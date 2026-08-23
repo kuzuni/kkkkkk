@@ -369,21 +369,45 @@
   .slot .si2{font-size:32px}
   .slot .sv{font-size:18px;font-weight:900;color:#cfe0ff;margin-top:4px}
 
-  #modal{position:absolute;inset:0;background:rgba(4,6,14,.86);display:none;align-items:center;
-    justify-content:center;padding:44px;z-index:30}
+  /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
+     좌우 여백 91 / 세로는 중앙에서 아래로 42px (패딩 위 126 − 아래 42 = 84, 그 절반) */
+  #modal{position:absolute;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;
+    justify-content:center;padding:126px 91px 42px;z-index:30}
   #modal.on{display:flex}
-  /* max-height 를 프레임 높이 기준으로 (고정 px 이면 낮은 화면비에서 잘림) */
-  .mbox{width:100%;max-height:100%;overflow-y:auto;border-radius:32px;padding:32px;text-align:center;
-    background:linear-gradient(180deg,#1c2650,#131a34);border:4px solid #6d80c8;
-    box-shadow:0 0 60px rgba(90,140,255,.3)}
-  .mbox::-webkit-scrollbar{width:10px}
-  .mbox::-webkit-scrollbar-thumb{background:#2a3357;border-radius:6px}
-  .mbox h2{font-size:34px;margin-bottom:18px}
-  .mbox p{font-size:24px;color:#9fb0d4;line-height:1.7;font-weight:700}
-  .mbox p b{color:#ffd45e}
+  /* 검정 7px + 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D). 안쪽 6px 은 inset 그림자로 얹는다 */
+  .mbox{width:100%;max-height:1497px;display:flex;flex-direction:column;
+    border:7px solid #000;border-radius:42px;padding:11px;background:#46382D;
+    box-shadow:inset 0 0 0 6px #564438, 0 0 24px 10px rgba(0,0,0,.55)}
+  .mhead{flex:0 0 auto;height:91px;display:flex;align-items:center;justify-content:center;
+    border-radius:24px 24px 0 0;background:linear-gradient(180deg,#5B4643 0,#5B4643 9px,#523E3D 9px)}
+  .mhead h2{margin:0;font-size:44px;line-height:44px;font-weight:900;color:#fff;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill}
+  /* 베이지 본문 + 별무늬(53x50, pitch 235, 첫 별 x=146·y=564 → 본문 기준 35/1) */
+  .mbody{flex:1 1 auto;overflow-y:auto;padding:99px 21px 60px;text-align:center;
+    border-radius:0 0 24px 24px;background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpath d='M26.5 0C30 18 35 23 53 25C35 27 30 32 26.5 50C23 32 18 27 0 25C18 23 23 18 26.5 0Z' fill='%23ECD3B4'/%3E%3C/svg%3E") 35px 1px/235px 235px repeat}
+  .mbody::-webkit-scrollbar{width:10px}
+  .mbody::-webkit-scrollbar-thumb{background:#C0A886;border-radius:6px}
   .mrow{display:flex;gap:12px;margin-top:18px}
   .mrow>*{flex:1}
-  .mbox .gbtn{margin-top:16px}
+  .mbody .gbtn{margin-top:16px}
+
+  /* 본문이 베이지가 되었으므로 안쪽 요소를 어두운 글자로 뒤집는다 (패널에는 영향 없게 .mbody 스코프) */
+  .mbody p{font-size:24px;color:#5A4634;line-height:1.7;font-weight:700}
+  .mbody p b{color:#B4571E}
+  .mbody .li{background:#F7ECDA;border:0;border-radius:22px;padding:20px 24px;margin-bottom:25px}
+  .mbody .li .lt{color:#3A2C20}
+  .mbody .li .ls{color:#7A6550}
+  .mbody .li .lf span{color:#7A6550}
+  .mbody .qp{background:#D3BC9C}
+  .mbody .sect{background:#F7ECDA;border-color:#C8B091}
+  .mbody .sect h3{color:#3A2C20}
+  .mbody .sect h3 em{color:#B4571E}
+  .mbody .sect p{color:#7A6550}
+  .mbody .day,.mbody .slot{background:#F7ECDA;border-color:#C8B091}
+  .mbody .day .dn{color:#8A755C}
+  .mbody .day .dv,.mbody .slot .sv{color:#4A3A2C}
+  .mbody .gbtn:disabled,.mbody .mini:disabled{background:#9E9E9E;color:#EFEFEF;box-shadow:none}
 
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
@@ -481,7 +505,7 @@
   </div>
 
   <div id="modal"><div class="mbox">
-    <div class="mhead"><h2 id="mtitle"></h2><button class="mx" id="mxBtn" aria-label="닫기">✕</button></div>
+    <div class="mhead"><h2 id="mtitle"></h2></div>
     <div class="mbody" id="mbox"></div>
   </div></div>
   <div id="loading">스프라이트 불러오는 중...</div>
@@ -3124,7 +3148,8 @@ loadAtlases(() => {
   spawnStage();
   heroTab = HEROBODY[S.heroTab] ? S.heroTab : 'eq';
   syncPanel();
-  $('mxBtn').onclick = closeModal;
+  /* 레퍼런스 팝업은 헤더에 ✕ 가 없다(22·07·06·03 전부). 대신 딤을 눌러도 닫히게 한다 */
+  $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
   renderUI();
   offlineReward(lastTime);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
