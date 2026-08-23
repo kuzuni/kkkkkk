@@ -17,30 +17,66 @@
   #app{flex:none;width:1080px;height:1920px;transform-origin:center center;position:relative;overflow:hidden;
     background:#0a0c16;display:flex;flex-direction:column;box-shadow:0 0 140px rgba(90,140,255,.16)}
 
-  /* ============ 최상단: 프로필 + 재화 ============ */
-  #top{flex:none;height:112px;display:flex;align-items:center;gap:12px;padding:10px 14px;
-    background:linear-gradient(180deg,#1d2647,#131a33);border-bottom:4px solid #3a4778}
-  .prof{display:flex;align-items:center;gap:12px;cursor:pointer;flex:none}
-  .pface{width:84px;height:84px;border-radius:20px;flex:none;
-    border:4px solid #f0b44c;background:linear-gradient(180deg,#2b3560,#1a2242);
-    display:flex;align-items:center;justify-content:center;font-size:42px;position:relative}
-  .pface b{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:#f0b44c;color:#2a2107;
-    font-size:17px;font-weight:900;border-radius:12px;padding:0 8px;border:2px solid #7a5410;white-space:nowrap}
-  .pinfo{width:192px}
-  .pcp{font-size:25px;font-weight:900;color:#ffd45e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pexp{height:12px;border-radius:6px;background:#0d1226;border:2px solid #2b3866;margin-top:6px;overflow:hidden}
-  .pexp>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#7ce6a0,#49c46e)}
-  .prank{font-size:19px;font-weight:900;color:#9fc0ff;margin-top:4px}
+  /* ============ 최상단: 상단 HUD (A3) ============
+     측정표 docs/measure/A3-상단HUD.md 를 1:1 로 적용한다.
+     레퍼런스 y=84~226 구간이 이 프레임의 y=0~142 에 대응한다
+     (레퍼런스 최상단 84px 는 상태바 = 안전영역이며, 우리 구조에서는 #wrap 의
+      env(safe-area-inset-top) 이 프레임 바깥에서 흡수하므로 프레임에 넣지 않는다).
+     메인 재화 바는 104px 고정이고, 좌측 프로필 플레이트만 38px 아래로 돌출해
+     전투 화면 위에 겹친다. */
+  #top{flex:none;position:relative;z-index:6;height:104px;overflow:visible;
+    background:#42362A;border-bottom:4px solid #000}
+  /* 바 상단은 하드 블랙 밴드가 아니라 12px 감쇠 그라데이션 (레퍼런스 y=84~95) */
+  #top::before{content:'';position:absolute;left:0;right:0;top:0;height:12px;z-index:1;
+    background:linear-gradient(rgba(0,0,0,.8),rgba(0,0,0,0));pointer-events:none}
 
-  .curs{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
-  .crow{display:flex;gap:8px}
-  .cbox{flex:1;display:flex;align-items:center;gap:6px;background:#0b0f22;border:2.6px solid #2f3d70;
-    border-radius:40px;padding:4px 6px 4px 12px;min-width:0}
-  .cbox i{font-style:normal;font-size:22px;flex:none}
-  .cbox b{flex:1;font-size:22px;font-weight:900;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cbox u{flex:none;width:30px;height:30px;border-radius:50%;background:linear-gradient(180deg,#7ce6a0,#3aa860);
-    color:#06281a;font-size:24px;font-weight:900;line-height:28px;text-align:center;text-decoration:none;cursor:pointer}
-  .cGold b{color:#ffd45e}.cDia b{color:#7fe0ff}.cRel b{color:#d9a2ff}
+  /* 좌측 프로필 플레이트 — 우측이 36.7° 사선, 바보다 37px 돌출 */
+  .prof{position:absolute;left:0;top:0;width:466px;height:141px;background:#332822;
+    clip-path:polygon(0 0,466px 0,366px 141px,0 141px);cursor:pointer;z-index:2;
+    box-shadow:inset 0 6px 0 #000}
+  .pedge{position:absolute;left:0;top:0;width:470px;height:145px;background:#000;
+    clip-path:polygon(0 0,470px 0,368px 145px,0 145px);z-index:1;pointer-events:none}
+
+  /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 4px */
+  .pface{position:absolute;left:0;top:0;width:141px;height:141px;box-sizing:border-box;
+    border:3px solid #000;border-radius:16px;background:#735C4E;padding:9px;
+    box-shadow:inset 0 9px 0 #806D66}
+  .pface i{display:flex;width:100%;height:100%;box-sizing:border-box;font-style:normal;
+    border:4px solid #030000;border-radius:6px;background:#4579C5;
+    align-items:center;justify-content:center;font-size:66px;line-height:1}
+
+  /* 닉네임 · 칭호 · 전투력 세로 컬럼 (초상화 우측 x=151, y=12)
+     폰트 px 값은 «CSS 지정값» 이 아니라 «렌더된 글리프 잉크 높이» 를 레퍼런스에 맞춘 값이다
+     (본문 폰트가 레퍼런스의 압축 게임 폰트보다 넓고 높게 렌더된다):
+     닉네임 잉크 16 / 칭호 19 / 전투력 23 / 재화 25 */
+  .pcol{position:absolute;left:151px;top:12px;display:flex;flex-direction:column;
+    align-items:flex-start;gap:5px}
+  .pnick{width:269px;height:30px;line-height:30px;border-radius:15px;background:#000;
+    text-align:center;font-size:19px;letter-spacing:.5px;font-weight:700;color:#fff;
+    white-space:nowrap;overflow:hidden}
+  .ptitle{width:231px;height:41px;line-height:41px;text-align:center;
+    font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;
+    background:linear-gradient(#000 0 2px,#625245 2px 7px,#443B36 7px calc(100% - 9px),
+      #635146 calc(100% - 9px) calc(100% - 4px),#000 calc(100% - 4px) 100%);
+    clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
+  .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
+  .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
+    font-style:normal;font-size:28px;line-height:1;color:#F16B09}
+  .pcp b{font-size:32px;font-weight:800;color:#B9FC61;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+
+  /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
+  .curs{position:absolute;right:26px;top:31px;display:flex;gap:49px;z-index:3}
+  .cbox{position:relative;width:211px;height:50px;border-radius:25px;background:#221B13;
+    display:flex;align-items:center;justify-content:center;padding-left:18px;box-sizing:border-box}
+  /* 아이콘은 63x63 박스 안에서 flex 중앙 정렬 — 이모지 사이드베어링 때문에
+     line-height 로 맞추면 잉크 중심이 알약 좌측 모서리에서 밀린다 */
+  .cbox i{position:absolute;left:-31px;top:-7px;width:63px;height:63px;z-index:2;
+    display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
+  .cGold i{font-size:56px}.cDia i{font-size:62px}
+  .cbox b{font-size:33px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;transform:translateY(2px);
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
@@ -48,7 +84,8 @@
   #view{display:block;width:1080px;height:100%}
 
   /* 스테이지 정보 (상단 중앙) */
-  #stinfo{position:absolute;left:50%;transform:translateX(-50%);top:10px;width:460px;text-align:center;pointer-events:none}
+  /* top:48 — A3 이후 상단 HUD 의 프로필 플레이트가 전투 화면 위로 38px 돌출하므로 그 아래에서 시작한다 */
+  #stinfo{position:absolute;left:50%;transform:translateX(-50%);top:48px;width:460px;text-align:center;pointer-events:none}
   #stinfo .chap{font-size:25px;font-weight:900;text-shadow:0 2px 6px #000;letter-spacing:-.6px}
   #stinfo .chap em{font-style:normal;color:#ffd45e}
   #stinfo .kbar{height:16px;border-radius:8px;background:rgba(6,9,20,.9);border:2px solid #3a4778;
@@ -348,23 +385,18 @@
 <div id="wrap"><div id="app">
 
   <div id="top">
+    <div class="pedge"></div>
     <div class="prof" id="profBtn">
-      <div class="pface">🛡️<b id="plvN">Lv.1</b></div>
-      <div class="pinfo">
-        <div class="pcp">⚔️ <span id="cpN">0</span></div>
-        <div class="pexp"><i id="pexpF"></i></div>
-        <div class="prank"><span id="rankIc">🥉</span> <span id="rankN">브론즈</span></div>
+      <div class="pface"><i>🛡️</i></div>
+      <div class="pcol">
+        <div class="pnick" id="nickN">U_0000000000000</div>
+        <div class="ptitle" id="rankN">브론즈</div>
+        <div class="pcp"><i>🔥</i><b id="cpN">0</b></div>
       </div>
     </div>
     <div class="curs">
-      <div class="crow">
-        <div class="cbox cGold"><i>💰</i><b id="goldN">0</b></div>
-        <div class="cbox cDia"><i>💎</i><b id="diaN">0</b><u data-go="shop">+</u></div>
-      </div>
-      <div class="crow">
-        <div class="cbox cRel"><i>🔮</i><b id="relN">0</b><u data-go="shop">+</u></div>
-        <div class="cbox"><i>🏆</i><b id="collN">0/49</b></div>
-      </div>
+      <div class="cbox cGold"><i>🪙</i><b id="goldN">0</b></div>
+      <div class="cbox cDia"><i>💎</i><b id="diaN">0</b></div>
     </div>
   </div>
 
@@ -951,6 +983,7 @@ const ETYPE = {
 const KEY = 'idle_hunter_save_v4';
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); };
 const DEF = () => ({
+  nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   gold:0, dia:300, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
   sp:0, spAtk:0, spHp:0, spAuto:true,
   lv: UPG.reduce((o,u) => (o[u.id]=0, o), {}),
@@ -1988,15 +2021,13 @@ function drawFac(){
 const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
 function drawHud(){
   const maxHp = stat.maxHp;
+  /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
+     레벨 · 경험치 · 유물석 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
   $('cpN').textContent = fmt(cp());
-  $('plvN').textContent = 'Lv.' + S.plv;
-  $('pexpF').style.width = clamp(S.pexp/plvNeed(S.plv), 0, 1)*100 + '%';
-  $('rankIc').textContent = rankOf().ic;
+  $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
   $('goldN').textContent = fmt(S.gold);
   $('diaN').textContent = fmt(S.dia);
-  $('relN').textContent = fmt(S.relic);
-  $('collN').textContent = ownedTotal() + '/' + TOTAL_ITEMS;
   const ch = Math.floor((S.stage-1)/10) + 1, st = ((S.stage-1) % 10) + 1;
   $('chapN').innerHTML = ch + '-' + st + ' <em>' + (S.stage % 10 === 0 ? 'BOSS' : '스테이지') + '</em>'
     + ' <span style="font-size:19px;color:#a9bbe6">최고 ' + S.best + '</span>';
@@ -2773,6 +2804,8 @@ function renderSt(){
   const hh = Math.floor(t/3600), mm = Math.floor(t%3600/60);
   const nr = nextRank();
   let h = '<div class="sect"><h3><span>' + rankOf().ic + ' ' + rankOf().n + '</span><em>전투력 ' + fmt(cp()) + '</em></h3>'
+    + '<p>' + S.nick + ' — 레벨 <b>Lv.' + S.plv + '</b> · 경험치 <b>'
+    + fmt(S.pexp) + ' / ' + fmt(plvNeed(S.plv)) + '</b></p>'
     + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmt(nr.cp) + '</b><br>'
           + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
           + '<button class="gbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '>승급전 도전</button>'
@@ -2787,7 +2820,7 @@ function renderSt(){
     + '재생 <b>×' + fmt(b.regen) + '</b> · 골드 <b>×' + fmt(b.gold) + '</b> · 펫 <b>×' + b.pet.toFixed(2) + '</b></p></div>'
     + '<div class="sect"><h3>📊 통계</h3><p>'
     + '총 처치 <b>' + fmt(S.totalKills) + '</b> · 최고 스테이지 <b>' + S.best + '</b><br>'
-    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회<br>'
+    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물석 <b>🔮 ' + fmt(S.relic) + '</b><br>'
     + '도감 <b>' + ownedTotal() + ' / ' + (SKILLS.length+EQUIPS.length+PETS.length+RELICS.length) + '</b> · 출석 <b>' + S.att.n + '일</b><br>'
     + '플레이 <b>' + hh + '시간 ' + mm + '분</b></p></div>'
     + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmt(eHp(S.stage)) + '</b> · 공격 <b>' + fmt(eDmg(S.stage))
