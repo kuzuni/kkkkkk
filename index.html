@@ -118,6 +118,12 @@
   .tab .bdg{position:absolute;top:12px;right:calc(50% - 38px);width:18px;height:18px;border-radius:50%;
     background:#ff3b5c;border:3px solid #0b0f1e;display:none}
   .tab.alert .bdg{display:block}
+  /* 패널이 열려 있는 탭은 아이콘·라벨 대신 ✕(닫기) 버튼이 된다 */
+  .tab .tx{display:none;width:64px;height:64px;border-radius:50%;align-items:center;justify-content:center;
+    font-size:34px;font-weight:900;color:#0b1022;background:linear-gradient(180deg,#ffe07a,#f0a63c);
+    border:3px solid #fff2c4;box-shadow:0 3px 0 #8a5c14}
+  .tab.close .ti,.tab.close .tl,.tab.close .bdg{display:none}
+  .tab.close .tx{display:flex}
 
   /* ============ 공통 파츠 ============ */
   .sect{background:linear-gradient(180deg,#182144,#121a34);border:3px solid #33406e;
@@ -140,6 +146,11 @@
   .stab{flex:1;padding:16px 0;text-align:center;font-size:23px;font-weight:900;border-radius:18px;
     background:#141b34;border:2.8px solid #2b3866;color:#8d9cc2;cursor:pointer}
   .stab.on{background:linear-gradient(180deg,#2b3f74,#1e2c56);border-color:#5f7cc4;color:#bfe0ff}
+  .stab{position:relative}
+  .stab.alert::after{content:'';position:absolute;top:8px;right:10px;width:16px;height:16px;
+    border-radius:50%;background:#ff3b5c;border:3px solid #141b34}
+  /* 영웅 탭 서브탭 — 패널 최상단 고정(본문 스크롤과 분리) */
+  #herosub{flex:none;display:none;margin:0;padding:14px 16px 4px;background:#0d1020}
 
   .up{display:flex;align-items:center;gap:18px;padding:16px 18px;margin-bottom:12px;border-radius:22px;
     background:linear-gradient(180deg,#172046,#121a34);border:2.8px solid #2b3866;cursor:pointer}
@@ -287,6 +298,11 @@
   </div>
 
   <div id="panel">
+    <div id="herosub" class="subtabs">
+      <div class="stab on" data-hero="eq">⚔️ 장비</div>
+      <div class="stab" data-hero="sk">📜 스킬</div>
+      <div class="stab" data-hero="pet">🐾 동료</div>
+    </div>
     <div class="body on" id="bUp"></div>
     <div class="body" id="bSk"></div>
     <div class="body" id="bEq"></div>
@@ -297,13 +313,14 @@
     <div class="body" id="bSt"></div>
   </div>
 
+  <!-- 하단 탭바 5개(영웅·성장·모험·보물상자·상점).
+       패널이 열려 있는 동안 그 탭 자리는 ✕(닫기) 버튼으로 바뀐다. -->
   <div id="tabbar">
-    <div class="tab on" data-t="up"><span class="ti">⚒️</span><span class="tl">강화</span><i class="bdg"></i></div>
-    <div class="tab" data-t="sk"><span class="ti">📜</span><span class="tl">스킬</span><i class="bdg"></i></div>
-    <div class="tab" data-t="eq"><span class="ti">⚔️</span><span class="tl">장비</span><i class="bdg"></i></div>
-    <div class="tab" data-t="pet"><span class="ti">🐾</span><span class="tl">펫</span><i class="bdg"></i></div>
-    <div class="tab" data-t="rel"><span class="ti">🔮</span><span class="tl">유물</span><i class="bdg"></i></div>
-    <div class="tab" data-t="shop"><span class="ti">🛒</span><span class="tl">상점</span><i class="bdg"></i></div>
+    <div class="tab" data-t="hero"><span class="ti">🛡️</span><span class="tl">영웅</span><i class="bdg"></i><b class="tx">✕</b></div>
+    <div class="tab" data-t="grow"><span class="ti">⚒️</span><span class="tl">성장</span><i class="bdg"></i><b class="tx">✕</b></div>
+    <div class="tab" data-t="adv"><span class="ti">🗺️</span><span class="tl">모험</span><i class="bdg"></i><b class="tx">✕</b></div>
+    <div class="tab" data-t="box"><span class="ti">🎁</span><span class="tl">보물상자</span><i class="bdg"></i><b class="tx">✕</b></div>
+    <div class="tab" data-t="shop"><span class="ti">🛒</span><span class="tl">상점</span><i class="bdg"></i><b class="tx">✕</b></div>
   </div>
 
   <div id="modal"><div class="mbox" id="mbox"></div></div>
@@ -815,7 +832,7 @@ const DEF = () => ({
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}) },
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
-  buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up',
+  buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
 });
 let S = DEF();
@@ -2251,7 +2268,7 @@ function endPromo(win){
 /* ==========================================================================
    UI
    ========================================================================== */
-let uiDirty = true, curTab = 'up';
+let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = true;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
 function closeModal(){ $('modal').classList.remove('on'); }
 function popup(title, html){
@@ -2757,15 +2774,38 @@ bindBanner('bEq',  () => S.eqTab);
 bindBanner('bPet', () => 'pet');
 bindBanner('bRel', () => 'relic');
 
-/* ---- 탭 전환 ---- */
+/* ---- 탭 전환 ----
+   탭 5개(hero/grow/adv/box/shop) → 패널 본문 매핑. hero 는 서브탭(장비·스킬·동료)으로 다시 갈린다.
+   같은 탭을 다시 누르면 패널이 닫히고, 열려 있는 동안 그 탭 자리는 ✕ 로 바뀐다. */
 const TABBODY = { up:'bUp', sk:'bSk', eq:'bEq', pet:'bPet', rel:'bRel', shop:'bShop', dun:'bDun', st:'bSt' };
-function goTab(k){
-  curTab = k;
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.t === k));
-  Object.keys(TABBODY).forEach(z => $(TABBODY[z]).classList.toggle('on', z === k));
+const HEROBODY = { eq:'bEq', sk:'bSk', pet:'bPet' };
+function bodyOf(k){ return k === 'hero' ? HEROBODY[heroTab] : k === 'grow' ? 'bUp'
+  : k === 'adv' ? 'bDun' : k === 'box' ? 'bRel' : k === 'shop' ? 'bShop' : null; }
+function syncPanel(){
+  const b = panelOpen ? bodyOf(curTab) : null;
+  $('panel').style.display = panelOpen ? 'flex' : 'none';
+  $('herosub').style.display = (panelOpen && curTab === 'hero') ? 'flex' : 'none';
+  Object.keys(TABBODY).forEach(z => $(TABBODY[z]).classList.toggle('on', TABBODY[z] === b));
+  document.querySelectorAll('#herosub .stab').forEach(x => x.classList.toggle('on', x.dataset.hero === heroTab));
+  document.querySelectorAll('.tab').forEach(x => {
+    const me = panelOpen && x.dataset.t === curTab;
+    x.classList.toggle('on', me);
+    x.classList.toggle('close', me);
+  });
+  resizeCanvas();
+}
+function goTab(k, forceOpen){
+  if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
+  curTab = k; panelOpen = true; syncPanel();
   uiDirty = true; renderUI();
 }
 document.querySelectorAll('.tab').forEach(t => { t.onclick = () => goTab(t.dataset.t); });
+$('herosub').onclick = e => {
+  const s = e.target.closest('[data-hero]');
+  if(!s) return;
+  heroTab = s.dataset.hero; S.heroTab = heroTab;
+  syncPanel(); uiDirty = true; renderUI();
+};
 document.querySelectorAll('.side .ibtn').forEach(b => {
   b.onclick = () => {
     const k = b.dataset.pop;
@@ -2780,26 +2820,36 @@ document.querySelectorAll('.side .ibtn').forEach(b => {
 $('profBtn').onclick = openProfile;
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   e.stopPropagation();
-  goTab(b.dataset.go);
+  goTab(b.dataset.go, true);
 });
 $('tutoBtn').onclick = claimTuto;
 
 function renderUI(){
-  if(curTab === 'up') renderUp();
-  else if(curTab === 'sk')  renderBanner('skill', 'bSk');
-  else if(curTab === 'eq')  renderEq();
-  else if(curTab === 'pet') renderBanner('pet', 'bPet');
-  else if(curTab === 'rel') renderBanner('relic', 'bRel');
-  else if(curTab === 'dun') renderDun();
-  else if(curTab === 'shop') renderShop();
-  else if(curTab === 'st')  renderSt();
+  if(panelOpen){
+    if(curTab === 'grow') renderUp();
+    else if(curTab === 'hero'){
+      if(heroTab === 'eq')       renderEq();
+      else if(heroTab === 'sk')  renderBanner('skill', 'bSk');
+      else                       renderBanner('pet', 'bPet');
+    }
+    else if(curTab === 'adv')  renderDun();
+    else if(curTab === 'box')  renderBanner('relic', 'bRel');
+    else if(curTab === 'shop') renderShop();
+  }
+  const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
-    const al = k === 'sk' ? collReady('skill') : k === 'eq' ? collReady('equip')
-             : k === 'pet' ? collReady('pet') : k === 'rel' ? collReady('relic')
+    const al = k === 'hero' ? (collReady('equip') || collReady('skill') || collReady('pet'))
+             : k === 'grow' ? S.sp > 0
+             : k === 'adv'  ? dunAlert
+             : k === 'box'  ? collReady('relic')
              : k === 'shop' ? AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost)
-             : k === 'up' ? S.sp > 0 : false;
+             : false;
     t.classList.toggle('alert', !!al);
+  });
+  document.querySelectorAll('#herosub .stab').forEach(x => {
+    const k = x.dataset.hero;
+    x.classList.toggle('alert', !!collReady(k === 'eq' ? 'equip' : k === 'sk' ? 'skill' : 'pet'));
   });
   uiDirty = false;
 }
@@ -2855,6 +2905,8 @@ loadAtlases(() => {
   setAnim(player, 'knight', 'idle', 8, true);
   syncPets();
   spawnStage();
+  heroTab = HEROBODY[S.heroTab] ? S.heroTab : 'eq';
+  syncPanel();
   renderUI();
   offlineReward(lastTime);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
