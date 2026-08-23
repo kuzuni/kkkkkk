@@ -410,22 +410,24 @@
   #modal.on{display:flex}
   /* 검정 7px 은 헤더까지 감싸고, 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D)은 본문 좌·우·아래만 두른다.
      (레퍼런스에서 헤더 바는 검정 테두리 바로 안쪽까지 꽉 찬다 — 헤더 위에 갈색이 깔리지 않는다) */
+  /* 검정 8px + 갈색 프레임 10px(바깥 7 #564438 · 안쪽 3 #46382D) = 편측 18px */
   .mbox{width:100%;max-height:1497px;display:flex;flex-direction:column;overflow:hidden;
-    border:7px solid #000;border-radius:45px;padding:0 6px 6px;background:#564438;
+    border:8px solid #000;border-radius:43px;padding:0 7px 7px;background:#564438;
     box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
-  .mhead{flex:0 0 auto;height:91px;margin:0 -6px;display:flex;align-items:center;justify-content:center;
+  .mhead{flex:0 0 auto;height:91px;margin:0 -7px;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#5B4643 0,#5B4643 9px,#523E3D 9px,
       #523E3D calc(100% - 1px),#715B4E calc(100% - 1px))}
-  .mhead h2{margin:0;font-size:38px;line-height:38px;font-weight:900;color:#fff;
+  .mhead h2{position:relative;top:-2px;margin:0;font-size:38px;line-height:38px;font-weight:900;color:#fff;
     -webkit-text-stroke:11px #000;paint-order:stroke fill}
-  /* 베이지 본문 + 별무늬(5각별 50x46, pitch 235, 첫 별 x=146·y=564 → 본문 기준 36/1).
-     inset 1px 은 갈색 프레임 안쪽 베벨 */
-  .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 20px 44px;text-align:center;
-    border:solid #46382D;border-width:0 6px 6px;box-shadow:inset 0 0 0 1px #887561;
+  /* 베이지 본문 + 별무늬. 레퍼런스 별은 팔이 두껍고(내반경/외반경 0.68) 위 꼭짓점이 본문 상단선에
+     잘려 있다 → 타일을 10px 위로 올려 클립시킨다. 베벨 1px 은 좌·우·아래만 (헤더 아래엔 없다) */
+  .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 21px 48px;text-align:center;
+    border:solid #46382D;border-width:0 3px 3px;
+    box-shadow:inset 1px 0 0 #887561,inset -1px 0 0 #887561,inset 0 -1px 0 #887561;
     background:#F0D9BA
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='25,0 32,17 50,17 36,28 41,46 25,35 9,46 14,28 0,17 18,17' fill='%23EAD1B2'/%3E%3C/svg%3E") 36px 1px/235px 235px repeat}
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23EBD3B1'/%3E%3C/svg%3E") 37px -10px/235px 235px repeat}
   /* 레퍼런스는 카드 리스트가 베이지 위에 바로 놓이지 않고 한 겹 더 어두운 패널 위에 올라간다 */
-  .mwell{margin:0 -12px;padding:34px 12px 0;background:#D6C1A6;border-radius:22px}
+  .mwell{margin:0 -12px;padding:34px 12px 0;background:#D7C0A1;border-radius:22px}
   .mbody::-webkit-scrollbar{width:10px}
   .mbody::-webkit-scrollbar-thumb{background:#C0A886;border-radius:6px}
   .mrow{display:flex;gap:12px;margin-top:18px}
@@ -435,7 +437,7 @@
   /* 본문이 베이지가 되었으므로 안쪽 요소를 어두운 글자로 뒤집는다 (패널에는 영향 없게 .mbody 스코프) */
   .mbody p{font-size:24px;color:#5A4634;line-height:1.7;font-weight:700}
   .mbody p b{color:#B4571E}
-  .mbody .li{background:#F7ECDA;border:0;border-radius:22px;padding:25px 24px;margin-bottom:21px}
+  .mbody .li{background:#F7ECDA;border:0;border-radius:22px;padding:24px 24px 25px;margin-bottom:21px}
   .mbody .li:last-child{margin-bottom:0}
   .mbody .li .lt{color:#3A2C20}
   .mbody .li .ls{color:#7A6550}
