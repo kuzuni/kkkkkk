@@ -155,26 +155,35 @@
      외곽 지름 120 · pitch 130 · gap 10 · 좌우 여백 25 · 위아래 여백 26
      링대 16 = 바깥 어두운 4 + 컬러 링 8 + 안쪽 어두운 4, 안쪽 well 지름 88 */
   #slots{display:flex;gap:10px;justify-content:center;margin:26px 0 16px}
-  .slot2{flex:none;width:120px;height:120px;border-radius:50%;position:relative;overflow:hidden;
+  /* 링 4겹을 레이어로 쌓는다(inset box-shadow 는 그라디언트가 안 되므로):
+     .slot2 어두운 외곽 r56~59 > ::before 컬러 링 r48~55 > ::after 어두운 r44~47 > .cdw well r0~43 */
+  .slot2{flex:none;width:120px;height:120px;border-radius:50%;position:relative;
     display:flex;align-items:center;justify-content:center;font-size:84px;line-height:1;
-    background:#367cc1;
-    box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #25d8ff,inset 0 0 0 16px #030509}
-  /* 쿨타임 끝 = 활성 / 쿨타임 중 = 대기(파랑, 기본값) / 미해금 = 잠금(회색)
-     활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
-     골드 링(r48~55) + well 가장자리의 노란 안쪽 링(r36~43, 두께 8) 이 추가되는 구조다 */
-  .slot2.ready{background:#367cc1;
-    box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #ffb92b,inset 0 0 0 16px #030509,
-      inset 0 0 0 24px #fefe0c}
-  .slot2.empty{background:#454464;
-    box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #b9bccb,inset 0 0 0 16px #030509}
-  /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6) — 이모지 색을 탈색해 맞춘다 (잉크 56x64) */
-  .slot2 .lk{display:block;font-size:60px;line-height:1;filter:grayscale(1) brightness(3) contrast(.8)}
-  /* 쿨타임 오버레이는 well(88) 안쪽만 덮어 링을 가리지 않는다 */
-  .slot2 .cdw{position:absolute;left:16px;top:16px;width:88px;height:88px;border-radius:50%;
-    overflow:hidden;z-index:1;pointer-events:none}
+    background:#030509}
+  .slot2::before,.slot2::after{content:'';position:absolute;border-radius:50%}
+  .slot2::before{inset:4px;background:linear-gradient(180deg,#3ae8ff,#10c8fd)}   /* 중앙값 #25d8fe */
+  .slot2::after{inset:12px;background:#030509}
+  /* ::after 는 마지막 자식이라 그냥 두면 well 을 덮는다 — z-index 로 위로 올린다 */
+  .slot2 .cdw{position:absolute;inset:16px;border-radius:50%;overflow:hidden;z-index:1;
+    background:#367cc1;pointer-events:none}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.62);height:0%}
-  .slot2 .lvv2{position:absolute;left:0;right:0;bottom:15px;text-align:center;font-size:19px;
-    font-weight:900;color:#fff;text-shadow:0 0 4px #000,0 2px 3px #000;z-index:2}
+  .slot2 .si3{position:relative;z-index:2;display:block}
+  /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
+     활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
+     골드 링(r48~55) + well 가장자리 노란 안쪽 링(r36~43) + 바깥 노란 링(r60~66) 이 붙는 구조다 */
+  .slot2.ready{box-shadow:0 0 0 7px #fffe03}
+  .slot2.ready::before{background:linear-gradient(180deg,#ffe52b,#ff8d2d)}       /* 중앙값 #ffb92c */
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 8px #fefe0c}
+  .slot2.empty::before{background:linear-gradient(180deg,#cdd0dc,#a5a8ba)}       /* 중앙값 #b9bccb */
+  .slot2.empty .cdw{background:#454464}
+  /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
+  .slot2 .lk{position:relative;z-index:2;display:block;font-size:58px;line-height:1;
+    transform:scaleY(.83);filter:grayscale(1) brightness(2.6) drop-shadow(0 0 2px #000) drop-shadow(0 1px 1px #000)}
+  /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
+     아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
+  .slot2 .lvv2{position:absolute;left:50%;bottom:-14px;transform:translateX(-50%);
+    width:34px;height:34px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
+    font-size:20px;line-height:34px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
   /* 튜토리얼 배너 */
   #tuto{flex:none;display:flex;align-items:center;gap:14px;padding:10px 16px;
@@ -1985,7 +1994,7 @@ function buildSlots(){
   for(let i=0;i<8;i++){
     const id = S.eqSkill[i], sk = id && SK[id];
     h += '<div class="slot2' + (sk ? ' ready' : ' empty') + '">'
-      + (sk ? sk.ic : '<span class="lk">🔒</span>')
+      + (sk ? '<span class="si3">' + sk.ic + '</span>' : '<span class="lk">🔒</span>')
       + (sk ? '<div class="lvv2">' + oLv(id) + '</div>' : '')
       + '<div class="cdw"><div class="cdv"></div></div></div>';
   }
