@@ -56,45 +56,53 @@
   #stinfo .kbar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,#ffd45e)}
   #stinfo .kbar span{position:absolute;inset:0;font-size:15px;line-height:16px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
 
-  /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너).
-     크기는 전부 --ih(아이콘 높이) 에서 파생되고, --ih/--iw/--igap/--itop 은 layoutSide() 가
-     캔버스 높이에 비례시켜 덮어쓴다. 기본값은 레퍼런스(1080x2340) 측정치. */
-  .side{position:absolute;top:var(--itop,88px);display:flex;flex-direction:column;
-    gap:var(--igap,8px);z-index:3}
-  #sideL{left:var(--ix,10px)}
-  #sideR{right:var(--ix,10px)}
-  .ibtn{width:var(--iw,88px);height:var(--ih,86px);border-radius:calc(var(--ih,86px)*.233);
-    position:relative;cursor:pointer;
-    background:linear-gradient(180deg,#2a3663,#18203c);border:3px solid #4d5e99;
-    display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .ibtn .si{font-size:calc(var(--ih,86px)*.372);line-height:1.06}
-  .ibtn .sl{font-size:calc(var(--ih,86px)*.186);font-weight:900;color:#c2d0f0;
-    margin-top:calc(var(--ih,86px)*.023);white-space:nowrap}
-  /* 알림은 레퍼런스대로 좌상단 빨간 점 */
-  .ibtn .bdg{position:absolute;top:calc(var(--ih,86px)*-.058);left:calc(var(--ih,86px)*-.058);
-    width:calc(var(--ih,86px)*.221);height:calc(var(--ih,86px)*.221);border-radius:50%;
-    background:#ff3b5c;border:calc(var(--ih,86px)*.035) solid #0a0c16;
-    font-size:0;display:none}
+  /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
+     레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
+     가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 31 · 배너 234)는 1:1 고정,
+     세로(아트 높이 --ih · gap · top)는 layoutSide() 가 캔버스 높이에 비례시켜 덮어쓴다. */
+  .side{position:absolute;top:var(--itop,31px);display:flex;flex-direction:column;
+    gap:var(--igap,20px);z-index:3}
+  #sideL{left:45px;align-items:flex-start}
+  #sideR{right:45px;align-items:flex-end}
+  .ibtn{width:100px;height:calc(var(--ih,82px) + var(--ilh,32px));position:relative;cursor:pointer;
+    background:none;border:0;display:flex;flex-direction:column;align-items:center}
+  .ibtn .si{width:var(--ih,82px);height:var(--ih,82px);font-size:calc(var(--ih,82px)*.96);
+    line-height:var(--ih,82px);display:flex;align-items:center;justify-content:center;
+    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
+  .ibtn .sl{height:var(--ilh,32px);font-size:var(--ilf,32px);line-height:var(--ilh,32px);
+    font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--ilf,32px)*.16) #000;
+    paint-order:stroke fill;letter-spacing:-.05em;white-space:nowrap;
+    text-shadow:0 2px 2px rgba(0,0,0,.55)}
+  /* 레드닷 — 아트 대비 채움 Ø31/100 · 외곽 Ø42/100, 아트의 우상단 코너에 걸침 */
+  .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.19);top:calc(var(--ih,82px)*-.06);
+    width:calc(var(--ih,82px)*.42);height:calc(var(--ih,82px)*.42);border-radius:50%;
+    background:#f22e52;border:calc(var(--ih,82px)*.061) solid #000;font-size:0;display:none}
   .ibtn.on .bdg{display:block}
-  /* 미해금 슬롯 — 자물쇠 오버레이 */
-  .ibtn.lock{filter:saturate(.3) brightness(.6)}
-  .ibtn.lock::after{content:'🔒';position:absolute;inset:0;display:flex;
-    align-items:center;justify-content:center;font-size:calc(var(--ih,86px)*.43);
-    text-shadow:0 2px 6px #000}
-  /* 시설 타이머 배너 (우측 하단) */
-  .facb{width:var(--iw,88px);border-radius:calc(var(--ih,86px)*.233);position:relative;cursor:pointer;
-    background:linear-gradient(180deg,#3b2c63,#1d1638);border:3px solid #7a5fbf;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:calc(var(--ih,86px)*.07) 0 calc(var(--ih,86px)*.05)}
-  .facb .fic{font-size:calc(var(--ih,86px)*.372);line-height:1.06}
-  .facb .ftm{font-size:calc(var(--ih,86px)*.163);font-weight:900;color:#ffd45e;
-    margin-top:calc(var(--ih,86px)*.035);white-space:nowrap;letter-spacing:-.3px}
-  .facb .fbg{position:absolute;top:calc(var(--ih,86px)*-.081);right:calc(var(--ih,86px)*-.081);
-    min-width:calc(var(--ih,86px)*.302);height:calc(var(--ih,86px)*.302);
-    border-radius:calc(var(--ih,86px)*.151);background:#ff3b5c;color:#fff;
-    font-size:calc(var(--ih,86px)*.186);font-weight:900;line-height:calc(var(--ih,86px)*.302);
-    text-align:center;padding:0 calc(var(--ih,86px)*.058);
-    border:calc(var(--ih,86px)*.035) solid #0a0c16}
+  /* 미해금 — 아트 밝기는 유지하고 흰 자물쇠를 슬롯 위에 크게 얹는다(레퍼런스 방식) */
+  .ibtn.lock .si{opacity:.5}
+  .ibtn.lock::after{content:'🔒';position:absolute;left:0;right:0;top:0;height:var(--ih,82px);
+    display:flex;align-items:center;justify-content:center;font-size:calc(var(--ih,82px)*.66);
+    filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
+  /* 시설 타이머 배너 — 좌측만 캡슐, 오른쪽은 화면 밖으로 bleed */
+  .facb{width:234px;height:calc(var(--ih,82px)*1.28);margin-right:-45px;
+    border-radius:calc(var(--ih,82px)*.64) 0 0 calc(var(--ih,82px)*.64);
+    position:relative;cursor:pointer;overflow:visible;
+    background:linear-gradient(180deg,#8a6231,#4a3015);
+    border:5px solid #e0ac4c;border-right:0;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    box-shadow:0 4px 10px rgba(0,0,0,.55)}
+  .facb .fic{font-size:calc(var(--ih,82px)*.72);line-height:1;
+    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
+  .facb .fbg{min-width:calc(var(--ih,82px)*.54);height:calc(var(--ih,82px)*.54);
+    border-radius:calc(var(--ih,82px)*.27);background:#3ec46e;border:calc(var(--ih,82px)*.049) solid #0d3a20;
+    color:#fff;font-size:calc(var(--ih,82px)*.32);font-weight:900;
+    line-height:calc(var(--ih,82px)*.44);text-align:center;padding:0 calc(var(--ih,82px)*.1)}
+  /* 남은 시간 — 검정 pill, 배너 하단 우측에 걸침 */
+  .facb .ftm{position:absolute;right:0;bottom:calc(var(--ih,82px)*-.15);
+    height:calc(var(--ih,82px)*.427);min-width:171px;padding:0 16px 0 20px;
+    border-radius:calc(var(--ih,82px)*.214) 0 0 calc(var(--ih,82px)*.214);
+    background:#000;color:#fff;font-size:calc(var(--ih,82px)*.29);font-weight:900;
+    line-height:calc(var(--ih,82px)*.427);text-align:center;white-space:nowrap;letter-spacing:-.02em}
 
   /* 플레이어 HP + 스킬 슬롯 */
   #battlefoot{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 10px;
@@ -347,7 +355,7 @@
     <div class="side" id="sideR">
       <div class="ibtn lock" data-lock="이벤트"><span class="si">🎁</span><span class="sl">이벤트</span><span class="bdg"></span></div>
       <div class="ibtn lock" data-lock="특권"><span class="si">👑</span><span class="sl">특권</span><span class="bdg"></span></div>
-      <div class="facb" id="facb"><span class="fic">🏠</span><span class="ftm" id="facTm">--</span><span class="fbg" id="facBg">0</span></div>
+      <div class="facb" id="facb"><span class="fbg" id="facBg">0</span><span class="fic">🏠</span><span class="ftm" id="facTm">--</span></div>
     </div>
     <div id="battlefoot">
       <div id="hpwrap"><i id="hpF"></i><span id="hpT"></span></div>
@@ -446,24 +454,31 @@ function resizeCanvas(){
   layoutSide(hpx);
 }
 
-/* 사이드 아이콘(좌6·우3) 크기 맞춤.
-   레퍼런스는 1080x2340 캡처라 캔버스가 1161px 이지만 기준 프레임 9:16 에서는 741px 뿐이라
-   좌 6개가 그대로는 들어가지 않는다. 그래서 아이콘 높이·gap·상단 오프셋을
-   «첫 아이콘 top ~ battlefoot 위» 남은 세로 폭에 비례시킨다.
-   레퍼런스 측정치(SIDE.H/W/GAP)가 상한이며, 캔버스가 짧을 때만 그 비율대로 줄어든다. */
-const SIDE = { H:86, W:88, GAP:8, TOP:88, X:10, N:6, PAD:10 };
+/* 사이드 아이콘(좌6·우3) 크기 맞춤 — 측정표 docs/measure/A2-사이드아이콘.md
+   레퍼런스 좌측 스택은 813px 을 쓰지만 그건 캔버스가 1931px 인 1080x2340 캡처 얘기고,
+   기준 프레임 9:16 에서 캔버스는 741px, battlefoot 위로 남는 건 620px 남짓이라 원본 크기로는 안 들어간다.
+   ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
+   **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
+     레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
+const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22 };
 function layoutSide(hpx){
   const foot = $('battlefoot').offsetHeight || 122;
-  const gr = SIDE.GAP / SIDE.H, tr = SIDE.TOP / SIDE.H;
-  /* 필요 높이 = top + N*h + (N-1)*gap  <=  캔버스 높이 - battlefoot - 여백 */
+  const gr = SIDE.GAP/SIDE.ART, tr = SIDE.TOP/SIDE.ART, lr = SIDE.LABEL/SIDE.ART;
   const band = hpx - foot - SIDE.PAD;
-  const h = Math.min(SIDE.H, band / (tr + SIDE.N + (SIDE.N-1)*gr));
-  const k = h / SIDE.H;
-  app.style.setProperty('--ih',   h.toFixed(2) + 'px');
-  app.style.setProperty('--iw',   (SIDE.W*k).toFixed(2) + 'px');
-  app.style.setProperty('--igap', (SIDE.GAP*k).toFixed(2) + 'px');
-  app.style.setProperty('--itop', (SIDE.TOP*k).toFixed(2) + 'px');
-  app.style.setProperty('--ix',   (SIDE.X*k).toFixed(2) + 'px');
+  /* 우선 라벨까지 같은 비율로 줄여본다: top + N*(a + a*lr) + (N-1)*a*gr <= band */
+  let a = band / (tr + SIDE.N*(1 + lr) + (SIDE.N-1)*gr);
+  let L = a * lr;
+  if(L < SIDE.LMIN){                 /* 라벨이 읽을 수 없을 만큼 작아지면 하한을 두고 아트만 더 줄인다 */
+    const a2 = (band - SIDE.N*SIDE.LMIN) / (tr + SIDE.N + (SIDE.N-1)*gr);
+    if(a2 >= a){ L = SIDE.LMIN; a = a2; }   /* 하한을 써도 아트가 더 크면 채택 (4:3 처럼 극단적으로 짧으면 균등 축소 유지) */
+  }
+  a = Math.min(SIDE.ART, a);
+  L = Math.min(SIDE.LABEL, L);
+  app.style.setProperty('--ih',   a.toFixed(2) + 'px');
+  app.style.setProperty('--igap', (SIDE.GAP*a/SIDE.ART).toFixed(2) + 'px');
+  app.style.setProperty('--itop', (SIDE.TOP*a/SIDE.ART).toFixed(2) + 'px');
+  app.style.setProperty('--ilf',  L.toFixed(2) + 'px');
+  app.style.setProperty('--ilh',  L.toFixed(2) + 'px');
 }
 addEventListener('resize', fit);
 /* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
