@@ -129,8 +129,8 @@
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
   .ibtn .sl{height:var(--ilh,32px);font-size:var(--ilf,32px);line-height:var(--ilh,32px);
     font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--ilf,32px)*.25) #000;
-    paint-order:stroke fill;letter-spacing:-.05em;white-space:nowrap;
-    text-shadow:0 2px 2px rgba(0,0,0,.55)}
+    paint-order:stroke fill;letter-spacing:-.02em;white-space:nowrap;
+    transform:scaleX(.83);text-shadow:0 2px 2px rgba(0,0,0,.55)}
   /* 레드닷 — 아트 높이 대비 채움 Ø.378 · 외곽 Ø.512, 아트 우상단 코너에 걸침 */
   .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.195);top:calc(var(--ih,82px)*-.073);
     width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
@@ -142,23 +142,26 @@
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--ih,82px)*.66);
     filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
   /* 시설 타이머 배너 — 좌측만 캡슐, 오른쪽은 화면 밖으로 bleed */
-  .facb{width:234px;height:calc(var(--ih,82px)*1.28);margin-right:-45px;
-    border-radius:calc(var(--ih,82px)*.64) 0 0 calc(var(--ih,82px)*.64);
+  /* 실측 234x105 = 본체 226x97 + 검정 외곽선 4px. 금색 띠 7px, 좌측만 캡슐 radius 52 */
+  .facb{width:226px;height:calc(var(--ih,82px)*1.183);margin-right:-41px;
+    border-radius:calc(var(--ih,82px)*.634) 0 0 calc(var(--ih,82px)*.634);
     position:relative;cursor:pointer;overflow:visible;
-    background:#511f14;border:5px solid #fab647;border-right:0;
+    background:#511f14;border:calc(var(--ih,82px)*.085) solid #fab647;border-right:0;
     display:flex;align-items:center;justify-content:center;gap:10px;
-    box-shadow:0 0 0 calc(var(--ih,82px)*.061) #000, 0 4px 10px rgba(0,0,0,.55)}
+    box-shadow:0 0 0 calc(var(--ih,82px)*.049) #000, 0 4px 10px rgba(0,0,0,.55)}
   .facb .fic{font-size:calc(var(--ih,82px)*.72);line-height:1;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
-  .facb .fbg{min-width:calc(var(--ih,82px)*.54);height:calc(var(--ih,82px)*.54);
-    border-radius:calc(var(--ih,82px)*.27);background:#3ec46e;border:calc(var(--ih,82px)*.049) solid #0d3a20;
-    color:#fff;font-size:calc(var(--ih,82px)*.32);font-weight:900;
-    line-height:calc(var(--ih,82px)*.44);text-align:center;padding:0 calc(var(--ih,82px)*.1)}
-  /* 남은 시간 — 검정 pill, 배너 하단 우측에 걸침 */
-  .facb .ftm{position:absolute;right:21px;bottom:0;
+  /* 카운터 뱃지 — 좌측 캡 바깥으로 걸침 */
+  .facb .fbg{position:absolute;left:calc(var(--ih,82px)*-.11);top:50%;
+    transform:translateY(-50%);min-width:calc(var(--ih,82px)*.83);height:calc(var(--ih,82px)*.83);
+    border-radius:50%;background:#3ec46e;border:calc(var(--ih,82px)*.061) solid #0d3a20;
+    color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
+    line-height:calc(var(--ih,82px)*.71);text-align:center;padding:0 calc(var(--ih,82px)*.06)}
+  /* 남은 시간 — 검정 pill, 배너 하단 금테에 10px 걸쳐 내려옴 */
+  .facb .ftm{position:absolute;right:calc(var(--ih,82px)*.196);bottom:calc(var(--ih,82px)*-.256);
     height:calc(var(--ih,82px)*.427);min-width:151px;padding:0 18px;
     border-radius:calc(var(--ih,82px)*.214);
-    background:#2c2c2c;color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
+    background:#000;color:#fff;font-size:calc(var(--ih,82px)*.31);font-weight:900;
     line-height:calc(var(--ih,82px)*.427);text-align:center;white-space:nowrap;letter-spacing:-.02em}
 
   /* 플레이어 HP + 스킬 슬롯 */
@@ -579,23 +582,43 @@ function resizeCanvas(){
    ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
    **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
      레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
-const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22 };
+const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22, CLEAR:36 };
+/* 상단 HUD 가 캔버스 위로 내려와 걸치는 깊이 (프로필 카드 테두리 등). 스택은 그 아래로 피해야 한다. */
+function hudOverhang(){
+  const ar = app.getBoundingClientRect(), sc = ar.width/FRAME_W || 1;
+  const st = $('stagearea').getBoundingClientRect().top;
+  let deep = 0;
+  $('top').querySelectorAll('*').forEach(e => {
+    const r = e.getBoundingClientRect();
+    if(r.width > 0 && r.bottom > deep) deep = r.bottom;
+  });
+  return Math.max(0, (deep - st) / sc);
+}
 function layoutSide(hpx){
   const foot = $('battlefoot').offsetHeight || 122;
-  const gr = SIDE.GAP/SIDE.ART, tr = SIDE.TOP/SIDE.ART, lr = SIDE.LABEL/SIDE.ART;
-  const band = hpx - foot - SIDE.PAD;
-  /* 우선 라벨까지 같은 비율로 줄여본다: top + N*(a + a*lr) + (N-1)*a*gr <= band */
-  let a = band / (tr + SIDE.N*(1 + lr) + (SIDE.N-1)*gr);
-  let L = a * lr;
-  if(L < SIDE.LMIN){                 /* 라벨이 읽을 수 없을 만큼 작아지면 하한을 두고 아트만 더 줄인다 */
-    const a2 = (band - SIDE.N*SIDE.LMIN) / (tr + SIDE.N + (SIDE.N-1)*gr);
-    if(a2 >= a){ L = SIDE.LMIN; a = a2; }   /* 하한을 써도 아트가 더 크면 채택 (4:3 처럼 극단적으로 짧으면 균등 축소 유지) */
+  const gr = SIDE.GAP/SIDE.ART, lr = SIDE.LABEL/SIDE.ART;
+  const over = hudOverhang();
+  const D = SIDE.N*(1 + lr) + (SIDE.N-1)*gr, D2 = SIDE.N + (SIDE.N-1)*gr;
+  let a = SIDE.ART, L = SIDE.LABEL, top = SIDE.TOP;
+  for(let i = 0; i < 3; i++){        /* top 이 a 에 의존하므로 몇 번 돌려 수렴시킨다 */
+    const k = a / SIDE.ART;
+    top = Math.max(SIDE.TOP*k, over + SIDE.CLEAR*k);
+    const band = hpx - foot - SIDE.PAD - top;
+    let na = band / D, nL = na * lr;
+    if(nL < SIDE.LMIN){              /* 라벨이 읽을 수 없을 만큼 작아지면 하한을 두고 아트만 더 줄인다 */
+      const a2 = (band - SIDE.N*SIDE.LMIN) / D2;
+      if(a2 >= na){ nL = SIDE.LMIN; na = a2; }   /* 4:3 처럼 극단적으로 짧으면 균등 축소 유지 */
+    }
+    a = Math.max(12, Math.min(SIDE.ART, na));
+    L = Math.min(SIDE.LABEL, Math.max(6, nL));
   }
-  a = Math.min(SIDE.ART, a);
-  L = Math.min(SIDE.LABEL, L);
+  /* 안전판 — 태블릿 clamp 처럼 캔버스가 극단적으로 짧으면 하한을 무시하고 통째로 줄인다 */
+  const need = top + SIDE.N*(a + L) + (SIDE.N-1)*(SIDE.GAP*a/SIDE.ART);
+  const avail = hpx - foot - SIDE.PAD;
+  if(need > avail && need > 0){ const s = avail/need; a *= s; L *= s; top *= s; }
   app.style.setProperty('--ih',   a.toFixed(2) + 'px');
   app.style.setProperty('--igap', (SIDE.GAP*a/SIDE.ART).toFixed(2) + 'px');
-  app.style.setProperty('--itop', (SIDE.TOP*a/SIDE.ART).toFixed(2) + 'px');
+  app.style.setProperty('--itop', top.toFixed(2) + 'px');
   app.style.setProperty('--ilf',  L.toFixed(2) + 'px');
   app.style.setProperty('--ilh',  L.toFixed(2) + 'px');
 }
