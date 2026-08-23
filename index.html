@@ -103,17 +103,20 @@
   #sideR{right:45px;align-items:flex-end}
   .ibtn{width:100px;height:calc(var(--ih,82px) + var(--ilh,32px));position:relative;cursor:pointer;
     background:none;border:0;display:flex;flex-direction:column;align-items:center}
-  .ibtn .si{width:var(--ih,82px);height:var(--ih,82px);font-size:calc(var(--ih,82px)*.96);
+  /* 아트는 레퍼런스에서 높이 82 · 폭 94(종횡비 1.15)로 슬롯을 채운다.
+     이모지는 정사각이라 scaleX 로 그 종횡비를 맞춘다 (레이아웃 폭은 슬롯 100 고정). */
+  .ibtn .si{width:100px;height:var(--ih,82px);font-size:calc(var(--ih,82px)*.96);
     line-height:var(--ih,82px);display:flex;align-items:center;justify-content:center;
+    transform:scaleX(1.15);
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
   .ibtn .sl{height:var(--ilh,32px);font-size:var(--ilf,32px);line-height:var(--ilh,32px);
-    font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--ilf,32px)*.16) #000;
+    font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--ilf,32px)*.25) #000;
     paint-order:stroke fill;letter-spacing:-.05em;white-space:nowrap;
     text-shadow:0 2px 2px rgba(0,0,0,.55)}
-  /* 레드닷 — 아트 대비 채움 Ø31/100 · 외곽 Ø42/100, 아트의 우상단 코너에 걸침 */
-  .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.19);top:calc(var(--ih,82px)*-.06);
-    width:calc(var(--ih,82px)*.42);height:calc(var(--ih,82px)*.42);border-radius:50%;
-    background:#f22e52;border:calc(var(--ih,82px)*.061) solid #000;font-size:0;display:none}
+  /* 레드닷 — 아트 높이 대비 채움 Ø.378 · 외곽 Ø.512, 아트 우상단 코너에 걸침 */
+  .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.195);top:calc(var(--ih,82px)*-.073);
+    width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
+    background:#f22e52;border:calc(var(--ih,82px)*.067) solid #000;font-size:0;display:none}
   .ibtn.on .bdg{display:block}
   /* 미해금 — 아트 밝기는 유지하고 흰 자물쇠를 슬롯 위에 크게 얹는다(레퍼런스 방식) */
   .ibtn.lock .si{opacity:.5}
@@ -124,10 +127,9 @@
   .facb{width:234px;height:calc(var(--ih,82px)*1.28);margin-right:-45px;
     border-radius:calc(var(--ih,82px)*.64) 0 0 calc(var(--ih,82px)*.64);
     position:relative;cursor:pointer;overflow:visible;
-    background:linear-gradient(180deg,#8a6231,#4a3015);
-    border:5px solid #e0ac4c;border-right:0;
+    background:#511f14;border:5px solid #fab647;border-right:0;
     display:flex;align-items:center;justify-content:center;gap:10px;
-    box-shadow:0 4px 10px rgba(0,0,0,.55)}
+    box-shadow:0 0 0 calc(var(--ih,82px)*.061) #000, 0 4px 10px rgba(0,0,0,.55)}
   .facb .fic{font-size:calc(var(--ih,82px)*.72);line-height:1;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
   .facb .fbg{min-width:calc(var(--ih,82px)*.54);height:calc(var(--ih,82px)*.54);
@@ -135,10 +137,10 @@
     color:#fff;font-size:calc(var(--ih,82px)*.32);font-weight:900;
     line-height:calc(var(--ih,82px)*.44);text-align:center;padding:0 calc(var(--ih,82px)*.1)}
   /* 남은 시간 — 검정 pill, 배너 하단 우측에 걸침 */
-  .facb .ftm{position:absolute;right:0;bottom:calc(var(--ih,82px)*-.15);
-    height:calc(var(--ih,82px)*.427);min-width:171px;padding:0 16px 0 20px;
-    border-radius:calc(var(--ih,82px)*.214) 0 0 calc(var(--ih,82px)*.214);
-    background:#000;color:#fff;font-size:calc(var(--ih,82px)*.29);font-weight:900;
+  .facb .ftm{position:absolute;right:21px;bottom:0;
+    height:calc(var(--ih,82px)*.427);min-width:151px;padding:0 18px;
+    border-radius:calc(var(--ih,82px)*.214);
+    background:#2c2c2c;color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
     line-height:calc(var(--ih,82px)*.427);text-align:center;white-space:nowrap;letter-spacing:-.02em}
 
   /* 플레이어 HP + 스킬 슬롯 */
