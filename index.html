@@ -2354,7 +2354,7 @@ $('bUp').addEventListener('click', e => {
 });
 
 /* ---- 도감(소환) 탭 ---- */
-function petIconHtml(it){ return '<canvas width="46" height="32" data-pet="' + it.id + '"></canvas>'; }
+function petIconHtml(it){ return '<canvas width="92" height="64" data-pet="' + it.id + '"></canvas>'; }
 function paintPetIcons(root){
   root.querySelectorAll('canvas[data-pet]').forEach(cv => {
     const p = PT[cv.dataset.pet];
