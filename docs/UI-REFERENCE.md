@@ -104,6 +104,36 @@
 - 각 탭 = 큰 아이콘 + 라벨, 레드닷 지원, 신규는 **NEW** 리본
 - 패널/모달이 열려 있으면 해당 탭 자리가 **✕(닫기)** 버튼으로 바뀜
 
+### 안전 영역 (Safe Area) · 실기기 대응
+
+레퍼런스 스크린샷은 **1080×2340 전체 화면 캡처**이고 상태바가 보이지 않는 **몰입형(immersive)** 상태입니다.
+반면 웹 빌드는 노치 · 상태바 · 홈 인디케이터를 직접 피해야 합니다.
+
+| 문제 | 현재 상태 | 대응 |
+|---|---|---|
+| 노치/상태바가 상단 HUD를 가림 | `#wrap{inset:0}` 로 화면 전체를 덮음 | `#wrap` 에 `env(safe-area-inset-*)` 패딩 |
+| 홈 인디케이터가 하단 탭바를 가림 | 미처리 | 위와 동일 (bottom inset) |
+| 스케일 계산이 안전영역을 무시 | `fit()` 이 `window.innerHeight` 사용 | `#wrap` 의 `clientWidth/clientHeight` 기준으로 계산 |
+| 모바일 브라우저 주소창 표시/숨김 | `resize` 만 처리 | `visualViewport` 의 `resize`·`scroll` 도 처리 |
+| 기기별 화면비 편차(19.5:9 ~ 21:9) | 레터박스(위아래 여백) | 의도된 동작. 여백은 앱 배경색으로 채움 |
+
+```css
+#wrap{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  padding: env(safe-area-inset-top)  env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left); }
+```
+```js
+function fit(){
+  const w = wrap.clientWidth, h = wrap.clientHeight;      // 안전영역이 제외된 값
+  app.style.transform = 'scale(' + Math.min(w/1080, h/2340) + ')';
+}
+addEventListener('resize', fit);
+if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
+```
+
+> 좌표는 **1080×2340 프레임 안에서만** 다룹니다. 안전영역은 프레임 **바깥**에서 흡수되므로
+> 각 화면의 측정값은 안전영역과 무관하게 레퍼런스 그대로 쓰면 됩니다.
+
 ### 공통 규칙
 | 요소 | 규격 |
 |---|---|
@@ -574,6 +604,11 @@
       - [ ] 전투 캔버스 **논리 크기 2배 + `devicePixelRatio`는 1로 고정** — 버퍼 크기를 현재(1080px)와 동일하게 유지해 렌더 비용 유지
       - [ ] 좌표계에 묶인 값 일괄 2배: `WORLD`, `TSC`(타일 배율), `ETYPE[].scale`, `PET_SP[].scale`, 투사체/이펙트 반경, `stat.speed` 계열
       - [ ] 폰트 크기·여백·테두리 두께도 전부 2배
+- [ ] **안전 영역 대응** (0번 «안전 영역» 절 참고)
+      - [ ] `#wrap` 에 `env(safe-area-inset-*)` 패딩 적용
+      - [ ] `fit()` 을 `window.inner*` → `wrap.clientWidth/clientHeight` 기준으로 변경
+      - [ ] `visualViewport` 의 resize/scroll 이벤트로 주소창 변동 대응
+      - [ ] 노치 있는 기기(아이폰 시뮬레이터 등)에서 상단 HUD·하단 탭바가 가려지지 않는지 확인
 - [ ] 하단 탭바를 **5개**로 (영웅 · 성장 · 모험 · 보물상자 · 상점)
 - [ ] **패널 열림/닫힘 토글** — 탭을 다시 누르면 패널이 **닫히고**, 열려 있는 동안 그 탭 자리는 **✕ 버튼**으로 바뀔 것
       *(강화(성장) 탭 포함 전 탭 공통. 지금은 한 번 열면 닫히지 않음)*
