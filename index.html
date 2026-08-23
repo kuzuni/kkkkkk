@@ -28,7 +28,8 @@
      (상단 12px 암부 그라데이션 → 본체 → 하단 3px 소프트 → 검정 3px) */
   #top{flex:none;position:relative;z-index:6;height:104px;overflow:visible;
     -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;
-    background:linear-gradient(180deg,rgb(28,23,20) 0,rgb(23,22,20) 7px,rgb(18,18,18) 11px,
+    background:linear-gradient(180deg,rgb(28,23,20) 0,rgb(23,22,20) 3px,rgb(15,17,16) 6px,
+      rgb(18,18,18) 7px,rgb(33,28,25) 8px,rgb(46,37,32) 9px,rgb(59,49,40) 11px,
       #42362A 12px,#42362A 97px,rgb(60,47,39) 98px,rgb(36,31,28) 100px,#000 101px,#000 104px)}
 
   /* 좌측 프로필 플레이트 — 레퍼런스 사선은 «직선이 아니라 곡선» 이다
@@ -49,11 +50,11 @@
 
   /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 3px */
   .pface{position:absolute;left:0;top:0;width:141px;height:141px;box-sizing:border-box;
-    border:3px solid #000;border-radius:16px;padding:9px;
-    background:linear-gradient(90deg,#725B4B 0 50%,#7E6C62 50%);
-    box-shadow:inset 0 9px 0 #7F6E64,inset 0 -6px 0 #735C4E}
+    border:3px solid #000;border-radius:16px;padding:8px;
+    background:linear-gradient(90deg,rgb(101,90,86) 0,rgb(114,91,75) 45%,rgb(126,108,98) 100%);
+    box-shadow:inset 0 9px 0 #7F6E64,inset 0 -8px 0 #735C4E}
   .pface i{display:flex;width:100%;height:100%;box-sizing:border-box;font-style:normal;
-    border:3px solid #030000;border-radius:6px;background:#4579C5;
+    border:4px solid #030000;border-radius:6px;background:#4579C5;
     align-items:center;justify-content:center;font-size:66px;line-height:1}
 
   /* 닉네임 · 칭호 · 전투력 세로 컬럼 (초상화 우측 x=151, y=12)
@@ -68,30 +69,33 @@
     text-align:center;font-size:23px;letter-spacing:-.6px;font-weight:800;color:#fff;
     white-space:nowrap;overflow:hidden}
   .pnick span{display:inline-block;transform:scaleX(.91)}
-  .ptitle{position:relative;z-index:0;width:231px;height:41px;line-height:41px;text-align:center;
+  .ptitle{position:relative;z-index:0;margin-left:-1px;width:232px;height:41px;line-height:41px;text-align:center;
     font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;background:#000;
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
   /* 좌·우 꼭짓점까지 도는 3px 검정 외곽 — 검정 육각형 위에 3px 안쪽으로 채움을 얹는다 */
   /* 베벨은 상단 3px 하이라이트 · 하단 4px 그림자로 «비대칭» 이다 (양쪽 같은 밝기면 안 됨) */
   .ptitle::before{content:'';position:absolute;inset:3px;z-index:-1;
-    background:linear-gradient(#6E5D50 0 3px,#443B36 3px calc(100% - 4px),#635145 calc(100% - 4px));
+    background:linear-gradient(#625245 0 3px,#443B36 3px calc(100% - 4px),#635145 calc(100% - 4px));
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
   .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
+  /* 🔥 글리프는 세로로 길쭉해 잉크 폭이 레퍼런스보다 좁다 — 높이는 font-size, 폭은 scaleX 로 */
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
-    font-style:normal;font-size:28px;line-height:1;color:#F16B09}
-  .pcp b{font-size:35px;font-weight:800;color:#B9FC61;white-space:nowrap;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+    font-style:normal;font-size:28px;line-height:1;color:#F16B09;
+    transform:scaleX(1.17) translateY(1px)}
+  .pcp b{font-size:36px;font-weight:800;color:#A7E25A;white-space:nowrap;
+    transform:translateY(1.5px);-webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
   .curs{position:absolute;right:26px;top:31px;display:flex;gap:49px;z-index:3}
-  .cbox{position:relative;width:211px;height:50px;border-radius:19px;background:#221B13;
+  .cbox{position:relative;width:211px;height:48px;border-radius:19px;background:#221B13;
     display:flex;align-items:center;justify-content:center;padding-left:10px;box-sizing:border-box}
   /* 아이콘은 63x63 박스 안에서 flex 중앙 정렬 — 이모지 사이드베어링 때문에
      line-height 로 맞추면 잉크 중심이 알약 좌측 모서리에서 밀린다 */
-  .cbox i{position:absolute;left:-31px;top:-7px;width:63px;height:63px;z-index:2;
+  .cbox i{position:absolute;left:-31px;top:-8px;width:63px;height:63px;z-index:2;
     display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
-  /* 💎 는 글리프가 가로로 납작해 코인과 같은 font-size 면 잉크 높이가 8px 짧다 */
-  .cGold i{font-size:52px}.cDia i{font-size:59px}
+  /* 💎 는 글리프가 가로로 납작하다 — 높이를 맞추면 폭이 넘치므로 scaleX 로 되돌린다 */
+  .cGold i{font-size:52px}
+  .cDia i{font-size:59px;transform:scaleX(.86)}
   .cbox b{font-size:35px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   .cDia b{transform:translateX(3px)}
