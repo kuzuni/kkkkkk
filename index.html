@@ -148,7 +148,7 @@
   #tabbar{flex:none;height:180px;display:flex;position:relative;
     box-shadow:inset 3px 0 0 #1a1615,inset -3px 0 0 #1a1615;
     background:linear-gradient(180deg,#14100D 0 5px,
-      #584D37 5px 6px,#64543A 6px 7px,#5F5033 7px 8px,#54452E 8px 9px,   /* 1px 피크 + 감쇠 베벨 */
+      #55492F 5px 6px,#5D4F35 6px 7px,#584A30 7px 8px,#4E402B 8px 9px,   /* 1px 피크 + 감쇠 베벨 */
       #42362A 9px 104px,#33291D 104px 174px,#1F1C15 174px 176px,#101010 176px 180px)}
   .tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
     padding-top:31px;cursor:pointer;position:relative}
@@ -171,7 +171,7 @@
   /* 레퍼런스 라벨은 자당 advance 30px · 잉크 높이 33px 인 좁고 높은 게임 서체다.
      폭은 letter-spacing(36-6=30) 으로 맞추고, 라벨이 아이콘 하단을 ~19px 덮는다. */
   /* letter-spacing 은 마지막 글자 뒤에도 걸려 잉크가 박스 중심에서 3px 우측으로 밀린다 → left 로 되민다 */
-  .tab .tl{display:block;margin-top:-22px;font-size:36px;line-height:36px;font-weight:900;color:#fff;
+  .tab .tl{display:block;margin-top:-22px;font-size:35px;line-height:36px;font-weight:900;color:#fff;
     letter-spacing:-6px;white-space:nowrap;position:relative;left:-3px;z-index:1;
     text-shadow:0 6px 0 #000,0 -6px 0 #000,6px 0 0 #000,-6px 0 0 #000,
                 4px 4px 0 #000,-4px 4px 0 #000,4px -4px 0 #000,-4px -4px 0 #000}
@@ -195,8 +195,9 @@
   #tabbar.open .tab:not(.close) .ti{transform:scale(.85)}
   /* NEW 리본 — 칸 좌상단 앵커, 우상향 22°, 아직 한 번도 연 적 없는 탭에만 */
   .tab .nw{display:none;position:absolute;left:-4px;top:10px;width:112px;height:46px;
-    transform:rotate(-10deg);transform-origin:50% 50%;background:#c8342a;
-    border-top:3px solid #000;border-bottom:3px solid #000;box-shadow:0 4px 0 #94251e;
+    transform:rotate(-10deg);transform-origin:50% 50%;
+    background:linear-gradient(90deg,#8f1f1c 0 8px,#b42826 8px calc(100% - 8px),#8f1f1c calc(100% - 8px) 100%);
+    border-top:3px solid #000;border-bottom:3px solid #000;box-shadow:0 4px 0 #7d1d17;
     font-size:30px;line-height:38px;font-weight:900;color:#f2e15d;text-align:center;
     letter-spacing:2px;z-index:4;overflow:hidden;
     text-shadow:0 3px 0 #000,0 -3px 0 #000,3px 0 0 #000,-3px 0 0 #000}
