@@ -384,21 +384,27 @@
 
   /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
      좌우 여백 91 / 세로는 중앙에서 아래로 42px (패딩 위 126 − 아래 42 = 84, 그 절반) */
-  #modal{position:absolute;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;
+  #modal{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;align-items:center;
     justify-content:center;padding:126px 91px 42px;z-index:30}
   #modal.on{display:flex}
-  /* 검정 7px + 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D). 안쪽 6px 은 inset 그림자로 얹는다 */
-  .mbox{width:100%;max-height:1497px;display:flex;flex-direction:column;
-    border:7px solid #000;border-radius:42px;padding:11px;background:#46382D;
-    box-shadow:inset 0 0 0 6px #564438, 0 0 24px 10px rgba(0,0,0,.55)}
-  .mhead{flex:0 0 auto;height:91px;display:flex;align-items:center;justify-content:center;
-    border-radius:24px 24px 0 0;background:linear-gradient(180deg,#5B4643 0,#5B4643 9px,#523E3D 9px)}
-  .mhead h2{margin:0;font-size:44px;line-height:44px;font-weight:900;color:#fff;
+  /* 검정 7px 은 헤더까지 감싸고, 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D)은 본문 좌·우·아래만 두른다.
+     (레퍼런스에서 헤더 바는 검정 테두리 바로 안쪽까지 꽉 찬다 — 헤더 위에 갈색이 깔리지 않는다) */
+  .mbox{width:100%;max-height:1497px;display:flex;flex-direction:column;overflow:hidden;
+    border:7px solid #000;border-radius:45px;padding:0 6px 6px;background:#564438;
+    box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
+  .mhead{flex:0 0 auto;height:91px;margin:0 -6px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#5B4643 0,#5B4643 9px,#523E3D 9px,
+      #523E3D calc(100% - 1px),#715B4E calc(100% - 1px))}
+  .mhead h2{margin:0;font-size:38px;line-height:38px;font-weight:900;color:#fff;
     -webkit-text-stroke:11px #000;paint-order:stroke fill}
-  /* 베이지 본문 + 별무늬(53x50, pitch 235, 첫 별 x=146·y=564 → 본문 기준 35/1) */
-  .mbody{flex:1 1 auto;overflow-y:auto;padding:99px 21px 60px;text-align:center;
-    border-radius:0 0 24px 24px;background:#F0D9BA
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpath d='M26.5 0C30 18 35 23 53 25C35 27 30 32 26.5 50C23 32 18 27 0 25C18 23 23 18 26.5 0Z' fill='%23ECD3B4'/%3E%3C/svg%3E") 35px 1px/235px 235px repeat}
+  /* 베이지 본문 + 별무늬(5각별 50x46, pitch 235, 첫 별 x=146·y=564 → 본문 기준 36/1).
+     inset 1px 은 갈색 프레임 안쪽 베벨 */
+  .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 20px 44px;text-align:center;
+    border:solid #46382D;border-width:0 6px 6px;box-shadow:inset 0 0 0 1px #887561;
+    background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='25,0 32,17 50,17 36,28 41,46 25,35 9,46 14,28 0,17 18,17' fill='%23EAD1B2'/%3E%3C/svg%3E") 36px 1px/235px 235px repeat}
+  /* 레퍼런스는 카드 리스트가 베이지 위에 바로 놓이지 않고 한 겹 더 어두운 패널 위에 올라간다 */
+  .mwell{margin:0 -12px;padding:34px 12px 0;background:#D6C1A6;border-radius:22px}
   .mbody::-webkit-scrollbar{width:10px}
   .mbody::-webkit-scrollbar-thumb{background:#C0A886;border-radius:6px}
   .mrow{display:flex;gap:12px;margin-top:18px}
@@ -408,7 +414,8 @@
   /* 본문이 베이지가 되었으므로 안쪽 요소를 어두운 글자로 뒤집는다 (패널에는 영향 없게 .mbody 스코프) */
   .mbody p{font-size:24px;color:#5A4634;line-height:1.7;font-weight:700}
   .mbody p b{color:#B4571E}
-  .mbody .li{background:#F7ECDA;border:0;border-radius:22px;padding:20px 24px;margin-bottom:25px}
+  .mbody .li{background:#F7ECDA;border:0;border-radius:22px;padding:25px 24px;margin-bottom:21px}
+  .mbody .li:last-child{margin-bottom:0}
   .mbody .li .lt{color:#3A2C20}
   .mbody .li .ls{color:#7A6550}
   .mbody .li .lf span{color:#7A6550}
@@ -2535,9 +2542,17 @@ function closeModal(){ $('modal').classList.remove('on'); }
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
-  $('mtitle').innerHTML = m ? m[1] : '';
+  /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
+  $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
   const body = $('mbox');
-  body.innerHTML = m ? html.slice(m[0].length) : html;
+  body.innerHTML = '<div class="mwell">' + (m ? html.slice(m[0].length) : html) + '</div>';
+  /* 레퍼런스는 하단 버튼이 패널 바깥(베이지 위)에 놓인다 — 끝에 붙은 버튼 묶음을 패널 밖으로 뺀다 */
+  const well = body.firstElementChild, tail = [];
+  while(well.lastElementChild &&
+        (well.lastElementChild.tagName === 'BUTTON' || well.lastElementChild.classList.contains('mrow')))
+    tail.unshift(well.removeChild(well.lastElementChild));
+  tail.forEach(n => body.appendChild(n));
+  if(!well.childElementCount && !well.textContent.trim()) well.remove();
   body.scrollTop = 0;
   $('modal').classList.add('on');
 }
