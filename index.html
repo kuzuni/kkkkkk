@@ -175,14 +175,14 @@
   /* 스킬 슬롯 — 원형 8칸. 실측표: docs/measure/A4-스킬슬롯.md
      외곽 지름 120 · pitch 130 · gap 10 · 좌우 여백 25 · 위아래 여백 26
      링대 16 = 바깥 어두운 4 + 컬러 링 8 + 안쪽 어두운 4, 안쪽 well 지름 88 */
-  #slots{display:flex;gap:10px;justify-content:center;margin:26px 0 16px;padding-left:4px}
+  #slots{display:flex;gap:10px;justify-content:center;margin:26px 0 17px;padding-left:4px}
   /* 링 4겹을 레이어로 쌓는다(inset box-shadow 는 그라디언트가 안 되므로):
      .slot2 어두운 외곽 r56~59 > ::before 컬러 링 r48~55 > ::after 어두운 r44~47 > .cdw well r0~43 */
   .slot2{flex:none;width:120px;height:120px;border-radius:50%;position:relative;
     display:flex;align-items:center;justify-content:center;font-size:84px;line-height:1;
     background:#030509}
   .slot2::before,.slot2::after{content:'';position:absolute;border-radius:50%}
-  .slot2::before{inset:4px;background:linear-gradient(180deg,#25d8fe 0 50%,#04bef6 93%)}
+  .slot2::before{inset:4px;background:linear-gradient(180deg,#25d8fe 0 52%,#04bef6 70%,#04bef6 100%)}
   .slot2::after{inset:12px;background:#030509}
   /* ::after 는 마지막 자식이라 그냥 두면 well 을 덮는다 — z-index 로 위로 올린다 */
   .slot2 .cdw{position:absolute;inset:16px;border-radius:50%;overflow:hidden;z-index:1;
@@ -192,15 +192,15 @@
   /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
      활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
      골드 링(r48~55) + well 가장자리 노란 안쪽 링(r36~43) + 바깥 노란 링(r60~66) 이 붙는 구조다 */
-  .slot2.ready{box-shadow:0 0 0 7px #fffe03}
-  .slot2.ready::before{background:linear-gradient(180deg,#ffad2a 7%,#ffe52c 50%,#f89a24 93%)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 8px #fefe0c}
-  .slot2.empty::before{background:linear-gradient(180deg,#b9bccb 0 50%,#9fa4ba 93%)}
+  .slot2.ready{box-shadow:0 0 0 4px #fffe03}
+  .slot2.ready::before{background:linear-gradient(180deg,#ffae2b 7%,#ffe52c 14%,#ffe52c 50%,#fa9624 80%,#f08d20 100%)}
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 6px #fefe0c}
+  .slot2.empty::before{background:linear-gradient(180deg,#b9bccb 0 60%,#9fa4ba 88%)}
   .slot2.empty .cdw{background:#454464}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
-  .slot2 .lk{position:relative;z-index:2;display:block;font-size:53px;line-height:1;
-    transform:translateY(-5px) scaleY(.83);
-    filter:grayscale(1) brightness(2.6) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 1px #000)}
+  .slot2 .lk{position:relative;z-index:2;display:block;font-size:64px;line-height:1;
+    transform:translateY(-3px) scaleY(.785);
+    filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
      아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
   .slot2 .lvv2{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);
