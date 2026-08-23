@@ -25,22 +25,27 @@
      메인 재화 바는 104px 고정이고, 좌측 프로필 플레이트만 38px 아래로 돌출해
      전투 화면 위에 겹친다. */
   #top{flex:none;position:relative;z-index:6;height:104px;overflow:visible;
-    background:#42362A;border-bottom:4px solid #000}
-  /* 바 상단은 하드 블랙 밴드가 아니라 12px 감쇠 그라데이션 (레퍼런스 y=84~95) */
-  #top::before{content:'';position:absolute;left:0;right:0;top:0;height:12px;z-index:1;
-    background:linear-gradient(rgba(0,0,0,.8),rgba(0,0,0,0));pointer-events:none}
+    border-bottom:3px solid #000;
+    /* 상단은 8px 암부 유지 + 4px 램프 (레퍼런스 y=84~96), 하단은 3px 검정 + 소프트 감쇠 */
+    background:linear-gradient(rgba(0,0,0,.78) 0,rgba(0,0,0,.78) 8px,rgba(0,0,0,0) 12px),#42362A;
+    box-shadow:inset 0 -6px 6px -3px rgba(0,0,0,.75);
+    -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
 
-  /* 좌측 프로필 플레이트 — 우측이 36.7° 사선, 바보다 37px 돌출 */
-  .prof{position:absolute;left:0;top:0;width:466px;height:141px;background:#332822;
-    clip-path:polygon(0 0,466px 0,366px 141px,0 141px);cursor:pointer;z-index:2;
-    box-shadow:inset 0 6px 0 #000}
-  .pedge{position:absolute;left:0;top:0;width:470px;height:145px;background:#000;
-    clip-path:polygon(0 0,470px 0,368px 145px,0 145px);z-index:1;pointer-events:none}
+  /* 좌측 프로필 플레이트 — 우측 사선 기울기 -0.783/px, 바보다 34px 돌출 */
+  .prof{position:absolute;left:0;top:0;width:472px;height:138px;background:#332822;
+    clip-path:polygon(0 0,472px 0,364px 138px,0 138px);cursor:pointer;z-index:2;
+    box-shadow:inset 0 8px 0 #0A0908}
+  /* 검정 외곽은 «바 아래로 돌출한 구간» 에만 보인다 — 레퍼런스는 바 안쪽 사선에 검정선이 없다 */
+  .pedge{position:absolute;left:0;top:0;width:476px;height:142px;background:#000;
+    clip-path:polygon(0 0,476px 0,366px 142px,0 142px);z-index:1;pointer-events:none;
+    -webkit-mask-image:linear-gradient(#0000 0 100px,#000 100px);
+    mask-image:linear-gradient(#0000 0 100px,#000 100px)}
 
   /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 4px */
   .pface{position:absolute;left:0;top:0;width:141px;height:141px;box-sizing:border-box;
-    border:3px solid #000;border-radius:16px;background:#735C4E;padding:9px;
-    box-shadow:inset 0 9px 0 #806D66}
+    border:3px solid #000;border-radius:16px;padding:9px;
+    background:linear-gradient(90deg,#645044 0 50%,#6A5A51 50%);
+    box-shadow:inset 0 9px 0 #776359,inset 0 -6px 0 #6F594C}
   .pface i{display:flex;width:100%;height:100%;box-sizing:border-box;font-style:normal;
     border:4px solid #030000;border-radius:6px;background:#4579C5;
     align-items:center;justify-content:center;font-size:66px;line-height:1}
@@ -50,33 +55,37 @@
      (본문 폰트가 레퍼런스의 압축 게임 폰트보다 넓고 높게 렌더된다):
      닉네임 잉크 16 / 칭호 19 / 전투력 23 / 재화 25 */
   .pcol{position:absolute;left:151px;top:12px;display:flex;flex-direction:column;
-    align-items:flex-start;gap:5px}
+    align-items:flex-start;gap:6px}
+  /* scaleX — 본문 폰트가 레퍼런스 압축 폰트보다 넓어서, 잉크 «높이» 를 16px 로 맞추면
+     폭이 레퍼런스(168px)보다 커진다. 높이는 font-size 로, 폭은 scaleX 로 맞춘다. */
   .pnick{width:269px;height:30px;line-height:30px;border-radius:15px;background:#000;
-    text-align:center;font-size:19px;letter-spacing:.5px;font-weight:700;color:#fff;
+    text-align:center;font-size:23px;letter-spacing:-.6px;font-weight:800;color:#fff;
     white-space:nowrap;overflow:hidden}
-  .ptitle{width:231px;height:41px;line-height:41px;text-align:center;
-    font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;
-    background:linear-gradient(#000 0 2px,#625245 2px 7px,#443B36 7px calc(100% - 9px),
-      #635146 calc(100% - 9px) calc(100% - 4px),#000 calc(100% - 4px) 100%);
+  .pnick span{display:inline-block;transform:scaleX(.86)}
+  .ptitle{position:relative;z-index:0;width:231px;height:41px;line-height:41px;text-align:center;
+    font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;background:#000;
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
-  .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
+  /* 좌·우 꼭짓점까지 도는 3px 검정 외곽 — 검정 육각형 위에 3px 안쪽으로 채움을 얹는다 */
+  .ptitle::before{content:'';position:absolute;inset:3px;z-index:-1;
+    background:linear-gradient(#7A6759 0 5px,#443B36 5px calc(100% - 6px),#7A6759 calc(100% - 6px));
+    clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
+  .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-2px}
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
-    font-style:normal;font-size:28px;line-height:1;color:#F16B09}
-  .pcp b{font-size:32px;font-weight:800;color:#B9FC61;white-space:nowrap;
+    font-style:normal;font-size:31px;line-height:1;color:#F16B09}
+  .pcp b{font-size:36px;font-weight:800;color:#B9FC61;white-space:nowrap;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
   .curs{position:absolute;right:26px;top:31px;display:flex;gap:49px;z-index:3}
   .cbox{position:relative;width:211px;height:50px;border-radius:25px;background:#221B13;
-    display:flex;align-items:center;justify-content:center;padding-left:18px;box-sizing:border-box}
+    display:flex;align-items:center;justify-content:center;padding-left:10px;box-sizing:border-box}
   /* 아이콘은 63x63 박스 안에서 flex 중앙 정렬 — 이모지 사이드베어링 때문에
      line-height 로 맞추면 잉크 중심이 알약 좌측 모서리에서 밀린다 */
   .cbox i{position:absolute;left:-31px;top:-7px;width:63px;height:63px;z-index:2;
     display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
-  .cGold i{font-size:56px}.cDia i{font-size:62px}
-  .cbox b{font-size:33px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis;transform:translateY(2px);
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cGold i{font-size:52px}.cDia i{font-size:51px}
+  .cbox b{font-size:36px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;-webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
@@ -400,7 +409,7 @@
     <div class="prof" id="profBtn">
       <div class="pface"><i>🛡️</i></div>
       <div class="pcol">
-        <div class="pnick" id="nickN">U_0000000000000</div>
+        <div class="pnick"><span id="nickN">U_0000000000000</span></div>
         <div class="ptitle" id="rankN">브론즈</div>
         <div class="pcp"><i>🔥</i><b id="cpN">0</b></div>
       </div>
