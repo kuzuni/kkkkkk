@@ -144,14 +144,14 @@
     line-height:var(--ih,82px);display:flex;align-items:center;justify-content:center;
     transform:scaleX(1.15);
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
-  .ibtn .sl{height:var(--ilh,32px);font-size:var(--ilf,32px);line-height:var(--ilh,32px);
+  .ibtn .sl{height:var(--ilh,32px);font-size:calc(var(--ilf,32px)*.94);line-height:var(--ilh,32px);
     font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--ilf,32px)*.25) #000;
     paint-order:stroke fill;letter-spacing:-.02em;white-space:nowrap;
     transform:scaleX(.83);text-shadow:0 2px 2px rgba(0,0,0,.55)}
   /* 레드닷 — 아트 높이 대비 채움 Ø.378 · 외곽 Ø.512, 아트 우상단 코너에 걸침 */
   .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.195);top:calc(var(--ih,82px)*-.073);
     width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
-    background:#f22e52;border:calc(var(--ih,82px)*.067) solid #000;font-size:0;display:none}
+    background:#f22e52;border:calc(var(--ih,82px)*.069) solid #000;font-size:0;display:none}
   .ibtn.on .bdg{display:block}
   /* 미해금 — 아트 밝기는 유지하고 흰 자물쇠를 슬롯 위에 크게 얹는다(레퍼런스 방식) */
   .ibtn.lock .si{opacity:.5}
@@ -160,13 +160,13 @@
     filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
   /* 시설 타이머 배너 — 좌측만 캡슐, 오른쪽은 화면 밖으로 bleed */
   /* 실측 234x105 = 본체 226x97 + 검정 외곽선 4px. 금색 띠 7px, 좌측만 캡슐 radius 52 */
-  .facb{width:226px;height:calc(var(--ih,82px)*1.183);margin-right:-41px;
+  .facb{width:230px;height:calc(var(--ih,82px)*1.183);margin-right:-45px;margin-top:calc(var(--ih,82px)*.11);
     border-radius:calc(var(--ih,82px)*.634) 0 0 calc(var(--ih,82px)*.634);
     position:relative;cursor:pointer;overflow:visible;
-    background:#511f14;border:calc(var(--ih,82px)*.085) solid #fab647;border-right:0;
+    background:#511f14;border:calc(var(--ih,82px)*.088) solid #fab647;border-right:0;
     display:flex;align-items:center;justify-content:center;gap:10px;
     box-shadow:0 0 0 calc(var(--ih,82px)*.049) #000, 0 4px 10px rgba(0,0,0,.55)}
-  .facb .fic{font-size:calc(var(--ih,82px)*.72);line-height:1;
+  .facb .fic{font-size:calc(var(--ih,82px)*1.05);line-height:1;margin:calc(var(--ih,82px)*-.41) 0 0 calc(var(--ih,82px)*.39);
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
   /* 카운터 뱃지 — 좌측 캡 바깥으로 걸침 */
   .facb .fbg{position:absolute;left:calc(var(--ih,82px)*-.11);top:50%;
@@ -762,7 +762,7 @@ function resizeCanvas(){
    ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
    **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
      레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
-const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22, CLEAR:36 };
+const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22, CLEAR:35 };
 /* 상단 HUD 가 캔버스 위로 내려와 걸치는 깊이 (프로필 카드 테두리 등). 스택은 그 아래로 피해야 한다. */
 function hudOverhang(){
   const ar = app.getBoundingClientRect(), sc = ar.width/FRAME_W || 1;
