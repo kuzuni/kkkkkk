@@ -104,6 +104,45 @@
 - 각 탭 = 큰 아이콘 + 라벨, 레드닷 지원, 신규는 **NEW** 리본
 - 패널/모달이 열려 있으면 해당 탭 자리가 **✕(닫기)** 버튼으로 바뀜
 
+### 화면비 대응 — 폭 고정 · 세로 가변
+
+디자인 기준은 **9:19.5 (1080×2340)** 이지만, **9:16 등 다른 화면비에서도 깨지지 않아야** 합니다.
+
+**고정 프레임(1080×2340)을 통째로 레터박스하면 안 됩니다.**
+9:16 기기에서는 높이가 먼저 걸려서 좌우에 약 **18% 여백**이 생기고 UI 전체가 그만큼 작아집니다.
+
+**규칙: 폭은 1080 고정, 높이는 기기 비율에 맞춰 가변.**
+
+```js
+const AW = wrap.clientWidth, AH = wrap.clientHeight;        // 안전영역 제외된 값
+const frameH = clamp(Math.round(1080 * AH / AW), 1600, 2600); // 극단 비율 방어
+app.style.width  = '1080px';
+app.style.height = frameH + 'px';
+app.style.transform = 'scale(' + (AW / 1080) + ')';          // 항상 폭에 꽉 맞음
+```
+
+| 화면비 | frameH | 2340 대비 |
+|---|---|---|
+| 9:21 | 2520 | +180 |
+| **9:19.5 (기준)** | **2340** | — |
+| 9:18 | 2160 | −180 |
+| **9:16** | **1920** | **−420** |
+| 4:3 (태블릿) | 1600 (clamp) | 레터박스 |
+
+**높이 배분 규칙**
+
+| 구분 | 요소 | 높이 |
+|---|---|---|
+| 고정 | 상단 HUD, 튜토리얼 배너, 하단 탭바 | 레퍼런스 측정값 그대로 |
+| **가변** | **전투 화면(캔버스)** | **남는 높이를 전부 흡수** |
+| 가변 | 패널(탭 콘텐츠) | 내부 스크롤로 흡수 |
+
+- 각 화면의 측정값은 **가로 방향은 항상 그대로**, 세로는 고정 요소만 그대로 두고 나머지를 캔버스가 먹는다
+- 전투 캔버스는 `VH`를 상수로 두지 말고 **프레임 높이에서 계산**할 것 (리사이즈 시 재계산 + 카메라 클램프 갱신)
+- 9:16(frameH 1920)에서 **좌측 사이드 아이콘 6개 + 우측 3개가 캔버스 안에 들어가는지** 반드시 확인
+  (아이콘 총 높이가 캔버스보다 커지면 아이콘 크기·간격을 캔버스 높이에 비례시킬 것)
+- 모달은 세로 중앙 정렬 + `max-height: 프레임 높이 - 여백` + 내부 스크롤
+
 ### 안전 영역 (Safe Area) · 실기기 대응
 
 레퍼런스 스크린샷은 **1080×2340 전체 화면 캡처**이고 상태바가 보이지 않는 **몰입형(immersive)** 상태입니다.
@@ -124,8 +163,11 @@
 ```
 ```js
 function fit(){
-  const w = wrap.clientWidth, h = wrap.clientHeight;      // 안전영역이 제외된 값
-  app.style.transform = 'scale(' + Math.min(w/1080, h/2340) + ')';
+  const AW = wrap.clientWidth, AH = wrap.clientHeight;         // 안전영역 제외
+  const frameH = clamp(Math.round(1080 * AH / AW), 1600, 2600);
+  app.style.height = frameH + 'px';
+  app.style.transform = 'scale(' + (AW / 1080) + ')';
+  resizeCanvas();                                              // 캔버스 높이 재계산
 }
 addEventListener('resize', fit);
 if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
@@ -604,6 +646,12 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
       - [ ] 전투 캔버스 **논리 크기 2배 + `devicePixelRatio`는 1로 고정** — 버퍼 크기를 현재(1080px)와 동일하게 유지해 렌더 비용 유지
       - [ ] 좌표계에 묶인 값 일괄 2배: `WORLD`, `TSC`(타일 배율), `ETYPE[].scale`, `PET_SP[].scale`, 투사체/이펙트 반경, `stat.speed` 계열
       - [ ] 폰트 크기·여백·테두리 두께도 전부 2배
+- [ ] **화면비 대응 — 폭 1080 고정 · 세로 가변** (0번 «화면비 대응» 절 참고)
+      - [ ] `#app` 높이를 `1080 × (안전영역 높이/폭)` 으로 동적 설정, `clamp(1600, 2600)`
+      - [ ] 전투 캔버스 `VH` 를 상수 대신 **프레임 높이에서 계산**, 리사이즈 시 재계산 + 카메라 클램프 갱신
+      - [ ] **9:16(frameH 1920)에서 사이드 아이콘 6개/3개가 캔버스 안에 들어가는지 확인**
+      - [ ] 모달에 `max-height` + 내부 스크롤
+      - [ ] 9:16 / 9:18 / 9:19.5 / 9:21 네 비율에서 캡처해 UI 겹침·잘림 확인
 - [ ] **안전 영역 대응** (0번 «안전 영역» 절 참고)
       - [ ] `#wrap` 에 `env(safe-area-inset-*)` 패딩 적용
       - [ ] `fit()` 을 `window.inner*` → `wrap.clientWidth/clientHeight` 기준으로 변경
