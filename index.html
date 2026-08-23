@@ -118,15 +118,53 @@
   #stagearea{position:relative;flex:1;min-height:0;width:1080px;background:#0a0c16}
   #view{display:block;width:1080px;height:100%}
 
-  /* 스테이지 정보 (상단 중앙) */
-  /* top:48 — A3 이후 상단 HUD 의 프로필 플레이트가 전투 화면 위로 38px 돌출하므로 그 아래에서 시작한다 */
-  #stinfo{position:absolute;left:50%;transform:translateX(-50%);top:48px;width:460px;text-align:center;pointer-events:none}
-  #stinfo .chap{font-size:25px;font-weight:900;text-shadow:0 2px 6px #000;letter-spacing:-.6px}
-  #stinfo .chap em{font-style:normal;color:#ffd45e}
-  #stinfo .kbar{height:16px;border-radius:8px;background:rgba(6,9,20,.9);border:2px solid #3a4778;
-    margin-top:6px;overflow:hidden;position:relative}
-  #stinfo .kbar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,#ffd45e)}
-  #stinfo .kbar span{position:absolute;inset:0;font-size:15px;line-height:16px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
+  /* ============ ② 스테이지 헤더 — 측정표 docs/measure/02-기본-메인-화면.md §1 ============
+     좌표 변환: 전투영역 top 은 레퍼런스 y=188 ↔ 프레임 y=104 이므로 «stagearea 기준 top = ref_y − 188».
+     캡슐 320..799 (480x92) 은 화면 정중앙이 아니라 중심 x=560 이다(좌17/우19 로 노드를 감싼 결과).
+     라벨 STAGE 는 중심 x=540 (정중앙) 이라 캡슐과 중심이 20px 어긋나 있다 — 실측대로 따로 잡는다. */
+  #stinfo{position:absolute;left:320px;top:136px;width:480px;height:92px;border-radius:46px;
+    background:rgba(0,0,0,.30);pointer-events:none;z-index:3}
+  /* 라벨 잉크 상단 311 → 캡슐 상단 324 을 13px 침범한다. 중심은 화면 정중앙 540 = 캡슐 좌단+220 */
+  #stinfo .chap{position:absolute;left:0;top:-13px;width:440px;text-align:center;
+    font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:0;white-space:nowrap;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+  #stinfo .chap em{font-style:normal}
+  #stinfo .kwrap{position:absolute;inset:0}
+  /* 트랙 335..745 (410x24) — 순수 검정, 안쪽 well·테두리 없음 */
+  #stinfo .kbar{position:absolute;left:15px;top:34px;width:410px;height:24px;
+    border-radius:12px;background:#000}
+  /* 채움은 트랙 안쪽으로 6px inset, 높이 12, 단색 #FFBF17 (그라디언트 아님) */
+  #stinfo .kbar>i{position:absolute;left:6px;top:6px;height:12px;width:0%;max-width:398px;
+    border-radius:6px;background:#FFBF17}
+  /* 레퍼런스 진행바에는 숫자 표기가 없다 — 요소는 남기고 감춘다(값은 계속 갱신됨) */
+  #stinfo .kbar span{display:none}
+  #stinfo .knode{position:absolute;top:22px;border-radius:50%;box-sizing:border-box}
+  /* 시작 노드 (361,370) 외경 48 = 노랑 40 + 검정 4 */
+  #stinfo .n1{left:17px;width:48px;height:48px;background:#FFBF17;border:4px solid #000}
+  /* 중간 노드 (540,370) Ø40 검정 단색 */
+  #stinfo .n2{left:200px;top:26px;width:40px;height:40px;background:#000;border:0}
+  /* 보스 해골 (740,370) 외경 82 = 검정 6 → 시안 5 → 네이비 원판 */
+  #stinfo .kboss{position:absolute;left:379px;top:5px;width:82px;height:82px;border-radius:50%;
+    background:#141414;display:flex;align-items:center;justify-content:center;font-size:46px;line-height:1}
+  #stinfo .kboss::before,#stinfo .kboss::after{content:'';position:absolute;border-radius:50%}
+  #stinfo .kboss::before{inset:6px;background:#4CBAED}
+  #stinfo .kboss::after{inset:11px;background:#2A3E81}
+  /* 흰 해골 잉크 52x46 — 이모지를 흰색으로 눌러 네이비 원판 위에 얹는다 */
+  #stinfo .kboss>i{position:relative;z-index:2;font-style:normal;display:block;
+    filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
+
+  /* 우상단 4분할 메뉴 버튼 — 측정표 §2. 934..1035 / 260..359, radius 24, 검정 24% */
+  #menub{position:absolute;right:44px;top:72px;width:102px;height:100px;border-radius:24px;
+    background:rgba(0,0,0,.24);cursor:pointer;z-index:3}
+  #menub s{position:absolute;width:27px;height:26px;border-radius:5px;background:#F5F5F5;
+    text-decoration:none;box-shadow:0 0 0 3px #141414}
+  #menub s:nth-of-type(1){left:23px;top:22px}
+  #menub s:nth-of-type(2){left:55px;top:22px}
+  #menub s:nth-of-type(3){left:23px;top:53px}
+  #menub s:nth-of-type(4){left:55px;top:53px}
+  /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16), 채움 Ø30 + 검정 5 */
+  #menub .bdg{position:absolute;left:71px;top:-4px;width:30px;height:30px;border-radius:50%;
+    background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0}
 
   /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
      레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
@@ -228,18 +266,69 @@
     width:40px;height:40px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
     font-size:21px;line-height:34px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
-  /* 튜토리얼 배너 */
-  #tuto{flex:none;display:flex;align-items:center;gap:14px;padding:10px 16px;
-    background:linear-gradient(90deg,#241a42,#2e2352);border-top:3px solid #6d54ad;border-bottom:3px solid #6d54ad}
+  /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============
+     측정표 docs/measure/02-기본-메인-화면.md §3~5.
+     하단 고정 요소는 «stagearea 기준 bottom = 2160 − ref_bottom» 으로 잡는다. */
+
+  /* 좌하단 — 채팅(Ø100 반투명 원판) + 마을(배경판 없는 아트 + 흰 라벨). 사이 간격 21 */
+  #botleft{position:absolute;left:17px;bottom:170px;width:132px;z-index:3;
+    display:flex;flex-direction:column;align-items:center;gap:21px}
+  #botleft .ubtn{position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+  #botleft .ubtn[data-util=chat]{width:100px;height:100px;border-radius:50%;background:rgba(0,0,0,.35);
+    justify-content:center}
+  #botleft .ubtn[data-util=chat] .ui{font-size:62px;line-height:1;
+    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
+  /* 마을: 아트 132x130 + 라벨 잉크 33(폰트 36)이 아트 하단에 5px 겹쳐 내려온다 */
+  #botleft .ubtn[data-util=town] .ui{width:132px;height:130px;font-size:124px;line-height:130px;
+    text-align:center;filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
+  #botleft .ubtn[data-util=town] .ul{margin-top:-5px;height:33px;font-size:36px;line-height:33px;
+    font-weight:900;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
+    letter-spacing:-.02em;white-space:nowrap;transform:scaleX(.86)}
+
+  /* 우하단 진행형 미션 배너 — 620..1080 / 1839..1989. 우측은 화면 밖으로 bleed 하므로 오른쪽 테두리·radius 없음.
+     레퍼런스는 «배너 전체가 [보상받기] 버튼» 이라 별도 버튼 박스가 없다. 진행바도 없다. */
+  #tuto{position:absolute;right:0;bottom:171px;width:460px;height:151px;z-index:3;
+    box-sizing:border-box;border:5px solid #000;border-right:0;border-radius:26px 0 0 26px;
+    background:linear-gradient(180deg,#F6DA55 0 4px,#FEB822 4px,#FFCB2A 50%,#FEE238 100%);
+    cursor:pointer}
   #tuto.off{display:none}
-  #tuto .tinfo{flex:1;min-width:0}
-  #tuto .tt{font-size:23px;font-weight:900;color:#ffe9a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #tuto .tp{height:10px;border-radius:6px;background:#171b34;margin:6px 0 4px;overflow:hidden}
-  #tuto .tp>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffd45e,#ff9a5c)}
-  #tuto .tsub{font-size:19px;color:#a9bbe6;font-weight:800}
-  #tuto .tbtn{flex:none;padding:14px 22px;border-radius:16px;border:0;font-size:22px;font-weight:900;
-    color:#2a2107;background:linear-gradient(180deg,#ffe07a,#f0a63c);cursor:pointer}
-  #tuto .tbtn:disabled{background:#26304e;color:#6e7a9c;cursor:default}
+  /* [보상받기] 라벨 — 상대 (102,18), 잉크 141x34, 금색 + 검정 외곽선 4 */
+  #tuto .tbtn{position:absolute;left:97px;top:13px;height:34px;padding:0;border:0;background:none;
+    font-size:34px;line-height:34px;font-weight:900;color:#FFCC2B;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;cursor:pointer;white-space:nowrap}
+  #tuto .tbtn:disabled{color:#E3B325;cursor:default}
+  #tuto .tinfo{position:absolute;left:55px;top:75px;width:265px}
+  #tuto .tt{height:22px;font-size:30px;line-height:22px;font-weight:900;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap;overflow:hidden}
+  /* 레퍼런스 배너에는 진행바가 없다 — 요소는 남기고 감춘다 */
+  #tuto .tp{display:none}
+  /* 보상 초록 박스 — 상대 (328,18), 117x117, radius 30, 검정5 → 연녹7 → 본체 */
+  #tuto .trew{position:absolute;left:323px;top:13px;width:117px;height:117px;box-sizing:border-box;
+    border-radius:30px;border:5px solid #000;background:#CBE957;
+    display:flex;align-items:center;justify-content:center}
+  #tuto .trew::before{content:'';position:absolute;inset:7px;border-radius:23px;background:#94BC35}
+  #tuto .trew .ri{position:relative;z-index:1;font-size:70px;line-height:1;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+  /* 카운터 — 초록 박스 우하단에 걸쳐 9px 아래로 돌출 (상대 377,116) */
+  #tuto .tsub{position:absolute;left:44px;top:95px;z-index:2;height:33px;
+    font-size:36px;line-height:33px;font-weight:900;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 배너 레드닷 — 초록 박스 우상단, 중심 상대 (435,25) */
+  #tuto .trew::after{content:'';position:absolute;right:-23px;top:-13px;width:30px;height:30px;
+    border-radius:50%;background:#F22E54;border:5px solid #000;box-sizing:content-box}
+
+  /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
+     요소·JS 갱신은 그대로 두고 표시만 끈다 — 되돌리려면 이 한 줄만 지우면 된다.
+     (켜 두면 좌하단 마을 라벨·우하단 미션 배너와 세로로 겹친다) */
+  #hpwrap{display:none}
+
+  /* 배속 버튼 — Ø82 원형, 중심 (1010,1775), 검정 72%. 잠금 상태 톤 그대로 */
+  #spdb{position:absolute;right:29px;bottom:343px;width:82px;height:82px;border-radius:50%;
+    background:rgba(0,0,0,.72);z-index:3;cursor:pointer}
+  #spdb .sk{position:absolute;left:50%;top:19px;transform:translateX(-50%);font-size:44px;line-height:41px;
+    filter:grayscale(1) brightness(2.8) drop-shadow(0 0 2px #000)}
+  #spdb .sv{position:absolute;left:0;right:0;bottom:1px;text-align:center;
+    font-size:21px;line-height:17px;font-weight:900;color:#606060}
 
   /* ============ 패널 ============ */
   /* 고정 높이(844 = 기존 422 x2). 넘치는 내용은 .body 내부 스크롤로 흡수 */
@@ -617,10 +706,16 @@
 
   <div id="stagearea">
     <canvas id="view" width="1080" height="864"></canvas>
+    <!-- ② 스테이지 헤더 — 라벨 + 진행바(시작/중간 노드 + 우측 보스 해골) -->
     <div id="stinfo">
       <div class="chap" id="chapN">1-1 <em>스테이지</em></div>
-      <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
+      <div class="kwrap">
+        <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
+        <b class="knode n1"></b><b class="knode n2"></b><b class="kboss"><i>💀</i></b>
+      </div>
     </div>
+    <!-- 우상단 4분할 메뉴 버튼 -->
+    <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i></div>
     <div class="side" id="sideL">
       <div class="ibtn" data-pop="attend"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="roul"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
@@ -634,19 +729,24 @@
       <div class="ibtn lock" data-lock="특권"><span class="si">👑</span><span class="sl">특권</span><span class="bdg"></span></div>
       <div class="facb" id="facb"><span class="fbg" id="facBg">0</span><span class="fic">🏠</span><span class="ftm" id="facTm">--</span></div>
     </div>
+    <!-- ④ 좌하단 유틸(채팅·마을) / 우하단 진행형 미션 배너 + 배속 버튼 -->
+    <div id="botleft">
+      <div class="ubtn" data-util="chat"><span class="ui">💬</span></div>
+      <div class="ubtn" data-util="town"><span class="ui">🌳</span><span class="ul">마을</span></div>
+    </div>
+    <div id="tuto">
+      <button class="tbtn" id="tutoBtn">진행중</button>
+      <div class="tinfo">
+        <div class="tt"><span id="tutoName">튜토리얼</span></div>
+        <div class="tp"><i id="tutoBar"></i></div>
+      </div>
+      <div class="trew"><span class="ri">🎁</span><span class="tsub" id="tutoSub">0 / 1</span></div>
+    </div>
+    <div id="spdb"><span class="sv">×1.3</span><span class="sk">🔒</span></div>
     <div id="battlefoot">
       <div id="hpwrap"><i id="hpF"></i><span id="hpT"></span></div>
       <div id="slots"></div>
     </div>
-  </div>
-
-  <div id="tuto">
-    <div class="tinfo">
-      <div class="tt">📌 <span id="tutoName">튜토리얼</span></div>
-      <div class="tp"><i id="tutoBar"></i></div>
-      <div class="tsub" id="tutoSub">0 / 1</div>
-    </div>
-    <button class="tbtn" id="tutoBtn">진행중</button>
   </div>
 
   <div id="panel">
@@ -2291,9 +2391,8 @@ function drawHud(){
   $('rankN').textContent = rankOf().n;
   $('goldN').textContent = fmt(S.gold);
   $('diaN').textContent = fmt(S.dia);
-  const ch = Math.floor((S.stage-1)/10) + 1, st = ((S.stage-1) % 10) + 1;
-  $('chapN').innerHTML = ch + '-' + st + ' <em>' + (S.stage % 10 === 0 ? 'BOSS' : '스테이지') + '</em>'
-    + ' <span style="font-size:19px;color:#a9bbe6">최고 ' + S.best + '</span>';
+  /* 레퍼런스 헤더는 «STAGE 37» 한 줄뿐이다 — 챕터 표기·최고기록은 프로필 모달에서 본다 */
+  $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>' + (S.stage % 10 === 0 ? ' BOSS' : '');
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
   if(promo){
@@ -2319,12 +2418,14 @@ function drawTuto(){
   if(!t){ box.classList.add('off'); return; }
   box.classList.remove('off');
   const p = Math.min(t.get(), t.goal), ready = p >= t.goal;
-  $('tutoName').textContent = t.n;
+  /* 레퍼런스 배너는 «[보상받기] / 미션 문구 / 보상칸 + 잔여 카운터» 3요소뿐이다(진행바 없음).
+     진행 수치는 미션 문구 뒤에 붙이고, 카운터에는 남은 개수를 넣는다. */
+  $('tutoName').textContent = t.n + ' (' + fmt(p) + '/' + fmt(t.goal) + ')';
   $('tutoBar').style.width = (p/t.goal*100) + '%';
-  $('tutoSub').textContent = fmt(p) + ' / ' + fmt(t.goal) + ' · 보상 💎' + fmt(t.c);
+  $('tutoSub').textContent = fmt(Math.max(0, t.goal - p));
   const btn = $('tutoBtn');
   btn.disabled = !ready;
-  btn.textContent = ready ? '보상 받기' : '진행중';
+  btn.textContent = ready ? '[보상받기]' : '[진행중]';
 }
 
 /* ==========================================================================
@@ -2711,7 +2812,9 @@ function endPromo(win){
 /* ==========================================================================
    UI
    ========================================================================== */
-let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = true;
+/* 기본 진입 화면은 «02 기본 메인 화면» = 패널이 닫힌 순수 전투 화면이다.
+   (레퍼런스 02번에는 하단 패널이 없고 전투 영역이 HUD~탭바 사이를 전부 채운다) */
+let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = false;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
 function closeModal(){ $('modal').classList.remove('on'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
@@ -3288,6 +3391,14 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   goTab(b.dataset.go, true);
 });
 $('tutoBtn').onclick = claimTuto;
+/* ④ 좌하단 유틸 · 우상단 메뉴 · 배속 — 레퍼런스 02번 구성. 콘텐츠는 아직 미구현이라 안내만 띄운다 */
+document.querySelectorAll('#botleft .ubtn').forEach(b => {
+  b.onclick = () => b.dataset.util === 'chat'
+    ? popup('💬 채팅', '<p>채팅은 아직 준비 중입니다.</p>')
+    : popup('🌳 마을', '<p>마을은 아직 준비 중입니다.</p>');
+});
+$('menub').onclick = () => popup('▦ 메뉴', '<p>설정 · 공지는 아직 준비 중입니다.</p>');
+$('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
 
 function renderUI(){
   if(panelOpen){
