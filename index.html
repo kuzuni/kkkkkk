@@ -466,71 +466,85 @@
      레퍼런스 1080x2340 절대 좌표를 그대로 쓴다. 그룹 상단(y=772)을 원점으로 삼아
      .ofrs(1080x972) 안에 절대 배치하고, 그 스테이지만 프레임 세로 중앙에 놓는다.
      (모달 아래 상품 배너가 모달 바깥에 있어서 공용 #modal 껍데기를 못 쓴다)
+
+     글자: 레퍼런스 폰트는 잉크가 큰 압축형이고 여기 폰트는 잉크비 0.93 이라
+     음수 letter-spacing 으로 폭을 맞추면 어절 공백과 소수점이 먹힌다.
+     그래서 font-size 는 실측 잉크높이/0.93 으로 잡고, 폭은 <i> 를 scaleX 로 눌러 맞춘다.
+     세로는 실측 잉크 중심에 줄상자 중심을 맞춘다.
      ========================================================================== */
   #offw{position:absolute;inset:0;background:rgba(0,0,0,.80);display:none;
     align-items:center;justify-content:center;z-index:34}
   #offw.on{display:flex}
   .ofrs{position:relative;width:1080px;height:972px;flex:0 0 auto}
   .ofrs>*{position:absolute}
+  .ofrs i{display:inline-block;font-style:normal;transform-origin:50% 50%}
   .ofrs .ot{color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
-    font-weight:900;white-space:nowrap;line-height:1}
+    font-weight:900;white-space:nowrap}
 
-  /* 모달 상자 — 검정 7 + 갈색 11 = 테두리 18, 본문 베이지 + 별무늬 */
+  /* 모달 상자 — 검정 7 + 갈색 11 = 테두리 18, 본문 베이지 + 별무늬.
+     타이틀바는 갈색 안쪽 테두리 위를 덮어 검정 테두리 안쪽 폭을 꽉 채운다(실측 x58~1021) */
   .ofr-box{left:51px;top:0;width:978px;height:657px;border-radius:54px;
     border:7px solid #000;background:#57453A;box-sizing:border-box;overflow:hidden}
-  /* 타이틀바는 갈색 안쪽 테두리 위를 덮어 검정 테두리 안쪽 폭을 꽉 채운다(실측 x58~1021) */
-  .ofr-head{height:90px;background:#52403D;display:flex;align-items:center;justify-content:center}
+  .ofr-head{height:90px;background:#52403D;text-align:center;line-height:90px}
+  .ofr-head i{font-size:48px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-weight:900;transform:scaleX(.906) translateY(2px)}
   .ofr-in{position:absolute;left:11px;right:11px;top:90px;bottom:11px;border-radius:36px;
     border-top-left-radius:0;border-top-right-radius:0;overflow:hidden;background:#F0D9BA;
     background-image:radial-gradient(#E5CAAC 4px,transparent 4.5px),
       radial-gradient(#E5CAAC 3px,transparent 3.5px);
     background-size:150px 150px,110px 110px;background-position:20px 30px,90px 95px}
-  .ofr-head span{font-size:60px;letter-spacing:-18px;text-indent:-18px;color:#fff;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill;font-weight:900;line-height:1}
 
-  /* 최대 시간 안내 — 알약 우측 끝(690)에서 5px 안쪽에 우측 정렬 */
-  .ofr-max{left:0;top:122px;width:690px;padding-right:5px;box-sizing:border-box;text-align:right;
-    font-size:28px;letter-spacing:-5px;font-weight:800;color:#9B6C54;line-height:28px}
+  /* 최대 시간 안내 — 잉크 우단 685(알약 우측 690 - 5), 잉크중심 y 137.5 */
+  .ofr-max{left:0;top:107px;width:690px;padding-right:5px;box-sizing:border-box;text-align:right;
+    height:60px;line-height:60px;font-size:22px;font-weight:800;color:#9B6C54}
+  .ofr-max i{transform:scaleX(1.1);transform-origin:100% 50%}
 
   /* 경과 시간 알약 + 스톱워치 (알약 좌변 위로 겹침) */
   .ofr-pill{left:411px;top:153px;width:280px;height:50px;border-radius:16px;
     border:5px solid #000;box-sizing:border-box;
     background:linear-gradient(180deg,#8182A0 0 75%,#707696 75%);
     display:flex;align-items:center;justify-content:center}
-  .ofr-pill b{font-size:30px;letter-spacing:-5px;text-indent:-5px;color:#fff;font-weight:900;
-    -webkit-text-stroke:4px #000;paint-order:stroke fill;line-height:1;transform:translateX(-10px)}
+  .ofr-pill b{font-size:24px;color:#fff;font-weight:900;line-height:1;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;transform:translateX(-10px)}
+  .ofr-pill i{transform:scaleX(1.06)}
   .ofr-clock{left:356px;top:133px;width:64px;height:73px;font-size:62px;line-height:73px;
     text-align:center}
 
-  /* 안내 문구 */
-  .ofr-lead{left:0;top:242px;width:1080px;text-align:center;font-size:42px;letter-spacing:-9px;
-    text-indent:-9px}
+  /* 안내 문구 — 잉크중심 y 263.5 */
+  .ofr-lead{left:0;top:233px;width:1080px;text-align:center;height:60px;line-height:60px;
+    font-size:34px}
+  .ofr-lead i{transform:scaleX(.97)}
 
   /* 보상 박스 + 초록 프레임 + 골드 + 수량 */
   .ofr-rw{left:115px;top:288px;width:850px;height:150px;border-radius:36px;background:#D7C0A1}
   .ofr-fr{left:477px;top:300px;width:126px;height:116px;border-radius:30px;
     border:5px solid #000;box-sizing:border-box;background:#CBE849;padding:5px}
   .ofr-fr i{display:flex;width:100%;height:100%;border-radius:24px;background:#94BC35;
-    align-items:center;justify-content:center;font-size:76px;line-height:1;font-style:normal}
-  .ofr-amt{left:0;top:407px;width:1080px;text-align:center;font-size:36px;letter-spacing:-1px}
+    align-items:center;justify-content:center;font-size:55px;line-height:1;transform:none}
+  .ofr-amt{left:0;top:393px;width:1080px;text-align:center;height:60px;line-height:60px;
+    font-size:35px}
+  .ofr-amt i{transform:scaleX(1.04)}
 
-  /* 버튼 2개 — 상단 하이라이트 8 / 본체 / 하단 음영 8 */
+  /* 버튼 2개 — 상단 하이라이트 8 / 본체 / 하단 음영 8, 글자 잉크중심 y 535.5 */
   .ofr-b{top:464px;height:148px;border-radius:48px;border:8px solid #000;box-sizing:border-box;
-    padding:0;cursor:pointer;font-size:48px;letter-spacing:-9px;text-indent:-9px;font-weight:900;
-    color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;line-height:1;
-    font-family:inherit}
+    padding:0;cursor:pointer;font-size:39px;font-weight:900;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;line-height:1;font-family:inherit}
+  .ofr-b i{display:inline-block;font-style:normal;transform-origin:50% 50%;
+    transform:translateY(-2px) scaleX(.9)}
   .ofr-b.g{left:240px;width:249px;
     background:linear-gradient(180deg,#ABFF7C 0 8px,#77E536 8px calc(100% - 8px),#40BC2A calc(100% - 8px))}
+  .ofr-b.g i{transform:translateY(-2px) scaleX(.885)}
   .ofr-b.b{left:540px;width:300px;
     background:linear-gradient(180deg,#53E6F8 0 8px,#2ABDDA 8px calc(100% - 8px),#0CA4C9 calc(100% - 8px))}
+  .ofr-b.b i{transform:translateY(-2px) scaleX(.967)}
   .ofr-ad{left:528px;top:567px;width:65px;height:54px;transform:rotate(-8deg);
     border-radius:8px;border:4px solid #000;box-sizing:border-box;background:#F5B728;
     padding:3px 2px 2px 6px;pointer-events:none}
-  .ofr-ad i{display:block;width:100%;height:100%;border-radius:4px;background:#8C4400;
+  .ofr-ad em{display:block;width:100%;height:100%;border-radius:4px;background:#8C4400;
     position:relative;font-style:normal}
-  .ofr-ad i::before{content:'';position:absolute;left:11px;top:9px;border-style:solid;
+  .ofr-ad em::before{content:'';position:absolute;left:11px;top:9px;border-style:solid;
     border-width:7.5px 0 7.5px 13px;border-color:transparent transparent transparent #FFF5CC}
-  .ofr-ad i b{position:absolute;right:-9px;bottom:-6px;font-size:21px;line-height:1;color:#fff;
+  .ofr-ad b{position:absolute;right:-9px;bottom:-6px;font-size:21px;line-height:1;color:#fff;
     font-weight:900;-webkit-text-stroke:3px #000;paint-order:stroke fill}
 
   /* 모달 바깥 아래 상품 배너 */
@@ -548,22 +562,27 @@
   .ofr-art{left:78px;top:783px;width:605px;height:276px;background:#91DEBE;
     background-image:repeating-linear-gradient(-60deg,rgba(255,255,255,.28) 0 10px,transparent 10px 26px);
     clip-path:polygon(0 0,74% 0,86% 44%,74% 100%,0 100%);
-    display:flex;align-items:center;justify-content:center;font-size:190px;line-height:1}
-  .ofr-t1{left:0;top:698px;width:894px;text-align:right;font-size:48px;letter-spacing:-10px;
-    text-indent:-10px;-webkit-text-stroke:5px #000}
-  .ofr-t2{left:0;top:764px;width:963px;text-align:right;font-size:62px;letter-spacing:-12px;
-    text-indent:-12px;font-weight:900;line-height:1;
+    display:flex;align-items:center;justify-content:center;font-size:250px;line-height:1}
+  .ofr-art i{transform:none}
+  /* 배너 문구 — 우단 894 / 963, 잉크중심 y 721.5 / 793 */
+  .ofr-t1{left:0;top:691px;width:894px;text-align:right;height:60px;line-height:60px;
+    font-size:39px;-webkit-text-stroke:5px #000}
+  .ofr-t1 i{transform:scaleX(1);transform-origin:100% 50%}
+  .ofr-t2{left:0;top:763px;width:963px;text-align:right;height:60px;line-height:60px;
+    font-size:50px;font-weight:900;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;
     background:linear-gradient(180deg,#FFF6BB,#FEBE55);-webkit-background-clip:text;
-    background-clip:text;color:transparent;
-    text-shadow:0 0 0 transparent;filter:drop-shadow(0 0 3px #000) drop-shadow(0 0 3px #000)}
+    background-clip:text;color:transparent}
+  .ofr-t2 i{transform:scaleX(1.076);transform-origin:100% 50%}
   .ofr-go{left:654px;top:834px;width:299px;height:118px;border-radius:40px;border:7px solid #000;
     box-sizing:border-box;padding:0;cursor:pointer;font-family:inherit;font-weight:900;
-    font-size:61px;letter-spacing:-12px;text-indent:-12px;line-height:1;color:#fff;
+    font-size:49px;line-height:1;color:#fff;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;
     background:linear-gradient(180deg,#98FF70 0 6px,#77E536 6px calc(100% - 7px),#3EBC2A calc(100% - 7px))}
+  .ofr-go i{display:inline-block;font-style:normal;transform:translateY(-3px) scaleX(.827)}
   .ofr-tag{left:115px;top:912px;width:350px;height:46px;border-radius:23px;background:#000;
-    font-size:30px;letter-spacing:-3px;text-indent:-3px;font-weight:800;color:#F0E164;
-    text-align:center;line-height:46px}
+    font-size:23px;font-weight:800;color:#F0E164;text-align:center;line-height:46px}
+  .ofr-tag i{transform:scaleX(1.035)}
 </style>
 </head>
 <body>
@@ -653,25 +672,25 @@
        공용 #modal 껍데기를 쓰지 않고 자체 오버레이로 둔다. -->
   <div id="offw"><div class="ofrs">
     <div class="ofr-box">
-      <div class="ofr-head"><span>오프라인 보상</span></div>
+      <div class="ofr-head"><i>오프라인 보상</i></div>
       <div class="ofr-in"></div>
     </div>
-    <div class="ofr-max" id="ofrMax">최대 6시간 0분</div>
-    <div class="ofr-pill"><b id="ofrTime">0시간 6분</b></div>
+    <div class="ofr-max"><i id="ofrMax">최대 6시간 0분</i></div>
+    <div class="ofr-pill"><b><i id="ofrTime">0시간 6분</i></b></div>
     <div class="ofr-clock">⏱️</div>
-    <div class="ofr-lead ot">자리를 비우신 동안 사냥했어요!</div>
+    <div class="ofr-lead ot"><i>자리를 비우신 동안 사냥했어요!</i></div>
     <div class="ofr-rw"></div>
     <div class="ofr-fr"><i>🪙</i></div>
-    <div class="ofr-amt ot" id="ofrAmt">0</div>
-    <button class="ofr-b g" id="ofrGet">받기</button>
-    <button class="ofr-b b" id="ofrGet15">1.5배 받기</button>
-    <div class="ofr-ad"><i><b>AD</b></i></div>
+    <div class="ofr-amt ot"><i id="ofrAmt">0</i></div>
+    <button class="ofr-b g" id="ofrGet"><i>받기</i></button>
+    <button class="ofr-b b" id="ofrGet15"><i>1.5배 받기</i></button>
+    <div class="ofr-ad"><em><b>AD</b></em></div>
     <div class="ofr-bn"><u></u><s></s><s></s><s></s></div>
-    <div class="ofr-art">🐸</div>
-    <div class="ofr-t1 ot">오프라인 보상 최대 시간</div>
-    <div class="ofr-t2">4시간 증가</div>
-    <button class="ofr-go" id="ofrGo">이동</button>
-    <div class="ofr-tag">구매 즉시 반영!</div>
+    <div class="ofr-art"><i>🐸</i></div>
+    <div class="ofr-t1 ot"><i>오프라인 보상 최대 시간</i></div>
+    <div class="ofr-t2"><i>4시간 증가</i></div>
+    <button class="ofr-go" id="ofrGo"><i>이동</i></button>
+    <div class="ofr-tag"><i>구매 즉시 반영!</i></div>
   </div></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
