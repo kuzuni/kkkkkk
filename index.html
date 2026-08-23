@@ -120,9 +120,12 @@
     display:flex;align-items:center;justify-content:center;font-size:84px;line-height:1;
     background:#367cc1;
     box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #25d8ff,inset 0 0 0 16px #030509}
-  /* 쿨타임 끝 = 활성(노랑) / 쿨타임 중 = 대기(파랑, 기본값) / 미해금 = 잠금(회색) */
-  .slot2.ready{background:#fdfd10;
-    box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #ffb92b,inset 0 0 0 16px #030509}
+  /* 쿨타임 끝 = 활성 / 쿨타임 중 = 대기(파랑, 기본값) / 미해금 = 잠금(회색)
+     활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
+     골드 링(r48~55) + well 가장자리의 노란 안쪽 링(r36~43, 두께 8) 이 추가되는 구조다 */
+  .slot2.ready{background:#367cc1;
+    box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #ffb92b,inset 0 0 0 16px #030509,
+      inset 0 0 0 24px #fefe0c}
   .slot2.empty{background:#454464;
     box-shadow:inset 0 0 0 4px #030509,inset 0 0 0 12px #b9bccb,inset 0 0 0 16px #030509}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6) — 이모지 색을 탈색해 맞춘다 (잉크 56x64) */
