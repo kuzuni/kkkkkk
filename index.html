@@ -166,8 +166,8 @@
   /* `*` 리셋은 의사요소를 잡지 못해 기본이 content-box 다 — 지정하지 않으면 테두리 16px 만큼
      커지고 중심이 8px 우측으로 밀린다 */
   .tab[data-t="hero"] .ti::before{content:'';position:absolute;left:50%;top:50%;box-sizing:border-box;
-    width:111px;height:111px;margin:-55.5px 0 0 -55.5px;border-radius:50%;
-    border:8px solid #f0b23c;box-shadow:0 0 0 3px #1a0f05}
+    width:111px;height:111px;margin:-60.5px 0 0 -55.5px;border-radius:50%;
+    border:8px solid #f4d719;box-shadow:0 0 0 3px #1a0f05}
   /* 레퍼런스 라벨은 자당 advance 30px · 잉크 높이 33px 인 좁고 높은 게임 서체다.
      폭은 letter-spacing(36-6=30) 으로 맞추고, 라벨이 아이콘 하단을 ~19px 덮는다. */
   /* letter-spacing 은 마지막 글자 뒤에도 걸려 잉크가 박스 중심에서 3px 우측으로 밀린다 → left 로 되민다 */
@@ -194,11 +194,11 @@
   .tab.close .tx{display:flex}
   #tabbar.open .tab:not(.close) .ti{transform:scale(.85)}
   /* NEW 리본 — 칸 좌상단 앵커, 우상향 22°, 아직 한 번도 연 적 없는 탭에만 */
-  .tab .nw{display:none;position:absolute;left:-4px;top:10px;width:112px;height:46px;
-    transform:rotate(-10deg);transform-origin:50% 50%;
+  .tab .nw{display:none;position:absolute;left:-4px;top:12px;width:112px;height:38px;
+    transform:rotate(-20deg);transform-origin:50% 50%;
     background:linear-gradient(90deg,#8f1f1c 0 8px,#b42826 8px calc(100% - 8px),#8f1f1c calc(100% - 8px) 100%);
     border-top:3px solid #000;border-bottom:3px solid #000;box-shadow:0 4px 0 #7d1d17;
-    font-size:30px;line-height:38px;font-weight:900;color:#f2e15d;text-align:center;
+    font-size:28px;line-height:32px;font-weight:900;color:#f2e15d;text-align:center;
     letter-spacing:2px;z-index:4;overflow:hidden;
     text-shadow:0 3px 0 #000,0 -3px 0 #000,3px 0 0 #000,-3px 0 0 #000}
   .tab.fresh .nw{display:block}
