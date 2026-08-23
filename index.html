@@ -460,6 +460,110 @@
   #loading{position:absolute;inset:0;background:#0b0d18;display:flex;align-items:center;
     justify-content:center;z-index:40;font-size:28px;font-weight:800;color:#8ea0c7}
   #loading.off{display:none}
+
+  /* ==========================================================================
+     01 오프라인 보상 팝업 — 측정표 docs/measure/01-오프라인보상팝업.md
+     레퍼런스 1080x2340 절대 좌표를 그대로 쓴다. 그룹 상단(y=772)을 원점으로 삼아
+     .ofrs(1080x972) 안에 절대 배치하고, 그 스테이지만 프레임 세로 중앙에 놓는다.
+     (모달 아래 상품 배너가 모달 바깥에 있어서 공용 #modal 껍데기를 못 쓴다)
+     ========================================================================== */
+  #offw{position:absolute;inset:0;background:rgba(0,0,0,.80);display:none;
+    align-items:center;justify-content:center;z-index:34}
+  #offw.on{display:flex}
+  .ofrs{position:relative;width:1080px;height:972px;flex:0 0 auto}
+  .ofrs>*{position:absolute}
+  .ofrs .ot{color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
+    font-weight:900;white-space:nowrap;line-height:1}
+
+  /* 모달 상자 — 검정 7 + 갈색 11 = 테두리 18, 본문 베이지 + 별무늬 */
+  .ofr-box{left:51px;top:0;width:978px;height:657px;border-radius:54px;
+    border:7px solid #000;background:#57453A;box-sizing:border-box;overflow:hidden}
+  /* 타이틀바는 갈색 안쪽 테두리 위를 덮어 검정 테두리 안쪽 폭을 꽉 채운다(실측 x58~1021) */
+  .ofr-head{height:90px;background:#52403D;display:flex;align-items:center;justify-content:center}
+  .ofr-in{position:absolute;left:11px;right:11px;top:90px;bottom:11px;border-radius:36px;
+    border-top-left-radius:0;border-top-right-radius:0;overflow:hidden;background:#F0D9BA;
+    background-image:radial-gradient(#E5CAAC 4px,transparent 4.5px),
+      radial-gradient(#E5CAAC 3px,transparent 3.5px);
+    background-size:150px 150px,110px 110px;background-position:20px 30px,90px 95px}
+  .ofr-head span{font-size:60px;letter-spacing:-18px;text-indent:-18px;color:#fff;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;font-weight:900;line-height:1}
+
+  /* 최대 시간 안내 — 알약 우측 끝(690)에서 5px 안쪽에 우측 정렬 */
+  .ofr-max{left:0;top:122px;width:690px;padding-right:5px;box-sizing:border-box;text-align:right;
+    font-size:28px;letter-spacing:-5px;font-weight:800;color:#9B6C54;line-height:28px}
+
+  /* 경과 시간 알약 + 스톱워치 (알약 좌변 위로 겹침) */
+  .ofr-pill{left:411px;top:153px;width:280px;height:50px;border-radius:16px;
+    border:5px solid #000;box-sizing:border-box;
+    background:linear-gradient(180deg,#8182A0 0 75%,#707696 75%);
+    display:flex;align-items:center;justify-content:center}
+  .ofr-pill b{font-size:30px;letter-spacing:-5px;text-indent:-5px;color:#fff;font-weight:900;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;line-height:1;transform:translateX(-10px)}
+  .ofr-clock{left:356px;top:133px;width:64px;height:73px;font-size:62px;line-height:73px;
+    text-align:center}
+
+  /* 안내 문구 */
+  .ofr-lead{left:0;top:242px;width:1080px;text-align:center;font-size:42px;letter-spacing:-9px;
+    text-indent:-9px}
+
+  /* 보상 박스 + 초록 프레임 + 골드 + 수량 */
+  .ofr-rw{left:115px;top:288px;width:850px;height:150px;border-radius:36px;background:#D7C0A1}
+  .ofr-fr{left:477px;top:300px;width:126px;height:116px;border-radius:30px;
+    border:5px solid #000;box-sizing:border-box;background:#CBE849;padding:5px}
+  .ofr-fr i{display:flex;width:100%;height:100%;border-radius:24px;background:#94BC35;
+    align-items:center;justify-content:center;font-size:76px;line-height:1;font-style:normal}
+  .ofr-amt{left:0;top:407px;width:1080px;text-align:center;font-size:36px;letter-spacing:-1px}
+
+  /* 버튼 2개 — 상단 하이라이트 8 / 본체 / 하단 음영 8 */
+  .ofr-b{top:464px;height:148px;border-radius:48px;border:8px solid #000;box-sizing:border-box;
+    padding:0;cursor:pointer;font-size:48px;letter-spacing:-9px;text-indent:-9px;font-weight:900;
+    color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;line-height:1;
+    font-family:inherit}
+  .ofr-b.g{left:240px;width:249px;
+    background:linear-gradient(180deg,#ABFF7C 0 8px,#77E536 8px calc(100% - 8px),#40BC2A calc(100% - 8px))}
+  .ofr-b.b{left:540px;width:300px;
+    background:linear-gradient(180deg,#53E6F8 0 8px,#2ABDDA 8px calc(100% - 8px),#0CA4C9 calc(100% - 8px))}
+  .ofr-ad{left:528px;top:567px;width:65px;height:54px;transform:rotate(-8deg);
+    border-radius:8px;border:4px solid #000;box-sizing:border-box;background:#F5B728;
+    padding:3px 2px 2px 6px;pointer-events:none}
+  .ofr-ad i{display:block;width:100%;height:100%;border-radius:4px;background:#8C4400;
+    position:relative;font-style:normal}
+  .ofr-ad i::before{content:'';position:absolute;left:11px;top:9px;border-style:solid;
+    border-width:7.5px 0 7.5px 13px;border-color:transparent transparent transparent #FFF5CC}
+  .ofr-ad i b{position:absolute;right:-9px;bottom:-6px;font-size:21px;line-height:1;color:#fff;
+    font-weight:900;-webkit-text-stroke:3px #000;paint-order:stroke fill}
+
+  /* 모달 바깥 아래 상품 배너 */
+  .ofr-bn{left:66px;top:674px;width:948px;height:298px;border-radius:24px;
+    border:6px solid #000;box-sizing:border-box;background:#48F291;overflow:hidden}
+  .ofr-bn>u{position:absolute;left:9px;right:9px;top:20px;bottom:9px;border-radius:14px;
+    background:#39C28C;text-decoration:none}
+  /* 우측 티켓 노치 3개 (중심 y 1518/1592/1665 → 스테이지 746/820/893) */
+  .ofr-bn>s{position:absolute;right:-17px;width:34px;height:34px;border-radius:50%;
+    background:rgba(0,0,0,.80);text-decoration:none}
+  .ofr-bn>s:nth-of-type(1){top:55px}
+  .ofr-bn>s:nth-of-type(2){top:129px}
+  .ofr-bn>s:nth-of-type(3){top:202px}
+  /* 캐릭터 일러스트 자리 — 우측이 대각선인 민트 패널 */
+  .ofr-art{left:78px;top:783px;width:605px;height:276px;background:#91DEBE;
+    background-image:repeating-linear-gradient(-60deg,rgba(255,255,255,.28) 0 10px,transparent 10px 26px);
+    clip-path:polygon(0 0,74% 0,86% 44%,74% 100%,0 100%);
+    display:flex;align-items:center;justify-content:center;font-size:190px;line-height:1}
+  .ofr-t1{left:0;top:698px;width:894px;text-align:right;font-size:48px;letter-spacing:-10px;
+    text-indent:-10px;-webkit-text-stroke:5px #000}
+  .ofr-t2{left:0;top:764px;width:963px;text-align:right;font-size:62px;letter-spacing:-12px;
+    text-indent:-12px;font-weight:900;line-height:1;
+    background:linear-gradient(180deg,#FFF6BB,#FEBE55);-webkit-background-clip:text;
+    background-clip:text;color:transparent;
+    text-shadow:0 0 0 transparent;filter:drop-shadow(0 0 3px #000) drop-shadow(0 0 3px #000)}
+  .ofr-go{left:654px;top:834px;width:299px;height:118px;border-radius:40px;border:7px solid #000;
+    box-sizing:border-box;padding:0;cursor:pointer;font-family:inherit;font-weight:900;
+    font-size:61px;letter-spacing:-12px;text-indent:-12px;line-height:1;color:#fff;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;
+    background:linear-gradient(180deg,#98FF70 0 6px,#77E536 6px calc(100% - 7px),#3EBC2A calc(100% - 7px))}
+  .ofr-tag{left:115px;top:912px;width:350px;height:46px;border-radius:23px;background:#000;
+    font-size:30px;letter-spacing:-3px;text-indent:-3px;font-weight:800;color:#F0E164;
+    text-align:center;line-height:46px}
 </style>
 </head>
 <body>
@@ -544,6 +648,30 @@
   <div id="modal"><div class="mbox">
     <div class="mhead"><h2 id="mtitle"></h2></div>
     <div class="mbody" id="mbox"></div>
+  </div></div>
+  <!-- 01 오프라인 보상 팝업. 모달 + 그 바깥 아래 상품 배너가 한 덩어리라
+       공용 #modal 껍데기를 쓰지 않고 자체 오버레이로 둔다. -->
+  <div id="offw"><div class="ofrs">
+    <div class="ofr-box">
+      <div class="ofr-head"><span>오프라인 보상</span></div>
+      <div class="ofr-in"></div>
+    </div>
+    <div class="ofr-max" id="ofrMax">최대 6시간 0분</div>
+    <div class="ofr-pill"><b id="ofrTime">0시간 6분</b></div>
+    <div class="ofr-clock">⏱️</div>
+    <div class="ofr-lead ot">자리를 비우신 동안 사냥했어요!</div>
+    <div class="ofr-rw"></div>
+    <div class="ofr-fr"><i>🪙</i></div>
+    <div class="ofr-amt ot" id="ofrAmt">0</div>
+    <button class="ofr-b g" id="ofrGet">받기</button>
+    <button class="ofr-b b" id="ofrGet15">1.5배 받기</button>
+    <div class="ofr-ad"><i><b>AD</b></i></div>
+    <div class="ofr-bn"><u></u><s></s><s></s><s></s></div>
+    <div class="ofr-art">🐸</div>
+    <div class="ofr-t1 ot">오프라인 보상 최대 시간</div>
+    <div class="ofr-t2">4시간 증가</div>
+    <button class="ofr-go" id="ofrGo">이동</button>
+    <div class="ofr-tag">구매 즉시 반영!</div>
   </div></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -3160,17 +3288,36 @@ function renderUI(){
   uiDirty = false;
 }
 
-/* ---- 오프라인 보상 ---- */
+/* ---- 오프라인 보상 (화면 01) ---- */
+const OFF_MAX_H = 6;                        /* 최대 적립 시간 */
+let offPend = null;                         /* {sec, gold, dia} — 아직 안 받은 보상 */
+
+const hhmm = sec => Math.floor(sec/3600) + '시간 ' + Math.floor(sec%3600/60) + '분';
+
+/* 보상을 계산해 팝업을 띄운다. mul 배를 곱해 지급한다. */
+function showOfflineReward(sec, gold, dia){
+  offPend = { sec: sec, gold: gold, dia: dia };
+  $('ofrMax').textContent = '최대 ' + OFF_MAX_H + '시간 0분';
+  $('ofrTime').textContent = hhmm(sec);
+  $('ofrAmt').textContent = fmt(gold);
+  $('offw').classList.add('on');
+}
+function closeOfflineReward(){ $('offw').classList.remove('on'); offPend = null; }
+function claimOffline(mul){
+  if(!offPend) return;
+  S.gold += offPend.gold * mul;
+  S.dia  += Math.floor(offPend.dia * mul);
+  markDirty();
+  closeOfflineReward();
+}
+
 function offlineReward(lastTime){
   if(!lastTime) return;
-  const sec = Math.min((Date.now()-lastTime)/1000, 8*3600);
+  const sec = Math.min((Date.now()-lastTime)/1000, OFF_MAX_H*3600);
   if(sec < 60) return;
   const gold = eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5;
   const dia = Math.floor(sec/20);          /* 분당 3 다이아 */
-  S.gold += gold; S.dia += dia;
-  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60);
-  popup('🌙 방치 보상', '<p>자리를 비운 <b>' + h + '시간 ' + m + '분</b> 동안<br>'
-    + '골드 <b>💰' + fmt(gold) + '</b><br>다이아 <b>💎' + fmt(dia) + '</b><br>를 획득했습니다!</p>');
+  showOfflineReward(sec, gold, dia);
 }
 
 /* ==========================================================================
@@ -3215,6 +3362,9 @@ loadAtlases(() => {
   syncPanel();
   /* 레퍼런스 팝업은 헤더에 ✕ 가 없다(22·07·06·03 전부). 대신 딤을 눌러도 닫히게 한다 */
   $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
+  $('ofrGet').onclick = () => claimOffline(1);
+  $('ofrGet15').onclick = () => claimOffline(1.5);
+  $('ofrGo').onclick = () => { closeOfflineReward(); goTab('shop', true); };
   renderUI();
   offlineReward(lastTime);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
