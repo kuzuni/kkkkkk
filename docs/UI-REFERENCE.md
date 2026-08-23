@@ -746,3 +746,31 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
   3. `docs/measure/NN-*.md` 가 있으면 재측정하지 않고 그대로 쓴다
   4. 검증 루프를 이어서 돌린다
 - **직전 세션의 대화 내용을 안다고 가정하지 않는다.** 필요한 정보는 전부 위 파일에 있어야 한다
+
+### 세션 중복 실행 방지 (락)
+
+루틴은 2시간마다 새 세션을 띄운다. **한 회차가 2시간을 넘기면 다음 회차와 겹칠 수 있으므로**
+git push 를 이용한 락으로 상호 배제를 건다. (push 는 원자적이라 동시 시작 시 한쪽만 성공한다)
+
+**시작할 때**
+1. `git pull --rebase` 로 최신 상태를 받는다
+2. `docs/.session-lock` 이 있으면 안의 UTC 시각을 본다
+   - **3시간 이내** → 다른 세션이 작업 중이다. **아무것도 하지 말고 즉시 종료**한다
+   - **3시간 초과** → 죽은 락으로 간주하고 덮어쓴다
+3. 락 파일에 시작 시각(UTC)을 쓰고 커밋 후 **push 한다**
+4. **push 가 거부되면**(non-fast-forward) 다른 세션이 먼저 락을 잡은 것이다. **즉시 종료**한다
+
+**끝낼 때 (성공·중단·에러 무관)**
+- `docs/.session-lock` 을 삭제하고 커밋 + push 한다
+- 락 해제를 빠뜨리면 다음 3시간 동안 작업이 멈추므로 반드시 지운다
+
+```bash
+# 시작
+git pull --rebase
+[ -f docs/.session-lock ] && echo "락 존재 → 시각 확인 후 판단"
+date -u +%Y-%m-%dT%H:%M:%SZ > docs/.session-lock
+git add docs/.session-lock && git commit -m "chore: 세션 락 획득" && git push   # 실패하면 즉시 종료
+
+# 종료
+git rm docs/.session-lock && git commit -m "chore: 세션 락 해제" && git push
+```
