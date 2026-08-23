@@ -24,30 +24,36 @@
       env(safe-area-inset-top) 이 프레임 바깥에서 흡수하므로 프레임에 넣지 않는다).
      메인 재화 바는 104px 고정이고, 좌측 프로필 플레이트만 38px 아래로 돌출해
      전투 화면 위에 겹친다. */
+  /* 바 전체 세로 프로파일을 레퍼런스 실측 스톱으로 직접 적는다
+     (상단 12px 암부 그라데이션 → 본체 → 하단 3px 소프트 → 검정 3px) */
   #top{flex:none;position:relative;z-index:6;height:104px;overflow:visible;
-    border-bottom:3px solid #000;
-    /* 상단은 8px 암부 유지 + 4px 램프 (레퍼런스 y=84~96), 하단은 3px 검정 + 소프트 감쇠 */
-    background:linear-gradient(rgba(0,0,0,.78) 0,rgba(0,0,0,.78) 8px,rgba(0,0,0,0) 12px),#42362A;
-    box-shadow:inset 0 -6px 6px -3px rgba(0,0,0,.75);
-    -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision}
+    -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;
+    background:linear-gradient(180deg,rgb(28,23,20) 0,rgb(23,22,20) 7px,rgb(18,18,18) 11px,
+      #42362A 12px,#42362A 97px,rgb(60,47,39) 98px,rgb(36,31,28) 100px,#000 101px,#000 104px)}
 
-  /* 좌측 프로필 플레이트 — 우측 사선 기울기 -0.783/px, 바보다 34px 돌출 */
-  .prof{position:absolute;left:0;top:0;width:472px;height:138px;background:#332822;
-    clip-path:polygon(0 0,472px 0,364px 138px,0 138px);cursor:pointer;z-index:2;
-    box-shadow:inset 0 8px 0 #0A0908}
-  /* 검정 외곽은 «바 아래로 돌출한 구간» 에만 보인다 — 레퍼런스는 바 안쪽 사선에 검정선이 없다 */
-  .pedge{position:absolute;left:0;top:0;width:476px;height:142px;background:#000;
-    clip-path:polygon(0 0,476px 0,366px 142px,0 142px);z-index:1;pointer-events:none;
-    -webkit-mask-image:linear-gradient(#0000 0 100px,#000 100px);
-    mask-image:linear-gradient(#0000 0 100px,#000 100px)}
+  /* 좌측 프로필 플레이트 — 레퍼런스 사선은 «직선이 아니라 곡선» 이다
+     (상단 -1.13/px → 하단 -0.50/px 로 완만해진다). 직선으로 두면 중간이 최대 7px 벌어진다. */
+  .prof{position:absolute;left:0;top:0;width:468px;height:135px;background:#332822;
+    clip-path:polygon(0 0,468px 0,463px 16px,454px 24px,445px 32px,439px 40px,432px 48px,
+      424px 60px,416px 72px,411px 80px,407px 90px,403px 96px,394px 100px,386px 112px,
+      382px 120px,374px 128px,367px 132px,363px 135px,0 135px);
+    cursor:pointer;z-index:2;box-shadow:inset 0 8px 0 #0A0908}
+  /* 검정 외곽(7px)은 «바 아래로 돌출한 구간» 에만 보인다 — 레퍼런스는 바 안쪽 사선에 검정선이 없다 */
+  .pedge{position:absolute;left:0;top:0;width:475px;height:142px;background:#000;
+    clip-path:polygon(0 0,475px 0,470px 16px,461px 24px,452px 32px,446px 40px,439px 48px,
+      431px 60px,423px 72px,418px 80px,414px 90px,410px 96px,401px 100px,393px 112px,
+      389px 120px,381px 128px,374px 132px,370px 139px,0 142px);
+    z-index:1;pointer-events:none;
+    -webkit-mask-image:linear-gradient(#0000 0 101px,#000 101px);
+    mask-image:linear-gradient(#0000 0 101px,#000 101px)}
 
-  /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 4px */
+  /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 3px */
   .pface{position:absolute;left:0;top:0;width:141px;height:141px;box-sizing:border-box;
     border:3px solid #000;border-radius:16px;padding:9px;
-    background:linear-gradient(90deg,#645044 0 50%,#6A5A51 50%);
-    box-shadow:inset 0 9px 0 #776359,inset 0 -6px 0 #6F594C}
+    background:linear-gradient(90deg,#725B4B 0 50%,#7E6C62 50%);
+    box-shadow:inset 0 9px 0 #7F6E64,inset 0 -6px 0 #735C4E}
   .pface i{display:flex;width:100%;height:100%;box-sizing:border-box;font-style:normal;
-    border:4px solid #030000;border-radius:6px;background:#4579C5;
+    border:3px solid #030000;border-radius:6px;background:#4579C5;
     align-items:center;justify-content:center;font-size:66px;line-height:1}
 
   /* 닉네임 · 칭호 · 전투력 세로 컬럼 (초상화 우측 x=151, y=12)
@@ -55,37 +61,40 @@
      (본문 폰트가 레퍼런스의 압축 게임 폰트보다 넓고 높게 렌더된다):
      닉네임 잉크 16 / 칭호 19 / 전투력 23 / 재화 25 */
   .pcol{position:absolute;left:151px;top:12px;display:flex;flex-direction:column;
-    align-items:flex-start;gap:6px}
+    align-items:flex-start;gap:5px}
   /* scaleX — 본문 폰트가 레퍼런스 압축 폰트보다 넓어서, 잉크 «높이» 를 16px 로 맞추면
      폭이 레퍼런스(168px)보다 커진다. 높이는 font-size 로, 폭은 scaleX 로 맞춘다. */
-  .pnick{width:269px;height:30px;line-height:30px;border-radius:15px;background:#000;
+  .pnick{width:269px;height:30px;line-height:30px;border-radius:11px;background:#000;
     text-align:center;font-size:23px;letter-spacing:-.6px;font-weight:800;color:#fff;
     white-space:nowrap;overflow:hidden}
-  .pnick span{display:inline-block;transform:scaleX(.86)}
+  .pnick span{display:inline-block;transform:scaleX(.91)}
   .ptitle{position:relative;z-index:0;width:231px;height:41px;line-height:41px;text-align:center;
     font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;background:#000;
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
   /* 좌·우 꼭짓점까지 도는 3px 검정 외곽 — 검정 육각형 위에 3px 안쪽으로 채움을 얹는다 */
+  /* 베벨은 상단 3px 하이라이트 · 하단 4px 그림자로 «비대칭» 이다 (양쪽 같은 밝기면 안 됨) */
   .ptitle::before{content:'';position:absolute;inset:3px;z-index:-1;
-    background:linear-gradient(#7A6759 0 5px,#443B36 5px calc(100% - 6px),#7A6759 calc(100% - 6px));
+    background:linear-gradient(#6E5D50 0 3px,#443B36 3px calc(100% - 4px),#635145 calc(100% - 4px));
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
-  .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-2px}
+  .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
-    font-style:normal;font-size:31px;line-height:1;color:#F16B09}
-  .pcp b{font-size:36px;font-weight:800;color:#B9FC61;white-space:nowrap;
+    font-style:normal;font-size:28px;line-height:1;color:#F16B09}
+  .pcp b{font-size:35px;font-weight:800;color:#B9FC61;white-space:nowrap;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
   .curs{position:absolute;right:26px;top:31px;display:flex;gap:49px;z-index:3}
-  .cbox{position:relative;width:211px;height:50px;border-radius:25px;background:#221B13;
+  .cbox{position:relative;width:211px;height:50px;border-radius:19px;background:#221B13;
     display:flex;align-items:center;justify-content:center;padding-left:10px;box-sizing:border-box}
   /* 아이콘은 63x63 박스 안에서 flex 중앙 정렬 — 이모지 사이드베어링 때문에
      line-height 로 맞추면 잉크 중심이 알약 좌측 모서리에서 밀린다 */
   .cbox i{position:absolute;left:-31px;top:-7px;width:63px;height:63px;z-index:2;
     display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
-  .cGold i{font-size:52px}.cDia i{font-size:51px}
-  .cbox b{font-size:36px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
+  /* 💎 는 글리프가 가로로 납작해 코인과 같은 font-size 면 잉크 높이가 8px 짧다 */
+  .cGold i{font-size:52px}.cDia i{font-size:59px}
+  .cbox b{font-size:35px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;
     text-overflow:ellipsis;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cDia b{transform:translateX(3px)}
 
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
