@@ -773,30 +773,49 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
   4. 검증 루프를 이어서 돌린다
 - **직전 세션의 대화 내용을 안다고 가정하지 않는다.** 필요한 정보는 전부 위 파일에 있어야 한다
 
-### 세션 중복 실행 방지 (락)
+### 병렬 워커 — 작업 단위 선점 (2026-08-24 개정)
 
-루틴은 2시간마다 새 세션을 띄운다. **한 회차가 2시간을 넘기면 다음 회차와 겹칠 수 있으므로**
-git push 를 이용한 락으로 상호 배제를 건다. (push 는 원자적이라 동시 시작 시 한쪽만 성공한다)
+> **옛 «전역 락(docs/.session-lock)» 방식은 폐기됐다.** 그 방식은 한 번에 한 세션만 돌게 하므로
+> 병렬 진행이 불가능하다. `.session-lock` 파일을 만들지도, 보고 종료하지도 마라.
+
+클라우드 워커 **A(:05) · B(:20) · C(:35) · D(:50)** 4개가 매시간 돌아 **동시에 최대 4개 세션**이 작업한다.
+전부 `index.html` 한 파일이므로 **작업 단위(ID)로 선점**해서 구간을 나눈다.
 
 **시작할 때**
-1. `git pull --rebase` 로 최신 상태를 받는다
-2. `docs/.session-lock` 이 있으면 안의 UTC 시각을 본다
-   - **3시간 이내** → 다른 세션이 작업 중이다. **아무것도 하지 말고 즉시 종료**한다
-   - **3시간 초과** → 죽은 락으로 간주하고 덮어쓴다
-3. 락 파일에 시작 시각(UTC)을 쓰고 커밋 후 **push 한다**
-4. **push 가 거부되면**(non-fast-forward) 다른 세션이 먼저 락을 잡은 것이다. **즉시 종료**한다
+1. `git checkout main || git checkout -B main origin/main` → `git pull --rebase origin main`
+2. `SID=sess-$(date -u +%H%M)-$RANDOM` 으로 세션 식별자를 만든다
+3. `docs/PROGRESS.md` 의 «작업 단위» 표 순서(A1→A5→01→23)대로 훑어
+   **미완료이면서 `docs/claims/<ID>.lock` 이 없는** 첫 작업을 고른다
+   - lock 이 있어도 안의 UTC 시각이 **90분 초과**면 죽은 것으로 보고 뺏는다
+4. lock 파일에 `<UTC시각> <SID>` 한 줄을 쓰고 커밋 후 push
+5. **push 가 거부되면** `git pull --rebase` 후 다시 본다
+   - 남이 같은 ID 를 먼저 잡았으면 **그 작업만 포기하고 다음 미선점 작업**으로 간다 (세션을 끝내지 않는다)
+   - 잡을 게 하나도 없을 때만 종료한다
 
 **끝낼 때 (성공·중단·에러 무관)**
-- `docs/.session-lock` 을 삭제하고 커밋 + push 한다
-- 락 해제를 빠뜨리면 다음 3시간 동안 작업이 멈추므로 반드시 지운다
+- `docs/claims/<ID>.lock` 을 삭제하고 커밋 + push 한다
+- 빼먹으면 90분 동안 그 작업이 막히므로 반드시 지운다
 
 ```bash
 # 시작
-git pull --rebase
-[ -f docs/.session-lock ] && echo "락 존재 → 시각 확인 후 판단"
-date -u +%Y-%m-%dT%H:%M:%SZ > docs/.session-lock
-git add docs/.session-lock && git commit -m "chore: 세션 락 획득" && git push   # 실패하면 즉시 종료
+git checkout main 2>/dev/null || git checkout -B main origin/main
+git pull --rebase origin main
+SID=sess-$(date -u +%H%M)-$RANDOM
+ls docs/claims/                                   # 선점 현황 확인
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $SID" > docs/claims/A1.lock
+git add docs/claims/A1.lock && git commit -m "chore: A1 선점 ($SID)"
+git push origin main    # 거부되면 pull --rebase 후 재확인 → 남의 것이면 다음 작업으로
 
 # 종료
-git rm docs/.session-lock && git commit -m "chore: 세션 락 해제" && git push
+git rm docs/claims/A1.lock && git commit -m "chore: A1 선점 해제" && git push origin main
 ```
+
+**충돌 처리**
+- push 전 항상 `git pull --rebase origin main`
+- `index.html` 충돌 시 **양쪽 변경을 모두 살린다** (서로 다른 구간이라 대개 자동 병합됨).
+  내 작업 구간이 아닌 곳은 남의 버전을 그대로 둔다. 병합 후 문법 검사 + 헤드리스로 에러 0건 확인
+- `PROGRESS.md` 충돌 시 **양쪽 행을 모두 살린다**
+- 비평 기록은 `docs/review/<ID>-이름.md` 에 **자기 파일로만** 쓴다 (공용 `review-log.md` 추가 금지)
+
+**전체 지시서는 `docs/ROUTINE.md`** 에 있다. 루틴 4개는 그 파일을 읽고 그대로 수행하므로,
+지시를 바꾸려면 `ROUTINE.md` 하나만 고치면 된다.
