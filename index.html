@@ -12,9 +12,9 @@
      따라서 #app 안의 좌표는 1080 프레임 기준값을 그대로 쓰면 된다. */
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
-  /* 기준 프레임 1080x2340(9:19.5). 폭은 1080 고정, 높이는 기기 비율에 맞춰 fit()이 덮어쓴다.
+  /* 기준 프레임 1080x1920(9:16). 폭은 1080 고정, 높이는 기기 비율에 맞춰 fit()이 덮어쓴다.
      남는 높이는 전투 캔버스(#stagearea)가 전부 흡수한다. */
-  #app{flex:none;width:1080px;height:2340px;transform-origin:center center;position:relative;overflow:hidden;
+  #app{flex:none;width:1080px;height:1920px;transform-origin:center center;position:relative;overflow:hidden;
     background:#0a0c16;display:flex;flex-direction:column;box-shadow:0 0 140px rgba(90,140,255,.16)}
 
   /* ============ 최상단: 프로필 + 재화 ============ */
@@ -43,7 +43,7 @@
   .cGold b{color:#ffd45e}.cDia b{color:#7fe0ff}.cRel b{color:#d9a2ff}
 
   /* ============ 전투 화면 ============ */
-  /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 2340 -> 1284px) */
+  /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
   #stagearea{position:relative;flex:1;min-height:0;width:1080px;background:#0a0c16}
   #view{display:block;width:1080px;height:100%}
 
@@ -256,7 +256,7 @@
   </div>
 
   <div id="stagearea">
-    <canvas id="view" width="1080" height="1284"></canvas>
+    <canvas id="view" width="1080" height="864"></canvas>
     <div id="stinfo">
       <div class="chap" id="chapN">1-1 <em>스테이지</em></div>
       <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
@@ -332,11 +332,11 @@ const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
 const $ = id => document.getElementById(id);
 
 /* ---------------- 화면 맞춤 ---------------- */
-/* 기준 프레임 1080x2340(9:19.5). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
+/* 기준 프레임 1080x1920(9:16). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
    안전영역은 #wrap 패딩으로 프레임 바깥에서 빠지므로 wrap.clientWidth/Height 를 기준으로 잰다. */
 const wrap = $('wrap'), app = $('app');
 const FRAME_W = 1080, FRAME_H_MIN = 1600, FRAME_H_MAX = 2600;
-let frameH = 2340;
+let frameH = 1920;
 function fit(){
   const AW = wrap.clientWidth, AH = wrap.clientHeight;
   if(!AW || !AH) return;
