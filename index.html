@@ -8,218 +8,226 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
-  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  #app{width:540px;height:960px;transform-origin:center center;position:relative;overflow:hidden;
-    background:#0a0c16;display:flex;flex-direction:column;box-shadow:0 0 70px rgba(90,140,255,.16)}
+  /* 안전영역(노치·홈 인디케이터)은 프레임 바깥에서 흡수한다.
+     따라서 #app 안의 좌표는 1080 프레임 기준값을 그대로 쓰면 된다. */
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  /* 기준 프레임 1080x2340(9:19.5). 폭은 1080 고정, 높이는 기기 비율에 맞춰 fit()이 덮어쓴다.
+     남는 높이는 전투 캔버스(#stagearea)가 전부 흡수한다. */
+  #app{flex:none;width:1080px;height:2340px;transform-origin:center center;position:relative;overflow:hidden;
+    background:#0a0c16;display:flex;flex-direction:column;box-shadow:0 0 140px rgba(90,140,255,.16)}
 
   /* ============ 최상단: 프로필 + 재화 ============ */
-  #top{flex:none;height:56px;display:flex;align-items:center;gap:6px;padding:5px 7px;
-    background:linear-gradient(180deg,#1d2647,#131a33);border-bottom:2px solid #3a4778}
-  .prof{display:flex;align-items:center;gap:6px;cursor:pointer;flex:none}
-  .pface{width:42px;height:42px;border-radius:10px;flex:none;
-    border:2px solid #f0b44c;background:linear-gradient(180deg,#2b3560,#1a2242);
-    display:flex;align-items:center;justify-content:center;font-size:21px;position:relative}
-  .pface b{position:absolute;bottom:-5px;left:50%;transform:translateX(-50%);background:#f0b44c;color:#2a2107;
-    font-size:8.5px;font-weight:900;border-radius:6px;padding:0 4px;border:1px solid #7a5410;white-space:nowrap}
-  .pinfo{width:96px}
-  .pcp{font-size:12.5px;font-weight:900;color:#ffd45e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pexp{height:6px;border-radius:3px;background:#0d1226;border:1px solid #2b3866;margin-top:3px;overflow:hidden}
+  #top{flex:none;height:112px;display:flex;align-items:center;gap:12px;padding:10px 14px;
+    background:linear-gradient(180deg,#1d2647,#131a33);border-bottom:4px solid #3a4778}
+  .prof{display:flex;align-items:center;gap:12px;cursor:pointer;flex:none}
+  .pface{width:84px;height:84px;border-radius:20px;flex:none;
+    border:4px solid #f0b44c;background:linear-gradient(180deg,#2b3560,#1a2242);
+    display:flex;align-items:center;justify-content:center;font-size:42px;position:relative}
+  .pface b{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:#f0b44c;color:#2a2107;
+    font-size:17px;font-weight:900;border-radius:12px;padding:0 8px;border:2px solid #7a5410;white-space:nowrap}
+  .pinfo{width:192px}
+  .pcp{font-size:25px;font-weight:900;color:#ffd45e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pexp{height:12px;border-radius:6px;background:#0d1226;border:2px solid #2b3866;margin-top:6px;overflow:hidden}
   .pexp>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#7ce6a0,#49c46e)}
-  .prank{font-size:9.5px;font-weight:900;color:#9fc0ff;margin-top:2px}
+  .prank{font-size:19px;font-weight:900;color:#9fc0ff;margin-top:4px}
 
-  .curs{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
-  .crow{display:flex;gap:4px}
-  .cbox{flex:1;display:flex;align-items:center;gap:3px;background:#0b0f22;border:1.3px solid #2f3d70;
-    border-radius:20px;padding:2px 3px 2px 6px;min-width:0}
-  .cbox i{font-style:normal;font-size:11px;flex:none}
-  .cbox b{flex:1;font-size:11px;font-weight:900;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cbox u{flex:none;width:15px;height:15px;border-radius:50%;background:linear-gradient(180deg,#7ce6a0,#3aa860);
-    color:#06281a;font-size:12px;font-weight:900;line-height:14px;text-align:center;text-decoration:none;cursor:pointer}
+  .curs{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .crow{display:flex;gap:8px}
+  .cbox{flex:1;display:flex;align-items:center;gap:6px;background:#0b0f22;border:2.6px solid #2f3d70;
+    border-radius:40px;padding:4px 6px 4px 12px;min-width:0}
+  .cbox i{font-style:normal;font-size:22px;flex:none}
+  .cbox b{flex:1;font-size:22px;font-weight:900;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cbox u{flex:none;width:30px;height:30px;border-radius:50%;background:linear-gradient(180deg,#7ce6a0,#3aa860);
+    color:#06281a;font-size:24px;font-weight:900;line-height:28px;text-align:center;text-decoration:none;cursor:pointer}
   .cGold b{color:#ffd45e}.cDia b{color:#7fe0ff}.cRel b{color:#d9a2ff}
 
   /* ============ 전투 화면 ============ */
-  #stagearea{position:relative;flex:none;width:540px;height:372px;background:#0a0c16}
-  #view{display:block;width:540px;height:372px}
+  /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 2340 -> 1284px) */
+  #stagearea{position:relative;flex:1;min-height:0;width:1080px;background:#0a0c16}
+  #view{display:block;width:1080px;height:100%}
 
   /* 스테이지 정보 (상단 중앙) */
-  #stinfo{position:absolute;left:50%;transform:translateX(-50%);top:5px;width:230px;text-align:center;pointer-events:none}
-  #stinfo .chap{font-size:12.5px;font-weight:900;text-shadow:0 1px 3px #000;letter-spacing:-.3px}
+  #stinfo{position:absolute;left:50%;transform:translateX(-50%);top:10px;width:460px;text-align:center;pointer-events:none}
+  #stinfo .chap{font-size:25px;font-weight:900;text-shadow:0 2px 6px #000;letter-spacing:-.6px}
   #stinfo .chap em{font-style:normal;color:#ffd45e}
-  #stinfo .kbar{height:8px;border-radius:4px;background:rgba(6,9,20,.9);border:1px solid #3a4778;
-    margin-top:3px;overflow:hidden;position:relative}
+  #stinfo .kbar{height:16px;border-radius:8px;background:rgba(6,9,20,.9);border:2px solid #3a4778;
+    margin-top:6px;overflow:hidden;position:relative}
   #stinfo .kbar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,#ffd45e)}
-  #stinfo .kbar span{position:absolute;inset:0;font-size:7.5px;line-height:8px;font-weight:900;color:#fff;text-shadow:0 1px 2px #000}
+  #stinfo .kbar span{position:absolute;inset:0;font-size:15px;line-height:16px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
 
   /* 좌우 세로 아이콘 */
-  .side{position:absolute;top:44px;display:flex;flex-direction:column;gap:4px;z-index:3}
-  #sideL{left:5px}
-  #sideR{right:5px}
-  .ibtn{width:44px;height:43px;border-radius:10px;position:relative;cursor:pointer;
-    background:linear-gradient(180deg,#2a3663,#18203c);border:1.5px solid #4d5e99;
+  .side{position:absolute;top:88px;display:flex;flex-direction:column;gap:8px;z-index:3}
+  #sideL{left:10px}
+  #sideR{right:10px}
+  .ibtn{width:88px;height:86px;border-radius:20px;position:relative;cursor:pointer;
+    background:linear-gradient(180deg,#2a3663,#18203c);border:3px solid #4d5e99;
     display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .ibtn .si{font-size:16px;line-height:17px}
-  .ibtn .sl{font-size:8px;font-weight:900;color:#c2d0f0;margin-top:1px}
-  .ibtn .bdg{position:absolute;top:-3px;right:-3px;min-width:14px;height:14px;border-radius:7px;background:#ff3b5c;
-    color:#fff;font-size:8.5px;font-weight:900;line-height:14px;text-align:center;padding:0 3px;
-    border:1.5px solid #0a0c16;display:none}
+  .ibtn .si{font-size:32px;line-height:34px}
+  .ibtn .sl{font-size:16px;font-weight:900;color:#c2d0f0;margin-top:2px}
+  .ibtn .bdg{position:absolute;top:-6px;right:-6px;min-width:28px;height:28px;border-radius:14px;background:#ff3b5c;
+    color:#fff;font-size:17px;font-weight:900;line-height:28px;text-align:center;padding:0 6px;
+    border:3px solid #0a0c16;display:none}
   .ibtn.on .bdg{display:block}
 
   /* 플레이어 HP + 스킬 슬롯 */
-  #battlefoot{position:absolute;left:0;right:0;bottom:0;padding:4px 6px 5px;
+  #battlefoot{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 10px;
     background:linear-gradient(180deg,rgba(8,11,24,0),rgba(8,11,24,.92) 35%)}
-  #hpwrap{height:12px;border-radius:6px;background:rgba(6,9,20,.9);border:1px solid #4a2b3a;
+  #hpwrap{height:24px;border-radius:12px;background:rgba(6,9,20,.9);border:2px solid #4a2b3a;
     overflow:hidden;position:relative}
   #hpwrap>i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff3b5c,#ff9a5c)}
-  #hpwrap span{position:absolute;inset:0;font-size:8px;line-height:12px;text-align:center;font-weight:900;
-    color:#fff;text-shadow:0 1px 2px #000}
-  #slots{display:flex;gap:3px;margin-top:4px}
-  .slot2{flex:1;height:36px;border-radius:8px;background:#141b33;border:1.4px solid #33406e;
-    position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:16px}
-  .slot2.empty{opacity:.3;font-size:11px;color:#5c6789}
+  #hpwrap span{position:absolute;inset:0;font-size:16px;line-height:24px;text-align:center;font-weight:900;
+    color:#fff;text-shadow:0 2px 4px #000}
+  #slots{display:flex;gap:6px;margin-top:8px}
+  .slot2{flex:1;height:72px;border-radius:16px;background:#141b33;border:2.8px solid #33406e;
+    position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:32px}
+  .slot2.empty{opacity:.3;font-size:22px;color:#5c6789}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.72);height:0%}
-  .slot2 .lvv2{position:absolute;bottom:1px;right:2px;font-size:7.5px;font-weight:900;color:#ffd45e;z-index:2}
+  .slot2 .lvv2{position:absolute;bottom:2px;right:4px;font-size:15px;font-weight:900;color:#ffd45e;z-index:2}
 
   /* 튜토리얼 배너 */
-  #tuto{flex:none;display:flex;align-items:center;gap:7px;padding:5px 8px;
-    background:linear-gradient(90deg,#241a42,#2e2352);border-top:1.5px solid #6d54ad;border-bottom:1.5px solid #6d54ad}
+  #tuto{flex:none;display:flex;align-items:center;gap:14px;padding:10px 16px;
+    background:linear-gradient(90deg,#241a42,#2e2352);border-top:3px solid #6d54ad;border-bottom:3px solid #6d54ad}
   #tuto.off{display:none}
   #tuto .tinfo{flex:1;min-width:0}
-  #tuto .tt{font-size:11.5px;font-weight:900;color:#ffe9a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #tuto .tp{height:5px;border-radius:3px;background:#171b34;margin:3px 0 2px;overflow:hidden}
+  #tuto .tt{font-size:23px;font-weight:900;color:#ffe9a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tuto .tp{height:10px;border-radius:6px;background:#171b34;margin:6px 0 4px;overflow:hidden}
   #tuto .tp>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffd45e,#ff9a5c)}
-  #tuto .tsub{font-size:9.5px;color:#a9bbe6;font-weight:800}
-  #tuto .tbtn{flex:none;padding:7px 11px;border-radius:8px;border:0;font-size:11px;font-weight:900;
+  #tuto .tsub{font-size:19px;color:#a9bbe6;font-weight:800}
+  #tuto .tbtn{flex:none;padding:14px 22px;border-radius:16px;border:0;font-size:22px;font-weight:900;
     color:#2a2107;background:linear-gradient(180deg,#ffe07a,#f0a63c);cursor:pointer}
   #tuto .tbtn:disabled{background:#26304e;color:#6e7a9c;cursor:default}
 
   /* ============ 패널 ============ */
-  #panel{flex:1;min-height:0;background:#0d1020;display:flex;flex-direction:column}
-  .body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:8px 8px 14px;display:none}
+  /* 고정 높이(844 = 기존 422 x2). 넘치는 내용은 .body 내부 스크롤로 흡수 */
+  #panel{flex:none;height:844px;min-height:0;background:#0d1020;display:flex;flex-direction:column}
+  .body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 28px;display:none}
   .body.on{display:block}
-  .body::-webkit-scrollbar{width:5px}
-  .body::-webkit-scrollbar-thumb{background:#2a3357;border-radius:3px}
+  .body::-webkit-scrollbar{width:10px}
+  .body::-webkit-scrollbar-thumb{background:#2a3357;border-radius:6px}
 
-  #tabbar{flex:none;height:60px;display:flex;background:linear-gradient(180deg,#1a2240,#0b0f1e);
-    border-top:2px solid #3a4778}
-  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  #tabbar{flex:none;height:120px;display:flex;background:linear-gradient(180deg,#1a2240,#0b0f1e);
+    border-top:4px solid #3a4778}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     cursor:pointer;position:relative}
-  .tab .ti{font-size:19px;line-height:20px;filter:grayscale(.6) opacity(.65)}
-  .tab .tl{font-size:9.5px;font-weight:900;color:#7787ab}
-  .tab.on{background:linear-gradient(180deg,#2c3a6b,#1a2447);box-shadow:inset 0 2px 0 #7fd0ff}
-  .tab.on .ti{filter:none;transform:translateY(-1px)}
+  .tab .ti{font-size:38px;line-height:40px;filter:grayscale(.6) opacity(.65)}
+  .tab .tl{font-size:19px;font-weight:900;color:#7787ab}
+  .tab.on{background:linear-gradient(180deg,#2c3a6b,#1a2447);box-shadow:inset 0 4px 0 #7fd0ff}
+  .tab.on .ti{filter:none;transform:translateY(-2px)}
   .tab.on .tl{color:#9fdcff}
-  .tab .bdg{position:absolute;top:6px;right:calc(50% - 19px);width:9px;height:9px;border-radius:50%;
-    background:#ff3b5c;border:1.5px solid #0b0f1e;display:none}
+  .tab .bdg{position:absolute;top:12px;right:calc(50% - 38px);width:18px;height:18px;border-radius:50%;
+    background:#ff3b5c;border:3px solid #0b0f1e;display:none}
   .tab.alert .bdg{display:block}
 
   /* ============ 공통 파츠 ============ */
-  .sect{background:linear-gradient(180deg,#182144,#121a34);border:1.5px solid #33406e;
-    border-radius:12px;padding:9px 10px;margin-bottom:8px}
-  .sect h3{font-size:12.5px;color:#bfd4ff;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
-  .sect h3 em{font-style:normal;font-size:11px;color:#8fd6ff;font-weight:800}
-  .sect p{font-size:11.5px;color:#9fb0d4;line-height:1.65;font-weight:700}
+  .sect{background:linear-gradient(180deg,#182144,#121a34);border:3px solid #33406e;
+    border-radius:24px;padding:18px 20px;margin-bottom:16px}
+  .sect h3{font-size:25px;color:#bfd4ff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+  .sect h3 em{font-style:normal;font-size:22px;color:#8fd6ff;font-weight:800}
+  .sect p{font-size:23px;color:#9fb0d4;line-height:1.65;font-weight:700}
   .sect p b{color:#ffd45e}
-  .gbtn{display:block;width:100%;padding:11px;border-radius:10px;border:0;cursor:pointer;
-    font-size:13px;font-weight:900;color:#2a2107;background:linear-gradient(180deg,#ffe07a,#f0a63c);
-    box-shadow:0 2px 0 #a06d1c}
-  .gbtn.blue{color:#062033;background:linear-gradient(180deg,#8fe6ff,#4aa8ff);box-shadow:0 2px 0 #1d68a8}
-  .gbtn.green{color:#06281a;background:linear-gradient(180deg,#9df0b0,#48c882);box-shadow:0 2px 0 #1e7a4c}
-  .gbtn.purple{color:#160b28;background:linear-gradient(180deg,#d3a8ff,#9b5cf0);box-shadow:0 2px 0 #6a2bb0}
+  .gbtn{display:block;width:100%;padding:22px;border-radius:20px;border:0;cursor:pointer;
+    font-size:26px;font-weight:900;color:#2a2107;background:linear-gradient(180deg,#ffe07a,#f0a63c);
+    box-shadow:0 4px 0 #a06d1c}
+  .gbtn.blue{color:#062033;background:linear-gradient(180deg,#8fe6ff,#4aa8ff);box-shadow:0 4px 0 #1d68a8}
+  .gbtn.green{color:#06281a;background:linear-gradient(180deg,#9df0b0,#48c882);box-shadow:0 4px 0 #1e7a4c}
+  .gbtn.purple{color:#160b28;background:linear-gradient(180deg,#d3a8ff,#9b5cf0);box-shadow:0 4px 0 #6a2bb0}
   .gbtn:disabled{background:#26304e;color:#68738f;box-shadow:none;cursor:default}
-  .gbtn small{display:block;font-size:10px;font-weight:800;opacity:.85}
-  .row2{display:flex;gap:6px}
+  .gbtn small{display:block;font-size:20px;font-weight:800;opacity:.85}
+  .row2{display:flex;gap:12px}
   .row2>*{flex:1}
-  .subtabs{display:flex;gap:5px;margin-bottom:8px}
-  .stab{flex:1;padding:8px 0;text-align:center;font-size:11.5px;font-weight:900;border-radius:9px;
-    background:#141b34;border:1.4px solid #2b3866;color:#8d9cc2;cursor:pointer}
+  .subtabs{display:flex;gap:10px;margin-bottom:16px}
+  .stab{flex:1;padding:16px 0;text-align:center;font-size:23px;font-weight:900;border-radius:18px;
+    background:#141b34;border:2.8px solid #2b3866;color:#8d9cc2;cursor:pointer}
   .stab.on{background:linear-gradient(180deg,#2b3f74,#1e2c56);border-color:#5f7cc4;color:#bfe0ff}
 
-  .up{display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:6px;border-radius:11px;
-    background:linear-gradient(180deg,#172046,#121a34);border:1.4px solid #2b3866;cursor:pointer}
+  .up{display:flex;align-items:center;gap:18px;padding:16px 18px;margin-bottom:12px;border-radius:22px;
+    background:linear-gradient(180deg,#172046,#121a34);border:2.8px solid #2b3866;cursor:pointer}
   .up.no{opacity:.45}
-  .up .ic{width:34px;height:34px;flex:none;border-radius:9px;display:flex;align-items:center;
-    justify-content:center;font-size:18px;background:#202c56;border:1px solid #3a4c88}
+  .up .ic{width:68px;height:68px;flex:none;border-radius:18px;display:flex;align-items:center;
+    justify-content:center;font-size:36px;background:#202c56;border:2px solid #3a4c88}
   .up .uinfo{flex:1;min-width:0}
-  .up .un{font-size:12.5px;font-weight:900}
-  .up .un i{font-style:normal;font-size:10.5px;color:#6ec6ff;margin-left:5px}
-  .up .uv{font-size:10.5px;color:#8b9ac0;margin-top:2px;font-weight:800;
+  .up .un{font-size:25px;font-weight:900}
+  .up .un i{font-style:normal;font-size:21px;color:#6ec6ff;margin-left:10px}
+  .up .uv{font-size:21px;color:#8b9ac0;margin-top:4px;font-weight:800;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .up .uc{flex:none;text-align:right;font-size:11.5px;font-weight:900;color:#ffd45e;white-space:nowrap}
-  .up .uc small{display:block;font-size:9px;color:#7b88a8;font-weight:800}
+  .up .uc{flex:none;text-align:right;font-size:23px;font-weight:900;color:#ffd45e;white-space:nowrap}
+  .up .uc small{display:block;font-size:18px;color:#7b88a8;font-weight:800}
 
-  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-  .cell{position:relative;border-radius:10px;padding:5px 3px 4px;text-align:center;cursor:pointer;
-    background:#131828;border:1.6px solid #262f52;overflow:hidden}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .cell{position:relative;border-radius:20px;padding:10px 6px 8px;text-align:center;cursor:pointer;
+    background:#131828;border:3.2px solid #262f52;overflow:hidden}
   .cell.lock{opacity:.38}
   .cell canvas{display:block;margin:0 auto}
-  .cell .nm{font-size:9.5px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cell .lvv{font-size:9px;font-weight:800;color:#93a2c6}
-  .cell .eqm{position:absolute;top:2px;left:2px;font-size:8px;font-weight:900;background:#2f9d5b;
-    color:#eafff2;border-radius:4px;padding:0 3px}
-  .cell .frag{position:absolute;top:2px;right:2px;font-size:8px;font-weight:900;
-    background:#1b2445;color:#a9bbe6;border-radius:4px;padding:0 3px}
+  .cell .nm{font-size:19px;font-weight:900;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell .lvv{font-size:18px;font-weight:800;color:#93a2c6}
+  .cell .eqm{position:absolute;top:4px;left:4px;font-size:16px;font-weight:900;background:#2f9d5b;
+    color:#eafff2;border-radius:8px;padding:0 6px}
+  .cell .frag{position:absolute;top:4px;right:4px;font-size:16px;font-weight:900;
+    background:#1b2445;color:#a9bbe6;border-radius:8px;padding:0 6px}
 
-  .odds{display:flex;gap:3px;margin-top:6px}
-  .odds div{flex:1;text-align:center;font-size:8.5px;font-weight:900;border-radius:5px;padding:3px 0;
-    background:#0e1428;border:1px solid #26304e}
-  .sexp{height:7px;border-radius:4px;background:#0e1428;border:1px solid #2b3866;overflow:hidden;margin-top:5px}
+  .odds{display:flex;gap:6px;margin-top:12px}
+  .odds div{flex:1;text-align:center;font-size:17px;font-weight:900;border-radius:10px;padding:6px 0;
+    background:#0e1428;border:2px solid #26304e}
+  .sexp{height:14px;border-radius:8px;background:#0e1428;border:2px solid #2b3866;overflow:hidden;margin-top:10px}
   .sexp>i{display:block;height:100%;background:linear-gradient(90deg,#8fd6ff,#6a8cff);width:0%}
 
-  .li{background:linear-gradient(180deg,#172046,#121a34);border:1.4px solid #2b3866;
-    border-radius:11px;padding:9px 10px;margin-bottom:6px}
-  .li .lt{font-size:12px;font-weight:900}
-  .li .ls{font-size:10.5px;color:#9fb0d4;font-weight:700;margin-top:3px;line-height:1.5}
-  .li .lf{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:8px}
-  .li .lf span{font-size:10.5px;color:#a9bbe6;font-weight:800}
-  .mini{padding:7px 13px;border-radius:8px;border:0;font-size:11px;font-weight:900;cursor:pointer;
+  .li{background:linear-gradient(180deg,#172046,#121a34);border:2.8px solid #2b3866;
+    border-radius:22px;padding:18px 20px;margin-bottom:12px}
+  .li .lt{font-size:24px;font-weight:900}
+  .li .ls{font-size:21px;color:#9fb0d4;font-weight:700;margin-top:6px;line-height:1.5}
+  .li .lf{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:16px}
+  .li .lf span{font-size:21px;color:#a9bbe6;font-weight:800}
+  .mini{padding:14px 26px;border-radius:16px;border:0;font-size:22px;font-weight:900;cursor:pointer;
     color:#06281a;background:linear-gradient(180deg,#9df0b0,#48c882);white-space:nowrap}
   .mini.gold{color:#2a2107;background:linear-gradient(180deg,#ffe07a,#f0a63c)}
   .mini:disabled{background:#26304e;color:#68738f;cursor:default}
-  .qp{height:7px;border-radius:4px;background:#0e1428;overflow:hidden;margin-top:6px}
+  .qp{height:14px;border-radius:8px;background:#0e1428;overflow:hidden;margin-top:12px}
   .qp>i{display:block;height:100%;background:linear-gradient(90deg,#3fd0ff,#8b7bff)}
 
-  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .day{border-radius:8px;background:#131b33;border:1.3px solid #2b3866;padding:4px 1px;text-align:center}
-  .day .dn{font-size:8.5px;color:#8b9ac0;font-weight:800}
-  .day .di{font-size:14px;line-height:16px}
-  .day .dv{font-size:8px;font-weight:900;color:#cfe0ff}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  .day{border-radius:16px;background:#131b33;border:2.6px solid #2b3866;padding:8px 2px;text-align:center}
+  .day .dn{font-size:17px;color:#8b9ac0;font-weight:800}
+  .day .di{font-size:28px;line-height:32px}
+  .day .dv{font-size:16px;font-weight:900;color:#cfe0ff}
   .day.got{opacity:.35}
-  .day.today{border-color:#ffd45e;box-shadow:0 0 8px rgba(255,212,94,.4)}
+  .day.today{border-color:#ffd45e;box-shadow:0 0 16px rgba(255,212,94,.4)}
 
-  .wheel{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
-  .slot{border-radius:9px;background:#131b33;border:1.5px solid #2b3866;padding:7px 2px;text-align:center}
-  .slot.hit{border-color:#ffd45e;background:#2e2410;box-shadow:0 0 12px rgba(255,212,94,.5)}
-  .slot .si2{font-size:16px}
-  .slot .sv{font-size:9px;font-weight:900;color:#cfe0ff;margin-top:2px}
+  .wheel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .slot{border-radius:18px;background:#131b33;border:3px solid #2b3866;padding:14px 4px;text-align:center}
+  .slot.hit{border-color:#ffd45e;background:#2e2410;box-shadow:0 0 24px rgba(255,212,94,.5)}
+  .slot .si2{font-size:32px}
+  .slot .sv{font-size:18px;font-weight:900;color:#cfe0ff;margin-top:4px}
 
   #modal{position:absolute;inset:0;background:rgba(4,6,14,.86);display:none;align-items:center;
-    justify-content:center;padding:22px;z-index:30}
+    justify-content:center;padding:44px;z-index:30}
   #modal.on{display:flex}
-  .mbox{width:100%;max-height:640px;overflow-y:auto;border-radius:16px;padding:16px;text-align:center;
-    background:linear-gradient(180deg,#1c2650,#131a34);border:2px solid #6d80c8;
-    box-shadow:0 0 30px rgba(90,140,255,.3)}
-  .mbox::-webkit-scrollbar{width:5px}
-  .mbox::-webkit-scrollbar-thumb{background:#2a3357;border-radius:3px}
-  .mbox h2{font-size:17px;margin-bottom:9px}
-  .mbox p{font-size:12px;color:#9fb0d4;line-height:1.7;font-weight:700}
+  /* max-height 를 프레임 높이 기준으로 (고정 px 이면 낮은 화면비에서 잘림) */
+  .mbox{width:100%;max-height:100%;overflow-y:auto;border-radius:32px;padding:32px;text-align:center;
+    background:linear-gradient(180deg,#1c2650,#131a34);border:4px solid #6d80c8;
+    box-shadow:0 0 60px rgba(90,140,255,.3)}
+  .mbox::-webkit-scrollbar{width:10px}
+  .mbox::-webkit-scrollbar-thumb{background:#2a3357;border-radius:6px}
+  .mbox h2{font-size:34px;margin-bottom:18px}
+  .mbox p{font-size:24px;color:#9fb0d4;line-height:1.7;font-weight:700}
   .mbox p b{color:#ffd45e}
-  .mrow{display:flex;gap:6px;margin-top:9px}
+  .mrow{display:flex;gap:12px;margin-top:18px}
   .mrow>*{flex:1}
-  .mbox .gbtn{margin-top:8px}
+  .mbox .gbtn{margin-top:16px}
 
-  .sumhead{border-radius:11px;padding:8px;margin-bottom:8px;font-size:12.5px;font-weight:900}
-  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
-  .rc{position:relative;border-radius:9px;padding:6px 2px 5px;border:1.6px solid #333;overflow:hidden;
+  .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+  .rc{position:relative;border-radius:18px;padding:12px 4px 10px;border:3.2px solid #333;overflow:hidden;
     animation:pop .25s ease-out both}
-  .rc .rg{font-size:8px;font-weight:900;margin-top:1px}
-  .rc .rn{font-size:8px;color:#c3cfe8;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rc .new{position:absolute;top:1px;left:1px;background:#ff3b5c;color:#fff;font-size:7px;
-    font-weight:900;border-radius:4px;padding:0 3px}
-  .rc.hi{box-shadow:0 0 12px rgba(255,190,90,.8)}
+  .rc .rg{font-size:16px;font-weight:900;margin-top:2px}
+  .rc .rn{font-size:16px;color:#c3cfe8;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rc .new{position:absolute;top:2px;left:2px;background:#ff3b5c;color:#fff;font-size:14px;
+    font-weight:900;border-radius:8px;padding:0 6px}
+  .rc.hi{box-shadow:0 0 24px rgba(255,190,90,.8)}
   @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 
   #loading{position:absolute;inset:0;background:#0b0d18;display:flex;align-items:center;
-    justify-content:center;z-index:40;font-size:14px;font-weight:800;color:#8ea0c7}
+    justify-content:center;z-index:40;font-size:28px;font-weight:800;color:#8ea0c7}
   #loading.off{display:none}
 </style>
 </head>
@@ -248,7 +256,7 @@
   </div>
 
   <div id="stagearea">
-    <canvas id="view" width="540" height="372"></canvas>
+    <canvas id="view" width="1080" height="1284"></canvas>
     <div id="stinfo">
       <div class="chap" id="chapN">1-1 <em>스테이지</em></div>
       <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
@@ -324,18 +332,42 @@ const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
 const $ = id => document.getElementById(id);
 
 /* ---------------- 화면 맞춤 ---------------- */
-const app = $('app');
-function fit(){ app.style.transform = 'scale(' + Math.min(window.innerWidth/540, window.innerHeight/960) + ')'; }
-addEventListener('resize', fit); fit();
+/* 기준 프레임 1080x2340(9:19.5). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
+   안전영역은 #wrap 패딩으로 프레임 바깥에서 빠지므로 wrap.clientWidth/Height 를 기준으로 잰다. */
+const wrap = $('wrap'), app = $('app');
+const FRAME_W = 1080, FRAME_H_MIN = 1600, FRAME_H_MAX = 2600;
+let frameH = 2340;
+function fit(){
+  const AW = wrap.clientWidth, AH = wrap.clientHeight;
+  if(!AW || !AH) return;
+  frameH = clamp(Math.round(FRAME_W * AH / AW), FRAME_H_MIN, FRAME_H_MAX);
+  app.style.height = frameH + 'px';
+  app.style.transform = 'scale(' + (AW / FRAME_W) + ')';
+  resizeCanvas();
+}
 
+/* 전투 캔버스: 논리 좌표계는 기존 540 기준을 그대로 두고 ctx 를 SC배 확대해 1080 프레임을 채운다.
+   (월드/스프라이트/이펙트 상수를 건드리지 않으므로 밸런스 영향 없음)
+   버퍼 폭은 540x2 = 1080 으로 기존 hidpi(dpr 2) 와 동일 — 렌더 비용 유지. */
 const cvs = $('view'), ctx = cvs.getContext('2d');
-const VW = 540, VH = 372;
-(function hidpi(){
-  const d = Math.min(devicePixelRatio || 1, 2);
-  cvs.width = VW*d; cvs.height = VH*d;
-  cvs.style.width = VW+'px'; cvs.style.height = VH+'px';
-  ctx.setTransform(d,0,0,d,0,0);
-})();
+const SC = 2;
+const VW = 540;
+let VH = 372;                       // 프레임 높이에 따라 resizeCanvas() 가 다시 계산
+function resizeCanvas(){
+  const stage = $('stagearea');
+  const hpx = stage.clientHeight || 744;   // 1080 프레임 기준 px
+  VH = hpx / SC;
+  cvs.width = VW*SC; cvs.height = Math.round(hpx);
+  ctx.setTransform(SC,0,0,SC,0,0);
+}
+addEventListener('resize', fit);
+/* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
+if(window.ResizeObserver) new ResizeObserver(resizeCanvas).observe($('stagearea'));
+if(window.visualViewport){
+  visualViewport.addEventListener('resize', fit);
+  visualViewport.addEventListener('scroll', fit);
+}
+fit();
 
 /* ---------------- 스프라이트 ---------------- */
 const ATLAS = window.ATLAS || {};
@@ -1801,7 +1833,7 @@ function drawHud(){
   $('collN').textContent = ownedTotal() + '/' + TOTAL_ITEMS;
   const ch = Math.floor((S.stage-1)/10) + 1, st = ((S.stage-1) % 10) + 1;
   $('chapN').innerHTML = ch + '-' + st + ' <em>' + (S.stage % 10 === 0 ? 'BOSS' : '스테이지') + '</em>'
-    + ' <span style="font-size:9.5px;color:#a9bbe6">최고 ' + S.best + '</span>';
+    + ' <span style="font-size:19px;color:#a9bbe6">최고 ' + S.best + '</span>';
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
   if(promo){
@@ -1963,7 +1995,7 @@ function showSummonResult(b, times, res, lvUp){
   const B = BANNERS[b];
   const best = res.reduce((a,c) => a.it.g >= c.it.g ? a : c);
   const BG = GRADE[best.it.g], newCnt = res.filter(r => r.isNew).length;
-  let h = '<div class="sumhead" style="background:linear-gradient(90deg,' + BG.bg + ',#141a30);border:1.5px solid '
+  let h = '<div class="sumhead" style="background:linear-gradient(90deg,' + BG.bg + ',#141a30);border:3px solid '
     + BG.c + ';color:' + BG.c + '">' + BG.ic + ' ' + B.n + ' ' + times + '회 소환 — 최고 <b>' + BG.n + '</b></div>'
     + '<div class="cards">';
   res.forEach((r, i) => {
@@ -1971,7 +2003,7 @@ function showSummonResult(b, times, res, lvUp){
     h += '<div class="rc' + (r.it.g >= 3 ? ' hi' : '') + '" style="border-color:' + G.c + ';background:' + G.bg
       + ';animation-delay:' + (i*0.04).toFixed(2) + 's">'
       + (r.isNew ? '<div class="new">NEW</div>' : '')
-      + '<div style="font-size:17px;line-height:21px">' + itemIcon(r.it) + '</div>'
+      + '<div style="font-size:34px;line-height:42px">' + itemIcon(r.it) + '</div>'
       + '<div class="rg" style="color:' + G.c + '">' + G.n + '</div>'
       + '<div class="rn">' + r.it.n + '</div>'
       + '<div class="rg" style="color:#93a2c6">' + (r.isNew ? '획득!' : '+1') + '</div></div>';
@@ -2048,7 +2080,7 @@ function claimColl(cat){
   S.coll[cat]++;
   markDirty(); uiDirty = true; save();
   popup('🏆 컬렉션 보너스 획득!', '<p><b>' + COLL[cat].n + ' 도감</b> ' + t.need + '종 달성<br>'
-    + '<span style="color:#8ff0a8;font-size:14px">' + t.n + '</span><br>영구 적용됩니다!</p>');
+    + '<span style="color:#8ff0a8;font-size:28px">' + t.n + '</span><br>영구 적용됩니다!</p>');
 }
 const questGoal  = q => Math.ceil(q.base * Math.pow(q.mul, S.quest[q.id].s));
 const questProg  = q => Math.max(0, q.get() - (S.quest[q.id].base || 0));
@@ -2082,8 +2114,8 @@ function claimTuto(){
   S.dia += t.c; S.tuto++;
   uiDirty = true; save();
   popup('📌 튜토리얼 완료!', '<p><b>' + t.n + '</b><br>다이아 <b>💎+' + fmt(t.c) + '</b> 획득!</p>'
-    + (tutoCur() ? '<p style="color:#8fd6ff;margin-top:5px">다음 — ' + tutoCur().n + '</p>'
-                 : '<p style="color:#8ff0a8;margin-top:5px">모든 튜토리얼 완료! 🎉</p>'));
+    + (tutoCur() ? '<p style="color:#8fd6ff;margin-top:10px">다음 — ' + tutoCur().n + '</p>'
+                 : '<p style="color:#8ff0a8;margin-top:10px">모든 튜토리얼 완료! 🎉</p>'));
 }
 const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
 function claimAllMail(){
@@ -2169,7 +2201,7 @@ function buyPack(p){
   S.dia += p.dia; S.cnt.paid += p.won;
   uiDirty = true; save();
   popup('💎 구매 완료 (데모)', '<p><b>' + p.n + '</b><br>다이아 <b>💎+' + fmt(p.dia) + '</b><br>'
-    + '<span style="font-size:10.5px;color:#7d8bad">※ 실제 결제는 연동되지 않은 데모입니다.</span></p>');
+    + '<span style="font-size:21px;color:#7d8bad">※ 실제 결제는 연동되지 않은 데모입니다.</span></p>');
 }
 function buyAvatar(a){
   if(S.avatars[a.id]){ S.avatar = a.id; uiDirty = true; save(); return; }
@@ -2208,7 +2240,7 @@ function endPromo(win){
   if(win){
     S.rank++;
     markDirty(); uiDirty = true; save();
-    popup('🏅 승급 성공!', '<p><b style="font-size:16px">' + r.ic + ' ' + r.n + '</b> 달성!<br>'
+    popup('🏅 승급 성공!', '<p><b style="font-size:32px">' + r.ic + ' ' + r.n + '</b> 달성!<br>'
       + '계급 보너스 — 공격력 · 최대 체력 <b>+25%</b> (누적)<br>다음 계급에 도전해 보세요!</p>');
   }else{
     popup('💀 승급 실패', '<p>제한 시간 안에 <b>승급 수호자</b>를 처치하지 못했습니다.<br>더 성장한 뒤 다시 도전하세요!</p>');
@@ -2261,8 +2293,8 @@ function renderStat(){
   let h = '<div class="sect"><h3><span>🧬 스탯 포인트</span><em>Lv.' + S.plv + '</em></h3>'
     + '<p>레벨업마다 포인트 <b>' + SP_PER_LV + '</b>개를 얻습니다. 포인트 1개당 해당 스탯 <b>+'
     + (SP_VALUE*100) + '%</b></p>'
-    + '<p style="margin-top:5px;font-size:15px">남은 포인트 <b style="color:#8ff0a8;font-size:18px">' + fmt(S.sp) + '</b></p>'
-    + '<div class="row2" style="margin-top:7px">'
+    + '<p style="margin-top:10px;font-size:30px">남은 포인트 <b style="color:#8ff0a8;font-size:36px">' + fmt(S.sp) + '</b></p>'
+    + '<div class="row2" style="margin-top:14px">'
     + '<button class="gbtn ' + (S.spAuto ? 'green' : 'blue') + '" data-spauto="1">자동 분배 ' + (S.spAuto ? 'ON' : 'OFF')
     + '<small>공격 2 : 체력 1</small></button>'
     + '<button class="gbtn purple" data-spreset="1">스탯 초기화<small>💎 500</small></button></div></div>';
@@ -2270,7 +2302,7 @@ function renderStat(){
   [['atk','⚔️','공격력', S.spAtk, atkB, '공격력 +' + atkB + '%  (피해 ' + fmt(stat.dmg) + ')'],
    ['hp','❤️','체력',   S.spHp,  hpB,  '최대 체력 +' + hpB + '%  (' + fmt(stat.maxHp) + ')']].forEach(r => {
     h += '<div class="sect"><h3><span>' + r[1] + ' ' + r[2] + '</span><em>' + fmt(r[3]) + ' 포인트</em></h3>'
-      +  '<p>' + r[5] + '</p><div class="row2" style="margin-top:7px">'
+      +  '<p>' + r[5] + '</p><div class="row2" style="margin-top:14px">'
       +  '<button class="gbtn blue" data-sp="' + r[0] + '" data-n="1"'  + (S.sp >= 1 ? '' : ' disabled') + '>+1</button>'
       +  '<button class="gbtn blue" data-sp="' + r[0] + '" data-n="10"' + (S.sp >= 1 ? '' : ' disabled') + '>+10</button>'
       +  '<button class="gbtn" data-sp="' + r[0] + '" data-n="max"'     + (S.sp >= 1 ? '' : ' disabled') + '>MAX</button></div></div>';
@@ -2358,11 +2390,11 @@ function renderBanner(bkey, boxId, extraTop){
     + '</div>';
   if(done){
     const amt = refundAmount(list);
-    h += '<p style="margin-top:7px;color:#ffd45e">🏆 모든 아이템 최대 레벨 달성! 소환이 종료되었습니다.</p>'
-      +  '<button class="gbtn purple" data-refund="1" style="margin-top:7px"' + (amt > 0 ? '' : ' disabled') + '>'
+    h += '<p style="margin-top:14px;color:#ffd45e">🏆 모든 아이템 최대 레벨 달성! 소환이 종료되었습니다.</p>'
+      +  '<button class="gbtn purple" data-refund="1" style="margin-top:14px"' + (amt > 0 ? '' : ' disabled') + '>'
       +  '재료 환불<small>' + (amt > 0 ? curIc + ' +' + fmt(amt) : '남은 재료 없음') + '</small></button>';
   }else{
-    h += '<div class="row2" style="margin-top:7px">'
+    h += '<div class="row2" style="margin-top:14px">'
       +  '<button class="gbtn blue" data-sum="1"' + (cur < c1 ? ' disabled' : '') + '>소환 x1<small>' + curIc + ' ' + fmt(c1) + '</small></button>'
       +  '<button class="gbtn" data-sum="10"' + (cur < c10 ? ' disabled' : '') + '>소환 x10<small>' + curIc + ' ' + fmt(c10) + ' (10%↓)</small></button></div>';
   }
@@ -2373,7 +2405,7 @@ function renderBanner(bkey, boxId, extraTop){
   h += '<div class="sect"><h3><span>🏆 ' + C.n + ' 컬렉션</span><em>' + ownN + ' / ' + C.list.length + '</em></h3>';
   if(tier){
     h += '<p>' + tier.need + '종 수집 시 — <b style="color:#8ff0a8">' + tier.n + '</b></p>'
-      +  '<button class="gbtn" data-coll="' + B.coll + '" style="margin-top:6px"' + (ownN >= tier.need ? '' : ' disabled') + '>'
+      +  '<button class="gbtn" data-coll="' + B.coll + '" style="margin-top:12px"' + (ownN >= tier.need ? '' : ' disabled') + '>'
       +  (ownN >= tier.need ? '보너스 강화 받기!' : (tier.need - ownN) + '종 더 모으기') + '</button>';
   }else h += '<p>모든 컬렉션 보너스를 획득했습니다! 🎉</p>';
   h += '</div>';
@@ -2399,7 +2431,7 @@ function renderBanner(bkey, boxId, extraTop){
       +  'style="border-color:' + (own ? G.c : '#262f52') + ';background:' + (own ? G.bg : '#131828') + '">'
       +  (eq ? '<div class="eqm">장착</div>' : '')
       +  (own && frag(it.id) > 0 ? '<div class="frag">' + fmt(frag(it.id)) + '</div>' : '')
-      +  (cat === 'pet' ? petIconHtml(it) : '<div style="font-size:20px;line-height:25px">' + itemIcon(it) + '</div>')
+      +  (cat === 'pet' ? petIconHtml(it) : '<div style="font-size:40px;line-height:50px">' + itemIcon(it) + '</div>')
       +  '<div class="nm" style="color:' + (own ? G.c : '#5c6789') + '">' + (own ? it.n : '???') + '</div>'
       +  '<div class="lvv"' + (mark === ' MAX' ? ' style="color:#ffd45e"' : '') + '>'
       +  (own ? 'Lv.' + l2 + mark : G.n) + '</div></div>';
@@ -2458,12 +2490,12 @@ function showItem(id){
   let h = '<h2 style="color:' + G.c + '">' + itemIcon(it) + ' ' + (own ? it.n : '???') + '</h2>'
     + '<p><b style="color:' + G.c + '">' + G.ic + ' ' + G.n + '</b>' + (own ? ' · Lv.' + oLv(id) : '') + '</p>'
     + '<p>' + (own ? eff : '아직 획득하지 못했습니다. 소환으로 획득하세요.') + '</p>'
-    + '<div style="text-align:left;background:#0e1428;border-radius:10px;padding:8px 10px;margin-top:9px">'
+    + '<div style="text-align:left;background:#0e1428;border-radius:20px;padding:16px 20px;margin-top:18px">'
     + '<p style="color:#8fd6ff">보유 효과 — <b style="color:#8ff0a8">' + ownTxt + '</b></p>'
     + '<p style="color:#ffb648">장착 효과 — <b style="color:#8ff0a8">' + eqTxt + '</b></p></div>';
   if(own){
     const maxed = atMax(it), lim = maxLv(it);
-    h += '<p style="margin-top:8px">레벨 <b>' + oLv(id) + ' / ' + (lim === Infinity ? '∞' : lim) + '</b>'
+    h += '<p style="margin-top:16px">레벨 <b>' + oLv(id) + ' / ' + (lim === Infinity ? '∞' : lim) + '</b>'
       +  (maxed ? ' <span style="color:#ffd45e">MAX</span>' : '') + '<br>보유 재료 <b>' + fmt(frag(id)) + '</b>'
       +  (maxed ? '' : ' / 필요 <b>' + need + '</b>') + '</p>'
       +  '<div class="mrow"><button class="gbtn green" id="mEq">' + (eq ? '장착 해제' : '장착하기') + '</button>'
@@ -2476,10 +2508,10 @@ function showItem(id){
       +  '</div>'
       +  (maxed ? '' : '<button class="gbtn blue" id="mLvAll"' + (canLevel(it) ? '' : ' disabled') + '>가능한 만큼 강화</button>');
     if(cat === 'equip' && !isTopGrade(it) && !maxed)
-      h += '<p style="margin-top:7px;font-size:10.5px;color:#7d8bad">Lv.' + MAX_LEVEL + ' 달성 후 같은 장비 '
+      h += '<p style="margin-top:14px;font-size:21px;color:#7d8bad">Lv.' + MAX_LEVEL + ' 달성 후 같은 장비 '
         + CRAFT_NEED + '개로 <b>' + GRADE[it.g+1].n + '</b> 합성 가능</p>';
     if(cat === 'equip' && isTopGrade(it))
-      h += '<p style="margin-top:7px;font-size:10.5px;color:#ffb648">최고 등급 장비는 <b>무한 강화</b>됩니다.</p>';
+      h += '<p style="margin-top:14px;font-size:21px;color:#ffb648">최고 등급 장비는 <b>무한 강화</b>됩니다.</p>';
   }
   h += '<button class="gbtn" id="mClose">닫기</button>';
   $('mbox').innerHTML = h;
@@ -2493,7 +2525,7 @@ function showItem(id){
     if(c) c.onclick = () => {
       const nx = craft(it);
       if(nx) popup('⚗️ 합성 성공!', '<p><b style="color:' + GRADE[it.g].c + '">' + it.n + '</b> ' + CRAFT_NEED + '개 소모<br>'
-        + '<b style="color:' + GRADE[nx.g].c + ';font-size:15px">' + GRADE[nx.g].n + ' ' + nx.n + '</b> 획득!</p>');
+        + '<b style="color:' + GRADE[nx.g].c + ';font-size:30px">' + GRADE[nx.g].n + ' ' + nx.n + '</b> 획득!</p>');
     };
   }
 }
@@ -2508,8 +2540,8 @@ function renderDun(){
     const rw = d.rw(f);
     const rwTxt = [rw.gold ? '💰' + fmt(rw.gold) : '', rw.dia ? '💎' + fmt(rw.dia) : '',
                    rw.rel ? '🔮' + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
-    h += '<div class="li"><div class="lt">' + d.ic + ' ' + d.n + ' <span style="color:#8fd6ff;font-size:10.5px">'
-      +  f + '층</span> <span style="float:right;font-size:10.5px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
+    h += '<div class="li"><div class="lt">' + d.ic + ' ' + d.n + ' <span style="color:#8fd6ff;font-size:21px">'
+      +  f + '층</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
       +  left + '/' + DUN_TRY + '</span></div>'
       +  '<div class="ls">' + d.d + '<br>보상 ' + rwTxt + ' · 요구 전투력 <b style="color:'
       +  (ok ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(need) + '</b></div>'
@@ -2534,19 +2566,19 @@ function renderShop(){
     h += '<div class="cell" data-av="' + a.id + '" style="border-color:' + (own ? G.c : '#262f52')
       +  ';background:' + (own ? G.bg : '#131828') + '">'
       +  (cu ? '<div class="eqm">착용</div>' : '')
-      +  '<div style="font-size:20px;line-height:25px">🛡️</div>'
+      +  '<div style="font-size:40px;line-height:50px">🛡️</div>'
       +  '<div class="nm" style="color:' + G.c + '">' + a.n + '</div>'
       +  '<div class="lvv">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</div></div>';
   });
-  h += '</div><div class="sect" style="margin-top:8px"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
-    + '<p>보유 유물석 <b>🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:6px">'
+  h += '</div><div class="sect" style="margin-top:16px"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
+    + '<p>보유 유물석 <b>🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:12px">'
     + EXCHANGE.map(x => '<button class="gbtn purple" data-ex="' + x.dia + '"' + (S.dia >= x.dia ? '' : ' disabled')
         + '>🔮 ' + fmt(x.rel) + '<small>💎 ' + fmt(x.dia) + '</small></button>').join('') + '</div></div>'
     + '<div class="sect"><h3><span>💎 다이아 상점</span><em>데모</em></h3>'
     + '<p>※ 실제 결제는 연동되지 않은 <b>데모</b>입니다. 버튼을 누르면 다이아가 즉시 지급됩니다.</p></div>';
   PACKS.forEach(p => {
     h += '<div class="li"' + (p.hot ? ' style="border-color:#a9822e"' : '') + '>'
-      +  '<div class="lt">💎 ' + p.n + (p.hot ? ' <span style="color:#ff6b7f;font-size:10px">HOT</span>' : '') + '</div>'
+      +  '<div class="lt">💎 ' + p.n + (p.hot ? ' <span style="color:#ff6b7f;font-size:20px">HOT</span>' : '') + '</div>'
       +  '<div class="lf"><span>' + fmt(p.dia) + ' 다이아</span>'
       +  '<button class="mini gold" data-pack="' + p.id + '">₩' + p.won.toLocaleString() + '</button></div></div>';
   });
@@ -2594,7 +2626,7 @@ function renderSt(){
     + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmt(eHp(S.stage)) + '</b> · 공격 <b>' + fmt(eDmg(S.stage))
     + '</b><br>매 스테이지 적 <b>50마리</b>, 10스테이지마다 <b>보스</b></p></div>'
     + '<div class="sect"><h3>💾 데이터</h3><p>진행 상황은 자동 저장됩니다.</p>'
-    + '<button class="gbtn purple" id="resetBtn" style="margin-top:6px">전체 초기화</button></div>';
+    + '<button class="gbtn purple" id="resetBtn" style="margin-top:12px">전체 초기화</button></div>';
   setBody('bSt', h);
   const pb = $('promoBtn');
   if(pb) pb.onclick = openPromo;
@@ -2604,7 +2636,7 @@ function renderSt(){
 /* ---- 팝업: 출석 / 룰렛 / 우편 / 퀘스트 / 승급 ---- */
 function openAttend(){
   const day = S.att.n % 28, can = S.att.date !== today();
-  let h = '<h2>📅 출석 보상</h2><p>연속 <b>' + S.att.n + '</b>일 출석 중</p><div class="cal" style="margin-top:9px">';
+  let h = '<h2>📅 출석 보상</h2><p>연속 <b>' + S.att.n + '</b>일 출석 중</p><div class="cal" style="margin-top:18px">';
   ATTEND.forEach((r, i) => {
     const got = i < day || (i === day && !can);
     const val = r.dia ? '💎' + fmt(r.dia) : r.rel ? '🔮' + fmt(r.rel) : '💰';
@@ -2620,12 +2652,12 @@ function openAttend(){
   $('attBtn').onclick = claimAttend;
 }
 function openRoulette(hit, gotTxt){
-  let h = '<h2>🎰 행운 룰렛</h2><p>오늘 남은 횟수 <b>' + S.daily.spins + ' / ' + ROUL_FREE + '</b></p><div class="wheel" style="margin-top:9px">';
+  let h = '<h2>🎰 행운 룰렛</h2><p>오늘 남은 횟수 <b>' + S.daily.spins + ' / ' + ROUL_FREE + '</b></p><div class="wheel" style="margin-top:18px">';
   ROULETTE.forEach((r, i) => {
     const v = r.dia ? '💎' + fmt(r.dia) : r.rel ? '🔮' + fmt(r.rel) : '💰 골드';
     h += '<div class="slot' + (i === hit ? ' hit' : '') + '"><div class="si2">' + r.ic + '</div><div class="sv">' + v + '</div></div>';
   });
-  h += '</div>' + (gotTxt ? '<p style="color:#8ff0a8;font-size:13px">획득! <b>' + gotTxt + '</b></p>' : '')
+  h += '</div>' + (gotTxt ? '<p style="color:#8ff0a8;font-size:26px">획득! <b>' + gotTxt + '</b></p>' : '')
     + '<button class="gbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '>'
     + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</button>'
     + '<button class="gbtn green" id="rouClose">닫기</button>';
@@ -2654,7 +2686,7 @@ function openQuest(){
   let h = '<h2>📜 퀘스트</h2>';
   QUESTS.forEach(q => {
     const goal = questGoal(q), prog = Math.min(questProg(q), goal), rw = q.rw(S.quest[q.id].s);
-    h += '<div class="li"><div class="lt">' + q.n + ' <span style="color:#6ec6ff;font-size:10px">'
+    h += '<div class="li"><div class="lt">' + q.n + ' <span style="color:#6ec6ff;font-size:20px">'
       +  (S.quest[q.id].s+1) + '단계</span></div>'
       +  '<div class="qp"><i style="width:' + (prog/goal*100) + '%"></i></div>'
       +  '<div class="lf"><span>' + fmt(prog) + ' / ' + fmt(goal) + ' · 💰' + fmt(rw.g) + ' 💎' + fmt(rw.c) + '</span>'
@@ -2700,10 +2732,10 @@ function openPromo(){
   const okS = S.best >= r.stage, okC = cp() >= r.cp;
   $('mbox').innerHTML = '<h2>🏅 승급전</h2>'
     + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#ffd45e">' + r.ic + ' ' + r.n + '</b></p>'
-    + '<div style="text-align:left;background:#0e1428;border-radius:10px;padding:9px 11px;margin-top:9px">'
+    + '<div style="text-align:left;background:#0e1428;border-radius:20px;padding:18px 22px;margin-top:18px">'
     + '<p>최고 스테이지 <b style="color:' + (okS ? '#8ff0a8' : '#ff6b7f') + '">' + S.best + ' / ' + r.stage + '</b></p>'
     + '<p>전투력 <b style="color:' + (okC ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(cp()) + ' / ' + fmt(r.cp) + '</b></p></div>'
-    + '<p style="margin-top:8px">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
+    + '<p style="margin-top:16px">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
     + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p>'
     + '<button class="gbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '>승급전 시작</button>'
     + '<button class="gbtn green" id="pclose">닫기</button>';
