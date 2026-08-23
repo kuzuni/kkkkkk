@@ -471,7 +471,10 @@
     <div class="tab" data-t="shop"><span class="ti">🏪</span><span class="tl">상점</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
   </div>
 
-  <div id="modal"><div class="mbox" id="mbox"></div></div>
+  <div id="modal"><div class="mbox">
+    <div class="mhead"><h2 id="mtitle"></h2><button class="mx" id="mxBtn" aria-label="닫기">✕</button></div>
+    <div class="mbody" id="mbox"></div>
+  </div></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
 
@@ -2222,8 +2225,7 @@ function showSummonResult(b, times, res, lvUp){
     + '<br>보유 ' + (B.cur === 'rel' ? '🔮 <b>' + fmt(S.relic) : '💎 <b>' + fmt(S.dia)) + '</b></p>'
     + '<div class="mrow"><button class="gbtn blue" id="sumAgain">다시 소환</button>'
     + '<button class="gbtn green" id="sumClose">확인</button></div>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('sumClose').onclick = closeModal;
   $('sumAgain').onclick = () => doSummon(b, times);
 }
@@ -2463,9 +2465,18 @@ function endPromo(win){
 let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = true;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
 function closeModal(){ $('modal').classList.remove('on'); }
-function popup(title, html){
-  $('mbox').innerHTML = '<h2>' + title + '</h2>' + html + '<button class="gbtn green" id="okBtn">확인</button>';
+/* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
+   호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
+function showModal(html){
+  const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
+  $('mtitle').innerHTML = m ? m[1] : '';
+  const body = $('mbox');
+  body.innerHTML = m ? html.slice(m[0].length) : html;
+  body.scrollTop = 0;
   $('modal').classList.add('on');
+}
+function popup(title, html){
+  showModal('<h2>' + title + '</h2>' + html + '<button class="gbtn green" id="okBtn">확인</button>');
   $('okBtn').onclick = closeModal;
 }
 
@@ -2723,8 +2734,7 @@ function showItem(id){
       h += '<p style="margin-top:14px;font-size:21px;color:#ffb648">최고 등급 장비는 <b>무한 강화</b>됩니다.</p>';
   }
   h += '<button class="gbtn" id="mClose">닫기</button>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('mClose').onclick = closeModal;
   if(own){
     $('mEq').onclick = () => { toggleEquip(it, cat); showItem(id); };
@@ -2857,8 +2867,7 @@ function openAttend(){
   h += '</div><button class="gbtn" id="attBtn"' + (can ? '' : ' disabled') + '>'
     + (can ? (day+1) + '일차 보상 받기' : '내일 다시 받을 수 있습니다') + '</button>'
     + '<button class="gbtn green" id="attClose">닫기</button>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('attClose').onclick = closeModal;
   $('attBtn').onclick = claimAttend;
 }
@@ -2872,8 +2881,7 @@ function openRoulette(hit, gotTxt){
     + '<button class="gbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '>'
     + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</button>'
     + '<button class="gbtn green" id="rouClose">닫기</button>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('rouClose').onclick = closeModal;
   $('rouBtn').onclick = spinRoulette;
 }
@@ -2887,8 +2895,7 @@ function openMail(){
   h += '<button class="gbtn" id="mailBtn"' + (mailLeft() ? '' : ' disabled') + '>'
     + (mailLeft() ? '전체 수령 (' + mailLeft() + '통)' : '수령할 우편이 없습니다') + '</button>'
     + '<button class="gbtn green" id="mailClose">닫기</button>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('mailClose').onclick = closeModal;
   $('mailBtn').onclick = () => { claimAllMail(); };
 }
@@ -2906,8 +2913,7 @@ function openQuest(){
   });
   h += '<button class="gbtn" id="qAll"' + (rc ? '' : ' disabled') + '>' + (rc ? '모두 받기 (' + rc + ')' : '완료한 퀘스트가 없습니다') + '</button>'
     + '<button class="gbtn green" id="qClose">닫기</button>';
-  $('mbox').innerHTML = h;
-  $('modal').classList.add('on');
+  showModal(h);
   $('qClose').onclick = closeModal;
   $('qAll').onclick = () => claimAllQuests();
   $('mbox').querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
@@ -2916,9 +2922,8 @@ function openQuest(){
 }
 function openDungeon(){
   renderDun();
-  $('mbox').innerHTML = '<h2>🏰 던전</h2>' + $('bDun').innerHTML
-    + '<button class="gbtn green" id="dunClose">닫기</button>';
-  $('modal').classList.add('on');
+  showModal('<h2>🏰 던전</h2>' + $('bDun').innerHTML
+    + '<button class="gbtn green" id="dunClose">닫기</button>');
   $('dunClose').onclick = closeModal;
   $('mbox').querySelectorAll('[data-dun]').forEach(b => b.onclick = () => {
     challengeDungeon(DUNGEONS.find(d => d.id === b.dataset.dun));
@@ -2929,9 +2934,8 @@ function openDungeon(){
 }
 function openProfile(){
   renderSt();
-  $('mbox').innerHTML = '<h2>📊 내 정보</h2>' + $('bSt').innerHTML
-    + '<button class="gbtn green" id="stClose">닫기</button>';
-  $('modal').classList.add('on');
+  showModal('<h2>📊 내 정보</h2>' + $('bSt').innerHTML
+    + '<button class="gbtn green" id="stClose">닫기</button>');
   $('stClose').onclick = closeModal;
   const pb = $('promoBtn'); if(pb) pb.onclick = openPromo;
   const rb = $('resetBtn');
@@ -2941,7 +2945,7 @@ function openPromo(){
   const r = nextRank();
   if(!r){ popup('🏅 최고 계급', '<p>이미 최고 계급입니다! 🎉</p>'); return; }
   const okS = S.best >= r.stage, okC = cp() >= r.cp;
-  $('mbox').innerHTML = '<h2>🏅 승급전</h2>'
+  showModal('<h2>🏅 승급전</h2>'
     + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#ffd45e">' + r.ic + ' ' + r.n + '</b></p>'
     + '<div style="text-align:left;background:#0e1428;border-radius:20px;padding:18px 22px;margin-top:18px">'
     + '<p>최고 스테이지 <b style="color:' + (okS ? '#8ff0a8' : '#ff6b7f') + '">' + S.best + ' / ' + r.stage + '</b></p>'
@@ -2949,8 +2953,7 @@ function openPromo(){
     + '<p style="margin-top:16px">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
     + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p>'
     + '<button class="gbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '>승급전 시작</button>'
-    + '<button class="gbtn green" id="pclose">닫기</button>';
-  $('modal').classList.add('on');
+    + '<button class="gbtn green" id="pclose">닫기</button>');
   $('pclose').onclick = closeModal;
   $('pgo').onclick = startPromo;
 }
@@ -3112,6 +3115,7 @@ loadAtlases(() => {
   spawnStage();
   heroTab = HEROBODY[S.heroTab] ? S.heroTab : 'eq';
   syncPanel();
+  $('mxBtn').onclick = closeModal;
   renderUI();
   offlineReward(lastTime);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
