@@ -56,19 +56,45 @@
   #stinfo .kbar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,#ffd45e)}
   #stinfo .kbar span{position:absolute;inset:0;font-size:15px;line-height:16px;font-weight:900;color:#fff;text-shadow:0 2px 4px #000}
 
-  /* 좌우 세로 아이콘 */
-  .side{position:absolute;top:88px;display:flex;flex-direction:column;gap:8px;z-index:3}
-  #sideL{left:10px}
-  #sideR{right:10px}
-  .ibtn{width:88px;height:86px;border-radius:20px;position:relative;cursor:pointer;
+  /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너).
+     크기는 전부 --ih(아이콘 높이) 에서 파생되고, --ih/--iw/--igap/--itop 은 layoutSide() 가
+     캔버스 높이에 비례시켜 덮어쓴다. 기본값은 레퍼런스(1080x2340) 측정치. */
+  .side{position:absolute;top:var(--itop,88px);display:flex;flex-direction:column;
+    gap:var(--igap,8px);z-index:3}
+  #sideL{left:var(--ix,10px)}
+  #sideR{right:var(--ix,10px)}
+  .ibtn{width:var(--iw,88px);height:var(--ih,86px);border-radius:calc(var(--ih,86px)*.233);
+    position:relative;cursor:pointer;
     background:linear-gradient(180deg,#2a3663,#18203c);border:3px solid #4d5e99;
     display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .ibtn .si{font-size:32px;line-height:34px}
-  .ibtn .sl{font-size:16px;font-weight:900;color:#c2d0f0;margin-top:2px}
-  .ibtn .bdg{position:absolute;top:-6px;right:-6px;min-width:28px;height:28px;border-radius:14px;background:#ff3b5c;
-    color:#fff;font-size:17px;font-weight:900;line-height:28px;text-align:center;padding:0 6px;
-    border:3px solid #0a0c16;display:none}
+  .ibtn .si{font-size:calc(var(--ih,86px)*.372);line-height:1.06}
+  .ibtn .sl{font-size:calc(var(--ih,86px)*.186);font-weight:900;color:#c2d0f0;
+    margin-top:calc(var(--ih,86px)*.023);white-space:nowrap}
+  /* 알림은 레퍼런스대로 좌상단 빨간 점 */
+  .ibtn .bdg{position:absolute;top:calc(var(--ih,86px)*-.058);left:calc(var(--ih,86px)*-.058);
+    width:calc(var(--ih,86px)*.221);height:calc(var(--ih,86px)*.221);border-radius:50%;
+    background:#ff3b5c;border:calc(var(--ih,86px)*.035) solid #0a0c16;
+    font-size:0;display:none}
   .ibtn.on .bdg{display:block}
+  /* 미해금 슬롯 — 자물쇠 오버레이 */
+  .ibtn.lock{filter:saturate(.3) brightness(.6)}
+  .ibtn.lock::after{content:'🔒';position:absolute;inset:0;display:flex;
+    align-items:center;justify-content:center;font-size:calc(var(--ih,86px)*.43);
+    text-shadow:0 2px 6px #000}
+  /* 시설 타이머 배너 (우측 하단) */
+  .facb{width:var(--iw,88px);border-radius:calc(var(--ih,86px)*.233);position:relative;cursor:pointer;
+    background:linear-gradient(180deg,#3b2c63,#1d1638);border:3px solid #7a5fbf;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:calc(var(--ih,86px)*.07) 0 calc(var(--ih,86px)*.05)}
+  .facb .fic{font-size:calc(var(--ih,86px)*.372);line-height:1.06}
+  .facb .ftm{font-size:calc(var(--ih,86px)*.163);font-weight:900;color:#ffd45e;
+    margin-top:calc(var(--ih,86px)*.035);white-space:nowrap;letter-spacing:-.3px}
+  .facb .fbg{position:absolute;top:calc(var(--ih,86px)*-.081);right:calc(var(--ih,86px)*-.081);
+    min-width:calc(var(--ih,86px)*.302);height:calc(var(--ih,86px)*.302);
+    border-radius:calc(var(--ih,86px)*.151);background:#ff3b5c;color:#fff;
+    font-size:calc(var(--ih,86px)*.186);font-weight:900;line-height:calc(var(--ih,86px)*.302);
+    text-align:center;padding:0 calc(var(--ih,86px)*.058);
+    border:calc(var(--ih,86px)*.035) solid #0a0c16}
 
   /* 플레이어 HP + 스킬 슬롯 */
   #battlefoot{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 10px;
@@ -291,14 +317,17 @@
       <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
     </div>
     <div class="side" id="sideL">
-      <div class="ibtn" data-pop="attend"><span class="si">📅</span><span class="sl">출석</span><span class="bdg">!</span></div>
-      <div class="ibtn" data-pop="roul"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg">!</span></div>
-      <div class="ibtn" data-pop="mail"><span class="si">📬</span><span class="sl">우편</span><span class="bdg">!</span></div>
+      <div class="ibtn" data-pop="attend"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="roul"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="mail"><span class="si">📬</span><span class="sl">우편</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="quest"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="dun"><span class="si">🏰</span><span class="sl">던전</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="promo"><span class="si">🏅</span><span class="sl">승급전</span><span class="bdg"></span></div>
     </div>
     <div class="side" id="sideR">
-      <div class="ibtn" data-pop="quest"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg">!</span></div>
-      <div class="ibtn" data-pop="dun"><span class="si">🏰</span><span class="sl">던전</span><span class="bdg">!</span></div>
-      <div class="ibtn" data-pop="promo"><span class="si">🏅</span><span class="sl">승급전</span><span class="bdg">!</span></div>
+      <div class="ibtn lock" data-lock="이벤트"><span class="si">🎁</span><span class="sl">이벤트</span><span class="bdg"></span></div>
+      <div class="ibtn lock" data-lock="특권"><span class="si">👑</span><span class="sl">특권</span><span class="bdg"></span></div>
+      <div class="facb" id="facb"><span class="fic">🏠</span><span class="ftm" id="facTm">--</span><span class="fbg" id="facBg">0</span></div>
     </div>
     <div id="battlefoot">
       <div id="hpwrap"><i id="hpF"></i><span id="hpT"></span></div>
@@ -394,6 +423,27 @@ function resizeCanvas(){
   VH = hpx / SC;
   cvs.width = VW*SC; cvs.height = Math.round(hpx);
   ctx.setTransform(SC,0,0,SC,0,0);
+  layoutSide(hpx);
+}
+
+/* 사이드 아이콘(좌6·우3) 크기 맞춤.
+   레퍼런스는 1080x2340 캡처라 캔버스가 1161px 이지만 기준 프레임 9:16 에서는 741px 뿐이라
+   좌 6개가 그대로는 들어가지 않는다. 그래서 아이콘 높이·gap·상단 오프셋을
+   «첫 아이콘 top ~ battlefoot 위» 남은 세로 폭에 비례시킨다.
+   레퍼런스 측정치(SIDE.H/W/GAP)가 상한이며, 캔버스가 짧을 때만 그 비율대로 줄어든다. */
+const SIDE = { H:86, W:88, GAP:8, TOP:88, X:10, N:6, PAD:10 };
+function layoutSide(hpx){
+  const foot = $('battlefoot').offsetHeight || 122;
+  const gr = SIDE.GAP / SIDE.H, tr = SIDE.TOP / SIDE.H;
+  /* 필요 높이 = top + N*h + (N-1)*gap  <=  캔버스 높이 - battlefoot - 여백 */
+  const band = hpx - foot - SIDE.PAD;
+  const h = Math.min(SIDE.H, band / (tr + SIDE.N + (SIDE.N-1)*gr));
+  const k = h / SIDE.H;
+  app.style.setProperty('--ih',   h.toFixed(2) + 'px');
+  app.style.setProperty('--iw',   (SIDE.W*k).toFixed(2) + 'px');
+  app.style.setProperty('--igap', (SIDE.GAP*k).toFixed(2) + 'px');
+  app.style.setProperty('--itop', (SIDE.TOP*k).toFixed(2) + 'px');
+  app.style.setProperty('--ix',   (SIDE.X*k).toFixed(2) + 'px');
 }
 addEventListener('resize', fit);
 /* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
@@ -1852,8 +1902,16 @@ function drawSlots(){
 }
 
 const SIDEB = {};
-document.querySelectorAll('.side .ibtn').forEach(b => SIDEB[b.dataset.pop] = b);
+document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => SIDEB[b.dataset.pop] = b);
 function sideAlert(k, on){ const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on); }
+/* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수 */
+function drawFac(){
+  const now = new Date(), nx = new Date(now); nx.setHours(24, 0, 0, 0);
+  const m = Math.max(0, Math.floor((nx - now) / 60000));
+  const d = Math.floor(m/1440), h = Math.floor(m%1440/60);
+  $('facTm').textContent = d > 0 ? d + 'D ' + h + 'H' : (h > 0 ? h + 'H ' + (m%60) + 'M' : m + 'M');
+  $('facBg').textContent = S.daily.spins + DUNGEONS.reduce((a, x) => a + (S.daily.dun[x.id]||0), 0);
+}
 const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
 function drawHud(){
   const maxHp = stat.maxHp;
@@ -1887,6 +1945,7 @@ function drawHud(){
   sideAlert('quest',  QUESTS.some(questReady));
   sideAlert('dun',    DUNGEONS.some(d => S.daily.dun[d.id] > 0));
   sideAlert('promo',  canPromote());
+  drawFac();
 }
 function drawTuto(){
   const box = $('tuto'), t = tutoCur();
@@ -2827,7 +2886,7 @@ $('herosub').onclick = e => {
   heroTab = s.dataset.hero; S.heroTab = heroTab;
   syncPanel(); uiDirty = true; renderUI();
 };
-document.querySelectorAll('.side .ibtn').forEach(b => {
+document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
   b.onclick = () => {
     const k = b.dataset.pop;
     if(k === 'attend') openAttend();
@@ -2838,6 +2897,11 @@ document.querySelectorAll('.side .ibtn').forEach(b => {
     else if(k === 'promo') openPromo();
   };
 });
+document.querySelectorAll('.side .ibtn[data-lock]').forEach(b => {
+  b.onclick = () => popup('🔒 ' + b.dataset.lock, '<p>아직 해금되지 않은 콘텐츠입니다.</p>');
+});
+$('facb').onclick = () => popup('🏠 시설', '<p>다음 일일 초기화까지 <b>' + $('facTm').textContent + '</b> 남았습니다.<br>'
+  + '오늘 남은 무료 입장 <b>' + $('facBg').textContent + '</b>회</p>');
 $('profBtn').onclick = openProfile;
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   e.stopPropagation();
