@@ -1353,6 +1353,154 @@
   .eqtc.on>b{color:#F0BB8C}
   .eqtc.lk>b{visibility:hidden}
   .eqtc>.eqli{top:5px;transform:scale(.73);transform-origin:50% 0}
+
+  /* ==========================================================================
+     07 스킬 팝업 — 측정표 docs/measure/07-스킬팝업.md
+     껍데기는 «폭 1080 바닥 시트». 05(가운데 다이얼로그)·03(전체화면)과 다르다.
+     레퍼런스 시트 ref y676~2160 (h 1484) 이고 바닥이 하단 네비바에 **딱 붙어** 잘린다.
+     우리 프레임도 탭바(180) 위에 붙이면 같은 관계라 **높이 1484 를 그대로** 쓴다.
+     세로 420px 차이는 시트 위(전투 캔버스)가 흡수한다 — 시트를 줄이지 않는다.
+     시트 = `#panel` 자체다(A5 문서의 «(나) 바닥 시트 = 우리 #panel»).
+     스킬 본문이 켜졌을 때만 `:has()` 로 껍데기를 갈아끼우므로 **다른 탭은 건드리지 않는다.**
+     내부 좌표계: `#bSk` 원점 = 시트 콘텐츠 박스 좌상단 = 레퍼런스 (7, 683).
+       → 로컬 x = ref x − 7 · 로컬 y = ref y − 683 (눈대중 없음)
+     테두리는 전부 `box-shadow inset` 링으로 그린다 — border 를 쓰면 자식 좌표계가
+     테두리만큼 밀려 실측 절대좌표를 그대로 못 쓴다.
+     ========================================================================== */
+  /* z-index 9 — 전투 오버레이(스테이지 헤더·배틀풋 z3)와 상단 HUD(z6) 위로 올린다.
+     캔버스가 152px 로 짧아지면서 스테이지 헤더가 시트 헤더를 덮었고,
+     레퍼런스는 상단 HUD 까지 딤이 덮여 있다(측정표 §10) */
+  #panel:has(#bSk.on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
+    border-radius:38px 38px 0 0;box-sizing:border-box;position:relative;z-index:9;
+    box-shadow:inset 7px 0 0 #FDF5E0,inset -7px 0 0 #FDF5E0}
+  /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
+  #panel:has(#bSk.on)::before{content:'';position:absolute;left:-7px;right:-7px;
+    bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:none}
+  /* 시트 안에 자체 서브탭 바가 있으므로 패널 상단 공용 서브탭은 숨긴다.
+     `syncPanel()` 이 인라인 style.display 를 직접 쓰므로 !important 가 필요하다 */
+  #panel:has(#bSk.on) #herosub{display:none!important}
+  #bSk.on{padding:0;overflow:hidden;position:relative;display:block}
+  #bSk>*{position:absolute}
+  #bSk i,#bSk b,#bSk u,#bSk s,#bSk em{display:block;font-style:normal;font-weight:900;
+    text-decoration:none}
+  #bSk .sk-head>i,#bSk .sk-tot>i,#bSk .sk-tot>em{display:inline-block}
+
+  /* 1 헤더 밴드 ref y684~796 (h113) · 배경 #5C4A40 · 상/좌/우 6px #655146 */
+  .sk-head{left:0;top:0;width:1066px;height:114px;background:#5C4A40;
+    border-radius:31px 31px 0 0;text-align:center;line-height:103px;
+    box-shadow:inset 0 6px 0 #655146,inset 6px 0 0 #655146,inset -6px 0 0 #655146}
+  /* 잉크 87x48 — 우리 폰트는 같은 높이에서 15% 더 넓다. 자간을 음수로 주면
+     어절 공백이 사라지므로(PROGRESS 01 교훈) 폭은 scaleX 로 맞춘다 */
+  .sk-head>i{font-size:54px;color:#fff;letter-spacing:2px;text-indent:2px;transform:scaleX(.864)}
+
+  /* 2 장착 슬롯 패널 ref(24,832) 1032x197 · 테두리 7 #C7B39A + 림 8 #F4E5D2 */
+  .sk-eqp{left:17px;top:149px;width:1032px;height:197px;border-radius:43px;background:#F0D9BA;
+    box-shadow:inset 0 0 0 7px #C7B39A,inset 0 0 0 15px #F4E5D2}
+  /* 슬롯 8칸 115x115 · pitch 125 · gap 10 · 패널기준 (21,41) */
+  .sk-slot{position:absolute;top:41px;width:115px;height:115px;border-radius:40px;
+    background:var(--f);box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r);cursor:pointer}
+  .sk-slot.lock{background:#43485B;box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #5D646A;
+    cursor:default}
+  /* 슬롯 아이콘 — 이모지. 잉크가 슬롯 위쪽 2/3 에 오도록 */
+  .sk-si{position:absolute;left:0;right:0;top:12px;height:70px;text-align:center;
+    font-size:58px;line-height:70px}
+  /* Lv.n 잉크 h19 · 잉크상단 = 슬롯상단+83 (라틴+숫자라 캡하이트 기준 fs26) */
+  .sk-slv{position:absolute;left:0;right:0;top:76px;height:32px;text-align:center;
+    font-size:27px;line-height:32px;color:#fff}
+  /* 슬롯 자물쇠 52x60 · 슬롯상단+26 (기준 49x57 을 1.061 배) */
+  .sk-slot.lock>.sk-lock{left:50%;top:28px;margin-left:-24.5px;transform:scale(1.061)}
+
+  /* 3 그리드 패널 ref(40,1070) 1000x680 · #CBB397 · radius 28 · 테두리 없음 */
+  .sk-gp{left:33px;top:387px;width:1000px;height:680px;border-radius:28px;background:#CBB397}
+  /* 카드 170x171 · 열 pitch 190 · 행 pitch 220 · 패널 padding 35 */
+  .sk-card{position:absolute;width:170px;height:171px;border-radius:42px;background:var(--f);
+    box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r);cursor:pointer}
+  .sk-ci{position:absolute;left:6px;right:6px;top:20px;height:96px;text-align:center;
+    font-size:78px;line-height:96px}
+  /* Lv.n — 잉크좌단 카드+20 / 잉크상단 카드+21. 뱃지 배경 없음(측정표 6-1) */
+  .sk-clv{position:absolute;left:20px;top:14px;height:32px;font-size:26px;line-height:32px;
+    color:#fff}
+  .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
+  /* 카드 자물쇠 49x57 · 카드상단+55 */
+  .sk-card>.sk-lock{left:50%;top:55px;margin-left:-24.5px}
+
+  /* 4 [+]/[─] — 알약 배경 없이 «검정 4px 외곽선 + 흰 글리프». 41 글리프 박스의
+       우상단이 카드/슬롯 **바깥** 우상단 코너에 맞는다 → 49 박스를 right/top −4 */
+  .sk-eq{position:absolute;right:-4px;top:-4px;width:49px;height:49px;cursor:pointer;
+    background:linear-gradient(#000,#000) center/49px 20px no-repeat,
+               linear-gradient(#000,#000) center/20px 49px no-repeat}
+  .sk-eq::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(#fff,#fff) center/41px 12px no-repeat,
+               linear-gradient(#fff,#fff) center/12px 41px no-repeat}
+  .sk-eq.m{height:20px;top:10px;background:linear-gradient(#000,#000) center/49px 20px no-repeat}
+  .sk-eq.m::after{background:linear-gradient(#fff,#fff) center/41px 12px no-repeat}
+
+  /* 5 재료 진행바 — 밴드 = 카드 전폭, 트랙 카드+132..+164(h33), 상단 검정 6 */
+  .sk-bar{position:absolute;left:5px;right:6px;top:126px;height:39px;box-sizing:border-box;
+    border-top:6px solid #000;background:#8182A0;border-radius:0 0 37px 37px;overflow:hidden}
+  .sk-bar>i{position:absolute;left:0;top:0;bottom:0;
+    background:linear-gradient(180deg,#FEC722 0 5px,#FFBB18 5px 12px,#FFB514 12px)}
+  .sk-bar>b{position:absolute;inset:0;text-align:center;font-size:21px;line-height:33px;
+    color:#fff}
+
+  /* 6 «장착 중» — 잉크 h30 · 카드상단+70 · #A2E941 */
+  .sk-on{position:absolute;left:0;right:0;top:63px;height:44px;text-align:center;
+    font-size:32px;line-height:44px;color:#A2E941}
+
+  /* 7 총 보유 효과 — 잉크 h30(fs32) · 잉크중심 x571.5 = 화면중심 +31.5 (측정표 §7) */
+  .sk-tot{left:0;right:0;top:1085px;height:44px;text-align:center;line-height:44px;
+    padding-left:63px;font-size:32px;white-space:nowrap}
+  .sk-tot>i{color:#fff}
+  .sk-tot>em{color:#B0E92A;margin-left:14px;font-size:31px}
+
+  /* 8 버튼 2개 275x131 · gap 36 · ref x247/558 y1841 */
+  .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
+    box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer}
+  #bSk .sk-btn>i{display:inline-block;transform:scaleX(.866)}
+  .sk-b1{left:240px;color:#fff;
+    background:linear-gradient(180deg,#ADFF86 0 10px,#78F34B 10px,#76D924 97px,
+      #ABFF85 97px 110px,#3EBC2A 110px)}
+  .sk-b2{left:551px;color:#DFDFDF;
+    background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 10px,#8B8B8B 97px,
+      #D2D2D2 97px 110px,#757575 110px)}
+
+  /* 9 서브탭 바 950x99 ref(65,2020) · 검정 6 · 배경 #61523D · 활성 세그먼트 #4B3E2D */
+  .sk-tabs{left:58px;top:1337px;width:950px;height:99px;border-radius:50px;
+    border:6px solid #000;box-sizing:border-box;
+    background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 71px,#5E4E37 71px 78px,#61523D 78px)}
+  .sk-tabs>*{position:absolute;top:0;height:85px}
+  .sk-tab{text-align:center;line-height:85px;font-size:41px;color:#A9A8AD;cursor:pointer}
+  .sk-tab.on{background:#4B3E2D;border-radius:36px;font-size:40px;line-height:76px;color:#F2BC8D;
+    letter-spacing:-3px;text-indent:-3px;
+    box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000}
+  /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
+  .sk-t1{left:0;width:224px}
+  .sk-t2{left:220px;width:261px}
+  .sk-t3{left:481px;width:223px}
+  .sk-t4{left:709px;width:229px}
+  .sk-tsep{left:704px;width:5px;background:#000;cursor:default}
+  .sk-tabs .sk-lock{top:15px;left:50%;margin-left:-24.5px}
+
+  /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
+     흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
+     레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
+  #bSk .ol3,#bSk .ol4,#bSk .ol5{--o:#000}
+  #bSk .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+    2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
+  #bSk .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+    3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
+  #bSk .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+    4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
+    5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
+    2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
+
+  /* 공용 자물쇠 — 이모지 글리프는 비율이 제각각이라 CSS 로 직접 그린다.
+     기준 49x57 (카드·서브탭 실측). 슬롯은 52x60 이라 scale 로 키운다 */
+  .sk-lock{position:absolute;width:49px;height:57px}
+  .sk-lock::before{content:'';position:absolute;left:11px;top:0;width:27px;height:27px;
+    box-sizing:border-box;border:8px solid #fff;border-bottom:0;border-radius:14px 14px 0 0}
+  .sk-lock::after{content:'';position:absolute;left:0;top:22px;width:49px;height:35px;
+    background:#fff;border-radius:7px}
 </style>
 </head>
 <body>
@@ -4317,7 +4465,92 @@ function renderEq(){
   top += '</div>';
   renderBanner(S.eqTab, 'bEq', top);
 }
-bindBanner('bSk',  () => 'skill');
+/* ---- 07 스킬 팝업 (폭 1080 바닥 시트) — 측정표 docs/measure/07-스킬팝업.md ----
+   레퍼런스는 커먼·언커먼·레어·에픽 4등급만 나와 있어 그 4개는 실측색을 그대로 쓰고,
+   우리 GRADE 의 전설·신화는 같은 «fill / 밝은 rim» 규칙으로 이어 붙였다. */
+const SK_FILL = ['#78553F','#94BC35','#347DC1','#661691','#C9871B','#B02338'];
+const SK_RIM  = ['#AB7A5C','#C8E746','#49A8DE','#8C45AF','#F0B53A','#DC4F62'];
+/* 장착 중 카드는 별도 딤 판 없이 면·rim 자체가 x0.65 로 렌더된다(측정표 6-5) */
+const skDim = h => '#' + [1,3,5].map(i =>
+  Math.round(parseInt(h.substr(i,2),16) * 0.65).toString(16).padStart(2,'0')).join('');
+
+function renderSkill(){
+  const eq = S.eqSkill;
+  let h = '<div class="sk-head"><i class="ol5">스킬</i></div>';
+
+  /* 2 장착 슬롯 8칸 — 앞에서부터 장착 스킬, 나머지는 잠금 슬롯 */
+  h += '<div class="sk-eqp">';
+  for(let i = 0; i < 8; i++){
+    const id = eq[i], it = id ? SK[id] : null, L = 'left:' + (21 + i*125) + 'px';
+    h += it
+      ? '<div class="sk-slot" data-skun="' + id + '" style="' + L
+        + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
+        + '<b class="sk-si">' + it.ic + '</b><u class="sk-slv ol4">Lv. ' + oLv(id) + '</u>'
+        + '<s class="sk-eq m"></s></div>'
+      : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span></div>';
+  }
+  h += '</div>';
+
+  /* 3 보유 스킬 격자 5열 x 3행 */
+  h += '<div class="sk-gp">';
+  SKILLS.forEach((it, i) => {
+    const own = has(it.id), on = skillEquipped(it.id), lv = own ? oLv(it.id) : 1;
+    const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
+    const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
+    const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
+    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-skit="' + it.id + '" '
+      +  'style="left:' + (35 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
+      +  ';--f:' + f + ';--r:' + r + '">'
+      +  (own ? '<b class="sk-ci">' + it.ic + '</b>' : '<span class="sk-lock"></span>')
+      +  '<u class="sk-clv ol4">Lv. ' + lv + '</u>'
+      +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-skeq="' + it.id + '"></s>' : '')
+      +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
+      +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
+      +  '<b class="ol3">' + have + '/' + need + '</b></div></div>';
+  });
+  h += '</div>';
+
+  /* 7 총 보유 효과 — 전투력 계산과 같은 곱연산(1954행)으로 낸다 */
+  const tot = SKILLS.reduce((m, s) => has(s.id) ? m * (1 + ownVal(s)) : m, 1) - 1;
+  h += '<div class="sk-tot"><i class="ol5">총 보유 효과:</i><em class="ol5">공격력 +' + pct(tot) + '</em></div>';
+
+  /* 8 버튼 2개 */
+  h += '<div class="sk-btn sk-b1" data-sksum="1"><i>스킬 소환</i></div>'
+    +  '<div class="sk-btn sk-b2" data-skup="1"><i>일괄 강화</i></div>';
+
+  /* 9 시트 안쪽 서브탭 4개 — 레퍼런스는 동료·기타가 둘 다 잠금이지만
+       우리 빌드는 동료가 해금돼 있어 라벨로 두고 «기타»만 잠금으로 둔다 */
+  h += '<div class="sk-tabs">'
+    +  '<div class="sk-tab sk-t1" data-sktab="eq">장비</div>'
+    +  '<div class="sk-tab sk-t2 on" data-sktab="sk">스킬</div>'
+    +  '<div class="sk-tab sk-t3" data-sktab="pet">동료</div>'
+    +  '<div class="sk-tsep"></div>'
+    +  '<div class="sk-tab sk-t4" data-sktab=""><span class="sk-lock"></span></div></div>';
+
+  setBody('bSk', h);
+}
+$('bSk').addEventListener('click', e => {
+  const un = e.target.closest('[data-skun]');
+  if(un){ toggleEquip(SK[un.dataset.skun], 'skill'); save(); uiDirty = true; renderUI(); return; }
+  const q = e.target.closest('[data-skeq]');
+  if(q){ toggleEquip(SK[q.dataset.skeq], 'skill'); save(); uiDirty = true; renderUI(); return; }
+  if(e.target.closest('[data-sksum]')){ doSummon('skill', 1); return; }
+  if(e.target.closest('[data-skup]')){
+    const r = levelUpAll(SKILLS);
+    popup(r.lvs ? '⬆️ 일괄 강화 완료' : '강화 재료 부족',
+      r.lvs ? '<p><b>' + r.n + '</b>종을 총 <b>' + r.lvs + '</b>레벨 강화했습니다!</p>'
+            : '<p>강화 가능한 스킬이 없습니다.<br>같은 스킬을 더 소환해 재료를 모으세요.</p>');
+    return;
+  }
+  const t = e.target.closest('[data-sktab]');
+  if(t){
+    if(!t.dataset.sktab){ popup('🔒 기타', '<p>아직 해금되지 않은 콘텐츠입니다.</p>'); return; }
+    heroTab = t.dataset.sktab; S.heroTab = heroTab;
+    syncPanel(); uiDirty = true; renderUI(); return;
+  }
+  const c = e.target.closest('[data-skit]');
+  if(c) showItem(c.dataset.skit);
+});
 bindBanner('bEq',  () => S.eqTab);
 bindBanner('bPet', () => 'pet');
 bindBanner('bRel', () => 'relic');
@@ -4497,7 +4730,7 @@ function renderUI(){
     if(curTab === 'grow') renderUp();
     else if(curTab === 'hero'){
       if(heroTab === 'eq')     { renderEq(); syncEquipPage(); }
-      else if(heroTab === 'sk')  renderBanner('skill', 'bSk');
+      else if(heroTab === 'sk')  renderSkill();          /* 07 — 전용 바닥 시트 */
       else                       renderBanner('pet', 'bPet');
     }
     else if(curTab === 'adv')  renderDun();
