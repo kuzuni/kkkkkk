@@ -2112,10 +2112,10 @@
   .spc-rib>b>i{transform:scaleX(.86)}   /* ref 잉크폭 107 vs 우리 124 */
   /* 닉네임 스트립 ref x352–695 — 반투명 흑갈, 좌단 30px 페이드.
      텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
-  .spc-nick{left:228px;top:310px;width:355px;height:52px;
-    background:linear-gradient(90deg,rgba(87,80,68,0) 0,rgba(87,80,68,.95) 45px,rgba(70,63,52,.97) 100%);
+  .spc-nick{left:228px;top:312px;width:355px;height:48px;
+    background:linear-gradient(90deg,rgba(87,80,68,0) 0,rgba(87,80,68,.95) 60px,rgba(70,63,52,.97) 100%);
     box-shadow:0 6px 18px rgba(120,80,40,.4);
-    text-align:center;line-height:52px}
+    text-align:center;line-height:48px}
   .spc-nick>i{font-size:28px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill;
     transform:translateX(24px)}
   /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
@@ -2133,7 +2133,7 @@
   .spc-row:nth-child(even){background:#F6E2C7}
   /* 이름(좌) — 잉크 좌변 컨테이너+37, 한글 fs27 흰(#F9F9F9)+검정 외곽선 5(한쪽 2.5) */
   .spc-row>.nm{position:absolute;left:37px;top:0;height:60px;line-height:60px;
-    font-size:27px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    font-size:27px;color:#F9F9F9;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     white-space:nowrap}
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
   /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 6 (1회차: 진록 아님, ref (0,0,0)) */
@@ -2151,10 +2151,11 @@
   .spc-tab-on>s{position:absolute;inset:0;background:#000;
     clip-path:polygon(0 50%,24px 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,24px 100%)}
   .spc-tab-on>b{position:absolute;left:4px;right:4px;top:6px;bottom:6px;
-    background:linear-gradient(180deg,#FFD65A 0 2px,#FFC736 2px 50%,#F8A63A 50%);
-    clip-path:polygon(0 50%,20px 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,20px 100%);
+    background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 50%,#F8A63A 50%);
+    clip-path:polygon(0 50%,24px 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,24px 100%);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
-  .spc-tab-on>b>i{-webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(.89)}
+  .spc-tab-on>b>i{font-size:37px;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(.84)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
   .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
     text-align:center;font-size:33px;font-weight:900;color:#A9A8AE;cursor:pointer}
