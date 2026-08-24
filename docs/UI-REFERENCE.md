@@ -1158,6 +1158,15 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
       `openRoulette(hit,txt)` 재렌더 구조 → `openRoulette()` 렌더 1회 + `roulSpinTo`/`roulFinish` 제자리 갱신.
       `node verify29.js` **66/66 PASS**(8칸 전수 정렬 중심 오차 0.00deg) · `node tools/smoke.js` SMOKE PASS.
       기록 `docs/review/29-룰렛원판화.md`. 연출(58)·쥬시(60)와 아트 5종은 범위 밖으로 남겼다
+- [x] **전투 화면 터치 조이스틱 — 캐릭터 수동 이동** (42번 작업, 2026-08-25 확정) — **완료 (2026-08-24, sess-2142-9112).**
+      캔버스(`#view`)를 직접 누른 자리에 플로팅 조이스틱(베이스 **Ø220** 흰 .15 / 노브 **Ø100** 흰 .30,
+      테두리 흰 .35 — 설계의 «흰 반투명 15~35%» 안)이 뜨고, 노브는 반경 **110** 안으로 clamp,
+      **데드존 15%**(16.5px) 밖은 `(d−dz)/(R−dz)` 세기로 `stat.speed` 를 곱한다.
+      잡고 있는 동안 **카이팅·적 회피·벽 마진 푸시 OFF**, **벽 하드 clamp·조준·공격·스킬 자동 발동은 유지**.
+      떼면(`pointerup`/`pointercancel`) 즉시 사라지고 자동 이동 복귀. HUD·사이드·탭바·팝업 위 터치는 무시
+      (앞의 셋은 자기가 포인터를 먹고, `pointer-events:none` 인 HUD 3종만 `joyBlocked()` 가 좌표로 거른다).
+      **저장 구조 미변경**(`KEY` 유지). `node verify42.js` **66/66 PASS** · `node tools/smoke.js` SMOKE PASS.
+      기록 `docs/review/42-터치조이스틱.md`. 연출(58)·쥬시(60)와 아트 2종(베이스 링·노브)은 범위 밖으로 남겼다
 
 #### E. 작업 순서 · 주의사항
 
