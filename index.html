@@ -751,6 +751,127 @@
   .ofr-tag{left:115px;top:912px;width:350px;height:46px;border-radius:23px;background:#000;
     font-size:23px;font-weight:800;color:#F0E164;text-align:center;line-height:46px}
   .ofr-tag i{transform:scaleX(1.035)}
+
+  /* ==========================================================================
+     03 던전 팝업 — 측정표 docs/measure/03-던전팝업.md
+     레퍼런스는 모달이 아니라 HUD 와 탭바 사이를 꽉 채우는 **불투명 리스트 페이지**다
+     (딤 없음 · 패널 테두리 없음 · 타이틀바 없음, 배경 #26211B 단색).
+     레퍼런스 y(2340) − 84 = 우리 y(1920)  ← 레퍼런스 최상단 상태바 84px 만큼 어긋난다.
+       HUD 하단  ref 191 → 우리 104(실측)
+       탭바 상단 ref 2160 → 우리 1740(실측)
+     고정 요소(카드 350 · 서브탭 98 · 여백 49/41/50)는 측정값 그대로 쓰고,
+     세로로 모자라는 342px 은 **카드 리스트가 스크롤로 흡수**한다. 축소 금지.
+     ========================================================================== */
+  #dunw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#26211B;
+    display:none;z-index:28}
+  #dunw.on{display:block}
+  #dunw i,#dunw em,#dunw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
+
+  /* 카드 리스트 — 상단 여백 49(ref 191→241), 하단은 서브탭 바로 위까지 */
+  .dns-list{position:absolute;left:0;right:0;top:53px;bottom:139px;overflow-y:auto;
+    overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .dns-list::-webkit-scrollbar{width:0;height:0}
+
+  /* 카드 — x50 w980 h350, pitch 360(=gap 10), 검정 테두리 좌우 7 / 상하 8, radius 12 */
+  /* 테두리를 border 로 주면 자식 절대좌표가 7/8px 밀리므로 별도 프레임 레이어(.fr)로 얹는다 */
+  .dnc{position:relative;left:50px;width:980px;height:350px;margin-bottom:10px;
+    border-radius:12px;overflow:visible;cursor:pointer}
+  .dnc:last-child{margin-bottom:0}
+  .dnc>.fr{inset:0;border-radius:12px;border:8px solid #000;border-left-width:7px;
+    border-right-width:7px;box-sizing:border-box;pointer-events:none}
+  /* 배경: 좌측 단색 + 우측 방사(선버스트). 카드별 색은 --s/--i/--r 로 넘긴다 */
+  .dnc>.bg{position:absolute;inset:8px 7px;border-radius:5px;overflow:hidden;background:var(--s)}
+  .dnc>.bg::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(68% 170% at 90% 20%,var(--i) 0%,var(--i) 55%,transparent 100%)}
+  .dnc>.bg::after{content:'';position:absolute;left:38%;top:-60%;width:124%;height:220%;
+    background:repeating-conic-gradient(from 0deg at 50% 50%,
+      var(--r) 0deg 7deg,transparent 7deg 15deg);
+    -webkit-mask-image:radial-gradient(60% 55% at 50% 50%,#000 0%,transparent 72%);
+    mask-image:radial-gradient(60% 55% at 50% 50%,#000 0%,transparent 72%);opacity:.85}
+  /* 안쪽 상단 하이라이트 1줄 + 좌측 13px 음영 */
+  .dnc>.sh{position:absolute;inset:8px 7px;border-radius:5px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.22) 0 3px,transparent 3px),
+      linear-gradient(90deg,rgba(0,0,0,.45) 0,transparent 13px)}
+  .dnc>*{position:absolute}
+
+  /* 던전명 — rel +42/+44, 잉크높이 52, #FDFF84, 검정 외곽선 4px */
+  .dnc .nm{left:39px;top:39px;height:58px;line-height:58px;font-size:58px;font-weight:900;
+    letter-spacing:-7px;color:#FDFF84;-webkit-text-stroke:4px #000;paint-order:stroke fill;
+    white-space:nowrap}
+  .dnc .nm i{transform:scaleX(1)}
+
+  /* 재화 알약 — rel x+92 y+121, w288 h46, radius23, rgba(0,0,0,.58) */
+  .dnc .pill{left:92px;top:121px;height:46px;border-radius:23px;background:rgba(0,0,0,.58);
+    min-width:288px}
+  .dnc .pill.p2{top:182px}
+  .dnc .pill>em{position:absolute;left:-32px;top:-2px;width:52px;height:52px;
+    font-size:46px;line-height:52px;text-align:center}
+  .dnc .pill>i{position:absolute;left:58px;top:8px;height:30px;line-height:30px;font-size:30px;
+    font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
+
+  /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
+  .dnc .lb{top:245px;height:33px;line-height:33px;font-size:33px;font-weight:800;
+    letter-spacing:-7px;color:#fff;white-space:nowrap}
+  .dnc .lb.a{left:134px}
+  .dnc .lb.b{left:314px}
+
+  /* 레벨·횟수 알약 — y+277 h47 radius23 rgba(0,0,0,.75) */
+  .dnc .sp{top:277px;height:47px;border-radius:23px;background:rgba(0,0,0,.75)}
+  .dnc .sp.lv{left:84px;width:156px}
+  .dnc .sp.tk{left:279px;width:171px}
+  .dnc .sp>em{position:absolute;text-align:center}
+  .dnc .sp.lv>em{left:-24px;top:-7px;width:48px;height:61px;font-size:52px;line-height:61px}
+  .dnc .sp.tk>em{left:-16px;top:0;width:64px;height:50px;font-size:44px;line-height:50px}
+  .dnc .sp>i{position:absolute;top:6px;height:34px;line-height:34px;font-size:40px;
+    font-weight:900;color:#fff;white-space:nowrap}
+  .dnc .sp.lv>i{left:64px}
+  .dnc .sp.tk>i{left:73px}
+
+  /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
+  .dnc .dot{left:951px;top:-4px;width:25px;height:25px;border-radius:50%;background:#F22E52;
+    border:5px solid #000;box-sizing:content-box;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85)}
+
+  /* 잠금 — 딤 .65 + 흰 자물쇠(106x123, 카드 중앙, y+60) + 조건 문구(y+223) */
+  .dnc .lk{inset:8px 7px;border-radius:5px;background:rgba(0,0,0,.65);pointer-events:none}
+  .dnc .lk>em{position:absolute;left:50%;top:52px;width:106px;height:123px;margin-left:-53px}
+  .dnc .lk>em::before{content:'';position:absolute;left:23px;top:0;width:60px;height:70px;
+    border:16px solid #fff;border-bottom:0;border-radius:30px 30px 0 0;box-sizing:border-box}
+  .dnc .lk>em::after{content:'';position:absolute;left:0;top:49px;width:106px;height:74px;
+    background:#fff;border-radius:14px;
+    background-image:radial-gradient(circle 11px at 53px 30px,#000 0 11px,transparent 11px),
+      linear-gradient(#000,#000);
+    background-size:100% 100%,10px 20px;background-position:0 0,48px 34px;
+    background-repeat:no-repeat,no-repeat}
+  .dnc .lk>u{position:absolute;left:0;right:0;top:211px;height:45px;line-height:45px;
+    padding-right:1px;box-sizing:border-box;
+    text-align:center;font-size:45px;font-weight:900;letter-spacing:-5px;color:#C8C8C8;
+    text-decoration:none;-webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap}
+  .dnc .lk>u b{color:#FF8252;font-weight:900}
+
+  /* 서브탭 — 컨테이너 x151 w794 h98 radius49, 하단이 탭바 위 41px.
+     좌 🔒(비선택 #61503C) / 우 던전(선택 #4B3E2D) 이 gap 0 으로 겹친다 */
+  .dns-sub{position:absolute;left:151px;top:auto;bottom:41px;width:794px;height:98px}
+  .dns-t{position:absolute;top:0;height:98px;border-radius:49px;border:6px solid #000;
+    box-sizing:border-box}
+  .dns-t.lk{left:0;width:524px;border-left-width:8px;background:#61503C;
+    box-shadow:inset 0 0 0 7px #705F4B}
+  .dns-t.lk>em{position:absolute;left:161px;top:15px;width:50px;height:57px}
+  .dns-t.lk>em::before{content:'';position:absolute;left:11px;top:0;width:28px;height:33px;
+    border:8px solid #fff;border-bottom:0;border-radius:14px 14px 0 0;box-sizing:border-box}
+  .dns-t.lk>em::after{content:'';position:absolute;left:0;top:23px;width:50px;height:34px;
+    background:#fff;border-radius:7px;
+    background-image:radial-gradient(circle 5px at 25px 14px,#000 0 5px,transparent 5px),
+      linear-gradient(#000,#000);
+    background-size:100% 100%,5px 9px;background-position:0 0,22px 16px;
+    background-repeat:no-repeat,no-repeat}
+  .dns-t.on{left:373px;width:421px;background:#4B3E2D;box-shadow:inset 0 0 0 7px #634F37}
+  .dns-t.on>b{position:absolute;left:0;right:0;top:18px;height:42px;line-height:42px;
+    text-align:center;font-size:42px;font-weight:900;letter-spacing:-5px;
+    padding-right:5px;box-sizing:border-box;color:#F3BC8C;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap}
+  .dns-t.on>s{position:absolute;right:13px;top:-4px;width:25px;height:25px;border-radius:50%;
+    background:#F22E52;border:5px solid #000;box-sizing:content-box;text-decoration:none}
 </style>
 </head>
 <body>
@@ -877,6 +998,15 @@
     <button class="ofr-go" id="ofrGo"><i>이동</i></button>
     <div class="ofr-tag"><i>구매 즉시 반영!</i></div>
   </div></div>
+  <!-- 03 던전 팝업. 레퍼런스는 모달이 아니라 HUD~탭바 사이를 채우는 리스트 페이지라
+       공용 #modal 껍데기를 쓰지 않는다. 측정표 docs/measure/03-던전팝업.md -->
+  <div id="dunw">
+    <div class="dns-list" id="dunList"></div>
+    <div class="dns-sub">
+      <div class="dns-t lk" id="dunSubLock"><em>🔒</em></div>
+      <div class="dns-t on"><b>던전</b><s></s></div>
+    </div>
+  </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
 
@@ -3361,18 +3491,74 @@ function openQuest(){
     claimQuest(QUESTS.find(x => x.id === b.dataset.q));
   });
 }
-function openDungeon(){
-  renderDun();
-  showModal('<h2>🏰 던전</h2>' + $('bDun').innerHTML
-    + '<button class="gbtn green" id="dunClose">닫기</button>');
-  $('dunClose').onclick = closeModal;
-  $('mbox').querySelectorAll('[data-dun]').forEach(b => b.onclick = () => {
-    challengeDungeon(DUNGEONS.find(d => d.id === b.dataset.dun));
+/* ---- 03 던전 팝업 (리스트 페이지) — 측정표 docs/measure/03-던전팝업.md ----
+   레퍼런스는 모달이 아니라 HUD~탭바 사이를 채우는 불투명 리스트 페이지다.
+   카드 좌표·크기는 전부 실측 절대 px (카드 980x350, pitch 360, 좌우 여백 50).
+   해금 조건은 레퍼런스의 「가이드미션 N 클리어」 자리에 우리 게임의 최고 스테이지를 넣었다.
+   (요구 전투력이 3.5K~9K 이라 그 전에는 어차피 클리어가 불가능해 밸런스 영향은 없다) */
+const DUN_UI = {
+  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:'🪙', tk:'🎫',
+            rw:['골드 획득 가능'], open:1  },
+  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️',
+            rw:['다이아 획득 가능'], open:1  },
+  relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫',
+            rw:['유물석 획득 가능','유물 재료 획득 가능'], open:15 },
+  growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️',
+            rw:['도감 재료 획득 가능'], open:25 },
+  boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫',
+            rw:['골드 획득 가능','보석 획득 가능'], open:40 }
+};
+function dunLocked(d){ return S.best < DUN_UI[d.id].open; }
+function renderDunPage(){
+  let h = '';
+  DUNGEONS.forEach(d => {
+    const u = DUN_UI[d.id], lock = dunLocked(d), left = S.daily.dun[d.id], f = S.dun[d.id];
+    h += '<div class="dnc" data-dcard="' + d.id + '" style="--s:' + u.s + ';--i:' + u.i
+      +  ';--r:' + u.r + ';--pt:' + u.pt + '">'
+      +  '<div class="bg"></div><div class="sh"></div><div class="fr"></div>'
+      +  '<div class="nm"><i>' + d.n + '</i></div>'
+      +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>' + u.ic
+           + '</em><i>' + t + '</i></div>').join('')
+      +  '<div class="lb a"><i>레벨</i></div><div class="lb b"><i>남은 횟수</i></div>'
+      +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
+      +  '<div class="sp tk"><em>' + u.tk + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
+      +  (!lock && left > 0 ? '<s class="dot"></s>' : '')
+      +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + u.open + '</b> 클리어</u></div>' : '')
+      +  '</div>';
   });
-  $('mbox').querySelectorAll('[data-sweep]').forEach(b => b.onclick = () => {
-    sweepDungeon(DUNGEONS.find(d => d.id === b.dataset.sweep));
-  });
+  $('dunList').innerHTML = h;
 }
+function openDungeon(){
+  renderDunPage();
+  $('dunw').classList.add('on');
+  $('dunList').scrollTop = 0;
+}
+function closeDungeon(){ $('dunw').classList.remove('on'); }
+$('dunList').addEventListener('click', e => {
+  const c = e.target.closest('[data-dcard]');
+  if(!c) return;
+  const d = DUNGEONS.find(x => x.id === c.dataset.dcard);
+  if(dunLocked(d)){
+    popup('🔒 ' + d.n, '<p>최고 스테이지 <b>' + DUN_UI[d.id].open + '</b> 를 클리어하면 열립니다.<br>'
+      + '현재 최고 스테이지 <b>' + S.best + '</b></p>');
+    return;
+  }
+  /* 04 던전 세부 팝업이 들어오기 전까지의 임시 진입점 — 도전/소탕 선택만 제공한다 */
+  const f = S.dun[d.id], need = d.req(f);
+  showModal('<h2>' + d.n + '</h2>'
+    + '<p>' + d.d + '<br>현재 <b>' + f + '층</b> · 요구 전투력 <b style="color:'
+    + (cp() >= need ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(need) + '</b><br>'
+    + '오늘 남은 입장 <b>' + S.daily.dun[d.id] + '/' + DUN_TRY + '</b></p>'
+    + '<button class="gbtn gold" id="dunSweep"' + (S.daily.dun[d.id] > 0 && f > 1 ? '' : ' disabled')
+    + '>⚡ 소탕</button>'
+    + '<button class="gbtn green" id="dunGo"' + (S.daily.dun[d.id] > 0 ? '' : ' disabled')
+    + '>도전</button>');
+  $('dunGo').onclick = () => { challengeDungeon(d); renderDunPage(); };
+  $('dunSweep').onclick = () => { sweepDungeon(d); renderDunPage(); };
+});
+$('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
+/* 탭바를 누르면 던전 페이지는 닫힌다 (탭바 자체는 A1 구간이라 손대지 않는다) */
+$('tabbar').addEventListener('click', closeDungeon, true);
 function openProfile(){
   renderSt();
   showModal('<h2>📊 내 정보</h2>' + $('bSt').innerHTML
@@ -3457,7 +3643,7 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     else if(k === 'roul') openRoulette(-1, '');
     else if(k === 'mail') openMail();
     else if(k === 'quest') openQuest();
-    else if(k === 'dun') openDungeon();
+    else if(k === 'dun') $('dunw').classList.contains('on') ? closeDungeon() : openDungeon();
     else if(k === 'promo') openPromo();
   };
 });
