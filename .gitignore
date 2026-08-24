@@ -104,3 +104,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# tooling (routine worker)
+/node_modules/
+/package.json
+/package-lock.json
+/scratchpad/

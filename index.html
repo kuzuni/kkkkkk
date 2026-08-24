@@ -706,6 +706,69 @@
   .sk-act .sk-e:disabled{filter:saturate(.3) brightness(.82)}
   .sk-act button:disabled{cursor:default}
 
+  /* ── 16 유물 세부 팝업 — docs/measure/16-유물세부팝업.md (레퍼런스 16 PIL 실측) ──
+     껍데기는 08 과 동일한 A5 딤 위 가운데 다이얼로그. .rl16 로 딤(.63)·본문·제목만 override.
+     본문 = 얇은 베이지 림(#F0D9BA, 상2·좌우9·하9) + 그 안쪽 전면 카드색(#D7C0A1) 844×829.
+     레퍼런스는 «강화» 단일 버튼(장착 버튼 없음) — 유물 수동 장착은 autoEquipAll 이 대체. */
+  #modal.rl16{background:rgba(0,0,0,.63);padding-top:132px}
+  .rl16 .mbox{border-bottom-width:10px;padding-bottom:9px}
+  .rl16 .mbody{padding:2px 0 9px;background:#F0D9BA;text-align:center;border-bottom-width:4px}
+  .rl16 .mhead h2{font-size:47px;line-height:47px;-webkit-text-stroke:6px #000}
+  .rld{position:relative;width:844px;height:829px;margin:0 auto;background:#D7C0A1;border-radius:24px}
+  .rld>*{position:absolute}
+  .rld b{display:block;font-weight:900;color:#fff;paint-order:stroke fill}
+  /* 아이콘 박스 149² — 4px 검정 + 안쪽 링 5px #AE7B5C */
+  .rl-ic{left:47px;top:49px;width:149px;height:149px;box-sizing:border-box;
+    border:4px solid #000;border-radius:20px;box-shadow:inset 0 0 0 5px #AE7B5C;
+    background:linear-gradient(180deg,#775742,#835F49);
+    display:flex;align-items:center;justify-content:center;font-size:96px;line-height:1}
+  /* 등급 알약 207×48 */
+  .rl-gr{left:237px;top:68px;width:207px;height:48px;box-sizing:border-box;
+    border:4px solid #000;border-radius:21px;box-shadow:inset 0 0 0 6px #AB7C5E;
+    background:linear-gradient(180deg,#775742 0%,#835F49 50%,#775742 100%);
+    display:flex;align-items:center;justify-content:center}
+  .rl-gr b{font-size:23px;-webkit-text-stroke:6px #000}
+  /* Lv 박스 139×65 — 진행바보다 위아래로 크고 좌단을 덮는다(z 위) */
+  .rl-lv{left:237px;top:129px;width:139px;height:65px;box-sizing:border-box;z-index:2;
+    border:5px solid #000;border-radius:32px;
+    background:linear-gradient(180deg,#57402F 0 8px,#6B573F 8px 15px,#57402F 15px 50px,#6B573F 50px 57px,#57402F 57px);
+    display:flex;align-items:center;justify-content:center}
+  .rl-lv b{font-size:34px;-webkit-text-stroke:9px #000;transform:scaleX(1.02)}
+  /* 진행바 436×48 — 트랙 2단(#8182A0/#6F7799), 채움 #FBB51F */
+  .rl-pb{left:346px;top:138px;width:436px;height:48px;box-sizing:border-box;
+    border:6px solid #000;border-radius:17px;overflow:hidden;
+    background:linear-gradient(180deg,#8182A0 0 20px,#6F7799 20px)}
+  .rl-pb i{display:block;height:100%;background:#FBB51F}
+  .rl-pb b{position:absolute;top:0;right:0;left:33px;height:100%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;color:#FBFEB7;-webkit-text-stroke:6px #000}
+  /* 플레이버 텍스트 박스 748×130 — 밝은 패널 위 다크 텍스트, 좌측 정렬 */
+  .rl-fl{left:47px;top:233px;width:748px;height:130px;box-sizing:border-box;overflow:hidden;
+    border:4px solid #000;border-radius:20px;background:#F8ECDB;
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:0 30px;text-align:left;
+    display:flex;align-items:center}
+  .rl-fl p{margin:0;font-size:32px;line-height:40px;font-weight:800;color:#5A4634}
+  /* 보유 효과 알약 298×58 — 효과 박스를 28px 파고드는 겹침 배지 */
+  .rl-ow{left:272px;top:390px;width:298px;height:58px;box-sizing:border-box;z-index:2;
+    border:4px solid #000;border-radius:19px;
+    background:linear-gradient(180deg,#543D2F 0 6px,#6A573F 6px calc(100% - 6px),#543D2F calc(100% - 6px));
+    display:flex;align-items:center;justify-content:center}
+  .rl-ow b{font-size:25px;-webkit-text-stroke:7px #000}
+  /* 효과 박스 748×199 — 상단 44 여백(겹침배지 아래), 골드 강조 */
+  .rl-eb{left:47px;top:420px;width:748px;height:199px;box-sizing:border-box;overflow:hidden;
+    border:4px solid #000;border-radius:20px;background:#F8ECDB;
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:44px 30px 0;text-align:left}
+  .rl-eb p{margin:0;font-size:32px;line-height:42px;font-weight:800;color:#5A4634}
+  .rl-eb p em{font-style:normal;color:#ECBB29;font-weight:900}
+  /* 강화 버튼 240×119 가로중앙 — 08 강화버튼과 동일 회색(회색이 기본색이라 비활성 딤 안 건다) */
+  .rl-act{left:301px;top:670px;width:240px;height:119px;box-sizing:border-box;padding:0 0 6px;cursor:pointer;
+    border:7px solid #000;border-radius:38px;font-family:inherit;
+    background:linear-gradient(180deg,#ADADAD,#8D8D8D);
+    box-shadow:inset 0 0 0 6px #D3D3D3,inset 0 -12px 0 -6px #767676;
+    display:flex;align-items:center;justify-content:center}
+  .rl-act b{font-size:45px;-webkit-text-stroke:9px #000;transform:scaleX(.94)}
+  .rl-act:disabled{cursor:default}
+
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
   .rc{position:relative;border-radius:18px;padding:12px 4px 10px;border:3.2px solid #333;overflow:hidden;
@@ -3069,6 +3132,18 @@ const RELICS = [
 ];
 const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률', rate:'공격 속도',
                     gold:'골드 획득', regen:'체력 재생', all:'전 스탯' };
+/* 16 유물 세부 팝업 플레이버 텍스트(정적 데이터 — 세이브 마이그레이션 불필요) */
+const RELIC_FLAVOR = {
+  rl0:'낡았지만 왠지 마음이 놓인다. 햄지가 자꾸 물어뜯으려 한다.',
+  rl1:'한때 이름난 전사의 것이었다고 한다. 매옹이가 반짝임에 홀렸다.',
+  rl2:'만지면 괜히 힘이 솟는 기분이 든다. 조심히 다루자.',
+  rl3:'모든 것을 꿰뚫어 본다는데, 정작 숨긴 간식은 못 찾는다.',
+  rl4:'아직도 따뜻하게 뛴다. 품에 안으면 든든하다.',
+  rl5:'손에 쥐면 바람이 인다. 햄지 털이 사방으로 날린다.',
+  rl6:'누가 봐도 비싸 보인다. 매옹이가 왕 흉내를 낸다.',
+  rl7:'심으면 세상이 자란다는 씨앗. 아직은 화분에 있다.',
+  rl8:'세상이 처음 만들어질 때의 조각. 밤에도 눈부시게 환하다.'
+};
 
 /* ---- 아바타 (다이아 구매 · 보유 효과 · 외형 변경) ---- */
 const AVATARS = [
@@ -4845,11 +4920,11 @@ function endPromo(win){
    (레퍼런스 02번에는 하단 패널이 없고 전투 영역이 HUD~탭바 사이를 전부 채운다) */
 let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = false;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
-function closeModal(){ $('modal').classList.remove('on', 'sk8'); }
+function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8');   /* 08 전용 껍데기 override 를 끈다 */
+  $('modal').classList.remove('sk8', 'rl16');   /* 08·16 전용 껍데기 override 를 끈다 */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -5124,10 +5199,44 @@ function showSkillDetail(id){
   if(l && !l.disabled) l.onclick = () => { if(levelUp(it)) showSkillDetail(id); };
 }
 
+/* ── 16 유물 세부 팝업 ── 측정표: docs/measure/16-유물세부팝업.md
+   껍데기는 A5 공용 모달(가운데 다이얼로그) + .rl16 override. 레퍼런스는 «강화» 단일 버튼(장착 버튼 없음).
+   유물 수동 장착은 autoEquipAll() 이 상위 3개를 자동 장착하므로, 강화 후 autoEquipAll 로 보유 효과를 유지한다. */
+function showRelicDetail(id){
+  const it = RL[id], G = GRADE[it.g], own = has(id), lv = oLv(id);
+  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
+  const rate = own ? (maxed ? 1 : Math.min(1, have / need)) : 0;
+  const p = (rate * 100).toFixed(1);
+  const flavor = own ? (RELIC_FLAVOR[id] || '') : '아직 발견하지 못한 유물이다.';
+  const effTxt = own
+    ? '햄지와 매옹이의 <em>' + RELIC_EFF[it.eff] + '</em> 이(가) <em>+' + pct(relicVal(it)) + '</em> 상승한다.'
+      + (relicEquipped(id) ? '<br>장착 중 — 효과 <em>2배</em> 로 적용된다.' : '')
+    : '유물 소환으로 획득하면 효과가 열립니다.';
+
+  $('mtitle').textContent = own ? it.n : '???';
+  $('mbox').innerHTML =
+      '<div class="rld">'
+    +   '<div class="rl-ic">' + (own ? it.ic : '❔') + '</div>'
+    +   '<div class="rl-gr"><b>' + G.n + '</b></div>'
+    +   '<div class="rl-lv"><b>Lv. ' + lv + '</b></div>'
+    +   '<div class="rl-pb"><i style="width:' + p + '%"></i>'
+    +     '<b>' + (maxed ? 'MAX' : have + '/' + need) + '</b></div>'
+    +   '<div class="rl-fl"><p>' + flavor + '</p></div>'
+    +   '<div class="rl-ow"><b>보유 효과</b></div>'
+    +   '<div class="rl-eb"><p>' + effTxt + '</p></div>'
+    +   '<button class="rl-act" id="mLv"' + (own && !maxed && canLevel(it) ? '' : ' disabled') + '><b>강화</b></button>'
+    + '</div>';
+  $('mbox').scrollTop = 0;
+  $('modal').classList.add('on', 'rl16');
+  const l = $('mLv');
+  if(l && !l.disabled) l.onclick = () => { if(levelUp(it)){ autoEquipAll(); showRelicDetail(id); } };
+}
+
 function showItem(id){
   const it = itemById(id);
   if(!it) return;
   if(SK[id]) return showSkillDetail(id);   /* 스킬은 08 전용 상세 팝업으로 */
+  if(RL[id]) return showRelicDetail(id);    /* 유물은 16 전용 상세 팝업으로 */
   const cat = catOf(it), G = GRADE[it.g], own = has(id), need = fragNeed(oLv(id));
   const eq = cat === 'skill' ? skillEquipped(id) : cat === 'pet' ? petEquipped(id)
            : cat === 'relic' ? relicEquipped(id) : eqEquipped(it);
