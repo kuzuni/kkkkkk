@@ -2431,8 +2431,10 @@
      calc(100% - 104px) 가 그 상한이다. 시트 1245 는 최저 상한(frameH 1600 → 1316)보다
      작아 오늘은 걸리지 않지만(실측 top 175), 시트가 1316 을 넘게 커지면 06·07 처럼
      본문에 `.shsc` 뷰포트를 넣어야 한다 — 그냥 두면 서브탭 바가 잘린다. */
+  /* 9회차(M P5): 좌상단 코너를 열별로 재면 ref «첫 갈색 y» 가 x0:952 x10:931 x20:924 x30:921 x35:920 —
+     원 반경 **≈40** 이다(r56 이면 x10 에서 944 여야 한다). */
   .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 104px);
-    background:#E6C695;border-radius:56px 56px 0 0;overflow:hidden}
+    background:#E6C695;border-radius:40px 40px 0 0;overflow:hidden}
   .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:#141414}
   .tr-sheet>*{position:absolute}
   .tr-wave{left:0;right:0;top:0;height:8px;background:#141414;z-index:3}
@@ -2454,7 +2456,9 @@
   .tr-box{left:17px;top:143px;width:1046px;height:1093px;border-radius:34px;
     background:linear-gradient(180deg,#F3E6CD 0 337px,#E9CD9E 337px 346px,#ECD9BB 346px 919px,
       #FFF3D8 919px 926px,#F3E7CD 926px);
-    box-shadow:inset 0 0 0 6px #CDA26C}
+    /* 9회차(N P4): ref 는 테두리(6px) 직후 **밝은 립 3px** (249,230,198) 이 4변 전부에 있다.
+       inset box-shadow 는 «먼저 적은 것이 위» 라 6px 테두리를 앞에, 9px 립을 뒤에 둔다 */
+    box-shadow:inset 0 0 0 6px #CDA26C,inset 0 0 0 9px #F9E6C6}
   .tr-box>*{position:absolute}
 
   /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y34 w551 h108 (가운데 바 + 좌우 꼬리) */
@@ -2505,8 +2509,13 @@
      초록 채움도 단색이 아니라 y1256 에서 끊기는 **하드 2단**이다 ((160,243,47) → (129,216,29)). */
   .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:28px 12px 12px 28px;
     background:#000}
-  .tr-prog>.trk{position:absolute;left:8px;top:7px;right:4px;bottom:7px;border-radius:8px;
-    background:linear-gradient(180deg,#0E0F14 0 6px,#1C1E2B 9px);overflow:hidden}
+  /* 9회차(비평가 N P1~P3, 자체 재확인) — ref x700 세로 구조는
+     검정 **3px**(y1229..1231) → 인셋 그늘 **10px**(8,9,13) → 채움 36px(25,28,37)
+     → **하단 인셋 하이라이트 1px**(15,14,20) → 검정 3px(y1279..1281) 이다.
+     8회차 것은 검정 7px·그늘 7px·채움 32px·하단 인셋 0 이라 **트랙 내부가 41 vs 47 (−12.8%)** 였다. */
+  .tr-prog>.trk{position:absolute;left:8px;top:4px;right:4px;bottom:4px;border-radius:8px;
+    background:linear-gradient(180deg,#0E0F14 0 10px,#1C1E2B 12px calc(100% - 1px),
+      #0F0E14 calc(100% - 1px));overflow:hidden}
   .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;
     background:linear-gradient(180deg,#A0F32F 0 21px,#81D81D 21px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
@@ -2560,21 +2569,25 @@
   /* 선택 칩 — ref 필 border-box y1337..1392 = 바 상단 기준 top9 h56 (top14 h45 는 21% 작았다).
      칩 아래 offset 65..68 은 ref 가 **트랙 원색 (193,144,104)** 이다 — 3회차의 어두운 그늘 밴드(::after)는
      ref 에 없어서 제거했다(있으면 칩이 h69 로 이어져 보인다). */
-  .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:0;top:9px;height:56px;
+  /* 9회차(N P8): ref 칩 border-box 는 x168..405 = **238**(우테두리 401..405 가 7회차에 확인된 그것).
+     right:0 이면 253−9 = 244 로 +2.5% 였다 */
+  .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:6px;top:9px;height:56px;
     border-radius:12px;background:linear-gradient(180deg,#FFEED0 0 4px,#FCD2AC 4px);
     box-shadow:inset 0 0 0 6px #AA6F4D}
   .tr-qty>.q:nth-child(1){left:0;width:253px;border-radius:12px 0 0 12px}
   .tr-qty>.q:nth-child(2){left:253px;width:255px}
   .tr-qty>.q:nth-child(3){left:508px;width:253px;border-radius:0 12px 12px 0;
     box-shadow:inset -6px 0 0 #EBBE9A}
+  /* 9회차(M P7, ⑥ 기록항목이지만 폭은 ② 비율이라 반영): ref 잉크 폭 x1 42 · x10 71 · x30 79,
+     우리는 셋 다 66 이었다(−7~−16%). 중심은 Δ≤2.5 로 맞으니 scaleX 로 폭만 넓힌다 */
   .tr-qty>.q>i{position:relative;z-index:2;top:5px;font-size:38px;color:#C6BCBA;
-    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill}
+    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill;transform:scaleX(1.12)}
   .tr-qty>.q.on>i{color:#F9F1EF}
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
   .tr-cards{left:0;right:0;top:373px;height:510px}
   .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:28px;background:#FFFDF2;
-    box-shadow:inset 0 0 0 8px #141414,0 0 0 3px #8B6A38,0 0 0 5px #C6A470,0 8px 0 #5E4823;
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 3px #8B6A38,0 0 0 5px #C6A470,0 5px 0 #5E4823;
     cursor:pointer}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
@@ -2607,7 +2620,12 @@
      **padding-right 로 flex 콘텐츠만** 왼쪽으로 민다(밴드 좌표 불변). */
   .tr-card>.cb{left:12px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:2px;padding-right:18px;border-radius:0 0 20px 20px;
-    background:linear-gradient(180deg,#BBA38B 0 99px,#AA7F54 99px)}
+    /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
+       1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
+       N 의 «9px · (69,52,34) 까지» 는 그 아래 카드 검정 테두리(1938~)의 AA 가 섞인 값이다 —
+       그대로 반영했더니 1936..1937 이 (69,52,31) 로 ref 보다 84 어두워졌다. ref 3단으로 되돌린다. */
+    background:linear-gradient(180deg,#BBA38B 0 100px,#B4906C 100px 101px,#AD865D 101px 103px,
+      #AA7D53 103px)}
   /* 💰 는 ref 금화 스프라이트의 자리표시다 — «아트 자리 규칙» 대로 bbox 53x55 를 정확히 차지시킨다.
      이모지 잉크비는 w/fs 1.00 · h/fs 1.12 이라 fs49 로 높이를 맞추고 폭만 scaleX 로 넓힌다. */
   .tr-card>.cb>s{font-size:49px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(1.08)}
@@ -2630,7 +2648,10 @@
     margin:8px 0 6px;cursor:pointer}
   /* 7회차: 칸 구분선을 inset box-shadow 로 주면 바 내부를 «관통»한다(83px).
      ref 는 y2043..2097 = **55px** 로 상하 14px 씩 인셋돼 있다(두 비평가가 독립적으로 +51% 로 지적). */
-  .tr-sub>.sg::after{content:'';position:absolute;right:0;top:14px;height:55px;width:4px;
+  /* 9회차(N P5·P6, 자체 재확인): ref 글리프 없는 행(y2094)에서 구분선은 **x538..541 · x774..779** 다.
+     flex 4등분 경계(297·534·771)에 붙이면 530·767 로 **8px 왼쪽**에 온다 → right:-8px 로 옮긴다
+     (탭 히트영역·라벨 정렬은 그대로. 두 비평가가 라벨 중심은 Δ≤2.5 로 «맞다» 고 했다) */
+  .tr-sub>.sg::after{content:'';position:absolute;right:-8px;top:14px;height:55px;width:4px;
     background:#4A3A2B;z-index:1}
   .tr-sub>.sg:last-child::after{display:none}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
