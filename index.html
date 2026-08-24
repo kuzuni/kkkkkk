@@ -1028,8 +1028,9 @@
     box-sizing:border-box;pointer-events:none}
   .shp-card>*{position:absolute}
 
-  /* 상자 아트(이모지 근사) — 아트 리소스 부재로 색·명암 감점 예상 */
-  .shp-card .cart{left:103px;top:150px;width:274px;height:204px;font-size:168px;line-height:204px;
+  /* 상자 아트(이모지 근사) — 아트 리소스 부재로 색·명암 감점 예상.
+     이모지 사이드베어링 탓에 글리프가 박스 중심보다 우측으로 밀려 left 를 24px 당겨 중심 x≈289 로 맞춘다 */
+  .shp-card .cart{left:79px;top:150px;width:274px;height:204px;font-size:162px;line-height:204px;
     text-align:center;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
 
   /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
@@ -1111,7 +1112,7 @@
   /* ✦ 마름모 구분선 */
   .shp-cs{position:absolute;top:44px;width:15px;height:20px;background:#989491;z-index:1;
     clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-  .shp-cs.s1{left:257px} .shp-cs.s3{left:747px}
+  .shp-cs.s1{left:251px} .shp-cs.s3{left:741px}
   /* 활성 알약(소환) — 양끝 화살촉 노랑 배너 */
   .shp-cat-pill{position:absolute;left:-8px;top:14px;width:250px;height:79px;z-index:1;
     background:linear-gradient(180deg,#FFC736,#F8A63A);border:6px solid #000;box-sizing:border-box;
@@ -5072,14 +5073,8 @@ function closeShopPage(){ $('shopw').classList.remove('on'); }
 $('shopList').addEventListener('click', e => {
   const info = e.target.closest('[data-shinfo]');
   if(info){
-    const b = info.dataset.shinfo, B = BANNERS[b], p = gradeProbs(b);
-    popup('🔍 ' + B.n + ' 확률 정보',
-      '<p>소환 레벨 <b>Lv.' + sumLv(b) + '</b> 기준 등급별 확률</p>'
-      + '<div style="text-align:left;background:#0e1428;border-radius:16px;padding:14px 18px;margin-top:12px">'
-      + GRADE.map((g,i) => sumLv(b) < GRADE_ROLL[i].unlock
-          ? '<p style="color:#7f8699">' + g.ic + ' ' + g.n + ' — 🔒 Lv.' + GRADE_ROLL[i].unlock + ' 해금</p>'
-          : '<p><b style="color:' + g.c + '">' + g.ic + ' ' + g.n + '</b> — ' + (p[i]*100).toFixed(2) + '%</p>').join('')
-      + '</div>');
+    /* 11 확률 정보 팝업(#prbw)으로 연결 — 다른 세션이 만든 정식 다이얼로그 재사용 */
+    if(typeof openProbInfo === 'function') openProbInfo(info.dataset.shinfo);
     return;
   }
   const btn = e.target.closest('[data-shsum]');
