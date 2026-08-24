@@ -1062,8 +1062,10 @@
   .dgd-amt i{transform:scaleX(1.15)}
 
   /* 입장권 알약 + 연속 도전 체크박스 (local y 824~877) */
-  .dgd-tk{left:119px;top:826px;width:199px;height:51px;border-radius:25px;background:#736757;
-    text-align:center;line-height:51px}
+  /* 알약 높이는 45 다(radius 22 = 높이/2). 1회차 자가 스캔이 51 로 읽은 건 티켓 아이콘의
+     안티에일리어싱 행까지 물린 값이었다 — 아이콘을 피한 x400/430/440 열에서는 ref 가 일관되게 44~45. */
+  .dgd-tk{left:119px;top:827px;width:199px;height:45px;border-radius:22px;background:#736757;
+    text-align:center;line-height:45px}
   .dgd-tk i{font-size:29px;font-weight:900;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:translateX(25px) scaleX(1.36)}
   .dgd-tki{left:111px;top:819px;width:69px;height:54px;font-size:40px;line-height:54px;text-align:center;
