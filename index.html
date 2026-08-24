@@ -2007,7 +2007,7 @@
   /* Gamer Id — 라틴 잉크 15 → font 21(÷0.72). 얇은 회흑 외곽선 2px */
   .pf-gid{left:0;right:0;top:37px;height:22px;line-height:22px;text-align:center;
     font-size:22px;font-weight:700;color:#fafafa;
-    -webkit-text-stroke:2.5px #777;paint-order:stroke fill;white-space:nowrap}
+    -webkit-text-stroke:3.5px #5F5F5F;paint-order:stroke fill;white-space:nowrap}
   /* 라틴 uuid 는 이 서체가 레퍼런스보다 14% 좁다 — 폭만 scaleX 로 회수 */
   .pf-gid>i{transform:scaleX(1.14)}
   /* 초상화 ref (451,595) 179×176 — 검정5 / 갈색(113,90,76)12 / 검정4 / 아트 137×138 */
@@ -2041,11 +2041,12 @@
   .pf-edit{left:602px;top:328px;width:56px;height:55px;background:#F6E8CB;
     border:5px solid #423127;border-radius:12px;box-sizing:border-box;cursor:pointer}
   /* 연필: 대각(−45°) 몸통 + 좌하단 촉 — ✎ 글리프는 리본으로 읽혀 폐기 */
-  .pf-edit::before{content:'';position:absolute;left:13px;top:1px;width:36px;height:14px;
-    background:#52433C;border-radius:2px;transform:rotate(45deg);transform-origin:0 50%}
-  .pf-edit::after{content:'';position:absolute;left:3px;top:31px;width:0;height:0;
-    border-left:12px solid #52433C;border-top:5px solid rgba(0,0,0,0);
-    border-bottom:7px solid rgba(0,0,0,0);transform:rotate(45deg)}
+  .pf-edit::before{content:'';position:absolute;left:12px;top:-2px;width:38px;height:18px;
+    background:linear-gradient(180deg,#52433C 0 7px,#F0E2C4 7px 11px,#52433C 11px);
+    border-radius:2px;transform:rotate(45deg);transform-origin:0 50%}
+  .pf-edit::after{content:'';position:absolute;left:2px;top:30px;width:0;height:0;
+    border-left:14px solid #52433C;border-top:6px solid rgba(0,0,0,0);
+    border-bottom:8px solid rgba(0,0,0,0);transform:rotate(45deg)}
   /* 탭 3개 ref y917 h70 — 활성은 콘텐츠 패널(#D0B195)과 이음새 없이 연결(2px 겹침) */
   .pf-tab{top:402px;width:228px;height:69px;line-height:80px;text-align:center;
     border-radius:16px 16px 0 0;background:#A5866A;cursor:pointer;
@@ -2054,7 +2055,7 @@
     font-size:38px;color:#A9A8AD;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
-  .pf-tab.on{height:76px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
+  .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
     box-shadow:none}
   .pf-tab.on::before{content:'';position:absolute;inset:0 0 9px 0;border-radius:16px 16px 0 0;
     box-shadow:inset 0 4px 0 #A6896B,inset 4px 0 0 #A6896B,inset -4px 0 0 #A6896B,
@@ -2071,7 +2072,7 @@
   /* 카드 350×77 r16 — 보유(139,118,99)/미보유(92,77,64). 장착 = 시안 링 6 + 검정 배지 */
   .pf-card{position:relative;width:350px;height:77px;border-radius:16px;background:#5C4D40}
   .pf-card.own{background:#8B7663}
-  .pf-card.eq{box-shadow:0 0 0 1px #8EFCF3,inset 0 0 0 5px #8EFCF3}
+  .pf-card.eq{box-shadow:0 0 0 1px #93EFE4,inset 0 0 0 5px #93EFE4}
   /* 카드 내부 육각 배너 w298 h57, 카드 상 11 / 좌 26 */
   .pf-bn{position:absolute;left:26px;top:11px;width:298px;height:57px;line-height:57px}
   .pf-bn>s.o{background:#000}
@@ -2094,7 +2095,8 @@
   /* 장착 중 배지 — 검정 알약 148×38, 카드 상변 −18 겹침 */
   .pf-eqb{position:absolute;left:50%;top:-21px;width:148px;height:38px;margin-left:-74px;
     border-radius:19px;background:#000;text-align:center;line-height:38px;z-index:2}
-  .pf-eqb>i{font-size:22px;color:#9FD855;transform:scaleX(.9)}
+  .pf-eqb>i{font-size:22px;color:#B4EC66;-webkit-text-stroke:3px #4C7E10;
+    paint-order:stroke fill;transform:scaleX(.9)}
   /* 해금 미션 바 ref (152,1541) 776×62 — (96,76,75), 상단만 r20 */
   .pf-msn{left:60px;top:1026px;width:776px;height:62px;line-height:62px;text-align:center;
     background:#604C4B;border-radius:20px 20px 0 0;
@@ -2127,7 +2129,8 @@
   .pf-tgl>.bn>s{position:absolute;inset:0;
     clip-path:polygon(0 50%,22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%)}
   .pf-tgl>.bn>s.f{inset:5px 6px;
-    background:linear-gradient(180deg,#FFE479 0 4px,#FFC736 4px 50%,#F8A63A 50%)}
+    background:radial-gradient(ellipse 12px 6px at 14% 24%,rgba(255,255,255,.95) 55%,rgba(255,255,255,0) 100%),
+      linear-gradient(180deg,#FFE479 0 4px,#FFC736 4px 50%,#F8A63A 50%)}
   .pf-tgl>.bn>i{position:relative;font-size:35px;color:#8DDCFD;
     -webkit-text-stroke:4px #001F2C;paint-order:stroke fill;transform:scaleX(.9)}
 
