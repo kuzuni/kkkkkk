@@ -2141,13 +2141,15 @@
      19 프로필 탭(#pfw)과 같은 셸 — 하단 토글로 상호 연결한다.
      ========================================================================== */
   #specw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:34;
-    align-items:center;justify-content:center}
+    align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
   #specw.on{display:flex}
   #specw i,#specw em,#specw b,#specw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
-  /* 바깥 박스 — 검정 7 + 갈색 11 + 하이라이트 1(#887661, 크림에 box-shadow) */
+  /* 바깥 박스 — 검정 7 + 갈색 11 + 하이라이트 1(#887661, 크림에 box-shadow).
+     상단 갈색 림은 밝→어둠 미세 그라(4회차 H 실측 (84,70,61)→(72,56,43)) */
   .spc{position:relative;flex:none;width:896px;height:1395px;max-height:100%;
-    background:#564438;border:7px solid #000;border-radius:44px;box-sizing:border-box;
+    background:linear-gradient(180deg,#57483E 0 9px,#4A3C2D 17px,#564438 20px);
+    border:7px solid #000;border-radius:44px;box-sizing:border-box;
     transform:translateY(42px)}
   /* 크림 본문 — padding-box 에서 좌우 12 / 상 12 / 하 13 인셋, radius 24 */
   .spc-body{position:absolute;left:12px;right:12px;top:12px;bottom:13px;background:#F0D9BA;
@@ -2178,14 +2180,14 @@
      텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
   .spc-nick{left:228px;top:312px;width:355px;height:48px;
     background:linear-gradient(90deg,rgba(87,80,68,0) 0,rgba(87,80,68,.95) 60px,rgba(70,63,52,.97) 100%);
-    box-shadow:0 6px 18px rgba(120,80,40,.4);
+    box-shadow:0 3px 8px rgba(120,80,40,.15);
     text-align:center;line-height:48px}
   .spc-nick>i{font-size:28px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill;
     transform:translateX(24px)}
   /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
   .spc-edit{left:583px;top:310px;width:56px;height:54px;box-sizing:border-box;
     border:5px solid #52433C;border-radius:12px;background:#F6E9C6;cursor:pointer;
-    box-shadow:0 6px 18px rgba(120,80,40,.4);
+    box-shadow:0 3px 8px rgba(120,80,40,.15);
     text-align:center;font-size:28px;line-height:44px}
   /* 스탯 리스트 뷰포트 800×744 — radius 20, 스크롤바 없는 내부 스크롤, 상단 18px 은 1행 색 패딩 */
   .spc-list{left:28px;top:448px;width:800px;height:744px;border-radius:20px;
@@ -2202,24 +2204,28 @@
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
   /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 6 (1회차: 진록 아님, ref (0,0,0)) */
   .spc-row>.vl{position:absolute;right:39px;top:0;height:60px;line-height:60px;
-    font-size:31px;color:#B0EE5E;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    font-size:31px;color:#B5F65F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
     border:5px solid #000;border-radius:22px;
     background:linear-gradient(180deg,#42362A 0,#352B1F 100%);
-    box-shadow:inset 0 3px 0 #5C4F46,inset 0 -3px 0 #5C4F46}
+    box-shadow:inset 0 5px 0 #5C4F46,inset 0 -5px 0 #5C4F46}
   /* 활성 금색 배너 386×67 — 셰브론(팁 ~24px, 중앙이 최광폭), 검정 외곽선 상하 6/좌우 4,
      채움 = 상단 2px 밝은 림 + 2단(#FFC736 / #F8A63A) */
   .spc-tab-on{position:absolute;left:-8px;top:9px;width:386px;height:67px;cursor:default}
   .spc-tab-on>s{position:absolute;inset:0;background:#000;
-    clip-path:polygon(0 50%,24px 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,24px 100%)}
-  .spc-tab-on>b{position:absolute;left:4px;right:4px;top:6px;bottom:6px;
-    background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 50%,#F8A63A 50%);
-    clip-path:polygon(0 50%,24px 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,24px 100%);
+    clip-path:polygon(0 50%,30px 0,calc(100% - 30px) 0,100% 50%,calc(100% - 26px) 100%,26px 100%)}
+  /* 몸통 = 사면 안쪽 4~6px 주황 그늘(4회차 G 실측 (181,109,24)~(196,133,17)), ::before = 금 2단 채움 */
+  .spc-tab-on>b{position:absolute;left:2px;right:2px;top:6px;bottom:6px;
+    background:linear-gradient(180deg,#C57419 0,#B96D18 100%);
+    clip-path:polygon(0 50%,26px 0,calc(100% - 26px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
-  .spc-tab-on>b>i{font-size:37px;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(.84)}
+  .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:6px;right:6px;
+    background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 50%,#F8A63A 50%);
+    clip-path:polygon(0 50%,22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 18px) 100%,18px 100%)}
+  .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
+    paint-order:stroke fill;transform:scaleX(.84)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
   .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
     text-align:center;font-size:33px;font-weight:900;color:#A9A8AE;cursor:pointer}
