@@ -2435,22 +2435,43 @@
     box-shadow:inset 0 0 0 6px #CDA26C}
   .tr-box>*{position:absolute}
 
-  /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y35 w551 h109 (가운데 바 + 좌우 깃) */
-  .tr-rib{left:247px;top:35px;width:551px;height:109px}
+  /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y34 w551 h108 (가운데 바 + 좌우 꼬리) */
+  /* 8회차: 리본 bbox 를 ref 실측(x265..813 · **y1097..1204 = h108**)에 맞췄다.
+     7회차 것은 y1098..1203(h106) 이라 K P8 의 «날개 높이 109 vs 106» 지적 그대로였다.
+     .tr-box top 143 + 34 = 시트 local 177 → ref 1097. */
+  .tr-rib{left:247px;top:34px;width:551px;height:108px}
   /* 7회차(비평가 L, 차분 스캔): **꼬리 폴리곤 외곽 다크 스트로크가 통째로 빠져 있었다.**
      ref x280 세로는 크림 → (74,47,30) 8px → 꼬리 채움 (101,70,49) 인데 우리는 곧장 채움이었다.
      `clip-path` 는 box-shadow 까지 잘라내므로 테두리를 box-shadow 로는 못 만든다 —
-     «다크 배경 + inset 8px 안쪽 채움 레이어» 2겹으로 폴리곤 윤곽을 따라가게 한다. */
-  .tr-rib>b{position:absolute;top:30px;width:52px;height:76px;background:#4C311F;z-index:1}
-  .tr-rib>b::before{content:'';position:absolute;inset:8px;background:#6B4A34}
-  .tr-rib>b.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,12px 50%)}
-  .tr-rib>b.l::before{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,10px 50%)}
-  .tr-rib>b.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%)}
-  .tr-rib>b.r::before{clip-path:polygon(0 0,100% 0,calc(100% - 10px) 50%,100% 100%,0 100%)}
-  .tr-rib>.bar{position:absolute;left:34px;right:34px;top:0;height:89px;background:#6B4A34;
-    border-radius:14px;box-shadow:inset 0 9px 0 #4C311F,inset 0 -9px 0 #4C311F,
+     «다크 배경 + 안쪽 채움 레이어» 2겹으로 폴리곤 윤곽을 따라가게 한다. */
+  /* 8회차 — 꼬리를 ref 행별 실측 프로파일로 다시 작도했다(K P8 ⑤ · L E).
+     7회차 것은 «폭 52 · 노치 1개(50%)» 라 **최대폭이 위·아래 끝 양쪽**에 왔지만,
+     ref 는 **두 개의 로브(swallow-tail)**다 — 행별 좌경계(ref x, y1126..1204):
+       1126:277 → 1139..1144:**265(최대)** → 1166:278(노치) → 1186..1194:267 → 1204:278.
+     즉 위 로브가 최대폭이고 아래 로브가 그보다 2px 얕다. 상하 대칭 V 가 아니다.
+     폭도 52 가 아니라 **76**(ref 좌꼬리 x265..340) 이고, 안쪽 26px 은 «접힘 다크 밴드» 다
+     (ref y1189 행: 다크 8 / 본체 38 / **접힘 26**). L 이 «다리 폭 29 vs 9 · 중심 16px 바깥» 로
+     지적한 것이 이 접힘 밴드다 — 폭 52 로는 밴드 자리가 없어 8px 스트로크로 보였다.
+     꼬리 상단(y0..60)은 바(ref 1097..1186)에 가려 x0..34 만 보이고, 접힘 밴드는 바 아래에서만 드러난다. */
+  .tr-rib>b{position:absolute;top:29px;width:76px;height:79px;background:#4C311F;z-index:1;
+    clip-path:polygon(13px 0,76px 0,76px 67px,75px 68px,73px 71px,71px 73px,69px 75px,66px 77px,
+      64px 79px,14px 79px,8px 75px,5px 71px,3px 68px,3px 61px,4px 56px,6px 52px,9px 48px,
+      11px 44px,14px 40px,11px 35px,8px 31px,5px 27px,3px 22px,1px 18px,1px 13px,3px 7px,7px 3px)}
+  /* 안쪽 채움 = 같은 좌표계에서 외곽 8px 안쪽. 오른쪽(안쪽)만 26px 들여 접힘 밴드를 남긴다 */
+  .tr-rib>b::before{content:'';position:absolute;inset:0;background:#6B4A34;
+    clip-path:polygon(21px 8px,50px 8px,50px 64px,47px 70px,14px 71px,11px 68px,11px 61px,
+      12px 56px,14px 52px,17px 48px,19px 44px,22px 40px,19px 35px,16px 31px,13px 27px,
+      11px 22px,9px 18px,9px 13px,12px 9px)}
+  .tr-rib>b.l{left:0}
+  /* 우측 꼬리는 좌측을 거울로 뒤집는다(ref 좌우 편차 ≤1px) */
+  .tr-rib>b.r{right:0;transform:scaleX(-1)}
+  /* 8회차: 바 상단 코너 반경 — ref 는 y1097 행이 x318..764(양쪽 19px 들여짐), y1098 이 14px 다.
+     r14 로는 8px/6px 밖에 안 들어가 각이 서 보였다. r24 면 첫 행 17px · 둘째 행 15px 로 ref 와 맞는다. */
+  .tr-rib>.bar{position:absolute;left:34px;right:34px;top:0;height:90px;background:#6B4A34;
+    border-radius:24px;box-shadow:inset 0 9px 0 #4C311F,inset 0 -9px 0 #4C311F,
     inset 7px 0 0 #4C311F,inset -7px 0 0 #4C311F;z-index:2}
-  .tr-rib>u{position:absolute;left:0;right:0;top:9px;height:60px;line-height:60px;text-align:center;
+  /* .tr-rib 이 1px 올라간 만큼 글자는 제자리에 두려고 top 9 → 10 */
+  .tr-rib>u{position:absolute;left:0;right:0;top:10px;height:60px;line-height:60px;text-align:center;
     font-size:49px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
     transform:scaleX(.93)}
   .tr-rib>u em{position:relative;top:4px;font-size:53px;color:#FA8153;-webkit-text-stroke:9px #000;
@@ -2475,7 +2496,9 @@
      ref 실측(가로 y1255 / 세로 x869..876)은 림 **211** · 면 **162→144(아래로 어두워짐)** 이고
      이는 측정표 §4 의 «면 #989898 / 림 #D3D3D3» 와도 일치한다. 3회차는 면 그라데이션 방향까지 뒤집혀 있었다.
      외곽선도 ref 는 (0,0,0) 순검정이라 #141414 가 아니다. */
-  .tr-up{left:838px;top:140px;width:108px;height:105px;border-radius:32px;cursor:pointer;
+  /* 8회차: ref 검정 외곽선 border-box 는 y1202..1308 = **h107** (x908 세로 스캔: 위 1202..1207 6px,
+     아래 1302..1308 7px). 7회차 것은 1203..1308(105) 이었다 — K P9 지적 그대로. */
+  .tr-up{left:838px;top:139px;width:108px;height:107px;border-radius:32px;cursor:pointer;
     background:linear-gradient(180deg,#A2A2A2 0,#9A9A9A 55%,#909090 100%);
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D3D3D3;text-align:center}
   .tr-up.on{background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
@@ -2556,11 +2579,17 @@
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
   .tr-card>.cn>i{font-size:29px;color:#6E502F;transform:scaleX(.95)}
+  /* 8회차(K P5) — 가격줄 3건. ref 카드1 실측(밴드 배경색 차분 마스크):
+       코인 x121..173 **53x55** · 숫자 잉크 y1860..1906 **h47** · 콘텐츠 잉크 중심 x194 = **카드중심 −4**.
+     7회차 것은 코인 42x47 · 숫자 잉크 42 · 중심 +5 였다. 중심은 밴드(=.cb 배경)를 움직이면 안 되므로
+     **padding-right 로 flex 콘텐츠만** 왼쪽으로 민다(밴드 좌표 불변). */
   .tr-card>.cb{left:12px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
-    justify-content:center;gap:7px;border-radius:0 0 20px 20px;
+    justify-content:center;gap:2px;padding-right:18px;border-radius:0 0 20px 20px;
     background:linear-gradient(180deg,#BBA38B 0 99px,#AA7F54 99px)}
-  .tr-card>.cb>s{font-size:42px;line-height:74px;-webkit-text-stroke:0}
-  .tr-card>.cb>i{position:relative;top:-3px;font-size:47px;line-height:62px;color:#F9EB6E;
+  /* 💰 는 ref 금화 스프라이트의 자리표시다 — «아트 자리 규칙» 대로 bbox 53x55 를 정확히 차지시킨다.
+     이모지 잉크비는 w/fs 1.00 · h/fs 1.12 이라 fs49 로 높이를 맞추고 폭만 scaleX 로 넓힌다. */
+  .tr-card>.cb>s{font-size:49px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(1.08)}
+  .tr-card>.cb>i{position:relative;top:-3px;font-size:52.5px;line-height:62px;color:#F9EB6E;
     -webkit-text-stroke:9px #141414;paint-order:stroke fill}
   /* 7회차: ref 카드 배지·서브탭 배지 모두 **지름 30**(fill 기준). 배수탭 점만 21 로 작다. */
   .tr-card>.dot{right:-9px;top:-8px;width:30px;height:30px;border-radius:50%;background:#EF3457;
@@ -2592,7 +2621,13 @@
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
   .tr-sub>.sg.on>i{color:#E7B88E;left:7px;top:-2px}
-  .tr-sub>.sg.lock>i{top:0;font-size:66px;line-height:97px;color:#fff;-webkit-text-stroke:0}
+  /* 8회차(K 아트절): ref 자물쇠 배지는 **59x60**(x629..687 · y2040..2099, 중심 658/2069).
+     🔒 이모지는 fs66 에서 잉크 **44x60** — 즉 «높이는 이미 맞고 폭만 −25%» 였다(K 의 «44px» 은 폭).
+     이모지는 폰트 크기로 키우면 높이까지 같이 커지므로(fs88 → 58x80) 폭만 scaleX 로 늘린다.
+     «아트 자리 규칙» — 나중에 이미지로 교체만 하면 되게 bbox 를 채운다.
+     (작업 47 이 이 탭을 «훈련·스탯 훈련» 2칸으로 없애면 함께 사라진다) */
+  .tr-sub>.sg.lock>i{top:-9px;left:6px;font-size:57px;line-height:97px;color:#fff;
+    -webkit-text-stroke:0;transform:scaleX(1.43)}
   .tr-sub>.sg.lock.txt>i{font-size:33px;line-height:78px;color:#C6BCBA;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill}
   .tr-sub>.sg.on>.dot{position:absolute;left:216px;top:-8px;width:30px;height:30px;border-radius:50%;

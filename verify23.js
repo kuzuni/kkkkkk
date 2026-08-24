@@ -1,0 +1,98 @@
+/* 23 훈련 팝업 — 8회차 자체 검증. DOM 실측 + «7회차에서 이미 맞았다» 항목 회귀 확인.
+   사용: node verify23.js   (index.html 을 1080x1920 헤드리스로 띄워 openTrain() 상태로 잰다) */
+const { chromium } = require('playwright');
+const path = require('path');
+
+/* ref 절대 y → 캡처 y 는 −425. 아래 기대값은 모두 «ref 절대 px» 로 적고 캡처 실측을 +425 해서 비교한다 */
+const EXP = [
+  /* [라벨, 셀렉터, {x,y,w,h} ref 기대값(생략 가능)] — y 는 ref 절대 */
+  ['시트 .tr-sheet',      '.tr-sheet', { x: 0, y: 920, w: 1080, h: 1245 }],
+  ['크림박스 .tr-box',    '.tr-box',   { x: 17, y: 1063, w: 1046, h: 1093 }],
+  ['리본 .tr-rib',        '.tr-rib',   { x: 264, y: 1097, w: 551, h: 108 }],
+  ['진행바 .tr-prog',     '.tr-prog',  { x: 194, y: 1228, w: 668, h: 55 }],
+  ['↑버튼 .tr-up',        '.tr-up',    { x: 855, y: 1202, w: 108, h: 107 }],
+  ['배수탭 바 .tr-qty',   '.tr-qty',   { x: 159, y: 1328, w: 761, h: 81 }],
+  ['카드1 .tr-card:1',    '.tr-card:nth-child(1)', { x: 35, y: 1436, w: 326, h: 510 }],
+  ['카드2 .tr-card:2',    '.tr-card:nth-child(2)', { x: 377, y: 1436, w: 326, h: 510 }],
+  ['카드3 .tr-card:3',    '.tr-card:nth-child(3)', { x: 718, y: 1436, w: 326, h: 510 }],
+  ['서브탭 바 .tr-sub',   '.tr-sub',   { x: 54, y: 2021, w: 960, h: 97 }],
+  ['가격줄 .cb(카드1)',   '.tr-card:nth-child(1) .cb', { x: 47, y: 1832, w: 305, h: 106 }],
+  ['선택칩 .q.on::before','.tr-qty>.q.on', {}],
+];
+
+(async () => {
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
+  await page.addInitScript(() => {
+    localStorage.setItem('idle_hunter_save_v4', JSON.stringify({
+      gold: 5e12, dia: 300, stage: 1, best: 1, trainStage: 1, statStage: 1,
+      lv: { atk: 98 }, buyQty: 1, autoBuy: false, tuto: 3,
+      seen: { hero: 1, up: 1, adv: 1, box: 1, shop: 1 }
+    }));
+  });
+  await page.goto('file://' + path.resolve('index.html'));
+  await page.waitForTimeout(900);
+  await page.evaluate(() => openTrain());
+  await page.waitForTimeout(600);
+
+  const got = await page.evaluate(exp => {
+    const out = [];
+    for (const [label, sel, e] of exp) {
+      const el = document.querySelector(sel);
+      if (!el) { out.push({ label, miss: true }); continue; }
+      const b = el.getBoundingClientRect();
+      out.push({ label, x: Math.round(b.x), y: Math.round(b.y) + 425, w: Math.round(b.width), h: Math.round(b.height), e });
+    }
+    /* 7회차가 «이미 맞았다» 고 못박은 항목들 — 회귀 감시 */
+    const g = s => { const el = document.querySelector(s); if (!el) return null;
+      const b = el.getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y) + 425, Math.round(b.width), Math.round(b.height)]; };
+    const reg = {
+      '카드 pitch': g('.tr-card:nth-child(2)')[0] - g('.tr-card:nth-child(1)')[0],
+      '카드 border-box': g('.tr-card:nth-child(1)').slice(2).join('x'),
+      '서브탭 바': g('.tr-sub').slice(2).join('x'),
+      '진행바 h': g('.tr-prog')[3],
+      '배수탭 바 x/w': g('.tr-qty')[0] + '/' + g('.tr-qty')[2],
+      '선택칩 x/w/h': (() => { const q = document.querySelector('.tr-qty>.q.on');
+        const cs = getComputedStyle(q, '::before');
+        return q.getBoundingClientRect().x + parseFloat(cs.left) + '/' + cs.width + '/' + cs.height; })(),
+      '서브탭 구분선 h': getComputedStyle(document.querySelector('.tr-sub>.sg'), '::after').height,
+      '슬롯 플레이트 s': getComputedStyle(document.querySelector('.tr-card .ci'), '::before').width,
+      '리본 바 h': g('.tr-rib>.bar')[3],
+      '꼬리 w/h': g('.tr-rib>b.l').slice(2).join('x'),
+    };
+    /* 프레임 밖 / 겹침 */
+    const app = document.getElementById('app').getBoundingClientRect();
+    let over = 0;
+    document.querySelectorAll('#trw *').forEach(el => {
+      const b = el.getBoundingClientRect();
+      if (b.width && b.height && (b.left < app.left - 1 || b.right > app.right + 1)) over++;
+    });
+    /* NaN/undefined 텍스트 */
+    const bad = /NaN|undefined|Infinity/.test(document.getElementById('trw').innerText);
+    return { out, reg, over, bad };
+  }, EXP);
+
+  let fail = 0;
+  console.log('== DOM 실측 (ref 절대 px 기준) ==');
+  for (const r of got.out) {
+    if (r.miss) { console.log('MISS  ' + r.label); fail++; continue; }
+    const e = r.e || {};
+    const d = k => (e[k] === undefined ? '' : (r[k] - e[k] >= 0 ? '+' : '') + (r[k] - e[k]));
+    const bad = ['x', 'y', 'w', 'h'].some(k => e[k] !== undefined && Math.abs(r[k] - e[k]) > 2);
+    if (bad) fail++;
+    console.log((bad ? 'FAIL  ' : 'ok    ') + r.label.padEnd(22)
+      + ` x${r.x}(${d('x')}) y${r.y}(${d('y')}) w${r.w}(${d('w')}) h${r.h}(${d('h')})`);
+  }
+  console.log('\n== 7회차 확정 항목 회귀 ==');
+  for (const k in got.reg) console.log('  ' + k.padEnd(18) + got.reg[k]);
+  console.log('\n프레임 밖 요소: ' + got.over + ' · NaN/undefined: ' + got.bad
+    + ' · 콘솔 에러: ' + errs.length);
+  if (got.over || got.bad || errs.length) fail++;
+  console.log(fail ? '\nVERIFY FAIL ' + fail : '\nVERIFY PASS');
+  await browser.close();
+  process.exit(fail ? 1 : 0);
+})();
