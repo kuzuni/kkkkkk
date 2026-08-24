@@ -2819,18 +2819,18 @@
     font-size:48px;font-weight:900;color:#fff;white-space:nowrap;
     -webkit-text-stroke:13px #000;paint-order:stroke fill}
   /* 웨이트 보강 — 12 의 .sm-fat 과 같은 «자기 색 스트로크 복제» 패턴. ref 획폭: 본문 6.5 / 닫기 7 */
-  .st-desc s{position:relative;text-decoration:none}
+  .st-desc s{position:relative;text-decoration:none;display:inline-block}
   .st-desc s::after,.st-desc em::after,.st-desc u::after,#statw .upr-close .st-fat::after{
     content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;
-    color:#fff;-webkit-text-stroke:var(--fatw,1px) #fff;paint-order:stroke fill}
-  .st-desc em::after{color:#FCC01E;-webkit-text-stroke:var(--fatw,1px) #FCC01E}
-  #statw .upr-close .st-fat{position:relative;--fatw:3px}
-  .st-desc>i{transform:scaleX(.94)}
+    color:#fff;-webkit-text-stroke:var(--fatw,.5px) #fff;paint-order:stroke fill}
+  .st-desc em::after{color:#FCC01E;-webkit-text-stroke:var(--fatw,.5px) #FCC01E}
+  #statw .upr-close .st-fat{position:relative;--fatw:2.5px}
+  .st-desc>i{transform:scaleX(.90)}
   /* «30» 숫자만 골드 (252,192,30) — % 와 한글은 흰색(2회차 B·C 공통 지적, 픽셀 검증).
      ⚠ 숫자는 캡하이트라 같은 48px 에선 h33 — 50px 로 올리고 폭은 scaleX 로(서체 숫자가 좁다) */
   .st-desc em{display:inline-block;font-style:normal;font-size:50px;color:#FCC01E;
-    transform:scaleX(1.22);margin:0 4px 0 7px}
-  .st-desc u{display:inline-block;text-decoration:none;transform:scaleX(1.09)}
+    transform:scaleX(1.28);margin:0 8px 0 10px}
+  .st-desc u{display:inline-block;text-decoration:none;transform:scaleX(1.14);margin-right:3px}
   /* 별 파티클 — 5각 별 + 방사 글로우(ref 램프: 코어 밖 ~24px 에 걸쳐 lum 91→26).
      P1 크림 52px 중심(171,906) / P2 노랑 37px 중심(244,1256) */
   .st-spark{position:absolute}
@@ -2838,14 +2838,14 @@
      r22 201 / r28 138 / r34 105 / r40 85 / r46 61 — r46 밖까지 완만히 감쇠 */
   .st-spark::before{content:'';position:absolute;inset:-24px;border-radius:50%}
   .st-spark.s1::before{inset:-34px;
-    background:radial-gradient(circle closest-side,rgba(255,254,232,.95) 0 38%,
-      rgba(255,252,190,.52) 48%,rgba(255,252,190,.38) 57%,rgba(255,252,190,.30) 67%,
-      rgba(255,252,190,.20) 77%,rgba(255,252,190,0) 98%)}
+    background:radial-gradient(circle closest-side,rgba(255,254,232,.95) 0 28%,
+      rgba(255,254,232,.80) 39%,rgba(255,252,190,.52) 44%,rgba(255,252,190,.38) 50%,
+      rgba(255,252,190,.30) 59%,rgba(255,252,190,.20) 68%,rgba(255,252,190,0) 86%)}
   .st-spark::after{content:'';position:absolute;inset:0;
     clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
   .st-spark.s1{left:145px;top:880px;width:52px;height:52px}
   .st-spark.s1::after{background:#FFFEC5}
-  .st-spark.s2{left:225px;top:1237px;width:37px;height:37px}
+  .st-spark.s2{left:224px;top:1236px;width:40px;height:40px}
   .st-spark.s2::before{background:radial-gradient(circle closest-side,rgba(228,218,55,.92) 0 35%,rgba(210,200,70,.35) 55%,rgba(210,200,70,0) 85%)}
   .st-spark.s2::after{background:#DFD51B}
   /* «터치하여 닫기» — 17 실측 잉크폭 258 (09 의 251 보다 +2%) */
@@ -5048,7 +5048,8 @@ function openStatUp(o){
   $('stDesc').innerHTML = t.split(/(\d+|%)/).map(tok => !tok ? ''
     : /^\d+$/.test(tok) ? '<em data-t="' + tok + '">' + tok + '</em>'
     : tok === '%'       ? '<u data-t="%">%</u>'
-    :                     '<s data-t="' + tok + '">' + tok + '</s>').join('');
+    :  (() => { const nb = tok.replace(/ /g, '\u00A0');
+         return '<s data-t="' + nb + '">' + nb + '</s>'; })()).join('');
   $('statw').classList.add('on');
 }
 $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
