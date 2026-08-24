@@ -266,7 +266,10 @@
   /* 카운터 뱃지 — 좌측 캡 바깥으로 걸침 */
   .facb .fbg{position:absolute;left:calc(var(--ih,82px)*-.11);top:50%;
     transform:translateY(-50%);min-width:calc(var(--ih,82px)*.83);height:calc(var(--ih,82px)*.83);
-    border-radius:50%;background:#3ec46e;border:calc(var(--ih,82px)*.061) solid #0d3a20;
+    /* 초록은 레퍼런스 실측 최빈색 rgb(112,240,64) 계열이다(x855..890 y707..772 샘플).
+       기존 #3ec46e 는 명도 −20% · 색상각이 청록 쪽으로 25° 치우쳐 있었다. */
+    border-radius:50%;background:linear-gradient(180deg,#a6fd68,#70f040 55%,#4fc22e);
+    border:calc(var(--ih,82px)*.061) solid #0d3a20;
     color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
     line-height:calc(var(--ih,82px)*.71);text-align:center;padding:0 calc(var(--ih,82px)*.06)}
   /* 남은 시간 — 검정 pill, 배너 하단 금테에 10px 걸쳐 내려옴 */
