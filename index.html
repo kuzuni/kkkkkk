@@ -2478,12 +2478,13 @@
       linear-gradient(90deg,#DE8436 0 2px,rgba(222,132,54,0) 2px 7px,
                             rgba(222,132,54,0) calc(100% - 7px),#DE8436 calc(100% - 2px)),
       linear-gradient(180deg,#FEEF88 0 2px,#FFEC85 2px 3px,#FFD46C 3px 4px,
-                             #FBC45D 4px 5px,#FFBE56 5px 82px,#F0A63C 82px 87px)}
+                             #FBC45D 4px 5px,#FFBE56 5px 82px,#EFA937 82px 85px,
+                             #B9862B 85px 87px)}
   /* 하이라이트는 균일하지 않다 — x300 에서 9px 인데 x420 부터는 4px 다(실측).
      그래서 바탕은 4px 로 깔고 좌측 끝에만 유광 패치를 얹는다. 1회차 비평 B ⑤ 대응. */
-  .sm-band::before{content:'';position:absolute;left:0;top:0;width:30px;height:9px;
+  .sm-band::before{content:'';position:absolute;left:0;top:0;width:24px;height:9px;
     border-radius:6px 0 0 0;
-    background:linear-gradient(90deg,#FEEF88 0 12px,rgba(254,239,136,0) 28px)}
+    background:linear-gradient(90deg,#FEEF88 0 17px,rgba(254,239,136,0) 24px)}
   /* 타이틀 잉크 456~625(w170) / 747~787(h41) → font-size 44, 밴드 세로중앙에서 1.5px 위.
      외곽선 실측 좌4·우5 → 한쪽 4.5px 를 내려면 -webkit-text-stroke 는 **9px**(안팎 절반씩). */
   .sm-band>i{position:relative;top:19px;font-size:44px;line-height:44px;color:#fff;
@@ -2555,7 +2556,7 @@
     background:linear-gradient(90deg,#FF3964 0 6px,#FF5D7A 6px 32px,#FF3964 32px);
     /* ref 실루엣은 단순 라운드 사각형이 아니라 **우하단이 사선으로 잘린** 리본 태그다
        (local x70 에서 분홍이 y18/33 까지만 남는다 — 2회차 비평 D ②). */
-    clip-path:polygon(0 0,79px 0,79px 21px,62px 39px,0 39px)}
+    clip-path:polygon(0 0,77px 0,77px 4px,68px 39px,0 39px)}
   /* ref 는 글자 둘레에 1~2px 짙은 외곽이 있다(2회차 비평 D ⑥). 스트로크는 안팎 절반씩이라 3px. */
   .sm-b1 .fr i{font-size:19px;line-height:33px;color:#F7EB73;letter-spacing:.5px;
     -webkit-text-stroke:3px #A6392F;paint-order:stroke fill}
