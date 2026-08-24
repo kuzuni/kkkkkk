@@ -1296,6 +1296,8 @@
   .rlx-sub>.box>i{color:#F0BD90}
   .rlx-sub>.rel{right:5px;width:378px;border-radius:8px 29px 29px 8px;background:#61503E}
   .rlx-sub>.rel>i{color:#A9A8AD}
+
+  /* ==========================================================================
      13 상점 팝업 — 재화 탭 — 측정표 docs/measure/13-상점팝업재화탭.md
      10 과 같은 (다) 전체화면 페이지 껍데기(#shopw)를 그대로 쓰고, 스크롤 콘텐츠만 갈아끼운다.
      좌표계: **콘텐츠 좌상단 = 레퍼런스 y192** → local y = ref y − 192. 가로는 1:1.
@@ -1309,7 +1311,8 @@
 
   /* §1 상단 배너 아트 — 전출혈 1080x356, radius 0, 테두리 없음 */
   .cn-bn{left:0;top:0;width:1080px;height:356px;overflow:hidden;
-    background:linear-gradient(180deg,#2166AB 0,#2A7BCA 42%,#2FC5EB 100%)}
+    background:linear-gradient(180deg,#2166AB 0,#2A69AB 16px,#2B7BCA 96px,#2D97CF 208px,
+      #33BCD7 272px,#2FBDF0 336px,#2FC5EB 356px)}
   .cn-bn>.ray{position:absolute;left:-30%;top:-70%;width:160%;height:210%;
     background:repeating-conic-gradient(from 0deg at 50% 34%,
       rgba(66,145,211,.85) 0deg 5deg,rgba(33,102,171,0) 5deg 13deg)}
@@ -1343,7 +1346,11 @@
     paint-order:stroke fill;transform:scaleX(.9)}
   /* §4 `⏱ 초기화: 5H 12M` 검은 알약 — 리본 몸통에 위쪽이 물린다(z 는 리본 아래) */
   .cn-rs{left:340px;top:583px;width:400px;height:56px;border-radius:28px;background:#000}
-  .cn-rs>em{position:absolute;left:86px;top:14px;font-size:29px;line-height:29px}
+  .cn-rs>em{position:absolute;left:88px;top:13px;width:23px;height:29px;font-size:0;
+    background:radial-gradient(circle at 50% 62%,#FFD34F 0 42%,#C98A16 42% 50%,transparent 50%),
+      linear-gradient(#FFF6C8,#FFF6C8) 10px 2px/3px 6px no-repeat}
+  .cn-rs>em::after{content:'';position:absolute;left:11px;top:14px;width:2px;height:8px;
+    background:#7A4B06;transform-origin:1px 1px;transform:rotate(38deg)}
   .cn-rs>.t1{position:absolute;left:121px;top:17px;font-size:21.7px;line-height:22px;color:#fff;
     transform:scaleX(1.07);transform-origin:0 50%}
   .cn-rs>.t2{position:absolute;left:196px;top:18px;font-size:25.7px;line-height:22px;color:#fff;
@@ -1353,12 +1360,14 @@
   .cn-cd{width:278px;height:309px}
   .cn-cd>*{position:absolute}
   .cn-cd>.bg{left:7px;top:7px;width:264px;height:295px;border-radius:28px;
-    background:linear-gradient(180deg,#5CBDEA 0,#5383B4 55%,#4665A5 100%)}
+    background:linear-gradient(180deg,#5CBDEA 0,#5CBDEA 62px,#5383B4 219px,
+      #3E73B9 219px,#4665A5 295px)}
   .cn-cd>.hd{left:7px;top:7px;width:264px;height:60px;border-radius:28px 28px 0 0;
     background:var(--hd,#48B6E7);overflow:hidden}
   .cn-cd>.hd::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;
     background:var(--hr,#8CF4FF)}
-  .cn-cd>.hd>i{position:absolute;left:2px;right:2px;top:14px;text-align:center;color:#fff;
+  /* 박스를 글리프 advance 보다 넓게 잡는다 — 좁으면 넘친 글리프가 우측으로 밀린다(PROGRESS 교훈) */
+  .cn-cd>.hd>i{position:absolute;left:-30px;right:-30px;top:14px;text-align:center;color:#fff;
     font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
   .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
     text-align:center;overflow:hidden}
@@ -1413,10 +1422,20 @@
       #76D924 89px,#ADFF81 89px,#ADFF81 96px,#75DB54 96px,#3EBC2A 103px)}
   .cn-mv>i{position:absolute;left:0;right:0;top:21px;text-align:center;color:#fff;font-size:49.5px;
     line-height:52px;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.882)}
-  /* §8 활성 알약이 «재화»(4번째 칸)에 올 때의 규격 — 측정표 13 §8 실측(검정 포함 264x76, 바 우측 7px 돌출,
-     세로 중심이 바 중심 2065 와 일치). 1번째 칸(소환)은 10 의 값을 그대로 둔다. */
+  /* §8 카테고리 탭 바 — 바 자체는 10 소속이라 **재화 탭일 때만** 13 실측치로 덮어쓴다
+     (`#shopList.coin ~ #shopCats`). 10 의 소환 탭 모습은 건드리지 않는다. 비평 1회차 A/B 공통 지적:
+     바가 27px 아래 · 라벨이 바 중심에서 17.5px 아래 · ✦ 가 13x18(ref 19x19) · NEW 리본은 13 에 없음. */
   #shopCats .shp-ct:nth-child(4) .shp-cat-pill{left:-6px;top:9px;width:264px;height:76px}
-  #shopCats .shp-cs.s3{z-index:3}
+  #shopCats .shp-cs.s2{left:485px;display:none}
+  #shopList.coin ~ #shopCats{bottom:41px}
+  #shopList.coin{bottom:154px}
+  #shopList.coin ~ #shopCats .shp-ct>i{top:23.5px;font-size:36px}
+  #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(.98)}
+  #shopList.coin ~ #shopCats .shp-cs{top:44px;width:19px;height:19px}
+  #shopList.coin ~ #shopCats .shp-cs.s1{left:239px}
+  #shopList.coin ~ #shopCats .shp-cs.s2{left:485px;display:block}
+  #shopList.coin ~ #shopCats .shp-cs.s3{left:732px;z-index:3}
+  #shopList.coin ~ #shopCats .shp-new{display:none}
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
@@ -2816,6 +2835,7 @@
       <div class="shp-ct" data-cat="daily"><i>일일/주간</i></div>
       <div class="shp-ct" data-cat="coin"><i>재화</i></div>
       <div class="shp-cs s1"></div>
+      <div class="shp-cs s2"></div>
       <div class="shp-cs s3"></div>
       <div class="shp-new"><i>NEW</i></div>
     </div>
@@ -5933,12 +5953,12 @@ $('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
    fs/sx/qx 는 «레퍼런스 잉크 폭·높이» 에 맞춘 칸별 보정값이다(측정표 §5-3). 이 서체는 레퍼런스의
    좁고 높은 게임 서체와 폭이 달라 한글은 줄이고 숫자는 늘려야 한다(PROGRESS «폭은 scaleX» 교훈). */
 const COIN_ADS = [
-  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:33.3, sx:.92,  qx:1.48 },
-  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:35.5, sx:.836, qx:1.17 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:34.4, sx:.966, qx:.93 },
-  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:30.1, sx:1.01, qx:1.03 },
-  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:35.5, sx:.945, qx:1.16 },
-  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🐾', cap:1, r:{ freePet:1 },   fs:32.3, sx:1,    qx:.93 }
+  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:35.3, sx:0.868, qx:1.48 },
+  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:37.6, sx:0.789, qx:1.17 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:36.5, sx:0.885, qx:0.84 },
+  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:31.9, sx:0.933, qx:1.03 },
+  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:37.6, sx:0.892, qx:1.16 },
+  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:34.2, sx:0.843, qx:0.84 }
 ];
 const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
 /* 일일 초기화까지 남은 시간 — 레퍼런스의 «⏱ 초기화: 5H 12M» 자리 */
@@ -5970,7 +5990,7 @@ function renderCoinPage(list){
       + a.sx + ';--qx:' + a.qx + (done ? ';--hd:#68C338;--hr:#7FD955' : '') + '">'
       +  '<div class="bg"></div><div class="hd"><i>' + a.n + '</i></div>'
       +  '<div class="pn"><em>' + a.ic + '</em></div>'
-      +  '<div class="qt">' + a.q + '</div>'
+      +  (done ? '' : '<div class="qt">' + a.q + '</div>')
       +  (done
           ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>구매 완료</i></div>'
           : '<div class="bt" data-cnad="' + a.id + '"><div class="ad"><s></s><b>AD</b></div>'
