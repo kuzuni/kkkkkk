@@ -2718,9 +2718,12 @@
   .tr-card>.cb>s{font-size:49px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(1.08)}
   .tr-card>.cb>i{position:relative;top:-3px;font-size:52.5px;line-height:62px;color:#F9EB6E;
     -webkit-text-stroke:9px #141414;paint-order:stroke fill}
-  /* 7회차: ref 카드 배지·서브탭 배지 모두 **지름 30**(fill 기준). 배수탭 점만 21 로 작다. */
-  .tr-card>.dot{right:-9px;top:-8px;width:30px;height:30px;border-radius:50%;background:#EF3457;
-    box-shadow:inset 0 0 0 3px #000;z-index:4}
+  /* 7회차: «ref 배지 지름 30» 으로 읽고 border-box 를 30 으로 줬는데 — **그 30 은 fill(핑크) 지름이었다.**
+     10회차 재측(ref y1445 가로 단면, 카드1): 검정 332..337(6px) · 핑크 338..368(**31px**) · 검정 369..373(5px)
+     → **border-box 42 · fill 31 · 링 5.5px**. 우리는 42 가 아니라 30 이라 외곽이 −29% 였다(비평가 Q P1).
+     중심은 유지해야 하므로 커진 12px 만큼 right/top 을 6px 씩 뺀다(중심 카드local 320,7 불변). */
+  .tr-card>.dot{right:-15px;top:-14px;width:42px;height:42px;border-radius:50%;background:#EF3457;
+    box-shadow:inset 0 0 0 5.5px #000;z-index:4}
   .tr-qty .dot{position:absolute;left:231px;top:-7px;width:27px;height:27px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
 
@@ -2760,8 +2763,10 @@
     -webkit-text-stroke:0;transform:scaleX(1.43)}
   .tr-sub>.sg.lock.txt>i{font-size:33px;line-height:78px;color:#C6BCBA;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill}
-  .tr-sub>.sg.on>.dot{position:absolute;left:216px;top:-8px;width:30px;height:30px;border-radius:50%;
-    background:#EF3457;box-shadow:inset 0 0 0 3px #141414;z-index:3}
+  /* 10회차: 카드 배지와 같은 정정. ref y2035 가로 단면 — 검정 272..277(6px) 뒤 핑크 시작 278,
+     우리는 검정 276..278(3px) 뒤 279 였다. border-box 42 · fill 31 · 링 5.5 (중심 231,7 불변) */
+  .tr-sub>.sg.on>.dot{position:absolute;left:210px;top:-14px;width:42px;height:42px;border-radius:50%;
+    background:#EF3457;box-shadow:inset 0 0 0 5.5px #141414;z-index:3}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
