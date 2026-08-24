@@ -1340,8 +1340,12 @@
   .eqrb{width:359px;height:105px}
   /* 판 실측(ref x=250 세로 프로필): 어두운 테두리 744~751(8px) · 주황 752~814(63) ·
      테두리 815~822(8px) → **총 높이 79 · 테두리 8px**. 88/5 로 두면 주황 면이 78 로 +22% 부푼다 */
+  /* radius: ref 좌측 모서리가 y744 x237 → y759 x206 으로 **15행**에 걸쳐 들어온다 → r≈16.
+     행별 인셋을 r−√(2rd−d²) 로 피팅하면 d=3→11 · d=6→6 · d=9→4 로 **r≈22** 다(10 은 절반).
+     그림자: ref 판 하단(822) 아래 y824~831 에 8px 짜리 회색 띠가 있다((183,171,145)) */
   .eqrb>.pl{position:absolute;left:32px;top:0;width:299px;height:79px;box-sizing:border-box;
-    background:var(--rb);border:8px solid var(--rd);border-radius:10px}
+    background:var(--rb);border:8px solid var(--rd);border-radius:22px;
+    box-shadow:0 7px 5px -2px rgba(0,0,0,.32)}
   .eqrb>.tl{position:absolute;top:26px;width:44px;height:71px;background:var(--rt);
     clip-path:polygon(0 0,100% 0,100% 100%,0 100%,22% 50%)}
   .eqrb>.tl.l{left:0}
@@ -1452,14 +1456,16 @@
   .eqlk.p2{left:482px}
   .eqlk.p3{left:652px}
   /* 라벨 — 잉크 1962~1988(h27) → font 29, 회색 #B5B5B5 + 검정 외곽선 한쪽 4(=8) */
-  .eqlk>u{position:absolute;left:-20px;right:-20px;top:77px;height:40px;line-height:40px;
+  .eqlk>u{position:absolute;left:-20px;right:-20px;top:84px;height:40px;line-height:40px;
     text-align:center;font-size:29px;font-weight:900;color:#B5B5B5;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;letter-spacing:-2px;
     text-indent:-2px;white-space:nowrap}
   .eqlk>u>i{transform:scaleX(.94)}
 
   /* 자물쇠 아이콘 — 흰 고리 34x18 + 몸통 55x39, 전체 bbox 67x72 */
-  .eqli{position:absolute;left:50%;top:16px;width:67px;height:72px;margin-left:-33px}
+  /* 원반 안 자물쇠·라벨이 통째로 5~6px 위에 있었다 —
+     ref 자물쇠 흰 몸통 y1892~1953 / 라벨 잉크 y1963~1987 vs 구현 1886~1947 / 1958~1980 */
+  .eqli{position:absolute;left:50%;top:22px;width:67px;height:72px;margin-left:-33px}
   .eqli::before{content:'';position:absolute;left:16px;top:0;width:35px;height:24px;
     border:9px solid #fff;border-bottom:0;border-radius:18px 18px 0 0;box-sizing:border-box;
     filter:drop-shadow(0 0 2.5px #000)}
@@ -1489,7 +1495,9 @@
   /* 선택 알약 — 셀보다 좌우 12px 씩 커서 바 밖으로 삐져나온다(폭 260) */
   .eqtc.on{width:260px;background:#4B3E2D;border-radius:49px;
     box-shadow:inset 0 0 0 7px #000,inset 0 0 0 16px #634F37}
-  .eqtc.on>b{color:#F0BB8C;left:12px;right:12px}
+  /* 레퍼런스는 **선택 탭 라벨만** 비선택보다 3px 위에 있다
+     (ref 장비 y2049~2085 vs 스킬 y2052~2088). 구현은 둘 다 2051 로 같았다 */
+  .eqtc.on>b{color:#F0BB8C;left:12px;right:12px;top:19px}
   .eqtc.on>b>i{transform:scaleX(.97)}
   /* 잠금 탭도 라벨이 **보인다** — 레퍼런스는 자물쇠 «뒤로» 글자가 깔린다
      (실측 3번 탭 잉크 x609~708 / 4번 x824~969, 자물쇠 좌우로 글리프가 삐져나온다).
