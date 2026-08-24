@@ -175,23 +175,38 @@
   /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16), 채움 Ø30 + 검정 5 */
   #menub .bdg{position:absolute;left:71px;top:-4px;width:30px;height:30px;border-radius:50%;
     background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0}
-  /* 레퍼런스 «우측 컬럼 1행» 은 이벤트 아이콘이 아니라 위의 4분할 메뉴 버튼이다
-     (A2 측정표 §2 «우측 1번(2×2 메뉴)…사이드 스택 소속이 아니다» 와 동일 결론).
-     현재 #sideR 은 1행부터 이벤트를 깔아 메뉴 버튼과 100x99px 완전히 겹친다.
-     A2 구간이라 규칙 자체는 고치지 않고, 스택 전체를 «한 행 pitch» 만큼 내려 겹침만 없앤다.
-     A2 에서 정식으로 1행을 비우면 이 한 줄만 지우면 된다. */
-  #sideR{transform:translateY(calc(var(--ih,82px) + var(--ilh,32px) + var(--igap,20px)))}
-
   /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
      레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
      가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 31 · 배너 234)는 1:1 고정,
-     세로(아트 높이 --ih · gap · top)는 layoutSide() 가 캔버스 높이에 비례시켜 덮어쓴다. */
-  .side{position:absolute;top:var(--itop,31px);display:flex;flex-direction:column;
+     세로(아트 높이 --ih · gap · top)는 layoutSide() 가 캔버스 높이에 비례시켜 덮어쓴다.
+
+     [행 그리드 — 좌우 공통] 측정표 §0 «1·2·3행 y 가 좌우 동일» 을 그대로 구현한다.
+     캔버스 top 은 레퍼런스 y=188(전폭 HUD 바 하단, 02 비고 1의 정정 좌표계)에 대응한다.
+       1행  ref 260..360 → 로컬 72..172   좌=라벨 없는 단독 아이콘(아트 101) · 우=#menub(top:72)
+       (1→2 사이 gap 60 — 측정표 §1-2. 라벨 그룹과 분리된 단독 버튼이라 여기만 gap 이 3배다)
+       2행  ref 421      → 로컬 233       좌=패스칸 · 우=이벤트칸
+       3행  ref 556      → 로컬 368       좌=퀘스트칸 · 우=특권칸
+       4행  ref 687      → 로컬 499       좌=휴식보너스칸 · 우=시설 타이머 배너
+       5행  ref 820      → 로컬 632       6행 ref 958 → 로컬 770
+     그래서 #sideR 은 «1행을 비우고 2행부터» 시작한다(= --itop + 단독행 높이 + gap 60).
+     예전의 `#sideR{transform:translateY(한 행 pitch)}` 겹침 회피 한 줄은 이 구조로 대체됐다. */
+  .side{position:absolute;top:var(--itop,72px);display:flex;flex-direction:column;
     gap:var(--igap,20px);z-index:3}
   #sideL{left:45px;align-items:flex-start}
-  #sideR{right:45px;align-items:flex-end}
+  #sideR{right:45px;align-items:flex-end;
+    top:calc(var(--itop,72px) + var(--isolo,101px) + var(--isgap,60px))}
   .ibtn{width:100px;height:calc(var(--ih,82px) + var(--ilh,32px));position:relative;cursor:pointer;
     background:none;border:0;display:flex;flex-direction:column;align-items:center}
+  /* 1행 단독 버튼 — 라벨이 없고(측정표 §1 «(라벨 없음)») 아트가 101 로 더 크며 아래 gap 이 60 이다.
+     아트 bbox 107x101 → 종횡비 1.06 (라벨 그룹의 1.15 와 다르다) */
+  .ibtn.solo{height:var(--isolo,101px);
+    margin-bottom:calc(var(--isgap,60px) - var(--igap,20px))}
+  .ibtn.solo .si{height:var(--isolo,101px);line-height:var(--isolo,101px);
+    font-size:calc(var(--isolo,101px)*.96);transform:scaleX(1.06)}
+  .ibtn.solo .bdg{left:calc(50px + var(--isolo,101px)*.195);top:calc(var(--isolo,101px)*-.073);
+    width:calc(var(--isolo,101px)*.512);height:calc(var(--isolo,101px)*.512);
+    border-width:calc(var(--isolo,101px)*.069)}
+  .ibtn.solo.lock::after{height:var(--isolo,101px);font-size:calc(var(--isolo,101px)*.66)}
   /* 아트는 레퍼런스에서 높이 82 · 폭 94(종횡비 1.15)로 슬롯을 채운다.
      이모지는 정사각이라 scaleX 로 그 종횡비를 맞춘다 (레이아웃 폭은 슬롯 100 고정). */
   .ibtn .si{width:100px;height:var(--ih,82px);font-size:calc(var(--ih,82px)*.96);
@@ -214,7 +229,8 @@
     filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
   /* 시설 타이머 배너 — 좌측만 캡슐, 오른쪽은 화면 밖으로 bleed */
   /* 실측 234x105 = 본체 226x97 + 검정 외곽선 4px. 금색 띠 7px, 좌측만 캡슐 radius 52 */
-  .facb{width:230px;height:calc(var(--ih,82px)*1.183);margin-right:-45px;margin-top:calc(var(--ih,82px)*.11);
+  /* 4행 — 좌측 «휴식 보너스» 칸 top(ref 687)에서 +7 내려간 지점이 배너 본체 top(ref 694) */
+  .facb{width:230px;height:calc(var(--ih,82px)*1.183);margin-right:-45px;margin-top:calc(var(--ih,82px)*.085);
     border-radius:calc(var(--ih,82px)*.634) 0 0 calc(var(--ih,82px)*.634);
     position:relative;cursor:pointer;overflow:visible;
     background:#511f14;border:calc(var(--ih,82px)*.088) solid #fab647;border-right:0;
@@ -745,7 +761,8 @@
     <!-- 우상단 4분할 메뉴 버튼 -->
     <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i></div>
     <div class="side" id="sideL">
-      <div class="ibtn" data-pop="attend"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
+      <!-- 1행은 레퍼런스에서 라벨 없는 단독 버튼이다(측정표 §1). 라벨을 달면 아래 5칸이 전부 27px 씩 밀린다 -->
+      <div class="ibtn solo" data-pop="attend" title="출석"><span class="si">📅</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="roul"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="mail"><span class="si">📬</span><span class="sl">우편</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="quest"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
@@ -892,7 +909,8 @@ function resizeCanvas(){
    ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
    **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
      레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
-const SIDE = { ART:82, LABEL:32, GAP:20, TOP:31, N:6, PAD:8, LMIN:22, CLEAR:35 };
+const SIDE = { ART:82, LABEL:32, GAP:20, TOP:72, N:5, PAD:8, LMIN:22, CLEAR:34,
+               SOLO:101, SGAP:60 };
 /* 상단 HUD 가 캔버스 위로 내려와 걸치는 깊이 (프로필 카드 테두리 등). 스택은 그 아래로 피해야 한다. */
 function hudOverhang(){
   const ar = app.getBoundingClientRect(), sc = ar.width/FRAME_W || 1;
@@ -907,8 +925,10 @@ function hudOverhang(){
 function layoutSide(hpx){
   const foot = $('battlefoot').offsetHeight || 122;
   const gr = SIDE.GAP/SIDE.ART, lr = SIDE.LABEL/SIDE.ART;
+  const sr = (SIDE.SOLO + SIDE.SGAP)/SIDE.ART;   /* 1행(단독 아이콘 + gap 60) 이 아트 높이의 몇 배인가 */
   const over = hudOverhang();
-  const D = SIDE.N*(1 + lr) + (SIDE.N-1)*gr, D2 = SIDE.N + (SIDE.N-1)*gr;
+  /* 스택 총높이 = top + 단독행 + gap60 + 라벨칸 N개 + 그 사이 gap (N-1)개 */
+  const D = sr + SIDE.N*(1 + lr) + (SIDE.N-1)*gr, D2 = sr + SIDE.N + (SIDE.N-1)*gr;
   let a = SIDE.ART, L = SIDE.LABEL, top = SIDE.TOP;
   for(let i = 0; i < 3; i++){        /* top 이 a 에 의존하므로 몇 번 돌려 수렴시킨다 */
     const k = a / SIDE.ART;
@@ -923,14 +943,18 @@ function layoutSide(hpx){
     L = Math.min(SIDE.LABEL, Math.max(6, nL));
   }
   /* 안전판 — 태블릿 clamp 처럼 캔버스가 극단적으로 짧으면 하한을 무시하고 통째로 줄인다 */
-  const need = top + SIDE.N*(a + L) + (SIDE.N-1)*(SIDE.GAP*a/SIDE.ART);
+  const k0 = a/SIDE.ART;
+  const need = top + (SIDE.SOLO + SIDE.SGAP)*k0 + SIDE.N*(a + L) + (SIDE.N-1)*(SIDE.GAP*k0);
   const avail = hpx - foot - SIDE.PAD;
   if(need > avail && need > 0){ const s = avail/need; a *= s; L *= s; top *= s; }
+  const k = a/SIDE.ART;
   app.style.setProperty('--ih',   a.toFixed(2) + 'px');
-  app.style.setProperty('--igap', (SIDE.GAP*a/SIDE.ART).toFixed(2) + 'px');
+  app.style.setProperty('--igap', (SIDE.GAP*k).toFixed(2) + 'px');
   app.style.setProperty('--itop', top.toFixed(2) + 'px');
   app.style.setProperty('--ilf',  L.toFixed(2) + 'px');
   app.style.setProperty('--ilh',  L.toFixed(2) + 'px');
+  app.style.setProperty('--isolo',(SIDE.SOLO*k).toFixed(2) + 'px');
+  app.style.setProperty('--isgap',(SIDE.SGAP*k).toFixed(2) + 'px');
 }
 addEventListener('resize', fit);
 /* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
