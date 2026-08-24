@@ -2294,6 +2294,72 @@
   #trw.on{display:block}
   #trw i,#trw em,#trw b,#trw u,#trw s{display:inline-block;font-style:normal;font-weight:900;
     text-decoration:none;transform-origin:50% 50%}
+  #trw>*{position:absolute}
+  .tr-dim{inset:0;background:rgba(0,0,0,.45)}
+  /* 시트 — 하단 고정. 자식 좌표는 «시트 local y = 레퍼런스 y − SHEET_TOP» */
+  .tr-sheet{left:0;right:0;bottom:0;height:1180px;background:#7A5334;border-radius:44px 44px 0 0}
+  .tr-sheet>*{position:absolute}
+  .tr-wave{left:0;right:0;top:0;height:46px;background:#7A5334;border-radius:44px 44px 0 0}
+  .tr-head{left:0;right:0;top:26px;height:96px;text-align:center;line-height:96px}
+  .tr-head>i{font-size:60px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill}
+  .tr-box{left:26px;right:26px;top:132px;bottom:150px;background:#EFCB93;border-radius:30px}
+  .tr-box>*{position:absolute}
+  /* 리본 «훈련 N 단계» */
+  .tr-rib{left:50%;transform:translateX(-50%);top:-28px;width:560px;height:120px}
+  .tr-rib>.bar{position:absolute;left:36px;right:36px;top:12px;height:96px;background:#C9622F;
+    border:5px solid #000;box-sizing:border-box;border-radius:12px}
+  .tr-rib>b{position:absolute;top:26px;width:70px;height:70px;background:#8E3E1C;
+    border:5px solid #000;box-sizing:border-box}
+  .tr-rib>b.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26px 50%)}
+  .tr-rib>b.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 26px) 50%,100% 100%,0 100%)}
+  .tr-rib>u{position:absolute;left:0;right:0;top:26px;height:70px;line-height:70px;text-align:center;
+    font-size:50px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2}
+  .tr-rib>u em{color:#FFC530;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  /* 진행바 + ↑ */
+  .tr-prog{left:60px;top:130px;width:700px;height:60px;border-radius:30px;background:#000}
+  .tr-prog>.trk{position:absolute;left:5px;top:5px;right:5px;bottom:5px;border-radius:25px;
+    background:#5E4B36;overflow:hidden}
+  .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:25px;background:#63D14A}
+  .tr-prog>b{position:absolute;inset:0;text-align:center;line-height:60px;font-size:34px;color:#fff;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+  .tr-up{left:800px;top:120px;width:150px;height:80px;border-radius:24px;background:#7E7E7E;
+    border:5px solid #000;box-sizing:border-box;text-align:center;line-height:70px;cursor:pointer}
+  .tr-up.on{background:linear-gradient(180deg,#7BE04F,#3FA221)}
+  .tr-up>i{font-size:54px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 배수 탭 x1/x10/x30 */
+  .tr-qty{left:0;right:0;top:220px;height:80px;text-align:center}
+  .tr-qty>.q{position:relative;display:inline-block;width:180px;height:74px;margin:0 8px;
+    border-radius:20px;background:#B08A5E;border:5px solid #000;box-sizing:border-box;
+    line-height:64px;cursor:pointer}
+  .tr-qty>.q.on{background:#FFC530}
+  .tr-qty>.q>i{font-size:36px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 스탯 카드 3열 */
+  .tr-cards{left:24px;right:24px;top:320px;height:520px}
+  .tr-card{position:absolute;top:0;width:300px;height:100%;border-radius:24px;background:#F6E3C2;
+    border:6px solid #000;box-sizing:border-box;cursor:pointer;overflow:hidden}
+  .tr-card:nth-child(1){left:0} .tr-card:nth-child(2){left:50%;transform:translateX(-50%)}
+  .tr-card:nth-child(3){right:0}
+  .tr-card.no{filter:grayscale(.35) brightness(.86)}
+  .tr-card>*{position:absolute}
+  .tr-card>.ch{left:0;right:0;top:0;height:74px;background:#FFC530;text-align:center;line-height:74px}
+  .tr-card>.ch>i{font-size:32px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .tr-card>.ci{left:0;right:0;top:96px;height:150px;text-align:center;line-height:150px;font-size:110px}
+  .tr-card>.cv{left:0;right:0;top:250px;height:52px;text-align:center;line-height:52px}
+  .tr-card>.cv>i{font-size:44px;color:#63D14A;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .tr-card>.cn{left:0;right:0;top:308px;height:46px;text-align:center;line-height:46px}
+  .tr-card>.cn>i{font-size:32px;color:#4A3B2B}
+  .tr-card>.cb{left:0;right:0;bottom:0;height:88px;background:#6B4A2B;text-align:center;line-height:88px}
+  .tr-card>.cb>s{font-size:38px;vertical-align:-4px} .tr-card>.cb>i{font-size:34px;color:#fff;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;margin-left:8px}
+  .tr-card>.dot,.tr-qty .dot{position:absolute;right:10px;top:10px;width:24px;height:24px;
+    border-radius:50%;background:#FF3B47;border:3px solid #000;box-sizing:border-box}
+  /* 하단 서브탭 4칸 */
+  .tr-sub{left:26px;right:26px;bottom:24px;height:104px;display:flex}
+  .tr-sub>.sg{position:relative;flex:1;text-align:center;line-height:104px;background:#5E4128;
+    border:5px solid #000;box-sizing:border-box;cursor:pointer}
+  .tr-sub>.sg:first-child{border-radius:52px 0 0 52px} .tr-sub>.sg:last-child{border-radius:0 52px 52px 0}
+  .tr-sub>.sg.on{background:#C9622F}
+  .tr-sub>.sg>i{font-size:34px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
