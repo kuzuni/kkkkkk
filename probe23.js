@@ -48,7 +48,12 @@ const dataUri = 'data:' + mime + ';base64,' + fs.readFileSync(path.resolve(file)
       /* 서브탭 바(어두운 갈색 max<=115) 위의 밝은 잉크 */
       lit:    (r, g2, b) => Math.max(r, g2, b) > 150,
       pure:   (r, g2, b) => Math.min(r, g2) >= 232 && b >= 215,
-      notcream: (r, g2, b) => Math.max(r, g2, b) < 232 || (r - b) > 42
+      notcream: (r, g2, b) => Math.max(r, g2, b) < 232 || (r - b) > 42,
+      /* 카드 아트 뒤 «판»(ref 237,217,190 / cap 234,214,179) — 흰 본문(r-b~10)·헤더밴드(r-b~106) 와 분리 */
+      plate:  (r, g2, b) => Math.max(r, g2, b) >= 212 && Math.max(r, g2, b) <= 252
+                          && (r - b) >= 33 && (r - b) <= 72 && (r - g2) >= 12 && (r - g2) <= 30,
+      /* 트레이 틴트(236,217,187) — 크림(243,231,207/243,230,205) 과 분리 */
+      tray:   (r, g2, b) => Math.abs(r - 236) <= 6 && Math.abs(g2 - 217) <= 6 && Math.abs(b - 187) <= 6
     };
     const test = masks[o.mask || 'rib'];
 
