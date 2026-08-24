@@ -398,7 +398,13 @@
 
   /* ============ 패널 ============ */
   /* 고정 높이(844 = 기존 422 x2). 넘치는 내용은 .body 내부 스크롤로 흡수 */
-  #panel{flex:none;height:844px;min-height:0;background:#0d1020;display:flex;flex-direction:column}
+  /* 작업 38 — 패널은 «오버레이» 다. flex 흐름에서 빼내 탭바(180) 위에 얹는다.
+     흐름에 두면 패널이 열릴 때마다 #stagearea 가 844px 줄어 ResizeObserver → layoutSide() 가
+     돌고, 사이드 아이콘이 위로 밀리며 찌그러졌다. 이제 캔버스 높이는 «패널 닫힘» 기준으로 항상 고정된다.
+     z-index 9 — 캔버스 위 오버레이(스테이지 헤더·배틀풋 z3, 사이드 z5)와 상단 HUD(z6) 위,
+     딤/다이얼로그/전체화면 껍데기(z28~40) 아래. 07 스킬 시트(:has)도 같은 z9 를 쓴다. */
+  #panel{position:absolute;left:0;right:0;bottom:180px;z-index:9;
+    height:844px;min-height:0;background:#0d1020;display:flex;flex-direction:column}
   .body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 28px;display:none}
   .body.on{display:block}
   .body::-webkit-scrollbar{width:10px}
@@ -2548,7 +2554,7 @@
      캔버스가 152px 로 짧아지면서 스테이지 헤더가 시트 헤더를 덮었고,
      레퍼런스는 상단 HUD 까지 딤이 덮여 있다(측정표 §10) */
   #panel:has(#bSk.on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
-    border-radius:38px 38px 0 0;box-sizing:border-box;position:relative;z-index:9;
+    border-radius:38px 38px 0 0;box-sizing:border-box;z-index:9;   /* position 은 #panel(absolute) 상속 — 작업 38 */
     box-shadow:inset 7px 0 0 #FDF5E0,inset -7px 0 0 #FDF5E0}
   /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
   #panel:has(#bSk.on)::before{content:'';position:absolute;left:-7px;right:-7px;
@@ -7514,7 +7520,9 @@ function syncPanel(){
     x.classList.toggle('fresh', !S.seen[x.dataset.t]);   /* 아직 안 연 탭에 NEW 리본 */
   });
   syncEquipPage();                                       /* 06 장비 바닥 시트 표시 여부 */
-  resizeCanvas();
+  /* 작업 38 — 여기서 resizeCanvas() 를 부르지 않는다.
+     패널이 오버레이가 된 뒤로 개폐가 #stagearea 높이를 바꾸지 않으므로 재계산이 불필요하고,
+     부르면 캔버스 버퍼를 다시 잡고 layoutSide() 가 돌아 사이드 아이콘이 재배치된다(= 금지 사항). */
 }
 function goTab(k, forceOpen){
   /* 상점 탭 → 10 소환 페이지(전체화면 #shopw). forceOpen=true 는 재화 카테고리가 기존 패널 상점을 열 때만 쓴다. */
