@@ -3087,8 +3087,8 @@
   #defw i,#defw b{display:inline-block;font-style:normal}
   /* 해골 엠블럼 — 원 221×209(x429), 남색 링 12px #0B4E83 + 시안 밴드(측30·상28·하38 — 하단이
      더 두껍다) #48F6FB + 내부 #0B4B7B. 글로우는 ref 실측 «세기 미미» — 약하게만 */
-  .df-emb{position:absolute;left:429px;top:330px;width:221px;height:209px;box-sizing:border-box;
-    border:12px solid #0B4E83;border-radius:50%;background:#48F6FB;
+  .df-emb{position:absolute;left:429px;top:332px;width:221px;height:209px;box-sizing:border-box;
+    border:12px solid #0B4E83;border-radius:50%;background:#48DAE7;
     box-shadow:0 0 42px 8px rgba(45,150,205,.55)}
   .df-emb::before{content:'';position:absolute;left:30px;right:30px;top:28px;bottom:4px;
     background:linear-gradient(180deg,#0B4B7B 0 55%,#2F86B5 74%,#40AEE1 84% 100%);
@@ -3124,16 +3124,19 @@
     transform-origin:50% 0;font-size:74px;line-height:80px}
   .df-ic .f1{position:absolute;left:-3px;bottom:-3px;font-size:46px;line-height:46px}
   .df-ic .f2{position:absolute;right:-3px;bottom:-3px;font-size:46px;line-height:46px}
-  /* c3 아이콘은 기하 도형이라 CSS 작화 — 크림 원 96 + 레드닷 24×25(원 좌상단 +67,+11) */
-  .df-ic3{position:absolute;left:38px;top:28px;width:100px;height:96px;border-radius:50%;
-    background:#E8BB68}
-  .df-ic3::after{content:'';position:absolute;left:67px;top:11px;width:24px;height:25px;
+  /* c3 아이콘은 기하 도형이라 CSS 작화 — 검정 링 5 + 골드 그라 원 79×78(ref x156–234 y1314–1391),
+     레드닷 25×24 는 원 좌상단 +45,+7 (2회차 D 지적으로 재실측 — 측정표의 «크림 96×96»은 오독) */
+  .df-ic3{position:absolute;left:59px;top:33px;width:79px;height:78px;box-sizing:border-box;
+    border:5px solid #000;border-radius:50%;
+    background:linear-gradient(180deg,#F7DDA4 0,#EEC072 55%,#E7B868 100%)}
+  .df-ic3::after{content:'';position:absolute;left:40px;top:2px;width:25px;height:24px;
     border-radius:50%;background:#F22E52}
   /* 문구 — 좌정렬 시작 ref x273(패딩기준 176) · 세로 중앙. c2·c3 은 외곽선 없는 갈흑 #141108,
      c1 만 흰 채움+외곽선(실측 3.5 한쪽 → stroke 7) */
   .df-txt{position:absolute;left:176px;top:0;height:154px;display:flex;align-items:center;
     font-size:29px;font-weight:900;color:#FAFAFA;white-space:nowrap;text-align:left;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+    -webkit-text-stroke:6px #2A2420;paint-order:stroke fill}
+  .df-card.c1 .df-txt{-webkit-text-stroke:7px #000}
   /* ref 게임 서체는 극단적 장체 — 카드별 «목표 흰 잉크폭 ÷ 무변환 실측폭» 으로 scaleX */
   .df-txt i{transform-origin:0 50%}
   .df-card.c1 .df-txt i{transform:scaleX(.889)}
@@ -3147,7 +3150,7 @@
     box-shadow:inset 0 -6px 0 #D87C0F;display:flex;align-items:center;justify-content:center}
   .df-btn::after{content:'';position:absolute;left:14px;right:14px;bottom:9px;height:3px;
     border-radius:2px;background:#FDEE2F}
-  .df-btn svg{width:61px;height:48px;overflow:visible}
+  .df-btn svg{width:62px;height:50px;overflow:visible}
   .df-btn svg path{fill:#fff;stroke:#000;stroke-width:8;paint-order:stroke fill;stroke-linejoin:round}
   /* «터치하여 닫기» — 18 실측 잉크폭 254 (09 의 251 대비 +1.2%) */
   #defw .upr-close i{transform:scaleX(.943)}
