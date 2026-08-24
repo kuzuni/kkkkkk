@@ -1842,9 +1842,11 @@
     box-shadow:0 0 0 1px #887662}
   .pf>*{position:absolute}
   /* Gamer Id — 라틴 잉크 15 → font 21(÷0.72). 얇은 회흑 외곽선 2px */
-  .pf-gid{left:0;right:0;top:32px;height:22px;line-height:22px;text-align:center;
+  .pf-gid{left:0;right:0;top:37px;height:22px;line-height:22px;text-align:center;
     font-size:21px;font-weight:700;color:#fafafa;
     -webkit-text-stroke:4px #5a5a5a;paint-order:stroke fill;white-space:nowrap}
+  /* 라틴 uuid 는 이 서체가 레퍼런스보다 14% 좁다 — 폭만 scaleX 로 회수 */
+  .pf-gid>i{transform:scaleX(1.16)}
   /* 초상화 ref (451,595) 179×176 — 검정5 / 갈색(113,90,76)12 / 검정4 / 아트 137×138 */
   .pf-por{left:359px;top:80px;width:179px;height:176px;background:#000;border-radius:14px}
   .pf-por>.b{position:absolute;inset:5px;background:#715A4C;border-radius:10px}
@@ -1865,26 +1867,27 @@
   .pf-ttl>i{font-size:31px;color:#f5f5f5;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     transform:scaleX(.9)}
   /* 닉네임 바 ref y846 h49 — 반투명 (115,103,87), 좌우 알파 페이드 */
-  .pf-nick{left:238px;top:331px;width:368px;height:49px;line-height:49px;text-align:center;
-    background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,.92) 72px,
-      rgba(115,103,87,.92) calc(100% - 10px),rgba(115,103,87,0));
-    font-size:32px;font-weight:700;color:#fbfbfb;
+  .pf-nick{left:238px;top:331px;width:430px;height:49px;line-height:49px;
+    text-align:center;text-indent:-4px;   /* ref 텍스트 중심 x541.5 = 바 중심 −3.5px */
+    background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,1) 72px,
+      rgba(115,103,87,1) calc(100% - 62px),rgba(115,103,87,0));
+    font-size:29px;font-weight:700;color:#fbfbfb;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
   /* ✏ 편집 ref (694,843) 56×55 — 크림 + 암갈 테두리 5, r12 */
   .pf-edit{left:602px;top:328px;width:56px;height:55px;background:#F6E8CB;
     border:5px solid #423127;border-radius:12px;box-sizing:border-box;cursor:pointer;
-    text-align:center;line-height:44px;font-size:29px;color:#52433C;font-weight:900}
+    text-align:center;line-height:42px;font-size:42px;color:#52433C;font-weight:900}
   /* 탭 3개 ref y917 h70 — 활성은 콘텐츠 패널(#D0B195)과 이음새 없이 연결(2px 겹침) */
-  .pf-tab{top:402px;width:228px;height:69px;line-height:66px;text-align:center;
+  .pf-tab{top:402px;width:228px;height:69px;line-height:80px;text-align:center;
     border-radius:16px 16px 0 0;background:#A5866A;cursor:pointer;
     box-shadow:inset 0 0 0 6px #8C6D51,inset 0 0 0 12px #BAA085;
-    font-size:34px;color:#A9A8AD;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+    font-size:37px;color:#A9A8AD;-webkit-text-stroke:5px #000;paint-order:stroke fill}
   .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
   .pf-tab.on{height:76px;background:#D0B195;z-index:2;
     box-shadow:inset 0 4px 0 #A6896B,inset 4px 0 0 #A6896B,inset -4px 0 0 #A6896B,
       inset 0 10px 0 #E0CCB4,inset 10px 0 0 #E0CCB4,inset -10px 0 0 #E0CCB4;
-    font-size:35px;color:#FFF8C1}
+    font-size:38px;color:#FFF8C1}
   .pf-tab>i{transform:scaleX(.9)}
   /* 콘텐츠 패널 ref (150,985) 780×544, r36, 테두리 없음 */
   .pf-grid{left:58px;top:470px;width:780px;height:544px;background:#D0B195;border-radius:36px;
@@ -1894,30 +1897,33 @@
   /* 카드 350×77 r16 — 보유(139,118,99)/미보유(92,77,64). 장착 = 시안 링 6 + 검정 배지 */
   .pf-card{position:relative;width:350px;height:77px;border-radius:16px;background:#5C4D40}
   .pf-card.own{background:#8B7663}
-  .pf-card.eq{box-shadow:0 0 0 6px #8EFCF3}
+  .pf-card.eq{box-shadow:0 0 0 2px #8EFCF3,inset 0 0 0 4px #8EFCF3}
   /* 카드 내부 육각 배너 w298 h57, 카드 상 11 / 좌 26 */
   .pf-bn{position:absolute;left:26px;top:11px;width:298px;height:57px;line-height:57px}
   .pf-bn>s.o{background:#000}
   .pf-bn>s.m{background:var(--gr,#000)}
   .pf-bn>s.f{background:linear-gradient(180deg,var(--bv,#7D6857) 0 6px,var(--gc,#443B36) 6px)}
-  .pf-bn>i{font-size:25px;color:#ebebeb;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+  .pf-bn>i{font-size:27px;color:#ebebeb;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(.88)}
   .pf-card:not(.own) .pf-bn>i{color:#A7A7A7}
   /* 자물쇠(미보유) — 흰 몸통 28×32 + 고리, 검정 외곽은 drop-shadow */
-  .pf-lk{position:absolute;left:50%;top:50%;width:28px;height:32px;margin:-9px 0 0 -14px;
-    background:#fff;border-radius:5px;
+  .pf-lk{position:absolute;left:50%;top:22px;width:28px;height:32px;margin-left:-14px;
     filter:drop-shadow(0 0 2.5px #000) drop-shadow(0 0 1.5px #000)}
-  .pf-lk::before{content:'';position:absolute;left:4px;top:-13px;width:20px;height:16px;
-    border:6px solid #fff;border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box}
+  .pf-lk::before{content:'';position:absolute;left:4px;top:0;width:20px;height:15px;
+    border:5px solid #fff;border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box}
+  .pf-lk::after{content:'';position:absolute;left:0;top:12px;width:28px;height:20px;
+    border-radius:4px;
+    background:radial-gradient(circle 4px at 50% 32%,#1a1a1a 97%,rgba(0,0,0,0) 100%),
+      linear-gradient(#1a1a1a,#1a1a1a) no-repeat 50% 78%/5px 8px,#fff}
   /* 장착 중 배지 — 검정 알약 148×38, 카드 상변 −18 겹침 */
-  .pf-eqb{position:absolute;left:50%;top:-18px;width:148px;height:38px;margin-left:-74px;
+  .pf-eqb{position:absolute;left:50%;top:-21px;width:148px;height:38px;margin-left:-74px;
     border-radius:19px;background:#000;text-align:center;line-height:38px;z-index:2}
   .pf-eqb>i{font-size:22px;color:#9FD855;transform:scaleX(.9)}
   /* 해금 미션 바 ref (152,1541) 776×62 — (96,76,75), 상단만 r20 */
   .pf-msn{left:60px;top:1026px;width:776px;height:62px;line-height:62px;text-align:center;
     background:#604C4B;border-radius:20px 20px 0 0;
     font-size:32px;color:#f2f2f2;-webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .pf-msn>i{transform:scaleX(.88)}
+  .pf-msn>i{transform:scaleX(.95)}
   /* 크림 푸터 ref (150,1604) 780×148 — (255,238,212), 하단 r24 */
   .pf-ftr{left:58px;top:1089px;width:780px;height:148px;background:#FFEED4;
     border-radius:0 0 24px 24px}
@@ -1927,8 +1933,8 @@
     background:linear-gradient(180deg,#A8A8A8 0,#989898 55%,#8A8A8A 100%);
     box-shadow:inset 0 7px 0 #D3D3D3,inset 7px 0 0 #D3D3D3,inset -7px 0 0 #D3D3D3,
       inset 0 -7px 0 #757575,inset 0 -14px 0 #D3D3D3;
-    text-align:center;line-height:103px}
-  .pf-btn>i{font-size:57px;color:#000;transform:scaleX(.85)}
+    text-align:center;line-height:93px}
+  .pf-btn>i{font-size:57px;color:#000;transform:scaleX(.76)}
   /* 하단 토글 바 ref (156,1776) 770×95 — 검정 5 + 암갈 그라, r24 */
   .pf-tgl{left:64px;top:1261px;width:770px;height:95px;background:#000;border-radius:24px}
   .pf-tgl>.in{position:absolute;inset:5px;border-radius:20px;
@@ -1936,16 +1942,16 @@
     box-shadow:inset 0 -2px 0 #5C4E41}
   /* 비활성 라벨 «종합 스탯» — 좌측 절반 중심 x188(바 local) */
   .pf-tgl>.lb{position:absolute;left:0;top:0;width:376px;height:95px;line-height:95px;
-    text-align:center;font-size:35px;color:#A5A4A9;
+    text-align:center;font-size:38px;color:#A5A4A9;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;cursor:pointer}
   .pf-tgl>.lb>i{transform:scaleX(.88)}
   /* 활성 «프로필» 황색 화살 배너 — 몸통 (414,13) 335×68 + 양끝 팁 20px, 2톤 채움 */
-  .pf-tgl>.bn{position:absolute;left:394px;top:13px;width:373px;height:68px;
+  .pf-tgl>.bn{position:absolute;left:390px;top:13px;width:381px;height:68px;
     text-align:center;line-height:68px}
   .pf-tgl>.bn>s{position:absolute;inset:0;
     clip-path:polygon(0 50%,22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%)}
   .pf-tgl>.bn>s.f{inset:5px 6px;
-    background:linear-gradient(180deg,#FFC736 0 50%,#F8A63A 50%)}
+    background:linear-gradient(180deg,#FFE479 0 4px,#FFC736 4px 50%,#F8A63A 50%)}
   .pf-tgl>.bn>i{position:relative;font-size:33px;color:#8DDCFD;
     -webkit-text-stroke:6px #001F2C;paint-order:stroke fill;transform:scaleX(.9)}
 
@@ -6648,7 +6654,7 @@ function pfGamerId(){
   return h.slice(0,8) + '-' + h.slice(8,12) + '-' + h.slice(12,16) + '-' + h.slice(16,20) + '-' + h.slice(20,32);
 }
 function renderProfile(){
-  $('pfGid').textContent = 'Gamer Id: ' + pfGamerId();
+  $('pfGid').innerHTML = '<i>Gamer Id: ' + pfGamerId() + '</i>';
   $('pfNick').textContent = S.nick;
   $('pfTtl').textContent = rankOf().n;
   let h = '';
