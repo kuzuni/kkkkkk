@@ -2883,7 +2883,10 @@
   .tr-qty .dot{position:absolute;left:231px;top:-7px;width:27px;height:27px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
 
-  /* §7 하단 서브탭 4칸 — x37 y958 w960 h97, 4등분 240 */
+  /* §7 하단 서브탭 — 레퍼런스는 4칸(x37 y958 w960 h97, 4등분 240)이지만
+     작업 47(2026-08-25, 저장소 주인 지시)로 «훈련 · 스탯 훈련» **2칸 균등**이 됐다.
+     바 껍데기 규격(960×97 · 상검정 8 / 하검정 6 · 상하 밝은 립 6 · 구분선 55px)과 활성 알약 규격(253×62)은
+     실측 그대로 유지하고, 위치만 새 칸(474)의 중앙으로 다시 잡는다. 칸 수는 우리 설계라 레퍼런스 대조 대상이 아니다. */
   .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:40px;background:#141414;
     overflow:hidden;display:flex}
   /* 6회차: ref 서브탭 바는 단색 갈색이 아니다 — x700 세로 스캔에서 위·아래에 **밝은 인셋 립 6px**
@@ -2894,10 +2897,10 @@
     margin:8px 0 6px;cursor:pointer}
   /* 7회차: 칸 구분선을 inset box-shadow 로 주면 바 내부를 «관통»한다(83px).
      ref 는 y2043..2097 = **55px** 로 상하 14px 씩 인셋돼 있다(두 비평가가 독립적으로 +51% 로 지적). */
-  /* 9회차(N P5·P6, 자체 재확인): ref 글리프 없는 행(y2094)에서 구분선은 **x538..541 · x774..779** 다.
-     flex 4등분 경계(297·534·771)에 붙이면 530·767 로 **8px 왼쪽**에 온다 → right:-8px 로 옮긴다
-     (탭 히트영역·라벨 정렬은 그대로. 두 비평가가 라벨 중심은 Δ≤2.5 로 «맞다» 고 했다) */
-  .tr-sub>.sg::after{content:'';position:absolute;right:-8px;top:14px;height:55px;width:4px;
+  /* 9회차(N P5·P6): ref 4칸 바의 구분선은 x538..541 · x774..779 로 flex 경계보다 8px 우측이었다(right:-8px).
+     47(2칸): 남는 경계는 **하나**이고 그 자리가 바 정중앙(local 480 = 960/2)이다. 4칸 기준의 +8 오프셋은
+     4등분 경계 전용 실측 보정이라 2칸에서는 의미가 없다 → 구분선을 경계에 정확히 물린다(right:-2px, 4px 중 2·2). */
+  .tr-sub>.sg::after{content:'';position:absolute;right:-2px;top:14px;height:55px;width:4px;
     background:#4A3A2B;z-index:1}
   .tr-sub>.sg:last-child::after{display:none}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
@@ -2905,23 +2908,22 @@
   /* 7회차: ref 칩은 border-box 253x62 로 바 내부 좌측에 **flush**(인셋 0)이고 하단 여백이 14px 다.
      우측 끝도 수직 직선이 아니라 **반경 ~31 라운드 캡**이다(L 이 x310 세로 다크 82px 연속으로 잡아냈다).
      6회차 것은 229x71 · 좌인셋 8 · 하단여백 5 였다(폭 −9.5% · 높이 +14.5%). */
-  .tr-sub>.sg.on::before{content:'';position:absolute;left:0;right:-15px;top:6px;height:62px;
+  /* 47: 알약 크기(253×62 · radius31 · 우측 다크캡 9)는 7회차 실측 그대로. 옛 `left:0;right:-15px` 는
+     칸 240 전제(= 폭 255)라 칸 474 에서는 칸을 통째로 덮는다 → 폭을 명시하고 칸 중앙에 놓는다
+     (474−253)/2 = **110.5**. 45(상점 탭 4→2)와 같은 처리다. */
+  .tr-sub>.sg.on::before{content:'';position:absolute;left:110.5px;right:auto;width:253px;top:6px;height:62px;
     border-radius:31px;background:#4B3E2D;box-shadow:inset -9px 0 0 #0C0803;z-index:1}
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
-  .tr-sub>.sg.on>i{color:#E7B88E;left:7px;top:-2px}
-  /* 8회차(K 아트절): ref 자물쇠 배지는 **59x60**(x629..687 · y2040..2099, 중심 658/2069).
-     🔒 이모지는 fs66 에서 잉크 **44x60** — 즉 «높이는 이미 맞고 폭만 −25%» 였다(K 의 «44px» 은 폭).
-     이모지는 폰트 크기로 키우면 높이까지 같이 커지므로(fs88 → 58x80) 폭만 scaleX 로 늘린다.
-     «아트 자리 규칙» — 나중에 이미지로 교체만 하면 되게 bbox 를 채운다.
-     (작업 47 이 이 탭을 «훈련·스탯 훈련» 2칸으로 없애면 함께 사라진다) */
-  .tr-sub>.sg.lock>i{top:-9px;left:6px;font-size:57px;line-height:97px;color:#fff;
-    -webkit-text-stroke:0;transform:scaleX(1.43)}
-  .tr-sub>.sg.lock.txt>i{font-size:33px;line-height:78px;color:#C6BCBA;
-    -webkit-text-stroke:5px #141414;paint-order:stroke fill}
+  /* 옛 left:7px 은 «칸 중심 120 → 알약 중심 127.5» 차이를 메우던 값이다. 알약이 칸 중앙에 오면 두 중심이
+     같아지므로 가로 오프셋은 0 이다(세로 −2 는 ref 잉크 정렬값이라 유지). */
+  .tr-sub>.sg.on>i{color:#E7B88E;top:-2px}
+  /* 8회차의 `.sg.lock` / `.sg.lock.txt`(🔒 이모지 배지 · «마법상판») 규칙은 47 에서 그 칸을 없애면서
+     같이 지웠다 — LESSONS 57-1 «대체하면 구버전 경로는 그때 지운다». */
   /* 10회차: 카드 배지와 같은 정정. ref y2035 가로 단면 — 검정 272..277(6px) 뒤 핑크 시작 278,
-     우리는 검정 276..278(3px) 뒤 279 였다. border-box 42 · fill 31 · 링 5.5 (중심 231,7 불변) */
-  .tr-sub>.sg.on>.dot{position:absolute;left:210px;top:-14px;width:42px;height:42px;border-radius:50%;
+     우리는 검정 276..278(3px) 뒤 279 였다. border-box 42 · fill 31 · 링 5.5
+     47: 배지는 알약에 붙은 요소라(알약 local 210) 알약과 같이 110.5 만큼 옮긴다 → 320.5. */
+  .tr-sub>.sg.on>.dot{position:absolute;left:320.5px;top:-14px;width:42px;height:42px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 5.5px #141414;z-index:3}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
@@ -9108,9 +9110,7 @@ function renderTrain(){
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
   $('trSub').innerHTML =
       '<span class="sg' + (t ? ' on' : '') + '" data-trsub="train"><i>훈련</i><em class="dot"></em></span>'
-    + '<span class="sg' + (t ? '' : ' on') + '" data-trsub="stat"><i>스탯 훈련</i></span>'
-    + '<span class="sg lock"><i>🔒</i></span>'
-    + '<span class="sg lock txt"><i>마법상판 🔒</i></span>';
+    + '<span class="sg' + (t ? '' : ' on') + '" data-trsub="stat"><i>스탯 훈련</i></span>';
 }
 function openTrain(){
   if(typeof closeDungeon === 'function') closeDungeon();

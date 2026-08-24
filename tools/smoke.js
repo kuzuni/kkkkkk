@@ -139,6 +139,12 @@ function launchOpts(){
       await page.waitForTimeout(400);
       const dsubs = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => e.dataset.dsub)).catch(() => []);
       dsubs.forEach((k) => openers.push({ label: 'dunsub:' + k, sel: null, dun: `#dunSub [data-dsub="${k}"]` }));
+      /* 23 훈련 시트 서브탭(훈련 · 스탯 훈련) — 훈련 시트를 연 뒤에만 보이는 2단계 오프너다(작업 47).
+         «스탯 훈련» 칸은 카드 3장의 재화를 골드 → 스탯 포인트로 갈아 끼운다. */
+      await page.click('.tab[data-t="grow"]', { timeout: 3000, force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      const tsubs = await page.$$eval('#trSub [data-trsub]', (els) => els.map((e) => e.dataset.trsub)).catch(() => []);
+      tsubs.forEach((k) => openers.push({ label: 'trsub:' + k, sel: null, tr: `#trSub [data-trsub="${k}"]` }));
       await ctx.close();
     }
     for (const o of openers) {
@@ -159,6 +165,11 @@ function launchOpts(){
           await page.waitForTimeout(400);
           const hit = await page.$eval(o.dun, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.dun, { timeout: 3000, force: true });
+        } else if (o.tr) {
+          await page.click('.tab[data-t="grow"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          const hit = await page.$eval(o.tr, (el) => { el.click(); return true; }).catch(() => false);
+          if (!hit) await page.click(o.tr, { timeout: 3000, force: true });
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
