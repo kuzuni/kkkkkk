@@ -23,15 +23,27 @@ const REF_TXT = process.argv[4] === 'live' ? null : { g: '40.77A', d: '1,300' };
   }, which);
   await page.waitForTimeout(600);
 
-  if (REF_TXT) {
-    await page.evaluate((t) => {
-      document.querySelectorAll('.pcb-g>b').forEach((e) => { e.textContent = t.g; });
-      document.querySelectorAll('.pcb-d>b').forEach((e) => { e.textContent = t.d; });
-    }, REF_TXT);
-  }
   /* 28 교훈 3 — 캔버스 흰 데미지 숫자가 잉크 스캔을 오염시킨다 */
   await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
   await page.waitForTimeout(120);
+  /* 렌더 루프를 먼저 세운다. 안 세우면 renderPcb() 가 라이브 값으로 되돌려서
+     레퍼런스 문자열 주입이 «캡처 직전에» 날아간다(51 함정 3 의 재현). */
+  await page.evaluate(() => { window.requestAnimationFrame = () => 0; });
+  await page.waitForTimeout(120);
+
+  if (REF_TXT) {
+    /* 51 함정 3 — textContent 만 바꾸면 «유휴 루프» 가 되돌린다. renderPcb() 는 값이 바뀔 때만 DOM 을
+       건드리므로, 전투가 골드를 버는 순간 라이브 값으로 덮어쓴다(실제로 «40.77A» 가 «969» 로 바뀌었다).
+       그래서 캐시 변수(pcbGold/pcbDia)까지 같이 심어 갱신 자체가 안 일어나게 만든다. */
+    await page.evaluate((t) => {
+      document.querySelectorAll('.pcb-g>b').forEach((e) => { e.textContent = t.g; });
+      document.querySelectorAll('.pcb-d>b').forEach((e) => { e.textContent = t.d; });
+      try { pcbGold = t.g; pcbDia = t.d; } catch (e) { /* 캐시가 없으면 무시 */ }
+    }, REF_TXT);
+    await page.waitForTimeout(400);
+    const stuck = await page.evaluate((t) => document.querySelector('.pcb-g>b').textContent === t.g, REF_TXT);
+    if (!stuck) { console.error('!! 주입한 문자열이 렌더 루프에 덮였다 — 이 캡처로 채점하지 마라'); process.exitCode = 2; }
+  }
 
   const geo = await page.evaluate((w) => {
     const root = document.getElementById(w === 'rel' ? 'relicw' : 'dunw');

@@ -1177,7 +1177,7 @@
     background:linear-gradient(180deg,#231A13 0,#231A13 28.5px,#1D160E 30.5px,
       #1D160E 49px);
     display:flex;align-items:center;justify-content:center;padding-left:53px;
-    padding-right:16px;box-sizing:border-box}
+    padding-right:14.5px;box-sizing:border-box}
   .pcb-g{left:505px}
   .pcb-d{left:805px}
   /* 아이콘 57x57 — 중심이 알약 좌측 캡 원 중심(좌단+24.5)이라 알약 위·아래로 4px 씩 나온다.
@@ -1191,14 +1191,22 @@
     text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
       2.1px 2.1px 0 #000,-2.1px 2.1px 0 #000,2.1px -2.1px 0 #000,-2.1px -2.1px 0 #000,
       0 5px 0 rgba(0,0,0,.92),2px 4.5px 0 rgba(0,0,0,.92),-2px 4.5px 0 rgba(0,0,0,.92)}
-  .pcb-d>i{left:-4px}
+  /* scaleX(.86) 은 text-shadow 링까지 가로로 줄인다 — x 오프셋을 /0.86 해서 되돌린다
+     (안 하면 젬 실루엣 폭만 3.3px 좁아진다. 비평 D 차분 5) */
+  .pcb-d>i{left:-4px;top:-3px;
+    text-shadow:3.49px 0 0 #000,-3.49px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
+      2.44px 2.1px 0 #000,-2.44px 2.1px 0 #000,2.44px -2.1px 0 #000,-2.44px -2.1px 0 #000,
+      0 5px 0 rgba(0,0,0,.92),2.33px 4.5px 0 rgba(0,0,0,.92),-2.33px 4.5px 0 rgba(0,0,0,.92)}
   /* #dunw i / #relicw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
   #dunw .pcb-p>i,#relicw .pcb-p>i{display:flex}
-  .pcb-g>i{font-size:51px;transform:scaleX(1.04)}
+  /* 이모지는 폰트 크기를 키우면 잉크가 «위로» 자란다(사이드베어링/베이스라인) — 51→52.5 로 키운
+     만큼 top 을 내려서 잉크 중심을 알약 중심(프레임 55)에 되돌린다. 25 교훈 4 의 세로 판. */
+  .pcb-g>i{left:-5px;top:-2.5px;font-size:52.5px;transform:scaleX(1.04)}
   .pcb-d>i{font-size:59px;transform:scaleX(.86)}
   /* 숫자 — 잉크 h23, 28 교훈 1(숫자 잉크비 0.69) → fs 33.3. 폭은 scaleX 로 회수.
      translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
-  .pcb-p>b{font-size:34.5px;font-weight:900;color:#fff;white-space:nowrap;line-height:1;
+  .pcb-p>b{position:relative;top:1px;font-size:34.5px;font-weight:900;color:#fff;
+    white-space:nowrap;line-height:1;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;
     transform:translate3d(0,0,0) scaleX(1.096);transform-origin:50% 50%;
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}

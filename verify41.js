@@ -38,13 +38,17 @@ async function snap(page, which) {
   }, { w: which, sels: GEO_SEL });
 }
 
-async function open(browser, file, which) {
+async function open(browser, file, which, freeze) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   await page.goto('file://' + file);
+  /* 픽셀 회귀 전용 — 렌더 루프를 «켜지자마자» 세운다. 살아 있는 게임을 두 번 찍으면
+     골드·쿨다운·스킬 발동이 매번 달라져서 대조가 근본적으로 비결정적이다.
+     rAF 를 죽이면 두 캡처가 같은 초기 프레임에서 멈춘다. */
+  if (freeze) { await page.waitForTimeout(60); await page.evaluate(() => { window.requestAnimationFrame = () => 0; }); }
   await page.waitForTimeout(900);
   if (which === 'dun') await page.evaluate(() => openDungeon());
   if (which === 'rel') await page.evaluate(() => openRelicPage());
@@ -61,7 +65,19 @@ async function open(browser, file, which) {
 }
 
 (async () => {
-  execSync(`git show ${process.argv[2] || 'HEAD~1'}:index.html > ${BEFORE}`);
+  /* 회귀 기준본을 «옛 커밋» 으로 잡으면 그 사이에 다른 워커가 넣은 변경까지 섞여 들어온다
+     (실제로 작업 63 의 탭바 테두리 제거가 섞여 오검출이 났다). 그래서 기준본은
+     **현재 파일에서 41 의 마크업만 들어낸 것** 으로 만든다 — 41 단독 영향만 남는다.
+     CSS 는 남겨도 마크업이 없으면 아무것도 그리지 않으므로 그대로 둔다. */
+  {
+    const cur = fs.readFileSync(path.resolve('index.html'), 'utf8');
+    const re = /\n\s*<!-- 41 팝업 내장 재화 바[\s\S]*?<div class="pcb">[\s\S]*?<\/div>\n\s*<\/div>/g;
+    const stripped = cur.replace(re, '');
+    const n = (cur.match(re) || []).length;
+    if (n !== 2) { no(`기준본 생성 실패 — .pcb 마크업 ${n}개만 제거됨(2개여야 한다)`); }
+    else ok('회귀 기준본 = 현재 파일에서 .pcb 마크업 2개만 제거');
+    fs.writeFileSync(BEFORE, stripped);
+  }
   const browser = await chromium.launch();
   const NOW = path.resolve('index.html');
 
@@ -144,22 +160,28 @@ async function open(browser, file, which) {
   console.log('\n[3] 02 메인 픽셀 회귀 (팝업 닫힌 기본 상태)');
   const shots = {};
   for (const [tag, file] of [['before', BEFORE], ['after', NOW]]) {
-    const { ctx, page } = await open(browser, file, null);
+    const { ctx, page } = await open(browser, file, null, true);
     shots[tag] = await page.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
     await ctx.close();
   }
   fs.writeFileSync('.v41a.png', shots.before); fs.writeFileSync('.v41b.png', shots.after);
   /* 스킬 슬롯(#slots)은 쿨다운 링이 rAF 로 도는 «유휴 애니메이션» 이라 같은 파일을 두 번 찍어도
      달라진다 — 대조에서 제외한다(51 함정 3 과 같은 부류). 제외 박스는 실측으로 잡는다. */
-  const ex = await (async () => { const { ctx, page } = await open(browser, NOW, null);
-    const r = await page.evaluate(() => { const a = document.getElementById('app').getBoundingClientRect(),
-      s = document.getElementById('slots').getBoundingClientRect();
-      return [Math.floor(s.left - a.left) - 4, Math.floor(s.top - a.top) - 4,
-        Math.ceil(s.right - a.left) + 4, Math.ceil(s.bottom - a.top) + 4]; });
+  /* 제외 박스 2개 — 둘 다 «유휴 루프가 굴리는 값» 이라 같은 파일을 두 번 찍어도 달라진다(51 함정 3).
+       #slots : 쿨다운 링이 rAF 로 돈다
+       .curs  : 전투가 골드를 계속 벌어 #goldN/#diaN 문자열이 바뀐다 (S.gold 가 소스라 덮어써도 되돌아온다) */
+  const ex = await (async () => { const { ctx, page } = await open(browser, NOW, null, true);
+    const r = await page.evaluate(() => {
+      const a = document.getElementById('app').getBoundingClientRect();
+      const box = (el) => { const s = el.getBoundingClientRect();
+        return [Math.floor(s.left - a.left) - 4, Math.floor(s.top - a.top) - 4,
+          Math.ceil(s.right - a.left) + 4, Math.ceil(s.bottom - a.top) + 4]; };
+      return [...box(document.getElementById('slots')), ...box(document.querySelector('.curs'))];
+    });
     await ctx.close(); return r; })();
   const diff = execSync(`python3 pxdiff41.py .v41a.png .v41b.png ${ex.join(' ')}`).toString().trim();
   const nd = parseInt(diff.split(' ')[0], 10);
-  nd === 0 ? ok('02 메인 픽셀 Δ0 (#slots 쿨다운 애니 제외)') : no('02 메인 픽셀 ' + diff);
+  nd === 0 ? ok('02 메인 픽셀 Δ0 (#slots 쿨다운 · .curs 골드 증가 제외)') : no('02 메인 픽셀 ' + diff);
 
   /* ---------- ④ 화면비 ---------- */
   console.log('\n[4] 화면비 5종 × 페이지 2종 — 바 기하가 프레임 좌표계에서 불변인가');

@@ -1,16 +1,16 @@
-# .png 두 장 픽셀 대조. 인자: a b [x0 y0 x1 y1 (제외 박스)]
+# .png 두 장 픽셀 대조. 인자: a b [x0 y0 x1 y1] ... (제외 박스 여러 개 가능)
 import sys
 from PIL import Image
 a = Image.open(sys.argv[1]).convert('RGB').load()
 b = Image.open(sys.argv[2]).convert('RGB').load()
-im = Image.open(sys.argv[1])
-W, H = im.size
-ex = [int(v) for v in sys.argv[3:7]] if len(sys.argv) >= 7 else None
+W, H = Image.open(sys.argv[1]).size
+nums = [int(v) for v in sys.argv[3:]]
+boxes = [nums[i:i + 4] for i in range(0, len(nums) - 3, 4)]
 n = 0
 rows = {}
 for y in range(H):
     for x in range(W):
-        if ex and ex[0] <= x <= ex[2] and ex[1] <= y <= ex[3]:
+        if any(bx[0] <= x <= bx[2] and bx[1] <= y <= bx[3] for bx in boxes):
             continue
         if a[x, y] != b[x, y]:
             n += 1
