@@ -724,13 +724,23 @@
   .rl16 .mbox{border-top-width:6px;border-bottom-width:6px;padding-bottom:9px}
   .rl16 .mbody{padding:2px 0 12px;background:#F0D9BA;text-align:center;border-bottom-width:3px}
   /* 제목 자폭 +21% (1회차 A/B 합치) — 잉크 높이는 일치하므로 scaleX 로만 폭 회수 */
-  .rl16 .mhead h2{font-size:52px;line-height:52px;-webkit-text-stroke:11px #000;paint-order:stroke fill;
-    transform:scaleX(.82) translateY(-2px)} /* ref 외곽선 편측 6px — 절반은 안쪽으로 사라지므로 11px */
+  .rl16 .mhead h2{font-size:52px;line-height:52px;-webkit-text-stroke:9.5px #000;paint-order:stroke fill;
+    transform:scaleX(.82) translateY(1px)} /* ref 외곽선 편측 6px — 절반은 안쪽으로 사라지므로 11px */
   /* ref 실측(1회차 재스캔): 헤더 아래 F0D9BA 밴드 34px → 카드색 D7C0A1 은 로컬 34~632 구간뿐,
      그 아래(강화 버튼 영역)는 다시 F0D9BA 다. 단색 카드가 아니라 3단 밴드. */
   .rld{position:relative;top:-1px;width:844px;height:817px;margin:0 auto;border-radius:24px;
-    background:linear-gradient(180deg,#F0D9BA 0 34px,#D7C0A1 34px 632px,#F0D9BA 632px)}
-  .rld>*{position:absolute}
+    background:#F0D9BA}
+  /* ref 안쪽 패널: 상단 36px 아래에서 시작하고 위쪽 두 모서리만 r30 으로 둥글다 */
+  .rld::before{content:'';position:absolute;left:0;right:0;top:36px;height:596px;z-index:0;
+    background:#D7C0A1;border-radius:30px 30px 0 0}
+  /* 하단 베이지 밴드의 별 장식 2행 — ref 실측: 41x49, 가로 pitch 235, 2행이 pitch 절반(117)만큼 엇갈림,
+     톤 (233,208,177) on (240,217,186). 행 중심 ref y1495 / y1602 (카드 로컬 657 / 764) */
+  .rld::after{content:'';position:absolute;left:0;right:0;top:632px;bottom:0;z-index:0;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='235' height='42'><path d='M45 0 L63 0 L79.5 11 L72 30 L60 42 L48 42 L36 30 L28.5 11 Z' fill='%23E9D0B1'/></svg>"),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='235' height='42'><path d='M159 0 L177 0 L193.5 11 L186 30 L174 42 L162 42 L150 30 L142.5 11 Z' fill='%23E9D0B1'/></svg>");
+    background-position:0 2px,0 108px;background-repeat:repeat-x,repeat-x}
+  .rld>*{position:absolute;z-index:1}
   .rld b{display:block;font-weight:900;color:#fff;paint-order:stroke fill}
   /* 아이콘 박스 149² — 4px 검정 + 안쪽 링 5px #AE7B5C */
   .rl-ic{left:47px;top:49px;width:149px;height:149px;box-sizing:border-box;
@@ -739,21 +749,21 @@
     display:flex;align-items:center;justify-content:center;font-size:96px;line-height:1}
   /* 등급 알약 207×48 */
   .rl-gr{left:237px;top:68px;width:209px;height:48px;box-sizing:border-box;
-    border:3px solid #000;border-radius:21px;box-shadow:inset 0 0 0 4px #AB7C5E;
+    border:3px solid #000;border-radius:24px;box-shadow:inset 0 0 0 5px #AB7C5E;
     background:linear-gradient(180deg,#775742 0%,#835F49 50%,#775742 100%);
     display:flex;align-items:center;justify-content:center}
-  .rl-gr b{font-size:23px;-webkit-text-stroke:6px #000}
+  .rl-gr b{font-size:23px;-webkit-text-stroke:5px #000;position:relative;top:1px}
   /* Lv 박스 139×65 — 진행바보다 위아래로 크고 좌단을 덮는다(z 위) */
   .rl-lv{left:237px;top:128px;width:139px;height:69px;box-sizing:border-box;z-index:2;
     border:5px solid #000;border-radius:32px;
-    background:linear-gradient(180deg,#57402F 0 8px,#6B573F 8px 15px,#57402F 15px 50px,#6B573F 50px 57px,#57402F 57px);
+    background:linear-gradient(180deg,#57402F 0 5px,#6B573F 5px 11px,#57402F 11px 47px,#6B573F 47px 53px,#57402F 53px);
     display:flex;align-items:center;justify-content:center}
-  .rl-lv b{font-size:37px;-webkit-text-stroke:9px #000;transform:scaleX(.96)}
+  .rl-lv b{font-size:37px;-webkit-text-stroke:8px #000;transform:scaleX(.96);position:relative;top:2px}
   /* 진행바 436×48 — 트랙 2단(#8182A0/#6F7799), 채움 #FBB51F */
   .rl-pb{left:346px;top:138px;width:438px;height:49px;box-sizing:border-box;
     border:7px solid #000;border-bottom-width:6px;border-radius:17px;overflow:hidden;
     background:linear-gradient(180deg,#8182A0 0 19px,#6F7799 19px)}
-  .rl-pb i{display:block;height:100%;background:linear-gradient(180deg,#FEC722 0 9px,#FFB514 9px)}
+  .rl-pb>i{display:block;height:100%;background:linear-gradient(180deg,#FEC722 0 9px,#FFB514 9px)}
   .rl-pb b{position:absolute;top:0;right:0;left:9px;height:100%; /* 라벨 중심 ref = 바 중심 −7.5px (1회차 A ④) */
     display:flex;align-items:center;justify-content:center;
     font-size:28px;color:#FBFEB7;-webkit-text-stroke:6px #000}
@@ -761,25 +771,25 @@
   /* 플레이버 텍스트 박스 748×130 — 밝은 패널 위 다크 텍스트, 좌측 정렬 */
   .rl-fl{left:47px;top:233px;width:750px;height:130px;box-sizing:border-box;overflow:hidden;
     border:4px solid #000;border-radius:27px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:5px 26px 0;text-align:left}
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:8px 26px 0;text-align:left}
   /* 이 서체는 ref 게임서체보다 자폭 +33% — 폭 133% 로 깔고 scaleX(.75) 로 시각폭을 되돌린다
      (음수 letter-spacing 금지 — PROGRESS 교훈). ref 텍스트는 상단 정렬(잉크 top = 박스+13). */
   .rl-fl p{margin:0;width:139%;transform:scaleX(.72);transform-origin:0 0;
-    font-size:38px;line-height:46px;font-weight:900;color:#0d0a06;
-    -webkit-text-stroke:1.35px #0d0a06;paint-order:stroke fill}
+    font-size:38px;line-height:46px;font-weight:900;color:#EFEFEF;
+    -webkit-text-stroke:6.4px #0d0a06;paint-order:stroke fill}
   /* 보유 효과 알약 298×58 — 효과 박스를 28px 파고드는 겹침 배지 */
   .rl-ow{left:272px;top:390px;width:298px;height:58px;box-sizing:border-box;z-index:2;
     border:3px solid #000;border-radius:19px;
     background:linear-gradient(180deg,#6A573F 0 4px,#543D2F 4px calc(100% - 4px),#6A573F calc(100% - 4px));
     display:flex;align-items:center;justify-content:center} /* 상하가 하이라이트·중앙이 원색 — 1회차에 반전돼 있었음 */
-  .rl-ow b{font-size:28px;-webkit-text-stroke:7px #000;margin-top:-4px;color:#EFEFEF;transform:scaleX(.855)}
+  .rl-ow b{font-size:28px;-webkit-text-stroke:6px #000;margin-top:-4px;color:#EFEFEF;transform:scaleX(.855)}
   /* 효과 박스 748×199 — 상단 44 여백(겹침배지 아래), 골드 강조 */
   .rl-eb{left:47px;top:419px;width:750px;height:200px;box-sizing:border-box;overflow:hidden;
     border:3px solid #000;border-radius:27px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:24px 26px 0;text-align:left}
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:28px 26px 0 31px;text-align:left}
   .rl-eb p{margin:0;width:133%;transform:scaleX(.75);transform-origin:0 0;
-    font-size:38px;line-height:48px;font-weight:900;color:#0d0a06;
-    -webkit-text-stroke:1.6px #0d0a06;paint-order:stroke fill}
+    font-size:38px;line-height:48px;font-weight:900;color:#EFEFEF;
+    -webkit-text-stroke:6.4px #0d0a06;paint-order:stroke fill}
   /* ref 골드 토큰: 한글 코어 h26(본문보다 작다) / 숫자는 h23 에 자당 16px(우리 서체 12.4 — 컨덴스드).
      스트로크는 뒤로 깔 것(위에 그리면 가는 획이 통째로 덮여 골드 소멸 — 3회차 검증).
      숫자 폭은 양수 letter-spacing 으로 벌린다(음수만 금지). */
@@ -792,9 +802,9 @@
   .rl-act{left:298px;top:670px;width:248px;height:119px;box-sizing:border-box;padding:0 0 12px;cursor:pointer;
     border:7px solid #000;border-radius:38px;font-family:inherit;
     background:linear-gradient(180deg,#A8A8A8,#8A8A8A);
-    box-shadow:inset 0 -6px 0 0 #757575,inset 0 -12px 0 0 #D3D3D3,inset 0 0 0 6px #D2D2D2;
+    box-shadow:inset 0 -7px 0 0 #757575,inset 0 -14px 0 0 #D3D3D3,inset 0 0 0 7px #D2D2D2;
     display:flex;align-items:center;justify-content:center}
-  .rl-act b{font-size:43px;-webkit-text-stroke:9px #000;transform:scaleX(.94);color:#DFDFDF}
+  .rl-act b{font-size:45px;-webkit-text-stroke:9px #000;transform:scaleX(.94);color:#DFDFDF}
   .rl-act:disabled{cursor:default}
 
   /* ── 22 퀘스트 팝업 — docs/measure/22-퀘스트팝업.md (레퍼런스 22 PIL 실측) ──
@@ -4235,13 +4245,13 @@ const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률'
 /* 16 유물 세부 팝업 플레이버 텍스트(정적 데이터 — 세이브 마이그레이션 불필요) */
 /* ref 플레이버는 «한 줄» 이며 잉크 폭 548px(4회차 PIL 스캔) — 21~23자로 맞춘다. 넘치면 2줄이 된다. */
 const RELIC_FLAVOR = {
-  rl0:'낡았지만 왠지 마음이 놓이는 부적이다.',
-  rl1:'한때 이름난 전사의 것이었다고 전해진다.',
+  rl0:'낡았지만 왠지 마음이 놓이는 작은 부적이다.',
+  rl1:'한때 이름난 전사의 것이었다고 전해지는 문장이다.',
   rl2:'만지기만 해도 괜히 힘이 솟는 기분이 든다.',
-  rl3:'세상 모든 것을 꿰뚫어 본다고 전해진다.',
+  rl3:'세상 모든 것을 꿰뚫어 본다고 전해지는 눈이다.',
   rl4:'아직도 따뜻하게 뛰고 있는 용의 심장이다.',
-  rl5:'손에 쥐면 어디선가 바람이 일어난다.',
-  rl6:'누가 봐도 비싸 보이는 순금 왕관이다.',
+  rl5:'손에 쥐면 어디선가 바람이 일어나는 인장이다.',
+  rl6:'누가 봐도 비싸 보이는 묵직한 순금 왕관이다.',
   rl7:'심으면 세상이 자란다고 전해지는 씨앗이다.',
   rl8:'세상이 처음 만들어질 때 떨어진 조각이다.'
 };
