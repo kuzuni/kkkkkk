@@ -226,19 +226,21 @@
     filter:drop-shadow(var(--o) 0 0 #080a0a) drop-shadow(calc(var(--o)*-1) 0 0 #080a0a)
            drop-shadow(0 var(--o) 0 #080a0a) drop-shadow(0 calc(var(--o)*-1) 0 #080a0a)
            drop-shadow(0 3px 5px rgba(0,0,0,.8))}
-  /* 라벨 — 레퍼런스는 좌우 크기가 다르다(실측 잉크 높이 좌 21~22 / 우 26, 좌가 약 17% 작다).
-     잉크비 0.897(=27/30.1 실측)로 역산: 좌 font-size 24 · 우 29. 폭은 scaleX 로 맞춘다
-     (좌 3자 74·2자 50 / 우 3자 77·2자 47 이 레퍼런스 실측 폭). */
+  /* 라벨 — 좌우 **같은 크기**다. 레퍼런스 잉크 높이가 좌 21~22 / 우 26 으로 갈려 보이는 건
+     크기 차이가 아니라 **받침 유무**다(실측: 패스21·퀘스트22 = 받침 없음 / 도감26·길드26·이벤트26·특권26
+     = 받침 있음. 좌우 양쪽에 26 이 다 있다). 2회차에 이걸 크기 차로 오독해 좌측을 17% 줄였던 것을 되돌린다.
+     잉크비 0.897(=27/30.1 실측)로 역산 → font-size 29, 폭은 scaleX .930
+     (레퍼런스 실측 폭: 3자 74~77 · 2자 47~51). */
   .ibtn .sl{height:var(--ilh,32px);font-size:calc(var(--ilf,32px)*var(--lf,.906));
     line-height:var(--ilh,32px);
     font-weight:900;color:#fff;
     /* 외곽선 두께는 «레퍼런스 라벨 영역의 근흑:흰 픽셀 비» 를 맞춰서 정했다.
-       레퍼런스 0.57~1.11 인데 .20 이면 1.38~2.88 로 2~3배 과중했다. .085 에서 0.6~1.4 로 붙는다. */
-    -webkit-text-stroke:calc(var(--ilf,32px)*var(--lf,.906)*.085) #000;
+       레퍼런스 실측 외곽선은 «옆 1~2px · 아래 4px»(도감 y=920 가로 / 이벤트 x=960 세로 스캔)이다.
+       두께는 «같은 글자(이벤트·특권)» 의 근흑:흰 픽셀 비로 맞췄다 — 레퍼런스 0.61 / 0.58 인데
+       .13 은 1.52 / 1.03 으로 과중, .06 은 0.56 / 0.35 로 과소, **.08 에서 0.76 / 0.61** 로 붙는다. */
+    -webkit-text-stroke:calc(var(--ilf,32px)*var(--lf,.906)*.08) #000;
     paint-order:stroke fill;letter-spacing:-.02em;white-space:nowrap;
-    transform:scaleX(var(--lx,.914));text-shadow:0 1px 2px rgba(0,0,0,.35)}
-  #sideL .ibtn{--lf:.750;--lx:1.11}
-  #sideR .ibtn{--lf:.906;--lx:.914}
+    transform:scaleX(var(--lx,.930));text-shadow:0 1px 2px rgba(0,0,0,.4)}
   /* 레드닷 — 아트 높이 대비 채움 Ø.378 · 외곽 Ø.512, 아트 우상단 코너에 걸침 */
   /* 측정표 §1-5: 슬롯 우변에서 안쪽 10 → 로컬 중심 x=90, 상단에서 아래 15 → 중심 y=15 */
   .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.232);top:calc(var(--ih,82px)*-.073);
@@ -268,8 +270,8 @@
     color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
     line-height:calc(var(--ih,82px)*.71);text-align:center;padding:0 calc(var(--ih,82px)*.06)}
   /* 남은 시간 — 검정 pill, 배너 하단 금테에 10px 걸쳐 내려옴 */
-  .facb .ftm{position:absolute;right:calc(var(--ih,82px)*.196);bottom:calc(var(--ih,82px)*-.256);
-    height:calc(var(--ih,82px)*.427);min-width:151px;padding:0 18px;
+  .facb .ftm{position:absolute;right:0;bottom:calc(var(--ih,82px)*-.256);
+    height:calc(var(--ih,82px)*.427);min-width:171px;padding:0 18px;
     border-radius:calc(var(--ih,82px)*.214);
     background:#000;color:#fff;font-size:calc(var(--ih,82px)*.31);font-weight:900;
     line-height:calc(var(--ih,82px)*.427);text-align:center;white-space:nowrap;letter-spacing:-.02em}
