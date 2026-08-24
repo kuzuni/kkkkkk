@@ -2573,6 +2573,43 @@
   .sm-close i{transform:scaleX(.96)}
 
   /* ==========================================================================
+     17 스탯업 보너스 팝업 연출 — 측정표 docs/measure/17-스탯업보너스팝업.md
+     껍데기 판정: 09(#upw) 와 같은 **(라) 껍데기 없음 · 딤 위 연출**.
+     리본은 09 와 픽셀 단위 동일 에셋(y −135) → .upr-rb/.upr-tl/.upr-close 를 그대로 재사용.
+     딤은 09 의 균일 .80 이 아니라 **상하 2톤**(상 .885 / 하 .79, 전환 프레임 y916→966).
+     ========================================================================== */
+  #statw{position:absolute;inset:0;display:none;z-index:38;cursor:pointer;
+    background:linear-gradient(180deg,rgba(0,0,0,.885) 0 916px,rgba(0,0,0,.79) 966px)}
+  #statw.on{display:block}
+  #statw i,#statw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
+  /* 리본 그룹 — 09 는 top:50% 센터링이지만 17 은 ref−84 절대 배치(몸통 outer top 877−84=793) */
+  #statw .upr-grp{top:793px;margin-top:0;height:230px}
+  /* 능력 아이콘 카드 — ref x416–663(w248) y1088–1359(h272), 검정 5px, radius 28.
+     안쪽 밝은 림(≈6px, #E04868)은 상·좌·우만이고 하단 ≈30px 는 안쪽 그늘(몸통의 ~0.3배). */
+  .st-icon{position:absolute;left:416px;top:1004px;width:248px;height:272px;box-sizing:border-box;
+    border:5px solid #000;border-radius:28px;
+    background:
+      linear-gradient(180deg,rgba(224,72,104,.95) 0 6px,rgba(224,72,104,0) 7px calc(100% - 34px),
+                             rgba(0,0,0,.62) calc(100% - 28px) 100%),
+      linear-gradient(90deg,rgba(224,72,104,.85) 0 6px,rgba(224,72,104,0) 7px calc(100% - 7px),
+                            rgba(224,72,104,.85) calc(100% - 6px) 100%),
+      #B41C3C;
+    display:flex;align-items:center;justify-content:center}
+  .st-icon>b{font-size:150px;line-height:230px}
+  /* 설명 1줄 — 잉크 h45(→48px)·중심 x540·프레임 y1357–1402. 외곽선 실측 5~7 → stroke 11 */
+  .st-desc{position:absolute;left:0;right:0;top:1345px;height:70px;line-height:70px;text-align:center;
+    font-size:48px;font-weight:900;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill}
+  .st-desc>i{transform:scaleX(.94)}
+  /* 별 파티클 — 4포인트 별. P1 크림 64px (171,906) / P2 노랑 38px (244,1256)+올리브 글로우 */
+  .st-spark{position:absolute;
+    clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
+  .st-spark.s1{left:139px;top:874px;width:64px;height:64px;background:#FFFEC5;
+    filter:drop-shadow(0 0 9px rgba(255,250,180,.55))}
+  .st-spark.s2{left:225px;top:1237px;width:38px;height:38px;background:#DFD51B;
+    filter:drop-shadow(0 0 16px rgba(190,180,90,.9)) drop-shadow(0 0 30px rgba(160,155,80,.55))}
+
+  /* ==========================================================================
      15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
      껍데기 판정: **(다) 딤·헤더·테두리 없는 전체화면 페이지** — 03 던전(#dunw)·10 상점(#shopw) 과 같은 부류.
      딤 0(페이지 배경 #272731 이 10/13 과 원색까지 동일), 모달 카드·타이틀바·✕ 없음.
@@ -2992,6 +3029,20 @@
         <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB30c"></div></button>
     </div>
     <div class="sm-close"><i class="sm-fat" data-t="터치하여 닫기">터치하여 닫기</i></div>
+  </div>
+  <!-- 17 스탯업 보너스 팝업 연출. 09 와 같은 «딤 위 연출» — 리본(.upr-*)은 09 CSS 재사용.
+       측정표 docs/measure/17-스탯업보너스팝업.md. 훈련(23)의 ↑ 버튼이 openStatUp() 을 호출한다. -->
+  <div id="statw">
+    <div class="upr-grp">
+      <div class="upr-tl l"><s></s></div>
+      <div class="upr-tl r"><s></s></div>
+      <div class="upr-rb"><i>능력 획득</i></div>
+    </div>
+    <div class="st-spark s1"></div>
+    <div class="st-spark s2"></div>
+    <div class="st-icon"><b id="stIc">⚔️</b></div>
+    <div class="st-desc"><i id="stDesc"></i></div>
+    <div class="upr-close"><i>터치하여 닫기</i></div>
   </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -4701,6 +4752,16 @@ function openUpAll(ups){
 function closeUpAll(){ $('upw').classList.remove('on'); }
 /* «터치하여 닫기» — 화면 아무 데나 탭하면 닫힌다(레퍼런스에 ✕ 버튼이 없다) */
 $('upw').addEventListener('click', closeUpAll);
+
+/* ── 17 스탯업 보너스 팝업 연출 ── 측정표: docs/measure/17-스탯업보너스팝업.md
+   훈련(23) 단계 상승 시 재생하는 표시 전용 연출(저장 구조 무관).
+   23 훈련 시스템이 ↑ 버튼에서 openStatUp({ic,desc}) 로 호출한다. */
+function openStatUp(o){
+  $('stIc').textContent = (o && o.ic) || '⚔️';
+  $('stDesc').textContent = (o && o.desc) || '';
+  $('statw').classList.add('on');
+}
+$('statw').addEventListener('click', () => $('statw').classList.remove('on'));
 
 const nextGradeItem = it => EQUIPS.find(e => e.slot === it.slot && e.g === it.g+1);
 const canCraft = it => catOf(it) === 'equip' && !isTopGrade(it) && oLv(it.id) >= MAX_LEVEL
