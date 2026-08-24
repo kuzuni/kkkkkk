@@ -2715,9 +2715,9 @@
   /* 능력 아이콘 카드 — ref x416–662(w247) y1088–1335(h248 정사각), 검정 5px, radius 28.
      핑크 안쪽 림 7px 는 **4변 전부**(#F33E69 = 실측 243,62,105). 카드 아래 y1336~1368 은
      카드가 아니라 **드롭 섀도**다(1회차에 카드 몸통으로 오독해 h272 로 넣었었다 — 비평 A 정정). */
-  .st-icon{position:absolute;left:416px;top:1004px;width:248px;height:248px;box-sizing:border-box;
+  .st-icon{position:absolute;left:416px;top:1004px;width:247px;height:248px;box-sizing:border-box;
     border:5px solid #000;border-radius:28px;background:#B41C3C;
-    box-shadow:0 26px 22px -8px rgba(0,0,0,.45),inset 0 0 0 7px #F33E69;
+    box-shadow:0 26px 22px -8px rgba(0,0,0,.45),inset 0 0 0 6px #F33E69;
     display:flex;align-items:center;justify-content:center}
   /* 이모지 잉크 167 폭 → ref 아트 잉크 144×166. 높이는 일치하므로 scaleX 만 */
   .st-icon>b{font-size:150px;line-height:200px;transform:scaleX(.86)}
@@ -2726,16 +2726,29 @@
     font-size:48px;font-weight:900;color:#fff;white-space:nowrap;
     -webkit-text-stroke:11px #000;paint-order:stroke fill}
   .st-desc>i{transform:scaleX(.94)}
-  /* 별 파티클 — 4포인트 «뚱뚱한» 별(잉크 채움비 ≈0.6, 비평 A 실측 1764/51² · 781/36²).
-     P1 크림 52px 중심(171,906) / P2 노랑 42px 중심(244,1256)+올리브 글로우 */
-  .st-spark{position:absolute;
-    clip-path:polygon(50% 0,80% 20%,100% 50%,80% 80%,50% 100%,20% 80%,0 50%,20% 20%)}
-  .st-spark.s1{left:145px;top:880px;width:52px;height:52px;background:#FFFEC5;
-    filter:drop-shadow(0 0 9px rgba(255,250,180,.55))}
-  .st-spark.s2{left:225px;top:1237px;width:37px;height:37px;background:#DFD51B;
-    filter:drop-shadow(0 0 16px rgba(190,180,90,.9)) drop-shadow(0 0 30px rgba(160,155,80,.55))}
+  /* «30» 숫자만 골드 (252,192,30) — % 와 한글은 흰색(2회차 B·C 공통 지적, 픽셀 검증).
+     ⚠ 숫자는 캡하이트라 같은 48px 에선 h33 — 50px 로 올리고 폭은 scaleX 로(서체 숫자가 좁다) */
+  .st-desc em{display:inline-block;font-style:normal;font-size:50px;color:#FCC01E;
+    transform:scaleX(1.14)}
+  /* 별 파티클 — 5각 별 + 방사 글로우(ref 램프: 코어 밖 ~24px 에 걸쳐 lum 91→26).
+     P1 크림 52px 중심(171,906) / P2 노랑 37px 중심(244,1256) */
+  .st-spark{position:absolute}
+  /* ref 실측: 별 중심 r22 까지 lum≈235 의 짙은 원형 헤일로, r28 에서 ~103, r39 에서 딤 —
+     «별 + 밝은 블롭» 이 실제 형상이다(별 꼭지만 헤일로 밖으로 나온다) */
+  .st-spark::before{content:'';position:absolute;inset:-24px;border-radius:50%;
+    background:radial-gradient(circle closest-side,rgba(255,252,200,.93) 0 44%,rgba(255,252,190,.34) 56%,rgba(255,252,190,0) 78%)}
+  .st-spark::after{content:'';position:absolute;inset:0;
+    clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+  .st-spark.s1{left:145px;top:880px;width:52px;height:52px}
+  .st-spark.s1::after{background:#FFFEC5}
+  .st-spark.s2{left:225px;top:1237px;width:37px;height:37px}
+  .st-spark.s2::before{background:radial-gradient(circle closest-side,rgba(228,218,55,.92) 0 35%,rgba(210,200,70,.35) 52%,rgba(210,200,70,0) 75%)}
+  .st-spark.s2::after{background:#DFD51B}
   /* «터치하여 닫기» — 17 실측 잉크폭 258 (09 의 251 보다 +2%) */
   #statw .upr-close i{transform:scaleX(.951)}
+  /* 리본 꼬리 — 17 은 09 보다 드룹이 3px 짧다(주황 하단 ref987→프레임 903, 캡처 906) */
+  #statw .upr-tl{transform-origin:50% 0;transform:scaleY(.969)}
+  #statw .upr-tl.r{transform:scaleX(-1) scaleY(.969)}
 
   /* ==========================================================================
      15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
@@ -4909,7 +4922,9 @@ $('upw').addEventListener('click', closeUpAll);
    23 훈련 시스템이 ↑ 버튼에서 openStatUp({ic,desc}) 로 호출한다. */
 function openStatUp(o){
   $('stIc').textContent = (o && o.ic) || '⚔️';
-  $('stDesc').textContent = (o && o.desc) || '';
+  /* 숫자 토큰만 골드(<em>) — ref 는 «30» 이 (252,192,30), % 와 한글은 흰색 */
+  const t = ((o && o.desc) || '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  $('stDesc').innerHTML = t.replace(/(\d+)/g, '<em>$1</em>');
   $('statw').classList.add('on');
 }
 $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
