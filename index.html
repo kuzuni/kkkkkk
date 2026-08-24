@@ -1018,14 +1018,19 @@
      → 01(#offw)·03(#dunw) 과 같이 전용 오버레이를 쓴다.
      내부 좌표는 전부 «레퍼런스 절대 px − 기준점» 이다 (눈대중 없음).
      ========================================================================== */
-  #wpnw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:31}
-  #wpnw.on{display:block}
+  /* A5 공용 모달과 같은 방식으로 «위 126 / 아래 42» 패딩 안에서 중앙 정렬한다.
+     이러면 프레임 높이가 달라져도 관계가 유지된다 —
+     실제로 프레임을 레퍼런스와 같은 2340 으로 키우면 모달이 정확히 y478 에 온다(실측 확인). */
+  #wpnw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:31;
+    align-items:center;justify-content:center;padding:126px 91px 42px;box-sizing:border-box}
+  #wpnw.on{display:flex}
   #wpnw i,#wpnw em,#wpnw b,#wpnw u,#wpnw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
 
   /* 모달 박스 — 검정 7px + 갈색 프레임(#564438), radius 42 */
-  .wm{position:absolute;left:91px;top:50%;width:898px;height:1469px;
-    transform:translateY(calc(-50% + 42px));
+  /* 프레임이 짧은 기기(4:3 → #app 1600)에서는 1469 가 안 들어간다 → max-height 로 눌리고
+     본문이 스크롤한다. 눌리지 않는 한 높이는 실측 1469 그대로다. */
+  .wm{position:relative;flex:none;width:898px;height:1469px;max-height:100%;
     background:#564438;border:7px solid #000;border-radius:42px;box-sizing:border-box}
   .wm>*{position:absolute}
 
@@ -1039,10 +1044,14 @@
   /* 본문 — ref x111~968 / y579~1925 → 박스기준 left 13, top 94, 858x1347 */
   .wm-fr{left:9px;top:94px;right:9px;bottom:9px;border:solid #46382D;border-width:0 4px 4px;
     border-radius:0 0 34px 34px;box-sizing:border-box;pointer-events:none;z-index:4}
-  .wm-body{left:13px;top:94px;width:858px;height:1347px;background:#F0D9BA;
-    border-radius:0 0 30px 30px;overflow:hidden;
+  .wm-body{left:13px;top:94px;right:13px;bottom:9px;background:#F0D9BA;
+    border-radius:0 0 30px 30px;overflow-x:hidden;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
     box-shadow:inset 1px 0 0 #887662,inset -1px 0 0 #887662,inset 0 -1px 0 #887662}
-  .wm-body>*{position:absolute}
+  .wm-body::-webkit-scrollbar{width:0;height:0}
+  /* 절대좌표 자식은 이 래퍼(실측 858x1347)가 기준이다 — 본문이 눌려도 좌표가 흔들리지 않는다 */
+  .wm-in{position:relative;width:858px;height:1347px}
+  .wm-in>*{position:absolute}
 
   /* 정보/그리드 패널 — 본문기준 좌 7 (ref x118) */
   .wm-info{left:7px;top:32px;width:844px;height:396px;border-radius:37px;background:#D7C0A1}
@@ -1325,7 +1334,7 @@
       <div class="wm-fr"></div>
       <div class="wm-ar l" id="wpnPrev"></div>
       <div class="wm-ar r" id="wpnNext"></div>
-      <div class="wm-body">
+      <div class="wm-body"><div class="wm-in">
         <div class="wm-info" id="wpnInfo">
           <div class="wm-ic"  id="wpnIc"></div>
           <div class="wm-cat">🐱</div>
@@ -1344,7 +1353,7 @@
         <div class="wm-tot" id="wpnTotal"></div>
         <button class="wm-btn wm-b1" id="wpnBtnEq"></button>
         <button class="wm-btn wm-b2" id="wpnBtnUp"></button>
-      </div>
+      </div></div>
     </div>
   </div>
   <div id="loading">스프라이트 불러오는 중...</div>
