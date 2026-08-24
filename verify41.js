@@ -161,6 +161,38 @@ async function open(browser, file, which) {
   const nd = parseInt(diff.split(' ')[0], 10);
   nd === 0 ? ok('02 메인 픽셀 Δ0 (#slots 쿨다운 애니 제외)') : no('02 메인 픽셀 ' + diff);
 
+  /* ---------- ④ 화면비 ---------- */
+  console.log('\n[4] 화면비 5종 × 페이지 2종 — 바 기하가 프레임 좌표계에서 불변인가');
+  for (const [W, H] of [[1080, 1920], [1920, 1080], [1024, 768], [1080, 2340], [768, 1024]]) {
+    for (const which of ['dun', 'rel']) {
+      const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto('file://' + NOW); await page.waitForTimeout(800);
+      await page.evaluate((w) => { if (w === 'rel') openRelicPage(); else openDungeon(); }, which);
+      await page.waitForTimeout(400);
+      const r = await page.evaluate((w) => {
+        const root = document.getElementById(w === 'rel' ? 'relicw' : 'dunw');
+        const a = document.getElementById('app').getBoundingClientRect();
+        const sc = a.width / 1080;   /* fit() 이 프레임을 scale 로 맞춘다 — 정규화해서 잰다 */
+        const bar = root.querySelector('.pcb').getBoundingClientRect();
+        const t = document.getElementById('top').getBoundingClientRect();
+        const pills = [...root.querySelectorAll('.pcb-p')].map((e) => {
+          const q = e.getBoundingClientRect();
+          return [Math.round((q.left - a.left) / sc), Math.round((q.top - a.top) / sc),
+            Math.round(q.width / sc), Math.round(q.height / sc)];
+        });
+        return { top: +((bar.top - a.top) / sc).toFixed(1), h: +(bar.height / sc).toFixed(1),
+          covers: bar.top <= t.top + 0.5 && bar.bottom >= t.bottom - 0.5,
+          inside: bar.top >= a.top - 0.5 && bar.left >= a.left - 0.5 && bar.right <= a.right + 0.5, pills };
+      }, which);
+      const good = r.top === 0 && Math.abs(r.h - 108) <= 1 && r.covers && r.inside
+        && JSON.stringify(r.pills) === JSON.stringify([[503, 31, 254, 49], [803, 31, 254, 49]]);
+      good ? ok(`${W}×${H} [${which}] 바 top0 h108 · 알약 503/803 254×49 · HUD 덮음 · 프레임 안`)
+        : no(`${W}×${H} [${which}] ` + JSON.stringify(r));
+      await ctx.close();
+    }
+  }
+
   await browser.close();
   fs.unlinkSync(BEFORE);
   console.log(`\n${fail === 0 ? 'VERIFY41 PASS' : 'VERIFY41 FAIL'} (${pass}/${pass + fail})`);
