@@ -75,7 +75,14 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       const p = e.querySelector('.sp.lv'), i = p.querySelector('i');
       return Math.round(i.getBoundingClientRect().right - p.getBoundingClientRect().right);
     }));
-    chk('알약 밖으로 글자가 새지 않음', ov.every((d) => d <= 0), ov);
+    chk('시간 알약 밖으로 글자가 새지 않음', ov.every((d) => d <= 0), ov);
+    /* 재화 알약(`.pill`)은 폭 288 고정 + 글자가 left:58 절대배치라 안쪽 폭이 230 뿐이다.
+       03 던전의 10글자 라벨이 7.5px 새는 기존 결함이 있으므로, 레이드 라벨은 반드시 230 안에 넣는다. */
+    const pov = await page.$$eval('#dunList [data-rcard] .pill', (els) => els.map((e) => {
+      const i = e.querySelector('i');
+      return Math.round(i.getBoundingClientRect().right - e.getBoundingClientRect().right);
+    }));
+    chk('재화 알약 밖으로 라벨이 새지 않음', pov.every((d) => d <= 0), pov);
 
     /* ---------- 3. 04 세부 팝업 재사용 ---------- */
     console.log('[3] 카드 클릭 → 04 세부 팝업(레이드 모드)');
@@ -171,6 +178,20 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('결과 팝업 표시', r.modal && /레이드 결과/.test(r.title), r.title);
     chk('결과에 총 피해량·DPS', /총 피해량/.test(r.txt) && /DPS/.test(r.txt));
     chk('결과에 NaN/undefined 없음', !/NaN|undefined|Infinity/.test(r.txt), r.txt.replace(/\n/g, ' | '));
+    /* A5 모달 본문은 크림(#D7C0A1) 바탕 — 어두운 배경용 색을 쓰면 대비 1.1:1 로 안 보인다 */
+    const con = await page.evaluate(() => {
+      const lum = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number).map((v) => {
+        const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+      const well = document.querySelector('#mbox .mwell') || document.getElementById('mbox');
+      const bg = lum(getComputedStyle(well).backgroundColor);
+      return [...document.querySelectorAll('#mbox b')].map((b) => {
+        const f = lum(getComputedStyle(b).color);
+        const r = (Math.max(f, bg) + 0.05) / (Math.min(f, bg) + 0.05);
+        return { t: b.textContent, r: +r.toFixed(2) };
+      });
+    });
+    chk('결과 팝업 강조 글자 대비 ≥ 2.5:1', con.every((c) => c.r >= 2.5), con);
     chk('S.raidBest.r60 기록', !!(r.best.r60 && r.best.r60.dmg > 0 && r.best.r60.dps > 0),
       r.best.r60 && `dmg ${Math.round(r.best.r60.dmg)} dps ${Math.round(r.best.r60.dps)}`);
     chk('localStorage 에 저장됨', !!(r.saved && r.saved.r60 && r.saved.r60.dps > 0));

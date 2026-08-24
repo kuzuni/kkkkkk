@@ -472,7 +472,7 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
   > 03 카드 규격(980×350) 그대로이고 «레벨/남은 횟수» 자리가 «제한 시간(초)/최고 DPS» 다.
   > 04 세부 팝업 재사용(◀▶ = 다른 측정장, 「도전」 = 레이드 시작), 결과는 A5 공용 모달.
   > 확정 가정: 30·60·120초 · 해금 스테이지 1/15/30 · 입장 무제한 · 보상 없음.
-  > 기록 `docs/review/46-레이드DPS던전.md` · 회귀 `node tools/verify46.js`(58항목).
+  > 기록 `docs/review/46-레이드DPS던전.md` · 회귀 `node tools/verify46.js`(60항목).
 
 ---
 

@@ -7777,7 +7777,8 @@ const RAIDS = [
   { id:'r60',  n:'정규 측정장', sec:60,  open:1,
     ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'] } },
   { id:'r30',  n:'단기 측정장', sec:30,  open:15,
-    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['짧게 폭발 피해 측정'] } },
+    /* 알약 안쪽 폭은 230px 뿐이다 — 「짧게 폭발 피해 측정」(141) 은 7.5px 새어 나온다 */
+    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['폭발 피해 측정'] } },
   { id:'r120', n:'장기 측정장', sec:120, open:30,
     ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['지속 피해량 측정'] } }
 ];
@@ -7897,11 +7898,14 @@ function endRaid(record){
     const b = raidBest(r.id), rec = dps > b.dps;
     if(rec) S.raidBest[r.id] = { dmg, dps };
     save(); uiDirty = true;
+    /* A5 모달 본문은 크림(#D7C0A1) 바탕이다 — 어두운 배경용 색(#ffd88a·#8fd6ff)을 쓰면
+       대비가 1.1:1 이라 사실상 안 보인다. 강조는 공용 `.mbody p b`(#B4571E) 에 맡기고
+       크기로만 준다(신기록만 진한 초록). */
     popup('🏆 레이드 결과 — ' + r.n,
       '<p>제한 시간 <b>' + r.sec + '초</b><br>'
-      + '총 피해량 <b style="color:#ffd88a;font-size:30px">' + fmt(dmg) + '</b><br>'
-      + '초당 피해(DPS) <b style="color:#8fd6ff;font-size:30px">' + fmt(dps) + '</b><br>'
-      + (rec ? '<b style="color:#8ff0a8">신기록!</b>'
+      + '총 피해량 <b style="font-size:32px">' + fmt(dmg) + '</b><br>'
+      + '초당 피해(DPS) <b style="font-size:32px">' + fmt(dps) + '</b><br>'
+      + (rec ? '<b style="color:#1F6B33">신기록!</b>'
              : '최고 기록 <b>' + fmt(b.dmg) + '</b> · DPS <b>' + fmt(b.dps) + '</b>') + '</p>');
   }else{
     save(); uiDirty = true;
