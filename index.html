@@ -2824,13 +2824,13 @@
     content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;
     color:#fff;-webkit-text-stroke:var(--fatw,.5px) #fff;paint-order:stroke fill}
   .st-desc em::after{color:#FCC01E;-webkit-text-stroke:var(--fatw,.5px) #FCC01E}
-  #statw .upr-close .st-fat{position:relative;--fatw:2.5px}
+  #statw .upr-close .st-fat{position:relative;--fatw:1.5px}
   .st-desc>i{transform:scaleX(.90)}
   /* «30» 숫자만 골드 (252,192,30) — % 와 한글은 흰색(2회차 B·C 공통 지적, 픽셀 검증).
      ⚠ 숫자는 캡하이트라 같은 48px 에선 h33 — 50px 로 올리고 폭은 scaleX 로(서체 숫자가 좁다) */
   .st-desc em{display:inline-block;font-style:normal;font-size:50px;color:#FCC01E;
     transform:scaleX(1.28);margin:0 8px 0 10px}
-  .st-desc u{display:inline-block;text-decoration:none;transform:scaleX(1.14);margin-right:3px}
+  .st-desc u{display:inline-block;text-decoration:none;transform:scaleX(1.04);margin-right:3px}
   /* 별 파티클 — 5각 별 + 방사 글로우(ref 램프: 코어 밖 ~24px 에 걸쳐 lum 91→26).
      P1 크림 52px 중심(171,906) / P2 노랑 37px 중심(244,1256) */
   .st-spark{position:absolute}
@@ -2839,11 +2839,11 @@
   .st-spark::before{content:'';position:absolute;inset:-24px;border-radius:50%}
   .st-spark.s1::before{inset:-34px;
     background:radial-gradient(circle closest-side,rgba(255,254,232,.95) 0 28%,
-      rgba(255,254,232,.80) 39%,rgba(255,252,190,.52) 44%,rgba(255,252,190,.38) 50%,
-      rgba(255,252,190,.30) 59%,rgba(255,252,190,.20) 68%,rgba(255,252,190,0) 86%)}
+      rgba(255,254,232,.80) 39%,rgba(255,252,190,.55) 44%,rgba(255,252,190,.47) 50%,
+      rgba(255,252,190,.37) 59%,rgba(255,252,190,.26) 68%,rgba(255,252,190,0) 90%)}
   .st-spark::after{content:'';position:absolute;inset:0;
     clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
-  .st-spark.s1{left:145px;top:880px;width:52px;height:52px}
+  .st-spark.s1{left:144px;top:879px;width:54px;height:54px}
   .st-spark.s1::after{background:#FFFEC5}
   .st-spark.s2{left:224px;top:1236px;width:40px;height:40px}
   .st-spark.s2::before{background:radial-gradient(circle closest-side,rgba(228,218,55,.92) 0 35%,rgba(210,200,70,.35) 55%,rgba(210,200,70,0) 85%)}
