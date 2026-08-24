@@ -1337,7 +1337,7 @@
   .cn-rb>.tl.l{left:-37px;clip-path:polygon(100% 0,100% 100%,0 100%,28% 50%,0 0)}
   .cn-rb>.tl.r{left:614px;width:49px;clip-path:polygon(0 0,0 100%,100% 100%,71% 50%,100% 0)}
   .cn-rb>.tl>s{position:absolute;inset:5px;background:linear-gradient(180deg,
-      var(--t) 0 78%,var(--ts) 78% 100%)}
+      var(--t) 0 86%,var(--ts) 86% 100%)}
   .cn-rb>.tl.l>s{clip-path:polygon(100% 0,100% 100%,0 100%,30% 50%,0 0)}
   .cn-rb>.tl.r>s{clip-path:polygon(0 0,0 100%,100% 100%,70% 50%,100% 0)}
   .cn-rb>b{position:absolute;inset:0;border:6px solid #000;border-radius:16px;z-index:2;
@@ -1367,6 +1367,8 @@
     background:var(--hd,#48B6E7);overflow:hidden}
   .cn-cd>.hd::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;
     background:var(--hr,#8CF4FF)}
+  .cn-cd>.hd::after{content:'';position:absolute;left:6px;top:4px;width:70px;height:38px;
+    border-radius:0 0 40px 0;background:linear-gradient(135deg,rgba(220,250,255,.85),rgba(140,244,255,0) 70%)}
   /* 박스를 글리프 advance 보다 넓게 잡는다 — 좁으면 넘친 글리프가 우측으로 밀린다(PROGRESS 교훈) */
   .cn-cd>.hd>i{position:absolute;left:-30px;right:-30px;top:14px;text-align:center;color:#fff;
     font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
@@ -1383,14 +1385,14 @@
   .cn-cd>.bt>u{position:absolute;left:71px;width:165px;text-align:center;color:#fff;
     white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   .cn-cd>.bt>.lab{top:5px;font-size:27px;line-height:28px;transform:scaleX(.99)}
-  .cn-cd>.bt>.cnt{top:35px;font-size:22.5px;line-height:26px;transform:scaleX(1.3)}
+  .cn-cd>.bt>.cnt{top:35px;font-size:24px;line-height:26px;letter-spacing:2px;text-indent:2px;transform:scaleX(1.16)}
   /* ▶AD 뱃지 — dx31 dy228 61x47 r9 (버튼 기준 dx14 dy14) */
   .cn-cd>.bt>.ad{position:absolute;left:9px;top:9px;width:61px;height:47px;border-radius:9px;
     border:4px solid #000;background:linear-gradient(180deg,#FED152 0,#FDB128 60%,#F1AA1E 100%)}
   .cn-cd>.bt>.ad>s{position:absolute;left:6px;top:4px;width:42px;height:30px;border-radius:4px;
     background:linear-gradient(180deg,#863C00 0,#BC5417 50%,#9F4E00 100%)}
-  .cn-cd>.bt>.ad>s::after{content:'';position:absolute;left:14px;top:1px;width:0;height:0;
-    border-left:16px solid #FFFCDB;border-top:14px solid transparent;border-bottom:14px solid transparent}
+  .cn-cd>.bt>.ad>s::after{content:'';position:absolute;left:14px;top:4px;width:0;height:0;
+    border-left:16px solid #FFFCDB;border-top:12px solid transparent;border-bottom:12px solid transparent}
   .cn-cd>.bt>.ad>b{position:absolute;left:38px;top:30px;font-size:18.6px;line-height:19px;
     color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   /* 구매 완료 — 카드 전면 rgba(0,0,0,.335) + 중앙 띠(추가 .67) + 순백 글자 */
@@ -1430,12 +1432,13 @@
   #shopCats .shp-cs.s2{left:485px;display:none}
   #shopList.coin ~ #shopCats{bottom:41px}
   #shopList.coin{bottom:154px}
-  #shopList.coin ~ #shopCats .shp-ct>i{top:23.5px;font-size:36px}
+  #shopList.coin ~ #shopCats .shp-ct>i{top:25px;font-size:33.3px}
+  #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:31.2px;top:26px}
   #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(.98)}
   #shopList.coin ~ #shopCats .shp-cs{top:44px;width:19px;height:19px}
   #shopList.coin ~ #shopCats .shp-cs.s1{left:239px}
   #shopList.coin ~ #shopCats .shp-cs.s2{left:485px;display:block}
-  #shopList.coin ~ #shopCats .shp-cs.s3{left:732px;z-index:3}
+  #shopList.coin ~ #shopCats .shp-cs.s3{left:732px;z-index:3;background:#CFA692}
   #shopList.coin ~ #shopCats .shp-new{display:none}
 
   /* ==========================================================================
