@@ -2287,6 +2287,14 @@
        남는 52px 은 전투 캔버스가 흡수한다.
      패널 안쪽 좌표는 전부 «패널 local y = 레퍼런스 y − 577», x 는 레퍼런스 1:1.
      ========================================================================== */
+  /* ==========================================================================
+     23 훈련 팝업 (#trw) — 측정표 docs/measure/23-훈련팝업.md
+     ========================================================================== */
+  #trw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:29}
+  #trw.on{display:block}
+  #trw i,#trw em,#trw b,#trw u,#trw s{display:inline-block;font-style:normal;font-weight:900;
+    text-decoration:none;transform-origin:50% 50%}
+
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
   #eqw i,#eqw em,#eqw b,#eqw u{display:inline-block;font-style:normal;text-decoration:none;
@@ -3397,7 +3405,7 @@
        패널이 열려 있는 동안 그 탭 자리는 ✕(닫기) 버튼으로 바뀐다. -->
   <div id="tabbar">
     <div class="tab" data-t="hero"><span class="ti">🐾</span><span class="tl">영웅</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
-    <div class="tab" data-t="grow"><span class="ti">⚒️</span><span class="tl">성장</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
+    <div class="tab" data-t="grow"><span class="ti">⚒️</span><span class="tl">훈련</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="adv"><span class="ti">⚔️</span><span class="tl">모험</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="box"><span class="ti">🎁</span><span class="tl">보물상자</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="shop"><span class="ti">🏪</span><span class="tl">상점</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
@@ -3473,6 +3481,24 @@
       <div class="ac a2"></div>
       <div class="tb t1" data-rltab="box"><i>보물상자</i></div>
       <div class="tb t2 on" data-rltab="relic"><i>유물</i></div>
+    </div>
+  </div>
+  <!-- 23 훈련 팝업. 하단에서 올라오는 «바닥 시트»(상단 경계가 물결 곡선) — 측정표 docs/measure/23-훈련팝업.md.
+       하단 탭 «훈련» 을 누르면 바로 열린다(중간 성장 패널 폐기). -->
+  <div id="trw">
+    <div class="tr-dim"></div>
+    <div class="tr-sheet">
+      <div class="tr-wave"></div>
+      <div class="tr-head"><i>훈련</i></div>
+      <div class="tr-box">
+        <div class="tr-rib"><b class="l"></b><b class="r"></b><span class="bar"></span>
+          <u id="trRib"></u></div>
+        <div class="tr-prog"><span class="trk"><i id="trFill"></i></span><b id="trProg"></b></div>
+        <div class="tr-up" id="trUp"><i>↑</i></div>
+        <div class="tr-qty" id="trQty"></div>
+        <div class="tr-cards" id="trCards"></div>
+      </div>
+      <div class="tr-sub" id="trSub"></div>
     </div>
   </div>
   <!-- 06 장비 팝업. 폭 1080 «바닥 시트» — 공용 #modal(가운데 다이얼로그)과 규격이 달라 자체 오버레이.
@@ -4239,6 +4265,30 @@ const UPG = [
 ];
 const U = byId(UPG);
 
+/* ---- 23 훈련 (골드 강화 재설계) ----
+   UI-REFERENCE 23 «우리 게임 설계»: 강화 대상을 공격력·체력·체력회복 3종으로 단순화하고
+   각 스탯 상한 = 훈련 단계 × 100. 3종 모두 상한을 찍으면 ↑ 버튼이 열리고, 누르면 17 연출 →
+   단계 +1 → 상한 재확장(무한). 단계당 전 스탯 +10% 누적.
+   UPG 의 나머지 7종은 데이터·기존 세이브 값을 그대로 두되(계산에는 계속 반영) 구매 경로에서 제외한다. */
+const TRAIN_STATS = ['atk', 'hp', 'regen'];
+const TRAIN_CAP_STEP = 100;                  /* 단계당 상한 증가폭 */
+const TRAIN_BONUS = 0.10;                    /* 단계당 전 스탯 +10% */
+const TRAIN_QTYS = [1, 10, 30];              /* 구매 단위 x1 / x10 / x30 */
+const TRAIN_LABEL = { atk:'공격력', hp:'체력', regen:'체력 회복' };
+const trainStage = () => Math.max(1, S.trainStage | 0);
+const trainCap   = () => trainStage() * TRAIN_CAP_STEP;
+const trainLv    = id => Math.min(lv(id), trainCap());
+const trainProg  = () => TRAIN_STATS.reduce((s, id) => s + trainLv(id), 0);
+const trainMax   = () => TRAIN_STATS.length * trainCap();
+const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
+/* 스탯 훈련 — 훈련과 같은 구조(3종·단계 상한·↑·단계 보너스), 소모 재화만 스탯 포인트 */
+const statStage = () => Math.max(1, S.statStage | 0);
+const statCap   = () => statStage() * TRAIN_CAP_STEP;
+const statLv    = k => (k === 'atk' ? S.spAtk : k === 'hp' ? S.spHp : S.spRegen) | 0;
+const statProg  = () => TRAIN_STATS.reduce((s, k) => s + Math.min(statLv(k), statCap()), 0);
+const statMax   = () => TRAIN_STATS.length * statCap();
+const statReady = () => TRAIN_STATS.every(k => statLv(k) >= statCap());
+
 /* ---- 유물석 교환 (다이아 → 유물석) ---- */
 const EXCHANGE = [
   { dia:1000,  rel:100 },
@@ -4283,7 +4333,8 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.ge
 const DEF = () => ({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   gold:0, dia:300, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
-  sp:0, spAtk:0, spHp:0, spAuto:true,
+  sp:0, spAtk:0, spHp:0, spRegen:0, spAuto:true,
+  statStage:1,                                /* 23 스탯 훈련 단계 — 훈련과 같은 구조, 재화만 포인트 */
   lv: UPG.reduce((o,u) => (o[u.id]=0, o), {}),
   own:{},                                     /* id → {n:재료, l:레벨} */
   eqSkill:[], eqSlot:{ weapon:null, shield:null, amulet:null }, eqPet:[], eqRelic:[],
@@ -4298,6 +4349,7 @@ const DEF = () => ({
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
+  trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
   buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
@@ -4394,8 +4446,12 @@ function bonus(){
   const rb = 1 + S.rank*0.25;
   b.atk *= rb; b.hp *= rb;
   /* 스탯 포인트 분배 보너스 */
-  b.atk *= 1 + (S.spAtk|0)*SP_VALUE;
-  b.hp  *= 1 + (S.spHp|0)*SP_VALUE;
+  b.atk   *= 1 + (S.spAtk|0)*SP_VALUE;
+  b.hp    *= 1 + (S.spHp|0)*SP_VALUE;
+  b.regen *= 1 + (S.spRegen|0)*SP_VALUE;
+  /* 23 훈련·스탯 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
+  const tb = (1 + TRAIN_BONUS * (trainStage() - 1)) * (1 + TRAIN_BONUS * (statStage() - 1));
+  b.atk *= tb; b.hp *= tb; b.regen *= tb;
 
   bonusCache = b; bonusDirty = false;
   return b;
@@ -4453,11 +4509,12 @@ function gainExp(n){
 }
 /* 스탯 분배 */
 function addStat(k, n){
-  n = Math.min(n, S.sp);
+  /* 23 스탯 훈련 — 훈련과 같은 «단계 × 100» 상한을 넘겨 분배하지 않는다 */
+  n = Math.min(n, S.sp, Math.max(0, statCap() - statLv(k)));
   if(n <= 0) return 0;
   const before = k === 'hp' ? stat.maxHp : 0;
   S.sp -= n;
-  if(k === 'atk') S.spAtk += n; else S.spHp += n;
+  if(k === 'atk') S.spAtk += n; else if(k === 'regen') S.spRegen = (S.spRegen|0) + n; else S.spHp += n;
   markDirty(); uiDirty = true;
   if(k === 'hp') player.hp += stat.maxHp - before;
   save();
@@ -4465,19 +4522,25 @@ function addStat(k, n){
 }
 /* 자동 분배: 공격 2 : 체력 1 */
 function autoSpend(){
-  while(S.sp > 0){
-    const total = S.spAtk + S.spHp;
-    if(S.spAtk <= total*2/3) { S.spAtk++; } else { S.spHp++; }
+  /* 공격 2 : 체력 1 : 회복 1 — 단계 상한(statCap)을 넘기지 않는다 */
+  let guard = 0;
+  while(S.sp > 0 && guard++ < 20000){
+    const room = ['atk','hp','regen'].filter(k => statLv(k) < statCap());
+    if(!room.length) break;
+    const total = S.spAtk + S.spHp + (S.spRegen|0);
+    const want = S.spAtk <= total*0.5 ? 'atk' : (S.spHp|0) <= (S.spRegen|0) ? 'hp' : 'regen';
+    const k = room.includes(want) ? want : room[0];
+    if(k === 'atk') S.spAtk++; else if(k === 'hp') S.spHp++; else S.spRegen = (S.spRegen|0) + 1;
     S.sp--;
   }
   markDirty(); uiDirty = true;
 }
 function resetStat(){
   const cost = 500;
-  const total = S.spAtk + S.spHp;
+  const total = S.spAtk + S.spHp + (S.spRegen|0);
   if(total <= 0){ popup('초기화 불가', '<p>분배한 스탯 포인트가 없습니다.</p>'); return; }
   if(S.dia < cost){ popup('💎 다이아 부족', '<p>스탯 초기화에는 다이아 <b>💎' + cost + '</b>가 필요합니다.</p>'); return; }
-  S.dia -= cost; S.sp += total; S.spAtk = 0; S.spHp = 0;
+  S.dia -= cost; S.sp += total; S.spAtk = 0; S.spHp = 0; S.spRegen = 0;
   markDirty(); uiDirty = true; save();
   popup('🔄 스탯 초기화', '<p>포인트 <b>' + total + '</b>개를 돌려받았습니다.<br>다시 분배해 보세요!</p>');
 }
@@ -5917,8 +5980,60 @@ function autoBuyTick(dt){
   if(autoT > 0) return;
   autoT = 0.4;
   let best = null, bc = Infinity;
-  for(const u of UPG){ const c = u.cost(lv(u.id)); if(c <= S.gold && c < bc){ bc = c; best = u; } }
+  /* 23 — 훈련 3종만, 그것도 단계 상한 아래에서만 자동 구매한다 */
+  for(const id of TRAIN_STATS){
+    if(lv(id) >= trainCap()) continue;
+    const u = U[id], c = u.cost(lv(id));
+    if(c <= S.gold && c < bc){ bc = c; best = u; }
+  }
   if(best) applyBuy(best, 1, bc);
+}
+
+/* ---- 23 훈련 — 구매 · 단계 상승 ----
+   상한(단계×100)을 넘겨 사지 않는다. x10 · x30 은 상한까지만 채우고 남는 수량은 버린다. */
+function trainQty(){ return TRAIN_QTYS.includes(S.buyQty) ? S.buyQty : 1; }
+function trainBuyInfo(id){
+  const u = U[id], l = lv(id), room = Math.max(0, trainCap() - l);
+  const n = Math.min(trainQty(), room);
+  if(!n) return { n:0, cost:0, ok:false, full:true };
+  const cost = costOf(u, l, n);
+  return { n, cost, ok:S.gold >= cost, full:false };
+}
+function trainBuy(id){
+  const bi = trainBuyInfo(id);
+  if(!bi.ok) return false;
+  applyBuy(U[id], bi.n, bi.cost);
+  markDirty(); uiDirty = true; save();
+  return true;
+}
+/* ↑ 버튼 — 3종 모두 상한이면 단계 +1 → 17 스탯업 연출 재생 */
+function trainUp(){
+  if(!trainReady()) return false;
+  S.trainStage = trainStage() + 1;
+  markDirty(); uiDirty = true; save();
+  if(typeof openStatUp === 'function')
+    openStatUp({ ic:'⚔️', desc:'훈련 ' + S.trainStage + ' 단계 달성! 모든 능력치 10% 증가' });
+  return true;
+}
+/* 스탯 훈련 — 포인트로 올리고, 3종 상한을 채우면 같은 방식으로 단계가 오른다 */
+function statTrainBuyInfo(k){
+  const room = Math.max(0, statCap() - statLv(k));
+  const n = Math.min(trainQty(), room, S.sp);
+  return { n, cost:n, ok:n > 0, full:room === 0 };
+}
+function statTrainBuy(k){
+  const bi = statTrainBuyInfo(k);
+  if(!bi.ok) return false;
+  addStat(k, bi.n);
+  return true;
+}
+function statTrainUp(){
+  if(!statReady()) return false;
+  S.statStage = statStage() + 1;
+  markDirty(); uiDirty = true; save();
+  if(typeof openStatUp === 'function')
+    openStatUp({ ic:'🧬', desc:'스탯 훈련 ' + S.statStage + ' 단계 달성! 모든 능력치 10% 증가' });
+  return true;
 }
 function renderStat(){
   const atkB = (S.spAtk*SP_VALUE*100).toFixed(0), hpB = (S.spHp*SP_VALUE*100).toFixed(0);
@@ -6534,6 +6649,7 @@ function renderDunPage(){
 }
 function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
+  if(typeof closeTrain === 'function') closeTrain();
   if(typeof closeRelicPage === 'function') closeRelicPage();
   renderDunPage();
   $('dunw').classList.add('on');
@@ -6598,7 +6714,7 @@ function renderShopPage(){
   list.innerHTML = h;
 }
 function openShopPage(){
-  closeDungeon();
+  closeDungeon(); closeTrain();
   if(typeof closeRelicPage === 'function') closeRelicPage();
   shopCat = 'summon';
   document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
@@ -6704,7 +6820,7 @@ function renderRelicPage(){
   $('relicBody').innerHTML = h;
 }
 function openRelicPage(){
-  closeDungeon(); closeShopPage();
+  closeDungeon(); closeShopPage(); closeTrain();
   relicSub = 'box';
   document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
   renderRelicPage();
@@ -7497,6 +7613,90 @@ $('eqTabs').addEventListener('click', e => {
   if(k) popup('🔒 ' + k.dataset.eqlock, '<p>아직 해금되지 않은 콘텐츠입니다.</p>');
 });
 
+/* ==========================================================================
+   23 훈련 팝업 (#trw) — 측정표 docs/measure/23-훈련팝업.md
+   하단 탭 «훈련» 직행. 서브탭 1 = 훈련(골드), 2 = 스탯 훈련(포인트) — 구조는 같고 재화만 다르다.
+   ========================================================================== */
+let trSub = 'train';
+const trIsTrain = () => trSub === 'train';
+/* 카드 3장의 표시값 — 훈련은 골드/실수치, 스탯 훈련은 포인트/% */
+function trainCardData(){
+  return TRAIN_STATS.map(k => {
+    if(trIsTrain()){
+      const u = U[k], l = lv(k), bi = trainBuyInfo(k);
+      const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
+      return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
+        gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:'💰',
+        n:bi.n, ok:bi.ok, full:bi.full };
+    }
+    const l = statLv(k), bi = statTrainBuyInfo(k);
+    return { k, icon:U[k].icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
+      gain:'+' + (bi.n * SP_VALUE * 100).toFixed(0) + '%', cost:fmt(bi.cost), coin:'🧬',
+      n:bi.n, ok:bi.ok, full:bi.full };
+  });
+}
+function renderTrain(){
+  const t = trIsTrain();
+  const stage = t ? trainStage() : statStage();
+  const prog  = t ? trainProg()  : statProg();
+  const max   = t ? trainMax()   : statMax();
+  const ready = t ? trainReady() : statReady();
+  $('trRib').innerHTML = (t ? '훈련 ' : '스탯 훈련 ') + '<em>' + stage + '</em> 단계';
+  $('trFill').style.width = Math.max(0, Math.min(100, prog / max * 100)) + '%';
+  $('trProg').textContent = prog + '/' + max;
+  $('trUp').classList.toggle('on', ready);
+  $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
+    + '" data-trq="' + q + '"><i>x' + q + '</i>' + (q === 1 ? '<em class="dot"></em>' : '') + '</span>').join('');
+  $('trCards').innerHTML = trainCardData().map(c =>
+    '<div class="tr-card' + (c.ok ? '' : ' no') + (c.full ? ' full' : '') + '" data-tr="' + c.k + '">'
+    + '<span class="ch"><i>' + c.lvTxt + '</i></span>'
+    + '<span class="ci">' + c.icon + '</span>'
+    + '<span class="cv"><i>' + (c.full ? 'MAX' : c.gain) + '</i></span>'
+    + '<span class="cn"><i>' + c.name + '</i></span>'
+    + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
+    + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
+  $('trSub').innerHTML =
+      '<span class="sg' + (t ? ' on' : '') + '" data-trsub="train"><i>훈련</i></span>'
+    + '<span class="sg' + (t ? '' : ' on') + '" data-trsub="stat"><i>스탯 훈련</i></span>'
+    + '<span class="sg lock"><i>🔒</i></span>'
+    + '<span class="sg lock"><i>마법상판 🔒</i></span>';
+}
+function openTrain(){
+  if(typeof closeDungeon === 'function') closeDungeon();
+  renderTrain();
+  $('trw').classList.add('on');
+  syncTrainNav(true);
+}
+function closeTrain(){
+  const w = $('trw');
+  if(!w || !w.classList.contains('on')) return;
+  w.classList.remove('on');
+  syncTrainNav(false);
+}
+/* 전체화면 상점(syncShopNav)과 같은 규칙 — 열려 있는 동안 «훈련» 칸이 ✕ 로 바뀐다 */
+function syncTrainNav(on){
+  $('tabbar').classList.toggle('open', on || panelOpen);
+  const tabs = [...document.querySelectorAll('.tab')];
+  tabs.forEach((x, i) => {
+    const me = (on && x.dataset.t === 'grow') || (panelOpen && x.dataset.t === curTab);
+    x.classList.toggle('close', me);
+    x.classList.toggle('pre', !!(tabs[i+1] && ((on && tabs[i+1].dataset.t === 'grow')
+      || (panelOpen && tabs[i+1].dataset.t === curTab))));
+  });
+}
+$('trw').addEventListener('click', e => {
+  const sub = e.target.closest('[data-trsub]');
+  if(sub){ trSub = sub.dataset.trsub; renderTrain(); return; }
+  const q = e.target.closest('[data-trq]');
+  if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
+  if(e.target.closest('#trUp')){
+    (trIsTrain() ? trainUp() : statTrainUp()) ? renderTrain() : null;
+    return;
+  }
+  const card = e.target.closest('[data-tr]');
+  if(card){ (trIsTrain() ? trainBuy(card.dataset.tr) : statTrainBuy(card.dataset.tr)); renderTrain(); }
+});
+
 /* ---- 탭 전환 ----
    탭 5개(hero/grow/adv/box/shop) → 패널 본문 매핑. hero 는 서브탭(장비·스킬·동료)으로 다시 갈린다.
    같은 탭을 다시 누르면 패널이 닫히고, 열려 있는 동안 그 탭 자리는 ✕ 로 바뀐다. */
@@ -7527,7 +7727,7 @@ function syncPanel(){
 function goTab(k, forceOpen){
   /* 상점 탭 → 10 소환 페이지(전체화면 #shopw). forceOpen=true 는 재화 카테고리가 기존 패널 상점을 열 때만 쓴다. */
   if(k === 'shop' && !forceOpen){
-    closeDungeon(); closeRelicPage(); closeRelicTab();
+    closeDungeon(); closeRelicPage(); closeRelicTab(); closeTrain();
     if($('shopw').classList.contains('on')){ closeShopPage(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
     if(!S.seen.shop){ S.seen.shop = 1; document.querySelectorAll('.tab').forEach(x =>
@@ -7537,7 +7737,7 @@ function goTab(k, forceOpen){
   }
   /* 보물상자 탭 → 14 유물 팝업(전체화면 #relicw). 유물 서브탭 상태면 기존 배너 패널을 연다. */
   if(k === 'box' && !forceOpen){
-    closeDungeon(); closeShopPage();
+    closeDungeon(); closeShopPage(); closeTrain();
     if($('relicw').classList.contains('on')){ closeRelicPage(); return; }
     if(!S.seen.box){ S.seen.box = 1; document.querySelectorAll('.tab').forEach(x =>
       x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
@@ -7551,7 +7751,17 @@ function goTab(k, forceOpen){
     openRelicPage();
     return;
   }
-  closeShopPage(); closeRelicPage(); closeRelicTab();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
+  /* 훈련 탭 → 23 훈련 팝업(바닥 시트 #trw) 직행. 중간 «성장» 패널은 폐기했다. */
+  if(k === 'grow' && !forceOpen){
+    closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab();
+    if($('trw').classList.contains('on')){ closeTrain(); return; }
+    if(panelOpen){ panelOpen = false; syncPanel(); }
+    if(!S.seen.grow){ S.seen.grow = 1; document.querySelectorAll('.tab').forEach(x =>
+      x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
+    openTrain();
+    return;
+  }
+  closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
@@ -7597,6 +7807,7 @@ $('menub').onclick = () => popup('▦ 메뉴', '<p>설정 · 공지는 아직 �
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
 
 function renderUI(){
+  if($('trw').classList.contains('on')) renderTrain();   /* 23 훈련 팝업 — 골드가 늘면 카드 상태가 바뀐다 */
   if(panelOpen){
     if(curTab === 'grow') renderUp();
     else if(curTab === 'hero'){
