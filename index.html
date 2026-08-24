@@ -165,6 +165,12 @@
   /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16), 채움 Ø30 + 검정 5 */
   #menub .bdg{position:absolute;left:71px;top:-4px;width:30px;height:30px;border-radius:50%;
     background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0}
+  /* 레퍼런스 «우측 컬럼 1행» 은 이벤트 아이콘이 아니라 위의 4분할 메뉴 버튼이다
+     (A2 측정표 §2 «우측 1번(2×2 메뉴)…사이드 스택 소속이 아니다» 와 동일 결론).
+     현재 #sideR 은 1행부터 이벤트를 깔아 메뉴 버튼과 100x99px 완전히 겹친다.
+     A2 구간이라 규칙 자체는 고치지 않고, 스택 전체를 «한 행 pitch» 만큼 내려 겹침만 없앤다.
+     A2 에서 정식으로 1행을 비우면 이 한 줄만 지우면 된다. */
+  #sideR{transform:translateY(calc(var(--ih,82px) + var(--ilh,32px) + var(--igap,20px)))}
 
   /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
      레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
