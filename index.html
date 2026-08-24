@@ -1058,16 +1058,19 @@
   /* 4-2 이름 알약 ref(337,654) 349x50 */
   .wm-nm{left:219px;top:43px;width:349px;height:50px;border-radius:25px;background:#5F5647;
     text-align:center;line-height:50px;font-size:30px;color:#fff;overflow:hidden}
+  .wm-nm>i{transform:scaleX(.89)}                 /* 글자당 폭 +12% → 되돌림 */
   /* 4-3 등급 알약 ref(691,655) 209x49, 검정 4px */
   .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gc);
     border:4px solid #000;box-sizing:border-box;text-align:center;line-height:41px;
     font-size:24px;color:#fff}
+  .wm-gd>i{transform:scaleX(.93)}
   /* 4-5 재료 진행바 — 좌측 끝은 Lv 알약이 덮는다. ref 우단 901 → 패널기준 783 */
   .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#82829A;
     border:6px solid #000;box-sizing:border-box;overflow:hidden}
   .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wm-bar>i{position:absolute;left:0;right:0;top:1px;height:34px;line-height:34px;
-    text-align:center;font-size:26px;color:#FCFEB3;text-indent:60px}
+    text-align:center;font-size:26px;color:#FCFEB3;text-indent:20px}
+  .wm-bar>i>i{transform:scaleX(1.45)}             /* 숫자 잉크 w33 → 48 */
   /* 4-4 Lv 알약 ref(355,723) 139x70 — 진행바 위에 얹힌다 */
   .wm-lv{left:237px;top:112px;width:139px;height:70px;border-radius:35px;background:#543D2F;
     border:5px solid #000;box-sizing:border-box;text-align:center;line-height:60px;
@@ -1081,12 +1084,17 @@
   .wm-tb .dv{left:372px;top:71px;width:4px;height:56px;background:#96887B}
   .wm-tb .h1,.wm-tb .h2{top:16px;height:32px;line-height:32px;font-size:28px;color:#fff;
     text-align:center}
-  .wm-tb .h1{left:0;width:372px}
-  .wm-tb .h2{left:376px;width:372px}
+  .wm-tb .h1{left:0;width:372px;padding-left:18px;box-sizing:border-box}
+  .wm-tb .h2{left:376px;width:372px;padding-left:8px;box-sizing:border-box}
+  .wm-tb .h1>i,.wm-tb .h2>i{transform:scaleX(.87)}
   .wm-tb .l1,.wm-tb .l2{top:82px;height:36px;line-height:36px;font-size:35px;color:#000}
   .wm-tb .l1{left:22px}
   .wm-tb .l2{left:392px}
-  .wm-tb .v1,.wm-tb .v2{top:84px;height:32px;line-height:32px;font-size:28px;color:#BAFD62;
+  /* 좌측 정렬이라 왼쪽 끝을 고정한 채 좁힌다 */
+  .wm-tb .l1>i,.wm-tb .l2>i{transform:scaleX(.79);transform-origin:0 50%}
+  /* 값은 숫자·기호만이라 잉크가 «캡하이트»(≈0.72em)다 — 측정표의 0.93 공식(28px)을 쓰면
+     실측 잉크 26 이 19 로 나와 24% 작아진다. 26/0.72 ≈ 36 → 35px. 라벨(공격력)과 같은 급이 된다. */
+  .wm-tb .v1,.wm-tb .v2{top:80px;height:36px;line-height:36px;font-size:35px;color:#BAFD62;
     text-align:right;-webkit-text-stroke:3px #000;paint-order:stroke fill}
   .wm-tb .v1{left:172px;width:180px}
   .wm-tb .v2{left:542px;width:180px}
@@ -1099,14 +1107,15 @@
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:8px;height:100px;line-height:100px;text-align:center;font-size:66px}
   /* Lv.n 은 «우상단» 정렬이다 (좌상단 아님) — 우여백 15 / 상여백 19 */
-  .wgc .lv{right:10px;top:10px;height:29px;line-height:29px;font-size:29px;color:#fff;
+  .wgc .lv{right:13px;top:9px;height:28px;line-height:28px;font-size:28px;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
   .wgc .pb{left:0;right:0;bottom:0;height:34px;background:#82829A;border-top:5px solid #000;
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
-    text-align:center;font-size:20px;color:#fff}
+    text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6)}
   /* 장착 중 라벨 — 카드상단 +58 */
   .wgc .eqt{left:0;right:0;top:53px;height:32px;line-height:32px;text-align:center;
     font-size:30px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
@@ -1123,16 +1132,16 @@
     background-repeat:no-repeat,no-repeat}
 
   /* 7 총 보유 효과 — 본문기준 top 1108, 가운데 정렬 */
-  .wm-tot{left:0;right:0;top:1102px;height:46px;line-height:46px;text-align:center;
-    font-size:43px;color:#000}
+  .wm-tot{left:0;right:0;top:1104px;height:46px;line-height:46px;text-align:center;
+    font-size:44px;color:#000}
+  .wm-tot>i{transform:scaleX(.82)}                /* 줄 전체 잉크 564 → 462 (h 42 유지) */
   .wm-tot>b{color:#B8FE5D;-webkit-text-stroke:5px #000;paint-order:stroke fill}
 
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
   .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:6px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
-    background:linear-gradient(180deg,#D3D3D3 0 8px,#A4A4A4 8px,
-      #A4A4A4 calc(100% - 24px),#D3D3D3 calc(100% - 24px),
-      #D3D3D3 calc(100% - 7px),#757575 calc(100% - 7px))}
+    background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 12px,#8A8A8A 100px,
+      #BEBEBE 100px 112px,#757575 112px)}
   /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
   .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:5px #000;paint-order:stroke fill}
   .wm-b1{left:137px;color:#AAEFFF}
@@ -4003,7 +4012,7 @@ function renderWpn(){
   }
   $('wpnGrid').innerHTML = h;
   /* 하단 총 보유 효과 + 버튼 2개 */
-  $('wpnTotal').innerHTML = '총 보유 효과: <b>공격력 +' + wpct2(wpnTotalOwn()) + '</b>';
+  $('wpnTotal').innerHTML = '<i>총 보유 효과: <b>공격력 +' + wpct2(wpnTotalOwn()) + '</b></i>';
   const eqNow = S.eqSlot.weapon === cur.id;
   const bEq = $('wpnBtnEq');
   bEq.classList.toggle('off', eqNow || !own);
