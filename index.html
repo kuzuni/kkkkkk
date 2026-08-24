@@ -1534,15 +1534,19 @@
   .sk-bar>b{position:absolute;inset:0;text-align:center;font-size:21px;line-height:33px;
     color:#fff}
 
-  /* 6 «장착 중» — 잉크 h30 · 카드상단+70 · #A2E941 */
+  /* 6 «장착 중» — 잉크 h30 · 카드상단+70 · #A2E941
+     fs32 로 높이는 맞지만 우리 서체가 넓어 폭이 100 으로 나온다(ref 85, +17.6%).
+     자간을 음수로 주면 어절 공백이 사라지므로(PROGRESS 01 교훈) scaleX 로 좁힌다.
+     좌우 0 인 전폭 박스라 가로 스케일의 기준점이 곧 카드 중심 → 잉크 중심은 유지된다. */
   .sk-on{position:absolute;left:0;right:0;top:63px;height:44px;text-align:center;
-    font-size:32px;line-height:44px;color:#A2E941}
+    font-size:32px;line-height:44px;color:#A2E941;transform:scaleX(.85)}
 
   /* 7 총 보유 효과 — 잉크 h30(fs32) · 잉크중심 x571.5 = 화면중심 +31.5 (측정표 §7) */
   .sk-tot{left:0;right:0;top:1085px;height:44px;text-align:center;line-height:44px;
-    padding-left:63px;font-size:32px;white-space:nowrap}
-  .sk-tot>i{color:#fff}
-  .sk-tot>em{color:#B0E92A;margin-left:14px;font-size:31px}
+    padding-left:56px;font-size:32px;white-space:nowrap}
+  /* 라벨 «총 보유 효과:» 잉크 ref 169x30, 우리 서체는 fs32 에서 183 (+8.3%) → scaleX 로 좁힌다 */
+  .sk-tot>i{color:#fff;transform:scaleX(.923)}
+  .sk-tot>em{color:#B0E92A;margin-left:8px;font-size:31px}
 
   /* 8 버튼 2개 275x131 · gap 36 · ref x247/558 y1841 */
   .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
@@ -1560,10 +1564,15 @@
     border:6px solid #000;box-sizing:border-box;
     background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 71px,#5E4E37 71px 78px,#61523D 78px)}
   .sk-tabs>*{position:absolute;top:0;height:85px}
-  .sk-tab{text-align:center;line-height:85px;font-size:41px;color:#A9A8AD;cursor:pointer}
-  .sk-tab.on{background:#4B3E2D;border-radius:36px;font-size:40px;line-height:76px;color:#F2BC8D;
-    letter-spacing:-3px;text-indent:-3px;
+  /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
+     높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
+     (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
+     line-height 는 잉크 중심을 붙잡는 값이라 fs 와 함께 미세 조정한다 */
+  .sk-tab{text-align:center;line-height:87px;font-size:43px;color:#A9A8AD;cursor:pointer}
+  #bSk .sk-tab>i{display:inline-block;transform:scaleX(.914)}
+  .sk-tab.on{background:#4B3E2D;border-radius:36px;font-size:41px;line-height:77px;color:#F2BC8D;
     box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000}
+  #bSk .sk-tab.on>i{transform:scaleX(.893)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
   .sk-t1{left:0;width:224px}
   .sk-t2{left:220px;width:261px}
@@ -4775,9 +4784,9 @@ function renderSkill(){
   /* 9 시트 안쪽 서브탭 4개 — 레퍼런스는 동료·기타가 둘 다 잠금이지만
        우리 빌드는 동료가 해금돼 있어 라벨로 두고 «기타»만 잠금으로 둔다 */
   h += '<div class="sk-tabs">'
-    +  '<div class="sk-tab sk-t1" data-sktab="eq">장비</div>'
-    +  '<div class="sk-tab sk-t2 on" data-sktab="sk">스킬</div>'
-    +  '<div class="sk-tab sk-t3" data-sktab="pet">동료</div>'
+    +  '<div class="sk-tab sk-t1" data-sktab="eq"><i>장비</i></div>'
+    +  '<div class="sk-tab sk-t2 on" data-sktab="sk"><i>스킬</i></div>'
+    +  '<div class="sk-tab sk-t3" data-sktab="pet"><i>동료</i></div>'
     +  '<div class="sk-tsep"></div>'
     +  '<div class="sk-tab sk-t4" data-sktab=""><span class="sk-lock"></span></div></div>';
 
