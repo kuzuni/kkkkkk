@@ -1974,28 +1974,34 @@
   .spc-body{position:absolute;left:12px;right:12px;top:12px;bottom:13px;background:#F0D9BA;
     border-radius:24px;box-shadow:0 0 0 1px #887661}
   .spc-body>*{position:absolute}
-  /* Gamer Id — 잉크 y21(h15) 중앙정렬, 흰색, 외곽선 없음 */
+  /* Gamer Id — 잉크 y21(h15) 중앙정렬, 흰색. ref 폭 565 vs 우리 489 → scaleX 1.155,
+     암갈 미세 외곽선(ref 최암부 ~(50,47,42)) */
   .spc-gid{left:0;right:0;top:14px;height:30px;line-height:30px;text-align:center;
-    font-size:21px;font-weight:700;color:#FBFBFD;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+    font-size:21px;font-weight:700;color:#FBFBFD}
+  .spc-gid>i{transform:scaleX(1.155);-webkit-text-stroke:2px rgba(58,48,40,.75);
+    paint-order:stroke fill}
   /* 아바타 액자 179×180 — 검정 5 → 갈색 12(#715A4A) → 검정 라인 2 → 초상화(#3B5A86) */
   .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
     border:5px solid #000;border-radius:18px;background:#715A4A}
   .spc-ava>.in{position:absolute;left:12px;right:12px;top:12px;bottom:12px;
     border:2px solid #000;border-radius:6px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
-  /* 칭호 육각 배너 318×53 — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 (2겹 clip-path) */
-  .spc-rib{left:269px;top:250px;width:318px;height:53px}
+  /* 칭호 육각 배너 318×56(외곽선 포함 ref 783–838) — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 */
+  .spc-rib{left:269px;top:249px;width:318px;height:56px}
   .spc-rib>s{position:absolute;inset:0;background:#000;
-    clip-path:polygon(0 50%,7% 0,93% 0,100% 50%,93% 100%,7% 100%)}
+    clip-path:polygon(0 50%,13px 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,13px 100%)}
   .spc-rib>b{position:absolute;left:3px;right:3px;top:3px;bottom:3px;
     background:linear-gradient(180deg,#635145 0 8px,#433A35 8px);
-    clip-path:polygon(0 50%,7% 0,93% 0,100% 50%,93% 100%,7% 100%);
-    text-align:center;line-height:47px;font-size:30px;color:#fff}
-  /* 닉네임 스트립 — 반투명 흑갈, 좌단 30px 페이드. 텍스트 라틴 fs32 흰+진갈 외곽선 */
-  .spc-nick{left:251px;top:310px;width:333px;height:52px;
+    clip-path:polygon(0 50%,11px 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,11px 100%);
+    text-align:center;line-height:50px;font-size:30px;color:#fff}
+  .spc-rib>b>i{transform:scaleX(.86)}   /* ref 잉크폭 107 vs 우리 124 */
+  /* 닉네임 스트립 ref x352–695 — 반투명 흑갈, 좌단 30px 페이드.
+     텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
+  .spc-nick{left:241px;top:310px;width:342px;height:52px;
     background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,.92) 30px,rgba(115,103,87,.92) 100%);
     text-align:center;line-height:52px}
-  .spc-nick>i{font-size:32px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill}
+  .spc-nick>i{font-size:28px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill;
+    transform:translateX(17px)}
   /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
   .spc-edit{left:583px;top:310px;width:56px;height:54px;box-sizing:border-box;
     border:5px solid #52433C;border-radius:12px;background:#F6E9C6;cursor:pointer;
@@ -2010,15 +2016,18 @@
   .spc-row:nth-child(even){background:#F6E2C7}
   /* 이름(좌) — 잉크 좌변 컨테이너+37, 한글 fs27 흰(#F9F9F9)+검정 외곽선 5(한쪽 2.5) */
   .spc-row>.nm{position:absolute;left:37px;top:0;height:60px;line-height:60px;
-    font-size:27px;color:#F9F9F9;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-size:27px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap}
-  /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + 진록 외곽선 5, 숫자혼합 fs31 */
+  .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
+  /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 6 (1회차: 진록 아님, ref (0,0,0)) */
   .spc-row>.vl{position:absolute;right:37px;top:0;height:60px;line-height:60px;
-    font-size:31px;color:#BAFD60;-webkit-text-stroke:5px #274A11;paint-order:stroke fill;
+    font-size:31px;color:#BAFD60;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
-  /* 하단 토글 탭 컨테이너 767×94 — 검정 5 + #3D3630, radius 22 */
+  /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
-    border:5px solid #000;border-radius:22px;background:#3D3630}
+    border:5px solid #000;border-radius:22px;
+    background:linear-gradient(180deg,#42362A 0,#352B1F 100%);
+    box-shadow:inset 0 3px 0 #5C4F46,inset 0 -3px 0 #5C4F46}
   /* 활성 금색 배너 386×67 — 좌우 화살촉 팁, 검정 외곽선 3 (2겹 clip-path), 컨테이너 밖 살짝 돌출 */
   .spc-tab-on{position:absolute;left:-8px;top:8px;width:386px;height:67px;cursor:default}
   .spc-tab-on>s{position:absolute;inset:0;background:#000;
@@ -2026,11 +2035,12 @@
   .spc-tab-on>b{position:absolute;left:3px;right:3px;top:3px;bottom:3px;
     background:linear-gradient(180deg,#FFE983 0,#FFC736 50%,#F8A63A 100%);
     clip-path:polygon(0 50%,3% 0,97% 0,100% 50%,97% 100%,3% 100%);
-    text-align:center;line-height:61px;font-size:35px;color:#FEF7C1;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+    text-align:center;line-height:61px;font-size:35px;color:#FEF7C1}
+  .spc-tab-on>b>i{-webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(.89)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
   .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
     text-align:center;font-size:33px;font-weight:900;color:#9A99A0;cursor:pointer}
+  .spc-tab-off>i{transform:scaleX(.91)}   /* ref 잉크폭 83 vs 우리 91 */
 
   /* ==========================================================================
      06 장비 팝업 — 측정표 docs/measure/06-장비팝업.md
@@ -3306,15 +3316,15 @@
        19 프로필 탭(#pfw)과 하단 토글로 상호 연결. -->
   <div id="specw">
     <div class="spc"><div class="spc-body">
-      <div class="spc-gid" id="spcGid"></div>
+      <div class="spc-gid"><i id="spcGid"></i></div>
       <div class="spc-ava"><div class="in"><i>🛡️</i></div></div>
-      <div class="spc-rib"><s></s><b>칭호 없음</b></div>
+      <div class="spc-rib"><s></s><b><i>칭호 없음</i></b></div>
       <div class="spc-nick"><i id="spcNick"></i></div>
       <div class="spc-edit" id="spcEdit">✏️</div>
       <div class="spc-list" id="spcList"></div>
       <div class="spc-tabs">
-        <div class="spc-tab-on"><s></s><b>종합 스탯</b></div>
-        <div class="spc-tab-off" id="spcProfTab">프로필</div>
+        <div class="spc-tab-on"><s></s><b><i>종합 스탯</i></b></div>
+        <div class="spc-tab-off" id="spcProfTab"><i>프로필</i></div>
       </div>
     </div></div>
   </div>
@@ -6730,7 +6740,7 @@ function renderSpec(){
     ['햄지 이동 속도', '0%']
   ];
   $('spcList').innerHTML = rows.map(r =>
-    '<div class="spc-row"><span class="nm">' + r[0] + '</span><span class="vl">' + r[1] + '</span></div>').join('');
+    '<div class="spc-row"><span class="nm"><i>' + r[0] + '</i></span><span class="vl">' + r[1] + '</span></div>').join('');
 }
 function openSpec(){ renderSpec(); $('specw').classList.add('on'); }
 function closeSpec(){ $('specw').classList.remove('on'); }
