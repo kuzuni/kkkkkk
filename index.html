@@ -1129,6 +1129,112 @@
     font-size:38px;-webkit-text-stroke:0}
 
   /* ==========================================================================
+     14 유물 팝업 — 보물상자 탭 — 측정표 docs/measure/14-유물팝업보물상자탭.md
+     껍데기는 «(다) 전체화면 페이지» — 03 던전(#dunw)·10 상점(#shopw)과 동종.
+     상단 클러스터는 local y = ref y − 191, 하단 5칸·서브탭은 오버레이 하단 고정. -->
+     ========================================================================== */
+  #relicw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#27272F;
+    display:none;z-index:28;overflow:hidden}
+  #relicw.on{display:block}
+  #relicw i,#relicw em,#relicw b,#relicw u,#relicw s{display:inline-block;font-style:normal;
+    font-weight:900;text-decoration:none;transform-origin:50% 50%}
+  #relicw>*{position:absolute}
+  #relicBody{position:absolute;inset:0}
+  #relicBody>*{position:absolute}
+  /* 배경 유령 슬라임 무늬(흐릿) */
+  #relicw::before{content:'';position:absolute;left:0;right:0;top:200px;bottom:0;
+    background-image:radial-gradient(circle at 20% 18%,#2D2E42 0 26px,transparent 27px),
+      radial-gradient(circle at 72% 40%,#2D2E42 0 30px,transparent 31px),
+      radial-gradient(circle at 38% 66%,#2D2E42 0 24px,transparent 25px),
+      radial-gradient(circle at 86% 82%,#2D2E42 0 28px,transparent 29px);
+    background-size:520px 560px;opacity:.6;pointer-events:none}
+  /* 상단 어두운 스트립(진행바 영역) ref190~391 */
+  .rlx-strip{left:0;right:0;top:0;height:200px;background:#18171D;z-index:1}
+
+  /* §2 진행바 — x162 y262 w626 h57, 검정 4px, 채움 #FEC820/#FFB514, 트랙 #6F7899 */
+  .rlx-prog{left:162px;top:71px;width:626px;height:57px;border-radius:29px;background:#000;z-index:2}
+  .rlx-prog>.trk{position:absolute;left:4px;top:4px;right:4px;bottom:4px;border-radius:25px;
+    background:#6F7899;overflow:hidden}
+  .rlx-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:25px;
+    background:linear-gradient(180deg,#FEC820 0 34%,#FFB514)}
+  .rlx-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:57px;
+    font-size:33px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(.9);letter-spacing:-1px;z-index:2}
+  /* §2 [활성화 필요] 버튼 — x784 y236 w207 h110 회색 그라디언트 */
+  .rlx-act{left:784px;top:45px;width:207px;height:110px;border-radius:32px;
+    border:4px solid #000;box-sizing:border-box;
+    background:linear-gradient(180deg,#D3D3D3,#8A8A8A);z-index:2;text-align:center}
+  .rlx-act>em{position:absolute;left:23px;top:-38px;width:110px;height:83px;font-size:78px;
+    line-height:83px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))}
+  .rlx-act>u{position:absolute;left:6px;right:6px;top:56px;height:40px;line-height:40px;
+    font-size:31px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(.72);letter-spacing:-2px;white-space:nowrap}
+
+  /* §3 리본 「나무 상자」 — x248 y612 w583 h134 중심 x540 */
+  .rlx-rib{left:248px;top:421px;width:583px;height:134px;z-index:3}
+  .rlx-rib>.tl{position:absolute;top:26px;width:70px;height:82px;background:#524C7C;
+    border:5px solid #000;box-sizing:border-box;z-index:1}
+  .rlx-rib>.tl.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26px 50%)}
+  .rlx-rib>.tl.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 26px) 50%,100% 100%,0 100%)}
+  .rlx-rib>.bar{position:absolute;left:36px;right:36px;top:12px;height:110px;background:#6F6F93;
+    border:5px solid #000;box-sizing:border-box;border-radius:10px;z-index:2}
+  .rlx-rib>b{position:absolute;left:0;right:0;top:24px;height:86px;line-height:86px;text-align:center;
+    font-size:56px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    transform:scaleX(.88);letter-spacing:-1px;z-index:3}
+  /* 🔍 — x860 y674 w59 h57 */
+  .rlx-mag{left:860px;top:483px;width:59px;height:57px;border-radius:50%;background:#9DA3B8;
+    border:3px solid #4A4E5A;box-sizing:border-box;text-align:center;line-height:52px;
+    font-size:33px;color:#646A82;cursor:pointer;z-index:3;box-shadow:0 3px 3px rgba(0,0,0,.3)}
+
+  /* §4 획득 가능 목록 2줄 — 좌측 정렬 x270, 줄간격 70 */
+  .rlx-li{left:270px;height:34px;line-height:34px;white-space:nowrap;z-index:2}
+  .rlx-li>s{width:26px;text-align:left;font-size:27px;-webkit-text-stroke:0}
+  .rlx-li>i{font-size:27px;transform:scaleX(.9);letter-spacing:-.5px;vertical-align:1px}
+  .rlx-li.l1{top:620px} .rlx-li.l1>s,.rlx-li.l1>i{color:#FFF36B}
+  .rlx-li.l2{top:690px} .rlx-li.l2>s{color:#CE8EFF} .rlx-li.l2>i{color:#CC8EFB}
+
+  /* §5 중앙 상자 — x354 y986 w369 h289 중심(538,1130) */
+  .rlx-box{left:354px;top:795px;width:369px;height:289px;text-align:center;line-height:289px;
+    font-size:250px;z-index:2;filter:drop-shadow(0 8px 8px rgba(0,0,0,.4))}
+  .rlx-arw{left:901px;top:891px;width:77px;height:101px;line-height:101px;text-align:center;
+    font-size:92px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
+    cursor:pointer;z-index:3}
+
+  /* §6 [오픈 x1]/[오픈 x30] — y1333 w318 h148 회색 그라디언트 */
+  .rlx-op{top:1142px;width:318px;height:148px;border-radius:32px;border:5px solid #000;
+    box-sizing:border-box;background:linear-gradient(180deg,#A5A5A5,#8F8F8F);cursor:pointer;
+    text-align:center;line-height:148px;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.28)}
+  .rlx-op::before{content:'';position:absolute;left:0;right:0;top:0;height:9px;border-radius:27px 27px 0 0;
+    background:#C7C7C7}
+  .rlx-op>i{position:relative;font-size:57px;color:#111;transform:scaleX(.92);letter-spacing:-1px}
+  .rlx-op.b1{left:190px} .rlx-op.b30{left:571px}
+  .rlx-op.dis{filter:grayscale(.4) brightness(.82);cursor:default}
+
+  /* §7 하단 상자 5칸 — 하단 고정, 피치 199 */
+  .rlx-tiles{left:0;right:0;bottom:143px;height:122px;z-index:2}
+  .rlx-tile{position:absolute;top:0;height:122px;border-radius:26px;border:5px solid #000;
+    box-sizing:border-box;background:#46CDE1;text-align:center}
+  .rlx-tile>em{position:absolute;left:0;right:0;top:6px;height:74px;line-height:74px;font-size:60px}
+  .rlx-tile>u{position:absolute;left:0;right:0;bottom:6px;height:30px;line-height:30px;
+    font-size:26px;color:#111;transform:scaleX(.9)}
+  .rlx-tile.sel{top:-14px;height:136px;background:#F7EF42;box-shadow:0 0 0 3px #FFF7A0}
+  .rlx-tile.t1{left:41px;width:197px} .rlx-tile.t2{left:253px;width:179px}
+  .rlx-tile.t3{left:449px;width:182px} .rlx-tile.t4{left:648px;width:183px}
+  .rlx-tile.t5{left:849px;width:177px}
+
+  /* §8 서브탭 바 (보물상자·유물) — x135 w793 h97, 하단 고정 */
+  .rlx-sub{left:135px;bottom:18px;width:793px;height:97px;border-radius:33px;background:#634F37;
+    border:4px solid #000;box-sizing:border-box;z-index:4}
+  .rlx-sub>.seg{position:absolute;top:5px;bottom:5px;text-align:center;cursor:pointer;overflow:hidden}
+  .rlx-sub>.seg>i{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%) scaleX(.9);
+    font-size:37px;letter-spacing:-1px}
+  .rlx-sub>.box{left:5px;width:405px;border-radius:29px 8px 8px 29px;background:#4A3D2D;
+    box-shadow:inset 0 0 0 3px #8A6E3F}
+  .rlx-sub>.box>i{color:#F0BD90}
+  .rlx-sub>.rel{right:5px;width:378px;border-radius:8px 29px 29px 8px;background:#61503E}
+  .rlx-sub>.rel>i{color:#A9A8AD}
+
+  /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
      껍데기는 «가운데 다이얼로그 모달». 레퍼런스(1080x2340) 실측 절대좌표:
      모달 바깥 142,614 796x1197 / 본문 cream 159,713 762x1080.
@@ -2373,6 +2479,15 @@
       <div class="shp-cs s1"></div>
       <div class="shp-cs s3"></div>
       <div class="shp-new"><i>NEW</i></div>
+    </div>
+  </div>
+  <!-- 14 유물 팝업 — 보물상자 탭. (다) 전체화면 페이지. 측정표 docs/measure/14-유물팝업보물상자탭.md -->
+  <div id="relicw">
+    <div class="rlx-strip"></div>
+    <div id="relicBody"></div>
+    <div class="rlx-sub">
+      <div class="seg box on" data-rlxtab="box"><i>보물상자</i></div>
+      <div class="seg rel" data-rlxtab="rel"><i>유물</i></div>
     </div>
   </div>
   <!-- 06 장비 팝업. 폭 1080 «바닥 시트» — 공용 #modal(가운데 다이얼로그)과 규격이 달라 자체 오버레이.
@@ -5214,6 +5329,7 @@ function renderDunPage(){
 }
 function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
+  if(typeof closeRelicPage === 'function') closeRelicPage();
   renderDunPage();
   $('dunw').classList.add('on');
   $('dunList').scrollTop = 0;
@@ -5277,6 +5393,7 @@ function renderShopPage(){
 }
 function openShopPage(){
   closeDungeon();
+  if(typeof closeRelicPage === 'function') closeRelicPage();
   shopCat = 'summon';
   document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
   renderShopPage();
@@ -5318,6 +5435,97 @@ $('shopCats').addEventListener('click', e => {
   document.querySelectorAll('#shopCats .shp-ct').forEach(x => x.classList.toggle('on', x.dataset.cat === cat));
   renderShopPage();
   $('shopList').scrollTop = 0;
+});
+
+/* ---- 14 유물 팝업 — 보물상자 탭 (전체화면 페이지 #relicw) — 측정표 docs/measure/14-유물팝업보물상자탭.md ----
+   레퍼런스는 상자를 열어 유물을 뽑는 화면이다. 우리 게임엔 유물 소환 배너(BANNERS.relic, 유물석) 하나뿐이라
+   «상자 5종» 은 표시 전용 매핑으로 두고, [오픈 x1/x30] 은 기존 doSummon('relic', n) 에 그대로 연결한다.
+   저장 구조는 건드리지 않는다(표시 전용). «유물» 서브탭은 기존 배너 패널(#bRel, 15번 담당 예정)로 넘겨 기능을 보존한다. */
+const RLX_BOXES = [
+  { n:'나무 상자', ic:'📦', c:'#F7EF42', get:['골드 획득 가능', '언커먼 이하 등급 유물 등장'] },
+  { n:'강철 상자', ic:'🧰', c:'#46CDE1', get:['골드 획득 가능', '레어 이하 등급 유물 등장'] },
+  { n:'보석 상자', ic:'💠', c:'#3BD3EB', get:['골드 획득 가능', '에픽 이하 등급 유물 등장'] },
+  { n:'황금 상자', ic:'🎁', c:'#46CDE1', get:['골드 획득 가능', '유니크 이하 등급 유물 등장'] },
+  { n:'전설 상자', ic:'👑', c:'#42CFE3', get:['골드 획득 가능', '전설 등급 유물 등장'] }
+];
+let relicSub = 'box', relicBoxSel = 0;
+function renderRelicPage(){
+  const B = BANNERS.relic, bx = RLX_BOXES[relicBoxSel];
+  const owned = ownedIn(RELICS), total = RELICS.length;
+  const pct = total ? Math.round(owned / total * 100) : 0;
+  const c1 = summonCost('relic', 1), c30 = summonCost('relic', 30);
+  const can1 = S.relic >= c1, can30 = S.relic >= c30;
+  const collR = collReady('relic');
+  let h = '';
+  /* §2 진행바 + [활성화 필요]/[보너스 받기] 버튼 */
+  h += '<div class="rlx-prog"><div class="trk"><i style="width:' + pct + '%"></i></div>'
+    +  '<b>' + owned + '/' + total + '</b></div>'
+    +  '<div class="rlx-act' + (collR ? ' rdy' : '') + '"' + (collR ? ' data-rlxcoll="1"' : '')
+    +    '><em>' + bx.ic + '</em><u>' + (collR ? '보너스 받기' : '활성화 필요') + '</u></div>';
+  /* §3 리본 + 🔍 */
+  h += '<div class="rlx-rib"><s class="tl l"></s><s class="tl r"></s><div class="bar"></div>'
+    +    '<b>' + bx.n + '</b></div>'
+    +  '<div class="rlx-mag" data-rlxprob="1">🔍</div>';
+  /* §4 획득 가능 목록 */
+  h += '<div class="rlx-li l1"><s>✦</s><i>' + bx.get[0] + '</i></div>'
+    +  '<div class="rlx-li l2"><s>✦</s><i>' + bx.get[1] + '</i></div>';
+  /* §5 중앙 상자 + ▶ */
+  h += '<div class="rlx-box">' + bx.ic + '</div>'
+    +  '<div class="rlx-arw" data-rlxnext="1">▶</div>';
+  /* §6 오픈 버튼 */
+  h += '<div class="rlx-op b1' + (can1 ? '' : ' dis') + '" data-rlxopen="1"><i>오픈 x1</i></div>'
+    +  '<div class="rlx-op b30' + (can30 ? '' : ' dis') + '" data-rlxopen="30"><i>오픈 x30</i></div>';
+  /* §7 상자 5칸 */
+  h += '<div class="rlx-tiles">';
+  RLX_BOXES.forEach((x, i) => {
+    h += '<div class="rlx-tile t' + (i+1) + (i === relicBoxSel ? ' sel' : '') + '" data-rlxsel="' + i + '"'
+      +    (i === relicBoxSel ? '' : ' style="background:' + x.c + '"') + '>'
+      +    '<em>' + x.ic + '</em><u>x0</u></div>';
+  });
+  h += '</div>';
+  $('relicBody').innerHTML = h;
+}
+function openRelicPage(){
+  closeDungeon(); closeShopPage();
+  relicSub = 'box';
+  document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
+  renderRelicPage();
+  $('relicw').classList.add('on');
+}
+function closeRelicPage(){ $('relicw').classList.remove('on'); }
+$('relicBody').addEventListener('click', e => {
+  if(e.target.closest('[data-rlxnext]')){ relicBoxSel = (relicBoxSel + 1) % RLX_BOXES.length; renderRelicPage(); return; }
+  const sel = e.target.closest('[data-rlxsel]');
+  if(sel){ relicBoxSel = +sel.dataset.rlxsel; renderRelicPage(); return; }
+  const op = e.target.closest('[data-rlxopen]');
+  if(op){
+    if(op.classList.contains('dis')){
+      const need = summonCost('relic', +op.dataset.rlxopen) - S.relic;
+      popup('🔮 유물석 부족', '<p>유물석이 <b>' + fmt(Math.ceil(need)) + '</b> 더 필요합니다.<br>던전 <b>고대 유적</b>에서 유물석을 얻으세요!</p>');
+      return;
+    }
+    doSummon('relic', +op.dataset.rlxopen);
+    renderRelicPage();
+    return;
+  }
+  if(e.target.closest('[data-rlxprob]')){ openProbInfo('relic'); return; }
+  if(e.target.closest('[data-rlxcoll]')){ claimColl('relic'); renderRelicPage(); return; }
+});
+$('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
+  const seg = e.target.closest('[data-rlxtab]');
+  if(!seg) return;
+  const t = seg.dataset.rlxtab;
+  if(t === 'rel'){                        /* 유물 서브탭 → 기존 배너 패널(#bRel) 로 기능 보존 (15번 담당 예정) */
+    relicSub = 'rel';
+    closeRelicPage();
+    curTab = 'box'; panelOpen = true;
+    syncPanel(); uiDirty = true; renderUI();
+    return;
+  }
+  relicSub = 'box';
+  document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
+  if(panelOpen){ panelOpen = false; syncPanel(); }
+  openRelicPage();
 });
 
 /* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
@@ -5773,7 +5981,21 @@ function goTab(k, forceOpen){
     openShopPage();
     return;
   }
-  closeShopPage();                    /* 다른 탭으로 이동하면 상점 페이지는 닫는다 */
+  /* 보물상자 탭 → 14 유물 팝업(전체화면 #relicw). 유물 서브탭 상태면 기존 배너 패널을 연다. */
+  if(k === 'box' && !forceOpen){
+    closeDungeon(); closeShopPage();
+    if($('relicw').classList.contains('on')){ closeRelicPage(); return; }
+    if(!S.seen.box){ S.seen.box = 1; document.querySelectorAll('.tab').forEach(x =>
+      x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
+    if(relicSub === 'rel'){
+      if(panelOpen && curTab === 'box'){ panelOpen = false; syncPanel(); return; }
+      curTab = 'box'; panelOpen = true; syncPanel(); uiDirty = true; renderUI(); return;
+    }
+    if(panelOpen){ panelOpen = false; syncPanel(); }
+    openRelicPage();
+    return;
+  }
+  closeShopPage(); closeRelicPage();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
