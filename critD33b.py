@@ -1,0 +1,17 @@
+from PIL import Image
+import numpy as np
+ref = np.asarray(Image.open('/home/user/kkkkkk/docs/ref/33-재화-정보-팝업.jpg').convert('RGB')).astype(int)
+cap = np.asarray(Image.open('/home/user/kkkkkk/docs/review/33-r2.png').convert('RGB')).astype(int)
+print("REF y=1450 x235..275:"); print([ (x,tuple(ref[1450,x])) for x in range(235,276)])
+print("CAP y=1240 x235..275:"); print([ (x,tuple(cap[1240,x])) for x in range(235,276)])
+print("REF y=1450 x800..850:"); print([ (x,tuple(ref[1450,x])) for x in range(800,851)])
+print("CAP y=1240 x800..850:"); print([ (x,tuple(cap[1240,x])) for x in range(800,851)])
+print()
+print("REF x=540 y=865..900:"); print([ (y,tuple(ref[y,540])) for y in range(865,901)])
+print("CAP x=540 y=655..690:"); print([ (y,tuple(cap[y,540])) for y in range(655,691)])
+print()
+print("REF x=540 y=1560..1605:"); print([ (y,tuple(ref[y,540])) for y in range(1560,1606)])
+print("CAP x=540 y=1350..1395:"); print([ (y,tuple(cap[y,540])) for y in range(1350,1396)])
+print()
+print("REF x=540 y=770..800:"); print([ (y,tuple(ref[y,540])) for y in range(770,801)])
+print("CAP x=540 y=560..590:"); print([ (y,tuple(cap[y,540])) for y in range(560,591)])
