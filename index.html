@@ -2261,7 +2261,7 @@
   .ci-head>i{position:relative;top:-3px;left:-2px;font-size:43px;color:#FED349;
     -webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(.892)}
   /* 크림 본문 — 별 워터마크는 엇갈린 격자(53×51, pitch 236×117) */
-  .ci-body{flex:1 1 auto;position:relative;margin-top:2.5px;border:solid #46382D;border-width:0 4px 4px;
+  .ci-body{flex:1 1 auto;position:relative;border:solid #46382D;border-width:2.5px 4px 4px;border-top-color:#523E3D;
     border-radius:0 0 31px 31px;background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
     overflow:hidden}
@@ -2274,7 +2274,7 @@
   .ci-ic>i{position:absolute;left:0;right:0;top:1px;height:150px;line-height:150px;
     text-align:center;font-size:96px;transform:scaleX(.87)}
   /* «보유: n» 코어 y1080..1112(중심 1096) → body 중심 215. 전체가 라임 한 덩어리다 */
-  .ci-have{left:0;right:0;top:188px;height:50px;line-height:50px;text-align:center;
+  .ci-have{left:0;right:0;top:188px;height:50px;line-height:50px;text-align:center;left:-1.5px;
     font-size:38px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap;transform:scaleX(.953)}
   /* 설명 패널 ref(291,1131) 498×199 → body(30,250). 테두리 없음 · 검정 20% 오버레이(별이 비친다) */
@@ -2284,23 +2284,23 @@
      음수 letter-spacing 은 금지(LESSONS 01)이므로 **줄 상자를 넓게 잡고 scaleX 로 되돌린다** */
   .ci-desc>i{display:block;width:504px;margin:0 -29px;transform:scaleX(.925);
     font-size:31px;line-height:37px;text-align:center;color:#F9F9F9;
-    -webkit-text-stroke:6.5px #000;paint-order:stroke fill;white-space:normal}
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:normal}
   /* «획득처» 라벨 — 리스트 패널 상변을 11px 덮고 앉는다(라벨이 위 레이어) */
   .ci-wl{left:0;right:0;top:478px;height:45px;line-height:45px;text-align:center;
-    font-size:34px;color:#FEF7AC;-webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2;
-    transform:scaleX(.925)}
+    font-size:35.5px;color:#FEF7AC;-webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2;
+    transform:scaleX(.894)}
   /* 획득처 리스트 패널 ref(290,1385) 500×160 → body(29,504). 행 pitch 40 */
   .ci-ways{left:29px;top:504px;width:500px;height:160px;border-radius:23px;
     background:rgba(0,0,0,.18)}
   .ci-ways>div{position:absolute;left:10px;right:10px;height:32px;
     display:flex;align-items:center;white-space:nowrap}
-  .ci-ways>div:nth-child(1){top:27px}
-  .ci-ways>div:nth-child(2){top:67px}
-  .ci-ways>div:nth-child(3){top:107px}
+  .ci-ways>div:nth-child(1){top:28.5px}
+  .ci-ways>div:nth-child(2){top:68.5px}
+  .ci-ways>div:nth-child(3){top:108.5px}
   .ci-ways s{width:28px;font-size:29px;color:#8FFC48;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .ci-ways i{margin-left:12px;font-size:26px;color:#F9F9F9;
-    -webkit-text-stroke:6.5px #000;paint-order:stroke fill}
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
   /* 재화 아이콘은 전부 손가락 커서 — 클릭 가능하다는 신호 */
   [data-cur]{cursor:pointer}
   /* ==========================================================================
