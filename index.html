@@ -1233,6 +1233,127 @@
   .rlx-sub>.box>i{color:#F0BD90}
   .rlx-sub>.rel{right:5px;width:378px;border-radius:8px 29px 29px 8px;background:#61503E}
   .rlx-sub>.rel>i{color:#A9A8AD}
+     13 상점 팝업 — 재화 탭 — 측정표 docs/measure/13-상점팝업재화탭.md
+     10 과 같은 (다) 전체화면 페이지 껍데기(#shopw)를 그대로 쓰고, 스크롤 콘텐츠만 갈아끼운다.
+     좌표계: **콘텐츠 좌상단 = 레퍼런스 y192** → local y = ref y − 192. 가로는 1:1.
+     콘텐츠 총 높이 1809(ref 192~2000) — 뷰포트 1509 이라 300px 은 스크롤이 흡수한다(측정표 §9).
+     테두리를 준 요소의 절대배치 자식은 padding box 기준이라 **테두리는 전부 별도 오버레이**로 얹는다.
+     ========================================================================== */
+  .shp-list.coin{padding-top:0}
+  .cn-wrap{position:relative;width:1080px;height:1809px}
+  .cn-wrap *{box-sizing:border-box}
+  .cn-wrap>*{position:absolute}
+
+  /* §1 상단 배너 아트 — 전출혈 1080x356, radius 0, 테두리 없음 */
+  .cn-bn{left:0;top:0;width:1080px;height:356px;overflow:hidden;
+    background:linear-gradient(180deg,#2166AB 0,#2A7BCA 42%,#2FC5EB 100%)}
+  .cn-bn>.ray{position:absolute;left:-30%;top:-70%;width:160%;height:210%;
+    background:repeating-conic-gradient(from 0deg at 50% 34%,
+      rgba(66,145,211,.85) 0deg 5deg,rgba(33,102,171,0) 5deg 13deg)}
+  .cn-bn>.art{position:absolute;left:240px;top:118px;width:276px;height:206px;
+    font-size:196px;line-height:206px;text-align:center}
+  .cn-bn>.gem{position:absolute;font-size:74px;line-height:74px;color:#49CDF4}
+  /* §2 `재화 상점` 타이틀 — 잉크 x686 y335(local 143) 268x65, 중심 819.5, #FFF8AA */
+  .cn-ti{left:674px;top:135px;width:301px;height:78px;text-align:center}
+  .cn-ti>i{font-size:70px;line-height:74px;color:#FFF8AA;-webkit-text-stroke:10px #000;
+    paint-order:stroke fill;transform:scaleX(.928);text-shadow:2px 5px 0 #000}
+  /* §3-1 `상품` 갈색 밴드(전폭) — 검정8 + 채움85(2단, 경계 44px) + 검정8 */
+  .cn-hl{left:0;width:1080px;height:8px;background:#000}
+  .cn-hd{left:0;top:364px;width:1080px;height:85px;
+    background:linear-gradient(180deg,#7D5A44 0 44px,#70513D 44px)}
+  .cn-hd>i{position:absolute;left:0;right:0;top:16px;text-align:center;font-size:49.5px;
+    line-height:50px;color:#FFF8AA;transform:scaleX(.9)}
+
+  /* §3-2 · §7 리본 — 도형 동일, 색 토큰(--c 채움 / --h 상단림 / --s 하단그늘 / --t 꼬리)만 바꾼다 */
+  .cn-rb{left:227px;width:627px;height:92px}
+  .cn-rb>.tl{position:absolute;top:23px;width:50px;height:88px;background:#000;z-index:1}
+  .cn-rb>.tl.l{left:-37px;clip-path:polygon(100% 0,100% 100%,0 100%,28% 50%,0 0)}
+  .cn-rb>.tl.r{left:614px;width:49px;clip-path:polygon(0 0,0 100%,100% 100%,71% 50%,100% 0)}
+  .cn-rb>.tl>s{position:absolute;inset:5px;background:linear-gradient(180deg,
+      var(--t) 0 78%,var(--ts) 78% 100%)}
+  .cn-rb>.tl.l>s{clip-path:polygon(100% 0,100% 100%,0 100%,30% 50%,0 0)}
+  .cn-rb>.tl.r>s{clip-path:polygon(0 0,0 100%,100% 100%,70% 50%,100% 0)}
+  .cn-rb>b{position:absolute;inset:0;border:6px solid #000;border-radius:16px;z-index:2;
+    background:linear-gradient(180deg,var(--h) 0 3px,var(--c) 3px 75px,var(--s) 75px 80px)}
+  .cn-rb>i{position:absolute;left:0;right:0;top:24px;text-align:center;z-index:3;
+    font-size:39.8px;line-height:42px;color:#fff;-webkit-text-stroke:8px #000;
+    paint-order:stroke fill;transform:scaleX(.9)}
+  /* §4 `⏱ 초기화: 5H 12M` 검은 알약 — 리본 몸통에 위쪽이 물린다(z 는 리본 아래) */
+  .cn-rs{left:340px;top:583px;width:400px;height:56px;border-radius:28px;background:#000}
+  .cn-rs>em{position:absolute;left:86px;top:14px;font-size:29px;line-height:29px}
+  .cn-rs>.t1{position:absolute;left:121px;top:17px;font-size:21.7px;line-height:22px;color:#fff;
+    transform:scaleX(1.07);transform-origin:0 50%}
+  .cn-rs>.t2{position:absolute;left:196px;top:18px;font-size:25.7px;line-height:22px;color:#fff;
+    transform:scaleX(1.04);transform-origin:0 50%}
+
+  /* §5 상품 카드 3x2 — 278x309, 열 x111/401/691, 행 local 689/1008, 검정 7(오버레이), r35 */
+  .cn-cd{width:278px;height:309px}
+  .cn-cd>*{position:absolute}
+  .cn-cd>.bg{left:7px;top:7px;width:264px;height:295px;border-radius:28px;
+    background:linear-gradient(180deg,#5CBDEA 0,#5383B4 55%,#4665A5 100%)}
+  .cn-cd>.hd{left:7px;top:7px;width:264px;height:60px;border-radius:28px 28px 0 0;
+    background:var(--hd,#48B6E7);overflow:hidden}
+  .cn-cd>.hd::before{content:'';position:absolute;left:0;right:0;top:0;height:4px;
+    background:var(--hr,#8CF4FF)}
+  .cn-cd>.hd>i{position:absolute;left:2px;right:2px;top:14px;text-align:center;color:#fff;
+    font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
+  .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
+    text-align:center;overflow:hidden}
+  .cn-cd>.pn>em{font-size:112px;line-height:157px}
+  .cn-cd>.qt{left:167px;top:172px;height:30px;color:#fff;font-size:44px;line-height:30px;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
+    transform:scaleX(var(--qx,1.3));transform-origin:0 50%}
+  /* [받기] 버튼 — dx17 dy214 245x80 r28, 밴드 검정5 → 림4 → face55 → 림5 → 립5 */
+  .cn-cd>.bt{left:17px;top:214px;width:245px;height:80px;border-radius:28px;border:5px solid #000;
+    cursor:pointer;background:linear-gradient(180deg,#6BDCEA 0,#51E7F8 4px,#3FD5ED 4px,
+      #19AFD0 59px,#53E6FA 59px,#53E6FA 64px,#1EB3D1 64px,#14809D 69px)}
+  .cn-cd>.bt>u{position:absolute;left:71px;width:165px;text-align:center;color:#fff;
+    white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cn-cd>.bt>.lab{top:5px;font-size:27px;line-height:28px;transform:scaleX(.99)}
+  .cn-cd>.bt>.cnt{top:35px;font-size:22.5px;line-height:26px;transform:scaleX(1.3)}
+  /* ▶AD 뱃지 — dx31 dy228 61x47 r9 (버튼 기준 dx14 dy14) */
+  .cn-cd>.bt>.ad{position:absolute;left:9px;top:9px;width:61px;height:47px;border-radius:9px;
+    border:4px solid #000;background:linear-gradient(180deg,#FED152 0,#FDB128 60%,#F1AA1E 100%)}
+  .cn-cd>.bt>.ad>s{position:absolute;left:6px;top:4px;width:42px;height:30px;border-radius:4px;
+    background:linear-gradient(180deg,#863C00 0,#BC5417 50%,#9F4E00 100%)}
+  .cn-cd>.bt>.ad>s::after{content:'';position:absolute;left:14px;top:1px;width:0;height:0;
+    border-left:16px solid #FFFCDB;border-top:14px solid transparent;border-bottom:14px solid transparent}
+  .cn-cd>.bt>.ad>b{position:absolute;left:38px;top:30px;font-size:18.6px;line-height:19px;
+    color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 구매 완료 — 카드 전면 rgba(0,0,0,.335) + 중앙 띠(추가 .67) + 순백 글자 */
+  .cn-cd>.blk{left:7px;top:226px;width:264px;height:74px;background:#1C8D5E}
+  .cn-cd>.dim{left:7px;top:7px;width:264px;height:295px;border-radius:28px;background:rgba(0,0,0,.335)}
+  .cn-cd>.dn{left:7px;top:119px;width:264px;height:70px;background:rgba(0,0,0,.67)}
+  .cn-cd>.dn>i{position:absolute;left:0;right:0;top:19px;text-align:center;color:#fff;
+    font-size:31.2px;line-height:33px}
+  .cn-cd>.fr{left:0;top:0;width:278px;height:309px;border:7px solid #000;border-radius:35px;
+    pointer-events:none}
+
+  /* §6 `평생 광고 제거` 배너 — x66 local 1374 948x249, r20, 검정5 + 림7, 단색 #43BCF5 */
+  .cn-a2{left:66px;top:1374px;width:948px;height:249px;border-radius:20px;border:5px solid #000;
+    background:
+      repeating-linear-gradient(45deg,rgba(58,167,232,.85) 0 34px,rgba(67,188,245,0) 34px 68px),
+      linear-gradient(160deg,rgba(81,204,248,.55) 0 22%,rgba(67,188,245,0) 60%),#43BCF5;
+    box-shadow:inset 0 0 0 7px #6AE8FF;overflow:hidden}
+  .cn-a2>em{position:absolute;left:60px;top:32px;font-size:150px;line-height:170px}
+  .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
+    opacity:.92}
+  .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
+  .cn-a2t{left:561px;top:1402px;width:420px;height:80px;text-align:center}
+  .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:59px;line-height:70px;
+    transform:scaleX(.985)}
+  .cn-a2t>s{color:#000;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+  .cn-a2t>i{background:linear-gradient(180deg,#F8EBB4,#F5CA59);-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .cn-mv{left:695px;top:1489px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
+    cursor:pointer;background:linear-gradient(180deg,#ABFF85 0,#ABFF85 6px,#78F34A 6px,
+      #76D924 89px,#ADFF81 89px,#ADFF81 96px,#75DB54 96px,#3EBC2A 103px)}
+  .cn-mv>i{position:absolute;left:0;right:0;top:21px;text-align:center;color:#fff;font-size:49.5px;
+    line-height:52px;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.882)}
+  /* §8 활성 알약이 «재화»(4번째 칸)에 올 때의 규격 — 측정표 13 §8 실측(검정 포함 264x76, 바 우측 7px 돌출,
+     세로 중심이 바 중심 2065 와 일치). 1번째 칸(소환)은 10 의 값을 그대로 둔다. */
+  #shopCats .shp-ct:nth-child(4) .shp-cat-pill{left:-6px;top:9px;width:264px;height:76px}
+  #shopCats .shp-cs.s3{z-index:3}
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
@@ -3222,6 +3343,7 @@ function dailyCheck(){
     S.daily.spins = ROUL_FREE;
     DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
+    S.daily.adBuy = {};                 /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
     uiDirty = true;
   }
 }
@@ -5358,9 +5480,10 @@ let shopCat = 'summon';
 function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
 function renderShopPage(){
   const list = $('shopList');
+  list.classList.toggle('coin', shopCat === 'coin');
+  if(shopCat === 'coin'){ renderCoinPage(list); return; }
   if(shopCat !== 'summon'){
-    list.innerHTML = '<div class="shp-soon">' + (shopCat === 'coin' ? '재화 상점은 «상점» 탭에서 이용할 수 있습니다.'
-      : '준비 중입니다.') + '</div>';
+    list.innerHTML = '<div class="shp-soon">준비 중입니다.</div>';
     return;
   }
   let h = '';
@@ -5426,13 +5549,12 @@ $('shopCats').addEventListener('click', e => {
   const c = e.target.closest('[data-cat]');
   if(!c) return;
   const cat = c.dataset.cat;
-  if(cat === 'coin'){                 /* 재화 = 기존 다이아·아바타 상점(패널)으로 연결 — 기능 보존 */
-    closeShopPage();
-    goTab('shop', true);              /* forceOpen 으로 패널 상점을 연다(페이지 재진입 방지) */
-    return;
-  }
   shopCat = cat;
   document.querySelectorAll('#shopCats .shp-ct').forEach(x => x.classList.toggle('on', x.dataset.cat === cat));
+  /* 활성 알약은 활성 탭 칸 안에 산다(칸 기준 left:-8px = 칸 중앙). 탭이 바뀌면 노드째 옮긴다 —
+     13 에서 «재화»(4번째 칸)가 활성이 되면서 필요해졌다. 측정표 13 §8: 알약이 바 우측으로 7px 돌출. */
+  const pill = document.querySelector('#shopCats .shp-cat-pill');
+  if(pill && pill.parentNode !== c) c.insertBefore(pill, c.firstChild);
   renderShopPage();
   $('shopList').scrollTop = 0;
 });
@@ -5526,6 +5648,88 @@ $('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
   document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
   if(panelOpen){ panelOpen = false; syncPanel(); }
   openRelicPage();
+});
+/* ---- 13 상점 팝업 — 재화 탭 — 측정표 docs/measure/13-상점팝업재화탭.md ----
+   레퍼런스의 «광고 상품» 6칸을 그대로 옮기되, 보상은 이 게임에 있는 재화(골드·다이아·유물석)와
+   무료 소환으로 매핑한다. 전부 **하루 n회 제한**이라 밸런스 영향은 룰렛·출석과 같은 급이다.
+   횟수는 S.daily.adBuy 에 쌓고, 없는 키는 cap 으로 폴백해 **세이브 마이그레이션 없이** 돌아간다.
+   fs/sx/qx 는 «레퍼런스 잉크 폭·높이» 에 맞춘 칸별 보정값이다(측정표 §5-3). 이 서체는 레퍼런스의
+   좁고 높은 게임 서체와 폭이 달라 한글은 줄이고 숫자는 늘려야 한다(PROGRESS «폭은 scaleX» 교훈). */
+const COIN_ADS = [
+  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:33.3, sx:.92,  qx:1.48 },
+  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:35.5, sx:.836, qx:1.17 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:34.4, sx:.966, qx:.93 },
+  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:30.1, sx:1.01, qx:1.03 },
+  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:35.5, sx:.945, qx:1.16 },
+  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🐾', cap:1, r:{ freePet:1 },   fs:32.3, sx:1,    qx:.93 }
+];
+const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
+/* 일일 초기화까지 남은 시간 — 레퍼런스의 «⏱ 초기화: 5H 12M» 자리 */
+function coinResetTxt(){
+  const d = new Date(), e = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  const m = Math.max(0, Math.round((e - d) / 60000));
+  return Math.floor(m / 60) + 'H ' + String(m % 60).padStart(2, '0') + 'M';
+}
+function renderCoinPage(list){
+  let h = '<div class="cn-wrap">'
+    /* §1 배너 아트 + §2 타이틀 */
+    + '<div class="cn-bn"><div class="ray"></div><div class="art">🎁</div>'
+    +   '<div class="gem" style="left:96px;top:236px">💎</div>'
+    +   '<div class="gem" style="left:606px;top:250px;font-size:92px">💎</div>'
+    +   '<div class="gem" style="left:820px;top:196px;font-size:64px">💎</div></div>'
+    + '<div class="cn-ti"><i>재화 상점</i></div>'
+    /* §3-1 `상품` 밴드 */
+    + '<div class="cn-hl" style="top:356px"></div>'
+    + '<div class="cn-hd"><i>상품</i></div>'
+    + '<div class="cn-hl" style="top:449px"></div>'
+    /* §4 초기화 알약(리본보다 아래 z) + §3-2 광고 상품 리본 */
+    + '<div class="cn-rs"><em>⏱</em><i class="t1">초기화:</i><i class="t2">' + coinResetTxt() + '</i></div>'
+    + '<div class="cn-rb" style="top:503px;--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>광고 상품</i></div>';
+  /* §5 상품 카드 3x2 — 열 x111/401/691, 행 local 689/1008 */
+  COIN_ADS.forEach((a, i) => {
+    const x = [111, 401, 691][i % 3], y = i < 3 ? 689 : 1008, left = adLeft(a), done = left <= 0;
+    h += '<div class="cn-cd" style="left:' + x + 'px;top:' + y + 'px;--fs:' + a.fs + 'px;--sx:'
+      + a.sx + ';--qx:' + a.qx + (done ? ';--hd:#68C338;--hr:#7FD955' : '') + '">'
+      +  '<div class="bg"></div><div class="hd"><i>' + a.n + '</i></div>'
+      +  '<div class="pn"><em>' + a.ic + '</em></div>'
+      +  '<div class="qt">' + a.q + '</div>'
+      +  (done
+          ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>구매 완료</i></div>'
+          : '<div class="bt" data-cnad="' + a.id + '"><div class="ad"><s></s><b>AD</b></div>'
+            + '<u class="lab">받기</u><u class="cnt">(' + left + '/' + a.cap + ')</u></div>')
+      +  '<div class="fr"></div></div>';
+  });
+  /* §6 평생 광고 제거 배너 — [이동] 은 기존 다이아·아바타·유물석 교환 상점(패널)으로 보낸다 */
+  h += '<div class="cn-a2"><em>🎬</em><div class="no">🚫</div></div>'
+    + '<div class="cn-nt" style="top:1417px"></div><div class="cn-nt" style="top:1480px"></div>'
+    + '<div class="cn-nt" style="top:1543px"></div>'
+    + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
+    + '<div class="cn-mv" id="cnMove"><i>이동</i></div>'
+    /* §7 마일리지 상품 리본 (레퍼런스도 여기서 화면이 끝난다) */
+    + '<div class="cn-rb" style="top:1698px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>마일리지 상품</i></div>'
+    + '</div>';
+  list.innerHTML = h;
+}
+$('shopList').addEventListener('click', e => {
+  if(e.target.closest('#cnMove')){       /* 기존 다이아 패키지·아바타·유물석 교환소 보존 진입점 */
+    closeShopPage(); goTab('shop', true); return;
+  }
+  const b = e.target.closest('[data-cnad]');
+  if(!b) return;
+  const a = COIN_ADS.find(x => x.id === b.dataset.cnad);
+  if(!a || adLeft(a) <= 0) return;
+  if(!S.daily.adBuy) S.daily.adBuy = {};
+  S.daily.adBuy[a.id] = adLeft(a) - 1;
+  let got = '';
+  if(a.r.dia){ S.dia += a.r.dia; got = '💎 ' + fmt(a.r.dia); }
+  if(a.r.rel){ S.relic += a.r.rel; got = '🔮 ' + fmt(a.r.rel); }
+  if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = '🪙 ' + fmt(g); }
+  if(a.r.freePet){ doSummonFree('pet', a.r.freePet); got = '🐾 펫 소환 ' + a.r.freePet + '회'; }
+  uiDirty = true; save();
+  renderCoinPage($('shopList'));
+  if(got && !a.r.freePet) popup('🎁 ' + a.n + ' 수령', '<p>' + got + ' 을(를) 받았습니다.</p>');
 });
 
 /* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
