@@ -1031,7 +1031,7 @@
   .wm-head{left:0;right:0;top:2px;height:92px;border-radius:35px 35px 0 0;
     background:linear-gradient(180deg,#5B4643 0 5px,#533F3E 5px);
     text-align:center;line-height:92px}
-  .wm-head>i{font-size:40px;color:#fff;letter-spacing:1.5px;text-indent:1.5px;
+  .wm-head>i{position:relative;top:-3px;font-size:40px;color:#fff;letter-spacing:1.5px;text-indent:1.5px;
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
 
   /* 본문 — ref x111~968 / y579~1925 → 박스기준 left 13, top 94, 858x1347 */
@@ -1061,12 +1061,12 @@
   .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#82829A;
     border:6px solid #000;box-sizing:border-box;overflow:hidden}
   .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
-  .wm-bar>i{position:absolute;left:0;right:0;top:8px;height:34px;line-height:34px;
+  .wm-bar>i{position:absolute;left:0;right:0;top:1px;height:34px;line-height:34px;
     text-align:center;font-size:26px;color:#FCFEB3;text-indent:60px}
   /* 4-4 Lv 알약 ref(355,723) 139x70 — 진행바 위에 얹힌다 */
   .wm-lv{left:237px;top:112px;width:139px;height:70px;border-radius:35px;background:#543D2F;
     border:5px solid #000;box-sizing:border-box;text-align:center;line-height:60px;
-    font-size:44px;color:#fff;z-index:2}
+    font-size:35px;color:#fff;z-index:2}
 
   /* 4-6 보유/장착 효과 2열 표 ref(166,843) 748x150 — 헤더 59 + 본문 91 */
   .wm-tb{left:48px;top:232px;width:748px;height:150px}
@@ -1094,7 +1094,7 @@
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:9px;height:100px;line-height:100px;text-align:center;font-size:66px}
   /* Lv.n 은 «우상단» 정렬이다 (좌상단 아님) — 우여백 15 / 상여백 19 */
-  .wgc .lv{right:11px;top:15px;height:26px;line-height:26px;font-size:26px;color:#fff;
+  .wgc .lv{right:11px;top:11px;height:29px;line-height:29px;font-size:29px;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
   .wgc .pb{left:0;right:0;bottom:0;height:35px;background:#82829A;border-top:5px solid #000;
@@ -1128,10 +1128,11 @@
     background:linear-gradient(180deg,#D3D3D3 0 8px,#A4A4A4 8px,
       #A4A4A4 calc(100% - 24px),#D3D3D3 calc(100% - 24px),
       #D3D3D3 calc(100% - 7px),#757575 calc(100% - 7px))}
-  .wm-btn>i{font-size:41px;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
+  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:5px #000;paint-order:stroke fill}
   .wm-b1{left:137px;color:#AAEFFF}
   .wm-b2{left:447px;color:#DFDFDF}
-  .wm-btn.off{filter:saturate(.2) brightness(.86)}
+  .wm-btn.off{cursor:default}
 
   /* 6 좌우 페이지 화살표 — **모달 박스 바깥**. ref x14~76 / 1003~1065, y1152~1267 */
   /* .wm 이 border-box 라 자식 left/top 은 테두리 7px 안쪽부터 잰다 → ref 값에서 7 을 뺀다 */
