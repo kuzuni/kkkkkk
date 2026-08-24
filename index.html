@@ -1131,6 +1131,50 @@
   .ofr-tag i{transform:scaleX(1.035)}
 
   /* ==========================================================================
+     41 팝업 내장 재화 바 (.pcb) — 03 던전(#dunw) · 14 보물상자(#relicw) 공용
+     측정표 docs/measure/41-팝업내장재화바.md
+     «상단 골드·다이아는 메인 HUD(A3) 재사용이 아니라 팝업 자체에 포함된 재화 바»
+     (UI-REFERENCE 3·14번 «설계 확정(2026-08-25, 작업 41)»). 메인 HUD 와 형태가 다르다 —
+     프로필 플레이트가 없고, 본체가 하드 2단 톤이며, 알약이 254x49(HUD 는 211x48)다.
+     03 과 14 의 바는 ref 픽셀 동일이라 컴포넌트 1개를 두 페이지가 같이 쓴다.
+     페이지가 top:104 이므로 바는 page-local top:-104 로 올려 **프레임 0~107** 을 덮는다
+     (ref 87~191). 아래 4px 은 페이지 상단을 덮는 검정 테두리다.
+     ========================================================================== */
+  .pcb{position:absolute;left:0;right:0;top:-104px;height:108px;z-index:40;
+    -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;
+    background:linear-gradient(180deg,
+      rgb(28,23,20) 0,rgb(23,22,20) 3px,rgb(4,0,0) 4px,#000 6px,rgb(29,24,18) 8px,
+      rgb(55,46,37) 9px,rgb(66,54,42) 12px,#42362A 59px,
+      rgb(61,48,39) 60px,rgb(57,45,33) 62px,#3A2E22 63px,#3A2E22 99px,
+      rgb(52,42,32) 100px,rgb(40,31,24) 101px,rgb(14,10,7) 102px,#000 103px,
+      #000 106px,rgb(8,7,5) 107px,rgb(8,7,5) 108px)}
+  /* 알약 254x49 r24.5 — 좌단 503/803(아이콘이 좌측 캡을 덮어 역산), 상단 ref115 → 로컬 31 */
+  .pcb-p{position:absolute;top:31px;width:254px;height:49px;border-radius:24.5px;
+    background:linear-gradient(180deg,#231A13 0,#231A13 33px,#1F1810 35px,#1D160E 36px,
+      #1D160E 49px);
+    display:flex;align-items:center;justify-content:center;padding-left:53px;
+    padding-right:12px;box-sizing:border-box}
+  .pcb-g{left:503px}
+  .pcb-d{left:803px}
+  /* 아이콘 57x57 — 중심이 알약 좌측 캡 원 중심(좌단+24.5)이라 알약 위·아래로 4px 씩 나온다.
+     레퍼런스 아이콘은 검정 아웃라인 2~3px 을 포함한 실루엣이므로 blur 0 인 8방향 그림자로
+     «경화된» 링을 만든다(.cbox i 와 같은 처방 — A3 비고). */
+  .pcb-p>i{position:absolute;left:-4px;top:-4px;width:57px;height:57px;z-index:2;
+    align-items:center;justify-content:center;font-style:normal;line-height:1;
+    text-shadow:2.2px 0 0 #000,-2.2px 0 0 #000,0 2.2px 0 #000,0 -2.2px 0 #000,
+      1.6px 1.6px 0 #000,-1.6px 1.6px 0 #000,1.6px -1.6px 0 #000,-1.6px -1.6px 0 #000}
+  /* #dunw i / #relicw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
+  #dunw .pcb-p>i,#relicw .pcb-p>i{display:flex}
+  .pcb-g>i{font-size:51px;transform:scaleX(1.04)}
+  .pcb-d>i{font-size:60px;transform:scaleX(.86)}
+  /* 숫자 — 잉크 h23, 28 교훈 1(숫자 잉크비 0.69) → fs 33.3. 폭은 scaleX 로 회수.
+     translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
+  .pcb-p>b{font-size:33.3px;font-weight:900;color:#fff;white-space:nowrap;line-height:1;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;
+    transform:translate3d(0,0,0) scaleX(1.135);transform-origin:50% 50%;
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+  /* ==========================================================================
      03 던전 팝업 — 측정표 docs/measure/03-던전팝업.md
      레퍼런스는 모달이 아니라 HUD 와 탭바 사이를 꽉 채우는 **불투명 리스트 페이지**다
      (딤 없음 · 패널 테두리 없음 · 타이틀바 없음, 배경 #26211B 단색).
@@ -1407,13 +1451,15 @@
      껍데기는 «(다) 전체화면 페이지» — 03 던전(#dunw)·10 상점(#shopw)과 동종.
      상단 클러스터는 local y = ref y − 191, 하단 5칸·서브탭은 오버레이 하단 고정. -->
      ========================================================================== */
+  /* overflow 는 #relicw 가 아니라 #relicBody 가 맡는다 — 41 재화 바가 page-local top:-104 라
+     여기서 hidden 을 걸면 바가 통째로 잘린다. 클립 박스는 inset:0 으로 동일하다. */
   #relicw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#27272F;
-    display:none;z-index:28;overflow:hidden}
+    display:none;z-index:28;overflow:visible}
   #relicw.on{display:block}
   #relicw i,#relicw em,#relicw b,#relicw u,#relicw s{display:inline-block;font-style:normal;
     font-weight:900;text-decoration:none;transform-origin:50% 50%}
   #relicw>*{position:absolute}
-  #relicBody{position:absolute;inset:0}
+  #relicBody{position:absolute;inset:0;overflow:hidden}
   #relicBody>*{position:absolute}
   /* 배경 유령 슬라임 무늬(흐릿) */
   #relicw::before{content:'';position:absolute;left:0;right:0;top:200px;bottom:0;
@@ -3989,6 +4035,11 @@
   <!-- 03 던전 팝업. 레퍼런스는 모달이 아니라 HUD~탭바 사이를 채우는 리스트 페이지라
        공용 #modal 껍데기를 쓰지 않는다. 측정표 docs/measure/03-던전팝업.md -->
   <div id="dunw">
+    <!-- 41 팝업 내장 재화 바 (메인 HUD 재사용 아님) -->
+    <div class="pcb">
+      <div class="pcb-p pcb-g"><i>🪙</i><b>0</b></div>
+      <div class="pcb-p pcb-d"><i>💎</i><b>0</b></div>
+    </div>
     <div class="dns-list" id="dunList"></div>
     <div class="dns-sub">
       <div class="dns-t lk" id="dunSubLock"><em>🔒</em></div>
@@ -4011,6 +4062,11 @@
   </div>
   <!-- 14 유물 팝업 — 보물상자 탭. (다) 전체화면 페이지. 측정표 docs/measure/14-유물팝업보물상자탭.md -->
   <div id="relicw">
+    <!-- 41 팝업 내장 재화 바 (메인 HUD 재사용 아님) -->
+    <div class="pcb">
+      <div class="pcb-p pcb-g"><i>🪙</i><b>0</b></div>
+      <div class="pcb-p pcb-d"><i>💎</i><b>0</b></div>
+    </div>
     <div class="rlx-strip"></div>
     <div id="relicBody"></div>
     <div class="rlx-sub">
@@ -6034,6 +6090,21 @@ function drawBossHud(){
   $('bossHpN').textContent = fmt(hp);
 }
 const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
+/* 41 — 03·14 팝업 내장 재화 바 갱신. 바는 페이지마다 하나씩(=2개) 있으므로 id 가 아니라
+   클래스로 전부 돌린다. drawHud() 가 매 프레임 부르므로 값이 같으면 DOM 을 건드리지 않는다. */
+let pcbGold = null, pcbDia = null;
+function renderPcb(){
+  const g = fmt(S.gold), d = fmt(S.dia);
+  if(g !== pcbGold){
+    pcbGold = g;
+    document.querySelectorAll('.pcb-g>b').forEach(e => { e.textContent = g; });
+  }
+  if(d !== pcbDia){
+    pcbDia = d;
+    document.querySelectorAll('.pcb-d>b').forEach(e => { e.textContent = d; });
+  }
+}
+
 function drawHud(){
   const maxHp = stat.maxHp;
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
@@ -6045,6 +6116,8 @@ function drawHud(){
   $('diaN').textContent = fmt(S.dia);
   /* 33 — 정보 팝업이 열려 있으면 보유량 표시도 같이 갱신한다(열린 채로 값이 굳지 않게) */
   if(curInfoKey) renderCurInfo();
+  /* 41 — 03·14 팝업 내장 재화 바도 같이 갱신 */
+  renderPcb();
   /* 레퍼런스 헤더는 «STAGE 37» 한 줄뿐이다 — 챕터 표기·최고기록은 프로필 모달에서 본다 */
   /* 레퍼런스 39·40 의 보스 스테이지 헤더도 «STAGE n» 한 줄뿐이다 — «BOSS» 접미어는 없다(28) */
   $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>';
