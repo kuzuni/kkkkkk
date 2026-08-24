@@ -132,7 +132,12 @@ function launchOpts(){
         else if (o.hero) {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
-          await page.click(o.hero, { timeout: 3000, force: true });
+          /* `renderEqPage()` 는 dirty 프레임마다 `#eqCards.innerHTML` 을 통째로 갈아끼운다.
+             page.click 은 셀렉터를 한 번 resolve 한 뒤 클릭하므로 그 사이에 노드가 detach 되면
+             «Element is not visible» 로 죽는다(자동 플레이 중이라 재렌더가 잦다).
+             페이지 안에서 resolve+click 을 한 번에 해 레이스를 없앤다 — 위임 핸들러는 그대로 탄다. */
+          const hit = await page.$eval(o.hero, (el) => { el.click(); return true; }).catch(() => false);
+          if (!hit) await page.click(o.hero, { timeout: 3000, force: true });
         } else {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
           await page.waitForTimeout(200);
