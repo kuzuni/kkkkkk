@@ -1104,6 +1104,9 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
 | 파일 | 역할 |
 |---|---|
 | `docs/PROGRESS.md` | **단일 진실 공급원.** 단계·화면별 상태·점수·루프 횟수·미결 사항 |
+| `docs/PROGRESS-DONE.md` | 완료 행의 전문 아카이브 (PROGRESS 에는 한 줄 요약만) |
+| `docs/LESSONS.md` | 세션들이 남긴 교훈 모음 — 화면 잡기 전 1회 읽기 |
+| `tools/smoke.js` | push 전 필수 스모크 게이트 (`node tools/smoke.js` → SMOKE PASS) |
 | `docs/UI-REFERENCE.md` 24번 | 구현 체크리스트 `[ ] / [x]` |
 | `docs/measure/NN-이름.md` | 화면별 **측정표** (재측정 방지) |
 | `docs/review-log.md` | 비평가 점수와 지적사항 이력 |
