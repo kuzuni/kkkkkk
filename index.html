@@ -4071,7 +4071,9 @@
       <div class="ibtn" data-pop="roul"  style="--sf:.891;--sx:1.126;--dx:1.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="mail"  style="--sf:.884;--sx:1.184;--dx:1px"><span class="si">📬</span><span class="sl">우편</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="quest" style="--sf:.959;--sx:1.066;--dx:.5px;--dy:-2px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
-      <div class="ibtn" data-pop="dun"   style="--sf:.919;--sx:.912;--dy:-5px"><span class="si">🏰</span><span class="sl">던전</span><span class="bdg"></span></div>
+      <!-- 작업 48(2026-08-25, 저장소 주인 지시): 5행 «던전»(🏰) 삭제 — 하단 «던전» 탭(작업 24)과 중복이다.
+           openDungeon() 진입은 탭으로만. 승급전이 5행으로 올라오고 6행은 빈다.
+           행 그리드(pitch·gap·--itop)는 A2 측정 규격 그대로 두려고 SIDE.N 은 5 로 유지한다(아래 SIDE 주석). -->
       <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 레퍼런스 6행 폭 107 을 맞추려면 scaleX 2.04 가
            필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
       <div class="ibtn" data-pop="promo" style="--sf:.956;--sx:1.220;--dx:1px;--dy:3px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
@@ -4533,6 +4535,9 @@ function resizeCanvas(){
    ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
    **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
      레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
+/* N 은 «라벨 달린 행 칸» 수다. 작업 48 로 던전 아이콘을 빼서 실제 아이콘은 4개지만,
+   행 그리드(pitch·gap·--itop)를 A2 측정 규격 그대로 두어야 하므로 N 은 5 로 유지한다.
+   (N 을 4 로 줄이면 짧은 화면비에서 아이콘이 커지며 남은 행이 전부 위로 밀린다 — 6행은 «빈 칸»이다) */
 const SIDE = { ART:82, LABEL:32, GAP:20, TOP:72, N:5, PAD:8, LMIN:22, CLEAR:34,
                SOLO:101, SGAP:60 };
 /* 상단 HUD 가 캔버스 위로 내려와 걸치는 깊이 (프로필 카드 테두리 등). 스택은 그 아래로 피해야 한다. */
@@ -6380,7 +6385,7 @@ function drawHud(){
   sideAlert('roul',   S.daily.spins > 0);
   sideAlert('mail',   mailLeft() > 0);
   sideAlert('quest',  QUESTS.some(questReady) || DQUESTS.some(dqReady));
-  sideAlert('dun',    DUNGEONS.some(d => S.daily.dun[d.id] > 0));
+  /* 작업 48 — 던전 사이드 아이콘 제거로 'dun' 레드닷 대상이 없어졌다(탭바 뱃지로 대체). */
   sideAlert('promo',  canPromote());
   drawFac();
 }
@@ -9251,7 +9256,7 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     else if(k === 'roul') openRoulette();
     else if(k === 'mail') openMail();
     else if(k === 'quest') openQuest();
-    else if(k === 'dun') $('dunw').classList.contains('on') ? closeDungeon() : openDungeon();
+    /* 작업 48 — 좌측 «던전» 아이콘을 없앴다(하단 탭과 중복). 던전 진입은 setTab('dun') 하나뿐이다. */
     else if(k === 'promo') openPromo();
   };
 });
