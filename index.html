@@ -2306,15 +2306,17 @@
   /* ==========================================================================
      19 프로필 팝업 — 측정표 docs/measure/19-프로필팝업.md
      껍데기 = (가) 전면 딤 + 중앙 다이얼로그. 딤은 순검정이 아니라 짙은 남색(잔존율 R9/G25/B34).
-     패널 border-box ref (92,515) 896×1396 → 프레임 top 305 (전 요소 y_impl = y_ref − 210).
-     자식 좌표는 전부 «패널 local = ref − (92,515)». 테두리는 배경 레이어로 깔아
-     자식 좌표가 밀리지 않게 한다(03 함정).
+     패널 border-box ref (92,515) 896×1396 → **프레임 top 431**.
+     **작업 63(2026-08-25)**: 옛 값 305 는 폐기된 «y_ref − 210»(1920 프레임)이라 2280 프레임에서
+     126px 위로 떴다. 지시서 [2] 의 단일 변환 «frame y = ref y − 84» 로 재배치했다(515 − 84 = 431).
+     자식 좌표는 전부 «패널 local = ref − (92,515)» 이므로 .pf 의 top 한 곳만 바꾸면 화면 전체가 따라온다.
+     테두리는 배경 레이어로 깔아 자식 좌표가 밀리지 않게 한다(03 함정).
      ========================================================================== */
   #pfw{position:absolute;inset:0;background:rgba(0,20,50,.85);display:none;z-index:33}
   #pfw.on{display:block}
   #pfw i,#pfw em,#pfw b,#pfw s{display:inline-block;font-style:normal;text-decoration:none;
     font-weight:900}
-  .pf{position:absolute;left:92px;top:305px;width:896px;height:1396px;background:#000;
+  .pf{position:absolute;left:92px;top:431px;width:896px;height:1396px;background:#000;
     border-radius:45px}
   /* 갈색 링 11px = 밝은 (86,68,58) 7 + 어두운 (71,57,46) 4 */
   .pf-ring{position:absolute;inset:7px;border-radius:39px;
@@ -3329,7 +3331,8 @@
      껍데기가 **없다**. A5 의 3분류(가 다이얼로그 / 나 바닥시트 / 다 전체화면) 어디에도 없는
      «껍데기 없음» 4번째 유형이라 .mbox·헤더바·검정/갈색 프레임·베이지 본문을 하나도 쓰지 않는다.
      딤 rgba(0,0,0,.80) 1장 위에 ① 주황 리본 ② 초록 카드 3칸 ③ 카드별 «4 ➡ 5» ④ 하단 «터치하여 닫기».
-     세로: 리본+카드+레벨텍스트는 **화면 세로 중앙 정렬 그룹**(ref 그룹중심 1162 → 프레임중심),
+     세로: 리본+카드+레벨텍스트는 **ref−84 절대 배치 그룹**(ref y1012~1312 → 프레임 top 928.
+           작업 63 에서 «프레임 세로 중앙 정렬» 을 폐기했다 — 2280 프레임에서 62px 아래로 내려갔다),
            «터치하여 닫기» 만 **탭바 상단 기준**(ref 잉크하단 2164, 탭바상단 2160 → bottom −4).
      가로: 전부 1:1. 모든 요소 중심 x = 540.
      ========================================================================== */
@@ -3338,8 +3341,11 @@
   #upw.on{display:block}
   #upw i,#upw b,#upw em{display:inline-block;font-style:normal;transform-origin:50% 50%}
 
-  /* 중앙 그룹 — ref y1012~1312 (h 300). 중심을 프레임 중심에 맞춘다 */
-  .upr-grp{position:absolute;left:0;right:0;top:50%;height:300px;margin-top:-150px}
+  /* 그룹 — ref y1012~1312 (h 300).
+     작업 63(2026-08-25): 기준 프레임이 9:19(1080×2280) 로 바뀌면서 «프레임 세로 중앙» 은
+     더 이상 ref 와 같은 자리가 아니다(중앙 정렬이면 top 990, ref−84 는 928 → 62px 아래).
+     지시서 [2] 의 단일 변환 «frame y = ref y − 84» 로 절대 배치한다 — 17(#statw)이 쓰는 방식과 같다. */
+  .upr-grp{position:absolute;left:0;right:0;top:928px;height:300px}
   .upr-grp>*{position:absolute}
 
   /* ── 리본 몸통 — ref x277–803(w527) y1012–1112(h101), 검정 6px, radius 15.5 ──
@@ -3428,12 +3434,12 @@
      09 와 달리 **불투명 전폭 패널이 하나 있다**(x=0~1079 를 그대로 물고 좌우 테두리·radius 0).
      딤은 09 와 같은 rgba(0,0,0,.80) — 결과 연출 계열이 공통으로 깊다(실측 k=0.1979 → α=.802).
 
-     세로 좌표계 — PROGRESS «확정(03)» 의 2종 변환을 그대로 쓴다:
-       · 화면 위쪽 기준(리본·패널·그리드)  →  frame_y = ref_y − 84
-       · 탭바 위 고정(버튼 3개·터치하여 닫기) →  frame_y = ref_y − 419
-     ref 는 패널 하단(1331)~버튼 상단(1766) 이 435px 인데 우리 프레임에서는 100px 이 된다.
-     **420px 차이가 여기(패널↔버튼 사이 빈 딤 구간)에서 흡수된다** — 두 앵커를 모두 참으로
-     유지하는 유일한 배치다. 가로는 전부 1:1, 모든 요소 중심 x = 540.
+     세로 좌표계 — **작업 63(2026-08-25) 이후 변환은 하나뿐이다: frame_y = ref_y − 84.**
+       · 리본·패널·그리드·버튼 3개 → 전부 ref_y − 84 절대 배치
+       · «터치하여 닫기» 만 **탭바 상단 기준**(09 .upr-close 와 같은 규칙) — 탭바는 bottom:0 고정이라
+         프레임 높이와 무관하게 자리가 유지된다.
+     옛 «탭바 위 고정 = ref_y − 419» 는 1920(9:16) 프레임 전용 값이라 폐기했다.
+     가로는 전부 1:1, 모든 요소 중심 x = 540.
      ========================================================================== */
   #sumw{position:absolute;inset:0;background:rgba(0,0,0,.80);display:none;z-index:37;
     cursor:pointer}
@@ -3555,7 +3561,10 @@
 
   /* ── 하단 재소환 버튼 3개 — 외곽 247x148(ref y1766~1913), pitch 300, 그룹 x117~962 ──
      전부 같은 은색 스타일. 면(235x136)은 padding box 이므로 자식 절대좌표의 기준이 된다. */
-  .sm-btns{position:absolute;left:117px;top:1347px;width:846px;height:148px}
+  /* 작업 63(2026-08-25) — 1347 은 폐기된 «ref y − 419»(1920 프레임) 값이다.
+     2280 프레임에서는 패널 하단(1247)에서 100px 밖에 안 떨어져 ref 의 435px 공백이 사라졌다.
+     단일 변환 «ref y − 84» 로 재배치: 1766 − 84 = 1682 (패널 하단에서 435 ✓). */
+  .sm-btns{position:absolute;left:117px;top:1682px;width:846px;height:148px}
   .sm-b{position:absolute;top:0;width:247px;height:148px;box-sizing:border-box;
     border:6px solid #000;border-radius:34px;padding:0;cursor:pointer;
     background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px 10px,#A4A4A4 10px,
@@ -3679,16 +3688,19 @@
      18 패배 화면 — 측정표 docs/measure/18-패배화면.md
      껍데기 판정: 09·17 과 같은 **(라) 껍데기 없음 · 딤 위 연출**. 딤은 09(.80)와 달리
      **화면 전체 균일 .62**(선형 투과 0.14, 밴드 없음 — HUD·탭바까지 딤 아래).
-     세로 앵커: 카드 그룹(3장, pitch 180)이 **화면 세로 중앙**(ref 중심 1177.5 ≒ 1170+7.5)
-     → 1920 프레임에서 카드 top 705/885/1065. 엠블럼·제목은 그룹 위 스택(제목→카드1 80 ·
-     엠블럼→제목 41). «터치하여 닫기»는 09 .upr-close 재사용(탭바 상단 고정).
+     세로 앵커: **작업 63(2026-08-25) 에서 «화면 세로 중앙» 을 폐기**했다 — 그 값(705/885/1065)은
+     1920(9:16) 프레임 전용이라 2280 프레임에서 ref 보다 126px 위로 떴다.
+     지시서 [2] 의 단일 변환 **frame y = ref y − 84** 로 절대 배치한다:
+       엠블럼 원 ref542 → 458 · 제목 잉크중심 ref813 → 729(상자 top 694) ·
+       카드 outer ref 915/1095/1275 → **831/1011/1191**(pitch 180 · gap 14 그대로).
+     «터치하여 닫기»는 09 .upr-close 재사용(탭바 상단 고정 — 프레임 높이와 무관).
      ========================================================================== */
   #defw{position:absolute;inset:0;display:none;z-index:39;cursor:pointer;background:rgba(0,0,0,.62)}
   #defw.on{display:block}
   #defw i,#defw b{display:inline-block;font-style:normal}
   /* 해골 엠블럼 — 원 221×209(x429), 남색 링 12px #0B4E83 + 시안 밴드(측30·상28·하38 — 하단이
      더 두껍다) #48F6FB + 내부 #0B4B7B. 글로우는 ref 실측 «세기 미미» — 약하게만 */
-  .df-emb{position:absolute;left:429px;top:332px;width:221px;height:209px;box-sizing:border-box;
+  .df-emb{position:absolute;left:429px;top:458px;width:221px;height:209px;box-sizing:border-box;
     border:12px solid #0B4E83;border-radius:50%;
     background:radial-gradient(circle closest-side,#41C9DF 0 82%,#4FFFFA 98%,#4AE2EE 100%)}
   .df-emb::before{content:'';position:absolute;left:30px;right:30px;top:32px;bottom:18px;
@@ -3697,7 +3709,7 @@
   /* 해골은 SVG 작화(잉크 116×107, 눈·코는 내부 남색 관통) — 💀 이모지는 눈이 회색이라 폐기 */
   .df-emb>svg{position:absolute;left:50%;top:50%;transform:translate(-50%,-48%)}
   /* 제목 — 잉크 h45(→48px) 채움 #FAFAFA 균일(그라디언트 없음), 외곽선 실측 4~6(한쪽)→stroke 10 */
-  .df-title{position:absolute;left:0;right:0;top:566px;height:70px;line-height:70px;text-align:center;
+  .df-title{position:absolute;left:0;right:0;top:694px;height:70px;line-height:70px;text-align:center;
     font-size:49px;font-weight:900;color:#FAFAFA;white-space:nowrap;
     -webkit-text-stroke:12px #000;paint-order:stroke fill}
   .df-title i{transform:scaleX(.967);position:relative}
@@ -3707,9 +3719,9 @@
      (청회 몸통+흰 글자) — 스펙 문서의 «첫 카드 강조»의 실체다 */
   .df-card{position:absolute;left:91px;width:898px;height:166px;box-sizing:border-box;
     border:7px solid #000;border-radius:44px;background:#F0D9BA;box-shadow:inset 0 0 0 7px #FFF5DC}
-  .df-card.c1{top:705px;background:#7D86A7;box-shadow:inset 0 0 0 7px #97A0C9}
-  .df-card.c2{top:885px}
-  .df-card.c3{top:1065px}
+  .df-card.c1{top:831px;background:#7D86A7;box-shadow:inset 0 0 0 7px #97A0C9}
+  .df-card.c2{top:1011px}
+  .df-card.c3{top:1191px}
   /* 파인 바닥 패널 697×99 radius21 — ref x126(패딩기준 29) · 세로 중앙 */
   .df-card .pnl{position:absolute;left:27px;top:26px;width:700px;height:99px;border-radius:21px;
     background:#C7AF95}
