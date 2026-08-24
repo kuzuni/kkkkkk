@@ -1471,30 +1471,20 @@
     background:linear-gradient(180deg,#45372C,#372B1F);
     box-shadow:inset 0 0 0 6px rgba(92,79,70,.9)}
   .shp-cats>*{position:absolute;top:0;bottom:0}
-  .shp-ct{width:25%;text-align:center;cursor:pointer;color:#A8A7AC;z-index:2}
-  .shp-ct:nth-child(1){left:0}   .shp-ct:nth-child(2){left:25%}
-  .shp-ct:nth-child(3){left:50%} .shp-ct:nth-child(4){left:75%}
+  /* 45: 탭 2개 균등 — 칸 폭 50%(패딩박스 976 → 488). 바 껍데기 규격(990x107·검정 7·림 6·radius 33)은 그대로. */
+  .shp-ct{width:50%;text-align:center;cursor:pointer;color:#A8A7AC;z-index:2}
+  .shp-ct:nth-child(1){left:0}   .shp-ct:nth-child(2){left:50%}
   .shp-ct>i{position:absolute;left:0;right:0;top:41px;font-size:33px;color:inherit;z-index:2;
     transform:scaleX(.9);letter-spacing:-1px;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   .shp-ct.on{color:#fff}
-  /* ✦ 마름모 구분선 */
-  .shp-cs{position:absolute;top:44px;width:15px;height:20px;background:#989491;z-index:1;
+  /* ✦ 마름모 구분선 — 45: 칸 경계가 하나뿐이라 바 중앙 1개.
+     left 485 는 레퍼런스 4탭 바의 «가운데 ✦» 실측치이고, 그 자리가 곧 2탭의 경계다. */
+  .shp-cs{position:absolute;top:44px;left:485px;width:15px;height:20px;background:#989491;z-index:1;
     clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-  .shp-cs.s1{left:251px} .shp-cs.s3{left:741px}
-  /* 활성 알약(소환) — 양끝 화살촉 노랑 배너 */
-  .shp-cat-pill{position:absolute;left:-8px;top:14px;width:250px;height:79px;z-index:1;
+  /* 활성 알약 — 양끝 화살촉 노랑 배너. 45: 크기(250x79)는 실측 그대로 두고 칸 중앙 정렬 (488−250)/2 = 119 */
+  .shp-cat-pill{position:absolute;left:119px;top:14px;width:250px;height:79px;z-index:1;
     background:linear-gradient(180deg,#FFC736,#F8A63A);border:6px solid #000;box-sizing:border-box;
     clip-path:polygon(0 50%,8% 0,92% 0,100% 50%,92% 100%,8% 100%)}
-  /* NEW 리본 — 탭2·3 경계 위, −20° */
-  .shp-new{position:absolute;left:482px;top:-14px;width:116px;height:40px;z-index:3;
-    transform:rotate(-20deg);background:linear-gradient(180deg,#CF3126,#891C19);
-    border-radius:5px;text-align:center;line-height:40px}
-  .shp-new>i{font-size:24px;color:#F8E759;-webkit-text-stroke:0;transform:scaleX(.9);
-    letter-spacing:1px}
-
-  /* 준비 중 안내(특별·일일/주간 카테고리) */
-  .shp-soon{position:absolute;left:0;right:0;top:42%;text-align:center;color:#9a97a4;
-    font-size:38px;-webkit-text-stroke:0}
 
   /* ==========================================================================
      14 유물 팝업 — 보물상자 탭 — 측정표 docs/measure/14-유물팝업보물상자탭.md
@@ -1810,20 +1800,16 @@
   /* §8 카테고리 탭 바 — 바 자체는 10 소속이라 **재화 탭일 때만** 13 실측치로 덮어쓴다
      (`#shopList.coin ~ #shopCats`). 10 의 소환 탭 모습은 건드리지 않는다. 비평 1회차 A/B 공통 지적:
      바가 27px 아래 · 라벨이 바 중심에서 17.5px 아래 · ✦ 가 13x18(ref 19x19) · NEW 리본은 13 에 없음. */
-  #shopCats .shp-ct:nth-child(4) .shp-cat-pill{left:1px;top:9px;width:256px;height:76px}
-  #shopCats .shp-cs.s2{left:485px;display:none}
+  /* 45: «재화» 는 이제 2번째(마지막) 칸이다. 이 칸에 알약이 있는 상태 = 재화 탭이라 바 테두리가 5px
+     (패딩박스 980 → 칸 490) → 알약 중앙 정렬은 (490−256)/2 = 117 */
+  #shopCats .shp-ct:nth-child(2) .shp-cat-pill{left:117px;top:9px;width:256px;height:76px}
   #shopList.coin ~ #shopCats{bottom:41px}
   #shopList.coin{bottom:154px}
   #shopList.coin ~ #shopCats .shp-ct>i{top:25px;font-size:33.3px}
   #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:29.5px;top:25px;transform:scaleX(1.06)}
-  #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(.98)}
   #shopList.coin ~ #shopCats{border-width:5px;box-shadow:inset 0 0 0 3px rgba(92,79,70,.9)}
-  #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(1.07)}
+  /* 13 실측: 재화 탭에서 ✦ 는 19x19 · top 38. 좌표는 중앙 1개라 base(485)를 그대로 쓴다. */
   #shopList.coin ~ #shopCats .shp-cs{top:38px;width:19px;height:19px}
-  #shopList.coin ~ #shopCats .shp-cs.s1{left:239px}
-  #shopList.coin ~ #shopCats .shp-cs.s2{left:485px;display:block}
-  #shopList.coin ~ #shopCats .shp-cs.s3{left:732px;z-index:3;background:#CFA692}
-  #shopList.coin ~ #shopCats .shp-new{display:none}
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
@@ -4186,15 +4172,12 @@
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
   <div id="shopw">
     <div class="shp-list" id="shopList"></div>
+    <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
+         ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
     <div class="shp-cats" id="shopCats">
       <div class="shp-ct on" data-cat="summon"><div class="shp-cat-pill"></div><i>소환</i></div>
-      <div class="shp-ct" data-cat="special"><i>특별</i></div>
-      <div class="shp-ct" data-cat="daily"><i>일일/주간</i></div>
       <div class="shp-ct" data-cat="coin"><i>재화</i></div>
-      <div class="shp-cs s1"></div>
-      <div class="shp-cs s2"></div>
-      <div class="shp-cs s3"></div>
-      <div class="shp-new"><i>NEW</i></div>
+      <div class="shp-cs"></div>
     </div>
   </div>
   <!-- 14 유물 팝업 — 보물상자 탭. (다) 전체화면 페이지. 측정표 docs/measure/14-유물팝업보물상자탭.md -->
@@ -7734,10 +7717,7 @@ function renderShopPage(){
   const list = $('shopList');
   list.classList.toggle('coin', shopCat === 'coin');
   if(shopCat === 'coin'){ renderCoinPage(list); return; }
-  if(shopCat !== 'summon'){
-    list.innerHTML = '<div class="shp-soon">준비 중입니다.</div>';
-    return;
-  }
+  /* 45: 카테고리는 소환·재화 2개뿐이다(특별·일일/주간 제거) — «준비 중» 분기도 같이 없앴다. */
   let h = '';
   SHOP_BOXES.forEach(x => {
     const s = S.sum[x.b], need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
@@ -7771,6 +7751,11 @@ function openShopPage(){
   if(typeof closeRelicPage === 'function') closeRelicPage();
   shopCat = 'summon';
   document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
+  /* 45: 활성 알약은 «활성 탭 칸 안에» 사는 노드다(클릭 핸들러가 노드째 옮긴다). 재화 탭에서 닫고
+     다시 열면 소환이 활성인데 알약만 재화 칸에 남으므로, 여는 시점에 소환 칸으로 되돌린다. */
+  const pill0 = document.querySelector('#shopCats .shp-cat-pill');
+  const ct0 = document.querySelector('#shopCats .shp-ct[data-cat="summon"]');
+  if(pill0 && ct0 && pill0.parentNode !== ct0) ct0.insertBefore(pill0, ct0.firstChild);
   renderShopPage();
   $('shopw').classList.add('on');
   $('shopList').scrollTop = 0;
