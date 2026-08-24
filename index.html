@@ -1073,28 +1073,30 @@
     box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
     text-align:center;font-size:86px;line-height:135px}
   /* 장착 캐릭터 뱃지 — ref 잉크 x148~214 / y625~695 → 패널기준 (30,14) 67x71 */
-  .wm-cat{left:30px;top:14px;width:67px;height:71px;z-index:3;text-align:center;
-    font-size:62px;line-height:71px}
+  .wm-cat{left:25px;top:4px;width:67px;height:71px;z-index:3;text-align:center;
+    font-size:56px;line-height:71px}
   /* 4-2 이름 알약 ref(337,654) 349x50 */
   .wm-nm{left:219px;top:43px;width:349px;height:50px;border-radius:25px;background:#5F5647;
-    text-align:center;line-height:50px;font-size:30px;color:#fff;overflow:hidden}
+    text-align:center;line-height:50px;font-size:30px;color:#fff;overflow:hidden;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
   .wm-nm>i{transform:scaleX(.89)}                 /* 글자당 폭 +12% → 되돌림 */
   /* 4-3 등급 알약 ref(691,655) 209x49, 검정 4px */
   .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gc);
     border:4px solid #000;box-sizing:border-box;text-align:center;line-height:41px;
-    font-size:24px;color:#fff}
+    font-size:24px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-gd>i{transform:scaleX(.93)}
   /* 4-5 재료 진행바 — 좌측 끝은 Lv 알약이 덮는다. ref 우단 901 → 패널기준 783 */
   .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#82829A;
     border:6px solid #000;box-sizing:border-box;overflow:hidden}
   .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wm-bar>i{position:absolute;left:0;right:0;top:1px;height:34px;line-height:34px;
-    text-align:center;font-size:26px;color:#FCFEB3;text-indent:20px}
+    text-align:center;font-size:26px;color:#FCFEB3;text-indent:20px;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-bar>i>i{transform:scaleX(1.45)}             /* 숫자 잉크 w33 → 48 */
   /* 4-4 Lv 알약 ref(355,723) 139x70 — 진행바 위에 얹힌다 */
   .wm-lv{left:237px;top:112px;width:139px;height:70px;border-radius:35px;background:#543D2F;
     border:5px solid #000;box-sizing:border-box;text-align:center;line-height:60px;
-    font-size:35px;color:#fff;z-index:2}
+    font-size:35px;color:#fff;z-index:2;-webkit-text-stroke:7px #000;paint-order:stroke fill}
 
   /* 4-6 보유/장착 효과 2열 표 ref(166,843) 748x150 — 헤더 59 + 본문 91 */
   .wm-tb{left:48px;top:232px;width:748px;height:150px}
@@ -1107,7 +1109,9 @@
   .wm-tb .h1{left:0;width:372px;padding-left:18px;box-sizing:border-box}
   .wm-tb .h2{left:376px;width:372px;padding-left:8px;box-sizing:border-box}
   .wm-tb .h1>i,.wm-tb .h2>i{transform:scaleX(.87)}
-  .wm-tb .l1,.wm-tb .l2{top:82px;height:36px;line-height:36px;font-size:35px;color:#000}
+  .wm-tb .h1,.wm-tb .h2{-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .wm-tb .l1,.wm-tb .l2{top:82px;height:36px;line-height:36px;font-size:35px;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-tb .l1{left:22px}
   .wm-tb .l2{left:392px}
   /* 좌측 정렬이라 왼쪽 끝을 고정한 채 좁힌다 */
@@ -1135,7 +1139,8 @@
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
-    text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6)}
+    text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6);
+    -webkit-text-stroke:3px #000;paint-order:stroke fill}
   /* 장착 중 라벨 — 카드상단 +58 */
   .wgc .eqt{left:0;right:0;top:53px;height:32px;line-height:32px;text-align:center;
     font-size:30px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
@@ -1152,18 +1157,20 @@
     background-repeat:no-repeat,no-repeat}
 
   /* 7 총 보유 효과 — 본문기준 top 1108, 가운데 정렬 */
+  /* 레퍼런스 글자는 «흰 코어 + 검정 외곽선» 이다 (y1705 단면: #0A0907 → #F6F6F6 → #FFFFFF).
+     측정표가 #000000 으로 적은 것은 외곽선을 집은 오류다. */
   .wm-tot{left:0;right:0;top:1104px;height:46px;line-height:46px;text-align:center;
-    font-size:44px;color:#000}
+    font-size:44px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-tot>i{transform:scaleX(.82)}                /* 줄 전체 잉크 564 → 462 (h 42 유지) */
-  .wm-tot>b{color:#B8FE5D;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .wm-tot b{color:#B8FE5D}                        /* 직계(>)로 두면 <i> 래퍼 때문에 끊긴다 */
 
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
   .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:6px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
     background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 12px,#8A8A8A 100px,
-      #BEBEBE 100px 112px,#757575 112px)}
+      #D3D3D3 100px 107px,#757575 107px)}
   /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
-  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .wm-b1{left:137px;color:#AAEFFF}
   .wm-b2{left:447px;color:#DFDFDF}
   .wm-btn.off{cursor:default}
