@@ -1269,7 +1269,8 @@
     text-align:center;line-height:148px;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.28)}
   .rlx-op::before{content:'';position:absolute;left:0;right:0;top:0;height:9px;border-radius:27px 27px 0 0;
     background:#C7C7C7}
-  .rlx-op>i{position:relative;font-size:57px;color:#111;transform:scaleX(.92);letter-spacing:-1px}
+  .rlx-op>i{position:relative;font-size:57px;color:#fff;-webkit-text-stroke:7px #000;
+    paint-order:stroke fill;transform:scaleX(.92);letter-spacing:-1px}
   .rlx-op.b1{left:190px} .rlx-op.b30{left:571px}
   .rlx-op.dis{filter:grayscale(.4) brightness(.82);cursor:default}
 
@@ -1280,7 +1281,7 @@
   .rlx-tile>em{position:absolute;left:0;right:0;top:5px;height:62px;line-height:62px;font-size:52px}
   .rlx-tile>u{position:absolute;left:0;right:0;bottom:5px;height:28px;line-height:28px;
     font-size:25px;color:#111;transform:scaleX(.9)}
-  .rlx-tile.sel{top:-16px;height:120px;background:#F7EF42;box-shadow:0 0 0 3px #FFF7A0}
+  .rlx-tile.sel{top:-16px;height:120px;background:#FDBB1B;box-shadow:0 0 0 3px #FFE28A}
   .rlx-tile.t1{left:41px;width:197px} .rlx-tile.t2{left:253px;width:179px}
   .rlx-tile.t3{left:449px;width:182px} .rlx-tile.t4{left:648px;width:183px}
   .rlx-tile.t5{left:849px;width:177px}
@@ -5893,8 +5894,8 @@ function renderRelicPage(){
   h += '<div class="rlx-box">' + bx.ic + '</div>'
     +  '<div class="rlx-arw" data-rlxnext="1">▶</div>';
   /* §6 오픈 버튼 */
-  h += '<div class="rlx-op b1' + (can1 ? '' : ' dis') + '" data-rlxopen="1"><i>오픈 x1</i></div>'
-    +  '<div class="rlx-op b30' + (can30 ? '' : ' dis') + '" data-rlxopen="30"><i>오픈 x30</i></div>';
+  h += '<div class="rlx-op b1' + (can1 ? '' : ' dis') + '" data-rlxopen="1"><i>오픈 ×1</i></div>'
+    +  '<div class="rlx-op b30' + (can30 ? '' : ' dis') + '" data-rlxopen="30"><i>오픈 ×30</i></div>';
   /* §7 상자 5칸 */
   h += '<div class="rlx-tiles">';
   RLX_BOXES.forEach((x, i) => {
