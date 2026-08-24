@@ -1822,6 +1822,108 @@
     -webkit-text-stroke:4px #091D1C;paint-order:stroke fill;text-align:right}
 
   /* ==========================================================================
+     21 도감 보너스 팝업 (#collw) — 측정표 docs/measure/21-도감보너스팝업.md
+     껍데기 = 딤(.53) 위 가운데 다이얼로그(895×1543) + 모달 밑에서 돌출하는 깃발 서브탭 4개.
+     세로는 ref−210 평행이동. 모달 세로중심이 프레임 중심보다 42px 위(깃발탭 공간) —
+     flex 중앙정렬 + translateY(−42px). 자식 좌표는 «padding-box local = ref − (97,364)». */
+  #collw{position:absolute;inset:0;background:rgba(0,0,0,.53);display:none;z-index:33;
+    align-items:center;justify-content:center}
+  #collw.on{display:flex}
+  #collw i,#collw s,#collw b,#collw em{display:inline-block;font-style:normal;font-weight:900}
+  .cl{position:relative;flex:none;width:895px;height:1543px;box-sizing:border-box;
+    background:#F0D9BA;border:solid #000;border-width:8px 5px 7px;border-radius:48px 48px 12px 12px;
+    transform:translateY(-42px)}
+  .cl>*{position:absolute}
+  /* 상단 다크 밴드 ref y364~474 (리본·검색버튼 자리) */
+  .cl-band{left:0;right:0;top:0;height:111px;background:#33333D;border-radius:40px 40px 0 0;
+    box-shadow:inset 0 4px 0 #393943}
+  /* 좌우 갈색 베벨 프레임 (본문 구간만 — 밴드 구간은 다크가 전폭) */
+  .cl-fl{left:1px;top:111px;bottom:1px;width:10px;
+    background:linear-gradient(90deg,#2D241B,#4D3D2E 35%,#7B6550 70%,#987F61)}
+  .cl-fr{right:0;top:111px;bottom:1px;width:14px;
+    background:linear-gradient(90deg,#E4C197,#80684C 55%,#3F3529)}
+  /* 스크롤 뷰포트 ref x108~967 / y475~1891 */
+  .cl-body{left:11px;width:860px;top:111px;height:1416px;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none}
+  .cl-body::-webkit-scrollbar{display:none}
+  #collList{padding:21px 0 40px}
+  /* 파란 리본 «도감» — bbox ref x269~811 / y346~460, 모달 위로 10px 돌출 */
+  .cl-rib{left:172px;top:-18px;width:543px;height:115px;pointer-events:none;text-align:center}
+  .cl-rib>s{position:absolute;background:#0F9BBC;top:24px;width:72px;height:85px;
+    filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000)}
+  .cl-rib>s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,32% 50%)}
+  .cl-rib>s.tr{right:2px;clip-path:polygon(0 0,100% 0,68% 50%,100% 100%,0 100%)}
+  .cl-rib>s.bd{left:28px;right:28px;top:0;width:auto;height:91px;filter:none;
+    background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 62%,#139EBF 88%,#1E88A2);
+    border:5px solid #000;border-radius:10px;box-sizing:border-box}
+  .cl-rib>i{position:relative;font-size:48px;line-height:88px;color:#FEFEFE;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.90)}
+  /* 우측 🔍 — 원형 d68, 반투명 흰 + 어두운 링 */
+  .cl-srch{left:739px;top:17px;width:68px;height:68px;border-radius:50%;box-sizing:border-box;
+    background:#9DA2B6;border:5px solid #45454D;text-align:center;line-height:58px;font-size:36px;
+    filter:none;cursor:pointer}
+  .cl-srch>i{filter:grayscale(1) brightness(1.5);opacity:.85}
+  /* ── 세트 블록 (pitch 410 = 높이 370 + 마진 40) ── */
+  .clb{position:relative;width:820px;height:370px;margin:0 0 40px 22px}
+  .clb>*{position:absolute}
+  .clb-panel{left:0;top:0;width:820px;height:273px;background:#FEF5E6;border-radius:22px}
+  .clb-head{left:0;top:0;width:820px;height:81px;background:#565769;border-radius:22px 22px 0 0}
+  /* 빨간 방패 Lv 뱃지 ref x153~253 / y489~596 → 블록 local (23,−7), 101×108 */
+  .clb-bdg{left:23px;top:-7px;width:101px;height:108px;text-align:center;z-index:2}
+  .clb-bdg>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+  .clb-bdg>s.o{inset:0;background:#4F1106;
+    filter:drop-shadow(1.5px 0 0 #000) drop-shadow(-1.5px 0 0 #000) drop-shadow(0 1.5px 0 #000)}
+  .clb-bdg>s.g{inset:3px;background:#FFD64C}
+  .clb-bdg>s.r{inset:9px;background:linear-gradient(180deg,#C24831,#B33B23)}
+  .clb-bdg>i{position:relative;line-height:1;-webkit-text-stroke:4px rgba(0,0,0,.35);paint-order:stroke fill}
+  .clb-bdg>i.l{display:block;margin-top:5px;font-size:44px;transform:scale(.72);color:#FFED9D}
+  .clb-bdg>i.n{display:block;margin-top:-4px;font-size:47px;transform:scaleX(.80);color:#EEE9E5}
+  /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
+  .clb-star{left:127px;top:0;height:81px;line-height:81px;font-size:30px;color:#999CBD}
+  .clb-nm{left:167px;top:0;height:81px;line-height:81px;font-size:38px;color:#fff;
+    transform:scaleX(.88);transform-origin:left center;white-space:nowrap}
+  /* 아이템 카드 — 123×124, pitch 130(gap 7), 검정 5 + 등급 rim 5, radius 36 */
+  .clb-cards{left:26px;top:117px;white-space:nowrap}
+  .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 7px 0 0;
+    border:5px solid #000;border-radius:36px;box-sizing:border-box;overflow:hidden;
+    vertical-align:top;text-align:center}
+  .clb .cd>i.ci{display:block;margin-top:8px;font-size:60px;line-height:66px}
+  .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:35px}
+  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:5px;font-size:29px;line-height:29px;
+    transform:scaleX(.86)}
+  /* 효과 바 ref x131~949 / 블록 +290, h80 */
+  .clb-eff{left:1px;top:290px;width:818px;height:80px;background:#D6BC99;border-radius:18px;
+    line-height:80px;padding-left:33px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  .clb-eff i.g{color:#BAFD60}
+  /* 강화 버튼 — 238×90 캡슐, 우측이 바를 6px 넘음 */
+  .clb-btn{left:588px;top:284px;width:238px;height:90px;border-radius:45px;border:6px solid #000;
+    box-sizing:border-box;font:900 34px inherit;font-family:inherit;font-size:34px;color:#DFDFDF;
+    background:linear-gradient(180deg,#D3D3D3 0 28%,#A5A5A5 55%,#C8C8C8 74%,#757575);
+    padding:0;cursor:pointer}
+  .clb-btn:disabled{cursor:default}
+  .clb-btn.rdy{background:linear-gradient(180deg,#FFE066 0 40%,#F5A623);color:#fff;
+    -webkit-text-stroke:5px rgba(0,0,0,.4);paint-order:stroke fill}
+  /* ── 하단 깃발 서브탭 4개 — 모달 밑(top 1542)에서 돌출, pitch 207 ── */
+  .cl-tabs{left:27px;top:1534px;width:840px;height:150px;z-index:0}
+  .cltab{position:absolute;top:0;width:214px;height:118px;cursor:pointer;text-align:center}
+  .cltab:nth-child(1){left:0}.cltab:nth-child(2){left:208px}
+  .cltab:nth-child(3){left:416px}.cltab:nth-child(4){left:623px}
+  .cltab.on{height:145px}
+  .cltab>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 69%,50% 100%,0 69%)}
+  .cltab.on>s{clip-path:polygon(0 0,100% 0,100% 56%,50% 100%,0 56%)}
+  .cltab>s.k{inset:0;background:#000}
+  .cltab>s.y{left:7px;right:7px;top:0;bottom:6px;
+    background:linear-gradient(180deg,#FCD33D 0 55%,#F5B53A)}
+  .cltab>s.b{left:24px;right:24px;top:0;bottom:22px;
+    background:linear-gradient(180deg,#25AACD 0 4px,#1EA8D7 4px)}
+  .cltab>i{position:relative;margin-top:20px;font-size:41px;line-height:44px;color:#C2C3C5;
+    transform:scaleX(.88)}
+  .cltab.on>i{color:#F7F4EF}
+  .cltab>s.dot{display:none;left:172px;top:10px;width:22px;height:22px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
+  .cltab.alert>s.dot{display:block}
+  /* ==========================================================================
      19 프로필 팝업 — 측정표 docs/measure/19-프로필팝업.md
      껍데기 = (가) 전면 딤 + 중앙 다이얼로그. 딤은 순검정이 아니라 짙은 남색(잔존율 R9/G25/B34).
      패널 border-box ref (92,515) 896×1396 → 프레임 top 305 (전 요소 y_impl = y_ref − 210).
@@ -3260,6 +3362,24 @@
         <div class="prb-note">확률은 소수점 5번째 자리까지 표기되며, 이로 인해 보이는 숫자를 모두 합할 경우 100%가 나오지 않을 수 있습니다.</div>
         <div class="prb-list" id="prbList"></div>
       </div>
+    </div>
+  </div>
+  <!-- 21 도감 보너스 팝업 — 딤 위 가운데 다이얼로그 + 하단 깃발 서브탭. 측정표 docs/measure/21-도감보너스팝업.md
+       진입점: 소환 탭 컬렉션 섹션의 [세트 도감] 버튼. 세트 = 표시 전용 정적 그룹(COLL21),
+       강화 = 기존 claimColl(카테고리) 재사용 — 저장 구조 미변경. -->
+  <div id="collw">
+    <div class="cl">
+      <div class="cl-tabs" id="collTabs">
+        <div class="cltab" data-ct="weapon"><s class="k"></s><s class="y"></s><s class="b"></s><i>무기</i><s class="dot"></s></div>
+        <div class="cltab" data-ct="armor"><s class="k"></s><s class="y"></s><s class="b"></s><i>방어구</i><s class="dot"></s></div>
+        <div class="cltab" data-ct="skill"><s class="k"></s><s class="y"></s><s class="b"></s><i>스킬</i><s class="dot"></s></div>
+        <div class="cltab" data-ct="pet"><s class="k"></s><s class="y"></s><s class="b"></s><i>동료</i><s class="dot"></s></div>
+      </div>
+      <div class="cl-band"></div>
+      <div class="cl-fl"></div><div class="cl-fr"></div>
+      <div class="cl-body"><div id="collList"></div></div>
+      <div class="cl-rib"><s class="tl"></s><s class="tr"></s><s class="bd"></s><i>도감</i></div>
+      <div class="cl-srch"><i>🔍</i></div>
     </div>
   </div>
   <!-- 19 프로필 팝업 — 딤 위 중앙 다이얼로그. 측정표 docs/measure/19-프로필팝업.md -->
@@ -5677,6 +5797,8 @@ function renderBanner(bkey, boxId, extraTop){
       +  '<button class="gbtn" data-coll="' + B.coll + '" style="margin-top:12px"' + (ownN >= tier.need ? '' : ' disabled') + '>'
       +  (ownN >= tier.need ? '보너스 강화 받기!' : (tier.need - ownN) + '종 더 모으기') + '</button>';
   }else h += '<p>모든 컬렉션 보너스를 획득했습니다! 🎉</p>';
+  /* 21 도감 보너스 팝업 진입점 */
+  h += '<button class="gbtn blue" data-opencoll="' + B.coll + '" style="margin-top:12px">📖 세트 도감</button>';
   h += '</div>';
 
   /* 조작 */
@@ -5719,6 +5841,8 @@ function bindBanner(boxId, getBanner){
     if(e.target.closest('[data-refund]')){ doRefund(bkey); return; }
     const c = e.target.closest('[data-coll]');
     if(c){ claimColl(c.dataset.coll); return; }
+    const oc = e.target.closest('[data-opencoll]');
+    if(oc){ openColl21({ skill:'skill', equip:'weapon', pet:'pet' }[oc.dataset.opencoll] || 'armor'); return; }
     if(e.target.closest('[data-aeq]')){ S.autoEquip = !S.autoEquip; if(S.autoEquip) autoEquipAll(); uiDirty = true; save(); return; }
     if(e.target.closest('[data-eqbest]')){ autoEquipAll(); save(); return; }
     if(e.target.closest('[data-upall]')){
@@ -6700,6 +6824,87 @@ $('prbPrev').onclick = () => { if(prbStep > 0){ prbStep--; renderProbInfo(); } }
 $('prbNext').onclick = () => { if(prbStep < PRB_STEPS.length - 1){ prbStep++; renderProbInfo(); } };
 $('prbw').addEventListener('click', e => { if(e.target.id === 'prbw') closeProbInfo(); });
 $('tabbar').addEventListener('click', closeProbInfo, true);
+
+/* ---- 21 도감 보너스 팝업 (#collw) — 측정표 docs/measure/21-도감보너스팝업.md ----
+   세트 = 표시 전용 정적 그룹(기존 아이템·레벨을 그대로 읽는다). 뱃지 Lv = 세트 내 최저 레벨.
+   강화 버튼 = «세트 전원 요구 레벨 충족 + 해당 카테고리 collReady» 일 때만 활성 →
+   기존 claimColl(카테고리) 를 그대로 부른다. 저장 구조 미변경(KEY 유지). */
+const COLL21_PETIC = { bird:'🐦', robo:'🤖', dragon:'🐉' };
+/* 카드 등급색 [fill, rim, 라벨밴드] — 커먼·언커먼은 실측, 레어 이상은 게임 팔레트 추정 */
+const COLL21_CARD = [
+  ['#785843','#AD7A5B','#38271D'], ['#94BC35','#C9E747','#465A13'],
+  ['#3E8FD9','#79C0F2','#173A5E'], ['#A96BE0','#CFA0F5','#3E1E5C'],
+  ['#E0635B','#F59B84','#5C1714'], ['#E8B94C','#F7DE8C','#5C4310'] ];
+const COLL21 = {
+  weapon:{ cat:'equip', sets:[
+    { n:'낡은 시작',     it:['weapon0','weapon1'], req:2,  eff:'공격력 2% 증가' },
+    { n:'기사의 긍지',   it:['weapon2','weapon3'], req:4,  eff:'공격력 4% 증가' },
+    { n:'용을 베는 자',  it:['weapon4','weapon5'], req:6,  eff:'공격력 8% 증가' } ]},
+  armor:{ cat:'equip', sets:[
+    { n:'따뜻한 처음',     it:['shield0','amulet0'], req:6, eff:'체력 5% 증가' },
+    { n:'탐험가',          it:['shield1','amulet1'], req:4, eff:'체력 재생 3% 증가' },
+    { n:'부드러운 활동복', it:['shield2','amulet2'], req:2, eff:'매옹이 이동 속도 0.05% 증가' },
+    { n:'햇병아리 기사',   it:['shield3','shield4','shield5','amulet3','amulet4'], req:8, eff:'체력 8% 증가' },
+    { n:'영원의 성물',     it:['amulet5'], req:10, eff:'전 스탯 2% 증가' } ]},
+  skill:{ cat:'skill', sets:[
+    { n:'견습 헌터',     it:['slash','shuri'],          req:2, eff:'스킬 피해 2% 증가' },
+    { n:'칼바람',        it:['multi','orbit','ice'],    req:3, eff:'스킬 피해 3% 증가' },
+    { n:'천둥과 불꽃',   it:['aura','bolt'],            req:4, eff:'스킬 피해 5% 증가' },
+    { n:'재앙의 인장',   it:['boom','poison','drain'],  req:5, eff:'스킬 피해 8% 증가' },
+    { n:'하늘의 분노',   it:['boomer','meteor'],        req:6, eff:'치명타 피해 10% 증가' },
+    { n:'최후의 심판',   it:['holy'],                   req:8, eff:'스킬 피해 15% 증가' } ]},
+  pet:{ cat:'pet', sets:[
+    { n:'작은 날갯짓',   it:['bird0','bird1'], req:2, eff:'골드 획득 3% 증가' },
+    { n:'수호의 시작',   it:['robo0','bird2'], req:3, eff:'골드 획득 5% 증가' },
+    { n:'강철과 비늘',   it:['robo1','drag0'], req:4, eff:'동료 피해 5% 증가' },
+    { n:'파괴의 불꽃',   it:['robo2','drag1'], req:6, eff:'동료 피해 10% 증가' },
+    { n:'황금 전설',     it:['drag2'],         req:8, eff:'골드 획득 15% 증가' } ]}
+};
+let collTab = 'armor';
+function renderColl21(){
+  const T = COLL21[collTab];
+  let h = '';
+  T.sets.forEach((st, i) => {
+    const lvs = st.it.map(id => oLv(id));
+    const ok  = lvs.every(l => l >= st.req);
+    const rdy = ok && collReady(T.cat);
+    h += '<div class="clb"><div class="clb-panel"></div><div class="clb-head"></div>'
+      +  '<div class="clb-bdg"><s class="o"></s><s class="g"></s><s class="r"></s>'
+      +  '<i class="l">Lv.</i><i class="n">' + Math.min.apply(null, lvs) + '</i></div>'
+      +  '<i class="clb-star">✦</i><i class="clb-nm">' + st.n + '</i>'
+      +  '<div class="clb-cards">'
+      +  st.it.map(id => {
+           const it = itemById(id), c = COLL21_CARD[Math.min(it.g, 5)], l = oLv(id);
+           return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 5px ' + c[1] + '">'
+             + '<i class="ci">' + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
+             + '<s class="cb" style="background:' + c[2] + '"></s>'
+             + '<i class="cl2" style="color:' + (l >= st.req ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l + '/' + st.req + '</i></div>';
+         }).join('')
+      +  '</div>'
+      +  '<i class="clb-eff">' + st.eff.replace(/([\d.]+)/, '<i class="g">$1</i>') + '</i>'
+      +  '<button class="clb-btn' + (rdy ? ' rdy' : '') + '" data-c21="' + i + '"' + (rdy ? '' : ' disabled') + '>강화</button>'
+      +  '</div>';
+  });
+  $('collList').innerHTML = h;
+  document.querySelectorAll('#collTabs .cltab').forEach(t => {
+    const K = COLL21[t.dataset.ct];
+    t.classList.toggle('on', t.dataset.ct === collTab);
+    /* 레드닷 = 그 탭에 «전원 요구 레벨 충족» 세트가 있고 카테고리 보너스도 수령 가능할 때 */
+    t.classList.toggle('alert', collReady(K.cat) && K.sets.some(st => st.it.every(id => oLv(id) >= st.req)));
+  });
+}
+function openColl21(tab){ if(tab) collTab = tab; renderColl21(); $('collList').parentNode.scrollTop = 0; $('collw').classList.add('on'); }
+function closeColl21(){ $('collw').classList.remove('on'); }
+$('collw').addEventListener('click', e => {
+  if(e.target.id === 'collw'){ closeColl21(); return; }
+  const t = e.target.closest('.cltab');
+  if(t){ collTab = t.dataset.ct; renderColl21(); return; }
+  if(e.target.closest('[data-c21]')){
+    const T = COLL21[collTab];
+    if(collReady(T.cat)){ claimColl(T.cat); renderColl21(); }
+  }
+});
+$('tabbar').addEventListener('click', closeColl21, true);
 
 /* ---- 19 프로필 팝업 (중앙 다이얼로그 #pfw) — 측정표 docs/measure/19-프로필팝업.md ----
    칭호 = RANKS 표시 전용 매핑(보유 = 도달한 계급, 장착 = 현재 계급). 저장 구조 미변경.
