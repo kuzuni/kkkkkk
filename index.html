@@ -3244,8 +3244,31 @@
     display:flex;align-items:center;justify-content:center}
   .df-card.c1 .df-ic{left:47px}
   .df-ic>b{font-size:86px;line-height:100px}
-  /* 이모지 잉크를 ref 아트 bbox 로 역산 보정 — c1 ⚔️ 95×95→100×75(채도 낮춰 은백 근사) */
-  .df-card.c1 .df-ic>b{transform:scale(1.05,.79);filter:saturate(.55) brightness(1.12)}
+  /* c1 아이콘 — ref «보물상자» 를 픽셀맵대로 CSS 재작화 (100×75 @ ref x145–244 · y961–1035).
+     ⚔️ 이모지는 같은 창에서 잉크가 ref 6400px 대비 2610px(41%) 밖에 안 차 ② 상대크기를 회수할 수
+     없었다(3회차 자가 스캔). 3단 구조 — 뚜껑(청록 패널) / 몸통(은청 + 노란 자물쇠) / 받침(청록 패널).
+     실측색: 은백 #D7DAFF · 페리윙클 #8E93CA/#A6A9DE · 청록 #2B7051/#26553F · 자물쇠 #FFD247 */
+  .df-ic1{position:absolute;left:48px;top:40px;width:100px;height:75px;box-sizing:border-box;
+    border:3px solid #000;border-radius:19px 19px 11px 11px;overflow:hidden;background:#A6A9DE}
+  .df-ic1 s{position:absolute;display:block;left:0;right:0}
+  /* 뚜껑 y961–989 — 은백→페리윙클 + 가운데 청록 패널(좌우 검정 3px 기둥) */
+  .df-ic1 .lid{top:0;height:27px;border-bottom:3px solid #000;
+    background:linear-gradient(180deg,#D7DAFF 0 44%,#BFC2EA 72%,#9A9ECF 100%)}
+  .df-ic1 .lid::before{content:'';position:absolute;left:24%;right:24%;top:7px;bottom:0;
+    box-sizing:border-box;border-left:3px solid #000;border-right:3px solid #000;
+    background:linear-gradient(180deg,#2B7051 0 62%,#26553F 100%)}
+  /* 몸통 y991–1015 — 벨트(검정 4px)가 가로지르고 아래쪽이 은백으로 밝아진다 */
+  .df-ic1 .body{top:27px;height:27px;border-bottom:3px solid #000;
+    background:linear-gradient(180deg,#9A9ECF 0 30%,#C6C9EE 44%,#D7DAFF 100%)}
+  .df-ic1 .body::after{content:'';position:absolute;left:0;right:0;top:10px;height:3px;background:#000}
+  /* 받침 y1017–1035 — 뚜껑과 같은 청록 패널 */
+  .df-ic1 .base{top:54px;bottom:0;background:linear-gradient(180deg,#BFC2EA 0,#9A9ECF 100%)}
+  .df-ic1 .base::before{content:'';position:absolute;left:24%;right:24%;top:0;bottom:3px;
+    box-sizing:border-box;border-left:3px solid #000;border-right:3px solid #000;background:#26553F}
+  /* 자물쇠 — ref 노란 잉크 x195–216(22) · y999–1018(20), 몸통·받침 경계를 물고 있다 */
+  .df-ic1 .lock{left:42px;right:42px;top:30px;height:25px;z-index:2;border-radius:4px;
+    box-sizing:border-box;border:3px solid #000;
+    background:linear-gradient(180deg,#FFE688 0,#FFD247 45%,#E9A81E 100%)}
   /* c2 는 ref 아트(불꽃 62×76 + 흰·분홍 얼굴 2개)를 3요소 합성 */
   .df-card.c2 .df-ic{display:block}
   .df-ic .fl{position:absolute;left:50%;top:2px;transform:translateX(-50%) scale(.82,.86);
@@ -3816,7 +3839,7 @@
       <path d="M46 84v19M58 84v19M70 84v19" stroke="#0B4B7B" stroke-width="4"/>
     </svg></div>
     <div class="df-title"><i>패배하였습니다</i></div>
-    <div class="df-card c1"><div class="pnl"></div><div class="df-ic"><b>⚔️</b></div>
+    <div class="df-card c1"><div class="pnl"></div><div class="df-ic1"><s class="lid"></s><s class="body"></s><s class="base"></s><s class="lock"></s></div>
       <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
       <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
     <div class="df-card c2"><div class="pnl"></div><div class="df-ic"><b class="fl">🔥</b><b class="f1">🐹</b><b class="f2">🐱</b></div>
