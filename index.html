@@ -3212,11 +3212,11 @@
      링 셰이딩은 상하 그라데이션이 아니라 각도별이다(1회차 실측): 45°/315° 대각 하이라이트 ·
      135°/225° 대각 음영 · 상단/좌우는 중간톤. --rgM/--rgB/--rgD 로 conic 에 넣는다. */
   .rl-card{--ring:#5A607A;--rk:#5F647A;--rgM:#5D637B;--rgB:#797F97;--rgD:#40465E;
-    --cv1:#272837;--cv2:#2D2E42;--pk:#313852;--bv:#5A617A}
+    --cv1:#272837;--cv2:#2D2E42;--pk:#31384B;--bv:#5A617A}
   .rl-card.own{--ring:#868FB0;--rk:#8B95B8;--rgM:#8993B6;--rgB:#B3BCDD;--rgD:#626B8C;
     --cv1:#232230;--cv2:#3E3E58;--pk:#4E5572;--bv:#757E9F}
   /* 고급(=레퍼런스 «언커먼») 이하 실측, 희귀 이상은 게임 팔레트로 같은 명도관계를 이어 만든 값 */
-  .rl-card[data-g="1"]{--cv1:#12300B;--cv2:#1B3F13;--pk:#335B03;--bv:#3F6405}
+  .rl-card[data-g="1"]{--cv1:#12300B;--cv2:#1B3F13;--pk:#2A5203;--bv:#3F6405}
   .rl-card[data-g="1"].own{--cv1:#1B3F13;--cv2:#2C6020;--pk:#418003;--bv:#5E9608}
   .rl-card[data-g="2"]{--cv1:#12253C;--cv2:#1B3350;--pk:#24405F;--bv:#3A5C80}
   .rl-card[data-g="2"].own{--cv1:#1B3350;--cv2:#2A5382;--pk:#3A6795;--bv:#5D8FC4}
@@ -3245,8 +3245,8 @@
     font-size:118px;z-index:4}
   /* Lv. N — 잉크 h25 → font 36(캡하이트 ÷0.70) */
   .rl-card .lv{left:0;top:150px;width:227px;text-align:center;line-height:36px;z-index:5}
-  .rl-card .lv>i{font-size:34px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(1.06)}
+  .rl-card .lv>i{font-size:35px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(1.03)}
   /* 진행바 — 바깥 149x33(검정 5) · 트랙 139x23 · 숫자는 «바» 정중앙(채움 끝 아님) */
   .rl-card .bar{left:39px;top:193px;width:149px;height:33px;box-sizing:border-box;
     border:5px solid #000;border-radius:16.5px;background:#7F809C;z-index:5}
@@ -3265,14 +3265,14 @@
   /* 비활성 알약 — 밝고 돌출 */
   .rl-tabs .sg{top:0;width:389px;height:98px;border-radius:44px;background:#000}
   .rl-tabs .sg::after{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
-    border-radius:37px;background:linear-gradient(180deg,#705F4B 0 8px,#61503C 8px 70px,#705F4B 70px 84px)}
+    border-radius:37px;background:linear-gradient(180deg,#705F4B 0 8px,#61503C 8px 77px,#705F4B 77px 84px)}
   .rl-tabs .s1{left:0}
   .rl-tabs .s2{left:389px}
   /* 활성 알약 — 422x98, 세그 중심 정렬(좌우 16.5 부풀음) · 어둡고 눌린 인셋 */
   .rl-tabs .ac{top:0;width:422px;height:98px;border-radius:44px;background:#000}
   .rl-tabs .ac::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;
-    border-radius:38px;background:linear-gradient(180deg,#634F37 0 8px,#4B3E2D 8px 69px,
-      #634F37 69px 78px,#3F3124 78px 86px)}
+    border-radius:38px;background:linear-gradient(180deg,#634F37 0 6px,#4B3E2D 6px 70px,
+      #634F37 70px 76px,#3F3124 76px 83px)}
   .rl-tabs .ac.a2{left:373px}         /* ref x524 − 바 x151 */
   .rl-tabs .ac.a1{left:-17px}         /* 14 쪽 활성 위치(ref x134) — 대칭 */
   .rl-tabs .tb{top:0;height:98px;width:389px;text-align:center;cursor:pointer;z-index:2}
@@ -6818,7 +6818,7 @@ const RL_RIB = [
 const RL_POCKET = '<svg viewBox="0 0 216 189" aria-hidden="true">'
   + '<path d="M21.5 3.5H194.5A18 18 0 0 1 212.5 21.5V133C210.5 148 138 185 108 185'
   +   'C78 185 5.5 148 3.5 133V21.5A18 18 0 0 1 21.5 3.5Z" fill="var(--bv)" stroke="#000" stroke-width="7"/>'
-  + '<path d="M25 10.5H191V132C189 140 128 163 108 163C88 163 27 140 25 132Z" fill="var(--pk)"/>'
+  + '<path d="M32 13H184V128C182 136 126 158 108 158C90 158 34 136 32 128Z" fill="var(--pk)"/>'
   + '</svg>';
 const RL_LOCK = '<svg viewBox="0 0 103 113" aria-hidden="true">'
   + '<path d="M31.5 52V37a20 20 0 0 1 40 0v15" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>'
