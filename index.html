@@ -7438,6 +7438,12 @@ $('dgdGo').onclick = () => {
   /* 46 — 레이드 모드면 «도전» 이 레이드 시작이다. 던전 페이지를 닫아 전투 화면을 드러낸다. */
   if(dgdRaid){
     const r = dgdRaid;
+    if(raidOn){   /* 이미 측정 중이면 기록을 날리지 않도록 새로 시작하지 않는다 */
+      popup('⚔ 레이드 진행 중', '<p><b>' + raidOn.n + '</b> 측정이 진행 중입니다.<br>'
+        + '남은 시간 <b>' + Math.max(0, raidT).toFixed(1) + '초</b> · 누적 피해 <b>' + fmt(raidDmg) + '</b><br>'
+        + '먼저 끝내거나 <b>[포기하기]</b> 로 중단하세요.</p>');
+      return;
+    }
     closeDunDetail();
     closeDungeon();
     startRaid(r);
@@ -7785,8 +7791,10 @@ function renderRaidPage(){
       +  '<div class="bg"></div><div class="sh"></div><div class="fr"></div>'
       +  '<div class="nm"><i>' + r.n + '</i></div>'
       +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
-      +  '<div class="lb a"><i>제한 시간</i></div><div class="lb b"><i>최고 DPS</i></div>'
-      +  '<div class="sp lv"><em>⏱️</em><i>' + r.sec + '초</i></div>'
+      /* 단위(초)는 라벨에 둔다 — 알약 안에 «120초» 를 넣으면 폭이 195 가 돼
+         옆 알약 아이콘(카드 기준 x261)을 침범한다(던전 카드는 층 번호라 2자면 충분했다) */
+      +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>최고 DPS</i></div>'
+      +  '<div class="sp lv"><em>⏱️</em><i>' + r.sec + '</i></div>'
       +  '<div class="sp tk"><em>🏆</em><i>' + (b.dps > 0 ? fmt(b.dps) : '-') + '</i></div>'
       +  (!lock ? '<s class="dot"></s>' : '')
       +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')

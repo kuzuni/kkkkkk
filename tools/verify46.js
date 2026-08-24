@@ -66,8 +66,8 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('레이드 카드 3장', cards.length === 3, cards.length);
     chk('카드 규격 = 03 던전과 동일 980×350', cards.every((c) => c.w === 980 && c.h === 350),
       cards[0] && `${cards[0].w}×${cards[0].h}`);
-    chk('첫 카드 해금 + 제한 시간 60초', !!(cards[0] && !cards[0].lock && cards[0].lvl === '60초'), cards[0] && cards[0].lvl);
-    chk('라벨이 «제한 시간 / 최고 DPS»', !!(cards[0] && cards[0].la === '제한 시간' && cards[0].lb === '최고 DPS'),
+    chk('첫 카드 해금 + 제한 시간 60', !!(cards[0] && !cards[0].lock && cards[0].lvl === '60'), cards[0] && cards[0].lvl);
+    chk('라벨이 «제한 시간(초) / 최고 DPS»', !!(cards[0] && cards[0].la === '제한 시간(초)' && cards[0].lb === '최고 DPS'),
       cards[0] && `${cards[0].la}/${cards[0].lb}`);
     chk('기록 없으면 «-»', cards[0] && cards[0].best === '-', cards[0] && cards[0].best);
     chk('스테이지 미달 측정장 2장 잠금', cards.filter((c) => c.lock).length === 2);
@@ -196,7 +196,24 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     /* ---------- 9. 포기하기 = 기록 미저장 ---------- */
     console.log('[9] [포기하기] → 중단(기록 저장 안 함)');
     await click(page, '#dgdGo');
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(1200);
+    /* 측정 중에 또 «도전» 을 누르면 새로 시작하지 않고 안내만 (기록 보호) */
+    await click(page, '.tab[data-t="adv"]');
+    await page.waitForTimeout(400);
+    await click(page, '#dunList [data-rcard="r60"]');
+    await page.waitForTimeout(300);
+    const t0 = await page.evaluate(() => raidT);
+    await click(page, '#dgdGo');
+    await page.waitForTimeout(400);
+    const dup = await page.evaluate(() => ({
+      t: raidT, dmg: raidDmg, title: document.getElementById('mtitle').textContent,
+      on: document.getElementById('modal').classList.contains('on') }));
+    chk('측정 중 재도전은 새로 시작하지 않음', dup.on && /레이드 진행 중/.test(dup.title) && dup.t < t0,
+      `${dup.title} t ${dup.t.toFixed(1)} < ${t0.toFixed(1)}`);
+    await click(page, '#okBtn');
+    await page.waitForTimeout(200);
+    await click(page, '.tab[data-t="adv"]');   /* 던전 페이지 닫기 → 전투 화면 */
+    await page.waitForTimeout(400);
     await click(page, '#bossGv');
     await page.waitForTimeout(500);
     r = await page.evaluate(() => ({
