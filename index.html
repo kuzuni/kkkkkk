@@ -2372,14 +2372,19 @@
 
   /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y35 w551 h109 (가운데 바 + 좌우 깃) */
   .tr-rib{left:247px;top:35px;width:551px;height:109px}
-  .tr-rib>b{position:absolute;top:30px;width:52px;height:76px;background:#6B4A34;z-index:1}
-  .tr-rib>b.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,12px 50%);
-    box-shadow:inset -9px 0 0 #4C311F}
-  .tr-rib>b.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%);
-    box-shadow:inset 9px 0 0 #4C311F}
+  /* 7회차(비평가 L, 차분 스캔): **꼬리 폴리곤 외곽 다크 스트로크가 통째로 빠져 있었다.**
+     ref x280 세로는 크림 → (74,47,30) 8px → 꼬리 채움 (101,70,49) 인데 우리는 곧장 채움이었다.
+     `clip-path` 는 box-shadow 까지 잘라내므로 테두리를 box-shadow 로는 못 만든다 —
+     «다크 배경 + inset 8px 안쪽 채움 레이어» 2겹으로 폴리곤 윤곽을 따라가게 한다. */
+  .tr-rib>b{position:absolute;top:30px;width:52px;height:76px;background:#4C311F;z-index:1}
+  .tr-rib>b::before{content:'';position:absolute;inset:8px;background:#6B4A34}
+  .tr-rib>b.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,12px 50%)}
+  .tr-rib>b.l::before{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,10px 50%)}
+  .tr-rib>b.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 12px) 50%,100% 100%,0 100%)}
+  .tr-rib>b.r::before{clip-path:polygon(0 0,100% 0,calc(100% - 10px) 50%,100% 100%,0 100%)}
   .tr-rib>.bar{position:absolute;left:34px;right:34px;top:0;height:89px;background:#6B4A34;
     border-radius:14px;box-shadow:inset 0 9px 0 #4C311F,inset 0 -9px 0 #4C311F,
-    inset 5px 0 0 #4C311F,inset -5px 0 0 #4C311F;z-index:2}
+    inset 7px 0 0 #4C311F,inset -7px 0 0 #4C311F;z-index:2}
   .tr-rib>u{position:absolute;left:0;right:0;top:9px;height:60px;line-height:60px;text-align:center;
     font-size:49px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
     transform:scaleX(.93)}
@@ -2420,29 +2425,38 @@
     paint-order:stroke fill}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
+  /* 7회차: 바 폭이 767 이라 크림박스 안에서 우측으로 2.5px 편심(좌136/우131)이었다.
+     ref 는 761 로 좌136/우137 대칭이고 **우측 끝에도 밝은 립 6px** 이 있다(좌측만 있었다). */
   .tr-qty{left:142px;top:265px;width:761px;height:81px}
   /* 6회차: 칸 구분선은 «전체 높이 inset box-shadow» 가 아니다 — ref x664..667 세로 스캔상
      y1350..1381 (바 상단에서 22px, 길이 32px) 에만 있고 색도 (172,122,86) 로 훨씬 밝다(우리 #A06845 는 160,104,69).
      세로로 잘라내야 하므로 box-shadow 대신 background-image 레이어로 깐다. */
   .tr-qty>.q{position:absolute;top:0;height:81px;cursor:pointer;text-align:center;line-height:64px;
-    background-image:linear-gradient(#AC7A56,#AC7A56),
-      linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px);
-    background-size:3px 32px,100% 100%;
-    background-position:right 0 top 22px,left 0 top 0;
+    background:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px)}
+  /* 7회차: 구분선을 «칸의 오른쪽 모서리» 에 그리면 선택 칩(::before 가 right:0)이 1번 칸 구분선을
+     통째로 덮는다 — 비평가 L 이 차분 스캔으로 «x1|x10 구분선 완전 소실» 을 잡아냈다.
+     칸이 아니라 **바 위 오버레이**로 얹어 칩과 무관하게 만든다.
+     ref 실측: 구분선 x412..417(6px) · x664..667(4px), 세로는 바 상단 +22px 부터 32px.
+     ⚠ 측정표 §5 의 «구분선 x401..405» 는 사실 **선택 칩의 오른쪽 테두리**였다(그 옆 x412..417 이 진짜 구분선). */
+  .tr-qty::after{content:'';position:absolute;left:0;right:0;top:22px;height:32px;z-index:5;
+    pointer-events:none;
+    background-image:linear-gradient(#AC7A56,#AC7A56),linear-gradient(#AC7A56,#AC7A56);
+    background-size:6px 100%,4px 100%;
+    background-position:253px 0,505px 0;
     background-repeat:no-repeat,no-repeat}
   .tr-qty>.q:nth-child(1){box-shadow:inset 7px 0 0 #E7C09F}
   /* 마지막 칸은 우측 구분선이 없다 */
-  .tr-qty>.q:nth-child(3){background-image:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px);
-    background-size:100% 100%;background-position:0 0}
+
   /* 선택 칩 — ref 필 border-box y1337..1392 = 바 상단 기준 top9 h56 (top14 h45 는 21% 작았다).
      칩 아래 offset 65..68 은 ref 가 **트랙 원색 (193,144,104)** 이다 — 3회차의 어두운 그늘 밴드(::after)는
      ref 에 없어서 제거했다(있으면 칩이 h69 로 이어져 보인다). */
   .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:0;top:9px;height:56px;
     border-radius:12px;background:linear-gradient(180deg,#FFEED0 0 4px,#FCD2AC 4px);
     box-shadow:inset 0 0 0 6px #AA6F4D}
-  .tr-qty>.q:nth-child(1){left:0;width:247px;border-radius:12px 0 0 12px}
-  .tr-qty>.q:nth-child(2){left:247px;width:263px}
-  .tr-qty>.q:nth-child(3){left:510px;width:257px;border-radius:0 12px 12px 0;box-shadow:none}
+  .tr-qty>.q:nth-child(1){left:0;width:253px;border-radius:12px 0 0 12px}
+  .tr-qty>.q:nth-child(2){left:253px;width:255px}
+  .tr-qty>.q:nth-child(3){left:508px;width:253px;border-radius:0 12px 12px 0;
+    box-shadow:inset -6px 0 0 #EBBE9A}
   .tr-qty>.q>i{position:relative;z-index:2;top:5px;font-size:38px;color:#C6BCBA;
     -webkit-text-stroke:6px #3A2415;paint-order:stroke fill}
   .tr-qty>.q.on>i{color:#F9F1EF}
@@ -2463,8 +2477,11 @@
      (bbox 150x150 = 한 변 106 을 45° 회전한 마름모, 색 (234,214,179)). 우리 캡처에는 이 색 픽셀이 **0개**였다.
      아트 자체는 이모지 한계라 못 맞춰도 이 판은 CSS 로 회수 가능하다.
      .ci 에 z-index 를 줘 스택 문맥을 만들고 ::before 를 z-index:-1 로 두면 카드 배경 위·이모지 아래에 깔린다. */
-  .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:106px;height:106px;
-    margin:-56.5px 0 0 -53px;transform:rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
+  /* 7회차: 6회차 판이 ref 149 대비 130 (−12.8%) 이었다. 원인은 **border-radius** —
+     45° 회전한 «라운드» 정사각형은 꼭짓점이 깎여 bbox = s√2 − 2r(√2−1) 가 된다
+     (s=106·r=24 → 150−19.9 = 130, 실측과 일치). bbox 149 를 얻으려면 s = (149+19.9)/√2 = 119.4. */
+  .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:119.4px;height:119.4px;
+    margin:-63.2px 0 0 -59.7px;transform:rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
   /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
      (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
      이모지를 105px 로 줄여 마름모 네 귀가 드러나게 한다. */
@@ -2480,7 +2497,8 @@
   .tr-card>.cb>s{font-size:42px;line-height:74px;-webkit-text-stroke:0}
   .tr-card>.cb>i{position:relative;top:-3px;font-size:47px;line-height:62px;color:#F9EB6E;
     -webkit-text-stroke:9px #141414;paint-order:stroke fill}
-  .tr-card>.dot{right:-9px;top:-8px;width:33px;height:33px;border-radius:50%;background:#EF3457;
+  /* 7회차: ref 카드 배지·서브탭 배지 모두 **지름 30**(fill 기준). 배수탭 점만 21 로 작다. */
+  .tr-card>.dot{right:-9px;top:-8px;width:30px;height:30px;border-radius:50%;background:#EF3457;
     box-shadow:inset 0 0 0 3px #000;z-index:4}
   .tr-qty .dot{position:absolute;left:231px;top:-7px;width:27px;height:27px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
@@ -2493,18 +2511,26 @@
      (두 비평가가 독립적으로 «상·하 인셋 밝은 엣지 없음» 을 지적했다) */
   .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;
     background:linear-gradient(180deg,#705F4B 0 6px,#62513D 6px 77px,#705F4B 77px);
-    margin:8px 0 6px;cursor:pointer;box-shadow:inset -4px 0 0 #4A3A2B}
+    margin:8px 0 6px;cursor:pointer}
+  /* 7회차: 칸 구분선을 inset box-shadow 로 주면 바 내부를 «관통»한다(83px).
+     ref 는 y2043..2097 = **55px** 로 상하 14px 씩 인셋돼 있다(두 비평가가 독립적으로 +51% 로 지적). */
+  .tr-sub>.sg::after{content:'';position:absolute;right:0;top:14px;height:55px;width:4px;
+    background:#4A3A2B;z-index:1}
+  .tr-sub>.sg:last-child::after{display:none}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
-  .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;box-shadow:none}
-  .tr-sub>.sg.on::before{content:'';position:absolute;left:8px;right:0;top:5px;bottom:5px;
-    border-radius:34px 0 0 34px;background:#4B3E2D;border-right:9px solid #0C0803}
+  .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0}
+  /* 7회차: ref 칩은 border-box 253x62 로 바 내부 좌측에 **flush**(인셋 0)이고 하단 여백이 14px 다.
+     우측 끝도 수직 직선이 아니라 **반경 ~31 라운드 캡**이다(L 이 x310 세로 다크 82px 연속으로 잡아냈다).
+     6회차 것은 229x71 · 좌인셋 8 · 하단여백 5 였다(폭 −9.5% · 높이 +14.5%). */
+  .tr-sub>.sg.on::before{content:'';position:absolute;left:0;right:-15px;top:6px;height:62px;
+    border-radius:31px;background:#4B3E2D;box-shadow:inset -9px 0 0 #0C0803;z-index:1}
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
   .tr-sub>.sg.on>i{color:#E7B88E;left:7px;top:-2px}
   .tr-sub>.sg.lock>i{top:0;font-size:66px;line-height:97px;color:#fff;-webkit-text-stroke:0}
   .tr-sub>.sg.lock.txt>i{font-size:33px;line-height:78px;color:#C6BCBA;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill}
-  .tr-sub>.sg.on>.dot{position:absolute;left:216px;top:-8px;width:31px;height:31px;border-radius:50%;
+  .tr-sub>.sg.on>.dot{position:absolute;left:216px;top:-8px;width:30px;height:30px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 3px #141414;z-index:3}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
