@@ -3657,10 +3657,10 @@
     <div class="df-title"><i>패배하였습니다</i></div>
     <div class="df-card c1"><div class="pnl"></div><div class="df-ic"><b>⚔️</b></div>
       <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
-      <button class="df-btn" data-go="shop"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
+      <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
     <div class="df-card c2"><div class="pnl"></div><div class="df-ic"><b class="fl">🔥</b><b class="f1">🐹</b><b class="f2">🐱</b></div>
       <div class="df-txt"><i>골드로 햄지와 매옹이를 훈련시키세요</i></div>
-      <button class="df-btn" data-go="grow"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
+      <button class="df-btn" data-dfgo="grow"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
     <div class="df-card c3"><div class="pnl"></div><div class="df-ic3"></div>
       <div class="df-txt"><i>게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i></div>
       <button class="df-btn"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
@@ -5430,9 +5430,10 @@ $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
    화면 아무 데나 탭 = 닫기. → 버튼은 상점 소환(10)·성장 탭으로 유도. */
 function openDefeat(){ $('defw').classList.add('on'); }
 $('defw').addEventListener('click', () => $('defw').classList.remove('on'));
+/* ⚠ data-go 는 02 의 전역 [data-go] 델리게이트(goTab(...,true))가 가로채 이중 발화한다 — data-dfgo 사용 */
 document.querySelectorAll('#defw .df-btn').forEach(b => b.addEventListener('click', e => {
   e.stopPropagation(); $('defw').classList.remove('on');
-  if(b.dataset.go) goTab(b.dataset.go);
+  if(b.dataset.dfgo) goTab(b.dataset.dfgo);
 }));
 
 const nextGradeItem = it => EQUIPS.find(e => e.slot === it.slot && e.g === it.g+1);
