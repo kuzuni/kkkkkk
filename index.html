@@ -1564,8 +1564,11 @@
   .sk-head>i{font-size:54px;color:#fff;letter-spacing:2px;text-indent:2px;transform:scaleX(.864)}
 
   /* 2 장착 슬롯 패널 ref(24,832) 1032x197 · 테두리 7 #C7B39A + 림 8 #F4E5D2 */
-  .sk-eqp{left:17px;top:149px;width:1032px;height:197px;border-radius:43px;background:#F0D9BA;
-    box-shadow:inset 0 0 0 7px #C7B39A,inset 0 0 0 15px #F4E5D2}
+  /* 비평가 4인이 독립적으로 «패널이 6px 좁다» 고 지적했고 자가 raw 덤프도 일치했다.
+     ref y900 원본 픽셀: 크림 ~19 / 램프 20 / **테두리 21~29** / 림 30~37 / 내부 38~
+     측정표 4-1 의 «x24 · w1032 · 테두리 7» 은 램프를 테두리 시작으로 오독한 값이다. */
+  .sk-eqp{left:14px;top:149px;width:1037px;height:197px;border-radius:43px;background:#F0D9BA;
+    box-shadow:inset 0 0 0 8px #C7B39A,inset 0 0 0 16px #F4E5D2}
   /* 슬롯 8칸 115x115 · pitch 125 · gap 10 · 패널기준 (21,41) */
   .sk-slot{position:absolute;top:41px;width:115px;height:115px;border-radius:40px;
     background:var(--f);box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r);cursor:pointer}
@@ -1592,7 +1595,7 @@
   .sk-ci{position:absolute;left:6px;right:6px;top:20px;height:96px;text-align:center;
     font-size:78px;line-height:96px}
   /* Lv.n — 잉크좌단 카드+20 / 잉크상단 카드+21. 뱃지 배경 없음(측정표 6-1) */
-  .sk-clv{position:absolute;left:20px;top:14px;height:32px;font-size:26px;line-height:32px;
+  .sk-clv{position:absolute;left:18px;top:14px;height:32px;font-size:26px;line-height:32px;
     color:#fff}
   .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
   /* 카드 자물쇠 49x57 · 카드상단+55 */
@@ -1632,20 +1635,25 @@
   .sk-tot>em{color:#B0E92A;margin-left:8px;font-size:31px}
 
   /* 8 버튼 2개 275x131 · gap 36 · ref x247/558 y1841 */
+  /* 레퍼런스 버튼은 «검정 7 + 안쪽 라이트 림 7(상·좌·우) + 면 + 하단 라이트 6 + 언더립 6» 이다.
+     실측(초록, y1900 가로): 검정 249~255 → **라이트 림 256~262** → 면 265~
+             (x430 세로): 라이트 1850~1856 → 면 1859~1949 → **라이트 1951~1956** → **언더립 1958~1963**
+     좌우 림이 없으면 버튼이 납작해 보이고, 하단 라이트를 13px 로 깔면 면을 6px 잡아먹는다. */
   .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
-    box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer}
+    box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer;
+    box-shadow:inset 7px 0 0 var(--hl),inset -7px 0 0 var(--hl)}
   #bSk .sk-btn>i{display:inline-block;transform:scaleX(.866)}
-  .sk-b1{left:240px;color:#fff;
-    background:linear-gradient(180deg,#ADFF86 0 8px,#78F34B 8px,#76D924 97px,
-      #ABFF85 97px 110px,#3EBC2A 110px)}
-  .sk-b2{left:551px;color:#DFDFDF;
-    background:linear-gradient(180deg,#D3D3D3 0 8px,#A8A8A8 8px,#8B8B8B 97px,
-      #D2D2D2 97px 110px,#757575 110px)}
+  .sk-b1{left:240px;color:#fff;--hl:#ADFF86;
+    background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
+      #ABFF85 103px 109px,#3EBC2A 109px)}
+  .sk-b2{left:551px;color:#DFDFDF;--hl:#D3D3D3;
+    background:linear-gradient(180deg,#D3D3D3 0 9px,#A8A8A8 11px,#8B8B8B 101px,
+      #D2D2D2 103px 109px,#757575 109px)}
 
   /* 9 서브탭 바 950x99 ref(65,2020) · 검정 6 · 배경 #61523D · 활성 세그먼트 #4B3E2D */
   .sk-tabs{left:58px;top:1337px;width:950px;height:99px;border-radius:50px;
     border:6px solid #000;box-sizing:border-box;
-    background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 71px,#5E4E37 71px 78px,#61523D 78px)}
+    background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 79px,#706049 79px 85px,#61523D 85px)}
   .sk-tabs>*{position:absolute;top:0;height:85px}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
@@ -1653,8 +1661,14 @@
      line-height 는 잉크 중심을 붙잡는 값이라 fs 와 함께 미세 조정한다 */
   .sk-tab{text-align:center;line-height:87px;font-size:43px;color:#A9A8AD;cursor:pointer}
   #bSk .sk-tab>i{display:inline-block;transform:scaleX(.914)}
-  .sk-tab.on{background:#4B3E2D;border-radius:36px;font-size:41px;line-height:77px;color:#F2BC8D;
-    box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000}
+  /* 레퍼런스 알약은 평면이 아니다 — x340 세로 실측:
+     검정 2021~2026 → **밝은 베벨 2028~2034** → 면 2036~2088 → **밝은 베벨 2098~2103**
+     → **어두운 인셋 2105~2110** → 검정 2112~. 좌우에도 같은 밝은 안쪽 림이 있다. */
+  .sk-tab.on{border-radius:36px;font-size:41px;line-height:77px;color:#F2BC8D;
+    background:linear-gradient(180deg,#604F3D 0 9px,#4B3E2D 10px 72px,#5F4D39 72px 78px,
+      #413122 78px 85px);
+    box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000,
+      inset 14px 0 0 #604F3D,inset -14px 0 0 #604F3D}
   #bSk .sk-tab.on>i{transform:scaleX(.893)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
   .sk-t1{left:0;width:224px}
@@ -1688,11 +1702,25 @@
 
   /* 공용 자물쇠 — 이모지 글리프는 비율이 제각각이라 CSS 로 직접 그린다.
      기준 49x57 (카드·서브탭 실측). 슬롯은 52x60 이라 scale 로 키운다 */
-  .sk-lock{position:absolute;width:49px;height:57px}
+  /* 레퍼런스 자물쇠는 «흰 실루엣» 이 아니라 **검정 외곽선 + 흰 면 + 검정 열쇠구멍** 이다.
+     슬롯4 실측 — 가로 y950: 검정 446~450 / 흰 452~469 / **열쇠구멍 471~483** / 흰 485~504 / 검정 505~508
+                  세로 x477: 열쇠구멍 932~952 (h21)
+     흰 면만 그리면 near-black 픽셀이 ref 3104 대비 1618 (-48%) 로 떨어지고 형태가 뭉개진다.
+     외곽선은 두 의사요소의 «합집합» 을 감싸야 해서 box-shadow(요소별) 가 아니라
+     부모의 drop-shadow 를 4방향 체이닝해 그린다. */
+  .sk-lock{position:absolute;width:49px;height:57px;
+    filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000)
+           drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000)}
   .sk-lock::before{content:'';position:absolute;left:11px;top:0;width:27px;height:27px;
     box-sizing:border-box;border:8px solid #fff;border-bottom:0;border-radius:14px 14px 0 0}
+  /* 열쇠구멍은 «원 + 아래로 뻗는 슬롯» 이 아니라 **위아래가 넓고 허리가 좁은 표주박**이다.
+     ref 슬롯4 몸통에서 검정 런 폭: y931 3 · y937 **13** · y943 **8** · y949 **13** · y952 0
+     → 원 2개를 세로로 겹쳐 허리를 만든다. 몸통 기준 상대 y 8~27, 최대폭 12 */
   .sk-lock::after{content:'';position:absolute;left:0;top:22px;width:49px;height:35px;
-    background:#fff;border-radius:7px}
+    border-radius:7px;
+    background:radial-gradient(circle 6px at 24.5px 14px,#000 0 6px,#0000 6px),
+      radial-gradient(circle 6px at 24.5px 21px,#000 0 6px,#0000 6px),
+      linear-gradient(#000,#000) 21px 14px/7px 7px no-repeat,#fff}
 
   /* ==========================================================================
      09 일괄 강화 결과 팝업 — 측정표 docs/measure/09-일괄강화결과팝업.md
@@ -4857,7 +4885,7 @@ function renderSkill(){
   /* 2 장착 슬롯 8칸 — 앞에서부터 장착 스킬, 나머지는 잠금 슬롯 */
   h += '<div class="sk-eqp">';
   for(let i = 0; i < 8; i++){
-    const id = eq[i], it = id ? SK[id] : null, L = 'left:' + (21 + i*125) + 'px';
+    const id = eq[i], it = id ? SK[id] : null, L = 'left:' + (24 + i*125) + 'px';
     h += it
       ? '<div class="sk-slot" data-skun="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
