@@ -1071,12 +1071,13 @@
   .shp-card .b1>.lab{top:14px}
   .shp-card .b1>.sub{top:48px;height:24px;line-height:24px;font-size:23px;color:#fff;
     -webkit-text-stroke:6px #000;paint-order:stroke fill;left:0;right:0;text-align:center;z-index:2}
-  /* ▶AD 뱃지 — 버튼 좌하단 물림 */
-  .shp-card .b1>.ad{left:-14px;top:56px;width:66px;height:50px;border-radius:12px;
+  /* ▶AD 뱃지 — 시안 버튼 좌하단 코너 물림. 카드의 직속 자식이라 버튼 overflow:hidden 에 안 잘린다.
+     측정표 §2 #15: 카드 좌상단 기준 (707,198) 65×53, −6° 회전 */
+  .shp-card>.adbadge{left:706px;top:198px;width:66px;height:53px;border-radius:12px;
     background:linear-gradient(180deg,#E7A62B,#C26C16);border:5px solid #000;box-sizing:border-box;
-    transform:rotate(-6deg);z-index:3;line-height:40px;text-align:center;font-size:0}
-  .shp-card .b1>.ad::before{content:'▶AD';font-size:22px;font-weight:900;color:#fff;
-    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-1px}
+    transform:rotate(-6deg);z-index:3;line-height:43px;text-align:center}
+  .shp-card>.adbadge>i{font-size:23px;font-weight:900;color:#fff;
+    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:scaleX(.9)}
   /* 노랑 버튼 */
   .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px;
     --f1:#FCEF31;--f2:#FEC01D;--ring:#F6EF3E;--lip:#D87C0D;--p1:#C39313;--p2:#C38607}
@@ -4949,13 +4950,15 @@ function renderShopPage(){
       +  '<div class="cbar"><div class="trk"><i style="width:' + pctFill + '%"></i></div>'
       +    '<b>' + (s.lv >= SUM_MAXLV ? 'MAX' : s.exp + '/' + need) + '</b></div>'
       +  '<div class="cbtn b1" data-shsum="' + x.b + '" data-shn="10" data-shfree="1">'
-      +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u><div class="ad"></div></div>'
+      +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u></div>'
+      +  '<div class="adbadge"><i>▶AD</i></div>'
       +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
       +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">💎</span></div>'
       +    '<u class="cost">' + fmt(c10) + '</u></div>'
       +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
       +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">💎</span></div>'
       +    '<u class="cost g3">' + fmt(c30) + '</u></div>'
+      +  '<div class="cfr"></div>'
       +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
       +  '</div>';
   });
