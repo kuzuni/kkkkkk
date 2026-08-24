@@ -1004,6 +1004,144 @@
       #A8FB7E 84% 91%,#3FBC2C 91%)}
   .dgd-b.k i{font-size:60px;-webkit-text-stroke:0;transform:translateY(-2px)}
   .dgd-b:disabled{cursor:default}
+
+  /* ==========================================================================
+     05 무기 팝업 — 측정표 docs/measure/05-무기팝업.md
+     껍데기는 «딤 위 가운데 다이얼로그» (바닥시트·전체화면 아님).
+     레퍼런스 모달 x91 y478 898x1469, 세로중심 1212 = 화면중심 1170 + 42.
+     우리 프레임도 중심에서 +42 로 놓으면 같은 관계가 유지되므로
+     `top:50% / translateY(-50% + 42px)` 로 건다. 세로 420px 차이는 모달 바깥
+     (전투 화면)이 흡수한다 — 모달 자체는 실측 1469px 그대로 쓴다.
+     페이지 화살표가 **모달 박스 바깥**에 있어 공용 #modal 껍데기로는 표현이 안 된다
+     → 01(#offw)·03(#dunw) 과 같이 전용 오버레이를 쓴다.
+     내부 좌표는 전부 «레퍼런스 절대 px − 기준점» 이다 (눈대중 없음).
+     ========================================================================== */
+  #wpnw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:31}
+  #wpnw.on{display:block}
+  #wpnw i,#wpnw em,#wpnw b,#wpnw u,#wpnw s{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900}
+
+  /* 모달 박스 — 검정 7px + 갈색 프레임(#564438), radius 42 */
+  .wm{position:absolute;left:91px;top:50%;width:898px;height:1469px;
+    transform:translateY(calc(-50% + 42px));
+    background:#564438;border:7px solid #000;border-radius:42px;box-sizing:border-box}
+  .wm>*{position:absolute}
+
+  /* 타이틀바 ref y487~578 → 박스기준 top 9, 높이 92. 상단 5px 만 밝은 톤 */
+  .wm-head{left:0;right:0;top:2px;height:92px;border-radius:35px 35px 0 0;
+    background:linear-gradient(180deg,#5B4643 0 5px,#533F3E 5px);
+    text-align:center;line-height:92px}
+  .wm-head>i{font-size:40px;color:#fff;letter-spacing:1.5px;text-indent:1.5px;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+
+  /* 본문 — ref x111~968 / y579~1925 → 박스기준 left 13, top 94, 858x1347 */
+  .wm-body{left:13px;top:94px;width:858px;height:1347px;background:#F0D9BA;
+    border-radius:0 0 30px 30px;overflow:hidden}
+  .wm-body>*{position:absolute}
+
+  /* 정보/그리드 패널 — 본문기준 좌 7 (ref x118) */
+  .wm-info{left:7px;top:32px;width:844px;height:396px;border-radius:37px;background:#D7C0A1}
+  .wm-grid{left:7px;top:458px;width:844px;height:621px;border-radius:22px;background:#D7C0A1;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .wm-grid::-webkit-scrollbar{width:0;height:0}
+  .wm-info>*{position:absolute}
+
+  /* 4-1 아이콘 박스 ref(166,644) 148x147 — 패널기준 (48,33) */
+  .wm-ic{left:48px;top:33px;width:148px;height:147px;border:6px solid #000;border-radius:33px;
+    box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
+    text-align:center;font-size:86px;line-height:135px}
+  /* 4-2 이름 알약 ref(337,654) 349x50 */
+  .wm-nm{left:219px;top:43px;width:349px;height:50px;border-radius:25px;background:#5F5647;
+    text-align:center;line-height:50px;font-size:30px;color:#fff;overflow:hidden}
+  /* 4-3 등급 알약 ref(691,655) 209x49, 검정 4px */
+  .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gc);
+    border:4px solid #000;box-sizing:border-box;text-align:center;line-height:41px;
+    font-size:24px;color:#fff}
+  /* 4-5 재료 진행바 — 좌측 끝은 Lv 알약이 덮는다. ref 우단 901 → 패널기준 783 */
+  .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#82829A;
+    border:6px solid #000;box-sizing:border-box;overflow:hidden}
+  .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
+  .wm-bar>i{position:absolute;left:0;right:0;top:8px;height:34px;line-height:34px;
+    text-align:center;font-size:26px;color:#FCFEB3;text-indent:60px}
+  /* 4-4 Lv 알약 ref(355,723) 139x70 — 진행바 위에 얹힌다 */
+  .wm-lv{left:237px;top:112px;width:139px;height:70px;border-radius:35px;background:#543D2F;
+    border:5px solid #000;box-sizing:border-box;text-align:center;line-height:60px;
+    font-size:44px;color:#fff;z-index:2}
+
+  /* 4-6 보유/장착 효과 2열 표 ref(166,843) 748x150 — 헤더 59 + 본문 91 */
+  .wm-tb{left:48px;top:232px;width:748px;height:150px}
+  .wm-tb>*{position:absolute}
+  .wm-tb .hd{left:0;right:0;top:0;height:59px;background:#5C4B41;border-radius:25px 25px 0 0}
+  .wm-tb .bd{left:0;right:0;top:59px;height:91px;background:#F7ECDA;border-radius:0 0 26px 26px}
+  .wm-tb .dv{left:372px;top:71px;width:4px;height:56px;background:#96887B}
+  .wm-tb .h1,.wm-tb .h2{top:16px;height:32px;line-height:32px;font-size:28px;color:#fff;
+    text-align:center}
+  .wm-tb .h1{left:0;width:372px}
+  .wm-tb .h2{left:376px;width:372px}
+  .wm-tb .l1,.wm-tb .l2{top:82px;height:36px;line-height:36px;font-size:35px;color:#000}
+  .wm-tb .l1{left:22px}
+  .wm-tb .l2{left:392px}
+  .wm-tb .v1,.wm-tb .v2{top:84px;height:32px;line-height:32px;font-size:28px;color:#BAFD62;
+    text-align:right;-webkit-text-stroke:3px #000;paint-order:stroke fill}
+  .wm-tb .v1{left:172px;width:180px}
+  .wm-tb .v2{left:542px;width:180px}
+
+  /* 5 아이템 그리드 — 카드 148x158, pitch 170x190, 첫 카드 패널기준 (10,32) */
+  .wgc{position:absolute;width:148px;height:158px;border:4px solid #000;border-radius:35px;
+    box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
+    overflow:hidden;cursor:pointer}
+  .wgc.eq{border-color:#35DCEE;background:var(--ge)}
+  .wgc>*{position:absolute}
+  .wgc .ic{left:0;right:0;top:9px;height:100px;line-height:100px;text-align:center;font-size:66px}
+  /* Lv.n 은 «우상단» 정렬이다 (좌상단 아님) — 우여백 15 / 상여백 19 */
+  .wgc .lv{right:11px;top:15px;height:26px;line-height:26px;font-size:26px;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
+  .wgc .pb{left:0;right:0;bottom:0;height:35px;background:#82829A;border-top:5px solid #000;
+    box-sizing:border-box;overflow:hidden}
+  .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
+  .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
+    text-align:center;font-size:20px;color:#fff}
+  /* 장착 중 라벨 — 카드상단 +58 */
+  .wgc .eqt{left:0;right:0;top:54px;height:32px;line-height:32px;text-align:center;
+    font-size:30px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+  /* 미보유 자물쇠 49x55, 카드상단 +94 — 이모지 대신 CSS 로 그려 흰 단색 글리프에 맞춘다 */
+  .wgc.lk>.ic,.wgc.lk>.lv{opacity:.35}
+  .wgc .lock{left:50%;top:90px;width:49px;height:55px;margin-left:-25px}
+  .wgc .lock::before{content:'';position:absolute;left:11px;top:0;width:27px;height:31px;
+    border:7px solid #fff;border-bottom:0;border-radius:14px 14px 0 0;box-sizing:border-box}
+  .wgc .lock::after{content:'';position:absolute;left:0;top:22px;width:49px;height:33px;
+    background:#fff;border-radius:7px;
+    background-image:radial-gradient(circle 5px at 24px 13px,#000 0 5px,transparent 5px),
+      linear-gradient(#000,#000);
+    background-size:100% 100%,5px 9px;background-position:0 0,22px 15px;
+    background-repeat:no-repeat,no-repeat}
+
+  /* 7 총 보유 효과 — 본문기준 top 1108, 가운데 정렬 */
+  .wm-tot{left:0;right:0;top:1102px;height:46px;line-height:46px;text-align:center;
+    font-size:43px;color:#000}
+  .wm-tot>b{color:#B8FE5D;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+
+  /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
+  .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:6px solid #000;
+    box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
+    background:linear-gradient(180deg,#D3D3D3 0 8px,#A4A4A4 8px,
+      #A4A4A4 calc(100% - 24px),#D3D3D3 calc(100% - 24px),
+      #D3D3D3 calc(100% - 7px),#757575 calc(100% - 7px))}
+  .wm-btn>i{font-size:41px;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .wm-b1{left:137px;color:#AAEFFF}
+  .wm-b2{left:447px;color:#DFDFDF}
+  .wm-btn.off{filter:saturate(.2) brightness(.86)}
+
+  /* 6 좌우 페이지 화살표 — **모달 박스 바깥**. ref x14~76 / 1003~1065, y1152~1267 */
+  /* .wm 이 border-box 라 자식 left/top 은 테두리 7px 안쪽부터 잰다 → ref 값에서 7 을 뺀다 */
+  .wm-ar{position:absolute;top:667px;width:63px;height:116px;cursor:pointer}
+  .wm-ar.l{left:-84px}
+  .wm-ar.r{left:905px}
+  .wm-ar::before{content:'';position:absolute;top:23px;width:70px;height:70px;
+    border-left:16px solid #fff;border-top:16px solid #fff;box-sizing:border-box}
+  .wm-ar.l::before{left:14px;transform:rotate(-45deg)}
+  .wm-ar.r::before{left:-21px;transform:rotate(135deg)}
 </style>
 </head>
 <body>
@@ -1162,6 +1300,34 @@
       <button class="dgd-b g" id="dgdGo"><i>도전</i></button>
     </div>
   </div></div>
+  <!-- 05 무기 팝업. 딤 위 가운데 다이얼로그지만 페이지 화살표가 모달 박스 **바깥**에 있어
+       공용 #modal 껍데기로는 표현이 안 된다. 측정표 docs/measure/05-무기팝업.md -->
+  <div id="wpnw">
+    <div class="wm">
+      <div class="wm-head"><i>무기</i></div>
+      <div class="wm-ar l" id="wpnPrev"></div>
+      <div class="wm-ar r" id="wpnNext"></div>
+      <div class="wm-body">
+        <div class="wm-info" id="wpnInfo">
+          <div class="wm-ic"  id="wpnIc"></div>
+          <div class="wm-nm"  id="wpnName"></div>
+          <div class="wm-gd"  id="wpnGrade"></div>
+          <div class="wm-bar" id="wpnBar"><s id="wpnBarF"></s><i id="wpnBarT"></i></div>
+          <div class="wm-lv"  id="wpnLv"></div>
+          <div class="wm-tb">
+            <div class="hd"></div><div class="bd"></div><div class="dv"></div>
+            <div class="h1"><i>보유 효과</i></div><div class="h2"><i>장착 효과</i></div>
+            <div class="l1"><i>공격력</i></div><div class="v1" id="wpnOwnV"></div>
+            <div class="l2"><i>공격력</i></div><div class="v2" id="wpnEqV"></div>
+          </div>
+        </div>
+        <div class="wm-grid" id="wpnGrid"></div>
+        <div class="wm-tot" id="wpnTotal"></div>
+        <button class="wm-btn wm-b1" id="wpnBtnEq"></button>
+        <button class="wm-btn wm-b2" id="wpnBtnUp"></button>
+      </div>
+    </div>
+  </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
 
@@ -3760,6 +3926,122 @@ $('dunList').addEventListener('click', e => {
 $('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
 /* 탭바를 누르면 던전 페이지는 닫힌다 (탭바 자체는 A1 구간이라 손대지 않는다) */
 $('tabbar').addEventListener('click', closeDungeon, true);
+
+/* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
+   좌표는 전부 레퍼런스 실측 절대 px 이다. 격자는 **행 = 등급** 으로 묶는다:
+   레퍼런스는 1행 커먼 / 2행 언커먼 / 3행 레어 / 4행 에픽(잘림) 으로 등급이 행마다 띠를 이루는데,
+   우리 게임은 등급당 무기가 1종뿐이라 각 행의 1번 칸에 그 등급 무기를 놓고
+   나머지 4칸은 **미해금 자물쇠 칸**으로 채워 같은 띠 구조를 만든다.
+   (레퍼런스도 미보유 칸을 자물쇠로 그린다 — 밸런스에는 영향이 없다) */
+const WPN_COLS = 5, WPN_ROWS = 4;
+let wpnSel = null, wpnPage = 0;
+
+/* 레퍼런스 등급색 4종(커먼·언커먼·레어·에픽)을 실측값으로 쓰고,
+   우리 게임의 5·6단계(전설·신화)는 같은 채도 흐름으로 이어 붙였다. */
+const WGRADE = [
+  { c:'#775742', r:'#AE7B5C', e:'#4E3A2C' },   /* 일반  = 레퍼런스 커먼   */
+  { c:'#94BC35', r:'#C8E646', e:'#647F20' },   /* 고급  = 레퍼런스 언커먼 */
+  { c:'#1F5281', r:'#2C7097', e:'#143756' },   /* 희귀  = 레퍼런스 레어   */
+  { c:'#661691', r:'#8846A7', e:'#440F61' },   /* 영웅  = 레퍼런스 에픽   */
+  { c:'#B4741A', r:'#E8A63A', e:'#784D11' },   /* 전설 (레퍼런스 없음)    */
+  { c:'#9B1F3C', r:'#D34464', e:'#671429' }    /* 신화 (레퍼런스 없음)    */
+];
+/* 레퍼런스는 소수점을 살린다: 항목 «+46.2%», 총합 «+251.02%» — 공용 pct() 는 정수라 따로 쓴다 */
+const wpct  = v => (v*100).toFixed(1) + '%';
+const wpct2 = v => (v*100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/, ',') + '%';
+
+const wpnList = () => EQUIPS.filter(e => e.slot === 'weapon');
+function wpnCur(){
+  const l = wpnList();
+  return l.find(e => e.id === wpnSel) || l.find(e => e.id === S.eqSlot.weapon) || l[0];
+}
+const wpnTotalOwn = () => wpnList().reduce((s, e) => s + (has(e.id) ? ownVal(e) : 0), 0);
+
+function renderWpn(){
+  const l = wpnList(), cur = wpnCur(), g = GRADE[cur.g], wg = WGRADE[cur.g];
+  const own = has(cur.id), lvNow = oLv(cur.id), need = fragNeed(lvNow), got = own ? frag(cur.id) : 0;
+  /* 상단 선택 아이템 정보 */
+  const ib = $('wpnIc');
+  ib.textContent = cur.ic;
+  ib.style.setProperty('--gc', wg.c); ib.style.setProperty('--gr', wg.r);
+  $('wpnName').innerHTML  = '<i>' + cur.n + '</i>';
+  const gd = $('wpnGrade');
+  gd.innerHTML = '<i>' + g.n + '</i>'; gd.style.setProperty('--gc', wg.c);
+  $('wpnLv').innerHTML    = '<i>Lv. ' + (own ? lvNow : 0) + '</i>';
+  $('wpnBarF').style.width = (own ? Math.min(100, got/need*100) : 0) + '%';
+  $('wpnBarT').innerHTML  = '<i>' + got + '/' + need + '</i>';
+  $('wpnOwnV').innerHTML  = '<i>+' + wpct(own ? ownVal(cur)   : 0) + '</i>';
+  $('wpnEqV').innerHTML   = '<i>+' + wpct(own ? equipVal(cur) : 0) + '</i>';
+  /* 격자 — 행 = 등급, 1번 칸이 실제 무기 */
+  let h = '';
+  for(let r = 0; r < WPN_ROWS; r++){
+    const gi = wpnPage * WPN_ROWS + r;
+    if(gi >= GRADE.length) break;
+    const w = WGRADE[gi], it = l.find(e => e.g === gi);
+    for(let c = 0; c < WPN_COLS; c++){
+      const real = c === 0 ? it : null;
+      const mine = real && has(real.id), eq = real && S.eqSlot.weapon === real.id;
+      const n = mine ? frag(real.id) : 0, nd = real ? fragNeed(mine ? oLv(real.id) : 1) : 2;
+      h += '<div class="wgc' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + '"'
+        +  (mine ? ' data-wpn="' + real.id + '"' : '')
+        +  ' style="left:' + (10 + c*170) + 'px;top:' + (32 + r*190) + 'px'
+        +  ';--gc:' + w.c + ';--gr:' + w.r + ';--ge:' + w.e + '">'
+        +  '<em class="ic">' + (real ? real.ic : '⚔️') + '</em>'
+        +  (mine ? '<b class="lv"><i>Lv.' + oLv(real.id) + '</i></b>' : '')
+        +  (eq   ? '<u class="eqt"><i>장착 중</i></u>' : '')
+        +  (mine ? '' : '<div class="lock"></div>')
+        +  '<div class="pb"><s style="width:' + Math.min(100, n/nd*100) + '%"></s>'
+        +  '<i>' + n + '/' + nd + '</i></div>'
+        +  '</div>';
+    }
+  }
+  $('wpnGrid').innerHTML = h;
+  /* 하단 총 보유 효과 + 버튼 2개 */
+  $('wpnTotal').innerHTML = '총 보유 효과: <b>공격력 +' + wpct2(wpnTotalOwn()) + '</b>';
+  const eqNow = S.eqSlot.weapon === cur.id;
+  const bEq = $('wpnBtnEq');
+  bEq.classList.toggle('off', eqNow || !own);
+  bEq.innerHTML = '<i>' + (eqNow ? '장착 중' : '장착') + '</i>';
+  const up = l.filter(x => canLevel(x)).length;
+  $('wpnBtnUp').classList.toggle('off', !up);
+  $('wpnBtnUp').innerHTML = '<i>일괄 강화' + (up ? ' (' + up + ')' : '') + '</i>';
+}
+function openWeapon(id){
+  wpnSel = id || S.eqSlot.weapon || null;
+  wpnPage = 0;
+  renderWpn();
+  $('wpnw').classList.add('on');
+  $('wpnGrid').scrollTop = 0;
+}
+function closeWeapon(){ $('wpnw').classList.remove('on'); }
+$('wpnGrid').addEventListener('click', e => {
+  const c = e.target.closest('[data-wpn]');
+  if(!c) return;
+  wpnSel = c.dataset.wpn; renderWpn();
+});
+$('wpnBtnEq').onclick = () => {
+  const cur = wpnCur();
+  if(!has(cur.id) || S.eqSlot.weapon === cur.id) return;
+  S.eqSlot.weapon = cur.id; markDirty(); uiDirty = true; save(); renderWpn();
+};
+$('wpnBtnUp').onclick = () => {
+  const r = levelUpAll(wpnList());
+  renderWpn();
+  if(!r.lvs) popup('강화 재료 부족', '<p>강화할 수 있는 무기가 없습니다.</p>');
+};
+/* 페이지 화살표 — 등급 4행씩 넘긴다 */
+const wpnPages = () => Math.ceil(GRADE.length / WPN_ROWS);
+$('wpnPrev').onclick = () => { wpnPage = (wpnPage - 1 + wpnPages()) % wpnPages(); renderWpn(); $('wpnGrid').scrollTop = 0; };
+$('wpnNext').onclick = () => { wpnPage = (wpnPage + 1) % wpnPages(); renderWpn(); $('wpnGrid').scrollTop = 0; };
+/* 딤(모달 바깥)을 누르면 닫힌다. 탭바를 눌러도 닫는다 */
+$('wpnw').addEventListener('click', e => { if(e.target.id === 'wpnw') closeWeapon(); });
+$('tabbar').addEventListener('click', closeWeapon, true);
+/* 임시 진입점 — 06 장비 팝업이 들어오면 그 화면의 «무기 슬롯» 이 이 자리를 가져간다.
+   그때까지는 영웅 탭의 «장비» 서브탭에서 바로 연다 (herosub 자체는 A1 구간이라 손대지 않고
+   추가 리스너만 붙인다). */
+document.querySelectorAll('#herosub .stab').forEach(x => {
+  if(x.dataset.hero === 'eq') x.addEventListener('click', () => openWeapon());
+});
 function openProfile(){
   renderSt();
   showModal('<h2>📊 내 정보</h2>' + $('bSt').innerHTML
