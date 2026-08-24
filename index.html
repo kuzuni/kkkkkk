@@ -2229,46 +2229,47 @@
     text-decoration:none;font-weight:900}
   /* 세로중심 ref 1187 → 프레임 977 = 정중앙 960 +17 */
   .ci{position:relative;flex:none;width:598px;height:813px;max-height:100%;box-sizing:border-box;
-    border:8px solid #000;border-radius:45px;padding:0 7px 9px;background:#56443A;
+    border:8px solid #000;border-radius:45px;padding:0 8px 9px;background:#56443A;
     display:flex;flex-direction:column;transform:translateY(17px)}
   /* 헤더 바 ref x250..829 y790..879 — fill #523E3D, 상단 8px·좌우 7px 만 밝은 #5B4643 */
-  .ci-head{flex:0 0 90px;margin:0 -7px;border-radius:36px 36px 0 0;background:#523E3D;
+  .ci-head{flex:0 0 90px;margin:0 -8px;border-radius:36px 36px 0 0;background:#523E3D;
     box-shadow:inset 0 8px 0 #5B4643,inset 7px 0 0 #5B4643,inset -7px 0 0 #5B4643;
     text-align:center;line-height:90px;overflow:hidden}
   /* 타이틀 코어 h39 → 39/0.93 ≈ 42px. 레퍼런스(«보석» 2자) 코어폭 74 = 자당 37 */
-  .ci-head>i{position:relative;top:-3px;font-size:42px;color:#FED349;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(.88)}
+  .ci-head>i{position:relative;top:-3px;left:-2px;font-size:43px;color:#FED349;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(.892)}
   /* 크림 본문 — 별 워터마크는 엇갈린 격자(53×51, pitch 236×117) */
-  .ci-body{flex:1 1 auto;position:relative;border:solid #46382D;border-width:0 4px 4px;
+  .ci-body{flex:1 1 auto;position:relative;margin-top:2.5px;border:solid #46382D;border-width:0 4px 4px;
     border-radius:0 0 31px 31px;background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
     overflow:hidden}
   .ci-body>*{position:absolute}
   /* 아이콘 박스 ref(460,901) 160×160 → body(199,20). 검정 5 + 골드 림 7 + 오렌지 fill */
-  .ci-ic{left:200px;top:22.5px;width:160px;height:160px;box-sizing:border-box;
+  .ci-ic{left:199px;top:20px;width:160px;height:160px;box-sizing:border-box;
     border:5px solid #000;border-radius:35px;background:#D37C13;
     box-shadow:inset 0 0 0 7px #FCC132}
   /* 아트 자리 — 레퍼런스 보석 잉크 92×95. 이미지로 교체할 때 이 bbox 를 그대로 쓴다 */
-  .ci-ic>i{position:absolute;left:0;right:0;top:0;height:150px;line-height:150px;
+  .ci-ic>i{position:absolute;left:0;right:0;top:1px;height:150px;line-height:150px;
     text-align:center;font-size:96px;transform:scaleX(.87)}
   /* «보유: n» 코어 y1080..1112(중심 1096) → body 중심 215. 전체가 라임 한 덩어리다 */
-  .ci-have{left:0;right:0;top:190.5px;height:50px;line-height:50px;text-align:center;
-    font-size:36px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    white-space:nowrap}
+  .ci-have{left:0;right:0;top:188px;height:50px;line-height:50px;text-align:center;
+    font-size:38px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    white-space:nowrap;transform:scaleX(.953)}
   /* 설명 패널 ref(291,1131) 498×199 → body(30,250). 테두리 없음 · 검정 20% 오버레이(별이 비친다) */
-  .ci-desc{left:31px;top:252.5px;width:498px;height:199px;box-sizing:border-box;
-    border-radius:29px;background:rgba(0,0,0,.20);padding:17px 26px 0}
+  .ci-desc{left:30px;top:250px;width:498px;height:199px;box-sizing:border-box;
+    border-radius:29px;background:#C4AF94;padding:17px 26px 0}
   /* 레퍼런스 L1 은 16자 439px = 자당 27.4 인데 이 서체는 자당 31 이라 3줄로 접힌다.
      음수 letter-spacing 은 금지(LESSONS 01)이므로 **줄 상자를 넓게 잡고 scaleX 로 되돌린다** */
   .ci-desc>i{display:block;width:504px;margin:0 -29px;transform:scaleX(.925);
     font-size:31px;line-height:37px;text-align:center;color:#F9F9F9;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:normal}
+    -webkit-text-stroke:6.5px #000;paint-order:stroke fill;white-space:normal}
   /* «획득처» 라벨 — 리스트 패널 상변을 11px 덮고 앉는다(라벨이 위 레이어) */
-  .ci-wl{left:0;right:0;top:480.5px;height:45px;line-height:45px;text-align:center;
-    font-size:32px;color:#FEF7AC;-webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+  .ci-wl{left:0;right:0;top:478px;height:45px;line-height:45px;text-align:center;
+    font-size:34px;color:#FEF7AC;-webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2;
+    transform:scaleX(.925)}
   /* 획득처 리스트 패널 ref(290,1385) 500×160 → body(29,504). 행 pitch 40 */
-  .ci-ways{left:30px;top:506.5px;width:500px;height:160px;border-radius:23px;
-    background:rgba(0,0,0,.20)}
+  .ci-ways{left:29px;top:504px;width:500px;height:160px;border-radius:23px;
+    background:rgba(0,0,0,.18)}
   .ci-ways>div{position:absolute;left:10px;right:10px;height:32px;
     display:flex;align-items:center;white-space:nowrap}
   .ci-ways>div:nth-child(1){top:27px}
@@ -2277,7 +2278,7 @@
   .ci-ways s{width:28px;font-size:29px;color:#8FFC48;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .ci-ways i{margin-left:12px;font-size:26px;color:#F9F9F9;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill}
+    -webkit-text-stroke:6.5px #000;paint-order:stroke fill}
   /* 재화 아이콘은 전부 손가락 커서 — 클릭 가능하다는 신호 */
   [data-cur]{cursor:pointer}
   /* ==========================================================================
