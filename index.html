@@ -1338,8 +1338,10 @@
 
   /* ---- 이름 리본 (359x105, 가운데 판 299 + 좌우 꼬리) ---- */
   .eqrb{width:359px;height:105px}
-  .eqrb>.pl{position:absolute;left:32px;top:0;width:299px;height:88px;box-sizing:border-box;
-    background:var(--rb);border:5px solid var(--rd);border-radius:10px}
+  /* 판 실측(ref x=250 세로 프로필): 어두운 테두리 744~751(8px) · 주황 752~814(63) ·
+     테두리 815~822(8px) → **총 높이 79 · 테두리 8px**. 88/5 로 두면 주황 면이 78 로 +22% 부푼다 */
+  .eqrb>.pl{position:absolute;left:32px;top:0;width:299px;height:79px;box-sizing:border-box;
+    background:var(--rb);border:8px solid var(--rd);border-radius:10px}
   .eqrb>.tl{position:absolute;top:26px;width:44px;height:71px;background:var(--rt);
     clip-path:polygon(0 0,100% 0,100% 100%,0 100%,22% 50%)}
   .eqrb>.tl.l{left:0}
@@ -1378,16 +1380,61 @@
   .eqst{height:49px;border-radius:25px;background:#835848}
   .eqst.a{left:165px;width:181px}
   .eqst.b{left:425px;width:182px}
-  /* 잉크 h22~23 → font 25. 알약 안 가로 중앙 */
+  /* 잉크 h22~23 → font 31. 알약 안 가로 중앙.
+     외곽선은 `-webkit-text-stroke:6px` 대신 **바깥으로만 나가는 text-shadow** 로 그린다.
+     stroke 6 은 `paint-order:stroke fill` 덕에 흰 면이 살긴 하지만 글리프 폭 대비 외곽선이
+     너무 두껍다(실측 검정/잉크폭 = 14.1/px). text-shadow 3px 는 12.5/px 로
+     레퍼런스(7.5/px)에 더 가깝다. 07 `.ol3` 와 같은 방식 */
   .eqst>i{position:absolute;left:0;right:0;top:8px;height:34px;line-height:34px;
-    text-align:center;font-size:31px;font-weight:900;color:#FAF7F0;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;letter-spacing:-1px;
-    text-indent:1px;white-space:nowrap}
+    text-align:center;font-size:31px;font-weight:900;color:#FAF7F0;letter-spacing:-1px;
+    text-indent:1px;white-space:nowrap;
+    text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
+      2px 2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000,-2px -2px 0 #000;
+    /* 잉크 «높이»는 fs31 에서 22 로 레퍼런스와 정확히 같은데 «폭»이 모자란다
+       (`557.49A` 108 vs 127 / `72.33A` 92 vs 112 → 평균 ×1.19).
+       PROGRESS 교훈대로 음수 자간이 아니라 scaleX 로 넓힌다(숫자 1.19~1.60 범위 안) */
+    transform:scaleX(1.19)}
   /* 아이콘이 알약 좌단을 덮는다 — 검 58x74 @x122 / 하트 65x54 @x369 */
   .eqic{text-align:center}
-  .eqic.sw{left:122px;width:58px;height:74px;font-size:60px;line-height:74px}
-  .eqic.sw>i{transform:scale(.87,1.12)}
-  .eqic.hp{left:369px;width:65px;height:54px;font-size:52px;line-height:54px}
+  /* 검 — ⚔️ 이모지는 «교차된 검 2자루» 라 레퍼런스(기울어진 검 **1자루**)와 형태가 아예 다르고
+     팔레트도 어긋난다(실측: 레퍼런스 금색 #F0C040 492px·은색 240,240,240 341px →
+     이모지 58px·다른 은색). 하트와 같은 이유로 CSS 로 직접 그린다.
+     실측 잉크 bbox x121~189(69) · y1191~1264(74) · 축이 수평에서 약 56°(= 세로 기준 34° 시계) */
+  .eqic.sw{left:121px;width:69px;height:74px}
+  /* ⚠ 외곽선 filter 는 **부모**에 건다. 같은 요소에 `clip-path` 와 `filter` 를 함께 주면
+     렌더 순서가 «filter → clip-path» 라 clip-path 가 drop-shadow 를 통째로 잘라낸다
+     (실측: 검정 102px 만 남고 외곽선이 사라졌다) */
+  .eqic.sw>i{position:absolute;left:0;top:0;width:69px;height:74px;transform:none;
+    filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000)
+           drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
+  /* 칼날 #C1CFED + 손잡이 #F2C64B. 끝은 뾰족하고 자루 끝은 모따기.
+     외곽선은 «흐린» drop-shadow 로는 검정으로 안 읽힌다(픽셀 분류에서 검정 102px).
+     blur 0 + 4방향 오프셋을 체이닝해 **단단한 3px 외곽선**을 만든다.
+     면적비도 맞춘다 — 레퍼런스 은색 1169px : 금색 671px = **1.74:1** (축 방향 65% : 35%).
+     손잡이는 칼날보다 좁다(실측 bbox 38 vs 58) → 아래 구간을 좌우 18%씩 들여 깎는다.
+     축 각도는 은/금 무게중심 벡터(+23,−24)에서 수평 46° → 세로 기준 **44° 시계** */
+  .eqic.sw>i::before{content:'';position:absolute;left:50%;top:50%;
+    width:34px;height:77px;margin:-42px 0 0 -19px;transform:rotate(44deg);
+    background:linear-gradient(#C1CFED 0 50px,#F2C64B 50px);
+    clip-path:polygon(0 13%,50% 0,100% 13%,100% 65%,90% 65%,90% 95%,70% 100%,
+      30% 100%,10% 95%,10% 65%,0 65%)}
+  /* 하트는 ❤️ 이모지가 «단색 빨강(244,67,54)» 이라 레퍼런스(분홍 #FF3B7D + 안쪽 초록 `+`)와
+     색이 통째로 다르다. 자물쇠와 같은 이유로 CSS 로 직접 그린다 — 실측 65x54 @x369 */
+  .eqic.hp{left:369px;width:65px;height:54px}
+  .eqic.hp>i{position:absolute;left:0;top:0;width:65px;height:54px;transform:none}
+  /* 하트 = 원 2개 + 회전 사각형. 검정 외곽선은 blur 0 오프셋 체이닝으로 실루엣 바깥에만 얹는다.
+     실측 분홍 잉크 bbox = **65x54 @ (369,1200)** 이므로 하트가 박스를 꽉 채운다(인셋 없음) */
+  .eqic.hp>i::before{content:'';position:absolute;left:0;top:0;width:65px;height:54px;
+    background:
+      radial-gradient(circle 17px at 17px 17px,#FF3B7D 0 17px,transparent 17px),
+      radial-gradient(circle 17px at 48px 17px,#FF3B7D 0 17px,transparent 17px),
+      conic-gradient(from 45deg at 32.5px 19px,#FF3B7D 0 90deg,transparent 90deg);
+    filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000)
+           drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
+  /* 안쪽 초록 `+` (#9BE227) — 실측 24x25 @ (390,1217) = 하트 박스 기준 (21,17) */
+  .eqic.hp>i::after{content:'';position:absolute;left:21px;top:17px;width:24px;height:25px;
+    background:linear-gradient(#9BE227,#9BE227) center/24px 9px no-repeat,
+      linear-gradient(#9BE227,#9BE227) center/9px 25px no-repeat}
 
   /* ---- 캐릭터 일러스트 (이모지 대체 — 실제 아트 들어오면 교체) ---- */
   .eqil{text-align:center;pointer-events:none}
@@ -1396,9 +1443,11 @@
 
   /* ---- 잠금 슬롯 3개 (Ø109, pitch 170, 중심 369.5/539.5/709.5) ---- */
   /* 가장자리가 소프트한 그림자 원판이라 단색 원이 아니라 radial-gradient */
+  /* 정지점 84% 면 «색차 30 이내» 로 잡히는 지름이 106 이라 실측 109 보다 3px 작다.
+     r58 · 검출반경 = (s + 0.47·(100−s))% → s=88.5 에서 54.5 → **Ø109** */
   .eqlk{top:1293px;width:116px;height:116px;
     background:radial-gradient(circle closest-side at 50% 50%,
-      #74553F 0 84%,rgba(116,85,63,0) 100%)}
+      #74553F 0 88.5%,rgba(116,85,63,0) 100%)}
   .eqlk.p1{left:312px}
   .eqlk.p2{left:482px}
   .eqlk.p3{left:652px}
@@ -4887,8 +4936,8 @@ function renderEqPage(){
                      'data-eqpet="1"');
       }
     });
-    h += '<div class="eqic sw" style="top:' + g.sw + 'px"><i>⚔️</i></div>'
-      +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i>❤️</i></div>'
+    h += '<div class="eqic sw" style="top:' + g.sw + 'px"><i></i></div>'
+      +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i></i></div>'
       +  '<div class="eqst a" style="top:' + g.st + 'px"><i>' + fmt(r.atk) + '</i></div>'
       +  '<div class="eqst b" style="top:' + g.st + 'px"><i>' + fmt(r.hp) + '</i></div>';
   });
