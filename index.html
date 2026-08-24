@@ -3571,12 +3571,13 @@
     <div class="body" id="bSt"></div>
   </div>
 
-  <!-- 하단 탭바 5개(영웅·성장·모험·보물상자·상점).
+  <!-- 하단 탭바 5개(영웅·훈련·던전·보물상자·상점).
+       (2026-08-24 작업 24) 3번째 칸은 «모험» 이 아니라 «던전» 이고, 누르면 03 던전 페이지(#dunw)로 직행한다.
        패널이 열려 있는 동안 그 탭 자리는 ✕(닫기) 버튼으로 바뀐다. -->
   <div id="tabbar">
     <div class="tab" data-t="hero"><span class="ti">🐾</span><span class="tl">영웅</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="grow"><span class="ti">⚒️</span><span class="tl">훈련</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
-    <div class="tab" data-t="adv"><span class="ti">⚔️</span><span class="tl">모험</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
+    <div class="tab" data-t="adv"><span class="ti">⚔️</span><span class="tl">던전</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="box"><span class="ti">🎁</span><span class="tl">보물상자</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
     <div class="tab" data-t="shop"><span class="ti">🏪</span><span class="tl">상점</span><i class="bdg"></i><em class="nw">NEW</em><b class="tx">✕</b></div>
   </div>
@@ -6828,11 +6829,30 @@ function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
   if(typeof closeTrain === 'function') closeTrain();
   if(typeof closeRelicPage === 'function') closeRelicPage();
+  if(typeof closeRelicTab === 'function') closeRelicTab();
   renderDunPage();
   $('dunw').classList.add('on');
   $('dunList').scrollTop = 0;
+  syncDunNav(true);
 }
-function closeDungeon(){ $('dunw').classList.remove('on'); }
+function closeDungeon(){
+  const w = $('dunw');
+  if(!w || !w.classList.contains('on')) return;
+  w.classList.remove('on');
+  syncDunNav(false);
+}
+/* 작업 24 — 전체화면 상점(syncShopNav)·훈련(syncTrainNav)과 같은 규칙:
+   던전 페이지가 열려 있는 동안 «던전» 칸이 ✕(A1 의 .tab.close, 296px)로 바뀐다. */
+function syncDunNav(on){
+  $('tabbar').classList.toggle('open', on || panelOpen);
+  const tabs = [...document.querySelectorAll('.tab')];
+  tabs.forEach((x, i) => {
+    const me = (on && x.dataset.t === 'adv') || (panelOpen && x.dataset.t === curTab);
+    x.classList.toggle('close', me);
+    x.classList.toggle('pre', !!(tabs[i+1] && ((on && tabs[i+1].dataset.t === 'adv')
+      || (panelOpen && tabs[i+1].dataset.t === curTab))));
+  });
+}
 $('dunList').addEventListener('click', e => {
   const c = e.target.closest('[data-dcard]');
   if(!c) return;
@@ -6846,8 +6866,10 @@ $('dunList').addEventListener('click', e => {
   openDunDetail(d);
 });
 $('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
-/* 탭바를 누르면 던전 페이지는 닫힌다 (탭바 자체는 A1 구간이라 손대지 않는다) */
-$('tabbar').addEventListener('click', closeDungeon, true);
+/* (작업 24) 예전에는 «탭바를 누르면 던전 페이지가 닫힌다» 는 캡처 리스너를 여기 두었지만,
+   이제 던전은 탭 자체가 소유한 페이지다. 캡처 단계에서 먼저 닫아 버리면 goTab('adv') 이
+   «닫혀 있음» 을 보고 다시 열어 재클릭 토글이 죽는다. 다른 탭으로의 이동은 goTab 각 분기의
+   closeDungeon() 이 처리하므로 이 리스너는 제거했다. */
 
 /* ---- 10 상점 팝업 — 소환 탭 (전체화면 페이지 #shopw) — 측정표 docs/measure/10-상점팝업소환탭.md ----
    상자 카드 3장 = 무기·방어구·스킬 소환 배너. 각 카드 우측 소환 버튼 3개(무료 10연 / 💎 10연 / 💎 30연).
@@ -7947,7 +7969,17 @@ function goTab(k, forceOpen){
     openTrain();
     return;
   }
-  closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
+  /* 던전 탭 → 03 던전 페이지(#dunw) 직행. 중간 «모험» 패널은 폐기했다. (작업 24) */
+  if(k === 'adv' && !forceOpen){
+    closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();
+    if($('dunw').classList.contains('on')){ closeDungeon(); return; }
+    if(panelOpen){ panelOpen = false; syncPanel(); }
+    if(!S.seen.adv){ S.seen.adv = 1; document.querySelectorAll('.tab').forEach(x =>
+      x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
+    openDungeon();
+    return;
+  }
+  closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
