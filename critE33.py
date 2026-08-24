@@ -44,3 +44,11 @@ for nm,L,off in [('ref',RL,0),('cap',CL,DY)]:
     p=L[:,300]
     base = 781 if nm=='ref' else 571
     print(f" {nm} x=300 y {base-15}..{base+120}:", " ".join(f"{p[y]:.0f}" for y in range(base-15,base+121,5)))
+
+print("="*70); print("D. CREAM vertical extent at CENTER x=540 (avoid corner radius)")
+for nm,L,base in [('ref',RL,0),('cap',CL,DY)]:
+    p=L[:,540]
+    # top: from header brown(68) into cream(220) around ref 880
+    t=cross(p,850-base,920-base,144.0,True)
+    b=cross(p,1620-base,1540-base,146.0,True)
+    print(f" {nm} cream x540 top={t+base:.1f} bot={b+base:.1f} h={b-t:.1f}")
