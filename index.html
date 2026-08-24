@@ -2410,8 +2410,8 @@
     color:var(--fat,#fff);-webkit-text-stroke:var(--fatw,2px) var(--fat,#fff);paint-order:stroke fill}
   /* 굵기 보정량은 요소마다 다르다 — ref 잉크 «면적» 에 맞춰 개별로 잰 값이다.
      run 중앙값은 인접 획이 붙으면 뭉쳐 읽히므로 **면적** 을 기준으로 삼았다. */
-  #sumw .sm-band>i{--fatw:1.5px}
-  #sumw .sm-close i{--fatw:2px}
+  #sumw .sm-band>i{--fatw:2px}
+  #sumw .sm-close i{--fatw:2.5px}
   #sumw .sm-b .lab i{--fatw:1px}
   #sumw .sm-b .cost i{--fatw:0px}
   #sumw .sm-c>u i{--fatw:1px}
@@ -2449,7 +2449,8 @@
 
   /* 카드 — 검정 외곽선 5px + 안쪽 밝은 림 6px + 면(그라데이션 없음), radius 34 */
   .sm-c{position:relative;width:157px;height:157px;flex:0 0 auto;box-sizing:border-box;
-    border:5px solid #000;border-radius:32px;background:var(--face);
+    border:5px solid #000;border-radius:34px;
+    background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0) 55%),var(--face);
     box-shadow:inset 0 0 0 6px var(--rim)}
   /* 아이콘 잉크 목표 76x75(카드 안쪽 여백 약 40). 09 기록상 이모지는 font-size ≈ 잉크 이므로
      78px 에서 시작해 캡처 실측으로 보정한다. */
@@ -2513,7 +2514,7 @@
   .sm-b{position:absolute;top:0;width:247px;height:148px;box-sizing:border-box;
     border:6px solid #000;border-radius:34px;padding:0;cursor:pointer;
     background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px 10px,#A4A4A4 10px,
-                                      #989898 40px 72px,#909090 106px,#8B8B8B 118px 122px,
+                                      #989898 40px 100px,#909090 112px,#8B8B8B 118px 122px,
                                       #D3D3D3 122px 128px,#8B8B8B 128px 129px,
                                       #757575 129px 135px,#8B8B8B 135px 136px);
     box-shadow:inset 6px 0 0 #D3D3D3,inset -6px 0 0 #D3D3D3}
