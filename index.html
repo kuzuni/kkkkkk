@@ -4578,7 +4578,12 @@ const ENEMY_COUNT = 50;
 const eHp   = s => 55 * Math.pow(1.25, s-1);
 const eDmg  = s => 6  * Math.pow(1.14, s-1);
 const eGold = s => 4  * Math.pow(1.175, s-1);
-const stageTotal = () => ENEMY_COUNT + (S.stage % 10 === 0 ? 1 : 0);
+/* 작업 28 — 10 의 배수 스테이지는 «보스전». 보스전에는 보스 1마리만 스폰되고 일반 몹은 나오지 않는다.
+   보스전에서 지면(사망·시간 초과) 스테이지는 그대로 두고 «파밍»(S.bossFarm) 상태로 전환된다. */
+const BOSS_SEC = 30;                                  /* 보스전 제한 시간(초) */
+const isBossStage = () => S.stage % 10 === 0;
+const inBossFight = () => isBossStage() && !S.bossFarm;
+const stageTotal = () => inBossFight() ? 1 : ENEMY_COUNT;
 
 const ETYPE = {
   zombie: { name:'좀비',     atlas:'zombie', walk:'walk',       atk:'walk',         die:'Death',
@@ -4587,8 +4592,9 @@ const ETYPE = {
             fps:9,  scale:0.32,  r:13, sp:1.10, hp:0.50, dmg:0.7, gold:0.9, col:'#7cf3a0' },
   dark:   { name:'다크엘프', atlas:'elves',  walk:'blue_idle',  atk:'blue_attack',  die:'blue_die',
             fps:8,  scale:0.44,  r:21, sp:0.42, hp:2.6,  dmg:1.7, gold:2.0, col:'#8fa6ff' },
+  /* 작업 28 — 보스는 일반 몹(좀비) 대비 체력 ×22 · 공격력 ×22 (dmg 3.0 → 22) */
   boss:   { name:'군주',     atlas:'elves',  walk:'blue_idle',  atk:'blue_attack',  die:'blue_die',
-            fps:7,  scale:1.65, r:54, sp:0.48, hp:22,   dmg:3.0, gold:20,  col:'#ffca5c' },
+            fps:7,  scale:1.65, r:54, sp:0.48, hp:22,   dmg:22,  gold:20,  col:'#ffca5c' },
   promo:  { name:'승급 수호자', atlas:'elves', walk:'blue_idle', atk:'blue_attack', die:'blue_die',
             fps:7,  scale:1.9,  r:60, sp:0.55, hp:1,    dmg:4.5, gold:0,   col:'#ff6b7f' }
 };
@@ -4601,6 +4607,7 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.ge
 const DEF = () => ({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   gold:0, dia:300, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
+  bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   sp:0, spAtk:0, spHp:0, spRegen:0, spAuto:true,
   statStage:1,                                /* 23 스탯 훈련 단계 — 훈련과 같은 구조, 재화만 포인트 */
   lv: UPG.reduce((o,u) => (o[u.id]=0, o), {}),
@@ -4831,6 +4838,7 @@ let enemies = [], shots = [], parts = [], nums = [], corpses = [], zones = [], b
 let pets = [], spawnQ = [], skillCd = {};
 let killed = 0, msgTxt = '', msgT = 0, orbitAng = 0, auraTick = 0;
 let promo = null;   /* 승급전 진행 상태 */
+let bossT = 0;      /* 28 보스전 남은 시간(초). > 0 이면 보스전 진행 중 */
 let goldEMA = 0, goldWin = 0, winT = 0;
 
 function showMsg(t){ msgTxt = t; msgT = 1.7; }
@@ -4847,8 +4855,22 @@ function spawnStage(){
   enemies.length = 0; shots.length = 0; parts.length = 0; nums.length = 0;
   corpses.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0; spawnQ.length = 0;
   killed = 0;
-  const s = S.stage, boss = (s % 10 === 0);
+  if(!isBossStage()) S.bossFarm = false;   /* 28 — 보스 스테이지가 아니면 파밍 상태는 존재할 수 없다 */
+  const s = S.stage, boss = inBossFight();
   buildFloor(s);
+  /* 28 — 보스전이면 보스 «단독» 스폰(일반 몹 없음) + 30초 제한. 아니면 일반 몹 파도 */
+  if(boss){ spawnQ.push({ t:'boss', delay:1.4 }); bossT = BOSS_SEC; }
+  else    { bossT = 0; queueMobs(); }
+  player.x = WORLD.w/2; player.y = WORLD.h/2;
+  player.hp = stat.maxHp; player.dead = 0;
+  cam.x = player.x; cam.y = player.y;
+  syncPets();
+  showMsg(boss ? '⚠ BOSS STAGE ' + s + ' — ' + BOSS_SEC + '초' : 'STAGE ' + s);
+}
+
+/* 일반 몹 한 파도 — 스테이지 시작과 «파밍» 재충전 양쪽에서 쓴다(28) */
+function queueMobs(){
+  const s = S.stage;
   for(let i=0;i<ENEMY_COUNT;i++){
     let t = 'zombie';
     const r = Math.random();
@@ -4856,12 +4878,27 @@ function spawnStage(){
     else if(s >= 5 && r > 0.84) t = 'dark';
     spawnQ.push({ t, delay: i*0.02 + rnd(0, 0.3) });
   }
-  if(boss) spawnQ.push({ t:'boss', delay:1.4 });
-  player.x = WORLD.w/2; player.y = WORLD.h/2;
-  player.hp = stat.maxHp; player.dead = 0;
-  cam.x = player.x; cam.y = player.y;
-  syncPets();
-  showMsg(boss ? '⚠ BOSS STAGE ' + s : 'STAGE ' + s);
+}
+
+/* 28 — 보스전 실패(사망 또는 시간 초과). 스테이지는 «되돌리지 않고» 그 자리에서
+   일반 몹 파밍으로 전환하고, 스테이지 헤더 아래에 «재도전» 버튼을 띄운다.
+   플레이어 사망 연출·자동 부활은 건드리지 않는다(그래서 spawnStage 를 부르지 않는다). */
+function failBoss(why){
+  if(!inBossFight()) return;
+  bossT = 0;
+  S.bossFarm = true;
+  enemies.length = 0; spawnQ.length = 0; killed = 0;
+  queueMobs();
+  showMsg('💀 보스전 실패 (' + why + ') — [재도전] 으로 다시 도전');
+  uiDirty = true; save();
+}
+
+/* 28 — «재도전» 버튼: 같은 스테이지의 보스전을 처음부터 다시 시작한다 */
+function retryBoss(){
+  if(!S.bossFarm) return;
+  S.bossFarm = false;
+  spawnStage();
+  uiDirty = true; save();
 }
 
 function makeEnemy(tk){
@@ -4905,7 +4942,7 @@ function killEnemy(e){
   gainExp(2 + S.stage*0.5 + (e.tk === 'boss' ? 80 : 0));
   if(e.tk === 'boss' && S.stage >= S.best) S.dia += 250 + S.stage*25;
   burst(e.x, e.y - e.r, e.T.col, e.tk === 'boss' ? 46 : 13, e.tk === 'boss' ? 330 : 190);
-  if(e.tk === 'boss') cam.shake = 12;
+  if(e.tk === 'boss'){ cam.shake = 12; bossT = 0; S.bossFarm = false; }   /* 28 — 클리어 → 자동 진행 재개 */
   corpses.push({ akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
                  x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r });
 }
@@ -5226,6 +5263,7 @@ function step(dt){
         burst(player.x, player.y - 20, '#ff5470', 36, 320);
         cam.shake = 15; showMsg('부활 중...');
         openDefeat();   /* 18 패배 화면 — 표시 전용, 자동 부활은 그대로 진행 */
+        failBoss('패배');   /* 28 — 보스전 중이었으면 파밍 상태로 전환(스테이지 유지) */
       }
     }
     if(e.atkT <= 0) setAnim(e, e.T.atlas, e.T.walk, e.T.fps, true);
@@ -5329,6 +5367,12 @@ function step(dt){
     if(c.life <= 0) corpses.splice(i,1);
   }
 
+  /* ---- 28 보스전 제한 시간 ---- */
+  if(bossT > 0 && !promo){          /* 승급전이 끼어들면 보스전 시계는 멈춘다(endPromo 가 스테이지를 다시 깐다) */
+    bossT -= dt;
+    if(bossT <= 0){ bossT = 0; failBoss('시간 초과'); }
+  }
+
   /* ---- 승급전 진행 ---- */
   if(promo){
     promo.t -= dt;
@@ -5337,9 +5381,17 @@ function step(dt){
   }
 
   /* ---- 스테이지 클리어 ---- */
-  if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0){
+  if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0 && S.bossFarm){
+    /* 28 — 보스전 실패 상태: 스테이지를 올리지 않고 같은 스테이지 일반 몹을 다시 채운다(파밍) */
+    const bonusG = eGold(S.stage) * 12 * stat.goldMul;
+    S.gold += bonusG; goldWin += bonusG;
+    killed = 0; queueMobs();
+    showMsg('파밍 +' + fmt(bonusG) + 'G — [재도전] 으로 보스에 다시 도전');
+    uiDirty = true;
+  }
+  else if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0){
     const first = S.stage >= S.best;              /* 최고 기록 갱신 시에만 다이아 */
-    S.stage++;
+    S.stage++; S.bossFarm = false;                /* 28 — 다음 스테이지는 항상 «미도전» 상태로 */
     S.best = Math.max(S.best, S.stage);
     const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
     S.gold += bonusG; goldWin += bonusG;
