@@ -2330,7 +2330,8 @@
 
   /* §2 크림 박스 — border-box ref x17..1062 / y1063..2152, 테두리 #CDA26C 6px */
   .tr-box{left:17px;top:143px;width:1046px;height:1093px;border-radius:34px;
-    background:linear-gradient(180deg,#F3E6CD 0 340px,#EDDABC 420px 900px,#F3E7CF 960px);
+    background:linear-gradient(180deg,#F3E6CD 0 348px,#EDDABC 348px 919px,#FFF2D7 919px 925px,
+      #F3E7CF 925px);
     box-shadow:inset 0 0 0 6px #CDA26C}
   .tr-box>*{position:absolute}
 
@@ -2353,9 +2354,9 @@
   /* §4 진행바 — 박스 기준 x177 y165 w662 h55, 검정 8px, 채움 #9EF12F */
   .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:28px 12px 12px 28px;
     background:#141414}
-  .tr-prog>.trk{position:absolute;left:8px;top:7px;right:4px;bottom:7px;border-radius:21px;
+  .tr-prog>.trk{position:absolute;left:8px;top:7px;right:4px;bottom:7px;border-radius:8px;
     background:#1C1E2B;overflow:hidden}
-  .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:21px;
+  .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;
     background:linear-gradient(180deg,#9FE83B 0 2px,#97EB2A 2px 36px,#7BD31B 36px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
     font-size:31px;color:#fff;-webkit-text-stroke:7px #141414;paint-order:stroke fill;z-index:2;
@@ -2369,7 +2370,7 @@
     box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #CFF06B}
   /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
      stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다 */
-  .tr-up>svg{position:absolute;left:20px;top:19px;width:68px;height:66px}
+  .tr-up>svg{position:absolute;left:23px;top:14px;width:61px;height:59px}
   .tr-up>svg path{fill:#B0EA26;stroke:#141414;stroke-width:16;stroke-linejoin:round;
     paint-order:stroke fill}
 
@@ -2394,8 +2395,9 @@
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
   .tr-cards{left:0;right:0;top:373px;height:510px}
-  .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:26px;background:#FFFDF2;
-    box-shadow:inset 0 0 0 8px #141414;cursor:pointer}
+  .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:28px;background:#FFFDF2;
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 3px #8B6A38,0 0 0 5px #C6A470,0 8px 0 #5E4823;
+    cursor:pointer}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
   .tr-card>*{position:absolute}
@@ -2409,8 +2411,8 @@
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
   .tr-card>.cn>i{font-size:29px;color:#6E502F;transform:scaleX(.95)}
-  .tr-card>.cb{left:0;right:16px;top:396px;bottom:8px;display:flex;align-items:center;
-    justify-content:center;gap:7px;
+  .tr-card>.cb{left:12px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
+    justify-content:center;gap:7px;border-radius:0 0 20px 20px;
     background:linear-gradient(180deg,#BBA38B 0 99px,#AA7F54 99px)}
   .tr-card>.cb>s{font-size:42px;line-height:74px;-webkit-text-stroke:0}
   .tr-card>.cb>i{position:relative;top:-3px;font-size:47px;line-height:62px;color:#F9EB6E;
@@ -2421,10 +2423,11 @@
     background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
 
   /* §7 하단 서브탭 4칸 — x37 y958 w960 h97, 4등분 240 */
-  .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:48px;background:#000;
+  .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:40px;background:#141414;
     overflow:hidden;display:flex}
   .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;background:#635340;
-    margin:6px 0;cursor:pointer;box-shadow:inset -4px 0 0 #4A3A2B}
+    margin:6px 0;cursor:pointer;
+    box-shadow:inset -4px 0 0 #4A3A2B,inset 0 6px 0 #70604F,inset 0 -6px 0 #71604C}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
   .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;box-shadow:none}
   .tr-sub>.sg.on::before{content:'';position:absolute;left:8px;right:0;top:0;bottom:0;
@@ -7951,7 +7954,7 @@ function renderTrain(){
   const ready = t ? trainReady() : statReady();
   $('trRib').innerHTML = (t ? '훈련 ' : '스탯 훈련 ') + '<em>' + stage + '</em> 단계';
   /* 트랙 내부 646px. 둥근 캡 때문에 ref 는 0% 에서도 10px 이 보인다 — 같은 보정을 준다 */
-  $('trFill').style.width = (10 + Math.max(0, Math.min(1, prog / max)) * 636) + 'px';
+  $('trFill').style.width = (16 + Math.max(0, Math.min(1, prog / max)) * 632) + 'px';
   $('trProg').textContent = prog + '/' + max;
   $('trUp').classList.toggle('on', ready);
   $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
