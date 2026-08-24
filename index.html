@@ -771,7 +771,7 @@
   #dunw i,#dunw em,#dunw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
 
   /* 카드 리스트 — 상단 여백 49(ref 191→241), 하단은 서브탭 바로 위까지 */
-  .dns-list{position:absolute;left:0;right:0;top:53px;bottom:139px;overflow-y:auto;
+  .dns-list{position:absolute;left:0;right:0;top:45px;padding-top:8px;bottom:138px;overflow-y:auto;
     overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .dns-list::-webkit-scrollbar{width:0;height:0}
 
@@ -790,16 +790,16 @@
     background:repeating-conic-gradient(from 0deg at 50% 50%,
       var(--r) 0deg 7deg,transparent 7deg 15deg);
     -webkit-mask-image:radial-gradient(60% 55% at 50% 50%,#000 0%,transparent 72%);
-    mask-image:radial-gradient(60% 55% at 50% 50%,#000 0%,transparent 72%);opacity:.85}
+    mask-image:radial-gradient(66% 60% at 50% 50%,#000 0%,#000 34%,transparent 82%);opacity:1}
   /* 안쪽 상단 하이라이트 1줄 + 좌측 13px 음영 */
   .dnc>.sh{position:absolute;inset:8px 7px;border-radius:5px;pointer-events:none;
-    background:linear-gradient(180deg,rgba(255,255,255,.22) 0 3px,transparent 3px),
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0 2px,rgba(255,255,255,.17) 4px,transparent 8px),
       linear-gradient(90deg,rgba(0,0,0,.45) 0,transparent 13px)}
   .dnc>*{position:absolute}
 
   /* 던전명 — rel +42/+44, 잉크높이 52, #FDFF84, 검정 외곽선 4px */
   .dnc .nm{left:39px;top:40px;height:56px;line-height:56px;font-size:56px;font-weight:900;
-    letter-spacing:-5px;color:#FDFF84;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     white-space:nowrap}
   .dnc .nm i{transform:scaleX(1)}
 
@@ -813,8 +813,9 @@
     font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
 
   /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
-  .dnc .lb{top:245px;height:33px;line-height:33px;font-size:28px;font-weight:800;
-    letter-spacing:-3.5px;color:#fff;white-space:nowrap}
+  .dnc .lb{top:243px;height:33px;line-height:33px;font-size:28px;font-weight:800;
+    letter-spacing:-3.5px;word-spacing:0;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
   .dnc .lb.a{left:134px}
   .dnc .lb.b{left:314px}
 
@@ -824,15 +825,17 @@
   .dnc .sp.tk{left:279px;width:171px}
   .dnc .sp>em{position:absolute;text-align:center}
   .dnc .sp.lv>em{left:-31px;top:-7px;width:48px;height:61px;font-size:52px;line-height:61px}
-  .dnc .sp.tk>em{left:-16px;top:0;width:64px;height:50px;font-size:40px;line-height:50px}
+  .dnc .sp.tk>em{left:-22px;top:0;width:64px;height:50px;font-size:56px;line-height:50px;
+    transform:scaleY(.8)}
   .dnc .sp>i{position:absolute;top:6px;height:34px;line-height:34px;font-size:40px;
-    font-weight:900;color:#fff;white-space:nowrap}
+    font-weight:900;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill}
   .dnc .sp.lv>i{left:64px}
-  .dnc .sp.tk>i{left:73px;letter-spacing:4px}
+  .dnc .sp.tk>i{left:71px;letter-spacing:4px}
 
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
-  .dnc .dot{left:956px;top:1px;width:25px;height:25px;border-radius:50%;background:#F22E52;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 3.5px #FF7596,0 0 0 8.5px #000}
+  .dnc .dot{left:955px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
 
   /* 잠금 — 딤 .65 + 흰 자물쇠(106x123, 카드 중앙, y+60) + 조건 문구(y+223) */
   .dnc .lk{inset:8px 7px;border-radius:5px;background:rgba(0,0,0,.65);pointer-events:none}
@@ -854,7 +857,7 @@
 
   /* 서브탭 — 컨테이너 x151 w794 h98 radius49, 하단이 탭바 위 41px.
      좌 🔒(비선택 #61503C) / 우 던전(선택 #4B3E2D) 이 gap 0 으로 겹친다 */
-  .dns-sub{position:absolute;left:151px;top:auto;bottom:41px;width:794px;height:98px}
+  .dns-sub{position:absolute;left:151px;top:auto;bottom:40px;width:794px;height:98px}
   .dns-t{position:absolute;top:0;height:98px;border-radius:49px;border:6px solid #000;
     box-sizing:border-box}
   .dns-t.lk{left:0;width:524px;border-left-width:8px;background:#61503C;
@@ -874,9 +877,9 @@
     text-align:center;font-size:42px;font-weight:900;letter-spacing:-5px;
     padding-right:5px;box-sizing:border-box;color:#F3BC8C;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .dns-t.on>s{position:absolute;left:378px;top:2px;width:25px;height:25px;border-radius:50%;
+  .dns-t.on>s{position:absolute;left:371px;top:-6px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 3.5px #FF7596,0 0 0 8.5px #000}
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
      껍데기는 «가운데 다이얼로그 모달». 레퍼런스(1080x2340) 실측 절대좌표:
