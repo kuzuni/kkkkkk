@@ -586,14 +586,15 @@
      타이틀바는 갈색 안쪽 테두리 위를 덮어 검정 테두리 안쪽 폭을 꽉 채운다(실측 x58~1021) */
   .ofr-box{left:51px;top:0;width:978px;height:657px;border-radius:54px;
     border:7px solid #000;background:#57453A;box-sizing:border-box;overflow:hidden}
-  .ofr-head{height:90px;background:#52403D;text-align:center;line-height:90px}
+  .ofr-head{height:90px;text-align:center;line-height:90px;
+    background:linear-gradient(180deg,#5B4643 0 9px,#52403D 9px)}
   .ofr-head i{font-size:48px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     font-weight:900;transform:scaleX(.906) translateY(2px)}
   .ofr-in{position:absolute;left:11px;right:11px;top:90px;bottom:11px;border-radius:36px;
-    border-top-left-radius:0;border-top-right-radius:0;overflow:hidden;background:#F0D9BA;
-    background-image:radial-gradient(#E5CAAC 4px,transparent 4.5px),
-      radial-gradient(#E5CAAC 3px,transparent 3.5px);
-    background-size:150px 150px,110px 110px;background-position:20px 30px,90px 95px}
+    border-top-left-radius:0;border-top-right-radius:0;overflow:hidden;
+    /* 별무늬 타일은 A5 가 공용 모달(.mbody)에 쓴 것과 같은 5각별을 쓴다 */
+    background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23EBD3B1'/%3E%3C/svg%3E") 37px -10px/235px 235px repeat}
 
   /* 최대 시간 안내 — 잉크 우단 685(알약 우측 690 - 5), 잉크중심 y 137.5 */
   .ofr-max{left:0;top:107px;width:690px;padding-right:5px;box-sizing:border-box;text-align:right;
@@ -618,7 +619,7 @@
 
   /* 보상 박스 + 초록 프레임 + 골드 + 수량 */
   .ofr-rw{left:115px;top:288px;width:850px;height:150px;border-radius:36px;background:#D7C0A1}
-  .ofr-fr{left:477px;top:300px;width:126px;height:116px;border-radius:30px;
+  .ofr-fr{left:477px;top:300px;width:126px;height:128px;border-radius:30px;
     border:5px solid #000;box-sizing:border-box;background:#CBE849;padding:5px}
   .ofr-fr i{display:flex;width:100%;height:100%;border-radius:24px;background:#94BC35;
     align-items:center;justify-content:center;font-size:55px;line-height:1;transform:none}
@@ -633,10 +634,12 @@
   .ofr-b i{display:inline-block;font-style:normal;transform-origin:50% 50%;
     transform:translateY(-2px) scaleX(.9)}
   .ofr-b.g{left:240px;width:249px;
-    background:linear-gradient(180deg,#ABFF7C 0 8px,#77E536 8px calc(100% - 8px),#40BC2A calc(100% - 8px))}
+    background:linear-gradient(180deg,#ABFF7C 0 8px,#77EE44 8px,
+      #76DB27 calc(100% - 8px),#40BC2A calc(100% - 8px))}
   .ofr-b.g i{transform:translateY(-2px) scaleX(.885)}
   .ofr-b.b{left:540px;width:300px;
-    background:linear-gradient(180deg,#53E6F8 0 8px,#2ABDDA 8px calc(100% - 8px),#0CA4C9 calc(100% - 8px))}
+    background:linear-gradient(180deg,#53E6F8 0 8px,#35CFE7 8px,
+      #19B2D4 calc(100% - 8px),#0CA4C9 calc(100% - 8px))}
   .ofr-b.b i{transform:translateY(-2px) scaleX(.967)}
   .ofr-ad{left:528px;top:567px;width:65px;height:54px;transform:rotate(-8deg);
     border-radius:8px;border:4px solid #000;box-sizing:border-box;background:#F5B728;
@@ -684,7 +687,8 @@
     box-sizing:border-box;padding:0;cursor:pointer;font-family:inherit;font-weight:900;
     font-size:49px;line-height:1;color:#fff;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;
-    background:linear-gradient(180deg,#98FF70 0 6px,#77E536 6px calc(100% - 7px),#3EBC2A calc(100% - 7px))}
+    background:linear-gradient(180deg,#98FF70 0 6px,#77EE44 6px,
+      #76DB27 calc(100% - 7px),#3EBC2A calc(100% - 7px))}
   .ofr-go i{display:inline-block;font-style:normal;transform:translateY(-3px) scaleX(.827)}
   .ofr-tag{left:115px;top:912px;width:350px;height:46px;border-radius:23px;background:#000;
     font-size:23px;font-weight:800;color:#F0E164;text-align:center;line-height:46px}
