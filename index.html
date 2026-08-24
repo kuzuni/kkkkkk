@@ -713,23 +713,27 @@
   #modal.rl16{background:rgba(0,0,0,.63);padding-top:132px}
   .rl16 .mbox{border-bottom-width:10px;padding-bottom:9px}
   .rl16 .mbody{padding:2px 0 9px;background:#F0D9BA;text-align:center;border-bottom-width:4px}
-  .rl16 .mhead h2{font-size:52px;line-height:52px;-webkit-text-stroke:6px #000}
-  .rld{position:relative;width:844px;height:817px;margin:0 auto;background:#D7C0A1;border-radius:24px}
+  /* 제목 자폭 +21% (1회차 A/B 합치) — 잉크 높이는 일치하므로 scaleX 로만 폭 회수 */
+  .rl16 .mhead h2{font-size:52px;line-height:52px;-webkit-text-stroke:6px #000;transform:scaleX(.82)}
+  /* ref 실측(1회차 재스캔): 헤더 아래 F0D9BA 밴드 34px → 카드색 D7C0A1 은 로컬 34~632 구간뿐,
+     그 아래(강화 버튼 영역)는 다시 F0D9BA 다. 단색 카드가 아니라 3단 밴드. */
+  .rld{position:relative;width:844px;height:817px;margin:0 auto;border-radius:24px;
+    background:linear-gradient(180deg,#F0D9BA 0 34px,#D7C0A1 34px 632px,#F0D9BA 632px)}
   .rld>*{position:absolute}
   .rld b{display:block;font-weight:900;color:#fff;paint-order:stroke fill}
   /* 아이콘 박스 149² — 4px 검정 + 안쪽 링 5px #AE7B5C */
   .rl-ic{left:47px;top:49px;width:149px;height:149px;box-sizing:border-box;
     border:4px solid #000;border-radius:20px;box-shadow:inset 0 0 0 5px #AE7B5C;
-    background:linear-gradient(180deg,#775742,#835F49);
+    background:linear-gradient(180deg,#835F49,#775742); /* ref 상단이 밝다(125→105) — 1회차 B 지적으로 반전 */
     display:flex;align-items:center;justify-content:center;font-size:96px;line-height:1}
   /* 등급 알약 207×48 */
   .rl-gr{left:237px;top:68px;width:207px;height:48px;box-sizing:border-box;
-    border:4px solid #000;border-radius:21px;box-shadow:inset 0 0 0 6px #AB7C5E;
+    border:3px solid #000;border-radius:21px;box-shadow:inset 0 0 0 6px #AB7C5E;
     background:linear-gradient(180deg,#775742 0%,#835F49 50%,#775742 100%);
     display:flex;align-items:center;justify-content:center}
   .rl-gr b{font-size:23px;-webkit-text-stroke:6px #000}
   /* Lv 박스 139×65 — 진행바보다 위아래로 크고 좌단을 덮는다(z 위) */
-  .rl-lv{left:237px;top:129px;width:139px;height:65px;box-sizing:border-box;z-index:2;
+  .rl-lv{left:237px;top:126px;width:139px;height:69px;box-sizing:border-box;z-index:2;
     border:5px solid #000;border-radius:32px;
     background:linear-gradient(180deg,#57402F 0 8px,#6B573F 8px 15px,#57402F 15px 50px,#6B573F 50px 57px,#57402F 57px);
     display:flex;align-items:center;justify-content:center}
@@ -739,32 +743,36 @@
     border:6px solid #000;border-radius:17px;overflow:hidden;
     background:linear-gradient(180deg,#8182A0 0 20px,#6F7799 20px)}
   .rl-pb i{display:block;height:100%;background:#FBB51F}
-  .rl-pb b{position:absolute;top:0;right:0;left:33px;height:100%;
+  .rl-pb b{position:absolute;top:0;right:0;left:9px;height:100%; /* 라벨 중심 ref = 바 중심 −7.5px (1회차 A ④) */
     display:flex;align-items:center;justify-content:center;
     font-size:28px;color:#FBFEB7;-webkit-text-stroke:6px #000}
   /* 플레이버 텍스트 박스 748×130 — 밝은 패널 위 다크 텍스트, 좌측 정렬 */
   .rl-fl{left:47px;top:233px;width:748px;height:130px;box-sizing:border-box;overflow:hidden;
     border:4px solid #000;border-radius:20px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:0 30px;text-align:left;
-    display:flex;align-items:center}
-  .rl-fl p{margin:0;font-size:38px;line-height:46px;font-weight:800;color:#0d0a06}
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:3px 30px 0;text-align:left}
+  /* 이 서체는 ref 게임서체보다 자폭 +33% — 폭 133% 로 깔고 scaleX(.75) 로 시각폭을 되돌린다
+     (음수 letter-spacing 금지 — PROGRESS 교훈). ref 텍스트는 상단 정렬(잉크 top = 박스+13). */
+  .rl-fl p{margin:0;width:139%;transform:scaleX(.72);transform-origin:0 0;
+    font-size:38px;line-height:46px;font-weight:800;color:#0d0a06}
   /* 보유 효과 알약 298×58 — 효과 박스를 28px 파고드는 겹침 배지 */
   .rl-ow{left:272px;top:390px;width:298px;height:58px;box-sizing:border-box;z-index:2;
     border:4px solid #000;border-radius:19px;
-    background:linear-gradient(180deg,#543D2F 0 6px,#6A573F 6px calc(100% - 6px),#543D2F calc(100% - 6px));
-    display:flex;align-items:center;justify-content:center}
+    background:linear-gradient(180deg,#6A573F 0 6px,#543D2F 6px calc(100% - 6px),#6A573F calc(100% - 6px));
+    display:flex;align-items:center;justify-content:center} /* 상하가 하이라이트·중앙이 원색 — 1회차에 반전돼 있었음 */
   .rl-ow b{font-size:25px;-webkit-text-stroke:7px #000}
   /* 효과 박스 748×199 — 상단 44 여백(겹침배지 아래), 골드 강조 */
   .rl-eb{left:47px;top:420px;width:748px;height:199px;box-sizing:border-box;overflow:hidden;
     border:4px solid #000;border-radius:20px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:44px 30px 0;text-align:left}
-  .rl-eb p{margin:0;font-size:38px;line-height:48px;font-weight:800;color:#0d0a06}
-  .rl-eb p em{font-style:normal;color:#ECBB29;font-weight:900}
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:24px 30px 0;text-align:left}
+  .rl-eb p{margin:0;width:133%;transform:scaleX(.75);transform-origin:0 0;
+    font-size:38px;line-height:48px;font-weight:800;color:#0d0a06}
+  .rl-eb p em{font-style:normal;color:#ECBB29;font-weight:900;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill} /* ref 골드 토큰은 검정 외곽선 포함 */
   /* 강화 버튼 240×119 가로중앙 — 08 강화버튼과 동일 회색(회색이 기본색이라 비활성 딤 안 건다) */
   .rl-act{left:299px;top:670px;width:246px;height:119px;box-sizing:border-box;padding:0 0 6px;cursor:pointer;
     border:7px solid #000;border-radius:38px;font-family:inherit;
     background:linear-gradient(180deg,#ADADAD,#8D8D8D);
-    box-shadow:inset 0 0 0 6px #D3D3D3,inset 0 -12px 0 -6px #767676;
+    box-shadow:inset 0 0 0 6px #D3D3D3,inset 0 -14px 0 -6px #D3D3D3; /* ref 는 하단이 밝은 베벨(211) — 다크밴드 아님 */
     display:flex;align-items:center;justify-content:center}
   .rl-act b{font-size:45px;-webkit-text-stroke:9px #000;transform:scaleX(.94)}
   .rl-act:disabled{cursor:default}
