@@ -115,13 +115,25 @@ function launchOpts(){
       /* 영웅 서브탭 (있으면) */
       const subs = await page.$$eval('#panel [id^="b"][class*="sub"], #panel .sub [data-sub], #panel .subtab', (els) => els.map((e) => e.id || e.dataset.sub || e.textContent.trim()).filter(Boolean)).catch(() => []);
       subs.forEach((s) => openers.push({ label: 'sub:' + s, sel: null, sub: s }));
+      /* 06 장비 페이지 — 부위 슬롯 3칸이 각각 05 아이템 팝업(#wpnw)을 연다 (작업 25).
+         진입이 «영웅 탭 → 슬롯» 2단계라 위 셀렉터 수집에 안 걸린다. 06 의 서브탭도 같이 본다. */
+      await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      const slots = await page.$$eval('#eqCards [data-eqslot]', (els) => els.map((e) => e.dataset.eqslot)).catch(() => []);
+      slots.forEach((k) => openers.push({ label: 'eqslot:' + k, sel: null, hero: `#eqCards [data-eqslot="${k}"]` }));
+      const eqtabs = await page.$$eval('#eqTabs [data-eqtab]', (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
+      eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, sel: null, hero: `#eqTabs [data-eqtab="${k}"]` }));
       await ctx.close();
     }
     for (const o of openers) {
       const { ctx, page, errs } = await fresh(browser, 1080, 1920);
       try {
         if (o.sel) await page.click(o.sel, { timeout: 3000, force: true });
-        else {
+        else if (o.hero) {
+          await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.click(o.hero, { timeout: 3000, force: true });
+        } else {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
           await page.waitForTimeout(200);
           const el = await page.$(`#${o.sub}`); if (el) await el.click({ force: true });
