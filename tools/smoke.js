@@ -8,7 +8,7 @@
  *   1. 콘솔 error / pageerror 0건 (로드·자동 플레이·팝업 오픈 전 구간)
  *   2. 화면 텍스트에 NaN / undefined / Infinity 0건
  *   3. 하단 탭 7종 · 사이드 아이콘 전부 · ▦ 메뉴 · 영웅 서브탭이 에러 없이 열림
- *   4. 9:16(1080×1920) 과 16:9 가로(1920×1080) 모두에서 #app 이 뷰포트 안에 완전히 들어옴(37 회귀)
+ *   4. 9:19(1080×2280 기준)·9:16·16:9 가로·4:3·9:19.5·9:21 에서 #app 이 뷰포트 안에 완전히 들어옴(37 회귀) + 바닥 시트 잘림 없음(51)
  *   5. 자동 플레이 후 게임 상태가 살아 있음 (S.stage 숫자, 플레이어 HP 유한값)
  * 참고: 비평(점수)은 이 스크립트가 하지 않는다. 이건 «깨졌나» 만 본다.
  */
@@ -83,9 +83,9 @@ function launchOpts(){
   }
   try {
     /* ---------- 1. 로드 + 자동 플레이 ---------- */
-    console.log(`[1] 로드 + 자동 플레이 ${SECS}s (1080×1920)`);
+    console.log(`[1] 로드 + 자동 플레이 ${SECS}s (1080×2280 · 9:19 기준)`);
     {
-      const { ctx, page, errs } = await fresh(browser, 1080, 1920);
+      const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       await page.waitForTimeout(SECS * 1000);
       const st = await page.evaluate(() => ({
         stage: typeof S !== 'undefined' ? S.stage : null,
@@ -106,7 +106,7 @@ function launchOpts(){
     console.log('[2] 팝업 오픈');
     const openers = [];
     {
-      const { ctx, page } = await fresh(browser, 1080, 1920);
+      const { ctx, page } = await fresh(browser, 1080, 2280);
       const tabs = await page.$$eval('.tab[data-t]', (els) => els.map((e) => e.dataset.t));
       const pops = await page.$$eval('.side .ibtn[data-pop]', (els) => els.map((e) => e.dataset.pop));
       tabs.forEach((t) => openers.push({ label: 'tab:' + t, sel: `.tab[data-t="${t}"]` }));
@@ -130,7 +130,7 @@ function launchOpts(){
       await ctx.close();
     }
     for (const o of openers) {
-      const { ctx, page, errs } = await fresh(browser, 1080, 1920);
+      const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       try {
         if (o.sel) await page.click(o.sel, { timeout: 3000, force: true });
         else if (o.hero) {
@@ -160,7 +160,7 @@ function launchOpts(){
 
     /* ---------- 3. 화면비 회귀 (37/51) ---------- */
     console.log('[3] 화면비 — #app 이 뷰포트 안에');
-    for (const [w, h] of [[1080, 1920], [1920, 1080], [1024, 768], [1080, 2340]]) {
+    for (const [w, h] of [[1080, 2280], [1080, 1920], [1920, 1080], [1024, 768], [1080, 2340], [1080, 2520]]) {
       const { ctx, page, errs } = await fresh(browser, w, h);
       const r = await appInside(page);
       if (r) fail(`${w}×${h}: ${r}`); else ok(`${w}×${h}`);
