@@ -694,14 +694,21 @@
   #rouRes{min-height:42px}
 
   /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
-     좌우 여백 91 / 세로는 중앙에서 아래로 42px (패딩 위 126 − 아래 42 = 84, 그 절반) */
+     좌우 여백 91 / 세로는 «패딩 위 − 아래» 의 절반만큼 중앙에서 이동한다.
+     63(9:19 전환) 2회차: 기준 프레임이 2280 이 되면서 «위 126 − 아래 42 = +84»(중앙 +42) 는
+     레퍼런스보다 54px 아래가 됐다. 단일 변환 `frame y = ref y − 84` 를 만족하는 값은
+     «위 126 − 아래 150 = −24»(중앙 −12) 다. 검산: .mbox h1497 → 126+(2004−1497)/2 = 379.5 (ref 464−84=380 ✓)
+     padding-top 126 은 짧은 기기(4:3 → #app 1600)에서 상자가 상단 HUD(0..104)를 파고들지 않게 막는 가드라
+     그대로 두고, 이동분 108 은 전부 padding-bottom 에 넣는다. */
   #modal{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;align-items:center;
-    justify-content:center;padding:126px 91px 42px;z-index:30}
+    justify-content:center;padding:126px 91px 150px;z-index:30}
   #modal.on{display:flex}
   /* 검정 7px 은 헤더까지 감싸고, 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D)은 본문 좌·우·아래만 두른다.
      (레퍼런스에서 헤더 바는 검정 테두리 바로 안쪽까지 꽉 찬다 — 헤더 위에 갈색이 깔리지 않는다) */
   /* 검정 8px + 갈색 프레임 10px(바깥 7 #564438 · 안쪽 3 #46382D) = 편측 18px */
-  .mbox{width:100%;max-height:1497px;display:flex;flex-direction:column;overflow:hidden;
+  /* 63 2회차: 짧은 기기에서 1497 이 패딩 안에 안 들어가면 위로 넘쳐 HUD 를 파고들었다
+     (1600 프레임에서 top 93.5 실측) → `100%` 캡을 같이 걸어 눌리게 한다(.wm·.prb 와 같은 방식) */
+  .mbox{width:100%;max-height:min(1497px,100%);display:flex;flex-direction:column;overflow:hidden;
     border:8px solid #000;border-radius:44px;padding:0 7px 7px;background:#564438;
     box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
   .mhead{flex:0 0 auto;height:91px;margin:0 -7px;display:flex;align-items:center;justify-content:center;
@@ -1024,8 +1031,14 @@
      그래서 font-size 는 실측 잉크높이/0.93 으로 잡고, 폭은 <i> 를 scaleX 로 눌러 맞춘다.
      세로는 실측 잉크 중심에 줄상자 중심을 맞춘다.
      ========================================================================== */
+  /* 63 2회차 — 01 은 «+54 일괄» 대상이 **아니다**. `.ofrs` 는 레퍼런스 1:1 좌표 프레임이고
+     그 원점은 ref y **772** 다(`.ofr-box{left:51px;top:0}` ↔ 측정표 01 «바깥 테두리 x51~57 / y772~778»,
+     `.ofr-pill{left:411,top:153}` ↔ «채움 영역 x416,y930» 로 교차 확인). 목표 top = 772−84 = **688** 인데
+     순수 중앙 정렬이라 654 였다 → 위−아래 = 126−58 = **+68**(중앙 +34)로 내린다.
+     검산: 126+(2096−972)/2 = 688 ✓ */
   #offw{position:absolute;inset:0;background:rgba(0,0,0,.80);display:none;
-    align-items:center;justify-content:center;z-index:34}
+    align-items:center;justify-content:center;z-index:34;
+    padding:126px 0 58px;box-sizing:border-box}
   #offw.on{display:flex}
   .ofrs{position:relative;width:1080px;height:972px;flex:0 0 auto}
   .ofrs>*{position:absolute}
@@ -1822,11 +1835,16 @@
      좌표계: .dgd-body(=cream) 좌상단을 원점으로 삼는다 → local = ref - (159,713).
      글자: 잉크비 0.93 기준 font-size = 실측 잉크높이/0.93, 폭은 <i> 의 scaleX 로 맞춘다.
      ========================================================================== */
+  /* 63 2회차 — «패딩 없는 순수 중앙 정렬» 껍데기의 공통 처방:
+     `padding:126px 0 234px` (위−아래 = −108, 그 절반인 −54 만큼 중앙에서 위로) 로
+     기준 프레임 2280 에서 단일 변환(ref y − 84)을 맞춘다. 상자별 미세 오프셋(top/transform)은 그대로 둔다.
+     padding-top 126 은 짧은 기기 HUD(0..104) 가드다. */
   #dgdw{position:absolute;inset:0;background:rgba(0,0,0,.50);display:none;
-    align-items:center;justify-content:center;z-index:33}
+    align-items:center;justify-content:center;z-index:33;
+    padding:126px 0 234px;box-sizing:border-box}
   #dgdw.on{display:flex}
   /* 레퍼런스 모달 중심 y=1212, 화면 중심 1170 → 세로 중앙에서 아래로 42px (A5 와 같은 규칙) */
-  .dgd-box{position:relative;flex:0 0 auto;width:796px;height:1197px;top:42px;box-sizing:border-box;
+  .dgd-box{position:relative;flex:0 0 auto;width:796px;height:1197px;top:42px;max-height:100%;box-sizing:border-box;
     display:flex;flex-direction:column;overflow:hidden;
     border:7px solid #000;border-left-width:6px;border-right-width:6px;border-radius:42px;
     padding:0 11px 11px;background:#56443A}
@@ -1959,11 +1977,11 @@
      → 01(#offw)·03(#dunw) 과 같이 전용 오버레이를 쓴다.
      내부 좌표는 전부 «레퍼런스 절대 px − 기준점» 이다 (눈대중 없음).
      ========================================================================== */
-  /* A5 공용 모달과 같은 방식으로 «위 126 / 아래 42» 패딩 안에서 중앙 정렬한다.
-     이러면 프레임 높이가 달라져도 관계가 유지된다 —
-     실제로 프레임을 레퍼런스와 같은 2340 으로 키우면 모달이 정확히 y478 에 온다(실측 확인). */
+  /* A5 공용 모달과 같은 방식으로 «위 126 / 아래 150» 패딩 안에서 중앙 정렬한다.
+     63 2회차: 기준 프레임 2280 에서 단일 변환(ref y − 84)을 만족하도록 «위 126 − 아래 42» → «위 126 − 아래 150».
+     검산: .wm h1469 → 126+(2004−1469)/2 = 393.5 (측정표 05 바깥 박스 ref y478 − 84 = 394 ✓) */
   #wpnw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:31;
-    align-items:center;justify-content:center;padding:126px 91px 42px;box-sizing:border-box}
+    align-items:center;justify-content:center;padding:126px 91px 150px;box-sizing:border-box}
   #wpnw.on{display:flex}
   #wpnw i,#wpnw em,#wpnw b,#wpnw u,#wpnw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
@@ -2124,8 +2142,9 @@
      좌표: 가로 1:1, 세로 `구현 y = ref y − 210`. 정중앙이라 flex center 로 앉힌다.
      자식 좌표 기준 = 크림 본문(.prb-body) 좌상단 = ref(162,688). 즉 body-local = ref − (162,688).
      ========================================================================== */
+  /* 63 2회차 — 순수 중앙 정렬 껍데기 공통 처방(#dgdw 주석 참고). 검산: .prb h1170 → 126+(1920−1170)/2+5 = 506 (ref 590−84 ✓) */
   #prbw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:33;
-    align-items:center;justify-content:center;box-sizing:border-box}
+    align-items:center;justify-content:center;box-sizing:border-box;padding:126px 0 234px}
   #prbw.on{display:flex}
   #prbw i,#prbw em,#prbw b,#prbw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
@@ -2197,11 +2216,15 @@
      껍데기 = 딤(.53) 위 가운데 다이얼로그(895×1543) + 모달 밑에서 돌출하는 깃발 서브탭 4개.
      세로는 ref−210 평행이동. 모달 세로중심이 프레임 중심보다 42px 위(깃발탭 공간) —
      flex 중앙정렬 + translateY(−42px). 자식 좌표는 «padding-box local = ref − (97,364)». */
+  /* 63 2회차 — 순수 중앙 정렬 껍데기 공통 처방(#dgdw 주석 참고). 위−아래 = 168−276 = −108 로 같은 −54.
+     여기만 padding-top 이 168 인 이유: `.cl` 이 `translateY(-42px)` 를 갖고 있어, 짧은 기기에서 상자가
+     패딩 위에 붙었을 때 126−42 = 84 로 HUD(0..104)를 파고든다. 168−42 = 126 으로 가드를 맞춘다.
+     검산(2280): .cl h1543 → 168+(1836−1543)/2−42 = 272.5 (ref 중심 1127.5 → top 356, −84 = 272 ✓) */
   #collw{position:absolute;inset:0;background:rgba(0,0,0,.53);display:none;z-index:33;
-    align-items:center;justify-content:center}
+    align-items:center;justify-content:center;padding:168px 0 276px;box-sizing:border-box}
   #collw.on{display:flex}
   #collw i,#collw s,#collw b,#collw em{display:inline-block;font-style:normal;font-weight:900}
-  .cl{position:relative;flex:none;width:895px;height:1543px;box-sizing:border-box;
+  .cl{position:relative;flex:none;width:895px;height:1543px;max-height:100%;box-sizing:border-box;
     background:#F0D9BA;border:solid #000;border-width:8px 5px 7px;border-radius:48px 48px 12px 12px;
     transform:translateY(-42px)}
   .cl>*{position:absolute}
@@ -2303,8 +2326,9 @@
      테두리 단면(실측): 검정 8 → 갈색 밝은 #56443A 7 → 어두운 #46382D 4 → 크림 #F0D9BA.
      갈색 링은 **좌·우·하 3변만** — 상변 자리는 헤더 바가 차지한다(A5 .mbox 와 같은 구조).
      ========================================================================== */
+  /* 63 2회차 — 순수 중앙 정렬 껍데기 공통 처방(#dgdw 주석 참고). 검산: .ci h813 → 126+(1920−813)/2+17 = 696.5 (ref 781−84=697 ✓) */
   #ciw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;
-    align-items:center;justify-content:center;box-sizing:border-box}
+    align-items:center;justify-content:center;box-sizing:border-box;padding:126px 0 234px}
   #ciw.on{display:flex}
   #ciw i,#ciw em,#ciw b,#ciw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
@@ -2520,8 +2544,10 @@
      좌표는 전부 «크림 박스(#F0D9BA, ref x111/y534) 기준 상대값» = ref − (111, 534).
      19 프로필 탭(#pfw)과 같은 셸 — 하단 토글로 상호 연결한다.
      ========================================================================== */
+  /* 63 2회차 — 순수 중앙 정렬 껍데기 공통 처방(#dgdw 주석 참고). 검산: .spc h1395 → 126+(1920−1395)/2+42 = 430.5 (ref 515−84=431 ✓) */
   #specw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:34;
-    align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+    align-items:center;justify-content:center;-webkit-font-smoothing:antialiased;
+    padding:126px 0 234px;box-sizing:border-box}
   #specw.on{display:flex}
   #specw i,#specw em,#specw b,#specw s{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900}
