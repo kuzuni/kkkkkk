@@ -6,7 +6,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const REF='/home/user/kkkkkk/docs/ref/23-훈련-팝업.jpg';
-const CAP='/home/user/kkkkkk/docs/review/23-r8.png';
+const CAP='/home/user/kkkkkk/docs/review/23-r9.png';
 const uri=(f)=>'data:'+(/\.png$/i.test(f)?'image/png':'image/jpeg')+';base64,'+fs.readFileSync(f).toString('base64');
 const jobs = JSON.parse(process.argv[2]);
 (async()=>{

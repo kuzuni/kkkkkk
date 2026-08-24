@@ -2534,13 +2534,25 @@
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D3D3D3;text-align:center}
   .tr-up.on{background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #E4FA92}
+  /* 10회차(비평가 P P1, 자체 확인): ref 버튼 «바닥» 림은 3층이다 —
+     검정 6px(y1303..1308) → **어두운 회색 (117,117,117) 6px(y1297..1302)** → 밝은 211 6px(y1290..1295).
+     9회차까지는 검정 6 + 밝은 7 뿐이라 **117 층이 통째로 없었다**(가로 y1298 행: ref x877..937 이 113,113,113,
+     우리는 x873..944 가 211,211,211). 위쪽 림은 ref 도 «검정 → 밝은» 2층이라 **바닥에만** 넣는다.
+     inset box-shadow 로는 «바닥만 3층» 을 만들 수 없어(spread 가 4변에 걸린다) ::after 로 얹는다.
+     화살표는 local y78 에서 끝나고 이 띠는 89 부터라 겹치지 않는다. */
+  .tr-up::after{content:'';position:absolute;left:6px;right:6px;bottom:6px;height:12px;
+    background:linear-gradient(180deg,#D3D3D3 0 6px,#757575 6px);border-radius:0 0 26px 26px}
+  .tr-up.on::after{background:linear-gradient(180deg,#E4FA92 0 6px,#5E9A17 6px)}
   /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
      stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다.
      6회차: 잉크 치수를 ref 실측대로 다시 잡았다. ref 초록은 **머리 h29(최대폭 55) + 자루 h22(폭 27)
      = 전체 h51**, 잉크 중심이 버튼 중심보다 **7.5px 위**(광학 보정)다. 3회차 것은 h60·폭 62 로 크고 정중앙이었다.
      viewBox 를 잉크 55x51 + 스트로크 여유 8px 로 잡아야 stroke 가 SVG 밖으로 잘리지 않는다. */
   .tr-up>svg{position:absolute;left:16.5px;top:9.5px;width:73px;height:69px}
-  .tr-up>svg path{fill:#B0EA26;stroke:#000;stroke-width:16;stroke-linejoin:round;
+  /* 10회차(P P5·P6): 초록 잉크는 ref 57x53 / 우리 55x53 으로 이미 Δ≤2 다(건드리지 않는다).
+     차이는 **검정 외곽선 두께**뿐 — 자루 행(ref y1272)에서 ref 는 좌 5px(x889..893)·우 6px(x921..926) 인데
+     stroke-width:16 은 한쪽 8px 이라 스트로크 포함 bbox 가 +3/+5px 컸다. 12 → 한쪽 6px. */
+  .tr-up>svg path{fill:#B0EA26;stroke:#000;stroke-width:12;stroke-linejoin:round;
     paint-order:stroke fill}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
