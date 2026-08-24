@@ -34,8 +34,11 @@
 
   /* 좌측 프로필 플레이트 — 레퍼런스 사선은 «직선이 아니라 곡선» 이다
      (상단 -1.13/px → 하단 -0.50/px 로 완만해진다). 직선으로 두면 중간이 최대 7px 벌어진다. */
+  /* 초상화 카드(141)는 플레이트(135)보다 6px 아래로 내려온다 — 카드를 플레이트 «안» 에 두면
+     clip-path 에 잘려 밑변이 검은 띠로 읽힌다. 그래서 배경 판(.plate)과 내용(.prof)을 분리한다. */
+  .prof{position:absolute;left:0;top:0;width:468px;height:141px;cursor:pointer;z-index:3}
   /* 꼬리(바 아래로 나온 구간)는 한 단 어두운 톤 밴드가 붙는다 */
-  .prof{position:absolute;left:0;top:0;width:468px;height:135px;
+  .plate{position:absolute;left:0;top:0;width:468px;height:135px;
     background:linear-gradient(to bottom,#332822 0,#332822 116px,#29201B 118px,#29201B 135px);
     clip-path:polygon(0 0,468px 0,463px 16px,454px 24px,445px 32px,439px 40px,432px 48px,
       424px 60px,416px 72px,411px 80px,407px 90px,403px 96px,394px 100px,386px 112px,
@@ -53,11 +56,11 @@
   /* 초상화 카드 141x141 — 검은 외곽 3px → 갈색 프레임 9px → 내부 테두리 3px */
   .pface{position:absolute;left:0;top:0;width:141px;height:141px;box-sizing:border-box;
     border:3px solid #000;border-top-width:4px;border-bottom-width:2px;
-    border-radius:11px 11px 3px 3px;padding:8px 8px 10px;
+    border-radius:8px;padding:8px 8px 9px;
     background:linear-gradient(90deg,rgb(101,90,86) 0,rgb(114,91,75) 45%,rgb(126,108,98) 100%);
-    box-shadow:inset 0 9px 0 #7F6E64,inset 0 -10px 0 #735C4E}
+    box-shadow:inset 0 9px 0 #7F6E64,inset 0 -9px 0 #735C4E}
   .pface i{display:flex;width:100%;height:100%;box-sizing:border-box;font-style:normal;
-    border:4px solid #030000;border-radius:6px;background:#4579C5;
+    border:4px solid #030000;border-bottom-width:2px;border-radius:6px;background:#4579C5;
     align-items:center;justify-content:center;font-size:66px;line-height:1}
 
   /* 닉네임 · 칭호 · 전투력 세로 컬럼 (초상화 우측 x=151, y=12)
@@ -86,15 +89,16 @@
   .ptitle::before{content:'';position:absolute;inset:3px;z-index:-2;background:rgb(96,82,69);
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
   .ptitle::after{content:'';position:absolute;inset:3px 8px;z-index:-1;
-    background:linear-gradient(rgb(123,104,89) 0 4px,#443B36 4px calc(100% - 4px),#635145 calc(100% - 4px));
+    background:linear-gradient(rgb(98,82,69) 0 4px,#443B36 4px calc(100% - 4px),#635145 calc(100% - 4px));
     clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%,0 50%)}
   .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
   /* 🔥 글리프는 세로로 길쭉해 잉크 폭이 레퍼런스보다 좁다 — 높이는 font-size, 폭은 scaleX 로 */
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
-    font-style:normal;font-size:28px;line-height:1;color:#F16B09;
-    transform:scaleX(1.17) translateY(1px)}
-  .pcp b{font-size:37px;font-weight:900;color:#A7E25A;white-space:nowrap;
-    transform:translateY(2px);-webkit-text-stroke:6px #000;paint-order:stroke fill}
+    font-style:normal;font-size:33px;line-height:1;color:#F16B09;
+    transform:scaleX(1.17) translate(1px,1px)}
+  .pcp b{font-size:37px;font-weight:900;color:rgb(186,252,100);white-space:nowrap;
+    transform:translate3d(0,2px,0);-webkit-font-smoothing:antialiased;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
   .curs{position:absolute;right:26px;top:31px;display:flex;gap:49px;z-index:3}
@@ -105,13 +109,19 @@
   .cbox i{position:absolute;left:-31px;top:-8px;width:63px;height:63px;z-index:2;
     display:flex;align-items:center;justify-content:center;font-style:normal;line-height:1}
   /* 💎 는 글리프가 가로로 납작하다 — 높이를 맞추면 폭이 넘치므로 scaleX 로 되돌린다 */
-  /* 레퍼런스 아이콘은 4px 검정 아웃라인을 포함해 실루엣이 65px — 이모지에는 없으므로 링을 깐다 */
-  .cGold i{font-size:52px;text-shadow:0 0 4px #000,0 0 3px #000}
-  .cDia i{font-size:59px;transform:scaleX(.86);text-shadow:0 0 4px #000,0 0 3px #000}
+  /* 레퍼런스 아이콘은 검정 아웃라인을 포함해 실루엣이 65px.
+     blur 를 준 text-shadow 는 «흐린 그림자» 라 최저휘도가 42 까지밖에 안 내려간다 —
+     blur 0 인 8방향 그림자로 «경화된» 링을 만들어야 레퍼런스의 (0,0,0) 외곽선이 된다. */
+  .cbox i{text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000,
+    1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
+  .cGold i{font-size:52px}
+  .cDia i{font-size:59px;transform:scaleX(.86)}
+  /* translate3d + antialiased — 2D transform 레이어에서는 LCD 서브픽셀 AA 가 켜져 색번짐이 남는다 */
   .cbox b{font-size:36px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis;transform:translateY(1px);
+    text-overflow:ellipsis;transform:translate3d(0,1px,0);
+    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .cDia b{transform:translate(2px,1px)}
+  .cDia b{transform:translate3d(2px,1px,0)}
 
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
@@ -700,6 +710,7 @@
 
   <div id="top">
     <div class="pedge"></div>
+    <div class="plate"></div>
     <div class="prof" id="profBtn">
       <div class="pface"><i>🛡️</i></div>
       <div class="pcol">
