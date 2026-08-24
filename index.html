@@ -1453,8 +1453,10 @@
   .prb-head{left:0;right:0;top:0;height:90px;border-radius:24px 24px 0 0;
     background:linear-gradient(180deg,#5B4643 0 5px,#523E3D 5px);
     text-align:center;line-height:90px;overflow:hidden}
-  .prb-head>i{position:relative;top:-2px;font-size:51px;color:#fff;letter-spacing:1.5px;text-indent:1.5px;
-    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+  /* 이 프로젝트 서체는 레퍼런스보다 넓다 — 잉크높이 47 은 맞지만 폭이 +20% (218 vs 182).
+     scaleX 로 가로만 0.83 축소해 레퍼런스 잉크폭 182 에 맞춘다(높이 47 유지) */
+  .prb-head>i{position:relative;top:-2px;font-size:51px;color:#fff;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.86)}
   /* 크림 본문 ref x162~917 / y688~1741 → padding-box (15,92) ~ (우15,아래13) */
   .prb-body{left:15px;right:15px;top:92px;bottom:13px;background:#F0D9BA;
     border-radius:0 0 20px 20px;
@@ -1474,7 +1476,9 @@
   .prb-ar.l{left:226px}
   .prb-ar.r{left:467px}
   .prb-ar.r::before{transform:scaleX(-1)}
-  .prb-ar.off{opacity:.32;cursor:default}
+  /* 레퍼런스는 양 끝에서도 두 화살표가 모두 흰색으로 보인다 — 경계에서 클릭만 무효화하고
+     흐리게 죽이지는 않는다(off 는 커서만 바꾼다) */
+  .prb-ar.off{cursor:default}
   /* 안내문 2줄 ref y870~919 → body top 182, 좌우 인셋 32 */
   .prb-note{left:32px;right:33px;top:180px;font-size:19px;line-height:27px;color:#503D2F;
     text-align:center;font-weight:700}
@@ -1496,7 +1500,7 @@
   .prb-row>.ic{left:13px;top:9px;width:60px;height:60px;border:2px solid #5A5843;border-radius:14px;
     box-sizing:border-box;background:var(--gc,#96BC34);text-align:center;font-size:38px;line-height:56px}
   /* 이름 — 좌측정렬 x304 → pill 88. 세로중앙 */
-  .prb-row>.nm{left:88px;right:150px;top:0;height:77px;line-height:77px;font-size:37px;color:#000;
+  .prb-row>.nm{left:85px;right:150px;top:0;height:77px;line-height:77px;font-size:37px;color:#000;
     text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .prb-row>.nm>i{transform:scaleX(.9);transform-origin:0 50%}
   /* 확률 — 우측정렬 pill 우단−30. 시안+어두운 청록 외곽선 */
