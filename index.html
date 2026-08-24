@@ -3241,7 +3241,7 @@
     border:12px solid #0B4E83;border-radius:50%;
     background:radial-gradient(circle closest-side,#41C9DF 58%,#4FFFFA 84%,#46D6E5 100%);
     box-shadow:0 0 42px 8px rgba(45,150,205,.55)}
-  .df-emb::before{content:'';position:absolute;left:30px;right:30px;top:28px;bottom:4px;
+  .df-emb::before{content:'';position:absolute;left:30px;right:30px;top:32px;bottom:18px;
     background:linear-gradient(180deg,#0B4B7B 0 55%,#2F86B5 74%,#40AEE1 84% 100%);
     border-radius:50%}
   /* 해골은 SVG 작화(잉크 116×107, 눈·코는 내부 남색 관통) — 💀 이모지는 눈이 회색이라 폐기 */
@@ -3261,7 +3261,7 @@
   .df-card.c2{top:885px}
   .df-card.c3{top:1065px}
   /* 파인 바닥 패널 697×99 radius21 — ref x126(패딩기준 29) · 세로 중앙 */
-  .df-card .pnl{position:absolute;left:28px;top:26px;width:697px;height:99px;border-radius:21px;
+  .df-card .pnl{position:absolute;left:27px;top:26px;width:700px;height:99px;border-radius:21px;
     background:#C7AF95}
   .df-card.c1 .pnl{background:#636A86}
   /* 아이콘 100×100 박스 — 잉크 중심 c1 (194.5,중앙) / c2·c3 (185.5,중앙) */
@@ -3273,25 +3273,25 @@
      ⚔️ 이모지는 같은 창에서 잉크가 ref 6400px 대비 2610px(41%) 밖에 안 차 ② 상대크기를 회수할 수
      없었다(3회차 자가 스캔). 3단 구조 — 뚜껑(청록 패널) / 몸통(은청 + 노란 자물쇠) / 받침(청록 패널).
      실측색: 은백 #D7DAFF · 페리윙클 #8E93CA/#A6A9DE · 청록 #2B7051/#26553F · 자물쇠 #FFD247 */
-  .df-ic1{position:absolute;left:47px;top:39px;width:100px;height:75px;box-sizing:border-box;
-    border:3px solid #000;border-radius:19px 19px 11px 11px;overflow:hidden;background:#A6A9DE}
-  .df-ic1 s{position:absolute;display:block;left:0;right:0}
-  /* 뚜껑 y961–989 — 은백→페리윙클 + 가운데 청록 패널(좌우 검정 3px 기둥) */
-  .df-ic1 .lid{top:0;height:27px;border-bottom:3px solid #000;
+  .df-ic1{position:absolute;left:47px;top:39px;width:100px;height:75px}
+  .df-ic1 s{position:absolute;display:block;box-sizing:border-box;border:3px solid #000}
+  /* 뚜껑 y961–989 (ref 행폭 83~88 — 몸통보다 좁다) */
+  .df-ic1 .cLid{left:6px;right:6px;top:0;height:30px;border-radius:16px 16px 4px 4px;
     background:linear-gradient(180deg,#D7DAFF 0 44%,#BFC2EA 72%,#9A9ECF 100%)}
-  .df-ic1 .lid::before{content:'';position:absolute;left:24%;right:24%;top:7px;bottom:0;
+  .df-ic1 .cLid::before{content:'';position:absolute;left:20%;right:20%;top:6px;bottom:-3px;
     box-sizing:border-box;border-left:3px solid #000;border-right:3px solid #000;
     background:linear-gradient(180deg,#2B7051 0 62%,#26553F 100%)}
-  /* 몸통 y991–1015 — 벨트(검정 4px)가 가로지르고 아래쪽이 은백으로 밝아진다 */
-  .df-ic1 .body{top:27px;height:27px;border-bottom:3px solid #000;
+  /* 몸통 y991–1015 (ref 행폭 98~100 — 여기만 전폭) · 벨트가 가로지른다 */
+  .df-ic1 .cBody{left:0;right:0;top:28px;height:28px;border-radius:5px;
     background:linear-gradient(180deg,#9A9ECF 0 30%,#C6C9EE 44%,#D7DAFF 100%)}
-  .df-ic1 .body::after{content:'';position:absolute;left:0;right:0;top:10px;height:3px;background:#000}
-  /* 받침 y1017–1035 — 뚜껑과 같은 청록 패널 */
-  .df-ic1 .base{top:54px;bottom:0;background:linear-gradient(180deg,#BFC2EA 0,#9A9ECF 100%)}
-  .df-ic1 .base::before{content:'';position:absolute;left:24%;right:24%;top:0;bottom:3px;
+  .df-ic1 .cBody::after{content:'';position:absolute;left:-3px;right:-3px;top:10px;height:3px;background:#000}
+  /* 받침 y1017–1035 (ref 행폭 78~86) */
+  .df-ic1 .cBase{left:7px;right:7px;top:54px;bottom:0;border-radius:4px 4px 11px 11px;
+    background:linear-gradient(180deg,#BFC2EA 0,#9A9ECF 100%)}
+  .df-ic1 .cBase::before{content:'';position:absolute;left:19%;right:19%;top:-3px;bottom:2px;
     box-sizing:border-box;border-left:3px solid #000;border-right:3px solid #000;background:#26553F}
   /* 자물쇠 — ref 노란 잉크 x195–216(22) · y999–1018(20), 몸통·받침 경계를 물고 있다 */
-  .df-ic1 .lock{left:42px;right:42px;top:30px;height:25px;z-index:2;border-radius:4px;
+  .df-ic1 .cLock{left:45px;width:31px;top:33px;height:29px;z-index:2;border-radius:4px;
     box-sizing:border-box;border:3px solid #000;
     background:linear-gradient(180deg,#FFE688 0,#FFD247 45%,#E9A81E 100%)}
   /* c2 는 ref 아트(불꽃 62×76 + 흰·분홍 얼굴 2개)를 3요소 합성 */
@@ -3304,17 +3304,20 @@
      레드닷 25×24 는 원 좌상단 +45,+7 (2회차 D 지적으로 재실측 — 측정표의 «크림 96×96»은 오독) */
   .df-ic3{position:absolute;left:58px;top:32px;width:79px;height:78px;box-sizing:border-box;
     border:5px solid #000;border-radius:50%;
-    background:linear-gradient(180deg,#F7DDA4 0,#EEC072 55%,#E7B868 100%)}
-  .df-ic3::after{content:'';position:absolute;left:39px;top:1px;width:30px;height:27px;
+    background:linear-gradient(180deg,#F7DDA4 0,#EEC072 55%,#C6944F 100%)}
+  .df-ic3::after{content:'';position:absolute;left:40px;top:2px;width:28px;height:26px;
     border-radius:50%;background:#F22E52}
   /* 문구 — 좌정렬 시작 ref x273(패딩기준 176) · 세로 중앙. c2·c3 은 외곽선 없는 갈흑 #141108,
      c1 만 흰 채움+외곽선(실측 3.5 한쪽 → stroke 7) */
   .df-txt{position:absolute;left:177px;top:0;height:152px;display:flex;align-items:center;
     font-size:29px;font-weight:900;color:#FAFAFA;white-space:nowrap;text-align:left;
-    -webkit-text-stroke:6px #2A2420;paint-order:stroke fill}
+    -webkit-text-stroke:6px #100D09;paint-order:stroke fill}
   .df-card.c1 .df-txt{-webkit-text-stroke:7px #000}
   /* ref 게임 서체는 극단적 장체 — 카드별 «목표 흰 잉크폭 ÷ 무변환 실측폭» 으로 scaleX */
   .df-txt i{transform-origin:0 50%}
+  /* 흰 채움 비만 레이어 — ref 행별 흰 run 중앙값 4 vs 우리 2 였다 */
+  #defw .df-txt .ov{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;
+    -webkit-text-stroke:1px #FAFAFA;color:#FAFAFA}
   .df-card.c1 .df-txt i{transform:scaleX(.889)}
   .df-card.c2 .df-txt i{transform:scaleX(.875)}
   .df-card.c3 .df-txt i{transform:scaleX(.907)}
@@ -3322,14 +3325,14 @@
   /* 노란 → 버튼 118×118(검정 6, radius 32) — 세로 그라 + 하단 그늘 6px + 광택 띠 */
   .df-btn{position:absolute;left:743px;top:17px;width:118px;height:118px;box-sizing:border-box;
     border:7px solid #000;border-radius:32px;cursor:pointer;padding:0;
-    background:linear-gradient(180deg,#F5EF35 0,#FDD92B 10%,#FFC021 55%,#FFB514 100%);
+    background:linear-gradient(180deg,#F5EF35 0,#FDD92B 10%,#FFC021 55%,#FEAA0A 100%);
     box-shadow:inset 0 -6px 0 #D87C0F;display:flex;align-items:center;justify-content:center}
   .df-btn::after{content:'';position:absolute;left:14px;right:14px;bottom:6px;height:8px;
     border-radius:3px;background:#FDEE2F}
   .df-btn svg{width:62px;height:50px;overflow:visible}
   .df-btn svg path{fill:#fff;stroke:#000;stroke-width:6;paint-order:stroke fill;stroke-linejoin:round}
   /* «터치하여 닫기» — 18 실측 잉크폭 254 (09 의 251 대비 +1.2%) */
-  #defw .upr-close i{transform:scaleX(.943);-webkit-text-stroke:1.5px #F6F7F8}
+  #defw .upr-close i{transform:scaleX(.947);-webkit-text-stroke:1px #F6F7F8}
 
   /* ==========================================================================
      15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
@@ -3857,7 +3860,7 @@
        측정표 docs/measure/18-패배화면.md. 사망 시 openDefeat() 로 열린다. -->
   <div id="defw">
     <div class="df-emb"><svg width="116" height="107" viewBox="0 0 116 107">
-      <path d="M0 22C0 6 18 0 58 0s58 6 58 22v40c0 12-9 19-22 21H22C9 81 0 74 0 62z" fill="#F8FFF8"/>
+      <path d="M1 0Q13 3 27 12H89Q103 3 115 0v62c0 12-9 19-22 21H23C10 81 1 74 1 62z" fill="#F8FFF8"/>
       <path d="M26 78h64v20a9 9 0 0 1-9 9H35a9 9 0 0 1-9-9z" fill="#F8FFF8"/>
       <ellipse cx="31" cy="56" rx="18" ry="16" fill="#0B4B7B"/>
       <ellipse cx="85" cy="56" rx="18" ry="16" fill="#0B4B7B"/>
@@ -3865,14 +3868,14 @@
       <path d="M45 82v25M58 82v25M71 82v25" stroke="#0B4B7B" stroke-width="5"/>
     </svg></div>
     <div class="df-title"><i data-t="패배하였습니다">패배하였습니다</i></div>
-    <div class="df-card c1"><div class="pnl"></div><div class="df-ic1"><s class="lid"></s><s class="body"></s><s class="base"></s><s class="lock"></s></div>
-      <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
+    <div class="df-card c1"><div class="pnl"></div><div class="df-ic1"><s class="cLid"></s><s class="cBody"></s><s class="cBase"></s><s class="cLock"></s></div>
+      <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i><i class="ov" aria-hidden="true">상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
       <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="df-card c2"><div class="pnl"></div><div class="df-ic"><b class="fl">🔥</b><b class="f1">🐹</b><b class="f2">🐱</b></div>
-      <div class="df-txt"><i>골드로 햄지와 매옹이를 훈련시키세요</i></div>
+      <div class="df-txt"><i>골드로 햄지와 매옹이를 훈련시키세요</i><i class="ov" aria-hidden="true">골드로 햄지와 매옹이를 훈련시키세요</i></div>
       <button class="df-btn" data-dfgo="grow"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="df-card c3"><div class="pnl"></div><div class="df-ic3"></div>
-      <div class="df-txt"><i>게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i></div>
+      <div class="df-txt"><i>게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i><i class="ov" aria-hidden="true">게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i></div>
       <button class="df-btn"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
   </div>
