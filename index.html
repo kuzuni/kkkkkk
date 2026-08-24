@@ -2323,7 +2323,7 @@
 
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
   .tr-head{left:0;right:0;top:8px;height:106px;
-    background:linear-gradient(180deg,#A17D52 0 6px,#84583B 6px,#71462E 91px 97px,#553622 97px 106px)}
+    background:linear-gradient(180deg,#A17D52 0 6px,#8A5D3E 6px,#71462E 91px 97px,#553622 97px 106px)}
   .tr-head>i{position:absolute;left:0;right:0;top:14px;height:64px;line-height:64px;text-align:center;
     font-size:57px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.87)}
@@ -2356,24 +2356,22 @@
   .tr-prog>.trk{position:absolute;left:8px;top:7px;right:4px;bottom:7px;border-radius:21px;
     background:#1C1E2B;overflow:hidden}
   .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:21px;
-    background:linear-gradient(180deg,#A5EC46 0 2px,#9EF12F 2px 36px,#80D91F 36px)}
+    background:linear-gradient(180deg,#9FE83B 0 2px,#97EB2A 2px 36px,#7BD31B 36px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
     font-size:31px;color:#fff;-webkit-text-stroke:7px #141414;paint-order:stroke fill;z-index:2;
     transform:translateX(15px) scaleX(1.28)}
   /* §4b ↑ 버튼 — x838 y140 w108 h105. 3종 상한을 다 채우기 전에는 은색(비활성) */
+  /* ref 는 «바깥 밝은 림(189) > 면(170)» 순서다 — 림을 면보다 밝게 유지할 것 */
   .tr-up{left:838px;top:140px;width:108px;height:105px;border-radius:32px;cursor:pointer;
-    background:linear-gradient(180deg,#8C8C8C 0,#9A9A9A 55%,#CFCFCF 100%);
-    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #D3D3D3;text-align:center;line-height:105px}
-  .tr-up.on{background:linear-gradient(180deg,#63B41C 0,#7ACB27 55%,#CFF06B 100%)}
-  /* 화살표는 글리프로 그리면 스트로크가 초록을 먹어 4px 만 남는다 — CSS 도형으로 그린다 */
-  .tr-up>i{position:absolute;left:27px;top:17px;width:54px;height:53px;font-size:0;
-    filter:drop-shadow(7px 0 0 #141414) drop-shadow(-7px 0 0 #141414)
-           drop-shadow(0 7px 0 #141414) drop-shadow(0 -7px 0 #141414)}
-  .tr-up>i::before{content:'';position:absolute;left:0;top:0;width:0;height:0;
-    border-left:27px solid transparent;border-right:27px solid transparent;
-    border-bottom:30px solid #B0EA26}
-  .tr-up>i::after{content:'';position:absolute;left:13px;top:29px;width:28px;height:24px;
-    background:#B0EA26}
+    background:linear-gradient(180deg,#767676 0,#828282 60%,#8E8E8E 100%);
+    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #A0A0A0;text-align:center}
+  .tr-up.on{background:linear-gradient(180deg,#63B41C 0,#7ACB27 60%,#8FDC33 100%);
+    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #CFF06B}
+  /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
+     stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다 */
+  .tr-up>svg{position:absolute;left:20px;top:19px;width:68px;height:66px}
+  .tr-up>svg path{fill:#B0EA26;stroke:#141414;stroke-width:16;stroke-linejoin:round;
+    paint-order:stroke fill}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
   .tr-qty{left:142px;top:265px;width:761px;height:81px}
@@ -2396,7 +2394,7 @@
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
   .tr-cards{left:0;right:0;top:373px;height:510px}
-  .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:26px;background:#FFFDEE;
+  .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:26px;background:#FFFDF2;
     box-shadow:inset 0 0 0 8px #141414;cursor:pointer}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
@@ -2425,7 +2423,7 @@
   /* §7 하단 서브탭 4칸 — x37 y958 w960 h97, 4등분 240 */
   .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:48px;background:#000;
     overflow:hidden;display:flex}
-  .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;background:#5D5039;
+  .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;background:#635340;
     margin:6px 0;cursor:pointer;box-shadow:inset -4px 0 0 #4A3A2B}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
   .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;box-shadow:none}
@@ -3684,7 +3682,8 @@
         <div class="tr-rib"><b class="l"></b><b class="r"></b><span class="bar"></span>
           <u id="trRib"></u></div>
         <div class="tr-prog"><span class="trk"><i id="trFill"></i></span><b id="trProg"></b></div>
-        <div class="tr-up" id="trUp"><i>↑</i></div>
+        <div class="tr-up" id="trUp"><svg viewBox="0 0 68 66" aria-hidden="true">
+          <path d="M34 3 L65 34 H49 V63 H19 V34 H3 Z"/></svg></div>
         <div class="tr-qty" id="trQty"></div>
         <div class="tr-cards" id="trCards"></div>
       </div>
