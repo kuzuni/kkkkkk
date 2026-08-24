@@ -136,7 +136,7 @@
     background:rgba(0,0,0,.30);pointer-events:none;z-index:3}
   /* 라벨 잉크 상단 311 → 캡슐 상단 324 을 13px 침범한다. 중심은 화면 정중앙 540 = 캡슐 좌단+220 */
   #stinfo .chap{position:absolute;left:0;top:-13px;width:440px;text-align:center;
-    font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:0;white-space:nowrap;
+    font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:2.5px;white-space:nowrap;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
   #stinfo .chap em{font-style:normal}
   #stinfo .kwrap{position:absolute;inset:0}
@@ -160,7 +160,8 @@
   #stinfo .kboss::before{inset:6px;background:#4CBAED}
   #stinfo .kboss::after{inset:11px;background:#2A3E81}
   /* 흰 해골 잉크 52x46 — 이모지를 흰색으로 눌러 네이비 원판 위에 얹는다 */
-  #stinfo .kboss>i{position:relative;z-index:2;font-style:normal;display:block;transform:scaleY(.88);
+  #stinfo .kboss>i{position:relative;z-index:2;font-style:normal;display:block;
+    transform:translateY(-3px) scaleY(.88);
     filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
 
   /* 우상단 4분할 메뉴 버튼 — 측정표 §2. 934..1035 / 260..359, radius 24, 검정 24% */
@@ -172,9 +173,10 @@
   #menub s:nth-of-type(2){left:55px;top:22px}
   #menub s:nth-of-type(3){left:23px;top:53px}
   #menub s:nth-of-type(4){left:55px;top:53px}
-  /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16), 채움 Ø30 + 검정 5 */
-  #menub .bdg{position:absolute;left:71px;top:-4px;width:30px;height:30px;border-radius:50%;
-    background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0}
+  /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16). 실측 채움 Ø25 + 검정 4 (A2 표의 Ø31 은 오측) */
+  #menub .bdg{position:absolute;left:74px;top:-1px;width:25px;height:25px;border-radius:50%;
+    background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0}
+
   /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
      레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
      가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 31 · 배너 234)는 1:1 고정,
@@ -336,7 +338,7 @@
   #botleft .ubtn[data-util=chat] .ui{font-size:54px;line-height:1;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
   /* 마을: 아트 132x130 + 라벨 잉크 33(폰트 36)이 아트 하단에 5px 겹쳐 내려온다 */
-  #botleft .ubtn[data-util=town] .ui{width:132px;height:130px;font-size:130px;line-height:130px;
+  #botleft .ubtn[data-util=town] .ui{width:132px;height:130px;font-size:116px;line-height:130px;
     text-align:center;transform:translateX(-11px);filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
   #botleft .ubtn[data-util=town] .ul{margin-top:-5px;height:33px;font-size:36px;line-height:33px;
     font-weight:900;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
@@ -351,13 +353,13 @@
   #tuto.off{display:none}
   /* [보상받기] 라벨 — 상대 (102,18), 잉크 141x34, 금색 + 검정 외곽선 4 */
   #tuto .tbtn{position:absolute;left:97px;top:10px;height:34px;padding:0;border:0;background:none;
-    font-size:32px;line-height:34px;font-weight:900;color:#FFCC2B;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;cursor:pointer;white-space:nowrap}
-  #tuto .tbtn:disabled{color:#E3B325;cursor:default}
+    font-size:30px;line-height:34px;font-weight:900;color:#FDE465;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;cursor:pointer;white-space:nowrap}
+  #tuto .tbtn:disabled{color:#FDE465;cursor:default}
   #tuto .tinfo{position:absolute;left:55px;top:75px;width:217px}
-  #tuto .tt{height:22px;font-size:32px;line-height:22px;font-weight:900;color:#fff;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tuto .tt{font-size:24px;line-height:22px;font-weight:900;color:#fff;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;
+    transform:scaleX(.98);transform-origin:0 50%}
   /* 레퍼런스 배너에는 진행바가 없다 — 요소는 남기고 감춘다 */
   #tuto .tp{display:none}
   /* 보상 초록 박스 — 상대 (328,18), 117x117, radius 30, 검정5 → 연녹7 → 본체 */
@@ -372,7 +374,7 @@
     font-size:36px;line-height:33px;font-weight:900;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap}
   /* 배너 레드닷 — 초록 박스 우상단, 중심 상대 (435,25) */
-  #tuto .trew::after{content:'';position:absolute;right:-8px;top:-8px;width:24px;height:24px;
+  #tuto .trew::after{content:'';position:absolute;right:-12px;top:-12px;width:24px;height:24px;
     border-radius:50%;background:#F22E54;border:4px solid #000;box-sizing:content-box}
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
@@ -2499,7 +2501,7 @@ function drawTuto(){
   const p = Math.min(t.get(), t.goal), ready = p >= t.goal;
   /* 레퍼런스 배너는 «[보상받기] / 미션 문구 / 보상칸 + 잔여 카운터» 3요소뿐이다(진행바 없음).
      진행 수치는 미션 문구 뒤에 붙이고, 카운터에는 남은 개수를 넣는다. */
-  $('tutoName').textContent = t.n + ' (' + fmt(p) + '/' + fmt(t.goal) + ')';
+  $('tutoName').textContent = t.n;
   $('tutoBar').style.width = (p/t.goal*100) + '%';
   $('tutoSub').textContent = fmt(Math.max(0, t.goal - p));
   const btn = $('tutoBtn');
