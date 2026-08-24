@@ -2327,17 +2327,22 @@
   .tr-wave{left:0;right:0;top:0;height:8px;background:#141414;z-index:3}
 
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
+  /* 4회차: ref 는 «연속 그라데이션» 이 아니라 y1001 에서 끊기는 **하드 2단 스텝**이다.
+     x800 세로 스캔 — y938..998 이 (132,88,59) 로 일정, y1004..1022 가 (115,71,46) 로 일정. */
   .tr-head{left:0;right:0;top:8px;height:106px;
-    background:linear-gradient(180deg,#A17D52 0 6px,#8A5D3E 6px,#71462E 91px 97px,#553622 97px 106px);
+    background:linear-gradient(180deg,#A17D52 0 6px,#84583B 6px 73px,#73472E 73px 97px,#553622 97px 106px);
     box-shadow:inset 8px 0 0 #141414,inset -8px 0 0 #141414}
   .tr-head>i{position:absolute;left:0;right:0;top:14px;height:64px;line-height:64px;text-align:center;
     font-size:57px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.87)}
 
   /* §2 크림 박스 — border-box ref x17..1062 / y1063..2152, 테두리 #CDA26C 6px */
+  /* 4회차: 카드 트레이 밴드의 경계가 «완만한 그라데이션 램프» 로 뭉개져 있었다.
+     ref 는 x100 세로 스캔상 하드 경계다 — 박스 로컬 337..345 에 룰 9px (233,205,158),
+     본문 346..918 (236,217,187), 919..925 에 하이라이트 7px (255,243,216). 램프 구간은 0 이다. */
   .tr-box{left:17px;top:143px;width:1046px;height:1093px;border-radius:34px;
-    background:linear-gradient(180deg,#F3E6CD 0 348px,#EDDABC 348px 919px,#FFF2D7 919px 925px,
-      #F3E7CF 925px);
+    background:linear-gradient(180deg,#F3E6CD 0 337px,#E9CD9E 337px 346px,#ECD9BB 346px 919px,
+      #FFF3D8 919px 926px,#F3E7CD 926px);
     box-shadow:inset 0 0 0 6px #CDA26C}
   .tr-box>*{position:absolute}
 
@@ -2358,40 +2363,59 @@
     paint-order:stroke fill;margin:0 4px}
 
   /* §4 진행바 — 박스 기준 x177 y165 w662 h55, 검정 8px, 채움 #9EF12F */
+  /* 4회차 색 정정 — ref 진행바 외곽선은 (1,0,0) 즉 순검정이다(#141414 아님).
+     트랙 빈 구간은 단색이 아니라 **상단 6px 인셋 그늘**이 있다 (x700 스캔: y1235..1240 (14,15,20) → y1246+ (28,30,42)).
+     초록 채움도 단색이 아니라 y1256 에서 끊기는 **하드 2단**이다 ((160,243,47) → (129,216,29)). */
   .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:28px 12px 12px 28px;
-    background:#141414}
+    background:#000}
   .tr-prog>.trk{position:absolute;left:8px;top:7px;right:4px;bottom:7px;border-radius:8px;
-    background:#1C1E2B;overflow:hidden}
+    background:linear-gradient(180deg,#0E0F14 0 6px,#1C1E2B 9px);overflow:hidden}
   .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;
-    background:linear-gradient(180deg,#9FE83B 0 2px,#97EB2A 2px 36px,#7BD31B 36px)}
+    background:linear-gradient(180deg,#A0F32F 0 21px,#81D81D 21px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
-    font-size:31px;color:#fff;-webkit-text-stroke:7px #141414;paint-order:stroke fill;z-index:2;
+    font-size:31px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
     transform:translateX(15px) scaleX(1.28)}
   /* §4b ↑ 버튼 — x838 y140 w108 h105. 3종 상한을 다 채우기 전에는 은색(비활성) */
-  /* ref 는 «바깥 밝은 림(189) > 면(170)» 순서다 — 림을 면보다 밝게 유지할 것 */
+  /* ref 는 «바깥 밝은 림 > 면» 순서다 — 림을 면보다 밝게 유지할 것.
+     ⚠ 4회차 정정: 3회차가 림 #A0A0A0(160)·면 #767676~#8E8E8E(118~142) 로 재보정했는데 **양쪽 다 과하게 어두웠다.**
+     ref 실측(가로 y1255 / 세로 x869..876)은 림 **211** · 면 **162→144(아래로 어두워짐)** 이고
+     이는 측정표 §4 의 «면 #989898 / 림 #D3D3D3» 와도 일치한다. 3회차는 면 그라데이션 방향까지 뒤집혀 있었다.
+     외곽선도 ref 는 (0,0,0) 순검정이라 #141414 가 아니다. */
   .tr-up{left:838px;top:140px;width:108px;height:105px;border-radius:32px;cursor:pointer;
-    background:linear-gradient(180deg,#8E8E8E 0,#9A9A9A 60%,#A6A6A6 100%);
-    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #D3D3D3;text-align:center}
-  .tr-up.on{background:linear-gradient(180deg,#63B41C 0,#7ACB27 60%,#8FDC33 100%);
-    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #CFF06B}
+    background:linear-gradient(180deg,#A2A2A2 0,#9A9A9A 55%,#909090 100%);
+    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D3D3D3;text-align:center}
+  .tr-up.on{background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
+    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #E4FA92}
   /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
-     stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다 */
-  .tr-up>svg{position:absolute;left:23px;top:14px;width:61px;height:59px}
-  .tr-up>svg path{fill:#B0EA26;stroke:#141414;stroke-width:16;stroke-linejoin:round;
+     stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다.
+     6회차: 잉크 치수를 ref 실측대로 다시 잡았다. ref 초록은 **머리 h29(최대폭 55) + 자루 h22(폭 27)
+     = 전체 h51**, 잉크 중심이 버튼 중심보다 **7.5px 위**(광학 보정)다. 3회차 것은 h60·폭 62 로 크고 정중앙이었다.
+     viewBox 를 잉크 55x51 + 스트로크 여유 8px 로 잡아야 stroke 가 SVG 밖으로 잘리지 않는다. */
+  .tr-up>svg{position:absolute;left:16.5px;top:9.5px;width:73px;height:69px}
+  .tr-up>svg path{fill:#B0EA26;stroke:#000;stroke-width:16;stroke-linejoin:round;
     paint-order:stroke fill}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
   .tr-qty{left:142px;top:265px;width:761px;height:81px}
+  /* 6회차: 칸 구분선은 «전체 높이 inset box-shadow» 가 아니다 — ref x664..667 세로 스캔상
+     y1350..1381 (바 상단에서 22px, 길이 32px) 에만 있고 색도 (172,122,86) 로 훨씬 밝다(우리 #A06845 는 160,104,69).
+     세로로 잘라내야 하므로 box-shadow 대신 background-image 레이어로 깐다. */
   .tr-qty>.q{position:absolute;top:0;height:81px;cursor:pointer;text-align:center;line-height:64px;
-    background:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px);
-    box-shadow:inset -3px 0 0 #A06845}
-  .tr-qty>.q:nth-child(1){box-shadow:inset 7px 0 0 #E7C09F,inset -3px 0 0 #A06845}
-  .tr-qty>.q:nth-child(3){box-shadow:inset -7px 0 0 #E7C09F}
-  .tr-qty>.q.on::after{content:'';position:absolute;left:9px;right:0;top:59px;height:9px;
-    background:#A26843}
-  .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:0;top:14px;height:45px;
-    border-radius:12px;background:linear-gradient(180deg,#FFF0D3 0 3px,#FCD2AC 3px);
-    box-shadow:inset 0 0 0 4px #AA6F4D}
+    background-image:linear-gradient(#AC7A56,#AC7A56),
+      linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px);
+    background-size:3px 32px,100% 100%;
+    background-position:right 0 top 22px,left 0 top 0;
+    background-repeat:no-repeat,no-repeat}
+  .tr-qty>.q:nth-child(1){box-shadow:inset 7px 0 0 #E7C09F}
+  /* 마지막 칸은 우측 구분선이 없다 */
+  .tr-qty>.q:nth-child(3){background-image:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px);
+    background-size:100% 100%;background-position:0 0}
+  /* 선택 칩 — ref 필 border-box y1337..1392 = 바 상단 기준 top9 h56 (top14 h45 는 21% 작았다).
+     칩 아래 offset 65..68 은 ref 가 **트랙 원색 (193,144,104)** 이다 — 3회차의 어두운 그늘 밴드(::after)는
+     ref 에 없어서 제거했다(있으면 칩이 h69 로 이어져 보인다). */
+  .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:0;top:9px;height:56px;
+    border-radius:12px;background:linear-gradient(180deg,#FFEED0 0 4px,#FCD2AC 4px);
+    box-shadow:inset 0 0 0 6px #AA6F4D}
   .tr-qty>.q:nth-child(1){left:0;width:247px;border-radius:12px 0 0 12px}
   .tr-qty>.q:nth-child(2){left:247px;width:263px}
   .tr-qty>.q:nth-child(3){left:510px;width:257px;border-radius:0 12px 12px 0;box-shadow:none}
@@ -2411,8 +2435,17 @@
     background:linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
   .tr-card>.ch>i{font-size:54px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.9)}
-  .tr-card>.ci{left:73px;top:126px;width:180px;height:164px;text-align:center;line-height:164px;
-    font-size:150px}
+  /* 4회차: ref 는 카드 아트 «뒤» 에 45° 회전 라운드 스퀘어 «슬롯 플레이트» 를 깐다
+     (bbox 150x150 = 한 변 106 을 45° 회전한 마름모, 색 (234,214,179)). 우리 캡처에는 이 색 픽셀이 **0개**였다.
+     아트 자체는 이모지 한계라 못 맞춰도 이 판은 CSS 로 회수 가능하다.
+     .ci 에 z-index 를 줘 스택 문맥을 만들고 ::before 를 z-index:-1 로 두면 카드 배경 위·이모지 아래에 깔린다. */
+  .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:106px;height:106px;
+    margin:-56.5px 0 0 -53px;transform:rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
+  /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
+     (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
+     이모지를 105px 로 줄여 마름모 네 귀가 드러나게 한다. */
+  .tr-card>.ci{z-index:1;left:73px;top:126px;width:180px;height:164px;text-align:center;line-height:164px;
+    font-size:105px}
   .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
@@ -2431,9 +2464,12 @@
   /* §7 하단 서브탭 4칸 — x37 y958 w960 h97, 4등분 240 */
   .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:40px;background:#141414;
     overflow:hidden;display:flex}
-  .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;background:#635340;
-    margin:6px 0;cursor:pointer;
-    box-shadow:inset -4px 0 0 #4A3A2B,inset 0 6px 0 #70604F,inset 0 -6px 0 #71604C}
+  /* 6회차: ref 서브탭 바는 단색 갈색이 아니다 — x700 세로 스캔에서 위·아래에 **밝은 인셋 립 6px**
+     (112,95,75) 이 있고 본체는 (98,81,61) 이다. 검정 테두리도 위 8px / 아래 6px 로 비대칭.
+     (두 비평가가 독립적으로 «상·하 인셋 밝은 엣지 없음» 을 지적했다) */
+  .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;
+    background:linear-gradient(180deg,#705F4B 0 6px,#62513D 6px 77px,#705F4B 77px);
+    margin:8px 0 6px;cursor:pointer;box-shadow:inset -4px 0 0 #4A3A2B}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
   .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;box-shadow:none}
   .tr-sub>.sg.on::before{content:'';position:absolute;left:8px;right:0;top:5px;bottom:5px;
@@ -3690,8 +3726,8 @@
         <div class="tr-rib"><b class="l"></b><b class="r"></b><span class="bar"></span>
           <u id="trRib"></u></div>
         <div class="tr-prog"><span class="trk"><i id="trFill"></i></span><b id="trProg"></b></div>
-        <div class="tr-up" id="trUp"><svg viewBox="0 0 68 66" aria-hidden="true">
-          <path d="M34 3 L65 34 H49 V63 H19 V34 H3 Z"/></svg></div>
+        <div class="tr-up" id="trUp"><svg viewBox="0 0 73 69" aria-hidden="true">
+          <path d="M36.5 8 L65 38 H50 V61 H23 V38 H8 Z"/></svg></div>
         <div class="tr-qty" id="trQty"></div>
         <div class="tr-cards" id="trCards"></div>
       </div>
