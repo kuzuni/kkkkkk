@@ -110,3 +110,6 @@ InitTestScene*.unity*
 /package.json
 /package-lock.json
 /scratchpad/
+
+# 41 작업 중 만든 임시 대기 스크립트
+.waitcrit41.tmp.py
