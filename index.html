@@ -2378,6 +2378,26 @@
   /* 배지 숫자에만 RGB 서브픽셀 프린지가 끼었다(비평 B ⑤: 좌 (7,47,111)·우 (111,47,7)).
      레퍼런스는 순수 그레이스케일 AA 라 전체를 grayscale AA 로 통일한다. */
   #sumw{-webkit-font-smoothing:antialiased}
+  /* 레퍼런스 서체는 우리 것보다 훨씬 굵다 — «소환 결과»·«터치하여 닫기» 흰 획의 가로 run
+     중앙값이 ref 8px vs 우리 4px 다(2회차 비평 D ⑥, 자가 재측정으로 확인. 잉크 면적 −23%).
+     font-weight 는 이미 900 이라 더 못 올리고, `paint-order:stroke fill` 은 검정 스트로크가
+     흰 획을 파먹지 않게 할 뿐 **굵혀 주지는 않는다**.
+     → 같은 글자를 `::after` 로 한 겹 얹고 **흰 스트로크**를 줘 흰 획만 두껍게 한다.
+       검정 외곽선은 아래 레이어가 그대로 유지하므로 bbox 는 변하지 않고,
+       비평가가 «검정 잉크 +49% 과다» 라고 한 것도 같이 해소된다(흰색이 그만큼 안쪽을 되찾는다). */
+  #sumw .sm-fat{position:relative}
+  #sumw .sm-fat::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;
+    color:var(--fat,#fff);-webkit-text-stroke:var(--fatw,2px) var(--fat,#fff);paint-order:stroke fill}
+  /* 굵기 보정량은 요소마다 다르다 — ref 잉크 «면적» 에 맞춰 개별로 잰 값이다.
+     run 중앙값은 인접 획이 붙으면 뭉쳐 읽히므로 **면적** 을 기준으로 삼았다. */
+  #sumw .sm-band>i{--fatw:1.5px}
+  #sumw .sm-close i{--fatw:2px}
+  #sumw .sm-b .lab i{--fatw:1px}
+  #sumw .sm-b .cost i{--fatw:0px}
+  #sumw .sm-c>u i{--fatw:1px}
+  /* 가격·횟수는 흰색이 아니라 #FC716C 다. 비평가 2인이 «0 링 획 ref 6px vs 구현 3px» 로 같이 짚었다. */
+  #sumw .sm-b .cost i{--fat:#FC716C}
+  #sumw .sm-c>u i{--fat:#fff}
 
   /* ── 전폭 결과 패널 — ref y793~1331(h539). 좌우 테두리·radius **없음** ──
      세로 레이어(실측): 금5 + 어두운2 + 안쪽베벨7 = 상단 크롬 14
@@ -2441,9 +2461,9 @@
                              #FBC45D 4px 5px,#FFBE56 5px 82px,#F0A63C 82px 87px)}
   /* 하이라이트는 균일하지 않다 — x300 에서 9px 인데 x420 부터는 4px 다(실측).
      그래서 바탕은 4px 로 깔고 좌측 끝에만 유광 패치를 얹는다. 1회차 비평 B ⑤ 대응. */
-  .sm-band::before{content:'';position:absolute;left:0;top:0;width:120px;height:9px;
+  .sm-band::before{content:'';position:absolute;left:0;top:0;width:30px;height:9px;
     border-radius:6px 0 0 0;
-    background:linear-gradient(90deg,#FEEF88 0 55px,rgba(254,239,136,0) 115px)}
+    background:linear-gradient(90deg,#FEEF88 0 12px,rgba(254,239,136,0) 28px)}
   /* 타이틀 잉크 456~625(w170) / 747~787(h41) → font-size 44, 밴드 세로중앙에서 1.5px 위.
      외곽선 실측 좌4·우5 → 한쪽 4.5px 를 내려면 -webkit-text-stroke 는 **9px**(안팎 절반씩). */
   .sm-band>i{position:relative;top:19px;font-size:44px;line-height:44px;color:#fff;
@@ -2512,8 +2532,13 @@
      면이 27 로 눌린다(1회차 비평 A: 세로 −19.5%). 외곽선 포함 79x39 로 잡아야 면이 73x33 이 된다. */
   .sm-b1 .fr{left:-7px;top:68px;width:79px;height:39px;box-sizing:border-box;
     border:3px solid #000;border-radius:5px;text-align:center;
-    background:linear-gradient(90deg,#FF5D7A 0 49px,#FF3964 49px)}
-  .sm-b1 .fr i{font-size:19px;line-height:33px;color:#F7EB73;letter-spacing:.5px}
+    background:linear-gradient(90deg,#FF3964 0 6px,#FF5D7A 6px 32px,#FF3964 32px);
+    /* ref 실루엣은 단순 라운드 사각형이 아니라 **우하단이 사선으로 잘린** 리본 태그다
+       (local x70 에서 분홍이 y18/33 까지만 남는다 — 2회차 비평 D ②). */
+    clip-path:polygon(0 0,79px 0,79px 21px,62px 39px,0 39px)}
+  /* ref 는 글자 둘레에 1~2px 짙은 외곽이 있다(2회차 비평 D ⑥). 스트로크는 안팎 절반씩이라 3px. */
+  .sm-b1 .fr i{font-size:19px;line-height:33px;color:#F7EB73;letter-spacing:.5px;
+    -webkit-text-stroke:3px #A6392F;paint-order:stroke fill}
 
   /* ── «터치하여 닫기» — 09 와 **완전히 같은 앵커**(ref 잉크하단 2164, 탭바 상단 2160) ──
      이 게임에서 외곽선이 없는 유일한 텍스트 계열이다. -webkit-text-stroke 를 주지 말 것.
@@ -2792,17 +2817,17 @@
     <div class="sm-rb">
       <div class="sm-tl l"><s></s></div>
       <div class="sm-tl r"><s></s></div>
-      <div class="sm-band"><i>소환 결과</i></div>
+      <div class="sm-band"><i class="sm-fat" data-t="소환 결과">소환 결과</i></div>
     </div>
     <div class="sm-btns">
-      <button class="sm-b sm-b1" id="sumBF"><div class="lab"><i>10회 소환</i></div>
+      <button class="sm-b sm-b1" id="sumBF"><div class="lab"><i class="sm-fat" data-t="10회 소환">10회 소환</i></div>
         <div class="pan"></div><div class="cost" id="sumBFn"></div><div class="fr"><i>FREE</i></div></button>
-      <button class="sm-b sm-b2" id="sumB10"><div class="lab"><i>10회 소환</i></div>
+      <button class="sm-b sm-b2" id="sumB10"><div class="lab"><i class="sm-fat" data-t="10회 소환">10회 소환</i></div>
         <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB10c"></div></button>
-      <button class="sm-b sm-b3" id="sumB30"><div class="lab"><i>30회 소환</i></div>
+      <button class="sm-b sm-b3" id="sumB30"><div class="lab"><i class="sm-fat" data-t="30회 소환">30회 소환</i></div>
         <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB30c"></div></button>
     </div>
-    <div class="sm-close"><i>터치하여 닫기</i></div>
+    <div class="sm-close"><i class="sm-fat" data-t="터치하여 닫기">터치하여 닫기</i></div>
   </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -4650,7 +4675,7 @@ function showSummonResult(b, times, res, lvUp){
   $('sumGridIn').innerHTML = agg.map(a => {
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
     return '<div class="sm-c" style="--face:' + C.face + ';--rim:' + C.rim + '">'
-      + '<b>' + itemIcon(a.it) + '</b><u><i>' + a.n + '</i></u></div>';
+      + '<b>' + itemIcon(a.it) + '</b><u><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
   }).join('');
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
@@ -4661,10 +4686,11 @@ function syncSummonBtns(){
   const b = sumCtx; if(!b) return;
   const B = BANNERS[b], cur = B.cur === 'rel' ? S.relic : S.dia;
   const c10 = summonCost(b, 10), c30 = summonCost(b, 30), fl = freeLeft(b);
-  $('sumBFn').innerHTML  = '<i>' + fl + '/' + SHOP_FREE + '</i>';
+  const fat = t => '<i class="sm-fat" data-t="' + t + '">' + t + '</i>';
+  $('sumBFn').innerHTML  = fat(fl + '/' + SHOP_FREE);
   /* 레퍼런스 가격은 «1,000 / 3,000» 쉼표 표기다. 공용 fmt() 는 K 접미사(«1.44K»)라 이 화면만 쉼표로 쓴다. */
-  $('sumB10c').innerHTML = '<i>' + Math.round(c10).toLocaleString('en-US') + '</i>';
-  $('sumB30c').innerHTML = '<i>' + Math.round(c30).toLocaleString('en-US') + '</i>';
+  $('sumB10c').innerHTML = fat(Math.round(c10).toLocaleString('en-US'));
+  $('sumB30c').innerHTML = fat(Math.round(c30).toLocaleString('en-US'));
   $('sumBF').disabled  = fl <= 0;
   $('sumB10').disabled = cur < c10;
   $('sumB30').disabled = cur < c30;
