@@ -475,6 +475,9 @@
     border-radius:24px;padding:18px 20px;margin-bottom:16px}
   .sect h3{font-size:25px;color:#bfd4ff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
   .sect h3 em{font-style:normal;font-size:22px;color:#8fd6ff;font-weight:800}
+  .probq{font:inherit;font-size:20px;font-weight:800;color:#cfe0ff;background:#2b3866;
+    border:2px solid #3d4f86;border-radius:14px;padding:5px 14px;cursor:pointer;line-height:1}
+  .probq:active{background:#374a86}
   .sect p{font-size:23px;color:#9fb0d4;line-height:1.65;font-weight:700}
   .sect p b{color:#ffd45e}
   .gbtn{display:block;width:100%;padding:22px;border-radius:20px;border:0;cursor:pointer;
@@ -1431,6 +1434,76 @@
   .wm-ar.r::before{transform:scaleX(-1)}
 
   /* ==========================================================================
+     11 소환 부분 «확률 정보» 팝업 — 측정표 docs/measure/11-소환부분정보팝업.md
+     껍데기 = 딤(.55) 위 **정중앙 다이얼로그** 797×1170 (radius 30, 검정 6 + 갈색 프레임 13).
+     좌표: 가로 1:1, 세로 `구현 y = ref y − 210`. 정중앙이라 flex center 로 앉힌다.
+     자식 좌표 기준 = 크림 본문(.prb-body) 좌상단 = ref(162,688). 즉 body-local = ref − (162,688).
+     ========================================================================== */
+  #prbw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:33;
+    align-items:center;justify-content:center;box-sizing:border-box}
+  #prbw.on{display:flex}
+  #prbw i,#prbw em,#prbw b,#prbw s{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900}
+  /* 모달 박스 — 검정 6px + 갈색 프레임(#564437), radius 30 */
+  .prb{position:relative;flex:none;width:797px;height:1170px;max-height:100%;
+    background:#564437;border:6px solid #000;border-radius:30px;box-sizing:border-box;
+    transform:translateY(5px)}   /* 레퍼런스 세로중심 965(프레임중심 960 +5) 보정 */
+  .prb>*{position:absolute}
+  /* 타이틀 밴드 ref y596~686 → padding-box top 0, 높이 90. 상단 5px 만 밝은 톤 */
+  .prb-head{left:0;right:0;top:0;height:90px;border-radius:24px 24px 0 0;
+    background:linear-gradient(180deg,#5B4643 0 5px,#523E3D 5px);
+    text-align:center;line-height:90px;overflow:hidden}
+  .prb-head>i{position:relative;top:-2px;font-size:51px;color:#fff;letter-spacing:1.5px;text-indent:1.5px;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+  /* 크림 본문 ref x162~917 / y688~1741 → padding-box (15,92) ~ (우15,아래13) */
+  .prb-body{left:15px;right:15px;top:92px;bottom:13px;background:#F0D9BA;
+    border-radius:0 0 20px 20px;
+    box-shadow:inset 1px 0 0 #887662,inset -1px 0 0 #887662,inset 0 -1px 0 #887662}
+  .prb-body>*{position:absolute}
+
+  /* 단계 선택 행 — 탄색 박스 ref(471,704) 137×136 → body(309,16) */
+  .prb-stg{left:309px;top:16px;width:137px;height:136px;border-radius:26px;background:#B0A087;
+    text-align:center;cursor:default}
+  .prb-stg>.t{position:absolute;left:0;right:0;top:23px;font-size:35px;color:#523E3D;line-height:35px}
+  .prb-stg>.n{position:absolute;left:0;right:0;top:66px;font-size:52px;color:#523E3D;line-height:52px}
+  /* 화살표 — 배경 없는 흰 삼각형. ◀ ref x388~450 y741~807 → body(226,53) 62×66 */
+  .prb-ar{position:absolute;top:53px;width:62px;height:66px;cursor:pointer;
+    filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+  .prb-ar::before{content:'';position:absolute;inset:0;background:#fff;
+    clip-path:polygon(100% 0,0 50%,100% 100%)}
+  .prb-ar.l{left:226px}
+  .prb-ar.r{left:467px}
+  .prb-ar.r::before{transform:scaleX(-1)}
+  .prb-ar.off{opacity:.32;cursor:default}
+  /* 안내문 2줄 ref y870~919 → body top 182, 좌우 인셋 32 */
+  .prb-note{left:32px;right:33px;top:180px;font-size:19px;line-height:27px;color:#503D2F;
+    text-align:center;font-weight:700}
+  /* 등급바+행 스크롤 리스트 — ref 등급바 top 966 → body top 278. 리스트 좌우인셋 52 */
+  .prb-list{left:52px;right:52px;top:278px;bottom:6px;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch}
+  .prb-list::-webkit-scrollbar{width:0;height:0}
+  /* 등급 헤더 바 ref 651×81, 완전 캡슐, 밝은 초록 rim + 채움. 검정 테두리 없음 */
+  .prb-gh{position:relative;width:651px;height:81px;border-radius:40px;
+    background:var(--gc,#7C9A38);box-shadow:inset 0 3px 0 var(--gr,#D0FF78);
+    text-align:center;line-height:81px;margin-top:8px}
+  .prb-gh:first-child{margin-top:0}
+  .prb-gh>i{font-size:37px;color:#fff;-webkit-text-stroke:6px rgba(0,0,0,.62);paint-order:stroke fill}
+  /* 아이템 행 — 알약 ref 647×77, `#F7ECDA` 완전 캡슐, 구분선 없음(gap8) */
+  .prb-row{position:relative;width:647px;height:77px;margin:8px 0 0 2px;border-radius:38px;
+    background:#F7ECDA}
+  .prb-row>*{position:absolute}
+  /* 아이콘 박스 ref 60×60, 테두리 2px, pill 좌단+13 / top9 */
+  .prb-row>.ic{left:13px;top:9px;width:60px;height:60px;border:2px solid #5A5843;border-radius:14px;
+    box-sizing:border-box;background:var(--gc,#96BC34);text-align:center;font-size:38px;line-height:56px}
+  /* 이름 — 좌측정렬 x304 → pill 88. 세로중앙 */
+  .prb-row>.nm{left:88px;right:150px;top:0;height:77px;line-height:77px;font-size:37px;color:#000;
+    text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prb-row>.nm>i{transform:scaleX(.9);transform-origin:0 50%}
+  /* 확률 — 우측정렬 pill 우단−30. 시안+어두운 청록 외곽선 */
+  .prb-row>.pc{right:30px;top:0;height:77px;line-height:77px;font-size:28px;color:#ACFBFF;
+    -webkit-text-stroke:4px #091D1C;paint-order:stroke fill;text-align:right}
+
+  /* ==========================================================================
      06 장비 팝업 — 측정표 docs/measure/06-장비팝업.md
      껍데기 = **(나) 폭 1080 «바닥 시트»**. 가운데 다이얼로그(A5 `.mbox`)가 아니다.
        · 폭 1080 꽉 참(좌우 여백 0) · radius 위 38 / 아래 0 · 바닥은 하단 탭바에 가려 잘림
@@ -2214,6 +2287,21 @@
         <button class="wm-btn wm-b1" id="wpnBtnEq"></button>
         <button class="wm-btn wm-b2" id="wpnBtnUp"></button>
       </div></div>
+    </div>
+  </div>
+  <!-- 11 소환 부분 «확률 정보» 팝업. 딤 위 정중앙 다이얼로그. 측정표 docs/measure/11-소환부분정보팝업.md
+       진입점: 소환 박스 헤더의 🔍 (renderBanner 의 [data-prob]). 상점 소환탭(10)이 통합되면
+       그쪽에서도 openProbInfo(bkey, lv) 를 부르면 된다. -->
+  <div id="prbw">
+    <div class="prb">
+      <div class="prb-head"><i>확률 정보</i></div>
+      <div class="prb-body">
+        <div class="prb-stg"><b class="t">단계</b><b class="n" id="prbLv">1</b></div>
+        <div class="prb-ar l" id="prbPrev"></div>
+        <div class="prb-ar r" id="prbNext"></div>
+        <div class="prb-note">확률은 소수점 5번째 자리까지 표기되며, 이로 인해 보이는 숫자를 모두 합할 경우 100%가 나오지 않을 수 있습니다.</div>
+        <div class="prb-list" id="prbList"></div>
+      </div>
     </div>
   </div>
   <!-- 09 일괄 강화 결과 팝업. 껍데기(모달 박스·헤더 바·테두리)가 아예 없는 «딤 위 연출» 이다.
@@ -4443,7 +4531,9 @@ function renderBanner(bkey, boxId, extraTop){
 
   let h = extraTop || '';
   /* 소환 박스 */
-  h += '<div class="sect"><h3><span>' + B.ic + ' ' + B.n + ' 소환</span><em>소환 Lv.' + l
+  h += '<div class="sect"><h3><span>' + B.ic + ' ' + B.n + ' 소환</span>'
+    + '<button class="probq" data-prob="' + bkey + '" title="확률 정보">🔍 확률</button>'
+    + '<em>소환 Lv.' + l
     + (l >= SUM_MAXLV ? ' MAX' : '') + '</em></h3>'
     + '<div class="sexp"><i style="width:' + (l >= SUM_MAXLV ? 100 : sumExp(bkey)/need*100) + '%"></i></div>'
     + '<div class="odds">'
@@ -4505,6 +4595,8 @@ function bindBanner(boxId, getBanner){
   $(boxId).addEventListener('click', e => {
     const bkey = getBanner();
     const B = BANNERS[bkey];
+    const pq = e.target.closest('[data-prob]');
+    if(pq){ openProbInfo(pq.dataset.prob); return; }
     const s = e.target.closest('[data-sum]');
     if(s){ doSummon(bkey, +s.dataset.sum); return; }
     if(e.target.closest('[data-refund]')){ doRefund(bkey); return; }
@@ -5135,6 +5227,79 @@ $('eqCards').addEventListener('click', e => {
   const s = e.target.closest('[data-eqslot]');
   if(s && s.dataset.eqslot === 'weapon') openWeapon();
 });
+
+/* ==========================================================================
+   11 소환 부분 «확률 정보» 팝업 — 측정표 docs/measure/11-소환부분정보팝업.md
+   딤 위 정중앙 다이얼로그. 등급 헤더 바 + 아이템별 확률 행.
+   확률은 실제 소환 로직(gradeProbs → 등급확률, 등급 내 균등 추첨)에서 그대로 계산한다.
+   ◀▶ 로 «단계»(= 소환 레벨 이정표 1·5·15·30·40·100)를 넘겨 등급 해금·확률 변화를 열람한다.
+   ========================================================================== */
+const PRB_STEPS = [1, 5, 15, 30, 40, SUM_MAXLV];   /* 각 등급 해금 레벨 + 만렙 */
+let prbBank = 'weapon', prbStep = 0;
+/* 특정 레벨 L 에서의 등급별 확률(소환 로직과 동일 공식, L 을 명시적으로 받음) */
+function gradeProbsAt(b, L){
+  const w = GRADE_ROLL.map(g => {
+    if(L < g.unlock) return 0;
+    const t = clamp((L - g.unlock) / Math.max(1, SUM_MAXLV - g.unlock), 0, 1);
+    return g.p0 + (g.p1 - g.p0) * Math.pow(t, 0.9);
+  });
+  const tot = w.reduce((a, c) => a + c, 0) || 1;
+  return w.map(x => x / tot);
+}
+function renderProbInfo(){
+  const B = BANNERS[prbBank], L = PRB_STEPS[prbStep];
+  $('prbLv').textContent = L >= SUM_MAXLV ? 'MAX' : L;
+  $('prbPrev').classList.toggle('off', prbStep === 0);
+  $('prbNext').classList.toggle('off', prbStep === PRB_STEPS.length - 1);
+  /* 등급확률을 «빈 등급은 아래로 흘려보내는» 실제 추첨과 맞춰 아이템별로 분배 */
+  let gp = gradeProbsAt(prbBank, L).slice();
+  for(let g = GRADE.length - 1; g > 0; g--){
+    if(!B.list.some(x => x.g === g)){ gp[g - 1] += gp[g]; gp[g] = 0; }
+  }
+  let h = '';
+  for(let g = GRADE.length - 1; g >= 0; g--){          /* 높은 등급이 위 */
+    const items = B.list.filter(x => x.g === g);
+    if(gp[g] <= 1e-9 || !items.length) continue;
+    const G = GRADE[g], pctG = gp[g] * 100;
+    const each = gp[g] / items.length * 100;
+    h += '<div class="prb-gh" style="--gc:' + G.c + ';--gr:' + tint(G.c, .55) + '">'
+      +  '<i>' + G.n + ' (' + fmtPct(pctG, 2) + '%)</i></div>';
+    items.forEach(it => {
+      h += '<div class="prb-row">'
+        +  '<div class="ic" style="--gc:' + G.c + '">' + (it.ic || G.ic) + '</div>'
+        +  '<div class="nm"><i>' + it.n + '</i></div>'
+        +  '<div class="pc">' + each.toFixed(5) + '%</div></div>';
+    });
+  }
+  $('prbList').innerHTML = h || '<div class="prb-gh"><i>확률 정보 없음</i></div>';
+  $('prbList').scrollTop = 0;
+}
+/* 확률 표기: 정수면 정수, 아니면 소수 d 자리(뒤 0 제거) */
+function fmtPct(v, d){
+  if(Math.abs(v - Math.round(v)) < 0.05) return String(Math.round(v));
+  return v.toFixed(d).replace(/\.?0+$/, '');
+}
+/* 밴드/아이콘 밝은 rim 색 — 등급색을 흰쪽으로 k 만큼 섞는다 */
+function tint(hex, k){
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const m = c => Math.round(c + (255 - c) * k);
+  return 'rgb(' + m(r) + ',' + m(g) + ',' + m(b) + ')';
+}
+function openProbInfo(bank, lv){
+  prbBank = BANNERS[bank] ? bank : 'weapon';
+  const cur = lv != null ? lv : sumLv(prbBank);
+  /* 현재 레벨 이하의 가장 높은 이정표로 기본 단계를 맞춘다 */
+  prbStep = 0;
+  for(let i = 0; i < PRB_STEPS.length; i++) if(PRB_STEPS[i] <= cur) prbStep = i;
+  renderProbInfo();
+  $('prbw').classList.add('on');
+}
+function closeProbInfo(){ $('prbw').classList.remove('on'); }
+$('prbPrev').onclick = () => { if(prbStep > 0){ prbStep--; renderProbInfo(); } };
+$('prbNext').onclick = () => { if(prbStep < PRB_STEPS.length - 1){ prbStep++; renderProbInfo(); } };
+$('prbw').addEventListener('click', e => { if(e.target.id === 'prbw') closeProbInfo(); });
+$('tabbar').addEventListener('click', closeProbInfo, true);
+
 function openProfile(){
   renderSt();
   showModal('<h2>📊 내 정보</h2>' + $('bSt').innerHTML
