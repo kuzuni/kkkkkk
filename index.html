@@ -444,7 +444,8 @@
   /* 레퍼런스에는 활성 탭 하이라이트가 없다 — 열린 탭은 ✕ 칸으로 통째로 치환된다.
      (02번 영웅 아이콘의 금색 링은 선택 표시가 아니라 아이콘 아트다) */
   /* 레드닷: 중심 x = 칸 오른쪽 −21, 중심 y = 바 상단 +19.5, 채움 ⌀31 + 검정 5px */
-  .tab .bdg{position:absolute;top:1px;right:2px;width:37px;height:37px;border-radius:50%;
+  /* 레드닷은 화면 전체 Ø24~25 로 통일돼 있다(PROGRESS 02-비고) — 빨강 코어 24 + 검정 3 = 30 */
+  .tab .bdg{position:absolute;top:4px;right:5px;width:30px;height:30px;border-radius:50%;
     background:radial-gradient(circle at 50% 28%,#ff7991 0 12px,#f22e52 13px);
     border:3px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}
@@ -1435,6 +1436,10 @@
   #app:has(#shopw.on .shp-list.coin) .curs .cbox i{left:-54px}
   #app:has(#shopw.on .shp-list.coin) .curs .cGold i{font-size:46px}
   #app:has(#shopw.on .shp-list.coin) .curs .cDia i{font-size:52.5px}
+  /* ref HUD 숫자: 잉크 h22·'300' w65 — 우리 서체는 좁고 길어 fs↓ + scaleX 로 폭 회수 */
+  #app:has(#shopw.on .shp-list.coin) .curs .cbox{padding-left:0}
+  #app:has(#shopw.on .shp-list.coin) .curs .cbox b{font-size:32px;
+    transform:translate3d(0,1px,0) scaleX(1.28)}
   .cn-cd{width:278px;height:309px}
   .cn-cd>*{position:absolute}
   .cn-cd>.bg{left:7px;top:7px;width:264px;height:295px;border-radius:28px;
@@ -1454,6 +1459,8 @@
   .cn-cd>.pn>em{font-size:112px;line-height:157px}
   /* 구매 완료 카드는 본문 프레임도 초록(ref #135E3F = #1C8D5E×딤0.667) — 파랑 몸통이 슬리버로 비치지 않게 */
   .cn-cd.done>.bg{background:#1C8D5E}
+  /* 완료 카드의 ×N 은 ref 기준 «띠 아래(dy194)·카드 안 우측 정렬»(잉크 우단 x371~377, E·F 5회차 합의) */
+  .cn-cd.done>.qt{left:auto;right:14px;top:194px;transform-origin:100% 50%}
   .cn-cd>.qt{left:167px;top:169px;height:30px;color:#fff;font-size:41.2px;line-height:30px;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--qx,1.3));transform-origin:0 50%}
@@ -1493,11 +1500,11 @@
   .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
     opacity:.92}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
-  .cn-a2t{left:561px;top:1392px;width:420px;height:80px;text-align:center}
+  .cn-a2t{left:561px;top:1402px;width:420px;height:80px;text-align:center}
   .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:59px;line-height:70px;
     transform:scaleX(.985)}
   .cn-a2t>s{color:#000;-webkit-text-stroke:10px #000;paint-order:stroke fill}
-  .cn-a2t>i{background:linear-gradient(180deg,#F3DC96,#F5CA59);-webkit-background-clip:text;
+  .cn-a2t>i{background:linear-gradient(180deg,#F6E7AC,#E6A64E);-webkit-background-clip:text;
     background-clip:text;color:transparent}
   .cn-mv{left:695px;top:1489px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
     cursor:pointer;background:linear-gradient(180deg,#ABFF85 0,#ABFF85 6px,#78F34A 6px,
@@ -1514,7 +1521,9 @@
   #shopList.coin ~ #shopCats .shp-ct>i{top:25px;font-size:33.3px}
   #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:29.5px;top:25px;transform:scaleX(1.06)}
   #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(.98)}
-  #shopList.coin ~ #shopCats .shp-cs{top:44px;width:19px;height:19px}
+  #shopList.coin ~ #shopCats{border-width:5px;box-shadow:inset 0 0 0 3px rgba(92,79,70,.9)}
+  #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(1.07)}
+  #shopList.coin ~ #shopCats .shp-cs{top:38px;width:19px;height:19px}
   #shopList.coin ~ #shopCats .shp-cs.s1{left:239px}
   #shopList.coin ~ #shopCats .shp-cs.s2{left:485px;display:block}
   #shopList.coin ~ #shopCats .shp-cs.s3{left:732px;z-index:3;background:#CFA692}
@@ -6609,7 +6618,7 @@ $('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
 const COIN_ADS = [
   /* fs·sx: 3회차 자체 스캔 — 폭은 전부 ref Δ≤2 인데 높이만 +9~14% (서체 종횡비).
      ref_h/cap_h 만큼 fs 를 줄이고 폭 보존을 위해 sx 에 역수를 곱했다. qx 도 동일(×N 높이 28↔31). */
-  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.58 },
+  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.42 },
   { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.26 },
   { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.90 },
   { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:28.6, sx:1.040, qx:1.10 },
