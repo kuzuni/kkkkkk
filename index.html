@@ -1745,12 +1745,12 @@
      안쪽 주황 88px 을 실측 밴드대로 쌓는다(그라디언트가 아니라 평면 + 상단 하이라이트 + 하단 그늘).
      좌우 «접힘 그늘»(꼬리와 맞닿는 면)은 가로 그라디언트로 겹쳐 얹는다. */
   .upr-rb{left:277px;top:0;width:527px;height:101px;box-sizing:border-box;
-    border:6px solid #000;border-radius:16px;
+    border:6px solid #000;border-radius:19px;
     background:
       linear-gradient(90deg,#DC8431 0 4px,rgba(220,132,49,0) 11px,
                             rgba(221,132,50,0) calc(100% - 11px),#DD8432 calc(100% - 4px)),
-      linear-gradient(180deg,#FEF7A4 0 3px,#FDC961 3px 5px,#FEBD55 5px 83px,
-                             #FAB647 83px 85px,#E8A022 85px 88px);
+      linear-gradient(180deg,#FEF7A4 0 2px,#FDF08A 2px 3px,#FFE882 3px 4px,#FDDA74 4px 5px,
+                             #FCC862 5px 6px,#FEBD55 6px 83px,#FAB647 83px 85px,#E8A022 85px 88px);
     text-align:center;z-index:2}
   /* 모서리 유광 — ref x286–302 y1024–1030 (좌) / x794–795 y1024–1027 (우) */
   .upr-rb::before,.upr-rb::after{content:'';position:absolute;top:6px;height:7px;
@@ -1769,18 +1769,18 @@
      그래서 실루엣을 «몸통 왼쪽 기둥(local x 0~42, 전 높이) + 드룹(local y 70~96, 전 폭)» 의
      ㄴ 자 한 덩어리로 클립한다. x>42·y<70 은 비워서 몸통이 그대로 보이게 한다. */
   .upr-tl{top:25px;width:91px;height:96px;background:#000;z-index:3;
-    clip-path:polygon(15px 0,42px 0,42px 70px,91px 70px,91px 82px,80px 90px,64px 95px,18px 95px,2px 88px,0 80px,14px 45px,2px 16px)}
+    clip-path:polygon(15px 0,42px 0,42px 70px,91px 70px,91px 83px,80px 91px,64px 96px,18px 96px,2px 89px,0 80px,14px 45px,2px 16px)}
   .upr-tl.l{left:242px}
-  .upr-tl.r{left:747px;transform:scaleX(-1)}
+  .upr-tl.r{left:748px;transform:scaleX(-1)}
   /* 주황은 바깥 변에서만 5~7px 안쪽. 드룹 우변은 x325(local 83)까지고 그 바깥 327~333 이 검정(실측). */
   .upr-tl>s{position:absolute;inset:0;background:#F59632;
-    clip-path:polygon(15px 7px,42px 7px,42px 70px,83px 70px,83px 80px,72px 86px,58px 88px,21px 88px,8px 85px,7px 80px,21px 45px,9px 16px)}
+    clip-path:polygon(15px 7px,42px 7px,42px 70px,83px 70px,83px 81px,72px 87px,58px 89px,21px 89px,8px 86px,7px 80px,21px 45px,9px 16px)}
   /* 몸통이 꼬리에 드리운 그늘(#DD8433, 13px) + 몸통 아래로 드러난 짙은 그늘(#A45119, 19px) */
   /* ⚠ 순서 주의 — 몸통 쪽(안쪽)이 #DD8433, 바깥쪽 끝이 짙은 #A45119 다.
      실측: #DD8433 x291~303(local 49~61) · #A45119 x306~324(local 64~82). 반대로 넣으면
      드룹 우측이 밝아져 ref 대비 주황이 20px 더 뻗은 것처럼 읽힌다(2회차에 실제로 그랬다). */
   .upr-tl>s::after{content:'';position:absolute;right:0;top:0;bottom:0;width:43px;
-    background:linear-gradient(90deg,rgba(221,132,51,0) 0,#DD8433 14px,#A45119 16px,#A45119 43px)}
+    background:linear-gradient(90deg,rgba(221,132,51,0) 0 1px,#DD8433 2px 21px,#A45119 22px 43px)}
   /* 꼬리↔몸통 이음매는 위 «ㄴ 자 실루엣» 클립이 직접 처리한다(별도 패치 요소 불필요).
      ref y1060/1100 을 x272~291 로 스캔하면 전부 주황이고 검정 0 — 꼬리 y범위 밖인 y1020 만 검정이다. */
 
@@ -1788,9 +1788,9 @@
      3칸 등급색이 **전부 같다**(실측 Δ0). 칸별 등급색 분기를 넣지 않는다. */
   .upr-cards{left:0;right:0;top:131px;display:flex;gap:14px;justify-content:center}
   .upr-cel{width:137px;flex:0 0 auto}
-  .upr-card{width:137px;height:137px;box-sizing:border-box;
-    border:5px solid #000;border-radius:35px;
-    background:radial-gradient(circle at 50% 50%,#9FCA39 0,#94BC35 78%);
+  .upr-card{width:137px;height:138px;box-sizing:border-box;
+    border:5px solid #000;border-radius:38px;
+    background:radial-gradient(circle at 50% 62%,#9DC838 0 18%,#92BA33 78%);
     box-shadow:inset 0 0 0 5px #C5E549;
     display:flex;align-items:center;justify-content:center}
   /* 아이콘 잉크는 아트마다 51~65 로 제각각 → 90x90 안에 contain.
@@ -1800,7 +1800,7 @@
      ⚠ 숫자는 잉크가 **캡하이트**라 «÷0.93» 이 안 통한다(측정표 §2.3 경고).
      25px 으로 넣었더니 실측 잉크 17~18px(비평 1회차 A·B 공통 지적)이라 캡비 0.70 으로 역산해
      **33px** 으로 올렸다. 한글 라벨과 달리 숫자에는 이 비율을 쓸 것. */
-  .upr-lv{margin-top:6px;height:23px;line-height:23px;text-align:center;white-space:nowrap;
+  .upr-lv{margin-top:5px;height:23px;line-height:23px;text-align:center;white-space:nowrap;
     position:relative;left:1px;
     font-size:33px;font-weight:900;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill}
@@ -1818,7 +1818,7 @@
     font-size:45px;line-height:45px;font-weight:900;color:#fff}
   /* 이 프로젝트 서체가 레퍼런스의 «좁고 높은 게임용 한글 서체」보다 넓다. 잉크폭 270 → 실측 251.
      PROGRESS.md 규칙대로 음수 letter-spacing 이 아니라 <i> 의 scaleX 로 맞춘다. */
-  .upr-close i{transform:scaleX(.932);word-spacing:-4.6px}
+  .upr-close i{transform:scaleX(.932);word-spacing:-4.6px;position:relative;left:1px}
 </style>
 </head>
 <body>
@@ -3722,7 +3722,7 @@ function openUpAll(ups){
   $('upCards').innerHTML = ups.slice(0, UPR_MAX).map(u =>
       '<div class="upr-cel"><div class="upr-card"><b>' + (u.it.ic || '❔') + '</b></div>'
     + '<div class="upr-lv"><i>' + u.from + '</i>'
-    + '<em><svg viewBox="0 0 24 23"><path d="M0 5H12V0l12 11.5L12 23v-5H0z"/></svg></em>'
+    + '<em><svg viewBox="0 0 24 23"><path d="M0 5H10V-1l14 12.5L10 24v-5H0z"/></svg></em>'
     + '<i>' + u.to + '</i></div></div>').join('');
   $('upw').classList.add('on');
   return true;
