@@ -605,6 +605,89 @@
   .mbody .day .dv,.mbody .slot .sv{color:#4A3A2C}
   .mbody .gbtn:disabled,.mbody .mini:disabled{background:#9E9E9E;color:#EFEFEF;box-shadow:none}
 
+  /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
+     껍데기는 A5 공용 모달을 그대로 쓰고, 08 에서만 다른 3가지만 `.sk8` 로 override 한다:
+     딤 65%→55%, 본문 별무늬 없음(08 베이지 5구역 std 0.41~0.53 = JPEG 노이즈), 제목 잉크 46 → 49px.
+     본문 요소는 좌표를 전부 실측했으므로 카드(#D7C0A1) 안에서 절대 배치한다.
+     카드에 border 를 주지 않았으므로 자식 절대좌표의 기준(padding box)이 곧 카드 좌상단이다. */
+  #modal.sk8{background:rgba(0,0,0,.55)}
+  .sk8 .mbody{padding:24px 0 9px;background:#F0D9BA;text-align:center}
+  .sk8 .mhead h2{font-size:49px;line-height:49px;-webkit-text-stroke:11px #000}
+  /* 카드 800x701 — 본문 베이지 상단에서 24, 좌우 인셋 29 (실측 §2.0) */
+  .skd{position:relative;width:800px;height:701px;margin:0 auto;background:#D7C0A1;border-radius:38px}
+  .skd>*{position:absolute}
+  /* 레퍼런스 라벨은 전부 «흰 채움 + 검정 외곽선». 스트로크는 안팎 절반씩 나가므로 실측 한쪽 두께의 2배를 준다 */
+  .skd b,.sk-act b{display:block;font-weight:900;color:#fff;paint-order:stroke fill}
+
+  .sk-ic{left:25px;top:24px;width:149px;height:149px;box-sizing:border-box;
+    border:4px solid #000;border-radius:20px;box-shadow:inset 0 0 0 4px #AC7B5C;
+    background:linear-gradient(180deg,#775742,#85604B);
+    display:flex;align-items:center;justify-content:center;font-size:86px;line-height:1}
+  .sk-gr{left:216px;top:35px;width:210px;height:50px;box-sizing:border-box;
+    border:4px solid #000;border-radius:21px;box-shadow:inset 0 0 0 3px #AB7B5D;
+    background:linear-gradient(180deg,#775742,#835F49);
+    display:flex;align-items:center;justify-content:center}
+  .sk-gr b{font-size:24px;-webkit-text-stroke:7px #000}
+  /* Lv 박스는 진행바보다 위아래로 10px 씩 크고 진행바 좌단 33px 을 덮는다 (실측 §2.3) */
+  .sk-lv{left:215px;top:103px;width:145px;height:70px;box-sizing:border-box;z-index:2;
+    border:5px solid #000;border-radius:32px;
+    background:linear-gradient(180deg,#57402F 0 8px,#6B573F 8px 15px,#57402F 15px 43px,#6B573F 43px 50px,#57402F 50px);
+    display:flex;align-items:center;justify-content:center}
+  .sk-lv b{font-size:27px;-webkit-text-stroke:8px #000}
+  .sk-pb{left:326px;top:113px;width:436px;height:50px;box-sizing:border-box;
+    border:6px solid #000;border-radius:17px;overflow:hidden;
+    background:linear-gradient(180deg,#8182A0 0 21px,#6F7799 21px)}
+  .sk-pb i{display:block;height:100%;background:#FBB51F}
+  .sk-pb b{position:absolute;top:0;height:100%;display:flex;align-items:center;
+    font-size:22px;color:#FCFEB6;-webkit-text-stroke:6px #000}
+
+  /* 쿨타임 표 750x132 — 헤더행 50 / 검정 구분선 4 / 값행 69, 세로선은 값행 안쪽 상4·하8 인셋 */
+  .sk-ct{left:25px;top:208px;width:750px;height:132px;box-sizing:border-box;
+    border:4px solid #000;border-radius:22px;overflow:hidden;display:flex;flex-direction:column}
+  .sk-ct .hd{flex:0 0 50px;display:flex;
+    background:linear-gradient(180deg,#6B573F 0 3px,#543D2F 3px calc(100% - 4px),#6B573F calc(100% - 4px))}
+  .sk-ct .vl{flex:1 1 auto;position:relative;display:flex;
+    border-top:4px solid #000;background:#F8ECDB;box-shadow:inset 0 -4px 0 #FCF5E3}
+  .sk-ct .hd>*,.sk-ct .vl>*{flex:1;display:flex;align-items:center;justify-content:center}
+  .sk-ct .vl::after{content:'';position:absolute;left:50%;top:4px;bottom:8px;width:4px;
+    margin-left:-2px;background:#9A8C7E}
+  .sk-ct b{font-size:27px;-webkit-text-stroke:8px #000}
+  .sk-ct .vl b{font-size:26px}
+  .sk-ct .nt b{color:#96A4FC}
+
+  /* «스킬 설명» 알약은 설명 박스 상단을 28px 파고든다 (실측 §2.6) */
+  .sk-sl{left:250px;top:367px;width:300px;height:58px;box-sizing:border-box;z-index:2;
+    border:3px solid #000;border-radius:19px;
+    background:linear-gradient(180deg,#6A573F 0 5px,#543D2F 5px calc(100% - 5px),#6B573F calc(100% - 5px));
+    display:flex;align-items:center;justify-content:center}
+  .sk-sl b{font-size:28px;-webkit-text-stroke:8px #000}
+  .sk-db{left:25px;top:396px;width:750px;height:290px;box-sizing:border-box;overflow:hidden;
+    border:4px solid #000;border-radius:20px;background:#F8ECDB;
+    box-shadow:inset 0 0 0 4px #FCF5E3;padding:36px 29px 0;text-align:left}
+  .sk-db p{margin:0;font-size:32px;line-height:40px;font-weight:900;color:#fff;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .sk-db p em{font-style:normal;color:#F88050}
+
+  /* 보유 효과 바 — 테두리 없는 2분할 알약. 값 세그먼트는 가운데가 아니라 좌측 19px 부터 시작한다 */
+  .sk-ow{left:60px;top:603px;width:680px;height:65px;border-radius:30px;overflow:hidden;display:flex}
+  .sk-ow .k{flex:0 0 231px;background:#6F7798;display:flex;align-items:center;justify-content:center}
+  .sk-ow .v{flex:1;background:#786E64;display:flex;align-items:center;padding-left:19px}
+  .sk-ow b{font-size:25px;-webkit-text-stroke:7px #000}
+  .sk-ow .v b{font-size:26px}
+  .sk-ow .v em{font-style:normal;color:#BAFB64}
+
+  /* 버튼 250x120 · gap 90 · 라벨은 버튼 세로중심보다 4.5px 위 (padding-bottom 9 로 맞춘다) */
+  .sk-act{display:flex;gap:90px;height:120px;align-items:center;justify-content:center;margin-top:25px}
+  .sk-act button{width:250px;height:120px;box-sizing:border-box;padding:0 0 9px;cursor:pointer;
+    border:7px solid #000;border-radius:39px;font-family:inherit;
+    display:flex;align-items:center;justify-content:center}
+  .sk-act b{font-size:45px;-webkit-text-stroke:10px #000}
+  .sk-act .sk-e{background:linear-gradient(180deg,#44DAEF,#17AECD);
+    box-shadow:inset 0 0 0 6px #53E6F8,inset 0 -11px 0 -5px #0CA4CB}
+  .sk-act .sk-u{background:linear-gradient(180deg,#ADADAD,#8D8D8D);
+    box-shadow:inset 0 0 0 7px #D3D3D3,inset 0 -13px 0 -6px #4E4E4E}
+  .sk-act button:disabled{cursor:default;filter:saturate(.3) brightness(.82)}
+
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
   .rc{position:relative;border-radius:18px;padding:12px 4px 10px;border:3.2px solid #333;overflow:hidden;
@@ -3737,10 +3820,11 @@ function endPromo(win){
    (레퍼런스 02번에는 하단 패널이 없고 전투 영역이 HUD~탭바 사이를 전부 채운다) */
 let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = false;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
-function closeModal(){ $('modal').classList.remove('on'); }
+function closeModal(){ $('modal').classList.remove('on', 'sk8'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
+  $('modal').classList.remove('sk8');   /* 08 전용 껍데기 override 를 끈다 */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -3966,9 +4050,55 @@ function bindBanner(boxId, getBanner){
 }
 const itemById = id => SK[id] || EQ[id] || PT[id] || RL[id];
 
+/* ── 08 스킬 세부 팝업 ── 측정표: docs/measure/08-스킬세부팝업.md
+   레퍼런스 08 은 A5 공용 모달 껍데기(가운데 다이얼로그) 안에 «카드 한 장 + 버튼 2개» 가 들어간 형태다.
+   카드 안 요소는 좌표를 전부 실측했으므로 카드 좌상단 기준 절대 배치로 그린다.
+   레퍼런스에는 헤더 ✕ 도 «닫기» 버튼도 없다 — 딤을 눌러 닫는다(#modal 배경 클릭 핸들러가 이미 있다). */
+function showSkillDetail(id){
+  const it = SK[id], G = GRADE[it.g], own = has(id), lv = oLv(id), eq = skillEquipped(id);
+  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
+  const rate = own ? (maxed ? 1 : Math.min(1, have / need)) : 0;
+  const p = (rate * 100).toFixed(1);
+  /* 레퍼런스는 «낮/밤 쿨타임» 2열이지만 이 게임에는 낮·밤 개념이 없다.
+     표의 격자·색·간격은 그대로 두고 열 내용만 실제 데이터(쿨타임·피해량)로 채운다. */
+  const cool = it.cd > 0 ? it.cd.toFixed(2) + '초' : '지속형';
+  const dmgTxt = own ? fmt(skillDmg(it)) : '—';
+  /* 설명문의 수치는 레퍼런스처럼 주황(#F88050)으로 강조한다 */
+  const desc = (own ? it.d : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')
+    .replace(/(\d+(?:\.\d+)?)(%|초|발|방향|명|개)?/g, '<em>$1$2</em>');
+
+  $('mtitle').textContent = own ? it.n : '???';
+  $('mbox').innerHTML =
+      '<div class="skd">'
+    +   '<div class="sk-ic">' + (own ? it.ic : '❔') + '</div>'
+    +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
+    +   '<div class="sk-lv"><b>Lv. ' + lv + '</b></div>'
+    +   '<div class="sk-pb"><i style="width:' + p + '%"></i>'
+    +     '<b style="left:calc(' + p + '% + 3px)">' + (maxed ? 'MAX' : have + '/' + need) + '</b></div>'
+    +   '<div class="sk-ct">'
+    +     '<div class="hd"><div><b>쿨타임</b></div><div class="nt"><b>피해량</b></div></div>'
+    +     '<div class="vl"><div><b>' + cool + '</b></div><div class="nt"><b>' + dmgTxt + '</b></div></div>'
+    +   '</div>'
+    +   '<div class="sk-sl"><b>스킬 설명</b></div>'
+    +   '<div class="sk-db"><p>' + desc + '</p></div>'
+    +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
+    +     '<div class="v"><b>공격력 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em></b></div></div>'
+    + '</div>'
+    + '<div class="sk-act">'
+    +   '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>' + (eq ? '해제' : '장착') + '</b></button>'
+    +   '<button class="sk-u" id="mLv"' + (own && !maxed && canLevel(it) ? '' : ' disabled') + '><b>강화</b></button>'
+    + '</div>';
+  $('mbox').scrollTop = 0;
+  $('modal').classList.add('on', 'sk8');
+  const e = $('mEq'), l = $('mLv');
+  if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
+  if(l && !l.disabled) l.onclick = () => { if(levelUp(it)) showSkillDetail(id); };
+}
+
 function showItem(id){
   const it = itemById(id);
   if(!it) return;
+  if(SK[id]) return showSkillDetail(id);   /* 스킬은 08 전용 상세 팝업으로 */
   const cat = catOf(it), G = GRADE[it.g], own = has(id), need = fragNeed(oLv(id));
   const eq = cat === 'skill' ? skillEquipped(id) : cat === 'pet' ? petEquipped(id)
            : cat === 'relic' ? relicEquipped(id) : eqEquipped(it);
