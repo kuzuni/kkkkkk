@@ -1305,7 +1305,7 @@
   .eqp-ti>i{transform:scaleX(.98)}
 
   /* 본문 크림 696~2159, 좌우 안쪽 어두운 림 6px */
-  .eqp-bd{left:6px;top:119px;width:1068px;height:1464px;background:#ECCA99;
+  .eqp-bd{left:6px;top:118px;width:1068px;height:1465px;background:#ECCA99;
     box-shadow:inset 6px 0 0 #DBB07B,inset -6px 0 0 #DBB07B}
 
   /* 카드 컨테이너 34,711 1013x1284 — 배경(하늘/바닥/잠금띠)만 여기서 클립한다.
@@ -1338,7 +1338,7 @@
   .eqrb{width:359px;height:105px}
   .eqrb>.pl{position:absolute;left:32px;top:0;width:299px;height:88px;box-sizing:border-box;
     background:var(--rb);border:5px solid var(--rd);border-radius:10px}
-  .eqrb>.tl{position:absolute;top:26px;width:44px;height:71px;background:var(--rd);
+  .eqrb>.tl{position:absolute;top:26px;width:44px;height:71px;background:var(--rt);
     clip-path:polygon(0 0,100% 0,100% 100%,0 100%,22% 50%)}
   .eqrb>.tl.l{left:0}
   .eqrb>.tl.r{left:315px;transform:scaleX(-1)}
@@ -1368,7 +1368,7 @@
 
   /* 부위 뱃지 Ø78 — 슬롯 좌상단 기준 (−20,−19). 검정 6 → 밝은 초록 6 → 채움 */
   .eqbd{left:704px;width:78px;height:78px;border-radius:50%;background:#7C9A38;
-    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 12px #ACC640}
+    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 12px #ACC640,inset 0 0 0 16px #9EBA3C}
   .eqbd>em{position:absolute;left:0;right:0;top:14px;height:50px;line-height:50px;
     text-align:center;font-size:38px;filter:grayscale(1) brightness(3) drop-shadow(0 0 2px #000)}
 
@@ -1385,8 +1385,7 @@
   .eqic{text-align:center}
   .eqic.sw{left:122px;width:58px;height:74px;font-size:60px;line-height:74px}
   .eqic.sw>i{transform:scale(.87,1.12)}
-  .eqic.hp{left:369px;width:65px;height:54px;font-size:40px;line-height:54px}
-  .eqic.hp>i{transform:scale(1,.93)}
+  .eqic.hp{left:369px;width:65px;height:54px;font-size:52px;line-height:54px}
 
   /* ---- 캐릭터 일러스트 (이모지 대체 — 실제 아트 들어오면 교체) ---- */
   .eqil{text-align:center;pointer-events:none}
@@ -1402,7 +1401,7 @@
   .eqlk.p2{left:482px}
   .eqlk.p3{left:652px}
   /* 라벨 — 잉크 1962~1988(h27) → font 29, 회색 #B5B5B5 + 검정 외곽선 한쪽 4(=8) */
-  .eqlk>u{position:absolute;left:-20px;right:-20px;top:83px;height:40px;line-height:40px;
+  .eqlk>u{position:absolute;left:-20px;right:-20px;top:77px;height:40px;line-height:40px;
     text-align:center;font-size:29px;font-weight:900;color:#B5B5B5;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;letter-spacing:-2px;
     text-indent:-2px;white-space:nowrap}
@@ -1440,6 +1439,7 @@
   .eqtc.on{width:260px;background:#4B3E2D;border-radius:49px;
     box-shadow:inset 0 0 0 7px #000,inset 0 0 0 16px #634F37}
   .eqtc.on>b{color:#F0BB8C;left:12px;right:12px}
+  .eqtc.on>b>i{transform:scaleX(.97)}
   .eqtc.lk>b{visibility:hidden}
   .eqtc>.eqli{top:20px;transform:scale(.91,.90);transform-origin:50% 0}
 
@@ -1734,9 +1734,9 @@
       <div class="eqp-ti"><i>장비</i></div>
       <div class="eqp-bd"></div>
       <div class="eqc">
-        <div class="sky" style="top:0;height:398px"></div>
+        <div class="sky" style="top:0;height:581px"></div>
         <div class="gnd" style="top:398px;height:183px"></div>
-        <div class="sky" style="top:581px;height:394px"></div>
+        <div class="sky" style="top:581px;height:577px"></div>
         <div class="gnd" style="top:967px;height:191px"></div>
         <div class="band" style="top:1158px;height:126px"></div>
       </div>
@@ -4714,8 +4714,8 @@ const EQP_GEO = [
   { rb:746, sl:[770,1025], st:1204, sw:1191, hp:1200, il:'c2' }
 ];
 const EQP_CARD = [
-  { n:'햄지',   rb:'#F87D2F', rd:'#C7501D', ic:'🐹' },
-  { n:'매옹이', rb:'#0AAFEF', rd:'#0A75A4', ic:'🐱' }
+  { n:'햄지',   rb:'#F87D2F', rd:'#C7501D', rt:'#E86F2A', ic:'🐹' },
+  { n:'매옹이', rb:'#0AAFEF', rd:'#0A75A4', rt:'#0C8FC5', ic:'🐱' }
 ];
 const EQP_LOCK = [
   { n:'반지',   k:null },
@@ -4746,7 +4746,7 @@ function renderEqPage(){
     const g = EQP_GEO[i], c = EQP_CARD[i];
     h += '<div class="eqil ' + g.il + '"><em>' + c.ic + '</em></div>'
       +  '<div class="eqrb" style="top:' + g.rb + 'px;left:' + (i ? 179 : 174) + 'px;'
-      +    '--rb:' + c.rb + ';--rd:' + c.rd + '">'
+      +    '--rb:' + c.rb + ';--rd:' + c.rd + ';--rt:' + c.rt + '">'
       +    '<div class="tl l"></div><div class="tl r"></div>'
       +    '<div class="pl"></div><b><i>' + c.n + '</i></b></div>';
     r.sl.forEach((s, j) => {
