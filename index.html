@@ -2584,30 +2584,30 @@
   #statw i,#statw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
   /* 리본 그룹 — 09 는 top:50% 센터링이지만 17 은 ref−84 절대 배치(몸통 outer top 877−84=793) */
   #statw .upr-grp{top:793px;margin-top:0;height:230px}
-  /* 능력 아이콘 카드 — ref x416–663(w248) y1088–1359(h272), 검정 5px, radius 28.
-     안쪽 밝은 림(≈6px, #E04868)은 상·좌·우만이고 하단 ≈30px 는 안쪽 그늘(몸통의 ~0.3배). */
-  .st-icon{position:absolute;left:416px;top:1004px;width:248px;height:272px;box-sizing:border-box;
-    border:5px solid #000;border-radius:28px;
-    background:
-      linear-gradient(180deg,rgba(224,72,104,.95) 0 6px,rgba(224,72,104,0) 7px calc(100% - 34px),
-                             rgba(0,0,0,.62) calc(100% - 28px) 100%),
-      linear-gradient(90deg,rgba(224,72,104,.85) 0 6px,rgba(224,72,104,0) 7px calc(100% - 7px),
-                            rgba(224,72,104,.85) calc(100% - 6px) 100%),
-      #B41C3C;
+  /* 능력 아이콘 카드 — ref x416–662(w247) y1088–1335(h248 정사각), 검정 5px, radius 28.
+     핑크 안쪽 림 7px 는 **4변 전부**(#F33E69 = 실측 243,62,105). 카드 아래 y1336~1368 은
+     카드가 아니라 **드롭 섀도**다(1회차에 카드 몸통으로 오독해 h272 로 넣었었다 — 비평 A 정정). */
+  .st-icon{position:absolute;left:416px;top:1004px;width:248px;height:248px;box-sizing:border-box;
+    border:5px solid #000;border-radius:28px;background:#B41C3C;
+    box-shadow:0 26px 22px -8px rgba(0,0,0,.45),inset 0 0 0 7px #F33E69;
     display:flex;align-items:center;justify-content:center}
-  .st-icon>b{font-size:150px;line-height:230px}
+  /* 이모지 잉크 167 폭 → ref 아트 잉크 144×166. 높이는 일치하므로 scaleX 만 */
+  .st-icon>b{font-size:150px;line-height:200px;transform:scaleX(.86)}
   /* 설명 1줄 — 잉크 h45(→48px)·중심 x540·프레임 y1357–1402. 외곽선 실측 5~7 → stroke 11 */
   .st-desc{position:absolute;left:0;right:0;top:1345px;height:70px;line-height:70px;text-align:center;
     font-size:48px;font-weight:900;color:#fff;white-space:nowrap;
     -webkit-text-stroke:11px #000;paint-order:stroke fill}
   .st-desc>i{transform:scaleX(.94)}
-  /* 별 파티클 — 4포인트 별. P1 크림 64px (171,906) / P2 노랑 38px (244,1256)+올리브 글로우 */
+  /* 별 파티클 — 4포인트 «뚱뚱한» 별(잉크 채움비 ≈0.6, 비평 A 실측 1764/51² · 781/36²).
+     P1 크림 52px 중심(171,906) / P2 노랑 42px 중심(244,1256)+올리브 글로우 */
   .st-spark{position:absolute;
-    clip-path:polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)}
-  .st-spark.s1{left:139px;top:874px;width:64px;height:64px;background:#FFFEC5;
+    clip-path:polygon(50% 0,80% 20%,100% 50%,80% 80%,50% 100%,20% 80%,0 50%,20% 20%)}
+  .st-spark.s1{left:145px;top:880px;width:52px;height:52px;background:#FFFEC5;
     filter:drop-shadow(0 0 9px rgba(255,250,180,.55))}
-  .st-spark.s2{left:225px;top:1237px;width:38px;height:38px;background:#DFD51B;
+  .st-spark.s2{left:225px;top:1237px;width:37px;height:37px;background:#DFD51B;
     filter:drop-shadow(0 0 16px rgba(190,180,90,.9)) drop-shadow(0 0 30px rgba(160,155,80,.55))}
+  /* «터치하여 닫기» — 17 실측 잉크폭 258 (09 의 251 보다 +2%) */
+  #statw .upr-close i{transform:scaleX(.951)}
 
   /* ==========================================================================
      15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
