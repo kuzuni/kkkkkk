@@ -647,11 +647,33 @@
   .day.got{opacity:.35}
   .day.today{border-color:#ffd45e;box-shadow:0 0 16px rgba(255,212,94,.4)}
 
-  .wheel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-  .slot{border-radius:18px;background:#131b33;border:3px solid #2b3866;padding:14px 4px;text-align:center}
-  .slot.hit{border-color:#ffd45e;background:#2e2410;box-shadow:0 0 24px rgba(255,212,94,.5)}
-  .slot .si2{font-size:32px}
-  .slot .sv{font-size:18px;font-weight:900;color:#cfe0ff;margin-top:4px}
+  /* ── 룰렛 원판 (작업 29) — 8칸 그리드 하이라이트 폐기, 실제로 도는 원판 휠 ──
+     세그먼트 색·라벨은 전부 ROULETTE 배열에서 생성한다(보상 8종이 바뀌면 원판도 따라간다).
+     conic-gradient 은 0deg = 북 · 시계방향이라 세그먼트 i 는 [i*45, (i+1)*45], 중심각은 i*45+22.5 다.
+     포인터는 북(0deg)에 고정 — 원판을 −(중심각) 만큼 돌리면 그 칸이 포인터 아래로 온다. */
+  .rlt{position:relative;width:660px;height:660px;margin:4px auto 6px}
+  .rlt-rim{position:absolute;inset:0;border-radius:50%;background:linear-gradient(180deg,#7A5C3C,#48341F);
+    border:8px solid #000;box-shadow:0 10px 26px rgba(0,0,0,.45)}
+  .rlt-disc{position:absolute;inset:24px;border-radius:50%;overflow:hidden;
+    box-shadow:inset 0 0 0 4px rgba(0,0,0,.45);will-change:transform}
+  .rlt-seg{position:absolute;inset:0;transform:rotate(var(--a))}
+  .rlt-lb{position:absolute;left:50%;top:26px;width:186px;margin-left:-93px;text-align:center;
+    line-height:1.12;color:#2E2114;text-shadow:0 2px 0 rgba(255,255,255,.35)}
+  .rlt-ic{display:block;font-size:44px;line-height:50px}
+  .rlt-tx{display:block;font-size:23px;font-weight:900;letter-spacing:-.5px}
+  .rlt-vl{display:block;font-size:26px;font-weight:900;color:#5A3A16}
+  /* 당첨 칸 — 원판 위에 덧그리는 부채꼴 하이라이트(세그먼트와 같은 45deg 폭) */
+  .rlt-seg.hit::before{content:'';position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from -22.5deg,rgba(255,255,255,.55) 0 45deg,transparent 45deg);
+    animation:rltHit .5s ease-in-out 3}
+  @keyframes rltHit{0%,100%{opacity:.15}50%{opacity:1}}
+  .rlt-hub{position:absolute;left:50%;top:50%;width:150px;height:150px;margin:-75px 0 0 -75px;
+    border-radius:50%;border:8px solid #000;background:radial-gradient(circle at 38% 32%,#F3DCB4,#B98F55 62%,#7A5A31);
+    display:flex;align-items:center;justify-content:center;font-size:62px;line-height:62px}
+  .rlt-ptr{position:absolute;left:50%;top:-10px;width:0;height:0;margin-left:-31px;
+    border-left:31px solid transparent;border-right:31px solid transparent;border-top:78px solid #E4552B;
+    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 0 #000)}
+  #rouRes{min-height:42px}
 
   /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
      좌우 여백 91 / 세로는 중앙에서 아래로 42px (패딩 위 126 − 아래 42 = 84, 그 절반) */
@@ -700,7 +722,7 @@
   .mbody .sect p{color:#7A6550}
   .mbody .day,.mbody .slot{background:#F7ECDA;border-color:#C8B091}
   .mbody .day .dn{color:#8A755C}
-  .mbody .day .dv,.mbody .slot .sv{color:#4A3A2C}
+  .mbody .day .dv{color:#4A3A2C}
   .mbody .gbtn:disabled,.mbody .mini:disabled{background:#9E9E9E;color:#EFEFEF;box-shadow:none}
 
   /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
@@ -6333,6 +6355,7 @@ function claimAttend(){
   popup('📅 ' + (day+1) + '일차 출석 보상', '<p>' + r.ic + ' <b>' + txt + '</b><br>내일 또 접속해 주세요!</p>');
 }
 function spinRoulette(){
+  if(rouSpinning) return;                       /* 회전 중 재입력 차단 */
   if(S.daily.spins <= 0){
     popup('🎰 룰렛 종료', '<p>오늘 무료 룰렛을 모두 사용했습니다.<br>내일 <b>' + ROUL_FREE + '회</b> 충전됩니다.</p>');
     return;
@@ -6341,9 +6364,11 @@ function spinRoulette(){
   const tot = ROULETTE.reduce((s,x) => s+x.w, 0);
   let r = Math.random()*tot, idx = 0;
   for(let i=0;i<ROULETTE.length;i++){ r -= ROULETTE[i].w; if(r <= 0){ idx = i; break; } }
+  /* 보상은 «돌리는 순간» 지급한다(기존 로직 그대로) — 회전 중에 팝업을 닫아도 손실이 없다.
+     원판은 그 결과가 나오도록 감속해 멈추고, 당첨 표시만 정지 후에 드러낸다. */
   const txt = giveReward(ROULETTE[idx]);
   uiDirty = true; save();
-  openRoulette(idx, txt);
+  roulSpinTo(idx, txt);
 }
 function challengeDungeon(d){
   if(S.daily.dun[d.id] <= 0){
@@ -7058,19 +7083,87 @@ function openAttend(){
   $('attClose').onclick = closeModal;
   $('attBtn').onclick = claimAttend;
 }
-function openRoulette(hit, gotTxt){
-  let h = '<h2>🎰 행운 룰렛</h2><p>오늘 남은 횟수 <b>' + S.daily.spins + ' / ' + ROUL_FREE + '</b></p><div class="wheel" style="margin-top:18px">';
+/* ---- 룰렛 원판 (작업 29) ----
+   설계 확정(2026-08-24): 8칸 그리드 하이라이트 폐기 → 실제로 회전하는 원판 휠
+   (세그먼트 8칸 + 상단 고정 포인터 + 감속). 보상·확률·하루 5회 로직은 spinRoulette 그대로다. */
+const ROUL_TURNS = 6, ROUL_MS = 3600;            /* 최소 6바퀴 · 3.6초 감속 */
+const ROUL_SEGC = { 골드:['#F8CE63','#E9AE33'], 다이아:['#8FDCF7','#4FB3DE'],
+                    유물석:['#CFA6F2','#A473DC'], '대박!':['#FF9A64','#F2703B'] };
+let rouRot = 0, rouSpinning = false;
+function roulSegColor(i){ const c = ROUL_SEGC[ROULETTE[i].t] || ['#F8CE63','#E9AE33']; return c[i % 2]; }
+/* 세그먼트 라벨도 ROULETTE 배열에서 만든다 — 보상이 바뀌면 원판이 따라간다 */
+function roulLabel(r){
+  const v = [];
+  if(r.goldMul) v.push('×' + r.goldMul);
+  if(r.dia)     v.push((r.rel ? '💎' : '') + fmt(r.dia));
+  if(r.rel)     v.push((r.dia ? '🔮' : '') + fmt(r.rel));
+  return v.join(r.dia && r.rel ? '<br>' : ' ');
+}
+function openRoulette(){
+  const n = ROULETTE.length, seg = 360 / n;
+  let cg = [], segs = '';
   ROULETTE.forEach((r, i) => {
-    const v = r.dia ? '💎' + fmt(r.dia) : r.rel ? '🔮' + fmt(r.rel) : '💰 골드';
-    h += '<div class="slot' + (i === hit ? ' hit' : '') + '"><div class="si2">' + r.ic + '</div><div class="sv">' + v + '</div></div>';
+    cg.push(roulSegColor(i) + ' ' + (i*seg) + 'deg ' + ((i+1)*seg) + 'deg');
+    segs += '<div class="rlt-seg" style="--a:' + (i*seg + seg/2) + 'deg"><span class="rlt-lb">'
+         +  '<span class="rlt-ic">' + r.ic + '</span><span class="rlt-tx">' + r.t + '</span>'
+         +  '<span class="rlt-vl">' + roulLabel(r) + '</span></span></div>';
   });
-  h += '</div>' + (gotTxt ? '<p style="color:#8ff0a8;font-size:26px">획득! <b>' + gotTxt + '</b></p>' : '')
+  /* 경계선은 45deg 주기의 repeating-conic 1deg 띠로 얹는다(칸 색 위) */
+  const bg = 'repeating-conic-gradient(from -0.5deg,rgba(0,0,0,.5) 0 1deg,rgba(0,0,0,0) 1deg ' + seg + 'deg),'
+           + 'conic-gradient(from 0deg,' + cg.join(',') + ')';
+  const h = '<h2>🎰 행운 룰렛</h2>'
+    + '<p>오늘 남은 횟수 <b id="rouCnt">' + S.daily.spins + ' / ' + ROUL_FREE + '</b></p>'
+    + '<div class="rlt"><div class="rlt-rim"></div>'
+    +   '<div class="rlt-disc" id="rouDisc" style="background:' + bg
+    +     ';transform:rotate(' + rouRot.toFixed(2) + 'deg)">' + segs + '</div>'
+    +   '<div class="rlt-hub">🎰</div><div class="rlt-ptr"></div></div>'
+    + '<p id="rouRes">&nbsp;</p>'
     + '<button class="gbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '>'
     + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</button>'
     + '<button class="gbtn green" id="rouClose">닫기</button>';
   showModal(h);
+  rouSpinning = false;
   $('rouClose').onclick = closeModal;
   $('rouBtn').onclick = spinRoulette;
+}
+/* idx 칸이 북(포인터)에 오도록 감속 정지시킨다.
+   세그먼트 i 의 중심각 c = i*45+22.5 이므로 최종 회전각 ≡ −c (mod 360) 이면 된다. */
+function roulSpinTo(idx, txt){
+  const disc = $('rouDisc');
+  if(!disc){ roulFinish(idx, txt); return; }     /* 팝업이 닫혀 있으면 지급만 하고 끝 */
+  rouSpinning = true;
+  const btn = $('rouBtn'), cl = $('rouClose'), res = $('rouRes'), cnt = $('rouCnt');
+  if(btn){ btn.disabled = true; btn.textContent = '돌아가는 중…'; }
+  if(cl)  cl.disabled = true;
+  if(res) res.innerHTML = '&nbsp;';
+  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
+  document.querySelectorAll('#rouDisc .rlt-seg.hit').forEach(s => s.classList.remove('hit'));
+  const c = idx * (360/ROULETTE.length) + (360/ROULETTE.length)/2;
+  const base = rouRot + 360*ROUL_TURNS;
+  const target = base + ((((-c - base) % 360) + 360) % 360);
+  const from = rouRot, t0 = performance.now();
+  const step = now => {
+    if(!disc.isConnected){ rouSpinning = false; return; }   /* 다른 팝업이 열려 사라진 경우 */
+    const p = Math.min(1, (now - t0) / ROUL_MS);
+    rouRot = from + (target - from) * (1 - Math.pow(1 - p, 4));   /* easeOutQuart = 감속 */
+    disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+    if(p < 1) requestAnimationFrame(step);
+    else { rouRot = ((target % 360) + 360) % 360;
+           disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+           roulFinish(idx, txt); }
+  };
+  requestAnimationFrame(step);
+}
+function roulFinish(idx, txt){
+  rouSpinning = false;
+  const segs = document.querySelectorAll('#rouDisc .rlt-seg');
+  segs.forEach((s, i) => s.classList.toggle('hit', i === idx));
+  const res = $('rouRes'), btn = $('rouBtn'), cl = $('rouClose'), cnt = $('rouCnt');
+  if(res) res.innerHTML = '획득! <b>' + (txt || ROULETTE[idx].t) + '</b>';
+  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
+  if(cl)  cl.disabled = false;
+  if(btn){ btn.disabled = S.daily.spins <= 0;
+           btn.textContent = S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다'; }
 }
 function openMail(){
   let h = '<h2>📬 우편함</h2><p>운영자가 보낸 선물입니다.</p>';
@@ -8411,7 +8504,7 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
   b.onclick = () => {
     const k = b.dataset.pop;
     if(k === 'attend') openAttend();
-    else if(k === 'roul') openRoulette(-1, '');
+    else if(k === 'roul') openRoulette();
     else if(k === 'mail') openMail();
     else if(k === 'quest') openQuest();
     else if(k === 'dun') $('dunw').classList.contains('on') ? closeDungeon() : openDungeon();
