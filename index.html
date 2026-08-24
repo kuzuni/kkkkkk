@@ -3238,7 +3238,8 @@
   /* 해골 엠블럼 — 원 221×209(x429), 남색 링 12px #0B4E83 + 시안 밴드(측30·상28·하38 — 하단이
      더 두껍다) #48F6FB + 내부 #0B4B7B. 글로우는 ref 실측 «세기 미미» — 약하게만 */
   .df-emb{position:absolute;left:429px;top:332px;width:221px;height:209px;box-sizing:border-box;
-    border:12px solid #0B4E83;border-radius:50%;background:#48DAE7;
+    border:12px solid #0B4E83;border-radius:50%;
+    background:radial-gradient(circle closest-side,#41C9DF 58%,#4FFFFA 84%,#46D6E5 100%);
     box-shadow:0 0 42px 8px rgba(45,150,205,.55)}
   .df-emb::before{content:'';position:absolute;left:30px;right:30px;top:28px;bottom:4px;
     background:linear-gradient(180deg,#0B4B7B 0 55%,#2F86B5 74%,#40AEE1 84% 100%);
@@ -3248,8 +3249,10 @@
   /* 제목 — 잉크 h45(→48px) 채움 #FAFAFA 균일(그라디언트 없음), 외곽선 실측 4~6(한쪽)→stroke 10 */
   .df-title{position:absolute;left:0;right:0;top:566px;height:70px;line-height:70px;text-align:center;
     font-size:49px;font-weight:900;color:#FAFAFA;white-space:nowrap;
-    -webkit-text-stroke:10px #000;paint-order:stroke fill}
-  .df-title i{transform:scaleX(.967)}
+    -webkit-text-stroke:12px #000;paint-order:stroke fill}
+  .df-title i{transform:scaleX(.967);position:relative}
+  .df-title i::before{content:attr(data-t);position:absolute;left:0;top:0;
+    -webkit-text-stroke:2.5px #FAFAFA;color:#FAFAFA}
   /* 가이드 카드 898×166 · 검정 6 + 밝은 림 7(인셋) · radius 40(바깥). 카드1 만 «배색 반전»
      (청회 몸통+흰 글자) — 스펙 문서의 «첫 카드 강조»의 실체다 */
   .df-card{position:absolute;left:91px;width:898px;height:166px;box-sizing:border-box;
@@ -3292,7 +3295,7 @@
     box-sizing:border-box;border:3px solid #000;
     background:linear-gradient(180deg,#FFE688 0,#FFD247 45%,#E9A81E 100%)}
   /* c2 는 ref 아트(불꽃 62×76 + 흰·분홍 얼굴 2개)를 3요소 합성 */
-  .df-card.c2 .df-ic{display:block}
+  .df-card.c2 .df-ic{display:block;transform:translate(10.5px,-1.5px) scale(.892,.885)}
   .df-ic .fl{position:absolute;left:50%;top:2px;transform:translateX(-50%) scale(.82,.86);
     transform-origin:50% 0;font-size:74px;line-height:80px}
   .df-ic .f1{position:absolute;left:-3px;bottom:-3px;font-size:46px;line-height:46px}
@@ -3302,11 +3305,11 @@
   .df-ic3{position:absolute;left:58px;top:32px;width:79px;height:78px;box-sizing:border-box;
     border:5px solid #000;border-radius:50%;
     background:linear-gradient(180deg,#F7DDA4 0,#EEC072 55%,#E7B868 100%)}
-  .df-ic3::after{content:'';position:absolute;left:40px;top:2px;width:25px;height:24px;
+  .df-ic3::after{content:'';position:absolute;left:39px;top:1px;width:30px;height:27px;
     border-radius:50%;background:#F22E52}
   /* 문구 — 좌정렬 시작 ref x273(패딩기준 176) · 세로 중앙. c2·c3 은 외곽선 없는 갈흑 #141108,
      c1 만 흰 채움+외곽선(실측 3.5 한쪽 → stroke 7) */
-  .df-txt{position:absolute;left:175px;top:0;height:152px;display:flex;align-items:center;
+  .df-txt{position:absolute;left:177px;top:0;height:152px;display:flex;align-items:center;
     font-size:29px;font-weight:900;color:#FAFAFA;white-space:nowrap;text-align:left;
     -webkit-text-stroke:6px #2A2420;paint-order:stroke fill}
   .df-card.c1 .df-txt{-webkit-text-stroke:7px #000}
@@ -3321,12 +3324,12 @@
     border:7px solid #000;border-radius:32px;cursor:pointer;padding:0;
     background:linear-gradient(180deg,#F5EF35 0,#FDD92B 10%,#FFC021 55%,#FFB514 100%);
     box-shadow:inset 0 -6px 0 #D87C0F;display:flex;align-items:center;justify-content:center}
-  .df-btn::after{content:'';position:absolute;left:14px;right:14px;bottom:9px;height:3px;
-    border-radius:2px;background:#FDEE2F}
+  .df-btn::after{content:'';position:absolute;left:14px;right:14px;bottom:6px;height:8px;
+    border-radius:3px;background:#FDEE2F}
   .df-btn svg{width:62px;height:50px;overflow:visible}
   .df-btn svg path{fill:#fff;stroke:#000;stroke-width:6;paint-order:stroke fill;stroke-linejoin:round}
   /* «터치하여 닫기» — 18 실측 잉크폭 254 (09 의 251 대비 +1.2%) */
-  #defw .upr-close i{transform:scaleX(.943)}
+  #defw .upr-close i{transform:scaleX(.943);-webkit-text-stroke:1.5px #F6F7F8}
 
   /* ==========================================================================
      15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
@@ -3853,14 +3856,14 @@
        측정표 docs/measure/18-패배화면.md. 사망 시 openDefeat() 로 열린다. -->
   <div id="defw">
     <div class="df-emb"><svg width="116" height="107" viewBox="0 0 116 107">
-      <ellipse cx="58" cy="47" rx="58" ry="47" fill="#F8FFF8"/>
-      <path d="M32 78h52v21a8 8 0 0 1-8 8H40a8 8 0 0 1-8-8z" fill="#F8FFF8"/>
-      <ellipse cx="34" cy="52" rx="14" ry="16" fill="#0B4B7B"/>
-      <ellipse cx="82" cy="52" rx="14" ry="16" fill="#0B4B7B"/>
-      <path d="M58 82 50 66h16z" fill="#0B4B7B"/>
-      <path d="M46 84v19M58 84v19M70 84v19" stroke="#0B4B7B" stroke-width="4"/>
+      <path d="M0 22C0 6 18 0 58 0s58 6 58 22v40c0 12-9 19-22 21H22C9 81 0 74 0 62z" fill="#F8FFF8"/>
+      <path d="M26 78h64v17a9 9 0 0 1-9 9H35a9 9 0 0 1-9-9z" fill="#F8FFF8"/>
+      <ellipse cx="31" cy="56" rx="18" ry="16" fill="#0B4B7B"/>
+      <ellipse cx="85" cy="56" rx="18" ry="16" fill="#0B4B7B"/>
+      <path d="M58 80 49 63h18z" fill="#0B4B7B"/>
+      <path d="M45 82v22M58 82v22M71 82v22" stroke="#0B4B7B" stroke-width="5"/>
     </svg></div>
-    <div class="df-title"><i>패배하였습니다</i></div>
+    <div class="df-title"><i data-t="패배하였습니다">패배하였습니다</i></div>
     <div class="df-card c1"><div class="pnl"></div><div class="df-ic1"><s class="lid"></s><s class="body"></s><s class="base"></s><s class="lock"></s></div>
       <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
       <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
