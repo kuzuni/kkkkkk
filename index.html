@@ -496,14 +496,18 @@
   .shsc-in{position:relative;width:100%}
 
   /* 하단 탭바 — 레퍼런스 02·05·10·23번 실측값 (docs/measure/A1-탭바.md, 1080 폭 1:1)
-     바 높이 180 · 상단 검정 테두리 5 + 갈색 하이라이트 4 · 배경 2톤(#42362A / #33291D, 경계 +104)
+     바 높이 180 · 상단 검정 3 + 전이 1 + 갈색 림 5(피크 2 + 감쇠 3) · 배경 2톤(#42362A / #33291D, 경계 +104)
+     ※ 63번 버그 수정(2026-08-24): 검정을 5px 로 적어 림 전체가 1px 밀려 있었다. 레퍼런스 02·06·07·10·23
+       다섯 장을 깨끗한 열에서 스캔하니 전부 탭바 상단(ref y2161) 기준 0..3 검정 · 3..4 (36,28,17) ·
+       4..9 갈색 림 5단 · 9.. 본문색으로 동일했다. 상세 `docs/review/63-탭바상단검정테두리.md`
      닫힘 5칸 균등 216 / 열림 ✕칸 296 + 나머지 196 · 구분홈 6px
      아이콘 세로중심 +87 · 라벨 잉크 top +124(높이 32, 자당 advance 30) · 하단 여백 24 */
   /* 좌·우 3px 프레임은 칸 폭(216)을 깎지 않도록 border 가 아니라 inset 그림자로 얹는다 */
   #tabbar{flex:none;height:180px;display:flex;position:relative;
     box-shadow:inset 5px 0 0 #1a1615,inset -5px 0 0 #1a1615;
-    background:linear-gradient(180deg,#14100D 0 5px,
-      #55492F 5px 6px,#5D4F35 6px 7px,#584A30 7px 8px,#4E402B 8px 9px,   /* 1px 피크 + 감쇠 베벨 */
+    background:linear-gradient(180deg,#14100D 0 3px,#241C11 3px 4px,   /* 검정 3 + 전이 1 (ref 2164 = (36,28,17)) */
+      #584D38 4px 5px,#63543A 5px 6px,                                 /* 림 피크 2px */
+      #5F5034 6px 7px,#53442E 7px 8px,#473A28 8px 9px,                 /* 감쇠 3px */
       #42362A 9px 104px,#33291D 104px 174px,#1F1C15 174px 176px,#101010 176px 180px)}
   .tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
     padding-top:31px;cursor:pointer;position:relative}
