@@ -981,6 +981,149 @@
     background:#F22E52;text-decoration:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   /* ==========================================================================
+     10 상점 팝업 — 소환 탭 — 측정표 docs/measure/10-상점팝업소환탭.md
+     껍데기는 «(다) 전체화면 페이지» — 딤·헤더·테두리 없음. 03 던전(#dunw) 과 같은 부류.
+     HUD(프레임 104) ~ 앱 탭바(프레임 1740) 사이를 통째로 채운다. 배경 #272731.
+     레퍼런스 페이지(ref 191~2160=1969)보다 세로 333px 짧아 카드 리스트가 스크롤로 흡수한다(축소 금지).
+     내부 좌표: 카드 자식은 카드 좌상단(ref 50,250) 기준 상대좌표(측정표 §2)를 그대로 쓴다.
+       테두리·bg 는 별도 레이어(.cfr/.cbg)로 얹어 자식 절대좌표가 밀리지 않게 한다(03·04 와 같은 규칙).
+     다른 작업 단위 구간(패널·모달·다른 탭)은 건드리지 않는다.
+     ========================================================================== */
+  #shopw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#272731;
+    display:none;z-index:28}
+  #shopw.on{display:block}
+  #shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block;font-style:normal;
+    font-weight:900;text-decoration:none;transform-origin:50% 50%}
+
+  /* 카드 스크롤 리스트 — 위 여백 59(ref 191→250), 아래는 카테고리 탭바 위까지 */
+  .shp-list{position:absolute;left:0;right:0;top:0;bottom:127px;padding-top:59px;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .shp-list::-webkit-scrollbar{width:0;height:0}
+
+  /* 카드 — x50 w980 h450, 세로 gap 29, 검정 7px, radius 26, 그림자 0 10px 0 .33 */
+  .shp-card{position:relative;left:50px;width:980px;height:450px;margin-bottom:29px;
+    border-radius:26px;filter:drop-shadow(0 10px 0 rgba(0,0,0,.33))}
+  .shp-card:last-child{margin-bottom:0}
+  /* 본문 배경 — 가로 그라디언트 + 방사 광선(상자 아트 뒤) */
+  .shp-card>.cbg{position:absolute;inset:7px;border-radius:20px;overflow:hidden;
+    background:linear-gradient(90deg,var(--c1),var(--c2))}
+  .shp-card>.cbg::before{content:'';position:absolute;left:0;right:0;top:104px;bottom:0;
+    background:repeating-conic-gradient(from 0deg at 27% 52%,
+      rgba(255,255,255,.16) 0deg 5deg,transparent 5deg 12deg);
+    -webkit-mask-image:radial-gradient(38% 62% at 27% 52%,#000 0%,#000 30%,transparent 78%);
+    mask-image:radial-gradient(38% 62% at 27% 52%,#000 0%,#000 30%,transparent 78%)}
+  .shp-card>.cbg::after{content:'';position:absolute;left:0;right:0;bottom:0;height:12px;
+    background:linear-gradient(180deg,transparent,rgba(0,0,0,.28))}
+  /* 헤더 밴드 — 단색 + 상단 6px 하이라이트 림 */
+  .shp-card>.chd{position:absolute;left:7px;top:7px;width:966px;height:97px;
+    background:var(--hd);border-radius:19px 19px 0 0;box-sizing:border-box;
+    box-shadow:inset 0 6px 0 var(--hr);text-align:center;line-height:97px}
+  .shp-card>.chd>i{font-size:47px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(.9) translateY(2px);letter-spacing:-1px}
+  /* 검정 테두리 레이어 */
+  .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
+    box-sizing:border-box;pointer-events:none}
+  .shp-card>*{position:absolute}
+
+  /* 상자 아트(이모지 근사) — 아트 리소스 부재로 색·명암 감점 예상 */
+  .shp-card .cart{left:103px;top:150px;width:274px;height:204px;font-size:168px;line-height:204px;
+    text-align:center;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+
+  /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
+  .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
+    background:#9DA3B8;border:3px solid #4A4E5A;box-sizing:border-box;cursor:pointer;
+    font-size:34px;line-height:52px;text-align:center;color:#646A82;
+    box-shadow:0 3px 3px rgba(0,0,0,.3)}
+
+  /* Lv 알약 — 검정 캡슐, 글자 #7DE5ED */
+  .shp-card .clv{left:55px;top:363px;width:89px;height:44px;border-radius:22px;background:#000;
+    text-align:center;line-height:44px;z-index:2}
+  .shp-card .clv>i{font-size:27px;color:#7DE5ED;transform:scaleX(.82);letter-spacing:-1px}
+  /* 경험치 바 — 알약 아래로 물림 */
+  .shp-card .cbar{left:113px;top:369px;width:307px;height:32px;border-radius:16px;background:#000;
+    box-sizing:border-box}
+  .shp-card .cbar>.trk{position:absolute;left:3px;top:3px;right:3px;bottom:3px;border-radius:13px;
+    background:#373C4D;overflow:hidden}
+  .shp-card .cbar>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:13px;
+    background:linear-gradient(180deg,#FEC721,#FFB514)}
+  .shp-card .cbar>b{position:absolute;left:53px;right:0;top:0;bottom:0;text-align:center;
+    line-height:32px;font-size:20px;color:#F3F3F2;transform:scaleX(.85);letter-spacing:-1px;z-index:2}
+
+  /* 소환 버튼 3개 — 공통 3단 밴드 */
+  .shp-card .cbtn{box-sizing:border-box;border:6px solid #000;cursor:pointer;overflow:hidden;
+    background:linear-gradient(180deg,var(--f1),var(--f2))}
+  .shp-card .cbtn::before{content:'';position:absolute;left:0;right:0;top:0;height:7px;
+    background:var(--ring);border-radius:inherit}
+  .shp-card .cbtn::after{content:'';position:absolute;left:0;right:0;bottom:0;height:14px;
+    background:linear-gradient(180deg,var(--ring) 0,var(--ring) 7px,var(--lip) 7px,var(--lip) 14px)}
+  .shp-card .cbtn>u{position:absolute;left:0;right:0;text-align:center;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+  .shp-card .cbtn>.lab{top:24px;height:30px;line-height:30px;font-size:29px;transform:scaleX(.86)}
+  /* 인셋 패널(비용 행) */
+  .shp-card .cbtn>.pan{position:absolute;left:29px;right:29px;top:76px;height:37px;border-radius:15px;
+    background:linear-gradient(180deg,var(--p1),var(--p2));z-index:1}
+  .shp-card .cbtn>.cost{top:82px;height:26px;line-height:26px;font-size:26px;transform:scaleX(.9);
+    letter-spacing:-1px}
+  .shp-card .cbtn>.cost em{display:inline;font-size:26px;-webkit-text-stroke:0;vertical-align:-2px}
+  /* 시안 AD 버튼 */
+  .shp-card .b1{left:720px;top:146px;width:200px;height:98px;border-radius:37px;
+    --f1:#3DD5EC;--f2:#18B1D3;--ring:#53E6FA;--lip:#0DA2CA}
+  .shp-card .b1>.lab{top:14px}
+  .shp-card .b1>.sub{top:48px;height:24px;line-height:24px;font-size:23px;color:#fff;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;left:0;right:0;text-align:center;z-index:2}
+  /* ▶AD 뱃지 — 버튼 좌하단 물림 */
+  .shp-card .b1>.ad{left:-14px;top:56px;width:66px;height:50px;border-radius:12px;
+    background:linear-gradient(180deg,#E7A62B,#C26C16);border:5px solid #000;box-sizing:border-box;
+    transform:rotate(-6deg);z-index:3;line-height:40px;text-align:center;font-size:0}
+  .shp-card .b1>.ad::before{content:'▶AD';font-size:22px;font-weight:900;color:#fff;
+    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-1px}
+  /* 노랑 버튼 */
+  .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px;
+    --f1:#FCEF31;--f2:#FEC01D;--ring:#F6EF3E;--lip:#D87C0D;--p1:#C39313;--p2:#C38607}
+  /* 회색 버튼 */
+  .shp-card .b3{left:717px;top:262px;width:206px;height:127px;border-radius:36px;
+    --f1:#A8A8A8;--f2:#989898;--ring:#D2D2D2;--lip:#747474;--p1:#747474;--p2:#6C6C6C}
+  .shp-card .b3>.lab{color:#DADADA}
+  .shp-card .cbtn>.pan .gem{position:absolute;left:14px;top:-1px;font-size:36px;
+    -webkit-text-stroke:0;line-height:37px}
+  .shp-card .cbtn>.cost.g3{color:#EB6D68;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+
+  /* 잠금 상자(도감 완성) — 딤 + 안내 */
+  .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
+    line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:5}
+
+  /* 카테고리 탭 바 — x45 w990 h107, 검정 7 + 림 6, radius 33, 세로 그라디언트 */
+  .shp-cats{position:absolute;left:45px;right:45px;bottom:14px;height:107px;border-radius:33px;
+    border:7px solid #000;box-sizing:border-box;
+    background:linear-gradient(180deg,#45372C,#372B1F);
+    box-shadow:inset 0 0 0 6px rgba(92,79,70,.9)}
+  .shp-cats>*{position:absolute;top:0;bottom:0}
+  .shp-ct{width:25%;text-align:center;cursor:pointer;color:#A8A7AC;z-index:2}
+  .shp-ct:nth-child(1){left:0}   .shp-ct:nth-child(2){left:25%}
+  .shp-ct:nth-child(3){left:50%} .shp-ct:nth-child(4){left:75%}
+  .shp-ct>i{position:absolute;left:0;right:0;top:41px;font-size:33px;color:inherit;z-index:2;
+    transform:scaleX(.9);letter-spacing:-1px;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .shp-ct.on{color:#fff}
+  /* ✦ 마름모 구분선 */
+  .shp-cs{position:absolute;top:44px;width:15px;height:20px;background:#989491;z-index:1;
+    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+  .shp-cs.s1{left:257px} .shp-cs.s3{left:747px}
+  /* 활성 알약(소환) — 양끝 화살촉 노랑 배너 */
+  .shp-cat-pill{position:absolute;left:-8px;top:14px;width:250px;height:79px;z-index:1;
+    background:linear-gradient(180deg,#FFC736,#F8A63A);border:6px solid #000;box-sizing:border-box;
+    clip-path:polygon(0 50%,8% 0,92% 0,100% 50%,92% 100%,8% 100%)}
+  /* NEW 리본 — 탭2·3 경계 위, −20° */
+  .shp-new{position:absolute;left:482px;top:-14px;width:116px;height:40px;z-index:3;
+    transform:rotate(-20deg);background:linear-gradient(180deg,#CF3126,#891C19);
+    border-radius:5px;text-align:center;line-height:40px}
+  .shp-new>i{font-size:24px;color:#F8E759;-webkit-text-stroke:0;transform:scaleX(.9);
+    letter-spacing:1px}
+
+  /* 준비 중 안내(특별·일일/주간 카테고리) */
+  .shp-soon{position:absolute;left:0;right:0;top:42%;text-align:center;color:#9a97a4;
+    font-size:38px;-webkit-text-stroke:0}
+
+  /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
      껍데기는 «가운데 다이얼로그 모달». 레퍼런스(1080x2340) 실측 절대좌표:
      모달 바깥 142,614 796x1197 / 본문 cream 159,713 762x1080.
@@ -1978,6 +2121,19 @@
       <div class="dns-t on"><b>던전</b><s></s></div>
     </div>
   </div>
+  <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
+  <div id="shopw">
+    <div class="shp-list" id="shopList"></div>
+    <div class="shp-cats" id="shopCats">
+      <div class="shp-ct on" data-cat="summon"><div class="shp-cat-pill"></div><i>소환</i></div>
+      <div class="shp-ct" data-cat="special"><i>특별</i></div>
+      <div class="shp-ct" data-cat="daily"><i>일일/주간</i></div>
+      <div class="shp-ct" data-cat="coin"><i>재화</i></div>
+      <div class="shp-cs s1"></div>
+      <div class="shp-cs s3"></div>
+      <div class="shp-new"><i>NEW</i></div>
+    </div>
+  </div>
   <!-- 06 장비 팝업. 폭 1080 «바닥 시트» — 공용 #modal(가운데 다이얼로그)과 규격이 달라 자체 오버레이.
        딤 28% 는 HUD·전투화면에만 걸리고 하단 탭바에는 걸리지 않는다(#eqw 가 bottom:180 에서 끝난다). -->
   <div id="eqw">
@@ -2424,6 +2580,14 @@ const BANNERS = {
 const BKEYS = Object.keys(BANNERS);
 const EQ_BANNERS = ['weapon','shield','amulet'];
 
+/* 10 상점 소환 탭 — 상자 카드 3종(레퍼런스: 무기·방어구·스킬 상자). 각 상자 = 기존 소환 배너 */
+const SHOP_BOXES = [
+  { b:'weapon', n:'무기 상자',   ic:'🗡️', hd:'#2FAD88', hr:'#4FBB9B', c1:'#5BCAF5', c2:'#3F6DCF' },
+  { b:'shield', n:'방어구 상자', ic:'🛡️', hd:'#8E4B5C', hr:'#A16877', c1:'#E26E9F', c2:'#9B5462' },
+  { b:'skill',  n:'스킬 상자',   ic:'📜', hd:'#5B4586', hr:'#78659D', c1:'#A85EDB', c2:'#624C94' }
+];
+const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/2») */
+
 /* 소환 레벨 1~100 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
 const SUM_MAXLV = 100;
 const GRADE_ROLL = [
@@ -2631,7 +2795,8 @@ const DEF = () => ({
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{}, tuto:0,
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
-  daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}) },
+  daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
+          freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}) },   /* 상자별 오늘 남은 무료 10연 */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
@@ -2649,6 +2814,7 @@ function load(){
     ['lv','eqSlot','coll','quest','cnt','att','sum','dun'].forEach(k => b[k] = Object.assign(DEF()[k], d[k] || {}));
     b.daily = Object.assign(DEF().daily, d.daily || {});
     b.daily.dun = Object.assign(DEF().daily.dun, (d.daily && d.daily.dun) || {});
+    b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
     b.seen = d.seen || {};
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
@@ -2665,6 +2831,7 @@ function dailyCheck(){
     S.daily.date = t;
     S.daily.spins = ROUL_FREE;
     DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
+    S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
     uiDirty = true;
   }
 }
@@ -3849,6 +4016,21 @@ function doSummon(b, times){
   save();
   showSummonResult(b, times, res, lvUp);
 }
+/* 10 상점 무료 10연 — 재화를 소모하지 않는 것만 doSummon 과 다르다(무료 횟수 차감은 호출부 담당) */
+function doSummonFree(b, times){
+  const B = BANNERS[b];
+  if(allMaxed(B.list)){ doSummon(b, times); return; }
+  S.summons += times;
+  const ck = b === 'skill' ? 'sumSkill' : b === 'pet' ? 'sumPet' : b === 'relic' ? 'sumRelic' : 'sumEquip';
+  S.cnt[ck] += times;
+  const lvUp = sumAddExp(b, times);
+  const res = [];
+  for(let i=0;i<times;i++) res.push(summonOne(b));
+  markDirty(); uiDirty = true;
+  if(S.autoEquip) autoEquipAll();
+  save();
+  showSummonResult(b, times, res, lvUp);
+}
 const itemIcon = it => it.ic || (it.sp ? (it.sp === 'dragon' ? '🐉' : it.sp === 'bird' ? '🐦' : '🤖') : '❔');
 
 function showSummonResult(b, times, res, lvUp){
@@ -4719,6 +4901,7 @@ function renderDunPage(){
   $('dunList').innerHTML = h;
 }
 function openDungeon(){
+  if(typeof closeShopPage === 'function') closeShopPage();
   renderDunPage();
   $('dunw').classList.add('on');
   $('dunList').scrollTop = 0;
@@ -4739,6 +4922,95 @@ $('dunList').addEventListener('click', e => {
 $('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
 /* 탭바를 누르면 던전 페이지는 닫힌다 (탭바 자체는 A1 구간이라 손대지 않는다) */
 $('tabbar').addEventListener('click', closeDungeon, true);
+
+/* ---- 10 상점 팝업 — 소환 탭 (전체화면 페이지 #shopw) — 측정표 docs/measure/10-상점팝업소환탭.md ----
+   상자 카드 3장 = 무기·방어구·스킬 소환 배너. 각 카드 우측 소환 버튼 3개(무료 10연 / 💎 10연 / 💎 30연).
+   좌표는 카드 좌상단 기준 상대좌표(측정표 §2)를 그대로 CSS 로 박았고, 여기서는 상태값만 채운다. */
+let shopCat = 'summon';
+function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
+function renderShopPage(){
+  const list = $('shopList');
+  if(shopCat !== 'summon'){
+    list.innerHTML = '<div class="shp-soon">' + (shopCat === 'coin' ? '재화 상점은 «상점» 탭에서 이용할 수 있습니다.'
+      : '준비 중입니다.') + '</div>';
+    return;
+  }
+  let h = '';
+  SHOP_BOXES.forEach(x => {
+    const s = S.sum[x.b], need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
+    const pctFill = s.lv >= SUM_MAXLV ? 100 : Math.round(s.exp / need * 100);
+    const c10 = summonCost(x.b, 10), c30 = summonCost(x.b, 30), fl = freeLeft(x.b);
+    h += '<div class="shp-card" style="--hd:' + x.hd + ';--hr:' + x.hr + ';--c1:' + x.c1 + ';--c2:' + x.c2 + '">'
+      +  '<div class="cbg"></div>'
+      +  '<div class="chd"><i>' + x.n + '</i></div>'
+      +  '<div class="cart">' + x.ic + '</div>'
+      +  '<div class="cmag" data-shinfo="' + x.b + '">🔍</div>'
+      +  '<div class="clv"><i>Lv.' + s.lv + '</i></div>'
+      +  '<div class="cbar"><div class="trk"><i style="width:' + pctFill + '%"></i></div>'
+      +    '<b>' + (s.lv >= SUM_MAXLV ? 'MAX' : s.exp + '/' + need) + '</b></div>'
+      +  '<div class="cbtn b1" data-shsum="' + x.b + '" data-shn="10" data-shfree="1">'
+      +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u><div class="ad"></div></div>'
+      +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
+      +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">💎</span></div>'
+      +    '<u class="cost">' + fmt(c10) + '</u></div>'
+      +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
+      +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">💎</span></div>'
+      +    '<u class="cost g3">' + fmt(c30) + '</u></div>'
+      +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
+      +  '</div>';
+  });
+  list.innerHTML = h;
+}
+function openShopPage(){
+  closeDungeon();
+  shopCat = 'summon';
+  document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
+  renderShopPage();
+  $('shopw').classList.add('on');
+  $('shopList').scrollTop = 0;
+}
+function closeShopPage(){ $('shopw').classList.remove('on'); }
+$('shopList').addEventListener('click', e => {
+  const info = e.target.closest('[data-shinfo]');
+  if(info){
+    const b = info.dataset.shinfo, B = BANNERS[b], p = gradeProbs(b);
+    popup('🔍 ' + B.n + ' 확률 정보',
+      '<p>소환 레벨 <b>Lv.' + sumLv(b) + '</b> 기준 등급별 확률</p>'
+      + '<div style="text-align:left;background:#0e1428;border-radius:16px;padding:14px 18px;margin-top:12px">'
+      + GRADE.map((g,i) => sumLv(b) < GRADE_ROLL[i].unlock
+          ? '<p style="color:#7f8699">' + g.ic + ' ' + g.n + ' — 🔒 Lv.' + GRADE_ROLL[i].unlock + ' 해금</p>'
+          : '<p><b style="color:' + g.c + '">' + g.ic + ' ' + g.n + '</b> — ' + (p[i]*100).toFixed(2) + '%</p>').join('')
+      + '</div>');
+    return;
+  }
+  const btn = e.target.closest('[data-shsum]');
+  if(!btn) return;
+  const b = btn.dataset.shsum, n = +btn.dataset.shn;
+  if(btn.dataset.shfree){
+    if(allMaxed(BANNERS[b].list)){ doSummon(b, n); renderShopPage(); return; }
+    if(freeLeft(b) <= 0){ popup('무료 소환 소진', '<p>오늘 <b>' + BANNERS[b].n + '</b> 무료 소환을 모두 사용했습니다.<br>내일 다시 충전됩니다.</p>'); return; }
+    S.daily.freeSum[b] = freeLeft(b) - 1;
+    doSummonFree(b, n);
+    renderShopPage();
+    return;
+  }
+  doSummon(b, n);
+  renderShopPage();
+});
+$('shopCats').addEventListener('click', e => {
+  const c = e.target.closest('[data-cat]');
+  if(!c) return;
+  const cat = c.dataset.cat;
+  if(cat === 'coin'){                 /* 재화 = 기존 다이아·아바타 상점(패널)으로 연결 — 기능 보존 */
+    closeShopPage();
+    goTab('shop', true);              /* forceOpen 으로 패널 상점을 연다(페이지 재진입 방지) */
+    return;
+  }
+  shopCat = cat;
+  document.querySelectorAll('#shopCats .shp-ct').forEach(x => x.classList.toggle('on', x.dataset.cat === cat));
+  renderShopPage();
+  $('shopList').scrollTop = 0;
+});
 
 /* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
    좌표는 전부 레퍼런스 실측 절대 px 이다. 격자는 **행 = 등급** 으로 묶는다:
@@ -5110,6 +5382,17 @@ function syncPanel(){
   resizeCanvas();
 }
 function goTab(k, forceOpen){
+  /* 상점 탭 → 10 소환 페이지(전체화면 #shopw). forceOpen=true 는 재화 카테고리가 기존 패널 상점을 열 때만 쓴다. */
+  if(k === 'shop' && !forceOpen){
+    closeDungeon();
+    if($('shopw').classList.contains('on')){ closeShopPage(); return; }
+    if(panelOpen){ panelOpen = false; syncPanel(); }
+    if(!S.seen.shop){ S.seen.shop = 1; document.querySelectorAll('.tab').forEach(x =>
+      x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
+    openShopPage();
+    return;
+  }
+  closeShopPage();                    /* 다른 탭으로 이동하면 상점 페이지는 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
