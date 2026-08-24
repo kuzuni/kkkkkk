@@ -83,6 +83,24 @@ const dataUri = 'data:' + mime + ';base64,' + fs.readFileSync(path.resolve(file)
       }
       out.bbox = { x: mx, X: MX, y: my, Y: MY, w: MX - mx + 1, h: MY - my + 1, n };
     }
+    /* trans: 한 열/행의 «색이 바뀌는 좌표» 만 런렝스로 압축해 뽑는다 (누락 레이어 차분용) */
+    if (o.job === 'trans') {
+      const tol = o.tol === undefined ? 6 : o.tol;
+      const runs = [];
+      const axis = o.x !== undefined ? 'y' : 'x';
+      const a0 = axis === 'y' ? o.y0 : o.x0, a1 = axis === 'y' ? o.y1 : o.x1;
+      const get = (t) => axis === 'y' ? px(o.x, t) : px(t, o.y);
+      let start = a0, cur = get(a0);
+      for (let t = a0 + 1; t <= a1; t++) {
+        const p = get(t);
+        if (Math.abs(p[0] - cur[0]) > tol || Math.abs(p[1] - cur[1]) > tol || Math.abs(p[2] - cur[2]) > tol) {
+          runs.push(start + '-' + (t - 1) + '(' + (t - start) + ') ' + cur.join(','));
+          start = t; cur = p;
+        }
+      }
+      runs.push(start + '-' + a1 + '(' + (a1 - start + 1) + ') ' + cur.join(','));
+      out.runs = runs;
+    }
     if (o.job === 'colprofile') {
       /* 열별 상하 경계 — 세로 프로파일 */
       const cols = [];
