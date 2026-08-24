@@ -127,6 +127,12 @@ function launchOpts(){
       slots.forEach((k) => openers.push({ label: 'eqslot:' + k, sel: null, hero: `#eqCards [data-eqslot="${k}"]` }));
       const eqtabs = await page.$$eval('#eqTabs [data-eqtab]', (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
       eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, sel: null, hero: `#eqTabs [data-eqtab="${k}"]` }));
+      /* 10·13 상점 카테고리 탭 — 상점 페이지(#shopw)를 연 뒤에만 보이므로 2단계 오프너다.
+         재화 탭에는 44(다이아 상품 5종 + 마일리지 교환)가 붙어 있어 여기서만 렌더된다. */
+      await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      const cats = await page.$$eval('#shopCats .shp-ct[data-cat]', (els) => els.map((e) => e.dataset.cat)).catch(() => []);
+      cats.forEach((k) => openers.push({ label: 'shopcat:' + k, sel: null, shop: `#shopCats .shp-ct[data-cat="${k}"]` }));
       await ctx.close();
     }
     for (const o of openers) {
@@ -142,6 +148,11 @@ function launchOpts(){
              페이지 안에서 resolve+click 을 한 번에 해 레이스를 없앤다 — 위임 핸들러는 그대로 탄다. */
           const hit = await page.$eval(o.hero, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.hero, { timeout: 3000, force: true });
+        } else if (o.shop) {
+          await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          const hit = await page.$eval(o.shop, (el) => { el.click(); return true; }).catch(() => false);
+          if (!hit) await page.click(o.shop, { timeout: 3000, force: true });
         } else {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
           await page.waitForTimeout(200);

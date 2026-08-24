@@ -1600,7 +1600,8 @@
      테두리를 준 요소의 절대배치 자식은 padding box 기준이라 **테두리는 전부 별도 오버레이**로 얹는다.
      ========================================================================== */
   .shp-list.coin{padding-top:0}
-  .cn-wrap{position:relative;width:1080px;height:1809px}
+  /* 높이 1809(ref 구간) → 3066: 아래로 44 다이아 상품 5칸 + 마일리지 패널이 붙는다 */
+  .cn-wrap{position:relative;width:1080px;height:3066px}
   .cn-wrap *{box-sizing:border-box}
   .cn-wrap>*{position:absolute}
 
@@ -1735,6 +1736,64 @@
       #76D924 89px,#ADFF81 89px,#ADFF81 96px,#75DB54 96px,#3EBC2A 103px)}
   .cn-mv>i{position:absolute;left:0;right:0;top:21px;text-align:center;color:#fff;font-size:49.5px;
     line-height:52px;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.882)}
+
+  /* ==========================================================================
+     44 다이아 판매 상품 5종 + 마일리지 교환 (2026-08-25 저장소 주인 지시)
+     레퍼런스 13 은 «마일리지 상품» 리본에서 끝나므로 그 아래는 **우리 게임 설계**다
+     (UI-REFERENCE 13 «우리 게임 설계 ① ② ③»). 새 좌표계를 만들지 않고 §5 상품 그리드의
+     열(x111/401/691) · 카드 규격(278×309) · 행 pitch(319) · 리본↔카드 간격(94)을 그대로 쓴다.
+     local y: 다이아 리본 1698 / 카드 1884·2203 / 마일리지 리본 2587 / 마일리지 패널 2773.
+     (간격도 §5·§6 과 같은 값 — 배너·카드↔리본 75 · 리본↔본문 94 · 행 pitch 319)
+     ========================================================================== */
+  /* ① 다이아 카드 — §5 카드 껍데기 재사용, 몸통·헤더 색만 다이아(인디고) 계열로 */
+  .cn-cd.dia>.bg{background:linear-gradient(180deg,#8E7BF0 0,#8E7BF0 62px,#6455C4 219px,
+    #4E42AC 219px,#3C3290 295px)}
+  .cn-cd.dia>.pn>em{font-size:104px}
+  /* 수량은 «×200만» 까지 길어지므로 완료 카드와 같은 우측 앵커 — 5칸이 같은 잉크 우단을 쓴다 */
+  .cn-cd.dia>.qt{left:auto;right:14px;transform-origin:100% 50%}
+  /* 구매 버튼 — [받기]와 같은 상자(dx17 dy214 245×80 r28)에 ▶AD·(n/n) 없이 가격 한 줄 */
+  .cn-cd>.bt.buy{background:linear-gradient(180deg,#FFE9A0 0,#FFDD72 4px,#FDC63A 4px,
+    #F0A415 59px,#FFE07A 59px,#FFE07A 64px,#E29A10 64px,#9A6403 69px)}
+  .cn-cd>.bt.buy>.pr{left:0;right:0;width:auto;top:19px;font-size:33px;line-height:36px;
+    transform:scaleX(1.02)}
+  /* 마일리지 쿠폰 뱃지 — 아이템 판(dx11 dy69 256×157) 우상단에 물린다 */
+  .cn-cd>.cp{left:141px;top:78px;width:120px;height:46px;border-radius:23px;border:4px solid #000;
+    background:linear-gradient(180deg,#F6A3FF 0,#D24CF2 55%,#A521C9 100%)}
+  .cn-cd>.cp>i{position:absolute;left:0;right:0;top:7px;text-align:center;color:#fff;
+    font-size:25px;line-height:28px;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    white-space:nowrap;transform:scaleX(.9)}
+
+  /* ② 마일리지 패널 — §6 배너와 같은 규격(x66 948×h, r20, 검정5 + 림7)의 보라 판 */
+  .cn-ml{left:66px;top:2773px;width:948px;height:236px;border-radius:20px;border:5px solid #000;
+    background:
+      repeating-linear-gradient(45deg,rgba(126,25,166,.85) 0 34px,rgba(155,32,204,0) 34px 68px),
+      linear-gradient(160deg,rgba(210,76,242,.5) 0 22%,rgba(155,32,204,0) 60%),#9B20CC;
+    box-shadow:inset 0 0 0 7px #D98BFF;overflow:hidden}
+  .cn-ml>*{position:absolute}
+  .cn-ml>em{left:30px;top:44px;font-size:118px;line-height:140px}
+  .cn-ml>.tt{left:176px;top:36px;font-size:44px;line-height:48px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;transform:scaleX(.9);
+    transform-origin:0 50%}
+  .cn-ml>.ct{left:176px;top:36px;width:420px;text-align:right;font-size:44px;line-height:48px;
+    color:#FFF8AA;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
+  .cn-ml>.bar{left:176px;top:110px;width:420px;height:46px;border-radius:23px;border:5px solid #000;
+    background:#3A1B4C;overflow:hidden}
+  .cn-ml>.bar>s{position:absolute;left:0;top:0;bottom:0;border-radius:18px;
+    background:linear-gradient(180deg,#F7C9FF 0,#E7A6FF 8px,#C24DEF 100%)}
+  .cn-ml>.rw{left:176px;top:168px;font-size:30px;line-height:34px;color:#fff;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  /* [교환] — §6 [이동] 버튼과 같은 규격(269×118 r39 검정7), 패널 기준 dx629 dy59 */
+  .cn-ml>.ex{left:629px;top:59px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
+    cursor:pointer;background:linear-gradient(180deg,#ABFF85 0,#ABFF85 6px,#78F34A 6px,
+    #76D924 89px,#ADFF81 89px,#ADFF81 96px,#75DB54 96px,#3EBC2A 103px)}
+  .cn-ml>.ex>i{position:absolute;left:0;right:0;top:21px;text-align:center;color:#fff;
+    font-size:49.5px;line-height:52px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    transform:scaleX(.882)}
+  /* 쿠폰 10개 미만 — 회색 비활성 */
+  .cn-ml.off>.ex{cursor:default;background:linear-gradient(180deg,#B9B9B9 0,#B9B9B9 6px,#9A9A9A 6px,
+    #7C7C7C 89px,#BDBDBD 89px,#BDBDBD 96px,#8A8A8A 96px,#5C5C5C 103px)}
+  .cn-ml.off>.ex>i{color:#DADADA}
+
   /* §8 카테고리 탭 바 — 바 자체는 10 소속이라 **재화 탭일 때만** 13 실측치로 덮어쓴다
      (`#shopList.coin ~ #shopCats`). 10 의 소환 탭 모습은 건드리지 않는다. 비평 1회차 A/B 공통 지적:
      바가 27px 아래 · 라벨이 바 중심에서 17.5px 아래 · ✦ 가 13x18(ref 19x19) · NEW 리본은 13 에 없음. */
@@ -5086,6 +5145,7 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.ge
 const DEF = () => ({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   gold:0, dia:300, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
+  mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   sp:0, spAtk:0, spHp:0, spRegen:0, spAuto:true,
   statStage:1,                                /* 23 스탯 훈련 단계 — 훈련과 같은 구조, 재화만 포인트 */
@@ -5122,6 +5182,10 @@ function load(){
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
     b.seen = d.seen || {};
+    /* 44 마일리지 — 구버전 세이브에는 없는 필드다. KEY 를 올리면 전 진행도가 날아가므로
+       «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
+       옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
+    if(!Number.isFinite(b.mileage)) b.mileage = 0;
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
     b.eqRelic = (d.eqRelic || []).filter(i => RL[i]);
@@ -7846,6 +7910,42 @@ function coinResetTxt(){
   const m = Math.max(0, Math.round((e - d) / 60000));
   return Math.floor(m / 60) + 'H ' + String(m % 60).padStart(2, '0') + 'M';
 }
+/* ---- 44 다이아 판매 상품 5종 + 마일리지 (UI-REFERENCE 13 «우리 게임 설계» — 저장소 주인 지시) ----
+   가격 오름차순. 쿠폰(cp)은 90만·200만 상품에만 붙는다. `won` 은 표시용 원화가.
+   **결제 연동은 없다** — 구매 버튼은 가격 표시 + «준비 중». 실제 지급은 `grantDiaPack()` 하나로
+   모이며, 디버그 지급(`window.devBuyDia(id)`)과 나중 붙일 결제 콜백이 그 함수를 같이 쓴다. */
+const DIA_PACKS = [
+  { id:'d1', dia:10000,   won:1000,   cp:0, q:'×1만',   qx:1.10 },
+  { id:'d2', dia:70000,   won:5000,   cp:0, q:'×7만',   qx:1.10 },
+  { id:'d3', dia:150000,  won:11000,  cp:0, q:'×15만',  qx:1.00 },
+  { id:'d4', dia:900000,  won:55000,  cp:1, q:'×90만',  qx:1.00 },
+  { id:'d5', dia:2000000, won:110000, cp:2, q:'×200만', qx:0.88 }
+];
+const MILE_NEED = 10, MILE_DIA = 5000000;
+const wonTxt = w => String(w).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
+const diaPackName = p => '다이아 ' + p.q.slice(1) + '개';
+/* 다이아 상품 지급 — 결제 성공 시 호출될 지점. 재화·쿠폰·누적 결제수를 한 번에 반영하고 저장한다. */
+function grantDiaPack(p){
+  if(!p) return null;
+  S.dia += p.dia;
+  if(p.cp) S.mileage = (S.mileage || 0) + p.cp;
+  S.cnt.paid = (S.cnt.paid || 0) + 1;
+  uiDirty = true; save();
+  const sw = $('shopw');
+  if(sw && sw.classList.contains('on') && shopCat === 'coin') renderCoinPage($('shopList'));
+  return { dia:S.dia, mileage:S.mileage, paid:S.cnt.paid };
+}
+/* 디버그 지급 — 결제가 없는 동안 마일리지 적립·교환을 실제로 굴려 보기 위한 유일한 경로 */
+window.devBuyDia = id => grantDiaPack(DIA_PACKS.find(x => x.id === id));
+function mileageExchange(){
+  if((S.mileage || 0) < MILE_NEED) return false;
+  S.mileage -= MILE_NEED; S.dia += MILE_DIA;
+  uiDirty = true; save();
+  renderCoinPage($('shopList'));
+  popup('🎟️ 마일리지 교환', '<p>💎 ' + fmt(MILE_DIA) + ' 을(를) 받았습니다.</p>'
+    + '<p>남은 쿠폰 ' + S.mileage + '개</p>');
+  return true;
+}
 function renderCoinPage(list){
   let h = '<div class="cn-wrap">'
     /* §1 배너 아트 + §2 타이틀 */
@@ -7883,9 +7983,31 @@ function renderCoinPage(list){
     + '<div class="cn-nt" style="top:1543px"></div>'
     + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
     + '<div class="cn-mv" id="cnMove"><i>이동</i></div>'
-    /* §7 마일리지 상품 리본 (레퍼런스도 여기서 화면이 끝난다) */
-    + '<div class="cn-rb" style="top:1698px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
+    /* §7 다이아 상품 리본 (여기서부터 아래는 레퍼런스에 없는 «우리 게임 설계» — 작업 44) */
+    + '<div class="cn-rb" style="top:1698px;--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>다이아 상품</i></div>';
+  /* §7-1 다이아 판매 카드 5칸 — 열 x111/401/691, 행 local 1884/2203 (§5 와 같은 격자) */
+  DIA_PACKS.forEach((p, i) => {
+    const x = [111, 401, 691][i % 3], y = i < 3 ? 1884 : 2203;
+    h += '<div class="cn-cd dia" style="left:' + x + 'px;top:' + y + 'px;--fs:35.5px;--sx:.95'
+      + ';--qx:' + p.qx + ';--hd:#6B5BE8;--hr:#B0A6FF">'
+      +  '<div class="bg"></div><div class="hd"><i>다이아</i></div>'
+      +  '<div class="pn"><em>💎</em></div>'
+      +  '<div class="qt">' + p.q + '</div>'
+      +  (p.cp ? '<div class="cp"><i>쿠폰 +' + p.cp + '</i></div>' : '')
+      +  '<div class="bt buy" data-diabuy="' + p.id + '"><u class="pr">' + wonTxt(p.won) + '</u></div>'
+      +  '<div class="fr"></div></div>';
+  });
+  /* §8 마일리지 상품 리본 + 교환 패널 — 쿠폰 10개 → 다이아 500만 */
+  const mil = S.mileage || 0, milOk = mil >= MILE_NEED;
+  h += '<div class="cn-rb" style="top:2587px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>마일리지 상품</i></div>'
+    + '<div class="cn-ml' + (milOk ? '' : ' off') + '" id="cnMile"><em>🎟️</em>'
+    +   '<div class="tt">마일리지 쿠폰</div>'
+    +   '<div class="ct">' + mil + ' / ' + MILE_NEED + '</div>'
+    +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
+    +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → 💎 ' + fmt(MILE_DIA) + '</div>'
+    +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>'
     + '</div>';
   list.innerHTML = h;
 }
@@ -7893,6 +8015,17 @@ $('shopList').addEventListener('click', e => {
   if(e.target.closest('#cnMove')){       /* 기존 다이아 패키지·아바타·유물석 교환소 보존 진입점 */
     closeShopPage(); goTab('shop', true); return;
   }
+  /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
+  const dp = e.target.closest('[data-diabuy]');
+  if(dp){
+    const p = DIA_PACKS.find(x => x.id === dp.dataset.diabuy);
+    if(p) popup('💎 ' + diaPackName(p),
+      '<p>' + wonTxt(p.won) + '</p>'
+      + (p.cp ? '<p>구매 시 🎟️ 마일리지 쿠폰 +' + p.cp + '</p>' : '')
+      + '<p>결제 준비 중입니다.</p>');
+    return;
+  }
+  if(e.target.closest('#cnExch')){ mileageExchange(); return; }
   const b = e.target.closest('[data-cnad]');
   if(!b) return;
   const a = COIN_ADS.find(x => x.id === b.dataset.cnad);
