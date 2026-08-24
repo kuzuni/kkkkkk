@@ -9,12 +9,15 @@
 
 이 프로젝트는 Claude Code 클라우드 루틴 **4개**를 15분 간격으로 엇갈리게 돌려 병렬 작업한다.
 
-| 워커 | 계정 1 cron (UTC) | 계정 2 cron (UTC) |
-|---|---|---|
-| A | `5 * * * *` (:05) | `12 * * * *` (:12) |
-| B | `20 * * * *` (:20) | `27 * * * *` (:27) |
-| C | `35 * * * *` (:35) | `42 * * * *` (:42) |
-| D | `50 * * * *` (:50) | `57 * * * *` (:57) |
+| 워커 | 계정 1 cron (UTC) | 계정 2 cron (UTC) | 계정 3 cron (UTC) |
+|---|---|---|---|
+| A | `5 * * * *` (:05) | `12 * * * *` (:12) | `2 * * * *` (:02) |
+| B | `20 * * * *` (:20) | `27 * * * *` (:27) | `17 * * * *` (:17) |
+| C | `35 * * * *` (:35) | `42 * * * *` (:42) | `32 * * * *` (:32) |
+| D | `50 * * * *` (:50) | `57 * * * *` (:57) | `47 * * * *` (:47) |
+
+세 계정을 다 켜면 한 시간에 :02 :05 :12 :17 :20 :27 :32 :35 :42 :47 :50 :57 — 최소 간격 3분, 최대 12세션 동시.
+계정 4 를 더 붙이면 `:09/:24/:39/:54` 를 쓴다(간격 유지).
 
 - **계정마다 분(分)을 엇갈려 둔다.** 같은 분을 쓰면 양 계정을 동시에 켰을 때 워커가 쌍으로
   동시에 떠서 매 사이클 같은 작업을 두고 락 선점 경쟁부터 한다. 락(`docs/claims/*.lock`)은
@@ -137,6 +140,7 @@ ls docs/claims/                # lock 이 새로 잡히는가
 |---|---|---|
 | 계정 1 | `claude-opus-5` | 초기 A~D 구성 |
 | 계정 2 | `claude-opus-5` | 2026-08-24 fable-5 → opus-5 로 변경(저장소 주인 지시) |
+| 계정 3 | `claude-opus-5` | 2026-08-25 추가 예정 — 기본 opus-5, 바꾸려면 §5-5 update body 의 model 만 교체 |
 
 모델을 바꿔도 **`docs/ROUTINE.md` 지시서는 그대로 쓴다.** 지시서는 모델 중립적으로 쓰여 있다.
 
@@ -226,6 +230,49 @@ update_trigger(trigger_id: <위에서 받은 id>, model: "claude-fable-5")
 비평가·측정 서브에이전트를 못 띄워서 지시서 [3]-(나) 루프가 통째로 안 돈다 —
 그때는 웹 UI 에서 다시 만들어야 한다.
 
+### 5-5. raw API(`RemoteTrigger`)로 만들 때 — 계정 2 에서 실제로 성공한 body 원문 (계정 3 도 이걸 그대로)
+
+MCP `create_trigger` 가 없는 세션(로컬 Claude Code 등)에서는 `RemoteTrigger` 도구로 `POST /v1/code/triggers` 를 직접 친다.
+§5-3 의 평면 파라미터는 **400 «One of job_config or session_request must be set»** 로 거부된다. 아래 형태만 받는다.
+raw API 는 §5-2 표와 달리 **model·allowed_tools 를 생성 시점에 넣을 수 있다**(update 불필요).
+
+**environment_id 는** 그 계정의 기존 트리거를 `RemoteTrigger list` 로 보면 `job_config.ccr.environment_id` 에 있다
+(트리거가 하나도 없으면 웹 UI 에서 루틴을 하나 만들어 보고 list 로 읽는다).
+
+```json
+{
+  "name": "방치형 UI 병렬 워커 A (:02)",
+  "cron_expression": "2 * * * *",
+  "enabled": true,
+  "persist_session": false,
+  "job_config": { "ccr": {
+    "environment_id": "<이 계정의 env_…>",
+    "events": [{ "data": { "message": {
+        "content": "<§5-1 프롬프트 원문, {{워커}} 를 A 로>",
+        "role": "user", "type": "user" },
+      "parent_tool_use_id": null, "session_id": "", "type": "user",
+      "uuid": "aa000301-0000-4a00-9e00-000000000301" } }],
+    "session_context": {
+      "allowed_tools": ["Bash","Read","Write","Edit","Glob","Grep","Task","WebFetch"],
+      "model": "claude-opus-5",
+      "sources": [{ "git_repository": { "url": "https://github.com/kuzuni/kkkkkk" } }]
+    }
+  } }
+}
+```
+- `persist_session: false` 가 곧 «매 실행 새 세션»(= `create_new_session_on_fire: true`). 빠뜨리면 §6 의 «세션 하나가 찔리는» 사고.
+- B/C/D 는 `name`·`cron_expression`·`content` 의 워커 문자·`uuid` 끝자리만 바꾼다(계정 3: :17 / :32 / :47).
+- 만든 뒤 모델을 바꾸려면 `RemoteTrigger update`, body `{"model":"claude-opus-5"}` 처럼 **평면 키**로 부분 갱신된다(job_config 안 건드림). cron·name 도 같은 방식.
+- 확인은 §5-4. `list` 응답에서 4개의 `next_run_at` 분이 :02/:17/:32/:47 이고 `enabled:true`, `model`, `sources` 가 kkkkkk 인지 본다.
+
+### 5-6. 계정을 늘릴 때 (3개 이상 동시 가동)
+
+- **§4 체크리스트(push 권한·environment_id·playwright)를 그 계정에서 먼저** 통과시킨다. 안 되면 매시간 조용히 실패한다.
+- cron 은 §1 표의 그 계정 열을 쓴다 — 다른 계정과 **같은 분을 절대 쓰지 않는다**.
+- 나머지는 아무것도 바꿀 게 없다: 락(`docs/claims`)·선점 티어·회차 상한·heartbeat·smoke 게이트는 전부 저장소 규칙이라 계정을 가리지 않는다.
+- 12세션이면 `index.html` rebase 충돌이 더 잦다 — 지시서 [4](양쪽 변경 살리기 + smoke 재통과)로 흡수된다. 충돌 커밋이 시간당 3건을 넘기면 계정 하나를 잠시 끄는 게 낫다.
+- 어느 계정이든 **한도가 죽으면 그 계정만** 끈다(§2). heartbeat 덕에 죽은 lock 은 50분 안에 회수된다.
+
 ### 5-4. 만든 뒤 반드시 확인
 ```
 list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인지
@@ -264,3 +311,4 @@ list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인
 | 2026-08-24 | 계정 2 워커 cron 을 :12/:27/:42/:57 로 엇갈림 — 계정 간 동시 가동 대비. §1 에 계정별 cron 표·동시 가동 조건 명시 |
 | 2026-08-24 | 동시 가동 공식 허용 — 금지 대상을 «한도 소진 계정»으로 한정(§2·§6 갱신). `ROUTINE.md` [-1] 4 에 lock 선점 경쟁 패배 처리(rebase 충돌 = 포기, reset --hard) · [4] 에 남의 lock 불가침 규칙 추가 |
 | 2026-08-24 | 계정 2 워커 4개 모델을 `claude-fable-5` → `claude-opus-5` 로 변경 (update, 즉시 적용) |
+| 2026-08-25 | 계정 3 추가 준비 — §1 에 계정 3 cron(:02/:17/:32/:47)·계정 4 예비 분, §5-5 raw API body 원문, §5-6 다계정 운영 규칙 |
