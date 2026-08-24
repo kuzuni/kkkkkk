@@ -872,6 +872,128 @@
   .dns-t.on>s{position:absolute;left:378px;top:2px;width:25px;height:25px;border-radius:50%;
     background:#F22E52;text-decoration:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 3.5px #FF7596,0 0 0 8.5px #000}
+  /* ==========================================================================
+     04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
+     껍데기는 «가운데 다이얼로그 모달». 레퍼런스(1080x2340) 실측 절대좌표:
+     모달 바깥 142,614 796x1197 / 본문 cream 159,713 762x1080.
+     A5 공용 모달(.mbox)과 규격이 달라(폭 796 vs 898, 테두리 6+9, 별무늬 없음)
+     공용 껍데기를 쓰지 않고 자체 오버레이로 둔다. 다른 작업 단위 구간은 건드리지 않는다.
+
+     좌표계: .dgd-body(=cream) 좌상단을 원점으로 삼는다 → local = ref - (159,713).
+     글자: 잉크비 0.93 기준 font-size = 실측 잉크높이/0.93, 폭은 <i> 의 scaleX 로 맞춘다.
+     ========================================================================== */
+  #dgdw{position:absolute;inset:0;background:rgba(0,0,0,.50);display:none;
+    align-items:center;justify-content:center;z-index:33}
+  #dgdw.on{display:flex}
+  /* 레퍼런스 모달 중심 y=1212, 화면 중심 1170 → 세로 중앙에서 아래로 42px (A5 와 같은 규칙) */
+  .dgd-box{position:relative;flex:0 0 auto;width:796px;height:1197px;top:42px;box-sizing:border-box;
+    display:flex;flex-direction:column;overflow:hidden;
+    border:7px solid #000;border-left-width:6px;border-right-width:6px;border-radius:42px;
+    padding:0 11px 11px;background:#56443A}
+  /* 타이틀바는 갈색 링 위를 덮어 검정 테두리 안쪽 폭(784)을 꽉 채운다 */
+  .dgd-head{flex:0 0 auto;height:90px;margin:0 -11px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#5C4744 0 8px,#523E3D 8px)}
+  .dgd-head i{display:inline-block;font-style:normal;font-size:47px;line-height:47px;font-weight:900;
+    color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;
+    transform:scaleX(.93) translate(-2px,1px)}
+  /* 본문은 단색 크림 — 레퍼런스에 별무늬가 없다(99% 단일색 #F0D9BA) */
+  .dgd-body{position:relative;flex:1 1 auto;margin-top:2px;border-radius:27px;background:#F0D9BA;overflow:hidden}
+  .dgd-body>*{position:absolute}
+  /* 텍스트 오버레이는 화살표 위를 가로질러 놓이므로(폭 420) 클릭을 먹지 않게 한다 */
+  .dgd-body>div{pointer-events:none}
+  .dgd-body i{display:inline-block;font-style:normal;transform-origin:50% 50%}
+  .dgd-t{color:#fff;font-weight:900;white-space:nowrap;text-align:center;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+
+  /* 배너 일러스트 750x352 (local 6,24) — 초록 크리스탈 동굴 + 슬라임 실루엣 */
+  .dgd-bn{left:6px;top:24px;width:750px;height:352px;border-radius:12px;border:5px solid #0A0A08;
+    box-sizing:border-box;overflow:hidden;
+    background:linear-gradient(180deg,#227C58 0,#1F8B59 46%,#2FB477 78%,#3BE3A6 100%)}
+  .dgd-bn u{position:absolute;left:0;bottom:0;width:100%;height:190px;text-decoration:none;
+    background:radial-gradient(120% 100% at 50% 100%,rgba(110,255,200,.55) 0,rgba(110,255,200,0) 62%)}
+  /* 크리스탈 기둥 — 좌우에 하나씩 */
+  .dgd-bn s{position:absolute;bottom:0;width:96px;height:210px;text-decoration:none;
+    background:linear-gradient(160deg,#7CFFD2 0,#28A97A 55%,#146B4C 100%);
+    clip-path:polygon(50% 0,100% 34%,84% 100%,16% 100%,0 34%)}
+  .dgd-bn s:nth-of-type(1){left:52px}
+  .dgd-bn s:nth-of-type(2){right:64px;width:74px;height:158px}
+  /* 슬라임 실루엣 — 리본이 이 위를 반투명하게 덮는다 */
+  .dgd-bn b{position:absolute;left:50%;bottom:14px;width:300px;height:214px;margin-left:-150px;
+    border-radius:48% 48% 42% 42%/62% 62% 38% 38%;
+    background:radial-gradient(70% 70% at 42% 32%,#1E7A55 0,#0E5238 58%,#073626 100%)}
+  .dgd-bn b::before,.dgd-bn b::after{content:'';position:absolute;top:76px;width:34px;height:44px;
+    border-radius:50%;background:#052A1D}
+  .dgd-bn b::before{left:78px}
+  .dgd-bn b::after{right:78px}
+
+  /* 상태 리본 600x61 (local 82,289) — 알약이 아니라 좌측이 ◀ 로 파인 반투명 띠 */
+  .dgd-rb{left:82px;top:289px;width:600px;height:61px;background:rgba(0,0,0,.38);
+    clip-path:polygon(21px 0,599px 0,582px 61px,21px 61px,0 50%);
+    display:flex;align-items:center;justify-content:center}
+  .dgd-rb i{font-size:28px;line-height:1;font-weight:900;color:#FA716C;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;
+    letter-spacing:-4px;text-indent:-4px;transform:scaleX(1.07) translateY(1px)}
+
+  /* 난이도 선택 행 (local 171~591, 392~566) */
+  .dgd-plq{left:291px;top:392px;width:180px;height:175px;
+    background:#B49F88;
+    clip-path:polygon(16% 30%,4% 6%,29% 16%,71% 16%,96% 6%,84% 30%,100% 58%,84% 100%,16% 100%,0 58%)}
+  .dgd-ar{width:81px;height:84px;top:450px;padding:0;border:0;background:none;cursor:pointer;
+    font-family:inherit;font-size:88px;line-height:84px;font-weight:900;color:#fff;
+    -webkit-text-stroke:12px #000;paint-order:stroke fill}
+  .dgd-ar.l{left:171px}
+  .dgd-ar.r{left:510px}
+  .dgd-ar:disabled{opacity:.38;cursor:default}
+  .dgd-lv{left:171px;top:420px;width:420px;height:40px;line-height:40px;font-size:30px;
+    color:#FEF26C;-webkit-text-stroke:5px #000}
+  .dgd-fl{left:171px;top:466px;width:420px;height:45px;line-height:45px;font-size:57px;
+    -webkit-text-stroke:7px #000}
+
+  /* 보상 박스 730x179 (local 16,610) */
+  .dgd-rw{left:16px;top:610px;width:730px;height:179px;border-radius:35px;background:#C7AF95}
+  .dgd-rwl{left:16px;top:600px;width:730px;height:40px;line-height:40px;font-size:35px;
+    -webkit-text-stroke:5px #000}
+  .dgd-rwl i{transform:scaleX(.88)}
+  .dgd-fr{left:317px;top:640px;width:128px;height:128px;border-radius:26px;box-sizing:border-box;
+    border:6px solid #000;background:#FDC532;
+    display:flex;align-items:center;justify-content:center}
+  .dgd-fr em{width:104px;height:104px;border-radius:20px;background:#D37C13;font-style:normal;
+    display:flex;align-items:center;justify-content:center;font-size:62px;line-height:1}
+  .dgd-amt{left:16px;top:744px;width:730px;height:40px;line-height:40px;font-size:42px;
+    -webkit-text-stroke:6px #000}
+  .dgd-amt i{transform:scaleX(1.15)}
+
+  /* 입장권 알약 + 연속 도전 체크박스 (local y 824~877) */
+  .dgd-tk{left:155px;top:827px;width:164px;height:45px;border-radius:22px;background:#736757;
+    text-align:center;line-height:45px}
+  .dgd-tk i{font-size:29px;font-weight:900;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:translateX(6px) scaleX(1.36)}
+  .dgd-tki{left:118px;top:824px;width:69px;height:54px;font-size:44px;line-height:54px;text-align:center;
+    transform:rotate(-18deg);transform-origin:50% 50%}
+  .dgd-cb{left:446px;top:830px;width:40px;height:40px;border-radius:50%;box-sizing:border-box;
+    border:2px solid #000;padding:0;cursor:pointer;font-family:inherit;
+    background:radial-gradient(closest-side,#87614A 0 62%,#7C5A44 62% 82%,#A9775E 82% 100%)}
+  .dgd-cb::after{content:'';position:absolute;left:9px;top:11px;width:18px;height:9px;
+    border:solid #F0D9BA;border-width:0 0 5px 5px;transform:rotate(-45deg);opacity:0}
+  .dgd-cb.on::after{opacity:1}
+  .dgd-cbl{left:494px;top:829px;width:280px;height:40px;line-height:40px;font-size:29px;text-align:left;
+    -webkit-text-stroke:5px #000}
+  .dgd-cbl i{transform:translateX(-3px) scaleX(.915);transform-origin:0 50%}
+
+  /* 하단 버튼 2개 249x120 · gap 50 (local 107 / 406, top 900) */
+  .dgd-b{top:900px;width:249px;height:120px;border-radius:40px;box-sizing:border-box;padding:0;
+    border:7px solid #000;border-left-width:6px;border-right-width:6px;cursor:pointer;
+    font-family:inherit;font-weight:900;font-size:38px;line-height:1;color:#fff;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+  .dgd-b i{transform:translateY(-6px) scaleX(.94)}
+  .dgd-b.k{left:107px;
+    background:linear-gradient(180deg,#A6A11D 0 8px,#AC931D 8px,#AB7105 84%,
+      #C9A63A 84% 91%,#905105 91%)}
+  .dgd-b.g{left:406px;
+    background:linear-gradient(180deg,#ACFE85 0 8px,#76F34A 8px,#76D925 84%,
+      #A8FB7E 84% 91%,#3FBC2C 91%)}
+  .dgd-b.k i{font-size:60px;-webkit-text-stroke:0;transform:translateY(-2px)}
+  .dgd-b:disabled{cursor:default}
 </style>
 </head>
 <body>
@@ -1007,6 +1129,29 @@
       <div class="dns-t on"><b>던전</b><s></s></div>
     </div>
   </div>
+  <!-- 04 던전 세부 팝업. 폭 796 짜리 가운데 다이얼로그로 규격이 공용 #modal 과 달라 자체 오버레이. -->
+  <div id="dgdw"><div class="dgd-box">
+    <div class="dgd-head"><i id="dgdTitle">보석 던전</i></div>
+    <div class="dgd-body">
+      <div class="dgd-bn"><u></u><s></s><s></s><b></b></div>
+      <div class="dgd-rb"><i id="dgdState">어두운 밤 상태</i></div>
+      <div class="dgd-plq"></div>
+      <button class="dgd-ar l" id="dgdPrev">◀</button>
+      <button class="dgd-ar r" id="dgdNext">▶</button>
+      <div class="dgd-lv dgd-t"><i>레벨</i></div>
+      <div class="dgd-fl dgd-t"><i id="dgdFloor">3</i></div>
+      <div class="dgd-rw"></div>
+      <div class="dgd-rwl dgd-t"><i>보상</i></div>
+      <div class="dgd-fr"><em id="dgdIcon">💎</em></div>
+      <div class="dgd-amt dgd-t"><i id="dgdAmt">800</i></div>
+      <div class="dgd-tk"><i id="dgdTry">2/2</i></div>
+      <div class="dgd-tki">🎟️</div>
+      <button class="dgd-cb" id="dgdAuto"></button>
+      <div class="dgd-cbl dgd-t"><i>연속 도전</i></div>
+      <button class="dgd-b k" id="dgdSweep"><i>🔒</i></button>
+      <button class="dgd-b g" id="dgdGo"><i>도전</i></button>
+    </div>
+  </div></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
 
@@ -3341,11 +3486,68 @@ function renderDun(){
   setBody('bDun', h);
 }
 $('bDun').addEventListener('click', e => {
+  /* 도전 버튼은 곧바로 전투하지 않고 04 던전 세부 팝업을 연다 */
   const a = e.target.closest('[data-dun]');
-  if(a){ challengeDungeon(DUNGEONS.find(d => d.id === a.dataset.dun)); return; }
+  if(a){ openDunDetail(DUNGEONS.find(d => d.id === a.dataset.dun)); return; }
   const b = e.target.closest('[data-sweep]');
   if(b) sweepDungeon(DUNGEONS.find(d => d.id === b.dataset.sweep));
 });
+
+/* ---- 04 던전 세부 팝업 -------------------------------------------------
+   측정표 docs/measure/04-던전세부팝업.md · 비평 docs/review/04-던전세부팝업.md
+   층(레벨) 을 ◀▶ 로 고르고, 고른 층이 현재 층이면 «도전», 이전 층이면 «소탕»(즉시 보상).
+   밸런스 상수는 건드리지 않는다 — 기존 challengeDungeon / sweepDungeon 을 그대로 호출한다. */
+let dgdDun = null;      /* 지금 보고 있는 던전 */
+let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
+let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
+
+const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic:'고대의 잔향 상태',
+                    growth:'수련의 새벽 상태', boss:'마왕의 저주 상태' };
+
+function openDunDetail(d){
+  if(!d) return;
+  dgdDun = d;
+  dgdFloor = S.dun[d.id];
+  renderDunDetail();
+  $('dgdw').classList.add('on');
+}
+function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; }
+
+function renderDunDetail(){
+  const d = dgdDun; if(!d) return;
+  const cur = S.dun[d.id], left = S.daily.dun[d.id], rw = d.rw(dgdFloor);
+  $('dgdTitle').textContent = d.n;
+  $('dgdState').textContent = DUN_STATE[d.id] || '어두운 밤 상태';
+  $('dgdFloor').textContent = dgdFloor;
+  $('dgdTry').textContent = left + '/' + DUN_TRY;
+  /* 보상은 대표 재화 1종만 크게 보여준다 (레퍼런스와 동일 구조) */
+  const main = rw.gold ? ['🪙', rw.gold] : rw.dia ? ['💎', rw.dia]
+             : rw.rel  ? ['🔮', rw.rel]  : ['🧩', rw.frag];
+  $('dgdIcon').textContent = main[0];
+  $('dgdAmt').textContent  = fmt(main[1]);
+  $('dgdPrev').disabled = dgdFloor <= 1;
+  $('dgdNext').disabled = dgdFloor >= cur;
+  /* 고른 층이 현재 층이면 도전, 이전 층이면 소탕 */
+  const sweep = dgdFloor < cur;
+  $('dgdGo').querySelector('i').textContent = sweep ? '소탕' : '도전';
+  $('dgdGo').disabled = left <= 0;
+  $('dgdGo').style.filter = left <= 0 ? 'grayscale(.75) brightness(.8)' : '';
+  $('dgdAuto').classList.toggle('on', dgdAutoOn);
+}
+
+$('dgdPrev').onclick = () => { if(dgdFloor > 1){ dgdFloor--; renderDunDetail(); } };
+$('dgdNext').onclick = () => { if(dgdDun && dgdFloor < S.dun[dgdDun.id]){ dgdFloor++; renderDunDetail(); } };
+$('dgdAuto').onclick = () => { dgdAutoOn = !dgdAutoOn; renderDunDetail(); };
+$('dgdSweep').onclick = () => {};   /* 레퍼런스의 잠긴 유료 버튼 — 아직 미구현 */
+$('dgdGo').onclick = () => {
+  const d = dgdDun; if(!d) return;
+  const sweep = dgdFloor < S.dun[d.id];
+  closeDunDetail();
+  if(sweep) sweepDungeon(d); else challengeDungeon(d);
+  /* 03 의 던전 리스트 페이지가 뒤에 열려 있으면 남은 횟수·층을 갱신한다 */
+  if($('dunw').classList.contains('on')) renderDunPage();
+};
+$('dgdw').onclick = e => { if(e.target === $('dgdw')) closeDunDetail(); };
 
 /* ---- 상점 탭 ---- */
 function renderShop(){
@@ -3543,18 +3745,8 @@ $('dunList').addEventListener('click', e => {
       + '현재 최고 스테이지 <b>' + S.best + '</b></p>');
     return;
   }
-  /* 04 던전 세부 팝업이 들어오기 전까지의 임시 진입점 — 도전/소탕 선택만 제공한다 */
-  const f = S.dun[d.id], need = d.req(f);
-  showModal('<h2>' + d.n + '</h2>'
-    + '<p>' + d.d + '<br>현재 <b>' + f + '층</b> · 요구 전투력 <b style="color:'
-    + (cp() >= need ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(need) + '</b><br>'
-    + '오늘 남은 입장 <b>' + S.daily.dun[d.id] + '/' + DUN_TRY + '</b></p>'
-    + '<button class="gbtn gold" id="dunSweep"' + (S.daily.dun[d.id] > 0 && f > 1 ? '' : ' disabled')
-    + '>⚡ 소탕</button>'
-    + '<button class="gbtn green" id="dunGo"' + (S.daily.dun[d.id] > 0 ? '' : ' disabled')
-    + '>도전</button>');
-  $('dunGo').onclick = () => { challengeDungeon(d); renderDunPage(); };
-  $('dunSweep').onclick = () => { sweepDungeon(d); renderDunPage(); };
+  /* 04 던전 세부 팝업 — 03 이 남겨 둔 임시 진입점을 정식 팝업으로 교체했다 */
+  openDunDetail(d);
 });
 $('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
 /* 탭바를 누르면 던전 페이지는 닫힌다 (탭바 자체는 A1 구간이라 손대지 않는다) */
