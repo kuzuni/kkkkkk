@@ -3234,24 +3234,24 @@
   /* 가이드 카드 898×166 · 검정 6 + 밝은 림 7(인셋) · radius 40(바깥). 카드1 만 «배색 반전»
      (청회 몸통+흰 글자) — 스펙 문서의 «첫 카드 강조»의 실체다 */
   .df-card{position:absolute;left:91px;width:898px;height:166px;box-sizing:border-box;
-    border:6px solid #000;border-radius:44px;background:#F0D9BA;box-shadow:inset 0 0 0 7px #FFF5DC}
+    border:7px solid #000;border-radius:44px;background:#F0D9BA;box-shadow:inset 0 0 0 7px #FFF5DC}
   .df-card.c1{top:705px;background:#7D86A7;box-shadow:inset 0 0 0 7px #97A0C9}
   .df-card.c2{top:885px}
   .df-card.c3{top:1065px}
   /* 파인 바닥 패널 697×99 radius21 — ref x126(패딩기준 29) · 세로 중앙 */
-  .df-card .pnl{position:absolute;left:29px;top:27px;width:697px;height:99px;border-radius:21px;
+  .df-card .pnl{position:absolute;left:28px;top:26px;width:697px;height:99px;border-radius:21px;
     background:#C7AF95}
   .df-card.c1 .pnl{background:#636A86}
   /* 아이콘 100×100 박스 — 잉크 중심 c1 (194.5,중앙) / c2·c3 (185.5,중앙) */
-  .df-ic{position:absolute;left:38px;top:27px;width:100px;height:100px;
+  .df-ic{position:absolute;left:37px;top:26px;width:100px;height:100px;
     display:flex;align-items:center;justify-content:center}
-  .df-card.c1 .df-ic{left:47px}
+  .df-card.c1 .df-ic{left:46px}
   .df-ic>b{font-size:86px;line-height:100px}
   /* c1 아이콘 — ref «보물상자» 를 픽셀맵대로 CSS 재작화 (100×75 @ ref x145–244 · y961–1035).
      ⚔️ 이모지는 같은 창에서 잉크가 ref 6400px 대비 2610px(41%) 밖에 안 차 ② 상대크기를 회수할 수
      없었다(3회차 자가 스캔). 3단 구조 — 뚜껑(청록 패널) / 몸통(은청 + 노란 자물쇠) / 받침(청록 패널).
      실측색: 은백 #D7DAFF · 페리윙클 #8E93CA/#A6A9DE · 청록 #2B7051/#26553F · 자물쇠 #FFD247 */
-  .df-ic1{position:absolute;left:48px;top:40px;width:100px;height:75px;box-sizing:border-box;
+  .df-ic1{position:absolute;left:47px;top:39px;width:100px;height:75px;box-sizing:border-box;
     border:3px solid #000;border-radius:19px 19px 11px 11px;overflow:hidden;background:#A6A9DE}
   .df-ic1 s{position:absolute;display:block;left:0;right:0}
   /* 뚜껑 y961–989 — 은백→페리윙클 + 가운데 청록 패널(좌우 검정 3px 기둥) */
@@ -3280,14 +3280,14 @@
   .df-ic .f2{position:absolute;right:-3px;bottom:-3px;font-size:46px;line-height:46px}
   /* c3 아이콘은 기하 도형이라 CSS 작화 — 검정 링 5 + 골드 그라 원 79×78(ref x156–234 y1314–1391),
      레드닷 25×24 는 원 좌상단 +45,+7 (2회차 D 지적으로 재실측 — 측정표의 «크림 96×96»은 오독) */
-  .df-ic3{position:absolute;left:59px;top:33px;width:79px;height:78px;box-sizing:border-box;
+  .df-ic3{position:absolute;left:58px;top:32px;width:79px;height:78px;box-sizing:border-box;
     border:5px solid #000;border-radius:50%;
     background:linear-gradient(180deg,#F7DDA4 0,#EEC072 55%,#E7B868 100%)}
   .df-ic3::after{content:'';position:absolute;left:40px;top:2px;width:25px;height:24px;
     border-radius:50%;background:#F22E52}
   /* 문구 — 좌정렬 시작 ref x273(패딩기준 176) · 세로 중앙. c2·c3 은 외곽선 없는 갈흑 #141108,
      c1 만 흰 채움+외곽선(실측 3.5 한쪽 → stroke 7) */
-  .df-txt{position:absolute;left:176px;top:0;height:154px;display:flex;align-items:center;
+  .df-txt{position:absolute;left:175px;top:0;height:152px;display:flex;align-items:center;
     font-size:29px;font-weight:900;color:#FAFAFA;white-space:nowrap;text-align:left;
     -webkit-text-stroke:6px #2A2420;paint-order:stroke fill}
   .df-card.c1 .df-txt{-webkit-text-stroke:7px #000}
@@ -3298,14 +3298,14 @@
   .df-card.c3 .df-txt i{transform:scaleX(.907)}
   .df-card.c3 .df-txt{line-height:32px}
   /* 노란 → 버튼 118×118(검정 6, radius 32) — 세로 그라 + 하단 그늘 6px + 광택 띠 */
-  .df-btn{position:absolute;left:744px;top:18px;width:118px;height:118px;box-sizing:border-box;
+  .df-btn{position:absolute;left:743px;top:17px;width:118px;height:118px;box-sizing:border-box;
     border:7px solid #000;border-radius:32px;cursor:pointer;padding:0;
     background:linear-gradient(180deg,#F5EF35 0,#FDD92B 10%,#FFC021 55%,#FFB514 100%);
     box-shadow:inset 0 -6px 0 #D87C0F;display:flex;align-items:center;justify-content:center}
   .df-btn::after{content:'';position:absolute;left:14px;right:14px;bottom:9px;height:3px;
     border-radius:2px;background:#FDEE2F}
   .df-btn svg{width:62px;height:50px;overflow:visible}
-  .df-btn svg path{fill:#fff;stroke:#000;stroke-width:8;paint-order:stroke fill;stroke-linejoin:round}
+  .df-btn svg path{fill:#fff;stroke:#000;stroke-width:6;paint-order:stroke fill;stroke-linejoin:round}
   /* «터치하여 닫기» — 18 실측 잉크폭 254 (09 의 251 대비 +1.2%) */
   #defw .upr-close i{transform:scaleX(.943)}
 
@@ -3844,13 +3844,13 @@
     <div class="df-title"><i>패배하였습니다</i></div>
     <div class="df-card c1"><div class="pnl"></div><div class="df-ic1"><s class="lid"></s><s class="body"></s><s class="base"></s><s class="lock"></s></div>
       <div class="df-txt"><i>상점에서 무기, 방어구, 스킬을 소환하세요</i></div>
-      <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
+      <button class="df-btn" data-dfgo="shop"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="df-card c2"><div class="pnl"></div><div class="df-ic"><b class="fl">🔥</b><b class="f1">🐹</b><b class="f2">🐱</b></div>
       <div class="df-txt"><i>골드로 햄지와 매옹이를 훈련시키세요</i></div>
-      <button class="df-btn" data-dfgo="grow"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
+      <button class="df-btn" data-dfgo="grow"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="df-card c3"><div class="pnl"></div><div class="df-ic3"></div>
       <div class="df-txt"><i>게임 속 UI의 레드닷을 따라가면서 점점 더<br>강해지세요</i></div>
-      <button class="df-btn"><svg viewBox="0 0 60 46"><path d="M0 13H32V0L60 23 32 46V33H0Z"/></svg></button></div>
+      <button class="df-btn"><svg viewBox="0 0 60 46"><path d="M0 10H32V0L60 23 32 46V36H0Z"/></svg></button></div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
   </div>
   <!-- 20 프로필 팝업 — 플레이어 스펙 정보(종합 스탯 탭). 측정표 docs/measure/20-프로필팝업스펙정보.md
