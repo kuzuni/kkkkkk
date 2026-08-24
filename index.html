@@ -129,7 +129,21 @@
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
   #stagearea{position:relative;flex:1;min-height:0;width:1080px;background:#0a0c16}
-  #view{display:block;width:1080px;height:100%}
+  /* 조이스틱 드래그가 브라우저 스크롤·확대 제스처에 먹히지 않게 한다(작업 42) */
+  #view{display:block;width:1080px;height:100%;touch-action:none}
+
+  /* ============ 작업 42 — 전투 화면 플로팅 터치 조이스틱 ============
+     레퍼런스 이미지 없음 — 모바일 관례대로 베이스 Ø220 · 노브 Ø100 · 흰 반투명(15~35%).
+     누른 지점이 베이스의 «중심»이므로 margin 으로 절반씩 당겨 left/top 을 중심 좌표로 쓴다.
+     표시 전용이라 pointer-events 는 항상 none(캔버스가 계속 포인터를 받아야 한다).
+     z-index 2 — HUD(#stinfo·#bossTm·#bossHp 는 3) 아래, 캔버스 위. */
+  #joy{position:absolute;left:0;top:0;width:220px;height:220px;margin:-110px 0 0 -110px;
+    border-radius:50%;display:none;z-index:2;pointer-events:none;box-sizing:border-box;
+    background:rgba(255,255,255,.15);border:4px solid rgba(255,255,255,.35)}
+  #joy.on{display:block}
+  #joy i{position:absolute;left:50%;top:50%;width:100px;height:100px;margin:-50px 0 0 -50px;
+    border-radius:50%;box-sizing:border-box;
+    background:rgba(255,255,255,.35);border:3px solid rgba(255,255,255,.55)}
 
   /* ============ ② 스테이지 헤더 — 측정표 docs/measure/02-기본-메인-화면.md §1 ============
      좌표 변환: 전투영역 top 은 레퍼런스 y=188 ↔ 프레임 y=104 이므로 «stagearea 기준 top = ref_y − 188».
@@ -3939,6 +3953,8 @@
 
   <div id="stagearea">
     <canvas id="view" width="1080" height="864"></canvas>
+    <!-- 작업 42 — 플로팅 터치 조이스틱. 캔버스를 직접 누른 «그 자리»에 뜬다(표시 전용, 좌표는 프레임 px) -->
+    <div id="joy"><i id="joyKnob"></i></div>
     <!-- ② 스테이지 헤더 — 라벨 + 진행바(시작/중간 노드 + 우측 보스 해골) -->
     <div id="stinfo">
       <div class="chap" id="chapN">1-1 <em>스테이지</em></div>
@@ -4482,6 +4498,73 @@ if(window.visualViewport){
   visualViewport.addEventListener('scroll', fit);
 }
 fit();
+
+/* ==========================================================================
+   작업 42 — 전투 화면 플로팅 터치 조이스틱 (캐릭터 수동 이동)
+   설계 확정: UI-REFERENCE 서두 «설계 확정» 9번.
+   - 캔버스(#view)를 «직접» 누른 자리에 베이스가 뜨고, 노브는 베이스 반경 안으로 clamp 된다.
+   - 데드존은 베이스 반경의 15%. 그 밖은 (d−dz)/(R−dz) 로 0~1 세기 → 이동 속도에 곱한다.
+   - 잡혀 있는 동안 step() 의 자동 카이팅·적 회피·벽 마진 푸시가 꺼지고 하드 clamp 만 남는다.
+   - 떼면(pointerup/cancel) 즉시 사라지고 자동 이동으로 복귀한다.
+   - 사이드 아이콘·탭바·팝업은 자기가 포인터를 먹으므로 여기까지 오지 않는다. 다만
+     HUD 3종(#stinfo·#bossTm·#bossHp)은 pointer-events:none 이라 캔버스로 «새어» 들어오므로
+     그 사각형 안이면 무시한다(설계 «HUD 위 터치는 뜨지 않는다»).
+   ========================================================================== */
+const JOY_R = 110, JOY_DZ = 0.15;                 /* 베이스 반경(프레임 px) · 데드존 비율 */
+const joy = { on:false, id:-1, cx:0, cy:0, dx:0, dy:0, mag:0 };
+const joyEl = $('joy'), joyKnob = $('joyKnob');
+const JOY_HUD = '#stinfo, #bossTm.on, #bossHp.on';
+
+/* 클라이언트 좌표 → #stagearea 기준 프레임 px (#app 은 fit() 이 scale 하므로 되돌린다) */
+function joyLocal(ev){
+  const r = $('stagearea').getBoundingClientRect();
+  const sc = r.width/FRAME_W || 1;
+  return { x:(ev.clientX - r.left)/sc, y:(ev.clientY - r.top)/sc };
+}
+function joyBlocked(ev){
+  for(const el of document.querySelectorAll(JOY_HUD)){
+    const r = el.getBoundingClientRect();
+    if(r.width > 0 && ev.clientX >= r.left && ev.clientX <= r.right
+       && ev.clientY >= r.top && ev.clientY <= r.bottom) return true;
+  }
+  return false;
+}
+function joySet(px, py){                          /* 노브 위치 → 이동 벡터(단위벡터 + 세기) */
+  let dx = px - joy.cx, dy = py - joy.cy;
+  const d = Math.hypot(dx, dy), dz = JOY_R*JOY_DZ;
+  const k = d > JOY_R ? JOY_R/d : 1;
+  joyKnob.style.transform = 'translate(' + (dx*k).toFixed(1) + 'px,' + (dy*k).toFixed(1) + 'px)';
+  if(d <= dz){ joy.dx = 0; joy.dy = 0; joy.mag = 0; return; }
+  joy.dx = dx/d; joy.dy = dy/d;
+  joy.mag = Math.min(1, (Math.min(d, JOY_R) - dz) / (JOY_R - dz));
+}
+function joyStart(ev){
+  if(joy.on || (ev.button !== undefined && ev.button > 0) || joyBlocked(ev)) return;
+  const p = joyLocal(ev);
+  joy.on = true; joy.id = ev.pointerId;
+  joy.cx = p.x; joy.cy = p.y;
+  joyEl.style.left = p.x.toFixed(1) + 'px'; joyEl.style.top = p.y.toFixed(1) + 'px';
+  joyEl.classList.add('on');
+  joySet(p.x, p.y);                               /* 처음엔 중심 = 데드존 = 정지 */
+  try{ cvs.setPointerCapture(ev.pointerId); }catch(_){}
+  ev.preventDefault();
+}
+function joyMove(ev){
+  if(!joy.on || ev.pointerId !== joy.id) return;
+  const p = joyLocal(ev);
+  joySet(p.x, p.y);
+  ev.preventDefault();
+}
+function joyEnd(ev){
+  if(!joy.on || (ev && ev.pointerId !== undefined && ev.pointerId !== joy.id)) return;
+  joy.on = false; joy.id = -1; joy.dx = 0; joy.dy = 0; joy.mag = 0;
+  joyEl.classList.remove('on');
+}
+cvs.addEventListener('pointerdown', joyStart);
+/* 캡처가 걸리면 이벤트는 캔버스로 오지만 window 까지 버블한다 — 캡처가 실패해도 놓치지 않게 window 에 건다 */
+addEventListener('pointermove', joyMove);
+addEventListener('pointerup', joyEnd);
+addEventListener('pointercancel', joyEnd);
 
 /* ---------------- 스프라이트 ---------------- */
 const ATLAS = window.ATLAS || {};
@@ -5479,27 +5562,37 @@ function step(dt){
 
     const tg = nearest(player.x, player.y);
     let td = tg ? Math.hypot(tg.x-player.x, tg.y-player.y) : 0;
-    let mx = 0, my = 0;
+    let mx = 0, my = 0, mmag = 1;
+    /* 조준(가장 가까운 적)은 작업 42 수동 이동 중에도 그대로 동작한다 */
     if(tg){
       const dx = (tg.x-player.x)/td, dy = (tg.y-player.y)/td;
-      const want = 135;
-      if(td > want + 30){ mx += dx; my += dy; }
-      else if(td < want - 25){ mx -= dx*1.2; my -= dy*1.2; }
       player.aim = Math.atan2(dy, dx);
       player.flip = Math.cos(player.aim) > 0;   /* 기사 원본은 왼쪽을 봄 */
     }
-    for(const e of enemies){
-      const dx = player.x-e.x, dy = player.y-e.y;
-      const d = Math.hypot(dx, dy) || 1;
-      if(d < 115){ const w = (115-d)/115; mx += dx/d*w*1.7; my += dy/d*w*1.7; }
+    if(joy.on){
+      /* 작업 42 — 조이스틱이 잡혀 있는 동안은 이동 벡터를 손가락이 «직접» 정한다.
+         자동 카이팅·적 회피·벽 마진 푸시는 전부 끄고 아래 하드 clamp 만 남긴다. */
+      mx = joy.dx; my = joy.dy; mmag = joy.mag;
+    }else{
+      if(tg){
+        const dx = (tg.x-player.x)/td, dy = (tg.y-player.y)/td;
+        const want = 135;
+        if(td > want + 30){ mx += dx; my += dy; }
+        else if(td < want - 25){ mx -= dx*1.2; my -= dy*1.2; }
+      }
+      for(const e of enemies){
+        const dx = player.x-e.x, dy = player.y-e.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if(d < 115){ const w = (115-d)/115; mx += dx/d*w*1.7; my += dy/d*w*1.7; }
+      }
+      const m = 150;
+      if(player.x < m) mx += (m-player.x)/m*2.4;
+      if(player.x > WORLD.w-m) mx -= (player.x-(WORLD.w-m))/m*2.4;
+      if(player.y < m) my += (m-player.y)/m*2.4;
+      if(player.y > WORLD.h-m) my -= (player.y-(WORLD.h-m))/m*2.4;
     }
-    const m = 150;
-    if(player.x < m) mx += (m-player.x)/m*2.4;
-    if(player.x > WORLD.w-m) mx -= (player.x-(WORLD.w-m))/m*2.4;
-    if(player.y < m) my += (m-player.y)/m*2.4;
-    if(player.y > WORLD.h-m) my -= (player.y-(WORLD.h-m))/m*2.4;
 
-    const ml = Math.hypot(mx, my), sp = stat.speed;
+    const ml = Math.hypot(mx, my), sp = stat.speed*mmag;
     if(ml > 0.02){
       player.vx += ((mx/ml)*sp - player.vx) * Math.min(1, dt*9);
       player.vy += ((my/ml)*sp - player.vy) * Math.min(1, dt*9);
