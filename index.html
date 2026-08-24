@@ -3829,6 +3829,20 @@ const QUESTS = [
   { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ g:700*Math.pow(2.0,s),  c:80 + s*36 }) },
   { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ g:500*Math.pow(2.0,s),  c:180 + s*80 }) }
 ];
+/* 일일 퀘스트 (22번 «일일» 탭) — 자정 리셋. 진행 = 누적 카운터 − 자정 스냅샷(S.daily.qb).
+   보상은 레퍼런스처럼 전부 다이아. 수령 여부는 S.daily.q (날짜 바뀌면 통째로 초기화) */
+const DQUESTS = [
+  { id:'dsum',  n:'아무거나 소환 30회',  goal:30,  dia:50,  get:() => S.summons },
+  { id:'dupg',  n:'아무 강화 100회',     goal:100, dia:100, get:() => S.upgrades },
+  { id:'dkill', n:'적 500마리 처치',     goal:500, dia:50,  get:() => S.totalKills },
+  { id:'dspin', n:'룰렛 1회 돌리기',     goal:1,   dia:50,  get:() => S.cnt.spins },
+  { id:'ddun',  n:'던전 3회 도전하기',   goal:3,   dia:50,  get:() => S.cnt.dungeon }
+];
+const dqSnap  = () => DQUESTS.reduce((o,q) => (o[q.id] = q.get(), o), {});
+const dqProg  = q => { if(!S.daily.qb) S.daily.qb = dqSnap();
+                       return Math.max(0, q.get() - (S.daily.qb[q.id] || 0)); };
+const dqDone  = q => !!S.daily.q[q.id];
+const dqReady = q => !dqDone(q) && dqProg(q) >= q.goal;
 
 /* ---- 기본 강화 (골드) ---- */
 const UPG = [
@@ -3910,7 +3924,8 @@ const DEF = () => ({
   mail:{}, tuto:0,
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
-          freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}) },   /* 상자별 오늘 남은 무료 10연 */
+          freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
+          q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
@@ -3947,6 +3962,7 @@ function dailyCheck(){
     DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
     S.daily.adBuy = {};                 /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
+    S.daily.q = {}; S.daily.qb = dqSnap();   /* 일일 퀘스트 리셋 (22) */
     uiDirty = true;
   }
 }
@@ -4964,7 +4980,7 @@ function drawHud(){
   sideAlert('attend', S.att.date !== today());
   sideAlert('roul',   S.daily.spins > 0);
   sideAlert('mail',   mailLeft() > 0);
-  sideAlert('quest',  QUESTS.some(questReady));
+  sideAlert('quest',  QUESTS.some(questReady) || DQUESTS.some(dqReady));
   sideAlert('dun',    DUNGEONS.some(d => S.daily.dun[d.id] > 0));
   sideAlert('promo',  canPromote());
   drawFac();
@@ -5298,20 +5314,27 @@ function claimQuest(q){
   S.gold += rw.g; S.dia += rw.c;
   st.base = q.get(); st.s++;
   uiDirty = true; save();
-  popup('📜 퀘스트 완료!', '<p><b>' + q.n + '</b> 달성!<br>골드 <b>+' + fmt(rw.g) + '</b><br>다이아 <b>💎+' + fmt(rw.c) + '</b></p>');
+  openQuest();                                /* 22: 팝업을 유지한 채 행만 갱신 */
+}
+function claimDQuest(q){
+  if(!dqReady(q)) return;
+  S.dia += q.dia; S.daily.q[q.id] = 1;
+  uiDirty = true; save();
+  openQuest();
 }
 function claimAllQuests(){
-  let n = 0, g = 0, c = 0, guard = 0;
+  let n = 0, guard = 0;
   while(guard++ < 300){
     const q = QUESTS.find(questReady);
     if(!q) break;
     const st = S.quest[q.id], rw = q.rw(st.s);
-    S.gold += rw.g; S.dia += rw.c; g += rw.g; c += rw.c;
+    S.gold += rw.g; S.dia += rw.c;
     st.base = q.get(); st.s++; n++;
   }
+  DQUESTS.filter(dqReady).forEach(q => { S.dia += q.dia; S.daily.q[q.id] = 1; n++; });
   if(!n) return;
   uiDirty = true; save();
-  popup('📜 퀘스트 일괄 수령', '<p>퀘스트 <b>' + n + '</b>건 완료!<br>골드 <b>+' + fmt(g) + '</b><br>다이아 <b>💎+' + fmt(c) + '</b></p>');
+  openQuest();
 }
 const tutoCur   = () => S.tuto < TUTO.length ? TUTO[S.tuto] : null;
 const tutoReady = () => { const t = tutoCur(); return !!t && t.get() >= t.goal; };
