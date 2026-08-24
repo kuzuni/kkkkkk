@@ -403,12 +403,32 @@
      돌고, 사이드 아이콘이 위로 밀리며 찌그러졌다. 이제 캔버스 높이는 «패널 닫힘» 기준으로 항상 고정된다.
      z-index 9 — 캔버스 위 오버레이(스테이지 헤더·배틀풋 z3, 사이드 z5)와 상단 HUD(z6) 위,
      딤/다이얼로그/전체화면 껍데기(z28~40) 아래. 07 스킬 시트(:has)도 같은 z9 를 쓴다. */
+  /* 작업 51 — 넓은 화면(frameH 1600 clamp)에서 시트가 프레임 위로 잘리지 않게 높이를 제한한다.
+     상한 = frameH − HUD(104) − 탭바(180). #panel 은 #app(=frameH) 기준 absolute 라
+     100% = frameH 이고, bottom:180 을 이미 먹었으므로 calc(100% - 284px) 가 곧 그 상한이다.
+     9:16(1920) 이상에서는 상한 1636 > 시트 1484 라 아무것도 달라지지 않는다(회귀 0). */
   #panel{position:absolute;left:0;right:0;bottom:180px;z-index:9;
-    height:844px;min-height:0;background:#0d1020;display:flex;flex-direction:column}
+    height:844px;min-height:0;max-height:calc(100% - 284px);
+    background:#0d1020;display:flex;flex-direction:column}
   .body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 28px;display:none}
   .body.on{display:block}
   .body::-webkit-scrollbar{width:10px}
   .body::-webkit-scrollbar-thumb{background:#2a3357;border-radius:6px}
+
+  /* ==========================================================================
+     작업 51 — 바닥 시트 «세로 접힘» 공통 뷰포트
+     9:16 보다 넓은 화면에서는 frameH 가 1600 으로 clamp 되는데 바닥 시트는 1920 기준
+     고정 높이(장비 1584 · 스킬/동료 1484)라 시트 상단이 프레임 위로 잘려 나갔다.
+     시트에 `max-height` 를 걸어 «frameH − 104 − 180» 안에 가두고, 넘치는 만큼은
+     본문(.shsc)이 내부 스크롤로 흡수한다. 헤더와 서브탭 바는 뷰포트 «밖» 형제라 고정된다.
+     .shsc-in 높이는 «본문 콘텐츠의 마지막 bottom» 이라 9:16 에서는 뷰포트가 항상 더 커
+     스크롤이 걸리지 않는다 → 세로 폰 회귀 0. 자식 좌표는 시트 local 그대로 쓴다.
+     ⚠ 시트 안 절대배치 규칙(`.eqp>*` 등)은 직속 자식만 잡으므로 `.shsc-in>*` 도 같이 적을 것.
+     ========================================================================== */
+  .shsc{position:absolute;left:0;right:0;overflow-x:hidden;overflow-y:auto;
+    overscroll-behavior:contain;scrollbar-width:none}
+  .shsc::-webkit-scrollbar{width:0;height:0}
+  .shsc-in{position:relative;width:100%}
 
   /* 하단 탭바 — 레퍼런스 02·05·10·23번 실측값 (docs/measure/A1-탭바.md, 1080 폭 1:1)
      바 높이 180 · 상단 검정 테두리 5 + 갈색 하이라이트 4 · 배경 2톤(#42362A / #33291D, 경계 +104)
@@ -2320,8 +2340,12 @@
   .tr-dim{inset:0;background:rgba(0,0,0,.34)}
 
   /* §0 시트 — 전폭, 상단 radius 28, 검정 상단 테두리 8px */
-  .tr-sheet{left:0;right:0;bottom:0;height:1245px;background:#E6C695;
-    border-radius:56px 56px 0 0;overflow:hidden}
+  /* 작업 51 — 상한 = frameH − HUD 104 − 탭바 180. #trw 가 bottom:180 을 이미 먹었으므로
+     calc(100% - 104px) 가 그 상한이다. 시트 1245 는 최저 상한(frameH 1600 → 1316)보다
+     작아 오늘은 걸리지 않지만(실측 top 175), 시트가 1316 을 넘게 커지면 06·07 처럼
+     본문에 `.shsc` 뷰포트를 넣어야 한다 — 그냥 두면 서브탭 바가 잘린다. */
+  .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 104px);
+    background:#E6C695;border-radius:56px 56px 0 0;overflow:hidden}
   .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:#141414}
   .tr-sheet>*{position:absolute}
   .tr-wave{left:0;right:0;top:0;height:8px;background:#141414;z-index:3}
@@ -2492,9 +2516,17 @@
 
   /* 패널 — 검정 테두리 6px 은 배경으로 깔고 자식은 local 좌표를 그대로 쓴다
      (border 를 주면 절대배치 자식이 6px 밀린다 — 03 에서 잡은 함정) */
-  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;background:#000;
-    border-radius:38px 38px 0 0;overflow:hidden}
-  .eqp>*{position:absolute}
+  /* 작업 51 — #eqw 는 top:0/bottom:180 이라 100% = frameH − 180.
+     거기서 HUD 104 를 더 빼면 시트 상한이 된다(9:16 상한 1636 > 1584 → 회귀 0). */
+  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;max-height:calc(100% - 104px);
+    background:#000;border-radius:38px 38px 0 0;overflow:hidden}
+  .eqp>*,.eqp .shsc-in>*{position:absolute}
+  /* 헤더는 본문 뷰포트 «위»에 얹힌다 — 스크롤된 카드가 헤더를 덮지 않게 (DOM 순서상 뒤라 z 필요) */
+  .eqp-hd,.eqp-ti{z-index:3}
+  /* 본문 뷰포트 — 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1584−1444=140).
+     콘텐츠 마지막 bottom 은 카드 컨테이너 1418 이라 9:16(뷰포트 1444)에서는 스크롤 없음 */
+  .eqp>.shsc{top:0;bottom:140px}
+  .eqp .shsc-in{height:1418px}
 
   /* 헤더 583~694(h112) + 상단 베벨 6px + 좌우 베벨 7px */
   .eqp-hd{left:6px;top:6px;width:1068px;height:112px;background:#5B493F;
@@ -2515,7 +2547,9 @@
   .eqp-ti>i{transform:scaleX(.98)}
 
   /* 본문 크림 696~2159, 좌우 안쪽 어두운 림 6px */
-  .eqp-bd{left:6px;top:118px;width:1068px;height:1465px;background:#ECCA99;
+  /* 작업 51 — 높이 1465 대신 bottom:1px. 시트가 접혀도 크림 면이 서브탭 바 뒤까지 채운다
+     (1584 에서 118..1583 = h1465 로 종전과 Δ0) */
+  .eqp-bd{left:6px;top:118px;bottom:1px;width:1068px;background:#ECCA99;
     box-shadow:inset 6px 0 0 #DBB07B,inset -6px 0 0 #DBB07B}
 
   /* 카드 컨테이너 34,711 1013x1284 — 배경(하늘/바닥/잠금띠)만 여기서 클립한다.
@@ -2688,8 +2722,9 @@
     box-shadow:0 0 0 3px #000}
 
   /* ---- 최하단 서브탭 x66 w948 h97 (셀 4등분 237) ---- */
-  .eqtb{left:66px;top:1444px;width:948px;height:97px;border-radius:49px;background:#61503C;
-    box-shadow:inset 0 0 0 8px #000,inset 0 0 0 15px #705F4B}
+  /* 작업 51 — top:1444 대신 bottom:43(=1584−1541). 시트가 접혀도 바닥에 붙어 있는다 */
+  .eqtb{left:66px;bottom:43px;width:948px;height:97px;border-radius:49px;background:#61503C;
+    box-shadow:inset 0 0 0 8px #000,inset 0 0 0 15px #705F4B;z-index:3}
   .eqtb>*{position:absolute}
   /* 구분선 — 셀 경계 x539.5/776.5, y2040~2099 */
   .eqtd{top:19px;width:4px;height:60px;background:#483A2A}
@@ -2745,7 +2780,13 @@
      `syncPanel()` 이 인라인 style.display 를 직접 쓰므로 !important 가 필요하다 */
   #panel:has(:is(#bSk,#bPet).on) #herosub{display:none!important}
   :is(#bSk,#bPet).on{padding:0;overflow:hidden;position:relative;display:block}
-  :is(#bSk,#bPet)>*{position:absolute}
+  :is(#bSk,#bPet)>*,:is(#bSk,#bPet) .shsc-in>*{position:absolute}
+  /* 작업 51 — 본문 뷰포트: 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1477−1337=140).
+     본문 콘텐츠 마지막 bottom 은 버튼 1289 라 9:16(뷰포트 1337)에서는 스크롤이 안 걸린다.
+     헤더는 DOM 순서상 뷰포트보다 앞이라 z-index 로 위에 올려야 카드가 헤더를 덮지 않는다. */
+  :is(#bSk,#bPet)>.shsc{top:0;bottom:140px}
+  :is(#bSk,#bPet) .shsc-in{height:1289px}
+  .sk-head{z-index:3}
   :is(#bSk,#bPet) i,:is(#bSk,#bPet) b,:is(#bSk,#bPet) u,:is(#bSk,#bPet) s,:is(#bSk,#bPet) em{display:block;font-style:normal;font-weight:900;
     text-decoration:none}
   :is(#bSk,#bPet) .sk-head>i,:is(#bSk,#bPet) .sk-tot>i,:is(#bSk,#bPet) .sk-tot>em{display:inline-block}
@@ -2847,7 +2888,8 @@
       #D2D2D2 103px 109px,#757575 109px)}
 
   /* 9 서브탭 바 950x99 ref(65,2020) · 검정 6 · 배경 #61523D · 활성 세그먼트 #4B3E2D */
-  .sk-tabs{left:58px;top:1337px;width:950px;height:99px;border-radius:50px;
+  /* 작업 51 — top:1337 대신 bottom:41(=1477−1436). 시트가 접혀도 바닥에 붙어 있는다 */
+  .sk-tabs{left:58px;bottom:41px;width:950px;height:99px;border-radius:50px;z-index:3;
     border:6px solid #000;box-sizing:border-box;
     background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 79px,#706049 79px 85px,#61523D 85px)}
   .sk-tabs>*{position:absolute;top:0;height:85px}
@@ -3728,15 +3770,19 @@
       <div class="eqp-hd"></div>
       <div class="eqp-ti"><i>장비</i></div>
       <div class="eqp-bd"></div>
-      <div class="eqc">
-        <!-- 작업 25: 카드 1장. 하늘/지면 비율은 레퍼런스 카드1 그대로(398/581 = 68.5%),
-             잠금 슬롯 띠(.band)는 폐기 -->
-        <div class="sky" style="top:0;height:1284px"></div>
-        <div class="gnd" style="top:880px;height:404px"></div>
-      </div>
-      <div class="eqc-fr"></div>
-      <div class="eqc-hl"></div>
-      <div id="eqCards"></div>
+      <!-- 작업 51 — 본문(카드 컨테이너 + 전경 카드)만 스크롤 뷰포트에 넣는다.
+           헤더·서브탭 바는 뷰포트 밖 형제라 시트가 접혀도 고정된다. 자식 좌표는 시트 local 그대로. -->
+      <div class="shsc"><div class="shsc-in">
+        <div class="eqc">
+          <!-- 작업 25: 카드 1장. 하늘/지면 비율은 레퍼런스 카드1 그대로(398/581 = 68.5%),
+               잠금 슬롯 띠(.band)는 폐기 -->
+          <div class="sky" style="top:0;height:1284px"></div>
+          <div class="gnd" style="top:880px;height:404px"></div>
+        </div>
+        <div class="eqc-fr"></div>
+        <div class="eqc-hl"></div>
+        <div id="eqCards"></div>
+      </div></div>
       <div class="eqtb" id="eqTabs">
         <div class="eqtd d1"></div>
         <div class="eqtd d2"></div>
@@ -6151,7 +6197,16 @@ function endPromo(win){
 /* 기본 진입 화면은 «02 기본 메인 화면» = 패널이 닫힌 순수 전투 화면이다.
    (레퍼런스 02번에는 하단 패널이 없고 전투 영역이 HUD~탭바 사이를 전부 채운다) */
 let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = false;
-function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
+/* 작업 51 — 시트 본문 뷰포트(.shsc)는 innerHTML 교체로 통째로 새로 만들어지므로
+   `el.scrollTop` 만 살리면 재렌더(renderUI 는 골드가 늘 때마다 돈다)마다 본문이 맨 위로 튄다.
+   뷰포트 스크롤 위치도 같이 옮겨 심는다. */
+function setBody(id, html){
+  const el = $(id), st = el.scrollTop;
+  const vp = el.querySelector('.shsc'), vs = vp ? vp.scrollTop : 0;
+  el.innerHTML = html; el.scrollTop = st;
+  if(vs){ const nv = el.querySelector('.shsc'); if(nv) nv.scrollTop = vs; }
+  return el;
+}
 function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16', 'q22'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
@@ -7707,6 +7762,9 @@ function renderSkill(){
   const eq = S.eqSkill;
   let h = '<div class="sk-head"><i class="ol5">스킬</i></div>';
 
+  /* 작업 51 — 슬롯~버튼(본문)만 스크롤 뷰포트에 담는다. 헤더·서브탭 바는 뷰포트 밖 형제라 고정 */
+  h += '<div class="shsc"><div class="shsc-in">';
+
   /* 2 장착 슬롯 8칸 — 앞에서부터 장착 스킬, 나머지는 잠금 슬롯 */
   h += '<div class="sk-eqp">';
   for(let i = 0; i < 8; i++){
@@ -7746,6 +7804,8 @@ function renderSkill(){
   /* 8 버튼 2개 — [스킬 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §7, 작업 27) */
   h += '<div class="sk-btn sk-b1" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
     +  '<div class="sk-btn sk-b2" data-skup="1"><i class="ol3">일괄 강화</i></div>';
+
+  h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
   /* 9 시트 안쪽 서브탭 4개 — 레퍼런스는 동료·기타가 둘 다 잠금이지만
        우리 빌드는 동료가 해금돼 있어 라벨로 두고 «기타»만 잠금으로 둔다 */
@@ -7794,6 +7854,9 @@ function renderPet(){
   const eq = S.eqPet;
   let h = '<div class="sk-head"><i class="ol5">동료</i></div>';
 
+  /* 작업 51 — 07 과 동일. 슬롯~버튼(본문)만 스크롤 뷰포트에 담는다 */
+  h += '<div class="shsc"><div class="shsc-in">';
+
   /* 2 장착 슬롯 3칸 — 크기 115·pitch 125 는 07 과 동일, 패널(1037) 안 가로 중앙.
        좌 = (1037 - (2*125 + 115)) / 2 = 336 */
   h += '<div class="sk-eqp">';
@@ -7834,6 +7897,8 @@ function renderPet(){
   /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
   h += '<div class="sk-btn sk-b1" data-ptsum="1"><i class="ol3">동료 소환</i></div>'
     +  '<div class="sk-btn sk-b2" data-ptup="1"><i class="ol3">일괄 강화</i></div>';
+
+  h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
   /* 9 시트 안쪽 서브탭 4개 — 동료 활성 */
   h += '<div class="sk-tabs">'
