@@ -133,6 +133,12 @@ function launchOpts(){
       await page.waitForTimeout(400);
       const cats = await page.$$eval('#shopCats .shp-ct[data-cat]', (els) => els.map((e) => e.dataset.cat)).catch(() => []);
       cats.forEach((k) => openers.push({ label: 'shopcat:' + k, sel: null, shop: `#shopCats .shp-ct[data-cat="${k}"]` }));
+      /* 03 던전 페이지 서브탭(레이드 · 던전) — 던전 페이지를 연 뒤에만 보이는 2단계 오프너다(작업 46).
+         «레이드» 칸은 DPS 측정 던전 카드 리스트로 갈아 끼운다. */
+      await page.click('.tab[data-t="adv"]', { timeout: 3000, force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      const dsubs = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => e.dataset.dsub)).catch(() => []);
+      dsubs.forEach((k) => openers.push({ label: 'dunsub:' + k, sel: null, dun: `#dunSub [data-dsub="${k}"]` }));
       await ctx.close();
     }
     for (const o of openers) {
@@ -148,6 +154,11 @@ function launchOpts(){
              페이지 안에서 resolve+click 을 한 번에 해 레이스를 없앤다 — 위임 핸들러는 그대로 탄다. */
           const hit = await page.$eval(o.hero, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.hero, { timeout: 3000, force: true });
+        } else if (o.dun) {
+          await page.click('.tab[data-t="adv"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          const hit = await page.$eval(o.dun, (el) => { el.click(); return true; }).catch(() => false);
+          if (!hit) await page.click(o.dun, { timeout: 3000, force: true });
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);

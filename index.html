@@ -1303,6 +1303,12 @@
     -webkit-text-stroke:8px #000;paint-order:stroke fill}
   .dnc .sp.lv>i{left:64px}
   .dnc .sp.tk>i{left:71px;letter-spacing:4px}
+  /* 46 레이드 카드 — 던전 카드와 «같은 규격»(좌표·높이·radius·색 전부 동일)이지만
+     값 문자열이 층 번호(1~2자)가 아니라 «60초 / 1.23M» 이라 알약 폭만 내용에 맞춘다.
+     절대 배치를 relative 로 바꿔 shrink-to-fit 을 쓰되 좌측 여백(64/71)은 그대로 살린다. */
+  .dnc.rd .sp{width:auto;min-width:156px;padding-right:22px}
+  .dnc.rd .sp.lv>i,.dnc.rd .sp.tk>i{position:relative;left:0;margin-left:64px}
+  .dnc.rd .sp.tk>i{margin-left:71px}
 
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
   .dnc .dot{left:956px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
@@ -1327,28 +1333,21 @@
   .dnc .lk>u b{color:#FF8252;font-weight:900;font-size:106%}
 
   /* 서브탭 — 컨테이너 x151 w794 h98 radius49, 하단이 탭바 위 41px.
-     좌 🔒(비선택 #61503C) / 우 던전(선택 #4B3E2D) 이 gap 0 으로 겹친다 */
+     좌(비선택 #61503C) / 우(선택 #4B3E2D) 가 gap 0 으로 겹친다.
+     (작업 46) 왼쪽 칸은 자물쇠가 아니라 «레이드» 다. 껍데기 기하는 레퍼런스 그대로 두고
+     선택 상태만 좌우로 옮긴다 — 칸 위치·폭(.l 524 / .r 421)은 고정, .on/.off 가 색과 z 를 정한다. */
   .dns-sub{position:absolute;left:151px;top:auto;bottom:40px;width:794px;height:98px}
   .dns-t{position:absolute;top:0;height:98px;border-radius:49px;border:6px solid #000;
-    box-sizing:border-box}
-  .dns-t.lk{left:0;width:524px;border-left-width:8px;background:#61503C;
-    box-shadow:inset 0 0 0 7px #705F4B}
-  .dns-t.lk>em{position:absolute;left:161px;top:15px;width:50px;height:57px;
-    font-size:0;color:transparent}
-  .dns-t.lk>em::before{content:'';position:absolute;left:11px;top:0;width:28px;height:33px;
-    border:8px solid #fff;border-bottom:0;border-radius:14px 14px 0 0;box-sizing:border-box}
-  .dns-t.lk>em::after{content:'';position:absolute;left:0;top:23px;width:50px;height:34px;
-    background:#fff;border-radius:7px;
-    background-image:radial-gradient(circle 5px at 25px 14px,#000 0 5px,transparent 5px),
-      linear-gradient(#000,#000);
-    background-size:100% 100%,5px 9px;background-position:0 0,22px 16px;
-    background-repeat:no-repeat,no-repeat}
-  .dns-t.on{left:373px;width:421px;background:#4B3E2D;box-shadow:inset 0 0 0 7px #634F37}
-  .dns-t.on>b{position:absolute;left:0;right:0;top:18px;height:42px;line-height:42px;
+    box-sizing:border-box;cursor:pointer}
+  .dns-t.l{left:0;width:524px;border-left-width:8px}
+  .dns-t.r{left:373px;width:421px}
+  .dns-t.off{background:#61503C;box-shadow:inset 0 0 0 7px #705F4B;z-index:1}
+  .dns-t.on{background:#4B3E2D;box-shadow:inset 0 0 0 7px #634F37;z-index:2}
+  .dns-t>b{position:absolute;left:0;right:0;top:18px;height:42px;line-height:42px;
     text-align:center;font-size:42px;font-weight:900;letter-spacing:-5px;
     padding-right:5px;box-sizing:border-box;color:#F3BC8C;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .dns-t.on>s{position:absolute;left:371px;top:-6px;width:27px;height:27px;border-radius:50%;
+  .dns-t.r>s{position:absolute;left:371px;top:-6px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   /* ==========================================================================
@@ -4164,9 +4163,10 @@
       <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
     </div>
     <div class="dns-list" id="dunList"></div>
-    <div class="dns-sub">
-      <div class="dns-t lk" id="dunSubLock"><em>🔒</em></div>
-      <div class="dns-t on"><b>던전</b><s></s></div>
+    <!-- 46(2026-08-25 주인 지시): 왼쪽 자물쇠 칸은 «레이드»(DPS 측정 던전) 다. -->
+    <div class="dns-sub" id="dunSub">
+      <div class="dns-t l off" data-dsub="raid"><b>레이드</b></div>
+      <div class="dns-t r on" data-dsub="dun"><b>던전</b><s></s></div>
     </div>
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
@@ -4267,16 +4267,16 @@
       <div class="dgd-plq"></div>
       <button class="dgd-ar l" id="dgdPrev"><i>◀</i></button>
       <button class="dgd-ar r" id="dgdNext"><i>▶</i></button>
-      <div class="dgd-lv dgd-t"><i>레벨</i></div>
+      <div class="dgd-lv dgd-t"><i id="dgdLvL">레벨</i></div>
       <div class="dgd-fl dgd-t"><i id="dgdFloor">3</i></div>
       <div class="dgd-rw"></div>
-      <div class="dgd-rwl dgd-t"><i>보상</i></div>
+      <div class="dgd-rwl dgd-t"><i id="dgdRwL">보상</i></div>
       <div class="dgd-fr"><em id="dgdIcon">💎</em></div>
       <div class="dgd-amt dgd-t"><i id="dgdAmt">800</i></div>
       <div class="dgd-tk"><i id="dgdTry">2/2</i></div>
       <div class="dgd-tki">🎟️</div>
       <button class="dgd-cb" id="dgdAuto"></button>
-      <div class="dgd-cbl dgd-t"><i>연속 도전</i></div>
+      <div class="dgd-cbl dgd-t"><i id="dgdCbL">연속 도전</i></div>
       <button class="dgd-b k" id="dgdSweep"><span class="dgd-lk"><s></s><b></b></span></button>
       <button class="dgd-b g" id="dgdGo"><i>도전</i></button>
     </div>
@@ -5171,6 +5171,7 @@ const DEF = () => ({
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
+  raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
   buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
@@ -5195,6 +5196,13 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
+    /* 46 레이드 기록 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN 이 새지 않게 항목별로 못박는다. */
+    b.raidBest = (d.raidBest && typeof d.raidBest === 'object') ? d.raidBest : {};
+    Object.keys(b.raidBest).forEach(k => {
+      const r = b.raidBest[k];
+      if(!r || typeof r !== 'object' || !Number.isFinite(r.dmg) || !Number.isFinite(r.dps)) delete b.raidBest[k];
+    });
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
     b.eqRelic = (d.eqRelic || []).filter(i => RL[i]);
@@ -5391,6 +5399,12 @@ let pets = [], spawnQ = [], skillCd = {};
 let killed = 0, msgTxt = '', msgT = 0, orbitAng = 0, auraTick = 0;
 let promo = null;   /* 승급전 진행 상태 */
 let bossT = 0;      /* 28 보스전 남은 시간(초). > 0 이면 보스전 진행 중 */
+/* 46 레이드(DPS 측정 던전) — 제한 시간 동안 무한 체력 샌드백을 때려 총 피해량·DPS 를 잰다.
+   raidOn 이 켜져 있는 동안에는 스테이지 진행(클리어·다음 스테이지)이 멈춘다. */
+let raidOn = null;  /* 진행 중인 레이드 정의(RAIDS 항목) 또는 null */
+let raidT = 0;      /* 남은 시간(초) */
+let raidDmg = 0;    /* 누적 피해량 */
+let raidStage = 1;  /* 레이드 진입 직전 스테이지(끝나면 되돌린다) */
 let goldEMA = 0, goldWin = 0, winT = 0;
 
 function showMsg(t){ msgTxt = t; msgT = 1.7; }
@@ -5483,6 +5497,9 @@ function dmgNum(x, y, v, crit){
 function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
   dmgNum(e.x, e.y - e.r*2.6, dmg, crit);
+  /* 46 레이드 — 샌드백은 죽지 않는다. 모든 피해 경로가 이 함수 한 곳을 지나므로
+     여기서만 누적하면 스킬·평타·장판·투사체가 전부 집계된다. */
+  if(e.raid){ raidDmg += dmg; e.hp = e.max; return; }
   if(e.hp <= 0) killEnemy(e);
 }
 function killEnemy(e){
@@ -5935,6 +5952,12 @@ function step(dt){
     if(bossT <= 0){ bossT = 0; failBoss('시간 초과'); }
   }
 
+  /* ---- 46 레이드 제한 시간 ---- */
+  if(raidOn){
+    raidT -= dt;
+    if(raidT <= 0){ raidT = 0; endRaid(true); }
+  }
+
   /* ---- 승급전 진행 ---- */
   if(promo){
     promo.t -= dt;
@@ -5943,7 +5966,8 @@ function step(dt){
   }
 
   /* ---- 스테이지 클리어 ---- */
-  if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0 && S.bossFarm){
+  if(raidOn){ /* 46 — 레이드 중에는 스테이지 진행이 멈춘다(샌드백이 죽어도 다음 스테이지로 넘어가지 않는다) */ }
+  else if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0 && S.bossFarm){
     /* 28 — 보스전 실패 상태: 스테이지를 올리지 않고 같은 스테이지 일반 몹을 다시 채운다(파밍) */
     const bonusG = eGold(S.stage) * 12 * stat.goldMul;
     S.gold += bonusG; goldWin += bonusG;
@@ -6274,6 +6298,20 @@ function drawFac(){
    (40) 재도전 대기: 캡슐·진행바 숨김 · 해골 노드를 중앙 Ø120 으로 · [스테이지 재도전]
    기본(02) 상태는 두 클래스가 모두 빠진 상태라 한 줄도 바뀌지 않는다. */
 function drawBossHud(){
+  /* 46 레이드 — 28 보스전 HUD(⏱ 타이머 · 바 · [포기하기])를 그대로 재사용한다.
+     바는 «체력» 이 아니라 «최고 기록 대비 현재 DPS», 숫자는 누적 피해량이다. */
+  if(raidOn){
+    const si0 = $('stinfo');
+    si0.classList.add('bfight'); si0.classList.remove('bfarm');
+    $('bossTm').classList.add('on'); $('bossHp').classList.add('on');
+    $('bossGv').classList.add('on'); $('bossRt').classList.remove('on');
+    $('bossTmN').textContent = Math.max(0, raidT).toFixed(1);
+    const el = Math.max(0.001, raidOn.sec - raidT), dps = raidDmg / el;
+    const bestDps = (S.raidBest[raidOn.id] || {}).dps || 0;
+    $('bossHpF').style.width = (clamp(bestDps > 0 ? dps/bestDps : (raidDmg > 0 ? 1 : 0), 0, 1) * 671) + 'px';
+    $('bossHpN').textContent = fmt(raidDmg);
+    return;
+  }
   const bf = inBossFight(), fm = S.bossFarm && isBossStage();
   const si = $('stinfo');
   si.classList.toggle('bfight', bf);
@@ -6434,7 +6472,8 @@ $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
    화면 아무 데나 탭 = 닫기. → 버튼은 상점 소환(10)·성장 탭으로 유도. */
 /* 28 — 보스전 액션 버튼. [포기하기] 는 레퍼런스 39 에 있는 버튼이고, 동작은 이미 정의된
    «실패» 경로(스테이지 유지 + 파밍 전환 + 재도전 버튼)를 그대로 탄다. */
-$('bossGv').addEventListener('click', () => failBoss('포기'));
+/* 46 — 레이드 중이면 같은 버튼이 «레이드 중단» 이다(기록 저장 없음) */
+$('bossGv').addEventListener('click', () => { if(raidOn) endRaid(false); else failBoss('포기'); });
 $('bossRt').addEventListener('click', retryBoss);
 
 function openDefeat(){ $('defw').classList.add('on'); }
@@ -7344,6 +7383,8 @@ $('bDun').addEventListener('click', e => {
    층(레벨) 을 ◀▶ 로 고르고, 고른 층이 현재 층이면 «도전», 이전 층이면 «소탕»(즉시 보상).
    밸런스 상수는 건드리지 않는다 — 기존 challengeDungeon / sweepDungeon 을 그대로 호출한다. */
 let dgdDun = null;      /* 지금 보고 있는 던전 */
+let dgdRaid = null;     /* 46 — 레이드 모드일 때 보고 있는 측정장(둘 중 하나만 채워진다) */
+let dunSub = 'dun';     /* 46 — 03 던전 페이지 서브탭 'dun' | 'raid' (renderDunPage 가 읽는다) */
 let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
 let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
 
@@ -7352,12 +7393,15 @@ const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', 
 
 function openDunDetail(d){
   if(!d) return;
-  dgdDun = d;
+  dgdDun = d; dgdRaid = null;
   dgdFloor = S.dun[d.id];
+  /* 46 — 레이드가 갈아 끼운 라벨을 던전 문구로 되돌린다 */
+  $('dgdLvL').textContent = '레벨';
+  $('dgdRwL').textContent = '보상';
   renderDunDetail();
   $('dgdw').classList.add('on');
 }
-function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; }
+function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdRaid = null; }
 
 function renderDunDetail(){
   const d = dgdDun; if(!d) return;
@@ -7380,11 +7424,25 @@ function renderDunDetail(){
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
 }
 
-$('dgdPrev').onclick = () => { if(dgdFloor > 1){ dgdFloor--; renderDunDetail(); } };
-$('dgdNext').onclick = () => { if(dgdDun && dgdFloor < S.dun[dgdDun.id]){ dgdFloor++; renderDunDetail(); } };
-$('dgdAuto').onclick = () => { dgdAutoOn = !dgdAutoOn; renderDunDetail(); };
+$('dgdPrev').onclick = () => {
+  if(dgdRaid){ raidStep(-1); return; }
+  if(dgdFloor > 1){ dgdFloor--; renderDunDetail(); }
+};
+$('dgdNext').onclick = () => {
+  if(dgdRaid){ raidStep(1); return; }
+  if(dgdDun && dgdFloor < S.dun[dgdDun.id]){ dgdFloor++; renderDunDetail(); }
+};
+$('dgdAuto').onclick = () => { dgdAutoOn = !dgdAutoOn; dgdRaid ? renderRaidDetail() : renderDunDetail(); };
 $('dgdSweep').onclick = () => {};   /* 레퍼런스의 잠긴 유료 버튼 — 아직 미구현 */
 $('dgdGo').onclick = () => {
+  /* 46 — 레이드 모드면 «도전» 이 레이드 시작이다. 던전 페이지를 닫아 전투 화면을 드러낸다. */
+  if(dgdRaid){
+    const r = dgdRaid;
+    closeDunDetail();
+    closeDungeon();
+    startRaid(r);
+    return;
+  }
   const d = dgdDun; if(!d) return;
   const sweep = dgdFloor < S.dun[d.id];
   closeDunDetail();
@@ -7644,6 +7702,7 @@ const DUN_UI = {
 };
 function dunLocked(d){ return S.best < DUN_UI[d.id].open; }
 function renderDunPage(){
+  if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
   let h = '';
   DUNGEONS.forEach(d => {
     const u = DUN_UI[d.id], lock = dunLocked(d), left = S.daily.dun[d.id], f = S.dun[d.id];
@@ -7702,7 +7761,144 @@ $('dunList').addEventListener('click', e => {
   /* 04 던전 세부 팝업 — 03 이 남겨 둔 임시 진입점을 정식 팝업으로 교체했다 */
   openDunDetail(d);
 });
-$('dunSubLock').onclick = () => popup('🔒 잠김', '<p>아직 해금되지 않은 던전 종류입니다.</p>');
+/* ---- 46 레이드 (DPS 측정 던전) — UI-REFERENCE 3번 인용구 / «설계 확정» 12번 --------
+   왼쪽 서브탭 «레이드» 는 제한 시간 동안 «죽지 않는 샌드백 보스» 를 때려 총 피해량·DPS 를 재는
+   던전이다. 껍데기·카드 규격·04 세부 팝업은 03 던전 것을 그대로 쓰고 «내용» 만 레이드다.
+   가정(주인 확인 필요): 제한 시간 30/60/120초 3종 · 보스 공격 없음 · 입장 횟수 무제한 · 보상 없음. */
+const RAIDS = [
+  { id:'r60',  n:'정규 측정장', sec:60,  open:1,
+    ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'] } },
+  { id:'r30',  n:'단기 측정장', sec:30,  open:15,
+    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['짧게 폭발 피해 측정'] } },
+  { id:'r120', n:'장기 측정장', sec:120, open:30,
+    ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['지속 피해량 측정'] } }
+];
+const raidLocked = r => S.best < r.open;
+const raidBest = id => S.raidBest[id] || { dmg:0, dps:0 };
+
+function renderRaidPage(){
+  let h = '';
+  RAIDS.forEach(r => {
+    const u = r.ui, lock = raidLocked(r), b = raidBest(r.id);
+    h += '<div class="dnc rd" data-rcard="' + r.id + '" style="--s:' + u.s + ';--i:' + u.i
+      +  ';--r:' + u.r + ';--pt:' + u.pt + '">'
+      +  '<div class="bg"></div><div class="sh"></div><div class="fr"></div>'
+      +  '<div class="nm"><i>' + r.n + '</i></div>'
+      +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
+      +  '<div class="lb a"><i>제한 시간</i></div><div class="lb b"><i>최고 DPS</i></div>'
+      +  '<div class="sp lv"><em>⏱️</em><i>' + r.sec + '초</i></div>'
+      +  '<div class="sp tk"><em>🏆</em><i>' + (b.dps > 0 ? fmt(b.dps) : '-') + '</i></div>'
+      +  (!lock ? '<s class="dot"></s>' : '')
+      +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')
+      +  '</div>';
+  });
+  $('dunList').innerHTML = h;
+}
+/* 서브탭 전환 — 껍데기(#dunw)는 그대로 두고 리스트 내용과 선택 표시만 바꾼다 */
+function setDunSub(k){
+  dunSub = (k === 'raid') ? 'raid' : 'dun';
+  [...document.querySelectorAll('#dunSub .dns-t')].forEach(t => {
+    const me = t.dataset.dsub === dunSub;
+    t.classList.toggle('on', me);
+    t.classList.toggle('off', !me);
+  });
+  renderDunPage();
+  $('dunList').scrollTop = 0;
+}
+$('dunSub').addEventListener('click', e => {
+  const t = e.target.closest('[data-dsub]');
+  if(t) setDunSub(t.dataset.dsub);
+});
+$('dunList').addEventListener('click', e => {
+  const c = e.target.closest('[data-rcard]');
+  if(!c) return;
+  const r = RAIDS.find(x => x.id === c.dataset.rcard);
+  if(raidLocked(r)){
+    popup('🔒 ' + r.n, '<p>최고 스테이지 <b>' + r.open + '</b> 를 클리어하면 열립니다.<br>'
+      + '현재 최고 스테이지 <b>' + S.best + '</b></p>');
+    return;
+  }
+  openRaidDetail(r);
+});
+
+/* 04 세부 팝업 재사용 — «레벨» 자리에 제한 시간, «보상» 자리에 최고 기록, «도전» → 레이드 시작 */
+function openRaidDetail(r){
+  if(!r) return;
+  dgdRaid = r; dgdDun = null;
+  renderRaidDetail();
+  $('dgdw').classList.add('on');
+}
+function renderRaidDetail(){
+  const r = dgdRaid; if(!r) return;
+  const b = raidBest(r.id);
+  $('dgdTitle').textContent = r.n;
+  $('dgdState').textContent = '피해량 측정 상태';
+  $('dgdLvL').textContent = '제한 시간';
+  $('dgdFloor').textContent = r.sec + '초';
+  $('dgdRwL').textContent = '최고 기록';
+  $('dgdIcon').textContent = '🏆';
+  $('dgdAmt').textContent = b.dmg > 0 ? fmt(b.dmg) + ' (DPS ' + fmt(b.dps) + ')' : '기록 없음';
+  $('dgdTry').textContent = '∞';
+  $('dgdCbL').textContent = '연속 도전';
+  /* 레이드는 층이 없다 — ◀▶ 는 다른 측정장(제한 시간)으로 옮긴다 */
+  const i = RAIDS.indexOf(r);
+  $('dgdPrev').disabled = !RAIDS.slice(0, i).some(x => !raidLocked(x));
+  $('dgdNext').disabled = !RAIDS.slice(i+1).some(x => !raidLocked(x));
+  $('dgdGo').disabled = false;
+  $('dgdGo').style.filter = '';
+  $('dgdAuto').classList.toggle('on', dgdAutoOn);
+}
+function raidStep(dir){
+  const i = RAIDS.indexOf(dgdRaid);
+  for(let k = i + dir; k >= 0 && k < RAIDS.length; k += dir){
+    if(!raidLocked(RAIDS[k])){ dgdRaid = RAIDS[k]; renderRaidDetail(); return; }
+  }
+}
+
+/* ---- 레이드 진행 ----
+   샌드백은 «죽지 않는 보스» 다: 체력을 크게 잡고 hitEnemy 에서 매번 되돌리며,
+   공격력 0 이라 플레이어는 피해를 입지 않는다. 스테이지 진행은 step() 에서 멈춘다. */
+function startRaid(r){
+  if(raidOn) return;
+  raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
+  S.bossFarm = false; bossT = 0;
+  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  player.x = WORLD.w/2; player.y = WORLD.h/2;
+  player.hp = stat.maxHp; player.dead = 0;
+  cam.x = player.x; cam.y = player.y;
+  syncPets();
+  makeEnemy('boss');
+  const e = enemies[enemies.length-1];
+  if(e){ e.raid = true; e.dmg = 0; e.gold = 0; e.hp = e.max = 1e15; }
+  showMsg('⚔ 레이드 — ' + r.n + ' ' + r.sec + '초');
+  uiDirty = true;
+}
+function endRaid(record){
+  const r = raidOn; if(!r) return;
+  const el = Math.max(0.001, r.sec - Math.max(0, raidT));
+  const dmg = raidDmg, dps = dmg / el;
+  raidOn = null; raidT = 0; raidDmg = 0;
+  for(let i=enemies.length-1;i>=0;i--) if(enemies[i].raid) enemies.splice(i, 1);
+  S.stage = raidStage;
+  spawnStage();                     /* 레이드 전 스테이지로 복귀 */
+  drawBossHud();                    /* 레이드 HUD 를 즉시 내린다 */
+  if(record){
+    const b = raidBest(r.id), rec = dps > b.dps;
+    if(rec) S.raidBest[r.id] = { dmg, dps };
+    save(); uiDirty = true;
+    popup('🏆 레이드 결과 — ' + r.n,
+      '<p>제한 시간 <b>' + r.sec + '초</b><br>'
+      + '총 피해량 <b style="color:#ffd88a;font-size:30px">' + fmt(dmg) + '</b><br>'
+      + '초당 피해(DPS) <b style="color:#8fd6ff;font-size:30px">' + fmt(dps) + '</b><br>'
+      + (rec ? '<b style="color:#8ff0a8">신기록!</b>'
+             : '최고 기록 <b>' + fmt(b.dmg) + '</b> · DPS <b>' + fmt(b.dps) + '</b>') + '</p>');
+  }else{
+    save(); uiDirty = true;
+    showMsg('레이드 중단 — 기록 저장 안 함');
+  }
+  if($('dunw').classList.contains('on')) renderDunPage();
+}
 /* (작업 24) 예전에는 «탭바를 누르면 던전 페이지가 닫힌다» 는 캡처 리스너를 여기 두었지만,
    이제 던전은 탭 자체가 소유한 페이지다. 캡처 단계에서 먼저 닫아 버리면 goTab('adv') 이
    «닫혀 있음» 을 보고 다시 열어 재클릭 토글이 죽는다. 다른 탭으로의 이동은 goTab 각 분기의
