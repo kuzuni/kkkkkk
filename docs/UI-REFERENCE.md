@@ -1138,8 +1138,13 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
 - [x] **보스 제한 시간 30초** (28번 작업) — **완료 (2026-08-24, sess-1957).** 보스 단독 스폰 · ⏱ 30초 타이머 ·
       보스 체력바 · 실패 시 스테이지 유지 + 일반 몹 파밍 + 「스테이지 재도전」 버튼 · 클리어 시 자동 진행 재개.
       `ETYPE.boss.dmg` 3.0 → **22**. 측정표 `docs/measure/28-보스전.md` · 기록 `docs/review/28-보스전개편.md`
-- [ ] **룰렛 원판화** (29번 작업, 2026-08-24 확정) — 회전 원판 휠(8칸 + 포인터 + 감속), 오픈소스 코드 인라인 차용 가능,
-      보상·확률·횟수는 기존 `ROULETTE` 로직 그대로
+- [x] **룰렛 원판화** (29번 작업, 2026-08-24 확정) — **완료 (2026-08-24, sess-2042-26068).** 회전 원판 휠
+      (세그먼트 8칸 ⌀612 + 상단 고정 포인터 62×78 + 허브 ⌀150, 최소 6바퀴 · easeOutQuart 3.6초 감속).
+      **외부 라이브러리 0** — conic-gradient + rAF 자작 인라인(CDN 금지 조건 충족). 세그먼트 색·라벨은
+      `ROULETTE` 배열에서 생성하고 **보상·확률·하루 5회 로직은 `spinRoulette` 그대로**.
+      `openRoulette(hit,txt)` 재렌더 구조 → `openRoulette()` 렌더 1회 + `roulSpinTo`/`roulFinish` 제자리 갱신.
+      `node verify29.js` **66/66 PASS**(8칸 전수 정렬 중심 오차 0.00deg) · `node tools/smoke.js` SMOKE PASS.
+      기록 `docs/review/29-룰렛원판화.md`. 연출(58)·쥬시(60)와 아트 5종은 범위 밖으로 남겼다
 
 #### E. 작업 순서 · 주의사항
 
