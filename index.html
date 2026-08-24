@@ -1165,12 +1165,12 @@
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
   .wm-nm>i{transform:scaleX(.89)}                 /* 글자당 폭 +12% → 되돌림 */
   /* 4-3 등급 알약 ref(691,655) 209x49, 검정 4px */
-  .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gc);
+  .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gp,var(--gc));
     border:4px solid #000;box-sizing:border-box;text-align:center;line-height:41px;
     font-size:24px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-gd>i{transform:scaleX(.93)}
   /* 4-5 재료 진행바 — 좌측 끝은 Lv 알약이 덮는다. ref 우단 901 → 패널기준 783 */
-  .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#82829A;
+  .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#8182A0;
     border:6px solid #000;box-sizing:border-box;overflow:hidden}
   .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wm-bar>i{position:absolute;left:0;right:0;top:1px;height:34px;line-height:34px;
@@ -1219,7 +1219,7 @@
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
-  .wgc .pb{left:0;right:0;bottom:0;height:34px;background:#82829A;border-top:5px solid #000;
+  .wgc .pb{left:0;right:0;bottom:0;height:34px;background:#8182A0;border-top:5px solid #000;
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
@@ -1244,18 +1244,19 @@
   /* 레퍼런스 글자는 «흰 코어 + 검정 외곽선» 이다 (y1705 단면: #0A0907 → #F6F6F6 → #FFFFFF).
      측정표가 #000000 으로 적은 것은 외곽선을 집은 오류다. */
   .wm-tot{left:0;right:0;top:1104px;height:46px;line-height:46px;text-align:center;
-    font-size:44px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
-  .wm-tot>i{transform:scaleX(.82)}                /* 줄 전체 잉크 564 → 462 (h 42 유지) */
+    font-size:40px;color:#fff;-webkit-text-stroke:3px #000;paint-order:stroke fill}
+  .wm-tot>i{transform:scaleX(.90)}                /* 줄 전체 잉크 564 → 462 (h 42 유지) */
   .wm-tot b{color:#B8FE5D}                        /* 직계(>)로 두면 <i> 래퍼 때문에 끊긴다 */
 
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
   .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:6px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
-    background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 12px,#8A8A8A 100px,
-      #D3D3D3 100px 107px,#757575 107px)}
+    background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 12px,#8A8A8A 102px,
+      #D3D3D3 102px 108px,#757575 108px 116px,#000 116px)}
   /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
   .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .wm-b1{left:137px;color:#AAEFFF}
+  .wm-b1>i{transform:scaleX(.87)}
   .wm-b2{left:447px;color:#DFDFDF}
   .wm-btn.off{cursor:default}
 
@@ -1265,7 +1266,7 @@
   .wm-ar.l{left:-84px}
   .wm-ar.r{left:905px}
   .wm-ar::before{content:'';position:absolute;inset:0;background:#fff;
-    clip-path:polygon(100% 0,0 50%,100% 100%,100% 81.3%,37.5% 50%,100% 18.7%)}
+    clip-path:polygon(100% 0,0 50%,100% 100%,100% 65.6%,68.7% 50%,100% 34.4%)}
   .wm-ar.r::before{transform:scaleX(-1)}
 
   /* ==========================================================================
@@ -4462,13 +4463,15 @@ let wpnSel = null, wpnPage = 0;
 
 /* 레퍼런스 등급색 4종(커먼·언커먼·레어·에픽)을 실측값으로 쓰고,
    우리 게임의 5·6단계(전설·신화)는 같은 채도 흐름으로 이어 붙였다. */
+/* p = 등급 «알약» 색. 레퍼런스에서 알약은 카드보다 한 톤 밝다
+   (측정표 §4-3 알약 #9FCB3A ≠ §5-2 카드 언커먼 #94BC35 — 실측 (157,199,55)) */
 const WGRADE = [
-  { c:'#775742', r:'#AE7B5C', e:'#4E3A2C' },   /* 일반  = 레퍼런스 커먼   */
-  { c:'#94BC35', r:'#C8E646', e:'#647F20' },   /* 고급  = 레퍼런스 언커먼 */
-  { c:'#1F5281', r:'#2C7097', e:'#143756' },   /* 희귀  = 레퍼런스 레어   */
-  { c:'#661691', r:'#8846A7', e:'#440F61' },   /* 영웅  = 레퍼런스 에픽   */
-  { c:'#B4741A', r:'#E8A63A', e:'#784D11' },   /* 전설 (레퍼런스 없음)    */
-  { c:'#9B1F3C', r:'#D34464', e:'#671429' }    /* 신화 (레퍼런스 없음)    */
+  { c:'#775742', r:'#AE7B5C', e:'#4E3A2C', p:'#8A6450' },   /* 일반  = 레퍼런스 커먼   */
+  { c:'#94BC35', r:'#C8E646', e:'#647F20', p:'#9DC737' },   /* 고급  = 레퍼런스 언커먼 */
+  { c:'#1F5281', r:'#2C7097', e:'#143756', p:'#26608F' },   /* 희귀  = 레퍼런스 레어   */
+  { c:'#661691', r:'#8846A7', e:'#440F61', p:'#7620A3' },   /* 영웅  = 레퍼런스 에픽   */
+  { c:'#B4741A', r:'#E8A63A', e:'#784D11', p:'#C8821E' },   /* 전설 (레퍼런스 없음)    */
+  { c:'#9B1F3C', r:'#D34464', e:'#671429', p:'#AF2545' }    /* 신화 (레퍼런스 없음)    */
 ];
 /* 레퍼런스는 소수점을 살린다: 항목 «+46.2%», 총합 «+251.02%» — 공용 pct() 는 정수라 따로 쓴다 */
 const wpct  = v => (v*100).toFixed(1) + '%';
@@ -4490,7 +4493,7 @@ function renderWpn(){
   ib.style.setProperty('--gc', wg.c); ib.style.setProperty('--gr', wg.r);
   $('wpnName').innerHTML  = '<i>' + cur.n + '</i>';
   const gd = $('wpnGrade');
-  gd.innerHTML = '<i>' + g.n + '</i>'; gd.style.setProperty('--gc', wg.c);
+  gd.innerHTML = '<i>' + g.n + '</i>'; gd.style.setProperty('--gp', wg.p);
   $('wpnLv').innerHTML    = '<i>Lv. ' + (own ? lvNow : 0) + '</i>';
   $('wpnBarF').style.width = (own ? Math.min(100, got/need*100) : 0) + '%';
   $('wpnBarT').innerHTML  = '<i>' + got + '/' + need + '</i>';
@@ -4560,11 +4563,14 @@ $('wpnNext').onclick = () => { wpnPage = (wpnPage + 1) % wpnPages(); renderWpn()
 /* 딤(모달 바깥)을 누르면 닫힌다. 탭바를 눌러도 닫는다 */
 $('wpnw').addEventListener('click', e => { if(e.target.id === 'wpnw') closeWeapon(); });
 $('tabbar').addEventListener('click', closeWeapon, true);
-/* 임시 진입점 — 06 장비 팝업이 들어오면 그 화면의 «무기 슬롯» 이 이 자리를 가져간다.
-   그때까지는 영웅 탭의 «장비» 서브탭에서 바로 연다 (herosub 자체는 A1 구간이라 손대지 않고
-   추가 리스너만 붙인다). */
-document.querySelectorAll('#herosub .stab').forEach(x => {
-  if(x.dataset.hero === 'eq') x.addEventListener('click', () => openWeapon());
+/* 정식 진입점 — 06 장비 팝업의 «무기 슬롯».
+   06 이 «슬롯을 누르면 05 구간으로 내려간다» 고 설계해 뒀으므로(그 쪽 주석 참조)
+   06 의 핸들러는 건드리지 않고 추가 리스너만 붙인다. 방어구/반지 등 다른 부위는
+   해당 화면이 생길 때까지 06 의 기존 동작(배너 패널)에 맡긴다.
+   (05 가 임시로 쓰던 «영웅 → 장비 서브탭» 직결 진입은 06 이 그 자리를 가져가면서 제거했다) */
+$('eqCards').addEventListener('click', e => {
+  const s = e.target.closest('[data-eqslot]');
+  if(s && s.dataset.eqslot === 'weapon') openWeapon();
 });
 function openProfile(){
   renderSt();
