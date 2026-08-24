@@ -1422,7 +1422,11 @@
   /* 13: 재화 탭이 열린 동안 HUD 는 프로필 없는 민바 (레퍼런스 y100~190 — 다크바 + 재화 알약 2개뿐).
      coin 탭에만 스코프 — 10 소환 탭·02 메인의 HUD 는 건드리지 않는다. 알약 x: ref 537~745 / 838~1044. */
   #app:has(#shopw.on .shp-list.coin) #top :is(.pedge,.plate,.prof){display:none}
-  #app:has(#shopw.on .shp-list.coin) .curs{right:37px;gap:85px}
+  #app:has(#shopw.on .shp-list.coin) .curs{right:31px;gap:89px}
+  /* ref 13 아이콘: 골드 49×47(중심 = 알약 좌변 −22.5) / 다이아 유닛도 동비율 축소 */
+  #app:has(#shopw.on .shp-list.coin) .curs .cbox i{left:-54px}
+  #app:has(#shopw.on .shp-list.coin) .curs .cGold i{font-size:46px}
+  #app:has(#shopw.on .shp-list.coin) .curs .cDia i{font-size:52.5px}
   .cn-cd{width:278px;height:309px}
   .cn-cd>*{position:absolute}
   .cn-cd>.bg{left:7px;top:7px;width:264px;height:295px;border-radius:28px;
@@ -1440,7 +1444,9 @@
   .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
     text-align:center;overflow:hidden}
   .cn-cd>.pn>em{font-size:112px;line-height:157px}
-  .cn-cd>.qt{left:167px;top:169px;height:30px;color:#fff;font-size:39.7px;line-height:30px;
+  /* 구매 완료 카드는 본문 프레임도 초록(ref #135E3F = #1C8D5E×딤0.667) — 파랑 몸통이 슬리버로 비치지 않게 */
+  .cn-cd.done>.bg{background:#1C8D5E}
+  .cn-cd>.qt{left:167px;top:169px;height:30px;color:#fff;font-size:41.2px;line-height:30px;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--qx,1.3));transform-origin:0 50%}
   /* [받기] 버튼 — dx17 dy214 245x80 r28, 밴드 검정5 → 림4 → face55 → 림5 → 립5 */
@@ -1479,11 +1485,11 @@
   .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
     opacity:.92}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
-  .cn-a2t{left:561px;top:1402px;width:420px;height:80px;text-align:center}
+  .cn-a2t{left:561px;top:1392px;width:420px;height:80px;text-align:center}
   .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:59px;line-height:70px;
     transform:scaleX(.985)}
   .cn-a2t>s{color:#000;-webkit-text-stroke:10px #000;paint-order:stroke fill}
-  .cn-a2t>i{background:linear-gradient(180deg,#F8EBB4,#F5CA59);-webkit-background-clip:text;
+  .cn-a2t>i{background:linear-gradient(180deg,#F3DC96,#F5CA59);-webkit-background-clip:text;
     background-clip:text;color:transparent}
   .cn-mv{left:695px;top:1489px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
     cursor:pointer;background:linear-gradient(180deg,#ABFF85 0,#ABFF85 6px,#78F34A 6px,
@@ -1493,12 +1499,12 @@
   /* §8 카테고리 탭 바 — 바 자체는 10 소속이라 **재화 탭일 때만** 13 실측치로 덮어쓴다
      (`#shopList.coin ~ #shopCats`). 10 의 소환 탭 모습은 건드리지 않는다. 비평 1회차 A/B 공통 지적:
      바가 27px 아래 · 라벨이 바 중심에서 17.5px 아래 · ✦ 가 13x18(ref 19x19) · NEW 리본은 13 에 없음. */
-  #shopCats .shp-ct:nth-child(4) .shp-cat-pill{left:-6px;top:9px;width:264px;height:76px}
+  #shopCats .shp-ct:nth-child(4) .shp-cat-pill{left:1px;top:9px;width:256px;height:76px}
   #shopCats .shp-cs.s2{left:485px;display:none}
   #shopList.coin ~ #shopCats{bottom:41px}
   #shopList.coin{bottom:154px}
   #shopList.coin ~ #shopCats .shp-ct>i{top:25px;font-size:33.3px}
-  #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:31.2px;top:26px}
+  #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:29.5px;top:25px;transform:scaleX(1.06)}
   #shopList.coin ~ #shopCats .shp-ct:nth-child(3)>i{transform:scaleX(.98)}
   #shopList.coin ~ #shopCats .shp-cs{top:44px;width:19px;height:19px}
   #shopList.coin ~ #shopCats .shp-cs.s1{left:239px}
@@ -6594,12 +6600,12 @@ $('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
 const COIN_ADS = [
   /* fs·sx: 3회차 자체 스캔 — 폭은 전부 ref Δ≤2 인데 높이만 +9~14% (서체 종횡비).
      ref_h/cap_h 만큼 fs 를 줄이고 폭 보존을 위해 sx 에 역수를 곱했다. qx 도 동일(×N 높이 28↔31). */
-  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.64 },
-  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.30 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.93 },
-  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:28.6, sx:1.040, qx:1.14 },
-  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:32.2, sx:1.041, qx:1.28 },
-  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:30.9, sx:0.933, qx:0.93 }
+  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.58 },
+  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.26 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.90 },
+  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:28.6, sx:1.040, qx:1.10 },
+  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:32.2, sx:1.041, qx:1.24 },
+  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:30.9, sx:0.933, qx:0.90 }
 ];
 const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
 /* 일일 초기화까지 남은 시간 — 레퍼런스의 «⏱ 초기화: 5H 12M» 자리 */
@@ -6627,11 +6633,12 @@ function renderCoinPage(list){
   /* §5 상품 카드 3x2 — 열 x111/401/691, 행 local 689/1008 */
   COIN_ADS.forEach((a, i) => {
     const x = [111, 401, 691][i % 3], y = i < 3 ? 689 : 1008, left = adLeft(a), done = left <= 0;
-    h += '<div class="cn-cd" style="left:' + x + 'px;top:' + y + 'px;--fs:' + a.fs + 'px;--sx:'
+    /* 구매 완료 칸도 ×N 은 그대로 그린다 — ref 는 띠(dy119~189) 아래로 잉크 하단 ~9px 이 회색으로 비친다 */
+    h += '<div class="cn-cd' + (done ? ' done' : '') + '" style="left:' + x + 'px;top:' + y + 'px;--fs:' + a.fs + 'px;--sx:'
       + a.sx + ';--qx:' + a.qx + (done ? ';--hd:#68C338;--hr:#7FD955' : '') + '">'
       +  '<div class="bg"></div><div class="hd"><i>' + a.n + '</i></div>'
       +  '<div class="pn"><em>' + a.ic + '</em></div>'
-      +  (done ? '' : '<div class="qt">' + a.q + '</div>')
+      +  '<div class="qt">' + a.q + '</div>'
       +  (done
           ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>구매 완료</i></div>'
           : '<div class="bt" data-cnad="' + a.id + '"><div class="ad"><s></s><b>AD</b></div>'
