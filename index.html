@@ -904,21 +904,22 @@
   .dgd-head{flex:0 0 auto;height:90px;margin:0 -11px;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#5C4744 0 8px,#523E3D 8px)}
   .dgd-head i{display:inline-block;font-style:normal;font-size:47px;line-height:47px;font-weight:900;
-    color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;
+    color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
     transform:scaleX(.93) translate(-2px,1px)}
   /* 본문은 단색 크림 — 레퍼런스에 별무늬가 없다(99% 단일색 #F0D9BA) */
-  .dgd-body{position:relative;flex:1 1 auto;margin-top:2px;border-radius:27px;background:#F0D9BA;overflow:hidden}
+  .dgd-body{position:relative;flex:1 1 auto;margin-top:2px;border-radius:0 0 27px 27px;
+    background:#F0D9BA;overflow:hidden}
   .dgd-body>*{position:absolute}
   /* 텍스트 오버레이는 화살표 위를 가로질러 놓이므로(폭 420) 클릭을 먹지 않게 한다 */
   .dgd-body>div{pointer-events:none}
   .dgd-body i{display:inline-block;font-style:normal;transform-origin:50% 50%}
   .dgd-t{color:#fff;font-weight:900;white-space:nowrap;text-align:center;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
 
   /* 배너 일러스트 750x352 (local 6,24) — 초록 크리스탈 동굴 + 슬라임 실루엣 */
   .dgd-bn{left:6px;top:24px;width:750px;height:351px;border-radius:9px;border:6px solid #0A0A08;
     box-sizing:border-box;overflow:hidden;
-    background:linear-gradient(180deg,#238053 0,#3EB776 45%,#3CB574 78%,#3AB273 100%)}
+    background:linear-gradient(180deg,#268A58 0,#47C67E 45%,#45C37C 78%,#42BF79 100%)}
   .dgd-bn u{position:absolute;left:0;bottom:0;width:100%;height:190px;text-decoration:none;
     background:radial-gradient(120% 100% at 50% 100%,rgba(110,255,200,.22) 0,rgba(110,255,200,0) 62%)}
   /* 크리스탈 기둥 — 좌우에 하나씩 */
@@ -937,7 +938,8 @@
   .dgd-bn b::after{right:78px}
 
   /* 상태 리본 600x61 (local 82,289) — 알약이 아니라 좌측이 ◀ 로 파인 반투명 띠 */
-  .dgd-rb{left:82px;top:289px;width:600px;height:61px;background:rgba(0,0,0,.58);
+  .dgd-rb{left:82px;top:289px;width:600px;height:61px;
+    background:linear-gradient(90deg,rgba(0,0,0,.82) 0,rgba(0,0,0,.46) 100%);
     clip-path:polygon(27px 0,600px 0,583px 61px,27px 61px,0 50%);
     display:flex;align-items:center;justify-content:center}
   .dgd-rb i{font-size:28px;line-height:1;font-weight:900;color:#FA716C;
@@ -959,7 +961,7 @@
   .dgd-lv{left:171px;top:420px;width:420px;height:40px;line-height:40px;font-size:30px;
     color:#FEF26C;-webkit-text-stroke:5px #000}
   .dgd-fl{left:171px;top:466px;width:420px;height:45px;line-height:45px;font-size:55px;
-    -webkit-text-stroke:7px #000}
+    -webkit-text-stroke:5px #000}
 
   /* 보상 박스 730x179 (local 16,610) */
   .dgd-rw{left:16px;top:610px;width:730px;height:179px;border-radius:35px;background:#C7AF95}
@@ -972,7 +974,7 @@
   .dgd-fr em{width:104px;height:100px;border-radius:20px;background:#D37C13;font-style:normal;
     display:flex;align-items:center;justify-content:center;font-size:62px;line-height:1}
   .dgd-amt{left:16px;top:744px;width:730px;height:40px;line-height:40px;font-size:40px;
-    -webkit-text-stroke:6px #000}
+    -webkit-text-stroke:5px #000}
   .dgd-amt i{transform:scaleX(1.15)}
 
   /* 입장권 알약 + 연속 도전 체크박스 (local y 824~877) */
@@ -996,7 +998,7 @@
   .dgd-b{top:900px;width:249px;height:120px;border-radius:40px;box-sizing:border-box;padding:0;
     border:8px solid #000;cursor:pointer;
     font-family:inherit;font-weight:900;font-size:38px;line-height:1;color:#fff;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
   .dgd-b i{transform:translateY(-6px) scaleX(.94)}
   .dgd-b.k{left:107px;
     background:linear-gradient(180deg,#A6A11D 0 8px,#AC931D 8px,#AB7105 84%,
@@ -1004,7 +1006,13 @@
   .dgd-b.g{left:406px;
     background:linear-gradient(180deg,#ACFE85 0 8px,#76F34A 8px,#76D925 84%,
       #A8FB7E 84% 91%,#3FBC2C 91%)}
-  .dgd-b.k i{font-size:68px;-webkit-text-stroke:0;transform:translateY(-2px) scaleX(1.45)}
+  .dgd-lk{position:absolute;left:79px;top:16px;width:77px;height:70px}
+  .dgd-lk s{position:absolute;left:16px;top:0;width:45px;height:26px;box-sizing:border-box;
+    border:9px solid #000;border-bottom:0;border-radius:22px 22px 0 0;text-decoration:none}
+  .dgd-lk s::after{content:'';position:absolute;left:2px;top:2px;right:2px;bottom:0;
+    border:4px solid #FEF9B7;border-bottom:0;border-radius:14px 14px 0 0}
+  .dgd-lk b{position:absolute;left:0;bottom:0;width:77px;height:58px;box-sizing:border-box;
+    background:#FEF9B7;border:6px solid #000;border-radius:14px}
   .dgd-b:disabled{cursor:default}
 
   /* ==========================================================================
@@ -1322,7 +1330,7 @@
       <div class="dgd-tki">🎟️</div>
       <button class="dgd-cb" id="dgdAuto"></button>
       <div class="dgd-cbl dgd-t"><i>연속 도전</i></div>
-      <button class="dgd-b k" id="dgdSweep"><i>🔒</i></button>
+      <button class="dgd-b k" id="dgdSweep"><span class="dgd-lk"><s></s><b></b></span></button>
       <button class="dgd-b g" id="dgdGo"><i>도전</i></button>
     </div>
   </div></div>
