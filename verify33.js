@@ -34,8 +34,13 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
   const isOpen = () => page.evaluate(() => !!document.querySelector('#ciw.on'));
   const txt = () => page.evaluate(() => (document.getElementById('ciw') || {}).innerText || '');
 
-  /* ---- 1. 전역 규칙: [data-cur] 아이콘 전수 클릭 ---- */
+  /* ---- 1. 전역 규칙: [data-cur] 아이콘 전수 클릭 ----
+     HUD 알약 2개 외에 유물석(🔮 유물 소환 페이지) · 스탯 포인트(🧬 성장 스탯 탭) 아이콘도
+     화면에 띄워 놓고 «전수» 로 돈다 — 안 열어 두면 숨김 상태라 건너뛰어 버린다. */
   console.log('[1] 재화 아이콘 전수 클릭');
+  await page.evaluate(() => { try { S.upTab = 'stat'; uiDirty = true; renderUI(); } catch (e) {} });
+  await page.evaluate(() => { try { goTab('up'); } catch (e) {} });
+  await page.waitForTimeout(500);
   const icons = await page.$$eval('[data-cur]', els => els.map((e, i) => ({
     i, cur: e.dataset.cur, cls: e.className, id: e.id,
     vis: !!(e.getBoundingClientRect().width && e.getBoundingClientRect().height)
@@ -99,14 +104,17 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
     return !w.classList.contains('on');
   });
   byDim ? ok('딤 클릭으로 닫힘') : fail('딤을 눌러도 안 닫힌다');
+  /* 측정표 §11: 레퍼런스에 **닫기 X 도 하단 확인 버튼도 없다** — 있으면 오히려 감점이다 */
   await page.evaluate(() => openCurInfo('dia'));
-  const byBtn = await page.evaluate(() => {
-    const b = document.querySelector('#ciw .ci-ok, #ciw [data-ciok]');
-    if (!b) return null;
-    b.click();
-    return !document.getElementById('ciw').classList.contains('on');
+  const extra = await page.evaluate(() => {
+    const w = document.getElementById('ciw');
+    const n = w.querySelectorAll('button, .gbtn, .ci-ok').length;
+    /* 박스 안을 눌러도 닫히면 안 된다(딤만 닫는다) */
+    w.querySelector('.ci-body').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return { n, stillOpen: w.classList.contains('on') };
   });
-  byBtn === null ? fail('확인 버튼(.ci-ok)이 없다') : byBtn ? ok('확인 버튼으로 닫힘') : fail('확인 버튼이 안 닫는다');
+  extra.n === 0 ? ok('레퍼런스대로 버튼·X 없음 (0개)') : fail(`레퍼런스에 없는 버튼이 ${extra.n}개 있다`);
+  extra.stillOpen ? ok('박스 안 클릭으로는 안 닫힘') : fail('박스 안을 눌렀는데 닫혔다');
 
   /* ---- 5. 다른 화면 위에서도 열린다 ---- */
   console.log('[5] 다른 화면 위에서 열기');

@@ -2153,6 +2153,73 @@
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
   .cltab.alert>s.dot{display:block}
   /* ==========================================================================
+     33 재화 «정보» 팝업 (#ciw) — 측정표 docs/measure/33-재화정보팝업.md
+     전역 규칙(UI-REFERENCE 33): «모든 재화 아이콘은 클릭하면 이 정보 팝업이 뜬다».
+     껍데기 = 딤(.54) 위 **소형 가운데 다이얼로그** 598×813 (A5 공용 .mbox 폭 897 과 달라 자체 오버레이).
+     좌표: 가로 1:1 · 세로 `y_impl = y_ref − 210`(중앙 앵커라 flex center 로 앉힌다).
+     자식 좌표 기준 = 크림 본문(.ci-body) 좌상단 = ref(261,881). body-local = ref − (261,881).
+     테두리 단면(실측): 검정 8 → 갈색 밝은 #56443A 7 → 어두운 #46382D 4 → 크림 #F0D9BA.
+     갈색 링은 **좌·우·하 3변만** — 상변 자리는 헤더 바가 차지한다(A5 .mbox 와 같은 구조).
+     ========================================================================== */
+  #ciw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;
+    align-items:center;justify-content:center;box-sizing:border-box}
+  #ciw.on{display:flex}
+  #ciw i,#ciw em,#ciw b,#ciw s{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900}
+  /* 세로중심 ref 1187 → 프레임 977 = 정중앙 960 +17 */
+  .ci{position:relative;flex:none;width:598px;height:813px;max-height:100%;box-sizing:border-box;
+    border:8px solid #000;border-radius:45px;padding:0 7px 9px;background:#56443A;
+    display:flex;flex-direction:column;transform:translateY(17px)}
+  /* 헤더 바 ref x250..829 y790..879 — fill #523E3D, 상단 8px·좌우 7px 만 밝은 #5B4643 */
+  .ci-head{flex:0 0 90px;margin:0 -7px;border-radius:36px 36px 0 0;background:#523E3D;
+    box-shadow:inset 0 8px 0 #5B4643,inset 7px 0 0 #5B4643,inset -7px 0 0 #5B4643;
+    text-align:center;line-height:90px;overflow:hidden}
+  /* 타이틀 코어 h39 → 39/0.93 ≈ 42px. 레퍼런스(«보석» 2자) 코어폭 74 = 자당 37 */
+  .ci-head>i{position:relative;top:-3px;font-size:42px;color:#FED349;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(.88)}
+  /* 크림 본문 — 별 워터마크는 엇갈린 격자(53×51, pitch 236×117) */
+  .ci-body{flex:1 1 auto;position:relative;border:solid #46382D;border-width:0 4px 4px;
+    border-radius:0 0 31px 31px;background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
+    overflow:hidden}
+  .ci-body>*{position:absolute}
+  /* 아이콘 박스 ref(460,901) 160×160 → body(199,20). 검정 5 + 골드 림 7 + 오렌지 fill */
+  .ci-ic{left:200px;top:22.5px;width:160px;height:160px;box-sizing:border-box;
+    border:5px solid #000;border-radius:35px;background:#D37C13;
+    box-shadow:inset 0 0 0 7px #FCC132}
+  /* 아트 자리 — 레퍼런스 보석 잉크 92×95. 이미지로 교체할 때 이 bbox 를 그대로 쓴다 */
+  .ci-ic>i{position:absolute;left:0;right:0;top:0;height:150px;line-height:150px;
+    text-align:center;font-size:96px;transform:scaleX(.87)}
+  /* «보유: n» 코어 y1080..1112(중심 1096) → body 중심 215. 전체가 라임 한 덩어리다 */
+  .ci-have{left:0;right:0;top:190.5px;height:50px;line-height:50px;text-align:center;
+    font-size:36px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    white-space:nowrap}
+  /* 설명 패널 ref(291,1131) 498×199 → body(30,250). 테두리 없음 · 검정 20% 오버레이(별이 비친다) */
+  .ci-desc{left:31px;top:252.5px;width:498px;height:199px;box-sizing:border-box;
+    border-radius:29px;background:rgba(0,0,0,.20);padding:17px 26px 0}
+  /* 레퍼런스 L1 은 16자 439px = 자당 27.4 인데 이 서체는 자당 31 이라 3줄로 접힌다.
+     음수 letter-spacing 은 금지(LESSONS 01)이므로 **줄 상자를 넓게 잡고 scaleX 로 되돌린다** */
+  .ci-desc>i{display:block;width:504px;margin:0 -29px;transform:scaleX(.925);
+    font-size:31px;line-height:37px;text-align:center;color:#F9F9F9;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:normal}
+  /* «획득처» 라벨 — 리스트 패널 상변을 11px 덮고 앉는다(라벨이 위 레이어) */
+  .ci-wl{left:0;right:0;top:480.5px;height:45px;line-height:45px;text-align:center;
+    font-size:32px;color:#FEF7AC;-webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+  /* 획득처 리스트 패널 ref(290,1385) 500×160 → body(29,504). 행 pitch 40 */
+  .ci-ways{left:30px;top:506.5px;width:500px;height:160px;border-radius:23px;
+    background:rgba(0,0,0,.20)}
+  .ci-ways>div{position:absolute;left:10px;right:10px;height:32px;
+    display:flex;align-items:center;white-space:nowrap}
+  .ci-ways>div:nth-child(1){top:27px}
+  .ci-ways>div:nth-child(2){top:67px}
+  .ci-ways>div:nth-child(3){top:107px}
+  .ci-ways s{width:28px;font-size:29px;color:#8FFC48;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .ci-ways i{margin-left:12px;font-size:26px;color:#F9F9F9;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill}
+  /* 재화 아이콘은 전부 손가락 커서 — 클릭 가능하다는 신호 */
+  [data-cur]{cursor:pointer}
+  /* ==========================================================================
      19 프로필 팝업 — 측정표 docs/measure/19-프로필팝업.md
      껍데기 = (가) 전면 딤 + 중앙 다이얼로그. 딤은 순검정이 아니라 짙은 남색(잔존율 R9/G25/B34).
      패널 border-box ref (92,515) 896×1396 → 프레임 top 305 (전 요소 y_impl = y_ref − 210).
@@ -3797,8 +3864,9 @@
       </div>
     </div>
     <div class="curs">
-      <div class="cbox cGold"><i>🪙</i><b id="goldN">0</b></div>
-      <div class="cbox cDia"><i>💎</i><b id="diaN">0</b></div>
+      <!-- 33 — 재화 아이콘은 data-cur 하나로 정보 팝업에 연결된다(위임 핸들러) -->
+      <div class="cbox cGold" data-cur="gold"><i>🪙</i><b id="goldN">0</b></div>
+      <div class="cbox cDia" data-cur="dia"><i>💎</i><b id="diaN">0</b></div>
     </div>
   </div>
 
@@ -4075,6 +4143,22 @@
         <div class="prb-ar r" id="prbNext"></div>
         <div class="prb-note">확률은 소수점 5번째 자리까지 표기되며, 이로 인해 보이는 숫자를 모두 합할 경우 100%가 나오지 않을 수 있습니다.</div>
         <div class="prb-list" id="prbList"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 33 재화 «정보» 팝업. 딤 위 소형 가운데 다이얼로그 598×813. 측정표 docs/measure/33-재화정보팝업.md
+       진입점: 화면의 **모든 재화 아이콘** — 아이콘마다 리스너를 붙이지 않고 `data-cur="<키>"` 속성 하나로
+       표시한다(위임 핸들러 1개가 전부 처리). 새 화면이 재화 아이콘을 만들면 속성만 붙이면 연결된다.
+       레퍼런스에 닫기 X 도 하단 확인 버튼도 없다 — 딤/바깥을 눌러 닫는다. -->
+  <div id="ciw">
+    <div class="ci">
+      <div class="ci-head"><i id="ciTitle">재화</i></div>
+      <div class="ci-body">
+        <div class="ci-ic"><i id="ciIcon">💎</i></div>
+        <div class="ci-have" id="ciHave">보유: 0</div>
+        <div class="ci-desc" id="ciDesc"></div>
+        <div class="ci-wl">획득처</div>
+        <div class="ci-ways" id="ciWays"></div>
       </div>
     </div>
   </div>
@@ -5954,6 +6038,8 @@ function drawHud(){
   $('rankN').textContent = rankOf().n;
   $('goldN').textContent = fmt(S.gold);
   $('diaN').textContent = fmt(S.dia);
+  /* 33 — 정보 팝업이 열려 있으면 보유량 표시도 같이 갱신한다(열린 채로 값이 굳지 않게) */
+  if(curInfoKey) renderCurInfo();
   /* 레퍼런스 헤더는 «STAGE 37» 한 줄뿐이다 — 챕터 표기·최고기록은 프로필 모달에서 본다 */
   /* 레퍼런스 39·40 의 보스 스테이지 헤더도 «STAGE n» 한 줄뿐이다 — «BOSS» 접미어는 없다(28) */
   $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>';
@@ -6613,7 +6699,7 @@ function statTrainUp(){
 }
 function renderStat(){
   const atkB = (S.spAtk*SP_VALUE*100).toFixed(0), hpB = (S.spHp*SP_VALUE*100).toFixed(0);
-  let h = '<div class="sect"><h3><span>🧬 스탯 포인트</span><em>Lv.' + S.plv + '</em></h3>'
+  let h = '<div class="sect"><h3><span data-cur="sp">🧬 스탯 포인트</span><em>Lv.' + S.plv + '</em></h3>'
     + '<p>레벨업마다 포인트 <b>' + SP_PER_LV + '</b>개를 얻습니다. 포인트 1개당 해당 스탯 <b>+'
     + (SP_VALUE*100) + '%</b></p>'
     + '<p style="margin-top:10px;font-size:30px">남은 포인트 <b style="color:#8ff0a8;font-size:36px">' + fmt(S.sp) + '</b></p>'
@@ -7043,7 +7129,7 @@ function renderShop(){
       +  '<div class="lvv">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</div></div>';
   });
   h += '</div><div class="sect" style="margin-top:16px"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
-    + '<p>보유 유물석 <b>🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:12px">'
+    + '<p>보유 유물석 <b data-cur="relic">🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:12px">'
     + EXCHANGE.map(x => '<button class="gbtn purple" data-ex="' + x.dia + '"' + (S.dia >= x.dia ? '' : ' disabled')
         + '>🔮 ' + fmt(x.rel) + '<small>💎 ' + fmt(x.dia) + '</small></button>').join('') + '</div></div>'
     + '<div class="sect"><h3><span>💎 다이아 상점</span><em>데모</em></h3>'
@@ -7915,6 +8001,64 @@ $('prbPrev').onclick = () => { if(prbStep > 0){ prbStep--; renderProbInfo(); } }
 $('prbNext').onclick = () => { if(prbStep < PRB_STEPS.length - 1){ prbStep++; renderProbInfo(); } };
 $('prbw').addEventListener('click', e => { if(e.target.id === 'prbw') closeProbInfo(); });
 $('tabbar').addEventListener('click', closeProbInfo, true);
+
+/* ---- 33 재화 정보 팝업 (#ciw) — 측정표 docs/measure/33-재화정보팝업.md ----
+   저장소 주인 지시: «모든 재화 아이콘들은 클릭시 이렇게 정보 팝업 떠야함».
+   그래서 구현은 «아이콘마다 onclick» 이 아니라 **data-cur 속성 + 위임 핸들러 1개** 다 —
+   새 화면(41 의 03·14 내장 재화 바, 44 의 상점 상품 등)이 재화 아이콘을 만들 때
+   `data-cur="gold"` 만 붙이면 자동으로 연결된다. 저장 구조는 건드리지 않는다(KEY 유지).
+   설명·획득처 문구는 실제 게임 데이터에서 뽑는다 — 던전 이름은 DUNGEONS, 포인트는 SP_PER_LV. */
+const CURINFO = {
+  gold:  { ic:'🪙', n:'골드',
+    get:() => S.gold,
+    d:'장비와 스킬을 강화하고, 훈련으로 능력치를 올릴 때 사용합니다.',
+    ways:['적 처치', '던전 «' + (DUNGEONS.find(d => d.id === 'gold') || {}).n + '»', '오프라인 보상'] },
+  dia:   { ic:'💎', n:'다이아',
+    get:() => S.dia,
+    d:'장비와 스킬 등을 소환하거나, 다양한 물건을 구매할 때 사용합니다.',
+    ways:['출석 · 룰렛', '퀘스트 · 우편', '던전 «' + (DUNGEONS.find(d => d.id === 'dia') || {}).n + '»'] },
+  relic: { ic:'🔮', n:'유물석',
+    get:() => S.relic,
+    d:'유물을 소환하고 강화할 때 사용합니다.',
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic') || {}).n + '»', '룰렛 보상', '다이아 교환'] },
+  sp:    { ic:'🧬', n:'스탯 포인트',
+    get:() => S.sp,
+    d:'캐릭터 레벨업으로 얻어 공격력 · 체력 · 재생 훈련에 투자합니다.',
+    ways:['캐릭터 레벨업 (레벨당 ' + SP_PER_LV + ')', '스탯 초기화로 회수', '퀘스트 보상'] }
+};
+let curInfoKey = null;
+/* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
+function curVal(k){ const c = CURINFO[k]; return c ? c.get() : null; }
+function renderCurInfo(){
+  const c = CURINFO[curInfoKey]; if(!c) return;
+  $('ciTitle').textContent = c.n;
+  $('ciIcon').textContent  = c.ic;
+  $('ciHave').textContent  = '보유: ' + fmt(c.get());
+  $('ciDesc').innerHTML    = '<i>' + c.d + '</i>';
+  $('ciWays').innerHTML    = c.ways.map(w => '<div><s>✔</s><i>' + w + '</i></div>').join('');
+}
+function openCurInfo(kind){
+  if(!CURINFO[kind]) return;
+  curInfoKey = kind;
+  renderCurInfo();
+  $('ciw').classList.add('on');
+}
+function closeCurInfo(){ curInfoKey = null; $('ciw').classList.remove('on'); }
+/* 위임 핸들러 1개 — 캡처 단계에서 잡아 아이콘이 클릭 가능한 카드 «안»에 있어도 정보 팝업이 우선한다.
+   ⚠ 그래서 `data-cur` 는 **재화의 «보유량» 을 보여주는 아이콘에만** 붙인다.
+      구매·수령 버튼 위의 «가격/보상» 아이콘(10 소환 💎, 23 훈련 💰, 03 던전 보상, 22 퀘스트 보상)에
+      붙이면 그 클릭이 거래 대신 팝업을 열어 버린다 — 붙이지 말 것.
+   현재 대상: 상단 HUD 골드·다이아 알약 / 유물석 교환소 보유 표시 / 스탯 포인트 보유 표시.
+   41(03·14 팝업 내장 재화 바)·44(상점 재화 탭)가 새 재화 바를 만들면 속성만 붙이면 편입된다. */
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-cur]');
+  if(!t) return;
+  e.stopPropagation(); e.preventDefault();
+  openCurInfo(t.dataset.cur);
+}, true);
+$('ciw').addEventListener('click', e => { if(e.target.id === 'ciw') closeCurInfo(); });
+/* 팝업이 열린 채 화면이 바뀌면 값이 굳는다 — 렌더 루프에서 같이 갱신한다 */
+$('tabbar').addEventListener('click', closeCurInfo, true);
 
 /* ---- 21 도감 보너스 팝업 (#collw) — 측정표 docs/measure/21-도감보너스팝업.md ----
    세트 = 표시 전용 정적 그룹(기존 아이템·레벨을 그대로 읽는다). 뱃지 Lv = 세트 내 최저 레벨.
