@@ -1037,8 +1037,11 @@
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
 
   /* 본문 — ref x111~968 / y579~1925 → 박스기준 left 13, top 94, 858x1347 */
+  .wm-fr{left:9px;top:94px;right:9px;bottom:9px;border:solid #46382D;border-width:0 4px 4px;
+    border-radius:0 0 34px 34px;box-sizing:border-box;pointer-events:none;z-index:4}
   .wm-body{left:13px;top:94px;width:858px;height:1347px;background:#F0D9BA;
-    border-radius:0 0 30px 30px;overflow:hidden}
+    border-radius:0 0 30px 30px;overflow:hidden;
+    box-shadow:inset 1px 0 0 #887662,inset -1px 0 0 #887662,inset 0 -1px 0 #887662}
   .wm-body>*{position:absolute}
 
   /* 정보/그리드 패널 — 본문기준 좌 7 (ref x118) */
@@ -1319,6 +1322,7 @@
   <div id="wpnw">
     <div class="wm">
       <div class="wm-head"><i>무기</i></div>
+      <div class="wm-fr"></div>
       <div class="wm-ar l" id="wpnPrev"></div>
       <div class="wm-ar r" id="wpnNext"></div>
       <div class="wm-body">
