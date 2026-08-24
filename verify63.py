@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """63 탭바 상단 검정 테두리 — 검증기 (지시서 [3]-(가) 기계적 작업)
 
-  node cap63.js 63-before   # 수정 전 캡처
+  node cap63.js 63-before [세로]   # 수정 전 캡처
   ...수정...
-  node cap63.js 63-after    # 수정 후 캡처
-  python3 verify63.py
+  node cap63.js 63-after  [세로]   # 수정 후 캡처
+  python3 verify63.py [접두사-before] [접두사-after]
 
 판정 3종:
   A. 레퍼런스 프로파일 일치 — 5개 상태 × 깨끗한 열에서 탭바 상단 0..9행이 ref 실측과 Δ≤2
   B. 밴드 시프트 0 — 탭바 내부 밴드(9행 이하)와 탭바 위 영역이 before/after 픽셀 동일
-  C. 변경 구간 국한 — 달라진 행이 1740..1748(탭바 상단 9행) 안에만 있음
+  C. 변경 구간 국한 — 달라진 행이 «탭바 상단 y ~ +8» 9행 안에만 있음 (9:16 1740 · 9:19 2100)
 """
+import json
 import sys
 from PIL import Image
 
-TAB_TOP = 1740          # 캡처(1080x1920)에서 #tabbar 상단 y — cap63.js 실측
-REF_TOP = 2161          # 레퍼런스(1080x2340)에서 같은 지점 (PROGRESS «확정(18)» 오프셋 421)
+PRE_A = sys.argv[1] if len(sys.argv) > 1 else '63-before'
+PRE_B = sys.argv[2] if len(sys.argv) > 2 else '63-after'
+
+# 캡처에서 #tabbar 상단 y 는 하드코딩하지 않는다 — cap63.js 가 DOM 에서 떠 준 값을 상태별로 읽는다.
+# (2026-08-25 기준 화면비가 9:16→9:19 로 바뀌어 탭바 y 가 1740→2100 이 됐다. 이 검증은 그와 무관하게 돈다)
+REF_TOP = 2161          # 레퍼런스(1080x2340)에서 #tabbar 상단 y — 5장 실측 앵커
 
 # 레퍼런스 5장을 깨끗한 열에서 스캔해 얻은 탭바 상단 프로파일 (상단 기준 상대 행 → RGB)
 #  0..2 검정 / 3 전이 / 4..8 갈색 림(피크 2 + 감쇠 3) / 9.. 본문색
@@ -46,10 +51,19 @@ def ok(m):
     print('  o ' + m)
 
 
+# cap63.js 가 DOM 에서 떠 준 기하 — 탭바 상단 y 와 «유휴값» 마스크 사각형이 들어 있다.
+GEO = json.load(open(f'docs/review/{PRE_B}-geo.json'))
+
+
+def tab_top(st):
+    return int(round(GEO[st]['tabbar']['y']))
+
+
 # ---- A. 레퍼런스 프로파일 일치 -------------------------------------------------
 print('A. 레퍼런스 프로파일 일치 (탭바 상단 0..9행)')
 for st in STATES:
-    im = Image.open(f'docs/review/63-after-{st}.png').convert('RGB')
+    TAB_TOP = tab_top(st)
+    im = Image.open(f'docs/review/{PRE_B}-{st}.png').convert('RGB')
     px = im.load()
     worst = 0
     bad = []
@@ -64,23 +78,21 @@ for st in STATES:
     if bad:
         fail(f'{st}: ' + ' / '.join(bad[:4]))
     else:
-        ok(f'{st}: 0..9행 전부 ref 프로파일과 일치 (최대 Δ{worst})')
+        ok(f'{st}: 탭바 상단 y{TAB_TOP} 기준 0..9행 전부 ref 프로파일과 일치 (최대 Δ{worst})')
 
 # ---- B/C. 회귀 — before 대비 달라진 행이 탭바 상단 9행뿐 --------------------------
-# 유휴 루프가 굴리는 값(닉네임·시설 타이머·스킬 슬롯 쿨다운)은 제외한다 — LESSONS 51-③.
+# 유휴 루프가 굴리는 값(닉네임·시설 타이머·스킬 슬롯 쿨다운·스테이지 진행)은 제외한다 — LESSONS 51-③.
 # 사각형은 하드코딩이 아니라 cap63.js 가 DOM 에서 떠 준 것을 읽는다.
-import json
-GEO = json.load(open('docs/review/63-after-geo.json'))
-
 print('B. 밴드 시프트 0 · C. 변경 구간 국한 (before vs after, 유휴값 제외)')
 for st in STATES:
+    TAB_TOP = tab_top(st)
     vol = GEO[st].get('_volatile', [])
 
     def masked(x, y, _v=vol):
         return any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1 in _v)
 
-    a = Image.open(f'docs/review/63-before-{st}.png').convert('RGB')
-    b = Image.open(f'docs/review/63-after-{st}.png').convert('RGB')
+    a = Image.open(f'docs/review/{PRE_A}-{st}.png').convert('RGB')
+    b = Image.open(f'docs/review/{PRE_B}-{st}.png').convert('RGB')
     if a.size != b.size:
         fail(f'{st}: 캡처 크기가 다르다 {a.size} vs {b.size}')
         continue

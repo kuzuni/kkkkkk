@@ -1,5 +1,7 @@
-/* 63 탭바 상단 검정 테두리 — 상태 5종 캡처 + 탭바 상단 기하 실측 (1080x1920)
- *   node cap63.js <접두사>      → docs/review/<접두사>-{main,train,shop,equip,skill}.png
+/* 63 탭바 상단 검정 테두리 — 상태 5종 캡처 + 탭바 상단 기하 실측
+ *   node cap63.js <접두사> [세로]   → docs/review/<접두사>-{main,train,shop,equip,skill}.png
+ *   세로 기본 2280 (2026-08-25 기준 화면비 9:19). 1920(구 9:16)도 그대로 돈다 —
+ *   탭바 상단 y 는 하드코딩하지 않고 DOM 에서 떠서 -geo.json 에 남긴다.
  * 각 상태에서 #tabbar 의 border-box / 화면 y 와 캡처 위 탭바 상단 y 를 함께 덤프한다.
  */
 const { chromium } = require('playwright');
@@ -16,11 +18,12 @@ const STATES = [
 
 (async () => {
   const pre = process.argv[2] || '63-r1';
+  const VH = Number(process.argv[3] || 2280);
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errs = [];
   const geo = {};
   for (const st of STATES) {
-    const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: VH }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     page.on('console', m => { if (m.type() === 'error') errs.push(st.key + ': ' + m.text()); });
     page.on('pageerror', e => errs.push(st.key + ': PAGEERROR ' + e.message));
