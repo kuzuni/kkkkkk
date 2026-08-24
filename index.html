@@ -1317,8 +1317,16 @@
     box-shadow:inset 7px 0 0 #655146,inset -7px 0 0 #655146,inset 0 6px 0 #655146}
   /* 타이틀 `장비` — 잉크 613~662(h50) → font 54, 흰색 + 검정 외곽선 한쪽 5.5(=stroke 11) */
   .eqp-ti{left:0;right:0;top:27px;height:62px;line-height:62px;text-align:center;
-    font-size:54px;font-weight:900;color:#fff;-webkit-text-stroke:11px #000;
-    paint-order:stroke fill;letter-spacing:-2px;text-indent:2px;white-space:nowrap}
+    font-size:54px;font-weight:900;color:#fff;letter-spacing:-2px;text-indent:2px;
+    white-space:nowrap;
+    /* stroke 11 은 안쪽으로 5.5 파고들어 흰 면을 갉아먹는다
+       (검정/흰 픽셀비 ref 1.19 vs 구현 2.14, 안쪽 흰 획 8~9px → 4~5px).
+       ref 외곽선은 «한쪽 5px»(잉크 493~585 vs 외곽 포함 488~592) 이므로
+       바깥으로만 나가는 text-shadow 로 그린다 */
+    text-shadow:5px 0 0 #000,-5px 0 0 #000,0 5px 0 #000,0 -5px 0 #000,
+      4px 4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,-4px -4px 0 #000,
+      5px 2px 0 #000,-5px 2px 0 #000,5px -2px 0 #000,-5px -2px 0 #000,
+      2px 5px 0 #000,2px -5px 0 #000,-2px 5px 0 #000,-2px -5px 0 #000}
   .eqp-ti>i{transform:scaleX(.98)}
 
   /* 본문 크림 696~2159, 좌우 안쪽 어두운 림 6px */
@@ -1343,7 +1351,12 @@
   /* 컨테이너 테두리 6px #D7AA81 + 안쪽 2px 하이라이트 */
   .eqc-fr{left:34px;top:134px;width:1013px;height:1284px;border:6px solid #D7AA81;
     border-radius:31px;box-sizing:border-box;pointer-events:none}
-  .eqc-hl{left:44px;top:144px;width:993px;height:1264px;border:2px solid #FCEFD0;
+  /* ⚠ 하이라이트는 **좌우에만** 있다(측정표 §2-0 은 x 44 / 1035 만 적는다).
+     사방 border 로 두면 아래 테두리가 ref y1983~1984 전폭에 크림색 2px 줄을 긋고
+     잠금 라벨 «반지·목걸이·탈것» 을 가로지른다(원본 같은 y 는 밝은 픽셀 0개, 구현 776개).
+     비평가 2명이 독립적으로 같은 줄을 지적했다 */
+  .eqc-hl{left:44px;top:144px;width:993px;height:1264px;
+    border-left:2px solid #FCEFD0;border-right:2px solid #FCEFD0;
     border-radius:21px;box-sizing:border-box;pointer-events:none}
 
   /* 카드 전경 레이어 — 자식은 «패널 local y = ref−577», x 는 ref 1:1 을 그대로 쓴다 */
@@ -1361,15 +1374,23 @@
   .eqrb>.pl{position:absolute;left:32px;top:0;width:299px;height:79px;box-sizing:border-box;
     background:var(--rb);border:8px solid var(--rd);border-radius:22px;
     box-shadow:0 7px 5px -2px rgba(0,0,0,.32)}
-  .eqrb>.tl{position:absolute;top:26px;width:44px;height:71px;background:var(--rt);
-    clip-path:polygon(0 0,100% 0,100% 100%,0 100%,22% 50%)}
+  /* 꼬리 폭 71 — 판(744~822) 아래로 내려간 y826~838 구간에서 ref 좌꼬리가 x176~246(71),
+     우꼬리가 x461~530(70) 이다. 44 로 두면 40 밖에 안 나와 **43% 가늘다**(비평가 2명 일치).
+     판 위쪽 구간은 판에 가려 폭을 늘려도 보이지 않는다.
+     V 노치 깊이는 ref 가 약 10px(가장 넓은 174 → 노치 바닥 184) → 71 의 14% */
+  .eqrb>.tl{position:absolute;top:26px;width:71px;height:71px;background:var(--rt);
+    clip-path:polygon(0 0,100% 0,100% 88%,88% 100%,0 100%,14% 50%)}
   .eqrb>.tl.l{left:0}
-  .eqrb>.tl.r{left:315px;transform:scaleX(-1)}
+  .eqrb>.tl.r{left:287px;transform:scaleX(-1)}
   /* 잉크 761~800(h40) → 리본 top +17, font 45, 흰색 + 검정 외곽선 한쪽 6(=12) */
   .eqrb>b{position:absolute;left:32px;width:299px;top:5px;height:62px;line-height:62px;
     text-align:center;font-size:45px;font-weight:900;color:#fff;
-    -webkit-text-stroke:12px #000;paint-order:stroke fill;letter-spacing:-2px;text-indent:-2px;
-    white-space:nowrap}
+    letter-spacing:-2px;text-indent:-2px;white-space:nowrap;
+    /* 타이틀과 같은 이유. ref 외곽선 한쪽 6px (잉크 315~389 vs 외곽 포함 309~396) */
+    text-shadow:6px 0 0 #000,-6px 0 0 #000,0 6px 0 #000,0 -6px 0 #000,
+      5px 5px 0 #000,5px -5px 0 #000,-5px 5px 0 #000,-5px -5px 0 #000,
+      6px 3px 0 #000,-6px 3px 0 #000,6px -3px 0 #000,-6px -3px 0 #000,
+      3px 6px 0 #000,3px -6px 0 #000,-3px 6px 0 #000,-3px -6px 0 #000}
   .eqrb>b>i{transform:scaleX(.96)}
 
   /* ---- 장비 슬롯 228x228 (x724 고정) ---- */
@@ -1384,9 +1405,9 @@
     text-align:center;font-size:126px;line-height:150px}
   /* `Lv. n` — 잉크 슬롯 top +181(h30) → font 32, 흰색 + 검정 외곽선 */
   .eqsl>u{position:absolute;left:0;right:0;top:169px;height:56px;line-height:56px;
-    text-align:center;font-size:44px;font-weight:900;color:#fff;
+    text-align:center;font-size:43px;font-weight:900;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .eqsl>u>i{transform:scaleX(.89)}
+  .eqsl>u>i{transform:scaleX(.906)}
   .eqsl.empty>.rim>.fi{background:linear-gradient(180deg,#7E9C2C,#7A982A)}
 
   /* 부위 뱃지 Ø78 — 슬롯 좌상단 기준 (−20,−19). 검정 6 → 밝은 초록 6 → 채움 */
@@ -1481,9 +1502,12 @@
   /* 원반 안 자물쇠·라벨이 통째로 5~6px 위에 있었다 —
      ref 자물쇠 흰 몸통 y1892~1953 / 라벨 잉크 y1963~1987 vs 구현 1886~1947 / 1958~1980 */
   .eqli{position:absolute;left:50%;top:22px;width:67px;height:72px;margin-left:-33px}
-  .eqli::before{content:'';position:absolute;left:16px;top:0;width:35px;height:24px;
-    border:9px solid #fff;border-bottom:0;border-radius:18px 18px 0 0;box-sizing:border-box;
-    filter:drop-shadow(0 0 2.5px #000)}
+  /* ref 는 y1900(고리 상단 +8)에서 흰 픽셀이 **두 줄**(x355~366 / x373~385, 구멍 6px)로 갈린다.
+     border 9 + radius 18 이면 크라운이 두꺼워 같은 높이가 아직 «한 줄»로 막힌다.
+     위쪽 테두리만 얇게(7) 주어 구멍이 8px 지점부터 열리게 한다 */
+  .eqli::before{content:'';position:absolute;left:18px;top:0;width:31px;height:23px;
+    border-style:solid;border-color:#fff;border-width:7px 12px 0;border-radius:15px 15px 0 0;
+    box-sizing:border-box;filter:drop-shadow(0 0 2.5px #000)}
   .eqli::after{content:'';position:absolute;left:6px;top:23px;width:55px;height:39px;
     background:#fff;border-radius:8px;
     background-image:radial-gradient(circle 6px at 27px 15px,#000 0 6px,transparent 6px),
