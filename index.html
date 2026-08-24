@@ -769,6 +769,67 @@
   .rl-act b{font-size:45px;-webkit-text-stroke:9px #000;transform:scaleX(.94)}
   .rl-act:disabled{cursor:default}
 
+  /* ── 22 퀘스트 팝업 — docs/measure/22-퀘스트팝업.md (레퍼런스 22 PIL 실측) ──
+     껍데기는 A5 공용 다이얼로그 그대로(22 가 A5 의 원본 레퍼런스다). .q22 는 딤 .56 과
+     본문 절대배치만 override 한다. 좌표는 전부 실측 절대 px — 본문 원점(ref 111,563) 기준. */
+  #modal.q22{background:rgba(0,0,0,.56)}
+  .q22 .mbody{position:relative;padding:0;height:1383px;overflow:hidden;text-align:left}
+  .q22 .mbody b,.q22 .mbody i,.q22 .mbody em{font-style:normal;font-weight:900;paint-order:stroke fill}
+  /* 리스트 패널 844×999 (ref 118,628) — 테두리·스크롤바 없음, 5행째가 하단에서 잘리는 스크롤 뷰포트 */
+  .qs-pn{position:absolute;left:9px;top:65px;width:844px;height:999px;box-sizing:border-box;
+    background:#D7C0A1;border-radius:21px;overflow-y:auto;padding:33px 13px 20px}
+  .qs-pn::-webkit-scrollbar{display:none}
+  /* 행 818×179 pitch 200 (gap 21) */
+  .qs-r{position:relative;width:818px;height:179px;margin-bottom:21px;background:#F7ECDA;border-radius:23px}
+  .qs-r:last-child{margin-bottom:0}
+  /* 보상 프레임 106×105 (행 원점 131,661 기준 36,35) — 검정 5 + 금테 7 #FFC334 + 주황 #D37D12 */
+  .qs-i{position:absolute;left:36px;top:35px;width:106px;height:105px;box-sizing:border-box;
+    border:5px solid #000;border-radius:36px;background:#D37D12;box-shadow:inset 0 0 0 7px #FFC334;
+    display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
+  /* 수량 — 프레임 하단에 겹침 (잉크 y 122~146, 프레임 중심 정렬) */
+  .qs-i i{position:absolute;left:-20px;right:-20px;top:76px;text-align:center;
+    font-size:35px;line-height:1;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(1.4)}
+  /* 타이틀 — 좌단 x167(=진행바 좌단), 흰 채움 + 검정 외곽선, 숫자부 주황 #FD8354 */
+  .qs-t{position:absolute;left:170px;top:44px;font-size:29px;line-height:36px;font-weight:900;
+    color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.9);
+    transform-origin:0 0;white-space:nowrap}
+  .qs-t em{color:#FD8354}
+  /* 진행바 402×38 캡슐 — 검정 4, 트랙 2단, 채움 2톤 골드 */
+  .qs-p{position:absolute;left:168px;top:101px;width:402px;height:38px;box-sizing:border-box;
+    border:4px solid #000;border-radius:19px;overflow:hidden;
+    background:linear-gradient(180deg,#8182A0,#6F7899)}
+  .qs-p i{display:block;height:100%;background:linear-gradient(180deg,#FFC720 0 13px,#FFB514 13px)}
+  .qs-p b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:22px;color:#FAFAFA;-webkit-text-stroke:4px #000}
+  /* 보상 받기 195×118 — 검정 6, 회색(비활성)/초록(활성) 베벨 */
+  .qs-b{position:absolute;left:591px;top:31px;width:195px;height:118px;box-sizing:border-box;
+    border:6px solid #000;border-radius:40px;cursor:pointer;font-family:inherit;padding:0 0 10px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4CBA2E 90px,#BAEC77 90px 96px,#2F8F1E 96px)}
+  .qs-b:disabled{cursor:default;
+    background:linear-gradient(180deg,#D3D3D3 0 7px,#A8A8A8 7px,#8A8A8A 90px,#D3D3D3 90px 96px,#757575 96px)}
+  .qs-b b{font-size:30px;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(.98)}
+  .qs-b:disabled b{color:#DFDFDF}
+  /* 모두 받기 272×130 (ref 404,1647 → 293,1084) — 검정 7, 같은 베벨 */
+  .qs-all{position:absolute;left:295px;top:1084px;width:272px;height:130px;box-sizing:border-box;
+    border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0 0 14px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 96px,#B9EC77 96px 102px,#2F8F1E 102px)}
+  .qs-all:disabled{cursor:default;
+    background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 96px,#D1D1D1 96px 102px,#757575 102px)}
+  .qs-all b{font-size:39px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.94)}
+  .qs-all:disabled b{color:#DFDFDF}
+  /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
+  .qs-tg{position:absolute;left:42px;top:1238px;width:797px;height:99px;box-sizing:border-box;
+    border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
+  /* 선택 알약 425×99 — 어두운 면 + 밝은 rim. left/right 는 인라인으로 지정 */
+  .qs-tg .sel{position:absolute;top:-5px;width:425px;height:99px;box-sizing:border-box;
+    border:3px solid #483829;border-radius:49px;background:#473A2A;box-shadow:inset 0 0 0 5px #645038}
+  .qs-tg b{position:absolute;top:-5px;height:99px;width:200px;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;font-size:39px;color:#A9A8AD;-webkit-text-stroke:7px #000}
+  .qs-tg b i{transform:scaleX(.93)}
+  .qs-tg b.on{color:#8DDDFF;cursor:default}
+
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
   .rc{position:relative;border-radius:18px;padding:12px 4px 10px;border:3.2px solid #333;overflow:hidden;
@@ -3961,11 +4022,11 @@ const TUTO = [
 
 /* ---- 퀘스트 ---- */
 const QUESTS = [
-  { id:'kill',   n:'적 처치',       base:60, mul:1.55, get:() => S.totalKills, rw:s => ({ g:400*Math.pow(2.1,s),  c:90 + s*40 }) },
-  { id:'stage',  n:'스테이지 도달', base:3,  mul:1.5,  get:() => S.best,       rw:s => ({ g:600*Math.pow(2.0,s),  c:140 + s*60 }) },
-  { id:'summon', n:'소환하기',      base:5,  mul:1.6,  get:() => S.summons,    rw:s => ({ g:900*Math.pow(2.0,s),  c:100 + s*45 }) },
-  { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ g:700*Math.pow(2.0,s),  c:80 + s*36 }) },
-  { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ g:500*Math.pow(2.0,s),  c:180 + s*80 }) }
+  { id:'kill',   n:'적 처치',       base:60, mul:1.55, get:() => S.totalKills, rw:s => ({ g:400*Math.pow(2.1,s),  c:90 + s*40 }),  t:g => '적 <em>' + g + '</em>마리 처치' },
+  { id:'stage',  n:'스테이지 도달', base:3,  mul:1.5,  get:() => S.best,       rw:s => ({ g:600*Math.pow(2.0,s),  c:140 + s*60 }), t:g => '스테이지 <em>' + g + '</em> 도달' },
+  { id:'summon', n:'소환하기',      base:5,  mul:1.6,  get:() => S.summons,    rw:s => ({ g:900*Math.pow(2.0,s),  c:100 + s*45 }), t:g => '아무거나 소환 <em>' + g + '</em>회' },
+  { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ g:700*Math.pow(2.0,s),  c:80 + s*36 }),  t:g => '아무 강화 <em>' + g + '</em>회' },
+  { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ g:500*Math.pow(2.0,s),  c:180 + s*80 }), t:g => '도감 <em>' + g + '</em>종 수집' }
 ];
 /* 일일 퀘스트 (22번 «일일» 탭) — 자정 리셋. 진행 = 누적 카운터 − 자정 스냅샷(S.daily.qb).
    보상은 레퍼런스처럼 전부 다이아. 수령 여부는 S.daily.q (날짜 바뀌면 통째로 초기화) */
@@ -5623,11 +5684,11 @@ function endPromo(win){
    (레퍼런스 02번에는 하단 패널이 없고 전투 영역이 HUD~탭바 사이를 전부 채운다) */
 let uiDirty = true, curTab = 'hero', heroTab = 'eq', panelOpen = false;
 function setBody(id, html){ const el = $(id); const st = el.scrollTop; el.innerHTML = html; el.scrollTop = st; return el; }
-function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16'); }
+function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16', 'q22'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8', 'rl16');   /* 08·16 전용 껍데기 override 를 끈다 */
+  $('modal').classList.remove('sk8', 'rl16', 'q22');   /* 08·16·22 전용 껍데기 override 를 끈다 */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -6212,25 +6273,43 @@ function openMail(){
   $('mailClose').onclick = closeModal;
   $('mailBtn').onclick = () => { claimAllMail(); };
 }
-function openQuest(){
-  const rc = QUESTS.filter(questReady).length;
-  let h = '<h2>📜 퀘스트</h2>';
-  QUESTS.forEach(q => {
-    const goal = questGoal(q), prog = Math.min(questProg(q), goal), rw = q.rw(S.quest[q.id].s);
-    h += '<div class="li"><div class="lt">' + q.n + ' <span style="color:#6ec6ff;font-size:20px">'
-      +  (S.quest[q.id].s+1) + '단계</span></div>'
-      +  '<div class="qp"><i style="width:' + (prog/goal*100) + '%"></i></div>'
-      +  '<div class="lf"><span>' + fmt(prog) + ' / ' + fmt(goal) + ' · 💰' + fmt(rw.g) + ' 💎' + fmt(rw.c) + '</span>'
-      +  '<button class="mini" data-q="' + q.id + '"' + (questReady(q) ? '' : ' disabled') + '>'
-      +  (questReady(q) ? '받기' : '진행중') + '</button></div></div>';
-  });
-  h += '<button class="gbtn" id="qAll"' + (rc ? '' : ' disabled') + '>' + (rc ? '모두 받기 (' + rc + ')' : '완료한 퀘스트가 없습니다') + '</button>'
-    + '<button class="gbtn green" id="qClose">닫기</button>';
-  showModal(h);
-  $('qClose').onclick = closeModal;
+/* ---- 22 퀘스트 팝업 — 측정표 docs/measure/22-퀘스트팝업.md ----
+   A5 공용 다이얼로그 껍데기 + .q22 절대배치 본문. 레퍼런스 기본 선택 탭은 «반복».
+   보상 프레임은 다이아만 표시하지만 반복 퀘스트 수령 시 골드도 함께 지급된다(로직 유지). */
+let qTab = 'rep';
+function openQuest(tab){
+  if(tab) qTab = tab;
+  const qrow = (title, dia, prog, goal, ready, key) =>
+    '<div class="qs-r"><span class="qs-i">💎<i>' + fmt(dia) + '</i></span>'
+    + '<div class="qs-t">' + title + '</div>'
+    + '<div class="qs-p"><i style="width:' + Math.min(100, prog/goal*100).toFixed(1) + '%"></i>'
+    + '<b>' + fmt(prog) + '/' + fmt(goal) + '</b></div>'
+    + '<button class="qs-b" data-q="' + key + '"' + (ready ? '' : ' disabled') + '><b>보상 받기</b></button></div>';
+  const rows = (qTab === 'daily'
+    ? DQUESTS.map(q => qrow(q.n.replace(/(\d[\d,]*)/, '<em>$1</em>'), q.dia,
+        dqDone(q) ? q.goal : Math.min(dqProg(q), q.goal), q.goal, dqReady(q), 'd:' + q.id))
+    : ['summon','upg','kill','stage','coll'].map(id => QUESTS.find(x => x.id === id)).map(q => { const goal = questGoal(q);
+        return qrow(q.t(fmt(goal)), Math.round(q.rw(S.quest[q.id].s).c),
+          Math.min(questProg(q), goal), goal, questReady(q), q.id); })).join('');
+  const any = QUESTS.some(questReady) || DQUESTS.some(dqReady);
+  $('mtitle').textContent = '퀘스트';
+  $('mbox').innerHTML = '<div class="qs-pn">' + rows + '</div>'
+    + '<button class="qs-all" id="qAll"' + (any ? '' : ' disabled') + '><b>모두 받기</b></button>'
+    + '<div class="qs-tg">'
+    + '<span class="sel" style="left:' + (qTab === 'daily' ? -5 : 366) + 'px"></span>'
+    + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
+    + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>반복</i></b></div>';
+  const m = $('modal');
+  m.classList.remove('sk8', 'rl16');
+  m.classList.add('q22', 'on');
   $('qAll').onclick = () => claimAllQuests();
+  $('mbox').querySelectorAll('.qs-tg b').forEach(b => b.onclick = () => {
+    if(b.dataset.t !== qTab) openQuest(b.dataset.t);
+  });
   $('mbox').querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
-    claimQuest(QUESTS.find(x => x.id === b.dataset.q));
+    const k = b.dataset.q;
+    if(k.startsWith('d:')) claimDQuest(DQUESTS.find(x => x.id === k.slice(2)));
+    else claimQuest(QUESTS.find(x => x.id === k));
   });
 }
 /* ---- 03 던전 팝업 (리스트 페이지) — 측정표 docs/measure/03-던전팝업.md ----
