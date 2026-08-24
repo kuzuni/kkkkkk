@@ -3072,7 +3072,7 @@
      그 앞에 폭 216 «포켓» 패널이 겹쳐 원의 아래쪽을 가린다.
      ========================================================================== */
   #rlw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#272731;
-    display:none;z-index:28}
+    display:none;z-index:28;-webkit-font-smoothing:antialiased}
   #rlw.on{display:block}
   #rlw i,#rlw em,#rlw b,#rlw u{display:inline-block;font-style:normal;font-weight:900;
     text-decoration:none;transform-origin:50% 50%}
@@ -3100,8 +3100,8 @@
      fill 바닥 382, 검정 6, 안쪽 절반이 더 어둡다). 밴드보다 먼저 그려 뒤에 깔린다. */
   .rl-rib .dl,.rl-rib .dr{top:24px;width:52px;height:77px;box-sizing:border-box;
     border-bottom:6px solid #000}
-  .rl-rib .dl{left:36px;background:linear-gradient(90deg,var(--rt) 0 38%,var(--rt2) 46% 100%)}
-  .rl-rib .dr{right:36px;background:linear-gradient(90deg,var(--rt2) 0 54%,var(--rt) 62% 100%)}
+  .rl-rib .dl{left:36px;background:linear-gradient(90deg,var(--rt) 0 65%,var(--rt2) 78% 100%)}
+  .rl-rib .dr{right:36px;background:linear-gradient(90deg,var(--rt2) 0 22%,var(--rt) 35% 100%)}
   /* 중앙 밴드 — 검정 상 6 / 하 4, radius 16. 하단 음영은 그라데이션이 아니라 급한 4px 띠(실측 364→368) */
   .rl-rib .bd{left:36px;top:0;width:358px;height:84px;box-sizing:border-box;
     border:6px solid #000;border-bottom-width:4px;border-radius:16px;
@@ -3120,11 +3120,11 @@
      링 셰이딩은 상하 그라데이션이 아니라 각도별이다(1회차 실측): 45°/315° 대각 하이라이트 ·
      135°/225° 대각 음영 · 상단/좌우는 중간톤. --rgM/--rgB/--rgD 로 conic 에 넣는다. */
   .rl-card{--ring:#5A607A;--rk:#5F647A;--rgM:#5D637B;--rgB:#797F97;--rgD:#40465E;
-    --cv1:#272837;--cv2:#2D2E42;--pk:#31384B;--bv:#4E546C}
+    --cv1:#272837;--cv2:#2D2E42;--pk:#313852;--bv:#5A617A}
   .rl-card.own{--ring:#868FB0;--rk:#8B95B8;--rgM:#8993B6;--rgB:#B3BCDD;--rgD:#626B8C;
     --cv1:#232230;--cv2:#3E3E58;--pk:#4E5572;--bv:#757E9F}
   /* 고급(=레퍼런스 «언커먼») 이하 실측, 희귀 이상은 게임 팔레트로 같은 명도관계를 이어 만든 값 */
-  .rl-card[data-g="1"]{--cv1:#12300B;--cv2:#1B3F13;--pk:#2A5203;--bv:#3F6405}
+  .rl-card[data-g="1"]{--cv1:#12300B;--cv2:#1B3F13;--pk:#335B03;--bv:#3F6405}
   .rl-card[data-g="1"].own{--cv1:#1B3F13;--cv2:#2C6020;--pk:#418003;--bv:#5E9608}
   .rl-card[data-g="2"]{--cv1:#12253C;--cv2:#1B3350;--pk:#24405F;--bv:#3A5C80}
   .rl-card[data-g="2"].own{--cv1:#1B3350;--cv2:#2A5382;--pk:#3A6795;--bv:#5D8FC4}
@@ -3137,8 +3137,9 @@
 
   /* 아치 프레임 — 지름 227 정원. 검정 7 + 실버 링 15 + (캐비티가 얹는 검정 7) */
   .rl-card .ar{left:0;top:0;width:227px;height:227px;border-radius:50%;
-    background:conic-gradient(from 0deg,var(--rgM) 0deg,var(--rgB) 45deg,var(--rgM) 90deg,
-      var(--rgD) 135deg,var(--rgD) 225deg,var(--rgM) 270deg,var(--rgB) 315deg,var(--rgM) 360deg);
+    background:conic-gradient(from 0deg,var(--rgM) 0 18deg,var(--rgB) 40deg 50deg,
+      var(--rgM) 72deg 100deg,var(--rgD) 128deg 232deg,var(--rgM) 260deg 288deg,
+      var(--rgB) 310deg 320deg,var(--rgM) 342deg 360deg);
     box-shadow:inset 0 0 0 7px #000;z-index:1}
   /* 캐비티 — 지름 168 정원, 바깥 검정 7 */
   .rl-card .cv{left:29px;top:30px;width:168px;height:168px;border-radius:50%;
@@ -3152,8 +3153,8 @@
     font-size:118px;z-index:4}
   /* Lv. N — 잉크 h25 → font 36(캡하이트 ÷0.70) */
   .rl-card .lv{left:0;top:150px;width:227px;text-align:center;line-height:36px;z-index:5}
-  .rl-card .lv>i{font-size:36px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(1.01)}
+  .rl-card .lv>i{font-size:34px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(1.06)}
   /* 진행바 — 바깥 149x33(검정 5) · 트랙 139x23 · 숫자는 «바» 정중앙(채움 끝 아님) */
   .rl-card .bar{left:39px;top:193px;width:149px;height:33px;box-sizing:border-box;
     border:5px solid #000;border-radius:16.5px;background:#7F809C;z-index:5}
@@ -3163,8 +3164,8 @@
     font-size:21px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .rl-card .bar>b>i{transform:scaleX(1.29)}   /* 우리 서체는 숫자 폭이 모자란다(PROGRESS 05 비고) */
   /* 자물쇠 — 흰 86x95(외곽선 포함 103x113), 중심 = 카드중심 / 카드top+219 */
-  .rl-card .lk{left:61px;top:162px;width:105px;height:116px;z-index:5}
-  .rl-card .lk svg{display:block;width:105px;height:116px}
+  .rl-card .lk{left:61px;top:162px;width:105px;height:113px;z-index:5}
+  .rl-card .lk svg{display:block;width:105px;height:113px}
 
   /* ---- 서브탭 바 — 스크롤 위에 뜬 하단 오버레이. x151 y2021 778x98, radius 44 ---- */
   .rl-tabs{position:absolute;left:151px;bottom:41px;width:778px;height:98px;z-index:6}
@@ -6687,8 +6688,8 @@ $('shopList').addEventListener('click', e => {
 const RL_SLOTS = 6;
 const RL_RIB = [
   /* 밴드 · 상단 하이라이트 · 하단 음영 · 꼬리 · 꼬리 그늘 — 일반/고급/희귀는 실측(커먼/언커먼/레어) */
-  { c:'#6F6F91', h:'#9B9CB1', s:'#5C5C80', t:'#4E4773', t2:'#3C385B' },
-  { c:'#7C9A38', h:'#91AE51', s:'#667D2D', t:'#70843D', t2:'#3F5019' },
+  { c:'#6F6F91', h:'#9B9CB1', s:'#5C5C80', t:'#514C7C', t2:'#393454' },
+  { c:'#7C9A38', h:'#91AE51', s:'#667D2D', t:'#6E8534', t2:'#566628' },
   { c:'#1A89D8', h:'#4FA6E4', s:'#1470B0', t:'#0E72BD', t2:'#0A5990' },
   { c:'#7B57B8', h:'#9A7ACB', s:'#634694', t:'#5E3F94', t2:'#472F70' },
   { c:'#C08A2A', h:'#D6A54B', s:'#9C6E1F', t:'#9E7020', t2:'#7A5518' },
