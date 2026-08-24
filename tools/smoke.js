@@ -62,8 +62,25 @@ async function appInside(page) {
   });
 }
 
+/* 번들 브라우저를 못 찾는 환경(클라우드 러너는 /opt/pw-browsers 에 미리 깔려 있고
+   playwright 버전이 올라가면 기대 경로가 어긋난다) 대비 — 있으면 그걸 쓴다.
+   PW_CHROMIUM 으로 강제 지정도 가능. */
+function launchOpts(){
+  const fs = require('fs');
+  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
+  for (const p of cands) { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} }
+  return {};
+}
+
 (async () => {
-  const browser = await chromium.launch();
+  let browser;
+  try { browser = await chromium.launch(); }
+  catch (e) {
+    const o = launchOpts();
+    if (!o.executablePath) throw e;
+    console.log('[i] 번들 브라우저 없음 → ' + o.executablePath + ' 사용');
+    browser = await chromium.launch(o);
+  }
   try {
     /* ---------- 1. 로드 + 자동 플레이 ---------- */
     console.log(`[1] 로드 + 자동 플레이 ${SECS}s (1080×1920)`);
