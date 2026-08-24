@@ -2704,20 +2704,20 @@
   /* z-index 9 — 전투 오버레이(스테이지 헤더·배틀풋 z3)와 상단 HUD(z6) 위로 올린다.
      캔버스가 152px 로 짧아지면서 스테이지 헤더가 시트 헤더를 덮었고,
      레퍼런스는 상단 HUD 까지 딤이 덮여 있다(측정표 §10) */
-  #panel:has(#bSk.on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
+  #panel:has(:is(#bSk,#bPet).on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
     border-radius:38px 38px 0 0;box-sizing:border-box;z-index:9;   /* position 은 #panel(absolute) 상속 — 작업 38 */
     box-shadow:inset 7px 0 0 #FDF5E0,inset -7px 0 0 #FDF5E0}
   /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
-  #panel:has(#bSk.on)::before{content:'';position:absolute;left:-7px;right:-7px;
+  #panel:has(:is(#bSk,#bPet).on)::before{content:'';position:absolute;left:-7px;right:-7px;
     bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:none}
   /* 시트 안에 자체 서브탭 바가 있으므로 패널 상단 공용 서브탭은 숨긴다.
      `syncPanel()` 이 인라인 style.display 를 직접 쓰므로 !important 가 필요하다 */
-  #panel:has(#bSk.on) #herosub{display:none!important}
-  #bSk.on{padding:0;overflow:hidden;position:relative;display:block}
-  #bSk>*{position:absolute}
-  #bSk i,#bSk b,#bSk u,#bSk s,#bSk em{display:block;font-style:normal;font-weight:900;
+  #panel:has(:is(#bSk,#bPet).on) #herosub{display:none!important}
+  :is(#bSk,#bPet).on{padding:0;overflow:hidden;position:relative;display:block}
+  :is(#bSk,#bPet)>*{position:absolute}
+  :is(#bSk,#bPet) i,:is(#bSk,#bPet) b,:is(#bSk,#bPet) u,:is(#bSk,#bPet) s,:is(#bSk,#bPet) em{display:block;font-style:normal;font-weight:900;
     text-decoration:none}
-  #bSk .sk-head>i,#bSk .sk-tot>i,#bSk .sk-tot>em{display:inline-block}
+  :is(#bSk,#bPet) .sk-head>i,:is(#bSk,#bPet) .sk-tot>i,:is(#bSk,#bPet) .sk-tot>em{display:inline-block}
 
   /* 1 헤더 밴드 ref y684~796 (h113) · 배경 #5C4A40 · 상/좌/우 6px #655146 */
   .sk-head{left:0;top:0;width:1066px;height:114px;background:#5C4A40;
@@ -2807,7 +2807,7 @@
   .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
     box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer;
     box-shadow:inset 7px 0 0 var(--hl),inset -7px 0 0 var(--hl)}
-  #bSk .sk-btn>i{display:inline-block;transform:scaleX(.866)}
+  :is(#bSk,#bPet) .sk-btn>i{display:inline-block;transform:scaleX(.866)}
   .sk-b1{left:240px;color:#fff;--hl:#ADFF86;
     background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
       #ABFF85 103px 109px,#3EBC2A 109px)}
@@ -2825,7 +2825,7 @@
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
      line-height 는 잉크 중심을 붙잡는 값이라 fs 와 함께 미세 조정한다 */
   .sk-tab{text-align:center;line-height:87px;font-size:43px;color:#A9A8AD;cursor:pointer}
-  #bSk .sk-tab>i{display:inline-block;transform:scaleX(.914)}
+  :is(#bSk,#bPet) .sk-tab>i{display:inline-block;transform:scaleX(.914)}
   /* 레퍼런스 알약은 평면이 아니다 — x340 세로 실측:
      검정 2021~2026 → **밝은 베벨 2028~2034** → 면 2036~2088 → **밝은 베벨 2098~2103**
      → **어두운 인셋 2105~2110** → 검정 2112~. 좌우에도 같은 밝은 안쪽 림이 있다. */
@@ -2834,7 +2834,7 @@
       #413122 78px 85px);
     box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000,
       inset 14px 0 0 #604F3D,inset -14px 0 0 #604F3D}
-  #bSk .sk-tab.on>i{transform:scaleX(.893)}
+  :is(#bSk,#bPet) .sk-tab.on>i{transform:scaleX(.893)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
   .sk-t1{left:0;width:224px}
   .sk-t2{left:220px;width:261px}
@@ -2850,17 +2850,17 @@
   /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
      흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
      레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
-  #bSk .ol1,#bSk .ol2,#bSk .ol3,#bSk .ol4,#bSk .ol5{--o:#000}
-  #bSk .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
+  :is(#bSk,#bPet) .ol1,:is(#bSk,#bPet) .ol2,:is(#bSk,#bPet) .ol3,:is(#bSk,#bPet) .ol4,:is(#bSk,#bPet) .ol5{--o:#000}
+  :is(#bSk,#bPet) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
     1px 1px 0 var(--o),1px -1px 0 var(--o),-1px 1px 0 var(--o),-1px -1px 0 var(--o)}
-  #bSk .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
+  :is(#bSk,#bPet) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
     1px 2px 0 var(--o),1px -2px 0 var(--o),-1px 2px 0 var(--o),-1px -2px 0 var(--o),
     2px 1px 0 var(--o),2px -1px 0 var(--o),-2px 1px 0 var(--o),-2px -1px 0 var(--o)}
-  #bSk .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+  :is(#bSk,#bPet) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
     2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
-  #bSk .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+  :is(#bSk,#bPet) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
     3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
-  #bSk .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+  :is(#bSk,#bPet) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
     4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
     5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
     2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
@@ -7734,8 +7734,92 @@ $('bSk').addEventListener('click', e => {
   if(c) showItem(c.dataset.skit);
 });
 bindBanner('bEq',  () => S.eqTab);
-bindBanner('bPet', () => 'pet');
 bindBanner('bRel', () => 'relic');
+
+/* ==========================================================================
+   26 동료 팝업 (바닥 시트) — 07 스킬 팝업 구조·규격을 그대로 복제한다.
+   레퍼런스 스크린샷 없음(원본은 동료 서브탭이 잠금). 설계: UI-REFERENCE §26.
+   장착 슬롯만 8→3칸(패널 안 가로 중앙 정렬), 나머지 규격은 스킬 시트와 픽셀 동일.
+   데이터는 기존 PETS/S.eqPet/petEquipped 를 그대로 쓴다 — 저장 구조 미변경.
+   CSS 는 위의 #bSk 규칙을 :is(#bSk,#bPet) 로 공유한다.
+   ========================================================================== */
+function renderPet(){
+  const eq = S.eqPet;
+  let h = '<div class="sk-head"><i class="ol5">동료</i></div>';
+
+  /* 2 장착 슬롯 3칸 — 크기 115·pitch 125 는 07 과 동일, 패널(1037) 안 가로 중앙.
+       좌 = (1037 - (2*125 + 115)) / 2 = 336 */
+  h += '<div class="sk-eqp">';
+  for(let i = 0; i < 3; i++){
+    const id = eq[i], it = id ? PT[id] : null, L = 'left:' + (336 + i*125) + 'px';
+    h += it
+      ? '<div class="sk-slot" data-ptun="' + id + '" style="' + L
+        + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
+        + '<b class="sk-si">' + itemIcon(it) + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
+        + '<s class="sk-eq m"></s></div>'
+      : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span></div>';
+  }
+  h += '</div>';
+
+  /* 3 보유 동료 격자 5열 x 3행 (PETS) */
+  h += '<div class="sk-gp">';
+  PETS.forEach((it, i) => {
+    const own = has(it.id), on = petEquipped(it.id), lv = own ? oLv(it.id) : 1;
+    const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
+    const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
+    const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
+    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-ptit="' + it.id + '" '
+      +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
+      +  ';--f:' + f + ';--r:' + r + '">'
+      +  (own ? '<b class="sk-ci">' + itemIcon(it) + '</b>' : '<span class="sk-lock"></span>')
+      +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
+      +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-pteq="' + it.id + '"></s>' : '')
+      +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
+      +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
+      +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
+  });
+  h += '</div>';
+
+  /* 7 총 보유 효과 — 스킬과 같은 곱연산 표시 */
+  const tot = PETS.reduce((m, s) => has(s.id) ? m * (1 + ownVal(s)) : m, 1) - 1;
+  h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
+
+  /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
+  h += '<div class="sk-btn sk-b1" data-ptsum="1"><i class="ol3">동료 소환</i></div>'
+    +  '<div class="sk-btn sk-b2" data-ptup="1"><i class="ol3">일괄 강화</i></div>';
+
+  /* 9 시트 안쪽 서브탭 4개 — 동료 활성 */
+  h += '<div class="sk-tabs">'
+    +  '<div class="sk-tab sk-t1" data-pttab="eq"><i class="ol3">장비</i></div>'
+    +  '<div class="sk-tab sk-t2" data-pttab="sk"><i class="ol3">스킬</i></div>'
+    +  '<div class="sk-tab sk-t3 on" data-pttab="pet"><i class="ol4">동료</i></div>'
+    +  '<div class="sk-tsep"></div>'
+    +  '<div class="sk-tab sk-t4" data-pttab=""><i class="ol3">기타</i><span class="sk-lock"></span></div></div>';
+
+  setBody('bPet', h);
+}
+$('bPet').addEventListener('click', e => {
+  const un = e.target.closest('[data-ptun]');
+  if(un){ toggleEquip(PT[un.dataset.ptun], 'pet'); save(); uiDirty = true; renderUI(); return; }
+  const q = e.target.closest('[data-pteq]');
+  if(q){ toggleEquip(PT[q.dataset.pteq], 'pet'); save(); uiDirty = true; renderUI(); return; }
+  if(e.target.closest('[data-ptsum]')){ goTab('shop'); return; }   /* 그 자리 소환 X → 10 상점 소환 탭 */
+  if(e.target.closest('[data-ptup]')){
+    const r = levelUpAll(PETS);
+    if(!openUpAll(r.ups))
+      popup('강화 재료 부족',
+        '<p>강화 가능한 동료가 없습니다.<br>같은 동료를 더 소환해 재료를 모으세요.</p>');
+    return;
+  }
+  const t = e.target.closest('[data-pttab]');
+  if(t){
+    if(!t.dataset.pttab){ popup('🔒 기타', '<p>아직 해금되지 않은 콘텐츠입니다.</p>'); return; }
+    heroTab = t.dataset.pttab; S.heroTab = heroTab;
+    syncPanel(); uiDirty = true; renderUI(); return;
+  }
+  const c = e.target.closest('[data-ptit]');
+  if(c) showItem(c.dataset.ptit);
+});
 
 /* ==========================================================================
    06 장비 팝업 (바닥 시트) — 측정표 docs/measure/06-장비팝업.md
@@ -8048,7 +8132,7 @@ function renderUI(){
     else if(curTab === 'hero'){
       if(heroTab === 'eq')     { renderEq(); syncEquipPage(); }
       else if(heroTab === 'sk')  renderSkill();          /* 07 — 전용 바닥 시트 */
-      else                       renderBanner('pet', 'bPet');
+      else                       renderPet();               /* 26 — 동료 바닥 시트(07 구조 복제) */
     }
     else if(curTab === 'adv')  renderDun();
     else if(curTab === 'box')  renderBanner('relic', 'bRel');
