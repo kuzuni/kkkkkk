@@ -1,6 +1,8 @@
 /* 41 검증 — ① 기능 체크(T2 «기능 완성 규칙») ② 회귀(02 메인 · 03 · 14 좌표/픽셀).
    node verify41.js
-   비교 기준본은 `git show HEAD~1:index.html` 을 임시 파일로 떨궈서 쓴다(스크립트가 알아서 만든다). */
+   비교 기준본은 `git show <ref>:index.html` 을 임시 파일로 떨궈서 쓴다(스크립트가 알아서 만든다).
+   <ref> 는 인자로 준다 — 기본값 HEAD~1. 41 이 손대기 «전» 커밋을 줘야 회귀 대조가 유효하다.
+     예) node verify41.js 0384edc   (33 이 올라온 직후 = 41 직전 상태) */
 const { chromium } = require('playwright');
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -59,7 +61,7 @@ async function open(browser, file, which) {
 }
 
 (async () => {
-  execSync(`git show HEAD~1:index.html > ${BEFORE}`);
+  execSync(`git show ${process.argv[2] || 'HEAD~1'}:index.html > ${BEFORE}`);
   const browser = await chromium.launch();
   const NOW = path.resolve('index.html');
 
