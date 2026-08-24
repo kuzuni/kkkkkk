@@ -3314,28 +3314,32 @@
   /* ---- 등급 리본 — 전체 430x101(꼬리 포함) · 중앙 밴드 358x84 · 화면 정중앙 ---- */
   .rl-sec{margin-bottom:91px}
   .rl-sec:last-child{margin-bottom:0}
-  .rl-rib{position:relative;width:420px;height:101px;margin:0 auto}   /* 날개 총폭 420 (4회차 3인 실측 414~427 절충) */
+  .rl-rib{position:relative;width:430px;height:101px;margin:0 auto}   /* 5회차 자가 실측: ref 꼬리 최좌단 x325(=총폭 430). 4회차의 420 은 꼬리 검정 외곽선을 놓친 값 */
   .rl-rib>*{position:absolute}
   /* 좌·우 꼬리 — 밴드 바깥 36px, 리본top+24 ~ +98.
      바깥 모서리는 «제비꼬리»다: 위·아래 두 뾰족점 사이가 V 로 파여 있다.
      (레퍼런스 좌측 꼬리 좌단 실측: y+8 326 → y+34 341(노치) → y+64 326) */
-  .rl-rib .tl{left:0;top:22px;width:31px;height:76px;background:var(--rt);
-    clip-path:polygon(100% 0,0 13%,42% 47%,0 84%,0 95%,18% 100%,100% 100%)}
-  .rl-rib .tr{right:0;top:22px;width:31px;height:76px;background:var(--rt);
-    clip-path:polygon(0 0,100% 13%,58% 47%,100% 84%,100% 95%,82% 100%,0 100%)}
-  .rl-rib .tl::after,.rl-rib .tr::after{content:'';position:absolute;left:0;right:0;bottom:0;
-    height:8px;background:linear-gradient(180deg,var(--rt2) 0 3px,#000 3px)}  /* ref 꼬리는 바닥까지 밝다(4회차) */
+  /* 5회차 실측(ref y330): 바깥 검정 8px(329..336) → 꼬리 fill 36px(337..372) → 밴드 fill 373.
+     즉 꼬리는 «밴드 뒤» 가 아니라 «밴드 앞» 이며 밴드 좌우 테두리를 덮는다(이음매에 검정 없음). */
+  .rl-rib .tl{left:0;top:14px;width:47px;height:92px;background:#000;z-index:3;
+    clip-path:polygon(100% 0,0 13%,28% 47%,0 84%,0 95%,18% 100%,100% 100%)}
+  .rl-rib .tr{right:0;top:14px;width:47px;height:92px;background:#000;z-index:3;
+    clip-path:polygon(0 0,100% 13%,72% 47%,100% 84%,100% 95%,82% 100%,0 100%)}
+  .rl-rib .tl::after{content:'';position:absolute;left:8px;top:8px;bottom:8px;right:0;
+    background:var(--rt);clip-path:polygon(100% 0,0 13%,28% 47%,0 84%,0 95%,18% 100%,100% 100%)}
+  .rl-rib .tr::after{content:'';position:absolute;right:8px;top:8px;bottom:8px;left:0;
+    background:var(--rt);clip-path:polygon(0 0,100% 13%,72% 47%,100% 84%,100% 95%,82% 100%,0 100%)}
   /* 접힌 자락 — 밴드 양끝 뒤에서 아래로 16px 늘어진다(1회차 실측: ref 361..412 / 668..718,
      fill 바닥 382, 검정 6, 안쪽 절반이 더 어둡다). 밴드보다 먼저 그려 뒤에 깔린다. */
   .rl-rib .dl,.rl-rib .dr{top:24px;width:52px;height:77px;box-sizing:border-box;
     border-bottom:6px solid #000}
-  .rl-rib .dl{left:31px;background:linear-gradient(90deg,var(--rt) 0 62%,var(--rt2) 74% 100%)}
-  .rl-rib .dr{right:31px;background:linear-gradient(90deg,var(--rt2) 0 42%,var(--rt) 54% 100%)}  /* ref 우측 어두운 구간 668..690 (4회차) */
+  .rl-rib .dl{left:36px;background:linear-gradient(90deg,var(--rt) 0 62%,var(--rt2) 74% 100%)}
+  .rl-rib .dr{right:36px;background:linear-gradient(90deg,var(--rt2) 0 42%,var(--rt) 54% 100%)}  /* ref 우측 어두운 구간 668..690 (4회차) */
   /* 중앙 밴드 — 검정 상 6 / 하 4, radius 16. 하단 음영은 그라데이션이 아니라 급한 4px 띠(실측 364→368) */
-  .rl-rib .bd{left:31px;top:0;width:358px;height:84px;box-sizing:border-box;
+  .rl-rib .bd{left:36px;top:0;width:358px;height:84px;box-sizing:border-box;
     border:6px solid #000;border-bottom-width:4px;border-radius:16px;
     background:linear-gradient(180deg,var(--rh) 0 3px,var(--rc) 3px 68px,var(--rs) 69px 74px)}
-  .rl-rib .lb{left:31px;top:0;width:358px;height:84px;text-align:center;line-height:84px}
+  .rl-rib .lb{left:36px;top:0;width:358px;height:84px;text-align:center;line-height:84px}
   .rl-rib .lb>i{position:relative;top:-1px;font-size:44px;color:#fff;
     -webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.93)}
 
@@ -3348,13 +3352,20 @@
   /* 등급·보유 여부별 색 — 실버 링은 «보유 여부», 캐비티·포켓은 «등급» 에 연동(측정표 §4.4)
      링 셰이딩은 상하 그라데이션이 아니라 각도별이다(1회차 실측): 45°/315° 대각 하이라이트 ·
      135°/225° 대각 음영 · 상단/좌우는 중간톤. --rgM/--rgB/--rgD 로 conic 에 넣는다. */
+  /* 5회차: 파우치 쉘의 좌→우 그라(--bvl/--bvr)는 폐기했다. ref 는 좌우 대칭이고(y1500 좌 (69,107,8)
+     / 우 (69,107,6), Δ≤2), 무엇보다 --bvl/--bvr 을 베이스에만 정의해 둔 탓에
+     `var(--bvl,var(--bv))` 의 폴백이 영영 안 걸려 **[data-g] 등급 틴트가 통째로 무시됐다**
+     (고급 카드 쉘이 ref 초록 (63,100,5) 인데 회청색 (79,85,107) 로 나왔다). 이제 var(--bv) 단색이다. */
   .rl-card{--ring:#5A607A;--rk:#5F647A;--rgM:#5D637B;--rgB:#797F97;--rgD:#40465E;
-    --cv1:#272837;--cv2:#2D2E42;--pk:#31384B;--bv:#5A617A;--bvl:#4F556B;--bvr:#5F677E}
+    --cv1:#272837;--cv2:#2D2E42;--pk:#31384B;--bv:#4E546C}   /* 쉘 ref 실측 (78,84,108) — 5회차 */
   .rl-card.own{--ring:#868FB0;--rk:#8B95B8;--rgM:#8993B6;--rgB:#B3BCDD;--rgD:#626B8C;
-    --cv1:#3E3E58;--cv2:#3E3E58;--pk:#4E5572;--bv:#757E9F;--bvl:#757E9F;--bvr:#757E9F}
+    --cv1:#3E3E58;--cv2:#3E3E58;--pk:#4E5572;--bv:#757E9F}
   /* 고급(=레퍼런스 «언커먼») 이하 실측, 희귀 이상은 게임 팔레트로 같은 명도관계를 이어 만든 값 */
-  .rl-card[data-g="1"]{--cv1:#030902;--cv2:#071205;--pk:#2A5203;--bv:#3F6405}
-  .rl-card[data-g="1"].own{--cv1:#071205;--cv2:#0E2410;--pk:#418003;--bv:#5E9608}
+  /* 5회차: 초록 돔이 사실상 검정이었다 — 아이콘 숨긴 프로브의 상단 환형 중앙값이 ref (24,56,16)
+     인데 (4,11,3) 이었다(은색 대조군은 잠금 (39,37,52)/보유 (59,60,83) 둘 다 Δ≤5 로 정상).
+     등급 2~5 는 이미 이 명도대였고 1 만 홀로 near-black 이었다. */
+  .rl-card[data-g="1"]{--cv1:#183810;--cv2:#1E4415;--pk:#2A5203;--bv:#3F6405}
+  .rl-card[data-g="1"].own{--cv1:#183810;--cv2:#1E4415;--pk:#418003;--bv:#5E9608}
   .rl-card[data-g="2"]{--cv1:#12253C;--cv2:#1B3350;--pk:#24405F;--bv:#3A5C80}
   .rl-card[data-g="2"].own{--cv1:#1B3350;--cv2:#2A5382;--pk:#3A6795;--bv:#5D8FC4}
   .rl-card[data-g="3"]{--cv1:#1E1633;--cv2:#2E2246;--pk:#3A2B57;--bv:#55437A}
@@ -3401,15 +3412,19 @@
   .rl-tabs>*{position:absolute}
   /* 비활성 알약 — 밝고 돌출 */
   .rl-tabs .sg{top:0;width:389px;height:98px;border-radius:44px;background:#000}
+  /* 5회차: ref 는 안쪽 림이 사방이다 — 좌 x160..166 (110,97,81) 7px 뒤 fill (99,82,64).
+     우리는 상·하만 있고 좌·우가 0px 이었다(가로 그라가 아니라 inset 림으로 두른다). */
   .rl-tabs .sg::after{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
-    border-radius:37px;background:linear-gradient(180deg,#705F4B 0 8px,#61503C 8px 77px,#705F4B 77px 84px)}
+    border-radius:37px;box-shadow:inset 7px 0 0 #705F4B,inset -7px 0 0 #705F4B;
+    background:linear-gradient(180deg,#705F4B 0 8px,#61503C 8px 77px,#705F4B 77px 84px)}
   .rl-tabs .s1{left:0}
   .rl-tabs .s2{left:389px}
   /* 활성 알약 — 422x98, 세그 중심 정렬(좌우 16.5 부풀음) · 어둡고 눌린 인셋 */
   .rl-tabs .ac{top:0;width:422px;height:98px;border-radius:44px;background:#000}
   .rl-tabs .ac::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;
-    border-radius:38px;background:linear-gradient(180deg,#634F37 0 6px,#4B3E2D 6px 70px,
-      #634F37 70px 76px,#3F3124 76px 83px)}
+    border-radius:38px;box-shadow:inset 6px 0 0 #634F37,inset -6px 0 0 #634F37;
+    background:linear-gradient(180deg,#634F37 0 6px,#4B3E2D 6px 70px,
+      #634F37 70px 76px,#3F3124 76px 83px)}   /* 우측 림 ref x932..937 (97,79,57) — 5회차 */
   .rl-tabs .ac.a2{left:373px}         /* ref x524 − 바 x151 */
   .rl-tabs .ac.a1{left:-17px}         /* 14 쪽 활성 위치(ref x134) — 대칭 */
   .rl-tabs .tb{top:0;height:98px;width:389px;text-align:center;cursor:pointer;z-index:2}
@@ -7072,20 +7087,28 @@ const RL_RIB = [
 ];
 /* 포켓 — 바깥 실루엣(베벨색+검정 7) + 안쪽 면(좌·우·하 22 인셋) */
 const RL_POCKET = u => '<svg viewBox="0 0 216 189" aria-hidden="true">'
-  + '<defs><linearGradient id="pg' + u + '" x1="0" y1="0" x2="1" y2="0">'
-  +   '<stop offset="0" stop-color="var(--bvl,var(--bv))"/>'
-  +   '<stop offset="1" stop-color="var(--bvr,var(--bv))"/></linearGradient></defs>'
+  /* 5회차: 쉘은 등급 틴트 단색(--bv). 내부면 인셋 32 → 27 (측면 레일 ref 20px = x315..334,
+     3회차의 32 는 25px 로 +25% 과대였다). 내부면 상단에는 ref 의 립 하이라이트 밴드를 얹는다
+     (ref x350: 상단 (61,67,91) 피크 → 아래 (49,56,75) 평탄. 우리는 전 구간 평탄이었다). */
+  + '<defs><linearGradient id="ph' + u + '" x1="0" y1="0" x2="0" y2="1">'
+  +   '<stop offset=".02" stop-color="#FFF" stop-opacity="0"/>'
+  +   '<stop offset=".19" stop-color="#FFF" stop-opacity=".085"/>'
+  +   '<stop offset=".40" stop-color="#FFF" stop-opacity="0"/></linearGradient></defs>'
   + '<path d="M21.5 3.5H194.5A18 18 0 0 1 212.5 21.5V133C210.5 148 138 185 108 185'
-  +   'C78 185 5.5 148 3.5 133V21.5A18 18 0 0 1 21.5 3.5Z" fill="url(#pg' + u + ')" stroke="#000" stroke-width="7"/>'
-  + '<path d="M32 13H184V128C182 136 126 158 108 158C90 158 34 136 32 128Z" fill="var(--pk)"/>'
+  +   'C78 185 5.5 148 3.5 133V21.5A18 18 0 0 1 21.5 3.5Z" fill="var(--bv)" stroke="#000" stroke-width="7"/>'
+  + '<path d="M27 13H189V128C187 136 126 158 108 158C90 158 29 136 27 128Z" fill="var(--pk)"/>'
+  + '<path d="M27 13H189V128C187 136 126 158 108 158C90 158 29 136 27 128Z" fill="url(#ph' + u + ')"/>'
   + '</svg>';
 const RL_LOCK = '<svg viewBox="0 0 103 113" aria-hidden="true">'
   + '<path d="M31.5 52V37a20 20 0 0 1 40 0v15" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>'
-  + '<rect x="4" y="47" width="95" height="62" rx="15" fill="#000"/>'
+  /* 5회차: 흰 bbox 총합(86x95)은 ref 와 맞는데 «고리:몸통» 배분이 틀렸다 —
+     ref 중앙열 몸통 흰 652..708 vs 우리 656..707, 열쇠구멍 ref 33px(664..696) vs 27px.
+     몸통을 4px 위로 키워 고리 노출을 줄이고, 열쇠구멍을 ref 20x33 으로 키운다. */
+  + '<rect x="4" y="43" width="95" height="66" rx="15" fill="#000"/>'
   + '<path d="M31.5 52V37a20 20 0 0 1 40 0v15" fill="none" stroke="#FBFAFF" stroke-width="15" stroke-linecap="round"/>'
-  + '<rect x="8.5" y="51.5" width="86" height="53" rx="11" fill="#FBFAFF"/>'
-  + '<circle cx="51.5" cy="70" r="8.5" fill="#000"/>'
-  + '<path d="M47 72h9l2.5 17h-14z" fill="#000"/></svg>';
+  + '<rect x="8.5" y="47.5" width="86" height="57" rx="11" fill="#FBFAFF"/>'
+  + '<circle cx="51.5" cy="71" r="10" fill="#000"/>'
+  + '<path d="M45.5 74h12l3 19h-18z" fill="#000"/></svg>';
 function renderRelicTab(){
   let h = '';
   GRADE.forEach((g, gi) => {
