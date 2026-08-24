@@ -10,7 +10,7 @@ const REF_TXT = process.argv[4] === 'live' ? null : { g: '40.77A', d: '1,300' };
 
 (async () => {
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
@@ -55,7 +55,7 @@ const REF_TXT = process.argv[4] === 'live' ? null : { g: '40.77A', d: '1,300' };
   }, which);
 
   const out = path.join('docs/review', `41-${tag}-${which}.png`);
-  await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1080, height: 1920 } });
+  await page.screenshot({ path: out, clip: { x: 0, y: 0, width: 1080, height: 2280 } });
   console.log(JSON.stringify(geo, null, 1));
   console.log('errors:', errs.length ? errs : 0);
   console.log('shot:', out);

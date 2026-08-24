@@ -39,7 +39,7 @@ async function snap(page, which) {
 }
 
 async function open(browser, file, which) {
-  const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
@@ -145,7 +145,7 @@ async function open(browser, file, which) {
   const shots = {};
   for (const [tag, file] of [['before', BEFORE], ['after', NOW]]) {
     const { ctx, page } = await open(browser, file, null);
-    shots[tag] = await page.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 1920 } });
+    shots[tag] = await page.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
     await ctx.close();
   }
   fs.writeFileSync('.v41a.png', shots.before); fs.writeFileSync('.v41b.png', shots.after);
@@ -163,7 +163,7 @@ async function open(browser, file, which) {
 
   /* ---------- ④ 화면비 ---------- */
   console.log('\n[4] 화면비 5종 × 페이지 2종 — 바 기하가 프레임 좌표계에서 불변인가');
-  for (const [W, H] of [[1080, 1920], [1920, 1080], [1024, 768], [1080, 2340], [768, 1024]]) {
+  for (const [W, H] of [[1080, 2280], [1920, 1080], [1024, 768], [1080, 2340], [768, 1024]]) {
     for (const which of ['dun', 'rel']) {
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
       const page = await ctx.newPage();
@@ -186,8 +186,8 @@ async function open(browser, file, which) {
           inside: bar.top >= a.top - 0.5 && bar.left >= a.left - 0.5 && bar.right <= a.right + 0.5, pills };
       }, which);
       const good = r.top === 0 && Math.abs(r.h - 108) <= 1 && r.covers && r.inside
-        && JSON.stringify(r.pills) === JSON.stringify([[503, 31, 254, 49], [803, 31, 254, 49]]);
-      good ? ok(`${W}×${H} [${which}] 바 top0 h108 · 알약 503/803 254×49 · HUD 덮음 · 프레임 안`)
+        && JSON.stringify(r.pills) === JSON.stringify([[505, 31, 254, 49], [805, 31, 254, 49]]);
+      good ? ok(`${W}×${H} [${which}] 바 top0 h108 · 알약 505/805 254×49 · HUD 덮음 · 프레임 안`)
         : no(`${W}×${H} [${which}] ` + JSON.stringify(r));
       await ctx.close();
     }

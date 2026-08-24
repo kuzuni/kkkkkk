@@ -1147,35 +1147,46 @@
   .pcb{position:absolute;left:0;right:0;top:-104px;height:108px;z-index:40;
     -webkit-font-smoothing:antialiased;text-rendering:geometricPrecision;
     background:linear-gradient(180deg,
-      rgb(28,23,20) 0,rgb(23,22,20) 3px,rgb(4,0,0) 4px,#000 6px,rgb(29,24,18) 8px,
-      rgb(55,46,37) 9px,rgb(66,54,42) 12px,#42362A 59px,
-      rgb(61,48,39) 60px,rgb(57,45,33) 62px,#3A2E22 63px,#3A2E22 99px,
-      rgb(52,42,32) 100px,rgb(40,31,24) 101px,rgb(14,10,7) 102px,#000 103px,
+      rgb(44,33,27) 0,rgb(29,24,21) 2.5px,rgb(4,0,0) 3.5px,#000 4.5px,#000 7.5px,
+      rgb(29,24,18) 8.5px,rgb(55,46,37) 9.5px,rgb(66,54,42) 12px,#42362A 59px,
+      rgb(61,48,39) 60px,rgb(57,45,33) 62px,#3A2E22 63px,#3A2E22 99.5px,
+      rgb(52,42,32) 100.5px,rgb(40,31,24) 101.5px,rgb(14,10,7) 102.5px,#000 103.5px,
       #000 106px,rgb(8,7,5) 107px,rgb(8,7,5) 108px)}
+  /* 바가 페이지 본문 위로 떨어뜨리는 4px 내부 그림자 (ref 03 y192~195 · 14 y192~195) */
+  .pcb::after{content:'';position:absolute;left:0;right:0;top:108px;height:4px;
+    background:linear-gradient(180deg,rgba(0,0,0,.18) 0,rgba(0,0,0,0) 4px);pointer-events:none}
   /* 알약 254x49 r24.5 — 좌단 503/803(아이콘이 좌측 캡을 덮어 역산), 상단 ref115 → 로컬 31 */
+  /* 알약 내부 2톤 이음선은 «바 배경의 2톤 이음선과 같은 y» 다 — ref 는 알약 안에서도
+     프레임 y60.5 에서 꺾인다(비평 A·B 가 독립적으로 잡았고 자체 스캔으로도 확인).
+     알약 top 31 → 알약 로컬 29.5px, 램프 2px. 알약 자체 비율(71%)로 꺾으면 5px 어긋난다. */
   .pcb-p{position:absolute;top:31px;width:254px;height:49px;border-radius:24.5px;
-    background:linear-gradient(180deg,#231A13 0,#231A13 33px,#1F1810 35px,#1D160E 36px,
+    background:linear-gradient(180deg,#231A13 0,#231A13 28.5px,#1D160E 30.5px,
       #1D160E 49px);
     display:flex;align-items:center;justify-content:center;padding-left:53px;
-    padding-right:12px;box-sizing:border-box}
-  .pcb-g{left:503px}
-  .pcb-d{left:803px}
+    padding-right:16px;box-sizing:border-box}
+  .pcb-g{left:505px}
+  .pcb-d{left:805px}
   /* 아이콘 57x57 — 중심이 알약 좌측 캡 원 중심(좌단+24.5)이라 알약 위·아래로 4px 씩 나온다.
      레퍼런스 아이콘은 검정 아웃라인 2~3px 을 포함한 실루엣이므로 blur 0 인 8방향 그림자로
      «경화된» 링을 만든다(.cbox i 와 같은 처방 — A3 비고). */
-  .pcb-p>i{position:absolute;left:-4px;top:-4px;width:57px;height:57px;z-index:2;
+  /* 아이콘 «아트» 는 ref 좌단 500/801 에 그대로 두고 알약만 +2px 우측이라 오프셋이 칸마다 다르다.
+     검정 컨투어는 ref 가 좌우 3px · 상 3.5px · 하 5.5px 로 «아래가 두꺼운» 비대칭이다
+     (코인·젬이 같은 비대칭 = 공유 그림자 레이어. 비평 A 누락 레이어 1). */
+  .pcb-p>i{position:absolute;left:-6px;top:-4px;width:57px;height:57px;z-index:2;
     align-items:center;justify-content:center;font-style:normal;line-height:1;
-    text-shadow:2.2px 0 0 #000,-2.2px 0 0 #000,0 2.2px 0 #000,0 -2.2px 0 #000,
-      1.6px 1.6px 0 #000,-1.6px 1.6px 0 #000,1.6px -1.6px 0 #000,-1.6px -1.6px 0 #000}
+    text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
+      2.1px 2.1px 0 #000,-2.1px 2.1px 0 #000,2.1px -2.1px 0 #000,-2.1px -2.1px 0 #000,
+      0 5px 0 rgba(0,0,0,.92),2px 4.5px 0 rgba(0,0,0,.92),-2px 4.5px 0 rgba(0,0,0,.92)}
+  .pcb-d>i{left:-4px}
   /* #dunw i / #relicw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
   #dunw .pcb-p>i,#relicw .pcb-p>i{display:flex}
   .pcb-g>i{font-size:51px;transform:scaleX(1.04)}
-  .pcb-d>i{font-size:60px;transform:scaleX(.86)}
+  .pcb-d>i{font-size:59px;transform:scaleX(.86)}
   /* 숫자 — 잉크 h23, 28 교훈 1(숫자 잉크비 0.69) → fs 33.3. 폭은 scaleX 로 회수.
      translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
-  .pcb-p>b{font-size:33.3px;font-weight:900;color:#fff;white-space:nowrap;line-height:1;
-    -webkit-text-stroke:9px #000;paint-order:stroke fill;
-    transform:translate3d(0,0,0) scaleX(1.135);transform-origin:50% 50%;
+  .pcb-p>b{font-size:34.5px;font-weight:900;color:#fff;white-space:nowrap;line-height:1;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;
+    transform:translate3d(0,0,0) scaleX(1.096);transform-origin:50% 50%;
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
   /* ==========================================================================
