@@ -2306,9 +2306,10 @@
 
   /* §0 시트 — 전폭, 상단 radius 28, 검정 상단 테두리 8px */
   .tr-sheet{left:0;right:0;bottom:0;height:1245px;background:#E6C695;
-    border-radius:28px 28px 0 0;overflow:hidden}
+    border-radius:34px 34px 0 0;overflow:hidden}
+  .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;background:#141414}
   .tr-sheet>*{position:absolute}
-  .tr-wave{left:0;right:0;top:0;height:8px;background:#000;z-index:3}
+  .tr-wave{left:0;right:0;top:0;height:8px;background:#141414;z-index:3}
 
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
   .tr-head{left:0;right:0;top:8px;height:106px;
@@ -2318,20 +2319,22 @@
     transform:scaleX(.87)}
 
   /* §2 크림 박스 — border-box ref x17..1062 / y1063..2152, 테두리 #CDA26C 6px */
-  .tr-box{left:17px;top:143px;width:1046px;height:1090px;background:#F3E6CD;border-radius:20px;
+  .tr-box{left:17px;top:143px;width:1046px;height:1093px;border-radius:26px;
+    background:linear-gradient(180deg,#F3E6CD 0 340px,#EDDABC 420px 900px,#F3E7CF 960px);
     box-shadow:inset 0 0 0 6px #CDA26C}
   .tr-box>*{position:absolute}
 
   /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y35 w551 h109 (가운데 바 + 좌우 깃) */
   .tr-rib{left:247px;top:35px;width:551px;height:109px}
-  .tr-rib>b{position:absolute;top:16px;width:52px;height:78px;background:#4C311F;z-index:1}
+  .tr-rib>b{position:absolute;top:30px;width:52px;height:76px;background:#4C311F;z-index:1}
   .tr-rib>b.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,22px 50%)}
   .tr-rib>b.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 22px) 50%,100% 100%,0 100%)}
-  .tr-rib>.bar{position:absolute;left:34px;right:34px;top:0;height:109px;background:#6B4A34;
-    border-radius:14px;box-shadow:inset 0 0 0 5px #4C311F;z-index:2}
+  .tr-rib>.bar{position:absolute;left:34px;right:34px;top:0;height:89px;background:#6B4A34;
+    border-radius:14px;box-shadow:inset 0 9px 0 #4C311F,inset 0 -9px 0 #4C311F,
+    inset 5px 0 0 #4C311F,inset -5px 0 0 #4C311F;z-index:2}
   .tr-rib>u{position:absolute;left:0;right:0;top:9px;height:60px;line-height:60px;text-align:center;
-    font-size:51px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;z-index:3;
-    transform:scaleX(.89)}
+    font-size:51px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
+    transform:scaleX(.9)}
   .tr-rib>u em{position:relative;top:4px;font-size:53px;color:#FA8153;-webkit-text-stroke:9px #000;
     paint-order:stroke fill;margin:0 4px}
 
@@ -2340,54 +2343,63 @@
   .tr-prog>.trk{position:absolute;left:8px;top:7px;right:8px;bottom:7px;border-radius:21px;
     background:#1C1E2B;overflow:hidden}
   .tr-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:21px;
-    background:linear-gradient(180deg,#A5EC46 0 8px,#9EF12F 8px)}
+    background:linear-gradient(180deg,#A5EC46 0 2px,#9EF12F 2px 36px,#80D91F 36px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
-    font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
-    transform:translateX(15px) scaleX(1.2)}
+    font-size:31px;color:#fff;-webkit-text-stroke:7px #141414;paint-order:stroke fill;z-index:2;
+    transform:translateX(15px) scaleX(1.28)}
   /* §4b ↑ 버튼 — x838 y140 w108 h105. 3종 상한을 다 채우기 전에는 은색(비활성) */
-  .tr-up{left:838px;top:140px;width:108px;height:105px;border-radius:28px;cursor:pointer;
-    background:linear-gradient(180deg,#D3D3D3 0 8px,#989898 8px);
-    box-shadow:inset 0 0 0 6px #000;text-align:center;line-height:105px}
-  .tr-up.on{background:linear-gradient(180deg,#CFF06B 0 8px,#6FBE1E 8px)}
-  .tr-up>i{position:relative;top:-14px;font-size:92px;color:#B0EA26;-webkit-text-stroke:18px #000;
-    paint-order:stroke fill;line-height:105px;transform:scaleX(1.35)}
+  .tr-up{left:838px;top:140px;width:108px;height:105px;border-radius:32px;cursor:pointer;
+    background:linear-gradient(180deg,#8C8C8C 0,#9A9A9A 55%,#CFCFCF 100%);
+    box-shadow:inset 0 0 0 6px #141414,inset 0 0 0 13px #D3D3D3;text-align:center;line-height:105px}
+  .tr-up.on{background:linear-gradient(180deg,#63B41C 0,#7ACB27 55%,#CFF06B 100%)}
+  /* 화살표는 글리프로 그리면 스트로크가 초록을 먹어 4px 만 남는다 — CSS 도형으로 그린다 */
+  .tr-up>i{position:absolute;left:27px;top:17px;width:54px;height:53px;font-size:0;
+    filter:drop-shadow(0 0 0 #141414)}
+  .tr-up>i::before{content:'';position:absolute;left:0;top:0;width:0;height:0;
+    border-left:27px solid transparent;border-right:27px solid transparent;
+    border-bottom:30px solid #B0EA26}
+  .tr-up>i::after{content:'';position:absolute;left:13px;top:29px;width:28px;height:24px;
+    background:#B0EA26}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
-  .tr-qty{left:142px;top:265px;width:767px;height:73px}
-  .tr-qty>.q{position:absolute;top:0;height:73px;cursor:pointer;text-align:center;line-height:73px;
-    background:linear-gradient(180deg,#E6C09C 0 5px,#B8825E 5px 60px,#A26843 60px);
+  .tr-qty{left:142px;top:265px;width:767px;height:81px}
+  .tr-qty>.q{position:absolute;top:0;height:81px;cursor:pointer;text-align:center;line-height:64px;
+    background:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 60px,#A26843 60px 69px,#ECBE9A 69px);
     box-shadow:inset -3px 0 0 #A06845}
+  .tr-qty>.q.on::before{content:'';position:absolute;left:15px;right:0;top:14px;bottom:21px;
+    border-radius:24px;background:linear-gradient(180deg,#FFF0D3 0 3px,#FCD2AC 3px);
+    box-shadow:inset 0 0 0 6px #AA6F4D}
   .tr-qty>.q:nth-child(1){left:0;width:247px;border-radius:12px 0 0 12px}
   .tr-qty>.q:nth-child(2){left:247px;width:263px}
   .tr-qty>.q:nth-child(3){left:510px;width:257px;border-radius:0 12px 12px 0;box-shadow:none}
-  .tr-qty>.q.on{background:linear-gradient(180deg,#FDE0C4 0 5px,#FCD2AC 5px 60px,#E8B183 60px)}
-  .tr-qty>.q>i{font-size:31px;color:#C6BCBA;-webkit-text-stroke:6px #3A2415;paint-order:stroke fill}
+  .tr-qty>.q>i{position:relative;z-index:2;font-size:35px;color:#C6BCBA;
+    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill}
   .tr-qty>.q.on>i{color:#F9F1EF}
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
   .tr-cards{left:0;right:0;top:373px;height:510px}
   .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:26px;background:#FFFDEE;
-    box-shadow:inset 0 0 0 8px #000;cursor:pointer}
+    box-shadow:inset 0 0 0 8px #141414;cursor:pointer}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
   .tr-card>*{position:absolute}
-  .tr-card>.ch{left:8px;right:8px;top:12px;height:85px;text-align:center;line-height:79px;
-    background:linear-gradient(180deg,#F3D39A,#EEC889)}
+  .tr-card>.ch{left:8px;right:8px;top:8px;height:89px;text-align:center;line-height:83px;
+    background:linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
   .tr-card>.ch>i{font-size:54px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.9)}
-  .tr-card>.ci{left:83px;top:126px;width:180px;height:164px;text-align:center;line-height:164px;
+  .tr-card>.ci{left:73px;top:126px;width:180px;height:164px;text-align:center;line-height:164px;
     font-size:150px}
   .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
   .tr-card>.cn>i{font-size:29px;color:#6E502F;transform:scaleX(.95)}
-  .tr-card>.cb{left:8px;right:8px;top:396px;bottom:8px;text-align:center;line-height:107px;
+  .tr-card>.cb{left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
+    justify-content:center;gap:8px;
     background:linear-gradient(180deg,#BBA38B 0 99px,#AA7F54 99px)}
-  .tr-card>.cb>s{position:absolute;left:74px;top:16px;width:90px;height:74px;line-height:74px;
-    font-size:52px;-webkit-text-stroke:0}
-  .tr-card>.cb>i{position:absolute;left:142px;top:22px;width:174px;height:62px;line-height:62px;
-    font-size:42px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill}
-  .tr-card>.dot{right:-7px;top:-6px;width:31px;height:31px;border-radius:50%;background:#EF3457;
+  .tr-card>.cb>s{font-size:52px;line-height:74px;-webkit-text-stroke:0}
+  .tr-card>.cb>i{position:relative;top:-3px;font-size:47px;line-height:62px;color:#F9EB6E;
+    -webkit-text-stroke:9px #141414;paint-order:stroke fill}
+  .tr-card>.dot{right:-8px;top:-7px;width:33px;height:33px;border-radius:50%;background:#EF3457;
     box-shadow:inset 0 0 0 3px #000;z-index:4}
   .tr-qty .dot{position:absolute;left:232px;top:-6px;width:25px;height:25px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
@@ -2395,15 +2407,22 @@
   /* §7 하단 서브탭 4칸 — x37 y958 w960 h97, 4등분 240 */
   .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:48px;background:#000;
     overflow:hidden;display:flex}
-  .tr-sub>.sg{position:relative;flex:1;text-align:center;line-height:97px;background:#5D5039;
-    margin:6px 0;cursor:pointer;box-shadow:inset -3px 0 0 #2A2118}
+  .tr-sub>.sg{position:relative;flex:0 0 auto;text-align:center;line-height:85px;background:#5D5039;
+    margin:6px 0;cursor:pointer;box-shadow:inset -4px 0 0 #4A3A2B}
+  .tr-sub>.sg:nth-child(1){width:234px}
+  .tr-sub>.sg:nth-child(2){width:244px}
+  .tr-sub>.sg:nth-child(3){width:242px}
+  .tr-sub>.sg:nth-child(4){width:228px}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
   .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;box-shadow:none}
-  .tr-sub>.sg.on{background:#4B3E2D}
-  .tr-sub>.sg>i{font-size:40px;color:#B9A88F;line-height:85px;-webkit-text-stroke:5px #000;
-    paint-order:stroke fill;transform:scaleX(.9)}
-  .tr-sub>.sg.on>i{color:#E7B88E}
-  .tr-sub>.sg.lock>i{font-size:38px;color:#fff}
+  .tr-sub>.sg.on::before{content:'';position:absolute;left:8px;right:0;top:0;bottom:0;
+    border-radius:38px 0 0 38px;background:#4B3E2D;border-right:9px solid #0C0803}
+  .tr-sub>.sg>i{position:relative;z-index:2;top:3px;font-size:39px;color:#B9A88F;line-height:78px;
+    -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
+  .tr-sub>.sg.on>i{color:#E7B88E;left:7px;top:6px}
+  .tr-sub>.sg.lock>i{font-size:52px;color:#fff;-webkit-text-stroke:0}
+  .tr-sub>.sg.on>.dot{position:absolute;right:14px;top:8px;width:26px;height:26px;border-radius:50%;
+    background:#EF3457;box-shadow:inset 0 0 0 3px #141414;z-index:3}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
@@ -7805,11 +7824,12 @@ function renderTrain(){
   const max   = t ? trainMax()   : statMax();
   const ready = t ? trainReady() : statReady();
   $('trRib').innerHTML = (t ? '훈련 ' : '스탯 훈련 ') + '<em>' + stage + '</em> 단계';
-  $('trFill').style.width = Math.max(0, Math.min(100, prog / max * 100)) + '%';
+  /* 트랙 내부 646px. 둥근 캡 때문에 ref 는 0% 에서도 10px 이 보인다 — 같은 보정을 준다 */
+  $('trFill').style.width = (10 + Math.max(0, Math.min(1, prog / max)) * 636) + 'px';
   $('trProg').textContent = prog + '/' + max;
   $('trUp').classList.toggle('on', ready);
   $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
-    + '" data-trq="' + q + '"><i>x' + q + '</i>' + (q === 1 ? '<em class="dot"></em>' : '') + '</span>').join('');
+    + '" data-trq="' + q + '"><i>x' + q + '</i><em class="dot"></em></span>').join('');
   $('trCards').innerHTML = trainCardData().map(c =>
     '<div class="tr-card' + (c.ok ? '' : ' no') + (c.full ? ' full' : '') + '" data-tr="' + c.k + '">'
     + '<span class="ch"><i>' + c.lvTxt + '</i></span>'
@@ -7819,7 +7839,7 @@ function renderTrain(){
     + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
   $('trSub').innerHTML =
-      '<span class="sg' + (t ? ' on' : '') + '" data-trsub="train"><i>훈련</i></span>'
+      '<span class="sg' + (t ? ' on' : '') + '" data-trsub="train"><i>훈련</i><em class="dot"></em></span>'
     + '<span class="sg' + (t ? '' : ' on') + '" data-trsub="stat"><i>스탯 훈련</i></span>'
     + '<span class="sg lock"><i>🔒</i></span>'
     + '<span class="sg lock"><i>마법상판 🔒</i></span>';
