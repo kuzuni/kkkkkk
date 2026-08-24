@@ -1950,6 +1950,83 @@
     -webkit-text-stroke:6px #001F2C;paint-order:stroke fill;transform:scaleX(.9)}
 
   /* ==========================================================================
+     20 프로필 팝업 — 플레이어 스펙 정보(종합 스탯 탭) — 측정표 docs/measure/20-프로필팝업스펙정보.md
+     껍데기 = (다) 딤(.55) 위 가운데 다이얼로그 896×1395 (ref 세로중심 = 화면중심+42.5 → translateY 42).
+     좌표는 전부 «크림 박스(#F0D9BA, ref x111/y534) 기준 상대값» = ref − (111, 534).
+     19 프로필 탭(#pfw)과 같은 셸 — 하단 토글로 상호 연결한다.
+     ========================================================================== */
+  #specw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:34;
+    align-items:center;justify-content:center}
+  #specw.on{display:flex}
+  #specw i,#specw em,#specw b,#specw s{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900}
+  /* 바깥 박스 — 검정 7 + 갈색 11 + 하이라이트 1(#887661, 크림에 box-shadow) */
+  .spc{position:relative;flex:none;width:896px;height:1395px;max-height:100%;
+    background:#564438;border:7px solid #000;border-radius:44px;box-sizing:border-box;
+    transform:translateY(42px)}
+  /* 크림 본문 — padding-box 에서 좌우 12 / 상 12 / 하 13 인셋, radius 24 */
+  .spc-body{position:absolute;left:12px;right:12px;top:12px;bottom:13px;background:#F0D9BA;
+    border-radius:24px;box-shadow:0 0 0 1px #887661}
+  .spc-body>*{position:absolute}
+  /* Gamer Id — 잉크 y21(h15) 중앙정렬, 흰색, 외곽선 없음 */
+  .spc-gid{left:0;right:0;top:14px;height:30px;line-height:30px;text-align:center;
+    font-size:21px;font-weight:700;color:#FBFBFD;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+  /* 아바타 액자 179×180 — 검정 5 → 갈색 12(#715A4A) → 검정 라인 2 → 초상화(#3B5A86) */
+  .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
+    border:5px solid #000;border-radius:18px;background:#715A4A}
+  .spc-ava>.in{position:absolute;left:12px;right:12px;top:12px;bottom:12px;
+    border:2px solid #000;border-radius:6px;background:#3B5A86;overflow:hidden;
+    text-align:center;font-size:96px;line-height:145px}
+  /* 칭호 육각 배너 318×53 — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 (2겹 clip-path) */
+  .spc-rib{left:269px;top:250px;width:318px;height:53px}
+  .spc-rib>s{position:absolute;inset:0;background:#000;
+    clip-path:polygon(0 50%,7% 0,93% 0,100% 50%,93% 100%,7% 100%)}
+  .spc-rib>b{position:absolute;left:3px;right:3px;top:3px;bottom:3px;
+    background:linear-gradient(180deg,#635145 0 8px,#433A35 8px);
+    clip-path:polygon(0 50%,7% 0,93% 0,100% 50%,93% 100%,7% 100%);
+    text-align:center;line-height:47px;font-size:30px;color:#fff}
+  /* 닉네임 스트립 — 반투명 흑갈, 좌단 30px 페이드. 텍스트 라틴 fs32 흰+진갈 외곽선 */
+  .spc-nick{left:251px;top:310px;width:333px;height:52px;
+    background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,.92) 30px,rgba(115,103,87,.92) 100%);
+    text-align:center;line-height:52px}
+  .spc-nick>i{font-size:32px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill}
+  /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
+  .spc-edit{left:583px;top:310px;width:56px;height:54px;box-sizing:border-box;
+    border:5px solid #52433C;border-radius:12px;background:#F6E9C6;cursor:pointer;
+    text-align:center;font-size:28px;line-height:44px}
+  /* 스탯 리스트 뷰포트 800×744 — radius 20, 스크롤바 없는 내부 스크롤, 상단 18px 은 1행 색 패딩 */
+  .spc-list{left:28px;top:448px;width:800px;height:744px;border-radius:20px;
+    background:#FEEFD2;padding-top:18px;box-sizing:border-box;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .spc-list::-webkit-scrollbar{width:0;height:0}
+  /* 행 피치 60, 홀수 #FEEFD2 / 짝수 #F6E2C7 (구분선 없음) */
+  .spc-row{position:relative;height:60px;background:#FEEFD2}
+  .spc-row:nth-child(even){background:#F6E2C7}
+  /* 이름(좌) — 잉크 좌변 컨테이너+37, 한글 fs27 흰(#F9F9F9)+검정 외곽선 5(한쪽 2.5) */
+  .spc-row>.nm{position:absolute;left:37px;top:0;height:60px;line-height:60px;
+    font-size:27px;color:#F9F9F9;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    white-space:nowrap}
+  /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + 진록 외곽선 5, 숫자혼합 fs31 */
+  .spc-row>.vl{position:absolute;right:37px;top:0;height:60px;line-height:60px;
+    font-size:31px;color:#BAFD60;-webkit-text-stroke:5px #274A11;paint-order:stroke fill;
+    text-align:right;white-space:nowrap}
+  /* 하단 토글 탭 컨테이너 767×94 — 검정 5 + #3D3630, radius 22 */
+  .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
+    border:5px solid #000;border-radius:22px;background:#3D3630}
+  /* 활성 금색 배너 386×67 — 좌우 화살촉 팁, 검정 외곽선 3 (2겹 clip-path), 컨테이너 밖 살짝 돌출 */
+  .spc-tab-on{position:absolute;left:-8px;top:8px;width:386px;height:67px;cursor:default}
+  .spc-tab-on>s{position:absolute;inset:0;background:#000;
+    clip-path:polygon(0 50%,3% 0,97% 0,100% 50%,97% 100%,3% 100%)}
+  .spc-tab-on>b{position:absolute;left:3px;right:3px;top:3px;bottom:3px;
+    background:linear-gradient(180deg,#FFE983 0,#FFC736 50%,#F8A63A 100%);
+    clip-path:polygon(0 50%,3% 0,97% 0,100% 50%,97% 100%,3% 100%);
+    text-align:center;line-height:61px;font-size:35px;color:#FEF7C1;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+  /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
+  .spc-tab-off{position:absolute;left:440px;width:265px;top:0;height:84px;line-height:84px;
+    text-align:center;font-size:33px;font-weight:900;color:#9A99A0;cursor:pointer}
+
+  /* ==========================================================================
      06 장비 팝업 — 측정표 docs/measure/06-장비팝업.md
      껍데기 = **(나) 폭 1080 «바닥 시트»**. 가운데 다이얼로그(A5 `.mbox`)가 아니다.
        · 폭 1080 꽉 참(좌우 여백 0) · radius 위 38 / 아래 0 · 바닥은 하단 탭바에 가려 잘림
@@ -3207,6 +3284,22 @@
     <div class="st-icon"><b id="stIc">⚔️</b></div>
     <div class="st-desc"><i id="stDesc"></i></div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
+  </div>
+  <!-- 20 프로필 팝업 — 플레이어 스펙 정보(종합 스탯 탭). 측정표 docs/measure/20-프로필팝업스펙정보.md
+       19 프로필 탭(#pfw)과 하단 토글로 상호 연결. -->
+  <div id="specw">
+    <div class="spc"><div class="spc-body">
+      <div class="spc-gid" id="spcGid"></div>
+      <div class="spc-ava"><div class="in"><i>🛡️</i></div></div>
+      <div class="spc-rib"><s></s><b>칭호 없음</b></div>
+      <div class="spc-nick"><i id="spcNick"></i></div>
+      <div class="spc-edit" id="spcEdit">✏️</div>
+      <div class="spc-list" id="spcList"></div>
+      <div class="spc-tabs">
+        <div class="spc-tab-on"><s></s><b>종합 스탯</b></div>
+        <div class="spc-tab-off" id="spcProfTab">프로필</div>
+      </div>
+    </div></div>
   </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -6583,6 +6676,52 @@ $('pfEdit').onclick = () => {
   const v = prompt('닉네임을 입력하세요 (최대 14자)', S.nick);
   if(v && v.trim()){ S.nick = v.trim().slice(0, 14); save(); $('nickN').textContent = S.nick; renderProfile(); }
 };
+
+/* ---------------- 20 프로필 팝업 — 플레이어 스펙 정보 (#specw, 표시 전용 · 저장 구조 미변경) ---------------- */
+/* Gamer Id — 저장 구조를 바꾸지 않기 위해 닉네임에서 유도한 결정적 의사 UUID (FNV-1a) */
+function spcGamerId(){
+  let h = 0x811c9dc5; const s = S.nick + '|' + KEY;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  const hex = n => (n >>> 0).toString(16).padStart(8, '0');
+  const h2 = Math.imul(h, 2654435761) >>> 0, h3 = Math.imul(h2, 40503) >>> 0;
+  return hex(h) + '-' + hex(h2).slice(0, 4) + '-' + hex(h2).slice(4) + '-'
+    + hex(h3).slice(0, 4) + '-' + hex(h3) + hex(h).slice(0, 4);
+}
+/* 레퍼런스는 햄지·매옹이 2캐릭 각 7행 — 우리는 1캐릭(햄지)이라 실제 스탯 13행으로 표시 전용 매핑 */
+function renderSpec(){
+  $('spcGid').textContent = 'Gamer Id: ' + spcGamerId();
+  $('spcNick').textContent = S.nick;
+  const b = bonus();
+  const pc = v => fmtPct((v - 1) * 100, 2) + '%';
+  const rows = [
+    ['햄지 공격력', fmt(stat.dmg)],
+    ['햄지 체력', fmt(stat.maxHp)],
+    ['햄지 공격력', pc(b.atk)],
+    ['햄지 체력', pc(b.hp)],
+    ['햄지 일반 공격 피해량', '100%'],
+    ['햄지 일반 몬스터 피해량', '100%'],
+    ['햄지 보스 피해량', '100%'],
+    ['햄지 치명타 확률', pct(stat.crit)],
+    ['햄지 치명타 피해량', Math.round(stat.cdmg * 100) + '%'],
+    ['햄지 공격 속도', fmtPct((stat.rate / 1.4 - 1) * 100, 2) + '%'],
+    ['햄지 체력 재생', fmt(stat.regen) + '/s'],
+    ['햄지 골드 획득량', pc(b.gold)],
+    ['햄지 이동 속도', '0%']
+  ];
+  $('spcList').innerHTML = rows.map(r =>
+    '<div class="spc-row"><span class="nm">' + r[0] + '</span><span class="vl">' + r[1] + '</span></div>').join('');
+}
+function openSpec(){ renderSpec(); $('specw').classList.add('on'); }
+function closeSpec(){ $('specw').classList.remove('on'); }
+$('specw').addEventListener('click', e => { if(e.target.id === 'specw') closeSpec(); });
+$('tabbar').addEventListener('click', closeSpec, true);
+$('spcEdit').onclick = () => {
+  const v = prompt('닉네임을 입력하세요 (최대 14자)', S.nick);
+  if(v && v.trim()){ S.nick = v.trim().slice(0, 14); save(); $('nickN').textContent = S.nick; renderSpec(); }
+};
+/* 하단 토글 상호 연결 — 19 #pfw 의 «종합 스탯» → 여기 / 여기 «프로필» → #pfw */
+document.querySelector('.pf-tgl>.lb').onclick = () => { closeProfile(); openSpec(); };
+$('spcProfTab').onclick = () => { closeSpec(); openProfile(); };
 function openPromo(){
   const r = nextRank();
   if(!r){ popup('🏅 최고 계급', '<p>이미 최고 계급입니다! 🎉</p>'); return; }
