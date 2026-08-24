@@ -1822,6 +1822,134 @@
     -webkit-text-stroke:4px #091D1C;paint-order:stroke fill;text-align:right}
 
   /* ==========================================================================
+     19 프로필 팝업 — 측정표 docs/measure/19-프로필팝업.md
+     껍데기 = (가) 전면 딤 + 중앙 다이얼로그. 딤은 순검정이 아니라 짙은 남색(잔존율 R9/G25/B34).
+     패널 border-box ref (92,515) 896×1396 → 프레임 top 305 (전 요소 y_impl = y_ref − 210).
+     자식 좌표는 전부 «패널 local = ref − (92,515)». 테두리는 배경 레이어로 깔아
+     자식 좌표가 밀리지 않게 한다(03 함정).
+     ========================================================================== */
+  #pfw{position:absolute;inset:0;background:rgba(0,20,50,.85);display:none;z-index:33}
+  #pfw.on{display:block}
+  #pfw i,#pfw em,#pfw b,#pfw s{display:inline-block;font-style:normal;text-decoration:none;
+    font-weight:900}
+  .pf{position:absolute;left:92px;top:305px;width:896px;height:1396px;background:#000;
+    border-radius:45px}
+  /* 갈색 링 11px = 밝은 (86,68,58) 7 + 어두운 (71,57,46) 4 */
+  .pf-ring{position:absolute;inset:7px;border-radius:39px;
+    background:linear-gradient(180deg,#56443A 0 0);
+    box-shadow:inset 0 0 0 7px #56443A,inset 0 0 0 11px #47392E}
+  .pf-fill{position:absolute;inset:18px;border-radius:30px;background:#F0D9BA;
+    box-shadow:0 0 0 1px #887662}
+  .pf>*{position:absolute}
+  /* Gamer Id — 라틴 잉크 15 → font 21(÷0.72). 얇은 회흑 외곽선 2px */
+  .pf-gid{left:0;right:0;top:32px;height:22px;line-height:22px;text-align:center;
+    font-size:21px;font-weight:700;color:#fafafa;
+    -webkit-text-stroke:4px #5a5a5a;paint-order:stroke fill;white-space:nowrap}
+  /* 초상화 ref (451,595) 179×176 — 검정5 / 갈색(113,90,76)12 / 검정4 / 아트 137×138 */
+  .pf-por{left:359px;top:80px;width:179px;height:176px;background:#000;border-radius:14px}
+  .pf-por>.b{position:absolute;inset:5px;background:#715A4C;border-radius:10px}
+  .pf-por>.k{position:absolute;inset:17px;background:#000}
+  .pf-por>.art{position:absolute;inset:21px;background:linear-gradient(180deg,#4075C5,#5A97E7);
+    text-align:center;font-size:104px;line-height:134px;overflow:hidden}
+  /* 육각 배너 공통 — 양끝 뾰족(테이퍼 14px). 검정 외곽 + (옵션 금링) + 채움 */
+  .hx{text-align:center}
+  .hx>s{position:absolute;inset:0;
+    clip-path:polygon(0 50%,14px 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,14px 100%)}
+  .hx>s.m{inset:4px 4px}
+  .hx>s.f{inset:5px 4px}
+  .hx>i{position:relative}
+  /* 칭호 필 ref maxw319 h56 center x540 → local (288.5,268). fill(67,58,53) 상단 베벨(99,81,69) 6px */
+  .pf-ttl{left:289px;top:268px;width:319px;height:56px;line-height:56px}
+  .pf-ttl>s.o{background:#000}
+  .pf-ttl>s.f{background:linear-gradient(180deg,#635145 0 6px,#433A35 6px)}
+  .pf-ttl>i{font-size:31px;color:#f5f5f5;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    transform:scaleX(.9)}
+  /* 닉네임 바 ref y846 h49 — 반투명 (115,103,87), 좌우 알파 페이드 */
+  .pf-nick{left:238px;top:331px;width:368px;height:49px;line-height:49px;text-align:center;
+    background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,.92) 72px,
+      rgba(115,103,87,.92) calc(100% - 10px),rgba(115,103,87,0));
+    font-size:32px;font-weight:700;color:#fbfbfb;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
+  /* ✏ 편집 ref (694,843) 56×55 — 크림 + 암갈 테두리 5, r12 */
+  .pf-edit{left:602px;top:328px;width:56px;height:55px;background:#F6E8CB;
+    border:5px solid #423127;border-radius:12px;box-sizing:border-box;cursor:pointer;
+    text-align:center;line-height:44px;font-size:29px;color:#52433C;font-weight:900}
+  /* 탭 3개 ref y917 h70 — 활성은 콘텐츠 패널(#D0B195)과 이음새 없이 연결(2px 겹침) */
+  .pf-tab{top:402px;width:228px;height:69px;line-height:66px;text-align:center;
+    border-radius:16px 16px 0 0;background:#A5866A;cursor:pointer;
+    box-shadow:inset 0 0 0 6px #8C6D51,inset 0 0 0 12px #BAA085;
+    font-size:34px;color:#A9A8AD;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
+  /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
+  .pf-tab.on{height:76px;background:#D0B195;z-index:2;
+    box-shadow:inset 0 4px 0 #A6896B,inset 4px 0 0 #A6896B,inset -4px 0 0 #A6896B,
+      inset 0 10px 0 #E0CCB4,inset 10px 0 0 #E0CCB4,inset -10px 0 0 #E0CCB4;
+    font-size:35px;color:#FFF8C1}
+  .pf-tab>i{transform:scaleX(.9)}
+  /* 콘텐츠 패널 ref (150,985) 780×544, r36, 테두리 없음 */
+  .pf-grid{left:58px;top:470px;width:780px;height:544px;background:#D0B195;border-radius:36px;
+    overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding:46px 30px 20px;z-index:1}
+  .pf-grid::-webkit-scrollbar{width:0;height:0}
+  .pf-cards{display:grid;grid-template-columns:350px 350px;gap:23px 20px}
+  /* 카드 350×77 r16 — 보유(139,118,99)/미보유(92,77,64). 장착 = 시안 링 6 + 검정 배지 */
+  .pf-card{position:relative;width:350px;height:77px;border-radius:16px;background:#5C4D40}
+  .pf-card.own{background:#8B7663}
+  .pf-card.eq{box-shadow:0 0 0 6px #8EFCF3}
+  /* 카드 내부 육각 배너 w298 h57, 카드 상 11 / 좌 26 */
+  .pf-bn{position:absolute;left:26px;top:11px;width:298px;height:57px;line-height:57px}
+  .pf-bn>s.o{background:#000}
+  .pf-bn>s.m{background:var(--gr,#000)}
+  .pf-bn>s.f{background:linear-gradient(180deg,var(--bv,#7D6857) 0 6px,var(--gc,#443B36) 6px)}
+  .pf-bn>i{font-size:25px;color:#ebebeb;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(.88)}
+  .pf-card:not(.own) .pf-bn>i{color:#A7A7A7}
+  /* 자물쇠(미보유) — 흰 몸통 28×32 + 고리, 검정 외곽은 drop-shadow */
+  .pf-lk{position:absolute;left:50%;top:50%;width:28px;height:32px;margin:-9px 0 0 -14px;
+    background:#fff;border-radius:5px;
+    filter:drop-shadow(0 0 2.5px #000) drop-shadow(0 0 1.5px #000)}
+  .pf-lk::before{content:'';position:absolute;left:4px;top:-13px;width:20px;height:16px;
+    border:6px solid #fff;border-bottom:none;border-radius:10px 10px 0 0;box-sizing:border-box}
+  /* 장착 중 배지 — 검정 알약 148×38, 카드 상변 −18 겹침 */
+  .pf-eqb{position:absolute;left:50%;top:-18px;width:148px;height:38px;margin-left:-74px;
+    border-radius:19px;background:#000;text-align:center;line-height:38px;z-index:2}
+  .pf-eqb>i{font-size:22px;color:#9FD855;transform:scaleX(.9)}
+  /* 해금 미션 바 ref (152,1541) 776×62 — (96,76,75), 상단만 r20 */
+  .pf-msn{left:60px;top:1026px;width:776px;height:62px;line-height:62px;text-align:center;
+    background:#604C4B;border-radius:20px 20px 0 0;
+    font-size:32px;color:#f2f2f2;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .pf-msn>i{transform:scaleX(.88)}
+  /* 크림 푸터 ref (150,1604) 780×148 — (255,238,212), 하단 r24 */
+  .pf-ftr{left:58px;top:1089px;width:780px;height:148px;background:#FFEED4;
+    border-radius:0 0 24px 24px}
+  /* [장착 중] 버튼 ref (391,1620) 298×119 — 검정7 + 밝은링(211)7 + 하단 그늘(117)7 + 회색 그라 */
+  .pf-btn{left:299px;top:1105px;width:298px;height:119px;box-sizing:border-box;
+    border:7px solid #000;border-radius:36px;cursor:pointer;
+    background:linear-gradient(180deg,#A8A8A8 0,#989898 55%,#8A8A8A 100%);
+    box-shadow:inset 0 7px 0 #D3D3D3,inset 7px 0 0 #D3D3D3,inset -7px 0 0 #D3D3D3,
+      inset 0 -7px 0 #757575,inset 0 -14px 0 #D3D3D3;
+    text-align:center;line-height:103px}
+  .pf-btn>i{font-size:57px;color:#000;transform:scaleX(.85)}
+  /* 하단 토글 바 ref (156,1776) 770×95 — 검정 5 + 암갈 그라, r24 */
+  .pf-tgl{left:64px;top:1261px;width:770px;height:95px;background:#000;border-radius:24px}
+  .pf-tgl>.in{position:absolute;inset:5px;border-radius:20px;
+    background:linear-gradient(180deg,#5D4F42 0 2px,#413529 2px,#3A2E22 100%);
+    box-shadow:inset 0 -2px 0 #5C4E41}
+  /* 비활성 라벨 «종합 스탯» — 좌측 절반 중심 x188(바 local) */
+  .pf-tgl>.lb{position:absolute;left:0;top:0;width:376px;height:95px;line-height:95px;
+    text-align:center;font-size:35px;color:#A5A4A9;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;cursor:pointer}
+  .pf-tgl>.lb>i{transform:scaleX(.88)}
+  /* 활성 «프로필» 황색 화살 배너 — 몸통 (414,13) 335×68 + 양끝 팁 20px, 2톤 채움 */
+  .pf-tgl>.bn{position:absolute;left:394px;top:13px;width:373px;height:68px;
+    text-align:center;line-height:68px}
+  .pf-tgl>.bn>s{position:absolute;inset:0;
+    clip-path:polygon(0 50%,22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%)}
+  .pf-tgl>.bn>s.f{inset:5px 6px;
+    background:linear-gradient(180deg,#FFC736 0 50%,#F8A63A 50%)}
+  .pf-tgl>.bn>i{position:relative;font-size:33px;color:#8DDCFD;
+    -webkit-text-stroke:6px #001F2C;paint-order:stroke fill;transform:scaleX(.9)}
+
+  /* ==========================================================================
      06 장비 팝업 — 측정표 docs/measure/06-장비팝업.md
      껍데기 = **(나) 폭 1080 «바닥 시트»**. 가운데 다이얼로그(A5 `.mbox`)가 아니다.
        · 폭 1080 꽉 참(좌우 여백 0) · radius 위 38 / 아래 0 · 바닥은 하단 탭바에 가려 잘림
@@ -2997,6 +3125,29 @@
         <div class="prb-ar r" id="prbNext"></div>
         <div class="prb-note">확률은 소수점 5번째 자리까지 표기되며, 이로 인해 보이는 숫자를 모두 합할 경우 100%가 나오지 않을 수 있습니다.</div>
         <div class="prb-list" id="prbList"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 19 프로필 팝업 — 딤 위 중앙 다이얼로그. 측정표 docs/measure/19-프로필팝업.md -->
+  <div id="pfw">
+    <div class="pf">
+      <div class="pf-ring"></div>
+      <div class="pf-fill"></div>
+      <div class="pf-gid" id="pfGid"></div>
+      <div class="pf-por"><div class="b"></div><div class="k"></div><div class="art">🐹</div></div>
+      <div class="pf-ttl hx"><s class="o"></s><s class="f"></s><i id="pfTtl">칭호 없음</i></div>
+      <div class="pf-nick" id="pfNick"></div>
+      <div class="pf-edit" id="pfEdit">✎</div>
+      <div class="pf-tab t1 on"><i>칭호</i></div>
+      <div class="pf-tab t2"><i>초상화</i></div>
+      <div class="pf-tab t3"><i>프레임</i></div>
+      <div class="pf-grid"><div class="pf-cards" id="pfCards"></div></div>
+      <div class="pf-msn"><i>해금 미션: 미션 없음</i></div>
+      <div class="pf-ftr"></div>
+      <div class="pf-btn"><i>장착 중</i></div>
+      <div class="pf-tgl"><div class="in"></div>
+        <div class="lb"><i>종합 스탯</i></div>
+        <div class="bn"><s class="o" style="background:#000"></s><s class="f"></s><i>프로필</i></div>
       </div>
     </div>
   </div>
@@ -6370,15 +6521,53 @@ $('prbNext').onclick = () => { if(prbStep < PRB_STEPS.length - 1){ prbStep++; re
 $('prbw').addEventListener('click', e => { if(e.target.id === 'prbw') closeProbInfo(); });
 $('tabbar').addEventListener('click', closeProbInfo, true);
 
-function openProfile(){
-  renderSt();
-  showModal('<h2>📊 내 정보</h2>' + $('bSt').innerHTML
-    + '<button class="gbtn green" id="stClose">닫기</button>');
-  $('stClose').onclick = closeModal;
-  const pb = $('promoBtn'); if(pb) pb.onclick = openPromo;
-  const rb = $('resetBtn');
-  if(rb) rb.onclick = () => { if(confirm('모든 진행 상황이 삭제됩니다. 계속할까요?')){ localStorage.removeItem(KEY); location.reload(); } };
+/* ---- 19 프로필 팝업 (중앙 다이얼로그 #pfw) — 측정표 docs/measure/19-프로필팝업.md ----
+   칭호 = RANKS 표시 전용 매핑(보유 = 도달한 계급, 장착 = 현재 계급). 저장 구조 미변경.
+   종합 스탯(구 renderSt)은 st 탭에 그대로 있고, 하단 토글 «종합 스탯» 은 20번 화면 담당이 연결한다. */
+/* 배너 등급색 — 측정표 §5-3: 기본(68,59,54)/베벨(125,104,87) · 초록(47,64,9) · 청회(33,36,55) · 보라(58,23,87)+금링(157,120,42) */
+const PF_BN = [
+  { gc:'#443B36', bv:'#7D6857' }, { gc:'#443B36', bv:'#7D6857' },
+  { gc:'#2F4009', bv:'#68563E' }, { gc:'#2F4009', bv:'#68563E' },
+  { gc:'#212437', bv:'#8494A4' }, { gc:'#212437', bv:'#8494A4' },
+  { gc:'#3A1757', bv:'#9D782A', ring:'#9D782A' }, { gc:'#3A1757', bv:'#9D782A', ring:'#9D782A' }
+];
+/* Gamer Id — uuid 형식 표시 전용(닉네임에서 안정적으로 파생) */
+function pfGamerId(){
+  let a = 0x6df25ce0 >>> 0;
+  for(const ch of S.nick) a = (a * 31 + ch.charCodeAt(0)) >>> 0;
+  const hx = n => (n >>> 0).toString(16).padStart(8, '0');
+  const h = hx(a) + hx(a * 2654435761) + hx(a ^ 0x9e3779b9) + hx(a * 40503);
+  return h.slice(0,8) + '-' + h.slice(8,12) + '-' + h.slice(12,16) + '-' + h.slice(16,20) + '-' + h.slice(20,32);
 }
+function renderProfile(){
+  $('pfGid').textContent = 'Gamer Id: ' + pfGamerId();
+  $('pfNick').textContent = S.nick;
+  $('pfTtl').textContent = rankOf().n;
+  let h = '';
+  RANKS.forEach((r, i) => {
+    const own = i <= S.rank, eq = i === S.rank, bn = PF_BN[i] || PF_BN[0];
+    h += '<div class="pf-card' + (own ? ' own' : '') + (eq ? ' eq' : '') + '">'
+      +  '<div class="pf-bn hx" style="--gc:' + bn.gc + ';--bv:' + bn.bv
+      +  (bn.ring ? ';--gr:' + bn.ring : '') + '">'
+      +  '<s class="o"></s>' + (bn.ring ? '<s class="m"></s>' : '') + '<s class="f"></s>'
+      +  '<i>' + r.n + '</i></div>'
+      +  (own ? '' : '<div class="pf-lk"></div>')
+      +  (eq ? '<div class="pf-eqb"><i>장착 중</i></div>' : '')
+      +  '</div>';
+  });
+  $('pfCards').innerHTML = h;
+}
+function openProfile(){
+  renderProfile();
+  $('pfw').classList.add('on');
+}
+function closeProfile(){ $('pfw').classList.remove('on'); }
+$('pfw').addEventListener('click', e => { if(e.target.id === 'pfw') closeProfile(); });
+$('tabbar').addEventListener('click', closeProfile, true);
+$('pfEdit').onclick = () => {
+  const v = prompt('닉네임을 입력하세요 (최대 14자)', S.nick);
+  if(v && v.trim()){ S.nick = v.trim().slice(0, 14); save(); $('nickN').textContent = S.nick; renderProfile(); }
+};
 function openPromo(){
   const r = nextRank();
   if(!r){ popup('🏅 최고 계급', '<p>이미 최고 계급입니다! 🎉</p>'); return; }
