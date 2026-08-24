@@ -911,9 +911,9 @@
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 배너 일러스트 750x352 (local 6,24) — 초록 크리스탈 동굴 + 슬라임 실루엣 */
-  .dgd-bn{left:6px;top:24px;width:750px;height:352px;border-radius:12px;border:5px solid #0A0A08;
+  .dgd-bn{left:6px;top:24px;width:750px;height:351px;border-radius:9px;border:6px solid #0A0A08;
     box-sizing:border-box;overflow:hidden;
-    background:linear-gradient(180deg,#227C58 0,#1F8B59 46%,#2FB477 78%,#3BE3A6 100%)}
+    background:linear-gradient(180deg,#2A8A62 0,#279665 46%,#37BC80 78%,#43E9AC 100%)}
   .dgd-bn u{position:absolute;left:0;bottom:0;width:100%;height:190px;text-decoration:none;
     background:radial-gradient(120% 100% at 50% 100%,rgba(110,255,200,.55) 0,rgba(110,255,200,0) 62%)}
   /* 크리스탈 기둥 — 좌우에 하나씩 */
@@ -933,7 +933,7 @@
 
   /* 상태 리본 600x61 (local 82,289) — 알약이 아니라 좌측이 ◀ 로 파인 반투명 띠 */
   .dgd-rb{left:82px;top:289px;width:600px;height:61px;background:rgba(0,0,0,.38);
-    clip-path:polygon(21px 0,599px 0,582px 61px,21px 61px,0 50%);
+    clip-path:polygon(27px 0,600px 0,583px 61px,27px 61px,0 50%);
     display:flex;align-items:center;justify-content:center}
   .dgd-rb i{font-size:28px;line-height:1;font-weight:900;color:#FA716C;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;
@@ -942,12 +942,14 @@
   /* 난이도 선택 행 (local 171~591, 392~566) */
   .dgd-plq{left:291px;top:392px;width:180px;height:175px;
     background:#B49F88;
-    clip-path:polygon(16% 30%,4% 6%,29% 16%,71% 16%,96% 6%,84% 30%,100% 58%,84% 100%,16% 100%,0 58%)}
+    clip-path:polygon(4% 0,0 10%,0 66%,6% 71%,12% 75%,20% 80%,20% 88%,28% 97%,30% 100%,
+      70% 100%,72% 97%,80% 88%,80% 80%,88% 75%,94% 71%,100% 66%,100% 10%,96% 0)}
   .dgd-ar{width:81px;height:84px;top:450px;padding:0;border:0;background:none;cursor:pointer;
-    font-family:inherit;font-size:88px;line-height:84px;font-weight:900;color:#fff;
-    -webkit-text-stroke:12px #000;paint-order:stroke fill}
-  .dgd-ar.l{left:171px}
-  .dgd-ar.r{left:510px}
+    font-family:inherit;font-size:79px;line-height:84px;font-weight:900;color:#fff;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+  .dgd-ar i{display:inline-block;font-style:normal;transform:translateY(-1px) scaleX(1.19)}
+  .dgd-ar.l{left:170px}
+  .dgd-ar.r{left:512px}
   .dgd-ar:disabled{opacity:.38;cursor:default}
   .dgd-lv{left:171px;top:420px;width:420px;height:40px;line-height:40px;font-size:30px;
     color:#FEF26C;-webkit-text-stroke:5px #000}
@@ -969,12 +971,12 @@
   .dgd-amt i{transform:scaleX(1.15)}
 
   /* 입장권 알약 + 연속 도전 체크박스 (local y 824~877) */
-  .dgd-tk{left:155px;top:827px;width:164px;height:45px;border-radius:22px;background:#736757;
-    text-align:center;line-height:45px}
+  .dgd-tk{left:119px;top:826px;width:199px;height:51px;border-radius:25px;background:#736757;
+    text-align:center;line-height:51px}
   .dgd-tk i{font-size:29px;font-weight:900;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
-    transform:translateX(6px) scaleX(1.36)}
-  .dgd-tki{left:118px;top:824px;width:69px;height:54px;font-size:44px;line-height:54px;text-align:center;
-    transform:rotate(-18deg);transform-origin:50% 50%}
+    transform:translateX(25px) scaleX(1.36)}
+  .dgd-tki{left:113px;top:821px;width:69px;height:54px;font-size:42px;line-height:54px;text-align:center;
+    transform:rotate(-18deg);transform-origin:50% 50%;filter:hue-rotate(108deg) saturate(1.35)}
   .dgd-cb{left:446px;top:830px;width:40px;height:40px;border-radius:50%;box-sizing:border-box;
     border:2px solid #000;padding:0;cursor:pointer;font-family:inherit;
     background:radial-gradient(closest-side,#87614A 0 62%,#7C5A44 62% 82%,#A9775E 82% 100%)}
@@ -1141,8 +1143,8 @@
       <div class="dgd-bn"><u></u><s></s><s></s><b></b></div>
       <div class="dgd-rb"><i id="dgdState">어두운 밤 상태</i></div>
       <div class="dgd-plq"></div>
-      <button class="dgd-ar l" id="dgdPrev">◀</button>
-      <button class="dgd-ar r" id="dgdNext">▶</button>
+      <button class="dgd-ar l" id="dgdPrev"><i>◀</i></button>
+      <button class="dgd-ar r" id="dgdNext"><i>▶</i></button>
       <div class="dgd-lv dgd-t"><i>레벨</i></div>
       <div class="dgd-fl dgd-t"><i id="dgdFloor">3</i></div>
       <div class="dgd-rw"></div>
@@ -3532,9 +3534,8 @@ function renderDunDetail(){
   $('dgdAmt').textContent  = fmt(main[1]);
   $('dgdPrev').disabled = dgdFloor <= 1;
   $('dgdNext').disabled = dgdFloor >= cur;
-  /* 고른 층이 현재 층이면 도전, 이전 층이면 소탕 */
-  const sweep = dgdFloor < cur;
-  $('dgdGo').querySelector('i').textContent = sweep ? '소탕' : '도전';
+  /* 버튼 문구는 레퍼런스대로 항상 «도전» 이다. 이미 클리어한 이전 층을 고르면
+     즉시 보상(소탕)으로 처리되지만, 그것도 «그 층에 도전한다» 의 결과이므로 문구를 나누지 않는다. */
   $('dgdGo').disabled = left <= 0;
   $('dgdGo').style.filter = left <= 0 ? 'grayscale(.75) brightness(.8)' : '';
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
