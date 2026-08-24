@@ -10,7 +10,10 @@
     font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
   /* 안전영역(노치·홈 인디케이터)은 프레임 바깥에서 흡수한다.
      따라서 #app 안의 좌표는 1080 프레임 기준값을 그대로 쓰면 된다. */
+  /* 프레임은 항상 화면 중앙. 프레임이 화면비를 다 못 채우면 남는 영역은 검정
+     (세로로 남으면 레터박스, 가로로 남으면 필러박스 — 작업 37) */
   #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:#000;overflow:hidden;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   /* 기준 프레임 1080x1920(9:16). 폭은 1080 고정, 높이는 기기 비율에 맞춰 fit()이 덮어쓴다.
      남는 높이는 전투 캔버스(#stagearea)가 전부 흡수한다. */
@@ -3721,7 +3724,10 @@ function fit(){
   if(!AW || !AH) return;
   frameH = clamp(Math.round(FRAME_W * AH / AW), FRAME_H_MIN, FRAME_H_MAX);
   app.style.height = frameH + 'px';
-  app.style.transform = 'scale(' + (AW / FRAME_W) + ')';
+  /* 스케일은 폭·높이 중 «작은 쪽». 폭 기준(AW/1080)만 쓰면 frameH 가 clamp 에 걸리는
+     비율(9:16 보다 넓은 화면 — 가로 모드·데스크톱 창·태블릿)에서 프레임이 세로로 넘쳐
+     게임 화면이 잘린다. 세로 폰은 clamp 미적용 구간이라 두 값이 같아 동작 불변. */
+  app.style.transform = 'scale(' + Math.min(AW / FRAME_W, AH / frameH) + ')';
   resizeCanvas();
 }
 
