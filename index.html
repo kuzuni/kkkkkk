@@ -2065,6 +2065,153 @@
   /* 이 프로젝트 서체가 레퍼런스의 «좁고 높은 게임용 한글 서체」보다 넓다. 잉크폭 270 → 실측 251.
      PROGRESS.md 규칙대로 음수 letter-spacing 이 아니라 <i> 의 scaleX 로 맞춘다. */
   .upr-close i{transform:scaleX(.932);word-spacing:-4.6px;position:relative;left:1px}
+
+  /* ==========================================================================
+     12 소환 결과 팝업 — 측정표 docs/measure/12-소환결과팝업.md
+     껍데기 판정: A5 3분류(다이얼로그·바닥시트·전체화면) 어디에도 없는
+     **(라) 전면 딤 + 전폭 밴드 오버레이**. 09(#upw) 와 같은 «딤 위 연출» 계열이지만
+     09 와 달리 **불투명 전폭 패널이 하나 있다**(x=0~1079 를 그대로 물고 좌우 테두리·radius 0).
+     딤은 09 와 같은 rgba(0,0,0,.80) — 결과 연출 계열이 공통으로 깊다(실측 k=0.1979 → α=.802).
+
+     세로 좌표계 — PROGRESS «확정(03)» 의 2종 변환을 그대로 쓴다:
+       · 화면 위쪽 기준(리본·패널·그리드)  →  frame_y = ref_y − 84
+       · 탭바 위 고정(버튼 3개·터치하여 닫기) →  frame_y = ref_y − 419
+     ref 는 패널 하단(1331)~버튼 상단(1766) 이 435px 인데 우리 프레임에서는 100px 이 된다.
+     **420px 차이가 여기(패널↔버튼 사이 빈 딤 구간)에서 흡수된다** — 두 앵커를 모두 참으로
+     유지하는 유일한 배치다. 가로는 전부 1:1, 모든 요소 중심 x = 540.
+     ========================================================================== */
+  #sumw{position:absolute;inset:0;background:rgba(0,0,0,.80);display:none;z-index:37;
+    cursor:pointer}
+  #sumw.on{display:block}
+  #sumw i,#sumw b,#sumw u,#sumw s,#sumw em{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900;transform-origin:50% 50%}
+
+  /* ── 전폭 결과 패널 — ref y793~1331(h539). 좌우 테두리·radius **없음** ──
+     세로 레이어(실측): 금5 + 어두운2 + 안쪽베벨7 = 상단 크롬 14
+                        본문 #2A2835 단일색(무늬·그라데이션 없음)
+                        안쪽베벨8 + 어두운2 + 금5 = 하단 크롬 15
+     패널 높이는 그리드 행수에 따라 늘어나므로 크롬을 ::before/::after 로 분리했다. */
+  .sm-panel{position:absolute;left:0;right:0;top:709px;background:#2A2835;
+    padding:106px 0 98px;box-sizing:border-box}
+    /* 106 = 상단크롬14 + 본문위여백92 · 98 = (본문아래여백91 − 배지돌출8) + 하단크롬15
+       → 총 106+335+98 = 539 = ref 패널 높이(793~1331) */
+  .sm-panel::before,.sm-panel::after{content:'';position:absolute;left:0;right:0}
+  .sm-panel::before{top:0;height:14px;
+    background:linear-gradient(180deg,#FFDC38 0 3px,#F0BA1A 3px 5px,
+      #624E1C 5px 6px,#2A231B 6px 7px,#33313F 7px 9px,#414455 9px 12px,#35333F 12px 14px)}
+  .sm-panel::after{bottom:0;height:15px;
+    background:linear-gradient(180deg,#35333F 0 3px,#424556 3px 6px,#33313F 6px 8px,
+      #262223 8px 9px,#2B230E 9px 10px,#F8DE4D 10px 13px,#EAC22F 13px 15px)}
+
+  /* ── 아이템 그리드 — 6열, 카드 157x157, pitch 170(gap 13), 좌 여백 36 ──
+     ref 는 10칸(6+4) 2행이라 높이 327 이다. 개수 배지가 카드 바닥 **아래로 8px** 튀어나오므로
+     박스는 335 로 잡고 패널 아래 여백에서 8 을 뺐다(105 = 91 − 8 + 크롬15... → 아래 주석 참조).
+     30연 소환은 5행이 되는데 우리 프레임에는 패널↔버튼 사이가 100px 뿐이라 들어가지 않는다
+     → **레퍼런스 케이스(2행)를 픽셀 그대로 두고 초과분만 스크롤**한다(09 의 «6칸 컷» 대신). */
+  .sm-grid{position:relative;left:36px;width:1007px;height:335px;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .sm-grid::-webkit-scrollbar{width:0;height:0}
+  .sm-grid-in{display:flex;flex-wrap:wrap;gap:13px;width:1007px;padding-bottom:8px}
+
+  /* 카드 — 검정 외곽선 5px + 안쪽 밝은 림 6px + 면(그라데이션 없음), radius 34 */
+  .sm-c{position:relative;width:157px;height:157px;flex:0 0 auto;box-sizing:border-box;
+    border:5px solid #000;border-radius:34px;background:var(--face);
+    box-shadow:inset 0 0 0 6px var(--rim)}
+  /* 아이콘 잉크 목표 76x75(카드 안쪽 여백 약 40). 09 기록상 이모지는 font-size ≈ 잉크 이므로
+     78px 에서 시작해 캡처 실측으로 보정한다. */
+  .sm-c>b{position:absolute;left:0;right:0;top:0;bottom:0;
+    font-size:64px;line-height:147px;text-align:center}
+  /* 개수 배지 — **우하단이 아니라 하단 정중앙**이고 카드 바닥 아래로 8px 돌출, 배경 알약 없음.
+     ⚠ 숫자는 잉크가 캡하이트라 «÷0.93» 이 안 통한다(09 교훈) — 캡비 0.70 으로 역산해 25/0.70 = 36. */
+  .sm-c>u{position:absolute;left:0;right:0;bottom:-19px;height:36px;line-height:36px;
+    text-align:center;font-size:36px;color:#fff;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+  /* ref 의 `1` 은 «윗 깃 9px · 세로획 5px» 짜리 좁은 게임용 숫자다(잉크폭 9).
+     우리 서체는 같은 잉크높이에서 폭이 16 이라 +78% 로 읽힌다 → PROGRESS 규칙대로
+     음수 letter-spacing 이 아니라 <i> 의 scaleX 로 좁힌다. */
+  .sm-c>u i{transform:scaleX(.62)}
+
+  /* ── 리본 «소환 결과» — 면 bbox ref x249~831(583) y725~829(105) ──
+     중앙 밴드 513x87 + 좌우 «모래시계형» 꼬리 77x81. 09 의 제비꼬리와 형상이 다르다
+     (09 는 위가 넓고 아래로 처지는 드룹, 12 는 위·아래가 뾰족하고 가운데가 잘록하다). */
+  .sm-rb{position:absolute;left:0;right:0;top:641px;height:105px}
+  .sm-rb>*{position:absolute}
+  /* 밴드 면은 실측 513x87 그대로 두고 검정 링은 box-shadow 로 **바깥에** 얹는다
+     (border 로 주면 면이 줄어 이후 좌표가 전부 밀린다 — PROGRESS «주의(03)» 와 같은 함정). */
+  .sm-band{left:284px;top:0;width:513px;height:87px;border-radius:8px;z-index:2;
+    box-shadow:0 0 0 5px #000;text-align:center;
+    background:
+      linear-gradient(90deg,#DE8436 0 6px,rgba(222,132,54,0) 6px 14px,
+                            rgba(222,132,54,0) calc(100% - 14px),#DE8436 calc(100% - 6px)),
+      linear-gradient(180deg,#FEEF88 0 6px,#FDE87E 6px 8px,#FFD76B 8px 10px,
+                             #FFBE56 10px 82px,#F0A63C 82px 87px)}
+  /* 타이틀 잉크 456~625(w170) / 747~787(h41) → font-size 44, 밴드 세로중앙에서 1.5px 위.
+     외곽선 실측 좌4·우5 → 한쪽 4.5px 를 내려면 -webkit-text-stroke 는 **9px**(안팎 절반씩). */
+  .sm-band>i{position:relative;top:19px;font-size:44px;line-height:44px;color:#fff;
+    white-space:nowrap;-webkit-text-stroke:9px #000;paint-order:stroke fill;
+    transform:scaleX(.923)}
+  /* 꼬리 — 검정 실루엣(89x93) 위에 주황(77x81)을 6px 안쪽으로 얹는다.
+     09 와 같은 «ㄴ 자» 클립: x>35 & y<62 는 비워 밴드가 그대로 보이게 하고,
+     밴드 아래(y62~81)는 전 폭을 채워 밴드 바닥 검정띠를 덮는다(하나의 실루엣으로 보이게).
+     외곽 프로파일은 측정표 §2-1 의 행별 실측 x 를 그대로 꼭짓점으로 썼다. */
+  .sm-tl{top:18px;width:89px;height:93px;background:#000;z-index:3;
+    clip-path:polygon(41px 0,7px 0,2px 13px,2px 18px,7px 27px,11px 37px,14px 44px,
+                      8px 57px,4px 67px,0 79px,4px 92px,89px 92px,89px 69px,41px 69px)}
+  .sm-tl.l{left:243px}
+  .sm-tl.r{left:748px;transform:scaleX(-1)}
+  .sm-tl>s{position:absolute;left:6px;top:6px;width:77px;height:81px;background:#F69632;
+    clip-path:polygon(35px 0,7px 0,2px 7px,2px 12px,7px 21px,11px 31px,14px 38px,
+                      8px 51px,4px 61px,0 73px,4px 80px,77px 80px,77px 62px,35px 62px)}
+  /* 드룹에 드리운 그늘 — ⚠ 09 와 같은 함정: **밴드 쪽(안쪽)이 밝은 #DD8335**,
+     바깥 끝이 짙은 #A55019 다. 실측 local x 43~61 / 64~75. 뒤집으면 주황이 더 뻗어 보인다. */
+  .sm-tl>s::after{content:'';position:absolute;left:40px;width:37px;top:62px;bottom:0;
+    background:linear-gradient(90deg,rgba(221,131,53,0) 0 2px,#DD8335 3px 21px,#A55019 24px 37px)}
+
+  /* ── 하단 재소환 버튼 3개 — 외곽 247x148(ref y1766~1913), pitch 300, 그룹 x117~962 ──
+     전부 같은 은색 스타일. 면(235x136)은 padding box 이므로 자식 절대좌표의 기준이 된다. */
+  .sm-btns{position:absolute;left:117px;top:1347px;width:846px;height:148px}
+  .sm-b{position:absolute;top:0;width:247px;height:148px;box-sizing:border-box;
+    border:6px solid #000;border-radius:34px;padding:0;cursor:pointer;
+    background:linear-gradient(180deg,#D3D3D3 0 8px,#A5A5A5 8px 45px,#989898 45px 90px,
+                                      #8D8D8D 90px 122px,#D3D3D3 122px 128px,#767676 128px 136px);
+    box-shadow:inset 6px 0 0 #D3D3D3,inset -6px 0 0 #D3D3D3}
+  .sm-b:disabled{filter:grayscale(.5) brightness(.72);cursor:default}
+  .sm-b>*{position:absolute}
+  .sm-b1{left:0}
+  .sm-b2{left:299px}
+  .sm-b3{left:599px}
+  /* 타이틀 잉크 h30 → font-size 32, 색 #DFDFDF(순백이 아니다), 외곽선 3~4 → stroke 7.
+     면 상단에서 잉크 상단까지 25. */
+  .sm-b .lab{left:0;right:0;top:22px;height:36px;line-height:36px;text-align:center;
+    font-size:33px;color:#DFDFDF;white-space:nowrap;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+  .sm-b .lab i{transform:scaleX(.978)}
+  /* 내부 어두운 알약 — ref y1842~1877(h36) → 면기준 top 70, radius 18(완전 알약), 테두리 없음 */
+  .sm-b .pan{top:70px;height:36px;border-radius:18px;background:#747474}
+  .sm-b1 .pan{left:82px;width:132px}
+  .sm-b2 .pan,.sm-b3 .pan{left:19px;width:193px}
+  /* 가격·횟수 잉크 h25 → 숫자 캡비 0.70 으로 36. 색 #FC716C, 외곽선 3 → stroke 6 */
+  .sm-b .cost{top:65px;height:50px;line-height:50px;font-size:36px;color:#FC716C;
+    white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .sm-b1 .cost{left:82px;width:132px;text-align:center;font-size:34px;top:62px;transform:scaleX(1.15)}
+  .sm-b2 .cost,.sm-b3 .cost{left:61px;width:146px;text-align:center}
+  /* 젬 — 시안 아이콘 44x45(검정 외곽선 포함 50x53). **알약 좌측 캡을 완전히 덮는다**
+     (젬 y1834~1886 이 알약 y1842~1877 보다 상하로 넓어 가림 없는 행이 없다 — 측정표 §9). */
+  .sm-b .gem{left:14px;top:57px;width:56px;height:56px;line-height:56px;
+    text-align:center;font-size:46px}
+  /* FREE 뱃지 — 면 **왼쪽 바깥으로** 튀어나온 리본형 태그(면 좌단보다 4px 왼쪽부터).
+     라틴 대문자만이라 0.93 잉크비가 안 맞는다(측정표 §9) → 캡비 0.72 로 14/0.72 ≈ 19. */
+  .sm-b1 .fr{left:-4px;top:71px;width:73px;height:33px;box-sizing:border-box;
+    border:3px solid #000;border-radius:5px;text-align:center;
+    background:linear-gradient(90deg,#FF5D7A 0 49px,#FF3964 49px)}
+  .sm-b1 .fr i{font-size:19px;line-height:27px;color:#F7EB73;letter-spacing:.5px}
+
+  /* ── «터치하여 닫기» — 09 와 **완전히 같은 앵커**(ref 잉크하단 2164, 탭바 상단 2160) ──
+     이 게임에서 외곽선이 없는 유일한 텍스트 계열이다. -webkit-text-stroke 를 주지 말 것.
+     잉크 41 → font-size 44, 잉크폭 256(우리 서체가 넓어 scaleX 로 맞춘다). */
+  .sm-close{position:absolute;left:0;right:0;bottom:174px;text-align:center;
+    font-size:44px;line-height:44px;font-weight:900;color:#fff}
+  .sm-close i{transform:scaleX(.96)}
 </style>
 </head>
 <body>
@@ -2319,6 +2466,25 @@
       <div class="upr-cards" id="upCards"></div>
     </div>
     <div class="upr-close"><i>터치하여 닫기</i></div>
+  </div>
+  <!-- 12 소환 결과 팝업. 딤 위에 ① 리본 ② **전폭 불투명 패널**(그리드) ③ 재소환 버튼 3개
+       ④ 터치하여 닫기 가 따로 떠 있는 결과 연출이다. 측정표 docs/measure/12-소환결과팝업.md §0 -->
+  <div id="sumw">
+    <div class="sm-panel"><div class="sm-grid" id="sumGrid"><div class="sm-grid-in" id="sumGridIn"></div></div></div>
+    <div class="sm-rb">
+      <div class="sm-tl l"><s></s></div>
+      <div class="sm-tl r"><s></s></div>
+      <div class="sm-band"><i>소환 결과</i></div>
+    </div>
+    <div class="sm-btns">
+      <button class="sm-b sm-b1" id="sumBF"><div class="lab"><i>10회 소환</i></div>
+        <div class="pan"></div><div class="cost" id="sumBFn"></div><div class="fr"><i>FREE</i></div></button>
+      <button class="sm-b sm-b2" id="sumB10"><div class="lab"><i>10회 소환</i></div>
+        <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB10c"></div></button>
+      <button class="sm-b sm-b3" id="sumB30"><div class="lab"><i>30회 소환</i></div>
+        <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB30c"></div></button>
+    </div>
+    <div class="sm-close"><i>터치하여 닫기</i></div>
   </div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -4127,32 +4293,64 @@ function doSummonFree(b, times){
 }
 const itemIcon = it => it.ic || (it.sp ? (it.sp === 'dragon' ? '🐉' : it.sp === 'bird' ? '🐦' : '🤖') : '❔');
 
+/* ── 12 소환 결과 팝업 ── 측정표: docs/measure/12-소환결과팝업.md
+   레퍼런스 카드 등급색은 초록·갈색·파랑 3종뿐이다(10칸 중 7/2/1). 실측 3종을 그대로 박고
+   상위 3등급은 같은 «면 + 밝은 림» 명암 구조를 유지해 확장했다(레퍼런스에 표본이 없다).
+   기존 GRADE.bg/.c 는 어두운 남색 계열이라 이 화면에는 쓸 수 없다 — 다른 화면 것은 건드리지 않는다. */
+const SUM_CARD = [
+  { face:'#7D5A44', rim:'#AC7B5B' },   /* 0 일반 — ref 갈색 */
+  { face:'#97C034', rim:'#C7E746' },   /* 1 고급 — ref 초록(가장 흔함) */
+  { face:'#347DC1', rim:'#47A7E1' },   /* 2 희귀 — ref 파랑 */
+  { face:'#8B4FC4', rim:'#B478E8' },   /* 3 영웅 — 확장 */
+  { face:'#E0902A', rim:'#F5BC4E' },   /* 4 전설 — 확장 */
+  { face:'#D1483F', rim:'#F0766A' }    /* 5 신화 — 확장 */
+];
+let sumCtx = null;   /* 재소환 버튼이 어느 배너를 다시 굴릴지 */
+
 function showSummonResult(b, times, res, lvUp){
-  const B = BANNERS[b];
-  const best = res.reduce((a,c) => a.it.g >= c.it.g ? a : c);
-  const BG = GRADE[best.it.g], newCnt = res.filter(r => r.isNew).length;
-  let h = '<div class="sumhead" style="background:linear-gradient(90deg,' + BG.bg + ',#141a30);border:3px solid '
-    + BG.c + ';color:' + BG.c + '">' + BG.ic + ' ' + B.n + ' ' + times + '회 소환 — 최고 <b>' + BG.n + '</b></div>'
-    + '<div class="cards">';
-  res.forEach((r, i) => {
-    const G = GRADE[r.it.g];
-    h += '<div class="rc' + (r.it.g >= 3 ? ' hi' : '') + '" style="border-color:' + G.c + ';background:' + G.bg
-      + ';animation-delay:' + (i*0.04).toFixed(2) + 's">'
-      + (r.isNew ? '<div class="new">NEW</div>' : '')
-      + '<div style="font-size:34px;line-height:42px">' + itemIcon(r.it) + '</div>'
-      + '<div class="rg" style="color:' + G.c + '">' + G.n + '</div>'
-      + '<div class="rn">' + r.it.n + '</div>'
-      + '<div class="rg" style="color:#93a2c6">' + (r.isNew ? '획득!' : '+1') + '</div></div>';
+  sumCtx = b;
+  /* 레퍼런스는 «획득 아이템 그리드 + 우하단 개수» 다. 같은 아이템이 여러 번 나오면
+     칸을 늘리지 않고 **개수로 합친다**(ref 10연 → 10칸이지만 전부 1). */
+  const agg = [];
+  res.forEach(r => {
+    const f = agg.find(a => a.it.id === r.it.id);
+    if(f) f.n++; else agg.push({ it:r.it, n:1 });
   });
-  h += '</div><p>신규 <b style="color:#8ff0a8">' + newCnt + '종</b> · 중복 <b>' + (times-newCnt) + '</b>(재료 전환)'
-    + (lvUp ? '<br><b style="color:#8fd6ff">소환 레벨 +' + lvUp + '! (Lv.' + sumLv(b) + ')</b>' : '')
-    + '<br>보유 ' + (B.cur === 'rel' ? '🔮 <b>' + fmt(S.relic) : '💎 <b>' + fmt(S.dia)) + '</b></p>'
-    + '<div class="mrow"><button class="gbtn blue" id="sumAgain">다시 소환</button>'
-    + '<button class="gbtn green" id="sumClose">확인</button></div>';
-  showModal(h);
-  $('sumClose').onclick = closeModal;
-  $('sumAgain').onclick = () => doSummon(b, times);
+  $('sumGridIn').innerHTML = agg.map(a => {
+    const C = SUM_CARD[a.it.g] || SUM_CARD[0];
+    return '<div class="sm-c" style="--face:' + C.face + ';--rim:' + C.rim + '">'
+      + '<b>' + itemIcon(a.it) + '</b><u><i>' + a.n + '</i></u></div>';
+  }).join('');
+  $('sumGrid').scrollTop = 0;
+  syncSummonBtns();
+  $('sumw').classList.add('on');
 }
+/* 버튼 3개는 10 상점 소환 탭(#shopw)과 **같은 상태·같은 함수**를 쓴다 — freeLeft/summonCost/doSummonFree */
+function syncSummonBtns(){
+  const b = sumCtx; if(!b) return;
+  const B = BANNERS[b], cur = B.cur === 'rel' ? S.relic : S.dia;
+  const c10 = summonCost(b, 10), c30 = summonCost(b, 30), fl = freeLeft(b);
+  $('sumBFn').textContent  = fl + '/' + SHOP_FREE;
+  $('sumB10c').textContent = fmt(c10);
+  $('sumB30c').textContent = fmt(c30);
+  $('sumBF').disabled  = fl <= 0;
+  $('sumB10').disabled = cur < c10;
+  $('sumB30').disabled = cur < c30;
+}
+function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
+/* 배경(딤·패널) 아무 데나 탭하면 닫힌다 — «터치하여 닫기». 버튼 3개는 stopPropagation 대신
+   closest 로 걸러 낸다(버튼이 disabled 여도 닫히지 않게). */
+$('sumw').addEventListener('click', e => { if(!e.target.closest('.sm-b')) closeSummonResult(); });
+$('sumBF').onclick = () => {
+  const b = sumCtx; if(!b) return;
+  if(allMaxed(BANNERS[b].list)){ doSummon(b, 10); return; }
+  if(freeLeft(b) <= 0) return;
+  S.daily.freeSum[b] = freeLeft(b) - 1;
+  doSummonFree(b, 10);
+  { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); }
+};
+$('sumB10').onclick = () => { if(sumCtx){ doSummon(sumCtx, 10); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
+$('sumB30').onclick = () => { if(sumCtx){ doSummon(sumCtx, 30); { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); } } };
 
 /* ==========================================================================
    장착
