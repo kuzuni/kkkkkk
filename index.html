@@ -6555,7 +6555,7 @@ function syncPanel(){
 function goTab(k, forceOpen){
   /* 상점 탭 → 10 소환 페이지(전체화면 #shopw). forceOpen=true 는 재화 카테고리가 기존 패널 상점을 열 때만 쓴다. */
   if(k === 'shop' && !forceOpen){
-    closeDungeon(); closeRelicPage();
+    closeDungeon(); closeRelicPage(); closeRelicTab();
     if($('shopw').classList.contains('on')){ closeShopPage(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
     if(!S.seen.shop){ S.seen.shop = 1; document.querySelectorAll('.tab').forEach(x =>
