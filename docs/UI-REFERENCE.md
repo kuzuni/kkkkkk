@@ -1405,7 +1405,7 @@ git rm docs/claims/A1.lock && git commit -m "chore: A1 선점 해제" && git pus
 > 구매·수령 버튼 위의 «가격/보상» 아이콘(10 소환 💎, 23 훈련 💰, 03 던전 보상, 22 퀘스트 보상)에 붙이면
 > 그 클릭이 거래 대신 팝업을 연다.
 > 재화 4종(`gold`·`dia`·`relic`·`sp`)의 설명·획득처 문구는 **실제 게임 데이터**(`DUNGEONS` 던전 이름, `SP_PER_LV`)에서 뽑는다.
-> **저장 구조 미변경**(`KEY` 유지). `node verify33.js` **17/17 PASS** · `node tools/smoke.js` SMOKE PASS.
+> **저장 구조 미변경**(`KEY` 유지). `node verify33.js` **21/21 PASS** · `node tools/smoke.js` SMOKE PASS.
 > 비평 4회차 — **①~④ 최저 9 / 9 (통과, 기준 8)**. ⑤ 8 · ⑥ 8~9 는 «아트 대기»(글자 외곽선 잔차 0.27px/side).
 
 ## 34. 축복(버프) 팝업

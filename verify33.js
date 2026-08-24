@@ -41,6 +41,31 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
   await page.evaluate(() => { try { S.upTab = 'stat'; uiDirty = true; renderUI(); } catch (e) {} });
   await page.evaluate(() => { try { goTab('up'); } catch (e) {} });
   await page.waitForTimeout(500);
+  /* 41 이 03 던전·14 보물상자 팝업에 «내장 재화 바»(.pcb-p)를 만들면서 data-cur 을 붙였다 —
+     전역 규칙이 남의 화면에서도 실제로 도는지 팝업을 열어 확인한다. */
+  for (const [label, js] of [['03 던전 내장 재화 바', "openDungeon&&openDungeon()"],
+                             ['14 보물상자 내장 재화 바', "goTab('box')"]]) {
+    await page.evaluate(s => { try { eval(s); } catch (e) {} }, js);
+    await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('.pcb-p[data-cur]')]
+        .filter(e => e.getBoundingClientRect().width > 0);
+      if (!els.length) return { none: true };
+      const out = [];
+      for (const e of els) {
+        if (typeof closeCurInfo === 'function') closeCurInfo();
+        e.click();
+        out.push({ cur: e.dataset.cur, on: !!document.querySelector('#ciw.on') });
+      }
+      if (typeof closeCurInfo === 'function') closeCurInfo();
+      return { out };
+    });
+    if (r.none) ok(label + ': 지금 화면에 없음 — 건너뜀');
+    else r.out.forEach(o => o.on ? ok(`${label} [${o.cur}] 클릭 → 팝업 열림`)
+                                 : fail(`${label} [${o.cur}] 클릭해도 안 열림`));
+    await page.evaluate(() => { try { closeAllPop && closeAllPop(); } catch (e) {} });
+    await page.waitForTimeout(200);
+  }
   const icons = await page.$$eval('[data-cur]', els => els.map((e, i) => ({
     i, cur: e.dataset.cur, cls: e.className, id: e.id,
     vis: !!(e.getBoundingClientRect().width && e.getBoundingClientRect().height)
@@ -60,23 +85,26 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
 
   /* ---- 2. 내용이 실제 게임 데이터와 일치 ---- */
   console.log('[2] 표시 내용 = 실제 게임 데이터');
-  const want = { gold: 1234567, dia: 3210, relic: 450, sp: 12 };
+  const want = { gold: 0, dia: 3210, relic: 450, sp: 12 };   /* 값 자체는 curVal() 로 실시간 대조한다 */
   for (const k of Object.keys(want)) {
     await closeAll();
     const r = await page.evaluate(k => {
       if (typeof openCurInfo !== 'function') return { err: 'openCurInfo 없음' };
       openCurInfo(k);
       const w = document.getElementById('ciw');
-      return { on: w.classList.contains('on'), t: w.innerText, live: (typeof curVal === 'function' ? curVal(k) : null) };
+      const live = typeof curVal === 'function' ? curVal(k) : null;
+      return { on: w.classList.contains('on'), t: w.innerText, live,
+               shown: document.getElementById('ciHave').textContent,
+               expect: '보유: ' + fmt(live) };
     }, k);
     if (r.err) { fail(k + ': ' + r.err); continue; }
     if (!r.on) { fail(k + ': openCurInfo 로 안 열림'); continue; }
-    const f = new Intl.NumberFormat('en-US').format(want[k]);
-    const compact = String(want[k]);
-    const hit = r.t.replace(/\s/g, '').includes(f.replace(/\s/g, '')) || r.t.includes(compact) ||
-      (r.live != null && r.live === want[k]);
-    hit ? ok(`${k}: 보유량 표시가 실제 값(${want[k]})과 일치`)
-        : fail(`${k}: 보유량 ${want[k]} 이 팝업에 안 보인다 — 본문 «${r.t.replace(/\n/g, ' / ').slice(0, 160)}»`);
+    /* 골드는 자동 플레이가 계속 올리므로 «세이브에 넣은 값» 이 아니라 **그 순간의 실제 값**과 대조한다
+       (25 교훈 «유휴 루프가 굴리는 값을 빼라» 의 재현). 게임 표기 함수 fmt() 를 그대로 써서 비교. */
+    const hit = r.shown === r.expect;
+    hit ? ok(`${k}: 보유량 표시 «${r.shown}» = 실제 값 ${r.live} (fmt 일치)`)
+        : fail(`${k}: 표시 «${r.shown}» ≠ 실제 ${r.live}(→«${r.expect}») — 본문 «${r.t.replace(/\n/g, ' / ').slice(0, 140)}»`);
+    if (r.live == null) fail(k + ': curVal() 이 값을 못 준다');
     if (!/[가-힣]/.test(r.t)) fail(k + ': 한글 설명이 비어 있다');
   }
 
