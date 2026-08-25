@@ -5785,14 +5785,15 @@
   /* 토글 — 트랙 169×60 세로중앙 + 노브 99×69(트랙보다 커서 위아래 4.5px 씩 넘친다).
      ⚠ 레퍼런스는 «라벨이 노브 안»에 있다(트랙이 아니다). ON=우측 초록 / OFF=좌측 회색 */
   /* ref 단면(x740/x800): 트랙 외곽 **56**(검정 ~3) · 안쪽 50 이 «밝은 띠 4 + 본색 42 + 밝은 띠 4».
-     처음엔 h60·외곽5·단색으로 올렸다가 실측으로 정정했다. */
-  .cf55-sw{position:absolute;left:0;top:6.5px;width:169px;height:56px;box-sizing:border-box;
-    border:3px solid #000;border-radius:28px;cursor:pointer;
+     처음엔 h60·외곽5·단색으로 올렸다가 정정했다. 높이는 «50% 교차» 법(배경↔검정 중간 휘도가 처음/마지막으로
+     교차하는 행)으로 3차 측정해 **58** 로 확정했다 — 임계값 스캔은 58 을 56 으로 읽는다(비평 B 가 옳았다). */
+  .cf55-sw{position:absolute;left:0;top:5.5px;width:169px;height:58px;box-sizing:border-box;
+    border:3px solid #000;border-radius:29px;cursor:pointer;
     background:linear-gradient(#BECADA 0 8%,#8B96B4 8% 84%,#C0CAD3 84% 100%)}
   .cf55-sw.on{background:linear-gradient(#91E93F 0 8%,#6AC520 8% 84%,#8EE934 84% 100%)}
   /* ⚠ LESSONS 03: 절대배치 자식의 기준은 border box 가 아니라 **padding box** 다.
      트랙에 border 5 가 있으므로 «트랙 좌단에 붙인다» 는 left:0 이 아니라 left:-5 다. */
-  .cf55-kn{position:absolute;left:-3px;top:-9.5px;width:99px;height:69px;box-sizing:border-box;
+  .cf55-kn{position:absolute;left:-3px;top:-8.5px;width:99px;height:69px;box-sizing:border-box;
     border:5px solid #000;border-radius:34.5px;background:linear-gradient(#D3D3D3,#8F8F8F);
     text-align:center;line-height:59px}
   .cf55-sw.on>.cf55-kn{left:67px;background:linear-gradient(#ABFF7E,#5FC61E)}

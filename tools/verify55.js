@@ -46,7 +46,7 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
   eq('리스트 y', R.list.y, 740); eq('리스트 h', R.list.h, 509); is('행 수', R.rows, 6);
   eq('1행 y', R.row1.y, 740); eq('6행 y', R.row6.y, 1164, 2);
   eq('언어버튼 x', R.gold.x, 685); eq('언어버튼 w', R.gold.w, 169); eq('언어버튼 h', R.gold.h, 69);
-  eq('토글 트랙 x', R.sw2.x, 685); eq('토글 트랙 w', R.sw2.w, 169); eq('토글 트랙 h', R.sw2.h, 56);
+  eq('토글 트랙 x', R.sw2.x, 685); eq('토글 트랙 w', R.sw2.w, 169); eq('토글 트랙 h', R.sw2.h, 58);
   eq('ON 노브 x', R.kn2.x, 755); eq('OFF 노브 x', R.kn5.x, 685);
   eq('노브 w', R.kn2.w, 99); eq('노브 h', R.kn2.h, 69);
   eq('계정삭제 밑줄 x', R.dl.x, 496); eq('계정삭제 밑줄 w', R.dl.w, 90);
