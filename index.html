@@ -5350,13 +5350,24 @@
   /* 2차 비평 D: ref 는 수직두께가 x=100/180/260 에서 **67 로 일정한 평행사변형**인데 우리 clip-path 는
      좌변만 18%~82% 로 잘라 «쐐기»(85→111)가 됐고, 그 두꺼워진 좌하단이 배너 문구 선두를 덮었다.
      → 좌변도 0~100% 로 두고 상자 자체를 얇게(66) 만들어 균일 밴드로 바꾼다. */
-  .bls-rib{position:absolute;left:-14px;top:106px;width:310px;height:66px;
+  /* 11회차(2차 폴리시 라운드) — 10회차가 «E·F 엇갈림» 으로 미뤄 둔 리본 bbox 를 자체 raw 덤프로 결론냈다.
+     magenta 마스크 bbox: ref **316x144 @ frame x33..348 · y429..572** vs 우리 308x132 → F(316x146) 가 맞다.
+     E 의 «317x138 @y436..» 은 상단 8px 을 놓친 값이다.
+     ⚠ 두께를 키우는 처방(E·F 공통)은 틀렸다 — 열 두께 프로파일(x=100/150/200/250)은 ref 67/67/65/66 ·
+     우리 68/67/68/68 로 **중앙 밴드는 이미 일치**한다. 모자란 것은 «양 끝» 이다:
+       x=60  ref y491..571(81) vs 우리 493..559(67)  → 좌단이 아래로 12px 더 벌어진다(리본 접힘)
+       x=300 ref y429..505(77) vs 우리 432..495(64)  → 우단 스왈로테일이 위아래로 더 벌어진다
+     → 밴드 두께 66 은 그대로 두고 **박스를 314x76 으로 키워 끝단만 플레어**시킨다(밴드 = 상단 86.8%).
+     회전 후 bbox 계산: 315.9x144.1 (목표 316x144) · 잉크중심이 박스중심에서 (-3.5,+5.3) 이라
+     박스중심 frame(194.0,495.2) = .bls 기준 left −4 / top 112 로 놓으면 잉크중심이 ref(190.5,500.5) 에 맞는다. */
+  .bls-rib{position:absolute;left:-13px;top:105px;width:318px;height:76px;
     display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#D31464 0,#BE175D 100%);
-    clip-path:polygon(0 0,87% 0,100% 26%,89% 50%,100% 74%,87% 100%,0 100%);
+    clip-path:polygon(0 0,87% 0,100% 22.6%,89% 43.4%,100% 64.3%,87% 86.8%,12% 86.8%,0 100%);
     rotate:-15deg;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.35)}   /* 비평 A·D 합의: ref 기울기 15.0° */
+  /* 밴드가 박스 상단 66/76 이므로 문구는 박스 중심에서 5px 올려야 밴드 중심에 온다 */
   .bls-rib>i{font-size:27px;color:#FEF7AF;-webkit-text-stroke:6px #6E0834;paint-order:stroke fill;
-    transform:translateX(-14px)}
+    transform:translate(-14px,-5px)}
 
   /* §4 안내 배너 — 크림 위 반투명 토프 바 */
   /* 비평 A·B 합의: ref 배너 폭 892~896(우인셋 29~30) — 좌단은 핑크 리본이 덮어 대칭으로 잡는다 */
