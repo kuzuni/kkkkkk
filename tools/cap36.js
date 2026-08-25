@@ -13,11 +13,11 @@ const name = process.argv[2] || '36-r1.png';
 const out = path.resolve(__dirname, '..', 'docs', 'review', name);
 
 /* 레퍼런스와 같은 진행 상태. 출석 패스는 단계 간격 1일이라 단계 i 의 목표는 i+1 일이다.
-   «접속일 2» = 1·2 일차 해금, 3 일차부터 잠금. 무료 1일차는 이미 수령한 상태로 심는다. */
+   «접속일 2» = 1·2 일차 해금, 3 일차부터 잠금. 레퍼런스는 **무료 1·2 일차가 수령완료(✓)** 다(측정표 §8-3). */
 const SAVE = {
   best: 79, stage: 79, gold: 5e9, dia: 120000, relic: 4000,
   att: { n: 2, date: '' },
-  pass: { prem: {}, got: { 'att:0:0': 1 } },
+  pass: { prem: {}, got: { 'att:0:0': 1, 'att:1:0': 1 } },
 };
 
 function launchOpts() {
@@ -61,7 +61,7 @@ function launchOpts() {
   const st = await page.evaluate(() => {
     const r = (s) => { const e = document.querySelector(s); if (!e) return null;
       const b = e.getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)]; };
-    const rows = [...document.querySelectorAll('#psTk .ps-r')].filter(e => {
+    const rows = [...document.querySelectorAll('#psTk .ps-r:not(.ps-hr)')].filter(e => {
       const b = e.getBoundingClientRect(); return b.bottom > 715 && b.top < 2098;
     }).map(e => ({
       hex: e.querySelector('.ps-hex i').textContent,
@@ -71,8 +71,8 @@ function launchOpts() {
     return { hero: r('.ps-hero'), gold: r('.ps-gold'), hdr: r('.ps-hdr'), list: r('.ps-list'),
              bar: r('.ps-bar'), buy: r('.ps-buy'), lb: r('.ps-lb'), ttl: r('.ps-ttl'),
              on: document.querySelector('#psBar .pt.on').dataset.ptab,
-             onBox: r('#psBar .pt.on'), cols: document.querySelector('#psTk .ps-r').querySelectorAll('.ps-bx').length,
-             c1: r('#psTk .ps-bx.c1'), scroll: document.getElementById('psList').scrollTop, rows,
+             onBox: r('#psBar .pt.on'), cols: document.querySelector('#psTk .ps-r:not(.ps-hr)').querySelectorAll('.ps-bx').length,
+             c1: r('#psTk .ps-r:not(.ps-hr) .ps-bx.c1'), scroll: document.getElementById('psList').scrollTop, rows,
              overlays: [...document.querySelectorAll('#app > *')].filter(e => e.id !== 'psw' && e.id !== 'fxl'
                && getComputedStyle(e).display !== 'none'
                && Number(getComputedStyle(e).zIndex || 0) >= 34).map(e => e.id || e.className) };
@@ -86,6 +86,8 @@ function launchOpts() {
   if (st.cols !== 2) throw new Error('프리미엄 칸이 1개가 아니다(총 칸 ' + st.cols + ')');
   if (st.rows.length < 5) throw new Error('보이는 행이 5개 미만: ' + st.rows.length);
   if (st.rows[0].hex !== '1') throw new Error('첫 행이 1일차가 아니다: ' + st.rows[0].hex);
+  if (!st.rows[0].bx[0].startsWith('✓') || !st.rows[1].bx[0].startsWith('✓'))
+    throw new Error('레퍼런스와 상태 불일치 — 무료 1·2 일차가 수령완료가 아니다');
 
   await page.screenshot({ path: out });
   await browser.close();
