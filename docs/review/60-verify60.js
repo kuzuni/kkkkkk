@@ -222,11 +222,15 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     const r = await page.evaluate(async () => {
       const read = () => document.getElementById('cpN').textContent;
       const a = read();
-      S.spAtk += 4000;                                   /* 전투력을 크게 올린다 */
+      /* 전투력을 크게 올린다. «S.spAtk 를 직접 더하기» 는 못 쓴다 — spAtk 는 bonus() 를 거치는데
+         bonus() 는 markDirty() 로만 무효화되는 캐시라 값을 직접 꽂으면 cp() 가 안 움직인다(10회차에 잡음).
+         `S.lv.atk` 는 stat.dmg 의 U.atk.val(lv('atk')) 로 캐시 없이 바로 들어간다. */
+      S.lv.atk += 60;
       const seq = [];
       for (let i = 0; i < 8; i++) { await new Promise(r => requestAnimationFrame(r)); seq.push(read()); }
-      return { a, seq, uniq: new Set(seq).size };
+      return { a, seq, uniq: new Set(seq).size, moved: read() !== a };
     });
+    if (!r.moved) { fails.push('롤링: 전투력 표시가 아예 안 움직였다(레버 무효 — 게이트 자체 점검 필요)'); console.log('  ✗ 롤링 레버 무효'); }
     if (r.uniq < 3) { fails.push('롤링: 8프레임 동안 표시값 ' + r.uniq + '종 (>=3 기대 — 뚝 바뀜)'); console.log('  ✗ 롤링 ' + r.uniq + '종'); }
     else ok('롤링 8프레임 표시값 ' + r.uniq + '종 (' + r.a + ' → ' + r.seq[r.seq.length - 1] + ')');
   }

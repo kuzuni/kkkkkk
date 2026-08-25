@@ -41,6 +41,23 @@ const GRAB = () => {
   return keep.length;
 };
 const SEEK = (t) => { (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} }); };
+/* ⚠ 9회차 비평(R-3·S-3)이 «tab t=155 프레임에서 패널이 73px 역주행» 이라고 지적한 것의 정체(10회차에 규명).
+   `jzOn()` 은 애니메이션 `finished` 훅이 걸리면 안전망 타이머를 `max(ms, 2500)` 으로 건다.
+   그런데 GRAB 이 애니메이션을 **pause** 하면 `finished` 는 영원히 안 온다 — 반면 안전망 타이머는
+   **벽시계로 계속 흐른다.** 스크린샷 8장이 2.5초를 넘기는 순간 안전망이 클래스를 떼어 버려서
+   뒷프레임이 «연출 없는 정지 상태» 로 찍힌다(패널은 슬라이드 도중 → 제자리로 튄다).
+   → GRAB 직후 **걸려 있는 안전망 타이머를 전부 해제한다.** 타이머 id 는 `el['__jz_'+cls]` 에 있다. */
+const FREEZE = () => {
+  let n = 0;
+  document.querySelectorAll('*').forEach(el => {
+    for (const k of Object.keys(el)) {
+      /* 타이머 id 는 두 군데다 — `jzOn()` 은 `__jz_<클래스>`, `jzOpen()/jzClose()` 는 `__jzT`.
+         `__jzGen`·`__jzBusy` 도 숫자라 «__jz 로 시작» 만으로 지우면 세대 가드가 깨진다. 정확히 이 둘만. */
+      if ((k === '__jzT' || k.indexOf('__jz_') === 0) && el[k]) { clearTimeout(el[k]); el[k] = 0; n++; }
+    }
+  });
+  return n;
+};
 /* ⚠ 1회차 사고 — pause 한 애니메이션은 **영원히 멈춰 있다.** 장면을 넘어가도 살아 있어서
    다음 장면의 GRAB 에 같이 잡히고, SEEK 하면 **앞 장면의 연출이 같이 재생된다**(탭 장면에서
    누름 스프링이 되살아나 «탭 아이콘 팝이 1.12 가 아니라 1.04» 로 읽혔다). 장면 사이에 반드시 청소한다. */
@@ -74,11 +91,13 @@ async function scene(page, name, times, trigger) {
   await page.evaluate(MARK);
   await trigger();
   const n = await page.evaluate(GRAB);
+  let f = await page.evaluate(FREEZE);
   for (let i = 0; i < times.length; i++) {
+    f += await page.evaluate(FREEZE);       /* 프레임 사이에 새로 걸리는 안전망도 있다 — 매 프레임 다시 해제 */
     await page.evaluate(SEEK, times[i]);
     await page.screenshot({ path: path.join(OUT, `60-r${R}-${name}-${i + 1}.png`) });
   }
-  console.log(`  ${name}: 애니 ${n}개 · t = ${times.join(' / ')} ms`);
+  console.log(`  ${name}: 애니 ${n}개 · 안전망 타이머 ${f}개 해제 · t = ${times.join(' / ')} ms`);
 }
 
 /* 위임 핸들러를 타야 하는 클릭은 query 와 click 을 같은 태스크 안에 (LESSONS 50-①) */
@@ -120,8 +139,10 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
         { bubbles: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }));
     }, SEL);
     const n = await page.evaluate(GRAB);
+    let f1 = await page.evaluate(FREEZE);
     const PT = [0, 8, 20, 40, 60];                      /* t=8 은 «작게 시작» 증거용(비평 지적 4) */
     for (let i = 0; i < PT.length; i++) {
+      f1 += await page.evaluate(FREEZE);
       await page.evaluate(SEEK, PT[i]);
       await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 1}.png`) });
     }
@@ -129,12 +150,14 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
     await page.evaluate(MARK);
     await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
     const n2 = await page.evaluate(GRAB);
+    let f2 = await page.evaluate(FREEZE);
     const RT = [0, 45, 99, 145, 180];                   /* 99ms = 스프링 피크(55%), 45·145 는 키프레임 사이 */
     for (let i = 0; i < RT.length; i++) {
+      f2 += await page.evaluate(FREEZE);
       await page.evaluate(SEEK, RT[i]);
       await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 6}.png`) });
     }
-    console.log(`  press: 애니 ${n}/${n2}개 · 1~5 = 누름 ${PT.join('/')}ms · 6~10 = 뗌 ${RT.join('/')}ms`);
+    console.log(`  press: 애니 ${n}/${n2}개 · 안전망 ${f1}/${f2}개 해제 · 1~5 = 누름 ${PT.join('/')}ms · 6~10 = 뗌 ${RT.join('/')}ms`);
   }
 
   /* ── 2. 가운데 다이얼로그 열기 (딤 150ms + 박스 .92→1.02→1 / 220ms) ── */
