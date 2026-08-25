@@ -87,10 +87,10 @@ async function fresh(browser, w = 1080, h = 2280) {
         btns: R('.ml-btns'), sub: R('.ml-all.sub'), all: R('#mailBtn'), x: R('#mailX'), rowTops: rows };
     });
     near('상자 폭', g.box.w, 898);
-    near('상자 높이', g.box.h, 1317);
-    near('본문 높이', g.body.h, 1203);
+    near('상자 높이', g.box.h, 1303);
+    near('본문 높이', g.body.h, 1189);
     near('패널 폭', g.pn.w, 830);
-    near('패널 높이', g.pn.h, 900);
+    near('패널 높이', g.pn.h, 886);
     near('행 폭', g.r1.w, 784);
     near('행 높이', g.r1.h, 147);
     near('행 pitch', g.rowTops[1] - g.rowTops[0], 164);
