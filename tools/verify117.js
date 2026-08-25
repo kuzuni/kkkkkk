@@ -19,6 +19,9 @@
  *
  * ⚠ addInitScript 는 reload 마다 다시 돈다(34 교훈 5) — 세이브는 «처음 한 번만» 깐다.
  *    autoBuy·spAuto 는 끈다: 유휴 루프가 사이에 레벨을 올려 «배수 비교» 를 오염시킨다(51 교훈 ③).
+ * ⚠ 그것만으로는 부족했다 — «켜기 전 / 켠 뒤» 를 **다른 evaluate 로 나눠 재면** 그 사이에 tick 이 돌아
+ *    10회 중 1회 비가 어긋났다. 배수 비교는 전부 **한 evaluate 안**에서 재고(단일 스레드라 tick 이 못 낀다),
+ *    카드 클릭도 그 안에서 실제 DOM click 으로 쏜다([C]·[H]).
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
@@ -74,37 +77,46 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   ok(near(B[51][0], 6.0) && near(B[51][1], 120, 1e-9), 'B5 Lv51 = ×6.00 (공 +120%) 상한', JSON.stringify(B[51]));
   ok(near(B[80][0], B[51][0]), 'B6 Lv51 초과는 캡 — Lv80 도 ×6.00', JSON.stringify(B[80]));
 
-  /* ---- [C] 실제 배율 — bonus() 를 거쳐 stat 까지 내려가는가 ---- */
-  await page.evaluate(() => { S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); });
-  const base = await page.evaluate(() => ({ atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg }));
+  /* ---- [C] 실제 배율 — bonus() 를 거쳐 stat 까지 내려가는가 ----
+     ⚠ «켜기 전 / 켠 뒤» 를 서로 다른 evaluate 로 나눠 재면 그 사이에 유휴 루프가 한 번 돌아
+     강화 레벨이 오를 수 있고, 그러면 비가 1.20 이 아니라 1.20×(강화 증가분) 으로 나온다
+     (51 교훈 ③ 의 재현 — 실제로 10회 중 1회 이렇게 깨졌다). **한 evaluate 안에서** 재면
+     자바스크립트가 단일 스레드라 사이에 tick 이 못 낀다. 카드 클릭도 그 안에서 실제 DOM click
+     으로 쏜다 — 핸들러 경로(#blsw 위임 → activateBless)는 그대로 검증된다. */
+  const C = await page.evaluate(() => {
+    S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); renderBless();
+    const base = { atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg };
 
-  /* 1회차 — Lv1 이므로 종전과 같은 ×1.20 이어야 한다(회귀 방지: 34 게이트 C2/C3 와 같은 값) */
-  await page.evaluate(() => activateBless('atk'));
-  const c1 = await page.evaluate(() => ({ atk: mulAtk(), dmg: stat.dmg, lv: S.bless.lv, prog: S.bless.prog }));
-  ok(near(c1.atk / base.atk, 1.20, 1e-9), 'C1 Lv1 활성 = ×1.20 (34 회귀)', (c1.atk / base.atk).toFixed(4));
-  ok(near(c1.dmg / base.dmg, 1.20, 1e-9), 'C2 stat.dmg 도 ×1.20', (c1.dmg / base.dmg).toFixed(4));
-  ok(c1.prog === 1, 'C3 축복 경험치 +1', String(c1.prog));
+    /* 1회차 — Lv1 이므로 종전과 같은 ×1.20 이어야 한다(회귀 방지: 34 게이트 C2/C3 와 같은 값) */
+    document.getElementById('blsC_atk').click();
+    const c1 = { atk: mulAtk(), dmg: stat.dmg, lv: S.bless.lv, prog: S.bless.prog,
+                 txt: document.querySelector('#blsC_atk .tm>i').textContent };
 
-  /* 4회 켜면 Lv2 — 그 순간부터 효과가 22% 다 */
-  const c4 = await page.evaluate(() => {
-    ['hp', 'rate'].forEach(k => activateBless(k));                 /* 경험치 3 */
-    S.bless.exp.atk = 0; markDirty(); activateBless('atk');        /* 4번째 → Lv2 */
-    return { lv: S.bless.lv, prog: S.bless.prog, atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg };
-  });
-  ok(c4.lv === 2 && c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', c4.lv + '/' + c4.prog);
-  ok(near(c4.atk / base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (c4.atk / base.atk).toFixed(4));
-  ok(near(c4.hp / base.hp, 1.22, 1e-9) && near(c4.rate / base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
-     (c4.hp / base.hp).toFixed(4) + '/' + (c4.rate / base.rate).toFixed(4));
-  ok(near(c4.gold / base.gold, 1.55, 1e-9), 'C7 3종 전부 활성 → 골드 ×1.55 (보너스도 레벨 곡선)', (c4.gold / base.gold).toFixed(4));
-  ok(near(c4.dmg / base.dmg, 1.22, 1e-9), 'C8 stat.dmg 도 ×1.22 (HUD 전투력에 반영)', (c4.dmg / base.dmg).toFixed(4));
+    /* 4회 켜면 Lv2 — 그 순간부터 효과가 22% 다 */
+    ['hp', 'rate'].forEach(k => document.getElementById('blsC_' + k).click());     /* 경험치 3 */
+    S.bless.exp.atk = 0; markDirty(); document.getElementById('blsC_atk').click(); /* 4번째 → Lv2 */
+    const c4 = { lv: S.bless.lv, prog: S.bless.prog, atk: mulAtk(), hp: mulHp(), rate: mulRate(),
+                 gold: mulGold(), dmg: stat.dmg };
 
-  /* Lv6 → 1.30 */
-  const c6 = await page.evaluate(() => {
+    /* Lv6 → 1.30, 1종만 켜면 골드 보너스 없음 */
     S.bless.lv = 6; S.bless.exp = { atk: Date.now() + 6e5, hp: 0, rate: 0 }; markDirty();
-    return { atk: mulAtk(), gold: mulGold() };
+    const c6 = { atk: mulAtk(), gold: mulGold() };
+    return { base, c1, c4, c6 };
   });
-  ok(near(c6.atk / base.atk, 1.30, 1e-9), 'C9 Lv6 공격력 = ×1.30', (c6.atk / base.atk).toFixed(4));
-  ok(near(c6.gold / base.gold, 1.0), 'C10 1종만 켜면 골드 보너스 없음', (c6.gold / base.gold).toFixed(4));
+  ok(near(C.c1.atk / C.base.atk, 1.20, 1e-9), 'C1 Lv1 활성 = ×1.20 (34 회귀)', (C.c1.atk / C.base.atk).toFixed(4));
+  ok(near(C.c1.dmg / C.base.dmg, 1.20, 1e-9), 'C2 stat.dmg 도 ×1.20', (C.c1.dmg / C.base.dmg).toFixed(4));
+  ok(C.c1.prog === 1 && /^\u23F1 \d\d:\d\d:\d\d$/.test(C.c1.txt), 'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시',
+     C.c1.prog + ' ' + C.c1.txt);
+  ok(C.c4.lv === 2 && C.c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', C.c4.lv + '/' + C.c4.prog);
+  ok(near(C.c4.atk / C.base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (C.c4.atk / C.base.atk).toFixed(4));
+  ok(near(C.c4.hp / C.base.hp, 1.22, 1e-9) && near(C.c4.rate / C.base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
+     (C.c4.hp / C.base.hp).toFixed(4) + '/' + (C.c4.rate / C.base.rate).toFixed(4));
+  ok(near(C.c4.gold / C.base.gold, 1.55, 1e-9), 'C7 3종 전부 활성 → 골드 ×1.55 (보너스도 레벨 곡선)',
+     (C.c4.gold / C.base.gold).toFixed(4));
+  ok(near(C.c4.dmg / C.base.dmg, 1.22, 1e-9), 'C8 stat.dmg 도 ×1.22 (HUD 전투력에 반영)',
+     (C.c4.dmg / C.base.dmg).toFixed(4));
+  ok(near(C.c6.atk / C.base.atk, 1.30, 1e-9), 'C9 Lv6 공격력 = ×1.30', (C.c6.atk / C.base.atk).toFixed(4));
+  ok(near(C.c6.gold / C.base.gold, 1.0), 'C10 1종만 켜면 골드 보너스 없음', (C.c6.gold / C.base.gold).toFixed(4));
 
   /* ---- [D] 지속시간 곡선은 그대로 (레벨업은 그 활성화부터 즉시) ---- */
   const D = await page.evaluate(() => {
@@ -184,9 +196,17 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   });
   ok(near(H0.on / H0.off, 1.40, 1e-9), 'H1 Lv11 활성 = ×1.40', (H0.on / H0.off).toFixed(4));
   await page.waitForTimeout(2400);
-  const H1 = await page.evaluate(() => ({ on: blessOn('atk'), atk: mulAtk() }));
-  ok(!H1.on && near(H1.atk / H0.off, 1.0, 1e-9), 'H2 만료 즉시 배율 원복 (1초 tick 이 캐시를 깬다)',
-     (H1.atk / H0.off).toFixed(4));
+  /* 만료 뒤의 «원복» 도 2.4초 전의 값과 비교하면 유휴 루프에 오염된다(위 [C] 와 같은 이유).
+     만료 시점에서 «한 번 더 켜 보고» 그 자리에서 비를 재면 시간이 끼어들 틈이 없다. */
+  const H1 = await page.evaluate(() => {
+    const on0 = blessOn('atk'), off = mulAtk();                  /* 만료 상태의 배율 = 기준선 */
+    S.bless.exp.atk = Date.now() + 6e5; markDirty();
+    const on = mulAtk();
+    S.bless.exp.atk = 0; markDirty();
+    return { on0, ratio: on / off };
+  });
+  ok(!H1.on0 && near(H1.ratio, 1.40, 1e-9), 'H2 만료 즉시 배율 원복 (1초 tick 이 캐시를 깬다)',
+     '만료 후 재점화 비 ' + H1.ratio.toFixed(4));
 
   /* ---- [I] 레벨업 연출 (58 fxToast) ---- */
   const I = await page.evaluate(async () => {
