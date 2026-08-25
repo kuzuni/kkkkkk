@@ -1508,11 +1508,14 @@
     border:solid #7A6248;border-width:3px 5px 6px;box-shadow:none;background:#F0D9B9}
   /* 3열 × 226 · gap 44.5/33 → 767 = 크림 897 − 좌우 65 */
   .at-g{display:grid;grid-template-columns:repeat(3,226px);gap:33px 44.5px}
-  .at-c,.at-c7{position:relative;box-sizing:border-box;height:268px;background:#FEF8E1;
+  .at-c,.at-c7{position:relative;box-sizing:border-box;height:268px;
     border:5px solid #000;border-bottom-width:6px;border-radius:18px}
-  .at-c7{width:767px;margin-top:31px;border-radius:19px;background:#FEFCED}
-  /* 수령 완료 딤은 «카드 안쪽» 에만 건다 — ✔ 는 딤 위에 풀 밝기로 얹힌다(실측: 본문 ×0.50, ✔ 원색) */
-  .at-in{position:absolute;inset:0;border-radius:13px;overflow:hidden}
+  .at-c7{width:767px;margin-top:31px;border-radius:19px}
+  /* 수령 완료 딤은 «카드 안쪽» 에만 건다 — ✔ 는 딤 위에 풀 밝기로 얹힌다(실측: 본문 ×0.50, ✔ 원색).
+     ⚠ 카드 본문색은 `.at-c` 가 아니라 **`.at-in` 이 갖는다** — `.at-c` 에 두면 딤이 밴드·플레이트만
+     덮고 본문은 그대로 밝게 남는다(1회차 비평 A 실측: 딤 면적이 레퍼런스의 59%). */
+  .at-in{position:absolute;inset:0;border-radius:13px;overflow:hidden;background:#FEF8E1}
+  .at-c7 .at-in{background:#FEFCED}
   .at-c.got .at-in,.at-c7.got .at-in{filter:brightness(.5)}
   /* «N일 차» 밴드 216×56 (7일차 757×57). 기본 #2B2A30 / 강조 #FBBC48 */
   .at-bd{position:absolute;left:0;right:0;top:1px;height:56px;background:#2B2A30;overflow:hidden;
@@ -1540,8 +1543,8 @@
   .at-if>em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-style:normal;font-size:76px;line-height:76px}
   /* 수량 — 잉크 하단 = 프레임 하단 +8 (프레임 아래 테두리에 걸친다) */
-  .at-rw>b{position:absolute;left:50%;transform:translateX(-50%);top:115px;height:38px;line-height:38px;
-    white-space:nowrap;font-size:38px;font-weight:900;color:#fff;
+  .at-rw>b{position:absolute;left:50%;transform:translateX(-50%) scaleX(1.3);top:118px;height:35px;line-height:35px;
+    white-space:nowrap;font-size:35px;font-weight:900;color:#fff;
     -webkit-text-stroke:10px #000;paint-order:stroke fill}
   /* ✔ 수령완료 — 초록 코어 91×73, 중심 = (카드 중심, 카드 top+132) */
   .at-ck{position:absolute;left:0;right:0;top:73px;height:96px;display:flex;align-items:center;
@@ -1549,8 +1552,9 @@
     -webkit-text-stroke:9px #000;paint-order:stroke fill;pointer-events:none;transform:scaleX(.92)}
   /* 👑 포인터 — 77×58, 오늘 카드 하단을 10px 파고들어 아래 카드를 14px 덮는다 */
   .at-c.today{z-index:3;cursor:pointer}
-  .at-cr{position:absolute;left:0;right:0;top:244px;height:58px;display:flex;align-items:center;
-    justify-content:center;font-size:66px;line-height:66px;pointer-events:none}
+  .at-cr{position:absolute;left:0;right:0;top:256px;height:58px;display:flex;align-items:center;
+    justify-content:center;font-size:43px;line-height:43px;pointer-events:none}
+  .at-cr>i{font-style:normal;transform:scaleX(1.4)}
 
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
@@ -9845,7 +9849,7 @@ function openAttend(){
       +   '<div class="at-pl"></div>' + frames
       + '</div>'
       + (got ? '<div class="at-ck">✔</div>' : '')
-      + (now ? '<div class="at-cr">👑</div>' : '') + '</div>';
+      + (now ? '<div class="at-cr"><i>👑</i></div>' : '') + '</div>';
   };
   $('mtitle').textContent = '출석 보상';
   $('mbox').innerHTML = '<div class="at-g">'
