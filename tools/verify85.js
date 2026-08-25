@@ -93,11 +93,16 @@ const ok = (b, name, detail) => {
   /* [C] 최고 등급 판정 */
   const C = await page.evaluate(() => ({
     e7: isTopGrade(EQ.weapon7), e6: isTopGrade(EQ.weapon6), s5: isTopGrade(SK.holy),
-    p5: isTopGrade(PT.drag2), r5: isTopGrade(RL.rl8),
+    /* 106 — 동료가 8등급이 되면서 «펫 top = 신화» 는 폐기됐다. 이제 펫 top 은 g7(불멸)이고
+       구 최고 등급이던 drag2(신화)는 top 이 아니다. 무한 강화는 여전히 불멸 «장비» 전용. */
+    p7: isTopGrade(PT.pet7_0), p5: !isTopGrade(PT.drag2), r5: isTopGrade(RL.rl8),
+    lvP: maxLv(PT.pet7_0) === MAX_LEVEL,
     lvInf: maxLv(EQ.weapon7) === Infinity, lv6: maxLv(EQ.weapon6) === MAX_LEVEL, lvS: maxLv(SK.holy) === MAX_LEVEL
   }));
   ok(C.e7 && !C.e6, 'C1 장비 top = g7 (g6 은 아님)');
-  ok(C.s5 && C.p5 && C.r5, 'C2 비장비(스킬·펫·유물)는 신화(g5)가 top — «신화 = MAX» 유지');
+  ok(C.s5 && C.r5, 'C2 스킬·유물은 신화(g5)가 top — «신화 = MAX» 유지');
+  ok(C.p7 && C.p5, 'C2b 106 — 동료 top 은 불멸(g7), 구 신화 동료는 top 아님');
+  ok(C.lvP, 'C2c 불멸 동료도 Lv100 상한(무한 강화는 불멸 장비 전용)');
   ok(C.lvInf && C.lv6 && C.lvS, 'C3 무한 강화는 불멸 장비만 (g6 장비·신화 스킬은 Lv100 상한)');
 
   /* [D] 확률 */
@@ -173,13 +178,20 @@ const ok = (b, name, detail) => {
   ok(H.pages === 2, 'H1 wpnPages() === 2', String(H.pages));
   ok(H.hasG6 && H.hasG7 && !H.bad, 'H2 2페이지에 초월·불멸 행 렌더 · NaN 없음');
 
-  /* [I] 도감 */
+  /* [I] 도감 — 91 이 «카테고리 × need 티어» 를 «부위 × 등급 세트» 로 전면 교체하면서
+     이 절이 읽던 `COLL.equip.tiers` 가 사라져 게이트가 여기서 즉사하고 있었다(85 이후 줄곧 미실행).
+     묻는 것은 그대로다: **도감이 8등급 108종을 하나도 빠뜨리지 않고 담는가.**
+     새 구조에서는 «장비 세트 24개(3부위 × 8등급) · 구성원 합 108» 이 같은 단언이다. */
   const I = await page.evaluate(() => {
-    const t = COLL.equip.tiers;
+    const eq = COLL_SETS.filter(s => s.cat === 'equip');
+    const ids = new Set(eq.reduce((a, s) => a.concat(s.it), []));
     let err = null; try { renderColl21(); } catch (e) { err = String(e); }
-    return { last: t[t.length - 1].need, asc: t.every((x, i) => !i || x.need > t[i - 1].need), err };
+    return { sets: eq.length, members: ids.size, all: EQUIPS.every(e => ids.has(e.id)),
+             g7: eq.filter(s => /:7$/.test(s.key)).length, err };
   });
-  ok(I.last === 108 && I.asc, 'I1 도감 마지막 티어 = 108종(전 종) · 오름차순', String(I.last));
+  ok(I.sets === 24 && I.members === 108 && I.all,
+    'I1 도감 장비 세트 24개 · 구성원 108종(전 종 포함)', I.sets + '세트 / ' + I.members + '종');
+  ok(I.g7 === 3, 'I1b 불멸(g7) 세트가 부위마다 1개', String(I.g7));
   ok(!I.err, 'I2 renderColl21 에러 없음', I.err || '');
 
   /* [J] 구 세이브 호환 — 옛 신화 무한강화(lv120) 소지자 */

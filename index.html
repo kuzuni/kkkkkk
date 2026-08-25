@@ -8236,8 +8236,9 @@ function buildFloor(seed){
 /* ==========================================================================
    데이터
    ========================================================================== */
-/* 85(2026-08-26, 주인 지시) — 장비만 8등급. 7 «초월»·8 «불멸» 신설(mul 은 6→10 뒤로 16·26 기하급수 유지).
-   스킬·펫·유물·코스튬은 6단계(신화)까지만 쓴다 → «최고 등급» 판정은 isTopGrade 가 아니라 topG(cat) 기준. */
+/* 85(2026-08-26, 주인 지시) — 장비가 8등급. 7 «초월»·8 «불멸» 신설(mul 은 6→10 뒤로 16·26 기하급수 유지).
+   106(2026-08-26, 주인 지시) — **펫(동료)도 8등급**(장비와 같은 36종·같은 확률표).
+   스킬·유물·코스튬만 6단계(신화)까지 쓴다 → «최고 등급» 판정은 isTopGrade 가 아니라 topG(cat) 기준. */
 const GRADE = [
   { n:'일반', c:'#9aa7c2', bg:'#1a2038', mul:1.0,  ic:'🥉' },
   { n:'고급', c:'#6fe08a', bg:'#152a1f', mul:1.5,  ic:'🥈' },
@@ -8353,18 +8354,74 @@ SLOTS.forEach(s => EQ_NAMES[s.k].forEach((tier, g) =>
   tier.forEach((x, j) =>
     EQUIPS.push({ id:s.k + g + (j ? '_' + j : ''), n:x.n, slot:s.k, g, j, v:x.v, ic:x.ic || s.ic }))));
 
-/* ---- 펫 (최대 3마리) ---- */
-const PETS = [
-  { id:'bird0', n:'꼬마 새',     g:0, sp:'bird',   tint:null,      m:0.45, cd:1.30 },
-  { id:'bird1', n:'화염 조',     g:1, sp:'bird',   tint:'#ff9d6a', m:0.60, cd:1.20 },
-  { id:'robo0', n:'수호 로봇',   g:1, sp:'robo',   tint:null,      m:0.65, cd:1.40 },
-  { id:'bird2', n:'서리 조',     g:2, sp:'bird',   tint:'#8fd6ff', m:0.85, cd:1.10 },
-  { id:'robo1', n:'전투 드론',   g:2, sp:'robo',   tint:'#8fd6ff', m:0.95, cd:1.20 },
-  { id:'drag0', n:'아기 드래곤', g:3, sp:'dragon', tint:null,      m:1.30, cd:1.10 },
-  { id:'robo2', n:'파괴 병기',   g:3, sp:'robo',   tint:'#ff8f8f', m:1.40, cd:1.00 },
-  { id:'drag1', n:'홍염 드래곤', g:4, sp:'dragon', tint:'#ff8a5c', m:2.20, cd:0.95 },
-  { id:'drag2', n:'황금 드래곤', g:5, sp:'dragon', tint:'#ffd45e', m:3.40, cd:0.80 }
+/* ---- 펫(동료, 최대 3마리) ----
+   작업 106(2026-08-26, 저장소 주인 지시) — «소환에 동료 소환도 넣고, 동료도 무기처럼 등급을 여러 개로.
+   개수는 무기와 똑같이.» → 85 의 장비와 **같은 8등급 × (5,5,5,5,5,5,5,1) = 36종**(무기 부위당 종 수와 동일).
+   구조는 EQ_NAMES 와 같은 «등급 → 항목 배열». **구 9종(bird0·robo0…)은 id·이름·m·cd 를 한 글자도 안 바꿨다**
+   (구 세이브 `S.own`·`S.eqPet` 호환 + 기존 밸런스 불변). 신설 27종만 아래 곡선에서 파생한다.
+     · `m`(피해 계수) = `PET_M[g] × v` — `PET_M[g] = 0.45 × GRADE[g].mul^0.88`.
+       지수 0.88 은 «각 등급 최강 구 펫»(robo0 0.65 · robo1 0.95 · robo2 1.40 · drag1 2.20 · drag2 3.40)에
+       맞춘 값이다(예측 0.639·0.930·1.380·2.210·3.414 — 오차 ≤2%). 그대로 16·26 등급까지 잇는다.
+     · `cd`(공격 주기) = `PET_CD[g] = 1.30 × GRADE[g].mul^-0.20` — 구 펫 1.30·1.20·1.10·0.95·0.80 에 맞춘 지수.
+     · `v` = 같은 등급 안 개체차 배율(0.90~1.15, 85 의 EQ_NAMES.v 와 같은 역할). 구 9종은 v 를 쓰지 않는다.
+       ⚠ 펫에는 `slot` 이 없으므로 `eqv()` 가 v 를 곱하지 않는다 — v 는 **오직 m 파생용**이고 도감·보유 효과는 불변.
+     · id 는 구 9종만 원래 이름을 유지하고 신설은 `pet<g>_<j>`(j = 등급 안 자리). 다른 계열 id 와 겹치지 않는다.
+     · 아이콘은 항목별 이모지를 두지 않는다 — `itemIcon()` 이 `sp`(bird/robo/dragon)로 🐦/🤖/🐉 를 고른다.
+       개체는 **스프라이트 3종 × tint** 로 구분한다(같은 등급 안에서 같은 스프라이트가 겹치면 tint 를 크게 벌렸다). */
+const PET_M  = [0.450, 0.643, 0.937, 1.389, 2.178, 3.414, 5.162, 7.914];   /* 0.45 × mul^0.88 (소수 3자리 반올림) */
+const PET_CD = [1.30,  1.20,  1.10,  1.01,  0.91,  0.82,  0.75,  0.68 ];   /* 1.30 × mul^-0.20 (소수 2자리 반올림) */
+const PET_NAMES = [
+  /* 0 일반 */
+  [ { id:'bird0', n:'꼬마 새',   sp:'bird',   tint:null,      m:0.45, cd:1.30 },
+    { n:'고물 드론',      sp:'robo',   tint:'#b9c2d0', v:0.92 },
+    { n:'새끼 도마뱀',    sp:'dragon', tint:'#9ad6a0', v:1.06 },
+    { n:'참새 정찰병',    sp:'bird',   tint:'#d9c98a', v:1.12 },
+    { n:'나무 인형',      sp:'robo',   tint:'#c39a6b', v:0.96 } ],
+  /* 1 고급 */
+  [ { id:'bird1', n:'화염 조',   sp:'bird',   tint:'#ff9d6a', m:0.60, cd:1.20 },
+    { id:'robo0', n:'수호 로봇', sp:'robo',   tint:null,      m:0.65, cd:1.40 },
+    { n:'강철 익룡',      sp:'dragon', tint:'#9fb4c9', v:1.10 },
+    { n:'청동 매',        sp:'bird',   tint:'#c98f4a', v:0.94 },
+    { n:'순찰 드론',      sp:'robo',   tint:'#7fe0b0', v:1.05 } ],
+  /* 2 희귀 */
+  [ { id:'bird2', n:'서리 조',   sp:'bird',   tint:'#8fd6ff', m:0.85, cd:1.10 },
+    { id:'robo1', n:'전투 드론', sp:'robo',   tint:'#8fd6ff', m:0.95, cd:1.20 },
+    { n:'기사의 비룡',    sp:'dragon', tint:'#7f9bff', v:1.12 },
+    { n:'폭풍 매',        sp:'bird',   tint:'#c8b6ff', v:0.92 },
+    { n:'은빛 경비병',    sp:'robo',   tint:'#dfe6ef', v:1.08 } ],
+  /* 3 영웅 */
+  [ { id:'drag0', n:'아기 드래곤', sp:'dragon', tint:null,    m:1.30, cd:1.10 },
+    { id:'robo2', n:'파괴 병기', sp:'robo',   tint:'#ff8f8f', m:1.40, cd:1.00 },
+    { n:'룬 올빼미',      sp:'bird',   tint:'#b98cff', v:1.08 },
+    { n:'룬 비룡',        sp:'dragon', tint:'#8f7bff', v:0.95 },
+    { n:'마력 골렘',      sp:'robo',   tint:'#6fe0c8', v:1.12 } ],
+  /* 4 전설 */
+  [ { id:'drag1', n:'홍염 드래곤', sp:'dragon', tint:'#ff8a5c', m:2.20, cd:0.95 },
+    { n:'용아 수리',      sp:'bird',   tint:'#ffcf6a', v:1.10 },
+    { n:'용살자 기갑',    sp:'robo',   tint:'#ff6f4f', v:0.94 },
+    { n:'벽력 비룡',      sp:'dragon', tint:'#7fd0ff', v:1.05 },
+    { n:'용왕의 매',      sp:'bird',   tint:'#e08cff', v:1.13 } ],
+  /* 5 신화 */
+  [ { id:'drag2', n:'황금 드래곤', sp:'dragon', tint:'#ffd45e', m:3.40, cd:0.80 },
+    { n:'천공의 봉황',    sp:'bird',   tint:'#ff7fa8', v:1.15 },
+    { n:'별빛 수호기',    sp:'robo',   tint:'#9fd6ff', v:0.95 },
+    { n:'월광 비룡',      sp:'dragon', tint:'#cfd8ff', v:1.06 },
+    { n:'일식의 까마귀',  sp:'bird',   tint:'#8f7fa0', v:1.10 } ],
+  /* 6 초월 — 전부 신설 */
+  [ { n:'차원의 용',      sp:'dragon', tint:'#4fe3c4', v:1.00 },
+    { n:'시간의 파수기',  sp:'robo',   tint:'#ffe08a', v:1.08 },
+    { n:'공허의 갈까마귀', sp:'bird',  tint:'#6f6f8f', v:0.94 },
+    { n:'무한의 비룡',    sp:'dragon', tint:'#b0ffe8', v:1.05 },
+    { n:'초신성 기갑',    sp:'robo',   tint:'#ff9de0', v:1.12 } ],
+  /* 7 불멸 — 1종 */
+  [ { n:'만물의 수호룡',  sp:'dragon', tint:'#f0edd2', v:1.00 } ]
 ];
+const PETS = [];
+PET_NAMES.forEach((tier, g) => tier.forEach((x, j) => PETS.push({
+  id: x.id || ('pet' + g + '_' + j), n:x.n, g, sp:x.sp, tint:x.tint || null, v:x.v || 1,
+  m:  x.m  != null ? x.m  : Math.round(PET_M[g] * (x.v || 1) * 1000) / 1000,
+  cd: x.cd != null ? x.cd : PET_CD[g]
+})));
 const PET_SP = {
   bird:   { anim:'anim',    fps:14, scale:0.34, faceRight:true },
   robo:   { anim:'Running', fps:16, scale:0.16, faceRight:true },
@@ -8494,12 +8551,14 @@ const SK = byId(SKILLS), EQ = byId(EQUIPS), PT = byId(PETS), RL = byId(RELICS), 
    **10회 = 1,000 다이아 · 30회 = 3,000 다이아** 로 통일한다. `cost:100` + `flat:1`(10연 할인 없음)
    이면 `summonCost` 가 정확히 1,000 / 3,000 을 낸다. 펫·유물은 «현행 유지» 지시라
    `cost`·10연 할인(0.9)을 그대로 둔다(펫 10연 2,250 · 유물 10연 3,600 불변). */
+/* `g8:1` = 8등급 표(GRADE_ROLL_EQ · 초월 Lv55 · 불멸 Lv75)를 쓰는 배너.
+   85 에서 장비 3종에 붙었고, 106 에서 **펫**이 8등급 36종이 되면서 같은 표를 쓴다(지시 ③). */
 const BANNERS = {
   skill:  { n:'스킬',   ic:'📜', cost:100, flat:1, cur:'dia', coll:'skill', list:SKILLS },
-  weapon: { n:'무기',   ic:'⚔️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
-  shield: { n:'방패',   ic:'🛡️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
-  amulet: { n:'목걸이', ic:'📿', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
-  pet:    { n:'펫',     ic:'🐾', cost:250, cur:'dia', coll:'pet',   list:PETS }
+  weapon: { n:'무기',   ic:'⚔️', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
+  shield: { n:'방패',   ic:'🛡️', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
+  amulet: { n:'목걸이', ic:'📿', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
+  pet:    { n:'동료',   ic:'🐾', cost:250, g8:1, cur:'dia', coll:'pet',   list:PETS }
 };   /* 89 — BANNERS.relic(유물 소환 배너) 폐기: 유물은 #relw 페이지의 균등 소환만 쓴다 */
 const BKEYS = Object.keys(BANNERS);
 /* 작업 57 — `EQ_BANNERS`(구버전 장비 패널의 무기·방패·목걸이 서브탭) 폐기.
@@ -8510,11 +8569,15 @@ const BKEYS = Object.keys(BANNERS);
    «방어구 상자» 명칭 폐기(실체가 shield 방패 배너였다) → «방패 상자» 로 개명,
    «목걸이 상자» 신설(BANNERS.amulet 은 73 때부터 있었는데 상점 카드가 없어 소환할 길이 없었다).
    목걸이 색 테마는 기존 3장(청록/장미/보라)과 겹치지 않는 호박(앰버) 톤 — 측정표 10 §5. */
+/* 작업 106 (2026-08-26, 저장소 주인 지시 «소환에 동료 소환도 넣고») — **동료 상자 5번째**.
+   76 규격 그대로 카드 1장만 늘렸다(리스트가 스크롤한다 — 카드 기하·간격은 1px 도 안 바뀐다).
+   색 테마는 기존 4장(청록·장미·호박·보라)과 겹치지 않는 잎녹색 톤. */
 const SHOP_BOXES = [
   { b:'weapon', n:'무기 상자',   ic:'🗡️', hd:'#2FAD88', hr:'#4FBB9B', c1:'#5BCAF5', c2:'#3F6DCF' },
   { b:'shield', n:'방패 상자',   ic:'🛡️', hd:'#8E4B5C', hr:'#A16877', c1:'#E26E9F', c2:'#9B5462' },
   { b:'amulet', n:'목걸이 상자', ic:'📿', hd:'#A07A2C', hr:'#B4924E', c1:'#F0C05A', c2:'#C08A3C' },
-  { b:'skill',  n:'스킬 상자',   ic:'📜', hd:'#5B4586', hr:'#78659D', c1:'#A85EDB', c2:'#624C94' }
+  { b:'skill',  n:'스킬 상자',   ic:'📜', hd:'#5B4586', hr:'#78659D', c1:'#A85EDB', c2:'#624C94' },
+  { b:'pet',    n:'동료 상자',   ic:'🐾', hd:'#3E7A46', hr:'#5A9464', c1:'#7BD86A', c2:'#3F8F4F' }
 ];
 const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/2») */
 
@@ -8528,13 +8591,14 @@ const GRADE_ROLL = [
   { unlock:30, p0:0.00, p1:0.15 },
   { unlock:40, p0:0.00, p1:0.10 }
 ];
-/* 85 — 장비 배너(무기·방패·목걸이)만 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
-   스킬·펫 배너는 위 6행 표 그대로. 확률은 gradeProbs 가 총합으로 재정규화하므로 p1 합이 1 일 필요 없음. */
+/* 85 — 장비 배너(무기·방패·목걸이)가 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
+   106 — **동료 배너도 같은 8행 표**(지시 ③ «소환 확률표는 85 의 8행 표를 그대로 재사용, Lv 해금 동일»).
+   스킬 배너만 위 6행 표 그대로다. 확률은 gradeProbs 가 총합으로 재정규화하므로 p1 합이 1 일 필요 없음. */
 const GRADE_ROLL_EQ = GRADE_ROLL.concat([
   { unlock:55, p0:0.00, p1:0.06 },
   { unlock:75, p0:0.00, p1:0.03 }
 ]);
-const rollOf = b => BANNERS[b].coll === 'equip' ? GRADE_ROLL_EQ : GRADE_ROLL;
+const rollOf = b => BANNERS[b].g8 ? GRADE_ROLL_EQ : GRADE_ROLL;
 const sumNeedExp = lv => 5 + (lv-1)*4;
 
 /* ---- 컬렉션(도감) — 작업 91 (2026-08-26, 저장소 주인 지시) : «부위 × 등급 세트» 단위로 전면 교체 ----
@@ -10561,9 +10625,11 @@ const MAX_LEVEL = 100, FRAG_BASE = 5, FRAG_CAP = 20, CRAFT_NEED = 5;
 const REFUND = [20, 45, 100, 220, 550, 1400, 3400, 8000];   /* 85 — 7 초월·8 불멸 행 추가(기하급수 유지) */
 const fragNeed = l => Math.min(FRAG_BASE + (l-1), FRAG_CAP);
 const catOf = it => SK[it.id] ? 'skill' : PT[it.id] ? 'pet' : RL[it.id] ? 'relic' : 'equip';
-/* 85 — «최고 등급» 은 카테고리별이다: 장비만 8등급(불멸), 스킬·펫·유물·코스튬은 6등급(신화)까지.
-   isTopGrade 를 GRADE.length 로 판정하면 신화 스킬의 MAX 표기·합성 차단이 통째로 깨진다. */
-const topG = cat => cat === 'equip' ? GRADE.length-1 : 5;
+/* 85 — «최고 등급» 은 카테고리별이다: 장비는 8등급(불멸), 스킬·유물·코스튬은 6등급(신화)까지.
+   isTopGrade 를 GRADE.length 로 판정하면 신화 스킬의 MAX 표기·합성 차단이 통째로 깨진다.
+   106 — **펫도 8등급**이 됐다(장비와 같은 종 수·같은 확률표). 다만 «무한 강화» 는 `maxLv` 가
+   `catOf === 'equip'` 로 따로 막으므로 불멸 장비 전용 그대로다 — 불멸 동료는 Lv100 상한이다. */
+const topG = cat => (cat === 'equip' || cat === 'pet') ? GRADE.length-1 : 5;
 const isTopGrade = it => it.g >= topG(catOf(it));
 const maxLv = it => (catOf(it) === 'equip' && isTopGrade(it)) ? Infinity : MAX_LEVEL;
 const atMax = it => has(it.id) && oLv(it.id) >= maxLv(it);
@@ -13017,7 +13083,7 @@ $('eqCards').addEventListener('click', e => {
    ========================================================================== */
 const PRB_STEPS    = [1, 5, 15, 30, 40, SUM_MAXLV];             /* 각 등급 해금 레벨 + 만렙 */
 const PRB_STEPS_EQ = [1, 5, 15, 30, 40, 55, 75, SUM_MAXLV];     /* 85 — 장비 배너는 초월 55·불멸 75 이정표 포함 */
-const prbSteps = () => BANNERS[prbBank].coll === 'equip' ? PRB_STEPS_EQ : PRB_STEPS;
+const prbSteps = () => BANNERS[prbBank].g8 ? PRB_STEPS_EQ : PRB_STEPS;   /* 106 — 동료 배너도 8행 표(g8) */
 let prbBank = 'weapon', prbStep = 0;
 /* 특정 레벨 L 에서의 등급별 확률(소환 로직과 동일 공식, L 을 명시적으로 받음) */
 function gradeProbsAt(b, L){
@@ -13051,7 +13117,9 @@ function renderProbInfo(){
       +  '<i>' + G.n + ' (' + fmtPct(pctG, 2) + '%)</i></div>';
     items.forEach(it => {
       h += '<div class="prb-row">'
-        +  '<div class="ic" style="--gc:' + G.c + '">' + (it.ic || G.ic) + '</div>'
+        /* 106 — 동료는 항목 이모지가 없고 스프라이트(bird/robo/dragon)로 아이콘을 고른다.
+           장비·스킬은 전부 `ic` 가 있어 itemIcon() 이 같은 값을 그대로 돌려준다(표시 불변). */
+        +  '<div class="ic" style="--gc:' + G.c + '">' + (itemIcon(it) === '❔' ? G.ic : itemIcon(it)) + '</div>'
         +  '<div class="nm"><i>' + it.n + '</i></div>'
         +  '<div class="pc">' + each.toFixed(5) + '%</div></div>';
     });
@@ -13835,8 +13903,11 @@ function openPromo(){
 /* ---- 07 스킬 팝업 (폭 1080 바닥 시트) — 측정표 docs/measure/07-스킬팝업.md ----
    레퍼런스는 커먼·언커먼·레어·에픽 4등급만 나와 있어 그 4개는 실측색을 그대로 쓰고,
    우리 GRADE 의 전설·신화는 같은 «fill / 밝은 rim» 규칙으로 이어 붙였다. */
-const SK_FILL = ['#78553F','#94BC35','#347DC1','#661691','#C9871B','#B02338'];
-const SK_RIM  = ['#AB7A5C','#C8E746','#49A8DE','#8C45AF','#F0B53A','#DC4F62'];
+/* 106 — 동료가 8등급이 되면서 6·7(초월·불멸) 칸이 필요하다. 스킬은 여전히 0~5 만 쓰므로
+   **뒤에 2개를 덧붙이기만** 했다(기존 인덱스 불변 = 04·07 카드 색 1px 도 안 바뀜).
+   두 색은 12 결과 팝업의 SUM_CARD 6·7(초월 청록 · 불멸 은빛)과 같은 값이다. */
+const SK_FILL = ['#78553F','#94BC35','#347DC1','#661691','#C9871B','#B02338','#1EA98E','#8F90AE'];
+const SK_RIM  = ['#AB7A5C','#C8E746','#49A8DE','#8C45AF','#F0B53A','#DC4F62','#40DCC0','#D9DAEE'];
 /* 장착 중 카드는 별도 딤 판 없이 면·rim 자체가 x0.65 로 렌더된다(측정표 6-5) */
 const skDim = h => '#' + [1,3,5].map(i =>
   Math.round(parseInt(h.substr(i,2),16) * 0.65).toString(16).padStart(2,'0')).join('');
@@ -13979,7 +14050,7 @@ function renderPet(){
   }
   h += '</div>';
 
-  /* 3 보유 동료 격자 5열 x 3행 (PETS) */
+  /* 3 보유 동료 격자 5열 — 106 으로 36종 = 8행(열 pitch 190 · 행 pitch 220 유지, 넘치면 안쪽 스크롤) */
   h += '<div class="sk-gp">';
   PETS.forEach((it, i) => {
     const own = has(it.id), on = petEquipped(it.id), lv = own ? oLv(it.id) : 1;
@@ -13997,6 +14068,8 @@ function renderPet(){
       +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
   });
+  /* 106 — 절대배치 카드만으로는 스크롤 높이가 서지 않으므로 스페이서로 내용 높이를 세운다(86 교훈 1) */
+  h += '<div class="sk-gsp" style="height:' + (35 + Math.ceil(PETS.length/5)*220) + 'px"></div>';
   h += '</div>';
 
   /* 7 총 보유 효과 — 스킬과 같은 곱연산 표시 */
@@ -14019,7 +14092,9 @@ $('bPet').addEventListener('click', e => {
   if(un){ toggleEquip(PT[un.dataset.ptun], 'pet'); save(); uiDirty = true; renderUI(); return; }
   const q = e.target.closest('[data-pteq]');
   if(q){ toggleEquip(PT[q.dataset.pteq], 'pet'); save(); uiDirty = true; renderUI(); return; }
-  if(e.target.closest('[data-ptsum]')){ goTab('shop'); return; }   /* 그 자리 소환 X → 10 상점 소환 탭 */
+  /* 106 — 상점에 «동료 상자» 가 생겼다. 73 이 «막다른 길»(상점에 펫 카드가 없다)로 남긴 경로를
+     여기서 잇는다 — goTab 으로 탭 상태·seen 점을 정상 처리한 뒤 그 상자까지 스크롤·팝한다. */
+  if(e.target.closest('[data-ptsum]')){ goTab('shop'); openShopPage('pet'); return; }
   if(e.target.closest('[data-ptup]')){
     const r = levelUpAll(PETS);
     if(!openUpAll(r.ups))

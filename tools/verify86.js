@@ -205,7 +205,11 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
   /* ---------------- [5] 도감 · 확률 ---------------- */
   console.log('[5] 도감 · 확률');
   const cl = await p.evaluate(() => {
-    const t = COLL.skill.tiers;
+    /* 91 이 «카테고리 × need 티어» 를 «등급 세트» 로 교체하면서 `COLL.skill.tiers` 가 사라져
+       이 절이 즉사하고 있었다(86 이후 미실행). 묻는 것은 그대로 — «도감이 스킬 24종을 다 담는가» —
+       새 구조에서는 «스킬 세트 6개(6등급) · 구성원 합 24» 가 같은 단언이다. */
+    const sk = COLL_SETS.filter(x => x.tab === 'skill');
+    const skIds = new Set(sk.reduce((a2, x) => a2.concat(x.it), []));
     /* 확률 팝업은 «그 레벨에서 확률이 0 이 아닌 등급»만 그린다 — 전 단계를 훑어 24종이 다 나오는지 본다 */
     const seen = new Set(); let maxHeads = 0;
     PRB_STEPS.forEach((_, i) => {
@@ -215,11 +219,11 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
       maxHeads = Math.max(maxHeads, document.querySelectorAll('#prbList .prb-gh').length);
     });
     document.getElementById('prbw').classList.remove('on');
-    return { needs: t.map(x => x.need), rows: seen.size, heads: maxHeads,
-             listLen: BANNERS.skill.list.length };
+    return { sets: sk.length, members: skIds.size, all: SKILLS.every(x => skIds.has(x.id)),
+             rows: seen.size, heads: maxHeads, listLen: BANNERS.skill.list.length };
   });
-  ok(cl.needs[cl.needs.length - 1] === 24, 'COLL.skill 마지막 티어 need = 24 (전 종 수집)');
-  ok(cl.needs.every((v, i) => i === 0 || v > cl.needs[i - 1]), 'need 단조 증가');
+  ok(cl.members === 24 && cl.all, '도감 스킬 세트 구성원 24종 = 전 종 (실측 ' + cl.members + ')');
+  ok(cl.sets === 6, '도감 스킬 세트 6개(6등급) (실측 ' + cl.sets + ')');
   ok(cl.listLen === 24, '스킬 소환 풀 24종 (실측 ' + cl.listLen + ')');
   ok(cl.rows === 24, '11 확률 팝업이 전 단계에 걸쳐 24종을 모두 표기 (실측 ' + cl.rows + ')');
   ok(cl.heads === 6, '확률 팝업 등급 헤더 최대 6개 (실측 ' + cl.heads + ')');

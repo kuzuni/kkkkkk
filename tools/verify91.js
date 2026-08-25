@@ -1,6 +1,8 @@
 /* 작업 91 — 도감 시스템 «부위 × 등급 세트» 전면 교체.  실행: node tools/verify91.js [--table]
    지시서 [3]-(가)(레퍼런스 대조가 필요 없는 시스템 교체) + T2 «기능 완성 규칙»(실제로 동작해야 완료).
-     [1] 구조 — 세트 37개(장비 24 · 스킬 6 · 펫 6 · 유물 1) · 키 형식 · 구성원 · 등급 mul
+     [1] 구조 — 세트 39개(장비 24 · 스킬 6 · 펫 8 · 유물 1) · 키 형식 · 구성원 · 등급 mul
+         (106 으로 동료가 8등급 36종이 되면서 펫 세트가 6 → 8 이 됐다. 91 의 «자동 생성» 설계대로
+          도감 코드는 한 줄도 안 고쳤고, 이 게이트의 «분포» 단언만 새 종 수로 따라간다.)
      [2] 규칙 — 가능 단계 = min(세트 최저 Lv, 10). 지시 검증 예시 그대로 단언
      [3] 보너스 — 강화 후 bonus() 수치 = 표값(단계당 = 기준값 × 등급 mul, 축별 가산 후 1회 곱)
      [4] 저장 — 구 세이브(카테고리 카운터 4개) 로드 → 버려지고 안내 1회 · 새 키는 보존
@@ -49,23 +51,24 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
       COLL_SETS.forEach(s => s.it.forEach(i => { if (seen[i]) d++; seen[i] = 1; })); return d; })(),
     wCounts: [0,1,2,3,4,5,6,7].map(g => (COLL_SET['equip:weapon:' + g] || { it: [] }).it.length),
     skCounts: [0,1,2,3,4,5].map(g => (COLL_SET['skill:' + g] || { it: [] }).it.length),
-    petCounts: [0,1,2,3,4,5].map(g => (COLL_SET['pet:' + g] || { it: [] }).it.length),
+    /* 106 — 동료가 8등급 36종이 되면서 펫 세트도 0~7 이다(구 6등급 9종에서 확장) */
+    petCounts: [0,1,2,3,4,5,6,7].map(g => (COLL_SET['pet:' + g] || { it: [] }).it.length),
     relic: COLL_SET['relic:0'] ? COLL_SET['relic:0'].it.length : 0,
     relicMul: COLL_SET['relic:0'] ? COLL_SET['relic:0'].mul : 0,
     wEff: [0,1,2,3,4,5,6,7].map(g => (COLL_SET['equip:weapon:' + g] || { eff: {} }).eff.atk),
     maxStep: COLL_MAX_STEP,
     gone: typeof COLL === 'undefined'
   }));
-  ok(st.len === 37, '세트 37개 (실측 ' + st.len + ')');
-  ok(JSON.stringify(st.byCat) === '[24,6,6,1]', '카테고리 분포 장비24·스킬6·펫6·유물1 (실측 ' + JSON.stringify(st.byCat) + ')');
-  ok(JSON.stringify(st.byTab) === '[6,8,8,8,6,1]', '탭 분포 스킬6·무기8·방패8·목걸이8·펫6·유물1 (실측 ' + JSON.stringify(st.byTab) + ')');
+  ok(st.len === 39, '세트 39개 (106 이후 — 실측 ' + st.len + ')');
+  ok(JSON.stringify(st.byCat) === '[24,6,8,1]', '카테고리 분포 장비24·스킬6·펫8(106)·유물1 (실측 ' + JSON.stringify(st.byCat) + ')');
+  ok(JSON.stringify(st.byTab) === '[6,8,8,8,8,1]', '탭 분포 스킬6·무기8·방패8·목걸이8·펫8(106)·유물1 (실측 ' + JSON.stringify(st.byTab) + ')');
   ok(new Set(st.keys).size === st.len, '세트 키 중복 없음');
-  ok(st.keys.every(k => /^(equip:(weapon|shield|amulet):[0-7]|skill:[0-5]|pet:[0-5]|relic:0)$/.test(k)),
+  ok(st.keys.every(k => /^(equip:(weapon|shield|amulet):[0-7]|skill:[0-5]|pet:[0-7]|relic:0)$/.test(k)),
      '키 형식 equip:{slot}:{g} · skill:{g} · pet:{g} · relic:0');
   ok(st.dupIt === 0, '한 아이템이 두 세트에 속하지 않음 (중복 ' + st.dupIt + ')');
   ok(JSON.stringify(st.wCounts) === '[5,5,5,5,5,5,5,1]', '무기 세트 구성원 5×7 + 최종등급 1 (실측 ' + JSON.stringify(st.wCounts) + ')');
   ok(JSON.stringify(st.skCounts) === '[4,4,4,4,4,4]', '스킬 세트 구성원 4×6 (실측 ' + JSON.stringify(st.skCounts) + ')');
-  ok(st.petCounts.reduce((a, c) => a + c, 0) === 9, '펫 세트 구성원 합 9종 (실측 ' + JSON.stringify(st.petCounts) + ')');
+  ok(st.petCounts.reduce((a, c) => a + c, 0) === 36, '펫 세트 구성원 합 36종 (106 — 실측 ' + JSON.stringify(st.petCounts) + ')');
   ok(st.relic === 10, '유물은 10종 1세트 (실측 ' + st.relic + ')');
   ok(near(st.relicMul, 3.78, 0.001), '유물 세트 등급배율 = 구성원 mul 평균 3.78 (실측 ' + st.relicMul + ')');
   ok(near(st.wEff[0], 0.02, 1e-9), '지시 예시 — 무기·일반 단계당 공격력 +2% (실측 ' + (st.wEff[0] * 100).toFixed(1) + '%)');
@@ -290,7 +293,7 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     console.log('\n| 탭 | 세트 수 | 보너스 축 | 최저 등급 세트 단계당 | 최고 등급 세트 단계당 |');
     console.log('|---|---|---|---|---|');
     tbl.forEach(t => console.log('| ' + t.tab + ' | ' + t.sets + ' | ' + t.eff + ' | ' + t.lo + ' | ' + t.hi + ' (' + t.hiN + ') |'));
-    console.log('\n축별 만단계(37세트 × 10단계) 상한 — ' + Object.keys(capTbl)
+    console.log('\n축별 만단계(39세트 × 10단계) 상한 — ' + Object.keys(capTbl)
       .map(k => k + ' ' + (k === 'cdmg' ? '+' + capTbl[k].toFixed(2) : '×' + (1 + capTbl[k]).toFixed(2))).join(' · '));
   }
 

@@ -42,7 +42,10 @@ async function launchAny(){
   await p.waitForTimeout(900);
 
   /* ── §1 카드 4장 ─────────────────────────────────────────────── */
-  console.log('§1 상자 카드 4장 — 순서·이름·색');
+  /* 106(2026-08-26, 주인 지시) — 상자가 5장이 됐다(«동료 상자» 5번째 추가).
+     76 이 못박은 것은 «앞 4장의 순서·이름·색» 이므로 그 4장만 그대로 단언하고,
+     5번째는 «106 이 늘린 칸» 으로 따로 본다. 색 전부 다름 규칙은 5장 전체에 그대로 적용한다. */
+  console.log('§1 상자 카드 — 앞 4장(76) + 동료 상자(106)');
   const cards = await p.evaluate(() => {
     openShopPage();
     return {
@@ -51,12 +54,15 @@ async function launchAny(){
       hasArmorWord: document.getElementById('shopList').innerHTML.indexOf('방어구') >= 0
     };
   });
-  ok(cards.boxes.map(x => x.b).join(',') === 'weapon,shield,amulet,skill',
-    '순서 weapon→shield→amulet→skill (' + cards.boxes.map(x => x.b).join(',') + ')');
-  ok(cards.dom.join(',') === '무기 상자,방패 상자,목걸이 상자,스킬 상자',
-    '카드 이름 4장 (' + cards.dom.join(',') + ')');
+  ok(cards.boxes.slice(0, 4).map(x => x.b).join(',') === 'weapon,shield,amulet,skill',
+    '앞 4장 순서 weapon→shield→amulet→skill (' + cards.boxes.map(x => x.b).join(',') + ')');
+  ok(cards.dom.slice(0, 4).join(',') === '무기 상자,방패 상자,목걸이 상자,스킬 상자',
+    '앞 4장 이름 (' + cards.dom.slice(0, 4).join(',') + ')');
   ok(!cards.hasArmorWord, '상점 DOM 에 «방어구» 문자열 없음');
-  ok(new Set(cards.boxes.map(x => x.hd)).size === 4, '헤더 색 4종 전부 다름 (목걸이 = 4번째 톤)');
+  ok(new Set(cards.boxes.map(x => x.hd)).size === cards.boxes.length,
+    '헤더 색 ' + cards.boxes.length + '종 전부 다름 (목걸이 = 4번째 톤 · 동료 = 5번째 톤)');
+  ok(cards.boxes.length === 5 && cards.boxes[4].b === 'pet' && cards.dom[4] === '동료 상자',
+    '106 — 5번째 «동료 상자» (' + cards.dom.join(',') + ')');
 
   /* ── §2 목걸이 10연 실동작 ───────────────────────────────────── */
   console.log('§2 목걸이 10연 — 차감·카운터·소환레벨·부위');
