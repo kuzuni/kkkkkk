@@ -178,8 +178,11 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
   await page.evaluate(CLICK, '.tab[data-t="hero"]');
   await page.waitForTimeout(400);
 
-  /* ── 5. 카드 그리드 stagger 25ms (03 던전 전체화면 페이지) ── */
-  await scene(page, 'stagger', [0, 12, 55, 95, 145, 195, 250, 320],
+  /* ── 5. 카드 그리드 stagger 25ms (03 던전 전체화면 페이지) ──
+     11회차 — 카드 시작이 `JZ_STAG_BASE`(120ms) 뒤로 밀렸다(페이지 페이드와의 곱셈 구간을 피하려고).
+     옛 표본(0/12/55/95…)은 앞 4장이 전부 «페이드 중 빈 그리드» 라 stagger 가 2~3장에만 걸렸다.
+     페이드 구간 1장 + 카드 등장 구간 6장으로 다시 잡는다. */
+  await scene(page, 'stagger', [0, 60, 120, 150, 180, 230, 300, 400],
     () => page.evaluate(() => openDungeon()));
   await page.evaluate(() => closeDungeon());
   await page.waitForTimeout(400);

@@ -46,6 +46,27 @@ const CLEARJZ = () => {
 /* ⚠ seek 와 read 를 **다른 page.evaluate 로 나누면 안 된다.** 그 사이(수십 ms)에
    `jzClose` 의 클래스 제거 타임아웃(140ms)이 끼어들어 측정 대상 애니메이션이 바뀐다 —
    6회차에 «닫기 프레임인데 열기 값(0.92)이 읽히는» 오독으로 나타났다. 한 태스크 안에서 끝낸다. */
+/* ⚠ 11회차 — «그 요소의 opacity» 만 재면 **컨테이너와의 곱셈**을 못 본다.
+   10회차 결함 2·5 가 정확히 그것이었다(박스 하한 .45 가 딤 컨테이너와 곱해져 0 이 됐는데 게이트는 통과).
+   화면에 실제로 나오는 값 = 조상 opacity 의 곱. 그걸 재는 항목을 따로 둔다. */
+const EFFOP = (page, t, sel) => page.evaluate(([t, sel]) => {
+  (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+  const e = document.querySelector(sel); if (!e) return null;
+  let o = 1;
+  for (let n = e; n && n.nodeType === 1; n = n.parentElement) {
+    const v = parseFloat(getComputedStyle(n).opacity);
+    if (!isNaN(v)) o *= v;
+  }
+  return o;
+}, [t, sel]);
+/* 딤이 «컨테이너 opacity» 가 아니라 «배경색 알파» 로 페이드하는지 본다(11회차 결함 2 의 처방) */
+const BGA = (page, t, sel) => page.evaluate(([t, sel]) => {
+  (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+  const e = document.querySelector(sel); if (!e) return null;
+  const m = /^rgba?\(([^)]+)\)/.exec(getComputedStyle(e).backgroundColor || '');
+  if (!m) return null;
+  const p = m[1].split(','); return p.length < 4 ? 1 : parseFloat(p[3]);
+}, [t, sel]);
 const SR = (page, t, sel, kind) => page.evaluate(([t, sel, kind]) => {
   (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
   const e = document.querySelector(sel); if (!e) return null;
@@ -109,11 +130,13 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     near('열기 t136 #pfw>* scale(오버슈트)', await page.evaluate(SC, '#pfw>*'), 1.02, 0.012);
     await page.evaluate(SEEK, 220);
     near('열기 t220 #pfw>* scale(정착)', await page.evaluate(SC, '#pfw>*'), 1, 0.005);
-    const OP = () => parseFloat(getComputedStyle(document.querySelector('#pfw')).opacity);
-    await page.evaluate(SEEK, 0);
-    near('열기 t0 딤 opacity', await page.evaluate(OP), 0, 0.02);
-    await page.evaluate(SEEK, 150);
-    near('열기 t150 딤 opacity', await page.evaluate(OP), 1, 0.02);
+    /* ⚠ 11회차 — 옛 항목은 «컨테이너 opacity 0 → 1» 을 기대했다. 그게 바로 결함 2 의 원인이었다
+       (컨테이너가 흐리면 박스의 .45 가 곱해져 소거된다). 이제 딤은 **배경색 알파**로 페이드하고
+       컨테이너 opacity 는 1 로 고정이며, 게이트도 «화면에 실제로 나오는 값» 으로 바꾼다. */
+    near('열기 t0 딤 배경 알파', await BGA(page, 0, '#pfw'), 0, 0.02);
+    near('열기 t150 딤 배경 알파', await BGA(page, 150, '#pfw'), 0.85, 0.03);
+    near('열기 t0 박스 실효 opacity(조상 곱)', await EFFOP(page, 0, '#pfw>*'), 0.45, 0.04);
+    near('열기 t66 박스 실효 opacity(30% = 불투명)', await EFFOP(page, 66, '#pfw>*'), 1, 0.03);
     await page.evaluate(() => closeProfile()); await page.waitForTimeout(400);
   }
 
@@ -147,6 +170,31 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     if (worst < -10) { fails.push(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px)`);
       console.log(`  ✗ 시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px`); }
     else ok(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px 이내)`);
+    /* ⚠ 11회차(결함 1) — 딤이 시트와 «같이» 올라오면 하드 와이프가 된다.
+       딤 자식은 컨테이너의 translate 를 정확히 상쇄해 **화면상 제자리**여야 하고,
+       자기 opacity 로 150ms 페이드해야 한다. 화면 좌표(getBoundingClientRect)로 직접 잰다. */
+    const dimId = await page.evaluate(() => {
+      const d = document.querySelector('#trw>.jz-dm'); if (!d) return null;
+      d.setAttribute('data-jzdim', '1'); return 1;
+    });
+    if (!dimId) { fails.push('시트 딤 자식(.jz-dm)이 안 잡혔다 — 딤 분리 미적용'); console.log('  ✗ 시트 딤 .jz-dm 없음'); }
+    else {
+      const DY = t => page.evaluate(tt => {
+        (window.__jzA || []).forEach(a => { try { a.currentTime = tt; } catch (_) {} });
+        /* 기준은 «움직이지 않는» #app 이다 — #trw 자신은 슬라이드 중이라 기준이 될 수 없다 */
+        const d = document.querySelector('#trw>[data-jzdim]'), p = document.querySelector('#app');
+        return { dy: d.getBoundingClientRect().y - p.getBoundingClientRect().y,
+                 op: parseFloat(getComputedStyle(d).opacity) };
+      }, t);
+      let dworst = 0;
+      for (const t of [0, 30, 60, 90, 120, 150, 180, 206, 225, 240]) {
+        const v = await DY(t);
+        if (Math.abs(v.dy) > Math.abs(dworst)) dworst = v.dy;
+      }
+      near('시트 딤 화면 고정(최대 이탈 px)', dworst, 0, 2);
+      near('시트 딤 t0 opacity(페이드 시작)', (await DY(0)).op, 0, 0.02);
+      near('시트 딤 t150 opacity(페이드 완료)', (await DY(150)).op, 1, 0.02);
+    }
     await page.evaluate(() => closeTrain()); await page.waitForTimeout(400);
   }
 
@@ -166,19 +214,44 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     await page.waitForTimeout(400);
   }
 
-  console.log('[5] 카드 그리드 stagger 25ms');
+  console.log('[5] 카드 그리드 stagger 25ms — «렌더된 등장 시각» 으로 잰다(선언값 읽기 금지)');
   await page.evaluate(CLEARJZ);
   {
-    await page.evaluate(() => openDungeon()); await page.waitForTimeout(20);
-    const d = await page.evaluate(() => {
-      const g = document.querySelectorAll('#dunw .jz-st');
-      return [...g].slice(0, 5).map(e => parseFloat(e.style.getPropertyValue('--jzd')) || 0);
-    });
-    if (d.length < 3) { fails.push('stagger: 대상 카드 ' + d.length + '개 (>=3 기대)'); console.log('  ✗ stagger 대상 ' + d.length + '개'); }
-    else { const step = d[1] - d[0];
-      near('stagger 간격(ms)', step, 25, 0.5);
-      near('stagger 5번째 지연(ms)', d[Math.min(4, d.length - 1)], 25 * Math.min(4, d.length - 1), 0.5);
-      ok('stagger 대상 ' + d.length + '개 이상'); }
+    /* ⚠ 11회차 — 옛 항목은 `style.--jzd` **선언값**을 읽어 «25ms 균등» 이라고 통과시켰다.
+       그 사이 두 비평가의 실측은 10~39ms(3.9배 편차)에 순서 역전까지 있었다 — 게이트가 순환 논증이었다
+       (3회차·67 3회차와 같은 종류의 함정. LESSONS 43-①).
+       → 이제 «조상 opacity 까지 곱한 실효 불투명도가 0.5 를 넘는 첫 시각» 을 카드마다 찾아
+       그 **간격**을 본다. 선언 delay 를 한 번도 읽지 않는다. */
+    await page.evaluate(() => openDungeon());
+    await page.evaluate(GRAB);
+    const n = await page.evaluate(() => document.querySelectorAll('#dunw .jz-st').length);
+    if (n < 3) { fails.push('stagger: 대상 카드 ' + n + '개 (>=3 기대)'); console.log('  ✗ stagger 대상 ' + n + '개'); }
+    else {
+      const onset = await page.evaluate(() => {
+        const g = [...document.querySelectorAll('#dunw .jz-st')].slice(0, 5);
+        const eff = e => { let o = 1; for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
+          const v = parseFloat(getComputedStyle(x).opacity); if (!isNaN(v)) o *= v; } return o; };
+        const out = g.map(() => null);
+        for (let t = 0; t <= 700; t += 2) {
+          (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+          void document.documentElement.offsetHeight;
+          for (let i = 0; i < g.length; i++) if (out[i] === null && eff(g[i]) >= 0.5) out[i] = t;
+          if (out.every(v => v !== null)) break;
+        }
+        return out;
+      });
+      if (onset.some(v => v === null)) { fails.push('stagger: 700ms 안에 안 나타난 카드가 있다 ' + JSON.stringify(onset));
+        console.log('  ✗ stagger 미등장 ' + JSON.stringify(onset)); }
+      else {
+        const gaps = onset.slice(1).map((v, i) => v - onset[i]);
+        console.log('    실측 등장 시각(ms) = ' + onset.join(' / ') + ' · 간격 = ' + gaps.join(' / '));
+        for (let i = 0; i < gaps.length; i++) near('stagger 실측 간격 #' + (i + 1) + '(ms)', gaps[i], 25, 6);
+        /* 순서 역전 = 간격이 음수. 위 near 로도 걸리지만 원인이 다르므로 따로 이름을 붙여 둔다. */
+        if (gaps.some(g => g <= 0)) { fails.push('stagger: 등장 순서 역전(간격 ' + gaps.join('/') + ')'); console.log('  ✗ stagger 순서 역전'); }
+        else ok('stagger 순서 역전 0건 (' + onset.length + '칸)');
+      }
+    }
+    await page.evaluate(CLEARJZ);
     await page.evaluate(() => closeDungeon()); await page.waitForTimeout(400);
   }
 
@@ -213,6 +286,41 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     if (!col || !/255,\s*59,\s*78/.test(col)) { fails.push('부족 오버레이 색 = ' + col + ' (기대 rgb(255,59,78))');
       console.log('  ✗ 부족 오버레이 색 = ' + col); }
     else ok('부족 오버레이 색 = ' + col + ' (딤 위 불투명 빨강)');
+    /* ⚠ 11회차(결함 3) — 9회차의 «알약 R=243 통과» 는 **섬광판을 잰 것**이었고,
+       알약 «본체와 그 수치» 는 딤 아래에 남아 두 비평가가 ×0.46 로 같은 값을 쟀다.
+       이제 알약을 통째로 복제해 #fxl 에 다시 그린다 — 복제본에 **수치 글자가 실제로 있는지**까지 본다.
+       (DOM 존재만 보면 또 «판만 있고 숫자는 딤 아래» 를 통과시킨다) */
+    const cl = await page.evaluate(() => {
+      const p = document.querySelector('#fxl .jz-badp'); if (!p) return null;
+      const b = p.querySelector('b'), ic = p.querySelector('i');
+      const pr = p.getBoundingClientRect(), sr = document.querySelector('.cDia').getBoundingClientRect();
+      /* 복제본의 «실효» 불투명도 — 조상을 곱해서 1 이라야 «딤 위» 다(딤 아래면 딤 계수가 곱해진다) */
+      let eo = 1; for (let x = b; x && x.nodeType === 1; x = x.parentElement) {
+        const v = parseFloat(getComputedStyle(x).opacity); if (!isNaN(v)) eo *= v; }
+      return { txt: b ? b.textContent.trim() : null, ic: ic ? ic.textContent.trim() : null, eo,
+               dx: Math.abs(pr.x - sr.x), dy: Math.abs(pr.y - sr.y),
+               ids: p.querySelectorAll('[id]').length,
+               z: parseInt(getComputedStyle(document.getElementById('fxl')).zIndex, 10),
+               mz: parseInt(getComputedStyle(document.getElementById('modal')).zIndex, 10) };
+    });
+    if (!cl) { fails.push('부족: 알약 복제 판(.jz-badp) 없음 — 수치가 딤 아래에 남는다'); console.log('  ✗ 알약 복제 판 없음'); }
+    else {
+      /* ⚠ «원본 텍스트와 같은가» 로 재면 안 된다 — HUD 는 58 `fxDisp` 로 **롤링 중**이라
+         복제한 순간의 값과 나중에 읽은 원본이 다르다(첫 시도에서 9.00M vs 1.35M 로 오진했다).
+         봐야 할 것은 «수치 글자와 아이콘이 딤 위에 실제로 그려지는가» 다. */
+      if (!cl.txt || !/[0-9]/.test(cl.txt) || !cl.ic) { fails.push('부족: 복제 알약에 수치·아이콘이 없다 (수치="' + cl.txt + '" 아이콘="' + cl.ic + '")');
+        console.log('  ✗ 복제 알약 내용 없음'); }
+      else ok('복제 알약이 수치·아이콘까지 그려짐 = "' + cl.ic + ' ' + cl.txt + '"');
+      if (!(cl.z > cl.mz)) { fails.push('부족: #fxl z' + cl.z + ' 가 #modal z' + cl.mz + ' 보다 위가 아니다');
+        console.log('  ✗ 복제 판이 딤 위가 아님'); }
+      else ok('복제 판 레이어 #fxl z' + cl.z + ' > 딤 #modal z' + cl.mz);
+      near('복제 알약 수치 실효 opacity(딤 곱 없음)', cl.eo, 1, 0.02);
+      near('복제 알약 좌상단 Δx', cl.dx, 0, 2);
+      near('복제 알약 좌상단 Δy', cl.dy, 0, 2);
+      /* 복제본에 id 가 남으면 `$('diaN')` 이 유령을 집어 HUD 갱신이 화면 밖으로 간다 */
+      if (cl.ids) { fails.push('부족: 복제본에 id 가 ' + cl.ids + '개 남았다(원본 id 충돌)'); console.log('  ✗ 복제본 id 잔존'); }
+      else ok('복제본 id 0개 (원본 #diaN/#goldN 과 충돌 없음)');
+    }
     await page.evaluate(() => closeModal()); await page.waitForTimeout(300);
   }
 
@@ -287,6 +395,27 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     near('닫기 t0 #pfw>* scale', await SR(page, 0, '#pfw>*', 'sc'), 1, 0.02);
     near('닫기 t120 #pfw>* scale', await SR(page, 120, '#pfw>*', 'sc'), 0.94, 0.02);
     near('닫기 t120 #pfw>* opacity', await SR(page, 120, '#pfw>*', 'op'), 0, 0.05);
+    /* ⚠ 11회차(결함 5) — «끝값이 .94» 만으로는 부족하다. 옛 곡선은 축소보다 **투명도가 먼저 0 에 닿아**
+       선언 6% 중 2.6%p 가 화면에 안 나왔다(T) · 렌더된 축소가 −44%(U). 축소가 «보이는 동안» 끝나야 한다.
+       → 실효 불투명도가 0.25 이상인 마지막 시각의 scale 을 재서, 선언 축소의 대부분이 렌더되는지 본다. */
+    const vis25 = await page.evaluate(() => {
+      let last = null;
+      for (let t = 0; t <= 120; t += 2) {
+        (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+        void document.documentElement.offsetHeight;
+        const e = document.querySelector('#pfw>*');
+        let o = 1; for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
+          const v = parseFloat(getComputedStyle(x).opacity); if (!isNaN(v)) o *= v; }
+        if (o >= 0.25) { const s = getComputedStyle(e).scale; last = (!s || s === 'none') ? 1 : parseFloat(s); }
+      }
+      return last;
+    });
+    if (vis25 === null) { fails.push('닫기: 실효 불투명도 0.25 이상인 프레임이 없다'); console.log('  ✗ 닫기 가시 프레임 0장'); }
+    else { const rendered = (1 - vis25) / 0.06 * 100;
+      console.log('    가시(실효 α≥.25) 마지막 scale = ' + vis25.toFixed(4) + ' → 선언 축소의 ' + rendered.toFixed(0) + '% 렌더');
+      if (rendered < 70) { fails.push('닫기: 선언 축소의 ' + rendered.toFixed(0) + '% 만 렌더(70% 이상 기대)');
+        console.log('  ✗ 닫기 축소 미렌더'); }
+      else ok('닫기 축소 렌더율 ' + rendered.toFixed(0) + '% (>=70%)'); }
     await page.evaluate(CLEARJZ); await page.waitForTimeout(400);
 
     /* 바닥 시트 닫기 — jzSheetOut(130ms): translateY → 100% */

@@ -5221,14 +5221,23 @@
   /* ⚠ `mix-blend-mode:screen` 은 어두운 딤 위에서 실효 α 가 0.12 밖에 안 나온다
      (7회차 비평 실측: 피크 휘도 32 — 딤 걸리기 전 정상값 58 보다 45% 어둡다 = «번쩍» 이 아니라 «팥죽»).
      → 블렌드를 빼고 **불투명 빨강 + 글로우**로 딤 위에서 확실히 튀게 한다. */
-  .jz-badov{position:absolute;pointer-events:none;background:#FF3B4E;
+  /* 11회차(10회차 결함 3) — «섬광판만» 딤 위에 띄우면 **알약 본체와 그 수치는 딤 아래에 남는다.**
+     두 비평가가 독립으로 같은 값을 쟀다: 알약 B채널 176→81(×0.46) · 흰 글리프 255→134(−47.5%) —
+     둘 다 화면 딤 계수(×0.456)와 일치한다. 즉 9회차의 «알약 R=243 통과» 는 **섬광판을 잰 것**이었다.
+     `#top`(z6) 은 `#modal`(z30) 아래라 z-index 로는 못 올린다(부모 쌓임 맥락). A3 구간을 건드리지 않고
+     회수하는 방법은 하나뿐 — **알약을 통째로 복제해 `#fxl`(z60) 에 같은 bbox 로 다시 그린다.**
+     흔들림·빨간 틴트는 복제 «판»(.jz-badp) 이 받고, 섬광은 그 위에 겹친다. */
+  .jz-badp{position:absolute;pointer-events:none;overflow:visible}
+  .jz-badp>*{position:absolute;left:0;top:0;margin:0}
+  .jz-badov{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;background:#FF3B4E;
     box-shadow:0 0 42px 14px rgba(255,59,78,.85);
     animation:jzBadOv .46s ease-out both}
   /* 피크 .96 을 300ms 유지하면 «번쩍» 이 아니라 «빨간 막대» 라 알약 수치가 안 보인다(9회차 비평).
-     첫 번째 극점에서만 세게 치고 빠르게 빠진다. */
-  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.62;translate:-6px}
-    28%{opacity:.44;translate:6px}46%{opacity:.3;translate:-6px}64%{opacity:.2;translate:6px}
-    82%{opacity:.1;translate:-6px}100%{opacity:0;translate:0}}
+     첫 번째 극점에서만 세게 치고 빠르게 빠진다.
+     ⚠ 11회차 — `translate` 는 뺐다. 이제 흔들림은 부모 판(.jz-badp.jz-bad)이 주므로
+     섬광판까지 흔들면 **변위가 2배**가 된다(합성). 섬광판은 «밝기» 만 담당한다. */
+  @keyframes jzBadOv{0%{opacity:0}10%{opacity:.62}28%{opacity:.44}46%{opacity:.3}
+    64%{opacity:.2}82%{opacity:.1}100%{opacity:0}}
   @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
     100%{filter:none}}
 
@@ -5239,6 +5248,20 @@
      (5회차 비평 실측: t=0 박스 불투명도 0%, 첫 측정 가능 프레임 t=20 은 이미 .944).
      → 앞 20% 를 빠르게 올려 «작게 시작» 이 눈에 걸리게 하고, 나머지 80% 로 150ms 페이드를 유지한다. */
   .jz-o{animation:jzDim .15s ease-out both}
+  /* ⚠ 11회차(10회차 결함 2) — 위 «앞 20% 를 빠르게» 는 **완화책이지 해결이 아니었다.**
+     컨테이너 `opacity` 는 자식과 **곱해진다.** 박스의 선언 하한 .45 는 t=0 에 0 × .45 = **0** 이라
+     한 프레임도 렌더되지 않고(T 실측 0.00 · U 실측 t10 0.155), 램프가 2.3~2.5배 길어 보인다.
+     → 딤이 «배경색» 인 오버레이(전부 rgba 단색이다)는 **컨테이너를 흐리지 말고 배경색만 페이드**한다.
+     그러면 컨테이너 opacity 는 1 로 고정 → 박스의 .45 가 그대로 화면에 나온다.
+     `--jzbg` 는 `jzOpen()` 이 그 오버레이의 실제 배경색을 읽어 인라인으로 꽂아 준다
+     (배경이 그라디언트·불투명이면 클래스를 안 붙여 위 폴백으로 떨어진다 — #statw·#psw 등). */
+  /* ⚠ 중간 키프레임을 `color-mix()` 로 만들면 안 된다 — 보간 결과가 `color(srgb …)` 로 계산돼
+     **computed 값이 rgba 가 아니게 된다**(게이트가 알파를 못 읽는다. 실제로 null 이 나왔다).
+     jzDim 의 «앞이 빠른» 곡선은 두 점 + 베지어로 그대로 재현한다(25% 지점 ≈ .55). */
+  .jz-o.jz-dlg.jz-bg{animation:jzDimBg .15s cubic-bezier(.2,.85,.4,1) both}
+  .jz-c.jz-dlg.jz-bg{animation:jzDimBgOut .12s ease-in both}
+  @keyframes jzDimBg{from{background-color:transparent}to{background-color:var(--jzbg)}}
+  @keyframes jzDimBgOut{from{background-color:var(--jzbg)}to{background-color:transparent}}
   /* ⚠ 닫기에 열기 곡선을 `reverse` 로 재활용하면 안 된다 — 열기의 «앞 6% 무릎» 이
      닫기에선 **끝 15ms 에 딤의 72% 가 한 번에 증발하는 절벽**이 된다(8회차 비평 실측).
      닫기는 자기 곡선을 따로 갖는다. */
@@ -5250,13 +5273,19 @@
      구간의 65~95% 를 태워버려서 «작게 시작» 이 **한 프레임도 안 보인다**(3회차 비평 실측: t=30ms 에 이미 .993).
      구간별 이징으로 나눠 앞 구간은 정상 ease-out, 오버슈트는 뒤 구간에만 남긴다. */
   .jz-o.jz-dlg>*{animation:jzBoxIn .22s linear both}
-  .jz-c.jz-dlg>*{animation:jzBoxOut .12s ease-in both}
+  .jz-c.jz-dlg>*{animation:jzBoxOut .12s linear both}
   @keyframes jzBoxIn{0%{scale:.92;opacity:.45;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
     30%{opacity:1}
     62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
-  @keyframes jzBoxOut{to{scale:.94;opacity:0}}
-  /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1) */
-  .jz-o.jz-pg{animation:jzPgIn .17s ease-out both}
+  /* ⚠ 11회차(10회차 결함 5) — `to{scale:.94;opacity:0}` 은 **두 속성이 같은 곡선**이라
+     투명도가 축소보다 먼저 0 에 닿는다(T: 23px(2.6%) 미렌더 · U: 렌더된 축소 −44%, 진행 어긋남 16.9%p).
+     축소가 «보이는 동안» 끝나야 하므로 opacity 를 **뒤로 몰고**(70% 까지 .8 유지) 축소는 앞에서 진행시킨다. */
+  @keyframes jzBoxOut{0%{scale:1;opacity:1;animation-timing-function:cubic-bezier(.3,0,.6,1)}
+    70%{opacity:.8;animation-timing-function:linear}100%{scale:.94;opacity:0}}
+  /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1)
+     ⚠ 11회차 — 170 → 120ms. 페이지 페이드는 **그 안의 카드 stagger 와 곱해진다**(결함 4 의 절반).
+     페이드를 짧게 끝내고 카드는 그 뒤부터 시작시켜(`JZ_STAG_BASE`) 곱셈 구간을 아예 없앤다. */
+  .jz-o.jz-pg{animation:jzPgIn .12s ease-out both}
   .jz-c.jz-pg{animation:jzPgIn .12s ease-in reverse both}
   @keyframes jzPgIn{from{opacity:0;scale:.985}to{opacity:1;scale:1}}
   /* 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 **8px**
@@ -5276,6 +5305,21 @@
     70%{translate:0 -8px}86%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}
     100%{translate:0 0}}
   @keyframes jzSheetOut{to{translate:0 100%}}
+  /* ⚠ 11회차(10회차 결함 1) — **딤이 시트와 같이 올라온다.**
+     시트 오버레이(#trw·#eqw)의 딤은 컨테이너의 «자식» 이라 컨테이너가 `translate` 하면 딤도 같이 쓸려 올라간다.
+     그래서 딤이 «페이드» 가 아니라 **하드 와이프**로 읽혔다(T: 경계 1px 하드 에지 y252 0.995→y253 0.658 ·
+     상·하단 90ms 시차 / U: 유효 페이드 ≤45ms, 시작 105ms 지연, 레이어 2장 45ms 어긋남).
+     dlg·bad·stagger 는 정상 페이드였으니 «한 빌드에 딤 문법 2종» 이라는 지적도 정확하다.
+     → 딤을 컨테이너에서 «떼어낸다». 딤은 `inset:0` 이라 **높이가 컨테이너와 같으므로**
+     컨테이너의 `translate` 를 **정확히 반대로** 걸면 화면상 제자리에 고정된다(퍼센트 기준이 같다).
+     그 위에 자기 페이드(jzDim/jzDimOut)를 얹으면 dlg 와 «같은 딤 문법» 이 된다.
+     딤 판별은 CSS 클래스 이름(.dim/.tr-dim)에 묶지 않고 `jzDimKids()` 가 기하+알파로 찾는다. */
+  .jz-o.jz-sh2>.jz-dm{animation:jzSheetAnti .24s linear both,jzDim .15s ease-out both}
+  .jz-c.jz-sh2>.jz-dm{animation:jzSheetAntiOut .13s ease-in both,jzDimOut .12s ease-in both}
+  @keyframes jzSheetAnti{0%{translate:0 -100%;animation-timing-function:cubic-bezier(.25,.12,.35,1)}
+    70%{translate:0 8px}86%{translate:0 8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}
+    100%{translate:0 0}}
+  @keyframes jzSheetAntiOut{to{translate:0 -100%}}
   /* 시트는 «자기 높이만큼 아래» 에서 올라오므로 슬라이드 도중 **탭바 위를 쓸고 지나간다**
      (5회차 비평: t=30·60 프레임에서 탭 칸이 가려져 아이콘 팝이 안 보였다).
      ⚠ 이걸 «타이머로 붙였다 떼는 클래스» 로 하면 애니메이션이 느려진 프레임에서 먼저 풀려 다시 가려진다
@@ -5295,9 +5339,16 @@
     45%{scale:1.12;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
+  /* ⚠ 11회차(10회차 결함 6) — 옛 곡선은 `scale .9 → 1.03` 인데 **화면에 나온 진폭은 2.7%**(T),
+     오버슈트는 0~2.1% 였다. 이유는 opacity 가 «60% 지점에 가서야» 1 이 되어서다 —
+     카드가 보이기 시작할 땐 scale 이 이미 1 근처였다(«눈에 띄는 구간이 뒤쪽 3%» 뿐).
+     → 다른 팝(누름 .94→1.04 · dlg .92→1.02 · 탭 1→1.12)과 **같은 문법**으로 통일한다:
+     opacity 를 앞 12% 에 다 태우고, 축소·오버슈트는 «보이는 동안» 전부 진행시킨다.
+     실효 진폭 .954 → 1.02 (6.6%, 오버슈트 +2%) = 누름 6.1% · dlg 10% 사이. */
   .jz-st{animation:jzSt .2s linear both;animation-delay:var(--jzd,0ms)}
-  @keyframes jzSt{0%{scale:.9;opacity:0;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
-    60%{scale:1.03;opacity:1;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
+  @keyframes jzSt{0%{scale:.94;opacity:0;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
+    12%{opacity:1}
+    62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
 
   /* ⑤ 수치 변화 틴트 — 오를 때 초록 / 내릴 때 빨강 0.4초 (롤링은 58 fxDisp·jzRollVal) */
   .jz-up-n{animation:jzUpN .4s ease-out both}
@@ -14320,9 +14371,41 @@ function jzKind(el){
   const n = el.childElementCount;
   return (n >= 1 && n <= 2) ? 'jz-dlg' : 'jz-pg';       /* 박스 1~2개 = 다이얼로그, 그 외 = 전체화면 페이지 */
 }
+/* ── 딤 분리(11회차 — 10회차 결함 1·2) ──
+   딤과 «움직이는 것» 이 같은 레이어에 있으면 반드시 둘 중 하나가 망가진다:
+   · 다이얼로그: 컨테이너 opacity 가 자식과 **곱해져** 박스 하한 .45 가 소거된다(결함 2)
+   · 바닥 시트: 딤이 시트와 같이 `translate` 돼 **하드 와이프**가 된다(결함 1)
+   → 열 때 한 번 판별해서 «딤은 딤대로 페이드, 내용은 내용대로 움직이게» 갈라 둔다. */
+const jzAlpha = c => { const m = /^rgba?\(([^)]+)\)/.exec(c || ''); if(!m) return 0;
+  const p = m[1].split(','); return p.length < 4 ? 1 : parseFloat(p[3]); };
+/* 딤 자식 = «컨테이너를 그대로 덮는 반투명 판». 클래스 이름(.dim/.tr-dim)에 묶으면 금방 낡는다.
+   한 번 붙인 `jz-dm` 은 안 뗀다 — 부모에 `.jz-o/.jz-c` 가 없으면 아무 규칙도 안 걸리는 무해한 표식이다. */
+function jzDimKids(el){
+  const R = el.getBoundingClientRect();
+  if(!R.height) return;
+  for(const c of el.children){
+    if(c.classList.contains('jz-dm')) continue;
+    const r = c.getBoundingClientRect();
+    let a = 0; try { a = jzAlpha(getComputedStyle(c).backgroundColor); } catch(_){}
+    if(a > 0 && a < 1 && Math.abs(r.height - R.height) < 2 && Math.abs(r.width - R.width) < 2)
+      c.classList.add('jz-dm');
+  }
+}
+/* 다이얼로그 딤은 컨테이너 «자신의 배경색» 이다 — 그 색을 읽어 두면 opacity 대신 배경색만 페이드할 수 있다.
+   그라디언트·불투명 배경(#statw·#psw 등)은 알파가 안 잡히므로 클래스를 안 붙이고 옛 폴백으로 둔다. */
+function jzDimBg(el, k){
+  el.classList.remove('jz-bg');                         /* 먼저 뗀다 — 안 그러면 «페이드 도중의 색» 을 읽어 굳힌다 */
+  if(k !== 'jz-dlg') return;
+  let bg = ''; try { bg = getComputedStyle(el).backgroundColor; } catch(_){}
+  const a = jzAlpha(bg);
+  if(a > 0 && a < 1){ el.style.setProperty('--jzbg', bg); el.classList.add('jz-bg'); }
+  else el.classList.remove('jz-bg');
+}
 function jzOpen(el){
   const k = jzKind(el);
   el.classList.remove('jz-c', 'jz-dlg', 'jz-pg', 'jz-sh2');
+  jzDimBg(el, k);
+  if(k === 'jz-sh2') jzDimKids(el);
   el.classList.add('jz-o', k);
   clearTimeout(el.__jzT);
   const gen = el.__jzGen = (el.__jzGen || 0) + 1;      /* 개폐도 같은 세대 가드 (연타 대비) */
@@ -14338,6 +14421,8 @@ function jzClose(el, disp){
   el.__jzBusy = 1;
   el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
   el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
+  jzDimBg(el, k);                                       /* display 를 되살린 «뒤» 라야 배경색·기하가 읽힌다 */
+  if(k === 'jz-sh2') jzDimKids(el);
   el.classList.add('jz-c', k);
   clearTimeout(el.__jzT);
   const gen = el.__jzGen = (el.__jzGen || 0) + 1;
@@ -14367,27 +14452,72 @@ function jzModalMood(){
   if(/다이아|💎/.test(t)) jzBadPill('.cDia');
   else if(/골드|🪙/.test(t)) jzBadPill('.cGold');
 }
-/* 재화 알약 «부족» 플래시 — 알약 자체는 딤 아래라 안 보이므로 #fxl(z60) 에 같은 bbox 로 겹쳐 그린다 */
+/* 재화 알약 «부족» 플래시 — 알약(#top z6)은 딤(#modal z30) 아래라 **알약도 그 수치도 어두워진 채**다.
+   11회차(결함 3): 섬광판만 #fxl 에 띄우던 옛 방식은 «빨간 판» 만 딤 위에 있고 본체는 아래에 남아
+   두 비평가가 «알약이 딤 아래»(×0.46 = 딤 계수)라고 같은 값으로 짚었다.
+   → 알약을 **복제해서** #fxl(z60) 에 같은 bbox 로 다시 그린다. 흔들림·빨간 틴트는 복제 판이 받고
+   섬광은 그 위에 겹친다. `#top` 을 올리는 방식은 A3 구간이라 못 쓴다(부모 쌓임 맥락 문제이기도 하다). */
 function jzBadPill(sel){
   const el = document.querySelector(sel);
   if(!el) return;
   jzOn(el, 'jz-bad', 480);
   const L = fxL(), r = fxRect(el);
   if(!L || !r) return;
+  const p = document.createElement('s');
+  p.className = 'jz-badp jz-bad';                     /* 판이 흔들림+빨간 틴트를 받는다(복제 알약과 섬광이 함께 흔들린다) */
+  p.style.left = r.x + 'px'; p.style.top = r.y + 'px';
+  p.style.width = r.w + 'px'; p.style.height = r.h + 'px';
+  /* 복제 — id 는 전부 떼야 한다(`#goldN`/`#diaN` 이 둘이 되면 `$()` 가 복제본을 집어 HUD 갱신이 유령에 간다) */
+  const c = el.cloneNode(true);
+  c.removeAttribute('id');
+  c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  c.classList.remove('jz-bad', 'jz-dn', 'jz-up', 'jz-up-n', 'jz-dn-n');
+  c.style.width = r.w + 'px'; c.style.height = r.h + 'px';
+  p.appendChild(c);
   const d = document.createElement('s');
   d.className = 'jz-badov';
-  d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
-  d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
-  L.appendChild(d);
-  void d.offsetWidth;                                 /* ⚠ 이걸 빼면 getAnimations() 가 «비어 있다» 고 나온다 */
+  p.appendChild(d);
+  L.appendChild(p);
+  void p.offsetWidth;                                 /* ⚠ 이걸 빼면 getAnimations() 가 «비어 있다» 고 나온다 */
   /* 수명을 wall-clock 으로 잡으면 캡처(1장 ≈ 900ms)에서 첫 장 전에 사라진다 — 애니메이션에 물린다. */
-  if(!jzDoneThen(d.getAnimations(), () => d.remove())) setTimeout(() => d.remove(), 520);
+  const as = p.getAnimations().concat(d.getAnimations());
+  if(!jzDoneThen(as, () => p.remove())) setTimeout(() => p.remove(), 520);
 }
 
 /* ── ④ 카드 그리드 등장 — 좌상단부터 stagger 25ms ──
    «리스트 컨테이너» 를 셀렉터로 나열하지 않는다(화면마다 이름이 달라 금방 낡는다).
    자식 3개 이상이 같은 className 을 공유하면 그게 카드 그리드다 — 4단계까지만 훑고 멈춘다. */
+/* ⚠ 11회차(10회차 결함 4) — 옛 코드는 카드마다 `jzOn()` 을 돌렸는데, `jzOn()` 은 안에서
+   `void el.offsetWidth` 로 **강제 리플로우**를 두 번 한다. 20칸이면 리플로우 40번이 루프 «도중에»
+   흩어져서 카드마다 애니메이션 시작 시각이 밀린다 — 선언은 25ms 균등인데 실측은 10~39ms(최대 3.9배)에
+   순서 역전(t=95 에 c2 가 c1 보다 앞섬)까지 났다. **선언값을 읽는 게이트(옛 §5)는 이걸 못 잡는다.**
+   → 클래스 제거·`--jzd` 설정은 전부 먼저 끝내고, 리플로우는 **딱 한 번**, 그 다음 클래스 부착도
+   한 번에 한다. 전 카드가 같은 프레임에서 출발하므로 간격은 `animation-delay` 그대로가 된다.
+   그리고 지연 기준선(`JZ_STAG_BASE`)을 둬 «컨테이너 페이드(jz-pg 120ms · 박스 opacity 66ms)와
+   곱해지는 구간» 밖에서 카드가 시작하게 한다 — 곱셈이 결함 4 의 나머지 절반이었다. */
+const JZ_STAG_BASE = 120, JZ_STAG_STEP = 25;
+function jzStagGo(kids, n){
+  for(let i = 0; i < n; i++){
+    kids[i].classList.remove('jz-st');
+    kids[i].style.setProperty('--jzd', (JZ_STAG_BASE + i*JZ_STAG_STEP) + 'ms');
+  }
+  void kids[0].offsetWidth;                             /* 리플로우 1회 — 여기서 전 카드의 시작 시각이 하나로 묶인다 */
+  for(let i = 0; i < n; i++) kids[i].classList.add('jz-st');
+  void kids[0].offsetWidth;                             /* 애니메이션 등록 강제(jzOn 과 같은 이유) */
+  for(let i = 0; i < n; i++) jzStagLife(kids[i], JZ_STAG_BASE + 240 + i*JZ_STAG_STEP);
+}
+/* 수명 관리만 jzOn 과 같은 방식으로(재시작은 위에서 이미 했으므로 리플로우를 다시 하지 않는다) */
+function jzStagLife(el, ms){
+  const key = '__jz_jz-st', gkey = '__jzg_jz-st', off = () => el.classList.remove('jz-st');
+  const gen = el[gkey] = (el[gkey] || 0) + 1;
+  clearTimeout(el[key]);
+  const hooked = jzDoneThen(el.getAnimations(), () => {
+    if(el[gkey] !== gen) return;
+    clearTimeout(el[key]); off();
+  });
+  el[key] = setTimeout(() => { if(el[gkey] === gen) off(); }, hooked ? Math.max(ms, 2500) : ms);
+}
 function jzStagger(root){
   let level = [root], depth = 0;
   while(level.length && depth < 4){
@@ -14396,8 +14526,7 @@ function jzStagger(root){
       const kids = p.children;
       if(kids.length >= 3 && kids[0].className && kids[0].className === kids[1].className
          && kids[1].className === kids[2].className){
-        const n = Math.min(kids.length, 20);
-        for(let i = 0; i < n; i++){ kids[i].style.setProperty('--jzd', (i*25) + 'ms'); jzOn(kids[i], 'jz-st', 240 + i*25); }
+        jzStagGo(kids, Math.min(kids.length, 20));
         continue;                                       /* 그리드를 찾았으면 그 아래로는 안 내려간다 */
       }
       for(let i = 0; i < kids.length && next.length < 40; i++) next.push(kids[i]);
