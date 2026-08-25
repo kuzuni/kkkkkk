@@ -56,18 +56,18 @@ const eq = (n, got, exp, tol = 0.6) =>
      패스가 좌측 사이드로 옮겨 가면 6칸 690 으로 내리고 이 기대값도 같이 내린다. */
   eq('패널 높이(7칸 = 6실칸 + 임시 패스칸)', col.h, 800);
   const tl = await R('#mnw .mn-tail');
-  eq('꼬리 x(패널 우변)', tl.x, 899); eq('꼬리 y', tl.y, 183.5);
-  eq('꼬리 길이', tl.w, 27.5); eq('꼬리 밑변', tl.h, 43, 1.2);   /* 21.5+21.5 는 서브픽셀로 42 로 잡힌다 */
+  eq('꼬리 x(패널 우변)', tl.x, 899); eq('꼬리 y', tl.y, 181.5);
+  eq('꼬리 길이', tl.w, 29); eq('꼬리 밑변', tl.h, 46, 1);   /* border-width 는 레이아웃이 정수로 내림한다 — 22.75 로 적으면 44 가 된다 */
   const mb = await R('#menub');
   /* 꼬리 꼭짓점 ref x926 은 ▦ 좌변(934)에 «닿지 않는다» — 8px 떨어져 있다(y289 단면 실측). */
-  eq('꼬리 꼭짓점 x (ref 926)', tl.x + tl.w, 926.5, 1);
-  ok('▦ 좌변까지 남는 틈', `${(mb.x - (tl.x + tl.w)).toFixed(1)}px (ref 934−926 = 8)`);
+  eq('꼬리 꼭짓점 x (ref 928 — 4회차 A·B 합치)', tl.x + tl.w, 928, 1);
+  ok('▦ 좌변까지 남는 틈', `${(mb.x - (tl.x + tl.w)).toFixed(1)}px (ref 934−928 = 6)`);
 
   const NB = await p.$$eval('#mnw .mn-b', es => es.length);
   eq('칸 개수(작업 71 이후 = 6 + 임시 패스 1)', NB, 7);
   for (let i = 1; i <= NB; i++) {
     const r = await R(`#mnw .mn-b:nth-of-type(${i})`);
-    eq(`칸${i} x`, r.x, 780); eq(`칸${i} 폭`, r.w, 99); eq(`칸${i} 높이`, r.h, 100);
+    eq(`칸${i} x`, r.x, 780); eq(`칸${i} 폭`, r.w, 100); eq(`칸${i} 높이`, r.h, 100);
     eq(`칸${i} y (pitch 110)`, r.y, 149 + (i - 1) * 110);
     const ic = await R(`#mnw .mn-b:nth-of-type(${i}) .mn-i`);
     /* 슬롯 중심의 기준은 칸top+32(측정표 §3-1)이고, 거기에 «이 이모지의 잉크가 라인박스 중앙에서 벗어난 만큼»을
