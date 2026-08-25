@@ -7639,7 +7639,7 @@ function spriteCenter(e, flip){
   let s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
   /* 적은 스폰 0.3초 동안 팝인한다 — 그리는 쪽이 `T.scale*(0.4+0.6*grow)` 를 쓰므로
      여기서도 같은 배율을 써야 한다. 안 그러면 팝인 중 목표가 최대 (38,41)px 어긋난다. */
-  if(e.born !== undefined && e.born < 0.3) s *= 0.4 + 0.6*(e.born/0.3);
+  if(e.born !== undefined && e.born < 0.3 && !e.nopop) s *= 0.4 + 0.6*(e.born/0.3);
   const dx = (-fr[6]/2 + fr[4] + fr[2]/2) * s;      /* flip 이면 좌우 대칭이라 부호가 뒤집힌다 */
   const dy = (-fr[7] + fr[5] + fr[3]/2) * s;
   const f = flip === undefined ? e.flip : flip;
@@ -7672,7 +7672,7 @@ function cineStart(mode, pt, flip, base){
   cine.oy = base ? pt.y - base.y : 0;
   cine.fs = null; cine.fsW = 0; cine.fsT = 1;   /* 첫 camUpdate 에서 그때의 방향으로 초기화(그 프레임엔 이징 없음) */
 }
-function cineBossIn(e){ if(!e) return; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e); }
+function cineBossIn(e){ if(!e) return; e.nopop = true; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e); }
 /* killEnemy 는 이 호출 «두 줄 뒤» 에 시체를 `anim: e.T.die` 로 갈아끼운다 —
    살아 있는 프레임의 트림으로 목표를 잡으면 실제로 그려지는 시체와 46px 어긋난다.
    그래서 «시체가 될 모습»(die 0프레임)으로 중심을 계산한다. */
@@ -7740,10 +7740,15 @@ function camUpdate(dt){
   const fy = player.y + (tgy - player.y)*w;
   /* 줌 — «출발 줌 zb» 에서 목표 배율까지. zb 는 1 로 서서히 풀리므로 연출이 끝나도 계단이 없다 */
   cine.zb += (1-cine.zb) * camDamp(CINE_TGK, dt);
-  /* 줌 가중치는 위치와 따로 간다 — 위치는 «앞으로 몰린» 곡선이라 t=0.617 에 사실상 끝나는데
-     줌까지 같이 끝나 버리면 남은 0.18초가 «스케일 정지 + 카메라만 흐름» 이 된다.
-     줌은 스펙 그대로 0.80초 smoothstep 으로 채운다. */
-  const zw = cine.mode === 'in' ? camSm(cine.t/CINE_IN_S) : w;
+  /* 줌 가중치는 위치와 «같은» 곡선을 쓴다.
+     4회차에는 줌만 0.80초 smoothstep 으로 떼어 놨는데, 5회차 비평 O 가 그 결과를 픽셀로 재서 뒤집었다 —
+     실측 줌 진행률이 스펙의 ease-out 대비 t=0.283 에서 **44.3pp 부족**했고(smoothstep 예측치와 오차 0.3%),
+     위치는 t=0.450 에 이미 89.4% 를 소화해 **마지막 0.333초(연출의 42%)가 «카메라는 거의 정지, 스케일만 램프»** 가 됐다.
+     스펙 문구는 «보스로 팬+줌인(scale 1.15, 0.8초, ease-out)» — 팬과 줌은 한 동작이다.
+     둘을 같은 camEaseOut 에 묶으면 곡선 불일치가 사라지고 t≈0.62 에 같이 착지한다.
+     (4회차 M 의 «줌이 먼저 끝난다» 지적과는 방향이 반대인데, 그 지적의 «카메라만 흐름» 은
+      가중치가 아니라 **살아 움직이는 보스를 따라가는 트래킹** 이다 — O 는 이를 정상으로 판정했다) */
+  const zw = w;
   const fz = cine.zb + ((cine.mode === 'kill' ? CINE_ZKILL : CINE_ZIN) - cine.zb)*zw;
 
   /* 리드 — 속도 방향으로 최대 CAM_LEAD px 앞을 본다. 멈추면(그리고 연출 중에는) 0 으로 되돌아간다 */
@@ -7758,7 +7763,12 @@ function camUpdate(dt){
   /* 연출 중에는 더 세게 좁힌다 — 0.12 로는 «0.8초 팬» 이 끝나도 195px 이 남아 실효 1.15초가 된다.
      w 로 섞으므로 연출 진입·이탈에서 계수가 계단으로 바뀌지 않는다 */
   const kc = cine.mode === 'kill' ? CAM_KKILL : CAM_KCINE;
-  const k = camDamp(CAM_K + (kc-CAM_K)*w, dt);
+  /* 추적 계수는 «위치 가중치» 보다 먼저 올린다. w 가 아직 0 에 가까운 첫 0.1초에도 목표점 fx 는
+     앞으로 몰린 ease-out 을 타고 이미 빠르게 달아나는데, 그때 k 가 평상시 0.12 면 카메라가 크게 뒤처진다.
+     그 지연은 줌이 차오른 뒤 «보스가 프레임 끝에서 잘림» 으로 나타난다(줌·팬을 같은 곡선에 묶은 직후 2/52프레임·최대 13px).
+     계수만 앞당기는 것이라 목표 궤적은 그대로고, 저크·가속 예산에는 여유가 크다(0.54/1.64 vs 상한 3/8). */
+  const kw = cine.mode === 'in' ? Math.max(w, camSm(cine.t/0.20)) : w;
+  const k = camDamp(CAM_K + (kc-CAM_K)*kw, dt);
   cam.x += (t.x-cam.x)*k; cam.y += (t.y-cam.y)*k;
   /* 줌이 «작아지는» 동안에는 보이는 반폭이 넓어져 어제까지 합법이던 좌표가 경계를 넘는다 — 매 프레임 다시 가둔다 */
   const c = camClamp(cam.x, cam.y);
@@ -7859,17 +7869,23 @@ function draw(){
     }
     const e = o, T2 = e.T;
     const grow = e.born < 0.3 ? e.born/0.3 : 1;
+    /* 67 — 보스 도전 연출 중인 적만 스프라이트 팝인(0.4→1.0)을 건너뛴다.
+       팝인이 살아 있으면 스폰 0.3초 동안 겉보기 크기가 ×1.44 로 부풀어, 카메라의 1.15배 푸시인이
+       «커짐» 의 31% 밖에 못 차지한다(5회차 비평 O 결함 4 실측: A2→A6 총 ×1.636 중 줌 기여 ×1.134).
+       그러면 푸시인이 연출로 안 읽힌다. 스폰 링 텔레그래프와 `born<0.3` 무적·비활성 판정은 그대로 둔다 —
+       바뀌는 것은 «그려지는 크기» 하나뿐이라 밸런스·히트박스에 영향이 없다. */
+    const sgrow = e.nopop ? 1 : grow;
     if(e.born < 0.3){
       ctx.globalAlpha = grow; ctx.strokeStyle = T2.col; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*(2.4-grow*1.4), 0, 6.283); ctx.stroke();
       ctx.globalAlpha = 1;
     }
-    drawShadow(e.x, e.y, e.r*0.85*grow);
+    drawShadow(e.x, e.y, e.r*0.85*sgrow);
     const fr = curFrame(e);
-    const ok = fr && drawFrame(T2.atlas, fr, e.x, e.y, T2.scale*(0.4+0.6*grow), e.flip, grow);
+    const ok = fr && drawFrame(T2.atlas, fr, e.x, e.y, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow);
     if(!ok){
-      ctx.globalAlpha = grow; ctx.fillStyle = e.fx > 0 ? '#fff' : T2.col;
-      ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*grow, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.globalAlpha = sgrow; ctx.fillStyle = e.fx > 0 ? '#fff' : T2.col;
+      ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*sgrow, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }else if(e.fx > 0){
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
       drawFrame(T2.atlas, fr, e.x, e.y, T2.scale, e.flip, 1);
