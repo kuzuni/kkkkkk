@@ -5923,11 +5923,11 @@
   /* 타이틀 명판 — ref x297..782 y104..217 (486×114), 프레임 top 20. 육각(상하로 30px 씩 좁아짐).
      검정 8~9 / 상단 립 10 #6C584D / fill #483A2F / 하단 립 11 #6F5D51 (측정표 §2) */
   .rk-title{left:297px;top:20px;width:486px;height:114px;background:#000;
-    clip-path:polygon(0 50%,6.2% 0,93.8% 0,100% 50%,93.8% 100%,6.2% 100%)}
+    clip-path:polygon(0 50%,12.3% 0,87.7% 0,100% 50%,87.7% 100%,12.3% 100%)}
   .rk-title>s{position:absolute;left:9px;right:9px;top:9px;bottom:9px;
     background:linear-gradient(180deg,#6C584D 0,#6C584D 10px,#483A2F 10px,#483A2F 34px,
       #362B25 34px,#362B25 72px,#483A2F 72px,#483A2F 85px,#6F5D51 85px,#6F5D51 96px);
-    clip-path:polygon(0 50%,6.2% 0,93.8% 0,100% 50%,93.8% 100%,6.2% 100%)}
+    clip-path:polygon(0 50%,12.3% 0,87.7% 0,100% 50%,87.7% 100%,12.3% 100%)}
   /* 잉크 221×37 중심 (539,162) → 프레임 cy 78. fs 37/0.93 ≈ 40, 편측 4 → CSS 8 */
   /* 잉크 실측: 캡처 cy 99.5 / ref cy 162.5 → 프레임 78.5. line-box 가 21px 아래로 밀려 있어 top −21.
      폭도 캡처 248 vs ref 220 이라 scaleX 로 좁힌다(LESSONS 01 — 음수 letter-spacing 금지) */
@@ -5956,9 +5956,17 @@
   .rk-pod.p3>u{background:linear-gradient(180deg,#8A6A44 0,#8A6A44 14px,#432D15 14px,#432D15 24px,
     #58422A 24px,#58422A 76%,#45301B 76%)}
   /* 아트 자리 — 단상 위 캐릭터+탈것 ≈290×300. bbox 를 정확히 차지시킨다(아트 자리 규칙) */
-  .rk-ch{width:290px;height:300px;display:flex;align-items:flex-end;justify-content:center;
-    font-size:190px;line-height:1}
-  .rk-ch.c1{left:396px;top:148px} .rk-ch.c2{left:71px;top:182px} .rk-ch.c3{left:722px;top:192px}
+  /* 아트 자리 — ref 실측 bbox(`bbox … light>78`): 2위 x24..380·y239..564 / 1위 x386..694·y230..530 /
+     3위 x700..1041·y232..552. 2회차의 «290×300 고정» 은 세로 −50%·가로 −33~46% 였다(비평 D②).
+     이미지로 교체할 때 이 bbox 를 그대로 쓴다 — 이모지는 잉크가 이 상자를 채우도록 fs·scaleX 를 역산했다. */
+  .rk-ch{display:flex;align-items:center;justify-content:center;line-height:1;overflow:visible}
+  #rkw .rk-ch>em{display:block;line-height:1}
+  .rk-ch.c1{left:386px;top:146px;width:309px;height:301px;font-size:354px}
+  .rk-ch.c2{left:24px;top:155px;width:357px;height:326px;font-size:384px}
+  .rk-ch.c3{left:700px;top:148px;width:342px;height:321px;font-size:378px}
+  #rkw .rk-ch.c1>em{transform:scaleX(1.03)}
+  #rkw .rk-ch.c2>em{transform:scaleX(1.10)}
+  #rkw .rk-ch.c3>em{transform:scaleX(1.07)}
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
     clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%)}
@@ -6106,7 +6114,8 @@
   .rk-tab{top:0;height:164px;background:#3F2D26;border-radius:10px 10px 0 0;
     text-align:center;cursor:pointer}
   .rk-sep{top:0;height:164px;width:4px;background:#000}
-  .rk-sep.e1{left:488px} .rk-sep.e2{left:680px;width:5px} .rk-sep.e3{left:875px;width:5px}
+  .rk-sep.e0{left:195px} .rk-sep.e1{left:488px} .rk-sep.e2{left:680px;width:5px}
+  .rk-sep.e3{left:875px;width:5px}
   .rk-tab.on{background:#785048}
   .rk-tab.t1{left:199px;width:288px} .rk-tab.t2{left:492px;width:188px}
   .rk-tab.t3{left:685px;width:190px}
@@ -6835,9 +6844,9 @@
       <div class="rk-hall"></div>
       <div class="rk-title"><s></s><i>스테이지 랭킹</i></div>
       <!-- 아트 자리 ×3 — 단상 위 캐릭터+탈것 290×300 -->
-      <div class="rk-ch c2" id="rkCh2">🦊</div>
-      <div class="rk-ch c1" id="rkCh1">🐲</div>
-      <div class="rk-ch c3" id="rkCh3">🐺</div>
+      <div class="rk-ch c2"><em id="rkCh2">🦊</em></div>
+      <div class="rk-ch c1"><em id="rkCh1">🐲</em></div>
+      <div class="rk-ch c3"><em id="rkCh3">🐺</em></div>
       <div class="rk-pod p2"><u></u></div>
       <div class="rk-pod p1"><u></u></div>
       <div class="rk-pod p3"><u></u></div>
@@ -6875,7 +6884,7 @@
       <div class="rk-tab t1 on" data-rktab="stage"><u>🗺️</u><b>스테이지</b></div>
       <div class="rk-tab t2" data-rktab="tower"><u>🏰</u><b>시련의 탑</b></div>
       <div class="rk-tab t3" data-rktab="farm"><u>🏚️</u><b>몬스터 농장</b></div>
-      <div class="rk-sep e1"></div><div class="rk-sep e2"></div><div class="rk-sep e3"></div>
+      <div class="rk-sep e0"></div><div class="rk-sep e1"></div><div class="rk-sep e2"></div><div class="rk-sep e3"></div>
     </div>
   </div>
   <!-- 56 절전 모드 — 전면 불투명 검정 잠금화면. 측정표 docs/measure/56-절전모드.md.

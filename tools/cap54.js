@@ -30,6 +30,10 @@ function launchOpts() {
   await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'load' });
   await page.waitForTimeout(1500);
 
+  /* 58 연출 모듈의 재화 파티클(#fxl)이 전체화면 페이지 «위» 를 지나가 채점을 오염시킨다 —
+     53·72 가 같은 문제를 겪고 쓴 대책을 그대로 가져온다(tools/cap53.js·cap72.js). */
+  await page.addStyleTag({ content: '#fxl{display:none!important}' });
+
   const injected = await page.evaluate(() => {
     if (typeof S === 'undefined' || typeof openRank !== 'function') return 'no-hooks';
     S.autoBuy = false; S.spAuto = false;
