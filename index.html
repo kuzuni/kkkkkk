@@ -1986,17 +1986,11 @@
      카드2 x726~1022 / rel 52~341. 즉 «우측 안쪽 경계와 하단 안쪽 경계에 둘 다 붙어 두 방향으로
      잘리고, 상단만 36~52px 비운다». 카드별 값은 --thw(폭) --tht(상단 인셋) 로 넘긴다.
      좌측 경계는 검정 외곽선 하드 엣지 — 1회차의 64px 페이드는 폐기하고 12px 만 남긴다. */
-  /* 슬롯 자체에 «아트 바닥판» 을 깐다 — 레퍼런스 일러스트는 우측·하단 안쪽 경계까지 꽉 찬 그림이라
-     이모지 하나만 띄우면 우측 100px 커버리지가 75~79% → 25~46% 로 무너진다(비평가 O 실측).
-     아트가 들어오면 이 판이 곧 이미지 자리다. */
+  /* 슬롯은 «기하만» 남긴다. 2~6회차에 깔았던 검정 바닥판·가장자리 띠는 7회차에 걷어냈다 —
+     비평가 Y 실측: 그 판은 경계 «접촉» 을 못 만들면서(우단 40%p 그대로) 우측 명도를 −57% 로 떨어뜨려
+     레퍼런스의 «우측으로 밝아지는 선버스트» 와 명암 구배가 반대가 됐다. 아트가 들어오면 여기가 그대로 이미지 자리다. */
   .dnc>.th{position:absolute;right:7px;top:var(--tht);width:var(--thw);
     height:calc(341px - var(--tht));overflow:hidden;border-radius:0 0 5px 0;pointer-events:none;
-    background:radial-gradient(150% 128% at 100% 100%,rgba(0,0,0,.36) 0%,rgba(0,0,0,.23) 52%,
-      rgba(0,0,0,.10) 78%,transparent 96%),
-      linear-gradient(270deg,rgba(0,0,0,.20) 0%,rgba(0,0,0,.07) 30%,transparent 58%),
-      linear-gradient(0deg,rgba(0,0,0,.20) 0%,rgba(0,0,0,.05) 32%,transparent 60%),
-      linear-gradient(270deg,rgba(0,0,0,.34) 0 12px,rgba(0,0,0,.14) 34px,transparent 70px),
-      linear-gradient(0deg,rgba(0,0,0,.32) 0 12px,rgba(0,0,0,.13) 34px,transparent 70px);
     -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 100%);
     mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 100%)}
   /* 이모지 잉크비는 글리프마다 폭 0.81~1.13em · 높이 1.08~1.13em 으로 제각각이다(fs300 실측).
@@ -2007,7 +2001,6 @@
     width:400px;height:400px;font-size:var(--thf);line-height:400px;text-align:center;
     font-style:normal;transform:scaleX(var(--tsx,1));
     filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
-  .dnc>.scn~.th{background:none}   /* 잠금 카드는 씬 판이 전면을 덮으므로 썸네일 바닥판을 끈다 */
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:11px;bottom:8px;overflow:hidden;
