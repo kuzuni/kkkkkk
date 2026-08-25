@@ -619,7 +619,10 @@
   #tuto .tbtn{position:absolute;left:97px;top:10px;height:34px;padding:0;border:0;background:none;
     font-size:30px;line-height:34px;font-weight:900;color:#FDE465;
     -webkit-text-stroke:6px #000;paint-order:stroke fill;cursor:pointer;white-space:nowrap}
-  #tuto .tbtn:disabled{color:#FDE465;cursor:default}
+  /* 73 ① — 미완 상태의 `[미션-n]` 라벨은 그대로 두되 **클릭을 배너로 흘려보낸다**.
+     `pointer-events:none` 이라 pointerdown 의 target 이 `#tuto` 가 되어 60 쥬시가 «죽은 버튼 흔들림»
+     대신 배너 누름 피드백을 낸다. 기하(레이아웃)는 한 픽셀도 바뀌지 않는다. */
+  #tuto .tbtn:disabled{color:#FDE465;cursor:inherit;pointer-events:none}
   #tuto .tinfo{position:absolute;left:55px;top:75px;width:217px}
   #tuto .tt{font-size:24px;line-height:22px;font-weight:900;color:#fff;
     -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;
@@ -656,7 +659,7 @@
      ⚠ 테두리를 `border:0` 으로 지우면 **패딩 박스가 5px 움직여 절대배치 자식이 전부 밀린다**
        (03 교훈). `border-color:transparent` 로 «안 보이게만» 한다 — 배경은 보더 박스까지 칠해지므로
        ref 처럼 460×150 전체가 균일한 반투명 검정이 된다. */
-  #tuto.todo{background:rgba(0,0,0,.55);border-color:transparent;cursor:default}
+  #tuto.todo{background:rgba(0,0,0,.55);border-color:transparent;cursor:pointer}   /* 73 ① — 미완이어도 누를 수 있다 */
   #tuto.todo .trew::after{display:none}                 /* 레드닷은 «누를 게 있다» 는 신호다 */
   /* 보상칸 — 32 는 **118×118 · radius 34 · 안쪽 링 6** 이고 배너 세로 정중앙이다(측정표 §3).
      02(초록·117·radius 30)는 그대로 두고 여기서만 덮는다. */
@@ -6598,11 +6601,15 @@ const byId = a => a.reduce((o,x) => (o[x.id]=x, o), {});
 const SK = byId(SKILLS), EQ = byId(EQUIPS), PT = byId(PETS), RL = byId(RELICS), AV = byId(AVATARS);
 
 /* ---- 소환 배너 (무기 · 방패 · 목걸이 따로) ---- */
+/* 작업 73 ④ (2026-08-25, 저장소 주인 지시) — 무기·방어구(방패)·목걸이·스킬 상자는
+   **10회 = 1,000 다이아 · 30회 = 3,000 다이아** 로 통일한다. `cost:100` + `flat:1`(10연 할인 없음)
+   이면 `summonCost` 가 정확히 1,000 / 3,000 을 낸다. 펫·유물은 «현행 유지» 지시라
+   `cost`·10연 할인(0.9)을 그대로 둔다(펫 10연 2,250 · 유물 10연 3,600 불변). */
 const BANNERS = {
-  skill:  { n:'스킬',   ic:'📜', cost:150, cur:'dia', coll:'skill', list:SKILLS },
-  weapon: { n:'무기',   ic:'⚔️', cost:160, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
-  shield: { n:'방패',   ic:'🛡️', cost:160, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
-  amulet: { n:'목걸이', ic:'📿', cost:160, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
+  skill:  { n:'스킬',   ic:'📜', cost:100, flat:1, cur:'dia', coll:'skill', list:SKILLS },
+  weapon: { n:'무기',   ic:'⚔️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
+  shield: { n:'방패',   ic:'🛡️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
+  amulet: { n:'목걸이', ic:'📿', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
   pet:    { n:'펫',     ic:'🐾', cost:250, cur:'dia', coll:'pet',   list:PETS },
   relic:  { n:'유물',   ic:'🔮', cost:400, cur:'rel', coll:'relic', list:RELICS }
 };
@@ -6737,28 +6744,46 @@ const MAILS = [
      · 절대형(abs:1) : «스테이지 N 도달» 처럼 누적값 자체가 목표. 기준선을 쓰지 않는다.
    보상은 전부 다이아(레퍼런스 «💎1,000» 톤). 300 → 3,000 으로 완만히 오른다.
    14·17·19 번은 03 던전 해금(«가이드미션 N 클리어»)의 기준점이라 스테이지 조건을 겸한다. */
+/* 작업 73 (2026-08-25, 저장소 주인 지시) — 세 가지를 얹었다.
+   ① `go`  : **미완 상태에서 배너를 누르면 그 미션을 할 수 있는 화면으로 이동**한다(gmGo).
+   ② `dia` : 다음 미션이 «소환» 이면 이 미션의 보상이 그 소환의 **10연 한 번**을 감당해야 한다
+             → 하드코딩 대신 `() => summonCost(b, 10)` 로 계산한다(④ 가격 통일과 자동으로 맞물린다).
+             첫 미션(스킬 소환)은 앞 미션이 없으므로 **초기 다이아 `DEF().dia` 를 1,000 으로** 올렸다.
+   ③ `ban` : 소환 미션 진행 중에는 **다른 상자 소환을 막는다**(gmBlocked → doSummon/doSummonFree 진입부).
+   ⚠ 항목 «순서·개수» 는 세이브 호환(S.guide.idx)을 위해 절대 바꾸지 않는다.
+   [담당 결정 — 5번 미션] 지시서 73 의 «펫 상자를 SHOP_BOXES 에 추가하거나 미션을 방어구 소환으로
+   바꿀 것» 중 **후자**를 택했다. 펫 상자를 상점에 추가하면 레퍼런스가 3칸인 10 상점 화면(다른 작업
+   단위·비평 점수 7)의 카드 목록을 건드리게 된다. 방어구(shield) 상자는 이미 `SHOP_BOXES` 에 있어
+   ①의 «누르면 그 화면으로» 가 실동작하고, 화면 레이아웃은 한 픽셀도 바뀌지 않는다.
+   → 펫 소환 경로(26 동료 시트 [동료 소환] → 상점에 펫 카드 없음)는 **여전히 막다른 길**이다.
+     이건 73 의 범위 밖이라 PROGRESS 비고에 남긴다(26/10 담당이 처리할 것). */
 const GUIDE = [
-  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill },
-  { n:'스킬 장착하기',         goal:1,   dia:300,  abs:1, get:() => S.eqSkill.length },
-  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip },
-  { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn() },
-  { n:'훈련 10회 하기',        goal:10,  dia:500,  get:() => S.upgrades },
-  { n:'동료 1회 소환하기',     goal:1,   dia:500,  get:() => S.cnt.sumPet },
-  { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills },
-  { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best },
-  { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon },
-  { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins },
-  { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n },
-  { n:'보물상자 1개 오픈',     goal:1,   dia:800,  get:() => S.cnt.sumRelic },
-  { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps },
-  { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best },
-  { n:'유물 장착하기',         goal:1,   dia:1000, abs:1, get:() => S.eqRelic.length },
-  { n:'스탯 포인트 10 투자',   goal:10,  dia:1200, get:() => S.spAtk + S.spHp },
-  { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best },
-  { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic },
-  { n:'보스 1회 처치하기',     goal:1,   dia:2000, get:() => bossCleared() },
-  { n:'스테이지 40 도달하기',  goal:40,  dia:3000, abs:1, get:() => S.best }
+  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill,  ban:'skill',  go:() => gmShop('skill') },
+  { n:'스킬 장착하기',         goal:1,   abs:1,    get:() => S.eqSkill.length, dia:() => summonCost('weapon', 10), go:() => gmHero('sk') },
+  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip,  ban:'weapon', go:() => gmShop('weapon') },
+  { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn(),  go:() => gmHero('eq') },
+  { n:'훈련 10회 하기',        goal:10,  get:() => S.upgrades, dia:() => summonCost('shield', 10), go:() => gmTrain('train') },
+  { n:'방어구 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'shield', go:() => gmShop('shield') },
+  { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills,     go:() => gmBattle() },
+  { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best,    go:() => gmBattle() },
+  { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon) },
+  { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins,      go:() => { gmCloseAll(); openRoulette(); } },
+  { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n,          go:() => { gmCloseAll(); openAttend(); } },
+  { n:'보물상자 1개 오픈',     goal:1,   dia:800,  get:() => S.cnt.sumRelic,   go:() => gmPage('relicw', openRelicPage) },
+  { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps,   go:() => gmHero('eq') },
+  { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best,    go:() => gmBattle() },
+  { n:'유물 장착하기',         goal:1,   dia:1000, abs:1, get:() => S.eqRelic.length, go:() => gmPage('rlw', openRelicTab) },
+  { n:'스탯 포인트 10 투자',   goal:10,  dia:1200, get:() => S.spAtk + S.spHp, go:() => gmTrain('stat') },
+  { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best,    go:() => gmBattle() },
+  { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic,
+                                                                              go:() => gmPage('collw', () => openColl21()) },
+  { n:'보스 1회 처치하기',     goal:1,   dia:2000, get:() => bossCleared(),    go:() => gmBattle() },
+  { n:'스테이지 40 도달하기',  goal:40,  dia:3000, abs:1, get:() => S.best,    go:() => gmBattle() }
 ];
+/* 미션 «내용» 이 바뀌면(5번 동료→방어구) 옛 세이브의 기준선(S.guide.prog)이 다른 카운터를 가리켜
+   미션이 즉시 완료되거나 영영 안 끝난다. 버전이 다르면 기준선만 -1(미확정)로 되돌려
+   gmBase() 가 «지금 값» 으로 다시 찍게 한다 — 61 의 지연 확정(lazy) 규칙 그대로다. */
+const GUIDE_V = 2;
 /* 장착 중인 장비 부위 수(25 확정 — 무기·방패·목걸이 3칸) */
 const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eqSlot[k] ? 1 : 0), 0);
 /* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
@@ -6898,7 +6923,9 @@ const KEY = 'idle_hunter_save_v4';
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); };
 const DEF = () => ({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
-  gold:0, dia:300, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
+  /* 73 ② — 첫 가이드 미션이 «스킬 1회 소환» 이고 상점 최소 단위가 10연(1,000 다이아)이라
+     시작 다이아가 300 이면 첫 미션부터 유료 경로가 막힌다. 지시대로 1,000 이상으로 올린다. */
+  gold:0, dia:1000, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   sp:0, spAtk:0, spHp:0, spRegen:0, spAuto:true,
@@ -6911,7 +6938,7 @@ const DEF = () => ({
   coll:{ skill:0, equip:0, pet:0, relic:0 },
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
-  guide:{ idx:0, prog:0 },                    /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선 */
+  guide:{ idx:0, prog:0, gv:GUIDE_V },        /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선, gv=미션표 버전(73) */
   pass:{ prem:{}, got:{} },                   /* 35·36 패스 — prem[탭]=1 활성화, got['탭:단계:칸']=1 */
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
@@ -6969,6 +6996,9 @@ function load(){
     }
     if(!Number.isFinite(b.guide.idx))  b.guide.idx  = 0;
     if(!Number.isFinite(b.guide.prog)) b.guide.prog = -1;
+    /* 73 — 미션표 버전이 다르면(5번 «동료 소환» → «방어구 소환» 처럼 get() 이 바뀌었다) 기준선을
+       미확정으로 되돌린다. 그래야 «다른 카운터로 찍힌 기준선» 때문에 미션이 즉시 완료되지 않는다. */
+    if(b.guide.gv !== GUIDE_V){ b.guide.prog = -1; b.guide.gv = GUIDE_V; }
     /* 35 패스 — 44 교훈 2 대로 KEY 는 올리지 않고 «없으면 기본값» 으로 흡수한다.
        옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN·예외가 새지 않게 항목별로 못박는다. */
     if(!b.pass || typeof b.pass !== 'object') b.pass = DEF().pass;
@@ -8532,7 +8562,7 @@ function drawTuto(){
   $('tutoPg').innerHTML = '<b>(</b><em>' + gmNum(fmt(p)) + '</em><s>/</s><em>' + gmNum(fmt(m.goal)) + '</em><b>)</b>';
   $('tutoBar').style.width = (p / m.goal * 100) + '%';
   $('tutoRew').textContent = '💎';
-  $('tutoSub').textContent = fmt(m.dia);
+  $('tutoSub').textContent = fmt(gmDia(m));
   const btn = $('tutoBtn');
   btn.disabled = !ready;
   if(ready) btn.textContent = '[보상받기]';                 /* 02 ④ 는 손대지 않는다 */
@@ -8676,7 +8706,10 @@ function sumAddExp(b, n){
   if(s.lv >= SUM_MAXLV) s.exp = 0;
   return up;
 }
-const summonCost = (b, n) => Math.round(BANNERS[b].cost * n * (n >= 10 ? 0.9 : 1));
+/* 작업 73 ④ — `flat` 배너(무기·방패·목걸이·스킬)는 10연 할인을 받지 않는다(10회 1,000 / 30회 3,000,
+   30회는 10회의 정확히 3배). 펫·유물은 종전대로 10연 이상 0.9 할인. */
+const summonCost = (b, n) => { const B = BANNERS[b];
+  return Math.round(B.cost * n * ((n >= 10 && !B.flat) ? 0.9 : 1)); };
 function payFor(b, cost){
   const B = BANNERS[b];
   if(B.cur === 'rel'){ if(S.relic < cost) return false; S.relic -= cost; }
@@ -8697,6 +8730,7 @@ function summonOne(b){
 }
 function doSummon(b, times){
   const B = BANNERS[b];
+  if(gmBlocked(b)) return;                       /* 73 ③ 가이드 소환 미션 진행 중 — 다른 상자는 못 뽑는다 */
   if(allMaxed(B.list)){
     popup('🏆 도감 완성', '<p><b>' + B.n + '</b>의 모든 아이템이 최대 레벨입니다.<br>남은 재료를 환불하세요!</p>');
     return;
@@ -8721,8 +8755,11 @@ function doSummon(b, times){
   showSummonResult(b, times, res, lvUp);
 }
 /* 10 상점 무료 10연 — 재화를 소모하지 않는 것만 doSummon 과 다르다(무료 횟수 차감은 호출부 담당) */
-function doSummonFree(b, times){
+function doSummonFree(b, times, viaReward){
   const B = BANNERS[b];
+  /* 73 ③ — 룰렛 «펫 소환권» 처럼 **보상으로 지급되는** 무료 소환(viaReward)은 막지 않는다.
+     막으면 이미 소모된 보상이 통째로 사라진다. 플레이어가 직접 누르는 경로만 검사한다. */
+  if(!viaReward && gmBlocked(b)) return;
   if(allMaxed(B.list)){ doSummon(b, times); return; }
   S.summons += times;
   const ck = b === 'skill' ? 'sumSkill' : b === 'pet' ? 'sumPet' : b === 'relic' ? 'sumRelic' : 'sumEquip';
@@ -8803,6 +8840,7 @@ function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
 $('sumw').addEventListener('click', e => { if(!e.target.closest('.sm-b')) closeSummonResult(); });
 $('sumBF').onclick = () => {
   const b = sumCtx; if(!b) return;
+  if(gmBlocked(b)) return;                       /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
   if(allMaxed(BANNERS[b].list)){ doSummon(b, 10); return; }
   if(freeLeft(b) <= 0) return;
   S.daily.freeSum[b] = freeLeft(b) - 1;
@@ -8928,19 +8966,61 @@ function gmProg(m){
 const gmReady = () => { const m = gmCur(); return !!m && gmProg(m) >= m.goal; };
 /* 다음 미션으로 넘어갈 때 기준선을 다시 찍는다 */
 function gmStart(){ const m = gmCur(); S.guide.prog = (m && !m.abs) ? m.get() : 0; }
+/* ---- 73 ② 보상 — 다음 미션이 «소환» 이면 그 10연 값이 들어오므로 함수형 보상을 허용한다 ---- */
+const gmDia = m => Math.round(typeof m.dia === 'function' ? m.dia() : m.dia);
+
+/* ---- 73 ① 미완 미션 클릭 → 그 미션을 할 수 있는 화면으로 이동 ----
+   전부 «이미 열려 있으면 다시 열지 않는다»(토글로 닫히면 이동이 아니라 취소가 된다). */
+function gmCloseAll(){
+  closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();
+  closeColl21(); closeModal();                    /* 21 도감·공용 모달까지 걷어야 «이동» 이 완결된다 */
+  if(panelOpen){ panelOpen = false; syncPanel(); }
+}
+function gmBattle(){ gmCloseAll(); uiDirty = true; renderUI(); }          /* 전투로 달성하는 미션 */
+function gmPage(id, open){ const w = $(id); gmCloseAll(); if(!w || !w.classList.contains('on')) open(); }
+function gmHero(sub){ gmCloseAll(); heroTab = sub; S.heroTab = sub; goTab('hero', true); }
+function gmTrain(sub){ gmCloseAll(); trSub = sub; openTrain(); }
+/* 10 상점 소환 탭을 열고 **그 상자 카드까지 스크롤**한다(레퍼런스 3칸 중 어느 것인지 바로 보이게) */
+function gmShop(box){ gmCloseAll(); openShopPage(box); }
+/* 배너 탭 — 완료면 수령, 미완이면 이동. `go` 가 없는 미션은 아무 일도 하지 않는다(무해) */
+function gmGo(){
+  const m = gmCur();
+  if(!m) return;
+  if(gmReady()){ claimGuide(); return; }
+  if(typeof m.go !== 'function') return;
+  m.go();
+  fxToast('📌 ' + m.n);
+}
+
+/* ---- 73 ③ 소환 미션 진행 중에는 다른 상자 소환을 막는다 ----
+   `gmBan()` 은 «지금 강제되는 상자» 다. 미션이 목표를 채운 뒤(수령 전 포함)에는 해제된다.
+   유물(relic)은 가이드 대상이 아니라 항상 통과시킨다. */
+function gmBan(){
+  const m = gmCur();
+  return (m && m.ban && gmProg(m) < m.goal) ? m.ban : null;
+}
+/* 막히면 안내 팝업을 띄우고 true. **무료 횟수 차감보다 먼저** 불러야 한다(차감 후면 횟수가 샌다). */
+function gmBlocked(b){
+  if(b === 'relic') return false;
+  const need = gmBan();
+  if(!need || need === b) return false;
+  popup('📌 가이드 진행', '<p>원활한 가이드 진행을 위해 <b>' + BANNERS[need].n
+    + ' 소환</b>을 먼저 해주세요!</p>');
+  return true;
+}
 function claimGuide(){
   const m = gmCur();
   if(!m || !gmReady()) return;
   const box = $('tuto'), rew = box && box.querySelector('.trew');
   fxAt(rew || box);                            /* 58 — 보상칸에서 HUD 다이아 알약으로 날아간다 */
-  S.dia += m.dia;
+  S.dia += gmDia(m);
   S.guide.idx++; gmStart();
   if(rew) fxPop(rew);                          /* 58 — 보상 팝 + 버스트 */
   fxReward(rew || box);
-  fxToast('가이드 미션 완료 — 💎 ' + fmt(m.dia));
+  fxToast('가이드 미션 완료 — 💎 ' + fmt(gmDia(m)));
   uiDirty = true; save();
   if(!gmCur())                                 /* 체인 끝에서만 모달로 마무리한다 */
-    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>💎+' + fmt(m.dia) + '</b> 획득!</p>'
+    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>💎+' + fmt(gmDia(m)) + '</b> 획득!</p>'
       + '<p style="color:#8ff0a8;margin-top:10px">모든 가이드 미션 완료! 🎉</p>');
 }
 const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
@@ -10348,6 +10428,9 @@ function endRaid(record){
    좌표는 카드 좌상단 기준 상대좌표(측정표 §2)를 그대로 CSS 로 박았고, 여기서는 상태값만 채운다. */
 let shopCat = 'summon';
 function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
+/* 73 ④ — 레퍼런스 상점 카드 가격은 «1,000 / 3,000» 쉼표 표기다(측정표 10 §21·§26).
+   공용 fmt() 는 K 접미사(«1.00K»)라 이 화면에서는 12 결과 팝업과 같은 쉼표 표기를 쓴다. */
+const won = n => Math.round(n).toLocaleString('en-US');
 function renderShopPage(){
   const list = $('shopList');
   list.classList.toggle('coin', shopCat === 'coin');
@@ -10371,17 +10454,18 @@ function renderShopPage(){
       +  '<div class="adbadge"><i>▶AD</i></div>'
       +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
       +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">💎</span></div>'
-      +    '<u class="cost">' + fmt(c10) + '</u></div>'
+      +    '<u class="cost">' + won(c10) + '</u></div>'
       +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
       +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">💎</span></div>'
-      +    '<u class="cost g3">' + fmt(c30) + '</u></div>'
+      +    '<u class="cost g3">' + won(c30) + '</u></div>'
       +  '<div class="cfr"></div>'
       +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
       +  '</div>';
   });
   list.innerHTML = h;
 }
-function openShopPage(){
+/* 73 ① — `focus` 로 상자 키(weapon/shield/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
+function openShopPage(focus){
   closeDungeon(); closeTrain();
   if(typeof closeRelicPage === 'function') closeRelicPage();
   shopCat = 'summon';
@@ -10393,7 +10477,18 @@ function openShopPage(){
   if(pill0 && ct0 && pill0.parentNode !== ct0) ct0.insertBefore(pill0, ct0.firstChild);
   renderShopPage();
   $('shopw').classList.add('on');
-  $('shopList').scrollTop = 0;
+  const li = $('shopList');
+  li.scrollTop = 0;
+  if(focus){
+    const i = SHOP_BOXES.findIndex(x => x.b === focus);
+    const card = i >= 0 ? li.children[i] : null;
+    if(card){
+      /* 카드 3장이 뷰포트에 다 들어가면 스크롤 여지가 0 이다 — 클램프해 두면 그때도 안전하다 */
+      const top = card.offsetTop - li.children[0].offsetTop;
+      li.scrollTop = Math.max(0, Math.min(top, li.scrollHeight - li.clientHeight));
+      fxPop(card);                                 /* 58 — 어느 상자로 가라는 건지 한 번 튄다 */
+    }
+  }
   syncShopNav(true);
 }
 function closeShopPage(){ $('shopw').classList.remove('on'); syncShopNav(false); }
@@ -10420,6 +10515,7 @@ $('shopList').addEventListener('click', e => {
   if(!btn) return;
   const b = btn.dataset.shsum, n = +btn.dataset.shn;
   if(btn.dataset.shfree){
+    if(gmBlocked(b)) return;                     /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
     if(allMaxed(BANNERS[b].list)){ doSummon(b, n); renderShopPage(); return; }
     if(freeLeft(b) <= 0){ popup('무료 소환 소진', '<p>오늘 <b>' + BANNERS[b].n + '</b> 무료 소환을 모두 사용했습니다.<br>내일 다시 충전됩니다.</p>'); return; }
     S.daily.freeSum[b] = freeLeft(b) - 1;
@@ -10714,7 +10810,7 @@ $('shopList').addEventListener('click', e => {
   if(a.r.dia){ S.dia += a.r.dia; got = '💎 ' + fmt(a.r.dia); }
   if(a.r.rel){ S.relic += a.r.rel; got = '🔮 ' + fmt(a.r.rel); }
   if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = '🪙 ' + fmt(g); }
-  if(a.r.freePet){ doSummonFree('pet', a.r.freePet); got = '🐾 펫 소환 ' + a.r.freePet + '회'; }
+  if(a.r.freePet){ doSummonFree('pet', a.r.freePet, 1); got = '🐾 펫 소환 ' + a.r.freePet + '회'; }
   uiDirty = true; save();
   renderCoinPage($('shopList'));
   if(got && !a.r.freePet) popup('🎁 ' + a.n + ' 수령', '<p>' + got + ' 을(를) 받았습니다.</p>');
@@ -12099,9 +12195,10 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   goTab(b.dataset.go, true);
 });
 /* 61 — 레퍼런스 배너는 «배너 전체가 [보상받기] 버튼» 이다. 라벨과 배너 어디를 눌러도 수령된다.
-   미완료 상태에서는 gmReady() 가 false 라 claimGuide() 가 즉시 되돌아온다(무해). */
-$('tutoBtn').onclick = e => { e.stopPropagation(); claimGuide(); };
-$('tuto').onclick    = claimGuide;
+   73 ① — 미완료 상태에서도 배너 전체가 살아 있다: 누르면 그 미션을 할 수 있는 화면으로 이동한다
+   (`gmGo()` 가 완료/미완을 갈라 수령 또는 이동을 한다). */
+$('tutoBtn').onclick = e => { e.stopPropagation(); gmGo(); };
+$('tuto').onclick    = gmGo;
 /* ④ 좌하단 유틸 · 우상단 메뉴 · 배속 — 레퍼런스 02번 구성. 콘텐츠는 아직 미구현이라 안내만 띄운다 */
 document.querySelectorAll('#botleft .ubtn').forEach(b => {
   b.onclick = () => b.dataset.util === 'chat'
@@ -12272,7 +12369,7 @@ $('mnw').querySelector('.mn-col').onclick = e => {
     const m = gmCur();
     popup('🗺️ 길라잡이', m
       ? '<p><b>' + m.n + '</b></p><p>진행 <b>' + gmProg(m) + ' / ' + m.goal + '</b></p>'
-        + '<p>보상 💎 <b>' + fmt(m.dia) + '</b></p>'
+        + '<p>보상 💎 <b>' + fmt(gmDia(m)) + '</b></p>'
         + (gmReady() ? '<p style="color:#8ff0a8;margin-top:10px">완료! 화면 하단 배너에서 수령하세요.</p>' : '')
       : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
   }
