@@ -129,7 +129,7 @@ function launchOpts(){
       eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, sel: null, hero: `#eqTabs [data-eqtab="${k}"]` }));
       /* 07·26·50 바닥 시트 «안쪽» 서브탭 바(장비·스킬·코스튬·동료) — 06 시트가 아니라 시트 안에 있어서
          «영웅 탭 → 06 서브탭 → 시트 안 서브탭» 3단계다(작업 50). 코스튬 시트의 [착용]/[구매] 도 같이 본다. */
-      await page.$eval('#eqTabs [data-eqtab="cos"]', (el) => el.click()).catch(() => {});
+      await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click()).catch(() => {});
       await page.waitForTimeout(400);
       const costabs = await page.$$eval('#bCos [data-costab]', (els) => els.map((e) => e.dataset.costab)).catch(() => []);
       costabs.forEach((k) => openers.push({ label: 'costab:' + k, sel: null, cos: `#bCos [data-costab="${k}"]` }));
@@ -179,12 +179,13 @@ function launchOpts(){
           const hit = await page.$eval(o.tr, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.tr, { timeout: 3000, force: true });
         } else if (o.cos) {
+          /* `page.$eval` 은 «resolve → 평가» 2왕복이라 그 사이 `renderCos()` 가 innerHTML 을 갈아끼우면
+             detach 된 노드를 클릭하게 되고 위임 핸들러가 안 탄다. query+click 을 한 evaluate 에 넣는다. */
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
-          await page.$eval('#eqTabs [data-eqtab="cos"]', (el) => el.click());
+          await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click());
           await page.waitForTimeout(400);
-          const hit = await page.$eval(o.cos, (el) => { el.click(); return true; }).catch(() => false);
-          if (!hit) await page.click(o.cos, { timeout: 3000, force: true });
+          await page.evaluate((s) => document.querySelector(s).click(), o.cos);
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
