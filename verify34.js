@@ -155,12 +155,16 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
      F 가 2차의 엇갈림도 설명했다 — 헤더 밴드가 본체보다 좌3/우2 인셋이라 헤더 행에서 재면 20~21 로 읽힌다. */
   ok('J7 카드 x 75/390/705 · w300', geo.c1[0] === 75 && geo.c2[0] === 390 && geo.c3[0] === 705
      && geo.c1[2] === 300, [geo.c1[0], geo.c2[0], geo.c3[0]].join('/'));
-  ok('J8 보너스탭 318,1197,442x58', near(geo.btab, [318, 1197, 442, 58]), JSON.stringify(geo.btab));
-  ok('J9 보너스바 75,1252,930x152', near(geo.bn, [75, 1252, 930, 152]), JSON.stringify(geo.bn));
+  /* 11회차 정정 — ref 탭 마스크 bbox x317..762(446). 낡은 기대값 442 는 «구현» 이 아니라 «검사» 가 낡은 것이다 */
+  ok('J8 보너스탭 317,1195,446x60', near(geo.btab, [317, 1195, 446, 60]), JSON.stringify(geo.btab));
+  /* 11회차: 자체 col x900 덤프로 ref 바 = 1254..1403(h150) 확정. 노출 립 = 1254−1195 = 59 (G 60 · H 59) */
+  ok('J9 보너스바 75,1254,930x150', near(geo.bn, [75, 1254, 930, 150]), JSON.stringify(geo.bn));
   ok('J10 초록 스트립 64,1523,952x252', near(geo.promo, [64, 1523, 952, 252]), JSON.stringify(geo.promo));
-  /* 10회차: E «ref 원 중심 1863» · F «ref y1805..1921 → 중심 1863» 독립 일치 (우리 1858.5) → +5 */
-  ok('J11 닫기 X 중심 540,1864 Ø132', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
-     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1864) <= 2 && geo.x[2] === 132, JSON.stringify(geo.x));
+  /* 11회차: G «ref 검정 링 9~10px» vs H «링 없음» 엇갈림 → 자체 row1863 덤프로 H 확정.
+     ref 는 붉은 원 Ø119 + 1px 어두운 테 = 실루엣 Ø≈120 이고 순검정 링이 없다. 우리 7px 링(Ø132)을 걷어낸다.
+     중심 y 는 G·H·10회차 3자 일치로 1863.5 유지 */
+  ok('J11 닫기 X 중심 540,1863.5 Ø120', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
+     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1863.5) <= 2 && geo.x[2] === 120, JSON.stringify(geo.x));
   /* 프레임 이탈 0 */
   const out = await page.evaluate(() => {
     const app = document.getElementById('app').getBoundingClientRect();

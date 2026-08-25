@@ -5398,15 +5398,15 @@
      첫·마지막 자식의 `margin:auto` 로 중앙을 만들면 남는 공간이 음수일 때 auto 가 0 이 돼
      **위쪽 가드(126)를 지키고 아래로만** 넘치고, `overflow-y:auto` 로 닿을 수 있다. */
   #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;overflow-y:auto;
-    box-sizing:border-box;padding:126px 0 136px;flex-direction:column;align-items:center;justify-content:flex-start}
+    box-sizing:border-box;padding:126px 0 148px;flex-direction:column;align-items:center;justify-content:flex-start}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
   /* 검정 8 + 갈색 링 11(바깥 6 #564438 · 안쪽 5 #46382D) = 편측 19 → 크림 폭 960 (ref 958) */
   .bls{position:relative;flex:none;margin-top:auto;width:998px;height:1157px;box-sizing:border-box;
-    border:8px solid #000;border-radius:44px;padding:0 6px 6px;background:#564438;
+    border:8px solid #000;border-radius:49px;padding:0 6px 6px;background:#564438;
     display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
-  .bls-head{flex:0 0 90px;margin:0 -6px;border-radius:36px 36px 0 0;background:#523E3D;
+  .bls-head{flex:0 0 90px;margin:0 -6px;border-radius:41px 41px 0 0;background:#523E3D;
     box-shadow:inset 0 8px 0 #5B4643,inset 6px 0 0 #5B4643,inset -6px 0 0 #5B4643;
     text-align:center;line-height:90px;overflow:hidden}
   /* 타이틀 «축복» 코어 78×47 → fs 47/0.93 ≈ 50, 편측 외곽 6 */
@@ -5472,7 +5472,7 @@
      (2차 비평 D «18→36» 의 방향이 맞았고 폭은 그보다 더 컸다) */
   .bls-c{position:relative;border-radius:44px;overflow:hidden;cursor:pointer;
     display:flex;flex-direction:column}
-  .bls-c>.h{flex:0 0 78px;background:#54413D;display:flex;align-items:center;justify-content:center}
+  .bls-c>.h{flex:0 0 80px;background:#54413D;display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
   .bls-c>.h>i{font-size:35px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.936)}
   /* ⚠⚠ 5회차의 «평면» 판정은 **스캐너의 한계에 속은 오판**이었다(8회차 정정).
@@ -5488,13 +5488,13 @@
   .bls-c>.b>*{position:absolute}
   /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
      ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
-  .bls-c .ic{left:0;right:0;top:16px;height:166px;line-height:166px;text-align:center;font-size:140px}
+  .bls-c .ic{left:0;right:0;top:14px;height:166px;line-height:166px;text-align:center;font-size:140px}
   /* 1회차: 초록 코어 h29·w105 (ref h32·w119) → fs 42→46 */
-  .bls-c .vl{left:0;right:0;top:185px;height:50px;line-height:50px;text-align:center;
+  .bls-c .vl{left:0;right:0;top:183px;height:50px;line-height:50px;text-align:center;
     font-size:46px;color:#A6DC60;-webkit-text-stroke:11px #123005;paint-order:stroke fill}
   /* ⚠ `#blsw s`(특이도 1-0-1)가 display:inline-block 을 못박으므로 여기서 flex 를 써도 진다.
      LESSONS 15 «폴백이 안 걸린다» 의 사촌 — 안쪽 정렬은 line-height/text-align 으로 한다. */
-  .bls-c .tm{left:42px;top:252px;width:214px;height:97px;border-radius:22px;background:#926A24;
+  .bls-c .tm{left:42px;top:250px;width:214px;height:97px;border-radius:22px;background:#926A24;
     box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center}
   /* 1회차: 흰 코어 w153 (ref 169, −9.5%) — 높이는 Δ1 이라 fs 는 두고 폭만 넓힌다 */
   .bls-c .tm>i{font-size:30px;color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(1.1)}
@@ -5506,11 +5506,16 @@
   .bls-c.off .glo{background:#D8D2C8}
 
   /* §7 «보너스 축복» 탭 + 보너스 바 */
-  .bls-btab{left:258px;top:752px;width:442px;height:58px;border-radius:20px 20px 0 0;background:#3E302D;
+  /* 11회차 — 10회차가 «E h55/top+5 vs F h59/top+2 엇갈림» 으로 유지했던 탭. 자체 실측으로 판정:
+     탭 마스크 bbox ref x317..762(446) vs 우리 318..759(442) → 폭 +4 · 좌 −1. 높이·top 은 양쪽 일치(유지).
+     좌상단 아크 최소자승(30px 창): ref R=37.6 · 우리 R=22.5(실제 20 → 창 편향 +2.5) ⇒ ref 실효 R≈35 */
+  .bls-btab{left:257px;top:750px;width:446px;height:60px;border-radius:35px 35px 0 0;background:#3E302D;
     display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
   .bls-btab>i{font-size:34px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.875)}
-  .bls-bn{left:15px;top:807px;width:930px;height:152px;border-radius:52px;overflow:hidden;
+  /* 11회차 — 비평 G ③: 탭이 바 위로 튀어나온 «노출 립» 이 ref 59~57 인데 우리 55.
+     자체 col x900 덤프: ref 바 상단 1254 · 하단 1403 (h150) vs 우리 1252..1403(h152) → 바만 2px 내리고 2px 줄인다 */
+  .bls-bn{left:15px;top:809px;width:930px;height:150px;border-radius:52px;overflow:hidden;
     background:repeating-linear-gradient(-45deg,#F0B048 0 26.2px,#F8C850 26.2px 50.9px)}
   .bls-bn>*{position:absolute}
   /* 2차 비평 C: ref 보너스 바에는 카드와 같은 계열의 상 9px / 하 14px 밝은 띠가 있다(우리는 0px) */
@@ -5555,24 +5560,36 @@
     border:5px solid #000;border-radius:30px;overflow:hidden;
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
-  /* ref 아이콘 뭉치 잉크 308x197 — 이모지 한 줄로는 높이가 안 나와 scaleY 로 bbox 를 채운다(아트 자리) */
-  /* 2차: scaleY 로 높이만 늘렸더니 폭이 −54% 로 남았다. 이모지 3개를 «벌려서» 폭을 채운다 */
-  .bls-promo .ic{left:64px;top:18px;width:340px;height:210px;line-height:210px;text-align:center;
-    font-size:132px;letter-spacing:14px;text-indent:14px}
-  .bls-promo .ic>b{transform:scaleY(1.2)}
+  /* §9 좌측 일러스트 — 11회차에 «아트 자리 규칙» 위반이 실측으로 드러나 CSS 작화로 갈아탔다.
+     비초록 잉크 마스크(스트립 안): ref **x137..459 · y1536..1759 = 323x224** (단일 덩어리)
+     vs 이모지판 **x231..375 · y1579..1723 = 145x145** — 폭 45% · 높이 65% 밖에 안 찼다.
+     원인: `⚔️❤️⚡` 3자를 넣었는데 헤드리스에서 잉크 덩어리가 **1개(145x145)** 로만 잡힌다 —
+     이모지 폰트 가용성에 잉크 bbox 가 좌우돼 «bbox 를 정확히 차지» 를 보장할 수 없다.
+     → 폰트 의존을 끊고 radial-gradient 로 직접 그린다. 측정표 §11 의 «날개 달린 3원형 뭉치 ≈325x200» 형태를
+     그대로 따라 3원 + 좌우 날개로 잡아 **정확히 323x224 @ promo-local(73,13)** 을 채운다(= frame x137..459 · y1536..1759).
+     색은 축복 3종(공격 빨강 · 체력 금색 · 속도 파랑)에 맞춰 뒀다 — 아트가 오면 background 만 교체하면 된다. */
+  .bls-promo .ic{left:68px;top:8px;width:323px;height:224px;font-size:0;line-height:0;
+    background:
+      radial-gradient(ellipse 34px 30px at 34px 90px,#F3FFE0 0 32px,transparent 33px),
+      radial-gradient(ellipse 34px 30px at 289px 90px,#F3FFE0 0 32px,transparent 33px),
+      radial-gradient(circle 68px at 86px 156px,#FF6B5A 0 66px,transparent 67px),
+      radial-gradient(circle 68px at 237px 156px,#5AC8FF 0 66px,transparent 67px),
+      radial-gradient(circle 66px at 161px 66px,#FFD24A 0 64px,transparent 65px)}
   /* 비평 A·B 합의: ref 헤드라인 잉크 379x55(자당 47.4), 우끝 953 = 스트립 우인셋 55~61 → 우측 정렬 */
-  .bls-promo .tx{left:420px;right:52px;top:24px;height:80px;line-height:80px;text-align:right;
-    font-size:56px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
+  /* 11회차 — G ⑥: 잉크 h 53 vs ref 59 → fs 56→62. 잉크 상단이 8px 아래라 top 24→19 */
+  .bls-promo .tx{left:420px;right:52px;top:19px;height:80px;line-height:80px;text-align:right;
+    font-size:62px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
   /* 2차 비평 D: ref 버튼은 **검정 6px 외곽 + 내측 상단 하이라이트 8px** 이 있고 면이 (119,229,54) 로 밝다.
      비활성(.off)도 회녹(143,169,138)이 아니라 «조금 어두운 초록» 이어야 ref 와 대비가 맞는다. */
   .bls-promo .gb.off{background:linear-gradient(180deg,#7FCF63 0,#5FB03A 55%,#458F22 100%);cursor:default}
+  /* 11회차 — G ②: ref 검정 테두리 9~10px vs 우리 7px(6px + AA). 외곽 bbox 는 ref 266 / 우리 267 로 이미 일치 */
   .bls-promo .gb{left:625px;top:112px;width:267px;height:118px;box-sizing:border-box;
-    border:6px solid #000;border-radius:28px;cursor:pointer;
+    border:9px solid #000;border-radius:28px;cursor:pointer;
     background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
     box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
-    font-size:46px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
+    font-size:49px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
-  .bls-x{flex:none;position:relative;top:5px;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
+  .bls-x{flex:none;position:relative;top:10px;margin:18px 0 auto;width:120px;height:120px;box-sizing:border-box;border:1px solid #2A2A2A;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1}
   /* ==========================================================================
