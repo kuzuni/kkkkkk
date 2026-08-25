@@ -2723,7 +2723,7 @@
   .spc-body{position:absolute;left:12px;right:12px;top:12px;bottom:13px;
     background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px -23px/236px 234px repeat;
-    border-radius:24px;box-shadow:0 0 0 1px #887661}
+    border-radius:28px;box-shadow:0 0 0 1px #887661}
   /* ⚠ `.spc-body` 에 `overflow:hidden` 을 주면 안 된다 — 배경은 어차피 border-radius 가 잘라 주는데,
      짧은 기기(frameH 1600: 4:3·16:9 가로)에서는 .spc 가 1395→1240 으로 눌려 `.spc-tabs` 가
      크림 박스 아래로 삐져나오므로 hidden 이면 «프로필» 토글이 통째로 사라진다(5회차에 넣었다가 되돌림). */
@@ -2738,10 +2738,12 @@
   /* 5회차 — 코너 반경 18 → 7 (ref 는 dy6 에서 이미 풀폭 x451, 우리는 dy16 이었다. 비평가 I·J 독립 지적).
      안쪽 검정 라인도 ref 4px(x468–471) vs 우리 2px → 3px 로. 좌우 테두리는 양쪽 다 검정5+갈색12 대칭이라
      J 의 «우/하 오프셋 플레이트» 지적은 픽셀 스캔으로 반증돼 미반영(y680 가로 프로파일 대칭 확인) */
+  /* 6회차 — ref 액자 외곽은 «사방 균일» 이 아니라 **하단 가중**이다(비평가 K·L 독립 실측):
+     상변 검정4+갈색10=14 · 하변 검정8+갈색13=21 · 좌우 검정5+갈색12=17. 바닥 그림자를 테두리에 내장한 것. */
   .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
-    border:5px solid #000;border-radius:7px;background:#715A4A}
-  .spc-ava>.in{position:absolute;left:12px;right:12px;top:12px;bottom:12px;
-    border:3px solid #000;border-radius:4px;background:#3B5A86;overflow:hidden;
+    border:solid #000;border-width:4px 5px 8px;border-radius:7px;background:#715A4A}
+  .spc-ava>.in{position:absolute;left:12px;right:12px;top:10px;bottom:13px;
+    border:4px solid #000;border-radius:4px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
   /* 칭호 육각 배너 318×56(외곽선 포함 ref 783–838) — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 */
   .spc-rib{left:269px;top:249px;width:318px;height:56px}
@@ -2750,10 +2752,16 @@
   /* 5회차 — x539 세로 프로파일 실측으로 4겹 구조가 드러났다(비평가 J 지적을 스캔으로 확인):
      ref y783–838 = 검정6 / 밝은 림 5(98,81,71) / 면 35(67,58,53) / **밝은 림 4(91,77,68)** / 검정6.
      우리는 검정 3 · 상단 림 8 · 면 41 이고 **하단 밝은 림이 통째로 없었다.** inset 3→6 + 3단 그라로 재작도 */
-  .spc-rib>b{position:absolute;left:3px;right:3px;top:6px;bottom:6px;
-    background:linear-gradient(180deg,#635147 0 5px,#433A35 5px 40px,#5B4D44 40px);
-    clip-path:polygon(0 50%,11px 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,11px 100%);
-    text-align:center;line-height:44px;font-size:30px;color:#fff}
+  /* 6회차 — 5회차의 «세로 3단 그라» 로는 **사선 끝단(좌·우 셰브론)에 밝은 림이 안 생긴다.**
+     ref 는 y810 가로 프로파일에서 검정4 → 림5(97,84,68) → 면 순인데 우리는 검정 직후 바로 면이었다
+     (비평가 K 가 «누락 레이어 1순위» 로 지목). 세로 그라 대신 **림 레이어 `<u>` 를 한 겹 끼워** 사면까지 감싼다.
+     겹 구조(세로): 검정6 / 림5 / 면35 / 림4 / 검정6.  (가로): 검정4 / 림6 / 면 */
+  .spc-rib>u{position:absolute;left:4px;right:4px;top:6px;bottom:6px;
+    background:linear-gradient(180deg,#635147,#5B4D44);
+    clip-path:polygon(0 50%,11px 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,11px 100%)}
+  .spc-rib>b{position:absolute;left:10px;right:10px;top:11px;bottom:10px;background:#433A35;
+    clip-path:polygon(0 50%,8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%);
+    text-align:center;line-height:35px;font-size:30px;color:#fff}
   .spc-rib>b>i{transform:scaleX(.86)}   /* ref 잉크폭 107 vs 우리 124 */
   /* 닉네임 스트립 ref x352–695 — 반투명 흑갈, 좌단 30px 페이드.
      텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
@@ -2763,12 +2771,13 @@
     background:linear-gradient(90deg,rgba(87,80,68,0) 0,rgba(87,80,68,.95) 60px,rgba(70,63,52,.97) 100%);
     box-shadow:0 3px 8px rgba(120,80,40,.15);
     text-align:center;line-height:48px}
+  /* 6회차 — 흰 잉크 폭 235 vs ref 261(−10%) → scaleX 로만 늘린다(높이는 ref 23 / 우리 22 로 거의 같다) */
   .spc-nick>i{font-size:28px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill;
-    transform:translateX(18px)}
+    transform:translateX(18px) scaleX(1.11)}
   /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
   /* 5회차 — 진갈 테두리 바깥 bbox 실측 ref x696–748 y845–896 = **53×52**(측정표 §6 의 56×54 는 검정 AA 포함값).
      비평가 I 도 독립적으로 53×52 @ x696 로 읽었다. 반경도 ref ≈10 vs 우리 12 */
-  .spc-edit{left:585px;top:311px;width:53px;height:52px;box-sizing:border-box;
+  .spc-edit{left:585px;top:310px;width:53px;height:54px;box-sizing:border-box;
     border:5px solid #52433C;border-radius:10px;background:#F6E9C6;cursor:pointer;
     box-shadow:0 3px 8px rgba(120,80,40,.15);
     text-align:center;font-size:28px;line-height:44px}
@@ -2778,7 +2787,7 @@
      즉 상단 패딩이 18 이 아니라 23 이고, 하단은 13행이 **16px 노출된 채 클리핑**된다(스크롤 어포던스).
      비평가 I·J 가 «13행 슬라이버 누락» 으로 독립 지적한 것이 이것이다. abs top = 449.5+443.5 = 893 = ref 977 ✓ */
   /* 코너 반경 20→28: ref 는 상변에서 좌우로 26px 들어간 지점부터 시작해 dy24 에 풀폭 도달, 우리는 dy16 이었다 */
-  .spc-list{left:28px;top:443.5px;width:800px;height:760px;border-radius:28px;
+  .spc-list{left:28px;top:443.5px;width:800px;height:760px;border-radius:34px;
     background:#FEEFD2;padding-top:23px;box-sizing:border-box;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .spc-list::-webkit-scrollbar{width:0;height:0}
@@ -2786,15 +2795,22 @@
   .spc-row{position:relative;height:60px;background:#FEEFD2}
   .spc-row:nth-child(even){background:#F6E2C7}
   /* 이름(좌) — 잉크 좌변 컨테이너+37, 한글 fs27 흰(#F9F9F9)+검정 외곽선 5(한쪽 2.5) */
-  /* 5회차 — 잉크 총높이가 ref 34 vs 우리 31 이었다(흰 코어는 ref 26 / 우리 25 로 거의 같다).
-     즉 font-size 가 아니라 **외곽선 두께** 문제다(16 교훈 ②). 03 규칙 «바깥 4px = stroke 8px» 대로 5→8 */
-  .spc-row>.nm{position:absolute;left:37px;top:0;height:60px;line-height:60px;
-    font-size:27px;color:#F9F9F9;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+  /* ⚠ 5회차의 «stroke 5→8» 은 **오판이었고 6회차에 되돌렸다**(비평가 K·L 이 독립적으로 회귀로 지적).
+     «잉크 총높이 31 vs ref 34» 는 맞았지만, 총높이를 외곽선으로 채우면 **검정 면적비가 29%→48% 로 뛴다**.
+     ref 는 «얇은 외곽선 + 두꺼운 흰 몸통» 이고 우리는 «두꺼운 외곽선 + 얇은 흰 몸통» 이라 총높이만 같아진 것이다.
+     남은 차이(같은 bbox 안 흰 픽셀 ref 963 / 우리 620)는 **글리프 스템 굵기** — 게임 서체 없이는 회수 불가다
+     (16 «흰 코어 두께» 천장과 동일). 외곽선은 ref 실측 ≈2.5px 바깥 = stroke 5 로 되돌린다.
+     좌 인셋 37→39: 흰 코어 좌단이 ref 180 vs 우리 178 이었다 */
+  .spc-row>.nm{position:absolute;left:39px;top:0;height:60px;line-height:60px;
+    font-size:27px;color:#F9F9F9;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     white-space:nowrap}
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
-  /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 6 (1회차: 진록 아님, ref (0,0,0)) */
+  /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 (1회차: 진록 아님, ref (0,0,0)).
+     6회차 — 검정 면적비 57.6% vs ref 44.3% 라 stroke 6→5, 초록 몸통 h22 vs ref 23 이라 fs 31→32.5,
+     비평가 L 의 «세로중심 −1.5px» 는 fs 를 31→32.5 로 올리자 저절로 해소됐다(잉크가 베이스라인 위로 자란다) —
+     top 을 같이 밀면 오히려 +1.5 가 되므로 top 은 0 으로 둔다(실측: fs 만 올린 상태에서 중심 Δ0) */
   .spc-row>.vl{position:absolute;right:39px;top:0;height:60px;line-height:60px;
-    font-size:31px;color:#B5F65F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
+    font-size:32.5px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
@@ -2803,18 +2819,25 @@
     box-shadow:inset 0 5px 0 #5C4F46,inset 0 -5px 0 #5C4F46}
   /* 활성 금색 배너 386×67 — 셰브론(팁 ~24px, 중앙이 최광폭), 검정 외곽선 상하 6/좌우 4,
      채움 = 상단 2px 밝은 림 + 2단(#FFC736 / #F8A63A) */
-  .spc-tab-on{position:absolute;left:-8px;top:9px;width:386px;height:67px;cursor:default}
+  /* 6회차 — ref 는 «전체 높이가 사선인 육각형» 이 아니라 **직선 몸통 + 가운데 화살촉** 이다(비평가 K·L).
+     행별 실측: 검정 좌변이 y1798~1814 내내 x156 로 «평평» 하다가 y1814~1830 에서만 149 까지 파고들고 다시 156 으로 돌아온다.
+     금 채움도 같은 구조(평평 174 → y1806~1836 구간만 158). 우리는 55px 전 구간이 사선이라 촉이 둔했다.
+     팔각형으로 다시 그린다 — 좌팁이 컨테이너 좌변(157) 밖으로 나가므로 상자를 좌로 5px 넓힌다(left −8→−13, w 386→391). */
+  .spc-tab-on{position:absolute;left:-13px;top:9px;width:391px;height:67px;cursor:default}
   .spc-tab-on>s{position:absolute;inset:0;background:#000;
-    clip-path:polygon(0 50%,30px 0,calc(100% - 30px) 0,100% 50%,calc(100% - 26px) 100%,26px 100%)}
+    clip-path:polygon(7px 0,calc(100% - 19px) 0,calc(100% - 19px) 25%,100% 50%,calc(100% - 19px) 70%,
+      calc(100% - 19px) 100%,7px 100%,7px 70%,0 50%,7px 25%)}
   /* 몸통 = 사면 안쪽 4~6px 주황 그늘(4회차 G 실측 (181,109,24)~(196,133,17)), ::before = 금 2단 채움 */
   /* 5회차 — 금색 채움 실측 ref h56(y1795–1850) vs 우리 54. 검정 외곽은 상하 6 이므로 top 만 5 로 (56 = 67−5−6) */
-  .spc-tab-on>b{position:absolute;left:2px;right:2px;top:5px;bottom:6px;
+  .spc-tab-on>b{position:absolute;left:5px;right:2px;top:5px;bottom:6px;
     background:linear-gradient(180deg,#C57419 0,#B96D18 100%);
-    clip-path:polygon(0 50%,26px 0,calc(100% - 26px) 0,100% 50%,calc(100% - 22px) 100%,22px 100%);
+    clip-path:polygon(17px 0,calc(100% - 21px) 0,calc(100% - 21px) 21%,100% 50%,calc(100% - 21px) 74%,
+      calc(100% - 21px) 100%,17px 100%,17px 74%,0 50%,17px 21%);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
-  .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:6px;right:6px;
+  .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:4px;right:5px;
     background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 50%,#F8A63A 50%);
-    clip-path:polygon(0 50%,22px 0,calc(100% - 22px) 0,100% 50%,calc(100% - 18px) 100%,18px 100%)}
+    clip-path:polygon(16px 0,calc(100% - 19px) 0,calc(100% - 19px) 21%,100% 50%,calc(100% - 19px) 74%,
+      calc(100% - 19px) 100%,16px 100%,16px 74%,0 50%,16px 21%)}
   .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
     paint-order:stroke fill;transform:scaleX(.84)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
@@ -4775,7 +4798,7 @@
     <div class="spc"><div class="spc-body">
       <div class="spc-gid"><i id="spcGid"></i></div>
       <div class="spc-ava"><div class="in"><i>🛡️</i></div></div>
-      <div class="spc-rib"><s></s><b><i>칭호 없음</i></b></div>
+      <div class="spc-rib"><s></s><u></u><b><i>칭호 없음</i></b></div>
       <div class="spc-nick"><i id="spcNick"></i></div>
       <div class="spc-edit" id="spcEdit">✏️</div>
       <div class="spc-list" id="spcList"></div>
