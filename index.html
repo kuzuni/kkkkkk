@@ -5022,7 +5022,8 @@
      36 출석 패스는 이 껍데기를 그대로 쓰고 PASS_TABS 슬롯만 채운다(측정표 §9-3). */
   #psw{position:absolute;inset:0;display:none;z-index:34;background:#000;overflow:hidden}
   #psw.on{display:block}
-  #psw i,#psw b,#psw s,#psw u,#psw em{display:inline-block;font-style:normal;font-weight:900}
+  #psw i,#psw b,#psw s,#psw u,#psw em{display:inline-block;font-style:normal;font-weight:900;
+    text-decoration:none}
   #psw>*{position:absolute}
 
   /* ---- 히어로 배너 ref y0..618 → frame −84..534 (보이는 구간 0..534) ---- */
@@ -5033,8 +5034,9 @@
   .ps-cl{background:#D5FBFE;border-radius:50%;opacity:.85}
   /* 아트 자리 — 레퍼런스는 1080x619 통짜 비트맵이다(측정표 §10).
      이미지로 교체할 때 이 bbox 를 그대로 쓴다. 지금은 이모지로 자리만 잡는다. */
-  .ps-art{left:0;right:0;bottom:0;height:250px;text-align:center;font-size:150px;line-height:250px;
-    letter-spacing:-10px;opacity:.95;pointer-events:none}
+  /* 아트 자리 — ref 는 금화더미가 **전 폭 1080** 을 채운다(하늘 비율 17.3%). 이미지로 교체할 때 이 bbox 를 쓴다. */
+  .ps-art{left:0;right:0;bottom:0;height:215px;text-align:center;font-size:205px;line-height:215px;
+    letter-spacing:-24px;opacity:.95;pointer-events:none;white-space:nowrap}
 
   /* 타이틀 «스테이지 패스 1» — 코어 ref x61..526 y190..245 → frame y106..161, 좌측 정렬(여백 55) */
   .ps-ttl{left:55px;top:92px;height:84px;line-height:84px;font-size:74px;color:#fff;
@@ -5050,8 +5052,8 @@
   .ps-st{left:0;width:530px;text-align:center;color:#F0E861;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;white-space:nowrap}
   .ps-st.l{top:398px;height:50px;line-height:50px;font-size:39px}
-  .ps-st.v{top:447px;height:50px;line-height:50px;font-size:39px}
-  .ps-st>i{transform:scaleX(.9)}
+  .ps-st.v{top:444px;height:56px;line-height:56px;font-size:45px}
+  .ps-st>i{transform:scaleX(.98)}
 
   /* 프리미엄 구매 버튼 — 외곽 ref x605..1023 y460..608 → frame x605 y376, 419x149, r38 */
   .ps-buy{left:605px;top:376px;width:419px;height:149px;box-sizing:border-box;cursor:pointer;
@@ -5067,14 +5069,16 @@
   .ps-buy>b.t2>i{transform:scaleX(.75)}
   /* 리본 배지 — 잉크 ref x563..679 y440..559 → frame x563 y356, 117x120 (버튼 좌측을 42px 침범) */
   .ps-rib{left:563px;top:356px;width:117px;height:120px;pointer-events:none;text-align:center}
-  .ps-rib>s.tail{position:absolute;left:38px;top:107px;width:47px;height:65px;background:#7A3FD0;
+  /* ref 는 메달과 리본 꼬리가 **붙어 있다** — 1회차는 67px 벌어져 클러스터가 +89% 로 늘어났다.
+     꼬리를 메달 바로 아래에 물리고(겹침 8px) 전체를 측정표 bbox(117×120) 안에 넣는다. */
+  .ps-rib>s.tail{position:absolute;left:35px;top:58px;width:47px;height:62px;background:#7A3FD0;
     clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
-  .ps-rib>s.wing{position:absolute;left:0;top:24px;width:117px;height:52px;background:#F4F6FF;
-    border-radius:26px;filter:drop-shadow(0 0 3px #000)}
-  .ps-rib>s.med{position:absolute;left:29px;top:8px;width:59px;height:59px;background:#FBCE1B;
-    box-shadow:inset 0 0 0 6px #A36B18;
+  .ps-rib>s.wing{position:absolute;left:0;top:22px;width:117px;height:48px;background:#F4F6FF;
+    border-radius:24px;filter:drop-shadow(0 0 3px #000)}
+  .ps-rib>s.med{position:absolute;left:29px;top:6px;width:59px;height:59px;background:#FBCE1B;
+    box-shadow:inset 0 0 0 6px #A36B18;z-index:2;
     clip-path:polygon(21px 0,38px 0,100% 21px,100% 38px,38px 100%,21px 100%,0 38px,0 21px)}
-  .ps-rib>i{position:absolute;left:29px;top:8px;width:59px;line-height:59px;font-size:34px}
+  .ps-rib>i{position:absolute;left:29px;top:6px;width:59px;line-height:59px;font-size:34px;z-index:3}
 
   /* ---- 골드 구분바 ref y619..647 → frame 535..563 (아래 검정 4px 은 헤더 밴드 소유) ---- */
   .ps-gold{left:0;right:0;top:535px;height:29px;
@@ -5186,13 +5190,15 @@
   /* ---- 하단 패스 종류 탭바 ref y2161..2339 → 프레임 바닥 앵커(h179) ---- */
   .ps-bar{left:0;right:0;bottom:0;height:179px;background:#000}
   .ps-bar>div{position:absolute;top:8px;height:166px;cursor:pointer;
-    box-shadow:inset 0 -18px 0 rgba(255,255,255,.13)}
+    box-shadow:inset 0 -60px 0 rgba(0,0,0,.09)}
   .ps-bar>div.bk{left:0;width:195px;background:#49322C}
   .ps-bar>div.pt{background:#3F2D29}
   .ps-bar>div.pt.on{background:#7D574C}
   /* 아이콘 ref y2175..2255 → 바 기준 top 6 / 라벨 코어 ref y2280..2321 → top 111 */
-  .ps-bar>div>i{position:absolute;left:0;right:0;top:6px;height:80px;line-height:80px;
-    text-align:center;font-size:66px}
+  /* ref 탭 아이콘 잉크 133~137w × 76~95h — 이모지 대체라도 **bbox 는 지켜야 한다**(아트 교체용 자리) */
+  .ps-bar>div>i{position:absolute;left:0;right:0;top:2px;height:96px;line-height:96px;
+    text-align:center;font-size:92px}
+  .ps-bar>div>i>em{transform:scaleX(1.15)}
   .ps-bar>div>b{position:absolute;left:0;right:0;top:105px;height:42px;line-height:42px;
     text-align:center;font-size:38px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;
     white-space:nowrap}
@@ -5721,15 +5727,15 @@
     <div class="ps-hdr">
       <u class="f"></u><u class="p"></u>
       <b class="f"><i>무료</i></b><b class="p"><i>프리미엄</i></b>
-      <div class="ps-bdg f">🎗️</div><div class="ps-bdg p">🏅</div>
+      <div class="ps-bdg f"><i>🎗️</i></div><div class="ps-bdg p"><i>🏅</i></div>
     </div>
     <div class="ps-list" id="psList"><div class="ps-tk" id="psTk"></div></div>
     <div class="ps-bar" id="psBar">
       <div class="bk" data-pback="1"><u></u></div>
-      <div class="pt" data-ptab="stage"><i>💎</i><b><em>스테이지</em></b></div>
-      <div class="pt lk" data-ptab="box"><i>🎁</i><b><em>보물상자</em></b><s class="lk">🔒</s></div>
-      <div class="pt lk" data-ptab="tower"><i>🏰</i><b><em>시련의탑</em></b><s class="lk">🔒</s></div>
-      <div class="pt" data-ptab="att"><i>📅</i><b><em>출석</em></b></div>
+      <div class="pt" data-ptab="stage"><i><em>💎</em></i><b><em>스테이지</em></b></div>
+      <div class="pt lk" data-ptab="box"><i><em>🎁</em></i><b><em>보물상자</em></b><s class="lk">🔒</s></div>
+      <div class="pt lk" data-ptab="tower"><i><em>🏰</em></i><b><em>시련의탑</em></b><s class="lk">🔒</s></div>
+      <div class="pt" data-ptab="att"><i><em>📅</em></i><b><em>출석</em></b></div>
     </div>
   </div>
   <!-- 19 프로필 팝업 — 딤 위 중앙 다이얼로그. 측정표 docs/measure/19-프로필팝업.md -->
