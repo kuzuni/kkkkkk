@@ -2003,7 +2003,7 @@
   .ofr-tag i{transform:scaleX(1.035)}
 
   /* ==========================================================================
-     41 팝업 내장 재화 바 (.pcb) — 03 던전(#dunw) · 89 유물(#relw) 공용
+     41 팝업 내장 재화 바 (.pcb) — 03 던전(#dunw) · 89 유물(#relw) · 10 상점(#shopw, 81) 공용
      측정표 docs/measure/41-팝업내장재화바.md
      «상단 골드·다이아는 메인 HUD(A3) 재사용이 아니라 팝업 자체에 포함된 재화 바»
      (UI-REFERENCE 3·14번 «설계 확정(2026-08-25, 작업 41)»). 메인 HUD 와 형태가 다르다 —
@@ -2052,7 +2052,7 @@
       2.44px 2.1px 0 #000,-2.44px 2.1px 0 #000,2.44px -2.1px 0 #000,-2.44px -2.1px 0 #000,
       0 5px 0 rgba(0,0,0,.92),2.33px 4.5px 0 rgba(0,0,0,.92),-2.33px 4.5px 0 rgba(0,0,0,.92)}
   /* #dunw i / #relw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
-  #dunw .pcb-p>i,#relw .pcb-p>i{display:flex}
+  #dunw .pcb-p>i,#relw .pcb-p>i,#shopw .pcb-p>i{display:flex}
   /* 이모지는 폰트 크기를 키우면 잉크가 «위로» 자란다(사이드베어링/베이스라인) — 51→52.5 로 키운
      만큼 top 을 내려서 잉크 중심을 알약 중심(프레임 55)에 되돌린다. 25 교훈 4 의 세로 판. */
   .pcb-g>i{left:-5px;top:-2.5px;font-size:52.5px;transform:scaleX(1.04)}
@@ -6919,6 +6919,11 @@
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
   <div id="shopw">
+    <!-- 81 팝업 내장 재화 바 — 03 던전·89 유물과 동일한 41 컴포넌트 (메인 HUD 재사용 아님) -->
+    <div class="pcb">
+      <div class="pcb-p pcb-g" data-cur="gold"><i>🪙</i><b>0</b></div>
+      <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
+    </div>
     <div class="shp-list" id="shopList"></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
          ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
@@ -14035,9 +14040,18 @@ function offlineReward(lastTime){
 const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (캔버스 parts 320 과 별개) */
 const FXFLY_MAX = 12;                                /* 동시에 «날고 있는» 재화 아이콘 총합 상한 */
 const FXCUR = {
-  gold:{ pill:'.cGold', ic:'🪙', col:'#FFDE6A', fs:46 },
-  dia :{ pill:'.cDia',  ic:'💎', col:'#8FE9FF', fs:42 }
+  gold:{ pill:'.cGold', pcb:'.pcb-g', ic:'🪙', col:'#FFDE6A', fs:46 },
+  dia :{ pill:'.cDia',  pcb:'.pcb-d', ic:'💎', col:'#8FE9FF', fs:42 }
 };
+/* 81 — 41 재화 바(.pcb)가 있는 페이지(03 던전·10 상점·89 유물)가 열려 있으면
+   비행 도착지·+n 앵커는 메인 HUD 알약이 아니라 «그 팝업 안의 바» 다(41 규칙).
+   닫힌 오버레이의 알약은 rect 폭이 0 이라 걸러진다. */
+function fxPill(C){
+  for(const p of document.querySelectorAll(C.pcb)){
+    if(p.getBoundingClientRect().width) return p;
+  }
+  return document.querySelector(C.pill);
+}
 let fxLay = null;
 const fxL = () => fxLay && fxLay.isConnected ? fxLay : (fxLay = $('fxl'));
 /* 77 — 전투 발 연출 레이어(#fxlc, z7 · 팝업 아래). 출발점에 combat 태그가 있으면 여기 그린다. */
@@ -14106,7 +14120,7 @@ function fxFly(from, cur, n){
   /* 77 — 전투 발이면 팝업 아래 레이어(#fxlc). +n 도 같은 레이어에 뜨도록 batch 에 기억한다. */
   const combat = !!(from && from.combat);
   const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
-  const pill = document.querySelector(C.pill); if(!pill) return;
+  const pill = fxPill(C); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
   sfx('coin');                                          /* 78 — 재화 획득(이름별 30ms 디바운스) */
@@ -14170,7 +14184,7 @@ function fxPunch(el){
 function fxPlus(cur, n, combat){
   /* 77 — 전투 발 묶음의 +n 은 #fxlc 에(팝업 아래). UI 발은 종전대로 #fxl. */
   const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
-  const pill = document.querySelector(C.pill); if(!pill) return;
+  const pill = fxPill(C); if(!pill) return;
   const r = fxRect(pill); if(!r) return;
   const el = document.createElement('b');
   el.className = 'fx-plus';
