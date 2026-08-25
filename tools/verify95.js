@@ -1,0 +1,308 @@
+#!/usr/bin/env node
+/* 작업 95 검증 게이트 — PC 마우스 드래그 스크롤 (전역 1개 핸들러)
+ *
+ *   node tools/verify95.js
+ *
+ * 배경(PROGRESS 95): 폰에서는 드래그로 스크롤이 되는데 PC 에서는 «안 되는 곳이 많다».
+ * 브라우저는 터치 드래그만 네이티브 스크롤로 처리하고 마우스 드래그는 스크롤이 아니다.
+ * 수정은 화면별 땜질이 아니라 #app 위임 1쌍(index.html «95» 절)이라, 검증도
+ * «화면을 열고 진짜 마우스로 끌어서 scrollTop 이 움직였는가» 를 화면마다 실측한다.
+ *
+ * ⚠ 화면마다 페이지를 새로 연다. 한 페이지에서 팝업을 갈아 끼우면 앞 화면의 렌더 상태가
+ *   남아 격자가 한 프레임 0×0 이 되는 등 «작업과 무관한» 흔들림이 섞인다(1회차 실측).
+ *
+ * 검사 항목
+ *   [A] 드래그 스크롤 — 스크롤 가능한 화면 전부에서 마우스 down→move(−400px)→up 후
+ *       scrollTop 이 min(300, 최대스크롤) 이상. 뗀 뒤 0.6초 값도 같이 기록한다
+ *       (재렌더로 0 으로 되돌아가는 화면이 있는데 그건 작업 107 소관이라 95 통과를 막지 않는다)
+ *   [B] 클릭 억제 — 드래그(≥8px)한 제스처는 click 이 발화하지 않는다(74 합성기 포함)
+ *   [C] 탭 회귀 — 5px 만 움직인 제스처는 click 이 정상 발화한다(74 탭 유실 수정 유지)
+ *   [D] 휠 — mouse.wheel 로 scrollTop 이 증가한다(막는 리스너 없음)
+ *   [E] 관성 — 빠른 드래그 뒤 손을 떼도 scrollTop 이 더 흐른다
+ *   [F] 터치 회귀 — 터치 드래그는 네이티브 스크롤만 (ds-drag 안 붙음 = 관성 이중 적용 없음)
+ *   [G] 레이아웃 중립 — 스크롤바 거터(offsetWidth−clientWidth)가 0 유지 · #dsbar 는 오버레이
+ *   [H] overscroll-behavior:contain 이 스크롤 컨테이너 전부에 걸려 있다
+ *   [I] 콘솔 에러 / pageerror 0건
+ * 통과: 실패 0건
+ */
+const path = require('path');
+const fs = require('fs');
+const { chromium } = (() => {
+  try { return require('playwright'); } catch (_) {}
+  const os = require('os');
+  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
+  for (const root of roots) {
+    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
+    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
+  }
+  console.error('playwright 없음 — npm i --no-save playwright'); process.exit(2);
+})();
+
+const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+const fails = [];
+const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
+const ok = (m) => console.log('  ✓ ' + m);
+
+function launchOpts() {
+  for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))
+    try { if (fs.existsSync(p)) return { executablePath: p }; } catch (_) {}
+  return {};
+}
+
+/* [화면, 여는 식(전역 open…/gmHero), 스크롤 컨테이너 셀렉터, 프레임 높이] */
+const SCREENS = [
+  ['04 스킬 카드 격자', `gmHero('sk')`,                  '#panel .sk-gp,#panel .shsc', 2280],
+  ['06 장비 시트',      `gmHero('eq')`,                  '#eqw .shsc',                 2280],
+  ['06 장비 시트 9:16', `gmHero('eq')`,                  '#eqw .shsc',                 1920],
+  ['50 코스튬 격자',    `gmHero('cos')`,                 '#bCos .sk-gp',               2280],
+  ['26 동료 격자',      `gmHero('pet')`,                 '#panel .sk-gp,#panel .shsc', 2280],
+  ['05 무기 카드 격자', `openWeapon('sword','weapon')`,  '.wm-grid',                   2280],
+  ['10 상점(소환)',     `openShopPage()`,                '.shp-list',                  2280],
+  ['13 상점(재화)',     `openShopPage('coin')`,          '.shp-list',                  2280],
+  ['03 던전 리스트',    `openDungeon()`,                 '.dns-list',                  2280],
+  ['21 도감',           `openColl21()`,                  '.cl-body',                   2280],
+  ['22 퀘스트',         `openQuest()`,                   '.qs-pn',                     2280],
+  ['69 우편함',         `openMail()`,                    '.ml-pn',                     2280],
+  /* 53 은 «가벼운 시드» — 스킬을 보유시키면 renderBag 이 터진다(SKILLS 의 중복 키 `n` 버그,
+     PROGRESS 109 로 신설). 95 와 무관한 크래시라 여기서는 피해 가고 «스크롤 컨테이너 없음» 만 본다. */
+  ['53 가방',           `openBag()`,                     '.bg53-panel,.bg53-grid',     2280, 'light'],
+  ['20 스펙',           `openSpec()`,                    '.spc-list',                  2280],
+  ['54 랭킹',           `openRank()`,                    '.rk-list',                   2280],
+  ['35 패스',           `openPass()`,                    '.ps-list',                   2280],
+  ['19 프로필',         `openProfile()`,                 '.pf-grid',                   2280],
+  ['34 축복',           `openBless()`,                   '#blsw',                      2280],
+];
+
+/* 스크롤 컨테이너 CSS 셀렉터 — [G]·[H] 용 (index.html «95» CSS 블록과 같은 목록) */
+const CONTAINERS = ['.body', '.shsc', '.mbody', '.qs-pn', '.ml-pn', '.dns-list', '.shp-list',
+  '.wm-body', '.wm-grid', '.prb-list', '.cl-body', '.pf-grid', '.spc-list', '.sk-gp',
+  '.sm-grid', '.ps-list', '.rk-list', '#blsw'];
+
+/* 격자가 실제로 넘치도록 보유 목록을 채운다. ⚠ S.stage/S.best 는 건드리지 않는다 —
+   스테이지를 점프시키면 전투 루프가 «e.born of undefined» 로 터진다(95 와 무관한 기존 레이스). */
+const SEED = (light) => {
+  S.gold = 1e15; S.dia = 1e9; S.relic = 1e6;
+  if (!light) {
+    for (const s of SKILLS) S.own[s.id] = { n: 50, l: 5 };
+    for (const p of PETS) S.own[p.id] = { n: 50, l: 5 };
+    for (const e of EQUIPS) S.own[e.id] = { n: 50, l: 5 };
+  }
+  window.__clk = 0;
+  document.addEventListener('click', () => { window.__clk++; }, true);
+  uiDirty = true; renderUI();
+};
+
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  const errs = [];
+
+  /* 화면 1개 = 페이지 1개. 앞 화면의 렌더 상태가 다음 화면에 섞이지 않게 매번 새로 연다. */
+  /* ⚠ 기본은 hasTouch:false 다 — 터치를 켜면 크로뮴의 주 포인터가 coarse 가 되어
+     `(pointer:fine)` 로 게이트한 스크롤 인디케이터(#dsbar)가 «PC 인데도» 안 뜬다. */
+  const fresh = async (h = 2280, touch = false, light = false) => {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: h }, deviceScaleFactor: 1, hasTouch: touch });
+    const page = await ctx.newPage();
+    page.on('console', (m) => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+    page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof S !== 'undefined' && typeof renderUI === 'function');
+    await page.waitForTimeout(1000);
+    await page.evaluate(SEED, light);
+    await page.waitForTimeout(500);
+    return { ctx, page };
+  };
+
+  /* 화면을 열고 «지금 살아 있는» 컨테이너를 셀렉터로 다시 찾는 리더(window.__top)를 심는다.
+     ⚠ 노드를 쥐고 재면 재렌더로 갈린 옛(detached) 노드의 0 을 읽는다 — 실제로 그렇게 오판했다. */
+  const open = async (page, expr, sel) => {
+    const info = await page.evaluate(([expr, sel]) => {
+      try { eval(expr); } catch (e) { return { err: String(e) }; }
+      uiDirty = true; try { renderUI(); } catch (_) {}
+      window.__sel = sel;
+      window.__box = () => {
+        const l = [...document.querySelectorAll(window.__sel)]
+          .filter((e) => { const q = e.getBoundingClientRect(); return q.width > 4 && q.height > 4; });
+        return l.find((e) => e.scrollHeight - e.clientHeight > 1) || l[0] || null;
+      };
+      window.__top = () => { const b = window.__box(); return b ? b.scrollTop : -1; };
+      const el = window.__box();
+      if (!el) return { err: '컨테이너 없음' };
+      el.scrollTop = 0;
+      const r = el.getBoundingClientRect();
+      return { max: el.scrollHeight - el.clientHeight, x: Math.round(r.x + r.width / 2),
+               y: Math.round(r.y + Math.min(r.height * 0.65, r.height - 60)) };
+    }, [expr, sel]);
+    await page.waitForTimeout(350);           /* 연 직후 재렌더 한 바퀴를 지나서 잡는다 */
+    return info;
+  };
+
+  const drag = async (page, x, y, dy, steps = 12, hold = 12) => {
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    for (let i = 1; i <= steps; i++) { await page.mouse.move(x, y + (dy * i) / steps); await page.waitForTimeout(hold); }
+    await page.mouse.up();
+  };
+  /* 관성이 멎을 때까지 훑어 최댓값 — 재렌더로 한 프레임 사라지는 화면이 있어 단발 측정은 못 믿는다 */
+  const peak = async (page, ms = 320) => {
+    let v = -1;
+    for (let i = 0; i * 40 < ms; i++) { const t = await page.evaluate(() => window.__top()); if (t > v) v = t; await page.waitForTimeout(40); }
+    return v;
+  };
+
+  /* ---------- [A] 화면별 마우스 드래그 스크롤 ---------- */
+  console.log('[A] 마우스 드래그 스크롤 — 화면별 실측 (화면마다 새 페이지)');
+  const table = [];
+  for (const [name, expr, sel, vh, light] of SCREENS) {
+    const { ctx, page } = await fresh(vh, false, light === 'light');
+    const info = await open(page, expr, sel);
+    if (info.err) {
+      if (info.err === '컨테이너 없음') { console.log(`  · ${name} — 스크롤 컨테이너 없음 (해당 없음)`); table.push([name, sel, '없음', '—', '—', '해당없음']); }
+      else { fail(`${name}: ${info.err}`); table.push([name, sel, '—', '—', '—', 'ERR']); }
+      await ctx.close(); continue;
+    }
+    if (info.max < 20) {
+      console.log(`  · ${name} — 스크롤 여지 ${info.max}px (해당 없음)`);
+      table.push([name, sel, info.max, '—', '—', '해당없음']); await ctx.close(); continue;
+    }
+    await drag(page, info.x, info.y, -400);
+    const up = await peak(page);
+    await page.waitForTimeout(300);
+    const late = await page.evaluate(() => window.__top());
+    const want = Math.min(300, info.max);
+    if (up >= want) ok(`${name} (${sel}) — 최대 ${info.max}px 중 ${Math.round(up)}px 스크롤`
+      + (late < up - 8 ? `  ⚠ 0.6초 뒤 ${Math.round(late)}px 로 되돌아감 (재렌더 — 작업 107 소관)` : ''));
+    else fail(`${name} (${sel}) — 드래그 −400px 후 scrollTop ${Math.round(up)} < ${want} (최대 ${info.max})`);
+    table.push([name, sel, info.max, Math.round(up), Math.round(late), up >= want ? 'PASS' : 'FAIL']);
+    await ctx.close();
+  }
+
+  /* ---------- [B] 드래그한 제스처는 click 없음 / [C] 5px 은 여전히 탭 ---------- */
+  {
+    const { ctx, page } = await fresh();
+    const info = await open(page, `openShopPage()`, '.shp-list');
+    console.log('[B] 드래그 = 탭 아님 (click 억제)');
+    await page.evaluate(() => { window.__clk = 0; });
+    await drag(page, info.x, info.y, -260);
+    await page.waitForTimeout(400);
+    const c = await page.evaluate(() => window.__clk);
+    if (c === 0) ok('260px 드래그 → click 0건');
+    else fail(`260px 드래그인데 click ${c}건 발화 (74 합성기 억제 실패)`);
+
+    console.log('[C] 탭 회귀 — 5px 이동은 click 정상');
+    await page.waitForTimeout(400);                      /* 74 ③ 딤 가드(250ms) 를 지나서 누른다 */
+    await page.evaluate(() => { window.__clk = 0; });
+    await drag(page, info.x, info.y, -5, 2, 30);
+    await page.waitForTimeout(400);
+    const c2 = await page.evaluate(() => window.__clk);
+    if (c2 >= 1) ok(`5px 이동 → click ${c2}건 정상 발화`);
+    else fail('5px 이동인데 click 0건 — 탭이 죽었다(74 회귀)');
+    await ctx.close();
+  }
+
+  /* ---------- [D] 휠 (마우스 컨텍스트) ---------- */
+  {
+    const { ctx, page } = await fresh();
+    const info = await open(page, `openRank()`, '.rk-list');
+    console.log('[D] 휠');
+    await page.mouse.move(info.x, info.y);
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(300);
+    const w = await page.evaluate(() => window.__top());
+    if (w > 100) ok(`휠 600 → scrollTop ${Math.round(w)}`);
+    else fail(`휠 600 후 scrollTop ${Math.round(w)} (막는 리스너 의심)`);
+    await ctx.close();
+  }
+
+  /* ---------- [F] 터치 회귀 (터치 컨텍스트) ---------- */
+  {
+    const { ctx, page } = await fresh(2280, true);
+    const info = await open(page, `openRank()`, '.rk-list');
+    console.log('[F] 터치 회귀 — 네이티브 스크롤만');
+    const cdp = await ctx.newCDPSession(page);
+    const pt = (type, y, on) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: on ? [{ x: info.x, y }] : [] });
+    await pt('touchStart', info.y, 1);
+    for (let i = 1; i <= 8; i++) { await pt('touchMove', info.y - i * 40, 1); await page.waitForTimeout(16); }
+    const mid = await page.evaluate(() => ({ top: window.__top(), drag: document.body.classList.contains('ds-drag') }));
+    await pt('touchEnd', info.y - 320, 0);
+    await page.waitForTimeout(400);
+    if (!mid.drag) ok('터치 드래그에 ds-drag 안 붙음 (마우스 전용 — 관성 이중 적용 없음)');
+    else fail('터치인데 ds-drag 가 붙었다 — 네이티브 스크롤과 관성이 겹친다');
+    const af = await page.evaluate(() => window.__top());
+    if (af > 100) ok(`터치 드래그 → scrollTop ${Math.round(af)} (네이티브 경로 그대로)`);
+    else fail(`터치 드래그 후 scrollTop ${Math.round(af)} — 네이티브 스크롤이 죽었다`);
+    await ctx.close();
+  }
+
+  /* ---------- [E] 관성 ---------- */
+  {
+    const { ctx, page } = await fresh();
+    const info = await open(page, `openPass()`, '.ps-list');
+    console.log('[E] 관성(fling)');
+    await page.mouse.move(info.x, info.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) { await page.mouse.move(info.x, info.y - i * 60); await page.waitForTimeout(8); }
+    await page.mouse.up();
+    const t0 = await page.evaluate(() => window.__top());
+    await page.waitForTimeout(450);
+    const t1 = await page.evaluate(() => window.__top());
+    if (t1 - t0 > 20) ok(`뗀 뒤 ${Math.round(t1 - t0)}px 더 흐름 (${Math.round(t0)} → ${Math.round(t1)})`);
+    else fail(`관성 없음 — 뗀 직후 ${Math.round(t0)} → ${Math.round(t1)}`);
+    await ctx.close();
+  }
+
+  /* ---------- [G]·[H] ---------- */
+  {
+    const { ctx, page } = await fresh();
+    const info = await open(page, `openRank()`, '.rk-list');
+    await drag(page, info.x, info.y, -200);              /* #dsbar 는 첫 드래그 때 만들어진다 */
+    await page.waitForTimeout(200);
+    console.log('[G] 레이아웃 중립 — 스크롤바 거터');
+    const g = await page.evaluate((sels) => {
+      const out = [];
+      for (const s of sels) document.querySelectorAll(s).forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.width < 4) return;
+        const cs = getComputedStyle(el);
+        out.push({ s, gutter: el.offsetWidth - el.clientWidth - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0) });
+      });
+      const bar = document.getElementById('dsbar');
+      return { out, bar: bar ? { pe: getComputedStyle(bar).pointerEvents, pos: getComputedStyle(bar).position, w: bar.offsetWidth } : null };
+    }, CONTAINERS);
+    /* .body·.mbody 는 이번 작업 전부터 10px 스크롤바를 갖고 있다 — 그대로 두는 게 «중립» 이다 */
+    const bad = g.out.filter((r) => r.gutter > 0 && r.s !== '.body' && r.s !== '.mbody');
+    if (!bad.length) ok(`거터 0 유지 (${g.out.length}개 컨테이너 실측 · .body/.mbody 기존 10px 제외)`);
+    else bad.forEach((r) => fail(`${r.s} 스크롤바 거터 ${r.gutter}px — 콘텐츠 폭이 줄어 레이아웃 점수가 흔들린다`));
+    if (!g.bar) fail('#dsbar 가 만들어지지 않았다 (스크롤 단서 없음)');
+    else if (g.bar.pe === 'none' && g.bar.pos === 'absolute') ok(`#dsbar 오버레이 (absolute · pointer-events:none · 폭 ${g.bar.w})`);
+    else fail(`#dsbar 가 오버레이가 아니다: ${JSON.stringify(g.bar)}`);
+
+    console.log('[H] overscroll-behavior:contain');
+    const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+    const rule = (src.match(/[^{}]*\{[^{}]*overscroll-behavior:\s*contain[^{}]*\}/g) || []).join(' ');
+    const missSrc = CONTAINERS.filter((c) => !rule.includes(c));
+    if (!missSrc.length) ok(`CSS 규칙에 ${CONTAINERS.length}개 셀렉터 전부 포함`);
+    else missSrc.forEach((m) => fail('overscroll-behavior 규칙 누락: ' + m));
+    const r = await page.evaluate((sels) => {
+      const seen = [], miss = [];
+      for (const s of sels) { const el = document.querySelector(s); if (!el) continue; seen.push(s);
+        if (getComputedStyle(el).overscrollBehaviorY !== 'contain') miss.push(s); }
+      return { seen: seen.length, miss };
+    }, CONTAINERS);
+    if (!r.miss.length) ok(`DOM 실측 ${r.seen}개 전부 contain`);
+    else r.miss.forEach((m) => fail('overscroll-behavior computed 불일치: ' + m));
+    await ctx.close();
+  }
+
+  console.log('[I] 콘솔');
+  if (!errs.length) ok('에러 0건'); else errs.slice(0, 8).forEach((e) => fail(e));
+
+  console.log('\n| 화면 | 컨테이너 | 최대 스크롤 | 드래그 −400 직후 | 0.6초 뒤 | 판정 |');
+  console.log('|---|---|---|---|---|---|');
+  for (const t of table) console.log(`| ${t[0]} | \`${t[1]}\` | ${t[2]} | ${t[3]} | ${t[4]} | ${t[5]} |`);
+
+  await browser.close();
+  console.log(fails.length ? `\nVERIFY95 FAIL — ${fails.length}건` : '\nVERIFY95 PASS');
+  process.exit(fails.length ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(2); });

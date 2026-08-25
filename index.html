@@ -6772,6 +6772,31 @@
   #svw .sv-hint{position:absolute;left:0;right:0;bottom:var(--hnb,195px);height:52px;line-height:52px;
     text-align:center;font-size:46px;color:#888;letter-spacing:var(--hnls,0px);white-space:nowrap;
     transform:translateX(var(--hnx,1.5px)) scaleX(var(--hnsx,.919))}
+
+  /* ==========================================================================
+     95 — PC 마우스 드래그 스크롤 (스크롤 컨테이너 공통 규칙)
+
+     ⚠ 레이아웃 중립이 절대 조건이다. `::-webkit-scrollbar{width:6px}` 로 «PC 에서만 얇은
+       스크롤바» 를 되살리는 안(PROGRESS 95 ④)은 **채택하지 않았다** — webkit 스크롤바는
+       오버레이가 아니라 **콘텐츠 폭을 6px 먹는다.** 헤드리스 캡처(Playwright chromium)도
+       `(pointer:fine)` 에 걸리므로 19곳 전 컨테이너의 콘텐츠가 6px 좁아져 이미 8점을 받은
+       화면들의 ①~④(배치·여백·정렬)가 통째로 흔들린다. 대신 스크롤 단서는 JS 쪽
+       **오버레이 인디케이터(#dsbar, pointer-events:none·absolute)** 로 준다 — 폭 0.
+     ③ overscroll-behavior:contain — 팝업 위에서 굴린 휠이 뒤 패널로 새지 않게(19곳 전부).
+     ⑤ 드래그 중 텍스트 선택·이미지 고스트 방지(user-select 는 html,body 전역에 이미 있다). */
+  .body,.shsc,.mbody,.qs-pn,.ml-pn,.dns-list,.shp-list,.wm-body,.wm-grid,.prb-list,
+  .cl-body,.pf-grid,.spc-list,.sk-gp,.sm-grid,.ps-list,.rk-list,#blsw{overscroll-behavior:contain}
+  /* 마우스(fine) 에서만 «끌 수 있다» 는 커서 단서. 자식 버튼의 cursor:pointer 가 이깁니다 —
+     60 jzTarget 은 cursor==='pointer' 만 컨트롤로 보므로 grab 은 오판을 만들지 않는다. */
+  @media (pointer:fine){
+    .body,.shsc,.mbody,.qs-pn,.ml-pn,.dns-list,.shp-list,.wm-body,.wm-grid,.prb-list,
+    .cl-body,.pf-grid,.spc-list,.sk-gp,.sm-grid,.ps-list,.rk-list,#blsw{cursor:grab}
+  }
+  body.ds-drag,body.ds-drag *{cursor:grabbing !important}
+  /* 오버레이 스크롤 인디케이터 — 폭을 차지하지 않는다(absolute + pointer-events:none) */
+  #dsbar{position:absolute;width:6px;border-radius:3px;background:rgba(255,255,255,.42);
+    z-index:99;pointer-events:none;opacity:0;transition:opacity .25s;display:none}
+  #dsbar.on{opacity:1}
 </style>
 </head>
 <body>
@@ -15471,6 +15496,7 @@ function tapInit(){
     const rec = tapRec;
     if(!rec || rec.done || e.isPrimary === false) return;
     rec.done = true;
+    if(dsDragged) return;                       /* 95 — 이 제스처는 드래그 스크롤이었다(탭 아님) */
     if(Math.hypot(e.clientX - rec.x, e.clientY - rec.y) / scale() >= TAP_MOVE) return;
     if(rec.type === 'touch' && performance.now() - rec.t >= TAP_MS) return;
     const el = tapFind(rec, e.clientX, e.clientY);
@@ -15489,8 +15515,151 @@ function tapInit(){
     if(tapRec && performance.now() - tapRec.t < 3000){ e.stopImmediatePropagation(); e.preventDefault(); }
   }, true);
 }
-if(document.readyState === 'loading') addEventListener('DOMContentLoaded', () => { jzInit(); tapInit(); });
-else { jzInit(); tapInit(); }
+/* ══════════════════════════════════════════════════════════════════════════
+   95 — PC 마우스 드래그 스크롤 (전역 1개 핸들러, 2026-08-26 저장소 주인 지시)
+
+   증상: 폰에서는 드래그로 스크롤이 되는데 PC 에서는 «안 되는 곳이 많다»(06 장비 시트·
+   05 카드 격자·10/13 상점·03 던전·21 도감·53 가방 …). 원인은 화면별 버그가 아니라
+   플랫폼 의미론이다 — 브라우저는 **터치 드래그만** 네이티브 스크롤로 처리하고 마우스
+   드래그는 «선택» 이다. 게다가 스크롤 컨테이너 19곳 중 17곳이 스크롤바를 숨겨 놔서
+   PC 에는 휠밖에 단서가 없고, 그 휠도 커서가 컨테이너 «안» 에 있어야만 먹는다.
+
+   그래서 수정도 화면별 땜질이 아니라 **#app 위임 1쌍**이다(60 jz·74 tap 과 같은 자리).
+   pointerdown 에서 조상 중 «실제로 스크롤 가능한»(scrollHeight>clientHeight + overflowY
+   auto/scroll) 컨테이너를 찾아 두고, 이동이 DS_MOVE(8 프레임px)를 넘는 순간부터
+   Δy 를 scrollTop 에 반영한다. 떼면 관성(v × 0.95/frame, 60 쥬시 톤).
+
+   ⚠ 임계값 8 은 74 TAP_MOVE(10) 보다 **작아야** 한다 — 8~10px 사이 제스처가 «스크롤도
+     되고 탭도 되는» 이중 발화가 되지 않도록, 드래그가 확정되는 즉시 `dsDragged` 를 세워
+     74 합성기가 그 제스처의 탭을 버리게 한다(네이티브 click 은 74 가 이미 삼킨다).
+   ⚠ 제외 대상: 캔버스(#view — 42 조이스틱) · input/textarea/select · 64 훈련 꾹 누르기
+     카드([data-tr]) · 55 볼륨 트랙(#cfTrack) · 89 유물 basin(#rwBasin). 전부 pointerdown
+     을 «누르고 있는 동안» 의 입력으로 쓰는 곳이라 드래그를 얹으면 회귀한다.
+   ⚠ 마우스 전용이다(pointerType==='mouse'). 터치는 네이티브 스크롤이 이미 정확하고,
+     여기서 손대면 관성이 두 번 걸린다.
+   ========================================================================== */
+const DS_MOVE = 8;              /* 드래그 확정 임계 (프레임 px) — 74 TAP_MOVE(10) 미만이어야 한다 */
+const DS_DAMP = 0.95;           /* 관성 감쇠 / frame (60 쥬시 톤) */
+const DS_VMAX = 4.0;            /* 관성 초기 속도 상한 (프레임px/ms) */
+const DS_VMIN = 0.02;           /* 관성 종료 속도 */
+const DS_BAR_MS = 700;          /* 인디케이터 유지 시간 */
+/* ⚠ `canvas` 를 통째로 빼면 안 된다 — 87 코스튬 카드·10 상점 배너·35 패스 아이콘이 전부 캔버스라
+   그 위에서 시작한 드래그가 통째로 죽는다(1회차에 50·10·22·35 가 이 이유로 0px 였다).
+   빼야 하는 건 «누르고 있는 동안» 을 입력으로 쓰는 곳뿐이다 — 전투 캔버스(#view = 42 조이스틱)만. */
+const DS_NO = '#view,input,textarea,select,[data-tr],#cfTrack,#rwBasin';
+let dsRec = null;               /* 진행 중 제스처 */
+let dsDragged = false;          /* 이 제스처가 «드래그» 로 확정됐는가 — 74 합성기가 읽는다 */
+let dsGlide = 0;                /* 관성 rAF 핸들 */
+let dsBarT = 0;
+
+const dsScale = () => { const a = $('app'); return (a && a.getBoundingClientRect().width / FRAME_W) || 1; };
+/* 조상 중 «지금 실제로 스크롤 가능한» 첫 컨테이너. 스크롤 여지가 없으면 계속 위로 올라간다
+   (시트 안의 격자가 이미 끝까지 갔을 때 바깥 시트가 이어받게 — 네이티브 체이닝과 같은 순서) */
+function dsBox(el){
+  for(let n = el; n && n.nodeType === 1 && n !== document.body; n = n.parentElement){
+    if(n.scrollHeight - n.clientHeight <= 1) continue;
+    let ov = ''; try { ov = getComputedStyle(n).overflowY; } catch(_){}
+    if(ov === 'auto' || ov === 'scroll') return n;
+  }
+  return null;
+}
+/* ④ 스크롤 단서 — 폭을 먹지 않는 오버레이 인디케이터(webkit 스크롤바를 쓰지 않는 이유는 CSS 주석) */
+function dsBar(box){
+  const app = $('app');
+  if(!app || !box || !matchMedia('(pointer:fine)').matches) return;
+  let bar = $('dsbar');
+  if(!bar){ bar = document.createElement('div'); bar.id = 'dsbar'; app.appendChild(bar); }
+  const sc = dsScale(), ar = app.getBoundingClientRect(), br = box.getBoundingClientRect();
+  const trk = br.height / sc, th = Math.max(48, trk * (box.clientHeight / box.scrollHeight));
+  const mx = Math.max(1, box.scrollHeight - box.clientHeight);
+  bar.style.display = 'block';
+  bar.style.left   = ((br.right - ar.left) / sc - 9) + 'px';
+  bar.style.top    = ((br.top - ar.top) / sc + (trk - th) * (box.scrollTop / mx)) + 'px';
+  bar.style.height = th + 'px';
+  bar.classList.add('on');
+  const t = ++dsBarT;
+  setTimeout(() => { if(t === dsBarT) bar.classList.remove('on'); }, DS_BAR_MS);
+}
+function dsStop(){ if(dsGlide) cancelAnimationFrame(dsGlide); dsGlide = 0; }
+/* 끄는 «동안» 그 컨테이너가 재렌더(innerHTML)로 갈릴 수 있다 — 07 스킬·50 코스튬·10 상점 배너는
+   renderUI 0.35s 주기가 본문을 통째로 다시 그린다. 그러면 우리가 쥐고 있던 노드는 detached 가 되어
+   scrollTop 을 써도 화면이 안 움직이고, 새 노드는 0 에서 시작한다(= 사용자에게는 «드래그가 튕긴다»).
+   그래서 매 프레임 «지금 그 자리» 의 컨테이너를 다시 찾고 누적 위치(acc)를 이어 붙인다.
+   (재생성 자체를 없애는 것은 작업 107 의 몫이다 — 여기서는 그와 무관하게 드래그가 살아 있게만 한다) */
+function dsLive(r, x, y){
+  if(r.box && r.box.isConnected) return r.box;
+  const el = document.elementFromPoint(x, y), nb = el && dsBox(el);
+  r.box = nb || null;
+  return r.box;
+}
+function dsFling(r){
+  dsStop();
+  if(Math.abs(r.v) < DS_VMIN) return;
+  let sp = Math.max(-DS_VMAX, Math.min(DS_VMAX, r.v)), last = performance.now();
+  const step = now => {
+    const dt = Math.min(34, now - last); last = now;
+    const box = dsLive(r, r.px, r.y);
+    if(!box){ dsGlide = 0; return; }
+    box.scrollTop = r.acc + sp * dt;
+    const moved = box.scrollTop !== r.acc;
+    r.acc = box.scrollTop;
+    sp *= Math.pow(DS_DAMP, dt / 16.67);
+    dsBar(box);
+    if(Math.abs(sp) < DS_VMIN || !moved){ dsGlide = 0; return; }
+    dsGlide = requestAnimationFrame(step);
+  };
+  dsGlide = requestAnimationFrame(step);
+}
+function dsInit(){
+  const app = $('app');
+  if(!app) return;
+  app.addEventListener('pointerdown', e => {
+    dsDragged = false; dsRec = null; dsStop();
+    if(e.pointerType !== 'mouse' || e.button > 0 || e.isPrimary === false) return;
+    if(e.target.closest && e.target.closest(DS_NO)) return;
+    const box = dsBox(e.target);
+    if(!box) return;
+    dsRec = { box, id:e.pointerId, px:e.clientX, y:e.clientY, y0:e.clientY,
+              t:performance.now(), v:0, acc:box.scrollTop };
+  }, true);
+  addEventListener('pointermove', e => {
+    const r = dsRec;
+    if(!r || e.pointerId !== r.id) return;
+    const sc = dsScale();
+    if(!dsDragged){
+      if(Math.abs(r.y0 - e.clientY) / sc < DS_MOVE) return;
+      dsDragged = true;
+      document.body.classList.add('ds-drag');
+      try { app.setPointerCapture(e.pointerId); } catch(_){}   /* 프레임 밖까지 끌어도 따라온다 */
+    }
+    const dy = (r.y - e.clientY) / sc, now = performance.now(), dt = Math.max(1, now - r.t);
+    r.v = dy / dt; r.y = e.clientY; r.px = e.clientX; r.t = now;
+    const box = dsLive(r, e.clientX, e.clientY);
+    if(!box) return;
+    box.scrollTop = r.acc + dy;
+    r.acc = box.scrollTop;                                 /* 상·하한에서 잘린 값을 그대로 이어 쓴다 */
+    dsBar(box);
+    e.preventDefault();
+  }, true);
+  const end = e => {
+    const r = dsRec;
+    dsRec = null;
+    document.body.classList.remove('ds-drag');
+    if(!r || !dsDragged) return;
+    try { app.releasePointerCapture(r.id); } catch(_){}
+    if(performance.now() - r.t < 90) dsFling(r);               /* 멈춘 채로 뗐으면 관성 없음 */
+  };
+  addEventListener('pointerup', end, true);
+  addEventListener('pointercancel', end, true);
+  /* ③ 휠 — 막는 리스너는 없다. 커서가 컨테이너 «위» 일 때만 먹는 건 네이티브 그대로 두고,
+     굴린 사실을 인디케이터로만 알린다(스크롤 자체는 브라우저가 한다). */
+  app.addEventListener('wheel', e => {
+    const box = dsBox(e.target);
+    if(box) dsBar(box);
+  }, { capture:true, passive:true });
+}
+if(document.readyState === 'loading') addEventListener('DOMContentLoaded', () => { jzInit(); tapInit(); dsInit(); });
+else { jzInit(); tapInit(); dsInit(); }
 
 /* ==========================================================================
    78 오디오 — SFX · BGM (2026-08-25, 저장소 주인 지시)
