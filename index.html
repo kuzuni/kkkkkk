@@ -2152,8 +2152,15 @@
   .dnc .pill.p2{top:182px}
   .dnc .pill>em{position:absolute;left:-35px;top:-2px;width:52px;height:52px;
     font-size:44px;line-height:52px;text-align:center;transform:scaleY(1.08)}
+  /* 90 — 알약은 고정 288px 캡슐이고 글자는 left:58 절대배치라 «긴 라벨이 캡슐 밖으로 샌다»
+     (LESSONS 46-①). 캡슐을 늘리면 형제 알약과 폭이 어긋나므로 라벨만 scaleX 로 눌러 맞춘다
+     (LESSONS 01 — 폭은 letter-spacing 이 아니라 scaleX 로). 기본 1 이라 골드·다이아는 불변. */
   .dnc .pill>i{position:absolute;left:58px;top:8px;height:30px;line-height:30px;font-size:30px;
-    font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
+    font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt);
+    transform:scaleX(var(--psx,1))}
+  /* ⚠ LESSONS 21-①: 위 `#dunw i` 리셋(1-0-1)이 `.dnc .pill>i`(0-2-1)의 transform-origin 을 이긴다.
+     origin 이 가운데면 글자가 오른쪽으로 3.9px 밀려 왼쪽 시작점(left:58)이 어긋난다 — id 로 되받는다. */
+  #dunw .dnc .pill>i{transform-origin:left center}
 
   /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
   .dnc .lb{top:243px;height:33px;line-height:33px;font-size:26px;font-weight:800;
@@ -8142,20 +8149,38 @@ const COLL = {
     { need:40, n:'공격력 +120%',   f:b => b.atk *= 2.20 } ]}
 };
 
-/* ---- 던전 5종 (하루 입장 제한 · 유물조각 등 획득) ---- */
+/* ---- 던전 6종 (하루 입장 제한 · 골드 1 · 다이아 1 · 유물조각 4) ----
+   작업 90(2026-08-26, 저장소 주인 지시): 던전은 **골드 1 · 다이아 1 · 유물조각 1~4** 다.
+   `growth`(수련의 탑, 도감 재료)·`boss`(마왕의 성, 종합)는 폐기했다 — 89 «유물 소환» 이
+   유물조각을 유일한 소모 재화로 쓰므로 던전의 역할을 «유물조각 수급처» 로 모은다.
+   유물조각 던전 4단은 **보상 종류가 같고(rel) 난이도·보상량만 배수**로 갈린다(1 / 2.5 / 6 / 15).
+   상위 단은 «이전 단 N층 클리어» 로 해금한다(해금 조건은 DUN_UI 의 `pre`). */
+const REL_DUN = [
+  { id:'relic1', n:'고대 유적',   ic:'🔮', k:1   },
+  { id:'relic2', n:'잊힌 신전',   ic:'🏛', k:2.5 },
+  { id:'relic3', n:'용의 무덤',   ic:'🐉', k:6   },
+  { id:'relic4', n:'창세의 제단', ic:'🌌', k:15  }
+];
 const DUNGEONS = [
   { id:'gold',   n:'황금 동굴',  ic:'💰', d:'골드를 대량으로 획득',
     req:f => 2500*Math.pow(1.72,f-1),  rw:f => ({ gold: 9000*Math.pow(1.6,f-1) }) },
   { id:'dia',    n:'수정 광산',  ic:'💎', d:'다이아를 획득',
-    req:f => 4000*Math.pow(1.78,f-1),  rw:f => ({ dia: 250 + f*180 }) },
-  { id:'relic',  n:'고대 유적',  ic:'🔮', d:'유물조각을 획득',
-    req:f => 5000*Math.pow(1.78,f-1), rw:f => ({ rel: 200 + f*150 }) },
-  { id:'growth', n:'수련의 탑',  ic:'📈', d:'무작위 도감 재료를 획득',
-    req:f => 3500*Math.pow(1.72,f-1), rw:f => ({ frag: 3 + Math.floor(f/2) }) },
-  { id:'boss',   n:'마왕의 성',  ic:'👹', d:'종합 대량 보상',
-    req:f => 9000*Math.pow(1.85,f-1),  rw:f => ({ gold: 40000*Math.pow(1.7,f-1), dia: 400 + f*260, rel: 300 + f*200 }) }
-];
-const DUN_TRY = 3;   /* 던전별 하루 입장 횟수 */
+    req:f => 4000*Math.pow(1.78,f-1),  rw:f => ({ dia: 250 + f*180 }) }
+].concat(REL_DUN.map(r => ({
+  id:r.id, n:r.n, ic:r.ic, d:'유물조각을 획득',
+  req:f => 5000*r.k*Math.pow(1.78,f-1),
+  rw:f => ({ rel: Math.round((200 + f*150)*r.k) })
+})));
+/* 던전별 하루 입장 횟수 — 90 ④: 유물조각 하루 최대 수급 = 4던전 × 3회(= 12런) 로
+   89 의 소환 비용 곡선(하루 5~10회 소환)과 맞춘다. 던전 수가 늘어도 이 값은 그대로다. */
+const DUN_TRY = 3;
+/* 90 ⑤ — 안내 문구가 «고대 유적» 을 상수로 박고 있었다. 지금 열려 있는 유물조각 던전 중
+   가장 깊은 단을 이름으로 준다(전부 잠겨 있으면 1단). 던전 이름을 바꿔도 문구가 따라온다. */
+function relDunName(){
+  let n = REL_DUN[0].n;
+  REL_DUN.forEach(r => { const d = DUNGEONS.find(x => x.id === r.id); if(d && !dunLocked(d)) n = d.n; });
+  return n;
+}
 
 /* ---- 출석 (28일) ----
    70(2026-08-25): 레퍼런스의 «7일차 전폭 카드 = 보상 3개 가로 나열» 을 재현하려면 주차 마지막 날이
@@ -8438,6 +8463,15 @@ function load(){
     ['lv','eqSlot','coll','quest','cnt','att','sum','dun'].forEach(k => b[k] = Object.assign(DEF()[k], d[k] || {}));
     b.daily = Object.assign(DEF().daily, d.daily || {});
     b.daily.dun = Object.assign(DEF().daily.dun, (d.daily && d.daily.dun) || {});
+    /* 90 — 던전 재편(relic → relic1~4, growth·boss 폐기). KEY 는 올리지 않는다(44 교훈 2).
+       구 세이브의 «고대 유적» 진행도(층·남은 입장 횟수)는 이름만 바뀐 같은 던전이므로 relic1 로
+       이어 준다. growth·boss 키는 남아 있어도 DUNGEONS 에 없으니 아무도 읽지 않는다. */
+    {
+      const of = d.dun && d.dun.relic;
+      if(Number.isFinite(of) && of > (b.dun.relic1 | 0)) b.dun.relic1 = of | 0;
+      const ot = d.daily && d.daily.dun && d.daily.dun.relic;
+      if(Number.isFinite(ot) && d.daily && d.daily.date === today()) b.daily.dun.relic1 = Math.max(0, Math.min(DUN_TRY, ot | 0));
+    }
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
     b.seen = d.seen || {};
@@ -10342,7 +10376,7 @@ function doSummon(b, times){
     popup(B.cur === 'rel' ? '🔮 유물조각 부족' : '💎 다이아 부족',
       '<p>' + (B.cur === 'rel' ? '유물조각' : '다이아') + '이(가) <b>'
       + fmt(Math.ceil(cost - (B.cur === 'rel' ? S.relic : S.dia))) + '</b> 더 필요합니다.<br>'
-      + (B.cur === 'rel' ? '던전 <b>고대 유적</b>에서 유물조각을 얻으세요!' : '출석 · 룰렛 · 퀘스트 · 상점에서 다이아를 얻으세요!') + '</p>');
+      + (B.cur === 'rel' ? '던전 <b>' + relDunName() + '</b>에서 유물조각을 얻으세요!' : '출석 · 룰렛 · 퀘스트 · 상점에서 다이아를 얻으세요!') + '</p>');
     return;
   }
   S.summons += times;
@@ -10731,6 +10765,12 @@ function spinRoulette(){
   roulSpinTo(idx, txt);
 }
 function challengeDungeon(d){
+  /* 90 — 잠긴 던전은 03 카드가 이미 막지만, 04 세부 팝업·구 패널 등 다른 진입점도 있으므로
+     «입장하는 한 지점» 에서 한 번 더 막는다(LESSONS 46-③). */
+  if(dunLocked(d)){
+    popup('🔒 ' + d.n, '<p>' + dunLockTxt(d) + ' 하면 열립니다.</p>');
+    return;
+  }
   if(S.daily.dun[d.id] <= 0){
     popup('입장 횟수 소진', '<p>오늘 <b>' + d.n + '</b> 입장 횟수를 모두 사용했습니다.<br>내일 <b>' + DUN_TRY + '회</b> 충전됩니다.</p>');
     return;
@@ -10817,6 +10857,7 @@ function drawDunHud(){
 }
 $('dunOut').addEventListener('click', () => endDunRun(false, true));
 function sweepDungeon(d){
+  if(dunLocked(d)){ popup('🔒 ' + d.n, '<p>' + dunLockTxt(d) + ' 하면 열립니다.</p>'); return; }
   const f = S.dun[d.id] - 1;
   if(f < 1){ popup('소탕 불가', '<p>먼저 1층을 클리어해야 소탕할 수 있습니다.</p>'); return; }
   if(S.daily.dun[d.id] <= 0){ popup('입장 횟수 소진', '<p>오늘 입장 횟수를 모두 사용했습니다.</p>'); return; }
@@ -11233,8 +11274,8 @@ let dunSub = 'dun';     /* 46 — 03 던전 페이지 서브탭 'dun' | 'raid' (
 let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
 let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
 
-const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic:'고대의 잔향 상태',
-                    growth:'수련의 새벽 상태', boss:'마왕의 저주 상태' };
+const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic1:'고대의 잔향 상태',
+                    relic2:'잊힌 새벽 상태', relic3:'용의 숨결 상태', relic4:'창세의 여명 상태' };
 
 function openDunDetail(d){
   if(!d) return;
@@ -11643,15 +11684,33 @@ const DUN_UI = {
             rw:['골드 획득 가능'], gm:0  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️', th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
             rw:['다이아 획득 가능'], gm:0  },
-  relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
-            rw:['유물조각 획득 가능','유물 재료 획득 가능'], gm:15 },
-  growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️', th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
-            rw:['도감 재료 획득 가능'], gm:18 },
-  boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫', th:'👹', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
-            rw:['골드 획득 가능','보석 획득 가능'], gm:21 }
+  /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
+     색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
+     알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
+  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
+            rw:['유물조각 획득 가능'], psx:0.966, gm:15 },
+  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🔮', tk:'🎟️', th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
+  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'🔮', tk:'🎫', th:'🐲', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
+  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:'🔮', tk:'🎟️', th:'👹', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
 };
-/* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다. */
-function dunLocked(d){ return S.guide.idx < DUN_UI[d.id].gm; }
+/* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다.
+   90 — 유물조각 2~4단은 대신 «이전 단 N층 클리어»(`pre`) 로 잠긴다. `S.dun[id]` 는 «도전 가능한 층»
+   이므로 N 층을 깬 상태 = `S.dun[pre.id] > pre.f` 다. 04 세부 팝업의 해금 자리 규격을 그대로 쓴다. */
+function dunLocked(d){
+  const u = DUN_UI[d.id]; if(!u) return false;
+  if(u.pre) return (S.dun[u.pre.id] | 0) <= u.pre.f;
+  return S.guide.idx < (u.gm | 0);
+}
+/* 잠금 칸(`.lk`)·잠금 팝업이 같은 문구를 쓰도록 한 곳에서 만든다 */
+function dunLockTxt(d){
+  const u = DUN_UI[d.id]; if(!u) return '';
+  if(!u.pre) return '가이드미션 <b>' + u.gm + '</b> 클리어';
+  const p = DUNGEONS.find(x => x.id === u.pre.id);
+  return (p ? p.n : u.pre.id) + ' <b>' + u.pre.f + '</b>층 클리어';
+}
 function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
   let h = '';
@@ -11660,7 +11719,8 @@ function renderDunPage(){
     h += '<div class="dnc" data-dcard="' + d.id + '" style="--s:' + u.s + ';--i:' + u.i
       +  ';--r:' + u.r + ';--pt:' + u.pt + ';--tsx:' + u.tsx
       +  ';--thw:' + u.thw + ';--tht:' + u.tht + ';--thf:' + u.thf
-      +  ';--thcx:' + u.thcx + ';--thcy:' + u.thcy + (u.scn ? ';--scn:' + u.scn : '') + '">'
+      +  ';--thcx:' + u.thcx + ';--thcy:' + u.thcy + (u.scn ? ';--scn:' + u.scn : '')
+      +  (u.psx ? ';--psx:' + u.psx : '') + '">'      /* 90 — 긴 보상 라벨만 폭을 눌러 캡슐 안에 넣는다 */
       +  '<div class="bg"></div>'
       +  (lock && u.scn ? '<div class="scn"></div>' : '')   /* 72 — 잠금 카드 씬 아트 자리 */
       +  '<div class="th"><em>' + u.th + '</em></div>'      /* 72 — 우측 몬스터 썸네일(아트 자리) */
@@ -11672,7 +11732,7 @@ function renderDunPage(){
       +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
       +  '<div class="sp tk"><em>' + u.tk + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
       +  (!lock && left > 0 ? '<s class="dot"></s>' : '')
-      +  (lock ? '<div class="lk"><em>🔒</em><u>가이드미션 <b>' + u.gm + '</b> 클리어</u></div>' : '')
+      +  (lock ? '<div class="lk"><em>🔒</em><u>' + dunLockTxt(d) + '</u></div>' : '')
       +  '</div>';
   });
   $('dunList').innerHTML = h;
@@ -11709,8 +11769,13 @@ $('dunList').addEventListener('click', e => {
   if(!c) return;
   const d = DUNGEONS.find(x => x.id === c.dataset.dcard);
   if(dunLocked(d)){
-    popup('🔒 ' + d.n, '<p>가이드미션 <b>' + DUN_UI[d.id].gm + '</b> 을 클리어하면 열립니다.<br>'
-      + '현재 가이드미션 <b>' + Math.min(S.guide.idx + 1, GUIDE.length) + '</b> 진행 중</p>');
+    const u = DUN_UI[d.id];
+    popup('🔒 ' + d.n, '<p>' + dunLockTxt(d) + ' 하면 열립니다.<br>'
+      + (u.pre
+          ? '현재 <b>' + (DUNGEONS.find(x => x.id === u.pre.id) || {}).n + '</b> '
+            + Math.max(0, (S.dun[u.pre.id] | 0) - 1) + '층 클리어'
+          : '현재 가이드미션 <b>' + Math.min(S.guide.idx + 1, GUIDE.length) + '</b> 진행 중')
+      + '</p>');
     return;
   }
   /* 04 던전 세부 팝업 — 03 이 남겨 둔 임시 진입점을 정식 팝업으로 교체했다 */
@@ -12012,7 +12077,7 @@ function summonRelic(quiet){
   const cost = relicCost();
   if(S.relic < cost){
     if(!quiet) popup('🔮 유물조각 부족', '<p>유물조각이 <b>' + fmt(cost - S.relic) + '</b> 더 필요합니다.<br>'
-      + '던전 <b>고대 유적</b>에서 유물조각을 얻으세요!</p>');
+      + '던전 <b>' + relDunName() + '</b>에서 유물조각을 얻으세요!</p>');
     return null;
   }
   S.relic -= cost;
@@ -12480,7 +12545,7 @@ const CURINFO = {
   relic: { ic:'🔮', n:'유물조각',
     get:() => S.relic,
     d:'유물을 소환하고 강화할 때 사용합니다.',
-    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic') || {}).n + '»', '룰렛 보상', '다이아 교환'] }
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic1') || {}).n + '» 외 3', '룰렛 보상', '다이아 교환'] }
 };   /* 88 — sp(스탯 포인트) 항목 폐기 */
 let curInfoKey = null;
 /* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
