@@ -345,7 +345,9 @@ async function fresh(browser, w = 1080, h = 2280) {
       : fail('삭제 검증 전제 실패 — 읽음/미수령이 둘 다 있어야 한다');
     !delPre.dis ? ok('읽음이 있으면 [읽음 전체 삭제] 활성') : fail('읽음이 있는데 비활성');
     await page.evaluate(() => { document.getElementById('mailDel').click(); });
-    await page.waitForTimeout(700);
+    /* 92 — 삭제 재렌더는 접힘 .40s + 행 스태거(최대 2×140ms) + 20 = **최대 700ms** 뒤다.
+       700 으로 재면 경계에서 경합한다(3회차에 실제로 실패했다) → 여유를 준다. */
+    await page.waitForTimeout(1000);
     const delPost = await page.evaluate(() => ({
       rows: [...document.querySelectorAll('.ml-r [data-ml]')].map((b) => b.dataset.ml),
       state: { ...S.mail },
@@ -398,7 +400,9 @@ async function fresh(browser, w = 1080, h = 2280) {
 
     /* 92 — 전부 읽은 뒤 다시 삭제하면 목록이 비고 «우편이 없습니다» 가 뜬다 */
     await page.evaluate(() => { document.getElementById('mailDel').click(); });
-    await page.waitForTimeout(700);
+    /* 92 — 삭제 재렌더는 접힘 .40s + 행 스태거(최대 2×140ms) + 20 = **최대 700ms** 뒤다.
+       700 으로 재면 경계에서 경합한다(3회차에 실제로 실패했다) → 여유를 준다. */
+    await page.waitForTimeout(1000);
     const empt = await page.evaluate(() => {
       const e = document.querySelector('.ml-empty');
       return { rows: document.querySelectorAll('.ml-r').length, txt: e && e.textContent.trim(),

@@ -18,7 +18,7 @@ const path = require('path');
 const pre = process.argv[2] || 'docs/review/92-fx';
 /* ms — 접힘 .42s + 행 스태거 90ms → 관측 구간 0~510ms 를 8등분.
    `currentTime` 은 **딜레이 포함** 타임라인이라 스태거된 2번째 행도 같은 t 로 맞는다. */
-const STOPS = [0, 70, 140, 210, 280, 350, 420, 500];
+const STOPS = [0, 75, 150, 225, 300, 375, 450, 540];
 
 (async () => {
   const b = await chromium.launch();
@@ -65,18 +65,26 @@ const STOPS = [0, 70, 140, 210, 280, 350, 420, 500];
     window.__held = null;
     const raw = window.setTimeout;
     window.setTimeout = function (fn, ms) {
-      /* 92 삭제 재렌더(.42s + 스태거 + 20). 행 버스트 스태거(60·150ms)와 섞이지 않게 400 이상만 */
-      if (ms >= 400) { window.__held = fn; return 0; }
+      /* 92 삭제 재렌더(.40s + 스태거 + 20). 파티클 수명 타이머(620ms)와 섞이지 않게 400~600 만 */
+      if (ms >= 400 && ms <= 800) { window.__held = fn; return 0; }
       return raw.apply(window, arguments);
     };
     document.getElementById('mailDel').click();
     window.setTimeout = raw;
+    /* ⚠ `getAnimations()` 는 **스타일 재계산이 돈 뒤에야** 새 CSS 애니메이션을 안다.
+       클릭 직후 동기로 부르면 0개가 나온다(3회차에 실제로 그랬다 — 2회차에는 `fxPop` 의
+       `void offsetWidth` 가 우연히 플러시를 해 주고 있었다). 강제로 레이아웃을 읽어 플러시한다. */
+    void document.body.offsetHeight;
+    document.querySelectorAll('.ml-r.out').forEach((r) => void getComputedStyle(r).animationName);
+    /* 상자(`mlOut`)와 내용 페이드(`mlOutIn`)를 **같이** 잡아 같은 t 로 탐색한다 —
+       하나만 멈추면 내용 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => a.animationName === 'mlOut');
+      .filter((a) => a.animationName === 'mlOut' || a.animationName === 'mlOutIn');
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);
   console.log(`  접힘 애니메이션 ${n}개 정지 — 프레임을 정확한 ms 로 탐색한다`);
+  if (!n) { console.log('  ✗ 애니메이션을 못 잡았다 — 캡처가 정지 화면이 된다. 중단.'); await b.close(); process.exit(1); }
 
   for (const t of STOPS) {
     const state = await p.evaluate((ms) => {
