@@ -363,8 +363,12 @@
   #menub s:nth-of-type(3){left:23px;top:53px}
   #menub s:nth-of-type(4){left:55px;top:53px}
   /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16). 실측 채움 Ø25 + 검정 4 (A2 표의 Ø31 은 오측) */
+  /* 작업 71 — 이 배지는 «우편 안 읽음»(구 좌측 📬 레드닷)을 그대로 옮겨 받은 것이라 상태로 켜고 끈다.
+     기본은 꺼짐, `sideAlert('mail', …)` 이 #menub 에 `.alert` 를 토글한다.
+     아래 `#menub.mnon .bdg{display:none}` 은 «메뉴 열림» 이라 특이성이 같고 뒤에 와서 이긴다(순서 유지할 것). */
   #menub .bdg{position:absolute;left:74px;top:-1px;width:25px;height:25px;border-radius:50%;
-    background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0}
+    background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0;display:none}
+  #menub.alert .bdg{display:block}
   /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
      ✕ 잉크 ref x954..1017 y280..339 = 64×60, 중심 (985,310) → 버튼 로컬 정중앙 (51,50).
      막대 2개로 작도: 두께 14 · 길이 74.5 · ±43° → bbox 64×61 (ref 64×60). */
@@ -407,8 +411,11 @@
         반경이 35 라 그 열은 코너 원호 한가운데고 상변이 12px 아래로, 하변이 11px 위로 읽힌다.
         **패널 중심 x830 세로 스캔**으로 다시 재니 y212 전이 · y1123 전이였다(비평가 A·B 도 독립적으로 213/1122).
         검산: 상20.5 + 8칸×100 + 7갭×10 + 하20 = **910.5** ≈ 910. 상하 패딩이 대칭이라는 것도 이때 드러났다.
-     높이는 «8칸 910» + «35 인계 임시 9번째 칸 110» = **1020**. */
-  #mnw .mn-col{position:absolute;left:761px;top:128.5px;width:138px;height:1020px;
+     높이는 «8칸 910» + «35 인계 임시 9번째 칸 110» = 1020 이었다.
+     ⚠ **작업 71(2026-08-25)**: 레퍼런스 8칸에서 «공지»·«게임 라운지» 를 뺐다 → 실칸 6개 + 임시 «패스» = **7칸**.
+        검산식(LESSONS 52-①) 7×100 + 6×10 + 상20.5 + 하20 = **800.5 → 800**. 상변(top 128.5)·꼬리는 그대로다
+        (꼬리는 #menub 을 가리키므로 패널 «위» 기준이고, 줄어드는 것은 아래끝뿐이다). */
+  #mnw .mn-col{position:absolute;left:761px;top:128.5px;width:138px;height:800px;
     border-radius:35px;background:rgba(0,0,0,.28)}
   /* 꼬리 — 밑변 ref y267..312(46)이 패널 우변에 붙고 꼭짓점 (935,289). 꼭짓점 x935 = #menub 좌변 x934.
      패널과 겹치게 그리면 알파가 두 번 곱해져 그 부분만 짙어진다 → **패널 밖(x899..935)에만** 그린다. */
@@ -430,8 +437,8 @@
   #mnw .mn-b:nth-of-type(1){top:20.5px}  #mnw .mn-b:nth-of-type(2){top:130.5px}
   #mnw .mn-b:nth-of-type(3){top:240.5px} #mnw .mn-b:nth-of-type(4){top:350.5px}
   #mnw .mn-b:nth-of-type(5){top:460.5px} #mnw .mn-b:nth-of-type(6){top:570.5px}
-  #mnw .mn-b:nth-of-type(7){top:680.5px} #mnw .mn-b:nth-of-type(8){top:790.5px}
-  #mnw .mn-b:nth-of-type(9){top:900.5px}  /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
+  #mnw .mn-b:nth-of-type(7){top:680.5px}  /* ⚠ 7번째 = 레퍼런스에 없는 임시 «패스» 칸 — 위 HTML 주석 참고 */
+  /* 작업 71 — 8·9번째 칸 규칙은 뺐다(칸이 7개다). 칸을 다시 늘리면 pitch 110 으로 이어 적을 것. */
   /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
      **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
      칸별 잉크 폭이 34~66 으로 달라서 --sf(등방)·--sx(가로만) 로 각 이모지를 ref bbox 에 맞춘다(A2 방식).
@@ -453,9 +460,8 @@
     text-align:center;font-size:var(--lf,26px);color:#FDFDFD;
     -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--lx,.82))}
-  /* 8번 «게임 라운지» 만 컬러 — 초록 라운드 타일(#03ED68) 위 흰 글리프. ref 잉크 46×35 + 타일 57×55 */
-  #mnw .mn-b.gl .mn-i{width:57px;height:55px;left:50%;margin-left:-28.5px;right:auto;top:17px;
-    line-height:55px;border-radius:15px;background:#03ED68}
+  /* 작업 71 — «게임 라운지» 칸(유일한 `.gl` 사용처: 초록 타일 #03ED68 · ref 잉크 46×35 + 타일 57×55)을
+     지우면서 그 규칙도 함께 뺐다. 컬러 타일 칸이 다시 생기면 여기에 되살릴 것. */
 
   /* 좌측 세로 아이콘. 측정표: docs/measure/A2-사이드아이콘.md
      작업 49(2026-08-25, 저장소 주인 지시): **우측 컬럼(#sideR — 이벤트·특권 잠금 아이콘 + 시설 배너)은 전부 삭제**했다.
@@ -5017,7 +5023,8 @@
 
   /* ⑥ 레드닷·NEW 리본 — 생길 때 0→1.3→1 팝 + 주기 미세 펄스(2초)
      display:none ↔ block 전환만으로 애니메이션이 «처음부터» 다시 돈다(별도 JS 불필요). */
-  .ibtn.on .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.tr-sub>.sg.on>.dot,.dnc .dot{
+  /* 작업 71 — 좌측 📬 에서 ▦ 메뉴 버튼으로 옮겨 온 «우편» 레드닷도 같은 손맛을 받게 넣는다(④ 일관성). */
+  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.tr-sub>.sg.on>.dot,.dnc .dot{
     animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
   @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
   @keyframes jzDotPulse{0%,72%,100%{scale:1}84%{scale:1.14}}
@@ -5554,7 +5561,10 @@
            bbox(측정표 §1-1)에 맞추는» 배율이다. 이모지를 바꾸면 두 값을 다시 재야 한다. -->
       <div class="ibtn solo" data-pop="attend" title="출석" style="--sf:.971;--sx:1.091;--dy:2.5px"><span class="si">📅</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="roul"  style="--sf:.891;--sx:1.126;--dx:1.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
-      <div class="ibtn" data-pop="mail"  style="--sf:.884;--sx:1.184;--dx:1px"><span class="si">📬</span><span class="sl">우편</span><span class="bdg"></span></div>
+      <!-- 작업 71(2026-08-25, 저장소 주인 지시): 3행 «우편»(📬) 삭제 — 52 ▦ 메뉴의 «우편» 칸과 중복이다.
+           우편 진입은 ▦ 메뉴 하나뿐(openMail). 레드닷은 `sideAlert('mail')` 이 #menub 의 `.bdg` 로 옮겨 켠다.
+           `.side` 가 flex 컬럼이라 아래 행이 그대로 한 칸씩 당겨지고(퀘스트 471 · 승급전 605 · 축복 739),
+           행 그리드 규격(SIDE.N=5 · --ih/--igap/--itop)은 48·34 주석대로 A2 측정표 그대로 둔다 = 남는 행 좌표 Δ0. -->
       <div class="ibtn" data-pop="quest" style="--sf:.959;--sx:1.066;--dx:.5px;--dy:-2px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
       <!-- 작업 48(2026-08-25, 저장소 주인 지시): 5행 «던전»(🏰) 삭제 — 하단 «던전» 탭(작업 24)과 중복이다.
            openDungeon() 진입은 탭으로만. 승급전이 5행으로 올라오고 6행은 빈다.
@@ -5834,18 +5844,21 @@
     <div class="mn-col">
       <!-- --sf/--sx/--dy 는 «이 이모지의 캡처 잉크» 를 측정표 §3 의 레퍼런스 bbox 에 맞추는 실측 역산값이다
            (A2 방식). 이모지를 바꾸면 `node tools/box52.js <캡처> 785 872 160 110 80 8 45 lum` 으로 다시 재야 한다. -->
-      <div class="mn-b" data-mn="notice"><i class="mn-i" style="--sf:.981;--sx:1.073;--dy:2.6px">📢</i><i class="mn-l" style="--lx:.85">공지</i></div>
+      <!-- 작업 71(2026-08-25, 저장소 주인 지시): 레퍼런스 8칸 중 «공지»(📢)·«게임 라운지»(🎮) 두 칸을 뺀다.
+           남는 항목은 우편 · 랭킹 · 길라잡이 · 가방 · 절전 · 설정 6개 + 35 가 맡긴 임시 «패스» = 7칸.
+           칸 규격(99×100 · pitch 110 · 상하 패딩 20.5/20)은 52 측정표 그대로, 위에서부터 채운다.
+           `.mn-col` 높이는 검산식대로 7칸×100 + 6갭×10 + 40.5 = 800.5 → **800**(9칸 1020 에서 −220). -->
       <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.90">우편</i></div>
       <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.92">랭킹</i></div>
       <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:20.4px;--lx:.944">길라잡이</i></div>
       <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.89">가방</i></div>
       <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.87">절전</i></div>
       <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.89">설정</i></div>
-      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lf:20.4px;--lx:.93">게임 라운지</i></div>
-      <!-- ⚠ 9번째 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
+      <!-- ⚠ 마지막(7번째) 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
            임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고
-           `.mn-col` 높이를 997 → **887**(8칸)로 되돌린다. -->
+           `.mn-col` 높이를 800 → **690**(6칸: 6×100 + 5×10 + 40.5)으로 되돌린다.
+           작업 71 이 좌측에서 «우편» 을 뺐지만 그 자리는 A2 행 그리드 유지를 위해 비워 두므로 패스는 아직 여기 있다. -->
       <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:1.457;--sx:.651">🎫</i><i class="mn-l" style="--lx:.85">패스</i></div>
     </div>
   </div>
@@ -6641,13 +6654,9 @@ const RANKS = [
   { n:'챌린저',   ic:'🔥', stage:300, cp:2.0e21 }
 ];
 
-/* ---- 공지사항 (작업 52 «공지» 칸) ---- */
-const NOTICE = [
-  { t:'🎉 오픈 안내',        b:'방치형 던전 RPG 를 시작해 주셔서 감사합니다. 자동 전투로 스테이지를 밀며 장비·스킬·유물을 모아 보세요.' },
-  { t:'⚔️ 보스전 안내',      b:'10 스테이지마다 보스가 등장합니다. 제한 시간 30초 안에 잡지 못하면 그 스테이지에서 파밍하며 «재도전» 할 수 있습니다.' },
-  { t:'🗺️ 길라잡이',         b:'화면 하단 배너의 가이드 미션을 따라가면 다이아를 받으며 콘텐츠가 순서대로 해금됩니다.' },
-  { t:'🛠️ 준비 중인 기능',   b:'가방 · 랭킹 · 설정 · 절전 모드는 순차적으로 열립니다.' }
-];
+/* ---- 공지사항: 작업 71(2026-08-25, 저장소 주인 지시)로 ▦ 메뉴에서 «공지» 칸을 뺐고,
+       NOTICE 배열의 유일한 소비처가 그 팝업이라 데이터도 함께 삭제했다(구버전 폐기 = 죽은 데이터까지, LESSONS 68-③).
+       공지 기능이 다시 필요하면 «칸 + 분기 + 배열» 세 곳을 같이 되살릴 것. ---- */
 
 /* ---- 우편함 ---- */
 const MAILS = [
@@ -8278,7 +8287,14 @@ function drawSlots(){
 
 const SIDEB = {};
 document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => SIDEB[b.dataset.pop] = b);
-function sideAlert(k, on){ const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on); }
+/* 작업 71 — «우편» 은 좌측 사이드에서 빠졌으므로(▦ 메뉴 전용) SIDEB 에 버튼이 없다.
+   그 레드닷은 우상단 ▦ 메뉴 버튼의 `.bdg` 로 옮겨 켠다: `#menub.alert .bdg{display:block}`.
+   호출부(`sideAlert('mail', mailLeft() > 0)`)는 한 줄도 안 고친다 — 여기서 갈라 준다. */
+const MENUB = $('menub');
+function sideAlert(k, on){
+  const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on);
+  if(k === 'mail') MENUB.classList.toggle('alert', !!on);
+}
 /* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수.
    작업 49(2026-08-25): 배너 DOM(#facb/#facTm/#facBg)을 삭제했다. 계산 로직 자체는 다른 화면이
    가져다 쓸 수 있으므로 **보존**하고, 그릴 대상이 없으면 조용히 빠지도록 널 가드만 넣는다
@@ -11949,7 +11965,7 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     const k = b.dataset.pop;
     if(k === 'attend') openAttend();
     else if(k === 'roul') openRoulette();
-    else if(k === 'mail') openMail();
+    /* 작업 71 — 좌측 «우편» 아이콘을 없앴다(▦ 메뉴와 중복). 우편 진입은 menuGo('mail') 하나뿐이다. */
     else if(k === 'quest') openQuest();
     /* 작업 48 — 좌측 «던전» 아이콘을 없앴다(하단 탭과 중복). 던전 진입은 setTab('dun') 하나뿐이다. */
     else if(k === 'promo') openPromo();
@@ -12118,9 +12134,9 @@ $('mnw').querySelector('.mn-col').onclick = e => {
   if(!b) return;
   closeMenu();
   const k = b.dataset.mn;
+  /* 작업 71 — «공지»(NOTICE 팝업)·«게임 라운지» 칸을 지우면서 두 분기도 함께 뺐다.
+     둘 다 «읽기 전용 안내» 라 다른 재화·기능의 유일한 경로가 아니었다(LESSONS 68-③ 점검). */
   if(k === 'mail') openMail();
-  else if(k === 'notice') popup('📢 공지사항', NOTICE.map(n =>
-    '<p style="text-align:left;margin-bottom:14px"><b>' + n.t + '</b><br>' + n.b + '</p>').join(''));
   else if(k === 'guide'){
     const m = gmCur();
     popup('🗺️ 길라잡이', m
@@ -12133,7 +12149,6 @@ $('mnw').querySelector('.mn-col').onclick = e => {
   else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
   else if(k === 'conf')   popup('⚙️ 설정',      '<p>설정은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 55)</p>');
-  else if(k === 'lounge') popup('🎮 게임 라운지','<p>게임 라운지는 준비 중입니다.</p>');
   else if(k === 'pass')   openPass('stage');          /* 작업 35 인계 — 레퍼런스에 없는 임시 칸 */
 };
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
