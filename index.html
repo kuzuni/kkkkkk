@@ -4006,6 +4006,81 @@
        카드 outer ref 915/1095/1275 → **831/1011/1191**(pitch 180 · gap 14 그대로).
      «터치하여 닫기»는 09 .upr-close 재사용(탭바 상단 고정 — 프레임 높이와 무관).
      ========================================================================== */
+  /* ==========================================================================
+     31 던전 클리어 화면 — 측정표 docs/measure/31-던전클리어화면.md
+     껍데기 판정: A5 3분류에 없는 «껍데기 없음·딤 위 연출»(09·12·17·18 계열)이되,
+     09·12 의 «전폭 밴드 + 리본» 구조다. **모달이 아니다** — 밴드는 좌우 여백 0 · radius 0 · x0–1080 전폭.
+     딤은 화면 전체 균일 rgba(0,0,0,.78) (30-던전-입장모습.jpg 와 픽셀 나눗셈: 흰 255 → 56, 비 0.2196).
+     세로는 전부 지시서 [2] 의 단일 변환 «frame y = ref y − 84» 절대 배치. 가로 1:1, 중심 x=540.
+     리본은 17(#statw)·09(#upw) 리본과 **픽셀 동일 에셋**(orange 마스크 IoU 0.884, dy +25 정합)이라
+     `.upr-grp/.upr-rb/.upr-tl` 을 CSS 수정 없이 그대로 쓰고 그룹 top 만 바꾼다(17 의 793 − 25 = 768).
+     ========================================================================== */
+  #dclw{position:absolute;inset:0;display:none;z-index:40;cursor:pointer;background:rgba(0,0,0,.78)}
+  #dclw.on{display:block}
+  #dclw i,#dclw b,#dclw s{display:inline-block;font-style:normal;transform-origin:50% 50%}
+  /* 리본 그룹 — 몸통 outer top ref 852 → frame 768. 꼬리는 기본값(top 25px)이 ref 877−852=25 와 일치 */
+  #dclw .upr-grp{top:768px;margin-top:0;height:130px;z-index:3}
+  /* 전폭 밴드 1080×340 — 위→아래 7층(검정5·노랑6·베벨8·채움300·베벨9·노랑6·검정6 = 340).
+     채움 #2A2835 는 그라디언트가 아니라 완전 균일(행 스캔 Δ0). */
+  .dcl-band{position:absolute;left:0;right:0;top:839px;height:340px;z-index:1;
+    background:linear-gradient(180deg,
+      #000 0 5px,#F8CC2F 5px 11px,#414455 11px 19px,#2A2835 19px 319px,
+      #484B5A 319px 328px,#F4CD42 328px 334px,#000 334px 340px)}
+  /* 보상 타일 — 몸통 104×99 r26 + 검정 6(바깥 bbox 116×110). 상단 19px 하이라이트. */
+  .dcl-tile{position:absolute;left:488px;top:955px;width:104px;height:99px;border-radius:26px;
+    background:linear-gradient(180deg,#C7E747 0,#A9CE3D 19px,#94BC35 100%);
+    box-shadow:0 0 0 6px #000;z-index:2}
+  /* 골드 코인 63×65 — 금테 링 + 노란 코어 + 하단 광택. 최종은 스프라이트 교체 자리(아트 필요 표) */
+  .dcl-coin{position:absolute;left:509px;top:977px;width:63px;height:65px;border-radius:50%;
+    background:radial-gradient(circle closest-side,#FEEC1E 0 62%,#F6C60F 78%,#E59D0B 100%);
+    box-shadow:inset 0 -9px 10px -6px #FFEF83;z-index:3}
+  /* 골드 외 재화는 이모지 대체 — 아트 자리 규칙대로 **같은 63×65 bbox** 를 그대로 차지한다 */
+  .dcl-coin.alt{background:none;box-shadow:none;font-size:56px;line-height:65px;text-align:center}
+  /* 수량 — 타일 몸통 하단(1053)에 1px 겹쳐 붙는다. 잉크 h20 → 28px */
+  .dcl-amt{position:absolute;left:0;right:0;top:1046px;height:36px;line-height:36px;text-align:center;
+    font-size:28px;font-weight:700;color:#fff;white-space:nowrap;z-index:4;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 하단 버튼 3개 — **가운데 «확인» 만 크다**(264×136 vs 234×105, 글자 41 vs 34).
+     세 칸을 같은 크기로 만들면 이 화면의 시각적 포인트가 사라진다(측정표 «실수하기 쉬운 지점»). */
+  .dcl-btn{position:absolute;box-sizing:border-box;border:6px solid #000;border-radius:34px;
+    text-align:center;white-space:nowrap;font-weight:900;color:#fff;padding:0;cursor:pointer;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+  .dcl-btn>i{position:relative;z-index:2}
+  /* 하단 광택 밴드 7px + 하단 음영 6~7px — 세 버튼 공통 구조, 색만 다르다 */
+  .dcl-btn::after{content:'';position:absolute;left:0;right:0;bottom:0;height:13px;
+    border-radius:0 0 28px 28px;z-index:1}
+  .dcl-re{left:91px;top:1377px;width:248px;height:118px;font-size:34px;line-height:96px;
+    background:linear-gradient(180deg,#F2EE4F 0 1px,#F9F32F 1px,#F7AE0A 100%)}
+  .dcl-re::after{background:linear-gradient(180deg,#FFEC34 0 7px,#CF8103 7px)}
+  .dcl-nx{left:741px;top:1377px;width:248px;height:118px;font-size:34px;line-height:95px;
+    background:linear-gradient(180deg,#68DDEE 0 1px,#55E8FA 1px,#2FC5E0 100%)}
+  .dcl-nx::after{background:linear-gradient(180deg,#51E6FC 0 7px,#0EA4C7 7px)}
+  .dcl-ok{left:401px;top:1361px;width:278px;height:149px;border-width:7px;border-radius:37px;
+    font-size:41px;line-height:124px;
+    background:linear-gradient(180deg,#B2FA8E 0 7px,#7BF051 7px,#80DC39 100%)}
+  .dcl-ok::after{height:14px;border-radius:0 0 30px 30px;
+    background:linear-gradient(180deg,#AFFF83 0 7px,#43B92D 7px)}
+  /* 코스트 알약 — 좌우 «대칭»이 아니라 각 버튼 중심 정렬이다(우 = 좌 + 650, 행별 Δ≤1px).
+     티켓 아이콘이 알약 좌측 끝에 34px 겹쳐 얹힌다. 확인(가운데) 버튼에는 알약이 없다. */
+  .dcl-pill{position:absolute;top:1331px;width:157px;height:39px;border-radius:19px;
+    background:#412A1C;z-index:2}
+  .dcl-pill.l{left:153px}
+  .dcl-pill.r{left:803px}
+  .dcl-tk{position:absolute;top:1336px;width:44px;height:33px;border-radius:6px;z-index:3;
+    box-sizing:border-box;border:2px solid #000;
+    background:linear-gradient(180deg,#FFFDF2 0 11px,#A96B87 11px 23px,#FFE238 23px)}
+  .dcl-tk.l{left:119px}
+  .dcl-tk.r{left:769px}
+  /* 수량 「4」 — 알약 중심(좌 231 / 우 881) 기준. 잉크 h21 → 30px */
+  .dcl-cn{position:absolute;top:1334px;width:157px;height:33px;line-height:33px;text-align:center;
+    font-size:30px;font-weight:700;color:#fff;z-index:4;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .dcl-cn.l{left:153px}
+  .dcl-cn.r{left:803px}
+  /* 리본 우상단 스파클 30×40 (흰색 40%) */
+  .dcl-spk{position:absolute;left:719px;top:722px;width:30px;height:40px;z-index:4;
+    background:#fff;opacity:.4;
+    clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%)}
   #defw{position:absolute;inset:0;display:none;z-index:39;cursor:pointer;background:rgba(0,0,0,.62)}
   #defw.on{display:block}
   #defw i,#defw b{display:inline-block;font-style:normal}
@@ -4826,6 +4901,25 @@
   </div>
   <!-- 18 패배 화면. 09·17 과 같은 «딤 위 연출» — 표시 전용(자동 부활 로직 불변).
        측정표 docs/measure/18-패배화면.md. 사망 시 openDefeat() 로 열린다. -->
+  <!-- 31 던전 클리어 화면. 09·12·17·18 과 같은 «딤 위 연출» — 리본(.upr-*)은 17 CSS 재사용.
+       측정표 docs/measure/31-던전클리어화면.md. challengeDungeon()·sweepDungeon() 성공 시 열린다. -->
+  <div id="dclw">
+    <div class="dcl-band"></div>
+    <div class="upr-grp">
+      <div class="upr-tl l"><s></s></div>
+      <div class="upr-tl r"><s></s></div>
+      <div class="upr-rb"><i>클리어 보상</i></div>
+    </div>
+    <div class="dcl-spk"></div>
+    <div class="dcl-tile"></div>
+    <div class="dcl-coin" id="dclIc"></div>
+    <div class="dcl-amt"><i id="dclAmt">0</i></div>
+    <div class="dcl-pill l"></div><div class="dcl-tk l"></div><div class="dcl-cn l"><i id="dclTryL">0</i></div>
+    <div class="dcl-pill r"></div><div class="dcl-tk r"></div><div class="dcl-cn r"><i id="dclTryR">0</i></div>
+    <button class="dcl-btn dcl-re" id="dclRe"><i>재도전</i></button>
+    <button class="dcl-btn dcl-ok" id="dclOk"><i>확인</i></button>
+    <button class="dcl-btn dcl-nx" id="dclNx"><i>다음</i></button>
+  </div>
   <div id="defw">
     <div class="df-emb"><svg width="116" height="107" viewBox="0 0 116 107">
       <path d="M1 0Q13 3 27 12H89Q103 3 115 0v62c0 12-9 19-22 21H23C10 81 1 74 1 62z" fill="#F8FFF8"/>
@@ -7535,10 +7629,10 @@ function challengeDungeon(d){
   const f = S.dun[d.id], need = d.req(f), my = cp();
   if(my >= need){
     S.dun[d.id]++;
-    const txt = giveReward(d.rw(f));
+    giveReward(d.rw(f));
     uiDirty = true; save();
-    popup('🏆 ' + d.n + ' ' + f + '층 클리어!', '<p>전투력 <b>' + fmt(my) + '</b> ≥ 요구 <b>' + fmt(need) + '</b><br>'
-      + '보상 — <b>' + txt + '</b><br><span style="color:#8fd6ff">다음 ' + (f+1) + '층 해금!</span></p>');
+    /* 31 던전 클리어 화면 — 일반 popup() 대신 전용 결과 연출을 띄운다 */
+    openDunClear(d, f);
   }else{
     uiDirty = true; save();
     popup('💀 ' + d.n + ' ' + f + '층 실패', '<p>전투력이 부족합니다.<br>내 전투력 <b>' + fmt(my)
@@ -7550,10 +7644,55 @@ function sweepDungeon(d){
   if(f < 1){ popup('소탕 불가', '<p>먼저 1층을 클리어해야 소탕할 수 있습니다.</p>'); return; }
   if(S.daily.dun[d.id] <= 0){ popup('입장 횟수 소진', '<p>오늘 입장 횟수를 모두 사용했습니다.</p>'); return; }
   S.daily.dun[d.id]--; S.cnt.dungeon++;
-  const txt = giveReward(d.rw(f));
+  giveReward(d.rw(f));
   uiDirty = true; save();
-  popup('⚡ ' + d.n + ' 소탕', '<p>' + f + '층 즉시 보상<br><b>' + txt + '</b></p>');
+  openDunClear(d, f);   /* 31 — 소탕도 «클리어 보상» 결과 화면을 그대로 쓴다 */
 }
+
+/* ---- 31 던전 클리어 화면 -------------------------------------------------
+   측정표 docs/measure/31-던전클리어화면.md. 09·12·17·18 과 같은 «딤 위 연출» 계열.
+   실제 보상 데이터로 동작한다: 방금 클리어한 층의 대표 재화 1종을 타일에 띄우고,
+   알약 2개는 그 던전의 «남은 입장 횟수» 를 보여 준다(레퍼런스의 티켓 배지 자리). */
+let dclDun = null, dclFloor = 1;
+function openDunClear(d, f){
+  if(!d) return;
+  dclDun = d; dclFloor = f;
+  const rw = d.rw(f);
+  /* 04 세부 팝업과 같은 «대표 재화 1종» 규칙 — 표시가 두 화면에서 어긋나지 않게 맞춘다 */
+  const main = rw.gold ? ['gold', rw.gold] : rw.dia ? ['dia', rw.dia]
+             : rw.rel  ? ['rel',  rw.rel] : ['frag', rw.frag];
+  const ic = $('dclIc');
+  /* 아트 자리 규칙 — 대체물도 레퍼런스 bbox(63×65)를 그대로 차지한다 */
+  ic.className = 'dcl-coin' + (main[0] === 'gold' ? '' : ' alt');
+  ic.textContent = main[0] === 'gold' ? '' : ({ dia:'💎', rel:'🔮', frag:'🧩' })[main[0]];
+  $('dclAmt').textContent = fmt(main[1]);
+  const left = S.daily.dun[d.id];
+  $('dclTryL').textContent = left;
+  $('dclTryR').textContent = left;
+  /* 남은 횟수가 없으면 재도전·다음을 눌러도 입장 못 한다 — 눌림을 막고 회색으로 */
+  const off = left <= 0;
+  [$('dclRe'), $('dclNx')].forEach(b => {
+    b.disabled = off;
+    b.style.filter = off ? 'grayscale(.75) brightness(.8)' : '';
+  });
+  $('dclw').classList.add('on');
+}
+function closeDunClear(){ $('dclw').classList.remove('on'); dclDun = null; }
+$('dclw').addEventListener('click', e => { if(e.target === $('dclw')) closeDunClear(); });
+$('dclOk').addEventListener('click', e => { e.stopPropagation(); closeDunClear(); });
+/* 재도전 = 방금 깬 층을 다시 · 다음 = 새로 열린 층으로. 둘 다 실제 입장 횟수를 소모한다. */
+$('dclRe').addEventListener('click', e => {
+  e.stopPropagation();
+  const d = dclDun, f = dclFloor; if(!d) return;
+  closeDunClear();
+  if(f < S.dun[d.id]) sweepDungeon(d); else challengeDungeon(d);
+});
+$('dclNx').addEventListener('click', e => {
+  e.stopPropagation();
+  const d = dclDun; if(!d) return;
+  closeDunClear();
+  challengeDungeon(d);
+});
 function buyPack(p){
   S.dia += p.dia; S.cnt.paid += p.won;
   uiDirty = true; save();
@@ -10764,7 +10903,7 @@ loadAtlases(() => {
    ========================================================================== */
 const JZ_SHEET = { trw:1, eqw:1, panel:1 };            /* 아래에서 올라오는 바닥 시트 */
 const JZ_OVID = ['modal','offw','dunw','shopw','relicw','dgdw','wpnw','prbw','collw','ciw',
-                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','rlw','panel'];
+                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','dclw','rlw','panel'];
 const JZ_NOPRESS = new Set(JZ_OVID.concat(['app','wrap','fxl','stagearea','view','tabbar','top']));
 /* 붙인 클래스는 «애니메이션이 실제로 끝났을 때» 뗀다.
    ⚠ wall-clock `setTimeout(…, ms)` 로 떼면 안 된다 — 애니메이션이 느려지거나 멈춘 프레임에서
