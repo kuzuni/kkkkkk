@@ -5670,8 +5670,12 @@
   .cf55-row:nth-child(even){background:#E2CDAF}
   #cfw .cf55-row>*{position:absolute}
   /* 아이콘 자리 — ref 잉크 x214..283 (칸 70×58), 세로 중앙 */
+  /* 아트 자리 규칙 — 이모지 대체물은 «레퍼런스 아이콘 bbox(w×h·중심)를 정확히 차지» 해야 한다
+     (나중에 이미지로 교체만 하면 되게). 레퍼런스 6개는 56×56·50×50·64×44·71×56·48×50·58×64 로
+     제각각이라 A2·52 방식대로 행마다 --sf(크기)·--sx(가로)·--dy(세로) 를 실측 역산해 붙인다. */
   .cf55-ic{left:24px;top:50%;width:70px;height:58px;margin-top:-29px;
-    line-height:58px;text-align:center;font-size:46px}
+    line-height:58px;text-align:center;font-size:calc(46px * var(--sf,1));
+    transform:translateY(var(--dy,0px)) scaleX(var(--sx,1))}
   /* 라벨 — 좌단 x300 고정(6행 전부 일치). 잉크 높이 28~33 → font-size 34(÷0.93).
      ref 서체가 우리보다 좁아 폭은 --sx 로 회수한다(LESSONS 01). */
   /* 잉크 높이 목표 28~33 — font 30(코어 27.9) + 편측 2.5 = 32.9. 외곽선 7 이면 38.6 으로 6px 크다. */
@@ -11710,12 +11714,12 @@ window.openBag = openBag;
    실동작이고, 실제로 무언가를 끄는 건 **화면 흔들림**(67 카메라 shake)과 **볼륨 슬라이더 값**이다.
    오디오가 들어오면 sndOn() 한 곳만 보면 되도록 게이트를 미리 뚫어 뒀다. */
 const CF_ROWS = [
-  { k:'lang',  ic:'💬', n:'언어',               sx:.86, val:'한국어' },
-  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.93, lf:33 },
-  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.90, lf:33 },
-  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.89 },
-  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.88 },
-  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.91 }
+  { k:'lang',  ic:'💬', n:'언어',               sx:.86, val:'한국어', sf:1.08, ix:.96, dy:1 },
+  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.93, lf:33, sf:1.06, ix:1.18, dy:0 },
+  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.90, lf:33, sf:.85, ix:1.48, dy:2 },
+  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.89, sf:1.10, ix:1.24, dy:-2 },
+  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.88, sf:1.02, ix:.92, dy:0 },
+  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.91, sf:1.28, ix:.87, dy:-2 }
 ];
 /* 오디오 게이트 — 지금은 «설정 값을 읽는 유일한 곳». 소리가 들어오면 여기서 분기한다. */
 const sndOn = k => !!(S.opt && S.opt[k]) && (S.opt.vol | 0) > 0;
@@ -11739,7 +11743,8 @@ function renderConf(){
       ? '<div class="cf55-gold" data-cfr="' + r.k + '"><i style="--sx:.95">' + r.val + '</i></div>'
       : '<div class="cf55-sw' + (S.opt[r.k] ? ' on' : '') + '" data-cfr="' + r.k + '">'
         + '<s class="cf55-kn"><i>' + (S.opt[r.k] ? 'ON' : 'OFF') + '</i></s></div>';
-    return '<div class="cf55-row"><i class="cf55-ic">' + r.ic + '</i>'
+    return '<div class="cf55-row"><i class="cf55-ic" style="--sf:' + (r.sf || 1)
+      + ';--sx:' + (r.ix || 1) + ';--dy:' + (r.dy || 0) + 'px">' + r.ic + '</i>'
       + '<div class="cf55-lb"' + (r.lf ? ' style="--lf:' + r.lf + 'px"' : '') + '>'
       + '<i style="--sx:' + r.sx + '">' + r.n + '</i></div>'
       + '<div class="cf55-ct">' + ctl + '</div></div>';

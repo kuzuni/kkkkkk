@@ -161,3 +161,14 @@ elif mode=='silh':
                 if top is None: top=y
                 bot=y
         print(f"x{x} y{top}..{bot} h={(bot-top+1) if top else 0}")
+
+elif mode=='diff':
+    # bbox of pixels differing from a given bg colour by > th (manhattan max-channel)
+    x0,y0,x1,y1=map(int,sys.argv[2:6]); bg=tuple(int(sys.argv[6][i:i+2],16) for i in (0,2,4)); th=int(sys.argv[7])
+    ax=ay=10**9; bx=by=-1
+    for y in range(y0,y1+1):
+        for x in range(x0,x1+1):
+            c=px[x,y]
+            if max(abs(c[i]-bg[i]) for i in range(3))>th:
+                ax=min(ax,x);bx=max(bx,x);ay=min(ay,y);by=max(by,y)
+    print('none' if bx<0 else f"x{ax}..{bx} (w{bx-ax+1}) y{ay}..{by} (h{by-ay+1})")
