@@ -4627,6 +4627,133 @@
     78%{opacity:1}100%{opacity:0;scale:1.1}}
   .jz-wf{position:absolute;inset:0;pointer-events:none;background:#fff;animation:jzWf .15s ease-out both}
   @keyframes jzWf{0%{opacity:.86}100%{opacity:0}}
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     34 축복(버프) 팝업 — 측정표 docs/measure/34-축복버프팝업.md
+     껍데기 = 딤(.54) 위 **가운데 다이얼로그** 998×1157 (A5 .mbox 와 같은 겹 구성이지만
+     폭 897 이 아니라 998 이고, 팝업 «바깥» 에 초록 스트립 + 닫기 X 형제가 붙어 있어 자체 오버레이로 둔다).
+     세로: 블록(팝업1157 + 21 + 스트립252 + 24 + X120 = 1574) 을 «위 126 − 아래 145» 로 중앙 배치하면
+     top = 126 + (2280−126−142−1574)/2 = 345 = ref 429 − 84 ✓ (63 2회차 규칙: 가드 126 은 두고 아래로 민다)
+     좌표 기준: 팝업 자식은 크림 본문 좌상단 = ref(61,529) 원점. ══════════════════════════════════════ */
+  #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;
+    box-sizing:border-box;padding:126px 0 142px;flex-direction:column;align-items:center;justify-content:center}
+  #blsw.on{display:flex}
+  #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
+
+  /* 검정 8 + 갈색 링 11(바깥 6 #564438 · 안쪽 5 #46382D) = 편측 19 → 크림 폭 960 (ref 958) */
+  .bls{position:relative;flex:none;width:998px;height:1157px;max-height:100%;box-sizing:border-box;
+    border:8px solid #000;border-radius:44px;padding:0 6px 6px;background:#564438;
+    display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
+  .bls-head{flex:0 0 90px;margin:0 -6px;border-radius:36px 36px 0 0;background:#523E3D;
+    box-shadow:inset 0 8px 0 #5B4643,inset 6px 0 0 #5B4643,inset -6px 0 0 #5B4643;
+    text-align:center;line-height:90px;overflow:hidden}
+  /* 타이틀 «축복» 코어 78×47 → fs 47/0.93 ≈ 50, 편측 외곽 6 */
+  /* 1회차 실측: 코어 h47 은 ref 와 Δ0, 폭만 94(ref 78, +20.5%) → scaleX .83 (LESSONS: 폭은 scaleX 로) */
+  .bls-head>i{position:relative;top:-2px;font-size:50px;color:#FEF8AE;
+    -webkit-text-stroke:12px #000;paint-order:stroke fill;transform:scaleX(.83)}
+  /* 크림 본문 — 별 워터마크는 A5 .mbody 와 같은 게임 공용 자산이다 (LESSONS 20-②: 새로 그리지 말 것) */
+  /* border-top 2px 는 ref 헤더(437..526) ↔ 크림(529 시작) 사이 전이 2행이다.
+     margin 으로 밀면 갈색 링이 드러난다(LESSONS 33-③) — border 로 같은 자리를 헤더색으로 칠한다. */
+  .bls-body{flex:1 1 auto;position:relative;border:solid #46382D;border-width:2px 5px 5px;border-top-color:#523E3D;
+    border-radius:0 0 30px 30px;background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23ECD3B4'/%3E%3C/svg%3E") 37px -2px/235px 235px repeat}
+  .bls-body>*{position:absolute}
+
+  /* §3 핑크 캠페인 리본 — 팝업 좌측 외곽을 8px 넘어간다(ref x33 < 팝업 41). .bls 기준 좌표 */
+  /* ref 리본 bbox 316×144 는 «회전 뒤» 값이다 — 회전 전 원본은 306×77
+     (W'=w·cos13+h·sin13=316, H'=w·sin13+h·cos13=144 을 풀면 나온다). 중심 ref(190.5, 500.5+84) */
+  .bls-rib{position:absolute;left:-11.5px;top:109px;width:306px;height:77px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#D31464 0,#BE175D 100%);
+    clip-path:polygon(0 18%,86% 0,100% 22%,88% 50%,100% 78%,86% 100%,0 82%);
+    rotate:-13deg;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.35)}
+  .bls-rib>i{font-size:31px;color:#FEF7AF;-webkit-text-stroke:7px #6E0834;paint-order:stroke fill;
+    transform:translateX(-14px)}
+
+  /* §4 안내 배너 — 크림 위 반투명 토프 바 */
+  .bls-note{left:40px;top:40px;width:879px;height:98px;border-radius:48px;background:#A2927B;
+    display:flex;align-items:center;justify-content:center}
+  /* ref 문구 24자 코어 597(자당 24.9) — 우리 문구도 24자로 맞추고 자폭만 scaleX 로 좁힌다 */
+  .bls-note>i{font-size:36px;color:#fff;-webkit-text-stroke:8px #4A3B2C;paint-order:stroke fill;transform:scaleX(.856)}
+
+  /* §5 Lv 알약 + 진행바 (알약이 진행바 좌단을 덮는다) */
+  .bls-lv{left:50px;top:181px;width:134px;height:68px;box-sizing:border-box;z-index:2;
+    border:5px solid #000;border-radius:34px;background:#553E2E;
+    display:flex;align-items:center;justify-content:center}
+  .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill}
+  .bls-bar{left:183px;top:189px;width:682px;height:51px;box-sizing:border-box;
+    border:5px solid #000;border-radius:26px;background:#81839A;overflow:hidden}
+  .bls-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FDB419;border-radius:26px 0 0 26px}
+  .bls-bar>i{position:absolute;left:0;right:0;top:0;bottom:0;line-height:41px;text-align:center;
+    font-size:30px;color:#FCFEB3;-webkit-text-stroke:7px #2D2100;paint-order:stroke fill}
+
+  /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
+  .bls-cards{left:15px;top:270px;width:928px;height:447px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+  .bls-c{position:relative;border-radius:24px;overflow:hidden;cursor:pointer;
+    display:flex;flex-direction:column}
+  .bls-c>.h{flex:0 0 78px;background:#54413D;display:flex;align-items:center;justify-content:center}
+  /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
+  .bls-c>.h>i{font-size:35px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.936)}
+  /* 본문 = 노랑 사선 스트라이프(측정: 밝은 #FFCE57 / 어두운 #F5B64C, 주기 ≈38px) */
+  .bls-c>.b{flex:1 1 auto;position:relative;
+    background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
+  .bls-c>.b>*{position:absolute}
+  .bls-c .ic{left:0;right:0;top:13px;height:166px;line-height:166px;text-align:center;font-size:126px}
+  /* 1회차: 초록 코어 h29·w105 (ref h32·w119) → fs 42→46 */
+  .bls-c .vl{left:0;right:0;top:185px;height:50px;line-height:50px;text-align:center;
+    font-size:46px;color:#A6DC60;-webkit-text-stroke:11px #123005;paint-order:stroke fill}
+  /* ⚠ `#blsw s`(특이도 1-0-1)가 display:inline-block 을 못박으므로 여기서 flex 를 써도 진다.
+     LESSONS 15 «폴백이 안 걸린다» 의 사촌 — 안쪽 정렬은 line-height/text-align 으로 한다. */
+  .bls-c .tm{left:46px;top:252px;width:205px;height:97px;border-radius:22px;background:#926A24;
+    box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center}
+  /* 1회차: 흰 코어 w153 (ref 169, −9.5%) — 높이는 Δ1 이라 fs 는 두고 폭만 넓힌다 */
+  .bls-c .tm>i{font-size:30px;color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(1.1)}
+  .bls-c .glo{left:0;right:0;bottom:0;height:19px;
+    background:linear-gradient(180deg,#EEBA4A 0,#FFFA89 100%)}
+  /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
+  .bls-c.off>.b{background:repeating-linear-gradient(45deg,#9E9284 0 19px,#8A7E70 19px 38px)}
+  .bls-c.off .vl{color:#D8D2C8}
+  .bls-c.off .tm{background:#5C5044;box-shadow:inset 0 0 0 3px #4B4136}
+  .bls-c.off .glo{background:linear-gradient(180deg,#8A7E70 0,#C6BEB2 100%)}
+
+  /* §7 «보너스 축복» 탭 + 보너스 바 */
+  .bls-btab{left:258px;top:752px;width:442px;height:58px;border-radius:20px 20px 0 0;background:#3E302D;
+    display:flex;align-items:center;justify-content:center}
+  /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
+  .bls-btab>i{font-size:34px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.875)}
+  .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
+    background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
+  .bls-bn>*{position:absolute}
+  .bls-bn .ic{left:34px;top:24px;width:186px;height:116px;line-height:116px;text-align:center;font-size:92px}
+  /* 1회차: 흰 잉크 w218 (ref 181) → scaleX .83 */
+  .bls-bn .tx{left:309px;top:38px;height:76px;line-height:76px;font-size:42px;color:#fff;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83);transform-origin:left center}
+  .bls-bn .tx em{color:#A6DC60;margin-left:20px}
+  .bls-bn.off{background:repeating-linear-gradient(45deg,#9E9284 0 19px,#8A7E70 19px 38px)}
+  .bls-bn.off .tx em{color:#D8D2C8}
+
+  /* §8 하단 안내 문구 — 잉크 ref y1496..1531 → body local 967..1002 */
+  /* ref 푸터는 검정 마스크(max RGB<45)에 걸린다 = 거의 검정. 1회차의 #6A5033 은 너무 밝았다 */
+  .bls-ft{left:0;right:0;top:957px;height:52px;line-height:52px;text-align:center;
+    font-size:38px;font-weight:900;color:#241A0E}
+  .bls-ft>i{transform:scaleX(.75)}
+
+  /* §9 팝업 «바깥» — 초록 프로모 스트립(간격 21) + 닫기 X(간격 31) */
+  .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:252px;box-sizing:border-box;
+    border:5px solid #000;border-radius:30px;overflow:hidden;
+    background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
+  .bls-promo>*{position:absolute}
+  .bls-promo .ic{left:71px;top:24px;width:325px;height:200px;line-height:200px;text-align:center;font-size:112px}
+  .bls-promo .tx{left:491px;top:30px;height:74px;line-height:74px;font-size:44px;color:#FFF06A;
+    -webkit-text-stroke:11px #063D1E;paint-order:stroke fill}
+  .bls-promo .gb{left:625px;top:115px;width:267px;height:115px;border:0;border-radius:28px;cursor:pointer;
+    background:linear-gradient(180deg,#8CF05C 0,#70E030 55%,#4DBB18 100%);
+    box-shadow:inset 0 6px 0 rgba(255,255,255,.55),0 6px 0 #2F7A0C;
+    font-size:42px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
+  .bls-x{flex:none;margin-top:24px;width:120px;height:120px;box-sizing:border-box;border:7px solid #000;
+    border-radius:50%;background:#E04D57;cursor:pointer;line-height:106px;text-align:center;
+    font-size:60px;font-weight:900;color:#FAF0F1}
 </style>
 </head>
 <body>
@@ -4692,6 +4819,10 @@
       <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 레퍼런스 6행 폭 107 을 맞추려면 scaleX 2.04 가
            필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
       <div class="ibtn" data-pop="promo" style="--sf:.956;--sx:1.220;--dx:1px;--dy:3px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
+      <!-- 작업 34(2026-08-25): 48 이 «던전» 을 지우면서 비워 둔 **예약된 5번째 라벨 행**에 «축복» 을 넣는다.
+           layoutSide() 는 SIDE.N=5 로 이미 5칸을 잡아 두고 있어(위 48 주석) 행 그리드·--ih/--igap/--itop 이
+           바뀌지 않는다 = 기존 4칸 아이콘 좌표 이동 0. A2 측정 규격은 그대로다. -->
+      <div class="ibtn" data-pop="bless" style="--sf:.930;--sx:1.150;--dy:1px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
     </div>
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
@@ -4964,6 +5095,33 @@
         <div class="ci-ways" id="ciWays"></div>
       </div>
     </div>
+  </div>
+  <!-- 34 축복(버프) 팝업 — 딤 위 가운데 다이얼로그 998×1157 + 팝업 «바깥» 초록 스트립 · 닫기 X.
+       측정표 docs/measure/34-축복버프팝업.md · 우리 게임 설계는 그 §10.
+       진입: 좌측 사이드 아이콘 «축복»(data-pop="bless"). -->
+  <div id="blsw">
+    <div class="bls">
+      <div class="bls-rib"><i>축복 장려 캠페인</i></div>
+      <div class="bls-head"><i>축복</i></div>
+      <div class="bls-body">
+        <div class="bls-note"><i>축복은 언제나 무료! 만료되면 다시 받으세요</i></div>
+        <div class="bls-lv"><i id="blsLv">Lv.1</i></div>
+        <div class="bls-bar"><s id="blsFill"></s><i id="blsProg">0/4</i></div>
+        <div class="bls-cards" id="blsCards"></div>
+        <div class="bls-btab"><i>보너스 축복</i></div>
+        <div class="bls-bn" id="blsBonus">
+          <s class="ic">💰</s>
+          <s class="tx">골드 획득량<em>+50%</em></s>
+        </div>
+        <div class="bls-ft"><i>모든 축복을 활성화하면 보너스 축복이 활성화됩니다.</i></div>
+      </div>
+    </div>
+    <div class="bls-promo">
+      <s class="ic">⚔️❤️⚡</s>
+      <s class="tx">모든 축복 받기!</s>
+      <button class="gb" id="blsAll">받기</button>
+    </div>
+    <div class="bls-x" id="blsX">✕</div>
   </div>
   <!-- 21 도감 보너스 팝업 — 딤 위 가운데 다이얼로그 + 하단 깃발 서브탭. 측정표 docs/measure/21-도감보너스팝업.md
        진입점: 소환 탭 컬렉션 섹션의 [세트 도감] 버튼. 세트 = 표시 전용 정적 그룹(COLL21),
@@ -5828,6 +5986,20 @@ const ETYPE = {
 /* ==========================================================================
    세이브
    ========================================================================== */
+/* ── 34 축복(버프) — 측정표 docs/measure/34-축복버프팝업.md §10 «우리 게임 설계» ──
+   레퍼런스는 «햄지 공격력 / 매옹이 공격력 / 체력» 3칸이지만 우리 게임은 캐릭터가 «용사» 1명이라
+   (UI-REFERENCE «설계 확정» 1번) 3칸을 «공격력 / 체력 / 공격 속도» 로 바꾼다. 레이아웃은 그대로.
+   광고 SDK 가 없으므로 활성화는 **무료**다(44 의 «결제 미연동» 과 같은 사유로 목업을 만들지 않는다). */
+const BLESS = [
+  { k:'atk',  n:'공격력',   ic:'⚔️', v:0.20 },
+  { k:'hp',   n:'체력',     ic:'❤️', v:0.20 },
+  { k:'rate', n:'공격 속도', ic:'⚡', v:0.20 }
+];
+const BLESS_STEP  = 4;                 /* 진행바 n/4 — 4번 켜면 축복 레벨 +1 */
+const BLESS_BASE  = 30 * 60 * 1000;    /* 기본 지속 30분 */
+const BLESS_PERLV = 5 * 60 * 1000;     /* 레벨당 +5분 */
+const BLESS_GOLD  = 0.50;              /* 보너스 축복 — 3종 전부 활성일 때 골드 획득량 +50% */
+
 const KEY = 'idle_hunter_save_v4';
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); };
 const DEF = () => ({
@@ -5846,6 +6018,7 @@ const DEF = () => ({
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
   guide:{ idx:0, prog:0 },                    /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선 */
+  bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
@@ -5876,6 +6049,15 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
+    /* 34 축복 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       옛 세이브엔 bless 가 없고, 있어도 문자열·null 이면 NaN 이 새므로 항목별로 못박는다. */
+    {
+      const s = (b.bless && typeof b.bless === 'object') ? b.bless : {};
+      const e = (s.exp && typeof s.exp === 'object') ? s.exp : {};
+      b.bless = { lv: Number.isFinite(s.lv) && s.lv >= 1 ? s.lv|0 : 1,
+                  prog: Number.isFinite(s.prog) && s.prog >= 0 ? Math.min(s.prog|0, BLESS_STEP-1) : 0, exp:{} };
+      BLESS.forEach(x => { const v = e[x.k]; b.bless.exp[x.k] = Number.isFinite(v) && v > 0 ? v : 0; });
+    }
     /* 46 레이드 기록 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
        옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN 이 새지 않게 항목별로 못박는다. */
     b.raidBest = (d.raidBest && typeof d.raidBest === 'object') ? d.raidBest : {};
@@ -5977,6 +6159,13 @@ function bonus(){
   /* 23 훈련·스탯 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
   const tb = (1 + TRAIN_BONUS * (trainStage() - 1)) * (1 + TRAIN_BONUS * (statStage() - 1));
   b.atk *= tb; b.hp *= tb; b.regen *= tb;
+
+  /* 34 축복 — 활성 축복만 곱하고, 3종 전부 활성이면 «보너스 축복»(골드 +50%)이 붙는다.
+     만료는 시간으로 갈리므로 blessTick() 이 만료 순간에 markDirty() 를 불러 이 캐시를 깬다. */
+  if(blessOn('atk'))  b.atk  *= 1 + BLESS[0].v;
+  if(blessOn('hp'))   b.hp   *= 1 + BLESS[1].v;
+  if(blessOn('rate')) b.rate *= 1 + BLESS[2].v;
+  if(blessAll())      b.gold *= 1 + BLESS_GOLD;
 
   bonusCache = b; bonusDirty = false;
   return b;
@@ -9743,6 +9932,72 @@ $('ciw').addEventListener('click', e => { if(e.target.id === 'ciw') closeCurInfo
 /* 팝업이 열린 채 화면이 바뀌면 값이 굳는다 — 렌더 루프에서 같이 갱신한다 */
 $('tabbar').addEventListener('click', closeCurInfo, true);
 
+/* ---- 34 축복(버프) 팝업 (#blsw) — 측정표 docs/measure/34-축복버프팝업.md ----
+   축복 3종은 «무료로 켜는 시간제 버프» 다. 켜면 지속시간 동안 bonus() 에 곱해지고(위 bonus() 참고),
+   3종이 동시에 켜져 있는 동안만 «보너스 축복»(골드 +50%)이 붙는다.
+   축복을 1개 켤 때마다 진행 +1, 4 를 채우면 축복 레벨 +1 이고 레벨당 지속시간이 +5분 늘어난다.
+   저장 구조: `S.bless = {lv, prog, exp:{atk,hp,rate}}` — KEY 는 올리지 않고 load() 에서 «없으면 기본값». */
+function blessDur(){ return BLESS_BASE + BLESS_PERLV * Math.max(0, (S.bless.lv|0) - 1); }
+function blessLeft(k){ return Math.max(0, (S.bless.exp[k] || 0) - Date.now()); }
+function blessOn(k){ return blessLeft(k) > 0; }
+function blessAll(){ return BLESS.every(x => blessOn(x.k)); }
+function blessAny(){ return BLESS.some(x => !blessOn(x.k)); }   /* 켤 수 있는 축복이 하나라도 있나 */
+function hms(ms){
+  const t = Math.max(0, Math.ceil(ms/1000));
+  const p = n => String(n).padStart(2,'0');
+  return p(t/3600|0) + ':' + p((t/60|0)%60) + ':' + p(t%60);
+}
+function activateBless(k){
+  if(blessOn(k)) return false;                       /* 이미 켜져 있으면 시간을 덧붙이지 않는다 */
+  S.bless.exp[k] = Date.now() + blessDur();
+  if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
+  markDirty(); save(); renderBless(); uiDirty = true; renderUI();
+  return true;
+}
+function renderBless(){
+  if(!blsBuilt) buildBlessCards();
+  $('blsLv').textContent   = 'Lv.' + (S.bless.lv|0);
+  $('blsProg').textContent = (S.bless.prog|0) + '/' + BLESS_STEP;
+  /* 진행바 채움 — 트랙 안쪽 폭(682 − 테두리 10)에 비례. ref 3/4 = 74% 와 같은 규칙 */
+  $('blsFill').style.width = (100 * (S.bless.prog|0) / BLESS_STEP).toFixed(2) + '%';
+  BLESS.forEach(x => {
+    const c = $('blsC_' + x.k), on = blessOn(x.k);
+    c.classList.toggle('off', !on);
+    c.querySelector('.tm>i').textContent = on ? '⏱ ' + hms(blessLeft(x.k)) : '⏱ 받기';
+  });
+  $('blsBonus').classList.toggle('off', !blessAll());
+  $('blsAll').style.visibility = blessAny() ? '' : 'hidden';
+}
+let blsBuilt = false;
+function buildBlessCards(){
+  $('blsCards').innerHTML = BLESS.map(x =>
+    '<div class="bls-c" id="blsC_' + x.k + '" data-bless="' + x.k + '">' +
+      '<div class="h"><i>' + x.n + '</i></div>' +
+      '<div class="b"><s class="ic">' + x.ic + '</s>' +
+        '<s class="vl">+' + Math.round(x.v*100) + '%</s>' +
+        '<s class="tm"><i>⏱ 받기</i></s><s class="glo"></s></div>' +
+    '</div>').join('');
+  blsBuilt = true;
+}
+function openBless(){ renderBless(); $('blsw').classList.add('on'); }
+function closeBless(){ $('blsw').classList.remove('on'); }
+$('blsw').addEventListener('click', e => {
+  if(e.target.id === 'blsw'){ closeBless(); return; }
+  const c = e.target.closest && e.target.closest('[data-bless]');
+  if(c) activateBless(c.dataset.bless);
+});
+$('blsX').onclick  = closeBless;
+$('blsAll').onclick = () => { let n = 0; BLESS.forEach(x => { if(activateBless(x.k)) n++; }); if(!n) renderBless(); };
+/* 만료는 시간이 지나면서 갈리므로 1초마다 확인한다 — 만료 순간에만 캐시를 깨고(=재계산) 다시 그린다. */
+let blsWas = '';
+function blessTick(){
+  const now = BLESS.map(x => blessOn(x.k) ? 1 : 0).join('');
+  if(now !== blsWas){ blsWas = now; markDirty(); uiDirty = true; }
+  sideAlert('bless', blessAny());
+  if($('blsw').classList.contains('on')) renderBless();
+}
+setInterval(blessTick, 1000);
+
 /* ---- 21 도감 보너스 팝업 (#collw) — 측정표 docs/measure/21-도감보너스팝업.md ----
    세트 = 표시 전용 정적 그룹(기존 아이템·레벨을 그대로 읽는다). 뱃지 Lv = 세트 내 최저 레벨.
    강화 버튼 = «세트 전원 요구 레벨 충족 + 해당 카테고리 collReady» 일 때만 활성 →
@@ -10603,6 +10858,7 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     else if(k === 'quest') openQuest();
     /* 작업 48 — 좌측 «던전» 아이콘을 없앴다(하단 탭과 중복). 던전 진입은 setTab('dun') 하나뿐이다. */
     else if(k === 'promo') openPromo();
+    else if(k === 'bless') openBless();
   };
 });
 /* 작업 49 — 우측 사이드(이벤트·특권 잠금 아이콘 · #facb 시설 배너)를 삭제해서 그 핸들러 2개도 함께 뺐다.

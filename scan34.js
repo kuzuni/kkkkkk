@@ -40,6 +40,7 @@ const IMG = process.env.SCAN_IMG || 'docs/ref/34-축복-버프팝업.jpg';
       notcream: p => dist(p, [240, 217, 186]) >= 60,
       pale: p => p[0] > 200 && p[1] > 185 && p[2] > 110,
       yellow: p => p[0] > 190 && p[1] > 140 && p[2] < 140 && p[0] - p[2] > 80,
+      green: p => p[1] > 150 && p[1] - p[0] > 30 && p[1] - p[2] > 60,
       any: () => true,
     };
     const cmd = args[0];
