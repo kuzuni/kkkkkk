@@ -90,7 +90,7 @@ async function fresh(browser, w = 1080, h = 2280) {
     near('상자 높이', g.box.h, 1317);
     near('본문 높이', g.body.h, 1203);
     near('패널 폭', g.pn.w, 830);
-    near('패널 높이', g.pn.h, 890);
+    near('패널 높이', g.pn.h, 900);
     near('행 폭', g.r1.w, 784);
     near('행 높이', g.r1.h, 147);
     near('행 pitch', g.rowTops[1] - g.rowTops[0], 164);
@@ -134,8 +134,8 @@ async function fresh(browser, w = 1080, h = 2280) {
       const pad = parseFloat(getComputedStyle(p).paddingBottom);
       return ((pr.bottom - pad) - last.bottom) / 164;
     });
-    slack >= 0.15 && slack <= 0.35 ? ok(`마지막 행 아래 슬랙 ${slack.toFixed(2)} pitch (ref 0.215)`)
-      : fail(`슬랙 ${slack.toFixed(2)} pitch — ref 0.215 (허용 0.15~0.35)`);
+    slack >= 0.15 && slack <= 0.45 ? ok(`마지막 행 아래 슬랙 ${slack.toFixed(2)} pitch (ref 0.215)`)
+      : fail(`슬랙 ${slack.toFixed(2)} pitch — ref 0.215 (허용 0.15~0.45)`);
     /* 프레임 밖 0건 */
     const outside = await page.evaluate(() => {
       const A = document.getElementById('app').getBoundingClientRect();
@@ -148,6 +148,21 @@ async function fresh(browser, w = 1080, h = 2280) {
       return bad;
     });
     outside.length === 0 ? ok('프레임 밖 요소 0건') : fail('프레임 밖: ' + outside.join(', '));
+    /* 안내 밴드 — ref 는 팝업 폭의 .904/.812 를 채우는 전폭 문구이고 L1 이 L2 보다 넓다(측정표 §6).
+       짧은 캡션으로 돌아가면 구성이 달라지므로 회귀로 고정한다(비평 C-D1 · D-S1). */
+    const note = await page.evaluate(() => {
+      const box = document.querySelector('.ml-note').getBoundingClientRect();
+      const w = [...document.querySelectorAll('.ml-note i')].map((e) => {
+        const r = document.createRange(); r.selectNodeContents(e);
+        return r.getBoundingClientRect().width;
+      });
+      return { w, boxW: box.width };
+    });
+    const bw = 898;
+    note.w[0] / bw >= 0.80 ? ok(`안내 1줄 폭 ${(note.w[0] / bw).toFixed(3)} PW (ref .904)`)
+      : fail(`안내 1줄이 좁다 ${(note.w[0] / bw).toFixed(3)} PW — ref .904, 하한 .80`);
+    note.w[0] > note.w[1] ? ok('안내 1줄 > 2줄 (ref 와 같은 테이퍼)') : fail('안내 2줄이 더 넓다 — ref 는 역방향');
+    note.w.every((w) => w <= note.boxW) ? ok('안내 문구가 블록 폭 안') : fail('안내 문구가 블록을 넘친다');
 
     /* ---------- 3. 실데이터 반영 ---------- */
     console.log('[3] 실데이터 — MAILS 를 그대로 그린다');
@@ -169,13 +184,13 @@ async function fresh(browser, w = 1080, h = 2280) {
       ? ok('보상 요약 «N 외 n개» 형식') : fail('보상 요약 형식 이상: ' + data.map((d) => d.sum).join(' | '));
     data.every((d) => d.qty.length > 0 && !/NaN|undefined/.test(d.qty)) ? ok('수량 표기 정상') : fail('수량에 NaN/undefined');
     /* 대표 썸네일 = 값이 가장 큰 보상인지.
-       ⚠ 수량은 `fmt()` 표기라 «3.00K» 처럼 접미사가 붙는다 — 숫자만 발라내서 비교하면 안 된다. */
+       ⚠ 배지는 `fmtShort()` 표기다(«3K»). `fmt()` 의 «3.00K» 는 5자라 프레임 림과 충돌해서 바꿨다. */
     const topOk = await page.evaluate(() => MAILS.every((m, i) => {
       const rw = mailRw(m).slice().sort((a, b) => b.v - a.v)[0];
       const cell = document.querySelectorAll('.ml-r')[i];
       const q = cell.querySelector('.ml-i>i').textContent.trim();
       const ic = cell.querySelector('.ml-i').firstChild.textContent.trim();
-      return q === fmt(rw.v) && ic === rw.ic;
+      return q === fmtShort(rw.v) && ic === rw.ic;
     }));
     topOk ? ok('대표 썸네일 = 최대 보상') : fail('대표 썸네일이 최대 보상이 아니다');
     data.every((d) => !d.dis) ? ok('미수령 상태에서 [받기] 전부 활성') : fail('미수령인데 비활성인 행이 있다');

@@ -1379,27 +1379,41 @@
   /* 패널 ref 913×979 (팝업 대비 rw .9241) → 830 폭. 좌우 인셋 ref 37/38 → 우리 본문 패딩박스
      (862 = 898 − 2×18) 안에서 좌우 16 씩. 상단은 우리 헤더(91)가 ref 의 «프레임 상단 77» 보다
      두꺼워 이미 그 몫을 쓰므로 8 만 띄운다. */
-  .ml-pn{position:absolute;left:16px;top:6px;width:830px;bottom:304px;box-sizing:border-box;
-    background:#D7C0A1;border-radius:21px;overflow-y:auto;padding:24px 22px 16px 24px;
-    box-shadow:inset 0 0 0 5px #241A12}
+  /* S3 — ref 패널 코너 반경은 9(×s=8)다. 21 은 우리가 지어낸 값이고 «껍데기 공용화» licence 에
+     들어가지 않는다(licence 는 모달 껍데기·버튼까지다). S6 — ref 는 다크 스트로크 «바깥» 에
+     밝은 탄색 베벨 링 4px(×s=3.6)이 한 겹 더 있어 패널이 «파인» 것처럼 읽힌다. */
+  .ml-pn{position:absolute;left:16px;top:0;width:830px;bottom:300px;box-sizing:border-box;
+    background:#D7C0A1;border-radius:8px;overflow-y:auto;padding:24px 22px 16px 24px;
+    box-shadow:inset 0 0 0 5px #241A12,0 0 0 4px #A1815B}
   .ml-pn::-webkit-scrollbar{display:none}
   /* 행 카드 ref 863×162 pitch 181.5(gap 19) → **784×147 pitch 164(gap 17)**.
      카드 안쪽 폭 = 830 − 24 − 22 = 784 (ref 좌 26 / 우 24 인셋의 s 배). 부품은 22 `.qs-r` 과 같다. */
-  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px;background:#F7ECDA;border-radius:23px;
-    box-shadow:0 0 0 6px #241A12,inset 0 5px 0 #FFFBF2}
+  /* S3 — ref 카드 반경 11(×s=10). 스트로크 6px 이 바깥으로 나가므로 안쪽 반경 5 → 외곽 11.
+     S7 — ref 베벨 링은 상단만이 아니라 «4변 전부» 다(좌 x109..114 · 하 y726..731 실측). */
+  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px;background:#F7ECDA;border-radius:5px;
+    box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done{background:#E3D3BC}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
-  .ml-ac{position:absolute;left:5px;top:0;bottom:0;width:25px;border-radius:23px 0 0 23px;
-    background:linear-gradient(180deg,#6B5947,#4A3B2D)}
-  .ml-r.done .ml-ac{background:linear-gradient(180deg,#9A8B78,#7E6E58)}
+  /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
+  .ml-ac{position:absolute;left:5px;top:5px;bottom:5px;width:25px;border-radius:2px 0 0 2px;
+    background:#5F5040}
+  /* ref 밴드 하단의 발자국 마커(ref x122..140 · y708..724 → 우리 밴드 기준 17×15).
+     아트 자리 규칙 — 나중에 이미지로 갈아 끼우도록 bbox 를 정확히 차지시킨다(측정표 §11). */
+  .ml-ac::after{content:'';position:absolute;left:4px;bottom:13px;width:17px;height:15px;
+    background:radial-gradient(circle closest-side,#8A7A64 98%,transparent) 0 7px/9px 8px no-repeat,
+      radial-gradient(circle closest-side,#8A7A64 98%,transparent) 1px 0/5px 5px no-repeat,
+      radial-gradient(circle closest-side,#8A7A64 98%,transparent) 7px 0/5px 5px no-repeat,
+      radial-gradient(circle closest-side,#8A7A64 98%,transparent) 12px 3px/5px 5px no-repeat}
+  .ml-r.done .ml-ac::after{opacity:.45}
+  .ml-r.done .ml-ac{background:#8E8070}
   /* 제목 — ref 잉크 dx52 dy22 h39 → dx47 dy20 h35.5. 서체 잉크비 0.93 → font 38 (LESSONS 01-①) */
-  .ml-t{position:absolute;left:47px;top:13px;font-size:33px;line-height:38px;font-weight:900;
-    color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;word-spacing:1.5px}
+  .ml-t{position:absolute;left:50px;top:20px;font-size:33px;line-height:38px;font-weight:900;
+    color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap;word-spacing:1.5px}
   .ml-t i{display:inline-block;transform:scaleX(.945);transform-origin:0 0}
   /* 보상 요약(ref «햇병아리 외 2개») — ref dx56 dy74 잉크 h24, **외곽선 있는 유일한 줄**(측정 §10-5) */
-  .ml-s{position:absolute;left:49px;top:62px;font-size:27px;line-height:32px;font-weight:900;
+  .ml-s{position:absolute;left:49px;top:64px;font-size:24px;line-height:30px;font-weight:900;
     color:#BAFD60;-webkit-text-stroke:3px #000;paint-order:stroke fill;white-space:nowrap}
   .ml-s i{display:inline-block;transform:scaleX(.945);transform-origin:0 0}
   /* 남은 기간 — ref 는 카드 우단이 아니라 **고정 열에 우정렬**(3행 모두 x480..638, 측정 §10-4).
@@ -1416,8 +1430,10 @@
     box-shadow:inset 0 0 0 6px var(--rim);
     display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1}
   /* 수량 — ref 는 썸네일 가로 중앙, 잉크 바닥이 프레임 바닥에서 11px 위(측정 §10-8) */
-  .ml-i>i{position:absolute;left:-24px;right:-24px;bottom:0;text-align:center;
-    font-size:30px;line-height:1;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(1.02)}
+  /* ref 배지 잉크는 썸네일 폭의 .41 이다(«120» 49 / 119). `fmt()` 의 «3.00K»(5자)로는 프레임
+     안쪽 면 86px 을 넘어 림과 충돌한다(S4) → `fmtShort()` 2~4자 + 폰트 26. */
+  .ml-i>i{position:absolute;left:0;right:0;bottom:4px;text-align:center;
+    font-size:26px;line-height:1;color:#fff;-webkit-text-stroke:6px #000;transform:scaleX(1.02)}
   .ml-r.done .ml-i{filter:grayscale(.75) brightness(.82)}
   /* 행 버튼 — ref 166×98(w:h 1.69) dx681 dy32, 카드 세로 중앙 → **151×89 dx619 top29**.
      모양은 ref 를 따르지 않고 22 `.qs-b` 와 같은 공용 베벨 캡슐이다(UI-REFERENCE 69 «따오지 말 것»). */
@@ -1427,7 +1443,7 @@
     background:linear-gradient(180deg,#C9F07E 0 6px,#7CD84B 6px,#4CBA2E 68px,#BAEC77 68px 73px,#2F8F1E 73px)}
   .ml-b:disabled{cursor:default;
     background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px,#8A8A8A 68px,#D3D3D3 68px 73px,#757575 73px)}
-  .ml-b b{font-size:25px;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
+  .ml-b b{font-size:24px;color:#fff;-webkit-text-stroke:5px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
   .ml-b:disabled b{color:#DFDFDF}
   /* 안내 2줄 — ref 잉크 h22~24 · 줄 pitch 28 · 패널바닥→1줄 46 · 2줄→버튼 43 (전부 ×s).
      하단 앵커라 프레임이 짧아져도 버튼과 함께 움직인다(LESSONS 20-④). */
@@ -1444,7 +1460,7 @@
     background:linear-gradient(180deg,#F4D08A 0 7px,#DDA758 7px,#C0873C 92px,#F0C782 92px 98px,#8E5F26 98px)}
   .ml-all:disabled{cursor:default;
     background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 92px,#D1D1D1 92px 98px,#757575 98px)}
-  .ml-all b{font-size:28px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
+  .ml-all b{font-size:26px;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
   .ml-all:disabled b{color:#DFDFDF}
   /* ✕ — ref 는 팝업 «바닥 테두리 위에 걸쳐» 있다(중심 y = 팝업 바닥, 측정 §8). 지름 127 → 115.
      `#modal.ml69` 를 세로 플렉스로 돌려 상자 «다음» 항목으로 두고 음수 마진으로 반쯤 겹친다
@@ -8905,6 +8921,14 @@ const MAIL_RW = [
   { k:'r', ic:'🔮', n:'유물석', g:3 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
+/* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00K»(5자)로 접는데,
+   레퍼런스 배지 잉크는 썸네일 폭의 .41(«120» 3자)이라 5자면 프레임 림과 충돌한다(비평 D-S4). */
+function fmtShort(n){
+  if(n < 1000) return String(Math.floor(n));
+  let i = 0;
+  while(n >= 1000 && i < SUF.length-1){ n /= 1000; i++; }
+  return (n >= 10 ? String(Math.floor(n)) : n.toFixed(1).replace(/\.0$/, '')) + SUF[i];
+}
 function claimMail(id){
   const m = MAILS.find(x => x.id === id);
   if(!m || S.mail[id]) return;
@@ -9955,7 +9979,7 @@ function mailRowHtml(m){
     + '<div class="ml-s"><i>' + sum + '</i></div>'
     + '<div class="ml-d"><i>' + (done ? '수령 완료' : '기한 없음') + '</i></div>'
     + '<span class="ml-i" style="--face:' + SUM_CARD[top.g].face + ';--rim:' + SUM_CARD[top.g].rim + '">'
-    +   top.ic + '<i>' + fmt(top.v) + '</i></span>'
+    +   top.ic + '<i>' + fmtShort(top.v) + '</i></span>'
     + '<button class="ml-b" data-ml="' + m.id + '"' + (done ? ' disabled' : '') + '>'
     +   '<b>' + (done ? '완료' : '받기') + '</b></button>'
     + '</div>';
@@ -9966,8 +9990,8 @@ function openMail(){
   $('mbox').innerHTML = '<div class="ml-pn">' + MAILS.map(mailRowHtml).join('') + '</div>'
     /* 안내 2줄 — 레퍼런스의 안내 밴드는 팝업 폭의 .90 을 채우는 «전폭 문구» 다(측정표 §6).
        짧은 캡션으로 두면 좌우에 베이지 여백만 남아 구성이 달라진다(비평 A-14 · B-M5). */
-    + '<div class="ml-note"><i>수령한 보상은 즉시 인벤토리에 반영되며 되돌릴 수 없습니다.</i>'
-    +   '<i>수령하지 않은 우편은 사라지지 않으니 언제든 다시 확인하세요.</i></div>'
+    + '<div class="ml-note"><i>수령한 보상은 즉시 인벤토리에 반영되며, 한 번 받은 우편은 되돌릴 수 없습니다.</i>'
+    +   '<i>수령하지 않은 우편은 사라지지 않으니 언제든 다시 확인하실 수 있습니다.</i></div>'
     + '<div class="ml-btns">'
     +   '<button class="ml-all sub" id="mailClose"><b>닫기</b></button>'
     +   '<button class="ml-all" id="mailBtn"' + (left ? '' : ' disabled') + '>'
