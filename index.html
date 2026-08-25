@@ -2206,7 +2206,9 @@
   #dunw i,#dunw em,#dunw b{display:inline-block;font-style:normal;transform-origin:50% 50%}
 
   /* 카드 리스트 — 상단 여백 49(ref 191→241), 하단은 서브탭 바로 위까지 */
-  .dns-list{position:absolute;left:0;right:0;top:45px;padding-top:8px;bottom:138px;overflow-y:auto;
+  /* 2회차 비평 지적 3 — bottom 138 은 서브탭 바 상단(40+99=139)보다 1px 아래라 리스트 하단선이
+     바 외곽선에 **0px 로 붙었다**. 상점과 같은 14px 여백을 준다(40 + 99 + 14 = 153). */
+  .dns-list{position:absolute;left:0;right:0;top:45px;padding-top:8px;bottom:153px;overflow-y:auto;
     overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .dns-list::-webkit-scrollbar{width:0;height:0}
 
@@ -2349,7 +2351,10 @@
      폐기하고 **영웅 서브탭과 같은 공용 부품 `.stabs.sp2 > .stab`** 으로 바꿨다.
      바 기하(left 151 · width 794 · 탭바 위 40)는 03 측정표 실측 그대로 두고 칸만 2등분한다.
      레드닷은 `.stab > .bdg`. 측정표 §서브탭은 정오표 처리(docs/measure/03-던전팝업.md). */
-  .dns-sub{position:absolute;left:151px;top:auto;bottom:40px;width:794px}
+  /* 2회차 비평 지적 1 — 옛 좌표(x151 w794)는 좌 151 / 우 135 로 **16px 비대칭**이었다.
+     다른 공용 바는 전부 대칭(hero·eq 65/65 · shop 45/45)이라 «같은 부품» 으로 안 읽힌다.
+     폭 794 는 그대로 두고 좌우 여백만 143/143 으로 맞췄다. */
+  .dns-sub{position:absolute;left:143px;top:auto;bottom:40px;width:794px}
   /* ==========================================================================
      10 상점 팝업 — 소환 탭 — 측정표 docs/measure/10-상점팝업소환탭.md
      껍데기는 «(다) 전체화면 페이지» — 딤·헤더·테두리 없음. 03 던전(#dunw) 과 같은 부류.
@@ -5524,9 +5529,12 @@
     45%{scale:1.12;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
 
   /* ⑤ 96 — 서브탭 전환: 새로 활성이 된 칸이 1.06 으로 튄다.
-     ⚠ `transform` 이 아니라 독립 변형 속성 `scale:` 을 쓴다 — 라벨 폭 보정(scaleX)이 날아가지 않게. */
-  .jz-st{animation:jzSt .22s linear both}
-  @keyframes jzSt{0%{scale:1;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+     ⚠ `transform` 이 아니라 독립 변형 속성 `scale:` 을 쓴다 — 라벨 폭 보정(scaleX)이 날아가지 않게.
+     ⚠ 이름은 `jz-sb/jzSb` 다. 처음에 `jz-st/jzSt` 로 지었다가 **④ 카드 스태거와 이름이 겹쳐**
+        뒤에 선언된 스태거 규칙이 통째로 이겼다(칸이 0.94→1.02 로 튀었다 — 게이트가 잡았다).
+        `animation` 은 목록 전체가 교체되므로 이름 충돌은 «둘 중 하나가 통째로 사라지는» 사고다(LESSONS 60-3). */
+  .jz-sb{animation:jzSb .22s linear both}
+  @keyframes jzSb{0%{scale:1;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
     45%{scale:1.06;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
@@ -15762,7 +15770,7 @@ function jzInit(){
     if(!host) return;
     requestAnimationFrame(() => {
       const on = host.querySelector('.stabs > .stab.on');
-      if(on) jzOn(on, 'jz-st', 300);
+      if(on) jzOn(on, 'jz-sb', 300);
     });
   });
 

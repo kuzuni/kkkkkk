@@ -203,7 +203,44 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     ok('상점 탭 라벨 외곽선이 활성 ol4 / 비활성 ol3', act.coinInk === true, String(act.coinInk));
     ok('상점 → 소환 탭 복귀', act.summon === true, String(act.summon));
 
-    console.log('\n[5] 콘솔');
+    /* ---------- ⑥ 2회차 비평 반영 — 바 좌우 대칭 · 리스트와의 간격 ---------- */
+    console.log('\n[6] 2회차 비평 반영 (바 대칭 · 리스트 간격)');
+    const sym = await page.evaluate(() => new Promise(res => {
+      goTab('hero'); openDungeon();
+      setTimeout(() => {
+        const F = document.getElementById('app').getBoundingClientRect();
+        const b = document.getElementById('dunSub').getBoundingClientRect();
+        const li = document.querySelector('#dunw .dns-list').getBoundingClientRect();
+        res({ l: Math.round(b.x - F.x), r: Math.round(F.right - b.right), gap: Math.round(b.y - li.bottom) });
+      }, 700);
+    }));
+    ok('03 던전 바 좌우 대칭 (Δ≤1px)', Math.abs(sym.l - sym.r) <= 1, '좌 ' + sym.l + ' / 우 ' + sym.r);
+    ok('03 리스트 하단 ~ 바 상단 간격 ≥ 12px', sym.gap >= 12, sym.gap + 'px');
+
+    /* ---------- ⑤ 60 쥬시 — 탭 전환 시 활성 칸 1.06 팝 ---------- */
+    console.log('\n[7] 60 쥬시 — 탭 전환 팝(.jz-sb)');
+    const pop = await page.evaluate(() => new Promise(res => {
+      openShopPage();
+      setTimeout(() => {
+        document.querySelector('#shopCats [data-cat="coin"]').click();
+        /* 팝은 rAF 한 틱 뒤에 붙는다 — 두 틱 기다렸다가 «지금 도는 애니메이션» 을 읽는다 */
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+          const on = document.querySelector('#shopCats .stab.on');
+          const as = on.getAnimations().filter(a => (a.animationName || '') === 'jzSb');
+          const peak = [];
+          if (as[0]) { const kf = as[0].effect.getKeyframes(); kf.forEach(k => peak.push(k.scale)); }
+          res({ cls: on.classList.contains('jz-sb'), n: as.length, peak,
+            /* transform(scaleX 라벨 보정)이 살아 있는지 — 독립 변형 속성이라 덮이면 안 된다 */
+            ink: getComputedStyle(on.querySelector('i')).transform });
+        }, 30)));
+      }, 600);
+    }));
+    ok('활성 칸에 .jz-sb 가 붙는다', pop.cls === true, String(pop.cls));
+    ok('jzSb 애니메이션 1개', pop.n === 1, pop.n + '개');
+    ok('팝 최대 1.06 (scale: 로 — transform 아님)', pop.peak.includes('1.06'), JSON.stringify(pop.peak));
+    ok('라벨 폭 보정 transform 이 살아 있다', /matrix/.test(pop.ink) && pop.ink !== 'none', pop.ink);
+
+    console.log('\n[8] 콘솔');
     ok('콘솔 에러 0건', errs.length === 0, errs.length ? errs.slice(0, 3).join(' | ') : '0건');
   } finally {
     await browser.close();
