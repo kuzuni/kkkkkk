@@ -153,10 +153,11 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
     setup: () => { closeModal(); goTab('grow'); S.gold = 1e15; S.trainStage = 9999; /* 상한(full) 정지 배제 — 유실만 잰다 */ },
     targets: [{ q: '#trw [data-tr] .tr-up, #trw [data-tr]' }],
     metric: () => S.gold,
-    /* 200연속 구매는 레벨을 200 올려 비용이 지수로 큰다 — 한 번 넣은 예산이 ~120탭에서 고갈돼
-       이후 구매가 전부 실패(2회차 실측: before/after·mouse/touch 4런 전부 114~121 에서 정지 =
-       유실이 아니라 잔고). 매 탭 뒤 리필해서 «유실»만 잰다. */
-    between: () => { S.gold = 1e15; },
+    /* 200연속 구매는 레벨을 200 올려 비용이 지수로 큰다(첫 카드 atk: 45×1.19^l → +175레벨이면
+       ≈7e14). 한 번 넣은 예산은 ~120탭에서 고갈되고(4런 전부 114~121 정지), 리필만 하면
+       ~175탭에서 단일 비용이 예산을 다시 넘는다(실측 175/200) — 즉 «유실»이 아니라 잔고·비용 곡선.
+       매 탭 뒤 골드와 «구매로 오른 레벨»을 함께 원복해 탭마다 동일 조건으로 만든다. */
+    between: () => { S.gold = 1e15; for(const k in S.lv) if(S.lv[k] > 1) S.lv[k] = 1; },
   });
 
   await browser.close();
