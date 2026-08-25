@@ -112,7 +112,9 @@ const ck = (name, got, want, tol = 0) => {
   const D = R.ready;
   ck('테두리 검정 5px 복귀',              D.bw + ' ' + D.bcol, '5px rgb(0, 0, 0)');
   ck('배너 bbox 동일',                   D.banner.x + ',' + D.banner.w + ',' + D.banner.h, T.banner.x + ',' + T.banner.w + ',' + T.banner.h);
-  ck('보상칸 bbox 동일',                 D.rew.x + ',' + D.rew.w + ',' + D.rew.h, T.rew.x + ',' + T.rew.w + ',' + T.rew.h);
+  /* 보상칸 크기는 두 상태가 **의도적으로 1px 다르다** — 02 표는 117×117·radius 30(육안 실측),
+     32 표는 118×118·radius 34(픽셀 실측). 02 를 건드리지 않는 것이 회귀 방지다. */
+  ck('보상칸 bbox = 02 값 유지(117)',     D.rew.x + ',' + D.rew.w + ',' + D.rew.h, '948,117,117');
   ck('L1 transform 없음(02 는 보정 안 함)', D.l1tf, 'none');
   ck('수량 transform 없음',               D.subtf, 'none');
   ck('젬 transform 없음',                 D.gemtf, 'none');
