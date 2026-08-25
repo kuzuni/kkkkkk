@@ -2522,14 +2522,17 @@
   #collw.on{display:flex}
   #collw i,#collw s,#collw b,#collw em{display:inline-block;font-style:normal;font-weight:900}
   .cl{position:relative;flex:none;width:895px;height:1543px;max-height:100%;box-sizing:border-box;
-    background:#F0D9BA;border:solid #000;border-width:8px 5px 7px;border-radius:48px 48px 12px 12px;
+    background:#F0D9BA;border:solid #000;border-width:8px 5px 5px;border-radius:48px 48px 12px 12px;
+    /* ref 하단 단면: 크림 ~1890 → 갈색 베벨 1891~1893(3px) → 검정 1894~1897. 좌우엔 10px 베벨이 있는데
+       하단만 사실상 0 이었다(비평 F 누락 2). */
+    box-shadow:inset 0 -3px 0 #3A2C21;
     transform:translateY(-42px)}
   .cl>*{position:absolute}
   /* 상단 다크 밴드 ref y364~474 (리본·검색버튼 자리) */
   .cl-band{left:0;right:0;top:0;height:111px;background:#33333D;border-radius:40px 40px 0 0;
     box-shadow:inset 0 7px 0 #393943,inset 7px 0 0 #393943,inset -7px 0 0 #393943}
   /* 좌우 갈색 베벨 프레임 (본문 구간만 — 밴드 구간은 다크가 전폭) */
-  .cl-fl{left:1px;top:111px;bottom:1px;width:9px;
+  .cl-fl{left:0;top:111px;bottom:3px;width:10px;
     background:linear-gradient(90deg,#2D241B 0,#332A20 38%,#7B6550 68%,#B49474)}
   .cl-fr{right:0;top:111px;bottom:1px;width:14px;
     background:linear-gradient(90deg,#E4C197 0,#80684C 29%,#5A4E40 50%,#2D2822 71%,#252118)}
@@ -2537,7 +2540,7 @@
   /* 51 계열 — 높이를 «1416 고정» 으로 박으면 짧은 기기(frameH 1600)에서 `.cl` 이 max-height 로
      눌렸을 때 리스트가 모달 밖으로 흘러 깃발탭을 덮는다. 위·아래를 물려 상자를 따라 줄게 한다.
      기준 프레임에서는 콘텐츠 높이 1528 − 111 − 1 = 1416 으로 값이 동일하다. */
-  .cl-body{left:11px;width:860px;top:111px;bottom:1px;overflow-y:auto;overflow-x:hidden;
+  .cl-body{left:11px;width:860px;top:111px;bottom:3px;overflow-y:auto;overflow-x:hidden;
     scrollbar-width:none}
   .cl-body::-webkit-scrollbar{display:none}
   #collList{padding:21px 0 40px}
@@ -2546,19 +2549,25 @@
   /* ⚠ 1회차 비평 B 의 «플레이트 좌우 검정 갭이 과잉» 지적을 받아 지웠던 것이 **회귀**였다.
      3회차에 비평가 E·F 가 독립적으로 «리본 검정 외곽선 통째 누락» 을 잡았고, 자체 단면으로 확정했다 —
      ref y355: 검정 303~309 / 시안 310~770 / 검정 772~777 · ref y400(꼬리): 검정 275~282 / 시안 284~. */
-  .cl-rib s{position:absolute;background:#0F9BBC;top:24px;width:72px;height:79px}
+  .cl-rib s{position:absolute;background:#0F9BBC;top:29px;width:72px;height:73px}
   /* ⚠ `filter` 는 그 요소의 `clip-path` **전에** 적용된다 — 꼬리 자신에 drop-shadow 를 걸면
      클립이 그림자를 통째로 잘라내 검정 외곽선이 한 픽셀도 안 나온다(1~3회차 내내 그랬다).
      클립이 끝난 «래퍼» 에 걸어야 밖으로 나온다. */
   .cl-wing{position:absolute;left:0;right:0;top:0;bottom:0;
     filter:drop-shadow(9px 0 0 #000) drop-shadow(-9px 0 0 #000) drop-shadow(0 5px 0 #000) drop-shadow(0 -5px 0 #000)}
+  /* 꼬리를 플레이트 «위» 로 올리되(레퍼런스 접합), 래퍼를 플레이트 시안 시작선(rib-local 41 / 502)에서
+     잘라 꼬리의 검정 외곽선이 플레이트를 덮지 않게 한다. clip-path 는 filter «뒤» 라 외곽선까지 같이 잘린다. */
+  .cl-wing.l{clip-path:inset(0 calc(100% - 41px) 0 0)}
+  .cl-wing.r{clip-path:inset(0 0 0 calc(100% - 41px))}
   /* 꼬리 노치 깊이 — ref 행 프로파일(폭 41→29→42) 대비 우리가 5~6px 더 깊었다(41→23→41). 32%→24% */
   .cl-rib s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,24% 50%)}
   .cl-rib s.tr{right:2px;clip-path:polygon(0 0,100% 0,76% 50%,100% 100%,0 100%)}
   .cl-rib>s.bd{left:34px;right:35px;top:0;width:auto;height:91px;filter:none;
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 92%,#19ACCE 92% 95%,#0D8EAE 95%);
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
-    border:solid #000;border-width:8px 6px 5px;border-radius:10px;box-sizing:border-box}
+    border:solid #000;border-width:8px 6px 5px;border-radius:10px;box-sizing:border-box;
+    /* 접힘 음영 — ref 는 꼬리와 만나는 플레이트 안쪽 x308~317 / 762~771 이 10px 어둡다(12,137,167) */
+    box-shadow:inset 9px 0 0 rgba(0,0,0,.22),inset -9px 0 0 rgba(0,0,0,.22)}
   /* ref 「도감」 코어 87x44 @ x497~583 y367~410(프레임 283~326) · 검정 외곽 포함 98x55.
      우리는 코어 폭 −4.6% · 4px 아래 · 외곽 3px 얇았다(비평 C ⑥ · D ⑥ 공통). */
   .cl-rib>i{position:relative;font-size:48px;line-height:80px;color:#FEFEFE;
@@ -2592,12 +2601,12 @@
   #collw .clb-bdg>i.n{display:block;margin-top:-4px;font-size:54px;transform:scaleX(.85);color:#EEE9E5}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
   .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
-  .clb-nm{left:167px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
+  .clb-nm{left:165px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
   /* 아이템 카드 — 123×124, pitch 130(gap 7), 검정 5 + 등급 rim 5, radius 36 */
   .clb-cards{left:26px;top:117px;white-space:nowrap}
   .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 6.25px 0 0;
-    border:5px solid #000;border-radius:36px;box-sizing:border-box;overflow:hidden;
+    border:5px solid #000;border-radius:33px;box-sizing:border-box;overflow:hidden;
     vertical-align:top;text-align:center}
   /* ⚠ 같은 특이성 함정(위 뱃지 주석) — `#collw i{display:inline-block}` 이 이겨 이 상자가 «인라인» 이었고,
      이 컨테이너엔 이모지 폰트가 없어 폴백 글리프의 advance 가 598px 이 되면서 카드 밖으로 흘러
@@ -2608,9 +2617,9 @@
      **전역 클래스**라 카드 아이콘 `<i class="ci">` 에 그대로 먹고 있었다(그게 598px 의 진짜 원인). */
   #collw .clb .cd>i.cdic{position:absolute;left:0;right:0;top:0;bottom:35px;margin:0;
     display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
-  .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:35px}
+  .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:29px}
   .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:2px;font-size:27px;line-height:29px;
-    transform:scaleX(1.08);-webkit-text-stroke:8px #000;paint-order:stroke fill}
+    transform:scaleX(1.08);-webkit-text-stroke:5px #000;paint-order:stroke fill}
   /* 효과 바 ref x131~949 / 블록 +290, h80 */
   .clb-eff{left:1px;top:290px;width:818px;height:80px;background:#D6BC99;border-radius:18px;
     line-height:80px;padding-left:34px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
@@ -2623,7 +2632,7 @@
     background:linear-gradient(180deg,#A9A9A9,#8A8A8A);
     /* ref 세로 단면(x840): 상 검정테 → 밝은 림 210 → 본체 169→138 → **밝은 림 211(프레임 770)**
        → **어두운 띠 70(778)** → 검정테. 아래쪽 2층이 빠져 있었다(비평 D 누락 3). */
-    box-shadow:inset 0 -8px 0 #464646,inset 0 -15px 0 #D3D3D3,inset 0 0 0 6px #D3D3D3;
+    box-shadow:inset 0 -4px 0 #464646,inset 0 -7px 0 #757575,inset 0 -13px 0 #D3D3D3,inset 0 0 0 6px #D3D3D3;
     padding:0;cursor:pointer}
   .clb-btn:disabled{cursor:default}
   /* 28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
@@ -2635,12 +2644,12 @@
   /* 51 계열 — 깃발탭은 모달 «아래»로 150px 삐져나오는 유일한 요소라 top 절대로 박으면 안 된다.
      짧은 기기(1920×1080·1024×768 → frameH 1600)에서 `.cl` 이 눌리면 탭만 프레임 밖으로 105~147px
      밀려났다(smoke [3] 검출). bottom 앵커로 바꾸면 상자를 따라간다 — 기준 프레임 값은 top 1534 와 동일. */
-  .cl-tabs{left:27px;top:auto;bottom:-156px;width:840px;height:150px;z-index:0}
+  .cl-tabs{left:27px;top:auto;bottom:-154px;width:840px;height:150px;z-index:0}
   .cltab{position:absolute;top:0;width:214px;height:118px;cursor:pointer;text-align:center}
   .cltab:nth-child(1){left:0}.cltab:nth-child(2){left:208px}
   .cltab:nth-child(3){left:416px}.cltab:nth-child(4){left:623px}
   .cltab.on{height:145px}
-  .cltab>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 69%,50% 100%,0 69%)}
+  .cltab>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 67%,50% 100%,0 67%)}
   .cltab.on>s{clip-path:polygon(0 0,100% 0,100% 56%,50% 100%,0 56%)}
   .cltab>s.k{inset:0;background:#000}
   /* 레퍼런스 실측(프레임 기준) — 비활성 탭 top1815·꼭짓점1932: 노랑 y1815~1932(꼭짓점까지 «가득») ·
@@ -5194,7 +5203,7 @@
       <div class="cl-band"></div>
       <div class="cl-fl"></div><div class="cl-fr"></div>
       <div class="cl-body"><div id="collList"></div></div>
-      <div class="cl-rib"><span class="cl-wing"><s class="tl"></s><s class="tr"></s></span><s class="bd"></s><i>도감</i></div>
+      <div class="cl-rib"><s class="bd"></s><span class="cl-wing l"><s class="tl"></s></span><span class="cl-wing r"><s class="tr"></s></span><i>도감</i></div>
       <div class="cl-srch"><i>🔍</i></div>
     </div>
   </div>
@@ -10086,10 +10095,11 @@ setInterval(blessTick, 1000);
    기존 claimColl(카테고리) 를 그대로 부른다. 저장 구조 미변경(KEY 유지). */
 const COLL21_PETIC = { bird:'🐦', robo:'🤖', dragon:'🐉' };
 /* 카드 등급색 [fill, rim, 라벨밴드] — 커먼·언커먼은 실측, 레어 이상은 게임 팔레트 추정 */
+/* [fill, rim, 라벨밴드 상단, 라벨밴드 하단] — ref 는 밴드가 «아래로 갈수록 밝은» 2단이다(y704 (65,46,31) → y722 (83,53,42)) */
 const COLL21_CARD = [
-  ['#785843','#AD7A5B','#38271D'], ['#94BC35','#C9E747','#465A13'],
-  ['#3E8FD9','#79C0F2','#173A5E'], ['#A96BE0','#CFA0F5','#3E1E5C'],
-  ['#E0635B','#F59B84','#5C1714'], ['#E8B94C','#F7DE8C','#5C4310'] ];
+  ['#785843','#AD7A5B','#3D2A1E','#53352A'], ['#94BC35','#C9E747','#465A13','#5E7420'],
+  ['#3E8FD9','#79C0F2','#173A5E','#255480'], ['#A96BE0','#CFA0F5','#3E1E5C','#553080'],
+  ['#E0635B','#F59B84','#5C1714','#7C2A25'], ['#E8B94C','#F7DE8C','#5C4310','#7C5D1C'] ];
 const COLL21 = {
   weapon:{ cat:'equip', sets:[
     { n:'낡은 시작',     it:['weapon0','weapon1'], req:2,  eff:'공격력 2% 증가' },
@@ -10132,7 +10142,7 @@ function renderColl21(){
            const it = itemById(id), c = COLL21_CARD[Math.min(it.g, 5)], l = oLv(id);
            return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 5px ' + c[1] + '">'
              + '<i class="cdic">' + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
-             + '<s class="cb" style="background:' + c[2] + '"></s>'
+             + '<s class="cb" style="background:linear-gradient(180deg,' + c[2] + ',' + c[3] + ')"></s>'
              + '<i class="cl2" style="color:' + (l >= st.req ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l + '/' + st.req + '</i></div>';
          }).join('')
       +  '</div>'

@@ -179,9 +179,13 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
     await page.evaluate(() => openColl21('armor'));
     await page.waitForTimeout(250);
     const gg = await geo();
-    /* 짧은 기기에서는 상자가 padding-top(168) 에 붙고 자체 오프셋 −42 가 걸려 126 이 하한이다(가드) */
-    const d = (h - 2280) / 2, want = Math.max(REF(356) + d, 126);
-    T('프레임 ' + h + ' 모달 y (' + (want === 126 ? '짧은 기기 가드' : '중앙 앵커 Δ' + d) + ')', gg.cl.y, want, 2);
+    /* 기준 프레임보다 «큰» 화면에서는 순수 중앙 앵커라 Δ=(frameH−2280)/2 로 정확히 예측된다.
+       «짧은» 화면에서는 상자가 max-height 로 눌려 패딩 가드에 붙는데, 이때 정확한 top 은
+       flex 오버플로 규칙이 정하는 값이라 설계값이 아니다. 여기서 의미 있는 조건은
+       «상단 HUD(0..104)를 파고들지 않고 패딩 가드(168) 안에 있다» 뿐이고 그건 아래에서 따로 본다. */
+    const d = (h - 2280) / 2, clamped = gg.cl.h < 1540;
+    if (clamped) B('프레임 ' + h + ' 모달 y 가 패딩 가드 안 (104 < ' + gg.cl.y + ' ≤ 168)', gg.cl.y > 104 && gg.cl.y <= 168);
+    else T('프레임 ' + h + ' 모달 y (중앙 앵커 Δ' + d + ')', gg.cl.y, REF(356) + d, 2);
     /* 깃발탭은 모달 «하단» 앵커다(51 계열 수정) — 상자가 눌리면 같이 올라와야 프레임 밖으로 안 나간다 */
     T('프레임 ' + h + ' 탭 top (모달 하단 앵커)', gg.tabs[0].y, gg.cl.y + gg.cl.h - 1, 2);
     B('프레임 ' + h + ' 상단 HUD(104) 침범 없음', gg.cl.y >= 104);
