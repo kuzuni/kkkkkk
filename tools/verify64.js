@@ -62,7 +62,7 @@ const snap = page => page.evaluate(() => ({
 }));
 /* 결정적 초기 상태 — 전투 정지 + 골드/레벨 세팅 */
 async function reset(page, o){
-  await page.evaluate(cfg => {
+  const wasOpen = await page.evaluate(cfg => {
     step = () => {};                       /* 전투·수입·자동구매 정지 */
     S.autoBuy = false;
     S.trainStage = 1; S.statStage = 1;
@@ -71,9 +71,15 @@ async function reset(page, o){
     S.buyQty = cfg.qty;
     trSub = cfg.sub;
     save();
-    if (!$('trw').classList.contains('on')) openTrain(); else renderTrain();
+    const wasOpen = $('trw').classList.contains('on');
+    if (!wasOpen) openTrain(); else renderTrain();
+    return wasOpen;
   }, Object.assign({ atk: 0, gold: 1e12, sp: 0, qty: 1, sub: 'train' }, o || {}));
-  await page.waitForTimeout(60);
+  /* ⚠ 팝업을 «새로» 열었으면 60 의 바닥 시트 슬라이드업(약 300ms)이 도는 중이다.
+     그 사이 getBoundingClientRect() 로 잡은 좌표는 도착 전 위치라 클릭이 카드를 빗나가고
+     «Δ0 = 한 번도 안 사졌다» 로 보인다(실제로 4회 중 1회 이렇게 실패했다).
+     LESSONS 50-① 과 같은 부류 — 구현이 아니라 «측정이 애니메이션에 진» 것이다. */
+  await page.waitForTimeout(wasOpen ? 60 : 420);
 }
 
 (async () => {
