@@ -2593,7 +2593,10 @@
   .clb-btn{left:588px;top:284px;width:238px;height:90px;border-radius:45px;border:6px solid #000;
     box-sizing:border-box;font:900 34px inherit;font-family:inherit;font-size:34px;color:#DFDFDF;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;
-    background:linear-gradient(180deg,#A9A9A9,#8A8A8A);box-shadow:inset 0 0 0 6px #D3D3D3;
+    background:linear-gradient(180deg,#A9A9A9,#8A8A8A);
+    /* ref 세로 단면(x840): 상 검정테 → 밝은 림 210 → 본체 169→138 → **밝은 림 211(프레임 770)**
+       → **어두운 띠 70(778)** → 검정테. 아래쪽 2층이 빠져 있었다(비평 D 누락 3). */
+    box-shadow:inset 0 -8px 0 #464646,inset 0 -15px 0 #D3D3D3,inset 0 0 0 6px #D3D3D3;
     padding:0;cursor:pointer}
   .clb-btn:disabled{cursor:default}
   /* 28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
