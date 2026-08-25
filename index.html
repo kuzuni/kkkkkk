@@ -1857,9 +1857,9 @@
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23EBD3B1'/%3E%3C/svg%3E") 37px -10px/235px 235px repeat}
 
   /* 최대 시간 안내 — 잉크 우단 685(알약 우측 690 - 5), 잉크중심 y 137.5 */
-  .ofr-max{left:0;top:107px;width:690px;padding-right:5px;box-sizing:border-box;text-align:right;
+  .ofr-max{left:0;top:107px;width:690px;padding-right:1px;box-sizing:border-box;text-align:right;
     height:60px;line-height:60px;font-size:22px;font-weight:800;color:#9B6C54}
-  .ofr-max i{transform:scaleX(1.1);transform-origin:100% 50%}
+  .ofr-max i{transform:scaleX(1.128);transform-origin:100% 50%}
 
   /* 경과 시간 알약 + 스톱워치 (알약 좌변 위로 겹침) */
   .ofr-pill{left:411px;top:153px;width:280px;height:50px;border-radius:16px;
@@ -1883,10 +1883,17 @@
 
   /* 보상 박스 + 초록 프레임 + 골드 + 수량 */
   .ofr-rw{left:115px;top:288px;width:850px;height:150px;border-radius:36px;background:#D7C0A1}
-  .ofr-fr{left:477px;top:300px;width:126px;height:128px;border-radius:30px;
+  .ofr-fr{left:477px;top:300px;width:126px;height:126px;border-radius:30px;
     border:5px solid #000;box-sizing:border-box;background:#CBE849;padding:5px}
   .ofr-fr i{display:flex;width:100%;height:100%;border-radius:24px;background:#94BC35;
-    align-items:center;justify-content:center;font-size:72px;line-height:1;transform:none}
+    align-items:center;justify-content:center;font-size:62px;line-height:1;transform:none}
+  /* ref 코인은 검정 4px 테를 두른 금화다(행 단면: 초록→검정4→금66→검정4→초록).
+     이모지에 -webkit-text-stroke 는 안 먹으므로 drop-shadow 를 4방향 연쇄한다.
+     filter 는 «초록 채움을 가진 .ofr-fr i» 에 걸면 그 사각 박스가 그림자를 만들므로
+     글리프만 감싸는 안쪽 요소에 걸어야 한다. */
+  .ofr-fr b{display:block;font-weight:400;
+    filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000)
+           drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000)}
   .ofr-amt{left:0;top:393px;width:1080px;text-align:center;height:60px;line-height:60px;
     font-size:35px}
   .ofr-amt i{transform:scaleX(1.04)}
@@ -1932,7 +1939,14 @@
       radial-gradient(circle 21px at calc(100% - 1px) 146.5px,#0000 21px,#000 21.5px),
       radial-gradient(circle 21px at calc(100% - 1px) 219px,#0000 21px,#000 21.5px);
     -webkit-mask-composite:source-in;mask-composite:intersect}
-  .ofr-bn>s{display:none}
+  /* ref 절개 단면: 초록 → 검정 5px → 배경. mask 는 배너 테두리째 날리므로
+     구멍(r21)보다 5px 큰 검정 원반(r26)을 깔아 링만 남긴다.
+     보더박스 기준 중심 x = 948-1 = 947, y = 73.5/146.5/219 → 패딩박스(테두리 6) 기준으로 환산 */
+  .ofr-bn>s{position:absolute;right:-31px;width:52px;height:52px;border-radius:50%;
+    background:#000;text-decoration:none}
+  .ofr-bn>s:nth-of-type(1){top:41.5px}
+  .ofr-bn>s:nth-of-type(2){top:114.5px}
+  .ofr-bn>s:nth-of-type(3){top:187px}
   /* 캐릭터 일러스트 자리 — 우측이 대각선인 민트 패널.
      .ofr-bn 안에 넣어 overflow:hidden 으로 배너 라운드에 잘리게 한다.
      좌표는 배너 패딩박스 기준(실측 x78,y1457 − 배너 66,674 − 테두리 6) */
@@ -1940,7 +1954,10 @@
     background-image:repeating-linear-gradient(-60deg,rgba(255,255,255,.28) 0 10px,transparent 10px 26px);
     clip-path:polygon(0 0,74% 0,86% 44%,74% 100%,0 100%);
     display:flex;align-items:center;justify-content:center;font-size:250px;line-height:1}
-  .ofr-art i{transform:none}
+  /* 차분 영상(이모지 숨김 캡처와의 차) 실측: 우리 잉크 x244..516 (273x216, 중심 x380).
+     ref 캐릭터는 x112..390 (279x215, 중심 x251) — 크기는 같고 위치만 +129px 쏠렸다.
+     (ref 배너 좌단 코인 x66..110 과 중앙 코인군은 별도 아트라 이모지로는 못 채운다 — 아트 대기) */
+  .ofr-art i{transform:translate(-129px,-14px)}
   /* 배너 문구 — 우단 894 / 963, 잉크중심 y 721.5 / 793 */
   .ofr-t1{left:0;top:691px;width:896px;text-align:right;height:60px;line-height:60px;
     font-size:39px;-webkit-text-stroke:5px #000}
@@ -1949,9 +1966,9 @@
   /* '4시간 증가' 는 세로 그라데이션 글자 + 검정 외곽선이다.
      background-clip:text 과 -webkit-text-stroke 는 같이 못 쓴다(스트로크가 그라데이션을 덮어
      글자가 통째로 검정이 된다). 그래서 외곽선 레이어(.ofr-t2.s)를 먼저 깔고 그 위에 그라데이션을 얹는다. */
-  .ofr-t2{left:0;top:763px;width:963px;text-align:right;height:60px;line-height:60px;
-    font-size:50px;font-weight:900}
-  .ofr-t2 i{transform:scaleX(1.076);transform-origin:100% 50%;
+  .ofr-t2{left:0;top:760px;width:963px;text-align:right;height:60px;line-height:60px;
+    font-size:56.5px;font-weight:900}
+  .ofr-t2 i{transform:scaleX(.963);transform-origin:100% 50%;
     background:linear-gradient(180deg,#FFF6BB,#FEBE55);-webkit-background-clip:text;
     background-clip:text;color:transparent}
   .ofr-t2.s i{background:none;color:#000;-webkit-text-stroke:5px #000;paint-order:stroke fill}
@@ -6532,7 +6549,7 @@
     <div class="ofr-clock">⏱️</div>
     <div class="ofr-lead ot"><i>자리를 비우신 동안 사냥했어요!</i></div>
     <div class="ofr-rw"></div>
-    <div class="ofr-fr"><i>🪙</i></div>
+    <div class="ofr-fr"><i><b>🪙</b></i></div>
     <div class="ofr-amt ot"><i id="ofrAmt">0</i></div>
     <button class="ofr-b g" id="ofrGet"><i>받기</i></button>
     <button class="ofr-b b" id="ofrGet15"><i>1.5배 받기</i></button>
