@@ -1004,6 +1004,9 @@
     will-change:transform,opacity;
     text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000,
       1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
+  /* 꽂힌 뒤 짧게 사라진다 — transform 은 JS 가 알약 중심에 세워 둔 값을 그대로 둔다(opacity 만 건드릴 것) */
+  .fx-land{animation:fxLand .14s ease-out forwards}
+  @keyframes fxLand{0%{opacity:1}100%{opacity:0}}
 
   /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
   @keyframes fxPunch{0%{transform:scale(1)}28%{transform:scale(1.15)}62%{transform:scale(.975)}100%{transform:scale(1)}}
@@ -1012,7 +1015,7 @@
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
-    animation:fxPlus .85s cubic-bezier(.2,.8,.3,1) both}
+    animation:fxPlus .75s cubic-bezier(.2,.8,.3,1) both}
   @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
     18%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
     34%{transform:translate(-50%,-10px) scale(1)}
@@ -9640,7 +9643,8 @@ function fxFly(from, cur, n){
     const sx = p0.x + rnd(-52, 52), sy = p0.y + rnd(-38, 38);
     fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
       cx:(sx + to.x)/2 + rnd(-200, 200), cy:Math.min(sy, to.y) - rnd(140, 320),
-      t:-i*0.05, dur:0.44 + Math.random()*0.14, pill,
+      /* 58 공통 규칙 «0.3~0.8초» — 마지막 아이콘까지 0.030*7 + 0.43 + 0.14(꽂힘) = 0.78초 */
+      t:-i*0.030, dur:0.35 + Math.random()*0.08, pill,
       last:i === cnt-1, cur, n });
   }
 }
@@ -9662,7 +9666,7 @@ function fxPlus(cur, n){
   el.style.top  = (r.y + r.h + 8) + 'px';
   el.textContent = '+' + fmt(n);
   L.appendChild(el);
-  setTimeout(() => el.remove(), 900);
+  setTimeout(() => el.remove(), 800);
 }
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
@@ -9774,7 +9778,16 @@ function fxTick(dt){
     if(f.t < 0) continue;
     const p = f.t / f.dur;
     if(p >= 1 || !f.el.isConnected){
-      f.el.remove(); fxFlies.splice(i, 1);
+      fxFlies.splice(i, 1);
+      if(f.el.isConnected){
+        /* «꽂힘» — 마지막 프레임을 알약 중심에 «정확히» 세우고 짧게 사라진다.
+           바로 remove 하면 렌더된 마지막 위치가 p<1 이라 도착이 몇 px 모자란 채로 끝난다. */
+        f.el.style.transform = 'translate(' + f.tx.toFixed(1) + 'px,' + f.ty.toFixed(1) + 'px)'
+          + ' translate(-50%,-50%) scale(1)';
+        f.el.classList.add('fx-land');
+        const el = f.el;
+        setTimeout(() => el.remove(), 140);
+      }
       fxPunch(f.pill);
       if(f.last) fxPlus(f.cur, f.n);
       continue;
