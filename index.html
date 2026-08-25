@@ -4861,10 +4861,18 @@
 
   /* ── 하단 재소환 버튼 3개 — 외곽 247x148(ref y1766~1913), pitch 300, 그룹 x117~962 ──
      전부 같은 은색 스타일. 면(235x136)은 padding box 이므로 자식 절대좌표의 기준이 된다. */
-  /* 작업 63(2026-08-25) — 1347 은 폐기된 «ref y − 419»(1920 프레임) 값이다.
-     2280 프레임에서는 패널 하단(1247)에서 100px 밖에 안 떨어져 ref 의 435px 공백이 사라졌다.
-     단일 변환 «ref y − 84» 로 재배치: 1766 − 84 = 1682 (패널 하단에서 435 ✓). */
-  .sm-btns{position:absolute;left:117px;top:1682px;width:846px;height:148px}
+  /* 작업 63(2026-08-25) — 1347 은 폐기된 «ref y − 419»(1920 프레임) 값이다. 단일 변환 «ref y − 84» 로 1682 로 옮겼다.
+     작업 84(2026-08-26, 저장소 주인 보고) — 그 상단 변환이 이 요소에는 **틀렸다**.
+     측정표 §0 대로 버튼 3개와 «터치하여 닫기» 는 패널에 딸린 것이 아니라 **화면 하단(탭바) 기준**으로 놓인 요소다.
+     레퍼런스 2340 → 프레임 2280 은 «상단 84 잘림 + 하단 24 추가»(전투 캔버스 흡수)이므로
+     하단 앵커 변환은 «ref y − 60» 이다. top:1682 는 ref−84 라 버튼이 **23px 위로** 떠 있었고,
+     bottom 앵커인 .sm-close 와 어긋나 버튼↔닫기 간격이 ref 211 → 232 로 벌어졌다.
+     → top 폐기, bottom 앵커로 통일. 버튼 외곽 하변 = ref 1913 → 프레임 1853, 하단에서 2280−1854 = **426**.
+     (지시서의 427 은 «2340 − 1913» 인데 측정표 y 가 **포함 행**이라 하변 edge 는 1914 다 — 426 이 Δ0.)
+     짧은 프레임(clamp 하한 1600) 보호 — 하단 앵커라 프레임이 짧아지면 버튼이 패널(하단 1248) 위로 올라탄다.
+     37·51 과 같은 «와이드 화면» 계열이라 min() 으로 «패널 하단 + 20» 아래로만 오게 묶는다.
+     1416 = 패널 하단 1248 + 버튼 높이 148 + 여유 20. 2280·1920 프레임에서는 426 이 그대로 이긴다(Δ0). */
+  .sm-btns{position:absolute;left:117px;bottom:min(426px,calc(100% - 1416px));width:846px;height:148px}
   .sm-b{position:absolute;top:0;width:247px;height:148px;box-sizing:border-box;
     border:6px solid #000;border-radius:34px;padding:0;cursor:pointer;
     background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px 10px,#A4A4A4 10px,
@@ -4918,8 +4926,14 @@
 
   /* ── «터치하여 닫기» — 09 와 **완전히 같은 앵커**(ref 잉크하단 2164, 탭바 상단 2160) ──
      이 게임에서 외곽선이 없는 유일한 텍스트 계열이다. -webkit-text-stroke 를 주지 말 것.
-     잉크 41 → font-size 44, 잉크폭 256(우리 서체가 넓어 scaleX 로 맞춘다). */
-  .sm-close{position:absolute;left:0;right:0;bottom:174px;text-align:center;
+     잉크 41 → font-size 44, 잉크폭 256(우리 서체가 넓어 scaleX 로 맞춘다).
+     작업 84 — 하단 앵커 «ref y − 60» 기준 잉크 목표는 2064~2104(ref 2124~2164). 우리 잉크는 **43px**(ref 41)
+     이고 CSS 박스 하변보다 1px 아래로 나가므로 잉크 상·하변을 동시에 맞출 수 없다 →
+     **잉크 중심**을 ref 중심(2084)에 맞추는 175 로 잡는다(잉크 2063~2105, 중심 Δ0, 버튼↔닫기 간격 210).
+     지시서의 176 은 «잉크 하변 = CSS bottom» 가정에서 나온 값이라 실측으로 1px 정정했다.
+     .sm-btns 와 같은 짧은 프레임 보호 — 버튼이 위로 묶이면 이 문구도 같이 올려야 겹치지 않는다.
+     1480 = 버튼 하변 1416 + 여유 20 + 잉크 44. 프레임 1655 이상에서는 175 가 그대로 이긴다(2280·1920 Δ0). */
+  .sm-close{position:absolute;left:0;right:0;bottom:min(175px,calc(100% - 1480px));text-align:center;
     font-size:44px;line-height:44px;font-weight:900;color:#fff}
   .sm-close i{transform:scaleX(.96)}
 
@@ -10299,7 +10313,16 @@ function syncSummonBtns(){
 function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
 /* 배경(딤·패널) 아무 데나 탭하면 닫힌다 — «터치하여 닫기». 버튼 3개는 stopPropagation 대신
    closest 로 걸러 낸다(버튼이 disabled 여도 닫히지 않게). */
-$('sumw').addEventListener('click', e => { if(!e.target.closest('.sm-b')) closeSummonResult(); });
+/* 작업 84(2026-08-26) — 74 «탭 유실» 계열 버그. 버튼 중앙(클릭 지점)은 `.cost` 안의 `i.sm-fat` 인데
+   버튼 onclick 이 doSummon → syncSummonBtns 로 그 `i` 를 innerHTML 로 갈아 끼운다. 이벤트가 여기까지
+   버블링해 올 때쯤이면 e.target 은 **DOM 에서 떨어져 나간 노드**라 closest('.sm-b') 가 null 이 되고,
+   «배경 탭» 으로 오인돼 방금 띄운 결과 팝업이 그대로 닫혔다(소환은 되는데 결과를 못 본다).
+   composedPath() 는 **디스패치 시점의 경로**를 그대로 돌려주므로 중간 재렌더에 영향받지 않는다. */
+$('sumw').addEventListener('click', e => {
+  const pth = typeof e.composedPath === 'function' ? e.composedPath() : [e.target];
+  const inBtn = pth.some(n => n && n.classList && n.classList.contains('sm-b'));
+  if(!inBtn) closeSummonResult();
+});
 $('sumBF').onclick = () => {
   const b = sumCtx; if(!b) return;
   if(gmBlocked(b)) return;                       /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
