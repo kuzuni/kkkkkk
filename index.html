@@ -6178,6 +6178,13 @@
     text-align:center;font-size:27px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
     white-space:nowrap}
   .ps-bar>div>b>em{transform:scaleX(1.15)}
+  /* 9회차 — 4글자 한글 두 개가 우리 서체에서는 폭이 같은데(둘 다 122) ref 전용 서체에서는 다르다:
+     «보물상자» **114** · «시련의탑» **130**. 임계 200·225 양쪽에서 +7~8% / −6~7% 로 안정이고
+     비평가 Q-12 와 tools/scan35.py 가 **독립적으로 같은 값**을 냈다. 칸별 scaleX 로 가른다.
+     «스테이지»(+1~2) ·«출석»(−1~2)은 이미 맞았으니 건드리지 않는다.
+     하단바는 35·36 이 «같은 4칸» 을 공유하고 36 쪽 전용 덮어쓰기가 없어 공통 규칙으로 둔다. */
+  .ps-bar>div[data-ptab="box"]>b>em{transform:scaleX(1.07)}
+  .ps-bar>div[data-ptab="tower"]>b>em{transform:scaleX(1.228)}
   /* 6회차 I-7: 하단바 자물쇠가 ref 보다 14px 위였다(우리 본체+82..142 / ref +96..158) */
   .ps-bar>div>s.lk{position:absolute;left:0;right:0;top:92px;height:64px;line-height:64px;
     text-align:center;font-size:58px;z-index:2}
