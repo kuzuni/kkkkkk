@@ -5716,11 +5716,18 @@
   .cf55-acch>i{transform:scaleX(.88)}
   /* 구글 카드 ref x416..663 y1454..1531 (248×78) r12 — 흰 카드 + 외곽선 없는 유일한 글자 */
   .cf55-badge{left:255px;top:815px;width:248px;height:78px;box-sizing:border-box;border-radius:12px;
-    background:#FFF;line-height:78px;white-space:nowrap;text-align:center}
-  .cf55-badge>u{width:39px;height:39px;line-height:39px;font-size:32px;vertical-align:middle;
-    margin-right:11px}
-  .cf55-badge>i{font-size:29px;font-weight:800;color:#1A1A1A;vertical-align:middle;
-    transform:scaleX(var(--sx,1))}
+    background:#FFF;white-space:nowrap}
+  /* 구글 «G» 자리 — ref x435..474 y1473..1512 (39×39), 카드 기준 left/top 19.
+     아트가 들어오면 이 <u> 를 이미지로 갈아끼우면 된다(아트 자리 규칙). 4색 링 + 흰 속 + 파란 가로 막대. */
+  #cfw .cf55-badge>u{position:absolute;left:19px;top:19px;width:39px;height:39px;border-radius:50%;
+    background:conic-gradient(from 20deg,#EA4335 0 26%,#FBBC05 26% 50%,#34A853 50% 74%,#4285F4 74% 100%)}
+  #cfw .cf55-badge>u::after{content:'';position:absolute;left:9px;top:9px;width:21px;height:21px;
+    border-radius:50%;background:#FFF}
+  #cfw .cf55-badge>u::before{content:'';position:absolute;left:19px;top:16.5px;width:20px;height:8px;
+    background:#4285F4;z-index:1}
+  /* 라벨 잉크 ref x517..623 (107×27) — 카드 기준 left 101, 세로 중앙. 외곽선 없는 유일한 글자다. */
+  #cfw .cf55-badge>i{position:absolute;left:98px;top:0;bottom:0;height:78px;line-height:78px;
+    font-size:29px;font-weight:800;color:#1A1A1A;transform:scaleX(var(--sx,1));transform-origin:0 50%}
 
   /* ── 하단 버튼 3칸 ref y1588..1686 (217×99) · x201/432/662 (pitch 231) ── */
   .cf55-btn{top:949px;width:217px;height:99px;box-sizing:border-box;border:6px solid #000;
@@ -6569,7 +6576,7 @@
         <div class="cf55-list" id="cfList"></div>
         <div class="cf55-acc"></div>
         <div class="cf55-acch"><i>계정 연동</i></div>
-        <div class="cf55-badge"><u>🇬</u><i style="--sx:.92">연동 완료</i></div>
+        <div class="cf55-badge"><u></u><i style="--sx:.90">연동 완료</i></div>
         <div class="cf55-btn b1" data-cf="privacy"><i style="--sx:.91">개인정보 처리 방침</i></div>
         <div class="cf55-btn b2" data-cf="coupon"><i style="--sx:.94">쿠폰</i></div>
         <div class="cf55-btn b3" data-cf="support"><i style="--sx:1.02">고객 지원</i></div>
