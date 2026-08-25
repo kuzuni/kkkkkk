@@ -1784,10 +1784,15 @@
      테두리에 **흰 링**을 둘러 «흰 번쩍» 의 인상을 유지한다. 바깥 앰버 글로우가 어두운 시트 위에서도
      대비를 만들어, 밝은 카드·어두운 배경 어느 쪽에 얹혀도 성공이 읽힌다.
      opacity 는 **0% 부터 1** 이다 — 램프를 두면 «보이기 시작하는» 시각이 그만큼 늦어진다. */
+  /* 12회차 — 워시 62% 로 카드 «전면» 을 덮으니 정작 바뀐 정보(«Lv.1» 146×34px · «+2.4» 110×36px)가
+     176~295ms 동안 저대비로 뭉개졌다(비평가 Q·R 공통: «강조 요소 면적이 강조 대상의 34배»).
+     본문 워시는 26% 로 낮추고 **테두리 림 + 안쪽 글로우**가 강조를 맡는다 — 카드 전체가 «반응» 하되
+     글자는 그대로 읽힌다. 여운도 .44s → .34s 로 잘랐다(«잔광 355ms = 총 704ms 의 50%» 지적). */
   .fx-flash{position:absolute;box-sizing:border-box;opacity:0;transform-origin:center;
-    background:rgba(255,193,64,.62);border:9px solid #FFFFFF;
-    box-shadow:0 0 0 4px rgba(255,186,54,.95),0 0 24px 0 rgba(255,206,92,.85);
-    animation:fxFlash .44s cubic-bezier(.2,.8,.3,1) forwards}
+    background:rgba(255,193,64,.26);border:9px solid #FFFFFF;
+    box-shadow:inset 0 0 34px 10px rgba(255,206,92,.92),
+      0 0 0 4px rgba(255,186,54,.95),0 0 24px 0 rgba(255,206,92,.85);
+    animation:fxFlash .34s cubic-bezier(.2,.8,.3,1) forwards}
   /* 봉우리가 뾰족하면 ≥0.7 구간이 90ms 라 8프레임 캡처에 한 장 걸릴까 말까다. 고원을 만든다(≈270ms). */
   /* 확대는 «살짝» 이어야 한다 — 1.14 는 326px 카드에서 +45px 라 카드 간격 16px 를 넘어
      옆 카드를 침범한다(6회차 지적). 최대 1.05 = +16px 로 묶는다. */
@@ -1799,9 +1804,9 @@
      붙어 있는데 `animation-name` 이 `jzUp`). 두 모듈이 한 속성을 두고 싸우게 두지 않는다.
      확대는 1.06 = 좌우 10px 로, 카드 간격 16px 안에 머문다. */
   @keyframes fxFlash{0%{opacity:1;transform:scale(1)}
-    18%{opacity:.97;transform:scale(1.05)}
-    46%{transform:scale(1.06)}
-    70%{opacity:.8;transform:scale(1.03)}
+    22%{opacity:.97;transform:scale(1.05)}
+    52%{opacity:.92;transform:scale(1.06)}
+    74%{opacity:.72;transform:scale(1.03)}
     100%{opacity:0;transform:scale(1)}}
   /* 재렌더가 없는 화면(스킬·유물 세부의 레벨 알약)에서는 대상 자체도 같이 튄다 */
   .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
@@ -1837,7 +1842,7 @@
   .fx-toast{position:absolute;left:50%;z-index:2;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
     background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
     white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
-    animation:fxToastIn .22s cubic-bezier(.34,1.56,.64,1) both}
+    animation:fxToastIn .19s cubic-bezier(.34,1.56,.64,1) both}
   /* 0.28초짜리 페이드인은 «퀘스트 행이 먼저 바뀌고 토스트가 100ms 뒤에 따라붙는» 것으로 읽힌다.
      불투명도는 앞 35% 안에 다 올리고 나머지는 위치만 정돈한다(6회차 지적). */
   /* ⚠ 0% 를 `opacity:0` 으로 두면 **애니메이션이 실제로 돌기 전까지** `fill-mode:both` 가 그 상태를
@@ -1846,8 +1851,8 @@
      0% 부터 **이미 보이게** 하고 «위에서 내려오는» 것만 애니메이션으로 준다 — 첫 페인트에 바로 보인다. */
   /* 11회차: 0% 를 «0 이 아닌 .3» 으로. 위 fxCheckIn 과 같은 이유 — 막혀도 보이고, 돌면 램프가 생긴다. */
   @keyframes fxToastIn{0%{opacity:.3;transform:translate(-50%,-40px) scale(.92)}
-    40%{opacity:1;transform:translate(-50%,-8px) scale(.99)}
-    72%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
+    45%{opacity:1;transform:translate(-50%,-8px) scale(.99)}
+    75%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
     100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
   @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
@@ -11304,7 +11309,8 @@ function openMail(){
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
-  const fxMail = (el) => { if(el){ fxCheck(el); fxBurst(el, '#FFE9A8', 10); fxAt(el); fxSolo(el); fxHoldList(); } };
+  const fxMail = (btn, el) => { if(btn){ fxCheck(btn); fxBurst(btn, '#FFE9A8', 10); }
+    if(el){ fxAt(el); fxSolo(el); } fxHoldList(); fxFlush(); };
   $('mailClose').onclick = closeModal;
   $('mailX').onclick = closeModal;
   $('mailBtn').onclick = () => {
@@ -11314,7 +11320,7 @@ function openMail(){
   };
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
     const row = b.closest('.ml-r');
-    fxMail(row ? (row.querySelector('.ml-i') || row) : b);
+    fxMail(b, row ? (row.querySelector('.ml-i') || row) : b);
     fxThen(() => { claimMail(b.dataset.ml); fxRenderLater(openMail); });   /* 58 11회차 */
   });
 }
@@ -11350,9 +11356,13 @@ function openQuest(tab){
   /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
      «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
      재화 비행은 fxAt() 로 그 행을 출발점으로 지정만 하면 fxWatch 가 알아서 쏜다. */
-  const fxQuest = (el) => {
-    if(el){ fxCheck(el); fxBurst(el, '#8FE9FF', 10); fxAt(el); fxSolo(el); }
-    fxHoldList();                                /* 58 11회차 — 연출이 끝난 뒤에 목록을 갱신한다 */
+  /* 12회차 — 체크·버스트는 **누른 자리(버튼)** 에, 재화 출발점(fxAt)만 **보상 배지** 에 둔다.
+     11회차까지는 둘 다 배지에 걸어서 92px 체크 링이 받은 수량(«90», 44×30px)의 상단 60% 를
+     가렸다(비평가 Q·R 공통 실측). 손맛은 손가락 밑에, 재화는 보상 자리에서 나가는 것이 맞다. */
+  const fxQuest = (btn, el) => {
+    if(btn){ fxCheck(btn); fxBurst(btn, '#8FE9FF', 10); }
+    if(el){ fxAt(el); fxSolo(el); }
+    fxHoldList(); fxFlush();                     /* 연출이 끝난 뒤 목록 갱신 · 디바운스는 건너뛴다 */
     fxToast('퀘스트 완료');
   };
   /* ⚠ 연출 DOM 을 만들어 놓아도 **핸들러가 반환할 때까지 브라우저는 한 프레임도 못 그린다.**
@@ -11363,14 +11373,19 @@ function openQuest(tab){
      (`claim*` 은 모두 자체적으로 «받을 수 있나» 를 다시 확인하므로 한 프레임 지연은 안전하다) */
   /* rAF 콜백은 «그 프레임의 페인트 «전»» 에 돈다 — 한 번만 미루면 무거운 재렌더가 여전히 첫 페인트를
      막아서 연출이 안 그려진다(8회차: 토스트가 여전히 175ms). 두 번 미뤄 «한 프레임 그린 뒤» 처리한다. */
-  const fxThen = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
-  $('qAll').onclick = () => { fxQuest($('qAll')); fxThen(claimAllQuests); };
+  /* 12회차 — **2중 rAF 를 버린다.** 이 구조는 «재렌더가 150ms 넘게 메인 스레드를 잡는다» 는
+     전제로 넣었는데, 실측하면 `openQuest()` 재렌더 **0.9ms** · `save()` **0.2ms** 다(probe58g).
+     반면 이 컨테이너의 rAF 간격은 32~42ms 라 2중 rAF 자체가 **108.7ms** 를 먹는다 —
+     재화 비행이 클릭 후 191ms 에야 시작한 원인이 이것이다(비평가 Q·R 공통 «55~207ms 무반응»).
+     게다가 목록 재렌더는 이제 fxRenderLater 가 760ms 뒤로 미루므로 막을 것 자체가 없다. */
+  const fxThen = (fn) => fn();
+  $('qAll').onclick = () => { fxQuest($('qAll'), $('qAll')); fxThen(claimAllQuests); };
   $('mbox').querySelectorAll('.qs-tg b').forEach(b => b.onclick = () => {
     if(b.dataset.t !== qTab) openQuest(b.dataset.t);
   });
   $('mbox').querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
     const k = b.dataset.q, row = b.closest('.qs-r');
-    fxQuest(row ? (row.querySelector('.qs-i') || row) : b);
+    fxQuest(b, row ? (row.querySelector('.qs-i') || row) : b);
     fxThen(() => {
       if(k.startsWith('d:')) claimDQuest(DQUESTS.find(x => x.id === k.slice(2)));
       else claimQuest(QUESTS.find(x => x.id === k));
@@ -14122,9 +14137,11 @@ function fxBurst(t, col, n){
      중심에서 22px 로 고정하면 훈련 카드(326×510)처럼 큰 대상에서는 파티클이 통째로
      **카드 아이콘 위**에 얹혀 «애셋이 튀어 보인다» 로 읽혔다(10회차 보류 사유 4).
      안쪽 78% 타원 안에는 한 개도 생기지 않으므로 아이콘·수치가 가려지지 않는다. */
+  /* 12회차 — 링을 **짧은 변** 기준 원으로. 긴 변(카드 높이 505px)을 따라가면 반장축이 197px 이 돼
+     아이콘은 피하는 대신 카드 하단 비용행(«💰 53»)을 새로 덮었다(비평가 R 실측). */
   const r = (t && t.nodeType) ? fxRect(t) : null;
-  const rx = r ? clamp(r.w/2*0.78, 22, 168) : 22;
-  const ry = r ? clamp(r.h/2*0.78, 22, 168) : 22;
+  const rr = r ? clamp(Math.min(r.w, r.h)/2*0.78, 22, 130) : 22;
+  const rx = rr, ry = rr;
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
     const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
@@ -14155,6 +14172,7 @@ function fxFlash(el){
 function fxReward(t){
   const p = t ? fxPt(t) : fxSrc(performance.now());
   if(p) fxBurst(p, '#FFE9A8', 14);
+  fxFlush();                                          /* 12회차 — 보상은 «한 덩어리» 라 묶을 이유가 없다 */
 }
 /* 강화·업그레이드 «성공» 한 세트 — 대상 카드/행 흰 플래시 + 성공 파티클.
    수치 롤링은 HUD(fxTick)와 09 일괄 강화 팝업이 각각 맡는다. */
@@ -14250,6 +14268,10 @@ function fxSolo(el, ms){
    수령 판정(`questReady` 등)은 상태로 다시 하므로 그 사이 재클릭은 무시된다 — 지연은 안전하다. */
 let fxReT = 0;
 function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXSOLO)); }
+/* 「이번 획득은 묶음이 아니다」 — 보상 수령처럼 «한 번에 한 덩어리» 인 경로는 디바운스를 건너뛴다.
+   연속 킬을 묶으려고 둔 45ms 가 rAF 간격(32~42ms)과 겹쳐 실제로는 45~85ms 의 죽은 시간이 된다. */
+let fxNow = false;
+function fxFlush(){ fxNow = true; }
 function fxRenderLater(fn){
   const w = fxReT - performance.now();
   if(w > 8) setTimeout(fn, w); else fn();
@@ -14268,6 +14290,7 @@ const fxHold = { gold:0, dia:0 };
 const FXROLL = 0.32;
 const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
 function fxWatch(now){
+  const flush = fxNow;                                /* 이번 프레임 안에서만 유효 — 다음 프레임엔 다시 묶는다 */
   for(const k in FXCUR){
     const v = S[k];
     if(!Number.isFinite(v)) continue;
@@ -14284,11 +14307,12 @@ function fxWatch(now){
     /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
        디바운스는 «연출 시작 전 죽은 시간» 이라 0.8초 예산을 앞에서 그대로 갉아먹는다.
        예산: 70(디바운스) + 130(스태거) + 280(비행) + 140(꽂힘) + 300(롤링) ≈ 0.72초. */
-    if(fxAcc[k] > 0 && (now - fxAccT[k] > 45 || now - fxAccS[k] > 900)){
+    if(fxAcc[k] > 0 && (flush || now - fxAccT[k] > 45 || now - fxAccS[k] > 900)){
       fxFly(fxSrc(now), k, fxAcc[k]);
       fxAcc[k] = 0;
     }
   }
+  fxNow = false;
 }
 function fxTick(dt){
   fxFrame++;                                          /* 이번 프레임의 rect 캐시를 무효화 */
@@ -14316,7 +14340,11 @@ function fxTick(dt){
       if(!f.batch.fired){ f.batch.fired = true; fxHold[f.cur] = 0; fxPlus(f.cur, f.n); }
       continue;
     }
-    const e = p*p*(3 - 2*p), u = 1 - e;                /* 2차 베지에 + smoothstep — 포물선으로 꽂힌다 */
+    /* 12회차 — smoothstep(`p*p*(3-2*p)`)은 p→1 에서 **속도가 0** 이라 마지막 15% 가 거의 안 움직인다.
+       실측(probe58f): 코인이 426ms 에 알약 좌표(555,32)에 닿고 517ms 까지 **91ms 정지**해 있었다 —
+       비평가 2인이 «126ms 완전 정지» 로 잡은 것이 이것이다. 도착에서 **가속**하는 이징으로 바꾼다
+       (시작은 완만 0.35, 도착 속도 1.65) — «빨려 들어가 꽂힌다» 는 원래 의도에도 이쪽이 맞다. */
+    const e = p*(0.35 + 0.65*p), u = 1 - e;           /* 2차 베지에 + 가속 착지 */
     const x = u*u*f.sx + 2*u*e*f.cx + e*e*f.tx;
     const y = u*u*f.sy + 2*u*e*f.cy + e*e*f.ty;
     const s = 1 + 0.3*Math.sin(Math.PI*e) - 0.34*e;

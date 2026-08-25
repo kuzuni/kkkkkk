@@ -148,9 +148,12 @@ function pwLaunch(){
                 spark: document.querySelectorAll('#fxl .fx-spark').length,
                 toast: document.querySelector('#fxl .fx-toast') ? document.querySelector('#fxl .fx-toast').textContent : null,
                 d0, d1:S.dia };
-    await sleep(300);
-    r.fly = document.querySelectorAll('#fxl .fx-fly').length;
-    await sleep(1600);
+    /* 12회차 — «420ms 시점의 스냅샷» 으로 재면 안 된다. fxThen 의 2중 rAF(108ms)를 걷어내고
+       착지 이징을 가속으로 바꾼 뒤로 비행이 **50~350ms 안에 전부 끝나서** 420ms 에는 0개다.
+       재야 할 성질은 «비행이 있었나» 지 «420ms 에 아직 떠 있나» 가 아니다 — 최대치를 폴링한다. */
+    r.fly = 0;
+    for(let i=0;i<40;i++){ r.fly = Math.max(r.fly, document.querySelectorAll('#fxl .fx-fly').length); await sleep(12); }
+    await sleep(1300);
     r.toastGone = !document.querySelector('#fxl .fx-toast');
     closeModal();
     return r;
@@ -160,7 +163,7 @@ function pwLaunch(){
   chk(q.chk, '체크 스트로크 드로잉 생성');
   chk(q.spark > 0, '버스트 파티클 ' + q.spark + '개');
   chk(q.toast === '퀘스트 완료', '상단 토스트 "' + q.toast + '"');
-  chk(q.fly > 0, '이어서 재화 비행 ' + q.fly + '개 (보상 → 재화 획득 연결)');
+  chk(q.fly > 0, '이어서 재화 비행 최대 ' + q.fly + '개 (보상 → 재화 획득 연결)');
   chk(q.toastGone, '토스트가 스스로 사라진다');
 
   console.log('[6] 강화 성공 — 대상 카드 흰 플래시 + 성공 파티클');
@@ -357,7 +360,7 @@ function pwLaunch(){
     if(!b) return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), err:'퀘스트 버튼 없음' };
     const d0 = S.dia, t0 = Date.now();
     b.click();
-    let toastAt = -1, seenAt = -1, diaDone = -1, swapAt = -1;
+    let toastAt = -1, seenAt = -1, diaDone = -1, swapAt = -1, rampSeen = 0;
     for(let i=0;i<120;i++){
       const to = document.querySelector('#fxl .fx-toast');
       if(to){
@@ -365,6 +368,9 @@ function pwLaunch(){
         /* «보이기 시작한» 시각과 «다 뜬» 시각을 나눠 잰다 — 전자가 데이터 교체보다 앞서야 한다 */
         if(seenAt < 0 && op > 0.2) seenAt = Date.now() - t0;
         if(toastAt < 0 && op >= 0.9) toastAt = Date.now() - t0;
+        /* 12회차 — «램프가 실제로 있는가». 첫 키프레임을 1 로 못박으면 «스냅» 으로 읽히고
+           0 으로 두면 메인 스레드가 막힌 동안 «없는» 것이 된다. 중간값이 한 번이라도 관측돼야 한다. */
+        if(op > 0.24 && op < 0.9) rampSeen++;
       }
       if(swapAt < 0 && S.dia !== d0) swapAt = Date.now() - t0;   /* 데이터가 실제로 바뀐 시각 */
       /* «지급이 실제로 일어난 뒤» 표시가 따라잡은 시각을 잰다 — 지급 전에는 표시와 S 가 같아서
@@ -373,7 +379,7 @@ function pwLaunch(){
       await sleep(10);
     }
     closeModal();
-    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, seenAt, diaDone, swapAt };
+    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, seenAt, diaDone, swapAt, rampSeen };
   });
   chk(!t10.err, '퀘스트 트리거' + (t10.err ? ' — ' + t10.err : ''));
   chk(t10.fmax <= 1.06, '플래시 최대 확대 ×' + t10.fmax + ' — 카드 폭 ' + t10.cardW
@@ -384,7 +390,13 @@ function pwLaunch(){
      연출이 늦게 온다» 이므로 **순서 자체**를 잰다 — 이건 구조적으로 보장된다(수령을 두 프레임 미룬다). */
   chk(t10.seenAt >= 0 && t10.swapAt >= 0 && t10.seenAt <= t10.swapAt,
       '토스트가 데이터 교체 «보다 먼저» 보이기 시작 — 토스트 ' + t10.seenAt + 'ms vs 교체 ' + t10.swapAt + 'ms');
-  chk(t10.toastAt >= 0 && t10.toastAt <= 220, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (≤220ms)');
+  /* 12회차 — 상한 220 → 260ms. 11회차에 «등장이 스냅» 이라는 지적(비평가 O·P·Q·R)을 받아
+     첫 키프레임 불투명도를 1 → .3 으로 낮추고 앞 45% 에 **페이드인 램프**를 넣었다.
+     «완전히 뜨는» 시각은 그 램프 길이(≈85ms)만큼 뒤로 밀리는 것이 설계다 — 이 검사가 지키려던
+     성질(«데이터보다 먼저 보이기 시작») 은 바로 위 seenAt 검사가 그대로 지킨다.
+     이 컨테이너의 rAF 간격이 32~42ms 라 애니메이션 시작 자체가 프레임 단위로 흔들린다. */
+  chk(t10.toastAt >= 0 && t10.toastAt <= 300, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (≤300ms · 램프 45% 포함)');
+  chk(t10.rampSeen > 0, '등장 램프 관측 ' + t10.rampSeen + '회 (0.24 < opacity < 0.9 — «스냅» 이 아니다)');
   chk(t10.diaDone >= 120 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
 
   await browser.close();

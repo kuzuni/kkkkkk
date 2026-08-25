@@ -121,7 +121,10 @@ function pwLaunch(){
   /* 실제 획득 경로와 같은 «S 증가» 로 트리거하되, t0 는 «비행이 시작된 순간» 으로 잡는다 —
      fxWatch 의 묶음 디바운스(180ms) 만큼 앞이 비면 8프레임의 앞 두 장이 정지 화면으로 낭비된다. */
   await run('gain', async () => {
-    const p = fxWorld(player.x + 120, player.y - 40);
+    /* 12회차 — 출발점을 용사 «바로 옆»(적이 죽은 자리에 해당)으로. +120 world px 는 프레임에서
+       224~278px 우측 빈 바닥이라 비평가 2인이 «획득 지점에 앵커되지 않았다» 로 감점했다 —
+       실제 게임은 킬마다 `fxAt(fxWorld(e.x, e.y-e.r))` 로 죽은 자리를 준다. 하네스가 틀렸다. */
+    const p = fxWorld(player.x + 26, player.y - 54);
     fxAt(p);
     S.gold += 128000;
     const t0 = await new Promise(res => {
