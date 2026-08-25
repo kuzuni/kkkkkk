@@ -365,6 +365,65 @@
   /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16). 실측 채움 Ø25 + 검정 4 (A2 표의 Ø31 은 오측) */
   #menub .bdg{position:absolute;left:74px;top:-1px;width:25px;height:25px;border-radius:50%;
     background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0}
+  /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
+     ✕ 잉크 ref x954..1017 y280..339 = 64×60, 중심 (985,310) → 버튼 로컬 정중앙 (51,50).
+     막대 2개로 작도: 두께 14 · 길이 74.5 · ±43° → bbox 64×61 (ref 64×60). */
+  #menub .mx{position:absolute;inset:0;display:none}
+  #menub.mnon .mx{display:block}
+  #menub.mnon s{display:none}
+  #menub .mx::before,#menub .mx::after{content:'';position:absolute;left:13.75px;top:43px;
+    width:74.5px;height:14px;border-radius:7px;background:#FDFDFD;box-sizing:border-box}
+  #menub .mx::before{transform:rotate(43deg)}
+  #menub .mx::after{transform:rotate(-43deg)}
+
+  /* ===== 작업 52 — ▦ 메뉴 (말풍선 콜아웃 드롭다운) ==================================
+     측정표 `docs/measure/52-메뉴팝업.md`. 껍데기 판정을 먼저 했다(A5 교훈):
+       · **전체화면 딤이 없다** — 52 와 02 의 탭바(Δ1)·상단 HUD(Δ2) 평균색이 같다.
+       · 가운데 다이얼로그도 바닥 시트도 아니다. **우상단 #menub 을 가리키는 꼬리 달린 세로 1열 패널**이다.
+       · 패널 안도 반투명(투과율 .72)이라 뒤 전투 화면이 비친다.
+     세로 변환은 9:19 규칙 그대로 «프레임 y = ref y − 84» 하나뿐이다. */
+  #mnw{position:absolute;inset:0;display:none;z-index:28}
+  #mnw.on{display:block}
+  /* LESSONS 21-① — 오버레이 리셋은 ID 특이성이라 `.class>요소` 규칙을 이긴다.
+     여기서 display 를 바꿀 일이 있으면 반드시 `#mnw` 를 붙여 특이성을 맞출 것. */
+  #mnw i,#mnw s,#mnw b,#mnw em{display:block;font-style:normal;text-decoration:none;font-weight:900}
+  /* 패널 — ref x760.5..898.5 / y224.5..1112 → 프레임 x761 y141 138×887. 테두리 없음(밝은 stroke 0). */
+  #mnw .mn-col{position:absolute;left:761px;top:141px;width:138px;height:997px;
+    border-radius:18px;background:rgba(0,0,0,.28)}
+  /* 꼬리 — 밑변 ref y267..312(46)이 패널 우변에 붙고 꼭짓점 (935,289). 꼭짓점 x935 = #menub 좌변 x934.
+     패널과 겹치게 그리면 알파가 두 번 곱해져 그 부분만 짙어진다 → **패널 밖(x899..935)에만** 그린다. */
+  #mnw .mn-tail{position:absolute;left:899px;top:183px;width:0;height:0;
+    border-style:solid;border-width:23px 0 23px 36px;
+    border-color:transparent transparent transparent rgba(0,0,0,.28)}
+  /* 칸 — ref x785.5..873.5(88) · h80 · pitch110 · 첫 칸 상변 ref244 → 프레임 160.
+     패널(.28) 위에 .80 을 얹어 총 투과율 .72×.20 = .144 (ref 실측 .14). 테두리 없음.
+     ⚠ 칸의 기준(offset parent)은 프레임이 아니라 **`.mn-col` 패널**이다 — left/top 은 패널 로컬이다.
+        left 24 = 785 − 761 (측정표 §2 «좌 패딩 24.5»), top 19 = 160 − 141, 이후 pitch 110. */
+  #mnw .mn-b{position:absolute;left:24px;width:88px;height:80px;border-radius:26px;
+    background:rgba(0,0,0,.80);cursor:pointer}
+  #mnw .mn-b:nth-of-type(1){top:19px}  #mnw .mn-b:nth-of-type(2){top:129px}
+  #mnw .mn-b:nth-of-type(3){top:239px} #mnw .mn-b:nth-of-type(4){top:349px}
+  #mnw .mn-b:nth-of-type(5){top:459px} #mnw .mn-b:nth-of-type(6){top:569px}
+  #mnw .mn-b:nth-of-type(7){top:679px} #mnw .mn-b:nth-of-type(8){top:789px}
+  #mnw .mn-b:nth-of-type(9){top:899px}   /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
+  /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
+     **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
+     칸별 잉크 폭이 34~66 으로 달라서 --sf(등방)·--sx(가로만) 로 각 이모지를 ref bbox 에 맞춘다(A2 방식).
+     ⚠ transform 순서는 **translate 를 왼쪽**에 둔다 — `scale() translate()` 이면 translate 가 먼저 걸려
+        이동량이 sf 배로 늘어난다. 이쪽이어야 --dx/--dy 가 «최종 화면 px» 그대로다. */
+  #mnw .mn-i{position:absolute;left:0;right:0;top:6.5px;height:51px;line-height:51px;
+    text-align:center;font-size:52px;
+    transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--sf,1)) scaleX(var(--sx,1))}
+  /* 라벨 — 코어 높이 24 → font-size 24/0.93 ≈ 26 (LESSONS 01, 한글 잉크비 0.93).
+     중심 칸top+69. 폭은 글자 수마다 달라 **음수 letter-spacing 금지 · scaleX 로만** 맞춘다.
+     라벨이 아이콘 하단을 살짝 덮는 것은 레퍼런스 그대로다(1번: 아이콘 y250..301 / 라벨 y302..325). */
+  #mnw .mn-l{position:absolute;left:-6px;right:-6px;top:55px;height:28px;line-height:28px;
+    text-align:center;font-size:26px;color:#FDFDFD;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;
+    transform:scaleX(var(--lx,.82))}
+  /* 8번 «게임 라운지» 만 컬러 — 초록 라운드 타일(#03ED68) 위 흰 글리프. ref 잉크 46×35 + 타일 57×55 */
+  #mnw .mn-b.gl .mn-i{width:57px;height:55px;left:50%;margin-left:-28.5px;right:auto;top:6px;
+    line-height:55px;border-radius:15px;background:#03ED68}
 
   /* 좌측 세로 아이콘. 측정표: docs/measure/A2-사이드아이콘.md
      작업 49(2026-08-25, 저장소 주인 지시): **우측 컬럼(#sideR — 이벤트·특권 잠금 아이콘 + 시설 배너)은 전부 삭제**했다.
@@ -5115,7 +5174,7 @@
     </div>
     <button id="dunOut"><i>◀</i></button>
     <!-- 우상단 4분할 메뉴 버튼 -->
-    <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i></div>
+    <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i><b class="mx"></b></div>
     <div class="side" id="sideL">
       <!-- 1행은 레퍼런스에서 라벨 없는 단독 버튼이다(측정표 §1). 라벨을 달면 아래 5칸이 전부 27px 씩 밀린다.
            --sf/--sx 는 각 이모지의 실측 잉크(canvas getImageData)로 역산한 «그 칸의 레퍼런스 스프라이트
@@ -5391,6 +5450,30 @@
       </div>
     </div>
   </div>
+  <!-- 52 ▦ 메뉴 — 우상단 #menub 을 가리키는 말풍선 콜아웃. 측정표 docs/measure/52-메뉴팝업.md.
+       딤이 없다(레퍼런스 실측) — `#mnw` 는 «바깥을 눌러 닫기» 를 받는 투명 히트영역일 뿐 배경을 어둡게 하지 않는다.
+       라벨 --lx 는 ref 라벨 코어 폭 ÷ (글자수 × 26) 이다. 오염된 표본(우편·랭킹)은 깨끗한 4칸의 평균 .82 를 썼다. -->
+  <div id="mnw">
+    <s class="mn-tail"></s>
+    <div class="mn-col">
+      <!-- --sf/--sx/--dy 는 «이 이모지의 캡처 잉크» 를 측정표 §3 의 레퍼런스 bbox 에 맞추는 실측 역산값이다
+           (A2 방식). 이모지를 바꾸면 `node tools/box52.js <캡처> 785 872 160 110 80 8 45 lum` 으로 다시 재야 한다. -->
+      <div class="mn-b" data-mn="notice"><i class="mn-i" style="--sf:.981;--sx:1.073;--dy:2.6px">📢</i><i class="mn-l" style="--lx:.85">공지</i></div>
+      <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.90">우편</i></div>
+      <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.92">랭킹</i></div>
+      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lx:.72">길라잡이</i></div>
+      <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.89">가방</i></div>
+      <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.87">절전</i></div>
+      <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.89">설정</i></div>
+      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lx:.72">게임 라운지</i></div>
+      <!-- ⚠ 9번째 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
+           임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
+           레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고
+           `.mn-col` 높이를 997 → **887**(8칸)로 되돌린다. -->
+      <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:1.457;--sx:.651">🎫</i><i class="mn-l" style="--lx:.85">패스</i></div>
+    </div>
+  </div>
+
   <!-- 33 재화 «정보» 팝업. 딤 위 소형 가운데 다이얼로그 598×813. 측정표 docs/measure/33-재화정보팝업.md
        진입점: 화면의 **모든 재화 아이콘** — 아이콘마다 리스너를 붙이지 않고 `data-cur="<키>"` 속성 하나로
        표시한다(위임 핸들러 1개가 전부 처리). 새 화면이 재화 아이콘을 만들면 속성만 붙이면 연결된다.
@@ -6161,6 +6244,14 @@ const RANKS = [
   { n:'마스터',   ic:'🔱', stage:170, cp:8.0e14 },
   { n:'그랜드마스터', ic:'👑', stage:230, cp:1.0e18 },
   { n:'챌린저',   ic:'🔥', stage:300, cp:2.0e21 }
+];
+
+/* ---- 공지사항 (작업 52 «공지» 칸) ---- */
+const NOTICE = [
+  { t:'🎉 오픈 안내',        b:'방치형 던전 RPG 를 시작해 주셔서 감사합니다. 자동 전투로 스테이지를 밀며 장비·스킬·유물을 모아 보세요.' },
+  { t:'⚔️ 보스전 안내',      b:'10 스테이지마다 보스가 등장합니다. 제한 시간 30초 안에 잡지 못하면 그 스테이지에서 파밍하며 «재도전» 할 수 있습니다.' },
+  { t:'🗺️ 길라잡이',         b:'화면 하단 배너의 가이드 미션을 따라가면 다이아를 받으며 콘텐츠가 순서대로 해금됩니다.' },
+  { t:'🛠️ 준비 중인 기능',   b:'가방 · 랭킹 · 설정 · 절전 모드는 순차적으로 열립니다.' }
 ];
 
 /* ---- 우편함 ---- */
@@ -11402,18 +11493,46 @@ $('psTk').addEventListener('click', e => {
 $('psBuy').onclick = () => popup('💳 프리미엄 패스',
   '<p>결제 연동은 아직 준비 중입니다.</p><p>연동되면 이 버튼이 프리미엄을 활성화합니다.</p>');
 
-/* 작업 35 — «패스» 임시 진입점.
-   레퍼런스는 좌측 사이드 아이콘 «패스» 지만, 작업 48 이 비워 둔 5번째 라벨 행은 작업 34(축복)가
-   이미 가져갔고 SIDE.N 을 6 으로 올리면 A2 행 그리드(pitch·--ih·--itop)가 전 화면에서 흔들린다(48 주석).
-   #sideL 은 내 작업 구간도 아니라 손대지 않고, ▦ 메뉴 placeholder 안에 임시 진입점을 둔다.
-   → **52(메뉴 팝업)를 만드는 세션이 이 버튼을 정식 메뉴 항목으로 가져갈 것.**
-   (05→06 진입점 인계와 같은 패턴이다. 옮길 때 LESSONS 57-① 대로 이 경로는 그때 지운다) */
-$('menub').onclick = () => {
-  showModal('<h2>▦ 메뉴</h2><p>설정 · 공지는 아직 준비 중입니다.</p>'
-    + '<button class="gbtn green" id="psGo">🎫 패스</button>'
-    + '<button class="gbtn green" id="okBtn">확인</button>');
-  $('okBtn').onclick = closeModal;
-  $('psGo').onclick = () => { closeModal(); openPass('stage'); };
+/* 작업 35 가 «▦ 메뉴 placeholder» 안에 두었던 임시 패스 진입점(`#psGo`)은 여기서 정식 메뉴 항목으로 옮겼다.
+   (35 주석의 인계 지시 + LESSONS 57-① — 신규 화면이 구버전을 대체하면 구버전 경로는 그때 지운다)
+   ⚠ 「패스」 칸은 **레퍼런스 52 에 없는 9번째 칸**이다. 레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)인데,
+     작업 48 이 비워 둔 5번째 라벨 행을 작업 34(축복)가 가져갔고 SIDE.N 을 6 으로 올리면 A2 행 그리드가 전 화면에서
+     흔들려서(35 주석) 갈 곳이 없다. **좌측에 자리가 나면 옮기고 패널 높이를 887(8칸)로 되돌린다** — CSS 한 줄이다.
+*/
+/* ---- 52 ▦ 메뉴 (말풍선 콜아웃) ----------------------------------------------
+   레퍼런스에 딤이 없으므로 `#mnw` 는 배경을 어둡게 하지 않는 **투명 히트영역**이다.
+   ▦ 를 다시 누르면 닫힌다(버튼이 그 자리에서 ✕ 로 바뀐다) — 바깥 아무 곳을 눌러도 닫힌다.
+   진입점 8칸 중 랭킹·가방·절전·설정은 각각 작업 54·53·56·55 의 «화면» 이라 52 가 만들지 않는다.
+   그 화면들이 올라오면 아래 분기 한 줄씩만 갈아끼우면 된다(57 교훈 — 대체되면 구버전 경로는 그때 지운다). */
+let menuOn = false;
+function openMenu(){ menuOn = true; $('mnw').classList.add('on'); $('menub').classList.add('mnon'); }
+function closeMenu(){ menuOn = false; $('mnw').classList.remove('on'); $('menub').classList.remove('mnon'); }
+$('menub').onclick = e => { e.stopPropagation(); menuOn ? closeMenu() : openMenu(); };
+/* 바깥(투명 히트영역) 클릭 → 닫기. 패널 위 클릭은 칸 위임 핸들러가 받고 버블을 끊는다. */
+$('mnw').onclick = closeMenu;
+$('mnw').querySelector('.mn-col').onclick = e => {
+  e.stopPropagation();
+  const b = e.target.closest('[data-mn]');
+  if(!b) return;
+  closeMenu();
+  const k = b.dataset.mn;
+  if(k === 'mail') openMail();
+  else if(k === 'notice') popup('📢 공지사항', NOTICE.map(n =>
+    '<p style="text-align:left;margin-bottom:14px"><b>' + n.t + '</b><br>' + n.b + '</p>').join(''));
+  else if(k === 'guide'){
+    const m = gmCur();
+    popup('🗺️ 길라잡이', m
+      ? '<p><b>' + m.n + '</b></p><p>진행 <b>' + gmProg(m) + ' / ' + m.goal + '</b></p>'
+        + '<p>보상 💎 <b>' + fmt(m.dia) + '</b></p>'
+        + (gmReady() ? '<p style="color:#8ff0a8;margin-top:10px">완료! 화면 하단 배너에서 수령하세요.</p>' : '')
+      : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
+  }
+  else if(k === 'rank')   popup('🏆 랭킹',      '<p>랭킹은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 54 — 서버 없이 로컬 기록 + 더미 순위로 구현 예정)</p>');
+  else if(k === 'bag')    popup('🎒 가방',      '<p>가방은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 53)</p>');
+  else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
+  else if(k === 'conf')   popup('⚙️ 설정',      '<p>설정은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 55)</p>');
+  else if(k === 'lounge') popup('🎮 게임 라운지','<p>게임 라운지는 준비 중입니다.</p>');
+  else if(k === 'pass')   openPass('stage');          /* 작업 35 인계 — 레퍼런스에 없는 임시 칸 */
 };
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
 

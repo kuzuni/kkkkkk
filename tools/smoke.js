@@ -112,6 +112,10 @@ function launchOpts(){
       tabs.forEach((t) => openers.push({ label: 'tab:' + t, sel: `.tab[data-t="${t}"]` }));
       pops.forEach((p) => openers.push({ label: 'side:' + p, sel: `.side .ibtn[data-pop="${p}"]` }));
       if (await page.$('#menub')) openers.push({ label: 'menu', sel: '#menub' });
+      /* 52 ▦ 메뉴 8칸 — 메뉴를 연 뒤 칸을 누르는 2단계 오프너. `data-mn` 속성 하나로 표시되므로
+         칸이 늘거나 줄면 여기 목록이 자동으로 따라간다(33 «속성 + 위임 핸들러 1개» 방식). */
+      const mns = await page.$$eval('#mnw [data-mn]', (els) => els.map((e) => e.dataset.mn)).catch(() => []);
+      mns.forEach((k) => openers.push({ label: 'menu:' + k, sel: null, mn: k }));
       /* 33 재화 정보 팝업 — «모든 재화 아이콘» 이 오프너다. 아이콘은 data-cur 속성 하나로 표시되므로
          새 화면이 재화 아이콘을 추가해도 여기 목록이 자동으로 늘어난다(작업 33). */
       const curs = await page.$$eval('[data-cur]', (els) => els.map((e) => e.dataset.cur)).catch(() => []);
@@ -195,6 +199,11 @@ function launchOpts(){
              페이지 안에서 resolve+click 을 한 번에 해 레이스를 없앤다 — 위임 핸들러는 그대로 탄다. */
           const hit = await page.$eval(o.hero, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.hero, { timeout: 3000, force: true });
+        } else if (o.mn) {
+          /* 위임 핸들러(.mn-col)를 타야 하므로 query 와 click 을 같은 evaluate 안에서(LESSONS 50-①) */
+          await page.evaluate(() => document.querySelector('#menub').click());
+          await page.waitForTimeout(320);
+          await page.evaluate((k) => document.querySelector(`#mnw [data-mn="${k}"]`).click(), o.mn);
         } else if (o.dun) {
           await page.click('.tab[data-t="adv"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
@@ -326,7 +335,7 @@ function launchOpts(){
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
