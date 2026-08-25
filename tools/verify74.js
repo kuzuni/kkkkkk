@@ -46,9 +46,24 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
        엘리먼트를 새로 만들고 회수하지 않아, 1400탭짜리 장시간 런에서 크로미움의
        WebMediaPlayer 상한(~75)을 넘겨 «Blocked attempt to create a WebMediaPlayer»
        콘솔 에러가 1000건 넘게 쌓인다 → 콘솔 에러 0 조건이 무너지고 탭도 밀린다.
-       측정 대상과 무관한 소음이라 여기서 끈다(누수 자체는 별도 작업 단위 — PROGRESS 111). */
+       측정 대상과 무관한 소음이라 여기서 끈다(누수 자체는 별도 작업 단위 — PROGRESS 123). */
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }   /* 이미 물린 트랙도 놓는다 */
+
+    /* 110 — 플레이어를 죽지 않게 눌러 둔다.
+       이 게이트는 «자동 전투가 도는 채로»(= uiDirty 재렌더가 계속 도는 채로) 1400발을 던지는데,
+       그 사이에 플레이어가 죽으면 18 패배 화면(`#defw`)이 **전 화면을 덮고 탭을 삼킨다.**
+       본런에서 정확히 그렇게 3발이 새어 «탭 유실» 로 오계상됐다(진단 로그 착지=div#defw.on).
+       전투 자체는 그대로 돌려야 재렌더 압박이 유지되므로, 끄지 않고 **hp 만 채운다.**
+       (LESSONS 74-1 «반복 측정 하네스는 매 반복마다 소모 자원을 원복해야 측정 대상만 잰다» 의
+        체력 판 — 골드·레벨은 이미 원복하고 있었는데 체력만 빠져 있었다.) */
+    window.__alive = setInterval(() => {
+      try {
+        if (typeof player !== 'undefined' && typeof stat !== 'undefined') { player.hp = stat.maxHp; player.dead = 0; }
+      } catch (_) {}
+      const d = document.getElementById('defw');
+      if (d && d.classList.contains('on')) d.classList.remove('on');
+    }, 100);
     window.__hits = 0; window.__sel = ''; window.__land = '';
     /* 110 — 빗나간 탭의 «착지 지점» 을 남기려고 요소를 짧게 적는다 */
     window.__desc = el => {
