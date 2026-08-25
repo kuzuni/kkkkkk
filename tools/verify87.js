@@ -131,6 +131,37 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   const heads = await page.$$eval('#bCos .cos-hd', els => els.map(e => e.textContent));
   ok(heads.length === 6, '등급 섹션 헤더 ' + heads.length + '개 (' + heads.join(' / ') + ')');
 
+  /* 카드 한 번 누르면 «선택», 선택된 카드를 다시 누르면 08 상세 */
+  const sel = await page.evaluate(() => {
+    const id = AVATARS[7].id;
+    document.querySelector('[data-cosit="' + id + '"]').click();
+    const a = !!document.querySelector('[data-cosit="' + id + '"]').classList.contains('sel');
+    document.querySelector('[data-cosit="' + id + '"]').click();
+    const open = document.getElementById('modal').classList.contains('on');
+    const title = document.getElementById('mtitle').textContent;
+    document.getElementById('modal').classList.remove('on', 'sk8');
+    return { id, a, open, title };
+  });
+  ok(sel.a, '[카드 클릭] ' + sel.id + ' 가 «선택(.sel)» 으로 바뀜');
+  ok(sel.open && sel.title.length > 0, '[선택 카드 재클릭] 08 상세 열림 (제목 «' + sel.title + '»)');
+
+  /* 레드닷 — 조건 미해금 코스튬은 «살 수 있음» 으로 세지 않는다 */
+  const dot = await page.evaluate(() => {
+    const keep = Object.assign({}, S.avatars), kd = S.dia, kb = S.best, kr = S.rank;
+    const kc = { skill: S.coll.skill, equip: S.coll.equip };
+    AVATARS.forEach(a => S.avatars[a.id] = 1);                 /* 조건 해금 7종만 미보유로 남긴다 */
+    AVATARS.filter(a => a.req).forEach(a => delete S.avatars[a.id]);
+    S.dia = 1e9; S.best = 0; S.rank = 0; S.coll.skill = 0; S.coll.equip = 0;
+    const locked = AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a));
+    S.best = 1e6; S.rank = 7; S.coll.skill = 9; S.coll.equip = 9;
+    const opened = AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a));
+    S.avatars = keep; S.dia = kd; S.best = kb; S.rank = kr;
+    S.coll.skill = kc.skill; S.coll.equip = kc.equip; markDirty();
+    return { locked, opened };
+  });
+  ok(!dot.locked, '[레드닷] 조건 미달 코스튬만 남으면 «살 수 있음» 으로 세지 않음');
+  ok(dot.opened, '[레드닷] 조건을 채우면 다시 «살 수 있음» 으로 셈');
+
   /* 구매 — 다이아가 줄고, 보유가 되고, 즉시 착용된다 */
   const buy = await page.evaluate(() => {
     const target = AVATARS.find(a => !S.avatars[a.id] && !a.req);
@@ -256,6 +287,64 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   ok(scrolled > 0, '격자 스크롤 동작 (scrollTop ' + Math.round(scrolled) + ')');
   const keep = await page.evaluate(() => { renderCos(); return document.querySelector('#bCos .sk-gp').scrollTop; });
   ok(Math.abs(keep - scrolled) < 2, '재렌더 후 스크롤 위치 보존 (' + Math.round(keep) + ')');
+
+  /* 격자 기하 — 카드가 서로 겹치거나 상자 밖으로 나가면 안 된다(50칸은 눈으로 다 못 본다) */
+  const geo = await page.evaluate(() => {
+    const inn = document.querySelector('#bCos .cos-in');
+    const R = [...document.querySelectorAll('#bCos .sk-card')].map(c =>
+      ({ x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, h: c.offsetHeight }));
+    const H = [...document.querySelectorAll('#bCos .cos-hd')].map(c =>
+      ({ y: c.offsetTop, h: c.offsetHeight }));
+    let ov = 0;
+    for (let i = 0; i < R.length; i++) for (let j = i + 1; j < R.length; j++)
+      if (R[i].x < R[j].x + R[j].w && R[j].x < R[i].x + R[i].w
+       && R[i].y < R[j].y + R[j].h && R[j].y < R[i].y + R[i].h) ov++;
+    let hov = 0;
+    H.forEach(h => R.forEach(r => { if (r.y < h.y + h.h && h.y < r.y + r.h) hov++; }));
+    const out = R.filter(r => r.x < 0 || r.x + r.w > inn.clientWidth).length;
+    return { ov, hov, out, w: inn.clientWidth, cols: new Set(R.map(r => r.x)).size };
+  });
+  ok(geo.ov === 0, '카드끼리 겹침 0쌍');
+  ok(geo.hov === 0, '등급 헤더와 카드 행 겹침 0건');
+  ok(geo.out === 0, '카드가 격자 폭(' + geo.w + 'px) 밖으로 나간 것 0장 · 열 ' + geo.cols + '개');
+
+  /* ---------------- §8 화면 간 색 일치 (전투 · 79 장비 시트 · 80 랭킹) ---------------- */
+  console.log('\n§8 전투 · 79 장비 시트 · 80 랭킹 색 일치');
+  /* 팔레트 헬퍼를 페이지에 심어 둔다(틴트는 multiply 라 «찍힌 색 집합» 이 곧 지문이다) */
+  await page.evaluate(() => {
+    window.__pal = cv => { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, m = {};
+      for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) m[d[i] + ',' + d[i+1] + ',' + d[i+2]] = 1;
+      return Object.keys(m).sort(); };
+    window.__ref = av => { const c = document.createElement('canvas'); c.width = 120; c.height = 120;
+      drawHeroTo(c, { avatar: av, scale: 1 }); return __pal(c); };     /* = 전투가 쓰는 tinted() 경로 */
+    S.avatars.av47 = 1; S.avatar = 'av47'; save(); uiDirty = true;      /* 신화 자수정 — 눈에 띄는 색 */
+  });
+  /* 79 — 06 장비 시트(서브탭 «장비» 는 data-eqtab 이 없는 첫 칸이다) */
+  /* 서브탭 «장비» 칸은 data-eqtab 이 없어(현재 탭 표시용) 클릭으로는 안 돌아간다 — gmHero 로 간다 */
+  await page.evaluate(() => gmHero('eq'));
+  await page.waitForTimeout(600);
+  const eqc = await page.evaluate(() => {
+    const R = __ref('av47'), eq = document.querySelector('.eqil-cv');
+    const E = eq ? __pal(eq) : null;
+    return { R: R.length, E: E && E.length, sub: !!E && E.every(c => R.indexOf(c) >= 0) };
+  });
+  ok(eqc.R > 3, '기준(전투 tinted 경로) 팔레트 ' + eqc.R + '색');
+  ok(eqc.E > 3 && eqc.sub, '79 장비 시트 일러스트 색 = 전투 팔레트 (' + eqc.E + '색, 부분집합)');
+  /* 80 — 랭킹 단상. 칸마다 그 랭커의 look.avatar 로 그려지므로 «칸별로» 그 아바타와 비교한다.
+     단상은 rAF 틱(rkTick)이 그리므로 열고 나서 기다렸다가 읽는다. */
+  await page.evaluate(() => openRank());
+  await page.waitForTimeout(700);
+  const pods = await page.evaluate(() => [1, 2, 3].map((n, i) => {
+    const cv = document.getElementById('rkCh' + n);
+    if (!cv || typeof rkPodLooks === 'undefined' || !rkPodLooks[i]) return null;
+    const P = __pal(cv), R = __ref(rkPodLooks[i].avatar);
+    return { av: rkPodLooks[i].avatar, n: P.length, sub: P.length > 0 && P.every(c => R.indexOf(c) >= 0) };
+  }));
+  await page.evaluate(() => closeRank());
+  const got = pods.filter(Boolean);
+  ok(got.length === 3, '80 랭킹 단상 캔버스 3칸이 그려짐 (' + got.length + ')');
+  ok(got.length === 3 && got.every(p => p.sub), '80 랭킹 단상 3칸 모두 그 랭커 코스튬 색과 일치 ('
+    + got.map(p => p.av + ':' + p.n + '색').join(' · ') + ')');
 
   console.log('\n' + (errs.length ? '콘솔 에러 ' + errs.length + '건:\n  ' + errs.slice(0, 5).join('\n  ') : '콘솔 에러 0건'));
   ok(errs.length === 0, '콘솔·페이지 에러 0건');
