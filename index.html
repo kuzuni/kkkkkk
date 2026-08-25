@@ -5812,6 +5812,8 @@
     text-align:center;line-height:59px}
   .cf55-sw.on>.cf55-kn{left:67px;background:linear-gradient(#ABFF7E,#5FC61E)}
   .cf55-kn>i{font-size:23px;color:#FFF;-webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(.93)}
+  /* 「ON」 은 2글자라 사이드베어링 비중이 커서 같은 scaleX 로는 4px 좁다(ref 32 vs 28) */
+  #cfw .cf55-sw.on .cf55-kn>i{transform:scaleX(1.06)}
 
   /* ── 계정 연동 패널 ref x191..889 y1364..1561 (699×198) r45 ── */
   .cf55-acc{left:30px;top:725px;width:699px;height:198px;border-radius:45px;background:#D0BCA1}
@@ -5854,12 +5856,12 @@
     -webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
   .cf55-dl{left:335px;top:1111px;width:90px;height:2px;background:#F4F4F4;
     box-shadow:0 0 0 1.5px #000;cursor:pointer}
-  .cf55-n1{left:30px;top:1132px;width:699px;height:32px;line-height:32px}
+  .cf55-n1{left:30px;top:1134px;width:699px;height:32px;line-height:32px}
   .cf55-n1>i{font-size:24px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
   #cfw .cf55-n1>i.r{position:relative;right:6px}
   .cf55-n1>i.r{float:right}
-  .cf55-n2{left:0;right:0;top:1183px;height:32px;line-height:32px;text-align:center}
+  .cf55-n2{left:0;right:0;top:1185px;height:32px;line-height:32px;text-align:center}
   .cf55-n2>i{font-size:23px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
   /* ================= 54 랭킹 페이지 (#rkw) — 측정표 docs/measure/54-랭킹팝업.md =================
@@ -6789,8 +6791,8 @@
         <div class="cf55-btn b3" data-cf="support"><i style="--sx:1.02">고객 지원</i></div>
         <div class="cf55-del" data-cf="del"><i style="--sx:.91">계정 삭제</i></div>
         <s class="cf55-dl" data-cf="del"></s>
-        <div class="cf55-n1"><i id="cfUid"></i><i class="r" id="cfSrv" style="--sx:1.07"></i></div>
-        <div class="cf55-n2"><i id="cfGid" style="--sx:1.20"></i></div>
+        <div class="cf55-n1"><i id="cfUid" style="--sx:.97"></i><i class="r" id="cfSrv" style="--sx:1.07"></i></div>
+        <div class="cf55-n2"><i id="cfGid" style="--sx:1.22"></i></div>
       </div>
     </div>
   </div>
