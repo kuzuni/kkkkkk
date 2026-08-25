@@ -11,6 +11,16 @@ const ok = (n, c, d) => { if (c) { pass++; console.log('  PASS ' + n + (d ? ' �
   else { fail++; console.log('  FAIL ' + n + (d ? ' — ' + d : '')); } };
 const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
 
+/* 122 — «300ms 면 열기 연출이 끝났겠지» 라는 낡은 타이밍 가정을 시각이 아니라 **상태**로 바꾼다.
+   느린 러너에서는 60 페이지 등장 팝(`jzPgIn`, .12s)이 첫 프레임 지연 때문에 300~520ms 뒤에 끝난다.
+   그 중간에 재면 `#shopCats` 가 **0.985 로 줄어든 채**(바 폭 990→975.1 · 좌 45→52.4) 찍혀
+   45 와 무관한 FAIL 이 뜬다(main 에서도 4회 중 1회 재현). 애니메이션이 끝날 때까지 기다린다. */
+const settled = async page => {
+  await page.evaluate(() => Promise.all(
+    document.getElementById('shopw').getAnimations().map(a => a.finished.catch(() => {}))));
+  await page.waitForTimeout(60);
+};
+
 (async () => {
   /* 번들 브라우저가 없으면 컨테이너의 chromium-1194 로 떨어진다(LESSONS 57 환경 메모) */
   let browser;
@@ -48,7 +58,7 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   /* ---- 2. 소환 탭 기하 — 바 990x107 유지 · 칸 2등분 · 알약/라벨/✦ 중앙 ---- */
   console.log('\n[2] 소환 탭 기하 (바 990x107 · 칸 488 x2)');
   await page.evaluate(() => openShopPage());
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   const g = await page.evaluate(() => {
     const r = e => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, cx: b.x + b.width / 2 }; };
     const bar = document.getElementById('shopCats');
@@ -92,7 +102,7 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   /* ---- 3. 재화 탭 전환 — 알약 이동 · coin 렌더 · 기하 ---- */
   console.log('\n[3] 재화 탭 전환 (실동작)');
   await page.click('#shopCats .shp-ct[data-cat="coin"]');
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   const c = await page.evaluate(() => {
     const r = e => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, cx: b.x + b.width / 2 }; };
     const bar = document.getElementById('shopCats');
@@ -119,7 +129,7 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   /* ---- 4. 소환 탭 복귀 ---- */
   console.log('\n[4] 소환 탭 복귀');
   await page.click('#shopCats .shp-ct[data-cat="summon"]');
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   const s = await page.evaluate(() => ({
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     coinCls: document.getElementById('shopList').classList.contains('coin'),
@@ -136,7 +146,7 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   await page.evaluate(() => closeShopPage());
   await page.waitForTimeout(200);
   await page.evaluate(() => openShopPage());
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   const rz = await page.evaluate(() => ({
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     cards: document.querySelectorAll('#shopList .shp-card').length,
