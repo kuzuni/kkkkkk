@@ -127,6 +127,14 @@ function launchOpts(){
       slots.forEach((k) => openers.push({ label: 'eqslot:' + k, sel: null, hero: `#eqCards [data-eqslot="${k}"]` }));
       const eqtabs = await page.$$eval('#eqTabs [data-eqtab]', (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
       eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, sel: null, hero: `#eqTabs [data-eqtab="${k}"]` }));
+      /* 07·26·50 바닥 시트 «안쪽» 서브탭 바(장비·스킬·코스튬·동료) — 06 시트가 아니라 시트 안에 있어서
+         «영웅 탭 → 06 서브탭 → 시트 안 서브탭» 3단계다(작업 50). 코스튬 시트의 [착용]/[구매] 도 같이 본다. */
+      await page.$eval('#eqTabs [data-eqtab="cos"]', (el) => el.click()).catch(() => {});
+      await page.waitForTimeout(400);
+      const costabs = await page.$$eval('#bCos [data-costab]', (els) => els.map((e) => e.dataset.costab)).catch(() => []);
+      costabs.forEach((k) => openers.push({ label: 'costab:' + k, sel: null, cos: `#bCos [data-costab="${k}"]` }));
+      for (const b of ['data-coswear', 'data-cosbuy', 'data-cosun'])
+        if (await page.$(`#bCos [${b}]`)) openers.push({ label: 'cos:' + b, sel: null, cos: `#bCos [${b}]` });
       /* 10·13 상점 카테고리 탭 — 상점 페이지(#shopw)를 연 뒤에만 보이므로 2단계 오프너다.
          재화 탭에는 44(다이아 상품 5종 + 마일리지 교환)가 붙어 있어 여기서만 렌더된다. */
       await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true }).catch(() => {});
@@ -170,6 +178,13 @@ function launchOpts(){
           await page.waitForTimeout(400);
           const hit = await page.$eval(o.tr, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.tr, { timeout: 3000, force: true });
+        } else if (o.cos) {
+          await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.$eval('#eqTabs [data-eqtab="cos"]', (el) => el.click());
+          await page.waitForTimeout(400);
+          const hit = await page.$eval(o.cos, (el) => { el.click(); return true; }).catch(() => false);
+          if (!hit) await page.click(o.cos, { timeout: 3000, force: true });
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);

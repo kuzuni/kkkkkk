@@ -3114,23 +3114,8 @@
   .eqil{text-align:center;pointer-events:none;
     left:45px;width:640px;top:495px;height:831px;font-size:724px;line-height:825px;text-indent:-40px}
 
-  /* 자물쇠 아이콘 — 흰 고리 34x18 + 몸통 55x39, 전체 bbox 67x72 */
-  /* 원반 안 자물쇠·라벨이 통째로 5~6px 위에 있었다 —
-     ref 자물쇠 흰 몸통 y1892~1953 / 라벨 잉크 y1963~1987 vs 구현 1886~1947 / 1958~1980 */
-  .eqli{position:absolute;left:50%;top:22px;width:67px;height:72px;margin-left:-33px}
-  /* ref 는 y1900(고리 상단 +8)에서 흰 픽셀이 **두 줄**(x355~366 / x373~385, 구멍 6px)로 갈린다.
-     border 9 + radius 18 이면 크라운이 두꺼워 같은 높이가 아직 «한 줄»로 막힌다.
-     위쪽 테두리만 얇게(7) 주어 구멍이 8px 지점부터 열리게 한다 */
-  .eqli::before{content:'';position:absolute;left:18px;top:0;width:31px;height:23px;
-    border-style:solid;border-color:#fff;border-width:7px 12px 0;border-radius:15px 15px 0 0;
-    box-sizing:border-box;filter:drop-shadow(0 0 2.5px #000)}
-  .eqli::after{content:'';position:absolute;left:6px;top:23px;width:55px;height:39px;
-    background:#fff;border-radius:8px;
-    background-image:radial-gradient(circle 6px at 27px 15px,#000 0 6px,transparent 6px),
-      linear-gradient(#000,#000);
-    background-size:100% 100%,5px 11px;background-position:0 0,25px 18px;
-    background-repeat:no-repeat,no-repeat;
-    box-shadow:0 0 0 3px #000}
+  /* 작업 50 — 잠금 탭(«기타» 🔒)이 폐기되면서 `.eqli` 자물쇠 아이콘도 같이 제거했다.
+     06 서브탭은 이제 «장비·스킬·코스튬·동료» 4개가 전부 해금이라 쓰는 곳이 없다. */
 
   /* ---- 최하단 서브탭 x66 w948 h97 (셀 4등분 237) ---- */
   /* 작업 51 — top:1444 대신 bottom:43(=1584−1541). 시트가 접혀도 바닥에 붙어 있는다 */
@@ -3155,15 +3140,6 @@
      (ref 장비 y2049~2085 vs 스킬 y2052~2088). 구현은 둘 다 2051 로 같았다 */
   .eqtc.on>b{color:#F0BB8C;left:12px;right:12px;top:19px}
   .eqtc.on>b>i{transform:scaleX(.97)}
-  /* 잠금 탭도 라벨이 **보인다** — 레퍼런스는 자물쇠 «뒤로» 글자가 깔린다
-     (실측 3번 탭 잉크 x609~708 / 4번 x824~969, 자물쇠 좌우로 글리프가 삐져나온다).
-     `visibility:hidden` 이면 그 영역 밝은 픽셀이 0 이 된다. 마크업이 `<b>` → `<s.eqli>` 순서라
-     자물쇠가 위에 덮인다.
-     ⚠ 문자열은 미확정 — 측정표 §4-5 는 잉크 폭으로 3글자/4글자로 추정하지만
-     자물쇠가 가운데를 가려 복원 불가다. 기획서(UI-REFERENCE §292)의 «동료 · 기타» 를 따랐고
-     그래서 잉크 폭이 각각 101→68 / 146→68 로 짧다. 실제 문자열이 확인되면 교체할 것. */
-  .eqtc.lk>b{color:#A7A6AB}
-  .eqtc>.eqli{top:20px;transform:scale(.91,.90);transform-origin:50% 0}
 
   /* ==========================================================================
      07 스킬 팝업 — 측정표 docs/measure/07-스킬팝업.md
@@ -3181,26 +3157,26 @@
   /* z-index 9 — 전투 오버레이(스테이지 헤더·배틀풋 z3)와 상단 HUD(z6) 위로 올린다.
      캔버스가 152px 로 짧아지면서 스테이지 헤더가 시트 헤더를 덮었고,
      레퍼런스는 상단 HUD 까지 딤이 덮여 있다(측정표 §10) */
-  #panel:has(:is(#bSk,#bPet).on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
+  #panel:has(:is(#bSk,#bPet,#bCos).on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
     border-radius:38px 38px 0 0;box-sizing:border-box;z-index:9;   /* position 은 #panel(absolute) 상속 — 작업 38 */
     box-shadow:inset 7px 0 0 #FDF5E0,inset -7px 0 0 #FDF5E0}
   /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
-  #panel:has(:is(#bSk,#bPet).on)::before{content:'';position:absolute;left:-7px;right:-7px;
+  #panel:has(:is(#bSk,#bPet,#bCos).on)::before{content:'';position:absolute;left:-7px;right:-7px;
     bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:none}
   /* 시트 안에 자체 서브탭 바가 있으므로 패널 상단 공용 서브탭은 숨긴다.
      `syncPanel()` 이 인라인 style.display 를 직접 쓰므로 !important 가 필요하다 */
-  #panel:has(:is(#bSk,#bPet).on) #herosub{display:none!important}
-  :is(#bSk,#bPet).on{padding:0;overflow:hidden;position:relative;display:block}
-  :is(#bSk,#bPet)>*,:is(#bSk,#bPet) .shsc-in>*{position:absolute}
+  #panel:has(:is(#bSk,#bPet,#bCos).on) #herosub{display:none!important}
+  :is(#bSk,#bPet,#bCos).on{padding:0;overflow:hidden;position:relative;display:block}
+  :is(#bSk,#bPet,#bCos)>*,:is(#bSk,#bPet,#bCos) .shsc-in>*{position:absolute}
   /* 작업 51 — 본문 뷰포트: 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1477−1337=140).
      본문 콘텐츠 마지막 bottom 은 버튼 1289 라 9:16(뷰포트 1337)에서는 스크롤이 안 걸린다.
      헤더는 DOM 순서상 뷰포트보다 앞이라 z-index 로 위에 올려야 카드가 헤더를 덮지 않는다. */
-  :is(#bSk,#bPet)>.shsc{top:0;bottom:140px}
-  :is(#bSk,#bPet) .shsc-in{height:1289px}
+  :is(#bSk,#bPet,#bCos)>.shsc{top:0;bottom:140px}
+  :is(#bSk,#bPet,#bCos) .shsc-in{height:1289px}
   .sk-head{z-index:3}
-  :is(#bSk,#bPet) i,:is(#bSk,#bPet) b,:is(#bSk,#bPet) u,:is(#bSk,#bPet) s,:is(#bSk,#bPet) em{display:block;font-style:normal;font-weight:900;
+  :is(#bSk,#bPet,#bCos) i,:is(#bSk,#bPet,#bCos) b,:is(#bSk,#bPet,#bCos) u,:is(#bSk,#bPet,#bCos) s,:is(#bSk,#bPet,#bCos) em{display:block;font-style:normal;font-weight:900;
     text-decoration:none}
-  :is(#bSk,#bPet) .sk-head>i,:is(#bSk,#bPet) .sk-tot>i,:is(#bSk,#bPet) .sk-tot>em{display:inline-block}
+  :is(#bSk,#bPet,#bCos) .sk-head>i,:is(#bSk,#bPet,#bCos) .sk-tot>i,:is(#bSk,#bPet,#bCos) .sk-tot>em{display:inline-block}
 
   /* 1 헤더 밴드 ref y684~796 (h113) · 배경 #5C4A40 · 상/좌/우 6px #655146 */
   .sk-head{left:0;top:0;width:1066px;height:114px;background:#5C4A40;
@@ -3247,6 +3223,11 @@
   .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
   /* 카드 자물쇠 49x57 · 카드상단+55 */
   .sk-card>.sk-lock{left:50%;top:55px;margin-left:-24.5px}
+  /* 50 코스튬 — 하단 [착용]/[구매] 버튼의 대상이 되는 «선택 카드». 07·26 에는 선택 개념이 없어
+     여기서만 쓴다. 기하(w/h/radius/inset 링)는 건드리지 않고 **바깥으로만** 나가는 링을 더해
+     카드 bbox 와 그리드 pitch 가 1px 도 안 바뀌게 한다(아트 교체 시 그대로 벗겨진다). */
+  #bCos .sk-card.sel{box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r),
+    0 0 0 5px #F2BC8D,0 0 0 9px #000}
 
   /* 4 [+]/[─] — 알약 배경 없이 «검정 4px 외곽선 + 흰 글리프». 41 글리프 박스의
        우상단이 카드/슬롯 **바깥** 우상단 코너에 맞는다 → 49 박스를 right/top −4 */
@@ -3290,7 +3271,7 @@
   .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
     box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer;
     box-shadow:inset 7px 0 0 var(--hl),inset -7px 0 0 var(--hl)}
-  :is(#bSk,#bPet) .sk-btn>i{display:inline-block;transform:scaleX(.866)}
+  :is(#bSk,#bPet,#bCos) .sk-btn>i{display:inline-block;transform:scaleX(.866)}
   .sk-b1{left:240px;color:#fff;--hl:#ADFF86;
     background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
       #ABFF85 103px 109px,#3EBC2A 109px)}
@@ -3309,7 +3290,7 @@
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
      line-height 는 잉크 중심을 붙잡는 값이라 fs 와 함께 미세 조정한다 */
   .sk-tab{text-align:center;line-height:87px;font-size:43px;color:#A9A8AD;cursor:pointer}
-  :is(#bSk,#bPet) .sk-tab>i{display:inline-block;transform:scaleX(.914)}
+  :is(#bSk,#bPet,#bCos) .sk-tab>i{display:inline-block;transform:scaleX(.914)}
   /* 레퍼런스 알약은 평면이 아니다 — x340 세로 실측:
      검정 2021~2026 → **밝은 베벨 2028~2034** → 면 2036~2088 → **밝은 베벨 2098~2103**
      → **어두운 인셋 2105~2110** → 검정 2112~. 좌우에도 같은 밝은 안쪽 림이 있다. */
@@ -3318,7 +3299,7 @@
       #413122 78px 85px);
     box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000,
       inset 14px 0 0 #604F3D,inset -14px 0 0 #604F3D}
-  :is(#bSk,#bPet) .sk-tab.on>i{transform:scaleX(.893)}
+  :is(#bSk,#bPet,#bCos) .sk-tab.on>i{transform:scaleX(.893)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
   .sk-t1{left:0;width:224px}
   .sk-t2{left:220px;width:261px}
@@ -3334,17 +3315,17 @@
   /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
      흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
      레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
-  :is(#bSk,#bPet) .ol1,:is(#bSk,#bPet) .ol2,:is(#bSk,#bPet) .ol3,:is(#bSk,#bPet) .ol4,:is(#bSk,#bPet) .ol5{--o:#000}
-  :is(#bSk,#bPet) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
+  :is(#bSk,#bPet,#bCos) .ol1,:is(#bSk,#bPet,#bCos) .ol2,:is(#bSk,#bPet,#bCos) .ol3,:is(#bSk,#bPet,#bCos) .ol4,:is(#bSk,#bPet,#bCos) .ol5{--o:#000}
+  :is(#bSk,#bPet,#bCos) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
     1px 1px 0 var(--o),1px -1px 0 var(--o),-1px 1px 0 var(--o),-1px -1px 0 var(--o)}
-  :is(#bSk,#bPet) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
+  :is(#bSk,#bPet,#bCos) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
     1px 2px 0 var(--o),1px -2px 0 var(--o),-1px 2px 0 var(--o),-1px -2px 0 var(--o),
     2px 1px 0 var(--o),2px -1px 0 var(--o),-2px 1px 0 var(--o),-2px -1px 0 var(--o)}
-  :is(#bSk,#bPet) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+  :is(#bSk,#bPet,#bCos) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
     2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
-  :is(#bSk,#bPet) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+  :is(#bSk,#bPet,#bCos) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
     3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
-  :is(#bSk,#bPet) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+  :is(#bSk,#bPet,#bCos) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
     4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
     5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
     2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
@@ -4084,6 +4065,8 @@
     <div class="body" id="bSk"></div>
     <!-- 작업 57 — 구버전(파란 스킨) 장비 배너 패널 #bEq 폐기. 장비 서브탭은 항상 06 시트(#eqw) 다 -->
     <div class="body" id="bPet"></div>
+    <!-- 작업 50 — 코스튬(기존 «아바타» 기능 이관). 07/26 과 같은 바닥 시트 -->
+    <div class="body" id="bCos"></div>
     <div class="body" id="bRel"></div>
     <div class="body" id="bShop"></div>
     <div class="body" id="bDun"></div>
@@ -4226,10 +4209,11 @@
         <div class="eqtd d2"></div>
         <div class="eqtc on" style="left:-12px"><b><i>장비</i></b></div>
         <div class="eqtc" style="left:237px" data-eqtab="sk"><b><i>스킬</i></b></div>
-        <!-- 작업 25: «동료» 해금 → `bPet`. 같은 날 올라온 작업 26 이 `#bPet` 을 동료 팝업으로
-             교체했으므로 이 탭은 곧바로 26 동료 팝업으로 들어간다 -->
-        <div class="eqtc" style="left:474px" data-eqtab="pet"><b><i>동료</i></b></div>
-        <div class="eqtc lk" style="left:711px" data-eqlock="기타"><b><i>기타</i></b><s class="eqli"></s></div>
+        <!-- 작업 50: 서브탭은 «장비 · 스킬 · 코스튬 · 동료» 4개다(UI-REFERENCE 설계 확정 16번).
+             잠금(🔒) 탭 «기타» 는 폐기하고 3번 칸을 코스튬(→ `bCos`)으로, 동료는 4번 칸으로 옮겼다.
+             작업 25 가 해금한 «동료» 진입(→ 26 동료 팝업 `bPet`)은 그대로 살아 있다. -->
+        <div class="eqtc" style="left:474px" data-eqtab="cos"><b><i>코스튬</i></b></div>
+        <div class="eqtc" style="left:711px" data-eqtab="pet"><b><i>동료</i></b></div>
       </div>
     </div>
   </div>
@@ -7449,19 +7433,10 @@ $('dgdGo').onclick = () => {
 $('dgdw').onclick = e => { if(e.target === $('dgdw')) closeDunDetail(); };
 
 /* ---- 상점 탭 ---- */
+/* 작업 50 — «👤 아바타» 섹션은 **50 코스튬 시트로 이관**해 여기서 삭제했다.
+   구버전 진입점을 남기면 «새 화면을 우회하는 경로» 가 된다(LESSONS 57-①). */
 function renderShop(){
-  let h = '<div class="sect"><h3><span>👤 아바타</span><em>보유 효과 영구 적용</em></h3>'
-    + '<p>아바타는 <b>구매하면 보유 효과가 영구 적용</b>되고, 선택하면 외형이 바뀝니다.</p></div><div class="grid">';
-  AVATARS.forEach(a => {
-    const G = GRADE[a.g], own = !!S.avatars[a.id], cu = S.avatar === a.id;
-    h += '<div class="cell" data-av="' + a.id + '" style="border-color:' + (own ? G.c : '#262f52')
-      +  ';background:' + (own ? G.bg : '#131828') + '">'
-      +  (cu ? '<div class="eqm">착용</div>' : '')
-      +  '<div style="font-size:40px;line-height:50px">🛡️</div>'
-      +  '<div class="nm" style="color:' + G.c + '">' + a.n + '</div>'
-      +  '<div class="lvv">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</div></div>';
-  });
-  h += '</div><div class="sect" style="margin-top:16px"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
+  let h = '<div class="sect"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
     + '<p>보유 유물석 <b data-cur="relic">🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:12px">'
     + EXCHANGE.map(x => '<button class="gbtn purple" data-ex="' + x.dia + '"' + (S.dia >= x.dia ? '' : ' disabled')
         + '>🔮 ' + fmt(x.rel) + '<small>💎 ' + fmt(x.dia) + '</small></button>').join('') + '</div></div>'
@@ -7487,8 +7462,6 @@ $('bShop').addEventListener('click', e => {
     popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물석 <b>🔮' + fmt(ex.rel) + '</b></p>');
     return;
   }
-  const a = e.target.closest('[data-av]');
-  if(a) buyAvatar(AV[a.dataset.av]);
 });
 
 /* ---- 정보 탭 ---- */
@@ -8220,7 +8193,7 @@ function renderCoinPage(list){
   list.innerHTML = h;
 }
 $('shopList').addEventListener('click', e => {
-  if(e.target.closest('#cnMove')){       /* 기존 다이아 패키지·아바타·유물석 교환소 보존 진입점 */
+  if(e.target.closest('#cnMove')){       /* 기존 다이아 패키지·유물석 교환소 보존 진입점 (아바타는 작업 50 으로 코스튬 탭 이관) */
     closeShopPage(); goTab('shop', true); return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
@@ -8812,6 +8785,20 @@ const SK_RIM  = ['#AB7A5C','#C8E746','#49A8DE','#8C45AF','#F0B53A','#DC4F62'];
 const skDim = h => '#' + [1,3,5].map(i =>
   Math.round(parseInt(h.substr(i,2),16) * 0.65).toString(16).padStart(2,'0')).join('');
 
+/* 시트 안쪽 서브탭 바 — 07·26·50 이 픽셀 동일한 바를 쓰므로 한 곳에서 만든다.
+   작업 50 으로 4칸이 «장비 · 스킬 · 코스튬 · 동료» 가 됐다(잠금 «기타» 폐기).
+   `attr` 은 시트마다 다른 위임 키(`sktab`/`pttab`/`costab`)다 — 시트별 핸들러가 자기 것만 잡는다. */
+const HERO_TABS = [['eq','장비'], ['sk','스킬'], ['cos','코스튬'], ['pet','동료']];
+function subTabs(cur, attr){
+  return '<div class="sk-tabs">'
+    + HERO_TABS.map(([k, n], i) =>
+        '<div class="sk-tab sk-t' + (i+1) + (k === cur ? ' on' : '') + '" data-' + attr + '="' + k + '">'
+        + '<i class="ol' + (k === cur ? 4 : 3) + '">' + n + '</i></div>'
+        /* 구분선은 3·4번 칸 사이 한 곳뿐이다(측정표 §9 — 바 배경보다 어두운 함몰선 5x54) */
+        + (i === 2 ? '<div class="sk-tsep"></div>' : '')).join('')
+    + '</div>';
+}
+
 function renderSkill(){
   const eq = S.eqSkill;
   let h = '<div class="sk-head"><i class="ol5">스킬</i></div>';
@@ -8861,14 +8848,9 @@ function renderSkill(){
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
-  /* 9 시트 안쪽 서브탭 4개 — 레퍼런스는 동료·기타가 둘 다 잠금이지만
-       우리 빌드는 동료가 해금돼 있어 라벨로 두고 «기타»만 잠금으로 둔다 */
-  h += '<div class="sk-tabs">'
-    +  '<div class="sk-tab sk-t1" data-sktab="eq"><i class="ol3">장비</i></div>'
-    +  '<div class="sk-tab sk-t2 on" data-sktab="sk"><i class="ol4">스킬</i></div>'
-    +  '<div class="sk-tab sk-t3" data-sktab="pet"><i class="ol3">동료</i></div>'
-    +  '<div class="sk-tsep"></div>'
-    +  '<div class="sk-tab sk-t4" data-sktab=""><i class="ol3">기타</i><span class="sk-lock"></span></div></div>';
+  /* 9 시트 안쪽 서브탭 4개 — 작업 50 으로 «장비 · 스킬 · 코스튬 · 동료» 전부 해금이다
+       (레퍼런스는 3·4번 칸이 잠금이지만 우리 게임 설계는 UI-REFERENCE 설계 확정 16번). */
+  h += subTabs('sk', 'sktab');
 
   setBody('bSk', h);
 }
@@ -8887,7 +8869,7 @@ $('bSk').addEventListener('click', e => {
   }
   const t = e.target.closest('[data-sktab]');
   if(t){
-    if(!t.dataset.sktab){ popup('🔒 기타', '<p>아직 해금되지 않은 콘텐츠입니다.</p>'); return; }
+    /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
     heroTab = t.dataset.sktab; S.heroTab = heroTab;
     syncPanel(); uiDirty = true; renderUI(); return;
   }
@@ -8902,7 +8884,7 @@ bindBanner('bRel', () => 'relic');
    레퍼런스 스크린샷 없음(원본은 동료 서브탭이 잠금). 설계: UI-REFERENCE §26.
    장착 슬롯만 8→3칸(패널 안 가로 중앙 정렬), 나머지 규격은 스킬 시트와 픽셀 동일.
    데이터는 기존 PETS/S.eqPet/petEquipped 를 그대로 쓴다 — 저장 구조 미변경.
-   CSS 는 위의 #bSk 규칙을 :is(#bSk,#bPet) 로 공유한다.
+   CSS 는 위의 #bSk 규칙을 :is(#bSk,#bPet,#bCos) 로 공유한다.
    ========================================================================== */
 function renderPet(){
   const eq = S.eqPet;
@@ -8955,12 +8937,7 @@ function renderPet(){
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
   /* 9 시트 안쪽 서브탭 4개 — 동료 활성 */
-  h += '<div class="sk-tabs">'
-    +  '<div class="sk-tab sk-t1" data-pttab="eq"><i class="ol3">장비</i></div>'
-    +  '<div class="sk-tab sk-t2" data-pttab="sk"><i class="ol3">스킬</i></div>'
-    +  '<div class="sk-tab sk-t3 on" data-pttab="pet"><i class="ol4">동료</i></div>'
-    +  '<div class="sk-tsep"></div>'
-    +  '<div class="sk-tab sk-t4" data-pttab=""><i class="ol3">기타</i><span class="sk-lock"></span></div></div>';
+  h += subTabs('pet', 'pttab');
 
   setBody('bPet', h);
 }
@@ -8979,13 +8956,141 @@ $('bPet').addEventListener('click', e => {
   }
   const t = e.target.closest('[data-pttab]');
   if(t){
-    if(!t.dataset.pttab){ popup('🔒 기타', '<p>아직 해금되지 않은 콘텐츠입니다.</p>'); return; }
+    /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
     heroTab = t.dataset.pttab; S.heroTab = heroTab;
     syncPanel(); uiDirty = true; renderUI(); return;
   }
   const c = e.target.closest('[data-ptit]');
   if(c) showItem(c.dataset.ptit);
 });
+
+/* ==========================================================================
+   50 코스튬 팝업 (바닥 시트) — 07 스킬 팝업 구조·규격을 그대로 복제한다.
+   레퍼런스 스크린샷 없음. 설계: UI-REFERENCE §50 / 설계 확정 16번.
+   **기존 «아바타» 기능(다이아 구매 · 보유 효과 영구 합산 · 외형 변경)을 그대로 이관**한 것이고,
+   데이터·저장 구조(`AVATARS` · `S.avatar` · `S.avatars` · `bonus()` 합산)는 **한 줄도 안 바꿨다**.
+   구버전 진입점(상점 패널 `renderShop` 의 «👤 아바타» 섹션)은 같은 커밋에서 제거했다(LESSONS 57-①).
+   07 과 다른 점 3가지만:
+     · 코스튬은 레벨·재료가 없다 → 슬롯/카드의 `Lv.n` 자리에 **등급명**, 진행바 자리에 **가격/보유**.
+     · 장착은 8칸이 아니라 **1칸**(외형은 하나뿐) — 패널(1037) 안 가로 중앙 = (1037−115)/2 = 461.
+     · 하단 버튼이 [소환]/[일괄 강화] 가 아니라 **[착용]/[구매]** 이고 «선택 카드» 를 대상으로 한다.
+   ========================================================================== */
+let cosSel = null;                       /* 그리드에서 선택된 코스튬(기본 = 착용 중) */
+const cosCur = () => AV[S.avatar] ? S.avatar : 'av0';
+const cosOwn = id => !!S.avatars[id];
+/* 착용(외형 변경) — 구매는 기존 `buyAvatar()` 를 그대로 쓴다(보유 시 착용까지 해 준다) */
+function wearAvatar(id){
+  if(!cosOwn(id)) return false;
+  S.avatar = id; uiDirty = true; save(); return true;
+}
+function renderCos(){
+  const cur = cosCur();
+  if(!cosSel || !AV[cosSel]) cosSel = cur;
+  let h = '<div class="sk-head"><i class="ol5">코스튬</i></div>';
+
+  /* 작업 51 — 07·26 과 동일. 슬롯~버튼(본문)만 스크롤 뷰포트에 담는다 */
+  h += '<div class="shsc"><div class="shsc-in">';
+
+  /* 2 착용 슬롯 1칸 */
+  const cv = AV[cur];
+  h += '<div class="sk-eqp">'
+    +  '<div class="sk-slot" data-cosun="' + cur + '" style="left:461px'
+    +  ';--f:' + SK_FILL[cv.g] + ';--r:' + SK_RIM[cv.g] + '">'
+    +  '<b class="sk-si">🛡️</b><u class="sk-slv ol2">' + GRADE[cv.g].n + '</u>'
+    +  '<s class="sk-eq m"></s></div></div>';
+
+  /* 3 보유 코스튬 격자 5열 x 3행 (AVATARS) — 07 과 같은 pitch 190/220 */
+  h += '<div class="sk-gp">';
+  AVATARS.forEach((a, i) => {
+    const own = cosOwn(a.id), on = a.id === cur;
+    const f = on ? skDim(SK_FILL[a.g]) : SK_FILL[a.g];
+    const r = on ? skDim(SK_RIM[a.g])  : SK_RIM[a.g];
+    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
+      +  '" data-cosit="' + a.id + '" '
+      +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
+      +  ';--f:' + f + ';--r:' + r + '">'
+      +  (own ? '<b class="sk-ci">🛡️</b>' : '<span class="sk-lock"></span>')
+      +  '<u class="sk-clv ol2">' + GRADE[a.g].n + '</u>'
+      +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
+      +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
+      /* 진행바 자리 — 보유는 가득 채우고 «보유», 미보유는 빈 바에 다이아 가격 */
+      +  '<div class="sk-bar"><i style="width:' + (own ? 100 : 0) + '%"></i>'
+      +  '<b class="ol1">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</b></div></div>';
+  });
+  h += '</div>';
+
+  /* 7 총 보유 효과 — bonus() 의 아바타 합산과 같은 곱연산으로 낸다(공격력 기준) */
+  const tot = AVATARS.reduce((m, a) => cosOwn(a.id) ? m * (1 + a.atk) : m, 1) - 1;
+  h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
+
+  /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [구매] */
+  h += '<div class="sk-btn sk-b1" data-coswear="1"><i class="ol3">착용</i></div>'
+    +  '<div class="sk-btn sk-b2" data-cosbuy="1"><i class="ol3">구매</i></div>';
+
+  h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
+
+  h += subTabs('cos', 'costab');
+  setBody('bCos', h);
+}
+$('bCos').addEventListener('click', e => {
+  const un = e.target.closest('[data-cosun]');
+  if(un){ showCosDetail(un.dataset.cosun); return; }        /* 착용 슬롯 → 08 껍데기 상세 */
+  const q = e.target.closest('[data-coseq]');
+  if(q){ wearAvatar(q.dataset.coseq); cosSel = q.dataset.coseq; renderUI(); return; }
+  if(e.target.closest('[data-coswear]')){
+    if(wearAvatar(cosSel)) renderUI();
+    else popup('🔒 미보유 코스튬', '<p>먼저 구매해야 착용할 수 있습니다.</p>');
+    return;
+  }
+  if(e.target.closest('[data-cosbuy]')){
+    if(cosOwn(cosSel)) popup('👤 이미 보유 중', '<p>이미 가지고 있는 코스튬입니다.</p>');
+    else buyAvatar(AV[cosSel]);
+    renderUI(); return;
+  }
+  const t = e.target.closest('[data-costab]');
+  if(t){ heroTab = t.dataset.costab; S.heroTab = heroTab; syncPanel(); uiDirty = true; renderUI(); return; }
+  const c = e.target.closest('[data-cosit]');
+  if(c){
+    /* 이미 선택된 카드를 다시 누르면 08 껍데기 상세로 들어간다(07 의 `showItem` 자리) */
+    if(cosSel === c.dataset.cosit) showCosDetail(cosSel);
+    else { cosSel = c.dataset.cosit; renderCos(); }
+  }
+});
+/* 코스튬 상세 — 08 스킬 세부 팝업 껍데기(`.sk8`)를 재사용한다(UI-REFERENCE §50) */
+function showCosDetail(id){
+  const a = AV[id]; if(!a) return;
+  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur();
+  $('mtitle').textContent = own ? a.n : '???';
+  $('mbox').innerHTML =
+      '<div class="skd">'
+    +   '<div class="sk-ic">' + (own ? '🛡️' : '❔') + '</div>'
+    +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
+    +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
+    +   '<div class="sk-pb"><i style="width:' + (own ? 100 : 0) + '%"></i>'
+    +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</b></div>'
+    +   '<div class="sk-ct">'
+    +     '<div class="hd"><div><b>가격</b></div><div class="nt"><b>등급</b></div></div>'
+    +     '<div class="vl"><div><b>' + (a.cost ? '💎' + fmt(a.cost) : '기본') + '</b></div>'
+    +       '<div class="nt"><b>' + G.n + '</b></div></div>'
+    +   '</div>'
+    +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
+    +   '<div class="sk-db"><p>' + (own
+          ? '구매한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
+          : '아직 구매하지 않았습니다.<br>다이아로 구매하면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
+    +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
+    +     '<div class="v"><b>공격 <em>+' + pct(a.atk) + '</em> 체력 <em>+' + pct(a.hp)
+    +       '</em> 골드 <em>+' + pct(a.gold) + '</em></b></div></div>'
+    + '</div>'
+    + '<div class="sk-act">'
+    +   '<button class="sk-e" id="mEq"' + (own && !on ? '' : ' disabled') + '><b>착용</b></button>'
+    +   '<button class="sk-u" id="mLv"' + (own ? ' disabled' : '') + '><b>구매</b></button>'
+    + '</div>';
+  $('mbox').scrollTop = 0;
+  $('modal').classList.add('on', 'sk8');
+  const w = $('mEq'), b = $('mLv');
+  if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
+  if(b && !b.disabled) b.onclick = () => { buyAvatar(a); cosSel = id; renderUI(); showCosDetail(id); };
+}
 
 /* ==========================================================================
    06 장비 팝업 (바닥 시트) — 측정표 docs/measure/06-장비팝업.md
@@ -9050,10 +9155,10 @@ function syncEquipPage(){
   if(on) renderEqPage();
 }
 $('eqTabs').addEventListener('click', e => {
-  const t = e.target.closest('[data-eqtab]'), k = e.target.closest('[data-eqlock]');
-  /* 작업 25: 서브탭 목적지를 data 속성에서 읽는다(장비=현재 화면 · 스킬=07 · 동료=bPet) */
+  const t = e.target.closest('[data-eqtab]');
+  /* 작업 25·50: 서브탭 목적지를 data 속성에서 읽는다(장비=현재 화면 · 스킬=07 · 코스튬=50 · 동료=26).
+     작업 50 에서 잠금 탭이 사라져 `data-eqlock` 분기도 같이 제거했다 — 네 칸 전부 본문이 있다. */
   if(t){ heroTab = t.dataset.eqtab; S.heroTab = heroTab; syncPanel(); uiDirty = true; renderUI(); return; }
-  if(k) popup('🔒 ' + k.dataset.eqlock, '<p>아직 해금되지 않은 콘텐츠입니다.</p>');
 });
 
 /* ==========================================================================
@@ -9143,8 +9248,9 @@ $('trw').addEventListener('click', e => {
    탭 5개(hero/grow/adv/box/shop) → 패널 본문 매핑. hero 는 서브탭(장비·스킬·동료)으로 다시 갈린다.
    같은 탭을 다시 누르면 패널이 닫히고, 열려 있는 동안 그 탭 자리는 ✕ 로 바뀐다. */
 /* 작업 57 — 장비(eq)에는 패널 본문이 없다. 06 은 #panel 이 아니라 전용 오버레이 #eqw 다 */
-const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', rel:'bRel', shop:'bShop', dun:'bDun', st:'bSt' };
-const HEROBODY = { sk:'bSk', pet:'bPet' };
+const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', cos:'bCos', rel:'bRel', shop:'bShop', dun:'bDun', st:'bSt' };
+/* 작업 50 — 코스튬 서브탭 본문 추가. `eq` 는 여기 없다(06 은 전용 오버레이 #eqw, 작업 57) */
+const HEROBODY = { sk:'bSk', pet:'bPet', cos:'bCos' };
 function bodyOf(k){ return k === 'hero' ? HEROBODY[heroTab] : k === 'grow' ? 'bUp'
   : k === 'adv' ? 'bDun' : k === 'box' ? 'bRel' : k === 'shop' ? 'bShop' : null; }
 function syncPanel(){
@@ -9267,6 +9373,7 @@ function renderUI(){
     else if(curTab === 'hero'){
       if(heroTab === 'eq')       syncEquipPage();            /* 06 — 전용 바닥 시트(구버전 renderEq 폐기, 작업 57) */
       else if(heroTab === 'sk')  renderSkill();          /* 07 — 전용 바닥 시트 */
+      else if(heroTab === 'cos') renderCos();               /* 50 — 코스튬 바닥 시트(아바타 이관) */
       else                       renderPet();               /* 26 — 동료 바닥 시트(07 구조 복제) */
     }
     else if(curTab === 'adv')  renderDun();
@@ -9276,11 +9383,12 @@ function renderUI(){
   const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
-    const al = k === 'hero' ? (collReady('equip') || collReady('skill') || collReady('pet'))
+    /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다 */
+    const al = k === 'hero' ? (collReady('equip') || collReady('skill') || collReady('pet')
+                              || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost))
              : k === 'grow' ? S.sp > 0
              : k === 'adv'  ? dunAlert
              : k === 'box'  ? collReady('relic')
-             : k === 'shop' ? AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost)
              : false;
     t.classList.toggle('alert', !!al);
   });
