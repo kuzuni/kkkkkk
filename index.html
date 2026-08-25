@@ -2410,8 +2410,9 @@
   .cl-rib{left:172px;top:-18px;width:543px;height:115px;pointer-events:none;text-align:center}
   .cl-rib>s{position:absolute;background:#0F9BBC;top:24px;width:72px;height:79px;
     filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000)}
-  .cl-rib>s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,32% 50%)}
-  .cl-rib>s.tr{right:2px;clip-path:polygon(0 0,100% 0,68% 50%,100% 100%,0 100%)}
+  /* 꼬리 노치 깊이 — ref 행 프로파일(폭 41→29→42) 대비 우리가 5~6px 더 깊었다(41→23→41). 32%→24% */
+  .cl-rib>s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,24% 50%)}
+  .cl-rib>s.tr{right:2px;clip-path:polygon(0 0,100% 0,76% 50%,100% 100%,0 100%)}
   .cl-rib>s.bd{left:41px;right:41px;top:0;width:auto;height:91px;filter:none;
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 62%,#139EBF 88%,#1E88A2);
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
