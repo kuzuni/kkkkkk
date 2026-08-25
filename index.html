@@ -654,13 +654,16 @@
      (ref 는 L1 잉크하단 1878 → L2 잉크상단 1903 으로 25px 띄운다). */
   #tuto.todo .tinfo{left:3px;width:318px;top:57px}
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px;
-    -webkit-text-stroke:5px #000;letter-spacing:-1px}
+    -webkit-text-stroke:5px #000;letter-spacing:0px}
   /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
   #tuto .tt em{font-style:normal;color:#FE8252}
   /* ref 의 숫자 `10` 은 잉크 29×20 으로 **한글 캡하이트(24)의 83%** 다. 우리 기본 서체는 75% 라
      숫자만 키운다(비평가 G ⑥ · H ②). */
   /* ref 는 «회» 하단과 «10» 하단이 같은 바닥이다(Δ1). 우리 서체는 숫자가 4px 떠 있다. */
-  #tuto.todo .tt em{font-size:29px;letter-spacing:0;position:relative;top:4px}
+  /* ref 본문의 `10` 은 잉크 30 폭(`1`=8 · `0`=17)이다. 우리 숫자는 같은 높이에서 폭이 −24% 라
+     한글 줄 안에서도 숫자만 따로 넓힌다(줄 전체 scaleX 는 한글까지 늘어나므로 쓸 수 없다). */
+  #tuto.todo .tt em{font-size:29px;letter-spacing:0;position:relative;top:2px;
+    display:inline-block;transform:scaleX(1.3)}
   /* ── 글리프 종류별 보정 (32 5회차 — 비평가 I·J 2회차 지적) ─────────────────────────
      ref 게임 서체는 한 줄 안에서 **대괄호·한글·숫자가 모두 같은 바닥(baseline)** 에 서고
      «괄호 23 : 숫자 23» 처럼 크기비가 1:1 이다. 우리 기본 서체는
@@ -670,7 +673,8 @@
      ⚠ `transform` 은 레이아웃 폭을 안 바꾸므로 **줄어든/늘어난 만큼 좌우 `margin` 으로 상쇄**해야
        글자 사이에 빈틈이 생기지 않는다(원점이 중앙이라 양쪽에 절반씩). */
   #tuto.todo .tbtn b,#tuto.todo .tbtn i,#tuto.todo .tbtn s,#tuto.todo .tbtn em,
-  #tuto.todo .tpg  b,#tuto.todo .tpg  s,#tuto.todo .tpg  em{
+  #tuto.todo .tpg  b,#tuto.todo .tpg  s,#tuto.todo .tpg  em,
+  #tuto.todo .tbtn u,#tuto.todo .tpg  u,#tuto.todo .tt u{
     display:inline-block;position:relative;vertical-align:baseline;
     font-style:normal;font-weight:900;text-decoration:none}
   /* ⚠ ref 의 `1` 은 폭 8 로 `0`(17~18)의 **절반**이다 = 비례 숫자(proportional figures).
@@ -683,7 +687,9 @@
   #tuto.todo .tbtn i {font-size:29px;top:0px;transform:scaleX(0.78);margin:0 -4px}
   #tuto.todo .tbtn s {font-size:30px;top:-1px;transform:scaleX(1.4);margin:0 0px}
   #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.86);margin:0 -3px}
-  #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(1.15);margin:0 0px}
+  #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(0.95);margin:0 1px}
+  /* `1` 만 좁힌다 — ref 잉크 폭 6.5(우리 등폭 17.5). 줄어든 레이아웃 폭은 margin 으로 상쇄. */
+  #tuto.todo .tbtn u,#tuto.todo .tpg u,#tuto.todo .tt u{transform:scaleX(0.5);margin:0 -3.5px}
   #tuto.todo .tpg  s {font-size:30px;top:1px;transform:scaleX(0.9);margin:0 0px}
   #tuto.todo .tpg  em{font-size:28px;top:1px;transform:scaleX(0.95);margin:0 0px}
   /* @32-GLYPH-TUNE-END */
@@ -8121,19 +8127,19 @@ function drawTuto(){
      ref 는 문구의 «숫자만» 주황이라 숫자 런을 <em> 으로 감싼다(문자열은 전부 우리 소유). */
   box.classList.toggle('ready', ready);
   box.classList.toggle('todo', !ready);
-  $('tutoName').innerHTML = m.n.replace(/\d+/g, d => '<em>' + d + '</em>');
+  $('tutoName').innerHTML = m.n.replace(/\d+/g, d => '<em>' + gmNum(d) + '</em>');
   /* 32 — 미완료 줄은 **글리프 종류별로 감싸서** 내보낸다(괄호 b · 슬래시 s · 숫자 em).
      레퍼런스 게임 서체는 «괄호 : 숫자» 의 크기비와 baseline 이 우리 기본 서체와 다르다
      (비평가 I·J 가 독립으로 «숫자가 15~17% 작고 baseline 이 4~6px 떠 있다» 로 검출).
      CSS 에서 이 세 종류에만 크기·baseline 보정을 건다 — 문자열은 전부 우리 소유다. */
-  $('tutoPg').innerHTML = '<b>(</b><em>' + fmt(p) + '</em><s>/</s><em>' + fmt(m.goal) + '</em><b>)</b>';
+  $('tutoPg').innerHTML = '<b>(</b><em>' + gmNum(fmt(p)) + '</em><s>/</s><em>' + gmNum(fmt(m.goal)) + '</em><b>)</b>';
   $('tutoBar').style.width = (p / m.goal * 100) + '%';
   $('tutoRew').textContent = '💎';
   $('tutoSub').textContent = fmt(m.dia);
   const btn = $('tutoBtn');
   btn.disabled = !ready;
   if(ready) btn.textContent = '[보상받기]';                 /* 02 ④ 는 손대지 않는다 */
-  else      btn.innerHTML = '<b>[</b><i>미션</i><s>-</s><em>' + (S.guide.idx + 1) + '</em><b>]</b>';
+  else      btn.innerHTML = '<b>[</b><i>미션</i><s>-</s><em>' + gmNum(S.guide.idx + 1) + '</em><b>]</b>';
 }
 
 /* ==========================================================================
@@ -8508,6 +8514,11 @@ function claimAllQuests(){
    구 세이브에서 이관된 직후에는 prog = -1(미확정)이라 여기서 처음 읽힐 때 지금 값으로 자동 확정된다
    — 그래야 «이미 100만 마리 잡았으니 적 100마리 미션이 즉시 완료» 같은 오작동이 없다. */
 const gmCur   = () => S.guide.idx < GUIDE.length ? GUIDE[S.guide.idx] : null;
+/* 32 — 레퍼런스 게임 서체는 **비례 숫자**라 `1` 의 폭이 `0` 의 **절반**(잉크 6.5 vs 17)이다.
+   우리 기본 서체는 등폭이라 `1` 이 `0` 만큼 넓어 `(0/10)` 이 통째로 8.5% 길어진다
+   (비평가 L 이 «수정할 것은 단 하나» 로 지목). `font-variant-numeric:proportional-nums` 는
+   헤드리스 기본 서체에 pnum 이 없어 무효였다 → **`1` 만 태그로 감싸 CSS 로 좁힌다.** */
+const gmNum = v => String(v).replace(/1/g, '<u>1</u>');
 function gmBase(m){
   if(m.abs) return 0;
   if(!Number.isFinite(S.guide.prog) || S.guide.prog < 0) S.guide.prog = m.get();
