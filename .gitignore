@@ -116,6 +116,9 @@ InitTestScene*.unity*
 
 # 59/67 게이트가 before 비교용으로 잠깐 뽑는 임시 파일 (verify59.js 가 끝나면 지운다)
 .v59-before-*.html
+
+# 74 verify74 가 before 비교용으로 git show 로 뽑는 임시 파일 (측정 끝나면 지운다)
+index.before74.html
 docs/review/A2-r*-off.png
 docs/review/A2-r*-nolabel.png
 docs/review/A2-r*-noshadow.png
