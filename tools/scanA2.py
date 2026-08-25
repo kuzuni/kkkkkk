@@ -73,6 +73,29 @@ for row in rows:
           f'{gx0-sx0:2} / {sx1-gx1:2} / {gy0-sy0:2} / {sy1-gy1:2}')
 
 print()
+print(f'=== A2 r{R} — 처방: 목표 bbox 를 맞추는 --sf/--sx/--dx/--dy ===')
+print('외곽선 halo 는 --ih 고정값(2.3px x 4단)이라 글리프를 줄여도 거의 안 변한다 →')
+print('  필요한 글리프 = 목표 − halo, kh = 그 높이/현재 글리프높이, kw = 목표폭/(현재폭 x kh)')
+print('행     | 실루엣 기준(외곽선 포함=ref 정의)      | 글리프 기준(외곽선 제외)')
+print('       | sf     sx     dx      dy              | sf     sx')
+for row in rows:
+    n = row['pop']; c = row['cell']
+    rx0, rx1, ry0, ry1 = REF[n]
+    tw, th, tcx, ttop = rx1 - rx0 + 1, ry1 - ry0 + 1, (rx0 + rx1) / 2, ry0 - 84
+    sx0, sx1, sy0, sy1 = sil[n]
+    gx0, gx1, gy0, gy1 = gly[n]
+    Gw, Gh = gx1 - gx0 + 1, gy1 - gy0 + 1
+    hw, hh = (sx1 - sx0 + 1) - Gw, (sy1 - sy0 + 1) - Gh
+    sf0 = float(row['sf'] or .96); sxx0 = float(row['sx'] or 1.15)
+    dx0 = float((row['dx'] or '0px').replace('px', '')); dy0 = float((row['dy'] or '0px').replace('px', ''))
+    kh = (th - hh) / Gh; kw = (tw - hw) / (Gw * kh)
+    # 크기를 바꾸면 중심·top 도 바뀐다 → 새 실루엣의 중심/ top 을 예측해 dx/dy 를 역산
+    ncx = (sx0 + sx1) / 2   # 중심은 scale 로 거의 안 움직인다(박스 중앙 정렬)
+    ntop = (sy0 + sy1) / 2 - (th / 2)
+    print(f'{n:6} | {sf0*kh:.3f}  {sxx0*kw:.3f}  {dx0+(tcx-ncx):+6.1f}  {dy0+(ttop-ntop):+6.1f}        | '
+          f'{sf0*th/Gh:.3f}  {sxx0*tw/(Gw*th/Gh):.3f}')
+
+print()
 print(f'=== A2 r{R} — 라벨 잉크 (ref: 받침 있음 26~27 · 없음 21~23 · 중심 x 95) ===')
 print('행     | x0..x1   w  | y0..y1   h | 중심 x')
 for row in rows:
