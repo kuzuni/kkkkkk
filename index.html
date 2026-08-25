@@ -1273,6 +1273,76 @@
   .sk-act button:disabled{cursor:default}
 
 
+  /* ==========================================================================
+     104 — 공용 아이템 프레임 `.ifr` (저장소 주인 지시 2026-08-26)
+
+     «아이템들이 전부 프레임을 갖고 있는데 통일감 있게 돼야 한다» — 화면마다 따로 적혀 있던
+     아이템 칸(05 `.wgc` · 53 `.bg53-c` · 12 `.sm-c` · 69 `.ml-i` · 22 `.qs-i` · 70 `.at-if`)이
+     선 5 / 림 5~7 / 코너 23~35 / 수량 배지 4종으로 갈려 있었다. 그 여섯을 **한 벌**로 합친다.
+
+     기준은 지시대로 «가장 많이 쓰이는» 05 `.wgc`(148×158, 검정 5 · 림 6 · r35)와
+     53 `.bg53-c`(148×147, 검정 5 · 림 6 · r34) 다. 두 값에서 뽑은 토큰:
+       --if-bw 5px  (검정 외곽선 — 여섯 화면이 이미 전부 5 였다. 절대값이 곧 공용 토큰이다)
+       --if-rim 6px (안쪽 밝은 등급 림 — 22 의 7, 70 의 5 를 여기로 맞춘다)
+       --if-rr .233 (코너 = 폭 × 비율. 05 .2365 · 53 .2297 의 평균. 크기가 달라도 «같은 모양»)
+     화면이 주는 것은 **크기 `--if-w`(필요하면 `--if-h`) 와 등급색 두 개뿐**이다(지시 ①).
+
+     ⚠ 예외 하나 — 아이콘 잉크 크기 `--if-ic` 는 화면별 입력으로 남긴다.
+       ROUTINE [3] «아트 자리 규칙»: 이모지는 **레퍼런스 아트의 잉크 bbox** 를 정확히 차지해야
+       나중에 이미지로 갈아 끼울 때 안 튄다. 프레임(껍데기)은 통일 대상이지만 그 «안에 들어갈
+       아트» 는 화면별 측정값이다. 폴백은 53 기준 비율(.554×폭).
+     ⚠ 지시 ③ «화면별 측정표의 프레임 bbox 는 유지» — w×h 는 화면이 그대로 준다. 바뀌는 것은
+       코너·림 두께·수량 배지뿐이고, 그 셋은 측정 bbox 가 아니다. 상세는 docs/review/104-*.md.
+     ========================================================================== */
+  .ifr{--if-bw:5px;--if-rim:6px;--if-rr:.233;
+    position:relative;box-sizing:border-box;
+    width:var(--if-w);height:var(--if-h,var(--if-w));
+    border:var(--if-bw) solid #000;
+    border-radius:calc(var(--if-w) * var(--if-rr));
+    background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0) 55%),var(--if-face,#7D5A44);
+    box-shadow:inset 0 0 0 var(--if-rim) var(--if-rimc,#AC7B5B);
+    display:flex;align-items:center;justify-content:center;
+    font-size:var(--if-ic,calc(var(--if-w) * .554));line-height:1}
+  /* 하단 수량 — 프레임 «바닥 테두리에 걸친다»(05·53·12·22·70 이 전부 그렇게 하고 있었고
+     69 만 안쪽에 있었다). 좌우로 넘치게 두는 것은 53 3회차 교훈 — `2.26B` 같은 값이
+     칸 안쪽 폭보다 넓다. 잉크비는 숫자(캡하이트) 기준 ≈0.70 이라 폭 비율로 바로 잡는다. */
+  .ifr>.ifq{position:absolute;left:-20px;right:-20px;
+    bottom:calc(var(--if-w) * -.093);
+    height:calc(var(--if-w) * .243);line-height:calc(var(--if-w) * .243);
+    display:block;text-align:center;white-space:nowrap;
+    font-style:normal;font-weight:900;font-size:calc(var(--if-w) * .235);color:#fff;
+    -webkit-text-stroke:calc(var(--if-w) * .054) #000;paint-order:stroke fill;z-index:2}
+  /* 아이콘 슬롯 — 프레임 정중앙, 아트 교체 대비로 bbox 를 그대로 차지한다 */
+  .ifr>.ifi{position:absolute;left:0;right:0;top:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    font-style:normal;font-size:inherit;line-height:1;z-index:1}
+  /* 인셋 변형 — 04·07·50 `.sk-card` 처럼 **하단 진행바·[+] 배지가 패딩 박스 기준**으로 앉아 있는
+     칸은 진짜 `border` 를 주면 자식 전부가 5px 안쪽으로 밀린다(bbox 는 그대로여도 내부가 어긋난다).
+     같은 두께를 인셋 스택으로 그려 **선 5 · 림 6 · 코너 비율만 공유**하고 자식 좌표는 안 건드린다. */
+  .ifr.ifr-in{border-width:0;
+    box-shadow:inset 0 0 0 var(--if-bw) #000,
+      inset 0 0 0 calc(var(--if-bw) + var(--if-rim)) var(--if-rimc,#AC7B5B)}
+
+  /* ── 104 ② 공용 베벨 버튼 `.ifbtn` ────────────────────────────────────────
+     22 `.qs-b`·`.qs-all` 과 69 `.ml-b`·`.ml-all` 은 «같은 부품» 인데 네 곳에 따로 적혀 있었고
+     베벨 스톱이 버튼 높이에 따라 손으로 계산돼 바닥 여백이 4~9px 로 흩어져 있었다
+     (qs-b −10 · qs-all −7 · ml-b −4 · ml-all −5). 하나로 합치고 **바닥 림을 100% 기준**으로
+     잡아 어떤 높이에서도 같은 두께·같은 여백이 나오게 한다(밴드 6px · 바닥에서 6px 위).
+     화면이 주는 것은 위치·크기·모서리와 검정 테두리 두께 `--gb-bw` 뿐이다. */
+  .ifbtn{--gb-bw:6px;--gb-hi:#C9F07E;--gb-lt:#7CD84B;--gb-mid:#4CBA2E;--gb-dk:#2F8F1E;
+    position:absolute;box-sizing:border-box;cursor:pointer;font-family:inherit;
+    border:var(--gb-bw) solid #000;padding:0 0 10px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,
+      var(--gb-hi) 0 var(--gb-bw),var(--gb-lt) var(--gb-bw),
+      var(--gb-mid) calc(100% - 12px),var(--gb-hi) calc(100% - 12px) calc(100% - 6px),
+      var(--gb-dk) calc(100% - 6px))}
+  /* 92 — 빨강 변형(읽음 전체 삭제). 같은 베벨 스톱에 색만 바꾼다 */
+  .ifbtn.red{--gb-hi:#FFB3B3;--gb-lt:#F58B8B;--gb-mid:#E24E4E;--gb-dk:#A32C2C}
+  .ifbtn:disabled{cursor:default;--gb-hi:#D3D3D3;--gb-lt:#A8A8A8;--gb-mid:#8A8A8A;--gb-dk:#757575}
+  .ifbtn>b{font-weight:900;font-style:normal;color:#fff;white-space:nowrap}
+  .ifbtn:disabled>b{color:#DFDFDF}
+
   /* ── 22 퀘스트 팝업 — docs/measure/22-퀘스트팝업.md (레퍼런스 22 PIL 실측) ──
      껍데기는 A5 공용 다이얼로그 그대로(22 가 A5 의 원본 레퍼런스다). .q22 는 딤 .56 과
      본문 절대배치만 override 한다. 좌표는 전부 실측 절대 px — 본문 원점(ref 111,563) 기준. */
@@ -1309,16 +1379,21 @@
      레퍼런스 좌·우 열 14개의 «세로 연속 높이» 로 (h, r) 을 최소자승 피팅하면 **h 105.8 · r 30.9 (MSE 0.27)**
      이고, 측정표 값(h105·r36)은 같은 표본에서 MSE 41 이다 — 코너가 6px 더 둥글었다.
      세로는 «행 중심 정렬» 이 불변식이다(ref 프레임중심 750.75 = 행중심 750.5). */
-  .qs-i{position:absolute;left:36px;top:37px;width:106px;height:106px;box-sizing:border-box;
-    border:5px solid #000;border-radius:31px;background:#D37D12;box-shadow:inset 0 0 0 7px #FFC334;
-    display:flex;align-items:center;justify-content:center;font-size:50px;line-height:1}
+  /* 104 — 공용 아이템 프레임 `.ifr`. 화면이 주는 것은 위치·크기(106)와 면/림 색뿐이다.
+     이 칸은 여섯 중 «가장 어긋나 있던» 쪽이다: 림이 혼자 7(나머지 5~6), 코너 비율이 혼자 .293
+     (나머지 .213~.246). 공용 토큰으로 림 6 · 코너 106×.233 = 24.7 이 된다.
+     면·림 색은 레퍼런스가 고정한 금/주황 그대로 둔다(등급이 없는 «다이아 보상» 칸이다). */
+  .qs-i{position:absolute;left:36px;top:37px;
+    --if-w:106px;--if-ic:50px;--if-face:#D37D12;--if-rimc:#FFC334}
   /* 아트 자리 규칙 — 이모지는 **레퍼런스 아트의 잉크 bbox** 를 차지해야 나중에 이미지로 갈아끼울 때 안 튄다.
      ref 젬 잉크는 55×55 인데 fs60 은 65×58 이었다(가로 +18%). fs 는 세로를 맞추고 폭은 아트가 맡는다. */
   /* 수량 — 프레임 하단에 겹침 (레퍼런스 잉크 ref y783~807 = 프레임 하단 803.5 를 20px 파고든다).
      scaleX 는 «자당 폭» 으로 잡는다 — ref 는 `50` w44 / `100` w65 로 자당 22px(탭폭)인데
      1.4 로는 자당 26px(+18%)이었다(05 «숫자 폭» 교훈의 반대 방향). 1.4 × 22/26 = 1.18. */
-  .qs-i i{position:absolute;left:-20px;right:-20px;top:74px;text-align:center;
-    font-size:35px;line-height:1;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(1.18)}
+  /* 104 — 수량은 공용 `.ifq` 로 바뀌었다(106×.235 = 24.9 · 스트로크 5.7). 원래 35/8 은 프레임
+     폭 대비 .330 으로 여섯 화면 중 유일한 «큰 배지» 였다 — 통일의 대가로 여기가 가장 많이 줄었다.
+     자당 폭 보정(scaleX 1.18)은 이 화면 고유값이라 남긴다. */
+  .qs-i i.ifq{transform:scaleX(1.18)}
   /* 타이틀 — 좌단 x167(=진행바 좌단), 흰 채움 + 검정 외곽선, 숫자부 주황 #FD8354 */
   /* `scaleX(.9)` 는 어절 공백까지 10% 줄인다 — ref 어절 간 코어 간격 13~15px 인데 10~11px 이었다.
      문자열이 우리 설계라 scaleX 자체는 다시 뽑지 않고(43 교훈 2) **공백만** 되돌린다. */
@@ -1343,25 +1418,14 @@
      [모두 받기] 의 바닥 그림자 밴드가 14px 였다 — ref 는 7px(면이 그만큼 길다) 이라 되돌렸다.
      [보상 받기] 는 재하이라이트 위치(내부 local 90~96 = ref 788~794)가 우선이라 그대로 둔다
      (그림자는 ref 8 vs 우리 10 으로 Δ2 — 둘을 동시에 맞출 수 없어 위치 쪽을 택했다). */
-  .qs-b{position:absolute;left:591px;top:31px;width:195px;height:118px;box-sizing:border-box;
-    border:6px solid #000;border-radius:40px;cursor:pointer;font-family:inherit;padding:0 0 10px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4CBA2E 90px,#BAEC77 90px 96px,#2F8F1E 96px)}
-  .qs-b:disabled{cursor:default;
-    background:linear-gradient(180deg,#D3D3D3 0 7px,#A8A8A8 7px,#8A8A8A 90px,#D3D3D3 90px 96px,#757575 96px)}
-  .qs-b b{font-size:30px;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
-  .qs-b:disabled b{color:#DFDFDF}
+  /* 104 ② — 공용 베벨 버튼 `.ifbtn`. 화면이 주는 것은 위치·크기·모서리·테두리 두께뿐이다. */
+  .qs-b{left:591px;top:31px;width:195px;height:118px;--gb-bw:6px;border-radius:40px}
+  .qs-b b{font-size:30px;-webkit-text-stroke:7px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
   /* 모두 받기 272×130 (ref 404,1647 → 293,1084) — 검정 7, 같은 베벨 */
   /* 하단 앵커 — 기준 프레임(본문 1383)에서 bottom169 = top1084 로 실측과 동일하다 */
-  .qs-all{position:absolute;left:295px;bottom:166px;width:272px;height:130px;box-sizing:border-box;
-    border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0 0 14px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 103px,#B9EC77 103px 109px,#2F8F1E 109px)}
-  .qs-all:disabled{cursor:default;
-    background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 103px,#D1D1D1 103px 109px,#757575 109px)}
+  .qs-all{left:295px;bottom:166px;width:272px;height:130px;--gb-bw:7px;border-radius:43px}
   /* 코어 폭이 ref 156 → 148 (−5.1%) 이었다. scaleX 로만 편다(높이는 36 vs 35 로 맞다). */
-  .qs-all b{font-size:39px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
-  .qs-all:disabled b{color:#DFDFDF}
+  .qs-all b{font-size:39px;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
   /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
   .qs-tg{position:absolute;left:42px;bottom:43px;width:797px;height:99px;box-sizing:border-box;
     border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
@@ -1556,30 +1620,26 @@
   /* 보상 썸네일 — ref 119×118 dx544 dy21(카드 세로 중앙) → **108×108 dx494 top19.5**.
      12 소환 결과 `.sm-c` 와 **같은 공용 아이템 프레임**(검정 5 + 등급 rim 6 + 등급 면 SUM_CARD).
      아트 자리 규칙: 나중에 이미지로 갈아 끼우도록 프레임 안쪽 bbox 를 이모지가 그대로 차지한다. */
-  .ml-i{position:absolute;left:494px;top:19.5px;width:108px;height:108px;box-sizing:border-box;
-    border:5px solid #000;border-radius:23px;
-    background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0) 55%),var(--face);
-    box-shadow:inset 0 0 0 6px var(--rim);
-    display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1}
+  /* 104 — 공용 아이템 프레임 `.ifr`. 화면이 주는 것은 위치와 크기(108) · 등급색뿐이다.
+     주인 지시의 «우편함만 아이템 프레임이 다르다» 는 여기서 해소된다 — 코너 23(비율 .213)만
+     여섯 화면 중 혼자 각졌고, 수량 배지도 혼자 프레임 «안» 에 들어가 있었다. */
+  .ml-i{position:absolute;left:494px;top:19.5px;
+    --if-w:108px;--if-ic:48px;--if-face:var(--face);--if-rimc:var(--rim)}
   /* 수량 — ref 는 썸네일 가로 중앙, 잉크 바닥이 프레임 바닥에서 11px 위(측정 §10-8) */
   /* ref 배지 잉크는 썸네일 폭의 .41 이다(«120» 49 / 119). `fmt()` 의 «3.00K»(5자)로는 프레임
      안쪽 면 86px 을 넘어 림과 충돌한다(S4) → `fmtShort()` 2~4자 + 폰트 26. */
   /* ⚠ 배지 세로 위치는 비평가 I(«13px 위 → 3px 내려라»)와 J(«2px 위 → 5px 올려라»)가 **정반대**로 냈다.
      마스크가 다르다(I: 흰 코어 R,G,B>248 / J: 잉크 바닥 vs 프레임 안쪽 바닥) — LESSONS 20-⑤ 대로
      엇갈리면 손대지 않고, **두 명이 실제로 채점해 8·9 로 통과시킨 값**을 그대로 둔다. */
-  .ml-i>i{position:absolute;left:0;right:0;bottom:4px;text-align:center;
-    font-size:26px;line-height:1;color:#fff;-webkit-text-stroke:6px #000;transform:scaleX(1.02)}
+  /* 104 — 수량은 공용 `.ifq`(108×.235 = 25.4 · 스트로크 5.8) 로 바뀌었다. 원래는 26/6 이었고
+     «프레임 안쪽 bottom:4» 였는데, 나머지 다섯 화면처럼 바닥 테두리에 걸치게 통일했다.
+     ⚠ 아래 «비평가 I·J 가 정반대» 주석은 그 옛 위치에 대한 것이다 — 104 지시가 위치를 정했다. */
+  .ml-i>i.ifq{transform:scaleX(1.02)}
   .ml-r.done .ml-i{filter:grayscale(.75) brightness(.82)}
   /* 행 버튼 — ref 166×98(w:h 1.69) dx681 dy32, 카드 세로 중앙 → **151×89 dx619 top29**.
      모양은 ref 를 따르지 않고 22 `.qs-b` 와 같은 공용 베벨 캡슐이다(UI-REFERENCE 69 «따오지 말 것»). */
-  .ml-b{position:absolute;left:619px;top:29px;width:151px;height:89px;box-sizing:border-box;
-    border:6px solid #000;border-radius:36px;cursor:pointer;font-family:inherit;padding:0 0 8px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#C9F07E 0 6px,#7CD84B 6px,#4CBA2E 68px,#BAEC77 68px 73px,#2F8F1E 73px)}
-  .ml-b:disabled{cursor:default;
-    background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px,#8A8A8A 68px,#D3D3D3 68px 73px,#757575 73px)}
-  .ml-b b{font-size:26px;color:#fff;-webkit-text-stroke:4px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
-  .ml-b:disabled b{color:#DFDFDF}
+  .ml-b{left:619px;top:29px;width:151px;height:89px;--gb-bw:6px;border-radius:36px}
+  .ml-b b{font-size:26px;-webkit-text-stroke:4px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
   /* 안내 2줄 — ref 잉크 h22~24 · 줄 pitch 28 · 패널바닥→1줄 46 · 2줄→버튼 43 (전부 ×s).
      하단 앵커라 프레임이 짧아져도 버튼과 함께 움직인다(LESSONS 20-④). */
   /* ⚠ 줄바꿈이 나면 «한 글자 고아 줄» 이 생겨 블록이 50→71px 로 부풀고 푸터 간격이 무너진다(비평 G-1).
@@ -1590,21 +1650,14 @@
   /* 하단 버튼 2개 — ref 336×129 gap30 합 702(0.7105 PW), 좌우 여백 대칭 143.
      → 305×117 gap27 합 637, 좌우 여백 112. 둘은 **정확히 같은 크기**다(측정 §7). */
   .ml-btns{position:absolute;left:112px;width:638px;bottom:57px;height:117px}
-  .ml-all{position:absolute;top:0;width:305px;height:117px;box-sizing:border-box;
-    border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0;
-    display:flex;align-items:center;justify-content:center;left:333px;
-    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 92px,#B9EC77 92px 98px,#2F8F1E 98px)}
+  .ml-all{top:0;left:333px;width:305px;height:117px;--gb-bw:7px;border-radius:43px}
   /* 92 — 좌 = 「읽음 전체 삭제」 빨강(ref 면 #F26B6B 계열), 우 = 「일괄 읽기&수령」 초록.
-     녹색과 **같은 베벨 스톱**(0 7 / 92 98)을 쓰고 색만 붉은 계열로 바꿨다 — 두 버튼이 같은 부품이다. */
-  .ml-all.red{left:0;
-    background:linear-gradient(180deg,#FFB3B3 0 7px,#F58B8B 7px,#E24E4E 92px,#FFC0C0 92px 98px,#A32C2C 98px)}
-  .ml-all:disabled{cursor:default;
-    background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 92px,#D1D1D1 92px 98px,#757575 98px)}
+     104 ② — 붉은 변형도 공용 `.ifbtn.red` 로 옮겼다. 여기서는 «왼쪽 칸» 이라는 것만 말한다. */
+  .ml-all.red{left:0}
   /* 라벨이 7~8 글자로 길어졌다(92) — 잉크 폭이 면(291)을 넘지 않게 자간을 죄고 글자를 살짝 좁힌다.
      측정 §7 «라벨 잉크 h ÷ 버튼 h = .233» 은 세로 기준이라 font-size 는 그대로 29 를 지킨다. */
-  .ml-all b{font-size:29px;color:#fff;-webkit-text-stroke:5px #000;transform:scaleX(.93);
-    letter-spacing:-1.5px;white-space:nowrap;text-shadow:0 4px 0 #000}
-  .ml-all:disabled b{color:#DFDFDF}
+  .ml-all b{font-size:29px;-webkit-text-stroke:5px #000;transform:scaleX(.93);
+    letter-spacing:-1.5px;text-shadow:0 4px 0 #000}
   /* 92 — [읽음 전체 삭제] 로 목록이 비었을 때. 22 퀘스트 빈 상태와 같은 톤(어두운 패널 위 탄색 문구). */
   .ml-empty{display:flex;align-items:center;justify-content:center;height:100%;
     font-size:26px;font-weight:700;color:#8B7658;text-shadow:0 2px 0 rgba(0,0,0,.25)}
@@ -1686,15 +1739,16 @@
   /* 보상 1칸 = 아이템 프레임 138×138 + 그 아래 수량. 프레임은 검정 5 + 안쪽 림 5(등급색) */
   .at-rw{position:absolute;left:40px;top:83px;width:138px}
   .at-c7 .at-rw{top:84px}
-  .at-if{position:relative;width:138px;height:138px;box-sizing:border-box;border:5px solid #000;
-    border-radius:34px;background:#D07810;box-shadow:inset 0 0 0 5px #F8C030}
-  .at-if.rl{background:#9820D0;box-shadow:inset 0 0 0 5px #C860F8}
+  /* 104 — 공용 아이템 프레임 `.ifr`. 화면이 주는 것은 크기(138)와 면/림 색뿐이다.
+     림이 혼자 5 였고(나머지 6~7) 코너는 34 → 138×.233 = 32.2 로 공용 비율을 따른다. */
+  .at-if{--if-w:138px;--if-ic:76px;--if-face:#D07810;--if-rimc:#F8C030}
+  .at-if.rl{--if-face:#9820D0;--if-rimc:#C860F8}
   .at-if>em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-style:normal;font-size:76px;line-height:76px}
-  /* 수량 — 잉크 하단 = 프레임 하단 +8 (프레임 아래 테두리에 걸친다) */
-  .at-rw>b{position:absolute;left:50%;transform:translateX(-50%) scaleX(1.3);top:118px;height:35px;line-height:35px;
-    white-space:nowrap;font-size:35px;font-weight:900;color:#fff;
-    -webkit-text-stroke:10px #000;paint-order:stroke fill}
+  /* 수량 — 잉크 하단 = 프레임 하단 +8 (프레임 아래 테두리에 걸친다).
+     104 — 배지를 `.at-rw` 의 형제가 아니라 **프레임 안** 으로 옮기고 공용 `.ifq` 가 그린다
+     (138×.235 = 32.4 · 스트로크 7.4). 자당 폭 보정만 이 화면 고유값으로 남긴다. */
+  .at-if>b.ifq{transform:scaleX(1.3)}
   /* ✔ 수령완료 — 초록 코어 91×73, 중심 = (카드 중심, 카드 top+132) */
   .at-ck{position:absolute;left:0;right:0;top:73px;height:96px;display:flex;align-items:center;
     justify-content:center;padding-left:7px;font-size:106px;line-height:106px;color:#88F840;
@@ -3046,11 +3100,15 @@
   .wm-tb .v2{left:542px;width:183px}
 
   /* 5 아이템 그리드 — 카드 148x158, pitch 170x190, 첫 카드 패널기준 (10,32) */
-  .wgc{position:absolute;width:148px;height:158px;border:5px solid #000;
-    border-radius:35px 35px 12px 12px;
-    box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
+  /* 104 — 공용 아이템 프레임 `.ifr` 의 «기준 두 칸» 중 하나다(53 `.bg53-c` 와 함께).
+     아래 테두리는 재료 진행바(`.pb`)가 끊고 지나가므로 **아래 코너 12 만 이 화면 고유값**이고,
+     위 코너는 공용 비율(148×.233 = 34.5 ≈ 원래 35)을 그대로 쓴다.
+     수량 배지(`.ifq`)는 이 칸에 없다 — 05 의 «하단» 은 수량이 아니라 재료 진행바다(측정표 규격). */
+  .wgc{position:absolute;--if-w:148px;--if-h:158px;--if-ic:66px;
+    --if-face:var(--gc);--if-rimc:var(--gr);
+    border-radius:calc(var(--if-w) * var(--if-rr)) calc(var(--if-w) * var(--if-rr)) 12px 12px;
     overflow:hidden;cursor:pointer}
-  .wgc.eq{border-color:#134E52;background:var(--ge);box-shadow:inset 0 0 0 6px #35DCEE}
+  .wgc.eq{border-color:#134E52;--if-face:var(--ge);--if-rimc:#35DCEE}
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:8px;height:100px;line-height:100px;text-align:center;font-size:66px}
   /* Lv.n 은 «우상단» 정렬이다 (좌상단 아님) — 우여백 15 / 상여백 19 */
@@ -4553,8 +4611,13 @@
      레퍼런스는 위 42 · **아래 12** 다. 카드 5장(1행1·3열, 2행1열, 우하단 2곳)의 하단 코너를
      행별로 스캔하니 전부 «dy0 에서 inset 11 → dy10 에서 inset 0» = r 12 로 일치했다.
      42 로 두면 하단 진행바가 레퍼런스보다 훨씬 알약처럼 보인다. */
-  .sk-card{position:absolute;width:168px;height:171px;border-radius:38px 38px 16px 16px;
-    background:var(--f);box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r);cursor:pointer}
+  /* 104 — 공용 아이템 프레임 `.ifr` 의 **인셋 변형**(`.ifr-in`). 하단 진행바 `.sk-bar` 와 [+] `.sk-eq`
+     가 패딩 박스 기준이라 진짜 border 를 주면 내부가 통째로 밀린다 → 두께만 토큰으로 공유한다.
+     선 5(그대로) · 림 12−5=7 → **6** · 위 코너 38 → 168×.233 = 39.1. 아래 16 은 진행바 몫으로 고유값. */
+  .sk-card{position:absolute;--if-w:168px;--if-h:171px;--if-ic:78px;
+    --if-face:var(--f);--if-rimc:var(--r);
+    border-radius:calc(var(--if-w) * var(--if-rr)) calc(var(--if-w) * var(--if-rr)) 16px 16px;
+    cursor:pointer}
   .sk-ci{position:absolute;left:6px;right:6px;top:20px;height:96px;text-align:center;
     font-size:78px;line-height:96px}
   /* Lv.n — 잉크좌단 카드+20 / 잉크상단 카드+21. 뱃지 배경 없음(측정표 6-1) */
@@ -4586,7 +4649,9 @@
   /* 50 코스튬 — 하단 [착용]/[구매] 버튼의 대상이 되는 «선택 카드». 07·26 에는 선택 개념이 없어
      여기서만 쓴다. 기하(w/h/radius/inset 링)는 건드리지 않고 **바깥으로만** 나가는 링을 더해
      카드 bbox 와 그리드 pitch 가 1px 도 안 바뀌게 한다(아트 교체 시 그대로 벗겨진다). */
-  #bCos .sk-card.sel{box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r),
+  /* 104 — 인셋 두 겹은 공용 토큰(`.ifr-in`)과 같은 식으로 쓴다. 바깥 링만 이 화면 고유값이다. */
+  #bCos .sk-card.sel{box-shadow:inset 0 0 0 var(--if-bw) #000,
+    inset 0 0 0 calc(var(--if-bw) + var(--if-rim)) var(--r),
     0 0 0 5px #F2BC8D,0 0 0 9px #000}
 
   /* 4 [+]/[─] — 알약 배경 없이 «검정 4px 외곽선 + 흰 글리프». 41 글리프 박스의
@@ -4902,20 +4967,13 @@
   .sm-grid::-webkit-scrollbar{width:0;height:0}
   .sm-grid-in{display:flex;flex-wrap:wrap;gap:13px;width:1007px;padding-bottom:8px}
 
-  /* 카드 — 검정 외곽선 5px + 안쪽 밝은 림 6px + 면(그라데이션 없음), radius 34 */
-  .sm-c{position:relative;width:157px;height:157px;flex:0 0 auto;box-sizing:border-box;
-    border:5px solid #000;border-radius:34px;
-    background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,0) 55%),var(--face);
-    box-shadow:inset 0 0 0 6px var(--rim)}
+  /* 카드 — 104 공용 아이템 프레임 `.ifr`. 화면이 주는 것은 크기(157)와 등급색 두 개뿐이다.
+     선 5 · 림 6 은 원래 값 그대로이고, 코너는 34 → 157×.233 = 36.6 으로 공용 비율을 따른다. */
+  .sm-c{--if-w:157px;--if-ic:64px;--if-face:var(--face);--if-rimc:var(--rim);flex:0 0 auto}
   /* 아이콘 잉크 목표 76x75(카드 안쪽 여백 약 40). 09 기록상 이모지는 font-size ≈ 잉크 이므로
-     78px 에서 시작해 캡처 실측으로 보정한다. */
-  .sm-c>b{position:absolute;left:0;right:0;top:0;bottom:0;
-    font-size:64px;line-height:147px;text-align:center}
-  /* 개수 배지 — **우하단이 아니라 하단 정중앙**이고 카드 바닥 아래로 8px 돌출, 배경 알약 없음.
-     ⚠ 숫자는 잉크가 캡하이트라 «÷0.93» 이 안 통한다(09 교훈) — 캡비 0.70 으로 역산해 25/0.70 = 36. */
-  .sm-c>u{position:absolute;left:0;right:0;bottom:-19px;height:36px;line-height:36px;
-    text-align:center;font-size:36px;color:#fff;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+     78px 에서 시작해 캡처 실측으로 보정했다 → 64. «아트 잉크» 라 104 통일 대상이 아니다. */
+  .sm-c>b{font-style:normal;font-size:inherit;line-height:1}
+  /* 개수 배지는 `.ifq`(104) 가 그린다 — 하단 정중앙 · 카드 바닥 테두리에 걸침 · 배경 알약 없음 */
   /* ref 의 `1` 은 «윗 깃 9px · 세로획 5px» 짜리 좁은 게임용 숫자다(잉크폭 9).
      우리 서체는 같은 잉크높이에서 폭이 16 이라 +78% 로 읽힌다 → PROGRESS 규칙대로
      음수 letter-spacing 이 아니라 <i> 의 scaleX 로 좁힌다. */
@@ -6312,9 +6370,9 @@
     column-gap:22px;row-gap:23px;align-content:start}
   /* 칸 — 검정 5 + 등급 fill + 안쪽 밝은 림 6 + r34.
      overflow 는 visible 이다 — 수량이 칸 아래 테두리에 «걸쳐» 8px 삐져나오는 게 레퍼런스다. */
-  .bg53-c{position:relative;box-sizing:border-box;width:148px;height:147px;
-    border:5px solid #000;border-radius:34px;background:var(--g,#C6AF8E);
-    box-shadow:inset 0 0 0 6px var(--r,#D3BE9E)}
+  /* 104 — 공용 아이템 프레임 `.ifr` 의 «기준 두 칸» 중 하나다(05 `.wgc` 와 함께).
+     선 5 · 림 6 · 코너 148×.233 = 34.5(원래 34) 가 전부 그대로 살아난다 — 여기서 토큰을 뽑았다. */
+  .bg53-c{--if-w:148px;--if-h:147px;--if-face:var(--g,#C6AF8E);--if-rimc:var(--r,#D3BE9E)}
   /* 아이콘 — ref bbox 80~94 × 71~94, 칸 정중앙. 아트 교체 대비로 88×88 bbox 를 정확히 차지시킨다 */
   /* 이모지 잉크는 em 박스보다 좁다 — font-size 72 로는 잉크 폭이 68 밖에 안 나와 늘려야 했다.
      ⚠ 3회차 정정 — 2회차의 «ref 평균 91×82» 는 **칸 안쪽 밝은 림을 아이콘으로 오독한 값**이다
@@ -6331,10 +6389,9 @@
      측정표의 «코어 25~26 → font 28» 을 그대로 썼더니 실측 잉크가 **19px**(ref 24) 로 −21% 였다.
      숫자+쉼표는 캡하이트 기준이라 이 폰트의 잉크비가 **≈0.68** 이다 → 24/0.68 ≈ **35px**.
      line-height 는 그대로 두고 font-size 만 올려 «칸 아래 테두리에 걸치는» 중심을 유지한다. */
-  #bagw .bg53-c>b{position:absolute;left:-20px;right:-20px;top:120px;height:36px;line-height:36px;
-    display:block;text-align:center;font-size:35px;color:#F8F8F8;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2;white-space:nowrap;
-    letter-spacing:4px;text-indent:4px}
+  /* 104 — 수량은 공용 `.ifq` 가 그린다(148×.235 = 34.8 ≈ 원래 35 · 스트로크 8.0 = 원래 8).
+     자간만 이 화면 고유값으로 남긴다(3회차: 등폭 숫자를 ref 비례폭에 맞춘 보정). */
+  #bagw .bg53-c>b.ifq{color:#F8F8F8;letter-spacing:4px;text-indent:4px}
   /* 5회차 잔여 — ref 는 숫자가 **비례폭**이라 자리당 진행폭이 16~29 로 흩어지는데(«1» 은 잉크 8px)
      우리 폰트는 등폭이라 23~24 로 고르다. 중앙값은 24 vs 23 으로 맞췄고, `font-variant-numeric:
      proportional-nums` 는 이 폰트가 지원하지 않아 렌더가 1px 도 안 바뀌었다(시험 후 되돌림).
@@ -7017,6 +7074,7 @@
   #dsbar{position:absolute;width:6px;border-radius:3px;background:rgba(255,255,255,.42);
     z-index:99;pointer-events:none;opacity:0;transition:opacity .25s;display:none}
   #dsbar.on{opacity:1}
+
 </style>
 </head>
 <body>
@@ -10730,9 +10788,9 @@ function showSummonResult(b, times, res, lvUp){
      .forEach((o, k) => { dly[o.i] = k * 0.055; });
   $('sumGridIn').innerHTML = agg.map((a, i) => {
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
-    return '<div class="sm-c fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
+    return '<div class="sm-c ifr fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
       + ';animation-delay:' + dly[i].toFixed(3) + 's">'
-      + '<b>' + itemIcon(a.it) + '</b><u><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
+      + '<b>' + itemIcon(a.it) + '</b><u class="ifq"><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
   }).join('');
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
@@ -11795,8 +11853,9 @@ function openAttend(){
     const rw = atRewards(r);
     const frames = rw.map((x, k) =>
       '<div class="at-rw"' + (sev ? ' style="left:' + AT_F7X[k] + 'px"' : '') + '>'
-      + '<div class="at-if' + (x.rl ? ' rl' : '') + '"><em>' + x.ic + '</em></div>'
-      + '<b>' + x.v + '</b></div>').join('');
+      + '<div class="at-if ifr' + (x.rl ? ' rl' : '') + '"><em>' + x.ic + '</em>'
+      +   '<b class="ifq">' + x.v + '</b></div>'
+      + '</div>').join('');
     return '<div class="' + (sev ? 'at-c7' : 'at-c') + (got ? ' got' : '') + (now ? ' today' : '') + '"'
       + (now ? ' data-att="1"' : '') + '>'
       + '<div class="at-in">'
@@ -11944,9 +12003,9 @@ function mailRowHtml(m){
     + '<div class="ml-t"><i>' + m.t.replace(/^[^가-힣\w]+/, '').trim() + '</i></div>'
     + '<div class="ml-s"><i>' + sum + '</i></div>'
     + '<div class="ml-d"><i>' + (done ? '수령 완료' : '기한 없음') + '</i></div>'
-    + '<span class="ml-i" style="--face:' + SUM_CARD[top.g].face + ';--rim:' + SUM_CARD[top.g].rim + '">'
-    +   top.ic + '<i>' + fmtShort(top.v) + '</i></span>'
-    + '<button class="ml-b" data-ml="' + m.id + '"' + (done ? ' disabled' : '') + '>'
+    + '<span class="ml-i ifr" style="--face:' + SUM_CARD[top.g].face + ';--rim:' + SUM_CARD[top.g].rim + '">'
+    +   top.ic + '<i class="ifq">' + fmtShort(top.v) + '</i></span>'
+    + '<button class="ml-b ifbtn" data-ml="' + m.id + '"' + (done ? ' disabled' : '') + '>'
     +   '<b>' + (done ? '완료' : '받기') + '</b></button>'
     + '</div>';
 }
@@ -11962,9 +12021,9 @@ function openMail(){
     /* 92 — 좌 빨강 [읽음 전체 삭제] · 우 초록 [일괄 읽기&수령]. 닫기는 바닥 ✕(§8) 하나뿐이라
        버튼 «닫기» 는 없앴다. 두 라벨 모두 **고정**이다(ref 는 상태로 글자를 바꾸지 않는다). */
     + '<div class="ml-btns">'
-    +   '<button class="ml-all red" id="mailDel"' + (del ? '' : ' disabled') + '>'
+    +   '<button class="ml-all ifbtn red" id="mailDel"' + (del ? '' : ' disabled') + '>'
     +     '<b>읽음 전체 삭제</b></button>'
-    +   '<button class="ml-all" id="mailBtn"' + (left ? '' : ' disabled') + '>'
+    +   '<button class="ml-all ifbtn" id="mailBtn"' + (left ? '' : ' disabled') + '>'
     +     '<b>일괄 읽기&amp;수령</b></button>'
     + '</div>';
   const m = $('modal');
@@ -12032,11 +12091,11 @@ let qTab = 'rep';
 function openQuest(tab){
   if(tab) qTab = tab;
   const qrow = (title, dia, prog, goal, ready, key) =>
-    '<div class="qs-r"><span class="qs-i">💎<i>' + fmt(dia) + '</i></span>'
+    '<div class="qs-r"><span class="qs-i ifr">💎<i class="ifq">' + fmt(dia) + '</i></span>'
     + '<div class="qs-t">' + title + '</div>'
     + '<div class="qs-p"><i style="width:' + Math.min(100, prog/goal*100).toFixed(1) + '%"></i>'
     + '<b><em>' + fmt(prog) + '/' + fmt(goal) + '</em></b></div>'
-    + '<button class="qs-b" data-q="' + key + '"' + (ready ? '' : ' disabled') + '><b>보상 받기</b></button></div>';
+    + '<button class="qs-b ifbtn" data-q="' + key + '"' + (ready ? '' : ' disabled') + '><b>보상 받기</b></button></div>';
   const rows = (qTab === 'daily'
     ? DQUESTS.map(q => qrow(q.n.replace(/(\d[\d,]*)/, '<em>$1</em>'), q.dia,
         dqDone(q) ? q.goal : Math.min(dqProg(q), q.goal), q.goal, dqReady(q), 'd:' + q.id))
@@ -12046,7 +12105,7 @@ function openQuest(tab){
   const any = QUESTS.some(questReady) || DQUESTS.some(dqReady);
   $('mtitle').textContent = '퀘스트';
   $('mbox').innerHTML = '<div class="qs-pn">' + rows + '</div>'
-    + '<button class="qs-all" id="qAll"' + (any ? '' : ' disabled') + '><b>모두 받기</b></button>'
+    + '<button class="qs-all ifbtn" id="qAll"' + (any ? '' : ' disabled') + '><b>모두 받기</b></button>'
     + '<div class="qs-tg">'
     + '<span class="sel" style="left:' + (qTab === 'daily' ? -5 : 366) + 'px"></span>'
     + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
@@ -12842,7 +12901,7 @@ function renderWpn(){
       const real = items[c] || null;
       const mine = real && has(real.id), eq = real && S.eqSlot[wpnPart] === real.id;
       const n = mine ? frag(real.id) : 0, nd = real ? fragNeed(mine ? oLv(real.id) : 1) : 2;
-      h += '<div class="wgc' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + '"'
+      h += '<div class="wgc ifr' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + '"'
         +  (mine ? ' data-wpn="' + real.id + '"' : '')
         +  ' style="left:' + (10 + c*170) + 'px;top:' + (32 + r*190) + 'px'
         +  ';--gc:' + w.c + ';--gr:' + w.r + ';--ge:' + w.e + '">'
@@ -13309,10 +13368,10 @@ function bagUse(){
 function renderBag(){
   const rows = (bagTab === 'cur' ? bagCur() : bagUse()).slice(0, 40);
   const cells = rows.map(r =>
-    '<div class="bg53-c" style="--g:' + BAG_G[r.g][0] + ';--r:' + BAG_G[r.g][1] + '"'
+    '<div class="bg53-c ifr" style="--g:' + BAG_G[r.g][0] + ';--r:' + BAG_G[r.g][1] + '"'
       + ' data-bagn="' + r.n.replace(/"/g, '') + '" data-bagq="' + r.q + '">'
-      + '<u>' + r.ic + '</u><b>' + fmt(r.q) + '</b></div>').join('');
-  $('bagGrid').innerHTML = cells + '<div class="bg53-c em"></div>'.repeat(Math.max(0, BAG_MIN - rows.length));
+      + '<u>' + r.ic + '</u><b class="ifq">' + fmt(r.q) + '</b></div>').join('');
+  $('bagGrid').innerHTML = cells + '<div class="bg53-c ifr em"></div>'.repeat(Math.max(0, BAG_MIN - rows.length));
   /* 활성 알약은 «오른쪽 칸» 에 붙어 있는 게 레퍼런스 상태다. 왼쪽 칸이 활성이면 알약을 왼쪽으로 옮긴다 */
   $('bagPill').style.marginLeft = bagTab === 'use' ? '0px' : '372px';
   $('bagTabs').querySelectorAll('[data-bagtab]').forEach(t =>
@@ -13801,7 +13860,7 @@ function renderSkill(){
     const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
-    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-skit="' + it.id + '" '
+    h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + '" data-skit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
       /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조) */
@@ -13887,7 +13946,7 @@ function renderPet(){
     const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
-    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-ptit="' + it.id + '" '
+    h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + '" data-ptit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
       /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조) */
@@ -14012,7 +14071,7 @@ function renderCos(){
       const own = cosOwn(a.id), on = a.id === cur, lock = !own && !cosReqOk(a);
       const f = on ? skDim(SK_FILL[a.g]) : SK_FILL[a.g];
       const r = on ? skDim(SK_RIM[a.g])  : SK_RIM[a.g];
-      h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
+      h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
         +  '" data-cosit="' + a.id + '" '
         +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (y + ((i/5)|0)*220) + 'px'
         +  ';--f:' + f + ';--r:' + r + '">'
