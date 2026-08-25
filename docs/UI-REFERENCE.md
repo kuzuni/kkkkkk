@@ -1619,3 +1619,29 @@ git rm docs/claims/A1.lock && git commit -m "chore: A1 선점 해제" && git pus
 - 채점: 연속 프레임 6~8장(ROUTINE [3]-(다)) — ①타이밍·이징 ②크기 변화폭 ③대상 정확성 ④일관성(모든 버튼이 같은 손맛) 최저 8.
   «반응 없음»·«뚝 전환» 은 0점.
 - **골고루**: 공용 모듈이 올라간 뒤 각 화면의 비평에 ⑦ 손맛(쥬시) 축이 추가된다(8 기준). 특정 화면의 쥬시만 파지 말 것 — 화면당 회차 상한 동일.
+
+### 60 구현 (2026-08-25, sess-0058-25815 워커 D) — 공용 모듈 `jz*`
+
+CSS 는 `<style>` 맨 끝 «60» 절, JS 는 `<script>` 맨 끝 «60» 절. **호출부는 한 곳도 고치지 않았다**
+(예외 1행: `drawHud()` 의 전투력 롤링). 새 화면·새 버튼은 **아무것도 안 해도 손맛이 붙는다.**
+
+| 지시 항목 | 전역 부착 방식 |
+|---|---|
+| 모든 버튼·탭·카드 누름 | `#app` 에 `pointerdown/up` 위임 1쌍. 대상은 `cursor:pointer` 로 판별 |
+| 비활성 누름 | 같은 위임에서 `[disabled],.lock,.off,.dis` → shake 6px 3회 + `brightness(.82)` |
+| 팝업·시트 개폐 | 오버레이 19개 + `#panel` 에 `MutationObserver` — «보이게 됐다/안 됐다» 만 본다 |
+| 하단 탭 전환 | `#tabbar` 클릭 위임 → `.ti` 1.12 팝 |
+| 카드 그리드 | 팝업이 열릴 때 `jzStagger()` — «자식 3개 이상이 같은 className» 을 그리드로 판정(셀렉터 나열 없음) |
+| 수치 변화 | 재화는 58 `fxDisp` 롤링 + 60 틴트, 전투력은 `jzRollVal('cp')` 롤링 + 틴트 |
+| 레드닷·NEW | **순수 CSS** — `display:none ↔ block` 전환만으로 애니메이션이 재시작(JS 0줄) |
+| 스킬 슬롯 | `#slots` 의 `.slot2.ready` 토글 관찰 |
+| 보스 등장·처치 | `#stinfo` 의 `bfight`/`bfarm` 토글 관찰 |
+| 실패·재화 부족 | `#modal` 이 열릴 때 제목 정규식 판정 |
+| 토스트 | 58 `fx-toast` 재사용(이미 스프링 슬라이드다운 + 1.2s 페이드아웃) |
+
+⚠ **`transform` 을 쓰면 안 된다.** 이 저장소는 글자 폭 보정에 `transform:scaleX()` 를 대량으로 쓰고
+모달 정렬에 `translate(-50%,-50%)` 를 쓴다. 60 은 **독립 변형 속성 `scale:`/`translate:` 만** 쓴다
+(둘은 `transform` 과 합성된다). 새 쥬시를 추가하는 사람도 이 규칙을 지킬 것.
+
+검증: `node docs/review/60-verify60.js`(→ `VERIFY60 PASS`, 10절 25항목) ·
+캡처 `node docs/review/60-cap60.js <회차>`(6장면 × 8프레임) · 기록 `docs/review/60-UI쥬시니스.md`
