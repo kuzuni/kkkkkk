@@ -4702,7 +4702,9 @@
   .bls-c>.b{flex:1 1 auto;position:relative;
     background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
   .bls-c>.b>*{position:absolute}
-  .bls-c .ic{left:0;right:0;top:13px;height:166px;line-height:166px;text-align:center;font-size:126px}
+  /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
+     ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
+  .bls-c .ic{left:0;right:0;top:16px;height:166px;line-height:166px;text-align:center;font-size:140px}
   /* 1회차: 초록 코어 h29·w105 (ref h32·w119) → fs 42→46 */
   .bls-c .vl{left:0;right:0;top:185px;height:50px;line-height:50px;text-align:center;
     font-size:46px;color:#A6DC60;-webkit-text-stroke:11px #123005;paint-order:stroke fill}
@@ -4728,7 +4730,16 @@
   .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
     background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
   .bls-bn>*{position:absolute}
-  .bls-bn .ic{left:34px;top:24px;width:186px;height:116px;line-height:116px;text-align:center;font-size:92px}
+  /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
+  .bls-bn .ic{left:7px;top:9px;width:126px;height:136px;line-height:136px;text-align:center;font-size:110px}
+  /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
+     CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
+  .bls-bn .ch{left:133px;top:26px;width:46px;height:102px}
+  .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
+    box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
+    rotate:45deg;transform:skew(-10deg,-10deg)}
+  .bls-bn .ch::before{top:24px}
+  .bls-bn .ch::after{top:56px}
   /* 1회차: 흰 잉크 w218 (ref 181) → scaleX .83 */
   .bls-bn .tx{left:309px;top:38px;height:76px;line-height:76px;font-size:42px;color:#fff;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83);transform-origin:left center}
@@ -5114,6 +5125,7 @@
         <div class="bls-btab"><i>보너스 축복</i></div>
         <div class="bls-bn" id="blsBonus">
           <s class="ic">💰</s>
+          <s class="ch"></s>
           <s class="tx">골드 획득량<em>+50%</em></s>
         </div>
         <div class="bls-ft"><i>모든 축복을 활성화하면 보너스 축복이 활성화됩니다.</i></div>
@@ -5996,7 +6008,7 @@ const ETYPE = {
 const BLESS = [
   { k:'atk',  n:'공격력',   ic:'⚔️', v:0.20 },
   { k:'hp',   n:'체력',     ic:'❤️', v:0.20 },
-  { k:'rate', n:'공격 속도', ic:'⚡', v:0.20 }
+  { k:'rate', n:'공격 속도', ic:'🌀', v:0.20 }   /* ⚡ 는 노랑 카드 위에서 잉크가 배경과 섞여 스캔에 안 잡힌다 */
 ];
 const BLESS_STEP  = 4;                 /* 진행바 n/4 — 4번 켜면 축복 레벨 +1 */
 const BLESS_BASE  = 30 * 60 * 1000;    /* 기본 지속 30분 */
