@@ -1,6 +1,9 @@
 /* verify52.js — 작업 52 ▦ 메뉴 회귀 게이트.
-   ① 기하: 패널·꼬리·9칸·아이콘/라벨 슬롯이 측정표 `docs/measure/52-메뉴팝업.md` 와 일치하는가
-   ② 기능: 열기/닫기 · ▦→✕ 스왑 · 9칸이 «눌렀을 때 실제로 무엇을 바꾸는가»
+   ① 기하: 패널·꼬리·7칸·아이콘/라벨 슬롯이 측정표 `docs/measure/52-메뉴팝업.md` 와 일치하는가
+   ② 기능: 열기/닫기 · ▦→✕ 스왑 · 7칸이 «눌렀을 때 실제로 무엇을 바꾸는가»
+   ⚠ 칸 수는 **9 → 7** 이다(2026-08-25 작업 71 — 레퍼런스 8칸에서 «공지»·«게임 라운지» 삭제,
+     임시 «패스» 칸은 유지). 71 이 index.html 만 고치고 이 게이트를 안 고쳐 4회차 시작 시 FAIL 이었다
+     (LESSONS 52-② 의 재현 — «갈아끼우라» 고 인계한 자리를 보는 게이트도 같이 옮겨야 한다).
    ③ 회귀: 메뉴를 열고 닫아도 메인 화면 고정 요소가 Δ0 인가 (작업 38 «패널 오버레이화» 유지)
    실행: node tools/verify52.js        → 마지막 줄 `VERIFY52 PASS n/n`
    LESSONS 50-① — 위임 핸들러를 타야 하는 클릭은 query+click 을 같은 evaluate 안에 넣는다. */
@@ -48,9 +51,10 @@ const eq = (n, got, exp, tol = 0.6) =>
   /* ---- ① 기하 (측정표 기준. 프레임 좌표) ---- */
   const col = await R('#mnw .mn-col');
   eq('패널 x', col.x, 761); eq('패널 y', col.y, 128.5); eq('패널 폭', col.w, 138);
-  /* 높이는 «레퍼런스 8칸 910»(상20.5 + 8×100 + 7×10 + 하20) + «35 인계 임시 9번째 칸 110» = 1020.
-     패스가 좌측 사이드로 옮겨 가면 910 으로 되돌리고 이 기대값도 같이 내린다. */
-  eq('패널 높이(8칸 910 + 임시 패스칸 110)', col.h, 1020);
+  /* 검산식(LESSONS 52-①): 칸수×100 + (칸수−1)×10 + 상20.5 + 하20.
+     레퍼런스 8칸이면 910, 작업 71 이후의 실칸 6 + 임시 «패스» 1 = **7칸이면 800**.
+     패스가 좌측 사이드로 옮겨 가면 6칸 690 으로 내리고 이 기대값도 같이 내린다. */
+  eq('패널 높이(7칸 = 6실칸 + 임시 패스칸)', col.h, 800);
   const tl = await R('#mnw .mn-tail');
   eq('꼬리 x(패널 우변)', tl.x, 899); eq('꼬리 y', tl.y, 183.5);
   eq('꼬리 길이', tl.w, 27.5); eq('꼬리 밑변', tl.h, 43, 1.2);   /* 21.5+21.5 는 서브픽셀로 42 로 잡힌다 */
@@ -59,7 +63,9 @@ const eq = (n, got, exp, tol = 0.6) =>
   eq('꼬리 꼭짓점 x (ref 926)', tl.x + tl.w, 926.5, 1);
   ok('▦ 좌변까지 남는 틈', `${(mb.x - (tl.x + tl.w)).toFixed(1)}px (ref 934−926 = 8)`);
 
-  for (let i = 1; i <= 9; i++) {
+  const NB = await p.$$eval('#mnw .mn-b', es => es.length);
+  eq('칸 개수(작업 71 이후 = 6 + 임시 패스 1)', NB, 7);
+  for (let i = 1; i <= NB; i++) {
     const r = await R(`#mnw .mn-b:nth-of-type(${i})`);
     eq(`칸${i} x`, r.x, 780); eq(`칸${i} 폭`, r.w, 99); eq(`칸${i} 높이`, r.h, 100);
     eq(`칸${i} y (pitch 110)`, r.y, 149 + (i - 1) * 110);
@@ -78,9 +84,10 @@ const eq = (n, got, exp, tol = 0.6) =>
     eq(`칸${i} 라벨 중심 y (칸top+80)`, lb.y + lb.h / 2 - r.y, 80);
   }
 
-  /* ---- ② 기능: 9칸이 실제로 무엇을 바꾸는가 ---- */
+  /* ---- ② 기능: 7칸이 실제로 무엇을 바꾸는가 ----
+     «공지»·«게임 라운지» 는 작업 71(저장소 주인 지시)로 삭제됐다 — 칸이 없으므로 프로브도 뺐다.
+     되살아나면 `['notice','공지',…]` · `['lounge','게임 라운지',…]` 를 여기에 되돌린다. */
   const openers = [
-    ['notice', '공지',     () => p.$eval('#modal', e => e.classList.contains('on'))],
     ['mail',   '우편',     () => p.$eval('#modal', e => e.classList.contains('on'))],
     ['rank',   '랭킹',     () => p.$eval('#modal', e => e.classList.contains('on'))],
     ['guide',  '길라잡이', () => p.$eval('#modal', e => e.classList.contains('on'))],
@@ -89,7 +96,6 @@ const eq = (n, got, exp, tol = 0.6) =>
     ['bag',    '가방',     () => p.$eval('#bagw', e => e.classList.contains('on')).catch(() => false)],
     ['saver',  '절전',     () => p.$eval('#modal', e => e.classList.contains('on'))],
     ['conf',   '설정',     () => p.$eval('#modal', e => e.classList.contains('on'))],
-    ['lounge', '게임 라운지', () => p.$eval('#modal', e => e.classList.contains('on'))],
     ['pass',   '패스',     () => p.$eval('#psw', e => getComputedStyle(e).display !== 'none').catch(() => false)],
   ];
   for (const [k, label, probe] of openers) {
