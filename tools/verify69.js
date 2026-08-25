@@ -71,7 +71,9 @@ async function fresh(browser, w = 1080, h = 2280) {
     /* ---------- 2. 기하 (측정표 §10 채택값) ---------- */
     console.log('[2] 기하 — 측정표 §10 채택값');
     await page.evaluate(() => { closeModal(); openMail(); });
-    await page.waitForTimeout(300);
+    /* ⚠ 60 쥬시니스의 팝업 등장 애니메이션(scale 0.92→1)이 끝나기 «전» 에 재면 전 요소가 −8% 로 잡힌다.
+       기하 측정은 반드시 애니메이션이 끝난 뒤에 한다. */
+    await page.waitForTimeout(700);
     const g = await page.evaluate(() => {
       const A = document.getElementById('app').getBoundingClientRect();
       const R = (sel) => {
@@ -85,10 +87,10 @@ async function fresh(browser, w = 1080, h = 2280) {
         btns: R('.ml-btns'), sub: R('.ml-all.sub'), all: R('#mailBtn'), x: R('#mailX'), rowTops: rows };
     });
     near('상자 폭', g.box.w, 898);
-    near('상자 높이', g.box.h, 1310);
-    near('본문 높이', g.body.h, 1196);
+    near('상자 높이', g.box.h, 1317);
+    near('본문 높이', g.body.h, 1203);
     near('패널 폭', g.pn.w, 830);
-    near('패널 높이', g.pn.h, 851);
+    near('패널 높이', g.pn.h, 890);
     near('행 폭', g.r1.w, 784);
     near('행 높이', g.r1.h, 147);
     near('행 pitch', g.rowTops[1] - g.rowTops[0], 164);
@@ -120,6 +122,20 @@ async function fresh(browser, w = 1080, h = 2280) {
     });
     fits.sc <= fits.cl + 1 ? ok(`5행이 스크롤 없이 들어감 (${fits.sc} ≤ ${fits.cl})`)
       : fail(`리스트가 넘친다 ${fits.sc} > ${fits.cl}`);
+    /* 레퍼런스 패널은 마지막 행 아래에 «다음 자리» 슬랙을 남긴다(측정 §4 · 비평 B M4: ref 5.215 pitch).
+       슬랙이 0 이면 6번째 우편이 «스크롤» 이 아니라 «넘침» 처럼 보인다. 0.15~0.35 pitch 를 요구한다. */
+    /* ⚠ `scrollHeight` 는 넘치지 않는 컨테이너에서 `clientHeight` 로 바닥이 잡혀 슬랙이 항상 0 으로 나온다.
+       마지막 행의 «실제 바닥» 과 패널 콘텐츠 바닥 사이를 직접 잰다. */
+    const slack = await page.evaluate(() => {
+      const p = document.querySelector('.ml-pn');
+      const rows = p.querySelectorAll('.ml-r');
+      const last = rows[rows.length - 1].getBoundingClientRect();
+      const pr = p.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(p).paddingBottom);
+      return ((pr.bottom - pad) - last.bottom) / 164;
+    });
+    slack >= 0.15 && slack <= 0.35 ? ok(`마지막 행 아래 슬랙 ${slack.toFixed(2)} pitch (ref 0.215)`)
+      : fail(`슬랙 ${slack.toFixed(2)} pitch — ref 0.215 (허용 0.15~0.35)`);
     /* 프레임 밖 0건 */
     const outside = await page.evaluate(() => {
       const A = document.getElementById('app').getBoundingClientRect();

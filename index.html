@@ -1360,12 +1360,15 @@
      (레퍼런스 패널은 «3행만 차 있어도 5행 자리를 비워 두는» 고정 높이다 — 측정 §10-6).
      우리 우편은 5통이라 그 «5행 자리» 를 실제로 채우는 쪽이 구성에 충실하다 → 상자 1310
      (aspect 898:1310 = 1:1.459 vs ref 1:1.425, +2.4%). 본문 height = 1310 − 헤더91 − 패딩7 − 테두리16. */
-  #modal.ml69{background:rgba(0,0,0,.56);flex-direction:column}
+  /* ref 팝업 박스는 화면 정중앙이다(중심 1169.35 vs 1170) — A5 공용 «중앙 −12» 규칙은 22 레퍼런스
+     기준이라 69 에서는 상하 패딩을 대칭으로 두고, ✕ 는 음수 마진 2개로 «그룹 높이 0» 을 만들어
+     상자 중심이 밀리지 않게 한다(A 결함 10: 우리 상자 중심이 화면 중심보다 40.5px 위였다). */
+  #modal.ml69{background:rgba(0,0,0,.56);flex-direction:column;padding:126px 91px}
   /* ✕ 가 상자 바닥 테두리에 **걸쳐** 있으므로(측정 §8) 상자를 반지름만큼 낮춰 잡는다 —
      짧은 프레임에서 ✕ 가 프레임 밖으로 나가면 smoke [3] 잘림 검사에 걸린다
      (LESSONS 20-④ · 22 ⑤ 와 같은 함정). */
-  #modal.ml69 .mbox{max-height:min(1310px,calc(100% - 60px))}
-  .ml69 .mbody{position:relative;padding:0;height:1196px;overflow:hidden;text-align:left}
+  #modal.ml69 .mbox{max-height:min(1317px,calc(100% - 120px))}
+  .ml69 .mbody{position:relative;padding:0;height:1203px;overflow:hidden;text-align:left}
   /* 별 무늬는 22·33·20 이 쓰는 공용 «별 2개 반칸 오프셋» 체커보드 자산을 그대로 재사용한다
      (A5 기본 타일은 별이 1개뿐이라 행의 절반이 빈다 — LESSONS 22-① 참고). */
   .ml69 .mbody{background:#F0D9BA
@@ -1378,30 +1381,32 @@
   /* 패널 ref 913×979 (팝업 대비 rw .9241) → 830 폭. 좌우 인셋 ref 37/38 → 우리 본문 패딩박스
      (862 = 898 − 2×18) 안에서 좌우 16 씩. 상단은 우리 헤더(91)가 ref 의 «프레임 상단 77» 보다
      두꺼워 이미 그 몫을 쓰므로 8 만 띄운다. */
-  .ml-pn{position:absolute;left:16px;top:8px;width:830px;bottom:334px;box-sizing:border-box;
-    background:#D7C0A1;border-radius:21px;overflow-y:auto;padding:24px 22px 16px 24px}
+  .ml-pn{position:absolute;left:16px;top:6px;width:830px;bottom:304px;box-sizing:border-box;
+    background:#D7C0A1;border-radius:21px;overflow-y:auto;padding:24px 22px 16px 24px;
+    box-shadow:inset 0 0 0 5px #241A12}
   .ml-pn::-webkit-scrollbar{display:none}
   /* 행 카드 ref 863×162 pitch 181.5(gap 19) → **784×147 pitch 164(gap 17)**.
      카드 안쪽 폭 = 830 − 24 − 22 = 784 (ref 좌 26 / 우 24 인셋의 s 배). 부품은 22 `.qs-r` 과 같다. */
-  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px;background:#F7ECDA;border-radius:23px}
+  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px;background:#F7ECDA;border-radius:23px;
+    box-shadow:0 0 0 6px #241A12,inset 0 5px 0 #FFFBF2}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done{background:#E3D3BC}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   .ml-ac{position:absolute;left:5px;top:0;bottom:0;width:25px;border-radius:23px 0 0 23px;
-    background:linear-gradient(180deg,#F0B54A,#C77F22)}
-  .ml-r.done .ml-ac{background:linear-gradient(180deg,#A99880,#7E6E58)}
+    background:linear-gradient(180deg,#6B5947,#4A3B2D)}
+  .ml-r.done .ml-ac{background:linear-gradient(180deg,#9A8B78,#7E6E58)}
   /* 제목 — ref 잉크 dx52 dy22 h39 → dx47 dy20 h35.5. 서체 잉크비 0.93 → font 38 (LESSONS 01-①) */
-  .ml-t{position:absolute;left:47px;top:14px;font-size:38px;line-height:44px;font-weight:900;
-    color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;word-spacing:1.5px}
+  .ml-t{position:absolute;left:47px;top:13px;font-size:33px;line-height:38px;font-weight:900;
+    color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;word-spacing:1.5px}
   .ml-t i{display:inline-block;transform:scaleX(.945);transform-origin:0 0}
   /* 보상 요약(ref «햇병아리 외 2개») — ref dx56 dy74 잉크 h24, **외곽선 있는 유일한 줄**(측정 §10-5) */
-  .ml-s{position:absolute;left:51px;top:60px;font-size:24px;line-height:30px;font-weight:900;
-    color:#BAFD60;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap}
+  .ml-s{position:absolute;left:49px;top:62px;font-size:27px;line-height:32px;font-weight:900;
+    color:#BAFD60;-webkit-text-stroke:3px #000;paint-order:stroke fill;white-space:nowrap}
   .ml-s i{display:inline-block;transform:scaleX(.945);transform-origin:0 0}
   /* 남은 기간 — ref 는 카드 우단이 아니라 **고정 열에 우정렬**(3행 모두 x480..638, 측정 §10-4).
      우리 우편엔 만료가 없어 «기한 없음»(UI-REFERENCE 69 기능). 우단 = 카드상대 481. */
-  .ml-d{position:absolute;left:47px;width:434px;top:94px;text-align:right;
+  .ml-d{position:absolute;left:47px;width:440px;top:97px;text-align:right;
     font-size:27px;line-height:32px;font-weight:900;color:#8A755C;white-space:nowrap}
   .ml-d i{display:inline-block;transform:scaleX(.95)}
   /* 보상 썸네일 — ref 119×118 dx544 dy21(카드 세로 중앙) → **108×108 dx494 top19.5**.
@@ -1413,7 +1418,7 @@
     box-shadow:inset 0 0 0 6px var(--rim);
     display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1}
   /* 수량 — ref 는 썸네일 가로 중앙, 잉크 바닥이 프레임 바닥에서 11px 위(측정 §10-8) */
-  .ml-i>i{position:absolute;left:-24px;right:-24px;bottom:10px;text-align:center;
+  .ml-i>i{position:absolute;left:-24px;right:-24px;bottom:0;text-align:center;
     font-size:30px;line-height:1;color:#fff;-webkit-text-stroke:7px #000;transform:scaleX(1.02)}
   .ml-r.done .ml-i{filter:grayscale(.75) brightness(.82)}
   /* 행 버튼 — ref 166×98(w:h 1.69) dx681 dy32, 카드 세로 중앙 → **151×89 dx619 top29**.
@@ -1428,30 +1433,30 @@
   .ml-b:disabled b{color:#DFDFDF}
   /* 안내 2줄 — ref 잉크 h22~24 · 줄 pitch 28 · 패널바닥→1줄 46 · 2줄→버튼 43 (전부 ×s).
      하단 앵커라 프레임이 짧아져도 버튼과 함께 움직인다(LESSONS 20-④). */
-  .ml-note{position:absolute;left:16px;width:830px;bottom:233px;height:64px;text-align:center}
-  .ml-note i{display:block;font-size:24px;line-height:32px;font-weight:700;color:#7A6550}
+  .ml-note{position:absolute;left:16px;width:830px;bottom:212px;height:50px;text-align:center}
+  .ml-note i{display:block;font-size:22px;line-height:25px;font-weight:700;color:#7A6550}
   /* 하단 버튼 2개 — ref 336×129 gap30 합 702(0.7105 PW), 좌우 여백 대칭 143.
      → 305×117 gap27 합 637, 좌우 여백 112. 둘은 **정확히 같은 크기**다(측정 §7). */
-  .ml-btns{position:absolute;left:112px;width:638px;bottom:82px;height:117px}
+  .ml-btns{position:absolute;left:112px;width:638px;bottom:57px;height:117px}
   .ml-all{position:absolute;top:0;width:305px;height:117px;box-sizing:border-box;
-    border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0 0 12px;
+    border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0;
     display:flex;align-items:center;justify-content:center;left:333px;
     background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 92px,#B9EC77 92px 98px,#2F8F1E 98px)}
   .ml-all.sub{left:0;
     background:linear-gradient(180deg,#F4D08A 0 7px,#DDA758 7px,#C0873C 92px,#F0C782 92px 98px,#8E5F26 98px)}
   .ml-all:disabled{cursor:default;
     background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 92px,#D1D1D1 92px 98px,#757575 98px)}
-  .ml-all b{font-size:34px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
+  .ml-all b{font-size:28px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
   .ml-all:disabled b{color:#DFDFDF}
   /* ✕ — ref 는 팝업 «바닥 테두리 위에 걸쳐» 있다(중심 y = 팝업 바닥, 측정 §8). 지름 127 → 115.
      `#modal.ml69` 를 세로 플렉스로 돌려 상자 «다음» 항목으로 두고 음수 마진으로 반쯤 겹친다
      (`.mbox{overflow:hidden}` 안에 두면 잘리고, 헤더 라운드를 살리려면 그 클립을 풀 수 없다). */
   .ml-close{display:none}
-  #modal.ml69 .ml-close{display:flex;flex:0 0 auto;margin-top:-58px;width:115px;height:115px;
+  #modal.ml69 .ml-close{display:flex;flex:0 0 auto;margin:-58px 0 -57px;width:115px;height:115px;
     align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box;position:relative;
     border:6px solid #000;border-radius:50%;background:linear-gradient(180deg,#C2564E,#8E2F2C)}
   /* ✕ 글리프 ref 잉크 45×42 → 41×38 (지름의 0.354) */
-  #modal.ml69 .ml-close i{font-style:normal;font-size:44px;line-height:44px;font-weight:900;
+  #modal.ml69 .ml-close i{font-style:normal;font-size:58px;line-height:58px;font-weight:900;position:relative;top:3px;
     color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(.96)}
 
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
@@ -9773,8 +9778,10 @@ function openMail(){
   const left = mailLeft();
   $('mtitle').textContent = '우편함';
   $('mbox').innerHTML = '<div class="ml-pn">' + MAILS.map(mailRowHtml).join('') + '</div>'
-    + '<div class="ml-note"><i>보상은 받는 즉시 인벤토리에 반영됩니다.</i>'
-    +   '<i>수령하지 않은 우편은 사라지지 않습니다.</i></div>'
+    /* 안내 2줄 — 레퍼런스의 안내 밴드는 팝업 폭의 .90 을 채우는 «전폭 문구» 다(측정표 §6).
+       짧은 캡션으로 두면 좌우에 베이지 여백만 남아 구성이 달라진다(비평 A-14 · B-M5). */
+    + '<div class="ml-note"><i>수령한 보상은 즉시 인벤토리에 반영되며 되돌릴 수 없습니다.</i>'
+    +   '<i>수령하지 않은 우편은 사라지지 않으니 언제든 다시 확인하세요.</i></div>'
     + '<div class="ml-btns">'
     +   '<button class="ml-all sub" id="mailClose"><b>닫기</b></button>'
     +   '<button class="ml-all" id="mailBtn"' + (left ? '' : ' disabled') + '>'
