@@ -1,11 +1,11 @@
-/* 23 훈련 팝업 캡처 — 1080x1920, 상태: trainStage 1 / atk 98 / hp 0 / regen 0 */
+/* 23 훈련 팝업 캡처 — 1080x2280, 상태: trainStage 1 / atk 98 / hp 0 / regen 0 */
 const { chromium } = require('playwright');
 const path = require('path');
 
 (async () => {
   const out = process.argv[2] || 'docs/review/23-r4.png';
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });

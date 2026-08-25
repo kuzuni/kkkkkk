@@ -3684,7 +3684,14 @@
     background:#E6C695;border-radius:40px 40px 0 0;overflow:hidden}
   .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:#141414}
   .tr-sheet>*{position:absolute}
-  .tr-wave{left:0;right:0;top:0;height:8px;background:#141414;z-index:3}
+  /* 11회차(Q 인계 7번): 검정 상단 테두리가 «높이 8px 직사각형» 이라 라운드 코너에서 통째로 잘렸다 —
+     ref x10 세로는 검정 932..946 뒤 밝은 립 947 인데(=코너에서 세로 15px) 우리는 x10 에 검정이 **0px**,
+     시트 가장자리(933) 부터 곧장 헤더 갈색이었다. 직사각형 대신 **동심 링**(border-radius 40 의 8px border,
+     바깥 r40 / 안쪽 r32) 으로 그리면 코너에서만 세로 두께가 늘어난다(x10 예측 13.5..28.9 = 15.3px, ref Δ≈2).
+     배경은 없애고 테두리만 남겨 헤더가 가운데로 그대로 비쳐 보이게 한다. 좌우 8px 은 헤더의 기존
+     검정 옆테두리와 같은 색이라 겹쳐도 무해하다. */
+  .tr-wave{left:0;right:0;top:0;height:56px;box-sizing:border-box;background:none;z-index:3;
+    pointer-events:none;border:8px solid #141414;border-bottom:0;border-radius:40px 40px 0 0}
 
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
   /* 4회차: ref 는 «연속 그라데이션» 이 아니라 y1001 에서 끊기는 **하드 2단 스텝**이다.
@@ -3706,6 +3713,12 @@
     /* 9회차(N P4): ref 는 테두리(6px) 직후 **밝은 립 3px** (249,230,198) 이 4변 전부에 있다.
        inset box-shadow 는 «먼저 적은 것이 위» 라 6px 테두리를 앞에, 9px 립을 뒤에 둔다 */
     box-shadow:inset 0 0 0 6px #CDA26C,inset 0 0 0 9px #F9E6C6}
+  /* 11회차(R 인계 3번, 자체 차분 확인): 9회차가 넣은 밝은 립 3px 은 **트레이 틴트 구간에는 없다** —
+     ref y1600 가로는 테두리(x17..22) 직후 곧장 틴트(x23..31)인데 우리는 x23..25 가 립(249,230,198)이었다.
+     inset box-shadow 는 구간을 못 나누므로 틴트 밴드(박스 local 346..918 = 573px, 비평가 2명이
+     «완전 일치» 로 확인한 그 밴드)만 틴트색으로 덮어 립을 지운다. */
+  .tr-box::before{content:'';position:absolute;left:6px;right:6px;top:346px;height:573px;
+    background:#ECD9BB;pointer-events:none}
   .tr-box>*{position:absolute}
 
   /* §3 리본 «훈련 N 단계» — 박스 기준 x247 y34 w551 h108 (가운데 바 + 좌우 꼬리) */
@@ -3780,7 +3793,7 @@
      외곽선도 ref 는 (0,0,0) 순검정이라 #141414 가 아니다. */
   /* 8회차: ref 검정 외곽선 border-box 는 y1202..1308 = **h107** (x908 세로 스캔: 위 1202..1207 6px,
      아래 1302..1308 7px). 7회차 것은 1203..1308(105) 이었다 — K P9 지적 그대로. */
-  .tr-up{left:838px;top:139px;width:108px;height:107px;border-radius:32px;cursor:pointer;
+  .tr-up{left:838px;top:139px;width:108px;height:107px;border-radius:34px;cursor:pointer;
     background:linear-gradient(180deg,#A2A2A2 0,#9A9A9A 55%,#909090 100%);
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D3D3D3;text-align:center}
   .tr-up.on{background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
@@ -3836,7 +3849,9 @@
      right:0 이면 253−9 = 244 로 +2.5% 였다 */
   .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:6px;top:9px;height:56px;
     border-radius:12px;background:linear-gradient(180deg,#FFEED0 0 4px,#FCD2AC 4px);
-    box-shadow:inset 0 0 0 6px #AA6F4D}
+    /* 11회차(R 인계 2번): ref 칩 테두리는 좌 x168..172 · 우 x401..405 로 **5px** 이고 6px 은 +20% 였다
+       (인계표의 «좌 3px» 은 코어만 센 값 — 자체 차분 스캔은 좌우 모두 5px 이다) */
+    box-shadow:inset 0 0 0 5px #AA6F4D}
   .tr-qty>.q:nth-child(1){left:0;width:253px;border-radius:12px 0 0 12px}
   .tr-qty>.q:nth-child(2){left:253px;width:255px}
   .tr-qty>.q:nth-child(3){left:508px;width:253px;border-radius:0 12px 12px 0;
@@ -3852,7 +3867,9 @@
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
   .tr-cards{left:0;right:0;top:373px;height:510px}
   .tr-card{position:absolute;top:0;width:326px;height:510px;border-radius:28px;background:#FFFDF2;
-    box-shadow:inset 0 0 0 8px #141414,0 0 0 3px #8B6A38,0 0 0 5px #C6A470,0 5px 0 #5E4823;
+    /* 11회차(Q 인계 6번): ref 카드 외곽 베벨은 x32..34 = **3px** (x32 밝은갈 → x33·34 어두운갈 → x35 검정)
+       인데 우리는 x30..34 = 5px 이라 카드 피치가 4px 넓어 보였다. 3+5 → 2+3 으로 총 5→3. */
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823;
     cursor:pointer}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
@@ -3873,7 +3890,11 @@
   /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
      (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
      이모지를 105px 로 줄여 마름모 네 귀가 드러나게 한다. */
-  .tr-card>.ci{z-index:1;left:73px;top:126px;width:180px;height:164px;text-align:center;line-height:164px;
+  /* 11회차(Q 인계 4번 재측정): 인계표는 «폭 142 vs 148» 이라 했지만 자체 실측은 **폭이 맞다** —
+     ref 판 좌우 꼭짓점 x124..272(=149), 우리 판(런타임에 판만 마젠타로 칠해 잰 실bbox) x124..271(=148).
+     진짜 감점원은 **세로 위치**였다: ref 판 중심 y1627(카드2 x469 열도 y1617..1639 로 동일 서명 → 아트가
+     아니라 판임이 확정), 우리 중심 y1657 로 **30px 아래**. 이모지는 아트 대체물이므로 판과 함께 올린다. */
+  .tr-card>.ci{z-index:1;left:73px;top:96px;width:180px;height:164px;text-align:center;line-height:164px;
     font-size:105px}
   .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}

@@ -1,9 +1,10 @@
 /* 23 훈련 팝업 — 8회차 자체 검증. DOM 실측 + «7회차에서 이미 맞았다» 항목 회귀 확인.
-   사용: node verify23.js   (index.html 을 1080x1920 헤드리스로 띄워 openTrain() 상태로 잰다) */
+   사용: node verify23.js   (index.html 을 1080x2280 헤드리스로 띄워 openTrain() 상태로 잰다) */
 const { chromium } = require('playwright');
 const path = require('path');
 
-/* ref 절대 y → 캡처 y 는 −425. 아래 기대값은 모두 «ref 절대 px» 로 적고 캡처 실측을 +425 해서 비교한다 */
+/* ref 절대 y → 캡처 y 는 −65 (2026-08-25 11회차: 캡처 1080x2280 전환. 바닥 시트라 하단 앵커 →
+   1920 시절의 −425 에서 360 만큼 줄었다). 기대값은 모두 «ref 절대 px» 로 적고 캡처 실측을 +65 해서 비교한다 */
 const EXP = [
   /* [라벨, 셀렉터, {x,y,w,h} ref 기대값(생략 가능)] — y 는 ref 절대 */
   ['시트 .tr-sheet',      '.tr-sheet', { x: 0, y: 920, w: 1080, h: 1245 }],
@@ -22,7 +23,7 @@ const EXP = [
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
@@ -45,11 +46,11 @@ const EXP = [
       const el = document.querySelector(sel);
       if (!el) { out.push({ label, miss: true }); continue; }
       const b = el.getBoundingClientRect();
-      out.push({ label, x: Math.round(b.x), y: Math.round(b.y) + 425, w: Math.round(b.width), h: Math.round(b.height), e });
+      out.push({ label, x: Math.round(b.x), y: Math.round(b.y) + 65, w: Math.round(b.width), h: Math.round(b.height), e });
     }
     /* 7회차가 «이미 맞았다» 고 못박은 항목들 — 회귀 감시 */
     const g = s => { const el = document.querySelector(s); if (!el) return null;
-      const b = el.getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y) + 425, Math.round(b.width), Math.round(b.height)]; };
+      const b = el.getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y) + 65, Math.round(b.width), Math.round(b.height)]; };
     const reg = {
       '카드 pitch': g('.tr-card:nth-child(2)')[0] - g('.tr-card:nth-child(1)')[0],
       '카드 border-box': g('.tr-card:nth-child(1)').slice(2).join('x'),
