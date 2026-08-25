@@ -1041,8 +1041,14 @@
   @keyframes fxLand{0%{opacity:1}100%{opacity:0}}
 
   /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
-  @keyframes fxPunch{0%{transform:scale(1)}28%{transform:scale(1.15)}62%{transform:scale(.975)}100%{transform:scale(1)}}
-  .fx-punch{animation:fxPunch .3s cubic-bezier(.34,1.56,.64,1) both}
+  /* 봉우리가 뾰족하면(28% 한 점) 실제로 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
+     20~48% 를 고원으로 만들어 ≥1.12 가 약 110ms 유지되게 한다(6회차 지적). */
+  /* 봉우리가 뾰족하면(28% 한 점) 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
+     그리고 오버슈트 이징(cubic-bezier .34,1.56)은 키프레임 사이를 압축해 고원을 더 깎는다 —
+     고원 구간은 **ease-out** 으로 두고 키프레임으로 폭을 만든다(≥1.12 가 약 165ms). */
+  @keyframes fxPunch{0%{transform:scale(1)}14%{transform:scale(1.16)}52%{transform:scale(1.14)}
+    78%{transform:scale(.98)}100%{transform:scale(1)}}
+  .fx-punch{animation:fxPunch .36s ease-out both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
@@ -1083,12 +1089,14 @@
   .fx-flash{position:absolute;box-sizing:border-box;opacity:0;transform-origin:center;
     background:rgba(255,193,64,.62);border:9px solid #FFFFFF;
     box-shadow:0 0 0 5px rgba(255,186,54,.95),0 0 52px 16px rgba(255,206,92,.9);
-    animation:fxFlash .4s cubic-bezier(.2,.8,.3,1) forwards}
+    animation:fxFlash .34s cubic-bezier(.2,.8,.3,1) forwards}
   /* 봉우리가 뾰족하면 ≥0.7 구간이 90ms 라 8프레임 캡처에 한 장 걸릴까 말까다. 고원을 만든다(≈270ms). */
-  @keyframes fxFlash{0%{opacity:1;transform:scale(.97)}
-    22%{opacity:.96;transform:scale(1.05)}
-    55%{opacity:.85;transform:scale(1.09)}
-    100%{opacity:0;transform:scale(1.14)}}
+  /* 확대는 «살짝» 이어야 한다 — 1.14 는 326px 카드에서 +45px 라 카드 간격 16px 를 넘어
+     옆 카드를 침범한다(6회차 지적). 최대 1.05 = +16px 로 묶는다. */
+  @keyframes fxFlash{0%{opacity:1;transform:scale(.98)}
+    22%{opacity:.96;transform:scale(1.04)}
+    55%{opacity:.85;transform:scale(1.05)}
+    100%{opacity:0;transform:scale(1.05)}}
   /* 재렌더가 없는 화면(스킬·유물 세부의 레벨 알약)에서는 대상 자체도 같이 튄다 */
   .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
   @keyframes fxHit{0%{transform:scale(1)}34%{transform:scale(1.07)}100%{transform:scale(1)}}
@@ -1108,9 +1116,12 @@
   .fx-toast{position:absolute;left:50%;z-index:2;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
     background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
     white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
-    animation:fxToastIn .28s cubic-bezier(.34,1.56,.64,1) both}
-  @keyframes fxToastIn{from{opacity:0;transform:translate(-50%,-46px) scale(.9)}
-    to{opacity:1;transform:translate(-50%,0) scale(1)}}
+    animation:fxToastIn .14s cubic-bezier(.34,1.56,.64,1) both}
+  /* 0.28초짜리 페이드인은 «퀘스트 행이 먼저 바뀌고 토스트가 100ms 뒤에 따라붙는» 것으로 읽힌다.
+     불투명도는 앞 35% 안에 다 올리고 나머지는 위치만 정돈한다(6회차 지적). */
+  @keyframes fxToastIn{0%{opacity:0;transform:translate(-50%,-40px) scale(.92)}
+    25%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
+    100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
   @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
 
@@ -10017,7 +10028,7 @@ function fxFly(from, cur, n){
        알약이 y23 이라 호가 프레임 밖(실측 −12px)으로 나가 잘린다(3회차 지적). */
     const mx = (sx + to.x)/2, my = (sy + to.y)/2;
     const vx = to.x - sx, vy = to.y - sy, vl = Math.hypot(vx, vy) || 1;
-    const bow = vl * (0.20 + i*0.035);
+    const bow = vl * (0.11 + i*0.018);                 /* 휨이 크면 관계없는 행 위를 훑고 지나간다(6회차 지적) */
     fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
       cx:mx + (vy/vl)*bow, cy:Math.max(120, my - Math.abs(vx/vl)*bow*0.6 - bow*0.35),
       /* 58 공통 규칙 «0.3~0.8초» — 첫 도착 0.28초, 마지막 아이콘까지 0.026*5 + 0.35 + 0.14 = 0.62초.
@@ -10031,12 +10042,12 @@ function fxPunch(el){
      처음으로 되돌아가** 알약이 끝까지 안 커진다(비평가 2명이 «튀는 프레임이 한 장도 없다» 로 잡았다).
      한 번 튀는 동안(300ms)은 재시작하지 않는다. */
   const now = performance.now();
-  if(el.__fxPunchT && now - el.__fxPunchT < 300) return;
+  if(el.__fxPunchT && now - el.__fxPunchT < 360) return;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
   el.__fxPunchT = now;
   el.classList.remove('fx-punch');
   void el.offsetWidth;
   el.classList.add('fx-punch');
-  setTimeout(() => el.classList.remove('fx-punch'), 320);
+  setTimeout(() => el.classList.remove('fx-punch'), 380);
 }
 function fxPlus(cur, n){
   const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
@@ -10085,7 +10096,7 @@ function fxFlash(el){
   d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
   L.appendChild(d);
-  setTimeout(() => d.remove(), 380);
+  setTimeout(() => d.remove(), 400);                  /* 애니메이션(.34s)이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
 }
 /* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
    fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */
@@ -10126,8 +10137,8 @@ function fxCheck(el){
   const d = document.createElement('s');
   d.className = 'fx-check';
   d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
-  d.style.animation = 'fxCheckIn .8s ease-out both';
-  d.innerHTML = '<svg viewBox="0 0 100 100" width="132" height="132">'
+  d.style.animation = 'fxCheckIn .6s ease-out both';   /* 보상 숫자를 오래 덮지 않게 */
+  d.innerHTML = '<svg viewBox="0 0 100 100" width="92" height="92">'
     + '<circle cx="50" cy="50" r="41" fill="rgba(20,60,26,.55)" stroke="#7BE88E" stroke-width="8"/>'
     + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#B6FFC2" stroke-width="12"'
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
@@ -10146,7 +10157,7 @@ const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0,
 const fxHold = { gold:0, dia:0 };
 /* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
    0.8초 예산 안에 목표에 못 닿는다(4회차: 645ms 에 26% 진행 — 비평가 2명이 독립적으로 잡았다). */
-const FXROLL = 0.30;
+const FXROLL = 0.26;
 const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
 function fxWatch(now){
   for(const k in FXCUR){

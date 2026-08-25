@@ -23,7 +23,10 @@ const { chromium } = require('playwright');
 const ROUND = process.argv[2] || 'r2';
 const OUT = path.resolve(__dirname, 'docs', 'review');
 const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/');
-const WANT = [0, 90, 180, 270, 360, 450, 540, 630];      /* 트리거 기준 목표 시각(ms) */
+/* 트리거 기준 목표 시각(ms). 간격은 ROUTINE [3]-(다) 의 «80~100ms» 상한인 100ms 로 잡는다 —
+   90ms 로 잡으면 8장이 0~630ms 밖에 못 덮어서, **스펙 예산(0.8초) 안에 끝나는 연출인데도**
+   «마지막 프레임까지 숫자가 안 올라갔다» 는 지적이 나온다(6회차에 비평가 2명이 같은 이유로 감점했다). */
+const WANT = [0, 100, 200, 300, 400, 500, 600, 700];
 
 /* ── 스크린캐스트 수집기 ── */
 function recorder(cdp){

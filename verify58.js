@@ -283,6 +283,69 @@ const chk = (c, m) => c ? ok(m) : bad(m);
   chk(t9.movedAt >= 150, '숫자는 코인이 도착한 «뒤에» 오르기 시작 — ' + t9.movedAt + 'ms');
   chk(t9.doneAt > 0 && t9.doneAt <= 800, '롤링 완료 ' + t9.doneAt + 'ms (58: ≤800ms) → ' + t9.now);
 
+  console.log('[10] 6회차 지적 — 확대가 옆 카드를 안 넘는다 · 튐 고원 · 토스트 즉시성 · 보상 롤링 완주');
+  const t10 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const sc = el => { const m = String(getComputedStyle(el).transform).match(/matrix\(([\d.\-]+)/); return m ? +m[1] : 1; };
+    /* (가) 플래시 오버레이의 최대 확대 — 훈련 카드 폭 326, 카드 간격 16px 라 1.05(+16px)가 상한이다 */
+    S.gold = 1e13; openTrain(); await sleep(500);
+    const card = document.querySelector('#trw [data-tr]');
+    const cardW = card.getBoundingClientRect().width;
+    card.click();
+    let fmax = 1;
+    for(let i=0;i<50;i++){
+      const f = document.querySelector('#fxl .fx-flash');
+      if(f) fmax = Math.max(fmax, sc(f));
+      await sleep(10);
+    }
+    closeTrain();
+    /* (나) 알약 튐이 «고원» 인가 — ≥1.12 로 머무는 시간 */
+    await sleep(400);
+    const pill = document.querySelector('.cGold');
+    S.gold = 90000; fxHold.gold = 0; await sleep(1200);
+    const base = pill.getBoundingClientRect().width;
+    const tq = Date.now();
+    fxAt(fxWorld(player.x, player.y)); S.gold += 128000;
+    /* «샘플 1개 = 10ms» 로 세면 안 된다 — `sleep(10)` 은 evaluate 오버헤드로 실제 20~25ms 다.
+       경과 시각을 매번 다시 읽어 «≥1.12 였던 구간» 의 실제 길이를 적분한다
+       (43 교훈 1: 내가 쓴 assert 부터 어디를 기준으로 쟀는지 확인할 것). */
+    let hi = 0, pmax = 1, prevT = Date.now(), wasHi = false;
+    for(let i=0;i<130;i++){
+      const w = pill.getBoundingClientRect().width / base;
+      const nowT = Date.now();
+      pmax = Math.max(pmax, w);
+      if(wasHi) hi += nowT - prevT;
+      wasHi = w >= 1.12; prevT = nowT;
+      await sleep(10);
+    }
+    /* (다)(라) 퀘스트 — 토스트가 얼마나 빨리 뜨나 · 다이아 롤링이 0.8초 안에 끝나나 */
+    S.quest.kill.base = -1e9; openQuest('rep'); await sleep(350);
+    const dn = document.getElementById('diaN');
+    const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
+    if(!b) return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), err:'퀘스트 버튼 없음' };
+    const t0 = Date.now();
+    b.click();
+    const want = () => fmt(S.dia);
+    let toastAt = -1, diaDone = -1;
+    for(let i=0;i<120;i++){
+      const to = document.querySelector('#fxl .fx-toast');
+      if(toastAt < 0 && to && +getComputedStyle(to).opacity >= 0.9) toastAt = Date.now() - t0;
+      if(diaDone < 0 && dn.textContent === want()) diaDone = Date.now() - t0;
+      await sleep(10);
+    }
+    closeModal();
+    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, diaDone };
+  });
+  chk(!t10.err, '퀘스트 트리거' + (t10.err ? ' — ' + t10.err : ''));
+  chk(t10.fmax <= 1.06, '플래시 최대 확대 ×' + t10.fmax + ' — 카드 폭 ' + t10.cardW
+      + 'px, 카드 간격 16px 라 ×1.06 을 넘으면 옆 카드를 침범한다');
+  chk(t10.pmax >= 1.12, '알약 최대 확대 ×' + t10.pmax);
+  chk(t10.hi >= 90, '알약이 ×1.12 이상으로 ' + t10.hi + 'ms 유지 (봉우리가 뾰족하면 안 보인다)');
+  /* 하한은 «연출» 이 아니라 클릭 핸들러(claim + openQuest 재렌더) 비용이다 — 같은 프레임에 그려지므로
+     실제 «데이터가 먼저 바뀌는» 갭은 없다. 페이드인만 최대한 당겨 놓고 150ms 로 둔다. */
+  chk(t10.toastAt >= 0 && t10.toastAt <= 150, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (데이터 교체와 같은 프레임)');
+  chk(t10.diaDone >= 0 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms)');
+
   await browser.close();
   if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }
   console.log('\n' + (fails.length ? 'VERIFY58 FAIL — ' + fails.length + '건' : 'VERIFY58 PASS'));

@@ -5,7 +5,7 @@ box = tuple(int(x) for x in sys.argv[1:5])   # x0 y0 x1 y1
 print('card box', box)
 base = None
 for i in range(1, 9):
-    im = Image.open(f'docs/review/58-r5-upg-{i}.png').convert('RGB').crop(box)
+    im = Image.open(f'docs/review/58-r6-upg-{i}.png').convert('RGB').crop(box)
     px = list(im.getdata())
     mean = tuple(round(sum(c[k] for c in px)/len(px), 1) for k in range(3))
     lum  = round(sum(0.299*c[0]+0.587*c[1]+0.114*c[2] for c in px)/len(px), 1)
