@@ -17,7 +17,9 @@ const EXP = [
   ['카드2 .tr-card:2',    '.tr-card:nth-child(2)', { x: 377, y: 1436, w: 326, h: 510 }],
   ['카드3 .tr-card:3',    '.tr-card:nth-child(3)', { x: 718, y: 1436, w: 326, h: 510 }],
   ['서브탭 바 .tr-sub',   '.tr-sub',   { x: 54, y: 2021, w: 960, h: 97 }],
-  ['가격줄 .cb(카드1)',   '.tr-card:nth-child(1) .cb', { x: 47, y: 1832, w: 305, h: 106 }],
+  /* 12회차 재실측(비평가 T L2): ref y1880 은 x44 부터 곧장 밴드다(x43 은 카드 검정 테두리 AA).
+     8회차의 x47/w305 는 밴드가 검정에서 4px 떨어져 흰 카드 배경이 노출된 상태였다 → x44/w309 로 정정. */
+  ['가격줄 .cb(카드1)',   '.tr-card:nth-child(1) .cb', { x: 44, y: 1832, w: 309, h: 106 }],
   ['선택칩 .q.on::before','.tr-qty>.q.on', {}],
 ];
 
@@ -64,6 +66,14 @@ const EXP = [
       '슬롯 플레이트 s': getComputedStyle(document.querySelector('.tr-card .ci'), '::before').width,
       '리본 바 h': g('.tr-rib>.bar')[3],
       '꼬리 w/h': g('.tr-rib>b.l').slice(2).join('x'),
+      /* 11·12회차 확정분 — 회귀 감시 */
+      '아이콘 판 h(=119)': (() => { const cs = getComputedStyle(document.querySelector('.tr-card .ci'), '::before');
+        return Math.round(parseFloat(cs.width) * Math.SQRT2 - 2 * 24 * (Math.SQRT2 - 1)) + 'x'
+             + Math.round((parseFloat(cs.height) * Math.SQRT2 - 2 * 24 * (Math.SQRT2 - 1)) * 0.8); })(),
+      '서브탭 알약 left/w': (() => { const cs = getComputedStyle(document.querySelector('.tr-sub>.sg.on'), '::before');
+        return cs.left + '/' + cs.width; })(),
+      '서브탭 배지 ⌀': getComputedStyle(document.querySelector('.tr-sub>.sg.on>.dot')).width,
+      '트레이 배지 ⌀': getComputedStyle(document.querySelector('.tr-qty .dot')).width,
     };
     /* 프레임 밖 / 겹침 */
     const app = document.getElementById('app').getBoundingClientRect();

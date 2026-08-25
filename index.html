@@ -3739,8 +3739,17 @@
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
   /* 4회차: ref 는 «연속 그라데이션» 이 아니라 y1001 에서 끊기는 **하드 2단 스텝**이다.
      x800 세로 스캔 — y938..998 이 (132,88,59) 로 일정, y1004..1022 가 (115,71,46) 로 일정. */
+  /* 12회차(비평가 T L3): ref 헤더 우드바에는 **11x11 리벳(스터드) 4개**가 있는데 우리는 0개였다.
+     ref x12 세로 런렝스: 954..964 (113,71,46) · 979..989 (117,73,48) 이 배경 (131,87,60) 위에 찍힌다
+     (x10·x16 도 같은 구간, 우측은 x1066·x1068 에서 954..964 · 977..989). 우리 같은 열은 완전 평면이었다.
+     헤더 상단(ref 928) 기준 리벳 중심 y = 31 / 56, x = 14 / 1066. 색은 헤더 하단 밴드색과 같은 #71472E. */
   .tr-head{left:0;right:0;top:8px;height:106px;
-    background:linear-gradient(180deg,#A17D52 0 6px,#84583B 6px 73px,#73472E 73px 97px,#553622 97px 106px);
+    background:
+      radial-gradient(circle at 14px 31px,#71472E 0 5.5px,transparent 5.6px),
+      radial-gradient(circle at 14px 56px,#71472E 0 5.5px,transparent 5.6px),
+      radial-gradient(circle at 1066px 31px,#71472E 0 5.5px,transparent 5.6px),
+      radial-gradient(circle at 1066px 56px,#71472E 0 5.5px,transparent 5.6px),
+      linear-gradient(180deg,#A17D52 0 6px,#84583B 6px 73px,#73472E 73px 97px,#553622 97px 106px);
     box-shadow:inset 8px 0 0 #141414,inset -8px 0 0 #141414}
   .tr-head>i{position:absolute;left:0;right:0;top:14px;height:64px;line-height:64px;text-align:center;
     font-size:57px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
@@ -3928,8 +3937,16 @@
   /* 7회차: 6회차 판이 ref 149 대비 130 (−12.8%) 이었다. 원인은 **border-radius** —
      45° 회전한 «라운드» 정사각형은 꼭짓점이 깎여 bbox = s√2 − 2r(√2−1) 가 된다
      (s=106·r=24 → 150−19.9 = 130, 실측과 일치). bbox 149 를 얻으려면 s = (149+19.9)/√2 = 119.4. */
+  /* 11회차 2차 실측(비평가 S 의 «판 상단 17px 밀림» 지적을 재확인하다 나왔다): 판은 «45° 정사각형» 이 아니라
+     **세로로 눌린 마름모**다. ref 세 카드가 전부 같은 값을 준다 —
+       상단 꼭짓점 y1566 (x198·x540·x881 세 열 동일, 그 위는 흰 본문 254,254,244),
+       좌 꼭짓점 x124 / 우 꼭짓점 x272 (y1619..1632, 중심 y1625.5),
+       윗변 기울기 dx26 → Δy19 ≒ 0.8 (정사각형이면 1.0 이어야 한다).
+     → **149 x 119** (반높이 1625.5−1566 = 59.5). 인계표의 «높이 150» 은 색 마스크 bbox 가 카드 아트까지
+     물어서 나온 값이다(마스크 bbox 1566..1715 = 150 이 그대로 적혀 있었다).
+     정사각 마름모(149x149)를 세로 0.8 로 눌러 맞춘다 — 중심은 transform-origin 이 가운데라 불변. */
   .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:119.4px;height:119.4px;
-    margin:-63.2px 0 0 -59.7px;transform:rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
+    margin:-63.2px 0 0 -59.7px;transform:scale(1,.8) rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
   /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
      (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
      이모지를 105px 로 줄여 마름모 네 귀가 드러나게 한다. */
@@ -3937,7 +3954,7 @@
      ref 판 좌우 꼭짓점 x124..272(=149), 우리 판(런타임에 판만 마젠타로 칠해 잰 실bbox) x124..271(=148).
      진짜 감점원은 **세로 위치**였다: ref 판 중심 y1627(카드2 x469 열도 y1617..1639 로 동일 서명 → 아트가
      아니라 판임이 확정), 우리 중심 y1657 로 **30px 아래**. 이모지는 아트 대체물이므로 판과 함께 올린다. */
-  .tr-card>.ci{z-index:1;left:73px;top:96px;width:180px;height:164px;text-align:center;line-height:164px;
+  .tr-card>.ci{z-index:1;left:73px;top:95px;width:180px;height:164px;text-align:center;line-height:164px;
     font-size:105px}
   .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
@@ -3949,8 +3966,12 @@
        코인 x121..173 **53x55** · 숫자 잉크 y1860..1906 **h47** · 콘텐츠 잉크 중심 x194 = **카드중심 −4**.
      7회차 것은 코인 42x47 · 숫자 잉크 42 · 중심 +5 였다. 중심은 밴드(=.cb 배경)를 움직이면 안 되므로
      **padding-right 로 flex 콘텐츠만** 왼쪽으로 민다(밴드 좌표 불변). */
-  .tr-card>.cb{left:12px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
-    justify-content:center;gap:2px;padding-right:18px;border-radius:0 0 20px 20px;
+  /* 12회차(비평가 T L2): 밴드가 카드 내부 좌단(x43)에서 4px 떨어져 **순백 카드 배경이 그대로 비쳤다** —
+     ref y1880 은 x44 부터 곧장 밴드(221,209,197 → 188,161,134), 우리는 x43..46 이 (255,253,242).
+     카드 3장 · y1832~1924 전 구간 상시였다. left 12 → 9 (x44 = ref 첫 밴드 픽셀).
+     밴드가 3px 왼쪽으로 가면 flex 콘텐츠 중심도 1.5px 따라가므로 padding-right 로 되돌린다(18 → 15). */
+  .tr-card>.cb{left:9px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
+    justify-content:center;gap:2px;padding-right:15px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
        N 의 «9px · (69,52,34) 까지» 는 그 아래 카드 검정 테두리(1938~)의 AA 가 섞인 값이다 —
@@ -3968,15 +3989,22 @@
      중심은 유지해야 하므로 커진 12px 만큼 right/top 을 6px 씩 뺀다(중심 카드local 320,7 불변). */
   .tr-card>.dot{right:-15px;top:-14px;width:42px;height:42px;border-radius:50%;background:#EF3457;
     box-shadow:inset 0 0 0 5.5px #000;z-index:4}
-  .tr-qty .dot{position:absolute;left:231px;top:-7px;width:27px;height:27px;border-radius:50%;
-    background:#EF3457;box-shadow:inset 0 0 0 3px #000;z-index:4}
+  /* 12회차(비평가 T L4): ref y1334 가로 단면은 검정 388..391(4px) → 핑크 393.. 로 **border-box 31 · 링 4px**
+     인데 우리는 27 · 링 3px 이었다(−14% / −25%). 핑크 코어 21px 는 양쪽 같으므로 링만 얇았던 것이다.
+     배지 크기 체계를 ref(트레이 31 / 카드 42 / 서브탭 45)에 맞춘다. 중심은 유지 — 커진 4px 만큼 left·top 을 2 뺀다. */
+  .tr-qty .dot{position:absolute;left:229px;top:-9px;width:31px;height:31px;border-radius:50%;
+    background:#EF3457;box-shadow:inset 0 0 0 4px #000;z-index:4}
 
   /* §7 하단 서브탭 — 레퍼런스는 4칸(x37 y958 w960 h97, 4등분 240)이지만
      작업 47(2026-08-25, 저장소 주인 지시)로 «훈련 · 스탯 훈련» **2칸 균등**이 됐다.
      바 껍데기 규격(960×97 · 상검정 8 / 하검정 6 · 상하 밝은 립 6 · 구분선 55px)과 활성 알약 규격(253×62)은
      실측 그대로 유지하고, 위치만 새 칸(474)의 중앙으로 다시 잡는다. 칸 수는 우리 설계라 레퍼런스 대조 대상이 아니다. */
+  /* 12회차(비평가 T L1): 배지 dot 이 **바 상단선에서 수평으로 잘려** 반원이 돼 있었다 —
+     ref 배지는 y2014..2058 로 바 상단(2021)보다 7px 위로 튀어나오는데, `overflow:hidden` 이 그 7px 과
+     위쪽 검정 링 5px 을 통째로 잘랐다(우리 중심열 x401: y2020 크림 → y2021 곧장 빨강, 검정 0px).
+     칸(.sg)은 자체 radius 42 로 이미 바 안쪽에 6px 들어와 있어 바깥으로 새지 않는다 → 클립을 푼다. */
   .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:40px;background:#141414;
-    overflow:hidden;display:flex}
+    overflow:visible;display:flex}
   /* 6회차: ref 서브탭 바는 단색 갈색이 아니다 — x700 세로 스캔에서 위·아래에 **밝은 인셋 립 6px**
      (112,95,75) 이 있고 본체는 (98,81,61) 이다. 검정 테두리도 위 8px / 아래 6px 로 비대칭.
      (두 비평가가 독립적으로 «상·하 인셋 밝은 엣지 없음» 을 지적했다) */
@@ -3992,14 +4020,26 @@
     background:#4A3A2B;z-index:1}
   .tr-sub>.sg:last-child::after{display:none}
   .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
-  .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0}
+  /* 12회차(비평가 T L6): ref 는 바 **오른쪽 세로 구간**에도 밝은 안쪽 림이 있다 —
+     y2090 가로: 본체(98,81,61) → 림 996..1000 (114,97,77) → 1002 어둠 → 검정 1005..1010.
+     우리는 본체가 검정까지 그대로였다(림 0px). 상·하 림은 .sg 세로 그라데이션이 이미 만들고 있으므로
+     세로 구간만 마지막 칸에 inset 으로 보탠다. */
+  .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;
+    box-shadow:inset -6px 0 0 #705F4B}
   /* 7회차: ref 칩은 border-box 253x62 로 바 내부 좌측에 **flush**(인셋 0)이고 하단 여백이 14px 다.
      우측 끝도 수직 직선이 아니라 **반경 ~31 라운드 캡**이다(L 이 x310 세로 다크 82px 연속으로 잡아냈다).
      6회차 것은 229x71 · 좌인셋 8 · 하단여백 5 였다(폭 −9.5% · 높이 +14.5%). */
   /* 47: 알약 크기(253×62 · radius31 · 우측 다크캡 9)는 7회차 실측 그대로. 옛 `left:0;right:-15px` 는
      칸 240 전제(= 폭 255)라 칸 474 에서는 칸을 통째로 덮는다 → 폭을 명시하고 칸 중앙에 놓는다
      (474−253)/2 = **110.5**. 45(상점 탭 4→2)와 같은 처리다. */
-  .tr-sub>.sg.on::before{content:'';position:absolute;left:110.5px;right:auto;width:253px;top:6px;height:62px;
+  /* 12회차(비평가 S P3 · T L8 이 독립적으로 지적): ref 활성 알약은 **바 좌측 캡에 붙어 있다** —
+     y2065 가로에서 바 필이 x61 부터 시작하고 알약이 x69 부터니 좌여백 8px 다. 우리는 x171 = **+102px**.
+     칸을 4→2 로 바꾼 것(작업 47)은 설계지만, «첫 칸 알약이 좌측 캡에 앵커된다» 는 ref 규칙과 무관하다.
+     → 칸 중앙정렬(110.5)을 폐기하고 좌단 앵커(9 = 바 local 69)로 되돌린다.
+     폭도 같은 행에서 재실측했다: ref 알약 x69..298 = **230** (7회차의 253 은 +10%).
+     같은 행 오른쪽은 x299..305 가 바 필, x307..312 가 검정 캡이라 알약 끝이 298 로 확정된다.
+     (비평가 S 도 231 로 같은 값을 냈다 — T 의 245 는 우측 다크캡까지 센 값이다) */
+  .tr-sub>.sg.on::before{content:'';position:absolute;left:9px;right:auto;width:230px;top:6px;height:62px;
     border-radius:31px;background:#4B3E2D;box-shadow:inset -9px 0 0 #0C0803;z-index:1}
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
@@ -4011,7 +4051,10 @@
   /* 10회차: 카드 배지와 같은 정정. ref y2035 가로 단면 — 검정 272..277(6px) 뒤 핑크 시작 278,
      우리는 검정 276..278(3px) 뒤 279 였다. border-box 42 · fill 31 · 링 5.5
      47: 배지는 알약에 붙은 요소라(알약 local 210) 알약과 같이 110.5 만큼 옮긴다 → 320.5. */
-  .tr-sub>.sg.on>.dot{position:absolute;left:320.5px;top:-14px;width:42px;height:42px;border-radius:50%;
+  /* 12회차: 배지는 알약 우측 끝에 물린다. ref 절대 bbox x269..313 · y2014..2058 = **⌀45**,
+     .sg 기준으로 잡는다 — .sg 는 `margin:8px 0 6px` 라 바보다 8px 아래에서 시작하므로 top = −7−8 = **−15**
+     (바 기준 −7 로 잡으면 8px 모자라 링이 여전히 잘린다). left 는 .sg(x60) 기준 209 = ref x269. */
+  .tr-sub>.sg.on>.dot{position:absolute;left:209px;top:-15px;width:45px;height:45px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 5.5px #141414;z-index:3}
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
