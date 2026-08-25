@@ -3418,9 +3418,14 @@
      J 의 «우/하 오프셋 플레이트» 지적은 픽셀 스캔으로 반증돼 미반영(y680 가로 프로파일 대칭 확인) */
   /* 6회차 — ref 액자 외곽은 «사방 균일» 이 아니라 **하단 가중**이다(비평가 K·L 독립 실측):
      상변 검정4+갈색10=14 · 하변 검정8+갈색13=21 · 좌우 검정5+갈색12=17. 바닥 그림자를 테두리에 내장한 것. */
+  /* 10회차 ① — ref 액자는 4모서리 균일 라운드가 아니라 «대각» 이다(비평가 Q·R 독립 검출:
+     Q 우상 Δ11·좌하 Δ10 / R 우상 Δ15·좌하 Δ8) → 우상·좌하만 R15, 좌상 3.5·우하 5 유지.
+     10회차 ⑥ — 갈색 밴드 좌우 폭을 자체 스캔(s20b.py ①)으로 재확인: **ref 좌 10(x457–466) / 우 9(x614–622)**
+     인데 우리는 좌우 12/12 였다(R 의 «좌 11 / 우 9» 지적이 방향은 맞았다, Q 의 «137/137 정상» 은 반증).
+     검정 외곽 border 를 좌 6 / 우 7 로 갈라 padding box 를 옮기고 `.in` 인셋을 10 / 9 로 준다 */
   .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
-    border:solid #000;border-width:4px 5px 8px;border-radius:7px;background:#715A4A}
-  .spc-ava>.in{position:absolute;left:12px;right:12px;top:10px;bottom:10px;
+    border:solid #000;border-width:4px 7px 8px 6px;border-radius:3.5px 15px 5px 15px;background:#715A4A}
+  .spc-ava>.in{position:absolute;left:10px;right:9px;top:10px;bottom:10px;
     border:solid #000;border-width:4px 4px 6px;border-radius:4px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
   /* 칭호 육각 배너 318×56(외곽선 포함 ref 783–838) — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 */
@@ -3455,8 +3460,14 @@
      → 폭 364→356(우단 695), 중심 보정 translateX 18→22.
      몸통도 되돌린다 — ref 는 x400~680 이 **균일**(밝기 101)하고 우단 20px 에서만 페이드아웃하는데
      우리는 좌→우로 계속 어두워졌다(84→66). 하단 소프트 그림자도 ref 에 없다(M·N 독립 지적). */
+  /* 10회차 ④ — 좌측 페이드가 «선형» 이라 50% 크로싱이 x359 였다(비평가 Q Δ12 · R Δ11, 자체 스캔 359.4).
+     ref 는 S-커브라 **50% 크로싱 x370.8**(시작 324·도달 396 은 이미 맞다) → 느리게 시작해 중반에 꺾이는
+     8-스톱 S 로 다시 그린다. 크로싱은 «합성 밝기의 중간» = alpha .415 지점이므로 46px(=x370)에 .415 를 둔다 */
   .spc-nick{left:213px;top:312px;width:372px;height:48px;
-    background:linear-gradient(90deg,rgba(84,77,65,0) 0,rgba(84,77,65,.83) 72px,
+    background:linear-gradient(90deg,rgba(84,77,65,0) 0,rgba(84,77,65,.04) 16px,
+      rgba(84,77,65,.12) 28px,rgba(84,77,65,.28) 38px,rgba(84,77,65,.415) 46px,
+      rgba(84,77,65,.58) 54px,rgba(84,77,65,.72) 62px,rgba(84,77,65,.8) 68px,
+      rgba(84,77,65,.83) 72px,
       rgba(84,77,65,.83) calc(100% - 20px),rgba(84,77,65,.6) 100%);
     text-align:center;line-height:48px}
   /* 6회차 — 흰 잉크 폭 235 vs ref 261(−10%) → scaleX 로만 늘린다(높이는 ref 23 / 우리 22 로 거의 같다) */
@@ -3512,24 +3523,48 @@
      금 채움도 같은 구조(평평 174 → y1806~1836 구간만 158). 우리는 55px 전 구간이 사선이라 촉이 둔했다.
      팔각형으로 다시 그린다 — 좌팁이 컨테이너 좌변(157) 밖으로 나가므로 상자를 좌로 5px 넓힌다(left −8→−13, w 386→391). */
   .spc-tab-on{position:absolute;left:-13px;top:9px;width:391px;height:67px;cursor:default}
+  /* 10회차 ③ — 금탭 4모서리가 전부 직각(R0)이었다. ref 행별 인셋(자체 스캔 s20b.py ②, Q 처방 마스크
+     `R>140 & (R−B)>85`)은 상좌 7·4·3·2·1·1·0 / 하좌 6·4·3·2·1·1·0 / 상우 4·2·2·0 / 하우 4·2·1·1·0
+     → **좌상 R7 · 좌하 R6.5 · 우상/우하 R4.5**. ⚠ 9회차의 «45° 폴리곤 컷» 은 우하를 Δ8 로 악화시켰다 —
+     대신 **모서리마다 3점(90°·135°·180°) 원호 근사**를 폴리곤에 끼운다(최대 오차 0.4px).
+     border-radius 는 못 쓴다: 폴리곤의 평평한 변이 7px 안쪽이라 border box 코너를 잘라 버린다 */
   .spc-tab-on>s{position:absolute;inset:0;background:#000;
-    clip-path:polygon(7px 0,calc(100% - 19px) 0,calc(100% - 19px) 25%,100% 50%,calc(100% - 19px) 70%,
-      calc(100% - 19px) 100%,7px 100%,7px 70%,0 50%,7px 25%)}
+    clip-path:polygon(16px 0,calc(100% - 25px) 0,calc(100% - 20.76px) 1.76px,calc(100% - 19px) 6px,
+      calc(100% - 19px) 16.75px,100% 33.5px,calc(100% - 19px) 46.9px,
+      calc(100% - 19px) 61px,calc(100% - 20.76px) 65.24px,calc(100% - 25px) 67px,
+      15px 67px,9.34px 64.66px,7px 59px,7px 46.9px,0 33.5px,7px 16.75px,7px 9px,9.64px 2.64px)}
   /* 몸통 = 사면 안쪽 4~6px 주황 그늘(4회차 G 실측 (181,109,24)~(196,133,17)), ::before = 금 2단 채움 */
   /* 5회차 — 금색 채움 실측 ref h56(y1795–1850) vs 우리 54. 검정 외곽은 상하 6 이므로 top 만 5 로 (56 = 67−5−6) */
+  /* 10회차 ② — «화살촉 내부 앰버 쐐기 2개»(비평가 R «[E] 최우선, 레이어 통째 부재»).
+     ref 픽셀 실측(y1823 행): 좌 = 검정 …157 / 밝은 팁 림 158–163 / **앰버 (184,108,30) 164–173** / 금 174–
+     우 = 금 …514 / **앰버 515–525** / 밝은 팁 림 526–532 / 검정 533–
+     즉 ref 는 **화살촉 전체가 앰버**고 밝은 금은 촉 앞에서 끊긴다. 우리는 반대로 촉까지 금(#FFC736)이 차 있었다.
+     → ① `::before`(밝은 금)의 촉을 **없애고 둥근 사각**으로 만들어 x174–514 만 금이 되게 하고
+        ② `<b>`(앰버)의 촉만 남겨 그 사이 12~16px 이 앰버 쐐기로 드러나게 한다.
+        ③ 촉 끝의 밝은 림은 `<b>` 배경에 좌·우 세로 스트립 2겹으로 얹는다(평평한 구간은 `::before` 가 덮어 안 보인다).
+     촉 깊이도 ref 로 맞춘다 — 좌 apex x158(local 4) · 우 apex x532(local 100%−6). 이전엔 154 / 538 로 6px 깊었다 */
   .spc-tab-on>b{position:absolute;left:5px;right:2px;top:5px;bottom:6px;
-    background:linear-gradient(180deg,#C57419 0,#B96D18 100%);
-    clip-path:polygon(17px 0,calc(100% - 21px) 0,calc(100% - 21px) 21%,100% 50%,calc(100% - 21px) 74%,
-      calc(100% - 21px) 100%,17px 100%,17px 74%,0 50%,17px 21%);
+    background:linear-gradient(90deg,#FAE58C 0,#D9A238 55%,#B86C1E 100%) left 4px top 0/9px 100% no-repeat,
+      linear-gradient(270deg,#F7C63D 0,#DFA22F 45%,#B86C1E 100%) right 6px top 0/8px 100% no-repeat,
+      linear-gradient(180deg,#C57419 0,#B96D18 100%);
+    clip-path:polygon(28px 0,calc(100% - 29px) 0,calc(100% - 24.76px) 1.76px,calc(100% - 23px) 6px,
+      calc(100% - 23px) 11.76px,calc(100% - 6px) 28px,calc(100% - 23px) 41.44px,
+      calc(100% - 23px) 50px,calc(100% - 24.76px) 54.24px,calc(100% - 29px) 56px,
+      27px 56px,21.34px 53.66px,19px 48px,19px 41.44px,4px 28px,19px 11.76px,19px 9px,21.64px 2.64px);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
   .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:4px;right:5px;
     background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 58%,#F8A63A 58%);
-    clip-path:polygon(16px 0,calc(100% - 19px) 0,calc(100% - 19px) 21%,100% 50%,calc(100% - 19px) 74%,
-      calc(100% - 19px) 100%,16px 100%,16px 74%,0 50%,16px 21%)}
+    clip-path:polygon(25px 0,calc(100% - 25px) 0,calc(100% - 20.76px) 1.76px,calc(100% - 19px) 6px,
+      calc(100% - 19px) 50px,calc(100% - 20.76px) 54.24px,calc(100% - 25px) 56px,
+      24px 56px,18.34px 53.66px,16px 48px,16px 9px,18.64px 2.64px)}
   /* 8회차 — ref 금 채움 좌상단에 **광택 blob**(캡처 x173..196 × y1710..1719, L≈212)이 있는데 우리는 0층이었다.
      비평가 P 가 «통째 누락» 으로 지목. `<b>` 의 ::after 로 얹는다(::before 는 금 채움이 쓰고 있다). */
-  .spc-tab-on>b::after{content:'';position:absolute;left:19px;top:0;width:24px;height:10px;
-    border-radius:12px/6px;background:radial-gradient(60% 100% at 45% 40%,#FFF3B4,rgba(255,243,180,0) 78%)}
+  /* 10회차 ⑤ — 8회차의 blob 은 24×10 «원형 점» 이었는데 ref 는 **21×17 + 좌변을 따라 y1819(캡처 1735)까지
+     흐르는 폭 3~4px 의 L 자 림**이다(비평가 R). 반경 blob 1겹 + 세로 페이드 스트립 1겹으로 얹는다.
+     left 20px = x174 로 금 채움 좌변에 붙인다(::before 의 평평한 좌변과 같은 x) */
+  .spc-tab-on>b::after{content:'';position:absolute;left:20px;top:0;width:21px;height:25px;
+    background:radial-gradient(62% 55% at 46% 34%,#FFF3B4,rgba(255,243,180,0) 78%) 0 0/21px 17px no-repeat,
+      linear-gradient(180deg,rgba(255,243,180,.75),rgba(255,243,180,0)) 0 0/3.5px 25px no-repeat}
   .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
     paint-order:stroke fill;transform:scaleX(.84)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
