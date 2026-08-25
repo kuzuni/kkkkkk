@@ -7,7 +7,7 @@
  * 통과 조건 (하나라도 걸리면 exit 1):
  *   1. 콘솔 error / pageerror 0건 (로드·자동 플레이·팝업 오픈 전 구간)
  *   2. 화면 텍스트에 NaN / undefined / Infinity 0건
- *   3. 하단 탭 7종 · 사이드 아이콘 전부 · ▦ 메뉴 · 영웅 서브탭이 에러 없이 열림
+ *   3. 하단 탭 7종 · 사이드 아이콘 전부 · ▦ 메뉴 · 영웅 서브탭이 에러 없이 열림 + 런 화면 2종(30 던전 · 123 아레나)
  *   4. 9:19(1080×2280 기준)·9:16·16:9 가로·4:3·9:19.5·9:21 에서 #app 이 뷰포트 안에 완전히 들어옴(37 회귀) + 바닥 시트 잘림 없음(51)
  *   5. 자동 플레이 후 게임 상태가 살아 있음 (S.stage 숫자, 플레이어 HP 유한값)
  * 참고: 비평(점수)은 이 스크립트가 하지 않는다. 이건 «깨졌나» 만 본다.
@@ -332,6 +332,53 @@ function staticSyntax() {
         });
         (!back.run && back.top && back.tab) ? ok('나가기 → 기본 화면 복귀') : fail('던전 나가기 후 상태 이상: ' + JSON.stringify(back));
         if (errs.length) errs.forEach((e) => fail('던전 입장 중 ' + e)); else ok('던전 입장 콘솔 에러 0');
+      }
+      await ctx.close();
+    }
+
+    /* ---------- 2-2. 아레나 입장 화면 (작업 123) ----------
+       «컨텐츠» 탭 → 아레나 [도전] → 30초 1:1 대전 «런». 던전 런과 같은 상태(#app.dunrun)를 쓰되
+       HUD 가 통째로 다르므로(양쪽 닉네임·HP 바) 여기서 별도로 본다. */
+    console.log('[2-2] 아레나 입장 화면(123)');
+    {
+      const { ctx, page, errs } = await fresh(browser, 1080, 2280);
+      const enter = await page.evaluate(() => {
+        if (typeof startArena !== 'function' || typeof ARENA === 'undefined') return 'startArena 없음';
+        S.best = 999;
+        startArena();
+        return (typeof arena !== 'undefined' && arena) ? null : '아레나가 시작되지 않음';
+      }).catch((e) => String(e.message || e));
+      if (enter) fail('아레나 입장: ' + enter);
+      else {
+        await page.waitForTimeout(700);
+        const st = await page.evaluate(() => {
+          const app = document.getElementById('app'), A = app.getBoundingClientRect();
+          const vis = (id) => { const e = document.getElementById(id); const r = e && e.getBoundingClientRect(); return !!(r && r.width); };
+          const outs = [];
+          for (const id of ['arnHud', 'arnTm', 'arnHpL', 'arnHpR', 'dunOut']) {
+            const e = document.getElementById(id); if (!e) { outs.push(id + ' 없음'); continue; }
+            const r = e.getBoundingClientRect();
+            if (!r.width) { outs.push(id + ' 안 보임'); continue; }
+            if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5 || r.left < A.left - 1.5 || r.right > A.right + 1.5)
+              outs.push(id + ' 프레임 밖');
+          }
+          if (vis('dunHud')) outs.push('던전 HUD 가 같이 떠 있음');
+          if (vis('top')) outs.push('상단 HUD 가 안 숨겨짐');
+          if (vis('tabbar')) outs.push('탭바가 안 숨겨짐');
+          if (!document.getElementById('arnNmR').textContent.trim()) outs.push('상대 닉네임이 비어 있음');
+          return outs;
+        });
+        st.length ? st.forEach((m) => fail('아레나 입장: ' + m)) : ok('아레나 HUD 표시 + 던전 HUD 숨김 + 상단 HUD·탭바 숨김 + 프레임 안');
+        const bt = await badText(page);
+        if (bt) fail('아레나 입장 화면 텍스트에 ' + bt); else ok('아레나 입장 NaN/undefined 없음');
+        const back = await page.evaluate(async () => {
+          document.getElementById('dunOut').click();
+          await new Promise((r) => setTimeout(r, 400));
+          const vis = (id) => { const e = document.getElementById(id); const r = e && e.getBoundingClientRect(); return !!(r && r.width); };
+          return { run: typeof arena !== 'undefined' && !!arena, top: vis('top'), tab: vis('tabbar') };
+        });
+        (!back.run && back.top && back.tab) ? ok('나가기 → 기본 화면 복귀') : fail('아레나 나가기 후 상태 이상: ' + JSON.stringify(back));
+        if (errs.length) errs.forEach((e) => fail('아레나 입장 중 ' + e)); else ok('아레나 입장 콘솔 에러 0');
       }
       await ctx.close();
     }

@@ -364,6 +364,53 @@
      기하는 99×79 로 잡는다(1회차 캡처 실측 97×77 → 95×74 였다). */
   #dunOut i::after{margin:-40.5px 0 0 -51px;border-width:40.5px 99px 40.5px 0;border-right-color:#FDFDFD}
 
+  /* ---- 123 아레나 HUD (1:1 대전 더미) --------------------------------------
+     30 던전 입장 화면의 상태(#app.dunrun)를 그대로 타되, `#app.arn` 이 같이 붙으면
+     던전 HUD 대신 이쪽을 띄운다. 타이틀·타이머는 30 의 규격을 «값으로» 다시 적었다
+     (선택자를 공유하면 30 구간을 건드리게 된다 — 병렬 세션 규칙 3).
+     기하는 30 측정표 §2·§3 과 같은 기준(프레임 y = ref y − 84)이고, HP 바 2줄만 새 요소다. */
+  #arnHud{position:absolute;left:0;top:0;width:1080px;height:470px;display:none;z-index:3;
+    pointer-events:none}
+  #app.arn #arnHud{display:block}
+  #app.arn #dunHud{display:none}
+  #arnTtl{position:absolute;left:0;top:90px;width:1080px;text-align:center;white-space:nowrap;
+    font-size:38px;line-height:39px;font-weight:900;color:#fff;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+  /* ⏱ 클러스터 — 30 #dunTm 과 같은 규격(원판 Ø66 + 용두 36×21 + 흰 숫자) */
+  #arnTm{position:absolute;left:397px;top:146px;width:242px;height:80px}
+  #arnTm s{position:absolute;left:0;top:0;width:66px;height:80px;text-decoration:none}
+  #arnTm s::before,#arnTm s::after{content:'';position:absolute;box-sizing:border-box;
+    background:#FDEB4E;border:4px solid #000}
+  #arnTm s::before{left:14px;top:0;width:36px;height:21px;border-radius:5px}
+  #arnTm s::after{left:0;top:14px;width:66px;height:66px;border-radius:50%}
+  #arnTm b{position:absolute;left:98px;top:1px;width:200px;font-size:68px;line-height:89px;
+    font-weight:900;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+  /* scaleX 를 건 글자에는 AA 색번짐 방지가 필수다(LESSONS 16 ③) */
+  #arnTm b i{display:inline-block;font-style:normal;transform:scaleX(1.034);transform-origin:left center;
+    -webkit-font-smoothing:antialiased;backface-visibility:hidden}
+  /* 양쪽 줄 — 닉네임(좌) + HP 바 + 잔여 % (우). 30 진행바와 같은 «림 6 → 검정 트랙 → 채움» 문법 */
+  .arn-row{position:absolute;left:90px;width:900px;height:96px}
+  .arn-row.me{top:248px}
+  .arn-row.op{top:352px}
+  .arn-nm{position:absolute;left:4px;top:0;max-width:600px;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-style:normal;font-size:34px;line-height:36px;font-weight:900;color:#fff;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill}
+  .arn-pc{position:absolute;right:4px;top:0;font-size:30px;line-height:36px;font-weight:900;
+    color:#FFE9A6;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .arn-hp{position:absolute;left:0;top:44px;width:900px;height:52px;border-radius:20px;
+    background:#C1B6BA;display:block}
+  .arn-hp::before{content:'';position:absolute;left:6px;top:6px;width:888px;height:40px;
+    border-radius:15px;background:#0F0F0F}
+  .arn-hp>i{position:absolute;left:11px;top:11px;height:30px;width:0;max-width:878px;border-radius:4px;
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.32);transition:width .12s linear}
+  .arn-row.me .arn-hp>i{background:linear-gradient(90deg,#3FB65C 0,#2E9C49 55%,#1F7C38 100%)}
+  .arn-row.op .arn-hp>i{background:linear-gradient(90deg,#E4562C 0,#D3341C 55%,#A81E14 100%)}
+  /* VS — 두 줄 사이 중앙. 아트 자리 규칙: 나중에 이미지로 갈아 끼울 bbox 는 96×48 */
+  #arnVs{position:absolute;left:492px;top:330px;width:96px;height:48px;text-align:center;
+    font-size:44px;line-height:48px;font-weight:900;color:#FFD34A;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill}
+
   /* 우상단 4분할 메뉴 버튼 — 측정표 §2. 934..1035 / 260..359, radius 24, 검정 24% */
   #menub{position:absolute;right:44px;top:72px;width:102px;height:100px;border-radius:24px;
     background:rgba(0,0,0,.24);cursor:pointer;z-index:3}
@@ -2512,6 +2559,11 @@
   /* ⚠ 잠금 카드를 filter:brightness() 로 어둡게 하면 스크롤 fps 가 31.9 → 26.4 (−17%) 로 떨어진다
      (필터는 매 프레임 카드를 다시 래스터한다). 같은 «어둡게» 를 opacity 로 내면 합성만으로 끝난다. */
   #dunw .dnc.lkd>.bgm{opacity:.45}
+  /* 123 아레나 카드 — 썸네일 슬롯을 좌·우 절반으로 갈라 «마주 본 플레이어 2명» 을 세운다.
+     기하(슬롯 296×289)는 46·97 과 공용이고, 여기서는 캔버스 2장의 좌우 배치만 정한다. */
+  .dnc.arn2>.th>canvas{width:50%;height:100%}
+  .dnc.arn2>.th>canvas.arn-me{left:0}
+  .dnc.arn2>.th>canvas.arn-op{left:auto;right:0}
   .dnc.rd .sp{width:auto;min-width:156px;padding-right:22px}
   .dnc.rd .sp.lv>i,.dnc.rd .sp.tk>i{position:relative;left:0;margin-left:64px}
   .dnc.rd .sp.tk>i{margin-left:71px}
@@ -7517,6 +7569,16 @@
       <div id="dunBar"><em></em><s></s><i id="dunBarF"></i><b id="dunBarN">0</b><u>💀</u></div>
     </div>
     <button id="dunOut"><i>◀</i></button>
+    <!-- 123 아레나 HUD — 30 던전 입장 화면과 «같은 상태»(#app.dunrun: 상단 HUD·탭바 숨김 + ◀ 나가기)를
+         쓰되 내용만 1:1 대전이다. `#app.arn` 이 붙는 동안 #dunHud 대신 이쪽이 뜬다.
+         구성: 타이틀 «아레나» · ⏱ 제한 시간(28 보스전 타이머와 같은 규격) · 양쪽 닉네임 + HP 바 2줄. -->
+    <div id="arnHud">
+      <div id="arnTtl">아레나</div>
+      <div id="arnTm"><s></s><b><i id="arnTmN">30.0</i></b></div>
+      <div class="arn-row me"><i class="arn-nm" id="arnNmL">나</i><span class="arn-hp"><i id="arnHpL"></i></span><b class="arn-pc" id="arnPcL">100%</b></div>
+      <div id="arnVs">VS</div>
+      <div class="arn-row op"><i class="arn-nm" id="arnNmR">상대</i><span class="arn-hp"><i id="arnHpR"></i></span><b class="arn-pc" id="arnPcR">100%</b></div>
+    </div>
     <!-- 우상단 4분할 메뉴 버튼 -->
     <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i><b class="mx"><u></u></b></div>
     <div class="side" id="sideL">
@@ -7639,7 +7701,9 @@
     <!-- 46(2026-08-25 주인 지시): 왼쪽 자물쇠 칸은 «레이드»(DPS 측정 던전) 다. -->
     <!-- 96 — 공용 서브탭 부품(.stabs.sp2 > .stab). `.dns-t` 는 게이트(tools/verify46.js) 별칭. -->
     <div class="dns-sub stabs sp2" id="dunSub">
-      <div class="stab dns-t off" data-dsub="raid"><i class="ol3">레이드</i></div>
+      <!-- 123(2026-08-26, 저장소 주인 지시) — 라벨 «레이드» → «컨텐츠».
+           `data-dsub` 키는 raid 를 유지한다(46·97·smoke 오프너·verify 가 전부 이 키를 본다). -->
+      <div class="stab dns-t off" data-dsub="raid"><i class="ol3">컨텐츠</i></div>
       <div class="stab dns-t on" data-dsub="dun"><i class="ol4">던전</i><s class="bdg"></s></div>
     </div>
   </div>
@@ -9366,7 +9430,13 @@ const ETYPE = {
   boss:   { name:'군주',     atlas:'elves',  walk:'blue_idle',  atk:'blue_attack',  die:'blue_die',
             fps:7,  scale:1.65, r:54, sp:0.48, hp:22,   dmg:22,  gold:20,  col:'#ffca5c' },
   promo:  { name:'승급 수호자', atlas:'elves', walk:'blue_idle', atk:'blue_attack', die:'blue_die',
-            fps:7,  scale:1.9,  r:60, sp:0.55, hp:1,    dmg:4.5, gold:0,   col:'#ff6b7f' }
+            fps:7,  scale:1.9,  r:60, sp:0.55, hp:1,    dmg:4.5, gold:0,   col:'#ff6b7f' },
+  /* 123 아레나 상대 — **몬스터가 아니라 «플레이어 스프라이트를 쓰는 특수 적»** 이다(주인 지시 ④).
+     아틀라스·배율·반경을 플레이어(`drawFrame('knight', …, 1.0)` · `player.r 16`)와 같게 맞춰
+     «같은 종족 1:1» 로 읽히게 한다. 체력·공격력은 ETYPE 배수를 안 쓰고 startArena 가 직접 박는다
+     (스테이지 곡선 eHp/eDmg 가 아니라 «내 전투력» 기준이라 여기 값은 1 이 기준점이다). */
+  arena:  { name:'도전자',  atlas:'knight', walk:'idle',      atk:'attack_A',     die:'die',
+            fps:8,  scale:1.0,  r:16, sp:0.72, hp:1,    dmg:1,   gold:0,   col:'#ff9f6b' }
 };
 
 /* ==========================================================================
@@ -9418,6 +9488,7 @@ const DEF = () => ({
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
+  arena:{ w:0, l:0 },                         /* 123 아레나 전적 — 승/패(더미 대전). 진짜 매칭·랭킹은 후속 작업 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
   /* 105 — «알아서 되는 것» 은 전부 기본 OFF(저장소 주인 지시). autoEquip 키는 폐기(아무도 읽지 않는다),
@@ -9493,7 +9564,17 @@ function load(){
     Object.keys(b.raidBest).forEach(k => {
       const r = b.raidBest[k];
       if(!r || typeof r !== 'object' || !Number.isFinite(r.dmg) || !Number.isFinite(r.dps)) delete b.raidBest[k];
+      /* 123 — r30·r120 폐기. 지금 존재하는 측정장(r60)의 기록만 이월하고 나머지는 버린다
+         (남겨 두면 «어느 카드에도 안 뜨는 죽은 기록» 이 세이브에 계속 쌓인다). */
+      else if(!RAIDS.some(x => x.id === k)) delete b.raidBest[k];
     });
+    /* 123 아레나 전적 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       구 세이브에는 이 키가 아예 없으므로 0승 0패로 시작한다. */
+    {
+      const a = (d.arena && typeof d.arena === 'object') ? d.arena : {};
+      const n = v => (Number.isFinite(v) && v > 0 ? v | 0 : 0);
+      b.arena = { w:n(a.w), l:n(a.l) };
+    }
     /* 61 가이드 미션 — 구버전 세이브는 «S.tuto = 숫자» 였다. 44 교훈 2 대로 KEY 는 올리지 않고
        «없으면 기본값» 으로 흡수한다. 구 튜토리얼 12개는 새 체인 앞쪽과 순서가 같으므로 idx 를
        그대로 이어받고(체인 길이로 clamp), 기준선은 아래 gmStart() 가 지금 값으로 다시 찍는다. */
@@ -9715,6 +9796,9 @@ let raidOn = null;  /* 진행 중인 레이드 정의(RAIDS 항목) 또는 null 
 let raidT = 0;      /* 남은 시간(초) */
 let raidDmg = 0;    /* 누적 피해량 */
 let raidStage = 1;  /* 레이드 진입 직전 스테이지(끝나면 되돌린다) */
+/* 123 아레나(1:1 PvP 더미) — 진행 중이면 { op, t, stage, foe } 아니면 null.
+   op = 상대 정보({ n, look, cp, hp, max }), foe = 전장에 있는 상대 적 객체(enemies 안의 그것). */
+let arena = null;
 let goldEMA = 0, goldWin = 0, winT = 0;
 
 /* ==========================================================================
@@ -10723,6 +10807,16 @@ function step(dt){
     if(raidT <= 0){ raidT = 0; endRaid(true); }
   }
 
+  /* ---- 123 아레나 제한 시간·승패 판정 ----
+     승 = 상대 HP 0 · 패 = 내 HP 0 또는 시간 초과(제한 시간 안에 못 눕히면 진 것으로 본다). */
+  if(arena){
+    arena.t -= dt;
+    const foe = arena.foe;
+    if(foe && foe.hp <= 0) endArena(true);
+    else if(player.hp <= 0 || player.dead > 0) endArena(false);
+    else if(arena.t <= 0){ arena.t = 0; endArena(false); }
+  }
+
   /* ---- 30 던전 런 제한 시간 ---- */
   if(dunRun){
     dunRun.t -= dt;
@@ -10738,7 +10832,10 @@ function step(dt){
   }
 
   /* ---- 스테이지 클리어 ---- */
-  if(raidOn){ /* 46 — 레이드 중에는 스테이지 진행이 멈춘다(샌드백이 죽어도 다음 스테이지로 넘어가지 않는다) */ }
+  /* 123 — 아레나 중에도 스테이지는 오르지 않는다. 상대가 쓰러지면 그 자리에서 대전이 끝나므로
+     «몹이 떨어졌으니 다시 채운다»(30 던전) 도 하지 않는다 — 빈 전장은 결과 화면이 덮는다. */
+  if(arena){ /* no-op */ }
+  else if(raidOn){ /* 46 — 레이드 중에는 스테이지 진행이 멈춘다(샌드백이 죽어도 다음 스테이지로 넘어가지 않는다) */ }
   /* 30 — 던전 런 중에도 스테이지는 오르지 않는다. 몹이 떨어지면 같은 스테이지로 다시 채운다
      (제한 시간 동안 때릴 대상이 끊기면 진행바가 멈춰 버린다). */
   else if(dunRun){
@@ -11020,13 +11117,17 @@ function draw(){
     }
     drawShadow(e.x, e.y, e.r*0.85*sgrow);
     const fr = curFrame(e);
-    const ok = fr && drawFrame(T2.atlas, fr, e.x, e.y, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow);
+    /* 123 — `e.tint` 가 있는 적은 «틴트된 아틀라스» 로 그린다(아레나 상대 = 내 것과 다른 색의 기사).
+       플레이어 렌더(위 `aimg`)와 **같은 `tinted()` 경로**라 색이 픽셀 단위로 일치한다.
+       틴트가 없는 기존 적(좀비·고블린·다크엘프·보스·승급)은 img 가 null 이라 한 줄도 안 바뀐다. */
+    const eimg = e.tint ? tinted(T2.atlas, e.tint) : null;
+    const ok = fr && drawFrame(T2.atlas, fr, e.x, e.y, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow, eimg);
     if(!ok){
       ctx.globalAlpha = sgrow; ctx.fillStyle = e.fx > 0 ? '#fff' : T2.col;
       ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*sgrow, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }else if(e.fx > 0){
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
-      drawFrame(T2.atlas, fr, e.x, e.y, T2.scale, e.flip, 1);
+      drawFrame(T2.atlas, fr, e.x, e.y, T2.scale, e.flip, 1, eimg);
       ctx.restore();
     }
     if(e.slow > 0){
@@ -11425,6 +11526,7 @@ function drawHud(){
   $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>';
   drawBossHud();
   drawDunHud();                      /* 30 — 던전 런 HUD(타이머·진행바) */
+  drawArnHud();                      /* 123 — 아레나 HUD(타이머·양쪽 닉네임·HP 바) */
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
   if(promo){
@@ -11559,7 +11661,9 @@ $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
 $('bossGv').addEventListener('click', () => { if(raidOn) endRaid(false); else failBoss('포기'); });
 $('bossRt').addEventListener('click', retryBoss);
 
-function openDefeat(){ $('defw').classList.add('on'); }
+/* 123 — 아레나 중 사망은 «패배 화면(18)» 이 아니라 아레나 결과 화면이 받는다(두 겹으로 뜨지 않게).
+   자동 부활 진행은 그대로다 — 여기서 막는 것은 표시뿐이다. */
+function openDefeat(){ if(arena) return; $('defw').classList.add('on'); }
 $('defw').addEventListener('click', () => $('defw').classList.remove('on'));
 /* ⚠ data-go 는 02 의 전역 [data-go] 델리게이트(goTab(...,true))가 가로채 이중 발화한다 — data-dfgo 사용 */
 document.querySelectorAll('#defw .df-btn').forEach(b => b.addEventListener('click', e => {
@@ -12169,7 +12273,7 @@ const DUN_DMG_K = 1.2;       /* 요구 피해 = 요구 전투력 × 이 값 (헤
 let dunRun = null;           /* { d, f, t, dmg, need, stage } 또는 null */
 
 function startDunRun(d, f){
-  if(dunRun || raidOn) return;
+  if(dunRun || raidOn || arena) return;      /* 123 — 아레나 중에는 던전에 못 들어간다 */
   dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage };
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0;
@@ -12224,7 +12328,8 @@ function drawDunHud(){
   $('dunBarF').style.width = (clamp(dunRun.dmg/dunRun.need, 0, 1) * 574) + 'px';
   $('dunBarN').textContent = fmt(dunRun.dmg);
 }
-$('dunOut').addEventListener('click', () => endDunRun(false, true));
+/* 123 — ◀ 나가기는 던전 런과 아레나가 공용이다(같은 `#app.dunrun` 상태를 탄다). */
+$('dunOut').addEventListener('click', () => { if(arena) endArena(null); else endDunRun(false, true); });
 function sweepDungeon(d){
   if(dunLocked(d)){ popup('🔒 ' + d.n, '<p>' + dunLockTxt(d) + ' 하면 열립니다.</p>'); return; }
   const f = S.dun[d.id] - 1;
@@ -12691,6 +12796,7 @@ $('bDun').addEventListener('click', e => {
    밸런스 상수는 건드리지 않는다 — 기존 challengeDungeon / sweepDungeon 을 그대로 호출한다. */
 let dgdDun = null;      /* 지금 보고 있는 던전 */
 let dgdRaid = null;     /* 46 — 레이드 모드일 때 보고 있는 측정장(둘 중 하나만 채워진다) */
+let dgdArena = null;    /* 123 — 아레나 모드(셋 중 하나만 채워진다) */
 let dunSub = 'dun';     /* 46 — 03 던전 페이지 서브탭 'dun' | 'raid' (renderDunPage 가 읽는다) */
 let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
 let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
@@ -12700,7 +12806,7 @@ const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', 
 
 function openDunDetail(d){
   if(!d) return;
-  dgdDun = d; dgdRaid = null;
+  dgdDun = d; dgdRaid = null; dgdArena = null;   /* 123 */
   dgdFloor = S.dun[d.id];
   /* 46 — 레이드가 갈아 끼운 라벨을 던전 문구로 되돌린다 */
   $('dgdLvL').textContent = '레벨';
@@ -12708,7 +12814,7 @@ function openDunDetail(d){
   renderDunDetail();
   $('dgdw').classList.add('on');
 }
-function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdRaid = null; }
+function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdRaid = null; dgdArena = null; }
 
 function renderDunDetail(){
   const d = dgdDun; if(!d) return;
@@ -12739,9 +12845,25 @@ $('dgdNext').onclick = () => {
   if(dgdRaid){ raidStep(1); return; }
   if(dgdDun && dgdFloor < S.dun[dgdDun.id]){ dgdFloor++; renderDunDetail(); }
 };
-$('dgdAuto').onclick = () => { dgdAutoOn = !dgdAutoOn; dgdRaid ? renderRaidDetail() : renderDunDetail(); };
+$('dgdAuto').onclick = () => {
+  dgdAutoOn = !dgdAutoOn;
+  if(dgdArena) renderArenaDetail();          /* 123 */
+  else if(dgdRaid) renderRaidDetail();
+  else renderDunDetail();
+};
 $('dgdSweep').onclick = () => {};   /* 레퍼런스의 잠긴 유료 버튼 — 아직 미구현 */
 $('dgdGo').onclick = () => {
+  /* 123 — 아레나 모드면 «도전» 이 1:1 대전 시작이다(같은 «페이지를 닫고 전투 화면을 연다» 흐름). */
+  if(dgdArena){
+    if(arena || raidOn || dunRun){
+      popup('⚔ 진행 중', '<p>다른 전투가 진행 중입니다.<br>먼저 끝내거나 <b>[◀]</b> 로 중단하세요.</p>');
+      return;
+    }
+    closeDunDetail();
+    closeDungeon();
+    startArena();
+    return;
+  }
   /* 46 — 레이드 모드면 «도전» 이 레이드 시작이다. 던전 페이지를 닫아 전투 화면을 드러낸다. */
   if(dgdRaid){
     const r = dgdRaid;
@@ -13293,21 +13415,25 @@ $('dunList').addEventListener('click', e => {
       프레임은 `blue_attack_2`(잉크 121×132, 종횡 0.917) — 후보 13종을 `tools/probe97.js` 로
       실측해 슬롯 종횡(1.00~1.02)에 가장 가까운 «군주» 포즈를 골랐다(늘림 9~11%,
       던전 카드 이모지의 --tsx 0.977~1.158 과 같은 범위다). LESSONS 72-②의 스프라이트판. */
+/* 123(2026-08-26, 저장소 주인 지시) — 측정장 3종 중 **r60 하나만 남긴다**(r30·r120 삭제).
+   남은 칸은 «아레나»(ARENA, 1:1 PvP 더미)가 채운다 → «컨텐츠» 탭 카드는 항상 2장이다.
+   구 세이브의 `S.raidBest` 에 남아 있는 r30/r120 기록은 load() 에서 정리한다(이월은 r60 만). */
 const RAIDS = [
-  { id:'r60',  n:'정규 측정장', sec:60,  open:1,
+  { id:'r60',  n:'DPS 측정장', sec:60,  open:1,
     ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'],
          /* 틴트는 multiply 다 — 어두운 색을 곱하면 배경보다 «어두운» 스프라이트가 된다.
             초판 #E2907F(휘도 163)는 카드1 의 붉은 배경(#8A3A2E, 휘도 81) 위에서 잉크 평균이
             배경보다 낮아 묻혔다(실측 68.8 vs 86.5). 카드2·3 급(휘도 200 안팎)으로 올린다. */
-         thw:'311px', tht:'36px', thk:'elves', thf:'blue_attack_2', thi:'blue_idle', thc:'#EFC9B4' } },
-  { id:'r30',  n:'단기 측정장', sec:30,  open:15,
-    /* 알약 안쪽 폭은 230px 뿐이다 — 「짧게 폭발 피해 측정」(141) 은 7.5px 새어 나온다 */
-    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['폭발 피해 측정'],
-         thw:'296px', tht:'52px', thk:'elves', thf:'blue_attack_2', thi:'blue_idle', thc:'#E4CE8E' } },
-  { id:'r120', n:'장기 측정장', sec:120, open:30,
-    ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['지속 피해량 측정'],
-         thw:'330px', tht:'11px', thk:'elves', thf:'blue_attack_2', thi:'blue_idle', thc:'#B9A9F0' } }
+         thw:'311px', tht:'36px', thk:'elves', thf:'blue_attack_2', thi:'blue_idle', thc:'#EFC9B4' } }
 ];
+/* 123 — «아레나» 카드. 측정장과 같은 `.dnc` 규격이고 썸네일만 «마주 본 플레이어 2명» 이다
+   (97 규칙: 카드2 슬롯 296×289 · 상단 인셋 52 — 기하는 03 측정표 §3-9 카드2 값 그대로).
+   색은 폐기된 r120 의 «어두운 보라» 팔레트를 물려받는다 — 카드2 의 노랑(#7A6320, 휘도 98)
+   위에서는 기사 스프라이트(틴트 후 휘도 61)가 배경에 묻혀 97 의 «잉크가 배경보다 어둡지 않을 것»
+   판정을 통과하지 못한다(fnchk97 [2] 실측). 보라(#453380, 휘도 57)에서는 두 칸 다 살아난다. */
+const ARENA = { id:'arena', n:'아레나', sec:30, open:5,
+  ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['1:1 대전 (더미)'],
+       thw:'296px', tht:'52px' } };
 const raidLocked = r => S.best < r.open;
 const raidBest = id => S.raidBest[id] || { dmg:0, dps:0 };
 
@@ -13339,8 +13465,39 @@ function renderRaidPage(){
       +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')
       +  '</div>';
   });
+  h += arenaCardHTML();                       /* 123 — «컨텐츠» 탭 2번째 카드 */
   $('dunList').innerHTML = h;
   raidPaint();
+}
+/* 123 — 아레나 카드. 측정장 카드와 같은 `.dnc.rd` 부품을 쓰되 값 3곳만 다르다:
+   ① 알약 = «1:1 대전 (더미)» ② 좌측 캡슐 = 제한 시간 ③ 우측 캡슐 = 전적(승-패).
+   썸네일은 «마주 본 플레이어 2명» 이라 캔버스가 1장이 아니라 2장이다(내 look · 상대 look). */
+function arenaCardHTML(){
+  const u = ARENA.ui, lock = arenaLocked(), rec = S.arena || { w:0, l:0 };
+  /* 121 과 같은 부품을 쓴다 — `bgm-raid` 배경 레이어 + `lkd`(잠금 정지) + 카드 순번 위상(bgmVars).
+     순번은 측정장 다음 자리이므로 RAIDS.length. */
+  const ci = RAIDS.length;
+  return '<div class="dnc rd arn2 bgm-raid' + (lock ? ' lkd' : '')
+    +  '" data-arena="1" style="--s:' + u.s + ';--i:' + u.i
+    +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
+    +  bgmVars(ci) + '">'
+    +  '<div class="bg"></div>'
+    +  '<div class="bgm"></div>'                          /* 121 — 움직이는 배경 레이어(아트 대기) */
+    /* 캔버스 픽셀 = 슬롯 절반 폭 × 슬롯 높이 (97 «아트 자리 규칙» — bbox 를 정확히 차지) */
+    +  '<div class="th"><canvas class="thcv arn-me" width="' + (parseInt(u.thw, 10) / 2)
+    +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-arnav="' + cosCur() + '"></canvas>'
+    +  '<canvas class="thcv arn-op" width="' + (parseInt(u.thw, 10) / 2)
+    /* 미리보기 상대는 고정(1번 자리) — av0 은 틴트가 없어 내 기본 코스튬과 같은 색이 된다 */
+    +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-arnav="' + arenaLook(1).avatar + '"></canvas></div>'
+    +  '<div class="sh"></div><div class="fr"></div>'
+    +  '<div class="nm"><i>' + ARENA.n + '</i></div>'
+    +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
+    +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>전적 (승-패)</i></div>'
+    +  '<div class="sp lv"><em>⏱️</em><i>' + ARENA.sec + '</i></div>'
+    +  '<div class="sp tk"><em>🏅</em><i>' + rec.w + '-' + rec.l + '</i></div>'
+    +  (!lock ? '<s class="dot"></s>' : '')
+    +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + ARENA.open + '</b> 클리어</u></div>' : '')
+    +  '</div>';
 }
 /* 97 — 썸네일 캔버스 그리기. 던전 페이지는 renderUI 주기 루프에 없어(열 때·서브탭 전환 때만
    렌더된다) 87 `cosPaint` 처럼 «다음 틱이 알아서 다시 그려 준다» 를 기대할 수 없다.
@@ -13369,6 +13526,19 @@ function raidEnt(cv){
   return cv._an;
 }
 function raidDraw(cv){
+  /* 123 — 아레나 카드의 두 칸은 «몬스터 프레임» 이 아니라 플레이어(기사) 스프라이트다.
+     look(=코스튬 아바타) → 틴트는 80 `drawHeroTo` 와 **같은 데이터 경로**를 쓰되, 그리기는
+     97 의 `drawSpriteTo` 로 한다 — 카드 아트 자리는 «잉크 rect 를 슬롯에 꽉 채우는» 규칙이고
+     `drawHeroTo` 는 «씬에 발밑을 앉히는» 앵커라 슬롯 위쪽에 109px 공백이 남는다(verify72 [5]).
+     좌(내 코스튬)는 flip 해서 오른쪽을 보고, 우(더미 상대)는 원본 그대로 왼쪽을 봐 서로 마주 본다.
+     `data-thi` 가 없으므로 121 의 idle 프레임 순환에는 걸리지 않는다(정지 프레임 1장). */
+  if(cv.dataset.arnav){
+    const kn = ATLAS.knight, f = kn && kn.a && kn.a.idle && kn.a.idle[0];
+    if(!f) return false;
+    cv._fr = f;
+    return drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint,
+                              flip: cv.classList.contains('arn-me') });
+  }
   const f = cv.dataset.thi ? curFrame(raidEnt(cv)) : null;
   cv._fr = f || cv.dataset.thf;
   return drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc });
@@ -13409,6 +13579,17 @@ $('dunSub').addEventListener('click', e => {
   if(t) setDunSub(t.dataset.dsub);
 });
 $('dunList').addEventListener('click', e => {
+  /* 123 — «컨텐츠» 탭의 2번째 카드(아레나). 측정장과 같은 잠금 안내를 쓴다 */
+  const ac = e.target.closest('[data-arena]');
+  if(ac){
+    if(arenaLocked()){
+      popup('🔒 ' + ARENA.n, '<p>최고 스테이지 <b>' + ARENA.open + '</b> 를 클리어하면 열립니다.<br>'
+        + '현재 최고 스테이지 <b>' + S.best + '</b></p>');
+      return;
+    }
+    openArenaDetail();
+    return;
+  }
   const c = e.target.closest('[data-rcard]');
   if(!c) return;
   const r = RAIDS.find(x => x.id === c.dataset.rcard);
@@ -13423,7 +13604,7 @@ $('dunList').addEventListener('click', e => {
 /* 04 세부 팝업 재사용 — «레벨» 자리에 제한 시간, «보상» 자리에 최고 기록, «도전» → 레이드 시작 */
 function openRaidDetail(r){
   if(!r) return;
-  dgdRaid = r; dgdDun = null;
+  dgdRaid = r; dgdDun = null; dgdArena = null;   /* 123 */
   renderRaidDetail();
   $('dgdw').classList.add('on');
 }
@@ -13447,6 +13628,30 @@ function renderRaidDetail(){
   $('dgdGo').style.filter = '';
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
 }
+/* 123 — 아레나도 같은 04 세부 팝업을 쓴다. «레벨» 자리에 제한 시간, «보상» 자리에 전적,
+   [도전] → 대전 시작. 측정장이 1개뿐이라 ◀▶ 는 둘 다 막는다(옮겨 갈 곳이 없다). */
+function openArenaDetail(){
+  dgdArena = ARENA; dgdRaid = null; dgdDun = null;
+  renderArenaDetail();
+  $('dgdw').classList.add('on');
+}
+function renderArenaDetail(){
+  const rec = S.arena || { w:0, l:0 };
+  $('dgdTitle').textContent = ARENA.n;
+  $('dgdState').textContent = '1:1 대전 (더미)';
+  $('dgdLvL').textContent = '제한 시간';
+  $('dgdFloor').textContent = ARENA.sec + '초';
+  $('dgdRwL').textContent = '전적';
+  $('dgdIcon').textContent = '🏅';
+  $('dgdAmt').textContent = rec.w + '승 ' + rec.l + '패';
+  $('dgdTry').textContent = '∞';
+  $('dgdCbL').textContent = '연속 도전';
+  $('dgdPrev').disabled = true;
+  $('dgdNext').disabled = true;
+  $('dgdGo').disabled = false;
+  $('dgdGo').style.filter = '';
+  $('dgdAuto').classList.toggle('on', dgdAutoOn);
+}
 function raidStep(dir){
   const i = RAIDS.indexOf(dgdRaid);
   for(let k = i + dir; k >= 0 && k < RAIDS.length; k += dir){
@@ -13458,7 +13663,7 @@ function raidStep(dir){
    샌드백은 «죽지 않는 보스» 다: 체력을 크게 잡고 hitEnemy 에서 매번 되돌리며,
    공격력 0 이라 플레이어는 피해를 입지 않는다. 스테이지 진행은 step() 에서 멈춘다. */
 function startRaid(r){
-  if(raidOn) return;
+  if(raidOn || dunRun || arena) return;      /* 123 */
   raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
   S.bossFarm = false; bossT = 0;
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -13501,6 +13706,110 @@ function endRaid(record){
     showMsg('레이드 중단')            /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 */;
   }
   if($('dunw').classList.contains('on')) renderDunPage();
+}
+
+/* ==========================================================================
+   작업 123 — 아레나 (1:1 PvP «더미»)   저장소 주인 지시 2026-08-26
+   PvP 서버가 없으므로 상대는 **54 랭킹 더미 풀에서 뽑은 가짜 플레이어**다(문서 명시 = 목업 허용).
+   진짜 매칭·랭킹 반영은 후속 작업(«PvP»)으로 남긴다 — README «더미» 표기 참고.
+   구조는 30 던전 런과 같다: 전장을 비우고 → 상대 1명만 세우고 → 30초 제한 → 결과 화면.
+   다른 점은 «요구 피해량» 이 아니라 **상대 HP 를 먼저 0 으로 만드는 쪽이 이긴다**는 것뿐이다.
+   ========================================================================== */
+const ARENA_HP_K  = 0.70;   /* 상대 HP = 상대 전투력 × 이 값. 30 던전의 DUN_DMG_K(1.2 = 30초 누적 피해/cp)
+                               기준으로 «동급 상대면 ~17초에 쓰러진다» 는 지점이다(제한 30초의 58%). */
+const ARENA_DMG_K = 0.030;  /* 상대 평타 1대 = 내 최대 HP × 이 값 × 전력비. 접촉 쿨 0.9초라
+                               최악(계속 붙어 맞음)에도 30초에 최대 HP 의 ~99% 다 — 카이팅하면 진다는 뜻이 아니다. */
+const ARENA_RW    = { gold: 0, dia: 0 };   /* 실제 값은 arenaReward() 가 스테이지에 맞춰 만든다 */
+const arenaLocked = () => S.best < ARENA.open;
+/* 상대 뽑기 — 54 랭킹 더미 풀(RANK_NPC)에서 하나. `i` 를 주면 그 자리(카드 썸네일용 고정 미리보기),
+   안 주면 랜덤(실제 입장). look 은 80 과 같은 «외형 데이터» 라 나중에 서버 look 을 꽂기만 하면 된다. */
+function arenaLook(i){
+  const n = RANK_NPC.length;
+  const k = (i === undefined || i === null) ? Math.floor(Math.random()*n) : ((i % n) + n) % n;
+  const x = RANK_NPC[k];
+  return { n:x.n, av:x.av, avatar:'av' + (k % 6) };
+}
+/* 보상 — «준비 중» 없이 소량 확정치(주인 지시 ④). 승리는 전액, 패배는 참가 위로금 1/5.
+   골드는 스테이지 곡선을 타고(성장에 따라 의미가 유지된다), 다이아는 고정 소액이다. */
+function arenaReward(win){
+  const g = Math.max(100, Math.round(eGold(Math.max(1, S.best)) * 40));
+  return win ? { gold:g, dia:20 } : { gold:Math.round(g/5), dia:4 };
+}
+function startArena(){
+  if(arena || raidOn || dunRun) return;
+  const look = arenaLook();
+  const myCp = Math.max(1, cp());
+  const foeCp = Math.max(1, Math.round(myCp * rnd(0.8, 1.2)));   /* 주인 지시 ④ — 내 전투력 ×0.8~1.2 */
+  const hp = Math.max(1, foeCp * ARENA_HP_K);
+  arena = { op:{ n:look.n, avatar:look.avatar, cp:foeCp }, t:ARENA.sec, stage:S.stage, foe:null,
+            myMax:Math.max(1, stat.maxHp), opMax:hp, done:false };
+  /* 30·46 과 같은 «전장 초기화» 절차 */
+  S.bossFarm = false; bossT = 0;
+  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  rings.length = 0;
+  player.x = WORLD.w/2; player.y = WORLD.h/2;
+  player.hp = stat.maxHp; player.dead = 0;
+  { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
+  syncPets();
+  makeEnemy('arena');
+  const e = enemies[enemies.length-1];
+  if(e){
+    e.arena = true; e.hp = e.max = hp; e.gold = 0;
+    e.dmg = Math.max(1, arena.myMax * ARENA_DMG_K * (foeCp / myCp));
+    e.tint = (AV[look.avatar] && AV[look.avatar].tint) || '#FF9E7A';  /* 내 기사와 색이 겹치지 않게 */
+    e.nopop = true;                                   /* 67 — 팝인 없이 «마주 선 채» 시작 */
+    arena.foe = e;
+  }
+  msgTxt = ''; msgT = 0;                              /* 30 과 같은 이유 — 로드 직후 토스트를 지운다 */
+  closeDungeon();
+  $('app').classList.add('dunrun', 'arn');            /* 30 의 상태(상단 HUD·탭바 숨김 + ◀)를 그대로 탄다 */
+  $('arnNmL').textContent = S.nick;
+  $('arnNmR').textContent = look.n;
+  drawArnHud();
+  uiDirty = true;
+}
+/* win = true 승 · false 패 · null 중단(◀ 나가기 — 전적·보상 없음) */
+function endArena(win){
+  const a = arena; if(!a) return;
+  arena = null;
+  $('app').classList.remove('dunrun', 'arn');
+  for(let i=enemies.length-1;i>=0;i--) if(enemies[i].arena) enemies.splice(i, 1);
+  S.stage = a.stage; spawnStage();                    /* 아레나 전 스테이지로 복귀 */
+  player.hp = stat.maxHp; player.dead = 0;            /* 대전에서 깎인 체력은 들고 나가지 않는다 */
+  if(win === null){
+    save(); uiDirty = true;
+    showMsg('아레나 중단');                            /* 94 — 12자 이내 */
+  }else{
+    if(win) S.arena.w++; else S.arena.l++;
+    const got = giveReward(arenaReward(win));
+    uiDirty = true; save();
+    openArenaResult(win, a, got);
+  }
+  if($('dunw').classList.contains('on')) renderDunPage();
+}
+/* 결과 화면 — 31 던전 클리어 화면과 같은 «딤 위 연출» 계열이지만 승/패 두 가지라
+   A5 공용 모달(팝업)로 낸다. 보상은 giveReward() 가 이미 지급했고 여기서는 «무엇을 받았는지»만 적는다. */
+function openArenaResult(win, a, got){
+  sfx(win ? 'victory' : 'death');
+  const rec = S.arena;
+  popup(win ? '🏅 아레나 승리!' : '💀 아레나 패배',
+    '<p><b>' + S.nick + '</b> vs <b>' + a.op.n + '</b><br>'
+    + '상대 전투력 <b>' + fmt(a.op.cp) + '</b><br>'
+    + '보상 <b>' + got + '</b><br>'
+    + '전적 <b>' + rec.w + '승 ' + rec.l + '패</b></p>');
+}
+/* HUD 갱신 — drawHud() 가 매 프레임 부른다(30 의 drawDunHud 와 같은 자리) */
+function drawArnHud(){
+  if(!arena) return;
+  const a = arena;
+  $('arnTmN').textContent = Math.max(0, a.t).toFixed(1);
+  const mine = clamp(player.hp / a.myMax, 0, 1);
+  const foe  = clamp((a.foe ? Math.max(0, a.foe.hp) : 0) / a.opMax, 0, 1);
+  $('arnHpL').style.width = (mine * 878) + 'px';
+  $('arnHpR').style.width = (foe  * 878) + 'px';
+  $('arnPcL').textContent = Math.round(mine*100) + '%';
+  $('arnPcR').textContent = Math.round(foe *100) + '%';
 }
 /* (작업 24) 예전에는 «탭바를 누르면 던전 페이지가 닫힌다» 는 캡처 리스너를 여기 두었지만,
    이제 던전은 탭 자체가 소유한 페이지다. 캡처 단계에서 먼저 닫아 버리면 goTab('adv') 이

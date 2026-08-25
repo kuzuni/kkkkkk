@@ -113,35 +113,49 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   console.log('[5] 97 — 레이드 카드 썸네일');
   await p.evaluate(() => {
     S.best = 999;
-    S.raidBest = { r60: { dmg: 9.9e14, dps: 9.9e12 }, r30: { dmg: 9.9e14, dps: 9.9e12 },
-                   r120: { dmg: 9.9e14, dps: 9.9e12 } };
+    S.raidBest = { r60: { dmg: 9.9e14, dps: 9.9e12 } };   /* 123 — r30·r120 폐기 */
     setDunSub('raid');
   });
   await p.waitForTimeout(900);
   const rd = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.rd')].map((c) => {
     const cr = c.getBoundingClientRect();
-    const th = c.querySelector('.th'), cv = c.querySelector('canvas.thcv');
+    const th = c.querySelector('.th'), cvs = [...c.querySelectorAll('canvas.thcv')];
     const rel = (e) => { const r = e.getBoundingClientRect();
       return { x: +(r.left - cr.left).toFixed(1), y: +(r.top - cr.top).toFixed(1),
                w: +r.width.toFixed(1), h: +r.height.toFixed(1), r2: +(r.right - cr.left).toFixed(1) }; };
+    /* 123 — 아레나 카드는 «마주 본 플레이어 2명» 이라 캔버스가 2장이다. 잉크 bbox 는
+       두 캔버스를 슬롯 좌표로 합쳐(왼쪽 칸 오프셋 0, 오른쪽 칸 오프셋 = 칸 폭) 하나로 본다. */
     let ink = null;
-    if (cv) {
+    let off = 0;
+    for (const cv of cvs) {
       const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
       let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, on = 0;
       for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
         if (im[(y * cv.width + x) * 4 + 3] > 8) { on++;
           if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       }
-      ink = on ? { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null;
+      if (on) {
+        const b = { x0: x0 + off, y0, x1: x1 + off, y1 };
+        ink = ink ? { x0: Math.min(ink.x0, b.x0), y0: Math.min(ink.y0, b.y0),
+                      x1: Math.max(ink.x1, b.x1), y1: Math.max(ink.y1, b.y1) } : b;
+      }
+      off += cv.width;
     }
-    return { id: c.dataset.rcard, th: th ? rel(th) : null,
-             cvpx: cv ? [cv.width, cv.height] : null, ink,
+    if (ink) { ink.w = ink.x1 - ink.x0 + 1; ink.h = ink.y1 - ink.y0 + 1; }
+    return { id: c.dataset.rcard || (c.dataset.arena ? 'arena' : null), th: th ? rel(th) : null,
+             cvpx: cvs.length ? [cvs.reduce((a, v) => a + v.width, 0), Math.max(...cvs.map((v) => v.height))] : null,
+             ncv: cvs.length, ink,
              pe: th ? getComputedStyle(th).pointerEvents : '',
              kids: [...c.children].map((e) => e.className),
              right: Math.max(...[...c.querySelectorAll('.pill,.sp')].map((e) => rel(e).r2)) };
   }));
-  const REXP = [{ w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52 }, { w: 330, h: 330, dy: 11 }];
-  ok(rd.length === 3, `레이드 카드 3장 (실제 ${rd.length})`);
+  /* 123 — «컨텐츠» 탭 카드는 2장이다: ① DPS 측정장(구 r60, 311×305/36) ② 아레나(구 카드2 규격 296×289/52).
+     r30·r120 은 폐기됐다(구 3장 기대치는 여기까지). */
+  /* 아레나 칸 여유(tx/ty): 기사 아틀라스 idle 프레임 rect 는 44×46 인데 잉크는 (1,1)~(42,45) 라
+     **사방에 투명 1px** 이 들어 있다(실측). 그 1px 이 슬롯으로 늘어나면 가로 148/44 ≈ 3.4px ·
+     세로 289/46 ≈ 6.3px 이 된다 — 배치 오차가 아니라 아틀라스 프레임의 여백이므로 그만큼 허용한다. */
+  const REXP = [{ w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52, ncv: 2, tx: 4, ty: 7 }];
+  ok(rd.length === 2, `컨텐츠 카드 2장 — 측정장 + 아레나 (실제 ${rd.length})`);
   rd.forEach((c, i) => {
     const e = REXP[i]; if (!e) return;
     ok(!!c.th, `레이드 카드${i + 1}(${c.id}) 썸네일 슬롯 존재`);
@@ -151,11 +165,13 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(Math.abs(c.th.x - (980 - 7 - e.w)) <= 2, `레이드 카드${i + 1} 슬롯 x ${c.th.x} = ${980 - 7 - e.w} (우측 안쪽 정렬)`);
     ok(Math.abs(c.th.y - e.dy) <= 2, `레이드 카드${i + 1} 슬롯 y ${c.th.y} = ${e.dy}`);
     ok(!!c.cvpx && c.cvpx[0] === e.w && c.cvpx[1] === e.h,
-       `레이드 카드${i + 1} 캔버스 픽셀 ${JSON.stringify(c.cvpx)} = [${e.w},${e.h}] (1:1)`);
+       `레이드 카드${i + 1} 캔버스 픽셀(합) ${JSON.stringify(c.cvpx)} = [${e.w},${e.h}] (1:1)`);
+    ok(c.ncv === (e.ncv || 1), `레이드 카드${i + 1} 캔버스 ${c.ncv}장 = ${e.ncv || 1}장`);
     /* «자리를 잡았다» 와 «자리를 채웠다» 는 다르다(LESSONS 72-③) — 잉크가 슬롯 4변에 5px 안으로 닿아야 한다 */
     ok(!!c.ink, `레이드 카드${i + 1} 스프라이트가 실제로 그려졌다`);
-    if (c.ink) ok(c.ink.x0 <= 5 && c.ink.y0 <= 5 && c.ink.x1 >= e.w - 6 && c.ink.y1 >= e.h - 6,
-       `레이드 카드${i + 1} 잉크가 슬롯 bbox 를 채운다 (${c.ink.x0},${c.ink.y0})~(${c.ink.x1},${c.ink.y1})`);
+    const tx = e.tx || 5, ty = e.ty || 5;
+    if (c.ink) ok(c.ink.x0 <= tx && c.ink.y0 <= ty && c.ink.x1 >= e.w - tx - 1 && c.ink.y1 >= e.h - ty - 1,
+       `레이드 카드${i + 1} 잉크가 슬롯 bbox 를 채운다 (${c.ink.x0},${c.ink.y0})~(${c.ink.x1},${c.ink.y1}) ±${tx}/${ty}`);
     ok(c.pe === 'none', `레이드 카드${i + 1} 슬롯 pointer-events:none`);
     const iTh = c.kids.indexOf('th'), iSh = c.kids.indexOf('sh'), iFr = c.kids.indexOf('fr');
     ok(iTh > -1 && iTh < iSh && iTh < iFr, `레이드 카드${i + 1} 썸네일이 .sh/.fr 아래(${iTh} < ${iSh},${iFr})`);

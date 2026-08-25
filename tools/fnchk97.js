@@ -22,16 +22,18 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(1200);
 
-  console.log('[1] 하단 탭 «던전» → 던전 페이지 · 서브탭 «레이드» → 레이드 카드 3장');
+  /* 123 — «컨텐츠» 탭 카드는 2장(DPS 측정장 + 아레나)이고, 썸네일 캔버스는 3장이다
+     (측정장 1 + 아레나의 «마주 본 플레이어 2명» 2). */
+  console.log('[1] 하단 탭 «던전» → 던전 페이지 · 서브탭 «컨텐츠» → 카드 2장');
   await p.evaluate(() => document.querySelector('#tabbar [data-t="adv"]').click());
   await p.waitForTimeout(700);
   ok(await p.evaluate(() => $('dunw').classList.contains('on')), '던전 페이지가 열린다');
   await p.evaluate(() => document.querySelector('#dunSub [data-dsub="raid"]').click());
   await p.waitForTimeout(700);
   const n = await p.evaluate(() => document.querySelectorAll('#dunList .dnc.rd').length);
-  ok(n === 3, `레이드 카드 ${n}장`);
+  ok(n === 2, `컨텐츠 카드 ${n}장`);
   ok(await p.evaluate(() => document.querySelectorAll('#dunList .dnc.rd canvas.thcv').length === 3),
-     '카드 3장 전부 썸네일 캔버스가 붙었다');
+     '카드 2장 전부 썸네일 캔버스가 붙었다 (측정장 1 + 아레나 2 = 3장)');
 
   console.log('[2] 썸네일이 그려졌다 (빈 캔버스가 아니다) · 틴트가 스프라이트를 배경에 묻지 않게 한다');
   const drawn = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map((cv) => {
@@ -66,7 +68,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
 
   console.log('[4] 세부 팝업 내용이 그 레이드다 (엉뚱한 카드가 열리지 않는다)');
   const dg = await p.evaluate(() => ({ t: $('dgdTitle').textContent, f: $('dgdFloor').textContent }));
-  ok(dg.t === '정규 측정장' && dg.f === '60초', `제목 «${dg.t}» · 제한 시간 «${dg.f}»`);
+  ok(dg.t === 'DPS 측정장' && dg.f === '60초', `제목 «${dg.t}» · 제한 시간 «${dg.f}»`);
   await p.evaluate(() => { const x = document.querySelector('#dgdw .x, #dgdw [data-close]');
     if (x) x.click(); else $('dgdw').classList.remove('on'); });
   await p.waitForTimeout(400);

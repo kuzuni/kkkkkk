@@ -1,5 +1,5 @@
 /* 작업 97 — 레이드 탭 캡처 + 썸네일/알약 기하 실측.
-   실행: node tools/cap97.js            (기본 상태 — r30·r120 잠금)
+   실행: node tools/cap97.js            (기본 상태 — 아레나 잠금)
         node tools/cap97.js open        (S.best 를 올려 3장 모두 해금)
         node tools/cap97.js open big    (해금 + 최고 DPS 를 크게 넣어 알약 폭 최대치)
    내보내는 것: docs/shots/97-레이드-<모드>.png · 콘솔에 슬롯/알약 rect */
@@ -25,8 +25,7 @@ const MODE = OPEN ? (BIG ? '해금-최대' : '해금') : '기본';
   if (OPEN) {
     await p.evaluate(big => {
       S.best = 999;
-      if (big) S.raidBest = { r60: { dmg: 9.9e14, dps: 9.9e12 }, r30: { dmg: 9.9e14, dps: 9.9e12 },
-                              r120: { dmg: 9.9e14, dps: 9.9e12 } };
+      if (big) S.raidBest = { r60: { dmg: 9.9e14, dps: 9.9e12 } };   /* 123 — r30·r120 폐기 */
     }, BIG);
   }
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });

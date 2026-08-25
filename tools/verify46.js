@@ -38,7 +38,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
   try {
     /* ---------- 1. 서브탭 ---------- */
-    console.log('[1] 03 던전 페이지 서브탭 «레이드 · 던전»');
+    console.log('[1] 03 던전 페이지 서브탭 «컨텐츠 · 던전»');
     await click(page, '.tab[data-t="adv"]');
     await page.waitForTimeout(400);
     let t = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => ({
@@ -46,7 +46,8 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       x: Math.round(e.getBoundingClientRect().left), w: Math.round(e.getBoundingClientRect().width),
     })));
     chk('서브탭 2칸', t.length === 2, t.map((x) => x.k).join(','));
-    chk('왼쪽 칸이 «레이드»(자물쇠 아님)', t[0] && t[0].k === 'raid' && t[0].txt === '레이드', t[0] && t[0].txt);
+    /* 123 — 라벨이 «레이드» → «컨텐츠» 로 바뀌었다(data-dsub 키는 raid 유지) */
+    chk('왼쪽 칸이 «컨텐츠»(자물쇠 아님)', t[0] && t[0].k === 'raid' && t[0].txt === '컨텐츠', t[0] && t[0].txt);
     chk('오른쪽 칸이 «던전»', t[1] && t[1].k === 'dun' && t[1].txt === '던전', t[1] && t[1].txt);
     chk('기본 선택 = 던전', !!(t[1] && t[1].on && !t[0].on));
     const noLock = await page.$$eval('#dunSub .dns-t.lk, #dunSubLock', (e) => e.length).catch(() => 0);
@@ -54,7 +55,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('던전 카드 5장', (await page.$$eval('#dunList [data-dcard]', (e) => e.length)) === 5);
 
     /* ---------- 2. 레이드 탭 ---------- */
-    console.log('[2] «레이드» 칸 → 레이드 카드 리스트');
+    console.log('[2] «컨텐츠» 칸 → 카드 리스트 (123: 측정장 1 + 아레나 1)');
     await click(page, '#dunSub [data-dsub="raid"]');
     await page.waitForTimeout(300);
     const cards = await page.$$eval('#dunList [data-rcard]', (els) => els.map((e) => ({
@@ -63,14 +64,29 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       la: e.querySelector('.lb.a').textContent.trim(), lb: e.querySelector('.lb.b').textContent.trim(),
       w: Math.round(e.getBoundingClientRect().width), h: Math.round(e.getBoundingClientRect().height),
     })));
-    chk('레이드 카드 3장', cards.length === 3, cards.length);
+    /* 123 — 측정장은 r60 하나만 남았다(r30·r120 폐기). 아레나 카드는 `data-arena` 라 이 수집에 안 걸린다. */
+    chk('측정장 카드 1장 (r30·r120 폐기)', cards.length === 1, cards.length);
     chk('카드 규격 = 03 던전과 동일 980×350', cards.every((c) => c.w === 980 && c.h === 350),
       cards[0] && `${cards[0].w}×${cards[0].h}`);
     chk('첫 카드 해금 + 제한 시간 60', !!(cards[0] && !cards[0].lock && cards[0].lvl === '60'), cards[0] && cards[0].lvl);
     chk('라벨이 «제한 시간(초) / 최고 DPS»', !!(cards[0] && cards[0].la === '제한 시간(초)' && cards[0].lb === '최고 DPS'),
       cards[0] && `${cards[0].la}/${cards[0].lb}`);
     chk('기록 없으면 «-»', cards[0] && cards[0].best === '-', cards[0] && cards[0].best);
-    chk('스테이지 미달 측정장 2장 잠금', cards.filter((c) => c.lock).length === 2);
+    chk('측정장은 잠금 없음', cards.filter((c) => c.lock).length === 0);
+    /* 123 — 같은 탭의 2번째 카드 = 아레나. 스테이지 미달이면 잠긴다(ARENA.open = 5) */
+    const arn = await page.$$eval('#dunList [data-arena]', (els) => els.map((e) => ({
+      lock: !!e.querySelector('.lk'), nm: e.querySelector('.nm').textContent.trim(),
+      la: e.querySelector('.lb.a').textContent.trim(), lb: e.querySelector('.lb.b').textContent.trim(),
+      ncv: e.querySelectorAll('canvas.thcv').length,
+      w: Math.round(e.getBoundingClientRect().width), h: Math.round(e.getBoundingClientRect().height),
+    })));
+    chk('아레나 카드 1장', arn.length === 1, arn.length);
+    chk('아레나 카드 규격 980×350', !!(arn[0] && arn[0].w === 980 && arn[0].h === 350), arn[0] && `${arn[0].w}×${arn[0].h}`);
+    chk('아레나 카드 이름 «아레나»', !!(arn[0] && arn[0].nm === '아레나'), arn[0] && arn[0].nm);
+    chk('아레나 라벨 «제한 시간(초) / 전적 (승-패)»',
+      !!(arn[0] && arn[0].la === '제한 시간(초)' && arn[0].lb === '전적 (승-패)'), arn[0] && `${arn[0].la}/${arn[0].lb}`);
+    chk('아레나 썸네일 = 플레이어 2명(캔버스 2장)', !!(arn[0] && arn[0].ncv === 2), arn[0] && arn[0].ncv);
+    chk('스테이지 미달이면 아레나 잠금', !!(arn[0] && arn[0].lock), arn[0] && arn[0].lock);
     const ov = await page.$$eval('#dunList [data-rcard]', (els) => els.map((e) => {
       const p = e.querySelector('.sp.lv'), i = p.querySelector('i');
       return Math.round(i.getBoundingClientRect().right - p.getBoundingClientRect().right);
@@ -102,24 +118,20 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
         return `${Math.round(r.width)}×${Math.round(r.height)}`; })(),
     }));
     chk('#dgdw 열림 (04 규격 재사용)', d.on && d.box === '796×1197', d.box);
-    chk('타이틀 = 측정장 이름', d.title === '정규 측정장', d.title);
+    chk('타이틀 = 측정장 이름', d.title === 'DPS 측정장', d.title);
     chk('«레벨» → «제한 시간» 60초', d.lvL === '제한 시간' && d.floor === '60초', `${d.lvL}/${d.floor}`);
     chk('«보상» → «최고 기록»(기록 없음)', d.rwL === '최고 기록' && d.amt === '기록 없음', `${d.rwL}/${d.amt}`);
     chk('입장 횟수 무제한 ∞', d.tryN === '∞', d.tryN);
     chk('해금된 다른 측정장 없으면 ◀▶ 비활성', d.prev && d.next, `${d.prev}/${d.next}`);
 
-    console.log('[4] ◀▶ = 측정장 이동 (해금 후)');
+    /* 123 — 측정장이 하나뿐이라 ◀▶ 는 «해금 후에도» 갈 곳이 없다(구 «단기/장기 측정장 이동» 검사 폐기) */
+    console.log('[4] ◀▶ = 측정장 이동 (123: 측정장 1개 → 항상 비활성)');
     await page.evaluate(() => { S.best = 999; renderRaidDetail(); });
     await page.waitForTimeout(150);
-    await click(page, '#dgdNext');
-    await page.waitForTimeout(200);
     d = await page.evaluate(() => ({ title: document.getElementById('dgdTitle').textContent,
-      floor: document.getElementById('dgdFloor').textContent }));
-    chk('▶ → 단기 측정장 30초', d.title === '단기 측정장' && d.floor === '30초', `${d.title}/${d.floor}`);
-    await click(page, '#dgdPrev');
-    await page.waitForTimeout(200);
-    d = await page.evaluate(() => document.getElementById('dgdTitle').textContent);
-    chk('◀ → 정규 측정장 복귀', d === '정규 측정장', d);
+      prev: document.getElementById('dgdPrev').disabled, next: document.getElementById('dgdNext').disabled }));
+    chk('해금 후에도 ◀▶ 비활성 (옮겨 갈 측정장 없음)', d.prev && d.next, `${d.prev}/${d.next}`);
+    chk('타이틀 유지 = DPS 측정장', d.title === 'DPS 측정장', d.title);
 
     /* ---------- 5. 도전 = 레이드 시작 ---------- */
     console.log('[5] «도전» → 레이드 시작(샌드백 · 타이머 · HUD)');
@@ -206,8 +218,9 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     await page.waitForTimeout(400);
     const c2 = await page.$$eval('#dunList [data-rcard]', (els) => els.map((e) => ({
       id: e.dataset.rcard, best: e.querySelector('.sp.tk i').textContent.trim(), lock: !!e.querySelector('.lk') })));
-    chk('레이드 탭이 그대로 열려 있음', c2.length === 3, c2.length);
-    chk('스테이지 999 → 3장 전부 해금', c2.every((c) => !c.lock));
+    /* 123 — 측정장은 1장뿐이다(r30·r120 폐기). 같은 탭의 아레나 카드는 data-arena 라 이 수집 밖이다. */
+    chk('컨텐츠 탭이 그대로 열려 있음', c2.length === 1, c2.length);
+    chk('스테이지 999 → 측정장 해금', c2.every((c) => !c.lock));
     chk('카드 «최고 DPS» 갱신', c2[0] && c2[0].best !== '-', c2[0] && c2[0].best);
     await click(page, '#dunList [data-rcard="r60"]');
     await page.waitForTimeout(300);
