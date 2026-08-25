@@ -4509,6 +4509,23 @@
   .sk-card.lk>.sk-ci{opacity:.35;filter:grayscale(1)}
   /* 카드 자물쇠 49x57 · 카드상단+55 */
   .sk-card>.sk-lock{left:50%;top:55px;margin-left:-24.5px}
+  /* 87 — 코스튬 격자만 «상자 안» 세로 스크롤이 된다(50칸). 상자(1000x680)·카드·pitch 는
+     07 규격 그대로이고, 스크롤러만 `.sk-gp` 로 옮겨 시트 바깥 배치는 1px 도 안 바뀐다. */
+  #bCos .sk-gp{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #bCos .sk-gp::-webkit-scrollbar{width:0;height:0}
+  #bCos .cos-in{position:relative;width:100%}
+  #bCos .cos-pad{position:absolute;left:0;width:1px;height:30px}   /* 마지막 행 아래 여백 */
+  /* 등급 섹션 헤더 — 격자 안에서 «어디부터 어느 등급인지» 를 가르는 띠(레퍼런스 없음, 설계) */
+  #bCos .cos-hd{position:absolute;left:24px;width:952px;height:46px;line-height:46px;
+    border-radius:23px;background:#000;box-shadow:inset 0 0 0 3px var(--r)}
+  #bCos .cos-hd>i{position:absolute;left:24px;font-size:30px;font-style:normal}
+  #bCos .cos-hd>em{position:absolute;right:24px;font-size:28px;font-style:normal;color:#E8DCC8}
+  /* 카드·슬롯·상세의 그림 — 이모지가 아니라 그 코스튬 틴트로 그린 기사 캔버스(80 look 과 같은 경로).
+     08 상세 껍데기(`#mbox .sk-ic`) 안에서도 쓰이므로 `#bCos` 로 가두지 않는다. */
+  .cos-cv{display:block;margin:0 auto;image-rendering:pixelated}
+  #bCos .sk-si,#modal.sk8 .sk-ic{display:flex;align-items:flex-end;justify-content:center}
+  /* 조건 해금 카드의 진행바 — 가격 대신 조건이라 글자가 길다(작게 + 자물쇠 톤) */
+  #bCos .sk-bar.rq>b{font-size:21px;color:#FFD9A0}
   /* 50 코스튬 — 하단 [착용]/[구매] 버튼의 대상이 되는 «선택 카드». 07·26 에는 선택 개념이 없어
      여기서만 쓴다. 기하(w/h/radius/inset 링)는 건드리지 않고 **바깥으로만** 나가는 링을 더해
      카드 bbox 와 그리드 pitch 가 1px 도 안 바뀌게 한다(아트 교체 시 그대로 벗겨진다). */
@@ -7762,7 +7779,12 @@ function drawHeroTo(canvas, o){
   const fr = A.f[(o && o.frame) || (A.a.idle && A.a.idle[0])];
   if(!fr) return false;
   const av = o && AV[o.avatar];
-  const img = tinted('knight', av && av.tint);
+  /* 87 — `lite`: 아틀라스(927×254 ≈ 0.94MB)를 색마다 통째로 캐시하는 tinted() 대신
+     **그린 자리에서** 같은 연산(multiply → destination-in)을 한다. 50칸 격자가 50색을
+     캐시하면 47MB 라서 필요한 절충이고, 픽셀 연산이 같아 **색은 전투와 동일**하다
+     (verify87 §5 가 lite 카드와 tinted() 경로의 RGB 를 직접 비교한다). */
+  const lite = !!(o && o.lite && av && av.tint);
+  const img = lite ? A.image : tinted('knight', av && av.tint);
   if(!img) return false;
   const sc = (o && o.scale) || Math.max(1, Math.floor(canvas.height/fr[7]));
   const f0 = A.f[A.a.idle[0]];
@@ -7771,8 +7793,15 @@ function drawHeroTo(canvas, o){
   g.save();
   g.translate(canvas.width/2, canvas.height);
   if(o && o.flip) g.scale(-1, 1);
-  g.drawImage(img, fr[0], fr[1], fr[2], fr[3],
-    (-fr[6]/2 + fr[4] + c0)*sc, (-fr[7] + fr[5])*sc, fr[2]*sc, fr[3]*sc);
+  const dx = (-fr[6]/2 + fr[4] + c0)*sc, dy = (-fr[7] + fr[5])*sc;
+  g.drawImage(img, fr[0], fr[1], fr[2], fr[3], dx, dy, fr[2]*sc, fr[3]*sc);
+  if(lite){
+    g.globalCompositeOperation = 'multiply';
+    g.fillStyle = av.tint; g.fillRect(dx, dy, fr[2]*sc, fr[3]*sc);
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(img, fr[0], fr[1], fr[2], fr[3], dx, dy, fr[2]*sc, fr[3]*sc);
+    g.globalCompositeOperation = 'source-over';
+  }
   g.restore();
   return true;
 }
@@ -7997,15 +8026,104 @@ const RELICS = [
 const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률', rate:'공격 속도',
                     gold:'골드 획득', regen:'체력 재생', cdmg:'치명타 피해', all:'전 스탯' };
 
-/* ---- 아바타 (다이아 구매 · 보유 효과 · 외형 변경) ---- */
-const AVATARS = [
-  { id:'av0', n:'견습 기사',   g:0, tint:null,      cost:0,       atk:0.00, hp:0.00, gold:0.00 },
-  { id:'av1', n:'강철 기사',   g:1, tint:'#9fd6ff', cost:3000,    atk:0.10, hp:0.10, gold:0.05 },
-  { id:'av2', n:'백은의 용사', g:2, tint:'#a8ffc0', cost:15000,   atk:0.25, hp:0.20, gold:0.12 },
-  { id:'av3', n:'흑염 기사',   g:3, tint:'#c08cff', cost:70000,   atk:0.55, hp:0.40, gold:0.25 },
-  { id:'av4', n:'용살자',      g:4, tint:'#ffb648', cost:300000,  atk:1.20, hp:0.80, gold:0.50 },
-  { id:'av5', n:'신성 기사',   g:5, tint:'#ff8fa0', cost:1500000, atk:2.50, hp:1.60, gold:1.00 }
+/* ---- 코스튬(구 «아바타») 50종 — 다이아 구매 · 보유 효과 영구 합산 · 외형(틴트) 변경 ----
+   작업 87 (2026-08-26, 저장소 주인 지시 «코스튬은 50개 이상»): 6종 → **50종**.
+   · **id 는 «몇 번째» 가 아니라 고정 값**이다. 구 세이브(`S.avatar`·`S.avatars.av3`)가 그대로
+     살아야 하므로 av0~av5 는 이름·등급·가격·보유 효과를 **한 값도 안 바꿨다**(`COS_LEGACY`).
+     신규 44종은 av6~av49 이고, 표의 «순서» 가 바뀌어도 세이브는 id 로만 붙는다.
+   · 아트가 없어 외형은 «단일 knight 아틀라스 + tint» 뿐이다 → **틴트만으로 50종을 구분**한다:
+     일반~영웅 39종(av0 = 기본 = 무틴트)은 색상환을 39등분(9.23°)한 빗을 **stride 11 로 건너뛰며**
+     나눠 줘 같은 등급 안에서 최소 46° 벌어지고, 등급이 오를수록 채도·명도가 오른다(`COS_BAND`).
+     전설·신화 10종은 지시대로 «금·은·무지개» 계열이라 색상환에서 빼고 **명도·채도 축**으로 벌린다(`COS_HI`).
+     쌍별 최소 색차는 `tools/verify87.js` 가 CIE76 ΔE 로 잰다(기록: docs/review/87-코스튬50종.md).
+   · 틴트는 80 `look` → `drawHeroTo` → `tinted('knight', …)` 를 그대로 지나므로
+     **전투 · 79 장비 시트 · 80 랭킹 단상이 같은 색**을 낸다(50칸 격자만 아래 «lite» 경로).
+   · 획득은 다이아 구매가 기본이고, 7종만 **조건 해금**(`req` — 스테이지·계급·도감)이 추가로 붙는다. */
+function hsl2hex(h, s, l){
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2*l - 1)) * s, x = c * (1 - Math.abs((h/60) % 2 - 1)), m = l - c/2;
+  const r = [c,x,0,0,x,c][(h/60)|0], g = [x,c,c,x,0,0][(h/60)|0], b = [0,0,x,c,c,x][(h/60)|0];
+  const hx = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  return '#' + hx(r) + hx(g) + hx(b);
+}
+/* 등급별 정원 · 기준가 · 기준 보유 효과 · 틴트 채도/명도(전설·신화는 COS_HI 가 색을 준다) */
+const COS_BAND = [
+  { k:12, cost:1000,    atk:0.010, hp:0.008, gold:0.006, s:58,  l:68 },
+  { k:10, cost:3000,    atk:0.025, hp:0.020, gold:0.014, s:72,  l:71 },
+  { k:10, cost:15000,   atk:0.045, hp:0.036, gold:0.024, s:86,  l:74 },
+  { k:8,  cost:70000,   atk:0.070, hp:0.056, gold:0.036, s:100, l:77 },
+  { k:6,  cost:300000,  atk:0.120, hp:0.095, gold:0.060 },
+  { k:4,  cost:1500000, atk:0.200, hp:0.160, gold:0.100 }
 ];
+/* 색상환 배분 상수 — 39색을 «stride 19» 로 건너뛰며 나눠 주고, 등급 안에서 3칸마다
+   명도·채도를 한 단씩 흔들어 색상이 가까운 쌍의 색차를 벌린다.
+   ⚠ 이 세 값은 **눈대중이 아니라 탐색으로 고른 것**이다 — 색상 간격만으로는 부족했다:
+   처음 쓴 (stride 11, 흔들림 없음) 은 쌍별 최소 ΔE 가 3.3(av7↔av14, 둘 다 연녹)까지 떨어졌다.
+   Lab 에서 «색상 11° 차이» 는 밝은 저채도 구간에서 거의 같은 색이기 때문이다.
+   지금 값은 쌍별 최소 ΔE **10.3** · 같은 등급 안 최소 **11.0**(verify87 §2 가 매 실행 재측정).
+   COS_BAND 의 s/l 이나 아래 세 상수를 손대면 반드시 verify87 §2 를 다시 돌릴 것. */
+const COS_STRIDE = 19, COS_LADL = [-14, 0, 14], COS_LADS = [-20, 0, 20];
+/* 같은 등급 안 «소폭 분산» — 합은 비슷하게 두고 성향만 바꾼다(균형·공격·수호·행운) */
+const COS_VAR = [ [1.00,1.00,1.00], [1.30,0.70,0.90], [0.70,1.40,0.95], [0.85,0.85,1.60] ];
+/* 전설(금·은) · 신화(무지개·신성). 각 등급 첫 칸은 구 av4·av5 색 그대로 */
+const COS_HI = [ ['#ffb648','#eef2f8','#ffbfae','#c98b46','#9fb0c4','#8a7030'],
+                 ['#ff8fa0','#c07bff','#63d8ff','#8dff9e'] ];
+/* 구 6종의 가격·보유 효과 — 여기 값이 표보다 우선한다(세이브 호환) */
+const COS_LEGACY = {
+  av0:{ cost:0,       atk:0.00, hp:0.00, gold:0.00 },
+  av1:{ cost:3000,    atk:0.10, hp:0.10, gold:0.05 },
+  av2:{ cost:15000,   atk:0.25, hp:0.20, gold:0.12 },
+  av3:{ cost:70000,   atk:0.55, hp:0.40, gold:0.25 },
+  av4:{ cost:300000,  atk:1.20, hp:0.80, gold:0.50 },
+  av5:{ cost:1500000, atk:2.50, hp:1.60, gold:1.00 }
+};
+/* [id, 이름, 등급, (조건 해금)] — 등급 순서대로 12·10·10·8·6·4 = 50종 */
+const COS_LIST = [
+  /* 일반 12 */
+  ['av0','견습 기사',0],   ['av6','수련 기사',0],   ['av7','마을 위병',0],   ['av8','견습 궁수',0],
+  ['av9','순찰 기사',0],   ['av10','낡은 갑주',0],  ['av11','목검 수련생',0],['av12','방랑 검객',0],
+  ['av13','신참 창병',0],  ['av14','광부 갑주',0],  ['av15','숲의 사냥꾼',0],['av16','자경단원',0],
+  /* 고급 10 */
+  ['av1','강철 기사',1],   ['av17','청동 근위병',1],['av18','은빛 창기사',1],['av19','숲의 순찰자',1],
+  ['av20','강철 방패병',1],['av21','화염 견습',1],  ['av22','서리 검사',1],  ['av23','사막 용병',1],
+  ['av24','늪지 추적자',1],['av25','폭풍 척후병',1],
+  /* 희귀 10 */
+  ['av2','백은의 용사',2], ['av26','심해 기사',2],  ['av27','벽력 검호',2],  ['av28','성채 수호병',2],
+  ['av29','그림자 자객',2],['av30','취록 정령사',2],['av31','홍옥 기사단장',2],['av32','백야 순찰자',2],
+  ['av33','화산 파수꾼',2,{k:'stage',v:60}],       ['av34','청람 도끼병',2],
+  /* 영웅 8 */
+  ['av3','흑염 기사',3],   ['av35','서리심장 기사',3],['av36','뇌명의 성기사',3],['av37','심연 추적자',3],
+  ['av38','태양문 수호자',3,{k:'stage',v:120}],    ['av39','맹독의 그림자',3],
+  ['av40','비취 무투가',3],['av41','황혼 기사',3,{k:'rank',v:3}],
+  /* 전설 6 — 금·은 */
+  ['av4','용살자',4],      ['av42','백금 성기사',4],['av43','여명의 장미',4],['av44','청동 거신',4],
+  ['av45','은월 검성',4,{k:'coll',c:'skill',v:3}], ['av46','흑금 폭군',4,{k:'stage',v:220}],
+  /* 신화 4 — 무지개·신성 */
+  ['av5','신성 기사',5],   ['av47','자수정 대군주',5],
+  ['av48','창천의 화신',5,{k:'rank',v:6}],         ['av49','만상의 무지개',5,{k:'coll',c:'equip',v:4}]
+];
+const AVATARS = (() => {
+  const seat = [0,0,0,0,0,0];
+  let comb = 0;                                  /* 색상환 빗 진행(일반~영웅 39종만) */
+  return COS_LIST.map(row => {
+    const id = row[0], g = row[2], B = COS_BAND[g], j = seat[g]++, L = COS_LEGACY[id];
+    const v = COS_VAR[j % COS_VAR.length];
+    const a = {
+      id: id, n: row[1], g: g,
+      tint: id === 'av0' ? null
+          : g >= 4      ? COS_HI[g-4][j]
+          :               hsl2hex(((comb++ * COS_STRIDE) % 39) * (360/39),
+                                  B.s + COS_LADS[j % 3], B.l + COS_LADL[j % 3]),
+      cost: L ? L.cost : Math.round(B.cost * (1 + 0.12*j) / 100) * 100,
+      atk:  L ? L.atk  : +(B.atk  * v[0]).toFixed(4),
+      hp:   L ? L.hp   : +(B.hp   * v[1]).toFixed(4),
+      gold: L ? L.gold : +(B.gold * v[2]).toFixed(4)
+    };
+    if(row[3]) a.req = row[3];
+    return a;
+  });
+})();
 
 const byId = a => a.reduce((o,x) => (o[x.id]=x, o), {});
 const SK = byId(SKILLS), EQ = byId(EQUIPS), PT = byId(PETS), RL = byId(RELICS), AV = byId(AVATARS);
@@ -10890,10 +11008,15 @@ $('dclNx').addEventListener('click', e => {
    덤으로 `S.cnt.paid` 의 의미가 «누적 원화»(구) / «결제 횟수»(신) 로 갈리던 것도 «횟수» 로 정리됐다. */
 function buyAvatar(a){
   if(S.avatars[a.id]){ S.avatar = a.id; uiDirty = true; save(); return; }
+  /* 87 ③ — 조건 해금(7종)은 다이아가 있어도 조건을 채우기 전에는 못 산다 */
+  if(!cosReqOk(a)){
+    popup('🔒 해금 조건 미달', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
+      + '해금 조건 — <b>' + cosReqText(a) + '</b></p>'); return;
+  }
   if(S.dia < a.cost){ popup('💎 다이아 부족', '<p>다이아가 <b>💎' + fmt(a.cost - S.dia) + '</b> 더 필요합니다.</p>'); return; }
   S.dia -= a.cost; S.avatars[a.id] = 1; S.avatar = a.id;
   markDirty(); uiDirty = true; save();
-  popup('👤 아바타 획득!', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
+  popup('👤 코스튬 획득!', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
     + '보유 효과 — 공격 <b>+' + pct(a.atk) + '</b> · 체력 <b>+' + pct(a.hp) + '</b> · 골드 <b>+' + pct(a.gold) + '</b></p>');
 }
 
@@ -13375,12 +13498,35 @@ $('bPet').addEventListener('click', e => {
      · 하단 버튼이 [소환]/[일괄 강화] 가 아니라 **[착용]/[구매]** 이고 «선택 카드» 를 대상으로 한다.
    ========================================================================== */
 let cosSel = null;                       /* 그리드에서 선택된 코스튬(기본 = 착용 중) */
+let cosScroll = 0;                       /* 87 — 50칸 격자의 내부 스크롤 위치(재렌더 보존) */
+let cosSelShown = null;                  /* 87 — 마지막으로 «그려진» 선택(선택이 바뀔 때만 스크롤 이동) */
 const cosCur = () => AV[S.avatar] ? S.avatar : 'av0';
 const cosOwn = id => !!S.avatars[id];
+/* 87 ③ — 조건 해금. 다이아 구매 경로는 그대로고 이 조건이 **추가로** 걸린다(7종) */
+function cosReqOk(a){
+  const q = a && a.req; if(!q) return true;
+  if(q.k === 'stage') return (S.best|0)        >= q.v;
+  if(q.k === 'rank')  return (S.rank|0)        >= q.v;
+  if(q.k === 'coll')  return (S.coll[q.c]|0)   >= q.v;
+  return true;
+}
+function cosReqText(a){
+  const q = a && a.req; if(!q) return '';
+  if(q.k === 'stage') return '스테이지 ' + q.v + ' 도달';
+  if(q.k === 'rank')  return (RANKS[q.v] ? RANKS[q.v].ic + ' ' + RANKS[q.v].n : '계급 ' + q.v) + ' 승급';
+  if(q.k === 'coll')  return (COLL[q.c] ? COLL[q.c].n : q.c) + ' 도감 ' + q.v + '단계';
+  return '';
+}
 /* 착용(외형 변경) — 구매는 기존 `buyAvatar()` 를 그대로 쓴다(보유 시 착용까지 해 준다) */
 function wearAvatar(id){
   if(!cosOwn(id)) return false;
   S.avatar = id; uiDirty = true; save(); return true;
+}
+/* 87 — 카드·슬롯의 코스튬 그림(이모지 🛡️ 폐기). 80 `look` 과 같은 drawHeroTo 경로 */
+function cosPaint(root){
+  root.querySelectorAll('canvas[data-cosav]').forEach(cv => {
+    drawHeroTo(cv, { avatar: cv.dataset.cosav, scale: +cv.dataset.cossc || 1, lite: cv.hasAttribute('data-coslite') });
+  });
 }
 function renderCos(){
   const cur = cosCur();
@@ -13395,32 +13541,55 @@ function renderCos(){
   h += '<div class="sk-eqp">'
     +  '<div class="sk-slot" data-cosun="' + cur + '" style="left:461px'
     +  ';--f:' + SK_FILL[cv.g] + ';--r:' + SK_RIM[cv.g] + '">'
-    +  '<b class="sk-si">🛡️</b><u class="sk-slv ol2">' + GRADE[cv.g].n + '</u>'
+    +  '<b class="sk-si"><canvas class="cos-cv" width="96" height="126" data-cosav="' + cur
+    +    '" data-cossc="2"></canvas></b><u class="sk-slv ol2">' + GRADE[cv.g].n + '</u>'
     +  '<s class="sk-eq m"></s></div></div>';
 
-  /* 3 보유 코스튬 격자 5열 x 3행 (AVATARS) — 07 과 같은 pitch 190/220 */
-  h += '<div class="sk-gp">';
-  AVATARS.forEach((a, i) => {
-    const own = cosOwn(a.id), on = a.id === cur;
-    const f = on ? skDim(SK_FILL[a.g]) : SK_FILL[a.g];
-    const r = on ? skDim(SK_RIM[a.g])  : SK_RIM[a.g];
-    h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
-      +  '" data-cosit="' + a.id + '" '
-      +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
-      +  ';--f:' + f + ';--r:' + r + '">'
-      +  (own ? '<b class="sk-ci">🛡️</b>' : '<span class="sk-lock"></span>')
-      +  '<u class="sk-clv ol2">' + GRADE[a.g].n + '</u>'
-      +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
-      +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
-      /* 진행바 자리 — 보유는 가득 채우고 «보유», 미보유는 빈 바에 다이아 가격 */
-      +  '<div class="sk-bar"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-      +  '<b class="ol1">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</b></div></div>';
+  /* 3 코스튬 격자 — 87 로 6칸 → **50칸**이 되어 격자 «안»이 세로 스크롤이 된다.
+     시트 바깥 규격(슬롯·격자 상자 1000×680·총효과·버튼)은 07 측정치 그대로 두고,
+     `.sk-gp` 를 뷰포트로 만들어 등급별 섹션(헤더 + 5열 행들)을 그 안에 쌓는다.
+     열 pitch 190 · 행 pitch 220 · 카드 168×171 은 07 과 동일하다. */
+  h += '<div class="sk-gp"><div class="cos-in">';
+  let y = 20;
+  GRADE.forEach((G, g) => {
+    const list = AVATARS.filter(a => a.g === g);
+    if(!list.length) return;
+    const ownd = list.filter(a => cosOwn(a.id)).length;
+    h += '<div class="cos-hd" style="top:' + y + 'px;--r:' + SK_RIM[g] + '">'
+      +  '<i class="ol2" style="color:' + G.c + '">' + G.ic + ' ' + G.n + '</i>'
+      +  '<em class="ol2">' + ownd + ' / ' + list.length + '</em></div>';
+    y += 62;
+    list.forEach((a, i) => {
+      const own = cosOwn(a.id), on = a.id === cur, lock = !own && !cosReqOk(a);
+      const f = on ? skDim(SK_FILL[a.g]) : SK_FILL[a.g];
+      const r = on ? skDim(SK_RIM[a.g])  : SK_RIM[a.g];
+      h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
+        +  '" data-cosit="' + a.id + '" '
+        +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (y + ((i/5)|0)*220) + 'px'
+        +  ';--f:' + f + ';--r:' + r + '">'
+        /* 82 — 미보유도 «어떤 것인지» 보여야 한다. 코스튬은 아이콘이 곧 외형이라
+           이모지가 아니라 그 코스튬의 틴트로 그린 기사(80 look 과 같은 경로)를 넣는다 */
+        +  '<b class="sk-ci"><canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id
+        +    '" data-coslite></canvas></b>' + (own ? '' : '<span class="sk-lock"></span>')
+        +  '<u class="sk-clv ol2">' + GRADE[a.g].n + '</u>'
+        +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
+        +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
+        /* 진행바 자리 — 보유는 «보유», 조건 미달은 해금 조건, 그 밖은 다이아 가격 */
+        +  '<div class="sk-bar' + (lock ? ' rq' : '') + '"><i style="width:' + (own ? 100 : 0) + '%"></i>'
+        +  '<b class="ol1">' + (own ? '보유' : lock ? '🔒' + cosReqText(a) : '💎' + fmt(a.cost))
+        +  '</b></div></div>';
+    });
+    y += Math.ceil(list.length/5) * 220;
   });
-  h += '</div>';
+  h += '<div class="cos-pad" style="top:' + (y - 30) + 'px"></div>';
+  h += '</div></div>';
 
-  /* 7 총 보유 효과 — bonus() 의 아바타 합산과 같은 곱연산으로 낸다(공격력 기준) */
+  /* 7 총 보유 효과 — bonus() 의 코스튬 합산과 같은 곱연산으로 낸다(공격력 기준).
+     87 로 50종이 되어 «몇 종을 모았는지» 도 같이 보여 준다(격자가 스크롤이라 한눈에 안 보인다) */
   const tot = AVATARS.reduce((m, a) => cosOwn(a.id) ? m * (1 + a.atk) : m, 1) - 1;
-  h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
+  const nOwn = AVATARS.filter(a => cosOwn(a.id)).length;
+  h += '<div class="sk-tot"><i class="ol3">보유 ' + nOwn + '/' + AVATARS.length + ' · 총 보유 효과:</i>'
+    +  '<em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [구매] */
   h += '<div class="sk-btn sk-b1" data-coswear="1"><i class="ol3">착용</i></div>'
@@ -13430,6 +13599,24 @@ function renderCos(){
 
   h += subTabs('cos', 'costab');
   setBody('bCos', h);
+  /* 87 — 카드 50장의 코스튬 그림을 그리고, 격자 내부 스크롤 위치를 재렌더 너머로 잇는다
+     (setBody 는 시트 본문 `.shsc` 만 복원한다 — 격자는 그 «안»의 두 번째 스크롤러다) */
+  const bd = $('bCos');
+  cosPaint(bd);
+  const gp = bd.querySelector('.sk-gp');
+  if(gp){
+    gp.scrollTop = cosScroll;
+    /* 선택이 «바뀐» 렌더에서만 그 카드로 이동한다(매 틱 renderUI 에 스크롤을 뺏기지 않게).
+       첫 렌더에서는 착용 중인 코스튬이 화면에 들어온다 — 50칸이라 아래 등급은 안 보인다. */
+    const sel = bd.querySelector('.sk-card.sel');
+    if(sel && cosSelShown !== cosSel){
+      const t = sel.offsetTop;
+      if(t < gp.scrollTop + 8 || t + sel.offsetHeight > gp.scrollTop + gp.clientHeight - 8)
+        gp.scrollTop = cosScroll = Math.max(0, t - 82);
+    }
+    gp.addEventListener('scroll', () => { cosScroll = gp.scrollTop; }, { passive:true });
+  }
+  cosSelShown = cosSel;
 }
 $('bCos').addEventListener('click', e => {
   const un = e.target.closest('[data-cosun]');
@@ -13458,23 +13645,29 @@ $('bCos').addEventListener('click', e => {
 /* 코스튬 상세 — 08 스킬 세부 팝업 껍데기(`.sk8`)를 재사용한다(UI-REFERENCE §50) */
 function showCosDetail(id){
   const a = AV[id]; if(!a) return;
-  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur();
-  $('mtitle').textContent = own ? a.n : '???';
+  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur(), rq = cosReqOk(a);
+  /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 안 산 외형» 이라 미보유도 이름·그림을 보여 준다
+     (82 규칙 — 무엇인지 알아야 살지 말지 정한다). 대신 상태 줄이 «미보유/조건 미달» 을 말한다. */
+  $('mtitle').textContent = a.n;
   $('mbox').innerHTML =
       '<div class="skd">'
-    +   '<div class="sk-ic">' + (own ? '🛡️' : '❔') + '</div>'
+    +   '<div class="sk-ic"><canvas class="cos-cv" width="150" height="189" data-cosav="' + id
+    +     '" data-cossc="3"></canvas></div>'
     +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
-    +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
+    +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : rq ? '미보유' : '🔒 조건 미달') + '</b></div>'
     +   '<div class="sk-pb"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-    +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">' + (own ? '보유' : '💎' + fmt(a.cost)) + '</b></div>'
+    +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">'
+    +       (own ? '보유' : rq ? '💎' + fmt(a.cost) : '🔒' + cosReqText(a)) + '</b></div>'
     +   '<div class="sk-ct">'
-    +     '<div class="hd"><div><b>가격</b></div><div class="nt"><b>등급</b></div></div>'
-    +     '<div class="vl"><div><b>' + (a.cost ? '💎' + fmt(a.cost) : '기본') + '</b></div>'
+    +     '<div class="hd"><div><b>' + (a.req ? '해금 조건' : '가격') + '</b></div><div class="nt"><b>등급</b></div></div>'
+    +     '<div class="vl"><div><b>' + (a.req ? cosReqText(a) : a.cost ? '💎' + fmt(a.cost) : '기본') + '</b></div>'
     +       '<div class="nt"><b>' + G.n + '</b></div></div>'
     +   '</div>'
     +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
     +   '<div class="sk-db"><p>' + (own
           ? '구매한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
+          : !rq
+          ? '<em>' + cosReqText(a) + '</em> 을(를) 달성하면 다이아 <em>💎' + fmt(a.cost) + '</em> 로 구매할 수 있습니다.'
           : '아직 구매하지 않았습니다.<br>다이아로 구매하면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
     +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
     +     '<div class="v"><b>공격 <em>+' + pct(a.atk) + '</em> 체력 <em>+' + pct(a.hp)
@@ -13482,9 +13675,10 @@ function showCosDetail(id){
     + '</div>'
     + '<div class="sk-act">'
     +   '<button class="sk-e" id="mEq"' + (own && !on ? '' : ' disabled') + '><b>착용</b></button>'
-    +   '<button class="sk-u" id="mLv"' + (own ? ' disabled' : '') + '><b>구매</b></button>'
+    +   '<button class="sk-u" id="mLv"' + (own || !rq ? ' disabled' : '') + '><b>구매</b></button>'
     + '</div>';
   $('mbox').scrollTop = 0;
+  cosPaint($('mbox'));
   $('modal').classList.add('on', 'sk8');
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
@@ -14185,7 +14379,8 @@ function renderUI(){
     const k = t.dataset.t;
     /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다 */
     const al = k === 'hero' ? (collReady('equip') || collReady('skill') || collReady('pet')
-                              || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost))
+                              /* 87 — 조건 해금(req) 이 안 열린 코스튬은 «살 수 있음» 이 아니다 */
+                              || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a)))
              : k === 'grow' ? S.sp > 0
              : k === 'adv'  ? dunAlert
              : k === 'box'  ? collReady('relic')
