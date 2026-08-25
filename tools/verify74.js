@@ -41,8 +41,25 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
   await page.waitForTimeout(1500);
   await page.evaluate(() => {
     S.gold = 1e13; S.dia = 1e9; uiDirty = true;
-    window.__hits = 0; window.__sel = '';
+    /* 110 — 오디오는 끄고 잰다. 이 게이트는 «탭이 핸들러에 도달했는가» 만 보는데,
+       78 오디오의 `<audio>` 폴백 경로(`auMode==='el'`)가 `sfx()` 마다 `cloneNode()` 로
+       엘리먼트를 새로 만들고 회수하지 않아, 1400탭짜리 장시간 런에서 크로미움의
+       WebMediaPlayer 상한(~75)을 넘겨 «Blocked attempt to create a WebMediaPlayer»
+       콘솔 에러가 1000건 넘게 쌓인다 → 콘솔 에러 0 조건이 무너지고 탭도 밀린다.
+       측정 대상과 무관한 소음이라 여기서 끈다(누수 자체는 별도 작업 단위 — PROGRESS 111). */
+    if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
+    if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }   /* 이미 물린 트랙도 놓는다 */
+    window.__hits = 0; window.__sel = ''; window.__land = '';
+    /* 110 — 빗나간 탭의 «착지 지점» 을 남기려고 요소를 짧게 적는다 */
+    window.__desc = el => {
+      if (!el) return '(null)';
+      let s = el.tagName.toLowerCase();
+      if (el.id) s += '#' + el.id;
+      if (el.className && typeof el.className === 'string') s += '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.');
+      return s;
+    };
     document.addEventListener('click', e => {
+      window.__land = window.__desc(e.target) + ' ← ' + (e.composedPath() || []).slice(0, 4).map(window.__desc).join(' < ');
       if (window.__sel && e.target && e.target.closest && e.target.closest(window.__sel)) window.__hits++;
     }, true);
 
@@ -85,31 +102,62 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
         await new Promise(r => setTimeout(r, HOLD));
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       };
-  const rectOf = (sel, i) => page.evaluate(([s, idx]) => {
-    const list = document.querySelectorAll(s);
-    const el = list[Math.min(idx, list.length - 1)];
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) return null;
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  }, [sel, i || 0]);
+  /* 110 — «조준» 단계. 좌표만 주던 것을 «그 좌표의 최상위 요소가 정말 대상인가» 까지 본다.
+     이유: 닫힘 애니메이션(jzClose)이 도는 0.2~0.3초 동안 오버레이가 탭바·사이드 아이콘 위에
+     남아 있어서, 그때 던진 탭은 **대상에 닿지도 못하고** 오버레이에 먹힌다. 그건 74 가 잡으려는
+     «닿았는데 핸들러가 빈손» 과 전혀 다른 사건인데 같은 «실패» 로 세고 있었다(196~199/200 의 정체).
+     기존 대책은 대상마다 손으로 넣은 `gap` 이었고, 페이지가 조금만 느려지면 그대로 새어 나왔다.
+     여기서는 «가려져 있으면 최대 800ms 까지 기다렸다가 조준» 한다 — 사람이 팝업이 사라지는 걸
+     보고 누르는 것과 같다. **게이트의 강도는 그대로다**: 노드가 죽는 건 tap 의 down↔up «사이» 라
+     조준 시점 검사로는 절대 가려지지 않는다. 그래도 안 걷히면 covered:true 로 돌려 이유를 남긴다. */
+  const aim = async (sel, idx) => {
+    const t0 = Date.now();
+    for (;;) {
+      const r = await page.evaluate(([s, i]) => {
+        const list = document.querySelectorAll(s);
+        const el = list[Math.min(i, list.length - 1)];
+        if (!el) return null;
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height) return null;
+        const x = b.left + b.width / 2, y = b.top + b.height / 2;
+        const top = document.elementFromPoint(x, y);
+        return {
+          x, y,
+          covered: !(top && top.closest && top.closest(s)),
+          top: window.__desc ? window.__desc(top) : '',
+          anims: document.getAnimations().filter(a => a.playState === 'running')
+            .map(a => a.animationName || '?').slice(0, 4),
+        };
+      }, [sel, idx || 0]);
+      if (!r || !r.covered || Date.now() - t0 > 800) return r;
+      await page.waitForTimeout(40);
+    }
+  };
 
   const results = [];
   async function run(name, { setup, targets, countSel, between, metric, gap }) {
     await page.evaluate(setup);
     await page.waitForTimeout(600);
-    let okCnt = 0, miss = 0;
+    let okCnt = 0, miss = 0; const why = [];
     for (let i = 0; i < N; i++) {
       const sel = targets[i % targets.length];
-      const p = await rectOf(sel.q, sel.i || 0);
+      const p = await aim(sel.q, sel.i || 0);
       if (!p) { miss++; continue; }
       let before;
       if (metric) before = await page.evaluate(metric);
-      else await page.evaluate(s => { window.__sel = s; window.__hits = 0; }, countSel);
+      else await page.evaluate(s => { window.__sel = s; window.__hits = 0; window.__land = ''; }, countSel);
       await tap(p.x, p.y);
       await page.waitForTimeout(50);
-      if (metric) { const after = await page.evaluate(metric); if (after !== before) okCnt++; }
-      else { if (await page.evaluate(() => window.__hits) > 0) okCnt++; }
+      let hit;
+      if (metric) { const after = await page.evaluate(metric); hit = after !== before; }
+      else { hit = await page.evaluate(() => window.__hits) > 0; }
+      if (hit) okCnt++;
+      /* 110 — 빗나갔으면 «왜» 를 남긴다. covered=true 면 오버레이가 가로챈 것(페이스),
+         false 면 대상이 맨 위였는데도 핸들러가 빈손 = 74 계열의 진짜 유실이다. */
+      else if (why.length < 5) {
+        const land = metric ? '(metric 판정)' : await page.evaluate(() => window.__land || '(click 없음)');
+        why.push(`#${i} ${p.covered ? '가려짐' : '**대상이 최상위**'} · 최상위=${p.top} · 애니=${(p.anims || []).join(',') || '없음'} · 착지=${land}`);
+      }
       if (between) await page.evaluate(between);
       /* 닫힘 애니메이션(jzClose)이 도는 동안 오버레이가 다음 탭을 가로챈다 — 가라앉을 때까지 쉰다.
          (이건 버그가 아니라 하네스 페이스 문제다: 사람은 팝업이 닫히는 걸 보고 다음 탭을 한다) */
@@ -117,8 +165,9 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
     }
     await page.evaluate(() => { window.__sel = ''; });
     const rate = (okCnt / N * 100).toFixed(1);
-    results.push({ name, okCnt, rate, miss });
+    results.push({ name, okCnt, rate, miss, why });
     console.log(`  ${okCnt === N ? '✓' : '✗'} ${name}: ${okCnt}/${N} (${rate}%)` + (miss ? ` · 대상 미발견 ${miss}` : ''));
+    why.forEach(w => console.log('      ' + w));
   }
 
   /* ① 스킬 패널 장착/해제 행 — renderUI 가 0.35s 마다 setBody 로 통째 재작성하는 전형 */
