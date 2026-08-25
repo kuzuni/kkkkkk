@@ -338,7 +338,7 @@ function launchOpts(){
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {

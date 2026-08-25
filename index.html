@@ -5157,62 +5157,83 @@
     filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
 
   /* ================= 53 가방 팝업 (#bagw) — 측정표 docs/measure/53-가방팝업.md =================
-     껍데기 (가) 딤 위 가운데 다이얼로그. 948×967 @ ref(66,744) → 프레임 y 660 (ref y − 84).
-     공용 #modal 은 폭 898 고정(패딩 91)이라 948 이 안 나와서 자체 오버레이로 간다 — 19 #pfw · 33 #ciw 와 같은 판단.
-     딤 α .61 은 «02(딤 없음)와의 휘도비 0.39» 실측값이다(측정표 §1). */
-  #bagw{position:absolute;inset:0;background:rgba(0,0,0,.61);display:none;z-index:41;
+     껍데기 (가) 딤 위 가운데 다이얼로그 948×967 @ ref(66,744) → 프레임 y 660 (ref y − 84).
+     공용 #modal 은 폭 898 고정(패딩 91)이라 948 이 안 나와서 자체 오버레이 — 19 #pfw · 33 #ciw 와 같은 판단.
+     겹은 5장이다: 딤 / 팝업(헤더+크림) / 안내 배너 / 아이템 패널 / **팝업 «바깥» 하단 탭 스트립**.
+     배너·패널·탭 스트립은 2회차에 추가했다 — 1회차에 셋 다 빠져 있었고, 레퍼런스에 «항상 있는»
+     레이어가 빠지면 ①②③④ 가 한꺼번에 깎인다(LESSONS 34-②). */
+  #bagw{position:absolute;inset:0;background:rgba(0,0,0,.545);display:none;z-index:41;
     align-items:center;justify-content:center;box-sizing:border-box;padding:100px 0 94px}
   #bagw.on{display:flex}
-  /* LESSONS 21-1 · 34 부록: `#id 태그` 리셋(1-0-1)은 `.클래스 .클래스`(0-2-0)를 이긴다.
+  /* LESSONS 21-① · 34 부록: `#id 태그` 리셋(1-0-1)은 `.클래스 .클래스`(0-2-0)를 이긴다.
      이 안에서 display 를 바꾸는 규칙은 전부 `#bagw` 접두어를 달아 특이성을 맞춘다. */
   #bagw i,#bagw em,#bagw b,#bagw s,#bagw u{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900;transform-origin:50% 50%}
-  /* 세로중심 ref 1227.5 → 프레임 1143.5 = 정중앙 1140 +3.5 */
+  /* 세로중심 ref 1227.5 → 프레임 1143.5. 패딩 100/94 로 flex 중앙정렬하면 top 659.5 (목표 660, Δ0.5) */
   .bg53{position:relative;flex:none;width:948px;height:967px;max-height:100%;box-sizing:border-box;
     border:8px solid #000;border-radius:44px;padding:0 12px 12px;background:#55443A;
-    display:flex;flex-direction:column;
-    box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
-  /* 헤더 91px — 상단·좌우 밝은 립(#5B4643), 본체 #523E3D (A5 .mhead 와 같은 규격) */
+    display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
+  /* 헤더 91px — 상단·좌우 밝은 립(#5C4744), 본체 #523E3D (A5 .mhead 와 같은 규격) */
   .bg53-head{flex:0 0 91px;margin:0 -12px;border-radius:36px 36px 0 0;background:#523E3D;
-    box-shadow:inset 0 8px 0 #5B4643,inset 11px 0 0 #5B4643,inset -11px 0 0 #5B4643;
+    box-shadow:inset 0 8px 0 #5C4744,inset 11px 0 0 #5C4744,inset -11px 0 0 #5C4744;
     text-align:center;line-height:91px;overflow:hidden}
-  /* 타이틀 잉크 81×42 → font-size 42/0.93 ≈ 45 (LESSONS 01: 이 폰트의 잉크비는 0.93) */
-  .bg53-head>i{position:relative;top:-2px;font-size:45px;color:#fff;
+  /* 타이틀 코어 82×43 → font-size 43/0.93 ≈ 46 (LESSONS 01: 이 폰트의 잉크비는 0.93). 편측 외곽선 5 → 10 */
+  .bg53-head>i{position:relative;top:-2px;font-size:46px;color:#F8F8F8;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;letter-spacing:1.5px;text-indent:1.5px}
-  /* 크림 본문 908×848 + 별 워터마크(33 .ci-body 와 같은 엇갈린 격자 자산 — LESSONS 22-3: pitch 를 반드시 대조할 것.
-     ref 별 행 중심 간격이 117 이라 «별 2개짜리» 타일을 쓴다. 별 1개짜리 A5 타일은 행의 절반이 빈다) */
+  /* 크림 본문 908×848 + 별 워터마크(33 .ci-body 와 같은 «별 2개» 엇갈린 타일 — LESSONS 22-③:
+     별 1개짜리 A5 타일을 쓰면 행의 절반이 통째로 빈다) */
   .bg53-body{flex:1 1 auto;position:relative;box-sizing:border-box;
     border:solid #46382D;border-width:2.5px 0 0;border-top-color:#523E3D;
-    border-radius:0 0 31px 31px;background:#EED9BC
+    border-radius:0 0 31px 31px;background:#EED9BE
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
     overflow:hidden}
-  /* 안내 문구 — 잉크 487×26 @ 본문(210,56) → font-size 26/0.93 ≈ 28 */
-  .bg53-tip{position:absolute;left:0;right:0;top:47px;height:40px;line-height:40px;text-align:center;
-    font-size:28px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  /* 격자 — 원점 본문(40,156) · 칸 149×159 · pitch 170×171.
-     LESSONS 22-4: 하단 요소를 절대 top 으로 박으면 짧은 프레임에서 «삼켜진다» → 격자는 상단 앵커 + 남는 높이는
-     스크롤이 흡수한다(bottom:19px 로 하단도 같이 앵커해 본문이 눌려도 격자가 잘리지 않고 스크롤로 넘어간다). */
-  .bg53-grid{position:absolute;left:40px;right:39px;top:154px;bottom:19px;overflow-y:auto;
-    display:grid;grid-template-columns:repeat(5,149px);grid-auto-rows:159px;
-    column-gap:21px;row-gap:12px;align-content:start}
-  .bg53-grid::-webkit-scrollbar{width:10px}
-  .bg53-grid::-webkit-scrollbar-thumb{background:#C0A886;border-radius:6px}
-  /* 칸 — 검정 4px + 등급 fill + 반경 30. `--g` 가 등급색이다. */
-  .bg53-c{position:relative;box-sizing:border-box;width:149px;height:159px;
-    border:4px solid #000;border-radius:30px;background:var(--g,#CCC09C);overflow:hidden}
-  /* 등급 fill 위에 위→아래 살짝 밝→어두 그라디언트 (ref 칸 상단이 12% 밝다) */
-  .bg53-c::before{content:'';position:absolute;inset:0;border-radius:26px;
-    background:linear-gradient(180deg,rgba(255,255,255,.16) 0,rgba(255,255,255,0) 46%,rgba(0,0,0,.18) 100%)}
-  /* 아이콘 자리 — ref 아트 bbox 129×105 @ 칸(10,10). 이모지는 이 bbox 를 정확히 차지시킨다(아트 교체 대비) */
-  #bagw .bg53-c>u{position:absolute;left:6px;top:6px;width:129px;height:105px;
-    display:flex;align-items:center;justify-content:center;font-size:86px;line-height:1;z-index:1}
-  /* 수량 — 잉크 h24~26 @ 칸 y131 → font-size 27, 칸 가로 중앙 */
-  #bagw .bg53-c>b{position:absolute;left:0;right:0;top:124px;height:34px;line-height:34px;
-    display:block;text-align:center;font-size:27px;color:#fff;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2}
-  /* 빈 칸 — ref r4c4·r4c5. 아이콘·수량 없이 어두운 베이지만 (LESSONS 34-2: 숨기지 말고 «빈» 상태로 남긴다) */
-  .bg53-c.em{background:#CCC09C}
-  .bg53-c.em::before{background:linear-gradient(180deg,rgba(0,0,0,.10) 0,rgba(0,0,0,.16) 100%)}
+  #bagw .bg53-body>*{position:absolute}
+  /* 안내 배너 — ref x99..980 y863..962 (882×100) r30, 크림 위 반투명 토프(별 워터마크가 비친다) */
+  .bg53-tip{left:13px;top:18px;width:882px;height:100px;border-radius:30px;
+    background:rgba(184,150,110,.42);text-align:center;line-height:100px}
+  /* 문구 코어 488×27 중심 (539.5, 912) → font-size 27/0.93 ≈ 29, 편측 외곽선 4 → 8 */
+  .bg53-tip>i{font-size:29px;color:#F8F8F8;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  /* 아이템 패널 — ref x99..980 y983..1682 (882×700) r24. 격자를 담는 한 겹 어두운 상자 */
+  .bg53-panel{left:13px;top:138px;width:882px;height:700px;border-radius:24px;
+    background:rgba(176,140,98,.40);box-sizing:border-box;padding:16px 27px 27px;overflow:hidden}
+  /* 격자 — 칸 148×147 · pitch 170/170 (gap 22/23) · 5열 × 4행 · 원점 ref(126,999).
+     1회차엔 칸을 149×159 로 잡았는데, 수량 글씨의 검정 외곽선을 칸 아래 테두리로 오독한 것이었다
+     (LESSONS 22-① / 04-② «가림 없는 열을 골라 재라»). x410 같은 빈 열로 재면 999..1145 = 147 이다. */
+  .bg53-grid{position:absolute;left:27px;right:27px;top:16px;bottom:27px;overflow:visible;
+    display:grid;grid-template-columns:repeat(5,148px);grid-auto-rows:147px;
+    column-gap:22px;row-gap:23px;align-content:start}
+  /* 칸 — 검정 5 + 등급 fill + 안쪽 밝은 림 6 + r34.
+     overflow 는 visible 이다 — 수량이 칸 아래 테두리에 «걸쳐» 8px 삐져나오는 게 레퍼런스다. */
+  .bg53-c{position:relative;box-sizing:border-box;width:148px;height:147px;
+    border:5px solid #000;border-radius:34px;background:var(--g,#C6AF8E);
+    box-shadow:inset 0 0 0 6px var(--r,#D3BE9E)}
+  /* 아이콘 — ref bbox 80~94 × 71~94, 칸 정중앙. 아트 교체 대비로 88×88 bbox 를 정확히 차지시킨다 */
+  #bagw .bg53-c>u{position:absolute;left:50%;top:50%;width:88px;height:88px;margin:-44px 0 0 -44px;
+    display:flex;align-items:center;justify-content:center;font-size:72px;line-height:1;z-index:1}
+  /* 수량 — 코어 h26 @ 칸top+130, 칸 가로 중앙. 좌우로 넘쳐도 되게 -20px 씩 벌린다
+     (r3c1 의 `2.26B` 는 코어 폭 106 으로 칸 안쪽 폭보다 넓다) */
+  #bagw .bg53-c>b{position:absolute;left:-20px;right:-20px;top:120px;height:36px;line-height:36px;
+    display:block;text-align:center;font-size:28px;color:#F8F8F8;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2;white-space:nowrap}
+  /* 빈 칸 — ref r3c3·r3c4 는 «플레이스홀더 없음», 패널 배경 그대로다 */
+  .bg53-c.em{border-color:transparent;background:none;box-shadow:none}
+
+  /* 하단 탭 스트립 — 팝업 «바깥», 딤 «위». ref 트랙 x151..942 y1722..1814 (792×93) r46.
+     ⚠ 절대배치 자식의 기준은 border box 가 아니라 **padding box** 다(LESSONS 03) — .bg53 은 border 8 이라
+     padding box 좌단이 74, 하단이 팝업 하단−8 이다. 그래서 left = 151−74 = 77, margin-top = 12+8 = 20. */
+  .bg53-tabs{position:absolute;left:77px;top:100%;margin-top:20px;width:792px;height:93px;
+    box-sizing:border-box;border:5px solid #726252;border-radius:46px;background:#62513D;z-index:1}
+  #bagw .bg53-tabs>i{position:absolute;top:0;height:83px;line-height:83px;text-align:center;
+    font-size:38px;color:#A8A8AC;-webkit-text-stroke:10px #000;paint-order:stroke fill;z-index:1}
+  /* 비활성 «소모품» 코어 중심 x345.5 → 트랙 기준 194.5 (세그먼트 396 의 중앙 198 대비 −3) */
+  #bagw .bg53-tabs>i.t1{left:0;width:389px}
+  #bagw .bg53-tabs>i.t2{left:389px;width:393px}
+  /* 활성 알약 — ref x523..942 (420×93). 트랙보다 «어둡고» 카키 림이 붙고 글자색이 하늘색이다.
+     비활성 세그먼트(547 부터) 보다 24px 넓어 왼쪽으로 겹쳐 올라간다. */
+  .bg53-tabs>s.on{position:absolute;left:-5px;top:-5px;width:420px;height:93px;box-sizing:border-box;
+    margin-left:372px;border:5px solid #493C29;border-radius:46px;background:#473A2A;
+    box-shadow:inset 0 0 0 7px #62523B}
+  #bagw .bg53-tabs>i.act{color:#8BD5F6;z-index:2}
 </style>
 </head>
 <body>
@@ -5790,8 +5811,14 @@
     <div class="bg53">
       <div class="bg53-head"><i>가방</i></div>
       <div class="bg53-body">
-        <div class="bg53-tip">아이템을 눌러 상세 정보를 확인하세요</div>
-        <div class="bg53-grid" id="bagGrid"></div>
+        <div class="bg53-tip"><i>확인하고자 하는 재화를 선택해주세요.</i></div>
+        <div class="bg53-panel"><div class="bg53-grid" id="bagGrid"></div></div>
+      </div>
+      <!-- 팝업 «바깥» 하단 탭 스트립 (딤 위). 활성 알약은 라벨보다 먼저 그려 z-order 를 맞춘다 -->
+      <div class="bg53-tabs" id="bagTabs">
+        <s class="on" id="bagPill"></s>
+        <i class="t1" data-bagtab="use">소모품</i>
+        <i class="t2 act" data-bagtab="cur">재화</i>
       </div>
     </div>
   </div>
@@ -10773,43 +10800,76 @@ document.querySelector('.pf-tgl>.lb').onclick = () => { closeProfile(); openSpec
 $('spcProfTab').onclick = () => { closeSpec(); openProfile(); };
 
 /* ---- 53 가방 팝업 — 측정표 docs/measure/53-가방팝업.md ----
-   레퍼런스는 5열 격자에 «보유 아이템» 을 등급 내림차순으로 채우고, 남는 칸은 빈 칸으로 둔다(r4c4·r4c5).
-   데이터는 S.own(id → {n:재료 수, l:레벨}) 하나뿐이라 스킬·장비·펫·유물을 한 목록으로 합친다.
-   최소 20칸(5×4)은 항상 그린다 — 보유가 적어도 격자가 «반쪽» 이 되지 않게(LESSONS 34-2). */
+   레퍼런스는 «소모품 · 재화» 2탭 + 5×4 격자에 보유분을 등급 내림차순으로 채우고, 남는 칸은 비운다.
+   우리 게임 매핑(측정표 §6):
+     재화(기본 활성 — 레퍼런스와 같은 상태) = 골드·다이아·유물석·마일리지·스탯포인트 + S.own 보유 재료
+     소모품                                 = 던전 입장권 5종 · 상자별 무료 소환권 · 룰렛 남은 횟수
+   둘 다 실제 게임 데이터를 읽는다(«준비 중» 없음). 격자는 항상 20칸을 채워 반쪽이 되지 않게 한다. */
 const BAG_MIN = 20;
-function bagItems(){
+/* 등급별 (칸 채움, 안쪽 밝은 림) — 레퍼런스 실측 4종(고급·희귀·영웅·전설) + 일반·신화는 GRADE 톤에서 파생 */
+const BAG_G = [
+  ['#6E6A63', '#9AA7C2'],   /* 일반 */
+  ['#98C135', '#C6E647'],   /* 고급 — ref r3c1·r3c2 */
+  ['#347DC1', '#45A8E1'],   /* 희귀 — ref r1c4·r2* */
+  ['#9B26D7', '#CD66FF'],   /* 영웅 — ref r0c1~c4 */
+  ['#D27B12', '#FDC331'],   /* 전설 — ref r0c0 */
+  ['#C0304B', '#FF6B7F']    /* 신화 — 파생 */
+];
+let bagTab = 'cur';
+/* 재화 탭 — 보유 재화 + S.own 보유 재료(등급 내림차순) */
+function bagCur(){
+  const out = [
+    { ic:'🪙', n:'골드',       g:1, q:S.gold | 0 },
+    { ic:'💎', n:'다이아',     g:3, q:S.dia | 0 },
+    { ic:'🔮', n:'유물석',     g:2, q:S.relic | 0 },
+    { ic:'🎟️', n:'마일리지',   g:4, q:S.mileage | 0 },
+    { ic:'✨', n:'스탯 포인트', g:2, q:S.sp | 0 }
+  ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
-  return cat
-    .map(it => ({ it, n: (S.own[it.id] || {}).n | 0 }))
-    .filter(r => r.n > 0)
-    .sort((a, b) => (b.it.g - a.it.g) || cat.indexOf(a.it) - cat.indexOf(b.it));
+  cat.forEach(it => {
+    const n = (S.own[it.id] || {}).n | 0;
+    if(n > 0) out.push({ ic:itemIcon(it), n:it.n, g:it.g, q:n });
+  });
+  return out.sort((a, b) => b.g - a.g);
+}
+/* 소모품 탭 — 오늘 남은 횟수 계열(전부 실제 S.daily 값) */
+function bagUse(){
+  const d = S.daily || {}, out = [];
+  DUNGEONS.forEach(x => { const q = (d.dun || {})[x.id] | 0; if(q > 0) out.push({ ic:'🎫', n:x.n + ' 입장권', g:2, q }); });
+  SHOP_BOXES.forEach(x => { const q = (d.freeSum || {})[x.b] | 0; if(q > 0) out.push({ ic:'🎁', n:x.n + ' 무료 소환', g:3, q }); });
+  if((d.spins | 0) > 0) out.push({ ic:'🎰', n:'룰렛 횟수', g:4, q:d.spins | 0 });
+  return out.sort((a, b) => b.g - a.g);
 }
 function renderBag(){
-  const rows = bagItems();
+  const rows = (bagTab === 'cur' ? bagCur() : bagUse()).slice(0, 40);
   const cells = rows.map(r =>
-    '<div class="bg53-c" style="--g:' + GRADE[r.it.g].c + '" data-bagid="' + r.it.id + '">' +
-      '<u>' + itemIcon(r.it) + '</u><b>' + fmt(r.n) + '</b></div>').join('');
-  const pad = Math.max(0, BAG_MIN - rows.length);
-  $('bagGrid').innerHTML = cells + '<div class="bg53-c em"></div>'.repeat(pad);
+    '<div class="bg53-c" style="--g:' + BAG_G[r.g][0] + ';--r:' + BAG_G[r.g][1] + '"'
+      + ' data-bagn="' + r.n.replace(/"/g, '') + '" data-bagq="' + r.q + '">'
+      + '<u>' + r.ic + '</u><b>' + fmt(r.q) + '</b></div>').join('');
+  $('bagGrid').innerHTML = cells + '<div class="bg53-c em"></div>'.repeat(Math.max(0, BAG_MIN - rows.length));
+  /* 활성 알약은 «오른쪽 칸» 에 붙어 있는 게 레퍼런스 상태다. 왼쪽 칸이 활성이면 알약을 왼쪽으로 옮긴다 */
+  $('bagPill').style.marginLeft = bagTab === 'use' ? '0px' : '372px';
+  $('bagTabs').querySelectorAll('[data-bagtab]').forEach(t =>
+    t.classList.toggle('act', t.dataset.bagtab === bagTab));
 }
-function openBag(){ renderBag(); $('bagGrid').scrollTop = 0; $('bagw').classList.add('on'); }
+function openBag(){ renderBag(); $('bagw').classList.add('on'); }
 function closeBag(){ $('bagw').classList.remove('on'); }
 /* 딤(오버레이 자신)을 누르면 닫힌다 — 09·17·33 과 같은 관례 */
 $('bagw').addEventListener('click', e => { if(e.target.id === 'bagw') closeBag(); });
 $('tabbar').addEventListener('click', closeBag, true);
-/* 칸을 누르면 그 아이템의 상세를 띄운다 — 스킬은 08 스킬 세부 팝업, 나머지는 공용 popup() */
-$('bagGrid').addEventListener('click', e => {
-  const c = e.target.closest('[data-bagid]');
-  if(!c) return;
-  const id = c.dataset.bagid, o = S.own[id] || { n:0, l:0 };
-  const it = SK[id] || EQ[id] || PT[id] || RL[id];
-  if(!it) return;
-  popup(itemIcon(it) + ' ' + it.n,
-    '<p><b>' + GRADE[it.g].n + '</b> · 보유 재료 <b>' + fmt(o.n | 0) + '</b>개' +
-    (o.l ? '<br>레벨 <b>' + o.l + '</b>' : '') +
-    (it.d ? '<br><br>' + it.d : '') + '</p>');
+$('bagTabs').addEventListener('click', e => {
+  const t = e.target.closest('[data-bagtab]');
+  if(!t || t.dataset.bagtab === bagTab) return;
+  bagTab = t.dataset.bagtab;
+  renderBag();
 });
-/* 52 메뉴가 아직 다른 워커 구간이라 배선은 그쪽에서 한다 — 여기서는 진입점만 노출한다 */
+/* 칸을 누르면 그 항목의 상세를 띄운다 */
+$('bagGrid').addEventListener('click', e => {
+  const c = e.target.closest('[data-bagn]');
+  if(!c) return;
+  popup('🎒 ' + c.dataset.bagn, '<p>보유 <b>' + fmt(+c.dataset.bagq) + '</b></p>');
+});
+/* 52 ▦ 메뉴의 «가방» 칸이 이걸 부른다(그쪽 주석의 인계 지시) */
 window.openBag = openBag;
 
 function openPromo(){

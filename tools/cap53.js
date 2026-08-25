@@ -74,6 +74,7 @@ function launchOpts() {
       scale: +(app.width / 1080).toFixed(4),
       box: q('.bg53'), head: q('.bg53-head'), body: q('.bg53-body'),
       tip: q('.bg53-tip'), grid: q('.bg53-grid'),
+      banner: q('.bg53-tip'), panel: q('.bg53-panel'), tabs: q('.bg53-tabs'), pill: q('.bg53-tabs>s.on'),
       c1: q('.bg53-grid>.bg53-c:nth-child(1)'), c2: q('.bg53-grid>.bg53-c:nth-child(2)'),
       c6: q('.bg53-grid>.bg53-c:nth-child(6)'), c20: q('.bg53-grid>.bg53-c:nth-child(20)'),
       cells: document.querySelectorAll('.bg53-c').length
