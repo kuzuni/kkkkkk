@@ -5989,6 +5989,13 @@
     clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
   .ps-rib>s.wing{position:absolute;left:0;top:22px;width:117px;height:48px;background:#F4F6FF;
     border-radius:24px;filter:drop-shadow(0 0 3px #000)}
+  /* 9회차 — Q-3 과 P-10 이 «리본» 을 정반대로 지적해 보류했던 것을 갈랐다. **둘은 다른 것을 재고 있었다**:
+     Q 는 «흰 날개» 만, P 는 «배지 전체» 를. 날개만 같은 자로 스윕(180/195/210/225 — 전 구간 동일)하니
+     ref x576.. y367..403 **h37** cy385 ↔ 우리 x563.. y378..425 **h48** cy401.5 로 Q 가 맞았다
+     (우리 날개가 11px 크고 11px 아래). ⚠ 첫 측정에서 창을 x700 까지 열었더니 **CTA 흰 라벨**(우리 x676~ /
+     ref x691~)이 같이 잡혀 폭이 137 로 부풀고 결론이 뒤집혔다 — 창이 이웃 요소를 물면 비평가보다 크게 틀린다.
+     ⚠ `#psw:not(.att)` — 36 도 이 리본을 쓰고 tail 만 자기 값으로 덮어 뒀다(6236행). */
+  #psw:not(.att) .ps-rib>s.wing{left:13px;top:11px;width:97px;height:37px;border-radius:18px}
   .ps-rib>s.med{position:absolute;left:29px;top:6px;width:59px;height:59px;background:#FBCE1B;
     box-shadow:inset 0 0 0 6px #A36B18;z-index:2;
     clip-path:polygon(21px 0,38px 0,100% 21px,100% 38px,38px 100%,21px 100%,0 38px,0 21px)}
