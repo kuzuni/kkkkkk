@@ -26,8 +26,11 @@ const path = require('path');
 
   await page.goto('file://' + path.resolve('index.html'));
   await page.waitForTimeout(900);
-  /* 28 교훈 3 — 캔버스의 흰 데미지 숫자가 잉크 스캔을 오염시킨다 */
-  await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
+  /* ⚠ 캔버스를 숨기면 «딤 뒤 전투 화면» 자리가 통째로 검정이 돼 레퍼런스와 배경이 달라진다
+     (블록 지도 diff 에서 팝업 밖이 ref 'd'(갈색) vs cap 'K'(검정) 로 갈렸다).
+     28 교훈 3 의 «흰 데미지 숫자 오염» 은 전투 영역을 스캔할 때 이야기고, 이 화면은 팝업이 주인공이라
+     **캔버스를 그대로 둔다**. 대신 데미지 숫자가 안 뜨도록 전투를 정지시킨다. */
+  await page.evaluate(() => { if (typeof paused !== 'undefined') { try { paused = true; } catch (e) {} } });
   await page.click('.side .ibtn[data-pop="bless"]');
   await page.waitForTimeout(500);
   await page.screenshot({ path: out });

@@ -4682,15 +4682,15 @@
      34 축복(버프) 팝업 — 측정표 docs/measure/34-축복버프팝업.md
      껍데기 = 딤(.54) 위 **가운데 다이얼로그** 998×1157 (A5 .mbox 와 같은 겹 구성이지만
      폭 897 이 아니라 998 이고, 팝업 «바깥» 에 초록 스트립 + 닫기 X 형제가 붙어 있어 자체 오버레이로 둔다).
-     세로: 블록(팝업1157 + 21 + 스트립252 + 24 + X120 = 1574) 을 «위 126 − 아래 145» 로 중앙 배치하면
-     top = 126 + (2280−126−142−1574)/2 = 345 = ref 429 − 84 ✓ (63 2회차 규칙: 가드 126 은 두고 아래로 민다)
+     세로: 블록(팝업1157 + 21 + 스트립252 + 18 + X132 = 1580) 을 «위 126 − 아래 136» 로 중앙 배치하면
+     top = 126 + (2280−126−136−1580)/2 = 345 = ref 429 − 84 ✓ (63 2회차 규칙: 가드 126 은 두고 아래로 민다)
      좌표 기준: 팝업 자식은 크림 본문 좌상단 = ref(61,529) 원점. ══════════════════════════════════════ */
-  /* 짧은 기기(4:3 → #app 1600) 대책 — 블록 1574 가 안 들어가면 `justify-content:center` 는 «위로도» 넘쳐
+  /* 짧은 기기(4:3 → #app 1600) 대책 — 블록 1580 이 안 들어가면 `justify-content:center` 는 «위로도» 넘쳐
      팝업 머리가 HUD 위로 잘려 나간다(LESSONS 20-④: 클리핑은 «가장 짧은 프레임» 에서 확인하라).
      첫·마지막 자식의 `margin:auto` 로 중앙을 만들면 남는 공간이 음수일 때 auto 가 0 이 돼
      **위쪽 가드(126)를 지키고 아래로만** 넘치고, `overflow-y:auto` 로 닿을 수 있다. */
   #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;overflow-y:auto;
-    box-sizing:border-box;padding:126px 0 142px;flex-direction:column;align-items:center;justify-content:flex-start}
+    box-sizing:border-box;padding:126px 0 136px;flex-direction:column;align-items:center;justify-content:flex-start}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
@@ -4710,7 +4710,7 @@
      margin 으로 밀면 갈색 링이 드러난다(LESSONS 33-③) — border 로 같은 자리를 헤더색으로 칠한다. */
   .bls-body{flex:1 1 auto;position:relative;border:solid #46382D;border-width:2px 5px 5px;border-top-color:#523E3D;
     border-radius:0 0 30px 30px;background:#F0D9BA
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23ECD3B4'/%3E%3C/svg%3E") 37px -2px/235px 235px repeat}
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23E0C8A8'/%3E%3C/svg%3E") 37px -2px/235px 235px repeat}
   .bls-body>*{position:absolute}
 
   /* §3 핑크 캠페인 리본 — 팝업 좌측 외곽을 8px 넘어간다(ref x33 < 팝업 41). .bls 기준 좌표 */
@@ -4725,7 +4725,8 @@
     transform:translateX(-14px)}
 
   /* §4 안내 배너 — 크림 위 반투명 토프 바 */
-  .bls-note{left:40px;top:40px;width:879px;height:98px;border-radius:48px;background:#A2927B;
+  /* 비평 A·B 합의: ref 배너 폭 892~896(우인셋 29~30) — 좌단은 핑크 리본이 덮어 대칭으로 잡는다 */
+  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:48px;background:#A2927B;
     display:flex;align-items:center;justify-content:center}
   /* ref 문구 24자 코어 597(자당 24.9) — 우리 문구도 24자로 맞추고 자폭만 scaleX 로 좁힌다 */
   .bls-note>i{font-size:36px;color:#fff;-webkit-text-stroke:8px #4A3B2C;paint-order:stroke fill;transform:scaleX(.856)}
@@ -4749,11 +4750,14 @@
   .bls-c>.h{flex:0 0 78px;background:#54413D;display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
   .bls-c>.h>i{font-size:35px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.936)}
-  /* ⚠ 4회차 반증 — «노랑 사선 스트라이프» 는 눈으로 본 오독이었다. 픽셀 스캔은 **평면**이다:
-     `node scan34.js row 1120 76 372` → `76..372 (297) #fdce5a` 한 덩어리,
-     `col 95 878 1246` → `879..1237 (359) #fbcf66` 한 덩어리. 어두운 #F5B64C 는 아이콘 주변의
-     넓고 부드러운 음영일 뿐 주기 패턴이 아니다. 3회차의 19px 스트라이프는 제거한다. */
-  .bls-c>.b{flex:1 1 auto;position:relative;background:#FFCE57}
+  /* ⚠⚠ 5회차의 «평면» 판정은 **스캐너의 한계에 속은 오판**이었다(8회차 정정).
+     `row` 세그먼터는 «앞 픽셀과의 차이 > 26» 으로 끊는데, 두 톤 사이가 여러 픽셀에 걸쳐 부드럽게
+     넘어가면 단계마다 26 미만이라 **한 덩어리로 보고**한다. 면적 히스토그램으로 다시 재니
+     `rect 90 1105 360 1125` → (240,176,72) **44.3%** / (248,200,80) **39.3%** 로 2톤이다.
+     비평가 A 실측: **45° · 수평주기 92px · 어두운 띠 폭 43px** → 그라디언트 축 기준 65.05 / 30.4.
+     → 교훈: «주기 패턴이 있나» 는 세그먼트 개수가 아니라 **면적 히스토그램**으로 판정하라. */
+  .bls-c>.b{flex:1 1 auto;position:relative;
+    background:repeating-linear-gradient(45deg,#F0B048 0 30.4px,#F8C850 30.4px 65.05px)}
   .bls-c>.b>*{position:absolute}
   /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
      ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
@@ -4763,17 +4767,16 @@
     font-size:46px;color:#A6DC60;-webkit-text-stroke:11px #123005;paint-order:stroke fill}
   /* ⚠ `#blsw s`(특이도 1-0-1)가 display:inline-block 을 못박으므로 여기서 flex 를 써도 진다.
      LESSONS 15 «폴백이 안 걸린다» 의 사촌 — 안쪽 정렬은 line-height/text-align 으로 한다. */
-  .bls-c .tm{left:46px;top:252px;width:205px;height:97px;border-radius:22px;background:#926A24;
+  .bls-c .tm{left:42px;top:252px;width:214px;height:97px;border-radius:22px;background:#926A24;
     box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center}
   /* 1회차: 흰 코어 w153 (ref 169, −9.5%) — 높이는 Δ1 이라 fs 는 두고 폭만 넓힌다 */
   .bls-c .tm>i{font-size:30px;color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(1.1)}
-  .bls-c .glo{left:0;right:0;bottom:0;height:19px;
-    background:linear-gradient(180deg,#EEBA4A 0,#FFFA89 100%)}
+  .bls-c .glo{left:0;right:0;bottom:0;height:9px;background:#FFFF78}
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
-  .bls-c.off>.b{background:#9E9284}
+  .bls-c.off>.b{background:repeating-linear-gradient(45deg,#918576 0 30.4px,#9E9284 30.4px 65.05px)}
   .bls-c.off .vl{color:#D8D2C8}
   .bls-c.off .tm{background:#5C5044;box-shadow:inset 0 0 0 3px #4B4136}
-  .bls-c.off .glo{background:linear-gradient(180deg,#8A7E70 0,#C6BEB2 100%)}
+  .bls-c.off .glo{background:#D8D2C8}
 
   /* §7 «보너스 축복» 탭 + 보너스 바 */
   .bls-btab{left:258px;top:752px;width:442px;height:58px;border-radius:20px 20px 0 0;background:#3E302D;
@@ -4781,46 +4784,56 @@
   /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
   .bls-btab>i{font-size:34px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.875)}
   .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
-    background:#FFCE57}
+    background:repeating-linear-gradient(45deg,#F0B048 0 30.4px,#F8C850 30.4px 65.05px)}
   .bls-bn>*{position:absolute}
   /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
-  .bls-bn .ic{left:7px;top:9px;width:126px;height:136px;line-height:136px;text-align:center;font-size:110px}
+  /* ref 잉크 x136..246 · y1356..1470 → 바(75,1252) 로컬 (61,20) 114x115. 셰브론은 그 우하단에 겹친다 */
+  .bls-bn .ic{left:61px;top:20px;width:114px;height:115px;line-height:115px;text-align:center;font-size:104px}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
-  .bls-bn .ch{left:133px;top:26px;width:46px;height:102px}
+  .bls-bn .ch{left:140px;top:88px;width:46px;height:48px}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
-  .bls-bn .ch::before{top:24px}
-  .bls-bn .ch::after{top:56px}
+  .bls-bn .ch::before{top:0}
+  .bls-bn .ch::after{top:24px}
   /* 1회차: 흰 잉크 w218 (ref 181) → scaleX .83 */
-  .bls-bn .tx{left:309px;top:38px;height:76px;line-height:76px;font-size:42px;color:#fff;
-    -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83);transform-origin:left center}
+  /* 비평 B ④: 문구 중심이 529.5 로 10.5px 좌측 치우침 — 바 중심(540)에 가운데 정렬로 바꾼다 */
+  .bls-bn .tx{left:200px;right:20px;top:38px;height:76px;line-height:76px;text-align:center;font-size:42px;color:#fff;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill}
+  .bls-bn .tx>b{transform:scaleX(.83)}
   .bls-bn .tx em{color:#A6DC60;margin-left:20px}
-  .bls-bn.off{background:#9E9284}
+  .bls-bn.off{background:repeating-linear-gradient(45deg,#918576 0 30.4px,#9E9284 30.4px 65.05px)}
   .bls-bn.off .tx em{color:#D8D2C8}
 
   /* §8 하단 안내 문구 — 잉크 ref y1496..1531 → body local 967..1002 */
-  /* ref 푸터는 검정 마스크(max RGB<45)에 걸린다 = 거의 검정. 1회차의 #6A5033 은 너무 밝았다 */
+  /* ⚠ 7회차 정정 — ref 푸터는 «진한 글자» 가 아니라 **흰 글자 + 검정 외곽**이다.
+     rect 203,1496~875,1531 히스토그램: 순검정 10.0% · (240,232,216)~(240,232,224) 계열 11.2%.
+     dark 마스크에 걸린 673×36 은 «글자 본체» 가 아니라 **검정 외곽선의 bbox** 였다. */
   .bls-ft{left:0;right:0;top:957px;height:52px;line-height:52px;text-align:center;
-    font-size:38px;font-weight:900;color:#241A0E}
-  .bls-ft>i{transform:scaleX(.75)}
+    font-size:32px;font-weight:900;color:#fff}
+  .bls-ft>i{transform:scaleX(.887);-webkit-text-stroke:7px #000;paint-order:stroke fill}
 
   /* §9 팝업 «바깥» — 초록 프로모 스트립(간격 21) + 닫기 X(간격 31) */
   .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:252px;box-sizing:border-box;
     border:5px solid #000;border-radius:30px;overflow:hidden;
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
-  .bls-promo .ic{left:71px;top:24px;width:325px;height:200px;line-height:200px;text-align:center;font-size:112px}
-  .bls-promo .tx{left:491px;top:30px;height:74px;line-height:74px;font-size:44px;color:#FFF06A;
-    -webkit-text-stroke:11px #063D1E;paint-order:stroke fill}
+  /* ref 아이콘 뭉치 잉크 308x197 — 이모지 한 줄로는 높이가 안 나와 scaleY 로 bbox 를 채운다(아트 자리) */
+  .bls-promo .ic{left:71px;top:24px;width:325px;height:200px;line-height:200px;text-align:center;font-size:138px}
+  .bls-promo .ic>b{transform:scaleY(1.35)}
+  /* 비평 A·B 합의: ref 헤드라인 잉크 379x55(자당 47.4), 우끝 953 = 스트립 우인셋 55~61 → 우측 정렬 */
+  .bls-promo .tx{left:420px;right:52px;top:24px;height:80px;line-height:80px;text-align:right;
+    font-size:56px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
+  .bls-promo .gb.off{background:#8FA98A;box-shadow:inset 0 6px 0 rgba(255,255,255,.35),0 6px 0 #5E7259;cursor:default}
   .bls-promo .gb{left:625px;top:115px;width:267px;height:115px;border:0;border-radius:28px;cursor:pointer;
     background:linear-gradient(180deg,#8CF05C 0,#70E030 55%,#4DBB18 100%);
     box-shadow:inset 0 6px 0 rgba(255,255,255,.55),0 6px 0 #2F7A0C;
     font-size:42px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
-  .bls-x{flex:none;margin:24px 0 auto;width:120px;height:120px;box-sizing:border-box;border:7px solid #000;
-    border-radius:50%;background:#E04D57;cursor:pointer;line-height:106px;text-align:center;
-    font-size:60px;font-weight:900;color:#FAF0F1}
+  /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
+  .bls-x{flex:none;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
+    border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
+    font-size:72px;font-weight:900;color:#FAF0F1}
 </style>
 </head>
 <body>
@@ -10059,7 +10072,10 @@ function renderBless(){
     c.querySelector('.tm>i').textContent = on ? '⏱ ' + hms(blessLeft(x.k)) : '⏱ 받기';
   });
   $('blsBonus').classList.toggle('off', !blessAll());
-  $('blsAll').style.visibility = blessAny() ? '' : 'hidden';
+  /* ⚠ 비평 B 1순위: 이 버튼을 «숨겼더니» 스트립 CTA 레이어가 통째로 없는 그림이 돼
+     ①②③④ 가 한꺼번에 깎였다(스트립 하단 54px 공백·우측 정렬 97px 붕괴). ref 에는 항상 있는
+     레이어다 — 숨기지 말고 «비활성» 표시만 한다. */
+  $('blsAll').classList.toggle('off', !blessAny());
 }
 let blsBuilt = false;
 function buildBlessCards(){
