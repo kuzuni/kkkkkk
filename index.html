@@ -4401,9 +4401,11 @@
   .jz-badov{position:absolute;pointer-events:none;background:#FF3B4E;
     box-shadow:0 0 42px 14px rgba(255,59,78,.85);
     animation:jzBadOv .46s ease-out both}
-  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.96;translate:-6px}
-    28%{translate:6px}46%{translate:-6px}64%{opacity:.72;translate:6px}
-    82%{opacity:.4;translate:-6px}100%{opacity:0;translate:0}}
+  /* 피크 .96 을 300ms 유지하면 «번쩍» 이 아니라 «빨간 막대» 라 알약 수치가 안 보인다(9회차 비평).
+     첫 번째 극점에서만 세게 치고 빠르게 빠진다. */
+  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.62;translate:-6px}
+    28%{opacity:.44;translate:6px}46%{opacity:.3;translate:-6px}64%{opacity:.2;translate:6px}
+    82%{opacity:.1;translate:-6px}100%{opacity:0;translate:0}}
   @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
     100%{filter:none}}
 
@@ -4418,7 +4420,7 @@
      닫기에선 **끝 15ms 에 딤의 72% 가 한 번에 증발하는 절벽**이 된다(8회차 비평 실측).
      닫기는 자기 곡선을 따로 갖는다. */
   .jz-c{animation:jzDimOut .12s ease-in both}
-  @keyframes jzDim{0%{opacity:0}6%{opacity:.72}100%{opacity:1}}
+  @keyframes jzDim{0%{opacity:0}25%{opacity:.5}100%{opacity:1}}
   @keyframes jzDimOut{from{opacity:1}to{opacity:0}}
   /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
      ⚠ 이징을 애니메이션 «전체» 에 걸면 안 된다 — `cubic-bezier(.34,1.56,.64,1)` 는 첫 30ms 에
@@ -4426,8 +4428,9 @@
      구간별 이징으로 나눠 앞 구간은 정상 ease-out, 오버슈트는 뒤 구간에만 남긴다. */
   .jz-o.jz-dlg>*{animation:jzBoxIn .22s linear both}
   .jz-c.jz-dlg>*{animation:jzBoxOut .12s ease-in both}
-  @keyframes jzBoxIn{0%{scale:.92;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
-    62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
+  @keyframes jzBoxIn{0%{scale:.92;opacity:.45;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
+    30%{opacity:1}
+    62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
   @keyframes jzBoxOut{to{scale:.94;opacity:0}}
   /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1) */
   .jz-o.jz-pg{animation:jzPgIn .17s ease-out both}
@@ -4441,8 +4444,14 @@
   .jz-c.jz-sh2{animation:jzSheetOut .13s ease-in both}
   /* 이동 구간 이징이 너무 급하면 240ms 가 «80ms 스냅» 으로 읽힌다(5회차 비평: 예산 33% 에 이동 89% 완료).
      전반 50% 에 이동량 60% 쯤이 오도록 완화한다. */
-  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.25,.35,.35,1)}
-    86%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{translate:0 0}}
+  /* ⚠ 오버슈트를 «키프레임 한 점» 으로 두면 실제로는 거의 안 보인다.
+     `100%`(=시트 높이 ≈2100px) → `-8px` 을 한 구간에서 보간하므로 offset = (1−p)·2100 − 8p 이고,
+     |오버슈트| ≥6px 가 되려면 p>0.999 — 즉 **가시 구간이 18ms(60Hz 1.1프레임)** 뿐이다
+     (9회차 비평 실측: t=206 프레임이 0.0px). → 70~86% 를 −8px 로 **홀드**해 38ms 짜리 «구간» 으로 만든다.
+     이동 구간 이징의 첫 제어점 y 도 .35→.12 로 낮춰 앞쏠림(예산 50% 에 이동 88%)을 푼다. */
+  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.25,.12,.35,1)}
+    70%{translate:0 -8px}86%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}
+    100%{translate:0 0}}
   @keyframes jzSheetOut{to{translate:0 100%}}
   /* 시트는 «자기 높이만큼 아래» 에서 올라오므로 슬라이드 도중 **탭바 위를 쓸고 지나간다**
      (5회차 비평: t=30·60 프레임에서 탭 칸이 가려져 아이콘 팝이 안 보였다).
