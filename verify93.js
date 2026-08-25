@@ -145,6 +145,69 @@ function pwLaunch(){
   chk(t2.cross === 0, '딤이 안 걸린 퀘스트 행 위 관통 ' + t2.cross
       + '회 (93 ④: 0 — 3박자 내내 형제 행 딤이 유지된다)');
 
+  console.log('[2b] 2회차 회귀 — 궤적이 패널 «바깥» 으로 나간다(딤 무시) · 정지 프레임 0 · 숫자가 코인을 안 앞선다');
+  const t2b = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.dia = 300; S.gold = 4e5; fxHold.dia = 0; fxHold.gold = 0; await sleep(1600);
+    S.quest.kill.base = -1e9;
+    openQuest('rep'); await sleep(400);
+    const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
+    if(!b) return { err:'보상 받기 버튼 없음' };
+    const row = b.closest('.qs-r'), par = row && row.parentElement;
+    const sibs = par ? [].slice.call(par.children).filter(c => c !== row) : [];
+    const boxes = sibs.map(c => c.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+    const dn = document.getElementById('diaN');
+    const d0 = S.dia;
+    b.click();
+    /* «딤이 걸려 있어도» 관통 0 이어야 한다 — 2회차의 3차 베지에가 실제로 패널 밖으로 나가는지 */
+    let cross = 0, froze = 0, samp = 0, prev = new Map(), tot = 0, worstLead = -1;
+    const where = [];
+    /* 정지 판정은 **렌더 프레임 단위**로 재야 한다 — 10ms 폴링은 rAF(이 컨테이너 32~42ms)보다
+       빨라서 «아직 안 그려진 같은 좌표» 를 정지로 오독한다(43 교훈 1: 내 assert 부터 의심할 것). */
+    const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+    for(let i=0;i<70;i++){
+      const els = document.querySelectorAll('#fxl .fx-fly');
+      if(fxFlies.filter(f => f.ui && f.cur === 'dia').length) tot = Math.max(tot, fxFlies.filter(f => f.ui && f.cur === 'dia').length);
+      const cur = new Map();
+      for(const e of els){
+        /* 착지한 아이콘(.fx-land2)은 알약 중심에 95ms 머무는 것이 «설계» 다 — 정지 판정에서 뺀다 */
+        const landed = e.classList.contains('fx-land2') || e.classList.contains('fx-land');
+        const r = e.getBoundingClientRect();
+        const cx = r.left + r.width/2, cy = r.top + r.height/2;
+        if(!landed) cur.set(e, [cx, cy]);
+        const p = prev.get(e);
+        if(p && !landed){ samp++; if(Math.abs(cx - p[0]) < 0.5 && Math.abs(cy - p[1]) < 0.5) froze++; }
+        if(landed) continue;                              /* 알약 위 = 형제 행 밖이므로 관통 판정도 제외 */
+        for(const q of boxes) if(cx >= q.left && cx <= q.right && cy >= q.top && cy <= q.bottom){
+          cross++; if(where.length < 6) where.push(Math.round(cx) + ',' + Math.round(cy) + '@' + i);
+          break; }
+      }
+      prev = cur;
+      /* 숫자 진행률이 도착 진행률을 앞서면 안 된다(H ④). 다이아 묶음으로 잰다. */
+      if(tot){
+        const flying = fxFlies.filter(f => f.ui && f.cur === 'dia').length;
+        const arrived = (tot - flying)/tot;
+        const shown = parseFloat(String(dn.textContent).replace(/[^\d.]/g, '')) || 0;
+        const kk = String(dn.textContent).indexOf('K') >= 0 ? 1000 : 1;
+        const prog = Math.max(0, Math.min(1, (shown*kk - d0)/Math.max(1, S.dia - d0)));
+        if(arrived < 1) worstLead = Math.max(worstLead, prog - arrived);
+      }
+      await nextFrame();
+    }
+    await sleep(500);
+    closeModal();
+    return { cross, froze, samp, tot, where, worstLead:+worstLead.toFixed(3),
+             boxes:boxes.map(r => [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]) };
+  });
+  chk(!t2b.err, '2회차 회귀 트리거' + (t2b.err ? ' — ' + t2b.err : ''));
+  chk(t2b.cross === 0, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 0 이어야 한다 (2회차 3차 베지에)'
+      + (t2b.cross ? ' · 지점 ' + (t2b.where || []).join(' / ') + ' · 행 ' + JSON.stringify(t2b.boxes) : ''));
+  chk(t2b.samp > 200 && t2b.froze/t2b.samp <= 0.02,
+      '정지 프레임 ' + t2b.froze + '/' + t2b.samp + ' = '
+      + (t2b.samp ? (100*t2b.froze/t2b.samp).toFixed(1) : '-') + '% (렌더 프레임 기준 ≤2%)');
+  chk(t2b.worstLead <= 0.12,
+      '숫자가 도착보다 최대 ' + Math.round(t2b.worstLead*100) + '%p 앞선다 (2회차: 선형 롤링 — ≤12%p)');
+
   console.log('[3] 전투 발(킬 골드)은 변화 0 — 개수 3~6 · #fxlc · 0.8초 안');
   const t3 = await page.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));

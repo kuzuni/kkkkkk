@@ -1760,6 +1760,11 @@
      (9회차: n4·n5·n6 세 프레임 연속 관측). 코인 형태가 남지 않게 더 작게·더 빨리 지운다. */
   .fx-land{animation:fxLand .035s linear forwards}
   @keyframes fxLand{0%{opacity:.85}100%{opacity:0}}
+  /* 93 — UI 발 착지. 도착 간격이 45~90ms 라 35ms 페이드로는 «꽂힌 프레임» 이 캡처에도 눈에도
+     안 남는다(2회차: 비평가 2명이 비행 중 좌표를 도착점으로 오독). 알약 중심에 60% 구간을
+     머문 뒤 뺀다 — 그래도 총 95ms 라 «이중 원» 을 만들 만큼 길지는 않다. */
+  .fx-land2{animation:fxLand2 .095s linear forwards}
+  @keyframes fxLand2{0%{opacity:.95}58%{opacity:.9}100%{opacity:0}}
 
   /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
   /* 봉우리가 뾰족하면(28% 한 점) 실제로 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
@@ -1792,6 +1797,10 @@
     74%{transform:scale(1.02);outline:3px solid rgba(255,255,255,.14)}
     100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
   .fx-punch2{animation:fxPunch2 .16s ease-out both}
+  /* 알약(.cbox)은 아이콘 `i` 가 left:-31·width:63 이라 **박스 왼쪽 밖**에 걸쳐 있다. 박스 중심을
+     기준으로 확대하면 코인이 꽂히는 그 아이콘이 8~13px 왼쪽으로 튄다(비평가 G·H 공통 ⑤).
+     아이콘 중심(박스 좌변 +0.5px)을 pivot 으로 삼아 **도착점이 움직이지 않게** 한다. */
+  .cbox.fx-punch2{transform-origin:1px 50%}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
@@ -14642,15 +14651,37 @@ const FXFLY_MAX_C = 12;                              /* 전투 발 — 77 이전
    이렇게 두면 아이콘 수(8~16)가 달라져도 «첫 도착·마지막 도착» envelope 이 고정된다. */
 const FX3_SPREAD = 0.22;                             /* (a) 퍼짐 */
 const FX3_HOLD0  = 0.12, FX3_HOLD1 = 0.20;           /* (b) 머묾 */
-const FX3_STAG   = 0.035;                            /* (c) 흡수 스태거 */
-const FX3_STAGMX = 0.50;                             /* 스태거 총합 상한 */
+/* 2회차 — 스태거를 «출발» 이 아니라 «도착» 에만 남긴다. 1회차는 출발 스태거가 최대 0.50s 라
+   마지막 아이콘이 퍼짐 끝(0.22s)부터 0.92s 까지 **700ms 를 제자리에 서 있었고**, 비평가 G·H 가
+   독립적으로 «3박자가 아니라 퍼짐 → 0.9초 정지 → 우르르의 2박자»(①2~3점)로 잡았다.
+   → 전원이 **0.58s 안에 출발**하고, 도착 간격은 «비행 길이 차이» 로 만든다(0.16s ~ 0.64s). */
+const FX3_LAUNCH = 0.16;                             /* 출발 스태거 총폭 */
 const FX3_ARR0   = 0.50, FX3_ARR1 = 1.22;            /* 첫 도착 · 마지막 도착 (설계값 — 프레임 granularity 로 실측은 +40~70ms) */
-const FX3_ABS0   = 0.15, FX3_ABS1 = 0.80;            /* 흡수 비행 길이 클램프 — 하한이 크면 첫 도착이 뒤로 밀린다 */
-const FX3_R0     = 60,  FX3_R1 = 140;                /* 퍼짐 반경 */
-/* 방사 방향 — 모달 «좌측» 행 위로 나가면 «저 퀘스트도 완료됐나» 로 읽힌다(58 7회차 지적).
-   우상단으로 열린 120° 부채꼴로 제한한다(정위 −95° ~ 수평 우측 아래 +25°). */
-const FX3_A0 = -95 * Math.PI/180, FX3_A1 = 25 * Math.PI/180;
-const FX3_PUNCH = 160;                               /* UI 발 알약 펄스 재시작 간격 — 여러 번 «톡톡» */
+const FX3_ABS0   = 0.14, FX3_ABS1 = 0.90;            /* 흡수 비행 길이 클램프 */
+const FX3_R0     = 70,  FX3_R1 = 135;                /* 퍼짐 반경 */
+/* 방사 방향 — 모달 «좌측·위» 행 위로 나가면 «저 퀘스트도 완료됐나» 로 읽힌다(58 7회차 지적).
+   1회차는 −95°~+25° 라 위로도 아래로도 새서 «히어로 아래 4개»·«좌측 x=199» 가 잡혔다(G/H ② 4점).
+   **패널 밖(메인 화면)** 은 우상단 70° 부채꼴, **패널 안(모달·시트)** 은 거의 수평 우측 42° 부채꼴이다 —
+   패널 안에서 위로 퍼지면 그 순간 이미 «윗 행 카드 위» 라 궤적을 아무리 고쳐도 회수가 안 된다. */
+const FX3_A0  = -80 * Math.PI/180, FX3_A1  = -10 * Math.PI/180;   /* 패널 밖 */
+const FX3_PA0 = -30 * Math.PI/180, FX3_PA1 =  12 * Math.PI/180;   /* 패널 안 */
+/* 패널 안에서의 흡수 궤적 — 3차 베지에. 제어점 x 를 «패널 우측 바깥» 이 곡선 중점이 되도록 역산하고
+   (2차 베지에로는 중점이 제어점의 절반밖에 안 나가 패널을 못 벗어난다 — 1회차 실측 최대 x 708 < 패널 986),
+   첫 제어점을 출발점보다 **아래**(K1) 에 둬 «수평으로 슬링해 빠져나간 뒤 바깥에서 올라간다».
+   K1 0.25 는 위 행 밴드 관통 샘플이 0 이 되는 최소값이다(수치 탐색: 0.05→25샘플, 0.15→2, 0.25→0). */
+const FX3_K1 = 0.25, FX3_K2 = 0.55, FX3_OUTM = 46;
+const FX3_PANEL = '#mbox, #panel, .eqp, .tr-sheet';
+const FX3_PUNCH = 120;                               /* UI 발 알약 펄스 재시작 간격 — 여러 번 «톡톡» */
+/* 출발점을 품은 패널이 있으면 그 «우측 바깥» x 를 돌려준다(없으면 0 = 메인 화면 규칙). */
+function fx3Out(p){
+  for(const el of document.querySelectorAll(FX3_PANEL)){
+    const r = fxRect(el);
+    if(!r || r.w < 240) continue;
+    if(p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)
+      return Math.min(FRAME_W - 40, r.x + r.w + FX3_OUTM);
+  }
+  return 0;
+}
 const FXCUR = {
   gold:{ pill:'.cGold', pcb:'.pcb-g', ic:'🪙', col:'#FFDE6A', fs:46 },
   dia :{ pill:'.cDia',  pcb:'.pcb-d', ic:'💎', col:'#8FE9FF', fs:42 }
@@ -14760,7 +14791,10 @@ function fxFly(from, cur, n){
   fxHold[cur] = performance.now() + (combat ? 1400 : 2000);
   /* 93 — 롤링을 «첫 도착 → 마지막 도착» 길이로 늘린다. 전투 발은 종전 0.32s. */
   fxRollDur[cur] = combat ? FXROLL : (FX3_ARR1 - FX3_ARR0);
-  const stagSpan = Math.min(FX3_STAGMX, (cnt - 1) * FX3_STAG);
+  /* 2회차 — UI 발 롤링은 **선형**이다. easeOutCubic 은 앞이 급해서 도착률보다 숫자가 최대 43%p
+     앞섰다(비평가 H ④). 도착이 0.50~1.22s 에 균등 분배돼 있으므로 선형이면 «도착 개수 == 숫자 진행» 이다. */
+  fxRollLin[cur] = !combat;
+  const outX = combat ? 0 : fx3Out(p0);              /* 패널 안에서 출발하면 그 우측 바깥으로 뺀다 */
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
     el.className = 'fx-fly';
@@ -14770,27 +14804,40 @@ function fxFly(from, cur, n){
     L.appendChild(el);
     if(!combat){
       /* ── 93 UI 발 3박자 ───────────────────────────────────────────────
-         (a) 퍼짐 0.22s — 출발점에서 우상단 부채꼴로 60~140px 튀어나간다(ease-out, scale .6→1.1, 회전 ±20°)
-         (b) 머묾 0.12~0.20s — 그 자리에서 살짝 부유
-         (c) 흡수 — 알약으로 ease-in(가속) 비행, 도착 직전 scale 1.1→0.5 로 «빨려 들어감» */
+         (a) 퍼짐 0.22s — 출발점에서 부채꼴로 70~135px 튀어나간다(ease-out, scale .6→1.1, 회전 ±20°).
+             패널 안이면 «거의 수평 우측»(−30°~+12°) — 위로 퍼지면 그 자리가 이미 윗 행 카드다.
+         (b) 머묾 0.12~0.20s + 출발 스태거 0~0.16s — 그 자리에서 **눈에 보이게** 부유한다
+             (1회차의 «x 변화 0.0px 로 576ms 정지» 를 없앤 지점 — G ① 감점 1위)
+         (c) 흡수 — 알약으로 ease-in(가속) 비행. 패널 안이면 3차 베지에로 **수평 슬링 → 패널 밖 상승**,
+             패널 밖이면 종전 2차 호. 도착 «직전» 에만 scale 1.1→0.5 로 빨려 들어간다. */
       const u = cnt > 1 ? i/(cnt - 1) : 0;
-      const sx0 = p0.x + rnd(-18, 18), sy0 = p0.y + rnd(-14, 14);
-      const a = rnd(FX3_A0, FX3_A1), rr = rnd(FX3_R0, FX3_R1);
+      const sx0 = p0.x + rnd(-12, 12), sy0 = p0.y + rnd(-10, 10);
+      const a = outX ? rnd(FX3_PA0, FX3_PA1) : rnd(FX3_A0, FX3_A1);
+      const rr = rnd(FX3_R0, FX3_R1);
       const ax = clamp(sx0 + Math.cos(a)*rr, 40, FRAME_W - 40);
-      const ay = Math.max(120, sy0 + Math.sin(a)*rr);
-      const ha = FX3_SPREAD + (FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0)) + u*stagSpan;   /* 흡수 시작 */
+      const ay = clamp(sy0 + Math.sin(a)*rr, 120, frameH - 120);
+      const ha = FX3_SPREAD + (FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0)) + u*FX3_LAUNCH;  /* 흡수 시작 */
       const arr = FX3_ARR0 + u*(FX3_ARR1 - FX3_ARR0);                                  /* 도착 시각 */
       const ad = clamp(arr - ha, FX3_ABS0, FX3_ABS1);
-      /* 호는 «패널 바깥으로 크게 돌아» 올라간다 — 직선이면 모달 좌측 퀘스트 행 위를 관통한다(7회차). */
-      const vx = to.x - ax, vy = to.y - ay, vl = Math.hypot(vx, vy) || 1;
-      const bow = vl * (0.24 + i*0.012);
-      fxFlies.push({ el, ui:true, sx:sx0, sy:sy0, ax, ay, tx:to.x, ty:to.y,
-        cx:Math.min(FRAME_W - 40, Math.max(ax, to.x) + bow*0.8),
-        cy:Math.max(120, (ay + to.y)/2 - Math.abs(vx/vl)*bow*0.5),
-        sd:FX3_SPREAD, ha, ad, arr:ha + ad, rot:rnd(-20, 20),
+      const f = { el, ui:true, sx:sx0, sy:sy0, ax, ay, tx:to.x, ty:to.y,
+        sd:FX3_SPREAD, ha, ad, arr:ha + ad, rot:rnd(-20, 20), ph:rnd(0, 6.28),
         /* 14회차 교훈의 3박자 판 — dt 누적으로 돌면 dt 가 0.1s 로 클램프돼 프레임이 길어질수록
            연출이 벽시계보다 늘어진다(1.26s 설계가 1.4s 로 찍혔다). **시작 시각 기준**으로 돈다. */
-        st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n });
+        st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n };
+      if(outX){
+        /* 3차 베지에. 곡선 중점 x 가 정확히 outX 가 되도록 제어점 x 를 역산한다:
+           x(0.5) = .125·x0 + .75·c + .125·x1  →  c = (outX − .125(x0+x1)) / .75 */
+        const c = clamp((outX - 0.125*(ax + to.x))/0.75, Math.max(ax, to.x) + 80, 1500);
+        f.c1x = c; f.c1y = ay + FX3_K1*(ay - to.y);     /* 아래로 슬링 — 윗 행 밴드를 안 스친다 */
+        f.c2x = c; f.c2y = to.y + FX3_K2*(ay - to.y);
+      }else{
+        /* 패널이 없으면 종전 2차 호(58 7회차) — 메인 화면에서까지 x1030 까지 크게 돌 이유가 없다 */
+        const vx = to.x - ax, vy = to.y - ay, vl = Math.hypot(vx, vy) || 1;
+        const bow = vl * (0.24 + i*0.012);
+        f.cx = Math.min(FRAME_W - 40, Math.max(ax, to.x) + bow*0.8);
+        f.cy = Math.max(120, (ay + to.y)/2 - Math.abs(vx/vl)*bow*0.5);
+      }
+      fxFlies.push(f);
       continue;
     }
     const sx = p0.x + rnd(-36, 36), sy = p0.y + rnd(-26, 26);
@@ -15024,7 +15071,7 @@ function fxCheck(el){
 /* 93 — 둘 다 «마지막 도착(1.26s) + 100ms» 로 연동한다(저장소 주인 지시 ⑥).
    3박자로 늘린 뒤에도 620ms 에 목록을 갈면 **연출 중간에 재렌더가 끼어** 77·58 회귀가 난다:
    코인이 아직 형제 행 위를 지나는데 딤이 풀려 «저 퀘스트도 완료됐나» 오독이 돌아온다. */
-const FXSOLO = 1360, FXHOLD = 1360;
+const FXSOLO = 1250, FXHOLD = 1330;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
@@ -15071,6 +15118,9 @@ const FXROLL = 0.32;
 /* 93 — 롤링 길이를 묶음별로 정한다. UI 발 3박자는 «첫 도착(0.56s) → 마지막 도착(1.26s)» 인 0.70s 로
    늘려 코인과 숫자가 «같이» 오르게 하고, 전투 발은 종전 0.32s 를 그대로 쓴다. */
 const fxRollDur = { gold:FXROLL, dia:FXROLL };
+/* 93 2회차 — UI 발은 **선형** 롤링(도착 개수와 1:1). easeOutCubic 은 앞이 급해 숫자가 도착률을
+   최대 43%p 앞섰다(비평가 H ④ 실측: 678ms 숫자 32% · 도착 0%). 전투 발은 종전 easeOutCubic. */
+const fxRollLin = { gold:false, dia:false };
 const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
 function fxWatch(now){
   const flush = fxNow;                                /* 이번 프레임 안에서만 유효 — 다음 프레임엔 다시 묶는다 */
@@ -15115,9 +15165,13 @@ function fxTick(dt){
            바로 remove 하면 렌더된 마지막 위치가 p<1 이라 도착이 몇 px 모자란 채로 끝난다. */
         f.el.style.transform = 'translate(' + f.tx.toFixed(1) + 'px,' + f.ty.toFixed(1) + 'px)'
           + ' translate(-50%,-50%) scale(' + (f.ui ? '.5' : '.35') + ')';  /* 코인 형태로 안 읽히게 — «흡수» 한 점만 남긴다 */
-        f.el.classList.add('fx-land');
+        /* 2회차 — UI 발 착지를 «보이게» 한다. 35ms 페이드는 도착 간격(45~90ms)보다 짧아서
+           16프레임(95ms 간격) 캡처에 **도착 순간이 한 장도 안 걸리고**, 비평가 2명이 비행 중
+           좌표(598,89)를 «도착점» 으로 읽어 «39~65px 어긋남»(G ③ · H 3)으로 잡았다.
+           실제 요소 중심은 verify58 [8] 실측 0px 로 정확히 꽂힌다 — 안 보였던 것이 문제였다. */
+        f.el.classList.add(f.ui ? 'fx-land2' : 'fx-land');
         const el = f.el;
-        setTimeout(() => el.remove(), 45);
+        setTimeout(() => el.remove(), f.ui ? 100 : 45);
       }
       /* 93 — UI 발은 작고 짧은 펄스를 여러 번(도착 스태거에 맞춰 160ms 간격). 실제로 튄 도착에만
          «팅» 을 3단계 피치로 올려 붙인다 — 도착마다 울리면 0.7초에 13번이라 잡음이 된다. */
@@ -15138,16 +15192,30 @@ function fxTick(dt){
         x = f.sx + (f.ax - f.sx)*e; y = f.sy + (f.ay - f.sy)*e;
         s = 0.6 + 0.5*e; rot = f.rot*e;
         op = q < 0.18 ? (q/0.18) : 1;
-      }else if(f.t < f.ha){                             /* (b) 머묾 — 그 자리에서 살짝 부유 */
+      }else if(f.t < f.ha){                             /* (b) 머묾 — **눈에 보이게** 부유한다 */
+        /* 1회차는 여기서 x 가 정확히 f.ax 로 고정돼 «576ms 동안 x 변화 0.0px»(G ①)·«원점 박스
+           픽셀 변화 0.0%»(H ⑦) 로 잡혔다. 진폭은 작아도 **매 프레임 좌표가 달라야** 정지로 안 읽힌다. */
         const q = (f.ha - f.sd) > 0 ? (f.t - f.sd)/(f.ha - f.sd) : 1;
-        x = f.ax; y = f.ay - Math.sin(q*Math.PI)*7;
-        s = 1.1; rot = f.rot;
-      }else{                                            /* (c) 흡수 — ease-in(가속) + 도착 직전 축소 */
+        /* 크리프(단조 증가)를 사인보다 크게 잡아 **속도가 0 이 되는 프레임이 없게** 한다 —
+           사인만 두면 변곡점 프레임이 «정지» 로 찍힌다(2회차 게이트 실측 6/522). */
+        x = f.ax + Math.sin(f.t*7.5 + f.ph)*6 + q*20;   /* 느린 우측 크리프 — 흡수 방향으로 «준비» */
+        y = f.ay + Math.cos(f.t*6.1 + f.ph)*7 - q*13;
+        s = 1.1 + Math.sin(f.t*5.3 + f.ph)*0.03;
+        rot = f.rot + Math.sin(f.t*4.2 + f.ph)*4;
+      }else{                                            /* (c) 흡수 — ease-in(가속) + 도착 «직전» 축소 */
         const q = Math.min(1, (f.t - f.ha)/f.ad);
         const e = 0.15*q + 0.85*q*q, v = 1 - e;
-        x = v*v*f.ax + 2*v*e*f.cx + e*e*f.tx;
-        y = v*v*f.ay + 2*v*e*f.cy + e*e*f.ty;
-        s = 1.1 - 0.6*Math.pow(e, 2.2);                 /* 1.1 → 0.5 «빨려 들어감» */
+        if(f.c1x != null){                              /* 패널 안 — 수평 슬링 → 패널 밖 상승 */
+          const v2 = v*v, v3 = v2*v, e2 = e*e, e3 = e2*e;
+          x = v3*f.ax + 3*v2*e*f.c1x + 3*v*e2*f.c2x + e3*f.tx;
+          y = v3*f.ay + 3*v2*e*f.c1y + 3*v*e2*f.c2y + e3*f.ty;
+        }else{
+          x = v*v*f.ax + 2*v*e*f.cx + e*e*f.tx;
+          y = v*v*f.ay + 2*v*e*f.cy + e*e*f.ty;
+        }
+        /* 2회차 — 지수 2.2 는 중간(e .5)에서 이미 88% 라 «전 구간 선형 축소 = 멀어져 작아짐» 으로
+           읽혔다(G ⑧ · H 3). 지수 5 면 e .8 까지 91% 를 유지하고 마지막 20% 에서만 빨려 들어간다. */
+        s = 1.1 - 0.6*Math.pow(e, 5);                   /* 1.1 → 0.5 «빨려 들어감» */
         rot = f.rot*(1 - e);
       }
       f.el.style.opacity = op.toFixed(2);
@@ -15184,7 +15252,7 @@ function fxTick(dt){
        늘어져, 마지막 캡처 프레임에 목표치 1~2% 못 미친 숫자가 남았다(13회차 비평 4명 공통). */
     const q = fxRoll[k], p = (now - q.s)/((fxRollDur[k] || FXROLL)*1000);
     if(p >= 1){ fxDisp[k] = t; fxRoll[k] = null; continue; }
-    const e = 1 - Math.pow(1 - p, 3);                 /* easeOutCubic — FXROLL 에 «정확히» 도착한다 */
+    const e = fxRollLin[k] ? p : 1 - Math.pow(1 - p, 3);   /* 93: UI 발 선형 · 전투 발 easeOutCubic */
     fxDisp[k] = q.from + (q.to - q.from)*e;
   }
 }
