@@ -8034,7 +8034,7 @@ const SKILLS = [
   { id:'slash',  n:'검기',      g:0, ic:'🗡️', cd:0.85, m:1.00, d:'가장 가까운 적에게 검기를 1발 날린다' },
   { id:'shuri',  n:'표창 난사', g:0, ic:'✴️', cd:2.20, m:0.55, d:'8방향으로 표창을 뿌린다' },
   { id:'stone',  n:'돌팔매',    g:0, ic:'🪨', cd:1.30, m:1.35, d:'묵직한 돌덩이를 던져 적을 꿰뚫는다',
-    t:'proj', k:'shuri', n:1, sp:470, pierce:1, col:'#cbb08a', life:1.6, hits:1 },
+    t:'proj', k:'shuri', cnt:1, sp:470, pierce:1, col:'#cbb08a', life:1.6, hits:1 },
   { id:'vigor',  n:'기합',      g:0, ic:'💢', cd:9.00, m:0.70, sup:1, d:'5초간 스킬 피해가 18% 증가한다',
     t:'buff', bk:'atk', bv:0.18, bt:5.0 },
   /* ── 고급 ── */
@@ -8047,7 +8047,7 @@ const SKILLS = [
   { id:'aura',   n:'신성 오라', g:2, ic:'🔥', cd:0.00, m:0.55, d:'주위 적에게 지속 피해 (지속)' },
   { id:'bolt',   n:'연쇄 번개', g:2, ic:'⚡', cd:1.40, m:1.60, d:'무작위 적 3명에게 번개' },
   { id:'arrow',  n:'꿰뚫는 화살', g:2, ic:'🏹', cd:1.50, m:1.15, d:'빠른 화살 2발이 적을 길게 관통한다',
-    t:'proj', k:'ice', n:2, sp:900, spread:0.13, pierce:6, col:'#ffe6a8', life:1.4, hits:2 },
+    t:'proj', k:'ice', cnt:2, sp:900, spread:0.13, pierce:6, col:'#ffe6a8', life:1.4, hits:2 },
   { id:'haste',  n:'신속의 축복', g:2, ic:'🌀', cd:12.00, m:0.80, sup:1, d:'6초간 스킬 발동 속도가 30% 빨라진다',
     t:'buff', bk:'rate', bv:0.30, bt:6.0 },
   /* ── 영웅 ── */
@@ -8055,18 +8055,18 @@ const SKILLS = [
   { id:'poison', n:'맹독 안개', g:3, ic:'☠️', cd:3.20, m:0.80, d:'바닥에 독 장판을 남긴다' },
   { id:'drain',  n:'흡혈의 검', g:3, ic:'🩸', cd:2.60, m:2.00, d:'피해를 주고 체력을 흡수' },
   { id:'frost',  n:'서리 연쇄', g:3, ic:'🧊', cd:2.10, m:1.45, d:'무작위 적 4명을 얼려 둔화시킨다',
-    t:'chain', n:4, slow:0.50, col:'#a8e8ff', hits:4 },
+    t:'chain', cnt:4, slow:0.50, col:'#a8e8ff', hits:4 },
   /* ── 전설 ── */
   { id:'boomer', n:'부메랑',    g:4, ic:'🪃', cd:2.40, m:1.80, d:'나갔다 돌아오는 부메랑' },
   { id:'meteor', n:'운석 낙하', g:4, ic:'☄️', cd:4.00, m:5.00, d:'무작위 위치에 운석을 떨어뜨린다' },
   { id:'gale',   n:'폭풍의 칼날', g:4, ic:'🌪️', cd:2.80, m:1.05, d:'전방위로 칼날 12개를 흩뿌린다',
-    t:'proj', k:'slash', n:12, ring:1, sp:560, pierce:2, col:'#c9ffe8', life:1.5, hits:12 },
+    t:'proj', k:'slash', cnt:12, ring:1, sp:560, pierce:2, col:'#c9ffe8', life:1.5, hits:12 },
   { id:'ward',   n:'수호의 결계', g:4, ic:'🛡️', cd:14.00, m:1.40, sup:1, d:'체력을 15% 회복하고 7초간 받는 피해가 35% 줄어든다',
     t:'buff', bk:'def', bv:0.35, bt:7.0, heal:0.15 },
   /* ── 신화 ── */
   { id:'holy',   n:'심판의 빛', g:5, ic:'🌟', cd:3.00, m:4.00, d:'주변 전체에 성스러운 폭발' },
   { id:'lance',  n:'천벌의 창', g:5, ic:'🔻', cd:2.30, m:3.20, d:'심판의 창 3자루가 적을 모조리 관통한다',
-    t:'proj', k:'ice', n:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
+    t:'proj', k:'ice', cnt:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
   { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:5.20, d:'아주 넓은 범위를 통째로 날려버린다',
     t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2, hits:1 },
   { id:'rage',   n:'광란',      g:5, ic:'😡', cd:16.00, m:2.60, sup:1, d:'8초간 스킬 피해 40% · 발동 속도 25% 증가',
@@ -9150,7 +9150,7 @@ function castGeneric(s, dmg){
   const px = player.x, py = player.y - 22;
   switch(s.t){
     case 'proj': {
-      const n = s.n || 1, ring = !!s.ring;
+      const n = s.cnt || 1, ring = !!s.ring;   /* 109 — 발수는 cnt (n 은 이름) */
       let base;
       if(ring){
         if(!nearest(px, py)) return false;
@@ -9172,7 +9172,7 @@ function castGeneric(s, dmg){
     }
     case 'chain': {
       let n = 0;
-      for(let i=0;i<(s.n||3);i++){
+      for(let i=0;i<(s.cnt||3);i++){          /* 109 — 연쇄 대상 수는 cnt (n 은 이름) */
         const list = enemies.filter(e => e.born >= 0.3);
         if(!list.length) break;
         const e = list[Math.floor(Math.random()*list.length)];
