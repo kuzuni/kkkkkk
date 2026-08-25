@@ -9542,7 +9542,7 @@ function trGet(){ return trPool.length ? trPool.pop() : new Float32Array(TRAIL_N
 function trPut(b){ if(b && b.tr){ if(trPool.length < 96) trPool.push(b.tr); b.tr = null; b.tn = 0; } }
 /* 등급 가중 — 지시서 ⑥ «등급당 트레일 길이·파티클 수 +10%». 피해에는 곱하지 않는다 */
 const fxG = g => 1 + 0.1*(g || 0);          /* ⚠ 기존 `gMul`(등급 피해 배수)과 다른 것 — 이름 충돌 금지 */
-const TRAIL_BASE = { slash:11, shuri:10, boomer:10, ice:12, boom:12, meteor:13, pet:7 };
+const TRAIL_BASE = { slash:11, shuri:7, boomer:7, ice:12, boom:12, meteor:13, pet:7 };
 function trailLen(b){
   return Math.min(TRAIL_N, Math.round((TRAIL_BASE[b.k] || 6) * fxG(b.g)));
 }
@@ -9593,8 +9593,8 @@ function impactFx(x, y, vx, vy, col, crit, g){
      수명도 0.12 → 0.24s(80ms 캡처에서 3프레임)로 늘린다 */
   /* 2회차 비평(J·K 공통) — 링 반경에까지 등급 배수를 곱했더니 Ø180~321 로 커져 적 5마리를 삼켰다.
      **반경은 고정**하고 등급 가중은 스파크 수·트레일 길이에만 남긴다(적 폭 58px 의 1.5~1.9배) */
-  fxRing(x, y, crit ? 44 : 34, crit ? '#ffe27a' : col, 0.34, crit ? FX_W2 : FX_W);
-  if(crit) fxRing(x, y, 70, '#fff0b8', 0.38, FX_W, 18, 0.07);     /* 치명타 = 링 2겹(간격 26px) */
+  fxRing(x, y, crit ? 34 : 26, crit ? '#ffe27a' : col, 0.26, crit ? FX_W2 : FX_W);
+  if(crit) fxRing(x, y, 54, '#fff0b8', 0.30, FX_W, 16, 0.07);     /* 치명타 = 링 2겹(간격 20px) */
 }
 /* ③ 폭발 충격파 — 확장 링 2겹 + 흙·불 파편 + 소폭 흔들림(3). 2단(지연 0.10s)으로 «크게 터지는 느낌» */
 function boomFx(x, y, r, col, big){
@@ -10852,10 +10852,12 @@ function draw(){
        0 → 0.06s 에 0.65 → 1.38배로 부풀고, 0.06 → 0.24s 에 1.0배로 안착 */
     /* 4회차 비평 ④ — 피크 1.38배가 «1프레임» 뿐이라 80ms 캡처 그리드에서 팝이 통째로 사라졌다.
        0→0.05s 상승(0.8→1.8) · 0.05~0.21s **유지 1.8** · 0.21~0.45s 1.0 으로 복귀 = 피크가 2프레임 이상 잡힌다 */
+    /* 4회차 M(a) — 상승 구간이 0프레임이라 «축소만» 으로 읽혔다. 상승을 0.14s(2프레임)에 걸치고
+       0.14~0.30s 를 피크로 유지한 뒤 0.30~0.55s 에 1.0 으로 복귀한다 */
     const pop = !n.crit ? 1
-              : n.t < 0.05  ? 0.8 + 1.0*(n.t/0.05)
-              : n.t < 0.21  ? 1.8
-              : 1 + 0.8*clamp(1 - (n.t-0.21)/0.24, 0, 1);
+              : n.t < 0.14  ? 0.6 + 1.2*(n.t/0.14)
+              : n.t < 0.30  ? 1.8
+              : 1 + 0.8*clamp(1 - (n.t-0.30)/0.25, 0, 1);
     const sz = (n.crit ? 18 : 13) * pop;
     ctx.font = (n.crit ? '900 ' : '800 ') + sz.toFixed(1) + 'px sans-serif';
     ctx.fillStyle = n.crit ? '#ffd45e' : '#fff';

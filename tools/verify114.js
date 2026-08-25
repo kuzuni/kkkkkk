@@ -225,7 +225,7 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     return { main, dl: Math.round(-dl*100)/100, imp,
              dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
   });
-  ok(lifes.imp >= 0.32 && lifes.main >= 0.34,
+  ok(lifes.imp >= 0.24 && lifes.main >= 0.34,
      '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
   ok(lifes.dl >= 0.20, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.20 (한 프레임에 겹쳐 보이지 않는다)');
   ok(lifes.dbgMin >= 4.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 4.0 («보이지 않는 점» 회귀 방지)');
@@ -252,9 +252,9 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(dedup.same <= 2 && dedup.apart >= 5,
      '같은 자리 연타는 링이 겹치지 않는다 — 6연타 → ' + dedup.same + '겹 · 흩어진 6타 → ' +
      dedup.apart + '겹 (4회차 «동심 링 5~7겹 모아레» 회귀 방지)');
-  ok(rad.g0 === rad.g5 && rad.cr <= 70,
+  ok(rad.g0 === rad.g5 && rad.cr <= 56,
      '임팩트 링 반경은 등급과 무관하게 고정 ' + rad.g0 + 'px · 치명타 최대 ' + rad.cr +
-     'px ≤ 70 (2회차 «Ø321 로 적 5마리를 삼킴» 회귀 방지)');
+     'px ≤ 56 = 적 몸통(63px)의 1.7배 (2·4회차 «링이 적 여러 마리를 삼킴» 회귀 방지)');
 
   /* ---------------- [4] 폭발·충격파 ---------------- */
   console.log('[4] 폭발 · 충격파');
