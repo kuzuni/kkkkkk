@@ -72,7 +72,29 @@ function launchOpts(){
   return {};
 }
 
+/* ---------- 0. 정적 문법 — 브라우저를 띄우기 전에 본다 ----------
+   CSS 의 «닫히지 않은 / 이미 닫힌» 주석은 **브라우저가 조용히 삼킨다**: 콘솔 에러도 없고
+   페이지도 뜨는데 그 뒤 규칙 하나가 통째로 사라진다. 작업 92 에서 긴 설명 주석을 덧붙이다
+   «닫는 표시» 뒤에 산문을 이어 써서 **네 번** 재발했고, 그때마다 애니메이션이 «안 도는» 것처럼 보였다.
+   여는 표시와 닫는 표시 **개수만 세도** 전부 잡힌다. (JS 는 파싱해서 본다.)
+   — 이 주석 안에 그 두 기호를 «그대로» 쓰면 여기서도 같은 사고가 난다. 실제로 났다. */
+function staticSyntax() {
+  console.log('[0] 정적 문법 — CSS 주석 균형 · 인라인 JS 파싱');
+  const fsx = require('fs');
+  const h = fsx.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  [...h.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].forEach((m, i) => {
+    const o = (m[1].match(/\/\*/g) || []).length, c = (m[1].match(/\*\//g) || []).length;
+    if (o === c) ok('<style> ' + i + ' 주석 균형 (' + o + '쌍)');
+    else fail('<style> ' + i + ' 주석 불균형 — 여는 ' + o + ' vs 닫는 ' + c + ' (규칙이 조용히 사라진다)');
+  });
+  [...h.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)].forEach((m, i) => {
+    try { new Function(m[1]); ok('<script> ' + i + ' 파싱 OK'); }
+    catch (e) { fail('<script> ' + i + ' 파싱 실패 — ' + e.message); }
+  });
+}
+
 (async () => {
+  staticSyntax();
   let browser;
   try { browser = await chromium.launch(); }
   catch (e) {
