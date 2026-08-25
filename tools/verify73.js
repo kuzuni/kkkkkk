@@ -57,17 +57,24 @@ async function launchAny(){
   console.log('§1 ④ 가격 통일');
   const cost = await p.evaluate(() => {
     const o = {};
-    ['skill', 'weapon', 'shield', 'amulet', 'pet', 'relic'].forEach(k =>
+    /* 133 — 89 가 `BANNERS.relic` 을 폐기했다. 여기에 'relic' 을 남겨 두면 summonCost 가
+       undefined.cost 로 즉사해 §1 에서 게이트 전체가 멈춘다(89 이후 73 회귀는 한 번도 못 돌았다). */
+    ['skill', 'weapon', 'shield', 'amulet', 'pet'].forEach(k =>
       o[k] = { c1: summonCost(k, 1), c10: summonCost(k, 10), c30: summonCost(k, 30) });
-    return o;
+    return { cost: o, hasRelicBanner: 'relic' in BANNERS,
+             relicCostFn: typeof relicCost === 'function', relicCost: typeof relicCost === 'function' ? relicCost() : null };
   });
   ['skill', 'weapon', 'shield', 'amulet'].forEach(k => {
-    ok(cost[k].c10 === 1000, `${k} 10회 = 1,000 (실제 ${cost[k].c10})`);
-    ok(cost[k].c30 === 3000, `${k} 30회 = 3,000 (실제 ${cost[k].c30})`);
-    ok(cost[k].c30 === cost[k].c10 * 3, `${k} 30회 = 10회×3 (할인 없음)`);
+    ok(cost.cost[k].c10 === 1000, `${k} 10회 = 1,000 (실제 ${cost.cost[k].c10})`);
+    ok(cost.cost[k].c30 === 3000, `${k} 30회 = 3,000 (실제 ${cost.cost[k].c30})`);
+    ok(cost.cost[k].c30 === cost.cost[k].c10 * 3, `${k} 30회 = 10회×3 (할인 없음)`);
   });
-  ok(cost.pet.c10 === 2250 && cost.pet.c30 === 6750, `펫 가격 현행 유지 (${cost.pet.c10}/${cost.pet.c30})`);
-  ok(cost.relic.c10 === 3600 && cost.relic.c30 === 10800, `유물 가격 현행 유지 (${cost.relic.c10}/${cost.relic.c30})`);
+  ok(cost.cost.pet.c10 === 2250 && cost.cost.pet.c30 === 6750, `펫 가격 현행 유지 (${cost.cost.pet.c10}/${cost.cost.pet.c30})`);
+  /* 유물은 «현행 유지» 대상이었지만 89 가 소환 배너 자체를 없애고 #relw 페이지 균등 소환으로 옮겼다.
+     가격 숫자는 119(주인 지시 «100 에서 시작, 1씩 증가») 로 또 바뀔 예정이라 값이 아니라 **경로**만 본다. */
+  ok(!cost.hasRelicBanner, '89 — BANNERS.relic 폐기 유지 (유물은 소환 배너가 아니다)');
+  ok(cost.relicCostFn && Number.isFinite(cost.relicCost) && cost.relicCost > 0,
+    `유물 가격은 relicCost() 경로 (현재 ${cost.relicCost})`);
 
   /* ── §2 표시 = 실제 차감 ──────────────────────────────────────── */
   console.log('§2 ④ 상점 카드 표기 = 실제 차감액');
@@ -79,7 +86,12 @@ async function launchAny(){
       c30: c.querySelector('.cbtn.b3 .cost').textContent.trim()
     }));
   });
-  shown.forEach(s => ok(s.c10 === '1,000' && s.c30 === '3,000', `${s.box} 카드 표기 ${s.c10} / ${s.c30}`));
+  /* 133 — 106 이 «동료 상자» 를 SHOP_BOXES 에 추가해 카드가 3장 → 5장이 됐다.
+     73 ④ «가격 통일» 대상은 flat 배너 4종뿐이고 펫은 현행 유지(2,250/6,750)다. */
+  shown.forEach(s => {
+    if (s.box === 'pet') ok(s.c10 === '2,250' && s.c30 === '6,750', `${s.box} 카드 표기 ${s.c10} / ${s.c30} (현행 유지)`);
+    else                 ok(s.c10 === '1,000' && s.c30 === '3,000', `${s.box} 카드 표기 ${s.c10} / ${s.c30}`);
+  });
   for (const box of ['weapon', 'shield', 'amulet', 'skill']) {
     const r = await p.evaluate((box) => {
       S.dia = 99999; S.guide.idx = GUIDE.length;              /* 차단 해제 상태에서 순수 가격만 본다 */
@@ -141,9 +153,11 @@ async function launchAny(){
     '무료 10연 차단 — 무료 횟수 «차감 전» 에 막힘');
   ok(blk.afterOk.sk === blk.a.sk + 10 && blk.afterOk.dia === blk.a.dia - 1000,
     '지정 상자(스킬)는 정상 소환 · 1,000 차감');
+  /* 133 — 유물 소환은 89 이후 `doSummon('relic')` 이 아니라 #relw 페이지의 `summonRelic()` 이다.
+     73 ③ 이 보는 것(«가이드 소환 미션 중에도 유물은 막지 않는다»)은 그대로 유효하다. */
   const relicFree = await p.evaluate(() => {
-    S.relic = 99999; const r0 = S.cnt.sumRelic;
-    doSummon('relic', 1);
+    S.relic = 9999999; const r0 = S.cnt.sumRelic;
+    summonRelic(1);
     return S.cnt.sumRelic - r0;
   });
   ok(relicFree === 1, '유물은 가이드 대상 아님 — 차단하지 않는다');
@@ -163,24 +177,32 @@ async function launchAny(){
 
   /* ── §5 ① 미완 미션 클릭 → 이동 ───────────────────────────────── */
   console.log('§5 ① 미완 배너 클릭 → 목표 화면 이동');
+  /* 133 — 상점 4개 미션의 «어느 상자로 갔나» 판정 기준이 바뀌었다.
+     73 ① 은 `openShopPage(box)` 가 그 카드의 **윗변을 리스트 상단에 맞추는 것**(`scrollTop === want`)으로
+     봤는데, 113 이 `gmGo()` 끝에 붙인 `fxHand(m.hint)` → `gmHandScroll()` 이 **같은 동기 흐름에서**
+     그 카드의 [10회 소환] 버튼을 리스트 **한가운데로** 다시 끌어온다(fxHand 가 gmHandFrame 을 즉시 호출).
+     실측: 방패 미션 scrollTop 479→0 · 목걸이 미션 583→321. 카드는 두 경우 다 **완전히 보인다.**
+     89 이후 73 회귀가 한 번도 못 돌아 이 드리프트가 여태 안 보였다(127 교훈 1).
+     그래서 판정을 «상단 정렬» 이 아니라 73 ① 의 실제 요구(**목표 카드가 보이고, 손가락이 그 카드를
+     가리킨다**)로 바꾼다 — 113 이 스크롤 목표를 또 손봐도 깨지지 않고, 오히려 더 강한 조건이다. */
   const EXPECT = [
-    { i: 0,  d: '10 상점 · 스킬 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.skill.at && s.shopFocus.skill.inView },
+    { i: 0,  d: '10 상점 · 스킬 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.skill.inView && s.handBox === 'skill' },
     { i: 1,  d: '영웅 · 스킬 시트',     ck: s => s.panel && s.heroTab === 'sk' && s.tab === 'hero' },
-    { i: 2,  d: '10 상점 · 무기 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.weapon.at && s.shopFocus.weapon.inView },
+    { i: 2,  d: '10 상점 · 무기 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.weapon.inView && s.handBox === 'weapon' },
     { i: 3,  d: '06 장비 시트',         ck: s => s.eqw && s.heroTab === 'eq' },
-    { i: 4,  d: '23 훈련 · 훈련 탭',    ck: s => s.trw && s.trSub === 'train' },
-    { i: 5,  d: '10 상점 · 방패 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.shield.at && s.shopFocus.shield.inView },
-    { i: 6,  d: '10 상점 · 목걸이 상자', ck: s => s.shopw && s.shopFocus && s.shopFocus.amulet.at && s.shopFocus.amulet.inView },
+    { i: 4,  d: '23 훈련(단일 화면)',   ck: s => s.trw },
+    { i: 5,  d: '10 상점 · 방패 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.shield.inView && s.handBox === 'shield' },
+    { i: 6,  d: '10 상점 · 목걸이 상자', ck: s => s.shopw && s.shopFocus && s.shopFocus.amulet.inView && s.handBox === 'amulet' },
     { i: 7,  d: '전투(메인)',           ck: s => s.clean },
     { i: 8,  d: '전투(메인)',           ck: s => s.clean },
     { i: 9,  d: '03 던전',              ck: s => s.dunw },
     { i: 10, d: '룰렛',                 ck: s => s.modal },
     { i: 11, d: '출석',                 ck: s => s.modal },
-    { i: 12, d: '14 보물상자',          ck: s => s.relicw },
+    { i: 12, d: '89 유물 페이지(#relw)', ck: s => s.relw },
     { i: 13, d: '06 장비 시트',         ck: s => s.eqw && s.heroTab === 'eq' },
     { i: 14, d: '전투(메인)',           ck: s => s.clean },
-    { i: 15, d: '15 유물 탭',           ck: s => s.rlw },
-    { i: 16, d: '23 훈련 · 스탯 탭',    ck: s => s.trw && s.trSub === 'stat' },
+    { i: 15, d: '89 유물 페이지(#relw)', ck: s => s.relw },
+    { i: 16, d: '23 훈련(단일 화면)',   ck: s => s.trw },
     { i: 17, d: '전투(메인)',           ck: s => s.clean },
     { i: 18, d: '21 도감 보너스',       ck: s => s.collw },
     { i: 19, d: '전투(메인)',           ck: s => s.clean },
@@ -206,12 +228,18 @@ async function launchAny(){
           focus[x.b] = { at: li.scrollTop === want, inView: cr.top >= lr.top - 1 && cr.bottom <= lr.bottom + 1 };
         });
       }
-      const overlays = ['shopw', 'dunw', 'relicw', 'rlw', 'collw', 'trw', 'eqw', 'modal'];
-      return { name, notReady, idle,
-        shopw: on('shopw'), dunw: on('dunw'), relicw: on('relicw'), rlw: on('rlw'),
+      /* 133 — 89 가 14 `#relicw`·15 `#rlw` 를 단일 `#relw` 로 통합했고, 88 이 훈련 서브탭(`trSub`)을
+         없앴다. `trSub` 은 여기서 ReferenceError 를 내 §5 전체를 죽인다 — 이름째로 걷는다. */
+      /* 113 손가락이 지금 가리키는 상자 카드 (없으면 null) */
+      let handBox = null;
+      if (li && typeof gmHand !== 'undefined' && gmHand && gmHand.el)
+        SHOP_BOXES.forEach((x, i) => { const c = li.children[i]; if (c && c.contains(gmHand.el)) handBox = x.b; });
+      const overlays = ['shopw', 'dunw', 'relw', 'collw', 'trw', 'eqw', 'modal'];
+      return { name, notReady, idle, handBox,
+        shopw: on('shopw'), dunw: on('dunw'), relw: on('relw'),
         collw: on('collw'), trw: on('trw'), eqw: on('eqw'), modal: on('modal'),
         panel: $('panel').style.display !== 'none',
-        heroTab, trSub, tab: curTab, shopFocus: focus,
+        heroTab, tab: curTab, shopFocus: focus,
         clean: !overlays.some(on) && $('panel').style.display === 'none' };
     });
     ok(st.notReady && e.ck(st), `미션 ${e.i} «${st.name}» → ${e.d}`

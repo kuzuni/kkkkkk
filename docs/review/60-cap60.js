@@ -77,8 +77,10 @@ const CLEAR = () => {
 /* 모든 오버레이·패널을 닫아 «메인 화면» 으로 되돌린다 — 캡처 상태가 다르면 그 회차 비평은 통째로 무효다(LESSONS 04-①).
    1회차엔 누름 장면의 클릭이 영웅 패널을 열어 둔 채로 다음 장면들이 찍혀, 던전 그리드가 장비 시트 아래로 열렸다. */
 const RESET = () => {
-  ['closeModal', 'closeProfile', 'closeTrain', 'closeDungeon', 'closeShopPage', 'closeRelicPage',
-   'closeRelicTab', 'closeSpec', 'closeCurInfo', 'closeWeapon', 'closeProbInfo', 'closeColl21',
+  /* 133 — 89 가 `closeRelicPage`·`closeRelicTab` 을 폐기하고 `closeRelw` 로 합쳤다(typeof 가드 안이라
+     무해했지만, 유물 페이지가 열린 채로 다음 장면이 찍히는 것을 못 막고 있었다) */
+  ['closeModal', 'closeProfile', 'closeTrain', 'closeDungeon', 'closeShopPage', 'closeRelw',
+   'closeSpec', 'closeCurInfo', 'closeWeapon', 'closeProbInfo', 'closeColl21',
    'closeDunDetail', 'closeOfflineReward', 'closeSummonResult', 'closeUpAll']
     .forEach(f => { try { if (typeof window[f] === 'function') window[f](); } catch (_) {} });
   try { if (typeof panelOpen !== 'undefined' && panelOpen) { panelOpen = false; syncPanel(); } } catch (_) {}

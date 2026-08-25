@@ -38,8 +38,9 @@ const SCREENS = [
   { id: '11', name: '소환부분정보', sel: '#prbw', open: `openProbInfo('weapon',1)` },
   { id: '12', name: '소환결과', sel: '#sumw', open: `showSummonResult('weapon',10,SKILLS.concat(PETS).slice(0,10).map(it=>({it})),0)` },
   { id: '13', name: '상점재화탭', sel: '#shopw', open: `openShopPage(); (document.querySelector('[data-shopcat="coin"]')||{click(){}}).click()` },
-  { id: '14', name: '유물보물상자탭', sel: '#relicw', open: `openRelicPage()` },
-  { id: '15', name: '유물탭', sel: '#rlw', open: `openRelicTab()` },
+  /* 133 — 89 가 14 `#relicw`(보물상자 탭)·15 `#rlw`(유물 탭)를 폐기하고 단일 `#relw` 페이지로 합쳤다.
+     죽은 셀렉터·오프너는 `missing:true` 로 조용히 빠져 두 화면이 감사에서 통째로 누락돼 있었다. */
+  { id: '89', name: '유물페이지', sel: '#relw', open: `openRelw()` },
   { id: '16', name: '유물세부', sel: '#modal', open: `showRelicDetail(RELICS[0].id)` },
   { id: '17', name: '스탯업보너스', sel: '#statw', open: `openStatUp({ic:'⚔️',desc:'공격력 30% 증가'})` },
   { id: '18', name: '패배화면', sel: '#defw', open: `openDefeat()` },
