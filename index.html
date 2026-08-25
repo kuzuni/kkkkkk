@@ -5657,19 +5657,21 @@
   #cfw i,#cfw em,#cfw b,#cfw s,#cfw u{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900;transform-origin:50% 50%}
   /* 세로중심 ref 1212 → 프레임 1128. 패딩 40/63 이면 40 + (2280−40−63−1347)/2 = 455 (목표 455, Δ0) */
-  .cf55{position:relative;flex:none;width:798px;height:1347px;max-height:100%;box-sizing:border-box;
-    border:8px solid #000;border-radius:44px;padding:0 12px 12px;background:#503838;
+  /* 외곽 검정은 좌우 6 · 상하 8 로 찍힌다(JPEG). 7 로 잡고 폭 796 = ref x142..937 에 맞춘다.
+     본문 border-top 을 2 로 올려 크림 원점(ref 639)이 그대로 유지되게 한다. */
+  .cf55{position:relative;flex:none;width:796px;height:1347px;max-height:100%;box-sizing:border-box;
+    border:7px solid #000;border-radius:44px;padding:0 12px 12px;background:#503838;
     display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
   .cf55-head{flex:0 0 91px;margin:0 -12px;border-radius:36px 36px 0 0;background:#503838;
     box-shadow:inset 0 8px 0 #5C4744,inset 11px 0 0 #5C4744,inset -11px 0 0 #5C4744;
     text-align:center;line-height:91px;overflow:hidden}
   /* 타이틀 코어 83×46 → font-size 46/0.93 ≈ 49. 잉크 97×59 → 편측 외곽선 6.5 → 13.
      잉크 중심 y595 = 헤더 중심 592 + 3 */
-  .cf55-head>i{position:relative;top:3px;left:4px;font-size:49px;color:#F5EEAA;
-    -webkit-text-stroke:13px #000;paint-order:stroke fill;transform:scaleX(.90)}
+  .cf55-head>i{position:relative;top:2px;font-size:49px;color:#F5EEAA;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.94)}
   /* 크림 본문 758×1228 + 별 워터마크(33 .ci-body · 53 .bg53-body 와 같은 «별 2개» 엇갈린 타일) */
   .cf55-body{flex:1 1 auto;position:relative;box-sizing:border-box;
-    border:solid #46382D;border-width:1px 0 0;border-top-color:#503838;
+    border:solid #46382D;border-width:2px 0 0;border-top-color:#503838;
     border-radius:0 0 31px 31px;background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E7CFAE'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
     overflow:hidden}
@@ -5682,18 +5684,20 @@
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .cf55-sub>i{transform:scaleX(.82)}
   /* 트랙 ref x216..894 y703..752 (679×50) — 검정 6 + 주황 그라디언트 */
+  /* ref 단면(x400): 검정 6 → #F3C744 1 → #FEB612 35 → 검정 6. «윗쪽 26% 하이라이트» 가 아니라 1~2px 이다. */
   .cf55-track{left:55px;top:64px;width:679px;height:50px;box-sizing:border-box;
     border:6px solid #000;border-radius:25px;overflow:hidden;
-    background:linear-gradient(#FAC72D 0 26%,#F8B010 26% 100%);cursor:pointer}
+    background:#8A7355;cursor:pointer}
   .cf55-fill{position:absolute;left:0;top:0;bottom:0;width:100%;
-    background:linear-gradient(#FAC72D 0 26%,#F8B010 26% 100%)}
+    background:linear-gradient(#F3C744 0 5%,#FEB612 5% 97%,#F2B833 97% 100%)}
   .cf55-empty{position:absolute;left:0;top:0;right:0;bottom:0;background:#8A7355}
   /* 노브 ref x835..894 y703..752 (60×50). left 는 «트랙 왼끝 + 진행률 × (679−60)» */
+  /* ref 흰 코어 50×41 → 외곽 5(6 이면 48×38 로 작다) */
   .cf55-knob{left:55px;top:64px;width:60px;height:50px;box-sizing:border-box;
-    border:6px solid #000;border-radius:16px;background:#F6F5FA;z-index:2;pointer-events:none}
+    border:5px solid #000;border-radius:16px;background:#F6F5FA;z-index:2;pointer-events:none}
   .cf55-e0{left:57px;top:118px;height:32px;line-height:32px;font-size:25px;color:#F8F8F8;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .cf55-emax{left:643px;top:121px;height:32px;line-height:32px;font-size:21px;color:#F8F8F8;
+  .cf55-emax{left:651px;top:119px;height:32px;line-height:32px;font-size:21px;color:#F8F8F8;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
   .cf55-emax>i{transform:scaleX(1.14)}
   /* 구분선 ref x191..889 y801..804 */
@@ -5715,28 +5719,33 @@
      ref 서체가 우리보다 좁아 폭은 --sx 로 회수한다(LESSONS 01). */
   /* 잉크 높이 목표 28~33 — font 30(코어 27.9) + 편측 2.5 = 32.9. 외곽선 7 이면 38.6 으로 6px 크다. */
   .cf55-lb{left:109px;top:50%;height:44px;margin-top:-22px;line-height:44px;
-    font-size:var(--lf,30px);color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
+    font-size:var(--lf,31.5px);color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
   /* ⚠ LESSONS 21-①: 위 `#cfw i` 리셋(1-0-1)이 `.cf55-lb>i`(0-1-1)의 transform-origin 을 이긴다.
      좌단 고정 라벨은 origin 이 0 이어야 x300 이 유지되므로 #cfw 접두어로 특이성을 맞춘다. */
   #cfw .cf55-lb>i{transform:scaleX(var(--sx,1));transform-origin:0 50%}
   /* 컨트롤 슬롯 — ref x685..853 (169), 6행 전부 같은 자리 */
   .cf55-ct{left:494px;top:50%;width:169px;height:69px;margin-top:-34.5px}
   /* 언어 값 버튼 169×69 */
-  .cf55-gold{position:absolute;inset:0;box-sizing:border-box;border:6px solid #000;border-radius:35px;
-    background:linear-gradient(#F5E0A9,#E8C176);text-align:center;line-height:57px;cursor:pointer}
-  .cf55-gold>i{position:relative;top:-5px;font-size:28px;color:#4A2E12;transform:scaleX(var(--sx,1))}
+  /* ref 직선부(x770) 실측: 외곽 검정 **3~4**(6 이 아니다) · 상자 69 는 그대로 */
+  .cf55-gold{position:absolute;inset:0;box-sizing:border-box;border:4px solid #000;border-radius:34px;
+    background:linear-gradient(#F5E0A9,#E8C176);text-align:center;line-height:61px;cursor:pointer}
+  /* ref 잉크 **82×34**(직선부 x715..830·y842..888 창으로 3차 실측. 1차 창은 글리프 상하를 잘라 75×26 이었다) */
+  .cf55-gold>i{position:relative;top:-5px;font-size:36px;color:#4A2E12;transform:scaleX(var(--sx,1))}
   /* 토글 — 트랙 169×60 세로중앙 + 노브 99×69(트랙보다 커서 위아래 4.5px 씩 넘친다).
      ⚠ 레퍼런스는 «라벨이 노브 안»에 있다(트랙이 아니다). ON=우측 초록 / OFF=좌측 회색 */
-  .cf55-sw{position:absolute;left:0;top:4.5px;width:169px;height:60px;box-sizing:border-box;
-    border:5px solid #000;border-radius:30px;background:#96A0C4;cursor:pointer}
-  .cf55-sw.on{background:#6BC822}
+  /* ref 단면(x740/x800): 트랙 외곽 **56**(검정 ~3) · 안쪽 50 이 «밝은 띠 4 + 본색 42 + 밝은 띠 4».
+     처음엔 h60·외곽5·단색으로 올렸다가 실측으로 정정했다. */
+  .cf55-sw{position:absolute;left:0;top:6.5px;width:169px;height:56px;box-sizing:border-box;
+    border:3px solid #000;border-radius:28px;cursor:pointer;
+    background:linear-gradient(#BECADA 0 8%,#8B96B4 8% 84%,#C0CAD3 84% 100%)}
+  .cf55-sw.on{background:linear-gradient(#91E93F 0 8%,#6AC520 8% 84%,#8EE934 84% 100%)}
   /* ⚠ LESSONS 03: 절대배치 자식의 기준은 border box 가 아니라 **padding box** 다.
      트랙에 border 5 가 있으므로 «트랙 좌단에 붙인다» 는 left:0 이 아니라 left:-5 다. */
-  .cf55-kn{position:absolute;left:-5px;top:-9.5px;width:99px;height:69px;box-sizing:border-box;
+  .cf55-kn{position:absolute;left:-3px;top:-9.5px;width:99px;height:69px;box-sizing:border-box;
     border:5px solid #000;border-radius:34.5px;background:linear-gradient(#D3D3D3,#8F8F8F);
     text-align:center;line-height:59px}
-  .cf55-sw.on>.cf55-kn{left:65px;background:linear-gradient(#ABFF7E,#5FC61E)}
-  .cf55-kn>i{font-size:24px;color:#FFF;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .cf55-sw.on>.cf55-kn{left:67px;background:linear-gradient(#ABFF7E,#5FC61E)}
+  .cf55-kn>i{font-size:23px;color:#FFF;-webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(.93)}
 
   /* ── 계정 연동 패널 ref x191..889 y1364..1561 (699×198) r45 ── */
   .cf55-acc{left:30px;top:725px;width:699px;height:198px;border-radius:45px;background:#D0BCA1}
@@ -5760,19 +5769,25 @@
     font-size:29px;font-weight:800;color:#1A1A1A;transform:scaleX(var(--sx,1));transform-origin:0 50%}
 
   /* ── 하단 버튼 3칸 ref y1588..1686 (217×99) · x201/432/662 (pitch 231) ── */
-  .cf55-btn{top:949px;width:217px;height:99px;box-sizing:border-box;border:6px solid #000;
+  .cf55-btn{top:949px;width:218px;height:99px;box-sizing:border-box;border:6px solid #000;
     border-radius:49px;text-align:center;cursor:pointer;
-    background:linear-gradient(#FFDB2F 0 30%,#FEB413 30% 82%,#D07E04 82% 100%)}
-  .cf55-btn.b1{left:40px;background:linear-gradient(#51E7F8 0 30%,#2ABFDB 30% 82%,#1583A0 82% 100%)}
+    background:linear-gradient(#F5EE45 0 2.5%,#F6AF09 2.5% 82.7%,#FFEA38 82.7% 92%,#DA7B0D 92% 100%)}
+  /* 청록만 «윗 30% 가 한 단계 밝은» 2단이다(금색은 균일) — ref 단면 x300 대조 */
+  .cf55-btn.b1{left:40px;background:linear-gradient(#60BAC5 0 2%,#37BFD5 2% 32%,#18AFCE 32% 82.7%,
+    #51E6FC 82.7% 92%,#0EA4C9 92% 100%)}
   .cf55-btn.b2{left:271px}
-  .cf55-btn.b3{left:501px}
+  .cf55-btn.b3{left:500px}
   .cf55-btn>i{position:relative;top:22px;font-size:26px;color:#FFF;
     -webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
   .cf55-btn.b1>i{top:25px;font-size:23px}
   /* ── 푸터 ── */
   .cf55-del{left:0;right:0;top:1082px;height:36px;line-height:36px;text-align:center;cursor:pointer}
-  .cf55-del>i{font-size:23px;color:#F8F8F8;text-decoration:underline;text-underline-offset:5px;
+  /* ⚠ `text-decoration:underline` 은 `-webkit-text-stroke` + `paint-order` 와 같이 쓰면 캡처에 안 찍힌다
+     (비평 A 가 «밑줄 없음» 으로 잡았다). ref 는 y1750..1751 · x496..585 의 2×90 실선이라 요소로 깐다. */
+  .cf55-del>i{font-size:23px;color:#F8F8F8;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
+  .cf55-dl{left:335px;top:1111px;width:90px;height:2px;background:#F4F4F4;
+    box-shadow:0 0 0 1.5px #000;cursor:pointer}
   .cf55-n1{left:30px;top:1132px;width:699px;height:32px;line-height:32px}
   .cf55-n1>i{font-size:24px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
@@ -6681,6 +6696,7 @@
         <div class="cf55-btn b2" data-cf="coupon"><i style="--sx:.94">쿠폰</i></div>
         <div class="cf55-btn b3" data-cf="support"><i style="--sx:1.02">고객 지원</i></div>
         <div class="cf55-del" data-cf="del"><i style="--sx:.91">계정 삭제</i></div>
+        <s class="cf55-dl" data-cf="del"></s>
         <div class="cf55-n1"><i id="cfUid"></i><i class="r" id="cfSrv" style="--sx:1.07"></i></div>
         <div class="cf55-n2"><i id="cfGid" style="--sx:1.20"></i></div>
       </div>
@@ -12094,12 +12110,12 @@ window.openBag = openBag;
    실동작이고, 실제로 무언가를 끄는 건 **화면 흔들림**(67 카메라 shake)과 **볼륨 슬라이더 값**이다.
    오디오가 들어오면 sndOn() 한 곳만 보면 되도록 게이트를 미리 뚫어 뒀다. */
 const CF_ROWS = [
-  { k:'lang',  ic:'💬', n:'언어',               sx:.86, val:'한국어', sf:1.08, ix:.96, dy:1 },
-  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.93, lf:33, sf:1.06, ix:1.18, dy:0 },
-  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.90, lf:33, sf:.85, ix:1.48, dy:2 },
-  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.89, sf:1.10, ix:1.24, dy:-2 },
-  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.88, sf:1.02, ix:.92, dy:0 },
-  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.91, sf:1.28, ix:.87, dy:-2 }
+  { k:'lang',  ic:'💬', n:'언어',               sx:.90, val:'한국어', sf:1.08, ix:.96, dy:1 },
+  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.89, lf:34, sf:1.06, ix:1.18, dy:0 },
+  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.86, lf:34, sf:.85, ix:1.48, dy:2 },
+  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.85, sf:1.10, ix:1.24, dy:-2 },
+  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.84, sf:1.02, ix:.92, dy:0 },
+  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.87, sf:1.28, ix:.87, dy:-2 }
 ];
 /* 오디오 게이트 — 지금은 «설정 값을 읽는 유일한 곳». 소리가 들어오면 여기서 분기한다. */
 const sndOn = k => !!(S.opt && S.opt[k]) && (S.opt.vol | 0) > 0;
@@ -12120,7 +12136,7 @@ function renderConf(){
   $('cfKnob').style.left = (55 + vol / 100 * 619) + 'px';
   $('cfList').innerHTML = CF_ROWS.map(r => {
     const ctl = r.val
-      ? '<div class="cf55-gold" data-cfr="' + r.k + '"><i style="--sx:.95">' + r.val + '</i></div>'
+      ? '<div class="cf55-gold" data-cfr="' + r.k + '"><i style="--sx:.82">' + r.val + '</i></div>'
       : '<div class="cf55-sw' + (S.opt[r.k] ? ' on' : '') + '" data-cfr="' + r.k + '">'
         + '<s class="cf55-kn"><i>' + (S.opt[r.k] ? 'ON' : 'OFF') + '</i></s></div>';
     return '<div class="cf55-row"><i class="cf55-ic" style="--sf:' + (r.sf || 1)

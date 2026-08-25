@@ -32,24 +32,27 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
              row1:q('.cf55-row:nth-child(1)'), row6:q('.cf55-row:nth-child(6)'),
              gold:q('.cf55-gold'), sw2:q('.cf55-row:nth-child(2) .cf55-sw'),
              kn2:q('.cf55-row:nth-child(2) .cf55-kn'), kn5:q('.cf55-row:nth-child(5) .cf55-kn'),
-             rows:document.querySelectorAll('.cf55-row').length };
+             dl:q('.cf55-dl'), rows:document.querySelectorAll('.cf55-row').length };
   });
   /* ── 기하: 프레임 y = ref y − 84 ── */
-  eq('팝업 x', R.box.x, 141); eq('팝업 y', R.box.y, 455);
-  eq('팝업 w', R.box.w, 798); eq('팝업 h', R.box.h, 1347);
-  eq('헤더 h', R.head.h, 91); eq('본문 w', R.body.w, 758); eq('본문 h', R.body.h, 1228);
+  eq('팝업 x', R.box.x, 142); eq('팝업 y', R.box.y, 455);
+  eq('팝업 w', R.box.w, 796); eq('팝업 h', R.box.h, 1347);
+  eq('헤더 h', R.head.h, 91); eq('본문 w', R.body.w, 758);
+  /* border-box 1230 = 크림(패딩박스) 1228 + border-top 2. 크림 원점이 ref 639 → 프레임 555 다. */
+  eq('본문 h', R.body.h, 1230); eq('크림 원점 y', R.body.y + 2, 555);
   eq('트랙 x', R.track.x, 216); eq('트랙 y', R.track.y, 619); eq('트랙 w', R.track.w, 679);
   eq('노브(vol100) x', R.knob.x, 835);
   eq('구분선 y', R.rule.y, 717); eq('구분선 w', R.rule.w, 699);
   eq('리스트 y', R.list.y, 740); eq('리스트 h', R.list.h, 509); is('행 수', R.rows, 6);
   eq('1행 y', R.row1.y, 740); eq('6행 y', R.row6.y, 1164, 2);
   eq('언어버튼 x', R.gold.x, 685); eq('언어버튼 w', R.gold.w, 169); eq('언어버튼 h', R.gold.h, 69);
-  eq('토글 트랙 x', R.sw2.x, 685); eq('토글 트랙 w', R.sw2.w, 169); eq('토글 트랙 h', R.sw2.h, 60);
+  eq('토글 트랙 x', R.sw2.x, 685); eq('토글 트랙 w', R.sw2.w, 169); eq('토글 트랙 h', R.sw2.h, 56);
   eq('ON 노브 x', R.kn2.x, 755); eq('OFF 노브 x', R.kn5.x, 685);
   eq('노브 w', R.kn2.w, 99); eq('노브 h', R.kn2.h, 69);
+  eq('계정삭제 밑줄 x', R.dl.x, 496); eq('계정삭제 밑줄 w', R.dl.w, 90);
   eq('계정패널 y', R.acc.y, 1280); eq('계정패널 h', R.acc.h, 198);
   eq('구글카드 x', R.badge.x, 416); eq('구글카드 y', R.badge.y, 1370); eq('구글카드 w', R.badge.w, 248);
-  eq('버튼1 x', R.b1.x, 201); eq('버튼3 x', R.b3.x, 662); eq('버튼 y', R.b1.y, 1504); eq('버튼 h', R.b1.h, 99);
+  eq('버튼1 x', R.b1.x, 201); eq('버튼3 x', R.b3.x, 661); eq('버튼 y', R.b1.y, 1504); eq('버튼 h', R.b1.h, 99);
 
   /* ── 기능: 눌렀을 때 무엇이 바뀌는가 ── */
   const F = await page.evaluate(async () => {
