@@ -2634,6 +2634,21 @@
      1400→91.683 · 1491→97.642). 이래야 패널이 1992 로 늘어나도 «바닥선» 이 수반 밑으로 따라온다.
      수반 난색 글로우는 수반을 따라다녀야 하므로 .rw-mid::before 로 옮겼다. */
   .rw-bg{inset:0;background:
+    /* 120 2회차 — 바닥 결. 1회차는 y1445~2095 650px 대역이 «행마다 색 1개» 인 순수 세로
+       그라디언트라 비평 G 가 ⑤ 4점의 근거로 «패널의 69%가 무텍스처 플랫 필» 을 들었다.
+       .rw-bg::before(석벽 얼룩)는 상단 68.762% 만 덮어 바닥에는 결이 하나도 없었다. */
+    /* 바닥 램프가 막 불투명해지는 68~75% 대역은 석벽 얼룩(.rw-bg::before, 상단 68.762%)도
+       안 닿아 1회차엔 고유색 1(전 폭 단일값)이었다 — 그 구간부터 결을 깐다 */
+    radial-gradient(circle at 63% 69.5%,rgba(88,64,36,.16) 0 148px,rgba(88,64,36,0) 250px),
+    radial-gradient(circle at 15% 73.5%,rgba(24,17,10,.24) 0 136px,rgba(24,17,10,0) 232px),
+    radial-gradient(circle at 21% 81%,rgba(96,70,40,.20) 0 132px,rgba(96,70,40,0) 214px),
+    radial-gradient(circle at 77% 87%,rgba(26,18,10,.30) 0 150px,rgba(26,18,10,0) 246px),
+    radial-gradient(circle at 49% 95%,rgba(18,12,7,.28) 0 184px,rgba(18,12,7,0) 302px),
+    radial-gradient(circle at 7% 93%,rgba(78,56,33,.18) 0 112px,rgba(78,56,33,0) 192px),
+    radial-gradient(circle at 92% 76%,rgba(70,50,30,.16) 0 104px,rgba(70,50,30,0) 178px),
+    /* 최하단 «청흑 띠»(ref 배경 최하단 띠)도 1회차엔 전 폭 단일색 30~53행이었다(비평 H ⑤-3) */
+    radial-gradient(circle at 33% 99.2%,rgba(36,48,62,.34) 0 128px,rgba(36,48,62,0) 214px),
+    radial-gradient(circle at 81% 98.6%,rgba(10,16,24,.40) 0 112px,rgba(10,16,24,0) 196px),
     linear-gradient(180deg,rgba(46,32,18,0) 64.178%,#2D2114 73.347%,#332518 91.683%,#0C131B 97.642%,#0C131B 100%),
     radial-gradient(48% 42% at 50% 32%,#211D16 0%,#211D16 62%,rgba(33,29,22,0) 100%),
     linear-gradient(180deg,#090C10 0%,#0D100D 60%,#12130D 100%)}
@@ -2648,8 +2663,31 @@
     background-size:540px 520px}
   /* 중앙 아치 — 120: top 133→8.709% · height 889→58.219%(1527 대비). 가로는 1:1 고정이라
      패널이 길어지면 아치도 같이 길어지고, 슬롯 격자는 언제나 아치 안에 들어온다. */
-  .rw-bg::after{content:'';position:absolute;left:244px;top:8.709%;width:589px;height:58.219%;
-    background:#0E100E;border-radius:295px 295px 0 0;box-shadow:0 0 90px 20px rgba(0,0,0,.55)}
+  /* 120 2회차 — 아치는 «패널의 %» 가 아니라 **슬롯 격자를 감싸는 문틀**이다.
+     1회차에 높이만 %로 늘렸더니(889→1159) 폭 589 는 고정이라 종횡비가 1:1.51(ref) →
+     2280 에서 1:1.97 · 2600 에서 1:2.28 로 **화면이 길수록 홀쭉해졌다**(비평 H ② 1순위).
+     레퍼런스는 아치 133~1022 · 격자 320~836 이라 **아치 = 격자 ± 186** 이다. 그 관계로 바꾸면
+     아치는 어느 프레임에서도 **589×888(=ref 종횡비 그대로)** 이고 격자를 따라 움직인다.
+     내부도 «단색 #0E100E 통짜» 에서 세로 명암 + 하단 소멸로 바꿨다 — 1회차엔 589×1159
+     (패널 면적의 34.4%)가 전부 RGB(14,16,14) 한 값이라 «평면 슬래브» 로 읽혔고(비평 G ⑤ 1순위),
+     하변이 바닥 램프의 불투명 구간에 떨어져 **폭 589 수평 절단선**까지 생겼다.
+     하단 8%를 알파 0 으로 빼서 바닥으로 녹아들게 한다(문턱 밴드 대용). */
+  .rw-bg::after{content:'';position:absolute;left:244px;width:589px;
+    top:calc(var(--rw-sp) * .452617 - 186px * var(--rwc,1));height:calc(888px * var(--rwc,1));
+    background:
+      radial-gradient(58% 30% at 50% 6%,rgba(62,56,44,.50) 0%,rgba(62,56,44,0) 100%),
+      /* 아치 «안쪽» 결 — 세로 그라디언트만으로는 행마다 색이 1개라(고유색 1) 아래쪽 절반이
+         여전히 평면으로 읽힌다. 문 안 어둠에 깊이를 주는 얼룩 3개. */
+      radial-gradient(circle at 27% 61%,rgba(34,38,31,.55) 0 92px,rgba(34,38,31,0) 164px),
+      radial-gradient(circle at 75% 73%,rgba(6,8,6,.60) 0 104px,rgba(6,8,6,0) 186px),
+      radial-gradient(circle at 45% 87%,rgba(28,32,26,.45) 0 122px,rgba(28,32,26,0) 214px),
+      linear-gradient(180deg,#1A1D18 0%,#141712 17%,#0E100E 45%,#0B0D0A 73%,
+        rgba(10,12,9,.55) 92%,rgba(10,12,9,0) 100%);
+    border-radius:295px 295px 0 0;
+    /* 구 `box-shadow:0 0 90px 20px` 는 **테두리 상자 실루엣**에서 그려지므로 배경이 알파 0 으로
+       사라져도 하변에 그림자 계단이 남는다(1회차 Δ4.2 → 하단 소멸만 넣었을 때 Δ4.8 로 악화).
+       `drop-shadow` 는 **알파 채널**을 따라가므로 소멸 구간에서는 그림자도 같이 사라진다. */
+    filter:drop-shadow(0 0 40px rgba(0,0,0,.6)) drop-shadow(0 0 90px rgba(0,0,0,.45))}
   /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
   .rw-frame{inset:2px;border:5px solid #B29661;box-shadow:inset 0 0 0 2px rgba(0,0,0,.9);pointer-events:none;z-index:6}
   /* 코너 브래킷 98×53 — 상단 2개는 ::before/::after, 하단 2개는 .rw-fc (아트 대기) */
