@@ -1924,7 +1924,7 @@
     display:flex;align-items:center;justify-content:center}
   .ofr-pill b{font-size:24px;color:#fff;font-weight:900;line-height:1;
     -webkit-text-stroke:4px #000;paint-order:stroke fill;transform:translateX(-10px)}
-  .ofr-pill i{transform:scaleX(1.06)}
+  .ofr-pill i{transform:scaleX(1.099)}
   /* 시계 — ref 잉크 x357..424(68) y900..979(80). 박스를 글리프 advance 보다 넓게 잡아야
      text-align:center 가 먹는다(A1 교훈: 좁은 박스는 넘친 글리프를 좌측 정렬시킨다). */
   .ofr-clock{left:330px;top:128px;width:120px;height:81px;font-size:72px;line-height:81px;
@@ -1947,7 +1947,7 @@
      이모지에 -webkit-text-stroke 는 안 먹으므로 drop-shadow 를 4방향 연쇄한다.
      filter 는 «초록 채움을 가진 .ofr-fr i» 에 걸면 그 사각 박스가 그림자를 만들므로
      글리프만 감싸는 안쪽 요소에 걸어야 한다. */
-  .ofr-fr b{display:block;font-weight:400;
+  .ofr-fr b{display:block;font-weight:400;transform:scaleY(.97);
     filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000)
            drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000)}
   .ofr-amt{left:0;top:393px;width:1080px;text-align:center;height:60px;line-height:60px;
@@ -1964,11 +1964,13 @@
     background:linear-gradient(180deg,#ABFF7C 0 8px,#77EE44 8px,
       #76DB27 calc(100% - 16px),#ABFF7C calc(100% - 16px) calc(100% - 8px),
       #40BC2A calc(100% - 8px))}
+  .ofr-b.g{box-shadow:inset 6px 0 0 #ABFF7C,inset -6px 0 0 #ABFF7C}
   .ofr-b.g i{transform:translateY(-4px) scaleX(1.018)}
   .ofr-b.b{left:540px;width:300px;
     background:linear-gradient(180deg,#53E6F8 0 8px,#35CFE7 8px,
       #19B2D4 calc(100% - 16px),#52E7FD calc(100% - 16px) calc(100% - 8px),
       #0CA4C9 calc(100% - 8px))}
+  .ofr-b.b{box-shadow:inset 6px 0 0 #52E7FD,inset -6px 0 0 #52E7FD}
   .ofr-b.b i{transform:translateY(-4px) scaleX(1.019)}
   .ofr-ad{left:529px;top:570px;width:60px;height:48px;transform:rotate(-8deg);
     border-radius:8px;border:4px solid #000;box-sizing:border-box;background:#F5B728;
@@ -1983,7 +1985,7 @@
   /* 모달 바깥 아래 상품 배너 */
   .ofr-bn{left:66px;top:674px;width:948px;height:298px;border-radius:24px;
     border:6px solid #000;box-sizing:border-box;background:#48F291;overflow:hidden}
-  .ofr-bn>u{position:absolute;left:9px;right:9px;top:7px;bottom:9px;border-radius:14px;
+  .ofr-bn>u{position:absolute;left:9px;right:9px;top:7px;bottom:7px;border-radius:14px;
     background:#39C28C;text-decoration:none}
   /* 우측 티켓 노치 3개 (중심 y 1518/1592/1665 → 스테이지 746/820/893) */
   /* 노치는 «칠하는 것» 이 아니라 배너 실루엣을 뚫는 것이다 — 칠하면 배너 초록 위에 얹혀
@@ -2018,8 +2020,8 @@
      (ref 배너 좌단 코인 x66..110 과 중앙 코인군은 별도 아트라 이모지로는 못 채운다 — 아트 대기) */
   .ofr-art i{transform:translate(-129px,-14px)}
   /* 배너 문구 — 우단 894 / 963, 잉크중심 y 721.5 / 793 */
-  .ofr-t1{left:0;top:691px;width:896px;text-align:right;height:60px;line-height:60px;
-    font-size:39px;-webkit-text-stroke:13px #000}
+  .ofrs .ofr-t1{left:0;top:691px;width:896px;text-align:right;height:60px;line-height:60px;
+    font-size:39px;-webkit-text-stroke:17px #000}
   /* 잉크 폭이 ref 410 대비 419(+2.2%) 라 우측 기준으로 눌러 맞춘다 */
   .ofr-t1 i{transform:scaleX(.9785);transform-origin:100% 50%}
   /* '4시간 증가' 는 세로 그라데이션 글자 + 검정 외곽선이다.
@@ -2038,6 +2040,7 @@
     background:linear-gradient(180deg,#98FF70 0 8px,#77EE44 8px,
       #76DB27 calc(100% - 15px),#98FF70 calc(100% - 15px) calc(100% - 7px),
       #3EBC2A calc(100% - 7px))}
+  .ofr-go{box-shadow:inset 6px 0 0 #98FF70,inset -6px 0 0 #98FF70}
   .ofr-go i{display:inline-block;font-style:normal;transform:translateY(-5.5px) scaleX(.904)}
   .ofr-tag{left:115px;top:912px;width:350px;height:46px;border-radius:23px;background:#000;
     font-size:23px;font-weight:800;color:#F0E164;text-align:center;line-height:46px}
