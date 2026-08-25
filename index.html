@@ -1449,24 +1449,50 @@
           했다가 164px 중 143px(87%)을 140ms 에 몰아 올라간다(C-①). 1회차에 사라지는 행에서 고친
           «가만있다 훅» 이 남는 행으로 옮겨 간 것이다 → 홀드를 **18%(72ms)** 로 당기고 수축을
           147→92→38→0 **3단**으로 쪼개 아래 행이 0.51 / 0.50 / 0.34 px/ms 로 고르게 올라오게 했다.
-       ⑦ 이탈 168px → **196px**, 붉은 기(#E3D3BC → #E9AFAF)를 얹어 «지워진다» 를 행 스스로 말하게. */
+       ⑦ 이탈 168px → 196px, 붉은 기(#E3D3BC → #E9AFAF)를 얹어 «지워진다» 를 행 스스로 말하게.
+
+     ⚠ 3회차 비평(E 5 / F 5, 또 둘이 독립으로 같은 곳) 반영:
+       ⑧ **끝에서 알파가 절벽이다** — α .62 → .03 을 75ms 에 쏟아(0.0076/ms, 앞 300ms 평균의 5.8배)
+          «접혀 사라짐» 이 아니라 «꺼짐» 으로 읽혔다 → 88% 키프레임을 끼워 낙차를 고르게 폈다.
+       ⑨ **남는 행에 착지 감속이 없다** — 0.47px/ms 등속으로 올라오다 400ms 에 즉정지 → 수축을 5단으로
+          쪼개 0.37 → 0.52 → 0.41 → 0.29 px/ms 로 **끝에서 가라앉게** 했다.
+       ⑩ 내용을 «먼저 지우기» 만 했더니 잘리는 대상이 글자에서 **행 버튼으로 옮겨 갔을 뿐**이었고
+          (150ms 에 h107·α.69 로 «완료» 가 세로로 잘린다), 반대편에는 «내용 없는 분홍 슬래브» 가
+          140ms 남았다 → 내용에 **자기 translateX(150px)** 를 줘 **잘리기 전에 나가게** 했다. 둘 다 해소.
+       ⑪ 이탈 196px 은 «넛지로는 과하고 퇴장으로는 부족한 중간값» → **360px(카드 폭 46%)**.
+       ⑫ 붉은 기는 스태거를 타면 2번째 대상이 140ms 동안 평상 상태라 «대상이 2장» 임이 안 읽힌다
+          → 배경 틴트는 `.out` 이 붙는 **즉시**(스태거 없이) 들어가고, 스태거는 x·h 에만 건다.
+       ⑬ 버튼 `fxBurst` 는 뺐다 — 링 시작 반경 45.6 < 버튼 반높이 58.5 라 파티클이 **라벨 위에서 태어나고**
+          확산 115.6px 가 반높이를 57px 넘겨 위쪽 안내문에 얹힌다. `dCap` 이 58·60 **공용 모듈**이라
+          여기서 못 고친다(ROUTINE [4] «남의 구간 금지») → 임펄스는 행의 림 플래시(12%)로 옮겼다. */
   .ml-r.out{animation:mlOut .40s both;animation-delay:var(--mld,0ms);
-    pointer-events:none;overflow:hidden;position:relative;z-index:1}
+    pointer-events:none;overflow:hidden;position:relative;z-index:1;background:#F2C7C7}
   @keyframes mlOut{
-    0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);background:#E3D3BC;
-      animation-timing-function:cubic-bezier(.15,.8,.35,1)}
-    18%{opacity:.98;height:147px;margin-bottom:17px;transform:translateX(46px);background:#F2C7C7;
+    0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);
+      box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
+      animation-timing-function:cubic-bezier(.15,.85,.4,1)}
+    12%{opacity:.98;height:145px;margin-bottom:17px;transform:translateX(30px);
+      box-shadow:0 0 0 6px #241A12,inset 0 0 0 10px #FFF7EC;
       animation-timing-function:linear}
-    45%{opacity:.86;height:92px;margin-bottom:11px;transform:translateX(118px);background:#EFBCBC;
+    45%{opacity:.80;height:96px;margin-bottom:11px;transform:translateX(170px);
+      box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
       animation-timing-function:linear}
-    72%{opacity:.62;height:38px;margin-bottom:5px;transform:translateX(162px);background:#EBB4B4;
-      animation-timing-function:cubic-bezier(.35,0,.35,1)}
-    100%{opacity:0;height:0;margin-bottom:0;transform:translateX(196px);background:#E9AFAF;
+    72%{opacity:.52;height:40px;margin-bottom:5px;transform:translateX(278px);
+      animation-timing-function:linear}
+    /* 꼬리는 **이징이 아니라 값으로** 감속시킨다 — 마지막 구간에 ease-out 커브를 걸면 높이는
+       가라앉지만 **알파도 같이 앞으로 쏠려** «꺼짐» 절벽이 되살아난다(3회차에 실제로 그랬다:
+       α .47 → .03). 전부 `linear` 로 두고 키프레임 값 간격을 좁혀 0.42 → 0.36 → 0.21 px/ms 로 내린다. */
+    85%{opacity:.33;height:18px;margin-bottom:3px;transform:translateX(322px);
+      animation-timing-function:linear}
+    94%{opacity:.13;height:5px;margin-bottom:1px;transform:translateX(348px);
+      animation-timing-function:linear}
+    100%{opacity:0;height:0;margin-bottom:0;transform:translateX(360px);
       box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
-  /* 내용은 상자보다 «먼저» 지운다 — 안 그러면 h110·α.46 처럼 «읽히는데 가로로 잘린» 프레임이 생긴다
-     (C-④·D-④). 겸해서 파티클을 행에 뿌리지 않아도 «이 행이 빠진다» 가 읽힌다(붉은 기 + 내용 소거). */
+  /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
+     (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다. */
   .ml-r.out>*{animation:mlOutIn .40s both;animation-delay:var(--mld,0ms)}
-  @keyframes mlOutIn{0%,25%{opacity:1}65%,100%{opacity:0}}
+  @keyframes mlOutIn{0%,10%{opacity:1;transform:translateX(0)}
+    55%,100%{opacity:0;transform:translateX(150px)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
@@ -11865,14 +11891,15 @@ function openMail(){
   $('mailDel').onclick = () => {
     if(!mailDelable()) return;
     const b = $('mailDel');
-    /* 버튼 눌림은 60 `jzInit` 의 `jz-dn` 이 이미 준다. 2회차에 쓴 `fxPop` 은 «보상 아이템 팝»
-       (`0%{scale(0);opacity:0}`) 이라 **계속 있어야 할 버튼이 한 프레임 사라졌다가 1.2배로 튀어**
-       우측 버튼과의 35px 간격을 4.5px 까지 좁혔다(3회차 비평 D-④) → 뺐다.
-       버스트는 09·12·17 의 밀도(10~14개)에 맞춰 6 → 11 로 올리고, **색을 분홍(#FFC0C0)에서
-       크림(#FFEFD9)으로** 바꿨다 — 분홍 파티클은 빨간 버튼 면(#E24E4E) 위에서 대비가 모자라
-       비평가 2명이 독립적으로 «버튼 밴드에서 파티클 검출 0» 이라고 적었다(C-④). 실제로는 11개가
-       불투명도 1 로 떠 있었고(프로브 확인), **안 보인 게 아니라 안 읽힌 것**이다. */
-    fxBurst(b, '#FFEFD9', 11);
+    /* 버튼 눌림은 60 `jzInit` 의 `jz-dn` 이 담당한다.
+       - 2회차의 `fxPop` 은 «보상 아이템 팝»(`0%{scale(0);opacity:0}`) 이라 **계속 있어야 할 버튼이
+         한 프레임 사라졌다가 1.24배로 튀어** 우측 초록 버튼과의 35px 간격을 4.5px 까지 좁혔다(D-④).
+       - 3회차의 `fxBurst(버튼)` 은 링 시작 반경 45.6 이 버튼 반높이 58.5 보다 작아 파티클이
+         **라벨 «읽음 전체 삭제» 위에서 태어나고**, 확산 115.6px 가 반높이를 57px 넘겨 위쪽 안내문에
+         얹혔다(E-② · F-②). 이건 `fxBurst` 의 `dCap` 문제인데 **58·60 공용 모듈**이라 여기서
+         고치면 전 화면 버스트가 같이 바뀐다(ROUTINE [4] «남의 구간 절대 금지») → 쓰지 않는다.
+       임펄스는 **행 자신의 림 플래시**(`mlOut` 12%: inset 5 → 10px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
+       «버튼만 임펄스, 정작 사건 주체인 행은 등속 드리프트» 라는 층위 불일치도 같이 없어진다(F-④). */
     const rows = MAILS.filter(m => S.mail[m.id] === 1)
       .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
       .map(el => el && el.closest('.ml-r')).filter(Boolean);
