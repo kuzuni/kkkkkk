@@ -90,7 +90,7 @@ async function fresh(browser, w = 1080, h = 2280) {
     near('상자 높이', g.box.h, 1303);
     near('본문 높이', g.body.h, 1189);
     near('패널 폭', g.pn.w, 830);
-    near('패널 높이', g.pn.h, 886);
+    near('패널 높이', g.pn.h, 880);
     near('행 폭', g.r1.w, 784);
     near('행 높이', g.r1.h, 147);
     near('행 pitch', g.rowTops[1] - g.rowTops[0], 164);
@@ -148,6 +148,19 @@ async function fresh(browser, w = 1080, h = 2280) {
       return bad;
     });
     outside.length === 0 ? ok('프레임 밖 요소 0건') : fail('프레임 밖: ' + outside.join(', '));
+    /* ⚠ 패널 «바깥» 베벨 링(box-shadow 5px)은 `.mbody{overflow:hidden}` 에 잘린다 —
+       `.ml-pn{top:0}` 이던 3회차에는 링이 4변이 아니라 «U자» 였고, 요소 bbox 로는 절대 안 보였다
+       (비평 F 1순위). 링 두께만큼의 상단 여유를 회귀로 못박는다. */
+    const ring = await page.evaluate(() => {
+      const pn = document.querySelector('.ml-pn');
+      const sh = getComputedStyle(pn).boxShadow;
+      const m = /rgb\([^)]*\)\s+0px\s+0px\s+0px\s+(\d+(?:\.\d+)?)px(?!\s+inset)/.exec(sh.replace(/inset[^,]*,?/g, ''));
+      return { top: parseFloat(getComputedStyle(pn).top), w: m ? parseFloat(m[1]) : null };
+    });
+    ring.w === null ? fail('패널 외곽 베벨 링을 못 찾았다')
+      : (ring.top >= ring.w ? ok(`패널 외곽 베벨 링 ${ring.w}px 이 안 잘림 (top ${ring.top} ≥ ${ring.w})`)
+        : fail(`패널 외곽 베벨 링 ${ring.w}px 이 상단에서 잘린다 (top ${ring.top})`));
+
     /* 안내 밴드 — ref 는 팝업 폭의 .904/.812 를 채우는 전폭 문구이고 L1 이 L2 보다 넓다(측정표 §6).
        짧은 캡션으로 돌아가면 구성이 달라지므로 회귀로 고정한다(비평 C-D1 · D-S1). */
     const note = await page.evaluate(() => {
