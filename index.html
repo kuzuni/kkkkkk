@@ -1024,15 +1024,13 @@
   .gbtn small{display:block;font-size:20px;font-weight:800;opacity:.85}
   .row2{display:flex;gap:12px}
   .row2>*{flex:1}
-  .subtabs{display:flex;gap:10px;margin-bottom:16px}
-  .stab{flex:1;padding:16px 0;text-align:center;font-size:23px;font-weight:900;border-radius:18px;
-    background:#141b34;border:2.8px solid #2b3866;color:#8d9cc2;cursor:pointer}
-  .stab.on{background:linear-gradient(180deg,#2b3f74,#1e2c56);border-color:#5f7cc4;color:#bfe0ff}
-  .stab{position:relative}
-  .stab.alert::after{content:'';position:absolute;top:8px;right:10px;width:16px;height:16px;
-    border-radius:50%;background:#ff3b5c;border:3px solid #141b34}
-  /* 영웅 탭 서브탭 — 패널 최상단 고정(본문 스크롤과 분리) */
-  #herosub{flex:none;display:none;margin:0;padding:14px 16px 4px;background:#0d1020}
+  /* 96 — 구버전(파란 스킨) 수량 선택 칸. 이름이 `.subtabs/.stab` 이었지만 서브탭이 아니라
+     «강화 수량 x1/x10/MAX + 자동» 컨트롤이다(renderUp 전용). 공용 서브탭 부품이 `.stabs/.stab`
+     을 쓰게 되면서 `.qtabs/.qtab` 으로 개명했다. */
+  .qtabs{display:flex;gap:10px;margin-bottom:16px}
+  .qtab{flex:1;padding:16px 0;text-align:center;font-size:23px;font-weight:900;border-radius:18px;
+    background:#141b34;border:2.8px solid #2b3866;color:#8d9cc2;cursor:pointer;position:relative}
+  .qtab.on{background:linear-gradient(180deg,#2b3f74,#1e2c56);border-color:#5f7cc4;color:#bfe0ff}
 
   .up{display:flex;align-items:center;gap:18px;padding:16px 18px;margin-bottom:12px;border-radius:22px;
     background:linear-gradient(180deg,#172046,#121a34);border:2.8px solid #2b3866;cursor:pointer}
@@ -2337,20 +2335,12 @@
      좌(비선택 #61503C) / 우(선택 #4B3E2D) 가 gap 0 으로 겹친다.
      (작업 46) 왼쪽 칸은 자물쇠가 아니라 «레이드» 다. 껍데기 기하는 레퍼런스 그대로 두고
      선택 상태만 좌우로 옮긴다 — 칸 위치·폭(.l 524 / .r 421)은 고정, .on/.off 가 색과 z 를 정한다. */
-  .dns-sub{position:absolute;left:151px;top:auto;bottom:40px;width:794px;height:98px}
-  .dns-t{position:absolute;top:0;height:98px;border-radius:49px;border:6px solid #000;
-    box-sizing:border-box;cursor:pointer}
-  .dns-t.l{left:0;width:524px;border-left-width:8px}
-  .dns-t.r{left:373px;width:421px}
-  .dns-t.off{background:#61503C;box-shadow:inset 0 0 0 7px #705F4B;z-index:1}
-  .dns-t.on{background:#4B3E2D;box-shadow:inset 0 0 0 7px #634F37;z-index:2}
-  .dns-t>b{position:absolute;left:0;right:0;top:18px;height:42px;line-height:42px;
-    text-align:center;font-size:42px;font-weight:900;letter-spacing:-5px;
-    padding-right:5px;box-sizing:border-box;color:#F3BC8C;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .dns-t.r>s{position:absolute;left:371px;top:-6px;width:27px;height:27px;border-radius:50%;
-    background:#F22E52;text-decoration:none;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  /* 96 (2026-08-26 주인 지시 ⓐ «선택됐을 때 너무 과해 보인다») — 03 전용 탭 부품
+     (`.dns-t.l/.r` 가 gap 0 으로 겹치고 선택 칸이 검정 6px 테두리 + 인셋 7px 캡슐로 통째로 튀던 것)을
+     폐기하고 **영웅 서브탭과 같은 공용 부품 `.stabs.sp2 > .stab`** 으로 바꿨다.
+     바 기하(left 151 · width 794 · 탭바 위 40)는 03 측정표 실측 그대로 두고 칸만 2등분한다.
+     레드닷은 `.stab > .bdg`. 측정표 §서브탭은 정오표 처리(docs/measure/03-던전팝업.md). */
+  .dns-sub{position:absolute;left:151px;top:auto;bottom:40px;width:794px}
   /* ==========================================================================
      10 상점 팝업 — 소환 탭 — 측정표 docs/measure/10-상점팝업소환탭.md
      껍데기는 «(다) 전체화면 페이지» — 딤·헤더·테두리 없음. 03 던전(#dunw) 과 같은 부류.
@@ -2471,26 +2461,11 @@
   .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
     line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:5}
 
-  /* 카테고리 탭 바 — x45 w990 h107, 검정 7 + 림 6, radius 33, 세로 그라디언트 */
-  .shp-cats{position:absolute;left:45px;right:45px;bottom:14px;height:107px;border-radius:33px;
-    border:7px solid #000;box-sizing:border-box;
-    background:linear-gradient(180deg,#45372C,#372B1F);
-    box-shadow:inset 0 0 0 6px rgba(92,79,70,.9)}
-  .shp-cats>*{position:absolute;top:0;bottom:0}
-  /* 45: 탭 2개 균등 — 칸 폭 50%(패딩박스 976 → 488). 바 껍데기 규격(990x107·검정 7·림 6·radius 33)은 그대로. */
-  .shp-ct{width:50%;text-align:center;cursor:pointer;color:#A8A7AC;z-index:2}
-  .shp-ct:nth-child(1){left:0}   .shp-ct:nth-child(2){left:50%}
-  .shp-ct>i{position:absolute;left:0;right:0;top:41px;font-size:33px;color:inherit;z-index:2;
-    transform:scaleX(.9);letter-spacing:-1px;-webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .shp-ct.on{color:#fff}
-  /* ✦ 마름모 구분선 — 45: 칸 경계가 하나뿐이라 바 중앙 1개.
-     left 485 는 레퍼런스 4탭 바의 «가운데 ✦» 실측치이고, 그 자리가 곧 2탭의 경계다. */
-  .shp-cs{position:absolute;top:44px;left:485px;width:15px;height:20px;background:#989491;z-index:1;
-    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
-  /* 활성 알약 — 양끝 화살촉 노랑 배너. 45: 크기(250x79)는 실측 그대로 두고 칸 중앙 정렬 (488−250)/2 = 119 */
-  .shp-cat-pill{position:absolute;left:119px;top:14px;width:250px;height:79px;z-index:1;
-    background:linear-gradient(180deg,#FFC736,#F8A63A);border:6px solid #000;box-sizing:border-box;
-    clip-path:polygon(0 50%,8% 0,92% 0,100% 50%,92% 100%,8% 100%)}
+  /* 96 (2026-08-26 주인 지시 ⓑ «소환/재화 탭 선택 상태도 나쁘다») — 10 전용 탭 부품
+     (검정 7 + 림 6 짜리 별도 바 껍데기 · 활성 칸으로 **노드째 옮겨 다니던** 노랑 화살촉 알약
+     `.shp-cat-pill` · ✦ 마름모 구분선 `.shp-cs`)을 폐기하고 **공용 부품 `.stabs.sp2 > .stab`** 으로 바꿨다.
+     바 위치(x45 w990, 바닥 14)만 여기서 정한다. 10·13 측정표 §카테고리 바는 정오표 처리. */
+  .shp-cats{position:absolute;left:45px;right:45px;bottom:14px}
 
 
   /* ==========================================================================
@@ -2797,19 +2772,12 @@
     #7C7C7C 89px,#BDBDBD 89px,#BDBDBD 96px,#8A8A8A 96px,#5C5C5C 103px)}
   .cn-ml.off>.ex>i{color:#DADADA}
 
-  /* §8 카테고리 탭 바 — 바 자체는 10 소속이라 **재화 탭일 때만** 13 실측치로 덮어쓴다
-     (`#shopList.coin ~ #shopCats`). 10 의 소환 탭 모습은 건드리지 않는다. 비평 1회차 A/B 공통 지적:
-     바가 27px 아래 · 라벨이 바 중심에서 17.5px 아래 · ✦ 가 13x18(ref 19x19) · NEW 리본은 13 에 없음. */
-  /* 45: «재화» 는 이제 2번째(마지막) 칸이다. 이 칸에 알약이 있는 상태 = 재화 탭이라 바 테두리가 5px
-     (패딩박스 980 → 칸 490) → 알약 중앙 정렬은 (490−256)/2 = 117 */
-  #shopCats .shp-ct:nth-child(2) .shp-cat-pill{left:117px;top:9px;width:256px;height:76px}
+  /* §8 카테고리 탭 바 — **96 으로 탭 부품이 공용화됐다.** 13(재화 탭)에서 바 테두리·라벨 크기·✦ 를
+     따로 덮어쓰던 규칙(`#shopList.coin ~ #shopCats …`)은 전부 폐기한다 — 그게 «탭마다 미묘하게
+     다른 디자인» 의 원인이고, 주인 지시 ⓑ 가 없애라는 것이다. 남는 것은 **위치(바닥 41)** 하나뿐.
+     13 측정표 §8 은 정오표 처리(docs/measure/13-상점팝업재화탭.md). */
   #shopList.coin ~ #shopCats{bottom:41px}
   #shopList.coin{bottom:154px}
-  #shopList.coin ~ #shopCats .shp-ct>i{top:25px;font-size:33.3px}
-  #shopList.coin ~ #shopCats .shp-ct.on>i{font-size:29.5px;top:25px;transform:scaleX(1.06)}
-  #shopList.coin ~ #shopCats{border-width:5px;box-shadow:inset 0 0 0 3px rgba(92,79,70,.9)}
-  /* 13 실측: 재화 탭에서 ✦ 는 19x19 · top 38. 좌표는 중앙 1개라 base(485)를 그대로 쓴다. */
-  #shopList.coin ~ #shopCats .shp-cs{top:38px;width:19px;height:19px}
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
@@ -4485,27 +4453,12 @@
 
   /* ---- 최하단 서브탭 x66 w948 h97 (셀 4등분 237) ---- */
   /* 작업 51 — top:1444 대신 bottom:43(=1584−1541). 시트가 접혀도 바닥에 붙어 있는다 */
-  .eqtb{left:66px;bottom:43px;width:948px;height:97px;border-radius:49px;background:#61503C;
-    box-shadow:inset 0 0 0 8px #000,inset 0 0 0 15px #705F4B;z-index:3}
-  .eqtb>*{position:absolute}
-  /* 구분선 — 셀 경계 x539.5/776.5, y2040~2099 */
-  .eqtd{top:19px;width:4px;height:60px;background:#483A2A}
-  .eqtd.d1{left:472px}
-  .eqtd.d2{left:709px}
-  /* 탭 셀 — 라벨 잉크 h37 → font 40 */
-  .eqtc{top:0;width:237px;height:97px;cursor:pointer}
-  .eqtc>b{position:absolute;left:0;right:0;top:22px;height:52px;line-height:52px;
-    text-align:center;font-size:42px;font-weight:900;color:#A7A6AB;
-    -webkit-text-stroke:9px #000;paint-order:stroke fill;letter-spacing:-2px;
-    text-indent:-2px;white-space:nowrap}
-  .eqtc>b>i{transform:scaleX(.91)}
-  /* 선택 알약 — 셀보다 좌우 12px 씩 커서 바 밖으로 삐져나온다(폭 260) */
-  .eqtc.on{width:260px;background:#4B3E2D;border-radius:49px;
-    box-shadow:inset 0 0 0 7px #000,inset 0 0 0 16px #634F37}
-  /* 레퍼런스는 **선택 탭 라벨만** 비선택보다 3px 위에 있다
-     (ref 장비 y2049~2085 vs 스킬 y2052~2088). 구현은 둘 다 2051 로 같았다 */
-  .eqtc.on>b{color:#F0BB8C;left:12px;right:12px;top:19px}
-  .eqtc.on>b>i{transform:scaleX(.97)}
+  /* 96 (2026-08-26 주인 지시 ⓒ) — 06 이 자기 탭 부품(.eqtb/.eqtc/.eqtd)을 따로 그리던 것을 폐기하고
+     **영웅 시트와 같은 공용 부품 `.stabs > .stab`** 으로 바꿨다. 위치만 여기서 정한다.
+     프레임 좌표로 보면 두 바는 원래 같은 바였다 — 영웅 `#bSk`(패널 테두리 7) 안 left 58 = 프레임 65,
+     06 `.eqp`(테두리 없음) 안 left 66 = 프레임 66. 1px 차이는 측정 노이즈라 **영웅 값(65/950/41)** 으로 통일.
+     06 측정표 §서브탭은 정오표 처리(docs/measure/06-장비팝업.md). */
+  #eqTabs{left:65px;bottom:41px;width:950px}
 
   /* ==========================================================================
      07 스킬 팝업 — 측정표 docs/measure/07-스킬팝업.md
@@ -4529,9 +4482,8 @@
   /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
   #panel:has(:is(#bSk,#bPet,#bCos).on)::before{content:'';position:absolute;left:-7px;right:-7px;
     bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:none}
-  /* 시트 안에 자체 서브탭 바가 있으므로 패널 상단 공용 서브탭은 숨긴다.
-     `syncPanel()` 이 인라인 style.display 를 직접 쓰므로 !important 가 필요하다 */
-  #panel:has(:is(#bSk,#bPet,#bCos).on) #herosub{display:none!important}
+  /* 96 — 패널 상단 구버전 서브탭 바(#herosub)는 폐기했다. 장비는 패널 본문이 없어(HEROBODY 에 eq 없음)
+     패널 자체가 접히고, 스킬·동료·코스튬은 시트가 자기 서브탭 바를 그려서 **한 번도 보인 적이 없는 노드**였다. */
   :is(#bSk,#bPet,#bCos).on{padding:0;overflow:hidden;position:relative;display:block}
   :is(#bSk,#bPet,#bCos)>*,:is(#bSk,#bPet,#bCos) .shsc-in>*{position:absolute}
   /* 작업 51 — 본문 뷰포트: 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1477−1337=140).
@@ -4674,51 +4626,68 @@
 
   /* 9 서브탭 바 950x99 ref(65,2020) · 검정 6 · 배경 #61523D · 활성 세그먼트 #4B3E2D */
   /* 작업 51 — top:1337 대신 bottom:41(=1477−1436). 시트가 접혀도 바닥에 붙어 있는다 */
-  .sk-tabs{left:58px;bottom:41px;width:950px;height:99px;border-radius:50px;z-index:3;
+  /* ── 96 공용 서브탭 부품 `.stabs > .stab` (2026-08-26 저장소 주인 지시) ──
+     이 바가 원본이다: «영웅 서브탭 디자인이 제일 나으니 그 느낌으로 던전·상점 탭도 통일».
+     껍데기·칸·활성 알약·라벨 규격은 여기서만 정하고, 호스트는 **위치(left/bottom/width)** 만 정한다.
+       · 4칸 격자(영웅·장비) = `.stab-c1~c4` (레퍼런스 실측 경계 그대로)
+       · 2칸 균등(던전·상점) = 바에 `.sp2`
+     `.sk-tabs/.sk-tab` 은 07·26·50 게이트(tools/func50.js)가 쓰는 **별칭**으로 남겨 둔다. */
+  .stabs{height:99px;border-radius:50px;z-index:3;
     border:6px solid #000;box-sizing:border-box;
     background:linear-gradient(180deg,#6F6251 0 8px,#61523D 8px 79px,#706049 79px 85px,#61523D 85px)}
-  .sk-tabs>*{position:absolute;top:0;height:85px}
+  .stabs>*{position:absolute;top:0;height:85px}
+  .sk-tabs{left:58px;bottom:41px;width:950px}
+  /* 2칸 균등 — 03 던전·10 상점. 칸 경계는 바 콘텐츠 중앙 하나뿐이라 구분선을 두지 않는다 */
+  .stabs.sp2>.stab{width:50%}
+  .stabs.sp2>.stab:nth-of-type(1){left:0}
+  .stabs.sp2>.stab:nth-of-type(2){left:50%}
+  /* 레드닷 — 옛 `.dns-t.r>s`(칸 안 절대좌표 371) 를 칸 우상단 기준으로 옮긴 것 */
+  .stab>.bdg{position:absolute;right:23px;top:-6px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;text-decoration:none;transform:none;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
      line-height 는 잉크 중심을 붙잡는 값이라 fs 와 함께 미세 조정한다 */
-  .sk-tab{text-align:center;line-height:87px;font-size:43px;color:#A9A8AD;cursor:pointer}
-  :is(#bSk,#bPet,#bCos) .sk-tab>i{display:inline-block;transform:scaleX(.914)}
+  /* font-weight 는 부품이 직접 못 박는다 — 호스트(#bSk 시트·#shopw 페이지)마다 상속값이 달라서
+     안 적으면 06·03 라벨만 400 으로 떨어진다(96 게이트 ① 에서 잡혔다) */
+  .stab{text-align:center;line-height:87px;font-size:43px;font-weight:900;color:#A9A8AD;cursor:pointer}
+  .stab>i{display:inline-block;transform:scaleX(.914)}
   /* 레퍼런스 알약은 평면이 아니다 — x340 세로 실측:
      검정 2021~2026 → **밝은 베벨 2028~2034** → 면 2036~2088 → **밝은 베벨 2098~2103**
      → **어두운 인셋 2105~2110** → 검정 2112~. 좌우에도 같은 밝은 안쪽 림이 있다. */
-  .sk-tab.on{border-radius:36px;font-size:41px;line-height:77px;color:#F2BC8D;
+  .stab.on{border-radius:36px;font-size:41px;line-height:77px;color:#F2BC8D;
     background:linear-gradient(180deg,#604F3D 0 9px,#4B3E2D 10px 72px,#5F4D39 72px 78px,
       #413122 78px 85px);
     box-shadow:inset 7px 0 0 #000,inset -7px 0 0 #000,
       inset 14px 0 0 #604F3D,inset -14px 0 0 #604F3D}
-  :is(#bSk,#bPet,#bCos) .sk-tab.on>i{transform:scaleX(.893)}
+  .stab.on>i{transform:scaleX(.893)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
-  .sk-t1{left:0;width:224px}
-  .sk-t2{left:220px;width:261px}
-  .sk-t3{left:481px;width:223px}
-  .sk-t4{left:709px;width:229px}
+  .stab-c1{left:0;width:224px}
+  .stab-c2{left:220px;width:261px}
+  .stab-c3{left:481px;width:223px}
+  .stab-c4{left:709px;width:229px}
   /* 구분선 3 — 활성 알약의 좌우 «검정 7px 테두리» 와 달리, 맨 오른쪽 구분선은
      **바 배경보다 살짝 어두운 함몰선**이고 바 높이를 다 쓰지도 않는다.
      실측(x777 세로 프로파일): y2044~2097 (h54) 에만 존재하고 색은 #483B2B
      (바 배경 #61503C 대비 Δ26). 검정 #000 · 전체높이로 그리면 Δ97 · 높이 +57% 다. */
-  .sk-tsep{left:704px;top:18px;width:5px;height:54px;background:#483B2B;cursor:default}
-  .sk-tabs .sk-lock{top:15px;left:50%;margin-left:-24.5px}
+  .stab-sep{left:704px;top:18px;width:5px;height:54px;background:#483B2B;cursor:default}
+  .stabs .sk-lock{top:15px;left:50%;margin-left:-24.5px}
 
   /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
      흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
      레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
-  :is(#bSk,#bPet,#bCos) .ol1,:is(#bSk,#bPet,#bCos) .ol2,:is(#bSk,#bPet,#bCos) .ol3,:is(#bSk,#bPet,#bCos) .ol4,:is(#bSk,#bPet,#bCos) .ol5{--o:#000}
-  :is(#bSk,#bPet,#bCos) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs) .ol1,:is(#bSk,#bPet,#bCos,.stabs) .ol2,:is(#bSk,#bPet,#bCos,.stabs) .ol3,:is(#bSk,#bPet,#bCos,.stabs) .ol4,:is(#bSk,#bPet,#bCos,.stabs) .ol5{--o:#000}
+  :is(#bSk,#bPet,#bCos,.stabs) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
     1px 1px 0 var(--o),1px -1px 0 var(--o),-1px 1px 0 var(--o),-1px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
     1px 2px 0 var(--o),1px -2px 0 var(--o),-1px 2px 0 var(--o),-1px -2px 0 var(--o),
     2px 1px 0 var(--o),2px -1px 0 var(--o),-2px 1px 0 var(--o),-2px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
     2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
     3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
     4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
     5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
     2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
@@ -5543,6 +5512,12 @@
   .jz-ti{animation:jzTi .2s linear both}
   @keyframes jzTi{0%{scale:1;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
     45%{scale:1.12;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
+
+  /* ⑤ 96 — 서브탭 전환: 새로 활성이 된 칸이 1.06 으로 튄다.
+     ⚠ `transform` 이 아니라 독립 변형 속성 `scale:` 을 쓴다 — 라벨 폭 보정(scaleX)이 날아가지 않게. */
+  .jz-st{animation:jzSt .22s linear both}
+  @keyframes jzSt{0%{scale:1;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+    45%{scale:1.06;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
   /* ⚠ 11회차(10회차 결함 6) — 옛 곡선은 `scale .9 → 1.03` 인데 **화면에 나온 진폭은 2.7%**(T),
@@ -7041,11 +7016,6 @@
   </div>
 
   <div id="panel">
-    <div id="herosub" class="subtabs">
-      <div class="stab on" data-hero="eq">⚔️ 장비</div>
-      <div class="stab" data-hero="sk">📜 스킬</div>
-      <div class="stab" data-hero="pet">🐾 동료</div>
-    </div>
     <div class="body on" id="bUp"></div>
     <div class="body" id="bSk"></div>
     <!-- 작업 57 — 구버전(파란 스킨) 장비 배너 패널 #bEq 폐기. 장비 서브탭은 항상 06 시트(#eqw) 다 -->
@@ -7109,9 +7079,10 @@
     </div>
     <div class="dns-list" id="dunList"></div>
     <!-- 46(2026-08-25 주인 지시): 왼쪽 자물쇠 칸은 «레이드»(DPS 측정 던전) 다. -->
-    <div class="dns-sub" id="dunSub">
-      <div class="dns-t l off" data-dsub="raid"><b>레이드</b></div>
-      <div class="dns-t r on" data-dsub="dun"><b>던전</b><s></s></div>
+    <!-- 96 — 공용 서브탭 부품(.stabs.sp2 > .stab). `.dns-t` 는 게이트(tools/verify46.js) 별칭. -->
+    <div class="dns-sub stabs sp2" id="dunSub">
+      <div class="stab dns-t off" data-dsub="raid"><i class="ol3">레이드</i></div>
+      <div class="stab dns-t on" data-dsub="dun"><i class="ol4">던전</i><s class="bdg"></s></div>
     </div>
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
@@ -7124,10 +7095,10 @@
     <div class="shp-list" id="shopList"></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
          ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
-    <div class="shp-cats" id="shopCats">
-      <div class="shp-ct on" data-cat="summon"><div class="shp-cat-pill"></div><i>소환</i></div>
-      <div class="shp-ct" data-cat="coin"><i>재화</i></div>
-      <div class="shp-cs"></div>
+    <div class="shp-cats stabs sp2" id="shopCats">
+      <!-- 96 — 공용 서브탭 부품(.stabs.sp2 > .stab). `.shp-ct` 는 게이트(tools/verify45.js) 별칭. -->
+      <div class="shp-ct stab on" data-cat="summon"><i class="ol4">소환</i></div>
+      <div class="shp-ct stab" data-cat="coin"><i class="ol3">재화</i></div>
     </div>
   </div>
   <!-- 89 유물 페이지 — «유물 소환 → 자동 강화». (다) 전체화면 페이지(03 던전·10 상점 동종).
@@ -7190,16 +7161,15 @@
         <div class="eqc-hl"></div>
         <div id="eqCards"></div>
       </div></div>
-      <div class="eqtb" id="eqTabs">
-        <div class="eqtd d1"></div>
-        <div class="eqtd d2"></div>
-        <div class="eqtc on" style="left:-12px"><b><i>장비</i></b></div>
-        <div class="eqtc" style="left:237px" data-eqtab="sk"><b><i>스킬</i></b></div>
-        <!-- 작업 50: 서브탭은 «장비 · 스킬 · 코스튬 · 동료» 4개다(UI-REFERENCE 설계 확정 16번).
-             잠금(🔒) 탭 «기타» 는 폐기하고 3번 칸을 코스튬(→ `bCos`)으로, 동료는 4번 칸으로 옮겼다.
-             작업 25 가 해금한 «동료» 진입(→ 26 동료 팝업 `bPet`)은 그대로 살아 있다. -->
-        <div class="eqtc" style="left:474px" data-eqtab="cos"><b><i>코스튬</i></b></div>
-        <div class="eqtc" style="left:711px" data-eqtab="pet"><b><i>동료</i></b></div>
+      <!-- 작업 50: 서브탭은 «장비 · 스킬 · 코스튬 · 동료» 4개다(UI-REFERENCE 설계 확정 16번).
+           작업 96: 영웅 시트와 **같은 공용 부품**(.stabs>.stab, 칸 격자 .stab-c1~c4)으로 바꿨다.
+           `.eqtb/.eqtc` 는 게이트(tools/func50.js `#eqTabs .eqtc`)가 쓰는 별칭으로만 남는다. -->
+      <div class="stabs eqtb" id="eqTabs">
+        <div class="stab eqtc stab-c1 on"><i class="ol4">장비</i></div>
+        <div class="stab eqtc stab-c2" data-eqtab="sk"><i class="ol3">스킬</i></div>
+        <div class="stab eqtc stab-c3" data-eqtab="cos"><i class="ol3">코스튬</i></div>
+        <div class="stab eqtc stab-c4" data-eqtab="pet"><i class="ol3">동료</i></div>
+        <div class="stab-sep"></div>
       </div>
     </div>
   </div>
@@ -11332,10 +11302,10 @@ function trainUp(){
 /* 88 — 스탯 훈련(statTrain*)·스탯 분배 UI(renderStat) 폐기(저장소 주인 지시). */
 function renderUp(){
   /* 88 — «⚒️ 강화 / 🧬 스탯» 서브탭 폐기(스탯 시스템 제거). 강화 단일 화면. */
-  let h = '<div class="subtabs">';
-  QTYS.forEach(q => h += '<div class="stab' + (S.buyQty === q ? ' on' : '') + '" data-q="' + q + '">'
+  let h = '<div class="qtabs">';
+  QTYS.forEach(q => h += '<div class="qtab' + (S.buyQty === q ? ' on' : '') + '" data-q="' + q + '">'
     + (q === 'MAX' ? 'MAX' : 'x' + q) + '</div>');
-  h += '<div class="stab' + (S.autoBuy ? ' on' : '') + '" data-auto="1">자동 ' + (S.autoBuy ? 'ON' : 'OFF') + '</div></div>';
+  h += '<div class="qtab' + (S.autoBuy ? ' on' : '') + '" data-auto="1">자동 ' + (S.autoBuy ? 'ON' : 'OFF') + '</div></div>';
   for(const u of UPG){
     const l = lv(u.id), bi = buyInfo(u);
     h += '<div class="up' + (bi.ok ? '' : ' no') + '" data-u="' + u.id + '">'
@@ -12151,10 +12121,11 @@ function raidPaint(tries){
 /* 서브탭 전환 — 껍데기(#dunw)는 그대로 두고 리스트 내용과 선택 표시만 바꾼다 */
 function setDunSub(k){
   dunSub = (k === 'raid') ? 'raid' : 'dun';
-  [...document.querySelectorAll('#dunSub .dns-t')].forEach(t => {
+  [...document.querySelectorAll('#dunSub .stab')].forEach(t => {
     const me = t.dataset.dsub === dunSub;
     t.classList.toggle('on', me);
     t.classList.toggle('off', !me);
+    stabInk(t, me);          /* 96 — 활성 라벨은 외곽선 4px(영웅 서브탭과 같은 규칙) */
   });
   renderDunPage();
   $('dunList').scrollTop = 0;
@@ -12322,12 +12293,8 @@ function openShopPage(focus){
   closeDungeon(); closeTrain();
   if(typeof closeRelw === 'function') closeRelw();
   shopCat = 'summon';
-  document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
-  /* 45: 활성 알약은 «활성 탭 칸 안에» 사는 노드다(클릭 핸들러가 노드째 옮긴다). 재화 탭에서 닫고
-     다시 열면 소환이 활성인데 알약만 재화 칸에 남으므로, 여는 시점에 소환 칸으로 되돌린다. */
-  const pill0 = document.querySelector('#shopCats .shp-cat-pill');
-  const ct0 = document.querySelector('#shopCats .shp-ct[data-cat="summon"]');
-  if(pill0 && ct0 && pill0.parentNode !== ct0) ct0.insertBefore(pill0, ct0.firstChild);
+  /* 96 — 공용 부품이라 «활성 알약 노드를 칸 사이로 옮기는» 처리가 사라졌다(클래스 하나로 끝난다) */
+  setShopCatTabs('summon');
   renderShopPage();
   $('shopw').classList.add('on');
   const li = $('shopList');
@@ -12384,11 +12351,7 @@ $('shopCats').addEventListener('click', e => {
   if(!c) return;
   const cat = c.dataset.cat;
   shopCat = cat;
-  document.querySelectorAll('#shopCats .shp-ct').forEach(x => x.classList.toggle('on', x.dataset.cat === cat));
-  /* 활성 알약은 활성 탭 칸 안에 산다(칸 기준 left:-8px = 칸 중앙). 탭이 바뀌면 노드째 옮긴다 —
-     13 에서 «재화»(4번째 칸)가 활성이 되면서 필요해졌다. 측정표 13 §8: 알약이 바 우측으로 7px 돌출. */
-  const pill = document.querySelector('#shopCats .shp-cat-pill');
-  if(pill && pill.parentNode !== c) c.insertBefore(pill, c.firstChild);
+  setShopCatTabs(cat);
   renderShopPage();
   $('shopList').scrollTop = 0;
 });
@@ -13505,13 +13468,31 @@ const skDim = h => '#' + [1,3,5].map(i =>
    `attr` 은 시트마다 다른 위임 키(`sktab`/`pttab`/`costab`)다 — 시트별 핸들러가 자기 것만 잡는다. */
 const HERO_TABS = [['eq','장비'], ['sk','스킬'], ['cos','코스튬'], ['pet','동료']];
 function subTabs(cur, attr){
-  return '<div class="sk-tabs">'
+  /* 96 — 공용 부품 `.stabs > .stab`. `.sk-tabs/.sk-tab` 은 게이트 별칭으로 같이 붙인다. */
+  return '<div class="stabs sk-tabs">'
     + HERO_TABS.map(([k, n], i) =>
-        '<div class="sk-tab sk-t' + (i+1) + (k === cur ? ' on' : '') + '" data-' + attr + '="' + k + '">'
+        '<div class="stab sk-tab stab-c' + (i+1) + (k === cur ? ' on' : '') + '" data-' + attr + '="' + k + '">'
         + '<i class="ol' + (k === cur ? 4 : 3) + '">' + n + '</i></div>'
         /* 구분선은 3·4번 칸 사이 한 곳뿐이다(측정표 §9 — 바 배경보다 어두운 함몰선 5x54) */
-        + (i === 2 ? '<div class="sk-tsep"></div>' : '')).join('')
+        + (i === 2 ? '<div class="stab-sep"></div>' : '')).join('')
     + '</div>';
+}
+/* 96 — 공용 서브탭 부품의 «라벨 외곽선» 규칙. 영웅 바는 통째로 다시 그려지므로 subTabs() 안에서
+   `ol4`(활성)/`ol3`(비활성) 이 정해지지만, 03·10 처럼 **노드를 그대로 두고 클래스만 토글**하는
+   바는 여기서 같이 갈아 줘야 활성/비활성 라벨이 영웅과 픽셀 동일해진다. */
+function stabInk(cell, on){
+  const i = cell && cell.querySelector('i');
+  if(!i) return;
+  i.classList.toggle('ol4', !!on);
+  i.classList.toggle('ol3', !on);
+}
+/* 10·13 카테고리 탭 — 45 의 «알약 노드 이동» 을 96 이 클래스 토글로 대체했다 */
+function setShopCatTabs(cat){
+  document.querySelectorAll('#shopCats .stab').forEach(x => {
+    const me = x.dataset.cat === cat;
+    x.classList.toggle('on', me);
+    stabInk(x, me);
+  });
 }
 
 function renderSkill(){
@@ -13586,11 +13567,8 @@ $('bSk').addEventListener('click', e => {
     return;
   }
   const t = e.target.closest('[data-sktab]');
-  if(t){
-    /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
-    heroTab = t.dataset.sktab; S.heroTab = heroTab;
-    syncPanel(); uiDirty = true; renderUI(); return;
-  }
+  /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
+  if(t){ heroSubGo(t.dataset.sktab); return; }
   const c = e.target.closest('[data-skit]');
   if(c) showItem(c.dataset.skit);
 });
@@ -13672,11 +13650,8 @@ $('bPet').addEventListener('click', e => {
     return;
   }
   const t = e.target.closest('[data-pttab]');
-  if(t){
-    /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
-    heroTab = t.dataset.pttab; S.heroTab = heroTab;
-    syncPanel(); uiDirty = true; renderUI(); return;
-  }
+  /* 작업 50 — 잠금 칸(«기타») 폐기. 네 칸 전부 본문이 있으므로 빈 값 가드를 없앴다 */
+  if(t){ heroSubGo(t.dataset.pttab); return; }
   const c = e.target.closest('[data-ptit]');
   if(c) showItem(c.dataset.ptit);
 });
@@ -13833,7 +13808,7 @@ $('bCos').addEventListener('click', e => {
     renderUI(); return;
   }
   const t = e.target.closest('[data-costab]');
-  if(t){ heroTab = t.dataset.costab; S.heroTab = heroTab; syncPanel(); uiDirty = true; renderUI(); return; }
+  if(t){ heroSubGo(t.dataset.costab); return; }
   const c = e.target.closest('[data-cosit]');
   if(c){
     /* 이미 선택된 카드를 다시 누르면 08 껍데기 상세로 들어간다(07 의 `showItem` 자리) */
@@ -13969,7 +13944,7 @@ $('eqTabs').addEventListener('click', e => {
   const t = e.target.closest('[data-eqtab]');
   /* 작업 25·50: 서브탭 목적지를 data 속성에서 읽는다(장비=현재 화면 · 스킬=07 · 코스튬=50 · 동료=26).
      작업 50 에서 잠금 탭이 사라져 `data-eqlock` 분기도 같이 제거했다 — 네 칸 전부 본문이 있다. */
-  if(t){ heroTab = t.dataset.eqtab; S.heroTab = heroTab; syncPanel(); uiDirty = true; renderUI(); return; }
+  if(t){ heroSubGo(t.dataset.eqtab); return; }
 });
 
 /* ==========================================================================
@@ -14158,9 +14133,7 @@ function syncPanel(){
      장비 서브탭에는 #panel 에 표시할 본문이 없고, 06 은 전용 오버레이 #eqw 로 뜬다.
      빈 #panel(배경 #0d1020, 844px)을 그대로 펴 두면 06 시트 뒤에 구버전 잔재가 남는다. */
   $('panel').style.display = (panelOpen && b) ? 'flex' : 'none';
-  $('herosub').style.display = (panelOpen && b && curTab === 'hero') ? 'flex' : 'none';
   Object.keys(TABBODY).forEach(z => $(TABBODY[z]).classList.toggle('on', TABBODY[z] === b));
-  document.querySelectorAll('#herosub .stab').forEach(x => x.classList.toggle('on', x.dataset.hero === heroTab));
   const tabs = [...document.querySelectorAll('.tab')];
   $('tabbar').classList.toggle('open', panelOpen);
   tabs.forEach((x, i) => {
@@ -14174,6 +14147,16 @@ function syncPanel(){
   /* 작업 38 — 여기서 resizeCanvas() 를 부르지 않는다.
      패널이 오버레이가 된 뒤로 개폐가 #stagearea 높이를 바꾸지 않으므로 재계산이 불필요하고,
      부르면 캔버스 버퍼를 다시 잡고 layoutSide() 가 돌아 사이드 아이콘이 재배치된다(= 금지 사항). */
+}
+/* 96 ② (2026-08-26 주인 지시 ⓒ) — **영웅 서브탭 전환은 연출 없이 즉시 교체**.
+   장비만 별도 오버레이(#eqw)라 스킬↔장비 전환마다 #panel 이 내려가고 #eqw 가 올라와
+   «장비 탭만 아래에서 다시 등장» 했다. 60 의 개폐 감시는 display 변화만 보므로 전환 구간을
+   `jzHush()` 로 감싸 «보이기 상태만 갱신하고 jzOpen/jzClose 는 건너뛰게» 한다.
+   영웅 탭을 «처음 열 때» 는 이 경로가 아니라 goTab() 이라 시트 등장 연출이 그대로 붙는다. */
+function heroSubGo(k){
+  if(!k || k === heroTab) return;
+  jzHush(() => { heroTab = k; S.heroTab = k; syncPanel(); });
+  uiDirty = true; renderUI();
 }
 function goTab(k, forceOpen){
   /* 상점 탭 → 10 소환 페이지(전체화면 #shopw).
@@ -14226,12 +14209,6 @@ function goTab(k, forceOpen){
   uiDirty = true; renderUI();
 }
 document.querySelectorAll('.tab').forEach(t => { t.onclick = () => goTab(t.dataset.t); });
-$('herosub').onclick = e => {
-  const s = e.target.closest('[data-hero]');
-  if(!s) return;
-  heroTab = s.dataset.hero; S.heroTab = heroTab;
-  syncPanel(); uiDirty = true; renderUI();
-};
 document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
   b.onclick = () => {
     const k = b.dataset.pop;
@@ -14570,10 +14547,6 @@ function renderUI(){
              : k === 'box'  ? collCatReady('relic')
              : false;
     t.classList.toggle('alert', !!al);
-  });
-  document.querySelectorAll('#herosub .stab').forEach(x => {
-    const k = x.dataset.hero;
-    x.classList.toggle('alert', !!collCatReady(k === 'eq' ? 'equip' : k === 'sk' ? 'skill' : 'pet'));
   });
   uiDirty = false;
 }
@@ -15305,6 +15278,15 @@ function jzDoneThen(list, cb){
   Promise.all(as.map(a => a.finished.catch(() => {}))).then(cb);   /* cancel 은 reject → catch 로 흡수 */
   return true;
 }
+/* 96 ② — «연출 없이 즉시 교체» 구간. 이 안에서 일어난 오버레이 display 변화는
+   보이기 상태(__jzVis/__jzLast)만 갱신하고 개폐 연출을 건너뛴다.
+   MutationObserver 콜백은 «첫 변이가 기록된 시점» 에 마이크로태스크로 예약되므로,
+   여기서 queueMicrotask 로 푸는 쪽이 **항상 그 뒤**다(타이머 없이 순서가 보장된다). */
+let jzQuiet = 0;
+function jzHush(fn){
+  jzQuiet++;
+  try { fn(); } finally { queueMicrotask(() => { if(jzQuiet > 0) jzQuiet--; }); }
+}
 const jzOn = (el, cls, ms) => {
   if(!el || !el.classList) return;
   el.classList.remove(cls); void el.offsetWidth;       /* 리플로우 강제 — 같은 애니메이션 재시작 */
@@ -15647,6 +15629,8 @@ function jzInit(){
       if(vis === was) continue;
       el.__jzVis = vis;
       if(vis) el.__jzOpT = performance.now();      /* 74 ③ — 딤 가드용 «열린 시각» (탭 합성기가 읽는다) */
+      /* 96 ② — 서브탭 전환 중이면 연출을 건너뛴다(상태만 최신으로 유지) */
+      if(jzQuiet){ if(vis) el.__jzLast = disp; continue; }
       if(vis) jzOpen(el); else jzClose(el, el.__jzLast || 'flex');
       if(vis) el.__jzLast = disp;
     }
@@ -15669,6 +15653,19 @@ function jzInit(){
        그래서 «그 순간 보이는 쪽» 에 건다 — 둘 다 걸어 두면 숨은 쪽은 어차피 안 그려진다. */
     jzOn(t.querySelector('.ti'), 'jz-ti', 240);
     jzOn(t.querySelector('.tx'), 'jz-ti', 240);
+  });
+
+  /* ⑤ 96 — 서브탭 전환: **새로 활성이 된 칸**이 1.06 으로 튄다(③ 탭바 팝과 같은 곡선, 진폭만 작다).
+     영웅 시트는 바가 통째로 다시 그려지므로 «누른 노드» 가 아니라 **다시 그려진 뒤의 `.on` 칸**을 찾는다. */
+  app.addEventListener('click', e => {
+    const c = e.target.closest && e.target.closest('.stabs > .stab');
+    if(!c) return;
+    const host = c.closest('[id]');
+    if(!host) return;
+    requestAnimationFrame(() => {
+      const on = host.querySelector('.stabs > .stab.on');
+      if(on) jzOn(on, 'jz-st', 300);
+    });
   });
 
   /* ⑦ 스킬 슬롯 */

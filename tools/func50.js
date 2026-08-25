@@ -8,7 +8,9 @@
  *  주의(LESSONS 44-①): 세이브는 반드시 `addInitScript` 로 **페이지 스크립트보다 먼저** 심는다.
  *  게임 루프가 5초마다 자동 저장하므로 로드 후에 localStorage 를 고치면 옛 값이 덮어쓴다.
  */
-const { chromium } = require('playwright');
+/* 110 공용 부트스트랩 — 번들 브라우저가 없는 환경(클라우드 컨테이너)에서도 뜨게 한다 */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -51,7 +53,7 @@ const tap = (page, sel) => page.evaluate((s) => {
 }, sel);
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   try {
     /* ---------- 1. 진입 · 서브탭 구조 ---------- */
     console.log('[1] 진입 · 서브탭 4칸');

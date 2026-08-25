@@ -31,13 +31,18 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
     labels: [...document.querySelectorAll('#shopCats .shp-ct > i')].map(e => e.textContent),
     cs: document.querySelectorAll('#shopCats .shp-cs').length,
     pills: document.querySelectorAll('#shopCats .shp-cat-pill').length,
+    on: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
+    shared: document.querySelectorAll('#shopCats.stabs > .stab').length,
     dead: document.querySelectorAll('.shp-new, .shp-soon, [data-cat="special"], [data-cat="daily"]').length,
   }));
   ok('탭 2개', mk.cats.length === 2, JSON.stringify(mk.cats));
   ok('data-cat = summon,coin', mk.cats.join(',') === 'summon,coin', mk.cats.join(','));
   ok('라벨 = 소환,재화', mk.labels.join(',') === '소환,재화', mk.labels.join(','));
-  ok('✦ 구분선 1개', mk.cs === 1, mk.cs + '개');
-  ok('활성 알약 1개', mk.pills === 1, mk.pills + '개');
+  /* 96 — 공용 서브탭 부품(.stabs>.stab)으로 교체. ✦ 구분선·노랑 화살촉 알약은 폐기됐다 */
+  ok('96 공용 부품 .stabs > .stab 2칸', mk.shared === 2, mk.shared + '칸');
+  ok('96 ✦ 구분선 폐기(0개)', mk.cs === 0, mk.cs + '개');
+  ok('96 활성 알약 노드 폐기(0개)', mk.pills === 0, mk.pills + '개');
+  ok('활성 칸 1개 = 소환', mk.on.join(',') === 'summon', mk.on.join(','));
   ok('제거 대상 잔존 0 (NEW리본·준비중·특별·일일)', mk.dead === 0, mk.dead + '개');
 
   /* ---- 2. 소환 탭 기하 — 바 990x107 유지 · 칸 2등분 · 알약/라벨/✦ 중앙 ---- */
@@ -55,15 +60,14 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
         const b = rg.getBoundingClientRect();      /* 글자 실폭(잉크) — 박스 폭이 아니다 */
         return { ink: { x: b.x, w: b.width, cx: b.x + b.width / 2 }, box: r(e) };
       }),
-      pill: r(bar.querySelector('.shp-cat-pill')),
-      pillIn: bar.querySelector('.shp-cat-pill').parentNode.dataset.cat,
-      cs: r(bar.querySelector('.shp-cs')),
+      on: r(bar.querySelector('.shp-ct.on')),
       onTab: [...bar.querySelectorAll('.shp-ct.on')].map(e => e.dataset.cat),
       bw: parseFloat(getComputedStyle(bar).borderTopWidth),
     };
   });
   ok('바 폭 990', near(g.bar.w, 990), g.bar.w.toFixed(1));
-  ok('바 높이 107', near(g.bar.h, 107), g.bar.h.toFixed(1));
+  /* 96 — 바 껍데기가 공용 부품 규격(h99 · 검정 6)으로 통일됐다 */
+  ok('바 높이 99 (96 공용 부품)', near(g.bar.h, 99), g.bar.h.toFixed(1));
   ok('바 좌 45', near(g.bar.x, 45), g.bar.x.toFixed(1));
   const inner = g.bar.w - g.bw * 2;
   ok('칸 2개가 패딩박스를 정확히 2등분', near(g.cells[0].w, inner / 2) && near(g.cells[1].w, inner / 2),
@@ -77,17 +81,12 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   g.labels.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 안에 들어감(잘림 0)',
     l.ink.x >= g.cells[i].x - 0.5 && l.ink.x + l.ink.w <= g.cells[i].x + g.cells[i].w + 0.5,
     '잉크 ' + l.ink.x.toFixed(1) + '~' + (l.ink.x + l.ink.w).toFixed(1)));
-  ok('알약이 소환 칸 안에 있음', g.pillIn === 'summon', g.pillIn);
-  ok('알약 규격 250x79 유지', near(g.pill.w, 250) && near(g.pill.h, 79), g.pill.w.toFixed(1) + 'x' + g.pill.h.toFixed(1));
-  ok('알약이 소환 칸 중앙 (±2px)', near(g.pill.cx, g.cells[0].cx, 2),
-    g.pill.cx.toFixed(1) + ' vs ' + g.cells[0].cx.toFixed(1));
-  ok('알약이 바 안쪽에 들어감(좌측 돌출 0)', g.pill.x >= g.bar.x + g.bw - 0.5,
-    '알약좌 ' + g.pill.x.toFixed(1) + ' vs 바안쪽 ' + (g.bar.x + g.bw).toFixed(1));
-  ok('✦ 규격 15x20 유지', near(g.cs.w, 15) && near(g.cs.h, 20), g.cs.w.toFixed(1) + 'x' + g.cs.h.toFixed(1));
-  ok('✦ 가 칸 경계 부근 (±6px)', near(g.cs.cx, g.cells[0].x + g.cells[0].w, 6),
-    '✦중심 ' + g.cs.cx.toFixed(1) + ' vs 경계 ' + (g.cells[0].x + g.cells[0].w).toFixed(1));
-  ok('✦ 와 알약이 겹치지 않음', g.cs.x >= g.pill.x + g.pill.w || g.cs.x + g.cs.w <= g.pill.x,
-    '✦ ' + g.cs.x.toFixed(1) + '~' + (g.cs.x + g.cs.w).toFixed(1) + ' / 알약 ' + g.pill.x.toFixed(1) + '~' + (g.pill.x + g.pill.w).toFixed(1));
+  /* 96 — 활성 «칸» 자체가 알약이다(별도 노드 없음). 칸을 정확히 덮는지만 본다 */
+  ok('활성 칸이 소환 칸과 일치', near(g.on.x, g.cells[0].x) && near(g.on.w, g.cells[0].w),
+    g.on.x.toFixed(1) + '+' + g.on.w.toFixed(1) + ' vs ' + g.cells[0].x.toFixed(1) + '+' + g.cells[0].w.toFixed(1));
+  ok('활성 칸이 바 안쪽에 들어감(돌출 0)',
+    g.on.x >= g.bar.x + g.bw - 0.5 && g.on.x + g.on.w <= g.bar.x + g.bar.w - g.bw + 0.5,
+    '칸 ' + g.on.x.toFixed(1) + '~' + (g.on.x + g.on.w).toFixed(1));
   ok('활성 탭 = 소환 1개', g.onTab.join(',') === 'summon', g.onTab.join(','));
 
   /* ---- 3. 재화 탭 전환 — 알약 이동 · coin 렌더 · 기하 ---- */
@@ -100,9 +99,7 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
     return {
       bar: r(bar), bw: parseFloat(getComputedStyle(bar).borderTopWidth),
       cells: [...bar.querySelectorAll('.shp-ct')].map(r),
-      pill: r(bar.querySelector('.shp-cat-pill')),
-      pillIn: bar.querySelector('.shp-cat-pill').parentNode.dataset.cat,
-      cs: r(bar.querySelector('.shp-cs')),
+      on: r(bar.querySelector('.shp-ct.on')),
       onTab: [...bar.querySelectorAll('.shp-ct.on')].map(e => e.dataset.cat),
       coinCls: document.getElementById('shopList').classList.contains('coin'),
       items: document.querySelectorAll('#shopList .cn-card, #shopList > *').length,
@@ -110,14 +107,12 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
     };
   });
   ok('활성 탭 = 재화', c.onTab.join(',') === 'coin', c.onTab.join(','));
-  ok('알약이 재화 칸으로 이동', c.pillIn === 'coin', c.pillIn);
-  ok('재화 알약 규격 256x76 유지', near(c.pill.w, 256) && near(c.pill.h, 76), c.pill.w.toFixed(1) + 'x' + c.pill.h.toFixed(1));
-  ok('재화 알약이 칸 중앙 (±2px)', near(c.pill.cx, c.cells[1].cx, 2), c.pill.cx.toFixed(1) + ' vs ' + c.cells[1].cx.toFixed(1));
-  ok('재화 알약이 바 안쪽에 들어감(우측 돌출 0)', c.pill.x + c.pill.w <= c.bar.x + c.bar.w - c.bw + 0.5,
-    '알약우 ' + (c.pill.x + c.pill.w).toFixed(1) + ' vs 바안쪽 ' + (c.bar.x + c.bar.w - c.bw).toFixed(1));
-  ok('재화 ✦ 규격 19x19 (13 실측)', near(c.cs.w, 19) && near(c.cs.h, 19), c.cs.w.toFixed(1) + 'x' + c.cs.h.toFixed(1));
-  ok('재화 ✦ 와 알약 겹침 0', c.cs.x + c.cs.w <= c.pill.x || c.cs.x >= c.pill.x + c.pill.w,
-    '✦ ' + c.cs.x.toFixed(1) + '~' + (c.cs.x + c.cs.w).toFixed(1) + ' / 알약 ' + c.pill.x.toFixed(1) + '~' + (c.pill.x + c.pill.w).toFixed(1));
+  ok('활성 칸이 재화 칸으로 이동', near(c.on.x, c.cells[1].x) && near(c.on.w, c.cells[1].w),
+    c.on.x.toFixed(1) + '+' + c.on.w.toFixed(1) + ' vs ' + c.cells[1].x.toFixed(1) + '+' + c.cells[1].w.toFixed(1));
+  ok('재화 탭에서도 바 규격이 같다(96 — 13 전용 덮어쓰기 폐기)', near(c.bar.h, 99) && near(c.bw, 6),
+    'h' + c.bar.h.toFixed(1) + ' · 테두리 ' + c.bw.toFixed(1));
+  ok('활성 칸이 바 안쪽에 들어감(우측 돌출 0)', c.on.x + c.on.w <= c.bar.x + c.bar.w - c.bw + 0.5,
+    '칸우 ' + (c.on.x + c.on.w).toFixed(1) + ' vs 바안쪽 ' + (c.bar.x + c.bar.w - c.bw).toFixed(1));
   ok('#shopList.coin 켜짐 (13 재화 페이지 렌더)', c.coinCls === true, String(c.coinCls));
   ok('재화 페이지 내용 있음', c.items > 0, c.items + '개 노드');
 
@@ -126,13 +121,11 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   await page.click('#shopCats .shp-ct[data-cat="summon"]');
   await page.waitForTimeout(300);
   const s = await page.evaluate(() => ({
-    pillIn: document.querySelector('#shopCats .shp-cat-pill').parentNode.dataset.cat,
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     coinCls: document.getElementById('shopList').classList.contains('coin'),
     cards: document.querySelectorAll('#shopList .shp-card').length,
   }));
   ok('활성 탭 = 소환', s.onTab.join(',') === 'summon', s.onTab.join(','));
-  ok('알약이 소환 칸으로 복귀', s.pillIn === 'summon', s.pillIn);
   ok('coin 클래스 해제', s.coinCls === false, String(s.coinCls));
   ok('소환 상자 카드 3장', s.cards === 3, s.cards + '장');
 
@@ -145,12 +138,10 @@ const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
   await page.evaluate(() => openShopPage());
   await page.waitForTimeout(300);
   const rz = await page.evaluate(() => ({
-    pillIn: document.querySelector('#shopCats .shp-cat-pill').parentNode.dataset.cat,
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     cards: document.querySelectorAll('#shopList .shp-card').length,
   }));
   ok('재진입 시 활성 탭 = 소환', rz.onTab.join(',') === 'summon', rz.onTab.join(','));
-  ok('재진입 시 알약도 소환 칸 (활성/알약 불일치 0)', rz.pillIn === 'summon', rz.pillIn);
   ok('재진입 시 소환 카드 3장', rz.cards === 3, rz.cards + '장');
 
   /* ---- 6. 콘솔 에러 ---- */
