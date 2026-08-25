@@ -6896,7 +6896,7 @@
 
   /* ---- 스크롤 리스트 — 프레임 top ~ 입력 바 top(bottom 186) ---- */
   .ch-list{position:absolute;left:0;right:0;top:0;bottom:186px;
-    overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:24px 0}
+    overflow-y:auto;overflow-x:hidden;scrollbar-width:none;padding:24px 0 13px}
   .ch-list::-webkit-scrollbar{display:none}
 
   /* ---- 메시지 행 ----
@@ -6919,39 +6919,43 @@
   /* 이름줄 — 좌단이 말풍선 좌변과 같은 x240(측정표 §3-3). 잉크 h35 → fs 34(잉크비 .93, LESSONS 01) */
   .ch-nm{left:240px;top:0;height:36px;display:flex;align-items:center;white-space:nowrap;
     font-size:34px;line-height:36px}
-  .ch-nm>.gd{color:#B4571E}                       /* [길드태그] — 닉과 같은 색(측정표 §8) */
-  .ch-nm>.nk{margin-left:5px;color:#B4571E}
-  .ch-nm>.sx{margin-left:8px;font-size:32px}
-  .ch-nm>.sx.m{color:#2E6BD0} .ch-nm>.sx.f{color:#C23A5B}
+  .ch-nm>.ch-gd{color:#B4571E}                       /* [길드태그] — 닉과 같은 색(측정표 §8) */
+  .ch-nm>.ch-nk{margin-left:1px;color:#B4571E}
+  /* ⚠ ♂/♀ 글리프의 «잉크» 는 em 박스의 44% 뿐이다 — fs 를 잉크 높이로 주면 ref 32×30 자리에 14×14 만 찍힌다
+     (1회차 비평 Y D3 «폭 −57~68% · 높이 −48~52%»). 아트 자리 규칙대로 **박스를 고정하고 글리프를 키운다.** */
+  .ch-nm>.ch-sx{margin-left:3px;width:32px;height:36px;font-size:68px;line-height:36px;
+    text-align:center;overflow:visible}
+  .ch-nm>.ch-sx.m{color:#2E6BD0} .ch-nm>.ch-sx.f{color:#C23A5B}
   /* 배지 56×48 — 이름줄 위로 11px 넘친다(ref −5). 아트 자리 규칙대로 bbox 를 정확히 차지시킨다 */
-  .ch-nm>.bg{margin-left:8px;width:56px;height:48px;font-size:46px;line-height:48px;
+  .ch-nm>.ch-bd{margin-left:1px;width:56px;height:48px;font-size:46px;line-height:48px;
     text-align:center;transform:translateY(-6px)}
   /* 시각 — 우측 정렬 우끝 x967(우 margin 113). 잉크 h23 → fs 25 */
-  .ch-tm{right:113px;top:0;height:36px;line-height:36px;font-size:25px;color:#7A6550;font-weight:900}
+  .ch-tm{right:113px;top:0;height:36px;line-height:36px;font-size:32px;color:#7A6550;font-weight:900;
+    transform:scaleX(1.08);transform-origin:right center}
   /* 말풍선 — 폭 699 고정(내용 길이와 무관), h = 26 + 37×줄수. 패딩 13/18 이 그 26 을 만든다 */
   .ch-bb{left:240px;top:49px;width:699px;box-sizing:border-box;border-radius:14px;
-    background:#D7C0A1;padding:13px 18px;font-size:34px;line-height:37px;font-weight:800;
+    background:#D7C0A1;padding:13px 18px;font-size:34px;line-height:36px;font-weight:800;
     color:#3A2C20;word-break:break-word}
 
   /* ---- 대전 결과 카드(특수 메시지) — 말풍선 자리를 그대로 차지한다(측정표 §5) ----
      좌 승리칸 351 + 우 상대칸 348 = 699, 사이 구분선 0px(색 경계만). */
   .ch-cd{left:240px;top:48px;width:699px;height:206px;border-radius:13px;overflow:hidden;display:flex}
   .ch-cd>div{position:relative;height:206px}
-  .ch-cd>.cw{width:351px;background:linear-gradient(180deg,#9df0b0,#48c882)}   /* 공용 .gbtn.green 계열 */
-  .ch-cd>.cl{width:348px;background:#D7C0A1}
+  .ch-cd>.ch-cw{width:351px;background:linear-gradient(180deg,#9df0b0,#48c882)}   /* 공용 .gbtn.green 계열 */
+  .ch-cd>.ch-cl{width:348px;background:#D7C0A1}
   #chw .ch-cd>div>*{position:absolute}
-  .ch-cd .av{top:15px;width:95px;height:95px;box-sizing:border-box;
+  .ch-cd .ch-cav{top:15px;width:95px;height:95px;box-sizing:border-box;
     border:4px solid #000;border-radius:11px;background:#FFB95A;overflow:hidden}
-  .ch-cd>.cw .av{left:128px} .ch-cd>.cl .av{left:126px}
-  .ch-cd .av>canvas{position:absolute;left:0;top:0;width:87px;height:87px;image-rendering:pixelated}
+  .ch-cd>.ch-cw .ch-cav{left:128px} .ch-cd>.ch-cl .ch-cav{left:126px}
+  .ch-cd .ch-cav>canvas{position:absolute;left:0;top:0;width:87px;height:87px;image-rendering:pixelated}
   /* «승리» 58×30 — 아바타 하단 보더에 11px 겹쳐 올라탄다(ref +5) */
-  .ch-cd .wl{left:0;right:0;top:99px;height:30px;line-height:30px;text-align:center;
+  .ch-cd .ch-wl{left:0;right:0;top:99px;height:30px;line-height:30px;text-align:center;
     font-size:32px;color:#FFE07A;-webkit-text-stroke:8px #000;paint-order:stroke fill}
-  .ch-cd .nk{left:0;right:0;top:132px;height:26px;line-height:26px;text-align:center;
+  .ch-cd .ch-cnk{left:0;right:0;top:132px;height:26px;line-height:26px;text-align:center;
     font-size:24px;color:#1E1409}
-  .ch-cd .cp{left:0;right:0;top:165px;height:34px;line-height:34px;text-align:center;
+  .ch-cd .ch-ccp{left:0;right:0;top:165px;height:34px;line-height:34px;text-align:center;
     font-size:26px;color:#3A2C20;white-space:nowrap}
-  .ch-cd .cp>u{width:37px;height:32px;font-size:30px;line-height:32px;margin-right:5px;
+  .ch-cd .ch-ccp>u{width:37px;height:32px;font-size:30px;line-height:32px;margin-right:5px;
     text-align:center;transform:translateY(2px)}
   /* 우상단 관전 배지 43×41 — 카드 «밖으로» 걸친다(우 +35 / 위 −9)라 카드 형제로 둔다 */
   .ch-rp{left:931px;top:39px;width:43px;height:41px;border-radius:10px;box-sizing:border-box;
@@ -13682,19 +13686,19 @@ function chAvHTML(id){
 function chCardHTML(m, i){
   const cell = (cls, k, np, win) => {
     const p = RANK_NPC[np];
-    return '<div class="' + cls + '">' + chAvHTML('chVs' + i + k).replace('ch-av', 'av')
-      + (win ? '<b class="wl">승리</b>' : '')
-      + '<b class="nk">' + chEsc(p.n) + '</b>'
-      + '<b class="cp"><u>⚔️</u>' + fmt(rkCp(p.best)) + '</b></div>';
+    return '<div class="' + cls + '">' + chAvHTML('chVs' + i + k).replace('ch-av', 'ch-cav')
+      + (win ? '<b class="ch-wl">승리</b>' : '')
+      + '<b class="ch-cnk">' + chEsc(p.n) + '</b>'
+      + '<b class="ch-ccp"><u>⚔️</u>' + fmt(rkCp(p.best)) + '</b></div>';
   };
-  return '<div class="ch-cd">' + cell('cw', 'w', m.vs[0], 1) + cell('cl', 'l', m.vs[1], 0) + '</div>'
+  return '<div class="ch-cd">' + cell('ch-cw', 'w', m.vs[0], 1) + cell('ch-cl', 'l', m.vs[1], 0) + '</div>'
        + '<div class="ch-rp">▶</div>';
 }
 function chRowHTML(m, i){
-  const name = '<div class="ch-nm"><b class="gd">[' + chEsc(m.g) + ']</b>'
-    + '<b class="nk">' + chEsc(m.n) + '</b>'
-    + '<b class="sx ' + (m.s ? 'm' : 'f') + '">' + (m.s ? '♂' : '♀') + '</b>'
-    + (m.b ? '<b class="bg">' + m.b + '</b>' : '') + '</div>'
+  const name = '<div class="ch-nm"><b class="ch-gd">[' + chEsc(m.g) + ']</b>'
+    + '<b class="ch-nk">' + chEsc(m.n) + '</b>'
+    + '<b class="ch-sx ' + (m.s ? 'm' : 'f') + '">' + (m.s ? '♂' : '♀') + '</b>'
+    + (m.b ? '<b class="ch-bd">' + m.b + '</b>' : '') + '</div>'
     + '<i class="ch-tm">' + m.t + '</i>';
   const body = m.vs ? chCardHTML(m, i)
     : '<div class="ch-bb">' + chEsc(m.m).replace(/\n/g, '<br>') + '</div>';

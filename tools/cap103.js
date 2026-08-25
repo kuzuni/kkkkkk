@@ -71,9 +71,11 @@ function launchOpts() {
       nm1: q('#chList .ch-row .ch-nm'), tm1: q('#chList .ch-row .ch-tm'),
       bb1: q('#chList .ch-row .ch-bb'),
       bubbleH: byLines,
-      card: q('.ch-cd'), cw: q('.ch-cd>.cw'), cl: q('.ch-cd>.cl'),
-      cardAv: q('.ch-cd>.cw .av'), cardWl: q('.ch-cd .wl'),
-      cardNk: q('.ch-cd>.cw .nk'), cardCp: q('.ch-cd>.cw .cp'), rp: q('.ch-rp'),
+      card: q('.ch-cd'), cw: q('.ch-cd>.ch-cw'), cl: q('.ch-cd>.ch-cl'),
+      cardAv: q('.ch-cd>.ch-cw .ch-cav'), cardAvR: q('.ch-cd>.ch-cl .ch-cav'),
+      cardWl: q('.ch-cd .ch-wl'),
+      cardNk: q('.ch-cd>.ch-cw .ch-cnk'), cardCp: q('.ch-cd>.ch-cw .ch-ccp'), rp: q('.ch-rp'),
+      nmInk: ['.ch-gd', '.ch-nk', '.ch-sx', '.ch-bd'].map((s2) => q('#chList .ch-row .ch-nm ' + s2)),
       pitch: rows.slice(0, 6).map((r, i, a) => i ? +(r.getBoundingClientRect().top
         - a[i - 1].getBoundingClientRect().top).toFixed(1) : 0).slice(1),
       /* 캔버스는 file:// 아틀라스로 tainted 라 getImageData 가 막힌다 →
@@ -97,7 +99,7 @@ function launchOpts() {
     const l = document.getElementById('chList');
     return { rows: rows.length, text: last.querySelector('.ch-bb') ? last.querySelector('.ch-bb').textContent : '',
              html: last.querySelector('.ch-bb') ? last.querySelector('.ch-bb').innerHTML : '',
-             nick: last.querySelector('.ch-nm .nk') ? last.querySelector('.ch-nm .nk').textContent : '',
+             nick: last.querySelector('.ch-nm .ch-nk') ? last.querySelector('.ch-nm .ch-nk').textContent : '',
              cleared: document.getElementById('chIn').value === '',
              atBottom: l.scrollHeight - l.scrollTop - l.clientHeight < 4 };
   });
@@ -127,12 +129,23 @@ function launchOpts() {
   near('버블 x', box.bb1.x, 240, 1);
   near('버블 w', box.bb1.w, 699, 1);
   near('버블 top(행 기준)', box.bb1.y - box.row1.y, 49, 1);
-  near('1줄 버블 h', box.bubbleH[1] || 0, 63, 1);
+  near('1줄 버블 h', box.bubbleH[1] || 0, 62, 1);
+  near('2줄 버블 h', box.bubbleH[2] || 0, 98, 1);
+  near('3줄 버블 h', box.bubbleH[3] || 0, 134, 1);
+  /* 1회차 비평(X D1~D3 · Y D1~D2)이 둘 다 잡은 «카드 우칸이 42px 위로» — 21 도감의 전역 `.cl`
+     (`transform:translateY(-42px)` + 검정 5px 테두리)과 클래스명이 충돌한 것이었다.
+     두 칸의 top·height 가 같은지를 게이트에 박아 재발을 막는다. */
+  near('카드 두 칸 top 일치', box.cw.y - box.cl.y, 0, 0.5);
+  near('카드 승리칸 h', box.cw.h, 206, 1);
+  near('카드 상대칸 h', box.cl.h, 206, 1);
+  near('카드 상대칸 x(구분선 0)', box.cl.x - (box.cw.x + box.cw.w), 0, 0.5);
   near('카드 w', box.card.w, 699, 1);
   near('카드 h', box.card.h, 206, 1);
   near('카드 승리칸 w', box.cw.w, 351, 1);
   near('카드 상대칸 w', box.cl.w, 348, 1);
   near('카드 아바타 w', box.cardAv.w, 95, 1);
+  near('카드 좌 아바타 top(카드 기준)', box.cardAv.y - box.card.y, 15, 1);
+  near('카드 우 아바타 top(카드 기준)', box.cardAvR.y - box.card.y, 15, 1);
   near('관전 배지 x', box.rp.x, 931, 1);
   M.push(['1줄 행 pitch 132', box.pitch[0], 132, Math.abs(box.pitch[0] - 132) <= 2]);
   M.push(['아바타 전부 그려짐', box.painted + '/' + box.canvases, box.canvases, box.painted === box.canvases]);
