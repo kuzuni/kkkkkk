@@ -8601,9 +8601,21 @@ const GRADE_ROLL = [
 /* 85 — 장비 배너(무기·방패·목걸이)가 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
    106 — **동료 배너도 같은 8행 표**(지시 ③ «소환 확률표는 85 의 8행 표를 그대로 재사용, Lv 해금 동일»).
    스킬 배너만 위 6행 표 그대로다. 확률은 gradeProbs 가 총합으로 재정규화하므로 p1 합이 1 일 필요 없음. */
+/* 115 (2026-08-26, 저장소 주인 지시) — «불멸» 은 소환 만렙(Lv 100)에서도 **실효 ≈0.1%** 만 나온다.
+   상수는 «목표 실효 확률»(IMMORTAL_P_MAX) 로 적고, 표에 들어갈 가중치 p1 은 여기서 **역산**한다.
+   gradeProbs 는 만렙(t=1)에서 w = p1 을 그대로 쓰고 **총합으로 재정규화**하므로
+     실효 = p1 / (Σ다른행 p1 + p1) = TARGET   →   p1 = TARGET × Σ다른행 p1 / (1 − TARGET)
+   Σ다른행 p1 = 1.00(6행 표) + 0.06(초월) = 1.06 → p1 = 0.001 × 1.06 / 0.999 ≈ 0.00106106
+   (옛 값 p1 = 0.03 은 실효 0.03/1.09 ≈ **2.75%** 로 지시의 27배였다.)
+   해금 Lv75 는 그대로 — 75→100 구간은 t^0.9 로 0 에서 0.1% 까지 단조 상승한다.
+   ⚠ 값을 손으로 적지 말 것: 6행 표나 초월 가중치가 바뀌면 아래 식이 자동으로 따라간다(LESSONS 106-1). */
+const TRANSCEND_P1   = 0.06;     /* 초월 가중치 — 115 에서는 미변경(② 제안만, 주인 확인 대기) */
+const IMMORTAL_P_MAX = 0.0010;   /* ★ 불멸 «목표 실효 확률» @ 만렙 = 0.10% */
+const IMMORTAL_P1 = IMMORTAL_P_MAX * (GRADE_ROLL.reduce((a, g) => a + g.p1, 0) + TRANSCEND_P1)
+                    / (1 - IMMORTAL_P_MAX);
 const GRADE_ROLL_EQ = GRADE_ROLL.concat([
-  { unlock:55, p0:0.00, p1:0.06 },
-  { unlock:75, p0:0.00, p1:0.03 }
+  { unlock:55, p0:0.00, p1:TRANSCEND_P1 },
+  { unlock:75, p0:0.00, p1:IMMORTAL_P1 }
 ]);
 const rollOf = b => BANNERS[b].g8 ? GRADE_ROLL_EQ : GRADE_ROLL;
 const sumNeedExp = lv => 5 + (lv-1)*4;
@@ -13385,7 +13397,7 @@ function renderProbInfo(){
     const G = GRADE[g], pctG = gp[g] * 100;
     const each = gp[g] / items.length * 100;
     h += '<div class="prb-gh" style="--gc:' + G.c + ';--gr:' + tint(G.c, .55) + '">'
-      +  '<i>' + G.n + ' (' + fmtPct(pctG, 2) + '%)</i></div>';
+      +  '<i>' + G.n + ' (' + fmtProbPct(pctG) + '%)</i></div>';
     items.forEach(it => {
       h += '<div class="prb-row">'
         /* 106 — 동료는 항목 이모지가 없고 스프라이트(bird/robo/dragon)로 아이콘을 고른다.
@@ -13402,6 +13414,18 @@ function renderProbInfo(){
 function fmtPct(v, d){
   if(Math.abs(v - Math.round(v)) < 0.05) return String(Math.round(v));
   return v.toFixed(d).replace(/\.?0+$/, '');
+}
+/* 115 — **등급 확률 전용** 표기. fmtPct 는 «뒤 0 제거» 라 0.10 → «0.1», 0.001 → «»(빈 문자열!) 이 된다.
+   불멸이 만렙 0.10% 로 내려오면서 이 두 가지가 전부 실화가 됐다.
+     · 1% 미만  → **소수 둘째 자리 고정**(«0.10», «0.53») — 지시 ③ «0.10%» 표기
+     · 둘째 자리에서 0 이 되는 값(<0.005) → **«<0.01»** (0 으로 뭉개서 «없는 확률» 처럼 보이지 않게)
+     · 1% 이상  → 종전 그대로(fmtPct: 정수면 정수, 아니면 최대 2자리)
+   아이템별 행은 종전대로 toFixed(5) — 등급 확률을 종 수로 나눈 값이라 자리수가 더 필요하다. */
+function fmtProbPct(v){
+  if(!(v > 0))   return '0';
+  if(v < 0.005)  return '&lt;0.01';
+  if(v < 1)      return v.toFixed(2);
+  return fmtPct(v, 2);
 }
 /* 밴드/아이콘 밝은 rim 색 — 등급색을 흰쪽으로 k 만큼 섞는다 */
 function tint(hex, k){
