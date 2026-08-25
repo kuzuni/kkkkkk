@@ -1762,26 +1762,29 @@
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
-    animation:fxPlus .8s cubic-bezier(.2,.8,.3,1) both}
+    animation:fxPlus .6s cubic-bezier(.2,.8,.3,1) both}
   /* 위로 떠오르게 하면 알약이 화면 최상단이라 **HUD 숫자 위로 올라가 겹친다**(10회차 지적:
      «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 흘리며 사라지게 한다.
-     15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W)·길이 .62→.8s·페이드를 60% 뒤로 미뤄
-     «수명 150~260ms 로 짧다»(W) 를 해소. 위로는 여전히 안 올라간다(HUD 겹침 방지 유지). */
+     15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W). 16회차 — .8s 는 «687~702ms 에도
+     페이드 0% = 수명 >0.8s»(Y·Z 공통 ①)라 .6s 로, 페이드는 50% 부터 — 도착(~320ms)+600 이면
+     정산 프레임(850ms)에 뚜렷이 사라지는 중이다. */
   @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,-14px) scale(.7)}
     14%{opacity:1;transform:translate(-50%,0) scale(1.06)}
     30%{opacity:1;transform:translate(-50%,4px) scale(1)}
-    60%{opacity:1;transform:translate(-50%,12px) scale(1)}
+    50%{opacity:1;transform:translate(-50%,10px) scale(1)}
     100%{opacity:0;transform:translate(-50%,24px) scale(1)}}
-  /* 14회차 — 강화(upg)용 델타 플로터 «+2.4 공격력». gain 의 `+n` 과 같은 서체·스트로크로
-     어휘를 통일하되(13회차 U·V «씬 간 어휘 불일치»), 카드는 화면 중단이라 **위로** 떠오른다.
-     15회차 — 상승을 앞당기고(18% 에 이미 −18px) 길이를 .82s 로 늘려 «상승 40px/400ms 로 느려
-     타이틀 겹침이 오래 간다»(W·X)를 해소. 시작점 자체도 fxDelta() 가 카드 밖 −44px 로 뺐다. */
-  .fx-delta{animation-name:fxDelta;animation-duration:.82s}
-  @keyframes fxDelta{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
-    18%{opacity:1;transform:translate(-50%,-18px) scale(1.06)}
-    40%{opacity:1;transform:translate(-50%,-34px) scale(1)}
-    72%{opacity:1;transform:translate(-50%,-56px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-78px) scale(1)}}
+  /* 14회차 — 강화(upg)용 델타 플로터 «+2.4 공격력». gain 의 `+n` 과 같은 서체·스트로크.
+     16회차 — 카드 밖 −44px 시작은 «x1 배수 탭 라벨을 368ms+ 가려 '+2.2 공격력1' 로 합성 오독»
+     (15회차 Y·Z 공통 ③). 앵커를 **카드 안 수치 행(.cv)** 으로 되돌리고 카드 «안에서» 60px 떠오른다
+     — 델타가 그 수치 행에서 나왔다는 인과도 서고, 탭·타이틀 어느 쪽도 안 가린다.
+     0% opacity .34: 페이드인 램프가 길면 «수치는 91ms 에 바뀌었는데 플로터는 224ms» 인과 역전으로
+     읽힌다(Y ①). .62s 로 692ms 전에 소멸. 색은 재화 골드와 분리한 스탯 초록(Z ④). */
+  .fx-delta{animation-name:fxDelta;animation-duration:.62s}
+  @keyframes fxDelta{0%{opacity:.34;transform:translate(-50%,4px) scale(.8)}
+    10%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
+    30%{opacity:1;transform:translate(-50%,-22px) scale(1)}
+    62%{opacity:1;transform:translate(-50%,-44px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-60px) scale(1)}}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -1792,11 +1795,15 @@
      키우고, 어떤 배경에서도 읽히도록 검정 링을 두른다. */
   /* 14회차 — «씬 간 어휘 통일»: gain 코인(55~68px)에 비해 파티클이 16px 로 읽혔다(13회차 U·V).
      기본 26px 로 키우고, 수명 대부분(62%)을 큰 채로 유지한 뒤 끝에서만 줄여 24~28px 로 읽히게 한다. */
+  /* 16회차 — «플랫 단색 원은 09·12·17 의 글로우 별 어휘와 이질»(15회차 Y·Z 공통 ④, 아트 분류).
+     아트 전까지 radial-gradient 로 절반 회수: 흰 코어 → 본색 → 투명 가장자리의 «글로우 오브».
+     본색은 fxBurst 가 --c 로 준다. 끝 scale 도 .38→.5 — 중간 프레임이 12px 로 읽히던 것 방지. */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
-    box-shadow:0 0 0 3px rgba(0,0,0,.72);animation:fxSpark .58s ease-out forwards}
+    background:radial-gradient(circle at 42% 38%, #FFF 0%, var(--c,#FFE07A) 46%, rgba(0,0,0,0) 74%);
+    box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .58s ease-out forwards}
   @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
     62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(.92);opacity:1}
-    100%{transform:translate(var(--dx),var(--dy)) scale(.38);opacity:0}}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
 
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
@@ -14573,14 +14580,15 @@ function fxBurst(t, col, n){
   const rx = rr, ry = rr;
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
-    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
+    /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150. */
+    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(80, 150);
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
     const sz = Math.round(rnd(20, 30));
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
-    el.style.background = col || '#FFE07A';
+    el.style.setProperty('--c', col || '#FFE07A');    /* 16회차 — 글로우 오브의 본색(radial 중간대) */
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     el.style.left = (p.x + Math.cos(a)*rx) + 'px';
     el.style.top  = (p.y + Math.sin(a)*ry) + 'px';
@@ -14645,25 +14653,27 @@ function fxHitEl(t){
    재렌더 뒤에 부르면 `renderTrain()` 비용만큼(실측 ~150ms) 연출 시작이 늦는다. */
 function fxUpOk(target, at, txt){
   if(target){ fxFlash(target); fxHitEl(target); }
-  fxBurst(at || target, '#FFE9A8', 10);
-  if(txt) fxDelta(target || at, txt);
+  /* 16회차 — 크림 카드 위 #FFE9A8 은 저대비(Z «크림-온-크림»). 더 깊은 앰버로. */
+  fxBurst(at || target, '#FFC02E', 10);
+  /* 델타는 카드의 «수치 행»(.cv) 에서 떠오른다 — 없으면 카드 자체 */
+  if(txt) fxDelta((target && target.querySelector && target.querySelector('.cv')) || target || at, txt);
 }
-/* 강화 델타 플로터 — 카드 «위» 에서 «+2.4 공격력» 이 위로 떠오른다(14회차 신설).
-   15회차 — 카드 상단(r.y−4)에서 띄우니 «Lv. 1» 타이틀을 210ms 가렸다(비평 W·X 공통).
-   시작점을 카드 밖(−44px)으로 빼고, 한글 글리프가 숫자보다 커 보이던 것(30~34 vs 28px)을
-   font-size 34 로 눌러 gain 의 `+n` 과 잉크 높이를 맞춘다. 색도 fxPlus 골드(#FFDE6A)와 통일. */
+/* 강화 델타 플로터 «+2.4 공격력» (14회차 신설).
+   앵커 이력: 카드 상단 r.y−4(14) → 타이틀 210ms 가림 → 카드 밖 −44px(15) → x1 배수 탭 가림 →
+   16회차: **수치 행(.cv) 위에서 카드 안쪽으로** — 델타가 나온 자리에서 떠오르니 인과가 서고
+   탭·타이틀을 안 가린다. font-size 34 로 gain `+n` 과 잉크 높이 정렬(한글 글리프 보정). */
 function fxDelta(el, txt){
   const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;
   if(L.childElementCount >= FXMAX) return;
   const d = document.createElement('b');
   d.className = 'fx-plus fx-delta';
-  d.style.color = '#FFDE6A';
+  d.style.color = '#B6FFC2';                          /* 스탯 초록 — 재화 골드와 색 어휘 분리(15회차 Z ④) */
   d.style.fontSize = '34px';
   d.style.left = (r.x + r.w/2) + 'px';
-  d.style.top  = (r.y - 44) + 'px';
+  d.style.top  = (r.y - 6) + 'px';                    /* 앵커(.cv 수치 행) 바로 위에서 출발 */
   d.textContent = txt;
   L.appendChild(d);
-  setTimeout(() => d.remove(), 860);
+  setTimeout(() => d.remove(), 660);
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
