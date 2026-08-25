@@ -4,8 +4,9 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-/* 측정표 §1-2 의 ref 행 top: 260 / 421 / 556 / 687 / 820 → −84 */
-const ROW_TOP = [176, 337, 472, 603, 736];
+/* 측정표 §1-2 의 ref 행 top: 260 / 421 / 556 / 687 / 820 / 958 → −84
+   (83: 5행 «도감» 신설로 축복이 ref 6행 자리로 내려갔다) */
+const ROW_TOP = [176, 337, 472, 603, 736, 874];
 const TOL = 3;
 
 let pass = 0, fail = 0;
@@ -38,7 +39,7 @@ const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, consol
   });
 
   console.log('[1] 행 그리드 (1080x2280)');
-  ok(g.rows.length === 5, `좌측 5칸 (실제 ${g.rows.length})`);
+  ok(g.rows.length === 6, `좌측 6칸 (실제 ${g.rows.length})`);  /* 83: +도감 */
   g.rows.forEach((r, i) => {
     ok(Math.abs(r.y - ROW_TOP[i]) <= TOL,
       `${i + 1}행 ${r.pop} top ${r.y.toFixed(1)} — 목표 ${ROW_TOP[i]} (Δ${(r.y - ROW_TOP[i]).toFixed(1)})`);

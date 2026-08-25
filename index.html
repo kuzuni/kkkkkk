@@ -546,6 +546,8 @@
   #sideL .ibtn:nth-child(3){margin-top:1px}
   #sideL .ibtn:nth-child(4){margin-top:-3px}
   #sideL .ibtn:nth-child(5){margin-top:-1px}
+  /* 83 — 6번째 슬롯(축복이 내려간 ref 6행): 측정표 §1-2 pitch 5→6 = 138 (기본 134 + 4) */
+  #sideL .ibtn:nth-child(6){margin-top:4px}
   .ibtn.solo .si{width:calc(var(--isolo,101px)*1.6);height:var(--isolo,101px);
     line-height:var(--isolo,101px);font-size:calc(var(--isolo,101px)*var(--sf,.96))}
   .ibtn.solo.lock::after{height:var(--isolo,101px);font-size:calc(var(--isolo,101px)*.66)}
@@ -6806,10 +6808,17 @@
       <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 레퍼런스 6행 폭 107 을 맞추려면 scaleX 2.04 가
            필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
       <div class="ibtn" data-pop="promo" style="--sf:.848;--sx:1.143;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
+      <!-- 작업 83(2026-08-26, 저장소 주인 보고): 레퍼런스 ③ 좌측 5행 «도감» — 21 도감 보너스 팝업의
+           메인 진입점이다. 48·71 이 비워 둔 마지막 라벨 행을 채우므로 SIDE.N=5·행 그리드는 그대로
+           (기존 4칸 좌표 Δ0), 축복만 레퍼런스 6행(길드 y958 자리)으로 한 칸 내려간다.
+           --sf/--sx 는 📚 잉크(112×110 @font100)를 ref 5행 스프라이트 77×82(x58–134) 에 맞춘 역산값. -->
+      <div class="ibtn" data-pop="coll" style="--sf:.864;--sx:.919;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>
       <!-- 작업 34(2026-08-25): 48 이 «던전» 을 지우면서 비워 둔 **예약된 5번째 라벨 행**에 «축복» 을 넣는다.
            layoutSide() 는 SIDE.N=5 로 이미 5칸을 잡아 두고 있어(위 48 주석) 행 그리드·--ih/--igap/--itop 이
-           바뀌지 않는다 = 기존 4칸 아이콘 좌표 이동 0. A2 측정 규격은 그대로다. -->
-      <div class="ibtn" data-pop="bless" style="--sf:.876;--sx:1.069;--dx:2px;--dy:0px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
+           바뀌지 않는다 = 기존 4칸 아이콘 좌표 이동 0. A2 측정 규격은 그대로다.
+           83 이후: 도감이 ref 5행을 가져가고 축복은 ref 6행(길드 43–149 w107 · y958 h~86) 규격이다 —
+           «칸이 바뀌면 --sf/--sx 를 다시 재라»(A2 5회차 교훈) 대로 🙏 를 6행 bbox 로 재역산했다. -->
+      <div class="ibtn" data-pop="bless" style="--sf:.916;--sx:1.414;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
     </div>
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
@@ -9953,6 +9962,8 @@ function drawHud(){
   sideAlert('quest',  QUESTS.some(questReady) || DQUESTS.some(dqReady));
   /* 작업 48 — 던전 사이드 아이콘 제거로 'dun' 레드닷 대상이 없어졌다(탭바 뱃지로 대체). */
   sideAlert('promo',  canPromote());
+  /* 작업 83 — 받을 수 있는 도감 보너스가 하나라도 있을 때만 */
+  sideAlert('coll',   ['skill','equip','pet','relic'].some(collReady));
   drawFac();
 }
 function drawTuto(){
@@ -13650,6 +13661,8 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     else if(k === 'quest') openQuest();
     /* 작업 48 — 좌측 «던전» 아이콘을 없앴다(하단 탭과 중복). 던전 진입은 setTab('dun') 하나뿐이다. */
     else if(k === 'promo') openPromo();
+    /* 작업 83 — 좌측 5행 «도감» → 21 도감 보너스 팝업. 다른 페이지·팝업이 열려 있으면 걷어낸다(gmPage). */
+    else if(k === 'coll') gmPage('collw', () => openColl21());
     else if(k === 'bless') openBless();
   };
 });
