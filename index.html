@@ -13200,17 +13200,21 @@ function coinResetTxt(){
   return Math.floor(m / 60) + 'H ' + String(m % 60).padStart(2, '0') + 'M';
 }
 /* ---- 44 다이아 판매 상품 5종 + 마일리지 (UI-REFERENCE 13 «우리 게임 설계» — 저장소 주인 지시) ----
-   가격 오름차순. 쿠폰(cp)은 90만·200만 상품에만 붙는다. `won` 은 표시용 원화가.
+   가격 오름차순. 쿠폰(cp)은 위 2개(45만·100만) 상품에만 붙는다. `won` 은 표시용 원화가.
    **결제 연동은 없다** — 구매 버튼은 가격 표시 + «준비 중». 실제 지급은 `grantDiaPack()` 하나로
    모이며, 디버그 지급(`window.devBuyDia(id)`)과 나중 붙일 결제 콜백이 그 함수를 같이 쓴다. */
+/* 작업 116(2026-08-26, 저장소 주인 지시) — 다이아 상품 5종·마일리지 교환 다이아를 전부 «÷2».
+   가격(`won`)·쿠폰(`cp`)·`MILE_NEED` 는 그대로다(지시 ③). 구 세이브의 이미 받은 다이아도 안 건드린다(④).
+   수량 라벨 `q` 는 **손으로 적지 않고 `fmt()` 로 파생**한다 — 111 의 알파벳 단위 규약이 이미 들어가 있어
+   («×5.00A · ×35.0A · ×75.0A · ×450A · ×1.00B») 값과 라벨이 어긋날 수 없게 한다(LESSONS 111-1). */
 const DIA_PACKS = [
-  { id:'d1', dia:10000,   won:1000,   cp:0, q:'×1만',   qx:1.10 },
-  { id:'d2', dia:70000,   won:5000,   cp:0, q:'×7만',   qx:1.10 },
-  { id:'d3', dia:150000,  won:11000,  cp:0, q:'×15만',  qx:1.00 },
-  { id:'d4', dia:900000,  won:55000,  cp:1, q:'×90만',  qx:1.00 },
-  { id:'d5', dia:2000000, won:110000, cp:2, q:'×200만', qx:0.88 }
-];
-const MILE_NEED = 10, MILE_DIA = 5000000;
+  { id:'d1', dia:5000,    won:1000,   cp:0, qx:0.90 },
+  { id:'d2', dia:35000,   won:5000,   cp:0, qx:0.90 },
+  { id:'d3', dia:75000,   won:11000,  cp:0, qx:0.90 },
+  { id:'d4', dia:450000,  won:55000,  cp:1, qx:0.98 },
+  { id:'d5', dia:1000000, won:110000, cp:2, qx:0.90 }
+].map(p => Object.assign(p, { q: '×' + fmt(p.dia) }));
+const MILE_NEED = 10, MILE_DIA = 2500000;
 const wonTxt = w => String(w).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
 const diaPackName = p => '다이아 ' + p.q.slice(1) + '개';
 /* 다이아 상품 지급 — 결제 성공 시 호출될 지점. 재화·쿠폰·누적 결제수를 한 번에 반영하고 저장한다. */
@@ -13288,7 +13292,7 @@ function renderCoinPage(list){
       +  '<div class="bt buy" data-diabuy="' + p.id + '"><u class="pr">' + wonTxt(p.won) + '</u></div>'
       +  '<div class="fr"></div></div>';
   });
-  /* §8 마일리지 상품 리본 + 교환 패널 — 쿠폰 10개 → 다이아 500만 */
+  /* §8 마일리지 상품 리본 + 교환 패널 — 쿠폰 10개 → 다이아 250만(작업 116 «÷2») */
   const mil = S.mileage || 0, milOk = mil >= MILE_NEED;
   h += '<div class="cn-rb" style="top:2587px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>마일리지 상품</i></div>'
