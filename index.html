@@ -371,10 +371,25 @@
   #menub .mx{position:absolute;inset:0;display:none}
   #menub.mnon .mx{display:block}
   #menub.mnon s{display:none}
-  #menub .mx::before,#menub .mx::after{content:'';position:absolute;left:13.75px;top:43px;
-    width:74.5px;height:14px;border-radius:7px;background:#FDFDFD;box-sizing:border-box}
-  #menub .mx::before{transform:rotate(43deg)}
-  #menub .mx::after{transform:rotate(-43deg)}
+  /* ⚠ 둥근 끝(캡슐)의 회전 bbox 는 «사각형 공식» 이 아니다 —
+     사각형이면 `L·cosθ + t·sinθ` 지만 캡슐은 **`(L−t)·cosθ + t`** 다(양 끝이 반원이라 모서리가 없다).
+     사각형 공식으로 L=70 을 잡았더니 실측이 61×57 이 아니라 **56×52** 였다.
+     ref 흰 잉크 62×57 · t14 → (L−14)cos = 48 · (L−14)sin = 43 → θ 41.9° · L 78.4. */
+  #menub .mx::before,#menub .mx::after{content:'';position:absolute;left:11.8px;top:43px;
+    width:78.4px;height:14px;border-radius:7px;background:#FDFDFD;box-sizing:border-box;z-index:2}
+  #menub .mx::before{transform:rotate(41.9deg)}
+  #menub .mx::after{transform:rotate(-41.9deg)}
+  /* 검정 외곽선 — 레퍼런스 ✕ 는 흰 잉크 61×55 «위에 5px 검정 테두리» 가 있어 총 bbox 가 71×71 이다.
+     회전 막대에 box-shadow 를 주면 교차부에서 한쪽 검정이 다른 쪽 흰색을 덮으므로,
+     **더 굵은 검정 막대 2개를 뒤에 따로 깐다**(z-index 로 흰 막대를 위에). */
+  #menub .mx>u{position:absolute;inset:0;z-index:1}
+  #menub .mx>u::before,#menub .mx>u::after{content:'';position:absolute;left:6.8px;top:38px;
+    width:88.4px;height:24px;border-radius:12px;background:#0B0B0B;box-sizing:border-box}
+  #menub .mx>u::before{transform:rotate(41.9deg)}
+  #menub .mx>u::after{transform:rotate(-41.9deg)}
+  /* 레퍼런스 52(메뉴 열림)에는 ▦ 의 빨간 알림 점이 **없다**(붉은 픽셀 0개 — 비평가 A·B 독립 확인).
+     02(닫힘)에는 있으므로 지우지 않고 «열림 상태에서만» 숨긴다. */
+  #menub.mnon .bdg{display:none}
 
   /* ===== 작업 52 — ▦ 메뉴 (말풍선 콜아웃 드롭다운) ==================================
      측정표 `docs/measure/52-메뉴팝업.md`. 껍데기 판정을 먼저 했다(A5 교훈):
@@ -387,13 +402,20 @@
   /* LESSONS 21-① — 오버레이 리셋은 ID 특이성이라 `.class>요소` 규칙을 이긴다.
      여기서 display 를 바꿀 일이 있으면 반드시 `#mnw` 를 붙여 특이성을 맞출 것. */
   #mnw i,#mnw s,#mnw b,#mnw em{display:block;font-style:normal;text-decoration:none;font-weight:900}
-  /* 패널 — ref x760.5..898.5 / y224.5..1112 → 프레임 x761 y141 138×887. 테두리 없음(밝은 stroke 0). */
-  #mnw .mn-col{position:absolute;left:761px;top:141px;width:138px;height:997px;
-    border-radius:16px;background:rgba(0,0,0,.28)}
+  /* 패널 — ref x760.5..898.5 / **y212.5..1123** → 프레임 x761 **y128.5** · 138×**910**(8칸). 테두리 없음.
+     ⚠ 1·2회차는 상변을 y225·높이 887 로 잘못 적었다. 원인은 **x770(좌변에서 9px 안쪽) 세로 스캔** —
+        반경이 35 라 그 열은 코너 원호 한가운데고 상변이 12px 아래로, 하변이 11px 위로 읽힌다.
+        **패널 중심 x830 세로 스캔**으로 다시 재니 y212 전이 · y1123 전이였다(비평가 A·B 도 독립적으로 213/1122).
+        검산: 상20.5 + 8칸×100 + 7갭×10 + 하20 = **910.5** ≈ 910. 상하 패딩이 대칭이라는 것도 이때 드러났다.
+     높이는 «8칸 910» + «35 인계 임시 9번째 칸 110» = **1020**. */
+  #mnw .mn-col{position:absolute;left:761px;top:128.5px;width:138px;height:1020px;
+    border-radius:35px;background:rgba(0,0,0,.28)}
   /* 꼬리 — 밑변 ref y267..312(46)이 패널 우변에 붙고 꼭짓점 (935,289). 꼭짓점 x935 = #menub 좌변 x934.
      패널과 겹치게 그리면 알파가 두 번 곱해져 그 부분만 짙어진다 → **패널 밖(x899..935)에만** 그린다. */
-  #mnw .mn-tail{position:absolute;left:899px;top:183px;width:0;height:0;
-    border-style:solid;border-width:23px 0 23px 36px;
+  /* 돌출 27.5 = ref 꼭짓점 x926 − 패널 우변 898.5 (y289 가로 단면: x924 틴트 → x928 배경).
+     1·2회차의 «36 / 꼭짓점 x935» 는 오측이었다(비평가 A·B 가 독립적으로 28 로 검출). */
+  #mnw .mn-tail{position:absolute;left:899px;top:183.5px;width:0;height:0;
+    border-style:solid;border-width:21.5px 0 21.5px 27.5px;
     border-color:transparent transparent transparent rgba(0,0,0,.28)}
   /* 칸 — ref x780..879(**99**) · h**100** · pitch110(간격 10) · 첫 칸 상변 ref**233** → 프레임 149 · r35.
      ⚠ 1회차에 이 값을 88×80 / ref244 로 잘못 재고 한 번 커밋했다. 원인은 **폭을 «칸 위끝+6» 행에서 쟀기 때문**이다 —
@@ -405,11 +427,11 @@
         left 24 = 785 − 761 (측정표 §2 «좌 패딩 24.5»), top 19 = 160 − 141, 이후 pitch 110. */
   #mnw .mn-b{position:absolute;left:19px;width:99px;height:100px;border-radius:35px;
     background:rgba(0,0,0,.80);cursor:pointer}
-  #mnw .mn-b:nth-of-type(1){top:8px}   #mnw .mn-b:nth-of-type(2){top:118px}
-  #mnw .mn-b:nth-of-type(3){top:228px} #mnw .mn-b:nth-of-type(4){top:338px}
-  #mnw .mn-b:nth-of-type(5){top:448px} #mnw .mn-b:nth-of-type(6){top:558px}
-  #mnw .mn-b:nth-of-type(7){top:668px} #mnw .mn-b:nth-of-type(8){top:778px}
-  #mnw .mn-b:nth-of-type(9){top:888px}   /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
+  #mnw .mn-b:nth-of-type(1){top:20.5px}  #mnw .mn-b:nth-of-type(2){top:130.5px}
+  #mnw .mn-b:nth-of-type(3){top:240.5px} #mnw .mn-b:nth-of-type(4){top:350.5px}
+  #mnw .mn-b:nth-of-type(5){top:460.5px} #mnw .mn-b:nth-of-type(6){top:570.5px}
+  #mnw .mn-b:nth-of-type(7){top:680.5px} #mnw .mn-b:nth-of-type(8){top:790.5px}
+  #mnw .mn-b:nth-of-type(9){top:900.5px}  /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
   /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
      **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
      칸별 잉크 폭이 34~66 으로 달라서 --sf(등방)·--sx(가로만) 로 각 이모지를 ref bbox 에 맞춘다(A2 방식).
@@ -421,8 +443,14 @@
   /* 라벨 — 코어 높이 24 → font-size 24/0.93 ≈ 26 (LESSONS 01, 한글 잉크비 0.93).
      중심 칸top+69. 폭은 글자 수마다 달라 **음수 letter-spacing 금지 · scaleX 로만** 맞춘다.
      라벨이 아이콘 하단을 살짝 덮는 것은 레퍼런스 그대로다(1번: 아이콘 y250..301 / 라벨 y302..325). */
-  #mnw .mn-l{position:absolute;left:-6px;right:-6px;top:66px;height:28px;line-height:28px;
-    text-align:center;font-size:26px;color:#FDFDFD;
+  /* ⚠ **A1 함정**: 글리프 advance 보다 좁은 박스에 `text-align:center` 를 쓰면 넘친 글자가 가운데가 아니라
+        **좌측 정렬**돼 잉크가 오른쪽으로 밀린다. 2회차의 「게임 라운지」가 정확히 이 증상이었다
+        (칸 중심 대비 +12.5px · 칸 우변 16px 침범 — 비평가 A·B 가 독립 검출).
+        → 박스를 칸보다 훨씬 넓게(−45/−45 = 189) 잡아 **먼저 한 줄에 들어가게** 한 뒤 scaleX 로 좁힌다.
+     그리고 레퍼런스는 긴 라벨을 «가로만 압축» 하지 않고 **균등 축소**한다 —
+        2자 잉크 높이 24 vs 4·6자 잉크 높이 **19**. 그래서 --lf(폰트)를 따로 둔다(19/0.93 ≈ 20.4). */
+  #mnw .mn-l{position:absolute;left:-45px;right:-45px;top:66px;height:28px;line-height:28px;
+    text-align:center;font-size:var(--lf,26px);color:#FDFDFD;
     -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--lx,.82))}
   /* 8번 «게임 라운지» 만 컬러 — 초록 라운드 타일(#03ED68) 위 흰 글리프. ref 잉크 46×35 + 타일 57×55 */
@@ -5290,7 +5318,7 @@
     </div>
     <button id="dunOut"><i>◀</i></button>
     <!-- 우상단 4분할 메뉴 버튼 -->
-    <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i><b class="mx"></b></div>
+    <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i><b class="mx"><u></u></b></div>
     <div class="side" id="sideL">
       <!-- 1행은 레퍼런스에서 라벨 없는 단독 버튼이다(측정표 §1). 라벨을 달면 아래 5칸이 전부 27px 씩 밀린다.
            --sf/--sx 는 각 이모지의 실측 잉크(canvas getImageData)로 역산한 «그 칸의 레퍼런스 스프라이트
@@ -5577,11 +5605,11 @@
       <div class="mn-b" data-mn="notice"><i class="mn-i" style="--sf:.981;--sx:1.073;--dy:2.6px">📢</i><i class="mn-l" style="--lx:.85">공지</i></div>
       <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.90">우편</i></div>
       <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.92">랭킹</i></div>
-      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lx:.72">길라잡이</i></div>
+      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:20.4px;--lx:.944">길라잡이</i></div>
       <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.89">가방</i></div>
       <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.87">절전</i></div>
       <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.89">설정</i></div>
-      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lx:.785">게임 라운지</i></div>
+      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lf:20.4px;--lx:.93">게임 라운지</i></div>
       <!-- ⚠ 9번째 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
            임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고
