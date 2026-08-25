@@ -12103,7 +12103,10 @@ $('dunList').addEventListener('click', e => {
 const RAIDS = [
   { id:'r60',  n:'정규 측정장', sec:60,  open:1,
     ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'],
-         thw:'311px', tht:'36px', thk:'elves', thf:'blue_attack_2', thc:'#E2907F' } },
+         /* 틴트는 multiply 다 — 어두운 색을 곱하면 배경보다 «어두운» 스프라이트가 된다.
+            초판 #E2907F(휘도 163)는 카드1 의 붉은 배경(#8A3A2E, 휘도 81) 위에서 잉크 평균이
+            배경보다 낮아 묻혔다(실측 68.8 vs 86.5). 카드2·3 급(휘도 200 안팎)으로 올린다. */
+         thw:'311px', tht:'36px', thk:'elves', thf:'blue_attack_2', thc:'#EFC9B4' } },
   { id:'r30',  n:'단기 측정장', sec:30,  open:15,
     /* 알약 안쪽 폭은 230px 뿐이다 — 「짧게 폭발 피해 측정」(141) 은 7.5px 새어 나온다 */
     ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['폭발 피해 측정'],

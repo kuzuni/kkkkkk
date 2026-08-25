@@ -51,8 +51,13 @@ const MODE = OPEN ? (BIG ? '해금-최대' : '해금') : '기본';
         if (im[(y * cv.width + x) * 4 + 3] > 8) { on++;
           if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       }
+      /* 잉크 평균 휘도 — 틴트(multiply)가 배경보다 어두워지면 스프라이트가 묻힌다 */
+      let lum = 0;
+      for (let i = 0; i < im.length; i += 4) if (im[i + 3] > 8)
+        lum += 0.299 * im[i] + 0.587 * im[i + 1] + 0.114 * im[i + 2];
       ink = on ? { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1,
-                   cover: +(on / (cv.width * cv.height)).toFixed(3) } : { empty: true };
+                   cover: +(on / (cv.width * cv.height)).toFixed(3),
+                   lum: +(lum / on).toFixed(1) } : { empty: true };
     }
     return {
       id: c.dataset.rcard, locked: !!c.querySelector('.lk'),

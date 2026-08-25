@@ -33,13 +33,23 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   ok(await p.evaluate(() => document.querySelectorAll('#dunList .dnc.rd canvas.thcv').length === 3),
      '카드 3장 전부 썸네일 캔버스가 붙었다');
 
-  console.log('[2] 썸네일이 그려졌다 (빈 캔버스가 아니다)');
+  console.log('[2] 썸네일이 그려졌다 (빈 캔버스가 아니다) · 틴트가 스프라이트를 배경에 묻지 않게 한다');
   const drawn = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map((cv) => {
     const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
-    let on = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 8) on++;
-    return +(on / (cv.width * cv.height)).toFixed(3);
+    let on = 0, lum = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 8) {
+      on++; lum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    }
+    /* 카드 배경(--i)의 휘도 — 틴트는 multiply 라 어두운 색을 곱하면 배경보다 어두워진다 */
+    const bg = getComputedStyle(cv.closest('.dnc')).getPropertyValue('--i').trim();
+    const m = bg.match(/^#(\w{2})(\w{2})(\w{2})$/);
+    const bl = m ? 0.299 * parseInt(m[1], 16) + 0.587 * parseInt(m[2], 16) + 0.114 * parseInt(m[3], 16) : 0;
+    return { cover: +(on / (cv.width * cv.height)).toFixed(3), lum: +(lum / on).toFixed(1), bg, bl: +bl.toFixed(1) };
   }));
-  drawn.forEach((c, i) => ok(c > 0.2, `카드${i + 1} 잉크 채움률 ${c} (> 0.2)`));
+  drawn.forEach((c, i) => {
+    ok(c.cover > 0.2, `카드${i + 1} 잉크 채움률 ${c.cover} (> 0.2)`);
+    ok(c.lum > c.bl - 20, `카드${i + 1} 잉크 평균 휘도 ${c.lum} vs 배경 ${c.bg} ${c.bl} (묻히지 않는다)`);
+  });
 
   console.log('[3] 썸네일 위를 눌러도 카드가 눌린다 (슬롯이 클릭을 삼키지 않는다)');
   const opened = await p.evaluate(() => {
