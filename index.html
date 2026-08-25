@@ -4753,12 +4753,15 @@
   /* §3 핑크 캠페인 리본 — 팝업 좌측 외곽을 8px 넘어간다(ref x33 < 팝업 41). .bls 기준 좌표 */
   /* ref 리본 bbox 316×144 는 «회전 뒤» 값이다 — 회전 전 원본은 306×77
      (W'=w·cos13+h·sin13=316, H'=w·sin13+h·cos13=144 을 풀면 나온다). 중심 ref(190.5, 500.5+84) */
-  .bls-rib{position:absolute;left:-13.5px;top:95.5px;width:307px;height:114px;
+  /* 2차 비평 D: ref 는 수직두께가 x=100/180/260 에서 **67 로 일정한 평행사변형**인데 우리 clip-path 는
+     좌변만 18%~82% 로 잘라 «쐐기»(85→111)가 됐고, 그 두꺼워진 좌하단이 배너 문구 선두를 덮었다.
+     → 좌변도 0~100% 로 두고 상자 자체를 얇게(66) 만들어 균일 밴드로 바꾼다. */
+  .bls-rib{position:absolute;left:-14px;top:106px;width:310px;height:66px;
     display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,#D31464 0,#BE175D 100%);
-    clip-path:polygon(0 18%,86% 0,100% 22%,88% 50%,100% 78%,86% 100%,0 82%);
-    rotate:-13deg;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.35)}
-  .bls-rib>i{font-size:31px;color:#FEF7AF;-webkit-text-stroke:7px #6E0834;paint-order:stroke fill;
+    clip-path:polygon(0 0,87% 0,100% 26%,89% 50%,100% 74%,87% 100%,0 100%);
+    rotate:-15deg;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.35)}   /* 비평 A·D 합의: ref 기울기 15.0° */
+  .bls-rib>i{font-size:27px;color:#FEF7AF;-webkit-text-stroke:6px #6E0834;paint-order:stroke fill;
     transform:translateX(-14px)}
 
   /* §4 안내 배너 — 크림 위 반투명 토프 바 */
@@ -4823,12 +4826,17 @@
   .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
     background:repeating-linear-gradient(45deg,#F0B048 0 30.4px,#F8C850 30.4px 65.05px)}
   .bls-bn>*{position:absolute}
+  /* 2차 비평 C: ref 보너스 바에는 카드와 같은 계열의 상 9px / 하 14px 밝은 띠가 있다(우리는 0px) */
+  .bls-bn::before,.bls-bn::after{content:'';position:absolute;left:0;right:0;background:#FFF878}
+  .bls-bn::before{top:0;height:9px}
+  .bls-bn::after{bottom:0;height:14px}
   /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
   /* ref 잉크 x136..246 · y1356..1470 → 바(75,1252) 로컬 (61,20) 114x115. 셰브론은 그 우하단에 겹친다 */
-  .bls-bn .ic{left:61px;top:20px;width:114px;height:115px;line-height:115px;text-align:center;font-size:104px}
+  /* 잉크 실측 83x85 @x178 → ref 116x120 @x138: 이모지 잉크가 상자보다 작아 상자를 왼쪽으로 넓힌다 */
+  .bls-bn .ic{left:40px;top:12px;width:150px;height:130px;line-height:130px;text-align:center;font-size:140px}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
-  .bls-bn .ch{left:140px;top:88px;width:46px;height:48px}
+  .bls-bn .ch{left:132px;top:86px;width:46px;height:48px}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
@@ -4836,10 +4844,14 @@
   .bls-bn .ch::after{top:24px}
   /* 1회차: 흰 잉크 w218 (ref 181) → scaleX .83 */
   /* 비평 B ④: 문구 중심이 529.5 로 10.5px 좌측 치우침 — 바 중심(540)에 가운데 정렬로 바꾼다 */
-  .bls-bn .tx{left:200px;right:20px;top:38px;height:76px;line-height:76px;text-align:center;font-size:42px;color:#fff;
-    -webkit-text-stroke:11px #000;paint-order:stroke fill}
-  .bls-bn .tx>b{transform:scaleX(.83)}
-  .bls-bn .tx em{color:#A6DC60;margin-left:20px}
+  /* ⚠ 2차 비평 C·D 공통 1순위: `left:200` 로 잡았더니 «아이콘 우측 잔여폭의 중앙»(x629)이 돼
+     팝업 센터라인을 90px 이탈했다. 아이콘은 절대배치라 문구는 **바 전폭 기준**으로 가운데 정렬한다. */
+  /* 자폭은 상자 «전체» 에 scaleX 를 걸어 줄인다 — 전폭 상자라 축이 바 중심이라 중앙정렬이 유지된다
+     (안쪽 <b> 에 걸면 잉크만 줄고 중심은 그대로여서 2차 비평의 «자당 +20%» 가 안 잡혔다) */
+  .bls-bn .tx{left:0;right:0;top:38px;height:76px;line-height:76px;text-align:center;font-size:42px;color:#fff;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83)}
+  /* ref 초록 «+50%» 잉크 113x32 — 숫자 글리프가 좁아 자간으로 폭을 맞춘다(01 교훈: 폭은 자폭으로) */
+  .bls-bn .tx em{color:#A6DC60;margin-left:18px;font-size:45px;letter-spacing:5px;text-indent:5px}
   .bls-bn.off{background:repeating-linear-gradient(45deg,#918576 0 30.4px,#9E9284 30.4px 65.05px)}
   .bls-bn.off .tx em{color:#D8D2C8}
 
@@ -4857,16 +4869,21 @@
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
   /* ref 아이콘 뭉치 잉크 308x197 — 이모지 한 줄로는 높이가 안 나와 scaleY 로 bbox 를 채운다(아트 자리) */
-  .bls-promo .ic{left:71px;top:24px;width:325px;height:200px;line-height:200px;text-align:center;font-size:138px}
-  .bls-promo .ic>b{transform:scaleY(1.35)}
+  /* 2차: scaleY 로 높이만 늘렸더니 폭이 −54% 로 남았다. 이모지 3개를 «벌려서» 폭을 채운다 */
+  .bls-promo .ic{left:64px;top:18px;width:340px;height:210px;line-height:210px;text-align:center;
+    font-size:132px;letter-spacing:14px;text-indent:14px}
+  .bls-promo .ic>b{transform:scaleY(1.2)}
   /* 비평 A·B 합의: ref 헤드라인 잉크 379x55(자당 47.4), 우끝 953 = 스트립 우인셋 55~61 → 우측 정렬 */
   .bls-promo .tx{left:420px;right:52px;top:24px;height:80px;line-height:80px;text-align:right;
     font-size:56px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
-  .bls-promo .gb.off{background:#8FA98A;box-shadow:inset 0 6px 0 rgba(255,255,255,.35),0 6px 0 #5E7259;cursor:default}
-  .bls-promo .gb{left:625px;top:115px;width:267px;height:115px;border:0;border-radius:28px;cursor:pointer;
-    background:linear-gradient(180deg,#8CF05C 0,#70E030 55%,#4DBB18 100%);
-    box-shadow:inset 0 6px 0 rgba(255,255,255,.55),0 6px 0 #2F7A0C;
-    font-size:42px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
+  /* 2차 비평 D: ref 버튼은 **검정 6px 외곽 + 내측 상단 하이라이트 8px** 이 있고 면이 (119,229,54) 로 밝다.
+     비활성(.off)도 회녹(143,169,138)이 아니라 «조금 어두운 초록» 이어야 ref 와 대비가 맞는다. */
+  .bls-promo .gb.off{background:linear-gradient(180deg,#7FCF63 0,#5FB03A 55%,#458F22 100%);cursor:default}
+  .bls-promo .gb{left:625px;top:112px;width:267px;height:118px;box-sizing:border-box;
+    border:6px solid #000;border-radius:28px;cursor:pointer;
+    background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
+    box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
+    font-size:46px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
   .bls-x{flex:none;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
