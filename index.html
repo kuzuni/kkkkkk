@@ -3456,12 +3456,17 @@
   /* 6회차 — ref 액자 외곽은 «사방 균일» 이 아니라 **하단 가중**이다(비평가 K·L 독립 실측):
      상변 검정4+갈색10=14 · 하변 검정8+갈색13=21 · 좌우 검정5+갈색12=17. 바닥 그림자를 테두리에 내장한 것. */
   /* 10회차 ① — ref 액자는 4모서리 균일 라운드가 아니라 «대각» 이다(비평가 Q·R 독립 검출:
-     Q 우상 Δ11·좌하 Δ10 / R 우상 Δ15·좌하 Δ8) → 우상·좌하만 R15, 좌상 3.5·우하 5 유지.
+     Q 우상 Δ11·좌하 Δ10 / R 우상 Δ15·좌하 Δ8) → 우상·좌하만 크게 깎는다.
+     반경은 «추정» 대신 ref 의 **행별 인셋 프로파일**에 원을 피팅해 정했다(검정 마스크 max(R,G,B)<70):
+       우상 ref 인셋 d3=13·d4=11·d5=10·d8=6·d13=2 → r25 예측 13.1·11.4·10.0·6.5·2.1 (r15 은 4.8 로 한참 모자람)
+       좌하 ref 인셋 d0=18·d1=13·d3=8·d5=6·d8=3   → r20 (r18 은 첫 3행이 Δ2~4 모자랐다)
+       좌상 ref d0=5·d1=4·d3=1 → r5 · 우하 ref 는 d1 부터 628 고정 → r3
+     (Q·R 의 «15~16» 은 눈대중 추정이라 실제 곡률보다 작았다 — LESSONS 20-1 의 «측정표가 틀렸다» 와 같은 유형)
      10회차 ⑥ — 갈색 밴드 좌우 폭을 자체 스캔(s20b.py ①)으로 재확인: **ref 좌 10(x457–466) / 우 9(x614–622)**
      인데 우리는 좌우 12/12 였다(R 의 «좌 11 / 우 9» 지적이 방향은 맞았다, Q 의 «137/137 정상» 은 반증).
      검정 외곽 border 를 좌 6 / 우 7 로 갈라 padding box 를 옮기고 `.in` 인셋을 10 / 9 로 준다 */
   .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
-    border:solid #000;border-width:4px 7px 8px 6px;border-radius:3.5px 15px 5px 15px;background:#715A4A}
+    border:solid #000;border-width:4px 7px 8px 6px;border-radius:5px 25px 3px 20px;background:#715A4A}
   .spc-ava>.in{position:absolute;left:10px;right:9px;top:10px;bottom:10px;
     border:solid #000;border-width:4px 4px 6px;border-radius:4px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
@@ -3599,9 +3604,9 @@
   /* 10회차 ⑤ — 8회차의 blob 은 24×10 «원형 점» 이었는데 ref 는 **21×17 + 좌변을 따라 y1819(캡처 1735)까지
      흐르는 폭 3~4px 의 L 자 림**이다(비평가 R). 반경 blob 1겹 + 세로 페이드 스트립 1겹으로 얹는다.
      left 20px = x174 로 금 채움 좌변에 붙인다(::before 의 평평한 좌변과 같은 x) */
-  .spc-tab-on>b::after{content:'';position:absolute;left:20px;top:0;width:21px;height:25px;
-    background:radial-gradient(62% 55% at 46% 34%,#FFF3B4,rgba(255,243,180,0) 78%) 0 0/21px 17px no-repeat,
-      linear-gradient(180deg,rgba(255,243,180,.75),rgba(255,243,180,0)) 0 0/3.5px 25px no-repeat}
+  .spc-tab-on>b::after{content:'';position:absolute;left:19px;top:0;width:22px;height:25px;
+    background:radial-gradient(70% 60% at 46% 36%,#FFF3B4 0,rgba(255,243,180,.6) 62%,rgba(255,243,180,0) 94%) 0 0/22px 13px no-repeat,
+      linear-gradient(180deg,rgba(255,243,180,.9) 0 11px,rgba(255,243,180,.55) 16px,rgba(255,243,180,0) 25px) 0 0/4px 25px no-repeat}
   .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
     paint-order:stroke fill;transform:scaleX(.84)}
   /* 비활성 「프로필」 — 텍스트만, 중심 ref x734 → 컨테이너 상대 x577 */
