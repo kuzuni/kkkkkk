@@ -4032,7 +4032,10 @@
      물어서 나온 값이다(마스크 bbox 1566..1715 = 150 이 그대로 적혀 있었다).
      정사각 마름모(149x149)를 세로 0.8 로 눌러 맞춘다 — 중심은 transform-origin 이 가운데라 불변. */
   .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:119.4px;height:119.4px;
-    margin:-63.2px 0 0 -59.7px;transform:scale(1,.8) rotate(45deg);border-radius:24px;background:#EAD6B3;z-index:-1}
+    /* 13회차: 부모 .ci 에 scaleX(.845) 를 걸었으므로(이모지 잉크 폭 보정) 판은 역스케일로 상쇄한다
+       — 1/.845 = 1.1834. 최종 bbox = 149 x 119 로 불변이다. */
+    margin:-63.2px 0 0 -59.7px;transform:scale(1.1834,1.1198) scale(1,.8) rotate(45deg);
+    border-radius:24px;background:#EAD6B3;z-index:-1}
   /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
      (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
      이모지를 105px 로 줄여 마름모 네 귀가 드러나게 한다. */
@@ -4040,8 +4043,15 @@
      ref 판 좌우 꼭짓점 x124..272(=149), 우리 판(런타임에 판만 마젠타로 칠해 잰 실bbox) x124..271(=148).
      진짜 감점원은 **세로 위치**였다: ref 판 중심 y1627(카드2 x469 열도 y1617..1639 로 동일 서명 → 아트가
      아니라 판임이 확정), 우리 중심 y1657 로 **30px 아래**. 이모지는 아트 대체물이므로 판과 함께 올린다. */
-  .tr-card>.ci{z-index:1;left:73px;top:95px;width:180px;height:164px;text-align:center;line-height:164px;
-    font-size:105px}
+  /* 13회차 «아트 자리 규칙» 정렬(비평가 S P1 · U P3~P5 가 세 번 지적한 항목).
+     `ink23.js`(판을 숨기고 잉크만 재는 스캐너) 실측 — 우리 이모지 잉크 **180 x 151 · 중심 y1623**.
+     ref 아트 bbox(카드3, ref) **x805..956 = 152 x 151 · 중심 (880.5, 1640)**.
+     → **높이는 이미 정확히 같고(151)**, 폭만 +18%, 세로 중심이 17px 위였다.
+       · 폭: `scaleX(.845)` = 180 → 152 (판은 역스케일로 상쇄)
+       · 세로: `line-height` 164 → 198 로 글리프만 17px 내린다(판은 `top:50%` 라 line-height 영향 없음)
+     이모지는 GPT 아트로 교체될 자리표시라 «내용» 은 감점 대상이 아니지만 **bbox 는 맞춰 둔다**. */
+  .tr-card>.ci{z-index:1;left:73px;top:111px;width:180px;height:164px;text-align:center;line-height:224px;
+    font-size:105px;transform:scale(.845,.893)}
   .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
@@ -4077,9 +4087,12 @@
     box-shadow:inset 0 0 0 5.5px #000;z-index:4}
   /* 12회차(비평가 T L4): ref y1334 가로 단면은 검정 388..391(4px) → 핑크 393.. 로 **border-box 31 · 링 4px**
      인데 우리는 27 · 링 3px 이었다(−14% / −25%). 핑크 코어 21px 는 양쪽 같으므로 링만 얇았던 것이다.
-     배지 크기 체계를 ref(트레이 31 / 카드 42 / 서브탭 45)에 맞춘다. 중심은 유지 — 커진 4px 만큼 left·top 을 2 뺀다. */
+     배지 크기 체계를 ref(트레이 31 / 카드 42 / 서브탭 45)에 맞춘다. 중심은 유지 — 커진 4px 만큼 left·top 을 2 뺀다.
+     13회차(비평가 U P6): border-box 31 은 맞지만 **핑크 코어가 23 으로 ref 21 보다 +10%** 였다
+     (ref 가로 단면: 검정 388..391 · AA 392 · 핑크 393..413 · AA 414 · 검정 415..418).
+     링을 4 → 5 로 올리면 검정 388..392 · 핑크 393..413 으로 ref 와 정확히 겹친다. */
   .tr-qty .dot{position:absolute;left:229px;top:-9px;width:31px;height:31px;border-radius:50%;
-    background:#EF3457;box-shadow:inset 0 0 0 4px #000;z-index:4}
+    background:#EF3457;box-shadow:inset 0 0 0 5px #000;z-index:4}
 
   /* §7 하단 서브탭 — 레퍼런스는 4칸(x37 y958 w960 h97, 4등분 240)이지만
      작업 47(2026-08-25, 저장소 주인 지시)로 «훈련 · 스탯 훈련» **2칸 균등**이 됐다.
@@ -4129,9 +4142,12 @@
     border-radius:31px;background:#4B3E2D;box-shadow:inset -9px 0 0 #0C0803;z-index:1}
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
-  /* 옛 left:7px 은 «칸 중심 120 → 알약 중심 127.5» 차이를 메우던 값이다. 알약이 칸 중앙에 오면 두 중심이
-     같아지므로 가로 오프셋은 0 이다(세로 −2 는 ref 잉크 정렬값이라 유지). */
-  .tr-sub>.sg.on>i{color:#E7B88E;top:-2px}
+  /* 13회차(비평가 U P1 — 12회차가 낸 회귀다). 라벨은 `text-align:center` 로 **칸** 중앙에 서는데
+     12회차가 알약만 좌단 앵커로 옮겨 놓아 **라벨이 알약 밖으로 나갔다** —
+     알약 우단 x282 인데 라벨은 x330 까지 뻗어 48px(라벨 폭의 69%)이 비활성 트랙 위에 얹혔다.
+     ref 는 라벨 중심 x182 ≒ 알약 중심 x182.5 로 **알약 중심 정렬**이다.
+     칸 중심(60+237=297) → 알약 중심(60+9+115=184) 이므로 **−113px**. */
+  .tr-sub>.sg.on>i{color:#E7B88E;top:-2px;left:-113px}
   /* 8회차의 `.sg.lock` / `.sg.lock.txt`(🔒 이모지 배지 · «마법상판») 규칙은 47 에서 그 칸을 없애면서
      같이 지웠다 — LESSONS 57-1 «대체하면 구버전 경로는 그때 지운다». */
   /* 10회차: 카드 배지와 같은 정정. ref y2035 가로 단면 — 검정 272..277(6px) 뒤 핑크 시작 278,
