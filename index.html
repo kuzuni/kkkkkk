@@ -8627,7 +8627,10 @@ const DEF = () => ({
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
-  buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', heroTab:'eq',
+  /* 105 — «알아서 되는 것» 은 전부 기본 OFF(저장소 주인 지시). autoEquip 키는 폐기(아무도 읽지 않는다),
+     autoBuy(23 훈련 자동 구매)는 강화 탭의 «자동 ON/OFF» 토글이 남아 있으므로 기본값만 false 로 내린다.
+     a105 = 구 세이브 1회 정리 표식(켜 둔 플레이어의 선택을 두 번 끄지 않는다). */
+  buyQty:1, autoBuy:false, a105:1, eqTab:'weapon', heroTab:'eq',
   opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false },  /* 55 설정 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
@@ -8729,6 +8732,11 @@ function load(){
       b.pass.got['stage:' + k] = 1; delete b.pass.got[k];
     });
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
+    /* 105 — 구 세이브 «자동» 정리(KEY 유지 — 44 교훈 2). autoEquip 은 폐기 키라 지우고,
+       autoBuy 는 «기본 true 시절에 켜진 것» 이므로 세이브당 딱 한 번만 꺼 준다.
+       (a105 표식을 찍은 뒤 플레이어가 다시 켜면 그 선택은 그대로 유지된다.) */
+    delete b.autoEquip;
+    if(!d.a105){ b.autoBuy = false; b.a105 = 1; }
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
     /* 89 — 유물 장착·재료(n) 폐기: eqRelic 은 버리고, own.rl* 은 l(=Lv)만 남긴다 */
@@ -9672,7 +9680,8 @@ function step(dt){
   }
 
   if(S.autoBuy) autoBuyTick(dt);
-  if(S.autoEquip) autoEquipTick(dt);
+  /* 105 — «2초마다 autoEquipAll()» 폐기(저장소 주인 지시). 플레이어가 해제한 장착이
+     전투 루프에 의해 되돌아오던 원인이 이 한 줄이었다. 자동 장착은 어떤 주기 호출도 없다. */
 
   /* 67 — 카메라 추적·셰이크는 step 에서 빠졌다. loop() 가 «실시간 dt» 로 camUpdate() 를 부른다
      (처치 슬로모가 카메라 시간까지 늦추면 0.3초 연출이 1초로 늘어난다) */
@@ -10497,9 +10506,10 @@ function craft(it){
   if(!canCraft(it)) return null;
   const nx = nextGradeItem(it);
   S.own[it.id].n -= CRAFT_NEED;
-  if(!has(nx.id)) S.own[nx.id] = { n:0, l:1 }; else S.own[nx.id].n++;
+  const isNew = !has(nx.id);
+  if(isNew) S.own[nx.id] = { n:0, l:1 }; else S.own[nx.id].n++;
   markDirty(); uiDirty = true;
-  if(S.autoEquip) autoEquipAll();
+  if(isNew) equipFillNew([nx.id]);   /* 105 — 합성 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
   save();
   return nx;
 }
@@ -10586,7 +10596,7 @@ function doSummon(b, times){
   const res = [];
   for(let i=0;i<times;i++) res.push(summonOne(b));
   markDirty(); uiDirty = true;
-  if(S.autoEquip) autoEquipAll();
+  equipFillNew(res.filter(r => r.isNew).map(r => r.it.id));   /* 105 — 소환 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
   save();
   showSummonResult(b, times, res, lvUp);
 }
@@ -10604,7 +10614,7 @@ function doSummonFree(b, times, viaReward){
   const res = [];
   for(let i=0;i<times;i++) res.push(summonOne(b));
   markDirty(); uiDirty = true;
-  if(S.autoEquip) autoEquipAll();
+  equipFillNew(res.filter(r => r.isNew).map(r => r.it.id));   /* 105 — 소환 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
   save();
   showSummonResult(b, times, res, lvUp);
 }
@@ -10733,22 +10743,43 @@ function toggleEquip(it, cat){
 function power(it, cat){
   if(cat === 'skill') return skillDmg(it) * (it.cd > 0 ? 1/it.cd : 3);
   if(cat === 'pet')   return petDmg(it) / it.cd;
-  return gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);   /* 75 — 자동장착이 개체차까지 반영해 최강을 고른다 */
+  return gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);   /* 105 — 빈 칸 채움이 개체차까지 반영해 최강을 고른다 */
 }
-function autoEquipAll(){
-  S.eqSkill = SKILLS.filter(s => has(s.id)).sort((a,b) => power(b,'skill') - power(a,'skill')).slice(0,8).map(s => s.id);
-  S.eqPet   = PETS.filter(p => has(p.id)).sort((a,b) => power(b,'pet') - power(a,'pet')).slice(0,3).map(p => p.id);
+/* 105 — «자동 장착» 폐기(저장소 주인 지시 2026-08-26).
+   구: `autoEquipAll()` 이 보유 전체를 power 순으로 정렬해 8칸·3칸·부위 3칸을 **통째로 덮어썼고**,
+       전투 루프가 그것을 2초마다 불렀다 → 플레이어가 해제해도 되돌아왔다.
+   신: 장착은 **플레이어가 카드에서 한 것만** 남는다. 유일한 예외가 이 함수 —
+       «이번에 **처음** 얻은 것» 이 «빈 칸» 을 만났을 때 1회 채움.
+       후보를 이번 획득분(ids)으로만 한정하므로, 이미 갖고 있다가 **해제한 것은 절대 되돌아오지 않는다**
+       (중복 획득분 n++ 도 isNew 가 아니라 후보가 아니다). */
+function equipFillNew(ids){
+  const fresh = [...new Set(ids || [])].filter(id => has(id));
+  if(!fresh.length) return;
+  let changed = false, pets = false;
+  /* 스킬 8칸 — 빈 칸 수만큼 강한 것부터 */
+  const sk = fresh.filter(id => SK[id] && !S.eqSkill.includes(id))
+                  .sort((a,b) => power(SK[b],'skill') - power(SK[a],'skill'));
+  for(const id of sk){
+    if(S.eqSkill.length >= 8) break;
+    S.eqSkill.push(id); skillCd[id] = 0; changed = true;
+  }
+  /* 펫 3칸 */
+  const pt = fresh.filter(id => PT[id] && !S.eqPet.includes(id))
+                  .sort((a,b) => power(PT[b],'pet') - power(PT[a],'pet'));
+  for(const id of pt){
+    if(S.eqPet.length >= 3) break;
+    S.eqPet.push(id); changed = true; pets = true;
+  }
+  /* 장비 — 부위별 칸이 **비어 있을 때만**(다른 것이 끼워져 있으면 건드리지 않는다) */
   SLOTS.forEach(s => {
-    const best = EQUIPS.filter(e => e.slot === s.k && has(e.id)).sort((a,b) => power(b,'equip') - power(a,'equip'))[0];
-    S.eqSlot[s.k] = best ? best.id : null;
+    if(S.eqSlot[s.k]) return;
+    const best = fresh.filter(id => EQ[id] && EQ[id].slot === s.k)
+                      .sort((a,b) => power(EQ[b],'equip') - power(EQ[a],'equip'))[0];
+    if(best){ S.eqSlot[s.k] = best; changed = true; }
   });
-  syncPets(); markDirty(); uiDirty = true;
-}
-let autoEqT = 0;
-function autoEquipTick(dt){
-  autoEqT -= dt;
-  if(autoEqT > 0) return;
-  autoEqT = 2; autoEquipAll();
+  if(!changed) return;
+  if(pets) syncPets();
+  markDirty(); uiDirty = true;
 }
 
 /* ==========================================================================
@@ -15054,7 +15085,8 @@ loadAtlases(() => {
   dailyCheck();
   markDirty();
   if(!has('slash')){ S.own.slash = { n:0, l:1 }; S.eqSkill = ['slash']; }
-  if(S.autoEquip) autoEquipAll();
+  /* 105 — 시작 시 전체 자동 장착 폐기. 세이브에 남아 있는 «플레이어가 한 장착» 을 그대로 쓴다
+     (여기서 빈 칸을 채우면 해제하고 나간 칸이 재시작마다 되살아난다). */
   player.hp = stat.maxHp;
   setAnim(player, 'knight', 'idle', 8, true);
   syncPets();

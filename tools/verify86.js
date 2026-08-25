@@ -176,12 +176,12 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
 
   /* ---------------- [4] 04 스킬 격자 ---------------- */
   console.log('[4] 04 스킬 격자');
-  await p.evaluate(() => { Object.assign(S, DEF()); SKILLS.forEach(s => S.own[s.id] = { n: 0, l: 1 }); autoEquipAll(); uiDirty = true; renderUI(); gmHero('sk'); });
+  await p.evaluate(() => { Object.assign(S, DEF()); SKILLS.forEach(s => S.own[s.id] = { n: 0, l: 1 }); S.eqSkill = SKILLS.filter(s => has(s.id)).sort((a,b) => power(b,'skill') - power(a,'skill')).slice(0,8).map(s => s.id);  /* 105 — autoEquipAll() 폐기: 셋업만 직접 8칸 */ uiDirty = true; renderUI(); gmHero('sk'); });
   await p.waitForTimeout(500);
   const ui = await p.evaluate(() => {
     Object.assign(S, DEF());
     SKILLS.forEach(s => S.own[s.id] = { n: 0, l: 1 });
-    autoEquipAll(); uiDirty = true; renderUI();
+    S.eqSkill = SKILLS.filter(s => has(s.id)).sort((a,b) => power(b,'skill') - power(a,'skill')).slice(0,8).map(s => s.id);  /* 105 — autoEquipAll() 폐기: 셋업만 직접 8칸 */ uiDirty = true; renderUI();
     gmHero('sk');
     const gp = document.querySelector('#bSk .sk-gp');
     const cards = [...document.querySelectorAll('#bSk .sk-card')];
