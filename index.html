@@ -4138,7 +4138,11 @@
      리본은 17(#statw)·09(#upw) 리본과 **픽셀 동일 에셋**(orange 마스크 IoU 0.884, dy +25 정합)이라
      `.upr-grp/.upr-rb/.upr-tl` 을 CSS 수정 없이 그대로 쓰고 그룹 top 만 바꾼다(17 의 793 − 25 = 768).
      ========================================================================== */
-  #dclw{position:absolute;inset:0;display:none;z-index:40;cursor:pointer;background:rgba(0,0,0,.78)}
+  /* z-index 61 — **#fxl(58 재화 비행 연출 레이어)이 60 이라 그 위**에 와야 한다. 40 으로 두면
+     giveReward() 가 쏜 코인들이 이 화면 위를 가로질러 밴드 안·딤 위에 그대로 그려진다
+     (1회차 비평 A·B 공통 지적: 밴드 안 코인 2개 + 딤 뚫고 나온 스프라이트 9개, 휘도 255 vs ref 108).
+     레퍼런스에는 그 자리에 아무것도 없다 — 결과 화면은 연출 레이어보다 위다. */
+  #dclw{position:absolute;inset:0;display:none;z-index:61;cursor:pointer;background:rgba(0,0,0,.78)}
   #dclw.on{display:block}
   #dclw i,#dclw b,#dclw s{display:inline-block;font-style:normal;transform-origin:50% 50%}
   /* 리본 그룹 — 몸통 outer top ref 852 → frame 768. 꼬리는 기본값(top 25px)이 ref 877−852=25 와 일치 */
@@ -4147,12 +4151,12 @@
      채움 #2A2835 는 그라디언트가 아니라 완전 균일(행 스캔 Δ0). */
   .dcl-band{position:absolute;left:0;right:0;top:839px;height:340px;z-index:1;
     background:linear-gradient(180deg,
-      #000 0 5px,#F8CC2F 5px 11px,#414455 11px 19px,#2A2835 19px 319px,
-      #484B5A 319px 328px,#F4CD42 328px 334px,#000 334px 340px)}
+      #000 0 5px,#F8CC2F 5px 9px,#332B1E 9px 11px,#414455 11px 19px,#2A2835 19px 319px,
+      #484B5A 319px 327px,#332B1E 327px 329px,#F4CD42 329px 334px,#000 334px 340px)}
   /* 보상 타일 — 몸통 104×99 r26 + 검정 6(바깥 bbox 116×110). 상단 19px 하이라이트. */
   .dcl-tile{position:absolute;left:488px;top:955px;width:104px;height:99px;border-radius:26px;
     background:linear-gradient(180deg,#C7E747 0,#A9CE3D 19px,#94BC35 100%);
-    box-shadow:0 0 0 6px #000;z-index:2}
+    box-shadow:0 0 0 8px #000;z-index:2}   /* 1회차 A·B 공통: 외곽 bbox 116 → 120 */
   /* 골드 코인 63×65 — 금테 링 + 노란 코어 + 하단 광택. 최종은 스프라이트 교체 자리(아트 필요 표) */
   .dcl-coin{position:absolute;left:509px;top:977px;width:63px;height:65px;border-radius:50%;
     background:radial-gradient(circle closest-side,#FEEC1E 0 62%,#F6C60F 78%,#E59D0B 100%);
@@ -4172,15 +4176,20 @@
   /* 하단 광택 밴드 7px + 하단 음영 6~7px — 세 버튼 공통 구조, 색만 다르다 */
   .dcl-btn::after{content:'';position:absolute;left:0;right:0;bottom:0;height:13px;
     border-radius:0 0 28px 28px;z-index:1}
-  .dcl-re{left:91px;top:1377px;width:248px;height:118px;font-size:34px;line-height:96px;
+  .dcl-re{left:91px;top:1377px;width:248px;height:118px;border-width:7px;
+    font-size:34px;line-height:104px;
     background:linear-gradient(180deg,#F2EE4F 0 1px,#F9F32F 1px,#F7AE0A 100%)}
+  .dcl-re>i{transform:scaleX(.878);top:-6px}
   .dcl-re::after{background:linear-gradient(180deg,#FFEC34 0 7px,#CF8103 7px)}
-  .dcl-nx{left:741px;top:1377px;width:248px;height:118px;font-size:34px;line-height:95px;
+  .dcl-nx{left:741px;top:1377px;width:248px;height:118px;border-width:7px;
+    font-size:34px;line-height:104px;
     background:linear-gradient(180deg,#68DDEE 0 1px,#55E8FA 1px,#2FC5E0 100%)}
+  .dcl-nx>i{transform:scaleX(.887);top:-7px}
   .dcl-nx::after{background:linear-gradient(180deg,#51E6FC 0 7px,#0EA4C7 7px)}
   .dcl-ok{left:401px;top:1361px;width:278px;height:149px;border-width:7px;border-radius:37px;
-    font-size:41px;line-height:124px;
+    font-size:41px;line-height:135px;
     background:linear-gradient(180deg,#B2FA8E 0 7px,#7BF051 7px,#80DC39 100%)}
+  .dcl-ok>i{transform:scaleX(.907);top:-7px}
   .dcl-ok::after{height:14px;border-radius:0 0 30px 30px;
     background:linear-gradient(180deg,#AFFF83 0 7px,#43B92D 7px)}
   /* 코스트 알약 — 좌우 «대칭»이 아니라 각 버튼 중심 정렬이다(우 = 좌 + 650, 행별 Δ≤1px).
@@ -4189,11 +4198,13 @@
     background:#412A1C;z-index:2}
   .dcl-pill.l{left:153px}
   .dcl-pill.r{left:803px}
-  .dcl-tk{position:absolute;top:1336px;width:44px;height:33px;border-radius:6px;z-index:3;
-    box-sizing:border-box;border:2px solid #000;
+  /* 1회차 A·B 공통 지적: 비평가는 «색면» 을 잰다. border-box + 검정 2px 면 색면이 40×29 로 잡힌다
+     → content-box 로 바꿔 색면 자체를 ref bbox 44×33 에 맞춘다(검정 2px 은 그 바깥 림). */
+  .dcl-tk{position:absolute;top:1334px;width:44px;height:33px;border-radius:6px;z-index:3;
+    box-sizing:content-box;border:2px solid #000;
     background:linear-gradient(180deg,#FFFDF2 0 11px,#A96B87 11px 23px,#FFE238 23px)}
-  .dcl-tk.l{left:119px}
-  .dcl-tk.r{left:769px}
+  .dcl-tk.l{left:117px}
+  .dcl-tk.r{left:767px}
   /* 수량 「4」 — 알약 중심(좌 231 / 우 881) 기준. 잉크 h21 → 30px */
   .dcl-cn{position:absolute;top:1334px;width:157px;height:33px;line-height:33px;text-align:center;
     font-size:30px;font-weight:700;color:#fff;z-index:4;
@@ -7876,6 +7887,9 @@ let dclDun = null, dclFloor = 1;
 function openDunClear(d, f){
   if(!d) return;
   dclDun = d; dclFloor = f;
+  /* 레퍼런스의 배경은 «던전 씬 + 하단 스킬슬롯» 이다 — 03 던전 목록 페이지가 열린 채로 두면
+     결과 화면 뒤가 목록 페이지가 된다(1회차 비평 A·B 공통 지적). 결과를 볼 때는 목록을 닫는다. */
+  if(typeof closeDungeon === 'function') closeDungeon();
   const rw = d.rw(f);
   /* 04 세부 팝업과 같은 «대표 재화 1종» 규칙 — 표시가 두 화면에서 어긋나지 않게 맞춘다 */
   const main = rw.gold ? ['gold', rw.gold] : rw.dia ? ['dia', rw.dia]
