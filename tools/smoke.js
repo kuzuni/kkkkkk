@@ -172,6 +172,14 @@ function launchOpts(){
          «일일» 칸은 리스트를 일일 퀘스트 5행(다른 데이터 소스)으로 통째로 갈아 끼운다. */
       openers.push({ label: 'qtab:daily', sel: null, quest: 'daily' });
       openers.push({ label: 'qtab:rep', sel: null, quest: 'rep' });
+      /* 35 패스 페이지(#psw) — 진입이 «▦ 메뉴 → 🎫 패스» 2단계라 위 수집(.tab/.side/[data-cur])에 안 걸린다.
+         하단 패스 종류 탭 4칸(스테이지·보물상자🔒·시련의탑🔒·출석)과 뒤로가기까지 전부 돈다(작업 35). */
+      if (await page.$('#psw')) {
+        openers.push({ label: 'pass:35', sel: null, pass: true });
+        for (const k of ['stage', 'box', 'tower', 'att'])
+          openers.push({ label: 'ptab:' + k, sel: null, pass: `#psBar [data-ptab="${k}"]` });
+        openers.push({ label: 'pass:back', sel: null, pass: '#psBar [data-pback]' });
+      }
       await ctx.close();
     }
     for (const o of openers) {
@@ -197,6 +205,14 @@ function launchOpts(){
           await page.waitForTimeout(400);
           const hit = await page.$eval(o.tr, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.tr, { timeout: 3000, force: true });
+        } else if (o.pass) {
+          /* 35 — «▦ 메뉴 → 🎫 패스» 로 페이지를 연 뒤, 필요하면 하단 패스 탭까지 한 번 더 누른다.
+             query+click 을 한 evaluate 안에 넣는다(LESSONS 50-①). */
+          await page.evaluate(() => document.getElementById('menub').click());
+          await page.waitForTimeout(300);
+          await page.evaluate(() => document.getElementById('psGo').click());
+          await page.waitForTimeout(400);
+          if (typeof o.pass === 'string') await page.evaluate((s) => document.querySelector(s).click(), o.pass);
         } else if (o.cos) {
           /* `page.$eval` 은 «resolve → 평가» 2왕복이라 그 사이 `renderCos()` 가 innerHTML 을 갈아끼우면
              detach 된 노드를 클릭하게 되고 위임 핸들러가 안 탄다. query+click 을 한 evaluate 에 넣는다. */

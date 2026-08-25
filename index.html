@@ -4865,6 +4865,183 @@
   .bls-x{flex:none;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1}
+  /* ==========================================================================
+     35 패스 — 스테이지 패스 (측정표 docs/measure/35-패스.md)
+     껍데기는 «딤 없는 전체화면 페이지»다(측정표 §0 — 순백 42,381px · 순흑 129,410px 로
+     딤 없음을 픽셀로 확정했다). 03 던전·14 유물과 같은 계열이라 공용 #modal 을 쓰지 않는다.
+     세로 변환은 단 하나 «frame y = ref y − 84».
+     ⚠ 프레임 2280 − ref 콘텐츠 2256 = 24px 잔차는 **리스트(스크롤 영역)가 흡수**한다
+        (하단바는 bottom:0 앵커). 0번 «남는 높이는 가변 요소가 흡수» 와 같은 처방.
+     36 출석 패스는 이 껍데기를 그대로 쓰고 PASS_TABS 슬롯만 채운다(측정표 §9-3). */
+  #psw{position:absolute;inset:0;display:none;z-index:34;background:#000;overflow:hidden}
+  #psw.on{display:block}
+  #psw i,#psw b,#psw s,#psw u,#psw em{display:inline-block;font-style:normal;font-weight:900}
+  #psw>*{position:absolute}
+
+  /* ---- 히어로 배너 ref y0..618 → frame −84..534 (보이는 구간 0..534) ---- */
+  .ps-hero{left:0;right:0;top:0;height:535px;overflow:hidden;
+    background:linear-gradient(180deg,#54B8ED 0,#53D4F1 100%)}
+  .ps-hero>*{position:absolute}
+  /* 구름 — ref 실측 색 #D5FBFE. 아트 교체 전 임시 작화 */
+  .ps-cl{background:#D5FBFE;border-radius:50%;opacity:.85}
+  /* 아트 자리 — 레퍼런스는 1080x619 통짜 비트맵이다(측정표 §10).
+     이미지로 교체할 때 이 bbox 를 그대로 쓴다. 지금은 이모지로 자리만 잡는다. */
+  .ps-art{left:0;right:0;bottom:0;height:250px;text-align:center;font-size:150px;line-height:250px;
+    letter-spacing:-10px;opacity:.95;pointer-events:none}
+
+  /* 타이틀 «스테이지 패스 1» — 코어 ref x61..526 y190..245 → frame y106..161, 좌측 정렬(여백 55) */
+  .ps-ttl{left:55px;top:92px;height:84px;line-height:84px;font-size:74px;color:#fff;
+    -webkit-text-stroke:12px #000;paint-order:stroke fill;
+    text-shadow:0 4px 0 #000;white-space:nowrap}
+  .ps-ttl>i{transform:scaleX(.91);transform-origin:left center}
+  /* 부제 2줄 — 두 줄이 «서로» 중앙 정렬(화면 중앙 540 이 아니라 중심 x294.5)이다.
+     코어 L1 ref y294..324 → frame 210..240 / L2 ref y331..363 → frame 247..279 (pitch 37) */
+  .ps-sub{left:0;width:589px;top:200px;text-align:center;font-size:34px;line-height:37px;
+    color:#FFF268;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:pre-line}
+  .ps-sub>i{transform:scaleX(.91)}
+  /* 스탯 블록 — 라벨 코어 frame y407..439 / 값 코어 frame y456..487, 서로 중앙 정렬(중심 x265) */
+  .ps-st{left:0;width:530px;text-align:center;color:#F0E861;
+    -webkit-text-stroke:11px #000;paint-order:stroke fill;white-space:nowrap}
+  .ps-st.l{top:398px;height:50px;line-height:50px;font-size:39px}
+  .ps-st.v{top:447px;height:50px;line-height:50px;font-size:39px}
+  .ps-st>i{transform:scaleX(.9)}
+
+  /* 프리미엄 구매 버튼 — 외곽 ref x605..1023 y460..608 → frame x605 y376, 419x149, r38 */
+  .ps-buy{left:605px;top:376px;width:419px;height:149px;box-sizing:border-box;cursor:pointer;
+    border:solid #000;border-width:6px 7px 7px 6px;border-radius:38px;
+    background:linear-gradient(180deg,#77E536 0 calc(100% - 6px),#58F43C calc(100% - 6px) 100%);
+    box-shadow:inset 0 0 0 7px #ADFF83}
+  .ps-buy>b{position:absolute;left:0;right:0;text-align:center;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 라벨1 코어 frame y399..439 · 라벨2 코어 frame y463..492 (버튼 padding box 기준으로 −382) */
+  .ps-buy>b.t1{top:9px;height:50px;line-height:50px;font-size:44px}
+  .ps-buy>b.t2{top:73px;height:40px;line-height:40px;font-size:36px}
+  .ps-buy>b.t1>i{transform:scaleX(.9)}
+  .ps-buy>b.t2>i{transform:scaleX(.75)}
+  /* 리본 배지 — 잉크 ref x563..679 y440..559 → frame x563 y356, 117x120 (버튼 좌측을 42px 침범) */
+  .ps-rib{left:563px;top:356px;width:117px;height:120px;pointer-events:none;text-align:center}
+  .ps-rib>s.tail{position:absolute;left:38px;top:107px;width:47px;height:65px;background:#7A3FD0;
+    clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%)}
+  .ps-rib>s.wing{position:absolute;left:0;top:24px;width:117px;height:52px;background:#F4F6FF;
+    border-radius:26px;filter:drop-shadow(0 0 3px #000)}
+  .ps-rib>s.med{position:absolute;left:29px;top:8px;width:59px;height:59px;background:#FBCE1B;
+    box-shadow:inset 0 0 0 6px #A36B18;
+    clip-path:polygon(21px 0,38px 0,100% 21px,100% 38px,38px 100%,21px 100%,0 38px,0 21px)}
+  .ps-rib>i{position:absolute;left:29px;top:8px;width:59px;line-height:59px;font-size:34px}
+
+  /* ---- 골드 구분바 ref y619..647 → frame 535..563 (아래 검정 4px 은 헤더 밴드 소유) ---- */
+  .ps-gold{left:0;right:0;top:535px;height:29px;
+    background:linear-gradient(180deg,#000 0 4px,#B39A57 4px 5px,#FDD051 5px 22px,#F4AB38 22px 29px)}
+
+  /* ---- 무료/프리미엄 컬럼 헤더 밴드 ref y648..795 → frame 564..711 (h148) ---- */
+  .ps-hdr{left:0;right:0;top:564px;height:148px;box-sizing:border-box;
+    border-top:5px solid #000;border-bottom:10px solid #000}
+  .ps-hdr>*{position:absolute}
+  /* 톤 경계는 그라디언트가 아니라 «계단» 이다 — 위 88px / 아래 45px */
+  .ps-hdr>u{top:0;bottom:0;width:540px}
+  .ps-hdr>u.f{left:0;background:linear-gradient(180deg,#8992BB 0 88px,#6E7AAC 88px 100%)}
+  .ps-hdr>u.p{left:540px;background:linear-gradient(180deg,#7E1BCE 0 88px,#6C10B3 88px 100%)}
+  /* 라벨 — 코어 중심 x 무료 269.5(좌반 중심 270) / 프리미엄 808.5(우반 중심 809.5).
+     측정표 §11-10 대로 둘 다 48px 로 둔다(받침 차이인지 크기 차이인지 단정 불가) */
+  .ps-hdr>b{top:36px;height:56px;line-height:56px;width:540px;text-align:center;
+    font-size:48px;color:#fff;-webkit-text-stroke:11px #000;paint-order:stroke fill}
+  .ps-hdr>b.f{left:0}
+  .ps-hdr>b.p{left:540px}
+  .ps-hdr>b>i{transform:scaleX(.91)}
+  /* 배지 — 반쪽 왼쪽 끝 + 82px 이 중심. 무료 125x89(ref y674..762) / 프리미엄 125x108(ref y666..773) */
+  .ps-bdg{width:125px;text-align:center;pointer-events:none}
+  .ps-bdg.f{left:20px;top:105px;height:89px;line-height:89px;font-size:74px}
+  .ps-bdg.p{left:561px;top:97px;height:108px;line-height:108px;font-size:90px}
+
+  /* ---- 보상 트랙 리스트 ref y796..2160 → frame 712.. (하단바까지). 24px 잔차를 여기서 흡수 ---- */
+  .ps-list{left:0;right:0;top:712px;bottom:179px;overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;background:#2B76BA}
+  .ps-list::-webkit-scrollbar{display:none}
+  .ps-tk{position:relative}
+  /* 헤더 밴드 낙차 그림자 ref y796..840 */
+  .ps-tk::before{content:'';position:absolute;left:0;right:0;top:0;height:45px;z-index:4;
+    pointer-events:none;background:linear-gradient(180deg,rgba(17,42,62,.5),rgba(17,42,62,0))}
+  .ps-r{position:absolute;left:0;right:0;height:229.85px}
+  .ps-r>*{position:absolute}
+  /* 컬럼 셀 — 상 5px 밝은 베벨 / 하 6px 베벨 + 6px 어두운 홈 (측정표 §5-2)
+     별 워터마크는 이 화면 전용 타일이다(153.75 pitch — 기존 .ci-body 자산 236 과 다르다, §8) */
+  .ps-cf,.ps-cp{top:0;bottom:0}
+  .ps-cf{left:0;width:519px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23226ABF'%3E%3Cpolygon points='37,99 43.7,112.6 58.7,114.8 47.8,125.4 50.4,140.3 37,133.3 23.6,140.3 26.2,125.4 15.3,114.8 30.3,112.6'/%3E%3Cpolygon points='111.5,19.5 118.2,33.1 133.2,35.3 122.3,45.9 124.9,60.8 111.5,53.8 98.1,60.8 100.7,45.9 89.8,35.3 104.8,33.1'/%3E%3Cpolygon points='111.5,173.5 118.2,187.1 133.2,189.3 122.3,199.9 124.9,214.8 111.5,207.8 98.1,214.8 100.7,199.9 89.8,189.3 104.8,187.1'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
+      linear-gradient(180deg,#1E98CB 0 5px,#2B76BA 5px calc(100% - 12px),#1C9ACC calc(100% - 12px) calc(100% - 6px),#1B5DB3 calc(100% - 6px) 100%)}
+  .ps-cp{left:561px;width:519px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23891CDA'%3E%3Cpolygon points='15.75,99 22.45,112.6 37.45,114.8 26.55,125.4 29.15,140.3 15.75,133.3 2.35,140.3 4.95,125.4 -5.95,114.8 9.05,112.6'/%3E%3Cpolygon points='90.5,19.5 97.2,33.1 112.2,35.3 101.3,45.9 103.9,60.8 90.5,53.8 77.1,60.8 79.7,45.9 68.8,35.3 83.8,33.1'/%3E%3Cpolygon points='90.5,173.5 97.2,187.1 112.2,189.3 101.3,199.9 103.9,214.8 90.5,207.8 77.1,214.8 79.7,199.9 68.8,189.3 83.8,187.1'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
+      linear-gradient(180deg,#B831EC 0 5px,#962EE5 5px calc(100% - 12px),#B932EE calc(100% - 12px) calc(100% - 6px),#7F1CCE calc(100% - 6px) 100%)}
+  /* 컬럼 바깥 하이라이트 — 무료 x4..9(6px) / 프리미엄 x1070..1074(5px) */
+  .ps-eg{top:0;bottom:0;z-index:3;pointer-events:none}
+  .ps-eg.f{left:4px;width:6px;background:#1C98CC}
+  .ps-eg.p{left:1070px;width:5px;background:#B931ED}
+
+  /* 스파인 레일 x520..559 (검정 5px x2 + 내부 30) — 리스트 전체에 하나만 깐다 */
+  .ps-spine{position:absolute;left:520px;width:40px;top:0;bottom:0;box-sizing:border-box;z-index:2;
+    border-left:5px solid #000;border-right:5px solid #000;background:#202020}
+  .ps-spine>u{position:absolute;left:0;right:0;top:0;background:#A0F32D}
+
+  /* 육각(실측은 45° 챔퍼 8각) 배지 108x107 — 행 상단 +59.5, 중심 x539.5 */
+  .ps-hex{left:486px;width:108px;height:107px;top:59.5px;z-index:5;background:#000;
+    clip-path:polygon(38px 0,70px 0,100% 38px,100% 69px,70px 100%,38px 100%,0 69px,0 38px)}
+  .ps-hex>s{position:absolute;left:6px;top:6px;width:96px;height:95px;background:#FBCE1B;
+    clip-path:polygon(33px 0,63px 0,100% 33px,100% 62px,63px 100%,33px 100%,0 62px,0 33px)}
+  .ps-hex>s>s{position:absolute;left:8px;top:8px;width:80px;height:79px;background:#A36B18;
+    clip-path:polygon(27px 0,53px 0,100% 27px,100% 52px,53px 100%,27px 100%,0 52px,0 27px)}
+  .ps-hex.lk>s{background:#AE8310}
+  .ps-hex.lk>s>s{background:#6D490D}
+  /* 숫자 코어 h25 → 36px, 잉크 35 (외곽선 4~5px 한쪽 → stroke 9) */
+  .ps-hex>i{position:absolute;left:0;right:0;top:36px;height:35px;line-height:35px;text-align:center;
+    font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill}
+  .ps-hex>i>b{transform:scaleX(.63)}
+
+  /* 보상 칸 158x157 r32.25 · 검정 5 · 안쪽 림 7 (행 상단 +36) */
+  .ps-bx{top:36px;width:158px;height:157px;box-sizing:border-box;z-index:5;cursor:pointer;
+    border:5px solid #000;border-radius:32.25px;
+    background:var(--fill);box-shadow:inset 0 0 0 7px var(--rim)}
+  .ps-bx.c0{left:181px}   /* 무료 x181..338 (컬럼 중심 259.5) */
+  .ps-bx.c1{left:636px}   /* 프리미엄 #1 */
+  .ps-bx.c2{left:846px}   /* 프리미엄 #2 (묶음 중심 819.5) */
+  /* 아트 자리 — ref 잉크 78~90 x 63~85. 이미지 교체 시 이 bbox 를 그대로 쓴다 */
+  .ps-bx>i{position:absolute;left:0;right:0;top:9px;height:85px;line-height:85px;text-align:center;
+    font-size:74px}
+  /* 수량 코어 y+120..+145 (padding box 기준 −5) */
+  .ps-bx>b{position:absolute;left:0;right:0;top:115px;height:31px;line-height:31px;text-align:center;
+    font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
+  .ps-bx>b>em{transform:scaleX(.69)}
+  /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
+  .ps-bx>s.lk{position:absolute;left:105px;top:-27px;width:59px;height:69px;line-height:69px;
+    text-align:center;font-size:58px}
+  /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
+  .ps-bx.dn{--fill:#163C60;--rim:#1C526E}
+  .ps-bx.dn>i{opacity:.35}
+  .ps-bx.dn>b{color:#808080}
+  .ps-bx.dn>s.ck{position:absolute;left:33px;top:39px;width:82px;height:66px;line-height:66px;
+    text-align:center;font-size:76px;color:#8FFF45;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+
+  /* ---- 하단 패스 종류 탭바 ref y2161..2339 → 프레임 바닥 앵커(h179) ---- */
+  .ps-bar{left:0;right:0;bottom:0;height:179px;background:#000}
+  .ps-bar>div{position:absolute;top:8px;height:166px;cursor:pointer;
+    box-shadow:inset 0 -18px 0 rgba(255,255,255,.13)}
+  .ps-bar>div.bk{left:0;width:195px;background:#49322C}
+  .ps-bar>div.pt{background:#3F2D29}
+  .ps-bar>div.pt.on{background:#7D574C}
+  /* 아이콘 ref y2175..2255 → 바 기준 top 6 / 라벨 코어 ref y2280..2321 → top 111 */
+  .ps-bar>div>i{position:absolute;left:0;right:0;top:6px;height:80px;line-height:80px;
+    text-align:center;font-size:66px}
+  .ps-bar>div>b{position:absolute;left:0;right:0;top:105px;height:42px;line-height:42px;
+    text-align:center;font-size:38px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;
+    white-space:nowrap}
+  .ps-bar>div>b>em{transform:scaleX(.9)}
+  .ps-bar>div>s.lk{position:absolute;left:0;right:0;top:78px;height:64px;line-height:64px;
+    text-align:center;font-size:58px;z-index:2}
+  /* 뒤로가기 화살표 — 코어 82x64 @ ref x59..140 y2217..2280 → 바 기준 left 59 / top 48 */
+  .ps-bar>div.bk>u{position:absolute;left:59px;top:48px;width:82px;height:64px;background:#A9ABC4;
+    clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%);
+    filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
 </style>
 </head>
 <body>
@@ -5251,6 +5428,40 @@
       <div class="cl-body"><div id="collList"></div></div>
       <div class="cl-rib"><s class="bd"></s><span class="cl-wing l"><s class="tl"></s></span><span class="cl-wing r"><s class="tr"></s></span><i>도감</i></div>
       <div class="cl-srch"><i>🔍</i></div>
+    </div>
+  </div>
+  <!-- 35 패스 페이지 (#psw). 딤 없는 전체화면 페이지다 — 공용 #modal 껍데기를 쓰지 않는다.
+       측정표 docs/measure/35-패스.md. 36 출석 패스는 이 껍데기를 그대로 쓰고
+       PASS_TABS 슬롯(히어로·타이틀·부제·스탯·가격·프리미엄 칸 수)만 채우면 된다(§9-3). -->
+  <div id="psw">
+    <div class="ps-hero">
+      <div class="ps-cl" style="left:-40px;top:36px;width:300px;height:104px"></div>
+      <div class="ps-cl" style="left:812px;top:14px;width:340px;height:118px"></div>
+      <div class="ps-cl" style="left:640px;top:186px;width:210px;height:74px;opacity:.6"></div>
+      <div class="ps-art" id="psArt"></div>
+      <div class="ps-ttl"><i id="psTtl"></i></div>
+      <div class="ps-sub"><i id="psSub"></i></div>
+      <div class="ps-st l"><i id="psStL"></i></div>
+      <div class="ps-st v"><i id="psStV"></i></div>
+      <div class="ps-buy" id="psBuy">
+        <b class="t1"><i>프리미엄 활성화</i></b>
+        <b class="t2"><i id="psPrice"></i></b>
+      </div>
+      <div class="ps-rib"><s class="tail"></s><s class="wing"></s><s class="med"></s><i>⭐</i></div>
+    </div>
+    <div class="ps-gold"></div>
+    <div class="ps-hdr">
+      <u class="f"></u><u class="p"></u>
+      <b class="f"><i>무료</i></b><b class="p"><i>프리미엄</i></b>
+      <div class="ps-bdg f">🎗️</div><div class="ps-bdg p">🏅</div>
+    </div>
+    <div class="ps-list" id="psList"><div class="ps-tk" id="psTk"></div></div>
+    <div class="ps-bar" id="psBar">
+      <div class="bk" data-pback="1"><u></u></div>
+      <div class="pt" data-ptab="stage"><i>💎</i><b><em>스테이지</em></b></div>
+      <div class="pt lk" data-ptab="box"><i>🎁</i><b><em>보물상자</em></b><s class="lk">🔒</s></div>
+      <div class="pt lk" data-ptab="tower"><i>🏰</i><b><em>시련의탑</em></b><s class="lk">🔒</s></div>
+      <div class="pt" data-ptab="att"><i>📅</i><b><em>출석</em></b></div>
     </div>
   </div>
   <!-- 19 프로필 팝업 — 딤 위 중앙 다이얼로그. 측정표 docs/measure/19-프로필팝업.md -->
@@ -6130,6 +6341,7 @@ const DEF = () => ({
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
   guide:{ idx:0, prog:0 },                    /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선 */
+  pass:{ prem:false, got:{} },                /* 35 패스 — prem=프리미엄 활성화, got['단계:칸']=1 */
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
@@ -6186,6 +6398,11 @@ function load(){
     }
     if(!Number.isFinite(b.guide.idx))  b.guide.idx  = 0;
     if(!Number.isFinite(b.guide.prog)) b.guide.prog = -1;
+    /* 35 패스 — 44 교훈 2 대로 KEY 는 올리지 않고 «없으면 기본값» 으로 흡수한다.
+       옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN·예외가 새지 않게 항목별로 못박는다. */
+    if(!b.pass || typeof b.pass !== 'object') b.pass = DEF().pass;
+    b.pass.prem = !!b.pass.prem;
+    if(!b.pass.got || typeof b.pass.got !== 'object') b.pass.got = {};
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
@@ -11042,7 +11259,139 @@ document.querySelectorAll('#botleft .ubtn').forEach(b => {
     ? popup('💬 채팅', '<p>채팅은 아직 준비 중입니다.</p>')
     : popup('🌳 마을', '<p>마을은 아직 준비 중입니다.</p>');
 });
-$('menub').onclick = () => popup('▦ 메뉴', '<p>설정 · 공지는 아직 준비 중입니다.</p>');
+/* ==========================================================================
+   35 패스 — 스테이지 패스 (#psw). 측정표 docs/measure/35-패스.md
+   껍데기는 «딤 없는 전체화면 페이지»이고, 하단 패스 종류 탭바를 자체적으로 갖는다.
+   36 출석 패스는 PASS_TABS.att 와 passRow('att', i) 만 채우면 같은 껍데기를 쓴다(측정표 §9-3).
+   ========================================================================== */
+const PASS_STEP = 5;      /* 5스테이지마다 한 단계 */
+const PASS_N    = 40;     /* 단계 수 — 스테이지 5..200 */
+/* 등급색 [림, 내부] — 측정표 §5-4 실측 */
+const PASS_GRADE = [['#46A7DE','#347DC1'],['#C7E549','#98C135'],['#CA66FA','#9A25D6'],['#FCC334','#D37C13']];
+/* 보상 재화는 기존 3종만 쓴다(새 재화를 만들지 않는다 → 세이브 구조 무변경) */
+const PASS_CUR = [
+  { k:'gold',  ic:'🪙', n:i => 20000 * (i + 1) * (i + 1) },
+  { k:'dia',   ic:'💎', n:i => 30 + i * 10 },
+  { k:'relic', ic:'🔮', n:i => 3 + i }
+];
+const PASS_TABS = {
+  stage:{ ttl:'스테이지 패스 1', sub:'스테이지를 클리어해 패스 단계\n보상을 받으세요!',
+          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🏠🪙', cols:3 }
+  /* 36 담당: att:{ ttl:'출석 패스 1', sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
+     stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:'💎🛒', cols:2 } 를 여기에 추가한다.
+     cols=2 면 프리미엄 칸이 1개가 되고 x741 로 컬럼 중앙에 온다(측정표 §9-2). */
+};
+let passTab = 'stage';
+const passTier = i => (i + 1) * PASS_STEP;                       /* 그 단계의 목표 스테이지 */
+const passOpen = i => S.best >= passTier(i);                     /* 최고 스테이지 도달 = 해금 */
+const passGot  = (i, c) => !!S.pass.got[i + ':' + c];
+/* 칸 c: 0 = 무료 / 1·2 = 프리미엄. 등급은 단계가 오를수록·프리미엄일수록 높다 */
+function passRw(i, c){
+  const cur = PASS_CUR[(i + c) % 3], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);
+  return { k:cur.k, ic:cur.ic, n:Math.max(1, Math.round(cur.n(i) * mul)),
+           g:Math.min(3, Math.floor(i / 8) + c) };
+}
+/* 마지막으로 해금된 단계 — 스파인 초록 구간의 끝이다(측정표 §5-3: 초록은 그 육각 «위» 까지) */
+function passLast(){ let l = -1; for(let i = 0; i < PASS_N; i++) if(passOpen(i)) l = i; return l; }
+function passClaim(i, c){
+  if(!passOpen(i) || passGot(i, c)) return false;
+  if(c > 0 && !S.pass.prem){ popup('🔒 프리미엄', '<p>프리미엄 패스를 활성화하면 받을 수 있습니다.</p>'); return false; }
+  const r = passRw(i, c);
+  if(r.k === 'gold') S.gold += r.n; else if(r.k === 'dia') S.dia += r.n; else S.relic += r.n;
+  S.pass.got[i + ':' + c] = 1;
+  save(); renderPass(); uiDirty = true; renderUI();
+  return true;
+}
+/* 결제 연동은 아직 없다 — 44 와 같이 지급을 함수 하나로 모아 두고 버튼은 «준비 중» 이다.
+   결제를 붙일 때 아래 버튼 핸들러 한 줄만 이 함수를 부르게 바꾸면 된다. */
+function grantPassPrem(){ S.pass.prem = true; save(); renderPass(); uiDirty = true; }
+window.devPassPrem = grantPassPrem;
+const PASS_RH = 229.85;   /* 행 pitch — 측정표 §5-2 최소제곱 */
+function renderPass(){
+  const T = PASS_TABS[passTab] || PASS_TABS.stage;
+  $('psTtl').textContent  = T.ttl;
+  $('psSub').textContent  = T.sub;
+  $('psStL').textContent  = T.stl;
+  $('psStV').textContent  = T.stv();
+  $('psPrice').textContent = T.price;
+  $('psArt').textContent  = T.art;
+  $('psBuy').style.display = S.pass.prem ? 'none' : '';
+  document.querySelectorAll('#psBar .pt').forEach(b => b.classList.toggle('on', b.dataset.ptab === passTab));
+  passBarLayout();
+  const last = passLast();
+  let h = '<div class="ps-spine"><u style="height:' + (last < 0 ? 0 : last * PASS_RH + 59.5).toFixed(2) + 'px"></u></div>'
+        + '<div class="ps-eg f"></div><div class="ps-eg p"></div>';
+  for(let i = 0; i < PASS_N; i++){
+    const op = passOpen(i);
+    let bx = '';
+    for(let c = 0; c < T.cols; c++){
+      const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !S.pass.prem;
+      bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
+          + ' style="--rim:' + PASS_GRADE[r.g][0] + ';--fill:' + PASS_GRADE[r.g][1] + '">'
+          + '<i>' + r.ic + '</i><b><em>' + fmt(r.n) + '</em></b>'
+          + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk">🔒</s>' : '')) + '</div>';
+    }
+    h += '<div class="ps-r" style="top:' + (i * PASS_RH).toFixed(2) + 'px">'
+       + '<div class="ps-cf"></div><div class="ps-cp"></div>'
+       + '<div class="ps-hex' + (op ? '' : ' lk') + '"><s><s></s></s><i><b>' + passTier(i) + '</b></i></div>'
+       + bx + '</div>';
+  }
+  const tk = $('psTk');
+  tk.style.height = (PASS_N * PASS_RH).toFixed(2) + 'px';
+  tk.innerHTML = h;
+}
+/* 하단 탭바 — 비활성 190 · 활성 289(+99) · 구분선 5~6 · 뒤로가기 195 고정(측정표 §3-1).
+   활성 칸이 바뀌면 폭이 재분배되므로 좌표를 매번 다시 깐다. */
+function passBarLayout(){
+  const cells = [...document.querySelectorAll('#psBar .pt')];
+  let x = 200;                                   /* 뒤로가기(0..194) + 구분선 5 */
+  cells.forEach((c, n) => {
+    const w = c.classList.contains('on') ? 289 : 190;
+    c.style.left = x + 'px'; c.style.width = w + 'px';
+    x += w + (n === 1 ? 6 : (n === 2 ? 4 : 5));  /* 구분선 실측 5/6/4 */
+  });
+}
+function openPass(t){
+  if(t && PASS_TABS[t]) passTab = t;
+  renderPass();
+  $('psw').classList.add('on');
+  /* 레퍼런스는 «현재 단계» 근처가 보이는 상태다 — 마지막 해금 단계를 두 번째 행에 맞춘다 */
+  const l = passLast();
+  $('psList').scrollTop = Math.max(0, (l - 1) * PASS_RH);
+}
+function closePass(){ $('psw').classList.remove('on'); }
+$('psBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-ptab],[data-pback]');
+  if(!b) return;
+  if(b.dataset.pback){ closePass(); return; }
+  if(b.classList.contains('lk')){ popup('🔒 준비 중', '<p>아직 해금되지 않은 패스입니다.</p>'); return; }
+  const t = b.dataset.ptab;
+  if(!PASS_TABS[t]){ popup('🔒 준비 중', '<p>이 패스는 아직 준비 중입니다.</p>'); return; }
+  passTab = t; renderPass();
+});
+/* 레퍼런스에 «받기» 버튼이 없다 — 칸 자체가 탭 타깃이다(측정표 §5-5) */
+$('psTk').addEventListener('click', e => {
+  const b = e.target.closest('[data-pt]');
+  if(!b) return;
+  const [i, c] = b.dataset.pt.split(':').map(Number);
+  passClaim(i, c);
+});
+$('psBuy').onclick = () => popup('💳 프리미엄 패스',
+  '<p>결제 연동은 아직 준비 중입니다.</p><p>연동되면 이 버튼이 프리미엄을 활성화합니다.</p>');
+
+/* 작업 35 — «패스» 임시 진입점.
+   레퍼런스는 좌측 사이드 아이콘 «패스» 지만, 작업 48 이 비워 둔 5번째 라벨 행은 작업 34(축복)가
+   이미 가져갔고 SIDE.N 을 6 으로 올리면 A2 행 그리드(pitch·--ih·--itop)가 전 화면에서 흔들린다(48 주석).
+   #sideL 은 내 작업 구간도 아니라 손대지 않고, ▦ 메뉴 placeholder 안에 임시 진입점을 둔다.
+   → **52(메뉴 팝업)를 만드는 세션이 이 버튼을 정식 메뉴 항목으로 가져갈 것.**
+   (05→06 진입점 인계와 같은 패턴이다. 옮길 때 LESSONS 57-① 대로 이 경로는 그때 지운다) */
+$('menub').onclick = () => {
+  showModal('<h2>▦ 메뉴</h2><p>설정 · 공지는 아직 준비 중입니다.</p>'
+    + '<button class="gbtn green" id="psGo">🎫 패스</button>'
+    + '<button class="gbtn green" id="okBtn">확인</button>');
+  $('okBtn').onclick = closeModal;
+  $('psGo').onclick = () => { closeModal(); openPass('stage'); };
+};
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
 
 function renderUI(){
@@ -11555,7 +11904,7 @@ loadAtlases(() => {
    ========================================================================== */
 const JZ_SHEET = { trw:1, eqw:1, panel:1 };            /* 아래에서 올라오는 바닥 시트 */
 const JZ_OVID = ['modal','offw','dunw','shopw','relicw','dgdw','wpnw','prbw','collw','ciw',
-                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','dclw','rlw','panel'];
+                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','dclw','rlw','panel','psw'];
 const JZ_NOPRESS = new Set(JZ_OVID.concat(['app','wrap','fxl','stagearea','view','tabbar','top']));
 /* 붙인 클래스는 «애니메이션이 실제로 끝났을 때» 뗀다.
    ⚠ wall-clock `setTimeout(…, ms)` 로 떼면 안 된다 — 애니메이션이 느려지거나 멈춘 프레임에서
