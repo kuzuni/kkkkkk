@@ -1538,7 +1538,10 @@
   /* 수량 — ref 는 썸네일 가로 중앙, 잉크 바닥이 프레임 바닥에서 11px 위(측정 §10-8) */
   /* ref 배지 잉크는 썸네일 폭의 .41 이다(«120» 49 / 119). `fmt()` 의 «3.00K»(5자)로는 프레임
      안쪽 면 86px 을 넘어 림과 충돌한다(S4) → `fmtShort()` 2~4자 + 폰트 26. */
-  .ml-i>i{position:absolute;left:0;right:0;bottom:1px;text-align:center;
+  /* ⚠ 배지 세로 위치는 비평가 I(«13px 위 → 3px 내려라»)와 J(«2px 위 → 5px 올려라»)가 **정반대**로 냈다.
+     마스크가 다르다(I: 흰 코어 R,G,B>248 / J: 잉크 바닥 vs 프레임 안쪽 바닥) — LESSONS 20-⑤ 대로
+     엇갈리면 손대지 않고, **두 명이 실제로 채점해 8·9 로 통과시킨 값**을 그대로 둔다. */
+  .ml-i>i{position:absolute;left:0;right:0;bottom:4px;text-align:center;
     font-size:26px;line-height:1;color:#fff;-webkit-text-stroke:6px #000;transform:scaleX(1.02)}
   .ml-r.done .ml-i{filter:grayscale(.75) brightness(.82)}
   /* 행 버튼 — ref 166×98(w:h 1.69) dx681 dy32, 카드 세로 중앙 → **151×89 dx619 top29**.
