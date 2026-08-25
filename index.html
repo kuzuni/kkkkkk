@@ -6286,10 +6286,10 @@
   .rk-pod.p3>u{clip-path:polygon(4.2% 0,95.8% 0,100% 100%,0 100%)}
   .rk-pod.p1>u{background:linear-gradient(180deg,#FFDB61 0,#FFDB61 43px,#D07C36 43px,#D07C36 53px,
     #D88B47 53px,#D88B47 76%,#C26829 76%)}
-  .rk-pod.p2>u{background:linear-gradient(180deg,#BCCCDB 0,#BCCCDB 31px,#48587C 31px,#48587C 41px,
-    #5A697E 41px,#5A697E 76%,#4A597A 76%)}
-  .rk-pod.p3>u{background:linear-gradient(180deg,#8A6A44 0,#8A6A44 35px,#432D15 35px,#432D15 45px,
-    #58422A 45px,#58422A 76%,#45301B 76%)}
+  .rk-pod.p2>u{background:linear-gradient(180deg,#BCCCDB 0,#BCCCDB 45px,#48587C 45px,#48587C 60px,
+    #5A697E 60px,#5A697E 76%,#4A597A 76%)}
+  .rk-pod.p3>u{background:linear-gradient(180deg,#8A6A44 0,#8A6A44 49px,#432D15 49px,#432D15 71px,
+    #58422A 71px,#58422A 76%,#45301B 76%)}
   /* 아트 자리 — 단상 위 캐릭터+탈것 ≈290×300. bbox 를 정확히 차지시킨다(아트 자리 규칙) */
   /* 아트 자리 — ref 실측 bbox(`bbox … light>78`): 2위 x24..380·y239..564 / 1위 x386..694·y230..530 /
      3위 x700..1041·y232..552. 2회차의 «290×300 고정» 은 세로 −50%·가로 −33~46% 였다(비평 D②).
@@ -6307,11 +6307,11 @@
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
     clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%)}
-  .rk-sh.s1{left:489px;top:461px;width:102px;height:88px;font-size:62px;
+  .rk-sh.s1{left:489px;top:461px;width:102px;height:88px;font-size:77px;
     background:linear-gradient(180deg,#FDC648 0,#FDB934 100%)}
-  .rk-sh.s2{left:164px;top:482px;width:102px;height:73px;font-size:52px;
+  .rk-sh.s2{left:164px;top:482px;width:102px;height:73px;font-size:65px;
     background:linear-gradient(180deg,#BCCDDD 0,#9FB0C4 100%)}
-  .rk-sh.s3{left:814px;top:484px;width:102px;height:78px;font-size:56px;
+  .rk-sh.s3{left:814px;top:484px;width:102px;height:78px;font-size:70px;
     background:linear-gradient(180deg,#A87C56 0,#906848 100%)}
   /* 칭호 리본 — 1위 210×37@(439,548) · 2위 208×36@(111,559) · 3위 211×36@(759,561) */
   .rk-rb{box-sizing:border-box;border:3px solid #000;
@@ -6380,9 +6380,9 @@
   .rk-bd{display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
   /* 이모지 메달의 «잉크» 는 em 박스보다 훨씬 좁다 — ref 102×82 대비 51×84 였다(비평 C②).
      높이는 84→82 로 fs 72, 폭은 scaleX 2.0 으로 벌린다(아트 자리 규칙: bbox 를 정확히 차지). */
-  .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:72px}
-  #rkw .rk-bd.m>em{display:block;transform:scaleX(2)}
-  #rkw .rk-sh>em{display:block;transform:scaleX(2.1)}
+  .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:85px}
+  #rkw .rk-bd.m>em{display:block;position:relative;left:2.5px;transform:scaleX(1.78)}
+  #rkw .rk-sh>em{display:block;transform:scaleX(1.86)}
   /* clip 을 0% 에서 시작해야 도형 bbox 가 ref 96×96 이 된다 — 12% 에서 시작하면 실측 84 로 잘린다 */
   .rk-bd.f{left:32px;top:26px;width:96px;height:96px;background:#CDA37B;
     clip-path:polygon(0 0,50% 15%,100% 0,100% 55%,50% 100%,0 55%)}
@@ -6424,7 +6424,7 @@
   /* «최고 스테이지» 라벨 161×22 중심 (912,T+42.5) → local 중심 847 */
   #rkw .rk-lb{left:767px;top:28px;width:160px;height:30px;line-height:30px;display:block;
     text-align:center;font-size:26px;color:#FFF8AA;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;transform:scaleX(1.03)}
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;transform:scaleX(1.08)}
   /* 점수 알약 179×50 r25 @ local(759,T+64) */
   .rk-sc{left:759px;top:64px;width:179px;height:50px;border-radius:25px;background:#4F3F2F}
   #rkw .rk-sc>i{display:block;width:179px;height:50px;line-height:50px;text-align:center;
@@ -6458,7 +6458,7 @@
   /* ref 는 화살표에 검정 외곽이 있다 — 3회차엔 채움(81×64)만 그려 잉크 bbox 가 −14%/−22% 였다 */
   .rk-back{left:53px;top:41px;width:94px;height:82px;cursor:pointer;background:#000;
     clip-path:polygon(0 50%,42% 0,42% 30%,100% 30%,100% 70%,42% 70%,42% 100%)}
-  .rk-back>u{position:absolute;left:7px;top:9px;width:81px;height:64px;background:#A8A8C0;
+  .rk-back>u{position:absolute;left:7px;top:6px;width:81px;height:64px;background:#A8A8C0;
     clip-path:polygon(0 50%,42% 0,42% 30%,100% 30%,100% 70%,42% 70%,42% 100%)}
   /* 탭 3개 — 활성 표시는 ① 밝은 fill ② 폭 188/190 → 288 두 가지뿐(측정표 §9) */
   /* 비활성 탭은 ref 에서 내비 배경과 «거의 같은 색» 이고 경계는 검정 세퍼레이터가 만든다.
