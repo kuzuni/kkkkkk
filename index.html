@@ -3187,8 +3187,11 @@
   #collw .clb-bdg>i.l{display:block;margin:2px 0 0 -1px;font-size:32px;transform:scaleX(.939);color:#FFED9D}
   #collw .clb-bdg>i.n{display:block;margin:-2px 0 0 -2px;font-size:47px;transform:scaleX(.977);color:#EEE9E5}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
-  .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
-  .clb-nm{left:165px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
+  /* 7회차 — ref ✦ 잉크 24x25 @x263 프레임 y440~464(중심 452). 밴드 80 화 이후 1.5px 위로 떴다. */
+  .clb-star{left:133px;top:0;height:80px;line-height:84px;font-size:25px;color:#999CBD}
+  /* 7회차 — 헤더밴드를 81→80 으로 줄이면서 세트명 잉크가 밴드 안에서 1px 위로 떴다.
+     ref 세트명 잉크 182x35 @x298 프레임 y434~468(밴드 상단 411.5 기준 +22.5) — line-height 로 되돌린다. */
+  .clb-nm{left:165px;top:0;height:80px;line-height:77px;font-size:38px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
   /* 아이템 카드 — 6회차 실측으로 121×121, pitch 129.25(gap 8.25), 검정 5 + 등급 rim 5, radius 33.
      ref 단면(y675): 카드1 검정 외곽 157~277, 카드2 286~ → 폭 121 · 갭 8 · pitch 129.
