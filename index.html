@@ -4075,8 +4075,10 @@
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
   @keyframes jzShake{0%,100%{translate:0}
     16%{translate:-6px}33%{translate:6px}50%{translate:-6px}66%{translate:6px}83%{translate:-4px}}
-  /* 실패·재화 부족 — 흔들림 + 빨간 플래시(대상 위에 겹치는 틴트) */
-  .jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both}
+  /* 실패·재화 부족 — 흔들림 + 빨간 플래시(대상 위에 겹치는 틴트)
+     ⚠ `!important` 필수 — 실패 팝업의 `.mbox` 는 아래 «열기» 규칙(`.jz-o.jz-dlg>*`, 특이도 0-2-0)의
+     대상이기도 해서, 그냥 두면 열기 애니메이션이 이겨 흔들림이 통째로 사라진다(1회차에 실제로 났다). */
+  .jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both!important}
   @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
     100%{filter:none}}
 
@@ -10064,19 +10066,21 @@ const jzOn = (el, cls, ms) => {                        /* 클래스를 붙였다
 
 /* ── ① 누를 수 있는 것 전부 ── */
 let jzDown = null;
+/* ⚠ `cursor` 는 **상속**된다 — 안쪽부터 찾으면 `.tab` 이 아니라 그 안의 `<span class="ti">` 가 잡혀서
+   아이콘 글리프만 쪼그라든다(1회차에 실제로 이렇게 났다). «연속으로 pointer 인 조상 중 가장 바깥» 이
+   `cursor:pointer` 를 실제로 «선언한» 요소 = 버튼 본체다. */
 function jzTarget(t){
-  for(let el = t, i = 0; el && el.nodeType === 1 && i < 7; el = el.parentElement, i++){
-    if(JZ_NOPRESS.has(el.id)) return null;
-    if(el.tagName === 'BUTTON') return el;
+  let best = null;
+  for(let el = t, i = 0; el && el.nodeType === 1 && i < 8; el = el.parentElement, i++){
+    if(JZ_NOPRESS.has(el.id)) break;
     let c = ''; try { c = getComputedStyle(el).cursor; } catch(_){}
-    if(c === 'pointer'){
-      const r = el.getBoundingClientRect();
-      /* 화면 절반을 넘는 덩어리(페이지 본문·시트 전체)는 «버튼» 이 아니다 — 눌러도 안 움직인다 */
-      if(r.width > innerWidth*0.92 && r.height > innerHeight*0.55) return null;
-      return el;
-    }
+    if(c !== 'pointer' && el.tagName !== 'BUTTON'){ if(best) break; else continue; }
+    const r = el.getBoundingClientRect();
+    /* 프레임을 거의 채우는 덩어리(페이지 본문·시트 전체)는 «버튼» 이 아니다 — 눌러도 안 움직인다 */
+    if(r.width > innerWidth*0.7 && r.height > innerHeight*0.3) break;
+    best = el;
   }
-  return null;
+  return best;
 }
 const jzDead = el => !!(el.disabled || (el.matches && el.matches('[disabled],.lock,.off,.dis,.disabled')));
 function jzRelease(){

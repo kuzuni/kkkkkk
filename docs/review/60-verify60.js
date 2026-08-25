@@ -1,0 +1,150 @@
+#!/usr/bin/env node
+/* 60 — 쥬시 모듈 기하 검증 (비평가에게 보내기 전 자가 반증. LESSONS 04-①·05-③)
+ *
+ *   node docs/review/60-verify60.js      →  VERIFY60 PASS / FAIL
+ *
+ * 캡처 이미지를 «눈대중» 하기 전에, 애니메이션이 **지시서 수치대로** 도는지 값으로 먼저 확인한다.
+ * Web Animations 를 pause 하고 currentTime 을 세운 뒤 실제 렌더 행렬(`getComputedStyle().scale/translate`)을 읽는다.
+ */
+const path = require('path'); const fs = require('fs');
+const { chromium } = require('playwright');
+const URL = 'file://' + path.resolve(__dirname, '..', '..', 'index.html').replace(/\\/g, '/');
+const launchOpts = () => { for (const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean))
+  { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} } return {}; };
+
+const fails = []; const ok = m => console.log('  ✓ ' + m);
+const near = (label, got, want, tol) => {
+  if (got === null || got === undefined || Math.abs(got - want) > tol)
+    { fails.push(`${label}: ${got} (기대 ${want}±${tol})`); console.log('  ✗ ' + label + ` = ${got} (기대 ${want}±${tol})`); }
+  else ok(`${label} = ${typeof got === 'number' ? got.toFixed(3) : got} (기대 ${want}±${tol})`);
+};
+const GRAB = () => { window.__jzA = document.getAnimations(); window.__jzA.forEach(a => { try { a.pause(); } catch (_) {} }); };
+const SEEK = t => (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+/* computed `scale` 는 "1" | "0.94" | "0.94 0.94" 로 나온다 */
+const SC = s => { const e = document.querySelector(s); if (!e) return null;
+  const v = getComputedStyle(e).scale; if (!v || v === 'none') return 1; return parseFloat(v); };
+const TY = s => { const e = document.querySelector(s); if (!e) return null;
+  const v = getComputedStyle(e).translate; if (!v || v === 'none') return 0;
+  const p = v.trim().split(/\s+/); return p.length > 1 ? parseFloat(p[1]) : 0; };
+const TX = s => { const e = document.querySelector(s); if (!e) return null;
+  const v = getComputedStyle(e).translate; if (!v || v === 'none') return 0; return parseFloat(v); };
+
+(async () => {
+  const browser = await chromium.launch(launchOpts());
+  const page = await (await browser.newContext({ viewport: { width: 1080, height: 2280 } })).newPage();
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  await page.goto(URL, { waitUntil: 'load' }); await page.waitForTimeout(1200);
+  await page.evaluate(() => { S.gold = 9e12; S.dia = 9e6; });
+
+  console.log('[1] 버튼 누름 .94 (60ms) / 뗌 스프링 1.04 → 1 (180ms)');
+  {
+    const b = await page.evaluate(() => { const r = document.querySelector('.tab[data-t="hero"]').getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+    await page.mouse.move(b.x, b.y); await page.mouse.down();
+    await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 60);
+    near('누름 t60 .tab scale', await page.evaluate(SC, '.tab[data-t="hero"]'), 0.94, 0.01);
+    await page.mouse.move(6, 6); await page.mouse.up();
+    await page.mouse.move(b.x, b.y); await page.mouse.down(); await page.mouse.up();
+    await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 99);                     /* 0.18s * .55 = 99ms → 최대 1.04 */
+    near('뗌 t99 .tab scale(피크)', await page.evaluate(SC, '.tab[data-t="hero"]'), 1.04, 0.012);
+    await page.evaluate(SEEK, 180);
+    near('뗌 t180 .tab scale(복귀)', await page.evaluate(SC, '.tab[data-t="hero"]'), 1, 0.005);
+    await page.evaluate(() => document.querySelectorAll('.jz-dn,.jz-up').forEach(e => e.classList.remove('jz-dn', 'jz-up')));
+    await page.waitForTimeout(300);
+  }
+
+  console.log('[2] 다이얼로그 열기 — 박스 .92 → 1.02 → 1 (220ms) · 딤 페이드 150ms');
+  {
+    await page.evaluate(() => openProfile()); await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 0);
+    near('열기 t0 #pfw>* scale', await page.evaluate(SC, '#pfw>*'), 0.92, 0.012);
+    await page.evaluate(SEEK, 136);                    /* .22s * .62 = 136ms → 1.02 */
+    near('열기 t136 #pfw>* scale(오버슈트)', await page.evaluate(SC, '#pfw>*'), 1.02, 0.012);
+    await page.evaluate(SEEK, 220);
+    near('열기 t220 #pfw>* scale(정착)', await page.evaluate(SC, '#pfw>*'), 1, 0.005);
+    const OP = () => parseFloat(getComputedStyle(document.querySelector('#pfw')).opacity);
+    await page.evaluate(SEEK, 0);
+    near('열기 t0 딤 opacity', await page.evaluate(OP), 0, 0.02);
+    await page.evaluate(SEEK, 150);
+    near('열기 t150 딤 opacity', await page.evaluate(OP), 1, 0.02);
+    await page.evaluate(() => closeProfile()); await page.waitForTimeout(400);
+  }
+
+  console.log('[3] 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 8px (240ms)');
+  {
+    await page.evaluate(() => openTrain()); await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 0);
+    /* t0 은 «자기 높이만큼 아래» — computed 는 px 가 아니라 `100%` 로 나온다(퍼센트 유지) */
+    const t0 = await page.evaluate(() => { const v = getComputedStyle(document.querySelector('#trw')).translate;
+      return (v || '').trim().split(/\s+/)[1] || ''; });
+    if (t0 !== '100%') { fails.push('시트 t0 translateY = ' + t0 + ' (기대 100%)'); console.log('  ✗ 시트 t0 translateY = ' + t0); }
+    else ok('시트 t0 translateY = 100% (자기 높이만큼 아래)');
+    await page.evaluate(SEEK, 168);                    /* .24s * .70 = 168ms → -8px */
+    near('시트 t168 translateY(오버슈트)', await page.evaluate(TY, '#trw'), -8, 1.2);
+    await page.evaluate(SEEK, 240);
+    near('시트 t240 translateY(정착)', await page.evaluate(TY, '#trw'), 0, 0.6);
+    await page.evaluate(() => closeTrain()); await page.waitForTimeout(400);
+  }
+
+  console.log('[4] 탭 아이콘 1.12 팝 (200ms)');
+  {
+    await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').click());
+    await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 90);                     /* .2s * .45 = 90ms → 1.12 */
+    near('탭 t90 .ti scale(피크)', await page.evaluate(SC, '.tab[data-t="hero"] .ti'), 1.12, 0.012);
+    await page.evaluate(SEEK, 200);
+    near('탭 t200 .ti scale(복귀)', await page.evaluate(SC, '.tab[data-t="hero"] .ti'), 1, 0.005);
+    await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').click());
+    await page.waitForTimeout(400);
+  }
+
+  console.log('[5] 카드 그리드 stagger 25ms');
+  {
+    await page.evaluate(() => openDungeon()); await page.waitForTimeout(20);
+    const d = await page.evaluate(() => {
+      const g = document.querySelectorAll('#dunw .jz-st');
+      return [...g].slice(0, 5).map(e => parseFloat(e.style.getPropertyValue('--jzd')) || 0);
+    });
+    if (d.length < 3) { fails.push('stagger: 대상 카드 ' + d.length + '개 (>=3 기대)'); console.log('  ✗ stagger 대상 ' + d.length + '개'); }
+    else { const step = d[1] - d[0];
+      near('stagger 간격(ms)', step, 25, 0.5);
+      near('stagger 5번째 지연(ms)', d[Math.min(4, d.length - 1)], 25 * Math.min(4, d.length - 1), 0.5);
+      ok('stagger 대상 ' + d.length + '개 이상'); }
+    await page.evaluate(() => closeDungeon()); await page.waitForTimeout(400);
+  }
+
+  console.log('[6] 재화 부족 — 박스 흔들림 6px + 알약 빨간 틴트');
+  {
+    await page.evaluate(() => { S.dia = 0; popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); });
+    await page.evaluate(GRAB);
+    await page.evaluate(SEEK, 56);                     /* .34s * .165 ≈ 56ms → -6px */
+    near('부족 t56 .mbox translateX', await page.evaluate(TX, '#modal .mbox'), -6, 1.2);
+    const f = await page.evaluate(() => getComputedStyle(document.querySelector('.cDia')).filter);
+    if (!f || f === 'none') { fails.push('부족: .cDia 필터 없음'); console.log('  ✗ 부족 .cDia 틴트 없음'); }
+    else ok('부족 .cDia 틴트 = ' + f.slice(0, 46));
+    await page.evaluate(() => closeModal()); await page.waitForTimeout(300);
+  }
+
+  console.log('[7] 수치 롤링 — 전투력이 «뚝» 바뀌지 않는다');
+  {
+    const r = await page.evaluate(async () => {
+      const read = () => document.getElementById('cpN').textContent;
+      const a = read();
+      S.spAtk += 4000;                                   /* 전투력을 크게 올린다 */
+      const seq = [];
+      for (let i = 0; i < 8; i++) { await new Promise(r => requestAnimationFrame(r)); seq.push(read()); }
+      return { a, seq, uniq: new Set(seq).size };
+    });
+    if (r.uniq < 3) { fails.push('롤링: 8프레임 동안 표시값 ' + r.uniq + '종 (>=3 기대 — 뚝 바뀜)'); console.log('  ✗ 롤링 ' + r.uniq + '종'); }
+    else ok('롤링 8프레임 표시값 ' + r.uniq + '종 (' + r.a + ' → ' + r.seq[r.seq.length - 1] + ')');
+  }
+
+  if (errs.length) { fails.push('콘솔/페이지 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ')); }
+  console.log('');
+  console.log(fails.length ? 'VERIFY60 FAIL\n  - ' + fails.join('\n  - ') : 'VERIFY60 PASS');
+  await browser.close();
+  process.exit(fails.length ? 1 : 0);
+})();
