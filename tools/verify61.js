@@ -48,6 +48,11 @@ const snap = page => page.evaluate(() => {
     label: document.getElementById('tutoBtn').textContent,
     dis:   document.getElementById('tutoBtn').disabled,
     name:  document.getElementById('tutoName').textContent,
+    pg:    document.getElementById('tutoPg').textContent,
+    pgVis: getComputedStyle(document.getElementById('tutoPg')).display,
+    dot:   getComputedStyle(document.getElementById('tuto').querySelector('.trew'), '::after').display,
+    bg:    getComputedStyle(b).backgroundImage === 'none' ? getComputedStyle(b).backgroundColor : 'gradient',
+    bc:    getComputedStyle(b).borderTopColor,
     rew:   document.getElementById('tutoRew').textContent,
     sub:   document.getElementById('tutoSub').textContent,
     idx:   S.guide.idx, prog: S.guide.prog, dia: S.dia
@@ -88,7 +93,12 @@ const snap = page => page.evaluate(() => {
   eq('§1 idx=0', s.idx, 0);
   ok('§1 미완료(todo) 상태', s.todo && !s.ready, JSON.stringify({ todo: s.todo, ready: s.ready }));
   eq('§1 라벨 [미션-1]', s.label, '[미션-1]');
-  eq('§1 문구 «목표 (진행/목표)»', s.name, G[0].n + ' (0/' + G[0].goal + ')');
+  eq('§1 문구 = 미션 이름', s.name, G[0].n);
+  eq('§1 3번째 줄 «(진행/목표)»', s.pg, '(0/' + G[0].goal + ')');
+  ok('§1 미완료는 3번째 줄이 보인다', s.pgVis !== 'none', s.pgVis);
+  ok('§1 미완료 바탕은 반투명 검정(그라디언트 아님)', s.bg === 'rgba(0, 0, 0, 0.55)', s.bg);
+  ok('§1 미완료는 테두리가 안 보인다', /transparent|rgba\(0, 0, 0, 0\)/.test(s.bc), s.bc);
+  ok('§1 미완료는 레드닷 없음', s.dot === 'none', s.dot);
   eq('§1 보상 아이콘 💎', s.rew, '💎');
   eq('§1 보상 수량', s.sub, String(G[0].dia));
   ok('§1 버튼 disabled', s.dis === true);
@@ -104,7 +114,7 @@ const snap = page => page.evaluate(() => {
   await page.evaluate(() => { S.totalKills += 40; });
   await page.waitForTimeout(80);
   s = await snap(page);
-  eq('§2 진행이 카운터를 따라 오른다', s.name, G[6].n + ' (40/' + G[6].goal + ')');
+  eq('§2 진행이 카운터를 따라 오른다', s.pg, '(40/' + G[6].goal + ')');
   ok('§2 아직 미완료', s.todo && s.dis === true);
 
   /* ---------- §6 델타형 기준선 ---------- */
@@ -124,8 +134,12 @@ const snap = page => page.evaluate(() => {
   s = await snap(page);
   ok('§3 ready 상태로 전이', s.ready && !s.todo, JSON.stringify({ todo: s.todo, ready: s.ready }));
   eq('§3 라벨 [보상받기]', s.label, '[보상받기]');
-  eq('§3 문구 (100/100)', s.name, G[6].n + ' (100/100)');
+  eq('§3 문구 (100/100)', s.pg, '(100/100)');
   ok('§3 버튼 enabled', s.dis === false);
+  ok('§3 보상받기는 3번째 줄이 숨는다', s.pgVis === 'none', s.pgVis);
+  ok('§3 보상받기 바탕은 금색 그라디언트', s.bg === 'gradient', s.bg);
+  ok('§3 보상받기는 검정 테두리', s.bc === 'rgb(0, 0, 0)', s.bc);
+  ok('§3 보상받기는 레드닷 있음', s.dot !== 'none', s.dot);
 
   /* ---------- §12 58 연출 + §4 수령 ---------- */
   const diaBefore = s.dia;
@@ -142,7 +156,7 @@ const snap = page => page.evaluate(() => {
   s = await snap(page);
   eq('§4 idx +1', s.idx, 7);
   eq('§4 다이아 +보상', s.dia, diaBefore + G[6].dia);
-  eq('§4 배너가 다음 미션으로', s.name, G[7].n + ' (' + (await page.evaluate(() => Math.min(S.best, GUIDE[7].goal))) + '/' + G[7].goal + ')');
+  eq('§4 배너가 다음 미션으로', s.name, G[7].n);
   eq('§4 라벨이 [미션-8] 로', s.label, '[미션-8]');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('idle_hunter_save_v4')).guide);
   ok('§4 localStorage 에 저장됨', stored && stored.idx === 7, JSON.stringify(stored));
@@ -153,7 +167,7 @@ const snap = page => page.evaluate(() => {
   await page.evaluate(() => { S.best = 3; });
   await page.waitForTimeout(120);
   s = await snap(page);
-  eq('§7 abs 진행 = 누적값', s.name, G[7].n + ' (3/5)');
+  eq('§7 abs 진행 = 누적값', s.pg, '(3/5)');
   await page.evaluate(() => { S.best = 5; });
   await page.waitForTimeout(120);
   s = await snap(page);
@@ -203,6 +217,29 @@ const snap = page => page.evaluate(() => {
   ok('§13 탭바·좌하단 유틸·배속·슬롯과 겹침 0', geo.over.length === 0,
      geo.over.join(',') + ' / ' + JSON.stringify(geo.others));
 
+  /* ---------- §14 최장 문자열 bbox (46 교훈 1) ----------
+     보상 수량은 «300» ~ «3,000», 미션 이름은 최대 «스테이지 15 도달하기» 급이다.
+     체인 전 미션을 한 번씩 띄워 보고 잉크가 배너·보상칸 밖으로 새지 않는지 본다. */
+  const bleed = await page.evaluate(() => {
+    const app = document.getElementById('app'), ar = app.getBoundingClientRect(), sc = ar.width / 1080;
+    const F = el => { const b = el.getBoundingClientRect();
+      return { x:(b.left-ar.left)/sc, y:(b.top-ar.top)/sc, w:b.width/sc, h:b.height/sc }; };
+    const bad = [];
+    for (let i = 0; i < GUIDE.length; i++){
+      S.guide.idx = i; gmStart(); drawTuto();
+      const tb = F(document.getElementById('tuto'));
+      ['#tutoBtn', '#tutoName', '#tutoPg', '#tutoSub'].forEach(sel => {
+        const g = F(document.querySelector(sel));
+        if (g.w <= 0) return;                                  /* 숨은 줄은 건너뛴다 */
+        if (g.x < tb.x - 0.5 || g.x + g.w > tb.x + tb.w + 0.5 ||
+            g.y < tb.y - 0.5 || g.y + g.h > tb.y + tb.h + 12)   /* tsub 은 설계상 9px 아래로 돌출 */
+          bad.push(`#${i+1} ${sel} ${JSON.stringify(g)} vs banner ${JSON.stringify(tb)}`);
+      });
+    }
+    return bad;
+  });
+  ok('§14 20개 미션 전부 — 잉크가 배너 밖으로 새지 않는다', bleed.length === 0, bleed.slice(0, 3).join(' || '));
+
   /* ---------- §11 체인 완주 ---------- */
   await page.evaluate(() => { S.guide.idx = GUIDE.length; S.guide.prog = 0; });
   await page.waitForTimeout(120);
@@ -241,21 +278,23 @@ const snap = page => page.evaluate(() => {
       name: document.getElementById('tutoName').textContent,
       label: document.getElementById('tutoBtn').textContent,
       sub: document.getElementById('tutoSub').textContent,
+      pg: document.getElementById('tutoPg').textContent,
       ready: document.getElementById('tuto').classList.contains('ready')
     }));
     ok('§8 ' + v.t + ' → idx=' + v.wantIdx, m.idx === v.wantIdx, JSON.stringify(m));
     ok('§8 ' + v.t + ' → idx·prog 유한', m.finite, JSON.stringify(m));
     ok('§8 ' + v.t + ' → 배너에 NaN/undefined 없음',
-       ![m.name, m.label, m.sub].some(t => /NaN|undefined|null/.test(t)), [m.name, m.label, m.sub].join(' | '));
+       ![m.name, m.label, m.sub, m.pg].some(t => /NaN|undefined|null/.test(t)),
+       [m.name, m.label, m.sub, m.pg].join(' | '));
     /* 구 세이브가 누적 킬 99만이어도 «적 100마리» 미션이 즉시 완료되면 안 된다 */
     if (v.save.totalKills > 1000 && v.wantIdx < 20) {
       await p2.evaluate(() => { S.guide.idx = 6; S.guide.prog = -1; });
       await p2.waitForTimeout(120);
       const g = await p2.evaluate(() => ({
-        name: document.getElementById('tutoName').textContent,
+        pg: document.getElementById('tutoPg').textContent,
         ready: document.getElementById('tuto').classList.contains('ready') }));
       ok('§8 ' + v.t + ' → 기준선 미확정이 자동 확정돼 진행 0 부터',
-         /\(0\//.test(g.name) && !g.ready, JSON.stringify(g));
+         /^\(0\//.test(g.pg) && !g.ready, JSON.stringify(g));
     }
     await c2.close();
   }

@@ -427,13 +427,44 @@
   #tuto .trew::before{content:'';position:absolute;inset:7px;border-radius:23px;background:#94BC35}
   #tuto .trew .ri{position:relative;z-index:1;font-size:70px;line-height:1;
     filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
-  /* 카운터 — 초록 박스 우하단에 걸쳐 9px 아래로 돌출 (상대 377,116) */
-  #tuto .tsub{position:absolute;left:44px;top:95px;z-index:2;height:33px;
+  /* 카운터 — 초록 박스 우하단에 걸쳐 9px 아래로 돌출 (상대 377,116)
+     61: 내용이 «남은 개수 1자» 에서 «보상 수량 최대 5자(3,000)» 로 바뀌었다. left 고정 + nowrap 이면
+     긴 수량이 배너 밖으로 샌다(46 교훈 1). 보상칸 **가운데 정렬**로 바꾼다 — ref 실측 잉크 중심
+     (02 `3` = 387 · 32 `200` = 385.5) 이 둘 다 보상칸 중심 386 이라 두 상태 모두 값이 보존된다. */
+  #tuto .tsub{position:absolute;left:0;width:107px;text-align:center;top:95px;z-index:2;height:33px;
     font-size:36px;line-height:33px;font-weight:900;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill;white-space:nowrap}
   /* 배너 레드닷 — 초록 박스 우상단, 중심 상대 (435,25) */
   #tuto .trew::after{content:'';position:absolute;right:-12px;top:-12px;width:24px;height:24px;
     border-radius:50%;background:#F22E54;border:4px solid #000;box-sizing:content-box}
+
+  /* ===== 작업 61 — 가이드 미션 배너 «미완료 / 보상받기» 2상태 ==========================
+     측정표 docs/measure/61-가이드미션.md. 보상받기(02 ④)는 위 규칙 그대로 두고, 미완료(32)만
+     여기서 덮어쓴다 — 두 상태의 **바깥 박스는 완전히 같다**(620..1080 / ref 1840..1989, 460×150,
+     radius 26/0/0/26, 우측은 화면 밖으로 bleed). 다른 것은 «안» 뿐이다.
+
+     32(미완료)에만 있는 것 — 반투명 검정 바탕 · 테두리 없음 · 민트색 `[미션-n]` ·
+       **세 번째 줄 `(진행/목표)`** · 금색 보상칸 · 레드닷 없음
+     02(보상받기)에만 있는 것 — 금색 그라디언트 · 검정 5 테두리 · 금색 `[보상받기]` · 초록 보상칸 · 레드닷
+
+     ⚠ 테두리를 `border:0` 으로 지우면 **패딩 박스가 5px 움직여 절대배치 자식이 전부 밀린다**
+       (03 교훈). `border-color:transparent` 로 «안 보이게만» 한다 — 배경은 보더 박스까지 칠해지므로
+       ref 처럼 460×150 전체가 균일한 반투명 검정이 된다. */
+  #tuto.todo{background:rgba(0,0,0,.55);border-color:transparent;cursor:default}
+  #tuto.todo .trew::after{display:none}                 /* 레드닷은 «누를 게 있다» 는 신호다 */
+  #tuto.todo .trew{background:#FFC134}                  /* 링 — 밝은 금색 */
+  #tuto.todo .trew::before{background:#D27B13}          /* 본체 — 짙은 금색 단색 */
+  /* 세 줄 모두 텍스트 칸(보더박스 x5..323) 가운데 정렬 — ref 실측 중심 x=164.
+     ref 문자열 길이와 우리 미션 이름 길이가 다르므로 좌표 고정이 아니라 중심 정렬이 맞다. */
+  #tuto.todo .tbtn{left:0;width:318px;text-align:center;top:7px;height:27px;
+    font-size:29px;line-height:27px;color:#83FFE7}      /* L1 잉크 160×27 @ (93,12) */
+  #tuto.todo .tinfo{left:0;width:318px;top:58px}
+  #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px}
+  #tuto.todo .tt em{font-style:normal;color:#FE8252}    /* L2 의 숫자만 주황 */
+  #tuto .tpg{display:none}
+  #tuto.todo .tpg{display:block;position:absolute;left:0;width:318px;text-align:center;top:89px;
+    height:23px;font-size:27px;line-height:23px;font-weight:900;color:#FFC26A;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}  /* L3 잉크 89×23 @ (120,94) */
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
      요소·JS 갱신은 그대로 두고 표시만 끈다 — 되돌리려면 이 한 줄만 지우면 된다.
@@ -4215,6 +4246,8 @@
         <div class="tt"><span id="tutoName">튜토리얼</span></div>
         <div class="tp"><i id="tutoBar"></i></div>
       </div>
+      <b class="tpg" id="tutoPg"></b>            <!-- 61 — 미완료 상태의 3번째 줄 «(진행/목표)» -->
+
       <div class="trew"><span class="ri" id="tutoRew">💎</span><span class="tsub" id="tutoSub">300</span></div>
     </div>
     <div id="spdb"><span class="sv">×1.3</span><span class="sk">🔒</span></div>
@@ -6605,12 +6638,14 @@ function drawTuto(){
   if(!m){ box.classList.add('off'); return; }        /* 체인 완주 → 배너 자체가 사라진다 */
   box.classList.remove('off');
   const p = gmProg(m), ready = p >= m.goal;
-  /* 61 — 배너는 «라벨 / 미션 문구 (진행/목표) / 보상칸 + 보상 수량» 3요소다(진행바 없음).
-     레퍼런스 표기: 보상받기 상태 `[보상받기]` (02 ④) · 미완료 상태 `[미션-n]` (32).
-     문구는 `보물상자 1개 오픈 (0/1)` 형태로 목표 뒤에 진행 수치를 괄호로 붙인다. */
+  /* 61 — 배너는 «라벨 / 미션 문구 / (진행/목표) / 보상칸 + 보상 수량» 이다(진행바 없음).
+     미완료(32)   : `[미션-n]` · `아무거나 소환 10회` · `(0/10)`  ← 3줄
+     보상받기(02 ④): `[보상받기]` · `적 50마리 처치하기`          ← 2줄 (진행 줄 없음)
+     ref 는 문구의 «숫자만» 주황이라 숫자 런을 <em> 으로 감싼다(문자열은 전부 우리 소유). */
   box.classList.toggle('ready', ready);
   box.classList.toggle('todo', !ready);
-  $('tutoName').textContent = m.n + ' (' + fmt(p) + '/' + fmt(m.goal) + ')';
+  $('tutoName').innerHTML = m.n.replace(/\d+/g, d => '<em>' + d + '</em>');
+  $('tutoPg').textContent = '(' + fmt(p) + '/' + fmt(m.goal) + ')';
   $('tutoBar').style.width = (p / m.goal * 100) + '%';
   $('tutoRew').textContent = '💎';
   $('tutoSub').textContent = fmt(m.dia);
