@@ -167,7 +167,9 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
   await page.waitForTimeout(400);
 
   /* ── 3. 바닥 시트 슬라이드업 + 오버슈트 8px (240ms) ── */
-  await scene(page, 'sheet', [0, 25, 60, 105, 150, 206, 225, 240],
+  /* 12회차 — 오버슈트 홀드 구간(168~206ms)의 표본이 끝점 1장뿐이라 «38ms 홀드» 가 캡처로 증명이 안 됐다
+     (11회차 비평 D-11, 캡처 설계 결함). 홀드 안쪽 t=175 를 넣고 t=225 를 뺀다. */
+  await scene(page, 'sheet', [0, 25, 60, 105, 150, 175, 206, 240],
     () => page.evaluate(() => openTrain()));
   await page.evaluate(() => closeTrain());
   await page.waitForTimeout(400);

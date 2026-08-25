@@ -146,23 +146,24 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     await page.evaluate(() => openTrain()); await page.evaluate(GRAB);
     await page.evaluate(SEEK, 0);
     /* t0 은 «자기 높이만큼 아래» — computed 는 px 가 아니라 `100%` 로 나온다(퍼센트 유지) */
-    const t0 = await page.evaluate(() => { const v = getComputedStyle(document.querySelector('#trw')).translate;
+    /* 12회차 — 움직이는 것은 껍데기(#trw)가 아니라 시트 본체(#trw>.jz-sl) 다 */
+    const t0 = await page.evaluate(() => { const v = getComputedStyle(document.querySelector('#trw>.jz-sl')).translate;
       return (v || '').trim().split(/\s+/)[1] || ''; });
     if (t0 !== '100%') { fails.push('시트 t0 translateY = ' + t0 + ' (기대 100%)'); console.log('  ✗ 시트 t0 translateY = ' + t0); }
     else ok('시트 t0 translateY = 100% (자기 높이만큼 아래)');
     await page.evaluate(SEEK, 180);                    /* 70~86% 홀드 구간 한가운데 → -8px */
-    near('시트 t180 translateY(오버슈트 홀드)', await page.evaluate(TY, '#trw'), -8, 1.2);
+    near('시트 t180 translateY(오버슈트 홀드)', await page.evaluate(TY, '#trw>.jz-sl'), -8, 1.2);
     await page.evaluate(SEEK, 200);
-    near('시트 t200 translateY(홀드 유지)', await page.evaluate(TY, '#trw'), -8, 1.2);
+    near('시트 t200 translateY(홀드 유지)', await page.evaluate(TY, '#trw>.jz-sl'), -8, 1.2);
     await page.evaluate(SEEK, 240);
-    near('시트 t240 translateY(정착)', await page.evaluate(TY, '#trw'), 0, 0.6);
+    near('시트 t240 translateY(정착)', await page.evaluate(TY, '#trw>.jz-sl'), 0, 0.6);
     /* ⚠ 회귀 가드 — 이동거리(시트 높이 ≈2100px) 전체에 오버슈트 이징을 걸면
        베지어 최대치 1.098 이 그대로 **205px 물리 오버슈트**가 된다(3회차 비평 실측 212px).
        궤적 전체를 훑어 «최종 위치보다 10px 넘게 위로 올라간 순간» 이 없는지 본다. */
     let worst = 0;
     for (let t = 0; t <= 240; t += 6) {
       await page.evaluate(SEEK, t);
-      const v = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#trw')).translate;
+      const v = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#trw>.jz-sl')).translate;
         const p = (s || '').trim().split(/\s+/)[1] || '0';
         return p.endsWith('%') ? 9999 : parseFloat(p); });   /* 아직 % 구간이면 화면 밖 — 무시 */
       if (v !== 9999 && v < worst) worst = v;
@@ -170,6 +171,24 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     if (worst < -10) { fails.push(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px)`);
       console.log(`  ✗ 시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px`); }
     else ok(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px 이내)`);
+    /* ⚠ 12회차 — **선언 240ms 중 몇 %가 «화면 안에서» 도는가.**
+       11회차엔 `translate:0 100%` 의 기준이 껍데기(≈2105px)라 경로의 32.3%(680px)가 뷰포트 밖에서
+       소모됐고, 시트 상단이 화면에 들어오는 시각이 t≈39ms(예산의 16.3%)였다.
+       «끝값이 맞다» 로는 절대 안 잡히는 결함이라 **화면 좌표로 가시 구간을 직접 잰다.** */
+    const trav = await page.evaluate(() => {
+      const sl = document.querySelector('#trw>.jz-sl'), app = document.querySelector('#app');
+      const H = app.getBoundingClientRect().height, ay = app.getBoundingClientRect().y;
+      const top = t => { (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+        void document.documentElement.offsetHeight;
+        return sl.getBoundingClientRect().y - ay; };
+      const t0 = top(0), tE = top(240);
+      return { t0, tE, H, total: t0 - tE, vis: Math.min(t0, H) - tE };
+    });
+    const visPct = trav.total > 0 ? trav.vis / trav.total * 100 : 0;
+    console.log(`    이동거리 ${trav.total.toFixed(0)}px (t0 top ${trav.t0.toFixed(0)} → 최종 ${trav.tE.toFixed(0)}, 프레임 높이 ${trav.H.toFixed(0)})`);
+    if (visPct < 95) { fails.push(`시트 가시 이동 비율 ${visPct.toFixed(1)}% (95% 이상 기대 — 나머지는 뷰포트 밖)`);
+      console.log(`  ✗ 시트 가시 이동 비율 ${visPct.toFixed(1)}%`); }
+    else ok(`시트 가시 이동 비율 ${visPct.toFixed(1)}% (>=95%)`);
     /* ⚠ 11회차(결함 1) — 딤이 시트와 «같이» 올라오면 하드 와이프가 된다.
        딤 자식은 컨테이너의 translate 를 정확히 상쇄해 **화면상 제자리**여야 하고,
        자기 opacity 로 150ms 페이드해야 한다. 화면 좌표(getBoundingClientRect)로 직접 잰다. */
@@ -416,17 +435,67 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
       if (rendered < 70) { fails.push('닫기: 선언 축소의 ' + rendered.toFixed(0) + '% 만 렌더(70% 이상 기대)');
         console.log('  ✗ 닫기 축소 미렌더'); }
       else ok('닫기 축소 렌더율 ' + rendered.toFixed(0) + '% (>=70%)'); }
+    /* ⚠ 12회차 — 11회차에 축소를 살리려고 페이드를 뒤로 몰았더니 **이번엔 깜빡였다**
+       (두 비평가 독립 실측: 소멸률 8.1× / 7.3× 점프, 페이드량의 75%가 마지막 35ms).
+       «총량이 맞다» 로는 못 잡는다 — **구간별 소멸 속도의 최대/최소 비**를 본다. */
+    const rate = await page.evaluate(() => {
+      const e = document.querySelector('#pfw>*'), out = [];
+      for (let t = 0; t <= 120; t += 10) {
+        (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+        void document.documentElement.offsetHeight;
+        let o = 1; for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
+          const v = parseFloat(getComputedStyle(x).opacity); if (!isNaN(v)) o *= v; }
+        out.push(o);
+      }
+      const d = []; for (let i = 1; i < out.length; i++) d.push(out[i - 1] - out[i]);
+      return { out, d };
+    });
+    const pos = rate.d.filter(v => v > 0.001);
+    const ratio = pos.length ? Math.max(...pos) / Math.min(...pos) : 999;
+    console.log('    10ms 구간별 소멸량 = ' + rate.d.map(v => (v * 100).toFixed(1)).join(' / ') + ' %');
+    if (ratio > 3) { fails.push('닫기 소멸률 최대/최소 비 ' + ratio.toFixed(1) + '배 (3배 이하 기대 — 계단·깜빡)');
+      console.log('  ✗ 닫기 소멸률 ' + ratio.toFixed(1) + '배 점프'); }
+    else ok('닫기 소멸률 최대/최소 비 ' + ratio.toFixed(1) + '배 (<=3배, 계단 없음)');
     await page.evaluate(CLEARJZ); await page.waitForTimeout(400);
 
     /* 바닥 시트 닫기 — jzSheetOut(130ms): translateY → 100% */
     await page.evaluate(() => openTrain()); await page.waitForTimeout(500);
     await page.evaluate(() => closeTrain());
     await page.evaluate(GRAB);
-    near('닫기 t0 #trw translateY', await SR(page, 0, '#trw', 'ty'), 0, 1.5);
-    const tEnd = await SR(page, 130, '#trw', 'tyRaw');
+    near('닫기 t0 #trw translateY', await SR(page, 0, '#trw>.jz-sl', 'ty'), 0, 1.5);
+    const tEnd = await SR(page, 130, '#trw>.jz-sl', 'tyRaw');
     if (tEnd !== '100%') { fails.push('닫기 t130 시트 translateY = ' + tEnd + ' (기대 100%)'); console.log('  ✗ 닫기 t130 시트 = ' + tEnd); }
     else ok('닫기 t130 시트 translateY = 100% (아래로 빠짐)');
     await page.evaluate(CLEARJZ); await page.waitForTimeout(400);
+  }
+
+  console.log('[13] 12회차 — 딤 곡선 통일 · 시트에 stagger 없음 · 페이지 크로스페이드 이중상');
+  await page.evaluate(CLEARJZ);
+  {
+    /* ⓐ 딤 곡선이 한 종류인가 — dlg 는 «배경색 알파», 시트는 «자식 opacity» 로 그리지만 **곡선은 같아야** 한다.
+       11회차엔 진행 46.7% 시점에 19.2%p 가 벌어져 «한 빌드에 딤 곡선 2종» 으로 감점됐다. */
+    await page.evaluate(() => openProfile()); await page.evaluate(GRAB);
+    const dlgP = [];
+    for (const t of [37, 75, 112]) dlgP.push(await BGA(page, t, '#pfw') / 0.85);
+    await page.evaluate(CLEARJZ); await page.evaluate(() => closeProfile()); await page.waitForTimeout(400);
+    await page.evaluate(() => openTrain()); await page.evaluate(GRAB);
+    const shP = [];
+    for (const t of [37, 75, 112]) shP.push(await SR(page, t, '#trw>.jz-dm', 'op'));
+    console.log('    딤 진행률 t37/75/112 — dlg ' + dlgP.map(v => v.toFixed(3)).join('/')
+                + ' · 시트 ' + shP.map(v => v.toFixed(3)).join('/'));
+    for (let i = 0; i < 3; i++) near('딤 곡선 일치 #' + (i + 1) + '(dlg−시트)', dlgP[i] - shP[i], 0, 0.05);
+    /* ⓑ 시트 안에는 stagger 가 없어야 한다 — 있으면 «시트가 빈 채로 올라온다»(11회차 비평 MAJOR). */
+    const st = await page.evaluate(() => document.querySelectorAll('#trw .jz-st').length);
+    if (st) { fails.push('시트 안에 stagger 카드 ' + st + '개 (시트는 완성 상태로 올라와야 한다)');
+      console.log('  ✗ 시트 내부 stagger ' + st + '개'); }
+    else ok('시트 내부 stagger 0개 (면 전체가 완성 상태로 슬라이드)');
+    await page.evaluate(CLEARJZ); await page.evaluate(() => closeTrain()); await page.waitForTimeout(400);
+    /* ⓒ 전체화면 페이지의 반투명 구간 — 길면 아래 화면이 비쳐 «두 화면 동시 판독» 이 된다
+       (11회차 비평: t=60 에 알약 이중상 55px · 텍스트 온 텍스트). 45ms 면 이미 불투명해야 한다. */
+    await page.evaluate(() => openDungeon()); await page.evaluate(GRAB);
+    near('페이지 t45 불투명도(이중상 구간 종료)', await SR(page, 45, '#dunw', 'op'), 1, 0.02);
+    near('페이지 t0 불투명도', await SR(page, 0, '#dunw', 'op'), 0, 0.02);
+    await page.evaluate(CLEARJZ); await page.evaluate(() => closeDungeon()); await page.waitForTimeout(400);
   }
 
   console.log('[12] 탭 팝이 «그 순간 보이는» 아이콘에 붙는가 (패널이 열리면 .ti 는 display:none)');
