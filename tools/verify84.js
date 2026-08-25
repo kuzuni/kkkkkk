@@ -8,7 +8,11 @@
    변환: 이 둘은 **화면 하단(탭바) 기준** 요소이므로 «ref y − 60»(2340→2280 은 상단 84 잘림 + 하단 24 추가).
      → 프레임 목표: 버튼 1706~1853 · 닫기 잉크 2064~2104.
    ⑤색·⑥서체는 통과를 막지 않는다(지시서 [3]-(나) 2). 잉크 «높이»는 서체 차(43 vs 41)라 중심으로 본다. */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -25,7 +29,7 @@ const ok = (n, got, want, tol) => {
 };
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
@@ -101,7 +105,7 @@ const ok = (n, got, want, tol) => {
 
   /* 짧은 프레임(#app 높이 clamp 하한 1600) — 하단 앵커로 바꾼 대가로 패널과 겹칠 수 있다.
      min() 클램프가 살아 있는지 «겹침 0» 으로 본다(37·51 계열 회귀 게이트). */
-  const b2 = await chromium.launch();
+  const b2 = await launch(chromium);
   for (const vp of [{ width: 1920, height: 1080 }, { width: 1024, height: 768 }]) {
     const c2 = await b2.newContext({ viewport: vp, deviceScaleFactor: 1 });
     const q = await c2.newPage();
@@ -126,7 +130,7 @@ const ok = (n, got, want, tol) => {
 
   /* 기능 체크(지시서 «기능 완성 규칙») — 앵커를 옮긴 뒤에도 버튼 3개가 실제로 눌리고
      «터치하여 닫기»(딤 탭)가 닫는지. 좌표가 바뀌었으니 히트테스트까지 본다. */
-  const b3 = await chromium.launch();
+  const b3 = await launch(chromium);
   const c3 = await b3.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const q3 = await c3.newPage();
   const ferr = [];

@@ -12,16 +12,11 @@
  *   §7 UI       — 50칸 격자가 전부 그려짐 · 등급 섹션 헤더 6개 · 격자 내부 스크롤 가능 · 잠금 표기
  */
 const path = require('path');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const fs = require('fs'), os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 없음'); process.exit(2);
-})();
+/* 127 — 여기 복붙돼 있던 모듈 해석 블록은 «모듈» 만 찾고 «브라우저 바이너리» 는 안 찾아서,
+   드라이버가 기대하는 빌드(chromium-1234)와 러너에 깔린 빌드(chromium-1194)가 다르면
+   `Executable doesn't exist` 로 즉사했다. 해석 + 폴백 둘 다 tools/pwlaunch.js 공용. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const KEY = 'idle_hunter_save_v4';
@@ -52,7 +47,7 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
 
 (async () => {
   /* file:// 에서 아틀라스를 그린 캔버스는 기본적으로 «오염» 되어 getImageData 가 막힌다(§5·§7 이 픽셀을 읽는다) */
-  const browser = await chromium.launch({ args: ['--allow-file-access-from-files'] });
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const errs = [];
   const page = await ctx.newPage();
@@ -266,10 +261,22 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
 
   /* ---------------- §7 UI ---------------- */
   console.log('\n§7 UI (50칸 격자)');
-  await page.click('.tab[data-t="hero"]', { force: true });
-  await page.waitForTimeout(300);
-  await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click());
-  await page.waitForTimeout(500);
+  /* 127 — 여기는 §6 의 `page.reload()` 직후다. 고정 300/500ms 는 리로드 후 탭 핸들러가
+     붙기 전에 클릭이 떨어져 패널이 아예 안 열리는 경합이 있었고, 그러면 `#bCos .sk-gp` 가
+     null 이라 게이트가 «FAIL» 도 못 내고 TypeError 로 즉사했다(=127 이 잡아낸 «죽은 게이트»).
+     시간이 아니라 «격자가 떴는가» 를 기준으로 최대 ~10초 재시도한다.
+     탭 재클릭은 패널을 닫으므로(A1) 패널이 닫혀 있을 때만 누른다. */
+  for (let i = 0; i < 20 && !(await page.$('#bCos .sk-gp')); i++) {
+    await page.evaluate(() => {
+      const pn = document.querySelector('#panel');
+      if (!pn || getComputedStyle(pn).display === 'none') {
+        const tb = document.querySelector('.tab[data-t="hero"]'); if (tb) tb.click();
+      }
+      const t = document.querySelector('#eqTabs [data-eqtab="cos"]'); if (t) t.click();
+    });
+    await page.waitForTimeout(500);
+  }
+  await page.waitForSelector('#bCos .sk-gp', { state: 'attached', timeout: 5000 });
   const grid = await page.evaluate(() => {
     const gp = document.querySelector('#bCos .sk-gp'), inn = document.querySelector('#bCos .cos-in');
     const cv = document.querySelectorAll('#bCos .cos-cv');

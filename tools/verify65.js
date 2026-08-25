@@ -14,7 +14,11 @@
  * 마지막으로 8칸 전수로 «포인터 아래 칸 = 당첨 칸» 을 역산 대조한다(29 교훈 1 회귀).
  */
 const path = require('path');
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const FRAMES = Number(process.env.V65_FRAMES || 40);
 const GAP = Number(process.env.V65_GAP || 90);
@@ -25,7 +29,7 @@ const ok = (m) => console.log('  ✓ ' + m);
 const r2 = (n) => Math.round(n * 100) / 100;
 
 async function main() {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

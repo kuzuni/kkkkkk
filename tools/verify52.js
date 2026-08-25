@@ -7,7 +7,11 @@
    ③ 회귀: 메뉴를 열고 닫아도 메인 화면 고정 요소가 Δ0 인가 (작업 38 «패널 오버레이화» 유지)
    실행: node tools/verify52.js        → 마지막 줄 `VERIFY52 PASS n/n`
    LESSONS 50-① — 위임 핸들러를 타야 하는 클릭은 query+click 을 같은 evaluate 안에 넣는다. */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const T = [];
@@ -17,7 +21,7 @@ const eq = (n, got, exp, tol = 0.6) =>
   Math.abs(got - exp) <= tol ? ok(n, `${got} (기대 ${exp})`) : no(n, `${got} ≠ ${exp} (Δ${(got - exp).toFixed(1)})`);
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

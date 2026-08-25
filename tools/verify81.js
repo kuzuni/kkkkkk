@@ -5,7 +5,11 @@
    ④ 재화 비행 도착지(fxPill)가 상점 바의 알약
    ⑤ 콘솔 에러 0
    실행: node tools/verify81.js   캡처: docs/review/81-shop.png · 81-dun.png */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const { PNG } = require('pngjs');
@@ -17,7 +21,7 @@ const ck = (name, ok, info) => {
 };
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

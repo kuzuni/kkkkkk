@@ -5,7 +5,11 @@
    창 RMS 를 게인 산정 기준으로 쓴다: 꼬리 무음이 긴 파일이 full RMS 에서 과소평가돼
    게인을 과하게 올리는 것을 막는다. tools/verify98.js 가 같은 함수를 재사용한다. */
 const fs = require('fs'), path = require('path'), http = require('http');
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용.
+   여기 있던 자체 폴백은 후보가 `/opt/pw-browsers/chromium` 하나뿐이라, 그 심링크가 없고
+   `chromium-<빌드>/` 만 있는 러너에서는 못 찾았다. */
+const { pw, launch: pwLaunch } = require('./pwlaunch');
+const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const AUD = path.join(ROOT, 'assets', 'audio');
 const WIN_MS = +(process.env.W98 || 100);   /* 게인 산정 기준 창 — 98 은 100ms */
@@ -61,18 +65,10 @@ const MEASURE = `async (arg) => {
   return out;
 }`;
 
-/* 번들 브라우저를 못 찾는 환경(클라우드 러너 /opt/pw-browsers) 대비 — smoke.js 와 같은 규칙 */
-function launchOpts(){
-  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
-  for(const p of cands){ try{ if(fs.existsSync(p)) return { executablePath: p }; }catch(_){} }
-  return {};
-}
+/* 번들 브라우저를 못 찾는 환경(클라우드 러너 /opt/pw-browsers) 대비 — pwlaunch 공용 폴백.
+   호출부(verify98·measure)가 쓰던 `launch(args)` 시그니처는 그대로 둔다. */
 async function launch(args){
-  try{ return await chromium.launch({ args }); }
-  catch(e){
-    const o = launchOpts(); if(!o.executablePath) throw e;
-    return await chromium.launch(Object.assign({ args }, o));
-  }
+  return await pwLaunch(chromium, { args });
 }
 
 async function measure(urls){

@@ -16,7 +16,11 @@
      부족  12: 가격 rgb(252,113,108) · 알약 rgb(115,115,115) · 면 은색(#D3D3D3 림)
            10: 가격 rgb(235,109,104) · --f1 #A8A8A8
 */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const FILE = 'file://' + path.resolve(__dirname, '../index.html');
@@ -72,7 +76,7 @@ const probe10 = () => {
 };
 
 (async () => {
-  const br = await chromium.launch();
+  const br = await launch(chromium);
   const ctx = await br.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

@@ -5,7 +5,11 @@
  * 기준: docs/measure/22-퀘스트팝업.md 의 «레퍼런스 절대 y» → 프레임 y = ref y − 84 (가로 1:1).
  * 좌표는 전부 «프레임 px»(#app 의 scale 을 되돌린 값). 허용 오차 ±2px.
  */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const KEY = 'idle_hunter_save_v4';
@@ -52,7 +56,7 @@ const frameRects = (page, map) => page.evaluate((m) => {
 }, map);
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   try {
     /* ---------- 1. 기하 (기준 화면비 1080×2280) ---------- */
     const { ctx, page } = await openQuestPage(browser);

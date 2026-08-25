@@ -1,7 +1,11 @@
 /* 작업 A2 좌측 사이드 아이콘 — 회귀 게이트.  실행: node tools/verifyA2.js
    기하(행 그리드·좌측 여백·겹침)와 짧은 기기 대응만 본다. 잉크 bbox 는 tools/scanA2.py 담당.
    기준 프레임 1080x2280 에서 레퍼런스 02(1080x2340) 행 y − 84 를 목표로 한다. */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 /* 측정표 §1-2 의 ref 행 top: 260 / 421 / 556 / 687 / 820 / 958 → −84
@@ -13,7 +17,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ✗ ' + m)); };
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const errs = [];
 
   /* [1] 기준 프레임 — 행 그리드 */

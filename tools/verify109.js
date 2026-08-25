@@ -20,7 +20,11 @@
      ⑤ 이름 표시 — 이름이 **글자로 나오는** 화면(08 스킬 세부 `#mtitle` · 11 확률 정보 `.prb-row .nm`)에 숫자 이름 0건
         (PROGRESS 109 행의 «04/07/12/21» 은 오기다 — 그 넷은 스킬 이름을 글자로 그리지 않는다. 파일 아래 ⑤ 절 주석 참고)
 */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -139,7 +143,7 @@ const probeNames = () => {
       !/\bn:\s*\d/.test(src.slice(...arrayRange(src, 'SKILLS'))));
 
   /* ── 브라우저 ── */
-  const br = await chromium.launch();
+  const br = await launch(chromium);
   const ctx = await br.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

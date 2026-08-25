@@ -5,7 +5,11 @@
 
    LESSONS 34-⑤ — addInitScript 는 reload 마다 다시 도므로 세이브를 다시 깔지 않게 가드한다.
    LESSONS 51-③ — 유휴 루프가 굴리는 값(자동구매·자동강화)은 «수령 전후 재화 비교» 를 오염시키므로 끈다. */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 let pass = 0, failed = 0;
@@ -52,7 +56,7 @@ async function fresh(browser, w = 1080, h = 2280) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   try {
     /* ---------- 1. 진입 ---------- */
     console.log('[1] 진입 — ▦ 메뉴 → 우편');

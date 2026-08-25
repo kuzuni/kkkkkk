@@ -1,7 +1,11 @@
 /* 작업 30 — 던전 입장 화면 기하·기능 검증기.
    측정표 docs/measure/30-던전입장.md 의 실측값을 프레임 좌표(= ref y − 84, 가로 1:1)로 대조한다.
    실행: node tools/verify30.js   (playwright@1.56 + 컨테이너 chromium)  */
-const { chromium } = require('playwright');
+/* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 있던
+   `require('playwright')` + `chromium.launch()` 는 클라우드 러너(미리 깔린
+   /opt/pw-browsers, 빌드 번호 불일치)에서 `Executable doesn't exist` 로 즉사했다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const W = 1080, H = 2280;
@@ -18,7 +22,7 @@ const near = (label, got, want, tol) => {
 };
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
