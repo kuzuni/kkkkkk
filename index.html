@@ -4490,6 +4490,9 @@
   .sk-clv{position:absolute;left:18px;top:14px;height:32px;font-size:26px;line-height:32px;
     color:#fff}
   .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
+  /* 82 — 미보유 카드도 아이콘이 자물쇠 뒤에 비쳐 보이게(05 .wgc.lk>.ic 와 동일 컨셉).
+     brightness(0) 완전 실루엣 금지(주인 지시) — 흐린 회색 */
+  .sk-card.lk>.sk-ci{opacity:.35;filter:grayscale(1)}
   /* 카드 자물쇠 49x57 · 카드상단+55 */
   .sk-card>.sk-lock{left:50%;top:55px;margin-left:-24.5px}
   /* 50 코스튬 — 하단 [착용]/[구매] 버튼의 대상이 되는 «선택 카드». 07·26 에는 선택 개념이 없어
@@ -13009,7 +13012,8 @@ function renderSkill(){
     h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-skit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
-      +  (own ? '<b class="sk-ci">' + it.ic + '</b>' : '<span class="sk-lock"></span>')
+      /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조) */
+      +  '<b class="sk-ci">' + it.ic + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
       +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-skeq="' + it.id + '"></s>' : '')
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
@@ -13095,7 +13099,8 @@ function renderPet(){
     h += '<div class="sk-card' + (on ? ' dim' : own ? '' : ' lk') + '" data-ptit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
-      +  (own ? '<b class="sk-ci">' + itemIcon(it) + '</b>' : '<span class="sk-lock"></span>')
+      /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조) */
+      +  '<b class="sk-ci">' + itemIcon(it) + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
       +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-pteq="' + it.id + '"></s>' : '')
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
