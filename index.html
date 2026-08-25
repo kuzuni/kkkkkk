@@ -3102,7 +3102,9 @@
     transform:translateY(-42px)}
   .cl>*{position:absolute}
   /* 상단 다크 밴드 ref y364~474 (리본·검색버튼 자리) */
-  .cl-band{left:0;right:0;top:0;height:111px;background:#33333D;border-radius:34px 34px 0 0;
+  /* 8회차 — K #13 은 «ref 108» 이라 했지만 x500 열 자체 스캔은 **ref 364.5~474.5 = 110**(우리 111).
+     Δ3 이 아니라 Δ1 이다 — 측정표 §2-1 «ref y364~474» 와도 일치하므로 110 만 반영한다. */
+  .cl-band{left:0;right:0;top:0;height:110px;background:#33333D;border-radius:34px 34px 0 0;
     box-shadow:inset 0 7px 0 #393943,inset 7px 0 0 #393943,inset -7px 0 0 #393943}
   /* 좌우 갈색 베벨 프레임 (본문 구간만 — 밴드 구간은 다크가 전폭) */
   .cl-fl{left:0;top:111px;bottom:3px;width:10px;
@@ -3207,10 +3209,19 @@
      정확히 차지**하게 하고(6회차 카드 121×121 로 줄면서 아트 bbox 는 **111×76**), 넘치더라도 flex 중앙정렬이라 좌우로 «균등하게» 넘친다.
      ⚠ 클래스 이름도 `ci` → `cdic` 으로 바꿨다 — 33 재화 정보 팝업의 `.ci{width:598px;height:813px}` 가
      **전역 클래스**라 카드 아이콘 `<i class="ci">` 에 그대로 먹고 있었다(그게 598px 의 진짜 원인). */
-  #collw .clb .cd>i.cdic{position:absolute;left:0;right:0;top:0;bottom:35px;margin:0;
-    display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
+  /* 8회차 — 비평가 K·L 이 독립적으로 «아이콘 글리프 −18.5~19% w · 세로중심 9~10px 위» 를 짚었고
+     자체 스캔으로 확인했다: ref 아트의 검정 외곽이 y675 행 x185~187·248~250, x217 열 y637~705
+     → **ref 아트 bbox 66×70 @ 프레임 (185,550) = 카드 패딩박스 local (23,15)**.
+     우리 `.cdic` 는 111×76 박스(중심 local 55.5,38)라 글리프가 작고 12px 위였다.
+     아트 자리 규칙대로 **박스를 ref bbox 로 못박고** 폴백 글리프를 그 안에 채운다 —
+     나중에 이미지로 갈아 끼우면 위치·크기가 그대로 맞는다. */
+  #collw .clb .cd>i.cdic{position:absolute;left:23px;top:15px;width:66px;height:70px;margin:0;
+    display:flex;align-items:center;justify-content:center;font-size:65px;line-height:1;
+    transform:scaleX(1.15)}
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:29px}
-  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:2px;font-size:27px;line-height:29px;
+  /* 8회차 — K #16·L #9 가 «캡션 잉크 3~4px 위» 로 일치. 자체 행 프로파일(light>=150, x168~268):
+     ref 잉크 y708~724 / 우리 703~721 → 5px 내린다. */
+  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:-3px;font-size:27px;line-height:29px;
     transform:scaleX(1.08);-webkit-text-stroke:5px #000;paint-order:stroke fill}
   /* 효과 바 — 6회차 실측 ref x130.5~948.5 / y786.5~864.5 → 블록 local (0, +291), h78.
      (우리는 좌 131.5·h80 이라 좌로 1px 밀리고 아래로 2px 넘쳤다) */
@@ -3231,7 +3242,8 @@
   .clb-btn:disabled{cursor:default}
   /* 28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
      ref 잉크(외곽 포함) 74x43 @ y800~842(프레임 716~758) 에 맞추려면 안쪽 <i> 를 6px 올린다. */
-  .clb-btn>i{position:relative;top:-6px;transform:scaleX(.94)}
+  /* 8회차 — K #15(3px)·L #11(2.5px) 이 «[강화] 라벨이 버튼 중심보다 더 위» 로 일치 → 3px 내린다 */
+  .clb-btn>i{position:relative;top:-3px;transform:scaleX(.94)}
   .clb-btn.rdy{background:linear-gradient(180deg,#FFE066 0 40%,#F5A623);color:#fff;
     -webkit-text-stroke:5px rgba(0,0,0,.4);paint-order:stroke fill}
   /* ── 하단 깃발 서브탭 4개 — 모달 밑(top 1542)에서 돌출, pitch 207 ── */

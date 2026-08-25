@@ -81,7 +81,7 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   let g = await geo();
   T('모달 x', g.cl.x, 92, 1);            T('모달 y', g.cl.y, REF(356), 1);
   T('모달 width', g.cl.w, 895, 1);       T('모달 height', g.cl.h, 1544, 2);
-  T('다크 밴드 y', g.band.y, REF(364), 1); T('다크 밴드 height', g.band.h, 111, 1);
+  T('다크 밴드 y', g.band.y, REF(364), 1); T('다크 밴드 height', g.band.h, 110, 1);   /* 8회차 실측 ref 364.5~474.5 */
   T('리본 x', g.rib.x, 269, 1);          T('리본 y', g.rib.y, REF(346), 1);
   T('리본 width', g.rib.w, 543, 1);      T('리본 height', g.rib.h, 115, 1);
   T('🔍 x', g.srch.x, 836, 1);           T('🔍 y', g.srch.y, REF(381), 1);
