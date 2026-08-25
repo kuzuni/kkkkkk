@@ -62,11 +62,19 @@ const chk = (c, m) => c ? ok(m) : bad(m);
     const g0 = S.gold;
     fxAt(fxWorld(player.x + 140, player.y - 30));
     S.gold += 128000;
-    await sleep(230);
+    /* «연출 길이» 는 첫 아이콘이 뜬 순간부터 마지막이 사라질 때까지다. 고정 230ms 를 자고 나서
+       재면 그만큼 앞이 잘려 실제 481ms 짜리가 296ms 로 읽힌다(43 교훈 1 의 다섯 번째 재현). */
+    let tSpawn = 0;
+    for(let i=0;i<200;i++){
+      if(document.querySelectorAll('#fxl .fx-fly').length){ tSpawn = performance.now(); break; }
+      await sleep(8);
+    }
+    if(!tSpawn) return { err:'비행 아이콘이 생성되지 않았다' };
+    await sleep(60);                                    /* 스태거로 늦게 뜨는 것까지 세고 나서 개수를 잰다 */
     const n0 = document.querySelectorAll('#fxl .fx-fly').length;
     /* 시작 위치가 «출발점» 근처인지 */
     const f0 = document.querySelector('#fxl .fx-fly').getBoundingClientRect();
-    let punch = 0, minD = 1e9, t0 = performance.now(), lastSeen = 0, plusTxt = null;
+    let punch = 0, minD = 1e9, t0 = tSpawn, lastSeen = 0, plusTxt = null;
     while(performance.now() - t0 < 1600){
       const els = document.querySelectorAll('#fxl .fx-fly');
       if(els.length) lastSeen = performance.now() - t0;
@@ -82,6 +90,7 @@ const chk = (c, m) => c ? ok(m) : bad(m);
     return { n0, punch, minD:Math.round(minD), lastSeen:Math.round(lastSeen),
              startY:Math.round(f0.top), plusTxt, g0, g1:S.gold };
   });
+  chk(!fly.err, '재화 획득 트리거' + (fly.err ? ' — ' + fly.err : ''));
   chk(fly.n0 >= 3 && fly.n0 <= 8, '아이콘 ' + fly.n0 + '개 (58: 3~8개)');
   chk(fly.minD <= 6, 'HUD 골드 알약에 «정확히» 도착 — 최근접 ' + fly.minD + 'px');
   chk(fly.punch > 0, '도착 순간 알약이 튄다 (.fx-punch 관측 ' + fly.punch + '프레임)');
@@ -329,32 +338,44 @@ const chk = (c, m) => c ? ok(m) : bad(m);
       await sleep(10);
     }
     /* (다)(라) 퀘스트 — 토스트가 얼마나 빨리 뜨나 · 다이아 롤링이 0.8초 안에 끝나나 */
+    /* 다이아를 «지금 표시값과 다른» 값으로 내려 두고 시작한다 — 안 그러면 보상 90 을 더해도
+       fmt 문자열이 그대로라 «롤링이 2ms 에 끝났다» 는 거짓 통과가 난다(43 교훈 1 의 네 번째 재현). */
+    S.dia = 300; fxHold.dia = 0; await sleep(900);
     S.quest.kill.base = -1e9; openQuest('rep'); await sleep(350);
     const dn = document.getElementById('diaN');
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
     if(!b) return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), err:'퀘스트 버튼 없음' };
-    const t0 = Date.now();
+    const d0 = S.dia, t0 = Date.now();
     b.click();
-    const want = () => fmt(S.dia);
-    let toastAt = -1, diaDone = -1;
+    let toastAt = -1, seenAt = -1, diaDone = -1, swapAt = -1;
     for(let i=0;i<120;i++){
       const to = document.querySelector('#fxl .fx-toast');
-      if(toastAt < 0 && to && +getComputedStyle(to).opacity >= 0.9) toastAt = Date.now() - t0;
-      if(diaDone < 0 && dn.textContent === want()) diaDone = Date.now() - t0;
+      if(to){
+        const op = +getComputedStyle(to).opacity;
+        /* «보이기 시작한» 시각과 «다 뜬» 시각을 나눠 잰다 — 전자가 데이터 교체보다 앞서야 한다 */
+        if(seenAt < 0 && op > 0.2) seenAt = Date.now() - t0;
+        if(toastAt < 0 && op >= 0.9) toastAt = Date.now() - t0;
+      }
+      if(swapAt < 0 && S.dia !== d0) swapAt = Date.now() - t0;   /* 데이터가 실제로 바뀐 시각 */
+      /* «지급이 실제로 일어난 뒤» 표시가 따라잡은 시각을 잰다 — 지급 전에는 표시와 S 가 같아서
+         그대로 비교하면 «0ms 에 끝났다» 는 거짓 통과가 난다(43 교훈 1). */
+      if(diaDone < 0 && S.dia !== d0 && dn.textContent === fmt(S.dia)) diaDone = Date.now() - t0;
       await sleep(10);
     }
     closeModal();
-    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, diaDone };
+    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, seenAt, diaDone, swapAt };
   });
   chk(!t10.err, '퀘스트 트리거' + (t10.err ? ' — ' + t10.err : ''));
   chk(t10.fmax <= 1.06, '플래시 최대 확대 ×' + t10.fmax + ' — 카드 폭 ' + t10.cardW
       + 'px, 카드 간격 16px 라 ×1.06 을 넘으면 옆 카드를 침범한다');
   chk(t10.pmax >= 1.12, '알약 최대 확대 ×' + t10.pmax);
   chk(t10.hi >= 90, '알약이 ×1.12 이상으로 ' + t10.hi + 'ms 유지 (봉우리가 뾰족하면 안 보인다)');
-  /* 하한은 «연출» 이 아니라 클릭 핸들러(claim + openQuest 재렌더) 비용이다 — 같은 프레임에 그려지므로
-     실제 «데이터가 먼저 바뀌는» 갭은 없다. 페이드인만 최대한 당겨 놓고 150ms 로 둔다. */
-  chk(t10.toastAt >= 0 && t10.toastAt <= 150, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (데이터 교체와 같은 프레임)');
-  chk(t10.diaDone >= 0 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms)');
+  /* 절대 ms 로 재면 머신 부하에 흔들린다(118~175ms). 비평가가 지적한 성질은 «데이터가 먼저 바뀌고
+     연출이 늦게 온다» 이므로 **순서 자체**를 잰다 — 이건 구조적으로 보장된다(수령을 두 프레임 미룬다). */
+  chk(t10.seenAt >= 0 && t10.swapAt >= 0 && t10.seenAt <= t10.swapAt,
+      '토스트가 데이터 교체 «보다 먼저» 보이기 시작 — 토스트 ' + t10.seenAt + 'ms vs 교체 ' + t10.swapAt + 'ms');
+  chk(t10.toastAt >= 0 && t10.toastAt <= 220, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (≤220ms)');
+  chk(t10.diaDone >= 120 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
 
   await browser.close();
   if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }
