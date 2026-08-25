@@ -2417,8 +2417,10 @@
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 62%,#139EBF 88%,#1E88A2);
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
     border:solid #000;border-width:8px 0 5px;border-radius:10px;box-sizing:border-box}
-  .cl-rib>i{position:relative;font-size:48px;line-height:88px;color:#FEFEFE;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.90)}
+  /* ref 「도감」 코어 87x44 @ x497~583 y367~410(프레임 283~326) · 검정 외곽 포함 98x55.
+     우리는 코어 폭 −4.6% · 4px 아래 · 외곽 3px 얇았다(비평 C ⑥ · D ⑥ 공통). */
+  .cl-rib>i{position:relative;font-size:48px;line-height:80px;color:#FEFEFE;
+    -webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.945)}
   /* 우측 🔍 — 원형 d68, 반투명 흰 + 어두운 링 */
   .cl-srch{left:739px;top:17px;width:68px;height:68px;border-radius:50%;box-sizing:border-box;
     background:#5E6679;box-shadow:inset 0 0 0 8px #9DA2B6;border:5px solid #45454D;text-align:center;line-height:58px;font-size:36px;
