@@ -2591,7 +2591,7 @@
      클립이 그림자를 통째로 잘라내 검정 외곽선이 한 픽셀도 안 나온다(1~3회차 내내 그랬다).
      클립이 끝난 «래퍼» 에 걸어야 밖으로 나온다. */
   .cl-wing{position:absolute;left:0;right:0;top:0;bottom:0;
-    filter:drop-shadow(9px 0 0 #000) drop-shadow(-9px 0 0 #000) drop-shadow(0 5px 0 #000) drop-shadow(0 -5px 0 #000)}
+    filter:drop-shadow(6px 0 0 #000) drop-shadow(-6px 0 0 #000) drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000)}
   /* 꼬리를 플레이트 «위» 로 올리되(레퍼런스 접합), 래퍼를 플레이트 시안 시작선(rib-local 41 / 502)에서
      잘라 꼬리의 검정 외곽선이 플레이트를 덮지 않게 한다. clip-path 는 filter «뒤» 라 외곽선까지 같이 잘린다. */
   .cl-wing.l{clip-path:inset(0 calc(100% - 41px) 0 0)}
@@ -2604,7 +2604,7 @@
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
     border:solid #000;border-width:8px 6px 5px;border-radius:10px;box-sizing:border-box;
     /* 접힘 음영 — ref 는 꼬리와 만나는 플레이트 안쪽 x308~317 / 762~771 이 10px 어둡다(12,137,167) */
-    box-shadow:inset 9px 0 0 rgba(0,0,0,.22),inset -9px 0 0 rgba(0,0,0,.22)}
+    box-shadow:inset 5px 0 0 rgba(0,0,0,.22),inset -5px 0 0 rgba(0,0,0,.22)}
   /* ref 「도감」 코어 87x44 @ x497~583 y367~410(프레임 283~326) · 검정 외곽 포함 98x55.
      우리는 코어 폭 −4.6% · 4px 아래 · 외곽 3px 얇았다(비평 C ⑥ · D ⑥ 공통). */
   .cl-rib>i{position:relative;font-size:48px;line-height:80px;color:#FEFEFE;
@@ -2622,7 +2622,7 @@
   .clb-head{left:0;top:0;width:820px;height:81px;background:#565769;border-radius:22px 22px 0 0}
   /* 빨간 방패 Lv 뱃지 ref x153~253 / y489~596 → 블록 local (23,−7), 101×108 */
   .clb-bdg{left:23px;top:-7px;width:101px;height:108px;text-align:center;z-index:2}
-  .clb-bdg>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+  .clb-bdg>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 78%,88% 90%,50% 100%,12% 90%,0 78%)}
   /* 레퍼런스 단면 실측(y540, 뱃지 x153~253) — 진홍 153~157 / **붉은 림 158~163** / 골드 링 164~169 /
      안쪽 붉은 면 170~. 붉은 림이 통째로 빠져 있어 골드가 외곽선처럼 보였다(1회차 비평 A·B 공통 지적). */
   .clb-bdg>s.o{inset:0;background:#4F1106;
