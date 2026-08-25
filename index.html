@@ -5603,9 +5603,13 @@
   .bg53-head{flex:0 0 91px;margin:0 -12px;border-radius:36px 36px 0 0;background:#523E3D;
     box-shadow:inset 0 8px 0 #5C4744,inset 11px 0 0 #5C4744,inset -11px 0 0 #5C4744;
     text-align:center;line-height:91px;overflow:hidden}
-  /* 타이틀 코어 82×43 → font-size 43/0.93 ≈ 46 (LESSONS 01: 이 폰트의 잉크비는 0.93). 편측 외곽선 5 → 10 */
+  /* 타이틀 코어 82×43 → font-size 43/0.93 ≈ 46 (LESSONS 01: 이 폰트의 잉크비는 0.93). 편측 외곽선 5 → 10.
+     3회차 자체 실측(tools/cmp53.py ink): 잉크 높이는 42 로 맞았는데 폭이 **91**(ref 82) 로 +11% 였다.
+     이 폰트의 «자당 advance» 가 레퍼런스 서체보다 넓다 — 높이가 맞으므로 font-size 가 아니라
+     scaleX 로 폭만 줄인다(LESSONS 01: 폭은 scaleX, 음수 letter-spacing 은 공백·소수점을 먹는다). */
   .bg53-head>i{position:relative;top:-2px;font-size:46px;color:#F8F8F8;
-    -webkit-text-stroke:10px #000;paint-order:stroke fill;letter-spacing:1.5px;text-indent:1.5px}
+    -webkit-text-stroke:10px #000;paint-order:stroke fill;letter-spacing:1.5px;text-indent:1.5px;
+    transform:scaleX(.9)}
   /* 크림 본문 908×848 + 별 워터마크(33 .ci-body 와 같은 «별 2개» 엇갈린 타일 — LESSONS 22-③:
      별 1개짜리 A5 타일을 쓰면 행의 절반이 통째로 빈다) */
   .bg53-body{flex:1 1 auto;position:relative;box-sizing:border-box;
@@ -5641,9 +5645,13 @@
     display:flex;align-items:center;justify-content:center;font-size:80px;line-height:1;z-index:1;
     transform:scaleX(1.18)}
   /* 수량 — 코어 h26 @ 칸top+130, 칸 가로 중앙. 좌우로 넘쳐도 되게 -20px 씩 벌린다
-     (r3c1 의 `2.26B` 는 코어 폭 106 으로 칸 안쪽 폭보다 넓다) */
+     (r3c1 의 `2.26B` 는 코어 폭 106 으로 칸 안쪽 폭보다 넓다)
+     ⚠ 3회차 정정 — **잉크비 0.93 은 «한글» 값이다. 숫자에 쓰면 안 된다**(LESSONS 70-①).
+     측정표의 «코어 25~26 → font 28» 을 그대로 썼더니 실측 잉크가 **19px**(ref 24) 로 −21% 였다.
+     숫자+쉼표는 캡하이트 기준이라 이 폰트의 잉크비가 **≈0.68** 이다 → 24/0.68 ≈ **35px**.
+     line-height 는 그대로 두고 font-size 만 올려 «칸 아래 테두리에 걸치는» 중심을 유지한다. */
   #bagw .bg53-c>b{position:absolute;left:-20px;right:-20px;top:120px;height:36px;line-height:36px;
-    display:block;text-align:center;font-size:28px;color:#F8F8F8;
+    display:block;text-align:center;font-size:35px;color:#F8F8F8;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2;white-space:nowrap}
   /* 빈 칸 — ref r3c3·r3c4 는 «플레이스홀더 없음», 패널 배경 그대로다 */
   .bg53-c.em{border-color:transparent;background:none;box-shadow:none}
@@ -5657,7 +5665,9 @@
     font-size:38px;color:#A8A8AC;-webkit-text-stroke:10px #000;paint-order:stroke fill;z-index:1}
   /* 비활성 «소모품» 코어 중심 x345.5 → 트랙 기준 194.5 (세그먼트 396 의 중앙 198 대비 −3) */
   #bagw .bg53-tabs>i.t1{left:0;width:389px}
-  #bagw .bg53-tabs>i.t2{left:389px;width:393px}
+  /* 활성 «재화» — 3회차 자체 실측: 잉크 폭·높이는 ref 와 일치(75×34 vs 75×33)인데 **중심이 x +6.5** 였다.
+     세그먼트 중앙(198)이 아니라 ref 코어 중심 735 에 맞춘다 → 트랙 콘텐츠 기준 579 = left 389 + width/2 */
+  #bagw .bg53-tabs>i.t2{left:389px;width:380px}
   /* 활성 알약 — ref x523..942 (420×93). 트랙보다 «어둡고» 카키 림이 붙고 글자색이 하늘색이다.
      비활성 세그먼트(547 부터) 보다 24px 넓어 왼쪽으로 겹쳐 올라간다. */
   .bg53-tabs>s.on{position:absolute;left:-5px;top:-5px;width:420px;height:93px;box-sizing:border-box;
