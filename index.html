@@ -6987,13 +6987,13 @@
   .ch-nm>.ch-sx.f{color:#C23A5B;font-size:63px;transform:scaleX(1.55)}
   /* 배지 56×48 — 이름줄 위로 11px 넘친다(ref −5). 아트 자리 규칙대로 bbox 를 정확히 차지시킨다 */
   .ch-nm>.ch-bd{margin-left:17px;width:56px;height:48px;font-size:46px;line-height:48px;
-    text-align:center;transform:translateY(-6px) scaleX(1.25)}
+    text-align:center;transform:translateY(-4px) scaleX(var(--bsx,1.25))}
   /* 시각 — 우측 정렬 우끝 x967(우 margin 113). 잉크 h23 → fs 25 */
   .ch-tm{right:111px;top:-3px;height:36px;line-height:36px;font-size:34px;color:#7A6550;font-weight:900;
     transform:scaleX(1.02);transform-origin:right center}
   /* 말풍선 — 폭 699 고정(내용 길이와 무관), h = 26 + 37×줄수. 패딩 13/18 이 그 26 을 만든다 */
   .ch-bb{left:240px;top:49px;width:699px;box-sizing:border-box;border-radius:14px;
-    background:#D7C0A1;padding:13px 18px;font-size:34px;line-height:36px;font-weight:800;
+    background:#D7C0A1;padding:12px 18px 14px 14px;font-size:34px;line-height:36px;font-weight:800;
     color:#3A2C20;word-break:break-word}
 
   /* ---- 대전 결과 카드(특수 메시지) — 말풍선 자리를 그대로 차지한다(측정표 §5) ----
@@ -7008,20 +7008,20 @@
   .ch-cd>.ch-cw .ch-cav{left:128px} .ch-cd>.ch-cl .ch-cav{left:126px}
   .ch-cd .ch-cav>canvas{position:absolute;left:0;top:0;width:87px;height:87px;image-rendering:pixelated}
   /* «승리» 58×30 — 아바타 하단 보더에 11px 겹쳐 올라탄다(ref +5) */
-  .ch-cd .ch-wl{left:0;right:0;top:99px;height:30px;line-height:30px;text-align:center;
+  .ch-cd .ch-wl{left:0;right:0;top:96px;height:30px;line-height:30px;text-align:center;
     font-size:29px;color:#FFE07A;-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .ch-cd .ch-cnk{left:0;right:0;top:132px;height:26px;line-height:26px;text-align:center;
     font-size:21px;color:#1E1409}
   /* 3회차 P D2 · Q D7 — 레퍼런스 전투력 숫자는 «검정 외곽선 + 밝은 채움» 이라 잉크가 30.3(글자면 21.6)인데
      우리는 외곽선 없는 18~19 였다(−17~39%). 게임 공통 표기(`.rk-*` 계열)와 같은 채움+스트로크로 맞춘다. */
-  .ch-cd .ch-ccp{left:0;right:0;top:162px;height:34px;line-height:34px;text-align:center;
-    font-size:30px;color:#FFE07A;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap}
+  .ch-cd .ch-ccp{left:0;right:0;top:167px;height:34px;line-height:34px;text-align:center;
+    font-size:30px;color:#FFE07A;-webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
   .ch-cd .ch-ccp>u{width:37px;height:32px;font-size:30px;line-height:32px;margin-right:5px;
     text-align:center;transform:translateY(2px)}
   /* 우상단 관전 배지 43×41 — 카드 «밖으로» 걸친다(우 +35 / 위 −9)라 카드 형제로 둔다 */
   .ch-rp{left:931px;top:39px;width:43px;height:41px;border-radius:10px;box-sizing:border-box;
     border:3px solid #000;background:linear-gradient(180deg,#8fe6ff,#4aa8ff);
-    font-size:22px;line-height:35px;text-align:center;color:#062033}
+    font-size:19px;line-height:35px;text-align:center;color:#062033}
 
   /* ---- 하단 고정 입력 바(측정표 §6) — 바 186(검정 보더 4 포함) ---- */
   .ch-bar{position:absolute;left:0;right:0;bottom:0;height:186px;box-sizing:border-box;
@@ -7030,7 +7030,7 @@
   /* ◀ 뒤로 76×63 @ (22, 바top+76) — 입력창과 «바닥 정렬»(세로 중앙 아님, 측정표 §6) */
   .ch-back{left:22px;top:72px;width:76px;height:63px;box-sizing:border-box;cursor:pointer;
     border:4px solid #000;border-radius:11px;background:#FF1017;box-shadow:inset 0 -13px 0 #4E0507}
-  .ch-back>u{position:absolute;left:20px;top:9px;width:28px;height:30px;background:#fff;
+  .ch-back>u{position:absolute;left:22px;top:10px;width:24px;height:28px;background:#fff;
     clip-path:polygon(100% 0,100% 100%,0 50%)}
   /* 입력창 931×100 @ (123, 바top+37) — 좌 inset 54 가 플레이스홀더 잉크 좌단(ref x82) */
   .ch-in{left:123px;top:33px;width:931px;height:100px;box-sizing:border-box;
@@ -14254,6 +14254,10 @@ const CHAT_SEED = [
   [5,  0, 0, '👿',  33, '출석 보상도 잊지 마시고'],
   [23, 2, 1, '⭐',  35, '오늘도 다들 화이팅']
 ];
+/* 배지는 «아트 자리» 다 — 나중에 이미지로 교체할 자리(56×48)를 지금은 이모지가 «정확히» 차지해야 한다.
+   그런데 이모지마다 잉크 폭이 달라(4회차 실측: ⭐64 · 👿62 · 🛡54 · 🎖41, 전부 scaleX 1.25 기준)
+   한 값으로 주면 옆 gap 이 1~12px 로 튄다(R D1 · S D2). 이모지별로 «잉크 56» 이 되게 역산한다. */
+const CHAT_BSX = { '⭐':1.09, '👿':1.13, '🛡️':1.30, '🎖️':1.55, '🔥':1.40, '👑':1.20 };
 const chEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /* 더미 시각은 03:31 기준 누적분 — 실시계를 쓰면 캡처마다 값이 달라져 채점이 흔들린다(LESSONS 04-①) */
@@ -14292,7 +14296,7 @@ function chRowHTML(m, i){
   const name = '<div class="ch-nm"><b class="ch-gd">[' + chEsc(m.g) + ']</b>'
     + '<b class="ch-nk">' + chEsc(m.n) + '</b>'
     + '<b class="ch-sx ' + (m.s ? 'm' : 'f') + '">' + (m.s ? '♂' : '♀') + '</b>'
-    + (m.b ? '<b class="ch-bd">' + m.b + '</b>' : '') + '</div>'
+    + (m.b ? '<b class="ch-bd" style="--bsx:' + (CHAT_BSX[m.b] || 1.25) + '">' + m.b + '</b>' : '') + '</div>'
     + '<i class="ch-tm">' + m.t + '</i>';
   const body = m.vs ? chCardHTML(m, i)
     : '<div class="ch-bb">' + chEsc(m.m).replace(/\n/g, '<br>') + '</div>';
