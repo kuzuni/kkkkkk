@@ -90,7 +90,7 @@ function launchOpts(){
   const OVS = [
     { id: 'shopw', open: 'openShopPage()' },
     { id: 'dunw', open: 'openDungeon()' },
-    { id: 'relicw', open: 'openRelicPage()' },
+    { id: 'relw', open: 'openRelw()' },   /* 89 로 교체된 유물 페이지. 옛 이름 #relicw/openRelicPage() 는 존재한 적 없다(작업 130) */
     { id: 'trw', open: null },     /* 클래스 토글만으로 표시 */
     { id: 'eqw', open: null },
     { id: 'sumw', open: null },
@@ -108,10 +108,31 @@ function launchOpts(){
       };
       const target = document.getElementById(id) || document.querySelector('.' + id);
       let shown = null;
+      /* 130 — 60(쥬시니스)이 오버레이에 300~450ms 페이드를 달아서 고정 250ms 로는
+         «앞 오버레이가 아직 닫히는 중 · 새 오버레이는 opacity 0.5» 인 순간을 재게 된다.
+         (실측: openShopPage 직후 100ms 에 shopw opacity 0.00, closeShopPage 뒤 150ms 까지 shopw 가 여전히 block/1.00)
+         고정 대기 대신 «가라앉을 때까지» 폴링한다. */
+      /* ⚠ 폴링은 «프레임을 넘겨» 두 번 연속 참일 때만 인정한다. jz 애니메이션은 클래스를 붙인
+         직후의 첫 스타일 계산에서는 아직 «효과 밖»이라 기저값(opacity 1)이 읽히고, 다음 프레임에
+         비로소 0% 키프레임(opacity 0)이 걸린다 — 한 번만 재면 그 «가짜 1» 을 붙잡는다. */
+      const settle = async (test, ms) => {
+        let hit = 0;
+        for (let t = 0; t < ms; t += 50) {
+          if (test()) { if (++hit >= 2) return true; } else hit = 0;
+          await new Promise((res) => requestAnimationFrame(() => setTimeout(res, 50)));
+        }
+        return test();
+      };
+      const anims = (el) => { try { return el.getAnimations().filter((a) => a.playState === 'running').length; } catch (_) { return 0; } };
+      const vis = (el) => { if (!el) return false; const c = getComputedStyle(el); return c.display !== 'none' && c.visibility !== 'hidden' && parseFloat(c.opacity) > 0.05; };
       try {
+        /* 앞 항목의 닫힘 애니메이션이 끝나기를 먼저 기다린다 — 안 그러면 앞 오버레이를 재게 된다 */
+        await settle(() => !['shopw', 'dunw', 'relw', 'trw', 'eqw', 'sumw', 'mbox'].some((o) => o !== id && vis(document.getElementById(o))), 2500);
         if (open) { eval(open); }
         else if (target) { target.classList.add('on'); if (getComputedStyle(target).display === 'none') target.style.display = 'block'; }
-        await new Promise((res) => setTimeout(res, 250));
+        /* 열림 애니메이션이 «끝나서»(러닝 애니메이션 0 · opacity ≥ .95) 실제로 화면을 덮을 때까지 */
+        await settle(() => target && getComputedStyle(target).display !== 'none'
+          && anims(target) === 0 && parseFloat(getComputedStyle(target).opacity) >= 0.95, 2500);
         const box = target ? target.getBoundingClientRect() : null;
         if (!target || !box || box.width < 10) return { skip: '오버레이가 안 열림' };
         /* 프로브 지점: 오버레이 박스 안쪽 중심 (프레임 px 그대로 — fit() 스케일을 뷰포트 좌표로 환산) */
@@ -121,6 +142,12 @@ function launchOpts(){
         const under = probe(document.getElementById('fxlc'));
         const hitC = document.elementFromPoint(px, py);
         const underCovered = !under.contains(hitC) && hitC !== under;
+        /* 130 — «무언가에 가려짐» 이 아니라 «그 오버레이에 가려짐» 인지까지 본다.
+           이름이 틀린 게이트가 skip 으로 조용히 흘러가던 사고(#relicw)의 재발 방지:
+           오버레이가 안 열려도 다른 무엇이 점을 덮으면 underCovered 는 참이 될 수 있다. */
+        const byTarget = !!(hitC && (hitC === target || target.contains(hitC)));
+        const cs = getComputedStyle(target);
+        const reallyShown = cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.05;
         under.remove();
         const over = probe(document.getElementById('fxl'));
         /* #fxl 프로브가 그 점을 덮는지 — 프로브 박스가 점을 포함하게 좌표를 프레임 px 로 재배치 */
@@ -129,17 +156,20 @@ function launchOpts(){
         const hitU = document.elementFromPoint(px, py);
         const overVisible = hitU === over;
         over.remove();
-        return { underCovered, overVisible };
+        return { underCovered, overVisible, byTarget, reallyShown, hit: hitC ? (hitC.id || hitC.className || hitC.tagName) : null };
       } finally {
         if (open === 'openShopPage()' && typeof closeShopPage === 'function') closeShopPage();
         else if (open === 'openDungeon()' && typeof closeDungeon === 'function') closeDungeon();
-        else if (open === 'openRelicPage()' && typeof closeRelicPage === 'function') closeRelicPage();
+        else if (open === 'openRelw()' && typeof closeRelw === 'function') closeRelw();
         else if (id === 'mbox') { if (typeof closeModal === 'function') closeModal(); }
         else if (target) { target.classList.remove('on'); target.style.display = ''; }
         const p = document.getElementById('probe77'); if (p) p.remove();
       }
     }, ov).catch((e) => ({ skip: String(e) }));
     if (r.skip) { fail(`${ov.id}: 프로브 불가 — ${r.skip}`); continue; }
+    /* 130 — 실제로 그 오버레이가 열려 점을 덮고 있는지(= 이 검사가 헛돌지 않는지) 먼저 확인 */
+    if (r.reallyShown && r.byTarget) ok(`${ov.id}: 오버레이가 실제로 그 점을 덮는다 (hit=${r.hit})`);
+    else fail(`${ov.id}: 오버레이가 그 점을 안 덮는다 — 검사가 헛돈다 (shown=${r.reallyShown}, hit=${r.hit})`);
     if (r.underCovered) ok(`${ov.id}: #fxlc 는 아래(가려짐)`); else fail(`${ov.id}: #fxlc 프로브가 오버레이 위로 보인다`);
     if (r.overVisible) ok(`${ov.id}: #fxl 은 위(보임)`); else fail(`${ov.id}: #fxl 프로브가 오버레이에 가려진다`);
   }
@@ -199,7 +229,7 @@ function launchOpts(){
   {
     const flying = await page.evaluate(async () => {
       if (typeof closeModal === 'function') closeModal();     /* 앞 검사에서 열린 게 남아 있으면 닫는다 */
-      ['shopw', 'dunw', 'relicw', 'trw', 'eqw', 'sumw', 'bagw', 'mnw'].forEach((id) => {
+      ['shopw', 'dunw', 'relw', 'trw', 'eqw', 'sumw', 'bagw', 'mnw'].forEach((id) => {
         const el = document.getElementById(id); if (el) { el.classList.remove('on'); el.style.display = ''; }
       });
       await new Promise((res) => setTimeout(res, 300));
