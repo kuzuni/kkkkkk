@@ -3936,8 +3936,19 @@
      ref 에 없어서 제거했다(있으면 칩이 h69 로 이어져 보인다). */
   /* 9회차(N P8): ref 칩 border-box 는 x168..405 = **238**(우테두리 401..405 가 7회차에 확인된 그것).
      right:0 이면 253−9 = 244 로 +2.5% 였다 */
+  /* 13회차(비평가 T L5): 칩에 **광택 레이어가 통째로 없었다.** 원인은 그라데이션 기점이다 —
+     `#FFEED0 0 4px` 는 요소 상단(ref 1337)부터 4px 인데 그 자리는 5px inset 테두리가 덮고 있어
+     밝은 띠가 **한 픽셀도 안 보였다**(우리 x260 세로는 1342..1353 이 통째로 평면 252,210,172).
+     ref 실측 — x260(칩 중앙): 1342 (255,240,211) 1px → 1343 (242,219,187) → 1344.. (245,212,171)
+       → 1373..1386 (229,187,139) 로 아래쪽이 어두워지는 세로 그라데이션.
+     x181(칩 좌측): 1342..1348 이 (255,251,240) **7px**, 가로로는 y1345 에서 x174..190 **17px** —
+       즉 좌상단에 타원형 하이라이트가 얹히고 오른쪽으로 갈수록 1px 상단 립으로 잦아든다.
+     → 기점을 테두리 뒤(5px)로 옮기고, 좌상단 타원 광택을 radial 로 얹는다. */
   .tr-qty>.q.on::before{content:'';position:absolute;left:9px;right:6px;top:9px;height:56px;
-    border-radius:12px;background:linear-gradient(180deg,#FFEED0 0 4px,#FCD2AC 4px);
+    border-radius:12px;
+    background:
+      radial-gradient(ellipse 11px 6px at 14px 8px,#FFFDF4 0 55%,rgba(255,253,244,0) 100%),
+      linear-gradient(180deg,#FCD2AC 0 5px,#FFF3DC 5px 6px,#F2DBBB 6px 7px,#F5D4AB 7px 35px,#E5BB8B 36px);
     /* 11회차(R 인계 2번): ref 칩 테두리는 좌 x168..172 · 우 x401..405 로 **5px** 이고 6px 은 +20% 였다
        (인계표의 «좌 3px» 은 코어만 센 값 — 자체 차분 스캔은 좌우 모두 5px 이다) */
     box-shadow:inset 0 0 0 5px #AA6F4D}
@@ -3960,11 +3971,29 @@
        인데 우리는 x30..34 = 5px 이라 카드 피치가 4px 넓어 보였다. 3+5 → 2+3 으로 총 5→3. */
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823;
     cursor:pointer}
+  /* 13회차(비평가 T L7): 카드 아래 그림자 **층 순서가 뒤집혀** 있었다.
+     ref x200 세로: 1946 (94,72,35) **최암이 카드 바로 밑** → 1947..1949 (155,123,72)/(158,122,62)
+       → 1950 (185,157,110) → 1951 (241,217,179) → 크림. 즉 **6px 단조 감쇠**.
+     우리: 1946..1947 (139,106,56 = 베벨 어두운 링) → 1948 (198,164,112 = 베벨 밝은 링)
+       → 1949..1950 (94,72,35 = 드롭) 으로 **최암이 맨 바깥**이었다.
+     box-shadow 는 spread 링이 항상 border-box 에 붙어서 «드롭을 링 안쪽에» 놓을 수 없다
+     → 카드 아래 6px 스택을 `::after` 로 직접 깐다(자식이라 box-shadow 위에 그려진다). */
+  .tr-card::after{content:'';position:absolute;left:0;right:0;top:100%;height:6px;pointer-events:none;
+    border-radius:0 0 14px 14px;
+    background:linear-gradient(180deg,#5E4823 0 1px,#9B7A48 1px 4px,#B99D6E 4px 5px,#F1D9B3 5px 6px)}
   .tr-card:nth-child(1){left:18px} .tr-card:nth-child(2){left:360px} .tr-card:nth-child(3){left:701px}
   .tr-card.no{filter:grayscale(.4) brightness(.9)}
   .tr-card>*{position:absolute}
+  /* 13회차(비평가 S P4): 헤더 밴드 좌·우 세로 엣지 레이어가 없다. ref y1520 실측 —
+     좌: x44 (249,232,204) → 45 (249,224,184) → 46 (248,216,169) → 47 (246,209,156) → 48.. (242,204,141)
+         = **5px 흰 램프**(밴드색 대비 알파 .57 → 0 으로 감쇠).
+     우: x351 (240,205,149) → **x352 (202,179,137)** → 353 검정 = **1px 어두운 엣지**(좌우 비대칭이다).
+     우리는 x43..352 가 (239,201,137) 완전 평면이었다. 세로 그라데이션 위에 가로 레이어 2장을 얹는다. */
   .tr-card>.ch{left:8px;right:8px;top:8px;height:89px;text-align:center;line-height:83px;
-    background:linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
+    background:
+      linear-gradient(90deg,rgba(255,255,255,.57) 0,rgba(255,255,255,0) 5px),
+      linear-gradient(270deg,rgba(0,0,0,.14) 0,rgba(0,0,0,0) 2px),
+      linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
   .tr-card>.ch>i{font-size:54px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.9)}
   /* 4회차: ref 는 카드 아트 «뒤» 에 45° 회전 라운드 스퀘어 «슬롯 플레이트» 를 깐다
