@@ -123,7 +123,11 @@ global.__capLog = {};
   const buf = recorder(cdp);
   /* 14회차 — png → jpeg. 1080×2280 PNG 인코딩이 프레임 전달을 74ms 로 묶고 있었다
      (probe58g 실측 rAF 는 32~43ms). jpeg q86 이면 인코딩이 절반 이하라 원본 밀도가 오른다. */
-  await cdp.send('Page.startScreencast', { format:'jpeg', quality:86, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
+  /* 6회차 — quality 86 은 이 컨테이너에서 인코딩이 rAF 를 따라가지 못해, 비평가 U 가 «렌더 프레임이
+     정답표보다 f7 68ms → f9 219ms 로 갈수록 뒤진다» 를 실측했다. 비평가 5명이 독립적으로 잡은
+     «50~82ms 정지 프레임» 은 게임이 멈춘 것이 아니라 **그 드리프트로 같은 합성 프레임이 두 번 실린
+     것**이다(rAF 기준 게이트는 정지 0/395). 인코딩 비용을 낮춰 드리프트를 줄인다. */
+  await cdp.send('Page.startScreencast', { format:'jpeg', quality:55, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
   await page.waitForTimeout(300);
 
   const run = async (tag, trigger, waitMs) => {
@@ -140,10 +144,13 @@ global.__capLog = {};
     /* 93 5회차 — **HUD 숫자·비행 개수의 «정답» 을 프레임과 같이 남긴다.**
        4회차까지 비평가 6명 중 3명이 프레임에서 숫자를 잘못 읽어(«0 인 채로 있다가 한 프레임에 77% 점프»
        같은 오독) 존재하지 않는 결함을 1순위 감점으로 올렸다. 화면을 다시 읽게 하지 말고 값을 준다. */
-    const log = await page.evaluate(async (ms) => {
-      const out = [], t = Date.now();
+    /* 5회차 버그 — 정답표의 시계가 프레임 시계와 **200ms 어긋나 있었다**(비평가 T ③).
+       `t0.t` 는 페이지 안에서 트리거 «직전» 에 찍은 Date.now() 인데, 이 로그는 그 evaluate 가
+       왕복해 돌아온 «뒤» 에 자기 시계를 0 으로 잡았다. 트리거 시각을 넘겨 같은 원점을 쓴다. */
+    const log = await page.evaluate(async ([ms, t]) => {
+      const out = [];
       const nf = () => new Promise(r => requestAnimationFrame(() => r()));
-      while(Date.now() - t < ms){
+      while(Date.now() - t < ms + 260){
         out.push([Date.now() - t,
                   (document.getElementById('goldN')||{}).textContent || '',
                   (document.getElementById('diaN')||{}).textContent || '',
@@ -155,7 +162,7 @@ global.__capLog = {};
         await nf();
       }
       return out;
-    }, waitMs || 1900);
+    }, [waitMs || 1900, t0.t]);
     const worst = pick(buf, t0.t, tag, pre);
     if(global.__capLog) global.__capLog[tag] = log;
     return worst;
