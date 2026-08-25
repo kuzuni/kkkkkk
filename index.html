@@ -5090,15 +5090,19 @@
   .ps-hdr>u.p{left:540px;background:linear-gradient(180deg,#7E1BCE 0 88px,#6C10B3 88px 100%)}
   /* 라벨 — 코어 중심 x 무료 269.5(좌반 중심 270) / 프리미엄 808.5(우반 중심 809.5).
      측정표 §11-10 대로 둘 다 48px 로 둔다(받침 차이인지 크기 차이인지 단정 불가) */
-  .ps-hdr>b{top:36px;height:56px;line-height:56px;width:540px;text-align:center;
+  .ps-hdr>b{top:32px;height:56px;line-height:56px;width:540px;text-align:center;
     font-size:48px;color:#fff;-webkit-text-stroke:11px #000;paint-order:stroke fill}
   .ps-hdr>b.f{left:0}
   .ps-hdr>b.p{left:540px}
-  .ps-hdr>b>i{transform:scaleX(.91)}
+  .ps-hdr>b>i{transform:scaleX(.98)}
   /* 배지 — 반쪽 왼쪽 끝 + 82px 이 중심. 무료 125x89(ref y674..762) / 프리미엄 125x108(ref y666..773) */
   .ps-bdg{width:125px;text-align:center;pointer-events:none}
-  .ps-bdg.f{left:20px;top:105px;height:89px;line-height:89px;font-size:74px}
-  .ps-bdg.p{left:561px;top:97px;height:108px;line-height:108px;font-size:90px}
+  /* ⚠ top 은 «헤더 패딩박스(frame 569) 기준» 이다 — ref 절대 y 를 그대로 넣으면 84px 아래로 내려가
+     헤더 하단 검정에 잘린다(1회차 지적). 무료 ref y674 → 21 / 프리미엄 ref y666 → 13. */
+  .ps-bdg.f{left:20px;top:21px;height:89px;line-height:89px;font-size:86px}
+  .ps-bdg.f>i{transform:scaleX(1.3)}
+  .ps-bdg.p{left:561px;top:13px;height:108px;line-height:108px;font-size:104px}
+  .ps-bdg.p>i{transform:scaleX(1.12)}
 
   /* ---- 보상 트랙 리스트 ref y796..2160 → frame 712.. (하단바까지). 24px 잔차를 여기서 흡수 ---- */
   .ps-list{left:0;right:0;top:712px;bottom:179px;overflow-y:auto;overflow-x:hidden;
@@ -5113,18 +5117,20 @@
   /* 컬럼 셀 — 상 5px 밝은 베벨 / 하 6px 베벨 + 6px 어두운 홈 (측정표 §5-2)
      별 워터마크는 이 화면 전용 타일이다(153.75 pitch — 기존 .ci-body 자산 236 과 다르다, §8) */
   .ps-cf,.ps-cp{top:0;bottom:0}
-  .ps-cf{left:0;width:519px;
+  .ps-cf{left:0;width:521px;
     background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23226ABF'%3E%3Cpolygon points='37,99 43.7,112.6 58.7,114.8 47.8,125.4 50.4,140.3 37,133.3 23.6,140.3 26.2,125.4 15.3,114.8 30.3,112.6'/%3E%3Cpolygon points='111.5,19.5 118.2,33.1 133.2,35.3 122.3,45.9 124.9,60.8 111.5,53.8 98.1,60.8 100.7,45.9 89.8,35.3 104.8,33.1'/%3E%3Cpolygon points='111.5,173.5 118.2,187.1 133.2,189.3 122.3,199.9 124.9,214.8 111.5,207.8 98.1,214.8 100.7,199.9 89.8,189.3 104.8,187.1'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23226ABF'%3E%3Cpolygon points='37,102.5 42.6,113.8 55.1,115.6 46.0,124.4 48.2,136.8 37,131.0 25.8,136.8 28.0,124.4 18.9,115.6 31.4,113.8'/%3E%3Cpolygon points='111.5,23.0 117.1,34.3 129.6,36.1 120.5,44.9 122.7,57.3 111.5,51.5 100.3,57.3 102.5,44.9 93.4,36.1 105.9,34.3'/%3E%3Cpolygon points='111.5,177.0 117.1,188.3 129.6,190.1 120.5,198.9 122.7,211.3 111.5,205.5 100.3,211.3 102.5,198.9 93.4,190.1 105.9,188.3'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
       linear-gradient(180deg,#1E98CB 0 5px,#2B76BA 5px calc(100% - 12px),#1C9ACC calc(100% - 12px) calc(100% - 6px),#1B5DB3 calc(100% - 6px) 100%)}
-  .ps-cp{left:561px;width:519px;
+  .ps-cp{left:559px;width:521px;
     background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23891CDA'%3E%3Cpolygon points='15.75,99 22.45,112.6 37.45,114.8 26.55,125.4 29.15,140.3 15.75,133.3 2.35,140.3 4.95,125.4 -5.95,114.8 9.05,112.6'/%3E%3Cpolygon points='90.5,19.5 97.2,33.1 112.2,35.3 101.3,45.9 103.9,60.8 90.5,53.8 77.1,60.8 79.7,45.9 68.8,35.3 83.8,33.1'/%3E%3Cpolygon points='90.5,173.5 97.2,187.1 112.2,189.3 101.3,199.9 103.9,214.8 90.5,207.8 77.1,214.8 79.7,199.9 68.8,189.3 83.8,187.1'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='153.75' height='229.85'%3E%3Cg fill='%23891CDA'%3E%3Cpolygon points='15.75,102.5 21.35,113.8 33.85,115.6 24.75,124.4 26.95,136.8 15.75,131.0 4.55,136.8 6.75,124.4 -2.35,115.6 10.15,113.8'/%3E%3Cpolygon points='90.5,23.0 96.1,34.3 108.6,36.1 99.5,44.9 101.7,57.3 90.5,51.5 79.3,57.3 81.5,44.9 72.4,36.1 84.9,34.3'/%3E%3Cpolygon points='90.5,177.0 96.1,188.3 108.6,190.1 99.5,198.9 101.7,211.3 90.5,205.5 79.3,211.3 81.5,198.9 72.4,190.1 84.9,188.3'/%3E%3C/g%3E%3C/svg%3E") 0 0/153.75px 229.85px repeat,
       linear-gradient(180deg,#B831EC 0 5px,#962EE5 5px calc(100% - 12px),#B932EE calc(100% - 12px) calc(100% - 6px),#7F1CCE calc(100% - 6px) 100%)}
   /* 컬럼 바깥 하이라이트 — 무료 x4..9(6px) / 프리미엄 x1070..1074(5px) */
-  .ps-eg{top:0;bottom:0;z-index:3;pointer-events:none}
-  .ps-eg.f{left:4px;width:6px;background:#1C98CC}
-  .ps-eg.p{left:1070px;width:5px;background:#B931ED}
+  /* ⚠ position 을 빼면 통째로 안 그려진다 — 1회차에 이 4줄이 전부 «누락» 으로 잡혔다.
+     ref 는 하이라이트 안쪽에 어두운 외곽 테가 한 겹 더 있다(좌 x0..2 / 우 x1076..1079). */
+  .ps-eg{position:absolute;top:0;bottom:0;z-index:3;pointer-events:none}
+  .ps-eg.f{left:0;width:10px;background:linear-gradient(90deg,#1C2F4D 0 3px,#2B76BA 3px 4px,#1C98CC 4px 10px)}
+  .ps-eg.p{left:1070px;width:10px;background:linear-gradient(90deg,#B931ED 0 5px,#962EE5 5px 6px,#3A1150 6px 10px)}
 
   /* 스파인 레일 x520..559 (검정 5px x2 + 내부 30) — 리스트 전체에 하나만 깐다 */
   .ps-spine{position:absolute;left:520px;width:40px;top:0;bottom:0;box-sizing:border-box;z-index:2;
@@ -5132,42 +5138,50 @@
   .ps-spine>u{position:absolute;left:0;right:0;top:0;background:#A0F32D}
 
   /* 육각(실측은 45° 챔퍼 8각) 배지 108x107 — 행 상단 +59.5, 중심 x539.5 */
-  .ps-hex{left:486px;width:108px;height:107px;top:59.5px;z-index:5;background:#000;
-    clip-path:polygon(38px 0,70px 0,100% 38px,100% 69px,70px 100%,38px 100%,0 69px,0 38px)}
-  .ps-hex>s{position:absolute;left:6px;top:6px;width:96px;height:95px;background:#FBCE1B;
-    clip-path:polygon(33px 0,63px 0,100% 33px,100% 62px,63px 100%,33px 100%,0 62px,0 33px)}
-  .ps-hex>s>s{position:absolute;left:8px;top:8px;width:80px;height:79px;background:#A36B18;
-    clip-path:polygon(27px 0,53px 0,100% 27px,100% 52px,53px 100%,27px 100%,0 52px,0 27px)}
-  .ps-hex.lk>s{background:#AE8310}
-  .ps-hex.lk>s>s{background:#6D490D}
+  /* ref 중심열 실측 108×114 (좌우 수직변 31 · 위아래 45° 챔퍼 41.5) — 1회차의 107 평탄 8각은 −8px 이었다.
+     내부는 «세로 그라디언트 한 겹» 뿐이고 어두운 코어 링이 없다(1회차에 «없는 링 1개» 로 잡혔다). */
+  .ps-hex{left:486px;width:108px;height:114px;top:56.5px;z-index:5;background:#000;
+    clip-path:polygon(41.5px 0,66.5px 0,100% 41.5px,100% 72.5px,66.5px 100%,41.5px 100%,0 72.5px,0 41.5px)}
+  .ps-hex>s{position:absolute;left:6px;top:6px;width:96px;height:102px;
+    background:linear-gradient(180deg,#FDD41A,#FDBF1C);
+    clip-path:polygon(36px 0,60px 0,100% 36px,100% 66px,60px 100%,36px 100%,0 66px,0 36px)}
+  .ps-hex.lk>s{background:linear-gradient(180deg,#B98C12,#A3740E)}
   /* 숫자 코어 h25 → 36px, 잉크 35 (외곽선 4~5px 한쪽 → stroke 9) */
-  .ps-hex>i{position:absolute;left:0;right:0;top:36px;height:35px;line-height:35px;text-align:center;
+  .ps-hex>i{position:absolute;left:0;right:0;top:40px;height:35px;line-height:35px;text-align:center;
     font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill}
-  .ps-hex>i>b{transform:scaleX(.63)}
+  /* 측정표 §11-2 경고대로 «숫자 ÷0.69» 규약이 만든 scaleX .63 은 과소였다 —
+     ref 자당 advance 22~25 인데 우리는 11~13(폭 −50%)이었다. 실측으로 다시 뽑는다. */
+  .ps-hex>i>b{transform:scaleX(1.25)}
 
   /* 보상 칸 158x157 r32.25 · 검정 5 · 안쪽 림 7 (행 상단 +36) */
-  .ps-bx{top:36px;width:158px;height:157px;box-sizing:border-box;z-index:5;cursor:pointer;
+  .ps-bx{top:34px;width:158px;height:157px;box-sizing:border-box;z-index:5;cursor:pointer;
     border:5px solid #000;border-radius:32.25px;
     background:var(--fill);box-shadow:inset 0 0 0 7px var(--rim)}
   .ps-bx.c0{left:181px}   /* 무료 x181..338 (컬럼 중심 259.5) */
   .ps-bx.c1{left:636px}   /* 프리미엄 #1 */
   .ps-bx.c2{left:846px}   /* 프리미엄 #2 (묶음 중심 819.5) */
   /* 아트 자리 — ref 잉크 78~90 x 63~85. 이미지 교체 시 이 bbox 를 그대로 쓴다 */
-  .ps-bx>i{position:absolute;left:0;right:0;top:9px;height:85px;line-height:85px;text-align:center;
-    font-size:74px}
+  /* ref 아이콘 잉크 84~86×83~88, 상단이 칸 기준 +30~35 (우리는 +16~20 로 15px 떠 있었다).
+     패딩박스 기준이라 −5 한다. 이미지로 교체할 때 이 bbox 를 그대로 쓴다. */
+  .ps-bx>i{position:absolute;left:0;right:0;top:25px;height:88px;line-height:88px;text-align:center;
+    font-size:82px}
   /* 수량 코어 y+120..+145 (padding box 기준 −5) */
   .ps-bx>b{position:absolute;left:0;right:0;top:115px;height:31px;line-height:31px;text-align:center;
     font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
-  .ps-bx>b>em{transform:scaleX(.69)}
+  .ps-bx>b>em{transform:scaleX(1.25)}
   /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
   .ps-bx>s.lk{position:absolute;left:105px;top:-27px;width:59px;height:69px;line-height:69px;
     text-align:center;font-size:58px}
   /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
-  .ps-bx.dn{--fill:#163C60;--rim:#1C526E}
-  .ps-bx.dn>i{opacity:.35}
+  /* ⚠ 수령완료 색은 여기서 주면 안 된다 — 칸이 인라인 style 로 --fill/--rim 을 들고 있어
+     인라인이 클래스를 이긴다. renderPass() 가 «수령완료면 인라인을 아예 안 붙이는» 쪽으로 처리하고,
+     여기서는 기본값만 둔다(1회차에 «딤 오버레이 없음» 으로 잡힌 것의 정체). */
+  .ps-bx.dn{background:#163C60;box-shadow:inset 0 0 0 7px #1C526E}
+  .ps-bx.dn>i{opacity:.35;filter:grayscale(1)}
   .ps-bx.dn>b{color:#808080}
-  .ps-bx.dn>s.ck{position:absolute;left:33px;top:39px;width:82px;height:66px;line-height:66px;
-    text-align:center;font-size:76px;color:#8FFF45;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+  .ps-bx.dn>s.ck{position:absolute;left:33px;top:38px;width:82px;height:67px;line-height:67px;
+    text-align:center;font-size:76px;color:#8FFF45;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+    transform:scaleY(.82);transform-origin:top center}
 
   /* ---- 하단 패스 종류 탭바 ref y2161..2339 → 프레임 바닥 앵커(h179) ---- */
   .ps-bar{left:0;right:0;bottom:0;height:179px;background:#000}
@@ -11685,8 +11699,9 @@ function renderPass(){
     let bx = '';
     for(let c = 0; c < T.cols; c++){
       const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !S.pass.prem;
+      /* ⚠ 수령완료 칸에 인라인 --fill/--rim 을 붙이면 «인라인 > 클래스» 라 .dn 의 수령완료 색이 통째로 죽는다 */
       bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
-          + ' style="--rim:' + PASS_GRADE[r.g][0] + ';--fill:' + PASS_GRADE[r.g][1] + '">'
+          + (got ? '>' : ' style="--rim:' + PASS_GRADE[r.g][0] + ';--fill:' + PASS_GRADE[r.g][1] + '">')
           + '<i>' + r.ic + '</i><b><em>' + fmt(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk">🔒</s>' : '')) + '</div>';
     }
