@@ -16346,6 +16346,40 @@ let auMode = '';                        /* '' 초기화 전 · 'ctx' WebAudio ·
 let auCtx = null, auMaster = null, auSfxG = null, auBgmG = null;
 const auBuf = {}, auEl = {}, auLast = {};
 let auExt = '';
+/* ---- 128 «목소리 풀» — <audio> 폴백의 WebMediaPlayer 누수 방지 ----
+   크로미움은 **문서당** 미디어 플레이어를 ~75개로 제한한다(crbug.com/1144736). 종전 폴백은
+   겹침 재생을 위해 sfx() 호출마다 `base.cloneNode()` 로 엘리먼트를 새로 만들고 **회수하지 않아서**,
+   상한을 넘는 순간부터 «Blocked attempt to create a WebMediaPlayer» 가 쏟아지고 **그 뒤로 효과음이
+   통째로 죽었다**(1200회 폭주에서 경고 192건 · 이후 재생 0). 방치형 게임의 장시간 세션에서
+   `hit`·`coin` 만으로도 몇 분이면 닿는다 — 헤드리스만의 문제가 아니다.
+   이제 고정 개수의 엘리먼트를 «목소리» 로 돌려 쓴다(= 동시 발음 수 상한). 생성 비용도 사라진다.
+   총 미디어 엘리먼트 = AU_SFX 프리로드 27 + 목소리 8 + BGM 2 = 37 로 상한의 절반이다. */
+const AU_VOICE_MAX = 8;                 /* 동시 발음 수 상한 — 넘으면 가장 오래된 목소리를 뺏는다 */
+const auVo = [];                        /* {el, name, t} — t 는 마지막 발화 시각(performance.now) */
+const auBgmEl = [];                     /* BGM 전용 2개(페이드 교차용 핑퐁) */
+let auBgmIx = 1, auMade = 0;            /* auMade = 이 문서에서 만든 미디어 엘리먼트 총수(게이트가 읽는다) */
+function auVoice(name){
+  let same = null, idle = null, old = null;
+  for(let i = 0; i < auVo.length; i++){
+    const v = auVo[i], free = v.el.paused || v.el.ended;
+    if(free && v.name === name){ if(!same || v.t < same.t) same = v; }
+    else if(free){ if(!idle || v.t < idle.t) idle = v; }
+    if(!old || v.t < old.t) old = v;
+  }
+  if(same) return same;                                  /* 같은 파일이 쉬고 있다 — src 재할당 없이 즉시 */
+  if(auVo.length < AU_VOICE_MAX){
+    const v = { el: new Audio(), name: '', t: 0 };
+    auMade++; auVo.push(v); return v;
+  }
+  return idle || old;                                    /* 전부 재생 중이면 가장 오래된 것을 뺏는다 */
+}
+function auBgmVoice(){
+  auBgmIx ^= 1;
+  let el = auBgmEl[auBgmIx];
+  if(!el){ el = auBgmEl[auBgmIx] = new Audio(); auMade++; }
+  try{ el.pause(); }catch(_){}
+  return el;
+}
 function auFmt(){
   if(!auExt){
     const a = document.createElement('audio');
@@ -16373,7 +16407,13 @@ function sfx(name, opt){
       src.connect(g); g.connect(auSfxG); src.start();
     }else{
       const base = auEl[name]; if(!base) return;
-      const el = base.cloneNode();                     /* 겹침 재생 — 원본은 프리로드 캐시로만 쓴다 */
+      /* 128 — cloneNode() 로 새로 만들면 회수가 안 돼 WebMediaPlayer 상한에 닿는다. 풀을 돌려 쓴다.
+         원본(auEl)은 종전대로 프리로드 캐시로만 쓰고 직접 재생하지 않는다. */
+      const v = auVoice(name), el = v.el;
+      if(v.name !== name){ el.src = base.getAttribute('src') || base.src; v.name = name; }
+      if(!el.paused){ try{ el.pause(); }catch(_){} }
+      try{ if(el.currentTime) el.currentTime = 0; }catch(_){}   /* 뺏은 목소리는 처음부터 다시 */
+      v.t = t;
       el.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100 * vg));   /* 98 */
       try{ el.preservesPitch = false; }catch(_){}
       el.playbackRate = rate;
@@ -16382,7 +16422,10 @@ function sfx(name, opt){
   }catch(_){}
 }
 /* ---- BGM — bgmWant 가 «지금 나와야 할 트랙». 보스전 진입/이탈이 bgmSet 으로 바꾼다 ---- */
-let bgmWant = 'main', bgmCur = '', bgmNode = null, bgmElFade = 0;
+/* 128 — 페이드인·페이드아웃의 타이머 id 를 갈랐다. 한 변수를 나눠 쓰던 종전 구현은 bgmApply() 가
+   자기 페이드인을 걸며 `clearInterval(bgmElFade)` 로 **직전 트랙의 페이드아웃까지 지워서**,
+   옛 트랙이 볼륨을 문 채 영원히 재생되고(= BGM 2겹) 엘리먼트도 회수되지 않았다. */
+let bgmWant = 'main', bgmCur = '', bgmNode = null, bgmElFade = 0, bgmElFadeOut = 0, bgmFadeEl = null;
 function bgmSet(track){
   if(!AU_BGM[track]) return;
   bgmWant = track;
@@ -16399,11 +16442,14 @@ function bgmStopCur(){
       n.g.gain.linearRampToValueAtTime(0, t0 + 1);     /* 페이드아웃 1초 */
       n.src.stop(t0 + 1.05);
     }else{
-      clearInterval(bgmElFade);
+      /* 128 — 앞 페이드아웃이 아직 안 끝났으면 그 엘리먼트를 즉시 세운다(안 그러면 낮은 볼륨으로 계속 운다) */
+      clearInterval(bgmElFadeOut);
+      if(bgmFadeEl && bgmFadeEl !== n){ try{ bgmFadeEl.pause(); }catch(_){} }
       const el = n, step = Math.max(0.02, el.volume / 20);
-      bgmElFade = setInterval(() => {
+      bgmFadeEl = el;
+      bgmElFadeOut = setInterval(() => {
         el.volume = Math.max(0, el.volume - step);
-        if(el.volume <= 0){ clearInterval(bgmElFade); el.pause(); }
+        if(el.volume <= 0){ clearInterval(bgmElFadeOut); el.pause(); if(bgmFadeEl === el) bgmFadeEl = null; }
       }, 50);
     }
   }catch(_){}
@@ -16426,7 +16472,11 @@ function bgmApply(){
       src.connect(g); g.connect(auBgmG); src.start();
       bgmNode = { src, g }; bgmCur = want;
     }else{
-      const el = new Audio(AU_BASE + file + '.mp3');
+      /* 128 — 트랙이 바뀔 때마다 new Audio() 하면 보스전 진입·이탈마다 엘리먼트가 2개씩 쌓인다.
+         BGM 은 «울리는 트랙 1 + 페이드아웃 중인 트랙 1» 뿐이므로 2개를 핑퐁으로 돌려 쓴다. */
+      const el = auBgmVoice(), url = AU_BASE + file + '.mp3';
+      if(el.getAttribute('src') !== url) el.src = url;
+      try{ el.currentTime = 0; }catch(_){}
       el.loop = true; el.volume = 0;
       el.play().catch(() => {});
       const tgt = () => Math.max(0, Math.min(1, (S.opt.vol | 0) / 100 * AU_BGM_GAIN));   /* 98 */
@@ -16466,7 +16516,7 @@ function auLoadCtx(){
 function auLoadEl(){
   AU_SFX.forEach(n => {
     const el = new Audio(AU_BASE + n + auFmt());
-    el.preload = 'auto'; auEl[n] = el;
+    el.preload = 'auto'; auEl[n] = el; auMade++;      /* 128 — 고정 개수(AU_SFX 전종), 누수 아님 */
   });
 }
 function auInit(){
