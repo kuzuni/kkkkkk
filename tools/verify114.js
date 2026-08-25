@@ -225,10 +225,10 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     return { main, dl: Math.round(-dl*100)/100, imp,
              dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
   });
-  ok(lifes.imp >= 0.32 && lifes.main >= 0.30,
+  ok(lifes.imp >= 0.32 && lifes.main >= 0.34,
      '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
-  ok(lifes.dl >= 0.16, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.16 (한 프레임에 겹쳐 보이지 않는다)');
-  ok(lifes.dbgMin >= 2.6, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 2.6 («보이지 않는 점» 회귀 방지)');
+  ok(lifes.dl >= 0.20, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.20 (한 프레임에 겹쳐 보이지 않는다)');
+  ok(lifes.dbgMin >= 4.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 4.0 («보이지 않는 점» 회귀 방지)');
   const rad = await p.evaluate(() => {
     rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 0);
     const g0 = rings[0].r1;
@@ -239,6 +239,19 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     rings.length = 0;
     return { g0, g5, cr };
   });
+  const dedup = await p.evaluate(() => {
+    rings.length = 0;
+    for (let i = 0; i < 6; i++) impactFx(200, 200, 300, 0, '#fff', false, 0);   /* 같은 자리 연타 */
+    const same = rings.length;
+    rings.length = 0;
+    for (let i = 0; i < 6; i++) impactFx(200 + i*60, 200, 300, 0, '#fff', false, 0); /* 다른 자리 */
+    const apart = rings.length;
+    rings.length = 0;
+    return { same, apart };
+  });
+  ok(dedup.same <= 2 && dedup.apart >= 5,
+     '같은 자리 연타는 링이 겹치지 않는다 — 6연타 → ' + dedup.same + '겹 · 흩어진 6타 → ' +
+     dedup.apart + '겹 (4회차 «동심 링 5~7겹 모아레» 회귀 방지)');
   ok(rad.g0 === rad.g5 && rad.cr <= 70,
      '임팩트 링 반경은 등급과 무관하게 고정 ' + rad.g0 + 'px · 치명타 최대 ' + rad.cr +
      'px ≤ 70 (2회차 «Ø321 로 적 5마리를 삼킴» 회귀 방지)');

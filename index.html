@@ -9544,6 +9544,14 @@ function trailLen(b){
 }
 /* 확장 링 — r0 → r1 로 life 초 동안 퍼지며 선이 가늘어진다. dl 은 지연 발화(2단 폭발용) */
 function fxRing(x, y, r1, col, life, w, r0, dl){
+  /* 4회차 비평 ③ — 연타로 같은 자리에 링이 겹치면 반경 간격 5~10px 의 동심 띠가 돼 «몇 대 맞았는지»가
+     오히려 안 읽힌다. 같은 자리(30px 이내)에 «갓 생긴»(0.08s 이내) 같은 크기 링이 있으면 새로 만들지 않는다 */
+  /* 단, «지연 발화(dl)» 링은 일부러 겹쳐 쌓는 2겹·2단이므로 억제 대상이 아니다 */
+  if(!dl) for(let i=rings.length-1;i>=0;i--){
+    const q = rings[i];
+    if(q.t > 0.08 || q.t < 0) continue;
+    if(Math.abs(q.r1 - r1) < 24 && (q.x-x)*(q.x-x) + (q.y-y)*(q.y-y) < 900){ q.t = 0; return; }
+  }
   if(rings.length >= RING_CAP) rings.shift();
   rings.push({ x, y, r0: r0 || 2, r1, col: col || '#ffd08a', t: -(dl || 0), life: life || 0.25, w: w || 3, fl:0 });
 }
@@ -9564,7 +9572,7 @@ function debris(x, y, c, n, pw, gy){
     if(parts.length > PART_CAP) break;
     const a = -Math.PI/2 + rnd(-1.15, 1.15), v = rnd(pw*0.45, pw);
     parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.34,.68), t:0, c,
-                 r:rnd(2.6,6.0), gy: gy || 620 });
+                 r:rnd(4.0,9.0), gy: gy || 620 });
   }
 }
 /* ② 타격 임팩트 — 진행 방향 «반대»로 튀는 스파크 3~6개 + 0.12s 플래시 링(치명타는 링 2겹) */
@@ -9582,18 +9590,21 @@ function impactFx(x, y, vx, vy, col, crit, g){
   /* 2회차 비평(J·K 공통) — 링 반경에까지 등급 배수를 곱했더니 Ø180~321 로 커져 적 5마리를 삼켰다.
      **반경은 고정**하고 등급 가중은 스파크 수·트레일 길이에만 남긴다(적 폭 58px 의 1.5~1.9배) */
   fxRing(x, y, crit ? 44 : 34, crit ? '#ffe27a' : col, 0.34, crit ? FX_W2 : FX_W);
-  if(crit) fxRing(x, y, 62, '#fff0b8', 0.38, FX_W, 16, 0.07);     /* 치명타 = 링 2겹(간격 18px) */
+  if(crit) fxRing(x, y, 70, '#fff0b8', 0.38, FX_W, 18, 0.07);     /* 치명타 = 링 2겹(간격 26px) */
 }
 /* ③ 폭발 충격파 — 확장 링 2겹 + 흙·불 파편 + 소폭 흔들림(3). 2단(지연 0.10s)으로 «크게 터지는 느낌» */
 function boomFx(x, y, r, col, big){
   const c = col || '#ffb45c';
   /* 1회차 비평 ③ — 폭발은 «바닥에서» 터진다. 눕는 링(FX_FLAT)으로 통일해야 낙하 예고 타원·독 장판과
      같은 발자국 모양이 된다(예고 1.46:1 ↔ 폭발 0.90:1 로 어긋나 있었다) */
-  fxRing(x, y, r, c, 0.32, FX_W2);                                /* 본 충격파: 0 → 피해 반경 */
+  /* 4회차 비평 ①② — 링이 화구(스프라이트)보다 작아 12프레임 중 9장에서 불길에 묻혔다.
+     충격파는 «피해 반경에서 멈추는 테두리» 가 아니라 «그 밖으로 퍼져 나가는 파문» 이다:
+     본 충격파는 반경의 1.3배까지, 2단은 1.7~2.0배까지 나가고 시차도 0.16 → 0.20s 로 벌린다 */
+  fxRing(x, y, r*1.30, c, 0.36, FX_W2);                           /* 본 충격파 */
   fxRing(x, y, r*0.55, '#fff2c0', 0.22, FX_W);                    /* 안쪽 화염 링 */
-  fxRing(x, y, r*(big ? 1.45 : 1.25), c, 0.34, FX_W, r*0.55, 0.16);/* 2단 — 0.16s 뒤 바깥 파문 */
-  debris(x, y, c, big ? 22 : 16, big ? 460 : 360);
-  debris(x, y, '#8a6a4a', big ? 14 : 10, 320);                    /* 흙 파편 */
+  fxRing(x, y, r*(big ? 2.00 : 1.70), c, 0.40, FX_W, r*1.15, 0.20);/* 2단 — 0.20s 뒤 바깥 파문 */
+  debris(x, y, c, big ? 26 : 18, big ? 520 : 400);
+  debris(x, y, '#8a6a4a', big ? 16 : 12, 360);                    /* 흙 파편 */
   cam.shake = Math.max(cam.shake, big ? 6 : 3);
 }
 /* 장판·오라형 시전 — 바닥 마법진 플래시(눕는 링 2겹 + 회전 룬 대용 점) */
@@ -9606,7 +9617,7 @@ function magicFlash(x, y, r, col){
 function chainBoomFx(x, y, r, col){
   for(let i=0;i<3;i++){
     const a = rnd(0, 6.283), d = r*rnd(0.55, 0.95);
-    fxRing(x + Math.cos(a)*d, y + Math.sin(a)*d*0.7, r*0.5, col, 0.30, FX_W, 3, 0.10 + i*0.09);
+    fxRing(x + Math.cos(a)*d, y + Math.sin(a)*d*0.7, r*0.78, col, 0.32, FX_W, 4, 0.10 + i*0.10);
     const rr = rings[rings.length-1];
     rr.bn = 6; rr.bc = col; rr.bp = 210;
   }
@@ -9641,7 +9652,7 @@ function dmgNum(x, y, v, crit){
   if(nums.length > 44) nums.shift();
   /* 114 — 폭발 한 방에 6~7개가 한 자리에 겹쳐 «1.16A1.16A» 로 읽히던 것(2회차 J⑦·K⑤ 공통).
      가로 산포 ±26px + 최근 3개를 세로로 계단 배치한다 */
-  nums.push({ x, y: y - (nums.length % 3)*17, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-26,26) });
+  nums.push({ x, y: y - (nums.length % 4)*38, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-32,32) });
 }
 function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
@@ -10468,8 +10479,9 @@ function drawTrails(){
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for(const b of shots){
     const n = b.tn;
-    /* 표본 3개 미만(≈66ms)은 «궤적» 이 아니라 발사 지점의 뭉치라 캐릭터를 가린다(2회차 비평 ⑧) */
-    if(!b.tr || n < 3) continue;
+    /* 표본 5개 미만(≈110ms)은 «궤적» 이 아니라 발사 지점의 뭉치다 — 표창 8발이 한꺼번에 나가면
+       캐릭터 상반신의 25~35% 를 400ms 동안 덮었다(2회차 ⑧ · 4회차 ⑥) */
+    if(!b.tr || n < 5) continue;
     const k = b.k, fire = (k === 'boom' || k === 'meteor');
     /* 1회차 비평 — 잔상 휘도가 배경 대비 ΔL +14~26 이라 «사실상 안 보인다» 였다.
        전 종류를 가산 합성으로 올리고 알파를 키운다(색은 스킬 col 그대로 = 지시서 ⑥) */
@@ -10479,7 +10491,7 @@ function drawTrails(){
       /* 회전 잔상 — 선이 아니라 «지나간 자리의 고스트 별» 3~4개 */
       for(let i=0;i<n;i++){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
-        ctx.globalAlpha = f*f*0.6;
+        ctx.globalAlpha = f*f*0.5;
         ctx.fillStyle = b.col;
         ctx.beginPath();
         /* 지름 테이퍼 30% → 100% (1회차 비평 ⑤ «테이퍼 없음») */
@@ -10784,7 +10796,7 @@ function draw(){
       if(pass === 1 && core <= 0) break;
       ctx.globalAlpha = pass ? (0.55 + 0.45*core) : (1-f)*(1-f)*0.72 + 0.28*(1-f);
       ctx.strokeStyle = pass ? '#ffffff' : col;
-      ctx.lineWidth  = pass ? (FX_W - 1 + core) : (FX_W2 + 8)*(1 - f*0.40);
+      ctx.lineWidth  = pass ? (FX_W - 1 + core) : (FX_W2 + 3)*(1 - f*0.40);
       ctx.beginPath();
       ctx.moveTo(l.pts[0], l.pts[1]);
       for(let i=2;i<l.pts.length;i+=2) ctx.lineTo(l.pts[i], l.pts[i+1]);
@@ -10834,8 +10846,12 @@ function draw(){
        외곽선은 폭발 백열 코어 위에서도 읽히게 두껍게 — 1회차 비평 ⑧ «대비 1.2:1 판독 불가» */
     /* 2회차 비평(J·K 공통) — 첫 프레임이 최대라 «축소» 로만 읽혔다. 오버슈트를 넣어 팝으로 만든다:
        0 → 0.06s 에 0.65 → 1.38배로 부풀고, 0.06 → 0.24s 에 1.0배로 안착 */
-    const pop = n.crit ? (n.t < 0.06 ? 0.65 + 0.73*(n.t/0.06)
-                                     : 1 + 0.38*clamp(1 - (n.t-0.06)/0.18, 0, 1)) : 1;
+    /* 4회차 비평 ④ — 피크 1.38배가 «1프레임» 뿐이라 80ms 캡처 그리드에서 팝이 통째로 사라졌다.
+       0→0.05s 상승(0.8→1.8) · 0.05~0.21s **유지 1.8** · 0.21~0.45s 1.0 으로 복귀 = 피크가 2프레임 이상 잡힌다 */
+    const pop = !n.crit ? 1
+              : n.t < 0.05  ? 0.8 + 1.0*(n.t/0.05)
+              : n.t < 0.21  ? 1.8
+              : 1 + 0.8*clamp(1 - (n.t-0.21)/0.24, 0, 1);
     const sz = (n.crit ? 18 : 13) * pop;
     ctx.font = (n.crit ? '900 ' : '800 ') + sz.toFixed(1) + 'px sans-serif';
     ctx.fillStyle = n.crit ? '#ffd45e' : '#fff';
