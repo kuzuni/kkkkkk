@@ -155,7 +155,8 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       prevV = v; prev = { x: cam.x, y: cam.y };
       if (!b) { b = enemies.find(e => e.tk === 'boss') || null; if (b) spawnedF = f; }
       if (b) {
-        camToBoss.push(Math.hypot(cam.x - b.x, cam.y - b.y));
+        const bc = spriteCenter(b);                 /* 카메라 목표는 앵커가 아니라 «그려진 몸통 중심» 이다 */
+        camToBoss.push(Math.hypot(cam.x - bc.x, cam.y - bc.y));
         camToPl.push(Math.hypot(cam.x - player.x, cam.y - player.y));
         zs.push(cam.z);
         const m = cine.mode || '-';
@@ -176,9 +177,9 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[4] 보스 스폰이 연출을 켠다(in → hold → back → 종료)',
     boss.modes.join('>').includes('in>hold>back'), boss.modes.join(' > '));
   ok('[4] 팬·줌인 배율 1.15', Math.abs(boss.zMax - 1.15) < 0.02, boss.zMax.toFixed(3));
-  ok('[4] 카메라가 실제로 보스를 잡는다(중심 100px 이내)', boss.minCamToBoss < 100, boss.minCamToBoss.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
+  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
   ok('[4] 연출 뒤 플레이어로 복귀(150px 이내) · 줌 복원', boss.endCamToPl < 150 && Math.abs(boss.zEnd - 1) < 0.02, boss.endCamToPl.toFixed(0) + 'px · z' + boss.zEnd.toFixed(3));
-  ok('[4] 연출 길이 ≈ 1.75초(0.8+0.35+0.6)', boss.frames >= 95 && boss.frames <= 120, (boss.frames / 60).toFixed(2) + '초');
+  ok('[4] 연출 길이 ≈ 1.85초(0.8+0.45+0.6)', boss.frames >= 105 && boss.frames <= 130, (boss.frames / 60).toFixed(2) + '초');
   ok('[4] 연출 중 저크 < ' + LIM_JERK + 'px', boss.jerk < LIM_JERK, boss.jerk.toFixed(3) + 'px');
 
   const kill = await page.evaluate(() => {
@@ -218,7 +219,7 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[5] 처치 줌인 배율 1.30', !kill.err && Math.abs(kill.zMax - 1.30) < 0.03, kill.err || kill.zMax.toFixed(3));
   ok('[5] 슬로모 0.3초 = 18프레임(±2)', Math.abs(kill.slowFrames - 18) <= 2, kill.slowFrames + '프레임');
   ok('[5] 슬로모가 «끝난다»(이후 정상 배속)', kill.normFrames > 150, kill.normFrames + '프레임');
-  ok('[5] 화면 플래시가 뜨고 0.42초 안에 사라진다', kill.flashMax > 0.9 && kill.flashEnd === 0 && kill.flashFrames <= 27, `최대 ${kill.flashMax.toFixed(2)} · ${kill.flashFrames}프레임`);
+  ok('[5] 화면 플래시가 뜨고 0.30초(슬로모 안) 에 사라진다', kill.flashMax > 0.9 && kill.flashEnd === 0 && kill.flashFrames <= 19, `최대 ${kill.flashMax.toFixed(2)} · ${kill.flashFrames}프레임`);
   ok('[5] 처치 연출 뒤 줌 복원', Math.abs(kill.zEnd - 1) < 0.02, kill.zEnd.toFixed(3));
   ok('[5] 처치 연출 중 저크 < ' + LIM_JERK + 'px', kill.jerk < LIM_JERK, kill.jerk.toFixed(3) + 'px');
 

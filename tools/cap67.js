@@ -79,6 +79,7 @@ const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'docs', 'review'));
     for (let i = 0; i < 900 && !enemies.some(e => e.tk === 'boss'); i++) window.__tick();
     const b = enemies.find(e => e.tk === 'boss');
     if (b) killEnemy(b);
+    window.__tick();          /* 처치 «직후 한 프레임» 을 그려야 플래시 정점이 캡처에 남는다 */
   });
   for (let i = 1; i <= 8; i++) {
     log.push(['C' + i, await info()]); await shot(`67-kill-${i}.png`);
