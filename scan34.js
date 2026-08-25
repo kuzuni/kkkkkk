@@ -42,6 +42,7 @@ const IMG = process.env.SCAN_IMG || 'docs/ref/34-축복-버프팝업.jpg';
       yellow: p => p[0] > 190 && p[1] > 140 && p[2] < 140 && p[0] - p[2] > 80,
       green: p => p[1] > 150 && p[1] - p[0] > 30 && p[1] - p[2] > 60,
       noty: p => !(p[0] > 180 && p[1] > 130 && p[2] < 150 && p[0] - p[2] > 70),
+      mag: p => p[0] > 110 && p[0] - p[1] > 60 && p[0] - p[2] > 25 && p[2] > p[1],
       any: () => true,
     };
     const cmd = args[0];
