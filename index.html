@@ -2377,59 +2377,69 @@
   .rw-panel>*{position:absolute}
   /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 + 수반 난색 글로우 (아트 대기) */
   .rw-bg{inset:0;background:
-    radial-gradient(40% 18% at 50% 88%,#4A2E22 0%,rgba(74,46,34,0) 72%),
-    linear-gradient(180deg,rgba(46,31,18,0) 1060px,#2E1F12 1140px,#3A2A16 1400px,#0C131B 1491px,#0C131B 1527px),
+    radial-gradient(46% 22% at 50% 88%,#5A392A 0%,rgba(90,57,42,0) 74%),
+    linear-gradient(180deg,rgba(56,40,22,0) 1060px,#382816 1150px,#463522 1400px,#0C131B 1491px,#0C131B 1527px),
     radial-gradient(48% 42% at 50% 32%,#101210 0%,#101210 62%,rgba(16,18,16,0) 100%),
     linear-gradient(180deg,#0A1118 0%,#0E1319 60%,#12140F 100%)}
-  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1000px;opacity:.5;
-    background:repeating-linear-gradient(0deg,rgba(36,29,24,.55) 0 3px,transparent 3px 128px),
-      repeating-linear-gradient(90deg,rgba(36,29,24,.35) 0 3px,transparent 3px 172px)}
+  /* 석벽 질감 — 줄눈 격자 대신 은은한 얼룩(ref 는 또렷한 격자선이 없다) */
+  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1050px;opacity:.55;
+    background:radial-gradient(circle at 18% 22%,rgba(56,46,36,.5) 0 70px,transparent 110px),
+      radial-gradient(circle at 74% 14%,rgba(50,42,32,.45) 0 60px,transparent 100px),
+      radial-gradient(circle at 40% 58%,rgba(58,48,38,.4) 0 80px,transparent 130px),
+      radial-gradient(circle at 88% 66%,rgba(48,40,30,.45) 0 66px,transparent 108px),
+      radial-gradient(circle at 8% 82%,rgba(54,44,34,.4) 0 72px,transparent 118px);
+    background-size:540px 520px}
   .rw-bg::after{content:'';position:absolute;left:244px;top:133px;width:589px;height:889px;
     background:#0E100E;border-radius:295px 295px 0 0;box-shadow:0 0 90px 20px rgba(0,0,0,.55)}
   /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
-  .rw-frame{inset:5px;border:5px solid #B29661;box-shadow:inset 0 0 0 3px #634121;
-    pointer-events:none;z-index:6}
-  .rw-frame::before,.rw-frame::after{content:'✦';position:absolute;color:#B29661;
-    font-size:52px;line-height:78px;width:78px;text-align:center}
-  .rw-frame::before{left:2px;top:-6px;text-shadow:912px 0 0 #B29661}     /* 좌상 + 우상 */
-  .rw-frame::after{left:2px;bottom:-6px;text-shadow:912px 0 0 #B29661}   /* 좌하 + 우하 */
+  .rw-frame{inset:5px;border:5px solid #B29661;pointer-events:none;z-index:6}
+  /* 코너 브래킷 98×53 — 상단 2개는 ::before/::after, 하단 2개는 .rw-fc (아트 대기) */
+  .rw-frame::before,.rw-frame::after{content:'';position:absolute;top:2px;width:98px;height:53px;
+    border-top:9px solid #B29661}
+  .rw-frame::before{left:2px;border-left:9px solid #B29661;border-radius:6px 0 0 0}
+  .rw-frame::after{right:2px;border-right:9px solid #B29661;border-radius:0 6px 0 0}
+  .rw-fc{position:absolute;bottom:2px;width:98px;height:53px;border-bottom:9px solid #B29661;z-index:6;
+    pointer-events:none}
+  .rw-fc.bl{left:7px;border-left:9px solid #B29661;border-radius:0 0 0 6px}
+  .rw-fc.br{right:7px;border-right:9px solid #B29661;border-radius:0 0 6px 0}
   /* 유물 슬롯 151² ×10 (3·4·3) — 브론즈 공통 프레임, 내부는 슬롯별 radial 글로우 */
   .rw-grid{inset:0;z-index:2}
   .rw-c{position:absolute;width:151px;height:151px;box-sizing:border-box;cursor:pointer;
-    border:7px solid #A67B50;border-radius:9px;
-    box-shadow:inset 0 0 0 3px #8A6732,0 0 0 3px #35210F;
+    border:4px solid #A67B50;border-radius:9px;
+    box-shadow:inset 0 0 0 2px #8A6732,0 0 0 1px #35210F;
     background:radial-gradient(circle at 50% 46%,var(--cg) 0%,var(--ce) 88%)}
   .rw-c>i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:100px;line-height:1}
+    font-size:126px;line-height:1}
   .rw-c.off>i{filter:grayscale(.85) brightness(.5)}   /* 82 규칙 — 미보유도 어떤 유물인지 보인다 */
   .rw-c>u{position:absolute;left:-40px;right:-40px;top:116px;text-align:center;z-index:3;
-    font-size:35px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+    font-size:35px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(1.1)}
   .rw-c.off>u{color:#9AA0A8}
   /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
-  .rw-basin{left:275px;top:1171px;width:530px;height:240px;cursor:pointer;z-index:3}
+  .rw-basin{left:351px;top:1176px;width:378px;height:238px;cursor:pointer;z-index:3}
   .rw-basin>*{position:absolute}
-  /* 몸체(그릇 하부) w333 — 아래로 살짝 좁아진다 */
-  .rw-ped{left:98px;top:30px;width:333px;height:158px;
-    background:linear-gradient(180deg,#9AA08C 0%,#7E7A68 40%,#5A5348 100%);
-    clip-path:polygon(0 0,100% 0,86% 100%,14% 100%)}
-  /* 기단 플레어 — 바닥에서 530 까지 벌어진다 */
-  .rw-ped::after{content:'';position:absolute;left:-98px;top:158px;width:530px;height:52px;
-    background:linear-gradient(180deg,#6E685A 0%,#54503F 60%,#453F31 100%);
-    clip-path:polygon(28% 0,72% 0,96% 78%,100% 100%,0 100%,4% 78%)}
-  .rw-rim{left:85px;top:0;width:360px;height:44px;border-radius:50%;box-sizing:border-box;
-    background:linear-gradient(180deg,#B7C6B0 0%,#A1B49B 45%,#8E9177 100%);border:3px solid #000}
-  .rw-liq{left:136px;top:10px;width:258px;height:29px;border-radius:50%;
+  /* 몸체 — 어두운 석재(ref RGB≈45,38,26), 림 아래에서 살짝 좁아진다 */
+  .rw-ped{left:59px;top:28px;width:260px;height:150px;
+    background:linear-gradient(180deg,#3A3122 0%,#2D261A 55%,#241E14 100%);
+    clip-path:polygon(0 0,100% 0,94% 100%,6% 100%)}
+  /* 기단 — 몸체(≈230)에서 378 로 **벌어지는** 단차 2단 */
+  .rw-base{left:0;top:178px;width:378px;height:60px;
+    background:linear-gradient(180deg,#55492F 0%,#3E351F 34%,#4A4028 40%,#2A2416 100%);
+    clip-path:polygon(30% 0,70% 0,84% 40%,100% 100%,0 100%,16% 40%)}
+  .rw-rim{left:44px;top:0;width:289px;height:40px;border-radius:50%;box-sizing:border-box;
+    background:linear-gradient(180deg,#B7C6B0 0%,#A1B49B 45%,#7E8271 100%);border:3px solid #000}
+  .rw-liq{left:60px;top:7px;width:258px;height:27px;border-radius:50%;
     background:radial-gradient(50% 50% at 50% 50%,#fff 0%,#BFF6FF 30%,#39C1CF 100%);
-    box-shadow:0 0 30px 6px rgba(57,193,207,.5)}
-  .rw-basin>b{left:0;right:0;top:104px;text-align:center;font-size:44px;color:#F2F2F2;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.84)}
+    box-shadow:0 0 12px 2px rgba(57,193,207,.45)}
+  .rw-basin>b{left:0;right:0;top:96px;text-align:center;font-size:40px;color:#F2F2F2;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.84)}
   /* 코스트 필 262×51 — 수반 받침 위에 겹친다 */
-  .rw-cost{left:409px;top:1324px;width:262px;height:51px;box-sizing:border-box;z-index:4;
+  .rw-cost{left:405px;top:1324px;width:270px;height:51px;box-sizing:border-box;z-index:4;
     background:#191614;border:3px solid #000;border-radius:25.5px;
     box-shadow:0 0 0 1px #513229,inset 0 0 0 2px #403320;
     display:flex;align-items:center;justify-content:center;gap:10px}
   .rw-cost>i{font-size:29px;line-height:1}
-  .rw-cost>b{font-size:35px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .rw-cost>b{font-size:32px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .rw-cost.lack>b{color:#FF7A6F}
   /* 안내문 2줄 — 크림/탠골드, 행 피치 44 */
   .rw-cap{left:0;right:0;top:1408px;text-align:center;z-index:4}
@@ -6931,11 +6941,12 @@
       <div class="rw-bg"></div>
       <div class="rw-grid" id="rwGrid"></div>
       <div class="rw-basin" id="rwBasin">
-        <span class="rw-ped"></span><span class="rw-rim"></span><span class="rw-liq"></span><b>유물 소환</b>
+        <span class="rw-ped"></span><span class="rw-base"></span><span class="rw-rim"></span><span class="rw-liq"></span><b>유물 소환</b>
       </div>
       <div class="rw-cost" id="rwCost"><i>🔮</i><b>822</b></div>
       <div class="rw-cap"><p>던전에서 얻는 유물조각으로 다양한 능력을 가진 유물을 소환합니다.</p><p>각 유물이 등장할 확률은 동일합니다.</p></div>
       <div class="rw-frame"></div>
+      <span class="rw-fc bl"></span><span class="rw-fc br"></span>
     </div>
   </div>
   <!-- 23 훈련 팝업. 하단에서 올라오는 «바닥 시트»(상단 경계가 물결 곡선) — 측정표 docs/measure/23-훈련팝업.md.
