@@ -1807,11 +1807,26 @@
   .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
   @keyframes fxHit{0%{transform:scale(1)}34%{transform:scale(1.05)}100%{transform:scale(1)}}
 
+  /* ── 「가로지르기」 대책 (11회차) ──
+     보상이 리스트 하단에서 우상단 HUD 로 날아가면 그 사이의 «다른» 행들을 반드시 지난다
+     (실측: 위쪽 두 행을 각 14회 통과 — 경로를 바꿔서는 못 고치는 기하학적 성질이다).
+     비평가 5인이 연속으로 «저 퀘스트도 완료됐나» 로 읽었으므로, 경로가 아니라 **배경을 죽인다**:
+     수령한 행만 남기고 형제 행을 비행 동안 딤 처리한다. 코인이 지나가는 곳은 «꺼진 행» 이라
+     완료로 오독될 여지가 없다. 딤은 0.16초로 들어가고 0.34초로 풀린다(뚝 꺼지면 그것대로 눈에 띈다). */
+  .fx-dim{opacity:.3;filter:saturate(.35) brightness(.72);transition:opacity .16s ease-out,filter .16s ease-out}
+  .fx-undim{transition:opacity .34s ease-in,filter .34s ease-in}
+  /* 수령한 행은 오히려 살짝 들어올린다 — «이 행이 그 보상의 출처» 라는 것이 한눈에 읽혀야 한다 */
+  .fx-solo{position:relative;z-index:3;filter:brightness(1.1)}
+
   /* 퀘스트 완료 — 체크 스트로크 드로잉 */
   .fx-check{position:absolute;transform:translate(-50%,-50%)}
   @keyframes fxDraw{to{stroke-dashoffset:0}}
-  /* 0.7초 · 앞 18% 안에 완전히 뜬다 — 완만히 페이드인하면 «체크가 350ms 뒤에야 보인다» 가 된다 */
-  @keyframes fxCheckIn{0%{opacity:1;transform:translate(-50%,-50%) scale(.5)}
+  /* 0.7초 · 앞 18% 안에 완전히 뜬다 — 완만히 페이드인하면 «체크가 350ms 뒤에야 보인다» 가 된다.
+     11회차: 0% 를 `opacity:1` 로 못박아 두니 이번엔 «스냅» 으로 읽혔다(10회차 보류 사유 3).
+     0% 를 **0 이 아닌 .34** 로 두면 둘 다 산다 — 메인 스레드가 막혀도 fill-mode 가 «보이는» 상태를
+     유지하고(사라지지 않는다), 실제로 애니메이션이 돌면 앞 12% 에 페이드인 구간이 생긴다. */
+  @keyframes fxCheckIn{0%{opacity:.34;transform:translate(-50%,-50%) scale(.5)}
+    12%{opacity:1;transform:translate(-50%,-50%) scale(.94)}
     18%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
     34%{opacity:1;transform:translate(-50%,-50%) scale(1)}
     80%{opacity:1;transform:translate(-50%,-50%) scale(1)}
@@ -1822,15 +1837,17 @@
   .fx-toast{position:absolute;left:50%;z-index:2;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
     background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
     white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
-    animation:fxToastIn .14s cubic-bezier(.34,1.56,.64,1) both}
+    animation:fxToastIn .22s cubic-bezier(.34,1.56,.64,1) both}
   /* 0.28초짜리 페이드인은 «퀘스트 행이 먼저 바뀌고 토스트가 100ms 뒤에 따라붙는» 것으로 읽힌다.
      불투명도는 앞 35% 안에 다 올리고 나머지는 위치만 정돈한다(6회차 지적). */
   /* ⚠ 0% 를 `opacity:0` 으로 두면 **애니메이션이 실제로 돌기 전까지** `fill-mode:both` 가 그 상태를
      그대로 유지한다. 클릭 핸들러·재렌더로 메인 스레드가 막히면 그 시간만큼 토스트가 «없는» 것이 되고,
      비평가 3인이 연속으로 «토스트가 뒤늦게 뜬다» 로 잡았다(실측 139~185ms).
      0% 부터 **이미 보이게** 하고 «위에서 내려오는» 것만 애니메이션으로 준다 — 첫 페인트에 바로 보인다. */
-  @keyframes fxToastIn{0%{opacity:1;transform:translate(-50%,-40px) scale(.92)}
-    60%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
+  /* 11회차: 0% 를 «0 이 아닌 .3» 으로. 위 fxCheckIn 과 같은 이유 — 막혀도 보이고, 돌면 램프가 생긴다. */
+  @keyframes fxToastIn{0%{opacity:.3;transform:translate(-50%,-40px) scale(.92)}
+    40%{opacity:1;transform:translate(-50%,-8px) scale(.99)}
+    72%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
     100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
   @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
@@ -10090,13 +10107,16 @@ function claimQuest(q){
   S.gold += rw.g; S.dia += rw.c;
   st.base = q.get(); st.s++;
   uiDirty = true; save();
-  openQuest();                                /* 22: 팝업을 유지한 채 행만 갱신 */
+  /* 58(11회차): 재렌더를 연출이 끝난 뒤로 미룬다 — 즉시 갱신하면 체크가 붙은 행의 진행바가
+     0/93 으로 리셋돼 «완료 표시와 진행도가 모순» 인 화면이 남았다. fxHoldList 를 안 부른 경로는
+     지연 없이 곧바로 돈다. */
+  fxRenderLater(openQuest);                   /* 22: 팝업을 유지한 채 행만 갱신 */
 }
 function claimDQuest(q){
   if(!dqReady(q)) return;
   S.dia += q.dia; S.daily.q[q.id] = 1;
   uiDirty = true; save();
-  openQuest();
+  fxRenderLater(openQuest);                   /* 58 11회차 */
 }
 function claimAllQuests(){
   let n = 0, guard = 0;
@@ -10110,7 +10130,7 @@ function claimAllQuests(){
   DQUESTS.filter(dqReady).forEach(q => { S.dia += q.dia; S.daily.q[q.id] = 1; n++; });
   if(!n) return;
   uiDirty = true; save();
-  openQuest();
+  fxRenderLater(openQuest);                   /* 58 11회차 */
 }
 /* ---- 61 가이드 미션 — 진행 판정 · 수령 ----
    진행도는 «카운터 − 기준선» 이다. 기준선(S.guide.prog)은 미션이 현재로 올라온 순간 찍는다.
@@ -11284,7 +11304,7 @@ function openMail(){
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
-  const fxMail = (el) => { if(el){ fxCheck(el); fxBurst(el, '#FFE9A8', 10); fxAt(el); } };
+  const fxMail = (el) => { if(el){ fxCheck(el); fxBurst(el, '#FFE9A8', 10); fxAt(el); fxSolo(el); fxHoldList(); } };
   $('mailClose').onclick = closeModal;
   $('mailX').onclick = closeModal;
   $('mailBtn').onclick = () => {
@@ -11295,7 +11315,7 @@ function openMail(){
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
     const row = b.closest('.ml-r');
     fxMail(row ? (row.querySelector('.ml-i') || row) : b);
-    fxThen(() => { claimMail(b.dataset.ml); openMail(); });
+    fxThen(() => { claimMail(b.dataset.ml); fxRenderLater(openMail); });   /* 58 11회차 */
   });
 }
 /* ---- 22 퀘스트 팝업 — 측정표 docs/measure/22-퀘스트팝업.md ----
@@ -11331,7 +11351,8 @@ function openQuest(tab){
      «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
      재화 비행은 fxAt() 로 그 행을 출발점으로 지정만 하면 fxWatch 가 알아서 쏜다. */
   const fxQuest = (el) => {
-    if(el){ fxCheck(el); fxBurst(el, '#8FE9FF', 10); fxAt(el); }
+    if(el){ fxCheck(el); fxBurst(el, '#8FE9FF', 10); fxAt(el); fxSolo(el); }
+    fxHoldList();                                /* 58 11회차 — 연출이 끝난 뒤에 목록을 갱신한다 */
     fxToast('퀘스트 완료');
   };
   /* ⚠ 연출 DOM 을 만들어 놓아도 **핸들러가 반환할 때까지 브라우저는 한 프레임도 못 그린다.**
@@ -14097,14 +14118,21 @@ function fxBurst(t, col, n){
   const L = fxL(), p = fxPt(t); if(!L || !p) return;
   const cnt = n || 12;
   if(L.childElementCount + cnt > FXMAX) return;
+  /* 출발 반경 — 대상이 «요소» 면 그 bbox 테두리 근처에서 튀어나오게 한다(11회차).
+     중심에서 22px 로 고정하면 훈련 카드(326×510)처럼 큰 대상에서는 파티클이 통째로
+     **카드 아이콘 위**에 얹혀 «애셋이 튀어 보인다» 로 읽혔다(10회차 보류 사유 4).
+     안쪽 78% 타원 안에는 한 개도 생기지 않으므로 아이콘·수치가 가려지지 않는다. */
+  const r = (t && t.nodeType) ? fxRect(t) : null;
+  const rx = r ? clamp(r.w/2*0.78, 22, 168) : 22;
+  const ry = r ? clamp(r.h/2*0.78, 22, 168) : 22;
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
     const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
     el.className = 'fx-spark';
     el.style.background = col || '#FFE07A';
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
-    el.style.left = (p.x + Math.cos(a)*22) + 'px';
-    el.style.top  = (p.y + Math.sin(a)*22) + 'px';
+    el.style.left = (p.x + Math.cos(a)*rx) + 'px';
+    el.style.top  = (p.y + Math.sin(a)*ry) + 'px';
     el.style.setProperty('--dx', (Math.cos(a)*d).toFixed(1) + 'px');
     el.style.setProperty('--dy', (Math.sin(a)*d).toFixed(1) + 'px');
     L.appendChild(el);
@@ -14193,6 +14221,38 @@ function fxCheck(el){
     + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .26s ease-out .04s forwards"/></svg>';
   L.appendChild(d);
   setTimeout(() => d.remove(), 900);
+}
+
+/* ── 「수령한 행만 남긴다」 (11회차 — 10회차 보류 사유 1·2의 처방) ──
+   보상 비행은 리스트 하단 → 우상단 HUD 라 반드시 «다른 행 위» 를 지난다(기하학적 성질).
+   경로·제어점을 아무리 손봐도 회수되지 않으므로, 지나가는 동안 **형제 행을 딤** 처리해
+   «저 퀘스트도 완료됐나» 로 읽힐 여지를 없앤다.
+   ms 는 fxRenderLater 의 유지 시간과 같아야 한다 — 딤이 먼저 풀리고 행이 나중에 바뀌면
+   «두 번 바뀌는» 것으로 보인다. */
+const FXSOLO = 760;
+function fxSolo(el, ms){
+  /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
+  const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
+  const par = row && row.parentElement;
+  if(!par || par.children.length < 2) return;
+  const sib = [].slice.call(par.children).filter(c => c !== row && c.classList);
+  sib.forEach(c => c.classList.add('fx-dim'));
+  if(row.classList) row.classList.add('fx-solo');
+  setTimeout(() => {
+    sib.forEach(c => { if(c.classList){ c.classList.add('fx-undim'); c.classList.remove('fx-dim'); } });
+    if(row.classList) row.classList.remove('fx-solo');
+    setTimeout(() => sib.forEach(c => c.classList && c.classList.remove('fx-undim')), 380);
+  }, ms || FXSOLO);
+}
+/* 「연출이 끝날 때까지 목록을 바꾸지 않는다」.
+   수령 즉시 재렌더하면 **체크가 붙은 그 행의 진행바가 0/93 으로 리셋**돼 «완료 표시와 진행도가
+   모순» 인 화면이 남는다(10회차 보류 사유 2). 재화가 다 꽂힌 뒤에 갱신하면 인과가 바로 선다.
+   수령 판정(`questReady` 등)은 상태로 다시 하므로 그 사이 재클릭은 무시된다 — 지연은 안전하다. */
+let fxReT = 0;
+function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXSOLO)); }
+function fxRenderLater(fn){
+  const w = fxReT - performance.now();
+  if(w > 8) setTimeout(fn, w); else fn();
 }
 
 /* ── 자동 감시 + 매 프레임 갱신 ──

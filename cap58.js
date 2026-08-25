@@ -65,9 +65,19 @@ async function ensureLoop(page){
   if(!ok) throw new Error('rAF 루프가 돌지 않는다 — 캡처가 결정적이지 않다');
 }
 
+/* 번들 브라우저(버전 태그)가 컨테이너 이미지와 어긋나면 미리 깔린 실행 파일로 떨어진다 (tools/smoke.js 와 동일) */
+function pwLaunch(){
+  const fs2 = require('fs');
+  return chromium.launch().catch(e => {
+    for(const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium']){
+      try { if(p && fs2.existsSync(p)) return chromium.launch({ executablePath:p }); } catch(_){}
+    }
+    throw e;
+  });
+}
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await pwLaunch();
   const ctx = await browser.newContext({ viewport:{ width:1080, height:2280 }, deviceScaleFactor:1 });
   const page = await ctx.newPage();
   const errs = [];
