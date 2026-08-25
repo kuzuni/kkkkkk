@@ -1632,7 +1632,7 @@
   .ml-i{position:absolute;left:494px;top:19.5px;
     --if-w:108px;--if-ic:48px;--if-face:var(--face);--if-rimc:var(--rim)}
   /* 수량 — ref 는 썸네일 가로 중앙, 잉크 바닥이 프레임 바닥에서 11px 위(측정 §10-8) */
-  /* ref 배지 잉크는 썸네일 폭의 .41 이다(«120» 49 / 119). `fmt()` 의 «3.00K»(5자)로는 프레임
+  /* ref 배지 잉크는 썸네일 폭의 .41 이다(«120» 49 / 119). `fmt()` 의 «3.00A»(5자)로는 프레임
      안쪽 면 86px 을 넘어 림과 충돌한다(S4) → `fmtShort()` 2~4자 + 폰트 26. */
   /* ⚠ 배지 세로 위치는 비평가 I(«13px 위 → 3px 내려라»)와 J(«2px 위 → 5px 올려라»)가 **정반대**로 냈다.
      마스크가 다르다(I: 흰 코어 R,G,B>248 / J: 잉크 바닥 vs 프레임 안쪽 바닥) — LESSONS 20-⑤ 대로
@@ -7817,15 +7817,21 @@
    소탕! 방치형 헌터 — 방치 자동사냥 + 도감/던전/유물/승급 성장
    ========================================================================== */
 /* ---------------- 유틸 ---------------- */
-const SUF = ['','K','M','B','T'];
-for(let i=0;i<26;i++) for(let j=0;j<26;j++) SUF.push(String.fromCharCode(97+i)+String.fromCharCode(97+j));
+/* 111 — 숫자 단위 접미사. K/M/B/T 는 폐기하고 알파벳 한 글자로 잇는다:
+   10³=A · 10⁶=B · 10⁹=C … 10⁷⁸=Z, 그 다음은 두 글자(AA·AB … ZZ, 10⁷⁸¹ 까지).
+   대소문자는 SUF_CC 한 곳만 바꾸면 된다 — 레퍼런스 HUD 실측이 대문자(«538A»·«2.36C»,
+   docs/ref/69-우편함-팝업.jpg·70-출석보상-팝업.jpg)라 대문자를 기본으로 쓴다. */
+const SUF_CC = 65;                     /* 65 = 'A'(대문자, 기본) · 97 = 'a'(소문자) */
+const SUF = [''];
+for(let i=0;i<26;i++) SUF.push(String.fromCharCode(SUF_CC+i));
+for(let i=0;i<26;i++) for(let j=0;j<26;j++) SUF.push(String.fromCharCode(SUF_CC+i)+String.fromCharCode(SUF_CC+j));
 function fmt(n){
   if(!isFinite(n)) return '∞';
   if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
   let i = 0;
   while(n >= 1000 && i < SUF.length-1){ n /= 1000; i++; }
   /* 58 15회차 — toFixed 의 «반올림 승격» 경계 보정. 9.9999 는 n<10 분기라 toFixed(2)="10.00" 이 돼
-     롤링 중 «10.0T ↔ 10.00T» 로 자릿수 포맷이 요동쳤다(비평 W·X 공통). 승격되면 윗 분기 포맷을 쓴다. */
+     롤링 중 «10.0C ↔ 10.00C» 로 자릿수 포맷이 요동쳤다(비평 W·X 공통). 승격되면 윗 분기 포맷을 쓴다. */
   if(n < 10){ const s = n.toFixed(2); if(+s < 10) return s + SUF[i]; n = +s; }
   if(n < 100){ const s = n.toFixed(1); if(+s < 100) return s + SUF[i]; n = +s; }
   return Math.floor(n) + SUF[i];
@@ -10826,7 +10832,7 @@ function syncSummonBtns(){
   const c10 = summonCost(b, 10), c30 = summonCost(b, 30), fl = freeLeft(b);
   const fat = t => '<i class="sm-fat" data-t="' + t + '">' + t + '</i>';
   $('sumBFn').innerHTML  = fat(fl + '/' + SHOP_FREE);
-  /* 레퍼런스 가격은 «1,000 / 3,000» 쉼표 표기다. 공용 fmt() 는 K 접미사(«1.44K»)라 이 화면만 쉼표로 쓴다. */
+  /* 레퍼런스 가격은 «1,000 / 3,000» 쉼표 표기다. 공용 fmt() 는 알파벳 접미사(«1.44A»)라 이 화면만 쉼표로 쓴다. */
   $('sumB10c').innerHTML = fat(Math.round(c10).toLocaleString('en-US'));
   $('sumB30c').innerHTML = fat(Math.round(c30).toLocaleString('en-US'));
   /* 작업 102 — «회색 면 + 빨간 가격» 은 못 사는 상태 표시다. disabled 와 조건은 같지만 별개 축으로 둔다
@@ -11072,7 +11078,7 @@ const MAIL_RW = [
   { k:'r', ic:'🔮', n:'유물조각', g:3 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
-/* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00K»(5자)로 접는데,
+/* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00A»(5자)로 접는데,
    레퍼런스 배지 잉크는 썸네일 폭의 .41(«120» 3자)이라 5자면 프레임 림과 충돌한다(비평 D-S4). */
 function fmtShort(n){
   if(n < 1000) return String(Math.floor(n));
@@ -12482,7 +12488,7 @@ function endRaid(record){
 let shopCat = 'summon';
 function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
 /* 73 ④ — 레퍼런스 상점 카드 가격은 «1,000 / 3,000» 쉼표 표기다(측정표 10 §21·§26).
-   공용 fmt() 는 K 접미사(«1.00K»)라 이 화면에서는 12 결과 팝업과 같은 쉼표 표기를 쓴다. */
+   공용 fmt() 는 알파벳 접미사(«1.00A»)라 이 화면에서는 12 결과 팝업과 같은 쉼표 표기를 쓴다. */
 const won = n => Math.round(n).toLocaleString('en-US');
 function renderShopPage(){
   const list = $('shopList');
@@ -14720,7 +14726,7 @@ function renderPass(){
          .ps-bx.dn 은 색을 안 잡고 아이콘·수량 회색화만 한다(그래서 «인라인 > 클래스» 충돌이 없다) */
       bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
           + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
-          /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00K» 로 줄여 버린다(3회차 비평 C-10,
+          /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00A» 로 줄여 버린다(3회차 비평 C-10,
              LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
           /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
              레퍼런스 수량은 2~5자라 이 상황이 안 보이지만 우리 골드 보상은 20,000×(i+1)² 라 9자까지 간다.
