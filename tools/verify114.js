@@ -73,14 +73,19 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     partCap: typeof PART_CAP === 'number' ? PART_CAP : -1,
     trailN: typeof TRAIL_N === 'number' ? TRAIL_N : -1,
     boltLife: typeof BOLT_LIFE === 'number' ? BOLT_LIFE : -1,
+    trailDt: typeof TRAIL_DT === 'number' ? TRAIL_DT : -1,
+    flat: typeof FX_FLAT === 'number' ? FX_FLAT : -1,
+    w: [typeof FX_W === 'number' ? FX_W : -1, typeof FX_W2 === 'number' ? FX_W2 : -1],
     ringCap: typeof RING_CAP === 'number' ? RING_CAP : -1,
     ringsArr: Array.isArray(rings)
   }));
   ok(mod.fns.length === 11, '공용 fx 함수 11개 전부 존재 (실측 ' + mod.fns.length + ')');
   ok(mod.partCap === 480, '파티클 상한 PART_CAP = 480 (지시서 ⑤ · 실측 ' + mod.partCap + ')');
-  ok(mod.trailN === 10, '트레일 링버퍼 TRAIL_N = 10 (실측 ' + mod.trailN + ')');
-  ok(mod.boltLife === 0.30, '번개 수명 BOLT_LIFE = 0.30s (코어 0.15 + 잔광 · 실측 ' + mod.boltLife + ')');
+  ok(mod.trailN === 14, '트레일 링버퍼 TRAIL_N = 14 · 표본 22ms = 0.31s 궤적 (실측 ' + mod.trailN + ')');
+  ok(mod.boltLife === 0.34, '번개 수명 BOLT_LIFE = 0.34s (코어 0.15 + 잔광 램프 · 실측 ' + mod.boltLife + ')');
   ok(mod.ringsArr && mod.ringCap === 44, 'rings 배열 + 상한 44 (실측 ' + mod.ringCap + ')');
+  ok(mod.w[0] === 4 && mod.w[1] === 6 && mod.flat === 0.62,
+     '선 굵기 토큰 2종(FX_W 4 · FX_W2 6) · 눕는 링 비율 FX_FLAT 0.62 = 독 장판과 같은 발자국');
 
   /* ---------------- [2] 트레일 ---------------- */
   console.log('[2] 트레일 — 24종 강제 시전');

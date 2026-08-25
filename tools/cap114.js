@@ -16,10 +16,13 @@ const R = process.argv[2] || '1';
 const OUT = path.resolve(__dirname, '..', 'docs', 'review');
 
 const SCENES = [
-  { key:'trail',  skills:['shuri','ice'],  dist:420, n:8,  gap:80,  pre:0 },
-  { key:'impact', skills:['slash'],        dist:90,  n:8,  gap:80,  pre:0 },
-  { key:'boom',   skills:['meteor'],       dist:150, n:12, gap:80,  pre:0 },
-  { key:'bolt',   skills:['bolt'],         dist:220, n:8,  gap:80,  pre:0 }
+  /* 각 장면은 «트리거 직후» 부터 80ms 간격으로 찍는다(ROUTINE [3]-(다)).
+     1회차 비평 공통 지적: 자동 시전에 맡겼더니 8프레임 중 4~8장이 «연출 0» 이었다 —
+     쿨을 계속 비워 연출이 끊기지 않게 하고, 첫 장은 강제 시전 직후에 찍는다. */
+  { key:'trail',  skills:['shuri','ice'], dist:430, n:8,  gap:80, cast:'shuri', recast:200, crit:0 },
+  { key:'impact', skills:['slash'],       dist:110, n:8,  gap:80, cast:'slash', recast:120, crit:1 },
+  { key:'boom',   skills:['meteor'],      dist:150, n:12, gap:80, cast:'meteor', recast:420, crit:0 },
+  { key:'bolt',   skills:['bolt'],        dist:240, n:8,  gap:80, cast:'bolt',  recast:200, crit:0 }
 ];
 
 (async () => {
@@ -39,6 +42,9 @@ const SCENES = [
       S.own = {}; sc.skills.forEach(id => S.own[id] = { n:0, l:1 });
       S.eqSkill = sc.skills.slice();
       S.opt.shake = true;
+      /* 치명타 장면은 «확률» 에 맡기지 않는다 — 치명타 업그레이드 레벨을 올려 상한(95%)까지 띄운다.
+         Math.random 을 고정하면 파티클 각도까지 한 방향으로 굳어 연출 자체가 달라지므로 쓰지 않는다 */
+      S.lv.crit = sc.crit ? 400 : (S.lv.crit || 0);
       skillCd = {}; shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
       rings.length = 0; parts.length = 0; nums.length = 0; enemies.length = 0; spawnQ.length = 0;
       markDirty();
@@ -50,15 +56,20 @@ const SCENES = [
         const a = i*6.283/6;
         e.x = player.x + Math.cos(a)*sc.dist; e.y = player.y + Math.sin(a)*sc.dist;
       });
-      /* 적이 죽어 장면이 무너지지 않게 매 프레임 체력을 되돌린다 */
-      window.__cap114 = setInterval(() => enemies.forEach(e => { e.hp = e.max = 1e12; }), 16);
+      /* 적이 죽어 장면이 무너지지 않게 체력을 되돌리고, 쿨을 비워 연출이 끊기지 않게 한다 */
+      window.__cap114 = setInterval(() => {
+        enemies.forEach(e => { e.hp = e.max = 1e12; e.slow = 0; });
+      }, 16);
+      window.__cap114b = setInterval(() => { skillCd = {}; }, sc.recast);
+      /* 트리거 — 첫 장이 «시전 직후» 가 되게 여기서 한 번 직접 쏜다 */
+      if (SK[sc.cast]) castSkill(SK[sc.cast]);
     }, sc);
-    await p.waitForTimeout(220);
+    await p.waitForTimeout(40);
     for (let i = 1; i <= sc.n; i++) {
       await p.screenshot({ path: path.join(OUT, '114-r' + R + '-' + sc.key + '-' + i + '.png') });
       await p.waitForTimeout(sc.gap);
     }
-    await p.evaluate(() => { clearInterval(window.__cap114); });
+    await p.evaluate(() => { clearInterval(window.__cap114); clearInterval(window.__cap114b); });
     console.log('  ' + sc.key + ' — ' + sc.n + '장');
   }
   await b.close();

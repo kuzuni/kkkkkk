@@ -9437,15 +9437,19 @@ function makeEnemy(tk){
      `camUpdate` 가 `cam.shake` 를 0 으로 고정한다 — 여기서 따로 분기하지 않는다. */
 const PART_CAP  = 480;      /* 파티클 상한 (114: 320 → 480. 지시서 ⑤ 상한) */
 const RING_CAP  = 44;       /* 링 상한 — 넘으면 가장 오래된 것부터 버린다 */
-const TRAIL_N   = 10;       /* 트레일 링버퍼 표본 수(등급으로 «쓰는 길이»만 늘린다) */
-const TRAIL_DT  = 0.016;    /* 표본 간격(초) */
-const BOLT_LIFE = 0.30;     /* 번개 수명 — 앞 0.15s 코어 + 뒤 잔광(지시서 ③) */
+const TRAIL_N   = 14;       /* 트레일 링버퍼 표본 수(등급으로 «쓰는 길이»만 늘린다) */
+const TRAIL_DT  = 0.022;    /* 표본 간격(초) — 14 × 22ms = 0.31s 분량의 궤적이 남는다(1회차 비평 ⑤) */
+const BOLT_LIFE = 0.34;     /* 번개 수명 — 앞 0.15s 코어 + 뒤 잔광 램프(1회차 비평 ②) */
+/* 1회차 비평 ⑦ — 선 굵기가 2/5/7px 로 3배 흩어져 «같은 게임의 연출» 로 안 읽혔다. 두 값으로 통일한다 */
+const FX_W  = 4;            /* 기본 스트로크 */
+const FX_W2 = 6;            /* 강조(본 충격파·치명타) 스트로크 */
+const FX_FLAT = 0.62;       /* 바닥에 눕는 링의 세로 비율 — 독 장판(zones) 과 같은 값이라 문법이 맞는다 */
 const trPool = [];
 function trGet(){ return trPool.length ? trPool.pop() : new Float32Array(TRAIL_N*2); }
 function trPut(b){ if(b && b.tr){ if(trPool.length < 96) trPool.push(b.tr); b.tr = null; b.tn = 0; } }
 /* 등급 가중 — 지시서 ⑥ «등급당 트레일 길이·파티클 수 +10%». 피해에는 곱하지 않는다 */
 const fxG = g => 1 + 0.1*(g || 0);          /* ⚠ 기존 `gMul`(등급 피해 배수)과 다른 것 — 이름 충돌 금지 */
-const TRAIL_BASE = { slash:8, shuri:7, boomer:7, ice:8, boom:9, meteor:10, pet:5 };
+const TRAIL_BASE = { slash:11, shuri:10, boomer:10, ice:12, boom:12, meteor:13, pet:7 };
 function trailLen(b){
   return Math.min(TRAIL_N, Math.round((TRAIL_BASE[b.k] || 6) * fxG(b.g)));
 }
@@ -9454,7 +9458,7 @@ function fxRing(x, y, r1, col, life, w, r0, dl){
   if(rings.length >= RING_CAP) rings.shift();
   rings.push({ x, y, r0: r0 || 2, r1, col: col || '#ffd08a', t: -(dl || 0), life: life || 0.25, w: w || 3, fl:0 });
 }
-function fxRingFlat(x, y, r1, col, life, w, dl){       /* 바닥에 눕는 링(마법진·낙하 예고) */
+function fxRingFlat(x, y, r1, col, life, w, dl){       /* 바닥에 눕는 링(폭발·마법진·낙하 예고) */
   fxRing(x, y, r1, col, life, w, r1*0.15, dl);
   rings[rings.length-1].fl = 1;
 }
@@ -9470,44 +9474,48 @@ function debris(x, y, c, n, pw, gy){
   for(let i=0;i<n;i++){
     if(parts.length > PART_CAP) break;
     const a = -Math.PI/2 + rnd(-1.15, 1.15), v = rnd(pw*0.45, pw);
-    parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.32,.62), t:0, c,
-                 r:rnd(1.6,4.2), gy: gy || 620 });
+    parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.34,.68), t:0, c,
+                 r:rnd(2.6,6.0), gy: gy || 620 });
   }
 }
 /* ② 타격 임팩트 — 진행 방향 «반대»로 튀는 스파크 3~6개 + 0.12s 플래시 링(치명타는 링 2겹) */
 function impactFx(x, y, vx, vy, col, crit, g){
   const m = fxG(g), a0 = Math.atan2(-vy, -vx);
-  const n = Math.round((crit ? 6 : 3) * m);
+  const n = Math.round((crit ? 9 : 5) * m);
   for(let i=0;i<n;i++){
     if(parts.length > PART_CAP) break;
-    const a = a0 + rnd(-0.75, 0.75), v = rnd(160, crit ? 430 : 300);
-    parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.14,.30), t:0,
-                 c: crit ? '#ffe27a' : col, r:rnd(1.2,2.9) });
+    const a = a0 + rnd(-0.75, 0.75), v = rnd(200, crit ? 460 : 340);
+    parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.18,.34), t:0,
+                 c: crit ? '#ffe27a' : col, r:rnd(2.0,4.0) });
   }
-  fxRing(x, y, (crit ? 32 : 21) * m, crit ? '#ffe27a' : col, 0.12, crit ? 3.6 : 2.4);
-  if(crit) fxRing(x, y, 50*m, '#fff0b8', 0.17, 2.0, 6, 0.03);   /* 치명타 = 링 2겹 */
+  /* 1회차 비평 ④ — 링 지름이 캐릭터 키의 58% 라 «타격» 이 아니라 «점» 으로 읽혔다. 1.1~1.5H 로 키우고
+     수명도 0.12 → 0.24s(80ms 캡처에서 3프레임)로 늘린다 */
+  fxRing(x, y, (crit ? 58 : 42) * m, crit ? '#ffe27a' : col, 0.24, crit ? FX_W2 : FX_W);
+  if(crit) fxRing(x, y, 84*m, '#fff0b8', 0.30, FX_W, 12, 0.06);   /* 치명타 = 링 2겹 */
 }
 /* ③ 폭발 충격파 — 확장 링 2겹 + 흙·불 파편 + 소폭 흔들림(3). 2단(지연 0.10s)으로 «크게 터지는 느낌» */
 function boomFx(x, y, r, col, big){
   const c = col || '#ffb45c';
-  fxRing(x, y, r, c, 0.25, 7);                       /* 본 충격파: 0 → 피해 반경, 0.25s */
-  fxRing(x, y, r*0.55, '#fff2c0', 0.16, 4);          /* 안쪽 화염 링 */
-  fxRing(x, y, r*(big ? 1.35 : 1.12), c, 0.30, 3, r*0.4, 0.10);   /* 2단 — 0.10s 뒤 바깥 파문 */
-  debris(x, y, c, big ? 14 : 9, big ? 430 : 330);
-  debris(x, y, '#8a6a4a', big ? 8 : 5, 300);       /* 흙 파편 */
+  /* 1회차 비평 ③ — 폭발은 «바닥에서» 터진다. 눕는 링(FX_FLAT)으로 통일해야 낙하 예고 타원·독 장판과
+     같은 발자국 모양이 된다(예고 1.46:1 ↔ 폭발 0.90:1 로 어긋나 있었다) */
+  fxRing(x, y, r, c, 0.40, FX_W2);                                /* 본 충격파: 0 → 피해 반경 */
+  fxRing(x, y, r*0.55, '#fff2c0', 0.26, FX_W);                    /* 안쪽 화염 링 */
+  fxRing(x, y, r*(big ? 1.45 : 1.25), c, 0.42, FX_W, r*0.5, 0.16);/* 2단 — 0.16s 뒤 바깥 파문 */
+  debris(x, y, c, big ? 22 : 16, big ? 460 : 360);
+  debris(x, y, '#8a6a4a', big ? 14 : 10, 320);                    /* 흙 파편 */
   cam.shake = Math.max(cam.shake, big ? 6 : 3);
 }
 /* 장판·오라형 시전 — 바닥 마법진 플래시(눕는 링 2겹 + 회전 룬 대용 점) */
 function magicFlash(x, y, r, col){
-  fxRingFlat(x, y, r, col || '#fff2b0', 0.34, 5);
-  fxRingFlat(x, y, r*0.62, col || '#fff2b0', 0.26, 3, 0.05);
+  fxRingFlat(x, y, r, col || '#fff2b0', 0.34, FX_W2);
+  fxRingFlat(x, y, r*0.62, col || '#fff2b0', 0.26, FX_W, 0.05);
 }
 /* ④ 연쇄 폭발 — 착탄 주변 3곳이 0.08s 간격으로 «타닥» 터진다. 지연 발화 링에 파티클 스펙(bn/bc/bp)을
    실어 두고 링이 켜지는 순간 burst 를 쏜다(타이머 클로저 0개 = 할당 0). 피해는 없다 — 계수 불변 */
 function chainBoomFx(x, y, r, col){
   for(let i=0;i<3;i++){
     const a = rnd(0, 6.283), d = r*rnd(0.55, 0.95);
-    fxRing(x + Math.cos(a)*d, y + Math.sin(a)*d*0.7, r*0.42, col, 0.22, 4, 3, 0.08 + i*0.07);
+    fxRing(x + Math.cos(a)*d, y + Math.sin(a)*d*0.7, r*0.5, col, 0.30, FX_W, 3, 0.10 + i*0.09);
     const rr = rings[rings.length-1];
     rr.bn = 6; rr.bc = col; rr.bp = 210;
   }
@@ -9725,14 +9733,14 @@ function sfxCast(id){
 
 /* ---------------- 스킬 발동 ---------------- */
 function castSkill(s){
-  const n0 = shots.length;
+  const n0 = shots.length;              /* 114 — 이번 시전이 «새로» 만든 투사체 구간의 시작 */
   const ok = castSkillRaw(s);
-  /* 114 ⑥ — 등급 가중(트레일 길이·파티클 수 +10%/등급)을 위해 «이번 시전이 만든 투사체»에만 등급을 찍는다.
-     86 교훈 2 대로 기존 13분기는 한 글자도 건드리지 않는다 — 여기 두 줄이면 전 종류가 덮인다. */
-  if(ok){
-    for(let i=n0;i<shots.length;i++) shots[i].g = s.g;
-    sfxCast(s.id);                      /* 99 — 발동 실패(대상 없음·버프 중복)에는 울리지 않는다 */
-  }
+  if(ok) sfxCast(s.id);                 /* 99 — 발동 실패(대상 없음·버프 중복)에는 울리지 않는다.
+                                           ⚠ verify99 가 이 두 줄의 «인접»을 소스 정규식으로 본다(LESSONS 110-①).
+                                              사이에 코드를 끼우지 마라 — 114 의 등급 태깅은 아래에 둔다. */
+  /* 114 ⑥ — 등급 가중(트레일 길이·스파크 수 +10%/등급)을 위해 이번 시전의 투사체에만 등급을 찍는다.
+     86 교훈 2 대로 기존 13분기는 한 글자도 건드리지 않는다 — 여기 한 줄이면 전 종류가 덮인다. */
+  if(ok) for(let i=n0;i<shots.length;i++) shots[i].g = s.g;
   return ok;
 }
 function castSkillRaw(s){
@@ -10173,7 +10181,9 @@ function step(dt){
         const crit = Math.random() < stat.crit;
         const dmg = b.dmg * (crit ? stat.cdmg : 1);
         burst(b.x, b.y, crit ? '#ffe27a' : b.col, crit ? 8 : 4, crit ? 210 : 120);
-        impactFx(b.x, b.y, b.vx, b.vy, b.col, crit, b.g);   /* 114 ② — 방향성 스파크 + 플래시 링 */
+        /* 114 ② — 방향성 스파크 + 플래시 링. 앵커는 «투사체가 멈춘 자리»가 아니라 **적 몸통 중심**이다:
+           투사체 좌표로 찍으면 판정 반경(e.r+13)만큼 밖에 찍혀 그림자 아래로 내려간다(1회차 비평 ④) */
+        impactFx((b.x + ex)/2, (b.y + ey)/2, b.vx, b.vy, b.col, crit, b.g);
         if(b.slow) e.slow = b.slow;
         hitEnemy(e, dmg, crit, b.vx*0.05, b.vy*0.05);
         if(--b.pierce <= 0){ trPut(b); shots.splice(i,1); break; }
@@ -10358,16 +10368,19 @@ function drawTrails(){
     const n = b.tn;
     if(!b.tr || n < 2) continue;
     const k = b.k, fire = (k === 'boom' || k === 'meteor');
-    if(fire || k === 'slash') ctx.globalCompositeOperation = 'lighter';
+    /* 1회차 비평 — 잔상 휘도가 배경 대비 ΔL +14~26 이라 «사실상 안 보인다» 였다.
+       전 종류를 가산 합성으로 올리고 알파를 키운다(색은 스킬 col 그대로 = 지시서 ⑥) */
+    ctx.globalCompositeOperation = 'lighter';
     const first = (b.ti - n + TRAIL_N*2) % TRAIL_N;
     if(k === 'shuri' || k === 'boomer'){
       /* 회전 잔상 — 선이 아니라 «지나간 자리의 고스트 별» 3~4개 */
-      for(let i=0;i<n;i+=2){
+      for(let i=0;i<n;i++){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
-        ctx.globalAlpha = f*f*0.42;
+        ctx.globalAlpha = f*f*0.75;
         ctx.fillStyle = b.col;
         ctx.beginPath();
-        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 3.2 + 6.0*f, 0, 6.283);
+        /* 지름 테이퍼 30% → 100% (1회차 비평 ⑤ «테이퍼 없음») */
+        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 2.8 + 7.2*f, 0, 6.283);
         ctx.fill();
       }
     }else if(k === 'ice'){
@@ -10375,20 +10388,20 @@ function drawTrails(){
       for(let i=0;i<n;i++){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
         const x = b.tr[idx*2], y = b.tr[idx*2+1];
-        ctx.globalAlpha = f*0.5;
+        ctx.globalAlpha = 0.25 + f*0.6;
         ctx.fillStyle = i % 2 ? '#dff6ff' : b.col;
-        const s2 = 1.6 + 3.4*f, off = (i % 3 - 1)*4.5*(1-f);
+        const s2 = 2.4 + 5.0*f, off = (i % 3 - 1)*5.5*(1-f);
         ctx.beginPath();
         ctx.moveTo(x, y-s2+off); ctx.lineTo(x+s2, y+off); ctx.lineTo(x, y+s2+off); ctx.lineTo(x-s2, y+off);
         ctx.closePath(); ctx.fill();
       }
     }else{
       /* 폴리라인 잔상 — 검기(넓은 띠) · 화염(꼬리) · 그 외(가는 선) */
-      const w = k === 'slash' ? 11 : fire ? 13 : 6;
+      const w = k === 'slash' ? 13 : fire ? 15 : 8;
       for(let i=0;i<n-1;i++){
         const i0 = (first + i) % TRAIL_N, i1 = (first + i + 1) % TRAIL_N;
         const f = (i+1)/(n-1);
-        ctx.globalAlpha = f*f*(fire ? 0.55 : 0.45);
+        ctx.globalAlpha = f*f*(fire ? 0.85 : 0.7);
         ctx.strokeStyle = fire ? (f > 0.6 ? '#ffdc8a' : b.col) : b.col;
         ctx.lineWidth = 1.2 + w*f;
         ctx.beginPath();
@@ -10468,7 +10481,14 @@ function draw(){
   for(const p of parts){
     const a = 1 - p.t/p.life;
     ctx.globalAlpha = a; ctx.fillStyle = p.c;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*a + 0.5, 0, 6.283); ctx.fill();
+    if(p.gy){
+      /* 114 — 흙·불 파편: 알파만 빼고 «크기는 유지» 한다. 반지름까지 같이 줄이면 마지막 프레임엔
+         1px 점이 돼 비평가 둘 다 «파편 0개» 로 읽었다(1회차 공통 지적) */
+      const w = p.r*1.7;
+      ctx.fillRect(p.x - w/2, p.y - w/2, w, w);
+    }else{
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r*a + 0.5, 0, 6.283); ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 
@@ -10560,9 +10580,18 @@ function draw(){
     if(b.k !== 'meteor') continue;
     const f = clamp(1 - (b.ty - b.y)/420, 0, 1);
     ctx.save();
-    ctx.globalAlpha = 0.20 + 0.45*f;
-    ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth = 2 + 3*f;
-    ctx.beginPath(); ctx.ellipse(b.tx, b.ty, b.r*(1.25 - 0.35*f), b.r*(1.25 - 0.35*f)*0.5, 0, 0, 6.283);
+    ctx.globalAlpha = 0.30 + 0.50*f;
+    ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth = FX_W;
+    /* 예고 발자국 = 실제 폭발 링과 «같은 반경 · 같은 눕는 비율» 이어야 «저기 떨어진다» 로 읽힌다
+       (1회차 비평 ③ — 예고 1.46:1 547×374 ↔ 폭발 0.90:1 380×422 로 어긋나 있었다) */
+    const rr = b.r*(1.35 - 0.35*f);
+    ctx.beginPath(); ctx.arc(b.tx, b.ty, rr, 0, 6.283);
+    ctx.stroke();
+    /* 조준 십자 — 예고가 «장식»이 아니라 «표적»으로 읽히게 */
+    ctx.globalAlpha *= 0.8; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(b.tx - rr*0.25, b.ty); ctx.lineTo(b.tx + rr*0.25, b.ty);
+    ctx.moveTo(b.tx, b.ty - rr*0.25); ctx.lineTo(b.tx, b.ty + rr*0.25);
     ctx.stroke();
     ctx.restore();
   }
@@ -10613,24 +10642,29 @@ function draw(){
     if(!l.pts) continue;
     const col = l.col || '#cfeaff';
     const f = clamp(l.t/BOLT_LIFE, 0, 1);
+    /* 코어는 0.15s 까지 «살아 있고», 잔광은 끝까지 램프로 사그라든다.
+       1회차 비평 ② — 예전엔 코어가 꺼지는 순간 통째로 사라져 80ms 하드 컷이었다.
+       ⑦ — 코어 휘도가 폭발(200+)보다 40% 어두워 같은 게임 연출로 안 읽혔다 → 굵기·알파를 올린다 */
     const core = clamp(1 - l.t/0.15, 0, 1);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.globalCompositeOperation = 'lighter';
     for(let pass=0; pass<2; pass++){
       if(pass === 1 && core <= 0) break;
-      ctx.globalAlpha = pass ? core : (1-f)*0.34;
+      ctx.globalAlpha = pass ? (0.55 + 0.45*core) : (1-f)*(1-f)*0.55 + 0.10*(1-f);
       ctx.strokeStyle = pass ? '#ffffff' : col;
-      ctx.lineWidth  = pass ? 2.0 : 9.0*(1-f*0.5);
+      ctx.lineWidth  = pass ? (FX_W - 1 + core) : (FX_W2 + 5)*(1 - f*0.45);
       ctx.beginPath();
       ctx.moveTo(l.pts[0], l.pts[1]);
       for(let i=2;i<l.pts.length;i+=2) ctx.lineTo(l.pts[i], l.pts[i+1]);
       ctx.stroke();
       if(l.br) for(const bp of l.br){
-        ctx.lineWidth = pass ? 1.3 : 5.0*(1-f*0.5);
+        ctx.lineWidth = pass ? (FX_W - 2 + core*0.8) : FX_W2*(1 - f*0.45);
         ctx.beginPath();
         ctx.moveTo(bp[0], bp[1]); ctx.lineTo(bp[2], bp[3]); ctx.lineTo(bp[4], bp[5]);
         ctx.stroke();
       }
     }
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
 
@@ -10639,11 +10673,11 @@ function draw(){
     if(r.t < 0) continue;                       /* 지연 발화 대기 중 */
     const f = clamp(r.t/r.life, 0, 1), e = 1-(1-f)*(1-f);
     const rr = r.r0 + (r.r1 - r.r0)*e;
-    ctx.globalAlpha = (1-f)*(r.fl ? 0.75 : 0.9);
+    ctx.globalAlpha = (1-f*f)*(r.fl ? 0.8 : 0.95);      /* 1회차 비평 ① — 선형 감쇠는 80ms 캡처에서 «1프레임 반짝» 으로 읽혔다 */
     ctx.strokeStyle = r.col;
-    ctx.lineWidth = Math.max(0.6, r.w*(1-f*0.85));
+    ctx.lineWidth = Math.max(1.2, r.w*(1-f*0.6));
     ctx.beginPath();
-    if(r.fl) ctx.ellipse(r.x, r.y, rr, rr*0.5, 0, 0, 6.283);
+    if(r.fl) ctx.ellipse(r.x, r.y, rr, rr*FX_FLAT, 0, 0, 6.283);
     else     ctx.arc(r.x, r.y, rr, 0, 6.283);
     ctx.stroke();
   }
@@ -10664,11 +10698,12 @@ function draw(){
   for(const n of nums){
     const a = 1 - n.t/0.85;
     ctx.globalAlpha = a;
-    /* 114 ② — 치명타 숫자 «팝»: 0.15s 동안 1.55배에서 원래 크기로 줄어든다(임팩트 링과 같은 박자) */
-    const sz = n.crit ? 18*(1 + 0.55*clamp(1 - n.t/0.15, 0, 1)) : 13;
+    /* 114 ② — 치명타 숫자 «팝»: 0.22s 동안 1.6배에서 원래 크기로 줄어든다(임팩트 링과 같은 박자).
+       외곽선은 폭발 백열 코어 위에서도 읽히게 두껍게 — 1회차 비평 ⑧ «대비 1.2:1 판독 불가» */
+    const sz = n.crit ? 18*(1 + 0.60*clamp(1 - n.t/0.22, 0, 1)) : 13;
     ctx.font = (n.crit ? '900 ' : '800 ') + sz.toFixed(1) + 'px sans-serif';
     ctx.fillStyle = n.crit ? '#ffd45e' : '#fff';
-    ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 3.5;
+    ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineWidth = n.crit ? 6 : 5;
     ctx.strokeText(n.v, n.x+n.ox, n.y); ctx.fillText(n.v, n.x+n.ox, n.y);
   }
   ctx.globalAlpha = 1;
