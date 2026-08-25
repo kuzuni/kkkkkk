@@ -5858,11 +5858,24 @@
     -webkit-text-stroke:12px #000;paint-order:stroke fill;
     text-shadow:0 4px 0 #000;white-space:nowrap}
   .ps-ttl>i{transform:scaleX(.91);transform-origin:left center}
+  /* 8회차 — 타이틀 흰 코어가 «높이만» 과대였다. 임계 225·240(순백) 양쪽에서 ref h55 ↔ 우리 h68 (+24%),
+     폭은 ref 466 ↔ 우리 473 (+1.5%) 로 이미 맞았다(비평가 M «+8%» · 자체 스캔 «+23.6%» 이 같은 방향).
+     → font-size 로 높이를 내리고(74→60 = ×0.81) 줄어드는 폭은 scaleX 로 되민다(.91→1.107).
+     ⚠ `#psw:not(.att)` 로 좁힌다 — 36 출석 패스는 이 슬롯을 공유하면서 `>i` scaleX(.875)를
+     **현재 font-size 기준으로** 맞춰 뒀다(6069행). 밑값을 바꾸면 36 이 조용히 틀어진다. */
+  #psw:not(.att) .ps-ttl{font-size:60px}
+  #psw:not(.att) .ps-ttl>i{transform:scaleX(1.107)}
   /* 부제 2줄 — 두 줄이 «서로» 중앙 정렬(화면 중앙 540 이 아니라 중심 x294.5)이다.
      코어 L1 ref y294..324 → frame 210..240 / L2 ref y331..363 → frame 247..279 (pitch 37) */
   .ps-sub{left:0;width:589px;top:200px;text-align:center;font-size:34px;line-height:37px;
     color:#FFF268;-webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:pre-line}
   .ps-sub>i{transform:scaleX(.91)}
+  /* 8회차 — 부제는 2줄 다 «폭이 좁고 6px 위» 였다(임계 215 행그룹 분리 실측):
+     L1 ref w456 h31 @y210 ↔ 우리 w422 h30 @y204 · L2 ref w244 h33 @y247 ↔ 우리 w231 h30 @y241.
+     줄 pitch 는 37 로 양쪽 일치라 **line-height 는 건드리지 않는다** — font-size 만 34→37(×1.088)로
+     올리면 폭 422→459(ref 456)·높이 30→32.6(ref 31/33)이 한 번에 맞는다. top 200→205 로 6px 내린다.
+     ⚠ 위 타이틀과 같은 이유로 `#psw:not(.att)` 로 좁힌다(36 은 6071·6077 행에서 자기 값을 쓴다). */
+  #psw:not(.att) .ps-sub{font-size:37px;top:207px}
   /* 스탯 블록 — 라벨 코어 frame y407..439 / 값 코어 frame y456..487, 서로 중앙 정렬(중심 x265) */
   .ps-st{left:0;width:530px;text-align:center;color:#F0E861;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;white-space:nowrap}
