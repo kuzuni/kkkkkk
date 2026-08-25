@@ -266,12 +266,32 @@ const note = (name, detail) => { results.push({ name, note: true, detail: detail
     let f = 0;
     const origSpawn = window.spawnStage;
     window.spawnStage = function () { const r = origSpawn.apply(this, arguments); for (let k = 0; k < 3; k++) snaps.add(f + k); return r; };
+    /* 6회차 — **보스는 «HP 가 깎여» 죽는다.** 5회차까지의 게이트는 만피 보스를 곧바로 killEnemy() 해서
+       «빈사 편향» 구간을 통째로 건너뛰었다. 그건 실제로 플레이어가 보는 경로가 아니다
+       (3·5회차의 «게이트가 안 보는 구간» 과 같은 종류의 맹점이다) — 빈사 구간을 실제로 통과시킨 뒤 일격을 넣는다. */
+    b.hp = b.max * 0.15;
+    let lowOff = 0, lowClip = 0;
+    for (let i = 0; i < 90; i++) {
+      window.__tick();
+      lowOff = Math.max(lowOff, Math.hypot(cam.x - player.x, cam.y - player.y));
+      /* 편향이 걸린 동안에도 플레이어 몸통이 프레임 안에 통째로 남아야 한다 */
+      const pr = player.r || 40;
+      const ex = Math.max(Math.abs(cam.x - player.x) + pr - VW / (2 * cam.z), Math.abs(cam.y - player.y) + pr - VH / (2 * cam.z));
+      if (ex > 0) lowClip++;
+    }
+    const killD0 = (() => { const c = spriteCenter(b); return Math.hypot(cam.x - c.x, cam.y - c.y); })();
     killEnemy(b);
     const zs = [], flashes = [], offs = [];
     let jerk = 0, jerkAt = null, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y }, endF = -1;
+    /* 6회차 — «정지 프레임». 슬로모(t < CINE_SLOW_S) 안에서 카메라가 프레임당 SETTLE px 이하로만 움직이는 프레임 수.
+       4·5회차 비평이 3회 연속 짚은 최대 결함이 «슬로모 안에 정지 프레임이 0» 이었다(착지 t=0.333 > 슬로모 종료 0.30). */
+    const SETTLE = 2.0;
+    let still = 0, landT = -1;
     for (f = 0; f < 200; f++) {
       window.__tick();
       const v = { x: cam.x - prev.x, y: cam.y - prev.y };
+      const sp = Math.hypot(v.x, v.y);
+      if (f > 2 && sp <= SETTLE) { if (landT < 0) landT = +cine.t.toFixed(3); if (cine.mode === 'kill' && cine.t < CINE_SLOW_S) still++; }
       if (prevV && f > 2 && !snaps.has(f)) {
         const a = { x: v.x - prevV.x, y: v.y - prevV.y };
         acc = Math.max(acc, Math.hypot(a.x, a.y));
@@ -301,7 +321,7 @@ const note = (name, detail) => { results.push({ name, note: true, detail: detail
       offMin: Math.min(...offs.map(o => o.d).concat([1e9])), jerkAt, acc,
       /* 줌 정점 ~ 슬로모 종료(t<0.30) 사이 — 그 뒤는 «플레이어로 복귀» 구간이라 시체가 중앙을 떠나는 게 정상이다 */
       offPeakWin: Math.max(...offs.filter((o,i) => i >= offs.findIndex(q => q.z >= 1.29) && o.t < CINE_SLOW_S).map(o => o.d).concat([0])),
-      jerk
+      jerk, still, landT, killD0, lowOff, lowClip
     };
   });
   ok('[5] 처치 줌인 배율 1.30', !kill.err && Math.abs(kill.zMax - 1.30) < 0.03, kill.err || kill.zMax.toFixed(3));
@@ -316,6 +336,13 @@ const note = (name, detail) => { results.push({ name, note: true, detail: detail
   ok('[5] 줌 정점~슬로모 종료 내내 시체가 중앙 90px 이내', kill.offPeakWin < 90, kill.offPeakWin.toFixed(1) + 'px');
   ok('[5] 처치 연출 저크(3차 차분) < ' + LIM_CJRK, kill.jerk < LIM_CJRK, kill.jerk.toFixed(3) + 'px/f³ @' + JSON.stringify(kill.jerkAt));
   ok('[5] 처치 연출 가속 < ' + LIM_CACC, kill.acc < LIM_CACC, kill.acc.toFixed(2) + 'px/f²');
+  /* 6회차 신설 — 4·5회차가 3회 연속 짚은 «슬로모 안에 정지 프레임이 없다».
+     임계 2프레임은 «운 좋은 회차» 가 아니라 10회 반복에서 관측된 최소값(3)의 아래다(5회차 §8.4 규칙). */
+  ok('[5] 슬로모(0.30초) «안» 에 카메라 정지 프레임 ≥ 2 (≤2px/frame)', kill.still >= 2,
+     kill.still + '프레임 · 착지 t=' + (kill.landT < 0 ? '없음' : kill.landT.toFixed(3)) + '초 (슬로모 종료 0.300)');
+  ok('[5] 빈사 편향이 출발 거리를 줄인다 (카메라–시체중심 < 200px)', kill.killD0 < 200, kill.killD0.toFixed(0) + 'px');
+  ok('[5] 빈사 편향 중에도 플레이어가 프레임 안에 남는다', kill.lowClip === 0 && kill.lowOff <= 152,
+     kill.lowClip + '프레임 잘림 · 최대 편향 ' + kill.lowOff.toFixed(0) + 'px (상한 150)');
 
   /* ---- [6] 회귀 ---- */
   const reg = await page.evaluate(() => ({

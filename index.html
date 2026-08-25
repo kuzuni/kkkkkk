@@ -7852,7 +7852,7 @@ const TS = 16, TSC = 3, T = TS*TSC;
    (장식 얼룩 개수만 «넓이 비례» 로 늘린다 — 상수 70 을 그대로 두면 밀도가 1/4 이 된다). */
 const WORLD = { w: 40*T, h: 64*T };
 /* 67 — z: 카메라 줌(보스 연출) · lx/ly: 리드(진행 방향 선행)의 현재값 */
-const cam = { x: WORLD.w/2, y: WORLD.h/2, shake: 0, z: 1, lx: 0, ly: 0 };
+const cam = { x: WORLD.w/2, y: WORLD.h/2, shake: 0, z: 1, lx: 0, ly: 0, bx: 0, by: 0 };
 let floorCv = null;
 
 function buildFloor(seed){
@@ -9358,7 +9358,19 @@ const CAM_KCINE  = 0.40;   /* 연출 중 추적 비율. 0.12 로 두면 «0.8초
 const CAM_KKILL  = 0.46;   /* 처치 구간 추적 — 줌이 최대인 0.3초 안에 시체가 중앙에 «와 있어야» 한다 */
 const CAM_LEAD   = 90;     /* 리드 — 진행 방향으로 최대 선행 px */
 const CAM_LEADK  = 0.05;   /* 리드 자체의 추적 비율(방향 반전 때 튀지 않게 더 느리게) */
-const CINE_KILL_S= 0.24;   /* 처치 줌인이 차오르는 시간 — 더 짧게 하면 그 램프 자체가 저크로 읽힌다(0.14 에서 6.6px/f²) */
+/* 6회차 — «빈사 보스 예비 편향». 처치 슬로모(0.30초) 안에 «정지 프레임» 을 남기기 위한 것이다.
+   처치 램프(CINE_KILL_S)를 줄여서 푸는 길은 저크 예산에 막혀 있다(5회차 §11.7 실측: 0.17 에서 5.46px/f³).
+   카메라 추적은 **선형계**라 «걸리는 프레임 수» 는 거리에 무관하고 «px 로 잰 속도·저크» 만 거리에 비례한다 —
+   그래서 출발 거리를 줄이면 정지 판정(속도 px/f)도, 저크 예산도 같은 비율로 함께 내려간다.
+   보스가 빈사(HP ≤ CAM_LOWHP)가 되면 카메라가 서서히 보스 쪽으로 기울어 그 «출발 거리» 를 미리 줄여 둔다. */
+const CAM_LOWHP  = 0.20;   /* 이 비율 아래로 내려간 보스가 편향 대상 */
+const CAM_LOWW   = 1.00;   /* 플레이어–보스 거리의 이 비율만큼 다가간다(1 = 보스 앵커를 잡는다) */
+const CAM_LOW_MAX= 150;    /* 편향 상한(월드 px) — «플레이어가 프레임에 남는다» 를 보장하는 것은 이 상한이다.
+                              가시 반폭 270 · 플레이어 반폭 ≈ 40 이라 150 이면 최악에도 80px 여유. 리드는 편향만큼 접힌다 */
+const CAM_LOWK   = 0.08;   /* 편향의 감쇠 계수 — 임계 통과가 계단이 아니라 0.46초짜리 기울기로 읽히게 */
+const CINE_KILL_S= 0.19;   /* 처치 줌인이 차오르는 시간. 5회차에는 0.24 가 저크 예산의 한계였다(0.21 에서 3.45px/f³ · 0.17 에서 5.46).
+                              6회차의 «빈사 편향» 이 출발 거리를 270→127px 으로 줄여 같은 램프의 px 저크가 절반이 됐고,
+                              그 여유로 0.19 까지 당겨 카메라 착지를 t=0.333 → 0.250 으로 옮겼다(슬로모 종료 0.30 «안»). */
 const CINE_ZIN   = 1.15;   /* 보스 스폰 팬·줌 배율 */
 const CINE_ZKILL = 1.30;   /* 보스 처치 줌 배율 */
 const CINE_TS    = 0.30;   /* 처치 슬로모 timeScale */
@@ -9411,7 +9423,7 @@ function camClamp(x, y){
     y: WORLD.h <= hh*2 ? WORLD.h/2 : clamp(y, hh, WORLD.h-hh)
   };
 }
-function cineReset(){ cine.mode = ''; cine.t = 0; cine.tg = null; cine.flash = 0; cine.zb = 1; cam.z = 1; cam.lx = cam.ly = 0; }
+function cineReset(){ cine.mode = ''; cine.t = 0; cine.tg = null; cine.flash = 0; cine.zb = 1; cam.z = 1; cam.lx = cam.ly = 0; cam.bx = cam.by = 0; }
 /* 연출을 켤 때 «출발 줌» 과 대상 좌표를 스냅샷한다 — 이어달리기(연출 중 처치)에서도 계단이 안 생긴다 */
 function cineStart(mode, pt, flip, base){
   cine.mode = mode; cine.t = 0; cine.zb = cam.z; cine.flip = flip;
@@ -9495,9 +9507,31 @@ function camUpdate(dt){
     cine.cx += (c.x-cine.cx)*tk; cine.cy += (c.y-cine.cy)*tk;
     tgc = c;
   }
-  const tgx = cine.mode ? cine.cx : player.x, tgy = cine.mode ? cine.cy : player.y;
-  const fx = player.x + (tgx - player.x)*w;
-  const fy = player.y + (tgy - player.y)*w;
+  /* ── 빈사 보스 예비 편향 (6회차: 5회차 §11.8 ① — 3회 연속 지적된 «슬로모 안에 정지 프레임이 없다») ──
+     보스 HP 가 CAM_LOWHP 아래로 내려가면 카메라 기준점을 «플레이어» 에서 «플레이어 + 보스 방향 오프셋» 으로
+     서서히 옮긴다. 처치 연출이 시작될 때 카메라가 이미 시체 쪽에 절반쯤 와 있으므로 같은 램프로도 슬로모 안에 착지한다.
+     대상은 spriteCenter 가 아니라 **앵커(e.x, e.y−r)** 다 — 걷기 애니 트림이 프레임마다 중심을 흔들어
+     그대로 편향의 떨림(=저크)이 되기 때문이다(2회차 결함 ⑧ · 3회차 §9.1 과 같은 함정).
+     처치 연출 중에는 목표를 «얼린다» — w 가 시체 쪽으로 차오르는 동안 기준점이 플레이어로 되돌아가면
+     두 움직임이 서로를 상쇄해 카메라가 도착을 못 한다. 연출이 끝나면 목표가 0 이 되어 같은 감쇠로 풀린다. */
+  let btx = cam.bx, bty = cam.by;
+  if(cine.mode !== 'kill'){
+    btx = bty = 0;
+    const lb = enemies.find(e => e.tk === 'boss' && !e.raid && e.hp > 0 && e.max > 0 && e.hp <= e.max*CAM_LOWHP);
+    if(lb){
+      const dx = lb.x - player.x, dy = (lb.y - (lb.r || 0)) - player.y, d = Math.hypot(dx, dy);
+      if(d > 1){ const m = Math.min(CAM_LOWW*d, CAM_LOW_MAX); btx = dx/d*m; bty = dy/d*m; }
+    }
+  }
+  const bk = camDamp(CAM_LOWK, dt);
+  cam.bx += (btx-cam.bx)*bk; cam.by += (bty-cam.by)*bk;
+
+  /* 연출 가중치 w 의 «0 쪽» 끝은 플레이어가 아니라 «편향된 기준점» 이다 — 그래야 편향이 걸린 채로
+     연출이 시작돼도 첫 프레임에 기준점이 튀지 않는다(편향 → 연출 전환에 계단이 없다) */
+  const bpx = player.x + cam.bx, bpy = player.y + cam.by;
+  const tgx = cine.mode ? cine.cx : bpx, tgy = cine.mode ? cine.cy : bpy;
+  const fx = bpx + (tgx - bpx)*w;
+  const fy = bpy + (tgy - bpy)*w;
   /* 줌 — «출발 줌 zb» 에서 목표 배율까지. zb 는 1 로 서서히 풀리므로 연출이 끝나도 계단이 없다 */
   cine.zb += (1-cine.zb) * camDamp(CINE_TGK, dt);
   /* 줌 가중치는 위치와 «같은» 곡선을 쓴다.
@@ -9512,9 +9546,13 @@ function camUpdate(dt){
   const fz = cine.zb + ((cine.mode === 'kill' ? CINE_ZKILL : CINE_ZIN) - cine.zb)*zw;
 
   /* 리드 — 속도 방향으로 최대 CAM_LEAD px 앞을 본다. 멈추면(그리고 연출 중에는) 0 으로 되돌아간다 */
+  /* 편향이 걸린 만큼 리드를 접는다 — 둘이 겹치면 오프셋이 150+90=240px 이 되어 가시 반폭 270 에서
+     플레이어가 프레임 가장자리에 걸린다. 편향 자체가 이미 «어디를 볼지» 를 정한 상태라 리드의 역할과 겹친다. */
   const v = Math.hypot(player.vx, player.vy);
-  const tlx = v > 8 ? player.vx/v*CAM_LEAD*(1-w) : 0;
-  const tly = v > 8 ? player.vy/v*CAM_LEAD*(1-w) : 0;
+  const bw = Math.min(1, Math.hypot(cam.bx, cam.by)/CAM_LOW_MAX);
+  const lsc = (1-w)*(1-bw);
+  const tlx = v > 8 ? player.vx/v*CAM_LEAD*lsc : 0;
+  const tly = v > 8 ? player.vy/v*CAM_LEAD*lsc : 0;
   const lk = camDamp(CAM_LEADK, dt);
   cam.lx += (tlx-cam.lx)*lk; cam.ly += (tly-cam.ly)*lk;
 
