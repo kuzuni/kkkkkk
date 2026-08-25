@@ -248,6 +248,51 @@ function launchOpts(){
       await ctx.close();
     }
 
+    /* ---------- 2-1. 던전 입장 화면 (작업 30) ----------
+       04 [도전] → 30초 제한 전투 «런» 이라 탭/사이드 오프너 수집에 안 걸린다.
+       상단 HUD·탭바가 통째로 사라지는 유일한 상태라 여기서 별도로 본다. */
+    console.log('[2-1] 던전 입장 화면(30)');
+    {
+      const { ctx, page, errs } = await fresh(browser, 1080, 2280);
+      const enter = await page.evaluate(() => {
+        if (typeof challengeDungeon !== 'function' || typeof DUNGEONS === 'undefined') return 'challengeDungeon 없음';
+        const d = DUNGEONS[0]; S.daily.dun[d.id] = 3;
+        challengeDungeon(d);
+        return (typeof dunRun !== 'undefined' && dunRun) ? null : '던전 런이 시작되지 않음';
+      }).catch((e) => String(e.message || e));
+      if (enter) fail('던전 입장: ' + enter);
+      else {
+        await page.waitForTimeout(700);
+        const st = await page.evaluate(() => {
+          const app = document.getElementById('app'), A = app.getBoundingClientRect();
+          const vis = (id) => { const e = document.getElementById(id); const r = e && e.getBoundingClientRect(); return !!(r && r.width); };
+          const outs = [];
+          for (const id of ['dunHud', 'dunBar', 'dunTm', 'dunOut']) {
+            const e = document.getElementById(id); if (!e) { outs.push(id + ' 없음'); continue; }
+            const r = e.getBoundingClientRect();
+            if (!r.width) { outs.push(id + ' 안 보임'); continue; }
+            if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5 || r.left < A.left - 1.5 || r.right > A.right + 1.5)
+              outs.push(id + ' 프레임 밖');
+          }
+          if (vis('top')) outs.push('상단 HUD 가 안 숨겨짐');
+          if (vis('tabbar')) outs.push('탭바가 안 숨겨짐');
+          return outs;
+        });
+        st.length ? st.forEach((m) => fail('던전 입장: ' + m)) : ok('던전 HUD 표시 + 상단 HUD·탭바 숨김 + 프레임 안');
+        const bt = await badText(page);
+        if (bt) fail('던전 입장 화면 텍스트에 ' + bt); else ok('던전 입장 NaN/undefined 없음');
+        const back = await page.evaluate(async () => {
+          document.getElementById('dunOut').click();
+          await new Promise((r) => setTimeout(r, 400));
+          const vis = (id) => { const e = document.getElementById(id); const r = e && e.getBoundingClientRect(); return !!(r && r.width); };
+          return { run: typeof dunRun !== 'undefined' && !!dunRun, top: vis('top'), tab: vis('tabbar') };
+        });
+        (!back.run && back.top && back.tab) ? ok('나가기 → 기본 화면 복귀') : fail('던전 나가기 후 상태 이상: ' + JSON.stringify(back));
+        if (errs.length) errs.forEach((e) => fail('던전 입장 중 ' + e)); else ok('던전 입장 콘솔 에러 0');
+      }
+      await ctx.close();
+    }
+
     /* ---------- 3. 화면비 회귀 (37/51) ---------- */
     console.log('[3] 화면비 — #app 이 뷰포트 안에');
     for (const [w, h] of [[1080, 2280], [1080, 1920], [1920, 1080], [1024, 768], [1080, 2340], [1080, 2520]]) {
@@ -263,7 +308,7 @@ function launchOpts(){
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
