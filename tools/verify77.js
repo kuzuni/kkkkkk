@@ -134,7 +134,7 @@ function launchOpts(){
         if (open === 'openShopPage()' && typeof closeShopPage === 'function') closeShopPage();
         else if (open === 'openDungeon()' && typeof closeDungeon === 'function') closeDungeon();
         else if (open === 'openRelicPage()' && typeof closeRelicPage === 'function') closeRelicPage();
-        else if (id === 'mbox') { document.querySelectorAll('.modal.on').forEach((m) => m.classList.remove('on')); }
+        else if (id === 'mbox') { if (typeof closeModal === 'function') closeModal(); }
         else if (target) { target.classList.remove('on'); target.style.display = ''; }
         const p = document.getElementById('probe77'); if (p) p.remove();
       }
@@ -194,10 +194,28 @@ function launchOpts(){
     if (r.combat === 0) ok('#fxlc 에는 안 감'); else fail('UI 획득이 #fxlc 로 갔다');
   }
 
-  /* ---------- 메인 화면(팝업 없음)에서 전투 코인이 보이는지 — 캡처만 ---------- */
-  for (let i = 0; i < 3; i++) {
-    await page.waitForTimeout(i ? 90 : 800);
-    await page.screenshot({ path: path.join(SHOTS, `77-main-combat-f${i}.png`) });
+  /* ---------- 메인 화면(팝업 없음)에서 전투 코인이 보이는지 ---------- */
+  console.log('[F] 메인 화면 — 전투 코인 정상 표시(양성 증거)');
+  {
+    const flying = await page.evaluate(async () => {
+      if (typeof closeModal === 'function') closeModal();     /* 앞 검사에서 열린 게 남아 있으면 닫는다 */
+      ['shopw', 'dunw', 'relicw', 'trw', 'eqw', 'sumw', 'bagw', 'mnw'].forEach((id) => {
+        const el = document.getElementById(id); if (el) { el.classList.remove('on'); el.style.display = ''; }
+      });
+      await new Promise((res) => setTimeout(res, 300));
+      /* 착지 대기 후 전투 발 획득을 강제 — 캡처 타이밍에 확실히 공중에 있게 한다 */
+      await new Promise((res) => setTimeout(res, 900));
+      fxAt(fxWorld(player.x, player.y - 40), 'combat');
+      S.gold += 7777;
+      await new Promise((res) => setTimeout(res, 160));
+      return document.getElementById('fxlc').querySelectorAll('.fx-fly').length;
+    });
+    if (flying > 0) ok(`팝업 없는 화면에서 전투 코인 ${flying}개 공중(#fxlc 표시 중)`);
+    else fail('강제 전투 획득인데 #fxlc 에 공중 코인이 없다');
+    for (let i = 0; i < 3; i++) {
+      await page.screenshot({ path: path.join(SHOTS, `77-main-combat-f${i}.png`) });
+      await page.waitForTimeout(90);
+    }
   }
 
   if (errs.length) errs.forEach((e) => fail(e)); else ok('콘솔 에러 0');
