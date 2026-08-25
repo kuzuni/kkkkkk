@@ -5672,7 +5672,8 @@
   /* ⑥ 레드닷·NEW 리본 — 생길 때 0→1.3→1 팝 + 주기 미세 펄스(2초)
      display:none ↔ block 전환만으로 애니메이션이 «처음부터» 다시 돈다(별도 JS 불필요). */
   /* 작업 71 — 좌측 📬 에서 ▦ 메뉴 버튼으로 옮겨 온 «우편» 레드닷도 같은 손맛을 받게 넣는다(④ 일관성). */
-  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.tr-sub>.sg.on>.dot,.dnc .dot{
+  /* 작업 134 — `.tr-sub>.sg.on>.dot` 은 88 이 폐기한 훈련 서브탭의 잔재라 어디에도 걸리지 않는다(죽은 선택자). 삭제. */
+  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot{
     animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
   @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
   @keyframes jzDotPulse{0%,72%,100%{scale:1}84%{scale:1.14}}
