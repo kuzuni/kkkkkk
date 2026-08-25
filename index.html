@@ -1532,8 +1532,11 @@
     color:#EEE;-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .at-c7 .at-bd>i{top:1px;font-size:37px;line-height:37px}
   /* 프레임 뒤 밝은 판 147×167 (7일차 512×155) */
-  .at-pl{position:absolute;left:35px;top:73px;width:147px;height:167px;border-radius:24px;background:#E9D9BF}
-  .at-c7 .at-pl{left:123px;top:76px;width:512px;height:155px;background:#EADDCD}
+  /* ⚠ 측정표 §5 의 «147×167 · 카드 +40» 은 오측이다(1·2회차 비평가 2명이 독립적으로 잡았다).
+     색 마스크로 다시 재면 그리드 카드 플레이트는 **159×167 · 카드 +35**(ref c4 x191…349 · c6 x730…888,
+     세 행 전부 동일), 7일차는 **512×161 · 프레임 y1441**(ref y1525…1685) 이다. */
+  .at-pl{position:absolute;left:30px;top:73px;width:159px;height:167px;border-radius:24px;background:#E9D9BF}
+  .at-c7 .at-pl{left:123px;top:73px;width:512px;height:161px;background:#EADDCD}
   /* 보상 1칸 = 아이템 프레임 138×138 + 그 아래 수량. 프레임은 검정 5 + 안쪽 림 5(등급색) */
   .at-rw{position:absolute;left:40px;top:83px;width:138px}
   .at-c7 .at-rw{top:84px}
