@@ -5884,17 +5884,26 @@
       #362B25 34px,#362B25 72px,#483A2F 72px,#483A2F 85px,#6F5D51 85px,#6F5D51 96px);
     clip-path:polygon(0 50%,6.2% 0,93.8% 0,100% 50%,93.8% 100%,6.2% 100%)}
   /* 잉크 221×37 중심 (539,162) → 프레임 cy 78. fs 37/0.93 ≈ 40, 편측 4 → CSS 8 */
-  .rk-title>i{position:absolute;left:0;right:0;top:57px;height:42px;line-height:42px;
+  /* 잉크 실측: 캡처 cy 99.5 / ref cy 162.5 → 프레임 78.5. line-box 가 21px 아래로 밀려 있어 top −21.
+     폭도 캡처 248 vs ref 220 이라 scaleX 로 좁힌다(LESSONS 01 — 음수 letter-spacing 금지) */
+  .rk-title>i{position:absolute;left:0;right:0;top:36px;height:42px;line-height:42px;
     display:block;text-align:center;font-size:40px;color:#fff;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;letter-spacing:1px;text-indent:1px}
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.887)}
 
   /* ---- 시상대 3개. 텍스트 4종(방패·리본·닉네임·알약)은 «단상 앞면 위»에 얹힌다 ---- */
   /* 단상 박스 — 2위 x72 w288 top482 h210 / 1위 x398 w287 top448 h244 / 3위 x723 w287 top492 h200 */
   .rk-pod{overflow:visible}
   .rk-pod>u{position:absolute;left:0;right:0;top:0;bottom:0;border-radius:6px 6px 0 0}
-  .rk-pod.p1{left:398px;top:448px;width:287px;height:244px}
-  .rk-pod.p2{left:72px;top:482px;width:288px;height:210px}
-  .rk-pod.p3{left:723px;top:492px;width:287px;height:200px}
+  /* 밑변이 윗면보다 넓은 사다리꼴이다(ref y770 실측: 58..371 / 385..694 / 707..1030 —
+     윗면은 72..359 / 398..684 / 723..1009). 직사각형으로 두면 밑변이 −25px, 사이 간격이 +25px 벌어진다.
+     3위 윗면은 ref **555**(프레임 471) — 측정표 §12 가 «가림» 때문에 576 으로 잘못 읽은 값을 정정한다.
+     그래서 높이 서열은 1위 243 > 3위 221 > 2위 210 이다. */
+  .rk-pod.p1{left:385px;top:449px;width:309px;height:243px}
+  .rk-pod.p2{left:58px;top:482px;width:313px;height:210px}
+  .rk-pod.p3{left:707px;top:471px;width:324px;height:221px}
+  .rk-pod.p1>u{clip-path:polygon(4.2% 0,96.8% 0,100% 100%,0 100%)}
+  .rk-pod.p2>u{clip-path:polygon(4.5% 0,96.2% 0,100% 100%,0 100%)}
+  .rk-pod.p3>u{clip-path:polygon(4.9% 0,93.5% 0,100% 100%,0 100%)}
   .rk-pod.p1>u{background:linear-gradient(180deg,#FFDB61 0,#FFDB61 14px,#D07C36 14px,#D07C36 24px,
     #D88B47 24px,#D88B47 76%,#C26829 76%)}
   .rk-pod.p2>u{background:linear-gradient(180deg,#BCCCDB 0,#BCCCDB 14px,#48587C 14px,#48587C 24px,
@@ -5947,13 +5956,16 @@
 
   /* ---- ② 검정 구분선 / ③ 안내문 밴드 ---- */
   .rk-div1{left:0;right:0;top:692px;height:10px;background:#040000}
+  /* 안내문 밴드~내 순위 바 사이의 «본문 갈색» — 리스트 패널 바깥이 ref 는 #634032 다(비평 A⑤·B⑤).
+     이게 없으면 패널 안쪽(#3D2C25)과 바깥(#3C2D28)의 명도차가 24 → 2 로 무너져 패널 경계가 사라진다. */
+  .rk-mid{left:0;right:0;top:702px;bottom:375px;background:#634032}
   .rk-tip{left:0;right:0;top:702px;height:99px;
     background:linear-gradient(180deg,#623E30 0,#5B3B2C 60%,#59392A 75px,#59392A 86px,#674232 86px)}
   /* 문구 잉크 894×27 중심 (539.5,826) → 밴드 로컬 27..53. 외곽선 **없다**(측정표 §4).
      한글 46자를 894px 에 넣으려면 자당 19.4px = 0.67em 이라 scaleX 로 폭만 좁힌다(LESSONS 01) */
   .rk-tip>i{position:absolute;left:0;right:0;top:22px;height:36px;line-height:36px;
     display:block;text-align:center;font-size:29px;color:#D0D0D0;white-space:nowrap;
-    transform:scaleX(.67)}
+    transform:scaleX(.848)}
 
   /* ---- ④ 랭킹 리스트 패널 — 외곽 998×1083 @ (41,802), 테두리 9 #785341 1겹(검정 없음) ---- */
   .rk-panel{left:41px;top:802px;width:998px;bottom:395px;box-sizing:border-box;
@@ -5973,15 +5985,18 @@
   .rk-lc{left:6px;top:5px;width:148px;height:138px;border-radius:13px;background:#E1B98F}
   /* 우측 탠 패널 — 좌변이 기울어진 평행사변형(위 796 / 아래 825 = Δ29), 우측 끝 local 944 */
   .rk-rc{left:731px;top:5px;width:213px;height:138px;background:#E1B98F;
-    clip-path:polygon(65px 0,100% 0,100% 100%,94px 100%);border-radius:0 13px 13px 0}
+    clip-path:polygon(0 0,100% 0,100% 100%,29px 100%);border-radius:0 13px 13px 0}
   /* 순위 배지 — 1~3위는 금속 방패 아트 102×80 @ local(29,T+34) / 4위↓ 플랫 실루엣 96×96 @ (32,T+26) */
   .rk-bd{display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
   .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:74px}
+  /* clip 을 0% 에서 시작해야 도형 bbox 가 ref 96×96 이 된다 — 12% 에서 시작하면 실측 84 로 잘린다 */
   .rk-bd.f{left:32px;top:26px;width:96px;height:96px;background:#CDA37B;
-    clip-path:polygon(0 12%,50% 26%,100% 12%,100% 62%,50% 100%,0 62%)}
+    clip-path:polygon(0 0,50% 15%,100% 0,100% 55%,50% 100%,0 55%)}
   /* 4위 이하 숫자 잉크 29×36 → fs 39, 편측 3 → 6 */
-  #rkw .rk-bd.f>b{display:block;width:96px;text-align:center;font-size:39px;line-height:96px;
-    color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 숫자는 «잉크비 0.93»(한글 받침 기준)이 안 통한다 — fs39 로 잉크가 27 밖에 안 나왔다(ref 35).
+     실측 역산: 39 x 35/27 ≈ 51, 폭은 24.8 → ref 28 이라 scaleX 1.13 */
+  #rkw .rk-bd.f>b{display:block;width:96px;text-align:center;font-size:51px;line-height:96px;
+    color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(1.13)}
   /* 아바타 액자 111×113 @ local(192,T+17) — 검정 3 + 금테 5 */
   .rk-av{left:192px;top:17px;width:111px;height:113px;box-sizing:border-box;
     border:3px solid #000;border-radius:14px;background:#FFB95A;
@@ -5997,17 +6012,20 @@
   .rk-tt.no{background:#433A35;box-shadow:inset 0 0 0 4px #7A7A7A}
   #rkw .rk-tt.no>i{color:#CCCBC9}
   /* 닉네임 — 좌측 정렬 x local 318, 잉크 T+81..T+113 → fs 35, 편측 4 → 8 */
-  #rkw .rk-nm{left:318px;top:78px;width:400px;height:40px;line-height:40px;display:block;
-    font-size:35px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+  /* 잉크 실측 ref 22~26(3행 표본) vs 캡처 32 → fs 35 x 26/32 ≈ 28.
+     비평가 A 는 «ref 34» 라 했지만 행 1·2·4 를 직접 스캔하면 22/25/26 이다(A 오독).
+     그리고 잉크 상단이 리본 하단과 붙어 있었다(ref 는 10px 아래) → top +3 */
+  #rkw .rk-nm{left:318px;top:81px;width:400px;height:40px;line-height:40px;display:block;
+    font-size:28px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     white-space:nowrap;overflow:hidden}
   /* «최고 스테이지» 라벨 161×22 중심 (912,T+42.5) → local 중심 847 */
-  #rkw .rk-lb{left:767px;top:29px;width:160px;height:28px;line-height:28px;display:block;
-    text-align:center;font-size:24px;color:#FFF8AA;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  #rkw .rk-lb{left:767px;top:28px;width:160px;height:30px;line-height:30px;display:block;
+    text-align:center;font-size:26px;color:#FFF8AA;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;transform:scaleX(1.03)}
   /* 점수 알약 179×50 r25 @ local(759,T+64) */
   .rk-sc{left:759px;top:64px;width:179px;height:50px;border-radius:25px;background:#4F3F2F}
   #rkw .rk-sc>i{display:block;width:179px;height:50px;line-height:50px;text-align:center;
-    font-size:28px;color:#FFF8AA;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+    font-size:37px;color:#FFF8AA;-webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* ---- ⑤ 내 순위 고정 바 — 행과 같은 부품을 전폭 1080 으로. 색만 청회색 ---- */
   .rk-me{left:0;right:0;bottom:203px;height:172px;background:#707088}
@@ -6021,10 +6039,10 @@
     text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .rk-me .rk-av{left:206px;top:21px;width:122px;height:118px}
   .rk-me .rk-tt{left:343px;top:38px;width:278px;height:44px}
-  #rkw .rk-me .rk-nm{left:345px;top:80px;width:430px}
+  #rkw .rk-me .rk-nm{left:345px;top:80px;width:430px;font-size:35px}
   /* 우측 플레이트 — 행과 같은 Δ29 기울기, 우측 끝 1071 */
   .rk-mrc{left:861px;top:5px;width:210px;height:164px;background:#9090B0;
-    clip-path:polygon(29px 0,100% 0,100% 100%,0 100%);border-radius:0 14px 14px 0}
+    clip-path:polygon(0 0,100% 0,100% 100%,29px 100%);border-radius:0 14px 14px 0}
   #rkw .rk-me .rk-lb{left:897px;top:41px;width:161px}
   .rk-me .rk-sc{left:888px;top:77px}
 
@@ -6038,20 +6056,24 @@
   .rk-back>u{position:absolute;left:6px;top:6px;width:81px;height:64px;background:#A8A8C0;
     clip-path:polygon(0 50%,42% 0,42% 30%,100% 30%,100% 70%,42% 70%,42% 100%)}
   /* 탭 3개 — 활성 표시는 ① 밝은 fill ② 폭 188/190 → 288 두 가지뿐(측정표 §9) */
-  .rk-tab{top:0;height:164px;background:#483028;border-radius:10px 10px 0 0;
+  /* 비활성 탭은 ref 에서 내비 배경과 «거의 같은 색» 이고 경계는 검정 세퍼레이터가 만든다.
+     1회차엔 세퍼레이터를 안 그려서 탭 3개가 한 덩어리로 보였다(비평 A①·B① 일치). */
+  .rk-tab{top:0;height:164px;background:#3F2D26;border-radius:10px 10px 0 0;
     text-align:center;cursor:pointer}
+  .rk-sep{top:0;height:164px;width:4px;background:#000}
+  .rk-sep.e1{left:488px} .rk-sep.e2{left:680px;width:5px} .rk-sep.e3{left:875px;width:5px}
   .rk-tab.on{background:#785048}
   .rk-tab.t1{left:199px;width:288px} .rk-tab.t2{left:492px;width:188px}
   .rk-tab.t3{left:685px;width:190px}
   /* 아이콘 자리 — 탭1 160×99@top10 · 탭2 123×104@top5 · 탭3 151×107@top2 (아트 교체용 bbox) */
   #rkw .rk-tab>u{position:absolute;left:50%;display:flex;align-items:center;justify-content:center;
     line-height:1}
-  .rk-tab.t1>u{top:10px;width:160px;height:99px;margin-left:-80px;font-size:82px}
-  .rk-tab.t2>u{top:5px;width:123px;height:104px;margin-left:-61.5px;font-size:86px}
-  .rk-tab.t3>u{top:2px;width:151px;height:107px;margin-left:-75.5px;font-size:88px}
+  .rk-tab.t1>u{top:10px;width:160px;height:99px;margin-left:-80px;font-size:105px;transform:scaleX(1.24)}
+  .rk-tab.t2>u{top:5px;width:123px;height:104px;margin-left:-61.5px;font-size:97px;transform:scaleX(1.19)}
+  .rk-tab.t3>u{top:2px;width:151px;height:107px;margin-left:-75.5px;font-size:99px;transform:scaleX(1.20)}
   /* 라벨 잉크 h32 → fs 34, 편측 4 → 8. 탭1 top 117 / 탭2·3 top 115 */
-  #rkw .rk-tab>b{position:absolute;left:0;right:0;top:112px;height:40px;line-height:40px;
-    display:block;text-align:center;font-size:34px;color:#fff;
+  #rkw .rk-tab>b{position:absolute;left:0;right:0;top:110px;height:40px;line-height:40px;
+    display:block;text-align:center;font-size:31px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
   /* ================= 56 절전 모드 (#svw) — 측정표 docs/measure/56-절전모드.md =================
      레퍼런스 실측(측정표 §2): 이 화면은 «반투명 딤» 이 아니라 **완전 불투명 검정 잠금화면**이다.
@@ -6785,6 +6807,7 @@
       <div class="rk-pp q3"><i id="rkPs3"></i></div>
     </div>
     <div class="rk-div1"></div>
+    <div class="rk-mid"></div>
     <div class="rk-tip"><i>랭킹은 5분마다 불러오며, 프로필 정보는 새로운 스코어를 달성했을 때 반영됩니다.</i></div>
     <div class="rk-panel"><div class="rk-list" id="rkList"></div></div>
     <!-- 내 순위 고정 바 — 행과 같은 부품(.rk-av/.rk-tt/.rk-nm/.rk-lb/.rk-sc)을 전폭으로 -->
@@ -6804,6 +6827,7 @@
       <div class="rk-tab t1 on" data-rktab="stage"><u>🗺️</u><b>스테이지</b></div>
       <div class="rk-tab t2" data-rktab="tower"><u>🏰</u><b>시련의 탑</b></div>
       <div class="rk-tab t3" data-rktab="farm"><u>🏚️</u><b>몬스터 농장</b></div>
+      <div class="rk-sep e1"></div><div class="rk-sep e2"></div><div class="rk-sep e3"></div>
     </div>
   </div>
   <!-- 56 절전 모드 — 전면 불투명 검정 잠금화면. 측정표 docs/measure/56-절전모드.md.
