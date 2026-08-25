@@ -57,6 +57,11 @@ const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'docs', 'review'));
     mode: cine.mode, t: +cine.t.toFixed(3), z: +cam.z.toFixed(3), flash: +cine.flash.toFixed(2),
     cam: [Math.round(cam.x), Math.round(cam.y)], pl: [Math.round(player.x), Math.round(player.y)]
   }));
+  /* 편향 구간은 cine.t 대신 «편향 크기» 가 읽을 값이다 */
+  const lowInfo = async () => page.evaluate(() => ({
+    mode: 'low', t: +Math.hypot(cam.bx, cam.by).toFixed(1), z: +cam.z.toFixed(3), flash: 0,
+    cam: [Math.round(cam.x), Math.round(cam.y)], pl: [Math.round(player.x), Math.round(player.y)]
+  }));
 
   /* ---- 보스 스테이지로 들어가 연출 시작을 정확히 잡는다 ---- */
   await page.evaluate(() => { S.stage = 10; S.best = Math.max(S.best||1, 10); S.bossFarm = false; spawnStage(); });
@@ -78,7 +83,9 @@ const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'docs', 'review'));
   const PLAN_IN   = [0.02, 0.14, 0.28, 0.44, 0.60, 0.78];
   const PLAN_HOLD = [0.02, 0.12, 0.22, 0.32, 0.43];
   const PLAN_BACK = [0.02, 0.14, 0.28, 0.42, 0.56];
-  const PLAN_KILL = [0.02, 0.08, 0.14, 0.20, 0.26, 0.32, 0.45, 0.64];
+  /* 6회차 — 꼬리를 슬로모 «안» 으로 당겼다(0.32 → 0.26·0.29). 정지 프레임이 t=0.250 부터 생기므로
+     그 두 장을 나란히 놓아야 «카메라가 멈춰 있는가» 를 눈으로 판정할 수 있다. */
+  const PLAN_KILL = [0.02, 0.08, 0.14, 0.20, 0.26, 0.29, 0.45, 0.64];
 
   let n = 0;
   for (const t of PLAN_IN)   { await seek('in', t);   log.push(['A' + (++n), await info()]); await shot(`67-in-${n}.png`); }
@@ -87,7 +94,21 @@ const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'docs', 'review'));
   n = 0;
   for (const t of PLAN_BACK) { await seek('back', t); log.push(['B' + (++n), await info()]); await shot(`67-back-${n}.png`); }
 
-  /* C — 처치. 보스를 직접 죽이고 «그 다음 한 틱» 부터 목표 시각으로 이동 */
+  /* L — 빈사 편향 (6회차 신설). 보스 HP 가 20% 아래로 내려간 뒤 카메라가 보스 쪽으로 기우는 0.5초.
+     이 구간이 «처치 슬로모 안에 정지 프레임» 을 만드는 원인이므로 채점 증거로 남긴다. */
+  await page.evaluate(() => {
+    for (let i = 0; i < 900 && (!enemies.some(e => e.tk === 'boss') || cine.mode); i++) window.__tick();
+    const b = enemies.find(e => e.tk === 'boss');
+    if (b) b.hp = b.max * 0.15;
+  });
+  n = 0;
+  for (const f of [0, 12, 30, 60, 90]) {
+    await page.evaluate(k => window.__run(k), n === 0 ? 0 : [0, 12, 18, 30, 30][n]);
+    log.push(['L' + (++n), await lowInfo()]); await shot(`67-low-${n}.png`);
+  }
+
+  /* C — 처치. **빈사 구간을 실제로 통과한 뒤** 일격을 넣는다 — 5회차까지는 만피 보스를 곧바로 죽여서
+     플레이어가 실제로 보는 경로(편향이 걸린 상태의 처치)가 캡처에 한 장도 없었다. */
   await page.evaluate(() => {
     for (let i = 0; i < 900 && !enemies.some(e => e.tk === 'boss'); i++) window.__tick();
     const b = enemies.find(e => e.tk === 'boss');
