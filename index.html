@@ -724,6 +724,17 @@
   /* L2 잉크 좌단은 ref 677 인데 우리는 673 이었다(−4) → 칸을 3px 오른쪽으로. top 은 +1
      (ref 는 L1 잉크하단 1878 → L2 잉크상단 1903 으로 25px 띄운다). */
   #tuto.todo .tinfo{left:3px;width:318px;top:57px}
+  /* ★ 7회차(비평 M·N) — L2 획 두께는 **서체 한계로 확정, 더 밀지 마라.** ref 5 vs 우리 3(−40%) ·
+     잉크 화소 2217 → 1517(−32%) · 잉크 높이 26 → 24 인데, 아래 두 가지를 **실제로 해 보고 픽셀로 반증**했다:
+     ① M 의 «`paint-order` 누락» 진단은 틀렸다 — 베이스 규칙 `#tuto .tt`(위)가 이미
+        `paint-order:stroke fill` 을 주고 `.todo` 는 stroke «폭» 만 덮어쓴다. 넣어서 캡처하니
+        잉크 화소가 1517 → 1512 로 **무변화**였다.
+     ② «같은 색 스트로크로 살찌우기»(4365행 `--fat` 수법)도 안 먹는다. `currentColor` 폭 스윕 결과
+        4.5px 까지 **무변화**(216×24), 5px 에서 219×29, 6px 에서 219×30 으로 **bbox 만 터지고**
+        잉크 화소는 1402 (ref 2217) 에 그친다 — 스트로크는 글리프 «둘레» 만 감싸지 속을 못 채운다.
+        획 중앙값도 3.0 → 2.0 으로 오히려 **나빠진다**(카운터 둘레에 얇은 링이 생겨서).
+     → 원인은 폴백 서체의 한글 스템이 ref 게임 서체보다 얇은 것 하나다. `font-weight` 는 이미 900.
+       비평가 M·N 도 각각 «서체 필요»(M 6-4 · N 6-1) 로 독립 분류했다. **게임 서체 대기 항목.** */
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px;
     -webkit-text-stroke:5px #000;letter-spacing:0px}
   /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
@@ -733,8 +744,11 @@
   /* ref 는 «회» 하단과 «10» 하단이 같은 바닥이다(Δ1). 우리 서체는 숫자가 4px 떠 있다. */
   /* ref 본문의 `10` 은 잉크 30 폭(`1`=8 · `0`=17)이다. 우리 숫자는 같은 높이에서 폭이 −24% 라
      한글 줄 안에서도 숫자만 따로 넓힌다(줄 전체 scaleX 는 한글까지 늘어나므로 쓸 수 없다). */
+  /* ★ 7회차 — `scaleX(1.3)` 은 레이아웃 폭을 안 바꿔 잉크만 30% 번지므로 **양옆 어간을 잡아먹는다**:
+     «환»→«10» 어간이 ref 10.5 vs 우리 7.5(−29%), «0»→«회» 가 3.5 vs 2.5. 비평가 M·N 이 독립으로 지적.
+     늘어난 잉크만큼 margin 으로 되밀어 준다(이 파일 위쪽 «transform 은 margin 으로 상쇄» 규칙). */
   #tuto.todo .tt em{font-size:29px;letter-spacing:0;position:relative;top:2px;
-    display:inline-block;transform:scaleX(1.3)}
+    display:inline-block;transform:scaleX(1.3);margin:0 0 0 3px}
   /* ── 글리프 종류별 보정 (32 5회차 — 비평가 I·J 2회차 지적) ─────────────────────────
      ref 게임 서체는 한 줄 안에서 **대괄호·한글·숫자가 모두 같은 바닥(baseline)** 에 서고
      «괄호 23 : 숫자 23» 처럼 크기비가 1:1 이다. 우리 기본 서체는
@@ -760,9 +774,11 @@
   #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.86);margin:0 -3px}
   #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(0.95);margin:0 1px}
   /* `1` 만 좁힌다 — ref 잉크 폭 6.5(우리 등폭 17.5). 줄어든 레이아웃 폭은 margin 으로 상쇄. */
-  #tuto.todo .tbtn u,#tuto.todo .tpg u,#tuto.todo .tt u{transform:scaleX(0.5);margin:0 -3.5px}
-  #tuto.todo .tpg  s {font-size:30px;top:1px;transform:scaleX(0.9);margin:0 0px}
-  #tuto.todo .tpg  em{font-size:28px;top:1px;transform:scaleX(0.95);margin:0 0px}
+  /* ★ 7회차 — L3 `(0/10)` 의 «1»→«0» 어간이 ref 5 vs 우리 2 였다(자체 열 런 실측).
+     `u` 우측 margin 만 −3.5 → −0.5 로 풀어 3px 를 되돌린다(좌측은 그대로). */
+  #tuto.todo .tbtn u,#tuto.todo .tpg u,#tuto.todo .tt u{transform:scaleX(0.5);margin:0 -1.5px 0 -3.5px}
+  #tuto.todo .tpg  s {font-size:30px;top:1px;transform:scaleX(0.9);margin:0 1px 0 2px}
+  #tuto.todo .tpg  em{font-size:28px;top:1px;transform:scaleX(0.95);margin:0 -1px 0 -1px}
   /* @32-GLYPH-TUNE-END */
   #tuto .tpg{display:none}
   /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서, 폭 89 는 scaleX 1.5 에서 나온다. */
@@ -781,13 +797,18 @@
      ★ 반대로 ref 에 **없는** 갈색 소프트 그림자(기본 `.ri` 의 drop-shadow)는 여기서 지운다 —
        두 비평가가 «우리에게만 있는 잉여 레이어» 로 지적했다. 아트가 들어오면 필터를 통째로 지우고
        이미지로 교체한다(측정표 §8 «아트 필요»). */
-  #tuto.todo .trew .ri{font-size:64px;transform:translateZ(0) translateY(2px) scaleX(.82);filter:none;
+  /* ★ 7회차 — 젬 잉크가 57×62 로 ref 58×60 보다 **세로 +2 · 가로 −1**(비평가 M·N + 자체 스캔 3자 일치).
+     scaleX 단독을 scale(x,y) 로 바꿔 세로만 눌러 준다(.968=60/62 · 가로 .82→.834=58/57). */
+  #tuto.todo .trew .ri{font-size:64px;transform:translateZ(0) translateY(2px) scale(.834,.968);filter:none;
     text-shadow:5px 0 0 #000,-5px 0 0 #000,0 4px 0 #000,0 -4px 0 #000,
                 4px 3px 0 #000,-4px 3px 0 #000,4px -3px 0 #000,-4px -3px 0 #000}
   /* 수량 `200` 잉크 75×26 @ ref (969,1957) — 우리 숫자는 폭이 24% 모자라고,
      검정 외곽선은 ref 4.5px 인데 우리는 2px(=stroke 4) 였다 → stroke 8(바깥 4)로 올린다. */
-  #tuto.todo .tsub{-webkit-text-stroke:8px #000;
-    transform:translateZ(0) translateY(-1px) scaleX(1.32)}
+  /* ★ 7회차 — `200` 자간이 ref 6·6 vs 우리 4·4 였다(비평가 N + 자체 열 런). 자간을 벌리면 총폭이
+     커지므로 scaleX 로 되눌러 잉크 폭 76 을 유지한다(1.6×1.25 ≒ 시각 자간 2px).
+     `letter-spacing` 은 마지막 글자 뒤에도 붙으므로 같은 값 `text-indent` 로 중심을 되돌린다(LESSONS A5). */
+  #tuto.todo .tsub{-webkit-text-stroke:8px #000;letter-spacing:1.6px;text-indent:1.6px;
+    transform:translateZ(0) translateY(-1px) scaleX(1.25)}
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
      요소·JS 갱신은 그대로 두고 표시만 끈다 — 되돌리려면 이 한 줄만 지우면 된다.
