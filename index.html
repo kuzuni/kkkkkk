@@ -4122,9 +4122,19 @@
   @keyframes jzShake{0%,100%{translate:0}
     16%{translate:-6px}33%{translate:6px}50%{translate:-6px}66%{translate:6px}83%{translate:-4px}}
   /* 실패·재화 부족 — 흔들림 + 빨간 플래시(대상 위에 겹치는 틴트)
-     ⚠ `!important` 필수 — 실패 팝업의 `.mbox` 는 아래 «열기» 규칙(`.jz-o.jz-dlg>*`, 특이도 0-2-0)의
-     대상이기도 해서, 그냥 두면 열기 애니메이션이 이겨 흔들림이 통째로 사라진다(1회차에 실제로 났다). */
-  .jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both!important}
+     실패 팝업의 `.mbox` 는 «열기» 규칙(`.jz-o.jz-dlg>*`, 특이도 0-2-0)의 대상이기도 하다.
+     1회차엔 열기 애니가 흔들림을 삼켰고, 2회차에 `!important` 로 눌렀더니 이번엔 **흔들림이 열기 팝을 삼켜서
+     «부족 팝업만 뚝 뜨는»** 반대 사고가 났다(3회차 비평 실측: 박스 폭 882±1px 고정, 정상 팝업은 860→886→860).
+     → `!important` 를 빼고 **특이도(0-3-0)로 이기면서 세 애니메이션을 함께 선언**한다. 둘 다 산다. */
+  .jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both}
+  .jz-o.jz-dlg>.jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both,
+    jzBoxIn .22s linear both}
+  /* 재화 알약은 `#top`(z6) 안이라 딤(z30) «아래» 다 — filter 로 틴트해 봐야 휘도 8~10% 로 안 보인다
+     (3회차 비평 실측). 그래서 «부족» 플래시는 58 과 같은 방식으로 `#fxl`(z60) 위에 겹쳐 그린다. */
+  .jz-badov{position:absolute;pointer-events:none;background:#FF3B4E;mix-blend-mode:screen;
+    animation:jzBadOv .46s ease-out both}
+  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.85;translate:-6px}
+    28%{translate:6px}46%{translate:-6px}64%{opacity:.55;translate:4px}100%{opacity:0;translate:0}}
   @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
     100%{filter:none}}
 
@@ -4132,19 +4142,27 @@
   .jz-o{animation:jzDim .15s ease-out both}            /* 딤 페이드 */
   .jz-c{animation:jzDim .12s ease-in reverse both}
   @keyframes jzDim{from{opacity:0}to{opacity:1}}
-  /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms) */
-  .jz-o.jz-dlg>*{animation:jzBoxIn .22s var(--jzs) both}
+  /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
+     ⚠ 이징을 애니메이션 «전체» 에 걸면 안 된다 — `cubic-bezier(.34,1.56,.64,1)` 는 첫 30ms 에
+     구간의 65~95% 를 태워버려서 «작게 시작» 이 **한 프레임도 안 보인다**(3회차 비평 실측: t=30ms 에 이미 .993).
+     구간별 이징으로 나눠 앞 구간은 정상 ease-out, 오버슈트는 뒤 구간에만 남긴다. */
+  .jz-o.jz-dlg>*{animation:jzBoxIn .22s linear both}
   .jz-c.jz-dlg>*{animation:jzBoxOut .12s ease-in both}
-  @keyframes jzBoxIn{0%{scale:.92}62%{scale:1.02}100%{scale:1}}
+  @keyframes jzBoxIn{0%{scale:.92;animation-timing-function:cubic-bezier(.32,.5,.5,1)}
+    62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
   @keyframes jzBoxOut{to{scale:.94;opacity:0}}
   /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1) */
   .jz-o.jz-pg{animation:jzPgIn .17s ease-out both}
   .jz-c.jz-pg{animation:jzPgIn .12s ease-in reverse both}
   @keyframes jzPgIn{from{opacity:0;scale:.985}to{opacity:1;scale:1}}
-  /* 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 8px */
-  .jz-o.jz-sh2{animation:jzSheetIn .24s var(--jzs) both}
+  /* 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 **8px**
+     ⚠ 여기에 오버슈트 이징을 «전체» 로 걸면 안 된다. 이동거리가 시트 높이(≈2100px)라
+     베지어 최대치 1.098 이 그대로 **205px 물리 오버슈트**가 된다 — 화면 바닥에 200px 구멍이 뚫린다
+     (3회차 비평 실측 212px). 이동 구간은 비오버슈트 이징으로 붙이고, 8px 바운스는 마지막 구간에만. */
+  .jz-o.jz-sh2{animation:jzSheetIn .24s linear both}
   .jz-c.jz-sh2{animation:jzSheetOut .13s ease-in both}
-  @keyframes jzSheetIn{0%{translate:0 100%}70%{translate:0 -8px}100%{translate:0 0}}
+  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.18,.86,.28,1)}
+    74%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{translate:0 0}}
   @keyframes jzSheetOut{to{translate:0 100%}}
 
   /* ③ 하단 탭 전환 — 활성 탭 아이콘 1.12 로 튀었다 복귀 */
@@ -4152,8 +4170,9 @@
   @keyframes jzTi{0%{scale:1}45%{scale:1.12}100%{scale:1}}
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
-  .jz-st{animation:jzSt .2s var(--jzs) both;animation-delay:var(--jzd,0ms)}
-  @keyframes jzSt{0%{scale:.9;opacity:0}60%{scale:1.03;opacity:1}100%{scale:1;opacity:1}}
+  .jz-st{animation:jzSt .2s linear both;animation-delay:var(--jzd,0ms)}
+  @keyframes jzSt{0%{scale:.9;opacity:0;animation-timing-function:cubic-bezier(.32,.5,.5,1)}
+    60%{scale:1.03;opacity:1;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
 
   /* ⑤ 수치 변화 틴트 — 오를 때 초록 / 내릴 때 빨강 0.4초 (롤링은 58 fxDisp·jzRollVal) */
   .jz-up-n{animation:jzUpN .4s ease-out both}
@@ -10272,8 +10291,23 @@ function jzModalMood(){
   if(!/부족|실패|없습니다|불가/.test(t)) return;
   const box = document.querySelector('#modal .mbox');
   if(box) jzOn(box, 'jz-bad', 480);
-  if(/다이아|💎/.test(t)) jzOn(document.querySelector('.cDia'), 'jz-bad', 480);
-  else if(/골드|🪙/.test(t)) jzOn(document.querySelector('.cGold'), 'jz-bad', 480);
+  if(/다이아|💎/.test(t)) jzBadPill('.cDia');
+  else if(/골드|🪙/.test(t)) jzBadPill('.cGold');
+}
+/* 재화 알약 «부족» 플래시 — 알약 자체는 딤 아래라 안 보이므로 #fxl(z60) 에 같은 bbox 로 겹쳐 그린다 */
+function jzBadPill(sel){
+  const el = document.querySelector(sel);
+  if(!el) return;
+  jzOn(el, 'jz-bad', 480);
+  const L = fxL(), r = fxRect(el);
+  if(!L || !r) return;
+  const d = document.createElement('s');
+  d.className = 'jz-badov';
+  d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
+  d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
+  try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
+  L.appendChild(d);
+  setTimeout(() => d.remove(), 520);
 }
 
 /* ── ④ 카드 그리드 등장 — 좌상단부터 stagger 25ms ──

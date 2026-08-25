@@ -82,10 +82,24 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
       return (v || '').trim().split(/\s+/)[1] || ''; });
     if (t0 !== '100%') { fails.push('시트 t0 translateY = ' + t0 + ' (기대 100%)'); console.log('  ✗ 시트 t0 translateY = ' + t0); }
     else ok('시트 t0 translateY = 100% (자기 높이만큼 아래)');
-    await page.evaluate(SEEK, 168);                    /* .24s * .70 = 168ms → -8px */
-    near('시트 t168 translateY(오버슈트)', await page.evaluate(TY, '#trw'), -8, 1.2);
+    await page.evaluate(SEEK, 178);                    /* .24s * .74 = 178ms → -8px */
+    near('시트 t178 translateY(오버슈트)', await page.evaluate(TY, '#trw'), -8, 1.2);
     await page.evaluate(SEEK, 240);
     near('시트 t240 translateY(정착)', await page.evaluate(TY, '#trw'), 0, 0.6);
+    /* ⚠ 회귀 가드 — 이동거리(시트 높이 ≈2100px) 전체에 오버슈트 이징을 걸면
+       베지어 최대치 1.098 이 그대로 **205px 물리 오버슈트**가 된다(3회차 비평 실측 212px).
+       궤적 전체를 훑어 «최종 위치보다 10px 넘게 위로 올라간 순간» 이 없는지 본다. */
+    let worst = 0;
+    for (let t = 0; t <= 240; t += 6) {
+      await page.evaluate(SEEK, t);
+      const v = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#trw')).translate;
+        const p = (s || '').trim().split(/\s+/)[1] || '0';
+        return p.endsWith('%') ? 9999 : parseFloat(p); });   /* 아직 % 구간이면 화면 밖 — 무시 */
+      if (v !== 9999 && v < worst) worst = v;
+    }
+    if (worst < -10) { fails.push(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px)`);
+      console.log(`  ✗ 시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px`); }
+    else ok(`시트 궤적 최대 오버슈트 ${worst.toFixed(1)}px (허용 -10px 이내)`);
     await page.evaluate(() => closeTrain()); await page.waitForTimeout(400);
   }
 
@@ -122,9 +136,20 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     await page.evaluate(GRAB);
     await page.evaluate(SEEK, 56);                     /* .34s * .165 ≈ 56ms → -6px */
     near('부족 t56 .mbox translateX', await page.evaluate(TX, '#modal .mbox'), -6, 1.2);
-    const f = await page.evaluate(() => getComputedStyle(document.querySelector('.cDia')).filter);
-    if (!f || f === 'none') { fails.push('부족: .cDia 필터 없음'); console.log('  ✗ 부족 .cDia 틴트 없음'); }
-    else ok('부족 .cDia 틴트 = ' + f.slice(0, 46));
+    /* ⚠ 회귀 가드 — 2회차에 `.jz-bad{...!important}` 가 열기 팝(`jzBoxIn`)을 삼켜서
+       «부족 팝업만 뚝 뜨는» 사고가 났다(3회차 비평 실측: 박스 폭 882±1px 고정). 둘 다 살아야 한다. */
+    await page.evaluate(SEEK, 136);
+    near('부족 t136 .mbox scale(열기 팝 생존)', await page.evaluate(SC, '#modal .mbox'), 1.02, 0.015);
+    /* 알약 틴트는 딤(z30) 아래라 filter 로는 안 보인다 → #fxl(z60) 위 오버레이로 그린다.
+       위치는 **흔들리지 않는 t=0** 에서 잰다 — 흔들림 도중에 재면 그 변위(±6px)가 오차로 잡힌다. */
+    await page.evaluate(SEEK, 0);
+    const ov = await page.evaluate(() => {
+      const e = document.querySelector('#fxl .jz-badov'); if (!e) return null;
+      const p = document.querySelector('.cDia').getBoundingClientRect(), r = e.getBoundingClientRect();
+      return { dx: Math.abs(r.x + r.width / 2 - (p.x + p.width / 2)), dy: Math.abs(r.y + r.height / 2 - (p.y + p.height / 2)) };
+    });
+    if (!ov) { fails.push('부족: 알약 위 빨간 오버레이(.jz-badov) 없음'); console.log('  ✗ 부족 알약 오버레이 없음'); }
+    else { near('부족 오버레이 중심 Δx', ov.dx, 0, 2); near('부족 오버레이 중심 Δy', ov.dy, 0, 2); }
     await page.evaluate(() => closeModal()); await page.waitForTimeout(300);
   }
 
