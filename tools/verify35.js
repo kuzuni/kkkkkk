@@ -108,7 +108,7 @@ const openPassPage = async (page) => {
     await page.goto(URL); await page.waitForTimeout(800);
     await page.evaluate(() => {
       S.best = 79; S.stage = 79; S.gold = 0; S.dia = 0; S.relic = 0;
-      S.autoBuy = false; S.pass = { prem: false, got: {} };
+      S.autoBuy = false; S.pass = { prem: {}, got: {} };
       window.step = () => {};              /* 로직 정지 — 전투가 골드를 벌어 Δ 를 오염시킨다 */
       save();
     });
@@ -176,7 +176,8 @@ const openPassPage = async (page) => {
     await page.evaluate(() => save());
     await page.reload({ waitUntil: 'load' });
     await page.waitForTimeout(900);
-    const kept = await page.evaluate(() => ({ prem: S.pass.prem, a: !!S.pass.got['14:0'], b: !!S.pass.got['14:1'] }));
+    /* 36 이 붙으며 키가 «탭:단계:칸» 으로, prem 이 «탭별 맵» 으로 바뀌었다(index.html load() 마이그레이션) */
+    const kept = await page.evaluate(() => ({ prem: !!(S.pass.prem && S.pass.prem.stage), a: !!S.pass.got['stage:14:0'], b: !!S.pass.got['stage:14:1'] }));
     if (kept.prem && kept.a && kept.b) ok('영속성 — reload 후 프리미엄·수령 기록 유지');
     else no('영속성 실패: ' + JSON.stringify(kept));
 
@@ -191,7 +192,7 @@ const openPassPage = async (page) => {
         load();
         return { t: typeof S.pass, prem: typeof S.pass.prem, got: typeof S.pass.got };
       }, v === undefined ? undefined : v);
-      if (res.t === 'object' && res.prem === 'boolean' && res.got === 'object')
+      if (res.t === 'object' && res.prem === 'object' && res.got === 'object')
         ok('마이그레이션 — pass=' + JSON.stringify(v) + ' → 기본값 흡수');
       else no('마이그레이션 실패 pass=' + JSON.stringify(v) + ': ' + JSON.stringify(res));
     }

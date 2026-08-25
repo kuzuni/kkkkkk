@@ -5461,6 +5461,23 @@
     clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%);
     filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
 
+  /* ---- 36 출석 패스 탭 전용 슬롯 (측정표 docs/measure/36-패스출석패스.md · 35 측정표 §9-2) ----
+     껍데기(골드바·헤더밴드·행 그리드·스파인·하단바·구매버튼)는 35 와 완전히 같다 —
+     «x=4 열 RGB 대조에서 전 y Δ<12». 여기서는 탭마다 다른 4가지만 덮어쓴다:
+     ① 히어로 아트(금화더미+집 → 얼음/보석 광산+수레) ② 프리미엄 칸 2개 → 1개(x741, 컬럼 중앙 819.5)
+     ③ 리스트 선두 «접속일» 알약 ④ 육각 라벨 의미(스테이지 → 접속 일수, JS 쪽 PASS_TABS.att). */
+  /* 프리미엄 칸 1개 — 묶음 중심이 컬럼 중앙 819.5 로 온다(35 는 2개라 636/846 였다) */
+  #psw.att .ps-bx.c1{left:741px}
+  /* 출석 히어로 — 하늘은 같은 그라디언트, 아트만 «얼음/보석 광산 + 보석 수레» 로 바뀐다 */
+  #psw.att .ps-art{letter-spacing:-8px}
+  /* 리스트 선두 «접속일» 알약 — ref 잉크 x454..625 · y866..936 → 트랙 y70 (리스트 top 712, 스크롤 0).
+     스파인(x520..559) 위 중앙(539.5)에 얹힌다 — z-index 를 스파인(2)·행(5) 위로 올린다. */
+  .ps-lb{position:absolute;left:454px;top:70px;width:171px;height:70px;z-index:6;box-sizing:border-box;
+    border:5px solid #000;border-radius:35px;background:linear-gradient(180deg,#1B4E77,#12395A);
+    text-align:center;line-height:60px}
+  .ps-lb>i{font-size:36px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    transform:scaleX(.95);white-space:nowrap}
+
   /* ================= 53 가방 팝업 (#bagw) — 측정표 docs/measure/53-가방팝업.md =================
      껍데기 (가) 딤 위 가운데 다이얼로그 948×967 @ ref(66,744) → 프레임 y 660 (ref y − 84).
      공용 #modal 은 폭 898 고정(패딩 91)이라 948 이 안 나와서 자체 오버레이 — 19 #pfw · 33 #ciw 와 같은 판단.
@@ -6891,7 +6908,7 @@ const DEF = () => ({
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
   guide:{ idx:0, prog:0 },                    /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선 */
-  pass:{ prem:false, got:{} },                /* 35 패스 — prem=프리미엄 활성화, got['단계:칸']=1 */
+  pass:{ prem:{}, got:{} },                   /* 35·36 패스 — prem[탭]=1 활성화, got['탭:단계:칸']=1 */
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
@@ -6951,8 +6968,16 @@ function load(){
     /* 35 패스 — 44 교훈 2 대로 KEY 는 올리지 않고 «없으면 기본값» 으로 흡수한다.
        옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN·예외가 새지 않게 항목별로 못박는다. */
     if(!b.pass || typeof b.pass !== 'object') b.pass = DEF().pass;
-    b.pass.prem = !!b.pass.prem;
     if(!b.pass.got || typeof b.pass.got !== 'object') b.pass.got = {};
+    /* 36 출석 패스가 붙으면서 구조가 «패스마다 따로» 로 바뀌었다(KEY 는 그대로 — 44 교훈 2).
+       ⓐ prem: boolean → { stage:1 } · ⓑ got 키: '단계:칸' → 'stage:단계:칸'.
+       옛 세이브(35 시절)의 진행도는 전부 스테이지 패스 것이므로 그리로 이관한다. */
+    if(!b.pass.prem || typeof b.pass.prem !== 'object')
+      b.pass.prem = b.pass.prem ? { stage:1 } : {};
+    Object.keys(b.pass.got).forEach(k => {
+      if(k.split(':').length !== 2) return;                 /* 이미 새 키다 */
+      b.pass.got['stage:' + k] = 1; delete b.pass.got[k];
+    });
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
@@ -12094,17 +12119,26 @@ const PASS_CUR = [
   { k:'dia',   ic:'💎', n:i => 30 + i * 10 },
   { k:'relic', ic:'🔮', n:i => 3 + i }
 ];
+/* 탭 슬롯 — 35 가 깐 골격에 36(출석)이 자기 칸만 채운 것이다(측정표 §9-2·§9-3).
+   step/n/prog = 단계 간격·단계 수·해금 진행도 소스. 출석은 «접속일(S.att.n)» 이 진행도다.
+   head = 리스트 선두 라벨 알약(36 에만 있다. 있으면 R1 은 라벨 전용이고 보상은 R2 부터다). */
 const PASS_TABS = {
   stage:{ ttl:'스테이지 패스 1', sub:'스테이지를 클리어해 패스 단계\n보상을 받으세요!',
-          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🏠🪙', cols:3 }
-  /* 36 담당: att:{ ttl:'출석 패스 1', sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
-     stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:'💎🛒', cols:2 } 를 여기에 추가한다.
-     cols=2 면 프리미엄 칸이 1개가 되고 x741 로 컬럼 중앙에 온다(측정표 §9-2). */
+          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🏠🪙', cols:3,
+          step:PASS_STEP, n:PASS_N, prog:() => S.best, head:'' },
+  att:  { ttl:'출석 패스 1',   sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
+          stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:'💎🛒', cols:2,
+          step:1, n:30, prog:() => S.att.n, head:'접속일' }
 };
 let passTab = 'stage';
-const passTier = i => (i + 1) * PASS_STEP;                       /* 그 단계의 목표 스테이지 */
-const passOpen = i => S.best >= passTier(i);                     /* 최고 스테이지 도달 = 해금 */
-const passGot  = (i, c) => !!S.pass.got[i + ':' + c];
+const passT    = () => PASS_TABS[passTab] || PASS_TABS.stage;
+const passTier = i => (i + 1) * passT().step;                    /* 그 단계의 목표(스테이지 / 접속일) */
+const passOpen = i => passT().prog() >= passTier(i);             /* 목표 도달 = 해금 */
+/* got 키는 «탭:단계:칸» 이다 — 35 만 있던 시절의 «단계:칸» 은 load() 가 stage 로 이관한다.
+   네임스페이스가 없으면 스테이지 패스 3단계를 받은 사람이 출석 3일차도 받은 것이 된다. */
+const passGot  = (i, c) => !!S.pass.got[passTab + ':' + i + ':' + c];
+/* 프리미엄은 패스마다 따로 산다(₩14,900 / ₩5,900) — 구 세이브의 boolean 은 load() 가 옮긴다 */
+const passPrem = () => !!(S.pass.prem && S.pass.prem[passTab]);
 /* 칸 c: 0 = 무료 / 1·2 = 프리미엄. 등급은 단계가 오를수록·프리미엄일수록 높다 */
 function passRw(i, c){
   const cur = PASS_CUR[(i + c) % 3], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);
@@ -12112,53 +12146,57 @@ function passRw(i, c){
            g:Math.min(3, Math.floor(i / 8) + c) };
 }
 /* 마지막으로 해금된 단계 — 스파인 초록 구간의 끝이다(측정표 §5-3: 초록은 그 육각 «위» 까지) */
-function passLast(){ let l = -1; for(let i = 0; i < PASS_N; i++) if(passOpen(i)) l = i; return l; }
+function passLast(){ let l = -1, n = passT().n; for(let i = 0; i < n; i++) if(passOpen(i)) l = i; return l; }
 function passClaim(i, c){
   if(!passOpen(i) || passGot(i, c)) return false;
-  if(c > 0 && !S.pass.prem){ popup('🔒 프리미엄', '<p>프리미엄 패스를 활성화하면 받을 수 있습니다.</p>'); return false; }
+  if(c > 0 && !passPrem()){ popup('🔒 프리미엄', '<p>프리미엄 패스를 활성화하면 받을 수 있습니다.</p>'); return false; }
   const r = passRw(i, c);
   if(r.k === 'gold') S.gold += r.n; else if(r.k === 'dia') S.dia += r.n; else S.relic += r.n;
-  S.pass.got[i + ':' + c] = 1;
+  S.pass.got[passTab + ':' + i + ':' + c] = 1;
   save(); renderPass(); uiDirty = true; renderUI();
   return true;
 }
 /* 결제 연동은 아직 없다 — 44 와 같이 지급을 함수 하나로 모아 두고 버튼은 «준비 중» 이다.
    결제를 붙일 때 아래 버튼 핸들러 한 줄만 이 함수를 부르게 바꾸면 된다. */
-function grantPassPrem(){ S.pass.prem = true; save(); renderPass(); uiDirty = true; }
+function grantPassPrem(t){ S.pass.prem[t || passTab] = 1; save(); renderPass(); uiDirty = true; }
 window.devPassPrem = grantPassPrem;
 const PASS_RH = 229.85;   /* 행 pitch — 측정표 §5-2 최소제곱 */
 function renderPass(){
-  const T = PASS_TABS[passTab] || PASS_TABS.stage;
+  const T = passT(), prem = passPrem();
   $('psTtl').textContent  = T.ttl;
   $('psSub').textContent  = T.sub;
   $('psStL').textContent  = T.stl;
   $('psStV').textContent  = T.stv();
   $('psPrice').textContent = T.price;
   $('psArt').textContent  = T.art;
-  $('psBuy').style.display = S.pass.prem ? 'none' : '';
+  $('psw').classList.toggle('att', passTab === 'att');   /* 탭별 히어로 아트·칸 x 를 CSS 로 가른다 */
+  $('psBuy').style.display = prem ? 'none' : '';
   document.querySelectorAll('#psBar .pt').forEach(b => b.classList.toggle('on', b.dataset.ptab === passTab));
   passBarLayout();
-  const last = passLast();
-  let h = '<div class="ps-spine"><u style="height:' + (last < 0 ? 0 : last * PASS_RH + 59.5).toFixed(2) + 'px"></u></div>'
-        + '<div class="ps-eg f"></div><div class="ps-eg p"></div>';
-  for(let i = 0; i < PASS_N; i++){
+  /* 선두 라벨 알약이 있으면(36) 행 전체가 한 칸 내려가고 R1 은 라벨 전용이 된다(측정표 §9-2) */
+  const off = T.head ? PASS_RH : 0, last = passLast();
+  let h = '<div class="ps-spine"><u style="height:'
+        + (last < 0 ? 0 : off + last * PASS_RH + 59.5).toFixed(2) + 'px"></u></div>'
+        + '<div class="ps-eg f"></div><div class="ps-eg p"></div>'
+        + (T.head ? '<div class="ps-lb"><i>' + T.head + '</i></div>' : '');
+  for(let i = 0; i < T.n; i++){
     const op = passOpen(i);
     let bx = '';
     for(let c = 0; c < T.cols; c++){
-      const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !S.pass.prem;
+      const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !prem;
       /* ⚠ 수령완료 칸에 인라인 --fill/--rim 을 붙이면 «인라인 > 클래스» 라 .dn 의 수령완료 색이 통째로 죽는다 */
       bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
           + (got ? '>' : ' style="--rim:' + PASS_GRADE[r.g][0] + ';--fill:' + PASS_GRADE[r.g][1] + '">')
           + '<i>' + r.ic + '</i><b><em>' + fmt(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk">🔒</s>' : '')) + '</div>';
     }
-    h += '<div class="ps-r" style="top:' + (i * PASS_RH).toFixed(2) + 'px">'
+    h += '<div class="ps-r" style="top:' + (off + i * PASS_RH).toFixed(2) + 'px">'
        + '<div class="ps-cf"></div><div class="ps-cp"></div>'
        + '<div class="ps-hex' + (op ? '' : ' lk') + '"><s><s></s></s><i><b>' + passTier(i) + '</b></i></div>'
        + bx + '</div>';
   }
   const tk = $('psTk');
-  tk.style.height = (PASS_N * PASS_RH).toFixed(2) + 'px';
+  tk.style.height = (off + T.n * PASS_RH).toFixed(2) + 'px';
   tk.innerHTML = h;
 }
 /* 하단 탭바 — 비활성 190 · 활성 289(+99) · 구분선 5~6 · 뒤로가기 195 고정(측정표 §3-1).
