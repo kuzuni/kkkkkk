@@ -22,11 +22,23 @@ const launchOpts = () => {
   return {};
 };
 
-/* 트리거 직후의 애니메이션·트랜지션을 붙잡아 둔다 */
+/* 트리거 «직전» 시각을 찍어 둔다 — 그 뒤에 시작한 것만 이번 장면의 연출이다 */
+const MARK = () => { window.__jzT0 = document.timeline.currentTime || 0; };
+/* 이번 장면의 연출만 붙잡고, 나머지는 «쉬는 상태» 로 확정한다.
+   ⚠ 7회차 비평이 잡아낸 것: 레드닷·NEW 리본의 무한 펄스(`jzDotPulse`)까지 같이 seek 되면
+   «영웅 1칸을 누르는 동안 옆 4칸에 216×85px NEW 배너가 자라는» 프레임이 납품된다.
+   대상 외 애니메이션은 finish/cancel 해서 프레임마다 안 움직이게 못 박는다. */
 const GRAB = () => {
-  window.__jzA = document.getAnimations();
-  window.__jzA.forEach(a => { try { a.pause(); } catch (_) {} });
-  return window.__jzA.length;
+  const t0 = window.__jzT0 || 0, keep = [];
+  document.getAnimations().forEach(a => {
+    const mine = a.effect && a.effect.getTiming().iterations !== Infinity
+      && /^jz/.test(a.animationName || '')
+      && (a.startTime == null || a.startTime >= t0 - 30);
+    if (mine) { keep.push(a); try { a.pause(); } catch (_) {} }
+    else { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } }
+  });
+  window.__jzA = keep;
+  return keep.length;
 };
 const SEEK = (t) => { (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} }); };
 /* ⚠ 1회차 사고 — pause 한 애니메이션은 **영원히 멈춰 있다.** 장면을 넘어가도 살아 있어서
@@ -54,6 +66,7 @@ async function clean(page) { await page.evaluate(CLEAR); await page.evaluate(RES
 
 async function scene(page, name, times, trigger) {
   await clean(page);
+  await page.evaluate(MARK);
   await trigger();
   const n = await page.evaluate(GRAB);
   for (let i = 0; i < times.length; i++) {
@@ -95,6 +108,7 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
   {
     await clean(page);
     const SEL = '.tab[data-t="hero"]';
+    await page.evaluate(MARK);
     await page.evaluate(sel => {
       const el = document.querySelector(sel), r = el.getBoundingClientRect();
       el.dispatchEvent(new PointerEvent('pointerdown',
@@ -107,6 +121,7 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
       await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 1}.png`) });
     }
     await page.evaluate(CLEAR);
+    await page.evaluate(MARK);
     await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
     const n2 = await page.evaluate(GRAB);
     const RT = [0, 45, 99, 145, 180];                   /* 99ms = 스프링 피크(55%), 45·145 는 키프레임 사이 */

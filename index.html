@@ -4208,10 +4208,15 @@
     jzBoxIn .22s linear both}
   /* 재화 알약은 `#top`(z6) 안이라 딤(z30) «아래» 다 — filter 로 틴트해 봐야 휘도 8~10% 로 안 보인다
      (3회차 비평 실측). 그래서 «부족» 플래시는 58 과 같은 방식으로 `#fxl`(z60) 위에 겹쳐 그린다. */
-  .jz-badov{position:absolute;pointer-events:none;background:#FF3B4E;mix-blend-mode:screen;
+  /* ⚠ `mix-blend-mode:screen` 은 어두운 딤 위에서 실효 α 가 0.12 밖에 안 나온다
+     (7회차 비평 실측: 피크 휘도 32 — 딤 걸리기 전 정상값 58 보다 45% 어둡다 = «번쩍» 이 아니라 «팥죽»).
+     → 블렌드를 빼고 **불투명 빨강 + 글로우**로 딤 위에서 확실히 튀게 한다. */
+  .jz-badov{position:absolute;pointer-events:none;background:#FF3B4E;
+    box-shadow:0 0 42px 14px rgba(255,59,78,.85);
     animation:jzBadOv .46s ease-out both}
-  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.85;translate:-6px}
-    28%{translate:6px}46%{translate:-6px}64%{opacity:.55;translate:4px}100%{opacity:0;translate:0}}
+  @keyframes jzBadOv{0%{opacity:0;translate:0}10%{opacity:.96;translate:-6px}
+    28%{translate:6px}46%{translate:-6px}64%{opacity:.72;translate:6px}
+    82%{opacity:.4;translate:-6px}100%{opacity:0;translate:0}}
   @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
     100%{filter:none}}
 
@@ -4223,7 +4228,7 @@
      → 앞 20% 를 빠르게 올려 «작게 시작» 이 눈에 걸리게 하고, 나머지 80% 로 150ms 페이드를 유지한다. */
   .jz-o{animation:jzDim .15s ease-out both}
   .jz-c{animation:jzDim .12s ease-in reverse both}
-  @keyframes jzDim{0%{opacity:0}14%{opacity:.7}100%{opacity:1}}
+  @keyframes jzDim{0%{opacity:0}6%{opacity:.72}100%{opacity:1}}
   /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
      ⚠ 이징을 애니메이션 «전체» 에 걸면 안 된다 — `cubic-bezier(.34,1.56,.64,1)` 는 첫 30ms 에
      구간의 65~95% 를 태워버려서 «작게 시작» 이 **한 프레임도 안 보인다**(3회차 비평 실측: t=30ms 에 이미 .993).
@@ -4245,13 +4250,15 @@
   .jz-c.jz-sh2{animation:jzSheetOut .13s ease-in both}
   /* 이동 구간 이징이 너무 급하면 240ms 가 «80ms 스냅» 으로 읽힌다(5회차 비평: 예산 33% 에 이동 89% 완료).
      전반 50% 에 이동량 60% 쯤이 오도록 완화한다. */
-  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.3,.1,.35,1)}
-    74%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{translate:0 0}}
+  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.25,.35,.35,1)}
+    86%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{translate:0 0}}
   @keyframes jzSheetOut{to{translate:0 100%}}
   /* 시트는 «자기 높이만큼 아래» 에서 올라오므로 슬라이드 도중 **탭바 위를 쓸고 지나간다**
      (5회차 비평: t=30·60 프레임에서 탭 칸이 가려져 아이콘 팝이 안 보였다).
-     슬라이드 중에만 탭바를 위로 올린다 — 240ms 뒤 자동으로 원래 층으로 돌아간다. */
-  #tabbar.jz-top{z-index:31}
+     ⚠ 이걸 «타이머로 붙였다 떼는 클래스» 로 하면 애니메이션이 느려진 프레임에서 먼저 풀려 다시 가려진다
+     (7회차 비평 실측: 팝 피크 t=90 에 탭바 98.4% 덧칠). → **상태 기반**으로 건다 —
+     슬라이드 중인 시트(`.jz-sh2`)가 하나라도 있는 동안만 탭바가 위층이고, 끝나면 저절로 내려온다. */
+  #app:has(.jz-sh2) #tabbar{z-index:31}
 
   /* ③ 하단 탭 전환 — 활성 탭 아이콘 1.12 로 튀었다 복귀 */
   .jz-ti{animation:jzTi .2s var(--jzs) both}
@@ -10594,12 +10601,37 @@ const JZ_SHEET = { trw:1, eqw:1, panel:1 };            /* 아래에서 올라오
 const JZ_OVID = ['modal','offw','dunw','shopw','relicw','dgdw','wpnw','prbw','collw','ciw',
                  'pfw','specw','trw','eqw','upw','sumw','statw','defw','rlw','panel'];
 const JZ_NOPRESS = new Set(JZ_OVID.concat(['app','wrap','fxl','stagearea','view','tabbar','top']));
-const jzOn = (el, cls, ms) => {                        /* 클래스를 붙였다가 ms 뒤 뗀다(재발동 가능하게) */
+/* 붙인 클래스는 «애니메이션이 실제로 끝났을 때» 뗀다.
+   ⚠ wall-clock `setTimeout(…, ms)` 로 떼면 안 된다 — 애니메이션이 느려지거나 멈춘 프레임에서
+   **연출이 아직 도는 중인데 클래스가 먼저 사라진다.** (7회차 비평이 «닫기 프레임 증거 0장 ·
+   탭 팝 피크가 98% 가려짐» 으로 잡아낸 것의 정체가 이 한 줄기였다.)
+   타이머는 «애니메이션이 아예 안 붙은 경우» 만 받는 안전망으로 길게 남긴다. */
+const jzFinite = a => a.effect && a.effect.getTiming().iterations !== Infinity;
+/* ⚠ 트랜지션까지 세면 안 된다 — `.jz-dn` 제거로 생긴 60ms 역트랜지션이 «끝났다» 고 알려 줘서
+   방금 붙인 200ms 스프링 클래스를 60ms 만에 떼어 버린다(적용 직후 실제로 났다).
+   `jz*` 이름의 **CSS 애니메이션**만 센다. 하나도 못 찾으면 false — 호출부가 짧은 타이머로 대비한다. */
+function jzDoneThen(list, cb){
+  const as = list.filter(a => jzFinite(a) && /^jz/.test(a.animationName || ''));
+  if(!as.length) return false;
+  Promise.all(as.map(a => a.finished.catch(() => {}))).then(cb);   /* cancel 은 reject → catch 로 흡수 */
+  return true;
+}
+const jzOn = (el, cls, ms) => {
   if(!el || !el.classList) return;
   el.classList.remove(cls); void el.offsetWidth;       /* 리플로우 강제 — 같은 애니메이션 재시작 */
   el.classList.add(cls);
-  clearTimeout(el['__jz_' + cls]);
-  el['__jz_' + cls] = setTimeout(() => el.classList.remove(cls), ms);
+  void el.offsetWidth;                                 /* 애니메이션 등록을 강제 — 이걸 빼면 아래 목록이 빈다 */
+  const key = '__jz_' + cls, gkey = '__jzg_' + cls, off = () => el.classList.remove(cls);
+  /* ⚠ 세대 토큰 필수 — 같은 클래스를 다시 걸면 앞 애니메이션이 **cancel** 되고 그 `finished` 가
+     (reject→catch 로) 곧바로 resolve 된다. 가드가 없으면 **앞 세대의 콜백이 방금 붙인 클래스를 떼어 간다**
+     (연타·재발동에서 «연출이 한 번씩 안 나오는» 간헐 버그로 나타났다). */
+  const gen = el[gkey] = (el[gkey] || 0) + 1;
+  clearTimeout(el[key]);
+  const hooked = jzDoneThen(el.getAnimations(), () => {
+    if(el[gkey] !== gen) return;
+    clearTimeout(el[key]); off();
+  });
+  el[key] = setTimeout(() => { if(el[gkey] === gen) off(); }, hooked ? Math.max(ms, 2500) : ms);
 };
 
 /* ── ① 누를 수 있는 것 전부 ── */
@@ -10643,8 +10675,11 @@ function jzOpen(el){
   el.classList.remove('jz-c', 'jz-dlg', 'jz-pg', 'jz-sh2');
   el.classList.add('jz-o', k);
   clearTimeout(el.__jzT);
-  el.__jzT = setTimeout(() => el.classList.remove('jz-o', k), 300);
-  if(k === 'jz-sh2') jzOn($('tabbar'), 'jz-top', 320);   /* 시트가 탭바 위를 쓸고 지나가지 않게 */
+  const gen = el.__jzGen = (el.__jzGen || 0) + 1;      /* 개폐도 같은 세대 가드 (연타 대비) */
+  const offO = () => { if(el.__jzGen === gen) el.classList.remove('jz-o', k); };
+  void el.offsetWidth;
+  const hookedO = jzDoneThen(jzAnims(el), () => { clearTimeout(el.__jzT); offO(); });
+  el.__jzT = setTimeout(offO, hookedO ? 2500 : 300);
   jzStagger(el);
   if(el.id === 'modal') jzModalMood();
 }
@@ -10654,13 +10689,24 @@ function jzClose(el, disp){
   el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
   el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
   el.classList.add('jz-c', k);
-  if(k === 'jz-sh2') jzOn($('tabbar'), 'jz-top', 200);
   clearTimeout(el.__jzT);
-  el.__jzT = setTimeout(() => {
+  const gen = el.__jzGen = (el.__jzGen || 0) + 1;
+  const offC = () => {
+    if(el.__jzGen !== gen) return;
     el.classList.remove('jz-c', k);
     el.style.display = inl;                             /* 원래대로 — #panel 처럼 inline 'none' 을 쓰는 것도 보존 */
     el.__jzBusy = 0;
-  }, 140);
+  };
+  void el.offsetWidth;
+  const hookedC = jzDoneThen(jzAnims(el), () => { clearTimeout(el.__jzT); offC(); });
+  el.__jzT = setTimeout(offC, hookedC ? 2500 : 140);   /* 연출이 안 붙었으면 짧게 닫는다 */
+}
+/* 오버레이 개폐 연출은 «껍데기 자신(딤)» 과 «직속 박스» 두 군데에 걸린다 — 둘 다 기다린다.
+   손자(스태거 카드 등)는 개폐 수명과 무관하므로 넣지 않는다. */
+function jzAnims(el){
+  let a = el.getAnimations();
+  for(const c of el.children) a = a.concat(c.getAnimations());
+  return a;
 }
 /* 재화 부족·실패는 «뚝» 뜨면 안 된다 — 박스가 흔들리고 해당 재화 알약이 빨갛게 튄다 */
 function jzModalMood(){
