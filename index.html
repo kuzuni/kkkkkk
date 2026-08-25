@@ -4043,6 +4043,95 @@
   .rl-tabs .tb.on>i{color:#F2BC8D;top:-5px}   /* 활성 라벨이 5px 위(측정표 §2.4) */
   .rl-tabs .t1>i{transform:scaleX(.86)}
   .rl-tabs .t2>i{transform:scaleX(.80)}
+
+  /* ==========================================================================
+     60 — UI 쥬시니스 (전역 마이크로 인터랙션)
+     스펙: docs/UI-REFERENCE.md 60번 · 기록: docs/review/60-UI쥬시니스.md
+     58 의 fx 모듈이 «얻거나 오르는 순간»의 연출이라면, 60 은 «만지는 순간»의 손맛이다.
+     화면별로 만들지 않고 여기 클래스 + `jz*` 함수로 한 번만 만들어 전역 부착한다.
+
+     ⚠ 핵심 원칙 — **`transform` 을 절대 건드리지 않는다.**
+       이 프로젝트는 글자 폭 보정(LESSONS 05 «폰트»)에 `transform:scaleX()` 를 대량으로 쓰고,
+       모달 중앙 정렬에도 `translate(-50%,-50%)` 를 쓴다. 쥬시 애니메이션이 `transform` 을 덮으면
+       그 보정이 통째로 날아간다. 그래서 60 은 **독립 변형 속성(`scale:` / `translate:`)만** 쓴다 —
+       이 둘은 `transform` 과 «합성»되므로(적용 순서 translate→rotate→scale→transform) 기존 값이 살아 있다.
+     ========================================================================== */
+  :root{--jzs:cubic-bezier(.34,1.56,.64,1)}          /* 오버슈트 이징(60 공통) */
+
+  /* ① 누를 수 있는 것 전부 — 누름 .94(60ms) / 뗌 스프링 1.04→1(180ms) */
+  .jz-dn{scale:.94;transition:scale .06s ease-out}
+  .jz-up{animation:jzUp .18s var(--jzs) both}
+  @keyframes jzUp{0%{scale:.94}55%{scale:1.04}100%{scale:1}}
+  /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
+  .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
+  @keyframes jzShake{0%,100%{translate:0}
+    16%{translate:-6px}33%{translate:6px}50%{translate:-6px}66%{translate:6px}83%{translate:-4px}}
+  /* 실패·재화 부족 — 흔들림 + 빨간 플래시(대상 위에 겹치는 틴트) */
+  .jz-bad{animation:jzShake .34s ease-out both,jzRed .44s ease-out both}
+  @keyframes jzRed{0%{filter:none}22%{filter:brightness(1.1) sepia(1) hue-rotate(-35deg) saturate(6)}
+    100%{filter:none}}
+
+  /* ② 팝업·시트 열기/닫기 — «뚝 나타나고 뚝 사라지는 팝업은 0점» */
+  .jz-o{animation:jzDim .15s ease-out both}            /* 딤 페이드 */
+  .jz-c{animation:jzDim .12s ease-in reverse both}
+  @keyframes jzDim{from{opacity:0}to{opacity:1}}
+  /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms) */
+  .jz-o.jz-dlg>*{animation:jzBoxIn .22s var(--jzs) both}
+  .jz-c.jz-dlg>*{animation:jzBoxOut .12s ease-in both}
+  @keyframes jzBoxIn{0%{scale:.92}62%{scale:1.02}100%{scale:1}}
+  @keyframes jzBoxOut{to{scale:.94;opacity:0}}
+  /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1) */
+  .jz-o.jz-pg{animation:jzPgIn .17s ease-out both}
+  .jz-c.jz-pg{animation:jzPgIn .12s ease-in reverse both}
+  @keyframes jzPgIn{from{opacity:0;scale:.985}to{opacity:1;scale:1}}
+  /* 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 8px */
+  .jz-o.jz-sh2{animation:jzSheetIn .24s var(--jzs) both}
+  .jz-c.jz-sh2{animation:jzSheetOut .13s ease-in both}
+  @keyframes jzSheetIn{0%{translate:0 100%}70%{translate:0 -8px}100%{translate:0 0}}
+  @keyframes jzSheetOut{to{translate:0 100%}}
+
+  /* ③ 하단 탭 전환 — 활성 탭 아이콘 1.12 로 튀었다 복귀 */
+  .jz-ti{animation:jzTi .2s var(--jzs) both}
+  @keyframes jzTi{0%{scale:1}45%{scale:1.12}100%{scale:1}}
+
+  /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
+  .jz-st{animation:jzSt .2s var(--jzs) both;animation-delay:var(--jzd,0ms)}
+  @keyframes jzSt{0%{scale:.9;opacity:0}60%{scale:1.03;opacity:1}100%{scale:1;opacity:1}}
+
+  /* ⑤ 수치 변화 틴트 — 오를 때 초록 / 내릴 때 빨강 0.4초 (롤링은 58 fxDisp·jzRollVal) */
+  .jz-up-n{animation:jzUpN .4s ease-out both}
+  .jz-dn-n{animation:jzDnN .4s ease-out both}
+  @keyframes jzUpN{0%{color:#8CF7A6;scale:1.1}100%{scale:1}}
+  @keyframes jzDnN{0%{color:#FF7A8C;scale:1.1}100%{scale:1}}
+
+  /* ⑥ 레드닷·NEW 리본 — 생길 때 0→1.3→1 팝 + 주기 미세 펄스(2초)
+     display:none ↔ block 전환만으로 애니메이션이 «처음부터» 다시 돈다(별도 JS 불필요). */
+  .ibtn.on .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.tr-sub>.sg.on>.dot,.dnc .dot{
+    animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
+  @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
+  @keyframes jzDotPulse{0%,72%,100%{scale:1}84%{scale:1.14}}
+
+  /* ⑦ 스킬 슬롯(A4) — 발동 순간 링 번쩍 + 1.1 펄스 / 쿨타임 완료 시 짧은 글로우 */
+  .jz-cast{animation:jzCast .3s ease-out both}
+  @keyframes jzCast{0%{scale:1;filter:brightness(2.4)}40%{scale:1.1}100%{scale:1;filter:none}}
+  .jz-cdok{animation:jzCdOk .34s ease-out both}
+  @keyframes jzCdOk{0%{filter:brightness(1.9) drop-shadow(0 0 10px #FFE9A8)}100%{filter:none}}
+
+  /* ⑧ 보스 등장·처치 — 붉은 비네트 0.6s / 「BOSS」 리본 슬램 / 처치 흰 플래시 0.15s
+     #fxl(z60·pointer-events:none) 안에 얹으므로 입력을 막지 않는다(58 공통 규칙과 동일). */
+  .jz-vig{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 50%,rgba(255,0,0,0) 42%,rgba(180,0,10,.62) 100%);
+    animation:jzVig .6s ease-out both}
+  @keyframes jzVig{0%{opacity:0}26%{opacity:1}100%{opacity:0}}
+  .jz-slam{position:absolute;left:0;right:0;top:300px;text-align:center;pointer-events:none;
+    font-size:132px;font-weight:900;letter-spacing:10px;color:#FFD9D9;
+    -webkit-text-stroke:14px #4A0A10;paint-order:stroke fill;
+    text-shadow:0 10px 0 rgba(0,0,0,.5);animation:jzSlam .9s ease-out both}
+  @keyframes jzSlam{0%{opacity:0;translate:0 -260px;scale:1.6}
+    30%{opacity:1;translate:0 0;scale:.92}42%{scale:1.06}52%{scale:1}
+    78%{opacity:1}100%{opacity:0;scale:1.1}}
+  .jz-wf{position:absolute;inset:0;pointer-events:none;background:#fff;animation:jzWf .15s ease-out both}
+  @keyframes jzWf{0%{opacity:.86}100%{opacity:0}}
 </style>
 </head>
 <body>
@@ -6397,7 +6486,7 @@ function drawHud(){
   const maxHp = stat.maxHp;
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
      레벨 · 경험치 · 유물석 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
-  $('cpN').textContent = fmt(cp());
+  $('cpN').textContent = fmt(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
   /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
@@ -9869,6 +9958,238 @@ loadAtlases(() => {
   addEventListener('beforeunload', save);
   requestAnimationFrame(loop);
 });
+
+/* ==========================================================================
+   60 — UI 쥬시니스 (전역 마이크로 인터랙션)
+   스펙: docs/UI-REFERENCE.md 60번 · 기록: docs/review/60-UI쥬시니스.md · CSS: `<style>` 맨 끝 «60» 절
+
+   58(fx)이 «얻거나 오르는 순간»의 피드백이라면 60 은 «만지는 순간»의 손맛이다.
+   설계 지시대로 **한 번 만들어 전역 부착**한다 — 화면별 워커가 각자 만들지 않는다.
+
+   전역 부착 방식(호출부를 고치지 않는다. 46 교훈 3 «모든 경로가 지나는 한 지점»의 입력 판):
+     · 누름/뗌     : #app 에 pointerdown/up 위임 1쌍. 대상은 `cursor:pointer` 로 판별하므로
+                     지금 있는 버튼도 앞으로 생길 버튼도 자동 편입된다.
+     · 팝업 개폐   : 오버레이 22개 + 바닥 시트(#panel)에 MutationObserver.
+                     «보이게 됐다/안 보이게 됐다» 만 보므로 `.on` 토글이든 inline display 든 다 잡힌다.
+                     닫힐 때는 display 를 잠깐 되돌려 역방향 120ms 를 재생하고 원래 값으로 복구한다.
+     · 스킬 슬롯   : #slots 의 `.slot2.ready` 토글을 관찰 → 발동/쿨완료.
+     · 보스        : #stinfo 의 `bfight`/`bfarm` 토글을 관찰 → 등장 비네트·슬램 / 처치 흰 플래시.
+     · 실패·부족   : #modal 이 열릴 때 제목을 보고 판정 → 박스 흔들림 + 해당 재화 알약 빨간 틴트.
+     · 레드닷/NEW  : 순수 CSS(display 전환만으로 애니메이션이 재시작한다) — JS 0줄.
+     · 토스트      : 58 `fx-toast` 가 이미 스프링 슬라이드다운 + 1.2s 뒤 페이드아웃이라 그대로 쓴다.
+
+   ⚠ `transform` 금지 — 독립 변형 속성(`scale:`/`translate:`)만 쓴다. 이유는 CSS 절 머리말 참고.
+   ⚠ 입력 지연 0 — 애니메이션은 결과를 기다리지 않는다(누름은 pointerdown 즉시, 클릭 처리와 무관).
+   ========================================================================== */
+const JZ_SHEET = { trw:1, eqw:1, panel:1 };            /* 아래에서 올라오는 바닥 시트 */
+const JZ_OVID = ['modal','offw','dunw','shopw','relicw','dgdw','wpnw','prbw','collw','ciw',
+                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','rlw','panel'];
+const JZ_NOPRESS = new Set(JZ_OVID.concat(['app','wrap','fxl','stagearea','view','tabbar','top']));
+const jzOn = (el, cls, ms) => {                        /* 클래스를 붙였다가 ms 뒤 뗀다(재발동 가능하게) */
+  if(!el || !el.classList) return;
+  el.classList.remove(cls); void el.offsetWidth;       /* 리플로우 강제 — 같은 애니메이션 재시작 */
+  el.classList.add(cls);
+  clearTimeout(el['__jz_' + cls]);
+  el['__jz_' + cls] = setTimeout(() => el.classList.remove(cls), ms);
+};
+
+/* ── ① 누를 수 있는 것 전부 ── */
+let jzDown = null;
+function jzTarget(t){
+  for(let el = t, i = 0; el && el.nodeType === 1 && i < 7; el = el.parentElement, i++){
+    if(JZ_NOPRESS.has(el.id)) return null;
+    if(el.tagName === 'BUTTON') return el;
+    let c = ''; try { c = getComputedStyle(el).cursor; } catch(_){}
+    if(c === 'pointer'){
+      const r = el.getBoundingClientRect();
+      /* 화면 절반을 넘는 덩어리(페이지 본문·시트 전체)는 «버튼» 이 아니다 — 눌러도 안 움직인다 */
+      if(r.width > innerWidth*0.92 && r.height > innerHeight*0.55) return null;
+      return el;
+    }
+  }
+  return null;
+}
+const jzDead = el => !!(el.disabled || (el.matches && el.matches('[disabled],.lock,.off,.dis,.disabled')));
+function jzRelease(){
+  if(!jzDown) return;
+  const el = jzDown; jzDown = null;
+  el.classList.remove('jz-dn');
+  jzOn(el, 'jz-up', 200);
+}
+
+/* ── ② 팝업·시트 열기/닫기 ── */
+function jzKind(el){
+  if(JZ_SHEET[el.id]) return 'jz-sh2';
+  const n = el.childElementCount;
+  return (n >= 1 && n <= 2) ? 'jz-dlg' : 'jz-pg';       /* 박스 1~2개 = 다이얼로그, 그 외 = 전체화면 페이지 */
+}
+function jzOpen(el){
+  const k = jzKind(el);
+  el.classList.remove('jz-c', 'jz-dlg', 'jz-pg', 'jz-sh2');
+  el.classList.add('jz-o', k);
+  clearTimeout(el.__jzT);
+  el.__jzT = setTimeout(() => el.classList.remove('jz-o', k), 300);
+  jzStagger(el);
+  if(el.id === 'modal') jzModalMood();
+}
+function jzClose(el, disp){
+  const k = jzKind(el), inl = el.style.display;         /* 닫은 쪽이 남긴 inline 값(''(=클래스로 숨김) 또는 'none') */
+  el.__jzBusy = 1;
+  el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
+  el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
+  el.classList.add('jz-c', k);
+  clearTimeout(el.__jzT);
+  el.__jzT = setTimeout(() => {
+    el.classList.remove('jz-c', k);
+    el.style.display = inl;                             /* 원래대로 — #panel 처럼 inline 'none' 을 쓰는 것도 보존 */
+    el.__jzBusy = 0;
+  }, 140);
+}
+/* 재화 부족·실패는 «뚝» 뜨면 안 된다 — 박스가 흔들리고 해당 재화 알약이 빨갛게 튄다 */
+function jzModalMood(){
+  const t = ($('mtitle') || {}).textContent || '';
+  if(!/부족|실패|없습니다|불가/.test(t)) return;
+  const box = document.querySelector('#modal .mbox');
+  if(box) jzOn(box, 'jz-bad', 480);
+  if(/다이아|💎/.test(t)) jzOn(document.querySelector('.cDia'), 'jz-bad', 480);
+  else if(/골드|🪙/.test(t)) jzOn(document.querySelector('.cGold'), 'jz-bad', 480);
+}
+
+/* ── ④ 카드 그리드 등장 — 좌상단부터 stagger 25ms ──
+   «리스트 컨테이너» 를 셀렉터로 나열하지 않는다(화면마다 이름이 달라 금방 낡는다).
+   자식 3개 이상이 같은 className 을 공유하면 그게 카드 그리드다 — 4단계까지만 훑고 멈춘다. */
+function jzStagger(root){
+  let level = [root], depth = 0;
+  while(level.length && depth < 4){
+    const next = [];
+    for(const p of level){
+      const kids = p.children;
+      if(kids.length >= 3 && kids[0].className && kids[0].className === kids[1].className
+         && kids[1].className === kids[2].className){
+        const n = Math.min(kids.length, 20);
+        for(let i = 0; i < n; i++){ kids[i].style.setProperty('--jzd', (i*25) + 'ms'); jzOn(kids[i], 'jz-st', 240 + i*25); }
+        continue;                                       /* 그리드를 찾았으면 그 아래로는 안 내려간다 */
+      }
+      for(let i = 0; i < kids.length && next.length < 40; i++) next.push(kids[i]);
+    }
+    level = next; depth++;
+  }
+}
+
+/* ── ⑤ 수치 변화 — 롤링(jzRollVal) + 오를 때 초록 / 내릴 때 빨강 0.4초 틴트 ──
+   전투력은 drawHud 가 매 프레임 다시 쓰므로 «표시값» 을 여기서 만들어 준다(58 fxDisp 와 같은 방식). */
+const jzD = {};
+function jzRollVal(k, v){
+  if(!Number.isFinite(v)) return v;
+  const d = jzD[k];
+  if(d === undefined){ jzD[k] = v; return v; }
+  const gap = v - d;
+  if(Math.abs(gap) < 1){ jzD[k] = v; return v; }
+  jzD[k] = d + gap*0.18;
+  if(Math.abs(v - jzD[k]) < Math.max(1, Math.abs(v)*0.004)) jzD[k] = v;
+  return Math.round(jzD[k]);
+}
+const jzSeen = {};
+function jzTint(id, v){
+  if(!Number.isFinite(v)) return;
+  const p = jzSeen[id];
+  jzSeen[id] = v;
+  if(p === undefined || v === p) return;
+  jzOn($(id), v > p ? 'jz-up-n' : 'jz-dn-n', 440);
+}
+
+/* ── ⑦ 스킬 슬롯 · ⑧ 보스 ── */
+const jzReady = new WeakMap();
+function jzSlotWatch(m){
+  const el = m.target;
+  if(!el.classList || !el.classList.contains('slot2')) return;
+  const r = el.classList.contains('ready'), p = jzReady.get(el);
+  jzReady.set(el, r);
+  if(p === undefined || p === r) return;
+  jzOn(el, r ? 'jz-cdok' : 'jz-cast', 380);             /* 대기→활성 = 쿨 완료 글로우 / 활성→대기 = 발동 */
+}
+function jzFx(cls, ms, txt){
+  const L = (typeof fxL === 'function') ? fxL() : $('fxl');
+  if(!L) return;
+  const d = document.createElement('s');
+  d.className = cls;
+  if(txt) d.textContent = txt;
+  L.appendChild(d);
+  setTimeout(() => d.remove(), ms);
+}
+
+function jzInit(){
+  const app = $('app');
+  if(!app) return;
+  /* ① 누름 — pointerdown 즉시(결과를 기다리지 않는다) */
+  app.addEventListener('pointerdown', e => {
+    const el = jzTarget(e.target);
+    if(!el) return;
+    if(jzDead(el)){ jzOn(el, 'jz-sh', 380); return; }    /* 비활성: 좌우 흔들림 + 어두워짐 */
+    jzRelease();
+    jzDown = el; el.classList.add('jz-dn');
+  }, true);
+  addEventListener('pointerup', jzRelease, true);
+  addEventListener('pointercancel', jzRelease, true);
+
+  /* ② 오버레이 22개 + 바닥 시트 — «보이게 됐다/안 보이게 됐다» 만 본다 */
+  const mo = new MutationObserver(ms => {
+    for(const m of ms){
+      const el = m.target;
+      if(el.__jzBusy) continue;
+      let disp = 'none';
+      try { disp = getComputedStyle(el).display; } catch(_){}
+      const vis = disp !== 'none', was = !!el.__jzVis;
+      if(vis === was) continue;
+      el.__jzVis = vis;
+      if(vis) jzOpen(el); else jzClose(el, el.__jzLast || 'flex');
+      if(vis) el.__jzLast = disp;
+    }
+  });
+  for(const id of JZ_OVID){
+    const el = $(id);
+    if(!el) continue;
+    try { el.__jzVis = getComputedStyle(el).display !== 'none'; } catch(_){ el.__jzVis = false; }
+    mo.observe(el, { attributes:true, attributeFilter:['class','style'] });
+  }
+
+  /* ③ 하단 탭 전환 — 활성 탭 아이콘이 1.12 로 튄다 */
+  const tb = $('tabbar');
+  if(tb) tb.addEventListener('click', e => {
+    const t = e.target.closest && e.target.closest('.tab');
+    if(t) jzOn(t.querySelector('.ti'), 'jz-ti', 240);
+  });
+
+  /* ⑦ 스킬 슬롯 */
+  const sl = $('slots');
+  if(sl) new MutationObserver(ms => ms.forEach(jzSlotWatch))
+    .observe(sl, { attributes:true, attributeFilter:['class'], subtree:true });
+
+  /* ⑧ 보스 등장·처치 */
+  const si = $('stinfo');
+  if(si){
+    let bf = si.classList.contains('bfight');
+    new MutationObserver(() => {
+      const n = si.classList.contains('bfight');
+      if(n === bf) return;
+      bf = n;
+      if(n){ jzFx('jz-vig', 700); jzFx('jz-slam', 1000, 'BOSS'); }
+      else if(!si.classList.contains('bfarm')) jzFx('jz-wf', 200);   /* 처치 — 시간초과(bfarm)는 제외 */
+    }).observe(si, { attributes:true, attributeFilter:['class'] });
+  }
+
+  /* ⑤ 수치 틴트 — HUD 재화 2종 + 전투력. 롤링은 58 fxDisp(재화)·jzRollVal(전투력)이 맡는다. */
+  const tick = () => {
+    if(typeof S !== 'undefined'){
+      jzTint('goldN', S.gold); jzTint('diaN', S.dia);
+      if(typeof cp === 'function') jzTint('cpN', cp());
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+if(document.readyState === 'loading') addEventListener('DOMContentLoaded', jzInit);
+else jzInit();
 </script>
 </body>
 </html>
