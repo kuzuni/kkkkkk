@@ -88,3 +88,12 @@ VERIFY77 FAIL (1)
 - `tools/aspect63.js:41` — `{ id: '14', sel: '#relicw', open: 'openRelicPage()' }`. 보고 도구(합불 게이트 아님)라
   14 행만 조용히 빠진다.
 - `docs/review/60-cap60.js:80` — 닫기 목록의 `'closeRelicPage'`. `typeof` 가드 안이라 무해하지만 죽은 이름.
+
+## §7 관측 — smoke 1회 실패(재현 불가, 내 변경과 무관)
+
+rebase 로 113·114·103 의 커밋을 받은 직후 `node tools/smoke.js` 가 한 번 `SMOKE FAIL — 1건` 을 냈는데
+실패 줄(`✗`)이 출력에 없었고, **곧바로 이어 돌린 4회가 전부 `SMOKE PASS`** 였다.
+130 의 변경은 `tools/verify77.js` 한 파일뿐이라 smoke 경로에 닿지 않는다(`index.html` 무수정).
+재현이 안 돼 원인을 특정하지 못했으므로 새 행으로 등재하지 않고 여기 관측만 남긴다 —
+**smoke 가 «건수만 세고 실패 줄을 안 찍는» 경로가 있다는 것 자체는 확인된 셈**이니, 다음에 또 보이면
+그 출력 경로부터 볼 것.
