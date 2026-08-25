@@ -33,10 +33,15 @@ const CLEARJZ = () => {
      애니메이션은 fill:both 로 값을 붙든 채 영원히 남는다. 다음 절의 GRAB 이 그걸 다시 집어 가면
      «닫기 프레임인데 열기 애니가 재생»되는 오독이 난다(6회차에 실제로 났다).
      → 문서 전체를 훑어 전부 풀어 준다(무한 반복 애니는 finish 가 던지므로 cancel 로 뺀다). */
-  document.getAnimations().forEach(a => { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } });
+  /* ⚠ `finish()` 가 아니라 `cancel()` 이어야 한다. `finish()` 한 애니메이션은 `fill:both` 로
+     **끝값을 붙든 채 이펙트 스택에 남고**, 클래스를 지워도 `getAnimations()` 에 계속 잡힌다.
+     그러면 다음 장면의 GRAB 이 그걸 다시 집어 가서 **앞 장면 값이 새 연출을 덮는다**
+     (누름 잔재 `jzDn@60` 이 뗌 스프링을 가려 «뗌 t0 이 .94 가 아니다» 로 읽혔다).
+     클래스를 먼저 지우고 → 전부 cancel 해야 스택이 실제로 빈다. */
   window.__jzA = [];
   document.querySelectorAll('.jz-dn,.jz-up,.jz-sh,.jz-ti,.jz-st,.jz-bad,.jz-o,.jz-c,.jz-top')
     .forEach(e => e.classList.remove('jz-dn', 'jz-up', 'jz-sh', 'jz-ti', 'jz-st', 'jz-bad', 'jz-o', 'jz-c', 'jz-top'));
+  document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
 };
 /* ⚠ seek 와 read 를 **다른 page.evaluate 로 나누면 안 된다.** 그 사이(수십 ms)에
    `jzClose` 의 클래스 제거 타임아웃(140ms)이 끼어들어 측정 대상 애니메이션이 바뀐다 —
@@ -122,8 +127,8 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
       return (v || '').trim().split(/\s+/)[1] || ''; });
     if (t0 !== '100%') { fails.push('시트 t0 translateY = ' + t0 + ' (기대 100%)'); console.log('  ✗ 시트 t0 translateY = ' + t0); }
     else ok('시트 t0 translateY = 100% (자기 높이만큼 아래)');
-    await page.evaluate(SEEK, 178);                    /* .24s * .74 = 178ms → -8px */
-    near('시트 t178 translateY(오버슈트)', await page.evaluate(TY, '#trw'), -8, 1.2);
+    await page.evaluate(SEEK, 206);                    /* .24s * .86 = 206ms → -8px */
+    near('시트 t206 translateY(오버슈트)', await page.evaluate(TY, '#trw'), -8, 1.2);
     await page.evaluate(SEEK, 240);
     near('시트 t240 translateY(정착)', await page.evaluate(TY, '#trw'), 0, 0.6);
     /* ⚠ 회귀 가드 — 이동거리(시트 높이 ≈2100px) 전체에 오버슈트 이징을 걸면
@@ -197,6 +202,15 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     });
     if (!ov) { fails.push('부족: 알약 위 빨간 오버레이(.jz-badov) 없음'); console.log('  ✗ 부족 알약 오버레이 없음'); }
     else { near('부족 오버레이 중심 Δx', ov.dx, 0, 2); near('부족 오버레이 중심 Δy', ov.dy, 0, 2); }
+    /* ⚠ «DOM 이 있다» 로는 부족하다 — 3회 연속 «화면엔 강한 빨강 0px» 지적을 받았다.
+       피크 시각에 실제로 칠해지는 색을 본다(불투명 빨강 #FF3B4E 가 딤 위에 얹혀야 한다). */
+    const pk = await SR(page, 46, '#fxl .jz-badov', 'op');
+    near('부족 오버레이 피크 opacity(t=46)', pk, 0.96, 0.06);
+    const col = await page.evaluate(() => { const e = document.querySelector('#fxl .jz-badov');
+      return e ? getComputedStyle(e).backgroundColor : null; });
+    if (!col || !/255,\s*59,\s*78/.test(col)) { fails.push('부족 오버레이 색 = ' + col + ' (기대 rgb(255,59,78))');
+      console.log('  ✗ 부족 오버레이 색 = ' + col); }
+    else ok('부족 오버레이 색 = ' + col + ' (딤 위 불투명 빨강)');
     await page.evaluate(() => closeModal()); await page.waitForTimeout(300);
   }
 

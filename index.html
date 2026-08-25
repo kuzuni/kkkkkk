@@ -4240,9 +4240,18 @@
   :root{--jzs:cubic-bezier(.34,1.56,.64,1)}          /* 오버슈트 이징(60 공통) */
 
   /* ① 누를 수 있는 것 전부 — 누름 .94(60ms) / 뗌 스프링 1.04→1(180ms) */
-  .jz-dn{scale:.94;transition:scale .06s ease-out}
-  .jz-up{animation:jzUp .18s var(--jzs) both}
-  @keyframes jzUp{0%{scale:.94}55%{scale:1.04}100%{scale:1}}
+  /* ⚠ 누름을 `transition` 으로 하면 안 된다 — 트랜지션은 `animationName` 이 없어서
+     연출 캡처(트리거 이후 시작한 `jz*` 애니메이션만 seek)가 잡지 못하고, 그 결과
+     **누름 5프레임이 전부 같은 값**으로 찍힌다(8회차 비평이 «무반응» 으로 읽은 것의 정체).
+     애니메이션으로 바꾸면 나머지 연출과 같은 방식으로 다뤄진다(`both` 로 누른 동안 .94 유지). */
+  .jz-dn{animation:jzDn .06s ease-out both}
+  @keyframes jzDn{from{scale:1}to{scale:.94}}
+  /* 뗌 스프링 — 이징을 «전체» 에 걸면 오버슈트 베지어가 1구간에서 1.04 를 **넘겨 버리고**
+     피크도 55%(99ms)가 아니라 25% 부근으로 당겨진다(8회차 실측 피크 1.11 @t≈45).
+     → 구간별 이징. 55% 에서 정확히 1.04, 180ms 에서 정확히 1.00. */
+  .jz-up{animation:jzUp .18s linear both}
+  @keyframes jzUp{0%{scale:.94;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+    55%{scale:1.04;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
   /* 지시 «좌우 흔들림 6px 3회» = ±6px **3왕복**. 마지막 극점만 -4px 로 두면 감쇠로 읽힌다(비평 K-6). */
@@ -4278,8 +4287,12 @@
      (5회차 비평 실측: t=0 박스 불투명도 0%, 첫 측정 가능 프레임 t=20 은 이미 .944).
      → 앞 20% 를 빠르게 올려 «작게 시작» 이 눈에 걸리게 하고, 나머지 80% 로 150ms 페이드를 유지한다. */
   .jz-o{animation:jzDim .15s ease-out both}
-  .jz-c{animation:jzDim .12s ease-in reverse both}
+  /* ⚠ 닫기에 열기 곡선을 `reverse` 로 재활용하면 안 된다 — 열기의 «앞 6% 무릎» 이
+     닫기에선 **끝 15ms 에 딤의 72% 가 한 번에 증발하는 절벽**이 된다(8회차 비평 실측).
+     닫기는 자기 곡선을 따로 갖는다. */
+  .jz-c{animation:jzDimOut .12s ease-in both}
   @keyframes jzDim{0%{opacity:0}6%{opacity:.72}100%{opacity:1}}
+  @keyframes jzDimOut{from{opacity:1}to{opacity:0}}
   /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
      ⚠ 이징을 애니메이션 «전체» 에 걸면 안 된다 — `cubic-bezier(.34,1.56,.64,1)` 는 첫 30ms 에
      구간의 65~95% 를 태워버려서 «작게 시작» 이 **한 프레임도 안 보인다**(3회차 비평 실측: t=30ms 에 이미 .993).
@@ -4309,11 +4322,18 @@
      ⚠ 이걸 «타이머로 붙였다 떼는 클래스» 로 하면 애니메이션이 느려진 프레임에서 먼저 풀려 다시 가려진다
      (7회차 비평 실측: 팝 피크 t=90 에 탭바 98.4% 덧칠). → **상태 기반**으로 건다 —
      슬라이드 중인 시트(`.jz-sh2`)가 하나라도 있는 동안만 탭바가 위층이고, 끝나면 저절로 내려온다. */
-  #app:has(.jz-sh2) #tabbar{z-index:31}
+  /* 평상시에도 `#panel`(z9) 위에 둔다 — 10~27 구간에는 탭바를 덮어야 하는 오버레이가 하나도 없다. */
+  #tabbar{z-index:10}
+  /* 바닥 시트(#eqw z28 · #trw z29)가 열려 있거나 슬라이드 중인 동안에는 그 위로.
+     `.on`(열림)과 `.jz-sh2`(슬라이드 중) 둘 다 거는 이유: 연출 클래스만 보면
+     닫기 직후·연출이 안 붙은 프레임에서 한 순간 다시 덮인다(8회차 실측 72px 피복).
+     31 은 `#wpnw` 이므로 30 에 둔다 — 딤 있는 다이얼로그(30~41)는 여전히 탭바를 덮는다. */
+  #app:has(#eqw.on) #tabbar,#app:has(#trw.on) #tabbar,#app:has(.jz-sh2) #tabbar{z-index:30}
 
   /* ③ 하단 탭 전환 — 활성 탭 아이콘 1.12 로 튀었다 복귀 */
-  .jz-ti{animation:jzTi .2s var(--jzs) both}
-  @keyframes jzTi{0%{scale:1}45%{scale:1.12}100%{scale:1}}
+  .jz-ti{animation:jzTi .2s linear both}
+  @keyframes jzTi{0%{scale:1;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+    45%{scale:1.12;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
   .jz-st{animation:jzSt .2s linear both;animation-delay:var(--jzd,0ms)}
@@ -10840,7 +10860,9 @@ function jzBadPill(sel){
   d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
   L.appendChild(d);
-  setTimeout(() => d.remove(), 520);
+  void d.offsetWidth;                                 /* ⚠ 이걸 빼면 getAnimations() 가 «비어 있다» 고 나온다 */
+  /* 수명을 wall-clock 으로 잡으면 캡처(1장 ≈ 900ms)에서 첫 장 전에 사라진다 — 애니메이션에 물린다. */
+  if(!jzDoneThen(d.getAnimations(), () => d.remove())) setTimeout(() => d.remove(), 520);
 }
 
 /* ── ④ 카드 그리드 등장 — 좌상단부터 stagger 25ms ──

@@ -35,7 +35,7 @@ const GRAB = () => {
       && /^jz/.test(a.animationName || '')
       && (a.startTime == null || a.startTime >= t0 - 30);
     if (mine) { keep.push(a); try { a.pause(); } catch (_) {} }
-    else { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } }
+    else { try { a.cancel(); } catch (_) {} }          /* finish 는 스택에 남는다 — cancel 이라야 «쉬는 상태» 가 된다 */
   });
   window.__jzA = keep;
   return keep.length;
@@ -47,10 +47,15 @@ const SEEK = (t) => { (window.__jzA || []).forEach(a => { try { a.currentTime = 
 const CLEAR = () => {
   /* `window.__jzA`(마지막 GRAB 목록)만 풀면 그 앞 장면에서 pause 한 애니메이션이 남아
      다음 장면의 GRAB 에 다시 잡힌다 — 문서 전체를 훑어 전부 풀어 준다. */
-  document.getAnimations().forEach(a => { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } });
+  /* ⚠ `finish()` 가 아니라 `cancel()` 이어야 한다. `finish()` 한 애니메이션은 `fill:both` 로
+     **끝값을 붙든 채 이펙트 스택에 남고**, 클래스를 지워도 `getAnimations()` 에 계속 잡힌다.
+     그러면 다음 장면의 GRAB 이 그걸 다시 집어 가서 **앞 장면 값이 새 연출을 덮는다**
+     (누름 잔재 `jzDn@60` 이 뗌 스프링을 가려 «뗌 t0 이 .94 가 아니다» 로 읽혔다).
+     클래스를 먼저 지우고 → 전부 cancel 해야 스택이 실제로 빈다. */
   window.__jzA = [];
   document.querySelectorAll('.jz-dn,.jz-up,.jz-sh,.jz-ti,.jz-st,.jz-bad,.jz-o,.jz-c')
     .forEach(e => e.classList.remove('jz-dn', 'jz-up', 'jz-sh', 'jz-ti', 'jz-st', 'jz-bad', 'jz-o', 'jz-c'));
+  document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
 };
 /* 모든 오버레이·패널을 닫아 «메인 화면» 으로 되돌린다 — 캡처 상태가 다르면 그 회차 비평은 통째로 무효다(LESSONS 04-①).
    1회차엔 누름 장면의 클릭이 영웅 패널을 열어 둔 채로 다음 장면들이 찍혀, 던전 그리드가 장비 시트 아래로 열렸다. */
@@ -139,7 +144,7 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
   await page.waitForTimeout(400);
 
   /* ── 3. 바닥 시트 슬라이드업 + 오버슈트 8px (240ms) ── */
-  await scene(page, 'sheet', [0, 25, 60, 105, 145, 178, 205, 240],
+  await scene(page, 'sheet', [0, 25, 60, 105, 150, 206, 225, 240],
     () => page.evaluate(() => openTrain()));
   await page.evaluate(() => closeTrain());
   await page.waitForTimeout(400);
@@ -158,7 +163,7 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
 
   /* ── 6. 재화 부족 — 박스 흔들림 + 알약 빨간 틴트 ── */
   await page.evaluate(() => { S.dia = 0; });
-  await scene(page, 'bad', [0, 25, 80, 140, 195, 250, 310, 420],
+  await scene(page, 'bad', [0, 42, 85, 128, 170, 212, 255, 340],
     () => page.evaluate(() => popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>')));
   await page.evaluate(() => closeModal());
   await page.waitForTimeout(300);
