@@ -4698,9 +4698,11 @@
   .bls-c>.h{flex:0 0 78px;background:#54413D;display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
   .bls-c>.h>i{font-size:35px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.936)}
-  /* 본문 = 노랑 사선 스트라이프(측정: 밝은 #FFCE57 / 어두운 #F5B64C, 주기 ≈38px) */
-  .bls-c>.b{flex:1 1 auto;position:relative;
-    background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
+  /* ⚠ 4회차 반증 — «노랑 사선 스트라이프» 는 눈으로 본 오독이었다. 픽셀 스캔은 **평면**이다:
+     `node scan34.js row 1120 76 372` → `76..372 (297) #fdce5a` 한 덩어리,
+     `col 95 878 1246` → `879..1237 (359) #fbcf66` 한 덩어리. 어두운 #F5B64C 는 아이콘 주변의
+     넓고 부드러운 음영일 뿐 주기 패턴이 아니다. 3회차의 19px 스트라이프는 제거한다. */
+  .bls-c>.b{flex:1 1 auto;position:relative;background:#FFCE57}
   .bls-c>.b>*{position:absolute}
   /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
      ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
@@ -4717,7 +4719,7 @@
   .bls-c .glo{left:0;right:0;bottom:0;height:19px;
     background:linear-gradient(180deg,#EEBA4A 0,#FFFA89 100%)}
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
-  .bls-c.off>.b{background:repeating-linear-gradient(45deg,#9E9284 0 19px,#8A7E70 19px 38px)}
+  .bls-c.off>.b{background:#9E9284}
   .bls-c.off .vl{color:#D8D2C8}
   .bls-c.off .tm{background:#5C5044;box-shadow:inset 0 0 0 3px #4B4136}
   .bls-c.off .glo{background:linear-gradient(180deg,#8A7E70 0,#C6BEB2 100%)}
@@ -4728,7 +4730,7 @@
   /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
   .bls-btab>i{font-size:34px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.875)}
   .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
-    background:repeating-linear-gradient(45deg,#FFCE57 0 19px,#F5B64C 19px 38px)}
+    background:#FFCE57}
   .bls-bn>*{position:absolute}
   /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
   .bls-bn .ic{left:7px;top:9px;width:126px;height:136px;line-height:136px;text-align:center;font-size:110px}
@@ -4744,7 +4746,7 @@
   .bls-bn .tx{left:309px;top:38px;height:76px;line-height:76px;font-size:42px;color:#fff;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83);transform-origin:left center}
   .bls-bn .tx em{color:#A6DC60;margin-left:20px}
-  .bls-bn.off{background:repeating-linear-gradient(45deg,#9E9284 0 19px,#8A7E70 19px 38px)}
+  .bls-bn.off{background:#9E9284}
   .bls-bn.off .tx em{color:#D8D2C8}
 
   /* §8 하단 안내 문구 — 잉크 ref y1496..1531 → body local 967..1002 */
