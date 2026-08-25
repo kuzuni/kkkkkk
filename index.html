@@ -2374,16 +2374,22 @@
     transform:rotate(-6deg);z-index:3;line-height:43px;text-align:center}
   .shp-card>.adbadge>i{font-size:23px;font-weight:900;color:#fff;
     -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:scaleX(.9)}
-  /* 노랑 버튼 */
-  .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px;
-    --f1:#FCEF31;--f2:#FEC01D;--ring:#F6EF3E;--lip:#D87C0D;--p1:#C39313;--p2:#C38607}
-  /* 회색 버튼 */
-  .shp-card .b3{left:717px;top:262px;width:206px;height:127px;border-radius:36px;
-    --f1:#A8A8A8;--f2:#989898;--ring:#D2D2D2;--lip:#747474;--p1:#747474;--p2:#6C6C6C}
-  .shp-card .b3>.lab{color:#DADADA}
+  /* 10회 버튼(기하만) */
+  .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px}
+  /* 30회 버튼(기하만) */
+  .shp-card .b3{left:717px;top:262px;width:206px;height:127px;border-radius:36px}
+  /* 작업 102 — 노랑/회색은 «10회 vs 30회» 가 아니라 «살 수 있다 vs 없다» 다.
+     레퍼런스 10 은 다이아 1,000 상태(시작값)라 10회=1,000 은 노랑+흰 가격, 30회=3,000 은 회색+빨강 가격으로
+     **같은 프레임에** 두 상태가 같이 찍혔다. 그 색을 버튼 순번에 박아 둔 것이 이 버그의 원인이다.
+     `.rich`/`.lack` 은 색만 바꾸고 기하(위치·크기·radius)는 위 규칙이 그대로 유지한다. */
+  .shp-card .cbtn.rich{--f1:#FCEF31;--f2:#FEC01D;--ring:#F6EF3E;--lip:#D87C0D;--p1:#C39313;--p2:#C38607}
+  .shp-card .cbtn.lack{--f1:#A8A8A8;--f2:#989898;--ring:#D2D2D2;--lip:#747474;--p1:#747474;--p2:#6C6C6C}
+  .shp-card .cbtn.lack>.lab{color:#DADADA}
   .shp-card .cbtn>.pan .gem{position:absolute;left:14px;top:-1px;font-size:36px;
     -webkit-text-stroke:0;line-height:37px}
-  .shp-card .cbtn>.cost.g3{color:#EB6D68;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
+  /* 부족한 값(가격 · 남은 무료 횟수)만 빨강. 충분하면 `.cbtn>u` 의 흰색을 그대로 쓴다. */
+  .shp-card .cbtn.lack>.cost{color:#EB6D68;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
+  .shp-card .cbtn.lack>.sub{color:#EB6D68}   /* 외곽선 두께는 .b1>.sub 의 6px 를 그대로 둔다 */
 
   /* 잠금 상자(도감 완성) — 딤 + 안내 */
   .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
@@ -4803,8 +4809,9 @@
   #sumw .sm-b .lab i{--fatw:1px}
   #sumw .sm-b .cost i{--fatw:0px}
   #sumw .sm-c>u i{--fatw:1px}
-  /* 가격·횟수는 흰색이 아니라 #FC716C 다. 비평가 2인이 «0 링 획 ref 6px vs 구현 3px» 로 같이 짚었다. */
-  #sumw .sm-b .cost i{--fat:#FC716C}
+  /* 가격·횟수는 흰색이 아니라 #FC716C 다. 비평가 2인이 «0 링 획 ref 6px vs 구현 3px» 로 같이 짚었다.
+     102 — 그 실측은 **부족 상태**의 레퍼런스다. 굵기 보정 레이어(::after)의 색도 상태를 따라간다. */
+  #sumw .sm-b.lack .cost i{--fat:#FC716C}
   #sumw .sm-c>u i{--fat:#fff}
 
   /* ── 전폭 결과 패널 — ref y793~1331(h539). 좌우 테두리·radius **없음** ──
@@ -4910,9 +4917,24 @@
      37·51 과 같은 «와이드 화면» 계열이라 min() 으로 «패널 하단 + 20» 아래로만 오게 묶는다.
      1416 = 패널 하단 1248 + 버튼 높이 148 + 여유 20. 2280·1920 프레임에서는 426 이 그대로 이긴다(Δ0). */
   .sm-btns{position:absolute;left:117px;bottom:min(426px,calc(100% - 1416px));width:846px;height:148px}
+  /* 작업 102 — 은색 면 + 빨간 가격은 «못 사는 상태»(`.lack`) 다. 레퍼런스 12 는 무료 0/1 · 다이아 0
+     상태로 찍힌 것이라 버튼 3개가 전부 은색·빨강이었고, 그 색을 상태 구분 없이 박아 둔 것이 버그였다
+     (10 레퍼런스에서 **같은 프레임에** 1,000=노랑+흰 가격 / 3,000=은색+빨강 가격이 공존한다 = 상태색 증거).
+     → `.lack` 이 옛 은색 전부를 그대로 되살리므로 **부족 상태의 픽셀은 Δ0** 이고, 기본(충분) 상태만 새로 칠한다. */
   .sm-b{position:absolute;top:0;width:247px;height:148px;box-sizing:border-box;
     border:6px solid #000;border-radius:34px;padding:0;cursor:pointer;
-    background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px 10px,#A4A4A4 10px,
+    background:linear-gradient(180deg,#F6EF3E 0 6px,#FCEF31 6px 10px,#FCEF31 10px,
+                                      #FEC01D 40px 100px,#F5B61B 112px,#EDAA18 118px 122px,
+                                      #F6EF3E 122px 128px,#EDAA18 128px 129px,
+                                      #D87C0D 129px 135px,#EDAA18 135px 136px);
+    box-shadow:inset 6px 0 0 #F6EF3E,inset -6px 0 0 #F6EF3E}
+  /* 무료 버튼의 «충분» 색은 10 레퍼런스의 무료(▶AD) 버튼과 같은 시안이다(#3DD5EC→#18B1D3 / 림 #53E6FA / 립 #0DA2CA) */
+  .sm-b1{background:linear-gradient(180deg,#53E6FA 0 6px,#3DD5EC 6px 10px,#3DD5EC 10px,
+                                      #18B1D3 40px 100px,#15A6C6 112px,#1199B7 118px 122px,
+                                      #53E6FA 122px 128px,#1199B7 128px 129px,
+                                      #0DA2CA 129px 135px,#1199B7 135px 136px);
+    box-shadow:inset 6px 0 0 #53E6FA,inset -6px 0 0 #53E6FA}
+  .sm-b.lack{background:linear-gradient(180deg,#D3D3D3 0 6px,#A8A8A8 6px 10px,#A4A4A4 10px,
                                       #989898 40px 100px,#909090 112px,#8B8B8B 118px 122px,
                                       #D3D3D3 122px 128px,#8B8B8B 128px 129px,
                                       #757575 129px 135px,#8B8B8B 135px 136px);
@@ -4924,17 +4946,26 @@
   .sm-b3{left:599px}
   /* 타이틀 잉크 h30 → font-size 32, 색 #DFDFDF(순백이 아니다), 외곽선 3~4 → stroke 7.
      면 상단에서 잉크 상단까지 25. */
+  /* 102 — 은색(부족) 라벨은 실측 #DFDFDF, 노랑·시안(충분) 라벨은 10 레퍼런스 실측 #F8F8F8 */
   .sm-b .lab{left:0;right:0;top:22px;height:36px;line-height:36px;text-align:center;
-    font-size:33px;color:#DFDFDF;white-space:nowrap;
+    font-size:33px;color:#F8F8F8;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
+  .sm-b.lack .lab{color:#DFDFDF}
   .sm-b .lab i{transform:scaleX(.978)}
-  /* 내부 어두운 알약 — ref y1842~1877(h36) → 면기준 top 70, radius 18(완전 알약), 테두리 없음 */
-  .sm-b .pan{top:68px;height:38px;border-radius:19px;background:#737373}
+  /* 내부 어두운 알약 — ref y1842~1877(h36) → 면기준 top 70, radius 18(완전 알약), 테두리 없음.
+     102: 충분 상태의 알약은 «면보다 어두운 같은 색조» 다 — 노랑은 10 레퍼런스 실측(#C39313→#C38607),
+     시안은 같은 명도비(면 대비 L −38%)로 맞춘 디자인 결정(레퍼런스에 시안+알약 조합이 없다). */
+  .sm-b .pan{top:68px;height:38px;border-radius:19px;
+    background:linear-gradient(180deg,#C39313,#C38607)}
+  .sm-b1 .pan{background:linear-gradient(180deg,#0F8FAE,#0D82A0)}
+  .sm-b.lack .pan{background:#737373}
   .sm-b1 .pan{left:82px;width:132px}
   .sm-b2 .pan,.sm-b3 .pan{left:19px;width:193px}
   /* 가격·횟수 잉크 h25 → 숫자 캡비 0.70 으로 36. 색 #FC716C, 외곽선 3 → stroke 6 */
-  .sm-b .cost{top:62px;height:50px;line-height:50px;font-size:32px;color:#FC716C;
+  /* 102 — 빨강(#FC716C)은 «부족» 전용. 충분하면 10 레퍼런스의 노랑 버튼 가격과 같은 순백(#FFFFFF, 실측 n=643 평균 #F1F1F1 · 최빈 255,255,255) */
+  .sm-b .cost{top:62px;height:50px;line-height:50px;font-size:32px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .sm-b.lack .cost{color:#FC716C}
   /* ②③ 가격만 — 캡높이는 font-size 로, 부족한 폭(자간 advance)은 scaleX 로 되돌린다.
      ① 의 «0/1» 은 글리프 구성이 달라 이미 Δ0 이므로 여기서 제외한다(아래 .sm-b1 .cost 가 덮어쓴다). */
   .sm-b2 .cost i,.sm-b3 .cost i{transform:scaleX(1.30)}
@@ -10640,9 +10671,15 @@ function syncSummonBtns(){
   /* 레퍼런스 가격은 «1,000 / 3,000» 쉼표 표기다. 공용 fmt() 는 K 접미사(«1.44K»)라 이 화면만 쉼표로 쓴다. */
   $('sumB10c').innerHTML = fat(Math.round(c10).toLocaleString('en-US'));
   $('sumB30c').innerHTML = fat(Math.round(c30).toLocaleString('en-US'));
-  $('sumBF').disabled  = fl <= 0;
-  $('sumB10').disabled = cur < c10;
-  $('sumB30').disabled = cur < c30;
+  /* 작업 102 — «회색 면 + 빨간 가격» 은 못 사는 상태 표시다. disabled 와 조건은 같지만 별개 축으로 둔다
+     (`disabled` 는 입력 차단 + grayscale 필터, `.lack` 은 면·알약·글자색 자체). */
+  const lackF = fl <= 0, lack10 = cur < c10, lack30 = cur < c30;
+  $('sumBF').classList.toggle('lack', lackF);
+  $('sumB10').classList.toggle('lack', lack10);
+  $('sumB30').classList.toggle('lack', lack30);
+  $('sumBF').disabled  = lackF;
+  $('sumB10').disabled = lack10;
+  $('sumB30').disabled = lack30;
 }
 function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
 /* 배경(딤·패널) 아무 데나 탭하면 닫힌다 — «터치하여 닫기». 버튼 3개는 stopPropagation 대신
@@ -12184,12 +12221,27 @@ function renderShopPage(){
       +    '<u class="cost">' + won(c10) + '</u></div>'
       +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
       +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">💎</span></div>'
-      +    '<u class="cost g3">' + won(c30) + '</u></div>'
+      +    '<u class="cost">' + won(c30) + '</u></div>'
       +  '<div class="cfr"></div>'
       +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
       +  '</div>';
   });
   list.innerHTML = h;
+  syncShopSumBtns();
+}
+/* 작업 102 — 소환 버튼의 «충분(rich) / 부족(lack)» 색 상태만 갱신한다.
+   클래스만 토글하므로 노드를 갈아 끼우지 않는다 — 상점이 열린 채 재화가 변해도(퀘스트·룰렛·재화 탭 구매)
+   renderShopPage() 를 다시 부를 필요가 없고, 리스트 스크롤 위치도 그대로 남는다. */
+function syncShopSumBtns(){
+  document.querySelectorAll('#shopList .cbtn[data-shsum]').forEach(btn => {
+    const b = btn.dataset.shsum, B = BANNERS[b];
+    if(!B) return;
+    const cur = B.cur === 'rel' ? S.relic : S.dia;
+    const lack = btn.dataset.shfree ? freeLeft(b) <= 0 : cur < summonCost(b, +btn.dataset.shn);
+    btn.classList.toggle('lack', lack);
+    /* 무료 버튼의 «충분» 색은 시안(.b1)이라 rich(노랑)를 씌우지 않는다 */
+    if(!btn.dataset.shfree) btn.classList.toggle('rich', !lack);
+  });
 }
 /* 73 ① — `focus` 로 상자 키(weapon/shield/amulet/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
 function openShopPage(focus){
@@ -14415,6 +14467,9 @@ function renderUI(){
      작업 64: 0.35초마다 도는 이 갱신이 카드 노드를 갈아끼우면 «꾹 누르기» 의 포인터 캡처가 끊긴다.
      구조가 그대로일 때는 값만 고쳐 쓰는 renderTrainLive() 로 충분하고, 구조가 바뀌면 그쪽이 알아서 위임한다. */
   if($('trw').classList.contains('on')) renderTrainLive();
+  /* 작업 102 — 상점 소환 탭이 열려 있으면 버튼 색 상태(충분/부족)만 살려 둔다.
+     renderShopPage() 통짜 재렌더는 스크롤을 0 으로 되돌리므로(107 계열) 부르지 않는다. */
+  if($('shopw').classList.contains('on')) syncShopSumBtns();
   if(panelOpen){
     if(curTab === 'grow') renderUp();
     else if(curTab === 'hero'){
