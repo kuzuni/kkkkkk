@@ -8844,9 +8844,26 @@ const dqProg  = q => { if(!S.daily.qb) S.daily.qb = dqSnap();
 const dqDone  = q => !!S.daily.q[q.id];
 const dqReady = q => !dqDone(q) && dqProg(q) >= q.goal;
 
+/* ---- 112 훈련 비용 곡선 (저장소 주인 지시 2026-08-26 — «훈련이 너무 가혹하다.
+   스테이지 80 될 때까지 대충 훈련 4단계까지는 갈 정도로») ----
+   23 훈련 3종(atk·hp·regen)만 쓰는 «구간별 지수» 다. 무릎(TRAIN_KNEE)까지는 종전 지수를
+   **한 푼도 안 바꾸고** 그대로 태우고, 그 뒤로는 레벨당 ×TRAIN_COST_R 로 완만해진다.
+   - TRAIN_COST_R 은 눈대중이 아니라 **골드 수입의 스테이지당 성장률에서 역산**한 값이다:
+       dL/ds = ln(eGold 배율 1.175) / ln(r) = 목표 (300−100)레벨 / (80−20)스테이지 = 3.33
+       → r = 1.175^(1/3.33) = 1.0496 → 1.05 채택 (100레벨당 ×132).
+     이 값은 «하루에 얼마나 유휴로 두느냐» 가정과 **무관**하다(tools/sim112.js [C]-④ 민감도 표).
+   - TRAIN_KNEE 는 남은 자유도 하나로, «Lv300×3 누적 비용 ≈ 스테이지 80 누적 골드의 70%»
+     를 만족하는 값이다(실측 65.8%).
+   - 곡선을 바꿔도 세이브 구조는 그대로다(이미 산 레벨·골드 불변, 비용만 바뀐다).
+   게이트: `node tools/sim112.js` → SIM112 PASS · 기록 `docs/review/112-훈련밸런스.md` */
+const TRAIN_KNEE   = 15;
+const TRAIN_COST_R = 1.05;
+const trainCost = (b, r) => l =>
+  b * Math.pow(r, Math.min(l, TRAIN_KNEE)) * Math.pow(TRAIN_COST_R, Math.max(0, l - TRAIN_KNEE));
+
 /* ---- 기본 강화 (골드) ---- */
 const UPG = [
-  { id:'atk',   name:'공격력',      icon:'⚔️', cost:l => 45*Math.pow(1.19,l),
+  { id:'atk',   name:'공격력',      icon:'⚔️', cost:trainCost(45,1.19),
     val:l => 18*Math.pow(1.12,l),  show:l => '피해 ' + fmt(U.atk.val(l)*mulAtk()) },
   { id:'aspd',  name:'공격 속도',   icon:'⚡', cost:l => 40*Math.pow(1.20,l),
     val:l => Math.min(1.4 + 0.11*l, 14), show:l => '초당 ' + (U.aspd.val(l)*mulRate()).toFixed(2) + '회' },
@@ -8856,9 +8873,9 @@ const UPG = [
     val:l => 1.6 + 0.18*l, show:l => '×' + (U.cdmg.val(l) + bonus().cdmg).toFixed(2) },
   { id:'pierce',name:'관통',        icon:'🏹', cost:l => 400*Math.pow(2.05,l),
     val:l => 1 + l, show:l => U.pierce.val(l) + '명 관통' },
-  { id:'hp',    name:'최대 체력',   icon:'❤️', cost:l => 30*Math.pow(1.17,l),
+  { id:'hp',    name:'최대 체력',   icon:'❤️', cost:trainCost(30,1.17),
     val:l => 160*Math.pow(1.10,l), show:l => fmt(U.hp.val(l)*mulHp()) },
-  { id:'regen', name:'체력 재생',   icon:'✨', cost:l => 55*Math.pow(1.19,l),
+  { id:'regen', name:'체력 재생',   icon:'✨', cost:trainCost(55,1.19),
     val:l => 4*Math.pow(1.10,l), show:l => '초당 ' + fmt(U.regen.val(l)*mulRegen()) },
   { id:'def',   name:'방어력',      icon:'🛡️', cost:l => 70*Math.pow(1.20,l),
     val:l => 1 - Math.min(0.75, l*0.022), show:l => '받는 피해 -' + pct(1-U.def.val(l)) },
