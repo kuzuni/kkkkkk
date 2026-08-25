@@ -159,6 +159,15 @@ function launchOpts(){
         openers.push({ label: 'prof:19', sel: '#profBtn' });
         openers.push({ label: 'prof:20-스펙', sel: null, prof: '.pf-tgl>.lb' });
       }
+      /* 21 도감 보너스 팝업(#collw) — 진입이 «보물상자 탭 → [📖 세트 도감]» 2단계라 위 수집에 안 걸린다.
+         팝업 안의 깃발 서브탭 4개(무기·방어구·스킬·동료)도 각각 오프너로 돈다(작업 21). */
+      await page.click('.tab[data-t="box"]', { timeout: 3000, force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+      if (await page.$('[data-opencoll]')) {
+        openers.push({ label: 'coll21', sel: null, coll: true });
+        const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
+        cts.forEach((k) => openers.push({ label: 'colltab:' + k, sel: null, coll: `#collTabs .cltab[data-ct="${k}"]` }));
+      }
       await ctx.close();
     }
     for (const o of openers) {
@@ -197,6 +206,13 @@ function launchOpts(){
           await page.click('#profBtn', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
           await page.evaluate((s) => document.querySelector(s).click(), o.prof);
+        } else if (o.coll) {
+          /* 보물상자 탭 → [📖 세트 도감] → (탭 오프너면) 깃발 서브탭까지 (작업 21) */
+          await page.click('.tab[data-t="box"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.evaluate(() => document.querySelector('[data-opencoll]').click());
+          await page.waitForTimeout(400);
+          if (typeof o.coll === 'string') await page.evaluate((s) => document.querySelector(s).click(), o.coll);
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
@@ -227,10 +243,13 @@ function launchOpts(){
       /* 바닥 시트 하나 열어서 프레임 밖 잘림 확인 (51) */
       await page.click('.tab[data-t="grow"]', { timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(400);
+      /* 21 도감 팝업은 모달 «밑으로» 깃발탭이 145px 삐져나오는 유일한 껍데기라 화면비마다 같이 본다 */
+      await page.evaluate(() => { if (typeof openColl21 === 'function') openColl21('armor'); }).catch(() => {});
+      await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {

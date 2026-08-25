@@ -2370,7 +2370,10 @@
   .cl-fr{right:0;top:111px;bottom:1px;width:14px;
     background:linear-gradient(90deg,#E4C197,#80684C 55%,#3F3529)}
   /* 스크롤 뷰포트 ref x108~967 / y475~1891 */
-  .cl-body{left:11px;width:860px;top:111px;height:1416px;overflow-y:auto;overflow-x:hidden;
+  /* 51 계열 — 높이를 «1416 고정» 으로 박으면 짧은 기기(frameH 1600)에서 `.cl` 이 max-height 로
+     눌렸을 때 리스트가 모달 밖으로 흘러 깃발탭을 덮는다. 위·아래를 물려 상자를 따라 줄게 한다.
+     기준 프레임에서는 콘텐츠 높이 1528 − 111 − 1 = 1416 으로 값이 동일하다. */
+  .cl-body{left:11px;width:860px;top:111px;bottom:1px;overflow-y:auto;overflow-x:hidden;
     scrollbar-width:none}
   .cl-body::-webkit-scrollbar{display:none}
   #collList{padding:21px 0 40px}
@@ -2432,7 +2435,10 @@
   .clb-btn.rdy{background:linear-gradient(180deg,#FFE066 0 40%,#F5A623);color:#fff;
     -webkit-text-stroke:5px rgba(0,0,0,.4);paint-order:stroke fill}
   /* ── 하단 깃발 서브탭 4개 — 모달 밑(top 1542)에서 돌출, pitch 207 ── */
-  .cl-tabs{left:27px;top:1534px;width:840px;height:150px;z-index:0}
+  /* 51 계열 — 깃발탭은 모달 «아래»로 150px 삐져나오는 유일한 요소라 top 절대로 박으면 안 된다.
+     짧은 기기(1920×1080·1024×768 → frameH 1600)에서 `.cl` 이 눌리면 탭만 프레임 밖으로 105~147px
+     밀려났다(smoke [3] 검출). bottom 앵커로 바꾸면 상자를 따라간다 — 기준 프레임 값은 top 1534 와 동일. */
+  .cl-tabs{left:27px;top:auto;bottom:-156px;width:840px;height:150px;z-index:0}
   .cltab{position:absolute;top:0;width:214px;height:118px;cursor:pointer;text-align:center}
   .cltab:nth-child(1){left:0}.cltab:nth-child(2){left:208px}
   .cltab:nth-child(3){left:416px}.cltab:nth-child(4){left:623px}
