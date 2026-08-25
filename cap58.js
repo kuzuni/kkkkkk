@@ -28,7 +28,9 @@ const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/'
    «클릭 후 187ms 무반응» 이라는 오독이 나왔다 — 사실은 1번 프레임에 이미 토스트가 들어 있었다.
    간격은 ROUTINE [3]-(다) 의 «80~100ms» 상한인 100ms 로 잡는다 — 0~700ms 를 덮어야
    스펙 예산(0.8초) 안에 끝나는 연출의 «끝» 까지 담긴다. */
-const WANT = [0, 100, 200, 310, 420, 550, 690];
+/* 15회차 — 420 슬롯을 380 으로 내리고 320 을 넣어 «도착 순간»(실측 320~400ms)을 덮는다.
+   14회차 비평 W: 최근접 관측 100px 에서 다음 슬롯(421)엔 코인이 이미 소멸 — 310↔420 공백에 빠졌다. */
+const WANT = [0, 100, 210, 320, 380, 550, 690];
 
 /* ── 스크린캐스트 수집기 ── */
 function recorder(cdp){
@@ -45,7 +47,8 @@ function recorder(cdp){
    → 목표 시각 순서대로 **아직 안 쓴 프레임 중에서만** 고른다(단조 증가 보장). 그래도 목표에서
    ±55ms 넘게 벗어난 프레임은 로그에 «WARN» 으로 남겨 비평가 전달문에 적게 한다. */
 function pick(buf, t0, tag, pre){
-  const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -60);
+  /* -60 까지 허용하면 트리거 «이전» 프레임이 0ms 슬롯을 먹는다(14회차 upg: 8슬롯 중 2장이 기준) */
+  const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -8);
   if(rel.length < WANT.length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
   if(!pre) throw new Error(`${tag}: 트리거 직전 기준 프레임이 없다`);
   const gaps = rel.slice(1).map((f, i) => f.dt - rel[i].dt);
@@ -148,7 +151,14 @@ function pwLaunch(){
   });
 
   /* ── 씬 2: 보상 수령 (퀘스트) ── */
-  await page.evaluate(() => { S.quest.kill.base = -1e9; openQuest('rep'); });
+  /* 15회차 — base 를 -1e9 로 두면 수령 «직후의 다음 티어» 도 즉시 60/60 완료라, 재렌더 뒤 행이
+     «체크는 사라졌는데 버튼이 다시 활성 + 진행 그대로» 로 찍혀 상태 모순으로 오독된다(14회차 W ④).
+     실플레이처럼 «정확히 이번 티어만 완료» 상태를 만든다 — 수령 후엔 0/<다음 목표> 비활성이 찍힌다. */
+  await page.evaluate(() => {
+    const q = QUESTS.find(x => x.id === 'kill');
+    S.quest.kill.base = q.get() - questGoal(q);
+    openQuest('rep');
+  });
   await page.waitForTimeout(400);
   await run('quest', () => {
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
