@@ -29,6 +29,9 @@ const NOCLIP = args.includes('--noclip');   /* 잉크 원본 bbox 측정용 — 
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(450);
   await p.evaluate(() => { try { msgT = 0; } catch (e) {} const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
+  /* 58 연출 모듈의 재화 파티클이 카드 위를 지나가 썸네일 스캔을 오염시킨다(비평가 X 지적).
+     LESSONS 30-② 와 같은 «시간 의존 상태» 라 캡처 스크립트에서 제거한다. */
+  await p.addStyleTag({ content: '.fx-fly,.fx-plus,.fx-spark,.fx-toast,.fx-check,.fx-flash{display:none!important}' });
   await p.waitForTimeout(800);   /* 60 쥬시 pop-in 이 끝나야 카드 bbox 가 확정된다 */
 
   /* --probe: 카드 배경을 평탄한 흰색으로 깔고 텍스트를 숨겨 «이모지 잉크만» 스캔 가능하게 한다
