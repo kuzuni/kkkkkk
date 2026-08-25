@@ -5567,6 +5567,133 @@
     margin-left:372px;border:5px solid #493C29;border-radius:46px;background:#473A2A;
     box-shadow:inset 0 0 0 7px #62523B}
   #bagw .bg53-tabs>i.act{color:#8BD5F6;z-index:2}
+
+  /* ================= 55 설정 팝업 (#cfw) — 측정표 docs/measure/55-설정팝업.md =================
+     껍데기 (가) 딤(α .55) 위 가운데 다이얼로그 798×1347 @ ref(141,539) → 프레임 y 455 (ref y − 84).
+     53 가방과 «껍데기 규격이 같다»(검정 8 + 갈색 림 12 + r44 + 헤더 91 + 크림 본문) — 폭·높이만 다르다.
+     겹은 6장이다: 딤 / 팝업(헤더+크림) / 구분선 / 옵션 리스트(교대 틴트 6행) / 계정 패널 / 하단 버튼·푸터.
+     리스트·패널·구분선은 크림과 색차가 작아 놓치기 쉽다 — 53 2회차의 «누락 레이어 3장» 과 같은 계열이다
+     (LESSONS 53-2 · 34-②). 자체 스캔으로 x191..889(699) 전부 확인하고 올렸다. */
+  #cfw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:41;
+    align-items:center;justify-content:center;box-sizing:border-box;padding:40px 0 63px}
+  #cfw.on{display:flex}
+  /* LESSONS 21-① · 34 부록: `#id 태그` 리셋(1-0-1)은 `.클래스 .클래스`(0-2-0)를 이긴다. */
+  #cfw i,#cfw em,#cfw b,#cfw s,#cfw u{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900;transform-origin:50% 50%}
+  /* 세로중심 ref 1212 → 프레임 1128. 패딩 40/63 이면 40 + (2280−40−63−1347)/2 = 455 (목표 455, Δ0) */
+  .cf55{position:relative;flex:none;width:798px;height:1347px;max-height:100%;box-sizing:border-box;
+    border:8px solid #000;border-radius:44px;padding:0 12px 12px;background:#503838;
+    display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
+  .cf55-head{flex:0 0 91px;margin:0 -12px;border-radius:36px 36px 0 0;background:#503838;
+    box-shadow:inset 0 8px 0 #5C4744,inset 11px 0 0 #5C4744,inset -11px 0 0 #5C4744;
+    text-align:center;line-height:91px;overflow:hidden}
+  /* 타이틀 코어 83×46 → font-size 46/0.93 ≈ 49. 잉크 97×59 → 편측 외곽선 6.5 → 13.
+     잉크 중심 y595 = 헤더 중심 592 + 3 */
+  .cf55-head>i{position:relative;top:3px;left:4px;font-size:49px;color:#F5EEAA;
+    -webkit-text-stroke:13px #000;paint-order:stroke fill;transform:scaleX(.90)}
+  /* 크림 본문 758×1228 + 별 워터마크(33 .ci-body · 53 .bg53-body 와 같은 «별 2개» 엇갈린 타일) */
+  .cf55-body{flex:1 1 auto;position:relative;box-sizing:border-box;
+    border:solid #46382D;border-width:1px 0 0;border-top-color:#503838;
+    border-radius:0 0 31px 31px;background:#F0D9BA
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E7CFAE'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
+    overflow:hidden}
+  #cfw .cf55-body>*{position:absolute}
+  /* 본문 좌표 원점 = 크림 좌상 ref(161,639). 아래 left/top 은 전부 «ref − 원점» 이다. */
+
+  /* ── 볼륨 그룹 ── */
+  /* 잉크 52×33(외곽선 포함) — font 31(코어 28.8 + 편측 2 = 32.8) · 폭은 scaleX 로 회수 */
+  .cf55-sub{left:68px;top:10px;height:45px;line-height:45px;font-size:31px;color:#F8F8F8;
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .cf55-sub>i{transform:scaleX(.82)}
+  /* 트랙 ref x216..894 y703..752 (679×50) — 검정 6 + 주황 그라디언트 */
+  .cf55-track{left:55px;top:64px;width:679px;height:50px;box-sizing:border-box;
+    border:6px solid #000;border-radius:25px;overflow:hidden;
+    background:linear-gradient(#FAC72D 0 26%,#F8B010 26% 100%);cursor:pointer}
+  .cf55-fill{position:absolute;left:0;top:0;bottom:0;width:100%;
+    background:linear-gradient(#FAC72D 0 26%,#F8B010 26% 100%)}
+  .cf55-empty{position:absolute;left:0;top:0;right:0;bottom:0;background:#8A7355}
+  /* 노브 ref x835..894 y703..752 (60×50). left 는 «트랙 왼끝 + 진행률 × (679−60)» */
+  .cf55-knob{left:55px;top:64px;width:60px;height:50px;box-sizing:border-box;
+    border:6px solid #000;border-radius:16px;background:#F6F5FA;z-index:2;pointer-events:none}
+  .cf55-e0{left:57px;top:118px;height:32px;line-height:32px;font-size:25px;color:#F8F8F8;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cf55-emax{left:643px;top:121px;height:32px;line-height:32px;font-size:21px;color:#F8F8F8;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cf55-emax>i{transform:scaleX(1.14)}
+  /* 구분선 ref x191..889 y801..804 */
+  .cf55-rule{left:30px;top:162px;width:699px;height:4px;background:#D5C0A5}
+
+  /* ── 옵션 리스트 ref x191..889 y824..1333 (699×510) · 모서리 각(반경 0) · 교대 틴트 ── */
+  .cf55-list{left:30px;top:185px;width:699px;height:509px;display:flex;flex-direction:column}
+  .cf55-row{position:relative;flex:1 1 0;background:#D0BCA1}
+  .cf55-row:nth-child(even){background:#E2CDAF}
+  #cfw .cf55-row>*{position:absolute}
+  /* 아이콘 자리 — ref 잉크 x214..283 (칸 70×58), 세로 중앙 */
+  .cf55-ic{left:24px;top:50%;width:70px;height:58px;margin-top:-29px;
+    line-height:58px;text-align:center;font-size:46px}
+  /* 라벨 — 좌단 x300 고정(6행 전부 일치). 잉크 높이 28~33 → font-size 34(÷0.93).
+     ref 서체가 우리보다 좁아 폭은 --sx 로 회수한다(LESSONS 01). */
+  /* 잉크 높이 목표 28~33 — font 30(코어 27.9) + 편측 2.5 = 32.9. 외곽선 7 이면 38.6 으로 6px 크다. */
+  .cf55-lb{left:109px;top:50%;height:44px;margin-top:-22px;line-height:44px;
+    font-size:var(--lf,30px);color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
+  /* ⚠ LESSONS 21-①: 위 `#cfw i` 리셋(1-0-1)이 `.cf55-lb>i`(0-1-1)의 transform-origin 을 이긴다.
+     좌단 고정 라벨은 origin 이 0 이어야 x300 이 유지되므로 #cfw 접두어로 특이성을 맞춘다. */
+  #cfw .cf55-lb>i{transform:scaleX(var(--sx,1));transform-origin:0 50%}
+  /* 컨트롤 슬롯 — ref x685..853 (169), 6행 전부 같은 자리 */
+  .cf55-ct{left:494px;top:50%;width:169px;height:69px;margin-top:-34.5px}
+  /* 언어 값 버튼 169×69 */
+  .cf55-gold{position:absolute;inset:0;box-sizing:border-box;border:6px solid #000;border-radius:35px;
+    background:linear-gradient(#F5E0A9,#E8C176);text-align:center;line-height:57px;cursor:pointer}
+  .cf55-gold>i{position:relative;top:-5px;font-size:28px;color:#4A2E12;transform:scaleX(var(--sx,1))}
+  /* 토글 — 트랙 169×60 세로중앙 + 노브 99×69(트랙보다 커서 위아래 4.5px 씩 넘친다).
+     ⚠ 레퍼런스는 «라벨이 노브 안»에 있다(트랙이 아니다). ON=우측 초록 / OFF=좌측 회색 */
+  .cf55-sw{position:absolute;left:0;top:4.5px;width:169px;height:60px;box-sizing:border-box;
+    border:5px solid #000;border-radius:30px;background:#96A0C4;cursor:pointer}
+  .cf55-sw.on{background:#6BC822}
+  /* ⚠ LESSONS 03: 절대배치 자식의 기준은 border box 가 아니라 **padding box** 다.
+     트랙에 border 5 가 있으므로 «트랙 좌단에 붙인다» 는 left:0 이 아니라 left:-5 다. */
+  .cf55-kn{position:absolute;left:-5px;top:-9.5px;width:99px;height:69px;box-sizing:border-box;
+    border:5px solid #000;border-radius:34.5px;background:linear-gradient(#D3D3D3,#8F8F8F);
+    text-align:center;line-height:59px}
+  .cf55-sw.on>.cf55-kn{left:65px;background:linear-gradient(#ABFF7E,#5FC61E)}
+  .cf55-kn>i{font-size:24px;color:#FFF;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+
+  /* ── 계정 연동 패널 ref x191..889 y1364..1561 (699×198) r45 ── */
+  .cf55-acc{left:30px;top:725px;width:699px;height:198px;border-radius:45px;background:#D0BCA1}
+  /* 잉크 137×39 — font 35(코어 32.6) + 편측 3 = 38.6 · 폭 scaleX .88 */
+  .cf55-acch{left:30px;top:741px;width:699px;height:46px;line-height:46px;text-align:center;
+    font-size:35px;color:#F8F8F8;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .cf55-acch>i{transform:scaleX(.88)}
+  /* 구글 카드 ref x416..663 y1454..1531 (248×78) r12 — 흰 카드 + 외곽선 없는 유일한 글자 */
+  .cf55-badge{left:255px;top:815px;width:248px;height:78px;box-sizing:border-box;border-radius:12px;
+    background:#FFF;line-height:78px;white-space:nowrap;text-align:center}
+  .cf55-badge>u{width:39px;height:39px;line-height:39px;font-size:32px;vertical-align:middle;
+    margin-right:11px}
+  .cf55-badge>i{font-size:29px;font-weight:800;color:#1A1A1A;vertical-align:middle;
+    transform:scaleX(var(--sx,1))}
+
+  /* ── 하단 버튼 3칸 ref y1588..1686 (217×99) · x201/432/662 (pitch 231) ── */
+  .cf55-btn{top:949px;width:217px;height:99px;box-sizing:border-box;border:6px solid #000;
+    border-radius:49px;text-align:center;cursor:pointer;
+    background:linear-gradient(#FFDB2F 0 30%,#FEB413 30% 82%,#D07E04 82% 100%)}
+  .cf55-btn.b1{left:40px;background:linear-gradient(#51E7F8 0 30%,#2ABFDB 30% 82%,#1583A0 82% 100%)}
+  .cf55-btn.b2{left:271px}
+  .cf55-btn.b3{left:501px}
+  .cf55-btn>i{position:relative;top:22px;font-size:26px;color:#FFF;
+    -webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
+  .cf55-btn.b1>i{top:25px;font-size:23px}
+  /* ── 푸터 ── */
+  .cf55-del{left:0;right:0;top:1082px;height:36px;line-height:36px;text-align:center;cursor:pointer}
+  .cf55-del>i{font-size:23px;color:#F8F8F8;text-decoration:underline;text-underline-offset:5px;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
+  .cf55-n1{left:30px;top:1132px;width:699px;height:32px;line-height:32px}
+  .cf55-n1>i{font-size:24px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(var(--sx,1))}
+  #cfw .cf55-n1>i.r{position:relative;right:6px}
+  .cf55-n1>i.r{float:right}
+  .cf55-n2{left:0;right:0;top:1183px;height:32px;line-height:32px;text-align:center}
+  .cf55-n2>i{font-size:23px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    transform:scaleX(var(--sx,1))}
 </style>
 </head>
 <body>
@@ -6161,6 +6288,33 @@
         <s class="on" id="bagPill"></s>
         <i class="t1" data-bagtab="use">소모품</i>
         <i class="t2 act" data-bagtab="cur">재화</i>
+      </div>
+    </div>
+  </div>
+
+  <!-- 55 설정 팝업 — 측정표 docs/measure/55-설정팝업.md. 진입: 52 ▦ 메뉴 → «설정».
+       레퍼런스에 ✕ 가 없다(비평 대비 기록: 캡처의 ✕ 는 팝업 뒤 «메뉴 열림» 배경의 것이고 딤 아래다).
+       닫기는 딤 탭이다 — 70 출석 팝업과 같은 판단. -->
+  <div id="cfw">
+    <div class="cf55">
+      <div class="cf55-head"><i>설정</i></div>
+      <div class="cf55-body">
+        <div class="cf55-sub"><i>볼륨</i></div>
+        <div class="cf55-track" id="cfTrack"><s class="cf55-empty"></s><s class="cf55-fill" id="cfFill"></s></div>
+        <div class="cf55-knob" id="cfKnob"></div>
+        <div class="cf55-e0"><i>0</i></div>
+        <div class="cf55-emax"><i>MAX</i></div>
+        <div class="cf55-rule"></div>
+        <div class="cf55-list" id="cfList"></div>
+        <div class="cf55-acc"></div>
+        <div class="cf55-acch"><i>계정 연동</i></div>
+        <div class="cf55-badge"><u>🇬</u><i style="--sx:.92">연동 완료</i></div>
+        <div class="cf55-btn b1" data-cf="privacy"><i style="--sx:.91">개인정보 처리 방침</i></div>
+        <div class="cf55-btn b2" data-cf="coupon"><i style="--sx:.94">쿠폰</i></div>
+        <div class="cf55-btn b3" data-cf="support"><i style="--sx:1.02">고객 지원</i></div>
+        <div class="cf55-del" data-cf="del"><i style="--sx:.91">계정 삭제</i></div>
+        <div class="cf55-n1"><i id="cfUid"></i><i class="r" id="cfSrv" style="--sx:1.07"></i></div>
+        <div class="cf55-n2"><i id="cfGid" style="--sx:1.20"></i></div>
       </div>
     </div>
   </div>
@@ -6950,6 +7104,7 @@ const DEF = () => ({
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
   buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
+  opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false },  /* 55 설정 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
 });
@@ -6990,6 +7145,12 @@ function load(){
     /* 61 가이드 미션 — 구버전 세이브는 «S.tuto = 숫자» 였다. 44 교훈 2 대로 KEY 는 올리지 않고
        «없으면 기본값» 으로 흡수한다. 구 튜토리얼 12개는 새 체인 앞쪽과 순서가 같으므로 idx 를
        그대로 이어받고(체인 길이로 clamp), 기준선은 아래 gmStart() 가 지금 값으로 다시 찍는다. */
+    /* 55 설정 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지). 옛 세이브엔 opt 가 없다. */
+    {
+      const o = (d.opt && typeof d.opt === 'object') ? d.opt : {}, D = DEF().opt;
+      b.opt = { vol: Number.isFinite(o.vol) ? Math.max(0, Math.min(100, Math.round(o.vol))) : D.vol };
+      ['bgm','sfx','shake','push','night'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
+    }
     if(!b.guide || typeof b.guide !== 'object') b.guide = DEF().guide;
     if(d.guide === undefined){                       /* 구 세이브 → 이관 */
       b.guide = { idx: Number.isFinite(d.tuto) ? d.tuto : 0, prog:-1 };   /* -1 = 기준선 미확정 */
@@ -8121,7 +8282,9 @@ function camUpdate(dt){
     }
   }
 
-  if(cam.shake > 0) cam.shake = Math.max(0, cam.shake - dt*28);
+  /* 55 설정 «화면 흔들림» — 끄면 여기서 통째로 죽인다(호출부 8곳을 건드리지 않는 단일 게이트) */
+  if(!shakeOn()) cam.shake = 0;
+  else if(cam.shake > 0) cam.shake = Math.max(0, cam.shake - dt*28);
   if(cine.flash > 0) cine.flash = Math.max(0, cine.flash - dt/CINE_FLASH_S);
 }
 
@@ -11494,6 +11657,116 @@ $('bagGrid').addEventListener('click', e => {
 /* 52 ▦ 메뉴의 «가방» 칸이 이걸 부른다(그쪽 주석의 인계 지시) */
 window.openBag = openBag;
 
+/* ================= 55 설정 팝업 — docs/measure/55-설정팝업.md =================
+   레퍼런스 6행 순서 그대로: 언어 · BGM · SFX · 화면 흔들림 · 푸시 알림 · 야간 알림 수신 동의.
+   ⚠ 이 게임엔 아직 오디오·푸시가 없다. 그래서 BGM·SFX·푸시·야간은 «저장되는 사용자 설정» 까지가
+   실동작이고, 실제로 무언가를 끄는 건 **화면 흔들림**(67 카메라 shake)과 **볼륨 슬라이더 값**이다.
+   오디오가 들어오면 sndOn() 한 곳만 보면 되도록 게이트를 미리 뚫어 뒀다. */
+const CF_ROWS = [
+  { k:'lang',  ic:'💬', n:'언어',               sx:.86, val:'한국어' },
+  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.93, lf:33 },
+  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.90, lf:33 },
+  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.89 },
+  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.88 },
+  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.91 }
+];
+/* 오디오 게이트 — 지금은 «설정 값을 읽는 유일한 곳». 소리가 들어오면 여기서 분기한다. */
+const sndOn = k => !!(S.opt && S.opt[k]) && (S.opt.vol | 0) > 0;
+/* 67 카메라 흔들림 게이트 — 끄면 cam.shake 가 0 으로 고정된다(아래 renderConf 에서 즉시 반영) */
+const shakeOn = () => !!(S.opt && S.opt.shake);
+
+/* UID — 레퍼런스는 13자리. 닉네임에서 결정적으로 유도(19·20 의 Gamer Id 와 같은 방식, 저장 구조 불변) */
+function cfUid(){
+  let h = 0x811c9dc5; const s = 'uid|' + S.nick + '|' + KEY;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  const h2 = Math.imul(h, 2654435761) >>> 0;
+  return (String(h) + String(h2)).slice(0, 13).padStart(13, '1');
+}
+function renderConf(){
+  const vol = Math.max(0, Math.min(100, S.opt.vol | 0));
+  $('cfFill').style.width = vol + '%';
+  /* 노브 왼끝 = 트랙 왼끝 + 진행률 × (트랙폭 − 노브폭). 트랙 679 · 노브 60 → 이동거리 619 */
+  $('cfKnob').style.left = (55 + vol / 100 * 619) + 'px';
+  $('cfList').innerHTML = CF_ROWS.map(r => {
+    const ctl = r.val
+      ? '<div class="cf55-gold" data-cfr="' + r.k + '"><i style="--sx:.95">' + r.val + '</i></div>'
+      : '<div class="cf55-sw' + (S.opt[r.k] ? ' on' : '') + '" data-cfr="' + r.k + '">'
+        + '<s class="cf55-kn"><i>' + (S.opt[r.k] ? 'ON' : 'OFF') + '</i></s></div>';
+    return '<div class="cf55-row"><i class="cf55-ic">' + r.ic + '</i>'
+      + '<div class="cf55-lb"' + (r.lf ? ' style="--lf:' + r.lf + 'px"' : '') + '>'
+      + '<i style="--sx:' + r.sx + '">' + r.n + '</i></div>'
+      + '<div class="cf55-ct">' + ctl + '</div></div>';
+  }).join('');
+  $('cfUid').textContent = 'UID: ' + cfUid();
+  $('cfSrv').textContent = 'Server: KR-1';
+  $('cfGid').textContent = 'Gamer Id: ' + spcGamerId();
+}
+function openConf(){ renderConf(); $('cfw').classList.add('on'); }
+function closeConf(){ $('cfw').classList.remove('on'); }
+window.openConf = openConf;
+
+/* 딤(팝업 바깥) 탭 → 닫기. 레퍼런스에 ✕ 가 없다 — 70 출석 팝업과 같은 판단. */
+$('cfw').onclick = e => { if(e.target.id === 'cfw') closeConf(); };
+
+/* 볼륨 슬라이더 — 트랙을 누르거나 끌면 값이 따라온다(포인터 캡처로 트랙 밖까지 추적) */
+{
+  const tr = $('cfTrack');
+  const setVol = e => {
+    const r = tr.getBoundingClientRect();
+    const v = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100);
+    if(v !== (S.opt.vol | 0)){ S.opt.vol = v; renderConf(); save(); }
+  };
+  tr.addEventListener('pointerdown', e => {
+    e.preventDefault(); tr.setPointerCapture(e.pointerId); setVol(e);
+  });
+  tr.addEventListener('pointermove', e => { if(tr.hasPointerCapture(e.pointerId)) setVol(e); });
+  tr.addEventListener('pointerup',   e => { if(tr.hasPointerCapture(e.pointerId)) tr.releasePointerCapture(e.pointerId); });
+}
+/* 6행 + 하단 버튼 — 33 방식의 «속성 + 위임 핸들러 1개» */
+$('cfw').querySelector('.cf55-body').addEventListener('click', e => {
+  const row = e.target.closest('[data-cfr]');
+  if(row){
+    const k = row.dataset.cfr;
+    if(k === 'lang'){ popup('💬 언어', '<p>현재 <b>한국어</b>만 지원합니다.</p>'); return; }
+    S.opt[k] = !S.opt[k];
+    if(k === 'shake' && !S.opt.shake) cam.shake = 0;    /* 끄면 진행 중인 흔들림까지 즉시 멈춘다 */
+    renderConf(); save();
+    return;
+  }
+  const b = e.target.closest('[data-cf]');
+  if(!b) return;
+  const k = b.dataset.cf;
+  if(k === 'privacy') popup('🔒 개인정보 처리 방침',
+    '<p>이 게임은 <b>진행 상황을 이 기기의 브라우저 저장소에만</b> 보관합니다.</p>'
+    + '<p>서버로 전송하거나 제3자에게 제공하는 개인정보는 없습니다.</p>'
+    + '<p>저장 항목: 재화 · 스테이지 · 장착/보유 목록 · 설정값.</p>'
+    + '<p style="opacity:.75;font-size:.9em">브라우저 데이터를 지우거나 [계정 삭제] 를 누르면 즉시 사라집니다.</p>');
+  else if(k === 'coupon') cfCoupon();
+  else if(k === 'support') popup('🎧 고객 지원',
+    '<p>문의 시 아래 정보를 함께 알려주세요.</p>'
+    + '<p>UID <b>' + cfUid() + '</b></p>'
+    + '<p style="font-size:.8em;word-break:break-all">Gamer Id ' + spcGamerId() + '</p>'
+    + '<p>Server <b>KR-1</b> · 플레이 <b>' + Math.floor(S.playtime / 3600) + '시간</b></p>');
+  else if(k === 'del'){
+    if(confirm('계정을 삭제하면 모든 진행 상황이 사라집니다. 계속할까요?')){
+      localStorage.removeItem(KEY); location.reload();
+    }
+  }
+});
+/* 쿠폰 — 코드당 1회, 지급은 다이아. 사용 이력은 S.opt.cp 에 남는다(세이브 구조 추가만, KEY 유지) */
+const CF_CODES = { HELLO2026:500, IDLEHUNTER:1000, THANKYOU:300 };
+function cfCoupon(){
+  const raw = prompt('쿠폰 코드를 입력하세요.');
+  if(raw === null) return;
+  const code = String(raw).trim().toUpperCase();
+  if(!S.opt.cp || typeof S.opt.cp !== 'object') S.opt.cp = {};
+  if(!CF_CODES[code]){ popup('🎟️ 쿠폰', '<p>사용할 수 없는 코드입니다.</p>'); return; }
+  if(S.opt.cp[code]){ popup('🎟️ 쿠폰', '<p>이미 사용한 코드입니다.</p>'); return; }
+  S.opt.cp[code] = 1; S.dia += CF_CODES[code]; save(); drawHud();
+  if(typeof fxGain === 'function') fxGain('dia', CF_CODES[code]);
+  popup('🎟️ 쿠폰', '<p>💎 <b>' + fmt(CF_CODES[code]) + '</b> 을(를) 받았습니다!</p>');
+}
+
 function openPromo(){
   const r = nextRank();
   if(!r){ popup('🏅 최고 계급', '<p>이미 최고 계급입니다! 🎉</p>'); return; }
@@ -12376,7 +12649,7 @@ $('mnw').querySelector('.mn-col').onclick = e => {
   else if(k === 'rank')   popup('🏆 랭킹',      '<p>랭킹은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 54 — 서버 없이 로컬 기록 + 더미 순위로 구현 예정)</p>');
   else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
-  else if(k === 'conf')   popup('⚙️ 설정',      '<p>설정은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 55)</p>');
+  else if(k === 'conf')   openConf();                 /* 작업 55 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'pass')   openPass('stage');          /* 작업 35 인계 — 레퍼런스에 없는 임시 칸 */
 };
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');

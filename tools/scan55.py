@@ -1,6 +1,7 @@
 import sys
 from PIL import Image
-im = Image.open('docs/ref/55-설정팝업.jpg').convert('RGB')
+import os
+im = Image.open(os.environ.get("IMG","docs/ref/55-설정팝업.jpg")).convert("RGB")
 W,H = im.size
 px = im.load()
 def hx(c): return '#%02X%02X%02X'%c
@@ -129,3 +130,34 @@ elif mode=='corner2':
             c=px[x,y]; l=(c[0]*299+c[1]*587+c[2]*114)/1000
             if l>th: hit=x; break
         print(f"y{y} (+{y-y0}) firstlight {hit} (+{hit-x0 if hit else '-'})")
+
+elif mode=='inkcols':
+    x0,y0,x1,y1=map(int,sys.argv[2:6]); th=int(sys.argv[6]); gap=int(sys.argv[7]) if len(sys.argv)>7 else 6
+    on=[]
+    for x in range(x0,x1+1):
+        n=0
+        for y in range(y0,y1+1):
+            c=px[x,y]; l=(c[0]*299+c[1]*587+c[2]*114)/1000
+            if l<th: n+=1
+        on.append(n>0)
+    runs=[]; s=None; last=None
+    for i,v in enumerate(on):
+        if v:
+            if s is None: s=i
+            last=i
+        else:
+            if s is not None and i-last>gap:
+                runs.append((s+x0,last+x0)); s=None
+    if s is not None: runs.append((s+x0,last+x0))
+    for a,b in runs: print(f"x{a}..{b} (w{b-a+1})")
+
+elif mode=='silh':
+    x0,y0,x1,y1=map(int,sys.argv[2:6]); th=int(sys.argv[6]); step=int(sys.argv[7]) if len(sys.argv)>7 else 10
+    for x in range(x0,x1+1,step):
+        top=None; bot=None
+        for y in range(y0,y1+1):
+            c=px[x,y]; l=(c[0]*299+c[1]*587+c[2]*114)/1000
+            if l<th:
+                if top is None: top=y
+                bot=y
+        print(f"x{x} y{top}..{bot} h={(bot-top+1) if top else 0}")

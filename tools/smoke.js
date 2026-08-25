@@ -337,11 +337,14 @@ function launchOpts(){
       /* 69 우편함은 A5 공용 모달을 쓰되 ✕ 가 상자 «바닥 테두리에 걸쳐» 밖으로 나가는 유일한 모달이라
          (상자 1310 + ✕ 아래 절반 58) 짧은 프레임에서 같이 본다. #bagw 와 오버레이가 달라 겹치지 않는다. */
       await page.evaluate(() => { if (typeof openMail === 'function') openMail(); }).catch(() => {});
+      /* 55 설정은 798×1347 — 지금까지 중 «가장 키가 큰» 가운데 다이얼로그라 짧은 프레임(1600)에서
+         max-height 로 제일 많이 눌린다. 눌린 상자가 프레임 밖으로 나가지 않는지 화면비마다 본다. */
+      await page.evaluate(() => { if (typeof openConf === 'function') openConf(); }).catch(() => {});
       await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #modal.ml69 .mbox, #modal.ml69 .ml-close')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
