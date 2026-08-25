@@ -58,6 +58,11 @@ function launchOpts(){
     const f = document.querySelector('#mbox .rl-pb>i');
     if (b) b.textContent = '1/3';
     if (f) f.style.width = '33.3%';
+    /* 제목 자수를 레퍼런스와 맞춘다 — ref 는 «오우거의 돌망치»(8칸)인데 우리 커먼 유물은
+       «낡은 부적»(5칸)이라 그대로 재면 제목 잉크 폭이 −43% 로 나와 **허위 지적**이 된다(9회차에 실제로 발생).
+       자수를 맞춰야 «자당 폭·잉크 높이» 를 비교할 수 있다. 캡처 전용 표시 보정. */
+    const t = document.getElementById('mtitle');
+    if (t) t.textContent = '오우거의 돌망치';
   });
   await page.waitForTimeout(200);
 
