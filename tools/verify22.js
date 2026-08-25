@@ -121,7 +121,7 @@ const frameRects = (page, map) => page.evaluate((m) => {
     near('진행바 x', g.bar.x, 300);   /* 측정표 299 는 +1 오기 — ref 검정 마스크 300~699 */
     near('진행바 top', g.bar.y, R(762));
     near('진행바 width', g.bar.w, 400);
-    near('진행바 height', g.bar.h, 38);
+    near('진행바 height', g.bar.h, 39);  /* 비평가 P·Q·S 3명 모두 ref y762~800 = h39. 측정표 38 정정 */
 
     near('보상받기 x', g.btn.x, 722);
     near('보상받기 top', g.btn.y, R(692));
