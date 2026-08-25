@@ -14,6 +14,10 @@ const ok  = m => console.log('  ✓ ' + m);
 const bad = m => { fails.push(m); console.log('  ✗ ' + m); };
 const chk = (c, m) => c ? ok(m) : bad(m);
 
+  /* 작업 64 이후 훈련 카드는 `click` 이 아니라 `pointerdown`(꾹 누르기 연속 강화)로 동작한다.
+     한 번만 사면 되므로 누르고 바로 뗀다 — 뗌은 window 에서 받으므로 window 로 보낸다. */
+  const PRESS = `(el) => { el.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+    window.dispatchEvent(new PointerEvent('pointerup', {bubbles:true})); }`;
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport:{ width:1080, height:2280 }, deviceScaleFactor:1 });
@@ -148,7 +152,9 @@ const chk = (c, m) => c ? ok(m) : bad(m);
     if(!c) return { err:'훈련 카드 없음' };
     const before = lv(c.dataset.tr);
     const want = fxRect(c);                            /* 클릭 «전»에 잰다 — renderTrain() 이 카드를 재렌더해 detach 시킨다 */
-    c.click();
+    const press = el => { el.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+      window.dispatchEvent(new PointerEvent('pointerup', {bubbles:true})); };
+    press(c);
     await sleep(60);
     /* 플래시는 스스로 scale(1.045) 로 커지는 중이라 getBoundingClientRect 로 재면 그만큼 커 보인다
        (43 교훈 1 «내가 쓴 assert 도 어디를 기준으로 쟀는지 먼저 확인»). 인라인 style 의 «기하» 로 잰다. */
@@ -223,7 +229,9 @@ const chk = (c, m) => c ? ok(m) : bad(m);
     const card = document.querySelector('#trw [data-tr]');
     const cardC = rgba(getComputedStyle(card).backgroundColor);
     const t0 = Date.now();
-    card.click();
+    const press = el => { el.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+      window.dispatchEvent(new PointerEvent('pointerup', {bubbles:true})); };
+    press(card);
     /* «언제부터 언제까지 보이는가» — 10ms 폴링으로 opacity 궤적을 그대로 뜬다.
        누적 sleep 은 매번 오버슈트해서 «t=66ms» 같은 라벨이 실제로는 150ms 다(5회차에 이걸로 오진했다). */
     let first = -1, last = -1, peak = 0, flashL = null;
@@ -291,7 +299,9 @@ const chk = (c, m) => c ? ok(m) : bad(m);
     S.gold = 1e13; openTrain(); await sleep(500);
     const card = document.querySelector('#trw [data-tr]');
     const cardW = card.getBoundingClientRect().width;
-    card.click();
+    const press = el => { el.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}));
+      window.dispatchEvent(new PointerEvent('pointerup', {bubbles:true})); };
+    press(card);
     let fmax = 1;
     for(let i=0;i<50;i++){
       const f = document.querySelector('#fxl .fx-flash');

@@ -127,7 +127,9 @@ async function ensureLoop(page){
   await run('upg', () => {
     const c = document.querySelector('#trw [data-tr]');
     if(!c) return { err:'훈련 카드를 찾지 못했다' };
-    c.click();
+    /* 작업 64 이후 훈련 카드는 `click` 이 아니라 `pointerdown`(꾹 누르기 연속 강화)로 동작한다 */
+    c.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true }));
+    window.dispatchEvent(new PointerEvent('pointerup', { bubbles:true }));
     return { t: Date.now() };
   });
 
