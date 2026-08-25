@@ -42,7 +42,19 @@ function launchOpts() {
   await page.evaluate(() => document.getElementById('menub').click());
   await page.waitForTimeout(250);
   await page.evaluate(() => document.getElementById('psGo').click());
-  await page.waitForTimeout(500);
+  /* ⚠ 60 쥬시의 «열기 팝»(scale) 이 도는 동안 찍으면 페이지 전체가 3~4% 작게 찍힌다 —
+     1회차 캡처가 그래서 통째로 오염됐다(구매 버튼이 419x149 대신 405x144 로 찍혔다).
+     연출이 실제로 끝났는지는 시간이 아니라 **getAnimations() 가 비는지**로 확인한다
+     (LESSONS 60-④ «연출 수명을 setTimeout 으로 세지 마라» 의 캡처 판). */
+  /* «연출이 끝났나» 를 시간이나 getAnimations() 로 물으면 «아직 시작 안 함» 을 «끝남» 으로 읽는다.
+     실제로 1회차 캡처가 #psw 불투명도 0.38 인 프레임으로 찍혀 페이지 전체가 균일하게 어두워졌고,
+     그 아래 닫히는 중인 메뉴 모달(크림)까지 비쳐 들어왔다(LESSONS 04-① 의 연출 판).
+     → «상태» 로 판정한다: #psw 가 완전히 불투명하고, 메뉴 모달이 실제로 사라졌을 때만 찍는다. */
+  await page.waitForFunction(() => {
+    const w = document.getElementById('psw'), m = document.getElementById('modal');
+    return getComputedStyle(w).opacity === '1' && getComputedStyle(m).display === 'none';
+  }, null, { timeout: 10000 });
+  await page.waitForTimeout(250);
 
   /* 캔버스 데미지 숫자·자동 전투가 캡처를 오염시킨다(LESSONS 28-③ · 58-②) */
   await page.evaluate(() => {
@@ -65,9 +77,15 @@ function launchOpts() {
     }));
     return { hero: r('.ps-hero'), gold: r('.ps-gold'), hdr: r('.ps-hdr'), list: r('.ps-list'),
              bar: r('.ps-bar'), buy: r('.ps-buy'), on: document.querySelector('#psBar .pt.on').dataset.ptab,
-             onBox: r('#psBar .pt.on'), scroll: document.getElementById('psList').scrollTop, rows };
+             onBox: r('#psBar .pt.on'), scroll: document.getElementById('psList').scrollTop, rows,
+             overlays: [...document.querySelectorAll('#app > *')].filter(e => e.id !== 'psw' && e.id !== 'fxl'   /* fxl 은 투명한 연출 레이어라 오염원이 아니다 */
+               && getComputedStyle(e).display !== 'none'
+               && Number(getComputedStyle(e).zIndex || 0) >= 34).map(e => e.id || e.className) };
   });
   console.log(JSON.stringify(st, null, 1));
+  /* 캡처 오염 가드 — 딴 오버레이가 위에 떠 있으면 그 회차 비평은 통째로 무효다(LESSONS 04-①).
+     1회차가 «열기 연출 중» 으로 3~4% 작게 찍혔던 것과 같은 부류라 아예 assert 로 막는다. */
+  if (st.overlays.length) throw new Error('캡처 위에 떠 있는 오버레이: ' + st.overlays.join(', '));
   if (st.rows.length < 6) throw new Error('보이는 행이 6개 미만: ' + st.rows.length);
   if (st.rows[0].hex !== '65') throw new Error('첫 행이 스테이지 65 가 아니다: ' + st.rows[0].hex);
   if (!st.rows[0].bx[0].startsWith('✓')) throw new Error('레퍼런스와 상태 불일치 — 65 무료 칸이 수령완료가 아니다');
