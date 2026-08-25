@@ -109,10 +109,14 @@ const frameRects = (page, map) => page.evaluate((m) => {
     near('행 세로 pitch', g.row2.y - g.row1.y, 200);
     near('행 간 gap', g.row2.y - (g.row1.y + g.row1.h), 21);
 
+    /* ⚠ 측정표 §5-1 «y696~800 / h105 / radius 36» 은 코너 반경이 오기다(1회차 정오).
+       레퍼런스 좌·우 14개 열의 «세로 연속 높이» 최소자승 피팅 → h 105.8 · r 30.9 (MSE 0.27),
+       측정표 값(h105·r36)은 같은 표본에서 MSE 41. 상단도 696 이 아니라 698 이다. */
     near('보상 프레임 x', g.ico.x, 167);
     near('보상 프레임 width', g.ico.w, 106);
-    near('보상 프레임 height', g.ico.h, 105);
-    near('보상 프레임 top', g.ico.y, R(696));
+    near('보상 프레임 height', g.ico.h, 106);
+    near('보상 프레임 top', g.ico.y, R(698));
+    near('보상 프레임 세로중심 = 행 중심', (g.ico.y + g.ico.h / 2) - (g.row1.y + g.row1.h / 2), 0);
 
     near('진행바 x', g.bar.x, 299);
     near('진행바 top', g.bar.y, R(762));
