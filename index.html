@@ -4479,7 +4479,14 @@
   .sk-slot.lock>.sk-lock{left:50%;top:28px;margin-left:-24.5px;transform:scale(1.061)}
 
   /* 3 그리드 패널 ref(40,1070) 1000x680 · #CBB397 · radius 28 · 테두리 없음 */
-  .sk-gp{left:33px;top:387px;width:1000px;height:680px;border-radius:25px;background:#CBB397}
+  /* 86 — 스킬 24종(5열 x 5행)이 되면서 격자 내용이 패널(680)보다 길어진다.
+     패널 기하(1000x680 · top 387)는 레퍼런스 그대로 두고 **안쪽만 세로 스크롤**한다 —
+     .sk-tot(1085) · .sk-btn(1158) 의 y 가 밀리지 않으므로 04 레이아웃 점수에 영향이 없다.
+     .sk-gsp 는 절대배치 카드가 만들지 못하는 «스크롤 높이»를 세우는 스페이서다. */
+  .sk-gp{left:33px;top:387px;width:1000px;height:680px;border-radius:25px;background:#CBB397;
+    overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .sk-gp::-webkit-scrollbar{width:0;height:0}
+  .sk-gsp{position:relative!important;width:1px;pointer-events:none}
   /* 카드 170x171 · 열 pitch 190 · 행 pitch 220 · 패널 padding 35 */
   /* ⚠ 측정표 5-3 은 radius 42 를 **좌상단 코너에서만** 재고 위아래가 같다고 가정했는데
      레퍼런스는 위 42 · **아래 12** 다. 카드 5장(1행1·3열, 2행1열, 우하단 2곳)의 하단 코너를
@@ -7848,21 +7855,58 @@ const GRADE = [
   { n:'불멸', c:'#f0edd2', bg:'#2c2c3e', mul:26.0, ic:'♾️' }
 ];
 
-/* ---- 스킬 (최대 8개 장착) ---- */
+/* ---- 스킬 (최대 8개 장착) ----
+   작업 86(2026-08-26, 저장소 주인 지시) — **6등급 × 등급당 4종 = 24종.**
+   기존 13종은 id·등급·cd·m·발동 코드를 **한 글자도 바꾸지 않는다**(구 세이브 `S.own`·`S.eqSkill` 호환).
+   신설 11종(일반+2 · 고급+1 · 희귀+2 · 영웅+1 · 전설+2 · 신화+3)은 `t` 필드로 **기존 발동 타입을
+   파라미터만 다르게 재사용**한다 — `castGeneric()`(castSkill 의 default 분기) 하나가 전부 처리한다.
+     t:'proj'  투사체(k=그리기 종류 slash/shuri/ice · n 발수 · sp 속도 · spread 부채각 · ring 전방위 · pierce 가산)
+     t:'chain' 무작위 n명 즉발(bolt 재사용) · t:'area' 제자리 범위폭발(holy 재사용)
+     t:'buff'  자기 강화(bk 키 · bv 값 · bt 초) · `heal` 은 즉시 회복 비율(최대체력 대비)
+   `sup:1` = 보조(직접 피해 없음) — `stat.dps` 합산에서 제외한다(전투력 부풀림 방지).
+   등급 mul 은 `GRADE` 6단계 그대로 쓴다 — **85 의 7·8등급은 스킬에 적용하지 않는다.** */
 const SKILLS = [
+  /* ── 일반 ── */
   { id:'slash',  n:'검기',      g:0, ic:'🗡️', cd:0.85, m:1.00, d:'가장 가까운 적에게 검기를 1발 날린다' },
   { id:'shuri',  n:'표창 난사', g:0, ic:'✴️', cd:2.20, m:0.55, d:'8방향으로 표창을 뿌린다' },
+  { id:'stone',  n:'돌팔매',    g:0, ic:'🪨', cd:1.30, m:1.35, d:'묵직한 돌덩이를 던져 적을 꿰뚫는다',
+    t:'proj', k:'shuri', n:1, sp:470, pierce:1, col:'#cbb08a', life:1.6, hits:1 },
+  { id:'vigor',  n:'기합',      g:0, ic:'💢', cd:9.00, m:0.70, sup:1, d:'5초간 스킬 피해가 18% 증가한다',
+    t:'buff', bk:'atk', bv:0.18, bt:5.0 },
+  /* ── 고급 ── */
   { id:'multi',  n:'멀티 검기', g:1, ic:'🔱', cd:1.10, m:0.80, d:'부채꼴로 검기 여러 발을 발사' },
   { id:'orbit',  n:'회전검',    g:1, ic:'💫', cd:0.00, m:0.45, d:'주위를 도는 칼날 (지속)' },
   { id:'ice',    n:'얼음창',    g:1, ic:'❄️', cd:1.60, m:1.30, d:'적을 관통하고 둔화시킨다' },
+  { id:'mend',   n:'치유의 빛', g:1, ic:'💚', cd:11.00, m:0.75, sup:1, d:'체력을 12% 회복하고 6초간 재생이 크게 오른다',
+    t:'buff', bk:'regen', bv:1.20, bt:6.0, heal:0.12 },
+  /* ── 희귀 ── */
   { id:'aura',   n:'신성 오라', g:2, ic:'🔥', cd:0.00, m:0.55, d:'주위 적에게 지속 피해 (지속)' },
   { id:'bolt',   n:'연쇄 번개', g:2, ic:'⚡', cd:1.40, m:1.60, d:'무작위 적 3명에게 번개' },
+  { id:'arrow',  n:'꿰뚫는 화살', g:2, ic:'🏹', cd:1.50, m:1.15, d:'빠른 화살 2발이 적을 길게 관통한다',
+    t:'proj', k:'ice', n:2, sp:900, spread:0.13, pierce:6, col:'#ffe6a8', life:1.4, hits:2 },
+  { id:'haste',  n:'신속의 축복', g:2, ic:'🌀', cd:12.00, m:0.80, sup:1, d:'6초간 스킬 발동 속도가 30% 빨라진다',
+    t:'buff', bk:'rate', bv:0.30, bt:6.0 },
+  /* ── 영웅 ── */
   { id:'boom',   n:'화염구',    g:3, ic:'🔴', cd:2.00, m:2.40, d:'폭발하는 화염구를 던진다' },
   { id:'poison', n:'맹독 안개', g:3, ic:'☠️', cd:3.20, m:0.80, d:'바닥에 독 장판을 남긴다' },
   { id:'drain',  n:'흡혈의 검', g:3, ic:'🩸', cd:2.60, m:2.00, d:'피해를 주고 체력을 흡수' },
+  { id:'frost',  n:'서리 연쇄', g:3, ic:'🧊', cd:2.10, m:1.45, d:'무작위 적 4명을 얼려 둔화시킨다',
+    t:'chain', n:4, slow:0.50, col:'#a8e8ff', hits:4 },
+  /* ── 전설 ── */
   { id:'boomer', n:'부메랑',    g:4, ic:'🪃', cd:2.40, m:1.80, d:'나갔다 돌아오는 부메랑' },
   { id:'meteor', n:'운석 낙하', g:4, ic:'☄️', cd:4.00, m:5.00, d:'무작위 위치에 운석을 떨어뜨린다' },
-  { id:'holy',   n:'심판의 빛', g:5, ic:'🌟', cd:3.00, m:4.00, d:'주변 전체에 성스러운 폭발' }
+  { id:'gale',   n:'폭풍의 칼날', g:4, ic:'🌪️', cd:2.80, m:1.05, d:'전방위로 칼날 12개를 흩뿌린다',
+    t:'proj', k:'slash', n:12, ring:1, sp:560, pierce:2, col:'#c9ffe8', life:1.5, hits:12 },
+  { id:'ward',   n:'수호의 결계', g:4, ic:'🛡️', cd:14.00, m:1.40, sup:1, d:'체력을 15% 회복하고 7초간 받는 피해가 35% 줄어든다',
+    t:'buff', bk:'def', bv:0.35, bt:7.0, heal:0.15 },
+  /* ── 신화 ── */
+  { id:'holy',   n:'심판의 빛', g:5, ic:'🌟', cd:3.00, m:4.00, d:'주변 전체에 성스러운 폭발' },
+  { id:'lance',  n:'천벌의 창', g:5, ic:'🔻', cd:2.30, m:3.20, d:'심판의 창 3자루가 적을 모조리 관통한다',
+    t:'proj', k:'ice', n:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
+  { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:5.20, d:'아주 넓은 범위를 통째로 날려버린다',
+    t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2, hits:1 },
+  { id:'rage',   n:'광란',      g:5, ic:'😡', cd:16.00, m:2.60, sup:1, d:'8초간 스킬 피해 40% · 발동 속도 25% 증가',
+    t:'buff', bk:'atk', bv:0.40, bk2:'rate', bv2:0.25, bt:8.0 }
 ];
 
 /* ---- 장비 (무기 · 방패 · 목걸이) ---- */
@@ -8013,12 +8057,14 @@ const sumNeedExp = lv => 5 + (lv-1)*4;
 /* ---- 컬렉션 보너스 ---- */
 const COLL = {
   skill: { n:'스킬', list:SKILLS, tiers:[
-    { need:3,  n:'공격력 +10%',      f:b => b.atk *= 1.10 },
-    { need:5,  n:'공격속도 +8%',     f:b => b.rate *= 1.08 },
-    { need:7,  n:'공격력 +20%',      f:b => b.atk *= 1.20 },
-    { need:9,  n:'치명타 피해 +30%', f:b => b.cdmg += 0.30 },
-    { need:11, n:'공격력 +40%',      f:b => b.atk *= 1.40 },
-    { need:13, n:'모든 피해 +60%',   f:b => b.atk *= 1.60 } ]},
+    /* 86 ⑤ — 스킬 총수 13 → 24. need 를 같은 비율로 재배분(마지막 단계 = 전 종 수집 유지).
+       `S.coll.skill` 은 «받은 단계 수» 카운터라 구 세이브가 이미 받은 보너스는 그대로 유효하다(75 와 동일). */
+    { need:6,  n:'공격력 +10%',      f:b => b.atk *= 1.10 },
+    { need:10, n:'공격속도 +8%',     f:b => b.rate *= 1.08 },
+    { need:13, n:'공격력 +20%',      f:b => b.atk *= 1.20 },
+    { need:17, n:'치명타 피해 +30%', f:b => b.cdmg += 0.30 },
+    { need:20, n:'공격력 +40%',      f:b => b.atk *= 1.40 },
+    { need:24, n:'모든 피해 +60%',   f:b => b.atk *= 1.60 } ]},
   equip: { n:'장비', list:EQUIPS, tiers:[
     /* 85 ⑥ — 장비 총수 54 → 108(8등급 × 부위당 5,5,5,5,5,5,5,1). need 를 108 기준으로 재배분
        (마지막 단계 = 전 종 수집 유지). S.coll.equip 은 «받은 단계 수» 카운터라
@@ -8535,9 +8581,11 @@ const stat = {
     S.eqSkill.forEach(id => {
       const s = SK[id];
       if(!s) return;
+      if(s.sup) return;                 /* 86 — 보조(버프·회복)는 직접 피해가 없어 DPS 에 넣지 않는다 */
       const dmg = skillDmg(s);
       const hits = s.id === 'shuri' ? 8 : s.id === 'bolt' ? 3
-                 : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi')/2), 9) : 1;
+                 : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi')/2), 9)
+                 : s.hits || 1;         /* 86 — 신설 다발/연쇄 스킬의 발수 */
       d += s.cd > 0 ? dmg*hits/(s.cd/Math.max(0.35, this.rate/1.4)) : dmg*3;
     });
     S.eqPet.forEach(id => { const p = PT[id]; if(p) d += petDmg(p)/p.cd; });
@@ -8611,7 +8659,7 @@ const canPromote = () => { const r = nextRank(); return !!r && S.best >= r.stage
    ========================================================================== */
 const player = {
   x: WORLD.w/2, y: WORLD.h/2, r: 16, hp: 1, vx: 0, vy: 0,
-  aim: -Math.PI/2, flip: false, dead: 0, hitFx: 0, atkFx: 0, inv: 0,
+  aim: -Math.PI/2, flip: false, dead: 0, hitFx: 0, atkFx: 0, buffFx: 0, inv: 0,
   akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false
 };
 let enemies = [], shots = [], parts = [], nums = [], corpses = [], zones = [], booms = [], bolts = [];
@@ -8792,9 +8840,95 @@ function areaDamage(x, y, r, dmg, col){
   burst(x, y, col || '#ffd08a', 12, 220);
 }
 
+/* ---------------- 86 — 스킬 자기 강화 버프(전투 중에만 사는 휘발 상태) ----------------
+   저장하지 않는다(전투 시작 = 0). `bonus()` 캐시에 넣으면 전투력 표기가 초 단위로 요동치므로
+   **전투력(stat.dps·cp)에는 넣지 않고** 실제 피해·발동속도·피격·재생 계산에만 곱한다.
+   sbAtk() 스킬 피해 배수 · sbRate() 발동 속도 배수 · sbDef() 받는 피해 배수 · sbRegen() 재생 배수 */
+const sbuf = { atk:0, rate:0, def:0, regen:0 };
+function addSbuf(k, v, t){
+  if(!(k in sbuf)) return;
+  sbuf[k] = Math.max(sbuf[k], v);              /* 같은 버프 재발동은 «겹치기» 가 아니라 «갱신» */
+  sbufT[k] = Math.max(sbufT[k] || 0, t);
+}
+const sbufT = { atk:0, rate:0, def:0, regen:0 };
+function sbufTick(dt){
+  for(const k in sbufT){
+    if(sbufT[k] <= 0) continue;
+    sbufT[k] -= dt;
+    if(sbufT[k] <= 0){ sbufT[k] = 0; sbuf[k] = 0; }
+  }
+}
+function sbufClear(){ for(const k in sbufT){ sbufT[k] = 0; sbuf[k] = 0; } }
+const sbAtk   = () => 1 + sbuf.atk;
+const sbRate  = () => 1 + sbuf.rate;
+const sbDef   = () => 1 - sbuf.def;
+const sbRegen = () => 1 + sbuf.regen;
+
+/* ---------------- 86 — 신설 스킬 공용 발동기 (기존 타입 재사용, 파라미터만 다름) ---------------- */
+function castGeneric(s, dmg){
+  const px = player.x, py = player.y - 22;
+  switch(s.t){
+    case 'proj': {
+      const n = s.n || 1, ring = !!s.ring;
+      let base;
+      if(ring){
+        if(!nearest(px, py)) return false;
+        base = orbitAng*0.3;
+      }else{
+        const tg = nearest(px, py);
+        if(!tg) return false;
+        base = Math.atan2(tg.y - tg.r - py, tg.x - px);
+      }
+      const step = ring ? 6.283/n : (s.spread || 0);
+      for(let i=0;i<n;i++){
+        const a = ring ? base + i*step : base + (i-(n-1)/2)*step;
+        shots.push({ k:s.k, x:px, y:py, vx:Math.cos(a)*s.sp, vy:Math.sin(a)*s.sp, a,
+                     dmg, life:s.life || 1.3, pierce:stat.pierce + (s.pierce || 0),
+                     hit:[], col:s.col, spin:s.k === 'shuri' ? 0 : undefined, slow:s.slow });
+      }
+      if(s.k === 'slash') player.atkFx = 0.22;
+      return true;
+    }
+    case 'chain': {
+      let n = 0;
+      for(let i=0;i<(s.n||3);i++){
+        const list = enemies.filter(e => e.born >= 0.3);
+        if(!list.length) break;
+        const e = list[Math.floor(Math.random()*list.length)];
+        const crit = Math.random() < stat.crit;
+        bolts.push({ x1:px, y1:py, x2:e.x, y2:e.y - e.r, t:0, col:s.col });
+        if(s.slow) e.slow = s.slow;
+        hitEnemy(e, dmg*(crit?stat.cdmg:1), crit, 0, 0);
+        burst(e.x, e.y - e.r, s.col, 7, 190);
+        n++;
+      }
+      return n > 0;
+    }
+    case 'area': {
+      if(!nearest(px, py, (s.r || 190) + 120)) return false;
+      areaDamage(px, py, s.r || 190, dmg, s.col);
+      booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom',
+                   scale:s.scale || 3.4, alpha:0.85 });
+      cam.shake = Math.max(cam.shake, s.shake || 6);
+      return true;
+    }
+    case 'buff': {
+      /* 이미 걸려 있는 동안 다시 켜서 쿨을 낭비하지 않는다 — 남은 시간이 절반 넘게 남았으면 보류 */
+      if(sbufT[s.bk] > (s.bt || 0)*0.5) return false;
+      addSbuf(s.bk, s.bv, s.bt);
+      if(s.bk2) addSbuf(s.bk2, s.bv2, s.bt);
+      if(s.heal) player.hp = Math.min(stat.maxHp, player.hp + stat.maxHp*s.heal);
+      burst(px, py, s.bk === 'regen' ? '#8fffb0' : s.bk === 'def' ? '#9fd6ff' : '#ffd08a', 16, 180);
+      player.buffFx = 0.5;
+      return true;
+    }
+  }
+  return false;
+}
+
 /* ---------------- 스킬 발동 ---------------- */
 function castSkill(s){
-  const dmg = skillDmg(s);
+  const dmg = skillDmg(s) * sbAtk();
   const px = player.x, py = player.y - 22;
   switch(s.id){
     case 'slash': {
@@ -8897,14 +9031,16 @@ function castSkill(s){
       cam.shake = Math.max(cam.shake, 6);
       return true;
     }
+    /* 86 — 신설 11종은 전부 여기로 떨어진다(기존 13종의 분기는 위에서 그대로 처리됨) */
+    default: return castGeneric(s, dmg);
   }
-  return false;
 }
 
 /* ==========================================================================
    시뮬레이션
    ========================================================================== */
 function step(dt){
+  sbufTick(dt);                                  /* 86 — 스킬 자기 강화 버프 만료 */
   for(let i=spawnQ.length-1;i>=0;i--){
     spawnQ[i].delay -= dt;
     if(spawnQ[i].delay <= 0){
@@ -8922,13 +9058,15 @@ function step(dt){
     setAnim(player, 'knight', 'die', 8, false);
     if(player.dead <= 0){
       player.hp = maxHp; player.hitFx = 0; player.inv = 1.2;
+      sbufClear();                                      /* 86 — 부활하면 자기 강화 버프도 초기화 */
       burst(player.x, player.y - 20, '#7fd0ff', 28, 230);
       setAnim(player, 'knight', 'idle', 8, true);
       sfx('revive');                                    /* 78 — 부활 */
     }
   }else{
-    player.hp = Math.min(maxHp, player.hp + stat.regen*dt);
+    player.hp = Math.min(maxHp, player.hp + stat.regen*sbRegen()*dt);   /* 86 — 치유의 빛 */
     if(player.hitFx > 0) player.hitFx -= dt;
+    if(player.buffFx > 0) player.buffFx -= dt;
     if(player.atkFx > 0) player.atkFx -= dt;
     if(player.inv > 0) player.inv -= dt;
 
@@ -9001,7 +9139,7 @@ function step(dt){
     player.y = clamp(player.y + player.vy*dt, 30, WORLD.h-16);
 
     /* ---- 장착 스킬 자동 발동 ---- */
-    const rateMul = stat.rate/1.4;
+    const rateMul = stat.rate/1.4 * sbRate();   /* 86 — 신속의 축복·광란 */
     for(const id of S.eqSkill){
       const s = SK[id];
       if(!s || s.cd <= 0) continue;
@@ -9026,7 +9164,7 @@ function step(dt){
   if(skillEquipped('orbit') && has('orbit') && player.dead <= 0){
     orbitAng += dt*2.4;
     const s = SK.orbit;
-    const cnt = Math.min(2 + Math.floor(oLv('orbit')/2), 8), R = 78, od = skillDmg(s);
+    const cnt = Math.min(2 + Math.floor(oLv('orbit')/2), 8), R = 78, od = skillDmg(s) * sbAtk();
     for(let i=0;i<cnt;i++){
       const a = orbitAng + i*(6.283/cnt);
       const bx = player.x + Math.cos(a)*R, by = player.y - 22 + Math.sin(a)*R*0.75;
@@ -9049,7 +9187,7 @@ function step(dt){
     auraTick -= dt;
     if(auraTick <= 0){
       auraTick = 0.35;
-      const R = 92 + 6*oLv('aura'), d = skillDmg(SK.aura)*0.35;
+      const R = 92 + 6*oLv('aura'), d = skillDmg(SK.aura)*0.35*sbAtk();
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
         if(e.born < 0.3) continue;
@@ -9131,7 +9269,7 @@ function step(dt){
       setAnim(e, e.T.atlas, e.T.atk, 12, false);
       if(player.inv > 0) continue;
       player.inv = 0.4;
-      player.hp -= e.dmg * stat.defMul;
+      player.hp -= e.dmg * stat.defMul * sbDef();   /* 86 — 수호의 결계 */
       player.hitFx = 0.22;
       sfx('hit');                                       /* 78 — 플레이어 피격 */
       cam.shake = Math.min(9, cam.shake + 3.5);
@@ -13074,7 +13212,7 @@ function renderSkill(){
   }
   h += '</div>';
 
-  /* 3 보유 스킬 격자 5열 x 3행 */
+  /* 3 보유 스킬 격자 5열 — 86 으로 24종 = 5행(열 pitch 190 · 행 pitch 220 유지, 넘치면 안쪽 스크롤) */
   h += '<div class="sk-gp">';
   SKILLS.forEach((it, i) => {
     const own = has(it.id), on = skillEquipped(it.id), lv = own ? oLv(it.id) : 1;
@@ -13092,6 +13230,8 @@ function renderSkill(){
       +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
   });
+  /* 86 — 절대배치 카드만으로는 스크롤 높이가 서지 않으므로 스페이서로 내용 높이를 세운다 */
+  h += '<div class="sk-gsp" style="height:' + (35 + Math.ceil(SKILLS.length/5)*220) + 'px"></div>';
   h += '</div>';
 
   /* 7 총 보유 효과 — 전투력 계산과 같은 곱연산(1954행)으로 낸다 */
