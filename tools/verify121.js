@@ -149,6 +149,12 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   ok(txt.pill && Math.abs(txt.pill[0] - 92) <= 1 && Math.abs(txt.pill[1] - 121) <= 1, `보상 알약 rel ${txt.pill} = 92,121`);
   ok(txt.lb && Math.abs(txt.lb[0] - 134) <= 1 && Math.abs(txt.lb[1] - 243) <= 1, `라벨 rel ${txt.lb} = 134,243`);
   ok(txt.sp && Math.abs(txt.sp[0] - 84) <= 1 && Math.abs(txt.sp[1] - 277) <= 1, `값 알약 rel ${txt.sp} = 84,277`);
+  /* LESSONS 21-①·90-④ — `#dunw i,#dunw em,#dunw b` 리셋이 transform-origin 을 이기는 자리다.
+     스쿼시 축이 «발밑»(50% 100%)이 아니면 잉크가 위로 뜬다. */
+  const org = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc>.th>em')]
+    .map(e => getComputedStyle(e).transformOrigin));
+  ok(org.length === 6 && org.every(o => o === '200px 400px'),   /* em 상자 400×400 의 50% 100% */
+    `썸네일 transform-origin 이 발밑 200px 400px (${[...new Set(org)].join(' | ')})`);
   const hit = await p.evaluate(() => {
     const c = document.querySelector('#dunList .dnc'), r = c.getBoundingClientRect();
     const e = document.elementFromPoint(r.left + 250, r.top + 175);

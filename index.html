@@ -2425,7 +2425,11 @@
   .dnc>.th>em,.dnc.rd>.th>canvas{
     animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s),
               thSquash calc(var(--thb,4.3s)/5) ease-in-out infinite var(--thd,0s);
-    animation-play-state:paused;transform-origin:50% 100%}
+    animation-play-state:paused}
+  /* ⚠ LESSONS 21-①·90-④ 재발 지점: 위 `#dunw i,#dunw em,#dunw b` 리셋(1-0-1)이 `.dnc>.th>em`(0-3-1)의
+     `transform-origin` 을 이긴다. 스쿼시는 «발밑» 을 축으로 눌려야 하므로 id 로 되받는다.
+     캔버스(레이드)는 em 이 아니라 리셋에 안 걸리지만 같은 줄에 적어 둔다 — 둘이 갈라지면 또 어긋난다. */
+  #dunw .dnc>.th>em,#dunw .dnc.rd>.th>canvas{transform-origin:50% 100%}
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:11px;bottom:8px;overflow:hidden;
