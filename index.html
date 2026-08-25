@@ -6394,18 +6394,31 @@
      채움은 좌우 8 · 위 6 안쪽. 3회차엔 검정 외곽이 통째로 없어 실루엣 대비가 죽었다(비평 C②). */
   .rk-pod{background:#000}
   .rk-pod.p1{left:378px;top:449px;width:324px;height:243px}
-  .rk-pod.p2{left:50px;top:482px;width:328px;height:210px}
+  /* 8회차 — 2위 윗면은 «원근 평행사변형» 이다(남은 문제 1). ref 열스캔(near:91AFCB):
+     먼 모서리 x80..162 = ref 573 · x303..347 = ref 553(전이 구간 x266..303 은 방패에 가려 보이지 않는다),
+     가까운 모서리는 ref 603 에서 «평평»하다. 7회차까지의 «균일 45px» 는 두께뿐 아니라
+     가까운 모서리를 ref 603 → 617 로 14px 아래에 그리고 있었다.
+     그래서 상자를 위로 19px 넓히고(482→463) 검정 실루엣 자체를 기울인 뒤 윗면을 <b> 로 뗀다. */
+  .rk-pod.p2{left:50px;top:463px;width:328px;height:229px;
+    clip-path:polygon(4.268% 7.860%,95.732% 0,100% 100%,0 100%)}
   .rk-pod.p3{left:702px;top:471px;width:329px;height:221px}
+  .rk-pod>u,.rk-pod>b{position:absolute}
   .rk-pod>u{left:8px;right:8px;top:6px;bottom:0}
   .rk-pod.p1>u{clip-path:polygon(3.4% 0,96.6% 0,100% 100%,0 100%)}
-  .rk-pod.p2>u{clip-path:polygon(3.9% 0,96.1% 0,100% 100%,0 100%)}
+  .rk-pod.p2>u{top:50px;clip-path:polygon(3.81% 0,96.5% 0,100% 100%,0 100%)}
   .rk-pod.p3>u{clip-path:polygon(4.2% 0,95.8% 0,100% 100%,0 100%)}
-  .rk-pod.p1>u{background:linear-gradient(180deg,#FFDB61 0,#FFDB61 43px,#D07C36 43px,#D07C36 53px,
-    #D88B47 53px,#D88B47 76%,#C26829 76%)}
-  .rk-pod.p2>u{background:linear-gradient(180deg,#BCCCDB 0,#BCCCDB 45px,#48587C 45px,#48587C 60px,
-    #5A697E 60px,#5A697E 76%,#4A597A 76%)}
-  .rk-pod.p3>u{background:linear-gradient(180deg,#8A6A44 0,#8A6A44 49px,#432D15 49px,#432D15 71px,
-    #58422A 71px,#58422A 76%,#45301B 76%)}
+  /* 앞면은 «단일 톤» 이다 — ref 열스캔에서 가로줄 경계가 하나도 없다:
+     2위 x85·x345 → ref 604..774 가 #4A5978 한 덩어리(171px) · 1위 x410 → 702..773 #BC713A ·
+     3위 x990 → 640..774 #43311B. 7회차까지 그려 온 «상단테 / 굽» 하드 스톱 3개는 ref 에 없는 가짜
+     가로선이라 ③④ 의 격자 읽기를 깨뜨린다 → 부드러운 그라디언트로 교체(음영은 남기고 경계만 지움). */
+  .rk-pod.p1>u{background:linear-gradient(180deg,#FFDC62 0,#FFDC62 38px,#DC8A42 38px,#C67638 62%,#BB703A 100%)}
+  .rk-pod.p2>u{background:#4A5978}
+  .rk-pod.p3>u{background:linear-gradient(90deg,#332513 0,#432D15 26%,#452F17 100%)}
+  /* 2위 윗면 파라렐로그램 — 상자 (50,463) 328×76 기준.
+     먼 모서리 좌 (70.2,487) · 우 (357.8,469) / 가까운 모서리 (68.3,519)~(359.7,519) 프레임 절대좌표.
+     윗면 위의 검정 6px 띠는 .rk-pod 자기 배경이 clip-path 밖으로 드러나며 자동으로 생긴다. */
+  .rk-pod.p2>b{left:0;top:0;width:328px;height:76px;background:#91AFCB;
+    clip-path:polygon(6.159% 31.579%,93.841% 7.895%,94.421% 73.684%,5.579% 73.684%)}
   /* 아트 자리 — 단상 위 캐릭터+탈것 ≈290×300. bbox 를 정확히 차지시킨다(아트 자리 규칙) */
   /* 아트 자리 — ref 실측 bbox(`bbox … light>78`): 2위 x24..380·y239..564 / 1위 x386..694·y230..530 /
      3위 x700..1041·y232..552. 2회차의 «290×300 고정» 은 세로 −50%·가로 −33~46% 였다(비평 D②).
@@ -7315,7 +7328,7 @@
       <div class="rk-ch c2"><em id="rkCh2">🦊</em></div>
       <div class="rk-ch c1"><em id="rkCh1">🐲</em></div>
       <div class="rk-ch c3"><em id="rkCh3">🐺</em></div>
-      <div class="rk-pod p2"><u></u></div>
+      <div class="rk-pod p2"><u></u><b></b></div>
       <div class="rk-pod p1"><u></u></div>
       <div class="rk-pod p3"><u></u></div>
       <div class="rk-sh s2"><em>🥈</em></div>

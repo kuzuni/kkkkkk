@@ -46,7 +46,8 @@ const GEO = [
   ['.rk-tab.t2', 492, 2086, 188, 164],
   ['.rk-tab.t3', 685, 2086, 190, 164],
   ['.rk-pod.p1', 378, 449, 324, 243],
-  ['.rk-pod.p2', 50, 482, 328, 210],
+  ['.rk-pod.p2', 50, 463, 328, 229],   /* 8회차 — 윗면 원근 기울기를 담으려고 위로 19px 확장 */
+  ['.rk-pod.p2>b', 50, 463, 328, 76],
   ['.rk-pod.p3', 702, 471, 329, 221],
   ['.rk-mid', 0, 702, 1080, 1203],
   ['.rk-sep.e0', 195, 2086, 4, 164],
@@ -185,6 +186,65 @@ const GEO = [
     return ['NaN', 'undefined', 'null', 'Infinity'].filter((k) => t.includes(k));
   });
   ck(bad.length === 0, `랭킹 화면 텍스트에 ${bad.join(',')}`);
+
+  /* ---- 8회차: 시상대 윗면을 «실효 렌더값» 으로 잰다 (ROUTINE/LESSONS «게이트는 선언값을 읽지 마라»).
+     clip-path 는 getBoundingClientRect 에 안 잡히므로 박스 기하만으로는 평행사변형을 검증할 수 없다.
+     그래서 실제 캔버스를 찍어 «열마다 윗면 색이 몇 y 부터 몇 y 까지인가» 를 직접 센다.
+     기대값은 ref 열스캔(docs/measure/54-랭킹팝업.md §3-1a, 프레임 = ref y − 84). ---- */
+  await page.addStyleTag({ content: '#fxl{display:none!important}' });
+  await page.waitForTimeout(150);
+  const shot = (await page.locator('#app').screenshot()).toString('base64');
+  /* PNG 디코드는 크로미움 자신에게 시킨다 — npm 의존성 0 (pngjs 는 이 환경에 없다).
+     data: URL 은 캔버스를 오염시키지 않으므로 getImageData 가 그대로 된다. */
+  const probe = await page.evaluate(async (b64) => {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + b64; });
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    cv.getContext('2d').drawImage(img, 0, 0);
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    const W = cv.width;
+    const px = (x, y) => { const i = (W * y + x) << 2; return [d[i], d[i + 1], d[i + 2]]; };
+    const near = (c, hex, tol) => {
+      const r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), bl = parseInt(hex.slice(4, 6), 16);
+      return Math.abs(c[0] - r) <= tol && Math.abs(c[1] - g) <= tol && Math.abs(c[2] - bl) <= tol;
+    };
+    const span = (x, y0, y1, hex, tol) => {
+      let a = -1, b = -1;
+      for (let y = y0; y <= y1; y++) if (near(px(x, y), hex, tol)) { if (a < 0) a = y; b = y; }
+      return [a, b];
+    };
+    let bright = 0;
+    for (let y = 470; y <= 690; y++) if (near(px(990, y), '8A6A44', 24)) bright++;
+    return {
+      size: [cv.width, cv.height],
+      top2: [85, 150, 320, 345].map((x) => [x].concat(span(x, 455, 560, '91AFCB', 8))),
+      rim2: [[85, 487], [345, 469]].map(([x, y]) => [x, y].concat(px(x, y - 3))),
+      front2: span(85, 522, 686, '4A5978', 8),
+      gold1: span(440, 440, 520, 'FFDC62', 8),
+      bright3: bright
+    };
+  }, shot);
+  ck(probe.size[0] === 1080 && probe.size[1] === 2280, `캡처 크기 ${probe.size.join('x')} (기대 1080x2280)`);
+  /* 2위 윗면(#91AFCB) — 먼 모서리는 기울고 가까운 모서리는 프레임 518 에서 평평하다 */
+  const WANT2 = { 85: 487, 150: 483, 320: 471, 345: 469 };
+  for (const [x, a, b] of probe.top2) {
+    ck(a >= 0 && Math.abs(a - WANT2[x]) <= 3, `2위 윗면 먼 모서리 x${x} — 기대 ${WANT2[x]} · 실제 ${a}`);
+    ck(b >= 0 && Math.abs(b - 518) <= 3, `2위 윗면 가까운 모서리 x${x} — 기대 518(ref 603 − 84 − 1) · 실제 ${b}`);
+  }
+  /* 윗면 위에는 검정 실루엣 띠가 있어야 한다 */
+  for (const [x, y, r, g, b] of probe.rim2) {
+    ck(r < 70 && g < 70 && b < 70, `2위 윗면 위 검정 띠 x${x} y${y - 3} — 실제 rgb(${r},${g},${b})`);
+  }
+  /* 앞면은 단일 톤이라 «가로 경계» 가 없어야 한다 (ref 604..774 가 한 덩어리) */
+  ck(probe.front2[0] >= 0 && probe.front2[0] <= 525 && probe.front2[1] >= 684,
+    `2위 앞면 단일 톤 — 실제 ${probe.front2.join('..')} (기대 ≈521..686)`);
+  /* 1위 금색 윗면 — ref 538..577 → 프레임 454..493 */
+  ck(probe.gold1[0] >= 0 && Math.abs(probe.gold1[0] - 455) <= 3, `1위 윗면 먼 모서리 — 기대 455 · 실제 ${probe.gold1[0]}`);
+  ck(probe.gold1[1] >= 0 && Math.abs(probe.gold1[1] - 492) <= 3, `1위 윗면 가까운 모서리 — 기대 492(ref 577) · 실제 ${probe.gold1[1]}`);
+  /* 3위 — ref 에 밝은 슬래브가 없다(윗면·앞면 모두 짙은 갈색). 옛 #8A6A44 가 남아 있으면 실패 */
+  ck(probe.bright3 === 0, `3위에 ref 에 없는 밝은 슬래브가 ${probe.bright3}px 남아 있다`);
+
   ck(errs.length === 0, '콘솔 에러: ' + errs.join(' | '));
 
   console.log(`VERIFY54 ${pass}/${pass + fails.length}`);
