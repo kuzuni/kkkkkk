@@ -1077,10 +1077,12 @@
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
     animation:fxPlus .62s cubic-bezier(.2,.8,.3,1) both}
-  @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
-    18%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
-    34%{transform:translate(-50%,-10px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-62px) scale(1)}}
+  /* 위로 떠오르게 하면 알약이 화면 최상단이라 **HUD 숫자 위로 올라가 겹친다**(10회차 지적:
+     «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 **더 아래로** 흘리며 사라지게 한다. */
+  @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,-14px) scale(.7)}
+    18%{opacity:1;transform:translate(-50%,0) scale(1.06)}
+    34%{opacity:1;transform:translate(-50%,6px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,46px) scale(1)}}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}

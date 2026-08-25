@@ -132,7 +132,14 @@ async function ensureLoop(page){
   }, 1400);
 
   /* ── 씬 3: 강화 성공 (훈련 카드) ── */
-  await page.evaluate(() => { closeModal(); S.gold = 1e13; openTrain(); });
+  /* ⚠ `S.gold = 1e13` 자체가 «획득» 이라 재화 연출이 딸려 온다 — 그 «+10.0T» 플로터가 다음 씬의
+     기준 프레임까지 넘어가 «유령 텍스트» 로 오독된다(10회차 지적). 감시 기준값을 같이 맞춰 둔다. */
+  await page.evaluate(() => {
+    closeModal(); S.gold = 1e13;
+    fxSeen.gold = S.gold; fxDisp.gold = S.gold; fxAcc.gold = 0; fxHold.gold = 0;
+    document.querySelectorAll('#fxl .fx-plus, #fxl .fx-fly').forEach(e => e.remove());
+    openTrain();
+  });
   await page.waitForTimeout(500);
   await run('upg', () => {
     const c = document.querySelector('#trw [data-tr]');
