@@ -18,6 +18,9 @@ const out = path.resolve(__dirname, '../docs/review/02-r' + r + '.png');
   p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(1200);
+  /* 58 연출 모듈의 재화 파티클(#fxl)이 헤더·배너 위를 지나가 채점을 오염시킨다(53 이 같은 사고).
+     레퍼런스는 정지 화면이므로 캡처에서만 끈다 — 게임 코드는 건드리지 않는다. */
+  await p.addStyleTag({ content: '#fxl{display:none!important}' });
 
   await p.evaluate(() => {
     gmCloseAll(); closeModal();
