@@ -142,6 +142,60 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     else ok('롤링 8프레임 표시값 ' + r.uniq + '종 (' + r.a + ' → ' + r.seq[r.seq.length - 1] + ')');
   }
 
+  console.log('[8] 스킬 슬롯 — 발동 플래시 / 쿨 완료 글로우');
+  {
+    const r = await page.evaluate(async () => {
+      const s = document.querySelector('#slots .slot2');
+      if (!s) return { err: '슬롯 없음' };
+      const wait = () => new Promise(r => setTimeout(r, 40));
+      s.classList.add('ready'); await wait();
+      s.classList.remove('ready'); await wait();       /* 활성 → 대기 = 발동 */
+      const cast = s.classList.contains('jz-cast');
+      s.classList.add('ready'); await wait();          /* 대기 → 활성 = 쿨 완료 */
+      const cd = s.classList.contains('jz-cdok');
+      return { cast, cd };
+    });
+    if (r.err || !r.cast) { fails.push('슬롯 발동 플래시(.jz-cast) 없음'); console.log('  ✗ 슬롯 발동 플래시 없음'); }
+    else ok('슬롯 발동 → .jz-cast 부착');
+    if (!r.cd) { fails.push('슬롯 쿨완료 글로우(.jz-cdok) 없음'); console.log('  ✗ 슬롯 쿨완료 글로우 없음'); }
+    else ok('슬롯 쿨완료 → .jz-cdok 부착');
+  }
+
+  console.log('[9] 보스 — 등장 비네트+슬램 / 처치 흰 플래시');
+  {
+    const r = await page.evaluate(async () => {
+      const si = document.getElementById('stinfo'), L = document.getElementById('fxl');
+      const wait = () => new Promise(r => setTimeout(r, 40));
+      si.classList.remove('bfight', 'bfarm'); await wait();
+      si.classList.add('bfight'); await wait();
+      const vig = !!L.querySelector('.jz-vig'), slam = !!L.querySelector('.jz-slam');
+      si.classList.remove('bfight'); await wait();     /* bfarm 없이 빠짐 = 처치 */
+      const wf = !!L.querySelector('.jz-wf');
+      si.classList.remove('bfight', 'bfarm');
+      return { vig, slam, wf };
+    });
+    if (!r.vig) { fails.push('보스 등장 비네트(.jz-vig) 없음'); console.log('  ✗ 보스 비네트 없음'); } else ok('보스 등장 → 붉은 비네트');
+    if (!r.slam) { fails.push('보스 「BOSS」 리본 슬램(.jz-slam) 없음'); console.log('  ✗ 보스 슬램 없음'); } else ok('보스 등장 → 「BOSS」 슬램');
+    if (!r.wf) { fails.push('보스 처치 흰 플래시(.jz-wf) 없음'); console.log('  ✗ 처치 흰 플래시 없음'); } else ok('보스 처치 → 흰 플래시');
+  }
+
+  console.log('[10] 비활성 버튼 — 흔들림 6px + 어두워짐');
+  {
+    const r = await page.evaluate(async () => {
+      const b = document.getElementById('tutoBtn');
+      if (!b) return { err: '대상 없음' };
+      b.disabled = true;
+      const rc = b.getBoundingClientRect();
+      b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rc.x + rc.width / 2, clientY: rc.y + rc.height / 2 }));
+      await new Promise(r => setTimeout(r, 30));
+      return { sh: b.classList.contains('jz-sh'), dn: b.classList.contains('jz-dn'),
+               f: getComputedStyle(b).filter };
+    });
+    if (r.err || !r.sh) { fails.push('비활성 흔들림(.jz-sh) 없음'); console.log('  ✗ 비활성 흔들림 없음 ' + JSON.stringify(r)); }
+    else ok('비활성 누름 → .jz-sh (' + r.f.slice(0, 24) + ')');
+    if (r.dn) { fails.push('비활성인데 .jz-dn(정상 누름)도 붙었다'); console.log('  ✗ 비활성에 .jz-dn 동시 부착'); }
+  }
+
   if (errs.length) { fails.push('콘솔/페이지 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ')); }
   console.log('');
   console.log(fails.length ? 'VERIFY60 FAIL\n  - ' + fails.join('\n  - ') : 'VERIFY60 PASS');

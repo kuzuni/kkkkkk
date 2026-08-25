@@ -10073,6 +10073,10 @@ function jzTarget(t){
   let best = null;
   for(let el = t, i = 0; el && el.nodeType === 1 && i < 8; el = el.parentElement, i++){
     if(JZ_NOPRESS.has(el.id)) break;
+    /* `<button>` 과 «비활성» 표시가 붙은 요소는 그 자체가 컨트롤이다 — 바깥으로 더 나가면 안 된다.
+       (비활성 버튼 `#tutoBtn` 의 부모 `#tuto` 도 cursor:pointer 라, 바깥을 취하면 «살아 있는 배너»
+        가 잡혀 흔들림 대신 정상 누름이 나갔다 — 2회차에 실제로 났다) */
+    if(el.tagName === 'BUTTON' || jzDead(el)) return el;
     let c = ''; try { c = getComputedStyle(el).cursor; } catch(_){}
     if(c !== 'pointer' && el.tagName !== 'BUTTON'){ if(best) break; else continue; }
     const r = el.getBoundingClientRect();
