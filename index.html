@@ -1430,6 +1430,14 @@
     box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done{background:#E3D3BC}
+  /* 92 — [읽음 전체 삭제] 로 사라지는 행. 60 쥬시의 «접히며 사라짐»: 높이·여백·불투명도를 같이 0 으로
+     보낸다. (`.jz-*` 공용 이름은 60 구간이라 69 안에 지역 클래스로 둔다.) */
+  .ml-r.out{animation:mlOut .26s cubic-bezier(.4,0,.7,1) both;pointer-events:none;overflow:hidden}
+  @keyframes mlOut{
+    0%{opacity:1;transform:scaleY(1)}
+    35%{opacity:.55;transform:scaleY(1) translateX(26px)}
+    100%{opacity:0;transform:scaleY(.06) translateX(40px);height:0;margin-bottom:0;
+      box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
@@ -1498,12 +1506,20 @@
     border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0;
     display:flex;align-items:center;justify-content:center;left:333px;
     background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 92px,#B9EC77 92px 98px,#2F8F1E 98px)}
-  .ml-all.sub{left:0;
-    background:linear-gradient(180deg,#F4D08A 0 7px,#DDA758 7px,#C0873C 92px,#F0C782 92px 98px,#8E5F26 98px)}
+  /* 92 — 좌 = 「읽음 전체 삭제」 빨강(ref 면 #F26B6B 계열), 우 = 「일괄 읽기&수령」 초록.
+     녹색과 **같은 베벨 스톱**(0 7 / 92 98)을 쓰고 색만 붉은 계열로 바꿨다 — 두 버튼이 같은 부품이다. */
+  .ml-all.red{left:0;
+    background:linear-gradient(180deg,#FFB3B3 0 7px,#F58B8B 7px,#E24E4E 92px,#FFC0C0 92px 98px,#A32C2C 98px)}
   .ml-all:disabled{cursor:default;
     background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 92px,#D1D1D1 92px 98px,#757575 98px)}
-  .ml-all b{font-size:29px;color:#fff;-webkit-text-stroke:5px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
+  /* 라벨이 7~8 글자로 길어졌다(92) — 잉크 폭이 면(291)을 넘지 않게 자간을 죄고 글자를 살짝 좁힌다.
+     측정 §7 «라벨 잉크 h ÷ 버튼 h = .233» 은 세로 기준이라 font-size 는 그대로 29 를 지킨다. */
+  .ml-all b{font-size:29px;color:#fff;-webkit-text-stroke:5px #000;transform:scaleX(.93);
+    letter-spacing:-1.5px;white-space:nowrap;text-shadow:0 4px 0 #000}
   .ml-all:disabled b{color:#DFDFDF}
+  /* 92 — [읽음 전체 삭제] 로 목록이 비었을 때. 22 퀘스트 빈 상태와 같은 톤(어두운 패널 위 탄색 문구). */
+  .ml-empty{display:flex;align-items:center;justify-content:center;height:100%;
+    font-size:26px;font-weight:700;color:#8B7658;text-shadow:0 2px 0 rgba(0,0,0,.25)}
   /* ✕ — ref 는 팝업 «바닥 테두리 위에 걸쳐» 있다(중심 y = 팝업 바닥, 측정 §8). 지름 127 → 115.
      `#modal.ml69` 를 세로 플렉스로 돌려 상자 «다음» 항목으로 두고 음수 마진으로 반쯤 겹친다
      (`.mbox{overflow:hidden}` 안에 두면 잘리고, 헤더 라운드를 살리려면 그 클립을 풀 수 없다). */
@@ -10673,7 +10689,11 @@ function claimGuide(){
     popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>💎+' + fmt(gmDia(m)) + '</b> 획득!</p>'
       + '<p style="color:#8ff0a8;margin-top:10px">모든 가이드 미션 완료! 🎉</p>');
 }
+/* 92 — `S.mail[id]` 는 3상태다: **0/없음 = 미수령 · 1 = 수령 완료 · 2 = 삭제됨**(목록에서 제외).
+   `MAILS` 원본은 불변이라 «삭제» 는 렌더 필터일 뿐이고, 미수령(0)은 절대 지워지지 않는다. */
 const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
+const mailList = () => MAILS.filter(m => S.mail[m.id] !== 2);      /* 화면에 남는 우편 */
+const mailDelable = () => MAILS.filter(m => S.mail[m.id] === 1).length;   /* 지울 수 있는 = 수령 완료분 */
 /* ---- 69 우편함 — 보상 목록화 · 행별 수령 -------------------------------------
    레퍼런스 행은 «보상 썸네일 1칸 + 초록 요약(«햇병아리 외 2개»)» 이다. 우리 우편의 보상은
    골드·다이아·유물조각 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
@@ -10711,6 +10731,16 @@ function claimAllMail(){
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
   fxToast('우편 ' + n + '통 수령 — 💰 ' + fmt(g) + ' · 💎 ' + fmt(c) + (r ? ' · 🔮 ' + fmt(r) : ''));
+}
+/* 92 — [읽음 전체 삭제]. **수령 완료(1) 인 우편만** 2 로 넘겨 목록에서 뺀다.
+   미수령(0)은 손대지 않는다 — 보상이 사라지면 안 된다. 지운 id 를 돌려줘 연출이 그 행만 접게 한다. */
+function delReadMail(){
+  const ids = MAILS.filter(m => S.mail[m.id] === 1).map(m => m.id);
+  if(!ids.length) return ids;
+  ids.forEach(id => { S.mail[id] = 2; });
+  uiDirty = true; save();
+  fxToast('읽은 우편 ' + ids.length + '통 삭제');
+  return ids;
 }
 
 /* ==========================================================================
@@ -11572,17 +11602,21 @@ function mailRowHtml(m){
     + '</div>';
 }
 function openMail(){
-  const left = mailLeft();
+  const left = mailLeft(), list = mailList(), del = mailDelable();
   $('mtitle').textContent = '우편함';
-  $('mbox').innerHTML = '<div class="ml-pn">' + MAILS.map(mailRowHtml).join('') + '</div>'
+  $('mbox').innerHTML = '<div class="ml-pn">'
+    + (list.length ? list.map(mailRowHtml).join('') : '<div class="ml-empty">우편이 없습니다</div>') + '</div>'
     /* 안내 2줄 — 레퍼런스의 안내 밴드는 팝업 폭의 .90 을 채우는 «전폭 문구» 다(측정표 §6).
        짧은 캡션으로 두면 좌우에 베이지 여백만 남아 구성이 달라진다(비평 A-14 · B-M5). */
     + '<div class="ml-note"><i>수령한 보상은 즉시 인벤토리에 반영되며, 한 번 받은 우편은 다시 되돌릴 수 없습니다.</i>'
     +   '<i>수령하지 않은 우편은 사라지지 않으니 언제든 다시 확인하실 수 있습니다.</i></div>'
+    /* 92 — 좌 빨강 [읽음 전체 삭제] · 우 초록 [일괄 읽기&수령]. 닫기는 바닥 ✕(§8) 하나뿐이라
+       버튼 «닫기» 는 없앴다. 두 라벨 모두 **고정**이다(ref 는 상태로 글자를 바꾸지 않는다). */
     + '<div class="ml-btns">'
-    +   '<button class="ml-all sub" id="mailClose"><b>닫기</b></button>'
+    +   '<button class="ml-all red" id="mailDel"' + (del ? '' : ' disabled') + '>'
+    +     '<b>읽음 전체 삭제</b></button>'
     +   '<button class="ml-all" id="mailBtn"' + (left ? '' : ' disabled') + '>'
-    +     '<b>' + (left ? '전체 수령' : '수령 완료') + '</b></button>'
+    +     '<b>일괄 읽기&amp;수령</b></button>'
     + '</div>';
   const m = $('modal');
   m.classList.remove('sk8', 'rl16', 'q22');
@@ -11592,12 +11626,22 @@ function openMail(){
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
   const fxMail = (btn, el) => { if(btn){ fxCheck(btn); fxBurst(btn, '#FFE9A8', 10); }
     if(el){ fxAt(el); fxSolo(el); } fxHoldList(); fxFlush(); };
-  $('mailClose').onclick = closeModal;
   $('mailX').onclick = closeModal;
   $('mailBtn').onclick = () => {
     if(!mailLeft()) return;
     fxMail($('mailBtn'));
     fxThen(() => { claimAllMail(); openMail(); });
+  };
+  /* 92 — 삭제는 재화가 오가지 않으므로 58 비행은 없고, 지워지는 행만 접었다가(.out) 재렌더한다. */
+  $('mailDel').onclick = () => {
+    if(!mailDelable()) return;
+    const b = $('mailDel');
+    fxCheck(b); fxBurst(b, '#FFC0C0', 8);
+    const rows = MAILS.filter(m => S.mail[m.id] === 1)
+      .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
+      .map(el => el && el.closest('.ml-r')).filter(Boolean);
+    rows.forEach(r => r.classList.add('out'));
+    setTimeout(() => { delReadMail(); if(fxStillOpen('ml69')) openMail(); }, 260);
   };
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
     const row = b.closest('.ml-r');

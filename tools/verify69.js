@@ -107,7 +107,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       const rows = [...document.querySelectorAll('.ml-r')].map((e) => e.getBoundingClientRect().top - A.top);
       return { box: R('.mbox'), body: R('#mbox'), pn: R('.ml-pn'), r1: R('.ml-r'),
         i1: R('.ml-r .ml-i'), b1: R('.ml-r .ml-b'), note: R('.ml-note'),
-        btns: R('.ml-btns'), sub: R('.ml-all.sub'), all: R('#mailBtn'), x: R('#mailX'), rowTops: rows };
+        btns: R('.ml-btns'), sub: R('#mailDel'), all: R('#mailBtn'), x: R('#mailX'), rowTops: rows };
     });
     near('상자 폭', g.box.w, 898);
     near('상자 높이', g.box.h, 1303);
@@ -126,6 +126,42 @@ async function fresh(browser, w = 1080, h = 2280) {
     near('하단 버튼 2개 간격', g.all.x - (g.sub.x + g.sub.w), 27);
     near('하단 버튼 합 span', (g.all.x + g.all.w) - g.sub.x, 637);
     near('✕ 지름', g.x.w, 115);
+    /* 92 — 하단 버튼 2개의 «정체» 게이트: 좌 = 빨강 [읽음 전체 삭제] · 우 = 초록 [일괄 읽기&수령].
+       라벨은 상태로 바뀌지 않는 **고정 문구**이고, «닫기» 버튼은 없어야 한다(닫기는 바닥 ✕ 뿐). */
+    const bt = await page.evaluate(() => {
+      const hue = (el) => {
+        const bg = getComputedStyle(el).backgroundImage;
+        const m = [...bg.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].map((x) => x.slice(1, 4).map(Number));
+        if (!m.length) return null;
+        /* 면(가운데 스톱)의 색으로 판정한다 — 그라디언트 스톱 중 채도가 가장 큰 것 */
+        let best = m[0], bs = -1;
+        m.forEach((c) => { const s2 = Math.max(...c) - Math.min(...c); if (s2 > bs) { bs = s2; best = c; } });
+        return { r: best[0], g: best[1], b: best[2] };
+      };
+      const d = document.getElementById('mailDel'), a = document.getElementById('mailBtn');
+      /* 색은 «활성 상태» 의 면을 본다 — `:disabled` 는 두 버튼 모두 같은 회색이라 정체를 구분 못 한다.
+         (첫 진입에서 [읽음 전체 삭제] 는 지울 게 없어 비활성이다.) */
+      const liveHue = (el) => { const was = el.disabled; el.disabled = false;
+        const h = hue(el); el.disabled = was; return h; };
+      return { del: d && d.textContent.trim(), all: a && a.textContent.trim(),
+        delHue: d && liveHue(d), allHue: a && liveHue(a),
+        hasClose: !!document.getElementById('mailClose'),
+        delInk: d && d.querySelector('b').getBoundingClientRect().width,
+        allInk: a && a.querySelector('b').getBoundingClientRect().width };
+    });
+    bt.del === '읽음 전체 삭제' ? ok('좌 버튼 라벨 «읽음 전체 삭제»') : fail('좌 버튼 라벨 = ' + bt.del);
+    bt.all === '일괄 읽기&수령' ? ok('우 버튼 라벨 «일괄 읽기&수령»') : fail('우 버튼 라벨 = ' + bt.all);
+    !bt.hasClose ? ok('버튼 «닫기» 제거됨(닫기는 바닥 ✕ 뿐)') : fail('#mailClose 가 아직 있다');
+    (bt.delHue && bt.delHue.r > bt.delHue.g + 40 && bt.delHue.r > bt.delHue.b + 40)
+      ? ok(`좌 버튼 빨강 면 rgb(${bt.delHue.r},${bt.delHue.g},${bt.delHue.b})`)
+      : fail('좌 버튼이 빨강이 아니다 — ' + JSON.stringify(bt.delHue));
+    (bt.allHue && bt.allHue.g > bt.allHue.r + 40 && bt.allHue.g > bt.allHue.b + 40)
+      ? ok(`우 버튼 초록 면 rgb(${bt.allHue.r},${bt.allHue.g},${bt.allHue.b})`)
+      : fail('우 버튼이 초록이 아니다 — ' + JSON.stringify(bt.allHue));
+    /* 라벨 잉크가 버튼 «면»(305 − 테두리 7×2 = 291)을 넘으면 글자가 테두리를 뚫는다 */
+    (bt.delInk < 291 && bt.allInk < 291)
+      ? ok(`라벨 잉크 면 안 (좌 ${Math.round(bt.delInk)} · 우 ${Math.round(bt.allInk)} < 291)`)
+      : fail(`라벨 잉크가 면을 넘는다 — 좌 ${Math.round(bt.delInk)} · 우 ${Math.round(bt.allInk)}`);
     /* 비율 불변식 — 레퍼런스에서 그대로 가져온 값 */
     const rr = (n, got, want, tol) => near(n, +got.toFixed(4), want, tol);
     rr('패널 w ÷ 상자 w (ref .9241)', g.pn.w / g.box.w, 0.9241, 0.004);
@@ -252,7 +288,9 @@ async function fresh(browser, w = 1080, h = 2280) {
     const before = await page.evaluate(() => ({ g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail } }));
     const m0 = await page.evaluate(() => ({ ...MAILS[0] }));
     await page.evaluate(() => { document.querySelector('.ml-r [data-ml]').click(); });
-    await page.waitForTimeout(500);
+    /* 58 계약 — 행 수령의 재렌더는 `fxHoldList()` 의 FXHOLD(620ms) 가 풀린 «뒤» 다(`fxRenderLater`).
+       500ms 로 재면 아직 옛 행을 보고 «수령했는데 버튼이 활성» 이라고 오판한다(92 에서 잡음). */
+    await page.waitForTimeout(900);
     const after = await page.evaluate(() => ({
       g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail },
       saved: JSON.parse(localStorage.getItem(KEY) || '{}').mail || {},
@@ -278,7 +316,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       const id = b.dataset.ml; b.click(); b.click(); b.click();
       return MAILS.find((m) => m.id === id);
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(900);
     const dblPost = await page.evaluate(() => ({ g: S.gold, c: S.dia }));
     if (m1) {
       near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, drift);
@@ -292,6 +330,45 @@ async function fresh(browser, w = 1080, h = 2280) {
       return { hasNaN: /NaN|undefined/.test(t), gold: S.gold };
     });
     !hud.hasNaN ? ok('화면에 NaN/undefined 0건') : fail('화면에 NaN/undefined');
+
+    /* ---------- 4-b. 92 [읽음 전체 삭제] ---------- */
+    console.log('[4-b] 92 — 읽음 전체 삭제');
+    const delPre = await page.evaluate(() => ({
+      rows: document.querySelectorAll('.ml-r').length,
+      read: MAILS.filter((m) => S.mail[m.id] === 1).map((m) => m.id),
+      unread: MAILS.filter((m) => !S.mail[m.id]).map((m) => m.id),
+      dis: document.getElementById('mailDel').disabled,
+      g: S.gold, c: S.dia, r: S.relic
+    }));
+    delPre.read.length > 0 && delPre.unread.length > 0
+      ? ok(`삭제 검증 전제 — 읽음 ${delPre.read.length}통 · 미수령 ${delPre.unread.length}통`)
+      : fail('삭제 검증 전제 실패 — 읽음/미수령이 둘 다 있어야 한다');
+    !delPre.dis ? ok('읽음이 있으면 [읽음 전체 삭제] 활성') : fail('읽음이 있는데 비활성');
+    await page.evaluate(() => { document.getElementById('mailDel').click(); });
+    await page.waitForTimeout(700);
+    const delPost = await page.evaluate(() => ({
+      rows: [...document.querySelectorAll('.ml-r [data-ml]')].map((b) => b.dataset.ml),
+      state: { ...S.mail },
+      saved: JSON.parse(localStorage.getItem(KEY) || '{}').mail || {},
+      dis: document.getElementById('mailDel').disabled,
+      g: S.gold, c: S.dia, r: S.relic,
+      open: document.getElementById('modal').classList.contains('ml69')
+    }));
+    delPre.read.every((id) => !delPost.rows.includes(id))
+      ? ok(`읽은 ${delPre.read.length}통이 목록에서 사라짐`) : fail('읽은 우편이 아직 목록에 있다');
+    delPre.unread.every((id) => delPost.rows.includes(id))
+      ? ok(`미수령 ${delPre.unread.length}통은 그대로 남음`) : fail('미수령 우편이 지워졌다 — 보상 소실');
+    delPre.read.every((id) => delPost.state[id] === 2)
+      ? ok('삭제분 S.mail = 2') : fail('S.mail 이 2 로 안 바뀜');
+    delPre.read.every((id) => delPost.saved[id] === 2)
+      ? ok('삭제 상태가 세이브에 반영') : fail('삭제가 세이브에 반영 안 됨');
+    delPost.dis ? ok('삭제 후 [읽음 전체 삭제] 비활성(지울 게 없다)') : fail('지울 게 없는데 아직 활성');
+    (delPost.c === delPre.c && delPost.r === delPre.r)
+      ? ok('삭제는 재화를 건드리지 않는다') : fail('삭제인데 재화가 바뀌었다');
+    delPost.open ? ok('삭제 후에도 우편함이 열려 있다') : fail('삭제하니 팝업이 닫혔다');
+    /* 원본 MAILS 는 불변 */
+    const srcLen = await page.evaluate(() => MAILS.length);
+    srcLen === 5 ? ok('MAILS 원본 불변(5통)') : fail('MAILS 원본이 줄었다 — ' + srcLen);
 
     /* 전체 수령 */
     const leftBefore = await page.evaluate(() => mailLeft());
@@ -314,8 +391,26 @@ async function fresh(browser, w = 1080, h = 2280) {
     near('전체 수령 유물석', post2.r - pre2.r, sumRest.r, 0);
     post2.left === 0 ? ok('미수령 0통') : fail('아직 ' + post2.left + '통 남음');
     post2.allDis && post2.allDone ? ok('전 행 비활성 + .done') : fail('전 행 상태가 안 바뀜');
-    post2.btnDis && post2.btn === '수령 완료' ? ok('[전체 수령] → 비활성 «수령 완료»') : fail('하단 버튼 상태 = ' + post2.btn);
+    post2.btnDis && post2.btn === '일괄 읽기&수령'
+      ? ok('[일괄 읽기&수령] → 비활성 · 라벨 고정')
+      : fail('하단 버튼 상태 = ' + post2.btn + ' / disabled=' + post2.btnDis);
     post2.stillOpen ? ok('수령 후에도 우편함이 열려 있다(옛 popup() 덮어쓰기 회귀 없음)') : fail('수령 후 팝업이 덮였다');
+
+    /* 92 — 전부 읽은 뒤 다시 삭제하면 목록이 비고 «우편이 없습니다» 가 뜬다 */
+    await page.evaluate(() => { document.getElementById('mailDel').click(); });
+    await page.waitForTimeout(700);
+    const empt = await page.evaluate(() => {
+      const e = document.querySelector('.ml-empty');
+      return { rows: document.querySelectorAll('.ml-r').length, txt: e && e.textContent.trim(),
+        shown: !!(e && e.getBoundingClientRect().height > 10),
+        delDis: document.getElementById('mailDel').disabled,
+        allDis: document.getElementById('mailBtn').disabled,
+        allTxt: document.getElementById('mailBtn').textContent.trim() };
+    });
+    empt.rows === 0 ? ok('전부 삭제 → 행 0개') : fail('아직 ' + empt.rows + '행 남음');
+    (empt.shown && empt.txt === '우편이 없습니다') ? ok('빈 상태 문구 «우편이 없습니다»') : fail('빈 상태 문구 = ' + empt.txt);
+    empt.delDis && empt.allDis ? ok('빈 목록에서 두 버튼 모두 비활성') : fail('빈 목록인데 버튼이 활성');
+    empt.allTxt === '일괄 읽기&수령' ? ok('우 버튼 라벨 고정(«수령 완료» 로 안 바뀜)') : fail('우 버튼 라벨 = ' + empt.allTxt);
 
     /* 새로고침 후에도 유지 */
     await page.reload();
@@ -323,20 +418,14 @@ async function fresh(browser, w = 1080, h = 2280) {
     const persisted = await page.evaluate(() => mailLeft());
     persisted === 0 ? ok('새로고침 후에도 수령 상태 유지') : fail('새로고침 후 미수령 ' + persisted + '통으로 되돌아감');
 
-    /* 닫기 2종 */
-    await page.evaluate(() => openMail());
-    await page.waitForTimeout(250);
-    await page.evaluate(() => { document.getElementById('mailClose').click(); });
-    await page.waitForTimeout(200);
-    let closed = await page.evaluate(() => !document.getElementById('modal').classList.contains('on')
-      && !document.getElementById('modal').classList.contains('ml69'));
-    closed ? ok('[닫기] 로 닫힘 + ml69 해제') : fail('[닫기] 가 안 닫힌다');
+    /* 92 — 닫기 경로는 바닥 ✕ 하나뿐이다 */
     await page.evaluate(() => openMail());
     await page.waitForTimeout(250);
     await page.evaluate(() => { document.getElementById('mailX').click(); });
     await page.waitForTimeout(200);
-    closed = await page.evaluate(() => !document.getElementById('modal').classList.contains('on'));
-    closed ? ok('✕ 로 닫힘') : fail('✕ 가 안 닫힌다');
+    let closed = await page.evaluate(() => !document.getElementById('modal').classList.contains('on')
+      && !document.getElementById('modal').classList.contains('ml69'));
+    closed ? ok('✕ 로 닫힘 + ml69 해제') : fail('✕ 가 안 닫힌다');
     /* 다른 모달을 열면 ml69 가 남지 않는다 */
     await page.evaluate(() => { openMail(); if (typeof openQuest === 'function') openQuest(); });
     await page.waitForTimeout(300);
