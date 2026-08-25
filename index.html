@@ -2924,7 +2924,7 @@
   /* 프레임이 짧은 기기(4:3 → #app 1600)에서는 1469 가 안 들어간다 → max-height 로 눌리고
      본문이 스크롤한다. 눌리지 않는 한 높이는 실측 1469 그대로다. */
   .wm{position:relative;flex:none;width:898px;height:1469px;max-height:100%;
-    background:#564438;border:7px solid #000;border-radius:42px;box-sizing:border-box}
+    background:#564438;border:8px solid #000;border-radius:42px;box-sizing:border-box}
   .wm>*{position:absolute}
 
   /* 타이틀바 ref y487~578 → 박스기준 top 9, 높이 92. 상단 5px 만 밝은 톤 */
@@ -2935,9 +2935,9 @@
     -webkit-text-stroke:9px #000;paint-order:stroke fill}
 
   /* 본문 — ref x111~968 / y579~1925 → 박스기준 left 13, top 94, 858x1347 */
-  .wm-fr{left:9px;top:94px;right:9px;bottom:9px;border:solid #46382D;border-width:0 4px 4px;
+  .wm-fr{left:8px;top:93px;right:8px;bottom:8px;border:solid #46382D;border-width:0 4px 4px;
     border-radius:0 0 34px 34px;box-sizing:border-box;pointer-events:none;z-index:4}
-  .wm-body{left:13px;top:94px;right:13px;bottom:9px;background:#F0D9BA;
+  .wm-body{left:12px;top:93px;right:12px;bottom:8px;background:#F0D9BA;
     border-radius:0 0 30px 30px;overflow-x:hidden;overflow-y:auto;
     -webkit-overflow-scrolling:touch;
     box-shadow:inset 1px 0 0 #887662,inset -1px 0 0 #887662,inset 0 -1px 0 #887662}
@@ -3009,7 +3009,8 @@
   .wm-tb .v2{left:542px;width:183px}
 
   /* 5 아이템 그리드 — 카드 148x158, pitch 170x190, 첫 카드 패널기준 (10,32) */
-  .wgc{position:absolute;width:148px;height:158px;border:5px solid #000;border-radius:35px;
+  .wgc{position:absolute;width:148px;height:158px;border:5px solid #000;
+    border-radius:35px 35px 10px 10px;
     box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
     overflow:hidden;cursor:pointer}
   .wgc.eq{border-color:#134E52;background:var(--ge);box-shadow:inset 0 0 0 6px #35DCEE}
@@ -3025,13 +3026,15 @@
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
     text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6);
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+    -webkit-text-stroke:4px #000;paint-order:stroke fill}
   /* 장착 중 라벨 — 카드상단 +58 */
   .wgc .eqt{left:0;right:0;top:53px;height:32px;line-height:32px;text-align:center;
-    font-size:30px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
-  /* 미보유 자물쇠 49x55, 카드상단 +94 — 이모지 대신 CSS 로 그려 흰 단색 글리프에 맞춘다 */
+    font-size:27px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+  /* 미보유 자물쇠 49x55, **카드상단 +43** — 이모지 대신 CSS 로 그려 흰 단색 글리프에 맞춘다.
+     5회차: +94 로 잡혀 있어 하단 0/N 바가 자물쇠의 55% 를 덮고 있었다(ref 실측 카드기준 43,
+     캡처 94 — 51px 아래). 테두리 5px 안쪽 기준이므로 top = 43 − 5 = 38. */
   .wgc.lk>.ic,.wgc.lk>.lv{opacity:.35}
-  .wgc .lock{left:50%;top:89px;width:49px;height:55px;margin-left:-25px}
+  .wgc .lock{left:50%;top:38px;width:49px;height:55px;margin-left:-25px}
   .wgc .lock::before{content:'';position:absolute;left:11px;top:0;width:27px;height:31px;
     border:7px solid #fff;border-bottom:0;border-radius:14px 14px 0 0;box-sizing:border-box}
   .wgc .lock::after{content:'';position:absolute;left:0;top:22px;width:49px;height:33px;
@@ -3052,7 +3055,7 @@
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
   .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:7px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
-    background:linear-gradient(180deg,#D3D3D3 0 9px,#A8A8A8 11px,#8A8A8A 101px,
+    background:linear-gradient(180deg,#A8A8A8 0 11px,#8A8A8A 101px,
       #D3D3D3 101px 107px,#757575 107px 115px,#000 115px)}
   /* 4회차 — 버튼 «안쪽 밝은 링» 이 좌·우에서 통째로 빠져 있었다(두 비평가 독립 지적, 자체 단면으로 확인).
      ref y1828 가로단면: 검정 248~255 → **밝은회색(211) 256~262 = 7px** → 채움(152) 264~.
@@ -3077,17 +3080,18 @@
   /* 4회차 — 팔이 20% 얇았다. ref 행 프로파일을 직접 뜨면 셰브런의 «바깥 모서리» 가 꼭짓점이 아니라
      x56 에서 시작하는 **평평한 윗변**(폭 7px)이고, 안쪽 절개는 우리 것보다 얕고 세로로 길다:
        바깥변  ref x = 56 − 1.037y  (y0 에서 56 → y54~57 에서 0)   ← 우리 것은 63 − 1.086y 라 6px 우측
-       안쪽변  ref (62,y42) → (41,y66) 기울기 −0.875 → 대칭화하면 꼭짓점 x48.5 · 절개 y42~74
-     → 평평한 윗변 89% · 절개 꼭짓점 77% · 절개 y 36.5~63.5% 로 다시 그린다.
-     검산: 잉크 3256 → 3833 (ref 3718 은 JPEG 번짐 포함이라 상한), y36 가로런 40 → 42 (ref 44),
-     정점행 가로런 43 → 48.5 (ref 실효 49 — ref 실측 54 는 절개가 9px 아래로 치우친 탓이다).
+       안쪽변  ref (63,y41) → (41,y66) → (63,y92) — **절개 꼭짓점이 정점보다 9px 아래**다(좌·우 화살표 동일)
+       정점    ref 는 뾰족한 점이 아니라 **y54~62 의 평평한 좌변**이다(윗변과 같은 잘림)
+     → 이 셋을 그대로 박는다. 대칭화(5회차 전반)는 y48 가로런이 47 로 ref 52 에 못 미쳐 되돌렸다.
+     검산(가로런 y24/36/48): ref 33/44/52 · 4회차전 27/40/43 · 대칭 31/42/47 · **비대칭 32/44/51**.
      ref 는 흰 글리프 바깥에 **검정 외곽선 4px**(x10~13, 흰 잉크는 x14 부터)이 있는데 측정표의
      bbox 63x116 은 «흰 잉크» 기준이다 → 외곽선은 bbox **바깥**에 그린다(inset −4px 레이어). */
-  .wm-ar{position:absolute;top:667px;width:63px;height:116px;cursor:pointer}
-  .wm-ar.l{left:-84px}
-  .wm-ar.r{left:905px}
+  .wm-ar{position:absolute;top:666px;width:63px;height:116px;cursor:pointer}
+  .wm-ar.l{left:-85px}
+  .wm-ar.r{left:904px}
   .wm-ar::before,.wm-ar::after{content:'';position:absolute;
-    clip-path:polygon(89% 0,0 50%,89% 100%,100% 100%,100% 63.5%,77% 50%,100% 36.5%,100% 0)}
+    clip-path:polygon(89% 0,0 46.5%,0 53.5%,89% 100%,100% 100%,
+      100% 79.3%,65% 56.9%,100% 35.3%,100% 0)}
   .wm-ar::before{inset:-4px;background:#000}
   .wm-ar::after{inset:0;background:#fff}
   .wm-ar.r::before,.wm-ar.r::after{transform:scaleX(-1)}
