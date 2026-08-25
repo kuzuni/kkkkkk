@@ -189,6 +189,46 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(imp.sparkTot >= 3 && imp.sparkBack === imp.sparkTot,
      'impactFx 스파크가 전부 진행 방향 «반대»로 튄다 (' + imp.sparkBack + '/' + imp.sparkTot + ')');
   ok(imp.critRings >= 2, '치명타는 링 2겹 (실측 ' + imp.critRings + ' · 크리 숫자 ' + imp.critSeen + '개)');
+  /* 1회차 비평 ④ 회귀 방지 — 링이 «투사체가 멈춘 자리»(적 중심 밖 e.r+13)에 찍히면 안 된다 */
+  const anchor = await p.evaluate(() => {
+    window.__fx.setup('slash', 4, 70);
+    let d = -1, er = 0;
+    for (let i = 0; i < 150 && d < 0; i++) {
+      const r0 = rings.length;
+      step(1/60);
+      if (rings.length > r0) {
+        const r = rings[r0];
+        let best = 1e9;
+        for (const e of enemies) {
+          const dx = r.x - e.x, dy = r.y - (e.y - e.r);
+          best = Math.min(best, Math.hypot(dx, dy));
+          er = e.r;
+        }
+        d = best;
+      }
+      window.__fx.keepAlive();
+    }
+    return { d: Math.round(d), er: Math.round(er) };
+  });
+  ok(anchor.d >= 0 && anchor.d <= anchor.er + 6,
+     '임팩트 링이 적 몸통 중심에 정렬 — 중심 거리 ' + anchor.d + 'px ≤ 적 반경 ' + anchor.er + '+6px');
+  /* 1회차 비평 ①② 회귀 방지 — 80ms 캡처에서 «1프레임 반짝» 이 되지 않을 만큼 수명이 있는가 */
+  const lifes = await p.evaluate(() => {
+    rings.length = 0; parts.length = 0;
+    boomFx(100, 100, 130, '#ffb45c', false);
+    const main = Math.max.apply(null, rings.map(r => r.life));
+    const dl = Math.min.apply(null, rings.map(r => r.t));      /* 가장 늦게 켜지는 링의 지연(음수) */
+    rings.length = 0;
+    impactFx(100, 100, 300, 0, '#fff', false, 0);
+    const imp = Math.max.apply(null, rings.map(r => r.life));
+    const dbg = parts.filter(q => q.gy);
+    return { main, dl: Math.round(-dl*100)/100, imp,
+             dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
+  });
+  ok(lifes.imp >= 0.24 && lifes.main >= 0.40,
+     '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
+  ok(lifes.dl >= 0.16, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.16 (한 프레임에 겹쳐 보이지 않는다)');
+  ok(lifes.dbgMin >= 2.6, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 2.6 («보이지 않는 점» 회귀 방지)');
 
   /* ---------------- [4] 폭발·충격파 ---------------- */
   console.log('[4] 폭발 · 충격파');
