@@ -2076,7 +2076,8 @@
      ========================================================================== */
   .shp-list.coin{padding-top:0}
   /* 높이 1809(ref 구간) → 3066: 아래로 44 다이아 상품 5칸 + 마일리지 패널이 붙는다 */
-  .cn-wrap{position:relative;width:1080px;height:3066px}
+  /* 작업 68 — §9 유물석 교환(리본 3084 + 카드 3270~3579) 이 붙어 3066 → 3636 */
+  .cn-wrap{position:relative;width:1080px;height:3636px}
   .cn-wrap *{box-sizing:border-box}
   .cn-wrap>*{position:absolute}
 
@@ -2237,6 +2238,14 @@
   .cn-cd>.cp>i{position:absolute;left:0;right:0;top:7px;text-align:center;color:#fff;
     font-size:25px;line-height:28px;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap;transform:scaleX(.9)}
+
+  /* 작업 68 — §9 유물석 교환 카드. 구버전 패널 상점의 «🔮 유물석 교환소» 를 그대로 옮긴 것으로,
+     §5 광고 상품·§7 다이아와 **같은 격자(x111/401/691 · 278×309)** 를 쓴다. 색만 청록 계열로 구분한다. */
+  .cn-cd.rel>.bg{background:linear-gradient(180deg,#4FD6EE 0,#4FD6EE 62px,#1F93B4 219px,
+    #17758F 219px,#0F5A70 295px)}
+  .cn-cd.rel>.pn>em{font-size:104px}
+  /* 수량이 «×10,000» 까지 길어지므로 다이아 카드와 같은 우측 앵커 */
+  .cn-cd.rel>.qt{left:auto;right:14px;transform-origin:100% 50%}
 
   /* ② 마일리지 패널 — §6 배너와 같은 규격(x66 948×h, r20, 검정5 + 림7)의 보라 판 */
   .cn-ml{left:66px;top:2773px;width:948px;height:236px;border-radius:20px;border:5px solid #000;
@@ -5400,7 +5409,7 @@
     <!-- 작업 50 — 코스튬(기존 «아바타» 기능 이관). 07/26 과 같은 바닥 시트 -->
     <div class="body" id="bCos"></div>
     <div class="body" id="bRel"></div>
-    <div class="body" id="bShop"></div>
+    <!-- 작업 68 — 구버전(파란 스킨) 상점 배너 패널 #bShop 폐기. 상점 탭은 항상 10 상점 페이지(#shopw) 다 -->
     <div class="body" id="bDun"></div>
     <div class="body" id="bSt"></div>
   </div>
@@ -6564,14 +6573,7 @@ const EXCHANGE = [
   { dia:80000, rel:10000 }
 ];
 
-/* ---- 상점: 다이아 패키지 (데모 · 실제 결제 미연동) ---- */
-const PACKS = [
-  { id:'p1', n:'다이아 5만',   dia:50000,   won:3300 },
-  { id:'p2', n:'다이아 20만',  dia:200000,  won:12000 },
-  { id:'p3', n:'다이아 60만',  dia:600000,  won:33000 },
-  { id:'p4', n:'다이아 200만', dia:2000000, won:110000, hot:true },
-  { id:'p5', n:'다이아 1000만',dia:10000000,won:520000 }
-];
+/* 작업 68 — 구버전 `PACKS`(다이아 패키지 데모)는 폐기했다. 다이아 판매는 `DIA_PACKS`(작업 44) 가 유일한 출처다. */
 
 /* ---- 적 ---- */
 const ENEMY_COUNT = 50;
@@ -8801,12 +8803,8 @@ $('dclNx').addEventListener('click', e => {
   closeDunClear();
   challengeDungeon(d);
 });
-function buyPack(p){
-  S.dia += p.dia; S.cnt.paid += p.won;
-  uiDirty = true; save();
-  popup('💎 구매 완료 (데모)', '<p><b>' + p.n + '</b><br>다이아 <b>💎+' + fmt(p.dia) + '</b><br>'
-    + '<span style="font-size:21px;color:#7d8bad">※ 실제 결제는 연동되지 않은 데모입니다.</span></p>');
-}
+/* 작업 68 — `buyPack()` 폐기. 다이아 지급 경로는 `grantDiaPack()`(작업 44) 하나뿐이다.
+   덤으로 `S.cnt.paid` 의 의미가 «누적 원화»(구) / «결제 횟수»(신) 로 갈리던 것도 «횟수» 로 정리됐다. */
 function buyAvatar(a){
   if(S.avatars[a.id]){ S.avatar = a.id; uiDirty = true; save(); return; }
   if(S.dia < a.cost){ popup('💎 다이아 부족', '<p>다이아가 <b>💎' + fmt(a.cost - S.dia) + '</b> 더 필요합니다.</p>'); return; }
@@ -9429,34 +9427,11 @@ $('dgdw').onclick = e => { if(e.target === $('dgdw')) closeDunDetail(); };
 /* ---- 상점 탭 ---- */
 /* 작업 50 — «👤 아바타» 섹션은 **50 코스튬 시트로 이관**해 여기서 삭제했다.
    구버전 진입점을 남기면 «새 화면을 우회하는 경로» 가 된다(LESSONS 57-①). */
-function renderShop(){
-  let h = '<div class="sect"><h3><span>🔮 유물석 교환소</span><em>다이아 → 유물석</em></h3>'
-    + '<p>보유 유물석 <b data-cur="relic">🔮' + fmt(S.relic) + '</b> · 유물 소환에 사용됩니다.</p><div class="row2" style="margin-top:12px">'
-    + EXCHANGE.map(x => '<button class="gbtn purple" data-ex="' + x.dia + '"' + (S.dia >= x.dia ? '' : ' disabled')
-        + '>🔮 ' + fmt(x.rel) + '<small>💎 ' + fmt(x.dia) + '</small></button>').join('') + '</div></div>'
-    + '<div class="sect"><h3><span>💎 다이아 상점</span><em>데모</em></h3>'
-    + '<p>※ 실제 결제는 연동되지 않은 <b>데모</b>입니다. 버튼을 누르면 다이아가 즉시 지급됩니다.</p></div>';
-  PACKS.forEach(p => {
-    h += '<div class="li"' + (p.hot ? ' style="border-color:#a9822e"' : '') + '>'
-      +  '<div class="lt">💎 ' + p.n + (p.hot ? ' <span style="color:#ff6b7f;font-size:20px">HOT</span>' : '') + '</div>'
-      +  '<div class="lf"><span>' + fmt(p.dia) + ' 다이아</span>'
-      +  '<button class="mini gold" data-pack="' + p.id + '">₩' + p.won.toLocaleString() + '</button></div></div>';
-  });
-  h += '<div class="sect"><h3>📈 누적 결제 (데모)</h3><p>₩<b>' + S.cnt.paid.toLocaleString() + '</b></p></div>';
-  setBody('bShop', h);
-}
-$('bShop').addEventListener('click', e => {
-  const p = e.target.closest('[data-pack]');
-  if(p){ buyPack(PACKS.find(x => x.id === p.dataset.pack)); return; }
-  const x = e.target.closest('[data-ex]');
-  if(x){
-    const ex = EXCHANGE.find(v => v.dia === +x.dataset.ex);
-    if(S.dia < ex.dia){ popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); return; }
-    S.dia -= ex.dia; S.relic += ex.rel; uiDirty = true; save();
-    popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물석 <b>🔮' + fmt(ex.rel) + '</b></p>');
-    return;
-  }
-});
+/* 작업 68 — 구버전(파란 스킨) 상점 패널 `renderShop()` · `#bShop` 클릭 핸들러 폐기.
+   다이아 패키지(`PACKS`/`buyPack`)는 10 상점 «재화» 탭의 `DIA_PACKS` 로 이미 대체됐고(작업 44),
+   «👤 아바타» 는 코스튬 탭으로 이관됐다(작업 50). 유일하게 대체물이 없던
+   «🔮 유물석 교환소» 는 `renderCoinPage()` §9 로 옮겼다 — `EXCHANGE` 데이터는 한 줄도 안 바꿨다.
+   (LESSONS 57-① «신규 화면이 구버전을 대체하면 구버전 경로는 그때 지운다») */
 
 /* ---- 정보 탭 ---- */
 function renderSt(){
@@ -10195,14 +10170,15 @@ function renderCoinPage(list){
             + '<u class="lab">받기</u><u class="cnt">(' + left + '/' + a.cap + ')</u></div>')
       +  '<div class="fr"></div></div>';
   });
-  /* §6 평생 광고 제거 배너 — [이동] 은 기존 다이아·아바타·유물석 교환 상점(패널)으로 보낸다 */
+  /* §6 평생 광고 제거 배너 — 작업 68: [이동] 은 구버전 패널 상점이 아니라
+     **같은 페이지의 §7 다이아 상품** 으로 스크롤한다(구 UI 진입점 폐기). */
   h += '<div class="cn-a2"><em>🎬</em><div class="no">🚫</div></div>'
     + '<div class="cn-nt" style="top:1417px"></div><div class="cn-nt" style="top:1480px"></div>'
     + '<div class="cn-nt" style="top:1543px"></div>'
     + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
     + '<div class="cn-mv" id="cnMove"><i>이동</i></div>'
     /* §7 다이아 상품 리본 (여기서부터 아래는 레퍼런스에 없는 «우리 게임 설계» — 작업 44) */
-    + '<div class="cn-rb" style="top:1698px;--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
+    + '<div class="cn-rb" id="cnDiaRb" style="top:1698px;--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>다이아 상품</i></div>';
   /* §7-1 다이아 판매 카드 5칸 — 열 x111/401/691, 행 local 1884/2203 (§5 와 같은 격자) */
   DIA_PACKS.forEach((p, i) => {
@@ -10225,13 +10201,44 @@ function renderCoinPage(list){
     +   '<div class="ct">' + mil + ' / ' + MILE_NEED + '</div>'
     +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
     +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → 💎 ' + fmt(MILE_DIA) + '</div>'
-    +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>'
-    + '</div>';
+    +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
+  /* §9 유물석 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물석 교환소» 이관.
+     `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물석은 14/15 유물 소환의 재화라
+     대체 획득처가 광고 상품뿐이었으므로 폐기하지 않고 옮긴다. */
+  h += '<div class="cn-rb" style="top:3084px;--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물석 교환</i></div>';
+  EXCHANGE.forEach((x, i) => {
+    const px = [111, 401, 691][i % 3];
+    h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px;--fs:35.5px;--sx:.95'
+      +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5">'
+      +  '<div class="bg"></div><div class="hd"><i>유물석</i></div>'
+      +  '<div class="pn"><em>🔮</em></div>'
+      +  '<div class="qt">×' + fmt(x.rel) + '</div>'
+      +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">💎 ' + fmt(x.dia) + '</u></div>'
+      +  '<div class="fr"></div></div>';
+  });
+  h += '</div>';
   list.innerHTML = h;
 }
 $('shopList').addEventListener('click', e => {
-  if(e.target.closest('#cnMove')){       /* 기존 다이아 패키지·유물석 교환소 보존 진입점 (아바타는 작업 50 으로 코스튬 탭 이관) */
-    closeShopPage(); goTab('shop', true); return;
+  /* 작업 68 — 구버전 패널 상점으로 떨어지던 [이동]. 이제 같은 페이지의 §7 다이아 상품으로 스크롤한다.
+     offsetParent 에 의존하지 않도록 rect 차이로 목적지를 잡는다. */
+  if(e.target.closest('#cnMove')){
+    const rb = $('cnDiaRb'), lw = $('shopList');
+    if(rb && lw) lw.scrollTo({ top: lw.scrollTop + rb.getBoundingClientRect().top
+      - lw.getBoundingClientRect().top - 40, behavior:'smooth' });
+    return;
+  }
+  /* 작업 68 — §9 유물석 교환(구버전 패널 상점에서 이관). 규칙은 구버전과 동일하다. */
+  const ex0 = e.target.closest('[data-ex]');
+  if(ex0){
+    const ex = EXCHANGE.find(v => v.dia === +ex0.dataset.ex);
+    if(!ex) return;
+    if(S.dia < ex.dia){ popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); return; }
+    S.dia -= ex.dia; S.relic += ex.rel; uiDirty = true; save();
+    renderCoinPage($('shopList'));
+    popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물석 <b>🔮' + fmt(ex.rel) + '</b></p>');
+    return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
   const dp = e.target.closest('[data-diabuy]');
@@ -11526,11 +11533,12 @@ addEventListener('pointermove', e => {
    탭 5개(hero/grow/adv/box/shop) → 패널 본문 매핑. hero 는 서브탭(장비·스킬·동료)으로 다시 갈린다.
    같은 탭을 다시 누르면 패널이 닫히고, 열려 있는 동안 그 탭 자리는 ✕ 로 바뀐다. */
 /* 작업 57 — 장비(eq)에는 패널 본문이 없다. 06 은 #panel 이 아니라 전용 오버레이 #eqw 다 */
-const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', cos:'bCos', rel:'bRel', shop:'bShop', dun:'bDun', st:'bSt' };
+/* 작업 68 — 상점(shop)에도 패널 본문이 없다. 10 은 #panel 이 아니라 전용 페이지 #shopw 다 */
+const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', cos:'bCos', rel:'bRel', dun:'bDun', st:'bSt' };
 /* 작업 50 — 코스튬 서브탭 본문 추가. `eq` 는 여기 없다(06 은 전용 오버레이 #eqw, 작업 57) */
 const HEROBODY = { sk:'bSk', pet:'bPet', cos:'bCos' };
 function bodyOf(k){ return k === 'hero' ? HEROBODY[heroTab] : k === 'grow' ? 'bUp'
-  : k === 'adv' ? 'bDun' : k === 'box' ? 'bRel' : k === 'shop' ? 'bShop' : null; }
+  : k === 'adv' ? 'bDun' : k === 'box' ? 'bRel' : null; }
 function syncPanel(){
   const b = panelOpen ? bodyOf(curTab) : null;
   /* 작업 57 — 본문이 없는 서브탭(장비)은 패널 자체를 접는다. 구버전 #bEq 가 폐기돼
@@ -11555,8 +11563,10 @@ function syncPanel(){
      부르면 캔버스 버퍼를 다시 잡고 layoutSide() 가 돌아 사이드 아이콘이 재배치된다(= 금지 사항). */
 }
 function goTab(k, forceOpen){
-  /* 상점 탭 → 10 소환 페이지(전체화면 #shopw). forceOpen=true 는 재화 카테고리가 기존 패널 상점을 열 때만 쓴다. */
-  if(k === 'shop' && !forceOpen){
+  /* 상점 탭 → 10 소환 페이지(전체화면 #shopw).
+     작업 68 — 구버전 패널 상점(#bShop)을 폐기했으므로 `forceOpen` 분기가 없다.
+     상점은 **어떤 경로로 불려도** 10 페이지로만 간다(빈 #panel 이 열리는 일이 없다). */
+  if(k === 'shop'){
     closeDungeon(); closeRelicPage(); closeRelicTab(); closeTrain();
     if($('shopw').classList.contains('on')){ closeShopPage(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
@@ -11824,7 +11834,6 @@ function renderUI(){
     }
     else if(curTab === 'adv')  renderDun();
     else if(curTab === 'box')  renderBanner('relic', 'bRel');
-    else if(curTab === 'shop') renderShop();
   }
   const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
@@ -12287,7 +12296,8 @@ loadAtlases(() => {
   $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
   $('ofrGet').onclick = () => claimOffline(1);
   $('ofrGet15').onclick = () => claimOffline(1.5);
-  $('ofrGo').onclick = () => { closeOfflineReward(); goTab('shop', true); };
+  /* 작업 68 — 구버전 패널 상점 대신 10 상점 페이지를 연다(이 [이동] 이 파란 구 UI 로 떨어지던 버그) */
+  $('ofrGo').onclick = () => { closeOfflineReward(); openShopPage(); };
   renderUI();
   offlineReward(lastTime);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
