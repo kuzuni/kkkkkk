@@ -5530,7 +5530,7 @@
      첫·마지막 자식의 `margin:auto` 로 중앙을 만들면 남는 공간이 음수일 때 auto 가 0 이 돼
      **위쪽 가드(126)를 지키고 아래로만** 넘치고, `overflow-y:auto` 로 닿을 수 있다. */
   #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;overflow-y:auto;
-    box-sizing:border-box;padding:126px 0 148px;flex-direction:column;align-items:center;justify-content:flex-start}
+    box-sizing:border-box;padding:126px 0 146px;flex-direction:column;align-items:center;justify-content:flex-start}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
@@ -5590,7 +5590,9 @@
     border:5px solid #000;border-radius:34px;background:#553E2E;
     display:flex;align-items:center;justify-content:center}
   .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill}
-  .bls-bar{left:183px;top:191px;width:682px;height:48px;box-sizing:border-box;
+  /* 12회차 — I ①-1: ref 트랙 좌단 역산 233(알약 우단 248 아래로 15px 파고듦) vs 우리 250. J 도 독립으로
+     «3/4 채움 종료 ref 748 / 우리 752» 를 잡았다. 좌측으로 16px 늘려 알약 뒤로 넣는다(우단 925 유지). */
+  .bls-bar{left:167px;top:191px;width:698px;height:48px;box-sizing:border-box;
     border:6px solid #000;border-radius:24px;background:#81839A;overflow:hidden}
   .bls-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FDB419;border-radius:26px 0 0 26px}
   .bls-bar>i{position:absolute;left:0;right:0;top:0;bottom:0;line-height:36px;text-align:center;
@@ -5688,8 +5690,9 @@
   .bls-ft>i{transform:scaleX(.887);-webkit-text-stroke:7px #000;paint-order:stroke fill}
 
   /* §9 팝업 «바깥» — 초록 프로모 스트립(간격 21) + 닫기 X(간격 31) */
+  /* 12회차 — 스트립 모서리 반경: G ref≈17 · H ref≈20 · I ref≈18~19 로 3인이 «우리(30)가 크다» 로 수렴 → 20 */
   .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:252px;box-sizing:border-box;
-    border:5px solid #000;border-radius:30px;overflow:hidden;
+    border:5px solid #000;border-radius:20px;overflow:hidden;
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
   /* §9 좌측 일러스트 — 11회차에 «아트 자리 규칙» 위반이 실측으로 드러나 CSS 작화로 갈아탔다.
@@ -5714,14 +5717,15 @@
   /* 2차 비평 D: ref 버튼은 **검정 6px 외곽 + 내측 상단 하이라이트 8px** 이 있고 면이 (119,229,54) 로 밝다.
      비활성(.off)도 회녹(143,169,138)이 아니라 «조금 어두운 초록» 이어야 ref 와 대비가 맞는다. */
   .bls-promo .gb.off{background:linear-gradient(180deg,#7FCF63 0,#5FB03A 55%,#458F22 100%);cursor:default}
-  /* 11회차 — G ②: ref 검정 테두리 9~10px vs 우리 7px(6px + AA). 외곽 bbox 는 ref 266 / 우리 267 로 이미 일치 */
-  .bls-promo .gb{left:625px;top:112px;width:267px;height:118px;box-sizing:border-box;
-    border:9px solid #000;border-radius:28px;cursor:pointer;
+  /* 12회차 — 11회차의 «테두리 6→9»(G 단독)는 오판이었다. I «ref 좌6·상6·하6» · J «ref 6 vs 우리 9» 독립 일치 → 6 복귀.
+     높이도 I(ref 114) · J(ref 115) 일치로 118→115, top 112→113. 라벨은 I·J 공통 «5px 아래» → padding-bottom 으로 올린다 */
+  .bls-promo .gb{left:625px;top:113px;width:267px;height:115px;box-sizing:border-box;padding-bottom:10px;
+    border:6px solid #000;border-radius:28px;cursor:pointer;
     background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
     box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
     font-size:49px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
-  .bls-x{flex:none;position:relative;top:10px;margin:18px 0 auto;width:120px;height:120px;box-sizing:border-box;border:1px solid #2A2A2A;
+  .bls-x{flex:none;position:relative;top:9px;margin:18px 0 auto;width:122px;height:122px;box-sizing:border-box;border:2px solid #8A2530;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1}
   /* ==========================================================================

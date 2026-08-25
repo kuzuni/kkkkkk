@@ -149,7 +149,8 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   ok('J3 배너 89,486,900x100', near(geo.note, [89, 486, 900, 100]), JSON.stringify(geo.note));
   ok('J4 Lv 알약 110,626,134x68', near(geo.lv, [110, 626, 134, 68]), JSON.stringify(geo.lv));
   /* 10회차: 비평 E «ref h48» · F «ref 48~49, y636..684» 로 두 비평가 독립 일치 → 51→48, top 634→636 */
-  ok('J5 진행바 243,636,682x48', near(geo.bar, [243, 636, 682, 48]), JSON.stringify(geo.bar));
+  /* 12회차: ref 트랙이 Lv 알약 아래로 파고든다(I 역산 233 · J 채움경계 748) → 좌측 16px 연장, 우단 925 불변 */
+  ok('J5 진행바 227,636,698x48', near(geo.bar, [227, 636, 698, 48]), JSON.stringify(geo.bar));
   ok('J6 카드 그리드 75,715,930x447', near(geo.cards, [75, 715, 930, 447]), JSON.stringify(geo.cards));
   /* 10회차: E·F 둘 다 «ref 열 간격 15» (2차의 C 21 / D 18 을 뒤집는다). 피치 315 불변 → 카드 폭 300.
      F 가 2차의 엇갈림도 설명했다 — 헤더 밴드가 본체보다 좌3/우2 인셋이라 헤더 행에서 재면 20~21 로 읽힌다. */
@@ -163,8 +164,10 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   /* 11회차: G «ref 검정 링 9~10px» vs H «링 없음» 엇갈림 → 자체 row1863 덤프로 H 확정.
      ref 는 붉은 원 Ø119 + 1px 어두운 테 = 실루엣 Ø≈120 이고 순검정 링이 없다. 우리 7px 링(Ø132)을 걷어낸다.
      중심 y 는 G·H·10회차 3자 일치로 1863.5 유지 */
-  ok('J11 닫기 X 중심 540,1863.5 Ø120', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
-     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1863.5) <= 2 && geo.x[2] === 120, JSON.stringify(geo.x));
+  /* 12회차: I «실루엣 Ø120~121 + 어두운 적색 림» vs J «검정링 10px Ø140~141» → 자체 row1863 덤프로 I 확정
+     (ref 는 x479 부터 어두워지고 x600 이후가 딤이라 Ø≈122). 붉은 코어 118 은 유지한 채 림만 2px */
+  ok('J11 닫기 X 중심 540,1863 Ø122', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
+     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1863.5) <= 2 && geo.x[2] === 122, JSON.stringify(geo.x));
   /* 프레임 이탈 0 */
   const out = await page.evaluate(() => {
     const app = document.getElementById('app').getBoundingClientRect();
