@@ -2424,7 +2424,15 @@
   .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 7px 0 0;
     border:5px solid #000;border-radius:36px;box-sizing:border-box;overflow:hidden;
     vertical-align:top;text-align:center}
-  .clb .cd>i.ci{display:block;margin-top:8px;font-size:60px;line-height:66px}
+  /* ⚠ 같은 특이성 함정(위 뱃지 주석) — `#collw i{display:inline-block}` 이 이겨 이 상자가 «인라인» 이었고,
+     이 컨테이너엔 이모지 폰트가 없어 폴백 글리프의 advance 가 598px 이 되면서 카드 밖으로 흘러
+     **좌측 정렬**됐다(PROGRESS A1 비고의 «advance 보다 좁은 박스» 함정 그대로).
+     아트 자리 규칙: 나중에 이미지로 갈아 끼우면 되도록 **카드의 아트 영역 bbox(113×89, 라벨 밴드 위)를
+     정확히 차지**하게 하고, 넘치더라도 flex 중앙정렬이라 좌우로 «균등하게» 넘친다.
+     ⚠ 클래스 이름도 `ci` → `cdic` 으로 바꿨다 — 33 재화 정보 팝업의 `.ci{width:598px;height:813px}` 가
+     **전역 클래스**라 카드 아이콘 `<i class="ci">` 에 그대로 먹고 있었다(그게 598px 의 진짜 원인). */
+  #collw .clb .cd>i.cdic{position:absolute;left:0;right:0;top:0;bottom:35px;margin:0;
+    display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:35px}
   .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:5px;font-size:27px;line-height:29px;
     transform:scaleX(1.08);-webkit-text-stroke:8px #000;paint-order:stroke fill}
@@ -9318,7 +9326,7 @@ function renderColl21(){
       +  st.it.map(id => {
            const it = itemById(id), c = COLL21_CARD[Math.min(it.g, 5)], l = oLv(id);
            return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 5px ' + c[1] + '">'
-             + '<i class="ci">' + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
+             + '<i class="cdic">' + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
              + '<s class="cb" style="background:' + c[2] + '"></s>'
              + '<i class="cl2" style="color:' + (l >= st.req ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l + '/' + st.req + '</i></div>';
          }).join('')
