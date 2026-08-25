@@ -1968,10 +1968,11 @@
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:8px;bottom:8px;overflow:hidden;
-    border-radius:0 0 5px 0;pointer-events:none;
-    background:radial-gradient(120% 120% at 100% 100%,rgba(0,0,0,.30) 0%,rgba(0,0,0,.14) 55%,transparent 92%),
-      repeating-linear-gradient(90deg,rgba(255,255,255,.17) 0 46px,rgba(0,0,0,.20) 46px 92px),
-      repeating-linear-gradient(0deg,rgba(0,0,0,.24) 0 36px,rgba(255,255,255,.13) 36px 72px);
+    border-radius:5px;pointer-events:none;
+    background:radial-gradient(115% 130% at 100% 100%,rgba(0,0,0,.34) 0%,rgba(0,0,0,.16) 52%,transparent 88%),
+      linear-gradient(90deg,rgba(0,0,0,.10) 0 34%,transparent 62%),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.15) 0 46px,rgba(0,0,0,.18) 46px 92px),
+      repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 36px,rgba(255,255,255,.12) 36px 72px);
     -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 100%);
     mask-image:linear-gradient(90deg,transparent 0,#000 8px,#000 100%)}
   /* 안쪽 상단 하이라이트 1줄 + 좌측 13px 음영 */
@@ -10115,11 +10116,11 @@ const DUN_UI = {
             rw:['골드 획득 가능'], gm:0  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️', th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:0.972, thcx:'149.5px', thcy:'152.5px',
             rw:['다이아 획득 가능'], gm:0  },
-  relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🗿', thw:'330px', tht:'12px', thf:'312px', tsx:1.30,  thcx:'168px',   thcy:'171.5px', scn:'420px',
+  relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🗿', thw:'330px', tht:'12px', thf:'312px', tsx:1.30,  thcx:'168px',   thcy:'171.5px', scn:'7px',
             rw:['유물석 획득 가능','유물 재료 획득 가능'], gm:14 },
-  growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️', th:'👺', thw:'330px', tht:'12px', thf:'312px', tsx:1.028, thcx:'168px',   thcy:'171.5px', scn:'420px',
+  growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️', th:'👺', thw:'330px', tht:'12px', thf:'312px', tsx:1.028, thcx:'168px',   thcy:'171.5px', scn:'7px',
             rw:['도감 재료 획득 가능'], gm:17 },
-  boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫', th:'👹', thw:'330px', tht:'35px', thf:'289px', tsx:1.063, thcx:'168px',   thcy:'159px',   scn:'420px',
+  boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫', th:'👹', thw:'330px', tht:'35px', thf:'289px', tsx:1.063, thcx:'171px',   thcy:'159px',   scn:'7px',
             rw:['골드 획득 가능','보석 획득 가능'], gm:20 }
 };
 /* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다. */

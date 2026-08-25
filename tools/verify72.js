@@ -69,14 +69,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     if (c.locked) ok(c.iLk > c.iTh, `카드${i + 1}(잠금) 딤·자물쇠가 썸네일 위(${c.iLk} > ${c.iTh})`);
   });
 
-  console.log('[2-1] 잠금 카드 씬 아트 자리 (레퍼런스 잉크 좌단 385/465/395)');
+  console.log('[2-1] 잠금 카드 씬 아트 자리 — 카드 안쪽 전면(x57~1022, 비평가 P·R·T 교차)');
   const scn = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map((c) => {
     const s = c.querySelector('.scn'); if (!s) return null;
     const cr = c.getBoundingClientRect(), sr = s.getBoundingClientRect();
     return { dx: +(sr.left - cr.left).toFixed(1), w: +sr.width.toFixed(1), h: +sr.height.toFixed(1),
              locked: !!c.querySelector('.lk') };
   }));
-  [420, 420, 420].forEach((want, k) => {
+  [7, 7, 7].forEach((want, k) => {
     const c = scn[k + 2];
     ok(!!c, `잠금 카드${k + 3} 씬 자리 존재`);
     if (c) ok(Math.abs(c.dx - want) <= 1, `잠금 카드${k + 3} 씬 좌단 offset ${c.dx} = ${want}`);
