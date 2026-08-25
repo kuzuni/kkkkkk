@@ -118,9 +118,9 @@ const frameRects = (page, map) => page.evaluate((m) => {
     near('보상 프레임 top', g.ico.y, R(698));
     near('보상 프레임 세로중심 = 행 중심', (g.ico.y + g.ico.h / 2) - (g.row1.y + g.row1.h / 2), 0);
 
-    near('진행바 x', g.bar.x, 299);
+    near('진행바 x', g.bar.x, 300);   /* 측정표 299 는 +1 오기 — ref 검정 마스크 300~699 */
     near('진행바 top', g.bar.y, R(762));
-    near('진행바 width', g.bar.w, 402);
+    near('진행바 width', g.bar.w, 400);
     near('진행바 height', g.bar.h, 38);
 
     near('보상받기 x', g.btn.x, 722);

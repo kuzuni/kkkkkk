@@ -1000,12 +1000,14 @@
   /* 타이틀 — 좌단 x167(=진행바 좌단), 흰 채움 + 검정 외곽선, 숫자부 주황 #FD8354 */
   /* `scaleX(.9)` 는 어절 공백까지 10% 줄인다 — ref 어절 간 코어 간격 13~15px 인데 10~11px 이었다.
      문자열이 우리 설계라 scaleX 자체는 다시 뽑지 않고(43 교훈 2) **공백만** 되돌린다. */
-  .qs-t{position:absolute;left:170px;top:44px;font-size:29px;line-height:36px;font-weight:900;
-    color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.9);
-    transform-origin:0 0;white-space:nowrap;word-spacing:3.5px}
+  .qs-t{position:absolute;left:168px;top:44px;font-size:29px;line-height:36px;font-weight:900;
+    color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.945);
+    transform-origin:0 0;white-space:nowrap;word-spacing:1.5px}
   .qs-t em{color:#FD8354}
-  /* 진행바 402×38 캡슐 — 검정 4, 트랙 2단, 채움 2톤 골드 */
-  .qs-p{position:absolute;left:168px;top:101px;width:402px;height:38px;box-sizing:border-box;
+  /* 진행바 400×38 캡슐 — 검정 4, 트랙 2단, 채움 2톤 골드.
+     측정표 §5-4 는 «x299~700 = w402» 인데 레퍼런스 검정 마스크는 1·3행 모두 **300~699 = w400** 이다
+     (JPEG 번짐은 어두운 영역을 «넓히지» 좁히지 않으므로 400 이 상한이 아니라 실측이다). 400 으로 맞춘다. */
+  .qs-p{position:absolute;left:169px;top:101px;width:400px;height:38px;box-sizing:border-box;
     border:4px solid #000;border-radius:19px;overflow:hidden;
     background:linear-gradient(180deg,#8182A0,#6F7899)}
   .qs-p i{display:block;height:100%;background:linear-gradient(180deg,#FFC720 0 13px,#FFB514 13px)}
@@ -1015,7 +1017,10 @@
   .qs-p b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-size:22px;color:#FAFAFA;-webkit-text-stroke:4px #000}
   .qs-p b em{display:block;transform:scaleX(1.31)}
-  /* 보상 받기 195×118 — 검정 6, 회색(비활성)/초록(활성) 베벨 */
+  /* 보상 받기 195×118 — 검정 6, 회색(비활성)/초록(활성) 베벨.
+     [모두 받기] 의 바닥 그림자 밴드가 14px 였다 — ref 는 7px(면이 그만큼 길다) 이라 되돌렸다.
+     [보상 받기] 는 재하이라이트 위치(내부 local 90~96 = ref 788~794)가 우선이라 그대로 둔다
+     (그림자는 ref 8 vs 우리 10 으로 Δ2 — 둘을 동시에 맞출 수 없어 위치 쪽을 택했다). */
   .qs-b{position:absolute;left:591px;top:31px;width:195px;height:118px;box-sizing:border-box;
     border:6px solid #000;border-radius:40px;cursor:pointer;font-family:inherit;padding:0 0 10px;
     display:flex;align-items:center;justify-content:center;
@@ -1028,9 +1033,9 @@
   .qs-all{position:absolute;left:295px;top:1084px;width:272px;height:130px;box-sizing:border-box;
     border:7px solid #000;border-radius:43px;cursor:pointer;font-family:inherit;padding:0 0 14px;
     display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 96px,#B9EC77 96px 102px,#2F8F1E 102px)}
+    background:linear-gradient(180deg,#C9F07E 0 7px,#7CD84B 7px,#4EBB2F 103px,#B9EC77 103px 109px,#2F8F1E 109px)}
   .qs-all:disabled{cursor:default;
-    background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 96px,#D1D1D1 96px 102px,#757575 102px)}
+    background:linear-gradient(180deg,#D3D3D3 0 7px,#A7A7A7 7px,#8C8C8C 103px,#D1D1D1 103px 109px,#757575 109px)}
   /* 코어 폭이 ref 156 → 148 (−5.1%) 이었다. scaleX 로만 편다(높이는 36 vs 35 로 맞다). */
   .qs-all b{font-size:39px;color:#fff;-webkit-text-stroke:8px #000;transform:scaleX(.99)}
   .qs-all:disabled b{color:#DFDFDF}
