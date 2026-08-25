@@ -5209,19 +5209,19 @@
     border:5px solid #000;border-radius:34px;background:#553E2E;
     display:flex;align-items:center;justify-content:center}
   .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill}
-  .bls-bar{left:183px;top:189px;width:682px;height:51px;box-sizing:border-box;
-    border:5px solid #000;border-radius:26px;background:#81839A;overflow:hidden}
+  .bls-bar{left:183px;top:191px;width:682px;height:48px;box-sizing:border-box;
+    border:6px solid #000;border-radius:24px;background:#81839A;overflow:hidden}
   .bls-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FDB419;border-radius:26px 0 0 26px}
-  .bls-bar>i{position:absolute;left:0;right:0;top:0;bottom:0;line-height:41px;text-align:center;
+  .bls-bar>i{position:absolute;left:0;right:0;top:0;bottom:0;line-height:36px;text-align:center;
     font-size:30px;color:#FCFEB3;-webkit-text-stroke:7px #2D2100;paint-order:stroke fill}
 
   /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
-  .bls-cards{left:15px;top:270px;width:928px;height:447px;
-    display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+  .bls-cards{left:15px;top:270px;width:930px;height:447px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
   /* 10회차: 카드 모서리 반경 24 → 46. ref 좌상단 아크를 4점(y806 x95.5 · y812 x88.5 · y820 x82.5 · y830 x78.5)
      으로 원 방정식에 넣으면 R=44.8/45.2/45.9/48.3, 좌하단 3점도 45.9/49.1 → **R≈46**.
      (2차 비평 D «18→36» 의 방향이 맞았고 폭은 그보다 더 컸다) */
-  .bls-c{position:relative;border-radius:46px;overflow:hidden;cursor:pointer;
+  .bls-c{position:relative;border-radius:44px;overflow:hidden;cursor:pointer;
     display:flex;flex-direction:column}
   .bls-c>.h{flex:0 0 78px;background:#54413D;display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
@@ -5235,7 +5235,7 @@
      밝은 띠 시작 x=126·217·307 → **수평주기 90.5** · 밝 48 / 암 43. D 가 맞다. 축 65.05 → **64.0**(90.5/√2).
      → 교훈: «주기 패턴이 있나» 는 세그먼트 개수가 아니라 **면적 히스토그램**으로 판정하라. */
   .bls-c>.b{flex:1 1 auto;position:relative;
-    background:repeating-linear-gradient(45deg,#F0B048 0 30.4px,#F8C850 30.4px 64.0px)}
+    background:repeating-linear-gradient(-45deg,#F0B048 0 30.4px,#F8C850 30.4px 64.0px)}
   .bls-c>.b>*{position:absolute}
   /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
      ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
@@ -5251,7 +5251,7 @@
   .bls-c .tm>i{font-size:30px;color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(1.1)}
   .bls-c .glo{left:0;right:0;bottom:0;height:9px;background:#FFFF78}
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
-  .bls-c.off>.b{background:repeating-linear-gradient(45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
+  .bls-c.off>.b{background:repeating-linear-gradient(-45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
   .bls-c.off .vl{color:#D8D2C8}
   .bls-c.off .tm{background:#5C5044;box-shadow:inset 0 0 0 3px #4B4136}
   .bls-c.off .glo{background:#D8D2C8}
@@ -5261,8 +5261,8 @@
     display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
   .bls-btab>i{font-size:34px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.875)}
-  .bls-bn{left:15px;top:807px;width:928px;height:152px;border-radius:24px;overflow:hidden;
-    background:repeating-linear-gradient(45deg,#F0B048 0 30.4px,#F8C850 30.4px 64.0px)}
+  .bls-bn{left:15px;top:807px;width:930px;height:152px;border-radius:52px;overflow:hidden;
+    background:repeating-linear-gradient(-45deg,#F0B048 0 26.2px,#F8C850 26.2px 50.9px)}
   .bls-bn>*{position:absolute}
   /* 2차 비평 C: ref 보너스 바에는 카드와 같은 계열의 상 9px / 하 14px 밝은 띠가 있다(우리는 0px) */
   .bls-bn::before,.bls-bn::after{content:'';position:absolute;left:0;right:0;background:#FFF878}
@@ -5271,10 +5271,10 @@
   /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
   /* ref 잉크 x136..246 · y1356..1470 → 바(75,1252) 로컬 (61,20) 114x115. 셰브론은 그 우하단에 겹친다 */
   /* 잉크 실측 83x85 @x178 → ref 116x120 @x138: 이모지 잉크가 상자보다 작아 상자를 왼쪽으로 넓힌다 */
-  .bls-bn .ic{left:40px;top:12px;width:150px;height:130px;line-height:130px;text-align:center;font-size:140px}
+  .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
-  .bls-bn .ch{left:132px;top:86px;width:46px;height:48px}
+  .bls-bn .ch{left:125px;top:86px;width:46px;height:48px}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
@@ -5290,7 +5290,7 @@
     -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83)}
   /* ref 초록 «+50%» 잉크 113x32 — 숫자 글리프가 좁아 자간으로 폭을 맞춘다(01 교훈: 폭은 자폭으로) */
   .bls-bn .tx em{color:#A6DC60;margin-left:18px;font-size:45px;letter-spacing:5px;text-indent:5px}
-  .bls-bn.off{background:repeating-linear-gradient(45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
+  .bls-bn.off{background:repeating-linear-gradient(-45deg,#918576 0 26.2px,#9E9284 26.2px 50.9px)}
   .bls-bn.off .tx em{color:#D8D2C8}
 
   /* §8 하단 안내 문구 — 잉크 ref y1496..1531 → body local 967..1002 */
@@ -5323,7 +5323,7 @@
     box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
     font-size:46px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
-  .bls-x{flex:none;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
+  .bls-x{flex:none;position:relative;top:5px;margin:18px 0 auto;width:132px;height:132px;box-sizing:border-box;border:7px solid #000;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1}
   /* ==========================================================================

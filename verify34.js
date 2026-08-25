@@ -148,15 +148,19 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   ok('J2 헤더 h90', geo.head && Math.abs(geo.head[3] - 90) <= 1, geo.head && geo.head[3]);
   ok('J3 배너 89,486,900x100', near(geo.note, [89, 486, 900, 100]), JSON.stringify(geo.note));
   ok('J4 Lv 알약 110,626,134x68', near(geo.lv, [110, 626, 134, 68]), JSON.stringify(geo.lv));
-  ok('J5 진행바 243,634,682x51', near(geo.bar, [243, 634, 682, 51]), JSON.stringify(geo.bar));
-  ok('J6 카드 그리드 75,715,928x447', near(geo.cards, [75, 715, 928, 447]), JSON.stringify(geo.cards));
-  ok('J7 카드 x 75/390/705 · w298', geo.c1[0] === 75 && geo.c2[0] === 390 && geo.c3[0] === 705
-     && geo.c1[2] === 298, [geo.c1[0], geo.c2[0], geo.c3[0]].join('/'));
+  /* 10회차: 비평 E «ref h48» · F «ref 48~49, y636..684» 로 두 비평가 독립 일치 → 51→48, top 634→636 */
+  ok('J5 진행바 243,636,682x48', near(geo.bar, [243, 636, 682, 48]), JSON.stringify(geo.bar));
+  ok('J6 카드 그리드 75,715,930x447', near(geo.cards, [75, 715, 930, 447]), JSON.stringify(geo.cards));
+  /* 10회차: E·F 둘 다 «ref 열 간격 15» (2차의 C 21 / D 18 을 뒤집는다). 피치 315 불변 → 카드 폭 300.
+     F 가 2차의 엇갈림도 설명했다 — 헤더 밴드가 본체보다 좌3/우2 인셋이라 헤더 행에서 재면 20~21 로 읽힌다. */
+  ok('J7 카드 x 75/390/705 · w300', geo.c1[0] === 75 && geo.c2[0] === 390 && geo.c3[0] === 705
+     && geo.c1[2] === 300, [geo.c1[0], geo.c2[0], geo.c3[0]].join('/'));
   ok('J8 보너스탭 318,1197,442x58', near(geo.btab, [318, 1197, 442, 58]), JSON.stringify(geo.btab));
-  ok('J9 보너스바 75,1252,928x152', near(geo.bn, [75, 1252, 928, 152]), JSON.stringify(geo.bn));
+  ok('J9 보너스바 75,1252,930x152', near(geo.bn, [75, 1252, 930, 152]), JSON.stringify(geo.bn));
   ok('J10 초록 스트립 64,1523,952x252', near(geo.promo, [64, 1523, 952, 252]), JSON.stringify(geo.promo));
-  ok('J11 닫기 X 중심 540,1859 Ø132', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
-     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1859) <= 2 && geo.x[2] === 132, JSON.stringify(geo.x));
+  /* 10회차: E «ref 원 중심 1863» · F «ref y1805..1921 → 중심 1863» 독립 일치 (우리 1858.5) → +5 */
+  ok('J11 닫기 X 중심 540,1864 Ø132', geo.x && Math.abs(geo.x[0] + geo.x[2] / 2 - 540) <= 1
+     && Math.abs(geo.x[1] + geo.x[3] / 2 - 1864) <= 2 && geo.x[2] === 132, JSON.stringify(geo.x));
   /* 프레임 이탈 0 */
   const out = await page.evaluate(() => {
     const app = document.getElementById('app').getBoundingClientRect();
