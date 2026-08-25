@@ -5638,12 +5638,15 @@
     border:5px solid #000;border-radius:34px;background:var(--g,#C6AF8E);
     box-shadow:inset 0 0 0 6px var(--r,#D3BE9E)}
   /* 아이콘 — ref bbox 80~94 × 71~94, 칸 정중앙. 아트 교체 대비로 88×88 bbox 를 정확히 차지시킨다 */
-  /* 이모지 잉크는 em 박스보다 좁다 — font-size 72 로는 잉크 폭이 68 밖에 안 나와 ref 평균 91 대비 −25% 였다.
-     font-size 를 80 으로 올리고 scaleX 1.18 로 폭만 벌려 ≈89×89 를 만든다(ref 평균 91×82).
-     (LESSONS 41-② 의 scaleX 주의는 «검정 컨투어 링» 이 있는 아이콘 얘기라 여기엔 해당 없음) */
+  /* 이모지 잉크는 em 박스보다 좁다 — font-size 72 로는 잉크 폭이 68 밖에 안 나와 늘려야 했다.
+     ⚠ 3회차 정정 — 2회차의 «ref 평균 91×82» 는 **칸 안쪽 밝은 림을 아이콘으로 오독한 값**이다
+     (fill 만 마스킹하면 등급 림이 통째로 잉크로 잡힌다 — LESSONS 70-③ «색/면적 마스크로 재라»).
+     fill 과 rim 을 **둘 다** 빼고 7칸을 재니 ref 평균은 **82.3 × 83.0**(우리 93.4 × 81.4 = 폭 +13%)이었다.
+     → font-size 80→82(높이 81.4→83), scaleX 1.18→1.01(폭 93.4→82). (LESSONS 41-② 의 scaleX 주의는
+     «검정 컨투어 링» 이 있는 아이콘 얘기라 여기엔 해당 없음) */
   #bagw .bg53-c>u{position:absolute;left:50%;top:50%;width:88px;height:88px;margin:-44px 0 0 -44px;
-    display:flex;align-items:center;justify-content:center;font-size:80px;line-height:1;z-index:1;
-    transform:scaleX(1.18)}
+    display:flex;align-items:center;justify-content:center;font-size:82px;line-height:1;z-index:1;
+    transform:scaleX(1.01)}
   /* 수량 — 코어 h26 @ 칸top+130, 칸 가로 중앙. 좌우로 넘쳐도 되게 -20px 씩 벌린다
      (r3c1 의 `2.26B` 는 코어 폭 106 으로 칸 안쪽 폭보다 넓다)
      ⚠ 3회차 정정 — **잉크비 0.93 은 «한글» 값이다. 숫자에 쓰면 안 된다**(LESSONS 70-①).
