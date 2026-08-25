@@ -98,25 +98,27 @@ const near = (label, got, want, tol) => {
   if (out && !out.hidden) {
     near('뒤로가기 left', out.x, 47, 2);
     near('뒤로가기 w', out.w, 207, 2);
-    near('뒤로가기 h', out.h, 132, 2);
-    near('뒤로가기 bottom(프레임 하단 기준 210)', H - (out.y + out.h), 210, 3);
+    /* 1회차 비평 A4 — ref 판(검정 외곽 포함)은 y1999.5..2127.5 = h129 다. 2128 부터는 드롭섀도라
+       측정표 초판의 h132 는 섀도를 포함한 값이었다. */
+    near('뒤로가기 h', out.h, 129, 2);
+    near('뒤로가기 bottom(프레임 하단 기준 212)', H - (out.y + out.h), 212, 3);
   } else no('#dunOut 없음');
 
   const spd = await geo('#spdb');
   if (spd && !spd.hidden) {
     near('배속 Ø', spd.w, 81, 2);
-    near('배속 right(프레임 우단 기준 37)', W - (spd.x + spd.w), 37, 2);
-    near('배속 bottom(프레임 하단 기준 200)', H - (spd.y + spd.h), 200, 3);
+    near('배속 right(프레임 우단 기준 36)', W - (spd.x + spd.w), 36, 2);
+    near('배속 bottom(프레임 하단 기준 198)', H - (spd.y + spd.h), 198, 3);
   } else no('#spdb 없음');
 
   console.log('\n[C] 스킬 슬롯 — 탭바가 빠지며 +180 내려온다 (측정표 §7)');
   const slots = await geo('#slots');
   if (slots && !slots.hidden) {
-    near('슬롯 행 bottom(프레임 하단 기준 27)', H - (slots.y + slots.h), 27, 3);
+    near('슬롯 행 bottom(프레임 하단 기준 26)', H - (slots.y + slots.h), 26, 3);
     /* 슬롯은 «하단 고정» 요소라 기준이 bottom 이다 — 프레임(2280)이 ref 콘텐츠(2256)보다
        24px 크고 그 차이는 캔버스가 먹는다. 그래서 top 은 2280 − 27 − 120 = 2133 이 맞고,
        상단 고정 규칙(ref−84 = 2111)을 쓰면 안 된다(측정표 서두). */
-    near('슬롯 행 top(하단 기준 2280−27−120)', slots.y, 2133, 4);
+    near('슬롯 행 top(하단 기준 2280−26−120)', slots.y, 2134, 4);
   } else no('#slots 없음');
   const s0 = await geo('.slot2:nth-child(1)'), s7 = await geo('.slot2:nth-child(8)');
   if (s0 && s7 && !s0.hidden) {
