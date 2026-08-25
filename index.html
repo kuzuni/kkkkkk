@@ -5956,6 +5956,76 @@
   #rkw .rk-tab>b{position:absolute;left:0;right:0;top:112px;height:40px;line-height:40px;
     display:block;text-align:center;font-size:34px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
+  /* ================= 56 절전 모드 (#svw) — 측정표 docs/measure/56-절전모드.md =================
+     레퍼런스 실측(측정표 §2): 이 화면은 «반투명 딤» 이 아니라 **완전 불투명 검정 잠금화면**이다.
+     6개 잉크 덩어리를 뺀 전 픽셀이 정확히 RGB(0,0,0) 이고 «전투가 1픽셀도 안 보인다».
+     → `rgba(0,0,0,.9x)` 류 금지. `#000` 불투명 + 하위 레이어 `visibility:hidden`(= 합성까지 정지).
+     좌표는 전부 프레임 px(= 레퍼런스 y − 84). 하단 «밀어서 잠금 해제» 만 bottom 기준이다
+     (LESSONS 30-⑤ — 프레임 2280 은 레퍼런스 콘텐츠 2256 보다 24px 길고, 짧은 기기에서는 더 줄어든다). */
+  #svw{position:absolute;inset:0;display:none;z-index:62;background:#000;overflow:hidden;
+    touch-action:none;user-select:none;-webkit-user-select:none}
+  #svw.on{display:block}
+  /* 절전 중에는 오버레이 «아래» 를 통째로 눕힌다 — 그리기·합성·포인터 전부 정지(측정표 §6-2).
+     display:none 이 아니라 visibility:hidden 이라 레이아웃(#stagearea 높이·ResizeObserver)이 흔들리지 않는다. */
+  #app.sv>*:not(#svw){visibility:hidden;pointer-events:none}
+  #svw i,#svw b,#svw s,#svw u,#svw em{display:block;font-style:normal;font-weight:900;color:#FFF}
+
+  /* A 배터리 배지 — 그룹 84×46 @ (996,28.5) · 몸통 79×46 테두리 5 radius 3 · 꼭지 5×33 · 우여백 28.5 */
+  #svw .sv-bat{position:absolute;right:28.5px;top:28.5px;width:84px;height:46px}
+  #svw .sv-bat>s{position:absolute;left:0;top:0;width:79px;height:46px;box-sizing:border-box;
+    border:5px solid #FFF;border-radius:3px;background:none}
+  #svw .sv-bat>u{position:absolute;right:0;top:6.5px;width:5px;height:33px;background:#FFF;border-radius:0 2px 2px 0}
+  #svw .sv-bat>b{position:absolute;left:0;top:var(--baty,12px);width:79px;height:22px;line-height:22px;
+    text-align:center;font-size:29px;white-space:nowrap}
+
+  /* B 시계 — 잉크 386×115 @ y624, 가로 정중앙(cx 539.5). digit height 113 → font 157 */
+  #svw .sv-clk{position:absolute;left:0;right:0;top:var(--clky,621px);height:120px;line-height:120px;
+    text-align:center;font-size:160px;letter-spacing:var(--clkls,0px);white-space:nowrap}
+  /* C 날짜 — 잉크 260×38 @ y764. 레퍼런스는 MM/DD/YYYY 미국식이라 한국식 YYYY.MM.DD 로 옮겼다(같은 10글자) */
+  #svw .sv-dt{position:absolute;left:0;right:0;top:var(--dty,758.5px);height:52px;line-height:52px;
+    text-align:center;font-size:51px;letter-spacing:var(--dtls,0px);white-space:nowrap;
+    transform:scaleX(var(--dtsx,1.03))}
+
+  /* D ☠ STAGE N — ⚠ «아이콘+텍스트 묶음» 이 중앙이 아니다(측정표 §3-4).
+     텍스트만 화면 정중앙(cx 539.5)이고 스컬은 그 왼쪽에 absolute 로 덧붙는다. flex 로 묶으면 35px 어긋난다. */
+  #svw .sv-st{position:absolute;left:0;right:0;top:var(--sty,1031px);height:56px}
+  #svw .sv-st>i{position:absolute;left:0;right:0;top:var(--stty,2px);height:50px;line-height:50px;
+    text-align:center;font-size:48.5px;letter-spacing:var(--stls,0px);white-space:nowrap;
+    transform:scaleX(var(--stsx,.903))}
+  /* 스컬 배지 — 아트 자리(58×56). 원판 #801828 + 외곽 링 #101010, 안쪽 해골은 이모지 대체 */
+  #svw .sv-st>s{position:absolute;left:368px;top:0;width:57px;height:56px;border-radius:50%;
+    background:#801828;box-shadow:inset 0 0 0 3px #101010}
+  #svw .sv-st>s>em{position:absolute;left:0;right:0;top:var(--skty,10px);height:36px;line-height:36px;
+    text-align:center;font-size:var(--skfs,30px);transform:scaleX(var(--sksx,1))}
+
+  /* E 방치 요약 패널 — 601×351 @ (239.5,1128) · #272727 · radius 36 · 내부 패딩 50 균일
+     검산(LESSONS 52-①): 50 + 64×3 + 30×2 + 50 = 352 ≈ 실측 351 */
+  #svw .sv-p{position:absolute;left:239.5px;top:1128px;width:601px;height:351px;
+    background:#272727;border-radius:36px}
+  /* pill — 500×64 · pitch 94 · radius 28 (완전 스타디움 32 아님, 측정표 §6-4-3) */
+  #svw .sv-r{position:absolute;left:50px;width:500px;height:64px;background:#0E0E0E;border-radius:28px}
+  #svw .sv-r:nth-of-type(1){top:49.5px}
+  #svw .sv-r:nth-of-type(2){top:143.5px}
+  #svw .sv-r:nth-of-type(3){top:237.5px}
+  /* 아이콘 박스 48×48, 중심 cx 329.5 = pill 좌변 + 40 */
+  #svw .sv-r>u{position:absolute;left:16px;top:8px;width:48px;height:48px;line-height:48px;
+    text-align:center;font-size:var(--icfs,37.5px);transform:scaleX(var(--icsx,1))}
+  #svw .sv-r:nth-of-type(1)>u{--icsx:.74}                 /* ⏱️ 잉크 53x47 → ref 35x42 */
+  #svw .sv-r:nth-of-type(2)>u{--icsx:1}                   /* 💀 잉크 → ref 47x42 */
+  #svw .sv-r:nth-of-type(3)>u{--icfs:39.3px;--icsx:.89}   /* 🪙 → ref 44x44 */
+  /* 라벨 — 좌단 x360 = pill 좌변 + 70.5, 세로 중앙. 잉크 h26.5 → font 35 */
+  #svw .sv-r>i{position:absolute;left:70.5px;top:var(--rlty,17px);height:30px;line-height:30px;
+    font-size:28px;letter-spacing:var(--rlls,0px);white-space:nowrap;
+    transform:scaleX(var(--rlsx,.87));transform-origin:left center}
+  /* 값 — 우단 x759 = pill 우변 − 30.5, 우측 정렬. 잉크 h21.5 → font 30 */
+  #svw .sv-r>b{position:absolute;right:30.5px;top:var(--rvty,20px);height:26px;line-height:26px;
+    text-align:right;font-size:32px;letter-spacing:var(--rvls,0px);white-space:nowrap;
+    transform:scaleX(var(--rvsx,1.086));transform-origin:right center}
+
+  /* F 해제 안내 — 잉크 312×43 @ y2040(하단 여백 198), #888888. 하단 기준 배치(LESSONS 30-⑤) */
+  #svw .sv-hint{position:absolute;left:0;right:0;bottom:var(--hnb,195px);height:52px;line-height:52px;
+    text-align:center;font-size:47px;color:#888;letter-spacing:var(--hnls,0px);white-space:nowrap;
+    transform:scaleX(var(--hnsx,.907))}
 </style>
 </head>
 <body>
@@ -6633,6 +6703,21 @@
       <div class="rk-tab t2" data-rktab="tower"><u>🏰</u><b>시련의 탑</b></div>
       <div class="rk-tab t3" data-rktab="farm"><u>🏚️</u><b>몬스터 농장</b></div>
     </div>
+  </div>
+  <!-- 56 절전 모드 — 전면 불투명 검정 잠금화면. 측정표 docs/measure/56-절전모드.md.
+       진입: ▦ 메뉴 → 🔋 절전. 전투 «로직» 은 계속 돌고 «렌더» 만 멈춘다(loop() 의 saverOn 분기).
+       레퍼런스에 배터리 배지가 있는 이유가 그것이다 — 이 화면의 목적은 전력 절감이다. -->
+  <div id="svw">
+    <div class="sv-bat"><s></s><u></u><b id="svBat">100%</b></div>
+    <div class="sv-clk" id="svClk">00:00</div>
+    <div class="sv-dt" id="svDt">2026/01/01</div>
+    <div class="sv-st"><s><em>💀</em></s><i id="svSt">STAGE 1</i></div>
+    <div class="sv-p">
+      <div class="sv-r"><u>⏱️</u><i>방치 시간</i><b id="svT">00:00:00</b></div>
+      <div class="sv-r"><u>💀</u><i>처치한 몬스터 수</i><b id="svK">0</b></div>
+      <div class="sv-r"><u>🪙</u><i>획득한 골드</i><b id="svG">+0</b></div>
+    </div>
+    <div class="sv-hint">밀어서 잠금 해제</div>
   </div>
   <!-- 58 — UI 연출 공용 레이어. 모든 fx* 함수가 여기에만 DOM 을 만든다(pointer-events:none). -->
   <div id="fxl"></div>
@@ -13088,11 +13173,81 @@ $('mnw').querySelector('.mn-col').onclick = e => {
   }
   else if(k === 'rank')   openRank();                 /* 작업 54 — 전체화면 랭킹 페이지 */
   else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
-  else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
+  else if(k === 'saver')  openSaver();                /* 작업 56 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'conf')   openConf();                 /* 작업 55 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'pass')   openPass('stage');          /* 작업 35 인계 — 레퍼런스에 없는 임시 칸 */
 };
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
+
+/* ---- 56 절전 모드 (#svw) --------------------------------------------------
+   스펙: docs/UI-REFERENCE.md 56 · 측정표 docs/measure/56-절전모드.md · 기록 docs/review/56-절전모드.md
+
+   레퍼런스 실측이 지시서 전제와 다른 지점(측정표 §0):
+     ⓐ «어둡게» 가 아니라 **완전 불투명 검정** — 전투가 1픽셀도 안 보인다.
+     ⓑ 그래서 «렌더 최소화» 가 립서비스가 아니다. loop() 에서 draw/drawHud/drawTuto/renderUI 를
+        통째로 건너뛰고 step(dt)(=전투 로직)만 돌린다. 패널 3행이 그 «계속 도는 전투» 의 증거다.
+     ⓒ 화면 문구는 «밀어서 잠금 해제». UI-REFERENCE 는 «터치로 해제» 라 **둘 다 받는다**
+        (탭 1회 또는 120px 이상 스와이프). 문구는 레퍼런스 쪽을 따랐다.
+   패널 3행은 «절전 진입 시점부터의 증분» 이다(레퍼런스가 00:00:02 / 0 / +0 = 진입 직후 스냅샷). */
+let saverOn = false, svT0 = 0, svK0 = 0, svG0 = 0, svSec = -1, svLv = null;
+const sv2 = n => (n < 10 ? '0' : '') + n;
+function svClock(){
+  const d = new Date();
+  $('svClk').textContent = sv2(d.getHours()) + ':' + sv2(d.getMinutes());
+  $('svDt').textContent  = d.getFullYear() + '/' + sv2(d.getMonth()+1) + '/' + sv2(d.getDate());
+}
+/* 배터리 잔량은 «가짜 값을 넣지 않는다»(측정표 §6-5) — 못 얻는 브라우저에서는 배지를 숨긴다 */
+function svBattery(){
+  const put = l => { svLv = l; $('svBat').textContent = Math.round(l*100) + '%'; };
+  if(!navigator.getBattery){ document.querySelector('#svw .sv-bat').style.display = 'none'; return; }
+  navigator.getBattery().then(b => {
+    document.querySelector('#svw .sv-bat').style.display = '';
+    put(b.level);
+    b.onlevelchange = () => put(b.level);
+  }).catch(() => { document.querySelector('#svw .sv-bat').style.display = 'none'; });
+}
+function renderSaver(){
+  svClock();
+  $('svSt').textContent = 'STAGE ' + S.stage;
+  const s = Math.max(0, Math.floor((performance.now() - svT0)/1000));
+  $('svT').textContent = sv2(Math.floor(s/3600)) + ':' + sv2(Math.floor(s/60)%60) + ':' + sv2(s%60);
+  $('svK').textContent = fmt(Math.max(0, S.totalKills - svK0));
+  $('svG').textContent = '+' + fmt(Math.max(0, S.gold - svG0));
+}
+function openSaver(){
+  if(saverOn) return;
+  saverOn = true;
+  svT0 = performance.now(); svK0 = S.totalKills; svG0 = S.gold; svSec = -1;
+  msgTxt = ''; msgT = 0;            /* LESSONS 30-② — 시간 의존 토스트가 화면마다 다르게 찍히는 것을 막는다 */
+  $('app').classList.add('sv');
+  $('svw').classList.add('on');
+  svBattery();
+  renderSaver();
+}
+function closeSaver(){
+  if(!saverOn) return;
+  saverOn = false;
+  $('app').classList.remove('sv');
+  $('svw').classList.remove('on');
+  markDirty();                       /* 절전 동안 멈춰 있던 HUD·패널을 한 번에 되살린다 */
+  drawHud();
+  renderUI();
+}
+/* 해제 제스처 — 탭(이동 10px 미만) 또는 120px 이상 스와이프. 오버레이 전면이 히트영역이다.
+   ⚠ clientX/Y 는 «화면» px 이고 프레임은 fit() 이 scale() 로 줄여 놓은다 — 임계값은 «프레임» px 이라
+   실측 스케일(app 실폭 / 1080)로 나눠서 비교해야 기기마다 같은 제스처가 된다(작업 42 조이스틱과 같은 함정). */
+{
+  const w = $('svw');
+  let px = 0, py = 0, down = false;
+  const svScale = () => ($('app').getBoundingClientRect().width / FRAME_W) || 1;
+  w.addEventListener('pointerdown', e => { down = true; px = e.clientX; py = e.clientY; });
+  w.addEventListener('pointerup', e => {
+    if(!down) return; down = false;
+    const d = Math.hypot(e.clientX - px, e.clientY - py) / svScale();
+    if(d < 10 || d >= 120) closeSaver();
+  });
+  w.addEventListener('pointercancel', () => { down = false; });
+}
 
 function renderUI(){
   /* 23 훈련 팝업 — 골드가 늘면 카드 상태가 바뀐다.
@@ -13536,6 +13691,17 @@ function loop(now){
 
   /* 67 — 보스 처치 슬로모는 «게임 시간» 만 늦춘다. 카메라·연출(camUpdate)과 HUD 는 실시간 dt 로 돈다 */
   step(dt * camTimeScale());
+
+  /* 56 절전 모드 — «전투는 계속, 렌더는 정지». step(dt) 은 위에서 이미 돌았고 여기서는
+     캔버스·HUD·연출·UI 재렌더를 통째로 건너뛴다(측정표 §6-2 — 화면이 완전 불투명 검정이라 그릴 이유가 없다).
+     세이브(saveT)·일일 갱신(dayT)은 아래에서 그대로 돈다 — 멈추면 방치 진행이 유실된다. */
+  if(saverOn){
+    /* 갱신 주기를 «dt 누적» 으로 세면 안 된다 — dt 는 0.1 로 클램프돼 있어 실제 시각보다 뒤처지고,
+       그러면 «방치 시간» 이 초 경계 직전에 그려져 한 칸씩 늦게 보인다(실제로 그렇게 틀렸다).
+       실경과 초가 바뀌는 순간에만 그린다 = 초당 1회, 드리프트 0. */
+    const sec = Math.floor((performance.now() - svT0)/1000);
+    if(sec !== svSec){ svSec = sec; renderSaver(); }
+  } else {
   camUpdate(dt);
   draw();
   fxTick(dt);              /* 58 — 재화 감시·비행 갱신·숫자 롤링. drawHud 보다 «먼저» 돌아야 이번 프레임 값이 쓰인다 */
@@ -13544,6 +13710,7 @@ function loop(now){
 
   uiT += dt;
   if(uiT > 0.35){ uiT = 0; renderUI(); }
+  }
   dayT += dt;
   if(dayT > 30){ dayT = 0; dailyCheck(); }
   saveT += dt;

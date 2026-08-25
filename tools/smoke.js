@@ -357,6 +357,25 @@ function launchOpts(){
         return null;
       });
       if (cut) fail(`${w}×${h}: 바닥 시트가 프레임 밖으로 — ${cut}`); else ok(`${w}×${h} 시트 잘림 없음`);
+      /* 56 절전 모드는 «아래 레이어를 통째로 visibility:hidden» 으로 눕히는 유일한 오버레이라
+         위 후보들과 같이 열면 서로의 검사를 지운다 — 그래서 따로 열고 자기 요소만 본다.
+         짧은 프레임(1600)에서 시계·패널·하단 안내가 프레임 밖으로 나가지 않는지가 요지다. */
+      const svCut = await page.evaluate(() => {
+        if (typeof openSaver !== 'function') return null;
+        openSaver();
+        const app = document.getElementById('app'), A = app.getBoundingClientRect();
+        let bad = null;
+        for (const sel of ['#svw .sv-bat', '#svw .sv-clk', '#svw .sv-dt', '#svw .sv-st', '#svw .sv-p', '#svw .sv-hint']) {
+          const e = document.querySelector(sel); if (!e) continue;
+          const r = e.getBoundingClientRect();
+          if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5) {
+            bad = `${sel} top ${Math.round(r.top - A.top)} bottom ${Math.round(r.bottom - A.bottom)}`; break;
+          }
+        }
+        closeSaver();
+        return bad;
+      }).catch((e) => 'openSaver 실패: ' + String(e.message || e));
+      if (svCut) fail(`${w}×${h}: 절전 모드가 프레임 밖으로 — ${svCut}`); else ok(`${w}×${h} 절전 모드 잘림 없음`);
       if (errs.length) errs.forEach((e) => fail(`${w}×${h}: ${e}`));
       await ctx.close();
     }
