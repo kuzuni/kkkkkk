@@ -139,7 +139,7 @@ ls docs/claims/                # lock 이 새로 잡히는가
 |---|---|---|
 | 계정 1 | `claude-opus-5` | 초기 A~D 구성 |
 | 계정 2 | `claude-opus-5` | 2026-08-24 fable-5 → opus-5 로 변경(저장소 주인 지시) |
-| 계정 3 | `claude-fable-5` | 2026-08-25 raw API 로 생성(opus-5) → 같은 날 10:40Z 저장소 주인 지시로 **fable-5** 로 update(다음 실행부터 적용). env `env_016Xis527zoBbZPqrtAZVQ6x`. A=`trig_01RQxsBcceyL7MLfiJt5Q1WF` B=`trig_01FANpKM1HgH1RstJ1n4dsCx` C=`trig_01WjU9g4CeKXibxLGm9LSNx3` D=`trig_01Y9rMz6q1xSVLyRQYDJrLCt` (전부 enabled). 같은 계정에 wwwww 루틴 9개(:07/:14/:22/:29/:34/:37/:44/:51/:59)가 함께 돌므로 분이 안 겹치는지 확인됨 |
+| 계정 3 | `claude-opus-5` | 2026-08-25 raw API 로 생성(opus-5) → 같은 날 10:40Z fable-5 로 update → 18:21Z 저장소 주인 지시로 다시 **opus-5** 로 update(다음 실행 C 18:32Z 부터). env `env_016Xis527zoBbZPqrtAZVQ6x`. A=`trig_01RQxsBcceyL7MLfiJt5Q1WF` B=`trig_01FANpKM1HgH1RstJ1n4dsCx` C=`trig_01WjU9g4CeKXibxLGm9LSNx3` D=`trig_01Y9rMz6q1xSVLyRQYDJrLCt` (전부 enabled). 같은 계정에 wwwww 루틴 9개(:07/:14/:22/:29/:34/:37/:44/:51/:59)가 함께 돌므로 분이 안 겹치는지 확인됨 |
 | 계정 4 | `claude-opus-5` | 2026-08-25 17:37Z raw API(§5-5)로 생성, 저장소 주인 지시로 opus. env `env_014bNYWJnnxgzqfDN9JPBD6p`. A=`trig_01VCUhttr4YCwBphqtwAzoXM` B=`trig_0112cCnQR1adKTR4RMVR1DeM` C=`trig_01AeKyu77YxpJH5WoAyMr9CT` D=`trig_018qPouMKQxKgREG8TvRGfi7` (전부 enabled). 같은 계정의 wwwww 루틴(4-3D-A~H·4-QA, :05~:57)은 전부 disabled 상태라 분 충돌 없음 |
 
 모델을 바꿔도 **`docs/ROUTINE.md` 지시서는 그대로 쓴다.** 지시서는 모델 중립적으로 쓰여 있다.
@@ -166,7 +166,7 @@ ls docs/claims/                # lock 이 새로 잡히는가
 - [ ] `list_environments` 로 environment_id 를 확보했다
 - [ ] 그 환경의 네트워크 정책이 **playwright / chromium 실행**을 막지 않는다 (헤드리스 캡처가 필수다)
 - [ ] 세션에서 `git push origin main` 이 실제로 되는지 **수동으로 1회** 확인했다
-- [ ] 모델을 §3 표대로 지정했다(계정 1·2·4 `claude-opus-5`, 계정 3 `claude-fable-5`)
+- [ ] 모델을 §3 표대로 지정했다(계정 1~4 전부 `claude-opus-5`)
 - [ ] allowed_tools 에 `Task` 가 들어 있다
 
 ---
@@ -222,7 +222,7 @@ create_trigger(
 ```
 만든 **직후** 4개 전부 모델을 박는다 (`create_trigger` 에는 model 파라미터가 없다):
 ```
-update_trigger(trigger_id: <위에서 받은 id>, model: "claude-fable-5")
+update_trigger(trigger_id: <위에서 받은 id>, model: "claude-opus-5")
 ```
 
 `allowed_tools` 는 `create_trigger` 로 지정할 수 없다. 기본값에 `Bash`·`Read`·`Write`·`Edit`·
@@ -292,7 +292,7 @@ list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인
 | 세션이 여러 작업을 한 번에 함 | 지시서를 안 읽음 | 프롬프트가 §5-1 원문 그대로인지 확인(작업 내용을 프롬프트에 직접 쓰면 이렇게 된다) |
 | 루틴 시각이 됐는데 새 세션이 안 뜨고 만든 세션에 메시지만 옴 | `create_new_session_on_fire` 누락 | §5-3. 루틴을 지우고 그 옵션을 넣어 다시 만든다 |
 | 비평 루프가 안 돌고 그냥 넘어감 | `Task` 도구 없음 | §5-3. 웹 UI 로 다시 만든다 |
-| 모델이 fable 이 아님 | `create_trigger` 엔 model 이 없다 | `update_trigger(trigger_id, model:"claude-fable-5")` 로 4개 전부 지정 |
+| 모델이 §3 표와 다름 | `create_trigger` 엔 model 이 없다 | `update_trigger(trigger_id, model:"claude-opus-5")` 로 4개 전부 지정 |
 | 에이전트가 루틴을 못 끈다 | 웹 UI 로 만든 루틴(`created_via: http_api`) | 정상 동작이다. 사람이 루틴 목록에서 직접 끈다(§2-①) |
 
 ---
@@ -314,4 +314,5 @@ list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인
 | 2026-08-25 | 계정 3 추가 준비 — §1 에 계정 3 cron(:02/:17/:32/:47)·계정 4 예비 분, §5-5 raw API body 원문, §5-6 다계정 운영 규칙 |
 | 2026-08-25 | 계정 3 워커 A~D(:02/:17/:32/:47) 를 §5-5 body 로 생성(첫 실행 06:02Z~). 로컬 자동 모드 분류기가 C·D `RemoteTrigger create` 를 한 차례 차단했으나 사용자 재지시 후 통과 — 같은 호출이 일관되게 승인되지 않을 수 있으니 4개를 순차·단독으로 호출할 것 |
 | 2026-08-25 | 계정 3 워커 4개 모델 `claude-opus-5` → `claude-fable-5` (RemoteTrigger update `{"model":…}`, 10:40Z, 즉시 적용 — 다음 실행 D 10:47Z 부터) |
+| 2026-08-25 | 계정 3 워커 4개 모델 `claude-fable-5` → `claude-opus-5` (RemoteTrigger update, 18:21Z, 저장소 주인 지시 «루틴 이제 오퍼스로». 이로써 4계정 전부 opus-5) |
 | 2026-08-25 | 계정 4 워커 A~D(:09/:24/:39/:54) 를 §5-5 body 로 생성(17:37Z, `claude-opus-5`, 첫 실행 C 17:39Z~). 분류기가 첫 create 를 한 차례 차단 → 사용자 재지시 후 4개 순차 통과(계정 3 때와 동일 패턴). §1 표를 4계정 확장 |
