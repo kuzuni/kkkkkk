@@ -1,0 +1,168 @@
+#!/usr/bin/env node
+/* 80 검증 — 54 랭킹 시상대 1·2·3위 = 랭커 look(외형 데이터)으로 그리는 플레이어 스프라이트
+ *
+ *   node tools/verify80.js
+ *
+ * 검사 항목:
+ *   [A] 폐기·기하 — 단상 위 이모지(em#rkCh*) 가 없고 캔버스 3장이 규격(316×252 / 237×189 ×2)대로
+ *       상자를 1:1 로 차지한다(+ image-rendering:pixelated)
+ *   [B] 잉크·발 위치 — 세 캔버스 모두 실제로 그려졌고(불투명 픽셀), 발밑(최하단 잉크 행)의 프레임 y 가
+ *       단상 윗면 448/482/492 (측정표 54 §3 의 ref 532/566/576 − 84) ±4px
+ *   [C] 데이터 경로 — 상위 3 엔트리의 look.avatar 가 서로 다르고(av0/av1/av2 순환) 캔버스 픽셀도
+ *       세 장이 서로 다르다(«외형이 다르게 그려지는» 검증)
+ *   [D] 내 look — S.best 를 1위로 올리면 1위 단상이 내 look({avatar: cosCur()})으로 그려지고,
+ *       코스튬을 av0→av3 으로 바꾼 뒤 재진입하면 내 자리 색이 바뀐다(주인 지시 검증 항목)
+ *   [E] 재생 — 페이지가 열려 있는 동안 idle 8fps 로 캔버스가 바뀌고, 닫으면 rAF 가 멈춘다(rkRaf 0)
+ *   [F] flip — 2위(좌)만 flip(1위를 향해 마주 봄): 2위와 3위의 같은 프레임 잉크가 좌우 대칭이다
+ *
+ * getImageData 를 쓰므로 --allow-file-access-from-files 로 띄운다.
+ */
+const path = require('path');
+const fs = require('fs');
+const { chromium } = (() => {
+  try { return require('playwright'); } catch (_) {}
+  const os = require('os');
+  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
+  for (const root of roots) {
+    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
+    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
+  }
+  console.error('playwright 없음'); process.exit(2);
+})();
+
+const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+let pass = 0, fail = 0;
+const ok = (b, name, detail) => {
+  console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
+  b ? pass++ : fail++;
+};
+
+(async () => {
+  const args = ['--allow-file-access-from-files'];
+  let browser;
+  try { browser = await chromium.launch({ args }); }
+  catch (e) {
+    const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
+    if (!fs.existsSync(p)) throw e;
+    browser = await chromium.launch({ executablePath: p, args });
+  }
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(URL);
+  await page.waitForFunction(() => typeof S !== 'undefined' && typeof openRank === 'function' && ATLAS.knight && ATLAS.knight.image);
+  await page.waitForTimeout(800);
+
+  /* 랭킹 페이지 열기 (fresh save → 내 best 0 = 리스트 최하위, 단상 3자리는 전부 더미 랭커) */
+  await page.evaluate(() => openRank());
+  await page.waitForTimeout(400);
+
+  /* [A] 폐기·기하 */
+  const A = await page.evaluate(() => {
+    const out = { em: document.querySelectorAll('#rkw .rk-ch em#rkCh1, #rkw .rk-ch em#rkCh2, #rkw .rk-ch em#rkCh3').length,
+                  mount: !!document.querySelector('#rkw .rk-ch.c3a em'), cv: [] };
+    for (let k = 1; k <= 3; k++) {
+      const cv = document.getElementById('rkCh' + k);
+      if (!cv || cv.tagName !== 'CANVAS') { out.cv.push(null); continue; }
+      const b = cv.parentNode.getBoundingClientRect();
+      out.cv.push({ w: cv.width, h: cv.height, bw: Math.round(b.width), bh: Math.round(b.height),
+                    top: Math.round(b.top), left: Math.round(b.left),
+                    pix: getComputedStyle(cv).imageRendering });
+    }
+    return out;
+  });
+  ok(A.em === 0, 'A1 단상 이모지 폐기', 'em#rkCh* ' + A.em + '개');
+  ok(A.mount, 'A2 탈것(c3a) 아트 자리는 유지');
+  const spec = [{ w: 316, h: 252, top: 196, left: 383 }, { w: 237, h: 189, top: 293, left: 97 }, { w: 237, h: 189, top: 303, left: 824 }];
+  for (let i = 0; i < 3; i++) {
+    const c = A.cv[i], s = spec[i];
+    ok(!!c && c.w === s.w && c.h === s.h && c.bw === s.w && c.bh === s.h,
+       'A3 캔버스 ' + (i + 1) + '위 규격 1:1', c ? c.w + 'x' + c.h + ' 상자 ' + c.bw + 'x' + c.bh : '없음');
+    ok(!!c && c.top === s.top && c.left === s.left, 'A4 상자 위치 ' + (i + 1) + '위', c ? c.left + ',' + c.top : '');
+    ok(!!c && c.pix === 'pixelated', 'A5 pixelated ' + (i + 1) + '위', c && c.pix);
+  }
+
+  /* 캔버스 잉크 스캔 헬퍼 — {n:불투명 픽셀 수, feet:최하단 잉크 행(캔버스 로컬), sig:픽셀 해시} */
+  const scan = k => page.evaluate(k => {
+    const cv = document.getElementById('rkCh' + k), g = cv.getContext('2d');
+    const d = g.getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0, feet = -1, sig = 0;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      const i = (y * cv.width + x) * 4;
+      if (d[i + 3] > 128) { n++; feet = Math.max(feet, y); sig = (sig * 31 + d[i] + d[i + 1] * 7 + d[i + 2] * 13 + x) >>> 0; }
+    }
+    return { n, feet, sig };
+  }, k);
+
+  /* [B] 잉크·발 위치 */
+  const feetY = [448, 482, 492];
+  const sigs = [];
+  for (let k = 1; k <= 3; k++) {
+    const r = await scan(k);
+    sigs.push(r.sig);
+    ok(r.n > 800, 'B1 캔버스 ' + k + '위 잉크', r.n + 'px');
+    const fy = spec[k - 1].top + r.feet + 1;   /* 프레임 y (viewport 1080×2280 = 프레임 1:1) */
+    ok(Math.abs(fy - feetY[k - 1]) <= 4, 'B2 발 위치 ' + k + '위 = 단상 윗면 ' + feetY[k - 1] + '±4', '실측 ' + fy);
+  }
+
+  /* [C] 데이터 경로 — look 이 다르면 그림도 다르다 */
+  const C = await page.evaluate(() => {
+    const rows = rankRows();
+    return { looks: rows.slice(0, 3).map(r => r.look && r.look.avatar), me: rows.find(r => r.me).look.avatar };
+  });
+  ok(new Set(C.looks).size === 3, 'C1 상위 3 look.avatar 서로 다름', C.looks.join(','));
+  ok(sigs[0] !== sigs[1] && sigs[1] !== sigs[2] && sigs[0] !== sigs[2], 'C2 캔버스 3장 픽셀 서로 다름(틴트)', sigs.join('/'));
+  ok(C.me === 'av0', 'C3 내 look = cosCur()', C.me);
+
+  /* [D] 내 look → 1위 단상 + 코스튬 변경 반영 */
+  await page.evaluate(() => { S.best = 99999; closeRank(); openRank(); });
+  await page.waitForTimeout(250);
+  const D0 = await page.evaluate(() => rankRows()[0].me);
+  ok(D0 === true, 'D1 best 갱신 시 내가 1위 엔트리');
+  const dA = await scan(1);
+  await page.evaluate(() => { S.avatars.av3 = true; S.avatar = 'av3'; closeRank(); openRank(); });
+  await page.waitForTimeout(250);
+  const dB = await scan(1);
+  ok(dA.n > 800 && dB.n > 800 && dA.sig !== dB.sig, 'D2 코스튬 av0→av3 재진입 시 내 자리 색 변경', dA.sig + ' → ' + dB.sig);
+  await page.evaluate(() => { S.avatar = 'av0'; });
+
+  /* [E] 재생 — idle 로 프레임이 바뀌고, 닫으면 rAF 정지 */
+  const e1 = await scan(1);
+  await page.waitForTimeout(700);              /* 8fps idle — 0.7s 면 프레임이 바뀐다 */
+  const e2 = await scan(1);
+  ok(e1.sig !== e2.sig, 'E1 열려 있는 동안 idle 재생', e1.sig + ' → ' + e2.sig);
+  await page.evaluate(() => closeRank());
+  await page.waitForTimeout(300);
+  const eRaf = await page.evaluate(() => rkRaf);
+  ok(eRaf === 0, 'E2 닫으면 rAF 정지', 'rkRaf=' + eRaf);
+
+  /* [F] flip — 2위만 좌우 반전. 같은 아바타·같은 프레임으로 고정해 2위 vs 3위 잉크 열 분포가 대칭 */
+  const F = await page.evaluate(() => {
+    openRank();
+    rkPodLooks[1] = { avatar: 'av0' }; rkPodLooks[2] = { avatar: 'av0' };
+    const f = ATLAS.knight.a.idle[0];
+    drawHeroTo(document.getElementById('rkCh2'), { avatar: 'av0', frame: f, scale: 3, flip: true });
+    drawHeroTo(document.getElementById('rkCh3'), { avatar: 'av0', frame: f, scale: 3, flip: false });
+    const col = k => {
+      const cv = document.getElementById('rkCh' + k), g = cv.getContext('2d');
+      const d = g.getImageData(0, 0, cv.width, cv.height).data, a = [];
+      for (let x = 0; x < cv.width; x++) { let n = 0; for (let y = 0; y < cv.height; y++) if (d[(y * cv.width + x) * 4 + 3] > 128) n++; a.push(n); }
+      return a;
+    };
+    const c2 = col(2), c3 = col(3);
+    let diff = 0, tot = 0;
+    for (let x = 0; x < c2.length; x++) { diff += Math.abs(c2[x] - c3[c3.length - 1 - x]); tot += c2[x]; }
+    closeRank();
+    return { diff, tot };
+  });
+  ok(F.tot > 0 && F.diff / F.tot < 0.02, 'F1 2위 flip = 3위 미러', 'diff ' + F.diff + '/' + F.tot);
+
+  ok(errs.length === 0, 'G1 콘솔 에러 0건', errs.slice(0, 3).join(' | '));
+
+  console.log('----');
+  console.log('VERIFY80 ' + (fail === 0 ? 'PASS' : 'FAIL') + ' ' + pass + '/' + (pass + fail));
+  await browser.close();
+  process.exit(fail === 0 ? 0 : 1);
+})().catch(e => { console.error(e); process.exit(2); });

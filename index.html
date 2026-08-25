@@ -6460,12 +6460,16 @@
      2위 x24..338·y196..470(접지) · 3위 x700..1041·y262..471(접지). 잉크가 상자를 넘치게 fs·scaleX 를 잡고 클립. */
   /* 10회차 — M·N 공통분 반영: 1위 잉크 상단 ref 261(자체 col 스캔 raw345 정합)·바닥 466(슬래브 11px 겹침)·
      중심 530(전면 중심 541 − 13) · 3위는 두 오브젝트(좌 x700..840 · 우 x845..1041). 2위는 M·N 상충이라 유지(52-④) */
-  .rk-ch.c1{left:360px;top:261px;width:340px;height:205px;font-size:354px}
-  .rk-ch.c2{left:24px;top:196px;width:314px;height:274px;font-size:350px}
+  /* 작업 80 — 1·2·3위 캐릭터 이모지 폐기, 랭커 look 을 그리는 스프라이트 캔버스(79 규격: 79×63 논리
+     프레임 × 정수 배율 — 1위 sc4(316×252, «살짝 크게»)·2/3위 sc3(237×189)). 상자 = 캔버스 1:1(비정수
+     CSS 스케일은 픽셀 아트가 흐려져 금지). 바닥 = 단상 윗면 y(측정표 §3 ref 532/566/576 − 84 = 448/482/492) ·
+     가로 중심 = 1위 단상 전면 중심 541 · 2위 215 · 3위는 탈것(c3a) 우측 ref 캐릭터 자리 943.
+     틴트·프레임·flip 은 drawHeroTo 가 그린다(2위는 1위를 향해 flip — 기사 원본은 왼쪽을 봄) */
+  .rk-ch.c1{left:383px;top:196px;width:316px;height:252px}
+  .rk-ch.c2{left:97px;top:293px;width:237px;height:189px}
   .rk-ch.c3a{left:700px;top:330px;width:140px;height:145px;font-size:200px}
-  .rk-ch.c3b{left:845px;top:275px;width:196px;height:205px;font-size:300px}
-  #rkw .rk-ch.c1>em{transform:scaleX(1.36)}
-  #rkw .rk-ch.c2>em{transform:scaleX(1.06)}
+  .rk-ch.c3b{left:824px;top:303px;width:237px;height:189px}
+  #rkw .rk-ch>canvas{display:block;image-rendering:pixelated}
   /* 아트 자리 — 부유 장식 3군집(1·2위 상공 M x90..260/x350..560 · 3위 상공 자체 스캔 x728..1013 y147..260) */
   .rk-fl{display:flex;align-items:center;justify-content:space-between;
     font-size:100px;line-height:1;overflow:hidden;opacity:.92}
@@ -7361,12 +7365,14 @@
       <div class="rk-pod p2"><u></u><b></b></div>
       <div class="rk-pod p1"><u></u></div>
       <div class="rk-pod p3"><u></u></div>
-      <!-- 아트 자리 — 단상 위 캐릭터. 10회차: 시상대 «앞» (ref 는 캐릭터 바닥이 슬래브에 살짝 겹친다).
-           3위는 ref 가 두 오브젝트 클러스터(좌 탈것 + 우 캐릭터)라 자리도 둘로 쪼갠다 -->
-      <div class="rk-ch c2"><em id="rkCh2">🦊</em></div>
-      <div class="rk-ch c1"><em id="rkCh1">🐲</em></div>
+      <!-- 작업 80 — 단상 위 1·2·3위는 이모지가 아니라 «랭커의 외형 데이터(look)» 로 그리는 캔버스다.
+           renderRank() 가 각 엔트리의 look 으로 drawHeroTo() 호출(79 와 같은 헬퍼·전투와 같은 틴트 경로).
+           발밑 앵커 = 캔버스 바닥 중앙, 바닥 y = 단상 윗면(측정표 §3: ref 532/566/576 → 프레임 448/482/492).
+           3위 좌측 탈것(⛵)만 아트 자리로 남는다(ref 클러스터의 캐릭터 아닌 오브젝트) -->
+      <div class="rk-ch c2"><canvas id="rkCh2" width="237" height="189"></canvas></div>
+      <div class="rk-ch c1"><canvas id="rkCh1" width="316" height="252"></canvas></div>
       <div class="rk-ch c3a"><em>⛵</em></div>
-      <div class="rk-ch c3b"><em id="rkCh3">🐺</em></div>
+      <div class="rk-ch c3b"><canvas id="rkCh3" width="237" height="189"></canvas></div>
       <div class="rk-fl f1"><em>🛸</em><em>👑</em></div>
       <div class="rk-fl f2"><em>🤖</em><em>👻</em></div>
       <div class="rk-fl f3"><em>🛸</em><em>🎃</em></div>
@@ -12815,8 +12821,13 @@ const rkCp = b => Math.round(Math.pow(1.17, b) * 420);
 const rkTitle = t => (t >= 0 ? RANKS[Math.min(t, RANKS.length - 1)].n : null);
 
 function rankRows(){
-  const me = { n:S.nick, av:'🐱', t:S.rank, best:S.best | 0, cp:cp(), me:true };
-  const all = RANK_NPC.map(x => ({ n:x.n, av:x.av, t:x.t, best:x.best, cp:rkCp(x.best) })).concat([me]);
+  /* 작업 80 — look = «외형 데이터 → 그림» 구조(주인 지시). 단상은 look 만 보고 drawHeroTo 로 그리므로
+     나중에 실제 랭커가 서버에서 오면 그 사람의 look 을 넣기만 하면 된다. 지금은 서버가 없어
+     내 엔트리는 {avatar: cosCur()}, 더미 랭커는 엔트리마다 서로 다른 AVATARS 틴트(av0~av5 순환)를
+     넣어 «외형이 다르게 그려지는» 데이터 경로를 검증한다(확장: sprite·tint·weapon…). */
+  const me = { n:S.nick, av:'🐱', t:S.rank, best:S.best | 0, cp:cp(), me:true, look:{ avatar: cosCur() } };
+  const all = RANK_NPC.map((x, i) => ({ n:x.n, av:x.av, t:x.t, best:x.best, cp:rkCp(x.best),
+                                        look:{ avatar: 'av' + (i % 6) } })).concat([me]);
   all.sort((a, b) => b.best - a.best || b.cp - a.cp);
   all.forEach((r, i) => { r.p = i + 1; });
   return all;
@@ -12840,15 +12851,16 @@ function renderRank(){
   const rows = rankRows();
   rkRowsCache = rows;
   $('rkList').innerHTML = rows.map(rkRowHTML).join('');
-  /* 포디움 1·2·3위 — 씬의 텍스트 4종만 데이터로 채운다(단상·캐릭터는 아트 자리) */
+  /* 포디움 1·2·3위 — 텍스트 4종 + 캐릭터 look(작업 80: 이모지 폐기, 스프라이트 캔버스) */
   for(let i = 0; i < 3; i++){
     const r = rows[i], t = rkTitle(r.t), k = i + 1;
     $('rkPn' + k).textContent = r.n;
     $('rkPs' + k).textContent = r.best + ' 스테이지';
     $('rkPt' + k).textContent = t || '칭호 없음';
-    $('rkCh' + k).textContent = r.av;
+    rkPodLooks[i] = r.look;
     $('rkPt' + k).parentNode.classList.toggle('nt', !t);
   }
+  rkPodDraw();
   const me = rows.find(r => r.me);
   $('rkMyNo').textContent = me.p;
   $('rkMyNm').textContent = me.n;
@@ -12858,7 +12870,31 @@ function renderRank(){
   $('rkMyTt').className = 'rk-tt ' + (mt ? 'g' + Math.min(me.t, 7) : 'no');
   $('rkMyTt').firstElementChild.textContent = mt || '칭호 없음';
 }
-function openRank(){ renderRank(); $('rkw').classList.add('on'); }
+/* 작업 80 — 시상대 캐릭터 idle 애니메이션. 79 의 eqHero 와 같은 규격(knight·idle·8fps),
+   rAF 는 #rkw.on 인 동안만 돌고 닫히면 다음 틱에서 자멸한다. 아틀라스가 아직 안 실렸으면
+   drawHeroTo 가 false 로 빠지고 다음 틱이 다시 그리므로 별도 대기가 필요 없다. */
+const rkHero = { akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false };
+const rkPodLooks = [null, null, null];
+let rkRaf = 0, rkTs = 0;
+/* 단상별 배율·방향 — 1위 sc4(살짝 크게)·2/3위 sc3. 기사 원본은 왼쪽을 보므로
+   좌측 단상(2위)만 flip 해 1위를 향하고, 우측 단상(3위)은 원본 그대로 1위를 본다 */
+function rkPodDraw(){
+  const f = curFrame(rkHero);
+  for(let i = 0; i < 3; i++){
+    const cv = $('rkCh' + (i + 1)), lk = rkPodLooks[i];
+    if(cv && lk) drawHeroTo(cv, { avatar: lk.avatar, frame: f, scale: i === 0 ? 4 : 3, flip: i === 1 });
+  }
+}
+function rkTick(ts){
+  rkRaf = 0;
+  if(!$('rkw').classList.contains('on')){ rkTs = 0; return; }
+  const dt = rkTs ? Math.min((ts - rkTs)/1000, 0.1) : 0;
+  rkTs = ts;
+  stepAnim(rkHero, dt);
+  rkPodDraw();
+  rkRaf = requestAnimationFrame(rkTick);
+}
+function openRank(){ renderRank(); $('rkw').classList.add('on'); if(!rkRaf) rkRaf = requestAnimationFrame(rkTick); }
 function closeRank(){ $('rkw').classList.remove('on'); }
 $('rkBack').onclick = closeRank;
 /* 랭킹 종류 탭 — «시련의 탑»·«몬스터 농장» 은 콘텐츠 자체가 없다(35 패스의 잠금 탭과 같은 처리).
