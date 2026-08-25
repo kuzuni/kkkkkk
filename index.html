@@ -5649,6 +5649,17 @@ function killEnemy(e){
   corpses.push({ akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
                  x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r });
 }
+/* 작업 59 — 플레이어 자동 이동 AI 상수 (구석·벽 체류 최소화).
+   속도·사거리·피해는 손대지 않는다 = 밸런스 불변. 42 조이스틱 수동 중엔 적용되지 않는다. */
+const AI_WALL_M = 260;      /* 벽 반발 마진 (구 150) */
+const AI_WALL_K = 2.6;      /* 벽 반발 계수 — 가까울수록 «제곱»으로 강해진다 */
+const AI_PULL   = 0.9;      /* 중앙 인력 — 중심 편차(-1..1)에 비례 */
+const AI_HOME   = 0.6;      /* 적이 하나도 없을 때의 중앙 복귀 */
+function wallProx(x, y){    /* 0 = 중앙권, 1 = 벽에 붙음 */
+  const m = AI_WALL_M;
+  return Math.max(0, Math.min(1,
+    Math.max((m-x)/m, (x-(WORLD.w-m))/m, (m-y)/m, (y-(WORLD.h-m))/m)));
+}
 function nearest(x, y, maxD){
   let best = null, bd = maxD ? maxD*maxD : Infinity;
   for(const e of enemies){
@@ -5818,22 +5829,48 @@ function step(dt){
          자동 카이팅·적 회피·벽 마진 푸시는 전부 끄고 아래 하드 clamp 만 남긴다. */
       mx = joy.dx; my = joy.dy; mmag = joy.mag;
     }else{
+      /* 작업 59 — 자동 이동 AI: 구석·벽 체류 최소화
+         ① 중앙 인력(중심 편차 비례) ② 벽 마진 150→260 · 거리 제곱 반발
+         ③ 벽·구석 근처의 후퇴/회피는 직선 대신 벽을 따라 도는 스트레이프
+         ④ 적이 하나도 없으면 천천히 중앙 복귀 */
+      const cxw = WORLD.w/2, cyw = WORLD.h/2;
+      const orx = (player.x-cxw)/cxw, ory = (player.y-cyw)/cyw;   /* 중심 편차 -1..1 */
+      const wall = wallProx(player.x, player.y);
+      let ax = 0, ay = 0;               /* 후퇴 + 적 회피 — 벽 근처에서 접선으로 굴절시킨다 */
       if(tg){
         const dx = (tg.x-player.x)/td, dy = (tg.y-player.y)/td;
         const want = 135;
         if(td > want + 30){ mx += dx; my += dy; }
-        else if(td < want - 25){ mx -= dx*1.2; my -= dy*1.2; }
+        else if(td < want - 25){ ax -= dx*1.2; ay -= dy*1.2; }
+      }else{
+        const d = Math.hypot(orx*cxw, ory*cyw);                   /* ④ */
+        if(d > 40){ mx -= orx*cxw/d*AI_HOME; my -= ory*cyw/d*AI_HOME; }
       }
       for(const e of enemies){
         const dx = player.x-e.x, dy = player.y-e.y;
         const d = Math.hypot(dx, dy) || 1;
-        if(d < 115){ const w = (115-d)/115; mx += dx/d*w*1.7; my += dy/d*w*1.7; }
+        if(d < 115){ const w = (115-d)/115; ax += dx/d*w*1.7; ay += dy/d*w*1.7; }
       }
-      const m = 150;
-      if(player.x < m) mx += (m-player.x)/m*2.4;
-      if(player.x > WORLD.w-m) mx -= (player.x-(WORLD.w-m))/m*2.4;
-      if(player.y < m) my += (m-player.y)/m*2.4;
-      if(player.y > WORLD.h-m) my -= (player.y-(WORLD.h-m))/m*2.4;
+      /* ③ 스트레이프 — 벽 «바깥» 으로 향하는 성분만 떼어내 접선(벽을 따라 도는 방향)으로 옮긴다.
+         직선 후퇴로 벽을 파고들다 구석에 박히는 것이 심심함의 주원인이었다. */
+      if(wall > 0.15 && (ax !== 0 || ay !== 0)){
+        const ol = Math.hypot(orx, ory) || 1;
+        const oux = orx/ol, ouy = ory/ol;               /* 중심 → 나 (바깥) 단위벡터 */
+        const out = ax*oux + ay*ouy;
+        if(out > 0){
+          ax -= oux*out*wall; ay -= ouy*out*wall;       /* 바깥 성분 제거 */
+          let tx = -ouy, ty = oux;                      /* 벽을 따라 도는 접선 */
+          if(ax*tx + ay*ty < 0){ tx = -tx; ty = -ty; }  /* 이미 가던 쪽으로 */
+          ax += tx*out*wall; ay += ty*out*wall;
+        }
+      }
+      mx += ax; my += ay;
+      mx -= orx*AI_PULL; my -= ory*AI_PULL;             /* ① 중앙 인력 */
+      const m = AI_WALL_M, k = AI_WALL_K;               /* ② 벽 반발(거리 제곱) */
+      if(player.x < m){ const t = (m-player.x)/m; mx += t*t*k; }
+      if(player.x > WORLD.w-m){ const t = (player.x-(WORLD.w-m))/m; mx -= t*t*k; }
+      if(player.y < m){ const t = (m-player.y)/m; my += t*t*k; }
+      if(player.y > WORLD.h-m){ const t = (player.y-(WORLD.h-m))/m; my -= t*t*k; }
     }
 
     const ml = Math.hypot(mx, my), sp = stat.speed*mmag;
