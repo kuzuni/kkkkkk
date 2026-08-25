@@ -2111,6 +2111,25 @@ A5 `.mbox` 와 겹 구성이 같다: 검정 8 → 갈색 링 11(바깥 6 `#56443
 - [x] 게이트 `node tools/verify78.js` → **VERIFY78 PASS (20/20)** · `node tools/smoke.js` → **SMOKE PASS**
 - [ ] (60 구간) `#cfw` 가 `JZ_OVID` 에 없어 설정 팝업만 open/close 소리 미발화 — 60 담당이 추가하면 자동 편입
 
+### 128 `<audio>` 폴백 누수 체크리스트 (2026-08-25, sess-2104-10442 워커 A — 완료 · **버그**)
+
+`auMode === 'el'` 폴백에서 «호출마다 엘리먼트를 만들고 회수하지 않아» 크로미움의 문서당
+WebMediaPlayer 상한(~75, crbug.com/1144736)에 닿으면 **그 뒤로 효과음이 통째로 죽던** 버그.
+`ctx`(WebAudio) 경로는 `createBufferSource()` 라 무관하다 — **https 로 플레이하면 안 보인다.**
+상세 `docs/review/128-오디오누수.md`.
+
+- [x] **`sfx()` el 분기의 `base.cloneNode()` 폐기 → 고정 «목소리 풀»** `AU_VOICE_MAX = 8` · `auVo[]` ·
+      `auVoice(name)`(① 같은 이름의 쉬는 목소리 → ② 남는 목소리 → ③ 가장 오래된 것 뺏기). 같은 이름이면 `src` 재할당 없음
+- [x] 프리로드 캐시 `auEl`(AU_SFX 27종)은 **종전 그대로** — 고정 개수라 누수가 아니다(verify78 §C 가 계속 27 을 센다)
+- [x] **BGM 은 핑퐁 2개**(`auBgmEl`) — 트랙 전환마다 `new Audio()` 하던 것(보스전 진입·이탈마다 2개) 폐기
+- [x] **페이드인·페이드아웃 타이머 id 분리**(`bgmElFade` / `bgmElFadeOut`) — 하나를 나눠 쓰던 탓에 페이드인이
+      직전 트랙의 페이드아웃을 지워 **옛 트랙이 볼륨을 문 채 영원히 재생(BGM 2겹)** 되던 것 동반 수정
+- [x] 미디어 엘리먼트 총수 = 프리로드 27 + 목소리 8 + BGM 2 = **37 ≤ 75**. `auMade` 로 노출해 게이트가 직접 잰다
+- [x] 재현 `node tools/repro128.js` → 수정 전 **CRASH**(경고 192건 · 폭주 뒤 재생 0) → 수정 후 **PASS**
+- [x] 게이트 `node tools/verify128.js` → **VERIFY128 PASS (23/23)** · `--long` 이면 §D 자동 전투 180s
+      (`file://` 로 연다 — `http` 로 열면 `ctx` 경로라 이 버그를 아예 안 잰다. 첫 검사가 `auMode === 'el'`)
+- [x] 회귀 **VERIFY78 20/20 · VERIFY98 52/52 · VERIFY99 50/50 · SMOKE PASS**
+
 ### 98 볼륨 정규화 체크리스트 (2026-08-25, sess-1856-18302 워커 D — 완료)
 
 주인 지시: «효과음마다 볼륨이 제대로 · BGM 과 밸런스 · 사냥만 해도 시끄럽다(coin 이 특히)».
