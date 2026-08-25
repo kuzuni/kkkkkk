@@ -10060,6 +10060,10 @@ function step(dt){
           const crit = Math.random() < stat.crit;
           hitEnemy(e, od*(crit?stat.cdmg:1), crit, Math.cos(a)*70, Math.sin(a)*70);
           burst(bx, by, '#ffd9a0', 4, 120);
+          /* 114 ② — 지속형(회전검)도 «맞는 순간» 은 투사체와 같은 문법으로 읽혀야 한다.
+             칼날은 접선 방향으로 도는 중이므로 스파크는 접선 반대로 튄다 */
+          impactFx((bx + e.x)/2, (by + (e.y-e.r))/2, Math.cos(a+1.57)*300, Math.sin(a+1.57)*300,
+                   '#ffd9a0', crit, s.g);
         }
       }
     }
@@ -10071,6 +10075,8 @@ function step(dt){
     if(auraTick <= 0){
       auraTick = 0.35;
       const R = 92 + 6*oLv('aura'), d = skillDmg(SK.aura)*0.35*sbAtk();
+      /* 114 ③ — 지속형이라 «지금 피해가 들어갔다» 는 신호가 없었다. 틱마다 바닥 파문 한 겹 */
+      fxRingFlat(player.x, player.y - 20, R, '#ffb45c', 0.32, FX_W);
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
         if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
@@ -10624,6 +10630,24 @@ function draw(){
   /* 회전검 */
   if(skillEquipped('orbit') && has('orbit') && player.dead <= 0){
     const cnt = Math.min(2 + Math.floor(oLv('orbit')/2), 8), R = 78;
+    /* 114 ① — 회전검 잔상. 궤도가 «알려진 타원» 이라 링버퍼 없이 각도를 되짚어 그린다(할당 0).
+       칼날 뒤 0.30rad 를 6분절로 나눠 굵기·알파를 줄인다 */
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round'; ctx.strokeStyle = '#ffe1a0';
+    for(let i=0;i<cnt;i++){
+      const a = orbitAng + i*(6.283/cnt);
+      for(let t=0;t<6;t++){
+        const f = 1 - t/6, a0 = a - t*0.055, a1 = a0 - 0.055;
+        ctx.globalAlpha = f*f*0.55;
+        ctx.lineWidth = 1.5 + 7*f;
+        ctx.beginPath();
+        ctx.moveTo(player.x + Math.cos(a0)*R, player.y - 22 + Math.sin(a0)*R*0.75);
+        ctx.lineTo(player.x + Math.cos(a1)*R, player.y - 22 + Math.sin(a1)*R*0.75);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
     for(let i=0;i<cnt;i++){
       const a = orbitAng + i*(6.283/cnt);
       const bx = player.x + Math.cos(a)*R, by = player.y - 22 + Math.sin(a)*R*0.75;
