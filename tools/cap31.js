@@ -48,7 +48,12 @@ function launchOpts() {
   await page.evaluate(() => document.querySelector('#dunList [data-dcard]').click());
   await page.waitForTimeout(500);
   await page.evaluate(() => document.getElementById('dgdGo').click());
-  await page.waitForTimeout(900);
+  /* 900ms 고정 대기는 플레이크였다(2회차에 WARN(false) 1회) — 실제로 열릴 때까지 기다린다 */
+  await page.waitForFunction(() => {
+    const w = document.getElementById('dclw');
+    return !!w && w.classList.contains('on');
+  }, null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(600);
 
   const shown = await page.evaluate(() => {
     const w = document.getElementById('dclw');

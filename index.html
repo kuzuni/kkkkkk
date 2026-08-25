@@ -4200,7 +4200,7 @@
   .dcl-band{position:absolute;left:0;right:0;top:839px;height:340px;z-index:1;
     background:linear-gradient(180deg,
       #000 0 5px,#F8CC2F 5px 9px,#332B1E 9px 11px,#414455 11px 19px,#2A2835 19px 319px,
-      #484B5A 319px 327px,#332B1E 327px 329px,#F4CD42 329px 334px,#000 334px 340px)}
+      #484B5A 319px 328px,#332B1E 328px 330px,#F4CD42 330px 334px,#000 334px 340px)}
   /* 보상 타일 — 몸통 104×99 r26 + 검정 6(바깥 bbox 116×110). 상단 19px 하이라이트. */
   .dcl-tile{position:absolute;left:488px;top:955px;width:104px;height:99px;border-radius:26px;
     background:linear-gradient(180deg,#C7E747 0,#A9CE3D 19px,#94BC35 100%);
@@ -4260,7 +4260,9 @@
   .dcl-cn.l{left:153px}
   .dcl-cn.r{left:803px}
   /* 리본 우상단 스파클 30×40 (흰색 40%) */
-  .dcl-spk{position:absolute;left:719px;top:722px;width:30px;height:40px;z-index:4;
+  /* 2회차 비평 C·D 공통: 별 clip-path 가 안쪽으로 파여 «잉크»가 24×30 으로 잡혔다(ref 30×40).
+     중심 (734,742) 을 고정한 채 상자를 36×48 로 키워 잉크를 ref bbox 에 맞춘다. */
+  .dcl-spk{position:absolute;left:716px;top:718px;width:36px;height:48px;z-index:4;
     background:#fff;opacity:.4;
     clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%)}
   #defw{position:absolute;inset:0;display:none;z-index:39;cursor:pointer;background:rgba(0,0,0,.62)}
