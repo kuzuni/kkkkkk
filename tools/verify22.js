@@ -228,7 +228,16 @@ const frameRects = (page, map) => page.evaluate((m) => {
           const e = document.querySelector(sel); if (!e) { out.push(sel + ' 없음'); continue; }
           const r = e.getBoundingClientRect();
           if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5)
-            out.push(`${sel} top ${Math.round(r.top - A.top)} / bottom ${Math.round(r.bottom - A.bottom)}`);
+            out.push(`${sel} 프레임 밖 top ${Math.round(r.top - A.top)} / bottom ${Math.round(r.bottom - A.bottom)}`);
+        }
+        /* ⚠ 프레임 안에 있는 것만으로는 부족하다 — `.q22 .mbody{overflow:hidden}` 이라
+           본문 밖으로 나간 요소는 «삐져나옴» 이 아니라 **통째로 사라진다**(LESSONS 20-④).
+           짧은 프레임(frameH 1600)에서 [모두 받기]·토글이 실제로 61~86px 삼켜지고 있었다. */
+        const bd = document.querySelector('#modal .mbody'); const B = bd.getBoundingClientRect();
+        for (const sel of ['.qs-pn', '#qAll', '.qs-tg']) {
+          const r = document.querySelector(sel).getBoundingClientRect();
+          if (r.bottom > B.bottom + 0.5 || r.top < B.top - 0.5)
+            out.push(`${sel} 본문 밖(overflow:hidden 에 삼켜짐) ${Math.round(r.bottom - B.bottom)}px`);
         }
         return out;
       });
