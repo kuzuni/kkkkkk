@@ -3241,7 +3241,13 @@
      숫자 흰 코어 ref 22×32 하단 프레임 y476 / 우리 22×37 하단 y482 — 폭은 맞고 높이만 5px 컸다.
      폰트 크기로 높이를 맞추고 scaleX 로 폭을 되돌린다(서체가 달라 종횡비가 다르다 — ⑥ 항목). */
   #collw .clb-bdg>i.l{display:block;margin:2px 0 0 -1px;font-size:32px;transform:scaleX(.939);color:#FFED9D}
-  #collw .clb-bdg>i.n{display:block;margin:-2px 0 0 -2px;font-size:47px;transform:scaleX(.977);color:#EEE9E5}
+  /* 10회차 — N #1·#2 «Lv 숫자에 다크 스트로크가 통째로 없다». 자체 스캔으로 확정:
+     ref 숫자 주변 dark(<=45) 잉크 **35x47 @x187 프레임 y437~483**, 흰 코어는 22x32 @x193 y445~476.
+     즉 코어는 이미 Δ0 인데 **한 변 7px 짜리 어두운 외곽선**이 빠져 있었다(우리 dark 픽셀 0개).
+     «Lv.» 쪽은 ref 도 dark 픽셀이 1개뿐이라 외곽선이 없다 — 숫자에만 준다.
+     `-webkit-text-stroke` 는 글리프 윤곽 «중심»에 그려져 바깥으론 절반만 보인다(03 교훈) → 7px 원하면 14px. */
+  #collw .clb-bdg>i.n{display:block;margin:-2px 0 0 -2px;font-size:47px;transform:scaleX(.977);color:#EEE9E5;
+    -webkit-text-stroke:14px #4F1106;paint-order:stroke fill}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
   /* 7회차 — ref ✦ 잉크 24x25 @x263 프레임 y440~464(중심 452). 밴드 80 화 이후 1.5px 위로 떴다. */
   .clb-star{left:133px;top:0;height:80px;line-height:84px;font-size:25px;color:#999CBD}
@@ -3322,7 +3328,10 @@
        비활성 금색 레일 ref 94~117(23px) / 우리 92~117(25px) → `bottom` 26 → **24**
        활성   금색 레일 ref 117~145(28px) / 우리 111~144(33px) → `bottom` 33 → **28**
      즉 파란 판이 5~6px 짧고 그만큼 금색 레일이 두꺼웠다. 탭 «바깥» 높이는 ref 와 일치한다. */
-  .cltab>s.b{left:24px;right:24px;top:0;bottom:24px;box-shadow:inset 0 0 0 7px #1185C0;
+  /* 10회차 — 시안 내부판이 넓다. K(8회차)·N(9회차) 이 각각 «ref x151~311(161) / 우리 x149~313(165)» 로
+     같은 수치를 냈고, 자체 단면(y1950 행)도 **ref 151~313 / 우리 149~314.5** 로 방향이 같다.
+     좌우 인셋 24 → 25.5 (판 폭 166 → 163) — 비평가 값(161)과 자체 실측(162.5) 사이를 잡았다. */
+  .cltab>s.b{left:25.5px;right:25.5px;top:0;bottom:24px;box-shadow:inset 0 0 0 7px #1185C0;
     background:linear-gradient(180deg,#25AACD 0 4px,#1EA8D7 4px)}
   .cltab.on>s.b{bottom:28px}
   .cltab>i{position:relative;margin-top:17px;font-size:37px;line-height:44px;color:#C2C3C5;
