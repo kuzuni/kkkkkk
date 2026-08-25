@@ -8900,6 +8900,7 @@ function queueMobs(){
    플레이어 사망 연출·자동 부활은 건드리지 않는다(그래서 spawnStage 를 부르지 않는다). */
 function failBoss(why){
   if(!inBossFight()) return;
+  bgmSet('main');                                       /* 78 — 보스전 이탈 시 메인 트랙 복귀 */
   bossT = 0;
   S.bossFarm = true;
   enemies.length = 0; spawnQ.length = 0; killed = 0;
@@ -9151,6 +9152,7 @@ function step(dt){
       player.hp = maxHp; player.hitFx = 0; player.inv = 1.2;
       burst(player.x, player.y - 20, '#7fd0ff', 28, 230);
       setAnim(player, 'knight', 'idle', 8, true);
+      sfx('revive');                                    /* 78 — 부활 */
     }
   }else{
     player.hp = Math.min(maxHp, player.hp + stat.regen*dt);
@@ -9359,6 +9361,7 @@ function step(dt){
       player.inv = 0.4;
       player.hp -= e.dmg * stat.defMul;
       player.hitFx = 0.22;
+      sfx('hit');                                       /* 78 — 플레이어 피격 */
       cam.shake = Math.min(9, cam.shake + 3.5);
       const a = Math.atan2(-dy, -dx);
       player.vx += Math.cos(a)*140; player.vy += Math.sin(a)*140;
@@ -9367,6 +9370,7 @@ function step(dt){
         player.hp = 0; player.dead = 2.4;
         burst(player.x, player.y - 20, '#ff5470', 36, 320);
         cam.shake = 15; showMsg('부활 중...');
+        sfx('death');                                   /* 78 — 사망 */
         openDefeat();   /* 18 패배 화면 — 표시 전용, 자동 부활은 그대로 진행 */
         failBoss('패배');   /* 28 — 보스전 중이었으면 파밍 상태로 전환(스테이지 유지) */
       }
@@ -9527,6 +9531,7 @@ function step(dt){
     }
     spawnStage();
     showMsg(msg);
+    sfx('clear');                                       /* 78 — 스테이지 클리어 */
     uiDirty = true;
   }
 
@@ -9636,13 +9641,15 @@ function cineStart(mode, pt, flip, base){
   cine.hw = H ? H.hw : 0; cine.hh = H ? H.hh : 0;
   cine.fs = null; cine.fsW = 0; cine.fsT = 1;   /* 첫 camUpdate 에서 그때의 방향으로 초기화(그 프레임엔 이징 없음) */
 }
-function cineBossIn(e){ if(!e) return; e.nopop = true; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e); }
+function cineBossIn(e){ if(!e) return; e.nopop = true; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e);
+  sfx('bossin'); bgmSet('boss'); }                      /* 78 — 보스 등장 + 보스전 트랙 */
 /* killEnemy 는 이 호출 «두 줄 뒤» 에 시체를 `anim: e.T.die` 로 갈아끼운다 —
    살아 있는 프레임의 트림으로 목표를 잡으면 실제로 그려지는 시체와 46px 어긋난다.
    그래서 «시체가 될 모습»(die 0프레임)으로 중심을 계산한다. */
 function cineBossKill(corpse, flip){
   cine.tg = corpse;                       /* 매 프레임 spriteCenter() 로 다시 읽는다(저역통과 CINE_TGK) */
   cineStart('kill', spriteCenter(corpse, flip), flip); cine.flash = 1;
+  sfx('bosskill'); bgmSet('main');                      /* 78 — 보스 처치 + 메인 트랙 복귀 */
 }
 /* loop() 이 step(dt*이 값) 으로 쓴다 — 처치 직후 0.3초만 0.3배속 */
 function camTimeScale(){ return (cine.mode === 'kill' && cine.t < CINE_SLOW_S) ? CINE_TS : 1; }
@@ -10287,6 +10294,7 @@ function openUpAll(ups){
     + '<em><svg viewBox="0 0 24 23"><path d="M0 5H10V-1l14 12.5L10 24v-5H0z"/></svg></em>'
     + '<i>' + u.to + '</i></div></div>').join('');
   $('upw').classList.add('on');
+  sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
 }
 function closeUpAll(){ $('upw').classList.remove('on'); }
@@ -10307,6 +10315,7 @@ function openStatUp(o){
     :  (() => { const nb = tok.replace(/ /g, '\u00A0');
          return '<s data-t="' + nb + '">' + nb + '</s>'; })()).join('');
   $('statw').classList.add('on');
+  sfx('up');                                            /* 78 — 17 스탯업 보너스 연출 */
 }
 $('statw').addEventListener('click', () => $('statw').classList.remove('on'));
 
@@ -10488,12 +10497,15 @@ function showSummonResult(b, times, res, lvUp){
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
   $('sumw').classList.add('on');
+  /* 78 — 카드 팝에 맞춰 뒤집힘 소리(최대 5장 — 30연은 소리 잔치가 된다) */
+  dly.slice().sort((a, b) => a - b).slice(0, 5).forEach(d =>
+    setTimeout(() => { if($('sumw').classList.contains('on')) sfx('flip'); }, d * 1000));
   /* 영웅(g≥3) 이상은 팝 순간 광선 버스트를 얹는다 */
   const cards = $('sumGridIn').children;
   agg.forEach((a, i) => {
     if(a.it.g < 3 || !cards[i]) return;
     const el = cards[i], col = GRADE[a.it.g].c;
-    setTimeout(() => { if(el.isConnected && $('sumw').classList.contains('on')) fxBurst(el, col, 14); },
+    setTimeout(() => { if(el.isConnected && $('sumw').classList.contains('on')){ fxBurst(el, col, 14); sfx('rare'); } },
       dly[i]*1000 + 170);
   });
 }
@@ -10595,6 +10607,7 @@ const questProg  = q => Math.max(0, q.get() - (S.quest[q.id].base || 0));
 const questReady = q => questProg(q) >= questGoal(q);
 function claimQuest(q){
   if(!questReady(q)) return;
+  sfx('claim');                                         /* 78 — 퀘스트 보상 수령 */
   const st = S.quest[q.id], rw = q.rw(st.s);
   S.gold += rw.g; S.dia += rw.c;
   st.base = q.get(); st.s++;
@@ -10606,6 +10619,7 @@ function claimQuest(q){
 }
 function claimDQuest(q){
   if(!dqReady(q)) return;
+  sfx('claim');                                         /* 78 — 일일 퀘스트 보상 수령 */
   S.dia += q.dia; S.daily.q[q.id] = 1;
   uiDirty = true; save();
   fxRenderLater(() => { if(fxStillOpen('q22')) openQuest(); });    /* 58 11회차 */
@@ -10666,7 +10680,7 @@ function gmShop(box){ gmCloseAll(); openShopPage(box); }
 function gmGo(){
   const m = gmCur();
   if(!m) return;
-  if(gmReady()){ claimGuide(); return; }
+  if(gmReady()){ sfx('claim'); claimGuide(); return; }   /* 78 — 가이드 보상 수령 */
   if(typeof m.go !== 'function') return;
   m.go();
   fxToast('📌 ' + m.n);
@@ -10897,6 +10911,7 @@ function sweepDungeon(d){
 let dclDun = null, dclFloor = 1;
 function openDunClear(d, f){
   if(!d) return;
+  sfx('victory');                                       /* 78 — 던전 클리어 */
   dclDun = d; dclFloor = f;
   /* 레퍼런스의 배경은 «던전 씬 + 하단 스킬슬롯» 이다 — 03 던전 목록 페이지가 열린 채로 두면
      결과 화면 뒤가 목록 페이지가 된다(1회차 비평 A·B 공통 지적). 결과를 볼 때는 목록을 닫는다. */
@@ -11650,7 +11665,7 @@ function openAttend(){
   m.classList.remove('sk8', 'rl16', 'q22');
   m.classList.add('at70', 'on');
   const t = $('mbox').querySelector('[data-att]');
-  if(t) t.onclick = () => { claimAttend(t); openAttend(); };
+  if(t) t.onclick = () => { sfx('claim'); claimAttend(t); openAttend(); };   /* 78 */
 }
 /* ---- 룰렛 원판 (작업 29) ----
    설계 확정(2026-08-24): 8칸 그리드 하이라이트 폐기 → 실제로 회전하는 원판 휠
@@ -11718,6 +11733,11 @@ function roulSpinTo(idx, txt){
   const base = rouRot + 360*ROUL_TURNS;
   const target = base + ((((-c - base) % 360) + 360) % 360);
   const from = rouRot, t0 = performance.now();
+  let auSeg = Math.floor(from / (360/ROULETTE.length));  /* 78 — 칸 경계를 지날 때마다 틱 */
+  const auTick = () => {
+    const sg = Math.floor(rouRot / (360/ROULETTE.length));
+    if(sg !== auSeg){ auSeg = sg; sfx('rtick'); }
+  };
   /* 1단 — target 을 ROUL_OVER 만큼 «지나쳐» 감속한다(easeOutQuart) */
   const over = target + ROUL_OVER;
   const step = now => {
@@ -11725,6 +11745,7 @@ function roulSpinTo(idx, txt){
     const p = Math.min(1, (now - t0) / ROUL_MS);
     rouRot = from + (over - from) * (1 - Math.pow(1 - p, 4));      /* easeOutQuart = 감속 */
     disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+    auTick();
     if(p < 1) requestAnimationFrame(step);
     else requestAnimationFrame(back);
   };
@@ -11744,6 +11765,7 @@ function roulSpinTo(idx, txt){
   requestAnimationFrame(step);
 }
 function roulFinish(idx, txt){
+  sfx('rstop');                                         /* 78 — 룰렛 정지 */
   rouSpinning = false;
   roulSpinMark(false);                           /* 65 — 정지 표식 해제(당첨 하이라이트는 이 다음이다) */
   const segs = document.querySelectorAll('#rouDisc .rlt-seg');
@@ -13188,9 +13210,8 @@ window.openBag = openBag;
 
 /* ================= 55 설정 팝업 — docs/measure/55-설정팝업.md =================
    레퍼런스 6행 순서 그대로: 언어 · BGM · SFX · 화면 흔들림 · 푸시 알림 · 야간 알림 수신 동의.
-   ⚠ 이 게임엔 아직 오디오·푸시가 없다. 그래서 BGM·SFX·푸시·야간은 «저장되는 사용자 설정» 까지가
-   실동작이고, 실제로 무언가를 끄는 건 **화면 흔들림**(67 카메라 shake)과 **볼륨 슬라이더 값**이다.
-   오디오가 들어오면 sndOn() 한 곳만 보면 되도록 게이트를 미리 뚫어 뒀다. */
+   78 로 오디오가 들어왔다 — BGM·SFX 토글·볼륨은 auApply() 로 즉시 반영된다(파일 맨 끝 «78» 절).
+   푸시·야간만 아직 «저장되는 사용자 설정» 까지다. */
 const CF_ROWS = [
   { k:'lang',  ic:'💬', n:'언어',               sx:.90, val:'한국어', sf:1.08, ix:.96, dy:1 },
   { k:'bgm',   ic:'🎵', n:'BGM',                sx:.89, lf:34, sf:1.06, ix:1.18, dy:0 },
@@ -13199,7 +13220,7 @@ const CF_ROWS = [
   { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.84, sf:1.02, ix:.92, dy:0 },
   { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.87, sf:1.28, ix:.87, dy:-2, dx:-4 }
 ];
-/* 오디오 게이트 — 지금은 «설정 값을 읽는 유일한 곳». 소리가 들어오면 여기서 분기한다. */
+/* 오디오 게이트 — 78 의 sfx()/bgmApply() 가 재생 직전마다 이 값을 읽는다 */
 const sndOn = k => !!(S.opt && S.opt[k]) && (S.opt.vol | 0) > 0;
 /* 67 카메라 흔들림 게이트 — 끄면 cam.shake 가 0 으로 고정된다(아래 renderConf 에서 즉시 반영) */
 const shakeOn = () => !!(S.opt && S.opt.shake);
@@ -13244,7 +13265,7 @@ $('cfw').onclick = e => { if(e.target.id === 'cfw') closeConf(); };
   const setVol = e => {
     const r = tr.getBoundingClientRect();
     const v = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 100);
-    if(v !== (S.opt.vol | 0)){ S.opt.vol = v; renderConf(); save(); }
+    if(v !== (S.opt.vol | 0)){ S.opt.vol = v; auApply(); renderConf(); save(); }   /* 78 */
   };
   tr.addEventListener('pointerdown', e => {
     e.preventDefault(); tr.setPointerCapture(e.pointerId); setVol(e);
@@ -13260,6 +13281,8 @@ $('cfw').querySelector('.cf55-body').addEventListener('click', e => {
     if(k === 'lang'){ popup('💬 언어', '<p>현재 <b>한국어</b>만 지원합니다.</p>'); return; }
     S.opt[k] = !S.opt[k];
     if(k === 'shake' && !S.opt.shake) cam.shake = 0;    /* 끄면 진행 중인 흔들림까지 즉시 멈춘다 */
+    auApply();                                          /* 78 — BGM·SFX·볼륨 즉시 반영 */
+    if(k === 'sfx' && S.opt.sfx) sfx('toggle');         /* 켤 때만 — 끄면 게이트가 이미 닫혀 무음 */
     renderConf(); save();
     return;
   }
@@ -13932,7 +13955,7 @@ $('trw').addEventListener('click', e => {
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
   if(e.target.closest('#trUp')){
-    (trIsTrain() ? trainUp() : statTrainUp()) ? renderTrain() : null;
+    if(trIsTrain() ? trainUp() : statTrainUp()){ sfx('up'); renderTrain(); }   /* 78 — 단계 업 */
     return;
   }
   /* 작업 64 — 카드 강화는 pointerdown 에서 처리한다(아래 trHoldStart).
@@ -13953,7 +13976,11 @@ $('trw').addEventListener('click', e => {
 const TR_HOLD_DELAY = 350, TR_HOLD_IV0 = 160, TR_HOLD_IVMIN = 60, TR_HOLD_ACCEL = 0.86;
 let trHold = null;                      /* {key, timer, iv, n} — 누르고 있는 동안에만 존재 */
 const trCard = key => document.querySelector('#trw [data-tr="' + CSS.escape(key) + '"]');
-function trBuyOnce(key){ return trIsTrain() ? trainBuy(key) : statTrainBuy(key); }
+function trBuyOnce(key){
+  const ok = trIsTrain() ? trainBuy(key) : statTrainBuy(key);
+  if(ok) sfx('train');                                  /* 78 — 훈련 ↑ 틱(꾹 누르기 반복 포함) */
+  return ok;
+}
 /* 58 14회차 — 카드가 이미 보여 주는 «+2.4»(.cv)와 «공격력»(.cn)으로 델타 플로터 문구를 만든다 */
 function trDeltaTxt(card){
   const v = card && card.querySelector('.cv i'), n = card && card.querySelector('.cn i');
@@ -14575,6 +14602,7 @@ function fxFly(from, cur, n){
   const pill = document.querySelector(C.pill); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
+  sfx('coin');                                          /* 78 — 재화 획득(이름별 30ms 디바운스) */
   /* 3~6개 — 금액이 클수록 많이 (58 «3~8개»). 골드·다이아가 동시에 들어오면 두 묶음이 겹치므로
      «공중에 떠 있는 총합» 을 FXFLY_MAX 로 묶는다 — 안 묶으면 모달 헤더·HUD 숫자를 가린다. */
   /* 보상 수령은 골드·다이아가 «같이» 들어와 묶음이 둘이다. 뒤 묶음까지 6개씩 쏘면 0.7초 안에
@@ -15148,6 +15176,7 @@ function jzDimBg(el, k){
   else el.classList.remove('jz-bg');
 }
 function jzOpen(el){
+  sfx('open');                                          /* 78 — 팝업 열림(MO 가 모든 오버레이를 거친다) */
   const k = jzKind(el);
   el.classList.remove('jz-c', 'jz-dlg', 'jz-pg', 'jz-sh2');
   jzDimBg(el, k);
@@ -15168,6 +15197,7 @@ function jzOpen(el){
   if(el.id === 'modal') jzModalMood();
 }
 function jzClose(el, disp){
+  sfx('close');                                         /* 78 — 팝업 닫힘 */
   const k = jzKind(el), inl = el.style.display;         /* 닫은 쪽이 남긴 inline 값(''(=클래스로 숨김) 또는 'none') */
   el.__jzBusy = 1;
   el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
@@ -15338,6 +15368,7 @@ function jzInit(){
     const el = jzTarget(e.target);
     if(!el) return;
     if(jzDead(el)){
+      sfx('err');                                        /* 78 — 죽은 버튼 */
       jzOn(el, 'jz-sh', 380);                            /* 비활성: 좌우 흔들림 + 어두워짐 */
       /* 74 ④ — 진짜 disabled 컨트롤은 click 이 아예 안 나가므로 «왜 안 되는지» 를 여기서 알린다.
          .lock/.off 류는 자기 click 핸들러가 이미 구체적 안내를 띄우므로 건드리지 않는다. */
@@ -15345,6 +15376,7 @@ function jzInit(){
       return;
     }
     jzRelease();
+    sfx('tap');                                          /* 78 — 버튼 탭 */
     jzDown = el; el.classList.add('jz-dn');
   }, true);
   addEventListener('pointerup', jzRelease, true);
@@ -15534,6 +15566,160 @@ function tapInit(){
 }
 if(document.readyState === 'loading') addEventListener('DOMContentLoaded', () => { jzInit(); tapInit(); });
 else { jzInit(); tapInit(); }
+
+/* ==========================================================================
+   78 오디오 — SFX · BGM (2026-08-25, 저장소 주인 지시)
+   파일: assets/audio/<이름>.ogg(+.mp3 폴백) · bgm_main.mp3 · bgm_boss.mp3
+   전부 CC0 — 파일별 출처·작성자·라이선스는 assets/audio/CREDITS.md.
+   경로 2개:
+   · 'ctx'  — AudioContext + fetch/decodeAudioData 버퍼. 마스터(볼륨)→sfx/bgm 게이트 게인 2개.
+   · 'el'   — fetch 가 안 되는 file:// 등에서 <audio> 요소로 폴백(README «별도 서버 불필요» 유지).
+   설정(55)은 sndOn() 게이트를 그대로 쓰고, 토글·볼륨 변경은 auApply() 가 즉시 반영한다.
+   같은 SFX 30ms 디바운스 · 피치 ±5% 랜덤 · BGM 루프 + 페이드 1초 · 보스전은 bgm_boss 트랙.
+   ========================================================================== */
+const AU_BASE = 'assets/audio/';
+const AU_SFX = ['tap','open','close','flip','rare','up','train','claim','revive','rtick','rstop',
+                'err','toggle','coin','bosskill','hit','death','clear','victory','bossin'];
+const AU_BGM = { main:'bgm_main', boss:'bgm_boss' };
+let auMode = '';                        /* '' 초기화 전 · 'ctx' WebAudio · 'el' <audio> 폴백 */
+let auCtx = null, auMaster = null, auSfxG = null, auBgmG = null;
+const auBuf = {}, auEl = {}, auLast = {};
+let auExt = '';
+function auFmt(){
+  if(!auExt){
+    const a = document.createElement('audio');
+    auExt = (a.canPlayType && a.canPlayType('audio/ogg; codecs="vorbis"')) ? '.ogg' : '.mp3';
+  }
+  return auExt;
+}
+/* ---- SFX ---- */
+function sfx(name){
+  if(auMode === '' || !sndOn('sfx')) return;
+  const t = performance.now();
+  if(auLast[name] && t - auLast[name] < 30) return;    /* 동시 발화 30ms 디바운스 */
+  auLast[name] = t;
+  const rate = 1 + (Math.random() * 0.1 - 0.05);       /* 피치 ±5% */
+  try{
+    if(auMode === 'ctx'){
+      const b = auBuf[name]; if(!b) return;
+      const src = auCtx.createBufferSource();
+      src.buffer = b; src.playbackRate.value = rate;
+      src.connect(auSfxG); src.start();
+    }else{
+      const base = auEl[name]; if(!base) return;
+      const el = base.cloneNode();                     /* 겹침 재생 — 원본은 프리로드 캐시로만 쓴다 */
+      el.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      try{ el.preservesPitch = false; }catch(_){}
+      el.playbackRate = rate;
+      el.play().catch(() => {});
+    }
+  }catch(_){}
+}
+/* ---- BGM — bgmWant 가 «지금 나와야 할 트랙». 보스전 진입/이탈이 bgmSet 으로 바꾼다 ---- */
+let bgmWant = 'main', bgmCur = '', bgmNode = null, bgmElFade = 0;
+function bgmSet(track){
+  if(!AU_BGM[track]) return;
+  bgmWant = track;
+  bgmApply();
+}
+function bgmStopCur(){
+  if(!bgmNode) return;
+  const n = bgmNode; bgmNode = null; bgmCur = '';
+  try{
+    if(auMode === 'ctx'){
+      const t0 = auCtx.currentTime;
+      n.g.gain.cancelScheduledValues(t0);
+      n.g.gain.setValueAtTime(n.g.gain.value, t0);
+      n.g.gain.linearRampToValueAtTime(0, t0 + 1);     /* 페이드아웃 1초 */
+      n.src.stop(t0 + 1.05);
+    }else{
+      clearInterval(bgmElFade);
+      const el = n, step = Math.max(0.02, el.volume / 20);
+      bgmElFade = setInterval(() => {
+        el.volume = Math.max(0, el.volume - step);
+        if(el.volume <= 0){ clearInterval(bgmElFade); el.pause(); }
+      }, 50);
+    }
+  }catch(_){}
+}
+function bgmApply(){
+  if(auMode === '') return;
+  const want = (sndOn('bgm')) ? bgmWant : '';
+  if(bgmCur === want) return;
+  bgmStopCur();
+  if(!want) return;
+  const file = AU_BGM[want];
+  try{
+    if(auMode === 'ctx'){
+      const b = auBuf[file]; if(!b) return;            /* 아직 로드 전 — 로드 완료가 bgmApply 를 재호출 */
+      const src = auCtx.createBufferSource(), g = auCtx.createGain();
+      src.buffer = b; src.loop = true;
+      const t0 = auCtx.currentTime;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(1, t0 + 1);       /* 페이드인 1초 */
+      src.connect(g); g.connect(auBgmG); src.start();
+      bgmNode = { src, g }; bgmCur = want;
+    }else{
+      const el = new Audio(AU_BASE + file + '.mp3');
+      el.loop = true; el.volume = 0;
+      el.play().catch(() => {});
+      const tgt = () => Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      clearInterval(bgmElFade);
+      bgmElFade = setInterval(() => {
+        const t = tgt();
+        el.volume = Math.min(t, el.volume + Math.max(0.02, t / 20));
+        if(el.volume >= t) clearInterval(bgmElFade);
+      }, 50);
+      bgmNode = el; bgmCur = want;
+    }
+  }catch(_){}
+}
+/* ---- 설정 즉시 반영 — 55 의 토글·볼륨 핸들러가 부른다 ---- */
+function auApply(){
+  if(auMode === '') return;
+  try{
+    if(auMode === 'ctx'){
+      auMaster.gain.value = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      auSfxG.gain.value = S.opt.sfx ? 1 : 0;
+      auBgmG.gain.value = S.opt.bgm ? 1 : 0;
+    }else if(bgmNode && bgmCur){
+      bgmNode.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+    }
+  }catch(_){}
+  bgmApply();
+}
+/* ---- 로드 — 첫 사용자 제스처에서 초기화(모바일 자동재생 정책) ---- */
+function auLoadCtx(){
+  const load = (file, ext) => fetch(AU_BASE + file + ext)
+    .then(r => { if(!r.ok) throw 0; return r.arrayBuffer(); })
+    .then(ab => new Promise((ok, no) => auCtx.decodeAudioData(ab, ok, no)))
+    .then(b => { auBuf[file] = b; });
+  AU_SFX.forEach(n => load(n, auFmt()).catch(() => {}));
+  Object.values(AU_BGM).forEach(f => load(f, '.mp3').then(() => bgmApply()).catch(() => {}));
+}
+function auLoadEl(){
+  AU_SFX.forEach(n => {
+    const el = new Audio(AU_BASE + n + auFmt());
+    el.preload = 'auto'; auEl[n] = el;
+  });
+}
+function auInit(){
+  if(auMode !== ''){
+    if(auMode === 'ctx' && auCtx.state === 'suspended') auCtx.resume().catch(() => {});
+    return;
+  }
+  let ctx = null;
+  /* file:// 에서는 fetch 가 CORS 로 막힌다(시도만 해도 콘솔 에러) — 프로토콜로 미리 가른다 */
+  const canFetch = location.protocol === 'http:' || location.protocol === 'https:';
+  if(canFetch) try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch(_){}
+  if(!ctx){ auMode = 'el'; auLoadEl(); auApply(); return; }
+  auCtx = ctx;
+  auMaster = ctx.createGain(); auSfxG = ctx.createGain(); auBgmG = ctx.createGain();
+  auSfxG.connect(auMaster); auBgmG.connect(auMaster); auMaster.connect(ctx.destination);
+  auMode = 'ctx'; auApply(); auLoadCtx();
+  if(ctx.state === 'suspended') ctx.resume().catch(() => {});
+}
+addEventListener('pointerdown', auInit, true);
 </script>
 </body>
 </html>
