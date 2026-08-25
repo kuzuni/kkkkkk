@@ -9973,8 +9973,9 @@ function hms(ms){
 }
 function activateBless(k){
   if(blessOn(k)) return false;                       /* 이미 켜져 있으면 시간을 덧붙이지 않는다 */
-  S.bless.exp[k] = Date.now() + blessDur();
+  /* 레벨 상승은 «그 활성화부터» 적용한다 — 4번째를 켠 순간 바로 지속시간이 +5분이 되게 순서를 잡는다 */
   if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
+  S.bless.exp[k] = Date.now() + blessDur();
   markDirty(); save(); renderBless(); uiDirty = true; renderUI();
   return true;
 }
