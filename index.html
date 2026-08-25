@@ -2011,6 +2011,50 @@
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
   @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
 
+  /* ── 113 «손가락» 가이드 포인터 (2026-08-26, 저장소 주인 지시) ─────────────
+     가이드 미션 배너를 눌러 목적지로 이동한 뒤, «여기를 누르라» 고 가리킨다.
+     #fxl(z60·pointer-events:none) 안에 얹으므로 팝업 위에 뜨면서 입력을 막지 않는다
+     (58 공통 규칙 — 74 «탭 유실» 회귀를 만들지 않는 유일한 자리다).
+     좌표계는 fxRect() 와 같은 «프레임 px» 다 — #fxl 이 #app 안이라 clientWidth 가 1080.
+     ⚠ 손가락은 이모지(👆) 금지다. 플랫폼마다 글리프가 달라 크기·방향이 튄다(지시서 113 ③).
+     Kenney CC0 «Cursor Pack» 을 먼저 시도했으나 이 환경의 프록시가 kenney.nl 을 403 으로
+     막아(2026-08-26 실측) **인라인 SVG 손가락**으로 직접 그렸다 — 외곽 7px 검정 + 흰 장갑.
+     #fxHand 는 «팁(가리키는 점)» 에 놓인 0×0 앵커다. 자식 i 가 손 상자(120×120)를 팁 기준으로
+     걸고 회전을 맡고, 그 안의 s 가 «톡톡» 탭 애니메이션만 맡는다 — 회전과 탭을 한 transform 에
+     섞으면 미러링(.mir)에서 서로를 덮어쓴다. */
+  #fxHand{position:absolute;z-index:3;width:0;height:0;pointer-events:none}
+  #fxHand>i{position:absolute;left:-34px;top:-10px;width:120px;height:120px;
+    transform-origin:34px 10px;transform:rotate(16deg);
+    filter:drop-shadow(0 7px 0 rgba(0,0,0,.30))}
+  /* 프레임 오른쪽 끝에 붙은 대상은 손이 밖으로 나가므로 좌우를 뒤집어 왼쪽에서 가리킨다 */
+  #fxHand.mir>i{left:-86px;transform-origin:86px 10px;transform:rotate(-16deg)}
+  #fxHand.mir svg{transform:scaleX(-1);transform-origin:50% 50%}
+  #fxHand>i>s{position:absolute;inset:0;animation:fxHandTap .9s ease-in-out infinite}
+  /* 0.9s 안에 «톡 · 톡» 두 번. 부모가 회전돼 있어 이 translate 는 손가락 축을 따라간다 */
+  @keyframes fxHandTap{
+    0%{transform:translate(0,0) scale(1)}
+    18%{transform:translate(-4px,-15px) scale(.94)}
+    32%{transform:translate(0,3px) scale(1.02)}
+    50%{transform:translate(-3px,-11px) scale(.96)}
+    64%{transform:translate(0,0) scale(1)}
+    100%{transform:translate(0,0) scale(1)}}
+  /* 대상 bbox 에 걸리는 펄스 링 — 손가락과 같은 0.9s 주기.
+     2회차 확인: 노랑 «한 겹» 은 배경색이 크림인 화면(23 훈련 시트)에서 배경과 동색이 돼 사실상
+     사라진다(실측 링 247,216,142 ↔ 배경 237,216,179). 대비를 **노랑이 아니라 검정 테두리**가
+     책임지게 안팎으로 검정을 두른다 — 어두운 화면(03·89)에서는 노랑이, 밝은 화면에서는
+     검정이 형태를 세운다. 이 저장소의 다른 UI(‑webkit-text-stroke 검정 외곽)와 같은 원리다. */
+  #fxHandR{position:absolute;z-index:2;box-sizing:border-box;pointer-events:none;
+    border:7px solid #FFD24A;border-radius:24px;transform-origin:50% 50%;
+    box-shadow:0 0 0 4px rgba(0,0,0,.62),inset 0 0 0 3px rgba(0,0,0,.5),
+      0 0 20px rgba(255,210,74,.4) inset;
+    animation:fxHandRing .9s ease-in-out infinite}
+  /* 1회차 확인 — «0 까지 꺼지는» 펄스는 주기의 절반이 «링이 없는» 상태라 캡처마다 세기가 달랐고
+     한 장은 아예 링이 없는 것으로 읽혔다. 링은 항상 보이고 «숨만 쉰다». */
+  @keyframes fxHandRing{
+    0%{opacity:1;transform:scale(1)}
+    50%{opacity:.74;transform:scale(1.05)}
+    100%{opacity:1;transform:scale(1)}}
+
   #loading{position:absolute;inset:0;background:#0b0d18;display:flex;align-items:center;
     justify-content:center;z-index:40;font-size:28px;font-weight:800;color:#8ea0c7}
   #loading.off{display:none}
@@ -8799,28 +8843,47 @@ const MAILS = [
    상점 상자는 무기·방패·목걸이·스킬 4종이고 **펫 상자는 추가하지 않는다**. 76 에서 6번 미션을
    «방패 1회 소환하기» 로 개명하고 idx 6 에 «목걸이 1회 소환하기» 를 삽입했다(GUIDE_V 3, 이관은 load 쪽).
    → 펫 소환 경로(26 동료 시트 [동료 소환] → 상점에 펫 카드 없음)는 여전히 막다른 길이다(26 담당 몫). */
+/* 작업 113 (2026-08-26, 저장소 주인 지시) — `hint` 를 얹었다.
+   이동(`go`) 뒤 **눌러야 할 버튼**을 손가락(#fxHand)으로 가리킨다. 값은 «요소를 돌려주는 함수»
+   또는 셀렉터 문자열이며, `go` 가 끝난 뒤의 DOM 에서 찾는다. 전투로 달성하는 미션
+   (적 처치·스테이지 도달·보스)은 가리킬 버튼이 없으므로 **hint 를 두지 않는다**(이동만). */
 const GUIDE = [
-  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill,  ban:'skill',  go:() => gmShop('skill') },
-  { n:'스킬 장착하기',         goal:1,   abs:1,    get:() => S.eqSkill.length, dia:() => summonCost('weapon', 10), go:() => gmHero('sk') },
-  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip,  ban:'weapon', go:() => gmShop('weapon') },
-  { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn(),  go:() => gmHero('eq') },
-  { n:'훈련 10회 하기',        goal:10,  get:() => S.upgrades, dia:() => summonCost('shield', 10), go:() => gmTrain('train') },
+  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill,  ban:'skill',  go:() => gmShop('skill'),
+                                         hint:() => gmHintShop('skill') },
+  { n:'스킬 장착하기',         goal:1,   abs:1,    get:() => S.eqSkill.length, dia:() => summonCost('weapon', 10), go:() => gmHero('sk'),
+                                         hint:gmHintSkill },
+  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip,  ban:'weapon', go:() => gmShop('weapon'),
+                                         hint:() => gmHintShop('weapon') },
+  { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn(),  go:() => gmHero('eq'),
+                                         hint:() => gmHintEq(0) },
+  { n:'훈련 10회 하기',        goal:10,  get:() => S.upgrades, dia:() => summonCost('shield', 10), go:() => gmTrain('train'),
+                                         hint:gmHintTrain },
   { n:'방패 1회 소환하기',     goal:1,   get:() => S.cnt.sumEquip,  ban:'shield', go:() => gmShop('shield'),
-                                         dia:() => summonCost('amulet', 10) },   /* 다음 미션 = 목걸이 소환 */
-  { n:'목걸이 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'amulet', go:() => gmShop('amulet') },
+                                         dia:() => summonCost('amulet', 10),    /* 다음 미션 = 목걸이 소환 */
+                                         hint:() => gmHintShop('shield') },
+  { n:'목걸이 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'amulet', go:() => gmShop('amulet'),
+                                         hint:() => gmHintShop('amulet') },
   { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills,     go:() => gmBattle() },
   { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best,    go:() => gmBattle() },
-  { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon) },
-  { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins,      go:() => { gmCloseAll(); openRoulette(); } },
-  { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n,          go:() => { gmCloseAll(); openAttend(); } },
-  { n:'유물 1회 소환하기',     goal:1,   dia:800,  get:() => S.cnt.sumRelic,   go:() => gmPage('relw', openRelw) },
-  { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps,   go:() => gmHero('eq') },
+  { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon),
+                                         hint:gmHintDun },
+  { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins,      go:() => { gmCloseAll(); openRoulette(); },
+                                         hint:'#rouBtn' },
+  { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n,          go:() => { gmCloseAll(); openAttend(); },
+                                         hint:'#mbox [data-att]' },
+  { n:'유물 1회 소환하기',     goal:1,   dia:800,  get:() => S.cnt.sumRelic,   go:() => gmPage('relw', openRelw),
+                                         hint:'#rwBasin' },
+  { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps,   go:() => gmHero('eq'),
+                                         hint:() => gmHintEq(1) },   /* 장착된 슬롯 → 05 세부의 [강화] */
   { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best,    go:() => gmBattle() },
-  { n:'유물 Lv 3 모으기',      goal:3,   dia:1000, abs:1, get:() => relicLvSum(),     go:() => gmPage('relw', openRelw) },
-  { n:'훈련 30회 하기',        goal:30,  dia:1200, get:() => S.upgrades,       go:() => gmTrain() },   /* 88 — 구 «스탯 포인트 10 투자» 를 같은 자리에 교체(인덱스 호환) */
+  { n:'유물 Lv 3 모으기',      goal:3,   dia:1000, abs:1, get:() => relicLvSum(),     go:() => gmPage('relw', openRelw),
+                                         hint:'#rwBasin' },
+  { n:'훈련 30회 하기',        goal:30,  dia:1200, get:() => S.upgrades,       go:() => gmTrain(),   /* 88 — 구 «스탯 포인트 10 투자» 를 같은 자리에 교체(인덱스 호환) */
+                                         hint:gmHintTrain },
   { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => collSteps(),
-                                                                              go:() => gmPage('collw', () => openColl21()) },
+                                                                              go:() => gmPage('collw', () => openColl21()),
+                                         hint:gmHintColl },
   { n:'보스 1회 처치하기',     goal:1,   dia:2000, get:() => bossCleared(),    go:() => gmBattle() },
   { n:'스테이지 40 도달하기',  goal:40,  dia:3000, abs:1, get:() => S.best,    go:() => gmBattle() }
 ];
@@ -11397,6 +11460,7 @@ const gmDia = m => Math.round(typeof m.dia === 'function' ? m.dia() : m.dia);
 /* ---- 73 ① 미완 미션 클릭 → 그 미션을 할 수 있는 화면으로 이동 ----
    전부 «이미 열려 있으면 다시 열지 않는다»(토글로 닫히면 이동이 아니라 취소가 된다). */
 function gmCloseAll(){
+  gmHandOff();                                    /* 113 — 화면이 바뀌면 손가락은 즉시 걷는다 */
   closeDungeon(); closeShopPage(); closeRelw(); closeTrain();
   closeColl21(); closeModal();                    /* 21 도감·공용 모달까지 걷어야 «이동» 이 완결된다 */
   if(panelOpen){ panelOpen = false; syncPanel(); }
@@ -11407,6 +11471,48 @@ function gmHero(sub){ gmCloseAll(); heroTab = sub; S.heroTab = sub; goTab('hero'
 function gmTrain(){ gmCloseAll(); openTrain(); }   /* 88 — 서브탭 폐기, 훈련 단일 화면 */
 /* 10 상점 소환 탭을 열고 **그 상자 카드까지 스크롤**한다(레퍼런스 3칸 중 어느 것인지 바로 보이게) */
 function gmShop(box){ gmCloseAll(); openShopPage(box); }
+/* ---- 113 «손가락» 힌트 대상 (2026-08-26, 저장소 주인 지시) ----
+   `go` 가 이동을 끝낸 «뒤» 의 DOM 에서 찾는다. 렌더가 한 틱 늦어도 fxHand 가 탐색 창 안에서
+   다시 찾으므로 여기서는 «지금 없으면 null» 로 두면 된다. 전투 계열 미션은 hint 자체가 없다. */
+/* 10 상점 상자 카드의 [10회 소환] 버튼 — 무료 횟수가 남았으면 무료 버튼(b1)을 가리킨다 */
+function gmHintShop(box){
+  const sel = '#shopList [data-shsum="' + box + '"]';
+  return (freeLeft(box) > 0 ? document.querySelector(sel + '[data-shfree]') : null)
+      || document.querySelector(sel + ':not([data-shfree])')
+      || document.querySelector(sel);
+}
+/* 07 스킬 시트 — 첫 «미장착 보유» 카드(.lk = 미보유 · .dim = 장착 중). 없으면 장착 슬롯 */
+function gmHintSkill(){
+  for(const c of document.querySelectorAll('#bSk .sk-card'))
+    if(!c.classList.contains('lk') && !c.classList.contains('dim')) return c;
+  return document.querySelector('#bSk .sk-slot.lock') || document.querySelector('#bSk .sk-slot');
+}
+/* 06 장비 시트 부위 슬롯. full=1 이면 «장착된» 슬롯(→ 05 세부에서 강화), 아니면 빈 슬롯 */
+function gmHintEq(full){
+  const sl = [...document.querySelectorAll('#eqCards [data-eqslot]')];
+  if(!sl.length) return null;
+  return sl.find(s => !!S.eqSlot[s.dataset.eqslot] === !!full) || sl[0];
+}
+/* 23 훈련 — «공격력 ↑» = 공격력 카드 자체다. 강화를 실제로 받는 요소가 카드이고(64 의
+   pointerdown 홀드가 카드에 걸린다), 가격 바(.cb)만 감싸면 링이 카드 아랫단만 두르는 그림이 된다.
+   ⚠ GUIDE(라인 ~8790)가 `hint:gmHintTrain` 로 **참조 자체를 담는다** — 화살표 const 로 두면
+     GUIDE 평가 시점에 TDZ 로 죽는다. 여기 힌트 헬퍼는 전부 함수 선언(호이스팅)이어야 한다. */
+function gmHintTrain(){
+  return document.querySelector('#trCards [data-tr="atk"]')
+      || document.querySelector('#trCards .tr-card');
+}
+/* 03 던전 — 첫 «입장 가능» 카드(잠금 아님 + 남은 횟수 있음 = .dot 이 붙은 카드) */
+function gmHintDun(){
+  const cards = document.querySelectorAll('#dunList .dnc');
+  for(const c of cards) if(c.querySelector(':scope > .dot')) return c;
+  return cards[0] || null;
+}
+/* 21 도감 — 첫 «강화 가능» 버튼 */
+function gmHintColl(){
+  return document.querySelector('#collList .clb-btn.rdy')
+      || document.querySelector('#collList .clb-btn');
+}
+
 /* 배너 탭 — 완료면 수령, 미완이면 이동. `go` 가 없는 미션은 아무 일도 하지 않는다(무해) */
 function gmGo(){
   const m = gmCur();
@@ -11415,6 +11521,7 @@ function gmGo(){
   if(typeof m.go !== 'function') return;
   m.go();
   fxToast('📌 ' + m.n);
+  fxHand(m.hint);                                        /* 113 — 이동 뒤 «여기를 누르라» */
 }
 
 /* ---- 73 ③ 소환 미션 진행 중에는 다른 상자 소환을 막는다 ----
@@ -15824,6 +15931,121 @@ function fxToast(txt){
   setTimeout(() => el.classList.add('out'), 1200);
   setTimeout(() => el.remove(), 1560);
 }
+/* ==========================================================================
+   113 «손가락» 가이드 포인터 — fxHand()  (2026-08-26, 저장소 주인 지시)
+   가이드 미션 배너를 눌러 목적지로 이동한 뒤(73 ①), 눌러야 할 버튼을 손가락으로 가리킨다.
+   · 레이어는 #fxl(z60·pointer-events:none) — 팝업 위에 뜨지만 **아래 버튼의 탭을 가로채지 않는다**
+     (74 «탭 유실» 회귀 금지. 오버레이가 입력을 먹으면 그 자체가 74 의 재발이다).
+   · 대상 해석(hint)은 «셀렉터 문자열 · 함수 · 요소» 셋 다 받는다. 이동 직후에는 아직 렌더가
+     안 끝났을 수 있으므로 GM_HAND_SEEK 동안 매 프레임 다시 찾는다(LESSONS 50-① 재렌더 대응).
+   · 소멸: 대상 클릭 · 대상이 사라짐/화면 밖 · 탭바 이동 · GM_HAND_MS(8초) 중 먼저 오는 것.
+     대상 클릭 판정은 `e.target.closest()` 가 아니라 **`composedPath()`** 로 한다 —
+     핸들러 안 재렌더로 노드가 떨어져 나가도 경로는 디스패치 시점에 확정돼 있다(LESSONS 74-⑥).
+   · 위치 추종은 rAF 한 줄 — 시트 슬라이드·스크롤·리사이즈를 전부 같은 경로로 흡수한다.
+   ========================================================================== */
+const GM_HAND_MS = 8000;      /* 자동 소멸 */
+const GM_HAND_SEEK = 900;     /* 이동 직후 대상이 나타날 때까지 기다리는 창 */
+let gmHand = null;            /* {get, el, hand, ring, raf, t0, born} — 떠 있는 동안에만 존재 */
+
+/* hint → «요소를 돌려주는 함수» 로 정규화한다 */
+function gmHandGetter(hint){
+  if(!hint) return null;
+  if(typeof hint === 'function') return () => { const r = hint(); return typeof r === 'string' ? document.querySelector(r) : r; };
+  if(typeof hint === 'string')   return () => document.querySelector(hint);
+  if(hint.nodeType === 1)        return () => (hint.isConnected ? hint : null);
+  return null;
+}
+/* 대상이 스크롤 컨테이너 안에 있으면 가운데로 끌어온다.
+   `scrollIntoView()` 는 프레임(#wrap)까지 같이 굴려 fit() 정렬을 흔들 수 있어 쓰지 않는다 —
+   **스크롤 가능한 첫 조상만** 직접 굴린다(107 «자동 되돌림» 과 같은 구간이라 조심스럽게). */
+function gmHandScroll(el){
+  for(let p = el.parentElement; p && p !== document.body; p = p.parentElement){
+    if(p.scrollHeight - p.clientHeight < 4) continue;
+    const ov = getComputedStyle(p).overflowY;
+    if(ov !== 'auto' && ov !== 'scroll') continue;
+    const pr = p.getBoundingClientRect(), er = el.getBoundingClientRect();
+    const want = p.scrollTop + (er.top + er.height/2) - (pr.top + pr.height/2);
+    p.scrollTop = Math.max(0, Math.min(p.scrollHeight - p.clientHeight, want));
+    return;
+  }
+}
+function gmHandOff(){
+  const h = gmHand; if(!h) return;
+  gmHand = null;
+  if(h.raf) cancelAnimationFrame(h.raf);
+  if(h.hand) h.hand.remove();
+  if(h.ring) h.ring.remove();
+  document.removeEventListener('pointerdown', gmHandTap, true);
+}
+/* 대상(또는 탭바)을 누르면 «안내 완료» 다 */
+function gmHandTap(e){
+  const h = gmHand; if(!h) return;
+  const path = (e.composedPath && e.composedPath()) || [];
+  if(h.el && path.indexOf(h.el) >= 0){ gmHandOff(); return; }
+  const tb = $('tabbar');
+  if(tb && path.indexOf(tb) >= 0) gmHandOff();          /* 다른 탭으로 이동 */
+}
+function gmHandFrame(){
+  const h = gmHand; if(!h) return;
+  h.raf = requestAnimationFrame(gmHandFrame);
+  const now = performance.now();
+  if(now - h.born > GM_HAND_MS){ gmHandOff(); return; }
+  const el = h.get();
+  if(!el || !el.isConnected){
+    /* 이동 직후에는 아직 안 그려졌을 수 있다 — 탐색 창 안에서는 기다린다 */
+    if(now - h.born > GM_HAND_SEEK) gmHandOff();
+    return;
+  }
+  if(el !== h.el){ h.el = el; gmHandScroll(el); }
+  const r = fxRect(el), L = fxL();
+  if(!r || !L || r.w < 2 || r.h < 2){ if(now - h.born > GM_HAND_SEEK) gmHandOff(); return; }
+  const FW = L.clientWidth || FRAME_W, FH = L.clientHeight || FRAME_H_MIN;
+  /* 대상이 프레임 밖이면 표시하지 않는다(지시서 113 ②) */
+  if(r.x + r.w <= 0 || r.x >= FW || r.y + r.h <= 0 || r.y >= FH){
+    h.hand.style.display = h.ring.style.display = 'none';
+    return;
+  }
+  h.hand.style.display = h.ring.style.display = '';
+  /* 링 = 대상 bbox + 8px 여유 */
+  h.ring.style.left   = (r.x - 8) + 'px';
+  h.ring.style.top    = (r.y - 8) + 'px';
+  h.ring.style.width  = (r.w + 16) + 'px';
+  h.ring.style.height = (r.h + 16) + 'px';
+  h.ring.style.borderRadius = Math.min(24, (r.h + 16)/2) + 'px';
+  /* 팁 = 대상 «우하단 모서리 안쪽». 손 몸통은 그 아래·바깥으로 뻗어 **대상 글자를 덮지 않는다**
+     (1회차 확인: 중심 쪽(0.68·0.70)에 두면 버튼 문구와 가격을 손등이 가렸다).
+     손 상자(120)가 프레임 오른쪽을 넘으면 좌우를 뒤집어 왼쪽에서 가리킨다. */
+  const tx = r.x + Math.min(r.w*0.74, r.w - 22);
+  const ty = r.y + r.h - Math.min(r.h*0.22, 24);
+  const mir = tx - 34 + 120 > FW - 6;
+  h.hand.classList.toggle('mir', mir);
+  h.hand.style.left = tx + 'px';
+  /* 아래로 나가면 팁을 위로 당겨 손 전체를 프레임 안에 둔다(접촉은 유지된다) */
+  h.hand.style.top = Math.min(ty, FH - 116) + 'px';
+}
+/* 지시서 113 ④ — gmGo() 는 이동 뒤 이것만 부른다. hint 가 없는 미션(전투 계열)은 무해하게 통과 */
+function fxHand(hint){
+  gmHandOff();
+  const get = gmHandGetter(hint); if(!get) return;
+  const L = fxL(); if(!L) return;
+  const hand = document.createElement('div');
+  hand.id = 'fxHand';
+  hand.setAttribute('aria-hidden', 'true');
+  hand.innerHTML = '<i><s><svg viewBox="0 0 120 120" width="120" height="120">'
+    + '<g fill="#FFFFFF" stroke="#000000" stroke-width="7" stroke-linejoin="round">'
+    + '<path d="M34.5 11c-5.2 0-9.5 4.3-9.5 9.5V58c-6.6 2.6-11 9-11 16.2V84c0 15.5 12.6 28 28 28h20'
+    +   'c15.5 0 28-12.5 28-28V63c0-5-4-9-9-9-1.6 0-3.1.4-4.4 1.2-1-3.6-4.3-6.2-8.2-6.2-1.9 0-3.6.6-5 1.6'
+    +   '-1.3-2.9-4.2-4.9-7.6-4.9-.8 0-1.6.1-2.3.3V20.5c0-5.2-4.3-9.5-9.5-9.5z"/>'
+    + '<path d="M20 96h80" stroke-width="6" stroke-linecap="round" fill="none" opacity=".55"/>'
+    + '</g></svg></s></i>';
+  const ring = document.createElement('span');
+  ring.id = 'fxHandR';
+  L.appendChild(ring); L.appendChild(hand);
+  gmHand = { get, el:null, hand, ring, raf:0, born:performance.now() };
+  document.addEventListener('pointerdown', gmHandTap, true);
+  gmHandFrame();
+}
+
 function fxCheck(el){
   const L = fxL(), p = fxPt(el); if(!L || !p) return;
   if(L.childElementCount >= FXMAX) return;
