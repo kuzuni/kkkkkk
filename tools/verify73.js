@@ -8,7 +8,7 @@
      §3 ② 보상 체인 — 초기 다이아 ≥ 1,000 · 소환 미션 직전 미션 보상 ≥ 그 소환의 10연 값.
      §4 ③ 소환 차단 — 스킬 소환 미션 중 방어구 상자(유료·무료)를 눌러도 재화·카운터·무료횟수 불변 + 안내 팝업.
                        지정 상자는 정상 소환. 유물은 차단 안 함. 미션 완료 후 차단 해제.
-     §5 ① 이동 — 미션 20개 전수. 배너를 누르면 각 미션의 목표 화면이 실제로 열린다.
+     §5 ① 이동 — 미션 21개 전수(76 에서 «목걸이 소환» 삽입). 배너를 누르면 각 미션의 목표 화면이 실제로 열린다.
      §6 배너 상태 — 미완이어도 커서 pointer · `[미션-n]` 라벨이 클릭을 배너로 흘린다 · 기하 불변.
      §7 세이브 — 수령 시 다이아가 실제로 늘고 localStorage 에 반영된다.
      §8 콘솔 에러 0 */
@@ -32,8 +32,19 @@ const setMission = (p, i, mut) => p.evaluate(([i, mut]) => {
   uiDirty = true; renderUI(); drawTuto();
 }, [i, mut || '']);
 
+/* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 (76) */
+async function launchAny(){
+  try { return await chromium.launch(); }
+  catch (e) {
+    const fs = require('fs');
+    const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(x => { try { return fs.existsSync(x); } catch (_) { return false; } });
+    if (!cand) throw e;
+    return await chromium.launch({ executablePath: cand });
+  }
+}
+
 (async () => {
-  const b = await chromium.launch();
+  const b = await launchAny();
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
@@ -69,7 +80,7 @@ const setMission = (p, i, mut) => p.evaluate(([i, mut]) => {
     }));
   });
   shown.forEach(s => ok(s.c10 === '1,000' && s.c30 === '3,000', `${s.box} 카드 표기 ${s.c10} / ${s.c30}`));
-  for (const box of ['weapon', 'shield', 'skill']) {
+  for (const box of ['weapon', 'shield', 'amulet', 'skill']) {
     const r = await p.evaluate((box) => {
       S.dia = 99999; S.guide.idx = GUIDE.length;              /* 차단 해제 상태에서 순수 가격만 본다 */
       const before = S.dia, n0 = S.cnt.sumEquip + S.cnt.sumSkill;
@@ -95,8 +106,8 @@ const setMission = (p, i, mut) => p.evaluate(([i, mut]) => {
     if (!nx || !nx.ban) return;
     ok(r.dia >= 1000, `«${r.n}» 보상 ${r.dia} ≥ «${nx.n}» 10연 1,000`);
   });
-  ok(chain.rows.filter(r => r.ban).map(r => r.ban).join(',') === 'skill,weapon,shield',
-    '소환 미션 3개에 ban(skill/weapon/shield) 부착');
+  ok(chain.rows.filter(r => r.ban).map(r => r.ban).join(',') === 'skill,weapon,shield,amulet',
+    '소환 미션 4개에 ban(skill/weapon/shield/amulet) 부착 (76)');
 
   /* ── §4 소환 차단 ─────────────────────────────────────────────── */
   console.log('§4 ③ 소환 미션 중 다른 상자 차단');
@@ -158,21 +169,22 @@ const setMission = (p, i, mut) => p.evaluate(([i, mut]) => {
     { i: 2,  d: '10 상점 · 무기 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.weapon.at && s.shopFocus.weapon.inView },
     { i: 3,  d: '06 장비 시트',         ck: s => s.eqw && s.heroTab === 'eq' },
     { i: 4,  d: '23 훈련 · 훈련 탭',    ck: s => s.trw && s.trSub === 'train' },
-    { i: 5,  d: '10 상점 · 방어구 상자', ck: s => s.shopw && s.shopFocus && s.shopFocus.shield.at && s.shopFocus.shield.inView },
-    { i: 6,  d: '전투(메인)',           ck: s => s.clean },
+    { i: 5,  d: '10 상점 · 방패 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.shield.at && s.shopFocus.shield.inView },
+    { i: 6,  d: '10 상점 · 목걸이 상자', ck: s => s.shopw && s.shopFocus && s.shopFocus.amulet.at && s.shopFocus.amulet.inView },
     { i: 7,  d: '전투(메인)',           ck: s => s.clean },
-    { i: 8,  d: '03 던전',              ck: s => s.dunw },
-    { i: 9,  d: '룰렛',                 ck: s => s.modal },
-    { i: 10, d: '출석',                 ck: s => s.modal },
-    { i: 11, d: '14 보물상자',          ck: s => s.relicw },
-    { i: 12, d: '06 장비 시트',         ck: s => s.eqw && s.heroTab === 'eq' },
-    { i: 13, d: '전투(메인)',           ck: s => s.clean },
-    { i: 14, d: '15 유물 탭',           ck: s => s.rlw },
-    { i: 15, d: '23 훈련 · 스탯 탭',    ck: s => s.trw && s.trSub === 'stat' },
-    { i: 16, d: '전투(메인)',           ck: s => s.clean },
-    { i: 17, d: '21 도감 보너스',       ck: s => s.collw },
-    { i: 18, d: '전투(메인)',           ck: s => s.clean },
-    { i: 19, d: '전투(메인)',           ck: s => s.clean }
+    { i: 8,  d: '전투(메인)',           ck: s => s.clean },
+    { i: 9,  d: '03 던전',              ck: s => s.dunw },
+    { i: 10, d: '룰렛',                 ck: s => s.modal },
+    { i: 11, d: '출석',                 ck: s => s.modal },
+    { i: 12, d: '14 보물상자',          ck: s => s.relicw },
+    { i: 13, d: '06 장비 시트',         ck: s => s.eqw && s.heroTab === 'eq' },
+    { i: 14, d: '전투(메인)',           ck: s => s.clean },
+    { i: 15, d: '15 유물 탭',           ck: s => s.rlw },
+    { i: 16, d: '23 훈련 · 스탯 탭',    ck: s => s.trw && s.trSub === 'stat' },
+    { i: 17, d: '전투(메인)',           ck: s => s.clean },
+    { i: 18, d: '21 도감 보너스',       ck: s => s.collw },
+    { i: 19, d: '전투(메인)',           ck: s => s.clean },
+    { i: 20, d: '전투(메인)',           ck: s => s.clean }
   ];
   for (const e of EXPECT) {
     await setMission(p, e.i);

@@ -13,8 +13,19 @@ const ck = (name, got, want, tol = 0) => {
   console.log((ok ? '  OK   ' : '  FAIL ') + name.padEnd(46) + ' got ' + got + ' / want ' + want + (tol ? ' ±' + tol : ''));
 };
 
+/* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 (76) */
+async function launchAny(){
+  try { return await chromium.launch(); }
+  catch (e) {
+    const fs = require('fs');
+    const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(x => { try { return fs.existsSync(x); } catch (_) { return false; } });
+    if (!cand) throw e;
+    return await chromium.launch({ executablePath: cand });
+  }
+}
+
 (async () => {
-  const b = await chromium.launch();
+  const b = await launchAny();
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

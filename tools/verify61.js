@@ -84,8 +84,9 @@ const snap = page => page.evaluate(() => {
   await page.waitForTimeout(1200);
 
   /* 체인 정의를 한 번 읽어 둔다 — 기대값을 코드가 아니라 데이터에서 만든다 */
-  const G = await page.evaluate(() => GUIDE.map(m => ({ n: m.n, goal: m.goal, dia: m.dia, abs: !!m.abs })));
-  ok('§0 체인 20개', G.length === 20, 'len=' + G.length);
+  /* 73 부터 dia 가 함수인 미션이 있다(evaluate 의 JSON 직렬화에서 undefined 로 떨어진다) → gmDia 로 값을 읽는다 */
+  const G = await page.evaluate(() => GUIDE.map(m => ({ n: m.n, goal: m.goal, dia: gmDia(m), abs: !!m.abs })));
+  ok('§0 체인 21개(76 목걸이 삽입)', G.length === 21, 'len=' + G.length);
   ok('§0 보상은 전부 다이아(>0)', G.every(m => m.dia > 0));
   ok('§0 체인에 소환·강화·장비장착·훈련·던전·보스·스킬장착·룰렛·출석이 모두 있다',
      ['소환','강화','장비 장착','훈련','던전','보스','스킬 장착','룰렛','출석']
@@ -111,14 +112,14 @@ const snap = page => page.evaluate(() => {
      [s.label, s.name, s.sub].join(' | '));
 
   /* ---------- §2 진행 반영 (델타형) ---------- */
-  /* 미션 7 «적 100마리 처치» 로 옮겨 놓고 절반만 올린다 */
-  await page.evaluate(() => { S.guide.idx = 6; gmStart(); drawTuto(); });
+  /* 미션 8 «적 100마리 처치»(76 삽입으로 idx 7) 로 옮겨 놓고 절반만 올린다 */
+  await page.evaluate(() => { S.guide.idx = 7; gmStart(); drawTuto(); });
   await page.waitForTimeout(80);
   const kill0 = await page.evaluate(() => S.totalKills);
   await page.evaluate(() => { S.totalKills += 40; drawTuto(); });
   await page.waitForTimeout(80);
   s = await snap(page);
-  eq('§2 진행이 카운터를 따라 오른다', s.pg, '(40/' + G[6].goal + ')');
+  eq('§2 진행이 카운터를 따라 오른다', s.pg, '(40/' + G[7].goal + ')');
   ok('§2 아직 미완료', s.todo && s.dis === true);
 
   /* ---------- §6 델타형 기준선 ---------- */
@@ -158,15 +159,15 @@ const snap = page => page.evaluate(() => {
   ok('§12 토스트 1개 이상', fx.toast > 0, 'toast=' + fx.toast);
 
   s = await snap(page);
-  eq('§4 idx +1', s.idx, 7);
-  eq('§4 다이아 +보상', s.dia, diaBefore + G[6].dia);
-  eq('§4 배너가 다음 미션으로', s.name, G[7].n);
-  eq('§4 라벨이 [미션-8] 로', s.label, '[미션-8]');
+  eq('§4 idx +1', s.idx, 8);
+  eq('§4 다이아 +보상', s.dia, diaBefore + G[7].dia);
+  eq('§4 배너가 다음 미션으로', s.name, G[8].n);
+  eq('§4 라벨이 [미션-9] 로', s.label, '[미션-9]');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('idle_hunter_save_v4')).guide);
-  ok('§4 localStorage 에 저장됨', stored && stored.idx === 7, JSON.stringify(stored));
+  ok('§4 localStorage 에 저장됨', stored && stored.idx === 8, JSON.stringify(stored));
 
   /* ---------- §7 절대형(abs) ---------- */
-  /* 미션 8 «스테이지 5 도달» = abs. 기준선을 쓰지 않고 누적값이 그대로 진행이다 */
+  /* 미션 9 «스테이지 5 도달» = abs. 기준선을 쓰지 않고 누적값이 그대로 진행이다 */
   ok('§7 abs 미션의 기준선은 0', s.prog === 0, 'prog=' + s.prog);
   await page.evaluate(() => { S.best = 3; drawTuto(); });
   await page.waitForTimeout(120);
@@ -191,13 +192,13 @@ const snap = page => page.evaluate(() => {
   const relic = dl.cards.find(c => c.id === 'relic');
   ok('§10 유물 던전이 잠겨 있다', relic && relic.locked, JSON.stringify(relic));
   ok('§10 잠금 라벨이 «가이드미션 N 클리어»', /가이드미션/.test(relic.label) && !/스테이지/.test(relic.label), relic.label);
-  eq('§10 유물 던전 요구 미션', dl.gm.relic, 14);
-  eq('§10 수련 던전 요구 미션', dl.gm.growth, 17);
-  eq('§10 마왕 던전 요구 미션', dl.gm.boss, 20);
-  await page.evaluate(() => { S.guide.idx = 14; gmStart(); renderDunPage(); });
+  eq('§10 유물 던전 요구 미션', dl.gm.relic, 15);
+  eq('§10 수련 던전 요구 미션', dl.gm.growth, 18);
+  eq('§10 마왕 던전 요구 미션', dl.gm.boss, 21);
+  await page.evaluate(() => { S.guide.idx = 15; gmStart(); renderDunPage(); });
   dl = await dunLock();
-  ok('§10 idx=14 → 유물 던전 해금', !dl.cards.find(c => c.id === 'relic').locked);
-  ok('§10 idx=14 에서도 마왕 던전은 잠김', dl.cards.find(c => c.id === 'boss').locked);
+  ok('§10 idx=15 → 유물 던전 해금', !dl.cards.find(c => c.id === 'relic').locked);
+  ok('§10 idx=15 에서도 마왕 던전은 잠김', dl.cards.find(c => c.id === 'boss').locked);
   await page.evaluate(() => { const b = document.querySelector('#dunw .dnw-x, #dunw [data-close]'); if (b) b.click(); });
 
   /* ---------- §13 기하 ---------- */
@@ -268,7 +269,7 @@ const snap = page => page.evaluate(() => {
     { t: 'guide:"x" (문자열)',      save: { guide: 'x', dia: 100 },                  wantIdx: 0 },
     { t: 'guide 필드 결손',         save: { guide: {}, dia: 100 },                   wantIdx: 0 },
     { t: 'guide idx 문자열',        save: { guide: { idx: 'a', prog: 'b' }, dia: 100 }, wantIdx: 0 },
-    { t: 'guide idx 초과',          save: { guide: { idx: 999, prog: 0 }, dia: 100 }, wantIdx: 20 }
+    { t: 'guide idx 초과',          save: { guide: { idx: 999, prog: 0 }, dia: 100 }, wantIdx: 21 }
   ];
   for (const v of variants) {
     const c2 = await browser.newContext({ viewport: { width: 1080, height: 2280 } });

@@ -8099,10 +8099,15 @@ const BKEYS = Object.keys(BANNERS);
 /* 작업 57 — `EQ_BANNERS`(구버전 장비 패널의 무기·방패·목걸이 서브탭) 폐기.
    부위 전환은 06 시트의 슬롯 3칸 → 05 팝업(`openWeapon(null, part)`) 하나뿐이다. */
 
-/* 10 상점 소환 탭 — 상자 카드 3종(레퍼런스: 무기·방어구·스킬 상자). 각 상자 = 기존 소환 배너 */
+/* 10 상점 소환 탭 — 상자 카드 4종. 각 상자 = 기존 소환 배너.
+   작업 76 (2026-08-25, 저장소 주인 지시) — 소환 종류는 «무기·방패·목걸이·스킬» 4종.
+   «방어구 상자» 명칭 폐기(실체가 shield 방패 배너였다) → «방패 상자» 로 개명,
+   «목걸이 상자» 신설(BANNERS.amulet 은 73 때부터 있었는데 상점 카드가 없어 소환할 길이 없었다).
+   목걸이 색 테마는 기존 3장(청록/장미/보라)과 겹치지 않는 호박(앰버) 톤 — 측정표 10 §5. */
 const SHOP_BOXES = [
   { b:'weapon', n:'무기 상자',   ic:'🗡️', hd:'#2FAD88', hr:'#4FBB9B', c1:'#5BCAF5', c2:'#3F6DCF' },
-  { b:'shield', n:'방어구 상자', ic:'🛡️', hd:'#8E4B5C', hr:'#A16877', c1:'#E26E9F', c2:'#9B5462' },
+  { b:'shield', n:'방패 상자',   ic:'🛡️', hd:'#8E4B5C', hr:'#A16877', c1:'#E26E9F', c2:'#9B5462' },
+  { b:'amulet', n:'목걸이 상자', ic:'📿', hd:'#A07A2C', hr:'#B4924E', c1:'#F0C05A', c2:'#C08A3C' },
   { b:'skill',  n:'스킬 상자',   ic:'📜', hd:'#5B4586', hr:'#78659D', c1:'#A85EDB', c2:'#624C94' }
 ];
 const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/2») */
@@ -8227,7 +8232,8 @@ const MAILS = [
                        에 기준선으로 찍고, 진행 = get() − prog. 레퍼런스의 `(0/1)` 표기가 이것이다.
      · 절대형(abs:1) : «스테이지 N 도달» 처럼 누적값 자체가 목표. 기준선을 쓰지 않는다.
    보상은 전부 다이아(레퍼런스 «💎1,000» 톤). 300 → 3,000 으로 완만히 오른다.
-   14·17·19 번은 03 던전 해금(«가이드미션 N 클리어»)의 기준점이라 스테이지 조건을 겸한다. */
+   «스테이지 15/25/40 도달» 미션은 03 던전 해금(«가이드미션 N 클리어»)의 기준점이라 스테이지 조건을 겸한다
+   (76 의 목걸이 삽입으로 번호는 15·18·21 — DUN_UI.gm 과 같이 움직여야 한다). */
 /* 작업 73 (2026-08-25, 저장소 주인 지시) — 세 가지를 얹었다.
    ① `go`  : **미완 상태에서 배너를 누르면 그 미션을 할 수 있는 화면으로 이동**한다(gmGo).
    ② `dia` : 다음 미션이 «소환» 이면 이 미션의 보상이 그 소환의 **10연 한 번**을 감당해야 한다
@@ -8236,18 +8242,19 @@ const MAILS = [
    ③ `ban` : 소환 미션 진행 중에는 **다른 상자 소환을 막는다**(gmBlocked → doSummon/doSummonFree 진입부).
    ⚠ 항목 «순서·개수» 는 세이브 호환(S.guide.idx)을 위해 절대 바꾸지 않는다.
    [담당 결정 — 5번 미션] 지시서 73 의 «펫 상자를 SHOP_BOXES 에 추가하거나 미션을 방어구 소환으로
-   바꿀 것» 중 **후자**를 택했다. 펫 상자를 상점에 추가하면 레퍼런스가 3칸인 10 상점 화면(다른 작업
-   단위·비평 점수 7)의 카드 목록을 건드리게 된다. 방어구(shield) 상자는 이미 `SHOP_BOXES` 에 있어
-   ①의 «누르면 그 화면으로» 가 실동작하고, 화면 레이아웃은 한 픽셀도 바뀌지 않는다.
-   → 펫 소환 경로(26 동료 시트 [동료 소환] → 상점에 펫 카드 없음)는 **여전히 막다른 길**이다.
-     이건 73 의 범위 밖이라 PROGRESS 비고에 남긴다(26/10 담당이 처리할 것). */
+   바꿀 것» 중 **후자**를 택했다. 작업 76(2026-08-25, 저장소 주인 지시)이 이 결정을 **확정**했다 —
+   상점 상자는 무기·방패·목걸이·스킬 4종이고 **펫 상자는 추가하지 않는다**. 76 에서 6번 미션을
+   «방패 1회 소환하기» 로 개명하고 idx 6 에 «목걸이 1회 소환하기» 를 삽입했다(GUIDE_V 3, 이관은 load 쪽).
+   → 펫 소환 경로(26 동료 시트 [동료 소환] → 상점에 펫 카드 없음)는 여전히 막다른 길이다(26 담당 몫). */
 const GUIDE = [
   { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill,  ban:'skill',  go:() => gmShop('skill') },
   { n:'스킬 장착하기',         goal:1,   abs:1,    get:() => S.eqSkill.length, dia:() => summonCost('weapon', 10), go:() => gmHero('sk') },
   { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip,  ban:'weapon', go:() => gmShop('weapon') },
   { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn(),  go:() => gmHero('eq') },
   { n:'훈련 10회 하기',        goal:10,  get:() => S.upgrades, dia:() => summonCost('shield', 10), go:() => gmTrain('train') },
-  { n:'방어구 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'shield', go:() => gmShop('shield') },
+  { n:'방패 1회 소환하기',     goal:1,   get:() => S.cnt.sumEquip,  ban:'shield', go:() => gmShop('shield'),
+                                         dia:() => summonCost('amulet', 10) },   /* 다음 미션 = 목걸이 소환 */
+  { n:'목걸이 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'amulet', go:() => gmShop('amulet') },
   { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills,     go:() => gmBattle() },
   { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon) },
@@ -8266,8 +8273,9 @@ const GUIDE = [
 ];
 /* 미션 «내용» 이 바뀌면(5번 동료→방어구) 옛 세이브의 기준선(S.guide.prog)이 다른 카운터를 가리켜
    미션이 즉시 완료되거나 영영 안 끝난다. 버전이 다르면 기준선만 -1(미확정)로 되돌려
-   gmBase() 가 «지금 값» 으로 다시 찍게 한다 — 61 의 지연 확정(lazy) 규칙 그대로다. */
-const GUIDE_V = 2;
+   gmBase() 가 «지금 값» 으로 다시 찍게 한다 — 61 의 지연 확정(lazy) 규칙 그대로다.
+   v3 (76): idx 6 에 «목걸이 1회 소환하기» 삽입 — gv ≤ 2 세이브는 idx ≥ 6 이면 +1 이관(load 쪽). */
+const GUIDE_V = 3;
 /* 장착 중인 장비 부위 수(25 확정 — 무기·방패·목걸이 3칸) */
 const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eqSlot[k] ? 1 : 0), 0);
 /* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
@@ -8493,7 +8501,13 @@ function load(){
     if(!Number.isFinite(b.guide.prog)) b.guide.prog = -1;
     /* 73 — 미션표 버전이 다르면(5번 «동료 소환» → «방어구 소환» 처럼 get() 이 바뀌었다) 기준선을
        미확정으로 되돌린다. 그래야 «다른 카운터로 찍힌 기준선» 때문에 미션이 즉시 완료되지 않는다. */
-    if(b.guide.gv !== GUIDE_V){ b.guide.prog = -1; b.guide.gv = GUIDE_V; }
+    if(b.guide.gv !== GUIDE_V){
+      /* 76 — v3 에서 idx 6 에 «목걸이 소환» 이 «삽입» 됐다(개수 20→21). gv ≤ 2 세이브가
+         삽입점 이후를 진행 중이면 같은 미션을 계속 가리키게 +1 이관한다(새 미션은 건너뛴다 —
+         이미 지난 구간으로 되돌리지 않는다). 구 TUTO 세이브(gv 없음)도 같은 경로다. */
+      if((b.guide.gv|0) <= 2 && b.guide.idx >= 6) b.guide.idx += 1;
+      b.guide.prog = -1; b.guide.gv = GUIDE_V;
+    }
     /* 35 패스 — 44 교훈 2 대로 KEY 는 올리지 않고 «없으면 기본값» 으로 흡수한다.
        옛 세이브가 null·문자열·숫자를 갖고 있어도 NaN·예외가 새지 않게 항목별로 못박는다. */
     if(!b.pass || typeof b.pass !== 'object') b.pass = DEF().pass;
@@ -11757,11 +11771,11 @@ const DUN_UI = {
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️', th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
             rw:['다이아 획득 가능'], gm:0  },
   relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
-            rw:['유물석 획득 가능','유물 재료 획득 가능'], gm:14 },
+            rw:['유물석 획득 가능','유물 재료 획득 가능'], gm:15 },
   growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️', th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
-            rw:['도감 재료 획득 가능'], gm:17 },
+            rw:['도감 재료 획득 가능'], gm:18 },
   boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫', th:'👹', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
-            rw:['골드 획득 가능','보석 획득 가능'], gm:20 }
+            rw:['골드 획득 가능','보석 획득 가능'], gm:21 }
 };
 /* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다. */
 function dunLocked(d){ return S.guide.idx < DUN_UI[d.id].gm; }
@@ -11981,7 +11995,7 @@ function endRaid(record){
    closeDungeon() 이 처리하므로 이 리스너는 제거했다. */
 
 /* ---- 10 상점 팝업 — 소환 탭 (전체화면 페이지 #shopw) — 측정표 docs/measure/10-상점팝업소환탭.md ----
-   상자 카드 3장 = 무기·방어구·스킬 소환 배너. 각 카드 우측 소환 버튼 3개(무료 10연 / 💎 10연 / 💎 30연).
+   상자 카드 4장(76) = 무기·방패·목걸이·스킬 소환 배너. 각 카드 우측 소환 버튼 3개(무료 10연 / 💎 10연 / 💎 30연).
    좌표는 카드 좌상단 기준 상대좌표(측정표 §2)를 그대로 CSS 로 박았고, 여기서는 상태값만 채운다. */
 let shopCat = 'summon';
 function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
@@ -12021,7 +12035,7 @@ function renderShopPage(){
   });
   list.innerHTML = h;
 }
-/* 73 ① — `focus` 로 상자 키(weapon/shield/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
+/* 73 ① — `focus` 로 상자 키(weapon/shield/amulet/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
 function openShopPage(focus){
   closeDungeon(); closeTrain();
   if(typeof closeRelicPage === 'function') closeRelicPage();
@@ -12040,7 +12054,7 @@ function openShopPage(focus){
     const i = SHOP_BOXES.findIndex(x => x.b === focus);
     const card = i >= 0 ? li.children[i] : null;
     if(card){
-      /* 카드 3장이 뷰포트에 다 들어가면 스크롤 여지가 0 이다 — 클램프해 두면 그때도 안전하다 */
+      /* 카드가 뷰포트에 다 들어가면 스크롤 여지가 0 이다 — 클램프해 두면 그때도 안전하다 */
       const top = card.offsetTop - li.children[0].offsetTop;
       li.scrollTop = Math.max(0, Math.min(top, li.scrollHeight - li.clientHeight));
       fxPop(card);                                 /* 58 — 어느 상자로 가라는 건지 한 번 튄다 */
