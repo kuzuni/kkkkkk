@@ -5490,18 +5490,20 @@
   /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
   /* 자체 스캔(tools/scan36.py, 평균RGB>190): ref 잉크 85×97 vs 우리 63×98 → **폭만 −26%**.
      이모지는 가로세로가 같이 커져서 font-size 로는 못 맞춘다 — scaleX 로만 벌린다(LESSONS 30-③). */
-  .ps-bx>s.lk{position:absolute;left:94px;top:-21px;width:79px;height:87px;line-height:87px;
-    text-align:center;font-size:74px}
-  .ps-bx>s.lk>em{transform:scaleX(1.32)}
+  .ps-bx>s.lk{position:absolute;left:105px;top:-35px;width:79px;height:87px;line-height:87px;
+    text-align:center;font-size:66px}
+  .ps-bx>s.lk>em{transform:scaleX(1.24)}
   /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
   /* 수령완료 «색» 은 등급마다 다르다(등급색 × 0.5 — 36 측정표 §8-4) → renderPass() 가 인라인
      --rim/--fill 로 어둡게 준다. 여기서 색을 잡으면 «인라인 > 클래스» 라 어차피 지고,
      35 가 하드코딩했던 파랑 한 쌍이 주황 등급 칸에 잘못 붙는다. 여기서는 회색화만 한다. */
   .ps-bx.dn>i{opacity:.35;filter:grayscale(1)}
   .ps-bx.dn>b{color:#808080}
-  .ps-bx.dn>s.ck{position:absolute;left:33px;top:38px;width:82px;height:67px;line-height:67px;
-    text-align:center;font-size:76px;color:#8FFF45;-webkit-text-stroke:10px #000;paint-order:stroke fill;
-    transform:scaleY(.82);transform-origin:top center}
+  /* 자체 스캔(tools/scan36.py 판): ref 잉크 82×66 @ref y1097 vs 우리 73×45 @1109 —
+     scaleY(.82) 가 세로를 −33% 죽이고 있었다. 세로를 살리고 가로만 scaleX 로 눌러 82 에 맞춘다. */
+  .ps-bx.dn>s.ck{position:absolute;left:33px;top:26px;width:82px;height:67px;line-height:67px;
+    text-align:center;font-size:91px;color:#8FFF45;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+    transform:scaleX(.94);transform-origin:top center}
 
   /* ---- 하단 패스 종류 탭바 ref y2161..2339 → 프레임 바닥 앵커(h179) ---- */
   .ps-bar{left:0;right:0;bottom:0;height:179px;background:#000}
@@ -5540,6 +5542,21 @@
   #psw.att .ps-ttl>i{transform:scaleX(.875)}
   #psw.att .ps-buy>b.t2>i{transform:scaleX(1.162)}
   #psw.att .ps-sub>i{transform:scaleX(.981)}
+  /* 가격 코어 중심은 버튼 중심 814 가 아니라 **820** 이다(측정표 §5 — 35 와 같은 +6 오프셋) */
+  /* ⚠ position:relative 로 밀면 `.ps-buy>b` 의 absolute + left:0/right:0 이 풀려 레이아웃이 깨진다
+     (실제로 가격이 19px 조각으로 찌그러졌다). 위치는 transform 으로만 민다. */
+  #psw.att .ps-buy>b.t2{transform:translateX(6px)}
+  /* 부제 블록이 ref 대비 7px 높다(3회차 비평 D-8: ref frame 210..280 vs 203..270) */
+  #psw.att .ps-sub{top:207px}
+  /* 헤더 프리미엄 리본 배지의 «잉크» 좌단이 프리미엄 컬럼 경계 x560 에 맞아야 한다 —
+     지금은 586 이라 +26px 우측 편이고 «프리미엄» 글자와의 간격이 34 → 5 로 죽는다
+     (3회차 비평 C-5 · 1회차 A-2 가 같은 수치로 짚었다). 35 를 건드리지 않게 att 로만 스코프한다. */
+  #psw.att .ps-bdg.p{left:535px}
+  /* 버튼 라벨 «프리미엄 활성화» 잉크 폭 ref 256 vs 우리 278(+8.6%) — 리본 배지를 물고 들어간다 */
+  #psw.att .ps-buy>b.t1>i{transform:scaleX(.83)}
+  /* 보상 젬 — ref 잉크 **78×77**(칸 세로 정중앙). 💎 는 «납작하고 넓은» 글리프라
+     font-size 로 세로를 채우면 가로가 넘친다 → 키운 뒤 scaleX 로 되눌러 bbox 를 맞춘다. */
+  #psw.att .ps-bx>i{top:24px;font-size:96px;transform:scaleX(.76)}
 
   /* 히어로 — 35 는 «밝은 하늘 + 구름 + 금화더미 + 집», 36 은 «진파랑 하늘 + 빛살 + 반짝임 +
      금색 광차(시안 크리스탈) + 전폭 얼음바위 지대» 다. 36 에 구름은 없다(측정표 §1-0).
@@ -5579,8 +5596,8 @@
     border:5px solid #000;border-radius:31px;background:#8B95B8;
     box-shadow:inset 0 0 0 7px #BFCCD5;text-align:center;line-height:72px}
   /* 글자 코어 x495..583(w89, 자당 advance 32) · y885..915(h31) → 캡슐 기준 +20..+50 */
-  .ps-lb>i{font-size:34px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
-    transform:scaleX(.92);white-space:nowrap}
+  .ps-lb>i{position:relative;top:-7px;font-size:34px;color:#fff;-webkit-text-stroke:8px #000;
+    paint-order:stroke fill;transform:scaleX(.92);white-space:nowrap}
 
   /* ================= 53 가방 팝업 (#bagw) — 측정표 docs/measure/53-가방팝업.md =================
      껍데기 (가) 딤 위 가운데 다이얼로그 948×967 @ ref(66,744) → 프레임 y 660 (ref y − 84).
@@ -13170,7 +13187,9 @@ function renderPass(){
          .ps-bx.dn 은 색을 안 잡고 아이콘·수량 회색화만 한다(그래서 «인라인 > 클래스» 충돌이 없다) */
       bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
           + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
-          + '<i>' + r.ic + '</i><b><em>' + fmt(r.n) + '</em></b>'
+          /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00K» 로 줄여 버린다(3회차 비평 C-10,
+             LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
+          + '<i>' + r.ic + '</i><b><em>' + won(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : '')) + '</div>';
     }
     h += '<div class="ps-r" style="top:' + (off + i * PASS_RH).toFixed(2) + 'px">'
