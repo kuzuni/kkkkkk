@@ -7820,13 +7820,17 @@ function buildFloor(seed){
 /* ==========================================================================
    데이터
    ========================================================================== */
+/* 85(2026-08-26, 주인 지시) — 장비만 8등급. 7 «초월»·8 «불멸» 신설(mul 은 6→10 뒤로 16·26 기하급수 유지).
+   스킬·펫·유물·코스튬은 6단계(신화)까지만 쓴다 → «최고 등급» 판정은 isTopGrade 가 아니라 topG(cat) 기준. */
 const GRADE = [
   { n:'일반', c:'#9aa7c2', bg:'#1a2038', mul:1.0,  ic:'🥉' },
   { n:'고급', c:'#6fe08a', bg:'#152a1f', mul:1.5,  ic:'🥈' },
   { n:'희귀', c:'#5fb8ff', bg:'#14223c', mul:2.3,  ic:'🥇' },
   { n:'영웅', c:'#c48cff', bg:'#241a3c', mul:3.6,  ic:'💠' },
   { n:'전설', c:'#ffb648', bg:'#3a2a12', mul:6.0,  ic:'👑' },
-  { n:'신화', c:'#ff6b7f', bg:'#3a1420', mul:10.0, ic:'🔥' }
+  { n:'신화', c:'#ff6b7f', bg:'#3a1420', mul:10.0, ic:'🔥' },
+  { n:'초월', c:'#4fe3c4', bg:'#0e3028', mul:16.0, ic:'🌀' },
+  { n:'불멸', c:'#f0edd2', bg:'#2c2c3e', mul:26.0, ic:'♾️' }
 ];
 
 /* ---- 스킬 (최대 8개 장착) ---- */
@@ -7853,34 +7857,42 @@ const SLOTS = [
   { k:'amulet', n:'목걸이', ic:'📿', stat:'체력 재생' }
 ];
 /* 작업 75(2026-08-25, 주인 보고) — 등급당 1종 → 여러 종. 구조는 «부위 → 등급 → 항목 배열».
-   종수는 일반·고급 4 / 희귀·영웅 3 / 전설·신화 2 (부위당 18종, 총 54종).
-   id 는 j=0 이 기존 `slot+g`(weapon0~weapon5 등 — 구 세이브 보존), j≥1 은 `slot+g+'_'+j`.
+   작업 85(2026-08-26, 주인 지시) — 8등급 체계: 1~7등급 부위당 정확히 5종, 8(불멸)등급만 1종
+   → 부위당 36종, 3부위 108종. 75 의 기존 id·이름·v 는 전부 보존하고(각 티어 배열 앞쪽 그대로)
+   부족분만 뒤에 덧붙였다(j 이어짐). 7·8등급(초월·불멸)은 전부 신설.
+   id 는 j=0 이 기존 `slot+g`(weapon0~weapon7 등 — 구 세이브 보존), j≥1 은 `slot+g+'_'+j`.
    v 는 같은 등급 안 개체차 배율(0.9~1.15, ownVal·equipVal·power 에 곱함) — j=0 은 1.00 고정(구 세이브 수치 불변).
    ic 는 항목별 임시 아트(이모지) — j=0 은 기존 부위 아이콘 유지. */
 const EQ_NAMES = {
   weapon: [
-    [ {n:'녹슨 검',v:1.00,ic:'⚔️'},   {n:'낡은 손도끼',v:0.92,ic:'🪓'},  {n:'사냥꾼의 단검',v:1.06,ic:'🔪'}, {n:'견습 사수의 활',v:1.12,ic:'🏹'} ],
-    [ {n:'강철 장검',v:1.00,ic:'⚔️'}, {n:'전쟁 망치',v:1.10,ic:'🔨'},    {n:'강철 창',v:0.94,ic:'🔱'},       {n:'쌍날 도끼',v:1.05,ic:'🪓'} ],
-    [ {n:'기사의 대검',v:1.00,ic:'⚔️'}, {n:'은빛 세이버',v:1.12,ic:'🤺'}, {n:'처형자의 도끼',v:0.92,ic:'🪓'} ],
-    [ {n:'룬 블레이드',v:1.00,ic:'⚔️'}, {n:'룬 워해머',v:1.08,ic:'🔨'},   {n:'마력의 지팡이',v:0.95,ic:'🪄'} ],
-    [ {n:'용살자의 검',v:1.00,ic:'⚔️'}, {n:'용아 창',v:1.10,ic:'🔱'} ],
-    [ {n:'천공의 성검',v:1.00,ic:'⚔️'}, {n:'별빛 대검',v:1.15,ic:'🌠'} ]
+    [ {n:'녹슨 검',v:1.00,ic:'⚔️'},   {n:'낡은 손도끼',v:0.92,ic:'🪓'},  {n:'사냥꾼의 단검',v:1.06,ic:'🔪'}, {n:'견습 사수의 활',v:1.12,ic:'🏹'}, {n:'투박한 곤봉',v:0.96,ic:'🏏'} ],
+    [ {n:'강철 장검',v:1.00,ic:'⚔️'}, {n:'전쟁 망치',v:1.10,ic:'🔨'},    {n:'강철 창',v:0.94,ic:'🔱'},       {n:'쌍날 도끼',v:1.05,ic:'🪓'}, {n:'용병의 세검',v:1.02,ic:'🗡️'} ],
+    [ {n:'기사의 대검',v:1.00,ic:'⚔️'}, {n:'은빛 세이버',v:1.12,ic:'🤺'}, {n:'처형자의 도끼',v:0.92,ic:'🪓'}, {n:'성기사의 창',v:1.05,ic:'🔱'}, {n:'폭풍의 활',v:1.08,ic:'🏹'} ],
+    [ {n:'룬 블레이드',v:1.00,ic:'⚔️'}, {n:'룬 워해머',v:1.08,ic:'🔨'},   {n:'마력의 지팡이',v:0.95,ic:'🪄'}, {n:'룬 시미터',v:1.12,ic:'🗡️'}, {n:'룬 크로스보우',v:1.04,ic:'🎯'} ],
+    [ {n:'용살자의 검',v:1.00,ic:'⚔️'}, {n:'용아 창',v:1.10,ic:'🔱'}, {n:'용린 대검',v:0.94,ic:'🗡️'}, {n:'용염 마도서',v:1.05,ic:'📕'}, {n:'용왕의 활',v:1.13,ic:'🏹'} ],
+    [ {n:'천공의 성검',v:1.00,ic:'⚔️'}, {n:'별빛 대검',v:1.15,ic:'🌠'}, {n:'혜성의 창',v:0.95,ic:'☄️'}, {n:'일식의 도끼',v:1.06,ic:'🌑'}, {n:'월광 세검',v:1.10,ic:'🌙'} ],
+    [ {n:'차원 절단검',v:1.00,ic:'🌀'}, {n:'시간의 인도자',v:1.08,ic:'⏳'}, {n:'공허의 파문창',v:0.94,ic:'🕳️'}, {n:'무한의 마도서',v:1.05,ic:'📖'}, {n:'초신성 대궁',v:1.12,ic:'💥'} ],
+    [ {n:'만물의 종언',v:1.00,ic:'♾️'} ]
   ],
   shield: [
-    [ {n:'나무 방패',v:1.00,ic:'🛡️'},  {n:'여행자의 원방패',v:0.93,ic:'🪵'}, {n:'철테 방패',v:1.05,ic:'🔰'}, {n:'파수꾼의 대방패',v:1.12,ic:'🚧'} ],
-    [ {n:'강철 방패',v:1.00,ic:'🛡️'},  {n:'사각 방패',v:1.08,ic:'🧱'},       {n:'가시 방패',v:0.95,ic:'🌵'}, {n:'성벽 방패',v:1.12,ic:'🏰'} ],
-    [ {n:'기사 방패',v:1.00,ic:'🛡️'},  {n:'문장 방패',v:1.10,ic:'🔰'},       {n:'등딱지 방패',v:0.92,ic:'🐢'} ],
-    [ {n:'룬 실드',v:1.00,ic:'🛡️'},    {n:'마력 장벽',v:1.08,ic:'💠'},       {n:'수호자의 탑방패',v:0.94,ic:'🗼'} ],
-    [ {n:'용비늘 방패',v:1.00,ic:'🛡️'}, {n:'용골 방패',v:1.10,ic:'🦴'} ],
-    [ {n:'불멸의 성체',v:1.00,ic:'🛡️'}, {n:'태양의 아이기스',v:1.15,ic:'☀️'} ]
+    [ {n:'나무 방패',v:1.00,ic:'🛡️'},  {n:'여행자의 원방패',v:0.93,ic:'🪵'}, {n:'철테 방패',v:1.05,ic:'🔰'}, {n:'파수꾼의 대방패',v:1.12,ic:'🚧'}, {n:'낡은 솥뚜껑',v:0.96,ic:'🍳'} ],
+    [ {n:'강철 방패',v:1.00,ic:'🛡️'},  {n:'사각 방패',v:1.08,ic:'🧱'},       {n:'가시 방패',v:0.95,ic:'🌵'}, {n:'성벽 방패',v:1.12,ic:'🏰'}, {n:'청동 원방패',v:1.02,ic:'🥉'} ],
+    [ {n:'기사 방패',v:1.00,ic:'🛡️'},  {n:'문장 방패',v:1.10,ic:'🔰'},       {n:'등딱지 방패',v:0.92,ic:'🐢'}, {n:'성기사의 방벽',v:1.05,ic:'⚜️'}, {n:'서리 방패',v:1.08,ic:'❄️'} ],
+    [ {n:'룬 실드',v:1.00,ic:'🛡️'},    {n:'마력 장벽',v:1.08,ic:'💠'},       {n:'수호자의 탑방패',v:0.94,ic:'🗼'}, {n:'룬 수정 방패',v:1.12,ic:'🔮'}, {n:'룬 골렘 방패',v:1.04,ic:'🗿'} ],
+    [ {n:'용비늘 방패',v:1.00,ic:'🛡️'}, {n:'용골 방패',v:1.10,ic:'🦴'}, {n:'용익 방패',v:0.94,ic:'🪽'}, {n:'용화염 방패',v:1.05,ic:'🔥'}, {n:'용왕의 성벽',v:1.13,ic:'🏯'} ],
+    [ {n:'불멸의 성체',v:1.00,ic:'🛡️'}, {n:'태양의 아이기스',v:1.15,ic:'☀️'}, {n:'혜성의 방패',v:0.95,ic:'☄️'}, {n:'일식의 방벽',v:1.06,ic:'🌑'}, {n:'월광 방패',v:1.10,ic:'🌙'} ],
+    [ {n:'차원 방벽',v:1.00,ic:'🌀'}, {n:'시간의 성채',v:1.08,ic:'⏳'}, {n:'공허의 장막',v:0.94,ic:'🕳️'}, {n:'무한 결계',v:1.05,ic:'💠'}, {n:'초신성 방패',v:1.12,ic:'💥'} ],
+    [ {n:'만물의 수호',v:1.00,ic:'♾️'} ]
   ],
   amulet: [
-    [ {n:'가죽 목걸이',v:1.00,ic:'📿'}, {n:'조개껍질 목걸이',v:0.93,ic:'🐚'}, {n:'이빨 목걸이',v:1.05,ic:'🦷'}, {n:'네잎클로버 펜던트',v:1.12,ic:'🍀'} ],
-    [ {n:'은 목걸이',v:1.00,ic:'📿'},   {n:'달빛 펜던트',v:1.08,ic:'🌙'},     {n:'호박 목걸이',v:0.94,ic:'🟠'}, {n:'행운의 동전 목걸이',v:1.10,ic:'🪙'} ],
-    [ {n:'수정 목걸이',v:1.00,ic:'📿'}, {n:'나자르 부적',v:1.10,ic:'🧿'},     {n:'별빛 펜던트',v:0.92,ic:'⭐'} ],
-    [ {n:'룬 아뮬렛',v:1.00,ic:'📿'},   {n:'함사 부적',v:1.08,ic:'🪬'},       {n:'백합 문장 목걸이',v:0.95,ic:'⚜️'} ],
-    [ {n:'생명의 심장',v:1.00,ic:'📿'}, {n:'수호자의 눈물',v:1.10,ic:'💧'} ],
-    [ {n:'영원의 성물',v:1.00,ic:'📿'}, {n:'창세의 목걸이',v:1.15,ic:'✨'} ]
+    [ {n:'가죽 목걸이',v:1.00,ic:'📿'}, {n:'조개껍질 목걸이',v:0.93,ic:'🐚'}, {n:'이빨 목걸이',v:1.05,ic:'🦷'}, {n:'네잎클로버 펜던트',v:1.12,ic:'🍀'}, {n:'나무 구슬 목걸이',v:0.96,ic:'🪵'} ],
+    [ {n:'은 목걸이',v:1.00,ic:'📿'},   {n:'달빛 펜던트',v:1.08,ic:'🌙'},     {n:'호박 목걸이',v:0.94,ic:'🟠'}, {n:'행운의 동전 목걸이',v:1.10,ic:'🪙'}, {n:'은방울 목걸이',v:1.02,ic:'🔔'} ],
+    [ {n:'수정 목걸이',v:1.00,ic:'📿'}, {n:'나자르 부적',v:1.10,ic:'🧿'},     {n:'별빛 펜던트',v:0.92,ic:'⭐'}, {n:'성수 유리병',v:1.05,ic:'🧪'}, {n:'폭풍의 깃털',v:1.08,ic:'🪶'} ],
+    [ {n:'룬 아뮬렛',v:1.00,ic:'📿'},   {n:'함사 부적',v:1.08,ic:'🪬'},       {n:'백합 문장 목걸이',v:0.95,ic:'⚜️'}, {n:'룬 문자석',v:1.12,ic:'🪨'}, {n:'룬 나침반',v:1.04,ic:'🧭'} ],
+    [ {n:'생명의 심장',v:1.00,ic:'📿'}, {n:'수호자의 눈물',v:1.10,ic:'💧'}, {n:'용안 펜던트',v:0.94,ic:'🐲'}, {n:'용염 심장석',v:1.05,ic:'❤️‍🔥'}, {n:'용왕의 인장',v:1.13,ic:'🐉'} ],
+    [ {n:'영원의 성물',v:1.00,ic:'📿'}, {n:'창세의 목걸이',v:1.15,ic:'✨'}, {n:'혜성 조각 목걸이',v:0.95,ic:'☄️'}, {n:'일식의 문장',v:1.06,ic:'🌑'}, {n:'월광 펜던트',v:1.10,ic:'🌙'} ],
+    [ {n:'차원의 고리',v:1.00,ic:'🌀'}, {n:'시간의 태엽',v:1.08,ic:'⚙️'}, {n:'공허의 눈동자',v:0.94,ic:'🕳️'}, {n:'무한의 매듭',v:1.05,ic:'🔗'}, {n:'초신성 결정',v:1.12,ic:'💥'} ],
+    [ {n:'만물의 근원',v:1.00,ic:'♾️'} ]
   ]
 };
 const EQUIPS = [];
@@ -7974,6 +7986,13 @@ const GRADE_ROLL = [
   { unlock:30, p0:0.00, p1:0.15 },
   { unlock:40, p0:0.00, p1:0.10 }
 ];
+/* 85 — 장비 배너(무기·방패·목걸이)만 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
+   스킬·펫 배너는 위 6행 표 그대로. 확률은 gradeProbs 가 총합으로 재정규화하므로 p1 합이 1 일 필요 없음. */
+const GRADE_ROLL_EQ = GRADE_ROLL.concat([
+  { unlock:55, p0:0.00, p1:0.06 },
+  { unlock:75, p0:0.00, p1:0.03 }
+]);
+const rollOf = b => BANNERS[b].coll === 'equip' ? GRADE_ROLL_EQ : GRADE_ROLL;
 const sumNeedExp = lv => 5 + (lv-1)*4;
 
 /* ---- 컬렉션 보너스 ---- */
@@ -7986,14 +8005,15 @@ const COLL = {
     { need:11, n:'공격력 +40%',      f:b => b.atk *= 1.40 },
     { need:13, n:'모든 피해 +60%',   f:b => b.atk *= 1.60 } ]},
   equip: { n:'장비', list:EQUIPS, tiers:[
-    /* 75 ④ — 장비 총수 18 → 54(정확히 3배). need 도 3배 스케일(마지막 단계 = 전 종 수집 유지).
-       S.coll.equip 은 «받은 단계 수» 카운터라 구 세이브의 이미 받은 보너스는 그대로 유효하다. */
-    { need:12, n:'최대 체력 +15%',   f:b => b.hp *= 1.15 },
-    { need:24, n:'공격력 +15%',      f:b => b.atk *= 1.15 },
-    { need:33, n:'체력 재생 +40%',   f:b => b.regen *= 1.40 },
-    { need:42, n:'최대 체력 +40%',   f:b => b.hp *= 1.40 },
-    { need:48, n:'공격력 +50%',      f:b => b.atk *= 1.50 },
-    { need:54, n:'전 스탯 대폭 상승', f:b => { b.atk *= 1.6; b.hp *= 1.6; b.regen *= 1.6; } } ]},
+    /* 85 ⑥ — 장비 총수 54 → 108(8등급 × 부위당 5,5,5,5,5,5,5,1). need 를 108 기준으로 재배분
+       (마지막 단계 = 전 종 수집 유지). S.coll.equip 은 «받은 단계 수» 카운터라
+       구 세이브의 이미 받은 보너스는 그대로 유효하다. */
+    { need:24,  n:'최대 체력 +15%',   f:b => b.hp *= 1.15 },
+    { need:48,  n:'공격력 +15%',      f:b => b.atk *= 1.15 },
+    { need:66,  n:'체력 재생 +40%',   f:b => b.regen *= 1.40 },
+    { need:84,  n:'최대 체력 +40%',   f:b => b.hp *= 1.40 },
+    { need:96,  n:'공격력 +50%',      f:b => b.atk *= 1.50 },
+    { need:108, n:'전 스탯 대폭 상승', f:b => { b.atk *= 1.6; b.hp *= 1.6; b.regen *= 1.6; } } ]},
   pet: { n:'펫', list:PETS, tiers:[
     { need:2, n:'골드 획득 +20%', f:b => b.gold *= 1.20 },
     { need:4, n:'공격력 +12%',    f:b => b.atk *= 1.12 },
@@ -9996,10 +10016,13 @@ function drawTuto(){
    강화 · 합성 · 환불
    ========================================================================== */
 const MAX_LEVEL = 100, FRAG_BASE = 5, FRAG_CAP = 20, CRAFT_NEED = 5;
-const REFUND = [20, 45, 100, 220, 550, 1400];
+const REFUND = [20, 45, 100, 220, 550, 1400, 3400, 8000];   /* 85 — 7 초월·8 불멸 행 추가(기하급수 유지) */
 const fragNeed = l => Math.min(FRAG_BASE + (l-1), FRAG_CAP);
 const catOf = it => SK[it.id] ? 'skill' : PT[it.id] ? 'pet' : RL[it.id] ? 'relic' : 'equip';
-const isTopGrade = it => it.g >= GRADE.length-1;
+/* 85 — «최고 등급» 은 카테고리별이다: 장비만 8등급(불멸), 스킬·펫·유물·코스튬은 6등급(신화)까지.
+   isTopGrade 를 GRADE.length 로 판정하면 신화 스킬의 MAX 표기·합성 차단이 통째로 깨진다. */
+const topG = cat => cat === 'equip' ? GRADE.length-1 : 5;
+const isTopGrade = it => it.g >= topG(catOf(it));
 const maxLv = it => (catOf(it) === 'equip' && isTopGrade(it)) ? Infinity : MAX_LEVEL;
 const atMax = it => has(it.id) && oLv(it.id) >= maxLv(it);
 const canLevel = it => has(it.id) && oLv(it.id) < maxLv(it) && frag(it.id) >= fragNeed(oLv(it.id));
@@ -10081,12 +10104,13 @@ document.querySelectorAll('#defw .df-btn').forEach(b => b.addEventListener('clic
   if(b.dataset.dfgo) goTab(b.dataset.dfgo);
 }));
 
-/* 75 ③ — 합성 결과는 «다음 등급 첫 항목 고정» 이 아니라 같은 계열(j) 유지, 없으면 j 를 등급 내로 감아서
-   결정적으로 고른다(canCraft 와 craft 가 따로 부르므로 랜덤이면 판정↔지급이 어긋난다). */
+/* 85 ⑤ (주인 지시) — 합성 결과는 «다음 등급 5종 중 랜덤», 7→8 은 풀이 1종이라 자연히 고정.
+   canCraft 는 !!(존재 여부)만 보므로 랜덤이어도 판정↔지급이 어긋나지 않는다 —
+   실제 지급은 craft() 안의 nextGradeItem 호출 1번이 결정한다. */
 const nextGradeItem = it => {
   const pool = EQUIPS.filter(e => e.slot === it.slot && e.g === it.g + 1);
   if(!pool.length) return null;
-  return pool.find(e => e.j === it.j) || pool[(it.j || 0) % pool.length];
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 const canCraft = it => catOf(it) === 'equip' && !isTopGrade(it) && oLv(it.id) >= MAX_LEVEL
                     && frag(it.id) >= CRAFT_NEED && !!nextGradeItem(it);
@@ -10121,13 +10145,15 @@ const sumLv  = b => S.sum[b].lv;
 const sumExp = b => S.sum[b].exp;
 function gradeProbs(b){
   const l = sumLv(b);
-  const w = GRADE_ROLL.map(g => {
+  const w = rollOf(b).map(g => {          /* 85 — 장비 배너는 8행 표(GRADE_ROLL_EQ) */
     if(l < g.unlock) return 0;
     const t = clamp((l - g.unlock)/Math.max(1, SUM_MAXLV - g.unlock), 0, 1);
     return g.p0 + (g.p1 - g.p0)*Math.pow(t, 0.9);
   });
   const tot = w.reduce((a,c) => a+c, 0) || 1;
-  return w.map(x => x/tot);
+  const p = w.map(x => x/tot);
+  while(p.length < GRADE.length) p.push(0);   /* 6행 배너도 GRADE.length 길이로 패딩(소비처 인덱스 안전) */
+  return p;
 }
 function sumAddExp(b, n){
   const s = S.sum[b];
@@ -10215,7 +10241,9 @@ const SUM_CARD = [
   { face:'#347DC1', rim:'#47A7E1' },   /* 2 희귀 — ref 파랑 */
   { face:'#8B4FC4', rim:'#B478E8' },   /* 3 영웅 — 확장 */
   { face:'#E0902A', rim:'#F5BC4E' },   /* 4 전설 — 확장 */
-  { face:'#D1483F', rim:'#F0766A' }    /* 5 신화 — 확장 */
+  { face:'#D1483F', rim:'#F0766A' },   /* 5 신화 — 확장 */
+  { face:'#1EA98E', rim:'#40DCC0' },   /* 6 초월 — 85 확장(같은 «면 + 밝은 림» 규칙) */
+  { face:'#8F90AE', rim:'#D9DAEE' }    /* 7 불멸 — 85 확장 */
 ];
 let sumCtx = null;   /* 재소환 버튼이 어느 배너를 다시 굴릴지 */
 
@@ -12136,7 +12164,9 @@ const WGRADE = [
   { c:'#1F5281', r:'#2C7097', e:'#143756', p:'#26608F' },   /* 희귀  = 레퍼런스 레어   */
   { c:'#661691', r:'#8846A7', e:'#440F61', p:'#7620A3' },   /* 영웅  = 레퍼런스 에픽   */
   { c:'#B4741A', r:'#E8A63A', e:'#784D11', p:'#C8821E' },   /* 전설 (레퍼런스 없음)    */
-  { c:'#9B1F3C', r:'#D34464', e:'#671429', p:'#AF2545' }    /* 신화 (레퍼런스 없음)    */
+  { c:'#9B1F3C', r:'#D34464', e:'#671429', p:'#AF2545' },   /* 신화 (레퍼런스 없음)    */
+  { c:'#0F6E5C', r:'#2AA98D', e:'#0A4A3E', p:'#12816B' },   /* 초월 — 85 확장          */
+  { c:'#6E6F8E', r:'#A5A7C7', e:'#4A4B63', p:'#7F81A3' }    /* 불멸 — 85 확장          */
 ];
 /* 레퍼런스는 소수점을 살린다: 항목 «+46.2%», 총합 «+251.02%» — 공용 pct() 는 정수라 따로 쓴다 */
 const wpct  = v => (v*100).toFixed(1) + '%';
@@ -12259,23 +12289,27 @@ $('eqCards').addEventListener('click', e => {
    확률은 실제 소환 로직(gradeProbs → 등급확률, 등급 내 균등 추첨)에서 그대로 계산한다.
    ◀▶ 로 «단계»(= 소환 레벨 이정표 1·5·15·30·40·100)를 넘겨 등급 해금·확률 변화를 열람한다.
    ========================================================================== */
-const PRB_STEPS = [1, 5, 15, 30, 40, SUM_MAXLV];   /* 각 등급 해금 레벨 + 만렙 */
+const PRB_STEPS    = [1, 5, 15, 30, 40, SUM_MAXLV];             /* 각 등급 해금 레벨 + 만렙 */
+const PRB_STEPS_EQ = [1, 5, 15, 30, 40, 55, 75, SUM_MAXLV];     /* 85 — 장비 배너는 초월 55·불멸 75 이정표 포함 */
+const prbSteps = () => BANNERS[prbBank].coll === 'equip' ? PRB_STEPS_EQ : PRB_STEPS;
 let prbBank = 'weapon', prbStep = 0;
 /* 특정 레벨 L 에서의 등급별 확률(소환 로직과 동일 공식, L 을 명시적으로 받음) */
 function gradeProbsAt(b, L){
-  const w = GRADE_ROLL.map(g => {
+  const w = rollOf(b).map(g => {          /* 85 — 배너별 표(장비 8행 / 그 외 6행) */
     if(L < g.unlock) return 0;
     const t = clamp((L - g.unlock) / Math.max(1, SUM_MAXLV - g.unlock), 0, 1);
     return g.p0 + (g.p1 - g.p0) * Math.pow(t, 0.9);
   });
   const tot = w.reduce((a, c) => a + c, 0) || 1;
-  return w.map(x => x / tot);
+  const p = w.map(x => x / tot);
+  while(p.length < GRADE.length) p.push(0);   /* 아래 «빈 등급 흘려보내기» 루프가 GRADE.length 로 돌므로 패딩 */
+  return p;
 }
 function renderProbInfo(){
-  const B = BANNERS[prbBank], L = PRB_STEPS[prbStep];
+  const B = BANNERS[prbBank], ST = prbSteps(), L = ST[prbStep];
   $('prbLv').textContent = L >= SUM_MAXLV ? 'MAX' : L;
   $('prbPrev').classList.toggle('off', prbStep === 0);
-  $('prbNext').classList.toggle('off', prbStep === PRB_STEPS.length - 1);
+  $('prbNext').classList.toggle('off', prbStep === ST.length - 1);
   /* 등급확률을 «빈 등급은 아래로 흘려보내는» 실제 추첨과 맞춰 아이템별로 분배 */
   let gp = gradeProbsAt(prbBank, L).slice();
   for(let g = GRADE.length - 1; g > 0; g--){
@@ -12315,13 +12349,14 @@ function openProbInfo(bank, lv){
   const cur = lv != null ? lv : sumLv(prbBank);
   /* 현재 레벨 이하의 가장 높은 이정표로 기본 단계를 맞춘다 */
   prbStep = 0;
-  for(let i = 0; i < PRB_STEPS.length; i++) if(PRB_STEPS[i] <= cur) prbStep = i;
+  const ST = prbSteps();
+  for(let i = 0; i < ST.length; i++) if(ST[i] <= cur) prbStep = i;
   renderProbInfo();
   $('prbw').classList.add('on');
 }
 function closeProbInfo(){ $('prbw').classList.remove('on'); }
 $('prbPrev').onclick = () => { if(prbStep > 0){ prbStep--; renderProbInfo(); } };
-$('prbNext').onclick = () => { if(prbStep < PRB_STEPS.length - 1){ prbStep++; renderProbInfo(); } };
+$('prbNext').onclick = () => { if(prbStep < prbSteps().length - 1){ prbStep++; renderProbInfo(); } };
 $('prbw').addEventListener('click', e => { if(e.target.id === 'prbw') closeProbInfo(); });
 $('tabbar').addEventListener('click', closeProbInfo, true);
 
@@ -12644,7 +12679,9 @@ const BAG_G = [
   ['#347DC1', '#45A8E1'],   /* 희귀 — ref r1c4·r2* */
   ['#9B26D7', '#CD66FF'],   /* 영웅 — ref r0c1~c4 */
   ['#D27B12', '#FDC331'],   /* 전설 — ref r0c0 */
-  ['#C0304B', '#FF6B7F']    /* 신화 — 파생 */
+  ['#C0304B', '#FF6B7F'],   /* 신화 — 파생 */
+  ['#1FA98E', '#4FE3C4'],   /* 초월 — 85 파생 */
+  ['#8F90AE', '#EDEEFA']    /* 불멸 — 85 파생 */
 ];
 let bagTab = 'cur';
 /* 재화 탭 — 보유 재화 + S.own 보유 재료(등급 내림차순) */
