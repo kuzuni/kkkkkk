@@ -3894,20 +3894,29 @@
   /* 4회차 색 정정 — ref 진행바 외곽선은 (1,0,0) 즉 순검정이다(#141414 아님).
      트랙 빈 구간은 단색이 아니라 **상단 6px 인셋 그늘**이 있다 (x700 스캔: y1235..1240 (14,15,20) → y1246+ (28,30,42)).
      초록 채움도 단색이 아니라 y1256 에서 끊기는 **하드 2단**이다 ((160,243,47) → (129,216,29)). */
-  .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:28px 12px 12px 28px;
+  /* 14회차(비평가 V L3·L4 — 뿌리가 하나다): 좌측 코너 반경 **28 은 ref 의 ≈10 보다 3배**다.
+     ref 좌단 x 를 행별로 추적하면 y1228:204 · 1231:198 · 1234:196 · 1237~1273:194 로 r≈10 이고
+     (r=10 이면 dy3 에서 inset 2.9 = x196.9, dy6 에서 2.0 = x196 — 실측과 일치),
+     우리는 y1228:215 · 1231:208 · 1249:194 로 사실상 완전 알약형이었다.
+     그 탓에 **막대 중간 높이에서도 좌단이 4px 안쪽**이라(y1270 에서 ref 195 / 우리 199)
+     V L4 의 «녹색 채움 좌측 인셋 누락» 이 같이 생겼다 — 별개 결함이 아니라 이 반경의 결과다. */
+  .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:10px 12px 12px 10px;
     background:#000}
   /* 9회차(비평가 N P1~P3, 자체 재확인) — ref x700 세로 구조는
      검정 **3px**(y1229..1231) → 인셋 그늘 **10px**(8,9,13) → 채움 36px(25,28,37)
      → **하단 인셋 하이라이트 1px**(15,14,20) → 검정 3px(y1279..1281) 이다.
      8회차 것은 검정 7px·그늘 7px·채움 32px·하단 인셋 0 이라 **트랙 내부가 41 vs 47 (−12.8%)** 였다. */
-  .tr-prog>.trk{position:absolute;left:8px;top:4px;right:4px;bottom:4px;border-radius:8px;
+  /* 14회차(V L4): ref y1270 가로는 검정 195..198(4px) → **트랙 노출 199..201(3px, 25,25,35)**
+     → 초록 202.. 다. 우리는 검정 199..201 뒤 곧장 초록이라 «세로 3px 인셋은 있는데 좌변만 없는» 상태였다
+     (10회차가 상·하 인셋만 넣었다). 트랙을 left 8 → 5 로 내밀고 초록을 트랙 안에서 3px 들여보낸다. */
+  .tr-prog>.trk{position:absolute;left:5px;top:4px;right:4px;bottom:4px;border-radius:8px;
     background:linear-gradient(180deg,#0E0F14 0 10px,#1C1E2B 12px calc(100% - 1px),
       #0F0E14 calc(100% - 1px));overflow:hidden}
   /* 10회차(비평가 O P2, 자체 확인): ref x300 세로는 검정(1229..1231) → **다크 인셋 링 3px**
      (8,9,13 / 11,20,3 / 15,40,0) → 초록 **1235..1275 = 41px** → 다크 3px → 검정 이다.
      9회차 것은 검정 직후 곧바로 초록이라 채움이 **47px (+14.6%)** 였다. 초록 2단 스텝(21px)은
      양쪽 동일하므로 인셋 3px 만 넣으면 스텝도 ref y1256 에 정확히 온다. */
-  .tr-prog>.trk>i{position:absolute;left:0;top:3px;bottom:3px;border-radius:4px;
+  .tr-prog>.trk>i{position:absolute;left:3px;top:3px;bottom:3px;border-radius:4px;
     background:linear-gradient(180deg,#A0F32F 0 21px,#81D81D 21px)}
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
     font-size:31px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
@@ -3931,9 +3940,16 @@
      우리는 x873..944 가 211,211,211). 위쪽 림은 ref 도 «검정 → 밝은» 2층이라 **바닥에만** 넣는다.
      inset box-shadow 로는 «바닥만 3층» 을 만들 수 없어(spread 가 4변에 걸린다) ::after 로 얹는다.
      화살표는 local y78 에서 끝나고 이 띠는 89 부터라 겹치지 않는다. */
-  .tr-up::after{content:'';position:absolute;left:6px;right:6px;bottom:6px;height:12px;
-    background:linear-gradient(180deg,#D3D3D3 0 6px,#757575 6px);border-radius:0 0 26px 26px}
-  .tr-up.on::after{background:linear-gradient(180deg,#E4FA92 0 6px,#5E9A17 6px)}
+  /* 14회차(비평가 V L1): 이 띠가 **코너에서 검정 외곽선을 덮어** ref 대비 검정이 y1294..1302
+     **9행 통째로 0px** 이었다(ref y1296 좌 검정 864..871 / 우리 862 부터 곧장 밝은 211).
+     실루엣도 좌우로 3px 씩 부풀었다(ref 폭 88 → 94).
+     원인은 **border-radius 클램프**다 — 높이 12px 짜리 박스에 `0 0 26px 26px` 을 주면 CSS 가
+     radius 합이 변 길이를 넘는다며 전 radius 를 비례 축소한다(실효 ≈11px). 26 은 렌더된 적이 없다.
+     → 띠를 버튼 «안쪽 도형» 전체(inset 6 · radius 28 = 34−6)로 넓히고, **배경 그라데이션으로
+     바닥 12px 만 칠한다.** 그러면 radius 가 클램프되지 않고 검정 외곽선 안쪽에 정확히 눕는다. */
+  .tr-up::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;border-radius:28px;
+    background:linear-gradient(to top,#757575 0 6px,#D3D3D3 6px 12px,rgba(0,0,0,0) 12px)}
+  .tr-up.on::after{background:linear-gradient(to top,#5E9A17 0 6px,#E4FA92 6px 12px,rgba(0,0,0,0) 12px)}
   /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
      stroke-linejoin:round + paint-order:stroke 로 외곽선이 한쪽 8px 로 깔끔하게 깔린다.
      6회차: 잉크 치수를 ref 실측대로 다시 잡았다. ref 초록은 **머리 h29(최대폭 55) + 자루 h22(폭 27)
@@ -4084,13 +4100,19 @@
      ref y1880 은 x44 부터 곧장 밴드(221,209,197 → 188,161,134), 우리는 x43..46 이 (255,253,242).
      카드 3장 · y1832~1924 전 구간 상시였다. left 12 → 9 (x44 = ref 첫 밴드 픽셀).
      밴드가 3px 왼쪽으로 가면 flex 콘텐츠 중심도 1.5px 따라가므로 padding-right 로 되돌린다(18 → 15). */
-  .tr-card>.cb{left:9px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
-    justify-content:center;gap:2px;padding-right:15px;border-radius:0 0 20px 20px;
+  /* 14회차: left 9 는 ref 첫 «밴드» 픽셀(x44)에 맞춘 값인데, ref 의 x43 은 검정과 밴드 사이 AA 이고
+     우리 x43 은 **카드 흰 배경 1px 이 그대로 노출**됐다. 흰 실선이 남는 쪽이 더 나쁘므로 8 로 붙인다. */
+  .tr-card>.cb{left:8px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
+    justify-content:center;gap:2px;padding-right:16px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
        N 의 «9px · (69,52,34) 까지» 는 그 아래 카드 검정 테두리(1938~)의 AA 가 섞인 값이다 —
        그대로 반영했더니 1936..1937 이 (69,52,31) 로 ref 보다 84 어두워졌다. ref 3단으로 되돌린다. */
-    background:linear-gradient(180deg,#BBA38B 0 100px,#B4906C 100px 101px,#AD865D 101px 103px,
+    /* 14회차(비평가 V P7): 헤더밴드와 **같은 결함이 비용밴드에도** 있다 —
+       ref x44..47 이 (221,209,197) → (194,168,145) 4px 흰 램프인데 우리는 x43 1px 뿐이었다. */
+    background:
+      linear-gradient(90deg,rgba(255,255,255,.42) 0,rgba(255,255,255,0) 5px),
+      linear-gradient(180deg,#BBA38B 0 100px,#B4906C 100px 101px,#AD865D 101px 103px,
       #AA7D53 103px)}
   /* 💰 는 ref 금화 스프라이트의 자리표시다 — «아트 자리 규칙» 대로 bbox 53x55 를 정확히 차지시킨다.
      이모지 잉크비는 w/fs 1.00 · h/fs 1.12 이라 fs49 로 높이를 맞추고 폭만 scaleX 로 넓힌다. */
@@ -4156,8 +4178,14 @@
      폭도 같은 행에서 재실측했다: ref 알약 x69..298 = **230** (7회차의 253 은 +10%).
      같은 행 오른쪽은 x299..305 가 바 필, x307..312 가 검정 캡이라 알약 끝이 298 로 확정된다.
      (비평가 S 도 231 로 같은 값을 냈다 — T 의 245 는 우측 다크캡까지 센 값이다) */
+  /* 14회차(비평가 V L2 를 따라가다 나왔다): 7회차가 넣은 **우측 다크 캡 9px 은 ref 에 없다.**
+     ref 알약 채움(75,62,45)은 y2065 에서 x298 까지, y2085 에서 x294 까지 **끊김 없이** 이어지고
+     그 다음이 곧장 칸 채움(96,78,54)이다. 7회차 근거였던 «x310 세로 다크 82px 연속» 은
+     알약 캡이 아니라 **4칸 레이아웃의 칸 구분 스트로크**다(y 가 내려가며 307→281 로 휘는 곡선이라
+     알약 우단과 6px 떨어져 있다 — 47 의 2칸 설계에서는 그 자리에 아무것도 없는 게 맞다).
+     우리 캡처는 x283..291 이 (14,9,3) 으로 ref 에 없는 검정 띠였다 → 제거한다. */
   .tr-sub>.sg.on::before{content:'';position:absolute;left:9px;right:auto;width:230px;top:6px;height:62px;
-    border-radius:31px;background:#4B3E2D;box-shadow:inset -9px 0 0 #0C0803;z-index:1}
+    border-radius:31px;background:#4B3E2D;z-index:1}
   .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
     -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
   /* 13회차(비평가 U P1 — 12회차가 낸 회귀다). 라벨은 `text-align:center` 로 **칸** 중앙에 서는데
