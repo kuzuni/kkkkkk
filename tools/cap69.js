@@ -24,7 +24,22 @@ const GEO = process.argv.includes('--geo');
   await p.evaluate(() => { document.querySelector('#menub').click(); });
   await p.waitForTimeout(320);
   await p.evaluate(() => { document.querySelector('#mnw [data-mn="mail"]').click(); });
-  await p.waitForTimeout(420);
+  /* ⚠ 60 쥬시니스의 등장 애니메이션은 **오버슛 바운스**라 고정 대기로는 «정점/내리막» 프레임이 찍힌다
+     (그러면 비평가가 −8% 또는 +1.3% 로 어긋난 캡처를 채점한다). 변환이 항등이 될 때까지 기다린다. */
+  for (let i = 0; i < 60; i++) {
+    const done = await p.evaluate(() => {
+      const ident = (t) => t === 'none' || /^matrix\(1,\s*0,\s*0,\s*1,\s*0,\s*0\)$/.test(t);
+      for (let e = document.querySelector('.mbox'); e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (!ident(cs.transform) || (cs.scale && cs.scale !== 'none' && cs.scale !== '1')) return false;
+        if (parseFloat(cs.opacity) < 0.999) return false;
+      }
+      return true;
+    });
+    if (done) break;
+    await p.waitForTimeout(50);
+  }
+  await p.waitForTimeout(120);
 
   const geo = await p.evaluate(() => {
     const A = document.getElementById('app').getBoundingClientRect();

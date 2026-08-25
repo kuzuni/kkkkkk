@@ -16,6 +16,28 @@ const near = (name, got, want, tol = 1.0) =>
 
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
+/* 팝업 등장 애니메이션이 끝날 때까지 기다린다.
+   ⚠ «폭이 연속 2회 같으면 안정» 은 틀렸다 — 60 쥬시니스의 등장 애니메이션은 **오버슛(1.0 을 넘었다가
+   되돌아오는) 바운스**라, 오르막·정점·내리막 어디서든 같은 값이 두 번 잡힌다. 실제로 그렇게 두 번 오탐이
+   났다(상자 폭 835 = scale 0.93 / 909 = scale 1.013).
+   → 값이 아니라 **변환 자체가 항등이 될 때까지** 기다린다(자기 자신 + 조상 전부). */
+async function settle(page, sel = '.mbox', tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    const done = await page.evaluate((q) => {
+      const ident = (t) => t === 'none' || /^matrix\(1,\s*0,\s*0,\s*1,\s*0,\s*0\)$/.test(t);
+      for (let e = document.querySelector(q); e && e !== document.documentElement; e = e.parentElement) {
+        const cs = getComputedStyle(e);
+        if (!ident(cs.transform) || (cs.scale && cs.scale !== 'none' && cs.scale !== '1')) return false;
+        if (parseFloat(cs.opacity) < 0.999) return false;
+      }
+      return true;
+    }, sel);
+    if (done) { await page.waitForTimeout(40); return true; }
+    await page.waitForTimeout(50);
+  }
+  return false;
+}
+
 async function fresh(browser, w = 1080, h = 2280) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -72,8 +94,9 @@ async function fresh(browser, w = 1080, h = 2280) {
     console.log('[2] 기하 — 측정표 §10 채택값');
     await page.evaluate(() => { closeModal(); openMail(); });
     /* ⚠ 60 쥬시니스의 팝업 등장 애니메이션(scale 0.92→1)이 끝나기 «전» 에 재면 전 요소가 −8% 로 잡힌다.
-       기하 측정은 반드시 애니메이션이 끝난 뒤에 한다. */
-    await page.waitForTimeout(700);
+       고정 대기(700ms)로는 부하에 따라 가끔 레이스가 난다 — **연속 2회 같은 폭이 나올 때까지 폴링**한다.
+       (실제로 고정 대기 버전이 두 번 오탐을 냈다: 상자 폭 826/835 = scale 0.92/0.93 시점) */
+    await settle(page);
     const g = await page.evaluate(() => {
       const A = document.getElementById('app').getBoundingClientRect();
       const R = (sel) => {
@@ -176,6 +199,15 @@ async function fresh(browser, w = 1080, h = 2280) {
       : fail(`안내 1줄이 좁다 ${(note.w[0] / bw).toFixed(3)} PW — ref .904, 하한 .80`);
     note.w[0] > note.w[1] ? ok('안내 1줄 > 2줄 (ref 와 같은 테이퍼)') : fail('안내 2줄이 더 넓다 — ref 는 역방향');
     note.w.every((w) => w <= note.boxW) ? ok('안내 문구가 블록 폭 안') : fail('안내 문구가 블록을 넘친다');
+    /* ⚠ 각 안내 줄은 «정확히 1줄» 이어야 한다. 넘치면 «다.» 같은 한 글자 고아 줄이 생겨 블록이 부풀고
+       푸터 버튼과의 간격이 무너진다(4회차에 실제로 그랬다 — 비평 G-1).
+       `Range` 로 잰 폭은 «가장 넓은 줄» 이라 줄바꿈을 못 잡는다 — 요소 높이로 줄 수를 센다. */
+    const lines = await page.evaluate(() => [...document.querySelectorAll('.ml-note i')].map((e) => {
+      const lh = parseFloat(getComputedStyle(e).lineHeight);
+      return Math.round(e.getBoundingClientRect().height / lh);
+    }));
+    lines.every((n) => n === 1) ? ok(`안내 ${lines.length}줄이 각각 1줄 (줄바꿈 0)`)
+      : fail(`안내 문구가 줄바꿈됐다 — 줄 수 ${lines.join('/')} (고아 줄 발생)`);
 
     /* ---------- 3. 실데이터 반영 ---------- */
     console.log('[3] 실데이터 — MAILS 를 그대로 그린다');
