@@ -7976,8 +7976,8 @@ const TS = 16, TSC = 3, T = TS*TSC;
    바닥 타일맵·장식은 buildFloor 가 WORLD 크기에서 칸 수를 계산하므로 자동으로 새 크기를 채운다
    (장식 얼룩 개수만 «넓이 비례» 로 늘린다 — 상수 70 을 그대로 두면 밀도가 1/4 이 된다). */
 const WORLD = { w: 40*T, h: 64*T };
-/* 67 — z: 카메라 줌(보스 연출) · lx/ly: 리드(진행 방향 선행)의 현재값 */
-const cam = { x: WORLD.w/2, y: WORLD.h/2, shake: 0, z: 1, lx: 0, ly: 0, bx: 0, by: 0 };
+/* 108 — 줌·리드·편향 폐기. z 는 «항상 1» 인 상수로만 남는다(58/77 의 fxWorld 가 읽는다) — 어디서도 쓰지 않는다 */
+const cam = { x: WORLD.w/2, y: WORLD.h/2, shake: 0, z: 1 };
 let floorCv = null;
 
 function buildFloor(seed){
@@ -8993,7 +8993,6 @@ function spawnStage(){
   else    { bossT = 0; queueMobs(); }
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
-  cineReset();                                   /* 67 — 이전 스테이지의 보스 연출·줌을 끌고 오지 않는다 */
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
   syncPets();
   showMsg(boss ? '⚠ BOSS STAGE ' + s + ' — ' + BOSS_SEC + '초' : 'STAGE ' + s);
@@ -9097,10 +9096,8 @@ function killEnemy(e){
   corpses.push(corpse);
   if(e.tk === 'boss'){
     cam.shake = 12; bossT = 0; S.bossFarm = false;                       /* 28 — 클리어 → 자동 진행 재개 */
-    /* 67 — 줌인 + 슬로모 + 화면 플래시. 대상은 «죽은 적» 이 아니라 **시체 객체** 다 —
-       사망 애니메이션이 프레임마다 트림이 달라 그려진 중심이 0.27초 동안 119px 이동한다.
-       좌표 스냅샷을 잡으면 줌이 최대인 순간에 가장 크게 빗나간다(실측 152px). */
-    if(!e.raid) cineBossKill(corpse, e.flip);
+    /* 108 — 67 의 줌인·슬로모·플래시는 폐기(주인 지시). 남는 것은 78 의 처치음·BGM 복귀뿐이다 */
+    if(!e.raid) bossKillSfx();
   }
 }
 /* 작업 59 — 플레이어 자동 이동 AI 상수 (구석·벽 체류 최소화).
@@ -9342,8 +9339,9 @@ function step(dt){
     if(spawnQ[i].delay <= 0){
       const tk = spawnQ[i].t;
       makeEnemy(tk); spawnQ.splice(i,1);
-      /* 67 — 보스 도전 연출. 46 레이드 샌드백(startRaid 가 makeEnemy 를 직접 부른다)은 큐를 타지 않으므로 여기서 걸리지 않는다 */
-      if(tk === 'boss' && !raidOn) cineBossIn(enemies[enemies.length-1]);
+      /* 108 — 67 의 등장 팬·줌·hold 는 폐기(주인 지시). 남는 것은 78 의 등장음·보스 BGM 뿐이다.
+         46 레이드 샌드백(startRaid 가 makeEnemy 를 직접 부른다)은 큐를 타지 않으므로 여기서 걸리지 않는다 */
+      if(tk === 'boss' && !raidOn) bossInSfx(enemies[enemies.length-1]);
     }
   }
   const maxHp = stat.maxHp;
@@ -9737,8 +9735,8 @@ function step(dt){
     showMsg('파밍 +' + fmt(bonusG) + 'G — [재도전] 으로 보스에 다시 도전');
     uiDirty = true;
   }
-  /* 67 — cineBusy(): 보스 처치 연출(줌인·슬로모·플래시 0.9초)이 끝난 «뒤» 에 다음 스테이지를 깐다 */
-  else if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0 && !cineBusy()){
+  /* 108 — 처치 연출이 폐기돼 «연출이 끝나기를 기다리는» cineBusy() 게이트도 함께 사라졌다 */
+  else if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0){
     const first = S.stage >= S.best;              /* 최고 기록 갱신 시에만 다이아 */
     S.stage++; S.bossFarm = false;                /* 28 — 다음 스테이지는 항상 «미도전» 상태로 */
     S.best = Math.max(S.best, S.stage);
@@ -9768,261 +9766,43 @@ function step(dt){
 }
 
 /* ==========================================================================
-   67 — 카메라 (감쇠 추적 · 리드 · 월드 경계 클램프 · 보스 연출)
-   loop() 이 step() «뒤» 에 실시간 dt 로 부른다. 두 가지 이유로 step 안이 아니다 —
-   ① 보스 처치 슬로모(timeScale .3)가 카메라·연출 시간까지 늦추면 안 된다
-   ② 플레이어가 움직인 «뒤» 의 좌표를 따라가야 한 프레임 늦게 따라붙지 않는다
+   108 — 카메라 (플레이어 중심 단순 감쇠 추적 · 월드 경계 클램프 · 셰이크)
+   67 의 «보스 등장 팬·줌·플래시·hold / 처치 슬로모·줌·복귀 / 빈사 편향(bx,by) / 리드(lx,ly)» 는
+   저장소 주인 지시(2026-08-26)로 **전부 폐기**했다 — 남는 것은 67 이전과 같은 느낌의 추적 하나뿐이고
+   상수도 CAM_K 하나다. 줌 코드 경로는 없다(cam.z 는 어디서도 쓰이지 않는 상수 1).
+   loop() 이 step() «뒤» 에 부르는 것은 그대로 둔다 — 플레이어가 움직인 «뒤» 의 좌표를 따라가야
+   한 프레임 늦게 따라붙지 않는다.
    ========================================================================== */
-const CAM_K      = 0.12;   /* 감쇠 추적 — 60fps 한 프레임에 목표까지 좁히는 비율 */
-const CAM_KCINE  = 0.40;   /* 연출 중 추적 비율. 0.12 로 두면 «0.8초 팬» 이 잔여 195px 을 못 좁혀 실효 1.15초가 된다 */
-const CAM_KKILL  = 0.46;   /* 처치 구간 추적 — 줌이 최대인 0.3초 안에 시체가 중앙에 «와 있어야» 한다 */
-const CAM_LEAD   = 90;     /* 리드 — 진행 방향으로 최대 선행 px */
-const CAM_LEADK  = 0.05;   /* 리드 자체의 추적 비율(방향 반전 때 튀지 않게 더 느리게) */
-/* 6회차 — «빈사 보스 예비 편향». 처치 슬로모(0.30초) 안에 «정지 프레임» 을 남기기 위한 것이다.
-   처치 램프(CINE_KILL_S)를 줄여서 푸는 길은 저크 예산에 막혀 있다(5회차 §11.7 실측: 0.17 에서 5.46px/f³).
-   카메라 추적은 **선형계**라 «걸리는 프레임 수» 는 거리에 무관하고 «px 로 잰 속도·저크» 만 거리에 비례한다 —
-   그래서 출발 거리를 줄이면 정지 판정(속도 px/f)도, 저크 예산도 같은 비율로 함께 내려간다.
-   보스가 빈사(HP ≤ CAM_LOWHP)가 되면 카메라가 서서히 보스 쪽으로 기울어 그 «출발 거리» 를 미리 줄여 둔다. */
-const CAM_LOWHP  = 0.20;   /* 이 비율 아래로 내려간 보스가 편향 대상 */
-const CAM_LOWW   = 1.00;   /* 플레이어–보스 거리의 이 비율만큼 다가간다(1 = 보스 앵커를 잡는다) */
-const CAM_LOW_MAX= 150;    /* 편향 상한(월드 px) — «플레이어가 프레임에 남는다» 를 보장하는 것은 이 상한이다.
-                              가시 반폭 270 · 플레이어 반폭 ≈ 40 이라 150 이면 최악에도 80px 여유. 리드는 편향만큼 접힌다 */
-const CAM_LOWK   = 0.08;   /* 편향의 감쇠 계수 — 임계 통과가 계단이 아니라 0.46초짜리 기울기로 읽히게 */
-const CINE_KILL_S= 0.19;   /* 처치 줌인이 차오르는 시간. 5회차에는 0.24 가 저크 예산의 한계였다(0.21 에서 3.45px/f³ · 0.17 에서 5.46).
-                              6회차의 «빈사 편향» 이 출발 거리를 270→127px 으로 줄여 같은 램프의 px 저크가 절반이 됐고,
-                              그 여유로 0.19 까지 당겨 카메라 착지를 t=0.333 → 0.250 으로 옮겼다(슬로모 종료 0.30 «안»). */
-const CINE_ZIN   = 1.15;   /* 보스 스폰 팬·줌 배율 */
-const CINE_ZKILL = 1.30;   /* 보스 처치 줌 배율 */
-const CINE_TS    = 0.30;   /* 처치 슬로모 timeScale */
-const CINE_IN_S  = 0.80;   /* 보스로 팬·줌인 */
-const CINE_HOLD_S= 0.45;   /* 보스를 잡고 있는 시간 — «정지한 보스» 프레임이 실제로 남아야 한다 */
-const CINE_BACK_S= 0.60;   /* 플레이어로 복귀·줌 복원 */
-const CINE_KBACK_S=0.40;   /* 처치 뒤 복귀 — 슬로모(0.30)가 처치 연출의 43%를 덮게 짧게 */
-const CINE_SLOW_S= 0.30;   /* 슬로모 길이(실시간) */
-const CINE_FLASH = 0.42;   /* 처치 플래시 피크 알파 계수 (f²×이 값) */
-const CINE_FLASH_S = 0.20; /* 플래시 소멸 — 슬로모(0.30초)의 «앞쪽» 에서 걷어 깨끗한 슬로모 0.10초를 남긴다 */
-const CINE_TGK   = 0.10;   /* 연출 대상 좌표의 저역통과 — 스프라이트 flip 으로 중심이 208px 튀어도 카메라까지 오지 않게 */
-const CINE_FLIP_S= 0.45;   /* 보스가 돌아설 때 209.6px 짜리 스프라이트 순간이동을 따라가는 시간(smoothstep) */
-const CINE_FIT_M = 8;      /* 프레임 안 담기 상한의 여유(월드 px) — 반폭 스냅샷과 진행된 애니의 차이를 흡수 */
-const CINE_TGK_K = 0.16;   /* 처치 구간은 더 세게 — 사망 애니(10fps)가 그려진 중심을 «계단» 으로 119px 옮긴다 */
-/* 보스 연출 상태 — mode: '' | 'in' | 'hold' | 'back' | 'kill'
-   cx/cy = 저역통과된 대상 좌표 · zb = 이번 연출이 «출발한» 줌(연출 중 처치 시 줌이 뚝 떨어지지 않게) */
-const cine = { mode:'', t:0, tg:null, flash:0, cx:0, cy:0, zb:1, flip:false, ax:0, oy:0, fs:null, fs0:1, fsW:0, fsT:1 };
-/* 스프라이트는 «발밑» 기준으로 그려지고(drawFrame), 아틀라스 트림이 좌우 비대칭이라
-   **그려진 몸통 중심은 e.x/e.y 가 아니다** — 보스는 실측 (−104.8, −114.7) 만큼 어긋난다.
-   카메라는 좌표가 아니라 «보이는 몸통» 을 잡아야 하므로 그 중심을 계산해서 쓴다. */
-function spriteCenter(e, flip){
-  const A = ATLAS[e.akey], fr = A && A.f[curFrame(e)];
-  if(!fr) return { x:e.x, y:e.y - (e.r || 0) };
-  let s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
-  /* 적은 스폰 0.3초 동안 팝인한다 — 그리는 쪽이 `T.scale*(0.4+0.6*grow)` 를 쓰므로
-     여기서도 같은 배율을 써야 한다. 안 그러면 팝인 중 목표가 최대 (38,41)px 어긋난다. */
-  if(e.born !== undefined && e.born < 0.3 && !e.nopop) s *= 0.4 + 0.6*(e.born/0.3);
-  const dx = (-fr[6]/2 + fr[4] + fr[2]/2) * s;      /* flip 이면 좌우 대칭이라 부호가 뒤집힌다 */
-  const dy = (-fr[7] + fr[5] + fr[3]/2) * s;
-  const f = flip === undefined ? e.flip : flip;
-  return { x: e.x + (f ? -dx : dx), y: e.y + dy };
-}
-/* 그려지는 몸통의 반폭·반높이(월드 px). 연출 «프레임 안 담기» 상한을 계산하는 데 쓴다. */
-function spriteHalf(e){
-  const A = ATLAS[e.akey], fr = A && A.f[curFrame(e)];
-  if(!fr) return null;
-  let s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
-  if(e.born !== undefined && e.born < 0.3 && !e.nopop) s *= 0.4 + 0.6*(e.born/0.3);
-  return { hw: fr[2]*s/2, hh: fr[3]*s/2 };
-}
-/* 프레임률 독립 감쇠 — 60fps 에서 «프레임당 k» 가 되도록 dt 로 보정한다.
-   `dt*6` 식 선형 계수는 프레임이 튀면 그대로 저크가 된다(dt 0.1 캡에서 0.6 = 60% 점프) */
+/* 67 이전 코드는 `Math.min(1, dt*6)` 이었다 = 60fps 한 프레임에 0.10. 그 «느낌» 을 그대로 두고
+   프레임률만 독립시킨다 — 선형 계수는 프레임이 튀면 그대로 저크가 된다(dt 0.1 캡에서 0.6 = 60% 점프). */
+const CAM_K = 0.10;
+/* 프레임률 독립 감쇠 — 60fps 에서 «프레임당 k» 가 되도록 dt 로 보정한다. */
 const camDamp = (k, dt) => 1 - Math.pow(1 - k, Math.max(0, dt)*60);
-/* 월드 경계 클램프 — 화면 밖(검은 영역)이 절대 보이지 않게 «지금 보이는 반폭» 으로 가둔다.
-   줌이 커지면 보이는 반폭이 줄어 여유가 늘고, 월드가 화면보다 좁은 축은 중앙 고정이 답이다 */
+/* 월드 경계 클램프 — 화면 밖(검은 영역)이 절대 보이지 않게 «가시 반폭» 으로 가둔다.
+   67 의 «맵 2배(1920×3072)» 는 유지하므로 두 축 모두 클램프가 실제로 산다.
+   월드가 화면보다 좁은 축은 중앙 고정이 답이다(9:16 등 짧은 기기에서 세로가 그렇다). */
 function camClamp(x, y){
-  const hw = VW/(2*cam.z), hh = VH/(2*cam.z);
+  const hw = VW/2, hh = VH/2;
   return {
     x: WORLD.w <= hw*2 ? WORLD.w/2 : clamp(x, hw, WORLD.w-hw),
     y: WORLD.h <= hh*2 ? WORLD.h/2 : clamp(y, hh, WORLD.h-hh)
   };
 }
-function cineReset(){ cine.mode = ''; cine.t = 0; cine.tg = null; cine.flash = 0; cine.zb = 1; cam.z = 1; cam.lx = cam.ly = 0; cam.bx = cam.by = 0; }
-/* 연출을 켤 때 «출발 줌» 과 대상 좌표를 스냅샷한다 — 이어달리기(연출 중 처치)에서도 계단이 안 생긴다 */
-function cineStart(mode, pt, flip, base){
-  cine.mode = mode; cine.t = 0; cine.zb = cam.z; cine.flip = flip;
-  cine.cx = pt.x; cine.cy = pt.y;
-  /* 살아 있는 적을 따라갈 때 쓰는 «고정» 오프셋. 걷기 애니메이션은 프레임마다 트림이 달라
-     매 프레임 spriteCenter() 를 다시 읽으면 목표가 수십 px 씩 흔들린다(실측 최소이탈 2~93px 편차).
-     시체(kill)는 반대로 사망 애니가 중심을 «단조로» 119px 옮기므로 매 프레임 다시 읽는다. */
-  /* ax = «안 뒤집힌» 상태의 가로 오프셋(크기 고정) · fs = 그 부호(-1..+1, 부드럽게 넘어간다).
-     부호까지 얼려 버리면 스폰 직후 보스가 플레이어 쪽으로 «돌아설» 때(실측 18프레임째)
-     실제로 그려지는 몸통이 반대쪽으로 209.6px 옮겨 가는데 카메라는 옛 자리를 계속 잡는다. */
-  cine.ax = base ? (flip ? -(pt.x - base.x) : (pt.x - base.x)) : 0;
-  cine.oy = base ? pt.y - base.y : 0;
-  /* 대상 몸통 반폭·반높이를 연출 시작 시 한 번만 잰다 — 매 프레임 재면 걷기·사망 애니의
-     트림 차이가 그대로 줌 상한의 떨림이 된다(2회차 결함 ⑧ 과 같은 함정). */
-  const H = cine.tg && spriteHalf(cine.tg);
-  cine.hw = H ? H.hw : 0; cine.hh = H ? H.hh : 0;
-  cine.fs = null; cine.fsW = 0; cine.fsT = 1;   /* 첫 camUpdate 에서 그때의 방향으로 초기화(그 프레임엔 이징 없음) */
-}
-function cineBossIn(e){ if(!e) return; e.nopop = true; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e);
-  sfx('bossin'); bgmSet('boss'); }                      /* 78 — 보스 등장 + 보스전 트랙 */
-/* killEnemy 는 이 호출 «두 줄 뒤» 에 시체를 `anim: e.T.die` 로 갈아끼운다 —
-   살아 있는 프레임의 트림으로 목표를 잡으면 실제로 그려지는 시체와 46px 어긋난다.
-   그래서 «시체가 될 모습»(die 0프레임)으로 중심을 계산한다. */
-function cineBossKill(corpse, flip){
-  cine.tg = corpse;                       /* 매 프레임 spriteCenter() 로 다시 읽는다(저역통과 CINE_TGK) */
-  cineStart('kill', spriteCenter(corpse, flip), flip); cine.flash = 1;
-  sfx('bosskill'); bgmSet('main');                      /* 78 — 보스 처치 + 메인 트랙 복귀 */
-}
-/* loop() 이 step(dt*이 값) 으로 쓴다 — 처치 직후 0.3초만 0.3배속 */
-function camTimeScale(){ return (cine.mode === 'kill' && cine.t < CINE_SLOW_S) ? CINE_TS : 1; }
-/* 처치 연출이 도는 동안에는 스테이지 클리어(= spawnStage → cineReset)를 붙잡는다.
-   보스를 잡으면 «마지막 적이 사라진» 그 다음 프레임에 곧바로 다음 스테이지가 깔려서,
-   이 게이트가 없으면 줌인·슬로모·플래시가 한 프레임도 못 보이고 지워진다. */
-function cineBusy(){ return cine.mode === 'kill' && cine.t < CINE_SLOW_S + CINE_KBACK_S; }
-
-/* 연출 «가중치» w(0=플레이어, 1=연출 대상). smoothstep 이라 시작·끝에서 기울기가 0 이다 —
-   대상만 바꿔치기하면 그 프레임에 카메라 속도가 0 → 0.12×거리 로 «튀는» 저크가 그대로 보인다. */
-const camSm = (p) => { const q = clamp(p, 0, 1); return q*q*(3-2*q); };
-/* 스펙은 «ease-out» 이다. 순수 ease-out(1-(1-p)³)은 **시작 기울기가 3** 이라 첫 프레임에
-   35px/frame 짜리 컷인이 생긴다(저크). smoothstep 을 한 번 통과시킨 뒤 ease-out 을 씌우면
-   시작·끝 기울기는 0 이면서 곡선은 앞으로 몰린다 — 첫 100ms 이동이 전체의 2.0% → 12.4%. */
-const camEaseOut = (p) => { const q = camSm(p); return 1 - (1-q)*(1-q)*(1-q); };
-function cineWeight(){
-  const t = cine.t;
-  switch(cine.mode){
-    case 'in':   return camEaseOut(t/CINE_IN_S);
-    case 'hold': return 1;
-    case 'back': return camSm(1 - t/CINE_BACK_S);
-    /* 처치 펀치는 앞으로 몰지 않는다 — 0.26초짜리 램프에 ease-out 을 씌우면 그 자체가 8.7px/f² 저크가 된다 */
-    case 'kill': return t < CINE_SLOW_S ? camSm(t/CINE_KILL_S) : camSm(1 - (t-CINE_SLOW_S)/CINE_KBACK_S);
-    default:     return 0;
-  }
-}
 function camUpdate(dt){
-  if(cine.mode){
-    cine.t += dt;
-    if(cine.mode === 'in'  && cine.t >= CINE_IN_S)  { cine.mode = 'hold'; cine.t = 0; }
-    else if(cine.mode === 'hold' && cine.t >= CINE_HOLD_S){ cine.mode = 'back'; cine.t = 0; }
-    else if(cine.mode === 'back' && cine.t >= CINE_BACK_S) cine.mode = '';
-    else if(cine.mode === 'kill' && cine.t >= CINE_SLOW_S + CINE_KBACK_S) cine.mode = '';
-  }
-  const w = cine.mode ? cineWeight() : 0;
-  let tgc = null;   /* 저역통과를 거치지 «않은» 이번 프레임의 대상 중심 — 프레임 안 담기 상한은 이걸로 잰다 */
-  /* 대상 좌표 — 살아 있는 적이면 «그려진 몸통 중심», 좌표 스냅샷이면 그대로.
-     저역통과(CINE_TGK)는 flip 으로 중심이 208px 뒤집힐 때의 계단을 카메라 앞에서 흡수한다 */
-  if(cine.mode && cine.tg && cine.tg.akey){
-    /* kill = 시체(중심이 «단조» 이동) → 매 프레임 재계산.
-       그 외 = 살아 있는 적 → 크기는 고정 오프셋(걷기 애니 트림 흔들림 제거), 부호만 실제 방향을 따라간다. */
-    let c;
-    if(cine.mode === 'kill'){
-      c = spriteCenter(cine.tg, cine.flip);
-    }else{
-      /* 보스가 돌아서면 «그려지는 스프라이트 자체» 가 209.6px 순간이동한다(아틀라스 트림이 좌우 비대칭이라
-         drawFrame 이 미러링하면 박스가 통째로 반대편에 놓인다 — 렌더 규약 문제라 67 구간이 아니다).
-         **그걸 쫓아가면 안 된다.** 부호를 고정하면 몸통이 반대편으로 가 버리고(3회차 201px 이탈),
-         부드럽게 쫓아가면 1프레임짜리 점프가 «0.30초짜리 화면 이탈»로 늘어난다(4회차 최대 82% 잘림).
-         답은 **좌우 대칭점 = 앵커 그 자체**다 — 어느 쪽을 보든 몸통은 앵커에서 ±104.8px,
-         즉 앵커를 잡으면 **플립이 목표를 1px도 움직이지 않으면서** 몸통은 항상 프레임 안이다
-         (가시 반폭 234.8 vs 오프셋 104.8 + 몸통 반폭 87 = 192). 세로 오프셋은 발밑 기준이라 그대로 쓴다. */
-      c = { x: cine.tg.x, y: cine.tg.y + cine.oy };
-    }
-    const tk = camDamp(cine.mode === 'kill' ? CINE_TGK_K : CINE_TGK, dt);
-    cine.cx += (c.x-cine.cx)*tk; cine.cy += (c.y-cine.cy)*tk;
-    tgc = c;
-  }
-  /* ── 빈사 보스 예비 편향 (6회차: 5회차 §11.8 ① — 3회 연속 지적된 «슬로모 안에 정지 프레임이 없다») ──
-     보스 HP 가 CAM_LOWHP 아래로 내려가면 카메라 기준점을 «플레이어» 에서 «플레이어 + 보스 방향 오프셋» 으로
-     서서히 옮긴다. 처치 연출이 시작될 때 카메라가 이미 시체 쪽에 절반쯤 와 있으므로 같은 램프로도 슬로모 안에 착지한다.
-     대상은 spriteCenter 가 아니라 **앵커(e.x, e.y−r)** 다 — 걷기 애니 트림이 프레임마다 중심을 흔들어
-     그대로 편향의 떨림(=저크)이 되기 때문이다(2회차 결함 ⑧ · 3회차 §9.1 과 같은 함정).
-     처치 연출 중에는 목표를 «얼린다» — w 가 시체 쪽으로 차오르는 동안 기준점이 플레이어로 되돌아가면
-     두 움직임이 서로를 상쇄해 카메라가 도착을 못 한다. 연출이 끝나면 목표가 0 이 되어 같은 감쇠로 풀린다. */
-  let btx = cam.bx, bty = cam.by;
-  if(cine.mode !== 'kill'){
-    btx = bty = 0;
-    const lb = enemies.find(e => e.tk === 'boss' && !e.raid && e.hp > 0 && e.max > 0 && e.hp <= e.max*CAM_LOWHP);
-    if(lb){
-      const dx = lb.x - player.x, dy = (lb.y - (lb.r || 0)) - player.y, d = Math.hypot(dx, dy);
-      if(d > 1){ const m = Math.min(CAM_LOWW*d, CAM_LOW_MAX); btx = dx/d*m; bty = dy/d*m; }
-    }
-  }
-  const bk = camDamp(CAM_LOWK, dt);
-  cam.bx += (btx-cam.bx)*bk; cam.by += (bty-cam.by)*bk;
-
-  /* 연출 가중치 w 의 «0 쪽» 끝은 플레이어가 아니라 «편향된 기준점» 이다 — 그래야 편향이 걸린 채로
-     연출이 시작돼도 첫 프레임에 기준점이 튀지 않는다(편향 → 연출 전환에 계단이 없다) */
-  const bpx = player.x + cam.bx, bpy = player.y + cam.by;
-  const tgx = cine.mode ? cine.cx : bpx, tgy = cine.mode ? cine.cy : bpy;
-  const fx = bpx + (tgx - bpx)*w;
-  const fy = bpy + (tgy - bpy)*w;
-  /* 줌 — «출발 줌 zb» 에서 목표 배율까지. zb 는 1 로 서서히 풀리므로 연출이 끝나도 계단이 없다 */
-  cine.zb += (1-cine.zb) * camDamp(CINE_TGK, dt);
-  /* 줌 가중치는 위치와 «같은» 곡선을 쓴다.
-     4회차에는 줌만 0.80초 smoothstep 으로 떼어 놨는데, 5회차 비평 O 가 그 결과를 픽셀로 재서 뒤집었다 —
-     실측 줌 진행률이 스펙의 ease-out 대비 t=0.283 에서 **44.3pp 부족**했고(smoothstep 예측치와 오차 0.3%),
-     위치는 t=0.450 에 이미 89.4% 를 소화해 **마지막 0.333초(연출의 42%)가 «카메라는 거의 정지, 스케일만 램프»** 가 됐다.
-     스펙 문구는 «보스로 팬+줌인(scale 1.15, 0.8초, ease-out)» — 팬과 줌은 한 동작이다.
-     둘을 같은 camEaseOut 에 묶으면 곡선 불일치가 사라지고 t≈0.62 에 같이 착지한다.
-     (4회차 M 의 «줌이 먼저 끝난다» 지적과는 방향이 반대인데, 그 지적의 «카메라만 흐름» 은
-      가중치가 아니라 **살아 움직이는 보스를 따라가는 트래킹** 이다 — O 는 이를 정상으로 판정했다) */
-  const zw = w;
-  const fz = cine.zb + ((cine.mode === 'kill' ? CINE_ZKILL : CINE_ZIN) - cine.zb)*zw;
-
-  /* 리드 — 속도 방향으로 최대 CAM_LEAD px 앞을 본다. 멈추면(그리고 연출 중에는) 0 으로 되돌아간다 */
-  /* 편향이 걸린 만큼 리드를 접는다 — 둘이 겹치면 오프셋이 150+90=240px 이 되어 가시 반폭 270 에서
-     플레이어가 프레임 가장자리에 걸린다. 편향 자체가 이미 «어디를 볼지» 를 정한 상태라 리드의 역할과 겹친다. */
-  const v = Math.hypot(player.vx, player.vy);
-  const bw = Math.min(1, Math.hypot(cam.bx, cam.by)/CAM_LOW_MAX);
-  const lsc = (1-w)*(1-bw);
-  const tlx = v > 8 ? player.vx/v*CAM_LEAD*lsc : 0;
-  const tly = v > 8 ? player.vy/v*CAM_LEAD*lsc : 0;
-  const lk = camDamp(CAM_LEADK, dt);
-  cam.lx += (tlx-cam.lx)*lk; cam.ly += (tly-cam.ly)*lk;
-
-  cam.z = fz;
-  const t = camClamp(fx + cam.lx, fy + cam.ly);
-  /* 연출 중에는 더 세게 좁힌다 — 0.12 로는 «0.8초 팬» 이 끝나도 195px 이 남아 실효 1.15초가 된다.
-     w 로 섞으므로 연출 진입·이탈에서 계수가 계단으로 바뀌지 않는다 */
-  const kc = cine.mode === 'kill' ? CAM_KKILL : CAM_KCINE;
-  /* 추적 계수는 «위치 가중치» 보다 먼저 올린다. w 가 아직 0 에 가까운 첫 0.1초에도 목표점 fx 는
-     앞으로 몰린 ease-out 을 타고 이미 빠르게 달아나는데, 그때 k 가 평상시 0.12 면 카메라가 크게 뒤처진다.
-     그 지연은 줌이 차오른 뒤 «보스가 프레임 끝에서 잘림» 으로 나타난다(줌·팬을 같은 곡선에 묶은 직후 2/52프레임·최대 13px).
-     계수만 앞당기는 것이라 목표 궤적은 그대로고, 저크·가속 예산에는 여유가 크다(0.54/1.64 vs 상한 3/8). */
-  const kw = cine.mode === 'in' ? Math.max(w, camSm(cine.t/0.20)) : w;
-  const k = camDamp(CAM_K + (kc-CAM_K)*kw, dt);
+  /* 목표는 언제나 «플레이어» 다 — 보스도, 시체도, 빈사 편향도 카메라를 끌지 않는다 */
+  const t = camClamp(player.x, player.y);
+  const k = camDamp(CAM_K, dt);
   cam.x += (t.x-cam.x)*k; cam.y += (t.y-cam.y)*k;
-  /* 줌이 «작아지는» 동안에는 보이는 반폭이 넓어져 어제까지 합법이던 좌표가 경계를 넘는다 — 매 프레임 다시 가둔다 */
   const c = camClamp(cam.x, cam.y);
   cam.x = c.x; cam.y = c.y;
-
-  /* ── 프레임 안 담기 상한 (5회차: O 결함 3 · P 결함 1·2 — 두 비평가의 ③ 위치·경로 1순위) ──
-     `ctx.scale(z,z)` 는 «카메라 기준» 확대라, 카메라가 대상에 도착하기 «전» 에 줌이 차오르면
-     남은 간격이 z 배로 벌어져 대상이 프레임 밖으로 밀린다. 실측으로 두 곳에서 같은 원인이 잡혔다 —
-     처치 t=0.067~0.083 에 시체 61~201px 잘림(6회 중 4회) · 팬 t=0.117~0.300 에 보스 110~301px 잘림.
-     대상을 «따라가는 속도» 를 올려서 푸는 문제가 아니다(그건 저크가 된다).
-     **줌 쪽에 상한을 건다** — 이 프레임의 카메라 위치에서 몸통이 통째로 들어오는 최대 배율을 넘지 않는다.
-     카메라가 도착하면 상한이 저절로 풀려 1.15·1.30 을 그대로 찍는다(줌을 «늦추는» 것이지 «줄이는» 게 아니다).
-     1 아래로는 절대 내려가지 않는다 — 줌아웃은 주인 지시(줌인)를 뒤집는 것이라 스폰 링이 가시 반폭보다
-     먼 «팬 앞 0.15초» 는 물리적으로 담을 수 없고, 그 구간은 게이트가 수치로 따로 보고한다. */
-  if(cine.mode && cine.hw && tgc){
-    /* 반폭은 연출 시작 프레임의 스냅샷이라, 걷기·사망 애니가 진행되면 실제 몸통이 몇 px 더 넓어질 수 있다.
-       그 차이가 그대로 «잘림 0.x px» 로 남으므로 여유를 조금 얹는다(떨림 없는 상수). */
-    const nx = (cine.mode === 'kill' ? 0 : Math.abs(cine.ax)) + cine.hw + CINE_FIT_M;
-    const zf = Math.max(1, Math.min(
-      VW / (2 * (Math.abs(tgc.x - cam.x) + nx)),
-      VH / (2 * (Math.abs(tgc.y - cam.y) + cine.hh + CINE_FIT_M))
-    ));
-    if(cam.z > zf){
-      cam.z = zf;
-      const c2 = camClamp(cam.x, cam.y);   /* 줌이 내려가면 가시 반폭이 넓어져 월드 클램프가 다시 조인다 */
-      cam.x = c2.x; cam.y = c2.y;
-    }
-  }
-
   /* 55 설정 «화면 흔들림» — 끄면 여기서 통째로 죽인다(호출부 8곳을 건드리지 않는 단일 게이트) */
   if(!shakeOn()) cam.shake = 0;
   else if(cam.shake > 0) cam.shake = Math.max(0, cam.shake - dt*28);
-  if(cine.flash > 0) cine.flash = Math.max(0, cine.flash - dt/CINE_FLASH_S);
 }
+/* 78/98 오디오 훅 — 카메라 «연출» 은 폐기했지만 보스 등장·처치 «소리와 BGM 전환» 은
+   78·98 의 구간이라 그대로 산다. 카메라는 이 둘을 한 픽셀도 보지 않는다. */
+function bossInSfx(e){ if(!e) return; sfx('bossin'); bgmSet('boss'); }
+function bossKillSfx(){ sfx('bosskill'); bgmSet('main'); }
 
 /* ==========================================================================
    렌더
@@ -10035,18 +9815,16 @@ function drawShadow(x, y, w){
 function draw(){
   const sx = cam.shake ? rnd(-cam.shake, cam.shake)*0.45 : 0;
   const sy = cam.shake ? rnd(-cam.shake, cam.shake)*0.45 : 0;
-  /* 67 — 줌. scale(z) «뒤» 에 translate 하므로 화면좌표 = (월드 + o)*z 이고,
-     따라서 o = -cam + VW/(2z) 이어야 카메라가 화면 중앙에 온다. 셰이크는 화면 px 라 z 로 나눈다 */
-  const z = cam.z;
-  let ox = -(cam.x - VW/(2*z)) + sx/z, oy = -(cam.y - VH/(2*z)) + sy/z;
-  /* 67 — 셰이크는 «화면» 이 흔들리는 것이라 경계에 붙어 있을 때 월드 밖(검은 띠)을 드러낸다.
+  /* 108 — 줌 폐기(ctx.scale 없음). 67 이전과 같이 translate 만 한다 */
+  let ox = -(cam.x - VW/2) + sx, oy = -(cam.y - VH/2) + sy;
+  /* 셰이크는 «화면» 이 흔들리는 것이라 경계에 붙어 있을 때 월드 밖(검은 띠)을 드러낸다.
      camClamp 가 카메라를 가둔 뒤에도 여기서 한 번 더 가둬야 노출이 0 이 된다.
-     화면 0px = 월드 -ox, 화면 VW/z = 월드 VW/z-ox 이므로 ox ∈ [VW/z-WORLD.w, 0] 이면 항상 월드 안이다 */
-  if(WORLD.w > VW/z) ox = clamp(ox, VW/z - WORLD.w, 0);
-  if(WORLD.h > VH/z) oy = clamp(oy, VH/z - WORLD.h, 0);
+     화면 0px = 월드 -ox, 화면 VW = 월드 VW-ox 이므로 ox ∈ [VW-WORLD.w, 0] 이면 항상 월드 안이다 */
+  if(WORLD.w > VW) ox = clamp(ox, VW - WORLD.w, 0);
+  if(WORLD.h > VH) oy = clamp(oy, VH - WORLD.h, 0);
 
   ctx.fillStyle = '#0a0c16'; ctx.fillRect(0, 0, VW, VH);
-  ctx.save(); ctx.scale(z, z); ctx.translate(ox, oy);
+  ctx.save(); ctx.translate(ox, oy);
 
   if(floorCv) ctx.drawImage(floorCv, 0, 0);
   ctx.strokeStyle = 'rgba(10,8,20,.9)'; ctx.lineWidth = 10;
@@ -10255,15 +10033,9 @@ function draw(){
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, VW, VH);
 
-  /* 67 — 보스 처치 화면 플래시. DOM 이 아니라 캔버스에 얹는다(60 쥬시 모듈 구간을 건드리지 않는다) */
-  if(cine.flash > 0){
-    ctx.fillStyle = 'rgba(255,255,255,' + (cine.flash*CINE_FLASH).toFixed(3) + ')';
-    ctx.fillRect(0, 0, VW, VH);
-  }
-
   /* 화면 밖 적 표시 */
   for(const e of enemies){
-    const px = (e.x + ox)*z, py = (e.y + oy)*z;   /* 67 — 줌 적용 후의 화면 좌표로 판정한다 */
+    const px = e.x + ox, py = e.y + oy;            /* 108 — 줌이 없으므로 translate 만 적용한 화면 좌표 */
     if(px > -6 && px < VW+6 && py > -6 && py < VH+6) continue;
     const cx = VW/2, cy = VH/2, a = Math.atan2(py-cy, px-cx);
     ctx.save(); ctx.globalAlpha = .5; ctx.fillStyle = e.T.col;
@@ -11134,7 +10906,6 @@ function startDunRun(d, f){
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
-  cineReset();                                   /* 67 — 보스 연출 중에 들어가도 줌이 남지 않게 */
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
   syncPets();
   queueMobs();
@@ -12308,7 +12079,6 @@ function startRaid(r){
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
-  cineReset();                                   /* 67 — 보스 연출 중에 레이드로 들어가도 줌이 남지 않게 */
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
   syncPets();
   makeEnemy('boss');
@@ -15186,8 +14956,8 @@ function loop(now){
   if(dt > 0.1) dt = 0.1;
   S.playtime += dt;
 
-  /* 67 — 보스 처치 슬로모는 «게임 시간» 만 늦춘다. 카메라·연출(camUpdate)과 HUD 는 실시간 dt 로 돈다 */
-  step(dt * camTimeScale());
+  /* 108 — 처치 슬로모(camTimeScale) 폐기. 게임 시간은 언제나 실시간 그대로다 */
+  step(dt);
 
   /* 56 절전 모드 — «전투는 계속, 렌더는 정지». step(dt) 은 위에서 이미 돌았고 여기서는
      캔버스·HUD·연출·UI 재렌더를 통째로 건너뛴다(측정표 §6-2 — 화면이 완전 불투명 검정이라 그릴 이유가 없다).
