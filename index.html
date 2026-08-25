@@ -6140,47 +6140,49 @@
   /* A 배터리 배지 — 그룹 84×46 @ (996,28.5) · 몸통 79×46 테두리 5 radius 3 · 꼭지 5×33 · 우여백 28.5 */
   #svw .sv-bat{position:absolute;right:28.5px;top:28.5px;width:84px;height:46px}
   #svw .sv-bat>s{position:absolute;left:0;top:0;width:79px;height:46px;box-sizing:border-box;
-    border:5px solid #FFF;border-radius:3px;background:none}
+    border:4.5px solid #FFF;border-radius:3px;background:none}
   #svw .sv-bat>u{position:absolute;right:0;top:6.5px;width:5px;height:33px;background:#FFF;border-radius:0 2px 2px 0}
   #svw .sv-bat>b{position:absolute;left:0;top:var(--baty,12px);width:79px;height:22px;line-height:22px;
     text-align:center;font-size:29px;white-space:nowrap}
 
   /* B 시계 — 잉크 386×115 @ y624, 가로 정중앙(cx 539.5). digit height 113 → font 157 */
-  #svw .sv-clk{position:absolute;left:0;right:0;top:var(--clky,621px);height:120px;line-height:120px;
+  #svw .sv-clk{position:absolute;left:0;right:0;top:var(--clky,622px);height:120px;line-height:120px;
     text-align:center;font-size:160px;letter-spacing:var(--clkls,0px);white-space:nowrap;
-    transform:scaleX(var(--clksx,.97))}
+    transform:translateX(var(--clkx,-1px)) scaleX(var(--clksx,.97))}
   /* C 날짜 — 잉크 260×38 @ y764. 레퍼런스는 MM/DD/YYYY 미국식이라 한국식 YYYY.MM.DD 로 옮겼다(같은 10글자) */
-  #svw .sv-dt{position:absolute;left:0;right:0;top:var(--dty,755.5px);height:52px;line-height:52px;
+  #svw .sv-dt{position:absolute;left:0;right:0;top:var(--dty,756.5px);height:52px;line-height:52px;
     text-align:center;font-size:48.7px;letter-spacing:var(--dtls,0px);white-space:nowrap;
     transform:scaleX(var(--dtsx,1.08))}
 
   /* D ☠ STAGE N — ⚠ «아이콘+텍스트 묶음» 이 중앙이 아니다(측정표 §3-4).
      텍스트만 화면 정중앙(cx 539.5)이고 스컬은 그 왼쪽에 absolute 로 덧붙는다. flex 로 묶으면 35px 어긋난다. */
   #svw .sv-st{position:absolute;left:0;right:0;top:var(--sty,1031px);height:56px}
-  #svw .sv-st>i{position:absolute;left:0;right:0;top:var(--stty,2px);height:50px;line-height:50px;
+  #svw .sv-st>i{position:absolute;left:0;right:0;top:var(--stty,3px);height:50px;line-height:50px;
     text-align:center;font-size:48.5px;letter-spacing:var(--stls,0px);white-space:nowrap;
     transform:scaleX(var(--stsx,.89))}
   /* 스컬 배지 — 아트 자리(58×56). 원판 #801828 + 외곽 링 #101010, 안쪽 해골은 이모지 대체 */
   #svw .sv-st>s{position:absolute;left:368px;top:0;width:57px;height:56px;border-radius:50%;
     background:#801828;box-shadow:inset 0 0 0 4.5px #101010}
-  #svw .sv-st>s>em{position:absolute;left:0;right:0;top:var(--skty,10px);height:36px;line-height:36px;
-    text-align:center;font-size:var(--skfs,30px);transform:scaleX(var(--sksx,1))}
+  #svw .sv-st>s>em{position:absolute;left:0;right:0;top:var(--skty,4px);height:44px;line-height:44px;
+    text-align:center;font-size:var(--skfs,40.5px);transform:scaleX(var(--sksx,1.19))}
 
   /* E 방치 요약 패널 — 601×351 @ (239.5,1128) · #272727 · radius 36 · 내부 패딩 50 균일
      검산(LESSONS 52-①): 50 + 64×3 + 30×2 + 50 = 352 ≈ 실측 351 */
-  #svw .sv-p{position:absolute;left:239.5px;top:1128px;width:601px;height:351px;
+  #svw .sv-p{position:absolute;left:240px;top:1129px;width:600px;height:350px;
     background:#272727;border-radius:36px}
   /* pill — 500×64 · pitch 94 · radius 28 (완전 스타디움 32 아님, 측정표 §6-4-3) */
-  #svw .sv-r{position:absolute;left:50.5px;width:500px;height:64.5px;background:#0E0E0E;border-radius:28px}
-  #svw .sv-r:nth-of-type(1){top:49.5px}
-  #svw .sv-r:nth-of-type(2){top:143.5px}
-  #svw .sv-r:nth-of-type(3){top:237.5px}
+  #svw .sv-r{position:absolute;left:50px;width:500px;height:64.5px;background:#0E0E0E;border-radius:28px}
+  #svw .sv-r:nth-of-type(1){top:49px}
+  #svw .sv-r:nth-of-type(2){top:143px}
+  #svw .sv-r:nth-of-type(3){top:237px}
   /* 아이콘 박스 48×48, 중심 cx 329.5 = pill 좌변 + 40 */
   #svw .sv-r>u{position:absolute;left:16px;top:8px;width:48px;height:48px;line-height:48px;
-    text-align:center;font-size:var(--icfs,37.5px);transform:scaleX(var(--icsx,1))}
-  #svw .sv-r:nth-of-type(1)>u{--icsx:.74}                 /* ⏱️ 잉크 53x47 → ref 35x42 */
-  #svw .sv-r:nth-of-type(2)>u{--icsx:1}                   /* 💀 잉크 → ref 47x42 */
-  #svw .sv-r:nth-of-type(3)>u{--icfs:39.3px;--icsx:.89}   /* 🪙 → ref 44x44 */
+    text-align:center;font-size:var(--icfs,37.5px);
+    transform:translateY(var(--icdy,0px)) scaleX(var(--icsx,1))}
+  /* 폭은 3종 모두 0px 로 맞았고 높이만 4~7% 작았다(비평 C·D 2회차) — fs 를 올린 만큼 scaleX 로 폭을 되돌린다 */
+  #svw .sv-r:nth-of-type(1)>u{--icfs:39.3px;--icsx:.706}  /* ⏱️ → ref 잉크 36x44 */
+  #svw .sv-r:nth-of-type(2)>u{--icfs:40.2px;--icsx:.862}  /* 💀 → ref 잉크 48x45 */
+  #svw .sv-r:nth-of-type(3)>u{--icfs:42px;--icsx:.833;--icdy:-2px}  /* 🪙 → ref 잉크 45x47, 세로 중심 −2 */
   /* 라벨 — 좌단 x360 = pill 좌변 + 70.5, 세로 중앙. 잉크 h26.5 → font 35 */
   #svw .sv-r>i{position:absolute;left:67.5px;top:var(--rlty,16px);height:30px;line-height:30px;
     font-size:28px;letter-spacing:var(--rlls,0px);white-space:nowrap;
