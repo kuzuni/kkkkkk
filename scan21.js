@@ -42,6 +42,14 @@ const path = require('path');
     if (M === 'rows') { const t = Number(R[0]); const rows = [];
       for (let y = 0; y < h; y++) { let c = 0; for (let x = 0; x < w; x++) if (lum(at(x, y)) >= t) c++; rows.push(c); }
       return { y0: Y0, rows, imgSize: [im.naturalWidth, im.naturalHeight] }; }
+    if (M === 'cols') { const t = Number(R[0]); const cols = [];
+      for (let x = 0; x < w; x++) { let c = 0; for (let y = 0; y < h; y++) if (lum(at(x, y)) >= t) c++; cols.push(c); }
+      return { x0: X0, cols, imgSize: [im.naturalWidth, im.naturalHeight] }; }
+    /* strip — 1행(h==1) 또는 1열(w==1) 의 RGB 를 그대로 덤프한다(단면 스캔용) */
+    if (M === 'strip') { const s = [];
+      if (h === 1) { for (let x = 0; x < w; x++) s.push([X0 + x, ...at(x, 0)]); }
+      else { for (let y = 0; y < h; y++) s.push([Y0 + y, ...at(0, y)]); }
+      return { strip: s, imgSize: [im.naturalWidth, im.naturalHeight] }; }
     let minx = 1e9, miny = 1e9, maxx = -1, maxy = -1, n = 0;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (hit(at(x, y))) { n++; if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y; }

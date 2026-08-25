@@ -41,7 +41,22 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   await page.evaluate(() => goTab('box', true));
   await page.waitForTimeout(900);
   B('[data-opencoll] 버튼 존재', await page.locator('[data-opencoll]').count() > 0);
-  await page.locator('[data-opencoll]').first().click();
+  /* 6회차 — `locator.click()` 이 여기서 영원히 재시도한다. 원인은 21 이 아니라 **공용 `renderUI()`**:
+     보물상자 탭이 열려 있으면 0.35초 루프가 `renderBanner('relic','bRel')` 로 패널 innerHTML 을
+     통째로 갈아끼워, 버튼 노드가 초당 수십 번 detach 된다(MutationObserver 실측 3초에 87회).
+     playwright 의 «visible·enabled·stable» 대기가 끝나기 전에 노드가 사라져 타임아웃이다.
+     → 클릭 전에 «보이고 그 좌표의 hit target 이 자기 자신인지» 를 직접 확인해 클릭의 강도를 유지하고,
+       클릭 자체는 페이지 안에서 `el.click()` 으로 쏜다(같은 위임 핸들러를 그대로 탄다).
+     ※ 이 재렌더 폭주는 02·14 구간 버그다 — 21 작업 범위가 아니라 PROGRESS 비고에만 남긴다. */
+  const hit = await page.evaluate(() => {
+    const el = document.querySelector('[data-opencoll]');
+    const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+    const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return { vis: s.visibility === 'visible' && s.display !== 'none' && +s.opacity > 0,
+             sized: r.width > 0 && r.height > 0, self: !!top && (top === el || el.contains(top)) };
+  });
+  B('진입 버튼이 보이고 클릭 가능(hit target = 자기 자신)', hit.vis && hit.sized && hit.self);
+  await page.evaluate(() => document.querySelector('[data-opencoll]').click());
   await page.waitForTimeout(400);
   B('#collw 열림', await page.evaluate(() => $('collw').classList.contains('on')));
 
@@ -73,26 +88,34 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   T('🔍 지름', g.srch.w, 68, 1);
   T('스크롤 뷰포트 x', g.body.x, 108, 1); T('스크롤 뷰포트 y', g.body.y, REF(475), 1);
   T('스크롤 뷰포트 width', g.body.w, 860, 1);
-  T('블록 패널 x', g.panel.x, 130, 1);   T('블록 패널 width', g.panel.w, 820, 1);
+  /* 6회차 실측 — ref 패널 좌 130.5 / 우 948.5 (y540 단면) → 폭 818 */
+  T('블록 패널 x', g.panel.x, 130, 1);   T('블록 패널 width', g.panel.w, 818, 1);
 
-  /* ── 3. 블록 격자 (측정표 §5-0 pitch 410) ── */
+  /* ── 3. 블록 격자 — pitch 410 ──
+     ref 헤더 상단(x600 단면, 전이 중점) 495.5 / 904.5 / 1314.5 / 1724.5 → 간격 409·410·410.
+     정수 pitch 410 + 첫 블록 495.5 면 아래 블록이 ref 보다 최대 1px 낮다(허용 오차 안). */
   console.log('\n[3] 블록 격자 — pitch 410');
-  [496, 906, 1316, 1726].forEach((y, i) => {
+  [495.5, 905.5, 1315.5, 1725.5].forEach((y, i) => {
     if (g.blk[i]) T('블록' + (i + 1) + ' 헤더 y', g.blk[i].head.y, REF(y), 1);
   });
+  T('블록 헤더 다크밴드 h', g.blk[0].head.h, 80, 1);
   T('블록1 Lv뱃지 y', g.blk[0].bdg.y, REF(489), 1);
   T('블록1 Lv뱃지 w', g.blk[0].bdg.w, 101, 1);
   T('블록1 Lv뱃지 h', g.blk[0].bdg.h, 108, 1);
-  T('블록1 카드1 x', g.blk[0].cards[0].x, 156, 1);
-  T('블록1 카드1 y', g.blk[0].cards[0].y, REF(613), 1);
-  T('카드 width', g.blk[0].cards[0].w, 123, 1);
-  T('카드 height', g.blk[0].cards[0].h, 124, 1);
-  T('카드 pitch', g.blk[0].cards[1].x - g.blk[0].cards[0].x, 130, 1);
-  T('블록1 효과바 y', g.blk[0].eff.y, REF(786), 1);
-  T('블록1 효과바 h', g.blk[0].eff.h, 80, 1);
-  T('블록1 강화버튼 x', g.blk[0].btn.x, 718, 1);
-  T('블록1 강화버튼 y', g.blk[0].btn.y, REF(780), 1);
-  T('블록1 강화버튼 w', g.blk[0].btn.w, 238, 1);
+  /* 6회차 실측 — ref 카드 검정 외곽 x157~277 / y615~735 (y675 행 · x217 열 단면) → 121×121, pitch 129 */
+  T('블록1 카드1 x', g.blk[0].cards[0].x, 157, 1);
+  T('블록1 카드1 y', g.blk[0].cards[0].y, REF(614.5), 1);
+  T('카드 width', g.blk[0].cards[0].w, 121, 1);
+  T('카드 height', g.blk[0].cards[0].h, 121, 1);
+  T('카드 pitch', g.blk[0].cards[1].x - g.blk[0].cards[0].x, 129.25, 1);
+  /* 6회차 실측 — ref 효과바 y786.5~864.5 (x705 열 단면) → h78, 좌단은 패널과 같은 130.5 */
+  T('블록1 효과바 x', g.blk[0].eff.x, 130, 1);
+  T('블록1 효과바 y', g.blk[0].eff.y, REF(786.5), 1);
+  T('블록1 효과바 h', g.blk[0].eff.h, 78, 1);
+  /* 6회차 실측 — ref 강화버튼 x716.5~955.5 / y779.5~869.5 (x836 열 단면) → 239×90 */
+  T('블록1 강화버튼 x', g.blk[0].btn.x, 716.5, 1);
+  T('블록1 강화버튼 y', g.blk[0].btn.y, REF(779.5), 1);
+  T('블록1 강화버튼 w', g.blk[0].btn.w, 239, 1);
   T('블록1 강화버튼 h', g.blk[0].btn.h, 90, 1);
 
   /* ── 4. 하단 깃발 서브탭 (측정표 §6) ── */

@@ -3084,8 +3084,11 @@
   /* 좌우 갈색 베벨 프레임 (본문 구간만 — 밴드 구간은 다크가 전폭) */
   .cl-fl{left:0;top:111px;bottom:3px;width:10px;
     background:linear-gradient(90deg,#2D241B 0,#332A20 38%,#7B6550 68%,#B49474)}
+  /* 6회차 — ref 우측 단면(y675): 크림 …949 / 탠 950~967 / **(228,193,151) 968~971 4px** /
+     갈색 램프 972~981 / 검정 982~. 우리는 968.5 부터 곧장 램프라 갈색 프레임이 3px 안쪽으로 두꺼웠다.
+     `.cl-fr` 은 padding-box 우단(982.5) 기준 968.5~982.5 이므로 첫 3.5px 를 #E4C197 단색으로 세운다. */
   .cl-fr{right:0;top:111px;bottom:1px;width:14px;
-    background:linear-gradient(90deg,#E4C197 0,#80684C 29%,#5A4E40 50%,#2D2822 71%,#252118)}
+    background:linear-gradient(90deg,#E4C197 0 3.5px,#80684C 3.5px,#3F3529 7.5px,#0A0A08 12.5px)}
   /* 스크롤 뷰포트 ref x108~967 / y475~1891 */
   /* 51 계열 — 높이를 «1416 고정» 으로 박으면 짧은 기기(frameH 1600)에서 `.cl` 이 max-height 로
      눌렸을 때 리스트가 모달 밖으로 흘러 깃발탭을 덮는다. 위·아래를 물려 상자를 따라 줄게 한다.
@@ -3093,7 +3096,9 @@
   .cl-body{left:11px;width:860px;top:111px;bottom:3px;overflow-y:auto;overflow-x:hidden;
     scrollbar-width:none}
   .cl-body::-webkit-scrollbar{display:none}
-  #collList{padding:21px 0 40px}
+  /* 6회차 — ref 블록 헤더 상단 실측 495.5 / 904.5 / 1314.5 / 1724.5(x600 단면, 전이 중점).
+     프레임 = ref−84 → 411.5 / 820.5 / 1230.5 / 1640.5. 21 이면 첫 블록이 412.5 로 1px 낮았다. */
+  #collList{padding:20px 0 40px}
   /* 파란 리본 «도감» — bbox ref x269~811 / y346~460, 모달 위로 10px 돌출 */
   .cl-rib{left:172px;top:-18px;width:543px;height:115px;pointer-events:none;text-align:center}
   /* ⚠ 1회차 비평 B 의 «플레이트 좌우 검정 갭이 과잉» 지적을 받아 지웠던 것이 **회귀**였다.
@@ -3128,11 +3133,16 @@
     filter:none;cursor:pointer}
   /* ref 는 어두운 원반(94,102,125) 위에 그보다 밝은 돋보기(176,181,201) 다 — 우리 이모지는 231 로 날아갔다 */
   .cl-srch>i{filter:grayscale(1) brightness(.82);opacity:.9}
-  /* ── 세트 블록 (pitch 410 = 높이 370 + 마진 40) ── */
-  .clb{position:relative;width:820px;height:370px;margin:0 0 40px 22px}
+  /* ── 세트 블록 (pitch 410 = 높이 370 + 마진 40) ──
+     6회차 실측: ref 헤더 상단 495.5/904.5/1314.5/1724.5 → 간격 409/410/410.
+     소수 마진(39.7)은 스크롤 위치에 따라 블록마다 반올림이 달라져(verify 에서 Δ2 관측) 410 을 유지하고,
+     대신 `#collList` 상단 패딩을 21→20 으로 낮춰 첫 블록을 ref 에 맞췄다(누적 오차 ≤1px).
+     패널 폭도 820 → 818 (ref 좌 130.5 / 우 948.5. 우리 우끝이 950.5 로 2px 넘쳤다). */
+  .clb{position:relative;width:818px;height:370px;margin:0 0 40px 22px}
   .clb>*{position:absolute}
-  .clb-panel{left:0;top:0;width:820px;height:273px;background:#FEF5E6;border-radius:22px}
-  .clb-head{left:0;top:0;width:820px;height:81px;background:#565769;border-radius:22px 22px 0 0}
+  .clb-panel{left:0;top:0;width:818px;height:273px;background:#FEF5E6;border-radius:22px}
+  /* 헤더 다크밴드 h81 → 80 (ref x600 단면: 495.5~575.5. 크림 시작 575.5, 우리는 577.5 였다) */
+  .clb-head{left:0;top:0;width:818px;height:80px;background:#565769;border-radius:22px 22px 0 0}
   /* 빨간 방패 Lv 뱃지 ref x153~253 / y489~596 → 블록 local (23,−7), 101×108 */
   .clb-bdg{left:23px;top:-7px;width:101px;height:108px;text-align:center;z-index:2}
   .clb-bdg>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 78%,88% 90%,50% 100%,12% 90%,0 78%)}
@@ -3154,16 +3164,18 @@
   .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
   .clb-nm{left:165px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
-  /* 아이템 카드 — 123×124, pitch 130(gap 7), 검정 5 + 등급 rim 5, radius 36 */
-  .clb-cards{left:26px;top:117px;white-space:nowrap}
-  .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 6.25px 0 0;
+  /* 아이템 카드 — 6회차 실측으로 121×121, pitch 129.25(gap 8.25), 검정 5 + 등급 rim 5, radius 33.
+     ref 단면(y675): 카드1 검정 외곽 157~277, 카드2 286~ → 폭 121 · 갭 8 · pitch 129.
+     세로(x217 열): 검정 615~735 → 높이 121, 프레임 y 531. 블록 상단 411.5 + 118.5 = 530. */
+  .clb-cards{left:26.5px;top:118.5px;white-space:nowrap}
+  .clb .cd{position:relative;display:inline-block;width:121px;height:121px;margin:0 8.25px 0 0;
     border:5px solid #000;border-radius:33px;box-sizing:border-box;overflow:hidden;
     vertical-align:top;text-align:center}
   /* ⚠ 같은 특이성 함정(위 뱃지 주석) — `#collw i{display:inline-block}` 이 이겨 이 상자가 «인라인» 이었고,
      이 컨테이너엔 이모지 폰트가 없어 폴백 글리프의 advance 가 598px 이 되면서 카드 밖으로 흘러
      **좌측 정렬**됐다(PROGRESS A1 비고의 «advance 보다 좁은 박스» 함정 그대로).
      아트 자리 규칙: 나중에 이미지로 갈아 끼우면 되도록 **카드의 아트 영역 bbox(113×89, 라벨 밴드 위)를
-     정확히 차지**하게 하고, 넘치더라도 flex 중앙정렬이라 좌우로 «균등하게» 넘친다.
+     정확히 차지**하게 하고(6회차 카드 121×121 로 줄면서 아트 bbox 는 **111×76**), 넘치더라도 flex 중앙정렬이라 좌우로 «균등하게» 넘친다.
      ⚠ 클래스 이름도 `ci` → `cdic` 으로 바꿨다 — 33 재화 정보 팝업의 `.ci{width:598px;height:813px}` 가
      **전역 클래스**라 카드 아이콘 `<i class="ci">` 에 그대로 먹고 있었다(그게 598px 의 진짜 원인). */
   #collw .clb .cd>i.cdic{position:absolute;left:0;right:0;top:0;bottom:35px;margin:0;
@@ -3171,13 +3183,15 @@
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:29px}
   .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:2px;font-size:27px;line-height:29px;
     transform:scaleX(1.08);-webkit-text-stroke:5px #000;paint-order:stroke fill}
-  /* 효과 바 ref x131~949 / 블록 +290, h80 */
-  .clb-eff{left:1px;top:290px;width:818px;height:80px;background:#D6BC99;border-radius:18px;
-    line-height:80px;padding-left:34px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
+  /* 효과 바 — 6회차 실측 ref x130.5~948.5 / y786.5~864.5 → 블록 local (0, +291), h78.
+     (우리는 좌 131.5·h80 이라 좌로 1px 밀리고 아래로 2px 넘쳤다) */
+  .clb-eff{left:0;top:291px;width:818px;height:78px;background:#D6BC99;border-radius:18px;
+    line-height:78px;padding-left:34px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
     -webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
   .clb-eff i.g{color:#BAFD60}
-  /* 강화 버튼 — 238×90 캡슐, 우측이 바를 6px 넘음 */
-  .clb-btn{left:588px;top:284px;width:238px;height:90px;border-radius:45px;border:6px solid #000;
+  /* 강화 버튼 — 6회차 실측 ref x716.5~955.5 · y779.5~869.5 → 239×90, 블록 local (586, 284).
+     (블록이 1px 올라갔으므로 top 284 그대로가 ref 695.5 다. 우측이 바를 7px 넘는다) */
+  .clb-btn{left:586px;top:284px;width:239px;height:90px;border-radius:45px;border:6px solid #000;
     box-sizing:border-box;font:900 34px inherit;font-family:inherit;font-size:34px;color:#DFDFDF;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;
     background:linear-gradient(180deg,#A9A9A9,#8A8A8A);
