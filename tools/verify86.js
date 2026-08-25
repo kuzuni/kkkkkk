@@ -56,7 +56,8 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
   console.log('[1] 구조');
   const st = await p.evaluate(() => ({
     len: SKILLS.length,
-    dist: GRADE.map((_, g) => SKILLS.filter(s => s.g === g).length),
+    dist: [0,1,2,3,4,5].map(g => SKILLS.filter(s => s.g === g).length),
+    over: SKILLS.filter(s => s.g > 5).length,
     ids: SKILLS.map(s => s.id),
     old: SKILLS.filter(s => !s.t).map(s => [s.id, s.g, s.cd, s.m]),
     sup: SKILLS.filter(s => s.sup).length,
@@ -65,7 +66,7 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
   ok(st.len === 24, 'SKILLS.length === 24 (실측 ' + st.len + ')');
   ok(JSON.stringify(st.dist) === '[4,4,4,4,4,4]', '등급 분포 [4,4,4,4,4,4] (실측 ' + JSON.stringify(st.dist) + ')');
   ok(new Set(st.ids).size === st.len, 'id 중복 없음');
-  ok(st.gradeLen === 6, 'GRADE 는 6단계 그대로 (85 의 7·8등급 미적용)');
+  ok(st.over === 0, '스킬은 6등급까지만 쓴다 — 85 의 7·8등급(초월·불멸) 미적용 (초과 ' + st.over + '종)');
   const bad = st.old.filter(([id, g, cd, m]) => !OLD[id] || OLD[id][0] !== g || OLD[id][1] !== cd || OLD[id][2] !== m);
   ok(st.old.length === 13 && !bad.length, '기존 13종 id·등급·cd·m 불변 (어긋남 ' + bad.length + '건)');
   ok(st.sup === 5, '보조(sup) 5종 — DPS 합산 제외 대상');
