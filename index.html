@@ -1272,101 +1272,6 @@
   .sk-act .sk-e:disabled{filter:saturate(.3) brightness(.82)}
   .sk-act button:disabled{cursor:default}
 
-  /* ── 16 유물 세부 팝업 — docs/measure/16-유물세부팝업.md (레퍼런스 16 PIL 실측) ──
-     껍데기는 08 과 동일한 A5 딤 위 가운데 다이얼로그. .rl16 로 딤(.63)·본문·제목만 override.
-     본문 = 얇은 베이지 림(#F0D9BA, 상2·좌우9·하9) + 그 안쪽 전면 카드색(#D7C0A1) 844×829.
-     레퍼런스는 «강화» 단일 버튼(장착 버튼 없음) — 유물 수동 장착은 autoEquipAll 이 대체. */
-  #modal.rl16{background:rgba(0,0,0,.63);padding-top:127px;
-    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-  .rl16 .mbox{border-top-width:6px;border-bottom-width:6px;padding-bottom:9px}
-  .rl16 .mbody{padding:2px 0 12px;background:#F0D9BA;text-align:center;border-bottom-width:3px}
-  /* 제목 자폭 +21% (1회차 A/B 합치) — 잉크 높이는 일치하므로 scaleX 로만 폭 회수 */
-  .rl16 .mhead h2{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-    font-size:57px;line-height:57px;-webkit-text-stroke:7.6px #000;paint-order:stroke fill;text-shadow:0 3px 0 #000;
-    transform:scaleX(.765) translateY(1px) translateZ(0)} /* ref 외곽선 편측 6px — 절반은 안쪽으로 사라지므로 11px */
-  /* ref 실측(1회차 재스캔): 헤더 아래 F0D9BA 밴드 34px → 카드색 D7C0A1 은 로컬 34~632 구간뿐,
-     그 아래(강화 버튼 영역)는 다시 F0D9BA 다. 단색 카드가 아니라 3단 밴드. */
-  .rld{position:relative;top:-1px;width:844px;height:817px;margin:0 auto;border-radius:24px;
-    background:#F0D9BA}
-  /* ref 안쪽 패널: 상단 36px 아래에서 시작하고 위쪽 두 모서리만 r30 으로 둥글다 */
-  .rld::before{content:'';position:absolute;left:0;right:0;top:36px;height:598px;z-index:0;
-    background:#D7C0A1;border-radius:34px 34px 38px 38px}
-  /* 하단 베이지 밴드의 별 장식 2행 — ref 실측: 41x49, 가로 pitch 235, 2행이 pitch 절반(117)만큼 엇갈림,
-     톤 (233,208,177) on (240,217,186). 행 중심 ref y1495 / y1602 (카드 로컬 657 / 764) */
-  .rld::after{content:'';position:absolute;left:0;right:0;top:634px;bottom:0;z-index:0;
-    background-image:
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='235' height='54'><path d='M54.0 -2.4 L64.3 11.8 L81.0 17.2 L70.7 31.4 L73.2 51.0 L54.0 43.6 L34.8 51.0 L37.3 31.4 L27.0 17.2 L43.7 11.8 Z' fill='%23E9D0B1'/></svg>"),
-      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='235' height='54'><path d='M168.0 -2.4 L178.3 11.8 L195.0 17.2 L184.7 31.4 L187.2 51.0 L168.0 43.6 L148.8 51.0 L151.3 31.4 L141.0 17.2 L157.7 11.8 Z' fill='%23E9D0B1'/></svg>");
-    background-position:0 -8px,0 105px;background-repeat:repeat-x,repeat-x}
-  .rld>*{position:absolute;z-index:1}
-  .rld b{display:block;font-weight:900;color:#fff;paint-order:stroke fill;
-    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transform:translateZ(0)}
-  /* 아이콘 박스 149² — 4px 검정 + 안쪽 링 5px #AE7B5C */
-  .rl-ic{left:47px;top:49px;width:149px;height:149px;box-sizing:border-box;
-    border:4px solid #000;border-radius:24px;box-shadow:inset 0 0 0 4px #AE7B5C;
-    background:radial-gradient(circle at 50% 48%,#8A6550 0%,#7A583F 60%,#6F4F39 100%); /* ref 상단이 밝다(125→105) — 1회차 B 지적으로 반전 */
-    display:flex;align-items:center;justify-content:center;font-size:96px;line-height:1}
-  /* 등급 알약 207×48 */
-  .rl-gr{left:237px;top:68px;width:209px;height:48px;box-sizing:border-box;
-    border:4px solid #000;border-radius:24px;box-shadow:inset 0 0 0 5px #AB7C5E;
-    background:linear-gradient(180deg,#74533E 0%,#875F4B 50%,#74533E 100%);
-    display:flex;align-items:center;justify-content:center}
-  .rl-gr b{font-size:23px;-webkit-text-stroke:5px #000;position:relative;top:1px}
-  /* Lv 박스 139×65 — 진행바보다 위아래로 크고 좌단을 덮는다(z 위) */
-  .rl-lv{left:237px;top:128px;width:139px;height:69px;box-sizing:border-box;z-index:2;
-    border:5px solid #000;border-radius:32px;
-    background:#57402F;box-shadow:inset 0 0 0 6px #6B573F;
-    display:flex;align-items:center;justify-content:center}
-  .rl-lv b{font-size:37px;-webkit-text-stroke:8px #000;transform:scaleX(.96) translateZ(0);position:relative;top:2px}
-  /* 진행바 436×48 — 트랙 2단(#8182A0/#6F7799), 채움 #FBB51F */
-  .rl-pb{left:346px;top:138px;width:438px;height:49px;box-sizing:border-box;
-    border:6px solid #000;border-bottom-width:5px;border-radius:17px;overflow:hidden;
-    background:linear-gradient(180deg,#8182A0 0 22px,#6F7799 22px)}
-  .rl-pb>i{display:block;height:100%;background:linear-gradient(180deg,#FEC722 0 9px,#FFB514 9px)}
-  .rl-pb b{position:absolute;top:0;right:0;left:9px;height:100%; /* 라벨 중심 ref = 바 중심 −7.5px (1회차 A ④) */
-    display:flex;align-items:center;justify-content:center;
-    font-size:28px;color:#FBFEB7;-webkit-text-stroke:6px #000}
-  .rl-pb b i{display:block;font-style:normal;transform:scaleX(1.1) translateZ(0)}
-  /* 플레이버 텍스트 박스 748×130 — 밝은 패널 위 다크 텍스트, 좌측 정렬 */
-  .rl-fl{left:47px;top:233px;width:750px;height:130px;box-sizing:border-box;overflow:hidden;
-    border:4px solid #000;border-bottom-width:3px;border-radius:23px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:8px 26px 0;text-align:left}
-  /* 이 서체는 ref 게임서체보다 자폭 +33% — 폭 133% 로 깔고 scaleX(.75) 로 시각폭을 되돌린다
-     (음수 letter-spacing 금지 — PROGRESS 교훈). ref 텍스트는 상단 정렬(잉크 top = 박스+13). */
-  .rl-fl p{margin:0;width:139%;transform:scaleX(.837) translateZ(0);transform-origin:0 0;
-    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-    font-size:32.7px;line-height:46px;font-weight:900;color:#EFEFEF;
-    -webkit-text-stroke:5.1px #0d0a06;paint-order:stroke fill}
-  /* 보유 효과 알약 298×58 — 효과 박스를 28px 파고드는 겹침 배지 */
-  .rl-ow{left:272px;top:390px;width:298px;height:58px;box-sizing:border-box;z-index:2;
-    border:4px solid #000;border-radius:19px;
-    background:#543D2F;box-shadow:inset 0 0 0 4px #6A573F;
-    display:flex;align-items:center;justify-content:center} /* 상하가 하이라이트·중앙이 원색 — 1회차에 반전돼 있었음 */
-  .rl-ow b{font-size:28px;-webkit-text-stroke:6px #000;margin-top:-4px;color:#EFEFEF;transform:scaleX(.855) translateZ(0)}
-  /* 효과 박스 748×199 — 상단 44 여백(겹침배지 아래), 골드 강조 */
-  .rl-eb{left:47px;top:419px;width:750px;height:200px;box-sizing:border-box;overflow:hidden;
-    border:3px solid #000;border-bottom-width:4px;border-radius:23px;background:#F8ECDB;
-    box-shadow:inset 0 0 0 4px #FCF5E3;padding:30px 26px 0 31px;text-align:left}
-  .rl-eb p{margin:0;width:133%;transform:scaleX(.872) translateZ(0);transform-origin:0 0;
-    -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-    font-size:32.7px;line-height:48px;font-weight:900;color:#EFEFEF;
-    -webkit-text-stroke:6.1px #0d0a06;paint-order:stroke fill}
-  /* ref 골드 토큰: 한글 코어 h26(본문보다 작다) / 숫자는 h23 에 자당 16px(우리 서체 12.4 — 컨덴스드).
-     스트로크는 뒤로 깔 것(위에 그리면 가는 획이 통째로 덮여 골드 소멸 — 3회차 검증).
-     숫자 폭은 양수 letter-spacing 으로 벌린다(음수만 금지). */
-  .rl-eb p em{font-style:normal;color:#FDC726;font-weight:900;
-    font-size:28.5px;-webkit-text-stroke:3.4px #000;paint-order:stroke fill}
-  .rl-eb p em.n{font-size:31px;letter-spacing:3.5px}
-  /* 강화 버튼 240×119 가로중앙 — 08 강화버튼과 동일 회색(회색이 기본색이라 비활성 딤 안 건다) */
-  /* ref 버튼 세로 프로파일(직접 스캔): 상단 하이라이트 210 · 본문 168→138 · 하단 밝은 띠 211(h5) ·
-     그 아래 어두운 림 117(h6) — 3회차 E/F 실측치로 재보정 */
-  .rl-act{left:298px;top:670px;width:248px;height:119px;box-sizing:border-box;padding:0 0 12px;cursor:pointer;
-    border:7px solid #000;border-radius:38px;font-family:inherit;
-    background:linear-gradient(180deg,#A8A8A8,#8A8A8A);
-    box-shadow:inset 0 -7px 0 0 #757575,inset 0 -14px 0 0 #D3D3D3,inset 0 0 0 5px #D2D2D2,inset 0 6px 0 0 #D2D2D2;
-    display:flex;align-items:center;justify-content:center}
-  .rl-act b{font-size:49px;-webkit-text-stroke:6.4px #000;transform:scaleX(.875) translateZ(0);color:#DFDFDF;text-shadow:0 3px 0 #000}
-  .rl-act:disabled{cursor:default}
 
   /* ── 22 퀘스트 팝업 — docs/measure/22-퀘스트팝업.md (레퍼런스 22 PIL 실측) ──
      껍데기는 A5 공용 다이얼로그 그대로(22 가 A5 의 원본 레퍼런스다). .q22 는 딤 .56 과
@@ -2098,7 +2003,7 @@
   .ofr-tag i{transform:scaleX(1.035)}
 
   /* ==========================================================================
-     41 팝업 내장 재화 바 (.pcb) — 03 던전(#dunw) · 14 보물상자(#relicw) 공용
+     41 팝업 내장 재화 바 (.pcb) — 03 던전(#dunw) · 89 유물(#relw) 공용
      측정표 docs/measure/41-팝업내장재화바.md
      «상단 골드·다이아는 메인 HUD(A3) 재사용이 아니라 팝업 자체에 포함된 재화 바»
      (UI-REFERENCE 3·14번 «설계 확정(2026-08-25, 작업 41)»). 메인 HUD 와 형태가 다르다 —
@@ -2146,8 +2051,8 @@
     text-shadow:3.49px 0 0 #000,-3.49px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,
       2.44px 2.1px 0 #000,-2.44px 2.1px 0 #000,2.44px -2.1px 0 #000,-2.44px -2.1px 0 #000,
       0 5px 0 rgba(0,0,0,.92),2.33px 4.5px 0 rgba(0,0,0,.92),-2.33px 4.5px 0 rgba(0,0,0,.92)}
-  /* #dunw i / #relicw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
-  #dunw .pcb-p>i,#relicw .pcb-p>i{display:flex}
+  /* #dunw i / #relw i 의 display:inline-block 이 id 특이성으로 이겨서 여기서 되돌린다 */
+  #dunw .pcb-p>i,#relw .pcb-p>i{display:flex}
   /* 이모지는 폰트 크기를 키우면 잉크가 «위로» 자란다(사이드베어링/베이스라인) — 51→52.5 로 키운
      만큼 top 을 내려서 잉크 중심을 알약 중심(프레임 55)에 되돌린다. 25 교훈 4 의 세로 판. */
   .pcb-g>i{left:-5px;top:-2.5px;font-size:52.5px;transform:scaleX(1.04)}
@@ -2451,114 +2356,83 @@
     background:linear-gradient(180deg,#FFC736,#F8A63A);border:6px solid #000;box-sizing:border-box;
     clip-path:polygon(0 50%,8% 0,92% 0,100% 50%,92% 100%,8% 100%)}
 
+
   /* ==========================================================================
-     14 유물 팝업 — 보물상자 탭 — 측정표 docs/measure/14-유물팝업보물상자탭.md
-     껍데기는 «(다) 전체화면 페이지» — 03 던전(#dunw)·10 상점(#shopw)과 동종.
-     상단 클러스터는 local y = ref y − 191, 하단 5칸·서브탭은 오버레이 하단 고정. -->
+     89 유물 페이지 — «유물 소환 → 자동 강화» — 측정표 docs/measure/89-유물팝업.md
+     껍데기는 «(다) 전체화면 페이지»(03 던전·10 상점 동종, 딤·헤더·테두리 없음).
+     레퍼런스는 팝업 패널만 크롭된 486×687(×2.2222 = 1080×1527)이라 절대 y 변환이 없다 —
+     패널을 페이지 y266(프레임 y370)에 앉히고 내부 좌표는 전부 환산 실측값.
      ========================================================================== */
-  /* overflow 는 #relicw 가 아니라 #relicBody 가 맡는다 — 41 재화 바가 page-local top:-104 라
-     여기서 hidden 을 걸면 바가 통째로 잘린다. 클립 박스는 inset:0 으로 동일하다. */
-  #relicw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#27272F;
+  #relw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#0A0F14;
     display:none;z-index:28;overflow:visible}
-  #relicw.on{display:block}
-  #relicw i,#relicw em,#relicw b,#relicw u,#relicw s{display:inline-block;font-style:normal;
-    font-weight:900;text-decoration:none;transform-origin:50% 50%}
-  #relicw>*{position:absolute}
-  #relicBody{position:absolute;inset:0;overflow:hidden}
-  #relicBody>*{position:absolute}
-  /* 배경 유령 슬라임 무늬(흐릿) */
-  #relicw::before{content:'';position:absolute;left:0;right:0;top:200px;bottom:0;
-    background-image:radial-gradient(circle at 20% 18%,#2D2E42 0 26px,transparent 27px),
-      radial-gradient(circle at 72% 40%,#2D2E42 0 30px,transparent 31px),
-      radial-gradient(circle at 38% 66%,#2D2E42 0 24px,transparent 25px),
-      radial-gradient(circle at 86% 82%,#2D2E42 0 28px,transparent 29px);
-    background-size:520px 560px;opacity:.6;pointer-events:none}
-  /* 상단 어두운 스트립(진행바 영역) ref190~391 */
-  .rlx-strip{left:0;right:0;top:0;height:200px;background:#18171D;z-index:1}
-
-  /* §2 진행바 — x162 y262 w626 h57, 검정 4px, 채움 #FEC820/#FFB514, 트랙 #6F7899 */
-  .rlx-prog{left:162px;top:71px;width:626px;height:57px;border-radius:29px;background:#000;z-index:2}
-  .rlx-prog>.trk{position:absolute;left:4px;top:4px;right:4px;bottom:4px;border-radius:25px;
-    background:#6F7899;overflow:hidden}
-  .rlx-prog>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:25px;
-    background:#FFB514}
-  .rlx-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:57px;
-    font-size:33px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
-    transform:scaleX(.9);letter-spacing:-1px;z-index:2}
-  /* §2 [활성화 필요] 버튼 — x784 y236 w207 h110 회색 그라디언트 */
-  .rlx-act{left:784px;top:45px;width:207px;height:110px;border-radius:32px;
-    border:4px solid #000;box-sizing:border-box;
-    background:linear-gradient(180deg,#D3D3D3,#8A8A8A);z-index:2;text-align:center}
-  .rlx-act>em{position:absolute;left:23px;top:-38px;width:110px;height:83px;font-size:78px;
-    line-height:83px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.4))}
-  .rlx-act>u{position:absolute;left:6px;right:6px;top:56px;height:40px;line-height:40px;
-    font-size:31px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
-    transform:scaleX(.72);letter-spacing:-2px;white-space:nowrap}
-
-  /* §3 리본 「나무 상자」 — x248 y612 w583 h134 중심 x540 */
-  .rlx-rib{left:248px;top:412px;width:583px;height:134px;z-index:3}
-  .rlx-rib>.tl{position:absolute;top:26px;width:70px;height:82px;background:#524C7C;
-    border:5px solid #000;box-sizing:border-box;z-index:1}
-  .rlx-rib>.tl.l{left:0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,26px 50%)}
-  .rlx-rib>.tl.r{right:0;clip-path:polygon(0 0,100% 0,calc(100% - 26px) 50%,100% 100%,0 100%)}
-  .rlx-rib>.bar{position:absolute;left:36px;right:36px;top:12px;height:110px;background:#6F6F93;
-    border:5px solid #000;box-sizing:border-box;border-radius:10px;z-index:2}
-  .rlx-rib>b{position:absolute;left:0;right:0;top:24px;height:86px;line-height:86px;text-align:center;
-    font-size:56px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
-    transform:scaleX(.88);letter-spacing:-1px;z-index:3}
-  /* 🔍 — x860 y674 w59 h57 */
-  .rlx-mag{left:860px;top:483px;width:59px;height:57px;border-radius:50%;background:#9DA3B8;
-    border:3px solid #4A4E5A;box-sizing:border-box;text-align:center;line-height:52px;
-    font-size:33px;color:#646A82;cursor:pointer;z-index:3;box-shadow:0 3px 3px rgba(0,0,0,.3)}
-
-  /* §4 획득 가능 목록 2줄 — 좌측 정렬 x270, 줄간격 70 */
-  .rlx-li{left:270px;height:34px;line-height:34px;white-space:nowrap;z-index:2}
-  .rlx-li>s{width:26px;text-align:left;font-size:27px;-webkit-text-stroke:0}
-  .rlx-li>i{font-size:27px;transform:scaleX(.9);letter-spacing:-.5px;vertical-align:1px}
-  .rlx-li.l1{top:620px} .rlx-li.l1>s,.rlx-li.l1>i{color:#FFF36B}
-  .rlx-li.l2{top:690px} .rlx-li.l2>s{color:#CE8EFF} .rlx-li.l2>i{color:#CC8EFB}
-
-  /* §5 중앙 상자 — x354 y986 w369 h289 중심(538,1130) */
-  .rlx-box{left:354px;top:795px;width:369px;height:289px;text-align:center;line-height:289px;
-    font-size:250px;z-index:2;filter:drop-shadow(0 8px 8px rgba(0,0,0,.4))}
-  .rlx-arw{left:901px;top:891px;width:77px;height:101px;line-height:101px;text-align:center;
-    font-size:130px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
-    cursor:pointer;z-index:3;overflow:visible}
-
-  /* §6 [오픈 x1]/[오픈 x30] — y1333 w318 h148 회색 그라디언트 */
-  .rlx-op{top:1142px;width:318px;height:148px;border-radius:32px;border:5px solid #000;
-    box-sizing:border-box;background:linear-gradient(180deg,#ADADAD,#9E9E9E);cursor:pointer;
-    text-align:center;line-height:148px;z-index:2;box-shadow:0 6px 0 rgba(0,0,0,.28)}
-  .rlx-op::before{content:'';position:absolute;left:0;right:0;top:0;height:9px;border-radius:27px 27px 0 0;
-    background:#C7C7C7}
-  .rlx-op>i{position:relative;font-size:57px;color:#fff;-webkit-text-stroke:7px #000;
-    paint-order:stroke fill;transform:scaleX(.92);letter-spacing:-1px}
-  .rlx-op.b1{left:190px} .rlx-op.b30{left:571px}
-  .rlx-op.dis{filter:grayscale(.4) brightness(.82);cursor:default}
-
-  /* §7 하단 상자 5칸 — 하단 고정, 피치 199 */
-  .rlx-tiles{left:0;right:0;bottom:185px;height:104px;z-index:2}
-  .rlx-tile{position:absolute;top:0;height:104px;border-radius:24px;border:5px solid #000;
-    box-sizing:border-box;background:#46CDE1;text-align:center}
-  .rlx-tile>em{position:absolute;left:0;right:0;top:5px;height:62px;line-height:62px;font-size:52px}
-  .rlx-tile>u{position:absolute;left:0;right:0;bottom:5px;height:28px;line-height:28px;
-    font-size:25px;color:#111;transform:scaleX(.9)}
-  .rlx-tile.sel{top:-16px;height:120px;background:#FDBB1B;box-shadow:0 0 0 3px #FFE28A}
-  .rlx-tile.t1{left:41px;width:197px} .rlx-tile.t2{left:253px;width:179px}
-  .rlx-tile.t3{left:449px;width:182px} .rlx-tile.t4{left:648px;width:183px}
-  .rlx-tile.t5{left:849px;width:177px}
-
-  /* §8 서브탭 바 (보물상자·유물) — x135 w793 h97, 하단 고정 */
-  .rlx-sub{left:135px;bottom:18px;width:793px;height:97px;border-radius:33px;background:#634F37;
-    border:4px solid #000;box-sizing:border-box;z-index:4}
-  .rlx-sub>.seg{position:absolute;top:5px;bottom:5px;text-align:center;cursor:pointer;overflow:hidden}
-  .rlx-sub>.seg>i{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%) scaleX(.9);
-    font-size:37px;letter-spacing:-1px}
-  .rlx-sub>.box{left:5px;width:405px;border-radius:29px 8px 8px 29px;background:#4A3D2D;
-    box-shadow:inset 0 0 0 3px #8A6E3F}
-  .rlx-sub>.box>i{color:#F0BD90}
-  .rlx-sub>.rel{right:5px;width:378px;border-radius:8px 29px 29px 8px;background:#61503E}
-  .rlx-sub>.rel>i{color:#A9A8AD}
+  #relw.on{display:block}
+  #relw i,#relw em,#relw b,#relw u,#relw s{display:inline-block;font-style:normal;
+    font-weight:900;text-decoration:none}
+  /* 41 재화 바 — 이 페이지만 알약 3개(골드·다이아·유물조각)라 자리를 왼쪽으로 당긴다 */
+  #relw .pcb-g{left:205px}
+  #relw .pcb-d{left:505px}
+  .pcb-r{left:805px}
+  .pcb-r>i{left:-4px;top:-3px;font-size:50px;transform:scaleX(.95)}
+  .rw-panel{position:absolute;left:0;top:266px;width:1080px;height:1527px;overflow:hidden}
+  .rw-panel>*{position:absolute}
+  /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 + 수반 난색 글로우 (아트 대기) */
+  .rw-bg{inset:0;background:
+    radial-gradient(52% 30% at 50% 84%,#533328 0%,rgba(83,51,40,0) 70%),
+    linear-gradient(180deg,rgba(57,39,22,0) 940px,#392716 1000px,#44321A 1380px,#0C131B 1491px,#0C131B 1527px),
+    radial-gradient(48% 42% at 50% 32%,#0E100E 0%,#0E100E 62%,rgba(14,16,14,0) 100%),
+    linear-gradient(180deg,#070D12 0%,#0B0F13 60%,#0E100E 100%)}
+  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1000px;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(36,29,24,.55) 0 3px,transparent 3px 128px),
+      repeating-linear-gradient(90deg,rgba(36,29,24,.35) 0 3px,transparent 3px 172px)}
+  .rw-bg::after{content:'';position:absolute;left:244px;top:133px;width:589px;height:889px;
+    background:#0E100E;border-radius:295px 295px 0 0;box-shadow:0 0 90px 20px rgba(0,0,0,.55)}
+  /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
+  .rw-frame{inset:5px;border:5px solid #B29661;box-shadow:inset 0 0 0 3px #634121;
+    pointer-events:none;z-index:6}
+  .rw-frame::before,.rw-frame::after{content:'✦ ✦';position:absolute;left:8px;right:8px;
+    display:flex;justify-content:space-between;color:#B29661;font-size:52px;line-height:78px;
+    white-space:pre}
+  .rw-frame::before{top:-6px}
+  .rw-frame::after{bottom:-6px}
+  /* 유물 슬롯 151² ×10 (3·4·3) — 브론즈 공통 프레임, 내부는 슬롯별 radial 글로우 */
+  .rw-grid{inset:0;z-index:2}
+  .rw-c{position:absolute;width:151px;height:151px;box-sizing:border-box;cursor:pointer;
+    border:7px solid #A67B50;border-radius:9px;
+    box-shadow:inset 0 0 0 3px #8A6732,0 0 0 3px #35210F;
+    background:radial-gradient(circle at 50% 46%,var(--cg) 0%,var(--ce) 88%)}
+  .rw-c>i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:92px;line-height:1}
+  .rw-c.off>i{filter:grayscale(.85) brightness(.5)}   /* 82 규칙 — 미보유도 어떤 유물인지 보인다 */
+  .rw-c>u{position:absolute;left:-40px;right:-40px;top:120px;text-align:center;z-index:3;
+    font-size:30px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .rw-c.off>u{color:#9AA0A8}
+  /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
+  .rw-basin{left:353px;top:1171px;width:362px;height:220px;cursor:pointer;z-index:3}
+  .rw-basin>*{position:absolute}
+  .rw-ped{left:41px;top:40px;width:280px;height:158px;
+    background:linear-gradient(180deg,#8E9177 0%,#6E685A 34%,#5A5348 100%);
+    clip-path:polygon(6% 0,94% 0,78% 46%,72% 100%,28% 100%,22% 46%)}
+  .rw-rim{left:1px;top:0;width:360px;height:44px;border-radius:50%;box-sizing:border-box;
+    background:linear-gradient(180deg,#B7C6B0 0%,#A1B49B 45%,#8E9177 100%);border:3px solid #000}
+  .rw-liq{left:54px;top:11px;width:269px;height:33px;border-radius:50%;
+    background:radial-gradient(50% 50% at 50% 50%,#fff 0%,#BFF6FF 30%,#39C1CF 100%);
+    box-shadow:0 0 34px 8px rgba(57,193,207,.55)}
+  .rw-basin>b{left:0;right:0;top:102px;text-align:center;font-size:34px;color:#F2F2F2;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.95)}
+  /* 코스트 필 262×51 — 수반 받침 위에 겹친다 */
+  .rw-cost{left:409px;top:1322px;width:262px;height:51px;box-sizing:border-box;z-index:4;
+    background:#191614;border:3px solid #000;border-radius:25.5px;
+    box-shadow:0 0 0 2px #513229,inset 0 0 0 2px #403320;
+    display:flex;align-items:center;justify-content:center;gap:10px}
+  .rw-cost>i{font-size:29px;line-height:1}
+  .rw-cost>b{font-size:29px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+  .rw-cost.lack>b{color:#FF7A6F}
+  /* 안내문 2줄 — 크림/탠골드, 행 피치 44 */
+  .rw-cap{left:0;right:0;top:1408px;text-align:center;z-index:4}
+  .rw-cap p{margin:0;font-weight:900;font-size:31px;line-height:44px;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .rw-cap p:nth-child(1){color:#FFE4C2}
+  .rw-cap p:nth-child(2){color:#F1BC79}
 
   /* ==========================================================================
      13 상점 팝업 — 재화 탭 — 측정표 docs/measure/13-상점팝업재화탭.md
@@ -2569,7 +2443,7 @@
      ========================================================================== */
   .shp-list.coin{padding-top:0}
   /* 높이 1809(ref 구간) → 3066: 아래로 44 다이아 상품 5칸 + 마일리지 패널이 붙는다 */
-  /* 작업 68 — §9 유물석 교환(리본 3084 + 카드 3270~3579) 이 붙어 3066 → 3636 */
+  /* 작업 68 — §9 유물조각 교환(리본 3084 + 카드 3270~3579) 이 붙어 3066 → 3636 */
   .cn-wrap{position:relative;width:1080px;height:3636px}
   .cn-wrap *{box-sizing:border-box}
   .cn-wrap>*{position:absolute}
@@ -2732,7 +2606,7 @@
     font-size:25px;line-height:28px;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap;transform:scaleX(.9)}
 
-  /* 작업 68 — §9 유물석 교환 카드. 구버전 패널 상점의 «🔮 유물석 교환소» 를 그대로 옮긴 것으로,
+  /* 작업 68 — §9 유물조각 교환 카드. 구버전 패널 상점의 «🔮 유물조각 교환소» 를 그대로 옮긴 것으로,
      §5 광고 상품·§7 다이아와 **같은 격자(x111/401/691 · 278×309)** 를 쓴다. 색만 청록 계열로 구분한다. */
   .cn-cd.rel>.bg{background:linear-gradient(180deg,#4FD6EE 0,#4FD6EE 62px,#1F93B4 219px,
     #17758F 219px,#0F5A70 295px)}
@@ -5303,158 +5177,6 @@
   /* «터치하여 닫기» — 18 실측 잉크폭 254 (09 의 251 대비 +1.2%) */
   #defw .upr-close i{transform:scaleX(.947);-webkit-text-stroke:1px #F6F7F8}
 
-  /* ==========================================================================
-     15 유물 팝업 — 유물 탭 (도감 · 강화) — 측정표 docs/measure/15-유물팝업유물탭.md
-     껍데기 판정: **(다) 딤·헤더·테두리 없는 전체화면 페이지** — 03 던전(#dunw)·10 상점(#shopw) 과 같은 부류.
-     딤 0(페이지 배경 #272731 이 10/13 과 원색까지 동일), 모달 카드·타이틀바·✕ 없음.
-     화면 = 고정 HUD(A3) + 전폭 스크롤 리스트 + **리스트 위에 뜬 하단 서브탭 바** + 앱 탭바(A1).
-       └ 서브탭 바가 오버레이라는 근거: 레퍼런스에서 «레어» 리본(실제 top 2094)의 위쪽 24px 가
-         바(2021~2118)에 가려지고 아래 42px 가 바 밑으로 다시 보인다(측정표 §1.4).
-
-     세로 좌표 — PROGRESS «확정(03)» 의 2종 변환:
-       · 스크롤 안 요소  → 리스트 상단(ref 192)을 원점으로 한 상대 좌표 그대로
-       · 탭바 위 고정 요소(서브탭 바) → bottom = 2160 − ref_bottom
-     가로는 1:1(폭 1080 동일).
-
-     카드 실루엣은 «둥근 사각형» 이 아니라 **지름 227 정원(중심 ref(165,555.5))** 이다.
-     x=54 열이 y535~591 에서만 잉크로 잡히는 것으로 확정했다 — 반원 아래가 다시 좁아진다.
-     그 앞에 폭 216 «포켓» 패널이 겹쳐 원의 아래쪽을 가린다.
-     ========================================================================== */
-  #rlw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#272731;
-    display:none;z-index:28;-webkit-font-smoothing:antialiased}
-  #rlw.on{display:block}
-  #rlw i,#rlw em,#rlw b,#rlw u{display:inline-block;font-style:normal;font-weight:900;
-    text-decoration:none;transform-origin:50% 50%}
-
-  /* 스크롤 뷰포트 — ref y192~2159. 위 여백 98(리본 top 290), 아래는 서브탭 바 뒤로 이어진다 */
-  .rl-list{position:absolute;left:0;right:0;top:0;bottom:0;overflow-y:auto;overflow-x:hidden;
-    padding:102px 0 150px;-webkit-overflow-scrolling:touch}
-  .rl-list::-webkit-scrollbar{width:0;height:0}
-
-  /* ---- 등급 리본 — 전체 430x101(꼬리 포함) · 중앙 밴드 358x84 · 화면 정중앙 ---- */
-  .rl-sec{margin-bottom:91px}
-  .rl-sec:last-child{margin-bottom:0}
-  .rl-rib{position:relative;width:430px;height:101px;margin:0 auto}   /* 5회차 자가 실측: ref 꼬리 최좌단 x325(=총폭 430). 4회차의 420 은 꼬리 검정 외곽선을 놓친 값 */
-  .rl-rib>*{position:absolute}
-  /* 좌·우 꼬리 — 밴드 바깥 36px, 리본top+24 ~ +98.
-     바깥 모서리는 «제비꼬리»다: 위·아래 두 뾰족점 사이가 V 로 파여 있다.
-     (레퍼런스 좌측 꼬리 좌단 실측: y+8 326 → y+34 341(노치) → y+64 326) */
-  /* 5회차 실측(ref y330): 바깥 검정 8px(329..336) → 꼬리 fill 36px(337..372) → 밴드 fill 373.
-     즉 꼬리는 «밴드 뒤» 가 아니라 «밴드 앞» 이며 밴드 좌우 테두리를 덮는다(이음매에 검정 없음). */
-  .rl-rib .tl{left:0;top:14px;width:47px;height:92px;background:#000;z-index:3;
-    clip-path:polygon(100% 0,0 13%,28% 47%,0 84%,0 95%,18% 100%,100% 100%)}
-  .rl-rib .tr{right:0;top:14px;width:47px;height:92px;background:#000;z-index:3;
-    clip-path:polygon(0 0,100% 13%,72% 47%,100% 84%,100% 95%,82% 100%,0 100%)}
-  .rl-rib .tl::after{content:'';position:absolute;left:8px;top:8px;bottom:8px;right:0;
-    background:var(--rt);clip-path:polygon(100% 0,0 13%,28% 47%,0 84%,0 95%,18% 100%,100% 100%)}
-  .rl-rib .tr::after{content:'';position:absolute;right:8px;top:8px;bottom:8px;left:0;
-    background:var(--rt);clip-path:polygon(0 0,100% 13%,72% 47%,100% 84%,100% 95%,82% 100%,0 100%)}
-  /* 접힌 자락 — 밴드 양끝 뒤에서 아래로 16px 늘어진다(1회차 실측: ref 361..412 / 668..718,
-     fill 바닥 382, 검정 6, 안쪽 절반이 더 어둡다). 밴드보다 먼저 그려 뒤에 깔린다. */
-  .rl-rib .dl,.rl-rib .dr{top:24px;width:52px;height:77px;box-sizing:border-box;
-    border-bottom:6px solid #000}
-  .rl-rib .dl{left:36px;background:linear-gradient(90deg,var(--rt) 0 62%,var(--rt2) 74% 100%)}
-  .rl-rib .dr{right:36px;background:linear-gradient(90deg,var(--rt2) 0 42%,var(--rt) 54% 100%)}  /* ref 우측 어두운 구간 668..690 (4회차) */
-  /* 중앙 밴드 — 검정 상 6 / 하 4, radius 16. 하단 음영은 그라데이션이 아니라 급한 4px 띠(실측 364→368) */
-  .rl-rib .bd{left:36px;top:0;width:358px;height:84px;box-sizing:border-box;
-    border:6px solid #000;border-bottom-width:4px;border-radius:16px;
-    background:linear-gradient(180deg,var(--rh) 0 3px,var(--rc) 3px 68px,var(--rs) 69px 74px)}
-  .rl-rib .lb{left:36px;top:0;width:358px;height:84px;text-align:center;line-height:84px}
-  .rl-rib .lb>i{position:relative;top:-1px;font-size:44px;color:#fff;
-    -webkit-text-stroke:9px #000;paint-order:stroke fill;transform:scaleX(.93)}
-
-  /* ---- 카드 그리드 — 4열 227x324, gap 22.67 x 11, 좌우 여백 52 ---- */
-  .rl-grid{display:grid;grid-template-columns:repeat(4,227px);column-gap:22.67px;row-gap:11px;
-    padding:0 52px;margin-top:51px;justify-content:start}
-  .rl-card{position:relative;width:227px;height:324px;cursor:pointer}
-  .rl-card>*{position:absolute}
-
-  /* 등급·보유 여부별 색 — 실버 링은 «보유 여부», 캐비티·포켓은 «등급» 에 연동(측정표 §4.4)
-     링 셰이딩은 상하 그라데이션이 아니라 각도별이다(1회차 실측): 45°/315° 대각 하이라이트 ·
-     135°/225° 대각 음영 · 상단/좌우는 중간톤. --rgM/--rgB/--rgD 로 conic 에 넣는다. */
-  /* 5회차: 파우치 쉘의 좌→우 그라(--bvl/--bvr)는 폐기했다. ref 는 좌우 대칭이고(y1500 좌 (69,107,8)
-     / 우 (69,107,6), Δ≤2), 무엇보다 --bvl/--bvr 을 베이스에만 정의해 둔 탓에
-     `var(--bvl,var(--bv))` 의 폴백이 영영 안 걸려 **[data-g] 등급 틴트가 통째로 무시됐다**
-     (고급 카드 쉘이 ref 초록 (63,100,5) 인데 회청색 (79,85,107) 로 나왔다). 이제 var(--bv) 단색이다. */
-  .rl-card{--ring:#5A607A;--rk:#5F647A;--rgM:#5D637B;--rgB:#797F97;--rgD:#40465E;
-    --cv1:#272837;--cv2:#2D2E42;--pk:#31384B;--bv:#4E546C}   /* 쉘 ref 실측 (78,84,108) — 5회차 */
-  .rl-card.own{--ring:#868FB0;--rk:#8B95B8;--rgM:#8993B6;--rgB:#B3BCDD;--rgD:#626B8C;
-    --cv1:#3E3E58;--cv2:#3E3E58;--pk:#4E5572;--bv:#757E9F}
-  /* 고급(=레퍼런스 «언커먼») 이하 실측, 희귀 이상은 게임 팔레트로 같은 명도관계를 이어 만든 값 */
-  /* 5회차: 초록 돔이 사실상 검정이었다 — 아이콘 숨긴 프로브의 상단 환형 중앙값이 ref (24,56,16)
-     인데 (4,11,3) 이었다(은색 대조군은 잠금 (39,37,52)/보유 (59,60,83) 둘 다 Δ≤5 로 정상).
-     등급 2~5 는 이미 이 명도대였고 1 만 홀로 near-black 이었다. */
-  .rl-card[data-g="1"]{--cv1:#183810;--cv2:#1E4415;--pk:#2A5203;--bv:#3F6405}
-  .rl-card[data-g="1"].own{--cv1:#183810;--cv2:#1E4415;--pk:#418003;--bv:#5E9608}
-  .rl-card[data-g="2"]{--cv1:#12253C;--cv2:#1B3350;--pk:#24405F;--bv:#3A5C80}
-  .rl-card[data-g="2"].own{--cv1:#1B3350;--cv2:#2A5382;--pk:#3A6795;--bv:#5D8FC4}
-  .rl-card[data-g="3"]{--cv1:#1E1633;--cv2:#2E2246;--pk:#3A2B57;--bv:#55437A}
-  .rl-card[data-g="3"].own{--cv1:#2E2246;--cv2:#4A3670;--pk:#5C4487;--bv:#8368B8}
-  .rl-card[data-g="4"]{--cv1:#2B1F0D;--cv2:#3A2A12;--pk:#57431F;--bv:#7A6236}
-  .rl-card[data-g="4"].own{--cv1:#3A2A12;--cv2:#5A421C;--pk:#8A6A2E;--bv:#B8944A}
-  .rl-card[data-g="5"]{--cv1:#2B0F18;--cv2:#3A1420;--pk:#5A2431;--bv:#7E3F4C}
-  .rl-card[data-g="5"].own{--cv1:#3A1420;--cv2:#5C2131;--pk:#8E3949;--bv:#C0616F}
-
-  /* 아치 프레임 — 지름 227 정원. 검정 7 + 실버 링 15 + (캐비티가 얹는 검정 7) */
-  .rl-card .ar{left:0;top:0;width:227px;height:227px;border-radius:50%;
-    background:conic-gradient(from 0deg,var(--rgM) 0 18deg,var(--rgB) 40deg 50deg,
-      var(--rgM) 72deg 100deg,var(--rgD) 128deg 232deg,var(--rgM) 260deg 288deg,
-      var(--rgB) 310deg 320deg,var(--rgM) 342deg 360deg);
-    box-shadow:inset 0 0 0 7px #000;z-index:1}
-  /* 캐비티 — 지름 168 정원, 바깥 검정 7 */
-  .rl-card .cv{left:29px;top:30px;width:168px;height:168px;border-radius:50%;
-    background:linear-gradient(180deg,var(--cv1),var(--cv2));box-shadow:0 0 0 7px #000;z-index:2}
-  /* 포켓 — 216x189(카드 rel 5,135). 하단은 CSS radius 로 재현되지 않는 아트 곡선이라
-     측정표 §4.2(b) 의 반폭표에 3차 베지어를 맞춰 인라인 SVG 로 그린다(자가 실측 오차 ≤5px). */
-  .rl-card .pk{left:5px;top:131px;width:216px;height:193px;z-index:3}   /* 상단이 ref 보다 4px 낮았다(1회차) — 위로만 늘린다 */
-  .rl-card .pk svg{display:block;width:216px;height:193px}
-  /* 아이콘 — 캐비티 중앙 정렬. 잉크가 포켓 상단선을 넘어 아래로 흘러내린다(측정표 §4.5) */
-  .rl-card .ic{left:0;top:32px;width:227px;height:168px;text-align:center;line-height:168px;
-    font-size:118px;z-index:4}
-  /* Lv. N — 잉크 h25 → font 36(캡하이트 ÷0.70) */
-  .rl-card .lv{left:0;top:150px;width:227px;text-align:center;line-height:36px;z-index:5}
-  .rl-card .lv>i{font-size:35px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(1.03)}
-  /* 진행바 — 바깥 149x33(검정 5) · 트랙 139x23 · 숫자는 «바» 정중앙(채움 끝 아님) */
-  .rl-card .bar{left:39px;top:193px;width:149px;height:34px;box-sizing:border-box;
-    border:4px solid #000;border-radius:17px;background:linear-gradient(180deg,#8183A1,#6F7798);z-index:5}
-  .rl-card .bar>u{position:absolute;left:0;top:0;height:26px;border-radius:13px;
-    background:linear-gradient(180deg,#FCC729 0 4px,#FFB514 9px)}  /* 중앙이 #FFB514 (14 교훈) */
-  .rl-card .bar>b{position:absolute;left:0;right:0;top:0;line-height:26px;text-align:center;
-    font-size:21px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
-  .rl-card .bar>b>i{transform:scaleX(1.29)}   /* 우리 서체는 숫자 폭이 모자란다(PROGRESS 05 비고) */
-  /* 자물쇠 — 흰 86x95(외곽선 포함 103x113), 중심 = 카드중심 / 카드top+219 */
-  .rl-card .lk{left:61px;top:162px;width:105px;height:113px;z-index:5}
-  .rl-card .lk svg{display:block;width:105px;height:113px}
-
-  /* ---- 서브탭 바 — 스크롤 위에 뜬 하단 오버레이. x151 y2021 778x98, radius 44 ---- */
-  .rl-tabs{position:absolute;left:151px;bottom:41px;width:778px;height:98px;z-index:6}
-  .rl-tabs>*{position:absolute}
-  /* 비활성 알약 — 밝고 돌출 */
-  .rl-tabs .sg{top:0;width:389px;height:98px;border-radius:44px;background:#000}
-  /* 5회차: ref 는 안쪽 림이 사방이다 — 좌 x160..166 (110,97,81) 7px 뒤 fill (99,82,64).
-     우리는 상·하만 있고 좌·우가 0px 이었다(가로 그라가 아니라 inset 림으로 두른다). */
-  .rl-tabs .sg::after{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
-    border-radius:37px;box-shadow:inset 7px 0 0 #705F4B,inset -7px 0 0 #705F4B;
-    background:linear-gradient(180deg,#705F4B 0 8px,#61503C 8px 77px,#705F4B 77px 84px)}
-  .rl-tabs .s1{left:0}
-  .rl-tabs .s2{left:389px}
-  /* 활성 알약 — 422x98, 세그 중심 정렬(좌우 16.5 부풀음) · 어둡고 눌린 인셋 */
-  .rl-tabs .ac{top:0;width:422px;height:98px;border-radius:44px;background:#000}
-  .rl-tabs .ac::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;
-    border-radius:38px;box-shadow:inset 6px 0 0 #634F37,inset -6px 0 0 #634F37;
-    background:linear-gradient(180deg,#634F37 0 6px,#4B3E2D 6px 70px,
-      #634F37 70px 76px,#3F3124 76px 83px)}   /* 우측 림 ref x932..937 (97,79,57) — 5회차 */
-  .rl-tabs .ac.a2{left:373px}         /* ref x524 − 바 x151 */
-  .rl-tabs .ac.a1{left:-17px}         /* 14 쪽 활성 위치(ref x134) — 대칭 */
-  .rl-tabs .tb{top:0;height:98px;width:389px;text-align:center;cursor:pointer;z-index:2}
-  .rl-tabs .t1{left:0}
-  .rl-tabs .t2{left:389px}
-  .rl-tabs .tb>i{font-size:43px;color:#A9A8AD;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    line-height:98px;position:relative;top:0}
-  .rl-tabs .tb.on>i{color:#F2BC8D;top:-5px}   /* 활성 라벨이 5px 위(측정표 §2.4) */
-  .rl-tabs .t1>i{transform:scaleX(.86)}
-  .rl-tabs .t2>i{transform:scaleX(.80)}
 
   /* ==========================================================================
      60 — UI 쥬시니스 (전역 마이크로 인터랙션)
@@ -7113,7 +6835,6 @@
     <div class="body" id="bPet"></div>
     <!-- 작업 50 — 코스튬(기존 «아바타» 기능 이관). 07/26 과 같은 바닥 시트 -->
     <div class="body" id="bCos"></div>
-    <div class="body" id="bRel"></div>
     <!-- 작업 68 — 구버전(파란 스킨) 상점 배너 패널 #bShop 폐기. 상점 탭은 항상 10 상점 페이지(#shopw) 다 -->
     <div class="body" id="bDun"></div>
     <div class="body" id="bSt"></div>
@@ -7187,30 +6908,24 @@
       <div class="shp-cs"></div>
     </div>
   </div>
-  <!-- 14 유물 팝업 — 보물상자 탭. (다) 전체화면 페이지. 측정표 docs/measure/14-유물팝업보물상자탭.md -->
-  <div id="relicw">
-    <!-- 41 팝업 내장 재화 바 (메인 HUD 재사용 아님) -->
+  <!-- 89 유물 페이지 — «유물 소환 → 자동 강화». (다) 전체화면 페이지(03 던전·10 상점 동종).
+       14 보물상자(#relicw)·15 유물 탭(#rlw)·16 세부 팝업은 89 에서 폐기. 측정표 docs/measure/89-유물팝업.md -->
+  <div id="relw">
+    <!-- 41 팝업 내장 재화 바 — 이 페이지는 유물조각 알약까지 3개 -->
     <div class="pcb">
       <div class="pcb-p pcb-g" data-cur="gold"><i>🪙</i><b>0</b></div>
       <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
+      <div class="pcb-p pcb-r" data-cur="relic"><i>🔮</i><b>0</b></div>
     </div>
-    <div class="rlx-strip"></div>
-    <div id="relicBody"></div>
-    <div class="rlx-sub">
-      <div class="seg box on" data-rlxtab="box"><i>보물상자</i></div>
-      <div class="seg rel" data-rlxtab="rel"><i>유물</i></div>
-    </div>
-  </div>
-  <!-- 15 유물 팝업 — 유물 탭. «(다) 전체화면 페이지» — 03·10 과 같은 부류(딤·헤더·테두리 없음).
-       서브탭 바는 스크롤 리스트 «위에 뜬» 하단 오버레이다(측정표 §1.4). -->
-  <div id="rlw">
-    <div class="rl-list" id="rlList"></div>
-    <div class="rl-tabs">
-      <div class="sg s1"></div>
-      <div class="sg s2"></div>
-      <div class="ac a2"></div>
-      <div class="tb t1" data-rltab="box"><i>보물상자</i></div>
-      <div class="tb t2 on" data-rltab="relic"><i>유물</i></div>
+    <div class="rw-panel">
+      <div class="rw-bg"></div>
+      <div class="rw-grid" id="rwGrid"></div>
+      <div class="rw-basin" id="rwBasin">
+        <span class="rw-ped"></span><span class="rw-rim"></span><span class="rw-liq"></span><b>유물 소환</b>
+      </div>
+      <div class="rw-cost" id="rwCost"><i>🔮</i><b>822</b></div>
+      <div class="rw-cap"><p>던전에서 얻는 유물조각으로 다양한 능력을 가진 유물을 소환합니다.</p><p>각 유물이 등장할 확률은 동일합니다.</p></div>
+      <div class="rw-frame"></div>
     </div>
   </div>
   <!-- 23 훈련 팝업. 하단에서 올라오는 «바닥 시트»(상단 경계가 물결 곡선) — 측정표 docs/measure/23-훈련팝업.md.
@@ -8161,7 +7876,7 @@ const PET_SP = {
   dragon: { anim:'fly',     fps:12, scale:0.62, faceRight:true }
 };
 
-/* ---- 유물 (유물석으로 소환 · 강화 · 최대 3개 장착) ---- */
+/* ---- 유물 — 89: 유물조각으로 «소환 = 균등 1종 Lv+1» 자동 강화. 장착 없음, 보유 Lv 로 상시 적용 ---- */
 const RELICS = [
   { id:'rl0', n:'낡은 부적',     g:0, ic:'🪬',  eff:'atk',   v:0.05 },
   { id:'rl1', n:'전사의 문장',   g:1, ic:'🎖️', eff:'hp',    v:0.08 },
@@ -8171,23 +7886,11 @@ const RELICS = [
   { id:'rl5', n:'폭풍의 인장',   g:3, ic:'🌪️', eff:'rate',  v:0.10 },
   { id:'rl6', n:'황금 왕관',     g:4, ic:'👑',  eff:'gold',  v:0.35 },
   { id:'rl7', n:'세계수의 씨앗', g:4, ic:'🌳',  eff:'regen', v:0.40 },
-  { id:'rl8', n:'창세의 파편',   g:5, ic:'✨',  eff:'all',   v:0.30 }
+  { id:'rl8', n:'창세의 파편',   g:5, ic:'✨',  eff:'all',   v:0.30 },
+  { id:'rl9', n:'심판의 저울',   g:1, ic:'⚖️', eff:'cdmg',  v:0.06 }
 ];
 const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률', rate:'공격 속도',
-                    gold:'골드 획득', regen:'체력 재생', all:'전 스탯' };
-/* 16 유물 세부 팝업 플레이버 텍스트(정적 데이터 — 세이브 마이그레이션 불필요) */
-/* ref 플레이버는 «한 줄» 이며 잉크 폭 548px(4회차 PIL 스캔) — 21~23자로 맞춘다. 넘치면 2줄이 된다. */
-const RELIC_FLAVOR = {
-  rl0:'낡았지만 왠지 마음이 놓이는 작은 부적이다.',
-  rl1:'한때 이름난 전사의 것이었다고 전해지는 문장이다.',
-  rl2:'만지기만 해도 괜히 힘이 솟는 기분이 든다.',
-  rl3:'세상 모든 것을 꿰뚫어 본다고 전해지는 눈이다.',
-  rl4:'아직도 따뜻하게 뛰고 있는 용의 심장이다.',
-  rl5:'손에 쥐면 어디선가 바람이 일어나는 인장이다.',
-  rl6:'누가 봐도 비싸 보이는 묵직한 순금 왕관이다.',
-  rl7:'심으면 세상이 자란다고 전해지는 씨앗이다.',
-  rl8:'세상이 처음 만들어질 때 떨어진 조각이다.'
-};
+                    gold:'골드 획득', regen:'체력 재생', cdmg:'치명타 피해', all:'전 스탯' };
 
 /* ---- 아바타 (다이아 구매 · 보유 효과 · 외형 변경) ---- */
 const AVATARS = [
@@ -8212,9 +7915,8 @@ const BANNERS = {
   weapon: { n:'무기',   ic:'⚔️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
   shield: { n:'방패',   ic:'🛡️', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
   amulet: { n:'목걸이', ic:'📿', cost:100, flat:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
-  pet:    { n:'펫',     ic:'🐾', cost:250, cur:'dia', coll:'pet',   list:PETS },
-  relic:  { n:'유물',   ic:'🔮', cost:400, cur:'rel', coll:'relic', list:RELICS }
-};
+  pet:    { n:'펫',     ic:'🐾', cost:250, cur:'dia', coll:'pet',   list:PETS }
+};   /* 89 — BANNERS.relic(유물 소환 배너) 폐기: 유물은 #relw 페이지의 균등 소환만 쓴다 */
 const BKEYS = Object.keys(BANNERS);
 /* 작업 57 — `EQ_BANNERS`(구버전 장비 패널의 무기·방패·목걸이 서브탭) 폐기.
    부위 전환은 06 시트의 슬롯 3칸 → 05 팝업(`openWeapon(null, part)`) 하나뿐이다. */
@@ -8268,21 +7970,22 @@ const COLL = {
     { need:6, n:'골드 획득 +40%', f:b => b.gold *= 1.40 },
     { need:8, n:'공격력 +35%',    f:b => b.atk *= 1.35 },
     { need:9, n:'펫 피해 +100%',  f:b => b.pet *= 2.00 } ]},
-  relic: { n:'유물', list:RELICS, tiers:[
-    { need:2, n:'공격력 +15%',    f:b => b.atk *= 1.15 },
-    { need:4, n:'최대 체력 +25%', f:b => b.hp *= 1.25 },
-    { need:6, n:'공격력 +40%',    f:b => b.atk *= 1.40 },
-    { need:8, n:'전 스탯 +50%',   f:b => { b.atk *= 1.5; b.hp *= 1.5; b.regen *= 1.5; } },
-    { need:9, n:'공격력 +120%',   f:b => b.atk *= 2.20 } ]}
+  /* 89 — 유물 도감 티어는 «보유 종 수» 가 아니라 **Lv 총합** 기준(수동 장착·종 수집 개념 폐지) */
+  relic: { n:'유물', list:RELICS, lvSum:1, tiers:[
+    { need:3,  n:'공격력 +15%',    f:b => b.atk *= 1.15 },
+    { need:8,  n:'최대 체력 +25%', f:b => b.hp *= 1.25 },
+    { need:15, n:'공격력 +40%',    f:b => b.atk *= 1.40 },
+    { need:25, n:'전 스탯 +50%',   f:b => { b.atk *= 1.5; b.hp *= 1.5; b.regen *= 1.5; } },
+    { need:40, n:'공격력 +120%',   f:b => b.atk *= 2.20 } ]}
 };
 
-/* ---- 던전 5종 (하루 입장 제한 · 유물석 등 획득) ---- */
+/* ---- 던전 5종 (하루 입장 제한 · 유물조각 등 획득) ---- */
 const DUNGEONS = [
   { id:'gold',   n:'황금 동굴',  ic:'💰', d:'골드를 대량으로 획득',
     req:f => 2500*Math.pow(1.72,f-1),  rw:f => ({ gold: 9000*Math.pow(1.6,f-1) }) },
   { id:'dia',    n:'수정 광산',  ic:'💎', d:'다이아를 획득',
     req:f => 4000*Math.pow(1.78,f-1),  rw:f => ({ dia: 250 + f*180 }) },
-  { id:'relic',  n:'고대 유적',  ic:'🔮', d:'유물석을 획득',
+  { id:'relic',  n:'고대 유적',  ic:'🔮', d:'유물조각을 획득',
     req:f => 5000*Math.pow(1.78,f-1), rw:f => ({ rel: 200 + f*150 }) },
   { id:'growth', n:'수련의 탑',  ic:'📈', d:'무작위 도감 재료를 획득',
     req:f => 3500*Math.pow(1.72,f-1), rw:f => ({ frag: 3 + Math.floor(f/2) }) },
@@ -8293,13 +7996,13 @@ const DUN_TRY = 3;   /* 던전별 하루 입장 횟수 */
 
 /* ---- 출석 (28일) ----
    70(2026-08-25): 레퍼런스의 «7일차 전폭 카드 = 보상 3개 가로 나열» 을 재현하려면 주차 마지막 날이
-   3종 보상이어야 한다. 7 배수 날에 기존 다이아 + 유물석 + 골드 3종을 준다(다른 날은 종전 그대로 1종). */
+   3종 보상이어야 한다. 7 배수 날에 기존 다이아 + 유물조각 + 골드 3종을 준다(다른 날은 종전 그대로 1종). */
 const ATTEND = [];
 for(let i=1;i<=28;i++){
   let r;
   if(i % 28 === 0)      r = { ic:'🔥', t:'다이아', dia:3000, rel:1500, goldMul:60 };
   else if(i % 7 === 0)  r = { ic:'💎', t:'다이아', dia:1500 + i*60, rel:400 + i*25, goldMul:60 };
-  else if(i % 5 === 0)  r = { ic:'🔮', t:'유물석', rel:400 + i*25 };
+  else if(i % 5 === 0)  r = { ic:'🔮', t:'유물조각', rel:400 + i*25 };
   else if(i % 3 === 0)  r = { ic:'💰', t:'골드',   goldMul:60 };
   else                  r = { ic:'💎', t:'다이아', dia:350 + i*30 };
   ATTEND.push(r);
@@ -8309,10 +8012,10 @@ for(let i=1;i<=28;i++){
 const ROULETTE = [
   { ic:'💰', t:'골드',   goldMul:25,  w:22 },
   { ic:'💎', t:'다이아', dia:400,     w:20 },
-  { ic:'🔮', t:'유물석', rel:150,     w:16 },
+  { ic:'🔮', t:'유물조각', rel:150,     w:16 },
   { ic:'💰', t:'골드',   goldMul:80,  w:14 },
   { ic:'💎', t:'다이아', dia:900,     w:12 },
-  { ic:'🔮', t:'유물석', rel:400,     w:8  },
+  { ic:'🔮', t:'유물조각', rel:400,     w:8  },
   { ic:'💎', t:'다이아', dia:2500,    w:5  },
   { ic:'🎁', t:'대박!',  dia:6000, rel:1500, w:3 }
 ];
@@ -8380,10 +8083,10 @@ const GUIDE = [
   { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon) },
   { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins,      go:() => { gmCloseAll(); openRoulette(); } },
   { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n,          go:() => { gmCloseAll(); openAttend(); } },
-  { n:'보물상자 1개 오픈',     goal:1,   dia:800,  get:() => S.cnt.sumRelic,   go:() => gmPage('relicw', openRelicPage) },
+  { n:'유물 1회 소환하기',     goal:1,   dia:800,  get:() => S.cnt.sumRelic,   go:() => gmPage('relw', openRelw) },
   { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps,   go:() => gmHero('eq') },
   { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best,    go:() => gmBattle() },
-  { n:'유물 장착하기',         goal:1,   dia:1000, abs:1, get:() => S.eqRelic.length, go:() => gmPage('rlw', openRelicTab) },
+  { n:'유물 Lv 3 모으기',      goal:3,   dia:1000, abs:1, get:() => relicLvSum(),     go:() => gmPage('relw', openRelw) },
   { n:'스탯 포인트 10 투자',   goal:10,  dia:1200, get:() => S.spAtk + S.spHp, go:() => gmTrain('stat') },
   { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic,
@@ -8473,7 +8176,7 @@ const statProg  = () => TRAIN_STATS.reduce((s, k) => s + Math.min(statLv(k), sta
 const statMax   = () => TRAIN_STATS.length * statCap();
 const statReady = () => TRAIN_STATS.every(k => statLv(k) >= statCap());
 
-/* ---- 유물석 교환 (다이아 → 유물석) ---- */
+/* ---- 유물조각 교환 (다이아 → 유물조각) ---- */
 const EXCHANGE = [
   { dia:1000,  rel:100 },
   { dia:9000,  rel:1000 },
@@ -8544,7 +8247,7 @@ const DEF = () => ({
   statStage:1,                                /* 23 스탯 훈련 단계 — 훈련과 같은 구조, 재화만 포인트 */
   lv: UPG.reduce((o,u) => (o[u.id]=0, o), {}),
   own:{},                                     /* id → {n:재료, l:레벨} */
-  eqSkill:[], eqSlot:{ weapon:null, shield:null, amulet:null }, eqPet:[], eqRelic:[],
+  eqSkill:[], eqSlot:{ weapon:null, shield:null, amulet:null }, eqPet:[],
   avatar:'av0', avatars:{ av0:1 },
   sum: BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {}),
   coll:{ skill:0, equip:0, pet:0, relic:0 },
@@ -8644,7 +8347,9 @@ function load(){
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
-    b.eqRelic = (d.eqRelic || []).filter(i => RL[i]);
+    /* 89 — 유물 장착·재료(n) 폐기: eqRelic 은 버리고, own.rl* 은 l(=Lv)만 남긴다 */
+    delete b.eqRelic;
+    Object.keys(b.own).forEach(k => { if(k.slice(0,2) === 'rl' && RL[k] && b.own[k]) b.own[k].n = 0; });
     S = b;
     return d.time || null;
   }catch(e){ return null; }
@@ -8673,7 +8378,6 @@ const ownedIn = list => list.filter(x => has(x.id)).length;
 const ownedTotal = () => Object.keys(S.own).length;
 const skillEquipped = id => S.eqSkill.indexOf(id) >= 0;
 const petEquipped   = id => S.eqPet.indexOf(id) >= 0;
-const relicEquipped = id => S.eqRelic.indexOf(id) >= 0;
 const eqEquipped    = it => S.eqSlot[it.slot] === it.id;
 const gMul  = g => GRADE[g].mul;
 const lvMul = l => 1 + l*0.18;
@@ -8681,7 +8385,9 @@ const lvMul = l => 1 + l*0.18;
 const eqv = it => (it.slot && it.v) ? it.v : 1;
 const ownVal   = it => 0.02 * gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);
 const equipVal = it => 0.10 * gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);
-const relicVal = it => it.v * gMul(it.g) * lvMul(oLv(it.id)) * 0.5;
+/* 89 — 유물 효과는 «보유 Lv 선형»: v × 등급 mul × Lv × 0.25 (장착·2배 개념 폐지) */
+const relicVal = it => it.v * gMul(it.g) * oLv(it.id) * 0.25;
+const relicLvSum = () => RELICS.reduce((n,r) => n + oLv(r.id), 0);   /* 89 — 유물 Lv 총합(도감·비용·미션 공용) */
 
 let bonusCache = null, bonusDirty = true;
 const markDirty = () => { bonusDirty = true; };
@@ -8702,12 +8408,13 @@ function bonus(){
     const v = 1 + equipVal(EQ[id]);
     if(s.k === 'weapon') b.atk *= v; else if(s.k === 'shield') b.hp *= v; else b.regen *= v;
   });
-  /* 유물: 보유 = 절반 효과, 장착 = 전체 효과 */
+  /* 89 — 유물: 보유(= Lv ≥ 1)만으로 상시 적용. 장착 개념 없음 */
   RELICS.forEach(r => {
     if(!has(r.id)) return;
-    const v = relicVal(r) * (relicEquipped(r.id) ? 2 : 1);
+    const v = relicVal(r);
     if(r.eff === 'all'){ b.atk *= 1+v; b.hp *= 1+v; b.regen *= 1+v; b.gold *= 1+v; }
     else if(r.eff === 'crit') b.crit += v;
+    else if(r.eff === 'cdmg') b.cdmg += v;
     else if(r.eff === 'rate') b.rate *= 1+v;
     else b[r.eff] *= 1+v;
   });
@@ -10168,7 +9875,7 @@ function drawBossHud(){
 const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
 /* 41 — 03·14 팝업 내장 재화 바 갱신. 바는 페이지마다 하나씩(=2개) 있으므로 id 가 아니라
    클래스로 전부 돌린다. drawHud() 가 매 프레임 부르므로 값이 같으면 DOM 을 건드리지 않는다. */
-let pcbGold = null, pcbDia = null;
+let pcbGold = null, pcbDia = null, pcbRel = null;
 function renderPcb(){
   /* 58 — HUD 와 같은 «표시값»(롤링 중인 값)을 쓴다. 두 곳이 다른 숫자를 보이면 안 된다. */
   const g = fmt(fxVal('gold')), d = fmt(fxVal('dia'));
@@ -10180,12 +9887,18 @@ function renderPcb(){
     pcbDia = d;
     document.querySelectorAll('.pcb-d>b').forEach(e => { e.textContent = d; });
   }
+  /* 89 — 유물 페이지 알약(유물조각) */
+  const r = fmt(fxVal('relic'));
+  if(r !== pcbRel){
+    pcbRel = r;
+    document.querySelectorAll('.pcb-r>b').forEach(e => { e.textContent = r; });
+  }
 }
 
 function drawHud(){
   const maxHp = stat.maxHp;
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
-     레벨 · 경험치 · 유물석 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
+     레벨 · 경험치 · 유물조각 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
   $('cpN').textContent = fmt(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
@@ -10366,7 +10079,7 @@ function doRefund(bkey){
   if(B.cur === 'rel') S.relic += amt; else S.dia += amt;
   uiDirty = true; save();
   popup('♻️ 재료 환불', '<p><b>' + B.n + '</b> 도감을 모두 최대 레벨까지 완성했습니다!<br>'
-    + '남은 재료를 환불했습니다.<br>' + (B.cur === 'rel' ? '유물석 <b>🔮+' : '다이아 <b>💎+') + fmt(amt) + '</b></p>');
+    + '남은 재료를 환불했습니다.<br>' + (B.cur === 'rel' ? '유물조각 <b>🔮+' : '다이아 <b>💎+') + fmt(amt) + '</b></p>');
 }
 
 /* ==========================================================================
@@ -10423,10 +10136,10 @@ function doSummon(b, times){
   }
   const cost = summonCost(b, times);
   if(!payFor(b, cost)){
-    popup(B.cur === 'rel' ? '🔮 유물석 부족' : '💎 다이아 부족',
-      '<p>' + (B.cur === 'rel' ? '유물석' : '다이아') + '이(가) <b>'
+    popup(B.cur === 'rel' ? '🔮 유물조각 부족' : '💎 다이아 부족',
+      '<p>' + (B.cur === 'rel' ? '유물조각' : '다이아') + '이(가) <b>'
       + fmt(Math.ceil(cost - (B.cur === 'rel' ? S.relic : S.dia))) + '</b> 더 필요합니다.<br>'
-      + (B.cur === 'rel' ? '던전 <b>고대 유적</b>에서 유물석을 얻으세요!' : '출석 · 룰렛 · 퀘스트 · 상점에서 다이아를 얻으세요!') + '</p>');
+      + (B.cur === 'rel' ? '던전 <b>고대 유적</b>에서 유물조각을 얻으세요!' : '출석 · 룰렛 · 퀘스트 · 상점에서 다이아를 얻으세요!') + '</p>');
     return;
   }
   S.summons += times;
@@ -10559,12 +10272,7 @@ function toggleEquip(it, cat){
     }
     syncPets();
   }else if(cat === 'relic'){
-    const i = S.eqRelic.indexOf(it.id);
-    if(i >= 0) S.eqRelic.splice(i,1);
-    else{
-      if(S.eqRelic.length >= 3){ popup('슬롯 부족', '<p>유물은 최대 <b>3개</b>까지 장착할 수 있습니다.</p>'); return; }
-      S.eqRelic.push(it.id);
-    }
+    return;   /* 89 — 유물 장착 개념 폐지(보유만으로 상시 적용) */
   }else S.eqSlot[it.slot] = (S.eqSlot[it.slot] === it.id) ? null : it.id;
   markDirty(); uiDirty = true; save();
 }
@@ -10576,7 +10284,6 @@ function power(it, cat){
 function autoEquipAll(){
   S.eqSkill = SKILLS.filter(s => has(s.id)).sort((a,b) => power(b,'skill') - power(a,'skill')).slice(0,8).map(s => s.id);
   S.eqPet   = PETS.filter(p => has(p.id)).sort((a,b) => power(b,'pet') - power(a,'pet')).slice(0,3).map(p => p.id);
-  S.eqRelic = RELICS.filter(r => has(r.id)).sort((a,b) => power(b,'relic') - power(a,'relic')).slice(0,3).map(r => r.id);
   SLOTS.forEach(s => {
     const best = EQUIPS.filter(e => e.slot === s.k && has(e.id)).sort((a,b) => power(b,'equip') - power(a,'equip'))[0];
     S.eqSlot[s.k] = best ? best.id : null;
@@ -10593,13 +10300,15 @@ function autoEquipTick(dt){
 /* ==========================================================================
    컬렉션 · 퀘스트 · 튜토리얼 · 우편
    ========================================================================== */
-function collReady(cat){ const t = COLL[cat].tiers[S.coll[cat]]; return !!t && ownedIn(COLL[cat].list) >= t.need; }
+/* 89 — 유물 카테고리는 진행도가 «Lv 총합» 이다(lvSum 플래그) */
+const collProg = cat => COLL[cat].lvSum ? relicLvSum() : ownedIn(COLL[cat].list);
+function collReady(cat){ const t = COLL[cat].tiers[S.coll[cat]]; return !!t && collProg(cat) >= t.need; }
 function claimColl(cat){
   if(!collReady(cat)) return;
   const t = COLL[cat].tiers[S.coll[cat]];
   S.coll[cat]++;
   markDirty(); uiDirty = true; save();
-  popup('🏆 컬렉션 보너스 획득!', '<p><b>' + COLL[cat].n + ' 도감</b> ' + t.need + '종 달성<br>'
+  popup('🏆 컬렉션 보너스 획득!', '<p><b>' + COLL[cat].n + ' 도감</b> ' + t.need + (COLL[cat].lvSum ? 'Lv 달성<br>' : '종 달성<br>')
     + '<span style="color:#8ff0a8;font-size:28px">' + t.n + '</span><br>영구 적용됩니다!</p>');
 }
 const questGoal  = q => Math.ceil(q.base * Math.pow(q.mul, S.quest[q.id].s));
@@ -10666,7 +10375,7 @@ const gmDia = m => Math.round(typeof m.dia === 'function' ? m.dia() : m.dia);
 /* ---- 73 ① 미완 미션 클릭 → 그 미션을 할 수 있는 화면으로 이동 ----
    전부 «이미 열려 있으면 다시 열지 않는다»(토글로 닫히면 이동이 아니라 취소가 된다). */
 function gmCloseAll(){
-  closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();
+  closeDungeon(); closeShopPage(); closeRelw(); closeTrain();
   closeColl21(); closeModal();                    /* 21 도감·공용 모달까지 걷어야 «이동» 이 완결된다 */
   if(panelOpen){ panelOpen = false; syncPanel(); }
 }
@@ -10695,7 +10404,6 @@ function gmBan(){
 }
 /* 막히면 안내 팝업을 띄우고 true. **무료 횟수 차감보다 먼저** 불러야 한다(차감 후면 횟수가 샌다). */
 function gmBlocked(b){
-  if(b === 'relic') return false;
   const need = gmBan();
   if(!need || need === b) return false;
   popup('📌 가이드 진행', '<p>원활한 가이드 진행을 위해 <b>' + BANNERS[need].n
@@ -10720,12 +10428,12 @@ function claimGuide(){
 const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
 /* ---- 69 우편함 — 보상 목록화 · 행별 수령 -------------------------------------
    레퍼런스 행은 «보상 썸네일 1칸 + 초록 요약(«햇병아리 외 2개»)» 이다. 우리 우편의 보상은
-   골드·다이아·유물석 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
-   등급은 공용 아이템 프레임(SUM_CARD)의 색 인덱스다 — 골드 0(갈색) · 다이아 2(파랑) · 유물석 3(보라). */
+   골드·다이아·유물조각 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
+   등급은 공용 아이템 프레임(SUM_CARD)의 색 인덱스다 — 골드 0(갈색) · 다이아 2(파랑) · 유물조각 3(보라). */
 const MAIL_RW = [
   { k:'g', ic:'💰', n:'골드',   g:0 },
   { k:'c', ic:'💎', n:'다이아', g:2 },
-  { k:'r', ic:'🔮', n:'유물석', g:3 }
+  { k:'r', ic:'🔮', n:'유물조각', g:3 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
 /* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00K»(5자)로 접는데,
@@ -10868,7 +10576,7 @@ function endDunRun(cleared, quit){
   if(quit){ save(); uiDirty = true; showMsg('던전 중단 — 입장 횟수는 소모됩니다'); }
   else finishDunRun(r, cleared);
   if($('dunw').classList.contains('on')) renderDunPage();
-  if($('rlw').classList.contains('on')) renderRelicTab();
+  if($('relw').classList.contains('on')) renderRelw();
 }
 function finishDunRun(r, cleared){
   const d = r.d, f = r.f;
@@ -11204,104 +10912,7 @@ function paintPetIcons(root){
       (cv.width - fr[6]*sc)/2 + fr[4]*sc, (cv.height - fr[7]*sc)/2 + fr[5]*sc, fr[2]*sc, fr[3]*sc);
   });
 }
-function renderBanner(bkey, boxId, extraTop){
-  const B = BANNERS[bkey], list = B.list, C = COLL[B.coll];
-  const cur = B.cur === 'rel' ? S.relic : S.dia, curIc = B.cur === 'rel' ? '🔮' : '💎';
-  const c1 = summonCost(bkey,1), c10 = summonCost(bkey,10);
-  const done = allMaxed(list);
-  const probs = gradeProbs(bkey), l = sumLv(bkey), need = sumNeedExp(l);
-
-  let h = extraTop || '';
-  /* 소환 박스 */
-  h += '<div class="sect"><h3><span>' + B.ic + ' ' + B.n + ' 소환</span>'
-    + '<button class="probq" data-prob="' + bkey + '" title="확률 정보">🔍 확률</button>'
-    + '<em>소환 Lv.' + l
-    + (l >= SUM_MAXLV ? ' MAX' : '') + '</em></h3>'
-    + '<div class="sexp"><i style="width:' + (l >= SUM_MAXLV ? 100 : sumExp(bkey)/need*100) + '%"></i></div>'
-    + '<div class="odds">'
-    + GRADE.map((g,i) => '<div style="color:' + g.c + (probs[i] > 0 ? '' : ';opacity:.35') + '">' + g.n + '<br>'
-        + (probs[i] > 0 ? (probs[i]*100).toFixed(probs[i] < 0.01 ? 2 : 1) + '%' : 'Lv.' + GRADE_ROLL[i].unlock) + '</div>').join('')
-    + '</div>';
-  if(done){
-    const amt = refundAmount(list);
-    h += '<p style="margin-top:14px;color:#ffd45e">🏆 모든 아이템 최대 레벨 달성! 소환이 종료되었습니다.</p>'
-      +  '<button class="gbtn purple" data-refund="1" style="margin-top:14px"' + (amt > 0 ? '' : ' disabled') + '>'
-      +  '재료 환불<small>' + (amt > 0 ? curIc + ' +' + fmt(amt) : '남은 재료 없음') + '</small></button>';
-  }else{
-    h += '<div class="row2" style="margin-top:14px">'
-      +  '<button class="gbtn blue" data-sum="1"' + (cur < c1 ? ' disabled' : '') + '>소환 x1<small>' + curIc + ' ' + fmt(c1) + '</small></button>'
-      +  '<button class="gbtn" data-sum="10"' + (cur < c10 ? ' disabled' : '') + '>소환 x10<small>' + curIc + ' ' + fmt(c10) + ' (10%↓)</small></button></div>';
-  }
-  h += '</div>';
-
-  /* 컬렉션 보너스 */
-  const ownN = ownedIn(C.list), tier = C.tiers[S.coll[B.coll]];
-  h += '<div class="sect"><h3><span>🏆 ' + C.n + ' 컬렉션</span><em>' + ownN + ' / ' + C.list.length + '</em></h3>';
-  if(tier){
-    h += '<p>' + tier.need + '종 수집 시 — <b style="color:#8ff0a8">' + tier.n + '</b></p>'
-      +  '<button class="gbtn" data-coll="' + B.coll + '" style="margin-top:12px"' + (ownN >= tier.need ? '' : ' disabled') + '>'
-      +  (ownN >= tier.need ? '보너스 강화 받기!' : (tier.need - ownN) + '종 더 모으기') + '</button>';
-  }else h += '<p>모든 컬렉션 보너스를 획득했습니다! 🎉</p>';
-  /* 21 도감 보너스 팝업 진입점 */
-  h += '<button class="gbtn blue" data-opencoll="' + B.coll + '" style="margin-top:12px">📖 세트 도감</button>';
-  h += '</div>';
-
-  /* 조작 */
-  const upCnt = list.filter(canLevel).length, crCnt = list.filter(canCraft).length;
-  h += '<div class="subtabs">'
-    +  '<div class="stab' + (S.autoEquip ? ' on' : '') + '" data-aeq="1">자동장착 ' + (S.autoEquip ? 'ON' : 'OFF') + '</div>'
-    +  '<div class="stab" data-eqbest="1">최고 장착</div>'
-    +  '<div class="stab' + (upCnt ? ' on' : '') + '" data-upall="1">일괄 강화' + (upCnt ? ' (' + upCnt + ')' : '') + '</div></div>';
-  if(crCnt) h += '<div class="sect" style="border-color:#a9822e"><h3><span>⚗️ 합성 가능</span><em>' + crCnt + '종</em></h3>'
-    + '<p>Lv.' + MAX_LEVEL + ' 장비 + 같은 장비 ' + CRAFT_NEED + '개 → <b>다음 등급 1개</b></p></div>';
-
-  /* 그리드 */
-  const cat = B.coll === 'equip' ? 'equip' : B.coll;
-  h += '<div class="grid">';
-  list.forEach(it => {
-    const G = GRADE[it.g], own = has(it.id), l2 = oLv(it.id);
-    const eq = cat === 'skill' ? skillEquipped(it.id) : cat === 'pet' ? petEquipped(it.id)
-             : cat === 'relic' ? relicEquipped(it.id) : eqEquipped(it);
-    const mark = canCraft(it) ? ' ⚗️' : canLevel(it) ? ' ⬆' : atMax(it) ? ' MAX' : '';
-    h += '<div class="cell' + (own ? '' : ' lock') + '" data-it="' + it.id + '" '
-      +  'style="border-color:' + (own ? G.c : '#262f52') + ';background:' + (own ? G.bg : '#131828') + '">'
-      +  (eq ? '<div class="eqm">장착</div>' : '')
-      +  (own && frag(it.id) > 0 ? '<div class="frag">' + fmt(frag(it.id)) + '</div>' : '')
-      +  (cat === 'pet' ? petIconHtml(it) : '<div style="font-size:40px;line-height:50px">' + itemIcon(it) + '</div>')
-      +  '<div class="nm" style="color:' + (own ? G.c : '#5c6789') + '">' + (own ? it.n : '???') + '</div>'
-      +  '<div class="lvv"' + (mark === ' MAX' ? ' style="color:#ffd45e"' : '') + '>'
-      +  (own ? 'Lv.' + l2 + mark : G.n) + '</div></div>';
-  });
-  h += '</div>';
-  paintPetIcons(setBody(boxId, h));
-}
-function bindBanner(boxId, getBanner){
-  $(boxId).addEventListener('click', e => {
-    const bkey = getBanner();
-    const B = BANNERS[bkey];
-    const pq = e.target.closest('[data-prob]');
-    if(pq){ openProbInfo(pq.dataset.prob); return; }
-    const s = e.target.closest('[data-sum]');
-    if(s){ doSummon(bkey, +s.dataset.sum); return; }
-    if(e.target.closest('[data-refund]')){ doRefund(bkey); return; }
-    const c = e.target.closest('[data-coll]');
-    if(c){ claimColl(c.dataset.coll); return; }
-    const oc = e.target.closest('[data-opencoll]');
-    if(oc){ openColl21({ skill:'skill', equip:'weapon', pet:'pet' }[oc.dataset.opencoll] || 'armor'); return; }
-    if(e.target.closest('[data-aeq]')){ S.autoEquip = !S.autoEquip; if(S.autoEquip) autoEquipAll(); uiDirty = true; save(); return; }
-    if(e.target.closest('[data-eqbest]')){ autoEquipAll(); save(); return; }
-    if(e.target.closest('[data-upall]')){
-      const r = levelUpAll(B.list);
-      if(!openUpAll(r.ups))   /* 09 결과 연출. 강화된 게 없을 때만 기존 안내 모달 */
-        popup('강화 재료 부족',
-          '<p>강화 가능한 아이템이 없습니다.<br>같은 아이템을 더 소환해 재료를 모으세요.</p>');
-      return;
-    }
-    /* 작업 57 — `[data-stab]`(구버전 장비 패널 서브탭) 분기 삭제. 그 마크업을 만들던 renderEq 가 폐기됐다 */
-    const cell = e.target.closest('.cell');
-    if(cell) showItem(cell.dataset.it);
-  });
-}
+/* 89 — renderBanner/bindBanner(구 배너 패널 공용 렌더러) 폐기: 마지막 사용처가 유물 배너(#bRel)였다 */
 const itemById = id => SK[id] || EQ[id] || PT[id] || RL[id];
 
 /* ── 08 스킬 세부 팝업 ── 측정표: docs/measure/08-스킬세부팝업.md
@@ -11353,56 +10964,14 @@ function showSkillDetail(id){
   };
 }
 
-/* ── 16 유물 세부 팝업 ── 측정표: docs/measure/16-유물세부팝업.md
-   껍데기는 A5 공용 모달(가운데 다이얼로그) + .rl16 override. 레퍼런스는 «강화» 단일 버튼(장착 버튼 없음).
-   유물 수동 장착은 autoEquipAll() 이 상위 3개를 자동 장착하므로, 강화 후 autoEquipAll 로 보유 효과를 유지한다. */
-/* 받침 유무로 주격 조사 선택 (16 효과문 전용 — 한 줄 유지) */
-function josa(w){ const c = w.charCodeAt(w.length - 1);
-  return (c >= 0xAC00 && c <= 0xD7A3) ? ((c - 0xAC00) % 28 ? '이' : '가') : '이'; }
-function showRelicDetail(id){
-  const it = RL[id], G = GRADE[it.g], own = has(id), lv = oLv(id);
-  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
-  const rate = own ? (maxed ? 1 : Math.min(1, have / need)) : 0;
-  const p = (rate * 100).toFixed(1);
-  const flavor = own ? (RELIC_FLAVOR[id] || '') : '아직 발견하지 못한 유물이다.';
-  /* ref 효과문은 «골드 토큰으로 시작하는 1줄» 이다(4회차 PIL 스캔: 골드 토큰 x202~252 가 줄머리).
-     조사는 받침으로 골라 «이(가)» 병기를 없앤다 — 병기하면 줄이 ref 보다 6% 길어진다. */
-  const effTxt = own
-    ? '<em>' + RELIC_EFF[it.eff] + '</em>' + josa(RELIC_EFF[it.eff])
-      + ' 보유만 해도 <em class="n">+' + pct(relicVal(it)).replace('%','</em>%') + ' 상승하는 유물이다.'
-      + (relicEquipped(id) ? '<br>장착 중 — 효과 <em>2배</em> 로 적용된다.' : '')
-    : '유물 소환으로 획득하면 효과가 열립니다.';
-
-  $('mtitle').textContent = own ? it.n : '???';
-  $('mbox').innerHTML =
-      '<div class="rld">'
-    +   '<div class="rl-ic">' + (own ? it.ic : '❔') + '</div>'
-    +   '<div class="rl-gr"><b>' + G.n + '</b></div>'
-    +   '<div class="rl-lv"><b>Lv. ' + lv + '</b></div>'
-    +   '<div class="rl-pb"><i style="width:' + p + '%"></i>'
-    +     '<b><i>' + (maxed ? 'MAX' : have + '/' + need) + '</i></b></div>'
-    +   '<div class="rl-fl"><p>' + flavor + '</p></div>'
-    +   '<div class="rl-ow"><b>보유 효과</b></div>'
-    +   '<div class="rl-eb"><p>' + effTxt + '</p></div>'
-    +   '<button class="rl-act" id="mLv"' + (own && !maxed && canLevel(it) ? '' : ' disabled') + '><b>강화</b></button>'
-    + '</div>';
-  $('mbox').scrollTop = 0;
-  $('modal').classList.add('on', 'rl16');
-  const l = $('mLv');
-  if(l && !l.disabled) l.onclick = () => {
-    const tgt = $('mbox').querySelector('.rl-lv');
-    if(levelUp(it)){ fxUpOk(tgt, l); autoEquipAll(); showRelicDetail(id); fxHitEl('#mbox .rl-lv'); }   /* 58 */
-  };
-}
 
 function showItem(id){
   const it = itemById(id);
   if(!it) return;
   if(SK[id]) return showSkillDetail(id);   /* 스킬은 08 전용 상세 팝업으로 */
-  if(RL[id]) return showRelicDetail(id);    /* 유물은 16 전용 상세 팝업으로 */
   const cat = catOf(it), G = GRADE[it.g], own = has(id), need = fragNeed(oLv(id));
   const eq = cat === 'skill' ? skillEquipped(id) : cat === 'pet' ? petEquipped(id)
-           : cat === 'relic' ? relicEquipped(id) : eqEquipped(it);
+           : cat === 'relic' ? false : eqEquipped(it);
   let eff = '', ownTxt = '', eqTxt = '';
   if(cat === 'skill'){
     eff = it.d + '<br>피해 <b>' + fmt(skillDmg(it)) + '</b>' + (it.cd > 0 ? ' · 쿨타임 <b>' + it.cd.toFixed(2) + '초</b>' : ' · <b>지속형</b>');
@@ -11411,9 +10980,9 @@ function showItem(id){
     eff = '플레이어를 따라다니며 자동 공격<br>피해 <b>' + fmt(petDmg(it)) + '</b> · 주기 <b>' + it.cd.toFixed(2) + '초</b>';
     ownTxt = '공격력 +' + pct(ownVal(it)*0.6) + ' · 골드 +' + pct(ownVal(it)); eqTxt = '전투에 참여해 공격';
   }else if(cat === 'relic'){
-    eff = RELIC_EFF[it.eff] + ' 상승 유물';
+    eff = RELIC_EFF[it.eff] + ' 상승 유물 · 소환할 때마다 Lv +1';
     ownTxt = RELIC_EFF[it.eff] + ' +' + pct(relicVal(it));
-    eqTxt = RELIC_EFF[it.eff] + ' +' + pct(relicVal(it)*2) + ' (보유 효과 포함)';
+    eqTxt = '장착 없이 항상 적용';
   }else{
     const s = SLOTS.find(x => x.k === it.slot);
     eff = '부위 <b>' + s.n + '</b> · 효과 <b>' + s.stat + '</b>';
@@ -11569,7 +11138,7 @@ $('dgdGo').onclick = () => {
   if(sweep) sweepDungeon(d); else challengeDungeon(d);
   /* 03 의 던전 리스트 페이지가 뒤에 열려 있으면 남은 횟수·층을 갱신한다 */
   if($('dunw').classList.contains('on')) renderDunPage();
-  if($('rlw').classList.contains('on')) renderRelicTab();     /* 15 유물 탭 — 강화·획득 후 즉시 반영 */
+  if($('relw').classList.contains('on')) renderRelw();        /* 89 유물 페이지 — 강화·획득 후 즉시 반영 */
 };
 $('dgdw').onclick = e => { if(e.target === $('dgdw')) closeDunDetail(); };
 
@@ -11579,7 +11148,7 @@ $('dgdw').onclick = e => { if(e.target === $('dgdw')) closeDunDetail(); };
 /* 작업 68 — 구버전(파란 스킨) 상점 패널 `renderShop()` · `#bShop` 클릭 핸들러 폐기.
    다이아 패키지(`PACKS`/`buyPack`)는 10 상점 «재화» 탭의 `DIA_PACKS` 로 이미 대체됐고(작업 44),
    «👤 아바타» 는 코스튬 탭으로 이관됐다(작업 50). 유일하게 대체물이 없던
-   «🔮 유물석 교환소» 는 `renderCoinPage()` §9 로 옮겼다 — `EXCHANGE` 데이터는 한 줄도 안 바꿨다.
+   «🔮 유물조각 교환소» 는 `renderCoinPage()` §9 로 옮겼다 — `EXCHANGE` 데이터는 한 줄도 안 바꿨다.
    (LESSONS 57-① «신규 화면이 구버전을 대체하면 구버전 경로는 그때 지운다») */
 
 /* ---- 정보 탭 ---- */
@@ -11598,13 +11167,13 @@ function renderSt(){
     + 'DPS <b>' + fmt(stat.dps) + '</b> · 공격력 <b>' + fmt(stat.dmg) + '</b><br>'
     + '체력 <b>' + fmt(stat.maxHp) + '</b> · 재생 <b>' + fmt(stat.regen) + '/s</b><br>'
     + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/1.4).toFixed(2) + '</b><br>'
-    + '스킬 <b>' + S.eqSkill.length + '/8</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 <b>' + S.eqRelic.length + '/3</b></p></div>'
+    + '스킬 <b>' + S.eqSkill.length + '/8</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
     + '<div class="sect"><h3>🏆 누적 보너스</h3><p>'
     + '공격 <b>×' + fmt(b.atk) + '</b> · 체력 <b>×' + fmt(b.hp) + '</b><br>'
     + '재생 <b>×' + fmt(b.regen) + '</b> · 골드 <b>×' + fmt(b.gold) + '</b> · 펫 <b>×' + b.pet.toFixed(2) + '</b></p></div>'
     + '<div class="sect"><h3>📊 통계</h3><p>'
     + '총 처치 <b>' + fmt(S.totalKills) + '</b> · 최고 스테이지 <b>' + S.best + '</b><br>'
-    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물석 <b>🔮 ' + fmt(S.relic) + '</b><br>'
+    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물조각 <b>🔮 ' + fmt(S.relic) + '</b><br>'
     + '도감 <b>' + ownedTotal() + ' / ' + (SKILLS.length+EQUIPS.length+PETS.length+RELICS.length) + '</b> · 출석 <b>' + S.att.n + '일</b><br>'
     + '플레이 <b>' + hh + '시간 ' + mm + '분</b></p></div>'
     + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmt(eHp(S.stage)) + '</b> · 공격 <b>' + fmt(eDmg(S.stage))
@@ -11677,7 +11246,7 @@ const ROUL_OVER = 6, ROUL_BACK_MS = 260;
 /* 회전 중 «원판만 움직인다» 를 CSS 로 강제하는 표식 — 붙이고 떼는 곳은 여기 두 곳뿐이다 */
 function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
 const ROUL_SEGC = { 골드:['#F8CE63','#E9AE33'], 다이아:['#8FDCF7','#4FB3DE'],
-                    유물석:['#CFA6F2','#A473DC'], '대박!':['#FF9A64','#F2703B'] };
+                    유물조각:['#CFA6F2','#A473DC'], '대박!':['#FF9A64','#F2703B'] };
 let rouRot = 0, rouSpinning = false;
 function roulSegColor(i){ const c = ROUL_SEGC[ROULETTE[i].t] || ['#F8CE63','#E9AE33']; return c[i % 2]; }
 /* 세그먼트 라벨도 ROULETTE 배열에서 만든다 — 보상이 바뀌면 원판이 따라간다 */
@@ -11913,7 +11482,7 @@ const DUN_UI = {
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️', th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
             rw:['다이아 획득 가능'], gm:0  },
   relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
-            rw:['유물석 획득 가능','유물 재료 획득 가능'], gm:15 },
+            rw:['유물조각 획득 가능','유물 재료 획득 가능'], gm:15 },
   growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️', th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
             rw:['도감 재료 획득 가능'], gm:18 },
   boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫', th:'👹', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
@@ -11949,8 +11518,7 @@ function renderDunPage(){
 function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
   if(typeof closeTrain === 'function') closeTrain();
-  if(typeof closeRelicPage === 'function') closeRelicPage();
-  if(typeof closeRelicTab === 'function') closeRelicTab();
+  if(typeof closeRelw === 'function') closeRelw();
   renderDunPage();
   $('dunw').classList.add('on');
   $('dunList').scrollTop = 0;
@@ -12180,7 +11748,7 @@ function renderShopPage(){
 /* 73 ① — `focus` 로 상자 키(weapon/shield/amulet/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
 function openShopPage(focus){
   closeDungeon(); closeTrain();
-  if(typeof closeRelicPage === 'function') closeRelicPage();
+  if(typeof closeRelw === 'function') closeRelw();
   shopCat = 'summon';
   document.querySelectorAll('#shopCats .shp-ct').forEach(c => c.classList.toggle('on', c.dataset.cat === 'summon'));
   /* 45: 활성 알약은 «활성 탭 칸 안에» 사는 노드다(클릭 핸들러가 노드째 옮긴다). 재화 탭에서 닫고
@@ -12253,97 +11821,84 @@ $('shopCats').addEventListener('click', e => {
   $('shopList').scrollTop = 0;
 });
 
-/* ---- 14 유물 팝업 — 보물상자 탭 (전체화면 페이지 #relicw) — 측정표 docs/measure/14-유물팝업보물상자탭.md ----
-   레퍼런스는 상자를 열어 유물을 뽑는 화면이다. 우리 게임엔 유물 소환 배너(BANNERS.relic, 유물석) 하나뿐이라
-   «상자 5종» 은 표시 전용 매핑으로 두고, [오픈 x1/x30] 은 기존 doSummon('relic', n) 에 그대로 연결한다.
-   저장 구조는 건드리지 않는다(표시 전용). «유물» 서브탭은 기존 배너 패널(#bRel, 15번 담당 예정)로 넘겨 기능을 보존한다. */
-const RLX_BOXES = [
-  { n:'나무 상자', ic:'📦', c:'#F7EF42', get:['골드 획득 가능', '언커먼 이하 등급 유물 등장'] },
-  { n:'강철 상자', ic:'🧰', c:'#46CDE1', get:['골드 획득 가능', '레어 이하 등급 유물 등장'] },
-  { n:'보석 상자', ic:'💠', c:'#3BD3EB', get:['골드 획득 가능', '에픽 이하 등급 유물 등장'] },
-  { n:'황금 상자', ic:'🎁', c:'#46CDE1', get:['골드 획득 가능', '유니크 이하 등급 유물 등장'] },
-  { n:'전설 상자', ic:'👑', c:'#42CFE3', get:['골드 획득 가능', '전설 등급 유물 등장'] }
-];
-let relicSub = 'box', relicBoxSel = 0;
-function renderRelicPage(){
-  const B = BANNERS.relic, bx = RLX_BOXES[relicBoxSel];
-  const owned = ownedIn(RELICS), total = RELICS.length;
-  const pct = total ? Math.round(owned / total * 100) : 0;
-  const c1 = summonCost('relic', 1), c30 = summonCost('relic', 30);
-  const can1 = S.relic >= c1, can30 = S.relic >= c30;
-  const collR = collReady('relic');
-  let h = '';
-  /* §2 진행바 + [활성화 필요]/[보너스 받기] 버튼 */
-  h += '<div class="rlx-prog"><div class="trk"><i style="width:' + pct + '%"></i></div>'
-    +  '<b>' + owned + '/' + total + '</b></div>'
-    +  '<div class="rlx-act' + (collR ? ' rdy' : '') + '"' + (collR ? ' data-rlxcoll="1"' : '')
-    +    '><em>' + bx.ic + '</em><u>' + (collR ? '보너스 받기' : '활성화 필요') + '</u></div>';
-  /* §3 리본 + 🔍 */
-  h += '<div class="rlx-rib"><s class="tl l"></s><s class="tl r"></s><div class="bar"></div>'
-    +    '<b>' + bx.n + '</b></div>'
-    +  '<div class="rlx-mag" data-rlxprob="1">🔍</div>';
-  /* §4 획득 가능 목록 */
-  h += '<div class="rlx-li l1"><s>✦</s><i>' + bx.get[0] + '</i></div>'
-    +  '<div class="rlx-li l2"><s>✦</s><i>' + bx.get[1] + '</i></div>';
-  /* §5 중앙 상자 + ▶ */
-  h += '<div class="rlx-box">' + bx.ic + '</div>'
-    +  '<div class="rlx-arw" data-rlxnext="1">▶</div>';
-  /* §6 오픈 버튼 */
-  h += '<div class="rlx-op b1' + (can1 ? '' : ' dis') + '" data-rlxopen="1"><i>오픈 ×1</i></div>'
-    +  '<div class="rlx-op b30' + (can30 ? '' : ' dis') + '" data-rlxopen="30"><i>오픈 ×30</i></div>';
-  /* §7 상자 5칸 */
-  h += '<div class="rlx-tiles">';
-  RLX_BOXES.forEach((x, i) => {
-    h += '<div class="rlx-tile t' + (i+1) + (i === relicBoxSel ? ' sel' : '') + '" data-rlxsel="' + i + '"'
-      +    (i === relicBoxSel ? '' : ' style="background:' + x.c + '"') + '>'
-      +    '<em>' + x.ic + '</em><u>x0</u></div>';
+/* ---- 89 유물 페이지 — «유물 소환 → 자동 강화» (전체화면 #relw) — 측정표 docs/measure/89-유물팝업.md ----
+   14 보물상자·15 유물 탭·16 세부 팝업·유물 소환 배너(BANNERS.relic)·수동/자동 장착(S.eqRelic)은 폐기.
+   소환 1회 = 유물조각 relicCost() 소모 → 10종 균등 1개 Lv+1(신규 = Lv.1). 12 결과 팝업 대신
+   당첨 칸이 튀는 연출(58 fxUpOk) + Lv 숫자 증가. 효과는 보유(Lv≥1)만으로 상시 적용. */
+const RW_POS  = [[216,320],[462,320],[711,320],[91,496],[340,496],[587,496],[836,496],[216,671],[462,671],[711,671]];
+const RW_GLOW = [['#351709','#9B2316'],['#152719','#1A4A38'],['#241A1B','#AB312E'],['#0D2129','#33566B'],
+                 ['#212910','#75771B'],['#11173A','#3A6D97'],['#221A27','#7B4E9E'],['#3E2B0A','#C0A26D'],
+                 ['#1F0506','#EB625C'],['#274828','#2E6B35']];
+/* 비용 = 800 + 22 × ΣLv — 레퍼런스 822 는 ΣLv 1 시점. 90 던전 유물조각 수급(1회 150~400+)과 맞춘 완만 상승 */
+const RELIC_COST_BASE = 800, RELIC_COST_PER = 22;
+const relicCost = () => RELIC_COST_BASE + RELIC_COST_PER * relicLvSum();
+function renderRelw(){
+  const g = $('rwGrid');
+  if(!g.childElementCount)
+    g.innerHTML = RELICS.map((r, i) => '<div class="rw-c" data-rw="' + r.id + '" style="left:' + RW_POS[i][0]
+      + 'px;top:' + RW_POS[i][1] + 'px;--cg:' + RW_GLOW[i][1] + ';--ce:' + RW_GLOW[i][0] + '">'
+      + '<i>' + r.ic + '</i><u></u></div>').join('');
+  RELICS.forEach(r => {
+    const el = g.querySelector('[data-rw="' + r.id + '"]');
+    el.classList.toggle('off', !has(r.id));
+    el.querySelector('u').textContent = 'Lv.' + oLv(r.id);
   });
-  h += '</div>';
-  $('relicBody').innerHTML = h;
+  $('rwCost').querySelector('b').textContent = fmt(relicCost());
+  $('rwCost').classList.toggle('lack', S.relic < relicCost());
 }
-function openRelicPage(){
+function summonRelic(quiet){
+  const cost = relicCost();
+  if(S.relic < cost){
+    if(!quiet) popup('🔮 유물조각 부족', '<p>유물조각이 <b>' + fmt(cost - S.relic) + '</b> 더 필요합니다.<br>'
+      + '던전 <b>고대 유적</b>에서 유물조각을 얻으세요!</p>');
+    return null;
+  }
+  S.relic -= cost;
+  const it = RELICS[Math.floor(Math.random() * RELICS.length)];
+  if(!S.own[it.id]) S.own[it.id] = { n:0, l:1 }; else S.own[it.id].l++;
+  S.summons++; S.cnt.sumRelic++;
+  markDirty(); uiDirty = true; save();
+  renderRelw();
+  const el = $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
+  if(el) fxUpOk(el, el, it.n + ' Lv.' + oLv(it.id));
+  return it;
+}
+function openRelw(){
   closeDungeon(); closeShopPage(); closeTrain();
-  relicSub = 'box';
-  document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
-  renderRelicPage();
-  $('relicw').classList.add('on');
+  renderRelw();
+  $('relw').classList.add('on');
 }
-function closeRelicPage(){ $('relicw').classList.remove('on'); }
-$('relicBody').addEventListener('click', e => {
-  if(e.target.closest('[data-rlxnext]')){ relicBoxSel = (relicBoxSel + 1) % RLX_BOXES.length; renderRelicPage(); return; }
-  const sel = e.target.closest('[data-rlxsel]');
-  if(sel){ relicBoxSel = +sel.dataset.rlxsel; renderRelicPage(); return; }
-  const op = e.target.closest('[data-rlxopen]');
-  if(op){
-    if(op.classList.contains('dis')){
-      const need = summonCost('relic', +op.dataset.rlxopen) - S.relic;
-      popup('🔮 유물석 부족', '<p>유물석이 <b>' + fmt(Math.ceil(need)) + '</b> 더 필요합니다.<br>던전 <b>고대 유적</b>에서 유물석을 얻으세요!</p>');
-      return;
-    }
-    doSummon('relic', +op.dataset.rlxopen);
-    renderRelicPage();
-    return;
-  }
-  if(e.target.closest('[data-rlxprob]')){ openProbInfo('relic'); return; }
-  if(e.target.closest('[data-rlxcoll]')){ claimColl('relic'); renderRelicPage(); return; }
+function closeRelw(){ $('relw').classList.remove('on'); }
+/* 칸 터치 → 공용 아이템 상세 팝업 */
+$('rwGrid').addEventListener('click', e => {
+  const c = e.target.closest('[data-rw]');
+  if(c) showItem(c.dataset.rw);
 });
-$('relicw').querySelector('.rlx-sub').addEventListener('click', e => {
-  const seg = e.target.closest('[data-rlxtab]');
-  if(!seg) return;
-  const t = seg.dataset.rlxtab;
-  if(t === 'rel'){                        /* 유물 서브탭 → 15 유물 탭(#rlw) */
-    closeRelicPage();
-    if(panelOpen){ panelOpen = false; syncPanel(); }
-    openRelicTab();
-    return;
-  }
-  relicSub = 'box';
-  document.querySelectorAll('.rlx-sub .seg').forEach(s => s.classList.toggle('on', s.dataset.rlxtab === 'box'));
-  if(panelOpen){ panelOpen = false; syncPanel(); }
-  openRelicPage();
+/* [유물 소환] — 64 훈련 홀드 규칙 재사용: 즉시 1회 → 350ms 뒤 160ms 반복(×0.86 가속, 최소 60ms).
+   부족·이탈·팝업 닫힘 → 정지. 반복 중 부족은 조용히(shake만), 첫 누름 부족만 안내 팝업. */
+let rwHold = null;
+function rwHoldStop(bad){
+  const h = rwHold; if(!h) return;
+  rwHold = null; clearTimeout(h.timer);
+  if(bad && typeof jzOn === 'function') jzOn($('rwBasin'), 'jz-sh', 380);
+}
+function rwHoldTick(){
+  const h = rwHold; if(!h) return;
+  if(!$('relw').classList.contains('on')){ rwHoldStop(false); return; }
+  if(!summonRelic(true)){ rwHoldStop(true); return; }
+  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.timer = setTimeout(rwHoldTick, h.iv);
+}
+$('rwBasin').addEventListener('pointerdown', () => {
+  rwHoldStop(false);
+  if(!summonRelic()){ if(typeof jzOn === 'function') jzOn($('rwBasin'), 'jz-sh', 380); return; }
+  rwHold = { iv: TR_HOLD_IV0, timer: setTimeout(rwHoldTick, TR_HOLD_DELAY) };
 });
+['pointerup','pointercancel','pointerleave'].forEach(ev =>
+  $('rwBasin').addEventListener(ev, () => rwHoldStop(false)));
+
 /* ---- 13 상점 팝업 — 재화 탭 — 측정표 docs/measure/13-상점팝업재화탭.md ----
-   레퍼런스의 «광고 상품» 6칸을 그대로 옮기되, 보상은 이 게임에 있는 재화(골드·다이아·유물석)와
+   레퍼런스의 «광고 상품» 6칸을 그대로 옮기되, 보상은 이 게임에 있는 재화(골드·다이아·유물조각)와
    무료 소환으로 매핑한다. 전부 **하루 n회 제한**이라 밸런스 영향은 룰렛·출석과 같은 급이다.
    횟수는 S.daily.adBuy 에 쌓고, 없는 키는 cap 으로 폴백해 **세이브 마이그레이션 없이** 돌아간다.
    fs/sx/qx 는 «레퍼런스 잉크 폭·높이» 에 맞춘 칸별 보정값이다(측정표 §5-3). 이 서체는 레퍼런스의
@@ -12464,16 +12019,16 @@ function renderCoinPage(list){
     +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
     +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → 💎 ' + fmt(MILE_DIA) + '</div>'
     +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
-  /* §9 유물석 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물석 교환소» 이관.
-     `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물석은 14/15 유물 소환의 재화라
+  /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.
+     `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물조각은 14/15 유물 소환의 재화라
      대체 획득처가 광고 상품뿐이었으므로 폐기하지 않고 옮긴다. */
   h += '<div class="cn-rb" style="top:3084px;--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
-    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물석 교환</i></div>';
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
   EXCHANGE.forEach((x, i) => {
     const px = [111, 401, 691][i % 3];
     h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px;--fs:35.5px;--sx:.95'
       +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5">'
-      +  '<div class="bg"></div><div class="hd"><i>유물석</i></div>'
+      +  '<div class="bg"></div><div class="hd"><i>유물조각</i></div>'
       +  '<div class="pn"><em>🔮</em></div>'
       +  '<div class="qt">×' + fmt(x.rel) + '</div>'
       +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">💎 ' + fmt(x.dia) + '</u></div>'
@@ -12491,7 +12046,7 @@ $('shopList').addEventListener('click', e => {
       - lw.getBoundingClientRect().top - 40, behavior:'smooth' });
     return;
   }
-  /* 작업 68 — §9 유물석 교환(구버전 패널 상점에서 이관). 규칙은 구버전과 동일하다. */
+  /* 작업 68 — §9 유물조각 교환(구버전 패널 상점에서 이관). 규칙은 구버전과 동일하다. */
   const ex0 = e.target.closest('[data-ex]');
   if(ex0){
     const ex = EXCHANGE.find(v => v.dia === +ex0.dataset.ex);
@@ -12499,7 +12054,7 @@ $('shopList').addEventListener('click', e => {
     if(S.dia < ex.dia){ popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); return; }
     S.dia -= ex.dia; S.relic += ex.rel; uiDirty = true; save();
     renderCoinPage($('shopList'));
-    popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물석 <b>🔮' + fmt(ex.rel) + '</b></p>');
+    popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물조각 <b>🔮' + fmt(ex.rel) + '</b></p>');
     return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
@@ -12529,98 +12084,6 @@ $('shopList').addEventListener('click', e => {
   if(got && !a.r.freePet) popup('🎁 ' + a.n + ' 수령', '<p>' + got + ' 을(를) 받았습니다.</p>');
 });
 
-/* ---- 15 유물 팝업 — 유물 탭 (전체화면 페이지 #rlw) — 측정표 docs/measure/15-유물팝업유물탭.md ----
-   등급 리본으로 섹션을 나누고, 각 섹션에 아치형 슬롯 카드를 4열로 깐다.
-   좌표·색은 전부 측정표 실측값이며 CSS 에 박혀 있다 — 여기서는 상태값만 채운다.
-   **표시 전용이다.** RELICS·S.own·컬렉션 보너스 등 저장 구조는 건드리지 않는다.
-   레퍼런스는 등급당 6칸(1행 4 + 2행 2)이다. 이 게임의 유물은 등급당 1~2종뿐이라
-   05 무기 팝업과 같은 방식으로 **나머지를 미해금 자물쇠 칸으로 채워** 같은 격자 리듬을 만든다
-   (레퍼런스도 미보유 칸을 자물쇠로 그린다 — 밸런스에는 영향이 없다). */
-const RL_SLOTS = 6;
-const RL_RIB = [
-  /* 밴드 · 상단 하이라이트 · 하단 음영 · 꼬리 · 꼬리 그늘 — 일반/고급/희귀는 실측(커먼/언커먼/레어) */
-  { c:'#6F6F91', h:'#9B9CB1', s:'#5C5C80', t:'#514C7C', t2:'#393454' },
-  { c:'#7C9A38', h:'#91AE51', s:'#667D2D', t:'#6E8534', t2:'#566628' },
-  { c:'#1A89D8', h:'#4FA6E4', s:'#1470B0', t:'#0E72BD', t2:'#0A5990' },
-  { c:'#7B57B8', h:'#9A7ACB', s:'#634694', t:'#5E3F94', t2:'#472F70' },
-  { c:'#C08A2A', h:'#D6A54B', s:'#9C6E1F', t:'#9E7020', t2:'#7A5518' },
-  { c:'#C2545F', h:'#D67680', s:'#9E4049', t:'#A0424C', t2:'#7C333B' }
-];
-/* 포켓 — 바깥 실루엣(베벨색+검정 7) + 안쪽 면(좌·우·하 22 인셋) */
-const RL_POCKET = u => '<svg viewBox="0 0 216 189" aria-hidden="true">'
-  /* 5회차: 쉘은 등급 틴트 단색(--bv). 내부면 인셋 32 → 27 (측면 레일 ref 20px = x315..334,
-     3회차의 32 는 25px 로 +25% 과대였다). 내부면 상단에는 ref 의 립 하이라이트 밴드를 얹는다
-     (ref x350: 상단 (61,67,91) 피크 → 아래 (49,56,75) 평탄. 우리는 전 구간 평탄이었다). */
-  + '<defs><linearGradient id="ph' + u + '" x1="0" y1="0" x2="0" y2="1">'
-  +   '<stop offset=".02" stop-color="#FFF" stop-opacity="0"/>'
-  +   '<stop offset=".19" stop-color="#FFF" stop-opacity=".085"/>'
-  +   '<stop offset=".40" stop-color="#FFF" stop-opacity="0"/></linearGradient></defs>'
-  + '<path d="M21.5 3.5H194.5A18 18 0 0 1 212.5 21.5V133C210.5 148 138 185 108 185'
-  +   'C78 185 5.5 148 3.5 133V21.5A18 18 0 0 1 21.5 3.5Z" fill="var(--bv)" stroke="#000" stroke-width="7"/>'
-  + '<path d="M27 13H189V128C187 136 126 158 108 158C90 158 29 136 27 128Z" fill="var(--pk)"/>'
-  + '<path d="M27 13H189V128C187 136 126 158 108 158C90 158 29 136 27 128Z" fill="url(#ph' + u + ')"/>'
-  + '</svg>';
-const RL_LOCK = '<svg viewBox="0 0 103 113" aria-hidden="true">'
-  + '<path d="M31.5 52V37a20 20 0 0 1 40 0v15" fill="none" stroke="#000" stroke-width="30" stroke-linecap="round"/>'
-  /* 5회차: 흰 bbox 총합(86x95)은 ref 와 맞는데 «고리:몸통» 배분이 틀렸다 —
-     ref 중앙열 몸통 흰 652..708 vs 우리 656..707, 열쇠구멍 ref 33px(664..696) vs 27px.
-     몸통을 4px 위로 키워 고리 노출을 줄이고, 열쇠구멍을 ref 20x33 으로 키운다. */
-  + '<rect x="4" y="43" width="95" height="66" rx="15" fill="#000"/>'
-  + '<path d="M31.5 52V37a20 20 0 0 1 40 0v15" fill="none" stroke="#FBFAFF" stroke-width="15" stroke-linecap="round"/>'
-  + '<rect x="8.5" y="47.5" width="86" height="57" rx="11" fill="#FBFAFF"/>'
-  + '<circle cx="51.5" cy="71" r="10" fill="#000"/>'
-  + '<path d="M45.5 74h12l3 19h-18z" fill="#000"/></svg>';
-function renderRelicTab(){
-  let h = '';
-  GRADE.forEach((g, gi) => {
-    const list = RELICS.filter(r => r.g === gi);
-    if(!list.length) return;
-    const R = RL_RIB[gi];
-    h += '<div class="rl-sec" style="--rc:' + R.c + ';--rh:' + R.h + ';--rs:' + R.s
-      +  ';--rt:' + R.t + ';--rt2:' + R.t2 + '">'
-      +  '<div class="rl-rib"><div class="tl"></div><div class="tr"></div>'
-      +    '<div class="dl"></div><div class="dr"></div>'
-      +    '<div class="bd"></div><div class="lb"><i>' + g.n + '</i></div></div>'
-      +  '<div class="rl-grid">';
-    for(let i = 0; i < RL_SLOTS; i++){
-      const r = list[i];                       /* 없는 칸 = 미해금 자물쇠 칸 */
-      const own = r ? has(r.id) : false;
-      const lv = own ? oLv(r.id) : 0, need = fragNeed(own ? lv : 1), n = own ? frag(r.id) : 0;
-      const p = own ? clamp(n / need, 0, 1) : 0;
-      h += '<div class="rl-card' + (own ? ' own' : '') + '" data-g="' + gi + '"'
-        +    (r ? ' data-rl="' + r.id + '"' : '') + '>'
-        +    '<div class="ar"></div><div class="cv"></div><div class="pk">' + RL_POCKET(gi * 10 + i) + '</div>'
-        +    '<div class="ic">' + (r ? r.ic : '') + '</div>';
-      h += own
-        ? '<div class="lv"><i>Lv. ' + lv + '</i></div>'
-          + '<div class="bar"><u style="width:' + (p * 139) + 'px"></u><b><i>' + n + '/' + need + '</i></b></div>'
-        : '<div class="lk">' + RL_LOCK + '</div>';
-      h += '</div>';
-    }
-    h += '</div></div>';
-  });
-  $('rlList').innerHTML = h;
-}
-function openRelicTab(){
-  closeDungeon(); closeShopPage();
-  if(typeof closeRelicPage === 'function') closeRelicPage();   /* 14 보물상자 탭과 배타 */
-  relicSub = 'rel';
-  renderRelicTab();
-  $('rlw').classList.add('on');
-  $('rlList').scrollTop = 0;
-}
-function closeRelicTab(){ $('rlw').classList.remove('on'); }
-$('rlList').addEventListener('click', e => {
-  const c = e.target.closest('[data-rl]');
-  if(c) showItem(c.dataset.rl);     /* 16 유물 세부 팝업은 별도 작업 단위 — 공용 상세로 연결 */
-});
-document.querySelector('#rlw .rl-tabs').addEventListener('click', e => {
-  const t = e.target.closest('[data-rltab]');
-  if(!t || t.dataset.rltab === 'relic') return;
-  closeRelicTab();
-  relicSub = 'box';
-  openRelicPage();                  /* 14 보물상자 탭 */
-});
 
 /* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
    좌표는 전부 레퍼런스 실측 절대 px 이다. 격자는 **행 = 등급** 으로 묶는다:
@@ -12845,7 +12308,7 @@ const CURINFO = {
     get:() => S.dia,
     d:'장비와 스킬 등을 소환하거나, 다양한 물건을 구매할 때 사용합니다.',
     ways:['출석 · 룰렛', '퀘스트 · 우편', '던전 «' + (DUNGEONS.find(d => d.id === 'dia') || {}).n + '»'] },
-  relic: { ic:'🔮', n:'유물석',
+  relic: { ic:'🔮', n:'유물조각',
     get:() => S.relic,
     d:'유물을 소환하고 강화할 때 사용합니다.',
     ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic') || {}).n + '»', '룰렛 보상', '다이아 교환'] },
@@ -12876,7 +12339,7 @@ function closeCurInfo(){ curInfoKey = null; $('ciw').classList.remove('on'); }
    ⚠ 그래서 `data-cur` 는 **재화의 «보유량» 을 보여주는 아이콘에만** 붙인다.
       구매·수령 버튼 위의 «가격/보상» 아이콘(10 소환 💎, 23 훈련 💰, 03 던전 보상, 22 퀘스트 보상)에
       붙이면 그 클릭이 거래 대신 팝업을 열어 버린다 — 붙이지 말 것.
-   현재 대상: 상단 HUD 골드·다이아 알약 / 유물석 교환소 보유 표시 / 스탯 포인트 보유 표시.
+   현재 대상: 상단 HUD 골드·다이아 알약 / 유물조각 교환소 보유 표시 / 스탯 포인트 보유 표시.
    41(03·14 팝업 내장 재화 바)·44(상점 재화 탭)가 새 재화 바를 만들면 속성만 붙이면 편입된다. */
 document.addEventListener('click', e => {
   const t = e.target.closest && e.target.closest('[data-cur]');
@@ -13138,7 +12601,7 @@ $('spcProfTab').onclick = () => { closeSpec(); openProfile(); };
 /* ---- 53 가방 팝업 — 측정표 docs/measure/53-가방팝업.md ----
    레퍼런스는 «소모품 · 재화» 2탭 + 5×4 격자에 보유분을 등급 내림차순으로 채우고, 남는 칸은 비운다.
    우리 게임 매핑(측정표 §6):
-     재화(기본 활성 — 레퍼런스와 같은 상태) = 골드·다이아·유물석·마일리지·스탯포인트 + S.own 보유 재료
+     재화(기본 활성 — 레퍼런스와 같은 상태) = 골드·다이아·유물조각·마일리지·스탯포인트 + S.own 보유 재료
      소모품                                 = 던전 입장권 5종 · 상자별 무료 소환권 · 룰렛 남은 횟수
    둘 다 실제 게임 데이터를 읽는다(«준비 중» 없음). 격자는 항상 20칸을 채워 반쪽이 되지 않게 한다. */
 const BAG_MIN = 20;
@@ -13157,7 +12620,7 @@ function bagCur(){
   const out = [
     { ic:'🪙', n:'골드',       g:1, q:S.gold | 0 },
     { ic:'💎', n:'다이아',     g:3, q:S.dia | 0 },
-    { ic:'🔮', n:'유물석',     g:2, q:S.relic | 0 },
+    { ic:'🔮', n:'유물조각',     g:2, q:S.relic | 0 },
     { ic:'🎟️', n:'마일리지',   g:4, q:S.mileage | 0 },
     { ic:'✨', n:'스탯 포인트', g:2, q:S.sp | 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
@@ -13545,8 +13008,6 @@ $('bSk').addEventListener('click', e => {
   const c = e.target.closest('[data-skit]');
   if(c) showItem(c.dataset.skit);
 });
-/* 작업 57 — `bindBanner('bEq', …)` 폐기(구버전 장비 패널 삭제). `renderBanner` 자체는 유물 등이 계속 쓴다 */
-bindBanner('bRel', () => 'relic');
 
 /* ==========================================================================
    26 동료 팝업 (바닥 시트) — 07 스킬 팝업 구조·규격을 그대로 복제한다.
@@ -14042,11 +13503,11 @@ addEventListener('pointermove', e => {
    같은 탭을 다시 누르면 패널이 닫히고, 열려 있는 동안 그 탭 자리는 ✕ 로 바뀐다. */
 /* 작업 57 — 장비(eq)에는 패널 본문이 없다. 06 은 #panel 이 아니라 전용 오버레이 #eqw 다 */
 /* 작업 68 — 상점(shop)에도 패널 본문이 없다. 10 은 #panel 이 아니라 전용 페이지 #shopw 다 */
-const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', cos:'bCos', rel:'bRel', dun:'bDun', st:'bSt' };
+const TABBODY = { up:'bUp', sk:'bSk', pet:'bPet', cos:'bCos', dun:'bDun', st:'bSt' };
 /* 작업 50 — 코스튬 서브탭 본문 추가. `eq` 는 여기 없다(06 은 전용 오버레이 #eqw, 작업 57) */
 const HEROBODY = { sk:'bSk', pet:'bPet', cos:'bCos' };
 function bodyOf(k){ return k === 'hero' ? HEROBODY[heroTab] : k === 'grow' ? 'bUp'
-  : k === 'adv' ? 'bDun' : k === 'box' ? 'bRel' : null; }
+  : k === 'adv' ? 'bDun' : null; }
 function syncPanel(){
   const b = panelOpen ? bodyOf(curTab) : null;
   /* 작업 57 — 본문이 없는 서브탭(장비)은 패널 자체를 접는다. 구버전 #bEq 가 폐기돼
@@ -14075,7 +13536,7 @@ function goTab(k, forceOpen){
      작업 68 — 구버전 패널 상점(#bShop)을 폐기했으므로 `forceOpen` 분기가 없다.
      상점은 **어떤 경로로 불려도** 10 페이지로만 간다(빈 #panel 이 열리는 일이 없다). */
   if(k === 'shop'){
-    closeDungeon(); closeRelicPage(); closeRelicTab(); closeTrain();
+    closeDungeon(); closeRelw(); closeTrain();
     if($('shopw').classList.contains('on')){ closeShopPage(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
     if(!S.seen.shop){ S.seen.shop = 1; document.querySelectorAll('.tab').forEach(x =>
@@ -14083,25 +13544,19 @@ function goTab(k, forceOpen){
     openShopPage();
     return;
   }
-  /* 보물상자 탭 → 14 유물 팝업(전체화면 #relicw). 유물 서브탭 상태면 기존 배너 패널을 연다. */
+  /* 유물 탭 → 89 유물 페이지(전체화면 #relw) 직행. 14 보물상자·15 유물 탭·16 세부는 폐기(작업 89). */
   if(k === 'box' && !forceOpen){
     closeDungeon(); closeShopPage(); closeTrain();
-    if($('relicw').classList.contains('on')){ closeRelicPage(); return; }
+    if($('relw').classList.contains('on')){ closeRelw(); return; }
     if(!S.seen.box){ S.seen.box = 1; document.querySelectorAll('.tab').forEach(x =>
       x.classList.toggle('fresh', !S.seen[x.dataset.t])); }
-    if(relicSub === 'rel'){          /* 15 유물 탭 */
-      if($('rlw').classList.contains('on')){ closeRelicTab(); return; }
-      if(panelOpen){ panelOpen = false; syncPanel(); }
-      openRelicTab();
-      return;
-    }
     if(panelOpen){ panelOpen = false; syncPanel(); }
-    openRelicPage();
+    openRelw();
     return;
   }
   /* 훈련 탭 → 23 훈련 팝업(바닥 시트 #trw) 직행. 중간 «성장» 패널은 폐기했다. */
   if(k === 'grow' && !forceOpen){
-    closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab();
+    closeDungeon(); closeShopPage(); closeRelw();
     if($('trw').classList.contains('on')){ closeTrain(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
     if(!S.seen.grow){ S.seen.grow = 1; document.querySelectorAll('.tab').forEach(x =>
@@ -14111,7 +13566,7 @@ function goTab(k, forceOpen){
   }
   /* 던전 탭 → 03 던전 페이지(#dunw) 직행. 중간 «모험» 패널은 폐기했다. (작업 24) */
   if(k === 'adv' && !forceOpen){
-    closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();
+    closeShopPage(); closeRelw(); closeTrain();
     if($('dunw').classList.contains('on')){ closeDungeon(); return; }
     if(panelOpen){ panelOpen = false; syncPanel(); }
     if(!S.seen.adv){ S.seen.adv = 1; document.querySelectorAll('.tab').forEach(x =>
@@ -14119,7 +13574,7 @@ function goTab(k, forceOpen){
     openDungeon();
     return;
   }
-  closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
+  closeDungeon(); closeShopPage(); closeRelw(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
@@ -14453,7 +13908,6 @@ function renderUI(){
       else                       renderPet();               /* 26 — 동료 바닥 시트(07 구조 복제) */
     }
     else if(curTab === 'adv')  renderDun();
-    else if(curTab === 'box')  renderBanner('relic', 'bRel');
   }
   const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
@@ -15064,8 +14518,8 @@ loadAtlases(() => {
    ⚠ 입력 지연 0 — 애니메이션은 결과를 기다리지 않는다(누름은 pointerdown 즉시, 클릭 처리와 무관).
    ========================================================================== */
 const JZ_SHEET = { trw:1, eqw:1, panel:1 };            /* 아래에서 올라오는 바닥 시트 */
-const JZ_OVID = ['modal','offw','dunw','shopw','relicw','dgdw','wpnw','prbw','collw','ciw',
-                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','dclw','rlw','panel','psw'];
+const JZ_OVID = ['modal','offw','dunw','shopw','relw','dgdw','wpnw','prbw','collw','ciw',
+                 'pfw','specw','trw','eqw','upw','sumw','statw','defw','dclw','panel','psw'];
 const JZ_NOPRESS = new Set(JZ_OVID.concat(['app','wrap','fxl','stagearea','view','tabbar','top']));
 /* 붙인 클래스는 «애니메이션이 실제로 끝났을 때» 뗀다.
    ⚠ wall-clock `setTimeout(…, ms)` 로 떼면 안 된다 — 애니메이션이 느려지거나 멈춘 프레임에서

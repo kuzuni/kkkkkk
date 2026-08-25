@@ -119,7 +119,9 @@ function launchOpts(){
       /* 33 재화 정보 팝업 — «모든 재화 아이콘» 이 오프너다. 아이콘은 data-cur 속성 하나로 표시되므로
          새 화면이 재화 아이콘을 추가해도 여기 목록이 자동으로 늘어난다(작업 33). */
       const curs = await page.$$eval('[data-cur]', (els) => els.map((e) => e.dataset.cur)).catch(() => []);
-      [...new Set(curs)].forEach((c) => openers.push({ label: 'cur:' + c, sel: `[data-cur="${c}"]` }));
+      /* 89 — «유물조각» 알약은 #relw 페이지 안에만 있어 유물 탭을 먼저 연다(pre) */
+      [...new Set(curs)].forEach((c) => openers.push({ label: 'cur:' + c, sel: `[data-cur="${c}"]`,
+        pre: c === 'relic' ? '.tab[data-t="box"]' : null }));
       /* 영웅 서브탭 (있으면) */
       const subs = await page.$$eval('#panel [id^="b"][class*="sub"], #panel .sub [data-sub], #panel .subtab', (els) => els.map((e) => e.id || e.dataset.sub || e.textContent.trim()).filter(Boolean)).catch(() => []);
       subs.forEach((s) => openers.push({ label: 'sub:' + s, sel: null, sub: s }));
@@ -189,7 +191,10 @@ function launchOpts(){
     for (const o of openers) {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       try {
-        if (o.sel) await page.click(o.sel, { timeout: 3000, force: true });
+        if (o.sel) {
+          if (o.pre) { await page.click(o.pre, { timeout: 3000, force: true }); await page.waitForTimeout(400); }
+          await page.click(o.sel, { timeout: 3000, force: true });
+        }
         else if (o.hero) {
           await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
@@ -347,7 +352,7 @@ function launchOpts(){
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
