@@ -16,7 +16,7 @@ const IMG = process.env.SCAN_IMG || 'docs/ref/34-축복-버프팝업.jpg';
 
 (async () => {
   const b64 = fs.readFileSync(path.resolve(IMG)).toString('base64');
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const page = await browser.newPage();
   await page.setContent('<canvas id=c></canvas>');
   const args = process.argv.slice(2);
