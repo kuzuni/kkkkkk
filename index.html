@@ -1786,7 +1786,7 @@
      0% opacity .34: 페이드인 램프가 길면 «수치는 91ms 에 바뀌었는데 플로터는 224ms» 인과 역전으로
      읽힌다(Y ①). .62s 로 692ms 전에 소멸. 색은 재화 골드와 분리한 스탯 초록(Z ④). */
   .fx-delta{animation-name:fxDelta;animation-duration:.62s}
-  @keyframes fxDelta{0%{opacity:.34;transform:translate(-50%,4px) scale(.8)}
+  @keyframes fxDelta{0%{opacity:.6;transform:translate(-50%,4px) scale(.8)}
     10%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
     30%{opacity:1;transform:translate(-50%,-22px) scale(1)}
     62%{opacity:1;transform:translate(-50%,-44px) scale(1)}
@@ -1885,7 +1885,7 @@
      11회차: 0% 를 `opacity:1` 로 못박아 두니 이번엔 «스냅» 으로 읽혔다(10회차 보류 사유 3).
      0% 를 **0 이 아닌 .34** 로 두면 둘 다 산다 — 메인 스레드가 막혀도 fill-mode 가 «보이는» 상태를
      유지하고(사라지지 않는다), 실제로 애니메이션이 돌면 앞 12% 에 페이드인 구간이 생긴다. */
-  @keyframes fxCheckIn{0%{opacity:.34;transform:translate(-50%,-50%) scale(.5)}
+  @keyframes fxCheckIn{0%{opacity:.55;transform:translate(-50%,-50%) scale(.72)}
     12%{opacity:1;transform:translate(-50%,-50%) scale(.94)}
     18%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
     34%{opacity:1;transform:translate(-50%,-50%) scale(1)}
@@ -11818,7 +11818,7 @@ function openQuest(tab){
      11회차까지는 둘 다 배지에 걸어서 92px 체크 링이 받은 수량(«90», 44×30px)의 상단 60% 를
      가렸다(비평가 Q·R 공통 실측). 손맛은 손가락 밑에, 재화는 보상 자리에서 나가는 것이 맞다. */
   const fxQuest = (btn, el) => {
-    if(btn){ fxCheck(btn); fxBurst(btn, '#8FE9FF', 10); }
+    if(btn){ fxCheck(btn); fxBurst(btn, '#FFE07A', 10); }   /* 18회차 — 시안 버블은 09·12·17 금색 콘페티 톤과 이질(AD ④) */
     if(el){ fxAt(el); fxSolo(el); }
     fxHoldList(); fxFlush();                     /* 연출이 끝난 뒤 목록 갱신 · 디바운스는 건너뛴다 */
     fxToast('퀘스트 완료');
@@ -14612,8 +14612,10 @@ function fxBurst(t, col, n){
   const rx = rr, ry = rr;
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
-    /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150. */
-    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(80, 150);
+    /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150.
+       18회차 — 대상이 요소면 이동 거리를 그 경계 +40px 안으로 클램프(17회차 AD: 경계 밖 20~30px 스필). */
+    const dCap = r ? Math.max(70, Math.min(r.w, r.h)/2 + 40 - rr) : 150;
+    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(Math.min(80, dCap), Math.min(150, dCap));
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
@@ -14699,10 +14701,10 @@ function fxDelta(el, txt){
   if(L.childElementCount >= FXMAX) return;
   const d = document.createElement('b');
   d.className = 'fx-plus fx-delta';
-  d.style.color = '#B6FFC2';                          /* 스탯 초록 — 재화 골드와 색 어휘 분리(15회차 Z ④) */
+  d.style.color = '#8BE22C';                          /* 카드 «+2.4» 와 같은 스탯 초록(17회차 AC·AD: 민트는 색 불일치) */
   d.style.fontSize = '34px';
   d.style.left = (r.x + r.w/2) + 'px';
-  d.style.top  = (r.y - 30) + 'px';                    /* 앵커(.cv) 위 30px — 갱신된 «+2.4» 와 첫 프레임 겹침 방지(16회차 AB) */
+  d.style.top  = (r.y - 58) + 'px';                    /* 에지 간격 ~30px 확보 — −30px 는 글리프 높이만큼 먹혀 실간격 5px 였다(17회차 AC·AD) */
   d.textContent = txt;
   L.appendChild(d);
   setTimeout(() => d.remove(), 660);
@@ -14726,11 +14728,15 @@ function fxCheck(el){
   d.className = 'fx-check';
   d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
   d.style.animation = 'fxCheckIn .6s ease-out both';   /* 보상 숫자를 오래 덮지 않게 */
+  /* 18회차(17회차 비평 AC·AD 공통) — ① 스트로크를 흰색으로: 밝은초록-온-진초록은 205~250ms
+     저대비 구간이 생긴다. ② 드로잉 delay 를 **음수(−0.08s)** 로: CSS 애니는 첫 페인트에서야 돌기
+     시작하는데 이 컨테이너는 첫 페인트가 ~120ms 늦다 — 음수 delay 면 첫 페인트에 이미 44% 그려져
+     있어 «205ms 스트로크 0%» 가 사라진다(체감은 여전히 드로잉으로 읽힌다). */
   d.innerHTML = '<svg viewBox="0 0 100 100" width="92" height="92">'
-    + '<circle cx="50" cy="50" r="41" fill="rgba(20,60,26,.55)" stroke="#7BE88E" stroke-width="8"/>'
-    + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#B6FFC2" stroke-width="12"'
+    + '<circle cx="50" cy="50" r="41" fill="rgba(10,40,16,.62)" stroke="#7BE88E" stroke-width="8"/>'
+    + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#FFFFFF" stroke-width="12"'
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
-    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .18s ease-out .02s forwards"/></svg>';
+    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .18s ease-out -0.08s forwards"/></svg>';
   L.appendChild(d);
   setTimeout(() => d.remove(), 900);
 }
@@ -14743,8 +14749,8 @@ function fxCheck(el){
    693ms 복귀 0% — 이 컨테이너에서 setTimeout 발화 + 스타일 재계산 + 페인트가 **~170ms 늦게**
    얹혀 «530 시작» 이 실제로는 ~700 에 시작한다. 17회차 — 시작을 440 으로 앞당긴다: 코인이 형제
    행 대역(y900~1600)을 지나는 것은 ~300ms 까지라 440 해제는 오독 방지 목적을 해치지 않고,
-   지연을 먹어도 ~610 부터 복귀가 굴러 693 프레임에 30~50% 가 찍힌다. 재렌더는 620 유지. */
-const FXSOLO = 440, FXHOLD = 620;
+   지연을 먹어도 복귀가 캡처 안에 굴러간다(17회차 실측: 440 설정에 개시 ~560 — +120ms 지연 상수. 18회차 380 으로 재보정). 재렌더는 620 유지. */
+const FXSOLO = 380, FXHOLD = 620;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
