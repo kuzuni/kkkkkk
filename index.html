@@ -1430,14 +1430,31 @@
     box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done{background:#E3D3BC}
-  /* 92 — [읽음 전체 삭제] 로 사라지는 행. 60 쥬시의 «접히며 사라짐»: 높이·여백·불투명도를 같이 0 으로
-     보낸다. (`.jz-*` 공용 이름은 60 구간이라 69 안에 지역 클래스로 둔다.) */
-  .ml-r.out{animation:mlOut .26s cubic-bezier(.4,0,.7,1) both;pointer-events:none;overflow:hidden}
+  /* 92 — [읽음 전체 삭제] 로 사라지는 행. 60 쥬시의 «밀려나며 접힘»: 오른쪽으로 밀어낸 뒤
+     높이·여백을 0 으로 접는다. (`.jz-*` 공용 이름은 60 구간이라 69 안에 지역 클래스로 둔다.)
+
+     ⚠ 1회차 비평(A 3 / B 3) 반영 — 260ms·translateX 40px·단일 ease-in 은 세 가지가 동시에 틀렸다:
+       ① 이징이 `cubic-bezier(.4,0,.7,1)`(ease-in) 이라 앞 25% 구간이 진행률 4% 밖에 안 돼
+          «가만히 있다가 마지막에 훅» 으로 읽혔다 → 구간마다 이징을 따로 주고 수축을 **선형에 가깝게**.
+       ② 이탈 거리 40px 은 카드 폭 784 의 **5.1%** — «나간다» 가 아니라 «쪼그라든다» 로 읽힌다
+          → **168px(21%)**. ③ 높이 수축이 전 구간에 퍼져 있어 표본이 없다 → **46% 지점까지 높이를 붙잡고**
+          남은 54%(227ms) 에 걸쳐 접는다. 길이도 .26s → **.42s**(58 «0.3~0.8초» 규칙 안). */
+  .ml-r.out{animation:mlOut .42s both;animation-delay:var(--mld,0ms);
+    pointer-events:none;overflow:hidden;position:relative;z-index:1}
   @keyframes mlOut{
-    0%{opacity:1;transform:scaleY(1)}
-    35%{opacity:.55;transform:scaleY(1) translateX(26px)}
-    100%{opacity:0;transform:scaleY(.06) translateX(40px);height:0;margin-bottom:0;
+    0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);
+      animation-timing-function:cubic-bezier(.15,.8,.35,1)}
+    20%{opacity:.95;height:147px;margin-bottom:17px;transform:translateX(38px);
+      animation-timing-function:linear}
+    46%{opacity:.62;height:147px;margin-bottom:17px;transform:translateX(112px);
+      animation-timing-function:cubic-bezier(.4,.02,.4,1)}
+    100%{opacity:0;height:0;margin-bottom:0;transform:translateX(168px);
       box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
+  /* 92 — 남는 행의 재배치. 재렌더는 DOM 을 통째로 새로 만들므로 «자리 이동» 이 0ms 점프가 된다
+     (1회차 비평 A-③·B-③ 공통 지적). 재렌더 직후 옛 자리로 되돌려 놓고 이 클래스로 제자리까지
+     보간한다(FLIP). 이동량은 `--mlf` 로 행마다 다르게 들어온다. */
+  .ml-r.flip{animation:mlFlip .26s cubic-bezier(.2,.8,.3,1) both}
+  @keyframes mlFlip{from{transform:translateY(var(--mlf,0px))}to{transform:translateY(0)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
@@ -11705,16 +11722,43 @@ function openMail(){
     fxMail($('mailBtn'));
     fxThen(() => { claimAllMail(); openMail(); });
   };
-  /* 92 — 삭제는 재화가 오가지 않으므로 58 비행은 없고, 지워지는 행만 접었다가(.out) 재렌더한다. */
+  /* 92 — 삭제는 재화가 오가지 않으므로 58 비행은 없다. 지워지는 행을 **90ms 씩 어긋나게** 밀어내
+     접고(.out), 남는 행은 재렌더 뒤 FLIP(.flip)으로 제 자리까지 올라온다.
+     ⚠ 1회차 비평 반영 — ① `fxCheck` 는 «보상 확인» 표식이라 삭제에 의미가 안 맞고, 길이도 .6s 라
+     260ms 짜리 카드 연출보다 340ms 더 살아남아 버튼 라벨(92px 디스크가 높이 117 의 67%)을 덮었다
+     (B-④) → 뺐다. ② 파티클이 버튼에만 8개 몰려 «무엇이 사라졌는지» 는 대상 행에 신호가 0 이었다
+     (A-④) → 버튼 버스트는 6개로 줄이고 **사라지는 행마다** 미니 버스트를 스태거로 붙인다. */
+  const MLDEL_STAG = 90, MLDEL_DUR = 420;
   $('mailDel').onclick = () => {
     if(!mailDelable()) return;
     const b = $('mailDel');
-    fxCheck(b); fxBurst(b, '#FFC0C0', 8);
+    fxPop(b); fxBurst(b, '#FFC0C0', 6);
     const rows = MAILS.filter(m => S.mail[m.id] === 1)
       .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
       .map(el => el && el.closest('.ml-r')).filter(Boolean);
-    rows.forEach(r => r.classList.add('out'));
-    setTimeout(() => { delReadMail(); if(fxStillOpen('ml69')) openMail(); }, 260);
+    /* FLIP 준비 — 남는 행의 «지금» 자리를 재 둔다(재렌더 뒤 좌표와 비교한다) */
+    const was = {};
+    $('mbox').querySelectorAll('.ml-r [data-ml]').forEach(el => {
+      const r = el.closest('.ml-r'); if(r && !rows.includes(r)) was[el.dataset.ml] = r.getBoundingClientRect().top;
+    });
+    rows.forEach((r, i) => {
+      r.style.setProperty('--mld', (i * MLDEL_STAG) + 'ms');
+      r.classList.add('out');
+      setTimeout(() => fxBurst(r, '#FFC0C0', 5), i * MLDEL_STAG + 60);
+    });
+    setTimeout(() => {
+      delReadMail();
+      if(!fxStillOpen('ml69')) return;
+      openMail();
+      $('mbox').querySelectorAll('.ml-r [data-ml]').forEach(el => {
+        const r = el.closest('.ml-r'), from = was[el.dataset.ml];
+        if(!r || from === undefined) return;
+        const d = from - r.getBoundingClientRect().top;
+        if(Math.abs(d) < 2) return;
+        r.style.setProperty('--mlf', d.toFixed(1) + 'px');
+        r.classList.add('flip');
+      });
+    }, MLDEL_DUR + (rows.length - 1) * MLDEL_STAG + 20);
   };
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
     const row = b.closest('.ml-r');

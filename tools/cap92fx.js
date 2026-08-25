@@ -3,11 +3,11 @@
 
    ⚠ 1회차 교훈 — «고정 간격 waitForTimeout + screenshot» 으로는 **짧은 연출을 못 찍는다.**
    `page.screenshot()` 한 장이 100~200ms 걸려서 «+35ms 프레임» 이 실제로는 +300ms 에 찍힌다.
-   그러면 비평가는 «260ms 짜리가 70ms 만에 끝났다» 고 **캡처 아티팩트를 연출 결함으로 채점**한다
+   그러면 비평가는 «.42s 짜리가 70ms 만에 끝났다» 고 **캡처 아티팩트를 연출 결함으로 채점**한다
    (실제로 1회차 비평가 A 가 그렇게 읽었다). 그래서 이 하네스는 **Web Animations API 로 정지·탐색**한다:
      ① 클릭 → `.ml-r.out` 의 애니메이션을 즉시 `pause()`
      ② `currentTime` 을 0·35·70·…·245ms 로 **정확히** 옮겨 가며 1장씩 찍는다
-     ③ 260ms 뒤 재렌더는 `setTimeout` 을 가로채 붙잡아 뒀다가 마지막에 손으로 실행한다(착지 프레임)
+     ③ 연출 뒤 재렌더는 `setTimeout` 을 가로채 붙잡아 뒀다가 마지막에 손으로 실행한다(착지 프레임)
    → 프레임 라벨의 ms 가 **실제 애니메이션 진행 시각과 일치**한다.
 
    실행: node tools/cap92fx.js [접두어]     (기본 docs/review/92-fx)
@@ -16,7 +16,9 @@ const { chromium } = require('playwright');
 const path = require('path');
 
 const pre = process.argv[2] || 'docs/review/92-fx';
-const STOPS = [0, 35, 70, 105, 140, 175, 210, 245];   /* ms — 260ms 연출을 8등분 */
+/* ms — 접힘 .42s + 행 스태거 90ms → 관측 구간 0~510ms 를 8등분.
+   `currentTime` 은 **딜레이 포함** 타임라인이라 스태거된 2번째 행도 같은 t 로 맞는다. */
+const STOPS = [0, 70, 140, 210, 280, 350, 420, 500];
 
 (async () => {
   const b = await chromium.launch();
@@ -55,15 +57,16 @@ const STOPS = [0, 35, 70, 105, 140, 175, 210, 245];   /* ms — 260ms 연출을 
   });
   await p.waitForTimeout(150);
 
-  await p.screenshot({ path: path.resolve(__dirname, '..', `${pre}-0.png`) });
-  console.log(`frame 0   (트리거 직전)     → ${pre}-0.png`);
+  await p.screenshot({ path: path.resolve(__dirname, '..', `${pre}-pre.png`) });
+  console.log(`frame pre (트리거 직전)     → ${pre}-pre.png`);
 
   /* 클릭 — 260ms 재렌더 setTimeout 을 가로채 붙잡고, 접힘 애니메이션을 정지시킨다 */
   await p.evaluate(() => {
     window.__held = null;
     const raw = window.setTimeout;
     window.setTimeout = function (fn, ms) {
-      if (ms === 260) { window.__held = fn; return 0; }        /* 92 삭제 재렌더 */
+      /* 92 삭제 재렌더(.42s + 스태거 + 20). 행 버스트 스태거(60·150ms)와 섞이지 않게 400 이상만 */
+      if (ms >= 400) { window.__held = fn; return 0; }
       return raw.apply(window, arguments);
     };
     document.getElementById('mailDel').click();
@@ -79,10 +82,13 @@ const STOPS = [0, 35, 70, 105, 140, 175, 210, 245];   /* ms — 260ms 연출을 
     const state = await p.evaluate((ms) => {
       window.__anims.forEach((a) => { a.currentTime = ms; });
       const rs = [...document.querySelectorAll('.ml-r')];
-      return rs.map((r) => Math.round(r.getBoundingClientRect().height)).join('/');
+      const dx = (r) => { const m = /matrix\(([^)]+)\)/.exec(getComputedStyle(r).transform);
+        return m ? Math.round(parseFloat(m[1].split(',')[4])) : 0; };
+      return { h: rs.map((r) => Math.round(r.getBoundingClientRect().height)).join('/'),
+        x: rs.map(dx).join('/'), op: rs.map((r) => (+getComputedStyle(r).opacity).toFixed(2)).join('/') };
     }, t);
     await p.screenshot({ path: path.resolve(__dirname, '..', `${pre}-${t}.png`) });
-    console.log(`frame +${String(t).padStart(3)}ms  행 높이 ${state}  → ${pre}-${t}.png`);
+    console.log(`frame +${String(t).padStart(3)}ms  h ${state.h}  x ${state.x}  a ${state.op}  → ${pre}-${t}.png`);
   }
 
   /* 착지 — 붙잡아 둔 재렌더를 실행한다 */
