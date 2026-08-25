@@ -389,40 +389,44 @@
   #mnw i,#mnw s,#mnw b,#mnw em{display:block;font-style:normal;text-decoration:none;font-weight:900}
   /* 패널 — ref x760.5..898.5 / y224.5..1112 → 프레임 x761 y141 138×887. 테두리 없음(밝은 stroke 0). */
   #mnw .mn-col{position:absolute;left:761px;top:141px;width:138px;height:997px;
-    border-radius:18px;background:rgba(0,0,0,.28)}
+    border-radius:16px;background:rgba(0,0,0,.28)}
   /* 꼬리 — 밑변 ref y267..312(46)이 패널 우변에 붙고 꼭짓점 (935,289). 꼭짓점 x935 = #menub 좌변 x934.
      패널과 겹치게 그리면 알파가 두 번 곱해져 그 부분만 짙어진다 → **패널 밖(x899..935)에만** 그린다. */
   #mnw .mn-tail{position:absolute;left:899px;top:183px;width:0;height:0;
     border-style:solid;border-width:23px 0 23px 36px;
     border-color:transparent transparent transparent rgba(0,0,0,.28)}
-  /* 칸 — ref x785.5..873.5(88) · h80 · pitch110 · 첫 칸 상변 ref244 → 프레임 160.
+  /* 칸 — ref x780..879(**99**) · h**100** · pitch110(간격 10) · 첫 칸 상변 ref**233** → 프레임 149 · r35.
+     ⚠ 1회차에 이 값을 88×80 / ref244 로 잘못 재고 한 번 커밋했다. 원인은 **폭을 «칸 위끝+6» 행에서 쟀기 때문**이다 —
+       반경이 35 라 그 행은 아직 코너 원호 한가운데다(가로로 5px 씩 안쪽). 세 행(y250·690·1020)이 전부 top+6 이라
+       «세 번 확인했다» 는 착각까지 했다. **직선부(칸 중심 x830 세로 스캔 · 칸 위끝+47 가로 스캔)에서 다시 재라.**
+       검산: 8칸×100 + 7갭×10 + 상8.5 + 하9 = 887.5 = 패널 높이 887 (LESSONS 22-② 의 재현).
      패널(.28) 위에 .80 을 얹어 총 투과율 .72×.20 = .144 (ref 실측 .14). 테두리 없음.
      ⚠ 칸의 기준(offset parent)은 프레임이 아니라 **`.mn-col` 패널**이다 — left/top 은 패널 로컬이다.
         left 24 = 785 − 761 (측정표 §2 «좌 패딩 24.5»), top 19 = 160 − 141, 이후 pitch 110. */
-  #mnw .mn-b{position:absolute;left:24px;width:88px;height:80px;border-radius:26px;
+  #mnw .mn-b{position:absolute;left:19px;width:99px;height:100px;border-radius:35px;
     background:rgba(0,0,0,.80);cursor:pointer}
-  #mnw .mn-b:nth-of-type(1){top:19px}  #mnw .mn-b:nth-of-type(2){top:129px}
-  #mnw .mn-b:nth-of-type(3){top:239px} #mnw .mn-b:nth-of-type(4){top:349px}
-  #mnw .mn-b:nth-of-type(5){top:459px} #mnw .mn-b:nth-of-type(6){top:569px}
-  #mnw .mn-b:nth-of-type(7){top:679px} #mnw .mn-b:nth-of-type(8){top:789px}
-  #mnw .mn-b:nth-of-type(9){top:899px}   /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
+  #mnw .mn-b:nth-of-type(1){top:8px}   #mnw .mn-b:nth-of-type(2){top:118px}
+  #mnw .mn-b:nth-of-type(3){top:228px} #mnw .mn-b:nth-of-type(4){top:338px}
+  #mnw .mn-b:nth-of-type(5){top:448px} #mnw .mn-b:nth-of-type(6){top:558px}
+  #mnw .mn-b:nth-of-type(7){top:668px} #mnw .mn-b:nth-of-type(8){top:778px}
+  #mnw .mn-b:nth-of-type(9){top:888px}   /* ⚠ 레퍼런스에 없는 임시 칸 — 위 HTML 주석 참고 */
   /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
      **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
      칸별 잉크 폭이 34~66 으로 달라서 --sf(등방)·--sx(가로만) 로 각 이모지를 ref bbox 에 맞춘다(A2 방식).
      ⚠ transform 순서는 **translate 를 왼쪽**에 둔다 — `scale() translate()` 이면 translate 가 먼저 걸려
         이동량이 sf 배로 늘어난다. 이쪽이어야 --dx/--dy 가 «최종 화면 px» 그대로다. */
-  #mnw .mn-i{position:absolute;left:0;right:0;top:6.5px;height:51px;line-height:51px;
+  #mnw .mn-i{position:absolute;left:0;right:0;top:17.2px;height:51px;line-height:51px;
     text-align:center;font-size:52px;
     transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--sf,1)) scaleX(var(--sx,1))}
   /* 라벨 — 코어 높이 24 → font-size 24/0.93 ≈ 26 (LESSONS 01, 한글 잉크비 0.93).
      중심 칸top+69. 폭은 글자 수마다 달라 **음수 letter-spacing 금지 · scaleX 로만** 맞춘다.
      라벨이 아이콘 하단을 살짝 덮는 것은 레퍼런스 그대로다(1번: 아이콘 y250..301 / 라벨 y302..325). */
-  #mnw .mn-l{position:absolute;left:-6px;right:-6px;top:55px;height:28px;line-height:28px;
+  #mnw .mn-l{position:absolute;left:-6px;right:-6px;top:66px;height:28px;line-height:28px;
     text-align:center;font-size:26px;color:#FDFDFD;
     -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--lx,.82))}
   /* 8번 «게임 라운지» 만 컬러 — 초록 라운드 타일(#03ED68) 위 흰 글리프. ref 잉크 46×35 + 타일 57×55 */
-  #mnw .mn-b.gl .mn-i{width:57px;height:55px;left:50%;margin-left:-28.5px;right:auto;top:6px;
+  #mnw .mn-b.gl .mn-i{width:57px;height:55px;left:50%;margin-left:-28.5px;right:auto;top:17px;
     line-height:55px;border-radius:15px;background:#03ED68}
 
   /* 좌측 세로 아이콘. 측정표: docs/measure/A2-사이드아이콘.md
@@ -5550,7 +5554,7 @@
       <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.89">가방</i></div>
       <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.87">절전</i></div>
       <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.89">설정</i></div>
-      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lx:.72">게임 라운지</i></div>
+      <div class="mn-b gl" data-mn="lounge"><i class="mn-i" style="--sf:.673;--sx:1.121;--dy:.7px">🎮</i><i class="mn-l" style="--lx:.785">게임 라운지</i></div>
       <!-- ⚠ 9번째 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
            임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고

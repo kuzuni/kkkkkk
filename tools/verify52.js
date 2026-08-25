@@ -59,21 +59,21 @@ const eq = (n, got, exp, tol = 0.6) =>
 
   for (let i = 1; i <= 9; i++) {
     const r = await R(`#mnw .mn-b:nth-of-type(${i})`);
-    eq(`칸${i} x`, r.x, 785); eq(`칸${i} 폭`, r.w, 88); eq(`칸${i} 높이`, r.h, 80);
-    eq(`칸${i} y (pitch 110)`, r.y, 160 + (i - 1) * 110);
+    eq(`칸${i} x`, r.x, 780); eq(`칸${i} 폭`, r.w, 99); eq(`칸${i} 높이`, r.h, 100);
+    eq(`칸${i} y (pitch 110)`, r.y, 149 + (i - 1) * 110);
     const ic = await R(`#mnw .mn-b:nth-of-type(${i}) .mn-i`);
     /* 슬롯 중심의 기준은 칸top+32(측정표 §3-1)이고, 거기에 «이 이모지의 잉크가 라인박스 중앙에서 벗어난 만큼»을
        되돌리는 --dy 가 더해진다. 즉 검사해야 할 값은 «슬롯 중심 − dy» 다. 그냥 32 로 재면 --dy 를 준 칸이 전부 실패한다.
-       8번(.gl)은 초록 타일이 아이콘 슬롯을 겸하므로 기준이 33.5 다(ref 타일 y1020..1074 = 칸 로컬 6..60). */
+       8번(.gl)은 초록 타일이 아이콘 슬롯을 겸하므로 기준이 44.5 다(ref 타일 y1020..1074 = 칸(top 1003) 로컬 17..71). */
     const dy = await p.evaluate((n) => {
       const e = document.querySelector(`#mnw .mn-b:nth-of-type(${n}) .mn-i`);
       return parseFloat(getComputedStyle(e).getPropertyValue('--dy')) || 0;
     }, i);
     const base = await p.evaluate((n) =>
-      document.querySelector(`#mnw .mn-b:nth-of-type(${n})`).classList.contains('gl') ? 33.5 : 32, i);
+      document.querySelector(`#mnw .mn-b:nth-of-type(${n})`).classList.contains('gl') ? 44.5 : 42.7, i);
     eq(`칸${i} 아이콘 슬롯 중심 y (칸top+${base}, --dy ${dy})`, ic.y + ic.h / 2 - r.y - dy, base);
     const lb = await R(`#mnw .mn-b:nth-of-type(${i}) .mn-l`);
-    eq(`칸${i} 라벨 중심 y (칸top+69)`, lb.y + lb.h / 2 - r.y, 69);
+    eq(`칸${i} 라벨 중심 y (칸top+80)`, lb.y + lb.h / 2 - r.y, 80);
   }
 
   /* ---- ② 기능: 9칸이 실제로 무엇을 바꾸는가 ---- */
