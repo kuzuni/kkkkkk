@@ -2580,7 +2580,8 @@
   .cl-srch{left:739px;top:17px;width:68px;height:68px;border-radius:50%;box-sizing:border-box;
     background:#5E6679;box-shadow:inset 0 0 0 8px #9DA2B6;border:5px solid #45454D;text-align:center;line-height:58px;font-size:36px;
     filter:none;cursor:pointer}
-  .cl-srch>i{filter:grayscale(1) brightness(1.5);opacity:.85}
+  /* ref 는 어두운 원반(94,102,125) 위에 그보다 밝은 돋보기(176,181,201) 다 — 우리 이모지는 231 로 날아갔다 */
+  .cl-srch>i{filter:grayscale(1) brightness(.82);opacity:.9}
   /* ── 세트 블록 (pitch 410 = 높이 370 + 마진 40) ── */
   .clb{position:relative;width:820px;height:370px;margin:0 0 40px 22px}
   .clb>*{position:absolute}
@@ -2594,8 +2595,8 @@
   .clb-bdg>s.o{inset:0;background:#4F1106;
     filter:drop-shadow(1.5px 0 0 #000) drop-shadow(-1.5px 0 0 #000) drop-shadow(0 1.5px 0 #000)}
   .clb-bdg>s.e{inset:4px;background:linear-gradient(180deg,#C24831,#B33B23)}
-  .clb-bdg>s.g{inset:11px;background:#FFD64C}
-  .clb-bdg>s.r{inset:17px;background:linear-gradient(180deg,#C24831,#B33B23)}
+  .clb-bdg>s.g{inset:10px;background:#FFD64C}
+  .clb-bdg>s.r{inset:15px;background:linear-gradient(180deg,#C24831,#B33B23)}
   .clb-bdg>i{position:relative;line-height:1;-webkit-text-stroke:4px rgba(0,0,0,.35);paint-order:stroke fill}
   /* ⚠ 특이성 함정 — 이 파일 위쪽의 `#collw i{display:inline-block}` 은 **ID 셀렉터**라
      `.clb-bdg>i.l{display:block}` 을 이긴다. 그래서 «Lv.» 와 숫자가 2단이 아니라 **한 줄로 나란히**
