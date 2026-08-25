@@ -90,6 +90,9 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
     window.prompt = () => 'NOPE'; msgs = [];
     click('[data-cf="coupon"]'); out.couponBad = /사용할 수 없는/.test(msgs.join(''));
     window.prompt = op; window.popup = pp;
+    out.cpSaved = JSON.parse(localStorage.getItem(KEY)).opt.cp && JSON.parse(localStorage.getItem(KEY)).opt.cp.HELLO2026 === 1;
+    /* 새로고침을 흉내낸다 — load() 가 opt 를 항목별로 다시 짓기 때문에 cp 가 살아남는지 본다 */
+    out.cpSurvives = (() => { const raw = localStorage.getItem(KEY); load(); return !!(S.opt.cp && S.opt.cp.HELLO2026); })();
     /* 6. 언어 버튼은 토글이 아니다(값이 안 바뀐다) */
     const before = JSON.stringify(S.opt); click('.cf55-gold'); out.langNoop = JSON.stringify(S.opt) === before;
     /* 7. 딤 탭 → 닫힘 / ▦ 메뉴 → 열림 */
@@ -108,6 +111,7 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
     '볼륨 25% 반영':F.vol25, '노브 추종':F.knobMoved, '볼륨 저장':F.volSaved,
     '볼륨0 → 오디오게이트 off':F.gateOff, '볼륨100 → on':F.gateOn,
     '쿠폰 지급':F.coupon1, '쿠폰 재사용 차단':F.coupon2, '잘못된 코드 차단':F.couponBad,
+    '쿠폰 이력 저장':F.cpSaved, '쿠폰 이력이 새로고침을 견딤':F.cpSurvives,
     '언어 버튼은 무변경':F.langNoop, '딤 탭 닫힘':F.closed, '재오픈':F.reopened,
     'UID 형식':F.uid, 'Gamer Id 형식':F.gid
   }).forEach(([k, v]) => is(k, !!v, true));

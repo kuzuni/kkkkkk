@@ -7628,6 +7628,10 @@ function load(){
       const o = (d.opt && typeof d.opt === 'object') ? d.opt : {}, D = DEF().opt;
       b.opt = { vol: Number.isFinite(o.vol) ? Math.max(0, Math.min(100, Math.round(o.vol))) : D.vol };
       ['bgm','sfx','shake','push','night'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
+      /* 쿠폰 사용 이력 — 위에서 opt 를 «항목별로 다시 짓기» 때문에 명시적으로 살리지 않으면
+         새로고침 한 번에 통째로 날아가고 같은 코드를 무한히 재사용할 수 있게 된다. */
+      b.opt.cp = {};
+      if(o.cp && typeof o.cp === 'object') Object.keys(o.cp).forEach(k => { if(o.cp[k]) b.opt.cp[k] = 1; });
     }
     if(!b.guide || typeof b.guide !== 'object') b.guide = DEF().guide;
     if(d.guide === undefined){                       /* 구 세이브 → 이관 */
