@@ -2597,8 +2597,10 @@
      레퍼런스는 팝업 패널만 크롭된 486×687(×2.2222 = 1080×1527)이라 절대 y 변환이 없다 —
      패널을 페이지 y266(프레임 y370)에 앉히고 내부 좌표는 전부 환산 실측값.
      ========================================================================== */
-  #relw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#0A0F14;
-    display:none;z-index:28;overflow:visible}
+  /* 120 — 바탕은 «검정»(#0A0F14)이 아니라 패널 석벽 톤이다. 패널이 영역을 100% 덮으므로
+     원래 안 보여야 하지만, 어느 화면비에서도 «검은 띠» 가 안 나오도록 톤을 맞춰 둔다. */
+  #relw{position:absolute;left:0;right:0;top:104px;bottom:180px;background:#0D100D;
+    display:none;z-index:28;overflow:visible;--rwc:1}
   #relw.on{display:block}
   #relw i,#relw em,#relw b,#relw u,#relw s{display:inline-block;font-style:normal;
     font-weight:900;text-decoration:none}
@@ -2607,30 +2609,43 @@
   #relw .pcb-d{left:505px}
   .pcb-r{left:805px}
   .pcb-r>i{left:-4px;top:-3px;font-size:50px;transform:scaleX(.95)}
-  /* 작업 100 — 패널 높이 1527 은 «2280 기준 절대값» 이라 세로가 짧은 프레임에서 #relw
-     (top:104 / bottom:180) 밖으로 넘치고, z-index 28 > 탭바 10 이라 탭바 «위» 에 그려졌다
-     (1920 → 157px · 1600 → 477px 침범 — 저장소 주인 보고).
-     가용 높이 `frameH − 104 − 180 − 266` 에 맞춰 패널만 축소한다(--rws 는 rwFit() 이 갱신).
-     기준 해상도 2280 에서는 가용 1730 > 1527 이라 --rws = 1 → 89 측정 규격은 한 픽셀도 안 바뀐다.
-     origin 을 «top center» 로 잡아 상변 y266·가로 중심 540 이 고정된다. */
-  .rw-panel{position:absolute;left:0;top:266px;width:1080px;height:1527px;overflow:hidden;
-    transform-origin:50% 0;transform:scale(var(--rws,1))}
+  /* ── 작업 120 (저장소 주인 지시 2026-08-26) — «검은 여백 없이 꽉 채우는» 레이아웃 ──
+     100 은 «절대 높이 1527 패널» 을 균일 축소해 탭바 침범만 막았다. 그 결과 2280 에서
+     재화 바 아래 y108~370(266px)·패널 아래 1897~2100(203px)이 통째로 검정으로 남았다.
+     120 은 **패널 자체를 가용 영역(재화 바 밑 ~ 탭바 위)에 앵커**한다:
+       패널 = #relw 안 top:4(=프레임 108, .pcb 108px 바 바로 아래) ~ bottom:0(=탭바 상변).
+       9:19 → 1080×1992. 배경(.rw-bg)·금색 프레임(.rw-frame)은 inset 으로 항상 꽉 찬다.
+     내용은 **세로 3구획**(슬롯 격자 516 · 수반+코스트 216 · 안내문 88 = 820)이고,
+     남는 높이(= 100% − 820)는 **레퍼런스의 여백 비율 그대로** 4곳에 배분한다
+     (ref 1527 기준 상 320 : 격자↔수반 337 : 수반↔안내문 23 : 하 27 = 707).
+       상 .452617 · 누적(수반) .929279 · 누적(안내문) .961811
+     → 가용이 짧아지면 «구획 간 여백부터» 균등 비율로 줄고, 내용 픽셀은 그대로다.
+     내용 총합(820)보다도 가용이 짧아지는 극단에서만 --rwc(<1) 로 내용을 균일 축소한다
+     (rwFit(). 지원 범위 frameH 1600~2600 → 가용 1312~2312 이라 **항상 정확히 1**,
+      즉 ROUTINE [2] 의 «scale 래퍼» 가 아니다 — 잘림 방지용 최후 안전망일 뿐이다). */
+  .rw-panel{position:absolute;left:0;right:0;top:4px;bottom:0;overflow:hidden;
+    --rw-sp:calc(100% - 820px * var(--rwc,1))}
   .rw-panel>*{position:absolute}
-  /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 + 수반 난색 글로우 (아트 대기) */
+  /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 (아트 대기)
+     120: 바닥 그라디언트의 px 정지점을 **1527 대비 %** 로 환산했다(980→64.178 · 1120→73.347 ·
+     1400→91.683 · 1491→97.642). 이래야 패널이 1992 로 늘어나도 «바닥선» 이 수반 밑으로 따라온다.
+     수반 난색 글로우는 수반을 따라다녀야 하므로 .rw-mid::before 로 옮겼다. */
   .rw-bg{inset:0;background:
-    radial-gradient(40% 18% at 50% 88%,#3E2B1D 0%,rgba(62,42,30,0) 72%),
-    linear-gradient(180deg,rgba(46,32,18,0) 980px,#2D2114 1120px,#332518 1400px,#0C131B 1491px,#0C131B 1527px),
+    linear-gradient(180deg,rgba(46,32,18,0) 64.178%,#2D2114 73.347%,#332518 91.683%,#0C131B 97.642%,#0C131B 100%),
     radial-gradient(48% 42% at 50% 32%,#211D16 0%,#211D16 62%,rgba(33,29,22,0) 100%),
     linear-gradient(180deg,#090C10 0%,#0D100D 60%,#12130D 100%)}
   /* 석벽 질감 — 줄눈 격자 대신 은은한 얼룩(ref 는 또렷한 격자선이 없다). 7회차: 대비 강화(H stddev −33%) */
-  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1050px;opacity:.85;
+  /* 120: 1050px → 68.762%(1527 대비) */
+  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:68.762%;opacity:.85;
     background:radial-gradient(circle at 18% 22%,rgba(56,46,36,.5) 0 70px,transparent 110px),
       radial-gradient(circle at 74% 14%,rgba(50,42,32,.45) 0 60px,transparent 100px),
       radial-gradient(circle at 40% 58%,rgba(58,48,38,.4) 0 80px,transparent 130px),
       radial-gradient(circle at 88% 66%,rgba(48,40,30,.45) 0 66px,transparent 108px),
       radial-gradient(circle at 8% 82%,rgba(54,44,34,.4) 0 72px,transparent 118px);
     background-size:540px 520px}
-  .rw-bg::after{content:'';position:absolute;left:244px;top:133px;width:589px;height:889px;
+  /* 중앙 아치 — 120: top 133→8.709% · height 889→58.219%(1527 대비). 가로는 1:1 고정이라
+     패널이 길어지면 아치도 같이 길어지고, 슬롯 격자는 언제나 아치 안에 들어온다. */
+  .rw-bg::after{content:'';position:absolute;left:244px;top:8.709%;width:589px;height:58.219%;
     background:#0E100E;border-radius:295px 295px 0 0;box-shadow:0 0 90px 20px rgba(0,0,0,.55)}
   /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
   .rw-frame{inset:2px;border:5px solid #B29661;box-shadow:inset 0 0 0 2px rgba(0,0,0,.9);pointer-events:none;z-index:6}
@@ -2645,7 +2660,10 @@
   .rw-fc.bl{left:3px;border-left:4px solid #B29661}
   .rw-fc.br{right:3px;border-right:4px solid #B29661}
   /* 유물 슬롯 151² ×10 (3·4·3) — 브론즈 공통 프레임, 내부는 슬롯별 radial 글로우 */
-  .rw-grid{inset:0;z-index:2}
+  /* 120 — 상단 구획. 높이 516 = 3행(피치 176 · 슬롯 151 → 502) + Lv 라벨 하단 돌출 14.
+     슬롯 y 는 RW_POS 에서 격자 기준(0/176/351)으로 바뀌었다(구 320/496/671 = 패널 기준). */
+  .rw-grid{left:0;right:0;top:calc(var(--rw-sp) * .452617);height:516px;z-index:2;
+    transform:scale(var(--rwc,1));transform-origin:50% 0}
   .rw-c{position:absolute;width:151px;height:151px;box-sizing:border-box;cursor:pointer;
     border:4px solid #A67B50;border-radius:9px;
     box-shadow:inset 0 0 0 2px #8A6732,0 0 0 1px #35210F;
@@ -2658,8 +2676,18 @@
     font-size:35px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(1.1)}
   .rw-c.off>u{color:#9AA0A8}
+  /* 120 — 중단 구획(수반 + 코스트 알약). 둘의 상대 위치(ref 340,1173 / 401,1322)를 그대로
+     묶어서 통째로 움직인다. 높이 216 = 수반 캔버스(코스트 하변 202 < 216 이라 안에 들어온다). */
+  .rw-mid{left:340px;top:calc(var(--rw-sp) * .929279 + 516px * var(--rwc,1));
+    width:400px;height:216px;z-index:3;transform:scale(var(--rwc,1));transform-origin:50% 0}
+  .rw-mid>*{position:absolute}
+  /* 수반 난색 글로우 — 구 .rw-bg 1번 레이어(radial 40%×18% at 50% 88% of 1527 = rx432·ry275
+     @ 540,1344)를 수반 기준(200,171)으로 옮긴 것. 패널이 길어져도 수반을 따라간다. */
+  .rw-mid::before{content:'';position:absolute;left:-232px;top:-104px;width:864px;height:550px;
+    background:radial-gradient(closest-side ellipse at 50% 50%,#3E2B1D 0%,rgba(62,42,30,0) 72%);
+    pointer-events:none}
   /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
-  .rw-basin{left:340px;top:1173px;width:400px;height:216px;cursor:pointer;z-index:3}
+  .rw-basin{left:0;top:0;width:400px;height:216px;cursor:pointer;z-index:3}
   .rw-basin>*{position:absolute}
   /* 수반 실루엣 전체를 SVG 한 장으로 — clip/명암 대비 문제로 3회차까지 기단이 안 읽혔다.
      7회차: 높이는 G(238)·H(153)가 정반대라 측정표 h220(y527..626 그림자 포함)으로 중재 → 캔버스 216.
@@ -2668,8 +2696,8 @@
   .rw-stone{left:0;top:0;width:400px;height:216px;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22216%22 viewBox=%220 0 400 216%22%3E%3Cpath d=%22M84 156 L316 156 L330 178 L344 182 L368 206 L376 216 L24 216 L32 206 L56 182 L70 178 Z%22 fill=%22%234A4334%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M68 178 L332 178 L332 186 L68 186 Z%22 fill=%22%23352E20%22/%3E%3Cpath d=%22M32 33 A168 26 0 0 0 368 33 L342 64 L58 64 Z%22 fill=%22%237E8271%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M58 64 L342 64 L326 160 L74 160 Z%22 fill=%22%235A5344%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M73 92 L327 92 L319 128 L81 128 Z%22 fill=%22%234A4438%22/%3E%3Cellipse cx=%22200%22 cy=%2230%22 rx=%22168%22 ry=%2226%22 fill=%22%23A9BCA3%22 stroke=%22%23000%22 stroke-width=%225%22/%3E%3Cellipse cx=%22200%22 cy=%2226%22 rx=%22140%22 ry=%2215%22 fill=%22%232E3A36%22 stroke=%22%23000%22 stroke-width=%223%22/%3E%3Cellipse cx=%22200%22 cy=%2225%22 rx=%22135%22 ry=%2213%22 fill=%22%2339C1CF%22/%3E%3Cellipse cx=%22200%22 cy=%2224%22 rx=%2263%22 ry=%226%22 fill=%22%23D8FBFF%22/%3E%3C/svg%3E") 0 0/400px 216px no-repeat}
   .rw-basin>b{left:0;right:0;top:97px;text-align:center;font-size:40px;color:#F2F2F2;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.84)}
-  /* 코스트 필 262×51 — 수반 받침 위에 겹친다 */
-  .rw-cost{left:401px;top:1322px;width:278px;height:53px;box-sizing:border-box;z-index:4;
+  /* 코스트 필 262×51 — 수반 받침 위에 겹친다. 120: .rw-mid 기준(401−340 / 1322−1173) */
+  .rw-cost{left:61px;top:149px;width:278px;height:53px;box-sizing:border-box;z-index:4;
     background:#191614;border:3px solid #000;border-radius:26.5px;
     box-shadow:0 0 0 1px #513229,inset 0 0 0 2px #403320;
     /* 그룹 중심을 알약 중심보다 10px 왼쪽으로(측정표: 그룹 중심 x530 vs 알약 x540) */
@@ -2677,8 +2705,9 @@
   .rw-cost>i{font-size:36px;line-height:1}
   .rw-cost>b{font-size:35px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .rw-cost.lack>b{color:#FF7A6F}
-  /* 안내문 2줄 — 크림/탠골드, 행 피치 44 */
-  .rw-cap{left:0;right:0;top:1412px;text-align:center;z-index:4}
+  /* 안내문 2줄 — 크림/탠골드, 행 피치 44. 120: 하단 구획(높이 88 = 44×2) */
+  .rw-cap{left:0;right:0;top:calc(var(--rw-sp) * .961811 + 732px * var(--rwc,1));
+    text-align:center;z-index:4;transform:scale(var(--rwc,1));transform-origin:50% 0}
   .rw-cap p{margin:0;font-weight:900;font-size:31px;line-height:44px;
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
   .rw-cap p:nth-child(1){color:#FFE4C2}
@@ -7348,10 +7377,13 @@
     <div class="rw-panel">
       <div class="rw-bg"></div>
       <div class="rw-grid" id="rwGrid"></div>
-      <div class="rw-basin" id="rwBasin">
-        <span class="rw-stone"></span><b>유물 소환</b>
+      <!-- 120 — 중단 구획: 수반과 코스트 알약은 상대 위치가 고정이라 한 덩어리로 묶는다 -->
+      <div class="rw-mid">
+        <div class="rw-basin" id="rwBasin">
+          <span class="rw-stone"></span><b>유물 소환</b>
+        </div>
+        <div class="rw-cost" id="rwCost"><i>🔮</i><b>100</b></div>
       </div>
-      <div class="rw-cost" id="rwCost"><i>🔮</i><b>100</b></div>
       <div class="rw-cap"><p>던전에서 얻는 유물조각으로 다양한 능력을 가진 유물을 소환합니다.</p><p>각 유물이 등장할 확률은 동일합니다.</p></div>
       <div class="rw-frame"></div>
       <span class="rw-fc bl"></span><span class="rw-fc br"></span>
@@ -7918,21 +7950,22 @@ function fit(){
   rwFit();
 }
 
-/* ---- 작업 100 — 89 유물 페이지(#relw) 패널이 하단 탭바를 가리는 버그 ----
-   `.rw-panel` 은 레퍼런스(486×687 ×2.2222)를 그대로 옮긴 **절대 높이 1527** 이라
-   2280 프레임에서만 들어맞는다. 세로가 짧은 프레임에서는 `#relw`(top:104 / bottom:180)
-   밖으로 넘치는데 `#relw` 는 z-index 28 이고 `#tabbar` 는 10 이라 **탭바 위에 그려졌다.**
-     frameH 1920 → 157px · 1600 → 477px 침범(게이트 tools/verify100.js 로 실측·재현).
-   가용 높이에 맞춰 패널만 축소한다. 2280(기준 해상도)에서는 가용 1730 > 1527 이라
-   스케일이 **정확히 1** 이므로 89 측정표 규격은 그대로다.
-   ⚠ 대안이던 `#relw{overflow:hidden}` 은 쓸 수 없다 — 41 재화 바(`.pcb`)가 `top:-104px` 로
-   `#relw` **밖**(HUD 자리)에 얹혀 있어서 통째로 잘린다. 그래서 `overflow:visible` 이 원래 값이다. */
-const RW_TOP = 104, RW_BOT = 180, RW_PANEL_TOP = 266, RW_PANEL_H = 1527;
+/* ---- 작업 120 — 89 유물 페이지(#relw) «검은 여백 없이 꽉 채우기» ----
+   100 은 «절대 높이 1527 패널» 을 균일 축소해 탭바 침범(1920 → 157px · 1600 → 477px)만 막았고,
+   그래서 기준 해상도에서도 재화 바 밑 266px · 패널 밑 203px 이 검정으로 남아 있었다.
+   120 은 패널을 가용 영역에 앵커한다 — 높이는 CSS(`top:4/bottom:0`)가 잡고, 남는 세로는
+   레퍼런스 여백 비율대로 구획 사이에 배분된다(`--rw-sp`, CSS 주석 참조).
+   여기 남은 JS 는 **내용 총합(820)보다도 가용이 짧은 극단** 하나만 본다: 그때만 `--rwc` < 1 로
+   내용을 균일 축소해 잘림을 막는다. 지원 범위(frameH 1600~2600 → 가용 1312~2312)에서는
+   **항상 정확히 1** 이라 89 측정 규격(슬롯 151·피치 176·수반 400×216)이 그대로다.
+   ⚠ `#relw{overflow:visible}` 은 지우면 안 된다 — 41 재화 바(`.pcb`)가 `top:-104px` 로
+   `#relw` **밖**(HUD 자리)에 얹혀 있어서 `hidden` 이면 통째로 잘린다(100 의 교훈 3). */
+const RW_TOP = 104, RW_BOT = 180, RW_PCB = 4, RW_CONTENT_H = 820;
 function rwFit(){
   const el = $('relw'); if(!el) return;
-  const avail = frameH - RW_TOP - RW_BOT - RW_PANEL_TOP;
-  const s = Math.min(1, avail / RW_PANEL_H);
-  el.style.setProperty('--rws', s > 0 ? s.toFixed(5) : '0');
+  const avail = frameH - RW_TOP - RW_BOT - RW_PCB;     /* = .rw-panel 높이 */
+  const s = Math.min(1, avail / RW_CONTENT_H);
+  el.style.setProperty('--rwc', s > 0 ? s.toFixed(5) : '0');
 }
 
 /* 전투 캔버스: 논리 좌표계는 기존 540 기준을 그대로 두고 ctx 를 SC배 확대해 1080 프레임을 채운다.
@@ -13205,7 +13238,9 @@ $('shopCats').addEventListener('click', e => {
    14 보물상자·15 유물 탭·16 세부 팝업·유물 소환 배너(BANNERS.relic)·수동/자동 장착(S.eqRelic)은 폐기.
    소환 1회 = 유물조각 relicCost() 소모 → 10종 균등 1개 Lv+1(신규 = Lv.1). 12 결과 팝업 대신
    당첨 칸이 튀는 연출(58 fxUpOk) + Lv 숫자 증가. 효과는 보유(Lv≥1)만으로 상시 적용. */
-const RW_POS  = [[216,320],[462,320],[711,320],[91,496],[340,496],[587,496],[836,496],[216,671],[462,671],[711,671]];
+/* 120 — y 는 «격자 구획(.rw-grid)» 기준이다(구 값은 패널 기준 320/496/671).
+   행 피치 176 은 그대로 — 89 측정표의 슬롯 크기·피치 비율은 한 픽셀도 안 바뀐다. */
+const RW_POS  = [[216,0],[462,0],[711,0],[91,176],[340,176],[587,176],[836,176],[216,351],[462,351],[711,351]];
 const RW_GLOW = [['#351709','#9B2316'],['#152719','#1A4A38'],['#241A1B','#AB312E'],['#0D2129','#33566B'],
                  ['#212910','#75771B'],['#11173A','#3A6D97'],['#221A27','#7B4E9E'],['#3E2B0A','#C0A26D'],
                  ['#1F0506','#EB625C'],['#274828','#2E6B35']];

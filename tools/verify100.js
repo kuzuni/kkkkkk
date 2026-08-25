@@ -6,8 +6,12 @@
      ① 프레임 1600 · 1920 · 2280 각각에서 `#relw.on` 상태의 모든 `.rw-*` 요소 bbox 가
         `#tabbar` bbox 와 **교차 넓이 0** 인가.
      ② 탭바 5칸이 각각 하나도 가려지지 않는가(칸별 교차 넓이 0).
-     ③ 2280(기준 해상도)에서는 스케일이 정확히 1 이고 89 측정표 규격(패널 top266 · 1080×1527,
-        수반 340,1173 400×216 등)이 **한 픽셀도** 안 변했는가 — 회귀 방지.
+     ③ **작업 120 으로 교체됨** — 100 은 «절대 높이 1527 패널» 을 균일 축소해 침범만 막았고,
+        그 결과 남던 검은 띠를 120 이 «패널을 가용 영역에 앵커» 하는 방식으로 없앴다.
+        그래서 여기의 «스케일 = min(1, avail/1527)» · «패널 1080×1527 @y370» 회귀 검사는
+        더 이상 참이 아니다. 대신 **패널이 영역(재화 바 밑 ~ 탭바 위)을 정확히 덮는가** 를 본다.
+        89 측정 규격 중 «내용» 쪽(슬롯 151·행 피치 176·수반 400×216)은 그대로이므로 여기서 계속 지킨다.
+        영역 채움·검은 픽셀 0 은 `tools/verify120.js` 가 본다.
      ④ 짧은 프레임에서 패널 하변이 `#relw` 하변(=탭바 상변) 안에 들어오는가.
      ⑤ `.pcb` 재화 바는 `#relw` 밖(top:-104)에 있으므로 여전히 보이는가
         — `#relw{overflow:hidden}` 으로 고치면 이게 죽는다(그래서 스케일로 고쳤다).
@@ -38,7 +42,7 @@ function launchOpts(){
 }
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
-const HEIGHTS = [1600, 1920, 2280];   /* frameH clamp 하한 · 9:16 · 9:19 기준 */
+const HEIGHTS = [1600, 1920, 2280, 2600];   /* frameH clamp 하한 · 9:16 · 9:19 기준 · clamp 상한 */
 /* frameH 를 그대로 만들려면 뷰포트 비율이 1080:frameH 여야 한다(폭 1080 고정, clamp 1600~2600). */
 
 let pass = 0, fail = 0;
@@ -103,6 +107,25 @@ function inter(a, b){
         /* 탭바 5칸 */
         const cells = [...tabbar.children].map(el => ({ id: el.id || el.className.toString().slice(0,20), bb: F(el) }));
 
+        /* 120 — 89 측정 규격(슬롯 151² · 행 피치 176 · 3·4·3)이 프레임 높이와 무관하게 불변인가 */
+        let slotBad = '';
+        {
+          const cs = [...relw.querySelectorAll('.rw-c')].map(F);
+          if (cs.length !== 10) slotBad = `슬롯 ${cs.length}개(10 이어야)`;
+          else {
+            const off = cs.find(c => Math.abs(c.width - 151) > 0.6 || Math.abs(c.height - 151) > 0.6);
+            if (off) slotBad = `크기 ${off.width.toFixed(1)}×${off.height.toFixed(1)}`;
+            else {
+              /* 89 원본 RW_POS 의 행 y 는 320/496/671 이라 피치가 176/175 로 1px 다르다
+                 (측정표 «피치 176» 은 79×2.2222=175.55 의 반올림). 120 은 격자 기준으로
+                 0/176/351 로 옮겼을 뿐이라 이 1px 비대칭이 그대로 유지돼야 한다. */
+              const rows = [cs[0].top, cs[3].top, cs[7].top];
+              if (Math.abs((rows[1] - rows[0]) - 176) > 0.6 || Math.abs((rows[2] - rows[1]) - 175) > 0.6)
+                slotBad = `행 피치 ${(rows[1]-rows[0]).toFixed(1)}/${(rows[2]-rows[1]).toFixed(1)} (176/175 이어야)`;
+            }
+          }
+        }
+
         /* ⑥ 히트테스트 — 칸마다 중심 + 모서리 안쪽 5px, 총 5점 */
         let hitBad = 0; const hitWho = [];
         for (const c of tabbar.children) {
@@ -124,6 +147,8 @@ function inter(a, b){
           relw: F(relw), tabbar: F(tabbar), panel: F(panel), pcb: F(pcb),
           pcbVisible: getComputedStyle(pcb).visibility !== 'hidden' && pcb.getBoundingClientRect().height > 0,
           scale: getComputedStyle(panel).transform,
+          rwc: parseFloat(getComputedStyle(relw).getPropertyValue('--rwc')) || 0,
+          slotBad,
           items, cells,
           hitBad, hitWho: hitWho.slice(0, 3), hitTotal: tabbar.children.length * 5,
           basin: F(relw.querySelector('.rw-basin')),
@@ -168,29 +193,19 @@ function inter(a, b){
         r.pcbVisible && r.pcb.height > 100 && r.pcb.top < r.relw.top + 1,
         `pcb ${r.pcb.width.toFixed(0)}×${r.pcb.height.toFixed(0)} @top ${r.pcb.top.toFixed(0)} (relw.top ${r.relw.top.toFixed(0)})`);
 
-      /* ③ 2280 회귀 — 측정표 규격 그대로 */
-      if (H === 2280) {
-        ck('[2280] ③ 패널 스케일 = 1 (변환 없음)',
-          r.scale === 'none' || r.scale === 'matrix(1, 0, 0, 1, 0, 0)', r.scale);
-        ck('[2280] ③ 패널 bbox 1080×1527 @ 프레임 y370',
-          Math.abs(r.panel.width - 1080) < 0.6 && Math.abs(r.panel.height - 1527) < 0.6 &&
-          Math.abs(r.panel.top - 370) < 0.6,
-          `${r.panel.width.toFixed(1)}×${r.panel.height.toFixed(1)} @y${r.panel.top.toFixed(1)}`);
-        ck('[2280] ③ 수반 400×216 @ 패널상대 340,1173',
-          Math.abs(r.basin.width - 400) < 0.6 && Math.abs(r.basin.height - 216) < 0.6 &&
-          Math.abs((r.basin.left - r.panel.left) - 340) < 0.6 &&
-          Math.abs((r.basin.top - r.panel.top) - 1173) < 0.6,
-          `${r.basin.width.toFixed(1)}×${r.basin.height.toFixed(1)} @${(r.basin.left-r.panel.left).toFixed(1)},${(r.basin.top-r.panel.top).toFixed(1)}`);
-      } else {
-        /* 짧은 프레임에서는 «줄었을» 뿐 가로 중심이 유지돼야 한다(origin top center) */
-        const cx = (r.panel.left + r.panel.right) / 2;
-        ck(`[${H}] 패널 가로 중심 540 유지(origin top center)`, Math.abs(cx - 540) < 0.6, `${cx.toFixed(1)}`);
-        ck(`[${H}] 패널 상변 y370 고정(위로 안 밀림)`, Math.abs(r.panel.top - 370) < 0.6, `${r.panel.top.toFixed(1)}`);
-        const want = Math.min(1, (H - 550) / 1527);
-        const got = r.panel.height / 1527;
-        ck(`[${H}] 스케일 = min(1, (frameH−550)/1527)`, Math.abs(got - want) < 0.004,
-          `실측 ${got.toFixed(4)} vs 기대 ${want.toFixed(4)}`);
-      }
+      /* ③ 120 — 패널은 «재화 바 밑(y108) ~ 탭바 상변» 을 정확히 덮는다(가로 0~1080) */
+      ck(`[${H}] ③ 패널 = 영역 전체 (x0~1080 · y108~탭바상변 ${H - 180})`,
+        Math.abs(r.panel.left) < 0.6 && Math.abs(r.panel.right - 1080) < 0.6 &&
+        Math.abs(r.panel.top - 108) < 0.6 && Math.abs(r.panel.bottom - r.tabbar.top) < 0.6,
+        `${r.panel.width.toFixed(1)}×${r.panel.height.toFixed(1)} @y${r.panel.top.toFixed(1)}..${r.panel.bottom.toFixed(1)}`);
+      /* 89 측정 규격 중 «내용» 은 프레임 높이와 무관하게 불변이어야 한다(--rwc 는 1600~2600 에서 1) */
+      ck(`[${H}] ③ 내용 균일 축소 없음 (--rwc = 1)`, Math.abs(r.rwc - 1) < 1e-4, `${r.rwc}`);
+      ck(`[${H}] ③ 수반 400×216 · 가로 중심 540 (89 측정 규격 불변)`,
+        Math.abs(r.basin.width - 400) < 0.6 && Math.abs(r.basin.height - 216) < 0.6 &&
+        Math.abs((r.basin.left + r.basin.right) / 2 - 540) < 0.6,
+        `${r.basin.width.toFixed(1)}×${r.basin.height.toFixed(1)} @cx${((r.basin.left+r.basin.right)/2).toFixed(1)}`);
+      ck(`[${H}] ③ 슬롯 151×151 ×10 · 행 피치 176 (89 측정 규격 불변)`,
+        r.slotBad === '', r.slotBad || `10칸 전부 151×151 · 피치 176`);
 
       ck(`[${H}] 콘솔·런타임 에러 0`, errs.length === 0, errs.slice(0, 2).join(' | ') || '0건');
 
