@@ -52,13 +52,12 @@ const GEO = [
   ['.rk-mid', 0, 702, 1080, 1203],
   ['.rk-sep.e0', 195, 2086, 4, 164],
   ['.rk-sep.e1', 488, 2086, 4, 164],
-  ['.rk-ch.c1', 360, 261, 340, 205],   /* 10회차 — M·N 공통분(하단 466 슬래브 겹침·중심 530) */
-  ['.rk-ch.c2', 24, 196, 314, 274],
-  ['.rk-ch.c3a', 700, 330, 140, 145],
-  ['.rk-ch.c3b', 845, 275, 196, 205],
-  ['.rk-fl.f1', 350, 130, 220, 100],
-  ['.rk-fl.f2', 55, 140, 190, 110],
-  ['.rk-fl.f3', 728, 147, 286, 114],
+  /* 작업 101(주인 지시 2026-08-26) — `.rk-ch.c3a`(⛵) 와 `.rk-fl.f1/f2/f3`(🛸👑 🤖👻 🛸🎃) 는 폐기.
+     기하 기대값 대신 아래 «폐기» 절에서 «존재하지 않음» 으로 검사한다.
+     `.rk-ch.c1/c2/c3b` 의 기하도 여기서 뺐다 — **작업 80 이 단상 위 이모지를 스프라이트 캔버스로
+     바꾸면서 소유권이 `tools/verify80.js` 로 넘어갔다**(A3 캔버스 1:1 규격 · A4 상자 위치가 정답값).
+     여기 남아 있던 «10회차 M·N 공통분» 값(c1 360/261/340/205 · c2 24/196/314/274 · c3b 845/275/196/205)은
+     이모지 잉크 bbox 기준이라 80 이후로는 영구 FAIL 이었다 — LESSONS 52-⑤ «구현이 아니라 검사가 낡은 것». */
   ['.rk-sep.e2', 680, 2086, 5, 164],
   ['.rk-sep.e3', 875, 2086, 5, 164],
   ['.rk-sh.s1', 489, 461, 102, 88],
@@ -112,6 +111,22 @@ const GEO = [
     const d = want.map((v, k) => Math.abs(got[k] - v));
     ck(Math.max(...d) <= 1.0, `${g[0]} — 기대 ${want.join('/')} · 실제 ${got.join('/')} (Δ ${d.map(x=>x.toFixed(1)).join('/')})`);
   });
+
+  /* ---- 폐기(작업 101, 주인 지시 2026-08-26): 단상 위 부유 장식·탈것 «존재하지 않음» ----
+     ① `.rk-fl`(🛸👑 🤖👻 🛸🎃) 3군집 · ② `.rk-ch.c3a`(⛵) 는 마크업·CSS 모두 삭제됐다.
+     ③ 씬 안에 남는 <em> 은 순위 방패 3개(🥇🥈🥉)뿐이다 — 개수는 «방패 수» 에서 세므로
+        방패가 늘거나 줄어도 이 게이트는 안 깨진다(LESSONS 52-⑤ 처방 1·2). */
+  const dec = await page.evaluate(() => ({
+    fl: document.querySelectorAll('#rkw .rk-fl').length,
+    c3a: document.querySelectorAll('#rkw .rk-ch.c3a').length,
+    em: document.querySelectorAll('#rkw .rk-scene em').length,
+    sh: document.querySelectorAll('#rkw .rk-scene .rk-sh').length,
+    chEm: document.querySelectorAll('#rkw .rk-ch em').length
+  }));
+  ck(dec.fl === 0, `폐기 — 부유 장식 .rk-fl 이 ${dec.fl}개 남아 있음 (기대 0)`);
+  ck(dec.c3a === 0, `폐기 — 탈것 .rk-ch.c3a 가 ${dec.c3a}개 남아 있음 (기대 0)`);
+  ck(dec.chEm === 0, `폐기 — 단상 캐릭터 자리는 캔버스뿐이어야 하는데 <em> 이 ${dec.chEm}개 (기대 0)`);
+  ck(dec.em === dec.sh, `폐기 — 씬 <em> ${dec.em}개 · 순위 방패 ${dec.sh}개 (기대: 방패뿐이라 같아야 함)`);
 
   /* ---- 기능 2: 리스트 구성 (1~3위 메달 · 4위↓ 숫자) ---- */
   const list = await page.evaluate(() => {

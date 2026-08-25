@@ -62,7 +62,9 @@ const ok = (b, name, detail) => {
   /* [A] 폐기·기하 */
   const A = await page.evaluate(() => {
     const out = { em: document.querySelectorAll('#rkw .rk-ch em#rkCh1, #rkw .rk-ch em#rkCh2, #rkw .rk-ch em#rkCh3').length,
-                  mount: !!document.querySelector('#rkw .rk-ch.c3a em'), cv: [] };
+                  /* 작업 101(주인 지시 2026-08-26) — 탈것(c3a)·부유 장식(.rk-fl) 은 폐기됐다.
+                     «유지» 가 아니라 «존재하지 않음» 이 기대값이다. */
+                  gone: document.querySelectorAll('#rkw .rk-ch.c3a, #rkw .rk-fl').length, cv: [] };
     for (let k = 1; k <= 3; k++) {
       const cv = document.getElementById('rkCh' + k);
       if (!cv || cv.tagName !== 'CANVAS') { out.cv.push(null); continue; }
@@ -74,7 +76,7 @@ const ok = (b, name, detail) => {
     return out;
   });
   ok(A.em === 0, 'A1 단상 이모지 폐기', 'em#rkCh* ' + A.em + '개');
-  ok(A.mount, 'A2 탈것(c3a) 아트 자리는 유지');
+  ok(A.gone === 0, 'A2 탈것(c3a)·부유 장식(.rk-fl) 폐기 — 존재하지 않음', A.gone + '개 남음');
   const spec = [{ w: 395, h: 315, top: 133, left: 343 }, { w: 316, h: 252, top: 230, left: 57 }, { w: 316, h: 252, top: 240, left: 785 }];
   for (let i = 0; i < 3; i++) {
     const c = A.cv[i], s = spec[i];
