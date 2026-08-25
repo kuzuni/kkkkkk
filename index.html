@@ -7597,11 +7597,11 @@ function step(dt){
    ② 플레이어가 움직인 «뒤» 의 좌표를 따라가야 한 프레임 늦게 따라붙지 않는다
    ========================================================================== */
 const CAM_K      = 0.12;   /* 감쇠 추적 — 60fps 한 프레임에 목표까지 좁히는 비율 */
-const CAM_KCINE  = 0.30;   /* 연출 중 추적 비율. 0.12 로 두면 «0.8초 팬» 이 잔여 195px 을 못 좁혀 실효 1.15초가 된다 */
+const CAM_KCINE  = 0.40;   /* 연출 중 추적 비율. 0.12 로 두면 «0.8초 팬» 이 잔여 195px 을 못 좁혀 실효 1.15초가 된다 */
 const CAM_KKILL  = 0.46;   /* 처치 구간 추적 — 줌이 최대인 0.3초 안에 시체가 중앙에 «와 있어야» 한다 */
 const CAM_LEAD   = 90;     /* 리드 — 진행 방향으로 최대 선행 px */
 const CAM_LEADK  = 0.05;   /* 리드 자체의 추적 비율(방향 반전 때 튀지 않게 더 느리게) */
-const CINE_KILL_S= 0.26;   /* 처치 줌인이 차오르는 시간 — 더 짧게 하면 그 램프 자체가 저크로 읽힌다(0.14 에서 6.6px/f²) */
+const CINE_KILL_S= 0.24;   /* 처치 줌인이 차오르는 시간 — 더 짧게 하면 그 램프 자체가 저크로 읽힌다(0.14 에서 6.6px/f²) */
 const CINE_ZIN   = 1.15;   /* 보스 스폰 팬·줌 배율 */
 const CINE_ZKILL = 1.30;   /* 보스 처치 줌 배율 */
 const CINE_TS    = 0.30;   /* 처치 슬로모 timeScale */
@@ -7624,7 +7624,10 @@ const cine = { mode:'', t:0, tg:null, flash:0, cx:0, cy:0, zb:1, flip:false, ax:
 function spriteCenter(e, flip){
   const A = ATLAS[e.akey], fr = A && A.f[curFrame(e)];
   if(!fr) return { x:e.x, y:e.y - (e.r || 0) };
-  const s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
+  let s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
+  /* 적은 스폰 0.3초 동안 팝인한다 — 그리는 쪽이 `T.scale*(0.4+0.6*grow)` 를 쓰므로
+     여기서도 같은 배율을 써야 한다. 안 그러면 팝인 중 목표가 최대 (38,41)px 어긋난다. */
+  if(e.born !== undefined && e.born < 0.3) s *= 0.4 + 0.6*(e.born/0.3);
   const dx = (-fr[6]/2 + fr[4] + fr[2]/2) * s;      /* flip 이면 좌우 대칭이라 부호가 뒤집힌다 */
   const dy = (-fr[7] + fr[5] + fr[3]/2) * s;
   const f = flip === undefined ? e.flip : flip;
@@ -7710,16 +7713,12 @@ function camUpdate(dt){
     }else{
       /* 보스가 돌아서면 «그려지는 스프라이트 자체» 가 209.6px 순간이동한다(아틀라스 트림이 좌우 비대칭이라
          drawFrame 이 미러링하면 박스가 통째로 반대편에 놓인다 — 렌더 규약 문제라 67 구간이 아니다).
-         카메라는 그걸 따라가되 **smoothstep 으로 미끄러뜨린다** — 지수 감쇠로 따라가면 전환 첫 프레임에
-         속도가 0 → 209·k 로 튀어 저크가 되고, 안 따라가면 몸통이 화면 밖으로 나간다. */
-      const want = cine.tg.flip ? -1 : 1;
-      if(cine.fs === null){ cine.fs = want; cine.fs0 = want; cine.fsT = 1; }
-      if(want !== cine.fsW){ cine.fs0 = cine.fs; cine.fsW = want; cine.fsT = 0; }
-      if(cine.fsT < 1){
-        cine.fsT = Math.min(1, cine.fsT + dt/CINE_FLIP_S);
-        cine.fs = cine.fs0 + (want-cine.fs0)*camSm(cine.fsT);
-      }
-      c = { x: cine.tg.x + cine.ax*cine.fs, y: cine.tg.y + cine.oy };
+         **그걸 쫓아가면 안 된다.** 부호를 고정하면 몸통이 반대편으로 가 버리고(3회차 201px 이탈),
+         부드럽게 쫓아가면 1프레임짜리 점프가 «0.30초짜리 화면 이탈»로 늘어난다(4회차 최대 82% 잘림).
+         답은 **좌우 대칭점 = 앵커 그 자체**다 — 어느 쪽을 보든 몸통은 앵커에서 ±104.8px,
+         즉 앵커를 잡으면 **플립이 목표를 1px도 움직이지 않으면서** 몸통은 항상 프레임 안이다
+         (가시 반폭 234.8 vs 오프셋 104.8 + 몸통 반폭 87 = 192). 세로 오프셋은 발밑 기준이라 그대로 쓴다. */
+      c = { x: cine.tg.x, y: cine.tg.y + cine.oy };
     }
     const tk = camDamp(cine.mode === 'kill' ? CINE_TGK_K : CINE_TGK, dt);
     cine.cx += (c.x-cine.cx)*tk; cine.cy += (c.y-cine.cy)*tk;
@@ -7729,7 +7728,11 @@ function camUpdate(dt){
   const fy = player.y + (tgy - player.y)*w;
   /* 줌 — «출발 줌 zb» 에서 목표 배율까지. zb 는 1 로 서서히 풀리므로 연출이 끝나도 계단이 없다 */
   cine.zb += (1-cine.zb) * camDamp(CINE_TGK, dt);
-  const fz = cine.zb + ((cine.mode === 'kill' ? CINE_ZKILL : CINE_ZIN) - cine.zb)*w;
+  /* 줌 가중치는 위치와 따로 간다 — 위치는 «앞으로 몰린» 곡선이라 t=0.617 에 사실상 끝나는데
+     줌까지 같이 끝나 버리면 남은 0.18초가 «스케일 정지 + 카메라만 흐름» 이 된다.
+     줌은 스펙 그대로 0.80초 smoothstep 으로 채운다. */
+  const zw = cine.mode === 'in' ? camSm(cine.t/CINE_IN_S) : w;
+  const fz = cine.zb + ((cine.mode === 'kill' ? CINE_ZKILL : CINE_ZIN) - cine.zb)*zw;
 
   /* 리드 — 속도 방향으로 최대 CAM_LEAD px 앞을 본다. 멈추면(그리고 연출 중에는) 0 으로 되돌아간다 */
   const v = Math.hypot(player.vx, player.vy);

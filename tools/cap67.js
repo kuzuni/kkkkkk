@@ -63,28 +63,39 @@ const OUT = path.resolve(process.argv[2] || path.join(ROOT, 'docs', 'review'));
   await page.evaluate(() => { for (let i = 0; i < 600; i++) { window.__tick(); if (cine.mode === 'in' && cine.t > 0) break; } });
 
   const log = [];
-  /* A — 팬·줌인 100ms(6프레임) 간격 8장 */
-  for (let i = 1; i <= 8; i++) {
-    log.push(['A' + i, await info()]); await shot(`67-in-${i}.png`);
-    await page.evaluate(() => window.__run(6));
-  }
-  /* B — 복귀 구간. 'back' 이 시작될 때까지 돌린 뒤 100ms 간격 8장 */
-  await page.evaluate(() => { for (let i = 0; i < 600; i++) { window.__tick(); if (cine.mode === 'back') break; } });
-  for (let i = 1; i <= 8; i++) {
-    log.push(['B' + i, await info()]); await shot(`67-back-${i}.png`);
-    await page.evaluate(() => window.__run(6));
-  }
-  /* C — 처치. 보스를 직접 죽여 연출 첫 프레임부터 90ms(5~6프레임) 간격 8장 */
+  /* 4회차 비평(N) 지적 — 이전 프로토콜은 in 8 / back 8 / kill 8 이라 **유지(hold) 0.45초에 캡처가 0장**이었다.
+     연출의 핵심 비트에 증거가 없었다. 이제 «시각 지정» 으로 in 6 / hold 5 / back 5 / kill 8 을 찍는다.
+     목표 (mode, t) 에 도달할 때까지 틱을 돌리므로 회차 간 프레임이 정확히 대응된다. */
+  const seek = (mode, t) => page.evaluate(({ m, tt }) => {
+    for (let i = 0; i < 900; i++) {
+      if (cine.mode === m && cine.t >= tt) return true;
+      if (!cine.mode && m !== '-') { /* 이미 지나갔으면 더 못 잡는다 */ }
+      window.__tick();
+    }
+    return cine.mode === m;
+  }, { m: mode, tt: t });
+
+  const PLAN_IN   = [0.02, 0.14, 0.28, 0.44, 0.60, 0.78];
+  const PLAN_HOLD = [0.02, 0.12, 0.22, 0.32, 0.43];
+  const PLAN_BACK = [0.02, 0.14, 0.28, 0.42, 0.56];
+  const PLAN_KILL = [0.02, 0.08, 0.14, 0.20, 0.26, 0.32, 0.45, 0.64];
+
+  let n = 0;
+  for (const t of PLAN_IN)   { await seek('in', t);   log.push(['A' + (++n), await info()]); await shot(`67-in-${n}.png`); }
+  n = 0;
+  for (const t of PLAN_HOLD) { await seek('hold', t); log.push(['H' + (++n), await info()]); await shot(`67-hold-${n}.png`); }
+  n = 0;
+  for (const t of PLAN_BACK) { await seek('back', t); log.push(['B' + (++n), await info()]); await shot(`67-back-${n}.png`); }
+
+  /* C — 처치. 보스를 직접 죽이고 «그 다음 한 틱» 부터 목표 시각으로 이동 */
   await page.evaluate(() => {
     for (let i = 0; i < 900 && !enemies.some(e => e.tk === 'boss'); i++) window.__tick();
     const b = enemies.find(e => e.tk === 'boss');
     if (b) killEnemy(b);
     window.__tick();          /* 처치 «직후 한 프레임» 을 그려야 플래시 정점이 캡처에 남는다 */
   });
-  for (let i = 1; i <= 8; i++) {
-    log.push(['C' + i, await info()]); await shot(`67-kill-${i}.png`);
-    await page.evaluate(n => window.__run(n), i % 2 ? 5 : 6);     /* 평균 91.7ms */
-  }
+  n = 0;
+  for (const t of PLAN_KILL) { await seek('kill', t); log.push(['C' + (++n), await info()]); await shot(`67-kill-${n}.png`); }
 
   await ctx.close(); await browser.close();
   console.log('| 프레임 | mode | t(s) | zoom | flash | cam | player |');

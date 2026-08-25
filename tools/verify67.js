@@ -152,7 +152,7 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     S.stage = 10; S.best = Math.max(S.best || 1, 10); S.bossFarm = false;
     S.gold = 1e12;                                     /* 전투 결과와 무관하게 연출만 본다 */
     spawnStage();
-    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [], holdD = [];
+    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [], holdD = [], holdClip = [], cineClip = [];
     let spawnedF = -1, b = null, jerk = 0, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y };
     const marks = {};
     for (let f = 0; f < 400; f++) {                    /* ≈6.7초 */
@@ -175,7 +175,22 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
         const bi = spriteCenter(b, b.flip);
         camToBoss.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
         camToArt.push(Math.abs(cam.x - bi.x));
-        if(cine.mode === 'hold') holdD.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
+        /* ✓ 진짜로 중요한 것: «그려진 몸통이 화면 안에 통째로 들어오는가».
+           카메라는 플립 점프를 피하려고 앵커(좌우 대칭점)를 잡으므로 중심은 원래 ±104.8px 어긋난다 —
+           중심 거리로 채점하면 «설계대로 한 것» 이 감점된다. 프레임 안에 들어오는지로 잰다. */
+        const A = ATLAS[b.akey], fr = A && A.f[curFrame(b)], sc = (b.T && b.T.scale) || 1;
+        if(fr){
+          const hw = fr[2]*sc/2, hh = fr[3]*sc/2;
+          const vw = VW/(2*cam.z), vh = VH/(2*cam.z);
+          const outX = Math.max(0, (Math.abs(bi.x-cam.x)+hw) - vw);
+          const outY = Math.max(0, (Math.abs(bi.y-cam.y)+hh) - vh);
+          const clip = Math.max(outX, outY);
+          if(cine.mode === 'hold'){ holdD.push(Math.hypot(cam.x-bi.x, cam.y-bi.y)); holdClip.push(clip); }
+          /* «보스를 보여주는 구간» = 팬이 60% 넘게 진행된 뒤부터 유지 끝까지.
+             팬 «시작» 은 카메라가 아직 플레이어 위에 있고 보스는 300px 밖이라 잘려 있는 게 당연하다 —
+             그 프레임까지 세면 «팬을 하지 마라» 가 된다. */
+          if((cine.mode === 'in' && cineWeight() >= 0.85) || cine.mode === 'hold') cineClip.push(clip);
+        }
         camToPl.push(Math.hypot(cam.x - player.x, cam.y - player.y));
         zs.push(cam.z);
         const m = cine.mode || '-';
@@ -191,6 +206,9 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       minCamToBoss: Math.min(...camToBoss), minCamToArt: Math.min(...camToArt),
       holdMax: holdD.length ? Math.max(...holdD) : -1, holdN: holdD.length,
       holdMed: holdD.length ? holdD.slice().sort((a,b)=>a-b)[Math.floor(holdD.length/2)] : -1,
+      holdClip: holdClip.length ? Math.max(...holdClip) : -1,
+      cineClipMax: cineClip.length ? Math.max(...cineClip) : -1,
+      cineClipFrames: cineClip.filter(v => v > 0).length, cineFrames: cineClip.length,
       endCamToPl: camToPl[camToPl.length - 1],
       frames: zs.length, bossAlive: !!b && enemies.indexOf(b) >= 0
     };
@@ -198,11 +216,15 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[4] 보스 스폰이 연출을 켠다(in → hold → back → 종료)',
     boss.modes.join('>').includes('in>hold>back'), boss.modes.join(' > '));
   ok('[4] 팬·줌인 배율 1.15', Math.abs(boss.zMax - 1.15) < 0.02, boss.zMax.toFixed(3));
-  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px · 가로만 ' + boss.minCamToArt.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
-  /* 중앙값 40 / 최대 120 — 최대값이 느슨한 건 «보스가 돌아서면 스프라이트가 209.6px 순간이동한다» 는
-     렌더 규약 때문이다(67 구간 밖). 카메라는 0.45초 smoothstep 으로 따라가고, 그 사이 최대 ~105px 을 지난다. */
-  ok('[4] «유지» 구간 보스 중앙 이탈 중앙값 < 40px', boss.holdMed >= 0 && boss.holdMed < 40, boss.holdMed.toFixed(0) + 'px (최대 ' + boss.holdMax.toFixed(0) + 'px · ' + boss.holdN + '프레임)');
-  ok('[4] «유지» 구간 최대 이탈 < 120px (보스 방향 전환 전이 포함)', boss.holdMax >= 0 && boss.holdMax < 120, boss.holdMax.toFixed(0) + 'px');
+  /* 카메라는 «앵커 = 좌우 대칭점» 을 잡는다 — 플립 점프를 0px 으로 만드는 유일한 점이다.
+     그래서 몸통 «중심» 은 설계상 항상 ±104.8px 어긋난다. 중심 거리로 채점하면 설계대로 한 것이 감점된다.
+     채점은 아래 «몸통이 프레임 안에 들어오는가» 두 항목으로 하고, 여기서는 수치만 기록한다. */
+  ok('[4] 보스 정합 기록(가로는 설계상 ±104.8px)', boss.minCamToBoss < 200,
+    '최소 거리 ' + boss.minCamToBoss.toFixed(0) + 'px · 가로 성분 ' + boss.minCamToArt.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
+  /* 카메라는 «앵커 = 좌우 대칭점» 을 잡는다(플립 점프를 0 으로 만드는 유일한 점). 그러면 몸통 중심은
+     설계상 항상 ±104.8px 어긋나므로, 채점은 «중심 거리» 가 아니라 «몸통이 프레임 안에 들어오는가» 로 한다. */
+  ok('[4] «유지» 구간 내내 보스 몸통이 화면 안에 통째로 들어온다(잘림 0px)', boss.holdClip >= 0 && boss.holdClip <= 0.5, boss.holdClip.toFixed(1) + 'px 초과 · ' + boss.holdN + '프레임 · 중심 이탈 중앙값 ' + boss.holdMed.toFixed(0) + 'px');
+  ok('[4] «보스를 보여주는 구간»(팬 85%~유지 끝) 잘림 0프레임', boss.cineClipFrames === 0, boss.cineClipFrames + '/' + boss.cineFrames + '프레임 · 최대 ' + boss.cineClipMax.toFixed(0) + 'px');
   ok('[4] 연출 뒤 플레이어로 복귀(150px 이내) · 줌 복원', boss.endCamToPl < 150 && Math.abs(boss.zEnd - 1) < 0.02, boss.endCamToPl.toFixed(0) + 'px · z' + boss.zEnd.toFixed(3));
   ok('[4] 연출 길이 ≈ 1.85초(0.8+0.45+0.6)', boss.frames >= 105 && boss.frames <= 130, (boss.frames / 60).toFixed(2) + '초');
   ok('[4] 연출 중 저크(3차 차분) < ' + LIM_CJRK, boss.jerk < LIM_CJRK, boss.jerk.toFixed(3) + 'px/f³ · 가속 최대 ' + boss.acc.toFixed(2) + 'px/f²');
