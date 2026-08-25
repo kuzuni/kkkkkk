@@ -11,6 +11,17 @@ const T = (name, got, want, tol) => {
   ok ? pass++ : fail++;
   console.log((ok ? '  ok  ' : ' FAIL ') + name + ' = ' + got + ' (기대 ' + want + '±' + (tol === undefined ? 1 : tol) + ')');
 };
+/* 9회차 — 블록 좌표가 회차마다 최대 14px 씩 흔들려 게이트가 무작위로 깨졌다.
+   원인은 60 쥬시의 모달 등장 애니메이션(`.jz-o.jz-dlg>*{animation:jzBoxIn .22s}`)이다 —
+   고정 `waitForTimeout` 은 러너 부하에 따라 애니메이션 도중에 재기도 한다(피치가 410 이 아니라
+   413~417 로 나오는 것이 증거). 69 세션의 «변환 항등 대기» 와 같은 처방:
+   **무한 반복(jzDotPulse 등)을 뺀 모든 애니메이션이 끝날 때까지 기다린다.** */
+const settle = page => page.evaluate(() => Promise.all(
+  document.getAnimations()
+    .filter(a => a.effect && a.effect.getTiming().iterations !== Infinity)
+    .map(a => a.finished.catch(() => {}))
+));
+
 const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : ' FAIL ') + name); };
 
 (async () => {
@@ -58,6 +69,7 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   B('진입 버튼이 보이고 클릭 가능(hit target = 자기 자신)', hit.vis && hit.sized && hit.self);
   await page.evaluate(() => document.querySelector('[data-opencoll]').click());
   await page.waitForTimeout(400);
+  await settle(page);
   B('#collw 열림', await page.evaluate(() => $('collw').classList.contains('on')));
 
   const geo = () => page.evaluate(() => {
@@ -133,6 +145,7 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   for (const k of ['weapon', 'skill', 'pet', 'armor']) {
     await page.locator('.cltab[data-ct="' + k + '"]').click();
     await page.waitForTimeout(200);
+    await settle(page);
     const st = await page.evaluate(k => ({
       on: document.querySelector('.cltab[data-ct="' + k + '"]').classList.contains('on'),
       n: document.querySelectorAll('#collList .clb').length,

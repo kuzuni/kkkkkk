@@ -3288,13 +3288,22 @@
      노랑이 6px 짧아 꼭짓점에 검정이 비쳤고, 파랑은 활성에서 10px 길었다. */
   .cltab>s.y{left:7px;right:7px;top:0;bottom:0;
     background:linear-gradient(180deg,#FCD33D 0 55%,#F5B53A)}
-  .cltab>s.b{left:24px;right:24px;top:0;bottom:26px;box-shadow:inset 0 0 0 7px #1185C0;
+  /* 9회차 — L #13 «활성 탭 파란 패널이 짧다» 는 방향은 맞았다(수치는 자체 실측으로 다시 냈다).
+     x230(비활성)·x440(활성) 열 단면, 탭 상단 ref 1898.5 기준 local:
+       비활성 금색 레일 ref 94~117(23px) / 우리 92~117(25px) → `bottom` 26 → **24**
+       활성   금색 레일 ref 117~145(28px) / 우리 111~144(33px) → `bottom` 33 → **28**
+     즉 파란 판이 5~6px 짧고 그만큼 금색 레일이 두꺼웠다. 탭 «바깥» 높이는 ref 와 일치한다. */
+  .cltab>s.b{left:24px;right:24px;top:0;bottom:24px;box-shadow:inset 0 0 0 7px #1185C0;
     background:linear-gradient(180deg,#25AACD 0 4px,#1EA8D7 4px)}
-  .cltab.on>s.b{bottom:33px}
+  .cltab.on>s.b{bottom:28px}
   .cltab>i{position:relative;margin-top:17px;font-size:37px;line-height:44px;color:#C2C3C5;
     transform:scaleX(.99);-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .cltab.on>i{color:#F7F4EF}
-  .cltab>s.dot{display:none;left:172px;top:10px;width:22px;height:22px;border-radius:50%;
+  /* 9회차 — K #8 «알림점이 작고 10px 아래». 자체 실측: ref 붉은 점 bbox **x711~734 · y1900~1924**
+     (프레임 1816~1840, 중심 722.5/1828) = 스킬 탭(프레임 x540.5) local **(170.5, 2)** 지름 24.
+     우리는 local (172,10) 22px 이라 7.5px 아래·2px 작았다. ※ 60 쥬시의 jzDotPulse(scale 1.14) 때문에
+     색 마스크로는 bbox 가 번져 안 잡힌다 — CSS 값으로 맞춘다. */
+  .cltab>s.dot{display:none;left:170px;top:2.5px;width:24px;height:24px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
   .cltab.alert>s.dot{display:block}
   /* ==========================================================================

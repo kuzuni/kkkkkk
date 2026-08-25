@@ -5,6 +5,17 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
+/* 9회차 — 블록 좌표가 회차마다 최대 14px 씩 흔들려 게이트가 무작위로 깨졌다.
+   원인은 60 쥬시의 모달 등장 애니메이션(`.jz-o.jz-dlg>*{animation:jzBoxIn .22s}`)이다 —
+   고정 `waitForTimeout` 은 러너 부하에 따라 애니메이션 도중에 재기도 한다(피치가 410 이 아니라
+   413~417 로 나오는 것이 증거). 69 세션의 «변환 항등 대기» 와 같은 처방:
+   **무한 반복(jzDotPulse 등)을 뺀 모든 애니메이션이 끝날 때까지 기다린다.** */
+const settle = page => page.evaluate(() => Promise.all(
+  document.getAnimations()
+    .filter(a => a.effect && a.effect.getTiming().iterations !== Infinity)
+    .map(a => a.finished.catch(() => {}))
+));
+
 (async () => {
   const out = process.argv[2] || 'docs/review/21-r1.png';
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
@@ -33,6 +44,7 @@ const path = require('path');
   await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
   await page.evaluate(() => openColl21('armor'));
   await page.waitForTimeout(500);
+  await settle(page);
   await page.screenshot({ path: out });
 
   /* DOM 실측 — 프레임(#app) 좌표계 px */
