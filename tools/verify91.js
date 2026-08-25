@@ -6,7 +6,7 @@
      [2] 규칙 — 가능 단계 = min(세트 최저 Lv, 10). 지시 검증 예시 그대로 단언
      [3] 보너스 — 강화 후 bonus() 수치 = 표값(단계당 = 기준값 × 등급 mul, 축별 가산 후 1회 곱)
      [4] 저장 — 구 세이브(카테고리 카운터 4개) 로드 → 버려지고 안내 1회 · 새 키는 보존
-     [5] UI  — 21 팝업 탭 6개 · 세트 카드 · [강화] 버튼 실동작(단계 +1 · 전투력 상승) · 유물 10칸 가로 스크롤
+     [5] UI  — 21 팝업 탭 6개 · 세트 카드 · [강화] 버튼 실동작(단계 +1 · 전투력 상승) · 유물 3세트 3·4·3(118)
      [6] 연동 — 레드닷(사이드·탭·서브탭) · 가이드 미션 «도감 보너스 1회» · 87 코스튬 해금 조건
    기능 체크 표는 `--table` 로 출력한다(review 파일에 붙일 것). */
 const { chromium } = require('playwright');
@@ -53,24 +53,28 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     skCounts: [0,1,2,3,4,5].map(g => (COLL_SET['skill:' + g] || { it: [] }).it.length),
     /* 106 — 동료가 8등급 36종이 되면서 펫 세트도 0~7 이다(구 6등급 9종에서 확장) */
     petCounts: [0,1,2,3,4,5,6,7].map(g => (COLL_SET['pet:' + g] || { it: [] }).it.length),
-    relic: COLL_SET['relic:0'] ? COLL_SET['relic:0'].it.length : 0,
-    relicMul: COLL_SET['relic:0'] ? COLL_SET['relic:0'].mul : 0,
+    /* 118 — 유물이 «10종 1세트» 에서 «3 · 4 · 3» 3세트로 바뀌었다 */
+    relic: [0, 1, 2].map(i => (COLL_SET['relic:' + i] || { it: [] }).it.length),
+    relicMul: [0, 1, 2].map(i => (COLL_SET['relic:' + i] || { mul: 0 }).mul),
+    relicN: [0, 1, 2].map(i => (COLL_SET['relic:' + i] || { n: '' }).n),
     wEff: [0,1,2,3,4,5,6,7].map(g => (COLL_SET['equip:weapon:' + g] || { eff: {} }).eff.atk),
     maxStep: COLL_MAX_STEP,
     gone: typeof COLL === 'undefined'
   }));
-  ok(st.len === 39, '세트 39개 (106 이후 — 실측 ' + st.len + ')');
-  ok(JSON.stringify(st.byCat) === '[24,6,8,1]', '카테고리 분포 장비24·스킬6·펫8(106)·유물1 (실측 ' + JSON.stringify(st.byCat) + ')');
-  ok(JSON.stringify(st.byTab) === '[6,8,8,8,8,1]', '탭 분포 스킬6·무기8·방패8·목걸이8·펫8(106)·유물1 (실측 ' + JSON.stringify(st.byTab) + ')');
+  ok(st.len === 41, '세트 41개 (118 이후 — 실측 ' + st.len + ')');
+  ok(JSON.stringify(st.byCat) === '[24,6,8,3]', '카테고리 분포 장비24·스킬6·펫8(106)·유물3(118) (실측 ' + JSON.stringify(st.byCat) + ')');
+  ok(JSON.stringify(st.byTab) === '[6,8,8,8,8,3]', '탭 분포 스킬6·무기8·방패8·목걸이8·펫8(106)·유물3(118) (실측 ' + JSON.stringify(st.byTab) + ')');
   ok(new Set(st.keys).size === st.len, '세트 키 중복 없음');
-  ok(st.keys.every(k => /^(equip:(weapon|shield|amulet):[0-7]|skill:[0-5]|pet:[0-7]|relic:0)$/.test(k)),
-     '키 형식 equip:{slot}:{g} · skill:{g} · pet:{g} · relic:0');
+  ok(st.keys.every(k => /^(equip:(weapon|shield|amulet):[0-7]|skill:[0-5]|pet:[0-7]|relic:[0-2])$/.test(k)),
+     '키 형식 equip:{slot}:{g} · skill:{g} · pet:{g} · relic:{0..2}(118)');
   ok(st.dupIt === 0, '한 아이템이 두 세트에 속하지 않음 (중복 ' + st.dupIt + ')');
   ok(JSON.stringify(st.wCounts) === '[5,5,5,5,5,5,5,1]', '무기 세트 구성원 5×7 + 최종등급 1 (실측 ' + JSON.stringify(st.wCounts) + ')');
   ok(JSON.stringify(st.skCounts) === '[4,4,4,4,4,4]', '스킬 세트 구성원 4×6 (실측 ' + JSON.stringify(st.skCounts) + ')');
   ok(st.petCounts.reduce((a, c) => a + c, 0) === 36, '펫 세트 구성원 합 36종 (106 — 실측 ' + JSON.stringify(st.petCounts) + ')');
-  ok(st.relic === 10, '유물은 10종 1세트 (실측 ' + st.relic + ')');
-  ok(near(st.relicMul, 3.78, 0.001), '유물 세트 등급배율 = 구성원 mul 평균 3.78 (실측 ' + st.relicMul + ')');
+  ok(JSON.stringify(st.relic) === '[3,4,3]', '118 — 유물 3세트 3·4·3 (실측 ' + JSON.stringify(st.relic) + ')');
+  ok(st.relicMul.every((m, i) => near(m, [1.6, 3.875, 5.833333333333333][i], 0.001)),
+     '유물 세트 등급배율 = 세트별 구성원 mul 평균 1.600 / 3.875 / 5.833 (실측 '
+     + st.relicMul.map(m => m.toFixed(3)).join(' / ') + ')');
   ok(near(st.wEff[0], 0.02, 1e-9), '지시 예시 — 무기·일반 단계당 공격력 +2% (실측 ' + (st.wEff[0] * 100).toFixed(1) + '%)');
   ok(st.wEff.every((v, i) => i === 0 || v > st.wEff[i - 1]), '등급이 오를수록 단계당 값이 커진다 ('
      + st.wEff.map(v => (v * 100).toFixed(1) + '%').join(' → ') + ')');
@@ -179,7 +183,7 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     COLL_SET['equip:weapon:0'].it.forEach(id => S.own[id] = { n: 0, l: 4 });
     COLL_SET['equip:weapon:1'].it.forEach(id => S.own[id] = { n: 0, l: 1 });
     COLL_SET['skill:0'].it.forEach(id => S.own[id] = { n: 0, l: 2 });
-    COLL_SET['relic:0'].it.forEach(id => S.own[id] = { n: 0, l: 3 });
+    [0, 1, 2].forEach(i => COLL_SET['relic:' + i].it.forEach(id => S.own[id] = { n: 0, l: 3 }));
     markDirty(); renderUI();
     openColl21('weapon');
     return { blocks: document.querySelectorAll('#collList .clb').length,
@@ -222,15 +226,18 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
 
   const relic = await p.evaluate(() => {
     closeModal(); openColl21('relic');
-    const c = document.querySelector('#collList .clb-cards');
+    const cs = [...document.querySelectorAll('#collList .clb-cards')];
+    const c = cs[0];
     return { blocks: document.querySelectorAll('#collList .clb').length,
              cards: document.querySelectorAll('#collList .cd').length,
-             sw: c.scrollWidth, cw: c.clientWidth, over: c.scrollWidth > c.clientWidth,
+             perBlock: [...document.querySelectorAll('#collList .clb')].map(b => b.querySelectorAll('.cd').length),
+             sw: c.scrollWidth, cw: c.clientWidth, over: cs.some(x => x.scrollWidth > x.clientWidth),
              right: c.getBoundingClientRect().right,
              panelRight: document.querySelector('#collList .clb-panel').getBoundingClientRect().right };
   });
-  ok(relic.blocks === 1 && relic.cards === 10, '유물 탭 = 1세트 10칸 (실측 ' + relic.blocks + '블록 ' + relic.cards + '칸)');
-  ok(relic.over && relic.sw > relic.cw, '10칸은 가로 스크롤로 담긴다 (scrollWidth ' + Math.round(relic.sw) + ' > clientWidth ' + Math.round(relic.cw) + ')');
+  ok(relic.blocks === 3 && relic.cards === 10, '118 — 유물 탭 = 3세트 10칸 (실측 ' + relic.blocks + '블록 ' + relic.cards + '칸)');
+  ok(JSON.stringify(relic.perBlock) === '[3,4,3]', '118 — 세트별 칸 3·4·3 (실측 ' + JSON.stringify(relic.perBlock) + ')');
+  ok(!relic.over, '118 — 가로 스크롤 없이 담긴다 (scrollWidth ' + Math.round(relic.sw) + ' ≤ clientWidth ' + Math.round(relic.cw) + ')');
   ok(relic.right <= relic.panelRight + 1, '카드 상자가 세트 패널 밖으로 넘치지 않음 (상자 우끝 ' + Math.round(relic.right) + ' ≤ 패널 ' + Math.round(relic.panelRight) + ')');
 
   const tabSwitch = await p.evaluate(() => {

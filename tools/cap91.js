@@ -33,7 +33,8 @@ const OUT = process.argv[3] || ('91-' + TAB);
       if (!lv) return;
       s.it.forEach((id, i) => { if (!(g >= 3 && i === s.it.length - 1)) S.own[id] = { n: 0, l: lv }; });
     });
-    COLL_SET['relic:0'].it.forEach((id, i) => { if (i < 8) S.own[id] = { n: 0, l: 4 - (i % 3) }; });
+    /* 118 — 유물이 3세트(3·4·3)로 갈렸다. 세 세트 모두 캡처에 담기게 전 종을 채운다 */
+    [0, 1, 2].forEach(si => COLL_SET['relic:' + si].it.forEach((id, i) => S.own[id] = { n: 0, l: 4 - (i % 3) }));
     /* 받은 단계를 세트마다 다르게 — «단계 n/m» 표기와 버튼 활성/비활성이 섞이게 */
     S.coll['equip:weapon:0'] = 10; S.coll['equip:weapon:1'] = 2;
     S.coll['equip:shield:0'] = 10; S.coll['equip:shield:1'] = 4;
