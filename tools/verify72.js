@@ -43,14 +43,20 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     });
   });
 
-  console.log('[1] 슬롯 기하 — 카드 안쪽 우측 315×334, 카드 좌상단 기준 (658, 8)');
+  /* 카드별 기대 슬롯 — 레퍼런스 실측(비평가 O·P 교차 확인): 카드1 x712 rel top 36 / 카드2 x726 rel top 52.
+     잠금 카드 3~5 는 개별 측정이 불가(딤)해 카드1·2 중간값(폭 305 · top 42)을 쓴다. */
+  const EXP = [
+    { w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52 },
+    { w: 305, h: 299, dy: 42 }, { w: 305, h: 299, dy: 42 }, { w: 305, h: 299, dy: 42 }];
+  console.log('[1] 슬롯 기하 — 카드 안쪽 우측 정렬(우단 inset 7), 카드별 폭·상단 인셋');
   ok(d.length === 5, `카드 5장 (실제 ${d.length})`);
   d.forEach((c, i) => {
     ok(!!c.th, `카드${i + 1} 썸네일 슬롯 존재`);
     if (!c.th) return;
-    ok(Math.abs(c.th.w - 315) <= 1 && Math.abs(c.th.h - 334) <= 1, `카드${i + 1} 슬롯 ${c.th.w}×${c.th.h} = 315×334`);
-    ok(Math.abs(c.th.dx - 658) <= 1, `카드${i + 1} 슬롯 x offset ${c.th.dx} = 658 (우측 안쪽 정렬)`);
-    ok(Math.abs(c.th.dy - 8) <= 1, `카드${i + 1} 슬롯 y offset ${c.th.dy} = 8 (안쪽 상단)`);
+    const e = EXP[i];
+    ok(Math.abs(c.th.w - e.w) <= 1 && Math.abs(c.th.h - e.h) <= 1, `카드${i + 1} 슬롯 ${c.th.w}×${c.th.h} = ${e.w}×${e.h}`);
+    ok(Math.abs(c.th.dx - (980 - 7 - e.w)) <= 1, `카드${i + 1} 슬롯 x offset ${c.th.dx} = ${980 - 7 - e.w} (우측 안쪽 정렬)`);
+    ok(Math.abs(c.th.dy - e.dy) <= 1, `카드${i + 1} 슬롯 y offset ${c.th.dy} = ${e.dy}`);
     ok(!!c.emoji, `카드${i + 1} 대체 아트 있음 (${c.emoji})`);
     ok(/matrix\(/.test(c.sx), `카드${i + 1} 잉크 폭 정규화 scaleX 적용 (${c.sx})`);
   });
@@ -62,6 +68,20 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(c.iTh > -1 && c.iTh < c.iSh && c.iTh < c.iFr, `카드${i + 1} 썸네일이 .sh/.fr 아래(${c.iTh} < ${c.iSh},${c.iFr})`);
     if (c.locked) ok(c.iLk > c.iTh, `카드${i + 1}(잠금) 딤·자물쇠가 썸네일 위(${c.iLk} > ${c.iTh})`);
   });
+
+  console.log('[2-1] 잠금 카드 씬 아트 자리 (레퍼런스 잉크 좌단 385/465/395)');
+  const scn = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map((c) => {
+    const s = c.querySelector('.scn'); if (!s) return null;
+    const cr = c.getBoundingClientRect(), sr = s.getBoundingClientRect();
+    return { dx: +(sr.left - cr.left).toFixed(1), w: +sr.width.toFixed(1), h: +sr.height.toFixed(1),
+             locked: !!c.querySelector('.lk') };
+  }));
+  [335, 415, 345].forEach((want, k) => {
+    const c = scn[k + 2];
+    ok(!!c, `잠금 카드${k + 3} 씬 자리 존재`);
+    if (c) ok(Math.abs(c.dx - want) <= 1, `잠금 카드${k + 3} 씬 좌단 offset ${c.dx} = ${want}`);
+  });
+  ok(!scn[0] && !scn[1], '해금 카드 1·2 에는 씬 자리가 없다(레퍼런스도 우측 썸네일뿐)');
 
   console.log('[3] 카드 진입이 살아 있다 (썸네일 위를 눌러도 세부 팝업이 뜬다)');
   const opened = await p.evaluate(() => {
