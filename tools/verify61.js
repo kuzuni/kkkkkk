@@ -16,6 +16,10 @@
      §12 58 연출       수령 시 fx 레이어에 파티클/토스트가 실제로 생성된다
      §13 기하          배너가 탭바·좌하단 유틸과 겹치지 않고 프레임 밖으로 새지 않는다
 
+   ⚠ 상태를 바꾼 뒤 rAF 루프의 drawTuto() 를 «기다리지» 마라 — 헤드리스에서 rAF 가 스로틀되면
+      고정 대기(120ms)가 간헐 실패한다(29-② · 41-④ 부류의 플레이크). 상태 변경과 drawTuto() 를
+      **같은 evaluate 안에서** 부른다.
+
    사용: node tools/verify61.js [불러올.html] [출력.json]
    브라우저: PW_CHROMIUM 또는 /opt/pw-browsers/chromium */
 const fs = require('fs'), path = require('path');
@@ -108,10 +112,10 @@ const snap = page => page.evaluate(() => {
 
   /* ---------- §2 진행 반영 (델타형) ---------- */
   /* 미션 7 «적 100마리 처치» 로 옮겨 놓고 절반만 올린다 */
-  await page.evaluate(() => { S.guide.idx = 6; gmStart(); });
+  await page.evaluate(() => { S.guide.idx = 6; gmStart(); drawTuto(); });
   await page.waitForTimeout(80);
   const kill0 = await page.evaluate(() => S.totalKills);
-  await page.evaluate(() => { S.totalKills += 40; });
+  await page.evaluate(() => { S.totalKills += 40; drawTuto(); });
   await page.waitForTimeout(80);
   s = await snap(page);
   eq('§2 진행이 카운터를 따라 오른다', s.pg, '(40/' + G[6].goal + ')');
@@ -129,7 +133,7 @@ const snap = page => page.evaluate(() => {
      `idx ${before.idx}→${s.idx} dia ${before.dia}→${s.dia}`);
 
   /* ---------- §3 보상받기 전이 ---------- */
-  await page.evaluate(() => { S.totalKills += 60; });
+  await page.evaluate(() => { S.totalKills += 60; drawTuto(); });
   await page.waitForTimeout(120);
   s = await snap(page);
   ok('§3 ready 상태로 전이', s.ready && !s.todo, JSON.stringify({ todo: s.todo, ready: s.ready }));
@@ -164,11 +168,11 @@ const snap = page => page.evaluate(() => {
   /* ---------- §7 절대형(abs) ---------- */
   /* 미션 8 «스테이지 5 도달» = abs. 기준선을 쓰지 않고 누적값이 그대로 진행이다 */
   ok('§7 abs 미션의 기준선은 0', s.prog === 0, 'prog=' + s.prog);
-  await page.evaluate(() => { S.best = 3; });
+  await page.evaluate(() => { S.best = 3; drawTuto(); });
   await page.waitForTimeout(120);
   s = await snap(page);
   eq('§7 abs 진행 = 누적값', s.pg, '(3/5)');
-  await page.evaluate(() => { S.best = 5; });
+  await page.evaluate(() => { S.best = 5; drawTuto(); });
   await page.waitForTimeout(120);
   s = await snap(page);
   ok('§7 abs 목표 도달 → ready', s.ready, s.label);
@@ -182,7 +186,7 @@ const snap = page => page.evaluate(() => {
     });
     return { cards, gm: Object.keys(DUN_UI).reduce((o, k) => (o[k] = DUN_UI[k].gm, o), {}) };
   });
-  await page.evaluate(() => { S.guide.idx = 0; gmStart(); });
+  await page.evaluate(() => { S.guide.idx = 0; gmStart(); drawTuto(); });
   let dl = await dunLock();
   const relic = dl.cards.find(c => c.id === 'relic');
   ok('§10 유물 던전이 잠겨 있다', relic && relic.locked, JSON.stringify(relic));
@@ -241,13 +245,13 @@ const snap = page => page.evaluate(() => {
   ok('§14 20개 미션 전부 — 잉크가 배너 밖으로 새지 않는다', bleed.length === 0, bleed.slice(0, 3).join(' || '));
 
   /* ---------- §11 체인 완주 ---------- */
-  await page.evaluate(() => { S.guide.idx = GUIDE.length; S.guide.prog = 0; });
+  await page.evaluate(() => { S.guide.idx = GUIDE.length; S.guide.prog = 0; drawTuto(); });
   await page.waitForTimeout(120);
   s = await snap(page);
   ok('§11 완주하면 배너가 사라진다', s.off && s.disp === 'none', JSON.stringify({ off: s.off, disp: s.disp }));
 
   /* ---------- §9 영속성 (50 교훈 2 — addInitScript 금지) ---------- */
-  await page.evaluate(() => { S.guide.idx = 3; gmStart(); save(); });
+  await page.evaluate(() => { S.guide.idx = 3; gmStart(); drawTuto(); save(); });
   await page.reload();
   await page.waitForTimeout(1200);
   s = await snap(page);
@@ -288,7 +292,7 @@ const snap = page => page.evaluate(() => {
        [m.name, m.label, m.sub, m.pg].join(' | '));
     /* 구 세이브가 누적 킬 99만이어도 «적 100마리» 미션이 즉시 완료되면 안 된다 */
     if (v.save.totalKills > 1000 && v.wantIdx < 20) {
-      await p2.evaluate(() => { S.guide.idx = 6; S.guide.prog = -1; });
+      await p2.evaluate(() => { S.guide.idx = 6; S.guide.prog = -1; drawTuto(); });
       await p2.waitForTimeout(120);
       const g = await p2.evaluate(() => ({
         pg: document.getElementById('tutoPg').textContent,

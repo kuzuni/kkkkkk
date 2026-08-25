@@ -460,7 +460,8 @@
     font-size:29px;line-height:27px;color:#83FFE7}      /* L1 잉크 160×27 @ (93,12) */
   #tuto.todo .tinfo{left:0;width:318px;top:58px}
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px}
-  #tuto.todo .tt em{font-style:normal;color:#FE8252}    /* L2 의 숫자만 주황 */
+  /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
+  #tuto .tt em{font-style:normal;color:#FE8252}
   #tuto .tpg{display:none}
   #tuto.todo .tpg{display:block;position:absolute;left:0;width:318px;text-align:center;top:89px;
     height:23px;font-size:27px;line-height:23px;font-weight:900;color:#FFC26A;
