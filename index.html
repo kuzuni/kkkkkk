@@ -1944,13 +1944,13 @@
     position:relative;font-style:normal}
   .ofr-ad em::before{content:'';position:absolute;left:11px;top:9px;border-style:solid;
     border-width:7.5px 0 7.5px 13px;border-color:transparent transparent transparent #FFF5CC}
-  .ofr-ad b{position:absolute;right:-9px;bottom:-6px;font-size:21px;line-height:1;color:#fff;
+  .ofr-ad b{position:absolute;right:-15px;bottom:-9px;font-size:17px;line-height:1;color:#fff;
     font-weight:900;-webkit-text-stroke:3px #000;paint-order:stroke fill}
 
   /* 모달 바깥 아래 상품 배너 */
   .ofr-bn{left:66px;top:674px;width:948px;height:298px;border-radius:24px;
     border:6px solid #000;box-sizing:border-box;background:#48F291;overflow:hidden}
-  .ofr-bn>u{position:absolute;left:9px;right:9px;top:20px;bottom:9px;border-radius:14px;
+  .ofr-bn>u{position:absolute;left:9px;right:9px;top:7px;bottom:9px;border-radius:14px;
     background:#39C28C;text-decoration:none}
   /* 우측 티켓 노치 3개 (중심 y 1518/1592/1665 → 스테이지 746/820/893) */
   /* 노치는 «칠하는 것» 이 아니라 배너 실루엣을 뚫는 것이다 — 칠하면 배너 초록 위에 얹혀
@@ -1958,18 +1958,21 @@
      중심 ref y1519.5/1592.5/1665 → 배너 보더박스(674) 기준 73.5/146.5/219.
      반경은 ref 절개 프로파일 역산: 최심 22px · |t|=20 에서 7px → r≈21, 중심은 우변 안쪽 1px. */
   .ofr-bn{-webkit-mask-image:
-      radial-gradient(circle 21px at calc(100% - 1px) 73.5px,#0000 21px,#000 21.5px),
-      radial-gradient(circle 21px at calc(100% - 1px) 146.5px,#0000 21px,#000 21.5px),
-      radial-gradient(circle 21px at calc(100% - 1px) 219px,#0000 21px,#000 21.5px);
+      radial-gradient(circle 14px at calc(100% - 7px) 73.5px,#0000 14px,#000 14.5px),
+      radial-gradient(circle 14px at calc(100% - 7px) 146px,#0000 14px,#000 14.5px),
+      radial-gradient(circle 14px at calc(100% - 7px) 219px,#0000 14px,#000 14.5px);
     -webkit-mask-composite:source-in;mask-composite:intersect}
   /* ref 절개 단면: 초록 → 검정 5px → 배경. mask 는 배너 테두리째 날리므로
      구멍(r21)보다 5px 큰 검정 원반(r26)을 깔아 링만 남긴다.
      보더박스 기준 중심 x = 948-1 = 947, y = 73.5/146.5/219 → 패딩박스(테두리 6) 기준으로 환산 */
-  .ofr-bn>s{position:absolute;right:-31px;width:52px;height:52px;border-radius:50%;
-    background:#000;text-decoration:none}
-  .ofr-bn>s:nth-of-type(1){top:41.5px}
-  .ofr-bn>s:nth-of-type(2){top:114.5px}
-  .ofr-bn>s:nth-of-type(3){top:187px}
+  /* 절개 둘레는 «구멍 → 검정 5px → 밝은초록 8px → 본체» 순이다(ref 행 단면).
+     밝은초록 원반(r27) 위에 검정 원반(r19)을 얹고, mask 가 안쪽 r14 를 뚫는다. */
+  .ofr-bn>s{position:absolute;right:-26px;width:54px;height:54px;border-radius:50%;
+    background:#48F291;text-decoration:none}
+  .ofr-bn>s::before{content:'';position:absolute;inset:8px;border-radius:50%;background:#000}
+  .ofr-bn>s:nth-of-type(1){top:40.5px}
+  .ofr-bn>s:nth-of-type(2){top:113px}
+  .ofr-bn>s:nth-of-type(3){top:186px}
   /* 캐릭터 일러스트 자리 — 우측이 대각선인 민트 패널.
      .ofr-bn 안에 넣어 overflow:hidden 으로 배너 라운드에 잘리게 한다.
      좌표는 배너 패딩박스 기준(실측 x78,y1457 − 배너 66,674 − 테두리 6) */
@@ -1983,7 +1986,7 @@
   .ofr-art i{transform:translate(-129px,-14px)}
   /* 배너 문구 — 우단 894 / 963, 잉크중심 y 721.5 / 793 */
   .ofr-t1{left:0;top:691px;width:896px;text-align:right;height:60px;line-height:60px;
-    font-size:39px;-webkit-text-stroke:5px #000}
+    font-size:39px;-webkit-text-stroke:13px #000}
   /* 잉크 폭이 ref 410 대비 419(+2.2%) 라 우측 기준으로 눌러 맞춘다 */
   .ofr-t1 i{transform:scaleX(.9785);transform-origin:100% 50%}
   /* '4시간 증가' 는 세로 그라데이션 글자 + 검정 외곽선이다.
@@ -1994,7 +1997,7 @@
   .ofr-t2 i{transform:scaleX(.963);transform-origin:100% 50%;
     background:linear-gradient(180deg,#FFF6BB,#FEBE55);-webkit-background-clip:text;
     background-clip:text;color:transparent}
-  .ofr-t2.s i{background:none;color:#000;-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .ofr-t2.s i{background:none;color:#000;-webkit-text-stroke:13px #000;paint-order:stroke fill}
   .ofr-go{left:654px;top:834px;width:299px;height:118px;border-radius:40px;border:7px solid #000;
     box-sizing:border-box;padding:0;cursor:pointer;font-family:inherit;font-weight:900;
     font-size:49px;line-height:1;color:#fff;
