@@ -1762,20 +1762,26 @@
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
-    animation:fxPlus .62s cubic-bezier(.2,.8,.3,1) both}
+    animation:fxPlus .8s cubic-bezier(.2,.8,.3,1) both}
   /* 위로 떠오르게 하면 알약이 화면 최상단이라 **HUD 숫자 위로 올라가 겹친다**(10회차 지적:
-     «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 **더 아래로** 흘리며 사라지게 한다. */
+     «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 흘리며 사라지게 한다.
+     15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W)·길이 .62→.8s·페이드를 60% 뒤로 미뤄
+     «수명 150~260ms 로 짧다»(W) 를 해소. 위로는 여전히 안 올라간다(HUD 겹침 방지 유지). */
   @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,-14px) scale(.7)}
-    18%{opacity:1;transform:translate(-50%,0) scale(1.06)}
-    34%{opacity:1;transform:translate(-50%,6px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,46px) scale(1)}}
+    14%{opacity:1;transform:translate(-50%,0) scale(1.06)}
+    30%{opacity:1;transform:translate(-50%,4px) scale(1)}
+    60%{opacity:1;transform:translate(-50%,12px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,24px) scale(1)}}
   /* 14회차 — 강화(upg)용 델타 플로터 «+2.4 공격력». gain 의 `+n` 과 같은 서체·스트로크로
-     어휘를 통일하되(13회차 U·V «씬 간 어휘 불일치»), 카드는 화면 중단이라 **위로** 떠오른다. */
-  .fx-delta{animation-name:fxDelta}
-  @keyframes fxDelta{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}
-    18%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
-    34%{opacity:1;transform:translate(-50%,-10px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-52px) scale(1)}}
+     어휘를 통일하되(13회차 U·V «씬 간 어휘 불일치»), 카드는 화면 중단이라 **위로** 떠오른다.
+     15회차 — 상승을 앞당기고(18% 에 이미 −18px) 길이를 .82s 로 늘려 «상승 40px/400ms 로 느려
+     타이틀 겹침이 오래 간다»(W·X)를 해소. 시작점 자체도 fxDelta() 가 카드 밖 −44px 로 뺐다. */
+  .fx-delta{animation-name:fxDelta;animation-duration:.82s}
+  @keyframes fxDelta{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
+    18%{opacity:1;transform:translate(-50%,-18px) scale(1.06)}
+    40%{opacity:1;transform:translate(-50%,-34px) scale(1)}
+    72%{opacity:1;transform:translate(-50%,-56px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-78px) scale(1)}}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -1855,7 +1861,7 @@
      시작하지 못한다**(실측: 토스트·체크가 200ms 동안 0% 키프레임에 멈춰 있었다).
      `opacity` 단독은 합성기에서 처리돼 공짜다 — 딤은 이것만으로 충분히 읽힌다. */
   .fx-dim{opacity:.28;transition:opacity .16s ease-out}
-  .fx-undim{transition:opacity .34s ease-in}
+  .fx-undim{transition:opacity .3s ease-out}
   /* 수령한 행은 «이 행이 그 보상의 출처» 라는 것이 읽히게 위로 올린다(색 보정은 쓰지 않는다) */
   .fx-solo{position:relative;z-index:3}
 
@@ -7672,7 +7678,11 @@ function fmt(n){
   if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
   let i = 0;
   while(n >= 1000 && i < SUF.length-1){ n /= 1000; i++; }
-  return (n < 10 ? n.toFixed(2) : n < 100 ? n.toFixed(1) : Math.floor(n)) + SUF[i];
+  /* 58 15회차 — toFixed 의 «반올림 승격» 경계 보정. 9.9999 는 n<10 분기라 toFixed(2)="10.00" 이 돼
+     롤링 중 «10.0T ↔ 10.00T» 로 자릿수 포맷이 요동쳤다(비평 W·X 공통). 승격되면 윗 분기 포맷을 쓴다. */
+  if(n < 10){ const s = n.toFixed(2); if(+s < 10) return s + SUF[i]; n = +s; }
+  if(n < 100){ const s = n.toFixed(1); if(+s < 100) return s + SUF[i]; n = +s; }
+  return Math.floor(n) + SUF[i];
 }
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const rnd = (a,b) => a + Math.random()*(b-a);
@@ -14530,7 +14540,7 @@ function fxPlus(cur, n){
   el.style.top  = (r.y + r.h + 8) + 'px';
   el.textContent = '+' + fmt(n);
   L.appendChild(el);
-  setTimeout(() => el.remove(), 660);
+  setTimeout(() => el.remove(), 840);
 }
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
@@ -14557,6 +14567,11 @@ function fxBurst(t, col, n){
     const el = document.createElement('s');
     const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
     el.className = 'fx-spark';
+    /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
+       평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
+    const sz = Math.round(rnd(20, 30));
+    el.style.width = sz + 'px'; el.style.height = sz + 'px';
+    el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.background = col || '#FFE07A';
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     el.style.left = (p.x + Math.cos(a)*rx) + 'px';
@@ -14625,19 +14640,22 @@ function fxUpOk(target, at, txt){
   fxBurst(at || target, '#FFE9A8', 10);
   if(txt) fxDelta(target || at, txt);
 }
-/* 강화 델타 플로터 — 카드 상단 중앙에서 «+2.4 공격력» 이 위로 떠오른다(14회차).
-   gain 의 `+n`(fxPlus)과 같은 40px·검정 스트로크 — 씬 간 어휘를 맞춘다. */
+/* 강화 델타 플로터 — 카드 «위» 에서 «+2.4 공격력» 이 위로 떠오른다(14회차 신설).
+   15회차 — 카드 상단(r.y−4)에서 띄우니 «Lv. 1» 타이틀을 210ms 가렸다(비평 W·X 공통).
+   시작점을 카드 밖(−44px)으로 빼고, 한글 글리프가 숫자보다 커 보이던 것(30~34 vs 28px)을
+   font-size 34 로 눌러 gain 의 `+n` 과 잉크 높이를 맞춘다. 색도 fxPlus 골드(#FFDE6A)와 통일. */
 function fxDelta(el, txt){
   const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;
   if(L.childElementCount >= FXMAX) return;
   const d = document.createElement('b');
   d.className = 'fx-plus fx-delta';
-  d.style.color = '#FFE9A8';
+  d.style.color = '#FFDE6A';
+  d.style.fontSize = '34px';
   d.style.left = (r.x + r.w/2) + 'px';
-  d.style.top  = (r.y - 4) + 'px';
+  d.style.top  = (r.y - 44) + 'px';
   d.textContent = txt;
   L.appendChild(d);
-  setTimeout(() => d.remove(), 660);
+  setTimeout(() => d.remove(), 860);
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
@@ -14671,11 +14689,12 @@ function fxCheck(el){
    보상 비행은 리스트 하단 → 우상단 HUD 라 반드시 «다른 행 위» 를 지난다(기하학적 성질).
    경로·제어점을 아무리 손봐도 회수되지 않으므로, 지나가는 동안 **형제 행을 딤** 처리해
    «저 퀘스트도 완료됐나» 로 읽힐 여지를 없앤다.
-   ms 는 fxRenderLater 의 유지 시간과 같아야 한다 — 딤이 먼저 풀리고 행이 나중에 바뀌면
-   «두 번 바뀌는» 것으로 보인다.
-   14회차 — 760 → 620ms. 코인은 ~530ms 에 전부 착지하므로 620 이면 인과는 그대로 서고,
-   딤 «복귀» 구간이 8프레임 캡처(~700ms) 안에 들어온다(13회차 V: «복귀가 8장 안에 안 보인다»). */
-const FXSOLO = 620;
+   14회차 — 760 → 620ms 로 줄였지만 복귀 이징(.34s ease-in)이 느려 693ms 캡처엔 여전히 0% 로
+   찍혔다(15회차 비평 W·X 공통). 15회차 — 딤 «해제 시작»(FXSOLO 530)과 목록 재렌더(FXHOLD 620)를
+   분리한다: 복귀(0.3s ease-out)가 530~830ms 로 돌므로 693ms 프레임에 ~54% 회복이 찍히고,
+   재렌더(620)는 복귀 «도중» 에 겹쳐 한 번의 변화로 읽힌다(«딤 풀림 → 행 교체» 2단 변화 방지).
+   코인 전부 착지는 ~530ms 라 인과도 그대로 선다. */
+const FXSOLO = 530, FXHOLD = 620;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
@@ -14695,7 +14714,7 @@ function fxSolo(el, ms){
    모순» 인 화면이 남는다(10회차 보류 사유 2). 재화가 다 꽂힌 뒤에 갱신하면 인과가 바로 선다.
    수령 판정(`questReady` 등)은 상태로 다시 하므로 그 사이 재클릭은 무시된다 — 지연은 안전하다. */
 let fxReT = 0;
-function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXSOLO)); }
+function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXHOLD)); }
 /* 미룬 재렌더가 «닫은 팝업을 되살리지» 않게 한다 — `openQuest()`/`openMail()` 은 열기까지 하는
    함수라, 지연 중에 딤을 눌러 닫으면 FXSOLO(620ms) 뒤에 팝업이 혼자 다시 뜬다(12회차에 잡은 회귀). */
 const fxStillOpen = (cls) => { const m = $('modal'); return !!m && m.classList.contains('on') && m.classList.contains(cls); };

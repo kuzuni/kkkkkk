@@ -140,7 +140,9 @@ function pwLaunch(){
     /* 12회차 — 출발점을 용사 «바로 옆»(적이 죽은 자리에 해당)으로. +120 world px 는 프레임에서
        224~278px 우측 빈 바닥이라 비평가 2인이 «획득 지점에 앵커되지 않았다» 로 감점했다 —
        실제 게임은 킬마다 `fxAt(fxWorld(e.x, e.y-e.r))` 로 죽은 자리를 준다. 하네스가 틀렸다. */
-    const p = fxWorld(player.x + 26, player.y - 54);
+    /* 15회차 — (+26,−54) world = 프레임 (+52,−108)px 라 «용사에서 우상 +123/−158 이탈»(W·X 공통,
+       스폰 지터 포함 실측)로 잡혔다. 죽은 자리는 용사 «바로 옆» — 반경을 절반 이하로 줄인다. */
+    const p = fxWorld(player.x + 12, player.y - 20);
     fxAt(p);
     S.gold += 128000;
     const t0 = await new Promise(res => {
