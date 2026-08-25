@@ -89,13 +89,16 @@ const eq = (n, got, exp, tol = 0.6) =>
      되살아나면 `['notice','공지',…]` · `['lounge','게임 라운지',…]` 를 여기에 되돌린다. */
   const openers = [
     ['mail',   '우편',     () => p.$eval('#modal', e => e.classList.contains('on'))],
-    ['rank',   '랭킹',     () => p.$eval('#modal', e => e.classList.contains('on'))],
+    /* 작업 54(랭킹)·55(설정)·56(절전)이 화면을 올리면서 52 주석의 «분기 한 줄 교체» 지시대로
+       목적지를 각자의 전용 오버레이로 바꿨다. 프로브도 같이 옮긴다 — 이 자리는 화면이 하나 올라올 때마다
+       움직인다(LESSONS 52-⑤). `#modal` 을 보는 프로브가 남아 있으면 «칸이 안 열린다» 로 오진한다. */
+    ['rank',   '랭킹',     () => p.$eval('#rkw', e => e.classList.contains('on')).catch(() => false)],
     ['guide',  '길라잡이', () => p.$eval('#modal', e => e.classList.contains('on'))],
     /* 작업 53 이 «가방» 화면을 올리면서 52 주석의 지시대로 분기를 `openBag()` 으로 갈아끼웠다 —
        목적지가 `#modal` 이 아니라 전용 오버레이 `#bagw` 다. 화면이 올라올 때마다 여기 프로브도 같이 옮긴다. */
     ['bag',    '가방',     () => p.$eval('#bagw', e => e.classList.contains('on')).catch(() => false)],
-    ['saver',  '절전',     () => p.$eval('#modal', e => e.classList.contains('on'))],
-    ['conf',   '설정',     () => p.$eval('#modal', e => e.classList.contains('on'))],
+    ['saver',  '절전',     () => p.$eval('#svw', e => e.classList.contains('on')).catch(() => false)],
+    ['conf',   '설정',     () => p.$eval('#cfw', e => e.classList.contains('on')).catch(() => false)],
     ['pass',   '패스',     () => p.$eval('#psw', e => getComputedStyle(e).display !== 'none').catch(() => false)],
   ];
   for (const [k, label, probe] of openers) {
@@ -108,9 +111,13 @@ const eq = (n, got, exp, tol = 0.6) =>
     const closed = await p.$eval('#mnw', e => !e.classList.contains('on'));
     if (opened && closed) ok(`칸 «${label}» → 목적지 열림 + 메뉴 닫힘`);
     else no(`칸 «${label}»`, `열림=${opened} 메뉴닫힘=${closed}`);
-    await p.evaluate(() => { const m = document.getElementById('modal'); if (m) m.classList.remove('on');
-      const w = document.getElementById('psw'); if (w) w.classList.remove('on');
-      const g = document.getElementById('bagw'); if (g) g.classList.remove('on'); });
+    await p.evaluate(() => {
+      /* 다음 칸을 재기 전에 열린 목적지를 전부 닫는다. 화면이 늘어나면 여기 id 도 같이 늘린다.
+         절전(#svw)은 `#app.sv` 클래스와 렌더 스킵까지 걸어서 closeSaver() 를 부르는 편이 안전하다. */
+      const off = (id) => { const e = document.getElementById(id); if (e) e.classList.remove('on'); };
+      ['modal', 'psw', 'bagw', 'rkw', 'cfw'].forEach(off);
+      if (typeof window.closeSaver === 'function') window.closeSaver(); else { off('svw'); document.getElementById('app').classList.remove('sv'); }
+    });
     await p.waitForTimeout(150);
   }
 
