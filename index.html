@@ -259,26 +259,24 @@
   #menub .bdg{position:absolute;left:74px;top:-1px;width:25px;height:25px;border-radius:50%;
     background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0}
 
-  /* 좌우 세로 아이콘 — 좌 6 · 우 3(+시설 타이머 배너). 측정표: docs/measure/A2-사이드아이콘.md
+  /* 좌측 세로 아이콘. 측정표: docs/measure/A2-사이드아이콘.md
+     작업 49(2026-08-25, 저장소 주인 지시): **우측 컬럼(#sideR — 이벤트·특권 잠금 아이콘 + 시설 배너)은 전부 삭제**했다.
+     우측에 남는 것은 우상단 ▦ 메뉴 버튼(#menub)뿐이다. `.side` 는 이제 좌측 하나만 쓴다.
      레퍼런스에는 버튼 배경판·테두리가 없다. 투명 배경 위에 아트 + 흰 라벨(검정 외곽선)만 얹힌다.
      가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 31 · 배너 234)는 1:1 고정,
      세로(아트 높이 --ih · gap · top)는 layoutSide() 가 캔버스 높이에 비례시켜 덮어쓴다.
 
-     [행 그리드 — 좌우 공통] 측정표 §0 «1·2·3행 y 가 좌우 동일» 을 그대로 구현한다.
+     [행 그리드] 측정표 §0 의 행 y 를 그대로 구현한다.
      캔버스 top 은 레퍼런스 y=188(전폭 HUD 바 하단, 02 비고 1의 정정 좌표계)에 대응한다.
-       1행  ref 260..360 → 로컬 72..172   좌=라벨 없는 단독 아이콘(아트 101) · 우=#menub(top:72)
+       1행  ref 260..360 → 로컬 72..172   라벨 없는 단독 아이콘(아트 101). 우측은 #menub(top:72) 만 남는다
        (1→2 사이 gap 60 — 측정표 §1-2. 라벨 그룹과 분리된 단독 버튼이라 여기만 gap 이 3배다)
-       2행  ref 421      → 로컬 233       좌=패스칸 · 우=이벤트칸
-       3행  ref 556      → 로컬 368       좌=퀘스트칸 · 우=특권칸
-       4행  ref 687      → 로컬 499       좌=휴식보너스칸 · 우=시설 타이머 배너
-       5행  ref 820      → 로컬 632       6행 ref 958 → 로컬 770
-     그래서 #sideR 은 «1행을 비우고 2행부터» 시작한다(= --itop + 단독행 높이 + gap 60).
-     예전의 `#sideR{transform:translateY(한 행 pitch)}` 겹침 회피 한 줄은 이 구조로 대체됐다. */
+       2행  ref 421      → 로컬 233       패스칸
+       3행  ref 556      → 로컬 368       퀘스트칸
+       4행  ref 687      → 로컬 499       휴식보너스칸
+       5행  ref 820      → 로컬 632       6행 ref 958 → 로컬 770 */
   .side{position:absolute;top:var(--itop,72px);display:flex;flex-direction:column;
     gap:var(--igap,20px);z-index:3}
   #sideL{left:45px;align-items:flex-start}
-  #sideR{right:45px;align-items:flex-end;
-    top:calc(var(--itop,72px) + var(--isolo,101px) + var(--isgap,60px))}
   .ibtn{width:100px;height:calc(var(--ih,82px) + var(--ilh,32px));position:relative;cursor:pointer;
     background:none;border:0;display:flex;flex-direction:column;align-items:center}
   /* 1행 단독 버튼 — 라벨이 없고(측정표 §1 «(라벨 없음)») 아트가 101 로 더 크며 아래 gap 이 60 이다.
@@ -334,32 +332,7 @@
   .ibtn.lock::after{content:'🔒';position:absolute;left:0;right:0;top:0;height:var(--ih,82px);
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--ih,82px)*.66);
     filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
-  /* 시설 타이머 배너 — 좌측만 캡슐, 오른쪽은 화면 밖으로 bleed */
-  /* 실측 234x105 = 본체 226x97 + 검정 외곽선 4px. 금색 띠 7px, 좌측만 캡슐 radius 52 */
-  /* 4행 — 좌측 «휴식 보너스» 칸 top(ref 687)에서 +7 내려간 지점이 배너 본체 top(ref 694) */
-  .facb{width:230px;height:calc(var(--ih,82px)*1.183);margin-right:-45px;margin-top:calc(var(--ih,82px)*.085);
-    border-radius:calc(var(--ih,82px)*.634) 0 0 calc(var(--ih,82px)*.634);
-    position:relative;cursor:pointer;overflow:visible;
-    background:#511f14;border:calc(var(--ih,82px)*.088) solid #fab647;border-right:0;
-    display:flex;align-items:center;justify-content:center;gap:10px;
-    box-shadow:0 0 0 calc(var(--ih,82px)*.049) #000, 0 4px 10px rgba(0,0,0,.55)}
-  .facb .fic{font-size:calc(var(--ih,82px)*1.05);line-height:1;margin:calc(var(--ih,82px)*-.41) 0 0 calc(var(--ih,82px)*.39);
-    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 4px rgba(0,0,0,.7))}
-  /* 카운터 뱃지 — 좌측 캡 바깥으로 걸침 */
-  .facb .fbg{position:absolute;left:calc(var(--ih,82px)*-.11);top:50%;
-    transform:translateY(-50%);min-width:calc(var(--ih,82px)*.83);height:calc(var(--ih,82px)*.83);
-    /* 초록은 레퍼런스 실측 최빈색 rgb(112,240,64) 계열이다(x855..890 y707..772 샘플).
-       기존 #3ec46e 는 명도 −20% · 색상각이 청록 쪽으로 25° 치우쳐 있었다. */
-    border-radius:50%;background:linear-gradient(180deg,#a6fd68,#70f040 55%,#4fc22e);
-    border:calc(var(--ih,82px)*.061) solid #0d3a20;
-    color:#fff;font-size:calc(var(--ih,82px)*.40);font-weight:900;
-    line-height:calc(var(--ih,82px)*.71);text-align:center;padding:0 calc(var(--ih,82px)*.06)}
-  /* 남은 시간 — 검정 pill, 배너 하단 금테에 10px 걸쳐 내려옴 */
-  .facb .ftm{position:absolute;right:0;bottom:calc(var(--ih,82px)*-.256);
-    height:calc(var(--ih,82px)*.427);min-width:171px;padding:0 18px;
-    border-radius:calc(var(--ih,82px)*.214);
-    background:#000;color:#fff;font-size:calc(var(--ih,82px)*.31);font-weight:900;
-    line-height:calc(var(--ih,82px)*.427);text-align:center;white-space:nowrap;letter-spacing:-.02em}
+  /* 작업 49 — 시설 타이머 배너(.facb / .fic / .fbg / .ftm) CSS 는 DOM 과 함께 삭제했다. */
 
   /* 플레이어 HP + 스킬 슬롯 */
   #battlefoot{position:absolute;left:0;right:0;bottom:0;padding:8px 12px 10px;
@@ -4078,11 +4051,9 @@
            필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
       <div class="ibtn" data-pop="promo" style="--sf:.956;--sx:1.220;--dx:1px;--dy:3px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
     </div>
-    <div class="side" id="sideR">
-      <div class="ibtn lock" data-lock="이벤트" style="--sf:.970;--sx:1.015;--dx:.5px;--dy:-2px"><span class="si">🎁</span><span class="sl">이벤트</span><span class="bdg"></span></div>
-      <div class="ibtn lock" data-lock="특권"   style="--sf:.957;--sx:1.138;--dx:1px"><span class="si">👑</span><span class="sl">특권</span><span class="bdg"></span></div>
-      <div class="facb" id="facb"><span class="fbg" id="facBg">0</span><span class="fic">🏠</span><span class="ftm" id="facTm">--</span></div>
-    </div>
+    <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
+         이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
+         우측에 남는 UI 는 위의 우상단 ▦ 메뉴 버튼(#menub) 하나뿐이다. -->
     <!-- ④ 좌하단 유틸(채팅·마을) / 우하단 진행형 미션 배너 + 배속 버튼 -->
     <div id="botleft">
       <div class="ubtn" data-util="chat"><span class="ui">💬</span></div>
@@ -6292,13 +6263,24 @@ function drawSlots(){
 const SIDEB = {};
 document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => SIDEB[b.dataset.pop] = b);
 function sideAlert(k, on){ const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on); }
-/* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수 */
-function drawFac(){
+/* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수.
+   작업 49(2026-08-25): 배너 DOM(#facb/#facTm/#facBg)을 삭제했다. 계산 로직 자체는 다른 화면이
+   가져다 쓸 수 있으므로 **보존**하고, 그릴 대상이 없으면 조용히 빠지도록 널 가드만 넣는다
+   (지시서 «시설 타이머 갱신 로직은 DOM 이 없어도 에러 없게 정리 — 기능 보존 여부 미정, 표시만 제거»). */
+function facLeftText(){
   const now = new Date(), nx = new Date(now); nx.setHours(24, 0, 0, 0);
   const m = Math.max(0, Math.floor((nx - now) / 60000));
   const d = Math.floor(m/1440), h = Math.floor(m%1440/60);
-  $('facTm').textContent = d > 0 ? d + 'D ' + h + 'H' : (h > 0 ? h + 'H ' + (m%60) + 'M' : m + 'M');
-  $('facBg').textContent = S.daily.spins + DUNGEONS.reduce((a, x) => a + (S.daily.dun[x.id]||0), 0);
+  return d > 0 ? d + 'D ' + h + 'H' : (h > 0 ? h + 'H ' + (m%60) + 'M' : m + 'M');
+}
+function facFreeCount(){
+  return S.daily.spins + DUNGEONS.reduce((a, x) => a + (S.daily.dun[x.id]||0), 0);
+}
+function drawFac(){
+  const tm = $('facTm'), bg = $('facBg');
+  if(!tm && !bg) return;                       /* 49 — 배너가 없는 화면(현재 기본)에서는 아무것도 안 한다 */
+  if(tm) tm.textContent = facLeftText();
+  if(bg) bg.textContent = facFreeCount();
 }
 /* 28 — 보스전 헤더 상태 2종.
    (39) 보스전 중  : 캡슐·진행바 숨김 · 라벨 110px 하강 · ⏱ 타이머 · 보스 체력바 · [포기하기]
@@ -9260,11 +9242,9 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => {
     else if(k === 'promo') openPromo();
   };
 });
-document.querySelectorAll('.side .ibtn[data-lock]').forEach(b => {
-  b.onclick = () => popup('🔒 ' + b.dataset.lock, '<p>아직 해금되지 않은 콘텐츠입니다.</p>');
-});
-$('facb').onclick = () => popup('🏠 시설', '<p>다음 일일 초기화까지 <b>' + $('facTm').textContent + '</b> 남았습니다.<br>'
-  + '오늘 남은 무료 입장 <b>' + $('facBg').textContent + '</b>회</p>');
+/* 작업 49 — 우측 사이드(이벤트·특권 잠금 아이콘 · #facb 시설 배너)를 삭제해서 그 핸들러 2개도 함께 뺐다.
+   `.ibtn[data-lock]` 은 이제 DOM 에 하나도 없다(남겨 두면 querySelectorAll 이 0건을 돌 뿐이라 무해하지만,
+   죽은 핸들러를 남기지 않는다). */
 $('profBtn').onclick = openProfile;
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   e.stopPropagation();
