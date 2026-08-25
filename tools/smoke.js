@@ -153,6 +153,12 @@ function launchOpts(){
       await page.waitForTimeout(400);
       const tsubs = await page.$$eval('#trSub [data-trsub]', (els) => els.map((e) => e.dataset.trsub)).catch(() => []);
       tsubs.forEach((k) => openers.push({ label: 'trsub:' + k, sel: null, tr: `#trSub [data-trsub="${k}"]` }));
+      /* 19 프로필(#pfw) · 20 스펙 정보(#specw) — 상단 HUD 초상화가 19 를 열고, 19 의 하단 토글이 20 을 연다.
+         둘 다 위 셀렉터 수집(.tab/.side/[data-cur])에 안 걸리는 오프너다(작업 20). */
+      if (await page.$('#profBtn')) {
+        openers.push({ label: 'prof:19', sel: '#profBtn' });
+        openers.push({ label: 'prof:20-스펙', sel: null, prof: '.pf-tgl>.lb' });
+      }
       await ctx.close();
     }
     for (const o of openers) {
@@ -186,6 +192,11 @@ function launchOpts(){
           await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click());
           await page.waitForTimeout(400);
           await page.evaluate((s) => document.querySelector(s).click(), o.cos);
+        } else if (o.prof) {
+          /* 2단계 — HUD 초상화로 19 를 연 뒤 하단 토글 «종합 스탯» 으로 20 으로 넘어간다 */
+          await page.click('#profBtn', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.evaluate((s) => document.querySelector(s).click(), o.prof);
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
@@ -219,7 +230,7 @@ function launchOpts(){
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
