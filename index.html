@@ -14523,7 +14523,8 @@ function fxFly(from, cur, n){
   const pill = fxPill(C); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
-  sfx('coin');                                          /* 78 — 재화 획득(이름별 30ms 디바운스) */
+  sfx('coin');                                          /* 78 — 재화 획득. 98: 최소 간격 150ms(AU_MIN)
+                                                           → 킬 연발·같은 프레임의 골드/다이아 두 알약도 1회만 운다 */
   /* 3~6개 — 금액이 클수록 많이 (58 «3~8개»). 골드·다이아가 동시에 들어오면 두 묶음이 겹치므로
      «공중에 떠 있는 총합» 을 FXFLY_MAX 로 묶는다 — 안 묶으면 모달 헤더·HUD 숫자를 가린다. */
   /* 보상 수령은 골드·다이아가 «같이» 들어와 묶음이 둘이다. 뒤 묶음까지 6개씩 쏘면 0.7초 안에
@@ -15500,11 +15501,33 @@ else { jzInit(); tapInit(); }
    · 'el'   — fetch 가 안 되는 file:// 등에서 <audio> 요소로 폴백(README «별도 서버 불필요» 유지).
    설정(55)은 sndOn() 게이트를 그대로 쓰고, 토글·볼륨 변경은 auApply() 가 즉시 반영한다.
    같은 SFX 30ms 디바운스 · 피치 ±5% 랜덤 · BGM 루프 + 페이드 1초 · 보스전은 bgm_boss 트랙.
+
+   98 볼륨 정규화 (2026-08-26, 저장소 주인 지시 — «사냥만 해도 시끄럽다·coin 이 너무 크다»)
+   원본 파일의 음량이 제각각이라 파일별 게인 테이블 AU_GAIN 을 둔다. 값은 눈대중이 아니라
+   `node tools/aud98.js` 실측(peak · 최대 100ms 창 RMS)에서 계산했다 — 측정표 docs/review/98-오디오볼륨.md.
+     g = min( 10^((목표 − 창RMS)/20) , 10^((−1 − peak)/20) )
+   뒤 항은 **피크 실링**이다. 부스트가 필요한 파일(tap·toggle·flip·rtick·rare)은 원본 피크가 이미
+   −1 dBFS 근처라 목표까지 올리면 클리핑한다 → 실링에서 잘린다(그 5종은 목표 미달이 정상).
+   목표: UI 탭·팝업 −18 · 반복 UI(flip·rtick·train) −20 · 결과/보상 징글 −16 ·
+         **전투 반복음(hit·coin·clear) −26** · 보스 등장/처치·사망 −18 dBFS(창 RMS).
+   BGM 은 AU_BGM_GAIN 으로 배경까지 내린다(SFX 평균보다 8 dB 이상 아래).
+   coin 은 게인만으로 부족해 최소 발화 간격도 150ms 로 늘렸다(AU_MIN) — fxFly 가 킬마다·알약마다 부른다.
    ========================================================================== */
 const AU_BASE = 'assets/audio/';
 const AU_SFX = ['tap','open','close','flip','rare','up','train','claim','revive','rtick','rstop',
                 'err','toggle','coin','bosskill','hit','death','clear','victory','bossin'];
 const AU_BGM = { main:'bgm_main', boss:'bgm_boss' };
+/* 파일별 게인 — AU_SFX 전 항목 필수(빠지면 tools/verify98.js 가 실패한다) */
+const AU_GAIN = {
+  /* UI 탭·팝업 −18 */          tap:1.060, open:0.607, close:0.596, err:0.893, toggle:1.029, rstop:0.886,
+  /* 반복 UI −20 */             flip:1.010, rtick:1.076, train:0.770,
+  /* 결과·보상 징글 −16 */      claim:0.475, up:0.389, rare:1.008, victory:1.012, revive:0.558,
+  /* 전투 반복음 −26 */         hit:0.230, coin:0.141, clear:0.142,
+  /* 보스 등장·처치·사망 −18 */ bossin:1.772, bosskill:0.724, death:0.308
+};
+const AU_BGM_GAIN = 0.20;               /* BGM 기본 게인 — SFX 평균 대비 −8 dB 이하 */
+const AU_MIN = { coin:150 };            /* 이름별 최소 발화 간격(ms) — 없으면 AU_MIN_DEF */
+const AU_MIN_DEF = 30;
 let auMode = '';                        /* '' 초기화 전 · 'ctx' WebAudio · 'el' <audio> 폴백 */
 let auCtx = null, auMaster = null, auSfxG = null, auBgmG = null;
 const auBuf = {}, auEl = {}, auLast = {};
@@ -15520,19 +15543,22 @@ function auFmt(){
 function sfx(name){
   if(auMode === '' || !sndOn('sfx')) return;
   const t = performance.now();
-  if(auLast[name] && t - auLast[name] < 30) return;    /* 동시 발화 30ms 디바운스 */
+  const gap = AU_MIN[name] || AU_MIN_DEF;              /* 98 — coin 은 150ms(킬·알약마다 발화) */
+  if(auLast[name] && t - auLast[name] < gap) return;
   auLast[name] = t;
   const rate = 1 + (Math.random() * 0.1 - 0.05);       /* 피치 ±5% */
+  const vg = AU_GAIN[name] != null ? AU_GAIN[name] : 1;   /* 98 — 파일별 정규화 게인 */
   try{
     if(auMode === 'ctx'){
       const b = auBuf[name]; if(!b) return;
-      const src = auCtx.createBufferSource();
+      const src = auCtx.createBufferSource(), g = auCtx.createGain();
       src.buffer = b; src.playbackRate.value = rate;
-      src.connect(auSfxG); src.start();
+      g.gain.value = vg;                               /* 98 — 소스마다 게인 노드를 거쳐 auSfxG 로 */
+      src.connect(g); g.connect(auSfxG); src.start();
     }else{
       const base = auEl[name]; if(!base) return;
       const el = base.cloneNode();                     /* 겹침 재생 — 원본은 프리로드 캐시로만 쓴다 */
-      el.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      el.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100 * vg));   /* 98 */
       try{ el.preservesPitch = false; }catch(_){}
       el.playbackRate = rate;
       el.play().catch(() => {});
@@ -15580,14 +15606,14 @@ function bgmApply(){
       src.buffer = b; src.loop = true;
       const t0 = auCtx.currentTime;
       g.gain.setValueAtTime(0, t0);
-      g.gain.linearRampToValueAtTime(1, t0 + 1);       /* 페이드인 1초 */
+      g.gain.linearRampToValueAtTime(AU_BGM_GAIN, t0 + 1);   /* 98 — 페이드인 1초, 목표는 배경 레벨 */
       src.connect(g); g.connect(auBgmG); src.start();
       bgmNode = { src, g }; bgmCur = want;
     }else{
       const el = new Audio(AU_BASE + file + '.mp3');
       el.loop = true; el.volume = 0;
       el.play().catch(() => {});
-      const tgt = () => Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      const tgt = () => Math.max(0, Math.min(1, (S.opt.vol | 0) / 100 * AU_BGM_GAIN));   /* 98 */
       clearInterval(bgmElFade);
       bgmElFade = setInterval(() => {
         const t = tgt();
@@ -15607,7 +15633,7 @@ function auApply(){
       auSfxG.gain.value = S.opt.sfx ? 1 : 0;
       auBgmG.gain.value = S.opt.bgm ? 1 : 0;
     }else if(bgmNode && bgmCur){
-      bgmNode.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100));
+      bgmNode.volume = Math.max(0, Math.min(1, (S.opt.vol | 0) / 100 * AU_BGM_GAIN));   /* 98 */
     }
   }catch(_){}
   bgmApply();
