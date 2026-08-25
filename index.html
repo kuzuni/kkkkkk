@@ -2973,11 +2973,12 @@
   .wm-nm>i{transform:scaleX(.89)}                 /* 글자당 폭 +12% → 되돌림 */
   /* 4-3 등급 알약 ref(691,655) 209x49, 검정 4px */
   .wm-gd{left:573px;top:44px;width:209px;height:49px;border-radius:25px;background:var(--gp,var(--gc));
-    border:4px solid #000;box-sizing:border-box;text-align:center;line-height:41px;
+    border:3px solid #000;box-sizing:border-box;text-align:center;line-height:43px;
     font-size:24px;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wm-gd>i{transform:scaleX(.93)}
   /* 4-5 재료 진행바 — 좌측 끝은 Lv 알약이 덮는다. ref 우단 901 → 패널기준 783 */
-  .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;background:#8182A0;
+  .wm-bar{left:302px;top:122px;width:481px;height:50px;border-radius:25px;
+    background:linear-gradient(180deg,#8182A0 0 21px,#717799 21px);
     border:6px solid #000;box-sizing:border-box;overflow:hidden}
   .wm-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wm-bar>i{position:absolute;left:0;right:0;top:1px;height:34px;line-height:34px;
@@ -3027,7 +3028,8 @@
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
-  .wgc .pb{left:0;right:0;bottom:0;height:34px;background:#8182A0;border-top:5px solid #000;
+  .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;
+    background:linear-gradient(180deg,#8182A0 0 18px,#717799 18px);
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
@@ -3039,7 +3041,9 @@
   /* 미보유 자물쇠 49x55, **카드상단 +43** — 이모지 대신 CSS 로 그려 흰 단색 글리프에 맞춘다.
      5회차: +94 로 잡혀 있어 하단 0/N 바가 자물쇠의 55% 를 덮고 있었다(ref 실측 카드기준 43,
      캡처 94 — 51px 아래). 테두리 5px 안쪽 기준이므로 top = 43 − 5 = 38. */
-  .wgc.lk>.ic,.wgc.lk>.lv{opacity:.35}
+  .wgc.lk>.ic{opacity:.35}
+  /* 미보유 칸의 Lv 는 «흐린 회색»(ref 172,172,172 — 카드 파랑 31 위에서 역산하면 .63) */
+  .wgc.lk>.lv{opacity:.63}
   .wgc .lock{left:50%;top:38px;width:49px;height:55px;margin-left:-25px}
   .wgc .lock::before{content:'';position:absolute;left:11px;top:0;width:27px;height:31px;
     border:7px solid #fff;border-bottom:0;border-radius:14px 14px 0 0;box-sizing:border-box}
@@ -3055,14 +3059,18 @@
      측정표가 #000000 으로 적은 것은 외곽선을 집은 오류다. */
   .wm-tot{left:0;right:0;top:1104px;height:46px;line-height:46px;text-align:center;
     font-size:40px;color:#fff;-webkit-text-stroke:3px #000;paint-order:stroke fill}
-  .wm-tot>i{transform:scaleX(.90)}                /* 줄 전체 잉크 564 → 462 (h 42 유지) */
+  /* 6회차: 같은 문자열(「총 보유 효과:」)끼리 재면 ref 178 / 캡처 208 → .90 x 178/208 = .77 */
+  .wm-tot>i{transform:scaleX(.77)}                /* 라벨 잉크 208 → 178 (h 40 유지) */
   .wm-tot b{color:#B8FE5D}                        /* 직계(>)로 두면 <i> 래퍼 때문에 끊긴다 */
 
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
   .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:7px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
     background:linear-gradient(180deg,#A8A8A8 0 11px,#8A8A8A 101px,
-      #D3D3D3 101px 107px,#757575 107px 115px,#000 115px)}
+      #757575 107px 115px,#000 115px)}
+  /* 굽 — ref 는 밝은 밴드가 좌우 12px 씩 안쪽이고 모서리 곡선을 따라 좁아진다 */
+  .wm-btn::after{content:'';position:absolute;left:20px;right:20px;top:101px;height:6px;
+    background:#D3D3D3;border-radius:3px;pointer-events:none}
   /* 4회차 — 버튼 «안쪽 밝은 링» 이 좌·우에서 통째로 빠져 있었다(두 비평가 독립 지적, 자체 단면으로 확인).
      ref y1828 가로단면: 검정 248~255 → **밝은회색(211) 256~262 = 7px** → 채움(152) 264~.
      캡처는 검정 다음이 바로 채움이라 회색 면이 좌우로 4px 씩 넓었다.
@@ -12597,7 +12605,7 @@ function renderWpn(){
         +  ' style="left:' + (10 + c*170) + 'px;top:' + (32 + r*190) + 'px'
         +  ';--gc:' + w.c + ';--gr:' + w.r + ';--ge:' + w.e + '">'
         +  '<em class="ic">' + (real ? real.ic : sd.ic) + '</em>'
-        +  (mine ? '<b class="lv"><i>Lv.' + oLv(real.id) + '</i></b>' : '')
+        +  '<b class="lv"><i>Lv.' + (mine ? oLv(real.id) : 1) + '</i></b>'
         +  (eq   ? '<u class="eqt"><i>장착 중</i></u>' : '')
         +  (mine ? '' : '<div class="lock"></div>')
         +  '<div class="pb"><s style="width:' + Math.min(100, n/nd*100) + '%"></s>'
