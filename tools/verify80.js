@@ -4,7 +4,7 @@
  *   node tools/verify80.js
  *
  * 검사 항목:
- *   [A] 폐기·기하 — 단상 위 이모지(em#rkCh*) 가 없고 캔버스 3장이 규격(316×252 / 237×189 ×2)대로
+ *   [A] 폐기·기하 — 단상 위 이모지(em#rkCh*) 가 없고 캔버스 3장이 규격(395×315 / 316×252 ×2)대로
  *       상자를 1:1 로 차지한다(+ image-rendering:pixelated)
  *   [B] 잉크·발 위치 — 세 캔버스 모두 실제로 그려졌고(불투명 픽셀), 발밑(최하단 잉크 행)의 프레임 y 가
  *       단상 윗면 448/482/492 (측정표 54 §3 의 ref 532/566/576 − 84) ±4px
@@ -75,7 +75,7 @@ const ok = (b, name, detail) => {
   });
   ok(A.em === 0, 'A1 단상 이모지 폐기', 'em#rkCh* ' + A.em + '개');
   ok(A.mount, 'A2 탈것(c3a) 아트 자리는 유지');
-  const spec = [{ w: 316, h: 252, top: 196, left: 383 }, { w: 237, h: 189, top: 293, left: 97 }, { w: 237, h: 189, top: 303, left: 824 }];
+  const spec = [{ w: 395, h: 315, top: 133, left: 343 }, { w: 316, h: 252, top: 230, left: 57 }, { w: 316, h: 252, top: 240, left: 785 }];
   for (let i = 0; i < 3; i++) {
     const c = A.cv[i], s = spec[i];
     ok(!!c && c.w === s.w && c.h === s.h && c.bw === s.w && c.bh === s.h,
@@ -128,10 +128,11 @@ const ok = (b, name, detail) => {
   ok(dA.n > 800 && dB.n > 800 && dA.sig !== dB.sig, 'D2 코스튬 av0→av3 재진입 시 내 자리 색 변경', dA.sig + ' → ' + dB.sig);
   await page.evaluate(() => { S.avatar = 'av0'; });
 
-  /* [E] 재생 — idle 로 프레임이 바뀌고, 닫으면 rAF 정지 */
+  /* [E] 재생 — idle 로 프레임이 바뀌고, 닫으면 rAF 정지.
+     고정 대기 1회 비교는 idle 주기와 겹치면 같은 프레임을 두 번 볼 수 있어(플레이크) 변화를 폴링한다 */
   const e1 = await scan(1);
-  await page.waitForTimeout(700);              /* 8fps idle — 0.7s 면 프레임이 바뀐다 */
-  const e2 = await scan(1);
+  let e2 = e1;
+  for (let t = 0; t < 10 && e2.sig === e1.sig; t++) { await page.waitForTimeout(250); e2 = await scan(1); }
   ok(e1.sig !== e2.sig, 'E1 열려 있는 동안 idle 재생', e1.sig + ' → ' + e2.sig);
   await page.evaluate(() => closeRank());
   await page.waitForTimeout(300);
@@ -143,8 +144,8 @@ const ok = (b, name, detail) => {
     openRank();
     rkPodLooks[1] = { avatar: 'av0' }; rkPodLooks[2] = { avatar: 'av0' };
     const f = ATLAS.knight.a.idle[0];
-    drawHeroTo(document.getElementById('rkCh2'), { avatar: 'av0', frame: f, scale: 3, flip: true });
-    drawHeroTo(document.getElementById('rkCh3'), { avatar: 'av0', frame: f, scale: 3, flip: false });
+    drawHeroTo(document.getElementById('rkCh2'), { avatar: 'av0', frame: f, scale: 4, flip: true });
+    drawHeroTo(document.getElementById('rkCh3'), { avatar: 'av0', frame: f, scale: 4, flip: false });
     const col = k => {
       const cv = document.getElementById('rkCh' + k), g = cv.getContext('2d');
       const d = g.getImageData(0, 0, cv.width, cv.height).data, a = [];
