@@ -5554,7 +5554,8 @@
   /* ⚠ position 을 빼면 통째로 안 그려진다 — 1회차에 이 4줄이 전부 «누락» 으로 잡혔다.
      ref 는 하이라이트 안쪽에 어두운 외곽 테가 한 겹 더 있다(좌 x0..2 / 우 x1076..1079). */
   .ps-eg{position:absolute;top:0;bottom:0;z-index:3;pointer-events:none}
-  .ps-eg.f{left:0;width:10px;background:linear-gradient(90deg,#1C2F4D 0 3px,#2B76BA 3px 4px,#1C98CC 4px 10px)}
+  /* 좌측 하이라이트는 ref 가 x5..9(5px) 다 — 우리는 x4..9(6px) 로 1px 넓었다(6회차 J 10) */
+  .ps-eg.f{left:0;width:10px;background:linear-gradient(90deg,#1C2F4D 0 3px,#2B76BA 3px 5px,#1C98CC 5px 10px)}
   .ps-eg.p{left:1070px;width:10px;background:linear-gradient(90deg,#B931ED 0 5px,#962EE5 5px 6px,#3A1150 6px 10px)}
 
   /* 스파인 레일 x520..559 (검정 5px x2 + 내부 30) — 리스트 전체에 하나만 깐다 */
@@ -5596,6 +5597,11 @@
   .ps-bx>b{position:absolute;left:0;right:0;top:115px;height:31px;line-height:31px;text-align:center;
     font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
   .ps-bx>b>em{transform:scaleX(1.25)}
+  /* 긴 수량 축소 — 칸 안쪽 폭 146px 을 넘지 않게. 6자 이상 .ln1 / 8자 이상 .ln2 */
+  .ps-bx>b.ln1{font-size:29px}
+  .ps-bx>b.ln1>em{transform:scaleX(1.05)}
+  .ps-bx>b.ln2{font-size:23px}
+  .ps-bx>b.ln2>em{transform:scaleX(.92)}
   /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
   /* 자체 스캔(tools/scan36.py, 평균RGB>190): ref 잉크 85×97 vs 우리 63×98 → **폭만 −26%**.
      이모지는 가로세로가 같이 커져서 font-size 로는 못 맞춘다 — scaleX 로만 벌린다(LESSONS 30-③). */
@@ -5604,9 +5610,9 @@
      36 세션의 scan36 값과 내 첫 스캔이 그렇게 틀렸다. x≥968(아이콘 우단 밖)로 좁혀 재면
      ref **50×60 @cx989.5 · 잉크 top = 칸 상단 −16**, 우리(r4)는 **41×35**(세로 −42%)다.
      아래 값은 수정 → 재캡처 → 재측정으로 닫았다(r6 = 45×62 @722 cx992). 되돌리기 전에 tools/scan35.py 를 돌릴 것. */
-  .ps-bx>s.lk{position:absolute;left:60px;top:-26px;width:110px;height:127px;line-height:127px;
-    text-align:center;font-size:127px}
-  .ps-bx>s.lk>em{transform:scaleX(.8)}  /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
+  .ps-bx>s.lk{position:absolute;left:88.5px;top:-24px;width:110px;height:56px;line-height:56px;
+    text-align:center;font-size:56px}
+  .ps-bx>s.lk>em{transform:scaleX(1.21)}  /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
   /* 수령완료 «색» 은 등급마다 다르다(등급색 × 0.5 — 36 측정표 §8-4) → renderPass() 가 인라인
      --rim/--fill 로 어둡게 준다. 여기서 색을 잡으면 «인라인 > 클래스» 라 어차피 지고,
      35 가 하드코딩했던 파랑 한 쌍이 주황 등급 칸에 잘못 붙는다. 여기서는 회색화만 한다. */
@@ -5623,7 +5629,9 @@
   .ps-bar>div{position:absolute;top:8px;height:166px;cursor:pointer;
     box-shadow:inset 0 -60px 0 rgba(0,0,0,.09)}
   .ps-bar>div.bk{left:0;width:195px;background:#49322C}
-  .ps-bar>div.pt{background:#3F2D29}
+  /* 6회차 실측 — ref 비활성 칸은 **뒤로가기 칸과 같은 #49322C**(72~73,50,44) 다.
+     측정표의 #3F2D29 는 셀 하단 그림자 구간을 잰 값이었다(비평가 H·J 가 독립적으로 지적, 자체 스캔으로 확인). */
+  .ps-bar>div.pt{background:#49322C}
   .ps-bar>div.pt.on{background:#7D574C}
   /* 아이콘·라벨 위치는 **바 본체 상단(=div 상단) 기준 상대값**으로 잡는다 —
      탭바는 바닥 앵커라 프레임 24px 잔차가 그대로 들어가므로 절대 y 로 맞추면 안 된다.
@@ -5633,16 +5641,35 @@
   .ps-bar>div>i{position:absolute;left:0;right:0;top:23px;height:96px;line-height:96px;
     text-align:center;font-size:92px}
   .ps-bar>div>i>em{transform:scaleX(1.6)}
+  /* ref 아이콘 폭은 칸마다 다르다(전용 아트라 그렇다) — 스테이지 180~248 · 보물상자 167~179 ·
+     시련의탑 107~132 · 출석 145~153. 하나의 scaleX 로는 못 맞춰서 칸별로 나눈다(6회차 I-5·I-8). */
+  .ps-bar>div[data-ptab="box"]>i>em{transform:scaleX(1.77)}
+  .ps-bar>div[data-ptab="tower"]>i{top:10px}
+  .ps-bar>div[data-ptab="tower"]>i>em{transform:scaleX(1.03)}
+  /* 출석 📅 는 1.35 가 최선이다(잉크 156 vs ref 141, +11%) — 더 줄이면 오히려 넓어진다.
+     글리프 안에 흰 판이 있어 마스크가 판 가장자리를 잡기 때문으로, 남은 11% 는 아트 교체분이다. */
+  .ps-bar>div[data-ptab="att"]>i>em{transform:scaleX(1.35)}
+  /* **활성 칸**은 아이콘도 크다 — ref 활성(스테이지) 잉크는 h104 @본체+4 · 폭 241 로 비활성(h85·폭 105~167)과 다르다.
+     칸 폭이 190→289 로 넓어지는 규칙(측정표 §3-1)의 아이콘 판이다. `.on` 에 걸어야 36(출석 활성)에서도 같이 맞는다. */
+  .ps-bar>div.pt.on>i{top:4px;height:117px;line-height:117px;font-size:117px}
+  .ps-bar>div.pt.on>i>em{transform:scaleX(1.88)}
   .ps-bar>div>b{position:absolute;left:0;right:0;top:107px;height:42px;line-height:42px;
     text-align:center;font-size:27px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
     white-space:nowrap}
   .ps-bar>div>b>em{transform:scaleX(1.15)}
-  .ps-bar>div>s.lk{position:absolute;left:0;right:0;top:78px;height:64px;line-height:64px;
+  /* 6회차 I-7: 하단바 자물쇠가 ref 보다 14px 위였다(우리 본체+82..142 / ref +96..158) */
+  .ps-bar>div>s.lk{position:absolute;left:0;right:0;top:92px;height:64px;line-height:64px;
     text-align:center;font-size:58px;z-index:2}
   /* 뒤로가기 화살표 — 코어 82x64 @ ref x59..140 y2217..2280 → 바 기준 left 59 / top 48 */
-  .ps-bar>div.bk>u{position:absolute;left:59px;top:48px;width:82px;height:64px;background:#A9ABC4;
-    clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%);
-    filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
+  /* ⚠ `filter:drop-shadow` + `clip-path` 를 **같은 요소**에 주면 외곽선이 통째로 사라진다 —
+     클립이 필터 결과 바깥을 잘라내기 때문이다. 6회차 캡처에서 «갈색 → 밝은 회색» 으로 검정이 0px 이었고
+     그래서 잉크가 코어(82×64)와 같게 나왔다. 검정 판을 아래에 깔고 밝은 화살표를 6px 인셋으로 얹는다.
+     ref 잉크 95×82 @바 본체+42 · 코어 82×64 @+48 (측정표 §3-1). */
+  .ps-bar>div.bk>u{position:absolute;left:52px;top:41px;width:96px;height:84px;background:#000;
+    clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%)}
+  .ps-bar>div.bk>u::before{content:'';position:absolute;box-sizing:border-box;
+    left:7px;top:7px;width:82px;height:64px;background:#A9ABC4;
+    clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%)}
 
   /* ---- 36 출석 패스 탭 전용 슬롯 (측정표 docs/measure/36-패스출석패스.md · 35 측정표 §9-2) ----
      껍데기(골드바·헤더밴드·행 그리드·스파인·하단바·구매버튼)는 35 와 완전히 같다 —
@@ -13393,7 +13420,11 @@ function renderPass(){
           + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
           /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00K» 로 줄여 버린다(3회차 비평 C-10,
              LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
-          + '<i>' + r.ic + '</i><b><em>' + won(r.n) + '</em></b>'
+          /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
+             레퍼런스 수량은 2~5자라 이 상황이 안 보이지만 우리 골드 보상은 20,000×(i+1)² 라 9자까지 간다.
+             표기(쉼표)는 그대로 두고 **글자만 줄인다** — 8자 이상은 .ln2, 6자 이상은 .ln1 */
+          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 8 ? 'ln2' : (won(r.n).length >= 6 ? 'ln1' : ''))
+          + '"><em>' + won(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : '')) + '</div>';
     }
     h += '<div class="ps-r" style="top:' + (off + i * PASS_RH).toFixed(2) + 'px">'
