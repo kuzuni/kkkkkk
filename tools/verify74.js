@@ -150,9 +150,13 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
 
   /* ⑦ 훈련 ↑ — 작업 64 가 pointerdown 구매로 바꿔 둠 → 골드 감소로 판정 */
   await run('훈련 카드 ↑(pointerdown 구매)', {
-    setup: () => { closeModal(); goTab('grow'); S.gold = 1e13; S.trainStage = 9999; /* 상한(full) 정지 배제 — 유실만 잰다 */ },
+    setup: () => { closeModal(); goTab('grow'); S.gold = 1e15; S.trainStage = 9999; /* 상한(full) 정지 배제 — 유실만 잰다 */ },
     targets: [{ q: '#trw [data-tr] .tr-up, #trw [data-tr]' }],
     metric: () => S.gold,
+    /* 200연속 구매는 레벨을 200 올려 비용이 지수로 큰다 — 한 번 넣은 예산이 ~120탭에서 고갈돼
+       이후 구매가 전부 실패(2회차 실측: before/after·mouse/touch 4런 전부 114~121 에서 정지 =
+       유실이 아니라 잔고). 매 탭 뒤 리필해서 «유실»만 잰다. */
+    between: () => { S.gold = 1e15; },
   });
 
   await browser.close();
