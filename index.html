@@ -2427,7 +2427,14 @@
   #relw .pcb-d{left:505px}
   .pcb-r{left:805px}
   .pcb-r>i{left:-4px;top:-3px;font-size:50px;transform:scaleX(.95)}
-  .rw-panel{position:absolute;left:0;top:266px;width:1080px;height:1527px;overflow:hidden}
+  /* 작업 100 — 패널 높이 1527 은 «2280 기준 절대값» 이라 세로가 짧은 프레임에서 #relw
+     (top:104 / bottom:180) 밖으로 넘치고, z-index 28 > 탭바 10 이라 탭바 «위» 에 그려졌다
+     (1920 → 157px · 1600 → 477px 침범 — 저장소 주인 보고).
+     가용 높이 `frameH − 104 − 180 − 266` 에 맞춰 패널만 축소한다(--rws 는 rwFit() 이 갱신).
+     기준 해상도 2280 에서는 가용 1730 > 1527 이라 --rws = 1 → 89 측정 규격은 한 픽셀도 안 바뀐다.
+     origin 을 «top center» 로 잡아 상변 y266·가로 중심 540 이 고정된다. */
+  .rw-panel{position:absolute;left:0;top:266px;width:1080px;height:1527px;overflow:hidden;
+    transform-origin:50% 0;transform:scale(var(--rws,1))}
   .rw-panel>*{position:absolute}
   /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 + 수반 난색 글로우 (아트 대기) */
   .rw-bg{inset:0;background:
@@ -7570,6 +7577,24 @@ function fit(){
      게임 화면이 잘린다. 세로 폰은 clamp 미적용 구간이라 두 값이 같아 동작 불변. */
   app.style.transform = 'scale(' + Math.min(AW / FRAME_W, AH / frameH) + ')';
   resizeCanvas();
+  rwFit();
+}
+
+/* ---- 작업 100 — 89 유물 페이지(#relw) 패널이 하단 탭바를 가리는 버그 ----
+   `.rw-panel` 은 레퍼런스(486×687 ×2.2222)를 그대로 옮긴 **절대 높이 1527** 이라
+   2280 프레임에서만 들어맞는다. 세로가 짧은 프레임에서는 `#relw`(top:104 / bottom:180)
+   밖으로 넘치는데 `#relw` 는 z-index 28 이고 `#tabbar` 는 10 이라 **탭바 위에 그려졌다.**
+     frameH 1920 → 157px · 1600 → 477px 침범(게이트 tools/verify100.js 로 실측·재현).
+   가용 높이에 맞춰 패널만 축소한다. 2280(기준 해상도)에서는 가용 1730 > 1527 이라
+   스케일이 **정확히 1** 이므로 89 측정표 규격은 그대로다.
+   ⚠ 대안이던 `#relw{overflow:hidden}` 은 쓸 수 없다 — 41 재화 바(`.pcb`)가 `top:-104px` 로
+   `#relw` **밖**(HUD 자리)에 얹혀 있어서 통째로 잘린다. 그래서 `overflow:visible` 이 원래 값이다. */
+const RW_TOP = 104, RW_BOT = 180, RW_PANEL_TOP = 266, RW_PANEL_H = 1527;
+function rwFit(){
+  const el = $('relw'); if(!el) return;
+  const avail = frameH - RW_TOP - RW_BOT - RW_PANEL_TOP;
+  const s = Math.min(1, avail / RW_PANEL_H);
+  el.style.setProperty('--rws', s > 0 ? s.toFixed(5) : '0');
 }
 
 /* 전투 캔버스: 논리 좌표계는 기존 540 기준을 그대로 두고 ctx 를 SC배 확대해 1080 프레임을 채운다.
@@ -12287,6 +12312,7 @@ function summonRelic(quiet){
 function openRelw(){
   closeDungeon(); closeShopPage(); closeTrain();
   renderRelw();
+  rwFit();                       /* 100 — 열 때도 갱신(리사이즈 없이 바로 열리는 경로 대비) */
   $('relw').classList.add('on');
 }
 function closeRelw(){ $('relw').classList.remove('on'); }
