@@ -26,6 +26,10 @@ const chk = (c, m) => c ? ok(m) : bad(m);
   await page.evaluate(() => {
     player.inv = 1e9;
     for(const e of enemies){ e.x = 1; e.y = 1; }
+    /* 전투 로직을 통째로 멈춘다 — 자동 전투가 계속 골드를 벌면 «감소에는 연출을 안 건다»·«잔여 0»
+       같은 항목이 내 트리거가 아닌 전투 획득 때문에 흔들린다(41 교훈 4 «검사 절차가 유휴 루프에 오염된다»).
+       draw()/fxTick() 은 그대로 돌아 연출은 실제와 똑같이 재생된다. */
+    window.step = () => {};
   });
 
   console.log('[1] 레이어 · 입력 비차단');
@@ -69,7 +73,7 @@ const chk = (c, m) => c ? ok(m) : bad(m);
       if(pill.classList.contains('fx-punch')) punch++;
       const pl = document.querySelector('#fxl .fx-plus');
       if(pl && !plusTxt) plusTxt = pl.textContent;      /* 0.8초 뒤 스스로 사라지므로 «도는 동안» 잡는다 */
-      await sleep(16);
+      await sleep(8);
     }
     return { n0, punch, minD:Math.round(minD), lastSeen:Math.round(lastSeen),
              startY:Math.round(f0.top), plusTxt, g0, g1:S.gold };
@@ -169,9 +173,11 @@ const chk = (c, m) => c ? ok(m) : bad(m);
   console.log('[7] 파티클 상한 · 정리');
   const cap = await page.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
+    window.step = () => {};                            /* 전투 골드가 계속 새 비행을 만들면 «잔여» 를 못 잰다 */
+    await sleep(1200);
     let peak = 0;
     for(let i=0;i<60;i++){ fxBurst({x:540,y:1200}, '#fff', 14); peak = Math.max(peak, document.getElementById('fxl').childElementCount); }
-    await sleep(1400);
+    await sleep(1600);
     return { peak, rest: document.getElementById('fxl').childElementCount };
   });
   chk(cap.peak <= 120, 'DOM 파티클 상한 준수 — 최대 ' + cap.peak + '개 (FXMAX 120)');
@@ -201,12 +207,81 @@ const chk = (c, m) => c ? ok(m) : bad(m);
           min = Math.min(min, Math.hypot(r.left + r.width/2 - t.x, r.top + r.height/2 - t.y));
         }
         if(saw && !els.length) break;
-        await sleep(16);
+        await sleep(8);
       }
       return saw ? Math.round(min) : -1;
     });
     chk(d >= 0 && d <= 6, w + '×' + h + ' — 최근접 ' + d + 'px');
   }
+
+  console.log('[9b] 강화 플래시 — «보이는가» 를 대비·지연·지속으로 잰다');
+  const fl = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const rgba = c => { const m = (String(c).match(/[\d.]+/g) || [0,0,0,1]).map(Number);
+      return { r:m[0], g:m[1], b:m[2], a: m.length > 3 ? m[3] : 1 }; };
+    S.gold = 1e13; openTrain(); await sleep(500);
+    const card = document.querySelector('#trw [data-tr]');
+    const cardC = rgba(getComputedStyle(card).backgroundColor);
+    const t0 = Date.now();
+    card.click();
+    /* «언제부터 언제까지 보이는가» — 10ms 폴링으로 opacity 궤적을 그대로 뜬다.
+       누적 sleep 은 매번 오버슈트해서 «t=66ms» 같은 라벨이 실제로는 150ms 다(5회차에 이걸로 오진했다). */
+    let first = -1, last = -1, peak = 0, flashL = null;
+    for(let i=0;i<80;i++){
+      const f = document.querySelector('#fxl .fx-flash');
+      if(f){
+        const op = +getComputedStyle(f).opacity;
+        if(flashL === null) flashL = rgba(getComputedStyle(f).backgroundColor);
+        if(op > 0.7){ if(first < 0) first = Date.now() - t0; last = Date.now() - t0; }
+        peak = Math.max(peak, op);
+      }
+      await sleep(10);
+    }
+    /* 워시가 카드 위에 얹혔을 때 «채널별» 로 얼마나 움직이는가.
+       휘도만 재면 크림(252) 위의 금색 워시(218)가 «Δ34, 안 보임» 으로 오판된다 — 실제로 눈에 띄는
+       것은 파랑 채널 242 → 132 의 색 이동이다. 최대 채널 변화량으로 잰다. */
+    let dmax = 0;
+    if(flashL) for(const k of ['r','g','b'])
+      dmax = Math.max(dmax, Math.abs((flashL.a*flashL[k] + (1 - flashL.a)*cardC[k]) - cardC[k]));
+    closeTrain();
+    return { first, last, peak:+peak.toFixed(2),
+             cardRGB: [cardC.r, cardC.g, cardC.b].join(','), compDelta: Math.round(dmax) };
+  });
+  chk(fl.first >= 0 && fl.first <= 140, '클릭 후 ' + fl.first + 'ms 에 보이기 시작 (재렌더를 기다리지 않는다)');
+  chk(fl.last - fl.first >= 150, 'opacity≥0.7 로 ' + (fl.last - fl.first) + 'ms 유지 (한 프레임 스치지 않는다)');
+  chk(fl.compDelta >= 45, '카드(rgb ' + fl.cardRGB + ') 위 최대 채널 변화 ' + fl.compDelta + ' (≥45 여야 «플래시»로 읽힌다)');
+
+  console.log('[9] 알약이 «끝까지» 튄다 · 숫자 롤링이 0.8초 안에 끝난다');
+  await page.setViewportSize({ width:1080, height:2280 });
+  await page.waitForTimeout(500);
+  const t9 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    player.inv = 1e9;
+    for(const e of enemies){ e.x = 1; e.y = 1; }
+    window.step = () => {};                            /* 전투가 계속 골드를 벌면 «끝났나» 를 못 잰다 */
+    /* 앞 항목이 S.gold 를 1e13 으로 올려놨다 — 그대로 두면 +128K 를 더해도 fmt 문자열이
+       «10.0T» 로 같아서 «롤링이 0ms 에 끝났다» 는 거짓 통과가 난다(43 교훈 1: 내 assert 부터 의심할 것). */
+    S.gold = 90000; fxHold.gold = 0;
+    await sleep(1200);
+    const pill = document.querySelector('.cGold'), num = document.getElementById('goldN');
+    const base = pill.getBoundingClientRect().width;
+    const want = fmt(S.gold + 128000);
+    const t0 = performance.now();
+    fxAt(fxWorld(player.x + 140, player.y - 30));
+    S.gold += 128000;
+    let peak = base, doneAt = -1, movedAt = -1, prev = num.textContent;
+    while(performance.now() - t0 < 1600){
+      peak = Math.max(peak, pill.getBoundingClientRect().width);
+      if(movedAt < 0 && num.textContent !== prev) movedAt = performance.now() - t0;
+      if(doneAt < 0 && num.textContent === want) doneAt = performance.now() - t0;
+      await sleep(16);
+    }
+    return { grow: +(peak/base).toFixed(3), doneAt: Math.round(doneAt), movedAt: Math.round(movedAt), want,
+             now: num.textContent };
+  });
+  chk(t9.grow >= 1.10, '알약 최대 확대 ×' + t9.grow + ' (58: scale 1.15→1)');
+  chk(t9.movedAt >= 150, '숫자는 코인이 도착한 «뒤에» 오르기 시작 — ' + t9.movedAt + 'ms');
+  chk(t9.doneAt > 0 && t9.doneAt <= 800, '롤링 완료 ' + t9.doneAt + 'ms (58: ≤800ms) → ' + t9.now);
 
   await browser.close();
   if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }

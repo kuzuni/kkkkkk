@@ -1031,7 +1031,7 @@
     contain:layout style;font-family:inherit}
 
   /* 재화가 HUD 알약으로 날아가는 아이콘 — 위치는 JS 가 매 프레임 transform 으로 준다 */
-  .fx-fly{position:absolute;left:0;top:0;font-style:normal;font-weight:400;line-height:1;
+  .fx-fly{position:absolute;left:0;top:0;z-index:1;font-style:normal;font-weight:400;line-height:1;
     will-change:transform,opacity;
     text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000,
       1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
@@ -1065,16 +1065,30 @@
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
      innerHTML 로 통째로 재렌더돼(25 교훈 5) 대상에 붙인 클래스가 그 프레임에 날아간다. */
-  .fx-flash{position:absolute;background:#fff;opacity:0;transform-origin:center;
-    animation:fxFlash .26s cubic-bezier(.2,.8,.3,1) forwards}
-  /* 완만하게 빠지면 «30~40% 흰 워시» 구간이 길어져 비평가 2명이 독립적으로 «회색 탈채도 =
-     비활성 상태» 로 읽었다(2026-08-25 3회차). 세게 번쩍이고 빨리 빠지게 한다. */
-  @keyframes fxFlash{0%{opacity:0;transform:scale(1)}
-    22%{opacity:.95;transform:scale(1.05)}
-    34%{transform:scale(1.07)}
-    58%{opacity:.22}
-    100%{opacity:0;transform:scale(1)}}
-  /* 대상 «자체» 가 살짝 커졌다 복귀한다 — 오버레이만 키우면 카드 bbox 가 그대로라 «커졌다» 로 안 읽힌다 */
+  /* 강화 성공 플래시.
+     **흰색 판때기는 쓰지 않는다.** 훈련 카드 배경이 이미 크림(#FFFDF2)이라 흰 오버레이는
+     휘도가 182 → 219 로 +37 밖에 안 올라가고(4회차 픽셀 실측), 비평가 2명이 독립적으로
+     «플래시가 8프레임 전부에 없다» 고 읽었다. 대신 **카드 밖 어두운 시트 위로 번지는
+     밝은 링 + 글로우**로 만든다 — 배경이 밝든 어둡든 대비가 확보된다.
+     그리고 스케일은 **이 오버레이가** 맡는다. 대상 요소에 클래스를 걸면 `renderUI()` 가
+     0.35초 주기로 시트를 재렌더하면서 90ms 안에 지워진다(25 교훈 5 의 클래스 판). */
+  /* 강화 성공 플래시.
+     ⚠ **«흰색 플래시» 를 흰색으로 만들면 안 보인다.** 훈련 카드 배경이 `#FFFDF2`(휘도 252)라
+     흰 워시를 알파 .9 로 깔아도 합성 휘도가 **+2** 밖에 안 움직인다(5회차 실측).
+     그래서 코어는 **금색 워시**로 두고(파랑 채널 242 → 132, Δ110 — 크게 읽힌다)
+     테두리에 **흰 링**을 둘러 «흰 번쩍» 의 인상을 유지한다. 바깥 앰버 글로우가 어두운 시트 위에서도
+     대비를 만들어, 밝은 카드·어두운 배경 어느 쪽에 얹혀도 성공이 읽힌다.
+     opacity 는 **0% 부터 1** 이다 — 램프를 두면 «보이기 시작하는» 시각이 그만큼 늦어진다. */
+  .fx-flash{position:absolute;box-sizing:border-box;opacity:0;transform-origin:center;
+    background:rgba(255,193,64,.62);border:9px solid #FFFFFF;
+    box-shadow:0 0 0 5px rgba(255,186,54,.95),0 0 52px 16px rgba(255,206,92,.9);
+    animation:fxFlash .4s cubic-bezier(.2,.8,.3,1) forwards}
+  /* 봉우리가 뾰족하면 ≥0.7 구간이 90ms 라 8프레임 캡처에 한 장 걸릴까 말까다. 고원을 만든다(≈270ms). */
+  @keyframes fxFlash{0%{opacity:1;transform:scale(.97)}
+    22%{opacity:.96;transform:scale(1.05)}
+    55%{opacity:.85;transform:scale(1.09)}
+    100%{opacity:0;transform:scale(1.14)}}
+  /* 재렌더가 없는 화면(스킬·유물 세부의 레벨 알약)에서는 대상 자체도 같이 튄다 */
   .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
   @keyframes fxHit{0%{transform:scale(1)}34%{transform:scale(1.07)}100%{transform:scale(1)}}
 
@@ -1089,7 +1103,8 @@
     100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 
   /* 상단 토스트 — 슬라이드다운 + 스프링, 1.2초 뒤 페이드아웃 */
-  .fx-toast{position:absolute;left:50%;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
+  /* z-index 2 — 재화가 알약으로 날아가는 경로가 토스트 위를 지나므로, 글자를 코인이 가리면 안 된다 */
+  .fx-toast{position:absolute;left:50%;z-index:2;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
     background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
     white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
     animation:fxToastIn .28s cubic-bezier(.34,1.56,.64,1) both}
@@ -7538,7 +7553,8 @@ function showSkillDetail(id){
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
   /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클 */
   if(l && !l.disabled) l.onclick = () => {
-    if(levelUp(it)){ showSkillDetail(id); fxUpOk($('mbox').querySelector('.sk-lv'), $('mLv')); }
+    const tgt = $('mbox').querySelector('.sk-lv');
+    if(levelUp(it)){ fxUpOk(tgt, l); showSkillDetail(id); fxHitEl($('mbox').querySelector('.sk-lv')); }
   };
 }
 
@@ -7579,7 +7595,8 @@ function showRelicDetail(id){
   $('modal').classList.add('on', 'rl16');
   const l = $('mLv');
   if(l && !l.disabled) l.onclick = () => {
-    if(levelUp(it)){ autoEquipAll(); showRelicDetail(id); fxUpOk($('mbox').querySelector('.rl-lv'), $('mLv')); }   /* 58 */
+    const tgt = $('mbox').querySelector('.rl-lv');
+    if(levelUp(it)){ fxUpOk(tgt, l); autoEquipAll(); showRelicDetail(id); fxHitEl($('mbox').querySelector('.rl-lv')); }   /* 58 */
   };
 }
 
@@ -7640,8 +7657,10 @@ function showItem(id){
     $('mEq').onclick = () => { toggleEquip(it, cat); showItem(id); };
     const a = $('mLv'), b = $('mLvAll'), c = $('mCraft');
     /* 58 — 강화 성공 연출. 이 팝업은 «대상 카드» 가 따로 없어 버튼 행을 플래시한다 */
-    if(a) a.onclick = () => { if(levelUp(it)){ showItem(id); fxUpOk($('mbox').querySelector('.mrow'), $('mLv')); } };
-    if(b) b.onclick = () => { const n = levelUpMax(it); showItem(id); if(n) fxUpOk($('mbox').querySelector('.mrow'), $('mLvAll')); };
+    if(a) a.onclick = () => { const t = $('mbox').querySelector('.mrow');
+      if(levelUp(it)){ fxUpOk(t, a); showItem(id); fxHitEl($('mbox').querySelector('.mrow')); } };
+    if(b) b.onclick = () => { const t = $('mbox').querySelector('.mrow'); const n = levelUpMax(it);
+      if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl($('mbox').querySelector('.mrow')); };
     if(c) c.onclick = () => {
       const nx = craft(it);
       if(nx) popup('⚗️ 합성 성공!', '<p><b style="color:' + GRADE[it.g].c + '">' + it.n + '</b> ' + CRAFT_NEED + '개 소모<br>'
@@ -9583,8 +9602,9 @@ $('trw').addEventListener('click', e => {
        renderTrain() 이 카드를 재렌더하므로 «누른 시점의 좌표» 로 #fxl 에 그린다. */
     const key = card.dataset.tr;
     const okc = trIsTrain() ? trainBuy(key) : statTrainBuy(key);
+    if(okc) fxUpOk(card, card);                        /* 58 — 오버레이 먼저(재렌더를 기다리지 않는다) */
     renderTrain();
-    if(okc){ const fresh = document.querySelector('#trw [data-tr="' + key + '"]'); fxUpOk(fresh || card, fresh || card); }
+    if(okc) fxHitEl(document.querySelector('#trw [data-tr="' + key + '"]'));
   }
 });
 
@@ -9872,7 +9892,7 @@ function fxFly(from, cur, n){
   if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
   /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다 */
   const batch = { fired:false };
-  fxHold[cur] = performance.now() + 1200;              /* 코인이 도착하기 «전»에 숫자가 다 올라가면 순서가 뒤집힌다 */
+  fxHold[cur] = performance.now() + 1400;              /* 코인이 도착하기 «전»에 숫자가 다 올라가면 순서가 뒤집힌다 */
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
     el.className = 'fx-fly';
@@ -9881,21 +9901,32 @@ function fxFly(from, cur, n){
     el.style.opacity = '0';
     L.appendChild(el);
     const sx = p0.x + rnd(-36, 36), sy = p0.y + rnd(-26, 26);
-    /* 제어점 y 를 그냥 «출발·도착 중 위쪽에서 더 위로» 잡으면 알약이 y23 이라 호가 프레임 밖(y −12)
-       으로 나가 잘린다(3회차 실측). 상단 HUD 아래로 클램프해 화면 안에서만 휘게 한다. */
+    /* 제어점은 «출발→도착 직선의 중점에서 수직 방향으로 밀어낸» 자리다. 제어점 x·y 를 각각
+       랜덤으로 흔들면 아이콘마다 다른 방향으로 휘어 «2단 꺾임» 으로 읽힌다(4회차 지적).
+       휨 폭만 아이콘별로 조금 다르게 준다. 그리고 y 는 상단 HUD 아래로 클램프 — 안 하면
+       알약이 y23 이라 호가 프레임 밖(실측 −12px)으로 나가 잘린다(3회차 지적). */
+    const mx = (sx + to.x)/2, my = (sy + to.y)/2;
+    const vx = to.x - sx, vy = to.y - sy, vl = Math.hypot(vx, vy) || 1;
+    const bow = vl * (0.20 + i*0.035);
     fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
-      cx:(sx + to.x)/2 + rnd(-90, 90),
-      cy:Math.max(96, Math.min(sy, to.y) - rnd(90, 190)),
-      /* 58 공통 규칙 «0.3~0.8초» — 마지막 아이콘까지 0.030*7 + 0.43 + 0.14(꽂힘) = 0.78초 */
-      t:-i*0.030, dur:0.35 + Math.random()*0.08, pill, batch, cur, n });
+      cx:mx + (vy/vl)*bow, cy:Math.max(120, my - Math.abs(vx/vl)*bow*0.6 - bow*0.35),
+      /* 58 공통 규칙 «0.3~0.8초» — 첫 도착 0.28초, 마지막 아이콘까지 0.026*5 + 0.35 + 0.14 = 0.62초.
+         그 뒤에 붙는 숫자 롤링(FXROLL 0.3초)까지 합쳐 0.8초를 넘지 않아야 한다. */
+      t:-i*0.026, dur:0.28 + Math.random()*0.07, pill, batch, cur, n });
   }
 }
 function fxPunch(el){
   if(!el) return;
+  /* 아이콘 6개가 30ms 간격으로 도착하는데 도착마다 애니메이션을 재시작하면 **매번 scale 1.02 에서
+     처음으로 되돌아가** 알약이 끝까지 안 커진다(비평가 2명이 «튀는 프레임이 한 장도 없다» 로 잡았다).
+     한 번 튀는 동안(300ms)은 재시작하지 않는다. */
+  const now = performance.now();
+  if(el.__fxPunchT && now - el.__fxPunchT < 300) return;
+  el.__fxPunchT = now;
   el.classList.remove('fx-punch');
-  void el.offsetWidth;                                /* 리플로우 — 연속 도착에도 매번 다시 튀게 */
+  void el.offsetWidth;
   el.classList.add('fx-punch');
-  setTimeout(() => el.classList.remove('fx-punch'), 340);
+  setTimeout(() => el.classList.remove('fx-punch'), 320);
 }
 function fxPlus(cur, n){
   const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
@@ -9954,13 +9985,17 @@ function fxReward(t){
 }
 /* 강화·업그레이드 «성공» 한 세트 — 대상 카드/행 흰 플래시 + 성공 파티클.
    수치 롤링은 HUD(fxTick)와 09 일괄 강화 팝업이 각각 맡는다. */
+/* 대상 «자체» 의 스케일 펄스. `innerHTML` 재렌더가 있는 화면에서는 재렌더 «뒤» 에 부른다. */
+function fxHitEl(el){
+  if(!el || !el.classList) return;
+  el.classList.remove('fx-hit'); void el.offsetWidth;
+  el.classList.add('fx-hit');
+  setTimeout(() => el.classList && el.classList.remove('fx-hit'), 300);
+}
+/* 오버레이(#fxl)는 대상이 재렌더돼도 안 지워지므로 **재렌더 «전»에** 부르는 게 맞다 —
+   재렌더 뒤에 부르면 `renderTrain()` 비용만큼(실측 ~150ms) 연출 시작이 늦는다. */
 function fxUpOk(target, at){
-  if(target){
-    fxFlash(target);
-    target.classList.remove('fx-hit'); void target.offsetWidth;
-    target.classList.add('fx-hit');                   /* 카드 «자체» 가 커졌다 복귀 */
-    setTimeout(() => target.classList && target.classList.remove('fx-hit'), 300);
-  }
+  if(target){ fxFlash(target); fxHitEl(target); }
   fxBurst(at || target, '#FFE9A8', 10);
 }
 function fxToast(txt){
@@ -9999,6 +10034,10 @@ const fxSeen = { gold:null, dia:null };
 const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0, dia:0 };
 /* 비행이 «도착할 때까지» 표시값을 붙잡아 둔다(0 = 안 붙잡음). 도착이 없으면 1.2초 뒤 스스로 풀린다. */
 const fxHold = { gold:0, dia:0 };
+/* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
+   0.8초 예산 안에 목표에 못 닿는다(4회차: 645ms 에 26% 진행 — 비평가 2명이 독립적으로 잡았다). */
+const FXROLL = 0.30;
+const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
 function fxWatch(now){
   for(const k in FXCUR){
     const v = S[k];
@@ -10007,12 +10046,16 @@ function fxWatch(now){
     const d = v - fxSeen[k];
     fxSeen[k] = v;
     if(d > 0){                                        /* 소모(감소)에는 연출을 걸지 않는다 */
-      if(!fxAcc[k]) fxAccS[k] = now;
+      /* 묶음 디바운스(110ms) 동안 숫자가 먼저 오르면 «값이 먼저 갱신되고 코인이 나중에 난다» 가 된다.
+         홀드는 «비행이 뜰 때» 가 아니라 «새 묶음이 시작되는 순간» 에 건다.
+         이미 롤링 중이면 새로 걸지 않는다 — 전투처럼 계속 들어오는 획득에서 숫자가 끊긴다. */
+      if(!fxAcc[k]){ fxAccS[k] = now; if(!fxRoll[k]) fxHold[k] = now + 1400; }
       fxAcc[k] += d; fxAccT[k] = now;
     }
-    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(110ms 정지 or 900ms 누적).
-       180ms 는 «보상 버튼을 눌렀는데 연출이 늦게 시작한다» 로 읽혀 0.8초 예산을 앞에서 갉아먹었다. */
-    if(fxAcc[k] > 0 && (now - fxAccT[k] > 110 || now - fxAccS[k] > 900)){
+    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
+       디바운스는 «연출 시작 전 죽은 시간» 이라 0.8초 예산을 앞에서 그대로 갉아먹는다.
+       예산: 70(디바운스) + 130(스태거) + 280(비행) + 140(꽂힘) + 300(롤링) ≈ 0.72초. */
+    if(fxAcc[k] > 0 && (now - fxAccT[k] > 70 || now - fxAccS[k] > 900)){
       fxFly(fxSrc(now), k, fxAcc[k]);
       fxAcc[k] = 0;
     }
@@ -10053,7 +10096,6 @@ function fxTick(dt){
       + ' translate(-50%,-50%) scale(' + s.toFixed(3) + ')';
   }
   /* 숫자 롤링 — 0.35초 안팎으로 수렴. 1 미만 차이는 즉시 확정해 «영원히 도는» 상태를 막는다. */
-  const r = Math.min(1, dt * 7);
   for(const k in fxDisp){
     const t = S[k];
     if(!Number.isFinite(t)){ fxDisp[k] = t; continue; }
@@ -10062,8 +10104,14 @@ function fxTick(dt){
       if(now < fxHold[k]) continue;
       fxHold[k] = 0;
     }
-    const d = t - fxDisp[k];
-    fxDisp[k] = Math.abs(d) < 1 ? t : fxDisp[k] + d*r;
+    if(fxDisp[k] === t){ fxRoll[k] = null; continue; }
+    const R = fxRoll[k];
+    if(!R || R.to !== t){ fxRoll[k] = { from:fxDisp[k], to:t, t:0 }; }
+    const q = fxRoll[k];
+    q.t += dt;
+    if(q.t >= FXROLL){ fxDisp[k] = t; fxRoll[k] = null; continue; }
+    const e = 1 - Math.pow(1 - q.t/FXROLL, 3);        /* easeOutCubic — 0.38초에 «정확히» 도착한다 */
+    fxDisp[k] = q.from + (q.to - q.from)*e;
   }
 }
 /* HUD·재화 바가 쓰는 표시값. 롤링이 시작되기 전(초기 1프레임)에는 실제 값을 그대로 준다. */
