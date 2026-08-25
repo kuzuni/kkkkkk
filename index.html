@@ -2698,7 +2698,10 @@
   .spc-body{position:absolute;left:12px;right:12px;top:12px;bottom:13px;
     background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px -23px/236px 234px repeat;
-    border-radius:24px;box-shadow:0 0 0 1px #887661;overflow:hidden}
+    border-radius:24px;box-shadow:0 0 0 1px #887661}
+  /* ⚠ `.spc-body` 에 `overflow:hidden` 을 주면 안 된다 — 배경은 어차피 border-radius 가 잘라 주는데,
+     짧은 기기(frameH 1600: 4:3·16:9 가로)에서는 .spc 가 1395→1240 으로 눌려 `.spc-tabs` 가
+     크림 박스 아래로 삐져나오므로 hidden 이면 «프로필» 토글이 통째로 사라진다(5회차에 넣었다가 되돌림). */
   .spc-body>*{position:absolute}
   /* Gamer Id — 잉크 y21(h15) 중앙정렬, 흰색. ref 폭 565 vs 우리 489 → scaleX 1.155,
      암갈 미세 외곽선(ref 최암부 ~(50,47,42)) */
