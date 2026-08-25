@@ -6683,20 +6683,29 @@
   /* 외곽 상자 = 검정 테두리까지 포함(ref y770 실측: 50..377 / 378..701 / 702..1030).
      채움은 좌우 8 · 위 6 안쪽. 3회차엔 검정 외곽이 통째로 없어 실루엣 대비가 죽었다(비평 C②). */
   .rk-pod{background:#000}
-  .rk-pod.p1{left:378px;top:449px;width:324px;height:243px}
+  /* 9회차 — 전면은 사다리꼴이 아니라 «3단» 이다(비평 K·L 공통 + 자체 모서리 프로파일):
+     슬래브 립(2위만, x66..363 · 프레임 520..542) → 수직 변 직사각형 전면(2위 80..350 · 1위 398..684 ·
+     3위 716..1009, ~y651) → 바닥 받침(밑변 폭, y651..692. ref raw736 부터 좌 59 로 벌어짐).
+     7~8회차의 «슬래브→밑변 연속 사다리꼴» 은 중간 높이에서 전면을 편측 11~20px 넓게 그렸다(K①③·L② 공통 감점원). */
+  .rk-pod.p1{left:378px;top:449px;width:324px;height:243px;
+    clip-path:polygon(3.70% 0,96.91% 0,96.91% 79.84%,99.38% 79.84%,99.38% 100%,0.31% 100%,0.31% 79.84%,3.70% 79.84%)}
   /* 8회차 — 2위 윗면은 «원근 평행사변형» 이다(남은 문제 1). ref 열스캔(near:91AFCB):
      먼 모서리 x80..162 = ref 573 · x303..347 = ref 553(전이 구간 x266..303 은 방패에 가려 보이지 않는다),
      가까운 모서리는 ref 603 에서 «평평»하다. 7회차까지의 «균일 45px» 는 두께뿐 아니라
      가까운 모서리를 ref 603 → 617 로 14px 아래에 그리고 있었다.
      그래서 상자를 위로 19px 넓히고(482→463) 검정 실루엣 자체를 기울인 뒤 윗면을 <b> 로 뗀다. */
   .rk-pod.p2{left:50px;top:463px;width:328px;height:229px;
-    clip-path:polygon(4.268% 7.860%,95.732% 0,100% 100%,0 100%)}
-  .rk-pod.p3{left:702px;top:471px;width:329px;height:221px}
+    clip-path:polygon(4.27% 7.86%,95.73% 0,97.87% 37.99%,93.90% 37.99%,93.90% 78.60%,100% 78.60%,100% 100%,0.30% 100%,0.30% 78.60%,6.71% 78.60%,6.71% 37.99%,2.44% 37.99%)}
+  .rk-pod.p3{left:702px;top:471px;width:329px;height:221px;
+    clip-path:polygon(1.82% 0,95.74% 0,95.74% 77.83%,99.09% 77.83%,99.09% 100%,0 100%,0 77.83%,1.82% 77.83%)}
   .rk-pod>u,.rk-pod>b{position:absolute}
-  .rk-pod>u{left:8px;right:8px;top:6px;bottom:0}
-  .rk-pod.p1>u{clip-path:polygon(3.4% 0,96.6% 0,100% 100%,0 100%)}
-  .rk-pod.p2>u{top:50px;clip-path:polygon(3.81% 0,96.5% 0,100% 100%,0 100%)}
-  .rk-pod.p3>u{clip-path:polygon(4.2% 0,95.8% 0,100% 100%,0 100%)}
+  /* u = 채움(립·전면·받침을 한 폴리곤으로). 검정 외곽은 실루엣(.rk-pod)이 채움보다 8px 크게 남아 생긴다 */
+  .rk-pod.p1>u{left:9px;right:10px;top:6px;bottom:0;
+    clip-path:polygon(3.61% 0,97.38% 0,97.38% 82.70%,100% 82.70%,100% 100%,0 100%,0 82.70%,3.61% 82.70%)}
+  .rk-pod.p2>u{left:8px;right:8px;top:57px;bottom:0;
+    clip-path:polygon(2.56% 0,97.76% 0,97.76% 12.79%,93.59% 12.79%,93.59% 76.16%,100% 76.16%,100% 100%,0.32% 100%,0.32% 76.16%,7.05% 76.16%,7.05% 12.79%,2.56% 12.79%)}
+  .rk-pod.p3>u{left:7px;right:11px;top:6px;bottom:0;
+    clip-path:polygon(2.25% 0,96.46% 0,96.46% 80.93%,100% 80.93%,100% 100%,0 100%,0 80.93%,2.25% 80.93%)}
   /* 앞면은 «단일 톤» 이다 — ref 열스캔에서 가로줄 경계가 하나도 없다:
      2위 x85·x345 → ref 604..774 가 #4A5978 한 덩어리(171px) · 1위 x410 → 702..773 #BC713A ·
      3위 x990 → 640..774 #43311B. 7회차까지 그려 온 «상단테 / 굽» 하드 스톱 3개는 ref 에 없는 가짜
@@ -6717,12 +6726,18 @@
      (아트 자리 규칙: 이미지로 교체할 때 이 상자를 그대로 쓰므로 넘치는 잉크는 잘려도 무방하다) */
   .rk-ch{display:flex;align-items:center;justify-content:center;line-height:1;overflow:hidden}
   #rkw .rk-ch>em{display:block;line-height:1}
-  .rk-ch.c1{left:386px;top:146px;width:309px;height:301px;font-size:354px}
-  .rk-ch.c2{left:24px;top:155px;width:357px;height:326px;font-size:350px}
-  .rk-ch.c3{left:700px;top:148px;width:342px;height:321px;font-size:335px}
-  #rkw .rk-ch.c1>em{transform:scaleX(1.03)}
+  /* 9회차 — 비평 K·L 공통: ① 3위 상자가 부유 장식 구역(y147..260)까지 삼켜 h+58% ② 1위가 −21~31% 좁고
+     ③ 2위 잉크가 슬래브 위 34px 에 떠 있었다. ref 재실측(부유물 분리): 1위 x~345..665·y186..455(슬래브 접지) ·
+     2위 x24..338·y196..470(접지) · 3위 x700..1041·y262..471(접지). 잉크가 상자를 넘치게 fs·scaleX 를 잡고 클립. */
+  .rk-ch.c1{left:345px;top:186px;width:320px;height:269px;font-size:354px}
+  .rk-ch.c2{left:24px;top:196px;width:314px;height:274px;font-size:350px}
+  .rk-ch.c3{left:700px;top:262px;width:342px;height:209px;font-size:335px}
+  #rkw .rk-ch.c1>em{transform:scaleX(1.31)}
   #rkw .rk-ch.c2>em{transform:scaleX(1.06)}
   #rkw .rk-ch.c3>em{transform:scaleX(1.05)}
+  /* 아트 자리 — 3위 위 부유 장식(UFO·호박 등) ref bbox x728..1013 y147..260 (286×114). 비평 L «요소 결손» */
+  .rk-fl{left:728px;top:147px;width:286px;height:114px;display:flex;align-items:center;
+    justify-content:space-between;font-size:100px;line-height:1;overflow:hidden;opacity:.92}
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
     clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%)}
@@ -7620,6 +7635,7 @@
       <div class="rk-ch c2"><em id="rkCh2">🦊</em></div>
       <div class="rk-ch c1"><em id="rkCh1">🐲</em></div>
       <div class="rk-ch c3"><em id="rkCh3">🐺</em></div>
+      <div class="rk-fl"><em>🛸</em><em>🎃</em></div>
       <div class="rk-pod p2"><u></u><b></b></div>
       <div class="rk-pod p1"><u></u></div>
       <div class="rk-pod p3"><u></u></div>
