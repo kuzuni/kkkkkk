@@ -3511,12 +3511,15 @@
      우리는 좌→우로 계속 어두워졌다(84→66). 하단 소프트 그림자도 ref 에 없다(M·N 독립 지적). */
   /* 10회차 ④ — 좌측 페이드가 «선형» 이라 50% 크로싱이 x359 였다(비평가 Q Δ12 · R Δ11, 자체 스캔 359.4).
      ref 는 S-커브라 **50% 크로싱 x370.8**(시작 324·도달 396 은 이미 맞다) → 느리게 시작해 중반에 꺾이는
-     8-스톱 S 로 다시 그린다. 크로싱은 «합성 밝기의 중간» = alpha .415 지점이므로 46px(=x370)에 .415 를 둔다 */
+     S 로 다시 그린다. 크로싱은 «합성 밝기의 중간» = alpha .415 지점이므로 46px(=x370)에 .415 를 둔다.
+     10회차 재보정 — 첫 8-스톱은 50% 는 맞췄지만 **램프가 8~9px 짧았다**(비평가 S·T 독립 실측:
+     10–90% 폭 ref 49.6~49.8 / 우리 41.5~41.8). 10% 크로싱을 x346→**x341**, 90% 를 x388→**x392** 로 벌린
+     11-스톱으로 다시 그린다(50% 는 46px=x370 고정) */
   .spc-nick{left:213px;top:312px;width:372px;height:48px;
-    background:linear-gradient(90deg,rgba(84,77,65,0) 0,rgba(84,77,65,.04) 16px,
-      rgba(84,77,65,.12) 28px,rgba(84,77,65,.28) 38px,rgba(84,77,65,.415) 46px,
-      rgba(84,77,65,.58) 54px,rgba(84,77,65,.72) 62px,rgba(84,77,65,.8) 68px,
-      rgba(84,77,65,.83) 72px,
+    background:linear-gradient(90deg,rgba(84,77,65,0) 0,rgba(84,77,65,.022) 11px,
+      rgba(84,77,65,.085) 17px,rgba(84,77,65,.186) 26px,rgba(84,77,65,.295) 36px,
+      rgba(84,77,65,.415) 46px,rgba(84,77,65,.545) 56px,rgba(84,77,65,.7) 65px,
+      rgba(84,77,65,.78) 70px,rgba(84,77,65,.82) 76px,rgba(84,77,65,.83) 82px,
       rgba(84,77,65,.83) calc(100% - 20px),rgba(84,77,65,.6) 100%);
     text-align:center;line-height:48px}
   /* 6회차 — 흰 잉크 폭 235 vs ref 261(−10%) → scaleX 로만 늘린다(높이는 ref 23 / 우리 22 로 거의 같다) */
@@ -3591,15 +3594,17 @@
      → ① `::before`(밝은 금)의 촉을 **없애고 둥근 사각**으로 만들어 x174–514 만 금이 되게 하고
         ② `<b>`(앰버)의 촉만 남겨 그 사이 12~16px 이 앰버 쐐기로 드러나게 한다.
         ③ 촉 끝의 밝은 림은 `<b>` 배경에 좌·우 세로 스트립 2겹으로 얹는다(평평한 구간은 `::before` 가 덮어 안 보인다).
-     촉 깊이도 ref 로 맞춘다 — 좌 apex x158(local 4) · 우 apex x532(local 100%−6). 이전엔 154 / 538 로 6px 깊었다 */
+     촉 깊이도 ref 로 맞춘다 — 10회차 재보정으로 **좌 apex x155.5 · 우 apex x534.3**(비평가 S·T 가 독립적으로
+     같은 수치를 냈다: ref 우 팁 534.34/534.35 · 좌 팁 155.10/155.10, 팁-투-팁 ref 379.2 vs 우리 373.9).
+     이때 촉 끝 검정 스트로크도 7.4→5.8px 로 함께 회수된다(S [C]) */
   .spc-tab-on>b{position:absolute;left:5px;right:2px;top:5px;bottom:6px;
     background:linear-gradient(90deg,#FAE58C 0,#D9A238 55%,#B86C1E 100%) left 4px top 0/9px 100% no-repeat,
       linear-gradient(270deg,#F7C63D 0,#DFA22F 45%,#B86C1E 100%) right 6px top 0/8px 100% no-repeat,
       linear-gradient(180deg,#C57419 0,#B96D18 100%);
     clip-path:polygon(28px 0,calc(100% - 29px) 0,calc(100% - 24.76px) 1.76px,calc(100% - 23px) 6px,
-      calc(100% - 23px) 11.76px,calc(100% - 6px) 28px,calc(100% - 23px) 41.44px,
+      calc(100% - 23px) 11.76px,calc(100% - 3.7px) 28px,calc(100% - 23px) 41.44px,
       calc(100% - 23px) 50px,calc(100% - 24.76px) 54.24px,calc(100% - 29px) 56px,
-      27px 56px,21.34px 53.66px,19px 48px,19px 41.44px,4px 28px,19px 11.76px,19px 9px,21.64px 2.64px);
+      27px 56px,21.34px 53.66px,19px 48px,19px 41.44px,1.5px 28px,19px 11.76px,19px 9px,21.64px 2.64px);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
   .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:4px;right:5px;
     background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 58%,#F8A63A 58%);
