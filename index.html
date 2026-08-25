@@ -9128,6 +9128,7 @@ function areaDamage(x, y, r, dmg, col){
   const d = dmg * (crit ? stat.cdmg : 1);
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
+    if(!e) break;                       /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
     if(e.born < 0.3) continue;
     const ex = e.x-x, ey = (e.y - e.r) - y;
     if(ex*ex + ey*ey < (r+e.r)*(r+e.r)) hitEnemy(e, d, crit, ex*0.4, ey*0.4);
@@ -9465,6 +9466,7 @@ function step(dt){
       const bx = player.x + Math.cos(a)*R, by = player.y - 22 + Math.sin(a)*R*0.75;
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
+        if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3 || (e.orbCd || 0) > 0) continue;
         const dx = bx-e.x, dy = by-(e.y-e.r);
         if(dx*dx + dy*dy < (e.r+16)*(e.r+16)){
@@ -9485,6 +9487,7 @@ function step(dt){
       const R = 92 + 6*oLv('aura'), d = skillDmg(SK.aura)*0.35*sbAtk();
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
+        if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3) continue;
         const dx = e.x-player.x, dy = (e.y - e.r*0.7)-(player.y-20);
         if(dx*dx + dy*dy < R*R) hitEnemy(e, d, false, 0, 0);
@@ -9516,6 +9519,16 @@ function step(dt){
   /* ---- 적 ---- */
   for(let i=enemies.length-1;i>=0;i--){
     const e = enemies[i];
+    /* 110 — 이 루프 «안에서» 배열이 통째로 비워질 수 있다: 적의 접촉 공격에 플레이어가 죽으면
+       아래 ~60줄에서 failBoss('패배') 가 불리고, 그 안이 `enemies.length = 0` 이다.
+       그러면 남은 인덱스가 전부 빈 칸이 되어 `e.born += dt` 가
+       «Cannot read properties of undefined (reading 'born')» 으로 터졌다(rAF 는 loop() 맨 앞에서
+       이미 예약돼 있어 게임이 멈추진 않지만 매 프레임 예외가 쏟아진다).
+       정상 진행에서는 보스 스테이지가 «보스 1마리 단독 스폰» 이라 i=0 뿐이어서 드러나지 않았고,
+       몹이 깔린 채 S.stage 를 ×10 으로 점프시키면(하네스·치트·손상된 세이브) 바로 재현된다.
+       배열이 사라졌으면 이번 프레임의 적 처리는 거기서 끝난 것이다 — 남은 적은 다음 프레임에 돈다.
+       회귀 게이트: `node tools/repro110.js` 시나리오 A·B. */
+    if(!e) break;
     e.born += dt;
     if(e.fx > 0) e.fx -= dt;
     if(e.orbCd > 0) e.orbCd -= dt;
@@ -9619,6 +9632,7 @@ function step(dt){
 
     for(let j=enemies.length-1;j>=0;j--){
       const e = enemies[j];
+      if(!e) break;                     /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
       if(e.born < 0.3 || b.hit.indexOf(e) >= 0) continue;
       const ex = e.x, ey = e.y - e.r;
       if((b.x-ex)*(b.x-ex) + (b.y-ey)*(b.y-ey) < (e.r+13)*(e.r+13)){
@@ -9647,6 +9661,7 @@ function step(dt){
       z.tick = 0.4;
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
+        if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3) continue;
         const dx = e.x-z.x, dy = (e.y-e.r)-z.y;
         if(dx*dx + dy*dy < z.r*z.r) hitEnemy(e, z.dps*0.4, false, 0, 0);

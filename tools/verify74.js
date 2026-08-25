@@ -18,16 +18,10 @@
  * 통과: 모든 대상 성공률 100% + 콘솔 에러 0
  */
 const path = require('path');
-const { chromium } = (() => {
-  try { return require('playwright'); } catch (_) {}
-  const fs = require('fs'), os = require('os');
-  const roots = [path.join(os.homedir(), '.npm', '_npx'), path.join(process.env.LOCALAPPDATA || '', 'npm-cache', '_npx')];
-  for (const root of roots) {
-    let dirs = []; try { dirs = fs.readdirSync(root); } catch (_) { continue; }
-    for (const d of dirs) { const p = path.join(root, d, 'node_modules', 'playwright'); if (fs.existsSync(p)) return require(p); }
-  }
-  console.error('playwright 없음 — npm i --no-save playwright'); process.exit(2);
-})();
+/* 110 — 모듈 해석 + 브라우저 폴백은 tools/pwlaunch.js 공용. 여기 복붙돼 있던 해석 블록은
+   번들 브라우저가 없는 환경(클라우드 컨테이너)에서 launch 가 즉사하는 문제를 못 막았다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const FILE = process.env.TAP_FILE || 'index.html';   /* before/after 비교용 — 저장소 루트 기준 상대경로 */
 const URL = 'file://' + path.resolve(__dirname, '..', FILE).replace(/\\/g, '/');
@@ -36,7 +30,7 @@ const HOLD = Number(process.env.TAP_HOLD || 90);
 const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기기 터치와 데스크톱 마우스 의미론이 다르다 */
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, hasTouch: true, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
@@ -51,7 +45,33 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
     document.addEventListener('click', e => {
       if (window.__sel && e.target && e.target.closest && e.target.closest(window.__sel)) window.__hits++;
     }, true);
+
+    /* 110 — «열려 있는 것 전부 닫기».
+       이 게이트는 setup 마다 `closeRelicPage(); closeRelicTab();` 을 직접 불렀는데, 89 유물 개편이
+       두 함수를 `closeRelw()` 하나로 갈면서 **첫 setup 에서 ReferenceError 로 즉사**했다 —
+       74 는 전역 입력 경로라, 게이트가 죽은 채로 굴린 동안 회귀를 아무도 못 잡았다.
+       그래서 «이름을 하나 부르는» 대신 «현재 존재하는 닫기 함수를 전부 부르고, 사라진 이름은
+       기록해서 끝에 경고» 한다. 다음 개편이 또 이름을 갈아도 게이트는 죽지 않고 «이름이 바뀌었다»
+       고 알려 준다. 새 오버레이를 만들면 이 목록에 닫기 함수 이름을 추가하는 것까지가 그 작업 범위다. */
+    window.__CLOSERS = ['closeShopPage', 'closeTrain', 'closeDungeon', 'closeRelw', 'closeModal',
+      'closeProbInfo', 'closeBag', 'closeMenu', 'closeBless', 'closeColl21', 'closeConf',
+      'closeCurInfo', 'closeDunClear', 'closeDunDetail', 'closeOfflineReward', 'closePass',
+      'closeProfile', 'closeRank', 'closeSaver', 'closeSpec', 'closeSummonResult',
+      'closeUpAll', 'closeWeapon'];
+    window.__missing = [];
+    window.__closeAll = () => {
+      for (const n of window.__CLOSERS) {
+        const f = window[n];
+        if (typeof f === 'function') { try { f(); } catch (_) {} }
+        else if (window.__missing.indexOf(n) < 0) window.__missing.push(n);
+      }
+    };
   });
+  {
+    /* 이름이 사라진 닫기 함수가 있으면 «게이트가 현행 API 와 어긋났다» 는 뜻 — 즉사시키지 않고 알린다 */
+    const gone = await page.evaluate(() => { window.__closeAll(); return window.__missing; });
+    if (gone.length) console.log('  [!] 사라진 닫기 함수 ' + gone.length + '개: ' + gone.join(', ') + ' — tools/verify74.js __CLOSERS 갱신 필요');
+  }
   const cdp = await ctx.newCDPSession(page);
   const tap = PTR === 'mouse'
     ? async (x, y) => {
@@ -103,7 +123,7 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
 
   /* ① 스킬 패널 장착/해제 행 — renderUI 가 0.35s 마다 setBody 로 통째 재작성하는 전형 */
   await run('스킬 패널 행(0.35s 재렌더)', {
-    setup: () => { closeShopPage(); closeTrain(); closeDungeon(); closeRelicPage(); closeRelicTab();
+    setup: () => { window.__closeAll();
       heroTab = 'sk'; S.heroTab = 'sk'; curTab = 'hero'; panelOpen = true; syncPanel(); uiDirty = true; renderUI(); },
     targets: [{ q: '#bSk [data-skeq], #bSk [data-skun]' }],
     countSel: '#bSk [data-skeq], #bSk [data-skun]',
@@ -118,7 +138,7 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
 
   /* ③ 상점 카테고리 탭 — 성공 시 renderShopPage() 전체 재작성 */
   await run('상점 카테고리 탭', {
-    setup: () => { closeModal(); openShopPage(); },
+    setup: () => { window.__closeAll(); openShopPage(); },
     targets: [{ q: '#shopCats [data-cat="coin"]' }, { q: '#shopCats [data-cat="summon"]' }],
     countSel: '#shopCats [data-cat]',
   });
@@ -134,14 +154,14 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
 
   /* ⑤ 탭바 — 던전/보물상자 페이지 왕복 */
   await run('탭바 탭', {
-    setup: () => { closeShopPage(); if (typeof closeProbInfo === 'function') closeProbInfo(); },
+    setup: () => { window.__closeAll(); },
     targets: [{ q: '.tab[data-t="adv"]' }, { q: '.tab[data-t="box"]' }],
     countSel: '.tab',
   });
 
   /* ⑥ 사이드 아이콘(퀘스트) — 직결 onclick, 성공 시 모달이 열리므로 매회 닫는다 */
   await run('사이드 아이콘', {
-    setup: () => { closeDungeon(); closeRelicPage(); closeRelicTab(); closeModal(); },
+    setup: () => { window.__closeAll(); },
     targets: [{ q: '#sideL .ibtn[data-pop="quest"]' }],
     countSel: '#sideL .ibtn[data-pop]',
     between: () => closeModal(),
@@ -150,7 +170,7 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
 
   /* ⑦ 훈련 ↑ — 작업 64 가 pointerdown 구매로 바꿔 둠 → 골드 감소로 판정 */
   await run('훈련 카드 ↑(pointerdown 구매)', {
-    setup: () => { closeModal(); goTab('grow'); S.gold = 1e15; S.trainStage = 9999; /* 상한(full) 정지 배제 — 유실만 잰다 */ },
+    setup: () => { window.__closeAll(); goTab('grow'); S.gold = 1e15; S.trainStage = 9999; /* 상한(full) 정지 배제 — 유실만 잰다 */ },
     targets: [{ q: '#trw [data-tr] .tr-up, #trw [data-tr]' }],
     metric: () => S.gold,
     /* 200연속 구매는 레벨을 200 올려 비용이 지수로 큰다(첫 카드 atk: 45×1.19^l → +175레벨이면
