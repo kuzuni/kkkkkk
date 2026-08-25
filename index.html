@@ -557,16 +557,33 @@
   #tuto.todo .trew::before{background:#D27B13}          /* 본체 — 짙은 금색 단색 */
   /* 세 줄 모두 텍스트 칸(보더박스 x5..323) 가운데 정렬 — ref 실측 중심 x=164.
      ref 문자열 길이와 우리 미션 이름 길이가 다르므로 좌표 고정이 아니라 중심 정렬이 맞다. */
+  /* ── 잉크 폭 보정(32 1회차 실측, `node tools/probe32.js`) ────────────────────────
+     레퍼런스 게임 서체는 **숫자·괄호가 거의 정사각**이다(`(0/10)` 의 `0` 이 17×17).
+     우리 기본 서체는 같은 잉크 높이에서 세로로 길어 **폭만 17~24% 모자란다** — 높이를 ref 에 맞춘 뒤
+     `scaleX()` 로 폭을 채운다(A2 마을 라벨 `scaleX(.86)` · 23 훈련 팝업과 같은 처방).
+     ⚠ `scaleX` 를 건 글자에는 `-webkit-font-smoothing:antialiased` + `translateZ(0)` 를 반드시 같이 —
+       안 주면 서브픽셀 AA 로 색번짐이 생긴다(16 교훈 ③). */
+  #tuto.todo .tbtn,#tuto.todo .tpg,#tuto.todo .tsub,#tuto.todo .trew .ri{
+    -webkit-font-smoothing:antialiased;backface-visibility:hidden}
+  /* L1 잉크 160×27 @ ref (714,1852) — 중심 x **793.5** 다(L2·L3 의 785 보다 8.5 오른쪽. 실측값). */
   #tuto.todo .tbtn{left:0;width:318px;text-align:center;top:7px;height:27px;
-    font-size:29px;line-height:27px;color:#83FFE7}      /* L1 잉크 160×27 @ (93,12) */
+    font-size:28px;line-height:27px;color:#83FFE7;
+    transform:translateZ(0) translateX(9px) scaleX(1.25)}
   #tuto.todo .tinfo{left:0;width:318px;top:58px}
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px}
   /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
   #tuto .tt em{font-style:normal;color:#FE8252}
   #tuto .tpg{display:none}
+  /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서, 폭 89 는 scaleX 1.5 에서 나온다. */
   #tuto.todo .tpg{display:block;position:absolute;left:0;width:318px;text-align:center;top:89px;
-    height:23px;font-size:27px;line-height:23px;font-weight:900;color:#FFC26A;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}  /* L3 잉크 89×23 @ (120,94) */
+    height:23px;font-size:23px;line-height:23px;font-weight:900;color:#FFC26A;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;
+    transform:translateZ(0) scaleX(1.5)}
+  /* 💎 이모지는 ref 의 «오각 컷 파란 보석» 보다 **가로로 29% 넓다** — 잉크 bbox 를 58×60 으로 맞춘다.
+     (아트가 들어오면 이 scaleX 를 지우고 이미지로 교체한다. 측정표 §8 «아트 필요») */
+  #tuto.todo .trew .ri{transform:translateZ(0) translateY(-3px) scaleX(.77)}
+  /* 수량 `200` 잉크 75×26 @ ref (969,1957) — 우리 숫자는 폭이 24% 모자란다. */
+  #tuto.todo .tsub{transform:translateZ(0) translateY(-2px) scaleX(1.32)}
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
      요소·JS 갱신은 그대로 두고 표시만 끈다 — 되돌리려면 이 한 줄만 지우면 된다.

@@ -1,8 +1,10 @@
 /* 작업 32 — 배너 구간만 잘라 2배 확대한 대조쌍을 만든다.
    레퍼런스(1080×2340, jpg) 와 캡처(1080×2280, png) 의 세로 변환은 «ref y − 84» 하나뿐이다.
    자르는 창: ref x 580..1080 / y 1800..2030 (500×230) → 캡처는 같은 x / y 1716..1946.
-   출력: docs/review/32-crop-ref-x2.png · docs/review/32-crop-cap-x2.png
-   실행: node tools/crop32.js [캡처파일]  */
+   출력: docs/review/32-crop-ref-x2.png · docs/review/32-crop-cap-<태그>-x2.png
+   실행: node tools/crop32.js [캡처파일] [태그]
+   ⚠ 회차마다 **다른 태그**를 줘라 — 비평가가 이미지를 읽는 동안 같은 파일을 덮으면
+     «어느 회차를 본 채점인지» 를 알 수 없게 된다(1회차에 실제로 겪었다). */
 const fs = require('fs');
 const path = require('path');
 const jpeg = require('jpeg-js');
@@ -37,4 +39,4 @@ const ref = jpeg.decode(fs.readFileSync(R), { useTArray: true });
 cropScale(ref.data, ref.width, REF_Y0, '32-crop-ref-x2.png');
 
 const cap = PNG.sync.read(fs.readFileSync(capPath));
-cropScale(cap.data, cap.width, CAP_Y0, '32-crop-cap-x2.png');
+cropScale(cap.data, cap.width, CAP_Y0, '32-crop-cap-' + (process.argv[3] || 'x') + '-x2.png');

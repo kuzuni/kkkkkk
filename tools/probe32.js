@@ -42,16 +42,16 @@ const w = (y0, y1, x0 = 621, x1 = 947) => ({ x0, x1, y0: y0 - OFF, y1: y1 - OFF 
 let edge = null;
 for (let x = 560; x < 900; x++){
   const a = px(x-1, 1854), b = px(x, 1854);
-  if (Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]) > 40){ edge = x; break; }
+  if (Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]) > 120){ edge = x; break; }
 }
-function vEdge(x, from, to, dir){
+function vEdge(x, from, to, dir, th){
   for (let y = from; dir > 0 ? y < to : y > to; y += dir){
     const a = px(x, y - dir), b = px(x, y);
-    if (Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]) > 40) return y;
+    if (Math.abs(a[0]-b[0]) + Math.abs(a[1]-b[1]) + Math.abs(a[2]-b[2]) > th) return y;   /* 전투 캔버스가 살아 움직이므로 «반투명 검정 진입» 만 잡히도록 임계값을 높인다 */
   }
   return null;
 }
-const top = vEdge(700, 1750, 1820, 1), bot = vEdge(700, 1950, 1880, -1);
+const top = vEdge(700, 1770, 1800, 1, 120), bot = vEdge(700, 1940, 1915, -1, 60);
 
 console.log('capture: ' + path.basename(capPath) + '   (하단 앵커 변환: ref y = 캡처 y + 60)');
 console.log('─ 배너 껍데기 ───────────────────────────────────────────────');
@@ -67,7 +67,8 @@ row('L2 주황숫자',bbox((r,g,b,x)=>TXT(x)&&r>210&&g>100&&g<175&&b<125,       
 row('L3 연금색', bbox((r,g,b,x)=>TXT(x)&&r>215&&g>160&&g<225&&b>70&&b<160,   w(1928, 1965)), [741,1934,89,23]);
 
 console.log('─ 보상칸 ────────────────────────────────────────────────────');
-row('보상칸 금색', bbox((r,g,b,x)=>x>940&&((r>190&&g>140&&b<120)||(r>170&&g>95&&b<70)), w(1850, 1980, 940, 1079)), [948,1855,118,119]);
+/* 금색 마스크는 **검정 5px 테두리 안쪽**만 잡는다 → ref 기대값도 안쪽(118−10 × 119−10 @ 953,1860) 이다 */
+row('보상칸 금색', bbox((r,g,b,x)=>x>940&&((r>190&&g>140&&b<120)||(r>170&&g>95&&b<70)), w(1850, 1980, 940, 1079)), [953,1860,108,109]);
 row('젬 시안잉크', bbox((r,g,b,x)=>x>950&&b>190&&g>165&&r<175,                          w(1875, 1955, 940, 1079)), [978,1885,58,60]);
 row('수량 200',    bbox((r,g,b,x)=>x>940&&r>225&&g>225&&b>225,                          w(1950, 1995, 940, 1079)), [969,1957,75,26]);
 console.log('─ 레드닷(있으면 감점) ───────────────────────────────────────');
