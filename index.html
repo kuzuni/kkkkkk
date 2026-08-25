@@ -5352,6 +5352,14 @@
   .ps-cl{background:#D5FBFE;border-radius:50%;opacity:.85}
   /* 아트 자리 — 레퍼런스는 1080x619 통짜 비트맵이다(측정표 §10).
      이미지로 교체할 때 이 bbox 를 그대로 쓴다. 지금은 이모지로 자리만 잡는다. */
+  /* 지면(보물더미) 밴드 — 아트 교체용 자리다.
+     ref 는 하늘이 frame 106 부터 섞이기 시작해 **366 아래로는 하늘이 0%** 인데, 우리는 526 에서도
+     하늘이 20~60% 남아 있었다(G 1순위 «하늘 면적비 33.3% → 60.7%»). 면적·경계는 지금 CSS 로 맞추고
+     그림만 나중에 교체한다. 색은 ref 행 평균색(≈110,130,70 계열)에서 뽑았다. */
+  .ps-gr{left:0;right:0;bottom:0;height:325px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(107,96,64,0) 0,rgba(107,96,64,.14) 60px,rgba(107,96,64,.45) 120px,
+      #6B6040 156px,#7C8A4C 210px,#6E8A38 265px,#8C824A 325px)}
+  #psw.att .ps-gr{display:none}
   /* 아트 자리 — ref 는 금화더미가 **전 폭 1080** 을 채운다(하늘 비율 17.3%). 이미지로 교체할 때 이 bbox 를 쓴다. */
   .ps-art{left:0;right:0;bottom:0;height:215px;text-align:center;font-size:205px;line-height:215px;
     letter-spacing:-24px;opacity:.95;pointer-events:none;white-space:nowrap}
@@ -6621,6 +6629,7 @@
       <div class="ps-spk" style="left:557px;top:91px;width:44px;height:45px"></div>
       <div class="ps-spk" style="left:885px;top:267px;width:27px;height:28px"></div>
       <div class="ps-ice"></div>
+      <div class="ps-gr"></div>
       <div class="ps-art" id="psArt"></div>
       <div class="ps-ttl"><i id="psTtl"></i></div>
       <div class="ps-sub"><i id="psSub"></i></div>
