@@ -113,3 +113,6 @@ InitTestScene*.unity*
 
 # 41 작업 중 만든 임시 대기 스크립트
 .waitcrit41.tmp.py
+
+# 59/67 게이트가 before 비교용으로 잠깐 뽑는 임시 파일 (verify59.js 가 끝나면 지운다)
+.v59-before-*.html
