@@ -48,7 +48,15 @@ const GEO = process.argv.includes('--geo');
     for (const [k, v] of Object.entries(geo)) if (v) console.log(`  ${k}\tref x${v.x} y${(v.y + 84).toFixed(1)}  ${v.w}x${v.h}`);
   }
 
-  await p.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
+  /* LESSONS 28-③ 대로 캔버스를 숨겨 회차 간 재현성을 확보하되, **그냥 숨기면 안 된다** —
+     이 화면의 패널·칸은 전부 반투명이라 뒤가 새까매지면 «불투명한 판» 으로 찍힌다
+     (실제로 1회차 비평가가 «패널 대비가 5배 약하다 / 사실상 불투명» 으로 읽었다).
+     그래서 캔버스를 숨긴 자리에 **평탄한 중간톤**을 깐다 — 재현성(고정색)과 투명도 가시성을 둘 다 만족한다.
+     색은 레퍼런스 52 의 던전 바닥 실측값(#6A3844)이라 알파가 레퍼런스와 같은 배경 위에서 비교된다. */
+  await p.evaluate(() => {
+    const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+    const st = document.getElementById('stagearea'); if (st) st.style.background = '#6A3844';
+  });
   await p.waitForTimeout(60);
   await p.screenshot({ path: out });
   console.log('captured ' + out + (errs.length ? '  ⚠ 콘솔 에러 ' + errs.length + ': ' + errs.join(' | ') : '  콘솔 에러 0'));
