@@ -1769,6 +1769,13 @@
     18%{opacity:1;transform:translate(-50%,0) scale(1.06)}
     34%{opacity:1;transform:translate(-50%,6px) scale(1)}
     100%{opacity:0;transform:translate(-50%,46px) scale(1)}}
+  /* 14회차 — 강화(upg)용 델타 플로터 «+2.4 공격력». gain 의 `+n` 과 같은 서체·스트로크로
+     어휘를 통일하되(13회차 U·V «씬 간 어휘 불일치»), 카드는 화면 중단이라 **위로** 떠오른다. */
+  .fx-delta{animation-name:fxDelta}
+  @keyframes fxDelta{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}
+    18%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
+    34%{opacity:1;transform:translate(-50%,-10px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-52px) scale(1)}}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -1777,10 +1784,13 @@
   /* 방사형 버스트 파티클 */
   /* 14px 옅은 금색 점은 크림 카드 위에서 안 보인다(7회차: «성공 파티클 8프레임 전부 미관측»).
      키우고, 어떤 배경에서도 읽히도록 검정 링을 두른다. */
-  .fx-spark{position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  /* 14회차 — «씬 간 어휘 통일»: gain 코인(55~68px)에 비해 파티클이 16px 로 읽혔다(13회차 U·V).
+     기본 26px 로 키우고, 수명 대부분(62%)을 큰 채로 유지한 뒤 끝에서만 줄여 24~28px 로 읽히게 한다. */
+  .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
     box-shadow:0 0 0 3px rgba(0,0,0,.72);animation:fxSpark .58s ease-out forwards}
   @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
-    100%{transform:translate(var(--dx),var(--dy)) scale(.18);opacity:0}}
+    62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(.92);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.38);opacity:0}}
 
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
@@ -11744,7 +11754,7 @@ function openQuest(tab){
      전제로 넣었는데, 실측하면 `openQuest()` 재렌더 **0.9ms** · `save()` **0.2ms** 다(probe58g).
      반면 이 컨테이너의 rAF 간격은 32~42ms 라 2중 rAF 자체가 **108.7ms** 를 먹는다 —
      재화 비행이 클릭 후 191ms 에야 시작한 원인이 이것이다(비평가 Q·R 공통 «55~207ms 무반응»).
-     게다가 목록 재렌더는 이제 fxRenderLater 가 760ms 뒤로 미루므로 막을 것 자체가 없다. */
+     게다가 목록 재렌더는 이제 fxRenderLater 가 FXSOLO(620ms) 뒤로 미루므로 막을 것 자체가 없다. */
   const fxThen = (fn) => fn();
   $('qAll').onclick = () => { fxQuest($('qAll'), $('qAll')); fxThen(claimAllQuests); };
   $('mbox').querySelectorAll('.qs-tg b').forEach(b => b.onclick = () => {
@@ -13815,6 +13825,12 @@ const TR_HOLD_DELAY = 350, TR_HOLD_IV0 = 160, TR_HOLD_IVMIN = 60, TR_HOLD_ACCEL 
 let trHold = null;                      /* {key, timer, iv, n} — 누르고 있는 동안에만 존재 */
 const trCard = key => document.querySelector('#trw [data-tr="' + CSS.escape(key) + '"]');
 function trBuyOnce(key){ return trIsTrain() ? trainBuy(key) : statTrainBuy(key); }
+/* 58 14회차 — 카드가 이미 보여 주는 «+2.4»(.cv)와 «공격력»(.cn)으로 델타 플로터 문구를 만든다 */
+function trDeltaTxt(card){
+  const v = card && card.querySelector('.cv i'), n = card && card.querySelector('.cn i');
+  if(!v || !n || v.textContent === 'MAX') return '';
+  return v.textContent + ' ' + n.textContent;
+}
 /* 정지 사유와 무관하게 여기 한 곳으로 모인다 — 타이머 해제 + 반복분 연출 정산 */
 function trHoldStop(bad){
   const h = trHold; if(!h) return;
@@ -13822,7 +13838,7 @@ function trHoldStop(bad){
   clearTimeout(h.timer);
   const el = trCard(h.key);
   if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
-  else if(h.n > 1 && el) fxUpOk(el, el);                                /* 58 — 반복분은 마지막에 한 번 */
+  else if(h.n > 1 && el) fxUpOk(el, el, trDeltaTxt(el));                /* 58 — 반복분은 마지막에 한 번 */
 }
 function trHoldTick(){
   const h = trHold; if(!h) return;
@@ -13838,7 +13854,7 @@ function trHoldStart(key, card){
   const ok = trBuyOnce(key);
   /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
      그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
-  if(ok) fxUpOk(card, card);
+  if(ok) fxUpOk(card, card, trDeltaTxt(card));
   renderTrainLive();
   if(!ok){                                                             /* 첫 누름부터 실패면 반복 없음 */
     const el = trCard(key) || card;
@@ -14580,9 +14596,24 @@ function fxHitEl(t){
 }
 /* 오버레이(#fxl)는 대상이 재렌더돼도 안 지워지므로 **재렌더 «전»에** 부르는 게 맞다 —
    재렌더 뒤에 부르면 `renderTrain()` 비용만큼(실측 ~150ms) 연출 시작이 늦는다. */
-function fxUpOk(target, at){
+function fxUpOk(target, at, txt){
   if(target){ fxFlash(target); fxHitEl(target); }
   fxBurst(at || target, '#FFE9A8', 10);
+  if(txt) fxDelta(target || at, txt);
+}
+/* 강화 델타 플로터 — 카드 상단 중앙에서 «+2.4 공격력» 이 위로 떠오른다(14회차).
+   gain 의 `+n`(fxPlus)과 같은 40px·검정 스트로크 — 씬 간 어휘를 맞춘다. */
+function fxDelta(el, txt){
+  const L = fxL(), r = fxRect(el); if(!L || !r || !txt) return;
+  if(L.childElementCount >= FXMAX) return;
+  const d = document.createElement('b');
+  d.className = 'fx-plus fx-delta';
+  d.style.color = '#FFE9A8';
+  d.style.left = (r.x + r.w/2) + 'px';
+  d.style.top  = (r.y - 4) + 'px';
+  d.textContent = txt;
+  L.appendChild(d);
+  setTimeout(() => d.remove(), 660);
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
@@ -14617,8 +14648,10 @@ function fxCheck(el){
    경로·제어점을 아무리 손봐도 회수되지 않으므로, 지나가는 동안 **형제 행을 딤** 처리해
    «저 퀘스트도 완료됐나» 로 읽힐 여지를 없앤다.
    ms 는 fxRenderLater 의 유지 시간과 같아야 한다 — 딤이 먼저 풀리고 행이 나중에 바뀌면
-   «두 번 바뀌는» 것으로 보인다. */
-const FXSOLO = 760;
+   «두 번 바뀌는» 것으로 보인다.
+   14회차 — 760 → 620ms. 코인은 ~530ms 에 전부 착지하므로 620 이면 인과는 그대로 서고,
+   딤 «복귀» 구간이 8프레임 캡처(~700ms) 안에 들어온다(13회차 V: «복귀가 8장 안에 안 보인다»). */
+const FXSOLO = 620;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
@@ -14640,7 +14673,7 @@ function fxSolo(el, ms){
 let fxReT = 0;
 function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXSOLO)); }
 /* 미룬 재렌더가 «닫은 팝업을 되살리지» 않게 한다 — `openQuest()`/`openMail()` 은 열기까지 하는
-   함수라, 지연 중에 딤을 눌러 닫으면 760ms 뒤에 팝업이 혼자 다시 뜬다(12회차에 잡은 회귀). */
+   함수라, 지연 중에 딤을 눌러 닫으면 FXSOLO(620ms) 뒤에 팝업이 혼자 다시 뜬다(12회차에 잡은 회귀). */
 const fxStillOpen = (cls) => { const m = $('modal'); return !!m && m.classList.contains('on') && m.classList.contains(cls); };
 /* 「이번 획득은 묶음이 아니다」 — 보상 수령처럼 «한 번에 한 덩어리» 인 경로는 디바운스를 건너뛴다.
    연속 킬을 묶으려고 둔 45ms 가 rAF 간격(32~42ms)과 겹쳐 실제로는 45~85ms 의 죽은 시간이 된다. */
@@ -14737,11 +14770,13 @@ function fxTick(dt){
     }
     if(fxDisp[k] === t){ fxRoll[k] = null; continue; }
     const R = fxRoll[k];
-    if(!R || R.to !== t){ fxRoll[k] = { from:fxDisp[k], to:t, t:0 }; }
-    const q = fxRoll[k];
-    q.t += dt;
-    if(q.t >= FXROLL){ fxDisp[k] = t; fxRoll[k] = null; continue; }
-    const e = 1 - Math.pow(1 - q.t/FXROLL, 3);        /* easeOutCubic — 0.38초에 «정확히» 도착한다 */
+    if(!R || R.to !== t){ fxRoll[k] = { from:fxDisp[k], to:t, s:now }; }
+    /* 14회차 — 트윈을 dt 누적이 아니라 **시작 시각 기준**으로 돈다. dt 는 loop 에서 0.1s 로
+       클램프되므로 프레임이 길어지면(스크린캐스트 중 rAF 100ms+) 그만큼 트윈이 벽시계보다
+       늘어져, 마지막 캡처 프레임에 목표치 1~2% 못 미친 숫자가 남았다(13회차 비평 4명 공통). */
+    const q = fxRoll[k], p = (now - q.s)/(FXROLL*1000);
+    if(p >= 1){ fxDisp[k] = t; fxRoll[k] = null; continue; }
+    const e = 1 - Math.pow(1 - p, 3);                 /* easeOutCubic — FXROLL 에 «정확히» 도착한다 */
     fxDisp[k] = q.from + (q.to - q.from)*e;
   }
 }

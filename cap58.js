@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* 58 UI 연출 — 연속 프레임 캡처 (ROUTINE [3]-(다): 트리거 직후 80~100ms 간격 6~8장)
  *
- *   node cap58.js [라운드]      # 기본 r2 → docs/review/58-<라운드>-<씬>-<n>.png
+ *   node cap58.js [라운드]      # 기본 r2 → docs/review/58-<라운드>-<씬>-<n>.jpg (14회차부터 jpeg)
  *
  * ⚠ **`page.screenshot()` 로는 연출을 채점할 수 없다** (2026-08-25, 1회차가 이걸로 통째로 날아갔다).
  *   이 컨테이너에서 1080×2280 한 장에 **337~629ms** 가 걸린다. «90ms 간격» 이라고 적어 놓아도
@@ -39,19 +39,30 @@ function recorder(cdp){
   });
   return buf;
 }
+/* 14회차 — «가장 가까운 프레임» 을 목표 시각마다 독립적으로 고르면 **같은 원본 프레임이
+   이웃한 두 목표에 중복 선택**된다(원본 간격 74ms vs 목표 간격 90~130ms). 13회차 비평 U·V 가
+   «166ms 동결» 로 잡은 것이 바로 이 중복이다 — probe58f 실측에는 정지 구간이 없다.
+   → 목표 시각 순서대로 **아직 안 쓴 프레임 중에서만** 고른다(단조 증가 보장). 그래도 목표에서
+   ±55ms 넘게 벗어난 프레임은 로그에 «WARN» 으로 남겨 비평가 전달문에 적게 한다. */
 function pick(buf, t0, tag, pre){
   const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -60);
   if(rel.length < WANT.length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
   if(!pre) throw new Error(`${tag}: 트리거 직전 기준 프레임이 없다`);
+  const gaps = rel.slice(1).map((f, i) => f.dt - rel[i].dt);
+  const med = gaps.slice().sort((a,b) => a-b)[gaps.length >> 1] || 0;
   const out = [{ want:'기준', got:Math.round(pre.t - t0), data:pre.data }];
+  let from = 0;
   for(const w of WANT){
-    let best = rel[0];
-    for(const f of rel) if(Math.abs(f.dt - w) < Math.abs(best.dt - w)) best = f;
-    out.push({ want:w, got:Math.round(best.dt), data:best.data });
+    let bi = from;
+    for(let i = from; i < rel.length; i++)
+      if(Math.abs(rel[i].dt - w) < Math.abs(rel[bi].dt - w)) bi = i;
+    out.push({ want:w, got:Math.round(rel[bi].dt), data:rel[bi].data });
+    from = Math.min(bi + 1, rel.length - 1);            /* 다음 목표는 이 프레임 «뒤» 에서만 고른다 */
   }
-  out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.png`), Buffer.from(f.data, 'base64')));
+  out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
-  console.log(`  ✓ ${tag}: 8장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임)`);
+  console.log(`  ✓ ${tag}: 8장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
+  if(worst > 55) console.log(`    ⚠ WARN ${tag}: 목표 대비 ±${worst}ms — 비평가에게 «프레임 시각은 파일명이 아니라 이 로그 기준» 이라고 알릴 것`);
   return worst;
 }
 
@@ -99,7 +110,9 @@ function pwLaunch(){
 
   const cdp = await ctx.newCDPSession(page);
   const buf = recorder(cdp);
-  await cdp.send('Page.startScreencast', { format:'png', maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
+  /* 14회차 — png → jpeg. 1080×2280 PNG 인코딩이 프레임 전달을 74ms 로 묶고 있었다
+     (probe58g 실측 rAF 는 32~43ms). jpeg q86 이면 인코딩이 절반 이하라 원본 밀도가 오른다. */
+  await cdp.send('Page.startScreencast', { format:'jpeg', quality:86, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
   await page.waitForTimeout(300);
 
   const run = async (tag, trigger, waitMs) => {
@@ -166,5 +179,5 @@ function pwLaunch(){
   await cdp.send('Page.stopScreencast').catch(() => {});
   await browser.close();
   if(errs.length){ console.log('콘솔 에러:'); errs.slice(0,8).forEach(e => console.log('  ! ' + e)); process.exit(1); }
-  console.log('\ncap58 OK — docs/review/58-' + ROUND + '-*.png');
+  console.log('\ncap58 OK — docs/review/58-' + ROUND + '-*.jpg');
 })().catch(e => { console.error('cap58 실패:', e.message); process.exit(1); });
