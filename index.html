@@ -1752,12 +1752,18 @@
   /* 어두운 HUD 위에서 211×48 알약이 34px 넓어지는 것만으로는 «튐» 이 안 읽힌다
      (비평가 4명이 연속으로 «폭 변화 0» 이라고 했다 — 실측은 ×1.16 인데도).
      스케일에 **밝기 펄스**를 같이 얹어 «맞았다» 는 신호를 만든다. */
-  @keyframes fxPunch{0%{transform:scale(1);filter:brightness(1)}
-    16%{transform:scale(1.16);filter:brightness(1.85)}
-    54%{transform:scale(1.14);filter:brightness(1.35)}
-    80%{transform:scale(.98);filter:brightness(1.05)}
-    100%{transform:scale(1);filter:brightness(1)}}
-  .fx-punch{animation:fxPunch .3s ease-out both}
+  /* 17회차 — 16회차 비평 AA·AB 가 «알약 튐 8프레임 전부 0%» 를 독립 실측했다. verify58 은
+     ×1.155 를 재므로 애니메이션 자체는 돈다 — 범인은 keyframe 의 `filter:brightness` 다:
+     filter 는 매 프레임 래스터 레이어를 다시 만들어 이 컨테이너에서 **첫 페인트를 3~4프레임
+     늦추고**(교훈 10), .3s 짜리 애니가 지워지기 전에 스케일 프레임이 한 장도 안 찍힌다.
+     → filter 제거. «맞았다» 밝기 신호는 outline(레이아웃·래스터 무비용, 애니 가능)로 대체.
+     길이도 .3→.42s — 페인트 지연을 먹고도 캡처 슬롯 2개(47ms 간격)에 걸리게. */
+  @keyframes fxPunch{0%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}
+    14%{transform:scale(1.17);outline:5px solid rgba(255,255,255,.8)}
+    60%{transform:scale(1.13);outline:4px solid rgba(255,255,255,.45)}
+    84%{transform:scale(.98);outline:3px solid rgba(255,255,255,0)}
+    100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
+  .fx-punch{animation:fxPunch .42s ease-out both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
@@ -1799,11 +1805,11 @@
      아트 전까지 radial-gradient 로 절반 회수: 흰 코어 → 본색 → 투명 가장자리의 «글로우 오브».
      본색은 fxBurst 가 --c 로 준다. 끝 scale 도 .38→.5 — 중간 프레임이 12px 로 읽히던 것 방지. */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
-    background:radial-gradient(circle at 42% 38%, #FFF 0%, var(--c,#FFE07A) 46%, rgba(0,0,0,0) 74%);
+    background:radial-gradient(circle at 42% 38%, #FFF 0%, #FFF 26%, var(--c,#FFE07A) 62%, rgba(0,0,0,0) 88%);
     box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .58s ease-out forwards}
   @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
-    62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(.92);opacity:1}
-    100%{transform:translate(var(--dx),var(--dy)) scale(.5);opacity:0}}
+    62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.62);opacity:0}}
 
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
@@ -1868,7 +1874,7 @@
      시작하지 못한다**(실측: 토스트·체크가 200ms 동안 0% 키프레임에 멈춰 있었다).
      `opacity` 단독은 합성기에서 처리돼 공짜다 — 딤은 이것만으로 충분히 읽힌다. */
   .fx-dim{opacity:.28;transition:opacity .16s ease-out}
-  .fx-undim{transition:opacity .3s ease-out}
+  .fx-undim{transition:opacity .36s ease-out}
   /* 수령한 행은 «이 행이 그 보상의 출처» 라는 것이 읽히게 위로 올린다(색 보정은 쓰지 않는다) */
   .fx-solo{position:relative;z-index:3}
 
@@ -14554,12 +14560,12 @@ function fxPunch(el){
      처음으로 되돌아가** 알약이 끝까지 안 커진다(비평가 2명이 «튀는 프레임이 한 장도 없다» 로 잡았다).
      한 번 튀는 동안(300ms)은 재시작하지 않는다. */
   const now = performance.now();
-  if(el.__fxPunchT && now - el.__fxPunchT < 300) return;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
+  if(el.__fxPunchT && now - el.__fxPunchT < 420) return;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
   el.__fxPunchT = now;
   el.classList.remove('fx-punch');
   void el.offsetWidth;
   el.classList.add('fx-punch');
-  setTimeout(() => el.classList.remove('fx-punch'), 320);
+  setTimeout(() => el.classList.remove('fx-punch'), 450);
 }
 function fxPlus(cur, n){
   const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
@@ -14602,7 +14608,7 @@ function fxBurst(t, col, n){
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
-    const sz = Math.round(rnd(20, 30));
+    const sz = Math.round(rnd(24, 34));
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || '#FFE07A');    /* 16회차 — 글로우 오브의 본색(radial 중간대) */
@@ -14687,7 +14693,7 @@ function fxDelta(el, txt){
   d.style.color = '#B6FFC2';                          /* 스탯 초록 — 재화 골드와 색 어휘 분리(15회차 Z ④) */
   d.style.fontSize = '34px';
   d.style.left = (r.x + r.w/2) + 'px';
-  d.style.top  = (r.y - 6) + 'px';                    /* 앵커(.cv 수치 행) 바로 위에서 출발 */
+  d.style.top  = (r.y - 30) + 'px';                    /* 앵커(.cv) 위 30px — 갱신된 «+2.4» 와 첫 프레임 겹침 방지(16회차 AB) */
   d.textContent = txt;
   L.appendChild(d);
   setTimeout(() => d.remove(), 660);
@@ -14715,7 +14721,7 @@ function fxCheck(el){
     + '<circle cx="50" cy="50" r="41" fill="rgba(20,60,26,.55)" stroke="#7BE88E" stroke-width="8"/>'
     + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#B6FFC2" stroke-width="12"'
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
-    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .26s ease-out .04s forwards"/></svg>';
+    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .18s ease-out .02s forwards"/></svg>';
   L.appendChild(d);
   setTimeout(() => d.remove(), 900);
 }
@@ -14724,12 +14730,12 @@ function fxCheck(el){
    보상 비행은 리스트 하단 → 우상단 HUD 라 반드시 «다른 행 위» 를 지난다(기하학적 성질).
    경로·제어점을 아무리 손봐도 회수되지 않으므로, 지나가는 동안 **형제 행을 딤** 처리해
    «저 퀘스트도 완료됐나» 로 읽힐 여지를 없앤다.
-   14회차 — 760 → 620ms 로 줄였지만 복귀 이징(.34s ease-in)이 느려 693ms 캡처엔 여전히 0% 로
-   찍혔다(15회차 비평 W·X 공통). 15회차 — 딤 «해제 시작»(FXSOLO 530)과 목록 재렌더(FXHOLD 620)를
-   분리한다: 복귀(0.3s ease-out)가 530~830ms 로 돌므로 693ms 프레임에 ~54% 회복이 찍히고,
-   재렌더(620)는 복귀 «도중» 에 겹쳐 한 번의 변화로 읽힌다(«딤 풀림 → 행 교체» 2단 변화 방지).
-   코인 전부 착지는 ~530ms 라 인과도 그대로 선다. */
-const FXSOLO = 530, FXHOLD = 620;
+   15회차 — 해제 시작(FXSOLO 530)·재렌더(FXHOLD 620) 분리. 그래도 16회차 실측(AA·AB 독립)에서
+   693ms 복귀 0% — 이 컨테이너에서 setTimeout 발화 + 스타일 재계산 + 페인트가 **~170ms 늦게**
+   얹혀 «530 시작» 이 실제로는 ~700 에 시작한다. 17회차 — 시작을 440 으로 앞당긴다: 코인이 형제
+   행 대역(y900~1600)을 지나는 것은 ~300ms 까지라 440 해제는 오독 방지 목적을 해치지 않고,
+   지연을 먹어도 ~610 부터 복귀가 굴러 693 프레임에 30~50% 가 찍힌다. 재렌더는 620 유지. */
+const FXSOLO = 440, FXHOLD = 620;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
