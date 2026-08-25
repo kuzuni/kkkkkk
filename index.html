@@ -2788,7 +2788,7 @@
      상변 검정4+갈색10=14 · 하변 검정8+갈색13=21 · 좌우 검정5+갈색12=17. 바닥 그림자를 테두리에 내장한 것. */
   .spc-ava{left:340px;top:60px;width:179px;height:180px;box-sizing:border-box;
     border:solid #000;border-width:4px 5px 8px;border-radius:7px;background:#715A4A}
-  .spc-ava>.in{position:absolute;left:12px;right:12px;top:10px;bottom:13px;
+  .spc-ava>.in{position:absolute;left:12px;right:12px;top:10px;bottom:10px;
     border:4px solid #000;border-radius:4px;background:#3B5A86;overflow:hidden;
     text-align:center;font-size:96px;line-height:145px}
   /* 칭호 육각 배너 318×56(외곽선 포함 ref 783–838) — 채움 #433A35, 사면 하이라이트, 검정 외곽선 3 */
@@ -2805,7 +2805,7 @@
   .spc-rib>u{position:absolute;left:4px;right:4px;top:6px;bottom:6px;
     background:linear-gradient(180deg,#635147,#5B4D44);
     clip-path:polygon(0 50%,11px 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,11px 100%)}
-  .spc-rib>b{position:absolute;left:10px;right:10px;top:11px;bottom:10px;background:#433A35;
+  .spc-rib>b{position:absolute;left:9px;right:9px;top:11px;bottom:10px;background:#433A35;
     clip-path:polygon(0 50%,8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%);
     text-align:center;line-height:35px;font-size:30px;color:#fff}
   .spc-rib>b>i{transform:scaleX(.86)}   /* ref 잉크폭 107 vs 우리 124 */
@@ -2813,18 +2813,24 @@
      텍스트 중심은 스트립이 아니라 «다이얼로그 중심»(ref 539.5) — translateX 로 보정 */
   /* 5회차 — ref 는 스트립 우단(701)이 연필 버튼(696~) **밑으로 파고든다**. 우리는 694 에서 끊겨 2px 틈이
      생겼다(비평가 J). 폭 355→364(우단 703)로 늘리고 중심 보정 translateX 24→18 로 맞춘다 */
-  .spc-nick{left:228px;top:312px;width:364px;height:48px;
-    background:linear-gradient(90deg,rgba(87,80,68,0) 0,rgba(87,80,68,.95) 60px,rgba(70,63,52,.97) 100%);
-    box-shadow:0 3px 8px rgba(120,80,40,.15);
+  /* 7회차 정정 — 5회차에 J 의 «스트립이 연필 밑으로 파고든다» 를 받아 폭을 364(우단 703)로 늘렸는데
+     N 이 «ref 는 겹치지 않고 697/698 에서 접촉» 으로 반증했고 자가 스캔이 N 을 지지한다:
+     ref y870 의 «크림 아닌» 런 354..701 은 «스트립(~695) + 연필 좌측 테두리(696..701)» 이지 스트립 단독이 아니다.
+     → 폭 364→356(우단 695), 중심 보정 translateX 18→22.
+     몸통도 되돌린다 — ref 는 x400~680 이 **균일**(밝기 101)하고 우단 20px 에서만 페이드아웃하는데
+     우리는 좌→우로 계속 어두워졌다(84→66). 하단 소프트 그림자도 ref 에 없다(M·N 독립 지적). */
+  .spc-nick{left:228px;top:312px;width:356px;height:48px;
+    background:linear-gradient(90deg,rgba(84,77,65,0) 0,rgba(84,77,65,.83) 60px,
+      rgba(84,77,65,.83) calc(100% - 20px),rgba(84,77,65,0) 100%);
     text-align:center;line-height:48px}
   /* 6회차 — 흰 잉크 폭 235 vs ref 261(−10%) → scaleX 로만 늘린다(높이는 ref 23 / 우리 22 로 거의 같다) */
   .spc-nick>i{font-size:28px;color:#fff;-webkit-text-stroke:5px #3E3327;paint-order:stroke fill;
-    transform:translateX(18px) scaleX(1.11)}
+    transform:translateX(22px) scaleX(1.11)}
   /* 편집(연필) 버튼 56×54 — 테두리 5 #52433C, 채움 크림 */
   /* 5회차 — 진갈 테두리 바깥 bbox 실측 ref x696–748 y845–896 = **53×52**(측정표 §6 의 56×54 는 검정 AA 포함값).
      비평가 I 도 독립적으로 53×52 @ x696 로 읽었다. 반경도 ref ≈10 vs 우리 12 */
   .spc-edit{left:585px;top:310px;width:53px;height:54px;box-sizing:border-box;
-    border:5px solid #52433C;border-radius:10px;background:#F6E9C6;cursor:pointer;
+    border:6px solid #52433C;border-radius:10px;background:#F6E9C6;cursor:pointer;
     box-shadow:0 3px 8px rgba(120,80,40,.15);
     text-align:center;font-size:28px;line-height:44px}
   /* 스탯 리스트 뷰포트 800×760 — radius 20, 스크롤바 없는 내부 스크롤, 상단 23px 은 1행 색 패딩.
@@ -2848,7 +2854,7 @@
      (16 «흰 코어 두께» 천장과 동일). 외곽선은 ref 실측 ≈2.5px 바깥 = stroke 5 로 되돌린다.
      좌 인셋 37→39: 흰 코어 좌단이 ref 180 vs 우리 178 이었다 */
   .spc-row>.nm{position:absolute;left:39px;top:0;height:60px;line-height:60px;
-    font-size:27px;color:#F9F9F9;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-size:27px;color:#F9F9F9;-webkit-text-stroke:6px #000;paint-order:stroke fill;
     white-space:nowrap}
   .spc-row>.nm>i{transform:scaleX(.955);transform-origin:0 50%}
   /* 값(우) — 잉크 우변 컨테이너−37, 연두 #BAFD60 + «순검정» 외곽선 (1회차: 진록 아님, ref (0,0,0)).
@@ -2856,7 +2862,7 @@
      비평가 L 의 «세로중심 −1.5px» 는 fs 를 31→32.5 로 올리자 저절로 해소됐다(잉크가 베이스라인 위로 자란다) —
      top 을 같이 밀면 오히려 +1.5 가 되므로 top 은 0 으로 둔다(실측: fs 만 올린 상태에서 중심 Δ0) */
   .spc-row>.vl{position:absolute;right:39px;top:0;height:60px;line-height:60px;
-    font-size:32.5px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-size:33.5px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
   .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
@@ -2881,7 +2887,7 @@
       calc(100% - 21px) 100%,17px 100%,17px 74%,0 50%,17px 21%);
     text-align:center;line-height:55px;font-size:35px;color:#FEF7C1}
   .spc-tab-on>b::before{content:'';position:absolute;top:0;bottom:0;left:4px;right:5px;
-    background:linear-gradient(180deg,#FFDD66 0 3px,#FFC736 3px 50%,#F8A63A 50%);
+    background:linear-gradient(180deg,#FFDD66 0 4px,#FFC736 4px 50%,#F8A63A 50%);
     clip-path:polygon(16px 0,calc(100% - 19px) 0,calc(100% - 19px) 21%,100% 50%,calc(100% - 19px) 74%,
       calc(100% - 19px) 100%,16px 100%,16px 74%,0 50%,16px 21%)}
   .spc-tab-on>b>i{position:relative;font-size:37px;-webkit-text-stroke:6px #000;
