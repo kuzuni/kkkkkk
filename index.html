@@ -4495,23 +4495,15 @@
     background:linear-gradient(#9BE227,#9BE227) center/24px 9px no-repeat,
       linear-gradient(#9BE227,#9BE227) center/9px 25px no-repeat}
 
-  /* ---- 캐릭터 일러스트 (이모지 대체 — 실제 아트 들어오면 교체) ---- */
-  /* 작업 25: 카드 1장이 컨테이너 전체(1284)를 쓴다. 리본·슬롯·알약·Lv 은 레퍼런스 카드1 규격
-     그대로 고정이고, **늘어난 높이는 일러스트가 흡수한다**(340x254 → 640x658, 바닥 정렬 유지).
-     크기는 레퍼런스의 «리본 아래 빈 하늘 = 카드 높이의 18%» 를 되돌리도록 역산했다
-     (첫 시안 440x470 은 이 값이 38% 라 카드 좌상단이 통째로 빈 구멍이었다 — 시각 검수 D5).
-     지면 비율은 카드1 그대로 하늘 68.5% / 지면 31.5%, 발끝은 지면 36% 지점(= 레퍼런스와 동일) */
-  /* 2회차(시각 검수 D8): 위 640x658 은 «리본 아래 18%» 만 맞추고 **아래를 안 봤다** —
-     일러스트 잉크 바닥(local 1171)과 스탯 알약 상단(1330) 사이에 684x158 짜리 빈 띠가 남았다.
-     레퍼런스 카드1 은 같은 간극이 **4px** 다(아트 잉크 바닥 1198 / 알약 상단 1203). 두 앵커를
-     동시에 맞추도록 640x658 -> **640x831** 로 키웠다: 잉크 local **498~1326**(리본 아래 226 = 17.6%,
-     알약 위 **4**). `line-height` 는 825 로 따로 둔다 — height 를 늘려도 글리프가 안 밀리게 하려는 것.
-     `text-indent:-40px` 는 **이모지 전용 보정**이다. 🦸 는 사이드베어링 때문에 잉크가 박스 중심보다
-     오른쪽에 찍히는데, fs 를 590 -> 724 로 키우면 그 편차도 같이 커져 잉크 우단이 765 까지 가서
-     **슬롯 열(x724)을 침범**한다. 인덴트로 되돌리면 잉크 x141~691 로 좌측 열 안에 들어온다.
-     실제 아트로 교체할 때는 이 인덴트를 지우고 박스(45,495 640x831)에 맞춰 넣으면 된다. */
-  .eqil{text-align:center;pointer-events:none;
-    left:45px;width:640px;top:495px;height:831px;font-size:724px;line-height:825px;text-indent:-40px}
+  /* ---- 캐릭터 일러스트 — 작업 79: 전투 씬 플레이어 스프라이트를 캔버스로 직접 그린다 ---- */
+  /* 박스 좌표는 이모지 시절(측정표 06 «캐릭터 일러스트 용사» 45,495 640×831)과 동일 — 잉크 바닥이
+     스탯 알약 상단 4px 위, 리본 아래 빈 하늘 17.6% 인 앵커 2개를 그대로 물려받는다.
+     이모지 사이드베어링 보정(text-indent:-40px)·font-size 는 실제 아트 교체와 함께 제거(측정표 명시).
+     발밑 앵커 = 박스 바닥 중앙(drawHeroTo). 배율은 정수(현재 13 — 79×63 논리 프레임 기준
+     floor(831/63))라 잉크는 약 598×598 로 박스보다 작지만, 비정수·비율 왜곡 스케일은 픽셀 아트가
+     흐려지므로 금지. 코스튬(61)은 전투와 같은 tinted('knight', AV[cosCur()].tint) 를 지나므로
+     코스튬을 바꾸면 전투와 시트가 동시에 바뀐다. */
+  .eqil-cv{left:45px;width:640px;top:495px;height:831px;pointer-events:none;image-rendering:pixelated}
 
   /* 작업 50 — 잠금 탭(«기타» 🔒)이 폐기되면서 `.eqli` 자물쇠 아이콘도 같이 제거했다.
      06 서브탭은 이제 «장비·스킬·코스튬·동료» 4개가 전부 해금이라 쓰는 곳이 없다. */
@@ -7984,6 +7976,33 @@ function drawFrameC(key, frameName, x, y, scale, flip, alpha, img){
   ctx.drawImage(src, fr[0], fr[1], fr[2], fr[3],
     -fr[6]*scale/2 + fr[4]*scale, -fr[7]*scale/2 + fr[5]*scale, fr[2]*scale, fr[3]*scale);
   ctx.restore();
+  return true;
+}
+/* 작업 79·80 공용 — 임의 캔버스에 플레이어(knight) 프레임을 그린다.
+   앵커는 «발밑 = 캔버스 바닥 중앙». 배율은 정수만(픽셀 아트 흐림 방지) — 미지정이면
+   논리 프레임 높이(fr[7]=63) 기준 floor(canvas.height/63). 틴트는 전투 렌더와 완전히 같은
+   tinted('knight', AV[avatar].tint) 를 지나므로 색이 전투 캔버스와 픽셀 단위로 일치한다.
+   가로는 idle 0프레임의 잉크 중심으로 재중심(c0) — 프레임별 ox/sw 차이(±1src px)는
+   원래 애니메이션의 흔들림이므로 살린다. 80 랭킹 시상대는 {avatar, frame, scale} 만 바꿔 재사용. */
+function drawHeroTo(canvas, o){
+  const A = ATLAS.knight, g = canvas.getContext('2d');
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  if(!A || !A.image) return false;
+  const fr = A.f[(o && o.frame) || (A.a.idle && A.a.idle[0])];
+  if(!fr) return false;
+  const av = o && AV[o.avatar];
+  const img = tinted('knight', av && av.tint);
+  if(!img) return false;
+  const sc = (o && o.scale) || Math.max(1, Math.floor(canvas.height/fr[7]));
+  const f0 = A.f[A.a.idle[0]];
+  const c0 = f0[6]/2 - f0[4] - f0[2]/2;   /* idle 0프레임 잉크 중심 → 0 이 되는 보정 */
+  g.imageSmoothingEnabled = false;
+  g.save();
+  g.translate(canvas.width/2, canvas.height);
+  if(o && o.flip) g.scale(-1, 1);
+  g.drawImage(img, fr[0], fr[1], fr[2], fr[3],
+    (-fr[6]/2 + fr[4] + c0)*sc, (-fr[7] + fr[5])*sc, fr[2]*sc, fr[3]*sc);
+  g.restore();
   return true;
 }
 function setAnim(e, key, name, fps, loop){
@@ -13739,7 +13758,7 @@ function showCosDetail(id){
    스탯 알약은 카드1 과 같은 «카드 바닥에서 39px» 규칙으로 카드 바닥(패널 1418)에 맞춰 내렸다.
    sw/hp 아이콘 오프셋(−13/−4)도 카드1 그대로 */
 const EQP_GEO = { rb:167, sl:[256, 656, 1056], st:1330, sw:1317, hp:1326 };
-const EQP_CARD = { n:'용사', rb:'#F87D2F', rd:'#C7501D', rt:'#E86F2A', ic:'🦸' };
+const EQP_CARD = { n:'용사', rb:'#F87D2F', rd:'#C7501D', rt:'#E86F2A' }; /* ic(🦸) 는 작업 79 로 폐기 — 스프라이트 캔버스 */
 
 /* 슬롯 1칸 HTML. 뱃지는 슬롯 좌상단 모서리에 걸치므로 슬롯 **뒤에** 그린다(뒤 형제가 위) */
 function eqpSlot(y, badge, ic, lv, attr){
@@ -13749,9 +13768,24 @@ function eqpSlot(y, badge, ic, lv, attr){
        + '</div>'
        + '<div class="eqbd" style="top:' + (y - 19) + 'px"><em>' + badge + '</em></div>';
 }
+/* 작업 79 — 시트 캐릭터의 idle 애니메이션 상태. 전투 player 초기화(akey knight·idle·8fps)와 동일 규격.
+   rAF 는 시트가 보이는 동안만 돌고(#eqw.on 해제 시 다음 틱에서 자멸) 닫히면 정지한다. */
+const eqHero = { akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false };
+let eqHeroRaf = 0, eqHeroTs = 0;
+function eqHeroTick(ts){
+  eqHeroRaf = 0;
+  const cv = $('eqCards').querySelector('.eqil-cv');
+  if(!$('eqw').classList.contains('on') || !cv){ eqHeroTs = 0; return; }
+  const dt = eqHeroTs ? Math.min((ts - eqHeroTs)/1000, 0.1) : 0;
+  eqHeroTs = ts;
+  stepAnim(eqHero, dt);
+  drawHeroTo(cv, { avatar: cosCur(), frame: curFrame(eqHero) });
+  eqHeroRaf = requestAnimationFrame(eqHeroTick);
+}
 function renderEqPage(){
   const g = EQP_GEO, c = EQP_CARD;
-  let h = '<div class="eqil"><em>' + c.ic + '</em></div>'
+  /* 작업 79 — 이모지 자리표시(🦸) 폐기. 전투와 같은 아틀라스·틴트로 캔버스에 직접 그린다 */
+  let h = '<canvas class="eqil-cv" width="640" height="831"></canvas>'
     +  '<div class="eqrb" style="top:' + g.rb + 'px;left:174px;'
     +    '--rb:' + c.rb + ';--rd:' + c.rd + ';--rt:' + c.rt + '">'
     +    '<div class="tl l"></div><div class="tl r"></div>'
@@ -13769,6 +13803,8 @@ function renderEqPage(){
     +  '<div class="eqic sw" style="top:' + g.sw + 'px"><i></i></div>'
     +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i></i></div>';
   $('eqCards').innerHTML = h;
+  /* 작업 79 — innerHTML 교체 직후 현재 프레임을 즉시 1장 그린다(rAF 첫 틱 전 빈 캔버스 방지) */
+  drawHeroTo($('eqCards').querySelector('.eqil-cv'), { avatar: cosCur(), frame: curFrame(eqHero) });
 }
 
 /* 06 은 «영웅 탭 → 장비» 의 **유일한** 화면이다(작업 57, 2026-08-25).
@@ -13780,6 +13816,8 @@ function syncEquipPage(){
   const on = panelOpen && curTab === 'hero' && heroTab === 'eq';
   $('eqw').classList.toggle('on', on);
   if(on) renderEqPage();
+  /* 작업 79 — 시트가 보일 때만 idle 재생. 닫히면 eqHeroTick 이 첫 틱에서 스스로 멈춘다 */
+  if(on && !eqHeroRaf) eqHeroRaf = requestAnimationFrame(eqHeroTick);
 }
 $('eqTabs').addEventListener('click', e => {
   const t = e.target.closest('[data-eqtab]');
