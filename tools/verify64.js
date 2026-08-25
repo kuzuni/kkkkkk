@@ -6,7 +6,12 @@
  * «만들어 놓음» 이 아니라 «실제 게임 데이터로 동작하고 결과가 S·HUD·다른 화면에 반영됨» 을 본다.
  * 마우스 pointer 이벤트를 **진짜로** 눌렀다 떼면서(합성 dispatch 아님) 아래를 확인한다:
  *   §1 진입 · §2 단발 탭 · §3 350ms 임계 · §4 반복·가속 · §5 정지 4종(up/leave/cancel/팝업닫힘)
- *   §6 부족·상한 자동 정지 + shake · §7 배수 탭 x10/x30 · §8 스탯 훈련 서브탭 · §9 저장·HUD 반영
+ *   §6 부족·상한 자동 정지 + shake · §7 배수 탭 x10/x30 · §8 3종 카드 공통 · §9 저장·HUD 반영
+ *
+ * 132(2026-08-25): §8 은 원래 «스탯 훈련 서브탭» 을 검사했으나 작업 88 이 스탯 포인트 훈련
+ *   (statTrain*·S.sp*·trSub·서브탭)을 통째로 폐기해 **항상 FAIL(35/37)** 이었다. 그래서 88 이후
+ *   64 의 «꾹 누르기» 회귀는 한 번도 게이트로 쓰이지 못했다. 폐기된 화면 대신 **같은 취지**
+ *   («반복 강화가 atk 전용이 아니다»)를 지금 존재하는 대상 = 체력·체력 회복 카드로 검사한다.
  *   §10 58 연출 간소화(#fxl 폭주 없음) · §11 콘솔 에러 0
  *
  * ⚠ 결정성: 게임 루프의 `step()` 을 비워 전투·골드 수입·자동구매를 멈춘 뒤 잰다.
@@ -27,6 +32,8 @@ const { chromium } = (() => {
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const CARD = '#trw [data-tr="atk"]';
+const CARD_HP = '#trw [data-tr="hp"]';                  /* 132 — 3종 카드 공통 검사(§8) */
+const CARD_RG = '#trw [data-tr="regen"]';
 let pass = 0, fail = 0;
 const errs = [];
 function ok(name, cond, detail){
@@ -56,25 +63,25 @@ async function hold(page, sel, ms){
   await page.waitForTimeout(ms);
   await page.mouse.up();
 }
+/* 132 — 88 이 폐기한 sp/spAtk 대신 훈련 3종(TRAIN_STATS) 레벨을 다 본다 */
 const snap = page => page.evaluate(() => ({
-  atk: S.lv.atk | 0, hp: S.lv.hp | 0, gold: S.gold,
-  sp: S.sp | 0, spAtk: S.spAtk | 0, stage: S.trainStage | 0,
+  atk: S.lv.atk | 0, hp: S.lv.hp | 0, regen: S.lv.regen | 0,
+  gold: S.gold, stage: S.trainStage | 0,
 }));
 /* 결정적 초기 상태 — 전투 정지 + 골드/레벨 세팅 */
 async function reset(page, o){
   const wasOpen = await page.evaluate(cfg => {
     step = () => {};                       /* 전투·수입·자동구매 정지 */
     S.autoBuy = false;
-    S.trainStage = 1; S.statStage = 1;
-    S.lv.atk = cfg.atk; S.lv.hp = 0; S.lv.regen = 0;
-    S.gold = cfg.gold; S.sp = cfg.sp; S.spAtk = 0; S.spHp = 0; S.spRegen = 0;
+    S.trainStage = 1;
+    S.lv.atk = cfg.atk; S.lv.hp = cfg.hp; S.lv.regen = cfg.regen;
+    S.gold = cfg.gold;
     S.buyQty = cfg.qty;
-    trSub = cfg.sub;
     save();
     const wasOpen = $('trw').classList.contains('on');
     if (!wasOpen) openTrain(); else renderTrain();
     return wasOpen;
-  }, Object.assign({ atk: 0, gold: 1e12, sp: 0, qty: 1, sub: 'train' }, o || {}));
+  }, Object.assign({ atk: 0, hp: 0, regen: 0, gold: 1e12, qty: 1 }, o || {}));
   /* ⚠ 팝업을 «새로» 열었으면 60 의 바닥 시트 슬라이드업(약 300ms)이 도는 중이다.
      그 사이 getBoundingClientRect() 로 잡은 좌표는 도착 전 위치라 클릭이 카드를 빗나가고
      «Δ0 = 한 번도 안 사졌다» 로 보인다(실제로 4회 중 1회 이렇게 실패했다).
@@ -122,18 +129,37 @@ async function reset(page, o){
 
   /* ── §4 반복·가속 ── */
   console.log('[4] 연속 강화 · 가속 (160ms → ×0.86 → 최소 60ms)');
+  /* 132 — 옛 «앞 600ms 구매수 vs 뒤 600ms 구매수» 비교는 이 컨테이너에서 앞·뒤가 매번 **같은 수**로
+     나와(앞6/뒤6 · 앞5/뒤5) ±1 지터마다 뒤집혔다 — 3회 중 1회 FAIL. 원인은 구현이 아니라 측정이다:
+     틱마다 save()+renderTrainLive() 비용 w 가 붙어 실측 간격이 iv+w 가 되므로, 창 두 개의 «개수» 로는
+     가속분이 w 에 묻힌다. 그래서 **구매 시각을 직접 재서 간격 자체**를 본다 — 한 번의 실행 안에서
+     비교되므로 기계 속도에 무관하다. (LESSONS «측정이 애니메이션/부하에 진» 부류) */
   await reset(page);
+  await page.evaluate(() => {
+    window.__trT = []; window.__trOrig = trainBuy;
+    trainBuy = function(id){ const r = window.__trOrig(id); if(r) window.__trT.push(performance.now()); return r; };
+  });
   const p4 = await center(page, CARD);
   await page.mouse.move(p4.x, p4.y); await page.mouse.down();
-  await page.waitForTimeout(350 + 600);                 /* 반복 시작 후 앞 600ms */
-  const mid = await snap(page);
-  await page.waitForTimeout(600);                       /* 뒤 600ms */
+  await page.waitForTimeout(350 + 1200);
   await page.mouse.up();
   const end = await snap(page);                         /* 스냅은 «뗀 뒤» — 왕복 지연 동안의 틱을 세지 않는다 */
-  const n1 = mid.atk, n2 = end.atk - mid.atk;
-  ok('1.0초 꾹 → 5회 이상 강화', mid.atk >= 5, mid.atk + '회');
-  ok('가속: 뒤 600ms 구매수 > 앞 600ms', n2 > n1 - 1, '앞 ' + n1 + ' / 뒤 ' + n2);
-  ok('가속 상한: 뒤 600ms 가 10회 이하(최소 간격 60ms)', n2 <= 11, n2 + '회');
+  const ts = await page.evaluate(() => {
+    const t = window.__trT; trainBuy = window.__trOrig;  /* 래퍼 원복 — 뒤 절에 영향 없게 */
+    return t.map(v => v - t[0]);
+  });
+  const gaps = ts.slice(1).map((v, i) => v - ts[i]);    /* gaps[0] = 반복 시작 지연(350ms), 뒤가 반복 간격 */
+  const rep = gaps.slice(1);
+  const med3 = a3 => a3.slice().sort((x, y) => x - y)[Math.floor(a3.length / 2)];
+  const first = rep[0], last = med3(rep.slice(-3));     /* 마지막 3개의 중앙값 — 단발 지터에 안 흔들린다 */
+  console.log('     간격(ms): ' + gaps.map(v => Math.round(v)).join(' '));
+  ok('1.0초 꾹 → 5회 이상 강화', ts.filter(v => v <= 1000).length >= 5,
+     ts.filter(v => v <= 1000).length + '회');
+  ok('반복 시작 지연 ≈ 350ms', gaps[0] >= 300 && gaps[0] <= 560, Math.round(gaps[0]) + 'ms');
+  ok('가속: 마지막 반복 간격이 첫 반복 간격의 85% 이하', rep.length >= 5 && last <= first * 0.85,
+     '첫 ' + Math.round(first) + 'ms → 끝 ' + Math.round(last) + 'ms (' + rep.length + '회)');
+  ok('가속 상한: 반복 간격이 55ms 밑으로 내려가지 않음(최소 60ms)', Math.min.apply(null, rep) >= 55,
+     '최소 ' + Math.round(Math.min.apply(null, rep)) + 'ms');
   await page.waitForTimeout(400);
   const after4 = await snap(page);
   ok('pointerup 즉시 정지 (뗀 뒤 400ms Δ0)', after4.atk === end.atk, 'Δ' + (after4.atk - end.atk));
@@ -224,23 +250,32 @@ async function reset(page, o){
   await page.waitForTimeout(120);
   ok('x30 탭 클릭 → S.buyQty=30', await page.evaluate(() => S.buyQty) === 30);
 
-  /* ── §8 스탯 훈련 서브탭 ── */
-  console.log('[8] 스탯 훈련 서브탭 — 스탯 포인트로 같은 동작');
-  await reset(page, { sub: 'stat', sp: 12 });
-  a = await snap(page);
-  await hold(page, CARD, 1800);
-  await page.waitForTimeout(400);
+  /* ── §8 3종 카드 공통 (132 — 옛 «스탯 훈련 서브탭» 대체) ── */
+  console.log('[8] 3종 카드 공통 — 체력 · 체력 회복 카드도 같은 꾹 누르기 (반복이 atk 전용이 아니다)');
+  await reset(page);
+  a = await snap(page); await hold(page, CARD_HP, 420); await page.waitForTimeout(400);
   b = await snap(page);
-  ok('스탯 훈련도 꾹 누르면 연속(sp 12 → 12회에서 정지)', b.spAtk === 12 && b.sp === 0,
-     'spAtk ' + b.spAtk + ' / sp ' + b.sp);
-  await reset(page, { sub: 'stat', sp: 0 });
-  const p8 = await center(page, CARD);
+  ok('체력 카드 420ms → Lv +2 (단발 1 + 반복 1)', b.hp - a.hp === 2, 'Δhp ' + (b.hp - a.hp));
+  ok('체력 카드를 눌러도 공격력·체력 회복은 안 오른다', b.atk === a.atk && b.regen === a.regen,
+     'Δatk ' + (b.atk - a.atk) + ' / Δregen ' + (b.regen - a.regen));
+
+  await reset(page);
+  a = await snap(page); await hold(page, CARD_RG, 1000); await page.waitForTimeout(400);
+  b = await snap(page);
+  ok('체력 회복 카드 1.0초 꾹 → 5회 이상 연속', b.regen - a.regen >= 5, 'Δregen ' + (b.regen - a.regen));
+  ok('체력 회복 카드를 눌러도 공격력·체력은 안 오른다', b.atk === a.atk && b.hp === a.hp,
+     'Δatk ' + (b.atk - a.atk) + ' / Δhp ' + (b.hp - a.hp));
+
+  /* 골드 0 자동 정지 + 60 shake 가 atk 카드 전용 경로가 아니다 */
+  await reset(page, { gold: 0 });
+  const p8 = await center(page, CARD_HP);
   await page.mouse.move(p8.x, p8.y); await page.mouse.down();
   await page.waitForTimeout(120);
-  const shook8 = await page.evaluate(s => document.querySelector(s).classList.contains('jz-sh'), CARD);
+  const shook8 = await page.evaluate(s => document.querySelector(s).classList.contains('jz-sh'), CARD_HP);
   await page.mouse.up();
-  ok('포인트 0 → shake + 강화 없음', shook8 && (await snap(page)).spAtk === 0);
-  await page.evaluate(() => { trSub = 'train'; renderTrain(); });
+  await page.waitForTimeout(120);
+  ok('체력 카드도 골드 0 → shake + 강화 없음', shook8 && (await snap(page)).hp === 0, 'shake ' + shook8);
+  await reset(page);
 
   /* ── §9 저장 · HUD · 다른 화면 반영 ── */
   console.log('[9] 결과가 S · HUD · 다른 화면에 반영');
