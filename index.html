@@ -246,6 +246,97 @@
   #bossRt{left:402px;top:294px;width:276px;height:82px;font-size:28px;line-height:62px}
   #bossRt i{top:-3px;transform:scaleX(.970)}
 
+  /* ============ 작업 30 — 던전 입장 화면 ============
+     측정표 docs/measure/30-던전입장.md. 28 과 같은 방식이다 — 02 를 한 줄도 고치지 않고
+     상태 클래스 `#app.dunrun` 으로 덮는다. 클래스가 빠지면 기본 화면은 그대로다.
+     ⚠ 좌표 기준이 다르다 — 던전 모드는 상단 HUD(#top 104)가 없어 #stagearea top 이
+        프레임 0 = ref 84 다. 그래서 이 절의 top 은 «ref y − 84» 이고,
+        02·39 의 «ref y − 188»(상단 HUD 가 있는 화면 전용)과 다르다. */
+  #app.dunrun #top,
+  #app.dunrun #tabbar,
+  #app.dunrun #stinfo,
+  #app.dunrun #menub,
+  #app.dunrun #sideL,
+  #app.dunrun #botleft,
+  #app.dunrun #tuto{display:none}
+  /* 탭바(180)를 없애면 #stagearea 가 그만큼 자라고, 바닥에 붙은 #battlefoot 이 통째로 내려간다
+     → 슬롯 행이 정확히 +180 이동해 ref 2195..2313 에 앉는다(측정표 §7). 슬롯 규칙은 손대지 않는다. */
+  /* 배속 버튼만 자리를 옮긴다 — ref (963,2059,81,82) → right 37 · bottom 200 */
+  #app.dunrun #spdb{right:37px;bottom:200px;width:81px;height:81px;background:rgba(0,0,0,.60)}
+
+  /* 던전 HUD 묶음 — 타이틀 · ⏱ 타이머 · 진행바. 캔버스 위 표시 전용(z3, 포인터 통과) */
+  #dunHud{position:absolute;left:0;top:0;width:1080px;height:320px;display:none;z-index:3;
+    pointer-events:none}
+  #app.dunrun #dunHud{display:block}
+  /* 타이틀 «황금 동굴 - 레벨 3» — 잉크 ref (388,177,303,35) 중심 x539,
+     검정 외곽선 5px(= 중심 그리기라 10px 지정) */
+  #dunTtl{position:absolute;left:0;top:90px;width:1080px;text-align:center;white-space:nowrap;
+    font-size:38px;line-height:39px;font-weight:900;color:#fff;
+    -webkit-text-stroke:10px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+  /* ⏱ 남은 시간 — 클러스터 ref (397,230,242,80). 39 와 1px 이내로 같은 에셋이라
+     #bossTm 의 구성(용두 + 원판 + 흰 숫자)을 그대로 복제하되 30 실측값으로 다시 적는다 */
+  #dunTm{position:absolute;left:397px;top:146px;width:242px;height:80px}
+  /* 원판 ref Ø66 중심 (429.5,277) · 용두 ref x411..446 / y230..250 */
+  #dunTm s{position:absolute;left:0;top:0;width:66px;height:80px;text-decoration:none}
+  #dunTm s::before,#dunTm s::after{content:'';position:absolute;box-sizing:border-box;
+    background:#FDEB4E;border:4px solid #000}
+  #dunTm s::before{left:14px;top:0;width:36px;height:21px;border-radius:5px}
+  #dunTm s::after{left:0;top:14px;width:66px;height:66px;border-radius:50%}
+  /* 숫자 «29.6» — 잉크 ref (498,252,132,47), 스트로크 5~6(중심 그리기 13) */
+  #dunTm b{position:absolute;left:98px;top:1px;width:200px;font-size:68px;line-height:89px;
+    font-weight:900;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:13px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+  /* scaleX 를 건 글자에는 AA 색번짐 방지가 필수다(LESSONS 16 ③) */
+  #dunTm b i{display:inline-block;font-style:normal;transform:scaleX(1.034);transform-origin:left center;
+    -webkit-font-smoothing:antialiased;backface-visibility:hidden}
+
+  /* 던전 진행바 — 껍데기 ref (190,315,700,80) «계단형»:
+     본체 700×67 + 우측 보스 탭 106×80(13px 더 내려온다). 림 6 #C1B6BA → 검정 트랙 → 주황→적 채움 */
+  #dunBar{position:absolute;left:190px;top:231px;width:700px;height:80px}
+  #dunBar em{position:absolute;left:0;top:0;width:700px;height:67px;border-radius:18px;
+    background:#C1B6BA;font-style:normal}
+  #dunBar em::before{content:'';position:absolute;left:6px;top:6px;width:688px;height:55px;
+    border-radius:12px;background:#0F0F0F}
+  /* 보스 탭 local (594,0,106,80) — 좌상단 코너는 본체와 이어지므로 각지게 둔다 */
+  #dunBar s{position:absolute;left:594px;top:0;width:106px;height:80px;text-decoration:none;
+    border-radius:0 18px 16px 16px;background:#C1B6BA}
+  #dunBar s::before{content:'';position:absolute;left:0;top:6px;right:6px;bottom:6px;
+    border-radius:0 12px 11px 11px;background:#0F0F0F}
+  /* 채움 ref (205,328,475,42) — 트랙 안쪽 좌9·상7. 100% 기준은 «계단 앞» 574 (측정표 §4-2) */
+  #dunBarF{position:absolute;left:15px;top:13px;height:42px;width:0;max-width:574px;border-radius:4px;
+    background:linear-gradient(90deg,#E49D21 0%,#E37915 55%,#DB3E11 100%);
+    box-shadow:inset 0 2px 0 #E1A642}
+  /* 가운데 수치 — 잉크 ref (506,340,68,20) h20, 중심 x539.5 = 바(=화면) 정중앙 고정 */
+  #dunBar b{position:absolute;left:0;top:23px;width:700px;text-align:center;
+    font-size:29px;line-height:24px;font-weight:900;color:#fff;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+  /* 우측 보스 해골 — 잉크 ref (818,335,45,41) 중심 (840,355). 39 와 같은 에셋 */
+  #dunBar u{position:absolute;left:621px;top:14px;width:46px;height:52px;text-decoration:none;
+    font-size:46px;line-height:52px;text-align:center;transform:scale(1.122,.824);
+    filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
+
+  /* 뒤로가기(나가기) — ref (47,1999,207,132) · 검정 6 · radius 14 · 남보라 판 +
+     광택점 Ø14 @(14,14) + 흰 ◀ 잉크 97×77 중심 (149,2062). 라벨 문자는 없다 */
+  #dunOut{position:absolute;left:47px;bottom:210px;width:207px;height:132px;display:none;z-index:4;
+    box-sizing:border-box;border:6px solid #000;border-radius:14px;padding:0;cursor:pointer;
+    font-family:inherit;overflow:hidden;
+    background:linear-gradient(180deg,#7C7D9C 0,#757590 55%,#5F5F7B 100%);
+    box-shadow:0 8px 0 rgba(0,0,0,.16)}
+  #app.dunrun #dunOut{display:block}
+  #dunOut::before{content:'';position:absolute;left:8px;top:8px;width:14px;height:14px;
+    border-radius:50%;background:#9E9EBA}
+  /* 화살표는 글리프가 아니라 CSS 삼각형이다 — ◀ 글리프는 잉크가 72×89(세로로 길다)라
+     레퍼런스의 97×77(가로로 넓다)을 못 맞춘다. scaleX 로 늘리면 외곽선까지 찌그러진다.
+     border 삼각형이면 «아트 자리 규칙»대로 bbox 를 정확히 차지하고, 나중에 이미지로
+     갈아 끼우기만 하면 된다. 중심은 판 중심에서 (−1.5, −2) — ref 화살표 중심 (149,2062). */
+  #dunOut i{position:absolute;left:0;right:0;top:0;bottom:0;font-style:normal;font-size:0}
+  #dunOut i::before,#dunOut i::after{content:'';position:absolute;left:50%;top:50%;
+    width:0;height:0;border-style:solid;border-color:transparent}
+  /* 검정 외곽선 — 흰 삼각형을 약 6px 감싼 109×87 */
+  #dunOut i::before{margin:-45px 0 0 -56px;border-width:43.5px 109px 43.5px 0;border-right-color:#000}
+  /* 흰 화살표 잉크 — ref (101,2024,97,77) */
+  #dunOut i::after{margin:-40.5px 0 0 -50px;border-width:38.5px 97px 38.5px 0;border-right-color:#FDFDFD}
+
   /* 우상단 4분할 메뉴 버튼 — 측정표 §2. 934..1035 / 260..359, radius 24, 검정 24% */
   #menub{position:absolute;right:44px;top:72px;width:102px;height:100px;border-radius:24px;
     background:rgba(0,0,0,.24);cursor:pointer;z-index:3}
@@ -4566,6 +4657,14 @@
     <div id="bossHp"><i id="bossHpF"></i><b id="bossHpN">0</b><u>💀</u></div>
     <button id="bossGv" class="bbtn"><i>포기하기</i></button>
     <button id="bossRt" class="bbtn"><i>스테이지 재도전</i></button>
+    <!-- 작업 30 — 던전 입장 화면 HUD. 측정표 docs/measure/30-던전입장.md.
+         `#app.dunrun` 일 때만 보인다. 표시 전용이라 포인터는 캔버스로 통과시킨다. -->
+    <div id="dunHud">
+      <div id="dunTtl">황금 동굴 - 레벨 1</div>
+      <div id="dunTm"><s></s><b><i id="dunTmN">30.0</i></b></div>
+      <div id="dunBar"><em></em><s></s><i id="dunBarF"></i><b id="dunBarN">0</b><u>💀</u></div>
+    </div>
+    <button id="dunOut"><i>◀</i></button>
     <!-- 우상단 4분할 메뉴 버튼 -->
     <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i></div>
     <div class="side" id="sideL">
@@ -5137,7 +5236,7 @@ fit();
 const JOY_R = 110, JOY_DZ = 0.15;                 /* 베이스 반경(프레임 px) · 데드존 비율 */
 const joy = { on:false, id:-1, cx:0, cy:0, dx:0, dy:0, mag:0 };
 const joyEl = $('joy'), joyKnob = $('joyKnob');
-const JOY_HUD = '#stinfo, #bossTm.on, #bossHp.on';
+const JOY_HUD = '#stinfo, #bossTm.on, #bossHp.on, #dunTtl, #dunTm, #dunBar';   /* 30 — 던전 HUD 3종 추가 */
 
 /* 클라이언트 좌표 → #stagearea 기준 프레임 px (#app 은 fit() 이 scale 하므로 되돌린다) */
 function joyLocal(ev){
@@ -6092,6 +6191,8 @@ function hitEnemy(e, dmg, crit, kx, ky){
   /* 46 레이드 — 샌드백은 죽지 않는다. 모든 피해 경로가 이 함수 한 곳을 지나므로
      여기서만 누적하면 스킬·평타·장판·투사체가 전부 집계된다. */
   if(e.raid){ raidDmg += dmg; e.hp = e.max; return; }
+  /* 30 던전 런 — 같은 이유로 여기 한 줄이면 평타·스킬·장판·투사체·펫이 전부 집계된다 */
+  if(dunRun) dunRun.dmg += dmg;
   if(e.hp <= 0) killEnemy(e);
 }
 function killEnemy(e){
@@ -6610,6 +6711,13 @@ function step(dt){
     if(raidT <= 0){ raidT = 0; endRaid(true); }
   }
 
+  /* ---- 30 던전 런 제한 시간 ---- */
+  if(dunRun){
+    dunRun.t -= dt;
+    if(dunRun.dmg >= dunRun.need) endDunRun(true);
+    else if(dunRun.t <= 0){ dunRun.t = 0; endDunRun(false); }
+  }
+
   /* ---- 승급전 진행 ---- */
   if(promo){
     promo.t -= dt;
@@ -6619,6 +6727,11 @@ function step(dt){
 
   /* ---- 스테이지 클리어 ---- */
   if(raidOn){ /* 46 — 레이드 중에는 스테이지 진행이 멈춘다(샌드백이 죽어도 다음 스테이지로 넘어가지 않는다) */ }
+  /* 30 — 던전 런 중에도 스테이지는 오르지 않는다. 몹이 떨어지면 같은 스테이지로 다시 채운다
+     (제한 시간 동안 때릴 대상이 끊기면 진행바가 멈춰 버린다). */
+  else if(dunRun){
+    if(enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0){ killed = 0; queueMobs(); }
+  }
   else if(!promo && enemies.length === 0 && spawnQ.length === 0 && player.dead <= 0 && S.bossFarm){
     /* 28 — 보스전 실패 상태: 스테이지를 올리지 않고 같은 스테이지 일반 몹을 다시 채운다(파밍) */
     const bonusG = eGold(S.stage) * 12 * stat.goldMul;
@@ -7164,6 +7277,7 @@ function drawHud(){
   /* 레퍼런스 39·40 의 보스 스테이지 헤더도 «STAGE n» 한 줄뿐이다 — «BOSS» 접미어는 없다(28) */
   $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>';
   drawBossHud();
+  drawDunHud();                      /* 30 — 던전 런 HUD(타이머·진행바) */
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
   if(promo){
@@ -7667,19 +7781,83 @@ function challengeDungeon(d){
     return;
   }
   S.daily.dun[d.id]--; S.cnt.dungeon++;
-  const f = S.dun[d.id], need = d.req(f), my = cp();
-  if(my >= need){
+  uiDirty = true; save();
+  /* 30 — 즉시 판정하지 않는다. «던전 입장 화면»(제한 시간 전투)으로 들어간다.
+     클리어·실패 처리는 endDunRun() → finishDunRun() 이 한다. */
+  startDunRun(d, S.dun[d.id]);
+}
+
+/* ==========================================================================
+   작업 30 — 던전 입장(전투) 모드.  측정표 docs/measure/30-던전입장.md
+   04 [도전] → 즉시 판정 팝업이 아니라 **제한 시간 30초 실제 전투**로 전환한다.
+   진행바 = 이번 런의 누적 피해량 / 요구 피해량. 요구치를 채우면 그 자리에서 클리어,
+   시간이 다 되면 실패. 보상·층 해금·클리어 화면(31)은 기존 경로를 그대로 쓴다.
+
+   ⚠ 밸런스 — 판정이 «전투력 ≥ 요구 전투력» 에서 «30초 누적 피해 ≥ 요구 피해» 로 바뀐다.
+      요구 피해 = `d.req(f) × DUN_DMG_K`. 계수는 헤드리스 실측으로 잡았다 —
+      cp() 503 인 기본 캐릭터의 «30초 실제 누적 피해 ÷ cp» 가 스테이지 1/12/40/90 에서
+      1.57 / 1.17 / 0.63 / 0.65 였다(적이 세질수록 사망·카이팅으로 가동률이 떨어진다).
+      «자기 전투력 = 요구 전투력» 인 플레이어가 딱 통과하도록 중앙값 **1.2** 를 쓴다.
+      → 난이도는 기존 «cp ≥ req» 와 사실상 같고, 던전 상수(DUNGEONS·DUN_TRY)는 한 줄도 안 건드렸다.
+   ========================================================================== */
+const DUN_SEC = 30;          /* 제한 시간(초) — 28 보스전과 같은 규격 */
+const DUN_DMG_K = 1.2;       /* 요구 피해 = 요구 전투력 × 이 값 (헤드리스 실측 보정) */
+let dunRun = null;           /* { d, f, t, dmg, need, stage } 또는 null */
+
+function startDunRun(d, f){
+  if(dunRun || raidOn) return;
+  dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage };
+  /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
+  S.bossFarm = false; bossT = 0;
+  enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  player.x = WORLD.w/2; player.y = WORLD.h/2;
+  player.hp = stat.maxHp; player.dead = 0;
+  cineReset();                                   /* 67 — 보스 연출 중에 들어가도 줌이 남지 않게 */
+  { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
+  syncPets();
+  queueMobs();
+  closeDungeon();                                /* 03 던전 페이지가 뒤에 남아 화면을 덮지 않게 */
+  $('dunTtl').textContent = d.n + ' - 레벨 ' + f;
+  $('app').classList.add('dunrun');
+  drawDunHud();
+  uiDirty = true;
+}
+/* quit = 뒤로가기 버튼으로 중단(보상·실패 판정 없음). 입장 횟수는 이미 소모된 상태다. */
+function endDunRun(cleared, quit){
+  const r = dunRun; if(!r) return;
+  dunRun = null;
+  $('app').classList.remove('dunrun');
+  S.stage = r.stage; spawnStage();               /* 던전 전 스테이지로 복귀 */
+  if(quit){ save(); uiDirty = true; showMsg('던전 중단 — 입장 횟수는 소모됩니다'); }
+  else finishDunRun(r, cleared);
+  if($('dunw').classList.contains('on')) renderDunPage();
+  if($('rlw').classList.contains('on')) renderRelicTab();
+}
+function finishDunRun(r, cleared){
+  const d = r.d, f = r.f;
+  if(cleared){
     S.dun[d.id]++;
     giveReward(d.rw(f));
     uiDirty = true; save();
-    /* 31 던전 클리어 화면 — 일반 popup() 대신 전용 결과 연출을 띄운다 */
-    openDunClear(d, f);
+    openDunClear(d, f);                          /* 31 던전 클리어 화면 — 기존 경로 그대로 */
   }else{
     uiDirty = true; save();
-    popup('💀 ' + d.n + ' ' + f + '층 실패', '<p>전투력이 부족합니다.<br>내 전투력 <b>' + fmt(my)
-      + '</b> / 요구 <b style="color:#ff6b7f">' + fmt(need) + '</b><br>더 성장한 뒤 다시 도전하세요!</p>');
+    /* A5 모달 본문은 크림 바탕이다 — 어두운 배경용 색을 쓰면 대비가 1.1:1 이라 안 보인다(46 교훈) */
+    popup('💀 ' + d.n + ' ' + f + '층 실패',
+      '<p>제한 시간 <b>' + DUN_SEC + '초</b> 안에 요구 피해를 채우지 못했습니다.<br>'
+      + '누적 피해 <b>' + fmt(r.dmg) + '</b> / 요구 <b>' + fmt(r.need) + '</b><br>'
+      + '더 성장한 뒤 다시 도전하세요!</p>');
   }
 }
+/* HUD 갱신 — drawHud() 가 매 프레임 부른다(28 의 drawBossHud 와 같은 자리) */
+function drawDunHud(){
+  if(!dunRun) return;
+  $('dunTmN').textContent = Math.max(0, dunRun.t).toFixed(1);
+  $('dunBarF').style.width = (clamp(dunRun.dmg/dunRun.need, 0, 1) * 574) + 'px';
+  $('dunBarN').textContent = fmt(dunRun.dmg);
+}
+$('dunOut').addEventListener('click', () => endDunRun(false, true));
 function sweepDungeon(d){
   const f = S.dun[d.id] - 1;
   if(f < 1){ popup('소탕 불가', '<p>먼저 1층을 클리어해야 소탕할 수 있습니다.</p>'); return; }
