@@ -989,6 +989,72 @@
   .rc.hi{box-shadow:0 0 24px rgba(255,190,90,.8)}
   @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
 
+  /* ==========================================================================
+     58 — UI 연출 공용 모듈 (fx). 스펙: docs/UI-REFERENCE.md 58번
+     «얻거나 오르는» 모든 순간의 피드백을 여기 한 곳에서 만든다. 화면들은 JS 함수를 호출만 한다.
+     레이어 #fxl 은 프레임 전체를 덮되 pointer-events:none 이라 **입력을 막지 않는다**(58 공통 규칙).
+     z-index 60 — 현재 최상위 오버레이(#ciw 41 · #loading 40)보다 위.
+     좌표는 전부 «프레임 px»(1080 기준). #app 의 scale 은 fxPt()/fxRect() 가 되돌린다.
+     ========================================================================== */
+  #fxl{position:absolute;inset:0;z-index:60;pointer-events:none;overflow:hidden;
+    contain:layout style;font-family:inherit}
+
+  /* 재화가 HUD 알약으로 날아가는 아이콘 — 위치는 JS 가 매 프레임 transform 으로 준다 */
+  .fx-fly{position:absolute;left:0;top:0;font-style:normal;font-weight:400;line-height:1;
+    will-change:transform,opacity;
+    text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000,
+      1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
+
+  /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
+  @keyframes fxPunch{0%{transform:scale(1)}28%{transform:scale(1.15)}62%{transform:scale(.975)}100%{transform:scale(1)}}
+  .fx-punch{animation:fxPunch .3s cubic-bezier(.34,1.56,.64,1) both}
+
+  /* 알약 근처 `+1,234` 플로팅 텍스트 */
+  .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
+    transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
+    animation:fxPlus .85s cubic-bezier(.2,.8,.3,1) both}
+  @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
+    18%{opacity:1;transform:translate(-50%,-4px) scale(1.06)}
+    34%{transform:translate(-50%,-10px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-62px) scale(1)}}
+
+  /* 보상 아이템 팝 — 0 → 1.2 → 1 */
+  @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
+  .fx-pop{animation:fxPop .34s cubic-bezier(.34,1.56,.64,1) both}
+
+  /* 방사형 버스트 파티클 */
+  .fx-spark{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+    animation:fxSpark .58s ease-out forwards}
+  @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
+    100%{transform:translate(var(--dx),var(--dy)) scale(.18);opacity:0}}
+
+  /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
+     대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
+     innerHTML 로 통째로 재렌더돼(25 교훈 5) 대상에 붙인 클래스가 그 프레임에 날아간다. */
+  .fx-flash{position:absolute;background:#fff;opacity:0;transform-origin:center;
+    animation:fxFlash .34s ease-out forwards}
+  @keyframes fxFlash{0%{opacity:0;transform:scale(1)}
+    16%{opacity:.82;transform:scale(1.045)}
+    100%{opacity:0;transform:scale(1)}}
+
+  /* 퀘스트 완료 — 체크 스트로크 드로잉 */
+  .fx-check{position:absolute;transform:translate(-50%,-50%)}
+  @keyframes fxDraw{to{stroke-dashoffset:0}}
+  @keyframes fxCheckIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}
+    40%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+    72%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+
+  /* 상단 토스트 — 슬라이드다운 + 스프링, 1.2초 뒤 페이드아웃 */
+  .fx-toast{position:absolute;left:50%;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
+    background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
+    white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
+    animation:fxToastIn .28s cubic-bezier(.34,1.56,.64,1) both}
+  @keyframes fxToastIn{from{opacity:0;transform:translate(-50%,-46px) scale(.9)}
+    to{opacity:1;transform:translate(-50%,0) scale(1)}}
+  .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
+  @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
+
   #loading{position:absolute;inset:0;background:#0b0d18;display:flex;align-items:center;
     justify-content:center;z-index:40;font-size:28px;font-weight:800;color:#8ea0c7}
   #loading.off{display:none}
@@ -4426,6 +4492,8 @@
       </div>
     </div></div>
   </div>
+  <!-- 58 — UI 연출 공용 레이어. 모든 fx* 함수가 여기에만 DOM 을 만든다(pointer-events:none). -->
+  <div id="fxl"></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
 
@@ -5469,6 +5537,9 @@ function killEnemy(e){
   if(i < 0) return;
   enemies.splice(i, 1);
   const g = e.gold * stat.goldMul;
+  /* 58 — «획득 지점»에서 날아가야 하므로 적이 죽은 자리를 출발점으로 알려 준다.
+     실제 비행은 fxWatch() 가 증가분을 묶어서 한 번에 쏜다(연속 킬이 아이콘 폭탄이 되지 않게). */
+  fxAt(fxWorld(e.x, e.y - e.r));
   S.gold += g; goldWin += g; S.totalKills++; killed++;
   gainExp(2 + S.stage*0.5 + (e.tk === 'boss' ? 80 : 0));
   if(e.tk === 'boss' && S.stage >= S.best) S.dia += 250 + S.stage*25;
@@ -6307,7 +6378,8 @@ const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
    클래스로 전부 돌린다. drawHud() 가 매 프레임 부르므로 값이 같으면 DOM 을 건드리지 않는다. */
 let pcbGold = null, pcbDia = null;
 function renderPcb(){
-  const g = fmt(S.gold), d = fmt(S.dia);
+  /* 58 — HUD 와 같은 «표시값»(롤링 중인 값)을 쓴다. 두 곳이 다른 숫자를 보이면 안 된다. */
+  const g = fmt(fxVal('gold')), d = fmt(fxVal('dia'));
   if(g !== pcbGold){
     pcbGold = g;
     document.querySelectorAll('.pcb-g>b').forEach(e => { e.textContent = g; });
@@ -6325,8 +6397,9 @@ function drawHud(){
   $('cpN').textContent = fmt(cp());
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
-  $('goldN').textContent = fmt(S.gold);
-  $('diaN').textContent = fmt(S.dia);
+  /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
+  $('goldN').textContent = fmt(fxVal('gold'));
+  $('diaN').textContent = fmt(fxVal('dia'));
   /* 33 — 정보 팝업이 열려 있으면 보유량 표시도 같이 갱신한다(열린 채로 값이 굳지 않게) */
   if(curInfoKey) renderCurInfo();
   /* 41 — 03·14 팝업 내장 재화 바도 같이 갱신 */
@@ -6591,14 +6664,28 @@ function showSummonResult(b, times, res, lvUp){
     const f = agg.find(a => a.it.id === r.it.id);
     if(f) f.n++; else agg.push({ it:r.it, n:1 });
   });
-  $('sumGridIn').innerHTML = agg.map(a => {
+  /* 58 — «카드가 등급 순으로 순차 팝». DOM 순서(=레이아웃)는 12 규격 그대로 두고
+     animation-delay 만 등급 오름차순으로 매겨 낮은 등급부터 터지게 한다. */
+  const dly = new Array(agg.length).fill(0);
+  agg.map((a, i) => ({ i, g:a.it.g })).sort((x, y) => x.g - y.g || x.i - y.i)
+     .forEach((o, k) => { dly[o.i] = k * 0.055; });
+  $('sumGridIn').innerHTML = agg.map((a, i) => {
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
-    return '<div class="sm-c" style="--face:' + C.face + ';--rim:' + C.rim + '">'
+    return '<div class="sm-c fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
+      + ';animation-delay:' + dly[i].toFixed(3) + 's">'
       + '<b>' + itemIcon(a.it) + '</b><u><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
   }).join('');
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
   $('sumw').classList.add('on');
+  /* 영웅(g≥3) 이상은 팝 순간 광선 버스트를 얹는다 */
+  const cards = $('sumGridIn').children;
+  agg.forEach((a, i) => {
+    if(a.it.g < 3 || !cards[i]) return;
+    const el = cards[i], col = GRADE[a.it.g].c;
+    setTimeout(() => { if(el.isConnected && $('sumw').classList.contains('on')) fxBurst(el, col, 14); },
+      dly[i]*1000 + 170);
+  });
 }
 /* 버튼 3개는 10 상점 소환 탭(#shopw)과 **같은 상태·같은 함수**를 쓴다 — freeLeft/summonCost/doSummonFree */
 function syncSummonBtns(){
@@ -6729,6 +6816,7 @@ function claimTuto(){
   const t = tutoCur();
   if(!t || !tutoReady()) return;
   S.dia += t.c; S.tuto++;
+  fxReward(); fxToast('가이드 미션 완료');    /* 58 */
   uiDirty = true; save();
   popup('📌 튜토리얼 완료!', '<p><b>' + t.n + '</b><br>다이아 <b>💎+' + fmt(t.c) + '</b> 획득!</p>'
     + (tutoCur() ? '<p style="color:#8fd6ff;margin-top:10px">다음 — ' + tutoCur().n + '</p>'
@@ -6740,6 +6828,7 @@ function claimAllMail(){
   MAILS.forEach(m => { if(S.mail[m.id]) return; S.mail[m.id] = 1; g += m.g; c += m.c; r += m.r || 0; n++; });
   if(!n) return;
   S.gold += g; S.dia += c; S.relic += r;
+  fxReward();                                 /* 58 */
   uiDirty = true; save();
   popup('📬 우편 수령', '<p>우편 <b>' + n + '</b>통 수령!<br>골드 <b>+' + fmt(g) + '</b><br>다이아 <b>💎+' + fmt(c)
     + '</b><br>유물석 <b>🔮+' + fmt(r) + '</b></p>');
@@ -6749,6 +6838,7 @@ function claimAllMail(){
    출석 · 룰렛 · 던전 · 상점 · 승급전
    ========================================================================== */
 function giveReward(r){
+  fxReward();                                 /* 58 — 출석·룰렛·던전 보상이 전부 이 함수를 지난다 */
   const out = [];
   if(r.dia){     S.dia += r.dia;     out.push('💎 ' + fmt(r.dia)); }
   if(r.rel){     S.relic += r.rel;   out.push('🔮 ' + fmt(r.rel)); }
@@ -7215,7 +7305,10 @@ function showSkillDetail(id){
   $('modal').classList.add('on', 'sk8');
   const e = $('mEq'), l = $('mLv');
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
-  if(l && !l.disabled) l.onclick = () => { if(levelUp(it)) showSkillDetail(id); };
+  /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클 */
+  if(l && !l.disabled) l.onclick = () => {
+    if(levelUp(it)){ fxUpOk($('mbox').querySelector('.sk-lv'), l); showSkillDetail(id); }
+  };
 }
 
 /* ── 16 유물 세부 팝업 ── 측정표: docs/measure/16-유물세부팝업.md
@@ -7254,7 +7347,9 @@ function showRelicDetail(id){
   $('mbox').scrollTop = 0;
   $('modal').classList.add('on', 'rl16');
   const l = $('mLv');
-  if(l && !l.disabled) l.onclick = () => { if(levelUp(it)){ autoEquipAll(); showRelicDetail(id); } };
+  if(l && !l.disabled) l.onclick = () => {
+    if(levelUp(it)){ fxUpOk($('mbox').querySelector('.rl-lv'), l); autoEquipAll(); showRelicDetail(id); }   /* 58 */
+  };
 }
 
 function showItem(id){
@@ -7313,8 +7408,9 @@ function showItem(id){
   if(own){
     $('mEq').onclick = () => { toggleEquip(it, cat); showItem(id); };
     const a = $('mLv'), b = $('mLvAll'), c = $('mCraft');
-    if(a) a.onclick = () => { if(levelUp(it)) showItem(id); };
-    if(b) b.onclick = () => { levelUpMax(it); showItem(id); };
+    /* 58 — 강화 성공 연출. 이 팝업은 «대상 카드» 가 따로 없어 버튼 행을 플래시한다 */
+    if(a) a.onclick = () => { if(levelUp(it)){ fxUpOk(a.closest('.mrow') || a, a); showItem(id); } };
+    if(b) b.onclick = () => { if(levelUpMax(it)) fxUpOk(b, b); showItem(id); };
     if(c) c.onclick = () => {
       const nx = craft(it);
       if(nx) popup('⚗️ 합성 성공!', '<p><b style="color:' + GRADE[it.g].c + '">' + it.n + '</b> ' + CRAFT_NEED + '개 소모<br>'
@@ -7641,12 +7737,20 @@ function openQuest(tab){
   const m = $('modal');
   m.classList.remove('sk8', 'rl16');
   m.classList.add('q22', 'on');
-  $('qAll').onclick = () => claimAllQuests();
+  /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
+     «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
+     재화 비행은 fxAt() 로 그 행을 출발점으로 지정만 하면 fxWatch 가 알아서 쏜다. */
+  const fxQuest = (el) => {
+    if(el){ fxCheck(el); fxBurst(el, '#8FE9FF', 10); fxAt(el); }
+    fxToast('퀘스트 완료');
+  };
+  $('qAll').onclick = () => { fxQuest($('qAll')); claimAllQuests(); };
   $('mbox').querySelectorAll('.qs-tg b').forEach(b => b.onclick = () => {
     if(b.dataset.t !== qTab) openQuest(b.dataset.t);
   });
   $('mbox').querySelectorAll('[data-q]').forEach(b => b.onclick = () => {
-    const k = b.dataset.q;
+    const k = b.dataset.q, row = b.closest('.qs-r');
+    fxQuest(row ? (row.querySelector('.qs-i') || row) : b);
     if(k.startsWith('d:')) claimDQuest(DQUESTS.find(x => x.id === k.slice(2)));
     else claimQuest(QUESTS.find(x => x.id === k));
   });
@@ -9241,7 +9345,13 @@ $('trw').addEventListener('click', e => {
     return;
   }
   const card = e.target.closest('[data-tr]');
-  if(card){ (trIsTrain() ? trainBuy(card.dataset.tr) : statTrainBuy(card.dataset.tr)); renderTrain(); }
+  if(card){
+    /* 58 — 훈련 강화 성공: 그 카드가 흰 플래시 + 성공 파티클.
+       renderTrain() 이 카드를 재렌더하므로 «누른 시점의 좌표» 로 #fxl 에 그린다. */
+    const okc = trIsTrain() ? trainBuy(card.dataset.tr) : statTrainBuy(card.dataset.tr);
+    if(okc) fxUpOk(card, card);
+    renderTrain();
+  }
 });
 
 /* ---- 탭 전환 ----
@@ -9418,6 +9528,7 @@ function claimOffline(mul){
   if(!offPend) return;
   S.gold += offPend.gold * mul;
   S.dia  += Math.floor(offPend.dia * mul);
+  fxReward();                                 /* 58 */
   markDirty();
   closeOfflineReward();
 }
@@ -9429,6 +9540,267 @@ function offlineReward(lastTime){
   const gold = eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5;
   const dia = Math.floor(sec/20);          /* 분당 3 다이아 */
   showOfflineReward(sec, gold, dia);
+}
+
+/* ==========================================================================
+   58 — UI 연출 공용 모듈 (fx)   ─ 스펙: docs/UI-REFERENCE.md 58번 · 기록: docs/review/58-UI연출모듈.md
+   «얻거나 오르는» 모든 순간의 피드백을 여기서 한 번만 만들고, 화면들은 호출만 한다.
+
+     fxFly(from, cur, n)   재화가 HUD 알약으로 날아가 꽂힘 → 알약 튐 → 숫자 롤링 → `+n` 플로팅
+     fxPop(el)             보상 아이템 팝 (0 → 1.2 → 1)
+     fxBurst(t, col, n)    방사형 버스트 파티클
+     fxFlash(el)           흰 플래시 1회 + 살짝 커졌다 복귀 (강화·업그레이드 성공)
+     fxToast(text)         상단 토스트 (퀘스트 완료 등)
+     fxCheck(el)           체크 스트로크 드로잉 (퀘스트 항목)
+     fxAt(t)               «다음 재화 증가» 의 출발점 힌트(600ms 유효). t = 요소 | {x,y} 프레임 px
+
+   재화 획득 연출은 **호출부를 고치지 않아도 걸린다** — fxWatch() 가 매 프레임 S.gold/S.dia 의
+   증가분을 감시해 자동으로 fxFly 를 쏜다(46 교훈 3 «모든 경로가 지나는 한 지점»의 UI 판).
+   드랍·보상·판매·룰렛·우편 어느 경로로 늘어도 연출이 붙고, 앞으로 생길 경로도 자동 편입된다.
+   출발점만 각 경로가 fxAt() 로 알려 주면 «획득 지점에서» 날아간다.
+   길이 0.3~0.8초 · 입력 비차단(#fxl 은 pointer-events:none) · DOM 파티클 상한 FXMAX.
+   ========================================================================== */
+const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (캔버스 parts 320 과 별개) */
+const FXCUR = {
+  gold:{ pill:'.cGold', ic:'🪙', col:'#FFDE6A', fs:46 },
+  dia :{ pill:'.cDia',  ic:'💎', col:'#8FE9FF', fs:42 }
+};
+let fxLay = null;
+const fxL = () => fxLay && fxLay.isConnected ? fxLay : (fxLay = $('fxl'));
+/* #app 은 fit() 이 scale 하므로 화면 px 를 1080 프레임 px 로 되돌린다.
+   킬 1건마다 부르는 경로(fxWorld)가 있어 **프레임당 1회만** 실측하고 캐시한다(레이아웃 스래싱 방지). */
+let fxScC = null, fxScF = -1, fxFrame = 0;
+function fxSc(){
+  if(fxScF === fxFrame) return fxScC;
+  const a = $('app'); if(!a) return null;
+  const r = a.getBoundingClientRect();
+  if(!r.width) return null;
+  fxScF = fxFrame;
+  return (fxScC = { s:r.width / FRAME_W, x:r.left, y:r.top });
+}
+let fxStgY = 104, fxStgF = -1;
+function fxStageTop(){
+  if(fxStgF !== fxFrame){ const r = fxRect($('stagearea')); if(r) fxStgY = r.y; fxStgF = fxFrame; }
+  return fxStgY;
+}
+function fxRect(el){
+  if(!el || !el.getBoundingClientRect) return null;
+  const f = fxSc(); if(!f) return null;
+  const r = el.getBoundingClientRect();
+  if(!r.width && !r.height) return null;
+  return { x:(r.left-f.x)/f.s, y:(r.top-f.y)/f.s, w:r.width/f.s, h:r.height/f.s };
+}
+function fxPt(t){
+  if(!t) return null;
+  if(typeof t.x === 'number' && typeof t.y === 'number' && !t.nodeType) return { x:t.x, y:t.y };
+  const r = fxRect(t);
+  return r ? { x:r.x + r.w/2, y:r.y + r.h/2 } : null;
+}
+/* 전투 캔버스 월드 좌표 → 프레임 px. 캔버스는 논리 540 폭을 SC(2)배로 그린다(ox = -(cam.x-VW/2)). */
+function fxWorld(x, y){
+  return { x:(x - cam.x + VW/2) * SC, y:fxStageTop() + (y - cam.y + VH/2) * SC };
+}
+let fxOrig = null, fxOrigT = -1e9;
+function fxAt(t){ const p = fxPt(t); if(p){ fxOrig = p; fxOrigT = performance.now(); } }
+/* «획득 지점» 기본값 — 마지막으로 누른 버튼·카드. 화면이 fxAt() 를 부르지 않아도
+   «수령 버튼에서 재화가 날아가는» 그림이 되도록 전역 캡처 리스너 하나로 좌표를 기억한다.
+   (33 «전역 규칙은 리스너 하나 + 위임» 의 연출 판 — 새 화면은 아무것도 안 해도 편입된다) */
+let fxTapEl = null, fxTapT = -1e9;
+addEventListener('pointerdown', ev => {
+  const t = ev.target;
+  fxTapEl = (t && t.closest) ? (t.closest('button,[data-q],[data-tr],[data-cur],.qs-r,.rc,.gbtn,.sg') || t) : null;
+  fxTapT = performance.now();
+}, true);
+/* 명시 힌트(fxAt)와 마지막 탭 중 «더 최근» 것을 출발점으로 쓴다.
+   자동 전투는 킬마다 fxAt 를 부르므로 전투 중에는 항상 적이 죽은 자리가 이긴다. */
+function fxSrc(now){
+  const a = (now - fxOrigT < 600 && fxOrig) ? fxOrigT : -1e9;
+  const b = (now - fxTapT < 1200 && fxTapEl && fxTapEl.isConnected) ? fxTapT : -1e9;
+  if(a < -1e8 && b < -1e8) return null;
+  return a >= b ? fxOrig : fxPt(fxTapEl);
+}
+
+/* ── 재화 비행 ── */
+const fxFlies = [];
+function fxFly(from, cur, n){
+  const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
+  const pill = document.querySelector(C.pill); if(!pill) return;
+  const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
+  const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
+  /* 3~8개 — 금액이 클수록 많이 (58 «코인/젬 아이콘 3~8개») */
+  const cnt = clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.9), 3, 8);
+  if(L.childElementCount + cnt > FXMAX) return;
+  for(let i=0;i<cnt;i++){
+    const el = document.createElement('b');
+    el.className = 'fx-fly';
+    el.textContent = C.ic;
+    el.style.fontSize = C.fs + 'px';
+    el.style.opacity = '0';
+    L.appendChild(el);
+    const sx = p0.x + rnd(-52, 52), sy = p0.y + rnd(-38, 38);
+    fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
+      cx:(sx + to.x)/2 + rnd(-200, 200), cy:Math.min(sy, to.y) - rnd(140, 320),
+      t:-i*0.05, dur:0.44 + Math.random()*0.14, pill,
+      last:i === cnt-1, cur, n });
+  }
+}
+function fxPunch(el){
+  if(!el) return;
+  el.classList.remove('fx-punch');
+  void el.offsetWidth;                                /* 리플로우 — 연속 도착에도 매번 다시 튀게 */
+  el.classList.add('fx-punch');
+  setTimeout(() => el.classList.remove('fx-punch'), 340);
+}
+function fxPlus(cur, n){
+  const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
+  const pill = document.querySelector(C.pill); if(!pill) return;
+  const r = fxRect(pill); if(!r) return;
+  const el = document.createElement('b');
+  el.className = 'fx-plus';
+  el.style.color = C.col;
+  el.style.left = (r.x + r.w/2) + 'px';
+  el.style.top  = (r.y + r.h + 8) + 'px';
+  el.textContent = '+' + fmt(n);
+  L.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+/* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
+function fxPop(el){
+  if(!el || !el.classList) return;
+  el.classList.remove('fx-pop');
+  void el.offsetWidth;
+  el.classList.add('fx-pop');
+  setTimeout(() => el.classList && el.classList.remove('fx-pop'), 400);
+}
+function fxBurst(t, col, n){
+  const L = fxL(), p = fxPt(t); if(!L || !p) return;
+  const cnt = n || 12;
+  if(L.childElementCount + cnt > FXMAX) return;
+  for(let i=0;i<cnt;i++){
+    const el = document.createElement('s');
+    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
+    el.className = 'fx-spark';
+    el.style.background = col || '#FFE07A';
+    el.style.left = p.x + 'px';
+    el.style.top  = p.y + 'px';
+    el.style.setProperty('--dx', (Math.cos(a)*d).toFixed(1) + 'px');
+    el.style.setProperty('--dy', (Math.sin(a)*d).toFixed(1) + 'px');
+    L.appendChild(el);
+    setTimeout(() => el.remove(), 620);
+  }
+}
+function fxFlash(el){
+  const L = fxL(), r = fxRect(el); if(!L || !r) return;
+  if(L.childElementCount >= FXMAX) return;
+  const d = document.createElement('s');
+  d.className = 'fx-flash';
+  d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
+  d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
+  try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
+  L.appendChild(d);
+  setTimeout(() => d.remove(), 380);
+}
+/* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
+   fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */
+function fxReward(t){
+  const p = t ? fxPt(t) : fxSrc(performance.now());
+  if(p) fxBurst(p, '#FFE9A8', 14);
+}
+/* 강화·업그레이드 «성공» 한 세트 — 대상 카드/행 흰 플래시 + 성공 파티클.
+   수치 롤링은 HUD(fxTick)와 09 일괄 강화 팝업이 각각 맡는다. */
+function fxUpOk(target, at){
+  if(target) fxFlash(target);
+  fxBurst(at || target, '#FFE9A8', 10);
+}
+function fxToast(txt){
+  const L = fxL(); if(!L || !txt) return;
+  const stack = L.querySelectorAll('.fx-toast').length;
+  if(stack > 3) return;
+  const el = document.createElement('b');
+  el.className = 'fx-toast';
+  el.style.top = (150 + stack*104) + 'px';
+  el.textContent = txt;
+  L.appendChild(el);
+  setTimeout(() => el.classList.add('out'), 1200);
+  setTimeout(() => el.remove(), 1560);
+}
+function fxCheck(el){
+  const L = fxL(), p = fxPt(el); if(!L || !p) return;
+  if(L.childElementCount >= FXMAX) return;
+  const d = document.createElement('s');
+  d.className = 'fx-check';
+  d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
+  d.style.animation = 'fxCheckIn .8s ease-out both';
+  d.innerHTML = '<svg viewBox="0 0 100 100" width="132" height="132">'
+    + '<circle cx="50" cy="50" r="41" fill="rgba(20,60,26,.55)" stroke="#7BE88E" stroke-width="8"/>'
+    + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#B6FFC2" stroke-width="12"'
+    + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
+    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .34s ease-out .08s forwards"/></svg>';
+  L.appendChild(d);
+  setTimeout(() => d.remove(), 900);
+}
+
+/* ── 자동 감시 + 매 프레임 갱신 ──
+   fxDisp: HUD 에 «표시되는» 값. 실제 S 값으로 지수적으로 수렴해 숫자가 롤링한다(58 «숫자 롤링»).
+   drawHud() 가 이 값을 쓰고, 41 팝업 내장 재화 바(renderPcb)도 같은 값을 쓴다. */
+const fxDisp = { gold:null, dia:null };
+const fxSeen = { gold:null, dia:null };
+const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0, dia:0 };
+function fxWatch(now){
+  for(const k in FXCUR){
+    const v = S[k];
+    if(!Number.isFinite(v)) continue;
+    if(fxSeen[k] === null){ fxSeen[k] = v; continue; }
+    const d = v - fxSeen[k];
+    fxSeen[k] = v;
+    if(d > 0){                                        /* 소모(감소)에는 연출을 걸지 않는다 */
+      if(!fxAcc[k]) fxAccS[k] = now;
+      fxAcc[k] += d; fxAccT[k] = now;
+    }
+    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(180ms 정지 or 900ms 누적) */
+    if(fxAcc[k] > 0 && (now - fxAccT[k] > 180 || now - fxAccS[k] > 900)){
+      fxFly(fxSrc(now), k, fxAcc[k]);
+      fxAcc[k] = 0;
+    }
+  }
+}
+function fxTick(dt){
+  fxFrame++;                                          /* 이번 프레임의 rect 캐시를 무효화 */
+  const now = performance.now();
+  fxWatch(now);
+  for(let i=fxFlies.length-1;i>=0;i--){
+    const f = fxFlies[i];
+    f.t += dt;
+    if(f.t < 0) continue;
+    const p = f.t / f.dur;
+    if(p >= 1 || !f.el.isConnected){
+      f.el.remove(); fxFlies.splice(i, 1);
+      fxPunch(f.pill);
+      if(f.last) fxPlus(f.cur, f.n);
+      continue;
+    }
+    const e = p*p*(3 - 2*p), u = 1 - e;                /* 2차 베지에 + smoothstep — 포물선으로 꽂힌다 */
+    const x = u*u*f.sx + 2*u*e*f.cx + e*e*f.tx;
+    const y = u*u*f.sy + 2*u*e*f.cy + e*e*f.ty;
+    const s = 1 + 0.3*Math.sin(Math.PI*e) - 0.34*e;
+    f.el.style.opacity = p < 0.1 ? (p/0.1).toFixed(2) : '1';
+    f.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'
+      + ' translate(-50%,-50%) scale(' + s.toFixed(3) + ')';
+  }
+  /* 숫자 롤링 — 0.35초 안팎으로 수렴. 1 미만 차이는 즉시 확정해 «영원히 도는» 상태를 막는다. */
+  const r = Math.min(1, dt * 7);
+  for(const k in fxDisp){
+    const t = S[k];
+    if(!Number.isFinite(t)){ fxDisp[k] = t; continue; }
+    if(fxDisp[k] === null || !Number.isFinite(fxDisp[k])){ fxDisp[k] = t; continue; }
+    const d = t - fxDisp[k];
+    fxDisp[k] = Math.abs(d) < 1 ? t : fxDisp[k] + d*r;
+  }
+}
+/* HUD·재화 바가 쓰는 표시값. 롤링이 시작되기 전(초기 1프레임)에는 실제 값을 그대로 준다. */
+function fxVal(k){
+  const v = fxDisp[k];
+  return (v === null || !Number.isFinite(v)) ? S[k] : v;
 }
 
 /* ==========================================================================
@@ -9444,6 +9816,7 @@ function loop(now){
 
   step(dt);
   draw();
+  fxTick(dt);              /* 58 — 재화 감시·비행 갱신·숫자 롤링. drawHud 보다 «먼저» 돌아야 이번 프레임 값이 쓰인다 */
   drawHud();
   drawTuto();
 
