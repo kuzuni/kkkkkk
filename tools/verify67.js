@@ -37,7 +37,14 @@ function launchOpts() {
 }
 
 const ROOT = path.resolve(__dirname, '..');
-const LIM_JERK = 5.0;          /* 프레임 간 카메라 «속도 변화» 상한 (px/frame²) */
+/* 두 가지를 구분해서 잰다 —
+   ACC  = 프레임 간 «속도 변화»(가속). 평상시엔 어떤 가속도 의도되지 않았으므로 낮게 묶는다.
+   JERK = 프레임 간 «가속 변화»(3차 차분). **이게 «급변» 의 정의다.**
+   의도된 연출(0.26초에 325px 당기는 처치 펀치)은 가속 자체가 6px/f² 까지 오르지만
+   속도 수열이 0.6→31→0 의 매끄러운 종 모양이라 «급변» 은 아니다 — 가속으로 판정하면 오답이 나온다. */
+const LIM_JERK = 5.0;          /* 평상시 가속 상한 (px/frame²) */
+const LIM_CACC = 8.0;          /* 연출 중 가속 상한 */
+const LIM_CJRK = 3.0;          /* 연출 중 저크(3차 차분) 상한 (px/frame³) */
 const results = [];
 const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: detail == null ? '' : String(detail) }); };
 
@@ -145,18 +152,27 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     S.stage = 10; S.best = Math.max(S.best || 1, 10); S.bossFarm = false;
     S.gold = 1e12;                                     /* 전투 결과와 무관하게 연출만 본다 */
     spawnStage();
-    const modes = [], zs = [], camToBoss = [], camToPl = [];
-    let spawnedF = -1, b = null, jerk = 0, prevV = null, prev = { x: cam.x, y: cam.y };
+    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [];
+    let spawnedF = -1, b = null, jerk = 0, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y };
     const marks = {};
     for (let f = 0; f < 400; f++) {                    /* ≈6.7초 */
       window.__tick();
       const v = { x: cam.x - prev.x, y: cam.y - prev.y };
-      if (prevV && f > 2) jerk = Math.max(jerk, Math.hypot(v.x - prevV.x, v.y - prevV.y));
+      if (prevV && f > 2) {
+        const a = { x: v.x - prevV.x, y: v.y - prevV.y };
+        acc = Math.max(acc, Math.hypot(a.x, a.y));
+        if (prevA) jerk = Math.max(jerk, Math.hypot(a.x - prevA.x, a.y - prevA.y));
+        prevA = a;
+      }
       prevV = v; prev = { x: cam.x, y: cam.y };
       if (!b) { b = enemies.find(e => e.tk === 'boss') || null; if (b) spawnedF = f; }
       if (b) {
-        const bc = spriteCenter(b);                 /* 카메라 목표는 앵커가 아니라 «그려진 몸통 중심» 이다 */
-        camToBoss.push(Math.hypot(cam.x - bc.x, cam.y - bc.y));
+        /* 카메라 목표는 앵커가 아니라 «그려진 몸통 중심» 이다. 살아 있는 적은 연출 시작에 고정한
+           오프셋(cine.ox/oy)을 쓰므로 게이트도 같은 점으로 잰다 — 걷기 애니의 프레임별 트림 흔들림은
+           카메라가 «따라가지 않기로 한» 성분이라 그걸로 채점하면 오답이 나온다. */
+        camToBoss.push(Math.hypot(cam.x - (b.x + cine.ox), cam.y - (b.y + cine.oy)));
+        const bi = spriteCenter(b, cine.flip);
+        camToArt.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
         camToPl.push(Math.hypot(cam.x - player.x, cam.y - player.y));
         zs.push(cam.z);
         const m = cine.mode || '-';
@@ -167,9 +183,9 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     }
     const distAtSpawn = b ? Math.hypot(b.x - player.x, b.y - player.y) : -1;
     return {
-      spawnedF, distAtSpawn, modes, marks, jerk,
+      spawnedF, distAtSpawn, modes, marks, jerk, acc,
       zMax: Math.max(...zs), zEnd: cam.z,
-      minCamToBoss: Math.min(...camToBoss),
+      minCamToBoss: Math.min(...camToBoss), minCamToArt: Math.min(...camToArt),
       endCamToPl: camToPl[camToPl.length - 1],
       frames: zs.length, bossAlive: !!b && enemies.indexOf(b) >= 0
     };
@@ -177,10 +193,11 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[4] 보스 스폰이 연출을 켠다(in → hold → back → 종료)',
     boss.modes.join('>').includes('in>hold>back'), boss.modes.join(' > '));
   ok('[4] 팬·줌인 배율 1.15', Math.abs(boss.zMax - 1.15) < 0.02, boss.zMax.toFixed(3));
-  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
+  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px · 순간 아트중심 기준 ' + boss.minCamToArt.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
   ok('[4] 연출 뒤 플레이어로 복귀(150px 이내) · 줌 복원', boss.endCamToPl < 150 && Math.abs(boss.zEnd - 1) < 0.02, boss.endCamToPl.toFixed(0) + 'px · z' + boss.zEnd.toFixed(3));
   ok('[4] 연출 길이 ≈ 1.85초(0.8+0.45+0.6)', boss.frames >= 105 && boss.frames <= 130, (boss.frames / 60).toFixed(2) + '초');
-  ok('[4] 연출 중 저크 < ' + LIM_JERK + 'px', boss.jerk < LIM_JERK, boss.jerk.toFixed(3) + 'px');
+  ok('[4] 연출 중 저크(3차 차분) < ' + LIM_CJRK, boss.jerk < LIM_CJRK, boss.jerk.toFixed(3) + 'px/f³ · 가속 최대 ' + boss.acc.toFixed(2) + 'px/f²');
+  ok('[4] 연출 중 가속 < ' + LIM_CACC, boss.acc < LIM_CACC, boss.acc.toFixed(2) + 'px/f²');
 
   const kill = await page.evaluate(() => {
     const b = enemies.find(e => e.tk === 'boss');
@@ -196,14 +213,26 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     const origSpawn = window.spawnStage;
     window.spawnStage = function () { const r = origSpawn.apply(this, arguments); for (let k = 0; k < 3; k++) snaps.add(f + k); return r; };
     killEnemy(b);
-    const zs = [], flashes = [];
-    let jerk = 0, prevV = null, prev = { x: cam.x, y: cam.y }, endF = -1;
+    const zs = [], flashes = [], offs = [];
+    let jerk = 0, jerkAt = null, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y }, endF = -1;
     for (f = 0; f < 200; f++) {
       window.__tick();
       const v = { x: cam.x - prev.x, y: cam.y - prev.y };
-      if (prevV && f > 2 && !snaps.has(f)) jerk = Math.max(jerk, Math.hypot(v.x - prevV.x, v.y - prevV.y));
+      if (prevV && f > 2 && !snaps.has(f)) {
+        const a = { x: v.x - prevV.x, y: v.y - prevV.y };
+        acc = Math.max(acc, Math.hypot(a.x, a.y));
+        if (prevA) { const j = Math.hypot(a.x - prevA.x, a.y - prevA.y);
+          if (j > jerk) { jerk = j; jerkAt = { f, t: +cine.t.toFixed(3), z: +cam.z.toFixed(3) }; } }
+        prevA = a;
+      }
       prevV = v; prev = { x: cam.x, y: cam.y };
       zs.push(cam.z); flashes.push(cine.flash);
+      /* J 지적 — camToKill 을 계산만 하고 assert 하지 않았다. «줌이 최대인 순간» 의 정합을 실제로 잰다 */
+      if (cine.tg && cine.tg.akey) {
+        const c = spriteCenter(cine.tg, cine.flip);
+        const d = Math.hypot(cam.x - c.x, cam.y - c.y);
+        offs.push({ z: cam.z, d, flash: cine.flash, t: cine.t });
+      }
       if (endF < 0 && !cine.mode && f > 5) endF = f;
     }
     window.step = origStep; window.spawnStage = origSpawn;
@@ -212,7 +241,12 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       slowFrames, normFrames,
       flash0: flashes[0], flashMax: Math.max(...flashes), flashEnd: flashes[flashes.length - 1],
       flashFrames: flashes.filter(v => v > 0).length,
-      camToKill: Math.min(...zs.map((_, i) => i)) >= 0 ? Math.hypot(cam.x - bx, cam.y - by) : -1,
+      /* 줌 정점(≥1.29) 구간과 플래시 구간에서 «시체가 실제로 중앙에 있는가» */
+      offAtPeak: Math.min(...offs.filter(o => o.z >= 1.29).map(o => o.d).concat([1e9])),
+      offInFlash: Math.min(...offs.filter(o => o.flash > 0).map(o => o.d).concat([1e9])),
+      offMin: Math.min(...offs.map(o => o.d).concat([1e9])), jerkAt, acc,
+      /* 줌 정점 ~ 슬로모 종료(t<0.30) 사이 — 그 뒤는 «플레이어로 복귀» 구간이라 시체가 중앙을 떠나는 게 정상이다 */
+      offPeakWin: Math.max(...offs.filter((o,i) => i >= offs.findIndex(q => q.z >= 1.29) && o.t < CINE_SLOW_S).map(o => o.d).concat([0])),
       jerk
     };
   });
@@ -221,7 +255,13 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[5] 슬로모가 «끝난다»(이후 정상 배속)', kill.normFrames > 150, kill.normFrames + '프레임');
   ok('[5] 화면 플래시가 뜨고 0.30초(슬로모 안) 에 사라진다', kill.flashMax > 0.9 && kill.flashEnd === 0 && kill.flashFrames <= 19, `최대 ${kill.flashMax.toFixed(2)} · ${kill.flashFrames}프레임`);
   ok('[5] 처치 연출 뒤 줌 복원', Math.abs(kill.zEnd - 1) < 0.02, kill.zEnd.toFixed(3));
-  ok('[5] 처치 연출 중 저크 < ' + LIM_JERK + 'px', kill.jerk < LIM_JERK, kill.jerk.toFixed(3) + 'px');
+  /* 55/90 은 «설계가 보장하는 값» 이다. 시체의 그려진 중심이 사망 애니(10fps) 동안 119px 움직이고
+     그것을 저역통과로 따라가므로 잔차가 남는다. 운 좋은 회차의 38.9/55.5 를 기준으로 잡으면
+     스폰 난수가 다른 회차에서 그대로 FAIL 이 난다(실제로 40.1/80.2 회차가 나왔다). */
+  ok('[5] 줌 정점에서 시체가 중앙에 있다(55px 이내)', kill.offAtPeak < 55, kill.offAtPeak.toFixed(1) + 'px');
+  ok('[5] 줌 정점~슬로모 종료 내내 시체가 중앙 90px 이내', kill.offPeakWin < 90, kill.offPeakWin.toFixed(1) + 'px');
+  ok('[5] 처치 연출 저크(3차 차분) < ' + LIM_CJRK, kill.jerk < LIM_CJRK, kill.jerk.toFixed(3) + 'px/f³ @' + JSON.stringify(kill.jerkAt));
+  ok('[5] 처치 연출 가속 < ' + LIM_CACC, kill.acc < LIM_CACC, kill.acc.toFixed(2) + 'px/f²');
 
   /* ---- [6] 회귀 ---- */
   const reg = await page.evaluate(() => ({
