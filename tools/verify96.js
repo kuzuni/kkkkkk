@@ -174,7 +174,7 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       out.back = document.getElementById('bSk').classList.contains('on')
         && !document.getElementById('eqw').classList.contains('on');
       /* 03 던전 2탭 */
-      goTab('adv', true); await sleep(400);
+      openDungeon(); await sleep(400);
       document.querySelector('#dunSub [data-dsub="raid"]').click(); await sleep(300);
       out.raid = document.querySelector('#dunSub [data-dsub="raid"]').classList.contains('on');
       out.raidInk = document.querySelector('#dunSub [data-dsub="raid"]>i').classList.contains('ol4')
@@ -182,7 +182,7 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       document.querySelector('#dunSub [data-dsub="dun"]').click(); await sleep(300);
       out.dun = document.querySelector('#dunSub [data-dsub="dun"]').classList.contains('on');
       /* 10 상점 2탭 */
-      goTab('shop', true); await sleep(500);
+      openShopPage(); await sleep(500);
       document.querySelector('#shopCats [data-cat="coin"]').click(); await sleep(400);
       out.coin = shopCat === 'coin' && document.getElementById('shopList').classList.contains('coin');
       out.coinInk = document.querySelector('#shopCats [data-cat="coin"]>i').classList.contains('ol4')

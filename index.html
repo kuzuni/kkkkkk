@@ -2357,7 +2357,7 @@
     font-weight:900;text-decoration:none;transform-origin:50% 50%}
 
   /* 카드 스크롤 리스트 — 위 여백 59(ref 191→250), 아래는 카테고리 탭바 위까지 */
-  .shp-list{position:absolute;left:0;right:0;top:0;bottom:127px;padding-top:59px;
+  .shp-list{position:absolute;left:0;right:0;top:0;bottom:154px;padding-top:59px;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .shp-list::-webkit-scrollbar{width:0;height:0}
 
@@ -2465,7 +2465,7 @@
      (검정 7 + 림 6 짜리 별도 바 껍데기 · 활성 칸으로 **노드째 옮겨 다니던** 노랑 화살촉 알약
      `.shp-cat-pill` · ✦ 마름모 구분선 `.shp-cs`)을 폐기하고 **공용 부품 `.stabs.sp2 > .stab`** 으로 바꿨다.
      바 위치(x45 w990, 바닥 14)만 여기서 정한다. 10·13 측정표 §카테고리 바는 정오표 처리. */
-  .shp-cats{position:absolute;left:45px;right:45px;bottom:14px}
+  .shp-cats{position:absolute;left:45px;right:45px;bottom:41px}
 
 
   /* ==========================================================================
@@ -2776,8 +2776,9 @@
      따로 덮어쓰던 규칙(`#shopList.coin ~ #shopCats …`)은 전부 폐기한다 — 그게 «탭마다 미묘하게
      다른 디자인» 의 원인이고, 주인 지시 ⓑ 가 없애라는 것이다. 남는 것은 **위치(바닥 41)** 하나뿐.
      13 측정표 §8 은 정오표 처리(docs/measure/13-상점팝업재화탭.md). */
-  #shopList.coin ~ #shopCats{bottom:41px}
-  #shopList.coin{bottom:154px}
+  /* 96 — 바 위치도 통일한다. 옛 구현은 소환 탭 bottom:14 / 재화 탭 bottom:41 이라 **탭을 누를 때마다
+     바가 27px 위아래로 뛰었다** — 주인 지시 ⓑ 의 «선택 상태가 나쁘다» 에 그대로 해당한다.
+     13(재화) 실측인 41 로 맞추고 리스트 하변도 한 값(154 = 41 + 바 99 + 여백 14)으로 통일한다. */
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
