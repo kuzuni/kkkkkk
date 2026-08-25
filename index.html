@@ -5151,6 +5151,64 @@
   .ps-bar>div.bk>u{position:absolute;left:59px;top:48px;width:82px;height:64px;background:#A9ABC4;
     clip-path:polygon(0 50%,44% 0,44% 30%,100% 30%,100% 70%,44% 70%,44% 100%);
     filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000) drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000)}
+
+  /* ================= 53 가방 팝업 (#bagw) — 측정표 docs/measure/53-가방팝업.md =================
+     껍데기 (가) 딤 위 가운데 다이얼로그. 948×967 @ ref(66,744) → 프레임 y 660 (ref y − 84).
+     공용 #modal 은 폭 898 고정(패딩 91)이라 948 이 안 나와서 자체 오버레이로 간다 — 19 #pfw · 33 #ciw 와 같은 판단.
+     딤 α .61 은 «02(딤 없음)와의 휘도비 0.39» 실측값이다(측정표 §1). */
+  #bagw{position:absolute;inset:0;background:rgba(0,0,0,.61);display:none;z-index:41;
+    align-items:center;justify-content:center;box-sizing:border-box;padding:100px 0 94px}
+  #bagw.on{display:flex}
+  /* LESSONS 21-1 · 34 부록: `#id 태그` 리셋(1-0-1)은 `.클래스 .클래스`(0-2-0)를 이긴다.
+     이 안에서 display 를 바꾸는 규칙은 전부 `#bagw` 접두어를 달아 특이성을 맞춘다. */
+  #bagw i,#bagw em,#bagw b,#bagw s,#bagw u{display:inline-block;font-style:normal;
+    text-decoration:none;font-weight:900;transform-origin:50% 50%}
+  /* 세로중심 ref 1227.5 → 프레임 1143.5 = 정중앙 1140 +3.5 */
+  .bg53{position:relative;flex:none;width:948px;height:967px;max-height:100%;box-sizing:border-box;
+    border:8px solid #000;border-radius:44px;padding:0 12px 12px;background:#55443A;
+    display:flex;flex-direction:column;
+    box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
+  /* 헤더 91px — 상단·좌우 밝은 립(#5B4643), 본체 #523E3D (A5 .mhead 와 같은 규격) */
+  .bg53-head{flex:0 0 91px;margin:0 -12px;border-radius:36px 36px 0 0;background:#523E3D;
+    box-shadow:inset 0 8px 0 #5B4643,inset 11px 0 0 #5B4643,inset -11px 0 0 #5B4643;
+    text-align:center;line-height:91px;overflow:hidden}
+  /* 타이틀 잉크 81×42 → font-size 42/0.93 ≈ 45 (LESSONS 01: 이 폰트의 잉크비는 0.93) */
+  .bg53-head>i{position:relative;top:-2px;font-size:45px;color:#fff;
+    -webkit-text-stroke:10px #000;paint-order:stroke fill;letter-spacing:1.5px;text-indent:1.5px}
+  /* 크림 본문 908×848 + 별 워터마크(33 .ci-body 와 같은 엇갈린 격자 자산 — LESSONS 22-3: pitch 를 반드시 대조할 것.
+     ref 별 행 중심 간격이 117 이라 «별 2개짜리» 타일을 쓴다. 별 1개짜리 A5 타일은 행의 절반이 빈다) */
+  .bg53-body{flex:1 1 auto;position:relative;box-sizing:border-box;
+    border:solid #46382D;border-width:2.5px 0 0;border-top-color:#523E3D;
+    border-radius:0 0 31px 31px;background:#EED9BC
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='236' height='234'%3E%3Cg fill='%23E5CAAC'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63'/%3E%3Cpolygon points='140.5,117 151.67,129.63 167.13,136.35 158.57,150.87 156.96,167.65 140.5,164 124.04,167.65 122.43,150.87 113.87,136.35 129.33,129.63'/%3E%3C/g%3E%3C/svg%3E") 34px 19px/236px 234px repeat;
+    overflow:hidden}
+  /* 안내 문구 — 잉크 487×26 @ 본문(210,56) → font-size 26/0.93 ≈ 28 */
+  .bg53-tip{position:absolute;left:0;right:0;top:47px;height:40px;line-height:40px;text-align:center;
+    font-size:28px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 격자 — 원점 본문(40,156) · 칸 149×159 · pitch 170×171.
+     LESSONS 22-4: 하단 요소를 절대 top 으로 박으면 짧은 프레임에서 «삼켜진다» → 격자는 상단 앵커 + 남는 높이는
+     스크롤이 흡수한다(bottom:19px 로 하단도 같이 앵커해 본문이 눌려도 격자가 잘리지 않고 스크롤로 넘어간다). */
+  .bg53-grid{position:absolute;left:40px;right:39px;top:154px;bottom:19px;overflow-y:auto;
+    display:grid;grid-template-columns:repeat(5,149px);grid-auto-rows:159px;
+    column-gap:21px;row-gap:12px;align-content:start}
+  .bg53-grid::-webkit-scrollbar{width:10px}
+  .bg53-grid::-webkit-scrollbar-thumb{background:#C0A886;border-radius:6px}
+  /* 칸 — 검정 4px + 등급 fill + 반경 30. `--g` 가 등급색이다. */
+  .bg53-c{position:relative;box-sizing:border-box;width:149px;height:159px;
+    border:4px solid #000;border-radius:30px;background:var(--g,#CCC09C);overflow:hidden}
+  /* 등급 fill 위에 위→아래 살짝 밝→어두 그라디언트 (ref 칸 상단이 12% 밝다) */
+  .bg53-c::before{content:'';position:absolute;inset:0;border-radius:26px;
+    background:linear-gradient(180deg,rgba(255,255,255,.16) 0,rgba(255,255,255,0) 46%,rgba(0,0,0,.18) 100%)}
+  /* 아이콘 자리 — ref 아트 bbox 129×105 @ 칸(10,10). 이모지는 이 bbox 를 정확히 차지시킨다(아트 교체 대비) */
+  #bagw .bg53-c>u{position:absolute;left:6px;top:6px;width:129px;height:105px;
+    display:flex;align-items:center;justify-content:center;font-size:86px;line-height:1;z-index:1}
+  /* 수량 — 잉크 h24~26 @ 칸 y131 → font-size 27, 칸 가로 중앙 */
+  #bagw .bg53-c>b{position:absolute;left:0;right:0;top:124px;height:34px;line-height:34px;
+    display:block;text-align:center;font-size:27px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2}
+  /* 빈 칸 — ref r4c4·r4c5. 아이콘·수량 없이 어두운 베이지만 (LESSONS 34-2: 숨기지 말고 «빈» 상태로 남긴다) */
+  .bg53-c.em{background:#CCC09C}
+  .bg53-c.em::before{background:linear-gradient(180deg,rgba(0,0,0,.10) 0,rgba(0,0,0,.16) 100%)}
 </style>
 </head>
 <body>
@@ -5721,6 +5779,17 @@
         <div class="spc-tab-off" id="spcProfTab"><i>프로필</i></div>
       </div>
     </div></div>
+  </div>
+  <!-- 53 가방 팝업 — (가) 딤 위 가운데 다이얼로그 948×967. 측정표 docs/measure/53-가방팝업.md.
+       진입: 52 메뉴 → «가방». 52 는 다른 워커 구간이라 여기서는 openBag() 을 전역으로 노출만 한다. -->
+  <div id="bagw">
+    <div class="bg53">
+      <div class="bg53-head"><i>가방</i></div>
+      <div class="bg53-body">
+        <div class="bg53-tip">아이템을 눌러 상세 정보를 확인하세요</div>
+        <div class="bg53-grid" id="bagGrid"></div>
+      </div>
+    </div>
   </div>
   <!-- 58 — UI 연출 공용 레이어. 모든 fx* 함수가 여기에만 DOM 을 만든다(pointer-events:none). -->
   <div id="fxl"></div>
@@ -10698,6 +10767,47 @@ $('spcEdit').onclick = () => {
 /* 하단 토글 상호 연결 — 19 #pfw 의 «종합 스탯» → 여기 / 여기 «프로필» → #pfw */
 document.querySelector('.pf-tgl>.lb').onclick = () => { closeProfile(); openSpec(); };
 $('spcProfTab').onclick = () => { closeSpec(); openProfile(); };
+
+/* ---- 53 가방 팝업 — 측정표 docs/measure/53-가방팝업.md ----
+   레퍼런스는 5열 격자에 «보유 아이템» 을 등급 내림차순으로 채우고, 남는 칸은 빈 칸으로 둔다(r4c4·r4c5).
+   데이터는 S.own(id → {n:재료 수, l:레벨}) 하나뿐이라 스킬·장비·펫·유물을 한 목록으로 합친다.
+   최소 20칸(5×4)은 항상 그린다 — 보유가 적어도 격자가 «반쪽» 이 되지 않게(LESSONS 34-2). */
+const BAG_MIN = 20;
+function bagItems(){
+  const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
+  return cat
+    .map(it => ({ it, n: (S.own[it.id] || {}).n | 0 }))
+    .filter(r => r.n > 0)
+    .sort((a, b) => (b.it.g - a.it.g) || cat.indexOf(a.it) - cat.indexOf(b.it));
+}
+function renderBag(){
+  const rows = bagItems();
+  const cells = rows.map(r =>
+    '<div class="bg53-c" style="--g:' + GRADE[r.it.g].c + '" data-bagid="' + r.it.id + '">' +
+      '<u>' + itemIcon(r.it) + '</u><b>' + fmt(r.n) + '</b></div>').join('');
+  const pad = Math.max(0, BAG_MIN - rows.length);
+  $('bagGrid').innerHTML = cells + '<div class="bg53-c em"></div>'.repeat(pad);
+}
+function openBag(){ renderBag(); $('bagGrid').scrollTop = 0; $('bagw').classList.add('on'); }
+function closeBag(){ $('bagw').classList.remove('on'); }
+/* 딤(오버레이 자신)을 누르면 닫힌다 — 09·17·33 과 같은 관례 */
+$('bagw').addEventListener('click', e => { if(e.target.id === 'bagw') closeBag(); });
+$('tabbar').addEventListener('click', closeBag, true);
+/* 칸을 누르면 그 아이템의 상세를 띄운다 — 스킬은 08 스킬 세부 팝업, 나머지는 공용 popup() */
+$('bagGrid').addEventListener('click', e => {
+  const c = e.target.closest('[data-bagid]');
+  if(!c) return;
+  const id = c.dataset.bagid, o = S.own[id] || { n:0, l:0 };
+  const it = SK[id] || EQ[id] || PT[id] || RL[id];
+  if(!it) return;
+  popup(itemIcon(it) + ' ' + it.n,
+    '<p><b>' + GRADE[it.g].n + '</b> · 보유 재료 <b>' + fmt(o.n | 0) + '</b>개' +
+    (o.l ? '<br>레벨 <b>' + o.l + '</b>' : '') +
+    (it.d ? '<br><br>' + it.d : '') + '</p>');
+});
+/* 52 메뉴가 아직 다른 워커 구간이라 배선은 그쪽에서 한다 — 여기서는 진입점만 노출한다 */
+window.openBag = openBag;
+
 function openPromo(){
   const r = nextRank();
   if(!r){ popup('🏅 최고 계급', '<p>이미 최고 계급입니다! 🎉</p>'); return; }
@@ -11560,7 +11670,7 @@ $('mnw').querySelector('.mn-col').onclick = e => {
       : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
   }
   else if(k === 'rank')   popup('🏆 랭킹',      '<p>랭킹은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 54 — 서버 없이 로컬 기록 + 더미 순위로 구현 예정)</p>');
-  else if(k === 'bag')    popup('🎒 가방',      '<p>가방은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 53)</p>');
+  else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
   else if(k === 'conf')   popup('⚙️ 설정',      '<p>설정은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 55)</p>');
   else if(k === 'lounge') popup('🎮 게임 라운지','<p>게임 라운지는 준비 중입니다.</p>');

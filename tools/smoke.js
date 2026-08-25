@@ -331,11 +331,14 @@ function launchOpts(){
       await page.evaluate(() => { if (typeof openColl21 === 'function') openColl21('armor'); }).catch(() => {});
       /* 34 축복 팝업은 «팝업 + 팝업 밖 초록 스트립 + 닫기 X» 블록 1574px 이라 짧은 프레임에서 제일 먼저 넘친다 */
       await page.evaluate(() => { if (typeof openBless === 'function') openBless(); }).catch(() => {});
+      /* 53 가방 팝업은 948×967 가운데 다이얼로그라 짧은 프레임(1600)에서 max-height 로 눌린다 —
+         눌렸을 때 격자가 프레임 밖으로 나가지 않는지 화면비마다 같이 본다(LESSONS 22-4). */
+      await page.evaluate(() => { if (typeof openBag === 'function') openBag(); }).catch(() => {});
       await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
