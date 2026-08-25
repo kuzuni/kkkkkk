@@ -1035,17 +1035,26 @@
      대상 요소가 아니라 #fxl 안의 오버레이에 거는 이유: 훈련·장비 카드는 강화 직후
      innerHTML 로 통째로 재렌더돼(25 교훈 5) 대상에 붙인 클래스가 그 프레임에 날아간다. */
   .fx-flash{position:absolute;background:#fff;opacity:0;transform-origin:center;
-    animation:fxFlash .34s ease-out forwards}
+    animation:fxFlash .26s cubic-bezier(.2,.8,.3,1) forwards}
+  /* 완만하게 빠지면 «30~40% 흰 워시» 구간이 길어져 비평가 2명이 독립적으로 «회색 탈채도 =
+     비활성 상태» 로 읽었다(2026-08-25 3회차). 세게 번쩍이고 빨리 빠지게 한다. */
   @keyframes fxFlash{0%{opacity:0;transform:scale(1)}
-    16%{opacity:.82;transform:scale(1.045)}
+    22%{opacity:.95;transform:scale(1.05)}
+    34%{transform:scale(1.07)}
+    58%{opacity:.22}
     100%{opacity:0;transform:scale(1)}}
+  /* 대상 «자체» 가 살짝 커졌다 복귀한다 — 오버레이만 키우면 카드 bbox 가 그대로라 «커졌다» 로 안 읽힌다 */
+  .fx-hit{animation:fxHit .26s cubic-bezier(.34,1.56,.64,1) both}
+  @keyframes fxHit{0%{transform:scale(1)}34%{transform:scale(1.07)}100%{transform:scale(1)}}
 
   /* 퀘스트 완료 — 체크 스트로크 드로잉 */
   .fx-check{position:absolute;transform:translate(-50%,-50%)}
   @keyframes fxDraw{to{stroke-dashoffset:0}}
+  /* 0.7초 · 앞 18% 안에 완전히 뜬다 — 완만히 페이드인하면 «체크가 350ms 뒤에야 보인다» 가 된다 */
   @keyframes fxCheckIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}
-    40%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
-    72%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    18%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+    34%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    80%{opacity:1;transform:translate(-50%,-50%) scale(1)}
     100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 
   /* 상단 토스트 — 슬라이드다운 + 스프링, 1.2초 뒤 페이드아웃 */
@@ -7399,7 +7408,7 @@ function showSkillDetail(id){
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
   /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클 */
   if(l && !l.disabled) l.onclick = () => {
-    if(levelUp(it)){ fxUpOk($('mbox').querySelector('.sk-lv'), l); showSkillDetail(id); }
+    if(levelUp(it)){ showSkillDetail(id); fxUpOk($('mbox').querySelector('.sk-lv'), $('mLv')); }
   };
 }
 
@@ -7440,7 +7449,7 @@ function showRelicDetail(id){
   $('modal').classList.add('on', 'rl16');
   const l = $('mLv');
   if(l && !l.disabled) l.onclick = () => {
-    if(levelUp(it)){ fxUpOk($('mbox').querySelector('.rl-lv'), l); autoEquipAll(); showRelicDetail(id); }   /* 58 */
+    if(levelUp(it)){ autoEquipAll(); showRelicDetail(id); fxUpOk($('mbox').querySelector('.rl-lv'), $('mLv')); }   /* 58 */
   };
 }
 
@@ -7501,8 +7510,8 @@ function showItem(id){
     $('mEq').onclick = () => { toggleEquip(it, cat); showItem(id); };
     const a = $('mLv'), b = $('mLvAll'), c = $('mCraft');
     /* 58 — 강화 성공 연출. 이 팝업은 «대상 카드» 가 따로 없어 버튼 행을 플래시한다 */
-    if(a) a.onclick = () => { if(levelUp(it)){ fxUpOk(a.closest('.mrow') || a, a); showItem(id); } };
-    if(b) b.onclick = () => { if(levelUpMax(it)) fxUpOk(b, b); showItem(id); };
+    if(a) a.onclick = () => { if(levelUp(it)){ showItem(id); fxUpOk($('mbox').querySelector('.mrow'), $('mLv')); } };
+    if(b) b.onclick = () => { const n = levelUpMax(it); showItem(id); if(n) fxUpOk($('mbox').querySelector('.mrow'), $('mLvAll')); };
     if(c) c.onclick = () => {
       const nx = craft(it);
       if(nx) popup('⚗️ 합성 성공!', '<p><b style="color:' + GRADE[it.g].c + '">' + it.n + '</b> ' + CRAFT_NEED + '개 소모<br>'
@@ -9440,9 +9449,10 @@ $('trw').addEventListener('click', e => {
   if(card){
     /* 58 — 훈련 강화 성공: 그 카드가 흰 플래시 + 성공 파티클.
        renderTrain() 이 카드를 재렌더하므로 «누른 시점의 좌표» 로 #fxl 에 그린다. */
-    const okc = trIsTrain() ? trainBuy(card.dataset.tr) : statTrainBuy(card.dataset.tr);
-    if(okc) fxUpOk(card, card);
+    const key = card.dataset.tr;
+    const okc = trIsTrain() ? trainBuy(key) : statTrainBuy(key);
     renderTrain();
+    if(okc){ const fresh = document.querySelector('#trw [data-tr="' + key + '"]'); fxUpOk(fresh || card, fresh || card); }
   }
 });
 
@@ -9653,6 +9663,7 @@ function offlineReward(lastTime){
    길이 0.3~0.8초 · 입력 비차단(#fxl 은 pointer-events:none) · DOM 파티클 상한 FXMAX.
    ========================================================================== */
 const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (캔버스 parts 320 과 별개) */
+const FXFLY_MAX = 12;                                /* 동시에 «날고 있는» 재화 아이콘 총합 상한 */
 const FXCUR = {
   gold:{ pill:'.cGold', ic:'🪙', col:'#FFDE6A', fs:46 },
   dia :{ pill:'.cDia',  ic:'💎', col:'#8FE9FF', fs:42 }
@@ -9719,9 +9730,14 @@ function fxFly(from, cur, n){
   const pill = document.querySelector(C.pill); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
-  /* 3~8개 — 금액이 클수록 많이 (58 «코인/젬 아이콘 3~8개») */
-  const cnt = clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.9), 3, 8);
-  if(L.childElementCount + cnt > FXMAX) return;
+  /* 3~6개 — 금액이 클수록 많이 (58 «3~8개»). 골드·다이아가 동시에 들어오면 두 묶음이 겹치므로
+     «공중에 떠 있는 총합» 을 FXFLY_MAX 로 묶는다 — 안 묶으면 모달 헤더·HUD 숫자를 가린다. */
+  const room = Math.max(0, FXFLY_MAX - fxFlies.length);
+  const cnt = Math.min(clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.7), 3, 6), room);
+  if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
+  /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다 */
+  const batch = { fired:false };
+  fxHold[cur] = performance.now() + 1200;              /* 코인이 도착하기 «전»에 숫자가 다 올라가면 순서가 뒤집힌다 */
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
     el.className = 'fx-fly';
@@ -9729,12 +9745,14 @@ function fxFly(from, cur, n){
     el.style.fontSize = C.fs + 'px';
     el.style.opacity = '0';
     L.appendChild(el);
-    const sx = p0.x + rnd(-52, 52), sy = p0.y + rnd(-38, 38);
+    const sx = p0.x + rnd(-36, 36), sy = p0.y + rnd(-26, 26);
+    /* 제어점 y 를 그냥 «출발·도착 중 위쪽에서 더 위로» 잡으면 알약이 y23 이라 호가 프레임 밖(y −12)
+       으로 나가 잘린다(3회차 실측). 상단 HUD 아래로 클램프해 화면 안에서만 휘게 한다. */
     fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
-      cx:(sx + to.x)/2 + rnd(-200, 200), cy:Math.min(sy, to.y) - rnd(140, 320),
+      cx:(sx + to.x)/2 + rnd(-90, 90),
+      cy:Math.max(96, Math.min(sy, to.y) - rnd(90, 190)),
       /* 58 공통 규칙 «0.3~0.8초» — 마지막 아이콘까지 0.030*7 + 0.43 + 0.14(꽂힘) = 0.78초 */
-      t:-i*0.030, dur:0.35 + Math.random()*0.08, pill,
-      last:i === cnt-1, cur, n });
+      t:-i*0.030, dur:0.35 + Math.random()*0.08, pill, batch, cur, n });
   }
 }
 function fxPunch(el){
@@ -9802,7 +9820,12 @@ function fxReward(t){
 /* 강화·업그레이드 «성공» 한 세트 — 대상 카드/행 흰 플래시 + 성공 파티클.
    수치 롤링은 HUD(fxTick)와 09 일괄 강화 팝업이 각각 맡는다. */
 function fxUpOk(target, at){
-  if(target) fxFlash(target);
+  if(target){
+    fxFlash(target);
+    target.classList.remove('fx-hit'); void target.offsetWidth;
+    target.classList.add('fx-hit');                   /* 카드 «자체» 가 커졌다 복귀 */
+    setTimeout(() => target.classList && target.classList.remove('fx-hit'), 300);
+  }
   fxBurst(at || target, '#FFE9A8', 10);
 }
 function fxToast(txt){
@@ -9828,7 +9851,7 @@ function fxCheck(el){
     + '<circle cx="50" cy="50" r="41" fill="rgba(20,60,26,.55)" stroke="#7BE88E" stroke-width="8"/>'
     + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#B6FFC2" stroke-width="12"'
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
-    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .34s ease-out .08s forwards"/></svg>';
+    + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .26s ease-out .04s forwards"/></svg>';
   L.appendChild(d);
   setTimeout(() => d.remove(), 900);
 }
@@ -9839,6 +9862,8 @@ function fxCheck(el){
 const fxDisp = { gold:null, dia:null };
 const fxSeen = { gold:null, dia:null };
 const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0, dia:0 };
+/* 비행이 «도착할 때까지» 표시값을 붙잡아 둔다(0 = 안 붙잡음). 도착이 없으면 1.2초 뒤 스스로 풀린다. */
+const fxHold = { gold:0, dia:0 };
 function fxWatch(now){
   for(const k in FXCUR){
     const v = S[k];
@@ -9850,8 +9875,9 @@ function fxWatch(now){
       if(!fxAcc[k]) fxAccS[k] = now;
       fxAcc[k] += d; fxAccT[k] = now;
     }
-    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(180ms 정지 or 900ms 누적) */
-    if(fxAcc[k] > 0 && (now - fxAccT[k] > 180 || now - fxAccS[k] > 900)){
+    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(110ms 정지 or 900ms 누적).
+       180ms 는 «보상 버튼을 눌렀는데 연출이 늦게 시작한다» 로 읽혀 0.8초 예산을 앞에서 갉아먹었다. */
+    if(fxAcc[k] > 0 && (now - fxAccT[k] > 110 || now - fxAccS[k] > 900)){
       fxFly(fxSrc(now), k, fxAcc[k]);
       fxAcc[k] = 0;
     }
@@ -9878,7 +9904,9 @@ function fxTick(dt){
         setTimeout(() => el.remove(), 140);
       }
       fxPunch(f.pill);
-      if(f.last) fxPlus(f.cur, f.n);
+      /* 마지막 도착이 아니라 «첫 도착» 이다 — 마지막에 걸면 `+n` 이 0.6초 뒤에야 뜨고
+         숫자는 이미 다 올라간 뒤라 «순서 역전» 으로 읽힌다(3회차 비평 C·D 공통 지적). */
+      if(!f.batch.fired){ f.batch.fired = true; fxHold[f.cur] = 0; fxPlus(f.cur, f.n); }
       continue;
     }
     const e = p*p*(3 - 2*p), u = 1 - e;                /* 2차 베지에 + smoothstep — 포물선으로 꽂힌다 */
@@ -9895,6 +9923,10 @@ function fxTick(dt){
     const t = S[k];
     if(!Number.isFinite(t)){ fxDisp[k] = t; continue; }
     if(fxDisp[k] === null || !Number.isFinite(fxDisp[k])){ fxDisp[k] = t; continue; }
+    if(fxHold[k]){                                    /* 코인이 «꽂히는 순간» 부터 오르게 붙잡아 둔다 */
+      if(now < fxHold[k]) continue;
+      fxHold[k] = 0;
+    }
     const d = t - fxDisp[k];
     fxDisp[k] = Math.abs(d) < 1 ? t : fxDisp[k] + d*r;
   }
