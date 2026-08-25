@@ -80,7 +80,8 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     ringsArr: Array.isArray(rings)
   }));
   ok(mod.fns.length === 11, '공용 fx 함수 11개 전부 존재 (실측 ' + mod.fns.length + ')');
-  ok(mod.partCap === 480, '파티클 상한 PART_CAP = 480 (지시서 ⑤ · 실측 ' + mod.partCap + ')');
+  ok(mod.partCap > 320 && mod.partCap <= 480,
+     '파티클 상한 PART_CAP = ' + mod.partCap + ' (지시서 ⑤ «320 → 480 까지만» 범위 안)');
   ok(mod.trailN === 14, '트레일 링버퍼 TRAIL_N = 14 · 표본 22ms = 0.31s 궤적 (실측 ' + mod.trailN + ')');
   ok(mod.boltLife === 0.42, '번개 수명 BOLT_LIFE = 0.42s (코어 0.15 + 잔광 램프 · 실측 ' + mod.boltLife + ')');
   ok(mod.ringsArr && mod.ringCap === 44, 'rings 배열 + 상한 44 (실측 ' + mod.ringCap + ')');
@@ -228,7 +229,32 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(lifes.imp >= 0.24 && lifes.main >= 0.34,
      '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
   ok(lifes.dl >= 0.20, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.20 (한 프레임에 겹쳐 보이지 않는다)');
-  ok(lifes.dbgMin >= 4.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 4.0 («보이지 않는 점» 회귀 방지)');
+  ok(lifes.dbgMin >= 6.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 6.0 («보이지 않는 점» 회귀 방지)');
+  /* 5회차 비평 ① — 충격파가 화구 «안» 에서 시작하면 첫 2프레임이 불길에 묻힌다 */
+  const wave = await p.evaluate(() => {
+    rings.length = 0; boomFx(0, 0, 130, '#ffb45c', false);
+    const main = rings.filter(r => r.t >= 0).sort((a,b) => b.r1 - a.r1)[0];
+    return { r0: Math.round(main.r0), r1: Math.round(main.r1) };
+  });
+  ok(wave.r0 >= 90 && wave.r1 >= 200,
+     '본 충격파가 화구 테두리에서 시작해 밖으로 나간다 — r ' + wave.r0 + ' → ' + wave.r1 +
+     'px (피해 반경 130 기준 0.75 → 1.7배)');
+  /* 5회차 비평 ④ — 숫자 세로 계단이 «배열 길이» 면 소멸에 따라 같은 칸이 되감긴다 */
+  const stag = await p.evaluate(() => {
+    nums.length = 0;
+    const ys = [];
+    for (let i = 0; i < 3; i++){ dmgNum(500, 500, 100, false); ys.push(nums[nums.length-1].y); }
+    nums.length = 0;
+    for (let i = 0; i < 3; i++){ dmgNum(500, 500, 100, false); ys.push(nums[nums.length-1].y); }
+    nums.length = 0;
+    /* «연속으로 뜬 두 숫자» 가 같은 칸에 오지 않는 것이 요구다(4칸을 한 바퀴 돈 뒤 재사용은 정상) */
+    let minGap = 1e9;
+    for (let i = 1; i < ys.length; i++) minGap = Math.min(minGap, Math.abs(ys[i] - ys[i-1]));
+    return { ys, minGap };
+  });
+  ok(stag.minGap >= 40,
+     '데미지 숫자 세로 계단이 스폰 «순번» 으로 돈다 — 연속 스폰 최소 간격 ' + stag.minGap +
+     'px ≥ 40 (배열 길이로 돌리면 소멸 때마다 같은 칸이 되감긴다 · 5회차 «중심 간격 22px» 회귀 방지)');
   const rad = await p.evaluate(() => {
     rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 0);
     const g0 = rings[0].r1;
@@ -384,7 +410,7 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
              pool: trPool.length, shots: shots.length };
   });
   ok(perf.fps >= 55, '적 30 · 8스킬 60초 평균 프레임 ' + perf.ms + 'ms = ' + perf.fps + 'fps ≥ 55');
-  ok(perf.partMax <= 480 + 20, '파티클 상한 준수 최대 ' + perf.partMax + ' ≤ 500');
+  ok(perf.partMax <= 420, '파티클 상한 준수 최대 ' + perf.partMax + ' ≤ 420');
   ok(perf.ringMax <= 44, '링 상한 준수 최대 ' + perf.ringMax + ' ≤ 44');
   ok(perf.pool > 0, '트레일 버퍼가 풀로 되돌아와 재사용된다 (풀 ' + perf.pool + '개 · 프레임당 할당 0)');
 

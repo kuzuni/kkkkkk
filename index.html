@@ -9571,7 +9571,10 @@ function makeEnemy(tk){
      (`trGet`/`trPut`). 파티클·링은 상한이 있는 배열 재사용.
    · **56 절전 모드**에서는 `draw()` 자체가 안 돌아 그려지지 않고, **55 화면 흔들림 OFF** 면
      `camUpdate` 가 `cam.shake` 를 0 으로 고정한다 — 여기서 따로 분기하지 않는다. */
-const PART_CAP  = 480;      /* 파티클 상한 (114: 320 → 480. 지시서 ⑤ 상한) */
+/* 파티클 상한 — 지시서 ⑤ 는 «320 → 480 까지만» 이다. 480 으로 올려 보니 최악 부하(적 30 · 폭발계 8스킬)에서
+   상한에 붙어 살고, 그 상태의 파티클 갱신·그리기가 프레임 예산(−10%)을 먹었다. 400 이면 예산 안이고
+   실제 장면에서 파티클이 깎이는 일도 거의 없다(폭발 한 방이 만드는 양은 60~90개다) */
+const PART_CAP  = 400;
 const RING_CAP  = 44;       /* 링 상한 — 넘으면 가장 오래된 것부터 버린다 */
 const TRAIL_N   = 14;       /* 트레일 링버퍼 표본 수(등급으로 «쓰는 길이»만 늘린다) */
 const TRAIL_DT  = 0.022;    /* 표본 간격(초) — 14 × 22ms = 0.31s 분량의 궤적이 남는다(1회차 비평 ⑤) */
@@ -9619,13 +9622,13 @@ function debris(x, y, c, n, pw, gy){
     if(parts.length > PART_CAP) break;
     const a = -Math.PI/2 + rnd(-1.15, 1.15), v = rnd(pw*0.45, pw);
     parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.34,.68), t:0, c,
-                 r:rnd(4.0,9.0), gy: gy || 620 });
+                 r:rnd(6.0,13.0), gy: gy || 520 });
   }
 }
 /* ② 타격 임팩트 — 진행 방향 «반대»로 튀는 스파크 3~6개 + 0.12s 플래시 링(치명타는 링 2겹) */
 function impactFx(x, y, vx, vy, col, crit, g){
   const m = fxG(g), a0 = Math.atan2(-vy, -vx);
-  const n = Math.round((crit ? 9 : 5) * m);
+  const n = Math.round((crit ? 7 : 4) * m);
   for(let i=0;i<n;i++){
     if(parts.length > PART_CAP) break;
     const a = a0 + rnd(-0.75, 0.75), v = rnd(200, crit ? 460 : 340);
@@ -9647,11 +9650,14 @@ function boomFx(x, y, r, col, big){
   /* 4회차 비평 ①② — 링이 화구(스프라이트)보다 작아 12프레임 중 9장에서 불길에 묻혔다.
      충격파는 «피해 반경에서 멈추는 테두리» 가 아니라 «그 밖으로 퍼져 나가는 파문» 이다:
      본 충격파는 반경의 1.3배까지, 2단은 1.7~2.0배까지 나가고 시차도 0.16 → 0.20s 로 벌린다 */
-  fxRing(x, y, r*1.30, c, 0.36, FX_W2);                           /* 본 충격파 */
-  fxRing(x, y, r*0.55, '#fff2c0', 0.22, FX_W);                    /* 안쪽 화염 링 */
-  fxRing(x, y, r*(big ? 2.00 : 1.70), c, 0.40, FX_W, r*1.15, 0.20);/* 2단 — 0.20s 뒤 바깥 파문 */
-  debris(x, y, c, big ? 26 : 18, big ? 520 : 400);
-  debris(x, y, '#8a6a4a', big ? 16 : 12, 360);                    /* 흙 파편 */
+  /* 5회차 비평 ①② — 착탄 첫 2프레임(160ms)에 링 반경이 화구와 6% 차이라 불길에 완전히 묻혔다.
+     링을 «화구 안» 이 아니라 «화구 테두리» 에서 시작해 밖으로 내보낸다 */
+  fxRing(x, y, r*1.70, c, 0.34, FX_W2, r*0.75);                   /* 본 충격파: 화구 테두리 → 1.7배 */
+  fxRing(x, y, r*0.60, '#fff2c0', 0.20, FX_W);                    /* 안쪽 화염 링 */
+  fxRing(x, y, r*(big ? 2.40 : 2.05), c, 0.40, FX_W, r*1.45, 0.20);/* 2단 — 0.20s 뒤 바깥 파문 */
+  /* 파편이 파면(2단 링)을 한 번도 추월하지 못해 «화염 텍스처» 로 읽혔다 → 크고 빠르게 */
+  debris(x, y, c, big ? 18 : 13, big ? 780 : 620);
+  debris(x, y, '#8a6a4a', big ? 11 : 8, 560);                     /* 흙 파편 */
   cam.shake = Math.max(cam.shake, big ? 6 : 3);
 }
 /* 장판·오라형 시전 — 바닥 마법진 플래시(눕는 링 2겹 + 회전 룬 대용 점) */
@@ -9673,6 +9679,12 @@ function chainBoomFx(x, y, r, col){
    매 프레임 rnd 로 흔들면 지그재그가 프레임마다 다른 곳에 그려져 «치직» 이 아니라 «지지직 노이즈»가 된다.
    본선 6분절 + 가지 2~3개(본선 중간에서 갈라져 나가 짧게 끝난다) */
 function buildBolt(l){
+  /* 5회차 비평 ⑤ — 줄기가 히어로 스프라이트 정중앙을 관통해 4/8 프레임에서 캐릭터의 26~36% 를 덮었다.
+     시작점을 목표 방향으로 42px 밀어 «몸 밖에서» 뻗어 나가게 한다(도착점은 그대로 = 명중 위치 불변) */
+  {
+    const ddx = l.x2 - l.x1, ddy = l.y2 - l.y1, dl = Math.hypot(ddx, ddy);
+    if(dl > 90){ l.x1 += ddx/dl*42; l.y1 += ddy/dl*42; }
+  }
   const dx = l.x2 - l.x1, dy = l.y2 - l.y1, len = Math.hypot(dx, dy) || 1;
   const nx = -dy/len, ny = dx/len, SEG = 6;
   const pts = new Float32Array((SEG+1)*2);
@@ -9695,11 +9707,14 @@ function buildBolt(l){
     l.br.push(bp);
   }
 }
+let numSeq = 0;                 /* 114 — 데미지 숫자 스폰 순번(세로 계단 배치용) */
 function dmgNum(x, y, v, crit){
   if(nums.length > 44) nums.shift();
   /* 114 — 폭발 한 방에 6~7개가 한 자리에 겹쳐 «1.16A1.16A» 로 읽히던 것(2회차 J⑦·K⑤ 공통).
      가로 산포 ±26px + 최근 3개를 세로로 계단 배치한다 */
-  nums.push({ x, y: y - (nums.length % 4)*38, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-32,32) });
+  /* 5회차 비평 ④ — `nums.length % 4` 는 숫자가 사라질 때마다 되감겨 «같은 칸» 이 다시 나온다
+     (bolt 3연타에서 중심 간격 22px < 글자 높이 45px 로 51% 겹쳤다). 스폰 «순번» 으로 돌린다 */
+  nums.push({ x, y: y - (numSeq++ % 4)*44, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-32,32) });
 }
 function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
@@ -9836,7 +9851,7 @@ function castGeneric(s, dmg){
       magicFlash(px, py, s.r || 190, s.col);               /* 114 ③ */
       areaDamage(px, py, s.r || 190, dmg, s.col);
       booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom',
-                   scale:(s.scale || 3.4)*1.45, alpha:0.85 });   /* 114 ④ — 화구를 피해 반경에 맞게 */
+                   scale:(s.scale || 3.4)*1.45, alpha:0.62 });   /* 114 ④ — 화구를 피해 반경에 맞게 */
       cam.shake = Math.max(cam.shake, s.shake || 6);
       return true;
     }
@@ -9998,7 +10013,7 @@ function castSkillRaw(s){
       if(!nearest(px, py, 400)) return false;
       magicFlash(px, py, 190, '#fff2b0');                  /* 114 ③ — 시전 순간 바닥 마법진 */
       areaDamage(px, py, 190, dmg, '#fff2b0');
-      booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:5.4, alpha:0.85 });
+      booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:5.4, alpha:0.62 });
       cam.shake = Math.max(cam.shake, 6);
       return true;
     }
@@ -10309,7 +10324,7 @@ function step(dt){
       if(b.y >= b.ty){
         areaDamage(b.tx, b.ty, b.r, b.dmg, '#ffb45c');
         /* 114 ④ — 화구가 피해 반경(130)의 절반도 안 돼 «예고 원 밖은 안 맞는다» 로 보였다. 크게 터뜨린다 */
-        booms.push({ x:b.tx, y:b.ty, at:0, afps:24, aloop:false, akey:'boom', anim:'boom', scale:5.0, alpha:1 });
+        booms.push({ x:b.tx, y:b.ty, at:0, afps:24, aloop:false, akey:'boom', anim:'boom', scale:5.0, alpha:0.62 });
         cam.shake = Math.max(cam.shake, 8);
         trPut(b); shots.splice(i,1); continue;
       }
@@ -10318,7 +10333,7 @@ function step(dt){
     if(b.life <= 0 || b.x < -60 || b.y < -60 || b.x > WORLD.w+60 || b.y > WORLD.h+60){
       if(b.k === 'boom'){
         areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
-        booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:1 });
+        booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.62 });
         chainBoomFx(b.x, b.y, b.r, '#ffb45c');            /* 114 ④ — 착탄 주변 3연쇄 소폭발(그림뿐) */
       }
       trPut(b); shots.splice(i,1); continue;
@@ -10333,7 +10348,7 @@ function step(dt){
         b.hit.push(e);
         if(b.k === 'boom'){
           areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
-          booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:1 });
+          booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.62 });
           chainBoomFx(b.x, b.y, b.r, '#ffb45c');          /* 114 ④ */
           cam.shake = Math.max(cam.shake, 5);
           trPut(b); shots.splice(i,1); break;
@@ -10396,7 +10411,7 @@ function step(dt){
     p.vy *= Math.pow(p.gy ? 0.55 : 0.08, dt);
   }
   for(let i=nums.length-1;i>=0;i--){
-    const n = nums[i]; n.t += dt; n.y += n.vy*dt; n.vy += 70*dt;
+    const n = nums[i]; n.t += dt; n.y += n.vy*dt; n.vy += 24*dt;   /* 114 — 되내려앉지 않게(5회차 P④) */
     if(n.t > 0.85) nums.splice(i,1);
   }
   for(let i=corpses.length-1;i>=0;i--){
@@ -10524,15 +10539,19 @@ function bossKillSfx(){ sfx('bosskill'); bgmSet('main'); }
    ctx 상태는 이 함수가 끝날 때 원래대로(합성 source-over · alpha 1) 돌려놓는다. */
 function drawTrails(){
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  /* 성능 예산(지시서 ⑤ «−10% 이내») — 표본마다 stroke 를 부르면 8스킬 난사에서 프레임당 stroke 가
+     수백 번이 된다. 투사체가 많으면 «한 칸 건너» 그린다: 선은 그대로 이어지고 호출 수만 절반이 된다 */
+  const lod = shots.length > 10 ? 2 : 1;
+  /* 1회차 비평 — 잔상 휘도가 배경 대비 ΔL +14~26 이라 «사실상 안 보인다» 였다. 전 종류를 가산 합성으로
+     올리고 알파를 키운다(색은 스킬 col 그대로 = 지시서 ⑥).
+     ★ 합성 모드 전환은 투사체마다 하면 프레임당 100회가 넘는 상태 변경이 된다 — 루프 «밖에서» 한 번만 켠다 */
+  ctx.globalCompositeOperation = 'lighter';
   for(const b of shots){
     const n = b.tn;
     /* 표본 5개 미만(≈110ms)은 «궤적» 이 아니라 발사 지점의 뭉치다 — 표창 8발이 한꺼번에 나가면
        캐릭터 상반신의 25~35% 를 400ms 동안 덮었다(2회차 ⑧ · 4회차 ⑥) */
     if(!b.tr || n < 5) continue;
     const k = b.k, fire = (k === 'boom' || k === 'meteor');
-    /* 1회차 비평 — 잔상 휘도가 배경 대비 ΔL +14~26 이라 «사실상 안 보인다» 였다.
-       전 종류를 가산 합성으로 올리고 알파를 키운다(색은 스킬 col 그대로 = 지시서 ⑥) */
-    ctx.globalCompositeOperation = 'lighter';
     const first = (b.ti - n + TRAIL_N*2) % TRAIL_N;
     if(k === 'shuri' || k === 'boomer'){
       /* 회전 잔상 — 선이 아니라 «지나간 자리의 고스트 별» 3~4개 */
@@ -10548,17 +10567,17 @@ function drawTrails(){
     }else if(k === 'ice'){
       /* 서리 띠 — 마름모만 찍으면 «점 몇 개» 로 읽힌다(2회차 K). 궤적을 잇는 얇은 띠를 먼저 깐다 */
       ctx.strokeStyle = b.col; ctx.lineCap = 'round';
-      for(let i=0;i<n-1;i++){
-        const i0 = (first + i) % TRAIL_N, i1 = (first + i + 1) % TRAIL_N;
+      for(let i=0;i<n-1;i+=lod){
+        const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, n-1)) % TRAIL_N;
         const f = (i+1)/(n-1);
         ctx.globalAlpha = f*f*0.5;
-        ctx.lineWidth = 1 + 5*f;
+        ctx.lineWidth = 3 + 12*f;
         ctx.beginPath();
         ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
         ctx.stroke();
       }
       /* 서리 입자 — 진행선에서 좌우로 흩어지는 작은 마름모 */
-      for(let i=0;i<n;i++){
+      for(let i=0;i<n;i+=lod){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
         const x = b.tr[idx*2], y = b.tr[idx*2+1];
         ctx.globalAlpha = 0.25 + f*0.6;
@@ -10571,8 +10590,8 @@ function drawTrails(){
     }else{
       /* 폴리라인 잔상 — 검기(넓은 띠) · 화염(꼬리) · 그 외(가는 선) */
       const w = k === 'slash' ? 13 : fire ? 15 : 8;
-      for(let i=0;i<n-1;i++){
-        const i0 = (first + i) % TRAIL_N, i1 = (first + i + 1) % TRAIL_N;
+      for(let i=0;i<n-1;i+=lod){
+        const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, n-1)) % TRAIL_N;
         const f = (i+1)/(n-1);
         ctx.globalAlpha = f*f*(fire ? 0.85 : 0.7);
         ctx.strokeStyle = fire ? (f > 0.6 ? '#ffdc8a' : b.col) : b.col;
@@ -10581,18 +10600,22 @@ function drawTrails(){
         ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
         ctx.stroke();
       }
-      if(fire){
-        /* 연기 점 — 꼬리 «뒤쪽»(오래된 표본)일수록 크고 흐리다 */
-        ctx.globalCompositeOperation = 'source-over';
-        for(let i=0;i<n;i+=2){
-          const idx = (first + i) % TRAIL_N, f = (i+1)/n;
-          ctx.globalAlpha = (1-f)*0.22;
-          ctx.fillStyle = '#8b8b96';
-          ctx.beginPath(); ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 3 + 7*(1-f), 0, 6.283); ctx.fill();
-        }
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  /* 연기 점은 «빼기» 가 필요해 가산 합성 밖에서 따로 돈다(투사체가 많으면 생략) */
+  if(lod === 1){
+    ctx.fillStyle = '#8b8b96';
+    for(const b of shots){
+      const n = b.tn;
+      if(!b.tr || n < 5 || (b.k !== 'boom' && b.k !== 'meteor')) continue;
+      const first = (b.ti - n + TRAIL_N*2) % TRAIL_N;
+      for(let i=0;i<n;i+=2){
+        const idx = (first + i) % TRAIL_N, f = (i+1)/n;
+        ctx.globalAlpha = (1-f)*0.22;
+        ctx.beginPath(); ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 3 + 7*(1-f), 0, 6.283); ctx.fill();
       }
     }
-    ctx.globalCompositeOperation = 'source-over';
   }
   ctx.globalAlpha = 1;
 }
@@ -10660,7 +10683,11 @@ function draw(){
       const w = p.r*1.7;
       ctx.fillRect(p.x - w/2, p.y - w/2, w, w);
     }else{
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r*a + 0.5, 0, 6.283); ctx.fill();
+      const rr = p.r*a + 0.5;
+      /* 성능 예산 — 2px 이하의 점은 원호로 그리나 사각으로 그리나 화면에서 같다. 상한(480개)에
+         가까울수록 `arc()` 호출 비용이 프레임을 지배하므로 작은 것은 fillRect 로 흘린다 */
+      if(rr < 2.4) ctx.fillRect(p.x - rr, p.y - rr, rr*2, rr*2);
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, 6.283); ctx.fill(); }
     }
   }
   ctx.globalAlpha = 1;
@@ -10739,10 +10766,11 @@ function draw(){
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.lineCap = 'round'; ctx.strokeStyle = '#ffe1a0';
+    const ostep = cnt > 4 ? 2 : 1;              /* 칼날이 많으면 분절을 절반으로(성능 예산) */
     for(let i=0;i<cnt;i++){
       const a = orbitAng + i*(6.283/cnt);
-      for(let t=0;t<6;t++){
-        const f = 1 - t/6, a0 = a - t*0.055, a1 = a0 - 0.055;
+      for(let t=0;t<6;t+=ostep){
+        const f = 1 - t/6, a0 = a - t*0.055, a1 = a0 - 0.055*ostep;
         ctx.globalAlpha = f*f*0.55;
         ctx.lineWidth = 1.5 + 7*f;
         ctx.beginPath();
@@ -10771,25 +10799,36 @@ function draw(){
     if(b.k !== 'meteor') continue;
     const f = clamp(1 - (b.ty - b.y)/620, 0, 1);
     ctx.save();
-    ctx.globalAlpha = 0.45 + 0.45*f;
-    ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth = FX_W;
+    ctx.globalAlpha = 0.30 + 0.35*f;
+    ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth = FX_W - 1;
     /* 예고 발자국 = 실제 폭발 링과 «같은 반경 · 같은 눕는 비율» 이어야 «저기 떨어진다» 로 읽힌다
        (1회차 비평 ③ — 예고 1.46:1 547×374 ↔ 폭발 0.90:1 380×422 로 어긋나 있었다) */
     const rr = b.r*(1.35 - 0.35*f);
     ctx.beginPath(); ctx.arc(b.tx, b.ty, rr, 0, 6.283);
     ctx.stroke();
-    /* 조준 십자 — 예고가 «장식»이 아니라 «표적»으로 읽히게 */
+    /* 5회차 P⑥·Q② — 바깥 원은 «실제 피해 반경» 이라 줄일 수 없다(줄이면 «원 밖은 안 맞는다» 는 거짓말이 된다).
+       대신 안쪽에 낙하와 함께 **조여드는** 원을 하나 더 그려 «지금 저기로 떨어진다» 를 읽히게 한다 */
+    ctx.globalAlpha = 0.35 + 0.5*f; ctx.lineWidth = FX_W;
+    const ri = b.r*(1.05 - 0.55*f);
+    ctx.beginPath(); ctx.arc(b.tx, b.ty, ri, 0, 6.283); ctx.stroke();
+    /* 조준 십자 — 예고가 «장식»이 아니라 «표적»으로 읽히게. 수렴에 맞춰 같이 작아진다 */
     ctx.globalAlpha *= 0.8; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(b.tx - rr*0.25, b.ty); ctx.lineTo(b.tx + rr*0.25, b.ty);
-    ctx.moveTo(b.tx, b.ty - rr*0.25); ctx.lineTo(b.tx, b.ty + rr*0.25);
+    ctx.moveTo(b.tx - ri*0.34, b.ty); ctx.lineTo(b.tx + ri*0.34, b.ty);
+    ctx.moveTo(b.tx, b.ty - ri*0.34); ctx.lineTo(b.tx, b.ty + ri*0.34);
     ctx.stroke();
     ctx.restore();
   }
 
   /* 투사체 */
   for(const b of shots){
-    ctx.save(); ctx.translate(b.x, b.y);
+    /* 5회차 P⑤ — 8발 볼리가 머즐 오프셋 0 으로 캐릭터 «위» 에 생성돼 실루엣의 35% 를 덮었다.
+       위치(=게임 판정)는 그대로 두고 «몸에 겹치는 동안만» 투명하게 흘린다 */
+    const pdx = b.x - player.x, pdy = b.y - (player.y - 22);
+    const near = Math.sqrt(pdx*pdx + pdy*pdy);
+    ctx.save();
+    if(near < 62) ctx.globalAlpha = clamp(0.28 + (near/62)*0.72, 0.28, 1);
+    ctx.translate(b.x, b.y);
     if(b.k === 'slash'){
       ctx.rotate(b.a);
       ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 11; ctx.lineCap = 'round';
@@ -10825,6 +10864,7 @@ function draw(){
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,9,0,6.283); ctx.fill();
     }
     ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   /* 번개 — 114 ③: 굳힌 경로를 «잔광(넓고 흐린 선) → 코어(가는 밝은 선)» 2겹으로 긋고 가지도 같이 친다.
@@ -10859,7 +10899,19 @@ function draw(){
     ctx.globalAlpha = 1;
   }
 
-  /* 114 ②③ 확장 링 — 임팩트 플래시 · 폭발 충격파 · 바닥 마법진(fl) */
+  /* 폭발 스프라이트 */
+  for(const b of booms){
+    const fr = curFrame(b);
+    if(fr){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      drawFrameC('boom', fr, b.x, b.y, b.scale, false, b.alpha);
+      ctx.restore();
+    }
+  }
+
+  /* 114 ②③ 확장 링 — 임팩트 플래시 · 폭발 충격파 · 바닥 마법진(fl).
+     ★ 폭발 스프라이트 «뒤» 에 그렸더니 착탄 첫 2프레임(160ms)에 링 12개가 흰 화구에 100% 가려
+     «2단 충격파가 존재한 증거가 0프레임» 이었다(5회차 P① · Q(c) 공통) → 화구 위로 올린다 */
   for(const r of rings){
     if(r.t < 0) continue;                       /* 지연 발화 대기 중 */
     const f = clamp(r.t/r.life, 0, 1), e = 1-(1-f)*(1-f);
@@ -10873,16 +10925,6 @@ function draw(){
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
-
-  /* 폭발 스프라이트 */
-  for(const b of booms){
-    const fr = curFrame(b);
-    if(fr){
-      ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      drawFrameC('boom', fr, b.x, b.y, b.scale, false, b.alpha);
-      ctx.restore();
-    }
-  }
 
   /* 데미지 숫자 */
   ctx.textAlign = 'center';
@@ -10905,7 +10947,10 @@ function draw(){
     ctx.font = (n.crit ? '900 ' : '800 ') + sz.toFixed(1) + 'px sans-serif';
     ctx.fillStyle = n.crit ? '#ffd45e' : '#fff';
     ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineWidth = n.crit ? 6 : 5;
-    ctx.strokeText(n.v, n.x+n.ox, n.y); ctx.fillText(n.v, n.x+n.ox, n.y);
+    /* 5회차 P③·Q③ — 왼쪽 벽에 붙은 적의 숫자가 x42~169 에 그려져 좌측 사이드 아이콘 위로 나갔다.
+       월드 좌표를 화면 좌표로 환산해 안쪽으로 밀어 넣는다(적과의 연결은 40px 이내라 유지된다) */
+    const nx = clamp(n.x + n.ox + ox, 150, VW - 110) - ox;
+    ctx.strokeText(n.v, nx, n.y); ctx.fillText(n.v, nx, n.y);
   }
   ctx.globalAlpha = 1;
   ctx.restore();
