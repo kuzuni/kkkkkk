@@ -723,7 +723,9 @@
     transform:translateZ(0) translateX(-50%) scaleX(1.31)}
   /* L2 잉크 좌단은 ref 677 인데 우리는 673 이었다(−4) → 칸을 3px 오른쪽으로. top 은 +1
      (ref 는 L1 잉크하단 1878 → L2 잉크상단 1903 으로 25px 띄운다). */
-  #tuto.todo .tinfo{left:3px;width:318px;top:57px}
+  /* ★ 9회차 — 비평가 P·Q 가 독립으로 «L2 를 1px 내려라» 를 지시했다. 한 번에 두 어긋남이 잡힌다:
+     L1↓→L2↑ 24.5 → 25.5(ref 25.5) · L2↓→L3↑ 7.5 → 6.5(ref 6.5). */
+  #tuto.todo .tinfo{left:3px;width:318px;top:58px}
   /* ★ 7회차(비평 M·N) — L2 획 두께는 **서체 한계로 확정, 더 밀지 마라.** ref 5 vs 우리 3(−40%) ·
      잉크 화소 2217 → 1517(−32%) · 잉크 높이 26 → 24 인데, 아래 두 가지를 **실제로 해 보고 픽셀로 반증**했다:
      ① M 의 «`paint-order` 누락» 진단은 틀렸다 — 베이스 규칙 `#tuto .tt`(위)가 이미
@@ -770,8 +772,10 @@
   /* @32-GLYPH-TUNE (수치는 `node tools/probe32.js <캡처> runs` 로 글리프 열 런을 재서 맞춘다) */
   #tuto.todo .tbtn b {font-size:26px;top:-1px;transform:scaleX(1.15);margin:0 -1px}
   #tuto.todo .tbtn i {font-size:29px;top:0px;transform:scaleX(0.78);margin:0 -4px}
+  /* ★ 9회차(비평가 Q) — L1 어간 재배분. `-`→`2` 가 ref 6 vs 우리 2(−67%), `7`→`]` 가 4 vs 2(−50%).
+     늘린 어간만큼 `227` 잉크를 좁혀(scaleX .86→.78) **총폭을 지킨다**(우리 숫자가 ref 보다 자당 +2 넓다). */
   #tuto.todo .tbtn s {font-size:30px;top:-1px;transform:scaleX(1.4);margin:0 0px}
-  #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.86);margin:0 -3px}
+  #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.78);margin:0 -3px}
   #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(0.95);margin:0 1px}
   /* `1` 만 좁힌다 — ref 잉크 폭 6.5(우리 등폭 17.5). 줄어든 레이아웃 폭은 margin 으로 상쇄. */
   /* ★ 7회차 — L3 `(0/10)` 의 «1»→«0» 어간이 ref 5 vs 우리 2 였다(자체 열 런 실측).
