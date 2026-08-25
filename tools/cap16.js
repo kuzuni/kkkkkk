@@ -47,6 +47,9 @@ function launchOpts(){
   await page.evaluate(() => {
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     window.step = () => {};
+    /* ref 효과문은 «한 줄» 이다 — 장착 중이면 «장착 중 — 효과 2배» 한 줄이 더 붙어 2줄이 된다.
+       autoEquipAll 이 보유 유물을 자동 장착하므로 캡처 전에 장착을 비운다(레퍼런스와 같은 상태). */
+    S.eqRelic = [];
     showRelicDetail('rl0');
   });
   await page.waitForTimeout(400);
