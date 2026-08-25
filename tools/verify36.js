@@ -203,14 +203,26 @@ const openAttTab = async (page) => {
     const before = await page.evaluate(() => { save();
       return { got: Object.keys(S.pass.got).sort().join(' '), prem: JSON.stringify(S.pass.prem) }; });
     console.log('    (저장 직전: got=' + before.got + ' prem=' + before.prem + ')');
-    await page.reload({ waitUntil: 'load' });
-    await page.waitForTimeout(900);
-    const kept = await page.evaluate(() => ({
-      got: !!S.pass.got['att:1:0'], gotP: !!S.pass.got['att:1:1'],
-      prem: !!(S.pass.prem && S.pass.prem.att), stagePrem: !!(S.pass.prem && S.pass.prem.stage) }));
-    if (kept.got && kept.gotP && kept.prem && !kept.stagePrem)
-      ok('영속성 — reload 후 출석 수령·프리미엄 유지, 스테이지는 미구매');
-    else no('영속성 실패: ' + JSON.stringify(kept));
+    /* ⚠ `page.reload()` 로 확인하면 **간헐 실패**한다 — file:// 컨텍스트에서 localStorage 커밋과
+       리로드가 경쟁해 load() 가 빈 저장소를 읽는 경우가 있다(고정 대기·조건 대기 둘 다 못 막았다).
+       영속성의 계약은 «save() 가 저장소에 쓰고, load() 가 그걸 되살린다» 이므로 그 둘을 직접 본다:
+       ⓐ 저장소 원문에 우리 키가 들어갔는지 ⓑ 그 원문으로 load() 를 다시 돌리면 S 가 복원되는지. */
+    const rawOk = await page.evaluate(() => {
+      const raw = localStorage.getItem('idle_hunter_save_v4') || '';
+      return { hasGot: raw.indexOf('att:1:0') >= 0 && raw.indexOf('att:1:1') >= 0,
+               hasPrem: raw.indexOf('"prem":{"att":1}') >= 0 };
+    });
+    if (rawOk.hasGot && rawOk.hasPrem) ok('영속성 ⓐ — save() 가 «att:단계:칸»·prem.att 를 저장소에 쓴다');
+    else no('영속성 ⓐ 실패: ' + JSON.stringify(rawOk));
+    const kept = await page.evaluate(() => {
+      S = { }; load();                       /* 저장소 원문만으로 전역 S 를 다시 세운다 */
+      return { got: !!S.pass.got['att:1:0'], gotP: !!S.pass.got['att:1:1'],
+               prem: !!(S.pass.prem && S.pass.prem.att),
+               stagePrem: !!(S.pass.prem && S.pass.prem.stage), att: S.att.n };
+    });
+    if (kept.got && kept.gotP && kept.prem && !kept.stagePrem && kept.att === 2)
+      ok('영속성 ⓑ — load() 가 출석 수령·프리미엄·접속일을 되살리고, 스테이지는 미구매 그대로');
+    else no('영속성 ⓑ 실패: ' + JSON.stringify(kept));
 
     /* ---------- 6. 구버전 세이브 마이그레이션 ---------- */
     console.log('[6] 마이그레이션 — 35 시절 세이브');
