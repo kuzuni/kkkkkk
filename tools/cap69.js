@@ -50,7 +50,10 @@ const GEO = process.argv.includes('--geo');
       g[k] = { x: +(r.left - A.left).toFixed(1), y: +(r.top - A.top).toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) };
     };
     R('app', '#app'); R('mbox', '.mbox'); R('mhead', '.mhead'); R('mbody', '#mbox');
-    R('pn', '.ml-pn'); R('note', '.ml-note'); R('all', '.ml-all'); R('close', '.ml-close');
+    R('pn', '.ml-pn'); R('note', '.ml-note'); R('btns', '.ml-btns');
+    /* 92 — 하단 버튼은 2개다: 좌 #mailDel(빨강 삭제) · 우 #mailBtn(초록 수령) */
+    R('all', '.ml-all'); R('bDel', '#mailDel'); R('bAll', '#mailBtn'); R('close', '.ml-close');
+    R('empty', '.ml-empty');
     const rows = document.querySelectorAll('.ml-r');
     g.rowCount = rows.length;
     rows.forEach((_, i) => {
