@@ -5739,15 +5739,45 @@
      ref 는 하늘이 frame 106 부터 섞이기 시작해 **366 아래로는 하늘이 0%** 인데, 우리는 526 에서도
      하늘이 20~60% 남아 있었다(G 1순위 «하늘 면적비 33.3% → 60.7%»). 면적·경계는 지금 CSS 로 맞추고
      그림만 나중에 교체한다. 색은 ref 행 평균색(≈110,130,70 계열)에서 뽑았다. */
-  .ps-gr{left:0;right:0;bottom:0;height:371px;pointer-events:none;
-    background:linear-gradient(180deg,rgba(107,96,64,0) 0,rgba(107,96,64,.14) 60px,rgba(107,96,64,.45) 120px,
-      #6B6040 156px,#7C8A4C 256px,#6E8A38 311px,#8C824A 371px)}
+  /* 8회차: 우리 지평선은 전 열 frame 287 에서 «칼같이» 끊겼는데(열별 스캔 18/18 열이 287),
+     ref 는 하늘>50% 가 frame 315 까지 가고 >20% 가 362 까지 이어지는 «부드러운» 경계다.
+     지면 색 절대위치(420·475·535)는 그대로 두고 **전이 구간만 28px 아래로** 민다(h371→343). */
+  /* 지면 «윗변» 은 ref 에서 평평하지 않다 — 더미 사이 골로 하늘이 frame 516~533 까지 내려오고
+     더미 마루에서는 274 까지 올라온다(30px 간격 열 스캔, 좌측 평균 388). 평평한 밴드로는
+     지평선(>50% 315)과 하늘 면적비(45.6%)를 **동시에** 못 맞춘다 — r13~r15 가 지평선만 맞추고
+     면적비를 34% 에 묶어 둔 원인이 이것이다. → ref 프로파일을 그대로 폴리곤으로 떠서 윗변에 씌운다.
+     x690~ 구간의 ref 프로파일은 «집» 이라 지면으로 쓸 수 없어(집은 `.ps-hs` 담당) 완만하게 잇는다.
+     깎인 자리에는 부모 `.ps-hero` 의 하늘 그라디언트가 그대로 드러난다. */
+  .ps-gr{left:0;right:0;bottom:0;height:300px;pointer-events:none;
+    background:linear-gradient(180deg,#6B6040 0,#7C8A4C 185px,#6E8A38 240px,#8C824A 300px);
+    clip-path:polygon(0px 120px,30px 197px,60px 281px,90px 283px,120px 83px,150px 81px,180px 290px,
+      210px 101px,240px 102px,270px 111px,300px 138px,330px 142px,360px 148px,390px 148px,420px 148px,
+      450px 286px,480px 82px,510px 127px,540px 127px,570px 127px,600px 54px,630px 39px,660px 165px,
+      690px 130px,780px 128px,870px 126px,960px 128px,1080px 132px,1080px 300px,0px 300px)}
   #psw.att .ps-gr{display:none}
+  /* 우상단 집 일러스트 «아트 자리» — 8회차 신설.
+     ref 를 열별로 훑으면(하늘 종료 y) x720~1020 구간만 하늘이 frame 170·111·55·−13·64·121 로 잘려 있다 =
+     화면 우상단을 큰 집 덩어리가 차지한다. 우리는 전 열이 287 로 평평했다(= 그 덩어리가 통째로 없었다).
+     실측 bbox: x690..1079(w390) · frame y0..380(h380) · 중심 x884. 지붕 꼭짓점 x894 @y0,
+     y12 에서 x868..920 → y180 에서 x713..1078 로 벌어지는 삼각형(기울기 ≈1.0) → 밑변 도달 y193 = 51%.
+     «아트 자리 규칙»: 이미지가 들어오면 이 bbox 그대로 교체하면 된다(측정표 §10). */
+  .ps-hs{left:690px;top:0;width:390px;height:380px;pointer-events:none}
+  /* 치수는 «명시»한다 — `inset:0` 로는 clip-path 의 % 가 113px 짜리 상자 기준으로 풀려서
+     지붕 기울기가 3.4:1 로 뭉개졌다(실측: y20 에서 폭 136, y80 에서 벌써 전폭 390).
+     `#psw s` 태그 리셋이 display 를 inline-block 으로 되돌리는 오버레이라 더더욱 명시가 안전하다. */
+  .ps-hs>s{position:absolute;left:0;top:0;width:390px;height:380px;display:block}
+  .ps-hs>s.plate{background:#22272A;
+    clip-path:polygon(50% 0,100% 51%,100% 100%,0 100%,0 51%)}
+  .ps-hs>s.face{background:linear-gradient(180deg,#A6694C 0,#A6694C 51%,#FFDEB5 51%,#F0CB9C 100%);
+    clip-path:polygon(50% 3%,96% 52%,96% 100%,4% 100%,4% 52%)}
+  #psw.att .ps-hs{display:none}
   /* 아트 자리 — ref 는 금화더미가 **전 폭 1080** 을 채운다(하늘 비율 17.3%). 이미지로 교체할 때 이 bbox 를 쓴다. */
   /* 7회차 L-2: 이모지 코인이 Ø200 이라 «최고 스테이지 : 79»·CTA 를 정면으로 가리고 있었다.
      ref 는 텍스트 세이프에어리어를 가로지르는 전경 오브젝트가 없다(더미는 텍스트 «뒤» 배경이다).
      지면은 위 `.ps-gr` 밴드가 맡으므로 이모지는 더미 «디테일» 크기로 낮춘다. */
-  .ps-art{left:0;right:0;bottom:0;height:150px;text-align:center;font-size:132px;line-height:150px;
+  /* 8회차: 코인 더미를 오른쪽으로 60px 옮겼다(left:0→120). ref 는 x450 이 «골»(하늘 521)이고
+     더미 마루는 x540~660(362·274)인데, 가운데 정렬이면 코인이 x415~665 를 덮어 그 골을 메운다. */
+  .ps-art{left:120px;right:0;bottom:0;height:150px;text-align:center;font-size:132px;line-height:150px;
     letter-spacing:-14px;opacity:.95;pointer-events:none;white-space:nowrap}
 
   /* 타이틀 «스테이지 패스 1» — 코어 ref x61..526 y190..245 → frame y106..161, 좌측 정렬(여백 55) */
@@ -5891,13 +5921,18 @@
   .ps-bx>i{position:absolute;left:0;right:0;top:25px;height:88px;line-height:88px;text-align:center;
     font-size:82px}
   /* 수량 코어 y+120..+145 (padding box 기준 −5) */
-  .ps-bx>b{position:absolute;left:0;right:0;top:115px;height:31px;line-height:31px;text-align:center;
+  /* 8회차 — 칸 폭(158)보다 **넓은** 박스를 준다(-40/-40 → 238).
+     LESSONS A1: 글리프 advance 보다 좁은 박스에 text-align:center 를 쓰면 넘친 글자가 가운데가 아니라
+     «좌측 정렬» 돼 잉크가 우측으로 밀린다. 비평가 M 이 «13,500,000 이 칸 우변을 11px 넘고 중심이 +16.5px
+     밀렸다», N 이 «좌우로 3px 씩 넘친다» 로 같은 것을 독립 지적했다 — 원인은 폭 부족이 아니라 이 함정이다. */
+  .ps-bx>b{position:absolute;left:-40px;right:-40px;top:115px;height:31px;line-height:31px;text-align:center;
     font-size:36px;color:#fff;-webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
   .ps-bx>b>em{transform:scaleX(1.25)}
   /* 긴 수량은 칸 안쪽 폭 146px 을 넘지 않게 **가로로만 압축**한다 — font-size 를 줄이면
      한 화면에 잉크 높이가 26/20 두 종류로 공존해서 오히려 눈에 띈다(7회차 K-5). ref 는 전부 h26 이다. */
   .ps-bx>b.ln1>em{transform:scaleX(1.05)}
   .ps-bx>b.ln2>em{transform:scaleX(.84)}
+  .ps-bx>b.ln3>em{transform:scaleX(.72)}
   /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
   /* 자체 스캔(tools/scan36.py, 평균RGB>190): ref 잉크 85×97 vs 우리 63×98 → **폭만 −26%**.
      이모지는 가로세로가 같이 커져서 font-size 로는 못 맞춘다 — scaleX 로만 벌린다(LESSONS 30-③). */
@@ -7122,7 +7157,8 @@
   <div id="psw">
     <div class="ps-hero">
       <div class="ps-cl" style="left:-40px;top:36px;width:300px;height:104px"></div>
-      <div class="ps-cl" style="left:812px;top:14px;width:340px;height:118px"></div>
+      <!-- 8회차: left:812 구름을 뺐다. ref 의 그 자리(x812~1080 y14~132)는 «집 지붕» 이고 구름이 없다.
+           우리는 구름이 집 위에 얹혀 x810·x990 의 하늘 종료선을 32·18 로 끌어올렸다(ref 83·93). -->
       <div class="ps-cl" style="left:640px;top:186px;width:210px;height:74px;opacity:.6"></div>
       <!-- 36 출석 탭 전용 히어로 레이어(측정표 docs/measure/36-패스출석패스.md §1). 35 에서는 숨는다. -->
       <div class="ps-ray"></div>
@@ -7131,6 +7167,7 @@
       <div class="ps-spk" style="left:885px;top:267px;width:27px;height:28px"></div>
       <div class="ps-ice"></div>
       <div class="ps-gr"></div>
+      <div class="ps-hs"><s class="plate"></s><s class="face"></s></div>
       <div class="ps-art" id="psArt"></div>
       <div class="ps-ttl"><i id="psTtl"></i></div>
       <div class="ps-sub"><i id="psSub"></i></div>
@@ -13695,7 +13732,9 @@ const PASS_CUR = [
    head = 리스트 선두 라벨 알약(36 에만 있다. 있으면 R1 은 라벨 전용이고 보상은 R2 부터다). */
 const PASS_TABS = {
   stage:{ ttl:'스테이지 패스 1', sub:'스테이지를 클리어해 패스 단계\n보상을 받으세요!',
-          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🏠🪙', cols:3,
+          /* 8회차: 집은 `.ps-hs` 슬롯(우상단 390x380)이 맡는다 — 여기 🏠 를 두면 ref 에 없는
+             «화면 중앙 하단 집» 이 하나 더 생겨 덩어리가 두 곳으로 갈린다. 코인 더미만 남긴다. */
+          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🪙', cols:3,
           step:PASS_STEP, n:PASS_N, prog:() => S.best, head:'' },
   /* 36 — 레퍼런스는 보상이 **전 행 같은 아이템(파란 보석 = 다이아)** 이다(측정표 §8-3).
      무료 1,000 고정 · 프리미엄은 1일차만 30,000 이고 그 뒤는 10,000 · 등급은 전 칸 에픽(§8-4). */
@@ -13781,8 +13820,9 @@ function renderPass(){
              LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
           /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
              레퍼런스 수량은 2~5자라 이 상황이 안 보이지만 우리 골드 보상은 20,000×(i+1)² 라 9자까지 간다.
-             표기(쉼표)는 그대로 두고 **글자만 줄인다** — 8자 이상은 .ln2, 6자 이상은 .ln1 */
-          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 8 ? 'ln2' : (won(r.n).length >= 6 ? 'ln1' : ''))
+             표기(쉼표)는 그대로 두고 **글자만 줄인다** — 10자 이상은 .ln3, 8자 이상은 .ln2, 6자 이상은 .ln1
+             (8회차: «13,500,000» 10자가 .ln2 로도 147~154px 이라 칸을 넘어 M·N 이 같이 지적했다) */
+          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 10 ? 'ln3' : (won(r.n).length >= 8 ? 'ln2' : (won(r.n).length >= 6 ? 'ln1' : '')))
           + '"><em>' + won(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : '')) + '</div>';
     }
