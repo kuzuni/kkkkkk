@@ -565,20 +565,24 @@
        안 주면 서브픽셀 AA 로 색번짐이 생긴다(16 교훈 ③). */
   #tuto.todo .tbtn,#tuto.todo .tpg,#tuto.todo .tsub,#tuto.todo .trew .ri{
     -webkit-font-smoothing:antialiased;backface-visibility:hidden}
-  /* L1 잉크 160×27 @ ref (714,1852) — 중심 x **793.5** 다(L2·L3 의 785 보다 8.5 오른쪽. 실측값). */
-  #tuto.todo .tbtn{left:0;width:318px;text-align:center;top:7px;height:27px;
+  /* ⚠ scaleX 는 «칸 전체»(width:318) 에 걸면 안 된다 — 박스가 같이 늘어나 긴 미션 이름에서
+     보상칸·배너 밖으로 새어 나간다(46 교훈 1). **글자 폭에 딱 맞는 박스**(width:auto)를
+     중심에 놓고(`left:<중심>` + `translateX(-50%)`) 거기에만 건다. 잉크만 늘어난다. */
+  /* L1 잉크 160×27 @ ref (714,1852) — 중심 x **793.5** 다(L2·L3 의 785 보다 8.5 오른쪽. 실측값).
+     패딩박스 좌단이 625 이므로 left = 793.5 − 625 ≒ 168 */
+  #tuto.todo .tbtn{left:168px;width:auto;text-align:center;top:7px;height:27px;
     font-size:28px;line-height:27px;color:#83FFE7;
-    transform:translateZ(0) translateX(9px) scaleX(1.25)}
+    transform:translateZ(0) translateX(-50%) scaleX(1.25)}
   #tuto.todo .tinfo{left:0;width:318px;top:58px}
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px}
   /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
   #tuto .tt em{font-style:normal;color:#FE8252}
   #tuto .tpg{display:none}
   /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서, 폭 89 는 scaleX 1.5 에서 나온다. */
-  #tuto.todo .tpg{display:block;position:absolute;left:0;width:318px;text-align:center;top:89px;
+  #tuto.todo .tpg{display:inline-block;position:absolute;left:160px;width:auto;text-align:center;top:89px;
     height:23px;font-size:23px;line-height:23px;font-weight:900;color:#FFC26A;
     -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap;
-    transform:translateZ(0) scaleX(1.5)}
+    transform:translateZ(0) translateX(-50%) scaleX(1.5)}
   /* 💎 이모지는 ref 의 «오각 컷 파란 보석» 보다 **가로로 29% 넓다** — 잉크 bbox 를 58×60 으로 맞춘다.
      (아트가 들어오면 이 scaleX 를 지우고 이미지로 교체한다. 측정표 §8 «아트 필요») */
   #tuto.todo .trew .ri{transform:translateZ(0) translateY(-3px) scaleX(.77)}
