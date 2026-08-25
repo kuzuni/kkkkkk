@@ -4112,76 +4112,7 @@
   .tr-qty .dot{position:absolute;left:229px;top:-9px;width:31px;height:31px;border-radius:50%;
     background:#EF3457;box-shadow:inset 0 0 0 5px #000;z-index:4}
 
-  /* §7 하단 서브탭 — 레퍼런스는 4칸(x37 y958 w960 h97, 4등분 240)이지만
-     작업 47(2026-08-25, 저장소 주인 지시)로 «훈련 · 스탯 훈련» **2칸 균등**이 됐다.
-     바 껍데기 규격(960×97 · 상검정 8 / 하검정 6 · 상하 밝은 립 6 · 구분선 55px)과 활성 알약 규격(253×62)은
-     실측 그대로 유지하고, 위치만 새 칸(474)의 중앙으로 다시 잡는다. 칸 수는 우리 설계라 레퍼런스 대조 대상이 아니다. */
-  /* 12회차(비평가 T L1): 배지 dot 이 **바 상단선에서 수평으로 잘려** 반원이 돼 있었다 —
-     ref 배지는 y2014..2058 로 바 상단(2021)보다 7px 위로 튀어나오는데, `overflow:hidden` 이 그 7px 과
-     위쪽 검정 링 5px 을 통째로 잘랐다(우리 중심열 x401: y2020 크림 → y2021 곧장 빨강, 검정 0px).
-     칸(.sg)은 자체 radius 42 로 이미 바 안쪽에 6px 들어와 있어 바깥으로 새지 않는다 → 클립을 푼다. */
-  .tr-sub{left:54px;top:1101px;width:960px;height:97px;border-radius:40px;background:#141414;
-    overflow:visible;display:flex}
-  /* 6회차: ref 서브탭 바는 단색 갈색이 아니다 — x700 세로 스캔에서 위·아래에 **밝은 인셋 립 6px**
-     (112,95,75) 이 있고 본체는 (98,81,61) 이다. 검정 테두리도 위 8px / 아래 6px 로 비대칭.
-     (두 비평가가 독립적으로 «상·하 인셋 밝은 엣지 없음» 을 지적했다) */
-  .tr-sub>.sg{position:relative;flex:1 1 0;text-align:center;line-height:85px;
-    background:linear-gradient(180deg,#705F4B 0 6px,#62513D 6px 77px,#705F4B 77px);
-    margin:8px 0 6px;cursor:pointer}
-  /* 7회차: 칸 구분선을 inset box-shadow 로 주면 바 내부를 «관통»한다(83px).
-     ref 는 y2043..2097 = **55px** 로 상하 14px 씩 인셋돼 있다(두 비평가가 독립적으로 +51% 로 지적). */
-  /* 9회차(N P5·P6): ref 4칸 바의 구분선은 x538..541 · x774..779 로 flex 경계보다 8px 우측이었다(right:-8px).
-     47(2칸): 남는 경계는 **하나**이고 그 자리가 바 정중앙(local 480 = 960/2)이다. 4칸 기준의 +8 오프셋은
-     4등분 경계 전용 실측 보정이라 2칸에서는 의미가 없다 → 구분선을 경계에 정확히 물린다(right:-2px, 4px 중 2·2). */
-  .tr-sub>.sg::after{content:'';position:absolute;right:-2px;top:14px;height:55px;width:4px;
-    background:#4A3A2B;z-index:1}
-  .tr-sub>.sg:last-child::after{display:none}
-  .tr-sub>.sg:first-child{margin-left:6px;border-radius:42px 0 0 42px}
-  /* 12회차(비평가 T L6): ref 는 바 **오른쪽 세로 구간**에도 밝은 안쪽 림이 있다 —
-     y2090 가로: 본체(98,81,61) → 림 996..1000 (114,97,77) → 1002 어둠 → 검정 1005..1010.
-     우리는 본체가 검정까지 그대로였다(림 0px). 상·하 림은 .sg 세로 그라데이션이 이미 만들고 있으므로
-     세로 구간만 마지막 칸에 inset 으로 보탠다. */
-  .tr-sub>.sg:last-child{margin-right:6px;border-radius:0 42px 42px 0;
-    box-shadow:inset -6px 0 0 #705F4B}
-  /* 7회차: ref 칩은 border-box 253x62 로 바 내부 좌측에 **flush**(인셋 0)이고 하단 여백이 14px 다.
-     우측 끝도 수직 직선이 아니라 **반경 ~31 라운드 캡**이다(L 이 x310 세로 다크 82px 연속으로 잡아냈다).
-     6회차 것은 229x71 · 좌인셋 8 · 하단여백 5 였다(폭 −9.5% · 높이 +14.5%). */
-  /* 47: 알약 크기(253×62 · radius31 · 우측 다크캡 9)는 7회차 실측 그대로. 옛 `left:0;right:-15px` 는
-     칸 240 전제(= 폭 255)라 칸 474 에서는 칸을 통째로 덮는다 → 폭을 명시하고 칸 중앙에 놓는다
-     (474−253)/2 = **110.5**. 45(상점 탭 4→2)와 같은 처리다. */
-  /* 12회차(비평가 S P3 · T L8 이 독립적으로 지적): ref 활성 알약은 **바 좌측 캡에 붙어 있다** —
-     y2065 가로에서 바 필이 x61 부터 시작하고 알약이 x69 부터니 좌여백 8px 다. 우리는 x171 = **+102px**.
-     칸을 4→2 로 바꾼 것(작업 47)은 설계지만, «첫 칸 알약이 좌측 캡에 앵커된다» 는 ref 규칙과 무관하다.
-     → 칸 중앙정렬(110.5)을 폐기하고 좌단 앵커(9 = 바 local 69)로 되돌린다.
-     폭도 같은 행에서 재실측했다: ref 알약 x69..298 = **230** (7회차의 253 은 +10%).
-     같은 행 오른쪽은 x299..305 가 바 필, x307..312 가 검정 캡이라 알약 끝이 298 로 확정된다.
-     (비평가 S 도 231 로 같은 값을 냈다 — T 의 245 는 우측 다크캡까지 센 값이다) */
-  /* 14회차(비평가 V L2 를 따라가다 나왔다): 7회차가 넣은 **우측 다크 캡 9px 은 ref 에 없다.**
-     ref 알약 채움(75,62,45)은 y2065 에서 x298 까지, y2085 에서 x294 까지 **끊김 없이** 이어지고
-     그 다음이 곧장 칸 채움(96,78,54)이다. 7회차 근거였던 «x310 세로 다크 82px 연속» 은
-     알약 캡이 아니라 **4칸 레이아웃의 칸 구분 스트로크**다(y 가 내려가며 307→281 로 휘는 곡선이라
-     알약 우단과 6px 떨어져 있다 — 47 의 2칸 설계에서는 그 자리에 아무것도 없는 게 맞다).
-     우리 캡처는 x283..291 이 (14,9,3) 으로 ref 에 없는 검정 띠였다 → 제거한다. */
-  .tr-sub>.sg.on::before{content:'';position:absolute;left:9px;right:auto;width:230px;top:6px;height:62px;
-    border-radius:31px;background:#4B3E2D;z-index:1}
-  .tr-sub>.sg>i{position:relative;z-index:2;top:-5px;font-size:43px;color:#B9A88F;line-height:78px;
-    -webkit-text-stroke:5px #141414;paint-order:stroke fill;transform:scaleX(.9)}
-  /* 13회차(비평가 U P1 — 12회차가 낸 회귀다). 라벨은 `text-align:center` 로 **칸** 중앙에 서는데
-     12회차가 알약만 좌단 앵커로 옮겨 놓아 **라벨이 알약 밖으로 나갔다** —
-     알약 우단 x282 인데 라벨은 x330 까지 뻗어 48px(라벨 폭의 69%)이 비활성 트랙 위에 얹혔다.
-     ref 는 라벨 중심 x182 ≒ 알약 중심 x182.5 로 **알약 중심 정렬**이다.
-     칸 중심(60+237=297) → 알약 중심(60+9+115=184) 이므로 **−113px**. */
-  .tr-sub>.sg.on>i{color:#E7B88E;top:-2px;left:-113px}
-  /* 8회차의 `.sg.lock` / `.sg.lock.txt`(🔒 이모지 배지 · «마법상판») 규칙은 47 에서 그 칸을 없애면서
-     같이 지웠다 — LESSONS 57-1 «대체하면 구버전 경로는 그때 지운다». */
-  /* 10회차: 카드 배지와 같은 정정. ref y2035 가로 단면 — 검정 272..277(6px) 뒤 핑크 시작 278,
-     우리는 검정 276..278(3px) 뒤 279 였다. border-box 42 · fill 31 · 링 5.5
-     47: 배지는 알약에 붙은 요소라(알약 local 210) 알약과 같이 110.5 만큼 옮긴다 → 320.5. */
-  /* 12회차: 배지는 알약 우측 끝에 물린다. ref 절대 bbox x269..313 · y2014..2058 = **⌀45**,
-     .sg 기준으로 잡는다 — .sg 는 `margin:8px 0 6px` 라 바보다 8px 아래에서 시작하므로 top = −7−8 = **−15**
-     (바 기준 −7 로 잡으면 8px 모자라 링이 여전히 잘린다). left 는 .sg(x60) 기준 209 = ref x269. */
-  .tr-sub>.sg.on>.dot{position:absolute;left:209px;top:-15px;width:45px;height:45px;border-radius:50%;
-    background:#EF3457;box-shadow:inset 0 0 0 5.5px #141414;z-index:3}
+  /* 88 — «스탯 훈련» 서브탭 폐기(저장소 주인 지시): §7 서브탭 바(.tr-sub) 규격 삭제. 훈련 단일 화면. */
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
@@ -7015,7 +6946,6 @@
         <div class="tr-qty" id="trQty"></div>
         <div class="tr-cards" id="trCards"></div>
       </div>
-      <div class="tr-sub" id="trSub"></div>
     </div>
   </div>
   <!-- 06 장비 팝업. 폭 1080 «바닥 시트» — 공용 #modal(가운데 다이얼로그)과 규격이 달라 자체 오버레이.
@@ -8320,7 +8250,7 @@ const GUIDE = [
   { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps,   go:() => gmHero('eq') },
   { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'유물 Lv 3 모으기',      goal:3,   dia:1000, abs:1, get:() => relicLvSum(),     go:() => gmPage('relw', openRelw) },
-  { n:'스탯 포인트 10 투자',   goal:10,  dia:1200, get:() => S.spAtk + S.spHp, go:() => gmTrain('stat') },
+  { n:'훈련 30회 하기',        goal:30,  dia:1200, get:() => S.upgrades,       go:() => gmTrain() },   /* 88 — 구 «스탯 포인트 10 투자» 를 같은 자리에 교체(인덱스 호환) */
   { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic,
                                                                               go:() => gmPage('collw', () => openColl21()) },
@@ -8330,8 +8260,9 @@ const GUIDE = [
 /* 미션 «내용» 이 바뀌면(5번 동료→방어구) 옛 세이브의 기준선(S.guide.prog)이 다른 카운터를 가리켜
    미션이 즉시 완료되거나 영영 안 끝난다. 버전이 다르면 기준선만 -1(미확정)로 되돌려
    gmBase() 가 «지금 값» 으로 다시 찍게 한다 — 61 의 지연 확정(lazy) 규칙 그대로다.
-   v3 (76): idx 6 에 «목걸이 1회 소환하기» 삽입 — gv ≤ 2 세이브는 idx ≥ 6 이면 +1 이관(load 쪽). */
-const GUIDE_V = 3;
+   v3 (76): idx 6 에 «목걸이 1회 소환하기» 삽입 — gv ≤ 2 세이브는 idx ≥ 6 이면 +1 이관(load 쪽).
+   v4 (88): idx 16 «스탯 포인트 10 투자» → «훈련 30회 하기» 교체(같은 자리, 카운터 S.upgrades). */
+const GUIDE_V = 4;
 /* 장착 중인 장비 부위 수(25 확정 — 무기·방패·목걸이 3칸) */
 const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eqSlot[k] ? 1 : 0), 0);
 /* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
@@ -8401,13 +8332,7 @@ const trainLv    = id => Math.min(lv(id), trainCap());
 const trainProg  = () => TRAIN_STATS.reduce((s, id) => s + trainLv(id), 0);
 const trainMax   = () => TRAIN_STATS.length * trainCap();
 const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
-/* 스탯 훈련 — 훈련과 같은 구조(3종·단계 상한·↑·단계 보너스), 소모 재화만 스탯 포인트 */
-const statStage = () => Math.max(1, S.statStage | 0);
-const statCap   = () => statStage() * TRAIN_CAP_STEP;
-const statLv    = k => (k === 'atk' ? S.spAtk : k === 'hp' ? S.spHp : S.spRegen) | 0;
-const statProg  = () => TRAIN_STATS.reduce((s, k) => s + Math.min(statLv(k), statCap()), 0);
-const statMax   = () => TRAIN_STATS.length * statCap();
-const statReady = () => TRAIN_STATS.every(k => statLv(k) >= statCap());
+/* 88 — «스탯 훈련»(포인트 재화 훈련)은 캐릭터 레벨·스탯 포인트 시스템과 함께 폐기됐다(저장소 주인 지시). */
 
 /* ---- 유물조각 교환 (다이아 → 유물조각) ---- */
 const EXCHANGE = [
@@ -8473,11 +8398,11 @@ const DEF = () => ({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   /* 73 ② — 첫 가이드 미션이 «스킬 1회 소환» 이고 상점 최소 단위가 10연(1,000 다이아)이라
      시작 다이아가 300 이면 첫 미션부터 유료 경로가 막힌다. 지시대로 1,000 이상으로 올린다. */
-  gold:0, dia:1000, relic:0, stage:1, best:1, rank:0, plv:1, pexp:0,
+  gold:0, dia:1000, relic:0, stage:1, best:1, rank:0,
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
-  sp:0, spAtk:0, spHp:0, spRegen:0, spAuto:true,
-  statStage:1,                                /* 23 스탯 훈련 단계 — 훈련과 같은 구조, 재화만 포인트 */
+  /* 88 — 캐릭터 레벨·스탯 포인트·스탯 훈련 키 제거. 구 세이브의 잔존 키는 Object.assign 으로
+     들어와도 아무 곳에서도 읽지 않는다(삭제 불필요 — 지시 ⑤). */
   lv: UPG.reduce((o,u) => (o[u.id]=0, o), {}),
   own:{},                                     /* id → {n:재료, l:레벨} */
   eqSkill:[], eqSlot:{ weapon:null, shield:null, amulet:null }, eqPet:[],
@@ -8497,7 +8422,7 @@ const DEF = () => ({
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
   trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
-  buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', upTab:'up', heroTab:'eq',
+  buyQty:1, autoBuy:true, autoEquip:true, eqTab:'weapon', heroTab:'eq',
   opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false },  /* 55 설정 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
@@ -8661,12 +8586,10 @@ function bonus(){
   /* 계급 보너스 (승급전) */
   const rb = 1 + S.rank*0.25;
   b.atk *= rb; b.hp *= rb;
-  /* 스탯 포인트 분배 보너스 */
-  b.atk   *= 1 + (S.spAtk|0)*SP_VALUE;
-  b.hp    *= 1 + (S.spHp|0)*SP_VALUE;
-  b.regen *= 1 + (S.spRegen|0)*SP_VALUE;
-  /* 23 훈련·스탯 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
-  const tb = (1 + TRAIN_BONUS * (trainStage() - 1)) * (1 + TRAIN_BONUS * (statStage() - 1));
+  /* 88 — 스탯 포인트 분배·스탯 훈련 단계 배율 제거(구 세이브의 배율분은 보상 없이 소멸 —
+     «밸런스 재측정» 단계에 «스탯 포인트 제거분» 으로 기록, 지시 ②). */
+  /* 23 훈련 단계 보너스 — 단계가 오를 때마다 공격력·체력·체력회복 각 +10% 누적 */
+  const tb = 1 + TRAIN_BONUS * (trainStage() - 1);
   b.atk *= tb; b.hp *= tb; b.regen *= tb;
 
   /* 34 축복 — 활성 축복만 곱하고, 3종 전부 활성이면 «보너스 축복»(골드 +50%)이 붙는다.
@@ -8716,59 +8639,7 @@ const stat = {
 };
 const skillDmg = s => stat.dmg * s.m * gMul(s.g) * lvMul(oLv(s.id));
 const petDmg   = p => stat.dmg * p.m * gMul(p.g) * lvMul(oLv(p.id)) * bonus().pet;
-/* 캐릭터 레벨 */
-const plvNeed = l => Math.floor(30 * Math.pow(1.135, l-1));
-const SP_PER_LV = 3;          /* 레벨업당 스탯 포인트 */
-const SP_VALUE  = 0.02;       /* 포인트 1당 +2% */
-function gainExp(n){
-  S.pexp += n;
-  let up = 0;
-  while(S.pexp >= plvNeed(S.plv) && up < 500){ S.pexp -= plvNeed(S.plv); S.plv++; up++; }
-  if(up){
-    S.sp += up*SP_PER_LV;
-    if(S.spAuto) autoSpend();
-    markDirty(); uiDirty = true;
-    player.hp = Math.min(stat.maxHp, player.hp + stat.maxHp*0.3);
-  }
-  return up;
-}
-/* 스탯 분배 */
-function addStat(k, n){
-  /* 23 스탯 훈련 — 훈련과 같은 «단계 × 100» 상한을 넘겨 분배하지 않는다 */
-  n = Math.min(n, S.sp, Math.max(0, statCap() - statLv(k)));
-  if(n <= 0) return 0;
-  const before = k === 'hp' ? stat.maxHp : 0;
-  S.sp -= n;
-  if(k === 'atk') S.spAtk += n; else if(k === 'regen') S.spRegen = (S.spRegen|0) + n; else S.spHp += n;
-  markDirty(); uiDirty = true;
-  if(k === 'hp') player.hp += stat.maxHp - before;
-  save();
-  return n;
-}
-/* 자동 분배: 공격 2 : 체력 1 */
-function autoSpend(){
-  /* 공격 2 : 체력 1 : 회복 1 — 단계 상한(statCap)을 넘기지 않는다 */
-  let guard = 0;
-  while(S.sp > 0 && guard++ < 20000){
-    const room = ['atk','hp','regen'].filter(k => statLv(k) < statCap());
-    if(!room.length) break;
-    const total = S.spAtk + S.spHp + (S.spRegen|0);
-    const want = S.spAtk <= total*0.5 ? 'atk' : (S.spHp|0) <= (S.spRegen|0) ? 'hp' : 'regen';
-    const k = room.includes(want) ? want : room[0];
-    if(k === 'atk') S.spAtk++; else if(k === 'hp') S.spHp++; else S.spRegen = (S.spRegen|0) + 1;
-    S.sp--;
-  }
-  markDirty(); uiDirty = true;
-}
-function resetStat(){
-  const cost = 500;
-  const total = S.spAtk + S.spHp + (S.spRegen|0);
-  if(total <= 0){ popup('초기화 불가', '<p>분배한 스탯 포인트가 없습니다.</p>'); return; }
-  if(S.dia < cost){ popup('💎 다이아 부족', '<p>스탯 초기화에는 다이아 <b>💎' + cost + '</b>가 필요합니다.</p>'); return; }
-  S.dia -= cost; S.sp += total; S.spAtk = 0; S.spHp = 0; S.spRegen = 0;
-  markDirty(); uiDirty = true; save();
-  popup('🔄 스탯 초기화', '<p>포인트 <b>' + total + '</b>개를 돌려받았습니다.<br>다시 분배해 보세요!</p>');
-}
+/* 88 — 캐릭터 레벨(plv/pexp)·스탯 포인트(분배·자동분배·초기화) 시스템 폐기(저장소 주인 지시). */
 
 /* 전투력 */
 const cp = () => Math.round(stat.dps*1.2 + stat.maxHp*0.6 + stat.regen*80 + stat.dmg*3);
@@ -8916,7 +8787,6 @@ function killEnemy(e){
      실제 비행은 fxWatch() 가 증가분을 묶어서 한 번에 쏜다(연속 킬이 아이콘 폭탄이 되지 않게). */
   fxAt(fxWorld(e.x, e.y - e.r), 'combat');   /* 77 — 전투 발 태그: 코인 비행이 팝업 아래 #fxlc 로 간다 */
   S.gold += g; goldWin += g; S.totalKills++; killed++;
-  gainExp(2 + S.stage*0.5 + (e.tk === 'boss' ? 80 : 0));
   if(e.tk === 'boss' && S.stage >= S.best) S.dia += 250 + S.stage*25;
   burst(e.x, e.y - e.r, e.T.col, e.tk === 'boss' ? 46 : 13, e.tk === 'boss' ? 330 : 190);
   const corpse = { akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
@@ -10726,7 +10596,7 @@ function gmCloseAll(){
 function gmBattle(){ gmCloseAll(); uiDirty = true; renderUI(); }          /* 전투로 달성하는 미션 */
 function gmPage(id, open){ const w = $(id); gmCloseAll(); if(!w || !w.classList.contains('on')) open(); }
 function gmHero(sub){ gmCloseAll(); heroTab = sub; S.heroTab = sub; goTab('hero', true); }
-function gmTrain(sub){ gmCloseAll(); trSub = sub; openTrain(); }
+function gmTrain(){ gmCloseAll(); openTrain(); }   /* 88 — 서브탭 폐기, 훈련 단일 화면 */
 /* 10 상점 소환 탭을 열고 **그 상자 카드까지 스크롤**한다(레퍼런스 3칸 중 어느 것인지 바로 보이게) */
 function gmShop(box){ gmCloseAll(); openShopPage(box); }
 /* 배너 탭 — 완료면 수령, 미완이면 이동. `go` 가 없는 미션은 아무 일도 하지 않는다(무해) */
@@ -11157,54 +11027,10 @@ function trainUp(){
     openStatUp({ ic:'⚔️', desc:'훈련 ' + S.trainStage + ' 단계 달성! 모든 능력치 10% 증가' });
   return true;
 }
-/* 스탯 훈련 — 포인트로 올리고, 3종 상한을 채우면 같은 방식으로 단계가 오른다 */
-function statTrainBuyInfo(k){
-  const room = Math.max(0, statCap() - statLv(k));
-  const n = Math.min(trainQty(), room, S.sp);
-  return { n, cost:n, ok:n > 0, full:room === 0 };
-}
-function statTrainBuy(k){
-  const bi = statTrainBuyInfo(k);
-  if(!bi.ok) return false;
-  addStat(k, bi.n);
-  return true;
-}
-function statTrainUp(){
-  if(!statReady()) return false;
-  S.statStage = statStage() + 1;
-  markDirty(); uiDirty = true; save();
-  if(typeof openStatUp === 'function')
-    openStatUp({ ic:'🧬', desc:'스탯 훈련 ' + S.statStage + ' 단계 달성! 모든 능력치 10% 증가' });
-  return true;
-}
-function renderStat(){
-  const atkB = (S.spAtk*SP_VALUE*100).toFixed(0), hpB = (S.spHp*SP_VALUE*100).toFixed(0);
-  let h = '<div class="sect"><h3><span data-cur="sp">🧬 스탯 포인트</span><em>Lv.' + S.plv + '</em></h3>'
-    + '<p>레벨업마다 포인트 <b>' + SP_PER_LV + '</b>개를 얻습니다. 포인트 1개당 해당 스탯 <b>+'
-    + (SP_VALUE*100) + '%</b></p>'
-    + '<p style="margin-top:10px;font-size:30px">남은 포인트 <b style="color:#8ff0a8;font-size:36px">' + fmt(S.sp) + '</b></p>'
-    + '<div class="row2" style="margin-top:14px">'
-    + '<button class="gbtn ' + (S.spAuto ? 'green' : 'blue') + '" data-spauto="1">자동 분배 ' + (S.spAuto ? 'ON' : 'OFF')
-    + '<small>공격 2 : 체력 1</small></button>'
-    + '<button class="gbtn purple" data-spreset="1">스탯 초기화<small>💎 500</small></button></div></div>';
-
-  [['atk','⚔️','공격력', S.spAtk, atkB, '공격력 +' + atkB + '%  (피해 ' + fmt(stat.dmg) + ')'],
-   ['hp','❤️','체력',   S.spHp,  hpB,  '최대 체력 +' + hpB + '%  (' + fmt(stat.maxHp) + ')']].forEach(r => {
-    h += '<div class="sect"><h3><span>' + r[1] + ' ' + r[2] + '</span><em>' + fmt(r[3]) + ' 포인트</em></h3>'
-      +  '<p>' + r[5] + '</p><div class="row2" style="margin-top:14px">'
-      +  '<button class="gbtn blue" data-sp="' + r[0] + '" data-n="1"'  + (S.sp >= 1 ? '' : ' disabled') + '>+1</button>'
-      +  '<button class="gbtn blue" data-sp="' + r[0] + '" data-n="10"' + (S.sp >= 1 ? '' : ' disabled') + '>+10</button>'
-      +  '<button class="gbtn" data-sp="' + r[0] + '" data-n="max"'     + (S.sp >= 1 ? '' : ' disabled') + '>MAX</button></div></div>';
-  });
-  return h;
-}
+/* 88 — 스탯 훈련(statTrain*)·스탯 분배 UI(renderStat) 폐기(저장소 주인 지시). */
 function renderUp(){
-  let h = '<div class="subtabs">'
-    + '<div class="stab' + (S.upTab === 'up' ? ' on' : '') + '" data-uptab="up">⚒️ 강화</div>'
-    + '<div class="stab' + (S.upTab === 'stat' ? ' on' : '') + '" data-uptab="stat">🧬 스탯'
-    + (S.sp > 0 ? ' <span style="color:#ff6b7f">●</span>' : '') + '</div></div>';
-  if(S.upTab === 'stat'){ setBody('bUp', h + renderStat()); return; }
-  h += '<div class="subtabs">';
+  /* 88 — «⚒️ 강화 / 🧬 스탯» 서브탭 폐기(스탯 시스템 제거). 강화 단일 화면. */
+  let h = '<div class="subtabs">';
   QTYS.forEach(q => h += '<div class="stab' + (S.buyQty === q ? ' on' : '') + '" data-q="' + q + '">'
     + (q === 'MAX' ? 'MAX' : 'x' + q) + '</div>');
   h += '<div class="stab' + (S.autoBuy ? ' on' : '') + '" data-auto="1">자동 ' + (S.autoBuy ? 'ON' : 'OFF') + '</div></div>';
@@ -11219,19 +11045,6 @@ function renderUp(){
   setBody('bUp', h);
 }
 $('bUp').addEventListener('click', e => {
-  const ut = e.target.closest('[data-uptab]');
-  if(ut){ S.upTab = ut.dataset.uptab; uiDirty = true; renderUp(); return; }
-  const sp = e.target.closest('[data-sp]');
-  if(sp){
-    addStat(sp.dataset.sp, sp.dataset.n === 'max' ? S.sp : +sp.dataset.n);
-    renderUp(); return;
-  }
-  if(e.target.closest('[data-spauto]')){
-    S.spAuto = !S.spAuto;
-    if(S.spAuto) autoSpend();
-    uiDirty = true; save(); renderUp(); return;
-  }
-  if(e.target.closest('[data-spreset]')){ resetStat(); renderUp(); return; }
   if(e.target.closest('[data-auto]')){ S.autoBuy = !S.autoBuy; uiDirty = true; save(); return; }
   const q = e.target.closest('[data-q]');
   if(q){ S.buyQty = q.dataset.q === 'MAX' ? 'MAX' : +q.dataset.q; uiDirty = true; return; }
@@ -11506,8 +11319,8 @@ function renderSt(){
   const hh = Math.floor(t/3600), mm = Math.floor(t%3600/60);
   const nr = nextRank();
   let h = '<div class="sect"><h3><span>' + rankOf().ic + ' ' + rankOf().n + '</span><em>전투력 ' + fmt(cp()) + '</em></h3>'
-    + '<p>' + S.nick + ' — 레벨 <b>Lv.' + S.plv + '</b> · 경험치 <b>'
-    + fmt(S.pexp) + ' / ' + fmt(plvNeed(S.plv)) + '</b></p>'
+    /* 88 — 캐릭터 레벨·경험치 폐기. Lv 자리는 최고 스테이지로 대체(계급은 이미 h3 에 있다). */
+    + '<p>' + S.nick + ' — 최고 스테이지 <b>' + S.best + '</b></p>'
     + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmt(nr.cp) + '</b><br>'
           + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
           + '<button class="gbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '>승급전 도전</button>'
@@ -12654,7 +12467,7 @@ $('tabbar').addEventListener('click', closeProbInfo, true);
    그래서 구현은 «아이콘마다 onclick» 이 아니라 **data-cur 속성 + 위임 핸들러 1개** 다 —
    새 화면(41 의 03·14 내장 재화 바, 44 의 상점 상품 등)이 재화 아이콘을 만들 때
    `data-cur="gold"` 만 붙이면 자동으로 연결된다. 저장 구조는 건드리지 않는다(KEY 유지).
-   설명·획득처 문구는 실제 게임 데이터에서 뽑는다 — 던전 이름은 DUNGEONS, 포인트는 SP_PER_LV. */
+   설명·획득처 문구는 실제 게임 데이터에서 뽑는다 — 던전 이름은 DUNGEONS. */
 const CURINFO = {
   gold:  { ic:'🪙', n:'골드',
     get:() => S.gold,
@@ -12667,12 +12480,8 @@ const CURINFO = {
   relic: { ic:'🔮', n:'유물조각',
     get:() => S.relic,
     d:'유물을 소환하고 강화할 때 사용합니다.',
-    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic') || {}).n + '»', '룰렛 보상', '다이아 교환'] },
-  sp:    { ic:'🧬', n:'스탯 포인트',
-    get:() => S.sp,
-    d:'캐릭터 레벨업으로 얻어 공격력 · 체력 · 재생 훈련에 투자합니다.',
-    ways:['캐릭터 레벨업 (레벨당 ' + SP_PER_LV + ')', '스탯 초기화로 회수', '퀘스트 보상'] }
-};
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic') || {}).n + '»', '룰렛 보상', '다이아 교환'] }
+};   /* 88 — sp(스탯 포인트) 항목 폐기 */
 let curInfoKey = null;
 /* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
 function curVal(k){ const c = CURINFO[k]; return c ? c.get() : null; }
@@ -12695,7 +12504,7 @@ function closeCurInfo(){ curInfoKey = null; $('ciw').classList.remove('on'); }
    ⚠ 그래서 `data-cur` 는 **재화의 «보유량» 을 보여주는 아이콘에만** 붙인다.
       구매·수령 버튼 위의 «가격/보상» 아이콘(10 소환 💎, 23 훈련 💰, 03 던전 보상, 22 퀘스트 보상)에
       붙이면 그 클릭이 거래 대신 팝업을 열어 버린다 — 붙이지 말 것.
-   현재 대상: 상단 HUD 골드·다이아 알약 / 유물조각 교환소 보유 표시 / 스탯 포인트 보유 표시.
+   현재 대상: 상단 HUD 골드·다이아 알약 / 유물조각 교환소 보유 표시.
    41(03·14 팝업 내장 재화 바)·44(상점 재화 탭)가 새 재화 바를 만들면 속성만 붙이면 편입된다. */
 document.addEventListener('click', e => {
   const t = e.target.closest && e.target.closest('[data-cur]');
@@ -12979,8 +12788,7 @@ function bagCur(){
     { ic:'🪙', n:'골드',       g:1, q:S.gold | 0 },
     { ic:'💎', n:'다이아',     g:3, q:S.dia | 0 },
     { ic:'🔮', n:'유물조각',     g:2, q:S.relic | 0 },
-    { ic:'🎟️', n:'마일리지',   g:4, q:S.mileage | 0 },
-    { ic:'✨', n:'스탯 포인트', g:2, q:S.sp | 0 }
+    { ic:'🎟️', n:'마일리지',   g:4, q:S.mileage | 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
   cat.forEach(it => {
@@ -13775,34 +13583,22 @@ $('eqTabs').addEventListener('click', e => {
 
 /* ==========================================================================
    23 훈련 팝업 (#trw) — 측정표 docs/measure/23-훈련팝업.md
-   하단 탭 «훈련» 직행. 서브탭 1 = 훈련(골드), 2 = 스탯 훈련(포인트) — 구조는 같고 재화만 다르다.
+   하단 탭 «훈련» 직행. 88 — 서브탭(훈련/스탯 훈련) 폐기, 훈련(골드) 단일 화면.
    ========================================================================== */
-let trSub = 'train';
-const trIsTrain = () => trSub === 'train';
-/* 카드 3장의 표시값 — 훈련은 골드/실수치, 스탯 훈련은 포인트/% */
+/* 카드 3장의 표시값 — 골드/실수치 */
 function trainCardData(){
   return TRAIN_STATS.map(k => {
-    if(trIsTrain()){
-      const u = U[k], l = lv(k), bi = trainBuyInfo(k);
-      const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
-      return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-        gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:'💰',
-        n:bi.n, ok:bi.ok, full:bi.full };
-    }
-    const l = statLv(k), bi = statTrainBuyInfo(k);
-    return { k, icon:U[k].icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-      gain:'+' + (bi.n * SP_VALUE * 100).toFixed(0) + '%', cost:fmt(bi.cost), coin:'🧬',
+    const u = U[k], l = lv(k), bi = trainBuyInfo(k);
+    const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
+    return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
+      gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:'💰',
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }
 /* 리본·진행바·↑버튼 — 카드를 다시 그리지 않는 «가벼운» 갱신에서도 쓴다(작업 64 renderTrainLive) */
 function trSyncHead(){
-  const t = trIsTrain();
-  const stage = t ? trainStage() : statStage();
-  const prog  = t ? trainProg()  : statProg();
-  const max   = t ? trainMax()   : statMax();
-  const ready = t ? trainReady() : statReady();
-  $('trRib').innerHTML = (t ? '훈련 ' : '스탯 훈련 ') + '<em>' + stage + '</em> 단계';
+  const stage = trainStage(), prog = trainProg(), max = trainMax(), ready = trainReady();
+  $('trRib').innerHTML = '훈련 <em>' + stage + '</em> 단계';
   /* 트랙 내부 646px. 둥근 캡 때문에 ref 는 0% 에서도 10px 이 보인다 — 같은 보정을 준다 */
   $('trFill').style.width = (16 + Math.max(0, Math.min(1, prog / max)) * 632) + 'px';
   $('trProg').textContent = prog + '/' + max;
@@ -13817,7 +13613,7 @@ function renderTrainLive(){
   const cards = $('trCards');
   const els = cards.children;
   const data = trainCardData();
-  if(els.length !== data.length) return renderTrain();     /* 구조가 다르면(서브탭 전환 등) 통째로 */
+  if(els.length !== data.length) return renderTrain();     /* 구조가 다르면 통째로 */
   data.forEach((c, i) => {
     const el = els[i];
     if(el.dataset.tr !== c.k) return renderTrain();
@@ -13834,7 +13630,6 @@ function renderTrainLive(){
   trSyncHead();
 }
 function renderTrain(){
-  const t = trIsTrain();
   trSyncHead();
   $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
     + '" data-trq="' + q + '"><i>x' + q + '</i><em class="dot"></em></span>').join('');
@@ -13846,9 +13641,6 @@ function renderTrain(){
     + '<span class="cn"><i>' + c.name + '</i></span>'
     + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
-  $('trSub').innerHTML =
-      '<span class="sg' + (t ? ' on' : '') + '" data-trsub="train"><i>훈련</i><em class="dot"></em></span>'
-    + '<span class="sg' + (t ? '' : ' on') + '" data-trsub="stat"><i>스탯 훈련</i></span>';
 }
 function openTrain(){
   if(typeof closeDungeon === 'function') closeDungeon();
@@ -13874,12 +13666,10 @@ function syncTrainNav(on){
   });
 }
 $('trw').addEventListener('click', e => {
-  const sub = e.target.closest('[data-trsub]');
-  if(sub){ trSub = sub.dataset.trsub; renderTrain(); return; }
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
   if(e.target.closest('#trUp')){
-    if(trIsTrain() ? trainUp() : statTrainUp()){ sfx('up'); renderTrain(); }   /* 78 — 단계 업 */
+    if(trainUp()){ sfx('up'); renderTrain(); }   /* 78 — 단계 업 */
     return;
   }
   /* 작업 64 — 카드 강화는 pointerdown 에서 처리한다(아래 trHoldStart).
@@ -13890,7 +13680,7 @@ $('trw').addEventListener('click', e => {
    작업 64 — 훈련 카드 «꾹 누르면 연속 강화» (2026-08-25, 저장소 주인 지시)
    pointerdown 즉시 1회 → 350ms 뒤부터 반복 시작 → 간격 160ms 에서 ×0.86 씩 가속,
    최소 60ms. pointerup / pointercancel / 카드 밖으로 벗어남 → 즉시 정지.
-   골드(또는 스탯 포인트) 부족 · 단계 상한 도달 → 자동 정지 + 60 의 shake 1회.
+   골드 부족 · 단계 상한 도달 → 자동 정지 + 60 의 shake 1회.
    배수 탭(x1/x10/x30)은 반복 «1회당» 그대로 적용된다(trainBuyInfo 가 trainQty() 를 읽는다).
    58 연출: 반복 중에는 카드 플래시·파티클을 걸지 않고 **정지할 때 한 번만** 재생한다
    (60ms 간격으로 fxBurst 를 10개씩 쏘면 #fxl 이 FXMAX 로 막히고 손맛이 아니라 잡음이 된다).
@@ -13901,7 +13691,7 @@ const TR_HOLD_DELAY = 350, TR_HOLD_IV0 = 160, TR_HOLD_IVMIN = 60, TR_HOLD_ACCEL 
 let trHold = null;                      /* {key, timer, iv, n} — 누르고 있는 동안에만 존재 */
 const trCard = key => document.querySelector('#trw [data-tr="' + CSS.escape(key) + '"]');
 function trBuyOnce(key){
-  const ok = trIsTrain() ? trainBuy(key) : statTrainBuy(key);
+  const ok = trainBuy(key);
   if(ok) sfx('train');                                  /* 78 — 훈련 ↑ 틱(꾹 누르기 반복 포함) */
   return ok;
 }
@@ -14381,7 +14171,7 @@ function renderUI(){
     const al = k === 'hero' ? (collReady('equip') || collReady('skill') || collReady('pet')
                               /* 87 — 조건 해금(req) 이 안 열린 코스튬은 «살 수 있음» 이 아니다 */
                               || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a)))
-             : k === 'grow' ? S.sp > 0
+             : k === 'grow' ? false   /* 88 — 스탯 포인트 폐기, 성장 탭 레드닷 조건 삭제 */
              : k === 'adv'  ? dunAlert
              : k === 'box'  ? collReady('relic')
              : false;
@@ -14946,8 +14736,6 @@ loadAtlases(() => {
   const lastTime = load();
   dailyCheck();
   markDirty();
-  const owed = Math.max(0, (S.plv - 1)*SP_PER_LV - (S.sp + S.spAtk + S.spHp));
-  if(owed > 0){ S.sp += owed; if(S.spAuto) autoSpend(); }
   if(!has('slash')){ S.own.slash = { n:0, l:1 }; S.eqSkill = ['slash']; }
   if(S.autoEquip) autoEquipAll();
   player.hp = stat.maxHp;
