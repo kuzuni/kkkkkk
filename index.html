@@ -6105,14 +6105,16 @@
   /* 아트 자리 — ref 실측 bbox(`bbox … light>78`): 2위 x24..380·y239..564 / 1위 x386..694·y230..530 /
      3위 x700..1041·y232..552. 2회차의 «290×300 고정» 은 세로 −50%·가로 −33~46% 였다(비평 D②).
      이미지로 교체할 때 이 bbox 를 그대로 쓴다 — 이모지는 잉크가 이 상자를 채우도록 fs·scaleX 를 역산했다. */
-  .rk-ch{display:flex;align-items:center;justify-content:center;line-height:1;overflow:visible}
+  /* 이모지 잉크비는 글리프마다 달라 fs 만으로는 상자를 못 맞춘다 — 상자로 «잘라» bbox 를 보장한다.
+     (아트 자리 규칙: 이미지로 교체할 때 이 상자를 그대로 쓰므로 넘치는 잉크는 잘려도 무방하다) */
+  .rk-ch{display:flex;align-items:center;justify-content:center;line-height:1;overflow:hidden}
   #rkw .rk-ch>em{display:block;line-height:1}
   .rk-ch.c1{left:386px;top:146px;width:309px;height:301px;font-size:354px}
-  .rk-ch.c2{left:24px;top:155px;width:357px;height:326px;font-size:384px}
-  .rk-ch.c3{left:700px;top:148px;width:342px;height:321px;font-size:378px}
+  .rk-ch.c2{left:24px;top:155px;width:357px;height:326px;font-size:350px}
+  .rk-ch.c3{left:700px;top:148px;width:342px;height:321px;font-size:335px}
   #rkw .rk-ch.c1>em{transform:scaleX(1.03)}
-  #rkw .rk-ch.c2>em{transform:scaleX(1.10)}
-  #rkw .rk-ch.c3>em{transform:scaleX(1.07)}
+  #rkw .rk-ch.c2>em{transform:scaleX(1.06)}
+  #rkw .rk-ch.c3>em{transform:scaleX(1.05)}
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
     clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%)}
@@ -6147,8 +6149,8 @@
   .rk-pn.n3{left:734px;top:602px;width:261px}
   /* 포디움 점수 알약 — 3개 모두 230×45 r22, 1위만 y −10 */
   .rk-pp{width:230px;height:45px;border-radius:22px;text-align:center}
-  .rk-pp>i{display:block;height:45px;line-height:45px;font-size:22px;color:#FCF171;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .rk-pp>i{display:block;height:45px;line-height:45px;font-size:23px;color:#FCF171;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(1.25)}
   .rk-pp.q1{left:425px;top:625px;background:#442810}
   .rk-pp.q2{left:100px;top:635px;background:#11182B}
   .rk-pp.q3{left:750px;top:637px;background:#2E1F0C}
@@ -6199,7 +6201,7 @@
   /* 숫자는 «잉크비 0.93»(한글 받침 기준)이 안 통한다 — fs39 로 잉크가 27 밖에 안 나왔다(ref 35).
      실측 역산: 39 x 35/27 ≈ 51, 폭은 24.8 → ref 28 이라 scaleX 1.13 */
   #rkw .rk-bd.f>b{display:block;width:96px;text-align:center;font-size:51px;line-height:96px;
-    color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;transform:scaleX(1.13)}
+    color:#fff;-webkit-text-stroke:13px #000;paint-order:stroke fill;transform:scaleX(1.05)}
   /* 아바타 액자 111×113 @ local(192,T+17) — 검정 3 + 금테 5 */
   .rk-av{left:192px;top:17px;width:111px;height:113px;box-sizing:border-box;
     border:3px solid #000;border-radius:14px;background:#FFB95A;
@@ -6212,6 +6214,15 @@
     background:#B63F2B;box-shadow:inset 0 0 0 4px #F6A33B;overflow:hidden}
   #rkw .rk-tt>i{display:block;width:100%;text-align:center;font-size:26px;line-height:41px;
     color:#FFF175;-webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 등급색 — ref 6행이 전부 다른 색이다(측정표 §6-3). 단색으로 두면 정보 계층이 사라진다(비평 F⑤) */
+  .rk-tt.g7{background:#B63F2B;box-shadow:inset 0 0 0 4px #F6A33B}
+  .rk-tt.g6{background:#B1291D;box-shadow:inset 0 0 0 4px #F2AB2D}
+  .rk-tt.g5{background:#B32C4C;box-shadow:inset 0 0 0 4px #E0A03A}
+  .rk-tt.g4{background:#5A2985;box-shadow:inset 0 0 0 4px #BC9A53}
+  .rk-tt.g3{background:#B22D48;box-shadow:inset 0 0 0 4px #A17222}
+  .rk-tt.g2{background:#8A3A1C;box-shadow:inset 0 0 0 4px #C79038}
+  .rk-tt.g1{background:#3E5A86;box-shadow:inset 0 0 0 4px #8FA8C8}
+  .rk-tt.g0{background:#4A5A33;box-shadow:inset 0 0 0 4px #93A86A}
   .rk-tt.no{background:#433A35;box-shadow:inset 0 0 0 4px #7A7A7A}
   #rkw .rk-tt.no>i{color:#CCCBC9}
   /* 닉네임 — 좌측 정렬 x local 318, 잉크 T+81..T+113 → fs 35, 편측 4 → 8 */
@@ -12555,7 +12566,7 @@ function rkRowHTML(r){
   return '<div class="rk-row" data-rkp="' + r.p + '">'
     + '<div class="rk-lc"></div><div class="rk-rc"></div>' + badge
     + '<div class="rk-av"><u>' + r.av + '</u></div>'
-    + '<div class="rk-tt' + (t ? '' : ' no') + '"><i>' + (t || '칭호 없음') + '</i></div>'
+    + '<div class="rk-tt ' + (t ? 'g' + Math.min(r.t, 7) : 'no') + '"><i>' + (t || '칭호 없음') + '</i></div>'
     + '<i class="rk-nm">' + r.n + '</i>'
     + '<i class="rk-lb">최고 스테이지</i>'
     + '<div class="rk-sc"><i>' + r.best + '</i></div></div>';
@@ -12569,7 +12580,7 @@ function renderRank(){
   for(let i = 0; i < 3; i++){
     const r = rows[i], t = rkTitle(r.t), k = i + 1;
     $('rkPn' + k).textContent = r.n;
-    $('rkPs' + k).textContent = r.best;
+    $('rkPs' + k).textContent = r.best + ' 스테이지';
     $('rkPt' + k).textContent = t || '칭호 없음';
     $('rkCh' + k).textContent = r.av;
     $('rkPt' + k).parentNode.classList.toggle('nt', !t);
@@ -12580,7 +12591,7 @@ function renderRank(){
   $('rkMyAv').textContent = me.av;
   $('rkMySc').textContent = me.best;
   const mt = rkTitle(me.t);
-  $('rkMyTt').classList.toggle('no', !mt);
+  $('rkMyTt').className = 'rk-tt ' + (mt ? 'g' + Math.min(me.t, 7) : 'no');
   $('rkMyTt').firstElementChild.textContent = mt || '칭호 없음';
 }
 function openRank(){ renderRank(); $('rkw').classList.add('on'); }

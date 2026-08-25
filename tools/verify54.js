@@ -142,8 +142,10 @@ const GEO = [
   const pod = await page.evaluate(() => [1, 2, 3].map((k) => ({
     n: document.getElementById('rkPn' + k).textContent,
     s: document.getElementById('rkPs' + k).textContent })));
-  ck(pod[0].n === '세븐하이머' && pod[0].s === '452', `포디움 1위 «${pod[0].n}/${pod[0].s}»`);
-  ck(+pod[0].s > +pod[1].s && +pod[1].s > +pod[2].s, '포디움 1·2·3위 점수가 내림차순이 아님');
+  /* 시상대 알약은 ref 잉크 폭 166 이 «N 스테이지» 라 단위까지 붙는다(비평 F①) */
+  ck(pod[0].n === '세븐하이머' && pod[0].s === '452 스테이지', `포디움 1위 «${pod[0].n}/${pod[0].s}»`);
+  const pv = pod.map((x) => parseInt(x.s, 10));
+  ck(pv[0] > pv[1] && pv[1] > pv[2], '포디움 1·2·3위 점수가 내림차순이 아님');
 
   /* ---- 기능 5: 행 클릭 → 상세 팝업 ---- */
   await page.evaluate(() => document.querySelector('.rk-row').click());
