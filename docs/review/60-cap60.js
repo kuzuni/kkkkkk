@@ -33,7 +33,9 @@ const SEEK = (t) => { (window.__jzA || []).forEach(a => { try { a.currentTime = 
    다음 장면의 GRAB 에 같이 잡히고, SEEK 하면 **앞 장면의 연출이 같이 재생된다**(탭 장면에서
    누름 스프링이 되살아나 «탭 아이콘 팝이 1.12 가 아니라 1.04» 로 읽혔다). 장면 사이에 반드시 청소한다. */
 const CLEAR = () => {
-  (window.__jzA || []).forEach(a => { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } });
+  /* `window.__jzA`(마지막 GRAB 목록)만 풀면 그 앞 장면에서 pause 한 애니메이션이 남아
+     다음 장면의 GRAB 에 다시 잡힌다 — 문서 전체를 훑어 전부 풀어 준다. */
+  document.getAnimations().forEach(a => { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } });
   window.__jzA = [];
   document.querySelectorAll('.jz-dn,.jz-up,.jz-sh,.jz-ti,.jz-st,.jz-bad,.jz-o,.jz-c')
     .forEach(e => e.classList.remove('jz-dn', 'jz-up', 'jz-sh', 'jz-ti', 'jz-st', 'jz-bad', 'jz-o', 'jz-c'));
@@ -83,68 +85,79 @@ const CLICK = (s) => { const e = document.querySelector(s); if (e) e.click(); };
     return b;
   };
 
-  /* ── 1. 버튼 누름 → 뗌 (누름 .94/60ms · 스프링 1.04→1/180ms) ── */
+  /* ── 1. 버튼 누름 → 뗌 (누름 .94/60ms · 스프링 1.04→1/180ms) ──
+     ⚠ 실제 마우스(`mouse.down` → `move` → `up`)로 만들면 두 가지가 섞인다:
+        · 제자리에서 떼면 **클릭**이 되어 패널이 열리고 이후 장면이 오염된다(LESSONS 42-③)
+        · 눌린 채 옮기면 브라우저가 드래그로 보고 `pointercancel` 을 먼저 쏴서
+          «뗌» 타임라인이 `up` 보다 앞서 시작한다 → t=0 프레임이 .94 가 아니라 1.0 으로 찍힌다
+          (5·6회차 비평이 «뗌 t0 이 1.000» 이라고 읽은 것의 정체).
+     → 포인터 이벤트를 **페이지 안에서 직접 쏜다.** click 이 합성되지 않아 화면 상태도 안 변한다. */
   {
     await clean(page);
-    const p = await box('.tab[data-t="hero"]');
-    await page.mouse.move(p.x, p.y);
-    await page.mouse.down();
+    const SEL = '.tab[data-t="hero"]';
+    await page.evaluate(sel => {
+      const el = document.querySelector(sel), r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown',
+        { bubbles: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }));
+    }, SEL);
     const n = await page.evaluate(GRAB);
-    for (let i = 0; i < 4; i++) {
-      await page.evaluate(SEEK, [0, 20, 40, 60][i]);
+    const PT = [0, 8, 20, 40, 60];                      /* t=8 은 «작게 시작» 증거용(비평 지적 4) */
+    for (let i = 0; i < PT.length; i++) {
+      await page.evaluate(SEEK, PT[i]);
       await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 1}.png`) });
     }
-    /* 프레임 구석에서 떼서 click 이 탭 핸들러를 타지 않게 한다 (LESSONS 42-③).
-       그냥 제자리에서 떼면 «누르고 뗀 것 = 클릭» 이라 영웅 패널이 열려 **이후 장면이 통째로 오염된다.** */
     await page.evaluate(CLEAR);
-    await page.mouse.move(6, 6);
-    await page.mouse.up();
-    await page.waitForTimeout(150);
-    await page.evaluate(CLEAR);
-    await page.mouse.move(p.x, p.y);
-    await page.mouse.down();
-    await page.mouse.move(6, 6);
-    await page.mouse.up();                              /* 뗌 스프링만 만들고 클릭은 피한다 */
+    await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })));
     const n2 = await page.evaluate(GRAB);
-    for (let i = 0; i < 4; i++) {
-      await page.evaluate(SEEK, [0, 60, 120, 180][i]);
-      await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 5}.png`) });
+    const RT = [0, 45, 99, 145, 180];                   /* 99ms = 스프링 피크(55%), 45·145 는 키프레임 사이 */
+    for (let i = 0; i < RT.length; i++) {
+      await page.evaluate(SEEK, RT[i]);
+      await page.screenshot({ path: path.join(OUT, `60-r${R}-press-${i + 6}.png`) });
     }
-    console.log(`  press: 애니 ${n}/${n2}개 · 1~4 = 누름 0/20/40/60ms · 5~8 = 뗌 0/60/120/180ms`);
-    await page.evaluate(() => { document.querySelectorAll('.jz-dn').forEach(e => e.classList.remove('jz-dn')); });
-    await page.waitForTimeout(400);
+    console.log(`  press: 애니 ${n}/${n2}개 · 1~5 = 누름 ${PT.join('/')}ms · 6~10 = 뗌 ${RT.join('/')}ms`);
   }
 
   /* ── 2. 가운데 다이얼로그 열기 (딤 150ms + 박스 .92→1.02→1 / 220ms) ── */
-  await scene(page, 'dlg', [0, 20, 40, 70, 110, 150, 190, 230],
+  await scene(page, 'dlg', [0, 10, 35, 70, 100, 136, 175, 220],
     () => page.evaluate(() => openProfile()));
   await page.evaluate(() => closeProfile());
   await page.waitForTimeout(400);
 
   /* ── 3. 바닥 시트 슬라이드업 + 오버슈트 8px (240ms) ── */
-  await scene(page, 'sheet', [0, 40, 80, 120, 160, 178, 210, 240],
+  await scene(page, 'sheet', [0, 25, 60, 105, 145, 178, 205, 240],
     () => page.evaluate(() => openTrain()));
   await page.evaluate(() => closeTrain());
   await page.waitForTimeout(400);
 
   /* ── 4. 하단 탭 전환 — 아이콘 1.12 팝 + 패널 슬라이드인 ── */
-  await scene(page, 'tab', [0, 30, 60, 90, 120, 150, 190, 240],
+  await scene(page, 'tab', [0, 15, 45, 90, 120, 155, 190, 230],
     async () => { await page.evaluate(CLICK, '.tab[data-t="hero"]'); });
   await page.evaluate(CLICK, '.tab[data-t="hero"]');
   await page.waitForTimeout(400);
 
   /* ── 5. 카드 그리드 stagger 25ms (03 던전 전체화면 페이지) ── */
-  await scene(page, 'stagger', [0, 40, 80, 120, 170, 220, 280, 340],
+  await scene(page, 'stagger', [0, 12, 55, 95, 145, 195, 250, 320],
     () => page.evaluate(() => openDungeon()));
   await page.evaluate(() => closeDungeon());
   await page.waitForTimeout(400);
 
   /* ── 6. 재화 부족 — 박스 흔들림 + 알약 빨간 틴트 ── */
   await page.evaluate(() => { S.dia = 0; });
-  await scene(page, 'bad', [0, 27, 54, 112, 170, 224, 282, 420],
+  await scene(page, 'bad', [0, 25, 80, 140, 195, 250, 310, 420],
     () => page.evaluate(() => popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>')));
   await page.evaluate(() => closeModal());
   await page.waitForTimeout(300);
+
+  /* ── 7·8. 닫기 — 지시 «뚝 사라지는 팝업은 0점». 1·2차 캡처엔 닫기 프레임이 0장이었다 ── */
+  await scene(page, 'dlgclose', [0, 15, 35, 60, 85, 105, 120, 140],
+    async () => { await page.evaluate(() => openProfile()); await page.waitForTimeout(500);
+                  await page.evaluate(CLEAR); await page.evaluate(() => closeProfile()); });
+  await page.waitForTimeout(400);
+
+  await scene(page, 'sheetclose', [0, 15, 40, 65, 90, 110, 130, 150],
+    async () => { await page.evaluate(() => openTrain()); await page.waitForTimeout(500);
+                  await page.evaluate(CLEAR); await page.evaluate(() => closeTrain()); });
+  await page.waitForTimeout(400);
 
   console.log(errs.length ? '\n[!] 콘솔/페이지 에러 ' + errs.length + '건:\n  ' + errs.slice(0, 5).join('\n  ')
                           : '\nCAP60 OK — 에러 0건');

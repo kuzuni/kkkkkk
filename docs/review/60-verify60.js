@@ -19,7 +19,40 @@ const near = (label, got, want, tol) => {
   else ok(`${label} = ${typeof got === 'number' ? got.toFixed(3) : got} (기대 ${want}±${tol})`);
 };
 const GRAB = () => { window.__jzA = document.getAnimations(); window.__jzA.forEach(a => { try { a.pause(); } catch (_) {} }); };
-const SEEK = t => (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+/* currentTime 만 바꾸고 바로 getComputedStyle 을 읽으면 **직전 스타일이 그대로 나온다**
+   (같은 태스크에 스타일 플러시가 없어서 — 6회차에 «닫기인데 열기 값이 읽히는» 오독으로 나타났다).
+   seek 뒤에 강제로 한 번 읽어 플러시시킨다. */
+const SEEK = t => {
+  (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+  void document.documentElement.offsetHeight;
+  void getComputedStyle(document.body).opacity;
+};
+/* pause 한 애니메이션은 영원히 멈춰 있다 — 절을 넘어가기 전에 반드시 풀어 준다 */
+const CLEARJZ = () => {
+  /* ⚠ `window.__jzA` 만 풀면 안 된다 — 그건 **마지막 GRAB 목록**뿐이라, 그 앞 절에서 pause 해 둔
+     애니메이션은 fill:both 로 값을 붙든 채 영원히 남는다. 다음 절의 GRAB 이 그걸 다시 집어 가면
+     «닫기 프레임인데 열기 애니가 재생»되는 오독이 난다(6회차에 실제로 났다).
+     → 문서 전체를 훑어 전부 풀어 준다(무한 반복 애니는 finish 가 던지므로 cancel 로 뺀다). */
+  document.getAnimations().forEach(a => { try { a.finish(); } catch (_) { try { a.cancel(); } catch (__) {} } });
+  window.__jzA = [];
+  document.querySelectorAll('.jz-dn,.jz-up,.jz-sh,.jz-ti,.jz-st,.jz-bad,.jz-o,.jz-c,.jz-top')
+    .forEach(e => e.classList.remove('jz-dn', 'jz-up', 'jz-sh', 'jz-ti', 'jz-st', 'jz-bad', 'jz-o', 'jz-c', 'jz-top'));
+};
+/* ⚠ seek 와 read 를 **다른 page.evaluate 로 나누면 안 된다.** 그 사이(수십 ms)에
+   `jzClose` 의 클래스 제거 타임아웃(140ms)이 끼어들어 측정 대상 애니메이션이 바뀐다 —
+   6회차에 «닫기 프레임인데 열기 값(0.92)이 읽히는» 오독으로 나타났다. 한 태스크 안에서 끝낸다. */
+const SR = (page, t, sel, kind) => page.evaluate(([t, sel, kind]) => {
+  (window.__jzA || []).forEach(a => { try { a.currentTime = t; } catch (_) {} });
+  const e = document.querySelector(sel); if (!e) return null;
+  const cs = getComputedStyle(e);
+  if (kind === 'sc') { const v = cs.scale; return (!v || v === 'none') ? 1 : parseFloat(v); }
+  if (kind === 'op') return parseFloat(cs.opacity);
+  if (kind === 'tx') { const v = cs.translate; if (!v || v === 'none') return 0; return parseFloat(v); }
+  if (kind === 'tyRaw') { const v = cs.translate; if (!v || v === 'none') return '0px';
+    const p = (v || '').trim().split(/\s+/); return p.length > 1 ? p[1] : '0px'; }
+  const v = cs.translate; if (!v || v === 'none') return 0;
+  const p = v.trim().split(/\s+/); return p.length > 1 ? parseFloat(p[1]) : 0;
+}, [t, sel, kind]);
 /* computed `scale` 는 "1" | "0.94" | "0.94 0.94" 로 나온다 */
 const SC = s => { const e = document.querySelector(s); if (!e) return null;
   const v = getComputedStyle(e).scale; if (!v || v === 'none') return 1; return parseFloat(v); };
@@ -38,25 +71,31 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   await page.evaluate(() => { S.gold = 9e12; S.dia = 9e6; });
 
   console.log('[1] 버튼 누름 .94 (60ms) / 뗌 스프링 1.04 → 1 (180ms)');
+  await page.evaluate(CLEARJZ);
   {
-    const b = await page.evaluate(() => { const r = document.querySelector('.tab[data-t="hero"]').getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
-    await page.mouse.move(b.x, b.y); await page.mouse.down();
+    /* 실제 마우스로 누르면 «옮겨서 떼기» 가 pointercancel 을 먼저 쏴서 뗌 타임라인이 앞당겨진다.
+       (5·6회차 비평이 «뗌 t0 이 1.000» 으로 읽은 것의 정체) → 페이지 안에서 직접 쏜다. */
+    const SEL = '.tab[data-t="hero"]';
+    await page.evaluate(sel => { const el = document.querySelector(sel), r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown',
+        { bubbles: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 })); }, SEL);
     await page.evaluate(GRAB);
-    await page.evaluate(SEEK, 60);
-    near('누름 t60 .tab scale', await page.evaluate(SC, '.tab[data-t="hero"]'), 0.94, 0.01);
-    await page.mouse.move(6, 6); await page.mouse.up();
-    await page.mouse.move(b.x, b.y); await page.mouse.down(); await page.mouse.up();
+    near('누름 t60 .tab scale', await SR(page, 60, SEL, 'sc'), 0.94, 0.01);
+    await page.evaluate(CLEARJZ);
+    await page.evaluate(sel => { const el = document.querySelector(sel), r = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown',
+        { bubbles: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); }, SEL);
     await page.evaluate(GRAB);
-    await page.evaluate(SEEK, 99);                     /* 0.18s * .55 = 99ms → 최대 1.04 */
-    near('뗌 t99 .tab scale(피크)', await page.evaluate(SC, '.tab[data-t="hero"]'), 1.04, 0.012);
-    await page.evaluate(SEEK, 180);
-    near('뗌 t180 .tab scale(복귀)', await page.evaluate(SC, '.tab[data-t="hero"]'), 1, 0.005);
-    await page.evaluate(() => document.querySelectorAll('.jz-dn,.jz-up').forEach(e => e.classList.remove('jz-dn', 'jz-up')));
+    near('뗌 t0 .tab scale(눌린 상태에서 시작)', await SR(page, 0, SEL, 'sc'), 0.94, 0.012);
+    near('뗌 t99 .tab scale(피크)', await SR(page, 99, SEL, 'sc'), 1.04, 0.012);
+    near('뗌 t180 .tab scale(복귀)', await SR(page, 180, SEL, 'sc'), 1, 0.005);
+    await page.evaluate(CLEARJZ);
     await page.waitForTimeout(300);
   }
 
   console.log('[2] 다이얼로그 열기 — 박스 .92 → 1.02 → 1 (220ms) · 딤 페이드 150ms');
+  await page.evaluate(CLEARJZ);
   {
     await page.evaluate(() => openProfile()); await page.evaluate(GRAB);
     await page.evaluate(SEEK, 0);
@@ -74,6 +113,7 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[3] 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 8px (240ms)');
+  await page.evaluate(CLEARJZ);
   {
     await page.evaluate(() => openTrain()); await page.evaluate(GRAB);
     await page.evaluate(SEEK, 0);
@@ -104,18 +144,23 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[4] 탭 아이콘 1.12 팝 (200ms)');
+  await page.evaluate(CLEARJZ);
   {
     await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').click());
     await page.evaluate(GRAB);
-    await page.evaluate(SEEK, 90);                     /* .2s * .45 = 90ms → 1.12 */
-    near('탭 t90 .ti scale(피크)', await page.evaluate(SC, '.tab[data-t="hero"] .ti'), 1.12, 0.012);
-    await page.evaluate(SEEK, 200);
-    near('탭 t200 .ti scale(복귀)', await page.evaluate(SC, '.tab[data-t="hero"] .ti'), 1, 0.005);
+    /* ⚠ 패널이 열리면 그 칸은 `.close`(✕)가 되어 **`.ti` 는 display:none** 이다.
+       `.ti` 만 재면 «팝이 0px» 이라는 오독이 나온다(비평 L-1 이 정확히 이걸 짚었다).
+       화면에 실제로 그려지는 쪽을 골라서 잰다. */
+    const vis = await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').classList.contains('close') ? '.tx' : '.ti');
+    const SELI = '.tab[data-t="hero"] ' + vis;
+    near('탭 t90 ' + vis + ' scale(피크)', await SR(page, 90, SELI, 'sc'), 1.12, 0.012);
+    near('탭 t200 ' + vis + ' scale(복귀)', await SR(page, 200, SELI, 'sc'), 1, 0.005);
     await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').click());
     await page.waitForTimeout(400);
   }
 
   console.log('[5] 카드 그리드 stagger 25ms');
+  await page.evaluate(CLEARJZ);
   {
     await page.evaluate(() => openDungeon()); await page.waitForTimeout(20);
     const d = await page.evaluate(() => {
@@ -131,11 +176,13 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[6] 재화 부족 — 박스 흔들림 6px + 알약 빨간 틴트');
+  await page.evaluate(CLEARJZ);
   {
     await page.evaluate(() => { S.dia = 0; popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); });
     await page.evaluate(GRAB);
-    await page.evaluate(SEEK, 56);                     /* .34s * .165 ≈ 56ms → -6px */
-    near('부족 t56 .mbox translateX', await page.evaluate(TX, '#modal .mbox'), -6, 1.2);
+    /* jzShake 극점: .34s 의 12.5/25/37.5/50/62.5/75% = 42.5/85/127.5/170/212.5/255ms */
+    near('부족 t42 .mbox translateX(1번째 극점)', await SR(page, 42, '#modal .mbox', 'tx'), -6, 1.2);
+    near('부족 t255 .mbox translateX(6번째 극점, 감쇠 없음)', await SR(page, 255, '#modal .mbox', 'tx'), 6, 1.2);
     /* ⚠ 회귀 가드 — 2회차에 `.jz-bad{...!important}` 가 열기 팝(`jzBoxIn`)을 삼켜서
        «부족 팝업만 뚝 뜨는» 사고가 났다(3회차 비평 실측: 박스 폭 882±1px 고정). 둘 다 살아야 한다. */
     await page.evaluate(SEEK, 136);
@@ -154,6 +201,7 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[7] 수치 롤링 — 전투력이 «뚝» 바뀌지 않는다');
+  await page.evaluate(CLEARJZ);
   {
     const r = await page.evaluate(async () => {
       const read = () => document.getElementById('cpN').textContent;
@@ -168,6 +216,7 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[8] 스킬 슬롯 — 발동 플래시 / 쿨 완료 글로우');
+  await page.evaluate(CLEARJZ);
   {
     const r = await page.evaluate(async () => {
       const s = document.querySelector('#slots .slot2');
@@ -187,6 +236,7 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
   }
 
   console.log('[9] 보스 — 등장 비네트+슬램 / 처치 흰 플래시');
+  await page.evaluate(CLEARJZ);
   {
     const r = await page.evaluate(async () => {
       const si = document.getElementById('stinfo'), L = document.getElementById('fxl');
@@ -204,7 +254,53 @@ const TX = s => { const e = document.querySelector(s); if (!e) return null;
     if (!r.wf) { fails.push('보스 처치 흰 플래시(.jz-wf) 없음'); console.log('  ✗ 처치 흰 플래시 없음'); } else ok('보스 처치 → 흰 플래시');
   }
 
+  console.log('[11] 닫기 — «뚝 사라지는 팝업은 0점»(지시). 역방향 애니가 실제로 도는가');
+  await page.evaluate(CLEARJZ);
+  {
+    /* 다이얼로그 닫기 — jzBoxOut(120ms): scale 1 → .94 + opacity → 0 */
+    await page.evaluate(() => openProfile()); await page.waitForTimeout(400);
+    await page.evaluate(() => closeProfile());
+    await page.evaluate(GRAB);
+    const vis = await page.evaluate(() => getComputedStyle(document.querySelector('#pfw')).display);
+    if (vis === 'none') { fails.push('닫기: #pfw 가 즉시 display:none (역재생 없음)'); console.log('  ✗ 닫기 즉시 사라짐'); }
+    else ok('닫기 중 #pfw display = ' + vis + ' (역재생 위해 되살림)');
+    near('닫기 t0 #pfw>* scale', await SR(page, 0, '#pfw>*', 'sc'), 1, 0.02);
+    near('닫기 t120 #pfw>* scale', await SR(page, 120, '#pfw>*', 'sc'), 0.94, 0.02);
+    near('닫기 t120 #pfw>* opacity', await SR(page, 120, '#pfw>*', 'op'), 0, 0.05);
+    await page.evaluate(CLEARJZ); await page.waitForTimeout(400);
+
+    /* 바닥 시트 닫기 — jzSheetOut(130ms): translateY → 100% */
+    await page.evaluate(() => openTrain()); await page.waitForTimeout(500);
+    await page.evaluate(() => closeTrain());
+    await page.evaluate(GRAB);
+    near('닫기 t0 #trw translateY', await SR(page, 0, '#trw', 'ty'), 0, 1.5);
+    const tEnd = await SR(page, 130, '#trw', 'tyRaw');
+    if (tEnd !== '100%') { fails.push('닫기 t130 시트 translateY = ' + tEnd + ' (기대 100%)'); console.log('  ✗ 닫기 t130 시트 = ' + tEnd); }
+    else ok('닫기 t130 시트 translateY = 100% (아래로 빠짐)');
+    await page.evaluate(CLEARJZ); await page.waitForTimeout(400);
+  }
+
+  console.log('[12] 탭 팝이 «그 순간 보이는» 아이콘에 붙는가 (패널이 열리면 .ti 는 display:none)');
+  await page.evaluate(CLEARJZ);
+  {
+    const r = await page.evaluate(async () => {
+      const t = document.querySelector('.tab[data-t="hero"]');
+      t.click();                                       /* 패널 열림 → 이 칸은 .close(✕) 가 된다 */
+      await new Promise(r => setTimeout(r, 30));
+      const ti = t.querySelector('.ti'), tx = t.querySelector('.tx');
+      const vd = e => getComputedStyle(e).display !== 'none';
+      return { close: t.classList.contains('close'),
+               shown: vd(ti) ? 'ti' : (vd(tx) ? 'tx' : 'none'),
+               popped: (vd(ti) && ti.classList.contains('jz-ti')) || (vd(tx) && tx.classList.contains('jz-ti')) };
+    });
+    if (!r.popped) { fails.push('탭 팝이 보이는 아이콘(' + r.shown + ')에 안 붙었다'); console.log('  ✗ 탭 팝 미부착 ' + JSON.stringify(r)); }
+    else ok('탭 팝 → 보이는 쪽(' + r.shown + ')에 .jz-ti 부착' + (r.close ? ' [✕ 칸 상태]' : ''));
+    await page.evaluate(() => document.querySelector('.tab[data-t="hero"]').click());
+    await page.waitForTimeout(400);
+  }
+
   console.log('[10] 비활성 버튼 — 흔들림 6px + 어두워짐');
+  await page.evaluate(CLEARJZ);
   {
     const r = await page.evaluate(async () => {
       const b = document.getElementById('tutoBtn');

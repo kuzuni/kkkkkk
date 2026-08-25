@@ -4149,8 +4149,10 @@
   @keyframes jzUp{0%{scale:.94}55%{scale:1.04}100%{scale:1}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
+  /* 지시 «좌우 흔들림 6px 3회» = ±6px **3왕복**. 마지막 극점만 -4px 로 두면 감쇠로 읽힌다(비평 K-6). */
   @keyframes jzShake{0%,100%{translate:0}
-    16%{translate:-6px}33%{translate:6px}50%{translate:-6px}66%{translate:6px}83%{translate:-4px}}
+    12.5%{translate:-6px}25%{translate:6px}37.5%{translate:-6px}
+    50%{translate:6px}62.5%{translate:-6px}75%{translate:6px}}
   /* 실패·재화 부족 — 흔들림 + 빨간 플래시(대상 위에 겹치는 틴트)
      실패 팝업의 `.mbox` 는 «열기» 규칙(`.jz-o.jz-dlg>*`, 특이도 0-2-0)의 대상이기도 하다.
      1회차엔 열기 애니가 흔들림을 삼켰고, 2회차에 `!important` 로 눌렀더니 이번엔 **흔들림이 열기 팝을 삼켜서
@@ -4169,16 +4171,21 @@
     100%{filter:none}}
 
   /* ② 팝업·시트 열기/닫기 — «뚝 나타나고 뚝 사라지는 팝업은 0점» */
-  .jz-o{animation:jzDim .15s ease-out both}            /* 딤 페이드 */
+  /* 딤 페이드 150ms.
+     ⚠ 오버레이의 `opacity` 는 **자식(박스)까지 같이 흐려진다.** `from{opacity:0}` 으로 두면
+     t=0~20ms 구간의 박스 불투명도가 0~12% 라 지시한 «박스 .92 로 작게 시작» 이 **한 프레임도 안 보인다**
+     (5회차 비평 실측: t=0 박스 불투명도 0%, 첫 측정 가능 프레임 t=20 은 이미 .944).
+     → 앞 20% 를 빠르게 올려 «작게 시작» 이 눈에 걸리게 하고, 나머지 80% 로 150ms 페이드를 유지한다. */
+  .jz-o{animation:jzDim .15s ease-out both}
   .jz-c{animation:jzDim .12s ease-in reverse both}
-  @keyframes jzDim{from{opacity:0}to{opacity:1}}
+  @keyframes jzDim{0%{opacity:0}14%{opacity:.7}100%{opacity:1}}
   /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
      ⚠ 이징을 애니메이션 «전체» 에 걸면 안 된다 — `cubic-bezier(.34,1.56,.64,1)` 는 첫 30ms 에
      구간의 65~95% 를 태워버려서 «작게 시작» 이 **한 프레임도 안 보인다**(3회차 비평 실측: t=30ms 에 이미 .993).
      구간별 이징으로 나눠 앞 구간은 정상 ease-out, 오버슈트는 뒤 구간에만 남긴다. */
   .jz-o.jz-dlg>*{animation:jzBoxIn .22s linear both}
   .jz-c.jz-dlg>*{animation:jzBoxOut .12s ease-in both}
-  @keyframes jzBoxIn{0%{scale:.92;animation-timing-function:cubic-bezier(.32,.5,.5,1)}
+  @keyframes jzBoxIn{0%{scale:.92;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
     62%{scale:1.02;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
   @keyframes jzBoxOut{to{scale:.94;opacity:0}}
   /* 전체화면 페이지 — 딤이 없으므로 살짝만(.98→1) */
@@ -4191,9 +4198,15 @@
      (3회차 비평 실측 212px). 이동 구간은 비오버슈트 이징으로 붙이고, 8px 바운스는 마지막 구간에만. */
   .jz-o.jz-sh2{animation:jzSheetIn .24s linear both}
   .jz-c.jz-sh2{animation:jzSheetOut .13s ease-in both}
-  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.18,.86,.28,1)}
+  /* 이동 구간 이징이 너무 급하면 240ms 가 «80ms 스냅» 으로 읽힌다(5회차 비평: 예산 33% 에 이동 89% 완료).
+     전반 50% 에 이동량 60% 쯤이 오도록 완화한다. */
+  @keyframes jzSheetIn{0%{translate:0 100%;animation-timing-function:cubic-bezier(.3,.1,.35,1)}
     74%{translate:0 -8px;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{translate:0 0}}
   @keyframes jzSheetOut{to{translate:0 100%}}
+  /* 시트는 «자기 높이만큼 아래» 에서 올라오므로 슬라이드 도중 **탭바 위를 쓸고 지나간다**
+     (5회차 비평: t=30·60 프레임에서 탭 칸이 가려져 아이콘 팝이 안 보였다).
+     슬라이드 중에만 탭바를 위로 올린다 — 240ms 뒤 자동으로 원래 층으로 돌아간다. */
+  #tabbar.jz-top{z-index:31}
 
   /* ③ 하단 탭 전환 — 활성 탭 아이콘 1.12 로 튀었다 복귀 */
   .jz-ti{animation:jzTi .2s var(--jzs) both}
@@ -4201,7 +4214,7 @@
 
   /* ④ 카드 그리드 등장 — 좌상단부터 순차(stagger 25ms) 팝 */
   .jz-st{animation:jzSt .2s linear both;animation-delay:var(--jzd,0ms)}
-  @keyframes jzSt{0%{scale:.9;opacity:0;animation-timing-function:cubic-bezier(.32,.5,.5,1)}
+  @keyframes jzSt{0%{scale:.9;opacity:0;animation-timing-function:cubic-bezier(.45,.3,.5,1)}
     60%{scale:1.03;opacity:1;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;opacity:1}}
 
   /* ⑤ 수치 변화 틴트 — 오를 때 초록 / 내릴 때 빨강 0.4초 (롤링은 58 fxDisp·jzRollVal) */
@@ -10448,6 +10461,7 @@ function jzOpen(el){
   el.classList.add('jz-o', k);
   clearTimeout(el.__jzT);
   el.__jzT = setTimeout(() => el.classList.remove('jz-o', k), 300);
+  if(k === 'jz-sh2') jzOn($('tabbar'), 'jz-top', 320);   /* 시트가 탭바 위를 쓸고 지나가지 않게 */
   jzStagger(el);
   if(el.id === 'modal') jzModalMood();
 }
@@ -10457,6 +10471,7 @@ function jzClose(el, disp){
   el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
   el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
   el.classList.add('jz-c', k);
+  if(k === 'jz-sh2') jzOn($('tabbar'), 'jz-top', 200);
   clearTimeout(el.__jzT);
   el.__jzT = setTimeout(() => {
     el.classList.remove('jz-c', k);
@@ -10591,7 +10606,13 @@ function jzInit(){
   const tb = $('tabbar');
   if(tb) tb.addEventListener('click', e => {
     const t = e.target.closest && e.target.closest('.tab');
-    if(t) jzOn(t.querySelector('.ti'), 'jz-ti', 240);
+    if(!t) return;
+    /* ⚠ 이 리스너는 `.tab` 의 onclick(=goTab→syncPanel) 뒤에 버블로 온다. 그 사이 패널이 열리면
+       그 칸은 `.close`(✕ 칸)가 되고 **`.ti` 는 `display:none`** 이 된다 — 거기에 팝을 걸면
+       «아이콘 1.12 팝» 이 화면에 0px 도 안 나온다(5회차 비평 실측: 지름 100.0px 고정).
+       그래서 «그 순간 보이는 쪽» 에 건다 — 둘 다 걸어 두면 숨은 쪽은 어차피 안 그려진다. */
+    jzOn(t.querySelector('.ti'), 'jz-ti', 240);
+    jzOn(t.querySelector('.tx'), 'jz-ti', 240);
   });
 
   /* ⑦ 스킬 슬롯 */
