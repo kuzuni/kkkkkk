@@ -15,6 +15,11 @@ LESSONS 22-① «가림 없는 열의 세로 연속 높이로 재라» 를 쓰�
   python3 tools/scan54.py <img> runs <axis> <fixed> <a0> <a1> <pred>
         축을 따라가며 pred 를 만족하는 연속 구간 나열 (axis=row|col)
   python3 tools/scan54.py <img> px <x> <y>                  단일 화소
+  python3 tools/scan54.py <img> prof <axis> <x0> <y0> <x1> <y1> <pred>
+        axis=row → 각 y 의 (첫 x, 끝 x, 개수) / axis=col → 각 x 의 (첫 y, 끝 y, 개수)
+        같은 값이 연속되면 «y a..b» 로 압축 → 코너 반경·모서리 프로파일 추출용
+  python3 tools/scan54.py <img> tile <x0> <y0> <x1> <y1> <axis> <pmin> <pmax>
+        축 방향 자기상관으로 워터마크 타일 주기 탐색 (pmin..pmax 주기 중 최적)
 """
 import sys
 from PIL import Image
@@ -149,6 +154,49 @@ elif mode == 'runs':
         out.append((a1 + 1 - run, a1, run))
     for a, b, r in out:
         print(f'{a}..{b} ({r})')
+
+elif mode == 'prof':
+    axis = A[0]
+    x0, y0, x1, y1 = map(int, A[1:5])
+    p = mkpred(A[5])
+    out = []
+    outer = range(y0, y1 + 1) if axis == 'row' else range(x0, x1 + 1)
+    inner = range(x0, x1 + 1) if axis == 'row' else range(y0, y1 + 1)
+    for a in outer:
+        hits = [b for b in inner if p(px[b, a] if axis == 'row' else px[a, b])]
+        out.append((a, (hits[0], hits[-1], len(hits)) if hits else None))
+    # 같은 값 연속 압축
+    s = 0
+    for i in range(1, len(out) + 1):
+        if i == len(out) or out[i][1] != out[s][1]:
+            a0, a1_ = out[s][0], out[i - 1][0]
+            tag = f'{a0}' if a0 == a1_ else f'{a0}..{a1_}'
+            v = out[s][1]
+            print(f'{tag}: ' + ('none' if v is None else f'{v[0]}..{v[1]} n{v[2]}'))
+            s = i
+
+elif mode == 'tile':
+    x0, y0, x1, y1 = map(int, A[:4])
+    axis = A[4]; pmin, pmax = int(A[5]), int(A[6])
+    if axis == 'row':      # 가로 주기
+        sig = [sum(sum(px[x, y]) for y in range(y0, y1 + 1)) / (y1 - y0 + 1)
+               for x in range(x0, x1 + 1)]
+    else:                  # 세로 주기
+        sig = [sum(sum(px[x, y]) for x in range(x0, x1 + 1)) / (x1 - x0 + 1)
+               for y in range(y0, y1 + 1)]
+    m = sum(sig) / len(sig)
+    sig = [v - m for v in sig]
+    best = []
+    for p_ in range(pmin, pmax + 1):
+        n = len(sig) - p_
+        if n < p_:
+            continue
+        num = sum(sig[i] * sig[i + p_] for i in range(n))
+        den = (sum(sig[i] ** 2 for i in range(n)) * sum(sig[i + p_] ** 2 for i in range(n))) ** .5
+        best.append((num / den if den else 0, p_))
+    best.sort(reverse=True)
+    for c, p_ in best[:8]:
+        print(f'period {p_}  r={c:.3f}')
 
 else:
     raise SystemExit('알 수 없는 모드: ' + mode)

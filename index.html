@@ -5739,6 +5739,211 @@
   .cf55-n2{left:0;right:0;top:1183px;height:32px;line-height:32px;text-align:center}
   .cf55-n2>i{font-size:23px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
+  /* ================= 54 랭킹 페이지 (#rkw) — 측정표 docs/measure/54-랭킹팝업.md =================
+     껍데기 (다) **딤·테두리 없는 전체화면 페이지** (03 던전 · 14 유물 · 35 패스와 같은 계열).
+     딤 반증: ref 상단 씬에 순백 3644px 이 남아 있다(딤이 깔렸으면 불가능) — 측정표 §1.
+     세로 밴드 7장을 ref y−84 로 그대로 옮긴다:
+       씬 0..691 / 검정선 692..701 / 안내문 702..800 / 리스트 802..1884 /
+       내순위 1905..2076 / 검정선 2077..2084 / 내비 2086..2249.
+     ⚠ 남는 높이(2280−2249−31) 흡수는 **리스트 패널 하나**가 맡는다(LESSONS 22-④):
+       하단 3장은 전부 `bottom:` 앵커, 패널만 `top+bottom` 이라 짧은 프레임에서 패널만 줄어든다.
+     레퍼런스 캡처는 ref 2340−84 = 2256 까지라 프레임 2280 의 **하단 30px 은 캡처 밖**이다 —
+     그 띠는 내비바와 같은 색(`#rkw` 배경)으로 채워 «내비바가 이어진» 것처럼 보이게 한다. */
+  #rkw{position:absolute;inset:0;display:none;z-index:42;overflow:hidden;background:#3C2D28}
+  #rkw.on{display:block}
+  /* LESSONS 21-①: `#id 태그` 리셋(1-0-1)이 `.클래스 .클래스`(0-2-0)를 이긴다 — 이 안의 규칙은
+     전부 `#rkw` 접두어를 달아 특이성을 맞춘다. */
+  #rkw i,#rkw b,#rkw s,#rkw u,#rkw em{display:inline-block;font-style:normal;font-weight:900;
+    text-decoration:none;transform-origin:50% 50%}
+  #rkw>*{position:absolute}
+
+  /* ---- ① 포디움 씬 ref 0..775 → 프레임 0..691 (상단 84 는 프레임 밖) ---- */
+  .rk-scene{left:0;right:0;top:0;height:692px;overflow:hidden;
+    background:linear-gradient(180deg,#101020 0,#2A1020 46%,#4B1723 100%)}
+  .rk-scene>*{position:absolute}
+  /* 아트 자리 — 어두운 실내 기둥. 이미지로 교체할 때 이 씬 bbox(1080×776) 를 그대로 쓴다 */
+  .rk-hall{left:0;right:0;top:0;bottom:0;
+    background:radial-gradient(120% 80% at 50% 96%,rgba(255,190,120,.22) 0,rgba(0,0,0,0) 62%),
+      radial-gradient(60% 42% at 50% 8%,rgba(120,90,180,.20) 0,rgba(0,0,0,0) 70%)}
+
+  /* 타이틀 명판 — ref x297..782 y104..217 (486×114), 프레임 top 20. 육각(상하로 30px 씩 좁아짐).
+     검정 8~9 / 상단 립 10 #6C584D / fill #483A2F / 하단 립 11 #6F5D51 (측정표 §2) */
+  .rk-title{left:297px;top:20px;width:486px;height:114px;background:#000;
+    clip-path:polygon(0 50%,6.2% 0,93.8% 0,100% 50%,93.8% 100%,6.2% 100%)}
+  .rk-title>s{position:absolute;left:9px;right:9px;top:9px;bottom:9px;
+    background:linear-gradient(180deg,#6C584D 0,#6C584D 10px,#483A2F 10px,#483A2F 34px,
+      #362B25 34px,#362B25 72px,#483A2F 72px,#483A2F 85px,#6F5D51 85px,#6F5D51 96px);
+    clip-path:polygon(0 50%,6.2% 0,93.8% 0,100% 50%,93.8% 100%,6.2% 100%)}
+  /* 잉크 221×37 중심 (539,162) → 프레임 cy 78. fs 37/0.93 ≈ 40, 편측 4 → CSS 8 */
+  .rk-title>i{position:absolute;left:0;right:0;top:57px;height:42px;line-height:42px;
+    display:block;text-align:center;font-size:40px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;letter-spacing:1px;text-indent:1px}
+
+  /* ---- 시상대 3개. 텍스트 4종(방패·리본·닉네임·알약)은 «단상 앞면 위»에 얹힌다 ---- */
+  /* 단상 박스 — 2위 x72 w288 top482 h210 / 1위 x398 w287 top448 h244 / 3위 x723 w287 top492 h200 */
+  .rk-pod{overflow:visible}
+  .rk-pod>u{position:absolute;left:0;right:0;top:0;bottom:0;border-radius:6px 6px 0 0}
+  .rk-pod.p1{left:398px;top:448px;width:287px;height:244px}
+  .rk-pod.p2{left:72px;top:482px;width:288px;height:210px}
+  .rk-pod.p3{left:723px;top:492px;width:287px;height:200px}
+  .rk-pod.p1>u{background:linear-gradient(180deg,#FFDB61 0,#FFDB61 14px,#D07C36 14px,#D07C36 24px,
+    #D88B47 24px,#D88B47 76%,#C26829 76%)}
+  .rk-pod.p2>u{background:linear-gradient(180deg,#BCCCDB 0,#BCCCDB 14px,#48587C 14px,#48587C 24px,
+    #5A697E 24px,#5A697E 76%,#4A597A 76%)}
+  .rk-pod.p3>u{background:linear-gradient(180deg,#8A6A44 0,#8A6A44 14px,#432D15 14px,#432D15 24px,
+    #58422A 24px,#58422A 76%,#45301B 76%)}
+  /* 아트 자리 — 단상 위 캐릭터+탈것 ≈290×300. bbox 를 정확히 차지시킨다(아트 자리 규칙) */
+  .rk-ch{width:290px;height:300px;display:flex;align-items:flex-end;justify-content:center;
+    font-size:190px;line-height:1}
+  .rk-ch.c1{left:396px;top:148px} .rk-ch.c2{left:71px;top:182px} .rk-ch.c3{left:722px;top:192px}
+  /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
+  .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
+    clip-path:polygon(0 0,100% 0,100% 58%,50% 100%,0 58%)}
+  .rk-sh.s1{left:489px;top:461px;width:102px;height:88px;font-size:62px;
+    background:linear-gradient(180deg,#FDC648 0,#FDB934 100%)}
+  .rk-sh.s2{left:164px;top:482px;width:102px;height:73px;font-size:52px;
+    background:linear-gradient(180deg,#BCCDDD 0,#9FB0C4 100%)}
+  .rk-sh.s3{left:814px;top:484px;width:102px;height:78px;font-size:56px;
+    background:linear-gradient(180deg,#A87C56 0,#906848 100%)}
+  /* 칭호 리본 — 1위 210×37@(439,548) · 2위 208×36@(111,559) · 3위 211×36@(759,561) */
+  .rk-rb{box-sizing:border-box;border:3px solid #000;
+    clip-path:polygon(0 50%,7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%);
+    text-align:center;overflow:hidden}
+  .rk-rb>i{display:block;font-size:20px;line-height:100%;color:#FFF175;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+  .rk-pr1{left:439px;top:548px;width:210px;height:37px;background:#B44029;
+    box-shadow:inset 0 0 0 4px #FFCF52}
+  .rk-pr2{left:111px;top:559px;width:208px;height:36px;background:#A83216;
+    box-shadow:inset 0 0 0 4px #F4A139}
+  .rk-pr3{left:759px;top:561px;width:211px;height:36px;background:#433A35;
+    box-shadow:inset 0 0 0 4px #7A7A7A}
+  .rk-pr3>i{color:#CCCBC9}
+  /* 칭호가 없는 포디움 순위 — 무채 리본(ref 3위와 같은 처리) */
+  .rk-rb.nt{background:#433A35;box-shadow:inset 0 0 0 4px #7A7A7A}
+  #rkw .rk-rb.nt>i{color:#CCCBC9}
+  .rk-pr1>i,.rk-pr2>i,.rk-pr3>i{padding-top:8px}
+  /* 포디움 닉네임 — 잉크 h21~23 → fs 24, 편측 4 → 8. 중심 x 539.5 / 214.5 / 864.5 */
+  .rk-pn{height:28px;line-height:28px;display:block;text-align:center;font-size:24px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;overflow:hidden}
+  .rk-pn.n1{left:409px;top:590px;width:261px}
+  .rk-pn.n2{left:84px;top:601px;width:261px}
+  .rk-pn.n3{left:734px;top:602px;width:261px}
+  /* 포디움 점수 알약 — 3개 모두 230×45 r22, 1위만 y −10 */
+  .rk-pp{width:230px;height:45px;border-radius:22px;text-align:center}
+  .rk-pp>i{display:block;height:45px;line-height:45px;font-size:22px;color:#FCF171;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .rk-pp.q1{left:425px;top:625px;background:#442810}
+  .rk-pp.q2{left:100px;top:635px;background:#11182B}
+  .rk-pp.q3{left:750px;top:637px;background:#2E1F0C}
+
+  /* ---- ② 검정 구분선 / ③ 안내문 밴드 ---- */
+  .rk-div1{left:0;right:0;top:692px;height:10px;background:#040000}
+  .rk-tip{left:0;right:0;top:702px;height:99px;
+    background:linear-gradient(180deg,#623E30 0,#5B3B2C 60%,#59392A 75px,#59392A 86px,#674232 86px)}
+  /* 문구 잉크 894×27 중심 (539.5,826) → 밴드 로컬 27..53. 외곽선 **없다**(측정표 §4).
+     한글 46자를 894px 에 넣으려면 자당 19.4px = 0.67em 이라 scaleX 로 폭만 좁힌다(LESSONS 01) */
+  .rk-tip>i{position:absolute;left:0;right:0;top:22px;height:36px;line-height:36px;
+    display:block;text-align:center;font-size:29px;color:#D0D0D0;white-space:nowrap;
+    transform:scaleX(.67)}
+
+  /* ---- ④ 랭킹 리스트 패널 — 외곽 998×1083 @ (41,802), 테두리 9 #785341 1겹(검정 없음) ---- */
+  .rk-panel{left:41px;top:802px;width:998px;bottom:395px;box-sizing:border-box;
+    border:9px solid #785341;border-radius:21px;background:#3D2C25;
+    padding:16px 15px 0;overflow:hidden}
+  .rk-list{position:absolute;left:15px;right:15px;top:16px;bottom:0;
+    overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+  .rk-list::-webkit-scrollbar{display:none}
+
+  /* ---- 행 = 내 순위 바와 «같은 컴포넌트, 다른 폭» (측정표 주의점 2) ----
+     행 950×149 r15, 립 5 #F7EBD9, fill #F1E0CC, pitch 165(gap 16).
+     행 안 좌표는 전부 «행 로컬 = ref x − 65» 다. */
+  .rk-row{position:relative;box-sizing:border-box;width:950px;height:149px;margin-bottom:16px;
+    border-radius:15px;background:#F1E0CC;box-shadow:inset 0 0 0 5px #F7EBD9}
+  #rkw .rk-row>*{position:absolute}
+  /* 좌측 탠 칸 148×138 @ local(6,5) r13 */
+  .rk-lc{left:6px;top:5px;width:148px;height:138px;border-radius:13px;background:#E1B98F}
+  /* 우측 탠 패널 — 좌변이 기울어진 평행사변형(위 796 / 아래 825 = Δ29), 우측 끝 local 944 */
+  .rk-rc{left:731px;top:5px;width:213px;height:138px;background:#E1B98F;
+    clip-path:polygon(65px 0,100% 0,100% 100%,94px 100%);border-radius:0 13px 13px 0}
+  /* 순위 배지 — 1~3위는 금속 방패 아트 102×80 @ local(29,T+34) / 4위↓ 플랫 실루엣 96×96 @ (32,T+26) */
+  .rk-bd{display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
+  .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:74px}
+  .rk-bd.f{left:32px;top:26px;width:96px;height:96px;background:#CDA37B;
+    clip-path:polygon(0 12%,50% 26%,100% 12%,100% 62%,50% 100%,0 62%)}
+  /* 4위 이하 숫자 잉크 29×36 → fs 39, 편측 3 → 6 */
+  #rkw .rk-bd.f>b{display:block;width:96px;text-align:center;font-size:39px;line-height:96px;
+    color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* 아바타 액자 111×113 @ local(192,T+17) — 검정 3 + 금테 5 */
+  .rk-av{left:192px;top:17px;width:111px;height:113px;box-sizing:border-box;
+    border:3px solid #000;border-radius:14px;background:#FFB95A;
+    display:flex;align-items:center;justify-content:center}
+  .rk-av>u{width:95px;height:97px;border-radius:8px;background:#3E2E26;
+    display:flex;align-items:center;justify-content:center;font-size:66px;line-height:1}
+  /* 칭호 리본 256×47 @ local(317,T+34) — **폭 고정**(칭호 글자 수와 무관, 측정표 주의점 3) */
+  .rk-tt{left:317px;top:34px;width:256px;height:47px;box-sizing:border-box;border:3px solid #000;
+    clip-path:polygon(0 50%,13px 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,13px 100%);
+    background:#B63F2B;box-shadow:inset 0 0 0 4px #F6A33B;overflow:hidden}
+  #rkw .rk-tt>i{display:block;width:100%;text-align:center;font-size:26px;line-height:41px;
+    color:#FFF175;-webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  .rk-tt.no{background:#433A35;box-shadow:inset 0 0 0 4px #7A7A7A}
+  #rkw .rk-tt.no>i{color:#CCCBC9}
+  /* 닉네임 — 좌측 정렬 x local 318, 잉크 T+81..T+113 → fs 35, 편측 4 → 8 */
+  #rkw .rk-nm{left:318px;top:78px;width:400px;height:40px;line-height:40px;display:block;
+    font-size:35px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    white-space:nowrap;overflow:hidden}
+  /* «최고 스테이지» 라벨 161×22 중심 (912,T+42.5) → local 중심 847 */
+  #rkw .rk-lb{left:767px;top:29px;width:160px;height:28px;line-height:28px;display:block;
+    text-align:center;font-size:24px;color:#FFF8AA;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 점수 알약 179×50 r25 @ local(759,T+64) */
+  .rk-sc{left:759px;top:64px;width:179px;height:50px;border-radius:25px;background:#4F3F2F}
+  #rkw .rk-sc>i{display:block;width:179px;height:50px;line-height:50px;text-align:center;
+    font-size:28px;color:#FFF8AA;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+
+  /* ---- ⑤ 내 순위 고정 바 — 행과 같은 부품을 전폭 1080 으로. 색만 청회색 ---- */
+  .rk-me{left:0;right:0;bottom:203px;height:172px;background:#707088}
+  #rkw .rk-me>*{position:absolute}
+  /* 바 로컬 y = ref y − 1989. 좌 플레이트 149×164 @ (6,5) */
+  .rk-mp{left:6px;top:5px;width:149px;height:164px;border-radius:14px;background:#9090B0}
+  .rk-msh{left:18px;top:16px;width:125px;height:142px;background:#787890;
+    clip-path:polygon(0 12%,50% 26%,100% 12%,100% 62%,50% 100%,0 62%)}
+  /* 내 순위 숫자 잉크 116×43 중심 (79.5,2076) → 로컬 cy 87. fs 46, 편측 4 → 8 */
+  #rkw .rk-mn{left:0;top:63px;width:160px;height:48px;line-height:48px;display:block;
+    text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  .rk-me .rk-av{left:206px;top:21px;width:122px;height:118px}
+  .rk-me .rk-tt{left:343px;top:38px;width:278px;height:44px}
+  #rkw .rk-me .rk-nm{left:345px;top:80px;width:430px}
+  /* 우측 플레이트 — 행과 같은 Δ29 기울기, 우측 끝 1071 */
+  .rk-mrc{left:861px;top:5px;width:210px;height:164px;background:#9090B0;
+    clip-path:polygon(29px 0,100% 0,100% 100%,0 100%);border-radius:0 14px 14px 0}
+  #rkw .rk-me .rk-lb{left:897px;top:41px;width:161px}
+  .rk-me .rk-sc{left:888px;top:77px}
+
+  /* ---- ⑥ 검정선 / ⑦ 하단 내비바 ---- */
+  .rk-div2{left:0;right:0;bottom:195px;height:8px;background:#060100}
+  .rk-nav{left:0;right:0;bottom:30px;height:164px;
+    background:linear-gradient(90deg,#3C2D28 0,#483028 100%)}
+  #rkw .rk-nav>*{position:absolute}
+  /* ← 뒤로 — 외곽 94×82 @ local(53,41), 채움 81×64 #A8A8C0 중심 (99,78.5) */
+  .rk-back{left:53px;top:41px;width:94px;height:82px;cursor:pointer}
+  .rk-back>u{position:absolute;left:6px;top:6px;width:81px;height:64px;background:#A8A8C0;
+    clip-path:polygon(0 50%,42% 0,42% 30%,100% 30%,100% 70%,42% 70%,42% 100%)}
+  /* 탭 3개 — 활성 표시는 ① 밝은 fill ② 폭 188/190 → 288 두 가지뿐(측정표 §9) */
+  .rk-tab{top:0;height:164px;background:#483028;border-radius:10px 10px 0 0;
+    text-align:center;cursor:pointer}
+  .rk-tab.on{background:#785048}
+  .rk-tab.t1{left:199px;width:288px} .rk-tab.t2{left:492px;width:188px}
+  .rk-tab.t3{left:685px;width:190px}
+  /* 아이콘 자리 — 탭1 160×99@top10 · 탭2 123×104@top5 · 탭3 151×107@top2 (아트 교체용 bbox) */
+  #rkw .rk-tab>u{position:absolute;left:50%;display:flex;align-items:center;justify-content:center;
+    line-height:1}
+  .rk-tab.t1>u{top:10px;width:160px;height:99px;margin-left:-80px;font-size:82px}
+  .rk-tab.t2>u{top:5px;width:123px;height:104px;margin-left:-61.5px;font-size:86px}
+  .rk-tab.t3>u{top:2px;width:151px;height:107px;margin-left:-75.5px;font-size:88px}
+  /* 라벨 잉크 h32 → fs 34, 편측 4 → 8. 탭1 top 117 / 탭2·3 top 115 */
+  #rkw .rk-tab>b{position:absolute;left:0;right:0;top:112px;height:40px;line-height:40px;
+    display:block;text-align:center;font-size:34px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -6367,6 +6572,54 @@
         <div class="cf55-n1"><i id="cfUid"></i><i class="r" id="cfSrv" style="--sx:1.07"></i></div>
         <div class="cf55-n2"><i id="cfGid" style="--sx:1.20"></i></div>
       </div>
+    </div>
+  </div>
+  <!-- 54 랭킹 페이지 — (다) 딤 없는 전체화면 페이지. 측정표 docs/measure/54-랭킹팝업.md.
+       진입: ▦ 메뉴 → «랭킹». 리스트·내 순위 바는 renderRank() 가 채운다. -->
+  <div id="rkw">
+    <div class="rk-scene">
+      <div class="rk-hall"></div>
+      <div class="rk-title"><s></s><i>스테이지 랭킹</i></div>
+      <!-- 아트 자리 ×3 — 단상 위 캐릭터+탈것 290×300 -->
+      <div class="rk-ch c2" id="rkCh2">🦊</div>
+      <div class="rk-ch c1" id="rkCh1">🐲</div>
+      <div class="rk-ch c3" id="rkCh3">🐺</div>
+      <div class="rk-pod p2"><u></u></div>
+      <div class="rk-pod p1"><u></u></div>
+      <div class="rk-pod p3"><u></u></div>
+      <div class="rk-sh s2">🥈</div>
+      <div class="rk-sh s1">🥇</div>
+      <div class="rk-sh s3">🥉</div>
+      <div class="rk-rb rk-pr2"><i id="rkPt2">정복자</i></div>
+      <div class="rk-rb rk-pr1"><i id="rkPt1">성역의 관리자</i></div>
+      <div class="rk-rb rk-pr3"><i id="rkPt3">칭호 없음</i></div>
+      <i class="rk-pn n2" id="rkPn2"></i>
+      <i class="rk-pn n1" id="rkPn1"></i>
+      <i class="rk-pn n3" id="rkPn3"></i>
+      <div class="rk-pp q2"><i id="rkPs2"></i></div>
+      <div class="rk-pp q1"><i id="rkPs1"></i></div>
+      <div class="rk-pp q3"><i id="rkPs3"></i></div>
+    </div>
+    <div class="rk-div1"></div>
+    <div class="rk-tip"><i>랭킹은 5분마다 불러오며, 프로필 정보는 새로운 스코어를 달성했을 때 반영됩니다.</i></div>
+    <div class="rk-panel"><div class="rk-list" id="rkList"></div></div>
+    <!-- 내 순위 고정 바 — 행과 같은 부품(.rk-av/.rk-tt/.rk-nm/.rk-lb/.rk-sc)을 전폭으로 -->
+    <div class="rk-me">
+      <div class="rk-mp"></div><div class="rk-msh"></div>
+      <b class="rk-mn" id="rkMyNo">-</b>
+      <div class="rk-av"><u id="rkMyAv">🐱</u></div>
+      <div class="rk-tt no" id="rkMyTt"><i>칭호 없음</i></div>
+      <i class="rk-nm" id="rkMyNm"></i>
+      <div class="rk-mrc"></div>
+      <i class="rk-lb">최고 스테이지</i>
+      <div class="rk-sc"><i id="rkMySc">0</i></div>
+    </div>
+    <div class="rk-div2"></div>
+    <div class="rk-nav">
+      <div class="rk-back" id="rkBack"><u></u></div>
+      <div class="rk-tab t1 on" data-rktab="stage"><u>🗺️</u><b>스테이지</b></div>
+      <div class="rk-tab t2" data-rktab="tower"><u>🏰</u><b>시련의 탑</b></div>
+      <div class="rk-tab t3" data-rktab="farm"><u>🏚️</u><b>몬스터 농장</b></div>
     </div>
   </div>
   <!-- 58 — UI 연출 공용 레이어. 모든 fx* 함수가 여기에만 DOM 을 만든다(pointer-events:none). -->
@@ -11818,6 +12071,110 @@ function cfCoupon(){
   if(typeof fxGain === 'function') fxGain('dia', CF_CODES[code]);
   popup('🎟️ 쿠폰', '<p>💎 <b>' + fmt(CF_CODES[code]) + '</b> 을(를) 받았습니다!</p>');
 }
+/* ==========================================================================
+   54 랭킹 페이지 (#rkw) — 측정표 docs/measure/54-랭킹팝업.md
+   UI-REFERENCE 54: «서버가 없으므로 우선 로컬 데이터(내 기록 + 더미 순위)로 UI 만 구현».
+   사다리(RANK_NPC)를 **고정 상수**로 두고 내 실기록(S.best · cp())을 끼워 넣는다 —
+   고정이라서 내가 스테이지를 올리면 **내 순위 숫자가 실제로 올라간다**(목업이 아니다).
+   ========================================================================== */
+const RANK_NPC = [
+  { n:'세븐하이머',   av:'🐲', t:7, best:452 }, { n:'달빛도적',     av:'🦊', t:7, best:431 },
+  { n:'BladeOfDawn',  av:'🐺', t:7, best:407 }, { n:'무한의검제',   av:'🦁', t:6, best:388 },
+  { n:'퍼플드래곤',   av:'🐉', t:6, best:361 }, { n:'심연의관측자', av:'🦈', t:6, best:340 },
+  { n:'RedMoon',      av:'🐯', t:6, best:318 }, { n:'철벽수문장',   av:'🐻', t:5, best:296 },
+  { n:'고양이집사',   av:'🐱', t:5, best:271 }, { n:'NightCrawler', av:'🦇', t:5, best:252 },
+  { n:'황금손',       av:'🦅', t:5, best:233 }, { n:'만렙기원',     av:'🐢', t:4, best:214 },
+  { n:'폭풍의언덕',   av:'🦉', t:4, best:196 }, { n:'IronHeart',    av:'🦏', t:4, best:181 },
+  { n:'초코쿠키',     av:'🐰', t:4, best:167 }, { n:'던전청소부',   av:'🐷', t:4, best:152 },
+  { n:'라스트오더',   av:'🐗', t:3, best:139 }, { n:'별빛사냥꾼',   av:'🦌', t:3, best:126 },
+  { n:'Vagabond',     av:'🐴', t:3, best:114 }, { n:'까칠한도마뱀', av:'🦎', t:3, best:103 },
+  { n:'백발의현자',   av:'🦝', t:3, best:93  }, { n:'조용한관찰자', av:'🦔', t:2, best:84  },
+  { n:'SoloLeveling', av:'🐧', t:2, best:76  }, { n:'딸기우유',     av:'🐹', t:2, best:68  },
+  { n:'무명검객',     av:'🐸', t:2, best:61  }, { n:'PixelKnight',  av:'🐙', t:2, best:54  },
+  { n:'느긋한오후',   av:'🐨', t:1, best:48  }, { n:'초보사냥꾼',   av:'🐥', t:1, best:42  },
+  { n:'막귀',         av:'🦜', t:1, best:37  }, { n:'GreenTea',     av:'🐛', t:1, best:32  },
+  { n:'동네주민A',    av:'🐭', t:1, best:28  }, { n:'감자칩',       av:'🐣', t:0, best:24  },
+  { n:'뉴비입니다',   av:'🐤', t:0, best:20  }, { n:'하루한판',     av:'🦆', t:0, best:16  },
+  { n:'ClickMaster',  av:'🐌', t:0, best:13  }, { n:'출근길',       av:'🐞', t:0, best:10  },
+  { n:'심심해서',     av:'🦋', t:-1, best:8  }, { n:'튜토리얼중',   av:'🐜', t:-1, best:6  },
+  { n:'처음이라',     av:'🕊️', t:-1, best:4  }, { n:'방금가입',     av:'🐚', t:-1, best:2  }
+];
+/* 더미 전투력 — 동률(같은 스테이지)일 때만 쓰는 2차 정렬키. 스테이지 곡선 근사 */
+const rkCp = b => Math.round(Math.pow(1.17, b) * 420);
+const rkTitle = t => (t >= 0 ? RANKS[Math.min(t, RANKS.length - 1)].n : null);
+
+function rankRows(){
+  const me = { n:S.nick, av:'🐱', t:S.rank, best:S.best | 0, cp:cp(), me:true };
+  const all = RANK_NPC.map(x => ({ n:x.n, av:x.av, t:x.t, best:x.best, cp:rkCp(x.best) })).concat([me]);
+  all.sort((a, b) => b.best - a.best || b.cp - a.cp);
+  all.forEach((r, i) => { r.p = i + 1; });
+  return all;
+}
+/* 행과 내 순위 바는 «같은 부품, 다른 폭» 이다(측정표 주의점 2) — 마크업을 따로 짜지 않는다 */
+function rkRowHTML(r){
+  const t = rkTitle(r.t);
+  const badge = r.p <= 3
+    ? '<div class="rk-bd m">' + ['🥇', '🥈', '🥉'][r.p - 1] + '</div>'
+    : '<div class="rk-bd f"><b>' + r.p + '</b></div>';
+  return '<div class="rk-row" data-rkp="' + r.p + '">'
+    + '<div class="rk-lc"></div><div class="rk-rc"></div>' + badge
+    + '<div class="rk-av"><u>' + r.av + '</u></div>'
+    + '<div class="rk-tt' + (t ? '' : ' no') + '"><i>' + (t || '칭호 없음') + '</i></div>'
+    + '<i class="rk-nm">' + r.n + '</i>'
+    + '<i class="rk-lb">최고 스테이지</i>'
+    + '<div class="rk-sc"><i>' + r.best + '</i></div></div>';
+}
+let rkRowsCache = [];
+function renderRank(){
+  const rows = rankRows();
+  rkRowsCache = rows;
+  $('rkList').innerHTML = rows.map(rkRowHTML).join('');
+  /* 포디움 1·2·3위 — 씬의 텍스트 4종만 데이터로 채운다(단상·캐릭터는 아트 자리) */
+  for(let i = 0; i < 3; i++){
+    const r = rows[i], t = rkTitle(r.t), k = i + 1;
+    $('rkPn' + k).textContent = r.n;
+    $('rkPs' + k).textContent = r.best;
+    $('rkPt' + k).textContent = t || '칭호 없음';
+    $('rkCh' + k).textContent = r.av;
+    $('rkPt' + k).parentNode.classList.toggle('nt', !t);
+  }
+  const me = rows.find(r => r.me);
+  $('rkMyNo').textContent = me.p;
+  $('rkMyNm').textContent = me.n;
+  $('rkMyAv').textContent = me.av;
+  $('rkMySc').textContent = me.best;
+  const mt = rkTitle(me.t);
+  $('rkMyTt').classList.toggle('no', !mt);
+  $('rkMyTt').firstElementChild.textContent = mt || '칭호 없음';
+}
+function openRank(){ renderRank(); $('rkw').classList.add('on'); }
+function closeRank(){ $('rkw').classList.remove('on'); }
+$('rkBack').onclick = closeRank;
+/* 랭킹 종류 탭 — «시련의 탑»·«몬스터 농장» 은 콘텐츠 자체가 없다(35 패스의 잠금 탭과 같은 처리).
+   레퍼런스에 자물쇠 글리프가 없으므로 아이콘·라벨은 그대로 두고 안내만 띄운다. */
+$('rkw').querySelector('.rk-nav').addEventListener('click', e => {
+  const t = e.target.closest('[data-rktab]');
+  if(!t) return;
+  const k = t.dataset.rktab;
+  if(k === 'stage'){ renderRank(); return; }
+  popup(k === 'tower' ? '🏰 시련의 탑 랭킹' : '🏚️ 몬스터 농장 랭킹',
+    '<p>해당 콘텐츠가 아직 열리지 않았습니다.</p>'
+    + '<p style="opacity:.7;font-size:.9em">지금은 «스테이지» 랭킹만 집계됩니다.</p>');
+});
+/* 행을 누르면 그 유저의 기록 상세 */
+$('rkList').addEventListener('click', e => {
+  const row = e.target.closest('[data-rkp]');
+  if(!row) return;
+  const r = rkRowsCache.find(x => x.p === +row.dataset.rkp);
+  if(!r) return;
+  popup('🏆 ' + r.p + '위 · ' + r.n,
+    '<p>칭호 <b>' + (rkTitle(r.t) || '칭호 없음') + '</b></p>'
+    + '<p>최고 스테이지 <b>' + r.best + '</b></p>'
+    + '<p>전투력 <b>' + fmt(r.cp) + '</b></p>'
+    + (r.me ? '<p style="color:#8ff0a8;margin-top:10px">내 기록입니다.</p>' : ''));
+});
+/* 52 ▦ 메뉴의 «랭킹» 칸이 이걸 부른다 */
+window.openRank = openRank;
 
 function openPromo(){
   const r = nextRank();
@@ -12717,7 +13074,7 @@ $('mnw').querySelector('.mn-col').onclick = e => {
         + (gmReady() ? '<p style="color:#8ff0a8;margin-top:10px">완료! 화면 하단 배너에서 수령하세요.</p>' : '')
       : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
   }
-  else if(k === 'rank')   popup('🏆 랭킹',      '<p>랭킹은 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 54 — 서버 없이 로컬 기록 + 더미 순위로 구현 예정)</p>');
+  else if(k === 'rank')   openRank();                 /* 작업 54 — 전체화면 랭킹 페이지 */
   else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'saver')  popup('🔋 절전 모드', '<p>절전 모드는 준비 중입니다.</p><p style="opacity:.7;font-size:.9em">(작업 56 — 화면을 어둡게 하고 렌더를 최소화, 전투는 계속)</p>');
   else if(k === 'conf')   openConf();                 /* 작업 55 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */

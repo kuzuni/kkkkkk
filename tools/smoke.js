@@ -340,11 +340,14 @@ function launchOpts(){
       /* 55 설정은 798×1347 — 지금까지 중 «가장 키가 큰» 가운데 다이얼로그라 짧은 프레임(1600)에서
          max-height 로 제일 많이 눌린다. 눌린 상자가 프레임 밖으로 나가지 않는지 화면비마다 본다. */
       await page.evaluate(() => { if (typeof openConf === 'function') openConf(); }).catch(() => {});
+      /* 54 랭킹은 «전체화면 페이지 + bottom 앵커 3장» 이라 짧은 프레임에서 리스트 패널만 줄어야 한다
+         (LESSONS 22-④). 패널 높이가 음수로 접히면 여기서 잡힌다. */
+      await page.evaluate(() => { if (typeof openRank === 'function') openRank(); }).catch(() => {});
       await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
