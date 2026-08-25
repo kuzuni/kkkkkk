@@ -31,6 +31,11 @@ function launchOpts() {
   await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'load' });
   await page.waitForTimeout(1500);
 
+  /* 58 연출 모듈의 재화 파티클(#fxl 의 비행 골드)이 딤 «위» 를 지나가 채점을 오염시킨다 —
+     3회차 비평가 A·B 가 독립적으로 지적했다(«x737..789/y1688..1742 골드가 «재화» 라벨 잉크의 55% 를 가림»).
+     72 가 같은 문제를 겪고 쓴 대책을 그대로 가져온다(tools/cap72.js). */
+  await page.addStyleTag({ content: '#fxl{display:none!important}' });
+
   /* 렌더 루프를 먼저 세운다(41-④) — 그 다음에 상태를 주입해야 덮어쓰이지 않는다 */
   const injected = await page.evaluate(() => {
     if (typeof S === 'undefined' || typeof openBag !== 'function') return 'no-hooks';
