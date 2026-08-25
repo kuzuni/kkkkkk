@@ -7108,10 +7108,11 @@ const CINE_SLOW_S= 0.30;   /* 슬로모 길이(실시간) */
 const CINE_FLASH = 0.42;   /* 처치 플래시 피크 알파 계수 (f²×이 값) */
 const CINE_FLASH_S = 0.20; /* 플래시 소멸 — 슬로모(0.30초)의 «앞쪽» 에서 걷어 깨끗한 슬로모 0.10초를 남긴다 */
 const CINE_TGK   = 0.10;   /* 연출 대상 좌표의 저역통과 — 스프라이트 flip 으로 중심이 208px 튀어도 카메라까지 오지 않게 */
+const CINE_FLIP_S= 0.45;   /* 보스가 돌아설 때 209.6px 짜리 스프라이트 순간이동을 따라가는 시간(smoothstep) */
 const CINE_TGK_K = 0.16;   /* 처치 구간은 더 세게 — 사망 애니(10fps)가 그려진 중심을 «계단» 으로 119px 옮긴다 */
 /* 보스 연출 상태 — mode: '' | 'in' | 'hold' | 'back' | 'kill'
    cx/cy = 저역통과된 대상 좌표 · zb = 이번 연출이 «출발한» 줌(연출 중 처치 시 줌이 뚝 떨어지지 않게) */
-const cine = { mode:'', t:0, tg:null, flash:0, cx:0, cy:0, zb:1, flip:false, ox:0, oy:0 };
+const cine = { mode:'', t:0, tg:null, flash:0, cx:0, cy:0, zb:1, flip:false, ax:0, oy:0, fs:null, fs0:1, fsW:0, fsT:1 };
 /* 스프라이트는 «발밑» 기준으로 그려지고(drawFrame), 아틀라스 트림이 좌우 비대칭이라
    **그려진 몸통 중심은 e.x/e.y 가 아니다** — 보스는 실측 (−104.8, −114.7) 만큼 어긋난다.
    카메라는 좌표가 아니라 «보이는 몸통» 을 잡아야 하므로 그 중심을 계산해서 쓴다. */
@@ -7144,8 +7145,12 @@ function cineStart(mode, pt, flip, base){
   /* 살아 있는 적을 따라갈 때 쓰는 «고정» 오프셋. 걷기 애니메이션은 프레임마다 트림이 달라
      매 프레임 spriteCenter() 를 다시 읽으면 목표가 수십 px 씩 흔들린다(실측 최소이탈 2~93px 편차).
      시체(kill)는 반대로 사망 애니가 중심을 «단조로» 119px 옮기므로 매 프레임 다시 읽는다. */
-  cine.ox = base ? pt.x - base.x : 0;
+  /* ax = «안 뒤집힌» 상태의 가로 오프셋(크기 고정) · fs = 그 부호(-1..+1, 부드럽게 넘어간다).
+     부호까지 얼려 버리면 스폰 직후 보스가 플레이어 쪽으로 «돌아설» 때(실측 18프레임째)
+     실제로 그려지는 몸통이 반대쪽으로 209.6px 옮겨 가는데 카메라는 옛 자리를 계속 잡는다. */
+  cine.ax = base ? (flip ? -(pt.x - base.x) : (pt.x - base.x)) : 0;
   cine.oy = base ? pt.y - base.y : 0;
+  cine.fs = null; cine.fsW = 0; cine.fsT = 1;   /* 첫 camUpdate 에서 그때의 방향으로 초기화(그 프레임엔 이징 없음) */
 }
 function cineBossIn(e){ if(!e) return; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e); }
 /* killEnemy 는 이 호출 «두 줄 뒤» 에 시체를 `anim: e.T.die` 로 갈아끼운다 —
@@ -7192,9 +7197,25 @@ function camUpdate(dt){
   /* 대상 좌표 — 살아 있는 적이면 «그려진 몸통 중심», 좌표 스냅샷이면 그대로.
      저역통과(CINE_TGK)는 flip 으로 중심이 208px 뒤집힐 때의 계단을 카메라 앞에서 흡수한다 */
   if(cine.mode && cine.tg && cine.tg.akey){
-    /* kill = 시체(중심이 단조 이동) → 매 프레임 재계산 · 그 외 = 살아 있는 적 → 고정 오프셋 */
-    const c = cine.mode === 'kill' ? spriteCenter(cine.tg, cine.flip)
-            : { x: cine.tg.x + cine.ox, y: cine.tg.y + cine.oy };
+    /* kill = 시체(중심이 «단조» 이동) → 매 프레임 재계산.
+       그 외 = 살아 있는 적 → 크기는 고정 오프셋(걷기 애니 트림 흔들림 제거), 부호만 실제 방향을 따라간다. */
+    let c;
+    if(cine.mode === 'kill'){
+      c = spriteCenter(cine.tg, cine.flip);
+    }else{
+      /* 보스가 돌아서면 «그려지는 스프라이트 자체» 가 209.6px 순간이동한다(아틀라스 트림이 좌우 비대칭이라
+         drawFrame 이 미러링하면 박스가 통째로 반대편에 놓인다 — 렌더 규약 문제라 67 구간이 아니다).
+         카메라는 그걸 따라가되 **smoothstep 으로 미끄러뜨린다** — 지수 감쇠로 따라가면 전환 첫 프레임에
+         속도가 0 → 209·k 로 튀어 저크가 되고, 안 따라가면 몸통이 화면 밖으로 나간다. */
+      const want = cine.tg.flip ? -1 : 1;
+      if(cine.fs === null){ cine.fs = want; cine.fs0 = want; cine.fsT = 1; }
+      if(want !== cine.fsW){ cine.fs0 = cine.fs; cine.fsW = want; cine.fsT = 0; }
+      if(cine.fsT < 1){
+        cine.fsT = Math.min(1, cine.fsT + dt/CINE_FLIP_S);
+        cine.fs = cine.fs0 + (want-cine.fs0)*camSm(cine.fsT);
+      }
+      c = { x: cine.tg.x + cine.ax*cine.fs, y: cine.tg.y + cine.oy };
+    }
     const tk = camDamp(cine.mode === 'kill' ? CINE_TGK_K : CINE_TGK, dt);
     cine.cx += (c.x-cine.cx)*tk; cine.cy += (c.y-cine.cy)*tk;
   }

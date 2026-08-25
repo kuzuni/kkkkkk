@@ -152,7 +152,7 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     S.stage = 10; S.best = Math.max(S.best || 1, 10); S.bossFarm = false;
     S.gold = 1e12;                                     /* 전투 결과와 무관하게 연출만 본다 */
     spawnStage();
-    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [];
+    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [], holdD = [];
     let spawnedF = -1, b = null, jerk = 0, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y };
     const marks = {};
     for (let f = 0; f < 400; f++) {                    /* ≈6.7초 */
@@ -167,12 +167,15 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       prevV = v; prev = { x: cam.x, y: cam.y };
       if (!b) { b = enemies.find(e => e.tk === 'boss') || null; if (b) spawnedF = f; }
       if (b) {
-        /* 카메라 목표는 앵커가 아니라 «그려진 몸통 중심» 이다. 살아 있는 적은 연출 시작에 고정한
-           오프셋(cine.ox/oy)을 쓰므로 게이트도 같은 점으로 잰다 — 걷기 애니의 프레임별 트림 흔들림은
-           카메라가 «따라가지 않기로 한» 성분이라 그걸로 채점하면 오답이 나온다. */
-        camToBoss.push(Math.hypot(cam.x - (b.x + cine.ox), cam.y - (b.y + cine.oy)));
-        const bi = spriteCenter(b, cine.flip);
-        camToArt.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
+        /* ⚠ 게이트는 «카메라가 겨냥한 점» 이 아니라 **실제로 그려지는 스프라이트 중심** 을 재야 한다.
+           2회차 게이트는 cine 의 오프셋·flip 을 그대로 다시 써서 «자기가 겨냥한 곳을 잘 겨냥했다» 를
+           재고 있었다 — 보스가 돌아서서 몸통이 209.6px 반대로 간 회차에 **3px PASS** 가 나왔다
+           (LESSONS 18 «변환 상수를 우리 구현에서 역산하면 순환 논증» 의 카메라 판).
+           그래서 여기서는 오직 `b.flip`(적 자신의 방향)만 써서 독립적으로 계산한다. */
+        const bi = spriteCenter(b, b.flip);
+        camToBoss.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
+        camToArt.push(Math.abs(cam.x - bi.x));
+        if(cine.mode === 'hold') holdD.push(Math.hypot(cam.x - bi.x, cam.y - bi.y));
         camToPl.push(Math.hypot(cam.x - player.x, cam.y - player.y));
         zs.push(cam.z);
         const m = cine.mode || '-';
@@ -186,6 +189,8 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       spawnedF, distAtSpawn, modes, marks, jerk, acc,
       zMax: Math.max(...zs), zEnd: cam.z,
       minCamToBoss: Math.min(...camToBoss), minCamToArt: Math.min(...camToArt),
+      holdMax: holdD.length ? Math.max(...holdD) : -1, holdN: holdD.length,
+      holdMed: holdD.length ? holdD.slice().sort((a,b)=>a-b)[Math.floor(holdD.length/2)] : -1,
       endCamToPl: camToPl[camToPl.length - 1],
       frames: zs.length, bossAlive: !!b && enemies.indexOf(b) >= 0
     };
@@ -193,7 +198,11 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   ok('[4] 보스 스폰이 연출을 켠다(in → hold → back → 종료)',
     boss.modes.join('>').includes('in>hold>back'), boss.modes.join(' > '));
   ok('[4] 팬·줌인 배율 1.15', Math.abs(boss.zMax - 1.15) < 0.02, boss.zMax.toFixed(3));
-  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px · 순간 아트중심 기준 ' + boss.minCamToArt.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
+  ok('[4] 카메라가 보스 «그려진 몸통 중심» 을 잡는다(40px 이내)', boss.minCamToBoss < 40, boss.minCamToBoss.toFixed(0) + 'px · 가로만 ' + boss.minCamToArt.toFixed(0) + 'px (스폰 거리 ' + boss.distAtSpawn.toFixed(0) + 'px)');
+  /* 중앙값 40 / 최대 120 — 최대값이 느슨한 건 «보스가 돌아서면 스프라이트가 209.6px 순간이동한다» 는
+     렌더 규약 때문이다(67 구간 밖). 카메라는 0.45초 smoothstep 으로 따라가고, 그 사이 최대 ~105px 을 지난다. */
+  ok('[4] «유지» 구간 보스 중앙 이탈 중앙값 < 40px', boss.holdMed >= 0 && boss.holdMed < 40, boss.holdMed.toFixed(0) + 'px (최대 ' + boss.holdMax.toFixed(0) + 'px · ' + boss.holdN + '프레임)');
+  ok('[4] «유지» 구간 최대 이탈 < 120px (보스 방향 전환 전이 포함)', boss.holdMax >= 0 && boss.holdMax < 120, boss.holdMax.toFixed(0) + 'px');
   ok('[4] 연출 뒤 플레이어로 복귀(150px 이내) · 줌 복원', boss.endCamToPl < 150 && Math.abs(boss.zEnd - 1) < 0.02, boss.endCamToPl.toFixed(0) + 'px · z' + boss.zEnd.toFixed(3));
   ok('[4] 연출 길이 ≈ 1.85초(0.8+0.45+0.6)', boss.frames >= 105 && boss.frames <= 130, (boss.frames / 60).toFixed(2) + '초');
   ok('[4] 연출 중 저크(3차 차분) < ' + LIM_CJRK, boss.jerk < LIM_CJRK, boss.jerk.toFixed(3) + 'px/f³ · 가속 최대 ' + boss.acc.toFixed(2) + 'px/f²');
