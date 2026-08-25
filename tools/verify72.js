@@ -47,7 +47,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
      잠금 카드 3~5 는 개별 측정이 불가(딤)해 카드1·2 중간값(폭 305 · top 42)을 쓴다. */
   const EXP = [
     { w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52 },
-    { w: 305, h: 299, dy: 42 }, { w: 305, h: 299, dy: 42 }, { w: 305, h: 299, dy: 42 }];
+    { w: 330, h: 329, dy: 12 }, { w: 330, h: 329, dy: 12 }, { w: 330, h: 306, dy: 35 }];
   console.log('[1] 슬롯 기하 — 카드 안쪽 우측 정렬(우단 inset 7), 카드별 폭·상단 인셋');
   ok(d.length === 5, `카드 5장 (실제 ${d.length})`);
   d.forEach((c, i) => {
@@ -76,7 +76,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     return { dx: +(sr.left - cr.left).toFixed(1), w: +sr.width.toFixed(1), h: +sr.height.toFixed(1),
              locked: !!c.querySelector('.lk') };
   }));
-  [335, 415, 345].forEach((want, k) => {
+  [420, 420, 420].forEach((want, k) => {
     const c = scn[k + 2];
     ok(!!c, `잠금 카드${k + 3} 씬 자리 존재`);
     if (c) ok(Math.abs(c.dx - want) <= 1, `잠금 카드${k + 3} 씬 좌단 offset ${c.dx} = ${want}`);

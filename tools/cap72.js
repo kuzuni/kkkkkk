@@ -37,16 +37,13 @@ const NOCLIP = args.includes('--noclip');   /* 잉크 원본 bbox 측정용 — 
     await p.addStyleTag({ content: `
       .dnc>.bg{background:#fff!important}
       .dnc>.bg::before,.dnc>.bg::after,.dnc>.sh{display:none!important}
-      .dnc .nm,.dnc .pill,.dnc .lb,.dnc .sp,.dnc .dot,.dnc .lk{visibility:hidden!important}
-      .dnc>.th>em{filter:none!important}` });
-    /* 마스크·필터는 스타일시트 !important 로도 안 지워지는 경우가 있어 인라인으로 덮는다 */
-    await p.evaluate((process_env_noclip) => {
-      document.querySelectorAll('.dnc>.th').forEach((t) => {
-        t.style.webkitMaskImage = 'none'; t.style.maskImage = 'none';
-        if (process_env_noclip) t.style.overflow = 'visible';
-      });
-      document.querySelectorAll('.dnc>.th>em').forEach((e) => { e.style.filter = 'none'; });
-    }, NOCLIP);
+      .dnc .nm,.dnc .pill,.dnc .lb,.dnc .sp,.dnc .dot,.dnc .lk,.dnc>.scn{visibility:hidden!important}
+      .dnc>.th{background:none!important}` });
+    /* 슬롯의 마스크·잉크 필터는 «그대로 둔다» — 지우면 실제 렌더와 기하가 달라져 오측된다.
+       --noclip 은 잉크 원본 bbox 를 볼 때만 쓴다. */
+    if (NOCLIP) await p.evaluate(() => {
+      document.querySelectorAll('.dnc>.th').forEach((t) => { t.style.overflow = 'visible'; });
+    });
     await p.waitForTimeout(120);
   }
 
