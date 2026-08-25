@@ -2465,10 +2465,14 @@
   .cltab>s{position:absolute;clip-path:polygon(0 0,100% 0,100% 69%,50% 100%,0 69%)}
   .cltab.on>s{clip-path:polygon(0 0,100% 0,100% 56%,50% 100%,0 56%)}
   .cltab>s.k{inset:0;background:#000}
-  .cltab>s.y{left:7px;right:7px;top:0;bottom:6px;
+  /* 레퍼런스 실측(프레임 기준) — 비활성 탭 top1815·꼭짓점1932: 노랑 y1815~1932(꼭짓점까지 «가득») ·
+     파랑 x151~311(양쪽 인셋 27) y1815~1906. 활성 탭 꼭짓점 1959: 파랑 y1817~1928.
+     노랑이 6px 짧아 꼭짓점에 검정이 비쳤고, 파랑은 활성에서 10px 길었다. */
+  .cltab>s.y{left:7px;right:7px;top:0;bottom:0;
     background:linear-gradient(180deg,#FCD33D 0 55%,#F5B53A)}
-  .cltab>s.b{left:24px;right:24px;top:0;bottom:22px;
+  .cltab>s.b{left:27px;right:27px;top:0;bottom:26px;
     background:linear-gradient(180deg,#25AACD 0 4px,#1EA8D7 4px)}
+  .cltab.on>s.b{bottom:33px}
   .cltab>i{position:relative;margin-top:20px;font-size:37px;line-height:44px;color:#C2C3C5;
     transform:scaleX(.99);-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .cltab.on>i{color:#F7F4EF}
