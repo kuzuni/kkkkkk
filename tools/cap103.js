@@ -125,7 +125,7 @@ function launchOpts() {
   near('아바타 x', box.av1.x, 136, 1);
   near('아바타 w', box.av1.w, 95, 1);
   near('이름줄 x', box.nm1.x, 240, 1);
-  near('시각 우끝', box.tm1.x + box.tm1.w, 968, 2);   /* 측정표 967 · 2회차 Z 실측 ref 잉크 969~970 → 중간값 */
+  near('시각 우끝', box.tm1.x + box.tm1.w, 969, 2);   /* 3회차 P·Q 실측 ref 잉크 967.5~973.9 */
   near('버블 x', box.bb1.x, 240, 1);
   near('버블 w', box.bb1.w, 699, 1);
   near('버블 top(행 기준)', box.bb1.y - box.row1.y, 49, 1);
