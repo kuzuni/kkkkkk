@@ -73,15 +73,35 @@ const setup = () => {
       rows };
   });
 
-  /* 차분용 — 스택 전체 숨김 / 라벨만 숨김 */
+  /* 라벨 차분용 — `.bdg` 를 끄기 «전» 에 뜬다. 채점용 1장과 알림닷 상태가 같아야
+     full − labeloff 차분에 알림닷이 안 섞인다(4회차에 라벨 잉크 높이가 30 → 47 로 튀었다). */
+  await p.addStyleTag({ content: '#sideL .sl{visibility:hidden!important}' });
+  await p.waitForTimeout(150);
+  await p.screenshot({ path: path.join(dir, 'A2-r' + r + '-labeloff.png') });
+  /* 여기서부터 라벨은 다시 켜지 않는다 — 뒤 장들은 전부 «아이콘만» 이 필요하고,
+     껐다 켰다 하면 addStyleTag 순서에 기대게 된다(실제로 한 번 되살아나 아이콘 밴드가 라벨을 물었다). */
+
+  /* 차분용 — 스택 전체 숨김 / 라벨만 숨김.
+     [함정] `.bdg`(빨강 알림닷)는 `.si` 밖에 있고 슬롯 우상단으로 튀어나온다(x 114..156 · top −6).
+     이걸 켠 채로 차분을 뜨면 **아트 잉크 bbox 가 오른쪽·위로 부풀고**, 알림 상태가 회차마다 달라
+     같은 빌드에서도 수치가 흔들린다(4회차에 실제로 5px 씩 흔들렸다). 레퍼런스 02 에는 좌측 알림닷이
+     없고 비평가 2인도 마스킹해서 쟀으므로, **측정용 4장에서는 끈다**(채점용 1장은 그대로 둔다). */
+  await p.addStyleTag({ content: '#sideL .bdg{display:none!important}' });
   await p.addStyleTag({ content: '#sideL{visibility:hidden!important}' });
   await p.waitForTimeout(150);
   await p.screenshot({ path: path.join(dir, 'A2-r' + r + '-off.png') });
-  await p.addStyleTag({ content: '#sideL{visibility:visible!important} #sideL .sl{visibility:hidden!important}' });
+  await p.addStyleTag({ content: "#sideL{visibility:visible!important}" });
   await p.waitForTimeout(150);
   await p.screenshot({ path: path.join(dir, 'A2-r' + r + '-nolabel.png') });
-  /* 검정 외곽선(drop-shadow 4단 체이닝)을 끈 장 — 실루엣에서 이걸 빼면 순수 글리프 잉크가 나온다.
-     레퍼런스 스프라이트 bbox 는 «아트 + 자체 외곽선» 이라 우리도 실루엣으로 대조해야 한다. */
+  /* 소프트 드롭섀도(0 3px 5px)만 뺀 장 = «아트 + 검정 외곽선».
+     4회차 비평가 E·F 가 둘 다 «파랑틴트 드롭섀도는 잉크에서 제외» 로 재서 우리보다 12~14px 작게 나왔다.
+     레퍼런스 스프라이트 bbox 의 정의(아트+자체 외곽선)와 맞추려면 이 장으로 재야 한다. */
+  await p.addStyleTag({ content: `#sideL .si{filter:
+      drop-shadow(var(--o) 0 0 #080a0a) drop-shadow(calc(var(--o)*-1) 0 0 #080a0a)
+      drop-shadow(0 var(--o) 0 #080a0a) drop-shadow(0 calc(var(--o)*-1) 0 #080a0a)!important}` });
+  await p.waitForTimeout(150);
+  await p.screenshot({ path: path.join(dir, 'A2-r' + r + '-hard.png') });
+  /* 외곽선까지 전부 끈 장 — 순수 글리프 잉크 */
   await p.addStyleTag({ content: '#sideL .si{filter:none!important}' });
   await p.waitForTimeout(150);
   await p.screenshot({ path: path.join(dir, 'A2-r' + r + '-noshadow.png') });

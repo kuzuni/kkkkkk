@@ -539,6 +539,10 @@
      균등 pitch 로 깔면 3행 −1 · 4행 +2 · 5행 +3 px 어긋난다. 칸이 아니라 «행 슬롯» 에 붙는
      보정이라 nth-child 로 건다(48·71 이 칸 내용을 바꿔도 슬롯 좌표는 그대로여야 한다).
      보정폭이 pitch 의 2% 밑이라 짧은 기기 비례 축소에는 절대값 그대로 둔다. */
+  /* 3행 라벨만 −2px — 아트를 줄이고 나니 «라벨 하단 → 다음 행 아트 상단» 이 19px 로 남았다.
+     비평가 E(25) · F(21) 가 값은 갈렸어도 «21 밑으로 내려가면 안 된다» 는 데는 같아서 21 로 올린다.
+     같이 얻는 것: 아트 하단 → 라벨 잉크 간격이 6 → 4 로 레퍼런스(4)와 같아진다. */
+  #sideL .ibtn:nth-child(3) .sl{margin-top:-2px}
   #sideL .ibtn:nth-child(3){margin-top:1px}
   #sideL .ibtn:nth-child(4){margin-top:-3px}
   #sideL .ibtn:nth-child(5){margin-top:-1px}
@@ -6540,23 +6544,23 @@
       <!-- 1행은 레퍼런스에서 라벨 없는 단독 버튼이다(측정표 §1). 라벨을 달면 아래 5칸이 전부 27px 씩 밀린다.
            --sf/--sx 는 각 이모지의 실측 잉크(canvas getImageData)로 역산한 «그 칸의 레퍼런스 스프라이트
            bbox(측정표 §1-1)에 맞추는» 배율이다. 이모지를 바꾸면 두 값을 다시 재야 한다. -->
-      <div class="ibtn solo" data-pop="attend" title="출석" style="--sf:.971;--sx:1.091;--dy:2.5px"><span class="si">📅</span><span class="bdg"></span></div>
-      <div class="ibtn" data-pop="roul"  style="--sf:.891;--sx:1.126;--dx:1.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
+      <div class="ibtn solo" data-pop="attend" title="출석" style="--sf:.925;--sx:1.084;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="roul"  style="--sf:.839;--sx:1.111;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <!-- 작업 71(2026-08-25, 저장소 주인 지시): 3행 «우편»(📬) 삭제 — 52 ▦ 메뉴의 «우편» 칸과 중복이다.
            우편 진입은 ▦ 메뉴 하나뿐(openMail). 레드닷은 `sideAlert('mail')` 이 #menub 의 `.bdg` 로 옮겨 켠다.
            `.side` 가 flex 컬럼이라 아래 행이 그대로 한 칸씩 당겨지고(퀘스트 471 · 승급전 605 · 축복 739),
            행 그리드 규격(SIDE.N=5 · --ih/--igap/--itop)은 48·34 주석대로 A2 측정표 그대로 둔다 = 남는 행 좌표 Δ0. -->
-      <div class="ibtn" data-pop="quest" style="--sf:.959;--sx:1.066;--dx:.5px;--dy:-2px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="quest" style="--sf:.862;--sx:1.125;--dx:-.5px;--dy:-1px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
       <!-- 작업 48(2026-08-25, 저장소 주인 지시): 5행 «던전»(🏰) 삭제 — 하단 «던전» 탭(작업 24)과 중복이다.
            openDungeon() 진입은 탭으로만. 승급전이 5행으로 올라오고 6행은 빈다.
            행 그리드(pitch·gap·--itop)는 A2 측정 규격 그대로 두려고 SIDE.N 은 5 로 유지한다(아래 SIDE 주석). -->
       <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 레퍼런스 6행 폭 107 을 맞추려면 scaleX 2.04 가
            필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
-      <div class="ibtn" data-pop="promo" style="--sf:.956;--sx:1.220;--dx:1px;--dy:3px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="promo" style="--sf:.848;--sx:1.143;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
       <!-- 작업 34(2026-08-25): 48 이 «던전» 을 지우면서 비워 둔 **예약된 5번째 라벨 행**에 «축복» 을 넣는다.
            layoutSide() 는 SIDE.N=5 로 이미 5칸을 잡아 두고 있어(위 48 주석) 행 그리드·--ih/--igap/--itop 이
            바뀌지 않는다 = 기존 4칸 아이콘 좌표 이동 0. A2 측정 규격은 그대로다. -->
-      <div class="ibtn" data-pop="bless" style="--sf:.930;--sx:1.150;--dy:1px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="bless" style="--sf:.876;--sx:1.069;--dx:2px;--dy:0px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
     </div>
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.

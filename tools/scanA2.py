@@ -4,13 +4,13 @@
   python3 tools/scanA2.py <회차>
 
 capA2.js 가 뜬 4장의 차분으로 «순수 잉크 bbox» 를 낸다.
-임계값 마스크는 드롭섀도·안티에일리어싱을 물어 수 px 틀린다(A2 3회차 교훈) —
-숨긴 캡처와의 차분은 그 오차가 없다. 차분은 «그 종류의 요소만» 달라진 두 장을 쓰므로
+임계값 120 은 4회차 비평가 E·F 의 «배경 색거리 마스크» 를 재현하도록 맞춘 값이다
+(같은 빌드에서 두 사람 수치와 ≤1px 일치. 26 으로 두면 소프트 섀도의 옅은 프린지를 물어 축당 6px 부푼다). 차분은 «그 종류의 요소만» 달라진 두 장을 쓰므로
 밴드가 옆 행을 물어도 오염되지 않는다(단 같은 종류의 옆 행은 피한다).
 
-  실루엣  = nolabel  − off        (아트 + 검정 외곽선 = 레퍼런스 스프라이트 bbox 와 같은 정의)
+  실루엣  = hard     − off        (아트 + 검정 외곽선. 소프트 드롭섀도는 뺀다 = 비평가 정의)
   글리프  = noshadow − off        (외곽선 없는 이모지 잉크)
-  라벨    = full     − nolabel
+  라벨    = full     − labeloff  (알림닷 상태가 같은 장끼리 뺀다)
 """
 import sys, os, json
 from PIL import Image
@@ -18,7 +18,8 @@ from PIL import Image
 R = sys.argv[1] if len(sys.argv) > 1 else '4'
 D = os.path.join(os.path.dirname(__file__), '..', 'docs', 'review')
 img = lambda n: Image.open(os.path.join(D, f'A2-r{R}{n}.png')).convert('RGB')
-full, off, nol, nsh = img(''), img('-off'), img('-nolabel'), img('-noshadow')
+full, off, nol, nsh, hard = img(''), img('-off'), img('-nolabel'), img('-noshadow'), img('-hard')
+lbo = img('-labeloff')
 box = json.load(open(os.path.join(D, f'A2-r{R}-box.json')))
 
 # 레퍼런스 02(1080x2340) 좌측 스택 스프라이트 bbox — 측정표 §1-1. 캡처 y = ref y - 84.
@@ -27,12 +28,12 @@ REF = {
     'attend': (42, 148, 260, 360),   # ref1 자물쇠      107 x 101
     'roul':   (51, 142, 421, 499),   # ref2 패스         92 x 79
     'quest':  (47, 141, 556, 635),   # ref3 퀘스트       95 x 80
-    'promo':  (53, 146, 687, 770),   # ref4 휴식 보너스  94 x 84
+    'promo':  (53, 146, 686, 766),   # ref4 휴식 보너스  94 x 81 (4회차 정정: 표의 ~770/84 는 라벨을 문 값)
     'bless':  (58, 134, 820, 901),   # ref5 도감         77 x 82
 }
 
 
-def bbox(a, b, y0, y1, thr=26):
+def bbox(a, b, y0, y1, thr=120):
     pa, pb = a.load(), b.load()
     x0, x1, yy0, yy1 = 10**9, -1, 10**9, -1
     for y in range(max(0, y0), min(a.height, y1)):
@@ -51,7 +52,7 @@ sil = {}
 for row in rows:
     n = row['pop']; c = row['cell']
     rx0, rx1, ry0, ry1 = REF[n]
-    r = bbox(nol, off, c['y'] - 25, c['y'] + 107)
+    r = bbox(hard, off, c['y'] - 25, c['y'] + 107)
     sil[n] = r
     x0, x1, y0, y1 = r
     w, h, cx = x1 - x0 + 1, y1 - y0 + 1, (x0 + x1) / 2
@@ -102,7 +103,7 @@ for row in rows:
     n = row['pop']; c = row['cell']
     if not row['sl']:
         continue
-    r = bbox(full, nol, c['y'] + 78, c['y'] + 132)
+    r = bbox(full, lbo, c['y'] + 78, c['y'] + 132)
     if not r:
         print(f'{n:6} | (라벨 없음)'); continue
     x0, x1, y0, y1 = r
