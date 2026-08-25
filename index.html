@@ -10144,13 +10144,13 @@ function claimQuest(q){
   /* 58(11회차): 재렌더를 연출이 끝난 뒤로 미룬다 — 즉시 갱신하면 체크가 붙은 행의 진행바가
      0/93 으로 리셋돼 «완료 표시와 진행도가 모순» 인 화면이 남았다. fxHoldList 를 안 부른 경로는
      지연 없이 곧바로 돈다. */
-  fxRenderLater(openQuest);                   /* 22: 팝업을 유지한 채 행만 갱신 */
+  fxRenderLater(() => { if(fxStillOpen('q22')) openQuest(); });   /* 22: 팝업을 유지한 채 행만 갱신 */
 }
 function claimDQuest(q){
   if(!dqReady(q)) return;
   S.dia += q.dia; S.daily.q[q.id] = 1;
   uiDirty = true; save();
-  fxRenderLater(openQuest);                   /* 58 11회차 */
+  fxRenderLater(() => { if(fxStillOpen('q22')) openQuest(); });    /* 58 11회차 */
 }
 function claimAllQuests(){
   let n = 0, guard = 0;
@@ -10164,7 +10164,7 @@ function claimAllQuests(){
   DQUESTS.filter(dqReady).forEach(q => { S.dia += q.dia; S.daily.q[q.id] = 1; n++; });
   if(!n) return;
   uiDirty = true; save();
-  fxRenderLater(openQuest);                   /* 58 11회차 */
+  fxRenderLater(() => { if(fxStillOpen('q22')) openQuest(); });    /* 58 11회차 */
 }
 /* ---- 61 가이드 미션 — 진행 판정 · 수령 ----
    진행도는 «카운터 − 기준선» 이다. 기준선(S.guide.prog)은 미션이 현재로 올라온 순간 찍는다.
@@ -11350,7 +11350,7 @@ function openMail(){
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
     const row = b.closest('.ml-r');
     fxMail(b, row ? (row.querySelector('.ml-i') || row) : b);
-    fxThen(() => { claimMail(b.dataset.ml); fxRenderLater(openMail); });   /* 58 11회차 */
+    fxThen(() => { claimMail(b.dataset.ml); fxRenderLater(() => { if(fxStillOpen('ml69')) openMail(); }); });   /* 58 11회차 */
   });
 }
 /* ---- 22 퀘스트 팝업 — 측정표 docs/measure/22-퀘스트팝업.md ----
@@ -14297,6 +14297,9 @@ function fxSolo(el, ms){
    수령 판정(`questReady` 등)은 상태로 다시 하므로 그 사이 재클릭은 무시된다 — 지연은 안전하다. */
 let fxReT = 0;
 function fxHoldList(ms){ fxReT = Math.max(fxReT, performance.now() + (ms || FXSOLO)); }
+/* 미룬 재렌더가 «닫은 팝업을 되살리지» 않게 한다 — `openQuest()`/`openMail()` 은 열기까지 하는
+   함수라, 지연 중에 딤을 눌러 닫으면 760ms 뒤에 팝업이 혼자 다시 뜬다(12회차에 잡은 회귀). */
+const fxStillOpen = (cls) => { const m = $('modal'); return !!m && m.classList.contains('on') && m.classList.contains(cls); };
 /* 「이번 획득은 묶음이 아니다」 — 보상 수령처럼 «한 번에 한 덩어리» 인 경로는 디바운스를 건너뛴다.
    연속 킬을 묶으려고 둔 45ms 가 rAF 간격(32~42ms)과 겹쳐 실제로는 45~85ms 의 죽은 시간이 된다. */
 let fxNow = false;

@@ -397,6 +397,26 @@ function pwLaunch(){
      이 컨테이너의 rAF 간격이 32~42ms 라 애니메이션 시작 자체가 프레임 단위로 흔들린다. */
   chk(t10.toastAt >= 0 && t10.toastAt <= 300, '토스트가 ' + t10.toastAt + 'ms 에 완전히 뜬다 (≤300ms · 램프 45% 포함)');
   chk(t10.rampSeen > 0, '등장 램프 관측 ' + t10.rampSeen + '회 (0.24 < opacity < 0.9 — «스냅» 이 아니다)');
+
+  /* [11] 12회차 회귀 — 미룬 재렌더가 «닫은 팝업을 되살리면» 안 된다.
+     11회차에 목록 갱신을 760ms 뒤로 미뤘는데 `openQuest()` 는 «열기» 까지 하는 함수다.
+     지연 중에 딤을 눌러 닫으면 팝업이 혼자 다시 뜬다 — 실제로 그렇게 만들어 놓고 있었다. */
+  console.log('[11] 지연 재렌더가 닫힌 팝업을 되살리지 않는다');
+  const t11 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.quest.kill.base = -1e9; openQuest('rep'); await sleep(300);
+    const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
+    if(!b) return { err:'보상 받기 버튼 없음' };
+    b.click();
+    await sleep(60);
+    closeModal();                                     /* 연출이 도는 중에 닫는다 */
+    await sleep(1200);                                /* 지연(760ms) 을 충분히 넘긴다 */
+    const back = $('modal').classList.contains('on');
+    closeModal();
+    return { back };
+  });
+  chk(!t11.err && t11.back === false, '수령 직후 닫으면 1.2초 뒤에도 팝업이 다시 뜨지 않는다'
+      + (t11.err ? ' — ' + t11.err : ''));
   chk(t10.diaDone >= 120 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
 
   await browser.close();
