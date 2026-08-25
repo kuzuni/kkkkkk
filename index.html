@@ -1471,28 +1471,49 @@
     0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);
       box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
       animation-timing-function:cubic-bezier(.15,.85,.4,1)}
-    12%{opacity:.98;height:145px;margin-bottom:17px;transform:translateX(30px);
-      box-shadow:0 0 0 6px #241A12,inset 0 0 0 10px #FFF7EC;
+    /* 임펄스 «한 방» — 4회차에 버튼 파티클을 뺀 뒤로 이게 연출의 **유일한 악센트**인데
+       inset +5px(카드 높이 147 의 3.4%)로는 «악센트가 아니라 렌더 노이즈» 였다(G-② · H-②).
+       → **+16px(11%)**, 피크를 12% → **8%(32ms)** 로 당겨 초동 홀드를 지탱하게 하고 30% 에 감쇠. */
+    8%{opacity:1;height:146px;margin-bottom:17px;transform:translateX(22px);
+      box-shadow:0 0 0 6px #241A12,inset 0 0 0 16px #FFF7EC;
       animation-timing-function:linear}
-    45%{opacity:.80;height:96px;margin-bottom:11px;transform:translateX(170px);
+    30%{opacity:.90;height:120px;margin-bottom:14px;transform:translateX(96px);
       box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
       animation-timing-function:linear}
-    72%{opacity:.52;height:40px;margin-bottom:5px;transform:translateX(278px);
+    45%{opacity:.80;height:96px;margin-bottom:11px;transform:translateX(170px);
+      animation-timing-function:linear}
+    72%{opacity:.50;height:40px;margin-bottom:5px;transform:translateX(278px);
       animation-timing-function:linear}
     /* 꼬리는 **이징이 아니라 값으로** 감속시킨다 — 마지막 구간에 ease-out 커브를 걸면 높이는
        가라앉지만 **알파도 같이 앞으로 쏠려** «꺼짐» 절벽이 되살아난다(3회차에 실제로 그랬다:
-       α .47 → .03). 전부 `linear` 로 두고 키프레임 값 간격을 좁혀 0.42 → 0.36 → 0.21 px/ms 로 내린다. */
-    85%{opacity:.33;height:18px;margin-bottom:3px;transform:translateX(322px);
+       α .47 → .03). 전부 `linear` 로 두고 키프레임 값 간격을 좁혀 감속시킨다.
+       4회차 추가 — 알파 낙차의 **피크를 중간(85~94%)으로 옮기고 꼬리를 낮췄다**: 마지막 24ms 가
+       가져가던 페이드 몫이 13% → **7%** 다(G-①ⓑ «물리는 가라앉는데 밝기는 꺼진다»). */
+    85%{opacity:.28;height:18px;margin-bottom:3px;transform:translateX(322px);
       animation-timing-function:linear}
-    94%{opacity:.13;height:5px;margin-bottom:1px;transform:translateX(348px);
+    94%{opacity:.07;height:5px;margin-bottom:1px;transform:translateX(348px);
+      animation-timing-function:linear}
+    97%{opacity:.03;height:2px;margin-bottom:0;transform:translateX(355px);
       animation-timing-function:linear}
     100%{opacity:0;height:0;margin-bottom:0;transform:translateX(360px);
       box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
-     (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다. */
+     (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
+
+     ⚠ 4회차 비평(G 6 / H 6) — 이 «내용 페이드» 는 **좌우를 갈라야** 한다. 하나로 묶으면 두 요구가
+     정면충돌한다: 빈 분홍판을 줄이려면 **늦게** 지워야 하는데(H-1순위), 우측 썸네일·행 버튼은
+     패널 클립선(x953)에 먼저 닿으므로 **일찍** 지워야 «읽히는데 잘린» 프레임이 안 생긴다(G-1순위).
+       · 좌측(제목·요약·악센트) — 70%(280ms)까지 살린다 → 내용 0 인 판이 180ms → **120ms**
+       · 우측(`.ml-i`·`.ml-b`) — 22%(88ms)에 지운다 → +75ms 의 «완료» 절단이 α .81 → **α .20**
+     겸해서 내용 이탈을 150px → **60px** 로 줄였다 — 150px 중 29px 은 **내용 자신이 클립 쪽으로 밀어
+     만든 잘림**이었다(H-④ㄴ: 구조적 여유 26px 외의 초과분). */
   .ml-r.out>*{animation:mlOutIn .40s both;animation-delay:var(--mld,0ms)}
   @keyframes mlOutIn{0%,10%{opacity:1;transform:translateX(0)}
-    55%,100%{opacity:0;transform:translateX(150px)}}
+    55%{opacity:.28;transform:translateX(40px)}
+    70%,100%{opacity:0;transform:translateX(60px)}}
+  .ml-r.out>.ml-i,.ml-r.out>.ml-b{animation:mlOutR .40s both;animation-delay:var(--mld,0ms)}
+  @keyframes mlOutR{0%,6%{opacity:1;transform:translateX(0)}
+    22%,100%{opacity:0;transform:translateX(34px)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */

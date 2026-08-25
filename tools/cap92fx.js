@@ -54,6 +54,10 @@ const STOPS = [0, 75, 150, 225, 300, 375, 450, 540];
   await p.evaluate(() => {
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     const st = document.getElementById('stagearea'); if (st) st.style.background = '#6A3844';
+    /* LESSONS 58-2 — 게임 로직만 죽인다(`draw()`·`fxTick()` 은 계속 돌아 연출은 그대로 보인다).
+       안 멈추면 유휴 전투 수입이 프레임마다 HUD 골드를 굴려서(비평가 G: «375·450 프레임의 헤더
+       골드 1.9→4») 삭제 연출과 무관한 변화가 캡처에 섞이고, 비평가가 그걸 채점하려 든다. */
+    if (typeof window.step === 'function') window.step = () => {};
   });
   await p.waitForTimeout(150);
 
@@ -76,10 +80,10 @@ const STOPS = [0, 75, 150, 225, 300, 375, 450, 540];
        `void offsetWidth` 가 우연히 플러시를 해 주고 있었다). 강제로 레이아웃을 읽어 플러시한다. */
     void document.body.offsetHeight;
     document.querySelectorAll('.ml-r.out').forEach((r) => void getComputedStyle(r).animationName);
-    /* 상자(`mlOut`)와 내용 페이드(`mlOutIn`)를 **같이** 잡아 같은 t 로 탐색한다 —
-       하나만 멈추면 내용 알파가 프레임과 어긋난다. */
+    /* 상자(`mlOut`)와 내용 페이드(`mlOutIn` 좌측 · `mlOutR` 우측)를 **전부 같이** 잡아
+       같은 t 로 탐색한다 — 하나라도 빠지면 그 요소의 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => a.animationName === 'mlOut' || a.animationName === 'mlOutIn');
+      .filter((a) => /^(mlOut|mlOutIn|mlOutR)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);
