@@ -162,6 +162,14 @@ function pwLaunch(){
      «체크는 사라졌는데 버튼이 다시 활성 + 진행 그대로» 로 찍혀 상태 모순으로 오독된다(14회차 W ④).
      실플레이처럼 «정확히 이번 티어만 완료» 상태를 만든다 — 수령 후엔 0/<다음 목표> 비활성이 찍힌다. */
   await page.evaluate(() => {
+    /* 3회차 — 씬A 가 골드를 128K 로 올려 놓아서, 보상 +400 이 `fmt` 축약(«128K»)에 삼켜져
+       **17프레임 내내 숫자가 한 번도 안 바뀐다**(비평가 K ① 감점 1위 — «도착 개수 == 숫자 진행» 을
+       한 프레임도 입증 못 함). 잔고를 세 자리로 낮춰 보상이 자릿수로 드러나게 한다.
+       fxSeen/fxDisp 를 같이 맞춰 «감소» 가 다음 씬의 기준 프레임에 유령으로 남지 않게 한다. */
+    S.gold = 900; S.dia = 300;
+    fxSeen.gold = S.gold; fxDisp.gold = S.gold; fxAcc.gold = 0; fxHold.gold = 0;
+    fxSeen.dia = S.dia;  fxDisp.dia = S.dia;  fxAcc.dia = 0;  fxHold.dia = 0;
+    document.querySelectorAll('#fxl .fx-plus, #fxl .fx-fly').forEach(e => e.remove());
     const q = QUESTS.find(x => x.id === 'kill');
     S.quest.kill.base = q.get() - questGoal(q);
     openQuest('rep');

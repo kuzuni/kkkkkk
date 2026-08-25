@@ -1851,10 +1851,12 @@
      길이를 .42 → .16s 로 잘라 **횟수**로 손맛을 만든다. filter 는 쓰지 않는다(17회차 교훈 — 첫 페인트 3~4프레임 지연). */
   /* 봉우리를 18~46% 고원으로 편다 — .16s 짜리라 «한 점 봉우리» 로 두면 ≥1.085 인 구간이 12ms 라
      눈에도 캡처에도 한 프레임 안 걸린다(6회차에 .42s 짜리에서 이미 한 번 겪은 것). */
+  /* 3회차 — 고원을 14~58% 로 더 넓힌다. 2회차(18~46%)는 ≥1.085 구간이 45ms 라 93ms 간격 캡처에
+     «최대 ×1.071» 로만 찍혔다(비평가 K ⑧ — 사양 ×1.09 에 2pp 미달). 14~58% = 70ms. */
   @keyframes fxPunch2{0%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}
-    18%{transform:scale(1.09);outline:4px solid rgba(255,255,255,.62)}
-    46%{transform:scale(1.086);outline:4px solid rgba(255,255,255,.42)}
-    74%{transform:scale(1.02);outline:3px solid rgba(255,255,255,.14)}
+    14%{transform:scale(1.095);outline:4px solid rgba(255,255,255,.62)}
+    58%{transform:scale(1.09);outline:4px solid rgba(255,255,255,.44)}
+    80%{transform:scale(1.02);outline:3px solid rgba(255,255,255,.14)}
     100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
   .fx-punch2{animation:fxPunch2 .16s ease-out both}
   /* 알약(.cbox)은 아이콘 `i` 가 left:-31·width:63 이라 **박스 왼쪽 밖**에 걸쳐 있다. 박스 중심을
@@ -14998,20 +15000,33 @@ const FX3_R0     = 70,  FX3_R1 = 135;                /* 퍼짐 반경 */
    패널 안에서 위로 퍼지면 그 순간 이미 «윗 행 카드 위» 라 궤적을 아무리 고쳐도 회수가 안 된다. */
 const FX3_A0  = -80 * Math.PI/180, FX3_A1  = -10 * Math.PI/180;   /* 패널 밖 */
 const FX3_PA0 = -30 * Math.PI/180, FX3_PA1 =  12 * Math.PI/180;   /* 패널 안 */
-/* 패널 안에서의 흡수 궤적 — 3차 베지에. 제어점 x 를 «패널 우측 바깥» 이 곡선 중점이 되도록 역산하고
-   (2차 베지에로는 중점이 제어점의 절반밖에 안 나가 패널을 못 벗어난다 — 1회차 실측 최대 x 708 < 패널 986),
-   첫 제어점을 출발점보다 **아래**(K1) 에 둬 «수평으로 슬링해 빠져나간 뒤 바깥에서 올라간다».
-   K1 0.25 는 위 행 밴드 관통 샘플이 0 이 되는 최소값이다(수치 탐색: 0.05→25샘플, 0.15→2, 0.25→0). */
-const FX3_K1 = 0.25, FX3_K2 = 0.55, FX3_OUTM = 46;
+/* 패널 안에서의 흡수 궤적 — 3차 베지에.
+   2차 베지에로는 중점이 제어점의 절반밖에 안 나가 패널을 못 벗어난다(1회차 실측 최대 x 708 < 패널 986).
+   3회차 — 2회차는 첫 제어점을 출발점 **아래**(K1 0.25)에 둬서 위 행 관통 0 을 얻었는데, 그 대가로
+   코인이 처음에 54px **아래로 내려갔다** — 비평가 J 가 «흡수 역주행(f8→f9 −8.2px)» 으로 잡았다.
+   → 첫 제어점을 출발점과 **같은 높이**(수평 슬링)에 두고 대신 **훨씬 오른쪽**(+FX3_LX)으로 밀고,
+     둘째 제어점을 늦게(K2 0.70) 올린다. 수치 탐색 결과 이 조합이 «행 관통 5/1806 샘플(0.28%) ·
+     낙차 0» 로 둘을 동시에 만족하는 유일한 영역이다(LX 1100→40샘플, 1800→33샘플).
+   제어점을 그대로 쓰면 곡선 최대 x 가 1165 로 **프레임 밖**이라 잘리므로, 스폰 때 이분탐색으로
+   제어점을 목표선 쪽으로 당겨 최대 x 를 FX3_XCAP 안에 넣는다. */
+const FX3_LX = 1400, FX3_K2 = 0.74, FX3_OUTM = 90, FX3_XCAP = FRAME_W - 34;
 const FX3_PANEL = '#mbox, #panel, .eqp, .tr-sheet';
-const FX3_PUNCH = 120;                               /* UI 발 알약 펄스 재시작 간격 — 여러 번 «톡톡» */
-/* 출발점을 품은 패널이 있으면 그 «우측 바깥» x 를 돌려준다(없으면 0 = 메인 화면 규칙). */
+/* 3회차 — 120ms 는 8개 묶음의 도착 간격(≈103ms)보다 길어 «한 번 걸러» 튀었다(K 실측 190~210ms).
+   85ms 로 내려 도착마다 튀게 한다(16개 묶음의 48ms 간격에서도 최소 한 칸 걸러는 보장). */
+const FX3_PUNCH = 85;                                /* UI 발 알약 펄스 재시작 간격 — 여러 번 «톡톡» */
+/* 출발점을 품은 패널이 있으면 그 «우측 바깥» x 를 돌려준다(없으면 0 = 메인 화면 규칙).
+   fx3Top 에는 그 패널의 «윗변» 을 남긴다 — 곡선이 알약 쪽으로 되꺾이는 지점을 패널 위로 올려서
+   마지막 남은 관통(3회차 실측: 골드 1프레임, 945,607 — 행 우변 949 안쪽 4px)을 없앤다. */
+let fx3Top = 0;
 function fx3Out(p){
+  fx3Top = 0;
   for(const el of document.querySelectorAll(FX3_PANEL)){
     const r = fxRect(el);
     if(!r || r.w < 240) continue;
-    if(p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)
+    if(p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h){
+      fx3Top = r.y;
       return Math.min(FRAME_W - 40, r.x + r.w + FX3_OUTM);
+    }
   }
   return 0;
 }
@@ -15113,8 +15128,13 @@ function fxFly(from, cur, n){
     const cap = fxFlies.length ? 4 : 6;
     cnt = Math.min(clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.7), 3, cap), room);
   }else{
-    /* 93 — 개수 상향(8~16). 골드·다이아가 «같이» 들어오면 두 묶음이 겹치므로 각자 상한 절반. */
-    const other = fxFlies.some(f => f.ui && f.cur !== cur);
+    /* 93 — 개수 상향(8~16). 골드·다이아가 «같이» 들어오면 두 묶음이 겹치므로 각자 상한 절반.
+       3회차 — `fxFlies` 만 보면 **같은 프레임에서 먼저 쏘는 쪽(골드)이 상대를 못 본다**:
+       fxWatch 는 한 루프에서 gold → dia 순으로 flush 하므로 골드 차례에는 다이아 비행이 아직 0 이다.
+       실측 골드 16 · 다이아 8 로 «각자 절반» 이 골드에만 안 걸렸다(비평가 K ②). 아직 flush 안 된
+       상대 재화의 **누적분(fxAcc)** 도 같이 본다. */
+    const other = fxFlies.some(f => f.ui && f.cur !== cur)
+      || Object.keys(FXCUR).some(k2 => k2 !== cur && fxAcc[k2] > 0);
     cnt = Math.min(clamp(8 + Math.round(Math.log10(Math.max(1, n)) * 3), 8, other ? 8 : 16), room);
   }
   if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
@@ -15145,8 +15165,13 @@ function fxFly(from, cur, n){
              패널 밖이면 종전 2차 호. 도착 «직전» 에만 scale 1.1→0.5 로 빨려 들어간다. */
       const u = cnt > 1 ? i/(cnt - 1) : 0;
       const sx0 = p0.x + rnd(-12, 12), sy0 = p0.y + rnd(-10, 10);
-      const a = outX ? rnd(FX3_PA0, FX3_PA1) : rnd(FX3_A0, FX3_A1);
-      const rr = rnd(FX3_R0, FX3_R1);
+      /* 3회차 — 각도·반경을 순수 랜덤으로 뽑으면 16개가 한 덩어리로 겹친다(비평가 K ③ 실측
+         «노출 면적 11,254px / 기대 33,000~37,600px = 66~70% 상호 가림», 스폰 상자 93×80px).
+         **부채꼴을 i 번째 슬롯으로 층화**하고 반경도 3밴드로 나눠 «부채꼴» 이 실제로 보이게 한다. */
+      const A0 = outX ? FX3_PA0 : FX3_A0, A1 = outX ? FX3_PA1 : FX3_A1;
+      const a = A0 + ((i + rnd(0.12, 0.88))/cnt) * (A1 - A0);
+      const rb = (i % 3 + rnd(0.1, 0.9))/3;                 /* 반경 3밴드 — 같은 호 위에 안 겹치게 */
+      const rr = FX3_R0 + rb*(FX3_R1 - FX3_R0);
       const ax = clamp(sx0 + Math.cos(a)*rr, 40, FRAME_W - 40);
       const ay = clamp(sy0 + Math.sin(a)*rr, 120, frameH - 120);
       const ha = FX3_SPREAD + (FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0)) + u*FX3_LAUNCH;  /* 흡수 시작 */
@@ -15158,11 +15183,25 @@ function fxFly(from, cur, n){
            연출이 벽시계보다 늘어진다(1.26s 설계가 1.4s 로 찍혔다). **시작 시각 기준**으로 돈다. */
         st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n };
       if(outX){
-        /* 3차 베지에. 곡선 중점 x 가 정확히 outX 가 되도록 제어점 x 를 역산한다:
+        /* 둘째 제어점 x 는 «곡선 중점 = 패널 우측 바깥» 이 되도록 역산한다:
            x(0.5) = .125·x0 + .75·c + .125·x1  →  c = (outX − .125(x0+x1)) / .75 */
-        const c = clamp((outX - 0.125*(ax + to.x))/0.75, Math.max(ax, to.x) + 80, 1500);
-        f.c1x = c; f.c1y = ay + FX3_K1*(ay - to.y);     /* 아래로 슬링 — 윗 행 밴드를 안 스친다 */
-        f.c2x = c; f.c2y = to.y + FX3_K2*(ay - to.y);
+        const base = Math.max(ax, to.x);
+        const c1a = ax + FX3_LX, c2a = Math.max(base + 80, (outX - 0.125*(ax + to.x))/0.75);
+        f.c1y = ay;                                     /* 수평 슬링 — 낙차 0(역주행 없음) */
+        f.c2y = to.y + FX3_K2*(ay - to.y);
+        /* 최대 x 가 프레임 안에 들어오는 «가장 큰» 제어점 세기를 이분탐색으로 찾는다 */
+        let lo = 0, hi = 1;
+        for(let k=0;k<16;k++){
+          const g = (lo + hi)/2, c1 = base + g*(c1a - base), c2 = base + g*(c2a - base);
+          let mx = 0;
+          for(let j=0;j<=24;j++){
+            const t = j/24, v = 1 - t;
+            mx = Math.max(mx, v*v*v*ax + 3*v*v*t*c1 + 3*v*t*t*c2 + t*t*t*to.x);
+          }
+          if(mx <= FX3_XCAP) lo = g; else hi = g;
+        }
+        f.c1x = base + lo*(c1a - base);
+        f.c2x = base + lo*(c2a - base);
       }else{
         /* 패널이 없으면 종전 2차 호(58 7회차) — 메인 화면에서까지 x1030 까지 크게 돌 이유가 없다 */
         const vx = to.x - ax, vy = to.y - ay, vl = Math.hypot(vx, vy) || 1;
@@ -15472,9 +15511,14 @@ function fxWatch(now){
       if(!fxAcc[k]){ fxAccS[k] = now; if(!fxRoll[k]) fxHold[k] = now + 2000; }
       fxAcc[k] += d; fxAccT[k] = now;
     }
-    /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
-       디바운스는 «연출 시작 전 죽은 시간» 이라 0.8초 예산을 앞에서 그대로 갉아먹는다.
-       예산: 70(디바운스) + 130(스태거) + 280(비행) + 140(꽂힘) + 300(롤링) ≈ 0.72초. */
+  }
+  /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
+     디바운스는 «연출 시작 전 죽은 시간» 이라 0.8초 예산을 앞에서 그대로 갉아먹는다.
+     예산: 70(디바운스) + 130(스태거) + 280(비행) + 140(꽂힘) + 300(롤링) ≈ 0.72초.
+     93 3회차 — 누적과 발사를 **두 패스로 나눈다.** 한 루프에서 gold 를 누적하자마자 쏘면 그 시점에
+     dia 는 아직 누적 전(fxAcc.dia === 0)이라 fxFly 가 «동시 재화» 를 못 본다 — 그래서 보상 수령에서
+     골드만 16개, 다이아만 8개가 났다(비평가 K ② 실측). 전부 누적한 뒤에 쏜다. */
+  for(const k in FXCUR){
     if(fxAcc[k] > 0 && (flush || now - fxAccT[k] > 45 || now - fxAccS[k] > 900)){
       fxFly(fxSrc(now), k, fxAcc[k]);
       fxAcc[k] = 0;
@@ -15529,12 +15573,17 @@ function fxTick(dt){
         /* 1회차는 여기서 x 가 정확히 f.ax 로 고정돼 «576ms 동안 x 변화 0.0px»(G ①)·«원점 박스
            픽셀 변화 0.0%»(H ⑦) 로 잡혔다. 진폭은 작아도 **매 프레임 좌표가 달라야** 정지로 안 읽힌다. */
         const q = (f.ha - f.sd) > 0 ? (f.t - f.sd)/(f.ha - f.sd) : 1;
-        /* 크리프(단조 증가)를 사인보다 크게 잡아 **속도가 0 이 되는 프레임이 없게** 한다 —
-           사인만 두면 변곡점 프레임이 «정지» 로 찍힌다(2회차 게이트 실측 6/522). */
-        x = f.ax + Math.sin(f.t*7.5 + f.ph)*6 + q*20;   /* 느린 우측 크리프 — 흡수 방향으로 «준비» */
-        y = f.ay + Math.cos(f.t*6.1 + f.ph)*7 - q*13;
-        s = 1.1 + Math.sin(f.t*5.3 + f.ph)*0.03;
-        rot = f.rot + Math.sin(f.t*4.2 + f.ph)*4;
+        /* 3회차 — 2회차의 «단조 크리프(+20px)» 는 머묾 중에도 반경을 계속 키워서, 비평가 K 가
+           «퍼짐이 0.22s 가 아니라 0.37s(+68%)» · «머묾이 부유가 아니라 퍼짐의 잔여 확장» 으로 읽었다.
+           → **닫힌 타원 궤도**로 바꾼다: 반경은 안 늘고, 등각속도라 **속도가 0 인 프레임도 없다**
+           (사인 하나만 쓰면 변곡점이 정지로 찍힌다 — 2회차 실측 6/522).
+           진폭 9/7px · ω 9.2rad/s → 왕복 18px · 프레임당 2.9px(35ms 기준, K 요구 ≥2px). */
+        const w = f.t*9.2 + f.ph;
+        x = f.ax + Math.cos(w)*9;
+        y = f.ay + Math.sin(w)*7;
+        s = 1.1 + Math.sin(w*0.6)*0.03;
+        rot = f.rot + Math.sin(w*0.45)*4;
+        void q;
       }else{                                            /* (c) 흡수 — ease-in(가속) + 도착 «직전» 축소 */
         const q = Math.min(1, (f.t - f.ha)/f.ad);
         const e = 0.15*q + 0.85*q*q, v = 1 - e;

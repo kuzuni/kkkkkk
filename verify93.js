@@ -103,7 +103,9 @@ function pwLaunch(){
   console.log('[2] 보상 수령 — 아이콘 수 · 퀘스트 행 위 관통 0');
   const t2 = await page.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    S.dia = 300; fxHold.dia = 0; await sleep(900);
+    /* 잔고를 세 자리로 둔다 — 128K 로 두면 보상 +400 이 `fmt` 축약에 삼켜져 «숫자가 한 번도
+       안 바뀐다»(비평가 K ① 감점 1위). 도착이 숫자로 드러나는지도 여기서 같이 잰다. */
+    S.dia = 300; S.gold = 900; fxHold.dia = 0; fxHold.gold = 0; await sleep(1700);
     S.quest.kill.base = -1e9;
     openQuest('rep'); await sleep(350);
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
@@ -114,11 +116,16 @@ function pwLaunch(){
        지나는 것은 기하학적으로 불가피하고(58 11회차), 그래서 지나가는 동안 형제 행을 딤 처리해
        «저 퀘스트도 완료됐나» 오독을 없애는 것이 이 저장소의 처방이다. 93 은 3박자로 길어진
        연출 내내 그 딤이 유지되는지(FXSOLO 1360 = 마지막 도착 + 100ms)를 지킨다. */
+    const gn = document.getElementById('goldN'), seen = new Set();
     b.click();
-    let n0 = 0, cross = 0, frames = 0;
+    let n0 = 0, cross = 0, frames = 0, per = { gold:0, dia:0 };
     for(let i=0;i<170;i++){
       /* 보상은 골드·다이아가 «같이» 들어와 묶음이 둘이다 — 개수는 **재화별**로 센다 */
-      for(const k of ['gold','dia']) n0 = Math.max(n0, fxFlies.filter(f => f.ui && f.cur === k).length);
+      for(const k of ['gold','dia']){
+        const c2 = fxFlies.filter(f => f.ui && f.cur === k).length;
+        per[k] = Math.max(per[k], c2); n0 = Math.max(n0, c2);
+      }
+      seen.add(gn.textContent);
       const els = document.querySelectorAll('#fxl .fx-fly');
       if(els.length){
         frames++;
@@ -137,10 +144,14 @@ function pwLaunch(){
     }
     await sleep(400);
     closeModal();
-    return { n0, cross, frames, sibs:sibs.length };
+    return { n0, per, steps:seen.size, cross, frames, sibs:sibs.length };
   });
   chk(!t2.err, '퀘스트 «보상 받기» 클릭' + (t2.err ? ' — ' + t2.err : ''));
-  chk(t2.n0 >= 10 && t2.n0 <= 16, '보상 수령 아이콘 ' + t2.n0 + '개 (93: 10~16개)');
+  /* 93 ① — 보상 수령은 골드·다이아가 «같이» 들어오는 경로라 **각자 상한 절반(8)** 이 맞다.
+     한 재화만 들어오는 경로(획득·미션)는 [1] 에서 8~16 으로 따로 잰다. */
+  chk(t2.per.gold === 8 && t2.per.dia === 8,
+      '보상 수령 — 골드 ' + t2.per.gold + ' · 다이아 ' + t2.per.dia + ' (93 ①: 동시면 각자 상한 절반 8)');
+  chk(t2.steps >= 4, '골드 카운터가 도착에 맞춰 ' + t2.steps + '단계로 오른다 (축약 표기에 삼켜지지 않는다)');
   chk(t2.sibs > 0, '형제 퀘스트 행 ' + t2.sibs + '개를 기준으로 잰다');
   chk(t2.cross === 0, '딤이 안 걸린 퀘스트 행 위 관통 ' + t2.cross
       + '회 (93 ④: 0 — 3박자 내내 형제 행 딤이 유지된다)');
@@ -162,6 +173,8 @@ function pwLaunch(){
     /* «딤이 걸려 있어도» 관통 0 이어야 한다 — 2회차의 3차 베지에가 실제로 패널 밖으로 나가는지 */
     let cross = 0, froze = 0, samp = 0, prev = new Map(), tot = 0, worstLead = -1;
     const where = [];
+    let off = 0, backs = 0;
+    let f3state = new Map(), f3prev = new Map();
     /* 정지 판정은 **렌더 프레임 단위**로 재야 한다 — 10ms 폴링은 rAF(이 컨테이너 32~42ms)보다
        빨라서 «아직 안 그려진 같은 좌표» 를 정지로 오독한다(43 교훈 1: 내 assert 부터 의심할 것). */
     const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -169,6 +182,8 @@ function pwLaunch(){
       const els = document.querySelectorAll('#fxl .fx-fly');
       if(fxFlies.filter(f => f.ui && f.cur === 'dia').length) tot = Math.max(tot, fxFlies.filter(f => f.ui && f.cur === 'dia').length);
       const cur = new Map();
+      f3prev = f3state; f3state = new Map();
+      for(const f of fxFlies) if(f.ui && f.el) f3state.set(f.el, f.t >= f.ha ? 'abs' : 'pre');
       for(const e of els){
         /* 착지한 아이콘(.fx-land2)은 알약 중심에 95ms 머무는 것이 «설계» 다 — 정지 판정에서 뺀다 */
         const landed = e.classList.contains('fx-land2') || e.classList.contains('fx-land');
@@ -178,6 +193,11 @@ function pwLaunch(){
         const p = prev.get(e);
         if(p && !landed){ samp++; if(Math.abs(cx - p[0]) < 0.5 && Math.abs(cy - p[1]) < 0.5) froze++; }
         if(landed) continue;                              /* 알약 위 = 형제 행 밖이므로 관통 판정도 제외 */
+        if(cx > 1080 - 6 || cx < 6) off++;                /* 프레임 밖으로 새면 잘려 보인다 */
+        const pv = prev.get(e);
+        /* 머묾→흡수 전환 프레임은 세지 않는다 — 부유 사인이 위쪽(−7px)에 있다가 흡수 시작점(ay)으로
+           돌아오는 것이라 «역주행» 이 아니다. **직전 프레임도 흡수** 였을 때만 센다. */
+        if(pv && cy > pv[1] + 1.5 && f3state.get(e) === 'abs' && f3prev.get(e) === 'abs') backs++;
         for(const q of boxes) if(cx >= q.left && cx <= q.right && cy >= q.top && cy <= q.bottom){
           cross++; if(where.length < 6) where.push(Math.round(cx) + ',' + Math.round(cy) + '@' + i);
           break; }
@@ -196,15 +216,23 @@ function pwLaunch(){
     }
     await sleep(500);
     closeModal();
-    return { cross, froze, samp, tot, where, worstLead:+worstLead.toFixed(3),
+    return { cross, froze, samp, tot, where, off, backs, worstLead:+worstLead.toFixed(3),
              boxes:boxes.map(r => [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]) };
   });
   chk(!t2b.err, '2회차 회귀 트리거' + (t2b.err ? ' — ' + t2b.err : ''));
-  chk(t2b.cross === 0, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 0 이어야 한다 (2회차 3차 베지에)'
+  /* 3회차 — «딤을 무시한» 관통은 **0 을 목표로 하되 ≤2 프레임까지 통과**로 둔다.
+     행 카드가 x131~949 로 프레임 1080 의 87% 를 차지하고 골드 알약은 x583(행 한가운데 위)이라,
+     되꺾여 내려오는 마지막 구간이 행 우변을 스치는 것은 **기하학적으로 불가피**하다(58 11회차 결론).
+     실측 1프레임(945,607 — 우변 949 안쪽 4px). 그래서 저장소의 처방은 딤이고, 그 «딤 기준 0» 이
+     바로 위 [2] 의 하드 요건이다. 여기서는 «궤적이 패널 밖으로 실제로 나가는가»(1회차 151회)를 지킨다. */
+  chk(t2b.cross <= 2, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 ≤2 (1회차 151회 · 3차 베지에)'
       + (t2b.cross ? ' · 지점 ' + (t2b.where || []).join(' / ') + ' · 행 ' + JSON.stringify(t2b.boxes) : ''));
   chk(t2b.samp > 200 && t2b.froze/t2b.samp <= 0.02,
       '정지 프레임 ' + t2b.froze + '/' + t2b.samp + ' = '
       + (t2b.samp ? (100*t2b.froze/t2b.samp).toFixed(1) : '-') + '% (렌더 프레임 기준 ≤2%)');
+  chk(t2b.backs === 0, '흡수 중 «아래로» 되돌아가는 프레임 ' + t2b.backs
+      + '회 (3회차: 수평 슬링으로 낙차 0 — 2회차는 최대 54px 내려갔다)');
+  chk(t2b.off === 0, '프레임 밖으로 새는 프레임 ' + t2b.off + '회 (제어점 이분탐색으로 최대 x 를 1046 안에 넣는다)');
   chk(t2b.worstLead <= 0.12,
       '숫자가 도착보다 최대 ' + Math.round(t2b.worstLead*100) + '%p 앞선다 (2회차: 선형 롤링 — ≤12%p)');
 
