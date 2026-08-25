@@ -21,9 +21,13 @@ scan70.py — 70 출석보상 팝업 레퍼런스 픽셀 스캐너
   python3 tools/scan70.py bright <x0> <y0> <x1> <y1>  # 영역 평균 RGB/휘도 (딤·수령완료 밝기비용)
   python3 tools/scan70.py edges <y> <x0> <x1> [th]    # 행 단면 중 «급격한» 경계 x 만 나열
 """
-import sys, math
+import sys, math, signal
 from collections import Counter
 from PIL import Image
+
+# `| head` 로 잘라 볼 때 BrokenPipe 트레이스백이 뜨지 않게
+try: signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+except (AttributeError, ValueError): pass
 
 IMG = 'docs/ref/70-출석보상-팝업.jpg'
 im = Image.open(IMG).convert('RGB')

@@ -941,13 +941,7 @@
   .qp{height:14px;border-radius:8px;background:#0e1428;overflow:hidden;margin-top:12px}
   .qp>i{display:block;height:100%;background:linear-gradient(90deg,#3fd0ff,#8b7bff)}
 
-  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  .day{border-radius:16px;background:#131b33;border:2.6px solid #2b3866;padding:8px 2px;text-align:center}
-  .day .dn{font-size:17px;color:#8b9ac0;font-weight:800}
-  .day .di{font-size:28px;line-height:32px}
-  .day .dv{font-size:16px;font-weight:900;color:#cfe0ff}
-  .day.got{opacity:.35}
-  .day.today{border-color:#ffd45e;box-shadow:0 0 16px rgba(255,212,94,.4)}
+  /* 구 출석 달력(.cal/.day 7×4 그리드)은 작업 70 에서 폐기했다 — `.at70` 블록을 본다 */
 
   /* ── 룰렛 원판 (작업 29) — 8칸 그리드 하이라이트 폐기, 실제로 도는 원판 휠 ──
      세그먼트 색·라벨은 전부 ROULETTE 배열에서 생성한다(보상 8종이 바뀌면 원판도 따라간다).
@@ -1042,9 +1036,7 @@
   .mbody .sect h3{color:#3A2C20}
   .mbody .sect h3 em{color:#B4571E}
   .mbody .sect p{color:#7A6550}
-  .mbody .day,.mbody .slot{background:#F7ECDA;border-color:#C8B091}
-  .mbody .day .dn{color:#8A755C}
-  .mbody .day .dv{color:#4A3A2C}
+  .mbody .slot{background:#F7ECDA;border-color:#C8B091}
   .mbody .gbtn:disabled,.mbody .mini:disabled{background:#9E9E9E;color:#EFEFEF;box-shadow:none}
 
   /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
@@ -1458,6 +1450,85 @@
   /* ✕ 글리프 ref 잉크 45×42 → 41×38 (지름의 0.354) */
   #modal.ml69 .ml-close i{font-style:normal;font-size:58px;line-height:58px;font-weight:900;position:relative;top:3px;
     color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(.96)}
+  /* ── 70 출석 보상 팝업 — docs/measure/70-출석보상팝업.md (레퍼런스 70 PIL 실측) ──
+     껍데기는 A5 공용 다이얼로그의 «층 구성»(검정 외곽 → 어두운 갈색 → 갈색 베벨 → 크림 본문)을 그대로 쓰되,
+     레퍼런스 70 은 A5 표준(898 폭)보다 넓은 **940×1077** 이라 `.at70` 에서 폭·높이·테두리만 다시 적는다.
+     ⚠ «A5 를 scale 로 늘린다» 가 아니다 — 층 두께는 전부 70 실측값이다.
+
+     세로 층 (프레임 y, ref−84):
+       606…613  검정 외곽 8            | 614…725  노란 밴드 112       | 726…730  검정 5
+       731…733  갈색 베벨 3            | 734…1665 크림 본문 932       | 1666…1671 갈색 베벨 6
+       1672…1677 어두운 갈색 6         | 1678…1682 검정 외곽 5
+     가로 층: 70…79 검정10 · 80…85 #2A2018(6) · 86…90 #7A6248(5) · 91…987 크림(897) · 대칭
+     → 검정은 `.mbox` 의 border(8/10/5), #2A2018 은 `.mbox` 배경 + padding 6, #7A6248 은 `.mbody` border 다.
+     노란 밴드는 갈색 층을 «덮고» 검정 외곽까지 꽉 차므로 `.mhead` 를 `margin:0 -6px` 로 내보낸다. */
+  /* 팝업 상단 606 = padding-top 159 + (2280−159−150−1077)/2 */
+  #modal.at70{background:rgba(0,0,0,.65);padding:159px 70px 150px}
+  .at70 .mbox{height:1077px;max-height:100%;border-width:8px 10px 5px;border-radius:20px;
+    padding:0 6px 6px;background:#2A2018;overflow:visible}
+  /* 밴드 920×112 — 상단 하이라이트 4 · 상 #FFB53E 54 · 전이 3 · 하 #EA9133 51 (실측 2톤, 무늬 없음) */
+  .at70 .mhead{height:117px;margin:0 -6px;border-bottom:5px solid #000;border-radius:10px 10px 0 0;
+    overflow:visible;position:relative;
+    background:linear-gradient(180deg,#FFF98F 0,#FFDF66 4px,#FFB53E 4px,#FFB53E 58px,
+      #F59C36 58px,#F59C36 61px,#EA9133 61px)}
+  /* 타이틀 잉크 47 → fs 50(잉크비 .93) · 외곽 편측 4 → text-stroke 8. 잉크 중심 = 밴드 중심 +2 */
+  .at70 .mhead h2{top:1px;font-size:50px;line-height:50px;-webkit-text-stroke:8px #000}
+  /* 캘린더 고리 — 채움 35×122(외곽 포함 45×132), 중심 x = 팝업중심 ±340.5, 밴드 상단보다 66px 위 */
+  .at-ring{position:absolute;top:-71px;width:45px;height:132px;box-sizing:border-box;
+    border:5px solid #000;border-radius:23px;
+    background:linear-gradient(180deg,#C0C1DD 0 70%,#9699BA 70%)}
+  .at-ring.l{left:96.5px}
+  .at-ring.r{left:777.5px}
+  /* 고리는 `.mhead`(공용 헤더)에 붙이므로 70 이 아닌 팝업에서는 숨긴다 */
+  #modal:not(.at70) .at-ring{display:none}
+  /* 크림 본문 897×932 — 좌우 갈색 베벨 5 · 상 3 · 하 6. 패딩 상29 / 좌우65 / 하35 (실측) */
+  .at70 .mbody{flex:0 0 auto;height:941px;padding:29px 65px 35px;overflow:hidden;text-align:center;
+    border:solid #7A6248;border-width:3px 5px 6px;box-shadow:none;background:#F0D9B9}
+  /* 3열 × 226 · gap 44.5/33 → 767 = 크림 897 − 좌우 65 */
+  .at-g{display:grid;grid-template-columns:repeat(3,226px);gap:33px 44.5px}
+  .at-c,.at-c7{position:relative;box-sizing:border-box;height:268px;background:#FEF8E1;
+    border:5px solid #000;border-bottom-width:6px;border-radius:18px}
+  .at-c7{width:767px;margin-top:31px;border-radius:19px;background:#FEFCED}
+  /* 수령 완료 딤은 «카드 안쪽» 에만 건다 — ✔ 는 딤 위에 풀 밝기로 얹힌다(실측: 본문 ×0.50, ✔ 원색) */
+  .at-in{position:absolute;inset:0;border-radius:13px;overflow:hidden}
+  .at-c.got .at-in,.at-c7.got .at-in{filter:brightness(.5)}
+  /* «N일 차» 밴드 216×56 (7일차 757×57). 기본 #2B2A30 / 강조 #FBBC48 */
+  .at-bd{position:absolute;left:0;right:0;top:1px;height:56px;background:#2B2A30;overflow:hidden;
+    display:flex;align-items:center;justify-content:center}
+  .at-c7 .at-bd{top:0;height:57px}
+  .at-bd.hi{background:#FBBC48}
+  /* 강조 밴드의 사선 하이라이트 — 폭 47, 수직에서 31°(아래로 갈수록 왼쪽) */
+  .at-bd.hi::before{content:'';position:absolute;left:34px;top:-10px;bottom:-10px;width:47px;
+    background:rgba(255,255,255,.16);transform:skewX(-31deg)}
+  /* 잉크 29 → fs 31. 잉크 중심이 밴드 중심보다 4px 위 */
+  /* 잉크 폭이 ref 대비 +8% 라 자간 대신 scaleX 로만 좁힌다(LESSONS 01 — letter-spacing 은 어절 공백을 먹는다) */
+  .at-bd>i{position:relative;display:inline-block;top:-5px;font-style:normal;font-weight:900;
+    font-size:33px;line-height:33px;transform:scaleX(.92);
+    color:#EEE;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  .at-c7 .at-bd>i{top:1px;font-size:37px;line-height:37px}
+  /* 프레임 뒤 밝은 판 147×167 (7일차 512×155) */
+  .at-pl{position:absolute;left:35px;top:73px;width:147px;height:167px;border-radius:24px;background:#E9D9BF}
+  .at-c7 .at-pl{left:123px;top:76px;width:512px;height:155px;background:#EADDCD}
+  /* 보상 1칸 = 아이템 프레임 138×138 + 그 아래 수량. 프레임은 검정 5 + 안쪽 림 5(등급색) */
+  .at-rw{position:absolute;left:40px;top:83px;width:138px}
+  .at-c7 .at-rw{top:84px}
+  .at-if{position:relative;width:138px;height:138px;box-sizing:border-box;border:5px solid #000;
+    border-radius:34px;background:#D07810;box-shadow:inset 0 0 0 5px #F8C030}
+  .at-if.rl{background:#9820D0;box-shadow:inset 0 0 0 5px #C860F8}
+  .at-if>em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-style:normal;font-size:76px;line-height:76px}
+  /* 수량 — 잉크 하단 = 프레임 하단 +8 (프레임 아래 테두리에 걸친다) */
+  .at-rw>b{position:absolute;left:50%;transform:translateX(-50%);top:115px;height:38px;line-height:38px;
+    white-space:nowrap;font-size:38px;font-weight:900;color:#fff;
+    -webkit-text-stroke:10px #000;paint-order:stroke fill}
+  /* ✔ 수령완료 — 초록 코어 91×73, 중심 = (카드 중심, 카드 top+132) */
+  .at-ck{position:absolute;left:0;right:0;top:73px;height:96px;display:flex;align-items:center;
+    justify-content:center;padding-left:7px;font-size:106px;line-height:106px;color:#88F840;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;pointer-events:none;transform:scaleX(.92)}
+  /* 👑 포인터 — 77×58, 오늘 카드 하단을 10px 파고들어 아래 카드를 14px 덮는다 */
+  .at-c.today{z-index:3;cursor:pointer}
+  .at-cr{position:absolute;left:0;right:0;top:244px;height:58px;display:flex;align-items:center;
+    justify-content:center;font-size:66px;line-height:66px;pointer-events:none}
 
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
@@ -6531,12 +6602,14 @@ const DUNGEONS = [
 ];
 const DUN_TRY = 3;   /* 던전별 하루 입장 횟수 */
 
-/* ---- 출석 (28일) ---- */
+/* ---- 출석 (28일) ----
+   70(2026-08-25): 레퍼런스의 «7일차 전폭 카드 = 보상 3개 가로 나열» 을 재현하려면 주차 마지막 날이
+   3종 보상이어야 한다. 7 배수 날에 기존 다이아 + 유물석 + 골드 3종을 준다(다른 날은 종전 그대로 1종). */
 const ATTEND = [];
 for(let i=1;i<=28;i++){
   let r;
-  if(i % 28 === 0)      r = { ic:'🔥', t:'다이아', dia:3000, rel:1500 };
-  else if(i % 7 === 0)  r = { ic:'💎', t:'다이아', dia:1500 + i*60 };
+  if(i % 28 === 0)      r = { ic:'🔥', t:'다이아', dia:3000, rel:1500, goldMul:60 };
+  else if(i % 7 === 0)  r = { ic:'💎', t:'다이아', dia:1500 + i*60, rel:400 + i*25, goldMul:60 };
   else if(i % 5 === 0)  r = { ic:'🔮', t:'유물석', rel:400 + i*25 };
   else if(i % 3 === 0)  r = { ic:'💰', t:'골드',   goldMul:60 };
   else                  r = { ic:'💎', t:'다이아', dia:350 + i*30 };
@@ -8800,13 +8873,19 @@ function giveReward(r){
   }
   return out.join(' · ');
 }
-function claimAttend(){
-  if(S.att.date === today()) return;
+/* 70 — 팝업 안에서 «오늘 카드»를 탭해 수령한다. 레퍼런스에 결과 팝업이 없으므로
+   확인 팝업 대신 58 연출(보상 버스트 → 재화 비행 → HUD 롤링)로 피드백하고 팝업을 그 자리에서 재렌더한다.
+   `at` 은 «누른 시점의 카드» — 재렌더로 노드가 날아가므로 좌표를 먼저 넘겨 둔다(LESSONS 22 와 같은 처방). */
+function claimAttend(at){
+  if(S.att.date === today()) return '';
   const day = S.att.n % 28, r = ATTEND[day];
   S.att.n++; S.att.date = today();
+  if(at){ fxAt(at); fxCheck(at); }             /* 연출 DOM 은 #fxl 에 — 재렌더에 안 지워진다 */
   const txt = giveReward(r);
+  fxToast((day+1) + '일차 출석 보상');
   uiDirty = true; save();
-  popup('📅 ' + (day+1) + '일차 출석 보상', '<p>' + r.ic + ' <b>' + txt + '</b><br>내일 또 접속해 주세요!</p>');
+  sideAlert('attend', false);
+  return txt;
 }
 function spinRoulette(){
   if(rouSpinning) return;                       /* 회전 중 재입력 차단 */
@@ -9030,11 +9109,11 @@ function setBody(id, html){
   if(vs){ const nv = el.querySelector('.shsc'); if(nv) nv.scrollTop = vs; }
   return el;
 }
-function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16', 'q22', 'ml69'); }
+function closeModal(){ $('modal').classList.remove('on', 'sk8', 'rl16', 'q22', 'ml69', 'at70'); }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8', 'rl16', 'q22', 'ml69');   /* 08·16·22·69 전용 껍데기 override 를 끈다 */
+  $('modal').classList.remove('sk8', 'rl16', 'q22', 'ml69', 'at70');   /* 08·16·22·69·70 전용 껍데기 override 를 끈다 */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -9633,21 +9712,54 @@ function renderSt(){
 }
 
 /* ---- 팝업: 출석 / 룰렛 / 우편 / 퀘스트 / 승급 ---- */
+/* ---- 70 출석 보상 팝업 — docs/measure/70-출석보상팝업.md ----
+   A5 공용 다이얼로그 껍데기(#modal) + `.at70` override. 좌표는 전부 실측 절대 px.
+   **28일을 «7일 단위 4주차» 로 접고, 현재 주차를 자동으로 보여 준다**(좌우 넘김 없음 —
+   레퍼런스에 페이지 화살표가 없고, 넘길 수 있어도 미래 주차는 볼 것 말고 할 게 없다).
+   레퍼런스에 하단 버튼·닫기 ✕ 가 없으므로 수령은 «오늘 카드 탭», 닫기는 딤 탭이다.
+   7일차 밴드가 강조색인 것은 «오늘» 이라서가 아니라 «주차 최종 보상» 강조다(실측 §7). */
+function atRewards(r){                                  /* 카드에 그릴 보상 칸(최대 3) */
+  const out = [];
+  if(r.dia)     out.push({ ic:'💎', v:fmt(r.dia) });
+  if(r.rel)     out.push({ ic:'🔮', v:fmt(r.rel), rl:true });
+  if(r.goldMul) out.push({ ic:'💰', v:fmt(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
+  if(r.gold)    out.push({ ic:'💰', v:fmt(r.gold) });
+  return out.slice(0, 3);
+}
+const AT_F7X = [149.5, 309.5, 469.5];                   /* 7일차 프레임 3개 left (pitch 160) */
 function openAttend(){
   const day = S.att.n % 28, can = S.att.date !== today();
-  let h = '<h2>📅 출석 보상</h2><p>연속 <b>' + S.att.n + '</b>일 출석 중</p><div class="cal" style="margin-top:18px">';
-  ATTEND.forEach((r, i) => {
-    const got = i < day || (i === day && !can);
-    const val = r.dia ? '💎' + fmt(r.dia) : r.rel ? '🔮' + fmt(r.rel) : '💰';
-    h += '<div class="day' + (got ? ' got' : '') + (i === day && can ? ' today' : '') + '">'
-      +  '<div class="dn">' + (i+1) + '일</div><div class="di">' + r.ic + '</div><div class="dv">' + val + '</div></div>';
-  });
-  h += '</div><button class="gbtn" id="attBtn"' + (can ? '' : ' disabled') + '>'
-    + (can ? (day+1) + '일차 보상 받기' : '내일 다시 받을 수 있습니다') + '</button>'
-    + '<button class="gbtn green" id="attClose">닫기</button>';
-  showModal(h);
-  $('attClose').onclick = closeModal;
-  $('attBtn').onclick = claimAttend;
+  const base = Math.floor(day / 7) * 7;                 /* 현재 주차 자동 표시 */
+  const card = (i) => {                                 /* i = 0..6 (주차 안 인덱스) */
+    const idx = base + i, r = ATTEND[idx], sev = i === 6;
+    /* `day` 는 «다음에 받을» 칸이다 — 오늘 몫을 이미 받았어도 그 칸은 아직 «미래» 지 «완료» 가 아니다
+       (구 달력의 `i===day && !can` 을 그대로 두면 내일 보상이 회색으로 죽어 보인다) */
+    const got = idx < day, now = idx === day && can;
+    const rw = atRewards(r);
+    const frames = rw.map((x, k) =>
+      '<div class="at-rw"' + (sev ? ' style="left:' + AT_F7X[k] + 'px"' : '') + '>'
+      + '<div class="at-if' + (x.rl ? ' rl' : '') + '"><em>' + x.ic + '</em></div>'
+      + '<b>' + x.v + '</b></div>').join('');
+    return '<div class="' + (sev ? 'at-c7' : 'at-c') + (got ? ' got' : '') + (now ? ' today' : '') + '"'
+      + (now ? ' data-att="1"' : '') + '>'
+      + '<div class="at-in">'
+      +   '<div class="at-bd' + (now || sev ? ' hi' : '') + '"><i>' + (idx+1) + '일 차</i></div>'
+      +   '<div class="at-pl"></div>' + frames
+      + '</div>'
+      + (got ? '<div class="at-ck">✔</div>' : '')
+      + (now ? '<div class="at-cr">👑</div>' : '') + '</div>';
+  };
+  $('mtitle').textContent = '출석 보상';
+  $('mbox').innerHTML = '<div class="at-g">'
+    + [0,1,2,3,4,5].map(card).join('') + '</div>' + card(6);
+  const hd = document.querySelector('#modal .mhead');
+  if(!hd.querySelector('.at-ring'))
+    hd.insertAdjacentHTML('beforeend', '<s class="at-ring l"></s><s class="at-ring r"></s>');
+  const m = $('modal');
+  m.classList.remove('sk8', 'rl16', 'q22');
+  m.classList.add('at70', 'on');
+  const t = $('mbox').querySelector('[data-att]');
+  if(t) t.onclick = () => { claimAttend(t); openAttend(); };
 }
 /* ---- 룰렛 원판 (작업 29) ----
    설계 확정(2026-08-24): 8칸 그리드 하이라이트 폐기 → 실제로 회전하는 원판 휠
