@@ -4215,7 +4215,7 @@
         <div class="tt"><span id="tutoName">튜토리얼</span></div>
         <div class="tp"><i id="tutoBar"></i></div>
       </div>
-      <div class="trew"><span class="ri">🎁</span><span class="tsub" id="tutoSub">0 / 1</span></div>
+      <div class="trew"><span class="ri" id="tutoRew">💎</span><span class="tsub" id="tutoSub">300</span></div>
     </div>
     <div id="spdb"><span class="sv">×1.3</span><span class="sk">🔒</span></div>
     <div id="battlefoot">
@@ -5149,21 +5149,42 @@ const MAILS = [
   { id:'m5', t:'📩 운영자의 편지',       b:'즐거운 사냥 되세요!',           g:20000, c:600,  r:500 }
 ];
 
-/* ---- 튜토리얼 ---- */
-const TUTO = [
-  { n:'스킬 1회 소환하기',   goal:1,  c:200, get:() => S.cnt.sumSkill },
-  { n:'스킬 장착하기',       goal:2,  c:200, get:() => S.eqSkill.length },
-  { n:'무기 1회 소환하기',   goal:1,  c:250, get:() => S.cnt.sumEquip },
-  { n:'펫 1회 소환하기',     goal:1,  c:300, get:() => S.cnt.sumPet },
-  { n:'강화 10회 하기',      goal:10, c:250, get:() => S.upgrades },
-  { n:'스탯 포인트 5 투자',  goal:5,  c:250, get:() => S.spAtk + S.spHp },
-  { n:'출석 보상 받기',      goal:1,  c:300, get:() => S.att.n },
-  { n:'룰렛 1회 돌리기',     goal:1,  c:300, get:() => S.cnt.spins },
-  { n:'던전 1회 도전하기',   goal:1,  c:350, get:() => S.cnt.dungeon },
-  { n:'아이템 1회 강화하기', goal:1,  c:350, get:() => S.cnt.levelUps },
-  { n:'컬렉션 보너스 받기',  goal:1,  c:500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic },
-  { n:'승급전 승리하기',     goal:1,  c:800, get:() => S.rank }
+/* ---- 가이드 미션 (작업 61) --------------------------------------------------
+   구 «튜토리얼»(TUTO / S.tuto) 을 대체한다. 레퍼런스 32(미완료 상태)·02 ④(보상받기 상태)의
+   우하단 배너가 이 체인 하나를 그린다.
+
+   진행도 규칙 — 미션은 두 종류다.
+     · 델타형(기본)  : «지금부터 n회 더». 미션이 현재로 올라온 순간의 카운터를 `S.guide.prog`
+                       에 기준선으로 찍고, 진행 = get() − prog. 레퍼런스의 `(0/1)` 표기가 이것이다.
+     · 절대형(abs:1) : «스테이지 N 도달» 처럼 누적값 자체가 목표. 기준선을 쓰지 않는다.
+   보상은 전부 다이아(레퍼런스 «💎1,000» 톤). 300 → 3,000 으로 완만히 오른다.
+   14·17·19 번은 03 던전 해금(«가이드미션 N 클리어»)의 기준점이라 스테이지 조건을 겸한다. */
+const GUIDE = [
+  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  get:() => S.cnt.sumSkill },
+  { n:'스킬 장착하기',         goal:1,   dia:300,  abs:1, get:() => S.eqSkill.length },
+  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip },
+  { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn() },
+  { n:'훈련 10회 하기',        goal:10,  dia:500,  get:() => S.upgrades },
+  { n:'동료 1회 소환하기',     goal:1,   dia:500,  get:() => S.cnt.sumPet },
+  { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills },
+  { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best },
+  { n:'던전 1회 입장하기',     goal:1,   dia:700,  get:() => S.cnt.dungeon },
+  { n:'룰렛 1회 돌리기',       goal:1,   dia:700,  get:() => S.cnt.spins },
+  { n:'출석 보상 받기',        goal:1,   dia:800,  get:() => S.att.n },
+  { n:'보물상자 1개 오픈',     goal:1,   dia:800,  get:() => S.cnt.sumRelic },
+  { n:'아이템 1회 강화하기',   goal:1,   dia:900,  get:() => S.cnt.levelUps },
+  { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best },
+  { n:'유물 장착하기',         goal:1,   dia:1000, abs:1, get:() => S.eqRelic.length },
+  { n:'스탯 포인트 10 투자',   goal:10,  dia:1200, get:() => S.spAtk + S.spHp },
+  { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best },
+  { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, get:() => S.coll.skill+S.coll.equip+S.coll.pet+S.coll.relic },
+  { n:'보스 1회 처치하기',     goal:1,   dia:2000, get:() => bossCleared() },
+  { n:'스테이지 40 도달하기',  goal:40,  dia:3000, abs:1, get:() => S.best }
 ];
+/* 장착 중인 장비 부위 수(25 확정 — 무기·방패·목걸이 3칸) */
+const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eqSlot[k] ? 1 : 0), 0);
+/* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
+const bossCleared = () => Math.max(0, Math.floor((S.best - 1) / 10));
 
 /* ---- 퀘스트 ---- */
 const QUESTS = [
@@ -5298,7 +5319,8 @@ const DEF = () => ({
   sum: BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {}),
   coll:{ skill:0, equip:0, pet:0, relic:0 },
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
-  mail:{}, tuto:0,
+  mail:{},
+  guide:{ idx:0, prog:0 },                    /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선 */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
@@ -5336,6 +5358,16 @@ function load(){
       const r = b.raidBest[k];
       if(!r || typeof r !== 'object' || !Number.isFinite(r.dmg) || !Number.isFinite(r.dps)) delete b.raidBest[k];
     });
+    /* 61 가이드 미션 — 구버전 세이브는 «S.tuto = 숫자» 였다. 44 교훈 2 대로 KEY 는 올리지 않고
+       «없으면 기본값» 으로 흡수한다. 구 튜토리얼 12개는 새 체인 앞쪽과 순서가 같으므로 idx 를
+       그대로 이어받고(체인 길이로 clamp), 기준선은 아래 gmStart() 가 지금 값으로 다시 찍는다. */
+    if(!b.guide || typeof b.guide !== 'object') b.guide = DEF().guide;
+    if(d.guide === undefined){                       /* 구 세이브 → 이관 */
+      b.guide = { idx: Number.isFinite(d.tuto) ? d.tuto : 0, prog:-1 };   /* -1 = 기준선 미확정 */
+    }
+    if(!Number.isFinite(b.guide.idx))  b.guide.idx  = 0;
+    if(!Number.isFinite(b.guide.prog)) b.guide.prog = -1;
+    b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
     b.eqRelic = (d.eqRelic || []).filter(i => RL[i]);
@@ -6569,18 +6601,22 @@ function drawHud(){
   drawFac();
 }
 function drawTuto(){
-  const box = $('tuto'), t = tutoCur();
-  if(!t){ box.classList.add('off'); return; }
+  const box = $('tuto'), m = gmCur();
+  if(!m){ box.classList.add('off'); return; }        /* 체인 완주 → 배너 자체가 사라진다 */
   box.classList.remove('off');
-  const p = Math.min(t.get(), t.goal), ready = p >= t.goal;
-  /* 레퍼런스 배너는 «[보상받기] / 미션 문구 / 보상칸 + 잔여 카운터» 3요소뿐이다(진행바 없음).
-     진행 수치는 미션 문구 뒤에 붙이고, 카운터에는 남은 개수를 넣는다. */
-  $('tutoName').textContent = t.n;
-  $('tutoBar').style.width = (p/t.goal*100) + '%';
-  $('tutoSub').textContent = fmt(Math.max(0, t.goal - p));
+  const p = gmProg(m), ready = p >= m.goal;
+  /* 61 — 배너는 «라벨 / 미션 문구 (진행/목표) / 보상칸 + 보상 수량» 3요소다(진행바 없음).
+     레퍼런스 표기: 보상받기 상태 `[보상받기]` (02 ④) · 미완료 상태 `[미션-n]` (32).
+     문구는 `보물상자 1개 오픈 (0/1)` 형태로 목표 뒤에 진행 수치를 괄호로 붙인다. */
+  box.classList.toggle('ready', ready);
+  box.classList.toggle('todo', !ready);
+  $('tutoName').textContent = m.n + ' (' + fmt(p) + '/' + fmt(m.goal) + ')';
+  $('tutoBar').style.width = (p / m.goal * 100) + '%';
+  $('tutoRew').textContent = '💎';
+  $('tutoSub').textContent = fmt(m.dia);
   const btn = $('tutoBtn');
   btn.disabled = !ready;
-  btn.textContent = ready ? '[보상받기]' : '[진행중]';
+  btn.textContent = ready ? '[보상받기]' : '[미션-' + (S.guide.idx + 1) + ']';
 }
 
 /* ==========================================================================
@@ -6950,17 +6986,37 @@ function claimAllQuests(){
   uiDirty = true; save();
   openQuest();
 }
-const tutoCur   = () => S.tuto < TUTO.length ? TUTO[S.tuto] : null;
-const tutoReady = () => { const t = tutoCur(); return !!t && t.get() >= t.goal; };
-function claimTuto(){
-  const t = tutoCur();
-  if(!t || !tutoReady()) return;
-  S.dia += t.c; S.tuto++;
-  fxReward(); fxToast('가이드 미션 완료');    /* 58 */
+/* ---- 61 가이드 미션 — 진행 판정 · 수령 ----
+   진행도는 «카운터 − 기준선» 이다. 기준선(S.guide.prog)은 미션이 현재로 올라온 순간 찍는다.
+   구 세이브에서 이관된 직후에는 prog = -1(미확정)이라 여기서 처음 읽힐 때 지금 값으로 자동 확정된다
+   — 그래야 «이미 100만 마리 잡았으니 적 100마리 미션이 즉시 완료» 같은 오작동이 없다. */
+const gmCur   = () => S.guide.idx < GUIDE.length ? GUIDE[S.guide.idx] : null;
+function gmBase(m){
+  if(m.abs) return 0;
+  if(!Number.isFinite(S.guide.prog) || S.guide.prog < 0) S.guide.prog = m.get();
+  return S.guide.prog;
+}
+function gmProg(m){
+  m = m || gmCur(); if(!m) return 0;
+  return Math.max(0, Math.min(m.goal, Math.floor(m.get() - gmBase(m))));
+}
+const gmReady = () => { const m = gmCur(); return !!m && gmProg(m) >= m.goal; };
+/* 다음 미션으로 넘어갈 때 기준선을 다시 찍는다 */
+function gmStart(){ const m = gmCur(); S.guide.prog = (m && !m.abs) ? m.get() : 0; }
+function claimGuide(){
+  const m = gmCur();
+  if(!m || !gmReady()) return;
+  const box = $('tuto'), rew = box && box.querySelector('.trew');
+  fxAt(rew || box);                            /* 58 — 보상칸에서 HUD 다이아 알약으로 날아간다 */
+  S.dia += m.dia;
+  S.guide.idx++; gmStart();
+  if(rew) fxPop(rew);                          /* 58 — 보상 팝 + 버스트 */
+  fxReward(rew || box);
+  fxToast('가이드 미션 완료 — 💎 ' + fmt(m.dia));
   uiDirty = true; save();
-  popup('📌 튜토리얼 완료!', '<p><b>' + t.n + '</b><br>다이아 <b>💎+' + fmt(t.c) + '</b> 획득!</p>'
-    + (tutoCur() ? '<p style="color:#8fd6ff;margin-top:10px">다음 — ' + tutoCur().n + '</p>'
-                 : '<p style="color:#8ff0a8;margin-top:10px">모든 튜토리얼 완료! 🎉</p>'));
+  if(!gmCur())                                 /* 체인 끝에서만 모달로 마무리한다 */
+    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>💎+' + fmt(m.dia) + '</b> 획득!</p>'
+      + '<p style="color:#8ff0a8;margin-top:10px">모든 가이드 미션 완료! 🎉</p>');
 }
 const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
 function claimAllMail(){
@@ -7898,21 +7954,23 @@ function openQuest(tab){
 /* ---- 03 던전 팝업 (리스트 페이지) — 측정표 docs/measure/03-던전팝업.md ----
    레퍼런스는 모달이 아니라 HUD~탭바 사이를 채우는 불투명 리스트 페이지다.
    카드 좌표·크기는 전부 실측 절대 px (카드 980x350, pitch 360, 좌우 여백 50).
-   해금 조건은 레퍼런스의 「가이드미션 N 클리어」 자리에 우리 게임의 최고 스테이지를 넣었다.
-   (요구 전투력이 3.5K~9K 이라 그 전에는 어차피 클리어가 불가능해 밸런스 영향은 없다) */
+   해금 조건은 레퍼런스 그대로 「가이드미션 N 클리어」 다(작업 61 에서 체인이 생기며 연결).
+   구 조건이던 «최고 스테이지 15·25·40» 은 가이드 미션 14·17·20 번이 각각 그 스테이지 도달을
+   목표로 갖고 있어 **게이팅이 그대로 보존된다** — 밸런스 영향 없음. */
 const DUN_UI = {
   gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:'🪙', tk:'🎫',
-            rw:['골드 획득 가능'], open:1  },
+            rw:['골드 획득 가능'], gm:0  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️',
-            rw:['다이아 획득 가능'], open:1  },
+            rw:['다이아 획득 가능'], gm:0  },
   relic:  { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫',
-            rw:['유물석 획득 가능','유물 재료 획득 가능'], open:15 },
+            rw:['유물석 획득 가능','유물 재료 획득 가능'], gm:14 },
   growth: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🧩', tk:'🎟️',
-            rw:['도감 재료 획득 가능'], open:25 },
+            rw:['도감 재료 획득 가능'], gm:17 },
   boss:   { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'👑', tk:'🎫',
-            rw:['골드 획득 가능','보석 획득 가능'], open:40 }
+            rw:['골드 획득 가능','보석 획득 가능'], gm:20 }
 };
-function dunLocked(d){ return S.best < DUN_UI[d.id].open; }
+/* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다. */
+function dunLocked(d){ return S.guide.idx < DUN_UI[d.id].gm; }
 function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
   let h = '';
@@ -7928,7 +7986,7 @@ function renderDunPage(){
       +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
       +  '<div class="sp tk"><em>' + u.tk + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
       +  (!lock && left > 0 ? '<s class="dot"></s>' : '')
-      +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + u.open + '</b> 클리어</u></div>' : '')
+      +  (lock ? '<div class="lk"><em>🔒</em><u>가이드미션 <b>' + u.gm + '</b> 클리어</u></div>' : '')
       +  '</div>';
   });
   $('dunList').innerHTML = h;
@@ -7966,8 +8024,8 @@ $('dunList').addEventListener('click', e => {
   if(!c) return;
   const d = DUNGEONS.find(x => x.id === c.dataset.dcard);
   if(dunLocked(d)){
-    popup('🔒 ' + d.n, '<p>최고 스테이지 <b>' + DUN_UI[d.id].open + '</b> 를 클리어하면 열립니다.<br>'
-      + '현재 최고 스테이지 <b>' + S.best + '</b></p>');
+    popup('🔒 ' + d.n, '<p>가이드미션 <b>' + DUN_UI[d.id].gm + '</b> 을 클리어하면 열립니다.<br>'
+      + '현재 가이드미션 <b>' + Math.min(S.guide.idx + 1, GUIDE.length) + '</b> 진행 중</p>');
     return;
   }
   /* 04 던전 세부 팝업 — 03 이 남겨 둔 임시 진입점을 정식 팝업으로 교체했다 */
@@ -9607,7 +9665,10 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
   e.stopPropagation();
   goTab(b.dataset.go, true);
 });
-$('tutoBtn').onclick = claimTuto;
+/* 61 — 레퍼런스 배너는 «배너 전체가 [보상받기] 버튼» 이다. 라벨과 배너 어디를 눌러도 수령된다.
+   미완료 상태에서는 gmReady() 가 false 라 claimGuide() 가 즉시 되돌아온다(무해). */
+$('tutoBtn').onclick = e => { e.stopPropagation(); claimGuide(); };
+$('tuto').onclick    = claimGuide;
 /* ④ 좌하단 유틸 · 우상단 메뉴 · 배속 — 레퍼런스 02번 구성. 콘텐츠는 아직 미구현이라 안내만 띄운다 */
 document.querySelectorAll('#botleft .ubtn').forEach(b => {
   b.onclick = () => b.dataset.util === 'chat'
