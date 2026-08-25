@@ -1,0 +1,211 @@
+#!/usr/bin/env node
+/* 117 검증 — 34 축복: 켤 때마다 축복 경험치 ↑ → 레벨업, **레벨당 효과 +10%**
+ *
+ *   node tools/verify117.js
+ *
+ * 지시서(PROGRESS 117 «검증 [3]-(가)») 가 요구한 항목 그대로 — «만들어 놓음» 이 아니라
+ * «버튼을 누르면 실제 게임 데이터가 바뀌고 저장·HUD·다른 화면에 반영되는가» 를 본다.
+ *
+ *   [A] 상수 — BLESS_EFFLV(0.10) · BLESS_MAXLV(51) 존재, blessScale/blessPct 접근자
+ *   [B] 곡선 — Lv1 1.00 · Lv2 1.10 · Lv6 1.50 · Lv51 6.00 · Lv52 이상은 캡(6.00)
+ *   [C] 실제 배율 — activateBless 4회 → lv2, bonus().atk 배율 1.22 · Lv6 → 1.30 · 골드 Lv2 → 1.55
+ *   [D] 지속시간은 종전 곡선(30분 + 5분/Lv) 유지 — 레벨업은 «그 활성화부터» 즉시
+ *   [E] 상한 — Lv51 에서 경험치가 멈추고 진행바가 MAX
+ *   [F] UI 반영 — 카드 «+xx%» 와 보너스 «+xx%» 가 실효값, Lv 알약·진행바 갱신
+ *   [G] 저장·복원 — lv 이 저장되고 새로고침 뒤에도 같은 배율. 상한 초과 세이브는 잘린다
+ *   [H] 만료 — 만료 즉시 배율 원복(레벨이 올라도 캐시가 안 굳는다)
+ *   [I] 연출 — 레벨업 순간 토스트(58 fxToast) 1장
+ *   [J] 콘솔 에러 0건
+ *
+ * ⚠ addInitScript 는 reload 마다 다시 돈다(34 교훈 5) — 세이브는 «처음 한 번만» 깐다.
+ *    autoBuy·spAuto 는 끈다: 유휴 루프가 사이에 레벨을 올려 «배수 비교» 를 오염시킨다(51 교훈 ③).
+ */
+const path = require('path');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+
+const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+let pass = 0, fail = 0;
+const ok = (b, name, detail) => {
+  console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
+  b ? pass++ : fail++;
+};
+const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
+
+(async () => {
+  const browser = await launch(chromium);
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push(String(e)));
+
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('idle_hunter_save_v4'))
+      localStorage.setItem('idle_hunter_save_v4',
+        JSON.stringify({ gold: 1000, dia: 10, stage: 5, best: 5, autoBuy: false, spAuto: false }));
+  });
+  await page.goto(URL);
+  await page.waitForFunction(() => typeof S !== 'undefined' && typeof blessScale === 'function');
+  await page.waitForTimeout(600);
+
+  /* ---- [A] 상수·접근자 ---- */
+  const A = await page.evaluate(() => ({
+    eff: typeof BLESS_EFFLV === 'number' ? BLESS_EFFLV : null,
+    max: typeof BLESS_MAXLV === 'number' ? BLESS_MAXLV : null,
+    fns: ['blessScale', 'blessPct', 'blessGoldPct', 'blessLv', 'blessMax'].filter(n => typeof window[n] === 'function'),
+    lv: S.bless.lv, prog: S.bless.prog
+  }));
+  ok(A.eff === 0.10, 'A1 BLESS_EFFLV = 0.10 (레벨당 효과 +10%)', String(A.eff));
+  ok(A.max === 51, 'A2 BLESS_MAXLV = 51 (상한)', String(A.max));
+  ok(A.fns.length === 5, 'A3 접근자 5종 존재', A.fns.join(','));
+  ok(A.lv === 1 && A.prog === 0, 'A4 구버전 세이브 → Lv1 · 경험치 0', A.lv + '/' + A.prog);
+
+  /* ---- [B] 곡선 (S 를 직접 세워 순수 함수만 본다) ---- */
+  const B = await page.evaluate(() => {
+    const o = S.bless.lv, r = {};
+    [1, 2, 6, 11, 51, 80].forEach(l => { S.bless.lv = l; r[l] = [blessScale(), blessPct('atk'), blessGoldPct()]; });
+    S.bless.lv = o; return r;
+  });
+  ok(near(B[1][0], 1.0) && near(B[1][1], 20) && near(B[1][2], 50), 'B1 Lv1 = ×1.00 (공 +20% · 골드 +50%)', JSON.stringify(B[1]));
+  ok(near(B[2][0], 1.1) && near(B[2][1], 22) && near(B[2][2], 55), 'B2 Lv2 = ×1.10 (공 +22% · 골드 +55%)', JSON.stringify(B[2]));
+  ok(near(B[6][0], 1.5) && near(B[6][1], 30, 1e-9), 'B3 Lv6 = ×1.50 (공 +30%)', JSON.stringify(B[6]));
+  ok(near(B[11][1], 40, 1e-9) && near(B[11][2], 100, 1e-9), 'B4 Lv11 = 공 +40% · 골드 +100%', JSON.stringify(B[11]));
+  ok(near(B[51][0], 6.0) && near(B[51][1], 120, 1e-9), 'B5 Lv51 = ×6.00 (공 +120%) 상한', JSON.stringify(B[51]));
+  ok(near(B[80][0], B[51][0]), 'B6 Lv51 초과는 캡 — Lv80 도 ×6.00', JSON.stringify(B[80]));
+
+  /* ---- [C] 실제 배율 — bonus() 를 거쳐 stat 까지 내려가는가 ---- */
+  await page.evaluate(() => { S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); });
+  const base = await page.evaluate(() => ({ atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg }));
+
+  /* 1회차 — Lv1 이므로 종전과 같은 ×1.20 이어야 한다(회귀 방지: 34 게이트 C2/C3 와 같은 값) */
+  await page.evaluate(() => activateBless('atk'));
+  const c1 = await page.evaluate(() => ({ atk: mulAtk(), dmg: stat.dmg, lv: S.bless.lv, prog: S.bless.prog }));
+  ok(near(c1.atk / base.atk, 1.20, 1e-9), 'C1 Lv1 활성 = ×1.20 (34 회귀)', (c1.atk / base.atk).toFixed(4));
+  ok(near(c1.dmg / base.dmg, 1.20, 1e-9), 'C2 stat.dmg 도 ×1.20', (c1.dmg / base.dmg).toFixed(4));
+  ok(c1.prog === 1, 'C3 축복 경험치 +1', String(c1.prog));
+
+  /* 4회 켜면 Lv2 — 그 순간부터 효과가 22% 다 */
+  const c4 = await page.evaluate(() => {
+    ['hp', 'rate'].forEach(k => activateBless(k));                 /* 경험치 3 */
+    S.bless.exp.atk = 0; markDirty(); activateBless('atk');        /* 4번째 → Lv2 */
+    return { lv: S.bless.lv, prog: S.bless.prog, atk: mulAtk(), hp: mulHp(), rate: mulRate(), gold: mulGold(), dmg: stat.dmg };
+  });
+  ok(c4.lv === 2 && c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', c4.lv + '/' + c4.prog);
+  ok(near(c4.atk / base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (c4.atk / base.atk).toFixed(4));
+  ok(near(c4.hp / base.hp, 1.22, 1e-9) && near(c4.rate / base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
+     (c4.hp / base.hp).toFixed(4) + '/' + (c4.rate / base.rate).toFixed(4));
+  ok(near(c4.gold / base.gold, 1.55, 1e-9), 'C7 3종 전부 활성 → 골드 ×1.55 (보너스도 레벨 곡선)', (c4.gold / base.gold).toFixed(4));
+  ok(near(c4.dmg / base.dmg, 1.22, 1e-9), 'C8 stat.dmg 도 ×1.22 (HUD 전투력에 반영)', (c4.dmg / base.dmg).toFixed(4));
+
+  /* Lv6 → 1.30 */
+  const c6 = await page.evaluate(() => {
+    S.bless.lv = 6; S.bless.exp = { atk: Date.now() + 6e5, hp: 0, rate: 0 }; markDirty();
+    return { atk: mulAtk(), gold: mulGold() };
+  });
+  ok(near(c6.atk / base.atk, 1.30, 1e-9), 'C9 Lv6 공격력 = ×1.30', (c6.atk / base.atk).toFixed(4));
+  ok(near(c6.gold / base.gold, 1.0), 'C10 1종만 켜면 골드 보너스 없음', (c6.gold / base.gold).toFixed(4));
+
+  /* ---- [D] 지속시간 곡선은 그대로 (레벨업은 그 활성화부터 즉시) ---- */
+  const D = await page.evaluate(() => {
+    S.bless = { lv: 1, prog: 3, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty();
+    activateBless('atk');                                          /* 4번째 → Lv2 → 35분 */
+    const a = { lv: S.bless.lv, left: blessLeft('atk') };
+    S.bless.lv = 6; S.bless.exp.hp = 0; activateBless('hp');
+    return { a, b: { lv: S.bless.lv, left: blessLeft('hp') } };
+  });
+  ok(D.a.lv === 2 && Math.abs(D.a.left - 35 * 60000) < 2000, 'D1 Lv2 지속 35분 (레벨업 즉시 적용)', D.a.left);
+  ok(Math.abs(D.b.left - 55 * 60000) < 2000, 'D2 Lv6 지속 55분 (30 + 5×5)', D.b.left);
+
+  /* ---- [E] 상한 ---- */
+  const E = await page.evaluate(() => {
+    S.bless = { lv: BLESS_MAXLV, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty();
+    for (let i = 0; i < 8; i++) { S.bless.exp.atk = 0; activateBless('atk'); }
+    openBless();
+    return { lv: S.bless.lv, prog: S.bless.prog, mx: blessMax(),
+             pg: document.getElementById('blsProg').textContent,
+             fill: document.getElementById('blsFill').style.width,
+             scale: blessScale() };
+  });
+  ok(E.lv === 51 && E.prog === 0, 'E1 Lv51 에서 레벨·경험치 정지', E.lv + '/' + E.prog);
+  ok(E.pg === 'MAX' && parseFloat(E.fill) === 100, 'E2 진행바 «MAX» · 100%', E.pg + ' ' + E.fill);
+  ok(near(E.scale, 6.0), 'E3 상한 배율 ×6.00', String(E.scale));
+
+  /* ---- [F] UI 반영 ---- */
+  const F = await page.evaluate(() => {
+    const rd = lv => { S.bless = { lv, prog: 1, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); renderBless();
+      return { vl: [...document.querySelectorAll('#blsCards .vl')].map(e => e.textContent),
+               bn: document.getElementById('blsBnV').textContent,
+               lv: document.getElementById('blsLv').textContent,
+               pg: document.getElementById('blsProg').textContent,
+               fill: document.getElementById('blsFill').style.width }; };
+    return { l1: rd(1), l2: rd(2), l6: rd(6), l11: rd(11) };
+  });
+  ok(F.l1.vl.join(',') === '+20%,+20%,+20%' && F.l1.bn === '+50%', 'F1 Lv1 카드 +20% · 보너스 +50% (34 회귀)',
+     F.l1.vl.join(',') + ' | ' + F.l1.bn);
+  ok(F.l2.vl.join(',') === '+22%,+22%,+22%' && F.l2.bn === '+55%', 'F2 Lv2 카드 +22% · 보너스 +55%',
+     F.l2.vl.join(',') + ' | ' + F.l2.bn);
+  ok(F.l6.vl[0] === '+30%' && F.l11.vl[0] === '+40%', 'F3 Lv6 +30% · Lv11 +40%', F.l6.vl[0] + '/' + F.l11.vl[0]);
+  ok(F.l11.lv === 'Lv.11' && F.l11.pg === '1/4' && parseFloat(F.l11.fill) === 25,
+     'F4 Lv 알약 · 경험치 1/4 · 채움 25%', F.l11.lv + ' ' + F.l11.pg + ' ' + F.l11.fill);
+
+  /* ---- [G] 저장·복원 ---- */
+  const G1 = await page.evaluate(() => {
+    S.bless = { lv: 7, prog: 2, exp: { atk: Date.now() + 12e5, hp: Date.now() + 12e5, rate: Date.now() + 12e5 } };
+    markDirty(); save();
+    return { saved: JSON.parse(localStorage.getItem('idle_hunter_save_v4')).bless, atk: mulAtk(), gold: mulGold() };
+  });
+  ok(G1.saved && G1.saved.lv === 7 && G1.saved.prog === 2, 'G1 localStorage 에 lv·경험치 저장', JSON.stringify(G1.saved));
+  await page.reload();
+  await page.waitForFunction(() => typeof S !== 'undefined' && typeof blessScale === 'function');
+  await page.waitForTimeout(600);
+  const G2 = await page.evaluate(() => ({ lv: S.bless.lv, prog: S.bless.prog, scale: blessScale(),
+                                          pct: blessPct('atk'), key: KEY }));
+  ok(G2.lv === 7 && G2.prog === 2, 'G2 새로고침 후에도 Lv7 · 경험치 2', G2.lv + '/' + G2.prog);
+  ok(near(G2.scale, 1.6) && near(G2.pct, 32, 1e-9), 'G3 새로고침 후 배율도 그대로 (+32%)', G2.pct.toFixed(2));
+  ok(G2.key === 'idle_hunter_save_v4', 'G4 저장 KEY 미변경 (마이그레이션으로 흡수)', G2.key);
+  /* 손댄 세이브를 흉내낸다 — localStorage 만 고치면 돌고 있는 페이지의 자동 저장이 되돌려 놓는다.
+     S 에 직접 넣고 save() 해야 «상한 초과가 실제로 저장된» 상태가 된다. */
+  const G5 = await page.evaluate(() => { S.bless.lv = 999; save();
+    return JSON.parse(localStorage.getItem('idle_hunter_save_v4')).bless.lv; });
+  await page.reload();
+  await page.waitForFunction(() => typeof S !== 'undefined' && typeof blessScale === 'function');
+  await page.waitForTimeout(500);
+  const G6 = await page.evaluate(() => ({ lv: S.bless.lv, scale: blessScale() }));
+  ok(G5 === 999 && G6.lv === 51 && near(G6.scale, 6.0), 'G5 상한 초과 세이브(lv 999)는 51 로 잘린다',
+     '저장 ' + G5 + ' → 로드 ' + G6.lv + ' ×' + G6.scale);
+
+  /* ---- [H] 만료 — 레벨이 올라가 있어도 만료 즉시 원복 ---- */
+  const H0 = await page.evaluate(() => {
+    S.bless = { lv: 11, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty();
+    const off = mulAtk();
+    S.bless.exp.atk = Date.now() + 900; markDirty();
+    return { off, on: mulAtk() };
+  });
+  ok(near(H0.on / H0.off, 1.40, 1e-9), 'H1 Lv11 활성 = ×1.40', (H0.on / H0.off).toFixed(4));
+  await page.waitForTimeout(2400);
+  const H1 = await page.evaluate(() => ({ on: blessOn('atk'), atk: mulAtk() }));
+  ok(!H1.on && near(H1.atk / H0.off, 1.0, 1e-9), 'H2 만료 즉시 배율 원복 (1초 tick 이 캐시를 깬다)',
+     (H1.atk / H0.off).toFixed(4));
+
+  /* ---- [I] 레벨업 연출 (58 fxToast) ---- */
+  const I = await page.evaluate(async () => {
+    S.bless = { lv: 3, prog: 3, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); openBless();
+    document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+    activateBless('atk');
+    await new Promise(r => setTimeout(r, 120));
+    const t = [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).filter(s => /축복/.test(s));
+    return { lv: S.bless.lv, toasts: t, popped: !!document.querySelector('#blsCards .bls-c.fx-pop') };
+  });
+  ok(I.lv === 4, 'I1 4번째 활성 → Lv4', String(I.lv));
+  ok(I.toasts.length === 1 && /축복 Lv\.4 — 효과 \+26%/.test(I.toasts[0]), 'I2 레벨업 토스트 1장 (실효 %)',
+     JSON.stringify(I.toasts));
+  ok(I.popped, 'I3 카드 팝 연출(fxPop) 부착', String(I.popped));
+
+  /* ---- [J] 콘솔 ---- */
+  ok(errs.length === 0, 'J1 콘솔 에러 0건', errs.slice(0, 3).join(' | '));
+
+  await browser.close();
+  console.log('\nVERIFY117 ' + (fail === 0 ? 'PASS' : 'FAIL') + ' — ' + pass + '/' + (pass + fail));
+  process.exit(fail === 0 ? 0 : 1);
+})().catch(e => { console.error(e); process.exit(2); });

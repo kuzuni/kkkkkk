@@ -7531,7 +7531,7 @@
         <div class="bls-bn" id="blsBonus">
           <s class="ic">💰</s>
           <s class="ch"></s>
-          <s class="tx">골드 획득량<em>+50%</em></s>
+          <s class="tx">골드 획득량<em id="blsBnV">+50%</em></s>
         </div>
         <div class="bls-ft"><i>모든 축복을 활성화하면 보너스 축복이 활성화됩니다.</i></div>
       </div>
@@ -9034,10 +9034,14 @@ const BLESS = [
   { k:'hp',   n:'체력',     ic:'❤️', v:0.20 },
   { k:'rate', n:'공격 속도', ic:'🌀', v:0.20 }   /* ⚡ 는 노랑 카드 위에서 잉크가 배경과 섞여 스캔에 안 잡힌다 */
 ];
-const BLESS_STEP  = 4;                 /* 진행바 n/4 — 4번 켜면 축복 레벨 +1 */
+const BLESS_STEP  = 4;                 /* 진행바 n/4 — 축복 경험치 4를 채우면 축복 레벨 +1 */
 const BLESS_BASE  = 30 * 60 * 1000;    /* 기본 지속 30분 */
 const BLESS_PERLV = 5 * 60 * 1000;     /* 레벨당 +5분 */
-const BLESS_GOLD  = 0.50;              /* 보너스 축복 — 3종 전부 활성일 때 골드 획득량 +50% */
+/* 117 — 레벨이 «지속시간에만» 반영되던 것을 **효과 배율에도** 반영한다(저장소 주인 지시 2026-08-26).
+   효과 = v × (1 + 0.10 × (lv − 1))  →  Lv1 20% · Lv2 22% · Lv6 30% · Lv51 120%. 골드 보너스도 같은 곡선. */
+const BLESS_EFFLV = 0.10;              /* 레벨당 효과 +10% (기본값 대비 비율) */
+const BLESS_MAXLV = 51;                /* 상한 — Lv51 에서 +500%(효과 ×6) 로 캡. 무한 성장 방지 */
+const BLESS_GOLD  = 0.50;              /* 보너스 축복 — 3종 전부 활성일 때 골드 획득량 +50%(Lv1 기준) */
 
 const KEY = 'idle_hunter_save_v4';
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); };
@@ -9121,7 +9125,8 @@ function load(){
     {
       const s = (b.bless && typeof b.bless === 'object') ? b.bless : {};
       const e = (s.exp && typeof s.exp === 'object') ? s.exp : {};
-      b.bless = { lv: Number.isFinite(s.lv) && s.lv >= 1 ? s.lv|0 : 1,
+      /* 117 — 상한(BLESS_MAXLV)을 넘겨 저장된 값도 여기서 잘라 둔다(옛 세이브·손댄 세이브 대비) */
+      b.bless = { lv: Number.isFinite(s.lv) && s.lv >= 1 ? Math.min(s.lv|0, BLESS_MAXLV) : 1,
                   prog: Number.isFinite(s.prog) && s.prog >= 0 ? Math.min(s.prog|0, BLESS_STEP-1) : 0, exp:{} };
       BLESS.forEach(x => { const v = e[x.k]; b.bless.exp[x.k] = Number.isFinite(v) && v > 0 ? v : 0; });
     }
@@ -9276,12 +9281,14 @@ function bonus(){
   const tb = 1 + TRAIN_BONUS * (trainStage() - 1);
   b.atk *= tb; b.hp *= tb; b.regen *= tb;
 
-  /* 34 축복 — 활성 축복만 곱하고, 3종 전부 활성이면 «보너스 축복»(골드 +50%)이 붙는다.
-     만료는 시간으로 갈리므로 blessTick() 이 만료 순간에 markDirty() 를 불러 이 캐시를 깬다. */
-  if(blessOn('atk'))  b.atk  *= 1 + BLESS[0].v;
-  if(blessOn('hp'))   b.hp   *= 1 + BLESS[1].v;
-  if(blessOn('rate')) b.rate *= 1 + BLESS[2].v;
-  if(blessAll())      b.gold *= 1 + BLESS_GOLD;
+  /* 34 축복 — 활성 축복만 곱하고, 3종 전부 활성이면 «보너스 축복»(골드)이 붙는다.
+     만료는 시간으로 갈리므로 blessTick() 이 만료 순간에 markDirty() 를 불러 이 캐시를 깬다.
+     117 — 배율에 축복 레벨이 곱해진다(blessScale()). 레벨업은 activateBless() 가 markDirty() 로 캐시를 깬다. */
+  const bsc = blessScale();
+  if(blessOn('atk'))  b.atk  *= 1 + BLESS[0].v * bsc;
+  if(blessOn('hp'))   b.hp   *= 1 + BLESS[1].v * bsc;
+  if(blessOn('rate')) b.rate *= 1 + BLESS[2].v * bsc;
+  if(blessAll())      b.gold *= 1 + BLESS_GOLD * bsc;
 
   bonusCache = b; bonusDirty = false;
   return b;
@@ -13701,9 +13708,17 @@ $('tabbar').addEventListener('click', closeCurInfo, true);
 /* ---- 34 축복(버프) 팝업 (#blsw) — 측정표 docs/measure/34-축복버프팝업.md ----
    축복 3종은 «무료로 켜는 시간제 버프» 다. 켜면 지속시간 동안 bonus() 에 곱해지고(위 bonus() 참고),
    3종이 동시에 켜져 있는 동안만 «보너스 축복»(골드 +50%)이 붙는다.
-   축복을 1개 켤 때마다 진행 +1, 4 를 채우면 축복 레벨 +1 이고 레벨당 지속시간이 +5분 늘어난다.
+   축복을 1개 켤 때마다 축복 경험치 +1, 4 를 채우면 축복 레벨 +1 이고 레벨당 지속시간이 +5분 늘어난다.
+   117 — 레벨은 지속시간뿐 아니라 **효과 배율**에도 붙는다: 효과 = v × (1 + 0.10×(lv−1)), Lv51 에서 캡.
    저장 구조: `S.bless = {lv, prog, exp:{atk,hp,rate}}` — KEY 는 올리지 않고 load() 에서 «없으면 기본값». */
-function blessDur(){ return BLESS_BASE + BLESS_PERLV * Math.max(0, (S.bless.lv|0) - 1); }
+function blessLv(){ return Math.min(BLESS_MAXLV, Math.max(1, S.bless.lv|0)); }
+function blessMax(){ return blessLv() >= BLESS_MAXLV; }
+/* 117 — 효과 배율 계수. Lv1 = 1.0, 레벨당 +0.10, Lv51 = 6.0 */
+function blessScale(){ return 1 + BLESS_EFFLV * (blessLv() - 1); }
+/* 117 — 지금 레벨에서 그 축복이 실제로 주는 % (UI 표시·검증기 공용 접근자) */
+function blessPct(k){ const x = BLESS.find(b => b.k === k); return x ? x.v * blessScale() * 100 : 0; }
+function blessGoldPct(){ return BLESS_GOLD * blessScale() * 100; }
+function blessDur(){ return BLESS_BASE + BLESS_PERLV * (blessLv() - 1); }
 function blessLeft(k){ return Math.max(0, (S.bless.exp[k] || 0) - Date.now()); }
 function blessOn(k){ return blessLeft(k) > 0; }
 function blessAll(){ return BLESS.every(x => blessOn(x.k)); }
@@ -13715,23 +13730,38 @@ function hms(ms){
 }
 function activateBless(k){
   if(blessOn(k)) return false;                       /* 이미 켜져 있으면 시간을 덧붙이지 않는다 */
-  /* 레벨 상승은 «그 활성화부터» 적용한다 — 4번째를 켠 순간 바로 지속시간이 +5분이 되게 순서를 잡는다 */
-  if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
+  /* 레벨 상승은 «그 활성화부터» 적용한다 — 4번째를 켠 순간 바로 지속시간·효과가 오르게 순서를 잡는다 */
+  const lv0 = blessLv();
+  if(lv0 < BLESS_MAXLV){
+    if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
+  } else S.bless.prog = 0;                           /* 117 ④ 상한 도달 — 경험치는 더 쌓지 않는다 */
   S.bless.exp[k] = Date.now() + blessDur();
   markDirty(); save(); renderBless(); uiDirty = true; renderUI();
+  if(blessLv() > lv0) blessLvUpFx();                 /* 117 ③ 58/60 연출 — 카드 팝 + 토스트 */
   return true;
+}
+/* 117 ③ — 레벨업 순간의 피드백. 58 공용 모듈만 쓴다(새 연출을 만들지 않는다). */
+function blessLvUpFx(){
+  fxToast('축복 Lv.' + blessLv() + ' — 효과 +' + Math.round(blessPct('atk')) + '%');
+  BLESS.forEach(x => { const c = $('blsC_' + x.k); if(c) fxPop(c); });
 }
 function renderBless(){
   if(!blsBuilt) buildBlessCards();
-  $('blsLv').textContent   = 'Lv.' + (S.bless.lv|0);
-  $('blsProg').textContent = (S.bless.prog|0) + '/' + BLESS_STEP;
+  const mx = blessMax();
+  $('blsLv').textContent   = 'Lv.' + blessLv();
+  /* 117 — 이 «n/4» 가 축복 경험치다. 34 의 ①~④ 채점이 이 알약·트랙의 잉크 폭을 재고 있어
+     «EXP » 접두어는 붙이지 않았다(지시 ① «담당 결정, 4 고정도 무방»). 상한에서는 MAX. */
+  $('blsProg').textContent = mx ? 'MAX' : (S.bless.prog|0) + '/' + BLESS_STEP;
   /* 진행바 채움 — 트랙 안쪽 폭(682 − 테두리 10)에 비례. ref 3/4 = 74% 와 같은 규칙 */
-  $('blsFill').style.width = (100 * (S.bless.prog|0) / BLESS_STEP).toFixed(2) + '%';
+  $('blsFill').style.width = (mx ? 100 : 100 * (S.bless.prog|0) / BLESS_STEP).toFixed(2) + '%';
   BLESS.forEach(x => {
     const c = $('blsC_' + x.k), on = blessOn(x.k);
     c.classList.toggle('off', !on);
+    /* 117 ③ — 카드의 «+20%» 는 고정값이 아니라 «지금 레벨의 실효 효과» 다 */
+    c.querySelector('.vl').textContent = '+' + Math.round(blessPct(x.k)) + '%';
     c.querySelector('.tm>i').textContent = on ? '⏱ ' + hms(blessLeft(x.k)) : '⏱ 받기';
   });
+  $('blsBnV').textContent = '+' + Math.round(blessGoldPct()) + '%';
   $('blsBonus').classList.toggle('off', !blessAll());
   /* ⚠ 비평 B 1순위: 이 버튼을 «숨겼더니» 스트립 CTA 레이어가 통째로 없는 그림이 돼
      ①②③④ 가 한꺼번에 깎였다(스트립 하단 54px 공백·우측 정렬 97px 붕괴). ref 에는 항상 있는
@@ -13744,7 +13774,7 @@ function buildBlessCards(){
     '<div class="bls-c" id="blsC_' + x.k + '" data-bless="' + x.k + '">' +
       '<div class="h"><i>' + x.n + '</i></div>' +
       '<div class="b"><s class="ic">' + x.ic + '</s>' +
-        '<s class="vl">+' + Math.round(x.v*100) + '%</s>' +
+        '<s class="vl">+' + Math.round(blessPct(x.k)) + '%</s>' +
         '<s class="tm"><i>⏱ 받기</i></s><s class="glo"></s></div>' +
     '</div>').join('');
   blsBuilt = true;

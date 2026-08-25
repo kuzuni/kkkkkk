@@ -128,10 +128,14 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
     markDirty(); renderBless(); return mulAtk(); });
   await page.waitForTimeout(2400);
   let i = await page.evaluate(() => ({ on: blessOn('atk'), atk: mulAtk(),
+                                       /* 117 — 배수가 «1.20 고정» 이 아니라 «레벨 곡선» 이 됐다.
+                                          이 시점의 축복 레벨(E 에서 2가 돼 있다)로 기대값을 세운다. */
+                                       exp: 1 + BLESS[0].v * blessScale(), lv: blessLv(),
                                        off: document.querySelector('#blsC_atk').classList.contains('off'),
                                        txt: document.querySelector('#blsC_atk .tm>i').textContent }));
   ok('I1 만료되면 비활성', !i.on);
-  ok('I2 만료 즉시 배수 원복(캐시 무효화)', Math.abs(i.atk / gBefore - 1 / 1.2) < 1e-6, (i.atk / gBefore).toFixed(4));
+  ok('I2 만료 즉시 배수 원복(캐시 무효화)', Math.abs(i.atk / gBefore - 1 / i.exp) < 1e-6,
+     (i.atk / gBefore).toFixed(4) + ' (Lv' + i.lv + ' → ÷' + i.exp.toFixed(2) + ')');
   ok('I3 만료 카드 .off + «받기» 표시', i.off && /받기/.test(i.txt), i.txt);
 
   /* ── J. 기하(측정표 대조) ── */
