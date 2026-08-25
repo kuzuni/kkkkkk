@@ -5913,6 +5913,10 @@
     display:block;text-align:center;font-size:35px;color:#F8F8F8;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;z-index:2;white-space:nowrap;
     letter-spacing:4px;text-indent:4px}
+  /* 5회차 잔여 — ref 는 숫자가 **비례폭**이라 자리당 진행폭이 16~29 로 흩어지는데(«1» 은 잉크 8px)
+     우리 폰트는 등폭이라 23~24 로 고르다. 중앙값은 24 vs 23 으로 맞췄고, `font-variant-numeric:
+     proportional-nums` 는 이 폰트가 지원하지 않아 렌더가 1px 도 안 바뀌었다(시험 후 되돌림).
+     → 남은 ⑥ 차이는 CSS 로 회수 불가. **게임 서체가 들어오면 함께 해소된다**(아트 대기). */
   /* 빈 칸 — ref r3c3·r3c4 는 «플레이스홀더 없음», 패널 배경 그대로다 */
   .bg53-c.em{border-color:transparent;background:none;box-shadow:none}
 
