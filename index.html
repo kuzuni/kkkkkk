@@ -5895,10 +5895,7 @@
      깎인 자리에는 부모 `.ps-hero` 의 하늘 그라디언트가 그대로 드러난다. */
   .ps-gr{left:0;right:0;bottom:0;height:300px;pointer-events:none;
     background:linear-gradient(180deg,#6B6040 0,#7C8A4C 185px,#6E8A38 240px,#8C824A 300px);
-    clip-path:polygon(0px 120px,30px 197px,60px 281px,90px 283px,120px 83px,150px 81px,180px 290px,
-      210px 101px,240px 102px,270px 111px,300px 138px,330px 142px,360px 148px,390px 148px,420px 148px,
-      450px 286px,480px 82px,510px 127px,540px 127px,570px 127px,600px 54px,630px 39px,660px 165px,
-      690px 130px,780px 128px,870px 126px,960px 128px,1080px 132px,1080px 300px,0px 300px)}
+    clip-path:polygon(0px 123px,10px 131px,20px 140px,30px 147px,40px 147px,50px 147px,60px 147px,70px 132px,80px 114px,90px 95px,100px 91px,110px 87px,120px 85px,130px 84px,140px 83px,150px 104px,160px 126px,170px 147px,180px 133px,190px 118px,200px 103px,210px 102px,220px 102px,230px 102px,240px 103px,250px 105px,260px 108px,270px 113px,280px 124px,290px 133px,300px 139px,310px 139px,320px 141px,330px 143px,340px 146px,350px 148px,360px 149px,370px 149px,380px 149px,390px 148px,400px 148px,410px 147px,420px 147px,430px 147px,440px 147px,450px 132px,460px 113px,470px 91px,480px 84px,490px 79px,500px 103px,510px 133px,520px 165px,530px 170px,540px 171px,550px 167px,560px 154px,570px 128px,580px 97px,590px 71px,600px 89px,610px 82px,620px 77px,630px 77px,640px 74px,650px 73px,660px 36px,670px 36px,680px 38px,690px 39px,700px 137px,780px 133px,870px 131px,960px 133px,1080px 137px,1080px 300px,0px 300px)}
   #psw.att .ps-gr{display:none}
   /* 우상단 집 일러스트 «아트 자리» — 8회차 신설.
      ref 를 열별로 훑으면(하늘 종료 y) x720~1020 구간만 하늘이 frame 170·111·55·−13·64·121 로 잘려 있다 =
@@ -5954,6 +5951,15 @@
   .ps-st.l{top:398px;height:50px;line-height:50px;font-size:39px}
   .ps-st.v{top:444px;height:56px;line-height:56px;font-size:45px}
   .ps-st>i{transform:scaleX(.98)}
+  /* 8회차 — 비평가 P 의 5·8번(«두 줄의 크기 비가 어긋난다»)을 실측으로 확인했다(창 x60..440, T_pale):
+     라벨 ref w252 **h32** ↔ 우리 w256 **h35**(+9.4%) · «79» ref **w49** h30 ↔ 우리 **w44** h31(−10%)
+     · 행간(1행 잉크 하단→2행 잉크 상단) ref **18px** ↔ 우리 **14px**.
+     라벨은 font 로 높이를 내리고 scaleX 로 폭을 되밀고, 값은 scaleX 로 폭만 넓힌다.
+     ⚠ `#psw:not(.att)` — 36 도 이 슬롯(«접속일»/일수)을 쓴다. */
+  #psw:not(.att) .ps-st.l{font-size:36px}
+  #psw:not(.att) .ps-st.l>i{transform:scaleX(1.055)}
+  #psw:not(.att) .ps-st.v{top:445px}
+  #psw:not(.att) .ps-st.v>i{transform:scaleX(1.09)}
 
   /* 프리미엄 구매 버튼 — 외곽 ref x605..1023 y460..608 → frame x605 y376, 419x149, r38 */
   .ps-buy{left:605px;top:376px;width:419px;height:149px;box-sizing:border-box;cursor:pointer;
@@ -5966,6 +5972,11 @@
   .ps-buy>b.t1{top:9px;height:50px;line-height:50px;font-size:44px}
   .ps-buy>b.t2{top:73px;height:40px;line-height:40px;font-size:36px}
   .ps-buy>b.t1>i{transform:scaleX(.9)}
+  /* 8회차 — «프리미엄 활성화» 잉크가 ref 대비 폭 +8%(M «+7.7%» · Q «+8.5%» 독립 일치)·높이 +5%.
+     font 44→42 로 높이를 38 에 맞추고(40→37.3) scaleX .9→.873 으로 폭 281→259 로 되민다.
+     ⚠ `#psw:not(.att)` — 36 이 같은 라벨에 자기 scaleX(.83)를 **현재 font 기준으로** 걸어 뒀다(6127행). */
+  #psw:not(.att) .ps-buy>b.t1{font-size:42px}
+  #psw:not(.att) .ps-buy>b.t1>i{transform:scaleX(.873)}
   /* ref 코어 폭 157 · 우리 107 (−32%) — 자폭만 벌린다(세로 31 은 이미 일치). 7회차 L-8 */
   .ps-buy>b.t2>i{transform:scaleX(1.1)}
   /* 리본 배지 — 잉크 ref x563..679 y440..559 → frame x563 y356, 117x120 (버튼 좌측을 42px 침범) */
