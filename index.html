@@ -5513,9 +5513,12 @@
      아트 교체 자리는 «1080×234 @ frame y301..534» 다. */
   .ps-ice{position:absolute;left:0;right:0;top:301px;height:234px;pointer-events:none;
     background:linear-gradient(180deg,#37ECFF 0,#21A1AE 34%,#01526D 46%,#003E65 100%);
-    clip-path:polygon(0 62%,45px 69%,60px 55%,135px 52%,180px 74%,210px 43%,285px 51%,330px 71%,
-      420px 48%,495px 45%,570px 53%,585px 74%,660px 50%,750px 58%,840px 47%,930px 56%,1010px 49%,
-      1080px 60%,1080px 100%,0 100%)}
+    /* 능선 실측(§1-5)을 밴드(frame 301..534, h234) 비율로 환산한 것이다:
+       ref y384 → frame 300 → 0% · ref y470 → frame 386 → 36%. 즉 능선은 밴드의 **위 0~36%** 에 있다.
+       (1회차에 ref y 를 그대로 % 로 쓰는 실수를 해서 능선이 100px 아래로 내려가 있었다 — 자체 스캔으로 잡았다) */
+    clip-path:polygon(0 36%,45px 30%,60px 8%,135px 5%,180px 33%,210px 0,285px 6%,330px 26%,
+      420px 8%,495px 1%,570px 10%,585px 33%,660px 6%,750px 14%,840px 3%,930px 12%,1010px 5%,
+      1080px 16%,1080px 100%,0 100%)}
   /* 아트 자리 — 금색 광차. ref 실루엣 x610..1005 · y110..478 (보석더미 x633..987 y121..251,
      트레이 y244..322, 통 y325..455). 이미지로 교체할 때 이 bbox 를 그대로 쓴다(§1-4). */
   #psw.att .ps-art{left:610px;right:auto;top:26px;bottom:auto;width:396px;height:369px;
