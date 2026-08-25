@@ -269,7 +269,9 @@
   /* 배속 버튼만 자리를 옮긴다 — ref (963,2059,81,82) → right 37 · bottom 200 */
   #app.dunrun #spdb{right:36px;bottom:198px;width:81px;height:81px;background:rgba(0,0,0,.60)}
   /* 비평 1회차 A5/B3 — 자물쇠 잉크가 ref 36×43 인데 32×46 이었다(종횡비 −21%) */
-  #app.dunrun #spdb .sk{transform:translateX(-50%) scale(1.12,.93)}
+  #app.dunrun #spdb .sk{transform:translateX(-50%) translateY(-3px) scale(1.12,.93)}
+  /* 배율 라벨 잉크 h — ref 16, 캡처 14 (−12.5%) */
+  #app.dunrun #spdb .sv{font-size:24px;line-height:19px}
 
   /* 던전 HUD 묶음 — 타이틀 · ⏱ 타이머 · 진행바. 캔버스 위 표시 전용(z3, 포인터 통과) */
   #dunHud{position:absolute;left:0;top:0;width:1080px;height:320px;display:none;z-index:3;
@@ -279,7 +281,7 @@
      검정 외곽선 5px(= 중심 그리기라 10px 지정) */
   #dunTtl{position:absolute;left:0;top:90px;width:1080px;text-align:center;white-space:nowrap;
     font-size:38px;line-height:39px;font-weight:900;color:#fff;
-    -webkit-text-stroke:10px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
   /* ⏱ 남은 시간 — 클러스터 ref (397,230,242,80). 39 와 1px 이내로 같은 에셋이라
      #bossTm 의 구성(용두 + 원판 + 흰 숫자)을 그대로 복제하되 30 실측값으로 다시 적는다 */
   #dunTm{position:absolute;left:397px;top:146px;width:242px;height:80px}
@@ -292,7 +294,7 @@
   /* 숫자 «29.6» — 잉크 ref (498,252,132,47), 스트로크 5~6(중심 그리기 13) */
   #dunTm b{position:absolute;left:98px;top:1px;width:200px;font-size:68px;line-height:89px;
     font-weight:900;color:#fff;white-space:nowrap;
-    -webkit-text-stroke:11px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
   /* scaleX 를 건 글자에는 AA 색번짐 방지가 필수다(LESSONS 16 ③) */
   #dunTm b i{display:inline-block;font-style:normal;transform:scaleX(1.034);transform-origin:left center;
     -webkit-font-smoothing:antialiased;backface-visibility:hidden}
@@ -300,15 +302,16 @@
   /* 던전 진행바 — 껍데기 ref (190,315,700,80) «계단형»:
      본체 700×67 + 우측 보스 탭 106×80(13px 더 내려온다). 림 6 #C1B6BA → 검정 트랙 → 주황→적 채움 */
   #dunBar{position:absolute;left:190px;top:231px;width:700px;height:80px}
-  #dunBar em{position:absolute;left:0;top:0;width:700px;height:67px;border-radius:22px;
+  /* radius — 최상단행 좌·우 inset 실측: ref 24 / CSS22 캡처 20. AA 가 ~2px 을 먹으므로 26 으로 잡는다 */
+  #dunBar em{position:absolute;left:0;top:0;width:700px;height:67px;border-radius:26px;
     background:#C1B6BA;font-style:normal}
   #dunBar em::before{content:'';position:absolute;left:6px;top:6px;width:688px;height:55px;
-    border-radius:16px;background:#0F0F0F}
+    border-radius:20px;background:#0F0F0F}
   /* 보스 탭 local (594,0,106,80) — 좌상단 코너는 본체와 이어지므로 각지게 둔다 */
   #dunBar s{position:absolute;left:594px;top:0;width:106px;height:80px;text-decoration:none;
-    border-radius:0 22px 18px 18px;background:#C1B6BA}
+    border-radius:0 29px 20px 20px;background:#C1B6BA}
   #dunBar s::before{content:'';position:absolute;left:0;top:6px;right:6px;bottom:6px;
-    border-radius:0 16px 13px 13px;background:#0F0F0F}
+    border-radius:0 20px 15px 15px;background:#0F0F0F}
   /* 채움 ref (205,328,475,42) — 트랙 안쪽 좌9·상7. 100% 기준은 «계단 앞» 574 (측정표 §4-2) */
   #dunBarF{position:absolute;left:15px;top:13px;height:42px;width:0;max-width:574px;border-radius:4px;
     background:linear-gradient(90deg,#E49D21 0%,#E37915 55%,#DB3E11 100%);
@@ -316,7 +319,7 @@
   /* 가운데 수치 — 잉크 ref (506,340,68,20) h20, 중심 x539.5 = 바(=화면) 정중앙 고정 */
   #dunBar b{position:absolute;left:0;top:23px;width:700px;text-align:center;
     font-size:29px;line-height:24px;font-weight:900;color:#fff;
-    -webkit-text-stroke:9px #000;paint-order:stroke fill}
+    -webkit-text-stroke:7px #000;paint-order:stroke fill}
   /* 우측 보스 해골 — 잉크 ref (818,335,45,41) 중심 (840,355). 39 와 같은 에셋 */
   #dunBar u{position:absolute;left:621px;top:14px;width:46px;height:52px;text-decoration:none;
     font-size:46px;line-height:52px;text-align:center;transform:scale(1.122,.824);
@@ -332,7 +335,8 @@
     background:linear-gradient(180deg,#7C7D9C 0,#757590 55%,#5F5F7B 100%);
     box-shadow:0 9px 8px -3px rgba(0,0,0,.20)}
   #app.dunrun #dunOut{display:block}
-  #dunOut::before{content:'';position:absolute;left:8px;top:8px;width:14px;height:14px;
+  /* 광택점 — 2회차 비평 C 재실측으로 ref (60,2011,**16×16**) 확정(측정표 초판 Ø14 @ (61,2013) 은 오류) */
+  #dunOut::before{content:'';position:absolute;left:8px;top:6px;width:15px;height:15px;
     border-radius:50%;background:#9E9EBA}
   /* 화살표는 글리프가 아니라 CSS 삼각형이다 — ◀ 글리프는 잉크가 72×89(세로로 길다)라
      레퍼런스의 97×77(가로로 넓다)을 못 맞춘다. scaleX 로 늘리면 외곽선까지 찌그러진다.
@@ -342,10 +346,12 @@
   #dunOut i::before,#dunOut i::after{content:'';position:absolute;left:50%;top:50%;
     width:0;height:0;border-style:solid;border-color:transparent}
   /* 검정 외곽선 — 흰 삼각형을 약 6px 감싼 109×87 */
-  #dunOut i::before{margin:-46.5px 0 0 -57px;border-width:44.5px 111px 44.5px 0;border-right-color:#000}
+  /* 검정 외곽선 — 삼각형은 «bbox 를 t 만큼 키우는 것» 이 균일 외곽선이 아니다(꼭짓점 쪽이 얇아진다).
+     중앙 열(x=판중심)에서 ref 는 흰 잉크 위 검정이 6px 인데 111×89 로는 2.5px 뿐이었다 → 118×100. */
+  #dunOut i::before{margin:-53px 0 0 -63.5px;border-width:53px 124px 53px 0;border-right-color:#000}
   /* 흰 화살표 잉크 — ref (101,2024,97,77). 안티에일리어싱이 사면에서 1~1.5px 을 먹으므로
      기하는 99×79 로 잡는다(1회차 캡처 실측 97×77 → 95×74 였다). */
-  #dunOut i::after{margin:-41.5px 0 0 -51px;border-width:39.5px 99px 39.5px 0;border-right-color:#FDFDFD}
+  #dunOut i::after{margin:-40.5px 0 0 -51px;border-width:40.5px 99px 40.5px 0;border-right-color:#FDFDFD}
 
   /* 우상단 4분할 메뉴 버튼 — 측정표 §2. 934..1035 / 260..359, radius 24, 검정 24% */
   #menub{position:absolute;right:44px;top:72px;width:102px;height:100px;border-radius:24px;
