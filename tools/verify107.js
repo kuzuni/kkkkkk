@@ -20,6 +20,7 @@
  *   [E] 포인터를 쥔 «동안» 재생성 보류 — 누른 채 상태를 바꿔도 변이 0건, 떼면 반영
  *   [F] 값 갱신 회귀 — ① 이 UI 를 얼리지 않는다(골드를 바꾸면 성장 탭 표시가 따라온다)
  *   [G] 형제 시트 점검표(지시 ④) — 26 동료·50 코스튬·성장·던전·06 장비·10 상점
+ *   [I] 실제 마우스 드래그 — 끌고 손을 뗀 뒤 3초 동안 되돌아가지 않는다(주인 보고 그대로 재현)
  *   [H] 콘솔 에러 / pageerror 0건
  * 통과: 실패 0건
  */
@@ -124,10 +125,10 @@ async function openSheet(pg, expr) {
     /* [D] 장착/해제 = 구조가 실제로 바뀌는 재렌더 */
     const d = await pg.evaluate(async () => {
       /* 기본 세이브는 slash 1종만 보유(그것도 장착 중)이라 «장착 가능한 카드» 가 없다.
-         25 교훈 6-① 대로 S.own[id] 는 숫자가 아니라 {n,l} 객체다. */
+         25 교훈 6-① 대로 S.own[id] 는 숫자가 아니라 {n,l} 객체다.
+         (105 로 자동 장착이 폐기돼 «해제가 2초 뒤 되돌아오는» 함정은 더 없다) */
       const spare = SKILLS.find(s => !has(s.id));
       if (spare) { S.own[spare.id] = { n: 0, l: 1 }; }
-      S.autoEquip = false;                 /* 25 교훈 6-② — 켜져 있으면 해제가 2초 뒤 되돌아간다 */
       renderSkill();
       await new Promise(r => setTimeout(r, 60));
       const gp0 = document.querySelector('#bSk .sk-gp');
@@ -170,6 +171,25 @@ async function openSheet(pg, expr) {
     else fail('[E] 포인터를 쥔 동안 ' + e.held + '회 재생성됐다 (드래그 중 노드가 날아간다)');
     if (e.after > 0) ok('[E] 떼면 곧바로 반영(변이 ' + e.after + '회)');
     else fail('[E] 포인터를 뗐는데도 갱신이 안 붙었다 — 보류가 안 풀린다');
+
+    /* [I] 주인이 실제로 한 조작 그대로 — 진짜 마우스로 아래로 끌고, 손을 뗀 뒤 3초 지켜본다.
+           («아래로 끌었는데 자꾸 위로 올라간다» 를 합성 이벤트가 아닌 입력으로 재현) */
+    await pg.evaluate(() => { document.querySelector('#bSk .sk-gp').scrollTop = 0; });
+    const box = await pg.evaluate(() => {
+      const r = document.querySelector('#bSk .sk-gp').getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
+    });
+    await pg.mouse.move(box.x, box.y + box.h * 0.35);
+    await pg.mouse.down();
+    for (let i = 1; i <= 8; i++) { await pg.mouse.move(box.x, box.y + box.h * 0.35 - i * 40); await pg.waitForTimeout(16); }
+    await pg.mouse.up();
+    await pg.waitForTimeout(900);                       /* 95 관성이 멎을 때까지 */
+    const dragged = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
+    await pg.waitForTimeout(3000);                      /* renderUI 가 8~9회 도는 동안 */
+    const after = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
+    if (dragged <= 0) fail('[I] 마우스 드래그로 스크롤이 아예 안 됐다(scrollTop ' + dragged + ') — 95 회귀');
+    else if (after === dragged) ok('[I] 마우스 드래그 ' + dragged + 'px → 3초 뒤에도 ' + after + ' (되돌아가지 않음)');
+    else fail('[I] 드래그 ' + dragged + ' → 3초 뒤 ' + after + ' 로 되돌아갔다 (주인이 보고한 증상)');
 
     allErrs.push(...errs);
     await ctx.close();
