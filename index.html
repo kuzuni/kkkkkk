@@ -7836,6 +7836,7 @@ const CINE_FLASH = 0.42;   /* 처치 플래시 피크 알파 계수 (f²×이 �
 const CINE_FLASH_S = 0.20; /* 플래시 소멸 — 슬로모(0.30초)의 «앞쪽» 에서 걷어 깨끗한 슬로모 0.10초를 남긴다 */
 const CINE_TGK   = 0.10;   /* 연출 대상 좌표의 저역통과 — 스프라이트 flip 으로 중심이 208px 튀어도 카메라까지 오지 않게 */
 const CINE_FLIP_S= 0.45;   /* 보스가 돌아설 때 209.6px 짜리 스프라이트 순간이동을 따라가는 시간(smoothstep) */
+const CINE_FIT_M = 8;      /* 프레임 안 담기 상한의 여유(월드 px) — 반폭 스냅샷과 진행된 애니의 차이를 흡수 */
 const CINE_TGK_K = 0.16;   /* 처치 구간은 더 세게 — 사망 애니(10fps)가 그려진 중심을 «계단» 으로 119px 옮긴다 */
 /* 보스 연출 상태 — mode: '' | 'in' | 'hold' | 'back' | 'kill'
    cx/cy = 저역통과된 대상 좌표 · zb = 이번 연출이 «출발한» 줌(연출 중 처치 시 줌이 뚝 떨어지지 않게) */
@@ -7854,6 +7855,14 @@ function spriteCenter(e, flip){
   const dy = (-fr[7] + fr[5] + fr[3]/2) * s;
   const f = flip === undefined ? e.flip : flip;
   return { x: e.x + (f ? -dx : dx), y: e.y + dy };
+}
+/* 그려지는 몸통의 반폭·반높이(월드 px). 연출 «프레임 안 담기» 상한을 계산하는 데 쓴다. */
+function spriteHalf(e){
+  const A = ATLAS[e.akey], fr = A && A.f[curFrame(e)];
+  if(!fr) return null;
+  let s = (e.scale != null ? e.scale : (e.T && e.T.scale)) || 1;
+  if(e.born !== undefined && e.born < 0.3 && !e.nopop) s *= 0.4 + 0.6*(e.born/0.3);
+  return { hw: fr[2]*s/2, hh: fr[3]*s/2 };
 }
 /* 프레임률 독립 감쇠 — 60fps 에서 «프레임당 k» 가 되도록 dt 로 보정한다.
    `dt*6` 식 선형 계수는 프레임이 튀면 그대로 저크가 된다(dt 0.1 캡에서 0.6 = 60% 점프) */
@@ -7880,6 +7889,10 @@ function cineStart(mode, pt, flip, base){
      실제로 그려지는 몸통이 반대쪽으로 209.6px 옮겨 가는데 카메라는 옛 자리를 계속 잡는다. */
   cine.ax = base ? (flip ? -(pt.x - base.x) : (pt.x - base.x)) : 0;
   cine.oy = base ? pt.y - base.y : 0;
+  /* 대상 몸통 반폭·반높이를 연출 시작 시 한 번만 잰다 — 매 프레임 재면 걷기·사망 애니의
+     트림 차이가 그대로 줌 상한의 떨림이 된다(2회차 결함 ⑧ 과 같은 함정). */
+  const H = cine.tg && spriteHalf(cine.tg);
+  cine.hw = H ? H.hw : 0; cine.hh = H ? H.hh : 0;
   cine.fs = null; cine.fsW = 0; cine.fsT = 1;   /* 첫 camUpdate 에서 그때의 방향으로 초기화(그 프레임엔 이징 없음) */
 }
 function cineBossIn(e){ if(!e) return; e.nopop = true; cine.tg = e; cineStart('in', spriteCenter(e), e.flip, e); }
@@ -7924,6 +7937,7 @@ function camUpdate(dt){
     else if(cine.mode === 'kill' && cine.t >= CINE_SLOW_S + CINE_KBACK_S) cine.mode = '';
   }
   const w = cine.mode ? cineWeight() : 0;
+  let tgc = null;   /* 저역통과를 거치지 «않은» 이번 프레임의 대상 중심 — 프레임 안 담기 상한은 이걸로 잰다 */
   /* 대상 좌표 — 살아 있는 적이면 «그려진 몸통 중심», 좌표 스냅샷이면 그대로.
      저역통과(CINE_TGK)는 flip 으로 중심이 208px 뒤집힐 때의 계단을 카메라 앞에서 흡수한다 */
   if(cine.mode && cine.tg && cine.tg.akey){
@@ -7944,6 +7958,7 @@ function camUpdate(dt){
     }
     const tk = camDamp(cine.mode === 'kill' ? CINE_TGK_K : CINE_TGK, dt);
     cine.cx += (c.x-cine.cx)*tk; cine.cy += (c.y-cine.cy)*tk;
+    tgc = c;
   }
   const tgx = cine.mode ? cine.cx : player.x, tgy = cine.mode ? cine.cy : player.y;
   const fx = player.x + (tgx - player.x)*w;
@@ -7983,6 +7998,30 @@ function camUpdate(dt){
   /* 줌이 «작아지는» 동안에는 보이는 반폭이 넓어져 어제까지 합법이던 좌표가 경계를 넘는다 — 매 프레임 다시 가둔다 */
   const c = camClamp(cam.x, cam.y);
   cam.x = c.x; cam.y = c.y;
+
+  /* ── 프레임 안 담기 상한 (5회차: O 결함 3 · P 결함 1·2 — 두 비평가의 ③ 위치·경로 1순위) ──
+     `ctx.scale(z,z)` 는 «카메라 기준» 확대라, 카메라가 대상에 도착하기 «전» 에 줌이 차오르면
+     남은 간격이 z 배로 벌어져 대상이 프레임 밖으로 밀린다. 실측으로 두 곳에서 같은 원인이 잡혔다 —
+     처치 t=0.067~0.083 에 시체 61~201px 잘림(6회 중 4회) · 팬 t=0.117~0.300 에 보스 110~301px 잘림.
+     대상을 «따라가는 속도» 를 올려서 푸는 문제가 아니다(그건 저크가 된다).
+     **줌 쪽에 상한을 건다** — 이 프레임의 카메라 위치에서 몸통이 통째로 들어오는 최대 배율을 넘지 않는다.
+     카메라가 도착하면 상한이 저절로 풀려 1.15·1.30 을 그대로 찍는다(줌을 «늦추는» 것이지 «줄이는» 게 아니다).
+     1 아래로는 절대 내려가지 않는다 — 줌아웃은 주인 지시(줌인)를 뒤집는 것이라 스폰 링이 가시 반폭보다
+     먼 «팬 앞 0.15초» 는 물리적으로 담을 수 없고, 그 구간은 게이트가 수치로 따로 보고한다. */
+  if(cine.mode && cine.hw && tgc){
+    /* 반폭은 연출 시작 프레임의 스냅샷이라, 걷기·사망 애니가 진행되면 실제 몸통이 몇 px 더 넓어질 수 있다.
+       그 차이가 그대로 «잘림 0.x px» 로 남으므로 여유를 조금 얹는다(떨림 없는 상수). */
+    const nx = (cine.mode === 'kill' ? 0 : Math.abs(cine.ax)) + cine.hw + CINE_FIT_M;
+    const zf = Math.max(1, Math.min(
+      VW / (2 * (Math.abs(tgc.x - cam.x) + nx)),
+      VH / (2 * (Math.abs(tgc.y - cam.y) + cine.hh + CINE_FIT_M))
+    ));
+    if(cam.z > zf){
+      cam.z = zf;
+      const c2 = camClamp(cam.x, cam.y);   /* 줌이 내려가면 가시 반폭이 넓어져 월드 클램프가 다시 조인다 */
+      cam.x = c2.x; cam.y = c2.y;
+    }
+  }
 
   if(cam.shake > 0) cam.shake = Math.max(0, cam.shake - dt*28);
   if(cine.flash > 0) cine.flash = Math.max(0, cine.flash - dt/CINE_FLASH_S);

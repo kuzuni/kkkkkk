@@ -47,6 +47,9 @@ const LIM_CACC = 8.0;          /* 연출 중 가속 상한 */
 const LIM_CJRK = 3.0;          /* 연출 중 저크(3차 차분) 상한 (px/frame³) */
 const results = [];
 const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: detail == null ? '' : String(detail) }); };
+/* note = «통과를 막지 않지만 매 회차 수치를 남겨야 하는» 항목. 합격 수에 세지 않는다 —
+   조용히 표본에서 빼면 3회차의 «게이트가 순환 논증» 이 그대로 재발한다(5회차 비평 P 결함 3). */
+const note = (name, detail) => { results.push({ name, note: true, detail: detail == null ? '' : String(detail) }); };
 
 (async () => {
   let browser;
@@ -152,7 +155,7 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
     S.stage = 10; S.best = Math.max(S.best || 1, 10); S.bossFarm = false;
     S.gold = 1e12;                                     /* 전투 결과와 무관하게 연출만 본다 */
     spawnStage();
-    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [], holdD = [], holdClip = [], cineClip = [];
+    const modes = [], zs = [], camToBoss = [], camToPl = [], camToArt = [], holdD = [], holdClip = [], cineClip = [], earlyClip = [], backClip = [];
     let spawnedF = -1, b = null, jerk = 0, acc = 0, prevV = null, prevA = null, prev = { x: cam.x, y: cam.y };
     const marks = {};
     for (let f = 0; f < 400; f++) {                    /* ≈6.7초 */
@@ -185,11 +188,25 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
           const outX = Math.max(0, (Math.abs(bi.x-cam.x)+hw) - vw);
           const outY = Math.max(0, (Math.abs(bi.y-cam.y)+hh) - vh);
           const clip = Math.max(outX, outY);
+          /* 같은 프레임을 «줌 1(가장 넓게 보이는 상태)» 로 다시 재 본다.
+             z=1 에서도 잘린다면 그건 «카메라가 아직 멀다» 는 뜻이고, 주인 지시 수치(스폰 링 300~700 ·
+             줌인 1.15)의 귀결이라 어떤 줌으로도 담을 수 없다 — 통과를 막지 않고 수치만 남긴다.
+             z=1 에서는 담기는데 실제로 잘렸다면 그건 **우리 줌이 카메라보다 앞서 나가서 만든 잘림**이고,
+             그게 5회차 두 비평가가 ③ 1순위로 짚은 결함이다. 이쪽만 0 을 요구한다. */
+          const clipZ1 = Math.max(
+            Math.max(0, (Math.abs(bi.x-cam.x)+hw) - VW/2),
+            Math.max(0, (Math.abs(bi.y-cam.y)+hh) - VH/2));
           if(cine.mode === 'hold'){ holdD.push(Math.hypot(cam.x-bi.x, cam.y-bi.y)); holdClip.push(clip); }
-          /* «보스를 보여주는 구간» = 팬이 60% 넘게 진행된 뒤부터 유지 끝까지.
-             팬 «시작» 은 카메라가 아직 플레이어 위에 있고 보스는 300px 밖이라 잘려 있는 게 당연하다 —
-             그 프레임까지 세면 «팬을 하지 마라» 가 된다. */
-          if((cine.mode === 'in' && cineWeight() >= 0.85) || cine.mode === 'hold') cineClip.push(clip);
+          /* 5회차 비평 P 결함 3 — 예전 표본은 `cineWeight() >= 0.85 || hold` 뿐이었다.
+             camEaseOut 기준 w=0.85 는 t=0.383 이라 **팬 0.80초의 앞 48% 와 back 0.60초 전체가 통째로 미측정**이었고,
+             게이트는 «0/52프레임 잘림 없음» 을 계속 찍는데 비평가는 같은 빌드에서 8/12 회 잘림을 쟀다.
+             3회차의 «게이트가 순환 논증» 과 같은 종류의 결함 — 게이트가 «잘리는 구간을 안 보고 있었다».
+             → 표본을 연출 전 구간으로 넓히고, «스폰 링 때문에 물리적으로 불가능한» 앞 CLIP_GRACE 초만
+             따로 떼어 **수치로 보고**한다(조용히 빼지 않는다). */
+          if(cine.mode === 'in' || cine.mode === 'hold'){
+            if(clipZ1 > 0.5) earlyClip.push(clip);   /* 어떤 줌으로도 못 담는 구간 */
+            else cineClip.push(clip);                /* 담을 수 있었는데 잘린 구간 = 결함 */
+          }else backClip.push(clip);   /* 복귀 구간은 «보스를 떠나는» 것이 목적이라 잘림이 정상이다 — 기록만 */
         }
         camToPl.push(Math.hypot(cam.x - player.x, cam.y - player.y));
         zs.push(cam.z);
@@ -208,7 +225,10 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
       holdMed: holdD.length ? holdD.slice().sort((a,b)=>a-b)[Math.floor(holdD.length/2)] : -1,
       holdClip: holdClip.length ? Math.max(...holdClip) : -1,
       cineClipMax: cineClip.length ? Math.max(...cineClip) : -1,
-      cineClipFrames: cineClip.filter(v => v > 0).length, cineFrames: cineClip.length,
+      cineClipFrames: cineClip.filter(v => v > 0.5).length, cineFrames: cineClip.length,
+      earlyClipMax: earlyClip.length ? Math.max(...earlyClip) : -1,
+      earlyClipFrames: earlyClip.filter(v => v > 0).length, earlyFrames: earlyClip.length,
+      backClipFrames: backClip.filter(v => v > 0).length, backFrames: backClip.length,
       endCamToPl: camToPl[camToPl.length - 1],
       frames: zs.length, bossAlive: !!b && enemies.indexOf(b) >= 0
     };
@@ -224,7 +244,10 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   /* 카메라는 «앵커 = 좌우 대칭점» 을 잡는다(플립 점프를 0 으로 만드는 유일한 점). 그러면 몸통 중심은
      설계상 항상 ±104.8px 어긋나므로, 채점은 «중심 거리» 가 아니라 «몸통이 프레임 안에 들어오는가» 로 한다. */
   ok('[4] «유지» 구간 내내 보스 몸통이 화면 안에 통째로 들어온다(잘림 0px)', boss.holdClip >= 0 && boss.holdClip <= 0.5, boss.holdClip.toFixed(1) + 'px 초과 · ' + boss.holdN + '프레임 · 중심 이탈 중앙값 ' + boss.holdMed.toFixed(0) + 'px');
-  ok('[4] «보스를 보여주는 구간»(팬 85%~유지 끝) 잘림 0프레임', boss.cineClipFrames === 0, boss.cineClipFrames + '/' + boss.cineFrames + '프레임 · 최대 ' + boss.cineClipMax.toFixed(0) + 'px');
+  ok('[4] 담을 수 있는데 «줌이 앞서 나가» 잘린 프레임 0 (팬+유지 전 구간)', boss.cineClipFrames === 0, boss.cineClipFrames + '/' + boss.cineFrames + '프레임 · 최대 ' + boss.cineClipMax.toFixed(2) + 'px');
+  /* 앞 0.15초는 «스폰 링이 가시 반폭보다 멀다» 는 지시 수치의 귀결이라 통과를 막지 않는다 — 대신 매 회차 수치를 남긴다 */
+  note('[4] (참고) 줌 1 로도 못 담는 구간의 잘림 — 스폰 링(300~700px) > 가시 반폭 270px 의 귀결', boss.earlyClipFrames + '/' + boss.earlyFrames + '프레임 · 최대 ' + boss.earlyClipMax.toFixed(0) + 'px');
+  note('[4] (참고) 복귀 구간 보스 잘림 — 보스를 «떠나는» 구간이라 정상', boss.backClipFrames + '/' + boss.backFrames + '프레임');
   ok('[4] 연출 뒤 플레이어로 복귀(150px 이내) · 줌 복원', boss.endCamToPl < 150 && Math.abs(boss.zEnd - 1) < 0.02, boss.endCamToPl.toFixed(0) + 'px · z' + boss.zEnd.toFixed(3));
   ok('[4] 연출 길이 ≈ 1.85초(0.8+0.45+0.6)', boss.frames >= 105 && boss.frames <= 130, (boss.frames / 60).toFixed(2) + '초');
   ok('[4] 연출 중 저크(3차 차분) < ' + LIM_CJRK, boss.jerk < LIM_CJRK, boss.jerk.toFixed(3) + 'px/f³ · 가속 최대 ' + boss.acc.toFixed(2) + 'px/f²');
@@ -311,12 +334,14 @@ const ok = (name, pass, detail) => { results.push({ name, pass: !!pass, detail: 
   await browser.close();
 
   console.log('');
-  let bad = 0;
+  let bad = 0, total = 0;
   for (const r of results) {
+    if (r.note) { console.log('  · ' + r.name + (r.detail ? '  — ' + r.detail : '')); continue; }
+    total++;
     console.log((r.pass ? '  ✓ ' : '  ✗ ') + r.name + (r.detail ? '  — ' + r.detail : ''));
     if (!r.pass) bad++;
   }
   console.log('');
-  if (bad) { console.log(`VERIFY67 FAIL (${results.length - bad}/${results.length})`); process.exit(1); }
-  console.log(`VERIFY67 PASS (${results.length}/${results.length})`);
+  if (bad) { console.log(`VERIFY67 FAIL (${total - bad}/${total})`); process.exit(1); }
+  console.log(`VERIFY67 PASS (${total}/${total})`);
 })().catch(e => { console.error(e); process.exit(2); });
