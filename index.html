@@ -1000,7 +1000,9 @@
      세로는 «행 중심 정렬» 이 불변식이다(ref 프레임중심 750.75 = 행중심 750.5). */
   .qs-i{position:absolute;left:36px;top:37px;width:106px;height:106px;box-sizing:border-box;
     border:5px solid #000;border-radius:31px;background:#D37D12;box-shadow:inset 0 0 0 7px #FFC334;
-    display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
+    display:flex;align-items:center;justify-content:center;font-size:50px;line-height:1}
+  /* 아트 자리 규칙 — 이모지는 **레퍼런스 아트의 잉크 bbox** 를 차지해야 나중에 이미지로 갈아끼울 때 안 튄다.
+     ref 젬 잉크는 55×55 인데 fs60 은 65×58 이었다(가로 +18%). fs 는 세로를 맞추고 폭은 아트가 맡는다. */
   /* 수량 — 프레임 하단에 겹침 (레퍼런스 잉크 ref y783~807 = 프레임 하단 803.5 를 20px 파고든다).
      scaleX 는 «자당 폭» 으로 잡는다 — ref 는 `50` w44 / `100` w65 로 자당 22px(탭폭)인데
      1.4 로는 자당 26px(+18%)이었다(05 «숫자 폭» 교훈의 반대 방향). 1.4 × 22/26 = 1.18. */
