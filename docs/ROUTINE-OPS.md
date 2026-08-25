@@ -140,7 +140,7 @@ ls docs/claims/                # lock 이 새로 잡히는가
 |---|---|---|
 | 계정 1 | `claude-opus-5` | 초기 A~D 구성 |
 | 계정 2 | `claude-opus-5` | 2026-08-24 fable-5 → opus-5 로 변경(저장소 주인 지시) |
-| 계정 3 | `claude-opus-5` | 2026-08-25 추가 예정 — 기본 opus-5, 바꾸려면 §5-5 update body 의 model 만 교체 |
+| 계정 3 | `claude-opus-5` | 2026-08-25 raw API 로 생성. env `env_016Xis527zoBbZPqrtAZVQ6x`. A=`trig_01RQxsBcceyL7MLfiJt5Q1WF` B=`trig_01FANpKM1HgH1RstJ1n4dsCx` C=`trig_01WjU9g4CeKXibxLGm9LSNx3` D=`trig_01Y9rMz6q1xSVLyRQYDJrLCt` (전부 enabled). 같은 계정에 wwwww 루틴 9개(:07/:14/:22/:29/:34/:37/:44/:51/:59)가 함께 돌므로 분이 안 겹치는지 확인됨 |
 
 모델을 바꿔도 **`docs/ROUTINE.md` 지시서는 그대로 쓴다.** 지시서는 모델 중립적으로 쓰여 있다.
 
@@ -312,3 +312,4 @@ list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인
 | 2026-08-24 | 동시 가동 공식 허용 — 금지 대상을 «한도 소진 계정»으로 한정(§2·§6 갱신). `ROUTINE.md` [-1] 4 에 lock 선점 경쟁 패배 처리(rebase 충돌 = 포기, reset --hard) · [4] 에 남의 lock 불가침 규칙 추가 |
 | 2026-08-24 | 계정 2 워커 4개 모델을 `claude-fable-5` → `claude-opus-5` 로 변경 (update, 즉시 적용) |
 | 2026-08-25 | 계정 3 추가 준비 — §1 에 계정 3 cron(:02/:17/:32/:47)·계정 4 예비 분, §5-5 raw API body 원문, §5-6 다계정 운영 규칙 |
+| 2026-08-25 | 계정 3 워커 A~D(:02/:17/:32/:47) 를 §5-5 body 로 생성(첫 실행 06:02Z~). 로컬 자동 모드 분류기가 C·D `RemoteTrigger create` 를 한 차례 차단했으나 사용자 재지시 후 통과 — 같은 호출이 일관되게 승인되지 않을 수 있으니 4개를 순차·단독으로 호출할 것 |
