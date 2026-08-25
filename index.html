@@ -9559,7 +9559,8 @@ function trainCardData(){
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }
-function renderTrain(){
+/* 리본·진행바·↑버튼 — 카드를 다시 그리지 않는 «가벼운» 갱신에서도 쓴다(작업 64 renderTrainLive) */
+function trSyncHead(){
   const t = trIsTrain();
   const stage = t ? trainStage() : statStage();
   const prog  = t ? trainProg()  : statProg();
@@ -9570,6 +9571,35 @@ function renderTrain(){
   $('trFill').style.width = (16 + Math.max(0, Math.min(1, prog / max)) * 632) + 'px';
   $('trProg').textContent = prog + '/' + max;
   $('trUp').classList.toggle('on', ready);
+}
+/* 작업 64 — 카드 «노드를 갈아끼우지 않고» 값만 고쳐 쓴다.
+   ⚠ 이유: 터치는 pointerdown 대상에 **암묵적 포인터 캡처**가 걸린다. 그 노드를 innerHTML 로 날려 버리면
+     캡처가 끊긴 자리에서 pointerup 이 어디로 갈지 브라우저마다 다르고, 헤드리스(마우스)로는 재현되지 않아
+     «폰에서만 손을 떼도 안 멈춘다» 가 된다. 반복 구간은 반드시 이 경로로 돈다.
+   구조(.ch/.ci/.cv/.cn/.cb + em.dot)는 renderTrain() 이 만든 그대로이며 여기서는 텍스트·클래스만 바꾼다. */
+function renderTrainLive(){
+  const cards = $('trCards');
+  const els = cards.children;
+  const data = trainCardData();
+  if(els.length !== data.length) return renderTrain();     /* 구조가 다르면(서브탭 전환 등) 통째로 */
+  data.forEach((c, i) => {
+    const el = els[i];
+    if(el.dataset.tr !== c.k) return renderTrain();
+    const set = (sel, v) => { const n = el.querySelector(sel); if(n && n.textContent !== v) n.textContent = v; };
+    set('.ch i', c.lvTxt);
+    set('.cv i', c.full ? 'MAX' : c.gain);
+    set('.cb i', c.full ? '상한' : c.cost);
+    el.classList.toggle('no', !c.ok);
+    el.classList.toggle('full', !!c.full);
+    const dot = el.querySelector(':scope > em.dot');
+    if(c.ok && !dot){ const d = document.createElement('em'); d.className = 'dot'; el.appendChild(d); }
+    else if(!c.ok && dot) dot.remove();
+  });
+  trSyncHead();
+}
+function renderTrain(){
+  const t = trIsTrain();
+  trSyncHead();
   $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
     + '" data-trq="' + q + '"><i>x' + q + '</i><em class="dot"></em></span>').join('');
   $('trCards').innerHTML = trainCardData().map(c =>
@@ -9616,16 +9646,73 @@ $('trw').addEventListener('click', e => {
     (trIsTrain() ? trainUp() : statTrainUp()) ? renderTrain() : null;
     return;
   }
-  const card = e.target.closest('[data-tr]');
-  if(card){
-    /* 58 — 훈련 강화 성공: 그 카드가 흰 플래시 + 성공 파티클.
-       renderTrain() 이 카드를 재렌더하므로 «누른 시점의 좌표» 로 #fxl 에 그린다. */
-    const key = card.dataset.tr;
-    const okc = trIsTrain() ? trainBuy(key) : statTrainBuy(key);
-    if(okc) fxUpOk(card, card);                        /* 58 — 오버레이 먼저(재렌더를 기다리지 않는다) */
-    renderTrain();
-    if(okc) fxHitEl(document.querySelector('#trw [data-tr="' + key + '"]'));
+  /* 작업 64 — 카드 강화는 pointerdown 에서 처리한다(아래 trHoldStart).
+     click 까지 사면 «누를 때 1 + 뗄 때 1» 로 두 번 사진다 — 여기서는 아무것도 하지 않는다. */
+});
+
+/* --------------------------------------------------------------------------
+   작업 64 — 훈련 카드 «꾹 누르면 연속 강화» (2026-08-25, 저장소 주인 지시)
+   pointerdown 즉시 1회 → 350ms 뒤부터 반복 시작 → 간격 160ms 에서 ×0.86 씩 가속,
+   최소 60ms. pointerup / pointercancel / 카드 밖으로 벗어남 → 즉시 정지.
+   골드(또는 스탯 포인트) 부족 · 단계 상한 도달 → 자동 정지 + 60 의 shake 1회.
+   배수 탭(x1/x10/x30)은 반복 «1회당» 그대로 적용된다(trainBuyInfo 가 trainQty() 를 읽는다).
+   58 연출: 반복 중에는 카드 플래시·파티클을 걸지 않고 **정지할 때 한 번만** 재생한다
+   (60ms 간격으로 fxBurst 를 10개씩 쏘면 #fxl 이 FXMAX 로 막히고 손맛이 아니라 잡음이 된다).
+   ⚠ renderTrain() 이 매 회 카드 노드를 통째로 갈아끼운다 — 노드가 아니라 **키**를 들고 있다가
+     매번 다시 질의한다(LESSONS 50-① «재렌더에 진 클릭» 의 반복판).
+   -------------------------------------------------------------------------- */
+const TR_HOLD_DELAY = 350, TR_HOLD_IV0 = 160, TR_HOLD_IVMIN = 60, TR_HOLD_ACCEL = 0.86;
+let trHold = null;                      /* {key, timer, iv, n} — 누르고 있는 동안에만 존재 */
+const trCard = key => document.querySelector('#trw [data-tr="' + CSS.escape(key) + '"]');
+function trBuyOnce(key){ return trIsTrain() ? trainBuy(key) : statTrainBuy(key); }
+/* 정지 사유와 무관하게 여기 한 곳으로 모인다 — 타이머 해제 + 반복분 연출 정산 */
+function trHoldStop(bad){
+  const h = trHold; if(!h) return;
+  trHold = null;
+  clearTimeout(h.timer);
+  const el = trCard(h.key);
+  if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
+  else if(h.n > 1 && el) fxUpOk(el, el);                                /* 58 — 반복분은 마지막에 한 번 */
+}
+function trHoldTick(){
+  const h = trHold; if(!h) return;
+  if(!$('trw').classList.contains('on')){ trHoldStop(false); return; }  /* 팝업이 닫히면 같이 멈춘다 */
+  if(!trBuyOnce(h.key)){ renderTrainLive(); trHoldStop(true); return; } /* 부족·상한 → 정지 + shake */
+  h.n++;
+  renderTrainLive();
+  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.timer = setTimeout(trHoldTick, h.iv);
+}
+function trHoldStart(key, card){
+  trHoldStop(false);
+  const ok = trBuyOnce(key);
+  /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
+     그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
+  if(ok) fxUpOk(card, card);
+  renderTrainLive();
+  if(!ok){                                                             /* 첫 누름부터 실패면 반복 없음 */
+    const el = trCard(key) || card;
+    if(typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);
+    return;
   }
+  const fresh = trCard(key);
+  if(fresh && fresh !== card && typeof fxHitEl === 'function') fxHitEl(fresh);
+  trHold = { key, timer:0, iv:TR_HOLD_IV0, n:1 };
+  trHold.timer = setTimeout(trHoldTick, TR_HOLD_DELAY);
+}
+$('trw').addEventListener('pointerdown', e => {
+  const card = e.target.closest('[data-tr]');
+  if(card) trHoldStart(card.dataset.tr, card);
+});
+/* 뗌·취소는 카드 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다 */
+addEventListener('pointerup', () => trHoldStop(false));
+addEventListener('pointercancel', () => trHoldStop(false));
+/* «leave» — 손가락이 그 카드 밖으로 나가면 정지. 노드가 매 회 바뀌므로 좌표로 판정한다 */
+addEventListener('pointermove', e => {
+  if(!trHold) return;
+  const t = document.elementFromPoint(e.clientX, e.clientY);
+  const c = t && t.closest ? t.closest('[data-tr]') : null;
+  if(!c || c.dataset.tr !== trHold.key) trHoldStop(false);
 });
 
 /* ---- 탭 전환 ----
@@ -9754,7 +9841,10 @@ $('menub').onclick = () => popup('▦ 메뉴', '<p>설정 · 공지는 아직 �
 $('spdb').onclick = () => popup('🔒 배속', '<p>전투 배속은 아직 해금되지 않았습니다.</p>');
 
 function renderUI(){
-  if($('trw').classList.contains('on')) renderTrain();   /* 23 훈련 팝업 — 골드가 늘면 카드 상태가 바뀐다 */
+  /* 23 훈련 팝업 — 골드가 늘면 카드 상태가 바뀐다.
+     작업 64: 0.35초마다 도는 이 갱신이 카드 노드를 갈아끼우면 «꾹 누르기» 의 포인터 캡처가 끊긴다.
+     구조가 그대로일 때는 값만 고쳐 쓰는 renderTrainLive() 로 충분하고, 구조가 바뀌면 그쪽이 알아서 위임한다. */
+  if($('trw').classList.contains('on')) renderTrainLive();
   if(panelOpen){
     if(curTab === 'grow') renderUp();
     else if(curTab === 'hero'){
