@@ -1052,8 +1052,10 @@
   /* 꽂힌 뒤 «흡수되듯» 사라진다. transform 은 JS 가 알약 중심 + 축소값으로 세워 두므로
      여기서는 opacity 만 건드린다. 크기를 그대로 두고 천천히 빼면 알약의 코인 아이콘과 겹쳐
      **«이중 원» 버그처럼 읽힌다**(7회차 지적) — 짧게(100ms) 빼고, 축소는 JS 가 준다. */
-  .fx-land{animation:fxLand .07s ease-out forwards}
-  @keyframes fxLand{0%{opacity:.9}100%{opacity:0}}
+  /* 0.55배·70ms 로도 6개가 200ms 에 걸쳐 착지하면 «항상 한 개는 알약 위에» 있어 이중 원으로 읽힌다
+     (9회차: n4·n5·n6 세 프레임 연속 관측). 코인 형태가 남지 않게 더 작게·더 빨리 지운다. */
+  .fx-land{animation:fxLand .035s linear forwards}
+  @keyframes fxLand{0%{opacity:.85}100%{opacity:0}}
 
   /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
   /* 봉우리가 뾰족하면(28% 한 점) 실제로 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
@@ -1061,8 +1063,14 @@
   /* 봉우리가 뾰족하면(28% 한 점) 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
      그리고 오버슈트 이징(cubic-bezier .34,1.56)은 키프레임 사이를 압축해 고원을 더 깎는다 —
      고원 구간은 **ease-out** 으로 두고 키프레임으로 폭을 만든다(≥1.12 가 약 165ms). */
-  @keyframes fxPunch{0%{transform:scale(1)}16%{transform:scale(1.16)}54%{transform:scale(1.14)}
-    80%{transform:scale(.98)}100%{transform:scale(1)}}
+  /* 어두운 HUD 위에서 211×48 알약이 34px 넓어지는 것만으로는 «튐» 이 안 읽힌다
+     (비평가 4명이 연속으로 «폭 변화 0» 이라고 했다 — 실측은 ×1.16 인데도).
+     스케일에 **밝기 펄스**를 같이 얹어 «맞았다» 는 신호를 만든다. */
+  @keyframes fxPunch{0%{transform:scale(1);filter:brightness(1)}
+    16%{transform:scale(1.16);filter:brightness(1.85)}
+    54%{transform:scale(1.14);filter:brightness(1.35)}
+    80%{transform:scale(.98);filter:brightness(1.05)}
+    100%{transform:scale(1);filter:brightness(1)}}
   .fx-punch{animation:fxPunch .3s ease-out both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
@@ -10227,16 +10235,19 @@ function fxFly(from, cur, n){
        랜덤으로 흔들면 아이콘마다 다른 방향으로 휘어 «2단 꺾임» 으로 읽힌다(4회차 지적).
        휨 폭만 아이콘별로 조금 다르게 준다. 그리고 y 는 상단 HUD 아래로 클램프 — 안 하면
        알약이 y23 이라 호가 프레임 밖(실측 −12px)으로 나가 잘린다(3회차 지적). */
-    const mx = (sx + to.x)/2, my = (sy + to.y)/2;
+    const my = (sy + to.y)/2;
     const vx = to.x - sx, vy = to.y - sy, vl = Math.hypot(vx, vy) || 1;
     /* 휨을 작게 하면 출발→도착이 거의 «직선» 이 되는데, 그 직선이 하필 모달 좌측 퀘스트 행들 위를
        관통한다 — 비평가 3인이 연속으로 «저 퀘스트도 완료됐나» 로 읽었다. 방향은 목표(우상단) 쪽으로
        통일한 채 휨을 크게 줘서 **패널 바깥으로 크게 돌아** 올라가게 한다. */
     const bow = vl * (0.28 + i*0.02);
+    /* 제어점 x 를 **목표보다 더 오른쪽**에 둔다 — 출발점이 모달 좌측(퀘스트 행)이어도 곡선이
+       곧바로 패널 바깥으로 빠져나가 다른 행 위를 훑지 않는다(비평가 4명이 연속 지적). */
+    const mx = Math.min(FRAME_W - 40, Math.max(sx, to.x) + bow*0.8);
     /* 부호를 뒤집어 «목표(우상단) 쪽» 으로 휘게 한다 — 반대로 휘면 모달 좌측의 퀘스트 행 아이콘 위를
        그대로 훑고 지나가 «저 퀘스트도 완료됐나» 로 읽힌다(7회차 지적). */
     fxFlies.push({ el, sx, sy, tx:to.x, ty:to.y,
-      cx:mx - (vy/vl)*bow, cy:Math.max(120, my - Math.abs(vx/vl)*bow*0.6 - bow*0.35),
+      cx:mx, cy:Math.max(120, my - Math.abs(vx/vl)*bow*0.5),
       /* 58 공통 규칙 «0.3~0.8초» — 첫 도착 0.28초, 마지막 아이콘까지 0.026*5 + 0.35 + 0.14 = 0.62초.
          그 뒤에 붙는 숫자 롤링(FXROLL 0.3초)까지 합쳐 0.8초를 넘지 않아야 한다. */
       /* 예산: 45(디바운스) + 100(스태거) + 300(비행) + 80(꽂힘) ≈ 0.53초에 전부 착지,
@@ -10288,8 +10299,9 @@ function fxBurst(t, col, n){
     const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(95, 195);
     el.className = 'fx-spark';
     el.style.background = col || '#FFE07A';
-    el.style.left = p.x + 'px';
-    el.style.top  = p.y + 'px';
+    /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
+    el.style.left = (p.x + Math.cos(a)*22) + 'px';
+    el.style.top  = (p.y + Math.sin(a)*22) + 'px';
     el.style.setProperty('--dx', (Math.cos(a)*d).toFixed(1) + 'px');
     el.style.setProperty('--dy', (Math.sin(a)*d).toFixed(1) + 'px');
     L.appendChild(el);
@@ -10430,10 +10442,10 @@ function fxTick(dt){
         /* «꽂힘» — 마지막 프레임을 알약 중심에 «정확히» 세우고 짧게 사라진다.
            바로 remove 하면 렌더된 마지막 위치가 p<1 이라 도착이 몇 px 모자란 채로 끝난다. */
         f.el.style.transform = 'translate(' + f.tx.toFixed(1) + 'px,' + f.ty.toFixed(1) + 'px)'
-          + ' translate(-50%,-50%) scale(.55)';        /* 알약 아이콘보다 확실히 작게 — 겹쳐도 «이중 원» 이 안 된다 */
+          + ' translate(-50%,-50%) scale(.35)';        /* 코인 형태로 안 읽히게 — «흡수» 한 점만 남긴다 */
         f.el.classList.add('fx-land');
         const el = f.el;
-        setTimeout(() => el.remove(), 80);
+        setTimeout(() => el.remove(), 45);
       }
       fxPunch(f.pill);
       /* 마지막 도착이 아니라 «첫 도착» 이다 — 마지막에 걸면 `+n` 이 0.6초 뒤에야 뜨고

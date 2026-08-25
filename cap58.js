@@ -23,10 +23,12 @@ const { chromium } = require('playwright');
 const ROUND = process.argv[2] || 'r2';
 const OUT = path.resolve(__dirname, 'docs', 'review');
 const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/');
-/* 트리거 기준 목표 시각(ms). 간격은 ROUTINE [3]-(다) 의 «80~100ms» 상한인 100ms 로 잡는다 —
-   90ms 로 잡으면 8장이 0~630ms 밖에 못 덮어서, **스펙 예산(0.8초) 안에 끝나는 연출인데도**
-   «마지막 프레임까지 숫자가 안 올라갔다» 는 지적이 나온다(6회차에 비평가 2명이 같은 이유로 감점했다). */
-const WANT = [0, 100, 200, 300, 400, 500, 600, 700];
+/* 1번은 **트리거 «직전»** 프레임(기준), 2~8번이 연출 구간이다.
+   기준 프레임이 없으면 비평가가 «무엇이 바뀌었는지» 를 판정할 수 없고, 실제로 9회차에
+   «클릭 후 187ms 무반응» 이라는 오독이 나왔다 — 사실은 1번 프레임에 이미 토스트가 들어 있었다.
+   간격은 ROUTINE [3]-(다) 의 «80~100ms» 상한인 100ms 로 잡는다 — 0~700ms 를 덮어야
+   스펙 예산(0.8초) 안에 끝나는 연출의 «끝» 까지 담긴다. */
+const WANT = [0, 100, 200, 310, 420, 550, 690];
 
 /* ── 스크린캐스트 수집기 ── */
 function recorder(cdp){
@@ -37,18 +39,19 @@ function recorder(cdp){
   });
   return buf;
 }
-function pick(buf, t0, tag){
+function pick(buf, t0, tag, pre){
   const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -60);
   if(rel.length < WANT.length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
-  const out = [];
+  if(!pre) throw new Error(`${tag}: 트리거 직전 기준 프레임이 없다`);
+  const out = [{ want:'기준', got:Math.round(pre.t - t0), data:pre.data }];
   for(const w of WANT){
     let best = rel[0];
     for(const f of rel) if(Math.abs(f.dt - w) < Math.abs(best.dt - w)) best = f;
     out.push({ want:w, got:Math.round(best.dt), data:best.data });
   }
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.png`), Buffer.from(f.data, 'base64')));
-  const worst = Math.max(...out.map(f => Math.abs(f.got - f.want)));
-  console.log(`  ✓ ${tag}: 8장 · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임)`);
+  const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
+  console.log(`  ✓ ${tag}: 8장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임)`);
   return worst;
 }
 
@@ -90,11 +93,18 @@ async function ensureLoop(page){
   await page.waitForTimeout(300);
 
   const run = async (tag, trigger, waitMs) => {
+    /* 트리거 «직전» 프레임을 기준으로 남긴다. 화면이 정지해 있으면 스크린캐스트가 프레임을 안 내보내므로
+       살짝 흔들어(딤 1px 오프셋 없이) 마지막 프레임을 확보한다 — 없으면 스스로 오류를 낸다. */
+    await page.evaluate(() => { const l = document.getElementById('fxl');
+      const d = document.createElement('s'); d.style.cssText = 'position:absolute;left:0;top:0;width:1px;height:1px;background:rgba(0,0,0,.01)';
+      l.appendChild(d); setTimeout(() => d.remove(), 30); });
+    await page.waitForTimeout(260);
+    const pre = buf.length ? buf[buf.length - 1] : null;
     buf.length = 0;
     const t0 = await page.evaluate(trigger);
     if(t0 && t0.err) throw new Error(`${tag}: ${t0.err}`);
     await page.waitForTimeout(waitMs || 1100);
-    return pick(buf, t0.t, tag);
+    return pick(buf, t0.t, tag, pre);
   };
 
   /* ── 씬 1: 재화 획득 (전투 드랍 지점 → HUD 골드 알약) ── */
