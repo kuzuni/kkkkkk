@@ -1492,6 +1492,12 @@
     box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done{background:#E3D3BC}
+  /* 129 — 완료 표식을 클릭 즉시 입히므로(«죽은 버튼» 제거) 면색·썸네일 회색이 연출 도중에
+     **탁 튄다**. 코인이 썸네일을 떠난 뒤(93: 첫 도착 0.56s) 서서히 넘어가게 지연을 준다.
+     라벨·비활성은 지연 없이 즉시다 — 그게 이 버그의 본체다. `.out`(92 삭제)은 애니메이션이라
+     같은 속성을 잡아도 트랜지션보다 우선한다. */
+  .ml-r,.ml-ac{transition:background .30s ease .16s}
+  .ml-i{transition:filter .34s ease .18s}
   /* 92 — [읽음 전체 삭제] 로 사라지는 행. 60 쥬시의 «밀려나며 접힘»: 오른쪽으로 밀어낸 뒤
      높이·여백을 0 으로 접는다. (`.jz-*` 공용 이름은 60 구간이라 69 안에 지역 클래스로 둔다.)
 
@@ -12013,6 +12019,26 @@ function mailRowHtml(m){
     +   '<b>' + (done ? '완료' : '받기') + '</b></button>'
     + '</div>';
 }
+/* 129 — 「통재렌더 없이 그 행만 «수령 완료» 로 바꾼다」.
+   목록 통재렌더는 58 계약대로 연출이 끝난 뒤(`fxRenderLater` = FXHOLD)로 미루는 게 맞다 —
+   연출 중간에 목록을 갈면 코인이 아직 형제 행 위를 지나는데 딤이 풀려 77·58 회귀가 난다.
+   하지만 «이 행은 이미 받았다» 만은 **클릭 즉시** 말해야 한다: 93 이 FXHOLD 를 620 → 1330 으로
+   늘리면서 그 1.33초 동안 버튼이 «받기» 인 채 활성으로 남아, 눌러도 아무 일 없는 «죽은 버튼» 이
+   됐다(VERIFY69 FAIL 91/96 — 5건 전부 이 한 뿌리. 연타 검증이 «미수령 = :not([disabled])» 로
+   행을 고르는데 행이 안 갱신되니 이미 받은 같은 행을 다시 집어 증가분 0).
+   여기서 입히는 표식은 **`mailRowHtml` 의 `done` 분기와 정확히 같은 결과**여야 한다 — 어긋나면
+   FXHOLD 뒤 재렌더에서 표식이 «되돌아» 보인다. 그래서 문구·클래스를 이 한곳에 모은다. */
+function mailRowDone(row, btn){
+  if(btn){
+    btn.disabled = true;                       /* 연타 가드가 구조적으로 선다 — 비활성 버튼은 click 이 안 뜬다 */
+    const t = btn.querySelector('b') || btn;
+    t.textContent = '완료';
+  }
+  if(!row) return;
+  row.classList.add('done');
+  const d = row.querySelector('.ml-d i');
+  if(d) d.textContent = '수령 완료';
+}
 function openMail(){
   const left = mailLeft(), list = mailList(), del = mailDelable();
   $('mtitle').textContent = '우편함';
@@ -12083,8 +12109,10 @@ function openMail(){
       MLDEL_DUR + (rows.length - 1) * stag + 20);
   };
   $('mbox').querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
+    if(b.disabled || S.mail[b.dataset.ml]) return;      /* 129 — 이미 받은 행은 여기서 끝난다 */
     const row = b.closest('.ml-r');
     fxMail(b, row ? (row.querySelector('.ml-i') || row) : b);
+    mailRowDone(row, b);                                /* 129 — 재렌더는 미루되 «받았다» 는 지금 말한다 */
     fxThen(() => { claimMail(b.dataset.ml); fxRenderLater(() => { if(fxStillOpen('ml69')) openMail(); }); });   /* 58 11회차 */
   });
 }

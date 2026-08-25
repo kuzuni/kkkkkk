@@ -292,8 +292,21 @@ async function fresh(browser, w = 1080, h = 2280) {
     const before = await page.evaluate(() => ({ g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail } }));
     const m0 = await page.evaluate(() => ({ ...MAILS[0] }));
     await page.evaluate(() => { document.querySelector('.ml-r [data-ml]').click(); });
-    /* 58 계약 — 행 수령의 재렌더는 `fxHoldList()` 의 FXHOLD(620ms) 가 풀린 «뒤» 다(`fxRenderLater`).
-       500ms 로 재면 아직 옛 행을 보고 «수령했는데 버튼이 활성» 이라고 오판한다(92 에서 잡음). */
+    /* 129 — 「완료 표식은 재렌더를 기다리지 않는다」.
+       58 계약상 목록 통재렌더는 `fxHoldList()` 가 풀린 «뒤» 이고, 그 FXHOLD 는 93 이 620 → **1330ms**
+       로 늘렸다. 재렌더에만 기대면 그 1.33초 동안 버튼이 «받기» 인 채 활성으로 남아 «눌러도 아무
+       일 없는 죽은 버튼» 이 된다(129 가 잡은 회귀 — 여기 91/96 이 났다).
+       → 표식은 클릭 즉시(`mailRowDone`), 통재렌더는 그대로 미룸. **상수가 또 바뀌어도** 잡히도록
+       재렌더 «전» 시점에 한 번 재고, 재렌더 «후» 에 다시 재서 둘이 같은지까지 본다. */
+    await page.waitForTimeout(120);
+    const insta = await page.evaluate(() => ({
+      dis: document.querySelector('.ml-r .ml-b').disabled,
+      btn: document.querySelector('.ml-r .ml-b').textContent.trim(),
+      done: document.querySelector('.ml-r').classList.contains('done')
+    }));
+    insta.dis && insta.done && insta.btn === '완료'
+      ? ok('클릭 120ms 뒤 — 이미 «완료» · 비활성 · .done (재렌더를 안 기다린다)')
+      : fail(`재렌더 전 행이 옛 상태다 — btn=${insta.btn} disabled=${insta.dis} done=${insta.done} (129 회귀: 죽은 버튼)`);
     await page.waitForTimeout(900);
     const after = await page.evaluate(() => ({
       g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail },
@@ -326,6 +339,30 @@ async function fresh(browser, w = 1080, h = 2280) {
       near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, drift);
       near('연타 3회 — 다이아는 1회분만', dblPost.c - dblPre.c, m1.c, 0);
     } else fail('연타 검증용 미수령 행이 없다');
+
+    /* 129 — 미룬 통재렌더(FXHOLD)가 실제로 돌고 나서도 표식이 «되돌아오지» 않는지.
+       즉시 표식과 `mailRowHtml` 의 done 분기가 어긋나면 여기서 옛 라벨이 다시 보인다. */
+    await page.waitForTimeout(700);
+    const post = await page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.ml-r')];
+      return rows.map((r) => ({
+        id: r.querySelector('[data-ml]').dataset.ml,
+        dis: r.querySelector('.ml-b').disabled,
+        btn: r.querySelector('.ml-b').textContent.trim(),
+        done: r.classList.contains('done'),
+        d: r.querySelector('.ml-d i').textContent.trim(),
+        claimed: null
+      }));
+    });
+    const claimedIds = await page.evaluate(() => Object.keys(S.mail).filter((k) => S.mail[k] === 1));
+    post.filter((r) => claimedIds.includes(r.id))
+      .every((r) => r.dis && r.done && r.btn === '완료' && r.d === '수령 완료')
+      ? ok(`재렌더 뒤에도 수령 ${claimedIds.length}행이 «완료» 유지(즉시 표식 ≡ mailRowHtml)`)
+      : fail('재렌더가 수령한 행을 옛 상태로 되돌렸다 — ' +
+          post.filter((r) => claimedIds.includes(r.id)).map((r) => `${r.id}:${r.btn}/${r.dis}/${r.done}/${r.d}`).join(' '));
+    post.filter((r) => !claimedIds.includes(r.id))
+      .every((r) => !r.dis && r.btn === '받기' && !r.done)
+      ? ok('미수령 행은 그대로 [받기] 활성') : fail('미수령 행이 완료로 표시됐다');
 
     /* HUD 반영 — 렌더 루프가 갱신하므로 한 프레임 기다린다(LESSONS 25 함정) */
     await page.waitForTimeout(500);
