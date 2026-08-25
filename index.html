@@ -2302,6 +2302,11 @@
   /* 46 레이드 카드 — 던전 카드와 «같은 규격»(좌표·높이·radius·색 전부 동일)이지만
      값 문자열이 층 번호(1~2자)가 아니라 «60초 / 1.23M» 이라 알약 폭만 내용에 맞춘다.
      절대 배치를 relative 로 바꿔 shrink-to-fit 을 쓰되 좌측 여백(64/71)은 그대로 살린다. */
+  /* 97 — 레이드 카드 썸네일. 슬롯 기하(.dnc>.th)는 던전과 공용이고, 안에 드는 것만
+     이모지 <em> 대신 스프라이트 <canvas> 다. 캔버스를 슬롯에 꽉 채워 «아트 자리 규칙»
+     (bbox 를 정확히 차지)을 지킨다 — 픽셀 아트가 흐려지지 않게 확대 보간을 끈다. */
+  .dnc.rd>.th>canvas{position:absolute;left:0;top:0;width:100%;height:100%;
+    image-rendering:pixelated;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
   .dnc.rd .sp{width:auto;min-width:156px;padding-right:22px}
   .dnc.rd .sp.lv>i,.dnc.rd .sp.tk>i{position:relative;left:0;margin-left:64px}
   .dnc.rd .sp.tk>i{margin-left:71px}
@@ -7972,6 +7977,34 @@ function drawHeroTo(canvas, o){
   g.restore();
   return true;
 }
+/* 작업 97 — 79·80 의 `drawHeroTo` 를 «임의 아틀라스» 로 일반화한 헬퍼.
+   drawHeroTo 는 앵커가 «발밑»(전투 씬과 같은 기준)이지만, 여기 쓰임새는 카드의 «아트 자리»다:
+   72 «아트 자리 규칙»(레퍼런스 bbox 를 정확히 차지 — 나중에 일러스트로 교체만 하면 되게)을
+   지키려면 프레임 잉크 rect(fr[0..3])를 **슬롯 캔버스에 그대로 늘려** 채워야 한다.
+   그래서 fr[4..7](논리 프레임 오프셋·크기)은 쓰지 않는다 — 그건 «씬 좌표에 세우는» 값이다.
+   틴트는 87 의 lite 경로(그린 자리에서 multiply → destination-in)와 픽셀 연산이 같아
+   색이 전투 렌더의 `tinted()` 와 일치하면서 `tintCache`(아틀라스 통째 사본)를 늘리지 않는다. */
+function drawSpriteTo(canvas, o){
+  const A = ATLAS[o && o.k], g = canvas.getContext('2d');
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  if(!A || !A.image) return false;
+  const fr = A.f[o.frame];
+  if(!fr) return false;
+  const W = canvas.width, H = canvas.height;
+  g.imageSmoothingEnabled = false;
+  g.save();
+  if(o.flip){ g.translate(W, 0); g.scale(-1, 1); }
+  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, W, H);
+  if(o.tint){
+    g.globalCompositeOperation = 'multiply';
+    g.fillStyle = o.tint; g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, W, H);
+    g.globalCompositeOperation = 'source-over';
+  }
+  g.restore();
+  return true;
+}
 function setAnim(e, key, name, fps, loop){
   if(e.anim === name && e.akey === key) return;
   e.akey = key; e.anim = name; e.at = 0; e.afps = fps; e.aloop = loop; e.adone = false;
@@ -12054,14 +12087,27 @@ $('dunList').addEventListener('click', e => {
    왼쪽 서브탭 «레이드» 는 제한 시간 동안 «죽지 않는 샌드백 보스» 를 때려 총 피해량·DPS 를 재는
    던전이다. 껍데기·카드 규격·04 세부 팝업은 03 던전 것을 그대로 쓰고 «내용» 만 레이드다.
    가정(주인 확인 필요): 제한 시간 30/60/120초 3종 · 보스 공격 없음 · 입장 횟수 무제한 · 보상 없음. */
+/* 97 — 카드 우측 몬스터 썸네일(72 `.th` 슬롯).
+   ① 기하: 03 측정표 §3-8 의 던전 카드 값을 그대로 재사용한다 — 카드1 311×305(상단 인셋 36) ·
+      카드2 296×289(52) · 카드3 330×330(11). 잠금 여부로 바뀌지 않는 **카드별 고정값**이다
+      (해금 순간에 슬롯이 리사이즈되면 «칸이 흔들린다»).
+   ② 아트: 레이드 샌드백은 세 측정장 모두 같은 `ETYPE.boss`(elves 파랑 «군주») 다 —
+      **없는 몬스터를 그리지 않는다.** 대신 카드 팔레트로 틴트만 달리해 칸을 구분한다
+      (MOBS 가 같은 스프라이트를 tint 로 변주하는 것과 같은 방식).
+      프레임은 `blue_attack_2`(잉크 121×132, 종횡 0.917) — 후보 13종을 `tools/probe97.js` 로
+      실측해 슬롯 종횡(1.00~1.02)에 가장 가까운 «군주» 포즈를 골랐다(늘림 9~11%,
+      던전 카드 이모지의 --tsx 0.977~1.158 과 같은 범위다). LESSONS 72-②의 스프라이트판. */
 const RAIDS = [
   { id:'r60',  n:'정규 측정장', sec:60,  open:1,
-    ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'] } },
+    ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'],
+         thw:'311px', tht:'36px', thk:'elves', thf:'blue_attack_2', thc:'#E2907F' } },
   { id:'r30',  n:'단기 측정장', sec:30,  open:15,
     /* 알약 안쪽 폭은 230px 뿐이다 — 「짧게 폭발 피해 측정」(141) 은 7.5px 새어 나온다 */
-    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['폭발 피해 측정'] } },
+    ui:{ s:'#4A3A12', i:'#7A6320', r:'#96792B', pt:'#D9C68F', rw:['폭발 피해 측정'],
+         thw:'296px', tht:'52px', thk:'elves', thf:'blue_attack_2', thc:'#E4CE8E' } },
   { id:'r120', n:'장기 측정장', sec:120, open:30,
-    ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['지속 피해량 측정'] } }
+    ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['지속 피해량 측정'],
+         thw:'330px', tht:'11px', thk:'elves', thf:'blue_attack_2', thc:'#B9A9F0' } }
 ];
 const raidLocked = r => S.best < r.open;
 const raidBest = id => S.raidBest[id] || { dmg:0, dps:0 };
@@ -12071,8 +12117,14 @@ function renderRaidPage(){
   RAIDS.forEach(r => {
     const u = r.ui, lock = raidLocked(r), b = raidBest(r.id);
     h += '<div class="dnc rd" data-rcard="' + r.id + '" style="--s:' + u.s + ';--i:' + u.i
-      +  ';--r:' + u.r + ';--pt:' + u.pt + '">'
-      +  '<div class="bg"></div><div class="sh"></div><div class="fr"></div>'
+      +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht + '">'
+      +  '<div class="bg"></div>'
+      /* 97 — 던전 카드와 같은 자리(.bg 바로 뒤): 프레임·텍스트·잠금 딤이 전부 위로 온다.
+         canvas 픽셀 크기 = 슬롯 px 라 프레임 배율 1 에서 1:1 이다 */
+      +  '<div class="th"><canvas class="thcv" width="' + parseInt(u.thw, 10)
+      +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-thk="' + u.thk
+      +  '" data-thf="' + u.thf + '" data-thc="' + u.thc + '"></canvas></div>'
+      +  '<div class="sh"></div><div class="fr"></div>'
       +  '<div class="nm"><i>' + r.n + '</i></div>'
       +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
       /* 단위(초)는 라벨에 둔다 — 알약 안에 «120초» 를 넣으면 폭이 195 가 돼
@@ -12085,6 +12137,16 @@ function renderRaidPage(){
       +  '</div>';
   });
   $('dunList').innerHTML = h;
+  raidPaint();
+}
+/* 97 — 썸네일 캔버스 그리기. 던전 페이지는 renderUI 주기 루프에 없어(열 때·서브탭 전환 때만
+   렌더된다) 87 `cosPaint` 처럼 «다음 틱이 알아서 다시 그려 준다» 를 기대할 수 없다.
+   아틀라스 이미지가 아직 로드 전이면 빈 칸으로 남으므로, 성공할 때까지 몇 번 되쏜다. */
+function raidPaint(tries){
+  const cvs = [...document.querySelectorAll('#dunList canvas.thcv')];
+  if(!cvs.length) return;
+  const okAll = cvs.every(cv => drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv.dataset.thf, tint: cv.dataset.thc }));
+  if(!okAll && (tries | 0) < 25) setTimeout(() => raidPaint((tries | 0) + 1), 200);
 }
 /* 서브탭 전환 — 껍데기(#dunw)는 그대로 두고 리스트 내용과 선택 표시만 바꾼다 */
 function setDunSub(k){
