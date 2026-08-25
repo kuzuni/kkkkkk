@@ -134,6 +134,8 @@ function staticSyntax() {
       tabs.forEach((t) => openers.push({ label: 'tab:' + t, sel: `.tab[data-t="${t}"]` }));
       pops.forEach((p) => openers.push({ label: 'side:' + p, sel: `.side .ibtn[data-pop="${p}"]` }));
       if (await page.$('#menub')) openers.push({ label: 'menu', sel: '#menub' });
+      /* 103 채팅 페이지 — 02 좌하단 💬 가 오프너다(.tab/.side/[data-cur] 수집에 안 걸린다) */
+      if (await page.$('#chw')) openers.push({ label: 'util:chat', sel: '#botleft .ubtn[data-util="chat"]' });
       /* 52 ▦ 메뉴 8칸 — 메뉴를 연 뒤 칸을 누르는 2단계 오프너. `data-mn` 속성 하나로 표시되므로
          칸이 늘거나 줄면 여기 목록이 자동으로 따라간다(33 «속성 + 위임 핸들러 1개» 방식). */
       const mns = await page.$$eval('#mnw [data-mn]', (els) => els.map((e) => e.dataset.mn)).catch(() => []);
@@ -359,11 +361,14 @@ function staticSyntax() {
       /* 54 랭킹은 «전체화면 페이지 + bottom 앵커 3장» 이라 짧은 프레임에서 리스트 패널만 줄어야 한다
          (LESSONS 22-④). 패널 높이가 음수로 접히면 여기서 잡힌다. */
       await page.evaluate(() => { if (typeof openRank === 'function') openRank(); }).catch(() => {});
+      /* 103 채팅은 «전체화면 페이지 + bottom 앵커 입력 바» 라 짧은 프레임에서 리스트만 줄어야 한다.
+         입력 바(186px)가 프레임 밖으로 밀리거나 리스트 높이가 음수로 접히면 여기서 잡힌다. */
+      await page.evaluate(() => { if (typeof openChat === 'function') openChat(); }).catch(() => {});
       await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav, #chw .ch-list, #chw .ch-bar')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
