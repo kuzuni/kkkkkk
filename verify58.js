@@ -92,7 +92,10 @@ function pwLaunch(){
         const r = e.getBoundingClientRect();
         minD = Math.min(minD, Math.hypot(r.left + r.width/2 - target.x, r.top + r.height/2 - target.y));
       }
-      if(pill.classList.contains('fx-punch2') || pill.classList.contains('fx-punch')) punch++;
+      /* 93 4회차 — UI 발 펄스는 CSS 클래스가 아니라 **JS 진폭**(인라인 transform)이다.
+         클래스 재시작이 봉우리를 잘라 20ms 표본 80장 중 6장만 ≥1.05 였다(비평가 P·Q 가 3/18 로 확인). */
+      const pm = String(getComputedStyle(pill).transform).match(/matrix\(([\d.\-]+)/);
+      if((pm ? +pm[1] : 1) >= 1.03 || pill.classList.contains('fx-punch')) punch++;
       const pl = document.querySelector('#fxl .fx-plus');
       if(pl && !plusTxt) plusTxt = pl.textContent;      /* 0.8초 뒤 스스로 사라지므로 «도는 동안» 잡는다 */
       await sleep(8);
@@ -104,7 +107,7 @@ function pwLaunch(){
   /* 93 (저장소 주인 지시 2026-08-26) — UI 발은 8~16개. 3~6개 규칙은 이 행이 대체한다. */
   chk(fly.n0 >= 8 && fly.n0 <= 16, '아이콘 ' + fly.n0 + '개 (93: UI 발 8~16개)');
   chk(fly.minD <= 6, 'HUD 골드 알약에 «정확히» 도착 — 최근접 ' + fly.minD + 'px');
-  chk(fly.punch > 0, '도착 순간 알약이 튄다 (.fx-punch2 관측 ' + fly.punch + '프레임)');
+  chk(fly.punch > 0, '도착 순간 알약이 튄다 (확대 관측 ' + fly.punch + '프레임)');
   /* 93 — «퍼짐 0.22 + 머묾 0.12~0.20 + 흡수(스태거 35ms)» 로 총 1.1~1.4초. 옛 0.3~0.8초 규칙은 폐기. */
   chk(fly.lastSeen >= 900 && fly.lastSeen <= 1600, '연출 길이 ' + fly.lastSeen + 'ms (93: 1.1~1.4초 · +정리 여유)');
   chk(!!fly.plusTxt, '`+n` 플로팅 텍스트 — "' + fly.plusTxt + '"');
@@ -303,7 +306,8 @@ function pwLaunch(){
     S.gold += 128000;
     let peak = base, doneAt = -1, movedAt = -1, prev = num.textContent;
     while(performance.now() - t0 < 1600){
-      peak = Math.max(peak, pill.getBoundingClientRect().width);
+      const pm3 = String(getComputedStyle(pill).transform).match(/matrix\(([\d.\-]+)/);
+      peak = Math.max(peak, pill.getBoundingClientRect().width, base*(pm3 ? +pm3[1] : 1));
       if(movedAt < 0 && num.textContent !== prev) movedAt = performance.now() - t0;
       if(doneAt < 0 && num.textContent === want) doneAt = performance.now() - t0;
       await sleep(16);
@@ -348,7 +352,8 @@ function pwLaunch(){
     const pn0 = fxPunchN;                              /* 93 — «몇 번 톡톡 튀었나» */
     let hi = 0, pmax = 1, prevT = Date.now(), wasHi = false;
     for(let i=0;i<130;i++){
-      const w = pill.getBoundingClientRect().width / base;
+      const pm2 = String(getComputedStyle(pill).transform).match(/matrix\(([\d.\-]+)/);
+      const w = Math.max(pill.getBoundingClientRect().width / base, pm2 ? +pm2[1] : 1);
       const nowT = Date.now();
       pmax = Math.max(pmax, w);
       if(wasHi) hi += nowT - prevT;

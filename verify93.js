@@ -61,6 +61,7 @@ function pwLaunch(){
     const f0 = fxFlies[0], sv = fxSc();
     const org = { x:sv.x + f0.sx*sv.s, y:sv.y + f0.sy*sv.s };
     let n0 = 0, first = -1, last = -1, prev = 0, pmax = 1, radT = -1, radMax = 0, rollDone = -1;
+    let pobs = 0, phit = 0, lastSamp = -1e9, last2 = -1;
     while(performance.now() - t0 < 2200){
       const t = performance.now() - t0;
       const c = fxFlies.filter(f => f.ui).length;
@@ -76,13 +77,18 @@ function pwLaunch(){
         if(dd > radMax){ radMax = dd; radT = t; }
       }
       if(prev && c < prev){ if(first < 0) first = t; last = t; }
+      if(first >= 0 && c === 0 && prev === 0 && last2 < 0 && t > last + 200) last2 = t;
       prev = c;
       const mm = String(getComputedStyle(pb).transform).match(/matrix\(([\d.\-]+)/);
-      pmax = Math.max(pmax, mm ? +mm[1] : 1);
+      const sc2 = mm ? +mm[1] : 1;
+      pmax = Math.max(pmax, sc2);
+      /* 4회차 — «관측되는가» 를 잰다. 도착 창(첫~마지막 도착) 안에서 캡처 리듬(93ms)으로 표본해
+         ≥1.05 인 비율. 3회차까지는 CSS 애니메이션 재시작 때문에 7.5% 였다(비평가 P·Q 가 3/18 로 확인). */
+      if(first >= 0 && last2 < 0 && (t - lastSamp) >= 93){ lastSamp = t; pobs++; if(sc2 >= 1.05) phit++; }
       if(rollDone < 0 && num.textContent === want) rollDone = t;
       await sleep(8);
     }
-    return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0,
+    return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0, pobs, phit,
              pmax:+pmax.toFixed(3), radT:Math.round(radT), radMax:Math.round(radMax),
              rollDone:Math.round(rollDone), rest:document.getElementById('fxl').childElementCount };
   });
@@ -96,6 +102,9 @@ function pwLaunch(){
   chk(t1.last >= 1200 && t1.last <= 1400, '마지막 도착 ' + t1.last + 'ms (93: 1.2~1.4s)');
   chk(t1.punchN >= 4, '알약 펄스 ' + t1.punchN + '회 (93: ≥4회 — «톡톡» 이 찰진 핵심)');
   chk(t1.pmax >= 1.06, '펄스 최대 확대 ×' + t1.pmax + ' (93: 폭을 줄이고 횟수를 늘린다)');
+  chk(t1.pobs >= 5 && t1.phit/Math.max(1,t1.pobs) >= 0.6,
+      '도착 창에서 알약이 커져 보이는 표본 ' + t1.phit + '/' + t1.pobs
+      + ' = ' + Math.round(100*t1.phit/Math.max(1,t1.pobs)) + '% (캡처 리듬 93ms · ≥60%)');
   chk(t1.rollDone >= t1.first && t1.rollDone <= 1550,
       '숫자 롤링이 ' + t1.rollDone + 'ms 에 끝난다 — 첫 도착부터 마지막 도착까지 코인과 같이 오른다');
   chk(t1.rest === 0, '연출이 끝나면 레이어가 비워진다 (잔여 ' + t1.rest + ')');
@@ -220,19 +229,20 @@ function pwLaunch(){
              boxes:boxes.map(r => [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]) };
   });
   chk(!t2b.err, '2회차 회귀 트리거' + (t2b.err ? ' — ' + t2b.err : ''));
-  /* 3회차 — «딤을 무시한» 관통은 **0 을 목표로 하되 ≤2 프레임까지 통과**로 둔다.
-     행 카드가 x131~949 로 프레임 1080 의 87% 를 차지하고 골드 알약은 x583(행 한가운데 위)이라,
-     되꺾여 내려오는 마지막 구간이 행 우변을 스치는 것은 **기하학적으로 불가피**하다(58 11회차 결론).
-     실측 1프레임(945,607 — 우변 949 안쪽 4px). 그래서 저장소의 처방은 딤이고, 그 «딤 기준 0» 이
-     바로 위 [2] 의 하드 요건이다. 여기서는 «궤적이 패널 밖으로 실제로 나가는가»(1회차 151회)를 지킨다. */
-  chk(t2b.cross <= 2, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 ≤2 (1회차 151회 · 3차 베지에)'
+  /* 4회차 — «딤을 무시하고» 세도 **0** 이다. 3회차까지 1~4프레임 남던 스침(x940~948 · 행 우변 949)은
+     탈출 목표(FX3_OUTM 90→176)와 최대 x 상한(FRAME_W−34→−8)을 올려 곡선 전체를 오른쪽으로 민 것으로
+     없어졌다. 1회차 151회 → 4회차 0회. (딤 기준 0 은 위 [2] 의 하드 요건으로 따로 지킨다) */
+  /* 남는 ≤1 은 «행 밴드 경계선 위의 한 표본»(실측 925,949 — 행 하변 949 에 정확히 걸친 프레임)이다.
+     궤적이 행을 «가로지르는» 것이 아니라 경계에 접하는 것이고, 스폰 지터·재렌더로 행 rect 가 1~2px
+     움직이면 켜졌다 꺼진다. 0 으로 못박으면 게이트가 비결정적이 된다. */
+  chk(t2b.cross <= 1, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 ≤1 (1회차 151회 · 3차 베지에)'
       + (t2b.cross ? ' · 지점 ' + (t2b.where || []).join(' / ') + ' · 행 ' + JSON.stringify(t2b.boxes) : ''));
   chk(t2b.samp > 200 && t2b.froze/t2b.samp <= 0.02,
       '정지 프레임 ' + t2b.froze + '/' + t2b.samp + ' = '
       + (t2b.samp ? (100*t2b.froze/t2b.samp).toFixed(1) : '-') + '% (렌더 프레임 기준 ≤2%)');
   chk(t2b.backs === 0, '흡수 중 «아래로» 되돌아가는 프레임 ' + t2b.backs
       + '회 (3회차: 수평 슬링으로 낙차 0 — 2회차는 최대 54px 내려갔다)');
-  chk(t2b.off === 0, '프레임 밖으로 새는 프레임 ' + t2b.off + '회 (제어점 이분탐색으로 최대 x 를 1046 안에 넣는다)');
+  chk(t2b.off === 0, '프레임 밖으로 새는 프레임 ' + t2b.off + '회 (제어점 이분탐색으로 최대 x 를 FRAME_W−8 안에 넣는다)');
   chk(t2b.worstLead <= 0.12,
       '숫자가 도착보다 최대 ' + Math.round(t2b.worstLead*100) + '%p 앞선다 (2회차: 선형 롤링 — ≤12%p)');
 
