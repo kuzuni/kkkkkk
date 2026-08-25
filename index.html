@@ -7890,14 +7890,41 @@ const SLOTS = [
   { k:'shield', n:'방패',   ic:'🛡️', stat:'최대 체력' },
   { k:'amulet', n:'목걸이', ic:'📿', stat:'체력 재생' }
 ];
+/* 작업 75(2026-08-25, 주인 보고) — 등급당 1종 → 여러 종. 구조는 «부위 → 등급 → 항목 배열».
+   종수는 일반·고급 4 / 희귀·영웅 3 / 전설·신화 2 (부위당 18종, 총 54종).
+   id 는 j=0 이 기존 `slot+g`(weapon0~weapon5 등 — 구 세이브 보존), j≥1 은 `slot+g+'_'+j`.
+   v 는 같은 등급 안 개체차 배율(0.9~1.15, ownVal·equipVal·power 에 곱함) — j=0 은 1.00 고정(구 세이브 수치 불변).
+   ic 는 항목별 임시 아트(이모지) — j=0 은 기존 부위 아이콘 유지. */
 const EQ_NAMES = {
-  weapon: ['녹슨 검','강철 장검','기사의 대검','룬 블레이드','용살자의 검','천공의 성검'],
-  shield: ['나무 방패','강철 방패','기사 방패','룬 실드','용비늘 방패','불멸의 성체'],
-  amulet: ['가죽 목걸이','은 목걸이','수정 목걸이','룬 아뮬렛','생명의 심장','영원의 성물']
+  weapon: [
+    [ {n:'녹슨 검',v:1.00,ic:'⚔️'},   {n:'낡은 손도끼',v:0.92,ic:'🪓'},  {n:'사냥꾼의 단검',v:1.06,ic:'🔪'}, {n:'견습 사수의 활',v:1.12,ic:'🏹'} ],
+    [ {n:'강철 장검',v:1.00,ic:'⚔️'}, {n:'전쟁 망치',v:1.10,ic:'🔨'},    {n:'강철 창',v:0.94,ic:'🔱'},       {n:'쌍날 도끼',v:1.05,ic:'🪓'} ],
+    [ {n:'기사의 대검',v:1.00,ic:'⚔️'}, {n:'은빛 세이버',v:1.12,ic:'🤺'}, {n:'처형자의 도끼',v:0.92,ic:'🪓'} ],
+    [ {n:'룬 블레이드',v:1.00,ic:'⚔️'}, {n:'룬 워해머',v:1.08,ic:'🔨'},   {n:'마력의 지팡이',v:0.95,ic:'🪄'} ],
+    [ {n:'용살자의 검',v:1.00,ic:'⚔️'}, {n:'용아 창',v:1.10,ic:'🔱'} ],
+    [ {n:'천공의 성검',v:1.00,ic:'⚔️'}, {n:'별빛 대검',v:1.15,ic:'🌠'} ]
+  ],
+  shield: [
+    [ {n:'나무 방패',v:1.00,ic:'🛡️'},  {n:'여행자의 원방패',v:0.93,ic:'🪵'}, {n:'철테 방패',v:1.05,ic:'🔰'}, {n:'파수꾼의 대방패',v:1.12,ic:'🚧'} ],
+    [ {n:'강철 방패',v:1.00,ic:'🛡️'},  {n:'사각 방패',v:1.08,ic:'🧱'},       {n:'가시 방패',v:0.95,ic:'🌵'}, {n:'성벽 방패',v:1.12,ic:'🏰'} ],
+    [ {n:'기사 방패',v:1.00,ic:'🛡️'},  {n:'문장 방패',v:1.10,ic:'🔰'},       {n:'등딱지 방패',v:0.92,ic:'🐢'} ],
+    [ {n:'룬 실드',v:1.00,ic:'🛡️'},    {n:'마력 장벽',v:1.08,ic:'💠'},       {n:'수호자의 탑방패',v:0.94,ic:'🗼'} ],
+    [ {n:'용비늘 방패',v:1.00,ic:'🛡️'}, {n:'용골 방패',v:1.10,ic:'🦴'} ],
+    [ {n:'불멸의 성체',v:1.00,ic:'🛡️'}, {n:'태양의 아이기스',v:1.15,ic:'☀️'} ]
+  ],
+  amulet: [
+    [ {n:'가죽 목걸이',v:1.00,ic:'📿'}, {n:'조개껍질 목걸이',v:0.93,ic:'🐚'}, {n:'이빨 목걸이',v:1.05,ic:'🦷'}, {n:'네잎클로버 펜던트',v:1.12,ic:'🍀'} ],
+    [ {n:'은 목걸이',v:1.00,ic:'📿'},   {n:'달빛 펜던트',v:1.08,ic:'🌙'},     {n:'호박 목걸이',v:0.94,ic:'🟠'}, {n:'행운의 동전 목걸이',v:1.10,ic:'🪙'} ],
+    [ {n:'수정 목걸이',v:1.00,ic:'📿'}, {n:'나자르 부적',v:1.10,ic:'🧿'},     {n:'별빛 펜던트',v:0.92,ic:'⭐'} ],
+    [ {n:'룬 아뮬렛',v:1.00,ic:'📿'},   {n:'함사 부적',v:1.08,ic:'🪬'},       {n:'백합 문장 목걸이',v:0.95,ic:'⚜️'} ],
+    [ {n:'생명의 심장',v:1.00,ic:'📿'}, {n:'수호자의 눈물',v:1.10,ic:'💧'} ],
+    [ {n:'영원의 성물',v:1.00,ic:'📿'}, {n:'창세의 목걸이',v:1.15,ic:'✨'} ]
+  ]
 };
 const EQUIPS = [];
-SLOTS.forEach(s => EQ_NAMES[s.k].forEach((nm, i) =>
-  EQUIPS.push({ id:s.k + i, n:nm, slot:s.k, g:i, ic:s.ic })));
+SLOTS.forEach(s => EQ_NAMES[s.k].forEach((tier, g) =>
+  tier.forEach((x, j) =>
+    EQUIPS.push({ id:s.k + g + (j ? '_' + j : ''), n:x.n, slot:s.k, g, j, v:x.v, ic:x.ic || s.ic }))));
 
 /* ---- 펫 (최대 3마리) ---- */
 const PETS = [
@@ -8005,12 +8032,14 @@ const COLL = {
     { need:11, n:'공격력 +40%',      f:b => b.atk *= 1.40 },
     { need:13, n:'모든 피해 +60%',   f:b => b.atk *= 1.60 } ]},
   equip: { n:'장비', list:EQUIPS, tiers:[
-    { need:4,  n:'최대 체력 +15%',   f:b => b.hp *= 1.15 },
-    { need:8,  n:'공격력 +15%',      f:b => b.atk *= 1.15 },
-    { need:11, n:'체력 재생 +40%',   f:b => b.regen *= 1.40 },
-    { need:14, n:'최대 체력 +40%',   f:b => b.hp *= 1.40 },
-    { need:16, n:'공격력 +50%',      f:b => b.atk *= 1.50 },
-    { need:18, n:'전 스탯 대폭 상승', f:b => { b.atk *= 1.6; b.hp *= 1.6; b.regen *= 1.6; } } ]},
+    /* 75 ④ — 장비 총수 18 → 54(정확히 3배). need 도 3배 스케일(마지막 단계 = 전 종 수집 유지).
+       S.coll.equip 은 «받은 단계 수» 카운터라 구 세이브의 이미 받은 보너스는 그대로 유효하다. */
+    { need:12, n:'최대 체력 +15%',   f:b => b.hp *= 1.15 },
+    { need:24, n:'공격력 +15%',      f:b => b.atk *= 1.15 },
+    { need:33, n:'체력 재생 +40%',   f:b => b.regen *= 1.40 },
+    { need:42, n:'최대 체력 +40%',   f:b => b.hp *= 1.40 },
+    { need:48, n:'공격력 +50%',      f:b => b.atk *= 1.50 },
+    { need:54, n:'전 스탯 대폭 상승', f:b => { b.atk *= 1.6; b.hp *= 1.6; b.regen *= 1.6; } } ]},
   pet: { n:'펫', list:PETS, tiers:[
     { need:2, n:'골드 획득 +20%', f:b => b.gold *= 1.20 },
     { need:4, n:'공격력 +12%',    f:b => b.atk *= 1.12 },
@@ -8417,8 +8446,10 @@ const relicEquipped = id => S.eqRelic.indexOf(id) >= 0;
 const eqEquipped    = it => S.eqSlot[it.slot] === it.id;
 const gMul  = g => GRADE[g].mul;
 const lvMul = l => 1 + l*0.18;
-const ownVal   = it => 0.02 * gMul(it.g) * lvMul(oLv(it.id));
-const equipVal = it => 0.10 * gMul(it.g) * lvMul(oLv(it.id));
+/* 작업 75 — 장비 개체차 배율. slot 이 있는 것(장비)만 v 를 곱한다(유물의 v 는 relicVal 전용) */
+const eqv = it => (it.slot && it.v) ? it.v : 1;
+const ownVal   = it => 0.02 * gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);
+const equipVal = it => 0.10 * gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);
 const relicVal = it => it.v * gMul(it.g) * lvMul(oLv(it.id)) * 0.5;
 
 let bonusCache = null, bonusDirty = true;
@@ -10027,7 +10058,13 @@ document.querySelectorAll('#defw .df-btn').forEach(b => b.addEventListener('clic
   if(b.dataset.dfgo) goTab(b.dataset.dfgo);
 }));
 
-const nextGradeItem = it => EQUIPS.find(e => e.slot === it.slot && e.g === it.g+1);
+/* 75 ③ — 합성 결과는 «다음 등급 첫 항목 고정» 이 아니라 같은 계열(j) 유지, 없으면 j 를 등급 내로 감아서
+   결정적으로 고른다(canCraft 와 craft 가 따로 부르므로 랜덤이면 판정↔지급이 어긋난다). */
+const nextGradeItem = it => {
+  const pool = EQUIPS.filter(e => e.slot === it.slot && e.g === it.g + 1);
+  if(!pool.length) return null;
+  return pool.find(e => e.j === it.j) || pool[(it.j || 0) % pool.length];
+};
 const canCraft = it => catOf(it) === 'equip' && !isTopGrade(it) && oLv(it.id) >= MAX_LEVEL
                     && frag(it.id) >= CRAFT_NEED && !!nextGradeItem(it);
 function craft(it){
@@ -10253,7 +10290,7 @@ function toggleEquip(it, cat){
 function power(it, cat){
   if(cat === 'skill') return skillDmg(it) * (it.cd > 0 ? 1/it.cd : 3);
   if(cat === 'pet')   return petDmg(it) / it.cd;
-  return gMul(it.g) * lvMul(oLv(it.id));
+  return gMul(it.g) * lvMul(oLv(it.id)) * eqv(it);   /* 75 — 자동장착이 개체차까지 반영해 최강을 고른다 */
 }
 function autoEquipAll(){
   S.eqSkill = SKILLS.filter(s => has(s.id)).sort((a,b) => power(b,'skill') - power(a,'skill')).slice(0,8).map(s => s.id);
@@ -12356,9 +12393,10 @@ function renderWpn(){
   for(let r = 0; r < WPN_ROWS; r++){
     const gi = wpnPage * WPN_ROWS + r;
     if(gi >= GRADE.length) break;
-    const w = WGRADE[gi], it = l.find(e => e.g === gi);
+    /* 75 — 행 = 등급, 칸 = 그 등급의 실제 아이템들(2~4종). 남는 칸은 종전처럼 잠금 더미. */
+    const w = WGRADE[gi], items = l.filter(e => e.g === gi);
     for(let c = 0; c < WPN_COLS; c++){
-      const real = c === 0 ? it : null;
+      const real = items[c] || null;
       const mine = real && has(real.id), eq = real && S.eqSlot[wpnPart] === real.id;
       const n = mine ? frag(real.id) : 0, nd = real ? fragNeed(mine ? oLv(real.id) : 1) : 2;
       h += '<div class="wgc' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + '"'
