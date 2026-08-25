@@ -1718,6 +1718,13 @@
   #fxl{position:absolute;inset:0;z-index:60;pointer-events:none;overflow:hidden;
     contain:layout style;font-family:inherit;
     transform:translateZ(0);will-change:transform;backface-visibility:hidden}
+  /* 77 — 전투 발(發) 재화 연출 전용 레이어. 적 킬·보스·스테이지 드랍(fxWorld 좌표 출발)의
+     코인 비행·+n 은 여기에 그린다. z7 = 스테이지 오버레이(z3)·사이드(z5)·HUD(z6) 위,
+     #panel(z9)·#tabbar(z10)·모든 모달(z28+) 아래 — 팝업이 열려 있으면 딤·시트가 자연히 덮는다.
+     UI 발(보상 수령·룰렛·출석·우편 등 탭 기반)은 지금처럼 #fxl(z60, 팝업 위)에 남는다. */
+  #fxlc{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden;
+    contain:layout style;font-family:inherit;
+    transform:translateZ(0);will-change:transform;backface-visibility:hidden}
 
   /* ── 연출 시작 지연 ~150ms 에 대하여 (13회차 실측 · 다음 세션이 또 파지 않도록) ──
      비평가 6명(O·P·Q·R·S·T·U·V)이 회차마다 «클릭 후 139~235ms 무반응» 을 냈다. 원인을 하나씩 쟀다:
@@ -5125,7 +5132,9 @@
   /* z-index 61 — **#fxl(58 재화 비행 연출 레이어)이 60 이라 그 위**에 와야 한다. 40 으로 두면
      giveReward() 가 쏜 코인들이 이 화면 위를 가로질러 밴드 안·딤 위에 그대로 그려진다
      (1회차 비평 A·B 공통 지적: 밴드 안 코인 2개 + 딤 뚫고 나온 스프라이트 9개, 휘도 255 vs ref 108).
-     레퍼런스에는 그 자리에 아무것도 없다 — 결과 화면은 연출 레이어보다 위다. */
+     레퍼런스에는 그 자리에 아무것도 없다 — 결과 화면은 연출 레이어보다 위다.
+     (77 이후: 전투 발 코인은 #fxlc(z7)로 내려가 이 우회 없이도 안 뚫지만, giveReward 는 UI 발
+     경로(#fxl z60)로도 쏠 수 있어 61 을 유지한다 — 값 바꾸지 마라.) */
   #dclw{position:absolute;inset:0;display:none;z-index:61;cursor:pointer;background:rgba(0,0,0,.78)}
   #dclw.on{display:block}
   #dclw i,#dclw b,#dclw s{display:inline-block;font-style:normal;transform-origin:50% 50%}
@@ -7706,7 +7715,8 @@
     </div>
     <div class="sv-hint">밀어서 잠금 해제</div>
   </div>
-  <!-- 58 — UI 연출 공용 레이어. 모든 fx* 함수가 여기에만 DOM 을 만든다(pointer-events:none). -->
+  <!-- 58 — UI 연출 공용 레이어(팝업 위 z60). 77 — 전투 발 재화 연출은 #fxlc(팝업 아래 z7)에 분리. -->
+  <div id="fxlc"></div>
   <div id="fxl"></div>
   <div id="loading">스프라이트 불러오는 중...</div>
 </div></div>
@@ -8942,7 +8952,7 @@ function killEnemy(e){
   const g = e.gold * stat.goldMul;
   /* 58 — «획득 지점»에서 날아가야 하므로 적이 죽은 자리를 출발점으로 알려 준다.
      실제 비행은 fxWatch() 가 증가분을 묶어서 한 번에 쏜다(연속 킬이 아이콘 폭탄이 되지 않게). */
-  fxAt(fxWorld(e.x, e.y - e.r));
+  fxAt(fxWorld(e.x, e.y - e.r), 'combat');   /* 77 — 전투 발 태그: 코인 비행이 팝업 아래 #fxlc 로 간다 */
   S.gold += g; goldWin += g; S.totalKills++; killed++;
   gainExp(2 + S.stage*0.5 + (e.tk === 'boss' ? 80 : 0));
   if(e.tk === 'boss' && S.stage >= S.best) S.dia += 250 + S.stage*25;
@@ -14458,6 +14468,9 @@ const FXCUR = {
 };
 let fxLay = null;
 const fxL = () => fxLay && fxLay.isConnected ? fxLay : (fxLay = $('fxl'));
+/* 77 — 전투 발 연출 레이어(#fxlc, z7 · 팝업 아래). 출발점에 combat 태그가 있으면 여기 그린다. */
+let fxLayC = null;
+const fxLC = () => fxLayC && fxLayC.isConnected ? fxLayC : (fxLayC = $('fxlc'));
 /* #app 은 fit() 이 scale 하므로 화면 px 를 1080 프레임 px 로 되돌린다.
    킬 1건마다 부르는 경로(fxWorld)가 있어 **프레임당 1회만** 실측하고 캐시한다(레이아웃 스래싱 방지). */
 let fxScC = null, fxScF = -1, fxFrame = 0;
@@ -14492,8 +14505,9 @@ function fxWorld(x, y){
   const z = cam.z || 1;                 /* 67 — 보스 연출 줌 중에도 출발점이 «죽은 자리» 에 맞게 */
   return { x:((x - cam.x)*z + VW/2) * SC, y:fxStageTop() + ((y - cam.y)*z + VH/2) * SC };
 }
-let fxOrig = null, fxOrigT = -1e9;
-function fxAt(t){ const p = fxPt(t); if(p){ fxOrig = p; fxOrigT = performance.now(); } }
+let fxOrig = null, fxOrigT = -1e9, fxOrigSrc = null;
+/* 77 — src:'combat' 은 전투씬 발(fxWorld 좌표) 출발 표시. 킬 경로(killEnemy)만 붙인다. */
+function fxAt(t, src){ const p = fxPt(t); if(p){ fxOrig = p; fxOrigT = performance.now(); fxOrigSrc = src || null; } }
 /* «획득 지점» 기본값 — 마지막으로 누른 버튼·카드. 화면이 fxAt() 를 부르지 않아도
    «수령 버튼에서 재화가 날아가는» 그림이 되도록 전역 캡처 리스너 하나로 좌표를 기억한다.
    (33 «전역 규칙은 리스너 하나 + 위임» 의 연출 판 — 새 화면은 아무것도 안 해도 편입된다) */
@@ -14509,13 +14523,17 @@ function fxSrc(now){
   const a = (now - fxOrigT < 600 && fxOrig) ? fxOrigT : -1e9;
   const b = (now - fxTapT < 1200 && fxTapEl && fxTapEl.isConnected) ? fxTapT : -1e9;
   if(a < -1e8 && b < -1e8) return null;
-  return a >= b ? fxOrig : fxPt(fxTapEl);
+  /* 77 — 출처를 좌표와 함께 돌려준다. combat 이면 fxFly/fxBurst 가 #fxlc(팝업 아래)를 고른다. */
+  if(a >= b) return fxOrigSrc === 'combat' ? { x:fxOrig.x, y:fxOrig.y, combat:true } : fxOrig;
+  return fxPt(fxTapEl);
 }
 
 /* ── 재화 비행 ── */
 const fxFlies = [];
 function fxFly(from, cur, n){
-  const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
+  /* 77 — 전투 발이면 팝업 아래 레이어(#fxlc). +n 도 같은 레이어에 뜨도록 batch 에 기억한다. */
+  const combat = !!(from && from.combat);
+  const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
   const pill = document.querySelector(C.pill); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
@@ -14528,7 +14546,7 @@ function fxFly(from, cur, n){
   const cnt = Math.min(clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.7), 3, cap), room);
   if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
   /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다 */
-  const batch = { fired:false };
+  const batch = { fired:false, combat };
   fxHold[cur] = performance.now() + 1400;              /* 코인이 도착하기 «전»에 숫자가 다 올라가면 순서가 뒤집힌다 */
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
@@ -14576,8 +14594,9 @@ function fxPunch(el){
   el.classList.add('fx-punch');
   setTimeout(() => el.classList.remove('fx-punch'), 450);
 }
-function fxPlus(cur, n){
-  const C = FXCUR[cur], L = fxL(); if(!C || !L) return;
+function fxPlus(cur, n, combat){
+  /* 77 — 전투 발 묶음의 +n 은 #fxlc 에(팝업 아래). UI 발은 종전대로 #fxl. */
+  const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
   const pill = document.querySelector(C.pill); if(!pill) return;
   const r = fxRect(pill); if(!r) return;
   const el = document.createElement('b');
@@ -14598,7 +14617,9 @@ function fxPop(el){
   setTimeout(() => el.classList && el.classList.remove('fx-pop'), 400);
 }
 function fxBurst(t, col, n){
-  const L = fxL(), p = fxPt(t); if(!L || !p) return;
+  /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
+     쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
+  const L = (t && t.combat) ? fxLC() : fxL(), p = fxPt(t); if(!L || !p) return;
   const cnt = n || 12;
   if(L.childElementCount + cnt > FXMAX) return;
   /* 출발 반경 — 대상이 «요소» 면 그 bbox 테두리 근처에서 튀어나오게 한다(11회차).
@@ -14843,7 +14864,7 @@ function fxTick(dt){
       fxPunch(f.pill);
       /* 마지막 도착이 아니라 «첫 도착» 이다 — 마지막에 걸면 `+n` 이 0.6초 뒤에야 뜨고
          숫자는 이미 다 올라간 뒤라 «순서 역전» 으로 읽힌다(3회차 비평 C·D 공통 지적). */
-      if(!f.batch.fired){ f.batch.fired = true; fxHold[f.cur] = 0; fxPlus(f.cur, f.n); }
+      if(!f.batch.fired){ f.batch.fired = true; fxHold[f.cur] = 0; fxPlus(f.cur, f.n, f.batch.combat); }
       continue;
     }
     /* 12회차 — smoothstep(`p*p*(3-2*p)`)은 p→1 에서 **속도가 0** 이라 마지막 15% 가 거의 안 움직인다.
