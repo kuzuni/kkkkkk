@@ -68,6 +68,8 @@ function pick(buf, t0, tag, pre){
     from = Math.min(bi + 1, rel.length - 1);            /* 다음 목표는 이 프레임 «뒤» 에서만 고른다 */
   }
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `93-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
+  global.__capT = global.__capT || {};
+  global.__capT[tag] = out.slice(1).map(f => f.got);
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
   console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
   if(worst > 55) console.log(`    ⚠ WARN ${tag}: 목표 대비 ±${worst}ms — 비평가에게 «프레임 시각은 파일명이 아니라 이 로그 기준» 이라고 알릴 것`);
@@ -94,6 +96,7 @@ function pwLaunch(){
     throw e;
   });
 }
+global.__capLog = {};
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await pwLaunch();
@@ -134,8 +137,28 @@ function pwLaunch(){
     buf.length = 0;
     const t0 = await page.evaluate(trigger);
     if(t0 && t0.err) throw new Error(`${tag}: ${t0.err}`);
-    await page.waitForTimeout(waitMs || 1900);
-    return pick(buf, t0.t, tag, pre);
+    /* 93 5회차 — **HUD 숫자·비행 개수의 «정답» 을 프레임과 같이 남긴다.**
+       4회차까지 비평가 6명 중 3명이 프레임에서 숫자를 잘못 읽어(«0 인 채로 있다가 한 프레임에 77% 점프»
+       같은 오독) 존재하지 않는 결함을 1순위 감점으로 올렸다. 화면을 다시 읽게 하지 말고 값을 준다. */
+    const log = await page.evaluate(async (ms) => {
+      const out = [], t = Date.now();
+      const nf = () => new Promise(r => requestAnimationFrame(() => r()));
+      while(Date.now() - t < ms){
+        out.push([Date.now() - t,
+                  (document.getElementById('goldN')||{}).textContent || '',
+                  (document.getElementById('diaN')||{}).textContent || '',
+                  fxFlies.filter(f => f.ui).length,
+                  'D' + (fxDisp.gold==null?'null':Math.round(fxDisp.gold))
+                  + ' H' + (fxHold.gold ? Math.round(fxHold.gold - performance.now()) : 0)
+                  + ' S' + (fxStepTo.gold==null?'-':Math.round(fxStepTo.gold))
+                  + ' G' + Math.round(S.gold)]);
+        await nf();
+      }
+      return out;
+    }, waitMs || 1900);
+    const worst = pick(buf, t0.t, tag, pre);
+    if(global.__capLog) global.__capLog[tag] = log;
+    return worst;
   };
 
   /* ── 씬 1: 재화 획득 (전투 드랍 지점 → HUD 골드 알약) ── */
@@ -185,5 +208,13 @@ function pwLaunch(){
   await cdp.send('Page.stopScreencast').catch(() => {});
   await browser.close();
   if(errs.length){ console.log('콘솔 에러:'); errs.slice(0,8).forEach(e => console.log('  ! ' + e)); process.exit(1); }
+  /* 프레임별 «정답» 표 — 비평 전달문에 그대로 붙인다 */
+  for(const tag in global.__capLog){
+    const L = global.__capLog[tag];
+    const at = ms => { let b = L[0]; for(const r of L) if(Math.abs(r[0]-ms) < Math.abs(b[0]-ms)) b = r; return b; };
+    const T = (global.__capT && global.__capT[tag]) || [];
+    console.log(`  · ${tag} 정답표(t: 골드/다이아/비행수): ` +
+      T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[3]).join('  '));
+  }
   console.log('\ncap93 OK — docs/review/93-' + ROUND + '-*.jpg');
 })().catch(e => { console.error('cap93 실패:', e.message); process.exit(1); });

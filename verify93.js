@@ -182,7 +182,7 @@ function pwLaunch(){
     /* «딤이 걸려 있어도» 관통 0 이어야 한다 — 2회차의 3차 베지에가 실제로 패널 밖으로 나가는지 */
     let cross = 0, froze = 0, samp = 0, prev = new Map(), tot = 0, worstLead = -1;
     const where = [];
-    let off = 0, backs = 0;
+    let off = 0, backs = 0, worstLag = -1;
     let f3state = new Map(), f3prev = new Map();
     /* 정지 판정은 **렌더 프레임 단위**로 재야 한다 — 10ms 폴링은 rAF(이 컨테이너 32~42ms)보다
        빨라서 «아직 안 그려진 같은 좌표» 를 정지로 오독한다(43 교훈 1: 내 assert 부터 의심할 것). */
@@ -202,7 +202,9 @@ function pwLaunch(){
         const p = prev.get(e);
         if(p && !landed){ samp++; if(Math.abs(cx - p[0]) < 0.5 && Math.abs(cy - p[1]) < 0.5) froze++; }
         if(landed) continue;                              /* 알약 위 = 형제 행 밖이므로 관통 판정도 제외 */
-        if(cx > 1080 - 6 || cx < 6) off++;                /* 프레임 밖으로 새면 잘려 보인다 */
+        /* 5회차 — «중심» 이 아니라 **아이콘 상자**가 프레임 안에 있어야 한다(비평가 S ③:
+           중심 1064 = 폭의 37% 가 화면 밖). 좌우 어느 쪽이든 1px 라도 잘리면 센다. */
+        if(r.right > 1080.5 || r.left < -0.5) off++;
         const pv = prev.get(e);
         /* 머묾→흡수 전환 프레임은 세지 않는다 — 부유 사인이 위쪽(−7px)에 있다가 흡수 시작점(ay)으로
            돌아오는 것이라 «역주행» 이 아니다. **직전 프레임도 흡수** 였을 때만 센다. */
@@ -219,32 +221,45 @@ function pwLaunch(){
         const shown = parseFloat(String(dn.textContent).replace(/[^\d.]/g, '')) || 0;
         const kk = String(dn.textContent).indexOf('K') >= 0 ? 1000 : 1;
         const prog = Math.max(0, Math.min(1, (shown*kk - d0)/Math.max(1, S.dia - d0)));
-        if(arrived < 1) worstLead = Math.max(worstLead, prog - arrived);
+        if(arrived < 1){
+          worstLead = Math.max(worstLead, prog - arrived);
+          worstLag  = Math.max(worstLag,  arrived - prog);
+        }
       }
       await nextFrame();
     }
     await sleep(500);
     closeModal();
-    return { cross, froze, samp, tot, where, off, backs, worstLead:+worstLead.toFixed(3),
+    return { cross, froze, samp, tot, where, off, backs, worstLag:+worstLag.toFixed(3), worstLead:+worstLead.toFixed(3),
              boxes:boxes.map(r => [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]) };
   });
   chk(!t2b.err, '2회차 회귀 트리거' + (t2b.err ? ' — ' + t2b.err : ''));
   /* 4회차 — «딤을 무시하고» 세도 **0** 이다. 3회차까지 1~4프레임 남던 스침(x940~948 · 행 우변 949)은
      탈출 목표(FX3_OUTM 90→176)와 최대 x 상한(FRAME_W−34→−8)을 올려 곡선 전체를 오른쪽으로 민 것으로
      없어졌다. 1회차 151회 → 4회차 0회. (딤 기준 0 은 위 [2] 의 하드 요건으로 따로 지킨다) */
-  /* 남는 ≤1 은 «행 밴드 경계선 위의 한 표본»(실측 925,949 — 행 하변 949 에 정확히 걸친 프레임)이다.
-     궤적이 행을 «가로지르는» 것이 아니라 경계에 접하는 것이고, 스폰 지터·재렌더로 행 rect 가 1~2px
-     움직이면 켜졌다 꺼진다. 0 으로 못박으면 게이트가 비결정적이 된다. */
-  chk(t2b.cross <= 1, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 ≤1 (1회차 151회 · 3차 베지에)'
+  /* 5회차 — 상한을 1 → 4 로 되돌린다. **아이콘이 프레임 밖으로 잘리는 것을 없애는 대가**다.
+     4회차는 최대 x 를 FRAME_W−8 까지 밀어 관통을 1 로 눌렀는데, 그러면 아이콘 중심이 1072 라
+     폭의 34~37% 가 화면 밖으로 잘린 채 645ms 를 난다(비평가 S ③ 실측 8프레임 연속).
+     상한을 FRAME_W−40 으로 내리면 잘림은 0 이 되고 스침이 4프레임으로 는다.
+     **기하학적 벽**: 행 카드 우변 949 + 아이콘 반경 27 = 976 부터, 중심 상한 1041 까지 **65px** 뿐인데
+     골드 알약은 x583 — 행 x 범위 «안» 이다. 내려오는 마지막 구간이 그 65px 복도를 통과하는 것은
+     제어점을 어떻게 잡아도 없앨 수 없다(수치 탐색: 최선 K2 0.75 에서도 표본의 4.5%).
+     그래서 저장소의 처방은 딤이고, 그 «딤 기준 0» 이 위 [2] 의 하드 요건이다. 잘림(항상 보임) 과
+     스침(딤 위, 4프레임) 중 잘림을 없애는 쪽이 맞다. */
+  chk(t2b.cross <= 4, '형제 퀘스트 행 위 관통 ' + t2b.cross + '회 — **딤을 무시하고** 세도 ≤4 (1회차 151회 · 3차 베지에)'
       + (t2b.cross ? ' · 지점 ' + (t2b.where || []).join(' / ') + ' · 행 ' + JSON.stringify(t2b.boxes) : ''));
   chk(t2b.samp > 200 && t2b.froze/t2b.samp <= 0.02,
       '정지 프레임 ' + t2b.froze + '/' + t2b.samp + ' = '
       + (t2b.samp ? (100*t2b.froze/t2b.samp).toFixed(1) : '-') + '% (렌더 프레임 기준 ≤2%)');
   chk(t2b.backs === 0, '흡수 중 «아래로» 되돌아가는 프레임 ' + t2b.backs
       + '회 (3회차: 수평 슬링으로 낙차 0 — 2회차는 최대 54px 내려갔다)');
-  chk(t2b.off === 0, '프레임 밖으로 새는 프레임 ' + t2b.off + '회 (제어점 이분탐색으로 최대 x 를 FRAME_W−8 안에 넣는다)');
-  chk(t2b.worstLead <= 0.12,
-      '숫자가 도착보다 최대 ' + Math.round(t2b.worstLead*100) + '%p 앞선다 (2회차: 선형 롤링 — ≤12%p)');
+  chk(t2b.off === 0, '아이콘이 프레임 밖으로 잘리는 프레임 ' + t2b.off + '회 (중심이 아니라 **상자** 기준 · FX3_XCAP = FRAME_W−40)');
+  chk(t2b.worstLead <= 0.10,
+      '숫자가 도착보다 최대 ' + Math.round(t2b.worstLead*100) + '%p 앞선다 (도착 계단 — ≤10%p)');
+  /* 5회차 — «앞서지 않는다» 만 재면 «아예 안 오른다» 를 못 잡는다. 4회차가 정확히 그랬다:
+     도착 87.5% 인데 숫자 0%(비평가 R ①). 뒤처짐도 같이 잰다. */
+  chk(t2b.worstLag <= 0.20,
+      '숫자가 도착보다 최대 ' + Math.round(t2b.worstLag*100) + '%p 뒤처진다 (≤20%p — 4회차는 87.5%p 였다)');
 
   console.log('[3] 전투 발(킬 골드)은 변화 0 — 개수 3~6 · #fxlc · 0.8초 안');
   const t3 = await page.evaluate(async () => {

@@ -14,10 +14,10 @@ function pwLaunch(){const fs2=require('fs');return chromium.launch().catch(e=>{
   await page.evaluate(()=>{player.inv=1e9;for(const e of enemies){e.x=1;e.y=1;}window.step=()=>{};});
   const r=await page.evaluate(async()=>{
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-    S.gold=900; fxHold.gold=0; await sleep(1800);
+    S.gold=0; fxSeen.gold=0; fxDisp.gold=0; fxHold.gold=0; await sleep(1800);
     const num=document.getElementById('goldN'), before=num.textContent;
     const pn0=fxPunchN;
-    fxAt(fxWorld(player.x+12,player.y-20)); S.gold+=1280;
+    fxAt(fxWorld(player.x+12,player.y-20)); S.gold+=128000;
     let t0=0;
     for(let i=0;i<300;i++){ if(fxFlies.length&&fxFlies[0].ui){t0=fxFlies[0].st;break;} await sleep(3); }
     if(!t0) return {err:'no flies'};
@@ -28,13 +28,13 @@ function pwLaunch(){const fs2=require('fs');return chromium.launch().catch(e=>{
       const t=performance.now()-t0;
       const c=fxFlies.filter(f=>f.ui).length;
       if(c<prev){ for(let k=0;k<prev-c;k++) arrTs.push(Math.round(t)); if(firstArr<0)firstArr=Math.round(t); prev=c; }
-      if(num.textContent!==before){ if(firstNum<0)firstNum=Math.round(t); numTs.push(Math.round(t)); }
+      if(num.textContent!==before){ if(firstNum<0)firstNum=Math.round(t); numTs.push(Math.round(t)+':'+num.textContent+':'+(fxStepTo.gold==null?'-':Math.round(fxStepTo.gold))); }
       if(fxPunchN>pp){ for(let k=0;k<fxPunchN-pp;k++) punchTs.push(Math.round(t)); if(firstPunch<0)firstPunch=Math.round(t); pp=fxPunchN; }
       await nf();
     }
-    return {N, firstArr, firstNum, firstPunch, arr:arrTs, punch:punchTs, nSteps:new Set(numTs).size,
-            plusAt: null};
+    return {N, firstArr, firstNum, firstPunch, arr:arrTs, nSteps:new Set(numTs.map(x=>String(x).split(':')[1])).size,
+            trace:numTs.filter((_,i)=>i%2===0).slice(0,26)};
   });
-  console.log(JSON.stringify(r,null,1));
+  console.log(JSON.stringify(r));
   await browser.close();
 })();

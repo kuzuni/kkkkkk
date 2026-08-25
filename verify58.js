@@ -319,7 +319,7 @@ function pwLaunch(){
   chk(t9.grow >= 1.06, '알약 최대 확대 ×' + t9.grow + ' (93: 톡톡 펄스 1.09)');
   chk(t9.movedAt >= 150, '숫자는 코인이 도착한 «뒤에» 오르기 시작 — ' + t9.movedAt + 'ms');
   /* 93 — 롤링을 «첫 도착 → 마지막 도착» 으로 늘려 코인과 숫자가 같이 오른다 */
-  chk(t9.doneAt >= 900 && t9.doneAt <= 1550, '롤링 완료 ' + t9.doneAt + 'ms (93: 마지막 도착과 같이) → ' + t9.now);
+  chk(t9.doneAt >= 900 && t9.doneAt <= 1750, '롤링 완료 ' + t9.doneAt + 'ms (93 5회차: 도착 계단 — 마지막 도착 + 수렴) → ' + t9.now);
 
   console.log('[10] 6회차 지적 — 확대가 옆 카드를 안 넘는다 · 튐 고원 · 토스트 즉시성 · 보상 롤링 완주');
   const t10 = await page.evaluate(async () => {
@@ -430,7 +430,7 @@ function pwLaunch(){
   });
   chk(!t11.err && t11.back === false, '수령 직후 닫으면 1.8초 뒤에도 팝업이 다시 뜨지 않는다'
       + (t11.err ? ' — ' + t11.err : ''));
-  chk(t10.diaDone >= 120 && t10.diaDone <= 1550, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (93: 마지막 도착과 같이 · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
+  chk(t10.diaDone >= 120 && t10.diaDone <= 1750, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (93: 마지막 도착과 같이 · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
 
   await browser.close();
   if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }
