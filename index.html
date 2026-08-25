@@ -3177,8 +3177,11 @@
      `.clb-bdg>i.l{display:block}` 을 이긴다. 그래서 «Lv.» 와 숫자가 2단이 아니라 **한 줄로 나란히**
      붙어 있었다(1회차 비평 A 가 «숫자 중심 x +30px» 로 검출). 같은 ID 를 붙여 특이성을 맞춘다.
      레퍼런스(측정표 §5-3 · 자체 픽셀 스캔): «Lv.» 잉크 x185~233 y488~517 / 숫자 잉크 x193~214 y529~560 */
-  #collw .clb-bdg>i.l{display:block;margin:-9px 0 0 10px;font-size:45px;transform:scaleX(.883);color:#FFED9D}
-  #collw .clb-bdg>i.n{display:block;margin-top:-4px;font-size:54px;transform:scaleX(.85);color:#EEE9E5}
+  /* 7회차 실측(scan21 ink) — «Lv.» 잉크 ref 37×22 @x185 중심 x203 / 우리 49×31 중심 x209 였다.
+     숫자 흰 코어 ref 22×32 하단 프레임 y476 / 우리 22×37 하단 y482 — 폭은 맞고 높이만 5px 컸다.
+     폰트 크기로 높이를 맞추고 scaleX 로 폭을 되돌린다(서체가 달라 종횡비가 다르다 — ⑥ 항목). */
+  #collw .clb-bdg>i.l{display:block;margin:2px 0 0 -1px;font-size:32px;transform:scaleX(.939);color:#FFED9D}
+  #collw .clb-bdg>i.n{display:block;margin:-2px 0 0 -2px;font-size:47px;transform:scaleX(.977);color:#EEE9E5}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
   .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
   .clb-nm{left:165px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
