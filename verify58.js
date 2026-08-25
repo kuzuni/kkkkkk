@@ -92,7 +92,7 @@ function pwLaunch(){
         const r = e.getBoundingClientRect();
         minD = Math.min(minD, Math.hypot(r.left + r.width/2 - target.x, r.top + r.height/2 - target.y));
       }
-      if(pill.classList.contains('fx-punch')) punch++;
+      if(pill.classList.contains('fx-punch2') || pill.classList.contains('fx-punch')) punch++;
       const pl = document.querySelector('#fxl .fx-plus');
       if(pl && !plusTxt) plusTxt = pl.textContent;      /* 0.8초 뒤 스스로 사라지므로 «도는 동안» 잡는다 */
       await sleep(8);
@@ -101,10 +101,12 @@ function pwLaunch(){
              startY:Math.round(f0.top), plusTxt, g0, g1:S.gold };
   });
   chk(!fly.err, '재화 획득 트리거' + (fly.err ? ' — ' + fly.err : ''));
-  chk(fly.n0 >= 3 && fly.n0 <= 8, '아이콘 ' + fly.n0 + '개 (58: 3~8개)');
+  /* 93 (저장소 주인 지시 2026-08-26) — UI 발은 8~16개. 3~6개 규칙은 이 행이 대체한다. */
+  chk(fly.n0 >= 8 && fly.n0 <= 16, '아이콘 ' + fly.n0 + '개 (93: UI 발 8~16개)');
   chk(fly.minD <= 6, 'HUD 골드 알약에 «정확히» 도착 — 최근접 ' + fly.minD + 'px');
-  chk(fly.punch > 0, '도착 순간 알약이 튄다 (.fx-punch 관측 ' + fly.punch + '프레임)');
-  chk(fly.lastSeen >= 300 && fly.lastSeen <= 800, '연출 길이 ' + fly.lastSeen + 'ms (58: 300~800ms)');
+  chk(fly.punch > 0, '도착 순간 알약이 튄다 (.fx-punch2 관측 ' + fly.punch + '프레임)');
+  /* 93 — «퍼짐 0.22 + 머묾 0.12~0.20 + 흡수(스태거 35ms)» 로 총 1.1~1.4초. 옛 0.3~0.8초 규칙은 폐기. */
+  chk(fly.lastSeen >= 900 && fly.lastSeen <= 1600, '연출 길이 ' + fly.lastSeen + 'ms (93: 1.1~1.4초 · +정리 여유)');
   chk(!!fly.plusTxt, '`+n` 플로팅 텍스트 — "' + fly.plusTxt + '"');
 
   console.log('[3] 숫자 롤링 (뚝 바뀌지 않는다)');
@@ -309,9 +311,11 @@ function pwLaunch(){
     return { grow: +(peak/base).toFixed(3), doneAt: Math.round(doneAt), movedAt: Math.round(movedAt), want,
              now: num.textContent };
   });
-  chk(t9.grow >= 1.10, '알약 최대 확대 ×' + t9.grow + ' (58: scale 1.15→1)');
+  /* 93 — 도착이 5~6번 나뉘어 오므로 펄스 폭을 1.17 → 1.09 로 줄이고 **횟수**로 손맛을 만든다 */
+  chk(t9.grow >= 1.06, '알약 최대 확대 ×' + t9.grow + ' (93: 톡톡 펄스 1.09)');
   chk(t9.movedAt >= 150, '숫자는 코인이 도착한 «뒤에» 오르기 시작 — ' + t9.movedAt + 'ms');
-  chk(t9.doneAt > 0 && t9.doneAt <= 800, '롤링 완료 ' + t9.doneAt + 'ms (58: ≤800ms) → ' + t9.now);
+  /* 93 — 롤링을 «첫 도착 → 마지막 도착» 으로 늘려 코인과 숫자가 같이 오른다 */
+  chk(t9.doneAt >= 900 && t9.doneAt <= 1550, '롤링 완료 ' + t9.doneAt + 'ms (93: 마지막 도착과 같이) → ' + t9.now);
 
   console.log('[10] 6회차 지적 — 확대가 옆 카드를 안 넘는다 · 튐 고원 · 토스트 즉시성 · 보상 롤링 완주');
   const t10 = await page.evaluate(async () => {
@@ -341,13 +345,14 @@ function pwLaunch(){
     /* «샘플 1개 = 10ms» 로 세면 안 된다 — `sleep(10)` 은 evaluate 오버헤드로 실제 20~25ms 다.
        경과 시각을 매번 다시 읽어 «≥1.12 였던 구간» 의 실제 길이를 적분한다
        (43 교훈 1: 내가 쓴 assert 부터 어디를 기준으로 쟀는지 확인할 것). */
+    const pn0 = fxPunchN;                              /* 93 — «몇 번 톡톡 튀었나» */
     let hi = 0, pmax = 1, prevT = Date.now(), wasHi = false;
     for(let i=0;i<130;i++){
       const w = pill.getBoundingClientRect().width / base;
       const nowT = Date.now();
       pmax = Math.max(pmax, w);
       if(wasHi) hi += nowT - prevT;
-      wasHi = w >= 1.12; prevT = nowT;
+      wasHi = w >= 1.06; prevT = nowT;
       await sleep(10);
     }
     /* (다)(라) 퀘스트 — 토스트가 얼마나 빨리 뜨나 · 다이아 롤링이 0.8초 안에 끝나나 */
@@ -357,7 +362,8 @@ function pwLaunch(){
     S.quest.kill.base = -1e9; openQuest('rep'); await sleep(350);
     const dn = document.getElementById('diaN');
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
-    if(!b) return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), err:'퀘스트 버튼 없음' };
+    const punchN = fxPunchN - pn0;
+    if(!b) return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, punchN, pmax:+pmax.toFixed(3), err:'퀘스트 버튼 없음' };
     const d0 = S.dia, t0 = Date.now();
     b.click();
     let toastAt = -1, seenAt = -1, diaDone = -1, swapAt = -1, rampSeen = 0;
@@ -379,13 +385,15 @@ function pwLaunch(){
       await sleep(10);
     }
     closeModal();
-    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, pmax:+pmax.toFixed(3), toastAt, seenAt, diaDone, swapAt, rampSeen };
+    return { fmax:+fmax.toFixed(3), cardW:Math.round(cardW), hi, punchN, pmax:+pmax.toFixed(3), toastAt, seenAt, diaDone, swapAt, rampSeen };
   });
   chk(!t10.err, '퀘스트 트리거' + (t10.err ? ' — ' + t10.err : ''));
   chk(t10.fmax <= 1.06, '플래시 최대 확대 ×' + t10.fmax + ' — 카드 폭 ' + t10.cardW
       + 'px, 카드 간격 16px 라 ×1.06 을 넘으면 옆 카드를 침범한다');
-  chk(t10.pmax >= 1.12, '알약 최대 확대 ×' + t10.pmax);
-  chk(t10.hi >= 90, '알약이 ×1.12 이상으로 ' + t10.hi + 'ms 유지 (봉우리가 뾰족하면 안 보인다)');
+  chk(t10.pmax >= 1.06, '알약 최대 확대 ×' + t10.pmax + ' (93: 1.09 를 여러 번)');
+  /* 93 — «고원 한 번» 이 아니라 «톡톡 여러 번» 이 손맛의 핵심이다. 지킬 성질이 바뀌었으므로
+     ≥1.12 유지 시간이 아니라 **펄스 횟수**를 잰다(도착 0.5~1.26s 를 160ms 간격으로). */
+  chk(t10.punchN >= 4, '알약이 ' + t10.punchN + '번 튄다 (93: 도착마다 «톡톡» ≥4회)');
   /* 절대 ms 로 재면 머신 부하에 흔들린다(118~175ms). 비평가가 지적한 성질은 «데이터가 먼저 바뀌고
      연출이 늦게 온다» 이므로 **순서 자체**를 잰다 — 이건 구조적으로 보장된다(수령을 두 프레임 미룬다). */
   chk(t10.seenAt >= 0 && t10.swapAt >= 0 && t10.seenAt <= t10.swapAt,
@@ -410,14 +418,14 @@ function pwLaunch(){
     b.click();
     await sleep(60);
     closeModal();                                     /* 연출이 도는 중에 닫는다 */
-    await sleep(1200);                                /* 지연(760ms) 을 충분히 넘긴다 */
+    await sleep(1800);                                /* 93 — 지연이 FXHOLD 1360ms 로 늘었다. 충분히 넘긴다 */
     const back = $('modal').classList.contains('on');
     closeModal();
     return { back };
   });
-  chk(!t11.err && t11.back === false, '수령 직후 닫으면 1.2초 뒤에도 팝업이 다시 뜨지 않는다'
+  chk(!t11.err && t11.back === false, '수령 직후 닫으면 1.8초 뒤에도 팝업이 다시 뜨지 않는다'
       + (t11.err ? ' — ' + t11.err : ''));
-  chk(t10.diaDone >= 120 && t10.diaDone <= 800, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (≤800ms · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
+  chk(t10.diaDone >= 120 && t10.diaDone <= 1550, '보상 다이아 롤링 완료 ' + t10.diaDone + 'ms (93: 마지막 도착과 같이 · 120ms 미만이면 롤링이 아니라 즉시 반영이다)');
 
   await browser.close();
   if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }

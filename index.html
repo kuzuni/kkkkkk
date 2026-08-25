@@ -1784,6 +1784,16 @@
     84%{transform:scale(.98);outline:3px solid rgba(255,255,255,0)}
     100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
   .fx-punch{animation:fxPunch .42s ease-out both}
+  /* 93 — UI 발 3박자용 «톡톡» 펄스. 도착이 5~6번 나뉘어 오므로 한 번의 폭을 줄이고(1.17→1.09)
+     길이를 .42 → .16s 로 잘라 **횟수**로 손맛을 만든다. filter 는 쓰지 않는다(17회차 교훈 — 첫 페인트 3~4프레임 지연). */
+  /* 봉우리를 18~46% 고원으로 편다 — .16s 짜리라 «한 점 봉우리» 로 두면 ≥1.085 인 구간이 12ms 라
+     눈에도 캡처에도 한 프레임 안 걸린다(6회차에 .42s 짜리에서 이미 한 번 겪은 것). */
+  @keyframes fxPunch2{0%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}
+    18%{transform:scale(1.09);outline:4px solid rgba(255,255,255,.62)}
+    46%{transform:scale(1.086);outline:4px solid rgba(255,255,255,.42)}
+    74%{transform:scale(1.02);outline:3px solid rgba(255,255,255,.14)}
+    100%{transform:scale(1);outline:3px solid rgba(255,255,255,0)}}
+  .fx-punch2{animation:fxPunch2 .16s ease-out both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
@@ -14558,7 +14568,24 @@ function offlineReward(lastTime){
    길이 0.3~0.8초 · 입력 비차단(#fxl 은 pointer-events:none) · DOM 파티클 상한 FXMAX.
    ========================================================================== */
 const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (캔버스 parts 320 과 별개) */
-const FXFLY_MAX = 12;                                /* 동시에 «날고 있는» 재화 아이콘 총합 상한 */
+/* 93 — UI 발(보상 수령·미션·우편·퀘스트) 은 «퍼짐 → 머묾 → 흡수» 3박자로 느리게·많이,
+   전투 발(킬 골드)은 **현행 속도 그대로**다(초당 수십 회라 느리면 화면이 코인으로 덮인다). */
+const FXFLY_MAX   = 32;                              /* UI 발 — 8~16개 × (골드·다이아) 2묶음 */
+const FXFLY_MAX_C = 12;                              /* 전투 발 — 77 이전 값 유지 */
+/* 93 3박자 타이밍(초). 도착은 «첫 0.56s → 마지막 1.26s» 로 균등 분배한다 —
+   퍼짐(0.22) + 머묾(0.12~0.20) + 스태거(35ms·최대 0.50) 를 빼고 남는 만큼이 흡수 비행 길이다.
+   이렇게 두면 아이콘 수(8~16)가 달라져도 «첫 도착·마지막 도착» envelope 이 고정된다. */
+const FX3_SPREAD = 0.22;                             /* (a) 퍼짐 */
+const FX3_HOLD0  = 0.12, FX3_HOLD1 = 0.20;           /* (b) 머묾 */
+const FX3_STAG   = 0.035;                            /* (c) 흡수 스태거 */
+const FX3_STAGMX = 0.50;                             /* 스태거 총합 상한 */
+const FX3_ARR0   = 0.50, FX3_ARR1 = 1.22;            /* 첫 도착 · 마지막 도착 (설계값 — 프레임 granularity 로 실측은 +40~70ms) */
+const FX3_ABS0   = 0.15, FX3_ABS1 = 0.80;            /* 흡수 비행 길이 클램프 — 하한이 크면 첫 도착이 뒤로 밀린다 */
+const FX3_R0     = 60,  FX3_R1 = 140;                /* 퍼짐 반경 */
+/* 방사 방향 — 모달 «좌측» 행 위로 나가면 «저 퀘스트도 완료됐나» 로 읽힌다(58 7회차 지적).
+   우상단으로 열린 120° 부채꼴로 제한한다(정위 −95° ~ 수평 우측 아래 +25°). */
+const FX3_A0 = -95 * Math.PI/180, FX3_A1 = 25 * Math.PI/180;
+const FX3_PUNCH = 160;                               /* UI 발 알약 펄스 재시작 간격 — 여러 번 «톡톡» */
 const FXCUR = {
   gold:{ pill:'.cGold', pcb:'.pcb-g', ic:'🪙', col:'#FFDE6A', fs:46 },
   dia :{ pill:'.cDia',  pcb:'.pcb-d', ic:'💎', col:'#8FE9FF', fs:42 }
@@ -14643,19 +14670,32 @@ function fxFly(from, cur, n){
   const pill = fxPill(C); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
-  sfx('coin');                                          /* 78 — 재화 획득. 98: 최소 간격 150ms(AU_MIN)
-                                                           → 킬 연발·같은 프레임의 골드/다이아 두 알약도 1회만 운다 */
+  /* 78 — 재화 획득. 98: 최소 간격 150ms(AU_MIN) → 킬 연발·같은 프레임의 골드/다이아 두 알약도 1회만 운다.
+     93 — UI 발은 «퍼짐» 한 번을 낮은 피치로 깔고(촤르륵 대용), 도착마다 «팅» 을 피치 3단계로 올린다.
+     전용 촤르륵/팅 파일은 없다 — coin 을 피치로 나눠 쓰는 임시 처리다(78 규칙대로 소스가 들어오면 교체). */
+  sfx('coin', combat ? null : { rate:0.82, gap:120 });
   /* 3~6개 — 금액이 클수록 많이 (58 «3~8개»). 골드·다이아가 동시에 들어오면 두 묶음이 겹치므로
      «공중에 떠 있는 총합» 을 FXFLY_MAX 로 묶는다 — 안 묶으면 모달 헤더·HUD 숫자를 가린다. */
   /* 보상 수령은 골드·다이아가 «같이» 들어와 묶음이 둘이다. 뒤 묶음까지 6개씩 쏘면 0.7초 안에
      다 못 꽂혀 «다 됐는데 안 끝난 것처럼» 보인다(7회차 지적) — 이미 날고 있으면 4개로 줄인다. */
-  const room = Math.max(0, FXFLY_MAX - fxFlies.length);
-  const cap = fxFlies.length ? 4 : 6;
-  const cnt = Math.min(clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.7), 3, cap), room);
+  const room = Math.max(0, (combat ? FXFLY_MAX_C : FXFLY_MAX) - fxFlies.length);
+  let cnt;
+  if(combat){
+    const cap = fxFlies.length ? 4 : 6;
+    cnt = Math.min(clamp(3 + Math.round(Math.log10(Math.max(1, n)) * 0.7), 3, cap), room);
+  }else{
+    /* 93 — 개수 상향(8~16). 골드·다이아가 «같이» 들어오면 두 묶음이 겹치므로 각자 상한 절반. */
+    const other = fxFlies.some(f => f.ui && f.cur !== cur);
+    cnt = Math.min(clamp(8 + Math.round(Math.log10(Math.max(1, n)) * 3), 8, other ? 8 : 16), room);
+  }
   if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
-  /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다 */
-  const batch = { fired:false, combat };
-  fxHold[cur] = performance.now() + 1400;              /* 코인이 도착하기 «전»에 숫자가 다 올라가면 순서가 뒤집힌다 */
+  /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다. ting 은 93 의 «도착음 피치 3단계» 카운터. */
+  const batch = { fired:false, combat, ting:0 };
+  /* 93 — 마지막 도착(1.26s)까지 숫자가 안 끝나야 «코인과 숫자가 같이 오른다» (1400 → 2000) */
+  fxHold[cur] = performance.now() + (combat ? 1400 : 2000);
+  /* 93 — 롤링을 «첫 도착 → 마지막 도착» 길이로 늘린다. 전투 발은 종전 0.32s. */
+  fxRollDur[cur] = combat ? FXROLL : (FX3_ARR1 - FX3_ARR0);
+  const stagSpan = Math.min(FX3_STAGMX, (cnt - 1) * FX3_STAG);
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
     el.className = 'fx-fly';
@@ -14663,6 +14703,31 @@ function fxFly(from, cur, n){
     el.style.fontSize = C.fs + 'px';
     el.style.opacity = '0';
     L.appendChild(el);
+    if(!combat){
+      /* ── 93 UI 발 3박자 ───────────────────────────────────────────────
+         (a) 퍼짐 0.22s — 출발점에서 우상단 부채꼴로 60~140px 튀어나간다(ease-out, scale .6→1.1, 회전 ±20°)
+         (b) 머묾 0.12~0.20s — 그 자리에서 살짝 부유
+         (c) 흡수 — 알약으로 ease-in(가속) 비행, 도착 직전 scale 1.1→0.5 로 «빨려 들어감» */
+      const u = cnt > 1 ? i/(cnt - 1) : 0;
+      const sx0 = p0.x + rnd(-18, 18), sy0 = p0.y + rnd(-14, 14);
+      const a = rnd(FX3_A0, FX3_A1), rr = rnd(FX3_R0, FX3_R1);
+      const ax = clamp(sx0 + Math.cos(a)*rr, 40, FRAME_W - 40);
+      const ay = Math.max(120, sy0 + Math.sin(a)*rr);
+      const ha = FX3_SPREAD + (FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0)) + u*stagSpan;   /* 흡수 시작 */
+      const arr = FX3_ARR0 + u*(FX3_ARR1 - FX3_ARR0);                                  /* 도착 시각 */
+      const ad = clamp(arr - ha, FX3_ABS0, FX3_ABS1);
+      /* 호는 «패널 바깥으로 크게 돌아» 올라간다 — 직선이면 모달 좌측 퀘스트 행 위를 관통한다(7회차). */
+      const vx = to.x - ax, vy = to.y - ay, vl = Math.hypot(vx, vy) || 1;
+      const bow = vl * (0.24 + i*0.012);
+      fxFlies.push({ el, ui:true, sx:sx0, sy:sy0, ax, ay, tx:to.x, ty:to.y,
+        cx:Math.min(FRAME_W - 40, Math.max(ax, to.x) + bow*0.8),
+        cy:Math.max(120, (ay + to.y)/2 - Math.abs(vx/vl)*bow*0.5),
+        sd:FX3_SPREAD, ha, ad, arr:ha + ad, rot:rnd(-20, 20),
+        /* 14회차 교훈의 3박자 판 — dt 누적으로 돌면 dt 가 0.1s 로 클램프돼 프레임이 길어질수록
+           연출이 벽시계보다 늘어진다(1.26s 설계가 1.4s 로 찍혔다). **시작 시각 기준**으로 돈다. */
+        st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n });
+      continue;
+    }
     const sx = p0.x + rnd(-36, 36), sy = p0.y + rnd(-26, 26);
     /* 제어점은 «출발→도착 직선의 중점에서 수직 방향으로 밀어낸» 자리다. 제어점 x·y 를 각각
        랜덤으로 흔들면 아이콘마다 다른 방향으로 휘어 «2단 꺾임» 으로 읽힌다(4회차 지적).
@@ -14689,18 +14754,30 @@ function fxFly(from, cur, n){
       t:-i*0.020, dur:0.24 + Math.random()*0.06, pill, batch, cur, n });
   }
 }
-function fxPunch(el){
-  if(!el) return;
+let fxPunchN = 0;                                      /* 93 — 알약이 튄 횟수(누적) */
+function fxPunch(el, soft){
+  if(!el) return false;
   /* 아이콘 6개가 30ms 간격으로 도착하는데 도착마다 애니메이션을 재시작하면 **매번 scale 1.02 에서
      처음으로 되돌아가** 알약이 끝까지 안 커진다(비평가 2명이 «튀는 프레임이 한 장도 없다» 로 잡았다).
      한 번 튀는 동안(300ms)은 재시작하지 않는다. */
+  /* 93 — UI 발(soft)은 반대다. 도착이 0.56~1.26s 에 걸쳐 5~6번 나뉘어 오므로 **매번 짧고 작게**
+     튀어야 «톡톡» 하는 손맛이 난다 — 재시작 간격 420 → 160ms, 봉우리 1.17 → 1.09.
+     전투 발은 종전 그대로(420ms 고원) — 초당 수십 회라 짧게 자르면 떨림으로 읽힌다. */
   const now = performance.now();
-  if(el.__fxPunchT && now - el.__fxPunchT < 420) return;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
+  const gap = soft ? FX3_PUNCH : 420;
+  if(el.__fxPunchT && now - el.__fxPunchT < gap) return false;   /* 애니메이션 길이와 같게 — 중간에 재시작되면 고원이 깨진다 */
   el.__fxPunchT = now;
-  el.classList.remove('fx-punch');
+  const cls = soft ? 'fx-punch2' : 'fx-punch';
+  /* 93 — 앞 펄스의 «지우기» 타이머를 반드시 끈다. 160ms 간격으로 다시 걸면서 지우기를 190ms 뒤로
+     걸어 두면, **다음 펄스가 시작된 30ms 뒤에 앞 타이머가 그 클래스를 떼어** 펄스가 한 번만 보인다
+     (실측: 도착 5회에 펄스 2회). 420ms 짜리 전투 발에서는 간격 == 길이라 안 드러났던 버그다. */
+  if(el.__fxPunchTo) clearTimeout(el.__fxPunchTo);
+  el.classList.remove('fx-punch'); el.classList.remove('fx-punch2');
   void el.offsetWidth;
-  el.classList.add('fx-punch');
-  setTimeout(() => el.classList.remove('fx-punch'), 450);
+  el.classList.add(cls);
+  fxPunchN++;                                          /* 93 게이트용 — «몇 번 튀었나» 를 재는 유일한 결정적 신호 */
+  el.__fxPunchTo = setTimeout(() => { el.__fxPunchTo = 0; el.classList.remove(cls); }, soft ? 190 : 450);
+  return true;
 }
 function fxPlus(cur, n, combat){
   /* 77 — 전투 발 묶음의 +n 은 #fxlc 에(팝업 아래). UI 발은 종전대로 #fxl. */
@@ -14879,7 +14956,10 @@ function fxCheck(el){
    얹혀 «530 시작» 이 실제로는 ~700 에 시작한다. 17회차 — 시작을 440 으로 앞당긴다: 코인이 형제
    행 대역(y900~1600)을 지나는 것은 ~300ms 까지라 440 해제는 오독 방지 목적을 해치지 않고,
    지연을 먹어도 복귀가 캡처 안에 굴러간다(17회차 실측: 440 설정에 개시 ~560 — +120ms 지연 상수. 18회차 380 으로 재보정). 재렌더는 620 유지. */
-const FXSOLO = 380, FXHOLD = 620;
+/* 93 — 둘 다 «마지막 도착(1.26s) + 100ms» 로 연동한다(저장소 주인 지시 ⑥).
+   3박자로 늘린 뒤에도 620ms 에 목록을 갈면 **연출 중간에 재렌더가 끼어** 77·58 회귀가 난다:
+   코인이 아직 형제 행 위를 지나는데 딤이 풀려 «저 퀘스트도 완료됐나» 오독이 돌아온다. */
+const FXSOLO = 1360, FXHOLD = 1360;
 function fxSolo(el, ms){
   /* 행을 못 찾으면 아무것도 하지 않는다 — 임의 요소의 «형제» 를 끄면 엉뚱한 UI 가 꺼진다 */
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
@@ -14923,6 +15003,9 @@ const fxHold = { gold:0, dia:0 };
 /* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
    0.8초 예산 안에 목표에 못 닿는다(4회차: 645ms 에 26% 진행 — 비평가 2명이 독립적으로 잡았다). */
 const FXROLL = 0.32;
+/* 93 — 롤링 길이를 묶음별로 정한다. UI 발 3박자는 «첫 도착(0.56s) → 마지막 도착(1.26s)» 인 0.70s 로
+   늘려 코인과 숫자가 «같이» 오르게 하고, 전투 발은 종전 0.32s 를 그대로 쓴다. */
+const fxRollDur = { gold:FXROLL, dia:FXROLL };
 const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
 function fxWatch(now){
   const flush = fxNow;                                /* 이번 프레임 안에서만 유효 — 다음 프레임엔 다시 묶는다 */
@@ -14936,7 +15019,9 @@ function fxWatch(now){
       /* 묶음 디바운스(110ms) 동안 숫자가 먼저 오르면 «값이 먼저 갱신되고 코인이 나중에 난다» 가 된다.
          홀드는 «비행이 뜰 때» 가 아니라 «새 묶음이 시작되는 순간» 에 건다.
          이미 롤링 중이면 새로 걸지 않는다 — 전투처럼 계속 들어오는 획득에서 숫자가 끊긴다. */
-      if(!fxAcc[k]){ fxAccS[k] = now; if(!fxRoll[k]) fxHold[k] = now + 1400; }
+      /* 93 — 1400 → 2000. 도착이 없을 때의 «스스로 풀림» 안전장치인데, UI 발 3박자의 마지막 도착이
+         1.26s 라 1400 이면 연출 중간에 풀려 숫자가 먼저 다 오른다. */
+      if(!fxAcc[k]){ fxAccS[k] = now; if(!fxRoll[k]) fxHold[k] = now + 2000; }
       fxAcc[k] += d; fxAccT[k] = now;
     }
     /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
@@ -14955,24 +15040,54 @@ function fxTick(dt){
   fxWatch(now);
   for(let i=fxFlies.length-1;i>=0;i--){
     const f = fxFlies[i];
-    f.t += dt;
+    if(f.ui) f.t = (now - f.st)/1000; else f.t += dt;
     if(f.t < 0) continue;
-    const p = f.t / f.dur;
+    const p = f.ui ? f.t / f.arr : f.t / f.dur;
     if(p >= 1 || !f.el.isConnected){
       fxFlies.splice(i, 1);
       if(f.el.isConnected){
         /* «꽂힘» — 마지막 프레임을 알약 중심에 «정확히» 세우고 짧게 사라진다.
            바로 remove 하면 렌더된 마지막 위치가 p<1 이라 도착이 몇 px 모자란 채로 끝난다. */
         f.el.style.transform = 'translate(' + f.tx.toFixed(1) + 'px,' + f.ty.toFixed(1) + 'px)'
-          + ' translate(-50%,-50%) scale(.35)';        /* 코인 형태로 안 읽히게 — «흡수» 한 점만 남긴다 */
+          + ' translate(-50%,-50%) scale(' + (f.ui ? '.5' : '.35') + ')';  /* 코인 형태로 안 읽히게 — «흡수» 한 점만 남긴다 */
         f.el.classList.add('fx-land');
         const el = f.el;
         setTimeout(() => el.remove(), 45);
       }
-      fxPunch(f.pill);
+      /* 93 — UI 발은 작고 짧은 펄스를 여러 번(도착 스태거에 맞춰 160ms 간격). 실제로 튄 도착에만
+         «팅» 을 3단계 피치로 올려 붙인다 — 도착마다 울리면 0.7초에 13번이라 잡음이 된다. */
+      if(fxPunch(f.pill, f.ui) && f.ui){
+        sfx('coin', { rate:1 + (f.batch.ting % 3) * 0.14, gap:90 });
+        f.batch.ting++;
+      }
       /* 마지막 도착이 아니라 «첫 도착» 이다 — 마지막에 걸면 `+n` 이 0.6초 뒤에야 뜨고
          숫자는 이미 다 올라간 뒤라 «순서 역전» 으로 읽힌다(3회차 비평 C·D 공통 지적). */
       if(!f.batch.fired){ f.batch.fired = true; fxHold[f.cur] = 0; fxPlus(f.cur, f.n, f.batch.combat); }
+      continue;
+    }
+    if(f.ui){
+      /* ── 93 3박자 ── */
+      let x, y, s, op = 1, rot = 0;
+      if(f.t < f.sd){                                   /* (a) 퍼짐 — ease-out 으로 «튀어나감» */
+        const q = f.t/f.sd, e = 1 - Math.pow(1 - q, 3);
+        x = f.sx + (f.ax - f.sx)*e; y = f.sy + (f.ay - f.sy)*e;
+        s = 0.6 + 0.5*e; rot = f.rot*e;
+        op = q < 0.18 ? (q/0.18) : 1;
+      }else if(f.t < f.ha){                             /* (b) 머묾 — 그 자리에서 살짝 부유 */
+        const q = (f.ha - f.sd) > 0 ? (f.t - f.sd)/(f.ha - f.sd) : 1;
+        x = f.ax; y = f.ay - Math.sin(q*Math.PI)*7;
+        s = 1.1; rot = f.rot;
+      }else{                                            /* (c) 흡수 — ease-in(가속) + 도착 직전 축소 */
+        const q = Math.min(1, (f.t - f.ha)/f.ad);
+        const e = 0.15*q + 0.85*q*q, v = 1 - e;
+        x = v*v*f.ax + 2*v*e*f.cx + e*e*f.tx;
+        y = v*v*f.ay + 2*v*e*f.cy + e*e*f.ty;
+        s = 1.1 - 0.6*Math.pow(e, 2.2);                 /* 1.1 → 0.5 «빨려 들어감» */
+        rot = f.rot*(1 - e);
+      }
+      f.el.style.opacity = op.toFixed(2);
+      f.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)'
+        + ' translate(-50%,-50%) rotate(' + rot.toFixed(1) + 'deg) scale(' + s.toFixed(3) + ')';
       continue;
     }
     /* 12회차 — smoothstep(`p*p*(3-2*p)`)은 p→1 에서 **속도가 0** 이라 마지막 15% 가 거의 안 움직인다.
@@ -15002,7 +15117,7 @@ function fxTick(dt){
     /* 14회차 — 트윈을 dt 누적이 아니라 **시작 시각 기준**으로 돈다. dt 는 loop 에서 0.1s 로
        클램프되므로 프레임이 길어지면(스크린캐스트 중 rAF 100ms+) 그만큼 트윈이 벽시계보다
        늘어져, 마지막 캡처 프레임에 목표치 1~2% 못 미친 숫자가 남았다(13회차 비평 4명 공통). */
-    const q = fxRoll[k], p = (now - q.s)/(FXROLL*1000);
+    const q = fxRoll[k], p = (now - q.s)/((fxRollDur[k] || FXROLL)*1000);
     if(p >= 1){ fxDisp[k] = t; fxRoll[k] = null; continue; }
     const e = 1 - Math.pow(1 - p, 3);                 /* easeOutCubic — FXROLL 에 «정확히» 도착한다 */
     fxDisp[k] = q.from + (q.to - q.from)*e;
@@ -15836,13 +15951,15 @@ function auFmt(){
   return auExt;
 }
 /* ---- SFX ---- */
-function sfx(name){
+/* 93 — opt {rate, gap} 은 «같은 파일을 의도적으로 다르게 울리는» 호출용이다(재화 도착음 피치 3단계).
+   안 주면 종전과 완전히 같다 — 98 의 이름별 게인·최소 간격이 그대로 적용된다. */
+function sfx(name, opt){
   if(auMode === '' || !sndOn('sfx')) return;
   const t = performance.now();
-  const gap = AU_MIN[name] || AU_MIN_DEF;              /* 98 — coin 은 150ms(킬·알약마다 발화) */
+  const gap = (opt && opt.gap != null) ? opt.gap : (AU_MIN[name] || AU_MIN_DEF);   /* 98 — coin 은 150ms(킬·알약마다 발화) */
   if(auLast[name] && t - auLast[name] < gap) return;
   auLast[name] = t;
-  const rate = 1 + (Math.random() * 0.1 - 0.05);       /* 피치 ±5% */
+  const rate = (opt && opt.rate != null) ? opt.rate : 1 + (Math.random() * 0.1 - 0.05);   /* 피치 ±5% */
   const vg = AU_GAIN[name] != null ? AU_GAIN[name] : 1;   /* 98 — 파일별 정규화 게인 */
   try{
     if(auMode === 'ctx'){

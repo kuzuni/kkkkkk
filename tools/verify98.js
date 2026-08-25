@@ -102,7 +102,10 @@ const AU_SFX = eval(sfxSrc), AU_GAIN = eval('(' + gainSrc + ')'),
   const r = await pg.evaluate(async (names) => {
     const out = { mode: auMode, buf: 0, err: [], nodes: 0, ramp: null };
     out.buf = names.filter(n => auBuf[n]).length;
-    /* 소스마다 게인 노드를 거치는지 — createGain 호출 수를 센다 */
+    /* 소스마다 게인 노드를 거치는지 — createGain 호출 수를 센다.
+       세는 동안에도 게임은 살아 있어서 재화 도착음(93 의 «팅») 같은 자기 발화가 창에 섞일 수 있다.
+       지켜야 할 성질은 «20종이 전부 게인 노드를 거쳤나» 이므로 == 이 아니라 ≥ 로 본다
+       (== 로 두면 통과/실패가 실행마다 갈리는 결정적이지 않은 게이트가 된다 — 실측 20/21 교대). */
     const og = auCtx.createGain.bind(auCtx);
     let made = 0; auCtx.createGain = function(){ made++; return og(); };
     for(const n of names){
@@ -140,7 +143,7 @@ const AU_SFX = eval(sfxSrc), AU_GAIN = eval('(' + gainSrc + ')'),
   ck('auMode = ctx', r.mode === 'ctx', r.mode);
   ck('버퍼 ' + AU_SFX.length + '종 로드', r.buf === AU_SFX.length, r.buf + '/' + AU_SFX.length);
   ck('sfx() 20종 예외 0', r.err.length === 0, r.err.join(' / '));
-  ck('소스마다 게인 노드 (createGain ' + r.nodes + '회 = ' + AU_SFX.length + ')', r.nodes === AU_SFX.length);
+  ck('소스마다 게인 노드 (createGain ' + r.nodes + '회 ≥ ' + AU_SFX.length + ')', r.nodes >= AU_SFX.length);
   ck('볼륨 40 → master 0.4', Math.abs(r.master40 - 0.4) < 0.01, String(r.master40));
   ck('볼륨 100 → master 1.0', Math.abs(r.master100 - 1) < 0.01, String(r.master100));
   ck('SFX 토글 → sfxG 0/1', r.sfxOff === 0 && r.sfxOn === 1);

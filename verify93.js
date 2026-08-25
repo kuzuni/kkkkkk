@@ -1,0 +1,206 @@
+#!/usr/bin/env node
+/* 93 — UI 발 재화 흡수 «퍼짐 → 머묾 → 흡수» 3박자 기능 게이트
+ *
+ *   node verify93.js
+ *
+ * PROGRESS 93 행의 «검증» 목록을 그대로 잰다:
+ *   퍼짐 최대 반경 프레임(≈0.22s) 존재 · 첫 도착 0.5~0.6s · 마지막 도착 1.2~1.4s ·
+ *   알약 펄스 ≥4회 · 아이콘 수(보상 수령) 10~16 · 퀘스트 행 위 관통 0 · 전투 발 연출 변화 0
+ *
+ * 캡처를 «보는» 검증이 아니라 좌표·타이밍을 «재는» 검증이다(29 교훈 1).
+ * 도착은 DOM 이 아니라 `fxFlies` 배열에서 빠지는 순간으로 잰다 — DOM 은 .fx-land 페이드 45ms 뒤에
+ * 지워져 그만큼 늦게 읽힌다(43 교훈 1: 내 assert 가 어디를 재는지부터 확인할 것).
+ */
+const path = require('path');
+const { chromium } = require('playwright');
+const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/');
+
+const fails = [];
+const ok  = m => console.log('  ✓ ' + m);
+const bad = m => { fails.push(m); console.log('  ✗ ' + m); };
+const chk = (c, m) => c ? ok(m) : bad(m);
+
+function pwLaunch(){
+  const fs2 = require('fs');
+  return chromium.launch().catch(e => {
+    for(const p of [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium']){
+      try { if(p && fs2.existsSync(p)) return chromium.launch({ executablePath:p }); } catch(_){}
+    }
+    throw e;
+  });
+}
+
+(async () => {
+  const browser = await pwLaunch();
+  const ctx = await browser.newContext({ viewport:{ width:1080, height:2280 }, deviceScaleFactor:1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push('pageerror: ' + e.message));
+  page.on('console', m => { if(m.type() === 'error') errs.push('console: ' + m.text()); });
+  await page.goto(URL, { waitUntil:'load' });
+  await page.waitForTimeout(1200);
+  /* 전투 로직 정지 — 유휴 골드가 섞이면 «내 트리거» 가 아닌 획득이 타이밍을 흔든다(LESSONS 58-2) */
+  await page.evaluate(() => {
+    player.inv = 1e9;
+    for(const e of enemies){ e.x = 1; e.y = 1; }
+    window.step = () => {};
+  });
+
+  console.log('[1] 3박자 envelope — 퍼짐 0.22s · 첫 도착 0.5~0.6s · 마지막 도착 1.2~1.4s');
+  const t1 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.gold = 90000; fxHold.gold = 0; await sleep(1400);
+    const pb = document.querySelector('.cGold'), num = document.getElementById('goldN');
+    const want = fmt(S.gold + 128000);
+    const pn0 = fxPunchN;
+    fxAt(fxWorld(player.x + 140, player.y - 30));
+    S.gold += 128000;
+    let t0 = 0;
+    for(let i=0;i<250;i++){ if(fxFlies.length && fxFlies[0].ui){ t0 = fxFlies[0].st; break; } await sleep(4); }
+    if(!t0) return { err:'UI 발 비행이 생성되지 않았다' };
+    const f0 = fxFlies[0], sv = fxSc();
+    const org = { x:sv.x + f0.sx*sv.s, y:sv.y + f0.sy*sv.s };
+    let n0 = 0, first = -1, last = -1, prev = 0, pmax = 1, radT = -1, radMax = 0, rollDone = -1;
+    while(performance.now() - t0 < 2200){
+      const t = performance.now() - t0;
+      const c = fxFlies.filter(f => f.ui).length;
+      if(c > n0) n0 = c;
+      /* 퍼짐 반경 = 출발점에서의 «평균» 거리(프레임 px). 흡수가 시작되면 남은 아이콘만 남아
+         평균이 흔들리므로 0.42s 까지만 본다. t<60ms 는 transform 이 아직 안 실린 첫 프레임이라 뺀다. */
+      const els = document.querySelectorAll('#fxl .fx-fly');
+      if(els.length && t > 60 && t < 420){
+        let sum = 0;
+        for(const e of els){ const b = e.getBoundingClientRect();
+          sum += Math.hypot((b.left + b.width/2 - org.x)/sv.s, (b.top + b.height/2 - org.y)/sv.s); }
+        const dd = sum/els.length;
+        if(dd > radMax){ radMax = dd; radT = t; }
+      }
+      if(prev && c < prev){ if(first < 0) first = t; last = t; }
+      prev = c;
+      const mm = String(getComputedStyle(pb).transform).match(/matrix\(([\d.\-]+)/);
+      pmax = Math.max(pmax, mm ? +mm[1] : 1);
+      if(rollDone < 0 && num.textContent === want) rollDone = t;
+      await sleep(8);
+    }
+    return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0,
+             pmax:+pmax.toFixed(3), radT:Math.round(radT), radMax:Math.round(radMax),
+             rollDone:Math.round(rollDone), rest:document.getElementById('fxl').childElementCount };
+  });
+  chk(!t1.err, 'UI 발 재화 획득 트리거' + (t1.err ? ' — ' + t1.err : ''));
+  chk(t1.radMax >= 60 && t1.radMax <= 150,
+      '퍼짐 최대 반경 ' + t1.radMax + 'px (93: 60~140px · 아이콘별 랜덤이라 평균)');
+  chk(t1.radT >= 150 && t1.radT <= 420,
+      '퍼짐이 ' + t1.radT + 'ms 에 최대 (93: 0.22s 에 완료 후 머묾 — 그 구간의 프레임이 존재한다)');
+  /* 설계값은 0.50 / 1.22s 다. 실측은 rAF 간격(이 컨테이너 32~42ms)만큼 뒤에 잡힌다. */
+  chk(t1.first >= 500 && t1.first <= 600, '첫 도착 ' + t1.first + 'ms (93: 0.5~0.6s)');
+  chk(t1.last >= 1200 && t1.last <= 1400, '마지막 도착 ' + t1.last + 'ms (93: 1.2~1.4s)');
+  chk(t1.punchN >= 4, '알약 펄스 ' + t1.punchN + '회 (93: ≥4회 — «톡톡» 이 찰진 핵심)');
+  chk(t1.pmax >= 1.06, '펄스 최대 확대 ×' + t1.pmax + ' (93: 폭을 줄이고 횟수를 늘린다)');
+  chk(t1.rollDone >= t1.first && t1.rollDone <= 1550,
+      '숫자 롤링이 ' + t1.rollDone + 'ms 에 끝난다 — 첫 도착부터 마지막 도착까지 코인과 같이 오른다');
+  chk(t1.rest === 0, '연출이 끝나면 레이어가 비워진다 (잔여 ' + t1.rest + ')');
+
+  console.log('[2] 보상 수령 — 아이콘 수 · 퀘스트 행 위 관통 0');
+  const t2 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.dia = 300; fxHold.dia = 0; await sleep(900);
+    S.quest.kill.base = -1e9;
+    openQuest('rep'); await sleep(350);
+    const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
+    if(!b) return { err:'보상 받기 버튼 없음' };
+    const row = b.closest('.qs-r'), par = row && row.parentElement;
+    const sibs = par ? [].slice.call(par.children).filter(c => c !== row && c.getBoundingClientRect) : [];
+    /* «관통» 판정은 **딤이 안 걸린** 형제 행만 본다. 리스트 하단 → 우상단 HUD 라 형제 행 위를
+       지나는 것은 기하학적으로 불가피하고(58 11회차), 그래서 지나가는 동안 형제 행을 딤 처리해
+       «저 퀘스트도 완료됐나» 오독을 없애는 것이 이 저장소의 처방이다. 93 은 3박자로 길어진
+       연출 내내 그 딤이 유지되는지(FXSOLO 1360 = 마지막 도착 + 100ms)를 지킨다. */
+    b.click();
+    let n0 = 0, cross = 0, frames = 0;
+    for(let i=0;i<170;i++){
+      /* 보상은 골드·다이아가 «같이» 들어와 묶음이 둘이다 — 개수는 **재화별**로 센다 */
+      for(const k of ['gold','dia']) n0 = Math.max(n0, fxFlies.filter(f => f.ui && f.cur === k).length);
+      const els = document.querySelectorAll('#fxl .fx-fly');
+      if(els.length){
+        frames++;
+        for(const e of els){
+          const r = e.getBoundingClientRect();
+          const cx = r.left + r.width/2, cy = r.top + r.height/2;
+          for(const c2 of sibs){
+            if(c2.classList && c2.classList.contains('fx-dim')) continue;   /* 딤 중이면 오독 대상이 아니다 */
+            const q = c2.getBoundingClientRect();
+            if(!q.width || !q.height) continue;
+            if(cx >= q.left && cx <= q.right && cy >= q.top && cy <= q.bottom){ cross++; break; }
+          }
+        }
+      }
+      await sleep(10);
+    }
+    await sleep(400);
+    closeModal();
+    return { n0, cross, frames, sibs:sibs.length };
+  });
+  chk(!t2.err, '퀘스트 «보상 받기» 클릭' + (t2.err ? ' — ' + t2.err : ''));
+  chk(t2.n0 >= 10 && t2.n0 <= 16, '보상 수령 아이콘 ' + t2.n0 + '개 (93: 10~16개)');
+  chk(t2.sibs > 0, '형제 퀘스트 행 ' + t2.sibs + '개를 기준으로 잰다');
+  chk(t2.cross === 0, '딤이 안 걸린 퀘스트 행 위 관통 ' + t2.cross
+      + '회 (93 ④: 0 — 3박자 내내 형제 행 딤이 유지된다)');
+
+  console.log('[3] 전투 발(킬 골드)은 변화 0 — 개수 3~6 · #fxlc · 0.8초 안');
+  const t3 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    document.querySelectorAll('#fxl .fx-fly, #fxlc .fx-fly').forEach(e => e.remove());
+    fxFlies.length = 0;
+    S.gold = 5e5; fxHold.gold = 0;
+    await sleep(1900);                                 /* 대입 자체가 «증가» 라 UI 발 3박자(1.28s)가 먼저 돈다 */
+    document.querySelectorAll('#fxl .fx-fly, #fxlc .fx-fly').forEach(e => e.remove());
+    fxFlies.length = 0;
+    const t0 = performance.now();
+    fxAt(fxWorld(player.x, player.y), 'combat');
+    S.gold += 4000;
+    let n0 = 0, ui = 0, lc = 0, l = 0, last = -1, prev = 0;
+    while(performance.now() - t0 < 1500){
+      const c = fxFlies.filter(f => !f.ui).length;
+      n0 = Math.max(n0, c);
+      ui += fxFlies.filter(f => f.ui).length;
+      lc = Math.max(lc, document.querySelectorAll('#fxlc .fx-fly').length);
+      l  = Math.max(l,  document.querySelectorAll('#fxl .fx-fly').length);
+      if(prev && c < prev) last = performance.now() - t0;
+      prev = c;
+      await sleep(8);
+    }
+    return { n0, ui, lc, l, last:Math.round(last) };
+  });
+  chk(t3.n0 >= 3 && t3.n0 <= 6, '전투 발 아이콘 ' + t3.n0 + '개 (77 이전 그대로 3~6개)');
+  chk(t3.ui === 0, '전투 발에는 3박자가 안 붙는다 (ui 태그 관측 ' + t3.ui + ')');
+  chk(t3.lc > 0 && t3.l === 0, '팝업 «아래» 레이어 #fxlc 에 그린다 (fxlc ' + t3.lc + ' · fxl ' + t3.l + ')');
+  chk(t3.last > 0 && t3.last <= 800, '전투 발 마지막 도착 ' + t3.last + 'ms (현행 속도 유지 ≤800ms)');
+
+  console.log('[4] 골드·다이아 동시 — 각자 상한 절반');
+  const t4 = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    document.querySelectorAll('#fxl .fx-fly, #fxlc .fx-fly').forEach(e => e.remove());
+    fxFlies.length = 0;
+    S.gold = 1e6; S.dia = 1000; fxHold.gold = 0; fxHold.dia = 0; await sleep(1500);
+    fxAt({ x:540, y:1400 });
+    S.gold += 5e6; S.dia += 5000;
+    let g = 0, d = 0, tot = 0;
+    for(let i=0;i<120;i++){
+      g = Math.max(g, fxFlies.filter(f => f.ui && f.cur === 'gold').length);
+      d = Math.max(d, fxFlies.filter(f => f.ui && f.cur === 'dia').length);
+      tot = Math.max(tot, fxFlies.length);
+      await sleep(8);
+    }
+    await sleep(1600);
+    return { g, d, tot, rest:fxFlies.length };
+  });
+  chk(t4.g > 0 && t4.d > 0, '두 재화가 같이 난다 (골드 ' + t4.g + ' · 다이아 ' + t4.d + ')');
+  chk(t4.g <= 16 && t4.d <= 16, '각 묶음 ≤16개');
+  chk(t4.tot <= 32, '공중 총합 ' + t4.tot + '개 ≤ FXFLY_MAX 32');
+  chk(Math.min(t4.g, t4.d) <= 8, '뒤 묶음은 상한 절반(8) 로 줄인다 — 작은 쪽 ' + Math.min(t4.g, t4.d) + '개');
+  chk(t4.rest === 0, '연출이 끝나면 잔여 0');
+
+  await browser.close();
+  if(errs.length){ console.log('\n콘솔/런타임 에러:'); errs.slice(0,10).forEach(e => bad(e)); }
+  console.log('\n' + (fails.length ? 'VERIFY93 FAIL — ' + fails.length + '건' : 'VERIFY93 PASS'));
+  process.exit(fails.length ? 1 : 0);
+})();
