@@ -157,27 +157,30 @@
      (실측 중심 538 vs ref 540). 자간을 1.5 로 되돌리고 같은 값의 절반을 `text-indent` 로 되민다. */
   #stinfo .chap{position:absolute;left:0;top:-13px;width:440px;text-align:center;
     font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:1.5px;text-indent:.75px;white-space:nowrap;
-    -webkit-text-stroke:11px #000;paint-order:stroke fill;text-shadow:0 4px 0 #000}
+    -webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   #stinfo .chap em{font-style:normal}
   #stinfo .kwrap{position:absolute;inset:0}
   /* 트랙 335..745 (410x24) — 순수 검정, 안쪽 well·테두리 없음 */
   /* 4회차 — 시작 노드의 검정 링이 채움 위를 지나 x381..384 에 «4px 검정 틈» 을 냈다(비평가 A 실측).
-     레퍼런스는 같은 행에서 노랑이 343..466 끊김 없이 이어진다 → 트랙·채움을 시작 노드 **위**로 올린다.
-     중간 노드·해골은 트랙보다 위여야 하므로 z-index 를 명시한다(전부 같은 .kwrap 안이라 순서만 바뀐다). */
+     레퍼런스를 두 방향으로 잘라 보면 순서가 **트랙 < 노드 < 채움** 이다(5회차 정정):
+       · 가로 y370: 노드 우측 링 자리(381..385)가 검정이 아니라 **노랑** → 채움이 링 위에 있다
+       · 세로 x359: y350..389 가 **연속 노랑 40px** → 트랙의 위·아래 인셋 6px 이 노드를 덮지 않는다
+     4회차에 트랙째 위로 올렸더니 노드가 8/12/8 세 줄로 쪼개졌다(비평가 D 검출) — 채움만 올린다.
+     `.kbar` 는 z-index 를 주지 않아야 스태킹 문맥을 안 만들고 자식 `>i` 가 노드보다 위로 갈 수 있다. */
   #stinfo .kbar{position:absolute;left:15px;top:34px;width:410px;height:24px;
-    border-radius:12px;background:#000;z-index:1}
+    border-radius:12px;background:#000}
   /* 채움은 트랙 안쪽으로 6px inset, 높이 12, 단색 #FFBF17 (그라디언트 아님) */
   #stinfo .kbar>i{position:absolute;left:6px;top:6px;height:12px;width:0%;max-width:398px;
-    border-radius:6px;background:#FFBF17}
+    border-radius:6px;background:#FFBF17;z-index:2}
   /* 레퍼런스 진행바에는 숫자 표기가 없다 — 요소는 남기고 감춘다(값은 계속 갱신됨) */
   #stinfo .kbar span{display:none}
   #stinfo .knode{position:absolute;top:22px;border-radius:50%;box-sizing:border-box}
   /* 시작 노드 (361,370) 외경 48 = 노랑 40 + 검정 4 */
   #stinfo .n1{left:17px;width:48px;height:48px;background:#FFBF17;border:4px solid #000}
   /* 중간 노드 (540,370) Ø40 검정 단색 */
-  #stinfo .n2{left:200px;top:26px;width:40px;height:40px;background:#000;border:0;z-index:2}
+  #stinfo .n2{left:200px;top:26px;width:40px;height:40px;background:#000;border:0;z-index:3}
   /* 보스 해골 (740,370) 외경 82 = 검정 6 → 시안 5 → 네이비 원판 */
-  #stinfo .kboss{position:absolute;left:379px;top:5px;width:82px;height:82px;border-radius:50%;z-index:2;
+  #stinfo .kboss{position:absolute;left:379px;top:5px;width:82px;height:82px;border-radius:50%;z-index:3;
     background:#141414;display:flex;align-items:center;justify-content:center;font-size:53px;line-height:1}
   #stinfo .kboss::before,#stinfo .kboss::after{content:'';position:absolute;border-radius:50%}
   #stinfo .kboss::before{inset:6px;background:#4CBAED}
@@ -370,12 +373,15 @@
   #menub s:nth-of-type(2){left:55px;top:22px}
   #menub s:nth-of-type(3){left:23px;top:53px}
   #menub s:nth-of-type(4){left:55px;top:53px}
-  /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16). 실측 채움 Ø25 + 검정 4 (A2 표의 Ø31 은 오측) */
+  /* 레드닷 중심 (1025,276) → 버튼 기준 (91,16).
+     5회차 정정 — 3회차가 «화면 전체 Ø24~25 통일» 로 25 까지 줄였는데, 비평가 **A·C·D 셋이 독립으로**
+     «채움 ref 30~31 vs 우리 27(−12~14%)» 로 봤다(측정표 §2 원값도 Ø30 + 검정 5 = 외경 40).
+     배너 레드닷(ref 28~29)과는 **크기가 서로 다른 배지**다 — 한 값으로 묶지 말 것. 채움 25 → 30 · 링 4 → 5. */
   /* 작업 71 — 이 배지는 «우편 안 읽음»(구 좌측 📬 레드닷)을 그대로 옮겨 받은 것이라 상태로 켜고 끈다.
      기본은 꺼짐, `sideAlert('mail', …)` 이 #menub 에 `.alert` 를 토글한다.
      아래 `#menub.mnon .bdg{display:none}` 은 «메뉴 열림» 이라 특이성이 같고 뒤에 와서 이긴다(순서 유지할 것). */
-  #menub .bdg{position:absolute;left:74px;top:-1px;width:25px;height:25px;border-radius:50%;
-    background:#F22E52;border:4px solid #000;box-sizing:content-box;font-size:0;display:none}
+  #menub .bdg{position:absolute;left:71.5px;top:-3.5px;width:30px;height:30px;border-radius:50%;
+    background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0;display:none}
   #menub.alert .bdg{display:block}
   /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
      ✕ 잉크 ref x954..1017 y280..339 = 64×60, 중심 (985,310) → 버튼 로컬 정중앙 (51,50).
@@ -645,16 +651,19 @@
     display:flex;flex-direction:column;align-items:center;gap:21px}
   #botleft .ubtn{position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center}
   #botleft .ubtn[data-util=chat]{width:100px;height:100px;border-radius:50%;background:rgba(0,0,0,.35);
-    justify-content:center}
+    justify-content:center;left:1.5px}   /* 원 중심 ref 84.5 (컬럼 중심 83 보다 1.5 오른쪽) */
   #botleft .ubtn[data-util=chat] .ui{font-size:54px;line-height:1;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
   /* 마을: 아트 132x130 + 라벨 잉크 33(폰트 36)이 아트 하단에 5px 겹쳐 내려온다 */
   /* 4회차 — 아트 자리 규칙(레퍼런스 bbox 를 정확히 차지). 초록 캐노피 잉크를 같은 마스크로 재면
      ref 115x121 @ 중심 x83 · y1842..1962 인데 우리는 113x92 @ 중심 x77 · y1833..1924 였다
-     (비평가 A «높이 −16%» · B «중심 −5.5px, 하단 −8px» 와 같은 방향). 폭은 이미 맞으므로
-     **세로만 늘이고** 오른쪽·아래로 옮긴다. 이모지가 이미지로 교체되면 이 transform 만 지우면 된다. */
+     (비평가 A «높이 −16%» · B «중심 −5.5px, 하단 −8px» 와 같은 방향).
+     ★ 5회차 — 비평가 B·C·D **셋 모두** «폭 −8.5~11.5%» 로 봤다. 우리 초록 캐노피만 재면 ref 와 폭이
+     같지만, **레퍼런스 아트는 검정 외곽선 ≈7px 을 두르고 있어 실제 차지하는 상자가 132x130**(측정표 §3)
+     이다. 우리 이모지는 어두운 전투 배경 위라 외곽선을 둘러도 안 보이므로, «아트 자리 규칙» 대로
+     **보이는 잉크가 그 상자를 채우게** 키운다(콘텐츠가 아니라 자리를 맞추는 것). 목표 132x130 @ 중심 (82.5,1898). */
   #botleft .ubtn[data-util=town] .ui{width:132px;height:130px;font-size:116px;line-height:130px;
-    text-align:center;transform:translate(-5px,29.5px) scaleY(1.31);
+    text-align:center;transform:translate(-7px,15.5px) scale(1.138,1.206);
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
   /* 라벨 잉크 중심은 ref 81 인데 컬럼 중심(83)에 그대로 붙어 83.5 였다 → 2.5px 왼쪽 */
   #botleft .ubtn[data-util=town] .ul{position:relative;left:-2.5px;
@@ -717,6 +726,11 @@
      ② 보상 수량 줄이 ref 1957 인데 1960 이었다(A +3 / B +3, 잉크 높이는 26 으로 일치). */
   #tuto.ready{height:148px}
   #tuto.ready .tsub{top:90px}
+  #tuto.ready .tinfo{top:73px}   /* 껍데기 상단이 2px 내려온 만큼 2행도 되올린다 */
+  #tuto.ready .trew{top:11px}    /* 초록 보상칸도 같은 이유로 2px 되올린다 */
+  /* 보상 아이콘 잉크가 ref 72x54 인데 77x68 이었다(비평가 A 4회차 D4 · C 5회차 D1, 둘 다 «세로 +21~26%»).
+     초록칸 내부 상하 패딩이 26 → 19 로 좁아 보이는 원인이다. 중심 유지한 채 눌러 준다. */
+  #tuto.ready .trew .ri{transform:scale(.94,.79)}
   /* 1행 잉크는 ref 132x25 인데 font 30 에서는 136x29(높이 +16%) 였다. 높이를 ref 에 맞춰 font 26 으로
      내리면 폭이 117 로 좁아지므로 **좌단(ref 728)을 고정한 채** 가로만 되편다 — 게임 서체가 들어오면
      이 scaleX 만 지운다. `.todo` 로 새지 않게 `.ready` 로 좁혀 건다. */
@@ -865,11 +879,16 @@
     background:rgba(0,0,0,.72);z-index:3;cursor:pointer}
   /* 4회차 — 자물쇠 잉크가 ref 36x39 인데 31x45 였다(비평가 A·B 가 독립으로 **같은 수치**).
      잉크 상단(ref 1754)은 이미 맞으므로 **상단을 고정한 채** 가로로 펴고 세로로 누른다. */
+  /* 측정표 §5 «재생 삼각형 1025/1760 · 18x30 · #616161» — 잠금 비활성 톤. 5회차 신설.
+     `::before` 라 자물쇠(.sk)보다 **먼저** 칠해져 레퍼런스처럼 뒤에 깔린다.
+     #spdb 좌상단(969,1734) 기준 상대 좌표 = (56, 26). */
+  #spdb::before{content:'';position:absolute;left:56px;top:26px;width:0;height:0;
+    border-left:18px solid #616161;border-top:15px solid transparent;border-bottom:15px solid transparent}
   #spdb .sk{position:absolute;left:50%;top:19px;transform:translateX(-50%) scale(1.16,.87);
     transform-origin:50% 0;font-size:44px;line-height:41px;
     filter:grayscale(1) brightness(2.8) drop-shadow(0 0 2px #000)}
   #spdb .sv{position:absolute;left:0;right:0;bottom:1px;text-align:center;
-    font-size:21px;line-height:17px;font-weight:900;color:#606060}
+    font-size:24px;line-height:17px;font-weight:900;color:#606060;transform:scaleX(.92)}
 
   /* ============ 패널 ============ */
   /* 고정 높이(844 = 기존 422 x2). 넘치는 내용은 .body 내부 스크롤로 흡수 */
@@ -1641,7 +1660,7 @@
   /* 잉크 폭이 ref 대비 +8% 라 자간 대신 scaleX 로만 좁힌다(LESSONS 01 — letter-spacing 은 어절 공백을 먹는다) */
   .at-bd>i{position:relative;display:inline-block;top:-5px;font-style:normal;font-weight:900;
     font-size:33px;line-height:33px;transform:scaleX(.92);
-    color:#EEE;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+    color:#EEE;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   .at-c7 .at-bd>i{top:1px;font-size:37px;line-height:37px}
   /* 프레임 뒤 밝은 판 147×167 (7일차 512×155) */
   /* ⚠ 측정표 §5 의 «147×167 · 카드 +40» 은 오측이다(1·2회차 비평가 2명이 독립적으로 잡았다).
@@ -2153,7 +2172,7 @@
     transform:scaleY(1.25)}
   .dnc .sp>i{position:absolute;top:6px;height:34px;line-height:34px;font-size:41px;
     font-weight:900;color:#fff;white-space:nowrap;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill}
+    -webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   .dnc .sp.lv>i{left:64px}
   .dnc .sp.tk>i{left:71px;letter-spacing:4px}
   /* 46 레이드 카드 — 던전 카드와 «같은 규격»(좌표·높이·radius·색 전부 동일)이지만
@@ -2311,7 +2330,7 @@
   .shp-card .b3>.lab{color:#DADADA}
   .shp-card .cbtn>.pan .gem{position:absolute;left:14px;top:-1px;font-size:36px;
     -webkit-text-stroke:0;line-height:37px}
-  .shp-card .cbtn>.cost.g3{color:#EB6D68;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  .shp-card .cbtn>.cost.g3{color:#EB6D68;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
 
   /* 잠금 상자(도감 완성) — 딤 + 안내 */
   .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
@@ -2968,7 +2987,7 @@
     background:linear-gradient(180deg,#D3D3D3 0 10px,#A8A8A8 12px,#8A8A8A 102px,
       #D3D3D3 102px 108px,#757575 108px 116px,#000 116px)}
   /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
-  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   .wm-b1{left:137px;color:#AAEFFF}
   .wm-b1>i{transform:scaleX(.87)}
   .wm-b2{left:447px;color:#DFDFDF}
@@ -4522,7 +4541,7 @@
   .upr-lv{margin-top:5px;height:23px;line-height:23px;text-align:center;white-space:nowrap;
     position:relative;left:1px;
     font-size:33px;font-weight:900;color:#fff;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill}
+    -webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   /* ➡ 화살표 — 연두 #B4EC2C 채움 + 검정 외곽선(숫자와 같은 실측 4px → stroke-width 8).
      인라인 SVG 는 fill 을 지정하지 않으면 검정이 되므로 명시한다. gap 은 좌우 9px(실측).
      크기 24x23 은 폰트 크기와 무관하게 고정(실측값). */
@@ -5889,7 +5908,7 @@
   .bg53-tip{left:13px;top:20.5px;width:882px;height:100px;border-radius:30px;
     background:rgba(180,157,126,.42);text-align:center;line-height:100px}
   /* 문구 코어 488×27 중심 (539.5, 912) → font-size 27/0.93 ≈ 29, 편측 외곽선 4 → 8 */
-  .bg53-tip>i{font-size:29px;color:#F8F8F8;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+  .bg53-tip>i{font-size:29px;color:#F8F8F8;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   /* 아이템 패널 — ref x99..980 y983..1682 (882×700) r24. 격자를 담는 한 겹 어두운 상자 */
   .bg53-panel{left:13px;top:140.5px;width:882px;height:700px;border-radius:24px;
     background:rgba(178,154,124,.40);box-sizing:border-box;padding:16px 27px 27px;overflow:hidden}
@@ -6335,7 +6354,7 @@
     clip-path:polygon(0 12%,50% 26%,100% 12%,100% 62%,50% 100%,0 62%)}
   /* 내 순위 숫자 잉크 116×43 중심 (79.5,2076) → 로컬 cy 87. fs 46, 편측 4 → 8 */
   #rkw .rk-mn{left:0;top:63px;width:160px;height:48px;line-height:48px;display:block;
-    text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill}
+    text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   .rk-me .rk-av{left:206px;top:21px;width:122px;height:118px}
   .rk-me .rk-tt{left:343px;top:38px;width:278px;height:44px}
   #rkw .rk-me .rk-nm{left:345px;top:94px;width:430px;font-size:35px}
