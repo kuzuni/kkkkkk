@@ -166,6 +166,13 @@ async function fresh(browser, w = 1080, h = 2280) {
 
     /* ---------- 4. 기능 — 실제 클릭으로 상태가 바뀌는가 ---------- */
     console.log('[4] 기능 — 헤드리스 «실제 클릭»');
+    /* LESSONS 51-③ — 유휴 루프가 «골드» 를 계속 굴린다(자동구매를 꺼도 전투 수입은 들어온다).
+       다이아·유물석은 안 굴러가지만 골드만은 «드리프트» 를 먼저 재서 그만큼을 허용치로 쓴다. */
+    const dg0 = await page.evaluate(() => S.gold);
+    await page.waitForTimeout(600);
+    const drift = Math.max(4, (await page.evaluate(() => S.gold) - dg0) * 3);
+    ok(`골드 유휴 드리프트 측정 — 600ms 당 ${Math.round(drift / 3)} → 허용치 ±${Math.round(drift)}`);
+
     const before = await page.evaluate(() => ({ g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail } }));
     const m0 = await page.evaluate(() => ({ ...MAILS[0] }));
     await page.evaluate(() => { document.querySelector('.ml-r [data-ml]').click(); });
@@ -178,13 +185,29 @@ async function fresh(browser, w = 1080, h = 2280) {
       done: document.querySelector('.ml-r').classList.contains('done')
     }));
     after.mail[m0.id] === 1 ? ok('S.mail[m1] = 1 (수령 기록)') : fail('S.mail 이 안 바뀌었다');
-    near('골드 증가분', after.g - before.g, m0.g, 0);
+    near('골드 증가분', after.g - before.g, m0.g, drift);
     near('다이아 증가분', after.c - before.c, m0.c, 0);
     near('유물석 증가분', after.r - before.r, m0.r || 0, 0);
     after.saved[m0.id] === 1 ? ok('localStorage[KEY] 에 세이브 반영') : fail('세이브에 반영 안 됨');
     after.dis ? ok('수령한 행 버튼 비활성') : fail('수령했는데 버튼이 아직 활성');
     after.done ? ok('수령한 행 .done 상태(악센트 밴드·썸네일 회색)') : fail('.done 클래스 없음');
     after.btn === '완료' ? ok('수령한 행 라벨 «완료»') : fail('라벨 = ' + after.btn);
+
+    /* 58 연출 계약상 수령은 «두 프레임 뒤» 에 처리된다(22 openQuest 와 같은 패턴) — 그 사이 버튼이
+       아직 살아 있으므로 **연타해도 두 번 지급되면 안 된다**. `claimMail` 의 `S.mail[id]` 가드 검증. */
+    const dblPre = await page.evaluate(() => ({ g: S.gold, c: S.dia }));
+    const m1 = await page.evaluate(() => {
+      const b = document.querySelector('.ml-r [data-ml]:not([disabled])');
+      if (!b) return null;
+      const id = b.dataset.ml; b.click(); b.click(); b.click();
+      return MAILS.find((m) => m.id === id);
+    });
+    await page.waitForTimeout(500);
+    const dblPost = await page.evaluate(() => ({ g: S.gold, c: S.dia }));
+    if (m1) {
+      near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, drift);
+      near('연타 3회 — 다이아는 1회분만', dblPost.c - dblPre.c, m1.c, 0);
+    } else fail('연타 검증용 미수령 행이 없다');
 
     /* HUD 반영 — 렌더 루프가 갱신하므로 한 프레임 기다린다(LESSONS 25 함정) */
     await page.waitForTimeout(500);
@@ -210,7 +233,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       stillOpen: document.getElementById('modal').classList.contains('ml69')
     }));
     leftBefore > 0 ? ok(`전체 수령 전 미수령 ${leftBefore}통`) : fail('미수령이 0이라 전체 수령을 검증 못 함');
-    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, 0);
+    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, drift);
     near('전체 수령 다이아', post2.c - pre2.c, sumRest.c, 0);
     near('전체 수령 유물석', post2.r - pre2.r, sumRest.r, 0);
     post2.left === 0 ? ok('미수령 0통') : fail('아직 ' + post2.left + '통 남음');
