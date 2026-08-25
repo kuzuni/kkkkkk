@@ -111,11 +111,16 @@ const ck = (name, got, want, tol = 0) => {
   console.log('─ 보상받기(ready · 02 ④) 회귀 — 32 수정이 새지 않았는가 ───────');
   const D = R.ready;
   ck('테두리 검정 5px 복귀',              D.bw + ' ' + D.bcol, '5px rgb(0, 0, 0)');
-  ck('배너 bbox 동일',                   D.banner.x + ',' + D.banner.w + ',' + D.banner.h, T.banner.x + ',' + T.banner.w + ',' + T.banner.h);
+  /* ⚠ 2026-08-25 — 작업 02 4회차(`wip(02)` 5233b4b)가 **의도적으로** ready 껍데기를 바꿨다:
+     `#tuto.ready{height:148px}`(«배너 상단 2px») · `#tuto.ready .tbtn{transform:scaleX(1.13)}`.
+     32 의 회귀 검사는 여전히 «내 `.todo` 수정이 ready 로 새지 않았는가» 를 보는 것이므로,
+     기대값을 02 의 **새 확정값**으로 갱신한다(todo 는 계속 150 · scaleX 1.31 로 따로 검사한다).
+     — 구현이 아니라 **검사가 낡은 것**이다(52 교훈 2 의 재발). */
+  ck('배너 bbox — ready 는 02 확정값(h148)',  D.banner.x + ',' + D.banner.w + ',' + D.banner.h, T.banner.x + ',' + T.banner.w + ',148');
   /* 보상칸 크기는 두 상태가 **의도적으로 1px 다르다** — 02 표는 117×117·radius 30(육안 실측),
      32 표는 118×118·radius 34(픽셀 실측). 02 를 건드리지 않는 것이 회귀 방지다. */
   ck('보상칸 bbox = 02 값 유지(117)',     D.rew.x + ',' + D.rew.w + ',' + D.rew.h, '948,117,117');
-  ck('L1 transform 없음(02 는 보정 안 함)', D.l1tf, 'none');
+  ck('L1 transform — 02 가 건 scaleX(1.13)', D.l1tf, 'matrix(1.13, 0, 0, 1, 0, 0)');
   ck('수량 transform 없음',               D.subtf, 'none');
   ck('젬 transform 없음',                 D.gemtf, 'none');
   ck('L3 줄 숨김(02 는 2줄)',             D.l3disp, 'none');
