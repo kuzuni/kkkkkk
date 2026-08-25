@@ -304,16 +304,18 @@ function launchOpts(){
       await page.waitForTimeout(400);
       /* 21 도감 팝업은 모달 «밑으로» 깃발탭이 145px 삐져나오는 유일한 껍데기라 화면비마다 같이 본다 */
       await page.evaluate(() => { if (typeof openColl21 === 'function') openColl21('armor'); }).catch(() => {});
+      /* 34 축복 팝업은 «팝업 + 팝업 밖 초록 스트립 + 닫기 X» 블록 1574px 이라 짧은 프레임에서 제일 먼저 넘친다 */
+      await page.evaluate(() => { if (typeof openBless === 'function') openBless(); }).catch(() => {});
       await page.waitForTimeout(300);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut')]
+        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relicw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {
           const r = e.getBoundingClientRect(); if (r.width === 0 || r.height === 0) continue;
-          if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5) return `${e.id} top ${Math.round(r.top - A.top)} bottom ${Math.round(r.bottom - A.bottom)} (프레임 기준)`;
+          if (r.top < A.top - 1.5 || r.bottom > A.bottom + 1.5) return `${e.id || e.className} top ${Math.round(r.top - A.top)} bottom ${Math.round(r.bottom - A.bottom)} (프레임 기준)`;
         }
         return null;
       });

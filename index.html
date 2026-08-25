@@ -4638,13 +4638,17 @@
      세로: 블록(팝업1157 + 21 + 스트립252 + 24 + X120 = 1574) 을 «위 126 − 아래 145» 로 중앙 배치하면
      top = 126 + (2280−126−142−1574)/2 = 345 = ref 429 − 84 ✓ (63 2회차 규칙: 가드 126 은 두고 아래로 민다)
      좌표 기준: 팝업 자식은 크림 본문 좌상단 = ref(61,529) 원점. ══════════════════════════════════════ */
-  #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;
-    box-sizing:border-box;padding:126px 0 142px;flex-direction:column;align-items:center;justify-content:center}
+  /* 짧은 기기(4:3 → #app 1600) 대책 — 블록 1574 가 안 들어가면 `justify-content:center` 는 «위로도» 넘쳐
+     팝업 머리가 HUD 위로 잘려 나간다(LESSONS 20-④: 클리핑은 «가장 짧은 프레임» 에서 확인하라).
+     첫·마지막 자식의 `margin:auto` 로 중앙을 만들면 남는 공간이 음수일 때 auto 가 0 이 돼
+     **위쪽 가드(126)를 지키고 아래로만** 넘치고, `overflow-y:auto` 로 닿을 수 있다. */
+  #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;overflow-y:auto;
+    box-sizing:border-box;padding:126px 0 142px;flex-direction:column;align-items:center;justify-content:flex-start}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
   /* 검정 8 + 갈색 링 11(바깥 6 #564438 · 안쪽 5 #46382D) = 편측 19 → 크림 폭 960 (ref 958) */
-  .bls{position:relative;flex:none;width:998px;height:1157px;max-height:100%;box-sizing:border-box;
+  .bls{position:relative;flex:none;margin-top:auto;width:998px;height:1157px;box-sizing:border-box;
     border:8px solid #000;border-radius:44px;padding:0 6px 6px;background:#564438;
     display:flex;flex-direction:column;box-shadow:0 0 24px 10px rgba(0,0,0,.55)}
   .bls-head{flex:0 0 90px;margin:0 -6px;border-radius:36px 36px 0 0;background:#523E3D;
@@ -4767,7 +4771,7 @@
     background:linear-gradient(180deg,#8CF05C 0,#70E030 55%,#4DBB18 100%);
     box-shadow:inset 0 6px 0 rgba(255,255,255,.55),0 6px 0 #2F7A0C;
     font-size:42px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
-  .bls-x{flex:none;margin-top:24px;width:120px;height:120px;box-sizing:border-box;border:7px solid #000;
+  .bls-x{flex:none;margin:24px 0 auto;width:120px;height:120px;box-sizing:border-box;border:7px solid #000;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:106px;text-align:center;
     font-size:60px;font-weight:900;color:#FAF0F1}
 </style>
