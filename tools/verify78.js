@@ -1,6 +1,6 @@
 /* 78 오디오 게이트 — node tools/verify78.js → 마지막 줄 VERIFY78 PASS
    §A CREDITS.md 대조 + 용량 예산   (파일 시스템)
-   §B ctx 경로(http): 버퍼 22개 로드 · sfx 20종 예외 0 · 설정 토글 → gain 0/1 · 볼륨 → master ·
+   §B ctx 경로(http): 버퍼 = SFX + BGM 2 로드 · sfx 전종 예외 0 · 설정 토글 → gain 0/1 · 볼륨 → master ·
       BGM main 자동 시작 · bgmSet('boss') 전환 · BGM 토글 정지 · 콘솔 에러 0
    §C el 폴백(file://): auMode 'el' · sfx 예외 0 · 콘솔 에러 0 */
 const fs = require('fs'), path = require('path'), http = require('http');
@@ -24,8 +24,12 @@ for(const f of files){
 ck('§A SFX ≤50KB', overS.length === 0, overS.join(','));
 ck('§A BGM ≤1.5MB', overB.length === 0, overB.join(','));
 ck('§A 총량 ≤4MB', tot <= 4 * 1024 * 1024, (tot / 1048576).toFixed(2) + 'MB');
-const SFX_N = 20, BGM_N = 2;
-ck('§A 파일 수 = SFX 20×2 + BGM 2', files.length === SFX_N * 2 + BGM_N, String(files.length));
+/* 99 — SFX 20종에 스킬 시전음 7계열이 붙어 27종. 소스의 AU_SFX 를 그대로 세서 하드코딩을 없앤다 */
+const HTML78 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const SFX_N = (HTML78.match(/const AU_SFX = (\[[\s\S]*?\]);/) || [])[1]
+  ? eval((HTML78.match(/const AU_SFX = (\[[\s\S]*?\]);/))[1]).length : 0;
+const BGM_N = 2;
+ck('§A 파일 수 = SFX ' + SFX_N + '×2 + BGM 2', files.length === SFX_N * 2 + BGM_N, String(files.length));
 
 /* ---------- 서버 ---------- */
 const MIME = { '.html':'text/html', '.js':'text/javascript', '.png':'image/png', '.ogg':'audio/ogg',
@@ -64,16 +68,17 @@ const srv = http.createServer((req, res) => {
     await page.mouse.click(270, 400);                       /* 첫 제스처 → auInit */
     await page.waitForTimeout(300);
     ck('§B auMode = ctx', await page.evaluate(() => auMode) === 'ctx');
-    const loaded = await page.waitForFunction(() => Object.keys(auBuf).length >= 22, null, { timeout: 20000 })
+    const NBUF = SFX_N + BGM_N;
+    const loaded = await page.waitForFunction(n => Object.keys(auBuf).length >= n, NBUF, { timeout: 20000 })
       .then(() => true).catch(() => false);
-    ck('§B 버퍼 22개 로드(SFX 20 + BGM 2)', loaded,
+    ck('§B 버퍼 ' + NBUF + '개 로드(SFX ' + SFX_N + ' + BGM 2)', loaded,
        String(await page.evaluate(() => Object.keys(auBuf).length)));
     const r = await page.evaluate(() => {
       const out = { thrown: [] };
       for(const n of AU_SFX){ try{ auLast[n] = 0; sfx(n); }catch(e){ out.thrown.push(n + ':' + e); } }
       return out;
     });
-    ck('§B sfx() 20종 예외 0', r.thrown.length === 0, r.thrown.join(','));
+    ck('§B sfx() ' + SFX_N + '종 예외 0', r.thrown.length === 0, r.thrown.join(','));
     const g = await page.evaluate(() => {
       const o = {};
       S.opt.sfx = false; auApply(); o.sfxOff = auSfxG.gain.value;
@@ -112,7 +117,7 @@ const srv = http.createServer((req, res) => {
       try{ bgmApply(); out.bgm = bgmCur; }catch(e){ out.thrown.push('bgm:' + e); }
       return out;
     });
-    ck('§C <audio> 요소 20개', r.els === 20, String(r.els));
+    ck('§C <audio> 요소 ' + SFX_N + '개', r.els === SFX_N, String(r.els));
     ck('§C sfx()·bgmApply() 예외 0', r.thrown.length === 0, r.thrown.join(','));
     ck('§C BGM main (el 경로)', r.bgm === 'main', String(r.bgm));
     await page.waitForTimeout(500);

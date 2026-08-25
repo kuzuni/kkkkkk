@@ -40,6 +40,29 @@
 | bgm_main.mp3 | level1.mp3 (= Stage 1) | 4 Chiptunes (Adventure) | Juhani Junkala | CC0 1.0 | 메인 BGM 루프(41.1s) |
 | bgm_boss.mp3 | level3.mp3 (= Boss Fight) | 4 Chiptunes (Adventure) | Juhani Junkala | CC0 1.0 | 보스전 BGM 루프(71.7s) |
 
+## 자체 합성 — 스킬 시전음 7계열 (작업 99, 2026-08-26)
+
+작업 78 의 소스 팩 3종(Kenney Interface Sounds · Junkala 512 Sound Effects · SketchyLogic NES Shooter)의
+공개 미러에는 UI 클릭·폭발·징글만 들어 있고 **휘두름(whoosh)·전격(zap)·투척(throw) 계열이 없다**
+(미러 `razorbeard/classic-games` 의 `resources/sounds/` 실사 확인 — laser·shoot·whoosh 계열 404).
+그래서 작업 99 의 시전음은 지시서 ② 의 대체 경로대로 **numpy 로 자체 합성**해 78 과 같은 방식
+(soundfile / libsndfile 1.2.2)으로 ogg(Vorbis) + mp3 2벌로 인코딩했다.
+합성 코드는 `tools/synth99.py` (시드 고정 — 같은 파일이 재생성된다). **저작권자 없음 · CC0 1.0 으로 배포**한다.
+
+| 게임 파일 (.ogg/.mp3) | 출처 | 라이선스 | 합성 방식 | 용도(계열) |
+|---|---|---|---|---|
+| skwhoosh | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 화이트노이즈 + 밴드패스 스윕 700→2900Hz | 검기·멀티 검기·폭풍의 칼날·흡혈의 검 |
+| skthrow | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 짧은 tk 트랜지언트 + 하강 스위시 3200→1100Hz | 표창·돌팔매·화살·부메랑·천벌의 창 |
+| skice | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 고음 글리산도 1500→3400Hz + 고역 결정음 | 얼음창·서리 연쇄 |
+| skzap | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 불규칙 AM 구형파 버즈 + 고역 크래클 | 연쇄 번개 |
+| skcast | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 저역 스윕 190→48Hz + 저역 노이즈 | 화염구·운석·심판의 빛·창세의 폭발 |
+| skbubble | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 상승 블립 6알 + 저역 노이즈 베드 | 맹독 안개(독 장판) |
+| skchime | 자체 합성 (`tools/synth99.py`) | CC0 1.0 | 3음(G5·B5·E6) 사인 차임 | 기합·치유·신속·수호·광란 |
+
+- 레벨은 98 규약대로 **창100ms RMS −15.5 dBFS · 피크 ≤ −1 dBFS** 로 구웠다 —
+  `AU_GAIN` 0.296~0.326 을 곱하면 목표인 «전투 반복음 −26 dBFS» 가 된다.
+- 파일당 5~8KB(ogg)·2.6~5.5KB(mp3) 로 SFX 50KB 예산 안이다.
+
 - BGM 은 **mp3 단일 포맷**으로 넣었다(모든 브라우저·iOS 재생 가능). ogg 를 병행하면 총량이 4MB 예산을
   넘보므로 제외 — SFX 는 지시대로 ogg 우선 + mp3 폴백 2벌이다.
 - Stage 1 확인 근거: classic-games README 가 tetris_theme.ogg(41.1s)를 «Stage 1» 로 명기, clocksattack

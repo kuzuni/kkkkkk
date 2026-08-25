@@ -9292,8 +9292,41 @@ function castGeneric(s, dmg){
   return false;
 }
 
+/* ---------------- 99 스킬 시전음 (2026-08-26, 저장소 주인 지시 — «스킬을 써도 소리가 없어 심심하다»)
+   계열 키 7종 → assets/audio/sk*.ogg. 지속형(cd 0 = 회전검·신성 오라)은 castSkill 을 거치지 않아
+   시전음이 없다(지시서 ①). 소음 대책은 두 겹이다:
+   · 이름별 디바운스 — sfx() 안의 AU_MIN/AU_MIN_DEF(30ms)
+   · **계열 무관 공용 최소 간격 90ms** — 8칸이 동시에 쿨이 돌면 초당 수 회 겹친다(지시서 ④).
+   게인은 AU_GAIN 에서 0.25~0.35 · 목표 창RMS −26 dBFS(98 «전투 반복음» 분류). ------------------- */
+const SK_CAST_SFX = {
+  /* 검기 휘두름 */ slash:'skwhoosh', multi:'skwhoosh', gale:'skwhoosh', drain:'skwhoosh',
+  /* 투척      */ shuri:'skthrow', stone:'skthrow', arrow:'skthrow', boomer:'skthrow', lance:'skthrow',
+  /* 빙결      */ ice:'skice', frost:'skice',
+  /* 전격      */ bolt:'skzap',
+  /* 둔탁한 발사*/ boom:'skcast', meteor:'skcast', holy:'skcast', nova:'skcast',
+  /* 독 장판    */ poison:'skbubble',
+  /* 버프·치유  */ vigor:'skchime', mend:'skchime', haste:'skchime', ward:'skchime', rage:'skchime'
+  /* orbit·aura 는 지속 스킬 — 시전음 없음 */
+};
+const SK_SFX_GAP = 90;                  /* 시전음 공용 최소 간격(ms) */
+let skSfxLast = 0;
+function sfxCast(id){
+  const n = SK_CAST_SFX[id];
+  if(!n) return false;                  /* 지속 스킬 등 매핑 없음 */
+  const t = performance.now();
+  if(t - skSfxLast < SK_SFX_GAP) return false;
+  skSfxLast = t;
+  sfx(n);
+  return true;
+}
+
 /* ---------------- 스킬 발동 ---------------- */
 function castSkill(s){
+  const ok = castSkillRaw(s);
+  if(ok) sfxCast(s.id);                 /* 99 — 발동 실패(대상 없음·버프 중복)에는 울리지 않는다 */
+  return ok;
+}
+function castSkillRaw(s){
   const dmg = skillDmg(s) * sbAtk();
   const px = player.x, py = player.y - 22;
   switch(s.id){
@@ -15985,7 +16018,9 @@ else { jzInit(); tapInit(); dsInit(); }
    ========================================================================== */
 const AU_BASE = 'assets/audio/';
 const AU_SFX = ['tap','open','close','flip','rare','up','train','claim','revive','rtick','rstop',
-                'err','toggle','coin','bosskill','hit','death','clear','victory','bossin'];
+                'err','toggle','coin','bosskill','hit','death','clear','victory','bossin',
+                /* 99 스킬 시전음 7계열 — 매핑은 SK_CAST_SFX */
+                'skwhoosh','skthrow','skice','skzap','skcast','skbubble','skchime'];
 const AU_BGM = { main:'bgm_main', boss:'bgm_boss' };
 /* 파일별 게인 — AU_SFX 전 항목 필수(빠지면 tools/verify98.js 가 실패한다) */
 const AU_GAIN = {
@@ -15993,7 +16028,9 @@ const AU_GAIN = {
   /* 반복 UI −20 */             flip:1.010, rtick:1.076, train:0.770,
   /* 결과·보상 징글 −16 */      claim:0.475, up:0.389, rare:1.008, victory:1.012, revive:0.558,
   /* 전투 반복음 −26 */         hit:0.230, coin:0.141, clear:0.142,
-  /* 보스 등장·처치·사망 −18 */ bossin:1.772, bosskill:0.724, death:0.308
+  /* 보스 등장·처치·사망 −18 */ bossin:1.772, bosskill:0.724, death:0.308,
+  /* 99 스킬 시전음 −26 (합성 단계에서 창RMS −15.5 로 구웠다 → 게인이 0.25~0.35 안) */
+  skwhoosh:0.304, skthrow:0.326, skice:0.296, skzap:0.303, skcast:0.297, skbubble:0.298, skchime:0.298
 };
 const AU_BGM_GAIN = 0.20;               /* BGM 기본 게인 — SFX 평균 대비 −8 dB 이하 */
 const AU_MIN = { coin:150 };            /* 이름별 최소 발화 간격(ms) — 없으면 AU_MIN_DEF */

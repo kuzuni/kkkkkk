@@ -4,7 +4,7 @@
    §B 실측(tools/aud98.js: peak · 최대 100ms 창 RMS) + 20log10(게인) 이 목표 ±3 dB
       — 단 피크 실링(−1 dBFS)에 걸린 파일은 «목표보다 작다» 만 확인한다(더 올리면 클리핑)
    §C BGM 게인이 SFX 평균(전투 반복음 제외)보다 8 dB 이상 아래 · 클리핑 0건
-   §D 런타임: ctx 경로에서 sfx 20종 예외 0 · 소스마다 게인 노드 · el 폴백 volume = vol/100×게인 ·
+   §D 런타임: ctx 경로에서 sfx 전종 예외 0 · 소스마다 게인 노드 · el 폴백 volume = vol/100×게인 ·
       설정 토글·볼륨 회귀(auApply) 없음 · 콘솔 에러 0
    §E 전투 60초(가속) 동안 sfx('coin') 실제 발화 ≤ 7회/s */
 process.env.W98 = process.env.W98 || '100';
@@ -22,8 +22,11 @@ const TARGET = { tap:-18, open:-18, close:-18, err:-18, toggle:-18, rstop:-18,
                  flip:-20, rtick:-20, train:-20,
                  claim:-16, up:-16, rare:-16, victory:-16, revive:-16,
                  hit:-26, coin:-26, clear:-26,
-                 bossin:-18, bosskill:-18, death:-18 };
-const LOOP = ['hit', 'coin', 'clear'];        /* 전투 반복음 — §C 평균에서 뺀다 */
+                 bossin:-18, bosskill:-18, death:-18,
+                 /* 99 스킬 시전음 — «전투 반복음» 분류(초당 수 회 겹친다) */
+                 skwhoosh:-26, skthrow:-26, skice:-26, skzap:-26, skcast:-26, skbubble:-26, skchime:-26 };
+const LOOP = ['hit', 'coin', 'clear',         /* 전투 반복음 — §C 평균에서 뺀다 */
+              'skwhoosh', 'skthrow', 'skice', 'skzap', 'skcast', 'skbubble', 'skchime'];
 const CEIL = -1, TOL = 3;
 
 /* ---------- 소스에서 테이블 뽑기 ---------- */
@@ -113,6 +116,9 @@ const AU_SFX = eval(sfxSrc), AU_GAIN = eval('(' + gainSrc + ')'),
       await new Promise(r => setTimeout(r, 5));
     }
     out.nodes = made;
+    /* 99 이후 전투 중 스킬 시전음이 배경에서 끼어들 수 있다(루프 사이 await 구간).
+       → 루프는 «최소 개수» 로 보고, 정확히 1개인지는 끼어들 수 없는 동기 단일 호출로 확인한다. */
+    const m0 = made; auLast.tap = 0; sfx('tap'); out.oneNode = made - m0;
     auCtx.createGain = og;
     /* 설정 회귀 — 볼륨/토글이 즉시 반영되는가 */
     const v0 = S.opt.vol, s0 = S.opt.sfx, b0 = S.opt.bgm;
@@ -142,8 +148,9 @@ const AU_SFX = eval(sfxSrc), AU_GAIN = eval('(' + gainSrc + ')'),
 
   ck('auMode = ctx', r.mode === 'ctx', r.mode);
   ck('버퍼 ' + AU_SFX.length + '종 로드', r.buf === AU_SFX.length, r.buf + '/' + AU_SFX.length);
-  ck('sfx() 20종 예외 0', r.err.length === 0, r.err.join(' / '));
+  ck('sfx() ' + AU_SFX.length + '종 예외 0', r.err.length === 0, r.err.join(' / '));
   ck('소스마다 게인 노드 (createGain ' + r.nodes + '회 ≥ ' + AU_SFX.length + ')', r.nodes >= AU_SFX.length);
+  ck('동기 단일 sfx() → 게인 노드 정확히 1개', r.oneNode === 1, String(r.oneNode));
   ck('볼륨 40 → master 0.4', Math.abs(r.master40 - 0.4) < 0.01, String(r.master40));
   ck('볼륨 100 → master 1.0', Math.abs(r.master100 - 1) < 0.01, String(r.master100));
   ck('SFX 토글 → sfxG 0/1', r.sfxOff === 0 && r.sfxOn === 1);
