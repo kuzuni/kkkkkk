@@ -79,3 +79,40 @@ row('수량 200',    bbox((r,g,b,x)=>x>940&&r>225&&g>225&&b>225,                
 console.log('─ 레드닷(있으면 감점) ───────────────────────────────────────');
 const dot = bbox((r,g,b)=>r>180&&g<90&&b<110, w(1840, 1895, 1000, 1079));
 console.log('  붉은 픽셀       : ' + (dot ? dot.n + '개 ⚠ (ref 0개 — 미완료 상태엔 레드닷 없음)' : '0개 ✅'));
+
+/* ── 글리프 열 런 (측정표 §2-3 형식) ─────────────────────────────────────────
+   `node tools/probe32.js <캡처> runs` 로 켠다. 줄마다 «열 런 = 글리프» 를 뽑고
+   **각 런의 잉크 상·하단(ref y)** 을 같이 낸다 — 베이스라인 정렬을 보려면 이게 필요하다.
+   ref 실측(§2-3 · 비평가 I): L1 `[`25 `미션`27 `227`23 이 **모두 같은 바닥**에 선다.        */
+if (process.argv[3] === 'runs'){
+  const lines = [
+    ['L1 [미션-227]', (r,g,b)=>g>170&&b>150&&r<g-60,                     1845, 1890, 621, 947],
+    ['L2 본문',       (r,g,b)=>(r>225&&g>225&&b>225)||(r>210&&g>100&&g<175&&b<125), 1895, 1930, 621, 947],
+    ['L3 (0/10)',     (r,g,b)=>r>215&&g>160&&g<225&&b>70&&b<160,          1928, 1965, 621, 947],
+    ['수량 200',      (r,g,b)=>r>225&&g>225&&b>225,                       1950, 1995, 940, 1079]
+  ];
+  console.log('\n─ 글리프 열 런 (런 = x0-x1 · 잉크 ref y 상..하) ────────────────');
+  for (const [name, test, ry0, ry1, rx0, rx1] of lines){
+    const cols = [];
+    for (let x = rx0; x <= rx1; x++){
+      let t = 1e9, bm = -1;
+      for (let y = ry0 - OFF; y <= ry1 - OFF; y++){
+        const c = px(x, y);
+        if (test(c[0], c[1], c[2])){ if(y<t)t=y; if(y>bm)bm=y; }
+      }
+      cols.push(bm < 0 ? null : [t + OFF, bm + OFF]);
+    }
+    const runs = [];
+    let s = -1;
+    for (let i = 0; i <= cols.length; i++){
+      if (cols[i] && s < 0) s = i;
+      else if (!cols[i] && s >= 0){
+        let t = 1e9, bm = -1;
+        for (let j = s; j < i; j++){ if(cols[j][0]<t)t=cols[j][0]; if(cols[j][1]>bm)bm=cols[j][1]; }
+        runs.push((rx0+s) + '-' + (rx0+i-1) + '(w' + (i-s) + ' y' + t + '..' + bm + ' h' + (bm-t+1) + ')');
+        s = -1;
+      }
+    }
+    console.log('  ' + name.padEnd(14) + runs.join(' · '));
+  }
+}
