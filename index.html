@@ -10211,7 +10211,8 @@ function renderColl21(){
       +  '<div class="clb-cards">'
       +  st.it.map(id => {
            const it = itemById(id), c = COLL21_CARD[Math.min(it.g, 5)], l = oLv(id);
-           return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 5px ' + c[1] + '">'
+/* ref 카드 단면(y660): 검정 ~161 / **어두운 단 162~163** / 밝은 rim 164~167 / 면 169~ */
+           return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 2px rgba(0,0,0,.42),inset 0 0 0 7px ' + c[1] + '">'
              + '<i class="cdic">' + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
              + '<s class="cb" style="background:linear-gradient(180deg,' + c[2] + ',' + c[3] + ')"></s>'
              + '<i class="cl2" style="color:' + (l >= st.req ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l + '/' + st.req + '</i></div>';
