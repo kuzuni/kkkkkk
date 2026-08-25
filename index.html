@@ -2387,7 +2387,7 @@
   .cl>*{position:absolute}
   /* 상단 다크 밴드 ref y364~474 (리본·검색버튼 자리) */
   .cl-band{left:0;right:0;top:0;height:111px;background:#33333D;border-radius:40px 40px 0 0;
-    box-shadow:inset 0 4px 0 #393943}
+    box-shadow:inset 0 7px 0 #393943,inset 7px 0 0 #393943,inset -7px 0 0 #393943}
   /* 좌우 갈색 베벨 프레임 (본문 구간만 — 밴드 구간은 다크가 전폭) */
   .cl-fl{left:1px;top:111px;bottom:1px;width:10px;
     background:linear-gradient(90deg,#2D241B,#4D3D2E 35%,#7B6550 70%,#987F61)}
@@ -2407,14 +2407,15 @@
     filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000)}
   .cl-rib>s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,32% 50%)}
   .cl-rib>s.tr{right:2px;clip-path:polygon(0 0,100% 0,68% 50%,100% 100%,0 100%)}
-  .cl-rib>s.bd{left:28px;right:28px;top:0;width:auto;height:91px;filter:none;
+  .cl-rib>s.bd{left:41px;right:41px;top:0;width:auto;height:91px;filter:none;
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 62%,#139EBF 88%,#1E88A2);
-    border:5px solid #000;border-left:0;border-right:0;border-radius:10px;box-sizing:border-box}
+    /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
+    border:solid #000;border-width:8px 0 5px;border-radius:10px;box-sizing:border-box}
   .cl-rib>i{position:relative;font-size:48px;line-height:88px;color:#FEFEFE;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.90)}
   /* 우측 🔍 — 원형 d68, 반투명 흰 + 어두운 링 */
   .cl-srch{left:739px;top:17px;width:68px;height:68px;border-radius:50%;box-sizing:border-box;
-    background:#9DA2B6;border:5px solid #45454D;text-align:center;line-height:58px;font-size:36px;
+    background:#5E6679;box-shadow:inset 0 0 0 8px #9DA2B6;border:5px solid #45454D;text-align:center;line-height:58px;font-size:36px;
     filter:none;cursor:pointer}
   .cl-srch>i{filter:grayscale(1) brightness(1.5);opacity:.85}
   /* ── 세트 블록 (pitch 410 = 높이 370 + 마진 40) ── */
@@ -2438,14 +2439,14 @@
      붙어 있었다(1회차 비평 A 가 «숫자 중심 x +30px» 로 검출). 같은 ID 를 붙여 특이성을 맞춘다.
      레퍼런스(측정표 §5-3 · 자체 픽셀 스캔): «Lv.» 잉크 x185~233 y488~517 / 숫자 잉크 x193~214 y529~560 */
   #collw .clb-bdg>i.l{display:block;margin:-9px 0 0 10px;font-size:45px;transform:scaleX(.883);color:#FFED9D}
-  #collw .clb-bdg>i.n{display:block;margin-top:-5px;font-size:56px;transform:scaleX(.85);color:#EEE9E5}
+  #collw .clb-bdg>i.n{display:block;margin-top:-4px;font-size:54px;transform:scaleX(.85);color:#EEE9E5}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
   .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
   .clb-nm{left:167px;top:0;height:81px;line-height:81px;font-size:38px;color:#fff;
-    transform:scaleX(.88);transform-origin:left center;white-space:nowrap}
+    transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
   /* 아이템 카드 — 123×124, pitch 130(gap 7), 검정 5 + 등급 rim 5, radius 36 */
   .clb-cards{left:26px;top:117px;white-space:nowrap}
-  .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 7px 0 0;
+  .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 6.25px 0 0;
     border:5px solid #000;border-radius:36px;box-sizing:border-box;overflow:hidden;
     vertical-align:top;text-align:center}
   /* ⚠ 같은 특이성 함정(위 뱃지 주석) — `#collw i{display:inline-block}` 이 이겨 이 상자가 «인라인» 이었고,
@@ -2458,18 +2459,18 @@
   #collw .clb .cd>i.cdic{position:absolute;left:0;right:0;top:0;bottom:35px;margin:0;
     display:flex;align-items:center;justify-content:center;font-size:60px;line-height:1}
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:35px}
-  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:5px;font-size:27px;line-height:29px;
+  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:2px;font-size:27px;line-height:29px;
     transform:scaleX(1.08);-webkit-text-stroke:8px #000;paint-order:stroke fill}
   /* 효과 바 ref x131~949 / 블록 +290, h80 */
   .clb-eff{left:1px;top:290px;width:818px;height:80px;background:#D6BC99;border-radius:18px;
-    line-height:80px;padding-left:33px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+    line-height:80px;padding-left:34px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
+    -webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
   .clb-eff i.g{color:#BAFD60}
   /* 강화 버튼 — 238×90 캡슐, 우측이 바를 6px 넘음 */
   .clb-btn{left:588px;top:284px;width:238px;height:90px;border-radius:45px;border:6px solid #000;
     box-sizing:border-box;font:900 34px inherit;font-family:inherit;font-size:34px;color:#DFDFDF;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;
-    background:linear-gradient(180deg,#D3D3D3 0 28%,#A5A5A5 55%,#C8C8C8 74%,#757575);
+    background:linear-gradient(180deg,#A9A9A9,#8A8A8A);box-shadow:inset 0 0 0 6px #D3D3D3;
     padding:0;cursor:pointer}
   .clb-btn:disabled{cursor:default}
   /* 28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
