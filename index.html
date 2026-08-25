@@ -11963,15 +11963,14 @@ function openMail(){
   const mlDelay = i => Math.min(i, MLDEL_MAXS) * MLDEL_STAG;
   $('mailDel').onclick = () => {
     if(!mailDelable()) return;
-    const b = $('mailDel');
-    /* 버튼 눌림은 60 `jzInit` 의 `jz-dn` 이 담당한다.
+    /* 버튼 눌림은 60 `jzInit` 의 `jz-dn` 이 담당한다 — 여기서 버튼에 얹는 연출은 없다.
        - 2회차의 `fxPop` 은 «보상 아이템 팝»(`0%{scale(0);opacity:0}`) 이라 **계속 있어야 할 버튼이
          한 프레임 사라졌다가 1.24배로 튀어** 우측 초록 버튼과의 35px 간격을 4.5px 까지 좁혔다(D-④).
        - 3회차의 `fxBurst(버튼)` 은 링 시작 반경 45.6 이 버튼 반높이 58.5 보다 작아 파티클이
          **라벨 «읽음 전체 삭제» 위에서 태어나고**, 확산 115.6px 가 반높이를 57px 넘겨 위쪽 안내문에
          얹혔다(E-② · F-②). 이건 `fxBurst` 의 `dCap` 문제인데 **58·60 공용 모듈**이라 여기서
          고치면 전 화면 버스트가 같이 바뀐다(ROUTINE [4] «남의 구간 절대 금지») → 쓰지 않는다.
-       임펄스는 **행 자신의 림 플래시**(`mlOut` 12%: inset 5 → 10px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
+       임펄스는 **행 자신의 림 플래시**(`mlOut` 8%: inset 5 → 16px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
        «버튼만 임펄스, 정작 사건 주체인 행은 등속 드리프트» 라는 층위 불일치도 같이 없어진다(F-④). */
     const rows = MAILS.filter(m => S.mail[m.id] === 1)
       .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
