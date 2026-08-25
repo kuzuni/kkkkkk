@@ -168,6 +168,10 @@ function launchOpts(){
         const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
         cts.forEach((k) => openers.push({ label: 'colltab:' + k, sel: null, coll: `#collTabs .cltab[data-ct="${k}"]` }));
       }
+      /* 22 퀘스트 팝업의 하단 2분할 토글(일일 · 반복) — 팝업을 연 뒤에만 보이는 2단계 오프너다(작업 22).
+         «일일» 칸은 리스트를 일일 퀘스트 5행(다른 데이터 소스)으로 통째로 갈아 끼운다. */
+      openers.push({ label: 'qtab:daily', sel: null, quest: 'daily' });
+      openers.push({ label: 'qtab:rep', sel: null, quest: 'rep' });
       await ctx.close();
     }
     for (const o of openers) {
@@ -213,6 +217,16 @@ function launchOpts(){
           await page.evaluate(() => document.querySelector('[data-opencoll]').click());
           await page.waitForTimeout(400);
           if (typeof o.coll === 'string') await page.evaluate((s) => document.querySelector(s).click(), o.coll);
+        } else if (o.quest) {
+          /* 사이드 «퀘스트» → 팝업 하단 토글. «반복» 은 기본 선택이라 그냥 누르면 no-op 이므로
+             일일을 먼저 눌러 갔다가 되돌아오는 경로까지 본다(작업 22). */
+          await page.click('.side .ibtn[data-pop="quest"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          if (o.quest === 'rep') {
+            await page.evaluate(() => document.querySelector('.qs-tg b[data-t="daily"]').click());
+            await page.waitForTimeout(300);
+          }
+          await page.evaluate((t) => document.querySelector(`.qs-tg b[data-t="${t}"]`).click(), o.quest);
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
