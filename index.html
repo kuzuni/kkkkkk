@@ -5365,6 +5365,18 @@
     55%{scale:1.04;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
+  /* 94 ④ — «왜 안 되는지» 캡션. 예전에는 전투 캔버스 중앙에 56px 대형 텍스트(showMsg)로 띄웠는데,
+     ⓐ 팝업이 열려 있으면 딤 뒤에 가려 안 보이고 ⓑ 사유 문구가 길어 프레임 밖으로 나갔다.
+     이제 흔들리는 버튼 «옆(위)» 에 작은 DOM 캡션으로 붙인다 — #fxl(z60) 안이라 팝업 위에 뜬다.
+     좌표는 jzWhy() 가 프레임 px 로 계산하고, 폭은 최대 520px + 두 줄까지 줄바꿈해 절대 안 넘친다. */
+  .jz-why{position:absolute;z-index:3;font-style:normal;font-weight:900;font-size:26px;line-height:1.25;
+    color:#FFE9B0;background:rgba(24,17,10,.94);border:3px solid #6B5233;border-radius:16px;
+    padding:9px 18px;max-width:520px;text-align:center;box-shadow:0 5px 0 rgba(0,0,0,.35);
+    transform:translateX(-50%);animation:jzWhyIn .16s ease-out both}
+  @keyframes jzWhyIn{0%{opacity:.3;transform:translateX(-50%) translateY(6px) scale(.94)}
+    100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+  .jz-why.out{animation:jzWhyOut .22s ease-in forwards}
+  @keyframes jzWhyOut{to{opacity:0;transform:translateX(-50%) translateY(-8px) scale(.96)}}
   /* 지시 «좌우 흔들림 6px 3회» = ±6px **3왕복**. 마지막 극점만 -4px 로 두면 감쇠로 읽힌다(비평 K-6). */
   @keyframes jzShake{0%,100%{translate:0}
     12.5%{translate:-6px}25%{translate:6px}37.5%{translate:-6px}
@@ -8971,7 +8983,53 @@ let raidDmg = 0;    /* 누적 피해량 */
 let raidStage = 1;  /* 레이드 진입 직전 스테이지(끝나면 되돌린다) */
 let goldEMA = 0, goldWin = 0, winT = 0;
 
-function showMsg(t){ msgTxt = t; msgT = 1.7; }
+/* ==========================================================================
+   94 — 전투 캔버스 중앙 문구(showMsg)
+   저장소 주인 보고: «화면 밖으로 나가 읽을 수 없고 없어도 되는 말». 규칙 셋을 여기서 강제한다.
+     ① 문구는 짧게만 남긴다 — 긴 안내는 호출부에서 지웠다(파밍 반복·보스전 실패 장문 등).
+     ② 어떤 문자열이 와도 프레임 밖으로 나가지 않는다 — 폭이 넘치면 폰트를 비례 축소(하한 18),
+        그래도 넘치면 «…» 로 자른다. 계산은 매 프레임이 아니라 **여기서 한 번**만 한다.
+     ③ 같은 문구가 1초 안에 다시 오면 무시한다(파밍처럼 반복 호출되는 경로 방어).
+   연출: 페이드 인 0.15s → 유지 1.0s → 페이드 아웃 0.3s (그리기는 draw() 끝의 msgT 블록).
+   ========================================================================== */
+const MSG_IN = 0.15, MSG_HOLD = 1.0, MSG_OUT = 0.3;
+const MSG_DUR = MSG_IN + MSG_HOLD + MSG_OUT;   /* 1.45초 */
+const MSG_FS = 28;                              /* 논리 px (화면 56px) */
+const MSG_MINFS = 18;                           /* 축소 하한 — 이 아래로는 «…» 로 자른다 */
+const MSG_MAXW = VW - 40;                       /* 논리 500px. 외곽선 3px 을 더해도 프레임 안 */
+const MSG_DEDUP = 1000;                         /* ms — 같은 문구 무시 창 */
+let msgFs = MSG_FS, msgLast = '', msgLastT = -1e9;
+/* 문구를 «폭 안에 들어가는» (문자열, font-size) 한 쌍으로 맞춘다. ctx 상태는 건드리지 않는다. */
+function msgFit(t){
+  ctx.save();
+  ctx.font = '900 ' + MSG_FS + 'px sans-serif';
+  const w = ctx.measureText(t).width;
+  let fs = MSG_FS;
+  if(w > MSG_MAXW){
+    fs = Math.max(MSG_MINFS, Math.floor(MSG_FS * MSG_MAXW / w));
+    ctx.font = '900 ' + fs + 'px sans-serif';
+    if(ctx.measureText(t).width > MSG_MAXW){
+      /* 하한 폰트로도 넘친다 → «…» 를 포함해 들어가는 최대 길이를 이진 탐색으로 찾는다 */
+      let lo = 0, hi = t.length;
+      while(lo < hi){
+        const mid = (lo + hi + 1) >> 1;
+        if(ctx.measureText(t.slice(0, mid) + '…').width <= MSG_MAXW) lo = mid; else hi = mid - 1;
+      }
+      t = t.slice(0, lo) + '…';
+    }
+  }
+  ctx.restore();
+  return { t, fs };
+}
+function showMsg(t){
+  t = (t == null) ? '' : String(t);
+  if(!t) return;
+  const now = performance.now();
+  if(t === msgLast && now - msgLastT < MSG_DEDUP) return;   /* ③ 반복 호출 방어 */
+  msgLast = t; msgLastT = now;
+  const f = msgFit(t);                                      /* ② 폭 클램프 — 한 번만 */
+  msgTxt = f.t; msgFs = f.fs; msgT = MSG_DUR;
+}
 
 function syncPets(){
   pets = S.eqPet.filter(id => PT[id]).map((id, i) => {
@@ -8995,7 +9053,8 @@ function spawnStage(){
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
   syncPets();
-  showMsg(boss ? '⚠ BOSS STAGE ' + s + ' — ' + BOSS_SEC + '초' : 'STAGE ' + s);
+  /* 94 — «— 30초» 는 28 의 ⏱ 보스 타이머가 이미 헤더에 띄운다. 문구는 «BOSS n» 까지만. */
+  showMsg(boss ? 'BOSS ' + s : 'STAGE ' + s);
 }
 
 /* 일반 몹 한 파도 — 스테이지 시작과 «파밍» 재충전 양쪽에서 쓴다(28) */
@@ -9020,7 +9079,8 @@ function failBoss(why){
   S.bossFarm = true;
   enemies.length = 0; spawnQ.length = 0; killed = 0;
   queueMobs();
-  showMsg('💀 보스전 실패 (' + why + ') — [재도전] 으로 다시 도전');
+  /* 94 — 장문 안내 삭제. 실패는 붉은 비네트 + 헤더 아래 [재도전] 버튼(#bossRt)으로 이미 보인다.
+     중앙 대형 텍스트로 한 번 더 말하면 «화면 밖으로 나가는 중복 문구» 가 된다. */
   uiDirty = true; save();
 }
 
@@ -9732,7 +9792,8 @@ function step(dt){
     const bonusG = eGold(S.stage) * 12 * stat.goldMul;
     S.gold += bonusG; goldWin += bonusG;
     killed = 0; queueMobs();
-    showMsg('파밍 +' + fmt(bonusG) + 'G — [재도전] 으로 보스에 다시 도전');
+    /* 94 — 웨이브가 전멸할 때마다 반복되던 30자 문구를 삭제했다(잘린 채 계속 떴다).
+       파밍 골드는 58 재화 감시(fxWatch)가 S.gold 증가를 보고 코인 비행으로 이미 보여 준다. */
     uiDirty = true;
   }
   /* 108 — 처치 연출이 폐기돼 «연출이 끝나기를 기다리는» cineBusy() 게이트도 함께 사라졌다 */
@@ -9742,10 +9803,11 @@ function step(dt){
     S.best = Math.max(S.best, S.stage);
     const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
     S.gold += bonusG; goldWin += bonusG;
-    let msg = 'STAGE CLEAR! +' + fmt(bonusG) + 'G';
+    /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다. 다이아만 짧게 붙인다. */
+    let msg = 'STAGE CLEAR!';
     if(first){
       const d = 35 + Math.floor(S.stage*3.6);
-      S.dia += d; msg += '  💎+' + d;
+      S.dia += d; msg += ' 💎+' + d;
     }
     spawnStage();
     showMsg(msg);
@@ -10045,12 +10107,19 @@ function draw(){
   }
   ctx.globalAlpha = 1;
 
+  /* 94 — 중앙 문구. 문자열·폰트는 showMsg() 가 이미 폭에 맞춰 뒀다(msgTxt/msgFs).
+     페이드 인 0.15s(아래에서 10px 올라오며) → 유지 1.0s → 페이드 아웃 0.3s(위로 14px 빠지며). */
   if(msgT > 0){
-    const a = clamp(msgT/0.7, 0, 1);
+    const el = MSG_DUR - msgT;
+    let a, dy;
+    if(el < MSG_IN){ a = clamp(el/MSG_IN, 0, 1); dy = (1-a)*10; }
+    else if(msgT > MSG_OUT){ a = 1; dy = 0; }
+    else { a = clamp(msgT/MSG_OUT, 0, 1); dy = -(1-a)*14; }
     ctx.globalAlpha = a; ctx.textAlign = 'center';
-    ctx.font = '900 28px sans-serif'; ctx.fillStyle = '#fff';
-    ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 6;
-    const yy = VH/2 - 40 - (1-a)*14;
+    ctx.font = '900 ' + msgFs + 'px sans-serif'; ctx.fillStyle = '#fff';
+    ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 6 * msgFs / MSG_FS;
+    ctx.lineJoin = 'round';                  /* 축소 폰트에서 획 끝이 삐치는 것을 막는다 */
+    const yy = VH/2 - 40 + dy;
     ctx.strokeText(msgTxt, VW/2, yy); ctx.fillText(msgTxt, VW/2, yy);
     ctx.globalAlpha = 1;
   }
@@ -10924,7 +10993,7 @@ function endDunRun(cleared, quit){
   dunRun = null;
   $('app').classList.remove('dunrun');
   S.stage = r.stage; spawnStage();               /* 던전 전 스테이지로 복귀 */
-  if(quit){ save(); uiDirty = true; showMsg('던전 중단 — 입장 횟수는 소모됩니다'); }
+  if(quit){ save(); uiDirty = true; showMsg('던전 중단')          /* 94 — 12자 이내. 입장 횟수 소모 안내는 30 던전 페이지가 이미 표시한다 */; }
   else finishDunRun(r, cleared);
   if($('dunw').classList.contains('on')) renderDunPage();
   if($('relw').classList.contains('on')) renderRelw();
@@ -11046,7 +11115,7 @@ function startPromo(){
     ph:Math.random()*6.28, flip:false, slow:0,
     akey:T2.atlas, anim:T2.walk, at:0, afps:T2.fps, aloop:true, adone:false, atkT:0 });
   player.hp = stat.maxHp;
-  showMsg('⚔ 승급전 시작! 60초');
+  showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
   closeModal();
 }
 function endPromo(win){
@@ -12084,7 +12153,7 @@ function startRaid(r){
   makeEnemy('boss');
   const e = enemies[enemies.length-1];
   if(e){ e.raid = true; e.dmg = 0; e.gold = 0; e.hp = e.max = 1e15; }
-  showMsg('⚔ 레이드 — ' + r.n + ' ' + r.sec + '초');
+  showMsg('레이드 시작')            /* 94 — 이름·제한 시간은 46 레이드 HUD 에 이미 떠 있다 */;
   uiDirty = true;
 }
 function endRaid(record){
@@ -12111,7 +12180,7 @@ function endRaid(record){
              : '최고 기록 <b>' + fmt(b.dmg) + '</b> · DPS <b>' + fmt(b.dps) + '</b>') + '</p>');
   }else{
     save(); uiDirty = true;
-    showMsg('레이드 중단 — 기록 저장 안 함');
+    showMsg('레이드 중단')            /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 */;
   }
   if($('dunw').classList.contains('on')) renderDunPage();
 }
@@ -15106,6 +15175,35 @@ function jzRelease(){
   el.classList.remove('jz-dn');
   jzOn(el, 'jz-up', 200);
 }
+/* 94 ④ — 비활성 버튼 사유 캡션. `#fxl`(z60, pointer-events:none) 안에 버튼 «위» 로 띄운다.
+   좌표는 fxRect() 가 준 **프레임 px**(1080 기준, #app 의 scale 은 되돌려져 있다).
+   같은 버튼에 대해 하나만 띄우고(연타 시 갱신), 1.2초 뒤 페이드아웃한다. */
+let jzWhyEl = null, jzWhyTm = 0;
+function jzWhy(el, txt){
+  const L = (typeof fxL === 'function') ? fxL() : null;
+  const r = (typeof fxRect === 'function') ? fxRect(el) : null;
+  if(!L || !r || !txt) return;
+  clearTimeout(jzWhyTm);
+  if(jzWhyEl) jzWhyEl.remove();
+  const b = document.createElement('b');
+  b.className = 'jz-why';
+  b.textContent = txt;
+  L.appendChild(b);
+  /* 버튼 위쪽에 12px 띄워 붙인다. 위가 좁으면(프레임 상단 근처) 아래로 뒤집는다.
+     캡션 자신의 높이는 붙인 «뒤» 에만 알 수 있으므로 여기서 한 번 실측해 보정한다. */
+  b.style.left = clamp(r.x + r.w/2, 150, FRAME_W - 150) + 'px';
+  b.style.top = '0px';
+  const h = b.offsetHeight || 58, w = b.offsetWidth || 200;
+  const above = r.y - 12 - h;
+  b.style.top = (above >= 8 ? above : Math.min(r.y + r.h + 12, frameH - h - 8)) + 'px';
+  /* 좌우도 프레임 안으로 — translateX(-50%) 를 감안해 중심을 절반 폭만큼 밀어 넣는다 */
+  b.style.left = clamp(r.x + r.w/2, w/2 + 8, FRAME_W - w/2 - 8) + 'px';
+  jzWhyEl = b;
+  jzWhyTm = setTimeout(() => {
+    b.classList.add('out');
+    setTimeout(() => { b.remove(); if(jzWhyEl === b) jzWhyEl = null; }, 260);
+  }, 1200);
+}
 
 /* ── ② 팝업·시트 열기/닫기 ── */
 function jzKind(el){
@@ -15348,8 +15446,10 @@ function jzInit(){
       sfx('err');                                        /* 78 — 죽은 버튼 */
       jzOn(el, 'jz-sh', 380);                            /* 비활성: 좌우 흔들림 + 어두워짐 */
       /* 74 ④ — 진짜 disabled 컨트롤은 click 이 아예 안 나가므로 «왜 안 되는지» 를 여기서 알린다.
-         .lock/.off 류는 자기 click 핸들러가 이미 구체적 안내를 띄우므로 건드리지 않는다. */
-      if(el.disabled && typeof showMsg === 'function') showMsg(el.dataset.why || '아직 사용할 수 없습니다');
+         .lock/.off 류는 자기 click 핸들러가 이미 구체적 안내를 띄우므로 건드리지 않는다.
+         94 ④ — 전투 캔버스 중앙 대형 텍스트(showMsg) → 흔들리는 버튼 옆 DOM 캡션(jzWhy).
+         팝업 위(#fxl z60)에 떠야 읽히고, 사유 문구는 길어서 캔버스 한 줄로는 프레임을 넘겼다. */
+      if(el.disabled) jzWhy(el, el.dataset.why || '아직 사용할 수 없습니다');
       return;
     }
     jzRelease();
