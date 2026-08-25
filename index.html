@@ -2423,15 +2423,22 @@
   #collList{padding:21px 0 40px}
   /* 파란 리본 «도감» — bbox ref x269~811 / y346~460, 모달 위로 10px 돌출 */
   .cl-rib{left:172px;top:-18px;width:543px;height:115px;pointer-events:none;text-align:center}
-  .cl-rib>s{position:absolute;background:#0F9BBC;top:24px;width:72px;height:79px;
-    filter:drop-shadow(2px 0 0 #000) drop-shadow(-2px 0 0 #000) drop-shadow(0 2px 0 #000) drop-shadow(0 -2px 0 #000)}
+  /* ⚠ 1회차 비평 B 의 «플레이트 좌우 검정 갭이 과잉» 지적을 받아 지웠던 것이 **회귀**였다.
+     3회차에 비평가 E·F 가 독립적으로 «리본 검정 외곽선 통째 누락» 을 잡았고, 자체 단면으로 확정했다 —
+     ref y355: 검정 303~309 / 시안 310~770 / 검정 772~777 · ref y400(꼬리): 검정 275~282 / 시안 284~. */
+  .cl-rib s{position:absolute;background:#0F9BBC;top:24px;width:72px;height:79px}
+  /* ⚠ `filter` 는 그 요소의 `clip-path` **전에** 적용된다 — 꼬리 자신에 drop-shadow 를 걸면
+     클립이 그림자를 통째로 잘라내 검정 외곽선이 한 픽셀도 안 나온다(1~3회차 내내 그랬다).
+     클립이 끝난 «래퍼» 에 걸어야 밖으로 나온다. */
+  .cl-wing{position:absolute;left:0;right:0;top:0;bottom:0;
+    filter:drop-shadow(9px 0 0 #000) drop-shadow(-9px 0 0 #000) drop-shadow(0 5px 0 #000) drop-shadow(0 -5px 0 #000)}
   /* 꼬리 노치 깊이 — ref 행 프로파일(폭 41→29→42) 대비 우리가 5~6px 더 깊었다(41→23→41). 32%→24% */
-  .cl-rib>s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,24% 50%)}
-  .cl-rib>s.tr{right:2px;clip-path:polygon(0 0,100% 0,76% 50%,100% 100%,0 100%)}
-  .cl-rib>s.bd{left:41px;right:41px;top:0;width:auto;height:91px;filter:none;
+  .cl-rib s.tl{left:2px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,24% 50%)}
+  .cl-rib s.tr{right:2px;clip-path:polygon(0 0,100% 0,76% 50%,100% 100%,0 100%)}
+  .cl-rib>s.bd{left:34px;right:35px;top:0;width:auto;height:91px;filter:none;
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 92%,#19ACCE 92% 95%,#0D8EAE 95%);
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
-    border:solid #000;border-width:8px 0 5px;border-radius:10px;box-sizing:border-box}
+    border:solid #000;border-width:8px 6px 5px;border-radius:10px;box-sizing:border-box}
   /* ref 「도감」 코어 87x44 @ x497~583 y367~410(프레임 283~326) · 검정 외곽 포함 98x55.
      우리는 코어 폭 −4.6% · 4px 아래 · 외곽 3px 얇았다(비평 C ⑥ · D ⑥ 공통). */
   .cl-rib>i{position:relative;font-size:48px;line-height:80px;color:#FEFEFE;
@@ -2465,8 +2472,8 @@
   #collw .clb-bdg>i.n{display:block;margin-top:-4px;font-size:54px;transform:scaleX(.85);color:#EEE9E5}
   /* 세트 이름 — ✦(133,28) + 이름 잉크 시작 x167, 헤더 세로중앙 */
   .clb-star{left:133px;top:0;height:81px;line-height:81px;font-size:25px;color:#999CBD}
-  .clb-nm{left:167px;top:0;height:81px;line-height:81px;font-size:38px;color:#fff;
-    transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
+  .clb-nm{left:167px;top:0;height:81px;line-height:75px;font-size:38px;color:#fff;
+    -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
   /* 아이템 카드 — 123×124, pitch 130(gap 7), 검정 5 + 등급 rim 5, radius 36 */
   .clb-cards{left:26px;top:117px;white-space:nowrap}
   .clb .cd{position:relative;display:inline-block;width:123px;height:124px;margin:0 6.25px 0 0;
@@ -2518,10 +2525,10 @@
      노랑이 6px 짧아 꼭짓점에 검정이 비쳤고, 파랑은 활성에서 10px 길었다. */
   .cltab>s.y{left:7px;right:7px;top:0;bottom:0;
     background:linear-gradient(180deg,#FCD33D 0 55%,#F5B53A)}
-  .cltab>s.b{left:27px;right:27px;top:0;bottom:26px;
+  .cltab>s.b{left:24px;right:24px;top:0;bottom:26px;box-shadow:inset 0 0 0 8px #3A8291;
     background:linear-gradient(180deg,#25AACD 0 4px,#1EA8D7 4px)}
   .cltab.on>s.b{bottom:33px}
-  .cltab>i{position:relative;margin-top:20px;font-size:37px;line-height:44px;color:#C2C3C5;
+  .cltab>i{position:relative;margin-top:17px;font-size:37px;line-height:44px;color:#C2C3C5;
     transform:scaleX(.99);-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .cltab.on>i{color:#F7F4EF}
   .cltab>s.dot{display:none;left:172px;top:10px;width:22px;height:22px;border-radius:50%;
@@ -4860,7 +4867,7 @@
       <div class="cl-band"></div>
       <div class="cl-fl"></div><div class="cl-fr"></div>
       <div class="cl-body"><div id="collList"></div></div>
-      <div class="cl-rib"><s class="tl"></s><s class="tr"></s><s class="bd"></s><i>도감</i></div>
+      <div class="cl-rib"><span class="cl-wing"><s class="tl"></s><s class="tr"></s></span><s class="bd"></s><i>도감</i></div>
       <div class="cl-srch"><i>🔍</i></div>
     </div>
   </div>
