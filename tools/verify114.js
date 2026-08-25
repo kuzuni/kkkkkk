@@ -82,7 +82,7 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(mod.fns.length === 11, '공용 fx 함수 11개 전부 존재 (실측 ' + mod.fns.length + ')');
   ok(mod.partCap === 480, '파티클 상한 PART_CAP = 480 (지시서 ⑤ · 실측 ' + mod.partCap + ')');
   ok(mod.trailN === 14, '트레일 링버퍼 TRAIL_N = 14 · 표본 22ms = 0.31s 궤적 (실측 ' + mod.trailN + ')');
-  ok(mod.boltLife === 0.34, '번개 수명 BOLT_LIFE = 0.34s (코어 0.15 + 잔광 램프 · 실측 ' + mod.boltLife + ')');
+  ok(mod.boltLife === 0.42, '번개 수명 BOLT_LIFE = 0.42s (코어 0.15 + 잔광 램프 · 실측 ' + mod.boltLife + ')');
   ok(mod.ringsArr && mod.ringCap === 44, 'rings 배열 + 상한 44 (실측 ' + mod.ringCap + ')');
   ok(mod.w[0] === 4 && mod.w[1] === 6 && mod.flat === 0.62,
      '선 굵기 토큰 2종(FX_W 4 · FX_W2 6) · 눕는 링 비율 FX_FLAT 0.62 = 독 장판과 같은 발자국');
@@ -210,8 +210,8 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     }
     return { d: Math.round(d), er: Math.round(er) };
   });
-  ok(anchor.d >= 0 && anchor.d <= anchor.er + 6,
-     '임팩트 링이 적 몸통 중심에 정렬 — 중심 거리 ' + anchor.d + 'px ≤ 적 반경 ' + anchor.er + '+6px');
+  ok(anchor.d >= 0 && anchor.d <= anchor.er,
+     '임팩트 링이 적 몸통 중심에 정렬 — 중심 거리 ' + anchor.d + 'px ≤ 적 반경 ' + anchor.er + 'px (2회차 «32~47px 잔차» 회귀 방지)');
   /* 1회차 비평 ①② 회귀 방지 — 80ms 캡처에서 «1프레임 반짝» 이 되지 않을 만큼 수명이 있는가 */
   const lifes = await p.evaluate(() => {
     rings.length = 0; parts.length = 0;
@@ -225,10 +225,23 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     return { main, dl: Math.round(-dl*100)/100, imp,
              dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
   });
-  ok(lifes.imp >= 0.24 && lifes.main >= 0.40,
+  ok(lifes.imp >= 0.32 && lifes.main >= 0.30,
      '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
   ok(lifes.dl >= 0.16, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.16 (한 프레임에 겹쳐 보이지 않는다)');
   ok(lifes.dbgMin >= 2.6, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 2.6 («보이지 않는 점» 회귀 방지)');
+  const rad = await p.evaluate(() => {
+    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 0);
+    const g0 = rings[0].r1;
+    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 5);
+    const g5 = rings[0].r1;
+    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', true, 0);
+    const cr = Math.max.apply(null, rings.map(r => r.r1));
+    rings.length = 0;
+    return { g0, g5, cr };
+  });
+  ok(rad.g0 === rad.g5 && rad.cr <= 70,
+     '임팩트 링 반경은 등급과 무관하게 고정 ' + rad.g0 + 'px · 치명타 최대 ' + rad.cr +
+     'px ≤ 70 (2회차 «Ø321 로 적 5마리를 삼킴» 회귀 방지)');
 
   /* ---------------- [4] 폭발·충격파 ---------------- */
   console.log('[4] 폭발 · 충격파');

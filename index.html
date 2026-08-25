@@ -9502,7 +9502,7 @@ const PART_CAP  = 480;      /* 파티클 상한 (114: 320 → 480. 지시서 ⑤
 const RING_CAP  = 44;       /* 링 상한 — 넘으면 가장 오래된 것부터 버린다 */
 const TRAIL_N   = 14;       /* 트레일 링버퍼 표본 수(등급으로 «쓰는 길이»만 늘린다) */
 const TRAIL_DT  = 0.022;    /* 표본 간격(초) — 14 × 22ms = 0.31s 분량의 궤적이 남는다(1회차 비평 ⑤) */
-const BOLT_LIFE = 0.34;     /* 번개 수명 — 앞 0.15s 코어 + 뒤 잔광 램프(1회차 비평 ②) */
+const BOLT_LIFE = 0.42;     /* 번개 수명 — 앞 0.15s 코어 + 뒤 잔광 램프(1·2회차 비평 ②⑦) */
 /* 1회차 비평 ⑦ — 선 굵기가 2/5/7px 로 3배 흩어져 «같은 게임의 연출» 로 안 읽혔다. 두 값으로 통일한다 */
 const FX_W  = 4;            /* 기본 스트로크 */
 const FX_W2 = 6;            /* 강조(본 충격파·치명타) 스트로크 */
@@ -9553,17 +9553,19 @@ function impactFx(x, y, vx, vy, col, crit, g){
   }
   /* 1회차 비평 ④ — 링 지름이 캐릭터 키의 58% 라 «타격» 이 아니라 «점» 으로 읽혔다. 1.1~1.5H 로 키우고
      수명도 0.12 → 0.24s(80ms 캡처에서 3프레임)로 늘린다 */
-  fxRing(x, y, (crit ? 58 : 42) * m, crit ? '#ffe27a' : col, 0.24, crit ? FX_W2 : FX_W);
-  if(crit) fxRing(x, y, 84*m, '#fff0b8', 0.30, FX_W, 12, 0.06);   /* 치명타 = 링 2겹 */
+  /* 2회차 비평(J·K 공통) — 링 반경에까지 등급 배수를 곱했더니 Ø180~321 로 커져 적 5마리를 삼켰다.
+     **반경은 고정**하고 등급 가중은 스파크 수·트레일 길이에만 남긴다(적 폭 58px 의 1.5~1.9배) */
+  fxRing(x, y, crit ? 44 : 34, crit ? '#ffe27a' : col, 0.34, crit ? FX_W2 : FX_W);
+  if(crit) fxRing(x, y, 62, '#fff0b8', 0.38, FX_W, 16, 0.07);     /* 치명타 = 링 2겹(간격 18px) */
 }
 /* ③ 폭발 충격파 — 확장 링 2겹 + 흙·불 파편 + 소폭 흔들림(3). 2단(지연 0.10s)으로 «크게 터지는 느낌» */
 function boomFx(x, y, r, col, big){
   const c = col || '#ffb45c';
   /* 1회차 비평 ③ — 폭발은 «바닥에서» 터진다. 눕는 링(FX_FLAT)으로 통일해야 낙하 예고 타원·독 장판과
      같은 발자국 모양이 된다(예고 1.46:1 ↔ 폭발 0.90:1 로 어긋나 있었다) */
-  fxRing(x, y, r, c, 0.40, FX_W2);                                /* 본 충격파: 0 → 피해 반경 */
-  fxRing(x, y, r*0.55, '#fff2c0', 0.26, FX_W);                    /* 안쪽 화염 링 */
-  fxRing(x, y, r*(big ? 1.45 : 1.25), c, 0.42, FX_W, r*0.5, 0.16);/* 2단 — 0.16s 뒤 바깥 파문 */
+  fxRing(x, y, r, c, 0.32, FX_W2);                                /* 본 충격파: 0 → 피해 반경 */
+  fxRing(x, y, r*0.55, '#fff2c0', 0.22, FX_W);                    /* 안쪽 화염 링 */
+  fxRing(x, y, r*(big ? 1.45 : 1.25), c, 0.34, FX_W, r*0.55, 0.16);/* 2단 — 0.16s 뒤 바깥 파문 */
   debris(x, y, c, big ? 22 : 16, big ? 460 : 360);
   debris(x, y, '#8a6a4a', big ? 14 : 10, 320);                    /* 흙 파편 */
   cam.shake = Math.max(cam.shake, big ? 6 : 3);
@@ -9611,7 +9613,9 @@ function buildBolt(l){
 }
 function dmgNum(x, y, v, crit){
   if(nums.length > 44) nums.shift();
-  nums.push({ x, y, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-9,9) });
+  /* 114 — 폭발 한 방에 6~7개가 한 자리에 겹쳐 «1.16A1.16A» 로 읽히던 것(2회차 J⑦·K⑤ 공통).
+     가로 산포 ±26px + 최근 3개를 세로로 계단 배치한다 */
+  nums.push({ x, y: y - (nums.length % 3)*17, v:fmt(v), t:0, crit, vy:-46, ox:rnd(-26,26) });
 }
 function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
@@ -9735,7 +9739,7 @@ function castGeneric(s, dmg){
         if(!list.length) break;
         const e = list[Math.floor(Math.random()*list.length)];
         const crit = Math.random() < stat.crit;
-        bolts.push({ x1:px, y1:py, x2:e.x, y2:e.y - e.r, t:0, col:s.col });
+        bolts.push({ x1:px, y1:py-22, x2:e.x, y2:e.y - e.r, t:0, col:s.col });   /* 114 */
         if(s.slow) e.slow = s.slow;
         hitEnemy(e, dmg*(crit?stat.cdmg:1), crit, 0, 0);
         burst(e.x, e.y - e.r, s.col, 7, 190);
@@ -9748,7 +9752,7 @@ function castGeneric(s, dmg){
       magicFlash(px, py, s.r || 190, s.col);               /* 114 ③ */
       areaDamage(px, py, s.r || 190, dmg, s.col);
       booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom',
-                   scale:s.scale || 3.4, alpha:0.85 });
+                   scale:(s.scale || 3.4)*1.45, alpha:0.85 });   /* 114 ④ — 화구를 피해 반경에 맞게 */
       cam.shake = Math.max(cam.shake, s.shake || 6);
       return true;
     }
@@ -9856,7 +9860,7 @@ function castSkillRaw(s){
         if(!list.length) break;
         const e = list[Math.floor(Math.random()*list.length)];
         const crit = Math.random() < stat.crit;
-        bolts.push({ x1:px, y1:py, x2:e.x, y2:e.y - e.r, t:0 });
+        bolts.push({ x1:px, y1:py-22, x2:e.x, y2:e.y - e.r, t:0 });   /* 114 — 그림자가 아니라 몸통에서 */
         hitEnemy(e, dmg*(crit?stat.cdmg:1), crit, 0, 0);
         burst(e.x, e.y - e.r, '#bfe4ff', 7, 190);
         n++;
@@ -9885,7 +9889,7 @@ function castSkillRaw(s){
       hitEnemy(tg, d, crit, 0, 0);
       const heal = Math.min(stat.maxHp*0.05, d*0.25);
       player.hp = Math.min(stat.maxHp, player.hp + heal);
-      bolts.push({ x1:tg.x, y1:tg.y - tg.r, x2:px, y2:py, t:0, col:'#ff6b8a' });
+      bolts.push({ x1:tg.x, y1:tg.y - tg.r, x2:px, y2:py-22, t:0, col:'#ff6b8a' });   /* 114 */
       burst(px, py, '#ff9ab0', 8, 150);
       return true;
     }
@@ -9900,7 +9904,9 @@ function castSkillRaw(s){
     case 'meteor': {
       const tg = nearest(px, py, 600) || { x:px + rnd(-180,180), y:py + rnd(-180,180), r:0 };
       const mx = tg.x + rnd(-40,40), my = tg.y + rnd(-40,40);
-      shots.push({ k:'meteor', x:mx, y:my - 420, vx:rnd(-40,40), vy:900, a:1.57,
+      /* 114 — 낙하 «예고» 가 1프레임(80ms)밖에 안 보인다는 2회차 지적 → 낙하 «거리» 만 420 → 620px 로.
+         속도(900)·피해·반경은 그대로라 밸런스 불변이고 예고 리드타임만 0.47s → 0.69s 가 된다 */
+      shots.push({ k:'meteor', x:mx, y:my - 620, vx:rnd(-40,40), vy:900, a:1.57,
                    dmg, life:1.2, pierce:1, hit:[], col:'#ff9a5c', r:130, tx:mx, ty:my });
       return true;
     }
@@ -9908,7 +9914,7 @@ function castSkillRaw(s){
       if(!nearest(px, py, 400)) return false;
       magicFlash(px, py, 190, '#fff2b0');                  /* 114 ③ — 시전 순간 바닥 마법진 */
       areaDamage(px, py, 190, dmg, '#fff2b0');
-      booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.85 });
+      booms.push({ x:px, y:py, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:5.4, alpha:0.85 });
       cam.shake = Math.max(cam.shake, 6);
       return true;
     }
@@ -10218,7 +10224,8 @@ function step(dt){
     if(b.k === 'meteor'){
       if(b.y >= b.ty){
         areaDamage(b.tx, b.ty, b.r, b.dmg, '#ffb45c');
-        booms.push({ x:b.tx, y:b.ty, at:0, afps:24, aloop:false, akey:'boom', anim:'boom', scale:3.0, alpha:1 });
+        /* 114 ④ — 화구가 피해 반경(130)의 절반도 안 돼 «예고 원 밖은 안 맞는다» 로 보였다. 크게 터뜨린다 */
+        booms.push({ x:b.tx, y:b.ty, at:0, afps:24, aloop:false, akey:'boom', anim:'boom', scale:5.0, alpha:1 });
         cam.shake = Math.max(cam.shake, 8);
         trPut(b); shots.splice(i,1); continue;
       }
@@ -10227,7 +10234,7 @@ function step(dt){
     if(b.life <= 0 || b.x < -60 || b.y < -60 || b.x > WORLD.w+60 || b.y > WORLD.h+60){
       if(b.k === 'boom'){
         areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
-        booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:2.2, alpha:1 });
+        booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:1 });
         chainBoomFx(b.x, b.y, b.r, '#ffb45c');            /* 114 ④ — 착탄 주변 3연쇄 소폭발(그림뿐) */
       }
       trPut(b); shots.splice(i,1); continue;
@@ -10242,7 +10249,7 @@ function step(dt){
         b.hit.push(e);
         if(b.k === 'boom'){
           areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
-          booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:2.2, alpha:1 });
+          booms.push({ x:b.x, y:b.y, at:0, afps:26, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:1 });
           chainBoomFx(b.x, b.y, b.r, '#ffb45c');          /* 114 ④ */
           cam.shake = Math.max(cam.shake, 5);
           trPut(b); shots.splice(i,1); break;
@@ -10252,7 +10259,7 @@ function step(dt){
         burst(b.x, b.y, crit ? '#ffe27a' : b.col, crit ? 8 : 4, crit ? 210 : 120);
         /* 114 ② — 방향성 스파크 + 플래시 링. 앵커는 «투사체가 멈춘 자리»가 아니라 **적 몸통 중심**이다:
            투사체 좌표로 찍으면 판정 반경(e.r+13)만큼 밖에 찍혀 그림자 아래로 내려간다(1회차 비평 ④) */
-        impactFx((b.x + ex)/2, (b.y + ey)/2, b.vx, b.vy, b.col, crit, b.g);
+        impactFx(ex + (b.x-ex)*0.25, ey + (b.y-ey)*0.25, b.vx, b.vy, b.col, crit, b.g);
         if(b.slow) e.slow = b.slow;
         hitEnemy(e, dmg, crit, b.vx*0.05, b.vy*0.05);
         if(--b.pierce <= 0){ trPut(b); shots.splice(i,1); break; }
@@ -10435,7 +10442,8 @@ function drawTrails(){
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   for(const b of shots){
     const n = b.tn;
-    if(!b.tr || n < 2) continue;
+    /* 표본 3개 미만(≈66ms)은 «궤적» 이 아니라 발사 지점의 뭉치라 캐릭터를 가린다(2회차 비평 ⑧) */
+    if(!b.tr || n < 3) continue;
     const k = b.k, fire = (k === 'boom' || k === 'meteor');
     /* 1회차 비평 — 잔상 휘도가 배경 대비 ΔL +14~26 이라 «사실상 안 보인다» 였다.
        전 종류를 가산 합성으로 올리고 알파를 키운다(색은 스킬 col 그대로 = 지시서 ⑥) */
@@ -10445,14 +10453,25 @@ function drawTrails(){
       /* 회전 잔상 — 선이 아니라 «지나간 자리의 고스트 별» 3~4개 */
       for(let i=0;i<n;i++){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
-        ctx.globalAlpha = f*f*0.75;
+        ctx.globalAlpha = f*f*0.6;
         ctx.fillStyle = b.col;
         ctx.beginPath();
         /* 지름 테이퍼 30% → 100% (1회차 비평 ⑤ «테이퍼 없음») */
-        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 2.8 + 7.2*f, 0, 6.283);
+        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 2.0 + 5.0*f, 0, 6.283);
         ctx.fill();
       }
     }else if(k === 'ice'){
+      /* 서리 띠 — 마름모만 찍으면 «점 몇 개» 로 읽힌다(2회차 K). 궤적을 잇는 얇은 띠를 먼저 깐다 */
+      ctx.strokeStyle = b.col; ctx.lineCap = 'round';
+      for(let i=0;i<n-1;i++){
+        const i0 = (first + i) % TRAIL_N, i1 = (first + i + 1) % TRAIL_N;
+        const f = (i+1)/(n-1);
+        ctx.globalAlpha = f*f*0.5;
+        ctx.lineWidth = 1 + 5*f;
+        ctx.beginPath();
+        ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
+        ctx.stroke();
+      }
       /* 서리 입자 — 진행선에서 좌우로 흩어지는 작은 마름모 */
       for(let i=0;i<n;i++){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
@@ -10665,9 +10684,9 @@ function draw(){
   /* 114 ③ 운석 낙하 예고 — 떨어지는 동안 착탄 지점에 눕는 링이 조여든다 */
   for(const b of shots){
     if(b.k !== 'meteor') continue;
-    const f = clamp(1 - (b.ty - b.y)/420, 0, 1);
+    const f = clamp(1 - (b.ty - b.y)/620, 0, 1);
     ctx.save();
-    ctx.globalAlpha = 0.30 + 0.50*f;
+    ctx.globalAlpha = 0.45 + 0.45*f;
     ctx.strokeStyle = '#ff9a5c'; ctx.lineWidth = FX_W;
     /* 예고 발자국 = 실제 폭발 링과 «같은 반경 · 같은 눕는 비율» 이어야 «저기 떨어진다» 로 읽힌다
        (1회차 비평 ③ — 예고 1.46:1 547×374 ↔ 폭발 0.90:1 380×422 로 어긋나 있었다) */
@@ -10737,9 +10756,9 @@ function draw(){
     ctx.globalCompositeOperation = 'lighter';
     for(let pass=0; pass<2; pass++){
       if(pass === 1 && core <= 0) break;
-      ctx.globalAlpha = pass ? (0.55 + 0.45*core) : (1-f)*(1-f)*0.55 + 0.10*(1-f);
+      ctx.globalAlpha = pass ? (0.55 + 0.45*core) : (1-f)*(1-f)*0.72 + 0.28*(1-f);
       ctx.strokeStyle = pass ? '#ffffff' : col;
-      ctx.lineWidth  = pass ? (FX_W - 1 + core) : (FX_W2 + 5)*(1 - f*0.45);
+      ctx.lineWidth  = pass ? (FX_W - 1 + core) : (FX_W2 + 8)*(1 - f*0.40);
       ctx.beginPath();
       ctx.moveTo(l.pts[0], l.pts[1]);
       for(let i=2;i<l.pts.length;i+=2) ctx.lineTo(l.pts[i], l.pts[i+1]);
@@ -10787,7 +10806,11 @@ function draw(){
     ctx.globalAlpha = a;
     /* 114 ② — 치명타 숫자 «팝»: 0.22s 동안 1.6배에서 원래 크기로 줄어든다(임팩트 링과 같은 박자).
        외곽선은 폭발 백열 코어 위에서도 읽히게 두껍게 — 1회차 비평 ⑧ «대비 1.2:1 판독 불가» */
-    const sz = n.crit ? 18*(1 + 0.60*clamp(1 - n.t/0.22, 0, 1)) : 13;
+    /* 2회차 비평(J·K 공통) — 첫 프레임이 최대라 «축소» 로만 읽혔다. 오버슈트를 넣어 팝으로 만든다:
+       0 → 0.06s 에 0.65 → 1.38배로 부풀고, 0.06 → 0.24s 에 1.0배로 안착 */
+    const pop = n.crit ? (n.t < 0.06 ? 0.65 + 0.73*(n.t/0.06)
+                                     : 1 + 0.38*clamp(1 - (n.t-0.06)/0.18, 0, 1)) : 1;
+    const sz = (n.crit ? 18 : 13) * pop;
     ctx.font = (n.crit ? '900 ' : '800 ') + sz.toFixed(1) + 'px sans-serif';
     ctx.fillStyle = n.crit ? '#ffd45e' : '#fff';
     ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.lineWidth = n.crit ? 6 : 5;

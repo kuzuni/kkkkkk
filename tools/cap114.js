@@ -20,8 +20,10 @@ const SCENES = [
      1회차 비평 공통 지적: 자동 시전에 맡겼더니 8프레임 중 4~8장이 «연출 0» 이었다 —
      쿨을 계속 비워 연출이 끊기지 않게 하고, 첫 장은 강제 시전 직후에 찍는다. */
   { key:'trail',  skills:['shuri','ice'], dist:430, n:8,  gap:80, cast:'shuri', recast:200, crit:0 },
-  { key:'impact', skills:['slash'],       dist:110, n:8,  gap:80, cast:'slash', recast:120, crit:1 },
-  { key:'boom',   skills:['meteor'],      dist:150, n:12, gap:80, cast:'meteor', recast:420, crit:0 },
+  { key:'impact', skills:['slash'],       dist:95,  n:8,  gap:80, cast:'slash', recast:110, crit:1 },
+  /* 운석은 «한 발의 전 과정»(예고 0.69s → 착탄 → 잔해)을 봐야 한다. 재시전을 1.4s 로 벌려
+     두 발이 겹치지 않게 한다 — 2회차 비평가가 «헤드가 450px 역주행» 으로 읽은 것이 겹친 두 발이었다 */
+  { key:'boom',   skills:['meteor'],      dist:150, n:12, gap:80, cast:'meteor', recast:1400, crit:0 },
   { key:'bolt',   skills:['bolt'],        dist:240, n:8,  gap:80, cast:'bolt',  recast:200, crit:0 }
 ];
 
@@ -60,15 +62,23 @@ const SCENES = [
       window.__cap114 = setInterval(() => {
         enemies.forEach(e => { e.hp = e.max = 1e12; e.slow = 0; });
       }, 16);
-      window.__cap114b = setInterval(() => { skillCd = {}; }, sc.recast);
+      /* ⚠ `skillCd = {}` 로 «비우면» 오히려 시전이 늦어진다 — 다음 프레임에 `skillCd[id] = rnd(0,0.4)`
+         로 재초기화되기 때문(index.html 스킬 루프). 0 을 «넣어야» 즉시 시전된다 */
+      window.__cap114b = setInterval(() => { S.eqSkill.forEach(id => { skillCd[id] = 0; }); }, sc.recast);
       /* 트리거 — 첫 장이 «시전 직후» 가 되게 여기서 한 번 직접 쏜다 */
       if (SK[sc.cast]) castSkill(SK[sc.cast]);
     }, sc);
     await p.waitForTimeout(40);
+    const st = [];
     for (let i = 1; i <= sc.n; i++) {
       await p.screenshot({ path: path.join(OUT, '114-r' + R + '-' + sc.key + '-' + i + '.png') });
+      /* «그 프레임에 연출이 실제로 있었는가» 를 픽셀이 아니라 상태로 남긴다 —
+         비평가가 «무연출» 이라고 한 프레임이 정말 빈 프레임인지, 작아서 못 본 것인지 구분된다 */
+      st.push(await p.evaluate(() => rings.length + 'r/' + parts.length + 'p/' + shots.length +
+                                     's/' + bolts.length + 'b/' + booms.length + 'x'));
       await p.waitForTimeout(sc.gap);
     }
+    console.log('    상태: ' + st.join(' | '));
     await p.evaluate(() => { clearInterval(window.__cap114); clearInterval(window.__cap114b); });
     console.log('  ' + sc.key + ' — ' + sc.n + '장');
   }
