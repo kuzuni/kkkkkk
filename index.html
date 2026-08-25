@@ -7351,7 +7351,7 @@
       <div class="rw-basin" id="rwBasin">
         <span class="rw-stone"></span><b>유물 소환</b>
       </div>
-      <div class="rw-cost" id="rwCost"><i>🔮</i><b>822</b></div>
+      <div class="rw-cost" id="rwCost"><i>🔮</i><b>100</b></div>
       <div class="rw-cap"><p>던전에서 얻는 유물조각으로 다양한 능력을 가진 유물을 소환합니다.</p><p>각 유물이 등장할 확률은 동일합니다.</p></div>
       <div class="rw-frame"></div>
       <span class="rw-fc bl"></span><span class="rw-fc br"></span>
@@ -9143,6 +9143,13 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
+    /* 119 — S.cnt.sumRelic 이 «미션 카운터» 에서 «유물 소환 가격의 축» 이 됐다. 옛 세이브가 문자열·null 을
+       갖고 있으면 relicCost() 가 NaN 이 되어 가격 표시·부족 판정이 통째로 깨지므로(smoke NaN 게이트),
+       카운터 8종을 여기서 «유한한 0 이상 정수» 로 못박는다(44 교훈 2 — KEY 는 올리지 않는다). */
+    Object.keys(DEF().cnt).forEach(k => {
+      const v = b.cnt[k];
+      b.cnt[k] = Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
+    });
     /* 34 축복 — 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
        옛 세이브엔 bless 가 없고, 있어도 문자열·null 이면 NaN 이 새므로 항목별로 못박는다. */
     {
@@ -13202,9 +13209,14 @@ const RW_POS  = [[216,320],[462,320],[711,320],[91,496],[340,496],[587,496],[836
 const RW_GLOW = [['#351709','#9B2316'],['#152719','#1A4A38'],['#241A1B','#AB312E'],['#0D2129','#33566B'],
                  ['#212910','#75771B'],['#11173A','#3A6D97'],['#221A27','#7B4E9E'],['#3E2B0A','#C0A26D'],
                  ['#1F0506','#EB625C'],['#274828','#2E6B35']];
-/* 비용 = 800 + 22 × ΣLv — 레퍼런스 822 는 ΣLv 1 시점. 90 던전 유물조각 수급(1회 150~400+)과 맞춘 완만 상승 */
-const RELIC_COST_BASE = 800, RELIC_COST_PER = 22;
-const relicCost = () => RELIC_COST_BASE + RELIC_COST_PER * relicLvSum();
+/* 119 — 비용 = 100 + 1 × «누적 소환 횟수»(저장소 주인 지시 2026-08-26). 구 «800 + 22 × ΣLv» 는 폐기다.
+   축이 ΣLv 에서 소환 횟수로 바뀐 것이 핵심 — 유물을 강화 못 해도(중복만 떠도) 값은 오르고,
+   반대로 도감·던전으로 Lv 가 올라도 값은 안 오른다. S.cnt.sumRelic 은 61 미션이 이미 세던 값이라
+   구 세이브도 «쌓인 횟수 그대로» 이어진다(ΣLv 로 역산하지 않는다 — 지시 ①).
+   밸런스 메모(지시 ④): 90 유물조각 던전 1회 수급이 150~400+ 이므로 초반은 «던전 1회 = 소환 1~3회».
+   구 곡선(800 시작)이 «던전 2~5회 = 소환 1회» 였던 것에 비하면 대폭 완화 — 의도된 것으로 기록한다. */
+const RELIC_COST_BASE = 100, RELIC_COST_PER = 1;
+const relicCost = () => RELIC_COST_BASE + RELIC_COST_PER * (S.cnt.sumRelic | 0);
 function renderRelw(){
   const g = $('rwGrid');
   if(!g.childElementCount)
