@@ -697,6 +697,19 @@
     border-left:31px solid transparent;border-right:31px solid transparent;border-top:78px solid #E4552B;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 0 #000)}
   #rouRes{min-height:42px}
+  /* ── 회전 중 정지 (작업 65) — «원판만 돈다» ──
+     저장소 주인 지시: 룰렛을 돌릴 때 원판(#rouDisc)만 회전하고 **모달 박스·딤·배경·버튼은 완전히 정지**.
+     60 쥬시가 전역 부착이라 룰렛 팝업도 자동 편입돼 있는데, 회전 중에는 그게 그대로 «흔들림»이 된다:
+       · 돌리기 버튼 누름 → `jz-dn`(.94) + `jz-up` 스프링(1.04 오버슈트)이 회전 첫 290ms 를 먹는다
+       · 회전 중 두 버튼은 `disabled` 라 다시 누르면 `jz-sh` = **좌우 6px 3회 흔들림 + 어두워짐**
+     60 은 `transform` 을 안 쓰고 **독립 변형 속성(scale/translate/rotate)과 animation** 만 쓰므로
+     그 셋만 꺼 두면 흔들림·펄스류가 통째로 죽는다. 원판·세그먼트는 `transform:rotate` 라 **영향 없다** —
+     그래서 이 규칙 안에서도 원판은 계속 돈다. (60 규칙 보정: shake 는 실패·재화 부족 피드백 전용)
+     `!important` 는 쓰지 않는다 — id 1개가 있어 `.jz-o.jz-dlg>.jz-bad`(0-3-0)를 특이도로 이긴다.
+     (LESSONS 60: `!important` 로 누르면 이번엔 반대쪽 애니가 죽는 사고가 난다) */
+  #modal.rou-spin,#modal.rou-spin .mbox,#modal.rou-spin .mbox *{
+    animation-name:none;scale:none;translate:none;rotate:none}
+  #modal.rou-spin .jz-sh,#modal.rou-spin .jz-bad{filter:none}
 
   /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
      좌우 여백 91 / 세로는 «패딩 위 − 아래» 의 절반만큼 중앙에서 이동한다.
@@ -7897,6 +7910,11 @@ function openAttend(){
    설계 확정(2026-08-24): 8칸 그리드 하이라이트 폐기 → 실제로 회전하는 원판 휠
    (세그먼트 8칸 + 상단 고정 포인터 + 감속). 보상·확률·하루 5회 로직은 spinRoulette 그대로다. */
 const ROUL_TURNS = 6, ROUL_MS = 3600;            /* 최소 6바퀴 · 3.6초 감속 */
+/* 65 — 감속 끝의 «살짝 되감기»(오버슈트)는 **원판에만** 준다. 6° 는 반칸(22.5°)의 1/4 이라
+   되감는 동안에도 포인터가 당첨 칸을 벗어나지 않는다. 되감기 260ms 동안도 rouSpinning 은 true 다. */
+const ROUL_OVER = 6, ROUL_BACK_MS = 260;
+/* 회전 중 «원판만 움직인다» 를 CSS 로 강제하는 표식 — 붙이고 떼는 곳은 여기 두 곳뿐이다 */
+function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
 const ROUL_SEGC = { 골드:['#F8CE63','#E9AE33'], 다이아:['#8FDCF7','#4FB3DE'],
                     유물석:['#CFA6F2','#A473DC'], '대박!':['#FF9A64','#F2703B'] };
 let rouRot = 0, rouSpinning = false;
@@ -7933,6 +7951,7 @@ function openRoulette(){
     + '<button class="gbtn green" id="rouClose">닫기</button>';
   showModal(h);
   rouSpinning = false;
+  roulSpinMark(false);                           /* 65 — 표식은 #modal 에 남으므로 렌더 때마다 초기화한다 */
   $('rouClose').onclick = closeModal;
   $('rouBtn').onclick = spinRoulette;
 }
@@ -7942,6 +7961,7 @@ function roulSpinTo(idx, txt){
   const disc = $('rouDisc');
   if(!disc){ roulFinish(idx, txt); return; }     /* 팝업이 닫혀 있으면 지급만 하고 끝 */
   rouSpinning = true;
+  roulSpinMark(true);                            /* 65 — 박스·딤·버튼 정지(원판만 돈다) */
   const btn = $('rouBtn'), cl = $('rouClose'), res = $('rouRes'), cnt = $('rouCnt');
   if(btn){ btn.disabled = true; btn.textContent = '돌아가는 중…'; }
   if(cl)  cl.disabled = true;
@@ -7952,12 +7972,25 @@ function roulSpinTo(idx, txt){
   const base = rouRot + 360*ROUL_TURNS;
   const target = base + ((((-c - base) % 360) + 360) % 360);
   const from = rouRot, t0 = performance.now();
+  /* 1단 — target 을 ROUL_OVER 만큼 «지나쳐» 감속한다(easeOutQuart) */
+  const over = target + ROUL_OVER;
   const step = now => {
-    if(!disc.isConnected){ rouSpinning = false; return; }   /* 다른 팝업이 열려 사라진 경우 */
+    if(!disc.isConnected){ rouSpinning = false; roulSpinMark(false); return; }  /* 다른 팝업이 열려 사라진 경우 */
     const p = Math.min(1, (now - t0) / ROUL_MS);
-    rouRot = from + (target - from) * (1 - Math.pow(1 - p, 4));   /* easeOutQuart = 감속 */
+    rouRot = from + (over - from) * (1 - Math.pow(1 - p, 4));      /* easeOutQuart = 감속 */
     disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
     if(p < 1) requestAnimationFrame(step);
+    else requestAnimationFrame(back);
+  };
+  /* 2단 — 지나친 만큼 살짝 되감아 target 에 정확히 앉힌다(easeOutCubic). 원판 자체만 움직인다. */
+  const t1 = { v: 0 };
+  const back = now => {
+    if(!disc.isConnected){ rouSpinning = false; roulSpinMark(false); return; }
+    if(!t1.v) t1.v = now;
+    const p = Math.min(1, (now - t1.v) / ROUL_BACK_MS);
+    rouRot = over + (target - over) * (1 - Math.pow(1 - p, 3));
+    disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+    if(p < 1) requestAnimationFrame(back);
     else { rouRot = ((target % 360) + 360) % 360;
            disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
            roulFinish(idx, txt); }
@@ -7966,6 +7999,7 @@ function roulSpinTo(idx, txt){
 }
 function roulFinish(idx, txt){
   rouSpinning = false;
+  roulSpinMark(false);                           /* 65 — 정지 표식 해제(당첨 하이라이트는 이 다음이다) */
   const segs = document.querySelectorAll('#rouDisc .rlt-seg');
   segs.forEach((s, i) => s.classList.toggle('hit', i === idx));
   const res = $('rouRes'), btn = $('rouBtn'), cl = $('rouClose'), cnt = $('rouCnt');
