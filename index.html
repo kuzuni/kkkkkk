@@ -3007,7 +3007,8 @@
     text-align:center}
   .wm-tb .h1{left:0;width:372px;padding-left:18px;box-sizing:border-box}
   .wm-tb .h2{left:376px;width:372px;padding-left:8px;box-sizing:border-box}
-  .wm-tb .h1>i,.wm-tb .h2>i{transform:scaleX(.87)}
+  .wm-tb .h1>i{transform:scaleX(.87)}
+  .wm-tb .h2>i{transform:scaleX(.904)}          /* 「장착 효과」만 ref 105 대비 101 로 좁았다 */
   .wm-tb .h1,.wm-tb .h2{-webkit-text-stroke:5px #000;paint-order:stroke fill}
   .wm-tb .l1,.wm-tb .l2{top:82px;height:36px;line-height:36px;font-size:32px;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
@@ -3024,7 +3025,7 @@
 
   /* 5 아이템 그리드 — 카드 148x158, pitch 170x190, 첫 카드 패널기준 (10,32) */
   .wgc{position:absolute;width:148px;height:158px;border:5px solid #000;
-    border-radius:35px 35px 10px 10px;
+    border-radius:35px 35px 12px 12px;
     box-sizing:border-box;background:var(--gc);box-shadow:inset 0 0 0 6px var(--gr);
     overflow:hidden;cursor:pointer}
   .wgc.eq{border-color:#134E52;background:var(--ge);box-shadow:inset 0 0 0 6px #35DCEE}
@@ -3036,14 +3037,14 @@
   .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
   .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;
-    background:linear-gradient(180deg,#8182A0 0 18px,#717799 18px);
+    background:linear-gradient(180deg,#8182A0 0 19px,#717799 19px);
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
     text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6);
-    -webkit-text-stroke:4px #000;paint-order:stroke fill}
+    -webkit-text-stroke:3px #000;paint-order:stroke fill}
   /* 장착 중 라벨 — 카드상단 +58 */
-  .wgc .eqt{left:0;right:0;top:53px;height:32px;line-height:32px;text-align:center;
+  .wgc .eqt{left:0;right:0;top:49px;height:32px;line-height:32px;text-align:center;
     font-size:27px;color:#A2E941;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   /* 미보유 자물쇠 49x55, **카드상단 +43** — 이모지 대신 CSS 로 그려 흰 단색 글리프에 맞춘다.
      5회차: +94 로 잡혀 있어 하단 0/N 바가 자물쇠의 55% 를 덮고 있었다(ref 실측 카드기준 43,
