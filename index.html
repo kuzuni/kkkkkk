@@ -2379,12 +2379,12 @@
   .rw-panel>*{position:absolute}
   /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 + 수반 난색 글로우 (아트 대기) */
   .rw-bg{inset:0;background:
-    radial-gradient(40% 18% at 50% 88%,#3E2A1E 0%,rgba(62,42,30,0) 72%),
-    linear-gradient(180deg,rgba(46,32,18,0) 980px,#2C2012 1120px,#332616 1400px,#0C131B 1491px,#0C131B 1527px),
-    radial-gradient(48% 42% at 50% 32%,#201D16 0%,#201D16 62%,rgba(32,29,22,0) 100%),
-    linear-gradient(180deg,#0D1116 0%,#101310 60%,#12130D 100%)}
-  /* 석벽 질감 — 줄눈 격자 대신 은은한 얼룩(ref 는 또렷한 격자선이 없다) */
-  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1050px;opacity:.55;
+    radial-gradient(40% 18% at 50% 88%,#4A3322 0%,rgba(62,42,30,0) 72%),
+    linear-gradient(180deg,rgba(46,32,18,0) 980px,#33261A 1120px,#3A2A1C 1400px,#0C131B 1491px,#0C131B 1527px),
+    radial-gradient(48% 42% at 50% 32%,#1C1913 0%,#1C1913 62%,rgba(28,25,19,0) 100%),
+    linear-gradient(180deg,#090C10 0%,#0D100D 60%,#12130D 100%)}
+  /* 석벽 질감 — 줄눈 격자 대신 은은한 얼룩(ref 는 또렷한 격자선이 없다). 6회차: 대비 +25% */
+  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:1050px;opacity:.72;
     background:radial-gradient(circle at 18% 22%,rgba(56,46,36,.5) 0 70px,transparent 110px),
       radial-gradient(circle at 74% 14%,rgba(50,42,32,.45) 0 60px,transparent 100px),
       radial-gradient(circle at 40% 58%,rgba(58,48,38,.4) 0 80px,transparent 130px),
@@ -2396,11 +2396,11 @@
   /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
   .rw-frame{inset:2px;border:5px solid #B29661;box-shadow:inset 0 0 0 2px rgba(0,0,0,.9);pointer-events:none;z-index:6}
   /* 코너 브래킷 98×53 — 상단 2개는 ::before/::after, 하단 2개는 .rw-fc (아트 대기) */
-  .rw-frame::before,.rw-frame::after{content:'';position:absolute;top:4px;width:34px;height:34px;
+  .rw-frame::before,.rw-frame::after{content:'';position:absolute;top:4px;width:34px;height:27px;
     border-top:4px solid #B29661}
   .rw-frame::before{left:4px;border-left:4px solid #B29661}
   .rw-frame::after{right:4px;border-right:4px solid #B29661}
-  .rw-fc{position:absolute;bottom:4px;width:34px;height:34px;border-bottom:4px solid #B29661;z-index:6;
+  .rw-fc{position:absolute;bottom:4px;width:34px;height:27px;border-bottom:4px solid #B29661;z-index:6;
     pointer-events:none}
   .rw-fc.bl{left:6px;border-left:4px solid #B29661}
   .rw-fc.br{right:6px;border-right:4px solid #B29661}
@@ -2418,15 +2418,16 @@
     transform:scaleX(1.1)}
   .rw-c.off>u{color:#9AA0A8}
   /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
-  .rw-basin{left:340px;top:1173px;width:400px;height:205px;cursor:pointer;z-index:3}
+  .rw-basin{left:340px;top:1173px;width:400px;height:198px;cursor:pointer;z-index:3}
   .rw-basin>*{position:absolute}
   /* 수반 실루엣 전체를 SVG 한 장으로 — clip/명암 대비 문제로 3회차까지 기단이 안 읽혔다.
-     림 340×82(밝은 스톤 밴드) + 몸체 284→232(바닥보다 밝은 돌) + 기단 378 벌어짐, 전부 검정 외곽선 */
-  .rw-stone{left:0;top:0;width:400px;height:205px;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22205%22 viewBox=%220 0 400 205%22%3E%3Cpath d=%22M87 148 L313 148 L337 172 L353 176 L392 200 L400 205 L0 205 L8 200 L47 176 L63 172 Z%22 fill=%22%234A4334%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M71 172 L329 172 L329 180 L71 180 Z%22 fill=%22%23352E20%22/%3E%3Cpath d=%22M58 60 L342 60 L316 152 L84 152 Z%22 fill=%22%235A5344%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M73 96 L327 96 L319 122 L81 122 Z%22 fill=%22%234A4438%22/%3E%3Cellipse cx=%22200%22 cy=%2230%22 rx=%22168%22 ry=%2229%22 fill=%22%23A9BCA3%22 stroke=%22%23000%22 stroke-width=%225%22/%3E%3Cpath d=%22M33 33 A168 29 0 0 0 367 33 A168 34 0 0 1 33 33 Z%22 fill=%22%237E8271%22/%3E%3Cellipse cx=%22200%22 cy=%2226%22 rx=%22132%22 ry=%2212%22 fill=%22%232E3A36%22 stroke=%22%23000%22 stroke-width=%223%22/%3E%3Cellipse cx=%22200%22 cy=%2225%22 rx=%22124%22 ry=%229%22 fill=%22%2339C1CF%22/%3E%3Cellipse cx=%22200%22 cy=%2224%22 rx=%2258%22 ry=%225%22 fill=%22%23D8FBFF%22/%3E%3C/svg%3E") 0 0/400px 205px no-repeat}
+     6회차: 캔버스 h 205→198(G −7%/H +5.9% 중간값) · 림 rx 160 · 몸체 시작 y 60→74 로 내리고
+     그 사이를 밝은 석재 «보울 밑면» 쐐기(#7E8271)로 채워 림 노출 폭을 넓혔다(G 림 −13% 처방) */
+  .rw-stone{left:0;top:0;width:400px;height:198px;background:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22198%22 viewBox=%220 0 400 198%22%3E%3Cpath d=%22M87 141 L313 141 L337 165 L353 169 L392 193 L400 198 L0 198 L8 193 L47 169 L63 165 Z%22 fill=%22%234A4334%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M71 165 L329 165 L329 173 L71 173 Z%22 fill=%22%23352E20%22/%3E%3Cpath d=%22M40 33 A160 29 0 0 0 360 33 L342 74 L58 74 Z%22 fill=%22%237E8271%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M58 74 L342 74 L316 145 L84 145 Z%22 fill=%22%235A5344%22 stroke=%22%23000%22 stroke-width=%224%22/%3E%3Cpath d=%22M73 100 L327 100 L319 124 L81 124 Z%22 fill=%22%234A4438%22/%3E%3Cellipse cx=%22200%22 cy=%2230%22 rx=%22160%22 ry=%2229%22 fill=%22%23A9BCA3%22 stroke=%22%23000%22 stroke-width=%225%22/%3E%3Cellipse cx=%22200%22 cy=%2226%22 rx=%22126%22 ry=%2212%22 fill=%22%232E3A36%22 stroke=%22%23000%22 stroke-width=%223%22/%3E%3Cellipse cx=%22200%22 cy=%2225%22 rx=%22118%22 ry=%229%22 fill=%22%2339C1CF%22/%3E%3Cellipse cx=%22200%22 cy=%2224%22 rx=%2256%22 ry=%225%22 fill=%22%23D8FBFF%22/%3E%3C/svg%3E") 0 0/400px 198px no-repeat}
   .rw-basin>b{left:0;right:0;top:93px;text-align:center;font-size:40px;color:#F2F2F2;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.84)}
   /* 코스트 필 262×51 — 수반 받침 위에 겹친다 */
-  .rw-cost{left:405px;top:1329px;width:270px;height:53px;box-sizing:border-box;z-index:4;
+  .rw-cost{left:405px;top:1322px;width:270px;height:53px;box-sizing:border-box;z-index:4;
     background:#191614;border:3px solid #000;border-radius:26.5px;
     box-shadow:0 0 0 1px #513229,inset 0 0 0 2px #403320;
     display:flex;align-items:center;justify-content:center;gap:10px}
