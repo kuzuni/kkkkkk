@@ -161,7 +161,16 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
                thd: parseFloat(cs.getPropertyValue('--thd')) * 1000 };
     }, sel);
     if (!v || !isFinite(v.thb)) return Math.round(3900 * pct / 100);
-    return Math.round(v.thb * pct / 100 - (isFinite(v.thd) ? v.thd : 0));
+    /* ⚠⚠ 7회차 2차 — **부호를 틀렸었다.** `--thd` 는 CSS 에 이미 **음수로** 들어 있다
+       (`';--thd:-' + thdOf(i)` → `-0.37s`). 그래서 `− v.thd` 는 **빼는 게 아니라 더한다.**
+       local = currentTime − delay = currentTime − (−0.37s) 이므로 원하는 식은
+       **currentTime = 위상% × thb + thd**(thd 가 음수) 다. 틀린 부호는 2×0.37s = 740ms,
+       아레나 주기 4.12s 의 **18.0%** 를 통째로 얹는다.
+       7회차 비평가 M 이 이걸 독립으로 잡아냈다 — 「좌칸 6장 중 5장이 «라벨+18.0%» 모델과 ≤1px 로
+       일치하고, 그 18.0% 는 2×0.37s / 4.12s 와 정확히 같다」. 그리고 카드 인덱스 0 인 bob·raid 는
+       `--thd:-0s` 라 오차가 0 이어서 그 두 시리즈만 모델 잔차 rms 0.6px 로 완벽했다 — 그게 확증이다.
+       (M 은 이 값을 «코드 수정 근거로 쓰기 전에 표본을 다시 찍어라» 라고 명시했다. 그대로 한다.) */
+    return Math.round(v.thb * pct / 100 + (isFinite(v.thd) ? v.thd : 0));
   };
   /* ⚠⚠ 7회차 — **표본의 «빈 구간» 이 또 없는 결함을 만들었다.** 6회차가 중복 상태를 없애려고
      0~20%(짧은 들썩 한 번)와 84~93%(큰 점프)만 남겼는데, 그 사이 20~84% 에 표본이 **한 장도 없다.**
