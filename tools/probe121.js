@@ -116,5 +116,32 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
       + String(d.area).padStart(12) + '   ' + (c.lkd ? '잠금' : '-'));
   }
 
+  /* ---------- [3] 컨텐츠(레이드) 탭 배경 움직임 ---------- */
+  console.log('\n[3] 컨텐츠(레이드) 카드 배경 움직임 (같은 260×90 띠, 위상 0s ↔ 6s)');
+  console.log('    카드        평균차/255  최대차  움직인면적%  잠금');
+  await p.evaluate(() => setDunSub('raid'));
+  await p.waitForTimeout(900);
+  await p.evaluate(() => {
+    document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
+  });
+  const rn = await p.evaluate(() => document.querySelectorAll('#dunList .dnc.rd').length);
+  for (let i = 0; i < rn; i++) {
+    const c = await p.evaluate(i => {
+      const el = document.querySelectorAll('#dunList .dnc.rd')[i];
+      el.scrollIntoView({ block: 'center' });
+      const r = el.getBoundingClientRect();
+      return { id: el.dataset.rcard || ('rd' + (i + 1)), lkd: el.classList.contains('lkd'),
+               clip: { x: Math.round(r.left) + 340, y: Math.round(r.top) + 250, width: 260, height: 90 } };
+    }, i);
+    await p.waitForTimeout(120);
+    await seek(0); await p.waitForTimeout(60);
+    const f0 = await grab(c.clip);
+    await seek(6000); await p.waitForTimeout(60);
+    const f1 = await grab(c.clip);
+    const d = await diff(f0, f1, 260, 90);
+    console.log('  ' + c.id.padEnd(10) + String(d.avg).padStart(9) + String(d.max).padStart(8)
+      + String(d.area).padStart(12) + '   ' + (c.lkd ? '잠금' : '-'));
+  }
+
   await b.close();
 })().catch(e => { console.error(e); process.exit(1); });

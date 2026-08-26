@@ -237,39 +237,68 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   await p.evaluate(() => document.getElementById('app').classList.remove('sv'));
 
   /* ---------- §6 컨텐츠(레이드) 탭 ---------- */
-  sec('§6 컨텐츠(레이드) 탭 — 같은 레이어 · 아이들 프레임 순환');
+  sec('§6 컨텐츠 탭 — 같은 레이어 · 아이들 프레임 순환');
   await p.evaluate(() => setDunSub('raid'));
   await p.waitForTimeout(900);
+  /* ⚠ 카드 수를 박아 두지 마라 — 작업 123 이 «레이드 3장» 을 «측정장 1장 + 아레나 1장» 으로 갈아 끼웠고,
+     3 을 박아 둔 1회차 게이트가 그 커밋 다음에 바로 FAIL 로 죽었다(LESSONS 97-④ 의 재발).
+     기대치는 페이지에서 «파생» 시키고, 게이트가 보는 것은 «구성» 이 아니라 «성질» 이다. */
   const rd = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.rd')].map(c => {
-    const bgm = c.querySelector(':scope>.bgm'), cv = c.querySelector(':scope>.th>canvas');
+    const bgm = c.querySelector(':scope>.bgm');
+    const cvs = [...c.querySelectorAll(':scope>.th>canvas')];
     const cr = c.getBoundingClientRect(), tr = c.querySelector(':scope>.th').getBoundingClientRect();
-    return { id: c.dataset.rcard, lkd: c.classList.contains('lkd'), theme: (c.className.match(/bgm-\w+/) || [''])[0],
+    return { id: c.dataset.rcard || (c.dataset.arena ? 'arena' : '?'),
+      lkd: c.classList.contains('lkd'), theme: (c.className.match(/bgm-\w+/) || [''])[0],
       anims: bgm ? bgm.getAnimations({ subtree: true }).length : 0,
       states: bgm ? bgm.getAnimations({ subtree: true }).map(a => a.playState).join(',') : '',
-      th: cv ? { w: +tr.width.toFixed(1), h: +tr.height.toFixed(1), dy: +(tr.top - cr.top).toFixed(1),
-                 idle: cv.dataset.thi, fr: cv._fr } : null };
+      cvn: cvs.length,
+      thd: cvs.map(cv => getComputedStyle(cv).animationDelay).join(' '),
+      th: { w: +tr.width.toFixed(1), h: +tr.height.toFixed(1), dy: +(tr.top - cr.top).toFixed(1) },
+      slotOv: getComputedStyle(c.querySelector(':scope>.th')).overflow };
   }));
-  ok(rd.length === 3, `컨텐츠 카드 3장 (실제 ${rd.length})`);
+  ok(rd.length >= 2, `컨텐츠 카드 ${rd.length}장 (≥2 — 구성은 123 이 정한다)`);
   rd.forEach((c, i) => {
-    ok(c.theme === 'bgm-raid', `레이드${i + 1}(${c.id}) 테마 ${c.theme}`);
-    ok(c.anims >= 2, `레이드${i + 1} .bgm 애니메이션 ${c.anims}개 (번개 잔광 포함)`);
+    ok(c.theme === 'bgm-raid', `${c.id} 테마 ${c.theme}`);
+    ok(c.anims >= 2, `${c.id} .bgm 애니메이션 ${c.anims}개 (번개 잔광 포함)`);
     const want = c.lkd ? 'paused' : 'running';
-    ok(c.states.split(',').every(s => s === want), `레이드${i + 1}${c.lkd ? '(잠금)' : ''} 배경 ${c.states} = ${want}`);
-    const e = RAID_TH[i];
-    ok(c.th && Math.abs(c.th.w - e[0]) <= 1 && Math.abs(c.th.h - (341 - e[1])) <= 1,
-      `레이드${i + 1} 슬롯 ${c.th && c.th.w}×${c.th && c.th.h} = ${e[0]}×${341 - e[1]} (97 불변)`);
-    ok(c.th && c.th.idle === 'blue_idle', `레이드${i + 1} 아이들 애니 ${c.th && c.th.idle}`);
+    ok(c.states.split(',').every(s => s === want), `${c.id}${c.lkd ? '(잠금)' : ''} 배경 ${c.states} = ${want}`);
+    ok(c.slotOv === 'hidden', `${c.id} 슬롯 overflow:hidden (움직임은 슬롯 안에서만)`);
+    ok(Math.abs(c.th.h - (341 - c.th.dy)) <= 1,
+      `${c.id} 슬롯 높이 ${c.th.h} = 341 − 상단인셋 ${c.th.dy} (97 규격 불변)`);
   });
-  /* 아이들 프레임이 «실제로» 바뀐다 — 잠금 카드(2·3번)는 안 바뀌어야 한다 */
+  /* 아레나 카드는 칸이 2개다 — 지시 ⑥ «플레이어 2명이 서로 다른 위상으로» */
+  const arn = rd.find(c => c.id === 'arena');
+  if (arn) {
+    ok(arn.cvn === 2, `아레나 썸네일 칸 ${arn.cvn}개 (플레이어 2명)`);
+    const ds = arn.thd.split(' ');
+    ok(new Set(ds).size === 2, `아레나 두 칸의 들썩 위상이 다르다 (${arn.thd})`);
+  }
+  /* 아이들 프레임이 «실제로» 바뀐다 — 잠금 카드는 안 바뀌어야 한다 */
   const f0 = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map(c => c._fr));
   await p.waitForTimeout(900);
   const f1 = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map(c => c._fr));
-  ok(f0[0] !== f1[0], `해금 카드 아이들 프레임 순환 ${f0[0]} → ${f1[0]}`);
-  const lkIdx = rd.map((c, i) => c.lkd ? i : -1).filter(i => i >= 0);
-  ok(lkIdx.length > 0 && lkIdx.every(i => f0[i] === f1[i]),
-    `잠금 카드(${lkIdx.map(i => i + 1).join(',')}) 프레임 정지 ${lkIdx.map(i => f0[i] + '=' + f1[i]).join(' ')}`);
+  const liveIdx = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')]
+    .map((c, i) => c.closest('.dnc.lkd') ? -1 : i).filter(i => i >= 0));
+  const lockIdx = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')]
+    .map((c, i) => c.closest('.dnc.lkd') ? i : -1).filter(i => i >= 0));
+  ok(liveIdx.length > 0 && liveIdx.every(i => f0[i] && f1[i] && f0[i] !== f1[i]),
+    `해금 칸 ${liveIdx.length}개 전부 아이들 프레임 순환 (${liveIdx.map(i => f0[i] + '→' + f1[i]).join(' · ')})`);
+  ok(lockIdx.length === 0 || lockIdx.every(i => f0[i] === f1[i]),
+    `잠금 칸 ${lockIdx.length}개 프레임 정지`);
+  /* 아레나는 기본 세이브에서 잠겨 있다 — 해금해서 «두 기사가 서로 다른 위상으로 도는지» 까지 본다(지시 ⑥) */
+  if (arn) {
+    await p.evaluate(() => { S.best = 999; renderDunPage(); });
+    await p.waitForTimeout(900);
+    const g0 = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')].map(c => c._fr));
+    await p.waitForTimeout(900);
+    const g1 = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')].map(c => c._fr));
+    ok(g0.length === 2 && g0.every((f, i) => f && g1[i] && f !== g1[i]),
+      `해금 아레나 두 기사 아이들 순환 (${g0.map((f, i) => f + '→' + g1[i]).join(' · ')})`);
+    ok(g0.length === 2 && g0[0] !== g0[1], `두 기사가 같은 프레임이 아니다 (${g0.join(' / ')})`);
+    await p.evaluate(() => { S.best = 1; renderDunPage(); });
+    await p.waitForTimeout(400);
+  }
 
-  /* ---------- §7 스크롤 fps ---------- */
   sec('§7 스크롤 fps — 카드가 전부 도는 채로 03 리스트를 굴린다');
   await p.evaluate(() => setDunSub('dun'));
   await p.waitForTimeout(600);

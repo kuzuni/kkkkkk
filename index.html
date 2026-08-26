@@ -2504,10 +2504,10 @@
   .dnc.bgm-raid{                                                   /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
     --bgc:#FF9A5E;
     --bgm1:repeating-linear-gradient(88deg,transparent 0 34px,var(--bgc) 34px 48px,transparent 48px 96px);
-    --bgz1:192px 100%;--bgw1:192px;--bgo1:.34;
+    --bgz1:192px 100%;--bgw1:192px;--bgo1:.24;
     --bgm2:radial-gradient(closest-side at 22% 18%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 72% 58%,var(--bgc) 0%,transparent 100%);
-    --bgz2:264px 180px;--bgw2:264px;--bgo2:.40}
+    --bgz2:264px 180px;--bgw2:264px;--bgo2:.26}
   .dnc.bgm-raid>.bgm::after{animation:bgmB var(--bgt2,78s) linear infinite var(--bgd2,0s),
     bgmFlash var(--bgt3,9s) ease-in-out infinite var(--bgd2,0s);animation-play-state:paused}
   /* 72 — 우측 몬스터 썸네일 슬롯 (2회차: 비평가 O·P 실측 반영).
@@ -13587,10 +13587,12 @@ function dunLockTxt(d){
    속도 = 피치/주기 인데, 피치가 큰 카드일수록 주기도 커서 서로 상쇄됐다 — A 실측 4.34~5.16px/s).
    주기 폭을 넓혀 ±20% 로 벌린다.
    --thb 는 «들썩 4번 + 큰 점프 1번» 한 바퀴라 3.9~5.0s(지시 «3~5s 마다 한 번»), 짧은 들썩은 그 1/5 = 0.78~1.0s. */
+const thbOf = i => +(3.9 + 0.22*i).toFixed(2);      /* 들썩 한 바퀴(=큰 점프 주기) */
+const thdOf = i => +(0.37*i).toFixed(2);           /* 카드별 들썩 위상(양수. 실제로는 음수 delay 로 쓴다) */
 function bgmVars(i){
   return ';--bgt1:' + (44 + 8*i) + 's;--bgt2:' + (58 + 6*i) + 's;--bgt3:' + (8 + 1.5*i).toFixed(1) + 's'
     +  ';--bgd1:-' + (7*i) + 's;--bgd2:-' + (11*i) + 's'
-    +  ';--thb:' + (3.9 + 0.22*i).toFixed(2) + 's;--thd:-' + (0.37*i).toFixed(2) + 's';
+    +  ';--thb:' + thbOf(i) + 's;--thd:-' + thdOf(i) + 's';
 }
 function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
@@ -13751,7 +13753,9 @@ function arenaCardHTML(){
     /* 캔버스 픽셀 = 슬롯 절반 폭 × 슬롯 높이 (97 «아트 자리 규칙» — bbox 를 정확히 차지) */
     +  '<div class="th"><canvas class="thcv arn-me" width="' + (parseInt(u.thw, 10) / 2)
     +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-arnav="' + cosCur() + '"></canvas>'
-    +  '<canvas class="thcv arn-op" width="' + (parseInt(u.thw, 10) / 2)
+    /* 121-⑥ — «플레이어 스프라이트 2명이 서로 다른 위상으로 들썩». 카드가 준 --thd 를 상대 칸에서만
+       짧은 들썩 반 박자(--thb/10)만큼 더 늦춘다 — 둘이 한 몸처럼 뛰지 않게. */
+    +  '<canvas class="thcv arn-op" style="--thd:-' + (thdOf(ci) + thbOf(ci)/10).toFixed(2) + 's" width="' + (parseInt(u.thw, 10) / 2)
     /* 미리보기 상대는 고정(1번 자리) — av0 은 틴트가 없어 내 기본 코스튬과 같은 색이 된다 */
     +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-arnav="' + arenaLook(1).avatar + '"></canvas></div>'
     +  '<div class="sh"></div><div class="fr"></div>'
@@ -13783,10 +13787,13 @@ function raidPaint(tries){
    대신 정지 프레임이 `blue_attack_2`(잉크 123×134)에서 idle(107×134)로 바뀌므로 가로 늘림이
    11% → 28% 로 커진다 — 아트 교체 자리라 «아트 필요» 표에 적어 둔다(측정표 03 §배경/썸네일). */
 function raidEnt(cv){
-  if(!cv._an || cv._an.anim !== cv.dataset.thi){
-    /* 카드마다 위상을 다르게(0 / 0.7 / 1.4 프레임) — 셋이 한 몸처럼 움직이지 않게 한다 */
-    cv._an = { akey: cv.dataset.thk, anim: cv.dataset.thi, at: (cv.dataset.thn | 0) * 0.7,
-               afps: 8, aloop: true };
+  /* 아레나 두 칸은 몬스터가 아니라 기사다 — 아틀라스·애니 이름이 다르고, 위상은 «내 칸/상대 칸» 으로 가른다 */
+  const arn = !!cv.dataset.arnav;
+  const key = arn ? 'knight' : cv.dataset.thk, nm = arn ? 'idle' : cv.dataset.thi;
+  if(!cv._an || cv._an.anim !== nm || cv._an.akey !== key){
+    const n = arn ? (cv.classList.contains('arn-op') ? 1 : 0) : (cv.dataset.thn | 0);
+    /* 칸마다 위상을 다르게(0 / 0.7 / 1.4 프레임) — 한 몸처럼 움직이지 않게 한다 */
+    cv._an = { akey: key, anim: nm, at: n * 0.7, afps: 8, aloop: true };
   }
   return cv._an;
 }
@@ -13796,9 +13803,12 @@ function raidDraw(cv){
      97 의 `drawSpriteTo` 로 한다 — 카드 아트 자리는 «잉크 rect 를 슬롯에 꽉 채우는» 규칙이고
      `drawHeroTo` 는 «씬에 발밑을 앉히는» 앵커라 슬롯 위쪽에 109px 공백이 남는다(verify72 [5]).
      좌(내 코스튬)는 flip 해서 오른쪽을 보고, 우(더미 상대)는 원본 그대로 왼쪽을 봐 서로 마주 본다.
-     `data-thi` 가 없으므로 121 의 idle 프레임 순환에는 걸리지 않는다(정지 프레임 1장). */
+     121-⑥ — 기사도 아틀라스 아이들이 있으므로 몬스터와 같이 8fps 로 순환시킨다.
+     `knight.idle` 6프레임의 잉크는 44~47×45~46(종횡 0.957~1.022)으로 서로 3px 이내라
+     97-③ «슬롯 bbox 를 꽉 채운다» 를 지켜도 프레임 사이 폭 흔들림이 없다. */
   if(cv.dataset.arnav){
-    const kn = ATLAS.knight, f = kn && kn.a && kn.a.idle && kn.a.idle[0];
+    const f = curFrame(raidEnt(cv)) || (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle
+      && ATLAS.knight.a.idle[0]);
     if(!f) return false;
     cv._fr = f;
     return drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint,
@@ -13818,7 +13828,7 @@ function raidIdleTick(){
   raidIdleT0 = now;
   if(dt <= 0) return;
   document.querySelectorAll('#dunList canvas.thcv').forEach(cv => {
-    if(!cv.dataset.thi) return;
+    if(!cv.dataset.thi && !cv.dataset.arnav) return;
     if(cv.closest('.dnc.lkd')) return;          /* 지시 ④ — 잠금 카드는 정지 */
     const e = raidEnt(cv);
     stepAnim(e, dt);
