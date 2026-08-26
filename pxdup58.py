@@ -104,6 +104,35 @@ def main():
         base = Image.open(files[0]).convert('RGB')
         occ = [changed(base, Image.open(f).convert('RGB'), ZONE_LANE[1]) for f in files]
         omed = sorted(occ)[len(occ) // 2] if occ else 0
+        # ── 30회차 신설 — «레이어가 여러 프레임 연속 낡은» 경우 ──
+        # 위 쌍 검사는 **이웃 두 장**만 본다. 그래서 연출 레이어가 3~4장 연속 낡으면
+        # (그 사이 HUD·팝업은 계속 갱신되므로) 쌍마다 «많이 바뀌었다» 로 통과해 버린다.
+        # 30회차 실측이 그 경우다 — 씬 B 의 코인이 `page.screenshot()`(강제 합성)에는
+        # **t=154ms 에 이미** 밴드에 골드 6311px 로 있는데, 스크린캐스트 f2(91)·f3(153)·f4(283)
+        # 에는 607~622px(= 없음) 이고 f5(383)에서야 5110px 로 나타난다. 29차 AZ ①-3 과
+        # 30차 BB ① 이 라운드를 건너 이것을 «트리거 후 무반응» 으로 감점했다.
+        # → 각 프레임을 **기준(1번) 프레임과** 직접 비교해 시계열로 찍는다. 뒤 프레임이 큰데
+        #   앞 프레임이 그 20% 밑이면 «그 구간은 레이어가 낡았다» 로 운다.
+        bfx = [changed(base, Image.open(f).convert('RGB'), ZONE_FX[1]) for f in files]
+        bmax = max(bfx) if bfx else 0
+        print('    · 기준 대비 연출밴드 변화량: ' + ' '.join(
+            '%d:%d' % (i + 1, v) for i, v in enumerate(bfx)))
+        if bmax:
+            # 임계 — r30 실측: quest 슬롯 2·3·4 가 최대치의 24~27%(체크·버스트·버튼 누름은
+            # 제대로 그려지고 **재화만** 빠져 있어서 0 이 아니다), 슬롯 5 부터 96~100%.
+            # 0.20 으로는 그 셋이 안 잡힌다 → 0.35. 오검출 확인: gain 슬롯 2 는 65%(안 걸림) ·
+            # gain 뒤쪽·upg 뒤쪽은 낮지만 «뒤 슬롯이 다시 커지는» 조건에 안 걸린다(연출이 끝난 것).
+            stale = [i for i in range(1, len(bfx))
+                     if bfx[i] < bmax * 0.35 and max(bfx[i + 1:] or [0]) > bmax * 0.60]
+            if stale:
+                warned += 1
+                print('  \u26a0 레이어 지연 %s: 슬롯 %s — 기준 대비 연출밴드 변화가 최대치의 20%% 미만인데'
+                      ' **뒤 슬롯에서 갑자기 채워진다**. 강제 합성(`p58ai.js`)으로 같은 시각을 찍어'
+                      ' 확인할 것 — 30회차에는 화면에 이미 있었고 캡처만 낡았다.'
+                      % (sc, ', '.join(str(i + 1) for i in stale)))
+                print('    \u2192 전달문: \u00ab%s 슬롯 %s 는 캡처가 연출 레이어를 아직 안 올린 것이다.'
+                      ' 이 구간을 \u00ab트리거 후 무반응\u00bb\u00b7\u00ab재화가 안 나온다\u00bb 로 세지 말 것.\u00bb'
+                      % (sc, ', '.join(str(i + 1) for i in stale)))
         busy = [o > max(400, omed * 0.5) for o in occ]
         for i1, i2, vfx, vlive, vlane in pairs:
             # ⓐ 전면 중복 — 두 구역이 **같이** 죽었다. 26차 quest 2↔3 이 이것이다(AU·AV 공통:
