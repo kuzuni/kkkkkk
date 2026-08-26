@@ -199,11 +199,15 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   });
   ok(artSame, '--jz-amp:0 → 상자 아트가 1px 도 안 움직인다 (연출 끄기 스위치)');
   await p.evaluate(() => { document.getElementById('shopw').style.removeProperty('--jz-amp'); });
+  /* 두 시각만 비교하면 «하필 같은 위상» 에 걸려 헛 FAIL 이 난다(주기를 조정할 때마다 재발).
+     한 바퀴를 훑어 «서로 다른 상자» 가 하나라도 있으면 움직이는 것이다. */
   const back = await p.evaluate(async () => {
     const e = document.querySelector('#shopList .shp-card .cart');
     const at = t => { document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = t; } catch (_) {} });
-      const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].join(','); };
-    return at(0) !== at(6900);
+      const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(v => v.toFixed(2)).join(','); };
+    const seen = new Set();
+    for (let t = 0; t <= 7000; t += 250) seen.add(at(t));
+    return seen.size > 1;
   });
   ok(back, '변수를 되돌리면 다시 움직인다');
 
@@ -283,6 +287,28 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   }));
   ok(cons.all > 0 && cons.sweep === cons.all, '재화 카드 광택 스윕 ' + cons.sweep + '/' + cons.all);
   ok(cons.ads > 0 && cons.ring === cons.ads, '[받기] 버튼 펄스 링 ' + cons.ring + '/' + cons.ads);
+  /* 4회차 신설 — 비평가 둘이 «화면의 이 직사각형이 13.4초 내내 range 0» 이라고 좌표까지 짚었다.
+     그런 «완전 정지 구역» 이 다시 생기지 않도록, 카드가 아닌 구역도 각각 연출을 갖는지 못 박는다. */
+  const zones = await p.evaluate(() => {
+    const has = (sel, name, pseudo) => {
+      const e = document.querySelector(sel);
+      if (!e) return sel + ' 없음';
+      const v = pseudo ? getComputedStyle(e, pseudo).animationName : getComputedStyle(e).animationName;
+      return v && v.indexOf(name) >= 0 ? null : sel + (pseudo || '') + '=' + v;
+    };
+    return [
+      has('#shopList .cn-bn>.art', 'jz122Float'),
+      has('#shopList .cn-bn>.gem', 'jz122Float'),
+      has('#shopList .cn-rb>b', 'jz122Sweep', '::after'),
+      has('#shopList .cn-a2>em', 'jz122Float'),
+      has('#shopList .cn-a2', 'jz122Sweep', '::after'),
+      has('#shopList .cn-ml>em', 'jz122Float'),
+      has('#shopList #cnMove', 'jz122Ring2'),
+      has('#shopList .cn-ml:not(.off)>.ex', 'jz122Ring2'),
+    ].filter(Boolean);
+  });
+  ok(zones.length === 0, '카드 밖 구역(배너·리본·평생배너·마일리지·이동/교환 버튼)도 전부 연출 보유'
+    + (zones.length ? ' — 빠짐: ' + zones.join(' , ') : ''));
 
   const leak = await p.evaluate(() => {
     /* 앞선 절에서 d5 칸으로 스크롤해 뒀으므로 «지금 화면 안에 온전히 있는» 칸을 골라야 한다
