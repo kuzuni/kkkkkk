@@ -16,7 +16,9 @@ const EXP = [
   ['카드1 .tr-card:1',    '.tr-card:nth-child(1)', { x: 35, y: 1436, w: 326, h: 510 }],
   ['카드2 .tr-card:2',    '.tr-card:nth-child(2)', { x: 377, y: 1436, w: 326, h: 510 }],
   ['카드3 .tr-card:3',    '.tr-card:nth-child(3)', { x: 718, y: 1436, w: 326, h: 510 }],
-  ['서브탭 바 .tr-sub',   '.tr-sub',   { x: 54, y: 2021, w: 960, h: 97 }],
+  /* 서브탭 바(.tr-sub)는 작업 88(주인 지시 «스탯 훈련 폐기»)이 없앴다 — 기하 기대값은 폐기하고
+     «존재하지 않는다» 를 대신 검사한다(LESSONS 134: 지키던 성질이 아직 유효한지로 가른다).
+     16회차(2026-08-26, sess-0005-4811): 이 행이 남아 있어 게이트가 MISS 로 죽고 있었다. */
   /* 12회차 재실측(비평가 T L2): ref y1880 은 x44 부터 곧장 밴드다(x43 은 카드 검정 테두리 AA).
      8회차의 x47/w305 는 밴드가 검정에서 4px 떨어져 흰 카드 배경이 노출된 상태였다 → x44/w309 로 정정. */
   ['가격줄 .cb(카드1)',   '.tr-card:nth-child(1) .cb', { x: 43, y: 1832, w: 310, h: 106 }],
@@ -56,13 +58,15 @@ const EXP = [
     const reg = {
       '카드 pitch': g('.tr-card:nth-child(2)')[0] - g('.tr-card:nth-child(1)')[0],
       '카드 border-box': g('.tr-card:nth-child(1)').slice(2).join('x'),
-      '서브탭 바': g('.tr-sub').slice(2).join('x'),
+      '서브탭 바(88 폐기)': document.querySelector('.tr-sub') ? 'FAIL — 되살아남' : '없음(정상)',
       '진행바 h': g('.tr-prog')[3],
       '배수탭 바 x/w': g('.tr-qty')[0] + '/' + g('.tr-qty')[2],
       '선택칩 x/w/h': (() => { const q = document.querySelector('.tr-qty>.q.on');
         const cs = getComputedStyle(q, '::before');
         return q.getBoundingClientRect().x + parseFloat(cs.left) + '/' + cs.width + '/' + cs.height; })(),
-      '서브탭 구분선 h': getComputedStyle(document.querySelector('.tr-sub>.sg'), '::after').height,
+      /* 서브탭 구분선도 88 과 함께 폐기 — 배수탭(.tr-qty) 칸 구분선이 같은 성질을 잇는다 */
+      '배수탭 칸 경계 x': [...document.querySelectorAll('.tr-qty>.q')]
+        .map(q => Math.round(q.getBoundingClientRect().x)).join('/'),
       '슬롯 플레이트 s': getComputedStyle(document.querySelector('.tr-card .ci'), '::before').width,
       '리본 바 h': g('.tr-rib>.bar')[3],
       '꼬리 w/h': g('.tr-rib>b.l').slice(2).join('x'),
@@ -70,9 +74,12 @@ const EXP = [
       '아이콘 판 h(=119)': (() => { const cs = getComputedStyle(document.querySelector('.tr-card .ci'), '::before');
         return Math.round(parseFloat(cs.width) * Math.SQRT2 - 2 * 24 * (Math.SQRT2 - 1)) + 'x'
              + Math.round((parseFloat(cs.height) * Math.SQRT2 - 2 * 24 * (Math.SQRT2 - 1)) * 0.8); })(),
-      '서브탭 알약 left/w': (() => { const cs = getComputedStyle(document.querySelector('.tr-sub>.sg.on'), '::before');
-        return cs.left + '/' + cs.width; })(),
-      '서브탭 배지 ⌀': getComputedStyle(document.querySelector('.tr-sub>.sg.on>.dot')).width,
+      /* 서브탭 알약·배지 회귀는 88 폐기와 함께 사라졌다 — 대신 «시트 바닥 여백» 을 감시한다
+         (서브탭이 있던 자리라 되살아나거나 카드가 흘러내리면 여기서 잡힌다) */
+      '카드 하단~크림박스 하단': (() => {
+        const c = document.querySelector('.tr-cards').getBoundingClientRect();
+        const b = document.querySelector('.tr-box').getBoundingClientRect();
+        return Math.round(b.bottom - c.bottom); })(),
       '트레이 배지 ⌀': getComputedStyle(document.querySelector('.tr-qty .dot')).width,
     };
     /* 프레임 밖 / 겹침 */
