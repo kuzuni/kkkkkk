@@ -38,6 +38,14 @@ const ok = (name, got, want, tol) => {
     uiDirty = true; renderUI();
   });
   await p.waitForTimeout(600);
+  /* ⚠ 배지 클래스를 박기 «전에» 게임 자신의 렌더 루프를 세워야 한다.
+     안 그러면 `renderUI` 가 알림 조건을 다시 계산해 `.alert` 를 도로 떼고, 그 타이밍이 실행마다
+     달라 **같은 코드에서 62/62 와 53/62 가 번갈아 나온다**(실제로 그랬다).
+     LESSONS 21 «60 쥬시 이후 고정 waitForTimeout 게이트는 전부 흔들린다» 의 A1 판. */
+  await p.evaluate(() => {
+    window.requestAnimationFrame = () => 0;
+    for (let i = 1; i < 5000; i++) clearInterval(i);
+  });
   await p.evaluate(() => document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
     t.classList.toggle('alert', k === 'grow' || k === 'adv' || k === 'box');
