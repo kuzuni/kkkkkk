@@ -5,7 +5,10 @@
  * 캡처 오염 방지: 렌더 루프를 세우고(41-④) · 캔버스를 내리고(28-③) · 유휴 갱신을 멈춘다.
  *   node tools/cap22.js [출력이름]   → docs/review/22-r{n}.png
  */
-const { chromium } = require('playwright');
+/* 110 공용 부트스트랩 — 번들 브라우저가 없는 컨테이너에서 즉사하던 것을 폴백시킨다
+   (141, 2026-08-26: 이 캡처기가 아직 옛 2줄이라 클라우드 워커에서 못 돌았다) */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const KEY = 'idle_hunter_save_v4';
@@ -28,7 +31,7 @@ const SAVE = {
 };
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
     [KEY, JSON.stringify(SAVE)]);
