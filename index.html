@@ -2581,7 +2581,15 @@
   .cbox.fx-punch2{transform-origin:1px 50%}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
-  .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
+  /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
+     (씬 A·B 37px vs 씬 C 31~33px = −14~19%. 23회차 «플로터 31px» 의 부작용).
+     둘 다 «31 을 되돌리라» 가 아니라 «세 씬을 **한 값**으로 묶으라» 고 적었다 — 공용 모듈의
+     목적이 그것이다. 한 토큰으로 묶는다: 카드 신규값 48.5px 대비 70%(17~22회차에 «크기» 로는
+     한 번도 지적되지 않은 비율)이고, 씬 A·B 는 40 → 34 로 −15% 내려와 격차가 0 이 된다. */
+  /* 24회차 — 세 씬 공통 플로터 잉크 크기(gain «+n» · quest «+n» · upg 델타). 한 값으로 묶는다. */
+  :root{--fx-plus-fs:34px}
+
+  .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:var(--fx-plus-fs);white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
     animation:fxPlus .6s cubic-bezier(.2,.8,.3,1) both}
   /* 93 7회차 — UI 발은 도착이 1.26s 까지 이어지므로 «+n» 도 그때까지 살아 있어야 한다 */
@@ -2607,11 +2615,17 @@
      «같은 초록 두 줄이 나란히 멈춰 있는» 구간 자체를 없앤다. 길이는 0.62s 그대로 —
      upg 씬 총 길이(0.60s)가 구 규격 0.3~0.8s 안에 있다는 두 사람의 확인을 깨지 않기 위해서다. */
   .fx-delta{animation-name:fxDelta;animation-duration:.62s}
+  /* 24회차 — 상승 폭 104 → 80px. 착수점 5(2인 공통): 이 경로가 훈련 카드 아이콘(`.ci` 카드기준
+     y111~275)을 **가로 92% · 세로 25% 로 관통**한다(AN #15 · AP #13). 아이콘을 피할 수 있는
+     가로 자리는 카드 안에 없다 — 아이콘이 폭 180 으로 카드(326) 한가운데를 차지하므로 어떤
+     중앙 정렬 글자도 중심을 덮는다. 유일한 아이콘 없는 띠가 **y275~396**(아이콘 아래 ~ 버튼 위)라
+     상승 구간을 통째로 그 띠 안으로 내린다(아래 `fxDelta` 의 top). 끝점이 `.cv` 위지만 21회차의
+     «플로터가 떠 있는 동안 `.cv` 를 죽인다» 가 이미 걸려 있어 두 수치가 같이 안 읽힌다. */
   @keyframes fxDelta{0%{opacity:.6;transform:translate(-50%,4px) scale(.8)}
-    10%{opacity:1;transform:translate(-50%,-10px) scale(1.06)}
-    30%{opacity:1;transform:translate(-50%,-44px) scale(1)}
-    46%{opacity:.92;transform:translate(-50%,-64px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-104px) scale(1)}}
+    10%{opacity:1;transform:translate(-50%,-8px) scale(1.06)}
+    30%{opacity:1;transform:translate(-50%,-34px) scale(1)}
+    46%{opacity:.92;transform:translate(-50%,-50px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-80px) scale(1)}}
 
   /* 21회차 — 강화 델타 플로터가 떠 있는 동안 그 값이 나온 수치 행을 비운다(공존 제거).
      플로터 수명 660ms 중 «읽히는» 구간이 앞 ~420ms(상승 104px · 페이드 46%)라 그만큼만 비운다.
@@ -21049,9 +21063,12 @@ function fxDelta(el, txt){
   /* 23회차 — 19·20·21·22 네 라운드 연속 2인 공통(AL #4 · AM #3). 값은 둘 다 맞으므로(위 주석)
      **안 해 본 처방**만 시도한다: AM «플로터 글자높이를 신규값의 64% 로 낮춰 주종을 만들라».
      카드 신규값 `.tr-card>.cv>i` 는 48.5px 이므로 48.5 × 0.64 = **31px**(종전 34 = 70%). */
-  d.style.fontSize = '31px';
+  /* 24회차 — 크기는 `.fx-plus` 토큰(--fx-plus-fs)이 세 씬 공통으로 준다(위 CSS 주석). */
   d.style.left = (r.x + r.w/2) + 'px';
-  d.style.top  = (r.y - 58) + 'px';                    /* 에지 간격 ~30px 확보 — −30px 는 글리프 높이만큼 먹혀 실간격 5px 였다(17회차 AC·AD) */
+  /* 24회차 — 착수점 5. 종전 `r.y − 58`(= 카드 y230)에서 −104 까지 오르면 경로 y126~230 이
+     아이콘 상자(y111~275) 한가운데를 관통한다. 시작을 **수치 행 아래**로 내리고 상승도 80 으로
+     줄여 경로를 y288~368 = «아이콘 아래 ~ 버튼 위» 띠 안에 가둔다(아이콘 침범 0). */
+  d.style.top  = (r.y + r.h + 20) + 'px';
   d.textContent = txt;
   L.appendChild(d);
   setTimeout(() => d.remove(), 660);
