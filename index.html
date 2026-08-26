@@ -36,6 +36,27 @@
   #app{flex:none;width:1080px;height:1920px;transform-origin:center center;position:relative;overflow:hidden;
     background:#0a0c16;display:flex;flex-direction:column;box-shadow:0 0 140px rgba(90,140,255,.16)}
 
+  /* ============ 125 — 화폐 아이콘 공용 컴포넌트 (.cic) ============
+     골드·다이아·유물조각·입장권·마일리지는 «정해진 이미지 1개» 만 쓴다(저장소 주인 지시 2026-08-26).
+     이모지를 직접 박지 말고 JS 의 `curIc()` / `curIcEl()` 을 거친다 — 출처는 `CUR_ICON` 한 곳이다.
+     · 기본 크기는 **글자 크기 상대(1.08em)** 다. 자리를 옛 이모지가 아니라 **레퍼런스 잉크**에 맞춘다:
+       실측(`tools/ink125.js`) 이모지 잉크는 🪙 fs46 → 50×51 · 💎 fs42 → 47×42 로 font-size 의 1.10배(💎는
+       가로만 1.12배·세로 1.0배)인데, 레퍼런스는 둘 다 **정사각 45 안팎**(🪙 45×47 · 💎 44×45, 측정표
+       A3·07·13)이다 → fs 42 기준 1.08em = 45px 로 두 재화가 같은 정사각 bbox 를 차지한다.
+       덕분에 💎 를 눌러 담던 `scaleX` 보정이 필요 없어진다(이미지는 정사각으로 그려져 있다).
+     · 아이콘 실루엣이 측정표에 «아트 자리» 로 박혀 있는 두 곳은 px 로 못 박는다 —
+       **HUD 63×63**(measure/A3 §코인·젬 아이콘) · **41 팝업 재화 바 57×57**(measure/41 §아트 필요).
+       (지시 본문의 «알약 50» 은 눈대중 값이라 측정표 57 을 따른다. 그 외에는 `curIc(k, px)` 로 px 를 준다.)
+     · 옛 이모지에 걸려 있던 `scaleX` 보정(💎 를 눌러 담고 🪙 를 늘리던 것)은 이미지에는 **해가 된다** —
+       이미지는 정사각이므로 그 자리에서 transform 을 지운다.
+     · 컴포넌트는 화면 규칙보다 «앞» 에 둔다(LESSONS 104-④) — 화면이 덮어쓰는 쪽이다.
+       단 `transform` 무력화는 화면 규칙(`.pcb-d>i` 등)을 **이겨야** 하므로 `:has()` 로 특이도를 올린다. */
+  .cic{display:inline-block;width:1.08em;height:1.08em;vertical-align:-0.2em;
+    object-fit:contain;flex:none;pointer-events:none}
+  .cbox i>.cic{width:63px;height:63px}
+  .pcb-p>i>.cic{width:57px;height:57px}
+  .cbox i:has(>.cic),.pcb-p>i:has(>.cic){transform:none}
+
   /* ============ 최상단: 상단 HUD (A3) ============
      측정표 docs/measure/A3-상단HUD.md 를 1:1 로 적용한다.
      레퍼런스 y=84~226 구간이 이 프레임의 y=0~142 에 대응한다
@@ -3019,6 +3040,9 @@
   #app:has(#shopw.on .shp-list.coin) .curs .cbox i{left:-54px}
   #app:has(#shopw.on .shp-list.coin) .curs .cGold i{font-size:46px}
   #app:has(#shopw.on .shp-list.coin) .curs .cDia i{font-size:52.5px}
+  /* 125 — 이 탭에서는 HUD 알약 아이콘이 작다. 이미지는 font-size 를 안 타므로 px 로 다시 적는다:
+     옛 실루엣 = 잉크(fs×1.10) + 8방향 그림자 링 5px → 🪙 46 → 56 · 💎 52.5 → 55(정사각으로 통일). */
+  #app:has(#shopw.on .shp-list.coin) .curs .cbox i>.cic{width:55px;height:55px}
   /* ref HUD 숫자: 잉크 h22·'300' w65 — 우리 서체는 좁고 길어 fs↓ + scaleX 로 폭 회수 */
   #app:has(#shopw.on .shp-list.coin) .curs .cbox{padding-left:0}
   #app:has(#shopw.on .shp-list.coin) .curs .cbox b{font-size:32px;
@@ -7592,7 +7616,11 @@
   /* 폭은 3종 모두 0px 로 맞았고 높이만 4~7% 작았다(비평 C·D 2회차) — fs 를 올린 만큼 scaleX 로 폭을 되돌린다 */
   #svw .sv-r:nth-of-type(1)>u{--icfs:39.3px;--icsx:.706}  /* ⏱️ → ref 잉크 36x44 */
   #svw .sv-r:nth-of-type(2)>u{--icfs:40.2px;--icsx:.862}  /* 💀 → ref 잉크 48x45 */
-  #svw .sv-r:nth-of-type(3)>u{--icfs:42px;--icsx:.833;--icdy:-.5px}  /* 🪙 → ref 잉크 45x47, 세로 중심 −2 */
+  #svw .sv-r:nth-of-type(3)>u{--icfs:42px;--icsx:.833;--icdy:-.5px}  /* 〈125 이전〉 🪙 → ref 잉크 45x47 */
+  /* 125 — 골드 아이콘이 이미지로 바뀌었다. 이미지는 정사각이므로 글리프 보정(scaleX)을 지우고
+     ref 잉크 45×47 을 직접 쓴다(세로 중심 −2 는 그대로 둔다). */
+  #svw .sv-r>u:has(>.cic){transform:translateY(var(--icdy,0px))}
+  #svw .sv-r>u>.cic{width:45px;height:47px}
   /* 라벨 — 좌단 x360 = pill 좌변 + 70.5, 세로 중앙. 잉크 h26.5 → font 35 */
   #svw .sv-r>i{position:absolute;left:67.5px;top:var(--rlty,16px);height:30px;line-height:30px;
     font-size:28px;letter-spacing:var(--rlls,0px);white-space:nowrap;
@@ -7650,8 +7678,8 @@
     </div>
     <div class="curs">
       <!-- 33 — 재화 아이콘은 data-cur 하나로 정보 팝업에 연결된다(위임 핸들러) -->
-      <div class="cbox cGold" data-cur="gold"><i>🪙</i><b id="goldN">0</b></div>
-      <div class="cbox cDia" data-cur="dia"><i>💎</i><b id="diaN">0</b></div>
+      <div class="cbox cGold" data-cur="gold"><i data-cur-slot="gold"></i><b id="goldN">0</b></div>
+      <div class="cbox cDia" data-cur="dia"><i data-cur-slot="dia"></i><b id="diaN">0</b></div>
     </div>
   </div>
 
@@ -7738,7 +7766,7 @@
       </div>
       <b class="tpg" id="tutoPg"></b>            <!-- 61 — 미완료 상태의 3번째 줄 «(진행/목표)» -->
 
-      <div class="trew"><span class="ri" id="tutoRew">💎</span><span class="tsub" id="tutoSub">300</span></div>
+      <div class="trew"><span class="ri" id="tutoRew" data-cur-slot="dia"></span><span class="tsub" id="tutoSub">300</span></div>
     </div>
     <div id="spdb"><span class="sv">×1.3</span><span class="sk">🔒</span></div>
     <div id="battlefoot">
@@ -7791,7 +7819,7 @@
     <div class="ofr-ab ot" id="ofrAuto"><i></i></div>
     <div class="ofr-lead ot"><i>자리를 비우신 동안 사냥했어요!</i></div>
     <div class="ofr-rw"></div>
-    <div class="ofr-fr"><i><b>🪙</b></i></div>
+    <div class="ofr-fr"><i><b data-cur-slot="gold"></b></i></div>
     <div class="ofr-amt ot"><i id="ofrAmt">0</i></div>
     <button class="ofr-b g" id="ofrGet"><i>받기</i></button>
     <button class="ofr-b b" id="ofrGet15"><i>1.5배 받기</i></button>
@@ -7808,8 +7836,8 @@
   <div id="dunw">
     <!-- 41 팝업 내장 재화 바 (메인 HUD 재사용 아님) -->
     <div class="pcb">
-      <div class="pcb-p pcb-g" data-cur="gold"><i>🪙</i><b>0</b></div>
-      <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
+      <div class="pcb-p pcb-g" data-cur="gold"><i data-cur-slot="gold"></i><b>0</b></div>
+      <div class="pcb-p pcb-d" data-cur="dia"><i data-cur-slot="dia"></i><b>0</b></div>
     </div>
     <div class="dns-list" id="dunList"></div>
     <!-- 46(2026-08-25 주인 지시): 왼쪽 자물쇠 칸은 «레이드»(DPS 측정 던전) 다. -->
@@ -7825,8 +7853,8 @@
   <div id="shopw">
     <!-- 81 팝업 내장 재화 바 — 03 던전·89 유물과 동일한 41 컴포넌트 (메인 HUD 재사용 아님) -->
     <div class="pcb">
-      <div class="pcb-p pcb-g" data-cur="gold"><i>🪙</i><b>0</b></div>
-      <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
+      <div class="pcb-p pcb-g" data-cur="gold"><i data-cur-slot="gold"></i><b>0</b></div>
+      <div class="pcb-p pcb-d" data-cur="dia"><i data-cur-slot="dia"></i><b>0</b></div>
     </div>
     <div class="shp-list" id="shopList"></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
@@ -7844,9 +7872,9 @@
   <div id="relw">
     <!-- 41 팝업 내장 재화 바 — 이 페이지는 유물조각 알약까지 3개 -->
     <div class="pcb">
-      <div class="pcb-p pcb-g" data-cur="gold"><i>🪙</i><b>0</b></div>
-      <div class="pcb-p pcb-d" data-cur="dia"><i>💎</i><b>0</b></div>
-      <div class="pcb-p pcb-r" data-cur="relic"><i>🔮</i><b>0</b></div>
+      <div class="pcb-p pcb-g" data-cur="gold"><i data-cur-slot="gold"></i><b>0</b></div>
+      <div class="pcb-p pcb-d" data-cur="dia"><i data-cur-slot="dia"></i><b>0</b></div>
+      <div class="pcb-p pcb-r" data-cur="relic"><i data-cur-slot="relic"></i><b>0</b></div>
     </div>
     <div class="rw-panel">
       <div class="rw-bg"></div>
@@ -7856,7 +7884,7 @@
         <div class="rw-basin" id="rwBasin">
           <span class="rw-stone"></span><b>유물 소환</b>
         </div>
-        <div class="rw-cost" id="rwCost"><i>🔮</i><b>100</b></div>
+        <div class="rw-cost" id="rwCost"><i data-cur-slot="relic"></i><b>100</b></div>
       </div>
       <div class="rw-cap"><p>던전에서 얻는 유물조각으로 다양한 능력을 가진 유물을 소환합니다.</p><p>각 유물이 등장할 확률은 동일합니다.</p></div>
       <div class="rw-frame"></div>
@@ -7927,10 +7955,10 @@
       <div class="dgd-fl dgd-t"><i id="dgdFloor">3</i></div>
       <div class="dgd-rw"></div>
       <div class="dgd-rwl dgd-t"><i id="dgdRwL">보상</i></div>
-      <div class="dgd-fr"><em id="dgdIcon">💎</em></div>
+      <div class="dgd-fr"><em id="dgdIcon" data-cur-slot="dia"></em></div>
       <div class="dgd-amt dgd-t"><i id="dgdAmt">800</i></div>
       <div class="dgd-tk"><i id="dgdTry">2/2</i></div>
-      <div class="dgd-tki">🎟️</div>
+      <div class="dgd-tki" id="dgdTki" data-cur-slot="tkRelic"></div>
       <button class="dgd-cb" id="dgdAuto"></button>
       <div class="dgd-cbl dgd-t"><i id="dgdCbL">연속 도전</i></div>
       <button class="dgd-b k" id="dgdSweep"><span class="dgd-lk"><s></s><b></b></span></button>
@@ -8018,7 +8046,7 @@
     <div class="ci">
       <div class="ci-head"><i id="ciTitle">재화</i></div>
       <div class="ci-body">
-        <div class="ci-ic"><i id="ciIcon">💎</i></div>
+        <div class="ci-ic"><i id="ciIcon" data-cur-slot="dia"></i></div>
         <div class="ci-have" id="ciHave">보유: 0</div>
         <div class="ci-desc" id="ciDesc"></div>
         <div class="ci-wl">획득처</div>
@@ -8040,7 +8068,7 @@
         <div class="bls-cards" id="blsCards"></div>
         <div class="bls-btab"><i>보너스 축복</i></div>
         <div class="bls-bn" id="blsBonus">
-          <s class="ic">💰</s>
+          <s class="ic" data-cur-slot="gold"></s>
           <s class="ch"></s>
           <s class="tx">골드 획득량<em id="blsBnV">+50%</em></s>
         </div>
@@ -8165,9 +8193,9 @@
       <button class="sm-b sm-b1" id="sumBF"><div class="lab"><i class="sm-fat" data-t="10회 소환">10회 소환</i></div>
         <div class="pan"></div><div class="cost" id="sumBFn"></div><div class="fr"><i>FREE</i></div></button>
       <button class="sm-b sm-b2" id="sumB10"><div class="lab"><i class="sm-fat" data-t="10회 소환">10회 소환</i></div>
-        <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB10c"></div></button>
+        <div class="pan"></div><span class="gem" data-cur-slot="dia"></span><div class="cost" id="sumB10c"></div></button>
       <button class="sm-b sm-b3" id="sumB30"><div class="lab"><i class="sm-fat" data-t="30회 소환">30회 소환</i></div>
-        <div class="pan"></div><span class="gem">💎</span><div class="cost" id="sumB30c"></div></button>
+        <div class="pan"></div><span class="gem" data-cur-slot="dia"></span><div class="cost" id="sumB30c"></div></button>
     </div>
     <div class="sm-close"><i class="sm-fat" data-t="터치하여 닫기">터치하여 닫기</i></div>
   </div>
@@ -8364,7 +8392,7 @@
     <div class="sv-p">
       <div class="sv-r"><u>⏱️</u><i>방치 시간</i><b id="svT">00:00:00</b></div>
       <div class="sv-r"><u>💀</u><i>처치한 몬스터 수</i><b id="svK">0</b></div>
-      <div class="sv-r"><u>🪙</u><i>획득한 골드</i><b id="svG">+0</b></div>
+      <div class="sv-r"><u data-cur-slot="gold"></u><i>획득한 골드</i><b id="svG">+0</b></div>
     </div>
     <div class="sv-hint">밀어서 잠금 해제</div>
   </div>
@@ -8404,6 +8432,49 @@ const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const rnd = (a,b) => a + Math.random()*(b-a);
 const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
 const $ = id => document.getElementById(id);
+
+/* ---------------- 125 화폐 아이콘 단일 출처 ---------------- */
+/* 저장소 주인 지시(2026-08-26) — «게임 내 골드·다이아 등 화폐류는 전부 정해진 이미지 1개로 통일.
+   골드 이미지 여러 종류 ㄴㄴ, 한 종류로.»
+   ⇒ 화폐 아이콘은 **여기서만** 정한다. 문자열·데이터 배열에 이모지를 직접 박지 마라
+     (게이트 `tools/verify125.js` 가 소스에서 화폐 이모지 0건을 검사한다).
+   입장권은 «던전 계열» 로만 갈린다 — 골드/다이아/유물 3종까지만 허용(🎟️/🎫 혼용 폐기). */
+const CUR_ICON = {
+  gold:    'assets/ui/cur-gold.svg',
+  dia:     'assets/ui/cur-dia.svg',
+  relic:   'assets/ui/cur-relic.svg',
+  mile:    'assets/ui/cur-mile.svg',
+  tkGold:  'assets/ui/cur-ticket-gold.svg',
+  tkDia:   'assets/ui/cur-ticket-dia.svg',
+  tkRelic: 'assets/ui/cur-ticket-relic.svg'
+};
+/* 코드 곳곳의 짧은 키(보상 객체 `r.rel` · 우편 행 `k:'g'` · 가방 `relic` 등)를 한곳에서 흡수한다 */
+const CUR_ALIAS = { g:'gold', c:'dia', d:'dia', rel:'relic', r:'relic', frag:'relic',
+                    mileage:'mile', ticket:'tkRelic', tk:'tkRelic' };
+const curKey = k => CUR_ICON[k] ? k : (CUR_ALIAS[k] || 'gold');
+/* HTML 문자열 경로 — size 를 주면 px 고정 bbox, 안 주면 글자 크기 상대(1.1em) */
+function curIc(k, size){
+  const kk = curKey(k);
+  return '<img class="cic" data-cur-ic="' + kk + '" src="' + CUR_ICON[kk] + '" alt=""'
+       + (size ? ' style="width:' + size + 'px;height:' + size + 'px"' : '') + '>';
+}
+/* DOM 경로 — textContent 로 이모지를 넣던 자리를 그대로 대체한다(el 을 비우고 img 하나만 남긴다) */
+function curIcEl(el, k, size){
+  if(!el) return null;
+  el.textContent = '';
+  if(k == null) return null;
+  const im = document.createElement('img');
+  const kk = curKey(k);
+  im.className = 'cic';
+  im.dataset.curIc = kk;
+  im.src = CUR_ICON[kk];
+  im.alt = '';
+  if(size){ im.style.width = size + 'px'; im.style.height = size + 'px'; }
+  el.appendChild(im);
+  return im;
+}
+/* 던전 id → 입장권 종류. 유물조각 던전 4단(relic1~4)은 같은 «유물 던전권» 을 쓴다. */
+const dunTk = id => id === 'gold' ? 'tkGold' : id === 'dia' ? 'tkDia' : 'tkRelic';
 
 /* ---------------- 화면 맞춤 ---------------- */
 /* 기준 프레임 1080x1920(9:16). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
@@ -8522,6 +8593,17 @@ if(window.visualViewport){
   visualViewport.addEventListener('scroll', fit);
 }
 fit();
+
+/* 125 — 정적 마크업의 화폐 아이콘 자리(`data-cur-slot`)를 부팅 때 한 번 이미지로 채운다.
+   HTML 에 경로를 복제하지 않으므로 아이콘을 바꿀 때 고칠 곳은 여전히 `CUR_ICON` 한 곳뿐이다. */
+function curIcMount(root){
+  (root || document).querySelectorAll('[data-cur-slot]').forEach(el => {
+    const im = el.firstElementChild;
+    if(im && im.classList && im.classList.contains('cic')) return;   /* 이미 채워졌다 */
+    curIcEl(el, el.dataset.curSlot);
+  });
+}
+curIcMount();
 
 /* ==========================================================================
    작업 42 — 전투 화면 플로팅 터치 조이스틱 (캐릭터 수동 이동)
@@ -9269,15 +9351,15 @@ const collEffText  = (st, n) => Object.keys(st.eff)
    유물조각 던전 4단은 **보상 종류가 같고(rel) 난이도·보상량만 배수**로 갈린다(1 / 2.5 / 6 / 15).
    상위 단은 «이전 단 N층 클리어» 로 해금한다(해금 조건은 DUN_UI 의 `pre`). */
 const REL_DUN = [
-  { id:'relic1', n:'고대 유적',   ic:'🔮', k:1   },
+  { id:'relic1', n:'고대 유적',   ic:curIc('relic'), k:1   },
   { id:'relic2', n:'잊힌 신전',   ic:'🏛', k:2.5 },
   { id:'relic3', n:'용의 무덤',   ic:'🐉', k:6   },
   { id:'relic4', n:'창세의 제단', ic:'🌌', k:15  }
 ];
 const DUNGEONS = [
-  { id:'gold',   n:'황금 동굴',  ic:'💰', d:'골드를 대량으로 획득',
+  { id:'gold',   n:'황금 동굴',  ic:curIc('gold'), d:'골드를 대량으로 획득',
     req:f => 2500*Math.pow(1.72,f-1),  rw:f => ({ gold: 9000*Math.pow(1.6,f-1) }) },
-  { id:'dia',    n:'수정 광산',  ic:'💎', d:'다이아를 획득',
+  { id:'dia',    n:'수정 광산',  ic:curIc('dia'), d:'다이아를 획득',
     req:f => 4000*Math.pow(1.78,f-1),  rw:f => ({ dia: 250 + f*180 }) }
 ].concat(REL_DUN.map(r => ({
   id:r.id, n:r.n, ic:r.ic, d:'유물조각을 획득',
@@ -9302,22 +9384,22 @@ const ATTEND = [];
 for(let i=1;i<=28;i++){
   let r;
   if(i % 28 === 0)      r = { ic:'🔥', t:'다이아', dia:3000, rel:1500, goldMul:60 };
-  else if(i % 7 === 0)  r = { ic:'💎', t:'다이아', dia:1500 + i*60, rel:400 + i*25, goldMul:60 };
-  else if(i % 5 === 0)  r = { ic:'🔮', t:'유물조각', rel:400 + i*25 };
-  else if(i % 3 === 0)  r = { ic:'💰', t:'골드',   goldMul:60 };
-  else                  r = { ic:'💎', t:'다이아', dia:350 + i*30 };
+  else if(i % 7 === 0)  r = { ic:curIc('dia'), t:'다이아', dia:1500 + i*60, rel:400 + i*25, goldMul:60 };
+  else if(i % 5 === 0)  r = { ic:curIc('relic'), t:'유물조각', rel:400 + i*25 };
+  else if(i % 3 === 0)  r = { ic:curIc('gold'), t:'골드',   goldMul:60 };
+  else                  r = { ic:curIc('dia'), t:'다이아', dia:350 + i*30 };
   ATTEND.push(r);
 }
 
 /* ---- 룰렛 (하루 5회) ---- */
 const ROULETTE = [
-  { ic:'💰', t:'골드',   goldMul:25,  w:22 },
-  { ic:'💎', t:'다이아', dia:400,     w:20 },
-  { ic:'🔮', t:'유물조각', rel:150,     w:16 },
-  { ic:'💰', t:'골드',   goldMul:80,  w:14 },
-  { ic:'💎', t:'다이아', dia:900,     w:12 },
-  { ic:'🔮', t:'유물조각', rel:400,     w:8  },
-  { ic:'💎', t:'다이아', dia:2500,    w:5  },
+  { ic:curIc('gold'), t:'골드',   goldMul:25,  w:22 },
+  { ic:curIc('dia'), t:'다이아', dia:400,     w:20 },
+  { ic:curIc('relic'), t:'유물조각', rel:150,     w:16 },
+  { ic:curIc('gold'), t:'골드',   goldMul:80,  w:14 },
+  { ic:curIc('dia'), t:'다이아', dia:900,     w:12 },
+  { ic:curIc('relic'), t:'유물조각', rel:400,     w:8  },
+  { ic:curIc('dia'), t:'다이아', dia:2500,    w:5  },
   { ic:'🎁', t:'대박!',  dia:6000, rel:1500, w:3 }
 ];
 const ROUL_FREE = 5;
@@ -9341,7 +9423,7 @@ const RANKS = [
 /* ---- 우편함 ---- */
 const MAILS = [
   { id:'m1', t:'🎁 신규 헌터 환영 선물', b:'던전에 오신 것을 환영합니다!', g:3000,  c:1500, r:300 },
-  { id:'m2', t:'💎 오픈 기념 다이아',    b:'오픈 기념 선물입니다.',        g:0,     c:1200, r:0 },
+  { id:'m2', t:'오픈 기념 다이아',    b:'오픈 기념 선물입니다.',        g:0,     c:1200, r:0 },
   { id:'m3', t:'⚔️ 초보 헌터 지원 패키지', b:'스킬·장비·펫을 소환해 보세요.', g:12000, c:900,  r:200 },
   { id:'m4', t:'🐉 펫 소환 지원금',      b:'든든한 동료를 만나보세요!',     g:0,     c:800,  r:0 },
   { id:'m5', t:'📩 운영자의 편지',       b:'즐거운 사냥 되세요!',           g:20000, c:600,  r:500 }
@@ -9485,7 +9567,7 @@ const UPG = [
     val:l => 1 - Math.min(0.75, l*0.022), show:l => '받는 피해 -' + pct(1-U.def.val(l)) },
   { id:'spd',   name:'이동 속도',   icon:'👟', cost:l => 60*Math.pow(1.18,l),
     val:l => 115 + 4.5*l, show:l => Math.round(U.spd.val(l)) + ' 속도' },
-  { id:'gold',  name:'골드 획득',   icon:'💰', cost:l => 150*Math.pow(1.24,l),
+  { id:'gold',  name:'골드 획득',   icon:curIc('gold'), cost:l => 150*Math.pow(1.24,l),
     val:l => 1 + 0.10*l, show:l => '×' + (U.gold.val(l)*mulGold()).toFixed(2) }
 ];
 const U = byId(UPG);
@@ -10996,7 +11078,7 @@ function step(dt){
     let msg = 'STAGE CLEAR!';
     if(first){
       const d = 35 + Math.floor(S.stage*3.6);
-      S.dia += d; msg += ' 💎+' + d;
+      S.dia += d; msg += ' ' + curIc('dia') + '+' + d;
     }
     spawnStage();
     showMsg(msg);
@@ -11729,7 +11811,7 @@ function drawTuto(){
      CSS 에서 이 세 종류에만 크기·baseline 보정을 건다 — 문자열은 전부 우리 소유다. */
   $('tutoPg').innerHTML = '<b>(</b><em>' + gmNum(fmt(p)) + '</em><s>/</s><em>' + gmNum(fmt(m.goal)) + '</em><b>)</b>';
   $('tutoBar').style.width = (p / m.goal * 100) + '%';
-  $('tutoRew').textContent = '💎';
+  curIcEl($('tutoRew'), 'dia');
   $('tutoSub').textContent = fmt(gmDia(m));
   const btn = $('tutoBtn');
   btn.disabled = !ready;
@@ -11800,7 +11882,7 @@ $('upw').addEventListener('click', closeUpAll);
    훈련(23) 단계 상승 시 재생하는 표시 전용 연출(저장 구조 무관).
    23 훈련 시스템이 ↑ 버튼에서 openStatUp({ic,desc}) 로 호출한다. */
 function openStatUp(o){
-  $('stIc').textContent = (o && o.ic) || '⚔️';
+  $('stIc').innerHTML   = (o && o.ic) || '⚔️';   /* 125 — 훈련 «골드 획득» 은 이미지 아이콘 */
   /* 숫자 토큰만 골드(<em>) — ref 는 «30» 이 (252,192,30), % 와 한글은 흰색.
      토큰별 data-t 복제(::after)로 웨이트를 보강하므로 전체를 토큰으로 쪼갠다 */
   const t = ((o && o.desc) || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -11865,7 +11947,7 @@ function doRefund(bkey){
   if(B.cur === 'rel') S.relic += amt; else S.dia += amt;
   uiDirty = true; save();
   popup('♻️ 재료 환불', '<p><b>' + B.n + '</b> 도감을 모두 최대 레벨까지 완성했습니다!<br>'
-    + '남은 재료를 환불했습니다.<br>' + (B.cur === 'rel' ? '유물조각 <b>🔮+' : '다이아 <b>💎+') + fmt(amt) + '</b></p>');
+    + '남은 재료를 환불했습니다.<br>' + (B.cur === 'rel' ? '유물조각 <b>' + curIc('relic') + '+' : '다이아 <b>' + curIc('dia') + '+') + fmt(amt) + '</b></p>');
 }
 
 /* ==========================================================================
@@ -11924,7 +12006,7 @@ function doSummon(b, times){
   }
   const cost = summonCost(b, times);
   if(!payFor(b, cost)){
-    popup(B.cur === 'rel' ? '🔮 유물조각 부족' : '💎 다이아 부족',
+    popup(B.cur === 'rel' ? '유물조각 부족' : '다이아 부족',
       '<p>' + (B.cur === 'rel' ? '유물조각' : '다이아') + '이(가) <b>'
       + fmt(Math.ceil(cost - (B.cur === 'rel' ? S.relic : S.dia))) + '</b> 더 필요합니다.<br>'
       + (B.cur === 'rel' ? '던전 <b>' + relDunName() + '</b>에서 유물조각을 얻으세요!' : '출석 · 룰렛 · 퀘스트 · 상점에서 다이아를 얻으세요!') + '</p>');
@@ -12288,10 +12370,10 @@ function claimGuide(){
   S.guide.idx++; gmStart();
   if(rew) fxPop(rew);                          /* 58 — 보상 팝 + 버스트 */
   fxReward(rew || box);
-  fxToast('가이드 미션 완료 — 💎 ' + fmt(gmDia(m)));
+  fxToast('가이드 미션 완료 — ' + curIc('dia') + ' ' + fmt(gmDia(m)));
   uiDirty = true; save();
   if(!gmCur())                                 /* 체인 끝에서만 모달로 마무리한다 */
-    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>💎+' + fmt(gmDia(m)) + '</b> 획득!</p>'
+    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>' + curIc('dia') + '+' + fmt(gmDia(m)) + '</b> 획득!</p>'
       + '<p style="color:#8ff0a8;margin-top:10px">모든 가이드 미션 완료! 🎉</p>');
 }
 /* 92 — `S.mail[id]` 는 3상태다: **0/없음 = 미수령 · 1 = 수령 완료 · 2 = 삭제됨**(목록에서 제외).
@@ -12304,9 +12386,9 @@ const mailDelable = () => MAILS.filter(m => S.mail[m.id] === 1).length;   /* 지
    골드·다이아·유물조각 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
    등급은 공용 아이템 프레임(SUM_CARD)의 색 인덱스다 — 골드 0(갈색) · 다이아 2(파랑) · 유물조각 3(보라). */
 const MAIL_RW = [
-  { k:'g', ic:'💰', n:'골드',   g:0 },
-  { k:'c', ic:'💎', n:'다이아', g:2 },
-  { k:'r', ic:'🔮', n:'유물조각', g:3 }
+  { k:'g', ic:curIc('gold'), n:'골드',   g:0 },
+  { k:'c', ic:curIc('dia'), n:'다이아', g:2 },
+  { k:'r', ic:curIc('relic'), n:'유물조각', g:3 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
 /* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00A»(5자)로 접는데,
@@ -12335,7 +12417,8 @@ function claimAllMail(){
   uiDirty = true; save();
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
-  fxToast('우편 ' + n + '통 수령 — 💰 ' + fmt(g) + ' · 💎 ' + fmt(c) + (r ? ' · 🔮 ' + fmt(r) : ''));
+  fxToast('우편 ' + n + '통 수령 — ' + curIc('gold') + ' ' + fmt(g) + ' · ' + curIc('dia') + ' ' + fmt(c)
+    + (r ? ' · ' + curIc('relic') + ' ' + fmt(r) : ''));
 }
 /* 92 — [읽음 전체 삭제]. **수령 완료(1) 인 우편만** 2 로 넘겨 목록에서 뺀다.
    미수령(0)은 손대지 않는다 — 보상이 사라지면 안 된다. 지운 id 를 돌려줘 연출이 그 행만 접게 한다. */
@@ -12354,10 +12437,10 @@ function delReadMail(){
 function giveReward(r){
   fxReward();                                 /* 58 — 출석·룰렛·던전 보상이 전부 이 함수를 지난다 */
   const out = [];
-  if(r.dia){     S.dia += r.dia;     out.push('💎 ' + fmt(r.dia)); }
-  if(r.rel){     S.relic += r.rel;   out.push('🔮 ' + fmt(r.rel)); }
-  if(r.gold){    S.gold += r.gold;   out.push('💰 ' + fmt(r.gold)); }
-  if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push('💰 ' + fmt(g)); }
+  if(r.dia){     S.dia += r.dia;     out.push(curIc('dia') + ' ' + fmt(r.dia)); }
+  if(r.rel){     S.relic += r.rel;   out.push(curIc('relic') + ' ' + fmt(r.rel)); }
+  if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmt(r.gold)); }
+  if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmt(g)); }
   if(r.frag){
     const pool = SKILLS.concat(EQUIPS, PETS).filter(x => has(x.id));
     for(let i=0;i<r.frag;i++){
@@ -12522,7 +12605,9 @@ function openDunClear(d, f){
   const ic = $('dclIc');
   /* 아트 자리 규칙 — 대체물도 레퍼런스 bbox(63×65)를 그대로 차지한다 */
   ic.className = 'dcl-coin' + (main[0] === 'gold' ? '' : ' alt');
-  ic.textContent = main[0] === 'gold' ? '' : ({ dia:'💎', rel:'🔮', frag:'🧩' })[main[0]];
+  if(main[0] === 'frag'){ ic.textContent = '🧩'; }                 /* 조각은 재화가 아니다 */
+  else if(main[0] === 'gold'){ ic.textContent = ''; }              /* 골드는 배경 코인이 그린다 */
+  else curIcEl(ic, main[0] === 'rel' ? 'relic' : 'dia', 63);   /* 아트 자리 63×65 를 그대로 차지 */
   $('dclAmt').textContent = fmt(main[1]);
   const left = S.daily.dun[d.id];
   $('dclTryL').textContent = left;
@@ -12560,7 +12645,7 @@ function buyAvatar(a){
     popup('🔒 해금 조건 미달', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
       + '해금 조건 — <b>' + cosReqText(a) + '</b></p>'); return;
   }
-  if(S.dia < a.cost){ popup('💎 다이아 부족', '<p>다이아가 <b>💎' + fmt(a.cost - S.dia) + '</b> 더 필요합니다.</p>'); return; }
+  if(S.dia < a.cost){ popup('다이아 부족', '<p>다이아가 <b>' + curIc('dia') + fmt(a.cost - S.dia) + '</b> 더 필요합니다.</p>'); return; }
   S.dia -= a.cost; S.avatars[a.id] = 1; S.avatar = a.id;
   markDirty(); uiDirty = true; save();
   popup('👤 코스튬 획득!', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
@@ -12769,7 +12854,7 @@ function renderUp(){
       +  '<div class="ic">' + u.icon + '</div><div class="uinfo">'
       +  '<div class="un">' + u.name + '<i>Lv.' + l + '</i></div>'
       +  '<div class="uv">' + u.show(l) + ' → ' + u.show(l+bi.n) + '</div></div>'
-      +  '<div class="uc">💰' + fmt(bi.cost) + '<small>x' + bi.n + '</small></div></div>';
+      +  '<div class="uc">' + curIc('gold') + fmt(bi.cost) + '<small>x' + bi.n + '</small></div></div>';
   }
   setBody('bUp', h);
 }
@@ -12932,8 +13017,8 @@ function renderDun(){
   DUNGEONS.forEach(d => {
     const f = S.dun[d.id], need = d.req(f), left = S.daily.dun[d.id], ok = cp() >= need;
     const rw = d.rw(f);
-    const rwTxt = [rw.gold ? '💰' + fmt(rw.gold) : '', rw.dia ? '💎' + fmt(rw.dia) : '',
-                   rw.rel ? '🔮' + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
+    const rwTxt = [rw.gold ? curIc('gold') + fmt(rw.gold) : '', rw.dia ? curIc('dia') + fmt(rw.dia) : '',
+                   rw.rel ? curIc('relic') + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
     h += '<div class="li"><div class="lt">' + d.ic + ' ' + d.n + ' <span style="color:#8fd6ff;font-size:21px">'
       +  f + '층</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
       +  left + '/' + DUN_TRY + '</span></div>'
@@ -12982,13 +13067,15 @@ function renderDunDetail(){
   const d = dgdDun; if(!d) return;
   const cur = S.dun[d.id], left = S.daily.dun[d.id], rw = d.rw(dgdFloor);
   $('dgdTitle').textContent = d.n;
+  /* 125 — 입장권은 던전 계열 3종(골드·다이아·유물)뿐이다. 세부 팝업의 권종도 그 던전 것으로 맞춘다. */
+  curIcEl($('dgdTki'), dunTk(d.id));
   $('dgdState').textContent = DUN_STATE[d.id] || '어두운 밤 상태';
   $('dgdFloor').textContent = dgdFloor;
   $('dgdTry').textContent = left + '/' + DUN_TRY;
   /* 보상은 대표 재화 1종만 크게 보여준다 (레퍼런스와 동일 구조) */
-  const main = rw.gold ? ['🪙', rw.gold] : rw.dia ? ['💎', rw.dia]
-             : rw.rel  ? ['🔮', rw.rel]  : ['🧩', rw.frag];
-  $('dgdIcon').textContent = main[0];
+  const main = rw.gold ? [curIc('gold'), rw.gold] : rw.dia ? [curIc('dia'), rw.dia]
+             : rw.rel  ? [curIc('relic'), rw.rel]  : ['🧩', rw.frag];
+  $('dgdIcon').innerHTML = main[0];               /* 125 — 화폐는 이미지 태그 문자열이다(조각 🧩만 글자) */
   $('dgdAmt').textContent  = fmt(main[1]);
   $('dgdPrev').disabled = dgdFloor <= 1;
   $('dgdNext').disabled = dgdFloor >= cur;
@@ -13081,7 +13168,7 @@ function renderSt(){
     + '재생 <b>×' + fmt(b.regen) + '</b> · 골드 <b>×' + fmt(b.gold) + '</b> · 펫 <b>×' + b.pet.toFixed(2) + '</b></p></div>'
     + '<div class="sect"><h3>📊 통계</h3><p>'
     + '총 처치 <b>' + fmt(S.totalKills) + '</b> · 최고 스테이지 <b>' + S.best + '</b><br>'
-    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물조각 <b>🔮 ' + fmt(S.relic) + '</b><br>'
+    + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물조각 <b>' + curIc('relic') + ' ' + fmt(S.relic) + '</b><br>'
     + '도감 <b>' + ownedTotal() + ' / ' + (SKILLS.length+EQUIPS.length+PETS.length+RELICS.length) + '</b> · 출석 <b>' + S.att.n + '일</b><br>'
     + '플레이 <b>' + hh + '시간 ' + mm + '분</b></p></div>'
     + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmt(eHp(S.stage)) + '</b> · 공격 <b>' + fmt(eDmg(S.stage))
@@ -13103,10 +13190,10 @@ function renderSt(){
    7일차 밴드가 강조색인 것은 «오늘» 이라서가 아니라 «주차 최종 보상» 강조다(실측 §7). */
 function atRewards(r){                                  /* 카드에 그릴 보상 칸(최대 3) */
   const out = [];
-  if(r.dia)     out.push({ ic:'💎', v:fmt(r.dia) });
-  if(r.rel)     out.push({ ic:'🔮', v:fmt(r.rel), rl:true });
-  if(r.goldMul) out.push({ ic:'💰', v:fmt(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
-  if(r.gold)    out.push({ ic:'💰', v:fmt(r.gold) });
+  if(r.dia)     out.push({ ic:curIc('dia'), v:fmt(r.dia) });
+  if(r.rel)     out.push({ ic:curIc('relic'), v:fmt(r.rel), rl:true });
+  if(r.goldMul) out.push({ ic:curIc('gold'), v:fmt(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
+  if(r.gold)    out.push({ ic:curIc('gold'), v:fmt(r.gold) });
   return out.slice(0, 3);
 }
 const AT_F7X = [149.5, 309.5, 469.5];                   /* 7일차 프레임 3개 left (pitch 160) */
@@ -13162,8 +13249,8 @@ function roulSegColor(i){ const c = ROUL_SEGC[ROULETTE[i].t] || ['#F8CE63','#E9A
 function roulLabel(r){
   const v = [];
   if(r.goldMul) v.push('×' + r.goldMul);
-  if(r.dia)     v.push((r.rel ? '💎' : '') + fmt(r.dia));
-  if(r.rel)     v.push((r.dia ? '🔮' : '') + fmt(r.rel));
+  if(r.dia)     v.push((r.rel ? curIc('dia') : '') + fmt(r.dia));
+  if(r.rel)     v.push((r.dia ? curIc('relic') : '') + fmt(r.rel));
   return v.join(r.dia && r.rel ? '<br>' : ' ');
 }
 function openRoulette(){
@@ -13381,7 +13468,7 @@ let qTab = 'rep';
 function openQuest(tab){
   if(tab) qTab = tab;
   const qrow = (title, dia, prog, goal, ready, key) =>
-    '<div class="qs-r"><span class="qs-i ifr">💎<i class="ifq">' + fmt(dia) + '</i></span>'
+    '<div class="qs-r"><span class="qs-i ifr">' + curIc('dia') + '<i class="ifq">' + fmt(dia) + '</i></span>'
     + '<div class="qs-t">' + title + '</div>'
     + '<div class="qs-p"><i style="width:' + Math.min(100, prog/goal*100).toFixed(1) + '%"></i>'
     + '<b><em>' + fmt(prog) + '/' + fmt(goal) + '</em></b></div>'
@@ -13449,20 +13536,20 @@ function openQuest(tab){
    구 조건이던 «최고 스테이지 15·25·40» 은 가이드 미션 14·17·20 번이 각각 그 스테이지 도달을
    목표로 갖고 있어 **게이팅이 그대로 보존된다** — 밸런스 영향 없음. */
 const DUN_UI = {
-  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:'🪙', tk:'🎫', th:'🐉', thw:'311px', tht:'36px', thf:'291px', tsx:1.158, thcx:'157px',   thcy:'159.5px',
+  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'), th:'🐉', thw:'311px', tht:'36px', thf:'291px', tsx:1.158, thcx:'157px',   thcy:'159.5px',
             rw:['골드 획득 가능'], gm:0  },
-  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:'💎', tk:'🎟️', th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
+  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'), th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
             rw:['다이아 획득 가능'], gm:0  },
   /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
-  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:'🔮', tk:'🎫', th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'), th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, gm:15 },
-  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:'🔮', tk:'🎟️', th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'), th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
-  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:'🔮', tk:'🎫', th:'🐲', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
+  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'), th:'🐲', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
-  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:'🔮', tk:'🎟️', th:'👹', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'), th:'👹', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
 };
 /* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다.
@@ -13782,7 +13869,7 @@ function renderRaidDetail(){
   $('dgdLvL').textContent = '제한 시간';
   $('dgdFloor').textContent = r.sec + '초';
   $('dgdRwL').textContent = '최고 기록';
-  $('dgdIcon').textContent = '🏆';
+  $('dgdIcon').textContent = '🏆';        /* 레이드 최고 기록 — 재화가 아니라 트로피다 */
   $('dgdAmt').textContent = b.dmg > 0 ? fmt(b.dmg) + ' (DPS ' + fmt(b.dps) + ')' : '기록 없음';
   $('dgdTry').textContent = '∞';
   $('dgdCbL').textContent = '연속 도전';
@@ -14018,10 +14105,10 @@ function renderShopPage(){
       +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u></div>'
       +  '<div class="adbadge"><i>▶AD</i></div>'
       +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
-      +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">💎</span></div>'
+      +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
       +    '<u class="cost">' + won(c10) + '</u></div>'
       +  '<div class="cbtn b3" data-shsum="' + x.b + '" data-shn="30">'
-      +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">💎</span></div>'
+      +    '<u class="lab">30회 소환</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
       +    '<u class="cost">' + won(c30) + '</u></div>'
       +  '<div class="cfr"></div>'
       +  (maxed ? '<div class="clk">도감 완성 🏆</div>' : '')
@@ -14147,7 +14234,7 @@ function renderRelw(){
 function summonRelic(quiet){
   const cost = relicCost();
   if(S.relic < cost){
-    if(!quiet) popup('🔮 유물조각 부족', '<p>유물조각이 <b>' + fmt(cost - S.relic) + '</b> 더 필요합니다.<br>'
+    if(!quiet) popup('유물조각 부족', '<p>유물조각이 <b>' + fmt(cost - S.relic) + '</b> 더 필요합니다.<br>'
       + '던전 <b>' + relDunName() + '</b>에서 유물조각을 얻으세요!</p>');
     return null;
   }
@@ -14205,9 +14292,9 @@ $('rwBasin').addEventListener('pointerdown', () => {
 const COIN_ADS = [
   /* fs·sx: 3회차 자체 스캔 — 폭은 전부 ref Δ≤2 인데 높이만 +9~14% (서체 종횡비).
      ref_h/cap_h 만큼 fs 를 줄이고 폭 보존을 위해 sx 에 역수를 곱했다. qx 도 동일(×N 높이 28↔31). */
-  { id:'a1', n:'보석',                q:'×100', ic:'💎', cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.42 },
-  { id:'a2', n:'공물',                q:'×50',  ic:'🔮', cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.26 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:'🪙', cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.90 },
+  { id:'a1', n:'보석',                q:'×100', ic:curIc('dia'), cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.42 },
+  { id:'a2', n:'공물',                q:'×50',  ic:curIc('relic'), cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.26 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.90 },
   { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:28.6, sx:1.040, qx:1.10 },
   { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:32.2, sx:1.041, qx:1.24 },
   { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:30.9, sx:0.933, qx:0.90 }
@@ -14255,7 +14342,7 @@ function mileageExchange(){
   S.mileage -= MILE_NEED; S.dia += MILE_DIA;
   uiDirty = true; save();
   renderCoinPage($('shopList'));
-  popup('🎟️ 마일리지 교환', '<p>💎 ' + fmt(MILE_DIA) + ' 을(를) 받았습니다.</p>'
+  popup('마일리지 교환', '<p>' + curIc('dia') + ' ' + fmt(MILE_DIA) + ' 을(를) 받았습니다.</p>'
     + '<p>남은 쿠폰 ' + S.mileage + '개</p>');
   return true;
 }
@@ -14263,9 +14350,9 @@ function renderCoinPage(list){
   let h = '<div class="cn-wrap">'
     /* §1 배너 아트 + §2 타이틀 */
     + '<div class="cn-bn"><div class="art">🎁</div>'
-    +   '<div class="gem" style="left:96px;top:236px">💎</div>'
-    +   '<div class="gem" style="left:606px;top:250px;font-size:92px">💎</div>'
-    +   '<div class="gem" style="left:820px;top:196px;font-size:64px">💎</div></div>'
+    +   '<div class="gem" style="left:96px;top:236px">' + curIc('dia') + '</div>'
+    +   '<div class="gem" style="left:606px;top:250px;font-size:92px">' + curIc('dia') + '</div>'
+    +   '<div class="gem" style="left:820px;top:196px;font-size:64px">' + curIc('dia') + '</div></div>'
     + '<div class="cn-ti"><i>재화 상점</i></div>'
     /* §3-1 `상품` 밴드 */
     + '<div class="cn-hl" style="top:356px"></div>'
@@ -14313,7 +14400,7 @@ function renderCoinPage(list){
     h += '<div class="cn-cd dia' + (top ? ' top' : '') + '" style="left:' + x + 'px;top:' + y + 'px;--fs:35.5px;--sx:.95'
       + ';--qx:' + p.qx + ';--hd:#6B5BE8;--hr:#B0A6FF">'
       +  '<div class="bg">' + (top ? '<s class="ray"></s>' : '') + '</div><div class="hd"><i>다이아</i></div>'
-      +  '<div class="pn"><em>💎</em></div>'
+      +  '<div class="pn"><em>' + curIc('dia') + '</em></div>'
       +  '<div class="qt">' + p.q + '</div>'
       +  (p.cp ? '<div class="cp"><i>쿠폰 +' + p.cp + '</i></div>' : '')
       +  '<div class="bt buy" data-diabuy="' + p.id + '"><u class="pr">' + wonTxt(p.won) + '</u></div>'
@@ -14323,11 +14410,11 @@ function renderCoinPage(list){
   const mil = S.mileage || 0, milOk = mil >= MILE_NEED;
   h += '<div class="cn-rb" style="top:2587px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>마일리지 상품</i></div>'
-    + '<div class="cn-ml' + (milOk ? '' : ' off') + '" id="cnMile"><em>🎟️</em>'
+    + '<div class="cn-ml' + (milOk ? '' : ' off') + '" id="cnMile"><em>' + curIc('mile') + '</em>'
     +   '<div class="tt">마일리지 쿠폰</div>'
     +   '<div class="ct">' + mil + ' / ' + MILE_NEED + '</div>'
     +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
-    +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → 💎 ' + fmt(MILE_DIA) + '</div>'
+    +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → ' + curIc('dia') + ' ' + fmt(MILE_DIA) + '</div>'
     +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
   /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.
      `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물조각은 14/15 유물 소환의 재화라
@@ -14339,9 +14426,9 @@ function renderCoinPage(list){
     h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px;--fs:35.5px;--sx:.95'
       +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5">'
       +  '<div class="bg"></div><div class="hd"><i>유물조각</i></div>'
-      +  '<div class="pn"><em>🔮</em></div>'
+      +  '<div class="pn"><em>' + curIc('relic') + '</em></div>'
       +  '<div class="qt">×' + fmt(x.rel) + '</div>'
-      +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">💎 ' + fmt(x.dia) + '</u></div>'
+      +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">' + curIc('dia') + ' ' + fmt(x.dia) + '</u></div>'
       +  '<div class="fr"></div></div>';
   });
   h += '</div>';
@@ -14361,19 +14448,19 @@ $('shopList').addEventListener('click', e => {
   if(ex0){
     const ex = EXCHANGE.find(v => v.dia === +ex0.dataset.ex);
     if(!ex) return;
-    if(S.dia < ex.dia){ popup('💎 다이아 부족', '<p>다이아가 부족합니다.</p>'); return; }
+    if(S.dia < ex.dia){ popup('다이아 부족', '<p>다이아가 부족합니다.</p>'); return; }
     S.dia -= ex.dia; S.relic += ex.rel; uiDirty = true; save();
     renderCoinPage($('shopList'));
-    popup('🔮 교환 완료', '<p>다이아 <b>💎' + fmt(ex.dia) + '</b> → 유물조각 <b>🔮' + fmt(ex.rel) + '</b></p>');
+    popup('교환 완료', '<p>다이아 <b>' + curIc('dia') + fmt(ex.dia) + '</b> → 유물조각 <b>' + curIc('relic') + fmt(ex.rel) + '</b></p>');
     return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
   const dp = e.target.closest('[data-diabuy]');
   if(dp){
     const p = DIA_PACKS.find(x => x.id === dp.dataset.diabuy);
-    if(p) popup('💎 ' + diaPackName(p),
+    if(p) popup(diaPackName(p),
       '<p>' + wonTxt(p.won) + '</p>'
-      + (p.cp ? '<p>구매 시 🎟️ 마일리지 쿠폰 +' + p.cp + '</p>' : '')
+      + (p.cp ? '<p>구매 시 ' + curIc('mile') + ' 마일리지 쿠폰 +' + p.cp + '</p>' : '')
       + '<p>결제 준비 중입니다.</p>');
     return;
   }
@@ -14385,9 +14472,9 @@ $('shopList').addEventListener('click', e => {
   if(!S.daily.adBuy) S.daily.adBuy = {};
   S.daily.adBuy[a.id] = adLeft(a) - 1;
   let got = '';
-  if(a.r.dia){ S.dia += a.r.dia; got = '💎 ' + fmt(a.r.dia); }
-  if(a.r.rel){ S.relic += a.r.rel; got = '🔮 ' + fmt(a.r.rel); }
-  if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = '🪙 ' + fmt(g); }
+  if(a.r.dia){ S.dia += a.r.dia; got = curIc('dia') + ' ' + fmt(a.r.dia); }
+  if(a.r.rel){ S.relic += a.r.rel; got = curIc('relic') + ' ' + fmt(a.r.rel); }
+  if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = curIc('gold') + ' ' + fmt(g); }
   if(a.r.freePet){ doSummonFree('pet', a.r.freePet, 1); got = '🐾 펫 소환 ' + a.r.freePet + '회'; }
   uiDirty = true; save();
   renderCoinPage($('shopList'));
@@ -14602,7 +14689,7 @@ function renderWpn(){
   $('wpnL2').innerHTML   = '<i>' + sd.stat + '</i>';
   /* 상단 선택 아이템 정보 */
   const ib = $('wpnIc');
-  ib.textContent = cur.ic;
+  ib.innerHTML = cur.ic;                         /* 125 — ic 는 이미지 태그 문자열이다 */
   ib.style.setProperty('--gc', wg.c); ib.style.setProperty('--gr', wg.r);
   $('wpnName').innerHTML  = '<i>' + cur.n + '</i>';
   const gd = $('wpnGrade');
@@ -14789,15 +14876,15 @@ $('tabbar').addEventListener('click', closeProbInfo, true);
    `data-cur="gold"` 만 붙이면 자동으로 연결된다. 저장 구조는 건드리지 않는다(KEY 유지).
    설명·획득처 문구는 실제 게임 데이터에서 뽑는다 — 던전 이름은 DUNGEONS. */
 const CURINFO = {
-  gold:  { ic:'🪙', n:'골드',
+  gold:  { ic:curIc('gold'), n:'골드',
     get:() => S.gold,
     d:'장비와 스킬을 강화하고, 훈련으로 능력치를 올릴 때 사용합니다.',
     ways:['적 처치', '던전 «' + (DUNGEONS.find(d => d.id === 'gold') || {}).n + '»', '오프라인 보상'] },
-  dia:   { ic:'💎', n:'다이아',
+  dia:   { ic:curIc('dia'), n:'다이아',
     get:() => S.dia,
     d:'장비와 스킬 등을 소환하거나, 다양한 물건을 구매할 때 사용합니다.',
     ways:['출석 · 룰렛', '퀘스트 · 우편', '던전 «' + (DUNGEONS.find(d => d.id === 'dia') || {}).n + '»'] },
-  relic: { ic:'🔮', n:'유물조각',
+  relic: { ic:curIc('relic'), n:'유물조각',
     get:() => S.relic,
     d:'유물을 소환하고 강화할 때 사용합니다.',
     ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic1') || {}).n + '» 외 3', '룰렛 보상', '다이아 교환'] }
@@ -14808,7 +14895,7 @@ function curVal(k){ const c = CURINFO[k]; return c ? c.get() : null; }
 function renderCurInfo(){
   const c = CURINFO[curInfoKey]; if(!c) return;
   $('ciTitle').textContent = c.n;
-  $('ciIcon').textContent  = c.ic;
+  $('ciIcon').innerHTML    = c.ic;                /* 125 — CURINFO.ic 는 이미지 태그 문자열 */
   $('ciHave').textContent  = '보유: ' + fmt(c.get());
   $('ciDesc').innerHTML    = '<i>' + c.d + '</i>';
   $('ciWays').innerHTML    = c.ways.map(w => '<div><s>✔</s><i>' + w + '</i></div>').join('');
@@ -15104,10 +15191,10 @@ let bagTab = 'cur';
 /* 재화 탭 — 보유 재화 + S.own 보유 재료(등급 내림차순) */
 function bagCur(){
   const out = [
-    { ic:'🪙', n:'골드',       g:1, q:S.gold | 0 },
-    { ic:'💎', n:'다이아',     g:3, q:S.dia | 0 },
-    { ic:'🔮', n:'유물조각',     g:2, q:S.relic | 0 },
-    { ic:'🎟️', n:'마일리지',   g:4, q:S.mileage | 0 }
+    { ic:curIc('gold'), n:'골드',       g:1, q:S.gold | 0 },
+    { ic:curIc('dia'), n:'다이아',     g:3, q:S.dia | 0 },
+    { ic:curIc('relic'), n:'유물조각',     g:2, q:S.relic | 0 },
+    { ic:curIc('mile'), n:'마일리지',   g:4, q:S.mileage | 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
   cat.forEach(it => {
@@ -15119,7 +15206,7 @@ function bagCur(){
 /* 소모품 탭 — 오늘 남은 횟수 계열(전부 실제 S.daily 값) */
 function bagUse(){
   const d = S.daily || {}, out = [];
-  DUNGEONS.forEach(x => { const q = (d.dun || {})[x.id] | 0; if(q > 0) out.push({ ic:'🎫', n:x.n + ' 입장권', g:2, q }); });
+  DUNGEONS.forEach(x => { const q = (d.dun || {})[x.id] | 0; if(q > 0) out.push({ ic:curIc(dunTk(x.id)), n:x.n + ' 입장권', g:2, q }); });
   SHOP_BOXES.forEach(x => { const q = (d.freeSum || {})[x.b] | 0; if(q > 0) out.push({ ic:'🎁', n:x.n + ' 무료 소환', g:3, q }); });
   if((d.spins | 0) > 0) out.push({ ic:'🎰', n:'룰렛 횟수', g:4, q:d.spins | 0 });
   return out.sort((a, b) => b.g - a.g);
@@ -15261,11 +15348,11 @@ function cfCoupon(){
   if(raw === null) return;
   const code = String(raw).trim().toUpperCase();
   if(!S.opt.cp || typeof S.opt.cp !== 'object') S.opt.cp = {};
-  if(!CF_CODES[code]){ popup('🎟️ 쿠폰', '<p>사용할 수 없는 코드입니다.</p>'); return; }
-  if(S.opt.cp[code]){ popup('🎟️ 쿠폰', '<p>이미 사용한 코드입니다.</p>'); return; }
+  if(!CF_CODES[code]){ popup('쿠폰', '<p>사용할 수 없는 코드입니다.</p>'); return; }
+  if(S.opt.cp[code]){ popup('쿠폰', '<p>이미 사용한 코드입니다.</p>'); return; }
   S.opt.cp[code] = 1; S.dia += CF_CODES[code]; save(); drawHud();
   if(typeof fxGain === 'function') fxGain('dia', CF_CODES[code]);
-  popup('🎟️ 쿠폰', '<p>💎 <b>' + fmt(CF_CODES[code]) + '</b> 을(를) 받았습니다!</p>');
+  popup('쿠폰', '<p>' + curIc('dia') + ' <b>' + fmt(CF_CODES[code]) + '</b> 을(를) 받았습니다!</p>');
 }
 /* ==========================================================================
    54 랭킹 페이지 (#rkw) — 측정표 docs/measure/54-랭킹팝업.md
@@ -15854,7 +15941,7 @@ function renderCos(){
         +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
         /* 진행바 자리 — 보유는 «보유», 조건 미달은 해금 조건, 그 밖은 다이아 가격 */
         +  '<div class="sk-bar' + (lock ? ' rq' : '') + '"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-        +  '<b class="ol1">' + (own ? '보유' : lock ? '🔒' + cosReqText(a) : '💎' + fmt(a.cost))
+        +  '<b class="ol1">' + (own ? '보유' : lock ? '🔒' + cosReqText(a) : curIc('dia') + fmt(a.cost))
         +  '</b></div></div>';
     });
     y += Math.ceil(list.length/5) * 220;
@@ -15939,17 +16026,17 @@ function showCosDetail(id){
     +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : rq ? '미보유' : '🔒 조건 미달') + '</b></div>'
     +   '<div class="sk-pb"><i style="width:' + (own ? 100 : 0) + '%"></i>'
     +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">'
-    +       (own ? '보유' : rq ? '💎' + fmt(a.cost) : '🔒' + cosReqText(a)) + '</b></div>'
+    +       (own ? '보유' : rq ? curIc('dia') + fmt(a.cost) : '🔒' + cosReqText(a)) + '</b></div>'
     +   '<div class="sk-ct">'
     +     '<div class="hd"><div><b>' + (a.req ? '해금 조건' : '가격') + '</b></div><div class="nt"><b>등급</b></div></div>'
-    +     '<div class="vl"><div><b>' + (a.req ? cosReqText(a) : a.cost ? '💎' + fmt(a.cost) : '기본') + '</b></div>'
+    +     '<div class="vl"><div><b>' + (a.req ? cosReqText(a) : a.cost ? curIc('dia') + fmt(a.cost) : '기본') + '</b></div>'
     +       '<div class="nt"><b>' + G.n + '</b></div></div>'
     +   '</div>'
     +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
     +   '<div class="sk-db"><p>' + (own
           ? '구매한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
           : !rq
-          ? '<em>' + cosReqText(a) + '</em> 을(를) 달성하면 다이아 <em>💎' + fmt(a.cost) + '</em> 로 구매할 수 있습니다.'
+          ? '<em>' + cosReqText(a) + '</em> 을(를) 달성하면 다이아 <em>' + curIc('dia') + fmt(a.cost) + '</em> 로 구매할 수 있습니다.'
           : '아직 구매하지 않았습니다.<br>다이아로 구매하면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
     +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
     +     '<div class="v"><b>공격 <em>+' + pct(a.atk) + '</em> 체력 <em>+' + pct(a.hp)
@@ -16065,7 +16152,7 @@ function trainCardData(){
     const u = U[k], l = lv(k), bi = trainBuyInfo(k);
     const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
     return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-      gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:'💰',
+      gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:curIc('gold'),
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }
@@ -16363,9 +16450,9 @@ const PASS_N    = 40;     /* 단계 수 — 스테이지 5..200 */
 const PASS_GRADE = [['#46A7DE','#347DC1'],['#C7E549','#98C135'],['#CA66FA','#9A25D6'],['#FCC334','#D37C13']];
 /* 보상 재화는 기존 3종만 쓴다(새 재화를 만들지 않는다 → 세이브 구조 무변경) */
 const PASS_CUR = [
-  { k:'gold',  ic:'🪙', n:i => 20000 * (i + 1) * (i + 1) },
-  { k:'dia',   ic:'💎', n:i => 30 + i * 10 },
-  { k:'relic', ic:'🔮', n:i => 3 + i }
+  { k:'gold',  ic:curIc('gold'), n:i => 20000 * (i + 1) * (i + 1) },
+  { k:'dia',   ic:curIc('dia'), n:i => 30 + i * 10 },
+  { k:'relic', ic:curIc('relic'), n:i => 3 + i }
 ];
 /* 탭 슬롯 — 35 가 깐 골격에 36(출석)이 자기 칸만 채운 것이다(측정표 §9-2·§9-3).
    step/n/prog = 단계 간격·단계 수·해금 진행도 소스. 출석은 «접속일(S.att.n)» 이 진행도다.
@@ -16374,14 +16461,14 @@ const PASS_TABS = {
   stage:{ ttl:'스테이지 패스 1', sub:'스테이지를 클리어해 패스 단계\n보상을 받으세요!',
           /* 8회차: 집은 `.ps-hs` 슬롯(우상단 390x380)이 맡는다 — 여기 🏠 를 두면 ref 에 없는
              «화면 중앙 하단 집» 이 하나 더 생겨 덩어리가 두 곳으로 갈린다. 코인 더미만 남긴다. */
-          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:'🪙🪙', cols:3,
+          stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:curIc('gold') + curIc('gold'), cols:3,
           step:PASS_STEP, n:PASS_N, prog:() => S.best, head:'' },
   /* 36 — 레퍼런스는 보상이 **전 행 같은 아이템(파란 보석 = 다이아)** 이다(측정표 §8-3).
      무료 1,000 고정 · 프리미엄은 1일차만 30,000 이고 그 뒤는 10,000 · 등급은 전 칸 에픽(§8-4). */
   att:  { ttl:'출석 패스 1',   sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
-          stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:'💎', cols:2,
+          stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:curIc('dia'), cols:2,
           step:1, n:30, prog:() => S.att.n, head:'접속일',
-          rw:(i, c) => ({ k:'dia', ic:'💎', n: c === 0 ? 1000 : (i === 0 ? 30000 : 10000), g:3 }) }
+          rw:(i, c) => ({ k:'dia', ic:curIc('dia'), n: c === 0 ? 1000 : (i === 0 ? 30000 : 10000), g:3 }) }
 };
 let passTab = 'stage';
 const passT    = () => PASS_TABS[passTab] || PASS_TABS.stage;
@@ -16428,7 +16515,7 @@ function renderPass(){
   $('psStL').textContent  = T.stl;
   $('psStV').textContent  = T.stv();
   $('psPrice').textContent = T.price;
-  $('psArt').textContent  = T.art;
+  $('psArt').innerHTML    = T.art;               /* 125 — 패스 아트는 화폐 아이콘 이미지 문자열이다 */
   $('psw').classList.toggle('att', passTab === 'att');   /* 탭별 히어로 아트·칸 x 를 CSS 로 가른다 */
   $('psBuy').style.display = prem ? 'none' : '';
   document.querySelectorAll('#psBar .pt').forEach(b => b.classList.toggle('on', b.dataset.ptab === passTab));
@@ -16545,7 +16632,7 @@ $('mnw').querySelector('.mn-col').onclick = e => {
     const m = gmCur();
     popup('🗺️ 길라잡이', m
       ? '<p><b>' + m.n + '</b></p><p>진행 <b>' + gmProg(m) + ' / ' + m.goal + '</b></p>'
-        + '<p>보상 💎 <b>' + fmt(gmDia(m)) + '</b></p>'
+        + '<p>보상 ' + curIc('dia') + ' <b>' + fmt(gmDia(m)) + '</b></p>'
         + (gmReady() ? '<p style="color:#8ff0a8;margin-top:10px">완료! 화면 하단 배너에서 수령하세요.</p>' : '')
       : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
   }
@@ -16788,8 +16875,8 @@ function fx3Out(p){
   return 0;
 }
 const FXCUR = {
-  gold:{ pill:'.cGold', pcb:'.pcb-g', ic:'🪙', col:'#FFDE6A', fs:46 },
-  dia :{ pill:'.cDia',  pcb:'.pcb-d', ic:'💎', col:'#8FE9FF', fs:42 }
+  gold:{ pill:'.cGold', pcb:'.pcb-g', cur:'gold', col:'#FFDE6A', fs:46, ics:55 },
+  dia :{ pill:'.cDia',  pcb:'.pcb-d', cur:'dia',  col:'#8FE9FF', fs:42, ics:50 }
 };
 /* 81 — 41 재화 바(.pcb)가 있는 페이지(03 던전·10 상점·89 유물)가 열려 있으면
    비행 도착지·+n 앵커는 메인 HUD 알약이 아니라 «그 팝업 안의 바» 다(41 규칙).
@@ -16917,7 +17004,7 @@ function fxFly(from, cur, n){
   for(let i=0;i<cnt;i++){
     const el = document.createElement('b');
     el.className = 'fx-fly';
-    el.textContent = C.ic;
+    el.innerHTML = curIc(C.cur, C.ics);          /* 125 — 이모지 대신 CUR_ICON 이미지 1장 */
     el.style.fontSize = C.fs + 'px';
     el.style.opacity = '0';
     L.appendChild(el);
@@ -17216,7 +17303,7 @@ function fxToast(txt){
   const el = document.createElement('b');
   el.className = 'fx-toast';
   el.style.top = (150 + stack*104) + 'px';
-  el.textContent = txt;
+  el.innerHTML = txt;                            /* 125 — 화폐 아이콘(이미지 태그)이 들어온다 */
   L.appendChild(el);
   setTimeout(() => el.classList.add('out'), 1200);
   setTimeout(() => el.remove(), 1560);
@@ -17923,8 +18010,11 @@ function jzModalMood(){
   if(!/부족|실패|없습니다|불가/.test(t)) return;
   const box = document.querySelector('#modal .mbox');
   if(box) jzOn(box, 'jz-bad', 480);
-  if(/다이아|💎/.test(t)) jzBadPill('.cDia');
-  else if(/골드|🪙/.test(t)) jzBadPill('.cGold');
+  /* 125 — 옛 코드는 «💎» 이모지도 단서로 썼지만, 모달 제목은 showModal 이 **textContent** 로 넣고
+     («레퍼런스 헤더에는 이모지가 없다») 앞머리 기호를 떼기까지 한다 — 즉 제목에 아이콘은 원래 안 들어간다.
+     그래서 이모지를 지운 지금은 한글 이름만으로 충분하다. 제목에 아이콘 마크업을 붙이지 마라. */
+  if(/다이아/.test(t)) jzBadPill('.cDia');
+  else if(/골드/.test(t)) jzBadPill('.cGold');
 }
 /* 재화 알약 «부족» 플래시 — 알약(#top z6)은 딤(#modal z30) 아래라 **알약도 그 수치도 어두워진 채**다.
    11회차(결함 3): 섬광판만 #fxl 에 띄우던 옛 방식은 «빨간 판» 만 딤 위에 있고 본체는 아래에 남아

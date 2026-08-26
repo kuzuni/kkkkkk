@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 골드(동전) — 작업 125 단일 출처. 잉크가 viewBox 를 꽉 채운다(외곽선 포함). -->
+  <ellipse cx="32" cy="32" rx="30" ry="30" fill="#C97B1E" stroke="#000" stroke-width="4"/>
+  <ellipse cx="32" cy="30" rx="26" ry="26" fill="#F7C544"/>
+  <ellipse cx="32" cy="30" rx="19.5" ry="19.5" fill="none" stroke="#C97B1E" stroke-width="3"/>
+  <path d="M32 15.5l4.4 9.4 10.1 1.4-7.4 7.1 1.8 10.2-8.9-4.9-8.9 4.9 1.8-10.2-7.4-7.1 10.1-1.4z" fill="#FFE9A0" stroke="#C97B1E" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M14.5 22.5a20 20 0 0 1 12-9" fill="none" stroke="#FFF3C4" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+</svg>

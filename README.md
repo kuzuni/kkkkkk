@@ -12,8 +12,8 @@ HTML 파일 하나 + 스프라이트 에셋으로 동작합니다.
 
 ```
 ┌──────────────────────────────────────┐
-│ ⚔️전투력  💰골드  💎다이아 [+]        │ 프로필 + 재화 (+버튼)
-│  🥉계급  🔮유물석[+] 🏆도감           │
+│ ⚔️전투력  ◉골드  ◈다이아 [+]         │ 프로필 + 재화 (+버튼, 아이콘은 이미지 1종)
+│  🥉계급  ◆유물조각[+] 🏆도감          │
 ├──────────────────────────────────────┤
 │            1-5 스테이지 최고 5         │ 챕터-스테이지 + 처치 진행바
 │ [출석]                       [퀘스트]  │
@@ -248,6 +248,30 @@ assets/
 - 아틀라스를 JS로 변환해 두어 `fetch` 없이 `file://` 에서도 동작합니다
 - 밸런스 수치는 파일 상단 데이터 블록(`GRADE`/`SKILLS`/`EQUIPS`/`PETS`/`RELICS`/`AVATARS`/`BANNERS`/`GRADE_ROLL`/`COLL`/`DUNGEONS`/`ATTEND`/`ROULETTE`/`RANKS`/`QUESTS`/`TUTO`/`MAILS`/`PACKS`/`UPG`)에 모여 있습니다
 
+## 재화 아이콘 (작업 125)
+
+게임 안의 **화폐는 종류마다 정해진 이미지 1개**만 씁니다. 골드를 어떤 화면에서는 🪙, 다른 화면에서는 💰 로
+그리던 혼용은 폐기했습니다. 출처는 `index.html` 의 `CUR_ICON` 한 곳이고, 표시는 전부 헬퍼
+`curIc(키, 크기)` / `curIcEl(요소, 키, 크기)` / 정적 마크업 `data-cur-slot="키"` 를 거칩니다.
+
+| 재화 | 키 | 이미지 |
+|---|---|---|
+| 골드 | `gold` | `assets/ui/cur-gold.svg` |
+| 다이아 | `dia` | `assets/ui/cur-dia.svg` |
+| 유물조각 | `relic` | `assets/ui/cur-relic.svg` |
+| 마일리지 쿠폰 | `mile` | `assets/ui/cur-mile.svg` |
+| 골드 던전 입장권 | `tkGold` | `assets/ui/cur-ticket-gold.svg` |
+| 다이아 던전 입장권 | `tkDia` | `assets/ui/cur-ticket-dia.svg` |
+| 유물 던전 입장권 | `tkRelic` | `assets/ui/cur-ticket-relic.svg` |
+
+- 입장권은 **던전 계열 3종까지만** 씁니다(유물조각 던전 1~4단은 같은 권종).
+- 크기는 기본이 글자 크기 상대(`1.08em`)이고, 자리가 측정표에 박혀 있는 곳만 px 로 고정합니다
+  (상단 HUD 63×63 · 팝업 재화 바 57×57). 자세한 값과 «아트 필요» 표는 `docs/measure/125-화폐아이콘.md`.
+- 등급·계급·메달·장비 이름의 아이콘(🥇💠🔮 등)은 **재화 표시가 아니므로** 그대로 둡니다.
+- 아이콘 교체는 `CUR_ICON` 의 경로만 바꾸면 전 화면에 반영됩니다. 검증은 `node tools/verify125.js`.
+
 ## 에셋 출처
+
+화폐 아이콘 등 UI 에셋의 출처·라이선스는 `assets/CREDITS.md` 에 적습니다.
 
 스프라이트/타일셋은 [phaser3-examples](https://github.com/photonstorm/phaser3-examples) 예제 에셋을 사용했습니다. 프로토타입 용도로는 문제없지만 **상업 배포 시에는 각 에셋 라이선스를 확인하거나 CC0 에셋(Kenney, OpenGameArt 등)으로 교체**하세요.

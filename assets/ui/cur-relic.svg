@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 유물조각 — 작업 125 단일 출처 -->
+  <path d="M32 3l25 15v28L32 61 7 46V18z" fill="#7A3FC4" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M32 10l19 11.5v21L32 54 13 42.5v-21z" fill="#C08BFF"/>
+  <path d="M32 10v44M13 21.5l38 21M51 21.5l-38 21" stroke="#7A3FC4" stroke-width="2.5"/>
+  <path d="M32 10L13 21.5v10z" fill="#EBD8FF" opacity=".85"/>
+</svg>

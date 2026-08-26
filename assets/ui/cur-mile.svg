@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 마일리지 쿠폰 — 작업 125 단일 출처 -->
+  <path d="M5 15h54v13a6 6 0 0 0 0 12v13H5V40a6 6 0 0 0 0-12z" fill="#E2703A" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M11 21h42v7.5a8 8 0 0 0 0 15V51H11v-7.5a8 8 0 0 0 0-15z" fill="#FFB067"/>
+  <path d="M24 24v24" stroke="#E2703A" stroke-width="3" stroke-dasharray="5 5"/>
+  <path d="M38 27l12 12M39 30a2.6 2.6 0 1 0 .1 0M49 36a2.6 2.6 0 1 0 .1 0" fill="none" stroke="#8A3B12" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

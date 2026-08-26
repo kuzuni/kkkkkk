@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 골드 던전 입장권 — 작업 125 단일 출처(던전 계열 3종만 허용) -->
+  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#B3711C" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#F0BE4F"/>
+  <path d="M32 26.5l3.4 7.2 7.8 1.1-5.7 5.4 1.4 7.8L32 44.2l-6.9 3.8 1.4-7.8-5.7-5.4 7.8-1.1z" fill="#FFFFFF" opacity=".92" stroke="#B3711C" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>
