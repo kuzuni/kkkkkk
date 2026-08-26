@@ -1852,9 +1852,11 @@
     0%{opacity:1;height:147px;margin-bottom:17px}
     6.67%{opacity:1}
     10%{height:131.69px;margin-bottom:15.23px}
+    13.33%{height:126.58px;margin-bottom:14.64px}
     20%{height:116.38px;margin-bottom:13.46px}
     30%{height:101.06px;margin-bottom:11.69px}
     40%{height:85.75px;margin-bottom:9.92px}
+    43.33%{height:80.65px;margin-bottom:9.33px}
     50%{height:70.44px;margin-bottom:8.15px}
     60%{height:55.13px;margin-bottom:6.38px}
     70%{height:39.81px;margin-bottom:4.60px}
@@ -1920,14 +1922,26 @@
     /* scale = 위 `mlOut` 의 height ÷ 147. **퍼센트 목록이 글자까지 같아야 한다** — 13회차는
        35%(mlOut) vs 33%(여기)로 어긋나 그 사이에서 카드가 슬롯보다 2.55px 커졌다(14회차 실측).
        바깥 링은 «보이는 두께» 가 의미인 값이라 **scale 로 나눠 선언**한다(13회차 확정, LESSONS ⑩).
-       화면 목표: 6 → **13**(피크 t=30ms, 이웃 3행의 2.2배) → 8.5 → 6 이후 유지.
        90% 부터는 6 을 그대로 둔다 — 그 시점 카드가 9.2px 짜리 조각이라(α .11) 6/s = 96px 은
-       «링» 이 아니라 화면을 덮는 판이 된다(13회차도 86% 에서 같은 이유로 6 으로 떨궜다). */
+       «링» 이 아니라 화면을 덮는 판이 된다(13회차도 86% 에서 같은 이유로 6 으로 떨궜다).
+
+       ★ 15회차 — 플래시를 **6 → 16px(2.67배) · 어택 40ms · 디케이 90ms** 로 키웠다.
+       14회차는 «6 → 13px, 어택 30ms, 디케이 60ms» 였는데 **비평가 Z·Ω 가 독립적으로 «강조 0px»**
+       이라고 보고했다(Z: «높이가 147 을 넘는 프레임이 0개 — 크기 축에서 강조가 사실상 없다» ·
+       Ω: «림 플래시 두께 = 0px · 어택 0ms · 독립 디케이 0ms»). 둘 다 **같은 증상**이므로 실재다.
+       13px 은 796px 짜리 카드 둘레에서 «6px 대비 +7px» 이라 1080 폭 전체 캡처에서 1% 미만이었다.
+       **크기로 강조하되 레이아웃은 못 밀게** — 링은 `box-shadow` 라 박스 크기에 안 들어가므로
+       이웃 행을 밀지 않는다(Z 가 처방한 «높이 +4% 오버슈트» 는 남는 행을 아래로 밀었다가 되돌려
+       상승을 비단조로 만든다 — 그래서 안 쓴다).
+       **상한은 여백이 정한다**: 카드 우변 x933 · 패널 패딩박스 우변 x953 = 20px, 행 간격 17px.
+       16px 이면 좌우 여백 안에 들고 위아래로 이웃 행을 1px 만 스친다. 18px 이상은 패널 림에 닿는다. */
     0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
-    10%{transform:scale(.895833);box-shadow:0 0 0 14.51px #FFF7EC,inset 0 0 0 5px #FFFBF2}
-    20%{transform:scale(.791667);box-shadow:0 0 0 10.74px #241A12,inset 0 0 0 5px #FFFBF2}
-    30%{transform:scale(.687500);box-shadow:0 0 0 8.73px #241A12,inset 0 0 0 5px #FFFBF2}
-    40%{transform:scale(.583333);box-shadow:0 0 0 10.29px #241A12,inset 0 0 0 5px #FFFBF2}
+    10%{transform:scale(.895833);box-shadow:0 0 0 15.07px #FFF7EC,inset 0 0 0 5px #FFFBF2}
+    13.33%{transform:scale(.861111);box-shadow:0 0 0 18.58px #FFF7EC,inset 0 0 0 5px #FFFBF2}
+    20%{transform:scale(.791667);box-shadow:0 0 0 17.40px #FFF7EC,inset 0 0 0 5px #FFFBF2}
+    30%{transform:scale(.687500);box-shadow:0 0 0 15.19px #241A12,inset 0 0 0 5px #FFFBF2}
+    40%{transform:scale(.583333);box-shadow:0 0 0 12.19px #241A12,inset 0 0 0 5px #FFFBF2}
+    43.33%{transform:scale(.548611);box-shadow:0 0 0 10.94px #241A12,inset 0 0 0 5px #FFFBF2}
     50%{transform:scale(.479167);box-shadow:0 0 0 12.52px #241A12,inset 0 0 0 5px #FFFBF2}
     60%{transform:scale(.375000);box-shadow:0 0 0 16.00px #241A12,inset 0 0 0 5px #FFFBF2}
     70%{transform:scale(.270833);box-shadow:0 0 0 22.15px #241A12,inset 0 0 0 5px #FFFBF2}
