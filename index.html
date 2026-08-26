@@ -5270,11 +5270,11 @@
      → ① 약한 쪽(청록 2개)은 **상시 후광 자체를 호흡**시켜 진폭을 만든다(지금까지 후광은 상수라
         진폭에 1도 기여하지 않았다 — 퍼지는 링만 기여했다) ② 센 쪽은 `--jz-ring` 으로 눌러 맞춘다. */
   @keyframes jz122Ring{
-    0%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
-      0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(14px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(83,230,250,calc(.45 * var(--jz-glow))),
+    0%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-ring,1) * var(--jz-glow)))}
+    85%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(var(--jz-floor,.60) * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
   .shp-card:nth-child(2) .cbtn.b1:not(.lack){animation-delay:calc(-.22s * var(--jz-per))}
   .shp-card:nth-child(3) .cbtn.b1:not(.lack){animation-delay:calc(-.45s * var(--jz-per))}
@@ -5292,10 +5292,12 @@
        여전히 «완전 소등»(무연출 배경과 같은 값)으로 관측됐다. 골에서도 **반경·확산은 그대로 두고
        알파만** 45% 로 내린다 — 그래야 어느 거리에서 재도 «꺼지지 않는» 호흡이 된다. */
     /* 4회차(Q ②-2) — 하한이 최대치의 32% 라 «지목» 신호로 안 읽히는 구간이 있었다 → 55% */
-    0%,100%{box-shadow:inset 0 0 calc(14px * var(--jz-amp)) rgba(255,231,120,calc(.32 * var(--jz-glow))),
-      0 0 calc(14px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(255,231,120,calc(.45 * var(--jz-glow)))}
-    50%{box-shadow:inset 0 0 calc(14px * var(--jz-amp)) rgba(255,231,120,calc(.55 * var(--jz-glow))),
-      0 0 calc(15px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(255,231,120,calc(.78 * var(--jz-glow)))}}
+    /* ⚑ 15회차 — 바닥 44%(§17 신설 측정)를 55% 규약 위로 올린다. 기하는 양 끝을 **같게** 두고
+       (3회차가 «반경까지 줄이면 먼 거리에서 완전 소등» 으로 데인 자리다) 알파만 .56 ↔ .78 = 72% 로 호흡. */
+    0%,100%{box-shadow:inset 0 0 calc(15px * var(--jz-amp)) rgba(255,231,120,calc(.40 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 calc(16px * var(--jz-amp)) calc(7px * var(--jz-amp)) rgba(255,231,120,calc(.56 * var(--jz-ring,1) * var(--jz-glow)))}
+    50%{box-shadow:inset 0 0 calc(15px * var(--jz-amp)) rgba(255,231,120,calc(.55 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 calc(16px * var(--jz-amp)) calc(7px * var(--jz-amp)) rgba(255,231,120,calc(.78 * var(--jz-ring,1) * var(--jz-glow)))}}
 
   /* ── ②-1 재화 카드 아이콘 «둥실»(±3px) + 판 위 스파클 3점 순환(1.8s) ── */
   /* ⚑ 15회차 — 14회차 채점 AG «재화 1행 공물↔골드 둥실 위상차 286ms(사양 800ms, −64%)».
@@ -5500,15 +5502,21 @@
      14칸을 **stride 5**(5와 14가 서로소 → 14슬롯 완전 순열)로 돌려, 슬롯을 빠짐없이 쓰면서
      **이웃한 칸끼리는 5/14 주기(≈1.14s)씩 벌어지게** 한다. */
   .cn-cd>.fr::after{animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
-  .cn-cd>.bt[data-cnad]{animation:jz122RingC calc(1.15s * var(--jz-per)) ease-out infinite}
+  .cn-cd>.bt[data-cnad]{animation:jz122RingC calc(1.15s * var(--jz-per)) ease-out infinite;
+    /* 15회차 — 이 링만 «바닥 ≥ 피크의 55%» 를 못 맞췄다(49%). 카드가 `overflow:hidden` 이고
+       버튼 아래 여유가 **0px**(좌우 9~10px)이라 후광이 통째로 잘려 나가기 때문이다
+       — 비평가 AI 가 독립으로 같은 것을 짚었다(«퍼짐이 보일 자리가 없다»).
+       잘린 만큼은 바닥 알파로만 회수할 수 있다. Δ 는 그만큼 더 낮아지지만(11.2),
+       «꺼진 것처럼 보이는» 쪽이 ④ 감점이 크다. */
+    --jz-floor:.70}
   /* 6회차 — jz122Ring 과 같은 한 벌(상시 후광 20/4 α.9 · 피크 α.92 · 85% 26px) */
   /* 14회차 — `jz122Ring` 과 한 벌(§17: 이 링이 Δ10.0 으로 가장 약했다) */
   @keyframes jz122RingC{
-    0%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
-      0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(14px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(83,230,250,calc(.45 * var(--jz-glow))),
+    0%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-ring,1) * var(--jz-glow)))}
+    85%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(var(--jz-floor,.60) * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
   .cn-cd:nth-child(6n+1)>.bt[data-cnad]{animation-delay:calc(-.19s * var(--jz-per))}
   .cn-cd:nth-child(6n+2)>.bt[data-cnad]{animation-delay:calc(-.38s * var(--jz-per))}
@@ -5525,9 +5533,9 @@
      **알파만** .42→.78 / .6→1 로 올린다. 같은 거리에서 재도 Δ 가 2배가 된다. */
   @keyframes jz122Mile{
     0%,100%{box-shadow:inset 0 0 0 7px #E2A6FF,
-      0 0 calc(16px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(217,139,255,calc(.78 * var(--jz-glow)))}
+      0 0 calc(20px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(217,139,255,calc(.72 * var(--jz-ring,1) * var(--jz-glow)))}
     50%{box-shadow:inset 0 0 0 7px #F3C4FF,
-      0 0 calc(18px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(217,139,255,calc(1 * var(--jz-glow)))}}
+      0 0 calc(22px * var(--jz-amp)) calc(5px * var(--jz-amp)) rgba(217,139,255,calc(1 * var(--jz-ring,1) * var(--jz-glow)))}}
   .cn-ml:not(.off)>.ex{animation:jz122Ring2 calc(1.2s * var(--jz-per)) ease-out infinite}
   /* ⚑ 14회차 — [교환] 버튼면도 §15 에서 **심 0.0 / 측엽 −35.1**(그림자로 뒤집힘)이었다.
      여기는 [이동]과 달리 «심만 올리기» 로 못 고친다 — 이 버튼을 덮던 띠는 **패널(948px)의 띠**이고,
@@ -5727,13 +5735,20 @@
      보여줬다: 마일리지 패널 위 [교환] Δ38.4 ↔ 같은 규격의 [이동] Δ16.0. 바탕색을 CSS 가 못 읽으므로
      광택의 `jzShineA()` 역산 대신 **잰 값으로** 눌러 맞춘다. */
   @keyframes jz122Ring2{
-    0%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
-      0 0 0 0 rgba(173,255,129,calc(.92 * var(--jz-ring,1) * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
+    /* ⚑ 15회차 — 후광이 **상수**라 진폭을 퍼지는 링에만 기대고 있었다(§17 바닥 49~53%).
+       청록 한 벌(`jz122Ring`)과 같은 «기하 상수 + 알파 호흡» 으로 통일한다. */
+    0%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(25px * var(--jz-amp)) rgba(173,255,129,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(173,255,129,calc(.62 * var(--jz-ring,1) * var(--jz-glow)))}
+    85%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(25px * var(--jz-amp)) rgba(173,255,129,calc(.60 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(173,255,129,0)}
-    100%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(25px * var(--jz-amp)) rgba(173,255,129,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(173,255,129,0)}}
-  .cn-ml>.ex{--jz-ring:.58}   /* §17 실측 Δ38.4 → 목표 22 (14회차) */
+  /* §17 자리별 세기 보정 — 15회차에 «바닥 ≥ 피크의 55%» 를 같이 걸면서 전부 다시 쟀다.
+     (14회차 값 .58 은 바닥이 49% 로 꺼지던 시절의 보정이라 그대로 쓸 수 없다.) */
+  .cn-ml>.ex{--jz-ring:.443}   /* §17 실측 Δ28.8 → 목표 22 */
+  /* ⚠ [이동]에 --jz-ring 1.2 를 줬다가 되돌렸다: 피크 알파가 이미 1 에 붙어 있어 **피크는 안 오르고
+     바닥만** 올라 Δ 가 17.7 → 14.2 로 오히려 깎였다(§17 실측). 알파가 포화된 자리는
+     --jz-ring 으로 못 올린다 — 링 색과 바탕색의 휘도차가 천장이다(아래 «아트 대기» 표). */
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md

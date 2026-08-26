@@ -1063,29 +1063,80 @@ async function ampCheck(p, hosts) {
         }, [b64, iw, ih]));
       }
       const v = vals.filter(x => x != null);
-      return v.length ? +(Math.max(...v) - Math.min(...v)).toFixed(1) : null;
+      if (!v.length) return null;
+      /* ⚑ 15회차 — 진폭만으로는 «꺼지는 링» 을 못 잡는다. 14회차 채점(비평가 AI ①)이
+         AD 버튼 후광을 «하한/피크 17.8% · 4번 카드는 0 이하 = 완전 소등» 으로 짚었는데,
+         §17 은 max−min 만 보므로 **진폭이 목표에 맞아도 바닥이 0 인 링을 통과시킨다**.
+         그래서 «글로우를 통째로 끈» 기준선을 따로 잡고 **초과분의 하한/피크**를 같이 낸다
+         (73 강제 상자가 4회차부터 지키는 «하한 = 피크의 55%» 규약을 링에도 적용). */
+      await pat(sel + '{box-shadow:none!important}');
+      await seek(p, 0);
+      const b64 = (await p.screenshot({ clip: box })).toString('base64');
+      const base = await p.evaluate(async ([src, w, h]) => {
+        const img = new Image();
+        await new Promise(res => { img.onload = res; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        let s = 0, n = 0;
+        for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+          const inx = x >= 14 && x < 14 + w, iny = y >= 14 && y < 14 + h;
+          if (inx && iny) continue;
+          if (x < 2 || y < 2 || x >= c.width - 2 || y >= c.height - 2) continue;
+          const j = (y * c.width + x) * 4;
+          s += .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]; n++;
+        }
+        return n ? +(s / n).toFixed(2) : null;
+      }, [b64, iw, ih]);
+      await pat('');
+      const ex = base == null ? null : v.map(x => x - base);
+      const hi = ex ? Math.max(...ex) : null;
+      return { amp: +(Math.max(...v) - Math.min(...v)).toFixed(1),
+               floor: (ex && hi > .5) ? +(Math.min(...ex) / hi).toFixed(3) : null };
     };
+    const pat = txt => p.evaluate(x => {
+      let e = document.getElementById('jz122glow');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'jz122glow'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
     const GLOWS = [['강제 상자 테두리(2.8s)', '#shopList .shp-card.gm>.cfr', 2800],
                    ['[무료] 링(0.9s)', '#shopList .shp-card .cbtn.b1:not(.lack)', 900]];
     const amps = [];
     for (const [label, sel, per] of GLOWS) {
       const a = await glowAmp(sel, per);
-      amps.push([label, a]);
+      amps.push([label, a, false]);
     }
     await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
     await p.waitForTimeout(150);
-    for (const [label, sel, per] of [['마일리지 패널(2.6s)', '#shopList .cn-ml', 2600],
+    for (const [label, sel, per, clip] of [['마일리지 패널(2.6s)', '#shopList .cn-ml', 2600],
                                      ['[교환] 링(1.2s)', '#shopList .cn-ml>.ex', 1200],
                                      ['[이동] 링(1.35s)', '#shopList .cn-mv', 1350],
-                                     ['[받기 AD] 링(1.15s)', '#shopList .cn-cd>.bt[data-cnad]', 1150]]) {
+                                     /* ⚑ 15회차 — 이 링만 «구조적으로 잘린다»: 카드가 overflow:hidden 인데
+                                        버튼 아래 여유가 0px(좌우 9~10px)라 후광이 띠에 거의 안 잡힌다
+                                        (비평가 AI 가 독립으로 같은 것을 짚었다). 진폭 밴드·산포에서는 빼고
+                                        **바닥 규약만** 건다 — 버튼 기하는 레퍼런스 실측값이라 122 가 못 건드린다. */
+                                     ['[받기 AD] 링(1.15s·잘림)', '#shopList .cn-cd>.bt[data-cnad]', 1150, true]]) {
       const a = await glowAmp(sel, per);
-      amps.push([label, a]);
+      amps.push([label, a, !!clip]);
     }
-    console.log('    · ' + amps.map(([l, a]) => l + ' Δ' + (a == null ? '측정 불가' : a)).join(' | '));
-    const got = amps.filter(([, a]) => a != null).map(([, a]) => a);
-    ok(got.length >= 5, '글로우 측정점 ' + got.length + '개 (>=5)');
+    console.log('    · ' + amps.map(([l, a]) => l + ' Δ' + (a == null ? '측정 불가' : a.amp)
+      + (a && a.floor != null ? ' 바닥' + Math.round(a.floor * 100) + '%' : '')).join(' | '));
+    const got = amps.filter(([, a, c]) => a != null && !c).map(([, a]) => a.amp);
+    ok(got.length >= 5, '글로우 측정점(잘린 자리 제외) ' + got.length + '개 (>=5)');
     const spread = got.length ? Math.max(...got) / Math.max(.5, Math.min(...got)) : 99;
     ok(spread <= 2.2, "글로우 진폭 산포 = " + spread.toFixed(1) + "배 (<=2.2배 · 13회차 4.7배 → 14회차 1.8배)");
+    /* 15회차 — 체크리스트가 13회차부터 열어 둔 «Δ22±3 한 점 통일» */
+    const outb = amps.filter(([, a, c]) => a != null && !c && (a.amp < 19 || a.amp > 25));
+    ok(outb.length === 0, '글로우 진폭이 전부 밴드 19~25 안(Δ22±3)'
+      + (outb.length ? ' — 밖 ' + outb.length + '자리: ' + outb.map(([l, a]) => l + ' Δ' + a.amp).join(' , ') : ''));
+    /* 15회차 — 비평가 AI ① «AD 후광 하한/피크 17.8% · 4번 카드 소등» */
+    const fl = amps.filter(([, a]) => a != null && a.floor != null);
+    const lowf = fl.filter(([, a]) => a.floor < .55);
+    ok(fl.length >= 5, '바닥 비 측정점 ' + fl.length + '개 (>=5)');
+    ok(lowf.length === 0, '글로우 바닥이 전부 피크의 55% 이상 — 꺼지는 링이 없다'
+      + (lowf.length ? ' — 미달 ' + lowf.map(([l, a]) => l + ' ' + Math.round(a.floor * 100) + '%').join(' , ') : ''));
   }
 
   /* ── §8 스크롤 fps ────────────────────────────────────────────
