@@ -8881,8 +8881,13 @@
   .rk-bd{display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
   /* 이모지 메달의 «잉크» 는 em 박스보다 훨씬 좁다 — ref 102×82 대비 51×84 였다(비평 C②).
      높이는 84→82 로 fs 72, 폭은 scaleX 2.0 으로 벌린다(아트 자리 규칙: bbox 를 정확히 차지). */
-  .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:85px}
-  #rkw .rk-bd.m>em{display:block;position:relative;left:2.5px;transform:scaleX(1.78)}
+  /* 18회차 — 1~3위 메달 잉크가 **세로로 +13px(+16%)** 컸다(비평가 V ⑦. 자체 실측으로 확인:
+     ref 잉크 104×83 · 프레임 y860..942(행1) · 행2도 같은 값 vs 우리 103×96 · y850..945).
+     폭·중심 x 는 이미 맞으므로(104 vs 103 · 145 vs 144.5) **높이만** 줄이고 세로 중심을 맞춘다:
+     fs 85 → **74**(잉크 h 96×74/85 ≈ 83), 줄어든 폭은 scaleX 1.78 → **2.07** 로 되돌린다.
+     ref 잉크 중심 901 · 우리 897.5 → `translateY(3px)`. */
+  .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:74px}
+  #rkw .rk-bd.m>em{display:block;position:relative;left:2.5px;transform:scaleX(2.07) translateY(3px)}
   #rkw .rk-sh>em{display:block;transform:scaleX(1.86)}
   /* clip 을 0% 에서 시작해야 도형 bbox 가 ref 96×96 이 된다 — 12% 에서 시작하면 실측 84 로 잘린다 */
   .rk-bd.f{left:32px;top:26px;width:96px;height:96px;background:#CDA37B;
@@ -8896,7 +8901,11 @@
      ref 는 잉크 cy 1480.0 vs 셀 cy 1479(Δ+1.0) → **+5px** 내린다.
      (translateY 는 scaleX 뒤에 와도 Y 에는 배율이 없어 그대로 5px 다) */
   #rkw .rk-bd.f>b{display:block;width:96px;text-align:center;font-size:51px;line-height:96px;
-    color:#fff;-webkit-text-stroke:13px #000;paint-order:stroke fill;transform:scaleX(1.05) translateY(5px)}
+    color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(1.05) translateY(5px)}
+  /* 18회차 — 검정 외곽선이 **편측 +1.75px 두꺼웠다**(비평가 V ⑩). 실측(4위 칸):
+     ref 스트로크 bbox 40×47 / 흰 코어 29×36 → 편측 **5.5px** · 우리 42×52 / 28×37 → 편측 **7~7.5px**.
+     코어(글자 크기) 는 이미 맞으므로 **선 두께만** 13px → 10px(선언값 13 이 실측 7.5 로 나오는
+     +1.5px 안티에일리어싱 몫을 감안한 값. 10px → 편측 5+AA ≈ 5.5). */
   /* 아바타 액자 111×113 @ local(192,T+17) — 검정 3 + 금테 5 */
   .rk-av{left:192px;top:17px;width:111px;height:113px;box-sizing:border-box;
     border:3px solid #000;border-radius:14px;background:#FFB95A;
@@ -8924,7 +8933,11 @@
   /* 잉크 실측 ref 22~26(3행 표본) vs 캡처 32 → fs 35 x 26/32 ≈ 28.
      비평가 A 는 «ref 34» 라 했지만 행 1·2·4 를 직접 스캔하면 22/25/26 이다(A 오독).
      그리고 잉크 상단이 리본 하단과 붙어 있었다(ref 는 10px 아래) → top +3 */
-  #rkw .rk-nm{left:318px;top:81px;width:400px;height:40px;line-height:40px;display:block;
+  /* 18회차 — 닉네임 잉크가 리본에 **4px 붙어 있었다**(비평가 V ⑨). 실측(행1, 프레임):
+     리본 하단 ref 906 / 우리 907(Δ1 — 리본은 맞다) · 닉네임 잉크 ref **915..943(cy 929)** vs
+     우리 **910..940(cy 925)** = **Δ−4**. 리본↔닉네임 여백 ref 9px vs 우리 3px.
+     → top 81 → **85**. (`.rk-me .rk-nm` 는 자체 top:94 를 쓰므로 영향 없다) */
+  #rkw .rk-nm{left:318px;top:85px;width:400px;height:40px;line-height:40px;display:block;
     font-size:28px;color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     white-space:nowrap;overflow:hidden}
   /* «최고 스테이지» 라벨 161×22 중심 (912,T+42.5) → local 중심 847 */
