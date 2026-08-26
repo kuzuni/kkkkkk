@@ -48,10 +48,19 @@ const outHud = path.resolve(__dirname, '../docs/review/A3-r' + r + '-hud.png');
   await p.waitForTimeout(1600);   /* 펀치·스태거가 완전히 가라앉을 때까지 */
   /* `renderUI()` 가 0.35초마다 `cpN` 을 다시 쓰고 60 롤링이 매 프레임 덮으므로,
      캡처 직전에 두 갱신 경로를 세운 뒤에 넣는다 */
-  await p.evaluate(() => {
+  /* `A3_REFSTR=1` — **측정 전용** 모드. 칭호·재화 문자열을 레퍼런스와 **똑같은 글자**로 바꾼다.
+     우리 게임은 칭호 대신 계급(「브론즈」)을 쓰고 숫자 단위를 알파벳으로 통일했으므로(작업 111)
+     평소 캡처는 「브론즈」·「39.2A」·「1.30A」다. 글자 수가 다르면 잉크 **폭**을 레퍼런스와 비교할 수 없어
+     `tools/inkA3.py` 의 sx 배수가 오염된다 — 이 모드는 폭 역산에만 쓰고 채점 캡처로는 쓰지 않는다.
+     `renderUI`/`drawHud` 를 세운 **뒤에** 넣어야 0.35초 갱신에 덮이지 않는다. */
+  await p.evaluate((refstr) => {
     window.renderUI = () => {}; window.drawHud = () => {};
     const e = document.getElementById('cpN'); if (e) e.textContent = fmt(1330000);
-  });
+    if (refstr) {
+      const set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
+      set('rankN', '칭호 없음'); set('goldN', '39.20A'); set('diaN', '1,300');
+    }
+  }, process.env.A3_REFSTR === '1');
   await p.waitForTimeout(120);
   await p.screenshot({ path: out });
   await p.screenshot({ path: outHud, clip: { x: 0, y: 0, width: 1080, height: 160 } });
