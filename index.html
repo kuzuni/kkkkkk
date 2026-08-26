@@ -977,7 +977,7 @@
         방사 50% 교차(서브픽셀, 180방향 중앙값)로 REF 4칸을 다시 재니 well 89.0 · 링 7.28 ·
         어두운 테 3.58 · 외곽 **117.9** 로 닫힌다(검산 89.0 + 2×14.44 = 117.88 = 실측 117.9).
         비평가 M 도 독립적으로 같은 결론(외곽 119.0 · 링 7.03)에 도달했다. 되돌리지 말 것. */
-  #slots{display:flex;gap:12px;justify-content:center;margin:26px 0 17px;padding-left:2px}
+  #slots{display:flex;gap:12px;justify-content:center;margin:26px 0 17px;padding-left:3px}
   /* 링 4겹을 레이어로 쌓는다(inset box-shadow 는 그라디언트가 안 되므로):
      .slot2 어두운 외곽 r56~59 > ::before 컬러 링 r48~55 > ::after 어두운 r44~47 > .cdw well r0~43 */
   .slot2{flex:none;width:118px;height:118px;border-radius:50%;position:relative;
@@ -988,7 +988,7 @@
     #25d8fe 268deg 360deg)}
   .slot2::after{inset:10.84px;background:#030509}
   /* ::after 는 마지막 자식이라 그냥 두면 well 을 덮는다 — z-index 로 위로 올린다 */
-  .slot2 .cdw{position:absolute;inset:14.9px;border-radius:50%;overflow:hidden;z-index:1;
+  .slot2 .cdw{position:absolute;inset:14.5px;border-radius:50%;overflow:hidden;z-index:1;
     background:#367cc1;pointer-events:none}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.62);height:0%}
   /* 아이콘은 well(.cdw) 안에 넣어 원형으로 클립한다 — 밖에 두면 이모지 모서리가 링을 뚫는다 */
@@ -1014,11 +1014,15 @@
   .slot2:not(.empty)::before{inset:3.11px}
   .slot2:not(.empty)::after{inset:11.03px}
   .slot2:not(.empty) .cdw{inset:15.2px}
-  .slot2.ready{box-shadow:0 0 0 1px #030509,0 0 0 6.7px #fffe03}
+  .slot2.ready::after{inset:11.41px}
+  /* 바깥 노랑은 «링» 이 아니라 «글로우» 다 — REF 는 축 방향 r65.9 인데 대각선은 r67.8~68.7 로
+     비원형이다(비평가 Q 실측). 그래서 축으로 재는 사람(Q 5.67)과 대각을 포함해 재는 사람
+     (R 7.16)의 답이 갈렸다. 딱딱한 링 하나로는 둘 다 못 맞춘다 → 하드 링 + 흐린 헤일로. */
+  .slot2.ready{box-shadow:0 0 0 1px #030509,0 0 0 6.6px #fffe03,0 0 8px 2.5px rgba(255,254,3,.8)}
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 7px #fefe0c}
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 6.4px #fefe0c}
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}
@@ -1029,8 +1033,8 @@
       drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
      아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
-  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.3px;transform:translateX(-50%);
-    width:42.6px;height:39.6px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
+  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.8px;transform:translateX(-50%);
+    width:42.6px;height:40.1px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
     font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
   /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============
