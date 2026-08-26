@@ -77,7 +77,9 @@ const ok = (b, name, detail) => {
   });
   ok(A.em === 0, 'A1 단상 이모지 폐기', 'em#rkCh* ' + A.em + '개');
   ok(A.gone === 0, 'A2 탈것(c3a)·부유 장식(.rk-fl) 폐기 — 존재하지 않음', A.gone + '개 남음');
-  const spec = [{ w: 395, h: 315, top: 133, left: 343 }, { w: 316, h: 252, top: 230, left: 57 }, { w: 316, h: 252, top: 240, left: 785 }];
+  /* c3b left 785 → 708 (작업 54 10회차): ⛵(c3a) 폐기 뒤 3위 캐릭터만 자기 단상 중심에서
+     +76.5px 우측으로 밀려 있었다 — 단상 p3(702..1031, 중심 866.5) 중심에 맞춘 값이다. */
+  const spec = [{ w: 395, h: 315, top: 133, left: 343 }, { w: 316, h: 252, top: 230, left: 57 }, { w: 316, h: 252, top: 240, left: 708 }];
   for (let i = 0; i < 3; i++) {
     const c = A.cv[i], s = spec[i];
     ok(!!c && c.w === s.w && c.h === s.h && c.bw === s.w && c.bh === s.h,

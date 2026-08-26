@@ -7559,10 +7559,15 @@
      틴트·프레임·flip 은 drawHeroTo 가 그린다(2위는 1위를 향해 flip — 기사 원본은 왼쪽을 봄) */
   /* 작업 101 — 단상 위 «부유 장식»(.rk-fl f1/f2/f3 = 🛸👑 🤖👻 🛸🎃) 과 «3위 좌측 탈것»(.rk-ch.c3a = ⛵) 은
      저장소 주인 지시(2026-08-26)로 폐기했다. 담백하게 «플레이어 캐릭터만» 이 규칙이다 — 되살리지 말 것.
-     c3b(3위) 의 left:785 는 c3a 와 무관하게 ref 캐릭터 자리에서 나온 값이라 그대로 둔다. */
+     c3b(3위) 의 left 는 원래 785 였다 — ⛵ 가 왼쪽에 있던 시절의 «ref 캐릭터 자리» 값이다.
+     10회차(비평가 M ① 지적) — 탈것이 사라지자 그 값은 캐릭터를 **자기 단상 중심에서 +76.5px 우측**으로
+     밀어 놓은 꼴이 됐다(상자 중심 943 vs 단상 p3 중심 866.5). 단상 좌측 163px 이 통째로 비어 보인다.
+     1위(상자 540.5 / 단상 540)·2위(215 / 214)는 이미 단상 중심에 있어 3위만 어긋난 것이므로,
+     주인 지시 «담백하게 플레이어 캐릭터만» 의 뜻대로 **단상 중심에 맞춘다**: left 785 → 708(중심 866).
+     기대값 소유는 tools/verify80.js A4 다 — 거기 spec 도 같이 고쳤다. */
   .rk-ch.c1{left:343px;top:133px;width:395px;height:315px}
   .rk-ch.c2{left:57px;top:230px;width:316px;height:252px}
-  .rk-ch.c3b{left:785px;top:240px;width:316px;height:252px}
+  .rk-ch.c3b{left:708px;top:240px;width:316px;height:252px}
   #rkw .rk-ch>canvas{display:block;image-rendering:pixelated}
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
@@ -15769,13 +15774,19 @@ function renderRank(){
 const rkHero = { akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false };
 const rkPodLooks = [null, null, null];
 let rkRaf = 0, rkTs = 0;
-/* 단상별 배율·방향 — 1위 sc5(살짝 크게)·2/3위 sc4. 기사 원본은 왼쪽을 보므로
-   좌측 단상(2위)만 flip 해 1위를 향하고, 우측 단상(3위)은 원본 그대로 1위를 본다 */
+/* 단상별 배율·방향 — 1위 sc7·2/3위 sc5. 기사 원본은 왼쪽을 보므로
+   좌측 단상(2위)만 flip 해 1위를 향하고, 우측 단상(3위)은 원본 그대로 1위를 본다.
+   10회차(비평가 M·N 공통 ② 지적) — sc5/sc4 는 «상자» 가 아니라 «스프라이트 프레임» 배율이라
+   잉크가 상자를 절반밖에 못 채웠다: c1 잉크 215×225 / 상자 395×315(폭 54%) · c2·c3 172×180 / 316×252.
+   72 «아트 자리 규칙»은 대체물이 **레퍼런스 bbox 를 정확히 차지**할 것을 요구한다(상자 = ref bbox).
+   잉크는 sc 에 선형이고 발밑이 상자 바닥에 앵커되므로 **높이가 상자를 꽉 채우는 최대 정수 배율**을 쓴다 —
+   c1 315/45=7.0 → sc7(잉크 301×315) · c2·c3 252/45=5.6 → sc5(215×225, sc6 은 270 으로 머리가 잘린다).
+   정수 배율 유지는 image-rendering:pixelated 의 전제다(비정수면 픽셀 크기가 들쭉날쭉해진다). */
 function rkPodDraw(){
   const f = curFrame(rkHero);
   for(let i = 0; i < 3; i++){
     const cv = $('rkCh' + (i + 1)), lk = rkPodLooks[i];
-    if(cv && lk) drawHeroTo(cv, { avatar: lk.avatar, frame: f, scale: i === 0 ? 5 : 4, flip: i === 1 });
+    if(cv && lk) drawHeroTo(cv, { avatar: lk.avatar, frame: f, scale: i === 0 ? 7 : 5, flip: i === 1 });
   }
 }
 function rkTick(ts){
