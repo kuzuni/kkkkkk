@@ -75,19 +75,31 @@ async function measureBias(page, cdp, buf){
     (function tick(){
       const v = Math.max(0, Math.min(255, Math.round((performance.now() - p0) / step)));
       c.style.background = `rgb(${v},${255-v},40)`;
+      c.dataset.v = v;                               /* 17회차 — DOM 에도 같은 값을 쓴다(표 샘플러가 읽는다) */
       if(document.getElementById('cap93clk')) requestAnimationFrame(tick);
+    })();
+    /* 17회차 — **정답표 샘플러의 «읽기 시점»을 같은 프리롤에서 실측한다.**
+       이 루프는 아래 `log` 의 정답표 루프와 **구조가 같다**: rAF 콜백 «머리» 에서 DOM 을 읽고
+       다음 rAF 를 기다린다. 게임의 fxTick 은 페이지 로드 때 등록돼 이 루프보다 «먼저» 돌고,
+       시계 tick 도 이 루프보다 먼저 등록됐다 — 등록 순서까지 같아야 스큐가 같은 크기로 잡힌다.
+       읽은 값(dataset.v)이 «화면에 언제 뜨는지» 는 프레임 쪽 디코드값과 맞대 보면 나온다. */
+    window.__cap93s = [];
+    (function samp(){
+      window.__cap93s.push([Date.now(), c.dataset.v === undefined ? -1 : +c.dataset.v]);
+      if(document.getElementById('cap93clk')) requestAnimationFrame(samp);
     })();
     return { t0 };                                   /* 시계 원점의 절대시각(ms) */
   }, CLK_STEP);
   await page.waitForTimeout(CLK_MS);
   const frames = buf.slice();
+  const samp = await page.evaluate(() => window.__cap93s || []);
   await page.evaluate(() => { const c = document.getElementById('cap93clk'); if(c) c.remove(); });
   frames.forEach((f, i) => fs.writeFileSync(path.join(dir, `f${String(i).padStart(3,'0')}.jpg`), Buffer.from(f.data, 'base64')));
   let out = '';
   try { out = require('child_process').execFileSync('python3', [path.resolve(__dirname, 'dec93.py'), dir], { encoding:'utf8' }); }
   catch(e){ fs.rmSync(dir, { recursive:true, force:true }); throw new Error('색시계 디코드 실패(python3+PIL) — ' + e.message); }
   fs.rmSync(dir, { recursive:true, force:true });
-  const errs = [];
+  const errs = [], skews = [];
   for(const line of out.trim().split('\n')){
     const [name, r, g, b] = line.trim().split(/\s+/);
     const R = +r, G = +g, B = +b, i = +name.slice(1, 4);
@@ -101,13 +113,42 @@ async function measureBias(page, cdp, buf){
        중앙값이 그 전이(轉移)에 끌려간다. 시계 원점 +CLK_WARM 이후에 «그려진» 프레임만 쓴다. */
     if(drawn < CLK_WARM) continue;
     errs.push(frames[i].t - (clk.t0 + drawn));         /* 라벨 − 실제 = 바이어스 */
+    skews.push({ label: frames[i].t, drawnAbs: clk.t0 + drawn });
   }
   if(errs.length < 4) throw new Error(`색시계 표본이 ${errs.length}장뿐이다 — 바이어스를 못 잰다`);
-  errs.sort((a, b) => a - b);
-  const med = Math.round(errs[errs.length >> 1]);
-  const q = p => Math.round(errs[Math.min(errs.length-1, Math.floor(errs.length*p))]);
-  console.log(`  · 라벨 바이어스 실측: 표본 ${errs.length}장(워밍업 ${CLK_WARM}ms 제외) · 중앙 ${med}ms · 사분위 ${q(.25)}~${q(.75)}ms · 폭 ${Math.round(errs[0])}~${Math.round(errs[errs.length-1])}ms — pick() 이 라벨에서 뺀다`);
-  return med;
+  const sorted = errs.slice().sort((a, b) => a - b);
+  const med = Math.round(sorted[sorted.length >> 1]);
+  const q = p => Math.round(sorted[Math.min(sorted.length-1, Math.floor(sorted.length*p))]);
+  console.log(`  · 라벨 바이어스 실측: 표본 ${errs.length}장(워밍업 ${CLK_WARM}ms 제외) · 중앙 ${med}ms · 사분위 ${q(.25)}~${q(.75)}ms · 폭 ${Math.round(sorted[0])}~${Math.round(sorted[sorted.length-1])}ms — pick() 이 라벨에서 뺀다`);
+
+  /* ── 17회차 — **정답표↔프레임 스큐**(15회차 핸드오프 8번 · 16회차가 «다음 회차에» 로 미룬 것) ──
+     비평가 AN 이 «씬B 정답표 9칸 중 7칸이 정확히 한 롤링 스텝 뒤처진다» 를 HUD 직접 판독으로
+     잡았고, 16회차는 브리핑에 «감점 사유로 쓰지 마라» 를 넣는 임시 처방만 했다. 임시 처방은
+     비평가가 지켜 줘야만 듣는다 — 여기서 **이번 실행의** 스큐를 재서 표를 옮긴다.
+
+     원리: 샘플러가 시각 τ 에 읽은 DOM 값은 **그 프레임이 스왑된 뒤에야** 화면에 뜬다. 프리롤
+     프레임은 «화면에 뜬 시각(drawnAbs)» 과 «그때 화면이 들고 있던 값» 을 둘 다 알고 있으므로,
+     보정된 라벨(label − bias)에 가장 가까운 샘플러 행의 DOM 값과 대 보면 그 격차가 바로 스큐다.
+     스큐 = DOM읽기가 화면보다 앞선 ms. 따라서 «화면이 시각 t 에 보여 준 값» 은 샘플러 t − 스큐 행. */
+  let SK = 0;
+  if(samp && samp.length > 4){
+    const sk = [];
+    for(const p of skews){
+      const L = p.label - med;                         /* 이 프레임이 «실제로 그려진» 절대시각 */
+      let b = null;
+      for(const r of samp) if(!b || Math.abs(r[0] - L) < Math.abs(b[0] - L)) b = r;
+      if(!b || b[1] < 0) continue;
+      if(Math.abs(b[0] - L) > 60) continue;            /* 샘플러 간격 밖이면 대조가 무의미하다 */
+      sk.push((clk.t0 + b[1] * CLK_STEP) - p.drawnAbs);/* DOM 이 든 시각 − 화면이 든 시각 */
+    }
+    if(sk.length >= 4){
+      sk.sort((a, b) => a - b);
+      SK = Math.round(sk[sk.length >> 1]);
+      const sq = p => Math.round(sk[Math.min(sk.length-1, Math.floor(sk.length*p))]);
+      console.log(`  · 정답표 스큐 실측: 표본 ${sk.length}장 · 중앙 ${SK}ms · 사분위 ${sq(.25)}~${sq(.75)}ms — 정답표가 화면보다 ${SK >= 0 ? '앞선다' : '뒤진다'}. at() 이 이만큼 되돌린다`);
+    } else console.log('  ⚠ 정답표 스큐 표본 부족 — 보정 없이 간다(비평가에게 «표–그림 한 스텝 차는 감점 금지» 를 알릴 것)');
+  }
+  return { bias: med, skew: SK };
 }
 
 /* 14회차 — «가장 가까운 프레임» 을 목표 시각마다 독립적으로 고르면 **같은 원본 프레임이
@@ -116,6 +157,7 @@ async function measureBias(page, cdp, buf){
    → 목표 시각 순서대로 **아직 안 쓴 프레임 중에서만** 고른다(단조 증가 보장). 그래도 목표에서
    ±55ms 넘게 벗어난 프레임은 로그에 «WARN» 으로 남겨 비평가 전달문에 적게 한다. */
 let BIAS = 0;                                          /* measureBias() 가 이 실행에서 실측한 라벨 오차 */
+let SKEW = 0;                                          /* 17회차 — 정답표 DOM 읽기가 화면보다 앞선 ms */
 function pick(buf, t0, tag, pre){
   /* -60 까지 허용하면 트리거 «이전» 프레임이 0ms 슬롯을 먹는다(14회차 upg: 8슬롯 중 2장이 기준) */
   /* 15회차 — 라벨에서 실측 바이어스를 뺀 것이 «그려진 시각» 이다(§ measureBias). */
@@ -199,7 +241,7 @@ global.__capLog = {};
   /* 15회차 — 연출을 찍기 «전» 에 이 실행의 라벨 바이어스를 잰다. 시계는 여기서만 뜨고 곧 지워지므로
      저장되는 프레임에는 남지 않는다. 잰 뒤 버퍼를 비우고 한 박자 쉬어 시계 프레임이 기준 프레임으로
      새어 들어가지 않게 한다. */
-  BIAS = await measureBias(page, cdp, buf);
+  ({ bias: BIAS, skew: SKEW } = await measureBias(page, cdp, buf));
   /* 시계를 지운 «뒤» 에도 바이어스만큼은 시계가 든 프레임이 계속 도착한다(그게 바로 재고 있는 값이다).
      넉넉히 흘려보내고 버퍼를 비워야 시계가 기준 프레임으로 새지 않는다. */
   await page.waitForTimeout(Math.max(500, BIAS + 400));
@@ -223,8 +265,24 @@ global.__capLog = {};
        `t0.t` 는 페이지 안에서 트리거 «직전» 에 찍은 Date.now() 인데, 이 로그는 그 evaluate 가
        왕복해 돌아온 «뒤» 에 자기 시계를 0 으로 잡았다. 트리거 시각을 넘겨 같은 원점을 쓴다. */
     const log = await page.evaluate(async ([ms, t]) => {
-      const out = []; let spawn = 0;
+      const out = []; let spawn = 0; let cloneSeen = 0, cloneDiff = 0;
       const nf = () => new Promise(r => requestAnimationFrame(() => r()));
+      /* ⚑ 17회차 — **정답표가 «화면에 없는» 요소를 읽고 있었다.** 모달(씬B)에서 딤 «위» 에 보이는
+         알약은 `#goldN`/`#diaN` 을 품은 원본이 아니라 `fxLit` 복제판이고, 원본은 딤 아래라
+         비평가에게 안 보인다. 15회차 AN 의 «정답표 9칸 중 7칸이 한 롤링 스텝 뒤처진다» 는
+         시계 스큐가 아니라 **이것**이었다(16회차b 가 같은 결함을 probe93l 에서 고쳤는데,
+         정답표는 그대로 원본을 읽고 있었다 — 43 교훈 1 «내 assert 가 어디를 재는지부터 확인»).
+         → 복제판이 살아 있으면 복제판을, 없으면 원본을 읽는다. «보이는 것» 이 정답이다. */
+      const vis = (cur) => {
+        const el = document.querySelector('.cbox[data-cur="' + cur + '"]');
+        const orig = ((el && el.querySelector('b')) || {}).textContent || '';
+        const lit = (typeof fxLit !== 'undefined' && el) ? fxLit.get(el) : null;
+        if(!lit || !lit.c) return orig;
+        const b = lit.c.querySelector('b');
+        if(!b) return orig;
+        cloneSeen++; if(b.textContent !== orig) cloneDiff++;
+        return b.textContent;
+      };
       while(Date.now() - t < ms + 260){
         /* 스폰 시각은 «rAF 로 관측한 프레임» 이 아니라 아이콘 자신이 들고 있는 시작 시각(f.st)에서
            역산한다 — 관측으로 잡으면 한 프레임(35~50ms) 늦게 찍혀 «도착이 그만큼 이르다» 로 읽힌다. */
@@ -233,8 +291,8 @@ global.__capLog = {};
           if(f0) spawn = Math.round(Date.now() - (performance.now() - f0.st) - t);
         }
         out.push([Date.now() - t,
-                  (document.getElementById('goldN')||{}).textContent || '',
-                  (document.getElementById('diaN')||{}).textContent || '',
+                  vis('gold'),
+                  vis('dia'),
                   fxFlies.filter(f => f.ui).length,
                   'D' + (fxDisp.gold==null?'null':Math.round(fxDisp.gold))
                   + ' H' + (fxHold.gold ? Math.round(fxHold.gold - performance.now()) : 0)
@@ -243,7 +301,7 @@ global.__capLog = {};
         await nf();
       }
       out.spawn = spawn;
-      return { rows:out, spawn };
+      return { rows:out, spawn, cloneSeen, cloneDiff };
     }, [waitMs || 1900, t0.t]);
     const worst = pick(buf, t0.t, tag, pre);
     if(global.__capLog) global.__capLog[tag] = log;
@@ -304,10 +362,15 @@ global.__capLog = {};
   /* 프레임별 «정답» 표 — 비평 전달문에 그대로 붙인다 */
   for(const tag in global.__capLog){
     const L = global.__capLog[tag].rows, SP = global.__capLog[tag].spawn;
-    const at = ms => { let b = L[0]; for(const r of L) if(Math.abs(r[0]-ms) < Math.abs(b[0]-ms)) b = r; return b; };
+    /* 17회차 — 화면이 시각 ms 에 보여 준 값은 샘플러가 **ms − SKEW** 에 읽은 행이다(§measureBias). */
+    const at = ms => { const w = ms - SKEW; let b = L[0]; for(const r of L) if(Math.abs(r[0]-w) < Math.abs(b[0]-w)) b = r; return b; };
     const T = (global.__capT && global.__capT[tag]) || [];
-    console.log(`  · ${tag} 정답표(t = 트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행수): ` +
+    const CS = global.__capLog[tag].cloneSeen | 0, CD = global.__capLog[tag].cloneDiff | 0;
+    console.log(`  · ${tag} 정답표(t = 트리거 기준 ms · 스폰 지연 ${SP}ms · 스큐 보정 −${SKEW}ms · 골드/다이아/비행수): ` +
       T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[3]).join('  '));
+    /* 17회차 — 이 표가 «딤 위 복제판» 을 읽은 표본과, 그중 원본과 값이 달랐던 표본 수.
+       CD > 0 이면 종전 정답표(원본 읽기)는 그만큼 화면과 다른 값을 비평가에게 준 것이다. */
+    if(CS) console.log(`    · ${tag} 복제판 판독: 표본 ${CS}회 중 원본과 값이 달랐던 표본 ${CD}회 (종전 표는 이 ${CD}회를 틀리게 적었다)`);
   }
   console.log('\ncap93 OK — docs/review/93-' + ROUND + '-*.jpg');
 })().catch(e => { console.error('cap93 실패:', e.message); process.exit(1); });
