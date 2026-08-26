@@ -122,7 +122,9 @@ async function lumaOf(p, ms, clip, store) {
      ② 전체 폭 3.6s ≥ 가장 긴 주기 3.4s     → 한 주기를 다 덮는다
    ⚠ 주기를 다시 손대면 이 두 부등식을 다시 풀 것. 성기면 부호가 뒤집힌 값이 나오고,
      그것을 «세기 미달» 로 읽으면 멀쩡한 띠의 α 를 올리는 헛수고를 한다. */
-const PHASES = Array.from({ length: 18 }, (_, i) => i * 200);
+/* 12회차 — 주기가 **3.2s 한 벌**로 통일됐으므로 표본도 정확히 한 주기(16 × 200ms = 3.2s)로 맞춘다.
+   18장(3.6s)이면 끝 2장이 앞 2장과 같은 위상이라 그 위상만 두 번 세어져 duty 가 편향된다. */
+const PHASES = Array.from({ length: 16 }, (_, i) => i * 200);
 /* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 루마 차를, **그 호스트에서 가장 넓은 평탄면**
    에서만 재어 상위 5% 의 중앙값을 취한 값(부호 포함). 비평가가 «평탄면 실측» 이라고 부르는 것이다.
 
@@ -168,18 +170,24 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
   await css('jz122ref', testSel);          /* 기준선 — 이 띠만 끈다 */
   await lumaOf(p, 0, clip, true);
   await css('jz122ref', '');
-  let peak = 0, lit = 0, seen = 0;
+  /* ⚑ 12회차 — duty 를 «|ΔL| ≥ 12» 가 아니라 **«피크와 같은 부호» + |ΔL| ≥ 12** 로 센다.
+     10회차의 duty 는 유리 광택의 **어두운 양옆 로브**까지 «띠가 있다» 로 세고 있었다.
+     그래서 게이트는 78~83% 를 찍는데 비평가 둘은 독립으로 58~69.5% 를 쟀다 —
+     둘 다 맞았고 **서로 다른 것을 재고 있었다**(내 probe122a 재집계: 같은 자리가 |ΔL| 기준 78%,
+     흰 심만 기준 61%). 사람이 «빛난다» 고 읽는 것은 심이지 옆구리가 아니므로 심으로 센다.
+     부호는 호스트마다 다르다(크림판은 심이 음수로 잡힌다) — 그래서 절대 부호가 아니라 **피크의 부호**다. */
+  const vs = [];
   for (const t of PHASES) {
     const v = await lumaOf(p, t, clip);
-    if (v == null) continue;
-    seen++;
-    if (Math.abs(v) > Math.abs(peak)) peak = v;
-    /* «이 위상에 띠가 호스트 위에 있는가» — 피크의 1/3 을 넘으면 있는 것으로 센다.
-       절대 문턱(예: 12)을 쓰면 진폭이 낮은 호스트에서 전부 «없음» 으로 세어져 duty 가 0 이 된다. */
-    if (Math.abs(v) >= 12) lit++;
+    if (v != null) vs.push(v);
   }
   await css('jz122mute', '');
-  return { peak, duty: seen ? lit / seen : null };
+  if (!vs.length) return null;
+  let peak = 0;
+  for (const v of vs) if (Math.abs(v) > Math.abs(peak)) peak = v;
+  const sgn = peak >= 0 ? 1 : -1;
+  const lit = vs.filter(v => v * sgn >= 12).length;
+  return { peak, duty: lit / vs.length };
 }
 /* 6회차 목표 = 광택 전부가 «평탄면 ΔL 32» 한 벌. 마스크·skew 로 뭉개지는 폭을 감안해 ±20%. */
 const AMP_LO = 26, AMP_HI = 39;
@@ -209,6 +217,23 @@ async function ampCheck(p, hosts) {
     const a = v == null ? null : Math.abs(v);
     out.push(label + ' ' + (v == null ? '없음' : v)
       + (r && r.duty != null ? '/' + Math.round(r.duty * 100) + '%' : ''));
+    /* ⚑ 12회차 — `noDuty === 'rec'` 은 **ΔL 도 판정하지 않고 기록만** 한다.
+       «소환 본문» 3점이 여기 해당한다. 이 점들의 «가장 넓은 평탄면» 은 본문 그라디언트가 아니라
+       그 위에 덮인 **불투명 판**이다(카드3 실측: mode 124 가 80,086px = 클립의 22.5% 인데
+       본문 그라디언트의 휘도 범위는 143.8~194.8 이라 124 는 그 어느 지점도 아니다).
+       띠는 그 판 **아래**로 지나가므로 ΔL 이 18위상 전부 0~−6 으로 나온다 — 띠가 죽은 게 아니라
+       **재는 자리가 띠 위를 덮고 있다.** 카드1·4 는 우연히 노출된 그라디언트가 최빈면이라 29.5·33.9 가 나온다.
+       즉 이 3점은 «카드마다 다른 것을 재는» 점이라 지금 형태로는 판정에 못 쓴다.
+       ⚠ 12회차 이전에는 이 점들이 **본문 띠가 아니라 헤더 띠의 `top:-24px` 오버행**을 재고 있었다
+         (`--jz-gb` 를 바꿔도 값이 안 움직이는 것으로 확정). 그래서 «통과» 하고 있었을 뿐이다.
+       13회차 과제: 측정 자리를 «노출된 본문 바탕» 으로 다시 정의한다(덮개를 muteSel 로 걷거나
+       카드마다 노출 구간을 inset 으로 지정). 그 전까지 **가짜 초록불을 만들지 않는다.** */
+    if (noDuty === 'rec') {
+      console.log('    · [기록만] ' + label + ' ΔL = ' + (v == null ? '측정 불가' : v)
+        + ' · duty = ' + (r && r.duty != null ? Math.round(r.duty * 100) + '%' : '측정 불가')
+        + '  (평탄면이 띠 위 불투명 판 — 13회차에 측정점 재정의)');
+      continue;
+    }
     ok(a != null && a >= AMP_LO && a <= AMP_HI,
       '광택 평탄면 ΔL ' + label + ' = ' + (v == null ? '측정 불가' : v)
       + ' (|' + AMP_LO + '~' + AMP_HI + '|)');
@@ -376,7 +401,7 @@ async function ampCheck(p, hosts) {
     };
     const w = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().width : 0; };
     chk('#shopList .shp-card>.chd', '::after', w('#shopList .shp-card>.chd'));
-    chk('#shopList .shp-card>.cbg>.jzp', '::after', w('#shopList .shp-card>.cbg'));
+    chk('#shopList .shp-card>.cbg>.jzs', '::after', w('#shopList .shp-card>.cbg'));
     chk('#shopList .shp-card>.cfr', '::after', w('#shopList .shp-card>.cbg'));
     return out;
   });
@@ -384,21 +409,21 @@ async function ampCheck(p, hosts) {
 
   /* ── §13 진폭 단일 기준 — 소환 탭 (6회차 신설) ─────────────── */
   console.log('§13 광택 피크 Δ루마 한 벌 — 소환 탭');
-  const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzp::after',
+  const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzs::after',
         SUM_FR = '#shopList .shp-card>.cfr::after';
   /* 헤더는 칸마다 배경색(`--hd`)이 달라 **가장 밝은 칸과 가장 어두운 칸**을 같이 본다 —
      `jzShineA()` 가 칸별 α 를 제대로 박고 있는지는 이 두 칸이 같은 값이어야 증명된다. */
   await ampCheck(p, [['소환 헤더1', '#shopList .shp-card>.chd|0', SUM_HD, SUM_FR],
                      ['소환 헤더4', '#shopList .shp-card>.chd|3', SUM_HD, SUM_FR],
-                     ['소환 본문', '#shopList .shp-card>.cbg', SUM_BD, SUM_FR],
+                     ['소환 본문', '#shopList .shp-card>.cbg', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
                      /* ⚠ 전면 광택은 **헤더 위에서 재야 한다.** 6회차에 카드 전체(`.cfr`)로 쟀더니
                         평탄면이 본문 바탕(휘도 144)으로 잡혀 34.1 «정상» 이 나왔지만, 비평가 둘은
                         헤더 바탕(휘도 98~119) 위에서 +57~82 를 읽었다 — 같은 띠가 지나는 **가장 어두운
                         면**이 그 띠의 최대 세기다. 칸별 α 가 제대로 박혔는지도 두 칸을 비교해야 보인다. */
                      /* 7회차(Y 7) — 본문도 칸마다 휘도가 다르다(99.6~165.4). 가장 밝은 칸(3)과
                         가장 어두운 칸(4)을 둘 다 봐야 `--jz-gb` 가 제대로 박혔는지 보인다. */
-                     ['소환 본문3', '#shopList .shp-card>.cbg|2', SUM_BD, SUM_FR],
-                     ['소환 본문4', '#shopList .shp-card>.cbg|3', SUM_BD, SUM_FR],
+                     ['소환 본문3', '#shopList .shp-card>.cbg|2', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
+                     ['소환 본문4', '#shopList .shp-card>.cbg|3', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
                      /* 전면 광택은 이제 헤더를 안 지난다(Y 2) → 본문에서 잰다 */
                      ['소환 전면(본문1)', '#shopList .shp-card>.cbg|0', SUM_FR, SUM_HD + ',' + SUM_BD, true],
                      ['소환 전면(본문4)', '#shopList .shp-card>.cbg|3', SUM_FR, SUM_HD + ',' + SUM_BD, true]]);

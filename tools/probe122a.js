@@ -139,6 +139,22 @@ async function probe(p, label, hostSel, testSel) {
   await p.waitForTimeout(500);
   await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
 
+  /* 12회차 — 인자로 소환 탭 본문 측정점을 직접 파고들 수 있게 한다 */
+  if (process.argv[2] === 'sum') {
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(500);
+    await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
+    const BD = '#shopList .shp-card>.cbg>.jzs::after';
+    const HD = '#shopList .shp-card>.chd::after';
+    const FR = '#shopList .shp-card>.cfr::after';
+    /* ① 게이트와 똑같이 — 전면만 뮤트 */
+    await p.evaluate(t => { let e = document.createElement('style'); e.id = 'pmute'; e.textContent = t + '{opacity:0!important}'; document.head.appendChild(e); }, FR);
+    await probe(p, '소환 본문3 — 게이트와 동일(전면만 뮤트)', '#shopList .shp-card:nth-child(3)>.cbg', BD);
+    /* ② 헤더 띠까지 뮤트하면 달라지는가 */
+    await p.evaluate(t => { document.getElementById('pmute').textContent = t + '{opacity:0!important}'; }, FR + ',' + HD);
+    await probe(p, '소환 본문3 — 헤더 띠까지 뮤트', '#shopList .shp-card:nth-child(3)>.cbg', BD);
+    await b.close(); return;
+  }
   await probe(p, '평생배너 (.cn-a2)  ✗ FAIL 중', '#shopList .cn-a2', '#shopList .cn-a2::after');
   await probe(p, '상품 밴드 (.cn-hd)  ✓ 통과 중 — 대조군', '#shopList .cn-hd', '#shopList .cn-hd::after');
 
