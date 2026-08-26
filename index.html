@@ -12190,7 +12190,16 @@ const SUF_CC = 65;                     /* 65 = 'A'(대문자, 기본) · 97 = 'a
 const SUF = [''];
 for(let i=0;i<26;i++) SUF.push(String.fromCharCode(SUF_CC+i));
 for(let i=0;i<26;i++) for(let j=0;j<26;j++) SUF.push(String.fromCharCode(SUF_CC+i)+String.fromCharCode(SUF_CC+j));
-function fmt(n){
+/* 150 (저장소 주인 지시 2026-08-27) — «골드 빼고 나머지 숫자들은 A B C 단위 안 쓰고 숫자 그대로».
+   111 의 부분 되돌림이다. 표기층이 두 갈래로 갈린다:
+     · `fmtG(n)` — **골드 전용**. 111 의 알파벳 단위(구 `fmt`). 여기 말고는 SUF 를 쓰지 마라.
+     · `fmt(n)`  — **기본**. 단위 접기 없이 숫자 그대로(1000 이상 쉼표). 다이아·유물조각·전투력·
+                   데미지·체력·비용·보상·랭킹 점수… 골드가 아닌 모든 수는 이쪽이다.
+     · `fmtCur(k,n)` — 재화 종류가 **런타임에 갈리는** 자리(HUD 획득 연출·던전 보상 대표값·가방·
+                   재화 정보 팝업) 전용 디스패처. `k==='gold'` 만 `fmtG`.
+   ⚠ 새 코드에서 «수를 화면에 찍는» 자리는 기본이 `fmt` 다. 골드라고 확신할 때만 `fmtG`.
+   게이트: `node tools/verify150.js`(소스 스캔 + 런타임 표시값). */
+function fmtG(n){
   if(!isFinite(n)) return '∞';
   if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
   let i = 0;
@@ -12201,6 +12210,16 @@ function fmt(n){
   if(n < 100){ const s = n.toFixed(1); if(+s < 100) return s + SUF[i]; n = +s; }
   return Math.floor(n) + SUF[i];
 }
+function fmt(n){
+  if(!isFinite(n)) return '∞';
+  /* 1000 미만은 111 과 같은 규칙을 그대로 쓴다(배율 «×2.4» 같은 소수 표기가 여기 걸려 있다). */
+  if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
+  /* 1000 이상은 접지 않고 세 자리 쉼표. 1e21 이상은 Number 가 지수 표기로 새므로 문자열로 끊는다. */
+  const f = Math.floor(n);
+  return f < 1e21 ? f.toLocaleString('en-US')
+                  : f.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+const fmtCur = (k, n) => k === 'gold' ? fmtG(n) : fmt(n);
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const rnd = (a,b) => a + Math.random()*(b-a);
 const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
@@ -16574,7 +16593,7 @@ const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
 let pcbGold = null, pcbDia = null, pcbRel = null;
 function renderPcb(){
   /* 58 — HUD 와 같은 «표시값»(롤링 중인 값)을 쓴다. 두 곳이 다른 숫자를 보이면 안 된다. */
-  const g = fmt(fxVal('gold')), d = fmt(fxVal('dia'));
+  const g = fmtG(fxVal('gold')), d = fmt(fxVal('dia'));
   if(g !== pcbGold){
     pcbGold = g;
     document.querySelectorAll('.pcb-g>b').forEach(e => { e.textContent = g; });
@@ -16599,7 +16618,7 @@ function drawHud(){
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
   /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
-  $('goldN').textContent = fmt(fxVal('gold'));
+  $('goldN').textContent = fmtG(fxVal('gold'));
   $('diaN').textContent = fmt(fxVal('dia'));
   /* 33 — 정보 팝업이 열려 있으면 보유량 표시도 같이 갱신한다(열린 채로 값이 굳지 않게) */
   if(curInfoKey) renderCurInfo();
@@ -17228,9 +17247,11 @@ const MAIL_RW = [
   { k:'r', ic:curIc('relic'), n:'유물조각', g:3 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
-/* 아이템 프레임 안 수량 배지용 «짧은» 표기. `fmt()` 는 1000 이상을 «3.00A»(5자)로 접는데,
-   레퍼런스 배지 잉크는 썸네일 폭의 .41(«120» 3자)이라 5자면 프레임 림과 충돌한다(비평 D-S4). */
-function fmtShort(n){
+/* 아이템 프레임 안 수량 배지용 «짧은» 표기. 골드는 111 단위를 접어야 배지 폭에 들어간다
+   (레퍼런스 배지 잉크는 썸네일 폭의 .41 — «3.00A» 5자면 프레임 림과 충돌한다, 비평 D-S4).
+   150 — 골드가 아닌 수는 접지 않고 `fmt()`(쉼표) 그대로 간다. 두 번째 인자로 재화 키를 준다. */
+function fmtShort(n, k){
+  if(k !== 'gold') return fmt(n);
   if(n < 1000) return String(Math.floor(n));
   let i = 0;
   while(n >= 1000 && i < SUF.length-1){ n /= 1000; i++; }
@@ -17243,7 +17264,7 @@ function claimMail(id){
   S.gold += m.g; S.dia += m.c; S.relic += m.r || 0;
   fxReward();                                 /* 58 */
   uiDirty = true; save();
-  fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmt(t.v)).join(' · '));
+  fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · '));   /* 150 */
 }
 function claimAllMail(){
   let g = 0, c = 0, r = 0, n = 0;
@@ -17254,7 +17275,7 @@ function claimAllMail(){
   uiDirty = true; save();
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
-  fxToast('우편 ' + n + '통 수령 — ' + curIc('gold') + ' ' + fmt(g) + ' · ' + curIc('dia') + ' ' + fmt(c)
+  fxToast('우편 ' + n + '통 수령 — ' + curIc('gold') + ' ' + fmtG(g) + ' · ' + curIc('dia') + ' ' + fmt(c)
     + (r ? ' · ' + curIc('relic') + ' ' + fmt(r) : ''));
 }
 /* 92 — [읽음 전체 삭제]. **수령 완료(1) 인 우편만** 2 로 넘겨 목록에서 뺀다.
@@ -17280,8 +17301,8 @@ function giveReward(r){
   const out = [];
   if(r.dia){     S.dia += r.dia;     out.push(curIc('dia') + ' ' + fmt(r.dia)); }
   if(r.rel){     S.relic += r.rel;   out.push(curIc('relic') + ' ' + fmt(r.rel)); }
-  if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmt(r.gold)); }
-  if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmt(g)); }
+  if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
+  if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmtG(g)); }
   if(r.frag){
     const pool = SKILLS.concat(EQUIPS, PETS).filter(x => has(x.id));
     for(let i=0;i<r.frag;i++){
@@ -17450,7 +17471,7 @@ function openDunClear(d, f){
   if(main[0] === 'frag'){ ic.textContent = '🧩'; }                 /* 조각은 재화가 아니다 */
   else if(main[0] === 'gold'){ ic.textContent = ''; }              /* 골드는 배경 코인이 그린다 */
   else curIcEl(ic, main[0] === 'rel' ? 'relic' : 'dia', 63);   /* 아트 자리 63×65 를 그대로 차지 */
-  $('dclAmt').textContent = fmt(main[1]);
+  $('dclAmt').textContent = fmtCur(main[0], main[1]);   /* 150 — 골드만 알파벳 단위 */
   const left = S.daily.dun[d.id];
   $('dclTryL').textContent = left;
   $('dclTryR').textContent = left;
@@ -17713,7 +17734,7 @@ function renderUp(){
       +  '<div class="ic">' + u.icon + '</div><div class="uinfo">'
       +  '<div class="un">' + u.name + '<i>Lv.' + l + '</i></div>'
       +  '<div class="uv">' + u.show(l) + ' → ' + u.show(l+bi.n) + '</div></div>'
-      +  '<div class="uc">' + curIc('gold') + fmt(bi.cost) + '<small>x' + bi.n + '</small></div></div>';
+      +  '<div class="uc">' + curIc('gold') + fmtG(bi.cost) + '<small>x' + bi.n + '</small></div></div>';
   }
   setBody('bUp', h);
 }
@@ -17876,7 +17897,7 @@ function renderDun(){
   DUNGEONS.forEach(d => {
     const f = S.dun[d.id], need = d.req(f), left = S.daily.dun[d.id], ok = cp() >= need;
     const rw = d.rw(f);
-    const rwTxt = [rw.gold ? curIc('gold') + fmt(rw.gold) : '', rw.dia ? curIc('dia') + fmt(rw.dia) : '',
+    const rwTxt = [rw.gold ? curIc('gold') + fmtG(rw.gold) : '', rw.dia ? curIc('dia') + fmt(rw.dia) : '',
                    rw.rel ? curIc('relic') + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
     h += '<div class="li"><div class="lt">' + d.ic + ' ' + d.n + ' <span style="color:#8fd6ff;font-size:21px">'
       +  f + '층</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
@@ -17932,10 +17953,10 @@ function renderDunDetail(){
   $('dgdFloor').textContent = dgdFloor;
   $('dgdTry').textContent = left + '/' + DUN_TRY;
   /* 보상은 대표 재화 1종만 크게 보여준다 (레퍼런스와 동일 구조) */
-  const main = rw.gold ? [curIc('gold'), rw.gold] : rw.dia ? [curIc('dia'), rw.dia]
-             : rw.rel  ? [curIc('relic'), rw.rel]  : ['🧩', rw.frag];
+  const main = rw.gold ? [curIc('gold'), rw.gold, 'gold'] : rw.dia ? [curIc('dia'), rw.dia, 'dia']
+             : rw.rel  ? [curIc('relic'), rw.rel, 'rel']  : ['🧩', rw.frag, 'frag'];
   $('dgdIcon').innerHTML = main[0];               /* 125 — 화폐는 이미지 태그 문자열이다(조각 🧩만 글자) */
-  $('dgdAmt').textContent  = fmt(main[1]);
+  $('dgdAmt').textContent  = fmtCur(main[2], main[1]);   /* 150 — 골드만 알파벳 단위 */
   $('dgdPrev').disabled = dgdFloor <= 1;
   $('dgdNext').disabled = dgdFloor >= cur;
   /* 버튼 문구는 레퍼런스대로 항상 «도전» 이다. 이미 클리어한 이전 층을 고르면
@@ -18049,8 +18070,8 @@ function atRewards(r){                                  /* 카드에 그릴 보�
   const out = [];
   if(r.dia)     out.push({ ic:curIc('dia'), v:fmt(r.dia) });
   if(r.rel)     out.push({ ic:curIc('relic'), v:fmt(r.rel), rl:true });
-  if(r.goldMul) out.push({ ic:curIc('gold'), v:fmt(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
-  if(r.gold)    out.push({ ic:curIc('gold'), v:fmt(r.gold) });
+  if(r.goldMul) out.push({ ic:curIc('gold'), v:fmtG(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
+  if(r.gold)    out.push({ ic:curIc('gold'), v:fmtG(r.gold) });
   return out.slice(0, 3);
 }
 const AT_F7X = [149.5, 309.5, 469.5];                   /* 7일차 프레임 3개 left (pitch 160) */
@@ -18220,7 +18241,7 @@ function mailRowHtml(m){
     + '<div class="ml-s"><i>' + sum + '</i></div>'
     + '<div class="ml-d"><i>' + (done ? '수령 완료' : '기한 없음') + '</i></div>'
     + '<span class="ml-i ifr" style="--face:' + SUM_CARD[top.g].face + ';--rim:' + SUM_CARD[top.g].rim + '">'
-    +   top.ic + '<i class="ifq">' + fmtShort(top.v) + '</i></span>'
+    +   top.ic + '<i class="ifq">' + fmtShort(top.v, top.k === 'g' ? 'gold' : '') + '</i></span>'
     + '<button class="ml-b ifbtn" data-ml="' + m.id + '"' + (done ? ' disabled' : '') + '>'
     +   '<b>' + (done ? '완료' : '받기') + '</b></button>'
     + '</div></div>';
@@ -19656,7 +19677,7 @@ $('shopList').addEventListener('click', e => {
   let got = '';
   if(a.r.dia){ S.dia += a.r.dia; got = curIc('dia') + ' ' + fmt(a.r.dia); }
   if(a.r.rel){ S.relic += a.r.rel; got = curIc('relic') + ' ' + fmt(a.r.rel); }
-  if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = curIc('gold') + ' ' + fmt(g); }
+  if(a.r.goldMul){ const g = Math.round(eGold(S.stage) * a.r.goldMul); S.gold += g; got = curIc('gold') + ' ' + fmtG(g); }
   if(a.r.freePet){ doSummonFree('pet', a.r.freePet, 1); got = '🐾 펫 소환 ' + a.r.freePet + '회'; }
   uiDirty = true; save();
   renderCoinPage($('shopList'));
@@ -20079,7 +20100,7 @@ function renderCurInfo(){
   const c = CURINFO[curInfoKey]; if(!c) return;
   $('ciTitle').textContent = c.n;
   $('ciIcon').innerHTML    = c.ic;                /* 125 — CURINFO.ic 는 이미지 태그 문자열 */
-  $('ciHave').textContent  = '보유: ' + fmt(c.get());
+  $('ciHave').textContent  = '보유: ' + fmtCur(curInfoKey, c.get());   /* 150 */
   $('ciDesc').innerHTML    = '<i>' + c.d + '</i>';
   $('ciWays').innerHTML    = c.ways.map(w => '<div><s>✔</s><i>' + w + '</i></div>').join('');
 }
@@ -20375,7 +20396,7 @@ let bagTab = 'cur';
 /* 재화 탭 — 보유 재화 + S.own 보유 재료(등급 내림차순) */
 function bagCur(){
   const out = [
-    { ic:curIc('gold'), n:'골드',       g:1, q:S.gold | 0 },
+    { ic:curIc('gold'), n:'골드',       g:1, q:S.gold | 0, k:'gold' },   /* 150 — 골드만 알파벳 단위 */
     { ic:curIc('dia'), n:'다이아',     g:3, q:S.dia | 0 },
     { ic:curIc('relic'), n:'유물조각',     g:2, q:S.relic | 0 },
     { ic:curIc('mile'), n:'마일리지',   g:4, q:S.mileage | 0 }
@@ -20399,8 +20420,9 @@ function renderBag(){
   const rows = (bagTab === 'cur' ? bagCur() : bagUse()).slice(0, 40);
   const cells = rows.map(r =>
     '<div class="bg53-c ifr" style="--g:' + BAG_G[r.g][0] + ';--r:' + BAG_G[r.g][1] + '"'
-      + ' data-bagn="' + r.n.replace(/"/g, '') + '" data-bagq="' + r.q + '">'
-      + '<u>' + r.ic + '</u><b class="ifq">' + fmt(r.q) + '</b></div>').join('');
+      + ' data-bagn="' + r.n.replace(/"/g, '') + '" data-bagq="' + r.q + '"'
+      + ' data-bagk="' + (r.k || '') + '">'
+      + '<u>' + r.ic + '</u><b class="ifq">' + fmtShort(r.q, r.k) + '</b></div>').join('');
   $('bagGrid').innerHTML = cells + '<div class="bg53-c ifr em"></div>'.repeat(Math.max(0, BAG_MIN - rows.length));
   /* 활성 알약은 «오른쪽 칸» 에 붙어 있는 게 레퍼런스 상태다. 왼쪽 칸이 활성이면 알약을 왼쪽으로 옮긴다 */
   $('bagPill').style.marginLeft = bagTab === 'use' ? '0px' : '372px';
@@ -20422,7 +20444,7 @@ $('bagTabs').addEventListener('click', e => {
 $('bagGrid').addEventListener('click', e => {
   const c = e.target.closest('[data-bagn]');
   if(!c) return;
-  notify('🎒 ' + c.dataset.bagn + ' — 보유 <b>' + fmt(+c.dataset.bagq) + '</b>');
+  notify('🎒 ' + c.dataset.bagn + ' — 보유 <b>' + fmtCur(c.dataset.bagk, +c.dataset.bagq) + '</b>');
 });
 /* 52 ▦ 메뉴의 «가방» 칸이 이걸 부른다(그쪽 주석의 인계 지시) */
 window.openBag = openBag;
@@ -21352,7 +21374,7 @@ function trainCardData(){
     const u = U[k], l = lv(k), bi = trainBuyInfo(k);
     const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
     return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-      gain:'+' + fmt(gain), cost:fmt(bi.cost), coin:curIc('gold'),
+      gain:'+' + fmt(gain), cost:fmtG(bi.cost), coin:curIc('gold'),
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }
@@ -21885,7 +21907,7 @@ function renderSaver(){
   const s = Math.max(0, Math.floor((performance.now() - svT0)/1000));
   $('svT').textContent = sv2(Math.floor(s/3600)) + ':' + sv2(Math.floor(s/60)%60) + ':' + sv2(s%60);
   $('svK').textContent = fmt(Math.max(0, S.totalKills - svK0));
-  $('svG').textContent = '+' + fmt(Math.max(0, S.gold - svG0));
+  $('svG').textContent = '+' + fmtG(Math.max(0, S.gold - svG0));
 }
 function openSaver(){
   if(saverOn) return;
@@ -21967,7 +21989,7 @@ function showOfflineReward(sec, gold, dia){
   offPend = { sec: sec, gold: gold, dia: dia };
   $('ofrMax').textContent = '최대 ' + OFF_MAX_H + '시간 0분';
   $('ofrTime').textContent = hhmm(sec);
-  $('ofrAmt').textContent = fmt(gold);
+  $('ofrAmt').textContent = fmtG(gold);
   autoBlessLine();                            /* 124 — 자동 축복 정산 한 줄(없으면 숨김) */
   $('offw').classList.add('on');
 }
@@ -23044,7 +23066,7 @@ function fxPlus(cur, n, combat){
   /* 10회차b — +8 이면 라벨(높이 33px)이 상단바 하단 테두리(y99~103)를 가로질러 글자의 33~39% 가
      선 위에 얹힌다(비평가 AE ⑥). UI 발은 그 선 아래로 내린다. */
   el.style.top  = (r.y + r.h + (combat ? 8 : 34)) + 'px';
-  el.textContent = '+' + fmt(n);
+  el.textContent = '+' + fmtCur(cur, n);   /* 150 — 골드만 알파벳 단위 */
   /* 7회차 — UI 발 3박자는 카운터가 1.26s 까지 오르는데 «+n» 은 0.6s 짜리라 **총액을 먼저 밝히고
      먼저 사라진다**(비평가 V ④ 실측: 카운터가 총액에 닿기 203ms 전에 소멸). 수명을 도착창에 맞춘다. */
   if(!combat) el.classList.add('ui');

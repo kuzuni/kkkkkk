@@ -17,6 +17,11 @@
                  표시되고, 탭·사이드·▦메뉴 오프너를 훑는 동안에도 그대로 유지된다
                  (텍스트에서 «K/M/B/T» 를 찾는 스캔은 대문자 채택 뒤로는 무의미하다 — 아래 주석)
      ⑧ 시간 표기 회귀 — `5H 30M` 식 D/H/M 는 단위가 아니라 시간이라 **바꾸지 않았다**
+
+   ⚠ 150 (2026-08-27, 주인 지시 «골드 빼고 나머지 숫자는 A B C 단위 안 쓰고 숫자 그대로») 이후
+     이 게이트가 보는 «알파벳 단위» 의 소유자는 `fmt` 가 아니라 **`fmtG`** 다. 111 의 단위표·자릿수
+     규칙은 골드에 그대로 살아 있고(그래서 이 게이트는 남는다), 골드가 아닌 수의 표기는
+     `tools/verify150.js` 가 본다. 옛 `fmt(...)` 단언은 전부 `fmtG(...)` 로 옮겼다.
 */
 /* 127 — 모듈 해석 + 번들 브라우저 폴백은 tools/pwlaunch.js 공용. */
 const { pw, launch } = require('./pwlaunch');
@@ -42,7 +47,8 @@ const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got ==
   yes('① 대소문자 상수 SUF_CC 가 한 곳에만 있다',
     (src.match(/const SUF_CC = /g) || []).length === 1);
   /* ⑥ 12 소환 가격 쉼표 예외 3곳 — 레퍼런스가 «1,000 / 3,000» 이라 그대로 둔다 */
-  eq('⑥ toLocaleString(\'en-US\') 쉼표 예외', (src.match(/toLocaleString\('en-US'\)/g) || []).length, 3);
+  /* 150 이후 넷이다 — 12 소환 가격 3곳 + `fmt()` 본체의 쉼표 표기 1곳(150 이 기본 표기로 채택). */
+  eq('⑥ toLocaleString(\'en-US\') 쉼표 표기', (src.match(/toLocaleString\('en-US'\)/g) || []).length, 4);
 
   /* ── 페이지 ─────────────────────────────────────────────────────── */
   const br = await launch(chromium);
@@ -82,19 +88,20 @@ const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got ==
     [9999.9, '10.0A'],            /* ④ 58 롤링 «반올림 승격» 보정 */
     [999949, '999A'],
   ];
-  const got = await p.evaluate(cs => cs.map(c => fmt(c[0])), CASES);
-  CASES.forEach((c, i) => eq('③ fmt(' + c[0] + ')', got[i], c[1]));
-  eq('③ fmt(Infinity)', await p.evaluate(() => fmt(Infinity)), '∞');
+  const got = await p.evaluate(cs => cs.map(c => fmtG(c[0])), CASES);   /* 150 — 알파벳 단위는 fmtG 소유 */
+  CASES.forEach((c, i) => eq('③ fmtG(' + c[0] + ')', got[i], c[1]));
+  eq('③ fmtG(Infinity)', await p.evaluate(() => fmtG(Infinity)), '∞');
   /* 정확히 1000ⁿ 인 값은 double 이 1000 으로 나누는 동안 999.99…9 로 떨어져 «한 칸 아래 접미사»
      로 나온다(1e78 → 999Y). 이 변환 전 K/M/B/T 시절에도 같았고 표시상 오차는 0.0000001% 다 —
      접미사 «계열» 만 본다. */
-  eq('③ fmt(1e78) 접미사 계열', (await p.evaluate(() => fmt(1e78))).replace(/[\d.]/g, ''), 'Y');
-  eq('③ fmt(1e81) 접미사 계열', (await p.evaluate(() => fmt(1e81))).replace(/[\d.]/g, ''), 'Z');
+  eq('③ fmtG(1e78) 접미사 계열', (await p.evaluate(() => fmtG(1e78))).replace(/[\d.]/g, ''), 'Y');
+  eq('③ fmtG(1e81) 접미사 계열', (await p.evaluate(() => fmtG(1e81))).replace(/[\d.]/g, ''), 'Z');
 
   /* ── ⑤ fmtShort ── */
+  /* 150 — 배지 «짧은» 표기도 골드일 때만 접는다. 재화 키를 두 번째 인자로 준다. */
   const SHORT = [[999, '999'], [1500, '1.5A'], [12345, '12A'], [3e6, '3B']];
-  const gs = await p.evaluate(cs => cs.map(c => fmtShort(c[0])), SHORT);
-  SHORT.forEach((c, i) => eq('⑤ fmtShort(' + c[0] + ')', gs[i], c[1]));
+  const gs = await p.evaluate(cs => cs.map(c => fmtShort(c[0], 'gold')), SHORT);
+  SHORT.forEach((c, i) => eq('⑤ fmtShort(' + c[0] + ", 'gold')", gs[i], c[1]));
 
   /* ── ⑦ 런타임 표시면 ── */
   const run = await p.evaluate(() => {
@@ -110,11 +117,11 @@ const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got ==
   });
   const okSuf = s => /^\d+(\.\d+)?[A-Z]{1,2}$/.test(s.trim());
   yes('⑦ HUD 골드 «' + run.gold + '» 알파벳 표기', okSuf(run.gold));
-  yes('⑦ HUD 다이아 «' + run.dia + '» 알파벳 표기', okSuf(run.dia));
-  eq('⑦ HUD 골드 fmt(5.07e3)', run.gold.trim(), '5.07A');
-  eq('⑦ HUD 다이아 fmt(2.36e9)', run.dia.trim(), '2.36C');
-  yes('⑦ HUD 전투력 «' + run.cp + '» 숫자 표기', /^\d+(\.\d+)?[A-Z]{0,2}$/.test(run.cp.trim()));
-  eq('⑦ 전투 데미지 숫자 fmt(1.234e7)', run.dmg, '12.3B');
+  eq('⑦ HUD 골드 fmtG(5.07e3)', run.gold.trim(), '5.07A');
+  /* 150 — 골드가 아닌 수는 «숫자 그대로» 다. 여기서는 «알파벳이 아님» 만 본다(값 단언은 verify150). */
+  yes('⑦ HUD 다이아 «' + run.dia + '» 는 알파벳 단위가 아니다(150)', !okSuf(run.dia));
+  yes('⑦ HUD 전투력 «' + run.cp + '» 숫자 표기', /^[\d,]+(\.\d+)?$/.test(run.cp.trim()));
+  yes('⑦ 전투 데미지 «' + run.dmg + '» 는 알파벳 단위가 아니다(150)', !okSuf(run.dmg));
 
   /* ⚠ 대문자 A~Z 를 채택한 결과 **화면 텍스트만 보고는 옛 K/M/B/T 를 판별할 수 없다** —
      새 표에서도 B=10⁶ · K=10³⁶ · M=10³⁹ · T=10⁶⁰ 이 전부 정상 접미사이기 때문이다
