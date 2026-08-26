@@ -2882,13 +2882,27 @@
     linear-gradient(180deg,#090C10 0%,#0D100D 60%,#12130D 100%)}
   /* 석벽 질감 — 줄눈 격자 대신 은은한 얼룩(ref 는 또렷한 격자선이 없다). 7회차: 대비 강화(H stddev −33%) */
   /* 120: 1050px → 68.762%(1527 대비) */
-  .rw-bg::before{content:'';position:absolute;left:0;right:0;top:0;height:68.762%;opacity:.85;
-    background:radial-gradient(circle at 18% 22%,rgba(56,46,36,.5) 0 70px,transparent 110px),
-      radial-gradient(circle at 74% 14%,rgba(50,42,32,.45) 0 60px,transparent 100px),
-      radial-gradient(circle at 40% 58%,rgba(58,48,38,.4) 0 80px,transparent 130px),
-      radial-gradient(circle at 88% 66%,rgba(48,40,30,.45) 0 66px,transparent 108px),
-      radial-gradient(circle at 8% 82%,rgba(54,44,34,.4) 0 72px,transparent 118px);
-    background-size:540px 520px}
+  /* 5회차 — 얼룩만으로는 «단색 평면» 이 안 깨진다. 비평 M·N 실측: 24×24 블록 std<1 이
+     **48.9%**(ref 환산 24.2%)이고, 특히 아치 관 위 밴드는 2280 78px → 2600 **189px** 로
+     프레임이 길수록 커진다 — 늘어난 높이가 통째로 «죽은 평면» 이 된다.
+     → 측정표 §배경이 적은 «돌 블록 윤곽 #241D18» 을 되살린다. 이전 세션이 «ref 는 또렷한
+     격자선이 없다» 며 얼룩으로 바꿨는데, 그건 «또렷한 격자» 얘기지 «결이 없다» 는 뜻이 아니었다.
+     아주 낮은 대비의 켜(course) 줄눈 + 세로 이음매를 얼룩 위에 얹어 어느 높이에서도
+     30~50px 마다 명암이 흔들리게 한다(비평 M 의 «25~40px 스케일에서 10~18레벨 요동»). */
+  .rw-bg::before{content:'';position:absolute;inset:0;opacity:.9;
+    background:
+      /* 가로 켜 줄눈 — 주기 47px, 폭 3px */
+      repeating-linear-gradient(180deg,rgba(46,38,29,.30) 0 2px,rgba(9,10,8,.34) 2px 4px,
+        rgba(0,0,0,0) 4px 47px),
+      /* 세로 이음매 — 켜마다 어긋나 보이도록 주기를 가로와 서로소로 잡는다 */
+      repeating-linear-gradient(90deg,rgba(44,36,28,.20) 0 2px,rgba(8,9,7,.24) 2px 4px,
+        rgba(0,0,0,0) 4px 163px),
+      radial-gradient(circle at 18% 22%,rgba(66,55,42,.55) 0 70px,transparent 110px),
+      radial-gradient(circle at 74% 14%,rgba(30,25,19,.50) 0 60px,transparent 100px),
+      radial-gradient(circle at 40% 58%,rgba(70,58,45,.45) 0 80px,transparent 130px),
+      radial-gradient(circle at 88% 66%,rgba(26,22,17,.50) 0 66px,transparent 108px),
+      radial-gradient(circle at 8% 82%,rgba(64,52,40,.45) 0 72px,transparent 118px);
+    background-size:100% 47px,163px 100%,540px 520px,540px 520px,540px 520px,540px 520px,540px 520px}
   /* 중앙 아치 — 120: top 133→8.709% · height 889→58.219%(1527 대비). 가로는 1:1 고정이라
      패널이 길어지면 아치도 같이 길어지고, 슬롯 격자는 언제나 아치 안에 들어온다. */
   /* 120 2회차 — 아치는 «패널의 %» 가 아니라 **슬롯 격자를 감싸는 문틀**이다.
@@ -2908,21 +2922,40 @@
          그래서 비평 K 가 «아치가 아니라 지름 589 정원이고 y1040 에서 끝난다» 로 읽었다.
          레퍼런스 아치는 벽보다 **어두운 문간**(#0E100E vs 벽 #211D16)이다 — 전 구간 어둡게 유지하고
          결은 «어두운 쪽으로만» 준다. 소멸은 바닥과 만나는 마지막 6% 에서만. */
-      radial-gradient(58% 26% at 50% 7%,rgba(2,3,2,.45) 0%,rgba(2,3,2,0) 100%),
+      radial-gradient(58% 26% at 50% 7%,rgba(2,3,2,.38) 0%,rgba(2,3,2,0) 100%),
       /* 아치 «안쪽» 결 — 세로 그라디언트만으로는 행마다 색이 1개라(고유색 1) 아래쪽 절반이
          여전히 평면으로 읽힌다. 문 안 어둠에 깊이를 주는 얼룩 3개(전부 어두운 쪽). */
-      radial-gradient(circle at 62% 14%,rgba(2,3,2,.40) 0 88px,rgba(2,3,2,0) 156px),
-      radial-gradient(circle at 30% 27%,rgba(3,4,3,.34) 0 96px,rgba(3,4,3,0) 170px),
-      radial-gradient(circle at 27% 61%,rgba(2,3,2,.42) 0 92px,rgba(2,3,2,0) 164px),
-      radial-gradient(circle at 75% 73%,rgba(1,2,1,.50) 0 104px,rgba(1,2,1,0) 186px),
-      radial-gradient(circle at 45% 87%,rgba(3,4,3,.38) 0 122px,rgba(3,4,3,0) 214px),
-      linear-gradient(180deg,#0E100E 0%,#0B0D0A 22%,#090B08 52%,#070906 82%,
-        rgba(7,9,6,.72) 94%,rgba(7,9,6,0) 100%);
+      radial-gradient(circle at 62% 14%,rgba(2,3,2,.26) 0 88px,rgba(2,3,2,0) 156px),
+      radial-gradient(circle at 30% 27%,rgba(3,4,3,.22) 0 96px,rgba(3,4,3,0) 170px),
+      radial-gradient(circle at 27% 61%,rgba(2,3,2,.28) 0 92px,rgba(2,3,2,0) 164px),
+      radial-gradient(circle at 75% 73%,rgba(1,2,1,.32) 0 104px,rgba(1,2,1,0) 186px),
+      radial-gradient(circle at 45% 87%,rgba(3,4,3,.24) 0 122px,rgba(3,4,3,0) 214px),
+      /* 5회차 — 4회차는 반대로 **너무 어두웠다**: 아치 안쪽 평균 휘도가 11.7 / 7.7 이라
+         비평 M 이 «82%가 휘도 8 미만 = 채워진 구조가 아니라 뚫린 구멍» 으로 읽었다.
+         벽(≈25)보다 «조금만» 어둡게(≈22) 올리고, 경계는 아래 문설주 립이 책임진다. */
+      linear-gradient(180deg,#2A2721 0%,#252219 26%,#211E15 58%,#1D1A12 84%,#1B1810 100%);
     border-radius:295px 295px 0 0;
+    /* 5회차 — **문설주(jamb) 립.** 4·5회차 비평 M·N 이 독립적으로 같은 1순위를 짚었다:
+       «아치에 경계가 없다 — 좌우변 최대 |d휘도/dx| 가 0.45~3.1/px 뿐이고 페더가 50px 라
+       선이 존재하지 않는다»(ref 는 행별 중앙값 1.45/px). 지금까지는 «안팎 밝기 차» 로만
+       아치를 표현했는데, 밝기 차는 아무리 키워도 **국소 에지**를 만들지 못한다 —
+       테두리를 실제로 세워야 한다. 상·좌·우 3변만(하변은 바닥으로 녹아들어야 하므로 0).
+       ⚠ `*{box-sizing:border-box}` 리셋은 **의사요소를 잡지 못한다**(A1 비고의 CSS 함정 2).
+          안 적으면 테두리 두께만큼 아치가 커지고 중심이 밀린다. */
+    box-sizing:border-box;border:7px solid rgba(61,54,41,.88);border-width:7px 7px 0 7px;
+    /* 하변 소멸을 **배경 알파** 로 하면 문설주(border)는 불투명하게 남아 하변에서 뚝 끊긴다
+       (2600 에서 하변 점프 5.0 vs 창 중앙값 0.7 — 절단선으로 잡혔다).
+       `mask` 는 테두리·배경·그림자를 **한꺼번에** 지우므로 문틀째 바닥으로 녹아든다. */
+    -webkit-mask-image:linear-gradient(180deg,#000 0 76%,rgba(0,0,0,.55) 91%,transparent 100%);
+    mask-image:linear-gradient(180deg,#000 0 76%,rgba(0,0,0,.55) 91%,transparent 100%);
     /* 구 `box-shadow:0 0 90px 20px` 는 **테두리 상자 실루엣**에서 그려지므로 배경이 알파 0 으로
        사라져도 하변에 그림자 계단이 남는다(1회차 Δ4.2 → 하단 소멸만 넣었을 때 Δ4.8 로 악화).
        `drop-shadow` 는 **알파 채널**을 따라가므로 소멸 구간에서는 그림자도 같이 사라진다. */
     filter:drop-shadow(0 0 40px rgba(0,0,0,.6)) drop-shadow(0 0 90px rgba(0,0,0,.45))}
+  /* ⚠ 립 안쪽 홈을 `inset` 그림자로 넣어 봤다가 뺐다 — inset 은 **4변 전부**를 따라가므로
+     하변에도 어두운 가로선이 생겨 «아치 하변 1차 차분» 이 3.6 → 10.2 로 도로 나빠졌다
+     (하변은 바닥으로 녹아들어야 하는 유일한 변이다). 7px 립만으로 이미 경계 기울기가
+     6.1 → 38~41 휘도/px 라 홈은 필요 없다. */
   /* 금색 장식 프레임 — 4변 라인 + 모서리 플러리시(아트 대기) */
   .rw-frame{inset:2px;border:5px solid #B29661;box-shadow:inset 0 0 0 2px rgba(0,0,0,.9);pointer-events:none;z-index:6}
   /* 코너 브래킷 98×53 — 상단 2개는 ::before/::after, 하단 2개는 .rw-fc (아트 대기) */
@@ -2982,7 +3015,7 @@
   .rw-cost>b{font-size:35px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
   .rw-cost.lack>b{color:#FF7A6F}
   /* 안내문 2줄 — 크림/탠골드, 행 피치 44. 120: 하단 구획(높이 88 = 44×2) */
-  .rw-cap{left:0;right:0;top:calc(var(--rw-sp) * .9000 + 732px * var(--rwc,1));
+  .rw-cap{left:0;right:0;top:calc(var(--rw-sp) * .8675 + 732px * var(--rwc,1) + 38px);
     text-align:center;z-index:4;transform:scale(var(--rwc,1));transform-origin:50% 0}
   .rw-cap p{margin:0;font-weight:900;font-size:31px;line-height:44px;
     -webkit-text-stroke:5px #000;paint-order:stroke fill}

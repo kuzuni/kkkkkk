@@ -32,7 +32,8 @@ const HEIGHTS = [1600, 1920, 2280, 2600];
    3회차에 그걸 키웠더니 비평 L 이 «안내문만 떨어져 나온다»(+147%)로 지적했다.
    K(하단 여백을 키워라)와 L(안내문을 수반에 붙여라)이 갈리는 지점이라 «큰 간극 → 하단» 만 옮긴다.
    2280 실측 595/422/38/117 — 격자↔수반:하단 = 570:50(12:1) → 422:117(3.6:1). */
-const GAP_W = [0.5075, 0.3600, 0.0325, 0.1000];
+const GAP_W = [0.5075, 0.3600];   /* 상 · 격자↔수반 (나머지는 gap2 고정 + 하단) */
+const GAP2_PX = 38;               /* 수반↔안내문 — 비례가 아니라 고정 */
 
 let pass = 0, fail = 0;
 const bad = [];
@@ -182,7 +183,11 @@ const inter = (a, b) => {
       const spare = P.h - 820;
       ck(`[${H}] ⑥ 여백 4곳 전부 양수 (구획 겹침 0)`, gaps.every(g => g > 0.5),
         gaps.map(g => g.toFixed(1)).join(' / '));
-      const wantG = GAP_W.map(w => spare * w);
+      /* gap2(수반↔안내문)는 **고정 38px** 이다 — 비례로 키우면 프레임이 길어질수록
+         안내문이 수반에서 떨어져 «한 덩어리» 로 안 읽힌다(비평 L +147% · N +43%).
+         나머지 3곳만 남는 높이를 비례 배분하고, 하단은 그 나머지를 받는다. */
+      const wantG = [spare * GAP_W[0], spare * GAP_W[1], GAP2_PX,
+                     P.h - 820 - spare * (GAP_W[0] + GAP_W[1]) - GAP2_PX];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
       ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27)대로 배분`, gErr < 1.0,
         `실측 ${gaps.map(g => g.toFixed(1)).join('/')} vs 기대 ${wantG.map(g => g.toFixed(1)).join('/')} (최대 Δ${gErr.toFixed(2)})`);

@@ -61,14 +61,69 @@ const PT = Number(process.argv[3] || 108);
     const midTop = PT + spare * 0.8675 + 516;
     const ab = Math.round(archBot);
     const yLo = ab - 40, yHi = Math.round(Math.min(ab + 40, midTop - 12));
+    /* 5회차 재정의 — «행평균» 을 그대로 쓰면 석벽 켜 줄눈(주기 47px)이 아치 하변과
+       우연히 겹칠 때 줄눈 점프를 «절단선» 으로 오인한다(2600 에서 실제로 y1567 에 겹쳤다).
+       줄눈은 **전 폭**에 걸리므로 «아치 안쪽 − 아치 바깥» 차분을 보면 상쇄된다.
+       아치만의 절단선은 안쪽에만 생기므로 이 차분에 남는다. */
     const diff = [];
-    for (let y = yLo; y <= yHi; y++) diff.push(rowStat(y, 250, 826).mean);
+    for (let y = yLo; y <= yHi; y++) {
+      const inside = rowStat(y, 250, 826).mean;
+      const outside = (rowStat(y, 60, 200).mean + rowStat(y, 880, 1020).mean) / 2;
+      diff.push(inside - outside);
+    }
     let maxJump = 0, jumpY = 0;
+    const jumps = [];
     for (let i = 1; i < diff.length; i++) {
       const j = Math.abs(diff[i] - diff[i - 1]);
+      jumps.push(j);
       if (j > maxJump) { maxJump = j; jumpY = yLo + i; }
     }
-    return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY };
+    /* 5회차 — 석벽 «켜 줄눈»(주기 47px)을 깐 뒤로는 창 안의 최대 급점프가 줄눈일 수도 있다.
+       C 가 잡으려는 것은 «아치 하변에만 있는 전폭 절단선» 이므로,
+       ⓐ 아치 하변 바로 그 자리(±3px)의 점프와 ⓑ 창 전체 점프의 중앙값을 같이 낸다.
+       ⓐ ≈ ⓑ 면 아치 하변은 특별하지 않다 = 절단선이 아니다. */
+    const sorted = [...jumps].sort((a, b) => a - b);
+    const medJump = sorted[Math.floor(sorted.length / 2)] || 0;
+    let atArch = 0;
+    for (let y = ab - 3; y <= ab + 3; y++) {
+      const i = y - yLo;
+      if (i >= 1 && i < diff.length) atArch = Math.max(atArch, Math.abs(diff[i] - diff[i - 1]));
+    }
+    /* D. «단색 평면» 비율 — 24×24 블록의 국소 표준편차. 비평 M 이 쓴 지표 그대로.
+       ref 크롭을 같은 배율로 환산했을 때 std<1 = 24.2% · std<2 = 42.6% 였다(M 실측).
+       E. 아치 «안쪽 평균 휘도» 와 «테두리 최대 기울기» — M 의 ⑤-2·⑤-4.
+          안쪽이 너무 어두우면 «채워진 구조» 가 아니라 «뚫린 구멍» 으로 읽힌다. */
+    let b1 = 0, b2 = 0, bT = 0;
+    for (let by = PT + 4; by + 24 < PB - 4; by += 24) {
+      for (let bx = 8; bx + 24 < c.width - 8; bx += 24) {
+        let s = 0, s2 = 0, n = 0;
+        for (let y = by; y < by + 24; y += 3) for (let x = bx; x < bx + 24; x += 3) {
+          const v = lum(x, y); s += v; s2 += v * v; n++;
+        }
+        const sd = Math.sqrt(Math.max(0, s2 / n - (s / n) * (s / n)));
+        bT++; if (sd < 1) b1++; if (sd < 2) b2++;
+      }
+    }
+    /* 아치 안쪽 평균(슬롯이 없는 두 밴드) */
+    const bandMean = (y0, y1) => { let s = 0, n = 0;
+      for (let y = y0; y <= y1; y += 2) for (let x = 250; x <= 826; x += 2) { s += lum(x, y); n++; }
+      return s / n; };
+    const gridTop = PT + spare * 0.5075, gridBot = gridTop + 516;
+    const upper = bandMean(Math.round(archTop) + 20, Math.round(gridTop) - 12);
+    const lower = bandMean(Math.round(gridBot) + 12, Math.round(archBot) - 20);
+    /* 테두리 기울기 — 아치 좌변 x244 / 우변 x833 을 가로지르는 행들의 최대 |dL/dx| */
+    let edgeMax = 0;
+    for (let y = Math.round(gridBot) + 20; y < Math.round(archBot) - 30; y += 6) {
+      for (const ex of [244, 833]) {
+        for (let x = ex - 14; x < ex + 14; x++) {
+          const g2 = Math.abs(lum(x + 1, y) - lum(x, y));
+          if (g2 > edgeMax) edgeMax = g2;
+        }
+      }
+    }
+    return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY, medJump, atArch,
+      flat1: b1 / bT * 100, flat2: b2 / bT * 100, blocks: bT,
+      archUpper: upper, archLower: lower, edgeMax };
   }, { url: data, PT });
 
   const f = n => n.toFixed(1);
@@ -81,6 +136,11 @@ const PT = Number(process.argv[3] || 108);
   console.log('  ' + out.floor.map(r => `${r.y}:${r.uniq}/${f(r.mean)}`).join('  '));
   const fU = out.floor.map(r => r.uniq);
   console.log(`  고유색 최소 ${Math.min(...fU)} · 최대 ${Math.max(...fU)}`);
-  console.log(`\nC. 아치 하변 ±40 행평균 휘도 1차 차분 최대 ${f(out.maxJump)} @y${out.jumpY}  (수평 절단선이면 급점프)`);
+  console.log(`\nC. 아치 하변 절단선 — «안−밖» 차분 기준. 하변 자리(±3px) 점프 ${f(out.atArch)} vs 창 중앙값 ${f(out.medJump)}  (창 최대 ${f(out.maxJump)} @y${out.jumpY})`);
+  console.log(`   판정: ${out.atArch <= Math.max(3, out.medJump * 2.5) ? '절단선 없음' : '★ 절단선 의심'}`);
+  console.log(`\nD. 단색 평면 비율 (24×24 블록 ${out.blocks}개) — std<1 ${f(out.flat1)}%  ·  std<2 ${f(out.flat2)}%`);
+  console.log(`   목표: std<1 < 30% (ref 환산 24.2% · M 실측)`);
+  console.log(`\nE. 아치 안쪽 평균 휘도 — 슬롯 위 ${f(out.archUpper)} · 슬롯 아래 ${f(out.archLower)}   (목표 ≥ 22 — 더 어두우면 «뚫린 구멍»)`);
+  console.log(`   아치 테두리 최대 기울기 ${f(out.edgeMax)} 휘도/px   (목표 ≥ 8 — 그 미만이면 «선이 없다»)`);
   await b.close();
 })();
