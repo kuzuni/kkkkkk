@@ -4137,7 +4137,7 @@
   /* 6회차 — 박스는 ref bbox(276×206) 그대로인데 **안의 글리프 잉크가 202×216** 이라 박스를 못 채우고
      있었다(비평가 AA ④: 종횡비 ref 1.34 ↔ 우리 0.94 로 뒤집힘). A2 방식대로 «높이=font-size ·
      폭=scaleX» 로 잉크를 박스에 정규화한다 — 나중에 일러스트로 바꿔 끼우기만 하면 되는 자리다. */
-  .cn-bn>.art{position:absolute;left:240px;top:118px;width:276px;height:206px;
+  .cn-bn>.art{position:absolute;left:240px;top:126px;width:276px;height:206px;
     font-size:186.9px;line-height:206px;text-align:center;transform:scaleX(1.433)}
   .cn-bn>.gem{position:absolute;font-size:74px;line-height:74px;color:#49CDF4}
   /* §2 `재화 상점` 타이틀 — 잉크 x686 y335(local 143) 268x65, 중심 819.5, #FFF8AA */
@@ -4181,10 +4181,12 @@
   /* 13: 재화 탭이 열린 동안 HUD 는 프로필 없는 민바 (레퍼런스 y100~190 — 다크바 + 재화 알약 2개뿐).
      coin 탭에만 스코프 — 10 소환 탭·02 메인의 HUD 는 건드리지 않는다. 알약 x: ref 537~745 / 838~1044. */
   #app:has(#shopw.on .shp-list.coin) #top :is(.pedge,.plate,.prof){display:none}
-  /* 7회차 — 비평가 AB 의 «알약이 +11~18px 우측» 은 **반증**. AB 가 «알약 좌변» 으로 읽은 489/787 은
-     알약 «몸통» 이 아니라 그 왼쪽으로 54px 삐져나온 **화폐 아이콘의 검정 외곽**(`.cbox i{left:-54px}`)이다.
-     알약 몸통 자체는 `--geo` 실측 538/838(w211) 로 1차 라운드 4회차의 ref 실측 541/844 와 Δ3/6 이다.
-     마스크가 다른 지적은 반영 전에 다시 재라 — 1차 라운드 교훈 2. 값은 그대로 둔다. */
+  /* 8회차 — «알약이 우측으로 밀렸다»(AB·AD)는 **사실이지만 이 규칙의 알약이 아니다.**
+     재화 탭에서 실제로 보이는 알약 2개는 `#top` 의 `.curs>.cbox` 가 아니라 그 위를 덮는
+     **41 팝업 내장 재화 바 `.pcb>.pcb-p`**(`.pcb-g{left:505}` · `.pcb-d{left:805}`, w254)다.
+     `.curs` 를 아무리 옮겨도 캡처 픽셀은 1개도 안 바뀐다(HUD 밴드 픽셀 차분 0). 그래서 이 값은
+     1차 라운드 그대로 두고, 실제 어긋남(ref 489/787·w258/260 ↔ 41 의 505/805·w254)은
+     **41 구간**이라 PROGRESS 비고로 넘긴다. 세 비평가의 값이 갈린 것도 서로 다른 알약을 잰 탓이다. */
   #app:has(#shopw.on .shp-list.coin) .curs{right:31px;gap:89px}
   /* ref 13 아이콘: 골드 49×47(중심 = 알약 좌변 −22.5) / 다이아 유닛도 동비율 축소 */
   #app:has(#shopw.on .shp-list.coin) .curs .cbox i{left:-54px}
@@ -4213,7 +4215,14 @@
     font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
   .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
     text-align:center;overflow:hidden}
-  .cn-cd>.pn>em{font-size:112px;line-height:157px}
+  /* 8회차 — 7회차 비평가 AC·AD 가 **독립적으로 일치**한 2건.
+     ⓐ 아이콘 6종이 크림 패널 안에서 일제히 **아래로 +4~10px**(AC 평균 +7.4 · AD 평균 +6.5) —
+        레퍼런스는 아이콘을 패널 정중앙이 아니라 6~9px 위에 둔다.
+     ⓑ 카드③(골드 상자) 아이콘이 **세로 +26~27%**(AC +27 · AD +26px) — ref 는 «넓고 납작한»
+        상자 아트(126×95)인데 우리는 정사각 SVG(120×121)라 종횡비가 뒤집혀 있었다.
+     칸별 아트 bbox 는 `--iw`/`--ih` 로 박는다(«아트 자리 규칙» — 일러스트로 바꿔 끼울 자리다). */
+  .cn-cd>.pn>em{position:relative;top:-7px;font-size:112px;line-height:157px}
+  .cn-cd>.pn>em>.cic{width:var(--iw,120px);height:var(--ih,120px)}
   /* 구매 완료 카드는 본문 프레임도 초록(ref #135E3F = #1C8D5E×딤0.667) — 파랑 몸통이 슬리버로 비치지 않게 */
   .cn-cd.done>.bg{background:#1C8D5E}
   /* 6회차 정오 — 5회차의 «띠 아래 dy194·우측 정렬» 은 **틀렸다**. 측정표 §5-4 의 «×100 잉크 y1020»
@@ -16943,7 +16952,7 @@ const COIN_ADS = [
      `qx`(×N)는 반대다 — 라틴·숫자는 서브셋에 없어 폴백 서체로 떨어져 오히려 +3~7% 컸다. */
   { id:'a1', n:'보석',                q:'×100', ic:curIc('dia'), cap:1, r:{ dia:100 },     fs:37.0, sx:1.047, qx:1.24 },
   { id:'a2', n:'공물',                q:'×50',  ic:curIc('relic'), cap:1, r:{ rel:50 },      fs:39.4, sx:0.894, qx:1.24 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:39.7, sx:0.995, qx:1.146 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:39.7, sx:0.995, qx:1.146, iw:126, ih:95 },
   { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:32.3, sx:1.084, qx:1.15 },
   { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:38.4, sx:1.050, qx:1.245 },
   { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:33.3, sx:1.007, qx:1.21 }
@@ -17024,7 +17033,9 @@ function renderCoinPage(list){
       + a.sx + ';--qx:' + a.qx + (done ? ';--hd:#68C338;--hr:#7FD955' : '')
       /* 7회차(Y 1) — 카드 띠의 흰 심 α 가 .33 고정이라 헤더색에 따라 ΔL 이 30.5~49.3(1.62배)로
          갈렸다. 소환 헤더·리본과 똑같이 그 칸의 헤더색에서 역산한다. */
-      + ';--jz-ga:' + jzShineA(done ? '#68C338' : '#48B6E7') + ';--jz-gd:' + jzShadeA(done ? '#68C338' : '#48B6E7') + '">'
+      + ';--jz-ga:' + jzShineA(done ? '#68C338' : '#48B6E7') + ';--jz-gd:' + jzShadeA(done ? '#68C338' : '#48B6E7')
+      /* 8회차 — 칸별 아트 bbox(«아트 자리 규칙»). 안 준 칸은 공용 120×120 */
+      + (a.iw ? ';--iw:' + a.iw + 'px;--ih:' + a.ih + 'px' : '') + '">'
       +  '<div class="bg"></div><div class="hd"><i>' + a.n + '</i></div>'
       +  '<div class="pn"><em>' + a.ic + '</em></div>'
       +  '<div class="qt">' + a.q + '</div>'
