@@ -29,6 +29,10 @@ const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html');
 const JSON_AT = (() => { const i = process.argv.indexOf('--json'); return i > 0 ? process.argv[i + 1] : null; })();
+/* ref 세로 오프셋. 상단 고정 요소는 84(상태바), **하단 고정 요소는 60** — 우리 프레임 2280 과
+   ref 콘텐츠 2256 의 24px 차(전투 캔버스가 흡수)가 «아래에서 잰 거리» 에는 그대로 남기 때문이다.
+   `#shopCats` 는 하단 고정이라 기본값이 60 이다. `--off N` 으로 바꾼다. (§25-6) */
+const OFF = (() => { const i = process.argv.indexOf('--off'); return i > 0 ? +process.argv[i + 1] : 60; })();
 
 /* 10 상점 = 공용 서브탭에 ref 가 있는 유일한 화면(§24-5 / 측정표 §13-3). */
 const SCREEN = {
@@ -93,7 +97,7 @@ async function main() {
   const shot = (await page.screenshot()).toString('base64');
   const refB64 = fs.readFileSync(path.join(ROOT, SCREEN.ref)).toString('base64');
 
-  const res = await page.evaluate(async ({ shot, refB64, items, SWEEP, P0, SRC }) => {
+  const res = await page.evaluate(async ({ shot, refB64, items, SWEEP, P0, OFF, SRC }) => {
     eval(SRC);
     const dec = async (b64, mime) => {
       const blob = await (await fetch(`data:${mime};base64,${b64}`)).blob();
@@ -111,7 +115,7 @@ async function main() {
         const P = Object.assign({}, P0, { TH });
         const o = measure(A.d, A.W, A.H, it.x - M, it.x + it.w + M, it.y - M, it.y + it.h + M, P);
         /* ref 창 = 같은 창을 세로만 +84 */
-        const f = measure(R.d, R.W, R.H, it.x - M, it.x + it.w + M, it.y - M + 84, it.y + it.h + M + 84, P);
+        const f = measure(R.d, R.W, R.H, it.x - M, it.x + it.w + M, it.y - M + OFF, it.y + it.h + M + OFF, P);
         row.ours[TH] = o.core ? o.core.h : null;
         row.ref[TH]  = f.core ? f.core.h : null;
         (row.oursW || (row.oursW = {}))[TH] = o.core ? o.core.w : null;
@@ -120,12 +124,12 @@ async function main() {
       out.push(row);
     }
     return out;
-  }, { shot, refB64, items, SWEEP, P0, SRC: MEASURE });
+  }, { shot, refB64, items, SWEEP, P0, OFF, SRC: MEASURE });
 
   const rows = res.map((r) => Object.assign({}, items.find((x) => x.i === r.i), r));
 
   console.log(`\n126 ② 공용 서브탭 «활성 : 비활성» 잉크 높이 — 임계 스윕 ${SWEEP.join('/')} · 근흑 ${P0.BLK}`);
-  console.log('coreH = 흰 코어 bbox 높이. ref 창 = 우리 창 세로 +84.\n');
+  console.log(`coreH = 흰 코어 bbox 높이. ref 창 = 우리 창 세로 +${OFF} (하단 고정 = 60 · 상단 고정 = 84).\n`);
   const f = (v) => (v == null ? '  —' : String(v).padStart(3));
   console.log('자리          상태   fs   | 우리 coreH ' + SWEEP.map((t) => t).join('/') + ' | ref coreH ' + SWEEP.map((t) => t).join('/'));
   for (const r of rows) {
