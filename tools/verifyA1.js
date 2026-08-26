@@ -82,7 +82,10 @@ const ok = (name, got, want, tol) => {
   /* 아이콘 — 칸별 역산값이 «지금 이모지» 에 맞는지. 잉크가 아니라 «상자 × scaleX» 로 본다.
      ref bbox 는 측정표 §4. 실측 잉크가 상자를 꽉 채우는지는 scanA1.py 가 본다. */
   const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 109.2, shop: 102 };
-  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.267, shop: 1.494 };
+  /* box 1.267 → 1.2366 · shop 1.494 → 1.458 (11회차): 비평가 O·P 가 폭을 «유물 ref122 vs 우리125»
+     로 **수치까지 동일하게**, 상점을 «ref 161~163 vs 우리 166» 으로 일치해 읽었다. 두 칸 다 세로는
+     ref 와 0% 라 `--sf`(등방)가 아니라 `--sx`(가로)만 줄인 값이다 — A2 방식. */
+  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.2366, shop: 1.458 };
   /* shop 7.8 → 6.5 (10회차): M «ref rel34 vs 우리 35» · N «ref local33 vs 우리 35» · 자체 스캔
      «ref 2134 vs 우리 2135» — 세 계측 모두 «1~2px 낮다» 로 부호가 같아 중앙값 1.3px 을 올렸다. */
   const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 6.5 };
@@ -126,7 +129,11 @@ const ok = (name, got, want, tol) => {
   ok('NEW 리본 bbox 폭 112', shop.nw.w, 112.4, 2.0);
   ok('NEW 리본 bbox 높이 76', shop.nw.h, 76.0, 2.0);
   ok('NEW 리본 좌변 858 (ref x862 는 칸 경계보다 2px 왼쪽)', shop.nw.x, 858, 2.0);
-  ok('NEW 리본 상변 2103 (정오표 §7-1 의 ref y2103)', shop.nw.y, 2103, 2.0);
+  /* ★ 상변은 **rect(검정 border-top 포함) 기준 2096** 이다. 측정표 §7-1 의 ref «2103» 은
+     **적색만 잡는 마스크**로 잰 값이라 여기에 그대로 박으면 안 된다 — 10회차에 그 둘을 맞대어
+     «4px 위로 샜다» 는 없는 오차를 만들고 리본을 거꾸로 4px 내렸다(11회차에 O·P 가 잡아냈다).
+     rect 상변 2096 ↔ 적색 상변 2101 (≈ref rel+1) 로, 둘의 차 ~5px 이 검정 테두리+반올림이다. */
+  ok('NEW 리본 상변 2096 (rect = 검정 테두리 포함 · 적색 상변은 여기서 +5)', shop.nw.y, 2096, 2.0);
   T.push({ name: 'NEW 리본 침범 2px 이내(ref 도 2px 넘친다)', got: shop.nw.x.toFixed(1), want: '≥856',
            tol: '-', pass: shop.nw.x >= 856 });
 
