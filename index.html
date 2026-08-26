@@ -2863,7 +2863,22 @@
      `left:-100%` 로 잡았던 **리셋 «팝»** 이 세로축에서 그대로 재발한다. */
   @keyframes bgmBv{from{transform:translate3d(0,0,0)}
     to{transform:translate3d(var(--bgw2,360px),calc(-1*var(--bgh2,0px)),0)}}
-  @keyframes bgmFlash{0%,86%,100%{opacity:var(--bgo2,.34)}90%{opacity:calc(var(--bgo2,.34) + .34)}94%{opacity:var(--bgo2,.34)}}
+  /* ⚠ 7회차 — **여기는 «키우라» 와 «줄이라» 가 정면으로 갈린 자리다. 그래서 값을 안 바꾼다.**
+     6회차 J(이월 ⓘ-3): 잔광 정점의 평균휘도 증분 **+6.30/255 (+7.0%)** 는 「잔광」 역치
+       (+18~25/255) 아래다 → 증분 .34 → .70 으로 키워라.
+     7회차 L ④-1: 그 잔광은 **국소 발광이 아니라 카드 전면 밝기 펌프**다(카드 내부 평균 +3.9/255,
+       글자 놓인 좌측 스트립 +12.4%). 네 테마 중 레이드만 카드 전체가 맥동해 **톤 일관성이 깨진다**.
+     한쪽을 따르면 다른 쪽이 정확히 그만큼 나빠진다(LESSONS 52-④ — 두 비평가가 같은 쪽으로 몰린
+     것만 반영한다. 여기는 서로 반대쪽이다). 게다가 ④ 는 지금 **8점(통과)** 이고 ①② 가 미달이라,
+     통과 중인 축을 흔들어 미달 축을 벌 자리가 아니다.
+     **한 번에 둘을 만족시키는 길은 «세기» 가 아니라 «범위» 다** — 카드 전면이 아니라 좁은 번개
+     줄기 한 가닥만 밝히면 국소 증분은 역치를 넘고 카드 평균은 지금보다 오히려 준다.
+     그건 레이어 하나를 새로 만드는 일이라 8회차 몫으로 넘긴다(review §7 ⓔ 에 설계까지 적어 뒀다).
+     지금은 증분을 `--bgfl` 변수로만 빼 둔다 — **기본값 .34 = 종전과 완전히 같은 동작**이다.
+     (`filter:brightness` 를 같이 걸어 봤다가 되돌렸다: 정점에서만 걸어도 애니메이션 내내 합성
+     레이어가 생겨 VERIFY121 §7 «스크롤 유지율» 예산을 건드린다.) */
+  @keyframes bgmFlash{0%,86%,100%{opacity:var(--bgo2,.34)}
+    90%{opacity:calc(var(--bgo2,.34) + var(--bgfl,.34))}94%{opacity:var(--bgo2,.34)}}
   /* 테마 — ①흐름(::before) ②입자·안개(::after). 무늬 «모양» 만 테마별로 다르다.
      ⚠ 2회차 정정 3건 (비평가 A·B 실측이 같은 쪽으로 몰린 것만 반영 — LESSONS 52-④):
      ⓐ **이동거리(--bgw*)는 타일 폭(--bgz*)의 «1배»여야 한다.** 1회차는 ::after 를 2배로 잡아
@@ -2893,7 +2908,26 @@
        → **듀티로 벌고 불투명도는 .40 까지만** (H 14: --bgo1 을 .40 넘게 올리면 알약 국소 대비가 4.5:1
        아래로 내려간다 — 적용 후 pill121.js 로 재확인한다). 주기 125.2px 은 그대로라 이음매 교정은 산다.
        **유물석은 손대지 않는다**(H 6 · 3회차 회귀 경고). */
-    --bgm1:repeating-linear-gradient(102deg,transparent 0 46px,var(--bgc) 46px 64px,transparent 64px 125.2px);
+    /* ⚠ 7회차 — **축주기를 타일 «1주기» 로 되돌리고 그 안에 서로 다른 줄기 2벌을 넣는다.**
+       6회차 비평가 I·J 가 독립으로 «체감 반복이 지시(40~90s)의 절반»(골드 20.2s / 20s)이라 했고
+       신설 `tools/period121.js` 가 그 원인을 그림으로 확증했다 — 위상 50% 에서 되돌아옴 지수
+       **R=0.000**(그 자리에서 그림이 완전히 원위치). 산술은 review ⓘ-1 그대로다:
+       체감주기 = --bgt1 / (타일당 주기 수) 이고 지금까지 타일당 2주기였다.
+       **타일·이동거리(--bgz1/--bgw1)는 그대로 두므로 속도가 안 변한다** — J 가 ② 통과 근거로 든
+       «6.40~3.67px/s = 카드폭 대비 초당 0.38~0.66%» 가 그대로 산다(LESSONS 92-⑪: 한쪽을 고치면서
+       다른 쪽을 깨지 말 것). 축주기만 125.2 → **250.4**(= 256 × sin102° × 1)로 되돌린다.
+       그러면 타일 안이 «같은 줄기 2개» 가 되어 되돌아옴이 그대로 남으므로, 두 줄기의 **폭과 알파를
+       다르게** 해 자기유사성을 깬다(유물석이 이미 이 구조다 — radial 겹 덕에 R=0.747 로 혼자 통과했다.
+       저장소 안에 대조군이 있었던 셈이다).
+       겸해 6회차 이월 ⓘ-2(J 처방: 골드 줄기 듀티 14.4% → 22~25%)를 같은 선언에서 회수한다 —
+       28 + 34 = 62px / 250.4 = **24.8%**. 불투명도는 안 올린다(--bgo1 상한 .40, H 14 알약 대비). */
+    /* ⚠ 7회차 2차 — 두 줄기의 **간격**까지 비대칭이어야 한다. 처음엔 폭·알파만 다르게 하고 위치를
+       반주기 근처(54 ↔ 182.6)에 뒀는데, 그러면 반주기 이동이 A 를 B 자리에 그대로 얹어
+       R 이 0.303 밖에 안 올랐다(0.000 → 0.303). 중심 간격을 **95 / 155.4 (1.64배)** 로 벌리면
+       반주기 이동 시 겹침이 34px 중 0.8px 뿐이다. 듀티(24.8%)와 폭은 그대로다. */
+    --bgm1:repeating-linear-gradient(102deg,transparent 0 40px,var(--bgc) 40px 68px,
+      transparent 68px 132px,color-mix(in srgb,var(--bgc) 55%,transparent) 132px 166px,
+      transparent 166px 250.4px);
     --bgz1:256px 100%;--bgw1:256px;--bgo1:.40;
     --bgm2:radial-gradient(circle at 18% 26%,var(--bgc) 0 3.5px,transparent 5px),
       radial-gradient(circle at 62% 12%,var(--bgc) 0 4.5px,transparent 6.4px),
@@ -2906,8 +2940,17 @@
        1.696 주기 = **끝 간격이 온전한 주기의 69.6%** 였다(골드 95.6%·레이드 92.3% 보다 훨씬 심하다 —
        4회차 두 비평가가 골드·레이드만 잰 것은 안개 레이어가 줄무늬를 덮어 눈으로 못 셌기 때문이다).
        교차 두 겹 모두 288 × sin58° / 2 = 122.12 로 맞춘다. 각도 ±58° 와 타일 288 은 그대로. */
-    --bgm1:repeating-linear-gradient(58deg,transparent 0 50.9px,var(--bgc) 50.9px 56.8px,transparent 56.8px 122.1px),
-      repeating-linear-gradient(-58deg,transparent 0 66.1px,var(--bgc) 66.1px 70.4px,transparent 70.4px 122.1px);
+    /* ⚠ 7회차 — 골드와 같은 교정(그쪽 주석이 근거다). 위상 50% 되돌아옴 지수 **R=0.005** 였다
+       (비평가 I 25.2s · J 25s = --bgt1 50s 의 정확히 절반). 축주기 122.1 → **244.24**
+       (= 288 × sin58° × 1)로 되돌리고 교차 두 겹 **각각** 안에 폭·알파가 다른 줄기 2벌을 넣는다.
+       듀티는 겹당 4.8% / 4.0% 로 종전(4.8% / 3.5%)과 사실상 같게 둔다 — 다이아는 5회차에 이미
+       불투명도로 «꼴찌» 를 벗어난 테마라 여기서 움직임 양을 또 건드리면 ② 격차를 반대로 흔든다. */
+    --bgm1:repeating-linear-gradient(58deg,transparent 0 50.9px,var(--bgc) 50.9px 57.6px,
+        transparent 57.6px 168px,color-mix(in srgb,var(--bgc) 60%,transparent) 168px 173px,
+        transparent 173px 244.24px),
+      repeating-linear-gradient(-58deg,transparent 0 66.1px,var(--bgc) 66.1px 70.4px,
+        transparent 70.4px 185px,color-mix(in srgb,var(--bgc) 65%,transparent) 185px 190.6px,
+        transparent 190.6px 244.24px);
     /* ⚠ 5회차 ② — 골드를 고치고 나니 **다이아가 새 꼴찌**로 드러났다(probe121 [2] 4.90 vs 유물2 10.76).
        두 비평가는 자기 창(카드 상단 띠)에서 다이아를 중간(43.9%/53.5%)으로 봤지만, 내 창 두 개
        (좌중앙 260×90 · all.js 밴드)는 둘 다 다이아를 최저로 잰다 — 교차 무늬가 위쪽에 몰려 있어
@@ -2933,7 +2976,16 @@
        ⚠ **각도를 바꾸면 이음매 교정도 다시 해야 한다**(G 는 «타일 그대로 둬도 안 깨진다» 고 했지만
        가로주기 = P/|sinθ| 라 θ 가 바뀌면 같이 바뀐다 — H 가 이 점을 잡았다).
        330 × sin148° / 2 = **87.44** 로 축주기를 다시 맞춘다. 가로주기는 여전히 165px(타일의 1/2)이다. */
-    --bgm1:repeating-linear-gradient(148deg,transparent 0 39.2px,var(--bgc) 39.2px 45.6px,transparent 45.6px 87.4px),
+    /* ⚠ 7회차 — 여기도 축주기를 타일 1주기(87.4 → **174.87** = 330 × sin148° × 1)로 되돌린다.
+       유물석은 `period121` 에서 혼자 통과(R=0.747)였지만 그건 **radial 안개 겹이 줄무늬의
+       자기유사성을 가려 준 것**이지 줄무늬 자체는 다른 셋과 똑같이 타일당 2주기였다 —
+       비평가 I·J 가 유물 카드를 «29.5s / 30~45s» 로 읽은 것이 그 증거다(--bgt1 은 60·70s).
+       ⚠ 3·5회차 경고 «유물석은 손대지 말 것» 은 **움직임 양(--bgo*·무늬 면적)** 에 대한 것이고,
+       여기서는 **듀티를 소수점까지 보존**한다: 7.2 + 5.6 = 12.8 / 174.87 = 7.32%
+       (종전 6.4 / 87.4 = 7.32% — 동일). 각도 148° 와 타일 330 도 그대로다. */
+    --bgm1:repeating-linear-gradient(148deg,transparent 0 39.2px,var(--bgc) 39.2px 46.4px,
+      transparent 46.4px 126.6px,color-mix(in srgb,var(--bgc) 70%,transparent) 126.6px 132.2px,
+      transparent 132.2px 174.87px),
       radial-gradient(closest-side at 26% 46%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 68% 26%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 88% 74%,var(--bgc) 0%,transparent 100%);
@@ -2947,11 +2999,20 @@
     --bgc:#FF9A5E;
     /* ⚠ 5회차 — 같은 이음매 교정(골드 주석 참고). 74° → 가로주기 96/0.9613 = 99.87px, 타일 192px 이라
        1.9225 주기 = 끝 간격 92.3%(4회차 E·F 의 «−7.9%»). 192 × sin74° / 2 = 92.28 로 맞춘다. */
-    --bgm1:repeating-linear-gradient(74deg,transparent 0 28.8px,var(--bgc) 28.8px 50px,transparent 50px 92.3px);
+    /* ⚠ 7회차 — 골드와 같은 교정(그쪽 주석이 근거다). 축주기 92.3 → **184.56**(= 192 × sin74° × 1).
+       레이드는 위상 50% 가 아니라 16.7% 에 최저(R=0.424)가 잡혔는데, 그건 이 테마만 `::before` 의
+       가로주기(96.02px)가 **카드 폭 966px 의 약 1/10** 이라 밴드 안에 주기가 10개나 들어가서
+       얕은 국소 최저가 여러 곳에 생기기 때문이다 — 그래도 «타일당 2주기» 라는 뿌리는 같다.
+       듀티는 24 + 18.4 = 42.4px / 184.56 = **23.0%** 로 종전(23.0%)과 동일하게 유지한다. */
+    /* 7회차 2차 — 골드와 같은 이유로 간격을 비대칭으로. 중심 간격 **68.4 / 116.2 (1.70배)**. */
+    --bgm1:repeating-linear-gradient(74deg,transparent 0 28.8px,var(--bgc) 28.8px 52.8px,
+      transparent 52.8px 100px,color-mix(in srgb,var(--bgc) 60%,transparent) 100px 118.4px,
+      transparent 118.4px 184.56px);
     --bgz1:192px 100%;--bgw1:192px;--bgo1:.24;
     --bgm2:radial-gradient(closest-side at 22% 18%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 72% 58%,var(--bgc) 0%,transparent 100%);
-    --bgz2:264px 180px;--bgw2:264px;--bgh2:180px;--bgo2:.26}
+    --bgz2:264px 180px;--bgw2:264px;--bgh2:180px;--bgo2:.26;
+    --bgfl:.34}                             /* 7회차 — 잔광 증분(종전값 그대로. 위 bgmFlash 주석 참고) */
   /* 6회차 — 열기는 «오른다». 세로는 음수 방향(위)이고 이동량은 타일 높이 1배(180px = `--bgz2` 의 세로).
      상자를 딱 그만큼 아래로 늘린다 — 늘린 부분은 `.bgm{overflow:hidden}` 이 잘라내므로 화면에 안 보인다.
      `background-size` 의 세로 피치가 그대로라 타일 위상도 안 밀린다. */

@@ -21,15 +21,33 @@ const TH = { gold: '골드 던전', dia: '다이아 던전', rel: '유물석', r
 
 /* --bgm1 / --bgz1 을 계산값에서 그대로 읽어 (각도, 축주기, 타일폭) 을 뽑는다.
    --bgm1 이 여러 겹이면 repeating-linear-gradient 겹을 **전부** 돌려준다(다이아는 교차 2겹). */
+/* ⚠ 7회차 — **정규식으로 겹을 뜯던 것을 괄호 세는 스캐너로 바꿨다.**
+   옛 정규식은 중첩 괄호를 «한 겹» 까지만 견뎠다. 7회차에 무늬 안에 `color-mix()` 를 쓰기 시작하자
+   유물석만 조용히 «repeating-linear-gradient 없음 — 건너뜀» 으로 빠졌다 —
+   `--bgc` 자체가 `color-mix(in srgb,var(--pt) 45%,#C79BFF)` 라 계산값이 **두 겹 중첩**이 되기 때문이다
+   (골드·다이아·레이드는 `--bgc` 가 단색이라 한 겹이어서 계속 통과했다).
+   게이트가 «FAIL» 이 아니라 «건너뜀» 으로 조용히 커버리지를 잃는 것이 제일 나쁘다 — 초록불인데
+   안 보고 있는 상태가 된다. 괄호 깊이를 세면 몇 겹이 중첩되든 안 놓친다. */
 function parseTheme(bgm1, bgz1) {
   const W = parseFloat(bgz1);
   const out = [];
-  const re = /repeating-linear-gradient\(([-0-9.]+)deg([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
-  let m;
-  while ((m = re.exec(bgm1))) {
-    const a = parseFloat(m[1]);
-    const px = [...m[2].matchAll(/([-0-9.]+)px/g)].map(x => parseFloat(x[1]));
-    if (px.length) out.push({ a, P: Math.max(...px) });
+  const KEY = 'repeating-linear-gradient(';
+  let i = 0;
+  while ((i = bgm1.indexOf(KEY, i)) !== -1) {
+    let d = 1, j = i + KEY.length;
+    for (; j < bgm1.length && d > 0; j++) {
+      if (bgm1[j] === '(') d++;
+      else if (bgm1[j] === ')') d--;
+    }
+    const body = bgm1.slice(i + KEY.length, j - 1);
+    i = j;
+    const am = body.match(/^\s*([-0-9.]+)deg/);
+    if (!am) continue;
+    /* 각도 뒤의 «색 스톱» 만 본다. 색 함수 안에 든 숫자(예: color-mix 의 55%)는 px 가 아니라 걸리지 않지만,
+       혹시 모를 오염을 막으려고 괄호 안쪽은 통째로 지우고 px 를 센다. */
+    const flat = body.replace(/\([^()]*\)/g, '').replace(/\([^()]*\)/g, '');
+    const px = [...flat.matchAll(/([-0-9.]+)px/g)].map(x => parseFloat(x[1]));
+    if (px.length) out.push({ a: parseFloat(am[1]), P: Math.max(...px) });
   }
   return { W, layers: out };
 }

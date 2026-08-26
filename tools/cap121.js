@@ -80,15 +80,31 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
      (H 15). 즉 «이음매 팝» 을 그림으로 반증할 수가 없었다. 등간격 6장은 «등속성» 판정의 근거라
      건드리지 않고(두 비평가 다 이 시리즈를 근거로 σ≤0.4px 를 냈다) **wrap 직전 1장을 덧붙인다.**
      카드1 의 실제 --bgt1 을 읽어 99% 지점을 찍는다 — 주기를 또 바꿔도 안 빗나간다. */
-  const bgt1 = await p.evaluate(() => {
-    const el = document.querySelector('#dunList .dnc');
-    return parseFloat(getComputedStyle(el).getPropertyValue('--bgt1')) * 1000;
-  });
-  await seek(Math.round(bgt1 * 0.99));
+  /* ⚠⚠ 7회차 — **여기가 «없는 결함» 을 하나 만들어 내고 있었다.**
+     7회차 비평가 L ①-2 가 「루프 이음매가 4장 중 3장에서 안 감긴다」며 flow-7 의 위상 오프셋을
+     카드2 **+60px(타일의 41.7%)** · 카드3 −50px(30.9%) · 카드4 −21px(12.7%) 로 실측해 냈다.
+     그런데 그건 연출이 아니라 **이 하네스가 만든 그림**이다 — `--bgt1` 을 «첫 카드» 에서 한 번 읽어
+     그 절대 시각(39.6s)으로 **모든 카드를 동시에** 앉혔는데, `--bgt1` 은 카드마다 다르다
+     (40 / 50 / 60 / 70s). 그래서 카드1 만 99% 이고 카드2 는 79.2% · 카드3 66% · 카드4 56.6% 였다.
+     즉 「이음매 직전」이라고 이름 붙은 프레임이 카드 2~4 에서는 **주기 한복판**이었고,
+     비평가는 그 한복판과 위상 0 을 비교해 «안 감긴다» 고 옳게 읽은 것이다(L 은 정확했다.
+     프레임이 거짓이었다). 5회차가 상수 7920/8460 으로 잔광을 놓친 것과 **같은 종류의 실수**다.
+     → 절대 시각이 아니라 **각 애니메이션의 제 주기 대비 비율**로 앉힌다. 그러면 6장짜리 등간격
+     시리즈(등속성 판정 근거 — 절대 시각이 맞다)는 그대로 두고 wrap 프레임만 정직해진다. */
+  const seekFrac = f => p.evaluate(fr => {
+    document.getAnimations().forEach(a => {
+      if (a._css !== 'running') return;
+      const d = a.effect && a.effect.getComputedTiming().duration;
+      if (typeof d === 'number' && d > 0) { try { a.currentTime = d * fr; } catch (_) {} }
+    });
+  }, f);
+  const bgt1s = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')]
+    .map(el => parseFloat(getComputedStyle(el).getPropertyValue('--bgt1'))));
+  await seekFrac(0.99);
   await p.waitForTimeout(90);
   await shot(p, 'flow-7');
-  console.log('flow 7장 — 배경 흐름 0/6/12/18/24/30s 위상 + wrap 직전 '
-    + (bgt1 * 0.99 / 1000).toFixed(1) + 's (--bgt1 ' + (bgt1 / 1000) + 's 의 99%)');
+  console.log('flow 7장 — 배경 흐름 0/6/12/18/24/30s 위상 + **카드마다 제 주기의 99%**'
+    + ' (--bgt1 ' + bgt1s.join('/') + 's → ' + bgt1s.map(v => (v * 0.99).toFixed(1)).join('/') + 's)');
 
   /* ---- ② 썸네일 들썩 8단계 : 던전 카드1 확대 ---- */
   const card1 = await p.evaluate(() => {
@@ -106,9 +122,34 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
      (비평가 J 는 같은 8장에서 키프레임 값이 지시와 정확히 일치한다고 옳게 읽었다).
      이제 «상태» 가 아니라 **곡선**을 찍는다: 짧은 들썩 한 번(0 상승 정점 하강 착지)과
      큰 점프 한 번(깊은 웅크림 상승 정점 하강)을 각각 4점으로. 중복 0쌍이고 인접 이동량이 고르다. */
+  /* ⚠⚠ 7회차 — **`3900` 은 «카드1 의» --thb 였다.** `--thb = 3.9 + 0.22i` · `--thd = -0.37i` 라
+     둘 다 **카드마다 다르다**(3.90~5.00s). 그런데 세 시리즈(bob·raid·arn)가 전부 상수 3900 을 쓰고
+     delay 를 무시해서, **카드 인덱스가 0 이 아닌 카드는 라벨과 다른 위상**이 찍히고 있었다.
+     7회차 비평가 L ②-1 이 「아레나 진폭이 다른 카드의 1/3(5~8px vs 12~14px) — 카드 간 격차 2.8배」로
+     최대 감점원을 잡았는데, 아레나 카드는 레이드 목록의 0번이 아니라서 «큰 점프 정점 90%» 라고
+     이름 붙은 프레임이 실제로는 97.9% 였다. 즉 **연출이 아니라 표본이 만든 지적**이다
+     (같은 L 이 카드1·레이드1 = 인덱스 0 인 두 시리즈에서는 7 / 12~14px 로 규격을 정확히 확인해 줬다.
+     인덱스 0 에서만 맞는다는 것 자체가 이 진단의 확증이다).
+     5회차의 «--bgt3 상수 7920/8460» · 이번 회차의 «flow-7 절대시각» 과 **완전히 같은 실수**다.
+     → 앞으로 위상은 언제나 **그 카드의 제 --thb·--thd 에서** 계산한다.
+     타임라인 시각 = 위상% × thb − thd  (CSS delay 가 −thd 라 local = currentTime + thd 이므로).
+     ⚠ 아레나 두 칸을 «각자 제 위상» 으로 앉히면 안 된다 — 상대 칸은 일부러 --thb/10 만큼 어긋나
+     있고(둘이 한 몸처럼 안 뛰게), 기준 칸을 제 위상에 앉히면 상대 칸은 자동으로 +10% 가 된다.
+     그게 제품이 실제로 도는 모습이다. */
+  const phaseOf = async (sel, pct) => {
+    const v = await p.evaluate(s => {
+      const el = document.querySelector(s);
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      return { thb: parseFloat(cs.getPropertyValue('--thb')) * 1000,
+               thd: parseFloat(cs.getPropertyValue('--thd')) * 1000 };
+    }, sel);
+    if (!v || !isFinite(v.thb)) return Math.round(3900 * pct / 100);
+    return Math.round(v.thb * pct / 100 - (isFinite(v.thd) ? v.thd : 0));
+  };
   const BOB = [0, 5, 10, 15, 20, 84, 87, 90, 93];   /* % of --thb — 짧은 들썩 곡선 5점 + 큰 점프 곡선 4점 */
   for (let i = 0; i < BOB.length; i++) {
-    await seek(Math.round(3900 * BOB[i] / 100));
+    await seek(await phaseOf('#dunList .dnc>.th>canvas', BOB[i]));
     await p.waitForTimeout(70);
     await shot(p, 'bob-' + (i + 1), card1);
   }
@@ -139,7 +180,7 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
      그 연출도 «18장 중 0장» 이라는 지적이 같이 나왔다. */
   const RAID = [0, 5, 10, 15, 20, 84, 87, 90, 93];   /* 6회차 — bob 과 같은 «곡선» 표본(중복 0쌍) */
   for (let i = 0; i < RAID.length; i++) {
-    await seek(Math.round(3900 * RAID[i] / 100));
+    await seek(await phaseOf('#dunList .dnc.rd>.th>canvas', RAID[i]));   /* 7회차 — 상수 3900 폐기(위 주석) */
     /* 스프라이트 프레임은 타이머가 굴리므로 여기서 직접 지정해 그린다(정지 상태에서도 순환이 보이게) */
     /* ⚠ 6회차 — 여기서 `drawSpriteTo` 를 **직접** 부르면 제품이 쓰는 옵션(padY·bright·fit·스쿼시 축)이
        빠져 표본이 화면과 다른 그림이 된다(실제로 padY 가 생기자 갈렸다). 제품과 **같은 경로**로 그린다. */
@@ -183,7 +224,8 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     const AFR = await p.evaluate(() => (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle) || []);
     const ARN = [0, 50, 84, 90];
     for (let i = 0; i < ARN.length; i++) {
-      await seek(Math.round(3900 * ARN[i] / 100));
+      /* 7회차 — **기준은 «내 칸»(arn-me)**. 상대 칸은 제 delay 대로 +10% 어긋난 채 따라온다(위 주석). */
+      await seek(await phaseOf('#dunList .dnc.rd.arn2>.th>canvas.arn-me', ARN[i]));
       /* 두 칸의 위상은 «내 칸/상대 칸» 으로 갈린다 — 하네스도 같은 규칙으로 프레임을 어긋나게 준다 */
       await p.evaluate(([fa, fb]) => {
         const me = document.querySelector('#dunList .dnc.rd.arn2 canvas.arn-me');
