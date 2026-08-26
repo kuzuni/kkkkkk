@@ -125,14 +125,28 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
                정의: 요소의 «로컬 하변»(레이아웃 좌표, 클립과 무관)이 카드 높이를 넘은 순간의
                실효 α(= 요소 자신의 α × 행 α). 이 값이 0.2 를 넘는 표본이 있으면 그 프레임에
                «읽을 수 있는데 잘린» 요소가 있는 것이다. */
-            cut: [...r.querySelectorAll('.ml-t,.ml-s,.ml-i,.ml-b,.ml-d')].map((e) => {
-              const bot = e.offsetTop + e.offsetHeight;
-              const ih2 = el.offsetHeight;
-              return bot > ih2 + 0.5
-                ? { n: e.className.split(' ')[0], depth: bot - ih2,
-                    ea: (+getComputedStyle(e).opacity) * (+getComputedStyle(r).opacity) }
-                : null;
-            }).filter(Boolean),
+            cut: (() => {
+              /* ★ 19회차 — **클립선을 고쳤다.** 18회차는 «카드 높이 h» 를 클립선으로 썼는데,
+                 내용을 실제로 가리는 선은 **h − 안쪽 빛 테두리 − 림 플래시** 다. 비평가 Χ 가
+                 렌더된 픽셀에서 «own≈30ms 에 「800」 숫자가 5px(26%) 잘린 채 알파 0.21» 을 잡았고,
+                 이 계측기는 h 로만 재서 «최대 실효 α 0.100 ✓» 라고 통과시키고 있었다.
+                 16회차 교훈(«계측기가 「1px 남았으니 통과」 로 읽던 것은 비평가가 옳았다»)의 재발이다.
+                 inset 그림자 두 개의 spread 중 **큰 쪽**이 그 시각에 안쪽을 덮는 두께다. */
+              const insets = getComputedStyle(el).boxShadow.split(/,(?=\s*(?:inset|rgb))/)
+                .filter((x) => /inset/.test(x))
+                .map((x) => { const m = /(-?[\d.]+)px\s*$/.exec(x.trim()); return m ? parseFloat(m[1]) : 0; });
+              const chrome = insets.length ? Math.max(...insets) : 0;
+              const clipLine = el.offsetHeight - chrome;
+              /* `.ml-ac`(좌측 액센트 띠)는 넣지 않는다 — top:5/bottom:5 로 **프레임에 붙어 같이
+                 줄어드는** 골격이라 내용이 아니고, 정의상 항상 «클립선에 걸린» 것으로 잡힌다. */
+              return [...r.querySelectorAll('.ml-t,.ml-s,.ml-i,.ml-b,.ml-d')].map((e) => {
+                const bot = e.offsetTop + e.offsetHeight;
+                return bot > clipLine + 0.5
+                  ? { n: e.className.split(' ')[0], depth: bot - clipLine,
+                      ea: (+getComputedStyle(e).opacity) * (+getComputedStyle(r).opacity) }
+                  : null;
+              }).filter(Boolean);
+            })(),
             /* 내용 왜곡 계측용 — 제목 잉크 상자의 «렌더» w/h. `overflow:hidden` 은 이 값을 안 자른다
                (레이아웃 상자 그대로 돌려준다) → **스케일만** 잡히고 클립은 안 잡힌다. 우리가 원하는 것이다. */
             cw: (() => { const e = r.querySelector('.ml-t'); return e ? e.getBoundingClientRect().width : 0; })(),
@@ -227,6 +241,16 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
   console.log(`우변 이탈 최대(보이는) ${mabs((o) => c0.r - o.right).toFixed(1)} px`);
   console.log(`행간 거터 최소(α>0.2)  ${gutSolid.length ? Math.min(...gutSolid).toFixed(2) : '—'} px  (정지 시 ${gut.length ? gut[0].toFixed(2) : '—'})`);
   console.log(`행간 거터 최소(α>0.02) ${gut.length ? Math.min(...gut).toFixed(2) : '—'} px  (플래시 밖 ${gutOut.length ? Math.min(...gutOut).toFixed(2) : '—'}) — 꼬리에서 이웃 링이 덮는 구간 포함`);
+  /* ★ 19회차 신설 — **«도색 외곽»** 상자를 직접 낸다. 18회차의 세 결함(폭 −10px · 상변 5px 역행 ·
+     거터 5→10px)은 전부 «링을 줄이면 박스가 사방으로 인셋된다» 는 한 원인에서 나왔는데,
+     이 계측기는 링 «안쪽» 상자(`.ml-in` rect)만 재고 있어서 셋 다 0 으로 보고하고 있었다.
+     비평가 둘이 같은 픽셀 좌표로 잡아 준 것을 계측기가 이제 스스로 잡는다. */
+  const solid = moving.filter((i) => alpha[i] > 0.2).map((i) => rows[i].out[0]).filter(Boolean);
+  const oW = (a) => a.map((o) => o.iw + 2 * (o.ring || 0));
+  const oT = (a) => a.map((o) => o.cy - o.ih / 2 - (o.ring || 0));
+  const spread = (a) => (a.length ? (Math.max(...a) - Math.min(...a)) : 0);
+  console.log(`도색 외곽 폭  α>0.2  ${spread(oW(solid)).toFixed(2)} px 변동   ·  α>0.02  ${spread(oW(vis)).toFixed(2)} px`);
+  console.log(`도색 외곽 상변 α>0.2  ${spread(oT(solid)).toFixed(2)} px 이동   ·  α>0.02  ${spread(oT(vis)).toFixed(2)} px  (0 = 역행 없음)`);
   const foldMax = vis.reduce((m, o) => Math.max(m, base.h / Math.max(o.ih, 0.01)), 1);
   console.log(`상자 접힘 최대(설계)   세로 1/${foldMax.toFixed(1)} · 가로 1/1.00 (폭 ${vis[0].iw.toFixed(0)}px 전 표본 고정)`);
   console.log(`console errors: ${errs.length}`);

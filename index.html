@@ -2179,7 +2179,14 @@
      m2 는 자기 틴트의 34% 지점에서 이미 소멸한다. 즉 «이 2장이 대상» 이라는 유일한 표식이
      연출 전반부 내내 없었다(0~144ms 프레임은 평상 베이지 227,211,188 그대로).
      4회차에 «붉은 기는 .out 이 붙는 즉시» 로 확정한 것이 129 의 뒤 커밋에 조용히 무효화된 것이다. */
-  .ml-r.out>.ml-in{transition:none;background:#F2C7C7}   /* 틴트는 .out 이 붙는 «즉시» — 4회차 확정 */
+  /* ★ 19회차 — 틴트도 **스태거를 탄다.** 18회차는 기하만 50ms 어긋나고 색은 두 행이 동시에 켜졌다.
+     Χ ①-5 «기하는 50ms 어긋나는데 색은 동시라 스태거가 «두 통» 이 아니라 «한 덩어리» 로 읽힌다» ·
+     Ψ T-5 «임의 프레임에서 두 카드 높이차가 항상 28~29px 로 고정이라 시각적으로는 거의 동시».
+     4회차의 «틴트는 .out 이 붙는 즉시» 는 그대로다 — 각 행의 «즉시» 가 자기 시작 시각이 됐을 뿐이다.
+     `forwards`(both 아님)로 둔 것이 핵심 — `both` 면 0% 상태가 **지연 구간에 소급 적용**돼
+     스태거가 통째로 사라진다. 지연 동안은 평소 색(수령 완료 `#E3D3BC`)이고, 자기 t=0 에 분홍으로 튄다. */
+  .ml-r.out>.ml-in{transition:none}
+  @keyframes mlTint{0%,100%{background:#F2C7C7}}
   /* 12회차 — 비평가 3명(U·V·W)이 «연출은 420ms 연속인데 버튼만 재렌더 시점에 0ms 하드컷으로
      빨강→회색이라, 그동안 아직 누를 수 있어 보인다» 를 독립 지적했다. 클릭 즉시 `disabled` 를 걸고
      (`:disabled` 그라디언트는 공용이라 못 건드리니) **filter 를 140ms 로 램프**시켜 급전환을 뭉갠다. */
@@ -2318,36 +2325,39 @@
         **연출 내내** 성립한다. 대가로 카드 자신의 수축 속도는 0.49 → 0.570 px/ms 로 16% 빨라진다 —
         이건 손해가 아니라 ③ 이 요구하던 «세로가 지배적인 움직임» 쪽으로 가는 것이다. */
   @keyframes mlOut{
+    /* ★ 19회차 — **이즈인을 넣었다.** 18회차 채점에서 Ψ·Χ 가 독립적으로 같은 것을 실측했다:
+       Ψ «y = 940 − 0.5684t 에 최대 잔차 0.9px — 감속이 들어갈 여지가 2px/7ms 뿐» ·
+       Χ «own 0→25ms 구간 속도가 순항의 **97%** — 1프레임 만에 최고속. 78%가 완전 등속 직선».
+       14회차가 «등속 + 착지» 로 간 것은 지수형(1−p)^1.6 이 **앞을 너무 빠르게** 해서 합산 피크가
+       1.44 였기 때문이다. 이즈인은 그 반대 방향이라 피크를 **낮추지 올리지 않는다** — 다만 같은
+       164px 를 더 짧은 순항 구간에 넣어야 하므로 순항 속도가 오른다. 예산을 맞춰 잡았다:
+         이즈인 50ms(변위 16.1px) + 순항 210ms + 착지 40ms(변위 12.9px) = 255·v = 164 → **v = 0.6431px/ms**
+         → 두 행이 겹칠 때의 합산 피크 **1.286** (7·8·11·14회차가 지켜 온 «≤1.30» 안).
+       Χ 가 «하드 스톱이 아니다 — 마지막 55ms/21px 에 감속 착지가 실재한다» 고 확인했으므로
+       (17회차 Σ·Φ 의 «하드 스톱» 은 표본 간격 아티팩트였다) 착지는 그대로 두고 **머리만** 고친다.
+
+       ⚠ 커브를 **pitch P(= height + margin-bottom)** 에 대해 설계하고 h 를 거기서 뽑았다.
+       h 에 직접 이징을 걸면 margin 이 17 로 고정된 구간에서 P 의 이징이 h 의 것과 달라져
+       **남는 행이 이징을 안 받는다** — 눈이 보는 것은 h 가 아니라 P 다.
+       P: 164 → 이즈인 50ms → 순항 → 착지 40ms → 0.  h = P − 17 (P ≥ 17), 그 아래는 80% 시점의
+       비(8.75 : 17)로 함께 0 으로 — 16회차가 잡은 «height 를 먼저 0 으로 보내면 self-collapsing
+       block 이 되어 margin 이 증발한다» 를 그대로 지킨다(h 는 100% 전에는 0 이 안 된다). */
     0%{opacity:1;height:147px;margin-bottom:17px}
-    6.67%{opacity:1}
-    10%{height:129.92px;margin-bottom:17px}
-    13.33%{height:124.22px;margin-bottom:17px}
-    20%{height:112.84px;margin-bottom:17px}
-    30%{height:95.75px;margin-bottom:17px}
-    40%{height:78.67px;margin-bottom:17px}
-    43.33%{height:72.98px;margin-bottom:17px}
-    50%{height:61.59px;margin-bottom:17px}
-    60%{height:44.51px;margin-bottom:17px}
-    /* ★ 18회차 — α 종료를 **70%(210ms) → 100%(300ms)** 로 되돌렸다. 16회차가 210ms 로 당긴 근거는
-       «h=40px 아래에서는 너무 작아 안 읽히는데 α 는 .4~.65 인 죽은 밴드» 였는데, 그 «작다» 는
-       **등방 축소라서 폭까지 40px 로 줄던 것**이다. 폭이 784 로 고정된 지금은 h=40 이어도
-       784×40 짜리 «닫히는 띠» 라 끝까지 읽힌다 — 16회차의 전제가 사라졌다.
-       그 대신 Σ 가 «①·④ 동시 감점» 으로 지적한 것이 회수된다: 예전엔 카드가 210ms 에 사라지는데
-       슬롯은 300ms 에 닫혀 **90ms(수명의 30%) 동안 «빈 구멍이 저절로 닫히는» 구간**이 있었다
-       (Σ 실측 t=210 에 슬롯이 아직 44px 열려 있음). 이제 «카드 소멸 = 슬롯 폐쇄» 로 **격차 0ms**.
-       덤으로 알파 기울기가 **.00526 → .00357/ms** 로 이 작업 최저가 된다(14회차 «알파 절벽 금지»). */
-    70%{height:27.41px;margin-bottom:17px}
-    80%{height:10.33px;margin-bottom:17px}
-    /* ⚠ 80% 뒤로는 height 를 **0 으로 먼저 보내면 안 된다.** `.ml-pn` 은 `display:block` 이라
-       높이 0 인 행은 «self-collapsing block» 이 되어 자기 `margin-bottom` 이 앞뒤 마진과
-       **합쳐져 사라진다**. 첫 시도(86.03% 에 height 0, margin 은 17→0 을 계속)에서 실제로
-       t=258ms 에 남은 pitch 17px 이 **한 프레임에** 증발해 합산 상승 피크가 1.141 → **2.733**,
-       재가속이 0.005 → **1.595** 로 튀었다(probe92 실측). 14·15회차가 지켜 온 값을 그대로 깨는 것이다.
-       → 80% 이후는 height 와 margin 을 **같은 비율(17:10.33)로 함께** 0 으로 보낸다.
-       P = height + margin 은 여전히 예전과 같은 값이라 남는 행의 상승은 1px 도 안 변한다. */
-    90%{height:3.88px;margin-bottom:6.38px}
-    92%{height:2.59px;margin-bottom:4.25px}
-    96%{height:.65px;margin-bottom:1.06px}
+    6.67%{opacity:1;height:144.43px;margin-bottom:17px}
+    10%{height:141.21px;margin-bottom:17px}
+    13.33%{height:136.71px;margin-bottom:17px}
+    16.67%{height:130.92px;margin-bottom:17px}
+    20%{height:124.49px;margin-bottom:17px}
+    30%{height:105.20px;margin-bottom:17px}
+    40%{height:85.91px;margin-bottom:17px}
+    50%{height:66.62px;margin-bottom:17px}
+    60%{height:47.33px;margin-bottom:17px}
+    70%{height:28.04px;margin-bottom:17px}
+    80%{height:8.75px;margin-bottom:17px}
+    86.67%{height:4.38px;margin-bottom:8.51px}
+    90%{height:2.47px;margin-bottom:4.79px}
+    92%{height:1.58px;margin-bottom:3.08px}
+    96%{height:.40px;margin-bottom:.78px}
     100%{opacity:0;height:0;margin-bottom:0}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
      (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
@@ -2388,7 +2398,11 @@
      → **등방 `scale`** 로 바꿨다. 종횡비가 보존되므로 왜곡이 **0 이 되는 것이 정의상 보장**된다.
      둘의 처방(«α 를 scale 에 붙여 일찍 지워라»)은 «빈 판» 을 도로 만든다 — 10회차에 0 으로 만든 값이다.
      등방 scale 은 **왜곡도 0, 빈 판도 0** 이라 둘을 맞바꾸지 않는 유일한 답이다. */
-  .ml-r.out>.ml-in{animation:mlOutIn .30s linear both;animation-delay:var(--mld,0ms)}
+  /* ⚠ 두 애니메이션을 **한 선언에** 적는다 — `animation` 을 두 규칙에 나눠 쓰면 나중 것이 앞 것을
+     통째로 덮어써서 틴트가 사라진다(같은 셀렉터라 우선순위가 같다). fill-mode 는 각각 다르다:
+     `mlOutIn` 은 `both`(지연 구간에 0% 기하를 깔아야 행이 안 튄다) · `mlTint` 는 `forwards`
+     (지연 구간에 소급 적용되면 스태거가 사라진다). */
+  .ml-r.out>.ml-in{animation:mlOutIn .30s linear both,mlTint .30s step-start forwards;animation-delay:var(--mld,0ms)}
   /* scale 계수 = 위 `mlOut` 의 height ÷ 147 (둘은 반드시 같이 고친다).
      림 플래시 창을 9%/25% → **12%/33%**(36ms/99ms)로 넓혔다 — 수명을 400→300 으로 줄이면서
      퍼센트를 그대로 둬 1.6프레임으로 쪼그라들어 있었다(V-①). 진폭도 안쪽 5→12px 에 더해
@@ -2473,40 +2487,81 @@
        선언값 = 빛 5 + 그 두께다(scale 나눗셈이 사라져 값이 곧 화면 두께다).
        Σ B-3 «4px 로 설계했는데 화면에 4px 로 나오는 프레임이 한 장도 없다(등방 축소가 띠까지 눌러
        실효 2.7~3.3px)» 가 이걸로 해소된다 — 40ms 프레임에서 실제로 4.0px 이 그려진다. */
+    /* ★ 19회차 — **바깥 링을 6px 로 고정했다(h<8 만 예외).** 18회차의 «h<48 부터 h/48 배» 는
+       Ψ·Χ 가 **독립적으로, 같은 픽셀 좌표로** 세 가지 결함을 실측한 원인이었다:
+         · «폭이 한 프레임도 안 변한다» 가 깨졌다 — 도색 외곽 796 → 792(t=210) → **786px(t=250)**,
+           −10px(−1.26%). 링을 줄이면 **박스가 사방으로 인셋**되기 때문이다(Χ ②-6).
+         · 카드 상변이 776 → 778 → **781px**, 접히는 방향과 **반대로 5px 역행**(Ψ P-2 · Χ ③-10, 수치 동일).
+         · 그 결과 위 거터가 5 → 7 → **10px(+100%)** 로 벌어졌다 되돌아온다(Ψ P-2 · Χ ③-9, 수치 동일).
+       **대칭 링은 «두께만» 줄일 수 없다** — 바깥 경계가 곧 두께이기 때문이다(shadow y-오프셋으로
+       윗변을 고정하면 아랫변이 그만큼 안으로 들어와 같은 결함이 아래로 옮겨 갈 뿐이다).
+       → 바깥 링은 **건드리지 않는다.** 폭 796 · 상변 776 · 거터 5px 이 전 구간 불변이 된다.
+       덤으로 Χ ①-3 의 «끝나는 시각이 3개(도색 268 / 슬롯 290 / 알파 300)» 도 사라진다 —
+       «도색 268» 은 링이 얇아져 사라진 시각이었다. 이제 도색·슬롯·알파가 **모두 300ms** 다.
+
+       ⚠ 두 사람이 같이 낸 «트림 비중 46%» 처방(임계를 48 → 108/120px 로 **올려라**)은 **안 받는다.**
+       그 처방과 위 세 결함이 **같은 한 가지 원인**을 공유하기 때문이다 — 임계를 올리면 인셋이
+       더 일찍 시작돼 폭 위반·상변 역행·거터 출렁임이 **더 커진다.** 둘은 양자택일이고,
+       두 사람이 «픽셀에서 직접 본» 쪽은 결함 세 가지이고 «비중 46%» 는 산술로 유도한 값이다.
+       대신 인셋을 안 만드는 축으로만 줄인다: **안쪽 빛 테두리(5px)를 h<60 부터 5·h/60 로**.
+       이건 상자 «안» 이라 외곽 기하를 1px 도 안 건드린다. 남는 비중은 «높이 10px 인 행에 이웃과
+       같은 6px 외곽선» 의 산술적 그림자이고, 그 외곽선이 이웃 행과 같아야 목록으로 읽힌다.
+
+       림 플래시는 피크를 **4 → 3px**, 창을 130 → **120ms** 로 낮췄다(Ψ 처방 5). 이유는 «강조가 과하다» 가
+       아니라 **플래시가 클립선을 자기 두께만큼 끌어올려** 썸네일 하변을 더 일찍 자르기 때문이다
+       (Χ ④-15: «own≈30ms 에 5px(26%) 절단 @ 알파 0.21»). 클립선 = h − 안쪽빛 − 플래시다. */
     0%{height:147px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
-    10%{height:129.92px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 8px #241A12}
-    13.33%{height:124.22px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 9px #241A12}
-    20%{height:112.84px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 8.6px #241A12}
-    30%{height:95.75px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 7.6px #241A12}
-    40%{height:78.67px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5.6px #241A12}
-    43.33%{height:72.98px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
-    50%{height:61.59px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
-    /* 여기부터 h < 48 — 링을 h/48 로 함께 줄인다(Σ B-2) */
-    60%{height:44.51px;box-shadow:0 0 0 5.56px #241A12,inset 0 0 0 4.64px #FFFBF2,inset 0 0 0 4.64px #241A12}
-    70%{height:27.41px;box-shadow:0 0 0 3.43px #241A12,inset 0 0 0 2.86px #FFFBF2,inset 0 0 0 2.86px #241A12}
-    80%{height:10.33px;box-shadow:0 0 0 1.29px #241A12,inset 0 0 0 1.08px #FFFBF2,inset 0 0 0 1.08px #241A12}
-    90%{height:3.88px;box-shadow:0 0 0 .48px #241A12,inset 0 0 0 .40px #FFFBF2,inset 0 0 0 .40px #241A12}
-    92%{height:2.59px;box-shadow:0 0 0 .32px #241A12,inset 0 0 0 .27px #FFFBF2,inset 0 0 0 .27px #241A12}
-    96%{height:.65px;box-shadow:0 0 0 .08px #241A12,inset 0 0 0 .07px #FFFBF2,inset 0 0 0 .07px #241A12}
+    6.67%{height:144.43px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 7.4px #241A12}
+    10%{height:141.21px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 8px #241A12}
+    13.33%{height:136.71px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 7.8px #241A12}
+    16.67%{height:130.92px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 7.6px #241A12}
+    20%{height:124.49px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 7.2px #241A12}
+    30%{height:105.20px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 6.2px #241A12}
+    40%{height:85.91px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    50%{height:66.62px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    /* 여기부터 h < 60 — 안쪽 빛만 5·h/60 로 줄인다(외곽 기하 불변) */
+    60%{height:47.33px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 3.94px #FFFBF2,inset 0 0 0 3.94px #241A12}
+    70%{height:28.04px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 2.34px #FFFBF2,inset 0 0 0 2.34px #241A12}
+    80%{height:8.75px;box-shadow:0 0 0 6px #241A12,inset 0 0 0 .73px #FFFBF2,inset 0 0 0 .73px #241A12}
+    /* h < 8 — 여기서만 바깥 링도 함께 접는다. 이 구간의 카드 알파는 0.15 아래라 인셋이 안 보인다
+       (18회차의 결함은 알파 0.32·0.18 구간에서 일어났다). */
+    86.67%{height:4.38px;box-shadow:0 0 0 3.29px #241A12,inset 0 0 0 .37px #FFFBF2,inset 0 0 0 .37px #241A12}
+    90%{height:2.47px;box-shadow:0 0 0 1.85px #241A12,inset 0 0 0 .21px #FFFBF2,inset 0 0 0 .21px #241A12}
+    92%{height:1.58px;box-shadow:0 0 0 1.19px #241A12,inset 0 0 0 .13px #FFFBF2,inset 0 0 0 .13px #241A12}
+    96%{height:.40px;box-shadow:0 0 0 .30px #241A12,inset 0 0 0 .03px #FFFBF2,inset 0 0 0 .03px #241A12}
     100%{height:0;box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2,inset 0 0 0 0 #241A12}}
-  /* ★ 18회차 — **4단 내용 소거.** 클립이 각 요소의 «하변» 에 닿기 «전에» 그 요소만 끈다.
-     높이 커브가 사실상 등속(0.569px/ms)이라 각 하변이 잘리는 시각은 산수로 정확히 나온다:
-       · `.ml-d`(하변 128) 33.4ms · `.ml-i`(127.5) 34.3ms · `.ml-b`(118) 50.9ms
-       · `.ml-s`(94) 93.1ms · `.ml-t`(58) 156.4ms
-     각 소거를 그보다 먼저 끝내면 **«읽히는데 잘린» 프레임이 0** 이다 — 5~9회차가 네 번(하변→우변→
-     상변→다시 하변) 재발시킨 결함의 유일한 구조적 해법이다.
-     불변식: 어떤 요소도 «자기 하변이 잘린 순간의 실효 α(= 로컬 α × 카드 α) > 0.2» 가 되지 않는다.
-     실측(설계값): `.ml-d`/`.ml-i` 0.14 · `.ml-b` 0.07 · `.ml-s` 0.03 · `.ml-t` 0.13 — 전부 0.2 미만.
-     반대편 요구(«이 2통이 대상» 을 읽을 시간)도 같이 커진다: 제목이 로컬 α 1 인 채로
-     카드 α ≥ 0.7 인 구간이 **104ms**(16회차 77ms 대비 +35%). */
-  .ml-r.out .ml-d,.ml-r.out .ml-i{animation:mlIco .30s linear both;animation-delay:var(--mld,0ms)}
-  @keyframes mlIco{0%{opacity:1}12.67%{opacity:0}100%{opacity:0}}      /* 38ms — 하변 128 이 33.4ms */
+  /* ★ 19회차 — 4단 내용 소거의 **기준선을 고쳤다.** 18회차는 클립선을 «카드 높이 h» 로 잡았는데,
+     내용을 실제로 가리는 선은 **h − 안쪽 빛 테두리 − 림 플래시** 다. Χ 가 렌더된 픽셀에서 잡았다:
+     «own≈30ms 에 «800» 숫자가 5px(26%) 잘린 채 알파 0.21» · «썸네일 프레임 하변 5px 통째 소실».
+     내 probe92 는 h 로만 재고 있어서 «최대 실효 α 0.100 ✓» 라고 통과시키고 있었다 —
+     **16회차 교훈(«계측기가 「1px 남았으니 통과」 로 읽고 있던 것은 비평가가 옳았다»)의 재발이다.**
+     → 계측기의 클립선을 고치고(probe92), 소거 창을 새 클립선 기준으로 다시 잡았다.
+     19회차는 이즈인 덕에 h 가 중반까지 더 크게 남아(t=120 에 85.91 vs 18회차 78.67) 창이 넓어졌다.
+
+     | 요소 | 로컬 하변 | **새 클립 시각**(h − 빛 − 플래시 기준) | 소거 창 | 잘리는 순간 실효 α |
+     |---|---|---|---|---|
+     | `.ml-d` · `.ml-i` · 발자국 | 128 · 127.5 | 43ms | 0 → 40ms | 0 |
+     | `.ml-b` | 118 | 57ms | 0 → 54ms | 0 |
+     | `.ml-s` | 94 | 100ms | 20 → 97ms | 0 |
+     | `.ml-t` | 58 | 156ms | 90 → 190ms | **0.175** (로컬 .34 × 카드 .514) |
+
+     제목만 «잘린 뒤에도 190ms 까지 산다» — 일부러다. Χ 의 «8점을 막는 단 하나» 가
+     «내용이 카드보다 93ms 먼저 사라져 연출의 31%가 무늬 없는 띠» 였고, 제목을 클립 시각(156ms)에
+     맞춰 끄면 그 띠가 **더 길어진다.** 불변식(실효 α ≤ 0.2)을 지키는 한도까지 늦춘 값이 190ms 다.
+
+     ★ 발자국 장식(`.ml-ac::after`)을 **1단에 편입**했다 — Ψ·Χ 가 독립으로 같은 것을 잡았다:
+     Χ «t=165 에서 발자국의 유효 대비가 제목의 **6.8배**. t=210 의 35px 띠에 남은 유일한 형상» ·
+     Ψ «t=250 의 796×10 바에 좌측 액센트 스트립과 발자국이 여전히 렌더된다».
+     의미 없는 장식이 의미 요소보다 오래 사는 것은 소거 순서의 역전이다. 액센트 «띠» 자체는
+     테두리처럼 행의 골격이라 남긴다 — 띠까지 지우면 닫히는 행이 아니라 빈 홈이 된다. */
+  .ml-r.out .ml-d,.ml-r.out .ml-i,.ml-r.out .ml-ac::after{animation:mlIco .30s linear both;animation-delay:var(--mld,0ms)}
+  @keyframes mlIco{0%{opacity:1}13.33%{opacity:0}100%{opacity:0}}      /* 40ms — 클립 43ms */
   .ml-r.out .ml-b{animation:mlBtn .30s linear both;animation-delay:var(--mld,0ms)}
-  @keyframes mlBtn{0%{opacity:1}17.33%{opacity:0}100%{opacity:0}}      /* 52ms — 하변 118 이 50.9ms */
+  @keyframes mlBtn{0%{opacity:1}18%{opacity:0}100%{opacity:0}}          /* 54ms — 클립 57ms */
   .ml-r.out .ml-s{animation:mlSum .30s linear both;animation-delay:var(--mld,0ms)}
-  @keyframes mlSum{0%,10%{opacity:1}31.67%{opacity:0}100%{opacity:0}}  /* 30→95ms — 하변 94 가 93.1ms */
+  @keyframes mlSum{0%,6.67%{opacity:1}32.33%{opacity:0}100%{opacity:0}} /* 20→97ms — 클립 100ms */
   .ml-r.out .ml-t{animation:mlTtl .30s linear both;animation-delay:var(--mld,0ms)}
-  @keyframes mlTtl{0%,33.33%{opacity:1}58.33%{opacity:0}100%{opacity:0}} /* 100→175ms — 하변 58 이 156.4ms */
+  @keyframes mlTtl{0%,30%{opacity:1}63.33%{opacity:0}100%{opacity:0}}   /* 90→190ms — 클립 156ms, 실효 α .175 */
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
