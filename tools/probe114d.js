@@ -83,6 +83,51 @@ const R1 = n => Math.round(n * 10) / 10;
     return out;
   });
 
+  /* ---- 13회차 신설 — «화구 가시 구간 vs 링 생존 구간» 을 같은 축에서 잰다 ----
+     12회차가 다음 회차로 넘긴 충돌: AO «2단 파문이 화구보다 160ms 더 산다, 줄여라(Ø294)» ↔
+     AP «160ms 만에 죽고 최대 Ø245~256 이라 피해 지름 260 에 미달, 늘리고 키워라».
+     두 사람이 잰 최대 Ø 부터 갈렸으므로 코드에서 먼저 가른다(LESSONS 114-2 의 1).
+     착탄 순간을 t=0 으로 잡고 **20ms 간격**으로 화구 알파·링 지름을 함께 찍는다 —
+     캡처 그리드(80ms)에서 무엇이 몇 장에 잡히는지도 같이 나온다. */
+  const wave = await p.evaluate(() => {
+    window.__pd.setup(6, 150);
+    window.__pd.cast('meteor');
+    /* 착탄(= booms 가 처음 생기는 순간)까지 굴린다 */
+    let guard = 0;
+    while (booms.length === 0 && guard++ < 300) step(1/60);
+    const DT = 1/60, STEP_MS = 20;
+    const out = [];
+    for (let k = 0; k <= 40; k++) {                    /* 0 ~ 800ms */
+      const ms = k * STEP_MS;
+      /* 화구 — index.html 의 렌더식과 같은 계산(BOOM_FADE 뒤 1.6제곱 감쇠) */
+      let fireA = 0, fireD = 0;
+      for (const b of booms) {
+        const fr = curFrame(b); if (!fr) continue;
+        const bl = boomFrames(), pr = bl ? Math.min(b.at / bl, 1) : 0;
+        const dk = pr <= BOOM_FADE ? 1 : 1 - Math.pow((pr - BOOM_FADE) / (1 - BOOM_FADE), 1.6);
+        const a = b.alpha * dk;
+        if (a > fireA) { fireA = a; fireD = Math.round(ATLAS.boom.f[fr][6] * b.scale); }
+      }
+      /* 링 — 지연 발화 대기(t<0)는 «아직 없음». rr 는 ease-out(1-(1-f)^2) */
+      const rs = rings.map(r => {
+        if (r.t < 0) return null;
+        const f = Math.min(Math.max(r.t / r.life, 0), 1), e = 1 - (1 - f) * (1 - f);
+        return { d: Math.round((r.r0 + (r.r1 - r.r0) * e) * 2), a: Math.round((1 - f * f) * (r.fl ? 0.8 : 0.95) * 100) / 100 };
+      }).filter(Boolean).sort((x, y) => y.d - x.d);
+      out.push({
+        ms,
+        capFrame: ms % 80 === 0 ? ms / 80 + 1 : '',      /* 80ms 캡처 그리드에 걸리는 지점 */
+        fireA: Math.round(fireA * 100) / 100, fireD,
+        rings: rs.length,
+        maxD: rs.length ? rs[0].d : 0,
+        maxA: rs.length ? rs[0].a : 0,
+        dList: rs.map(r => r.d).join('/')
+      });
+      for (let s = 0; s < Math.round(STEP_MS / 1000 / DT); s++) step(DT);
+    }
+    return out;
+  });
+
   await b.close();
 
   console.log('== 운석 예고 원 — cap114 boom 장면 재현 (게임px · 몸통 34 · 뷰포트 540) ==');
@@ -100,5 +145,22 @@ const R1 = n => Math.round(n * 10) / 10;
   console.log('첫 프레임 두 원 틈: ' + first.gapPx + ' 게임px' +
               (first.gapPx < 6 ? '  ← 6 게임px 미만이면 한 겹으로 읽힌다' : ''));
   console.log('십자 길이        : ' + first.crossLen + ' → ' + last.crossLen + ' 게임px');
+
+  console.log('');
+  console.log('== 착탄 이후 — 화구 vs 링 (같은 축 · 20ms 간격 · 착탄 = 0ms) ==');
+  console.table(wave.filter(r => r.ms % 40 === 0));
+  const fireLast = [...wave].reverse().find(r => r.fireA > 0.02);
+  const ringLast = [...wave].reverse().find(r => r.rings > 0);
+  const peak = wave.reduce((a, r) => (r.maxD > a.maxD ? r : a), wave[0]);
+  console.log('');
+  console.log('화구 가시 마지막  : ' + (fireLast ? fireLast.ms : 0) + 'ms  (알파 > 0.02)');
+  console.log('링 생존 마지막    : ' + (ringLast ? ringLast.ms : 0) + 'ms');
+  console.log('링이 화구보다 더 삶: ' + ((ringLast ? ringLast.ms : 0) - (fireLast ? fireLast.ms : 0)) + 'ms');
+  console.log('링 최대 지름      : Ø' + peak.maxD + ' 게임px (' + peak.ms + 'ms · 몸통의 ' +
+              R1(peak.maxD / 34) + '배 · 뷰포트 폭의 ' + Math.round(peak.maxD / 540 * 100) + '%)');
+  console.log('피해 지름 Ø260 과의 차: ' + (peak.maxD - 260) + ' 게임px');
+  const capRows = wave.filter(r => r.capFrame !== '');
+  console.log('80ms 캡처 그리드에서 링이 잡히는 장 수: ' +
+              capRows.filter(r => r.rings > 0).length + ' / ' + capRows.length);
   console.log('페이지 에러 ' + errs.length + '건');
 })();
