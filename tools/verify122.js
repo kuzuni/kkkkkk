@@ -146,13 +146,24 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
      ⚠ inset 이 필요한 이유: 기준면을 «최빈 휘도» 로 잡는데, 버튼처럼 **면이 다단 그라디언트**
      이고 **테두리가 균일한 검정**이면 최빈값이 테두리로 잡힌다. 띠는 테두리 안쪽에서만 도니까
      «평탄면에서 아무 변화 없음» = 0 이 나온다([이동] 버튼에서 실제로 겪었다). */
+  /* ⚑ 13회차 — 네 번째 필드 `x,y,w,h` 로 **요소 안의 부분 사각형**을 직접 지정할 수 있다.
+     inset 은 «사방을 똑같이» 물리는 것뿐이라, 덮개가 한쪽에 몰려 있는 자리를 못 판다.
+     `소환 본문` 3점이 그 경우다(§17-6) — `.cbg` 는 노출률이 23.7~30.3% 뿐이고
+     덮개(.chd/.cart/.clv/.cbar/.cbtn×3/.adbadge/.cmag)가 좌·상·하에 몰려 있다.
+     좌표는 **요소 상자 기준**이며 `tools/probe122b.js` 가 다섯 칸 공통 노출 구역으로 풀어 준다. */
   const clip = await p.evaluate(s => {
-    const [sel, idxS, insS] = s.split('|');
+    const [sel, idxS, insS, rectS] = s.split('|');
     const e = document.querySelectorAll(sel)[+(idxS || 0)];
     if (!e) return null;
     const ins = +(insS || 0);
     e.scrollIntoView({ block: 'center' });
     const r = e.getBoundingClientRect();
+    if (rectS) {
+      const [rx, ry, rw, rh] = rectS.split(',').map(Number);
+      const x = Math.max(0, Math.round(r.x + rx)), y = Math.max(0, Math.round(r.y + ry));
+      const w = Math.min(Math.round(rw), innerWidth - x), h = Math.min(Math.round(rh), innerHeight - y);
+      return (w > 4 && h > 4) ? { x, y, width: w, height: h } : null;
+    }
     const x = Math.max(0, Math.round(r.x + ins)), y = Math.max(0, Math.round(r.y + ins));
     const w = Math.min(Math.round(r.width - 2 * ins), innerWidth - x);
     const h = Math.min(Math.round(r.height - 2 * ins), innerHeight - y);
@@ -411,19 +422,30 @@ async function ampCheck(p, hosts) {
   console.log('§13 광택 피크 Δ루마 한 벌 — 소환 탭');
   const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzs::after',
         SUM_FR = '#shopList .shp-card>.cfr::after';
+  /* 13회차 — `.cbg` 안에서 **다섯 칸 전부 노출된** 최대 직사각형(`tools/probe122b.js` 실측).
+     카드별 최대 빈칸은 220~260×148~152 로 갈리는데, 그중 **모든 칸에서 동시에 비어 있는** 구역이
+     이 값이다. 헤더(104px) 아래·상자 아이콘 판 오른쪽의 본문 바탕이다. */
+  const SUM_BODY = '476,104,220,148';
   /* 헤더는 칸마다 배경색(`--hd`)이 달라 **가장 밝은 칸과 가장 어두운 칸**을 같이 본다 —
      `jzShineA()` 가 칸별 α 를 제대로 박고 있는지는 이 두 칸이 같은 값이어야 증명된다. */
   await ampCheck(p, [['소환 헤더1', '#shopList .shp-card>.chd|0', SUM_HD, SUM_FR],
                      ['소환 헤더4', '#shopList .shp-card>.chd|3', SUM_HD, SUM_FR],
-                     ['소환 본문', '#shopList .shp-card>.cbg', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
+                     /* ⚑ 13회차 — 세 «본문» 점의 클립을 `.cbg` 전체에서 **다섯 칸 공통 노출 구역
+                        220×148 @(476,104)** 로 좁혔다(§18-1). `.cbg` 전체를 쓰면 최빈면이 본문
+                        그라디언트가 아니라 그 위에 덮인 **불투명 판**(상자 아이콘 판·버튼·게이지)으로
+                        잡혀서 «카드마다 다른 것을 재는» 점이 된다 — 12회차가 그래서 `'rec'` 으로 내렸다.
+                        덮개를 `muteSel` 로 걷어서 재는 방법은 **쓰지 않는다**: 플레이어에게 안 보이는
+                        띠를 통과시키는 가짜 초록불이 된다. 실제로 보이는 자리에서만 잰다.
+                        duty 는 부분 영역 클립이므로 판정에서 빼고 기록만 한다(`true`). */
+                     ['소환 본문', '#shopList .shp-card>.cbg|0|0|' + SUM_BODY, SUM_BD, SUM_FR + ',' + SUM_HD, true],
                      /* ⚠ 전면 광택은 **헤더 위에서 재야 한다.** 6회차에 카드 전체(`.cfr`)로 쟀더니
                         평탄면이 본문 바탕(휘도 144)으로 잡혀 34.1 «정상» 이 나왔지만, 비평가 둘은
                         헤더 바탕(휘도 98~119) 위에서 +57~82 를 읽었다 — 같은 띠가 지나는 **가장 어두운
                         면**이 그 띠의 최대 세기다. 칸별 α 가 제대로 박혔는지도 두 칸을 비교해야 보인다. */
                      /* 7회차(Y 7) — 본문도 칸마다 휘도가 다르다(99.6~165.4). 가장 밝은 칸(3)과
                         가장 어두운 칸(4)을 둘 다 봐야 `--jz-gb` 가 제대로 박혔는지 보인다. */
-                     ['소환 본문3', '#shopList .shp-card>.cbg|2', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
-                     ['소환 본문4', '#shopList .shp-card>.cbg|3', SUM_BD, SUM_FR + ',' + SUM_HD, 'rec'],
+                     ['소환 본문3', '#shopList .shp-card>.cbg|2|0|' + SUM_BODY, SUM_BD, SUM_FR + ',' + SUM_HD, true],
+                     ['소환 본문4', '#shopList .shp-card>.cbg|3|0|' + SUM_BODY, SUM_BD, SUM_FR + ',' + SUM_HD, true],
                      /* 전면 광택은 이제 헤더를 안 지난다(Y 2) → 본문에서 잰다 */
                      ['소환 전면(본문1)', '#shopList .shp-card>.cbg|0', SUM_FR, SUM_HD + ',' + SUM_BD, true],
                      ['소환 전면(본문4)', '#shopList .shp-card>.cbg|3', SUM_FR, SUM_HD + ',' + SUM_BD, true]]);
