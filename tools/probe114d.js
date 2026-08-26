@@ -60,14 +60,16 @@ const R1 = n => Math.round(n * 10) / 10;
       if (m){
         /* index.html 의 예고 렌더와 «같은 식» 을 여기서 다시 계산한다 */
         const fr = Math.min(Math.max(1 - (m.ty - m.y) / 620, 0), 1);
-        const ro = m.r;                      /* 바깥 원 반지름 — 고정(= 피해 반경) */
-        const ri = m.r * (1.0 - 0.92 * fr);  /* 안쪽 원 반지름 — 착탄에 0 으로 수렴 */
+        const ro = m.r;                          /* 바깥 원 반지름 — 고정(= 피해 반경) */
+        /* ⚠ index.html 의 예고 렌더와 «같은 식» 을 여기서 다시 계산한다 — 저쪽을 바꾸면 여기도 바꿔라.
+           12회차: 선형 (1−0.92f) → 0.92·pow(1−f, 0.55) (AO③·AP① 공통 «이징 0» + AO②·AP «0 미수렴») */
+        const ri = m.r * 0.92 * Math.pow(1 - fr, 0.55); /* 안쪽 원 반지름 — f=1 에서 정확히 0 */
         out.push({
           frame: f + 1, ms: f * 80, f: Math.round(fr * 1000) / 1000,
           outerD: Math.round(ro * 2), innerD: Math.round(ri * 2),
           gapPx: Math.round(ro - ri),              /* 두 원 사이 «틈» — 0 이면 한 겹으로 보인다 */
           crossLen: Math.round(ri * 0.34 * 2),
-          aOuter: Math.round((0.30 + 0.35 * fr) * 100) / 100,
+          aOuter: Math.round((0.52 + 0.30 * fr) * 100) / 100,   /* 12회차 — 위계 반전 교정 후 값 */
           aInner: Math.round((0.35 + 0.5 * fr) * 100) / 100,
           fallY: Math.round(m.ty - m.y)
         });
