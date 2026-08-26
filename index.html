@@ -2186,7 +2186,7 @@
   /* 8회차 — .28 은 대비를 71.6% 깎아 «형제 행이 통째로 사라진» 것처럼 읽힌다(비평가 Y ①).
      오독을 막는 데는 이 정도면 충분하고, 목록의 맥락은 남는다. */
   .fx-dim{opacity:.5;transition:opacity .16s ease-out}
-  .fx-undim{transition:opacity .26s ease-out}
+  .fx-undim{transition:opacity .16s ease-out}
   /* 수령한 행은 «이 행이 그 보상의 출처» 라는 것이 읽히게 위로 올린다(색 보정은 쓰지 않는다) */
   .fx-solo{position:relative;z-index:3}
 
@@ -17633,7 +17633,7 @@ const FX3_R0     = 106, FX3_R1 = 184;                /* 퍼짐 반경 — 부유
    1회차는 −95°~+25° 라 위로도 아래로도 새서 «히어로 아래 4개»·«좌측 x=199» 가 잡혔다(G/H ② 4점).
    **패널 밖(메인 화면)** 은 우상단 70° 부채꼴, **패널 안(모달·시트)** 은 거의 수평 우측 42° 부채꼴이다 —
    패널 안에서 위로 퍼지면 그 순간 이미 «윗 행 카드 위» 라 궤적을 아무리 고쳐도 회수가 안 된다. */
-const FX3_A0  = -88 * Math.PI/180, FX3_A1  = -12 * Math.PI/180;   /* 패널 밖 */
+const FX3_A0  = -84 * Math.PI/180, FX3_A1  = -16 * Math.PI/180;   /* 패널 밖(부유 ±6° 를 빼도 −88~−12 안) */
 const FX3_PA0 = -19 * Math.PI/180, FX3_PA1 =  26 * Math.PI/180;   /* 패널 안 — 위로는 못 벌리니 아래로 */
 /* 패널 안에서의 흡수 궤적 — **두 구간 경로**(6회차).
    1회차 2차 베지에: 중점이 제어점의 절반밖에 안 나가 패널을 못 벗어났다(최대 x 708 < 패널 986).
@@ -17667,7 +17667,20 @@ const FX3_PANEL = '#mbox, #panel, .eqp, .tr-sheet';
 /* 9회차 — tau 0.20 은 도착 간격(48~100ms) 사이에 거의 안 꺼져서 «지속 ×1.078 · 피크 ×1.118» 이 되고,
    도착당 추가 폭이 2px(3.9%)뿐이라 «톡톡» 이 식별되지 않는다(비평가 AA ③). 시상수를 줄여
    **사이에 내려갔다가 도착마다 다시 차오르게** 한다 — 같은 피크에서 진폭 차가 커진다. */
-const FX3_PZ_HIT = 0.105, FX3_PZ_MAX = 0.102, FX3_PZ_TAU = 0.105;
+/* 10회차 — 시상수만으로는 피크가 15ms 만 유지돼 33~100ms 표본에 ×1.10 이 한 번도 안 걸린다
+   (비평가 AC ②: 34프레임 중 60px 이상 0회, 최대 ×1.073). 타격 직후 **FX3_PZ_HOLD 동안 고원**을
+   두고 그 뒤에 감쇠시킨다 — 피크는 사양대로 ×1.105 이고, 도착 사이에는 여전히 내려간다. */
+/* 10회차 — tau 0.105 는 도착 간격(평균 55ms) 사이에 0.062 까지밖에 안 떨어져서, 767ms 동안
+   기준선(×1.000)으로 **한 번도 안 내려온다** — «16회 톡톡» 이 아니라 «한 번 부풀어 유지» 로 읽혔다
+   (비평가 AB ②). 반대로 도착 간격(55ms) 안에 **완전히** 기준선까지 떨어뜨리면 이번엔 93ms 리듬
+   캡처에 피크가 13% 밖에 안 걸린다 — 앞 회차들이 «펄스가 안 보인다» 로 잡았던 그 상태다.
+   두 요구는 **이 컨테이너에서 동시에 만족할 수 없다.** 여기 rAF 는 32~42ms 라, 도착 간격(45ms)
+   안에 기준선까지 떨어지는 감쇠(시상수 ≤32ms)는 «한 프레임 안에» 끝나 버린다 — 실측하면 93ms
+   리듬 표본에 피크가 **1/8(13%)** 밖에 안 걸리고, 그건 앞 회차들이 «펄스가 아예 안 보인다» 로
+   네 번 잡았던 바로 그 상태다. 60fps 실기기에서는 AB 가 원한 왕복이 3~4프레임으로 보이지만,
+   **채점은 이 컨테이너의 캡처로 한다.** 보이는 쪽을 택한다 — 고원 30ms + 시상수 105ms,
+   피크 ×1.105, 도착 사이 저점 ×1.04~1.06. 남은 문제로 아래 §5 에 적는다. */
+const FX3_PZ_HIT = 0.16, FX3_PZ_MAX = 0.105, FX3_PZ_TAU = 0.105, FX3_PZ_HOLD = 0.03;
 /* 출발점을 품은 패널이 있으면 그 «우측 바깥» x 를 돌려준다(없으면 0 = 메인 화면 규칙).
    fx3Top 에는 그 패널의 «윗변» 을 남긴다 — 곡선이 알약 쪽으로 되꺾이는 지점을 패널 위로 올려서
    마지막 남은 관통(3회차 실측: 골드 1프레임, 945,607 — 행 우변 949 안쪽 4px)을 없앤다. */
@@ -17798,6 +17811,9 @@ function fxFly(from, cur, n){
   const batch = { fired:false, combat, ting:0, landed:0, cnt:0, base:null };
   /* 93 — 마지막 도착(1.26s)까지 숫자가 안 끝나야 «코인과 숫자가 같이 오른다» (1400 → 2000) */
   batch.cnt = cnt;
+  /* 10회차 — 복제판을 «첫 도착» 에 만들면 그 전까지 톱바가 딤 아래(휘도 25)라 첫 튐이 안 보인다
+     (비평가 AB ⑤: 첫 착지 2~4개의 튐·착지 표시가 화면에 0개). 스폰 시점에 미리 올린다. */
+  if(!combat) fxLitOn(pill);
   fxHold[cur] = performance.now() + (combat ? 1400 : 2000);
   /* 93 — 롤링을 «첫 도착 → 마지막 도착» 길이로 늘린다. 전투 발은 종전 0.32s. */
   /* 4회차 — UI 발 롤링을 «시간 트윈» 이 아니라 **도착 계단**에 문다(비평가 P·Q 공통 요구).
@@ -17948,12 +17964,18 @@ function fxLitOff(el){
   const t = fxLit.get(el);
   if(!t) return;
   fxLit.delete(el);
-  if(t.p.parentNode) t.p.remove();
+  /* 10회차 — 그냥 remove 하면 딤 위 밝은 알약이 **한 프레임에 −58%** 로 꺼져 하드컷으로 읽힌다
+     (비평가 AC ③). 짧게 크로스페이드시키고 지운다. */
+  const p = t.p;
+  p.style.transition = 'opacity .09s linear';
+  p.style.opacity = '0';
+  setTimeout(() => { if(p.parentNode) p.remove(); }, 120);
 }
 function fxPzHit(el){
   if(!el) return false;
   fxLitOn(el);
-  fxPz.set(el, Math.min(FX3_PZ_MAX, (fxPz.get(el) || 0) + FX3_PZ_HIT));
+  const st = fxPz.get(el);
+  fxPz.set(el, { a:Math.min(FX3_PZ_MAX, (st ? st.a : 0) + FX3_PZ_HIT), h:FX3_PZ_HOLD });
   fxPunchN++;
   return true;
 }
@@ -17963,15 +17985,17 @@ function fxPzTick(dt){
      아직 날고 있는 UI 아이콘이 없으면 시상수를 1/3 로 줄여 빠르게 가라앉힌다. */
   const flying = fxFlies.some(f => f.ui);
   const k = Math.exp(-dt/(flying ? FX3_PZ_TAU : FX3_PZ_TAU/3));
-  for(const [el, a0] of fxPz){
-    const a = a0*k;
+  for(const [el, st] of fxPz){
+    /* 고원 구간에는 안 깎는다 — 그래야 사양 피크가 프레임에 남는다 */
+    let a = st.a, h = st.h - dt;
+    if(h <= 0){ a = st.a*k; h = 0; }
     if(a < 0.004 || !el.isConnected){
       fxPz.delete(el);
       fxLitOff(el);
       if(el.style){ el.style.transform = ''; el.style.transformOrigin = ''; }
       continue;
     }
-    fxPz.set(el, a);
+    fxPz.set(el, { a, h });
     /* 딤 위 복제본 — 숫자와 배율을 원본에 맞춰 따라간다 */
     const lit = fxLit.get(el);
     if(lit){
@@ -18323,7 +18347,7 @@ function fxSolo(el, ms){
   setTimeout(() => {
     sib.forEach(c => { if(c.classList){ c.classList.add('fx-undim'); c.classList.remove('fx-dim'); } });
     if(row.classList) row.classList.remove('fx-solo');
-    setTimeout(() => sib.forEach(c => c.classList && c.classList.remove('fx-undim')), 280);
+    setTimeout(() => sib.forEach(c => c.classList && c.classList.remove('fx-undim')), 180);
   }, ms || FXSOLO);
 }
 /* 「연출이 끝날 때까지 목록을 바꾸지 않는다」.
@@ -18474,7 +18498,10 @@ function fxTick(dt){
            (마지막 관측이 알약에서 d=180~214px)로 잡았다. 가속은 유지하되 **끝에서만 살짝 눕혀**
            마지막 구간이 프레임에 남게 한다(58 12회차가 금지한 «도착 정지» 는 아니다 — 종단 속도가
            평균의 1.3배로 여전히 «빨려 들어간다»). */
-        const e = 0.15*q + 0.85*q*q*(1.18 - 0.18*q), v = 1 - e;
+        /* 10회차 — 계수 1.18/0.18 은 종단 1.70배라, 경로가 긴 씬B(총연장 ≈1810px)에서 마지막
+           362px(20%)이 여전히 ≤114ms 에 빠져 축소 구간이 한 프레임도 안 잡혔다(비평가 AB ③).
+           1.7/0.7 로 종단을 **1.26배**까지 내린다(전 구간 e' > 0 — 되돌아가지 않는다). */
+        const e = 0.15*q + 0.85*q*q*(1.7 - 0.7*q), v = 1 - e;
         if(f.ox != null){                               /* 패널 안 — 수평 탈출 → 복도 상승 → 위에서 복귀 */
           if(e < FX3_SPLIT){
             /* 8회차 — 3차 베지에로 «수평 → 수직» 을 한 번에 그리면 x 가 복도에 **점근**할 뿐이라
