@@ -213,8 +213,18 @@ const GEO = [
      그래서 실제 캔버스를 찍어 «열마다 윗면 색이 몇 y 부터 몇 y 까지인가» 를 직접 센다.
      기대값은 ref 열스캔(docs/measure/54-랭킹팝업.md §3-1a, 프레임 = ref y − 84). ---- */
   await page.addStyleTag({ content: '#fxl{display:none!important}' });
+  /* 작업 147(2026-08-26) — **이 절의 probe 는 전부 «단상 판» 기하다. 캐릭터를 숨기고 찍는다.**
+     이 파일은 세 회차(8·14·17회차) 연속으로 «표본 열이 캐릭터에 가려 검정이라 값을 잘못 읽었다» 를
+     겪었고(측정표 §3-1b 정오표 · 이 파일 top3/top3b 주석), 147 이 2·3위 스프라이트를 sc5 → sc7 로
+     키우자 **2위 단상은 가림 없는 열이 x72..81 뿐**이 됐다(잉크가 x54..361 로 단상 폭 72..359 를 덮는다).
+     표본 열을 옮기면 기대값을 슬로프로 다시 풀어야 해 «검사가 측정을 재정의» 하게 된다 —
+     대신 `visibility:hidden` 으로 캐릭터만 빼고 찍으면 **기대값을 한 줄도 안 바꾸고** 판을 그대로 잰다.
+     (`visibility` 라 레이아웃은 안 움직인다. 캐릭터 자체의 검증 소유권은 verify80/verify147 이다.) */
+  await page.addStyleTag({ content: '#rkw .rk-ch{visibility:hidden!important}' });
   await page.waitForTimeout(150);
   const shot = (await page.locator('#app').screenshot()).toString('base64');
+  /* 캡처가 끝났으면 바로 되돌린다 — 뒤에 붙는 검사가 «캐릭터 없는 화면» 을 보게 두지 않는다 */
+  await page.addStyleTag({ content: '#rkw .rk-ch{visibility:visible!important}' });
   /* PNG 디코드는 크로미움 자신에게 시킨다 — npm 의존성 0 (pngjs 는 이 환경에 없다).
      data: URL 은 캔버스를 오염시키지 않으므로 getImageData 가 그대로 된다. */
   const probe = await page.evaluate(async (b64) => {

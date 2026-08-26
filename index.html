@@ -9554,9 +9554,26 @@
      1위(상자 540.5 / 단상 540)·2위(215 / 214)는 이미 단상 중심에 있어 3위만 어긋난 것이므로,
      주인 지시 «담백하게 플레이어 캐릭터만» 의 뜻대로 **단상 중심에 맞춘다**: left 785 → 708(중심 866).
      기대값 소유는 tools/verify80.js A4 다 — 거기 spec 도 같이 고쳤다. */
+  /* 작업 147 (2026-08-26) — «2·3위 스프라이트 잉크가 ref 대비 −36~40%» 의 설계 판단.
+     등재문의 전제 2개가 **둘 다 틀렸다**(실측 `tools/probe147.js`·`probe147b.js`):
+       ⓐ «현행 2/3위 sc4» → 실제 draw 배율은 **sc5** 였다(상자만 sc4 규격 316×252 였을 뿐 `rkPodDraw` 는 5 를 넘긴다).
+       ⓑ «sc6 은 상자가 단상 구역을 넘어서 안 된다» → 상자는 투명하고(배경·테두리 없음) ref 캐릭터도
+          제 단상 밖으로 나온다. 단상 폭은 제약이 아니다.
+     **진짜 상한은 «타이틀 명판(x297..783 · 하단 134) 을 침범하지 않는 것»** 이다 — 11회차가 1위를
+     sc7 → sc6 으로 내린 바로 그 제약이고, 실측이 그 값을 재현한다(1위 sc7 잉크 상단 = 133 = 명판 하단).
+     배율별 잉크(idle 6프레임 최대, 발밑 = 단상 윗면):
+       sc5 잉크 225 · 몸통 200 | sc6 270/246 | **sc7 315/287** | sc8 360/328
+       명판 위로 새는 화소: sc7 = **0** · sc8 = 2위 784px(x239..366) · 3위 32px(x722..737) → **sc8 은 불가**
+     ref 몸통 상단(측정표 §3 단상 윗면 482/492 기준, 54 21회차 확정치): 2위 **176** · 3위 **170**
+       → sc5 282/292(Δ106·122) → **sc7 195/205(Δ19·35)** — 잔차 6~11%, 정수 배율로 회수 가능한 최댓값이다.
+     ⇒ 선택지 ②(랭킹 전용 배율 상향, **정수 유지**) 채택. ①(논리 프레임 재작도)·③(보류) 불필요.
+     상자는 «79×63 의 정수배» 가 아니라 **잉크가 잘리지 않는 최소 규격**으로 다시 적는다 —
+     세로는 잉크 최대 높이 fr[3]46 × 7 = **322**, 가로는 중심에서 최대 반폭 24 × 7 = 168 → **336**.
+     바닥 = 단상 윗면(482/492) · 가로 중심 = 단상 중심(215 / 866)은 그대로다. 기대값 소유는 tools/verify80.js.
+     1위(c1)는 손대지 않는다 — sc6 잉크 270 vs ref ≈275(11회차 실측)로 이미 Δ−2% 다. */
   .rk-ch.c1{left:343px;top:133px;width:395px;height:315px}
-  .rk-ch.c2{left:57px;top:230px;width:316px;height:252px}
-  .rk-ch.c3b{left:708px;top:240px;width:316px;height:252px}
+  .rk-ch.c2{left:47px;top:160px;width:336px;height:322px}
+  .rk-ch.c3b{left:698px;top:170px;width:336px;height:322px}
   #rkw .rk-ch>canvas{display:block;image-rendering:pixelated}
   /* 순위 방패 — 1위 102×88@(489,461) · 2위 102×73@(164,482) · 3위 102×78@(814,484) */
   .rk-sh{display:flex;align-items:center;justify-content:center;line-height:1;
@@ -10702,9 +10719,9 @@
            발밑 앵커 = 캔버스 바닥 중앙, 바닥 y = 단상 윗면(측정표 §3: ref 532/566/576 → 프레임 448/482/492).
            작업 101(주인 지시 2026-08-26) — 부유 장식 3군집(.rk-fl)과 3위 좌측 탈것(.rk-ch.c3a ⛵)은 폐기했다.
            단상 위에 남는 <em> 은 순위 방패 3개(🥇🥈🥉)뿐이다. 새 장식을 얹지 말 것. -->
-      <div class="rk-ch c2"><canvas id="rkCh2" width="316" height="252"></canvas></div>
+      <div class="rk-ch c2"><canvas id="rkCh2" width="336" height="322"></canvas></div>
       <div class="rk-ch c1"><canvas id="rkCh1" width="395" height="315"></canvas></div>
-      <div class="rk-ch c3b"><canvas id="rkCh3" width="316" height="252"></canvas></div>
+      <div class="rk-ch c3b"><canvas id="rkCh3" width="336" height="322"></canvas></div>
       <div class="rk-sh s2"><em>🥈</em></div>
       <div class="rk-sh s1"><em>🥇</em></div>
       <div class="rk-sh s3"><em>🥉</em></div>
@@ -18388,12 +18405,17 @@ let rkRaf = 0, rkTs = 0;
    **여백 145px**. 세로도 ref ≈275px 대비 315px(**+15%**, Q 실측)였다. sc6 이면 잉크 **258×270** 으로
    ref 높이(≈275)와 −2% 이내이고 머리 상단이 448−270=**178** 로 내려온다. 폭은 258 로 ref(≈305, N 실측) 대비
    −15% 지만 스프라이트 종횡비(43:45)가 ref 캐릭터(≈1.11)보다 좁아 **한 배율로 폭·높이를 동시에 맞출 수 없다** —
-   «타이틀을 침범한다» 는 실제 결함 쪽을 택했다(폭은 아트 교체 때 해소된다). */
+   «타이틀을 침범한다» 는 실제 결함 쪽을 택했다(폭은 아트 교체 때 해소된다).
+   **작업 147 (2026-08-26)** — 2·3위는 같은 «명판 침범» 제약이 sc7 까지는 걸리지 않는다(명판 x297..783·
+   하단 134, sc7 잉크 상단 2위 167 · 3위 177 → 명판 위로 새는 화소 **0**). sc8 은 2위 784px·3위 32px 가
+   명판을 덮어 불가. 그래서 **2·3위만 sc5 → sc7**(1위는 sc6 유지 — 1위는 단상이 34px 높아 같은 명판 여유가
+   한 단계 적다). ref 몸통 상단 176/170 대비 282/292 → **195/205**. 배율별 실측표는 `tools/probe147b.js`,
+   게이트는 `tools/verify147.js`. 상자 규격도 함께 커졌다(CSS `.rk-ch.c2/.c3b` 주석 참조). */
 function rkPodDraw(){
   const f = curFrame(rkHero);
   for(let i = 0; i < 3; i++){
     const cv = $('rkCh' + (i + 1)), lk = rkPodLooks[i];
-    if(cv && lk) drawHeroTo(cv, { avatar: lk.avatar, frame: f, scale: i === 0 ? 6 : 5, flip: i === 1 });
+    if(cv && lk) drawHeroTo(cv, { avatar: lk.avatar, frame: f, scale: i === 0 ? 6 : 7, flip: i === 1 });
   }
 }
 function rkTick(ts){
