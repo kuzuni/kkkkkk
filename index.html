@@ -13357,13 +13357,21 @@ const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eq
 /* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
 const bossCleared = () => Math.max(0, Math.floor((S.best - 1) / 10));
 
-/* ---- 퀘스트 ---- */
+/* ---- 퀘스트 ----
+   156(저장소 주인 지시 2026-08-27) — **보상은 다이아 전용이다.** 22 반복 퀘스트 행(`qrow`)은
+   처음부터 다이아 배지 하나(`curIc('dia') + rw.c`)만 그리는데 수령은 `S.gold += rw.g` 로 골드까지
+   같이 줬다. 58 연출은 «실제로 늘어난 재화» 를 정직하게 쏘므로(fxAcc → fxFly), 다이아만 적힌
+   보상을 받았는데 골드 코인도 같이 날아가는 «표기 ≠ 지급 ≠ 이펙트» 가 됐다.
+   ⚠ 처방은 **이펙트를 숨기는 것이 아니라 골드 지급 자체를 없애는 것**이다(58 규칙 — 연출은 실지급을
+   따른다). 일일 퀘스트(DQUESTS)는 원래부터 다이아 전용이라 손댈 것이 없었다.
+   → `rw` 에서 `g` 를 없앴다. 되살릴 일이 있으면 **행 표기(qrow)에 골드 배지를 같이 그리는 것까지**가
+   한 벌이다 — 한쪽만 되돌리면 같은 버그가 그대로 재발한다. */
 const QUESTS = [
-  { id:'kill',   n:'적 처치',       base:60, mul:1.55, get:() => S.totalKills, rw:s => ({ g:400*Math.pow(2.1,s),  c:90 + s*40 }),  t:g => '적 <em>' + g + '</em>마리 처치' },
-  { id:'stage',  n:'스테이지 도달', base:3,  mul:1.5,  get:() => S.best,       rw:s => ({ g:600*Math.pow(2.0,s),  c:140 + s*60 }), t:g => '스테이지 <em>' + g + '</em> 도달' },
-  { id:'summon', n:'소환하기',      base:5,  mul:1.6,  get:() => S.summons,    rw:s => ({ g:900*Math.pow(2.0,s),  c:100 + s*45 }), t:g => '아무거나 소환 <em>' + g + '</em>회' },
-  { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ g:700*Math.pow(2.0,s),  c:80 + s*36 }),  t:g => '아무 강화 <em>' + g + '</em>회' },
-  { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ g:500*Math.pow(2.0,s),  c:180 + s*80 }), t:g => '도감 <em>' + g + '</em>종 수집' }
+  { id:'kill',   n:'적 처치',       base:60, mul:1.55, get:() => S.totalKills, rw:s => ({ c:90 + s*40 }),  t:g => '적 <em>' + g + '</em>마리 처치' },
+  { id:'stage',  n:'스테이지 도달', base:3,  mul:1.5,  get:() => S.best,       rw:s => ({ c:140 + s*60 }), t:g => '스테이지 <em>' + g + '</em> 도달' },
+  { id:'summon', n:'소환하기',      base:5,  mul:1.6,  get:() => S.summons,    rw:s => ({ c:100 + s*45 }), t:g => '아무거나 소환 <em>' + g + '</em>회' },
+  { id:'upg',    n:'강화하기',      base:20, mul:1.6,  get:() => S.upgrades,   rw:s => ({ c:80 + s*36 }),  t:g => '아무 강화 <em>' + g + '</em>회' },
+  { id:'coll',   n:'도감 수집',     base:4,  mul:1.45, get:() => ownedTotal(), rw:s => ({ c:180 + s*80 }), t:g => '도감 <em>' + g + '</em>종 수집' }
 ];
 /* 일일 퀘스트 (22번 «일일» 탭) — 자정 리셋. 진행 = 누적 카운터 − 자정 스냅샷(S.daily.qb).
    보상은 레퍼런스처럼 전부 다이아. 수령 여부는 S.daily.q (날짜 바뀌면 통째로 초기화) */
@@ -17053,7 +17061,7 @@ function claimQuest(q){
   if(!questReady(q)) return;
   sfx('claim');                                         /* 78 — 퀘스트 보상 수령 */
   const st = S.quest[q.id], rw = q.rw(st.s);
-  S.gold += rw.g; S.dia += rw.c;
+  S.dia += rw.c;                                        /* 156 — 다이아 전용(행 표기와 일치) */
   st.base = q.get(); st.s++;
   uiDirty = true; save();
   /* 58(11회차): 재렌더를 연출이 끝난 뒤로 미룬다 — 즉시 갱신하면 체크가 붙은 행의 진행바가
@@ -17074,7 +17082,7 @@ function claimAllQuests(){
     const q = QUESTS.find(questReady);
     if(!q) break;
     const st = S.quest[q.id], rw = q.rw(st.s);
-    S.gold += rw.g; S.dia += rw.c;
+    S.dia += rw.c;                                      /* 156 — 다이아 전용(행 표기와 일치) */
     st.base = q.get(); st.s++; n++;
   }
   DQUESTS.filter(dqReady).forEach(q => { S.dia += q.dia; S.daily.q[q.id] = 1; n++; });
