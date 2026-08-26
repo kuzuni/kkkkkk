@@ -23,13 +23,34 @@ const GEO = process.argv.includes('--geo');
   await p.waitForTimeout(900);
 
   /* 결과 팝업을 띄운다 — 73 가이드 소환 미션(`gmBlocked`)이 초반 세이브에서 doSummon 을 막으므로
-     소환 결과 자체를 만들어 showSummonResult 로 직접 연다(12 의 레이아웃은 호출 경로와 무관하다). */
-  await p.evaluate(() => {
-    S.dia = 1e9;
-    const res = [];
-    for (let i = 0; i < 10; i++) res.push(summonOne('weapon'));
+     소환 결과 자체를 만들어 showSummonResult 로 직접 연다(12 의 레이아웃은 호출 경로와 무관하다).
+
+     `--ref` = **레퍼런스와 같은 상태**로 띄운다(2026-08-26, 12 2차 라운드 4회차).
+     04 비고 1 «캡처 상태가 레퍼런스와 다르면 그 회차 비평은 통째로 무효다» 때문에 필요하다:
+       ① 측정표 §11(작업 102) — 레퍼런스는 **무료 0회 · 다이아 0** 인 «부족(`.lack`)» 상태로 찍혔다.
+          기본 모드처럼 `S.dia=1e9` 를 주면 버튼이 시안·노랑 «충분» 색으로 뜨고 가격이 흰색이 된다.
+       ② 측정표 §4 — 레퍼런스 그리드는 **6열 2행 10칸**이다. 소환은 같은 아이템을 개수로 합치므로
+          무작위 10연은 칸 수가 줄어 그리드 형상 자체가 달라진다 → **서로 다른 10종**으로 채운다. */
+  const REF = process.argv.includes('--ref');
+  await p.evaluate((ref) => {
+    if (!ref) {
+      S.dia = 1e9;
+      const res = [];
+      for (let i = 0; i < 10; i++) res.push(summonOne('weapon'));
+      showSummonResult('weapon', 10, res, false);
+      return;
+    }
+    S.dia = 0;                                     /* ②③ 가격 빨강 + 은색 면 */
+    S.daily = S.daily || {};
+    S.daily.freeSum = Object.assign({}, S.daily.freeSum, { weapon: 0 });  /* ① 무료 소진 */
+    const res = [], seen = new Set();
+    for (let i = 0; i < 4000 && res.length < 10; i++) {
+      const r = summonOne('weapon');
+      if (seen.has(r.it.id)) continue;
+      seen.add(r.it.id); res.push(r);
+    }
     showSummonResult('weapon', 10, res, false);
-  });
+  }, REF);
   /* 58 카드 팝(fx-pop)·버스트가 끝날 때까지 — 12 는 등장 애니메이션이 카드에만 걸린다 */
   await p.waitForTimeout(1400);
 
