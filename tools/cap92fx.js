@@ -18,9 +18,9 @@ const { chromium } = pw();
 const path = require('path');
 
 const pre = process.argv[2] || 'docs/review/92-fx';
-/* ms — 7회차: 접힘 .30s + 행 스태거 140ms → 관측 구간 0~440ms 를 8등분.
+/* ms — 8회차: 접힘 .28s + 행 스태거 280ms(= 수명, 겹침 0) → 관측 구간 0~580ms 를 8등분.
    `currentTime` 은 **딜레이 포함** 타임라인이라 스태거된 2번째 행도 같은 t 로 맞는다. */
-const STOPS = [0, 60, 120, 180, 240, 300, 360, 440];
+const STOPS = [0, 70, 140, 210, 280, 360, 450, 580];
 
 (async () => {
   const b = await launch(chromium);
@@ -101,7 +101,7 @@ const STOPS = [0, 60, 120, 180, 240, 300, 360, 440];
     /* 상자(`mlOut`)와 내용 페이드(`mlOutIn` 좌측 · `mlOutR` 우측)를 **전부 같이** 잡아
        같은 t 로 탐색한다 — 하나라도 빠지면 그 요소의 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => /^(mlOut|mlOutIn|mlOutR|jzDn|jzUp)$/.test(a.animationName));
+      .filter((a) => /^(mlOut|mlOutA|mlOutB|mlOutC|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);
