@@ -255,7 +255,10 @@
      (실측 중심 538 vs ref 540). 자간을 1.5 로 되돌리고 같은 값의 절반을 `text-indent` 로 되민다. */
   #stinfo .chap{position:absolute;left:0;top:-13px;width:440px;text-align:center;
     font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:1.5px;text-indent:.75px;white-space:nowrap;
-    -webkit-text-stroke:5.5px #000;paint-order:stroke fill}
+    /* 126 10회차 — 측정표 02 1-2 로 확정: ref 는 잉크 bbox 446..634 / 외곽 442..639 = 바깥 4px.
+       스트로크는 윤곽 중심에 그려지므로 필요한 값은 8px 이고, 5.5px(바깥 2.75)는 31% 얇았다.
+       r 8/38 = .21 -> 타이틀 토큰 .22 (바깥 4.18 = ref 대비 +4.5%) */
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
   #stinfo .chap em{font-style:normal}
   #stinfo .kwrap{position:absolute;inset:0}
   /* 트랙 335..745 (410x24) — 순수 검정, 안쪽 well·테두리 없음 */
@@ -975,7 +978,7 @@
      **바깥 두께 = 값의 절반**이다. 6px(=바깥 3) 은 우리 서체의 가는 획에서 카운터를 메워
      흰 코어 면적이 ref 대비 −41% 였다(H) → **5px(=바깥 2.5)** 로 낮춘다. */
   #tuto.todo .tbtn{left:168px;width:auto;text-align:center;top:5px;height:27px;
-    font-size:28px;line-height:27px;color:#83FFE7;-webkit-text-stroke:5px #000;
+    font-size:28px;line-height:27px;color:#83FFE7;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
     transform:translateZ(0) translateX(-50%) scaleX(1.31)}
   /* L2 잉크 좌단은 ref 677 인데 우리는 673 이었다(−4) → 칸을 3px 오른쪽으로. top 은 +1
      (ref 는 L1 잉크하단 1878 → L2 잉크상단 1903 으로 25px 띄운다). */
@@ -994,7 +997,7 @@
      → 원인은 폴백 서체의 한글 스템이 ref 게임 서체보다 얇은 것 하나다. `font-weight` 는 이미 900.
        비평가 M·N 도 각각 «서체 필요»(M 6-4 · N 6-1) 로 독립 분류했다. **게임 서체 대기 항목.** */
   #tuto.todo .tt{text-align:center;transform:none;height:24px;font-size:26px;line-height:24px;
-    -webkit-text-stroke:5px #000;letter-spacing:0px}
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;letter-spacing:0px}
   /* L2 의 숫자만 주황 — ref 는 **두 상태 모두** 그렇다(32 `10` · 02 `50`). 상태 밖에 둔다. */
   #tuto .tt em{font-style:normal;color:#FE8252}
   /* ref 의 숫자 `10` 은 잉크 29×20 으로 **한글 캡하이트(24)의 83%** 다. 우리 기본 서체는 75% 라
@@ -1017,6 +1020,11 @@
        글자 사이에 빈틈이 생기지 않는다(원점이 중앙이라 양쪽에 절반씩). */
   #tuto.todo .tbtn b,#tuto.todo .tbtn i,#tuto.todo .tbtn s,#tuto.todo .tbtn em,
   #tuto.todo .tpg  b,#tuto.todo .tpg  s,#tuto.todo .tpg  em,
+  /* 126 10회차 — 스트로크 비율 토큰은 자식에도 다시 건다. em 은 선언한 요소의
+     font-size 로 px 가 되어 상속되므로, 부모에만 걸면 fs 가 다른 자식에서 r 이 갈린다. */
+  #tuto.todo .tbtn>*,#tuto.todo .tpg>*,#tuto.todo .tt>*,
+  #tuto.todo .tbtn>*>*,#tuto.todo .tpg>*>*,#tuto.todo .tt>*>*{
+    -webkit-text-stroke-width:calc(var(--st-body) * 1em)}
   #tuto.todo .tbtn u,#tuto.todo .tpg  u,#tuto.todo .tt u{
     display:inline-block;position:relative;vertical-align:baseline;
     font-style:normal;font-weight:900;text-decoration:none}
@@ -1044,7 +1052,7 @@
   /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서, 폭 89 는 scaleX 1.5 에서 나온다. */
   #tuto.todo .tpg{display:inline-block;position:absolute;left:160px;width:auto;text-align:center;top:89px;
     height:23px;font-size:23px;line-height:23px;font-weight:900;color:#FFC26A;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap;
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;white-space:nowrap;
     transform:translateZ(0) translateX(-50%) scaleX(1.4)}
   /* 💎 이모지는 ref 의 «오각 컷 파란 보석» 보다 **가로로 29% 넓다** — 잉크 bbox 를 58×60 으로 맞춘다.
      ★ **ref 아이콘에는 두께 3.5~5px 의 하드 검정 컨투어가 있다**(비평가 G·H 가 독립으로 «최우선 누락
@@ -1762,7 +1770,7 @@
      (같은 6글자로 대조: ref `45/200` 총잉크 w92 vs 우리 `50/224` w70). 숫자는 이 서체가 좁다(05 «폰트»)
      → `<em>` 의 scaleX 로만 편다. 92/70 = 1.31. `<i>` 는 채움 바가 이미 쓰고 있어 `<em>` 을 쓴다. */
   .qs-p b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:22px;color:#FAFAFA;-webkit-text-stroke:4px #000}
+    font-size:22px;color:#FAFAFA;-webkit-text-stroke:calc(var(--st-body) * 1em) #000}
   .qs-p b em{display:block;transform:scaleX(1.31)}
   /* 보상 받기 195×118 — 검정 6, 회색(비활성)/초록(활성) 베벨.
      [모두 받기] 의 바닥 그림자 밴드가 14px 였다 — ref 는 7px(면이 그만큼 길다) 이라 되돌렸다.
@@ -1785,7 +1793,7 @@
      → ref 흰 잉크는 156×36 이 아니라 **160×43** 이다(측정표 §6 정오표). 우리는 133×36 으로 −16.9% / −16.3%.
      비평가 K 의 독립 측정(임계 230)도 −16.5% / −18.4% 로 일치한다.
      높이로 fs 를 풀면 39 × 43/36 = 46.6 이고, 그 크기에서 폭이 168 로 +5% 넘쳐 sx 로 되돌린다(실측 곡선을 훑어 .973 — 8px «고정» 스트로크가 가로 압축에 비선형으로 반응해 한 번에 안 맞는다). */
-  .qs-all b{font-size:46.6px;-webkit-text-stroke:8px #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
+  .qs-all b{font-size:46.6px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
   /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
   .qs-tg{position:absolute;left:42px;bottom:43px;width:797px;height:99px;box-sizing:border-box;
     border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
@@ -3353,7 +3361,7 @@
 
   /* 던전명 — rel +42/+44, 잉크높이 52, #FDFF84, 검정 외곽선 4px */
   .dnc .nm{left:39px;top:40px;height:56px;line-height:56px;font-size:56px;font-weight:900;
-    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
     white-space:nowrap}
   .dnc .nm i{transform:scaleX(1)}
 
@@ -3463,8 +3471,8 @@
   .dnc .lk>u{position:absolute;left:0;right:0;top:211px;height:45px;line-height:45px;
     padding-right:1px;box-sizing:border-box;
     text-align:center;font-size:45px;font-weight:900;letter-spacing:-5px;color:#C8C8C8;
-    text-decoration:none;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .dnc .lk>u b{color:#FF8252;font-weight:900;font-size:106%}
+    text-decoration:none;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;white-space:nowrap}
+  .dnc .lk>u b{color:#FF8252;font-weight:900;font-size:106%;-webkit-text-stroke-width:calc(var(--st-hud) * 1em)}
 
   /* 서브탭 — 컨테이너 x151 w794 h98 radius49, 하단이 탭바 위 41px.
      좌(비선택 #61503C) / 우(선택 #4B3E2D) 가 gap 0 으로 겹친다.
@@ -3651,9 +3659,9 @@
      AD 라벨은 태그 **우하단 바깥**» 인데 구현은 «▶AD» 한 덩어리라 합산 bbox 만 맞고 부품이 각각 1.7~1.8배였다
      (P 실측 ▶ ref 11×13 vs 구현 13×22 · AD 잉크 ref 12 vs 구현 21). 두 부품으로 쪼갠다. */
   .shp-card>.adbadge>i{position:absolute;left:3.5px;right:-3.5px;top:0px;font-size:18px;font-weight:900;color:#fff;
-    -webkit-text-stroke:3px #000;paint-order:stroke fill;text-align:center}
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;text-align:center}
   .shp-card>.adbadge>b{position:absolute;left:38.5px;top:12.5px;font-size:17px;font-weight:900;color:#fff;
-    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-1px;white-space:nowrap}
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;letter-spacing:-1px;white-space:nowrap}
   /* 10회 버튼(기하만) */
   .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:37px}
   /* 30회 버튼(기하만) */
@@ -4160,7 +4168,7 @@
     font-size:126px;line-height:1}
   .rw-c.off>i{filter:grayscale(.85) brightness(.5)}   /* 82 규칙 — 미보유도 어떤 유물인지 보인다 */
   .rw-c>u{position:absolute;left:-40px;right:-40px;top:123px;text-align:center;z-index:3;
-    font-size:35px;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
+    font-size:35px;color:#fff;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
     transform:scaleX(1.1)}
   .rw-c.off>u{color:#9AA0A8}
   /* 120 — 중단 구획(수반 + 코스트 알약). 둘의 상대 위치(ref 340,1173 / 401,1322)를 그대로
@@ -4210,7 +4218,7 @@
      측정표 §캡션 1행도 «잉크 911×29» 라 확정치 쪽이 맞다 — 89 가 놓친 미달이다.
      line-height 44 는 그대로라 구획 높이 88 은 안 바뀐다(레이아웃 상수 820 유지). */
   .rw-cap p{margin:0;font-weight:900;font-size:36px;line-height:44px;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+    -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill}
   .rw-cap p:nth-child(1){color:#FFE4C2}
   .rw-cap p:nth-child(2){color:#F1BC79}
 
@@ -5971,7 +5979,7 @@
     background:linear-gradient(90deg,rgba(115,103,87,0) 0,rgba(115,103,87,1) 72px,
       rgba(115,103,87,1) calc(100% - 62px),rgba(115,103,87,0));
     font-size:29px;font-weight:700;color:#fbfbfb;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill;white-space:nowrap}
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;white-space:nowrap}
   .pf-nick>i{transform:scaleX(1.07)}
   /* ✏ 편집 ref (694,843) 56×55 — 크림 + 암갈 테두리 5, r12 */
   .pf-edit{left:602px;top:328px;width:56px;height:55px;background:#F6E8CB;
@@ -6473,9 +6481,9 @@
      ref 78x45 인데 우리는 72x41 (−8~9%), 세로 중심도 ref 1139 / 우리 1132 로 **7px 위**였다.
      → font-size 49 → 53.5 (+9%) · em 53 → 57.8 · top 10 → 17 (+7px). */
   .tr-rib>u{position:absolute;left:0;right:0;top:17px;height:60px;line-height:60px;text-align:center;
-    font-size:55.6px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
+    font-size:55.6px;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #141414;paint-order:stroke fill;z-index:3;
     transform:scaleX(.93)}
-  .tr-rib>u em{position:relative;top:4px;font-size:60px;color:#FA8153;-webkit-text-stroke:9px #000;
+  .tr-rib>u em{position:relative;top:4px;font-size:60px;color:#FA8153;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
     paint-order:stroke fill;margin:0 4px}
 
   /* §4 진행바 — 박스 기준 x177 y165 w662 h55, 검정 8px, 채움 #9EF12F */
@@ -6515,7 +6523,7 @@
      → 잉크 높이를 폰트로 올리고(31 → 35.1, 잉크 = 글리프 + 스트로크 7) 폭은 scaleX 로 되돌린다(1.28 → 1.022),
        가로 중심은 translateX 15 → 11.5. */
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
-    font-size:35.1px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
+    font-size:35.1px;color:#fff;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;z-index:2;
     transform:translateX(11.5px) scaleX(1.022)}
   /* §4b ↑ 버튼 — x838 y140 w108 h105. 3종 상한을 다 채우기 전에는 은색(비활성) */
   /* ref 는 «바깥 밝은 림 > 면» 순서다 — 림을 면보다 밝게 유지할 것.
@@ -6703,7 +6711,7 @@
       linear-gradient(180deg,#141414 0 1px,#FAE8D1 1px 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
   /* 16회차(W P5 «+8%» · X P3 «+10.8%» — 두 비평가 독립 일치): «Lv.» 잉크 높이가 ref 37~38 인데 우리는 41.
      잉크 = 글리프 + 스트로크 10 이므로 글리프만 31 → 27.5 로 줄인다: font-size 54 → 48 (−11%). */
-  .tr-card>.ch>i{font-size:48px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+  .tr-card>.ch>i{font-size:48px;color:#fff;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;
     transform:scaleX(.9)}
   /* 4회차: ref 는 카드 아트 «뒤» 에 45° 회전 라운드 스퀘어 «슬롯 플레이트» 를 깐다
      (bbox 150x150 = 한 변 106 을 45° 회전한 마름모, 색 (234,214,179)). 우리 캡처에는 이 색 픽셀이 **0개**였다.
@@ -6774,7 +6782,7 @@
   .tr-card>.cv{left:0;right:0;top:288px;height:60px;line-height:60px;text-align:center}
   /* 19회차(γ P7 · δ P6): 카드2·3 초록 잉크가 ref 35 / 우리 38~40 (+9~14%). 다만 카드1 은 ref 37 / 우리 38 로
      Δ1 이라(문자열이 카드마다 다르다) 과교정을 피해 −5% 만 준다. */
-  .tr-card>.cv>i{font-size:48.5px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+  .tr-card>.cv>i{font-size:48.5px;color:#8BE22C;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;
     display:inline-block;transform:scaleX(.90)}
   /* 17회차(Y P9 «h −10% · 중심 −1.5~2.5» · Z P7 «중심 −2» — 10회차 O P3 과도 같은 방향):
      ref 라벨 잉크 h30 중심 1799.5 / 우리 h27 중심 1797.5 → top 340 → 342. 폰트는 아래에서 +10%. */
@@ -6822,7 +6830,7 @@
   /* 19회차(Z · δ P4·P5 — 둘 다 «+9~12% 크고 위로 떠 있다»): ref 글자심 h33~34 · 코인 중심과 Δ−1 인데
      우리는 h37 · Δ−4 였다. 글리프 28 → 24.5 (font 52.5 → 46), 그리고 2px 내린다(top −3 → −1). */
   .tr-card>.cb>i{position:relative;top:-1px;font-size:46px;line-height:62px;color:#F9EB6E;
-    -webkit-text-stroke:9px #141414;paint-order:stroke fill}
+    -webkit-text-stroke:calc(var(--st-hud) * 1em) #141414;paint-order:stroke fill}
   /* 7회차: «ref 배지 지름 30» 으로 읽고 border-box 를 30 으로 줬는데 — **그 30 은 fill(핑크) 지름이었다.**
      10회차 재측(ref y1445 가로 단면, 카드1): 검정 332..337(6px) · 핑크 338..368(**31px**) · 검정 369..373(5px)
      → **border-box 42 · fill 31 · 링 5.5px**. 우리는 42 가 아니라 30 이라 외곽이 −29% 였다(비평가 Q P1).
