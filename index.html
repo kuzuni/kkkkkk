@@ -1224,7 +1224,10 @@
      A1 6회차: 폭은 8px 로 잡혀 있었지만 그라디언트가 35% 지점까지 배경색이라 **어두운 심이 5px**
      로만 찍혔다(비평가 H 실측 «우리 5 vs ref 7», G «5 vs 5» — 둘이 갈리므로 측정표의 6~7 을 따른다).
      폭은 그대로 두고 **어두운 구간을 앞당겨** 심을 6~7px 로 만든다. */
-  .tab:not(:last-child)::after{content:'';position:absolute;right:-3px;top:5px;bottom:0;width:8px;
+  /* 10회차 — 어두운 심이 1px 두껍고 0.5px 왼쪽이다. 비평가 2인이 **부호가 같다**:
+     M «ref 7px 중심 215.0 vs 우리 8px 중심 214.5», N «ref 6px 중심 215.5 vs 우리 7px 중심 215».
+     목표값은 6~7 로 갈리므로 중간(6.5)을 겨냥해 폭을 1px 줄이고 0.5px 오른쪽으로 민다. */
+  .tab:not(:last-child)::after{content:'';position:absolute;right:-2.5px;top:5px;bottom:0;width:7px;
     background:linear-gradient(90deg,#42362A 0,#2A2219 25%,#110E0B 75%,#110E0B 100%);z-index:2}
   /* 아이콘: 높이 112(세로중심 +87). 이모지 글리프가 박스를 거의 채우도록 font-size 를 키운다.
      폭은 글리프 advance(104px 기준 130px)보다 넓게 잡는다 — 좁으면 넘친 글리프가 가운데 정렬되지
@@ -1253,7 +1256,10 @@
   .tab[data-t="grow"]{--sf:91.3px;--sx:1.488;--dy:13.5px}  /* ⚒️ ref 150x100 · top 2147 */
   .tab[data-t="adv"] {--sf:107.1px;--sx:.908;--dy:9.3px}   /* ⚔️ ref 109x120 · top 2131 */
   .tab[data-t="box"] {--sf:109.2px;--sx:1.267;--dy:9.2px}  /* 🔮 ref 125x122 · top 2131 (§4 정오) */
-  .tab[data-t="shop"]{--sf:102px;--sx:1.494;--dy:7.8px}    /* 🏪 ref 165x113 · top 2134 (L 정오) */
+  /* 10회차 — 상점만 1~1.3px 낮다(높이 113 은 정확히 맞다). 비평가 2인 부호 일치:
+     M «ref rel 34 vs 우리 35», N «ref local 33 vs 우리 35». 자체 스캔도 2135 vs ref 2134.
+     세 값의 중앙을 잡아 1.3px 올린다. 다른 4칸은 2인 모두 ≤1px 이라 손대지 않는다. */
+  .tab[data-t="shop"]{--sf:102px;--sx:1.494;--dy:6.5px}    /* 🏪 ref 165x113 · top 2134 (L 정오) */
   .tab[data-t="hero"]{--sf:64px;--dy:4px}                  /* 🐾 + 금색 링 ref 121x121 · top 2131 */
   /* 영웅 칸의 금색 링은 선택 표시가 아니라 아이콘 아트다 (레퍼런스 23·10 에서 비활성일 때도 유지).
      잉크 bbox 를 지배하는 것은 글리프가 아니라 이 링이다 — ref 121x121 은 링 외곽(그림자 포함) 값이다.
@@ -1301,8 +1307,15 @@
      (y2161..2201, 코어 y2164..2195)로 측정표 §6 과 정확히 일치한다. r6 의 30 은 −27% 였다.
      LESSONS «게이트의 상수는 레퍼런스 실측과 통일 상수를 갈라서 다뤄라» 에 해당하는 자리다.
      중심 x = 칸 오른쪽 −21 · 중심 y = 바 상단 +21 (ref 2181 − 60) → right/top 모두 0.5px */
+  /* 10회차 — 광택이 «상단 림» 이 아니라 **디스크 전체**였다. 코어 반지름이 15.5px 인데
+     하이라이트를 `0 16px` 로 적어 #f22e52 가 한 픽셀도 안 찍혔다(정지 조건이 코어보다 크다).
+     비평가 2인 독립 일치: M «코어 (242,46,82) 여야 하는데 (255,121,145) — G+75 / B+63»,
+     N «ref 는 local 5..24 전 구간 242,46,82 단색인데 우리는 디스크의 80%가 하이라이트,
+     평균 밝기 123 → 174 (+41%)». 둘 다 «림 하이라이트는 상단 25% 이내» 로 처방이 같다.
+     → 코어를 #f22e52 로 두고 하이라이트를 상단 작은 원반으로 되돌린다. ⌀41·중심은 6회차에
+     레퍼런스 실측으로 못 박은 값이라 건드리지 않는다(측정표 §6). */
   .tab .bdg{position:absolute;top:-1px;right:.5px;width:41px;height:41px;border-radius:50%;
-    background:radial-gradient(circle at 50% 28%,#ff7991 0 16px,#f22e52 17px);
+    background:radial-gradient(circle at 50% 20%,#ff7891 0 2.5px,#f22e52 6px);
     border:5px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}
   /* 패널이 열려 있는 탭은 ✕ 버튼 칸으로 치환된다 — 칸 폭 296, 바탕은 평면 near-black,
@@ -1336,15 +1349,31 @@
      r6 는 w100 h38 이라 띠가 **−16% 얇고** 칸 밖으로 16px 넘쳤다.
      위치: bbox 좌상단을 칸 왼쪽 경계(x864)·y2103 에 붙인다. 칸 기준 중심 (58.5, 42.5),
      따라서 left = 58.5 − 108/2 = 4.5 · top = 42.5 − 45/2 = 20. */
-  .tab .nw{display:none;position:absolute;left:-1.3px;top:16px;width:108px;height:45px;
+  /* ── 10회차 정오 (비평가 M·N + 자체 스캔) ─────────────────────────────────
+     ① **상변이 4px 위로 새어 바 상단 검정 테두리를 넘는다.** 세 계측이 정확히 일치한다 —
+        N «ref local 3 vs 우리 −1», 자체 스캔 «ref 2103 vs 우리 2099», 그리고 위 정오표의
+        ref y2103 자체. (M 만 «상단 rel4 로 일치» 라고 읽어 갈렸으나 3:1 이라 다수를 따른다.)
+     ② **띠가 ref 보다 넓다.** M «ref 113 vs 우리 118 (+4.4%)» · N «ref 110 vs 우리 113».
+        목표 폭은 갈리지만 **부호와 «우리가 더 넓다» 는 2인 일치** → 중간을 겨냥해 bbox 112 로.
+        덤으로 두 비평가가 읽은 ref 좌변(M 861 · N 858)이 정오표의 864 보다 **둘 다 왼쪽**이라,
+        폭만 줄여도 좌변이 858 로 내려가 두 값 사이에 들어온다.
+     역산: bbox_w = w·cos20 + t·sin20 · bbox_h = w·sin20 + t·cos20 (t = 띠 두께)
+        w104 · t43 → bbox 112.4 x 76.0 (+ 아래로 흐르는 접힘 그림자 4px → 픽셀 h ≈ 80 ≈ ref 79)
+        상변 2103 에 맞추는 top = (2103 + 76/2) − 43/2 − 2100 = **19.5** */
+  .tab .nw{display:none;position:absolute;left:-1.3px;top:19.5px;width:104px;height:43px;
     transform:rotate(-20deg);transform-origin:50% 50%;
     background:linear-gradient(90deg,#8f1f1c 0 8px,#b42826 8px calc(100% - 8px),#8f1f1c calc(100% - 8px) 100%);
     border-top:4px solid #000;border-bottom:4px solid #000;box-shadow:0 4px 0 #7d1d17;
     /* NEW 글자: ref 캡높이 17 · 가로 56 (측정표 §7 «57x35» 는 검정 외곽선 포함값).
        8회차 비평가 K 실측 «캡높이 22.5(1.32배) · 가로 67.5(1.20배)» → 34 × (17/22.5) ≈ 26.
        리본 bbox(116x78)와 기울기(−20°)는 K 가 «정확하니 건드리지 마라» 로 확인해 줬다. */
+    /* 10회차 — 글자 잉크 폭이 −14%. 이번 라운드에서 **두 비평가가 수치까지 똑같이** 읽었다:
+       M «ref 57w×34h vs 우리 49w×35h», N «ref 57×36 vs 우리 49×35». 높이는 맞으므로
+       font-size 는 그대로 두고 **자간만** 넓힌다 — 'NEW' 3글자의 잉크 폭은 글리프 3개 + 자간 2개라
+       자간 +4px 이 잉크 +8px = 49 → 57 이다. 자간은 마지막 글자 뒤에도 붙어 가운데 정렬 잉크를
+       자간의 절반만큼 왼쪽으로 민다(2 → 6 이면 2px 추가 이동) → text-indent 4px 로 되민다. */
     font-size:26px;line-height:29px;font-weight:900;color:#f2e15d;text-align:center;
-    letter-spacing:2px;z-index:4;overflow:hidden;
+    letter-spacing:6px;text-indent:4px;z-index:4;overflow:hidden;
     /* 8회차 — 리본은 레퍼런스대로 칸 왼쪽 경계를 6px 넘어간다. 장식이 남의 칸 탭을 삼키면
        74/142 가 잡았던 «눌림 효과는 뜨는데 동작 안 함» 이 그대로 재발한다 → 히트를 통과시킨다. */
     pointer-events:none;

@@ -83,7 +83,9 @@ const ok = (name, got, want, tol) => {
      ref bbox 는 측정표 §4. 실측 잉크가 상자를 꽉 채우는지는 scanA1.py 가 본다. */
   const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 109.2, shop: 102 };
   const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.267, shop: 1.494 };
-  const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 7.8 };
+  /* shop 7.8 → 6.5 (10회차): M «ref rel34 vs 우리 35» · N «ref local33 vs 우리 35» · 자체 스캔
+     «ref 2134 vs 우리 2135» — 세 계측 모두 «1~2px 낮다» 로 부호가 같아 중앙값 1.3px 을 올렸다. */
+  const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 6.5 };
   const GLYPH = { hero: '🐾', grow: '⚒️', adv: '⚔️', box: '🔮', shop: '🏪' };
   const marks = await p.evaluate(() => [...document.querySelectorAll('.tab')].map(e => ({
     t: e.dataset.t, g: e.querySelector('.ti').textContent.trim(),
@@ -115,12 +117,16 @@ const ok = (name, got, want, tol) => {
     ok('레드닷 ' + t.t + ' 중심 y 2119.5', t.bdg.y + t.bdg.h / 2, 2119.5, 1.0);
   });
 
-  /* NEW 리본 — 측정표 §7-1 정오: bbox 117×79, 칸 왼쪽 경계(x864)·y2103 에 좌상단 밀착 */
+  /* NEW 리본 — **10회차 갱신**. 측정표 §7-1 정오의 «bbox 117×79 · 좌상단 x864·y2103» 중
+     상변 2103 은 그대로 두되, 폭은 비평가 M(ref 113)·N(ref 110) 2인이 **둘 다 정오표보다 좁게**
+     읽어 중간값 112 로 내렸다. 상변은 앞 값 2099 가 **정오표 자신의 2103 과도 어긋나 있었다** —
+     게이트가 어긋난 구현을 4px 그대로 고정하고 있었던 자리다(N 이 «바 상단 테두리를 넘는다» 로 지적).
+     역산 근거는 index.html `.tab .nw` 주석 참조 (w104 · t43 → bbox 112.4×76.0). */
   const shop = A.tabs.find(t => t.t === 'shop');
-  ok('NEW 리본 bbox 폭 117', shop.nw.w, 117, 2.0);
-  ok('NEW 리본 bbox 높이 79', shop.nw.h, 79, 2.0);
+  ok('NEW 리본 bbox 폭 112', shop.nw.w, 112.4, 2.0);
+  ok('NEW 리본 bbox 높이 76', shop.nw.h, 76.0, 2.0);
   ok('NEW 리본 좌변 858 (ref x862 는 칸 경계보다 2px 왼쪽)', shop.nw.x, 858, 2.0);
-  ok('NEW 리본 상변 2099', shop.nw.y, 2099, 2.0);
+  ok('NEW 리본 상변 2103 (정오표 §7-1 의 ref y2103)', shop.nw.y, 2103, 2.0);
   T.push({ name: 'NEW 리본 침범 2px 이내(ref 도 2px 넘친다)', got: shop.nw.x.toFixed(1), want: '≥856',
            tol: '-', pass: shop.nw.x >= 856 });
 
