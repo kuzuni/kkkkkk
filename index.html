@@ -4874,7 +4874,8 @@
      → 초록 202.. 다. 우리는 검정 199..201 뒤 곧장 초록이라 «세로 3px 인셋은 있는데 좌변만 없는» 상태였다
      (10회차가 상·하 인셋만 넣었다). 트랙을 left 8 → 5 로 내밀고 초록을 트랙 안에서 3px 들여보낸다. */
   .tr-prog>.trk{position:absolute;left:5px;top:4px;right:4px;bottom:4px;border-radius:8px;
-    background:linear-gradient(180deg,#0E0F14 0 10px,#1C1E2B 12px calc(100% - 1px),
+    /* 17회차(Y P7 «짙은층 ref 9 / 우리 11»): 10 → 9 (Z 도 ref 10 / 우리 11 로 같은 방향) */
+      background:linear-gradient(180deg,#0E0F14 0 9px,#1C1E2B 11px calc(100% - 1px),
       #0F0E14 calc(100% - 1px));overflow:hidden}
   /* 10회차(비평가 O P2, 자체 확인): ref x300 세로는 검정(1229..1231) → **다크 인셋 링 3px**
      (8,9,13 / 11,20,3 / 15,40,0) → 초록 **1235..1275 = 41px** → 다크 3px → 검정 이다.
@@ -4927,7 +4928,11 @@
   /* 10회차(P P5·P6): 초록 잉크는 ref 57x53 / 우리 55x53 으로 이미 Δ≤2 다(건드리지 않는다).
      차이는 **검정 외곽선 두께**뿐 — 자루 행(ref y1272)에서 ref 는 좌 5px(x889..893)·우 6px(x921..926) 인데
      stroke-width:16 은 한쪽 8px 이라 스트로크 포함 bbox 가 +3/+5px 컸다. 12 → 한쪽 6px. */
-  .tr-up>svg path{fill:#B0EA26;stroke:#000;stroke-width:12;stroke-linejoin:round;
+  /* 17회차(비평가 Y P1·P2 — 이 회차 ② 최대 감점원): 화살표 검정 외곽선이 ref 4~6px 인데 우리는 8~9px 로
+     **두 배**였고, 스트로크가 패스 중앙에 걸려 fill 을 먹는 바람에 초록 날개 두께가 ref 18px → 우리 11px
+     (−39%) 로 얇아졌다. 즉 «외곽선 과다» 와 «날개 과소» 는 뿌리가 하나다 — stroke-width 하나로 둘이 같이 낫는다.
+     bbox(57x52)는 이미 Δ≤1 이므로 건드리지 않는다. 12 → 7 (편측 6 → 3.5px, 되찾은 fill 이 날개로 간다). */
+  .tr-up>svg path{fill:#B0EA26;stroke:#000;stroke-width:7;stroke-linejoin:round;
     paint-order:stroke fill}
 
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
@@ -4980,7 +4985,9 @@
     box-shadow:inset -6px 0 0 #EBBE9A}
   /* 9회차(M P7, ⑥ 기록항목이지만 폭은 ② 비율이라 반영): ref 잉크 폭 x1 42 · x10 71 · x30 79,
      우리는 셋 다 66 이었다(−7~−16%). 중심은 Δ≤2.5 로 맞으니 scaleX 로 폭만 넓힌다 */
-  .tr-qty>.q>i{position:relative;z-index:2;top:5px;font-size:38px;color:#C6BCBA;
+  /* 17회차(Y P3 · Z P6 · 자체 실측 셋이 일치): 라벨 세로중심이 ref 1364.5(=칩 중심) / 우리 1361.5 로
+     3칸 모두 −3px. top 5 → 8. */
+  .tr-qty>.q>i{position:relative;z-index:2;top:8px;font-size:38px;color:#C6BCBA;
     /* 10회차(O P4): ref «x10» 잉크는 **72x36** 인데 9회차의 scaleX(1.12) 는 78x33 (폭 +8% · 높이 −8%) 로
        종횡비를 어긋나게 했다. 높이를 폰트로 올리고(38→41.5) 폭은 되돌린다(1.12→0.95). */
     /* 16회차(W P4 «−13~15%» · X P8 «−11~12.5%» — 두 비평가 독립 일치): 잉크 **높이는 ref 와 동일(36/36)**
@@ -5098,10 +5105,12 @@
   .tr-card>.cv{left:0;right:0;top:290.5px;height:60px;line-height:60px;text-align:center}
   .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     display:inline-block;transform:scaleX(.90)}
-  .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
+  /* 17회차(Y P9 «h −10% · 중심 −1.5~2.5» · Z P7 «중심 −2» — 10회차 O P3 과도 같은 방향):
+     ref 라벨 잉크 h30 중심 1799.5 / 우리 h27 중심 1797.5 → top 340 → 342. 폰트는 아래에서 +10%. */
+  .tr-card>.cn{left:0;right:0;top:342px;height:48px;line-height:48px;text-align:center}
   /* 10회차(O P3): ref 라벨 잉크 높이 **30**(y1785..1814) / 우리 27 (−10%).
      폭 차이(ref 140 «햄지 공격력» vs 우리 78 «공격력»)는 문자열 차이라 비교 대상이 아니다 */
-  .tr-card>.cn>i{font-size:32px;color:#6E502F;transform:scaleX(.95)}
+  .tr-card>.cn>i{font-size:35.2px;color:#6E502F;transform:scaleX(.95)}
   /* 8회차(K P5) — 가격줄 3건. ref 카드1 실측(밴드 배경색 차분 마스크):
        코인 x121..173 **53x55** · 숫자 잉크 y1860..1906 **h47** · 콘텐츠 잉크 중심 x194 = **카드중심 −4**.
      7회차 것은 코인 42x47 · 숫자 잉크 42 · 중심 +5 였다. 중심은 밴드(=.cb 배경)를 움직이면 안 되므로
@@ -8231,7 +8240,7 @@
           <u id="trRib"></u></div>
         <div class="tr-prog"><span class="trk"><i id="trFill"></i></span><b id="trProg"></b></div>
         <div class="tr-up" id="trUp"><svg viewBox="0 0 73 69" aria-hidden="true">
-          <path d="M36.5 8 L65 38 H50 V61 H23 V38 H8 Z"/></svg></div>
+          <path d="M36.5 8 L65 41 H50 V61 H23 V41 H8 Z"/></svg></div>
         <div class="tr-qty" id="trQty"></div>
         <div class="tr-cards" id="trCards"></div>
       </div>
