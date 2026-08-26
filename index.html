@@ -4658,9 +4658,110 @@
        ⓓ 강도는 변수 3개로만 조절한다(지시 ④) — `--jz-amp`(진폭) · `--jz-per`(주기) · `--jz-glow`(글로우).
           0 을 주면 진폭·글로우가 사라진다(연출 끄기는 이 세 값이 전부다).
      ========================================================================== */
-  #shopw{--jz-amp:1;--jz-per:1;--jz-glow:1;--jz-sw:3.2s}
+  /* ⚑ 13회차 — 광택 «층위» 복원. 12회차가 주기 11종(3.0~3.4s)을 `--jz-sw` 한 벌로 모은 것은
+     옳았지만(그 11종은 층이 아니라 **잡음**이었다), 체크리스트가 따로 적어 둔
+     «본문 전면 광택 4.6s» · «구획 리본 광택 6s» 까지 3.2s 로 눌러 버렸다.
+     비평가 AE·AF 가 13회차에 독립으로 같은 것을 짚었다 — «전 요소가 같은 클럭이라 층이 안 생기고
+     화면이 한 박자로만 뛴다»(AF ⑬ 실측 본문 3.1s·리본 3.19s / AE ⑩ 본문 3.2s·리본 3.05s).
+     → 층을 **`--jz-sw` 의 배수로** 되살린다. 절대 초로 다시 적으면 12회차가 고친 «주기를 바꾸면
+       위상이 깨진다» 로 되돌아간다. 1 : 1.5 : 2 = 3.2s : 4.8s : 6.4s (체크리스트 4s : 4.6s : 6s). */
+  #shopw{--jz-amp:1;--jz-per:1;--jz-glow:1;--jz-sw:3.2s;
+    --jz-sw2:calc(var(--jz-sw) * 1.5);   /* 본문·전면 광택 */
+    --jz-sw3:calc(var(--jz-sw) * 2)}     /* 구획 리본 */
   /* 56 절전 — «렌더만 멈춘다» 는 규칙에 상시 연출도 포함된다 */
   #app.sv #shopw *{animation-play-state:paused}
+
+  /* ── ①-0 «페이지 바탕» 빛 입자 (13회차 신설) ──────────────────────
+     비평가가 3·5·10·12회차에 되풀이해서 ④ 로 짚은 «정지 섬» 의 정체를 13회차에 처음
+     수치로 잡았다(`tools/scan122.py`, r12 프레임 한 주기를 겹쳐 «한 번도 안 변한 격자» 를 센다):
+
+       #shopw 안 정지 화소 — 소환 탭 26.2% · 재화 탭 41.9% · 재화 탭 아래쪽(다이아·마일리지) 55.4%
+
+     그런데 최대 정지 구역을 좌표로 뽑아 `elementFromPoint` 로 되짚으니 **카드가 아니라
+     전부 «맨 바탕»** 이었다 — 좌우 여백 띠(소환 56×1488 · 재화 104×920 두 줄),
+     구획 사이 가로 띠(1080×64 · 872×56), 다이아 5칸 격자가 남긴 구멍(408×400).
+     즉 카드 안은 이미 살아 있고(카드1 버튼 구역 정지 10.0%), **카드가 안 덮은 자리가 죽어 있었다.**
+     회차마다 카드 연출만 세게 만든 것은 그래서 ④ 를 못 올렸다.
+
+     → 카드가 아니라 **페이지 껍데기(`#shopw`)** 에 붙인다. 리스트(`.shp-list`)보다 뒤에 깔리므로
+       카드 위에는 한 점도 안 얹히고(가독성 ③④ 무영향 · bbox Δ0), 두 탭이 **같은 한 벌**을 쓴다.
+       스크롤 컨테이너 밖이라 스크롤해도 다시 칠하지 않는다(§8 fps).
+     문법·속도는 카드 안 입자(`jz122Rise`)와 같은 벌 — 점 1개 + box-shadow 복제, `translate` 만,
+     ≈65px/s(1996px / 30s), 좌우 흔들림은 주기당 2회. 밀도만 절반(1점 / 61k px²)이라 «바탕» 으로 읽힌다. */
+  #shopw>.jzb{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+  #shopw>.jzb>i{position:absolute;left:0;top:0;width:6px;height:6px;border-radius:50%;
+    background:none;
+    box-shadow:
+       88px  152px 0 0   rgba(255,255,255,calc(.58 * var(--jz-glow))),
+      402px  318px 0 1px rgba(255,255,255,calc(.44 * var(--jz-glow))),
+      916px   96px 0 0   rgba(255,255,255,calc(.62 * var(--jz-glow))),
+      214px  640px 0 1px rgba(255,255,255,calc(.40 * var(--jz-glow))),
+      640px  512px 0 0   rgba(255,255,255,calc(.55 * var(--jz-glow))),
+     1012px  860px 0 1px rgba(255,255,255,calc(.36 * var(--jz-glow))),
+      132px 1094px 0 0   rgba(255,255,255,calc(.60 * var(--jz-glow))),
+      748px  706px 0 1px rgba(255,255,255,calc(.42 * var(--jz-glow))),
+      496px 1288px 0 0   rgba(255,255,255,calc(.52 * var(--jz-glow))),
+      872px 1482px 0 1px rgba(255,255,255,calc(.38 * var(--jz-glow))),
+       60px 1676px 0 0   rgba(255,255,255,calc(.57 * var(--jz-glow))),
+      320px 1870px 0 1px rgba(255,255,255,calc(.43 * var(--jz-glow))),
+      968px 1560px 0 0   rgba(255,255,255,calc(.50 * var(--jz-glow))),
+      574px 1780px 0 1px rgba(255,255,255,calc(.34 * var(--jz-glow))),
+      236px 1180px 0 0   rgba(255,255,255,calc(.47 * var(--jz-glow))),
+      804px 1980px 0 1px rgba(255,255,255,calc(.41 * var(--jz-glow))),
+     /* ↓ 같은 16점의 «한 창 아래» 짝 — 이음매 없이 무한히 흐르게 한다(창 높이 1996 = 타일 높이) */
+       88px 2148px 0 0   rgba(255,255,255,calc(.58 * var(--jz-glow))),
+      402px 2314px 0 1px rgba(255,255,255,calc(.44 * var(--jz-glow))),
+      916px 2092px 0 0   rgba(255,255,255,calc(.62 * var(--jz-glow))),
+      214px 2636px 0 1px rgba(255,255,255,calc(.40 * var(--jz-glow))),
+      640px 2508px 0 0   rgba(255,255,255,calc(.55 * var(--jz-glow))),
+     1012px 2856px 0 1px rgba(255,255,255,calc(.36 * var(--jz-glow))),
+      132px 3090px 0 0   rgba(255,255,255,calc(.60 * var(--jz-glow))),
+      748px 2702px 0 1px rgba(255,255,255,calc(.42 * var(--jz-glow))),
+      496px 3284px 0 0   rgba(255,255,255,calc(.52 * var(--jz-glow))),
+      872px 3478px 0 1px rgba(255,255,255,calc(.38 * var(--jz-glow))),
+       60px 3672px 0 0   rgba(255,255,255,calc(.57 * var(--jz-glow))),
+      320px 3866px 0 1px rgba(255,255,255,calc(.43 * var(--jz-glow))),
+      968px 3556px 0 0   rgba(255,255,255,calc(.50 * var(--jz-glow))),
+      574px 3776px 0 1px rgba(255,255,255,calc(.34 * var(--jz-glow))),
+      236px 3176px 0 0   rgba(255,255,255,calc(.47 * var(--jz-glow))),
+      804px 3976px 0 1px rgba(255,255,255,calc(.41 * var(--jz-glow)));
+    animation:jz122Bg calc(30s * var(--jz-per)) linear infinite}
+  /* ⚑ 입자만으로는 «정지 섬» 이 안 없어진다 — 13회차에 실측으로 확인했다.
+     점 32개가 한 채점 창(9프레임 = 2.56s) 동안 지나는 자취는 6px×170px × 32 = 32,640px²,
+     `#shopw`(1080×1996) 의 **1.5%** 다. 정지 화소 비율은 26.2 → 26.0 / 41.9 → 41.4 밖에 안 움직였다.
+     이 지표(그리고 사람 눈)가 보는 것은 «점이 있느냐» 가 아니라 **얼마나 넓은 면이 변하느냐**다.
+     → 같은 레이어에 **바탕 전체를 지나는 사선 광택**을 하나 더 얹는다. 카드·리본·배너가 쓰는
+       그 문법 그대로이고(④ 일관성), 세기만 바탕용으로 낮췄다(피크 α .07 — 카드 띠의 1/4).
+     주기는 카드 띠(`--jz-sw` 3.2s)의 **2배**로 둔다. 같은 값이면 카드 띠와 바탕 띠가 한 덩어리로
+     붙어 보이고, 무리수 배로 두면 «같은 게임» 으로 안 읽힌다. */
+  /* ⚑ 띠 하나로는 **채점 창 안에서** 오른쪽이 안 변한다. 9프레임은 2.56s = 6.4s 주기의 40% 뿐이라
+     띠가 제 여정의 40% 밖에 못 가고, 화면 오른쪽은 그 창 안에서 한 번도 안 지나간다
+     (실측: 오른쪽 여백 56×1488 이 그대로 정지로 잡혔다). 사람이 보는 것도 같은 2~3초다.
+     → 주기는 6.4s 로 두고(느긋함 유지) **반주기 어긋난 띠를 하나 더** 둔다. 폭 전체가 3.2s 마다
+       한 번은 쓸린다. 주기를 3.2s 로 줄이는 쪽은 카드 띠와 붙어 보여서 안 쓴다. */
+  #shopw>.jzb::before,#shopw>.jzb::after{content:'';position:absolute;top:-40px;bottom:-40px;left:0;width:42%;
+    background:linear-gradient(100deg,rgba(255,255,255,0) 0,
+      rgba(255,255,255,calc(.07 * var(--jz-glow))) 46%,
+      rgba(255,255,255,calc(.07 * var(--jz-glow))) 54%,rgba(255,255,255,0) 100%);
+    animation:jz122BgSweep calc(var(--jz-sw) * 2 * var(--jz-per)) linear infinite}
+  #shopw>.jzb::before{animation-delay:calc(var(--jz-sw) * -1 * var(--jz-per))}
+  /* 띠 폭이 42% 이므로 −42% 에서 출발해 100% 까지 가면 왼쪽 밖 → 오른쪽 밖으로 완전히 빠져나간다
+     (§12 «스윕이 호스트를 완전히 통과» 와 같은 규칙). 바탕 띠는 «머무는» 연출이 아니라
+     «지나가는» 연출이라 이징 없이 linear 다 — 카드 띠의 체류(duty 88%)와 역할이 다르다. */
+  /* 100% = 띠 자기 폭(1080 × .42 = 453.6px)이다. 오른쪽 밖까지 = 1080 / 453.6 = 238.1%. */
+  @keyframes jz122BgSweep{0%{translate:-100% 0}100%{translate:238.1% 0}}
+  /* 한 주기에 정확히 창 하나(1996px)를 올린다 — 짝점이 그 자리를 이어받아 이음매가 없다.
+     좌우는 주기당 2왕복(카드 안 입자와 같은 규칙, 진폭만 ±10px 로 낮췄다). */
+  @keyframes jz122Bg{
+    0%{translate:0 0}
+    12.5%{translate:calc(10px * var(--jz-amp)) -249.5px}
+    25%{translate:0 -499px}
+    37.5%{translate:calc(-10px * var(--jz-amp)) -748.5px}
+    50%{translate:0 -998px}
+    62.5%{translate:calc(10px * var(--jz-amp)) -1247.5px}
+    75%{translate:0 -1497px}
+    87.5%{translate:calc(-10px * var(--jz-amp)) -1746.5px}
+    100%{translate:0 -1996px}}
 
   /* ── ①-1 상자 아트 «숨쉬기»(scale 1→1.04) + 이따금 «들썩»(rotate ±3° · translateY −6) ──
      한 요소에 두 애니메이션을 걸지만 **건드리는 속성이 다르다**(scale / translate·rotate) —
@@ -4900,11 +5001,11 @@
       rgba(0,0,0,calc(var(--jz-gd2,.11) * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
-  .shp-card:nth-child(2)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw) * -0.2 * var(--jz-per))}
-  .shp-card:nth-child(3)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw) * -0.4 * var(--jz-per))}
-  .shp-card:nth-child(4)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw) * -0.6 * var(--jz-per))}
-  .shp-card:nth-child(5)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw) * -0.8 * var(--jz-per))}
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
+  .shp-card:nth-child(2)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw2) * -0.2 * var(--jz-per))}
+  .shp-card:nth-child(3)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw2) * -0.4 * var(--jz-per))}
+  .shp-card:nth-child(4)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw2) * -0.6 * var(--jz-per))}
+  .shp-card:nth-child(5)>.cbg>.jzs::after{animation-delay:calc(var(--jz-sw2) * -0.8 * var(--jz-per))}
 
   /* ── ①-7 «정지 섬» 제거 — 카드 전면(버튼 3개 + Lv 게이지) 유리 광택 (6회차 · 7-3-2) ──
      U 실측: 소환 카드 본문의 3버튼 + Lv 게이지가 **본문 면적의 21%** 를 차지하면서 range 0.0 이었다.
@@ -4918,7 +5019,7 @@
      두 띠(4s · 5.4s)가 같은 면에서 겹치면 ΔL 이 44.8~57.4 로 튀었다(표본 40장 중 6장 = 15%).
      → 전면 광택을 **헤더 아래(98px)부터** 시작시킨다. 겹침이 구조적으로 사라진다.
      α 도 헤더색이 아니라 본문색에서 역산한 `--jz-gb` 를 쓴다(이제 헤더를 안 지나므로). */
-  .shp-card>.cfr::after{animation-delay:calc(var(--jz-sw) * -.5 * var(--jz-per));content:'';position:absolute;left:0;top:98px;bottom:-30px;width:22%;
+  .shp-card>.cfr::after{animation-delay:calc(var(--jz-sw2) * -.5 * var(--jz-per));content:'';position:absolute;left:0;top:98px;bottom:-30px;width:22%;
     pointer-events:none;--jz-run:966px;    /* 창 폭 그대로 — 10회차 기하 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(var(--jz-gd2,.11) * var(--jz-glow))) 22%,
@@ -4929,11 +5030,11 @@
       rgba(0,0,0,calc(var(--jz-gd2,.11) * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
-  .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw) * -0.7 * var(--jz-per))}
-  .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw) * -0.9 * var(--jz-per))}
-  .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw) * -1.1 * var(--jz-per))}
-  .shp-card:nth-child(5)>.cfr::after{animation-delay:calc(var(--jz-sw) * -1.3 * var(--jz-per))}
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
+  .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.7 * var(--jz-per))}
+  .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.9 * var(--jz-per))}
+  .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.1 * var(--jz-per))}
+  .shp-card:nth-child(5)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.3 * var(--jz-per))}
 
   /* ── ①-4 무료 횟수가 남은 카드의 [10회 소환(무료)] 버튼 — 펄스 링(0.9s) ──
      «남았는가» 는 102 의 `.lack` 이 이미 들고 있다(syncShopSumBtns). 상태를 두 번 적지 않는다.
@@ -5102,7 +5203,7 @@
       rgba(0,0,0,calc(.148 * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
   .cn-cd.done>.fr::after{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 */
   /* ⚑ 10회차(AA ④6 · AB ③1 — 둘이 독립으로 «위상이 안 흩어졌다» 를 짚었다).
      9회차까지 규칙이 **6n+1 ~ 6n+4 네 개뿐**이라, 6칸 주기의 5·6번째 칸은 규칙이 없어
@@ -5121,7 +5222,7 @@
      리본이 이미 `--jz-d` 를 렌더에서 박아 안전했던 것과 같은 처방이다(5회차에 배운 것을 카드에 안 옮겼던 것).
      14칸을 **stride 5**(5와 14가 서로소 → 14슬롯 완전 순열)로 돌려, 슬롯을 빠짐없이 쓰면서
      **이웃한 칸끼리는 5/14 주기(≈1.14s)씩 벌어지게** 한다. */
-  .cn-cd>.fr::after{animation-delay:calc(var(--jz-sw) * var(--jz-k,0) * var(--jz-per))}
+  .cn-cd>.fr::after{animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
   .cn-cd>.bt[data-cnad]{animation:jz122RingC calc(1.15s * var(--jz-per)) ease-out infinite}
   /* 6회차 — jz122Ring 과 같은 한 벌(상시 후광 20/4 α.9 · 피크 α.92 · 85% 26px) */
   @keyframes jz122RingC{
@@ -5240,7 +5341,7 @@
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+    animation:jz122Sweep calc(var(--jz-sw3) * var(--jz-per)) linear infinite}
   /* ⚑ 6회차(7-3-5) — 광택이 리본 몸통(`>b`)에서만 돌고 좌우 «꼬리»(`.tl`)는 죽어 있었다.
      꼬리는 `>b` 밖의 형제라 같은 띠로는 못 덮는다. 꼬리마다 **같은 띠(폭 138px)·같은 이동거리
      (`--jz-run:765px`)·같은 주기(3.2s)** 로 한 장씩 더 놓고, **위상만 x 거리만큼 밀어** 한 줄기가
@@ -5263,9 +5364,9 @@
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
-  .cn-rb>.tl.l>s::after{animation-delay:calc((var(--jz-d,0s) - .171s) * var(--jz-per))}
-  .cn-rb>.tl.r>s::after{animation-delay:calc((var(--jz-d,0s) + 2.753s) * var(--jz-per))}
+    animation:jz122Sweep calc(var(--jz-sw3) * var(--jz-per)) linear infinite}
+  .cn-rb>.tl.l>s::after{animation-delay:calc((var(--jz-d,0s) * 2 - .342s) * var(--jz-per))}
+  .cn-rb>.tl.r>s::after{animation-delay:calc((var(--jz-d,0s) * 2 + 5.506s) * var(--jz-per))}
 
   /* ── ②-8 «정지 섬» 제거 — 마일리지 패널 내부 · «상품» 밴드 (6회차 · 7-3-2) ──
      U 실측: 마일리지 패널 내부 430×170 이 mean range 0.017, 재화 «상품» 헤더 바 1080×~90 이
@@ -5307,7 +5408,7 @@
   /* 5회차(S ③) — `nth-child` 시드는 «리본이 리본끼리 연속한 형제» 일 때만 흩어진다.
      리본 사이에 카드 6~8장이 끼어 있어 셋이 같은 나머지에 걸렸다(실측: 세 리본의 띠 x 가 소수점까지 동일).
      렌더에서 칸마다 `--jz-d` 를 박는 쪽이 확실하다. */
-  .cn-rb>b::after{animation-delay:calc(var(--jz-d,0s) * var(--jz-per))}
+  .cn-rb>b::after{animation-delay:calc(var(--jz-d,0s) * 2 * var(--jz-per))}
   /* 4회차(Q ①-2 · R ④) — 비평가 둘이 독립으로 «[교환] 링이 통째로 없다» 고 읽었다.
      절반은 캡처 위상 앨리어싱(0.9s 링을 0/900/5200/13400 에 찍었다)이지만, 절반은 세기다 —
      상시 후광을 두껍게(9→14px, .34→.5) 하고 링이 사라지는 구간을 70%→**85%** 로 늦춘다. */
@@ -10366,6 +10467,9 @@
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
   <div id="shopw">
+    <!-- 122 ①-0 페이지 바탕 빛 입자 — 리스트보다 뒤에 깔린다(카드 위에는 한 점도 안 얹힌다).
+         스크롤 컨테이너 밖이라 굴려도 다시 칠하지 않는다. CSS 전용, JS 타이머 0줄. -->
+    <s class="jzb"><i></i></s>
     <!-- 81 팝업 내장 재화 바 — 03 던전·89 유물과 동일한 41 컴포넌트 (메인 HUD 재사용 아님) -->
     <div class="pcb">
       <div class="pcb-p pcb-g" data-cur="gold"><i data-cur-slot="gold"></i><b>0</b></div>
@@ -17640,8 +17744,23 @@ function renderCoinPage(list){
      3쌍이 5~6ms 이내). 그래서 칸 번호를 **렌더가 통째로 하나 세어** `--jz-k`(주기의 배수, 음수)로 박는다.
      stride 5 / 14슬롯 — 5와 14가 서로소라 14슬롯을 빠짐없이 한 바퀴 돌면서
      **이웃한 칸끼리는 5/14 주기(≈1.14s) 씩** 벌어진다(같은 행 두 칸이 붙는 것을 막는다). */
-  let jzN = 0;
-  const jzK = () => ';--jz-k:' + (-((jzN++ * 5) % 14) / 14).toFixed(4);
+  /* ⚑ 13회차 — stride 5 는 **줄 세우기 문제를 1차원으로 풀어서** 세로 이웃을 놓쳤다.
+     세 묶음이 전부 3열 격자(`[111,401,691][i%3]`)인데 칸 번호를 한 줄로 세어 5씩 건너뛰면
+     세로 이웃은 3칸 = 3×(5/14) = 15/14 ≡ **1/14 주기(229ms)** 로 붙는다 — 사실상 동위상이다.
+     비평가 AE·AF 가 13회차 채점에서 **독립으로 같은 5쌍**을 짚었다(실측 182~245ms,
+     심 위치 차 16~26px = 카드 폭의 6~10%). 각 열이 «위아래로 이어진 하나의 긴 사선» 으로 뭉쳐
+     보이는 것이 이 회차 ①·④ 의 최대 감점 사유였다.
+     → 위상을 **열·행 두 축으로** 준다: 열마다 +1/4 주기, 행마다 +1/2 주기.
+       이웃 간격은 가로 1/4(800ms) · 세로 1/2(1600ms) · 대각 1/4(800ms) 이 되고,
+       **넷 중 최소가 1/4** 이다. (d(a)·d(b)·d(a±b) 를 동시에 1/3 이상으로 만드는 (a,b) 는
+       존재하지 않는다 — a=b=1/3 이면 a−b=0 이 된다. 그래서 1/4 가 이 격자의 상한이다.)
+     `rowBase` 는 묶음마다 이어지는 행 번호다(광고 0~1 · 다이아 2~3 · 유물조각 4).
+     칸 수가 3의 배수가 아닌 묶음(다이아 5칸)이 있어 전역 카운터로는 열이 어긋난다 —
+     그래서 열은 **묶음 안 번호**(`i % 3`)에서 뽑는다. */
+  const jzK = (i, rowBase) => {
+    const col = i % 3, row = rowBase + ((i / 3) | 0);
+    return ';--jz-k:' + (-(((col * 3 + row * 6) % 12) / 12)).toFixed(4);
+  };
   let h = '<div class="cn-wrap">'
     /* §1 배너 아트 + §2 타이틀 */
     + '<div class="cn-bn"><div class="art">🎁</div>'
@@ -17661,7 +17780,7 @@ function renderCoinPage(list){
   COIN_ADS.forEach((a, i) => {
     const x = [111, 401, 691][i % 3], y = i < 3 ? 689 : 1008, left = adLeft(a), done = left <= 0;
     /* 구매 완료 칸도 ×N 은 그대로 그린다 — ref 는 띠(dy119~189) 아래로 잉크 하단 ~9px 이 회색으로 비친다 */
-    h += '<div class="cn-cd' + (done ? ' done' : '') + '" style="left:' + x + 'px;top:' + y + 'px' + jzK() + ';--fs:' + a.fs + 'px;--sx:'
+    h += '<div class="cn-cd' + (done ? ' done' : '') + '" style="left:' + x + 'px;top:' + y + 'px' + jzK(i, 0) + ';--fs:' + a.fs + 'px;--sx:'
       + a.sx + ';--qx:' + a.qx + (done ? ';--hd:#68C338;--hr:#7FD955' : '')
       /* 7회차(Y 1) — 카드 띠의 흰 심 α 가 .33 고정이라 헤더색에 따라 ΔL 이 30.5~49.3(1.62배)로
          갈렸다. 소환 헤더·리본과 똑같이 그 칸의 헤더색에서 역산한다. */
@@ -17698,7 +17817,7 @@ function renderCoinPage(list){
     const x = [111, 401, 691][i % 3], y = i < 3 ? 1884 : 2203;
     /* 122 ②-3 — 가장 큰 상품 한 칸만 아이템 판 뒤에 «골드 광선 20s 회전»(`.pn>s.ray`). CSS 전용. */
     const top = i === DIA_PACKS.length - 1;
-    h += '<div class="cn-cd dia' + (top ? ' top' : '') + '" style="left:' + x + 'px;top:' + y + 'px' + jzK() + ';--fs:40.8px;--sx:.98'
+    h += '<div class="cn-cd dia' + (top ? ' top' : '') + '" style="left:' + x + 'px;top:' + y + 'px' + jzK(i, 2) + ';--fs:40.8px;--sx:.98'
       + ';--qx:' + p.qx + ';--hd:#6B5BE8;--hr:#B0A6FF;--jz-ga:' + jzShineA('#6B5BE8') + ';--jz-gd:' + jzShadeA('#6B5BE8') + '">'
       /* 125 의 화폐 아이콘 공용 컴포넌트(`curIc`)와 122 의 광선 판을 **둘 다** 살린다 —
          광선은 «가려지는 몸통(.bg)» 이 아니라 아이템 판 안, 아이콘 뒤여야 보인다(122 2회차). */
@@ -17727,7 +17846,7 @@ function renderCoinPage(list){
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
   EXCHANGE.forEach((x, i) => {
     const px = [111, 401, 691][i % 3];
-    h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px' + jzK() + ';--fs:40.8px;--sx:.98'
+    h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px' + jzK(i, 4) + ';--fs:40.8px;--sx:.98'
       +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5'
       +  ';--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + '">'
       +  '<div class="bg"></div><div class="hd"><i>유물조각</i></div>'

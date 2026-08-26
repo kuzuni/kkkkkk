@@ -124,7 +124,25 @@ async function lumaOf(p, ms, clip, store) {
      그것을 «세기 미달» 로 읽으면 멀쩡한 띠의 α 를 올리는 헛수고를 한다. */
 /* 12회차 — 주기가 **3.2s 한 벌**로 통일됐으므로 표본도 정확히 한 주기(16 × 200ms = 3.2s)로 맞춘다.
    18장(3.6s)이면 끝 2장이 앞 2장과 같은 위상이라 그 위상만 두 번 세어져 duty 가 편향된다. */
+/* ⚑ 13회차 — 주기가 다시 **3층**이 됐다(3.2 / 4.8 / 6.4s — 체크리스트의 «본문 4.6s»·«리본 6s» 복원).
+   고정 격자를 그대로 두면 4.8s 짜리 띠를 3.2s 창으로만 봐서 **심을 한 번도 못 밟는 점**이 생긴다
+   (실제로 «소환 전면(본문4) = −13.7» 로 부호가 뒤집힌 어두운 옆구리가 잡혔다).
+   → 표본을 «고정 3.2s» 가 아니라 **재는 그 띠의 한 주기**로 잡는다. 위 부등식 ①②는 그대로다:
+     한 주기를 16등분하면 격자는 200~400ms 이고, 심 노출창(주기의 ~10%)보다 촘촘하다.
+   duty 도 정확히 한 주기라 여전히 편향이 없다. */
 const PHASES = Array.from({ length: 16 }, (_, i) => i * 200);
+const phasesFor = durMs => (!durMs || !isFinite(durMs) ? PHASES
+  : Array.from({ length: 16 }, (_, i) => Math.round(durMs * i / 16)));
+/* 의사요소까지 포함해 그 띠의 실제 주기(ms)를 읽는다. `sel::after` → (sel, '::after') */
+const durOf = (p, sel) => p.evaluate(s => {
+  const m = String(s).split('::');
+  const e = document.querySelector(m[0]);
+  if (!e) return null;
+  const d = getComputedStyle(e, m[1] ? '::' + m[1] : null).animationDuration || '';
+  const v = parseFloat(d);
+  if (!isFinite(v) || v <= 0) return null;
+  return /ms$/.test(d.trim()) ? v : v * 1000;
+}, sel);
 /* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 루마 차를, **그 호스트에서 가장 넓은 평탄면**
    에서만 재어 상위 5% 의 중앙값을 취한 값(부호 포함). 비평가가 «평탄면 실측» 이라고 부르는 것이다.
 
@@ -188,7 +206,8 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
      흰 심만 기준 61%). 사람이 «빛난다» 고 읽는 것은 심이지 옆구리가 아니므로 심으로 센다.
      부호는 호스트마다 다르다(크림판은 심이 음수로 잡힌다) — 그래서 절대 부호가 아니라 **피크의 부호**다. */
   const vs = [];
-  for (const t of PHASES) {
+  const ph = phasesFor(await durOf(p, testSel));   /* 13회차 — 그 띠의 한 주기를 16등분 */
+  for (const t of ph) {
     const v = await lumaOf(p, t, clip);
     if (v != null) vs.push(v);
   }
@@ -672,9 +691,66 @@ async function ampCheck(p, hosts) {
   });
   if (!leak) { ok(false, '스윕 누출을 잴 «화면 안 카드» 를 못 찾음'); }
   else {
+  /* ⚑ 13회차 — 이 절이 재는 것은 «**카드의** 띠가 카드 밖으로 새는가» 다.
+     13회차에 페이지 바탕 레이어(`#shopw>.jzb`, ①-0)가 생기면서 카드 밖 배경이 **설계대로**
+     움직이게 됐고, 그 움직임이 이 절을 빨간불로 만들었다(75/76).
+     판정을 느슨하게 하면(«거의 같으면 통과») 진짜 누출까지 같이 통과하므로 그렇게 풀지 않는다.
+     대신 **바탕 레이어만 끄고** 잰다 — 그러면 이 절은 3회차에 만든 그대로 «카드 띠만» 본다.
+     (바탕 레이어 자체가 카드 위로 새지 않는다는 것은 z-index 로 보장된다: `.shp-list` 보다 뒤다.) */
+  const bgOff = on => p.evaluate(v => {
+    let e = document.getElementById('jz122bgoff');
+    if (!v) { if (e) e.remove(); return; }
+    if (!e) { e = document.createElement('style'); e.id = 'jz122bgoff'; document.head.appendChild(e); }
+    e.textContent = '#shopw>.jzb{opacity:0!important}';
+  }, on);
+  await bgOff(true);
   const l0 = await shotAt(p, 0, leak), l1 = await shotAt(p, 1150, leak), l2 = await shotAt(p, 2300, leak);
+  await bgOff(false);
 
-  ok(l0.equals(l1) && l0.equals(l2), '카드 왼쪽 바깥 52px 띠가 세 위상에서 픽셀 동일 (스윕이 안 샌다)');
+  ok(l0.equals(l1) && l0.equals(l2), '카드 왼쪽 바깥 52px 띠가 세 위상에서 픽셀 동일 (스윕이 안 샌다 · 바탕 레이어 끄고)');
+  }
+
+  /* ── §14 이웃 칸 위상 분리 (13회차 신설) ────────────────────────
+     회차마다 되살아난 결함이라 게이트로 내린다. 5·9·12회차가 «위상을 흩었다» 고 적었는데
+     13회차 채점에서 비평가 AE·AF 가 **독립으로 같은 5쌍**을 «사실상 동위상» 으로 짚었다
+     (실측 182~245ms = 주기의 5.7~7.7%). 원인은 12회차의 stride 5 가 **1차원**이라
+     3열 격자의 세로 이웃(칸 번호 +3)을 15/14 ≡ 1/14 주기로 붙여 놓은 것이었다.
+     여기서 재는 것은 코드가 아니라 **결과**다 — 칸의 실제 좌표로 이웃을 찾고,
+     계산된 animation-delay/duration 으로 위상차를 원형 거리로 잰다. */
+  console.log('§14 이웃 칸 위상 분리 — 가로·세로 이웃이 주기의 20% 이상 벌어지는가');
+  const nb = await p.evaluate(() => {
+    const cards = [...document.querySelectorAll('#shopList .cn-cd')].map(e => {
+      const cs = getComputedStyle(e, '::after');   /* 칸 띠는 `.cn-cd>.fr::after` 지만 위상은 칸이 준다 */
+      const fr = e.querySelector(':scope>.fr');
+      const s = fr ? getComputedStyle(fr, '::after') : cs;
+      const dur = parseFloat(s.animationDuration) * (/ms$/.test(s.animationDuration.trim()) ? 1 : 1000);
+      const del = parseFloat(s.animationDelay) * (/ms$/.test(s.animationDelay.trim()) ? 1 : 1000);
+      const r = e.getBoundingClientRect();
+      return { x: Math.round(r.x), y: Math.round(r.y + (window.__sc || 0)), dur, del };
+    }).filter(c => isFinite(c.dur) && c.dur > 0 && isFinite(c.del));
+    /* 위상 = (−delay mod dur) / dur.  원형 거리로 비교한다. */
+    const ph = c => { let v = (-c.del % c.dur) / c.dur; if (v < 0) v += 1; return v; };
+    const dist = (a, b) => { const d = Math.abs(ph(a) - ph(b)) % 1; return Math.min(d, 1 - d); };
+    const out = [];
+    for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length; j++) {
+      const a = cards[i], b = cards[j];
+      if (a.dur !== b.dur) continue;               /* 주기가 다르면 «이웃» 비교가 성립하지 않는다 */
+      const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
+      const sameRow = dy < 40 && dx > 40 && dx < 400;    /* 가로 이웃 — 열 간격 290 */
+      const sameCol = dx < 40 && dy > 40 && dy < 400;    /* 세로 이웃 — 행 간격 319 */
+      if (!sameRow && !sameCol) continue;
+      out.push({ kind: sameRow ? '가로' : '세로', d: dist(a, b), ms: Math.round(dist(a, b) * a.dur),
+                 at: '(' + a.x + ',' + a.y + ')-(' + b.x + ',' + b.y + ')' });
+    }
+    return out;
+  });
+  {
+    const bad = nb.filter(v => v.d < .20);
+    const worst = nb.length ? nb.reduce((m, v) => v.d < m.d ? v : m) : null;
+    ok(nb.length >= 6, '이웃 쌍 ' + nb.length + '개를 찾았다 (>=6)');
+    ok(bad.length === 0, '이웃 위상차가 전부 주기의 20% 이상'
+      + (worst ? ' — 최소 ' + Math.round(worst.d * 100) + '%(' + worst.ms + 'ms, ' + worst.kind + ' ' + worst.at + ')' : '')
+      + (bad.length ? ' — 미달 ' + bad.length + '쌍: ' + bad.slice(0, 4).map(v => v.kind + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
   }
 
   const CSEL = ['.cn-cd>.hd>i', '.cn-cd>.bt', '.cn-cd>.bt>u', '.cn-cd>.qt', '.cn-ml>.ex', '.cn-ml>.ex>i'];
