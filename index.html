@@ -7214,12 +7214,15 @@
   /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
   /* 13회차 3차분 — K·N·자체 실측 3자 일치: ref 카드 폭 **298** · 거터 **17**(우리 300·15).
      그리드 pitch 315 는 그대로고 카드만 2px 좁힌다(x 76/391/706 = ref). */
-  /* 16회차 — R «ref 카드 298/296/297 · 거터 19/18 vs 우리 298/298/298 · 17/17 (−8%)» ·
-     S «ref 거터가 우리보다 +2» 로 방향 일치. 그리드 바깥(x76..1003 = w928)은 R 이 «0 차이» 로 확인했으므로
-     **총폭은 그대로 두고 거터만 넓혀** 카드가 줄게 한다: gap 18.5 ⇒ 카드 (928−37)/3 = 297,
-     카드 좌단 76 / 391.5 / 707 (R 의 ref 76 / 393 / 707). verify34 J6·J7 기대값도 같이 갱신한다. */
+  /* 16회차 — R «ref 거터 19/18» · S «거터 +2» 로 17 → 18.5 로 넓혔다. **이것은 오판이었다(17회차 되돌림).**
+     17회차 T 가 서브픽셀로 «ref 거터 16.71/16.67 · 폭 298.26/298.63/298.26» 을 재고 «되돌려라 —
+     이전 값(17/298)이 ref 에 거의 정확했고 18.5/297 이 오차를 0.3px → 2.2px 로 **13배** 키웠다» 고 판정,
+     U 도 «ref 15/15 vs 우리 19/18 (+26.7%)» 로 같은 방향이었다. 게다가 18.5 는 928 을 3등분하지 못해
+     **우리 거터 2개가 서로 1.00px 어긋났다**(ref 편차 0.04). 거터 표는 이렇게 갈린다:
+       E·F(10회차) 15 · K·N·자체(13회차) 17 · P·Q(15회차) 17 · **R(16회차) 19/18(단독 이상치)** · T(17회차) 16.7 · U(17회차) 15
+     ⇒ 17 이 6표 중 4표(13·15·17회차)의 값이고 T 의 실측 16.71 과 Δ0.3 이다. **gap 17 · 카드 298 로 복귀.** */
   .bls-cards{left:16px;top:270px;width:928px;height:447px;
-    display:grid;grid-template-columns:repeat(3,1fr);gap:18.5px}
+    display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
   /* 10회차: 카드 모서리 반경 24 → 46. ref 좌상단 아크를 4점(y806 x95.5 · y812 x88.5 · y820 x82.5 · y830 x78.5)
      으로 원 방정식에 넣으면 R=44.8/45.2/45.9/48.3, 좌하단 3점도 45.9/49.1 → **R≈46**.
      (2차 비평 D «18→36» 의 방향이 맞았고 폭은 그보다 더 컸다) */
@@ -7249,7 +7252,9 @@
      잉크 폭은 우리가 세 장 모두 152~155 로 «슬롯을 꽉 채워» 그렸는데 ref 는 아트별로 151/145/133 이다
      (아트 자리 규칙: 나중에 이미지로 갈아 끼우려면 bbox 가 ref 와 같아야 한다) ⇒ 카드별로 눌러 준다.
      ❤️ 만 높이가 141 로 13px 낮아 font-size 를 먼저 올리고 폭을 scaleX 로 되돌린다. */
-  .bls-c .ic{left:0;right:0;top:19px;height:166px;line-height:166px;text-align:center;font-size:140px}
+  /* 17회차 — T «아이콘 블록이 2px 위 (ref y814..967 / 우리 812..965) · 헤더 하단→아이콘 상단 ref 20.5 vs 우리 17.5»
+     · U «ref 816 / 우리 815». bbox(w 151/145/133)는 T·U 둘 다 «ref 와 정확히 일치» 라고 확인했으므로 top 만 +2. */
+  .bls-c .ic{left:0;right:0;top:21px;height:166px;line-height:166px;text-align:center;font-size:140px}
   #blsC_atk  .ic{transform:scaleX(.974)}
   #blsC_hp   .ic{font-size:153px;transform:scaleX(.858)}
   #blsC_rate .ic{transform:scaleX(.875)}
@@ -7265,7 +7270,10 @@
   /* 13회차 — 칩 모서리 반경: K «ref 24 / 우리 19» · L «ref 25 / 우리 22» · 자체 r34.py «ref 28 / 우리 20
      (CSS 22, 편향 −2 ⇒ ref 실효 30)». 셋 다 «우리가 작다» 로 같은 방향이고 값만 24·25·30 으로 갈려
      가운데인 26 을 쓴다. */
-  .bls-c .tm{left:41px;top:250px;width:219px;height:98px;border-radius:28px;background:#926A24;
+    /* 17회차 — T «우리 좌40.91 / 우36.88 ⇒ 카드 중심에서 +2.0px 우측, 3장 동일» · U «+2px 우측 편향».
+     ref 는 좌40.53 / 우39.13 (거의 대칭). 칩 폭·높이·y 는 둘 다 «완전 일치» 이므로 left 만 41 → 40
+     (카드 298 복귀 기준 우여백 39 ⇒ ref 와 Δ0.5/Δ0.1). */
+  .bls-c .tm{left:40px;top:250px;width:219px;height:98px;border-radius:28px;background:#926A24;
     box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center;
     /* ref 는 «시계+숫자» 덩어리가 칩 중심(225)에서 5px 왼쪽(중심 220)에 앉는다 — 그만큼 오른쪽에 여백 */
     box-sizing:border-box;padding-right:20px}
@@ -7282,7 +7290,10 @@
      된다(13회차에 한 번 겪었다 — 잉크 마스크에 아예 안 잡혔다). 같은 색·같은 외곽선을 다시 준다. */
   .bls-c .tm>b.ck{position:relative;top:4px;font-size:40px;line-height:97px;vertical-align:top;margin-right:10px;
     color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(.97)}
-  .bls-c .tm>i{position:relative;top:2px;font-size:30px;line-height:97px;vertical-align:top;color:#fff;-webkit-text-stroke:6px #1A1206;
+  /* 17회차 — T: ref 타이머 잉크 폭 181/181/183(편차 2px, 등폭) vs 우리 179/170/178(편차 **9px**).
+     «00:01:21» 만 혼자 9px 좁아 카드 3장이 시각적으로 안 맞는다 — 비례폭 숫자라 글리프마다 advance 가 다르다.
+     ref 대조 이전에 **우리 세 카드끼리 어긋나는** 결함이므로 tabular-nums 로 등폭 고정. */
+  .bls-c .tm>i{position:relative;top:2px;font-size:30px;line-height:97px;vertical-align:top;color:#fff;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;-webkit-text-stroke:6px #1A1206;
     paint-order:stroke fill;transform:scaleX(1.1);letter-spacing:.8px;margin-right:-.8px;
     -webkit-font-smoothing:antialiased}
   /* 13회차 3차분 — 비평 M ②. ref 의 카드 하단 밝은 띠는 **전폭이 아니다**:
@@ -7389,13 +7400,25 @@
      → 폰트 의존을 끊고 radial-gradient 로 직접 그린다. 측정표 §11 의 «날개 달린 3원형 뭉치 ≈325x200» 형태를
      그대로 따라 3원 + 좌우 날개로 잡아 **정확히 323x224 @ promo-local(73,13)** 을 채운다(= frame x137..459 · y1536..1759).
      색은 축복 3종(공격 빨강 · 체력 금색 · 속도 파랑)에 맞춰 뒀다 — 아트가 오면 background 만 교체하면 된다. */
-  .bls-promo .ic{left:68px;top:8px;width:323px;height:224px;font-size:0;line-height:0;
+  /* 17회차 — **S(16회차)·T·U 3인 일치**: 폭은 맞는데 **높이만 ~20px 과대**이고 그 탓에 스트립 안쪽
+     상하 여백이 절반으로 짜부라졌다.
+       S «ref 313×194 / 우리 313×211 (+17) · 상단여백 ref 22 vs 우리 10»
+       T «ref 201h(w322, 종횡 1.60) / 우리 220h(w319, 1.45) → +9.5% · 여백 ref 21/18 → 우리 10/9»
+       U «ref 322×199 / 우리 319×220 (+10.6%) · 여백 ref 22/19 → 우리 10/9»
+     ⇒ **폭 323 은 그대로 두고 높이만 224 → 201**(T·U 값), 상단 여백은 top 8 → 22 로 벌린다
+     (ink = 프레임 y1550..1751, ref 1550..1751).
+     원(circle)들은 세로만 201/224 = 0.897 배 해서 **타원**으로 바꾼다 — 폭은 건드리지 않는다.
+     ink 검산: 위 = 금색 59.2−59.2 = 0 · 아래 = 적/청 140+61 = 201. 정지 요소라 흐름 영향 없음(position:absolute). */
+  /* 자체 실측 보정 — height 201 로 그리면 그라디언트 끝단 AA 때문에 **실측 잉크가 198** 로 3px 모자랐고
+     상단 여백도 24(목표 22)였다. 박스를 204 로 잡아 잉크 201 을 내고 top 을 20 으로 올린다
+     ⇒ 잉크 프레임 y1550..1751 (T 의 ref 1550..1751) · 상단 여백 22 · 하단 여백 18. 세로 배율 204/224 = 0.9107. */
+  .bls-promo .ic{left:68px;top:20px;width:323px;height:204px;font-size:0;line-height:0;
     background:
-      radial-gradient(ellipse 34px 30px at 34px 90px,#F3FFE0 0 32px,transparent 33px),
-      radial-gradient(ellipse 34px 30px at 289px 90px,#F3FFE0 0 32px,transparent 33px),
-      radial-gradient(circle 68px at 86px 156px,#FF6B5A 0 66px,transparent 67px),
-      radial-gradient(circle 68px at 237px 156px,#5AC8FF 0 66px,transparent 67px),
-      radial-gradient(circle 66px at 161px 66px,#FFD24A 0 64px,transparent 65px)}
+      radial-gradient(ellipse 34px 27.3px at 34px 82px,#F3FFE0 0 94%,transparent 95%),
+      radial-gradient(ellipse 34px 27.3px at 289px 82px,#F3FFE0 0 94%,transparent 95%),
+      radial-gradient(ellipse 68px 61.9px at 86px 142.1px,#FF6B5A 0 97%,transparent 98%),
+      radial-gradient(ellipse 68px 61.9px at 237px 142.1px,#5AC8FF 0 97%,transparent 98%),
+      radial-gradient(ellipse 66px 60.1px at 161px 60.1px,#FFD24A 0 97%,transparent 98%)}
   /* 비평 A·B 합의: ref 헤드라인 잉크 379x55(자당 47.4), 우끝 953 = 스트립 우인셋 55~61 → 우측 정렬 */
   /* 11회차 — G ⑥: 잉크 h 53 vs ref 59 → fs 56→62. 잉크 상단이 8px 아래라 top 24→19 */
   /* 13회차 3차분 — M·N 이 독립적으로 «폭 −11.7%» 로 일치. 자체 검정 bbox ref 399x69 cy1585 / 우리 350x64 cy1582.5
@@ -7437,9 +7460,11 @@
      ⚠ 세로 흐름(§13-2 함정): 높이가 122→138 로 **+16px** 늘므로 margin-top 을 21→5 로 −16 해서
      흐름 총합을 0 으로 묶는다(팝업 y345 유지). 시각 위치는 흐름에 영향 없는 relative top 으로만 잡는다:
      스트립 하단 1771 + margin 5 + top 16 = **1792** ⇒ 간격 21(R 값). line-height 는 코어(118) 기준이라 그대로. */
-  .bls-x{flex:none;position:relative;top:16px;margin:5px 0 auto;width:138px;height:138px;box-sizing:border-box;border:10px solid #000;
+  .bls-x{flex:none;position:relative;top:16px;margin:5px 0 auto;width:138px;height:138px;box-sizing:border-box;border:9px solid #000;
+    /* 17회차 — 링 자체는 회수됐고 두께만 과했다: T «ref 8.4 / 우리 10 (+19%)» · U «ref 9 / 우리 10 (+11%)»
+       ⇒ 10 → 9. 바깥 138(T 실측 ref 138.4 · U 140)과 코어는 그대로. */
     border-radius:50%;background:#E04D57;box-shadow:inset 0 0 0 7px #9F2A30;
-    cursor:pointer;line-height:118px;text-align:center;
+    cursor:pointer;line-height:120px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1;
     /* 13회차 3차분 — M·N 일치: ref 글리프 중심 x541.5(원 중심 +2) / 우리 537(−2.5). 크기 50x51 vs 51x51 은 일치.
        세로도 ref 1858 / 우리 1855 ⇒ 4.5px 오른쪽 · 3px 아래. `text-indent` 는 좌우 중앙정렬을 밀어낸다. */
