@@ -50,7 +50,9 @@ const SCREENS = [
   /* 8회차 — `.mhead h2` 는 **A5 공용 모달 헤더**라 22 만 보고 고치면 나머지가 같이 움직인다.
      ref 가 있는 나머지 헤더 화면도 같이 재서 «22 를 맞추면 남이 어긋나는지» 를 먼저 본다. */
   { k: '69-우편함', ref: 'docs/ref/69-우편함-팝업.jpg', steps: ['#menub', '#mnw [data-mn="mail"]'], sels: ['.mhead h2'] },
-  { k: '33-재화정보', ref: 'docs/ref/33-재화-정보-팝업.jpg', steps: ['[data-cur="gold"]'], sels: ['.mhead h2'] },
+  /* 8회차 — r7 비평가 O·P 가 ② 2·4·5순위로 독립 일치한 19 자리들 */
+  { k: '19-프로필', ref: 'docs/ref/19-프로필-팝업.jpg', steps: ['#profBtn'],
+    sels: ['.pf-msn>i', '#pfw .pf-tgl .lb>i', '#pfw .pf-tgl .bn>i'] },
 ];
 
 const NOISE_TH = 18;
