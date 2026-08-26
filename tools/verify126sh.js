@@ -79,10 +79,15 @@ async function main() {
   console.log('[A] 소스 — 토큰 선언과 «묻히는 몫» 보상');
   const decl = /--sh-drop\s*:\s*\.?0*\.?(\d+)/.exec(SRC);
   ok(!!decl, ':root 에 `--sh-drop` 토큰이 선언돼 있다', decl ? '값 .' + decl[1] : '없음');
-  const useRe = /\.shp-card>\.chd>i\{[^}]*text-shadow:0 calc\(\(var\(--st-small\)\s*\/\s*2\s*\+\s*var\(--sh-drop\)\)\s*\*\s*1em\) 0 #000/;
-  ok(useRe.test(SRC.replace(/\n\s*/g, '')),
-    '카드 헤더가 `(--st-small/2 + --sh-drop)` 로 «묻히는 몫» 을 보상한다',
-    '오프셋을 그대로 쓰면 스트로크에 묻힌다(§20-2)');
+  ok(/--sh-s:calc\(\(var\(--st-small\)\s*\/\s*2\s*\+\s*var\(--sh-drop\)\)\s*\*\s*1em\)/.test(SRC),
+    '`--sh-s` 가 «묻히는 몫(st/2)» 을 미리 더해 둔다', '오프셋을 그대로 쓰면 스트로크에 묻힌다(§20-2)');
+  ok(/\.shp-card>\.chd>i\{[^}]*text-shadow:0 var\(--sh-s\) 0 #000/.test(SRC.replace(/\n\s*/g, '')),
+    '카드 헤더가 `--sh-s` 를 **세로 전용**으로 쓴다',
+    'X 오프셋을 주면 그림자가 획 아래에서 비켜나 아래쪽 검정이 오히려 준다(§20-7)');
+  ok(/text-shadow:0 var\(--sh-t\) 0 #000/.test(SRC.replace(/\n\s*/g, '')) &&
+     /text-shadow:0 var\(--sh-b\) 0 #000/.test(SRC.replace(/\n\s*/g, '')),
+    '토큰이 카드 헤더 밖으로 퍼졌다 (--sh-t 22 제목 · --sh-b 02 마을)',
+    'U·V 공통 1순위 — 8자리 중 1자리에만 붙어 ③ 이 묶여 있었다');
   ok(!/--sh-drop\s*:\s*0(?:px)?\s*[;}]/.test(SRC), '토큰이 0 으로 꺼져 있지 않다');
 
   const browser = await launch(chromium);
@@ -100,7 +105,7 @@ async function main() {
   const ours = (await profile(page, SEL)).filter((r) => r.core && r.top != null && r.bot != null);
   ok(ours.length >= 3, `카드 헤더 표본 ${ours.length}개 (≥3)`);
   for (const r of ours) {
-    ok(r.drop >= 2 && r.drop <= 4.5, `「${r.t}」 아래 검정이 위보다 2~4.5px 크다`,
+    ok(r.drop >= 2 && r.drop <= 4, `「${r.t}」 아래 검정이 위보다 2~4px 크다`,
       `위 ${r.top} · 아래 ${r.bot} · drop ${r.drop}`);
   }
 

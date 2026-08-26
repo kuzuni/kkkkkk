@@ -109,7 +109,39 @@
          `text-shadow:0 calc((var(--st-X)/2 + var(--sh-drop)) * 1em) 0 #000`
        ref 3px @ fs51 = .0588em 인데 실측 보정(안티에일리어싱으로 바깥 띠가 3.31 → 3.75 로
        읽힌다)까지 넣어 **.067** 로 잡았다 → 오프셋 6.73px · 실측 drop 3.0. */
-    --sh-drop:.067;    /* 잉크 «아래로만» 보이는 검정 그림자 — ref 가 이 그림자를 가진 계열에만 붙인다 */
+    /* 11회차 2차 — r11 채점(U·V)이 **둘 다 독립으로** 두 가지를 잡았다.
+       ① 방향은 맞았으나 **크기가 1px 과하다**: U(부분픽셀 50%–50%) 낙차 ref 2.59 vs 우리 3.69(+42%),
+          V(bbox 차분, 임계 6조합 × 카드 3장 = 18회 전부 흔들림 없음) ref 아래 6 vs 우리 7(+1px).
+          둘 다 «위쪽은 맞았으니 건드리지 마라» 로 일치한다.
+       ② **드롭은 아래로만이 아니라 «아래 + 오른쪽» 대각이다.** V 실측 ref 좌 4 / 우 5~7,
+          우리 좌 4 / 우 4. 내 프로파일러로 가로를 따로 재서 재현했다 —
+          방패 ref 좌4/우6(dropX +2) vs 우리 4/4(0) · 목걸이 ref 좌5/우7(+2) vs 우리 4/3(−1).
+          (이 파일 안 `.cn-ti>i` 가 이미 `2px 5px` 로 대각이었다 — 앞 세션이 한 자리에서 본 것이다.)
+       → ①은 반영했다. 오프셋 = st/2 + .053 = **6.0px @fs51** 이고, 보정된 측정으로 재니
+         우리 위 3.25 / 아래 6 vs ref 위 3 / 아래 6 = **세로는 Δ0**.
+
+       ⚠ ②(대각)는 **이번 회차에 넣었다가 도로 뺐다.** 넣어 보니 ref 프로파일이 재현되지 않는다:
+         X 오프셋을 주면 그림자가 획 «아래» 에서 옆으로 비켜나므로 열 단위로 재는 아래쪽 검정이
+         오히려 6 → 4~5 로 **줄어든다**(우리 대각 6/6 → 아래 4~5 · 우 3~4, 둘 다 ref 6/5 미달).
+         ref 는 아래 6 **와** 우 5 를 «동시에» 갖는데, 한 방향 대각 오프셋으로는 둘을 같이 못 만든다.
+         → ref 의 오른쪽 검정은 드롭 섀도가 아니라 **비대칭 외곽선(베벨)** 일 가능성이 크다.
+         V 의 실측(ref 좌 4 / 우 5~7)은 사실이지만 «대각 그림자» 라는 해석이 틀린 것이다.
+         12회차가 이 가설을 따로 검증할 것 — §20-8 ②. */
+    --sh-drop:.053;    /* 잉크 «아래·오른쪽» 으로 보이는 검정 그림자 — ref 가 가진 계열에만 붙인다 */
+    /* 쓰기 편한 짝 — 스트로크 토큰별로 «묻히는 몫(st/2)» 을 미리 더해 둔다.
+       `em` 은 **쓰는 요소의 font-size** 로 풀리므로 자리마다 저절로 비례한다.
+         .shp-card>.chd>i{text-shadow:0 var(--sh-s) 0 #000}
+       ★ 이 «비율» 설계가 옳다는 근거 — U 가 잰 ref 낙차와 `.053em` 이 자동으로 만드는 값이
+         자리마다 따로 맞춘 적이 없는데도 붙는다:
+           23 제목(fs61.5) ref 3.14 ↔ 3.26 (+0.12) · 02 「마을」(fs36) ref 1.90 ↔ 1.91 (**+0.01**)
+           22 제목(fs45.6) ref 2.57 ↔ 2.42 (−0.15) · 23 단계판(fs48) ref 2.95 ↔ 2.54 (−0.41)
+           19 아이디(fs23) ref 1.50 ↔ 1.22 (−0.28)                        ← 8곳 중 5곳이 ±0.5px
+         빗나가는 둘은 **작은 버튼 숫자**다(10 「10회 소환」 ref 0.88 ↔ 1.64 · 「1,000」 0.53 ↔ 1.38).
+         ref 는 이 급에서만 드롭을 비율보다 얕게 준다 → **작은 버튼 라벨에는 붙이지 마라.** */
+    --sh-t:calc((var(--st-title) / 2 + var(--sh-drop)) * 1em);
+    --sh-h:calc((var(--st-hud)   / 2 + var(--sh-drop)) * 1em);
+    --sh-b:calc((var(--st-body)  / 2 + var(--sh-drop)) * 1em);
+    --sh-s:calc((var(--st-small) / 2 + var(--sh-drop)) * 1em);
   }
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
@@ -898,6 +930,9 @@
     /* 126 ③ 9회차 — 4px = r .111. 레일 라벨과 같은 계열인데 이 자리만 토큰 밖이었다.
        ③ 지적이 직접 붙은 자리는 아니므로 크기대 토큰(.22)이 아니라 **본문 토큰**으로 한 단만 올린다. */
     font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;
+    /* 126 ③ 11회차 2차 — U ref 낙차 1.90 vs 우리 0.23. 비율 토큰이 만드는 1.91 이
+       실측과 **Δ+0.01** 로 붙는 자리다(«비율» 설계의 가장 강한 증거). */
+    text-shadow:0 var(--sh-b) 0 #000;
     /* 126 ②-2 7회차 — 흰 코어 48×30 vs ref 57×31(−15.8% / −3.2%, 비평가 N). 높이는 이미 맞다 →
        레일 라벨과 같은 «폭만» 자리다. 다만 이 자리 외곽선은 `4px 고정` 이라 sx 에 비선형이다
        (§11 「모두 받기」와 같은 함정) — 선형 예측 .86×57/48=1.021 로 한 번 재고 실측으로 되잡았다. */
@@ -1464,7 +1499,10 @@
      가르지 않는 이유는 126 이 «토큰 1벌로 통일» 지시이기 때문 — §13-3 `.tab .tl` 과 같은 처리다. */
   .mhead h2{position:relative;top:-1px;margin:0;font-size:45.6px;line-height:45.6px;font-weight:900;color:#fff;
     letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;transform:scaleX(1.057);
-    -webkit-text-stroke:calc(var(--st-title) * 1em) #000}   /* 126 ② — 10px 고정 = r .263 */
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;   /* 126 ② — 10px 고정 = r .263 */
+    /* 126 ③ 11회차 2차 — U·V 가 독립으로 «아래 드롭이 없다» 로 일치(U ref 낙차 2.57 vs 우리 0.00 ·
+       V ref 아래 6~7 vs 우리 5). 비율 토큰이 만드는 2.42 가 U 실측 2.57 과 −0.15 로 붙는다. */
+    text-shadow:0 var(--sh-t) 0 #000}
   /* 베이지 본문 + 별무늬. 레퍼런스 별은 팔이 두껍고(내반경/외반경 0.68) 위 꼭짓점이 본문 상단선에
      잘려 있다 → 타일을 10px 위로 올려 클립시킨다. 베벨 1px 은 좌·우·아래만 (헤더 아래엔 없다) */
   .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 21px 48px;text-align:center;
@@ -3588,7 +3626,7 @@
   /* 126 ③ 11회차 — 두께는 위 9회차 값 그대로 두고(위쪽 검정은 ref 와 이미 Δ0) **아래 그림자만** 준다.
      S·T 가 r9 에 «3 vs 5 = −40%» 로 든 감점의 정체가 이것이다. 토큰 설명은 `:root --sh-drop`. */
   .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
-    text-shadow:0 calc((var(--st-small) / 2 + var(--sh-drop)) * 1em) 0 #000;
+    text-shadow:0 var(--sh-s) 0 #000;
     transform:scaleX(1.03) translateY(4px);letter-spacing:-1px}
   /* 검정 테두리 레이어 */
   .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
@@ -6489,6 +6527,9 @@
      → font-size 57 → 61.5 (+8%, 잉크 47 → 50.8 · 79 → 85) · top 14 → 22 (+8px). */
   .tr-head>i{position:absolute;left:0;right:0;top:22px;height:64px;line-height:64px;text-align:center;
     font-size:61.5px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+    /* 126 ③ 11회차 2차 — U ref 낙차 3.14 vs 우리 −0.03 · V ref 아래 7~8 vs 우리 5.
+       스트로크가 토큰이 아니라 고정 10px 이라 «묻히는 몫» 도 5px 로 직접 적는다. */
+    text-shadow:0 calc(5px + var(--sh-drop) * 1em) 0 #000;
     transform:scaleX(.87)}
 
   /* §2 크림 박스 — border-box ref x17..1062 / y1063..2152, 테두리 #CDA26C 6px */

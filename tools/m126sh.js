@@ -113,14 +113,20 @@ function measure(d, W, H, x0, x1, y0, y1, P) {
     if (!colMax.has(x) || y > colMax.get(x)) colMax.set(x, y);
   }
   let bgDark = 0;
+  /* 흰 코어와 검정 사이에는 **안티에일리어스 램프**(예 148,148,148)가 1~2px 낀다.
+     «밝으면 바깥» 으로 끊으면 그 램프에서 즉시 0 을 반환해 두께가 통째로 사라진다
+     (11회차 2차에서 가로가 전부 4 로 읽히던 원인이 이것이었다 — 실제 픽셀은 5~6px 검정이었다).
+     그래서 **아직 검정을 만나기 전** 2px 까지는 램프로 보고 건너뛴다. ref/우리 양쪽에 같이 적용된다. */
+  const RAMP = 2;
   const march = (sx, sy, dy) => {
-    let n = 0;
+    let n = 0, seen = false;
     for (let i = 1; i <= P.MAXD; i++) {
       const yy = sy + dy * i;
       if (!inW(sx, yy)) return null;
       const o = at(sx, yy);
-      if (Math.max(d[o], d[o+1], d[o+2]) >= P.EXIT) return n;
-      n++;
+      if (Math.max(d[o], d[o+1], d[o+2]) < P.BLK) { n++; seen = true; continue; }
+      if (!seen && i <= RAMP) continue;
+      return n;
     }
     bgDark++; return null;
   };
@@ -131,12 +137,37 @@ function measure(d, W, H, x0, x1, y0, y1, P) {
   const tops = [], bots = [];
   for (const [x, y] of colMin) { if (y - yTop > P.EDGE) continue; const v = march(x, y, -1); if (v != null && v > 0) tops.push(v); }
   for (const [x, y] of colMax) { if (yBot - y > P.EDGE) continue; const v = march(x, y, 1);  if (v != null && v > 0) bots.push(v); }
+  /* 11회차 2차 — 비평가 V 가 «ref 의 드롭은 아래만이 아니라 **아래+오른쪽 대각**» 이라고 들었다
+     (ref 좌 4 / 우 5~7 · 우리 좌 4 / 우 4). 세로와 같은 방식으로 가로도 잰다. */
+  const rowMin = new Map(), rowMax = new Map();
+  for (const [x, y] of corePx) {
+    if (!rowMin.has(y) || x < rowMin.get(y)) rowMin.set(y, x);
+    if (!rowMax.has(y) || x > rowMax.get(y)) rowMax.set(y, x);
+  }
+  const marchX = (sx, sy, dx) => {
+    let n = 0, seen = false;
+    for (let i = 1; i <= P.MAXD; i++) {
+      const xx = sx + dx * i;
+      if (!inW(xx, sy)) return null;
+      const o = at(xx, sy);
+      if (Math.max(d[o], d[o+1], d[o+2]) < P.BLK) { n++; seen = true; continue; }
+      if (!seen && i <= RAMP) continue;
+      return n;
+    }
+    return null;
+  };
+  const xL = cb.x0, xR = cb.x0 + cb.w - 1;
+  const lefts = [], rights = [];
+  for (const [y, x] of rowMin) { if (x - xL > P.EDGE) continue; const v = marchX(x, y, -1); if (v != null && v > 0) lefts.push(v); }
+  for (const [y, x] of rowMax) { if (xR - x > P.EDGE) continue; const v = marchX(x, y, 1);  if (v != null && v > 0) rights.push(v); }
   const med = (arr) => { if (!arr.length) return null; arr.sort((p, q) => p - q); return +arr[arr.length >> 1].toFixed(2); };
-  const t = med(tops), bt = med(bots);
+  const t = med(tops), bt = med(bots), lf = med(lefts), rt = med(rights);
   return {
     core: cb, n: core.length, bgDark,
     top: t, bot: bt, nT: tops.length, nB: bots.length,
+    left: lf, right: rt, nL: lefts.length, nR: rights.length,
     drop: (t == null || bt == null) ? null : +(bt - t).toFixed(2),
+    dropX: (lf == null || rt == null) ? null : +(rt - lf).toFixed(2),
   };
 }`;
 
@@ -215,7 +246,7 @@ async function main() {
   const n = (v, w) => String(v == null ? '—' : v).padStart(w);
   console.log(`\n126 ③ 잉크 «위 vs 아래» 검정 프로파일 — 흰 임계 ${TH} · 근흑 ${BLK} · 탈출 ${EXIT} · 최대 ${MAXD} · 변 ${EDGE}`);
   console.log('drop = (아래 − 위). ref drop ≥ 3 이면 «ref 는 드롭 섀도 계열», Δdrop ≤ −2 면 우리에게 그림자가 모자란다.\n');
-  console.log('화면        자리                       fs    sw   우리위 우리아래 우리drop  n   ref위 ref아래 refdrop  n   Δdrop  판정');
+  console.log('화면        자리                    | 우리 위/아래/좌/우  drop dropX | ref 위/아래/좌/우  drop dropX | Δdrop ΔdropX');
   for (const r of rows) {
     const o = r.ours, f = r.ref;
     let verdict = '';
@@ -232,8 +263,9 @@ async function main() {
     const dd = (o.drop == null || f.drop == null) ? null : +(o.drop - f.drop).toFixed(2);
     console.log(
       `${r.screen.padEnd(10)}  ${(r.text + ' [' + r.sel.split(' ').pop() + ']').padEnd(26).slice(0, 26)} ` +
-      `${n(r.fs, 5)} ${n(r.sw, 5)}  ${n(o.top, 6)} ${n(o.bot, 7)} ${n(o.drop, 8)} ${n((o.nT||0)+'/'+(o.nB||0), 5)}  ` +
-      `${n(f.top, 6)} ${n(f.bot, 7)} ${n(f.drop, 7)} ${n((f.nT||0)+'/'+(f.nB||0), 5)} ${n(dd, 7)}  ${verdict}`);
+      `| ${n(o.top,3)}/${n(o.bot,3)}/${n(o.left,3)}/${n(o.right,3)} ${n(o.drop,5)} ${n(o.dropX,5)} ` +
+      `| ${n(f.top,3)}/${n(f.bot,3)}/${n(f.left,3)}/${n(f.right,3)} ${n(f.drop,5)} ${n(f.dropX,5)} ` +
+      `| ${n(dd,5)} ${n((o.dropX==null||f.dropX==null)?null:+(o.dropX-f.dropX).toFixed(2),6)}  ${verdict}`);
   }
   if (JSON_AT) { fs.writeFileSync(JSON_AT, JSON.stringify(rows, null, 1)); console.log('\n→ ' + JSON_AT); }
   console.log('');
