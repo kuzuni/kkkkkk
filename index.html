@@ -4714,8 +4714,11 @@
       radial-gradient(circle at 1066px 56px,#71472E 0 5.5px,transparent 5.6px),
       linear-gradient(180deg,#A17D52 0 6px,#84583B 6px 73px,#73472E 73px 97px,#553622 97px 106px);
     box-shadow:inset 8px 0 0 #141414,inset -8px 0 0 #141414}
-  .tr-head>i{position:absolute;left:0;right:0;top:14px;height:64px;line-height:64px;text-align:center;
-    font-size:57px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+  /* 16회차(비평가 W P4·P6 · X P6·P9 가 독립으로 같은 두 지적): 타이틀 잉크가 ref 87x50 인데 우리는 79x47
+     (폭 −9% · 높이 −6%) 이었고, 세로 중심도 ref 976 / 우리 968 로 **8px 위**였다.
+     → font-size 57 → 61.5 (+8%, 잉크 47 → 50.8 · 79 → 85) · top 14 → 22 (+8px). */
+  .tr-head>i{position:absolute;left:0;right:0;top:22px;height:64px;line-height:64px;text-align:center;
+    font-size:61.5px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.87)}
 
   /* §2 크림 박스 — border-box ref x17..1062 / y1063..2152, 테두리 #CDA26C 6px */
@@ -4772,10 +4775,13 @@
     border-radius:24px;box-shadow:inset 0 9px 0 #4C311F,inset 0 -9px 0 #4C311F,
     inset 7px 0 0 #4C311F,inset -7px 0 0 #4C311F;z-index:2}
   /* .tr-rib 이 1px 올라간 만큼 글자는 제자리에 두려고 top 9 → 10 */
-  .tr-rib>u{position:absolute;left:0;right:0;top:10px;height:60px;line-height:60px;text-align:center;
-    font-size:49px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
+  /* 16회차(W P4·P7 · X P7·P10 — 타이틀과 **같은 결함이 리본에도**): 2글자 «훈련» 잉크가
+     ref 78x45 인데 우리는 72x41 (−8~9%), 세로 중심도 ref 1139 / 우리 1132 로 **7px 위**였다.
+     → font-size 49 → 53.5 (+9%) · em 53 → 57.8 · top 10 → 17 (+7px). */
+  .tr-rib>u{position:absolute;left:0;right:0;top:17px;height:60px;line-height:60px;text-align:center;
+    font-size:55.6px;color:#fff;-webkit-text-stroke:9px #141414;paint-order:stroke fill;z-index:3;
     transform:scaleX(.93)}
-  .tr-rib>u em{position:relative;top:4px;font-size:53px;color:#FA8153;-webkit-text-stroke:9px #000;
+  .tr-rib>u em{position:relative;top:4px;font-size:60px;color:#FA8153;-webkit-text-stroke:9px #000;
     paint-order:stroke fill;margin:0 4px}
 
   /* §4 진행바 — 박스 기준 x177 y165 w662 h55, 검정 8px, 채움 #9EF12F */
@@ -4903,7 +4909,9 @@
   .tr-qty>.q>i{position:relative;z-index:2;top:5px;font-size:38px;color:#C6BCBA;
     /* 10회차(O P4): ref «x10» 잉크는 **72x36** 인데 9회차의 scaleX(1.12) 는 78x33 (폭 +8% · 높이 −8%) 로
        종횡비를 어긋나게 했다. 높이를 폰트로 올리고(38→41.5) 폭은 되돌린다(1.12→0.95). */
-    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill;transform:scaleX(.95);font-size:41.5px}
+    /* 16회차(W P4 «−13~15%» · X P8 «−11~12.5%» — 두 비평가 독립 일치): 잉크 **높이는 ref 와 동일(36/36)**
+       인데 폭만 좁다(ref x10 69~72 / 우리 60~64). 높이는 건드리지 말고 scaleX 만 .95 → 1.03 (+8.4%). */
+    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill;transform:scaleX(1.03);font-size:41.5px}
   .tr-qty>.q.on>i{color:#F9F1EF}
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
@@ -4940,13 +4948,15 @@
      ref y1450 은 검정이 x48 까지 이어지고 밴드가 x53 부터인데, 우리는 검정이 x42 에서 끊기고 x43 이 곧장 밴드였다.
      카드 radius 28 · 검정 8px 이므로 **안쪽 도형 반경은 20**(동심). 비용밴드(.cb)는 이미 `0 0 20px 20px` 다.
      11·13·14회차와 같은 계열의 «각진 박스가 라운드 코너를 덮는» 결함이다. */
-  .tr-card>.ch{left:8px;right:8px;top:8px;height:89px;text-align:center;line-height:83px;
+  .tr-card>.ch{left:8px;right:8px;top:8px;height:89px;text-align:center;line-height:90px;/* 16회차: Lv 잉크 세로 중심이 ref 1486.5 / 우리 1483 (−3.5) → line-height 83 → 90 */
     border-radius:20px 20px 0 0;
     background:
       linear-gradient(90deg,rgba(255,255,255,.57) 0,rgba(255,255,255,0) 5px),
       linear-gradient(270deg,rgba(0,0,0,.14) 0,rgba(0,0,0,0) 2px),
       linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
-  .tr-card>.ch>i{font-size:54px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+  /* 16회차(W P5 «+8%» · X P3 «+10.8%» — 두 비평가 독립 일치): «Lv.» 잉크 높이가 ref 37~38 인데 우리는 41.
+     잉크 = 글리프 + 스트로크 10 이므로 글리프만 31 → 27.5 로 줄인다: font-size 54 → 48 (−11%). */
+  .tr-card>.ch>i{font-size:48px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     transform:scaleX(.9)}
   /* 4회차: ref 는 카드 아트 «뒤» 에 45° 회전 라운드 스퀘어 «슬롯 플레이트» 를 깐다
      (bbox 150x150 = 한 변 106 을 45° 회전한 마름모, 색 (234,214,179)). 우리 캡처에는 이 색 픽셀이 **0개**였다.
@@ -4966,7 +4976,7 @@
   .tr-card>.ci::before{content:'';position:absolute;left:50%;top:50%;width:119.4px;height:119.4px;
     /* 13회차: 부모 .ci 에 scaleX(.845) 를 걸었으므로(이모지 잉크 폭 보정) 판은 역스케일로 상쇄한다
        — 1/.845 = 1.1834. 최종 bbox = 149 x 119 로 불변이다. */
-    margin:-63.2px 0 0 -59.7px;transform:scale(1.1834,1.1198) scale(1,.8) rotate(45deg);
+    margin:-63.2px 0 0 -59.7px;transform:scale(1.2063,1.1198) scale(1,.8) rotate(45deg);
     border-radius:24px;background:#EAD6B3;z-index:-1}
   /* 이모지는 ref 스프라이트와 달리 «속이 꽉 찬 덩어리» 라 150px 에서 플레이트를 통째로 덮어 버린다
      (검증 스캔: 플레이트색 가시 픽셀 238개 / ref 7423개). ref 아트도 판 위에 얹혀 판 가장자리가 보이므로
@@ -4982,10 +4992,38 @@
        · 폭: `scaleX(.845)` = 180 → 152 (판은 역스케일로 상쇄)
        · 세로: `line-height` 164 → 198 로 글리프만 17px 내린다(판은 `top:50%` 라 line-height 영향 없음)
      이모지는 GPT 아트로 교체될 자리표시라 «내용» 은 감점 대상이 아니지만 **bbox 는 맞춰 둔다**. */
-  .tr-card>.ci{z-index:1;left:73px;top:111px;width:180px;height:164px;text-align:center;line-height:224px;
-    font-size:105px;transform:scale(.845,.893)}
-  .tr-card>.cv{left:0;right:0;top:286px;height:60px;line-height:60px;text-align:center}
-  .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+  /* 16회차 — 비평가 W P1·P2 와 X P1·P2 가 «판이 12px 위 · 판 높이 150 이어야 한다» 로 수렴했지만
+     **판은 무죄다.** `refplate23.js`(신설: ref 판 베이지의 행별 좌/우 끝만 모아 실루엣을 복원)로 확정 —
+     ref 판의 **최대폭 행이 카드2 y1620..1631 · 카드1 y1624..1628**(폭 150)이라 판 세로 중심은 **1625.5** 다.
+     우리 판(plate23.js 실측) 148x118 · 중심 1625.5 로 이미 Δ0 이다. 두 비평가가 «중앙열 베이지가 1715 까지
+     이어진다» 고 읽은 것은 **아트 아래쪽의 다른 베이지 덩어리**(카드1 y1696..1714 는 중심 x220 으로
+     카드 중심 197.5 와 어긋난다 = 판이 아니다)를 판으로 이어 붙인 것이다. LESSONS 120 «비평가 2명이
+     수렴해도 게이트와 충돌하면 제3의 수단(픽셀)으로 확정하라» 그대로다.
+     **진짜 감점원은 한 겹 위, 아트(이모지) 자리다** — ink23.js 실측 우리 아트 중심 y1630.5(카드2) 인데
+     ref 아트 bbox 중심은 y1640(13회차 실측, 16회차 비평가 2명도 «12px 위» 로 같은 방향).
+     → 글리프만 +9.5px 내린다: line-height 224 → 245 (Δ21 의 절반이 글리프 이동, scaleY .893 반영).
+     판은 `top:50%` 라 line-height 에 영향받지 않는다(11회차 처방 유지). */
+  /* 16회차 — **클래스 이름 충돌**(비평가 X P1 «ref 에 없는 8px 검정 스트로크» 의 진짜 정체).
+     33 재화 정보 팝업의 전역 `.ci{border:8px solid #000;background:#564438;border-radius:…;padding:…}`
+     (§33, line ~4021)가 이 카드 아이콘 칸에도 그대로 걸린다 — 우리 규칙이 width/height/position 만
+     덮고 테두리·배경은 안 덮었기 때문이다. 그래서 판 둘레에 검정 8px 액자와 갈색 배경이 얹혀
+     베이지 가시 필드가 150x150 → 136x130 (−9%/−13%) 로 줄어 있었다.
+     33 쪽 규칙은 남의 구간이라 건드리지 않고 **여기서만 되돌린다**(같은 사고를 §3920 은 클래스명
+     `ci`→`cdic` 개명으로 풀었지만, 23 은 renderTrainLive·verify23 이 `.ci` 를 참조해 개명 비용이 크다). */
+  .tr-card>.ci{z-index:1;left:73px;top:111px;width:180px;height:164px;text-align:center;line-height:205px;
+    /* 16회차 아트 자리 재산출 — 전역 `.ci` 액자를 걷어내자 **진짜 이모지 잉크**가 드러났다:
+       99x96 (13회차가 «180x151» 로 잰 것은 액자였다). ref 아트 bbox 는 152x151 · 중심 y1640 이므로
+       font-size 105 → 165 로 높이를 맞추고(잉크 151 = ref 와 Δ0), 폭은 scaleX .845 → .829 (155 → 152),
+       가로 중심은 이모지 어드밴스가 우측으로 치우쳐 있어 text-indent −14px 로 되돌린다(551 → 539.5),
+       세로는 line-height 245 → 205 로 18px 올린다(1658 → 1640). */
+    font-size:165px;transform:scale(.829,.893);text-indent:-14px;
+    border:0;background:none;border-radius:0;padding:0;max-height:none;flex:none}
+  /* 16회차(inkcmp23 동일기준 실측): 초록 «+값» 잉크가 ref 126x37 인데 우리는 140x38 —
+     **높이는 맞고 폭만 +11%** 다(X P4 는 높이로 읽었다). 세로 중심도 ref 1752 / 우리 1747.5 (−4.5).
+     → top 286 → 290.5 · 글자에 scaleX(.90). */
+  .tr-card>.cv{left:0;right:0;top:290.5px;height:60px;line-height:60px;text-align:center}
+  .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+    display:inline-block;transform:scaleX(.90)}
   .tr-card>.cn{left:0;right:0;top:340px;height:48px;line-height:48px;text-align:center}
   /* 10회차(O P3): ref 라벨 잉크 높이 **30**(y1785..1814) / 우리 27 (−10%).
      폭 차이(ref 140 «햄지 공격력» vs 우리 78 «공격력»)는 문자열 차이라 비교 대상이 아니다 */
