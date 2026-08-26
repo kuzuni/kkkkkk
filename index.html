@@ -3150,7 +3150,7 @@
   .shp-card>.cbg::after{content:'';position:absolute;left:0;right:0;bottom:0;height:12px;
     background:linear-gradient(180deg,transparent,rgba(0,0,0,.28))}
   /* 헤더 밴드 — 단색 + 상단 6px 하이라이트 림 */
-  .shp-card>.chd{position:absolute;left:7px;top:7px;width:966px;height:97px;
+  .shp-card>.chd{position:absolute;left:7px;top:7px;width:966px;height:98px;
     background:var(--hd);border-radius:19px 19px 0 0;box-sizing:border-box;
     box-shadow:inset 0 6px 0 var(--hr);text-align:center;line-height:97px}
   /* 헤더 제목 — 3회차 실측: ref 잉크(흰 채움) 182×41, 2회차 구현 147×38(폭 −19% 높이 −7%).
@@ -3170,7 +3170,7 @@
      이모지는 정사각 글리프라 274×204(가로가 긴 상자)를 한 축만으로는 못 채운다 →
      font-size 로 **높이**를 맞추고 `transform:scaleX()` 로 **폭**을 채운다.
      122 의 상시 연출은 개별 속성(`scale`/`translate`/`rotate`)만 쓰므로 `transform` 칸은 비어 있다 — 충돌 없음. */
-  .shp-card .cart{left:99px;top:158px;width:274px;height:204px;font-size:185px;line-height:204px;
+  .shp-card .cart{left:101px;top:158px;width:274px;height:204px;font-size:185px;line-height:204px;
     text-align:center;transform:scaleX(1.343);filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
   /* 4회차 — 비평가 G·H 공통 지적 «카드2 아트 폭 −18%». 원인은 **이모지마다 글리프 종횡비가 다른데
      scaleX 를 한 값으로 돌려쓴 것**이다. font-size 200 에서 잰 글리프 잉크(도구 없이 재현 가능:
@@ -3187,7 +3187,7 @@
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
     background:#9DA3B8;border:3px solid #4A4E5A;box-sizing:border-box;cursor:pointer;
     /* 5회차 — J ② «돋보기 렌즈 외경 23 vs ref 28(−18%) · 글리프 잉크 −57%» → 34→41 */
-    font-size:41px;line-height:52px;text-align:center;color:#646A82;
+    font-size:36px;line-height:52px;text-align:center;color:#646A82;
     box-shadow:0 3px 3px rgba(0,0,0,.3)}
 
   /* Lv 알약 — 검정 캡슐, 글자 #7DE5ED */
@@ -3196,11 +3196,11 @@
   /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
   .shp-card .clv>i{font-size:24px;color:#7DE5ED;transform:scaleX(1.146);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
-  .shp-card .cbar{left:113px;top:369px;width:307px;height:32px;border-radius:16px;background:#000;
+  .shp-card .cbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
     box-sizing:border-box}
-  .shp-card .cbar>.trk{position:absolute;left:3px;top:3px;right:3px;bottom:3px;border-radius:13px;
+  .shp-card .cbar>.trk{position:absolute;left:3px;top:3px;right:3px;bottom:3px;border-radius:5px;
     background:#373C4D;overflow:hidden}
-  .shp-card .cbar>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:13px;
+  .shp-card .cbar>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;
     background:linear-gradient(180deg,#FEC721,#FFB514)}
   /* 3회차: 경험치 글자는 «Lv 알약에 안 가리는 오른쪽 구간» 이 아니라 **트랙 전체**의 가운데다.
      ref 잉크 중심 dx269.5 ≈ 안쪽 트랙(116..418) 중심 267 / 구현은 left:53 탓에 293.5 로 26px 우측이었다. */
