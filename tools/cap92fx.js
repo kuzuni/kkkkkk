@@ -12,7 +12,9 @@
 
    실행: node tools/cap92fx.js [접두어]     (기본 docs/review/92-fx)
    LESSONS 28-③ — 캔버스가 잉크 스캔을 오염시키므로 #view 를 숨기고 평탄한 중간톤을 깐다. */
-const { chromium } = require('playwright');
+/* 127 — 클라우드 러너에는 번들 브라우저가 없다. 게이트 공용 부트스트랩을 쓴다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const pre = process.argv[2] || 'docs/review/92-fx';
@@ -21,7 +23,7 @@ const pre = process.argv[2] || 'docs/review/92-fx';
 const STOPS = [0, 75, 150, 225, 300, 375, 450, 540];
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
