@@ -119,7 +119,7 @@ const PT = Number(process.argv[3] || 108);
     const bandMean = (y0, y1) => { let s = 0, n = 0;
       for (let y = y0; y <= y1; y += 2) for (let x = 250; x <= 826; x += 2) { s += lum(x, y); n++; }
       return s / n; };
-    const gridTop = PT + spare * 0.5075, gridBot = gridTop + 516, gridBot0 = gridBot;
+    const gridTop = PT + Math.min(spare * 0.5075, 600), gridBot = gridTop + 516, gridBot0 = gridBot;
     const upper = bandMean(Math.round(archTop) + 20, Math.round(gridTop) - 12);
     const lower = bandMean(Math.round(gridBot) + 12, Math.round(archBot) - 20);
     /* 테두리 기울기 — 아치 좌변 x244 / 우변 x833 을 가로지르는 행들의 최대 |dL/dx| */
