@@ -82,6 +82,26 @@
           **.13 → 8.3** · .145 → 4.7 · .16 → 3.4. 이 디자인이 «열려 있다» 고 인정한 하한이
           8.0px²(10 상점 「1,000」 8.3 · 52 「우편」 8.9)이므로 **.13 이 절벽 직전의 최대치**다. */
     --st-small:.13;    /* 작은 라벨·수량(<25px) + 02 레일 라벨(fs 29) */
+    /* 126 ③ 15회차 — **크기대 4단만으로는 안 되는 자리가 하나 있다: A5 공용 모달 헤더.**
+       r14 비평가 AA·AB 가 각자의 부분픽셀 50%-교차법으로 «22 「퀘스트」 타이틀만 좌변 +54~55% 두껍다» 를
+       독립으로 냈고(AA 안쪽임계 110/127/145 스윕에서 +60/+55/+46% 로 부호 불변 · AB 정수 bbox 로도 4→6),
+       **같은 방법으로 잰 나머지 세 타이틀은 −7~+4% 로 정상**이다(10 카드 헤더 3.59↔3.39 · 23 배너 4.54↔4.73 ·
+       02 STAGE 4.83↔4.63). r13 의 Y 도 같은 자리를 «+61%» 로 들었다 — 세 사람·두 회차째다.
+       원인은 **레퍼런스가 스트로크를 글자 크기에 비례시키지 않는 자리가 있다는 것**이다:
+       ref 는 fs 45.6 짜리 모달 헤더에 3.6px 를 두르면서 fs 38 짜리 02 STAGE 에는 4.8px 를 두른다
+       (큰 글자에 더 얇게 — 크기대 모델과 정반대). `--st-title` 은 02 STAGE 에서 맞고 있으므로
+       **토큰을 흔들면 맞는 자리가 깨진다.** 모달 헤더에만 별도 비율을 준다.
+       값: 실측 5.71 → 목표 3.69 는 ×0.646 이지만, 과교정을 피해 **×0.68(.22→.15)** 로 한 회차 만큼만 간다. */
+    --st-mh:.15;       /* A5 공용 모달 헤더(.mhead h2, fs 45.6) — ref 가 이 자리만 얇게 두른다 */
+    /* 126 ③ 15회차 — **그림자의 «가로» 성분.** §20-8 이 «대각 드롭» 을 기각한 것은 옳았다 —
+       한 겹짜리 그림자를 대각으로 옮기면 아래쪽 검정이 6 → 4~5 로 **줄어든다**(ref 는 아래 6 «와» 우 5 를
+       동시에 갖는다). 그래서 이번엔 **아래 겹을 그대로 두고 «오른쪽 전용 겹» 을 한 장 더 얹는다.**
+       ref 우−좌 실측(AA / AB, 서로 다른 방법): 10 헤더 +2.24 / +2.24 · 22 타이틀 +1.65 / +1.61 ·
+       23 배너 +2.06 / +2.12 — **2인이 소수점 첫째 자리까지 일치**하고, 우리 저장소의 `m126sh` 도
+       독립으로 같은 부호를 낸다(ref dropX +1~2 vs 우리 0~1). 세로 성분은 이미 맞으므로 건드리지 않는다.
+       ⚠ **02 STAGE(라틴)에는 붙이지 마라** — ref 자체가 우−좌 −0.47 로 대칭이고 우리도 대칭이다.
+       (`#stinfo .chap` 은 `text-shadow` 자체가 없어 토큰 확산 대상에서 자동으로 빠진다.) */
+    --sh-dropx:.040;   /* 오른쪽으로 «보이는» 몫 — .040 이 만드는 값 22 1.82 · 10 2.04 · 23 2.22 (ref 1.65/2.24/2.06) */
     /* 126 ③ 11회차(3차 라운드) — **드롭 섀도 토큰.** ③ 이 9회차 ↔ 10회차에 시소를 탄 이유가
        여기 있었다: r8 의 Q·R 은 10 카드 헤더를 «우리 6.00 vs ref 3.50 = 과다» 로, r9 의 S·T 는
        같은 자리를 «우리 3 vs ref 5 = 부족» 으로 **정반대**로 읽었다. 두 방법(bbox 차분·광선) 모두
@@ -142,6 +162,11 @@
     --sh-h:calc((var(--st-hud)   / 2 + var(--sh-drop)) * 1em);
     --sh-b:calc((var(--st-body)  / 2 + var(--sh-drop)) * 1em);
     --sh-s:calc((var(--st-small) / 2 + var(--sh-drop)) * 1em);
+    /* 15회차 — 가로 짝. «묻히는 몫» 은 세로와 같은 st/2 다(스트로크는 사방 균일하므로).
+       `--shx-t` 는 `.mhead h2` 가 쓰는 `--st-mh` 로 보상해야 한다 — 그 자리만 스트로크가 다르다. */
+    --shx-t:calc((var(--st-mh)    / 2 + var(--sh-dropx)) * 1em);
+    --shx-b:calc((var(--st-body)  / 2 + var(--sh-dropx)) * 1em);
+    --shx-s:calc((var(--st-small) / 2 + var(--sh-dropx)) * 1em);
   }
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
@@ -1639,10 +1664,13 @@
      표본은 22 뿐이고(69 는 육각 탭이라 구속 아님 — measure/69 §2), 70 은 `.at70` 이 top 을 따로 갖는다. */
   .mhead h2{position:relative;top:3px;margin:0;font-size:45.6px;line-height:45.6px;font-weight:900;color:#fff;
     letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;transform:scaleX(1.057);
-    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;   /* 126 ② — 10px 고정 = r .263 */
+    /* 126 ③ 15회차 — `--st-title`(.22) → **`--st-mh`(.15)**. 근거는 :root 의 토큰 선언 주석.
+       ⚠ 이 값은 22 의 ref 로만 구속된다(69 육각 탭은 구속 아니고 70 은 `.at70` 이 따로 갖는다 — 위 주석). */
+    -webkit-text-stroke:calc(var(--st-mh) * 1em) #000;
     /* 126 ③ 11회차 2차 — U·V 가 독립으로 «아래 드롭이 없다» 로 일치(U ref 낙차 2.57 vs 우리 0.00 ·
        V ref 아래 6~7 vs 우리 5). 비율 토큰이 만드는 2.42 가 U 실측 2.57 과 −0.15 로 붙는다. */
-    text-shadow:0 var(--sh-t) 0 #000}
+    /* 15회차 — 오른쪽 전용 겹을 한 장 더(아래 겹은 그대로). ref 우−좌 +1.61~1.65(AA·AB 일치) */
+    text-shadow:0 var(--sh-t) 0 #000, var(--shx-t) 0 0 #000}
   /* 베이지 본문 + 별무늬. 레퍼런스 별은 팔이 두껍고(내반경/외반경 0.68) 위 꼭짓점이 본문 상단선에
      잘려 있다 → 타일을 10px 위로 올려 클립시킨다. 베벨 1px 은 좌·우·아래만 (헤더 아래엔 없다) */
   .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 21px 48px;text-align:center;
@@ -3836,7 +3864,8 @@
   /* 126 ③ 11회차 — 두께는 위 9회차 값 그대로 두고(위쪽 검정은 ref 와 이미 Δ0) **아래 그림자만** 준다.
      S·T 가 r9 에 «3 vs 5 = −40%» 로 든 감점의 정체가 이것이다. 토큰 설명은 `:root --sh-drop`. */
   .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
-    text-shadow:0 var(--sh-s) 0 #000;
+    /* 15회차 — ref 우−좌 +2.24 (AA·AB 둘 다 같은 값) · 우리 0.08~0.16 */
+    text-shadow:0 var(--sh-s) 0 #000, var(--shx-s) 0 0 #000;
     transform:scaleX(1.03) translateY(4px);letter-spacing:-1px}
   /* 검정 테두리 레이어 */
   .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
@@ -7143,7 +7172,8 @@
     font-size:55.6px;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #141414;paint-order:stroke fill;z-index:3;
     /* 126 ③ 11회차 2차 — V «ref 아래 7~8 vs 우리 4~5(−40%)» · U «낙차 2.95 vs −0.08».
        그림자 색은 이 자리 외곽선과 같은 #141414 로 맞춘다(#000 이면 이음매가 보인다). */
-    text-shadow:0 var(--sh-b) 0 #141414;
+    /* 15회차 — ref 우−좌 +2.06/+2.12 · 우리 −0.24/−0.26. 그림자 색은 이 자리 외곽선과 같은 #141414 유지 */
+    text-shadow:0 var(--sh-b) 0 #141414, var(--shx-b) 0 0 #141414;
     transform:scaleX(.93)}
   .tr-rib>u em{position:relative;top:4px;font-size:60px;color:#FA8153;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
     paint-order:stroke fill;margin:0 4px;text-shadow:0 var(--sh-b) 0 #000}   /* 126 ③ 11회차 2차 — 리본 본문과 같은 계열 */
@@ -7968,7 +7998,13 @@
      ⚠ `.stab` 은 96 이 만든 **공용 서브탭**이라 03·06·13·23·47 의 활성 칸도 같이 6.3% 낮아진다.
      ref 가 있는 자리는 10 뿐이고 부품은 하나·서체도 하나이므로 부품째 고치는 것이 맞다 —
      다만 비활성 칸(fs 43)은 두 비평가 누구도 ref 로 못 쟀으므로 **건드리지 않는다**. */
-  .stab.on>i{transform:scaleX(.893) scaleY(.937)}
+  /* 126 ① 15회차 — **활성 칸 라벨만 8px 높이 앉아 있다.** AA(트랙 중심 대비 ref −1.0 vs 우리 −9.0) ·
+     AB(바 상단에서 ref 48.4% vs 우리 39.1% = −8.0px) 독립 일치. 같은 바의 **비활성 칸은 ref −1.9%p 로 정상**이라
+     바 기하가 아니라 «활성 상태만» 의 문제다 — 원인은 바로 위 `.stab.on{line-height:77px}` 이다
+     (비활성은 87px). 크기는 14회차에 이미 ref 와 Δ0.0% 로 맞았으므로(AA·AB 둘 다 확인) **오프셋만** 옮긴다.
+     ⚠ line-height 를 87 로 되돌리지 않는 이유: 그러면 `.bdg` 레드닷·자물쇠(`.sk-lock`)의 기준 상자가 같이
+     움직여 47·45 가 잡고 있는 격자가 흔들린다. 잉크만 내리는 것이 이 파일의 관례다(`.qs-tg b i` 와 같다). */
+  .stab.on>i{position:relative;top:8px;transform:scaleX(.893) scaleY(.937)}
   /* 탭 경계 ref 73/295/547/777/1006 → 바 콘텐츠(=ref 71) 기준 */
   .stab-c1{left:0;width:224px}
   .stab-c2{left:220px;width:261px}
