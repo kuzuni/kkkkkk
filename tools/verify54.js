@@ -235,15 +235,15 @@ const GEO = [
       for (let y = y0; y <= y1; y++) if (near(px(x, y), hex, tol)) { if (a < 0) a = y; b = y; }
       return [a, b];
     };
-    let bright = 0;
-    for (let y = 470; y <= 690; y++) if (near(px(990, y), '8A6A44', 24)) bright++;
     return {
       size: [cv.width, cv.height],
       top2: [85, 150, 320, 345].map((x) => [x].concat(span(x, 455, 560, '91AFCB', 8))),
       rim2: [[85, 487], [345, 469]].map(([x, y]) => [x, y].concat(px(x, y - 3))),
       front2: span(85, 522, 686, '4A5978', 8),
       gold1: span(440, 440, 520, 'FFDC62', 8),
-      bright3: bright
+      /* 15회차 — 3위 윗면은 «없다» 가 아니라 «밝은 띠 + 립» 2단이다(측정표 §3-1a 정오표) */
+      top3: span(990, 460, 560, '7B5A39', 12),
+      lip3: span(990, 512, 552, '60462D', 12)
     };
   }, shot);
   ck(probe.size[0] === 1080 && probe.size[1] === 2280, `캡처 크기 ${probe.size.join('x')} (기대 1080x2280)`);
@@ -264,8 +264,20 @@ const GEO = [
   /* 10회차 — 캐릭터가 슬래브 앞에서 11px 겹치므로(ref 동일) 먼 모서리는 455..469 사이에서 드러난다 */
   ck(probe.gold1[0] >= 455 - 3 && probe.gold1[0] <= 469, `1위 윗면 먼 모서리 — 기대 455~469(캐릭터 겹침) · 실제 ${probe.gold1[0]}`);
   ck(probe.gold1[1] >= 0 && Math.abs(probe.gold1[1] - 492) <= 3, `1위 윗면 가까운 모서리 — 기대 492(ref 577) · 실제 ${probe.gold1[1]}`);
-  /* 3위 — ref 에 밝은 슬래브가 없다(윗면·앞면 모두 짙은 갈색). 옛 #8A6A44 가 남아 있으면 실패 */
-  ck(probe.bright3 === 0, `3위에 ref 에 없는 밝은 슬래브가 ${probe.bright3}px 남아 있다`);
+  /* 3위 윗면 — **검사가 낡았던 항목**(LESSONS 52-⑤). 8회차까지 이 게이트는 «3위엔 밝은 슬래브가 없어야 한다»
+     (`bright3 === 0`)를 걸고 있었다. 근거였던 측정표 §3-1a 는 x990·x735 두 열만 봤는데 x735 는 캐릭터에
+     가려 검정이었다 — 즉 «없다» 를 가림 때문에 잘못 읽은 것이다. 비평가 4명(O·P·R·Q)이 두 회차에 걸쳐
+     «3위만 윗면이 없다» 고 짚었고, 가림 없는 열을 훑으니 ref 에 또렷하다(y, col 775·950·995 셋 다 동일):
+       밝은 윗면 …602 → 604..625 립 → 627..639 어두운 테 → 641.. 앞면
+     그래서 «없어야 한다» 를 **«있어야 한다 + 경계가 어디여야 한다»** 로 뒤집는다(2위 top2 와 같은 형식). */
+  ck(probe.top3[0] >= 0 && Math.abs(probe.top3[0] - 471) <= 3,
+    `3위 윗면 먼 모서리 x990 — 기대 471(ref 553~555) · 실제 ${probe.top3[0]}`);
+  ck(probe.top3[1] >= 0 && Math.abs(probe.top3[1] - 518) <= 3,
+    `3위 윗면 가까운 모서리 x990 — 기대 518(ref 602) · 실제 ${probe.top3[1]}`);
+  ck(probe.lip3[0] >= 0 && Math.abs(probe.lip3[0] - 520) <= 3,
+    `3위 슬래브 립 상단 x990 — 기대 520(ref 604) · 실제 ${probe.lip3[0]}`);
+  ck(probe.lip3[1] >= 0 && Math.abs(probe.lip3[1] - 541) <= 3,
+    `3위 슬래브 립 하단 x990 — 기대 541(ref 625) · 실제 ${probe.lip3[1]}`);
 
   ck(errs.length === 0, '콘솔 에러: ' + errs.join(' | '));
 
