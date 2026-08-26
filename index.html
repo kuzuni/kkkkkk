@@ -14550,7 +14550,7 @@ function renderPassPage(list){
       +  '<div class="qt">' + p.q + '</div>'
       +  (own
           ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>보유 중</i></div>'
-          : '<div class="bt buy" data-pvbuy="' + p.id + '"><u class="pr">💎 ' + fmt(p.dia) + '</u></div>')
+          : '<div class="bt buy" data-pvbuy="' + p.id + '"><u class="pr">' + curIc('dia') + ' ' + fmt(p.dia) + '</u></div>')
       +  '<div class="fr"></div></div>';
   });
   /* 안내문 2줄 — 카드 아래 */
@@ -14572,7 +14572,8 @@ function renderPassPage(list){
 function buyPass(id){
   const p = PASS_ITEMS.find(x => x.id === id);
   if(!p || passOwned(p)) return false;
-  if(S.dia < p.dia){ popup('💎 다이아 부족', '<p>' + p.n + ' 이용권은 💎 ' + fmt(p.dia) + ' 입니다.</p>'); return false; }
+  /* 125 — 화폐 표시는 CUR_ICON 이미지로. 모달 «제목» 에는 아이콘을 넣지 않는다(showModal 이 글자로 흘린다) */
+  if(S.dia < p.dia){ popup('다이아 부족', '<p>' + p.n + ' 이용권은 ' + curIc('dia') + ' ' + fmt(p.dia) + ' 입니다.</p>'); return false; }
   S.dia -= p.dia;
   if(p.id === 'noads'){ S.pass.noAds = true; syncNoAds(); }
   else {
@@ -14583,7 +14584,7 @@ function buyPass(id){
   }
   uiDirty = true; save(); renderUI();
   renderPassPage($('shopList'));
-  popup('🎫 ' + p.n + ' 이용권', '<p>' + p.nt + '</p>'
+  popup(p.n + ' 이용권', '<p>' + p.nt + '</p>'
     + '<p>' + (p.perm ? '평생 적용됩니다.' : PASS_ABLESS_DAYS + '일간 적용됩니다.') + '</p>');
   return true;
 }
