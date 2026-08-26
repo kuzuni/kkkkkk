@@ -15136,6 +15136,52 @@ function raidPaint(tries){
    «슬롯 bbox 를 꽉 채운다»(97) 를 그대로 지켜도 프레임 사이 폭 흔들림이 없다.
    대신 정지 프레임이 `blue_attack_2`(잉크 123×134)에서 idle(107×134)로 바뀌므로 가로 늘림이
    11% → 28% 로 커진다 — 아트 교체 자리라 «아트 필요» 표에 적어 둔다(측정표 03 §배경/썸네일). */
+
+/* ───── 121 6회차 — 아이들 «창»(지시 ⑥ 의 «idle 프레임 2~4장 순환») ─────
+   5회차가 1순위로 이월한 «스프라이트 아이들이 CSS 들썩을 통째로 덮는다»(비평가 G·H 공통).
+   두 비평가가 제시한 처방은 «`drawSpriteTo` 가 프레임마다 `k` 를 다시 계산하는 것이 원인이니
+   애니 전체 최대 bbox 로 한 번만 계산해 캐시하라» 였는데, **재보니 그 처방은 6장 중 4장을 나쁘게 만든다.**
+   `tools/inkjit121.js` 로 슬롯 로컬 잉크 bbox 를 프레임마다 실측한 표(캔버스 px, thBob 진폭 18 기준):
+
+     카드      아틀라스/애니        현행 top p2p / 최대 step   트림 합집합 처방 적용 시
+     gold      dragon/fly            59 / 48                    59 / 48   (← 하나도 안 준다)
+     dia       bird/anim              1 /  1                     7 /  7
+     relic1    elves/green_idle       0 /  0                     4 /  2
+     relic2    zombie/walk           16 / 16                    26 / 20
+     relic3    robo/Running           2 /  2                    12 /  5
+     relic4    elves/blue_idle        0 /  0                     2 /  2
+
+   dragon 은 12프레임 전부 96×64 **무트림**이라 `k` 가 이미 프레임 내내 하나다 — 즉 흔들림의 원인이
+   `drawSpriteTo` 가 아니다. 진짜 원인은 **«fly» 가 아이들이 아니라 비행 사이클**이라는 것이다:
+   f0·f6(날개 편 포즈)은 잉크 top 56·높이 171, f2~f4·f8~f10(접은 포즈)은 top 115·높이 112 —
+   한 사이클에 59px 을 오르내리고 125ms 마다 48px 을 순간이동한다(축 ① 이 금지하는 «팝» 이 초당 8회).
+   zombie/walk 도 같은 성질(걷기 사이클을 아이들로 쓰고 있다: top 17~33 · 잉크 높이 242~274).
+   나머지 4장은 이미 0~2px 이라 손댈 것이 없다 — 처방을 그대로 따랐으면 멀쩡한 4장을 망쳤다.
+
+   그래서 고치는 자리는 `drawSpriteTo`(72 구간, 레이드 카드와 공유)가 아니라 **«어느 프레임을 도느냐»** 다.
+   지시 ⑥ 이 «idle 프레임 2~4장 순환» 이라고 못 박아 둔 그대로, 사이클에서 **세로로 안 튀는 연속 3장**을
+   골라 돈다(위 실측에서 top p2p·step·잉크 높이 p2p 가 전부 0~2px 인 창을 전수 탐색해서 고른 것):
+     dragon/fly   f2·f3·f4          top p2p 0 · step 0 · 높이 p2p 0 (가로 실루엣만 8px 흔들려 날갯짓으로 읽힌다)
+     zombie/walk  walk_006..008     top p2p 2 · step 2 · 높이 p2p 2 (잉크 폭 231→201→216 이라 팔다리는 움직인다)
+   elves 두 벌은 프레임 수는 그대로 두되 **중복 rect 를 접는다**(5회차 G 11): `blue_idle` 은 `_1`≡`_4` ·
+   `_2`≡`_3` 라 실제 3포즈이고 체류가 125·125·250·125ms 로 갈려 있었다. `_0 _1 _2 _1` 로 접으면
+   왕복(A→B→C→B)이 유지되면서 체류가 125ms 로 고른다. `green_idle` 도 같은 구조다.
+   bird(1px)·robo(2px)는 창을 좁히면 잉크 폭 차가 1~2px 인 «정지처럼 보이는» 3장만 남으므로 전 사이클을 둔다.
+
+   창을 안 쓰는 애니(레이드·아레나 카드의 `blue_idle`·`knight/idle` 등)는 `curFrame` 그대로다. */
+const TH_IDLE = {
+  'dragon/fly':      ['f2', 'f3', 'f4'],
+  'zombie/walk':     ['walk_006', 'walk_007', 'walk_008'],
+  'elves/blue_idle': ['blue_idle_0', 'blue_idle_1', 'blue_idle_2', 'blue_idle_1'],
+  'elves/green_idle':['green_idle_0', 'green_idle_1', 'green_idle_2', 'green_idle_1'],
+};
+/* `stepAnim` 은 `aloop` 일 때 `at` 을 그냥 누적하므로(자르지 않는다) 창 길이로 나머지만 취하면 된다.
+   창이 없으면 80 의 `curFrame` 이 그대로 전 사이클을 돈다. */
+function thCurFrame(e){
+  const w = TH_IDLE[e.akey + '/' + e.anim];
+  if(!w) return curFrame(e);
+  return w[Math.floor(e.at) % w.length];
+}
 function raidEnt(cv){
   /* 아레나 두 칸은 몬스터가 아니라 기사다 — 아틀라스·애니 이름이 다르고, 위상은 «내 칸/상대 칸» 으로 가른다 */
   const arn = !!cv.dataset.arnav;
@@ -15157,14 +15203,15 @@ function raidDraw(cv){
      `knight.idle` 6프레임의 잉크는 44~47×45~46(종횡 0.957~1.022)으로 서로 3px 이내라
      97-③ «슬롯 bbox 를 꽉 채운다» 를 지켜도 프레임 사이 폭 흔들림이 없다. */
   if(cv.dataset.arnav){
-    const f = curFrame(raidEnt(cv)) || (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle
+    const f = thCurFrame(raidEnt(cv)) || (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle
       && ATLAS.knight.a.idle[0]);
     if(!f) return false;
     cv._fr = f;
     return drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint,
                               flip: cv.classList.contains('arn-me') });
   }
-  const f = cv.dataset.thi ? curFrame(raidEnt(cv)) : null;
+  /* 121 6회차 — 전 사이클이 아니라 «아이들 창»(TH_IDLE)을 돈다. 창이 없는 애니는 `curFrame` 과 같다. */
+  const f = cv.dataset.thi ? thCurFrame(raidEnt(cv)) : null;
   cv._fr = f || cv.dataset.thf;
   /* 72(2026-08-26) — 던전 카드는 «액자» 라 그림을 늘리지 않고 담는다(contain, 사방 TH_PAD).
      레이드·아레나 카드는 97 의 «슬롯을 꽉 채운다» 규칙 그대로다(fit 없음). */
@@ -15192,7 +15239,9 @@ function raidIdleTick(){
     if(cv.closest('.dnc.lkd')) return;          /* 지시 ④ — 잠금 카드는 정지 */
     const e = raidEnt(cv);
     stepAnim(e, dt);
-    const f = curFrame(e);
+    /* ⚠ `raidDraw` 와 **같은 함수**로 프레임을 골라야 한다 — 여기서 `curFrame`,
+       저기서 `thCurFrame` 을 쓰면 «바뀌었다» 판정과 실제로 그린 그림이 어긋나 다시 그리기가 샌다. */
+    const f = thCurFrame(e);
     if(f && f !== cv._fr) raidDraw(cv);
   });
 }
