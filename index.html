@@ -1545,7 +1545,10 @@
      69 의 ref 는 «육각 타이틀 탭» 이고 우리는 지시(UI-REFERENCE 69)대로 공용 `.mhead` 로 통일한 자리라
      구속 목표가 아니다(`docs/measure/69-우편함팝업.md` §2 가 그렇게 적어 뒀다). 화면별 override 로
      가르지 않는 이유는 126 이 «토큰 1벌로 통일» 지시이기 때문 — §13-3 `.tab .tl` 과 같은 처리다. */
-  .mhead h2{position:relative;top:-1px;margin:0;font-size:45.6px;line-height:45.6px;font-weight:900;color:#fff;
+  /* 126 ① 12회차 — `tools/m126vc.js` 실측 Δcy **−4.0**(22 「퀘스트」, 잉크 높이는 ref 와 Δ0 = 순수 쏠림).
+     U(5.5)·V 가 11회차에 «버튼·띠 안에서 글자가 위로 쏠린다» 로 든 축이다. 공용 헤더지만 ref 로 구속되는
+     표본은 22 뿐이고(69 는 육각 탭이라 구속 아님 — measure/69 §2), 70 은 `.at70` 이 top 을 따로 갖는다. */
+  .mhead h2{position:relative;top:3px;margin:0;font-size:45.6px;line-height:45.6px;font-weight:900;color:#fff;
     letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;transform:scaleX(1.057);
     -webkit-text-stroke:calc(var(--st-title) * 1em) #000;   /* 126 ② — 10px 고정 = r .263 */
     /* 126 ③ 11회차 2차 — U·V 가 독립으로 «아래 드롭이 없다» 로 일치(U ref 낙차 2.57 vs 우리 0.00 ·
@@ -1868,7 +1871,8 @@
      `line-height` 는 36 그대로 둔다 — 잉크 중심이 top+18 에 고정돼 있어서, 폰트만 키우면
      위아래로 대칭으로 자라 **자리를 옮기지 않는다**(진행바 상단 101 과도 21px 남는다).
      이 자리 외곽선은 `em` 이라 sx 에 선형이다(§11 의 「모두 받기」 비선형 함정 아님). */
-  .qs-t{position:absolute;left:168px;top:44px;font-size:35px;line-height:36px;font-weight:900;
+  /* 126 ① 12회차 — m126vc 실측 Δcy −4.5~−6.0(5행 중앙값 **−5.0**, Δh 0~2). V 의 «22 본문 6px». */
+  .qs-t{position:absolute;left:168px;top:49px;font-size:35px;line-height:36px;font-weight:900;
     color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;   /* 126 ② — 8px 고정 = r .276 */
     paint-order:stroke fill;transform:scaleX(.979);
     transform-origin:0 0;white-space:nowrap;word-spacing:1.5px}
@@ -1901,7 +1905,10 @@
      **원인은 외곽선이 아니라 font-size 다** — 외곽선을 0 으로 지워도 폭이 105 까지밖에 안 돌아온다(+1.7%p).
      측정표가 fs 를 «잉크/0.93» 으로 역산해 뒀는데 0.93 은 교체 전 서체 값이고 Jua 는 0.80 이다.
      높이로 fs 를 풀고(30 × 30/24 = 37.5) 폭은 sx 로 맞춘다(.98 × 122.5/128.75). */
-  .qs-b b{font-size:37.5px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
+  /* 126 ① 12회차 — m126vc 실측 Δcy **−4.0**(5개 전부 동일, Δh 0). U·V 가 «22 버튼» 으로 유일하게
+     **둘 다** 이름을 댄 자리다(U 4px · V 4.5px). 버튼은 내용을 세로 중앙 정렬해 `line-height` 로 못 민다
+     (LESSONS 28-2) — 안쪽 `b` 를 `position:relative` 로 내린다. */
+  .qs-b b{position:relative;top:4px;font-size:37.5px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
     transform:scaleX(.932);text-shadow:0 3px 0 #000}
   /* 모두 받기 272×130 (ref 404,1647 → 293,1084) — 검정 7, 같은 베벨 */
   /* 하단 앵커 — 기준 프레임(본문 1383)에서 bottom169 = top1084 로 실측과 동일하다 */
@@ -1911,7 +1918,10 @@
      → ref 흰 잉크는 156×36 이 아니라 **160×43** 이다(측정표 §6 정오표). 우리는 133×36 으로 −16.9% / −16.3%.
      비평가 K 의 독립 측정(임계 230)도 −16.5% / −18.4% 로 일치한다.
      높이로 fs 를 풀면 39 × 43/36 = 46.6 이고, 그 크기에서 폭이 168 로 +5% 넘쳐 sx 로 되돌린다(실측 곡선을 훑어 .973 — 8px «고정» 스트로크가 가로 압축에 비선형으로 반응해 한 번에 안 맞는다). */
-  .qs-all b{font-size:46.6px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
+  /* 126 ① 12회차 — m126vc 실측 Δcy **−9.0**. ⚠ 이 자리만 Δh +4(우리 46 vs ref 42)라 «순수 쏠림» 이
+     아니다 — 중심을 맞추면 위 −2 / 아래 +2 가 남는다. ① 은 중심 정렬로 채점하므로 −9 를 그대로 회수하고,
+     높이 +9.5% 는 ② 미해결로 review §21 에 남긴다(fs 46.6 은 5회차가 ref 43 으로 역산한 값이라 충돌한다). */
+  .qs-all b{position:relative;top:9px;font-size:46.6px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
   /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
   .qs-tg{position:absolute;left:42px;bottom:43px;width:797px;height:99px;box-sizing:border-box;
     border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
@@ -6350,7 +6360,8 @@
        세 번째로 같은 값을 냈다. §11 처방 «높이로 fs, 남은 폭을 sx»: fs 32×(30/26) = 36.9. */
     /* 126 ③ 9회차 — O ③ 상위 · P ③ «해금 미션 −50%». 4px = r .108 → 크기대 토큰(8.12px). */
     font-size:36.9px;color:#f2f2f2;-webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
-  .pf-msn>i{transform:scaleX(1.017)}
+  /* 126 ① 12회차 — m126vc 실측 Δcy **−5.5**(Δh 1). U 의 «19 띠 4.5px». */
+  .pf-msn>i{position:relative;top:5.5px;transform:scaleX(1.017)}
   /* 크림 푸터 ref (150,1604) 780×148 — (255,238,212), 하단 r24 */
   .pf-ftr{left:58px;top:1089px;width:780px;height:148px;background:#FFEED4;
     border-radius:0 0 24px 24px}
@@ -6380,7 +6391,8 @@
     text-align:center;font-size:38.3px;color:#A5A4A9;
     /* 126 ③ 9회차 — 4px = r .104(391곳 중 하위 5위). 크기대 토큰 → 8.43px */
     -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill;cursor:pointer}
-  .pf-tgl>.lb>i{transform:scaleX(.963)}
+  /* 126 ① 12회차 — m126vc 실측 Δcy **−6.0**(Δh 0 = 순수 쏠림). */
+  .pf-tgl>.lb>i{position:relative;top:6px;transform:scaleX(.963)}
   /* 활성 «프로필» 황색 화살 배너 — 몸통 (414,13) 335×68 + 양끝 팁 20px, 2톤 채움 */
   .pf-tgl>.bn{position:absolute;left:388px;top:13px;width:385px;height:68px;
     text-align:center;line-height:68px}
