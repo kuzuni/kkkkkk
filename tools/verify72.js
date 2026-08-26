@@ -175,6 +175,43 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   });
   ok(seen.size === d.length, `카드 ${d.length}장이 서로 다른 아트다 (${seen.size}종: ${[...seen].join(' · ')})`);
 
+  /* [1-3] 아이들 애니 **전 프레임**에서 안 잘린다.
+     위 [1-2] 는 «한 순간» 만 잰다. 아틀라스 애니는 프레임마다 rect 크기가 다르고
+     (zombie walk 는 201×178 ~ 174×235 로 흔들린다) contain 배율이 프레임마다 다시 풀리므로
+     한 장이 통과했다고 전부 통과가 아니다 — 121-⑥ 이 이걸 8fps 로 돌린다. */
+  console.log('[1-3] 아이들 애니 전 프레임 — 액자 안에서 안 잘린다');
+  const perFrame = await p.evaluate((PAD) => {
+    const out = [];
+    [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv, ci) => {
+      const A = ATLAS[cv.dataset.thk];
+      const list = (A && A.a[cv.dataset.thi]) || [cv.dataset.thf];
+      let worst = 1e9, worstFn = '';
+      const keep = cv._fr;
+      for (const fn of list) {
+        if (!A.f[fn]) continue;
+        drawSpriteTo(cv, { k: cv.dataset.thk, frame: fn, tint: '', fit: PAD,
+                           bright: +cv.dataset.thbr || 1 });
+        const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+        for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+          if (im[(y * cv.width + x) * 4 + 3] > 8) {
+            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        }
+        if (x1 < 0) { worst = -1; worstFn = fn + '(빈 프레임)'; break; }
+        const m = Math.min(x0, y0, cv.width - 1 - x1, cv.height - 1 - y1);
+        if (m < worst) { worst = m; worstFn = fn; }
+      }
+      if (keep) drawSpriteTo(cv, { k: cv.dataset.thk, frame: keep, tint: '', fit: PAD,
+                                   bright: +cv.dataset.thbr || 1 });
+      out.push({ card: ci + 1, n: list.length, worst, worstFn });
+    });
+    return out;
+  }, PAD);
+  perFrame.forEach((f) => {
+    ok(f.worst >= PAD - 1,
+       `카드${f.card} 아이들 ${f.n}프레임 전부 액자 안 — 최소 여백 ${f.worst} (최악 ${f.worstFn}) ≥ ${PAD - 1}`);
+  });
+
   console.log('[2] 클릭 통과 · z 순서');
   d.forEach((c, i) => {
     if (!c.th) return;
