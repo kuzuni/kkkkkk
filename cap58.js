@@ -77,6 +77,21 @@ function pick(buf, t0, tag, pre){
   global.__capT = global.__capT || {};
   global.__capT[tag] = out.slice(1).map(f => f.got);
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
+  /* 23회차 — 비평가 AN·AP 가 **독립적으로** «quest f2(79)와 f3(185)가 바이트 단위로 동일 =
+     106ms 정지 · 퍼짐이 293ms 늦다» 를 ① 축 최대 감점으로 냈다. 셋 다 틀렸다 — `probe58p` 로
+     10ms 간격으로 재 보면 게임은 **t=104ms 에 16개 전부 opacity 1** 이고 뭉치가 75×111 →
+     113×167(t=210) 로 자란다. 스크린캐스트가 서로 다른 타임스탬프로 **같은 페인트**를 두 번
+     내보냈고, `pick()` 이 그것을 두 슬롯에 그대로 써서 «정지 프레임» 을 만들어 냈다.
+     (22회차의 pointerdown 결함과 같은 계열 — «비평가 둘이 같은 걸 적으면 대개 하네스다».)
+     → 고쳐 쓸 수는 없다(없는 페인트를 만들 수 없다). 대신 **소리내어 알린다** — 중복이 있으면
+        그 슬롯을 찍어서, 비평가 전달문에 «이 두 장은 같은 페인트다, 정지로 세지 말 것» 을
+        넣게 한다. 조용히 넘어가면 매 회차 ① 에서 2~3점이 그냥 날아간다. */
+  const dup = [];
+  for(let i=1;i<out.length;i++) if(out[i].data === out[i-1].data)
+    dup.push(`${i}↔${i+1}(t=${out[i-1].got}↔${out[i].got}, Δ${out[i].got - out[i-1].got}ms)`);
+  if(dup.length) console.log(`    ⚠ 중복 페인트 ${tag}: ${dup.join(' · ')} — **같은 스크린캐스트 프레임**이다.`
+    + ` 비평가에게 «이 슬롯 쌍은 캡처가 같은 페인트를 두 번 쓴 것이니 «정지 프레임» 으로 세지 말 것»`
+    + ` 이라고 반드시 알려라(23회차: 이걸 안 알려서 AN·AP 둘 다 ① 을 3점으로 냈다).`);
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
   console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
   if(worst > 55) console.log(`    ⚠ WARN ${tag}: 목표 대비 ±${worst}ms — 비평가에게 «프레임 시각은 파일명이 아니라 이 로그 기준» 이라고 알릴 것`);
