@@ -30,7 +30,13 @@ const pre = process.argv[2] || 'docs/review/92-fx';
    전수 표본은 240ms 이후가 0.34 → 0.13px/ms 로 **감속 착지**한다고 말한다(재가속 0.003).
    착지 구간이 표본 사이에 통째로 들어가 있어서 «안 보이니 없다» 로 읽힌 것이다.
    250·285 를 주면 착지를 직접 볼 수 있다. 스태거 50ms 를 넣었으므로 창도 320 → 370 으로 늘린다. */
-const STOPS = [0, 40, 75, 120, 165, 210, 250, 285, 370];
+/* ★ 22회차 — 표본 목록을 **인자로 받게** 했다. §7-18 이 «T=300 과 T=210 두 벌을 캡처해 비평가에게
+   직접 물어라» 로 넘겼는데, 타임라인이 0.70배가 되면 같은 ms 표본은 **다른 진행률**을 찍는다
+   (예: 165ms 가 T=300 에서는 55% 인데 T=210 에서는 79%). 두 벌을 «같은 진행률» 로 맞춰야
+   비평가가 «어느 쪽이 나은가» 를 타이밍만 놓고 비교할 수 있다.
+   `node tools/cap92fx.js <접두어> 0,28,52,84,115,147,175,200,260` 처럼 준다. */
+const STOPS = (process.argv[3] || '0,40,75,120,165,210,250,285,370')
+  .split(',').map((s) => Math.round(+s.trim()));
 
 (async () => {
   const b = await launch(chromium);
@@ -86,11 +92,15 @@ const STOPS = [0, 40, 75, 120, 165, 210, 250, 285, 370];
      → 진짜 마우스 입력으로 누르고, 눌림 애니메이션도 `mlOut` 과 **같은 타임라인으로 정지·탐색**한다
      (안 그러면 눌림만 실시간으로 흘러 프레임과 어긋난다). */
   await p.evaluate(() => {
-    window.__held = null;
+    window.__held = null; window.__heldMs = [];
     window.__raw = window.setTimeout;
     window.setTimeout = function (fn, ms) {
-      /* 92 삭제 재렌더(.30s + 스태거 + 20). 파티클 수명 타이머와 섞이지 않게 300~800 만 */
-      if (ms >= 300 && ms <= 800) { window.__held = fn; return 0; }
+      /* 92 삭제 재렌더(.30s + 스태거 + 20). 파티클 수명 타이머와 섞이지 않게 240~800 만.
+         ★ 22회차 — 하한을 300 → **240** 으로 내렸다. T=210 변형은 재렌더가
+         210 + 35 + 20 = **265ms** 라 옛 창(300~800) 밖으로 새고, 그러면 착지 프레임이
+         «붙잡아 둔 재렌더» 가 아니라 실시간으로 먼저 지나가 버린다(=end 프레임이 거짓이 된다).
+         붙잡은 값은 `__heldMs` 로 밖에 찍어 **무엇을 붙잡았는지 눈으로 확인**한다. */
+      if (ms >= 240 && ms <= 800) { window.__heldMs.push(ms); window.__held = fn; return 0; }
       return window.__raw.apply(window, arguments);
     };
   });
@@ -116,6 +126,13 @@ const STOPS = [0, 40, 75, 120, 165, 210, 250, 285, 370];
   });
   const n = await p.evaluate(() => window.__anims.length);
   console.log(`  접힘 애니메이션 ${n}개 정지 — 프레임을 정확한 ms 로 탐색한다`);
+  const heldMs = await p.evaluate(() => window.__heldMs);
+  /* 창 안에 걸리는 타이머는 2개다 — 토스트 수명(760ms)과 삭제 재렌더. `__held` 는 **마지막에 등록된
+     것**을 쓰는데 재렌더가 항상 뒤에 등록되므로 그것이 잡힌다. 값을 찍어 두는 이유는,
+     T 를 바꿨을 때 «재렌더 = MLDEL_DUR + (n−1)·stag + 20» 이 실제로 그 값인지 눈으로 확인하기 위해서다
+     (T=300·스태거50 → 370 · T=210·스태거35 → 265). */
+  console.log(`  붙잡은 타이머: [${heldMs.join(', ')}] ms — 마지막(${heldMs[heldMs.length - 1]})이 삭제 재렌더다`);
+  if (!heldMs.length) { console.log('  ✗ 재렌더 타이머를 못 잡았다 — end 프레임을 믿지 마라.'); }
   if (!n) { console.log('  ✗ 애니메이션을 못 잡았다 — 캡처가 정지 화면이 된다. 중단.'); await b.close(); process.exit(1); }
 
   for (const t of STOPS) {
