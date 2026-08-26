@@ -85,13 +85,30 @@ function measure(d, W, H, x0, x1, y0, y1, P) {
   const core = [];
   for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) if (isCore(x, y)) core.push([x, y]);
   if (core.length < 6) return { core: null, n: core.length };
+  /* P.BAND — «가장 빽빽한 행» 에서 위아래로 이어지는 띠만 남긴다(opt-in).
+     창에 이웃 요소(아이콘·윗줄·아랫줄)의 흰 잉크가 같이 들어오면 bbox 높이가 통째로 부푼다.
+     행 프로파일이 끊기는 곳에서 자르면 «떨어져 있는 이웃» 은 빠지고 글자만 남는다.
+     m126sh 는 이 옵션을 쓰지 않는다(위/아래 프로파일은 원래 bbox 기준이라 결과가 바뀌면 안 된다). */
+  let corePx = core;
+  if (P.BAND) {
+    const rc = new Map();
+    for (const [, y] of core) rc.set(y, (rc.get(y) || 0) + 1);
+    let peakY = null, peak = -1;
+    for (const [y, k] of rc) if (k > peak) { peak = k; peakY = y; }
+    const floor = Math.max(1, peak * 0.10);
+    let lo = peakY, hi = peakY;
+    while (rc.has(lo - 1) && rc.get(lo - 1) >= floor) lo--;
+    while (rc.has(hi + 1) && rc.get(hi + 1) >= floor) hi++;
+    corePx = core.filter(([, y]) => y >= lo && y <= hi);
+    if (corePx.length < 6) corePx = core;
+  }
   let a = 1e9, b = -1, c = 1e9, e = -1;
-  for (const [x, y] of core) { if (x < a) a = x; if (x > b) b = x; if (y < c) c = y; if (y > e) e = y; }
+  for (const [x, y] of corePx) { if (x < a) a = x; if (x > b) b = x; if (y < c) c = y; if (y > e) e = y; }
   const cb = { x0: a, y0: c, w: b - a + 1, h: e - c + 1 };
 
   /* 열마다 코어의 최상단·최하단을 잡고, 거기서 위/아래로만 근흑을 센다. */
   const colMin = new Map(), colMax = new Map();
-  for (const [x, y] of core) {
+  for (const [x, y] of corePx) {
     if (!colMin.has(x) || y < colMin.get(x)) colMin.set(x, y);
     if (!colMax.has(x) || y > colMax.get(x)) colMax.set(x, y);
   }

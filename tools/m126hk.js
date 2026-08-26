@@ -103,7 +103,7 @@ async function main() {
         out.push({ i: it.i, ours, ref });
       }
       return out;
-    }, { shot, refB64, refMime, items, P: { TH, BLK, RAD, EXIT: 110, MAXD: 16, EDGE: 4 }, SRC: MEASURE });
+    }, { shot, refB64, refMime, items, P: { TH, BLK, RAD, EXIT: 110, MAXD: 16, EDGE: 4, BAND: true }, SRC: MEASURE });
 
     for (const r of res) rows.push(Object.assign({ screen: s.k }, items.find((x) => x.i === r.i), r));
     await ctx.close();
