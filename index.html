@@ -2499,18 +2499,27 @@
     --bgm2:radial-gradient(closest-side at 30% 34%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 76% 70%,var(--bgc) 0%,transparent 100%);
     --bgz2:210px 150px;--bgw2:210px;--bgo2:.20}
+  /* 유물석 — 1·2회차엔 «부드러운 안개 덩어리» 뿐이라 비평가 둘이 나란히 «따라갈 수 있는 점이 없다 /
+     30초 동안 밝기만 부푼다» 고 했다(고주파 시간에너지 1.17~2.34 vs 골드 8.06 = 6.9배).
+     안개는 그대로 두고 **결(빛줄기) 한 겹**을 얹어 «추적 가능한 특징» 을 만든다.
+     각도는 골드(102°)·레이드(74°)와 겹치지 않게 128° 로 벌린다 — 테마가 «형태» 로 갈리게. */
   .dnc.bgm-rel{                                                    /* 유물석 1~4 — 보랏빛 안개(층별 색 단계) */
+    /* ⚠ 보라 지분을 키워 보았지만(30%/#B074FF) 유물석3 이 오히려 4.77% 로 더 죽었다 — 그 카드의 원색
+       (#1D53CE)과 색상이 가까워 대비가 준다. 45%/#C79BFF 가 실측상 낫다(6.83%). 되돌리지 말 것. */
     --bgc:color-mix(in srgb,var(--pt) 45%,#C79BFF);
-    --bgm1:radial-gradient(closest-side at 26% 46%,var(--bgc) 0%,transparent 100%),
+    --bgm1:repeating-linear-gradient(128deg,transparent 0 74px,var(--bgc) 74px 86px,transparent 86px 165px),
+      radial-gradient(closest-side at 26% 46%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 68% 26%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 88% 74%,var(--bgc) 0%,transparent 100%);
-    --bgz1:330px 100%;--bgw1:330px;--bgo1:.46;
-    --bgm2:radial-gradient(closest-side at 44% 62%,var(--bgc) 0%,transparent 100%),
-      radial-gradient(closest-side at 12% 20%,var(--bgc) 0%,transparent 100%);
-    --bgz2:246px 168px;--bgw2:246px;--bgo2:.34}
+    --bgz1:330px 100%;--bgw1:330px;--bgo1:.50;
+    --bgm2:radial-gradient(circle at 22% 30%,var(--bgc) 0 4px,transparent 5.6px),
+      radial-gradient(circle at 64% 16%,var(--bgc) 0 3px,transparent 4.4px),
+      radial-gradient(circle at 82% 68%,var(--bgc) 0 4.5px,transparent 6.2px),
+      radial-gradient(closest-side at 44% 62%,var(--bgc) 0%,transparent 100%);
+    --bgz2:246px 168px;--bgw2:246px;--bgo2:.52}
   .dnc.bgm-raid{                                                   /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
     --bgc:#FF9A5E;
-    --bgm1:repeating-linear-gradient(88deg,transparent 0 34px,var(--bgc) 34px 48px,transparent 48px 96px);
+    --bgm1:repeating-linear-gradient(74deg,transparent 0 30px,var(--bgc) 30px 52px,transparent 52px 96px);
     --bgz1:192px 100%;--bgw1:192px;--bgo1:.24;
     --bgm2:radial-gradient(closest-side at 22% 18%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 72% 58%,var(--bgc) 0%,transparent 100%);
@@ -2551,19 +2560,32 @@
      지시 수치 그대로다 — 부호만 뒤집혔고, 화면에서 보이는 «들썩» 은 완전히 같다.
 
      스쿼시는 들썩과 **같은 타임라인**에 둔다(애니메이션 1개). 따로 걸면 주기가 어긋나 웅크림과 점프가
-     엇박이 된다. 한 루프(--thb 3.9~5.0s) = 짧은 들썩 4번(주기 --thb/5 = 0.78~1.00s) + 큰 점프 1번. */
+     엇박이 된다. 한 루프(--thb 3.9~5.0s) = 짧은 들썩 4번(주기 --thb/5 = 0.78~1.00s) + 큰 점프 1번.
+
+     ⚠ **3회차 재정정 — 정점도 «천장에 닿으면» 안 된다.** 2회차는 정점을 `translate:0`(=72 의 기준 자세)로
+     뒀는데, 그 자세가 곧 «잉크 상단 = 슬롯 천장» 이라 정점마다 글리프 맨 윗줄이 평평하게 잘렸다.
+     `probe121` [1] 을 **전 카드**로 넓혀 보니 6장 중 5장이 14위상 중 5~8위상에서 여유 0px 였다
+     (2회차 프로브가 카드1 만·7위상만 봐서 놓쳤다 — 비평가 C 가 카드2·4 에서 잡아냈다).
+     그래서 **바닥을 통째로 내려** 정점에도 2~4px 를 남긴다.
+     덤으로 2회차의 «큰 점프가 안 보인다»(짧은 들썩 정점과 큰 점프 정점이 둘 다 0 이라 정점 차 0px)도
+     같이 풀린다 — 이제 짧은 들썩 정점 4px · 큰 점프 정점 2px 로 갈라지고, 진폭은 10.6px 대 19.6px 다. */
   @keyframes thBob{
-    0%,20%,40%,60%,80%,100%{translate:0 8px;scale:1 .96}    /* 착지 — 웅크림 */
-    10%,30%,50%,70%        {translate:0 0;scale:1 1}        /* 짧은 들썩 8px — 잉크 상단 = 슬롯 천장 */
-    84%                    {translate:0 14px;scale:1 .94}   /* 큰 점프 전 깊은 웅크림 */
-    90%                    {translate:0 0;scale:1 1}}       /* 큰 점프 14px */
+    0%,20%,40%,60%,80%,100%{translate:0 10px;scale:1 .98}   /* 착지 — 웅크림 */
+    10%,30%,50%,70%        {translate:0 4px;scale:1 1}      /* 짧은 들썩 (정점 여유 4px) */
+    84%                    {translate:0 15px;scale:1 .97}   /* 큰 점프 전 깊은 웅크림 */
+    90%                    {translate:0 2px;scale:1 1}}     /* 큰 점프 (정점 여유 2px) */
   .dnc>.th>em,.dnc.rd>.th>canvas{
     animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s);
     animation-play-state:paused}
   /* ⚠ LESSONS 21-①·90-④ 재발 지점: 위 `#dunw i,#dunw em,#dunw b` 리셋(1-0-1)이 `.dnc>.th>em`(0-3-1)의
      `transform-origin` 을 이긴다. 스쿼시는 «발밑» 을 축으로 눌려야 하므로 id 로 되받는다.
      캔버스(레이드)는 em 이 아니라 리셋에 안 걸리지만 같은 줄에 적어 둔다 — 둘이 갈라지면 또 어긋난다. */
-  #dunw .dnc>.th>em,#dunw .dnc.rd>.th>canvas{transform-origin:50% 100%}
+  /* 스쿼시 축은 «잉크 발밑» = 슬롯 바닥이어야 한다. em 상자(400×400) 바닥은 슬롯 바닥보다 42~55px
+     아래라 그대로 쓰면 지렛대가 그만큼 길어져 4% 스쿼시가 상단에서 14.3px 로 증폭된다(비평가 A·C 실측).
+     상자 안에서 슬롯 바닥이 있는 지점 = (341 − tht) − (thcy − 200) = 541 − thcy − tht.
+     캔버스(레이드·아레나)는 슬롯을 꽉 채우므로 100% 가 곧 슬롯 바닥이다. */
+  #dunw .dnc>.th>em{transform-origin:50% calc(541px - var(--thcy) - var(--tht))}
+  #dunw .dnc.rd>.th>canvas{transform-origin:50% 100%}
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:11px;bottom:8px;overflow:hidden;

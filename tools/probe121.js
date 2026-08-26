@@ -70,26 +70,43 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
              avg: +(sum / (W * H)).toFixed(2), max: Math.round(max) };
   }, [a, b2, w, h]);
 
-  /* ---------- [1] 썸네일 잉크 bbox — 위상별 ---------- */
-  console.log('[1] 카드1 썸네일 «잉크» bbox (슬롯 좌상단 기준, 슬롯 ' + clip.width + '×' + clip.height + ')');
-  console.log('    위상   ink_top ink_bot ink_h   상단여유   비고');
-  const rows = [];
-  for (const t of [0, 390, 780, 1170, 1950, 2730, 3510]) {
-    await seek(t);
-    await p.waitForTimeout(60);
-    const withEm = await grab(clip);
-    await p.evaluate(() => { document.querySelector('#dunList .dnc>.th>em').style.visibility = 'hidden'; });
-    await p.waitForTimeout(50);
-    const noEm = await grab(clip);
-    await p.evaluate(() => { document.querySelector('#dunList .dnc>.th>em').style.visibility = ''; });
-    const d = await diff(withEm, noEm, clip.width, clip.height);
-    const cut = d.y0 <= 0 ? '⚠ 상단 잘림' : '';
-    rows.push([t, d.y0, d.y1, d.y1 - d.y0]);
-    console.log('  ' + String(t).padStart(5) + 'ms ' + String(d.y0).padStart(7) + String(d.y1).padStart(8)
-      + String(d.y1 - d.y0).padStart(7) + String(d.y0).padStart(10) + '   ' + cut);
+  /* ---------- [1] 썸네일 잉크 bbox — **전 카드** × 위상별 ---------- */
+  /* ⚠ 1·2회차 프로브는 카드1 만 봤다. 카드마다 --thcy(잉크 중심)·--thf(글리프 크기)·--tht(슬롯 인셋)이
+     달라 **상단 여유가 카드마다 다르다** — 비평가 C 가 카드2·4 에서 잘림을 잡아냈고 카드1 만 보던
+     프로브는 그것을 못 봤다. 전 카드를 돈다. */
+  console.log('[1] 썸네일 «잉크» 상단 여유 — 전 카드 × 위상 (px, 0 이하면 슬롯 천장에 잘림)');
+  const PH = [0, 195, 390, 585, 780, 1170, 1560, 1950, 2340, 2730, 3120, 3315, 3510, 3705];
+  const ncard = await p.evaluate(() => document.querySelectorAll('#dunList .dnc').length);
+  console.log('    카드        최소여유  최대여유  잉크높이 p2p  잘린 위상');
+  for (let i = 0; i < ncard; i++) {
+    const info = await p.evaluate(i => {
+      const el = document.querySelectorAll('#dunList .dnc')[i];
+      el.scrollIntoView({ block: 'center' });
+      const th = el.querySelector(':scope>.th'), r = th.getBoundingClientRect();
+      return { has: !!th.querySelector('em'),
+               clip: { x: Math.round(r.left), y: Math.round(r.top),
+                       width: Math.round(r.width), height: Math.round(r.height) } };
+    }, i);
+    await p.waitForTimeout(120);
+    if (!info.has) { console.log('  ' + CARD[i].padEnd(10) + '  (이모지 썸네일 아님 — 건너뜀)'); continue; }
+    const tops = [], hs = [];
+    for (const t of PH) {
+      await seek(t); await p.waitForTimeout(45);
+      const withEm = await grab(info.clip);
+      await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+        .querySelector(':scope>.th>em').style.visibility = 'hidden'; }, i);
+      await p.waitForTimeout(40);
+      const noEm = await grab(info.clip);
+      await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+        .querySelector(':scope>.th>em').style.visibility = ''; }, i);
+      const d = await diff(withEm, noEm, info.clip.width, info.clip.height);
+      tops.push(d.y0); hs.push(d.y1 - d.y0);
+    }
+    const cut = tops.filter(v => v <= 0).length;
+    console.log('  ' + CARD[i].padEnd(10) + String(Math.min(...tops)).padStart(8)
+      + String(Math.max(...tops)).padStart(10) + String(Math.max(...hs) - Math.min(...hs)).padStart(12)
+      + String(cut + '/' + PH.length).padStart(11) + (cut ? '  ⚠' : ''));
   }
-  const tops = rows.map(r => r[1]);
-  console.log('  → 잉크 상단 p2p ' + (Math.max(...tops) - Math.min(...tops)) + 'px · 최소 상단여유 ' + Math.min(...tops) + 'px');
 
   /* ---------- [2] 카드별 배경 «움직임 세기» ---------- */
   console.log('\n[2] 카드별 배경 움직임 (썸네일·글자를 뺀 좌중앙 260×90 띠, 위상 0s ↔ 6s)');

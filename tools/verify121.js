@@ -185,10 +185,18 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   ok(txt.sp && Math.abs(txt.sp[0] - 84) <= 1 && Math.abs(txt.sp[1] - 277) <= 1, `값 알약 rel ${txt.sp} = 84,277`);
   /* LESSONS 21-①·90-④ — `#dunw i,#dunw em,#dunw b` 리셋이 transform-origin 을 이기는 자리다.
      스쿼시 축이 «발밑»(50% 100%)이 아니면 잉크가 위로 뜬다. */
-  const org = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc>.th>em')]
-    .map(e => getComputedStyle(e).transformOrigin));
-  ok(org.length === 6 && org.every(o => o === '200px 400px'),   /* em 상자 400×400 의 50% 100% */
-    `썸네일 transform-origin 이 발밑 200px 400px (${[...new Set(org)].join(' | ')})`);
+  /* 스쿼시 축은 «슬롯 바닥» 이어야 한다 — em 상자(400×400) 바닥은 슬롯 바닥보다 42~55px 아래라
+     그대로 쓰면 지렛대가 길어져 4% 스쿼시가 상단에서 14.3px 로 증폭된다(비평가 A·C 실측).
+     기대값은 카드가 가진 변수에서 파생시킨다: 541 − thcy − tht. */
+  const org = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map(c => {
+    const e = c.querySelector(':scope>.th>em'); if (!e) return null;
+    const cs = getComputedStyle(c);
+    const want = 541 - parseFloat(cs.getPropertyValue('--thcy')) - parseFloat(cs.getPropertyValue('--tht'));
+    const got = parseFloat(getComputedStyle(e).transformOrigin.split(' ')[1]);
+    return { want: +want.toFixed(1), got: +got.toFixed(1) };
+  }).filter(Boolean));
+  ok(org.length === 6 && org.every(o => Math.abs(o.want - o.got) <= 0.6),
+    `썸네일 스쿼시 축 = 슬롯 바닥 (${org.map(o => o.got + '/' + o.want).join(' · ')})`);
   const hit = await p.evaluate(() => {
     const c = document.querySelector('#dunList .dnc'), r = c.getBoundingClientRect();
     const e = document.elementFromPoint(r.left + 250, r.top + 175);
