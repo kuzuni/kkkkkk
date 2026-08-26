@@ -2839,15 +2839,27 @@
      게이트가 «잉크가 액자 면에 묻히지 않는가»(97 [2])를 화면과 같은 값으로 잴 수 있다. */
   .dnc>.th>canvas{position:absolute;left:0;top:0;width:100%;height:100%;
     image-rendering:pixelated;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+  /* ⚠ 던전 캔버스에는 드롭섀도를 걸지 않는다. `.th{overflow:hidden}` 이 캔버스 **바깥**으로 퍼지는
+     그림자를 전부 잘라 내므로 **화면에는 한 픽셀도 안 나오는데** 스크롤 fps 만 먹는다
+     (`node tools/probe72p.js` 실측 17.2 → 19.1fps, +11%). 액자가 이미 입체감을 준다. */
   .dnc:not(.rd)>.th>canvas{left:var(--if-rim);top:var(--if-rim);
-    width:calc(100% - var(--if-rim) * 2);height:calc(100% - var(--if-rim) * 2)}
+    width:calc(100% - var(--if-rim) * 2);height:calc(100% - var(--if-rim) * 2);
+    filter:none}
 
   /* ───── 121 — 재생 게이트. 기본은 «정지» 이고 «03 페이지가 열려 있을 때만» 돈다 ─────
      지시 ②: will-change 는 화면에 보이는 카드에만. 페이지가 닫히면 합성 레이어를 남기지 않는다.
      아래 4블록은 **명시도가 같아 «소스 순서» 로 이긴다** — 순서를 바꾸지 말 것.
      ① #dunw.on = 재생  ② #app.sv(56 절전) = 정지  ③ 잠금 카드(.lkd) = 정지 (지시 ④) */
   #dunw.on .dnc>.bgm::before,#dunw.on .dnc>.bgm::after{animation-play-state:running;will-change:transform}
-  #dunw.on .dnc>.th>canvas{animation-play-state:running;will-change:translate,scale}
+  #dunw.on .dnc>.th>canvas{animation-play-state:running}
+  /* ⚠ 던전 캔버스에는 `will-change` 를 주지 않는다(72 8회차). 액자 6칸을 통째로 합성 레이어
+     (≈300×300 텍스처)로 올리면 03 리스트 스크롤에서 121 §7 유지율이 **73% → 69%** 로 떨어진다
+     (A/B 실측 2쌍씩). 들썩은 4% 스쿼시 + 15px 이동이라 레이어 승격 없이도 충분히 부드럽다.
+     레이드 카드(97)는 슬롯 1~2칸뿐이라 기존대로 승격시킨다.
+     ⚠⚠ **`animation-play-state` 는 이 줄에 섞지 마라.** 위 «명시도가 같아 소스 순서로 이긴다» 가
+     깨진다 — `.rd`(또는 `:not(.rd)`)를 붙이면 클래스가 하나 늘어 아래 `.lkd` 정지 규칙(1,3,1)을
+     **이겨 버리고** 잠금 카드 썸네일이 계속 돌았다(verify121 §«잠금 썸네일 paused» 4건 실패로 잡혔다). */
+  #dunw.on .dnc.rd>.th>canvas{will-change:translate,scale}
   #app.sv .dnc>.bgm::before,#app.sv .dnc>.bgm::after{animation-play-state:paused;will-change:auto}
   #app.sv .dnc>.th>canvas{animation-play-state:paused;will-change:auto}
   #dunw .dnc.lkd>.bgm::before,#dunw .dnc.lkd>.bgm::after{animation-play-state:paused;will-change:auto}
@@ -9688,6 +9700,24 @@ function drawHeroTo(canvas, o){
    그래서 fr[4..7](논리 프레임 오프셋·크기)은 쓰지 않는다 — 그건 «씬 좌표에 세우는» 값이다.
    틴트는 87 의 lite 경로(그린 자리에서 multiply → destination-in)와 픽셀 연산이 같아
    색이 전투 렌더의 `tinted()` 와 일치하면서 `tintCache`(아틀라스 통째 사본)를 늘리지 않는다. */
+/* 72(2026-08-26) — «밝힌 프레임» 캐시. 원본이 어두운 스프라이트(용 휘도 57 · 좀비 77)를 액자 면 위로
+   올리는 유일한 수단이 밝기 보정인데, `ctx.filter` 는 그릴 때마다 필터 파이프라인을 세운다.
+   프레임 1장을 한 번만 밝혀 두고 그 뒤로는 평범한 drawImage 를 한다(87 `tintCache` 와 같은 규칙).
+   키가 아틀라스+프레임+배율이라 아틀라스 프레임 수만큼만 늘고 멈춘다. */
+const brightCache = {};
+function brightFrame(A, name, fr, br){
+  const k = (A.img || '') + '|' + name + '|' + br;
+  let c = brightCache[k];
+  if(c) return c;
+  c = document.createElement('canvas');
+  c.width = fr[2]; c.height = fr[3];
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.filter = 'brightness(' + br + ')';
+  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, fr[2], fr[3]);
+  brightCache[k] = c;
+  return c;
+}
 function drawSpriteTo(canvas, o){
   const A = ATLAS[o && o.k], g = canvas.getContext('2d');
   g.clearRect(0, 0, canvas.width, canvas.height);
@@ -9710,10 +9740,13 @@ function drawSpriteTo(canvas, o){
   if(o.flip){ g.translate(W, 0); g.scale(-1, 1); }
   /* 72(2026-08-26) — 밝기 보정은 **CSS filter 가 아니라 여기서** 한다. CSS 로 걸면 캔버스 픽셀은
      원본 그대로라 «잉크가 배경에 묻히지 않는가»(97 [2]) 를 게이트가 잴 수 없다 — 화면과 게이트가
-     서로 다른 그림을 보게 된다. 틴트(multiply)는 어둡게만 되므로 어두운 스프라이트는 이쪽이 유일한 수단이다. */
-  if(o.bright && +o.bright !== 1) g.filter = 'brightness(' + (+o.bright) + ')';
-  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], dx, dy, dw, dh);
-  g.filter = 'none';
+     서로 다른 그림을 보게 된다. 틴트(multiply)는 어둡게만 되므로 어두운 스프라이트는 이쪽이 유일한 수단이다.
+     ⚠ **매번 `g.filter` 를 걸면 안 된다.** 8fps × 카드 6장이면 필터 파이프라인이 프레임마다 서 는데,
+     verify121 스크롤 fps 가 81~86% → 58% 로 내려앉는다(A/B 실측). 밝힌 결과를 프레임 단위로 캐시해
+     그 뒤로는 **평범한 drawImage** 만 한다 — 프레임 수가 유한(아틀라스)해서 캐시가 안 늘어난다. */
+  const img = (o.bright && +o.bright !== 1) ? brightFrame(A, o.frame, fr, +o.bright) : null;
+  if(img) g.drawImage(img, 0, 0, fr[2], fr[3], dx, dy, dw, dh);
+  else    g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], dx, dy, dw, dh);
   if(o.tint){
     g.globalCompositeOperation = 'multiply';
     g.fillStyle = o.tint; g.fillRect(dx, dy, dw, dh);
