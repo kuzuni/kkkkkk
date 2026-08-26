@@ -76,7 +76,7 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
     window.setTimeout = window.__raw;
     void document.body.offsetHeight;
     document.querySelectorAll('.ml-r.out').forEach((r) => void getComputedStyle(r).animationName);
-    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
+    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|mlTint|mlAcc|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   if (!(await p.evaluate(() => window.__anims.length))) { console.log('✗ 애니메이션을 못 잡았다 — 중단'); await b.close(); process.exit(1); }
@@ -90,9 +90,20 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
       const live = all.filter((r) => !r.classList.contains('out'));
       const inOf = (r) => r.querySelector(':scope>.ml-in');
       const ink = (r) => {
-        /* 내용 잉크 = 제목/요약/썸네일/버튼의 렌더 bbox 합(0 이면 «빈 판») */
-        return [...r.querySelectorAll('.ml-t,.ml-s,.ml-i,.ml-b,.ml-d')]
-          .reduce((a, e) => { const q = e.getBoundingClientRect(); return a + q.width * q.height; }, 0);
+        /* 내용 잉크 = 제목/요약/썸네일/버튼/기한/액센트의 «보이는» 면적 합.
+           ★ 20회차 — **알파를 곱한다.** 18·19회차는 렌더 bbox 만 더해서, 요소가 opacity 0 이 돼도
+           레이아웃 상자는 그대로라 잉크가 **한 번도 0 이 되지 않았다.** 그래서 «빈 판 0개» 라고
+           보고하는 동안 비평가 넷(Ψ·Χ·Ρ·Τ)이 사람 눈으로 93~130ms 짜리 빈 판을 보고 있었다.
+           클립도 반영한다 — 카드 밖으로 나간 부분은 안 보이므로 교집합 면적만 센다. */
+        const el = r.querySelector(':scope>.ml-in'); if (!el) return 0;
+        const box = el.getBoundingClientRect();
+        return [...r.querySelectorAll('.ml-t,.ml-s,.ml-i,.ml-b,.ml-d,.ml-ac')]
+          .reduce((a, e) => {
+            const q = e.getBoundingClientRect();
+            const h = Math.max(0, Math.min(q.bottom, box.bottom) - Math.max(q.top, box.top));
+            const w = Math.max(0, Math.min(q.right, box.right) - Math.max(q.left, box.left));
+            return a + (+getComputedStyle(e).opacity) * w * h;
+          }, 0);
       };
       const ringOf = (r) => {
         const el = inOf(r); if (!el) return null;
@@ -221,6 +232,24 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
     if (c.ea > cutMax) { cutMax = c.ea; cutWho = `${c.n} t=${r.t}ms 깊이 ${c.depth.toFixed(0)}px`; }
   })));
   console.log(`«읽히는데 잘림» 최대 실효α ${cutMax.toFixed(3)} (${cutWho}) — 상한 0.200 ${cutMax <= 0.2 ? '✓' : '✗'}`);
+  /* ★ 20회차 신설 — **«보이는 빈 판»**. Ρ·Τ 가 19회차에 둘 다 «8점을 막는 단 하나» 로 지목한 것이라
+     이제부터 게이트로 건다. 정의: 내용 잉크가 0 인데 카드 알파가 **0.1 을 넘는** 표본의 총 시간.
+     18·19회차의 «빈 판 표본» 은 α>0.02 라 «사실상 안 보이는 프레임» 까지 세고 있었고, 그래서
+     0 개라고 보고하면서도 사람 눈에는 110ms 짜리 판이 보였다.
+     반대편 지표도 같이 낸다 — «빈 구멍»(α=0 인데 슬롯이 아직 닫히는 중). 두 값은 **한 창의 양 끝**이라
+     한쪽만 줄이면 반드시 다른 쪽이 늘어난다(17회차 Σ·Φ 는 «빈 구멍» 을, 19회차 Ρ·Τ 는 «빈 판» 을 쳤다). */
+  /* ⚠ **행마다 따로 센다.** 스태거가 있으므로 «2행의 알파» 와 «4행의 슬롯» 을 섞으면 창이 부풀어
+     오른다(첫 구현이 그랬다 — 70ms 짜리를 100ms 로 보고했다). 각 행의 자기 알파 × 자기 슬롯이다. */
+  const perRow = (n) => rows.map((r) => r.out[n]).filter(Boolean);
+  const nOut = rows[0].out.length;
+  let bandMs = 0, holeMs = 0;
+  for (let n = 0; n < nOut; n++) {
+    const a = perRow(n);
+    bandMs = Math.max(bandMs, a.filter((o) => o.a > 0.1 && o.ink < 1).length * STEP);
+    holeMs = Math.max(holeMs, a.filter((o) => o.a <= 0.1 && o.rh > 0.5).length * STEP);
+  }
+  console.log(`«보이는 빈 판»(α>0.1 · 잉크 0)   ${bandMs}ms`);
+  console.log(`«빈 구멍»(α≤0.1 · 슬롯 안 닫힘)  ${holeMs}ms   ← 이 둘은 한 창의 양 끝이다`);
   console.log(`보이는 잉크 1.5% 도달 t=${inkIdx < 0 ? '-' : rows[inkIdx].t}ms → 뒤쪽 ${tailMs}ms (${(tailMs / END * 100).toFixed(1)}%)`);
   console.log(`정지 구간(속도 0)   ${rise.filter((v, i) => i > 0 && Math.abs(v) < 0.02).length * STEP}ms`);
   /* 16회차 신설 — 보이는 구간(α>0.02)에서만 잰다. «안 보이는 프레임의 이탈» 은 채점 대상이 아니다. */
