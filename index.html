@@ -988,7 +988,7 @@
     #25d8fe 268deg 360deg)}
   .slot2::after{inset:10.84px;background:#030509}
   /* ::after 는 마지막 자식이라 그냥 두면 well 을 덮는다 — z-index 로 위로 올린다 */
-  .slot2 .cdw{position:absolute;inset:14.5px;border-radius:50%;overflow:hidden;z-index:1;
+  .slot2 .cdw{position:absolute;inset:14.35px;border-radius:50%;overflow:hidden;z-index:1;
     background:#367cc1;pointer-events:none}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.62);height:0%}
   /* 아이콘은 well(.cdw) 안에 넣어 원형으로 클립한다 — 밖에 두면 이모지 모서리가 링을 뚫는다 */
@@ -1010,7 +1010,7 @@
      바깥으로 `box-shadow` 로 뻗는다 — 상자를 키우면 이웃 칸의 pitch 가 같이 밀린다.
      이 «상태별 지름» 이 1차 라운드부터 외경을 117 / 119 / 120 으로 갈리게 한 범인이다:
      재는 사람이 어느 칸을 골랐느냐에 따라 답이 달라졌다. ── */
-  .slot2:not(.empty){box-shadow:0 0 0 1px #030509}
+  .slot2:not(.empty){box-shadow:0 0 0 1.15px #030509;top:.45px}
   .slot2:not(.empty)::before{inset:3.11px}
   .slot2:not(.empty)::after{inset:11.03px}
   .slot2:not(.empty) .cdw{inset:15.2px}
@@ -1018,7 +1018,20 @@
   /* 바깥 노랑은 «링» 이 아니라 «글로우» 다 — REF 는 축 방향 r65.9 인데 대각선은 r67.8~68.7 로
      비원형이다(비평가 Q 실측). 그래서 축으로 재는 사람(Q 5.67)과 대각을 포함해 재는 사람
      (R 7.16)의 답이 갈렸다. 딱딱한 링 하나로는 둘 다 못 맞춘다 → 하드 링 + 흐린 헤일로. */
-  .slot2.ready{box-shadow:0 0 0 1px #030509,0 0 0 6.6px #fffe03,0 0 8px 2.5px rgba(255,254,3,.8)}
+  /* 활성 글로우 — 레퍼런스는 **정원이 아니다**: 축 r65.78 / 대각 r68.56 (Δ2.78, 4겹 대칭).
+     비평가 셋이 «맞다(축)» / «−22%(대각 포함)» / «대각 67.8~68.7» 로 갈렸던 것이 전부 이 비원형 탓이다.
+     `box-shadow` 스프레드는 상자 모양을 그대로 키우므로 원에서 라운디드 스퀘어를 못 만든다 → 전용 요소.
+     반폭 65.78 · 모서리 반지름 59.1 이면 45° 거리가 (65.78−59.1)√2 + 59.1 = 68.55 로 실측과 맞는다.
+     처방: **같은 원을 대각선 네 방향으로 조금씩 어긋나게 겹친다.** 중심을 (±d,±d) 로 옮긴 반지름 R 의
+     원 4개를 합치면 축 방향은 `d + √(R²−d²)`, 대각선은 `d√2 + R` 까지 뻗어 **대각선만 더 커진다.**
+     목표(축 65.7 · 대각 67.9)를 두 식에 넣어 풀면 **d = 4.3 · R = 61.55(= 59 + spread 2.55)**.
+     비원형성 Δ 는 REF 실측이 재는 사람마다 1.55~2.78 로 갈려(축·대각을 어느 각도로 잡느냐 차이)
+     **합의치 ~2.2** 를 겨눴다 — d 를 3.72 → 5.0 으로 흔들어 Δ 1.79 → 2.62 를 얻고 그 사이로 되돌렸다.
+     바깥 그림자는 테두리 상자 «바깥» 으로만 그려지므로 슬롯 안쪽은 가려지지 않고, 먼저 쓴
+     1px 검정 키라인이 위에 얹혀 노랑은 r60 부터 보인다. */
+  .slot2.ready{box-shadow:0 0 0 1px #030509,
+    4.3px 4.3px 0 2.55px #fffe03, -4.3px 4.3px 0 2.55px #fffe03,
+    4.3px -4.3px 0 2.55px #fffe03, -4.3px -4.3px 0 2.55px #fffe03}
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
@@ -1028,13 +1041,13 @@
   .slot2.empty .cdw{background:#454464}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
   .slot2 .lk{position:relative;z-index:2;display:block;font-size:64px;line-height:1;
-    transform:translateY(-1.5px) scaleY(.785);
+    transform:translateY(-1.5px) scaleY(.8);
     filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)
       drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
      아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
-  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.8px;transform:translateX(-50%);
-    width:42.6px;height:40.1px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
+  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.8px;transform:translateX(calc(-50% + 2.3px));
+    width:43.5px;height:40.1px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
     font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
   /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============

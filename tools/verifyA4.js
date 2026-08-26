@@ -71,6 +71,7 @@ function is(name, got, want) {
       lockCdwInset: px(cs(sl[4].querySelector('.cdw')).left),
       eqShadow: cs(sl[1]).boxShadow,
       eqCdwW: r(sl[1].querySelector('.cdw')).width,
+      eqTop: px(cs(sl[1]).top),
       readyGlow: cs(sl[0]).boxShadow, cdwRing: cs(cdw).boxShadow,
       readyAfter: getComputedStyle(sl[0], '::after').inset || getComputedStyle(sl[0], '::after').top,
       radius: cs(sl[0]).borderRadius,
@@ -101,13 +102,15 @@ function is(name, got, want) {
 
   /* ---- [2] 링 4겹 (측정표 §2) ---- */
   /* 잠금칸 = 기본 링대 (well 89.06 · 3.55 · 7.31 · 3.53 · 외곽 117.84) */
-  eq('잠금칸 well 지름', d.lockCdwW, 89, 0.3);
-  eq('잠금칸 well inset (링대 14.5)', d.lockCdwInset, 14.5, 0.2);
+  eq('잠금칸 well 지름', d.lockCdwW, 89.3, 0.3);
+  eq('잠금칸 well inset (링대 14.35)', d.lockCdwInset, 14.35, 0.2);
   /* 장착칸 = 레퍼런스가 2.2px 크게 그린다 (well 87.61 · 4.17 · 7.92 · 4.11 · 외곽 120.00).
      레이아웃 상자는 그대로 117.8 이고 커지는 1.1px 은 바깥 box-shadow 로 뻗는다 (측정표 §7-2) */
   eq('장착칸 well 지름', d.eqCdwW, 87.6, 0.3);
-  tot++; if (/(^|[^.\d])1px/.test(d.eqShadow)) ok++; else fails.push('장착칸 외곽 확장 1px: ' + d.eqShadow);
-  tot++; if (/6\.6px/.test(d.readyGlow)) ok++; else fails.push('활성 바깥 노랑 6.6px + 헤일로: ' + d.readyGlow);
+  /* 활성 글로우는 «정원이 아니다» — 대각선으로 어긋난 그림자 4겹의 합집합이라야 REF 의 비원형이 난다 */
+  tot++; if ((d.readyGlow.match(/4\.3px/g) || []).length >= 4) ok++;
+  else fails.push('활성 글로우 4겹 대각 오프셋(±4.3px) 아님: ' + d.readyGlow);
+  tot++; if (/2\.55px/.test(d.readyGlow)) ok++; else fails.push('활성 글로우 spread 2.55px 아님: ' + d.readyGlow);
   tot++; if (/6\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 6.4px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
@@ -120,18 +123,19 @@ function is(name, got, want) {
   is('잠금 자물쇠 5칸', d.lockCount, 5);
   is('활성 1칸', d.readyCount, 1);
   eq('자물쇠 font-size', d.lkFs, 64, 0.5);
-  tot++; if (/0\.785/.test(d.lkTr)) ok++; else fails.push('자물쇠 scaleY .785: ' + d.lkTr);
+  tot++; if (/0\.8[,)]/.test(d.lkTr)) ok++; else fails.push('자물쇠 scaleY .8: ' + d.lkTr);
   eq('자물쇠 세로 오프셋', d.lkDy, -1.5, 0.2);
+  tot++; if (/1\.15px/.test(d.eqShadow)) ok++; else fails.push('장착칸 지름 단차(외곽 확장 1.15px) 아님: ' + d.eqShadow);
+  eq('장착칸 세로 오프셋 (REF 는 장착칸을 조금 낮게 앉힌다)', d.eqTop, 0.45, 0.1);
 
   /* ---- [5] 하단 뱃지 (측정표 §2 «펫/동료 머리 뱃지») ---- */
   /* 레퍼런스 뱃지는 정원이 아니라 «가로로 누운» 43×39 (비평가 N·P 독립 일치) */
-  eq('뱃지 외곽 폭', d.bdgW, 42.6, 0.5);
+  eq('뱃지 외곽 폭', d.bdgW, 43.5, 0.5);
   eq('뱃지 외곽 높이', d.bdgH, 40.1, 0.5);
   eq('뱃지 하단 돌출', d.bdgOut, 9.8, 0.5);
   eq('뱃지 중심 (슬롯 중심 기준)', d.bdgCy, 48.8, 0.5);
   /* 활성칸 앰버 링은 대기칸 링보다 두껍다 (REF 활성 8.22~8.40 vs 대기 7.90~8.15) */
   tot++; if (/11\.41px/.test(d.readyAfter)) ok++; else fails.push('활성 앰버 링 ::after inset 11.41px: ' + d.readyAfter);
-  tot++; if (/rgba\(255, ?254, ?3/.test(d.readyGlow)) ok++; else fails.push('활성 글로우 헤일로 없음: ' + d.readyGlow);
 
   if (fails.length) { console.log('실패 항목:'); fails.forEach(f => console.log('  ✗ ' + f)); }
   console.log('VERIFYA4 ' + ok + '/' + tot + ' ' + (fails.length ? 'FAIL' : 'PASS'));
