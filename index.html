@@ -2420,6 +2420,13 @@
      (JS rAF·캔버스 금지 조항). 상단 비네팅은 정지 레이어라 .bgm 자신의 background 로 얹는다.
      이음매: 무늬 타일 폭(--bgz*)의 **정수배**만큼 이동(--bgw*)하므로 루프가 끊기지 않는다.
      색은 카드가 이미 갖고 있는 --r(선버스트 색)·--pt(밝은 톤)를 그대로 쓴다 → 유물석 1~4 의 «층별 색 단계» 가 공짜로 따라온다. */
+  /* ⚠ 여기에 «좌측 감쇠 마스크» 를 넣지 마라 — 2회차에 넣었다가 뺐다.
+     의도는 좋았다(알약이 rgba(0,0,0,.58) 반투명이라 배경이 비쳐 «알약 코어 픽셀의 24~41% 가 매 프레임
+     변조» 된다 — 비평가 A ⑦). 그런데 `mask-image` 는 카드마다 합성 패스를 하나 더 만들어
+     **스크롤 fps 를 29.9 → 22.7 (−24%)** 로 떨어뜨린다(`filter` 와 같은 부류. 이 절 위의 잠금 카드 주석 참고).
+     알약 변조는 절대값이 3.0~3.4/255 로 작고 글자는 8px 검정 외곽선이 지켜 준다 — 24% 를 주고 살 값이 아니다.
+     정말 없애야 한다면 마스크가 아니라 **움직이는 레이어를 오른쪽에만 두는 것**(`left:38%`, 선버스트와 같은 방식)이
+     공짜다. 다만 그러면 카드 왼쪽 절반이 정지한다. */
   .dnc>.bgm{position:absolute;inset:8px 7px;border-radius:5px;overflow:hidden;pointer-events:none;
     background:linear-gradient(180deg,rgba(0,0,0,.34) 0,rgba(0,0,0,.12) 15%,transparent 33%)}
   /* 레이어는 «카드 높이 그대로» 다 — 130% 로 키우면 합성 텍스처만 커지고(9장 × 2겹) 스크롤 fps 가 5% 깎인다 */
@@ -2435,36 +2442,51 @@
   @keyframes bgmA{from{transform:translate3d(0,0,0)}   to{transform:translate3d(calc(-1*var(--bgw1,240px)),0,0)}}
   @keyframes bgmB{from{transform:translate3d(0,0,0)}   to{transform:translate3d(var(--bgw2,360px),0,0)}}
   @keyframes bgmFlash{0%,86%,100%{opacity:var(--bgo2,.34)}90%{opacity:calc(var(--bgo2,.34) + .34)}94%{opacity:var(--bgo2,.34)}}
-  /* 테마 — ①흐름(::before) ②입자·안개(::after). 무늬 «모양» 만 테마별로 다르고 색은 카드 변수에서 온다 */
+  /* 테마 — ①흐름(::before) ②입자·안개(::after). 무늬 «모양» 만 테마별로 다르다.
+     ⚠ 2회차 정정 3건 (비평가 A·B 실측이 같은 쪽으로 몰린 것만 반영 — LESSONS 52-④):
+     ⓐ **이동거리(--bgw*)는 타일 폭(--bgz*)의 «1배»여야 한다.** 1회차는 ::after 를 2배로 잡아
+        «무늬가 원위치하는 체감 주기» 가 지속시간의 절반(34~36s)이 됐다 — 지시의 40~90s 하한 미달.
+        (A 실측: 골드 34.4s · 다이아 36.0s · 레이드 34.0s. 타일 피치 170/210/264px 를 4.94px/s 로 나눈 값)
+     ⓑ **진폭이 카드마다 3~5배 달랐다.** 골드·레이드는 시간축 휘도 p2p 1.1~2.1% 로 잠금 카드의
+        노이즈 바닥(0.9%)의 2~3배뿐이라 «얼어붙은 카드» 로 읽혔고, 다이아만 6.1% 였다.
+        불투명도를 카드1 기준이 아니라 **다이아(6.1%) 기준**으로 맞춘다.
+     ⓒ **테마 색을 카드 팔레트(--pt)에 맡기면 지시의 색 이름과 어긋난다.** 골드 던전의 --pt 는
+        실제로 자홍(H=333°)이고 다이아는 녹색(H=156°)이다 — 카드 원색이 그렇게 생겼다.
+        그래서 테마마다 **강조색 --bgc 를 따로 준다**. 유물석만은 지시가 «층별 색 단계» 를 요구하므로
+        보랏빛에 카드 팔레트를 섞어(`color-mix`) 단계가 살아 있게 한다. */
   .dnc.bgm-gold{                                                   /* 골드 던전 — 반짝이는 금빛 입자 흐름 */
-    --bgm1:repeating-linear-gradient(102deg,transparent 0 52px,var(--pt) 52px 60px,transparent 60px 128px);
-    --bgz1:256px 100%;--bgw1:256px;--bgo1:.20;
-    --bgm2:radial-gradient(circle at 18% 26%,var(--pt) 0 2.5px,transparent 3.6px),
-      radial-gradient(circle at 62% 12%,var(--pt) 0 3.5px,transparent 4.8px),
-      radial-gradient(circle at 84% 62%,var(--pt) 0 2px,transparent 3px),
-      radial-gradient(circle at 38% 78%,var(--pt) 0 3px,transparent 4.2px);
-    --bgz2:170px 132px;--bgw2:340px;--bgo2:.52}
+    --bgc:#FFDF8A;
+    --bgm1:repeating-linear-gradient(102deg,transparent 0 52px,var(--bgc) 52px 62px,transparent 62px 128px);
+    --bgz1:256px 100%;--bgw1:256px;--bgo1:.30;
+    --bgm2:radial-gradient(circle at 18% 26%,var(--bgc) 0 3.5px,transparent 5px),
+      radial-gradient(circle at 62% 12%,var(--bgc) 0 4.5px,transparent 6.4px),
+      radial-gradient(circle at 84% 62%,var(--bgc) 0 3px,transparent 4.4px),
+      radial-gradient(circle at 38% 78%,var(--bgc) 0 4px,transparent 5.6px);
+    --bgz2:170px 132px;--bgw2:170px;--bgo2:.80}
   .dnc.bgm-dia{                                                    /* 다이아 던전 — 푸른 결정 빛 */
-    --bgm1:repeating-linear-gradient(58deg,transparent 0 60px,var(--pt) 60px 66px,transparent 66px 144px),
-      repeating-linear-gradient(-58deg,transparent 0 78px,var(--pt) 78px 82px,transparent 82px 144px);
-    --bgz1:288px 100%;--bgw1:288px;--bgo1:.17;
-    --bgm2:radial-gradient(closest-side at 30% 34%,var(--pt) 0%,transparent 100%),
-      radial-gradient(closest-side at 76% 70%,var(--pt) 0%,transparent 100%);
-    --bgz2:210px 150px;--bgw2:420px;--bgo2:.26}
-  .dnc.bgm-rel{                                                    /* 유물석 1~4 — 보랏빛 안개(층별 색은 --pt 가 준다) */
-    --bgm1:radial-gradient(closest-side at 26% 46%,var(--pt) 0%,transparent 100%),
-      radial-gradient(closest-side at 68% 26%,var(--r) 0%,transparent 100%),
-      radial-gradient(closest-side at 88% 74%,var(--pt) 0%,transparent 100%);
-    --bgz1:330px 100%;--bgw1:330px;--bgo1:.30;
-    --bgm2:radial-gradient(closest-side at 44% 62%,var(--pt) 0%,transparent 100%),
-      radial-gradient(closest-side at 12% 20%,var(--r) 0%,transparent 100%);
-    --bgz2:246px 168px;--bgw2:492px;--bgo2:.22}
-  .dnc.bgm-raid{                                                   /* 레이드/컨텐츠 — 붉은 열기 + 번개 잔광 */
-    --bgm1:repeating-linear-gradient(88deg,transparent 0 34px,var(--r) 34px 46px,transparent 46px 96px);
-    --bgz1:192px 100%;--bgw1:192px;--bgo1:.22;
-    --bgm2:radial-gradient(closest-side at 22% 18%,var(--pt) 0%,transparent 100%),
-      radial-gradient(closest-side at 72% 58%,var(--pt) 0%,transparent 100%);
-    --bgz2:264px 180px;--bgw2:528px;--bgo2:.20}
+    --bgc:#9BE0FF;
+    --bgm1:repeating-linear-gradient(58deg,transparent 0 60px,var(--bgc) 60px 67px,transparent 67px 144px),
+      repeating-linear-gradient(-58deg,transparent 0 78px,var(--bgc) 78px 83px,transparent 83px 144px);
+    --bgz1:288px 100%;--bgw1:288px;--bgo1:.22;
+    --bgm2:radial-gradient(closest-side at 30% 34%,var(--bgc) 0%,transparent 100%),
+      radial-gradient(closest-side at 76% 70%,var(--bgc) 0%,transparent 100%);
+    --bgz2:210px 150px;--bgw2:210px;--bgo2:.20}
+  .dnc.bgm-rel{                                                    /* 유물석 1~4 — 보랏빛 안개(층별 색 단계) */
+    --bgc:color-mix(in srgb,var(--pt) 45%,#C79BFF);
+    --bgm1:radial-gradient(closest-side at 26% 46%,var(--bgc) 0%,transparent 100%),
+      radial-gradient(closest-side at 68% 26%,var(--bgc) 0%,transparent 100%),
+      radial-gradient(closest-side at 88% 74%,var(--bgc) 0%,transparent 100%);
+    --bgz1:330px 100%;--bgw1:330px;--bgo1:.46;
+    --bgm2:radial-gradient(closest-side at 44% 62%,var(--bgc) 0%,transparent 100%),
+      radial-gradient(closest-side at 12% 20%,var(--bgc) 0%,transparent 100%);
+    --bgz2:246px 168px;--bgw2:246px;--bgo2:.34}
+  .dnc.bgm-raid{                                                   /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
+    --bgc:#FF9A5E;
+    --bgm1:repeating-linear-gradient(88deg,transparent 0 34px,var(--bgc) 34px 48px,transparent 48px 96px);
+    --bgz1:192px 100%;--bgw1:192px;--bgo1:.34;
+    --bgm2:radial-gradient(closest-side at 22% 18%,var(--bgc) 0%,transparent 100%),
+      radial-gradient(closest-side at 72% 58%,var(--bgc) 0%,transparent 100%);
+    --bgz2:264px 180px;--bgw2:264px;--bgo2:.40}
   .dnc.bgm-raid>.bgm::after{animation:bgmB var(--bgt2,78s) linear infinite var(--bgd2,0s),
     bgmFlash var(--bgt3,9s) ease-in-out infinite var(--bgd2,0s);animation-play-state:paused}
   /* 72 — 우측 몬스터 썸네일 슬롯 (2회차: 비평가 O·P 실측 반영).
@@ -2489,15 +2511,26 @@
     filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
   /* 121-⑥ — 썸네일 몬스터 «들썩» 아이들. 슬롯(.th) 기하는 **불변**이고 안의 잉크만 움직인다.
      `transform` 은 이미 폭 정규화(scaleX(--tsx))가 쓰고 있으므로 건드리지 않고, 개별 변환 속성
-     `translate`(들썩) 과 `scale`(스쿼시)에 각각 애니메이션을 건다 — 서로 다른 속성이라 충돌이 없고,
-     개별 속성은 transform 보다 먼저 적용돼 scaleX 정규화가 그대로 살아 있다(verify72 §matrix 유지).
-     한 루프(--thb, 기본 4.3s) 안에 짧은 들썩 4번(−8px) + 큰 점프 1번(−14px) 이 들어간다 = 지시 «3~5s 마다 한 번». */
-  @keyframes thBob{0%,20%,40%,60%,80%,100%{translate:0 0}
-    10%,30%,50%,70%{translate:0 -8px}90%{translate:0 -14px}}
-  @keyframes thSquash{0%,100%{scale:1 .96}45%,55%{scale:1 1}}
+     `translate`(들썩)·`scale`(스쿼시)로 움직인다 — 다른 속성이라 충돌이 없고, 개별 속성은 transform
+     보다 먼저 적용돼 72 의 scaleX 정규화가 그대로 살아 있다(verify72 §matrix 유지).
+
+     ⚠ **움직임은 «위» 가 아니라 «아래» 로 뻗는다** (1회차 실측으로 뒤집었다).
+     72 는 몬스터 잉크가 슬롯을 **세로로 꽉 채우도록**(잉크 상단 = 슬롯 천장, 하단은 일부러 잘림) 앉혔다.
+     그래서 지시문 그대로 `translateY 0 → −8 → 0` 을 걸면 **올라가는 매 프레임 머리가 잘린다** —
+     `node tools/probe121.js` [1] 이 잉크 상단 여유를 0px 로, 7개 위상 중 5개에서 «상단 잘림» 으로 찍었다.
+     지시 ⑥ 의 «움직임은 슬롯 안에서만(하단 잘림 규칙 유지)» 가 이기므로, **기준 자세를 «가장 높은 포즈»로
+     두고 거기서 아래로 웅크렸다 펴는** 방식으로 옮겼다. 진폭(짧은 들썩 8px · 큰 점프 14px)과 스쿼시 4% 는
+     지시 수치 그대로다 — 부호만 뒤집혔고, 화면에서 보이는 «들썩» 은 완전히 같다.
+
+     스쿼시는 들썩과 **같은 타임라인**에 둔다(애니메이션 1개). 따로 걸면 주기가 어긋나 웅크림과 점프가
+     엇박이 된다. 한 루프(--thb 3.9~5.0s) = 짧은 들썩 4번(주기 --thb/5 = 0.78~1.00s) + 큰 점프 1번. */
+  @keyframes thBob{
+    0%,20%,40%,60%,80%,100%{translate:0 8px;scale:1 .96}    /* 착지 — 웅크림 */
+    10%,30%,50%,70%        {translate:0 0;scale:1 1}        /* 짧은 들썩 8px — 잉크 상단 = 슬롯 천장 */
+    84%                    {translate:0 14px;scale:1 .94}   /* 큰 점프 전 깊은 웅크림 */
+    90%                    {translate:0 0;scale:1 1}}       /* 큰 점프 14px */
   .dnc>.th>em,.dnc.rd>.th>canvas{
-    animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s),
-              thSquash calc(var(--thb,4.3s)/5) ease-in-out infinite var(--thd,0s);
+    animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s);
     animation-play-state:paused}
   /* ⚠ LESSONS 21-①·90-④ 재발 지점: 위 `#dunw i,#dunw em,#dunw b` 리셋(1-0-1)이 `.dnc>.th>em`(0-3-1)의
      `transform-origin` 을 이긴다. 스쿼시는 «발밑» 을 축으로 눌려야 하므로 id 로 되받는다.
@@ -13449,10 +13482,14 @@ function dunLockTxt(d){
 }
 /* 121 — 카드마다 «위상·속도» 를 다르게 하는 변수 묶음. 카드 인덱스 하나에서 전부 파생시킨다
    (LESSONS 90-① — 단마다 상수를 손으로 적으면 반드시 하나가 어긋난다).
-   흐름 40~90s 조항을 지킨다: --bgt1 52~82s · --bgt2 68~88s. 음수 delay = «이미 그만큼 지난 상태로 시작».
+   흐름 40~90s 조항을 지킨다: --bgt1 44~84s · --bgt2 58~88s. 이동거리 = 타일 폭 1배이므로
+   지속시간이 곧 «무늬가 원위치하는 체감 주기» 다. 음수 delay = «이미 그만큼 지난 상태로 시작».
+   ⚠ 2회차: 1회차의 52~82 / 68~88 은 «속도» 스프레드가 ±9% 밖에 안 됐다(이동거리가 타일 폭으로 고정돼
+   속도 = 피치/주기 인데, 피치가 큰 카드일수록 주기도 커서 서로 상쇄됐다 — A 실측 4.34~5.16px/s).
+   주기 폭을 넓혀 ±20% 로 벌린다.
    --thb 는 «들썩 4번 + 큰 점프 1번» 한 바퀴라 3.9~5.0s(지시 «3~5s 마다 한 번»), 짧은 들썩은 그 1/5 = 0.78~1.0s. */
 function bgmVars(i){
-  return ';--bgt1:' + (52 + 6*i) + 's;--bgt2:' + (68 + 4*i) + 's;--bgt3:' + (8 + 1.5*i).toFixed(1) + 's'
+  return ';--bgt1:' + (44 + 8*i) + 's;--bgt2:' + (58 + 6*i) + 's;--bgt3:' + (8 + 1.5*i).toFixed(1) + 's'
     +  ';--bgd1:-' + (7*i) + 's;--bgd2:-' + (11*i) + 's'
     +  ';--thb:' + (3.9 + 0.22*i).toFixed(2) + 's;--thd:-' + (0.37*i).toFixed(2) + 's';
 }

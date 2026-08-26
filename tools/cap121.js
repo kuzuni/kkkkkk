@@ -30,15 +30,27 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
   p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(1500);
+  /* 기본 세이브는 6장 중 4장이 잠겨 있어 «테마 4종» 중 둘밖에 안 보인다.
+     비평가가 유물석 보랏빛 안개·컨텐츠 붉은 열기를 볼 수 있도록 해금 상태로 찍는다.
+     (잠금 카드가 정지인지는 verify121 §2·§6 과 probe121 [2] 가 따로 본다) */
+  await p.evaluate(() => {
+    S.guide.idx = 99; S.best = 999;
+    ['relic1', 'relic2', 'relic3'].forEach(k => { S.dun[k] = 99; });
+  });
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(800);
+  await p.evaluate(() => renderDunPage());
+  await p.waitForTimeout(400);
 
   /* ---- 전부 일시정지 → 위상을 직접 찍는다 ---- */
+  /* ⚠ CSS 로 paused 인 애니메이션(잠금 카드)은 **건드리지 않는다** — 억지로 위상을 찍으면
+     캡처가 «잠금인데 움직인다» 는 거짓을 만들고, 비평가가 그 거짓을 지적으로 돌려준다(1회차에 실제로 그랬다). */
   const freeze = () => p.evaluate(() => {
-    document.getAnimations().forEach(a => { try { a.pause(); } catch (_) {} });
+    document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
   });
   const seek = ms => p.evaluate(t => {
     document.getAnimations().forEach(a => {
+      if (a._css !== 'running') return;
       const d = a.effect && a.effect.getComputedTiming().duration;
       if (typeof d === 'number' && d > 0) { try { a.currentTime = t % (d * 4); } catch (_) {} }
     });

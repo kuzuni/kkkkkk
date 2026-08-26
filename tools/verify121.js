@@ -96,8 +96,42 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
       .map(a => (a.effect.getComputedTiming().progress || 0).toFixed(4)).join('/')));
   ok(new Set(ph).size === ph.length, `카드마다 위상이 다르다 (${ph.join(' | ')})`);
   const tb = st.map(c => c.dur.split('/').map(Number));
-  ok(tb.every(d => d[0] >= 3000 && d[0] <= 5000), `썸네일 큰 점프 주기 3~5s (${st.map(c => c.dur.split('/')[0]).join(',')}ms)`);
-  ok(tb.every(d => d[1] >= 700 && d[1] <= 1000), `썸네일 짧은 들썩 0.7~1.0s (${st.map(c => c.dur.split('/')[1]).join(',')}ms)`);
+  ok(tb.every(d => d.length === 1 && d[0] >= 3000 && d[0] <= 5000),
+    `썸네일 애니 1개 · 큰 점프 주기 3~5s (${st.map(c => c.dur).join(',')}ms) — 들썩과 스쿼시는 같은 타임라인`);
+  ok(tb.every(d => d[0] / 5 >= 700 && d[0] / 5 <= 1000),
+    `짧은 들썩 0.7~1.0s (주기/5 = ${st.map(c => Math.round(+c.dur / 5)).join(',')}ms)`);
+  /* ⚠ 2회차 게이트 ①: **무늬가 원위치하는 «체감 주기»** 가 40~90s 인가.
+     1회차는 이동거리를 타일 폭의 2배로 잡아, 지속시간은 68~88s 인데 눈에 보이는 반복은 34~44s 였다
+     (비평가 A 실측 34.0~36.0s). 이동거리 = 타일 폭이어야 지속시간이 곧 체감 주기다. */
+  const loop = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map(c => {
+    const cs = getComputedStyle(c);
+    const px = v => parseFloat(v);
+    const tile = k => px(cs.getPropertyValue('--bgz' + k).trim().split(/\s+/)[0]);
+    return [1, 2].map(k => +(px(cs.getPropertyValue('--bgw' + k)) / tile(k)).toFixed(3));
+  }));
+  ok(loop.every(r => r.every(v => Math.abs(v - 1) < 0.01)),
+    `이동거리 = 타일 폭 ×1 (체감 주기 = 지속시간) — 실측 배수 ${[...new Set(loop.flat())].join(',')}`);
+  /* ⚠ 2회차 게이트 ②: 썸네일이 **위로는 안 간다**. 72 가 잉크를 슬롯 천장에 붙여 놨기 때문에
+     위로 1px 만 올라가도 머리가 잘린다(`node tools/probe121.js` [1] 이 1회차에 상단 여유 0px·5/7 위상 잘림).
+     기준 자세를 «가장 높은 포즈» 로 두고 아래로만 웅크리므로 translate 는 항상 ≥ 0 이어야 한다. */
+  const tr = await p.evaluate(() => {
+    const em = document.querySelector('#dunList .dnc>.th>em');
+    const a = em.getAnimations()[0];
+    if (!a) return null;
+    const d = a.effect.getComputedTiming().duration, was = a.playState;
+    a.pause();
+    const out = [];
+    for (let i = 0; i <= 20; i++) {
+      a.currentTime = d * i / 20;
+      out.push(+parseFloat(getComputedStyle(em).translate.split(' ')[1] || '0').toFixed(2));
+    }
+    if (was === 'running') a.play();
+    return out;
+  });
+  ok(tr && Math.min(...tr) >= -0.01,
+    `썸네일 translate 최소 ${tr && Math.min(...tr)}px ≥ 0 (위로 안 올라간다 = 머리 잘림 0)`);
+  ok(tr && Math.max(...tr) >= 12 && Math.max(...tr) <= 16,
+    `큰 점프 진폭 ${tr && Math.max(...tr)}px (지시 14px)`);
 
   /* ---------- §3 «실제로 움직인다» — 픽셀 판정 ---------- */
   sec('§3 픽셀 — 배경 0s/3s · 썸네일 0s/0.4s');
