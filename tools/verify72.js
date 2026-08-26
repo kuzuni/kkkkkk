@@ -58,8 +58,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
         /* ⚠ getBoundingClientRect 는 121 들썩의 `scale`(±4%)이 섞여 실제 레이아웃 크기가 아니다.
            offsetWidth/Height 로 잰다(변환 전 값). */
         const cs2 = getComputedStyle(cv);
-        /* 원본 프레임의 «잉크» bbox — contain 이 늘리지 않았는지(종횡 왜곡 0) 재려면 필요하다 */
-        const A = ATLAS[cv.dataset.thk], fr = A && A.f[cv._fr || cv.dataset.thf];
+        /* 원본 프레임의 «잉크» bbox — contain 이 늘리지 않았는지(종횡 왜곡 0) 재려면 필요하다.
+           149 — `TH_TRIM` 이 있으면 **원본은 그 부분 rect** 다. 표는 페이지에서 그대로 읽는다
+           (베끼면 index.html 이 바뀔 때 게이트만 낡는다 — LESSONS 147-③). */
+        const A = ATLAS[cv.dataset.thk], fr0 = A && A.f[cv._fr || cv.dataset.thf];
+        const rd0 = !!cv.closest('.dnc.rd');
+        const trm = (!rd0 && typeof TH_TRIM !== 'undefined')
+          ? TH_TRIM[cv.dataset.thk + '/' + cv.dataset.thi] : null;
+        const fr = (fr0 && trm) ? [fr0[0] + trm[0], fr0[1] + trm[1], trm[2], trm[3]] : fr0;
         let src = null;
         if (A && A.image && fr) {
           const t = document.createElement('canvas');
@@ -73,7 +79,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
             if (td[(y * t.width + x) * 4 + 3] > 8) {
               if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; }
           }
-          src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1 };
+          src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1, trim: !!trm };
         }
         art = { px: [cv.width, cv.height], css: [cv.offsetWidth, cv.offsetHeight],
                 k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi, src,
@@ -100,10 +106,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
      ⚠ 2026-08-26(97): 작업 90 이 던전을 5장 → **6장**(골드·다이아·유물조각 4단)으로 재편하면서
      이 기대치가 5장에 멈춰 있어 게이트가 `EXP[5] undefined` 로 즉사하고 있었다(90 은 verify90 만 돌렸다).
      구성 변경이 게이트를 앞지른 것이라 카드 수만 따라 올린다 — 기하 자체는 relic 3종과 같다. */
-  const EXP = [
-    { w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52 },
-    { w: 330, h: 330, dy: 11 }, { w: 330, h: 330, dy: 11 },
-    { w: 330, h: 330, dy: 11 }, { w: 330, h: 330, dy: 11 }];
+  /* 149(2026-08-26, 저장소 주인 지시 «던전 행 레이아웃은 좀 통일감 있게») —
+     6행이 **같은 액자**를 쓴다. 구 값(311/36 · 296/52)은 레퍼런스가 «흘러넘쳐 잘리는 일러스트» 였을 때의
+     크롭 차이였고, 72 가 그 자리를 «액자» 로 바꾼 뒤로는 좌변이 x643/662/677 로 어긋나 보였다.
+     기대치는 index.html 의 `DUN_TH_W/DUN_TH_T` 를 **읽어서** 만든다 — 상수를 베끼면 게이트만 낡는다. */
+  const TH = await p.evaluate(() => ({ w: DUN_TH_W, t: DUN_TH_T }));
+  const EXP = Array.from({ length: 6 }, () => ({ w: TH.w, h: 341 - TH.t, dy: TH.t }));
+  ok(TH.w === 330 && TH.t === 11, `공용 슬롯 상수 DUN_TH_W/DUN_TH_T = ${TH.w}/${TH.t}`);
+  ok(new Set(EXP.map(e => e.w + 'x' + e.h + '@' + e.dy)).size === 1, '기대 슬롯이 6행 전부 같은 한 벌');
   console.log('[1] 슬롯 기하 — 카드 안쪽 우측 정렬(우단 inset 7), 카드별 폭·상단 인셋');
   ok(d.length === 6, `카드 6장 (실제 ${d.length})`);
   d.forEach((c, i) => {
@@ -157,7 +167,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     const k = Math.min((a.px[0] - PAD * 2) / a.src.fw, (a.px[1] - PAD * 2) / a.src.fh);
     const ew = a.src.w * k, eh = a.src.h * k;
     ok(Math.abs(a.ink.w - ew) <= 2 && Math.abs(a.ink.h - eh) <= 2,
-       `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
+       `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h}`
+       + `${a.src.trim ? '(149 트림)' : ''} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
     /* 짧은 축은 «프레임 rect» 가 액자 여백에 딱 맞는다(잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다) */
     const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
     ok(Math.abs(slack - PAD) <= 1,

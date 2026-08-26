@@ -20,8 +20,11 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 const sec = t => console.log('\n[' + t + ']');
 
-/* 72 실측 슬롯 기하 — 던전 6장(폭, 상단 인셋). 레이드 3장은 RAIDS.ui 값. */
-const DUN_TH = [[311, 36], [296, 52], [330, 11], [330, 11], [330, 11], [330, 11]];
+/* 72 실측 슬롯 기하 — 던전 6장(폭, 상단 인셋). 레이드 3장은 RAIDS.ui 값.
+   149(주인 지시 «던전 행 통일감») — 던전 6장은 **한 벌**(DUN_TH_W/DUN_TH_T)이 됐다. 값은
+   페이지에서 읽어 채운다(상수를 베끼면 index.html 이 바뀔 때 이 게이트만 낡는다 — LESSONS 147-③).
+   ⚠ 레이드·아레나는 97 규칙 그대로라 여기 값은 **안 바뀐다.** */
+let DUN_TH = null;   /* 페이지 로드 후 DUN_TH_W/DUN_TH_T 로 채운다 */
 const RAID_TH = [[311, 36], [296, 52], [330, 11]];
 
 (async () => {
@@ -35,6 +38,7 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   await p.waitForTimeout(1400);
   /* 잠금 카드가 «정지» 인지 보려면 잠긴 칸이 최소 1장 있어야 한다 — 기본 세이브가 그 상태다.
      레이드 3장 중 r30·r120 은 S.best 미달로 잠겨 있다. */
+  DUN_TH = await p.evaluate(() => Array.from({ length: 6 }, () => [DUN_TH_W, DUN_TH_T]));
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(700);
 

@@ -11002,7 +11002,9 @@ function drawHeroTo(canvas, o){
    키가 아틀라스+프레임+배율이라 아틀라스 프레임 수만큼만 늘고 멈춘다. */
 const brightCache = {};
 function brightFrame(A, name, fr, br){
-  const k = (A.img || '') + '|' + name + '|' + br;
+  /* 149 — `fr` 이 «트림된 부분 rect» 일 수 있으므로 캐시 키에 rect 를 넣는다.
+     같은 프레임 이름이라도 트림 유무로 다른 그림이다(안 넣으면 첫 번째 것이 재사용돼 잘린 채 뜬다). */
+  const k = (A.img || '') + '|' + name + '|' + fr.join(',') + '|' + br;
   let c = brightCache[k];
   if(c) return c;
   c = document.createElement('canvas');
@@ -11018,8 +11020,15 @@ function drawSpriteTo(canvas, o){
   const A = ATLAS[o && o.k], g = canvas.getContext('2d');
   g.clearRect(0, 0, canvas.width, canvas.height);
   if(!A || !A.image) return false;
-  const fr = A.f[o.frame];
-  if(!fr) return false;
+  const fr0 = A.f[o.frame];
+  if(!fr0) return false;
+  /* 149(2026-08-26, 저장소 주인 지시 «던전 행 통일감») — `o.trim`([dx,dy,w,h], 프레임 rect 기준)이
+     있으면 **그 부분만** 원본으로 삼는다. 아틀라스 프레임 rect 는 대개 잉크에 딱 맞지만(실측 96~98%)
+     `dragon/fly` 만 96×64 안에서 **위 22행(34%)이 완전 투명**이라, contain 이 «빈 공간까지» 담아
+     그림이 액자 안에서 작아지고 **아래로 31.5px 치우쳐** 보였다(나머지 5행은 치우침 0).
+     트림 rect 는 «아이들 창 전 프레임의 합집합» 이라 창 안에서 상수다 → 프레임 간 흔들림 0(121 유지). */
+  const tr = o.trim;
+  const fr = tr ? [fr0[0] + tr[0], fr0[1] + tr[1], tr[2], tr[3]] : fr0;
   const W = canvas.width, H = canvas.height;
   /* 72(2026-08-26 주인 재지시) — 던전 카드 썸네일은 «흘러넘치는 일러스트» 가 아니라 «액자에 담긴 그림» 이다.
      `o.fit`(사방 여백 px)이 있으면 늘리지 않고 **종횡비를 지켜 담는다(contain)** — 용 96×64(1.47)나
@@ -15997,28 +16006,40 @@ function openQuest(tab){
    구분되게. 틴트는 안 쓴다: 원본 색이 이미 다르고, multiply 를 걸면 액자 면과의 대비만 잃는다.
    기하(--thw/--tht/--scn)는 **한 픽셀도 안 바뀐다**(해금 순간에 칸이 흔들리면 안 된다 — 97 ①). */
 const DUN_UI = {
+  /* 149(2026-08-26, 저장소 주인 지시 «던전 행 레이아웃은 좀 통일감 있게») —
+     썸네일 슬롯 기하를 **6행 공용 상수 DUN_TH_W/DUN_TH_T 하나**로 모았다. 카드별 값(311/36 · 296/52 ·
+     330/11)은 레퍼런스가 «흘러넘쳐 잘리는 일러스트» 였을 때의 **크롭 차이**였는데, 72 가 그 자리를
+     «액자» 로 바꾼 뒤로는 같은 차이가 **틀 어긋남**(좌변 x643/662/677)으로 보인다. 측정표 §3-8 개정.
+     ⚠ 레이드·아레나 카드(.dnc.rd)는 «슬롯을 꽉 채우는» 97 규칙이라 여기 상수를 안 쓴다 — 불변. */
   gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'),
-            thk:'dragon', thf:'f3', thi:'fly',        thbr:2.70, thw:'311px', tht:'36px',
+            thk:'dragon', thf:'f3', thi:'fly',        thbr:2.70,
             rw:['골드 획득 가능'], gm:0  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'),
-            thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00, thw:'296px', tht:'52px',
+            thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00,
             rw:['다이아 획득 가능'], gm:0  },
   /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
   relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
+            thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, gm:15 },
   relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
+            thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
   relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, thw:'330px', tht:'11px', scn:'7px',
+            thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
   relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
+            thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
 };
+/* 149 — 던전 카드 썸네일 «액자» 슬롯 기하. 6행이 **같은 한 벌**을 쓴다.
+   값은 6행 중 4행(유물조각 1~4단)이 이미 쓰던 것이고, 카드(980×350) 안에서
+   우단 7(.dnc>.th 의 CSS 상수) · 하단 9(341 − 350) · 상단 11 · 좌변 x643 으로 떨어진다.
+   캔버스 픽셀 = 액자 안쪽 = 330 − TH_INSET(22) = **308×308** (6행 공통). */
+const DUN_TH_W = 330, DUN_TH_T = 11;
+Object.keys(DUN_UI).forEach(k => { const u = DUN_UI[k];
+  u.thw = DUN_TH_W + 'px'; u.tht = DUN_TH_T + 'px'; });
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
    캔버스가 흐려지므로 verify72 가 둘이 같은지 잰다. */
@@ -16302,6 +16323,16 @@ function raidPaint(tries){
    bird(1px)·robo(2px)는 창을 좁히면 잉크 폭 차가 1~2px 인 «정지처럼 보이는» 3장만 남으므로 전 사이클을 둔다.
 
    창을 안 쓰는 애니(레이드·아레나 카드의 `blue_idle`·`knight/idle` 등)는 `curFrame` 그대로다. */
+/* 149 — 아틀라스 프레임 rect 안의 «잉크 합집합» rect(트림). 던전 카드 썸네일에만 쓴다.
+   `tools/inkjit149.js` 로 아이들 창의 전 프레임 알파 bbox 를 재서 «합집합» 을 적은 것이고,
+   합집합이라 창 안에서 상수 → 프레임 간 흔들림이 0 으로 유지된다(121 6회차 결론 보존).
+   여기 없는 스프라이트는 rect 가 이미 잉크에 96~98% 맞아 있어 트림이 필요 없다 —
+   **필요 없는 것을 넣지 마라.** 트림은 «액자 안에서 그림이 작고 치우친다» 를 고치는 것이지
+   «크게 보이게» 하는 손잡이가 아니다. */
+const TH_TRIM = {
+  /* dragon/fly f2·f3·f4 — rect 96×64, 잉크 x2..95 / y22..63 (세 프레임 y 동일, x 좌단만 2·4·8 로 날갯짓) */
+  'dragon/fly': [2, 22, 94, 42]
+};
 const TH_IDLE = {
   'dragon/fly':      ['f2', 'f3', 'f4'],
   'zombie/walk':     ['walk_006', 'walk_007', 'walk_008'],
@@ -16373,8 +16404,11 @@ function raidDraw(cv, pin){
      레이드·아레나 카드는 97 의 «슬롯을 꽉 채운다» 규칙 그대로다(fit 없음) —
      121 6회차부터 **세로로만** `TH_BOBPAD` 를 비운다(들썩이 들어갈 자리. `drawSpriteTo` 의 padY 주석 참고). */
   const rd = !!cv.closest('.dnc.rd');
+  /* 149 — 트림은 «액자에 담는»(fit) 던전 카드에만 건다. 레이드·아레나는 97 의 «꽉 채우기» 라
+     rect 전체를 슬롯에 늘려 넣고, 거기에 트림을 걸면 97 이 통과시킨 그림이 바뀐다 — 안 건다. */
+  const trim = rd ? null : TH_TRIM[cv.dataset.thk + '/' + cv.dataset.thi];
   return thPlace(cv, drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
-                            fit: rd ? 0 : TH_PAD, padY: rd ? TH_BOBPAD : 0,
+                            fit: rd ? 0 : TH_PAD, padY: rd ? TH_BOBPAD : 0, trim: trim,
                             bright: +cv.dataset.thbr || 1 }));
 }
 let raidIdleT0 = 0;
