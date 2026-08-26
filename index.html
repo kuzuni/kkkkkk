@@ -2711,6 +2711,15 @@
     animation:bgmB var(--bgt2,78s) linear infinite var(--bgd2,0s);animation-play-state:paused}
   @keyframes bgmA{from{transform:translate3d(0,0,0)}   to{transform:translate3d(calc(-1*var(--bgw1,240px)),0,0)}}
   @keyframes bgmB{from{transform:translate3d(0,0,0)}   to{transform:translate3d(var(--bgw2,360px),0,0)}}
+  /* ⚠ 6회차 — 5회차 G 12: 「배경 이동이 4종 전부 **순수 수평**(세로 성분 0.00px)이라 «열기가 오른다»
+     는 테마 이름과 어긋난다」. 레이드/컨텐츠만 세로 성분을 준다(`bgmBv`).
+     세로 이동량 `--bgh2` 는 **타일 높이(`--bgz2` 의 두 번째 값)와 정확히 같아야** 이음매가 안 생긴다 —
+     가로 `--bgw2` 가 타일 폭 1배인 것과 같은 규칙이다(2회차 ⓐ).
+     그리고 상자를 그만큼 **아래로 늘려 둬야** 한다: 상자는 `top:0;height:100%` 라 위로 180px 밀면
+     바닥에 180px 미도색 띠가 생기고, 그게 루프마다 한 프레임에 다시 채워지면 4회차가 `::after` 의
+     `left:-100%` 로 잡았던 **리셋 «팝»** 이 세로축에서 그대로 재발한다. */
+  @keyframes bgmBv{from{transform:translate3d(0,0,0)}
+    to{transform:translate3d(var(--bgw2,360px),calc(-1*var(--bgh2,0px)),0)}}
   @keyframes bgmFlash{0%,86%,100%{opacity:var(--bgo2,.34)}90%{opacity:calc(var(--bgo2,.34) + .34)}94%{opacity:var(--bgo2,.34)}}
   /* 테마 — ①흐름(::before) ②입자·안개(::after). 무늬 «모양» 만 테마별로 다르다.
      ⚠ 2회차 정정 3건 (비평가 A·B 실측이 같은 쪽으로 몰린 것만 반영 — LESSONS 52-④):
@@ -2799,8 +2808,12 @@
     --bgz1:192px 100%;--bgw1:192px;--bgo1:.24;
     --bgm2:radial-gradient(closest-side at 22% 18%,var(--bgc) 0%,transparent 100%),
       radial-gradient(closest-side at 72% 58%,var(--bgc) 0%,transparent 100%);
-    --bgz2:264px 180px;--bgw2:264px;--bgo2:.26}
-  .dnc.bgm-raid>.bgm::after{animation:bgmB var(--bgt2,78s) linear infinite var(--bgd2,0s),
+    --bgz2:264px 180px;--bgw2:264px;--bgh2:180px;--bgo2:.26}
+  /* 6회차 — 열기는 «오른다». 세로는 음수 방향(위)이고 이동량은 타일 높이 1배(180px = `--bgz2` 의 세로).
+     상자를 딱 그만큼 아래로 늘린다 — 늘린 부분은 `.bgm{overflow:hidden}` 이 잘라내므로 화면에 안 보인다.
+     `background-size` 의 세로 피치가 그대로라 타일 위상도 안 밀린다. */
+  .dnc.bgm-raid>.bgm::after{height:calc(100% + var(--bgh2,0px));
+    animation:bgmBv var(--bgt2,78s) linear infinite var(--bgd2,0s),
     bgmFlash var(--bgt3,9s) ease-in-out infinite var(--bgd2,0s);animation-play-state:paused}
   /* 72 — 우측 몬스터 썸네일 슬롯 (2회차: 비평가 O·P 실측 반영).
      레퍼런스 일러스트는 카드마다 bbox 가 다르다 — 카드1 x712~1022 / 카드 상단 기준 rel 36~341,
