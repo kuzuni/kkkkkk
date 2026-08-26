@@ -155,9 +155,12 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
       const pre = shots.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, h: b.hit.length }));
       const r0 = rings.length, p0 = parts.length;
       step(1/60);
-      if (rings.length > r0 && firstHitFrame < 0) {
+      /* 11회차 — 시전 순간 플래시 링(`cast`)이 생기면서 «새로 늘어난 첫 링 = 임팩트» 전제가 깨졌다.
+         임팩트가 아닌 링은 세지 않는다(연출 자체는 유지하고 판정만 정확히 한다) */
+      const addedImp = rings.slice(r0).filter(q => !q.cast).length;
+      if (addedImp > 0 && firstHitFrame < 0) {
         firstHitFrame = i;
-        ringsAtHit = rings.length - r0;
+        ringsAtHit = addedImp;
       }
       window.__fx.keepAlive();
     }
@@ -179,7 +182,8 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     for (let i = 0; i < 120 && !critRings; i++) {
       const r0 = rings.length;
       step(1/60);
-      if (rings.length > r0) critRings = rings.length - r0;
+      /* 11회차 — 위와 같은 이유로 시전 플래시 링은 «치명타 2겹» 계수에서 뺀다 */
+      if (rings.slice(r0).filter(q => !q.cast).length > 0) critRings = rings.slice(r0).filter(q => !q.cast).length;
       critSeen = nums.filter(n => n.crit).length;
       window.__fx.keepAlive();
     }
@@ -197,8 +201,10 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     for (let i = 0; i < 150 && d < 0; i++) {
       const r0 = rings.length;
       step(1/60);
-      if (rings.length > r0) {
-        const r = rings[r0];
+      /* 11회차 — 시전 플래시 링(시전자 위)이 첫 링이 되면 «적 몸통 정렬» 이 46px 로 오판된다 */
+      const addedA = rings.slice(r0).filter(q => !q.cast);
+      if (addedA.length > 0) {
+        const r = addedA[0];
         let best = 1e9;
         for (const e of enemies) {
           const dx = r.x - e.x, dy = r.y - (e.y - e.r);
@@ -226,9 +232,13 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     return { main, dl: Math.round(-dl*100)/100, imp,
              dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
   });
-  ok(lifes.imp >= 0.24 && lifes.main >= 0.34,
-     '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's (80ms 캡처에서 3~5프레임)');
-  ok(lifes.dl >= 0.20, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.20 (한 프레임에 겹쳐 보이지 않는다)');
+  /* 11회차 AM③ — 이 두 하한은 «1프레임 반짝 방지» 가 목적인데, 값이 «화구(0.302s)보다 링이 300ms
+     더 남는다» 를 강제하는 쪽으로 굳어 있었다(총 수명 0.20+0.40 = 0.60s). 목적은 유지하고
+     상한 쪽을 새로 건다: 링은 3프레임 이상 살고(≥0.24s), 화구보다 오래 남지 않는다(총 ≤0.36s). */
+  ok(lifes.imp >= 0.24 && lifes.main >= 0.24 && lifes.main + lifes.dl <= 0.36,
+     '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's · 2단 총 ' +
+     Math.round((lifes.main + lifes.dl)*100)/100 + 's ≤ 0.36 (화구 0.302s 보다 오래 남지 않는다)');
+  ok(lifes.dl >= 0.10, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.10 (80ms 캡처에서 최소 한 프레임 어긋난다)');
   ok(lifes.dbgMin >= 6.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 6.0 («보이지 않는 점» 회귀 방지)');
   /* 5회차 비평 ① — 충격파가 화구 «안» 에서 시작하면 첫 2프레임이 불길에 묻힌다 */
   const wave = await p.evaluate(() => {
@@ -236,9 +246,18 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     const main = rings.filter(r => r.t >= 0).sort((a,b) => b.r1 - a.r1)[0];
     return { r0: Math.round(main.r0), r1: Math.round(main.r1) };
   });
-  ok(wave.r0 >= 85 && wave.r1 >= 150 && wave.r1 <= 210,
-     '본 충격파가 화구 테두리에서 시작해 피해 반경을 조금 넘어선다 — r ' + wave.r0 + ' → ' + wave.r1 +
-     'px (피해 반경 130 기준 0.72 → 1.22배 · 캔버스 폭을 넘지 않는 상한)');
+  /* 11회차 AM② — 상한 210(= 피해 반경의 1.62배)이 «최대 Ø 377 게임px = 뷰포트 폭의 70%» 를 허용했고
+     실제로 화면 오른쪽에서 잘렸다(AM 실측 boom-11). 링은 화구 테두리에서 시작해 **피해 반경까지**만
+     가고, 바깥 2단이 그 1.15~1.26배에서 멈춘다 — 아래 «2단 상한» 이 뷰포트 초과를 직접 막는다 */
+  ok(wave.r0 >= 85 && wave.r1 >= 120 && wave.r1 <= 150,
+     '본 충격파가 화구 테두리에서 시작해 피해 반경까지 간다 — r ' + wave.r0 + ' → ' + wave.r1 +
+     'px (피해 반경 130 기준 0.72 → 1.00배)');
+  const wave2 = await p.evaluate(() => {
+    rings.length = 0; boomFx(0, 0, 130, '#ffb45c', true);
+    return { r1: Math.round(Math.max.apply(null, rings.map(r => r.r1))) };
+  });
+  ok(wave2.r1 * 2 <= 340,
+     '2단 파문 최대 지름 ' + (wave2.r1*2) + ' 게임px ≤ 340 (뷰포트 폭 540 의 63% · 화면 밖 잘림 방지)');
   /* 5회차 비평 ④ — 숫자 세로 계단이 «배열 길이» 면 소멸에 따라 같은 칸이 되감긴다 */
   const stag = await p.evaluate(() => {
     nums.length = 0;
