@@ -54,6 +54,16 @@ const SCREENS = [
     sels: ['#pfw .pf-btn>i', '#pfw .pf-tgl .lb>i'] },
   { k: '23-훈련', ref: 'docs/ref/23-훈련-팝업.jpg', steps: ['.tab[data-t="grow"]'],
     sels: ['.mhead h2'] },
+  /* 11회차 추가 — «손으로 박은 드롭 섀도» 9곳이 스트로크에 묻혀 0px 인 것을 찾았다(§20-2).
+     묻힌 것을 풀기 전에 **그 자리의 ref 가 실제로 그림자를 가졌는지** 먼저 잰다(§19-7 의 단서). */
+  { k: '69-우편', ref: 'docs/ref/69-우편함-팝업.jpg', steps: ['#menub', '#mnw [data-mn="mail"]'],
+    sels: ['.ml-all b', '.ml-b b'] },
+  { k: '35-패스', ref: 'docs/ref/35-패스-스테이지패스.jpg', steps: ['#sideL .ibtn[data-pop="pass"]'],
+    sels: ['.ps-ttl>i', '.ps-ttl'] },
+  { k: '13-재화', ref: 'docs/ref/13-상점-팝업-재화-탭.jpg', steps: ['.tab[data-t="shop"]', '#shopw .stab[data-ss="cur"]'],
+    sels: ['.shp-card .chd>i', '.cn-ti>i'] },
+  { k: '05-무기', ref: 'docs/ref/05-무기-팝업.jpg', steps: ['.tab[data-t="hero"]'],
+    sels: ['.mhead h2', '.stab>i'] },
 ];
 
 /* ── 한 장에서 «흰 코어 bbox + 위/아래 근흑 프로파일» ─────────────────────────────── */
