@@ -264,6 +264,49 @@ function pwLaunch(){
   chk(t2b.worstLag <= 0.20,
       '숫자가 도착보다 최대 ' + Math.round(t2b.worstLag*100) + '%p 뒤처진다 (≤20%p — 4회차는 87.5%p 였다)');
 
+  console.log('[2c] 8회차 — 모달 딤 위에서 알약 부풀기가 «보이는가» · 복도가 직선인가');
+  const t2c = await page.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.dia = 300; S.gold = 900; fxHold.dia = 0; fxHold.gold = 0; await sleep(1700);
+    S.quest.kill.base = -1e9; openQuest('rep'); await sleep(400);
+    const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
+    if(!b) return { err:'보상 받기 버튼 없음' };
+    b.click();
+    const nf = () => new Promise(r => requestAnimationFrame(() => r()));
+    let lit = 0, litMax = 1, samp = 0, corr = [];
+    const t0 = Date.now();
+    while(Date.now() - t0 < 2200){
+      const L = document.querySelectorAll('#fxl .fx-lit');
+      if(L.length){
+        lit++;
+        for(const p of L){
+          const m = String(getComputedStyle(p).transform).match(/matrix\(([\d.\-]+)/);
+          litMax = Math.max(litMax, m ? +m[1] : 1);
+        }
+      }
+      samp++;
+      /* 복도 직진성 — 상승 중(y 500~950)인 아이콘의 x 를 재화별로 모은다 */
+      for(const f of fxFlies){
+        if(!f.ui || f.ox == null || !f.el.isConnected) continue;
+        const r = f.el.getBoundingClientRect(), cy = r.top + r.height/2;
+        if(cy > 500 && cy < 950) corr.push([f.cur, Math.round(r.left + r.width/2)]);
+      }
+      await nf();
+    }
+    const g = corr.filter(c => c[0] === 'gold').map(c => c[1]);
+    const d = corr.filter(c => c[0] === 'dia').map(c => c[1]);
+    const sp = a => a.length ? Math.max(...a) - Math.min(...a) : -1;
+    return { lit, samp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
+             gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1 };
+  });
+  chk(!t2c.err, '모달 보상 수령 트리거' + (t2c.err ? ' — ' + t2c.err : ''));
+  chk(t2c.lit > 10, '딤 위 알약 복제판이 ' + t2c.lit + '프레임 떠 있다 (모달에서는 원본이 딤 아래라 안 보인다)');
+  chk(t2c.litMax >= 1.06, '복제판이 실제로 부푼다 ×' + t2c.litMax + ' (원본과 같은 배율)');
+  chk(t2c.gSp >= 0 && t2c.gSp <= 14 && t2c.dSp >= 0 && t2c.dSp <= 14,
+      '복도가 직선이다 — 상승 구간 x 흔들림 골드 ' + t2c.gSp + 'px · 다이아 ' + t2c.dSp + 'px (≤14px)');
+  chk(t2c.gMin >= 970 && t2c.dMin >= 1010,
+      '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)');
+
   console.log('[3] 전투 발(킬 골드)은 변화 0 — 개수 3~6 · #fxlc · 0.8초 안');
   const t3 = await page.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
