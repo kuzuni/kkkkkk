@@ -1597,13 +1597,22 @@
      (그림자는 ref 8 vs 우리 10 으로 Δ2 — 둘을 동시에 맞출 수 없어 위치 쪽을 택했다). */
   /* 104 ② — 공용 베벨 버튼 `.ifbtn`. 화면이 주는 것은 위치·크기·모서리·테두리 두께뿐이다. */
   .qs-b{left:591px;top:31px;width:195px;height:118px;--gb-bw:6px;border-radius:40px}
-  .qs-b b{font-size:30px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;   /* 126 ② — 7px = r .233 */
-    transform:scaleX(.98);text-shadow:0 3px 0 #000}
+  /* 126 ②-2 (5회차) — 흰 코어가 ref 대비 **폭 −16.3% · 높이 −22.6%** 였다(우리 103×24 / ref 123×31).
+     비평가 K 가 다른 임계(230)로 독립 측정한 값도 −16.4% / −17.2% 로 같은 자리를 가리킨다.
+     **원인은 외곽선이 아니라 font-size 다** — 외곽선을 0 으로 지워도 폭이 105 까지밖에 안 돌아온다(+1.7%p).
+     측정표가 fs 를 «잉크/0.93» 으로 역산해 뒀는데 0.93 은 교체 전 서체 값이고 Jua 는 0.80 이다.
+     높이로 fs 를 풀고(30 × 30/24 = 37.5) 폭은 sx 로 맞춘다(.98 × 122.5/128.75). */
+  .qs-b b{font-size:37.5px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
+    transform:scaleX(.932);text-shadow:0 3px 0 #000}
   /* 모두 받기 272×130 (ref 404,1647 → 293,1084) — 검정 7, 같은 베벨 */
   /* 하단 앵커 — 기준 프레임(본문 1383)에서 bottom169 = top1084 로 실측과 동일하다 */
   .qs-all{left:295px;bottom:166px;width:272px;height:130px;--gb-bw:7px;border-radius:43px}
-  /* 코어 폭이 ref 156 → 148 (−5.1%) 이었다. scaleX 로만 편다(높이는 36 vs 35 로 맞다). */
-  .qs-all b{font-size:39px;-webkit-text-stroke:8px #000;transform:scaleX(.99);text-shadow:0 4px 0 #000}
+  /* 126 ②-2 (5회차) — 위 «높이는 36 vs 35 로 맞다» 는 **ref 쪽 측정이 틀린 값이었다.**
+     레퍼런스를 다시 재니 「두」의 모음 ㅜ 세로획이 y≈1730 까지 내려가는데 옛 bbox 가 그 하단을 잘랐다
+     → ref 흰 잉크는 156×36 이 아니라 **160×43** 이다(측정표 §6 정오표). 우리는 133×36 으로 −16.9% / −16.3%.
+     비평가 K 의 독립 측정(임계 230)도 −16.5% / −18.4% 로 일치한다.
+     높이로 fs 를 풀면 39 × 43/36 = 46.6 이고, 그 크기에서 폭이 168 로 +5% 넘쳐 sx 로 되돌린다(실측 곡선을 훑어 .973 — 8px «고정» 스트로크가 가로 압축에 비선형으로 반응해 한 번에 안 맞는다). */
+  .qs-all b{font-size:46.6px;-webkit-text-stroke:8px #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
   /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
   .qs-tg{position:absolute;left:42px;bottom:43px;width:797px;height:99px;box-sizing:border-box;
     border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
@@ -1614,9 +1623,14 @@
     border:3px solid #483829;border-radius:49px;background:#473A2A;box-shadow:inset 0 0 0 5px #645038}
   /* 라벨 — 외곽선 두께는 ref 와 같은데(양쪽 4px) **흰/청 코어만 5~6% 작았다**(일일 69×36 → 65×34 ·
      반복 69×38 → 67×36). 20 교훈 3 대로 코어와 스트로크를 따로 보고, 코어만 키운다: fs 39 → 41. */
+  /* 126 ②-2 (5회차) — 위 «fs 39 → 41» 은 **마스크가 섞인 대조**였다: 그때의 «65×34» 는 외곽선 포함
+     bbox 이고 «ref 69×36» 은 흰 채움이라 규격이 서로 다르다. 같은 마스크끼리 다시 재면
+     흰 채움 우리 58×33 vs ref **68×36**(−14.7% / −8.3%) · 외곽선 포함 우리 66 vs ref 78(−15.4%) 로
+     **어느 규격으로 보든 −15%** 다. 높이로 fs 를 풀고(41 × 36/33) 폭은 sx 로 맞춘다.
+     ⚠ 잉크를 잴 때 «흰 채움» 과 «외곽선 포함» 을 섞지 마라 — 외곽선 두께만큼 통째로 어긋난다. */
   .qs-tg b{position:absolute;top:-5px;height:99px;width:200px;display:flex;align-items:center;
-    justify-content:center;cursor:pointer;font-size:41px;color:#A9A8AD;-webkit-text-stroke:7px #000}
-  .qs-tg b i{transform:scaleX(.93)}
+    justify-content:center;cursor:pointer;font-size:44.7px;color:#A9A8AD;-webkit-text-stroke:7px #000}
+  .qs-tg b i{transform:scaleX(1.001)}
   /* ref 는 **선택된 칸의 라벨이 6px 위로 들려** 있다(`반복` 코어 상단 1829 / `일일` 1835).
      비평가 2명이 독립적으로 «반복이 4px 아래» 로 잡았다. 상태 클래스로만 올린다. */
   .qs-tg b.on i{position:relative;top:-4px}
