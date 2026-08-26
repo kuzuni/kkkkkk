@@ -9115,7 +9115,11 @@
   /* ---- 행 = 내 순위 바와 «같은 컴포넌트, 다른 폭» (측정표 주의점 2) ----
      행 950×149 r15, 립 5 #F7EBD9, fill #F1E0CC, pitch 165(gap 16).
      행 안 좌표는 전부 «행 로컬 = ref x − 65» 다. */
-  .rk-row{position:relative;box-sizing:border-box;width:950px;height:149px;margin-bottom:16px;
+  /* 20회차 — 카드 높이·행간이 ref 와 **2px 씩** 어긋나 있었다(비평가 Z ⑦. 피치 165 는 양쪽 동일).
+     `col 630`·`col 700` 행간 갭 실측: ref **1061..1074 · 1226..1239 · 1391..1403(=14px)** vs
+     우리 **976..991 · 1141..1156 · 1306..1321(=16px)** → 카드 높이 ref **151** · 우리 149.
+     V(«ref 15 vs 16») · X(«15/16») 도 같은 방향을 읽었다. 피치를 유지해야 하므로 둘을 함께 바꾼다. */
+  .rk-row{position:relative;box-sizing:border-box;width:950px;height:151px;margin-bottom:14px;
     border-radius:15px;background:#F1E0CC;box-shadow:inset 0 0 0 5px #F7EBD9}
   #rkw .rk-row>*{position:absolute}
   /* 좌측 탠 칸 148×138 @ local(6,5) r13 */
@@ -9208,7 +9212,11 @@
   #rkw .rk-mn{left:0;top:63px;width:160px;height:48px;line-height:48px;display:block;
     text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:5.5px #000;paint-order:stroke fill;
     transform:translateY(2px)}
-  .rk-me .rk-av{left:206px;top:21px;width:122px;height:118px}
+  /* 20회차 — **비평가 X ⑩ 과 Z ⑧ 이 독립으로 같은 값**을 짚었다(ref 122×123 vs 우리 122×118).
+     자체 실측 `col 240`: ref 검정 외곽 **1926..2047 = h122**(위 테 3px · 아래 테 6px) vs
+     우리 1926..2043 = h118. 폭·좌변(206..327)·상단(1926)은 이미 일치하므로 **높이만** 118 → 122.
+     (리스트 행 액자는 ref 112×112 vs 우리 111×113 이라 손대지 않는다 — X·Z 둘 다 «일치» 확인) */
+  .rk-me .rk-av{left:206px;top:21px;width:122px;height:122px}
   /* 12회차 — height 44 → 48 (비평가 M · P 공통, 열스캔 확증):
      `col 480` ref 칭호판 검정 테두리 2028..2075 = **48px**(프레임 1944..1991) vs 우리 1943..1986 = 44px.
      리스트 행의 `.rk-tt`(45px)와 달리 내 순위 바만 더 두껍다 — top:38 을 고정한 채 아래로 4px 자란다. */
