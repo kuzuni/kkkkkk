@@ -270,13 +270,23 @@ async function fresh(browser, w = 1080, h = 2280) {
     data.every((d) => d.qty.length > 0 && !/NaN|undefined/.test(d.qty)) ? ok('수량 표기 정상') : fail('수량에 NaN/undefined');
     /* 대표 썸네일 = 값이 가장 큰 보상인지.
        ⚠ 배지는 `fmtShort()` 표기다(«3K»). `fmt()` 의 «3.00K» 는 5자라 프레임 림과 충돌해서 바꿨다. */
-    const topOk = await page.evaluate(() => MAILS.every((m, i) => {
-      const rw = mailRw(m).slice().sort((a, b) => b.v - a.v)[0];
-      const cell = document.querySelectorAll('.ml-r')[i];
-      const q = cell.querySelector('.ml-i>i').textContent.trim();
-      const ic = cell.querySelector('.ml-i').firstChild.textContent.trim();
-      return q === fmtShort(rw.v) && ic === rw.ic;
-    }));
+    /* 125(화폐 아이콘 통일) 뒤로 `rw.ic` 는 이모지 «글자» 가 아니라 `<img class="cic" data-cur-ic="…">`
+       **마크업 문자열**이다. 그래서 `firstChild.textContent` 는 항상 '' 이고 이 항목이 영구 FAIL 로
+       굳어 있었다(수량·아이콘은 실제로 맞게 그려진다). 텍스트가 아니라 «무엇을 그렸나» 로 비교한다. */
+    const topOk = await page.evaluate(() => {
+      const key = (node) => {
+        if (!node) return '';
+        if (node.nodeType === 1) return node.dataset.curIc || node.getAttribute('src') || node.outerHTML;
+        return node.textContent.trim();
+      };
+      const want = (html) => { const d = document.createElement('div'); d.innerHTML = html; return key(d.firstChild); };
+      return MAILS.every((m, i) => {
+        const rw = mailRw(m).slice().sort((a, b) => b.v - a.v)[0];
+        const cell = document.querySelectorAll('.ml-r')[i];
+        const q = cell.querySelector('.ml-i>i').textContent.trim();
+        return q === fmtShort(rw.v) && key(cell.querySelector('.ml-i').firstChild) === want(rw.ic);
+      });
+    });
     topOk ? ok('대표 썸네일 = 최대 보상') : fail('대표 썸네일이 최대 보상이 아니다');
     data.every((d) => !d.dis) ? ok('미수령 상태에서 [받기] 전부 활성') : fail('미수령인데 비활성인 행이 있다');
 

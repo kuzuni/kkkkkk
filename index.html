@@ -13617,10 +13617,24 @@ function mailRowDone(row, btn){
     const t = btn.querySelector('b') || btn;
     t.textContent = '완료';
   }
-  if(!row) return;
-  row.classList.add('done');
-  const d = row.querySelector('.ml-d i');
-  if(d) d.textContent = '수령 완료';
+  if(row){
+    row.classList.add('done');
+    const d = row.querySelector('.ml-d i');
+    if(d) d.textContent = '수령 완료';
+  }
+  mailBtnsSync();
+}
+/* 92 6회차 — 바닥 두 버튼의 활성도를 «지금 목록 DOM» 에서 다시 잰다.
+   129 가 수령 통재렌더를 `fxRenderLater`(= FXHOLD) 뒤로 미뤘는데 바닥 버튼은 같이 안 고쳤다.
+   93 이 FXHOLD 를 620 → 1330 으로 늘리면서 그 틈이 실사용에 드러났다 — 한 통 받은 직후
+   **1.33초 동안** [읽음 전체 삭제] 가 비활성이라 눌러도 아무 일도 안 일어난다(FNCHK92 3항 FAIL).
+   S 가 아니라 DOM 을 재는 이유: `claimMail()` 은 `fxThen` 뒤에 돌아 이 시점의 `S.mail` 은 아직 옛 값이다.
+   행 상태는 바로 위에서 in-place 로 고쳐 놨으므로 DOM 이 «지금» 의 진실이다. */
+function mailBtnsSync(){
+  const rows = [...document.querySelectorAll('#mbox .ml-r')];
+  const dl = $('mailDel'), bt = $('mailBtn');
+  if(dl) dl.disabled = !rows.some(r => r.classList.contains('done'));
+  if(bt) bt.disabled = !rows.some(r => !r.classList.contains('done'));
 }
 function openMail(){
   const left = mailLeft(), list = mailList(), del = mailDelable();

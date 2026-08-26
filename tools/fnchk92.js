@@ -2,14 +2,16 @@
    버튼을 실제로 눌러 «무엇이 바뀌는지» 를 헤드리스로 재고, 그대로 마크다운 표로 찍는다.
    실행: node tools/fnchk92.js
    확인 축: 화면(목록·버튼 상태) · 세이브(S + localStorage) · 재화(HUD 반영). */
-const { chromium } = require('playwright');
+/* 127 — 클라우드 러너에는 번들 브라우저가 없다. 게이트 공용 부트스트랩을 쓴다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const rows = [];
 const add = (btn, pre, act, exp, got, ok) => rows.push({ btn, pre, act, exp, got, ok });
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
