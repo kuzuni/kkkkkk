@@ -35,6 +35,46 @@ const ne = (n, got, bad) => R.push({ n, got: String(got), want: '≠ ' + bad, pa
 const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got === true });
 const near = (n, got, want, tol) => R.push({ n, got: String(got), want: want + '±' + tol, pass: Math.abs(got - want) <= tol });
 
+/* ── 136 — «기하 불변» 을 읽기 전에 기하가 멈추기를 기다린다 ───────────────────
+   증상: `10 기하 불변` 3항목이 실행마다 뜨고 지는 FAIL(4회 중 3회, 77/80)이었다.
+     FAIL 526,425,208,127 (want 525.7,425.7,212.2,129.5)   ← 정수 쪽이 «부족», 소수 쪽이 «충분»
+   PROGRESS 136 은 원인을 «122 의 링 펄스(`.cbtn.b1:not(.lack)`)가 충분 쪽에만 걸려서» 로 적었지만
+   그 펄스는 `box-shadow` 만 움직이므로 `getBoundingClientRect` 를 1px 도 못 바꾼다. 실제 원인은
+   **60 `jzStagger` 의 카드 등장 연출**이다 — `.jz-st{animation:jzSt .2s}` 의 키프레임이
+   `scale:.94 → 1.02 → 1` 이라 카드가 도는 동안 그 안의 버튼 rect 가 통째로 배율을 먹는다.
+   측정한 세 버튼이 «같은 원점(app 기준 x540·y385 = 첫 카드 중심)» 을 두고 같은 배율로 어긋난 것이
+   증거고, 진단에서 `DIV.shp-card jz-st | jzSt@249/running` 을 직접 잡았다.
+   왜 «충분» 쪽만 흔들렸나: 충분 패스는 `openShopPage()` 가 팝업을 **새로 열어** 스태거가 돌지만,
+   부족 패스는 이미 열린 팝업이라 스태거가 다시 안 돈다. `.lack` 과는 무관하다 —
+   두 패스의 «연출 위상» 이 달랐을 뿐이다.
+   따라서 이건 제품 결함이 아니라 **게이트가 재는 시점의 결함**이고, 고칠 자리는 여기다
+   (LESSONS 120: «애니메이션 붙는 화면은 고정 대기 대신 기하 정지 폴링»).
+   고정 대기(400ms)를 늘리는 처방은 쓰지 않는다 — 스태거 종료는 60+240+i·25ms 지만 실측 시작
+   시각이 부하에 따라 150ms 넘게 밀려서, 어떤 상수를 골라도 언젠가 다시 깨진다.
+   무한 루프 연출(jz122Ring·jz122Breathe 등)은 rect 를 안 움직이므로 폴링이 그대로 수렴한다.
+   만약 앞으로 rect 를 움직이는 무한 연출이 붙으면 이 폴링이 `수렴 실패` 로 **드러내 준다**. */
+const settle = (p, sels) => p.evaluate(async ss => {
+  const rd = () => ss.map(s => {
+    const e = document.querySelector(s);
+    if (!e) return s + ':없음';
+    const b = e.getBoundingClientRect();
+    return [b.left, b.top, b.width, b.height].map(v => v.toFixed(3)).join(',');
+  }).join('|');
+  const raf = () => new Promise(r => requestAnimationFrame(() => r()));
+  const t0 = performance.now();
+  let prev = rd(), same = 0;
+  while (performance.now() - t0 < 4000) {
+    await raf();
+    const cur = rd();
+    if (cur === prev) { if (++same >= 4) return { ok: true, ms: Math.round(performance.now() - t0) }; }
+    else { same = 0; prev = cur; }
+  }
+  return { ok: false, ms: Math.round(performance.now() - t0), last: prev };
+}, sels);
+
+const B12 = ['#sumBF', '#sumB10', '#sumB30'];
+const B10 = ['#shopList .shp-card .cbtn.b1', '#shopList .shp-card .cbtn.b2', '#shopList .shp-card .cbtn.b3'];
+
 /* 페이지에서 실행되는 수집기 — 12 팝업 */
 const probe12 = () => {
   const st = (sel, prop) => getComputedStyle(document.querySelector(sel))[prop];
@@ -102,6 +142,7 @@ const probe10 = () => {
   /* 충분 — 다이아 99,999 · 무료 1회 남음 */
   const cost = await open12(99999, 1);
   await p.waitForTimeout(500);
+  const s12r = await settle(p, B12);                 /* 136 */
   const rich12 = await p.evaluate(probe12);
   eq('12 충분 · 무료 lack 없음', rich12.bf.lack, false);
   eq('12 충분 · 10회 lack 없음', rich12.b10.lack, false);
@@ -126,6 +167,7 @@ const probe10 = () => {
   await p.evaluate(() => closeSummonResult());
   await open12(0, 0);
   await p.waitForTimeout(500);
+  const s12l = await settle(p, B12);                 /* 136 */
   const lack12 = await p.evaluate(probe12);
   eq('12 부족 · 무료 lack', lack12.bf.lack, true);
   eq('12 부족 · 10회 lack', lack12.b10.lack, true);
@@ -140,6 +182,7 @@ const probe10 = () => {
   yes('12 부족 · 면 은색(#989898) — 레퍼런스 그대로', /152, 152, 152/.test(lack12.b10.face));
   yes('12 부족 · 면 림 #D3D3D3 — 레퍼런스 그대로', /211, 211, 211/.test(lack12.b10.face));
   eq('12 부족 · 라벨 #DFDFDF — 레퍼런스 그대로', lack12.b10.lab, 'rgb(223, 223, 223)');
+  yes('12 기하 정지 폴링 수렴(충분 ' + s12r.ms + 'ms · 부족 ' + s12l.ms + 'ms)', s12r.ok && s12l.ok);   /* 136 */
   eq('12 기하 불변 · 무료 버튼', lack12.bf.r, rich12.bf.r);
   eq('12 기하 불변 · 10회 버튼', lack12.b10.r, rich12.b10.r);
   eq('12 기하 불변 · 30회 버튼', lack12.b30.r, rich12.b30.r);
@@ -168,6 +211,7 @@ const probe10 = () => {
 
   await open10(99999, 2);
   await p.waitForTimeout(400);
+  const s10r = await settle(p, B10);                 /* 136 — 여기서 jzSt 스태거가 아직 돌고 있었다 */
   const rich10 = await p.evaluate(probe10);
   eq('10 충분 · 10회 rich', rich10.b2.rich, true);
   eq('10 충분 · 30회 rich', rich10.b3.rich, true);
@@ -185,6 +229,7 @@ const probe10 = () => {
 
   await open10(0, 0);
   await p.waitForTimeout(400);
+  const s10l = await settle(p, B10);                 /* 136 */
   const lack10 = await p.evaluate(probe10);
   eq('10 부족 · 10회 lack', lack10.b2.lack, true);
   eq('10 부족 · 30회 lack', lack10.b3.lack, true);
@@ -197,10 +242,25 @@ const probe10 = () => {
   eq('10 무료 소진 · 무료 lack', lack10.b1.lack, true);
   eq('10 무료 소진 · 무료 면 회색', lack10.b1.f1, '#A8A8A8');
   eq('10 무료 소진 · 남은 횟수 빨강', lack10.b1.txt, RED10);
+  yes('10 기하 정지 폴링 수렴(충분 ' + s10r.ms + 'ms · 부족 ' + s10l.ms + 'ms)', s10r.ok && s10l.ok);   /* 136 */
   eq('10 기하 불변 · 10회 버튼', lack10.b2.r, rich10.b2.r);
   eq('10 기하 불변 · 30회 버튼', lack10.b3.r, rich10.b3.r);
   eq('10 기하 불변 · 무료 버튼', lack10.b1.r, rich10.b1.r);
   await p.locator('#app').screenshot({ path: path.resolve(__dirname, '../docs/review/102-10-lack.png') });
+
+  /* ── 136 음성 테스트 — 폴링이 «값을 굳혀» 진짜 어긋남까지 삼키지 않는지 ──
+     기하 정지 폴링을 넣으면 «항상 통과하는 게이트» 가 될 위험이 있다. 일부러 3px 틀어 놓고
+     같은 경로가 그것을 잡아내는지, 되돌리면 원래 값으로 돌아오는지 두 방향 모두 확인한다. */
+  await p.evaluate(() => { document.querySelector('#shopList .shp-card .cbtn.b2').style.marginLeft = '3px'; });
+  await settle(p, B10);
+  const bent10 = await p.evaluate(probe10);
+  await p.evaluate(() => { document.querySelector('#shopList .shp-card .cbtn.b2').style.marginLeft = ''; });
+  await settle(p, B10);
+  const back10 = await p.evaluate(probe10);
+  ne('136 음성 · 3px 어긋남을 잡는다', bent10.b2.r, lack10.b2.r);
+  near('136 음성 · 어긋남이 정확히 3px(반올림 아님)',
+       (+bent10.b2.r.split(',')[0]) - (+lack10.b2.r.split(',')[0]), 3, 0.01);
+  eq('136 음성 · 되돌리면 원래 기하', back10.b2.r, lack10.b2.r);
 
   /* 경계 — 다이아 1,000 = 레퍼런스 10 의 상태. 10회 노랑 / 30회 회색이 같은 프레임에 나와야 한다 */
   await open10(1000, 2);
