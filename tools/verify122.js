@@ -870,6 +870,90 @@ async function ampCheck(p, hosts) {
     ok((await floatPh()).out.filter(v => v.d < v.lim).length === 0, '음성항 제거 후 원상 복귀');
   }
 
+  /* ── §24 광택이 «글자 잉크» 를 깎지 않는가 (18회차 신설) ────────────────
+     ⚑ 18회차 비평가 **둘이 독립으로** 같은 결함을 화소로 잡았고, 15회차 이후 처음으로
+     «bbox 불변식은 통과인데 글자가 상한다» 는 자리를 짚었다:
+       AM[2] 「«보석» 제목의 잉크(luma<30, n=1082)를 **f1 에 고정한 마스크**로 9프레임 추적 →
+             평균 0.94 → **19.29**, 최대 **+107.0**. 같은 영역 흰 속살(luma>235)은 254.77 → 254.76
+             **무변화**」 = 광택이 밝은 데는 안 건드리고 **글자를 세우는 어두운 획만** 들어올린다.
+       AN[11] 「같은 자리 잉크 화소수 1138 → **918 (−19.3%)** · 소환 «무기 상자» 3539 → **2604 (−26.4%)**」
+     원인은 알파도 블렌드도 아니라 **쌓임 순서**였다 — 소환은 흰 심(`.chd::before`)이 z:2 인데
+     제목이 z:1, 재화는 글자가 z:2 인데 광택을 얹은 `.fr` 이 z:4. 둘 다 광택이 글자 «위» 다.
+     기존 게이트가 이걸 못 본 이유도 분명하다: §12 계열은 **bbox 만** 본다(위치는 안 변한다).
+     15회차 교훈 1 «자를 안 댄 곳은 자동으로 무결점» 이 **네 번째로** 재발한 자리다.
+
+     재는 법: AM 의 자를 그대로 쓴다 — 한 위상에서 잉크 마스크(luma<40)를 **고정**하고,
+     같은 마스크로 한 주기를 훑어 잉크 평균의 **상승분**을 본다. 획이 광택에 씻기면 오른다.
+     문턱은 3.0 루마 — 18회차 이전 값이 소환 +23.5 · 재화 +18.4 였으니 한참 아래다. */
+  console.log('§24 광택이 제목 글자 잉크를 깎지 않는가 (18회차 신설 — 2인 화소 일치)');
+  const INK_RISE_HI = 3.0;
+  async function inkRise(p, sel, stops) {
+    const box = await p.evaluate(s => {
+      const e = document.querySelector(s); if (!e) return null;
+      const r = e.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4 || r.top < 0 || r.bottom > innerHeight) return null;
+      return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
+    }, sel);
+    if (!box) return null;
+    let mask = null, base = 0, peak = -1e9, peakAt = 0;
+    for (const t of stops) {
+      const b64 = (await shotAt(p, t, box)).toString('base64');
+      const m = await p.evaluate(async ([src, mk]) => {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data, n = c.width * c.height;
+        const L = new Float32Array(n);
+        for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
+        if (!mk) { const idx = []; for (let i = 0; i < n; i++) if (L[i] < 40) idx.push(i); return { idx }; }
+        let s = 0; for (const i of mk) s += L[i];
+        return { mean: mk.length ? s / mk.length : 0 };
+      }, [b64, mask]);
+      if (!mask) { mask = m.idx; if (mask.length < 120) return { few: mask.length }; continue; }
+      if (base === 0) base = m.mean;
+      if (m.mean > peak) { peak = m.mean; peakAt = t; }
+    }
+    /* 첫 표본이 기준면이다 — 마스크를 뜬 그 위상의 잉크 평균 */
+    return { n: mask.length, rise: peak - base, peakAt };
+  }
+  {
+    const SW2 = 4800, S2 = [0, 480, 960, 1440, 1920, 2400, 2880, 3360, 3840, 4320];
+    const coinInk = await inkRise(p, '#shopList .cn-cd>.hd>i', S2.map(v => v + 40));
+    if (coinInk && coinInk.n) {
+      console.log('   재화 카드 제목  잉크 화소 ' + coinInk.n + '개 · 한 주기 최대 상승 '
+        + coinInk.rise.toFixed(2) + ' 루마 (t=' + coinInk.peakAt + 'ms)');
+      ok(coinInk.rise < INK_RISE_HI, '재화 카드 제목 잉크 상승 ' + coinInk.rise.toFixed(2)
+        + ' < ' + INK_RISE_HI + ' (18회차 이전 AM 실측 +18.4)');
+    } else ok(false, '재화 카드 제목 잉크 마스크를 못 떴다' + (coinInk ? ' (화소 ' + coinInk.few + '개)' : ''));
+
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(200);
+    const sumInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    if (sumInk && sumInk.n) {
+      console.log('   소환 헤더 제목  잉크 화소 ' + sumInk.n + '개 · 한 주기 최대 상승 '
+        + sumInk.rise.toFixed(2) + ' 루마 (t=' + sumInk.peakAt + 'ms)');
+      ok(sumInk.rise < INK_RISE_HI, '소환 헤더 제목 잉크 상승 ' + sumInk.rise.toFixed(2)
+        + ' < ' + INK_RISE_HI + ' (18회차 이전 AM 실측 +23.5 · 최대 +72.3)');
+    } else ok(false, '소환 헤더 제목 잉크 마스크를 못 떴다' + (sumInk ? ' (화소 ' + sumInk.few + '개)' : ''));
+
+    /* 음성항 — 글자를 다시 광택 «아래» 로 내리면 이 자가 잡아야 한다(15회차 교훈 2) */
+    await p.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v122neg24';
+      s.textContent = '#shopList>.shp-card>.chd>i{z-index:1 !important}';
+      document.head.appendChild(s);
+    });
+    const negInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    await p.evaluate(() => { const s = document.getElementById('v122neg24'); if (s) s.remove(); });
+    ok(!!(negInk && negInk.n && negInk.rise >= INK_RISE_HI),
+      '음성항 — 제목을 광택 아래(z:1)로 되돌리면 이 자가 잡는다 (상승 '
+      + (negInk && negInk.n ? negInk.rise.toFixed(2) : '?') + ' >= ' + INK_RISE_HI + ')');
+    const back = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    ok(!!(back && back.n && back.rise < INK_RISE_HI), '음성항 제거 후 원상 복귀');
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(200);
+  }
+
   const CSEL = ['.cn-cd>.hd>i', '.cn-cd>.bt', '.cn-cd>.bt>u', '.cn-cd>.qt', '.cn-ml>.ex', '.cn-ml>.ex>i'];
   const crects = () => p.evaluate(sel => sel.flatMap(s => [...document.querySelectorAll('#shopList ' + s)]
     .map(e => { const r = e.getBoundingClientRect(); return [s, r.x, r.y, r.width, r.height].join(','); })), CSEL);
@@ -1138,8 +1222,26 @@ async function ampCheck(p, hosts) {
      → 이웃 집합을 **±3 까지** 넓힌다. 그러면 stride 1/3 은 여기서 FAIL 하고(0%),
        stride **1/4** 가 ±1 25% · ±2 50% · ±3 25% 로 셋을 동시에 넘긴다.
        1/4 는 칸1↔칸5(±4)가 동위상이 되지만 **4칸 떨어진 쌍은 한 화면에 같이 안 보인다** —
-       5칸을 원 위에 고르게 놓는 1/5 은 ±1 이 20% 로 문턱 아래라 못 쓴다. 이 격자의 최선이다. */
-  console.log('§22 소환 1열 리스트 — 위아래 ±1·±2·±3 칸 위상 분리');
+       5칸을 원 위에 고르게 놓는 1/5 은 ±1 이 20% 로 문턱 아래라 못 쓴다. 이 격자의 최선이다.
+
+     ⚑ 18회차 — 위 문단의 «4칸 떨어진 쌍은 한 화면에 같이 안 보인다» 가 **틀렸다.**
+     73 강제 상자(`gmBan()`)가 끼면 리스트는 실제로 **5장**이고, 17회차 캡처가 그 다섯 번째를
+     찍어 왔다. 18회차 비평가 둘이 독립으로 같은 것을 짚었다:
+       AM[7] «0 / 0.248T / 0.500T / 0.760T … stride 1/4 이므로 5번 칸이 화면에 들어오는 순간
+              1번 칸과 위상차 **0%**»
+       AN[14] «stride T/4 는 칸 5개가 되는 순간 1번–5번이 위상차 0% 가 된다»
+     그리고 «±3 까지만 본다» 는 이 게이트의 이웃 집합이 **정확히 그 쌍을 또 비껴갔다** —
+     §14 의 대각 구멍 · §22 자신의 신설 이유와 **세 번째로 같은 계열**의 사고다.
+
+     ⚠ 산술: 5점을 원 위에 놓고 **모든 쌍**을 ≥25% 로 만드는 배치는 **존재하지 않는다**
+       (균등 배치의 최소 쌍거리가 1/5 = 20% 이고, 그것이 가능한 최댓값이다).
+       그러므로 «전 쌍 ≥25%» 라는 옛 문턱 자체가 5칸에서는 만족 불가능한 요구였다.
+       → 규약을 둘로 가른다(§0-1 도 같이 고쳤다):
+           ⓐ **맞닿은 쌍(±1) ≥ 33%** — 한 화면에서 실제로 나란히 보이는 것은 이웃이다.
+           ⓑ **모든 쌍(±1~±4) ≥ 12%** — «둘이 같이 뛴다» 로 읽히는 동위상만 막는다.
+         stride **2/5** 가 답이다: 위상 0/.4/.8/.2/.6 → ±1 전부 **40%**, 먼 쌍이 20%.
+         옛 stride 1/4 은 ⓑ 에서 **0% 로 FAIL** 한다(아래 음성항이 그것을 확인한다). */
+  console.log('§22 소환 1열 리스트 — 맞닿은 쌍 ≥33% · 모든 쌍(±1~±4) ≥12%');
   {
     await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
     await p.waitForTimeout(150);
@@ -1152,17 +1254,38 @@ async function ampCheck(p, hosts) {
         let v = (-del % dur) / dur; if (v < 0) v += 1;
         return { v, dur };
       }).filter(Boolean));
-    const pairs = [];
-    for (let i = 0; i < ph.length; i++) for (const d of [1, 2, 3]) {
-      const j = i + d; if (j >= ph.length) continue;
-      let x = Math.abs(ph[i].v - ph[j].v) % 1; x = Math.min(x, 1 - x);
-      pairs.push({ lab: '칸' + (i + 1) + '↔' + (j + 1), d: x, ms: Math.round(x * ph[i].dur) });
-    }
+    /* 이웃 집합을 **±4 까지** — 16회차가 ±3 에서 끊어 칸1↔칸5 를 못 봤다 */
+    const mk = arr => {
+      const out = [];
+      for (let i = 0; i < arr.length; i++) for (const d of [1, 2, 3, 4]) {
+        const j = i + d; if (j >= arr.length) continue;
+        let x = Math.abs(arr[i].v - arr[j].v) % 1; x = Math.min(x, 1 - x);
+        out.push({ lab: '칸' + (i + 1) + '↔' + (j + 1), d: x, gap: d, ms: Math.round(x * arr[i].dur) });
+      }
+      return out;
+    };
+    const pairs = mk(ph);
     console.log('    · ' + pairs.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%(' + v.ms + 'ms)').join(' | '));
-    const bad = pairs.filter(v => v.d < .25);
+    const adj = pairs.filter(v => v.gap === 1), badA = adj.filter(v => v.d < .33);
+    const badB = pairs.filter(v => v.d < .12);
     ok(ph.length >= 4, '소환 카드 ' + ph.length + '장의 헤더 띠 위상을 읽었다 (>=4)');
-    ok(bad.length === 0, '±1·±2·±3 칸 위상차가 전부 주기의 25% 이상 (14회차는 ±1 이 20% · 15회차는 ±3 이 0%)'
-      + (bad.length ? ' — 미달 ' + bad.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
+    ok(badA.length === 0, 'ⓐ 맞닿은 쌍(±1) 위상차가 전부 주기의 33% 이상 — ' +
+      adj.map(v => Math.round(v.d * 100) + '%').join('/') +
+      (badA.length ? ' — 미달 ' + badA.map(v => v.lab).join(',') : ''));
+    ok(badB.length === 0, 'ⓑ 모든 쌍(±1~±4)이 12% 이상 — 동위상으로 붙은 쌍이 없다 (옛 stride 1/4 은 칸1↔5 가 0%)'
+      + (badB.length ? ' — 미달 ' + badB.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
+
+    /* ⚑ 음성항 — 15회차 교훈 2 «신설·개정 항목은 음성항 없이 믿지 마라».
+       옛 stride 1/4 을 이 자리에서 되살려 놓고 같은 자를 대면 칸1↔5 가 0% 로 잡혀야 한다.
+       안 잡히면 위의 PASS 는 아무 뜻이 없다. 확인 뒤 바로 걷어내고 원상 복귀까지 본다. */
+    if (ph.length >= 5) {
+      const old = ph.map((o, i) => ({ v: (i * 0.25) % 1, dur: o.dur }));
+      const oldBad = mk(old).filter(v => v.d < .12);
+      ok(oldBad.length > 0, 'ⓝ 음성항 — 옛 stride 1/4 을 같은 자로 재면 동위상 쌍이 잡힌다 (' +
+        oldBad.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%').join(' , ') + ')');
+      const nowBad = mk(ph).filter(v => v.d < .12);
+      ok(nowBad.length === 0, 'ⓝ 원상 복귀 — 음성항이 현재 값을 오염시키지 않았다');
+    }
   }
 
   /* ── §21 골드 광선이 «보이는가» (15회차 신설) ────────────────────
