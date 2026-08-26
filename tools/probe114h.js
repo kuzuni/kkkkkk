@@ -66,10 +66,21 @@ const SCENES = [
       let inHit = 0;
       const realFxRing = fxRing, realHitRing = hitRing;
       hitRing = (x, y, crit) => { inHit = crit ? 2 : 1; const r = realHitRing(x, y, crit); inHit = 0; return r; };
+      /* ★ 17회차 — 인자만 베끼면 «나중에 붙는 표식» 을 통째로 놓친다. `imp`·`fl`·`cl` 은 전부
+         호출자가 `fxRing` 이 **돌아온 뒤** `rings[rings.length-1]` 에 찍는 값이라, 호출 시점의
+         스냅숏에는 없다. 그래서 대장이 폭발 본 충격파(cl='blast')를 배경(amb)으로 적고 있었다.
+         → 만들어진 **링 객체 자체**를 들고 있다가 시뮬이 끝난 뒤에 읽는다(수명이 다해 배열에서
+           빠져도 참조는 살아 있다). 겹침 억제로 새 링이 안 생긴 호출은 `seen` 으로 걸러진다. */
+      const seen = new Set();
       fxRing = (x, y, r1, col, life, w, r0, dl, nd) => {
-        log.push({ r0: r0 || 2, r1, life: life || 0.25, w: w || 3,
-                   imp: inHit ? 1 : 0, crit: inHit === 2 ? 1 : 0, dl: dl || 0 });
-        return realFxRing(x, y, r1, col, life, w, r0, dl, nd);
+        const ret = realFxRing(x, y, r1, col, life, w, r0, dl, nd);
+        const top = rings[rings.length - 1];
+        if (top && !seen.has(top)) {
+          seen.add(top);
+          log.push({ ring: top, r0: r0 || 2, r1, life: life || 0.25, w: w || 3,
+                     imp: inHit ? 1 : 0, crit: inHit === 2 ? 1 : 0, dl: dl || 0 });
+        }
+        return ret;
       };
 
       S.eqSkill.forEach(id => { if (SK[id]) castSkill(SK[id]); });
@@ -82,7 +93,16 @@ const SCENES = [
       /* 같은 규격끼리 묶는다 */
       const byKey = {};
       for (const r of log) {
-        const k = `${r.imp ? (r.crit ? '피격(치명)' : '피격') : '그 밖'}|Ø${(r.r0 * 2).toFixed(0)}→Ø${(r.r1 * 2).toFixed(0)}|${(r.life * 1000).toFixed(0)}ms|w${r.w}`;
+        /* ★ 17회차 — 예전에는 **저장된** `r.w` 를 적어서 파문·여진·시전 플래시가 전부 «w4» 로 나왔고,
+           그래서 이 대장이 «규격이 갈렸다» 를 계속 YES 로 냈다. 실제로 화면에 그려지는 선폭은
+           계층 배수(`ringTier`)가 곱해진 값이라, 대장도 **그려지는 값**을 적어야 진실을 말한다.
+           (16회차가 이 대장을 보고 «피격 링이 4종» 을 반증한 판단 자체는 맞았다 — 다만 그때는
+            «갈라 놓았다» 는 증거가 대장 어디에도 없었고, 이제는 계층 열이 그것을 보여 준다) */
+        const tw = (typeof ringTier === 'function') ? ringTier(r.ring || r) : { w: 1, a: 1 };
+        const tn = tw === RING_TIER.hit ? 'hit' : tw === RING_TIER.blast ? 'blast'
+                 : tw === RING_TIER.tele ? 'tele' : 'amb';
+        const dw = (r.w * tw.w).toFixed(1);
+        const k = `${r.imp ? (r.crit ? '피격(치명)' : '피격') : '그 밖'}|Ø${(r.r0 * 2).toFixed(0)}→Ø${(r.r1 * 2).toFixed(0)}|${(r.life * 1000).toFixed(0)}ms|그려지는 w${dw}·α×${tw.a.toFixed(2)}(${tn})`;
         byKey[k] = (byKey[k] || 0) + 1;
       }
       return byKey;
@@ -108,7 +128,10 @@ const SCENES = [
   [...impSpecs].forEach(s => console.log(`      ${s}`));
   console.log(`  그 밖의 링(파문·여진 등) : ${otherSpecs.size}종`);
   [...otherSpecs].forEach(s => console.log(`      ${s}`));
-  const onlyCritSplit = impSpecs.size <= 2;
+  /* ★ 17회차 — 상한이 2 였다. 설계상 피격 규격은 **3종**이다(일반 1 + 치명타 2겹 = 안쪽·바깥 각 1종).
+     그래서 이 판정은 «갈리지 않았는데도» 늘 YES 를 냈고, 16회차는 표를 손으로 읽어 NO 라고 바로잡아야 했다.
+     설계 3종까지가 «한 벌» 이다. */
+  const onlyCritSplit = impSpecs.size <= 3;
   console.log(`\n  → 피격 링이 장면마다 갈렸는가 : ${onlyCritSplit ? 'NO — 한 벌이다(일반/치명 2종은 설계)' : 'YES — 규격이 갈렸다'}`);
   console.log(`  → 비평가가 «4종» 으로 읽은 것은 ${onlyCritSplit ? '피격 링과 **다른 종류의 링**이 같은 모양이기 때문이다' : '실제 규격 차이다'}`);
   console.log(`콘솔 에러 ${err}건`);
