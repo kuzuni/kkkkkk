@@ -14,9 +14,19 @@
  * 화소로 뜨면 배경·이펙트가 섞여 회차마다 다른 답이 나온다(43 교훈 1).
  *
  * 판정
- *   [1] 아이콘 스폰 무리의 중심이 용사 **잉크 상자 안**에 있다 (죽은 자리 = 용사 «바로 옆»).
+ *   [1] 아이콘 스폰 무리의 중심이 용사 잉크 상자 **테두리 40px** 안이다 (죽은 자리 = 용사 «바로 옆»).
  *   [2] 스폰 원점이 잉크 상자 **테두리에서 40px** 안이다 (12·15회차가 두 번 좁힌 기준).
- *   [3] 세 기준의 실측치를 표로 남긴다 — 다음 회차 비평 수치는 이 표의 어느 칸인지로 대조한다.
+ *   [3] 스폰 지터가 앵커를 흐리지 않는다.
+ *   세 기준의 실측치를 표로 남긴다 — 다음 회차 비평 수치는 이 표의 어느 칸인지로 대조한다.
+ *
+ * ⚑ 20회차 추가 — **«어느 경로가 도는지» 를 먼저 찍는다.**
+ *   93 리뷰 §1-1 과 상수 주석은 퍼짐을 «우상단 부채꼴(FX3_A0/A1 · FX3_R0/R1)» 로 적어 두었지만,
+ *   실제로 그 상수가 쓰이는 것은 **밴드가 하나도 안 잡힌 경우뿐**이다:
+ *     · 씬A(메인 화면) — `fx3Band()` 가 STAGE 헤더 밴드를 잡아 **2행 가로 밴드**로 간다(58 25~30회차).
+ *     · 씬B(모달)     — `fx3Out`/`fx3Escape` 로 **패널 밖 탈출 + 형제 행 빈 밴드**로 간다.
+ *   즉 **두 씬 다 부채꼴이 아니다.** 부채꼴 상수로 재면 «각폭 134° · 반경 104~277px» 이라는
+ *   없는 결함이 나온다 — r20 비평가 AX(#1·#6)·AY(#1·#3)가 정확히 그렇게 쟀고, 그건 내가
+ *   브리핑에 부채꼴이라고 적었기 때문이다. 이 자는 경로를 찍고 **그 경로의 기준으로만** 잰다.
  */
 const path = require('path'), fs = require('fs');
 const { chromium } = require('playwright');
@@ -67,7 +77,20 @@ function launch(){
       await nf();
       if(seen && performance.now() - t0 > 260) break;
     }
-    return { box, p0, seen, frame: fr, logical: L };
+    /* 20회차 — **퍼짐 «끝점» 의 각도·반경 분포**. r20 에서 AX·AY 가 독립으로 «씬A 부채꼴이
+       부채꼴이 아니라 가로 리본»(AX 6/16 이탈·각폭 130.3° · AY 7/16 이탈·스팬 144.8°)을 냈는데,
+       두 사람 다 앵커를 **그림에서 추정**했다(AX 캐릭터 중심 517,1060 · AY 피팅 571,1030).
+       probe93p 가 이미 실측한 스폰 원점은 (≈591,1082) 라 최대 74px 어긋난다 — 원점이 74px
+       왼쪽이면 같은 끝점이 훨씬 넓은 각으로 읽힌다. 그림이 아니라 **코드가 놓은 끝점**을 잰다. */
+    /* ⚑ 20회차 — **어느 경로가 도는지부터 찍는다.** 부채꼴 상수(FX3_A0/A1 · FX3_R0/R1)는
+       «밴드가 안 잡힌 경우» 에만 쓰인다. 메인 화면(씬A)은 STAGE 헤더 밴드가 잡혀
+       `bnd = true`(2행 가로 밴드) 로 가므로 부채꼴 상수를 기준으로 재면 **없는 결함**이 나온다. */
+    const fan = fxFlies.filter(x => x.ui).map(x => {
+      const dx = x.ax - p0.x, dy = x.ay - p0.y;
+      return { a: Math.atan2(dy, dx)*180/Math.PI, r: Math.hypot(dx, dy), bnd: !!x.bnd };
+    });
+    return { box, p0, seen, frame: fr, logical: L, fan,
+             decl: { a0: FX3_A0*180/Math.PI, a1: FX3_A1*180/Math.PI, r0: FX3_R0, r1: FX3_R1, oby: FX3_OBY } };
   });
   await browser.close();
   if(tr.err){ console.log('probe93p 실패: ' + tr.err); process.exit(1); }
@@ -107,6 +130,38 @@ function launch(){
       edge(P.x, P.y) <= 40, `테두리 거리 ${edge(P.x,P.y).toFixed(0)}px (≤40)`);
   chk('[3] 스폰 지터가 앵커를 흐리지 않는다',
       d(cx, cy, P.x, P.y) <= 12, `무리 중심 − 스폰 원점 ${d(cx,cy,P.x,P.y).toFixed(1)}px (≤12)`);
+
+  /* ── 20회차 — 퍼짐 끝점의 부채꼴 ── */
+  const F = tr.fan || [], D = tr.decl;
+  if(!F.length){ console.log('  ✗ 퍼짐 끝점을 못 읽었다'); process.exit(1); }
+  const nb = F.filter(f => f.bnd).length;
+  const as = F.map(f => f.a).sort((x, y) => x - y), rs = F.map(f => f.r).sort((x, y) => x - y);
+  const bx = F.map(f => P.x + f.r*Math.cos(f.a*Math.PI/180));
+  const by = F.map(f => P.y + f.r*Math.sin(f.a*Math.PI/180));
+  const bw = Math.max(...bx) - Math.min(...bx), bh = Math.max(...by) - Math.min(...by);
+  console.log(`  · 퍼짐 끝점 — **경로: ${nb === F.length ? '밴드(2행 가로)' : nb ? '혼합' : '부채꼴'}** (밴드 ${nb}/${F.length})`);
+  console.log(`      각도 ${as[0].toFixed(1)}° ~ ${as[as.length-1].toFixed(1)}° (스팬 ${(as[as.length-1]-as[0]).toFixed(1)}°) · 반경 ${rs[0].toFixed(0)} ~ ${rs[rs.length-1].toFixed(0)}px`);
+  console.log(`      끝점 bbox ${bw.toFixed(0)}×${bh.toFixed(0)}px (종횡비 ${(bw/Math.max(1,bh)).toFixed(2)}:1)`);
+  if(nb === 0){
+    /* 부채꼴 경로일 때만 부채꼴 상수로 잰다 */
+    const outA = F.filter(f => f.a < D.a0 - 0.5 || f.a > D.a1 + 0.5).length;
+    const outR = F.filter(f => f.r < D.r0 - 0.5 || f.r > D.r1 + 0.5).length;
+    chk('[4] 퍼짐 끝점이 전부 선언 부채꼴 안',
+        outA === 0, `창 밖 ${outA}/${F.length}개 · 선언 ${D.a0.toFixed(0)}° ~ ${D.a1.toFixed(0)}°`);
+    chk('[5] 퍼짐 끝점이 전부 선언 반경대 안',
+        outR === 0, `밴드 밖 ${outR}/${F.length}개 · 선언 ${D.r0} ~ ${D.r1}px`);
+  }else{
+    /* ⚑ 밴드 경로다. **부채꼴 상수(FX3_A0/A1 · FX3_R0/R1)는 이 경로에 안 쓰인다** —
+       그걸로 재면 «각폭 125° · 반경 72~297px» 이라는 없는 결함이 나온다(r20 AX #1·#6 · AY #1·#3 이
+       정확히 그렇게 쟀고, 그건 내가 브리핑에 부채꼴이라고 적었기 때문이다).
+       밴드 경로에서 지킬 것은 «세로 봉투» 다: 종전 ±58px 봉투(28회차)를 넘으면 안 된다. */
+    const dy = F.map(f => f.r*Math.sin(f.a*Math.PI/180));
+    const off = dy.map(v => Math.abs(v + (D.oby)));
+    chk('[4] 밴드 경로 — 세로 봉투 ±58px 안 (28회차 확정)',
+        Math.max(...off) <= 58 + 2, `중심(출발점 위 ${(D.oby)}px) 기준 최대 ${Math.max(...off).toFixed(0)}px (≤58)`);
+    chk('[5] 밴드 경로 — 2행이 실제로 서로 다른 y 대에 있다',
+        bh >= 40, `끝점 세로 폭 ${bh.toFixed(0)}px (≥40 — 1행으로 뭉치면 «선» 이 된다)`);
+  }
 
   console.log(bad ? `\nPROBE93P FAIL (${bad}건)` : '\nPROBE93P PASS');
   process.exit(bad ? 1 : 0);
