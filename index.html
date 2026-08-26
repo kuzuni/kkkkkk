@@ -26,6 +26,33 @@
      «미션 · 1 · 받기» 와 12 의 `.sm-fat «10회 소환»` 4칸만 구서체로 남아 있었다(126 ①).
      화면마다 `font-family:inherit` 를 다시 적는 대신 여기서 한 번에 잇는다. */
   button,input,select,textarea{font-family:inherit}
+  /* ───────── 126 ② — 글자 외곽선 4단 토큰 ─────────
+     지금까지 외곽선은 «고정 px» 였다(50종 223곳: 4~13px). 그런데 글자 크기는 18~64px 로 흩어져 있어
+     **같은 6px 이 64px 글자에서는 9%, 24px 글자에서는 25%** 를 먹는다. 그 결과 실측(`tools/m126st.js`)이
+     **정확히 거꾸로** 나왔다 — 작은 글자일수록 외곽선이 두껍다:
+
+       작은(<25px) r 중앙값 .217 · 본문(25~33) .192 · 타이틀(33~45) .145 · 대형(45+) .162
+       (r = 스트로크 ÷ font-size. r ≥ .26 이 8종 23곳, .22~.26 이 12종 30곳)
+
+     이것이 3회차 비평가 H 의 1순위(«작은 라벨에서 ㅇ 속공간이 막힌다»)의 기계적 원인이다.
+     `paint-order:stroke fill` 이라 스트로크의 «안쪽 절반» 은 흰 채움이 덮지만, **속공간(카운터)은
+     채움이 아니라 구멍**이라 덮이지 않는다 — 카운터는 사방에서 sw/2 씩 잠식돼 지름이 sw 만큼 줄어든다.
+     그래서 막힘은 절대 px 가 아니라 **비율**로 결정된다. `tools/m126ct.js` 로 GameKR 을 실측한 결과:
+
+       r  .08   .12   .16   .18   .20   .22   ← 살아남은 카운터 면적(스트로크 0 대비, fs 22~56 평균)
+          ~80%  ~41%  ~23%  ~15%  ~12%  ~10%
+
+     따라서 토큰은 px 가 아니라 **font-size 비율**로 둔다(`calc(var(--st-*) * 1em)`) — 글자 크기가
+     바뀌어도 외곽선이 저절로 따라간다. 값은 «레퍼런스 바깥 두께»(= 스트로크 값의 절반. 본문 2~3px ·
+     수량 4.5px 이 G·H 독립 실측)와 «카운터 생존» 이 만나는 지점으로 잡았다.
+     ⚠ 우리 서체(Jua)는 획 15% 로 얇아 **카운터가 레퍼런스 서체보다 작다** — 레퍼런스의 바깥 두께를
+       작은 글자에서 그대로 재현하면 반드시 막힌다. 그 자리는 서체 교체 없이는 회수 불가다(③ 이후 재검). */
+  :root{
+    --st-hud:.17;      /* HUD·대형 숫자(45px+) — 획이 굵고 카운터가 커서 가장 두껍게 견딘다 */
+    --st-title:.15;    /* 팝업·카드 타이틀(33~45px) */
+    --st-body:.15;     /* 본문·버튼 라벨(25~33px) */
+    --st-small:.13;    /* 작은 라벨·수량(<25px) — 카운터가 가장 먼저 막히는 구간 */
+  }
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
   /* 안전영역(노치·홈 인디케이터)은 프레임 바깥에서 흡수한다.
@@ -592,7 +619,9 @@
      가로 폭은 stroke 가 lx 배로 같이 늘어나므로 **--lx 를 라벨마다 다시 풀었다**(아래 HTML 주석). */
   #mnw .mn-l{position:absolute;left:-45px;right:-45px;top:66px;height:28px;line-height:28px;
     text-align:center;font-size:var(--lf,24px);color:#FDFDFD;
-    -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap;
+    /* 126 ② — 7px 고정이었다. 이 칸의 font-size 는 라벨마다 다르다(`--lf`: 기본 24 · «길라잡이» 18.7)라
+       같은 7px 이 r .292 / **.374** 가 돼 전 화면에서 가장 심하게 막힌 자리였다(«우편»·«길라잡이» 의 ㅇ). */
+    -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--lx,.82))}
   #mnw .mn-l::after{content:attr(data-t);position:absolute;left:0;right:0;top:0;height:100%;
     color:#FDFDFD;-webkit-text-stroke:1.6px #FDFDFD;paint-order:stroke fill}
@@ -960,7 +989,11 @@
   /* ★ 7회차 — `200` 자간이 ref 6·6 vs 우리 4·4 였다(비평가 N + 자체 열 런). 자간을 벌리면 총폭이
      커지므로 scaleX 로 되눌러 잉크 폭 76 을 유지한다(1.6×1.25 ≒ 시각 자간 2px).
      `letter-spacing` 은 마지막 글자 뒤에도 붙으므로 같은 값 `text-indent` 로 중심을 되돌린다(LESSONS A5). */
-  #tuto.todo .tsub{-webkit-text-stroke:8px #000;letter-spacing:1.6px;text-indent:1.6px;
+  /* 126 ② — 8px 고정(fs36 = r .222). 위 주석의 «ref 바깥 4.5px» 는 레퍼런스 서체 기준이고,
+     우리 서체(Jua)는 획이 15% 로 얇아 같은 바깥 두께에서 `300` 의 «0» 속공간이 먼저 막힌다
+     (`tools/m126ct.js`: r .22 에서 카운터 잔존 ~10%). 대형 숫자 토큰(.17 → 바깥 3.06)으로 낮춘다.
+     레퍼런스 두께를 온전히 되찾으려면 획이 굵은 서체가 필요하다 — ③ 이후 재검 대상. */
+  #tuto.todo .tsub{-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;letter-spacing:1.6px;text-indent:1.6px;
     transform:translateZ(0) translateY(-1px) scaleX(1.25)}
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
@@ -1230,7 +1263,8 @@
       #523E3D calc(100% - 1px),#715B4E calc(100% - 1px))}
   /* letter-spacing 은 뒤쪽에도 붙으므로 같은 값의 text-indent 로 가운데를 되돌린다 */
   .mhead h2{position:relative;top:-1px;margin:0;font-size:38px;line-height:38px;font-weight:900;color:#fff;
-    letter-spacing:1.7px;text-indent:1.7px;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+    letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000}   /* 126 ② — 10px 고정 = r .263 */
   /* 베이지 본문 + 별무늬. 레퍼런스 별은 팔이 두껍고(내반경/외반경 0.68) 위 꼭짓점이 본문 상단선에
      잘려 있다 → 타일을 10px 위로 올려 클립시킨다. 베벨 1px 은 좌·우·아래만 (헤더 아래엔 없다) */
   .mbody{flex:1 1 auto;overflow-y:auto;padding:65px 21px 48px;text-align:center;
@@ -1399,7 +1433,9 @@
     height:calc(var(--if-w) * .243);line-height:calc(var(--if-w) * .243);
     display:block;text-align:center;white-space:nowrap;
     font-style:normal;font-weight:900;font-size:calc(var(--if-w) * .235);color:#fff;
-    -webkit-text-stroke:calc(var(--if-w) * .054) #000;paint-order:stroke fill;z-index:2}
+    /* 126 ② — 프레임 폭 기준(.054)이라 이미 «비율» 이긴 했지만 font-size 도 같은 프레임 폭 기준
+       (.235)이라 결과적으로 r = .054/.235 = **.230** 으로 고정돼 있었다. 글자 기준으로 옮긴다. */
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;z-index:2}
   /* 아이콘 슬롯 — 프레임 정중앙, 아트 교체 대비로 bbox 를 그대로 차지한다 */
   .ifr>.ifi{position:absolute;left:0;right:0;top:0;bottom:0;
     display:flex;align-items:center;justify-content:center;
@@ -1486,7 +1522,8 @@
   /* `scaleX(.9)` 는 어절 공백까지 10% 줄인다 — ref 어절 간 코어 간격 13~15px 인데 10~11px 이었다.
      문자열이 우리 설계라 scaleX 자체는 다시 뽑지 않고(43 교훈 2) **공백만** 되돌린다. */
   .qs-t{position:absolute;left:168px;top:44px;font-size:29px;line-height:36px;font-weight:900;
-    color:#fff;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.945);
+    color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;   /* 126 ② — 8px 고정 = r .276 */
+    paint-order:stroke fill;transform:scaleX(.945);
     transform-origin:0 0;white-space:nowrap;word-spacing:1.5px}
   .qs-t em{color:#FD8354}
   /* 진행바 400×38 캡슐 — 검정 4, 트랙 2단, 채움 2톤 골드.
@@ -1508,7 +1545,8 @@
      (그림자는 ref 8 vs 우리 10 으로 Δ2 — 둘을 동시에 맞출 수 없어 위치 쪽을 택했다). */
   /* 104 ② — 공용 베벨 버튼 `.ifbtn`. 화면이 주는 것은 위치·크기·모서리·테두리 두께뿐이다. */
   .qs-b{left:591px;top:31px;width:195px;height:118px;--gb-bw:6px;border-radius:40px}
-  .qs-b b{font-size:30px;-webkit-text-stroke:7px #000;transform:scaleX(.98);text-shadow:0 3px 0 #000}
+  .qs-b b{font-size:30px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;   /* 126 ② — 7px = r .233 */
+    transform:scaleX(.98);text-shadow:0 3px 0 #000}
   /* 모두 받기 272×130 (ref 404,1647 → 293,1084) — 검정 7, 같은 베벨 */
   /* 하단 앵커 — 기준 프레임(본문 1383)에서 bottom169 = top1084 로 실측과 동일하다 */
   .qs-all{left:295px;bottom:166px;width:272px;height:130px;--gb-bw:7px;border-radius:43px}
@@ -2474,7 +2512,7 @@
      translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
   .pcb-p>b{position:relative;top:1px;font-size:34.5px;font-weight:900;color:#fff;
     white-space:nowrap;line-height:1;
-    -webkit-text-stroke:8px #000;paint-order:stroke fill;
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill;   /* 126 ② — 8px = r .232 */
     transform:translate3d(0,0,0) scaleX(1.096);transform-origin:50% 50%;
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -2864,8 +2902,10 @@
     background:var(--ring);border-radius:inherit}
   .shp-card .cbtn::after{content:'';position:absolute;left:0;right:0;bottom:0;height:14px;
     background:linear-gradient(180deg,var(--ring) 0,var(--ring) 7px,var(--lip) 7px,var(--lip) 14px)}
+  /* 126 ② — 6px 고정을 세 자식이 같이 물려받는데 자식마다 font-size 가 다르다(.lab 29 · .cost 26 ·
+     .sub 23) → r 이 .207 / .231 / **.261** 로 벌어져 있었다. em 기준이면 셋 다 같은 비율이 된다. */
   .shp-card .cbtn>u{position:absolute;left:0;right:0;text-align:center;color:#fff;white-space:nowrap;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;z-index:2}
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;z-index:2}
   .shp-card .cbtn>.lab{top:24px;height:30px;line-height:30px;font-size:29px;transform:scaleX(.86)}
   /* 인셋 패널(비용 행) */
   .shp-card .cbtn>.pan{position:absolute;left:29px;right:29px;top:76px;height:37px;border-radius:15px;
@@ -2878,7 +2918,9 @@
     --f1:#3DD5EC;--f2:#18B1D3;--ring:#53E6FA;--lip:#0DA2CA}
   .shp-card .b1>.lab{top:14px}
   .shp-card .b1>.sub{top:48px;height:24px;line-height:24px;font-size:23px;color:#fff;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;left:0;right:0;text-align:center;z-index:2}
+    /* 126 ② — 6px 고정(fs23 = r .261). 전 화면에서 두 번째로 심한 «막힘 확실» 자리였다. */
+    -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;left:0;right:0;
+    text-align:center;z-index:2}
   /* ▶AD 뱃지 — 시안 버튼 좌하단 코너 물림. 카드의 직속 자식이라 버튼 overflow:hidden 에 안 잘린다.
      측정표 §2 #15: 카드 좌상단 기준 (707,198) 65×53, −6° 회전 */
   .shp-card>.adbadge{left:706px;top:198px;width:66px;height:53px;border-radius:12px;
@@ -2900,7 +2942,8 @@
   .shp-card .cbtn>.pan .gem{position:absolute;left:14px;top:-1px;font-size:36px;
     -webkit-text-stroke:0;line-height:37px}
   /* 부족한 값(가격 · 남은 무료 횟수)만 빨강. 충분하면 `.cbtn>u` 의 흰색을 그대로 쓴다. */
-  .shp-card .cbtn.lack>.cost{color:#EB6D68;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
+  .shp-card .cbtn.lack>.cost{color:#EB6D68;paint-order:stroke fill;
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
   .shp-card .cbtn.lack>.sub{color:#EB6D68}   /* 외곽선 두께는 .b1>.sub 의 6px 를 그대로 둔다 */
 
   /* 잠금 상자(도감 완성) — 딤 + 안내 */

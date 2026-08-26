@@ -206,7 +206,11 @@ const BBOX = {
     console.log('\n[⑥ 하단 수량 배지]');
     for (const b of r.badges) {
       ck('배지 글자비율 ' + b.label, near(b.fs / b.fw, 0.235, 0.004), (b.fs / b.fw).toFixed(4));
-      ck('배지 스트로크비율 ' + b.label, near(b.stroke / b.fw, 0.054, 0.004), (b.stroke / b.fw).toFixed(4));
+      /* 126 ② (2026-08-26) — 배지 외곽선의 기준이 «프레임 폭» 에서 «글자 크기» 로 옮겨졌다.
+         104 의 .054 는 05·53 에서 뽑은 «통일» 상수이지 레퍼런스 실측이 아니었고, 프레임 폭 기준이라
+         글자 대비로는 r = .054/.235 = .230 — 126 ② 가 «막힘 확실» 로 가른 구간이었다.
+         지금은 `--st-body`(.15) × 글자비율(.235) = **.03525**. 프레임마다 같다는 불변식은 그대로다. */
+      ck('배지 스트로크비율 ' + b.label, near(b.stroke / b.fw, 0.03525, 0.004), (b.stroke / b.fw).toFixed(4));
       ck('배지 바닥 걸침 ' + b.label, b.over > 0, b.over.toFixed(1) + 'px');
     }
 
