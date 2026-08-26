@@ -3871,7 +3871,10 @@
   /* 7 총 보유 효과 — 본문기준 top 1108, 가운데 정렬 */
   /* 레퍼런스 글자는 «흰 코어 + 검정 외곽선» 이다 (y1705 단면: #0A0907 → #F6F6F6 → #FFFFFF).
      측정표가 #000000 으로 적은 것은 외곽선을 집은 오류다. */
-  .wm-tot{left:0;right:0;top:1104px;height:46px;line-height:46px;text-align:center;
+  /* 7회차 — 잉크중심이 캡처 1618.5, ref 1623(측정표 §7 ref 잉크 1687~1727 중심 1707 → −84 = 1623)로
+     4.5~5px 위였다(비평가 R −5 · S −4.5 독립 일치). top 1104 → 1109.
+     잉크 «상단» 여백이 ref 30 보다 벌어지는 것은 우리 글리프 잉크가 3px 낮기 때문이라 중심을 기준으로 맞춘다. */
+  .wm-tot{left:0;right:0;top:1109px;height:46px;line-height:46px;text-align:center;
     font-size:40px;color:#fff;-webkit-text-stroke:3px #000;paint-order:stroke fill}
   /* 6회차: 같은 문자열(「총 보유 효과:」)끼리 재면 ref 178 / 캡처 208 → .90 x 178/208 = .77 */
   .wm-tot>i{transform:scaleX(.77)}                /* 라벨 잉크 208 → 178 (h 40 유지) */
@@ -3894,9 +3897,12 @@
   .wm-btn::before{content:'';position:absolute;left:0;right:0;top:0;bottom:16px;
     border:7px solid #D3D3D3;border-bottom:0;border-radius:35px 35px 0 0;
     box-sizing:border-box;pointer-events:none}
-  /* 레퍼런스 버튼 글자는 버튼 세로중심보다 6px 위에 앉는다 (잉크중심 1822 vs 버튼중심 1828) */
+  /* 레퍼런스 버튼 글자는 버튼 세로중심보다 5.5px 위에 앉는다 (측정표 §8: 잉크 1804~1841 중심 1822.5 vs 버튼중심 1828).
+     7회차 — top:-7px 은 그 «5.5px 위» 에 line-height 기울기가 한 번 더 얹혀 실측 잉크중심이 캡처 1734
+     (목표 1739)로 **10.5px** 위였다. 비평가 R(−5.5)·S(−5)가 독립 실측으로 같은 값을 냈고 측정표와도 일치.
+     → top −7 → **−2** (잉크중심 1739 = 버튼면 중심). */
   /* 외곽선은 안팎 절반씩 나간다(A5 교훈) — ref «한쪽 6.5px» → 11px. 5.5px 은 한쪽 2.75px 이라 −58% 였다 */
-  .wm-btn>i{position:relative;top:-7px;font-size:41px;-webkit-text-stroke:11px #000;paint-order:stroke fill;
+  .wm-btn>i{position:relative;top:-2px;font-size:41px;-webkit-text-stroke:11px #000;paint-order:stroke fill;
     transform:scaleX(.97)}
   .wm-b1{left:137px;color:#AAEFFF}
   .wm-b1>i{transform:scaleX(.845)}
