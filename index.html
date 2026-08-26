@@ -2588,7 +2588,14 @@
      그 사이가 **한 프레임짜리 순간이동**이라 비평가 AF·AG 가 둘 다 «알약에 못 닿고 증발한다» 로 읽었다.
      착지 포즈를 «찍어 놓는» 대신 마지막 간격을 70ms 에 **주행**시킨다 — 1000~1600px/s 라
      «빨려 들어감» 은 유지되고, 끝점은 여전히 정확히 알약 중심이다. */
-  .fx-land2{animation:fxLand2 .15s linear forwards;transition:transform .07s linear}
+  /* 14회차 — 위 «보이게 한다» 처방이 반대쪽으로 넘어가 있었다. `probe93g` 실측: 마지막 비행이
+     끝난 뒤 폭 25~27.5px 코인이 알약 «정중앙»(0.0px)에 **opacity 1.00 → 0.88 로 180ms 앉아 있다가**
+     218ms(씬A)·212ms(씬B)에야 사라진다 — 24회차(58)가 노린 «도착이 한 프레임 이상 보인다»(33ms)의
+     6~7배다. 16개가 같은 점에 쌓이므로 육안으로는 «흡수가 끝났는데 코인 한 개가 남아 있는» 잔류
+     스프라이트로 읽힌다(13회차 AJ ① «+317ms 까지 남는다»).
+     → 고원을 62%→45% 로, 길이를 .15s→.10s 로. 도착은 여전히 45ms(프레임 27~33ms 기준 1~2장)
+     동안 opacity ≥.88 로 «보이고», 꼬리는 td+100ms 로 내려간다. */
+  .fx-land2{animation:fxLand2 .10s linear forwards;transition:transform .07s linear}
   /* 93 8회차 — 딤 위에 다시 그리는 알약 복제판(«부족» 플래시의 .jz-badp 와 같은 처방)
      9회차 — 판을 `<s>` 로 만들었더니 **`line-through` 가 자식(복제한 숫자)까지 상속**돼
      숫자 세로 한가운데를 3px 흰 선이 관통했다(비평가 Z ① 실측: 9/17 프레임 733ms · 골드 65~97px).
@@ -2598,7 +2605,11 @@
      모달에서만 착지 표시가 16회 도착 전부 0프레임이었다(비평가 AE ①: 씬A 는 9/9 표본에 보인다).
      복제판은 «딤 위 배경» 이므로 비행·착지 아이콘 **아래**(z0)가 맞다. */
   .fx-lit{position:absolute;pointer-events:none;z-index:0}
-  @keyframes fxLand2{0%{opacity:.95}62%{opacity:.88}100%{opacity:0}}
+  /* 14회차 — 오므리기는 **독립 `scale` 프로퍼티로 하면 안 된다.** 개별 transform 프로퍼티는
+     transform 목록보다 **바깥**에 곱해지므로 `scale(.35)` 가 목록 안의 `translate(tx,ty)` 까지
+     0.35 배 해서 코인이 원점 쪽으로 끌려간다 — 실제로 게이트 «착지 주행 최대 거리» 가
+     154 → **294px**(상한 280)로 깨졌다. 오므리기는 인라인 transform 자체를 다시 써서 한다(JS 쪽). */
+  @keyframes fxLand2{0%{opacity:.95}45%{opacity:.88}100%{opacity:0}}
 
   /* 도착 순간 알약이 튄다 — 58 «scale 1.15 → 1» */
   /* 봉우리가 뾰족하면(28% 한 점) 실제로 1.15 인 구간이 ~40ms 라 눈에도 캡처에도 안 걸린다.
@@ -2651,7 +2662,15 @@
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
     animation:fxPlus .6s cubic-bezier(.2,.8,.3,1) both}
   /* 93 7회차 — UI 발은 도착이 1.26s 까지 이어지므로 «+n» 도 그때까지 살아 있어야 한다 */
-  .fx-plus.ui{animation-duration:1.42s}
+  /* 14회차 — 그 1.42s 는 «트리거» 가 아니라 **«첫 도착»**(실측 541ms·511ms)부터 세므로 종료가
+     그만큼 밀려 있었다. `probe93i` 실측: 코인이 화면에서 사라지는 1453ms(A)·1443ms(B) 뒤로
+     플로터가 **195ms·193ms** 더 혼자 남는다 — 12~14회차 비평가 5명(AH·AI·AJ·AK·AM)이 «수명이
+     연출보다 길다» 로 올린 것의 실체다. (같은 사람들이 함께 낸 «위로 띄워라»(10회차: 알약이 화면
+     최상단이라 정산된 HUD 숫자와 겹친다)·«총액을 먼저 내지 마라»(3회차: 마지막 도착에 걸면 숫자
+     롤링보다 뒤에 떠 인과가 역전된다)는 이미 내려진 결정이라 되돌리지 않는다.)
+     → 가시 구간이 애니 길이의 ≈77%(페이드 50%→100%)이므로 1.08s 면 첫 도착 +832ms ≈ 1.38s 에
+     끝난다. 마지막 도착(1.22s)보다는 뒤, 코인 소멸(꼬리 단축 후 ≈1.38s)과는 같은 시점이다. */
+  .fx-plus.ui{animation-duration:1.08s}
   /* 위로 떠오르게 하면 알약이 화면 최상단이라 **HUD 숫자 위로 올라가 겹친다**(10회차 지적:
      «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 흘리며 사라지게 한다.
      15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W). 16회차 — .8s 는 «687~702ms 에도
@@ -21722,7 +21741,21 @@ function fxTick(dt){
            실제 요소 중심은 verify58 [8] 실측 0px 로 정확히 꽂힌다 — 안 보였던 것이 문제였다. */
         const el = f.el;
         /* 24회차 — 페이드를 주행 뒤로 미뤘으므로 제거도 그만큼 늦춘다(주행 ≤120ms + 페이드 150ms) */
-        const hold = f.ui ? 158 + Math.round(1000*(parseFloat(el.style.animationDelay) || 0)) : 45;
+        /* 14회차 — fxLand2 가 .15s → .10s 로 줄었으므로 제거 시각도 같이 당긴다(주행 td + 페이드 100ms). */
+        const hold = f.ui ? 108 + Math.round(1000*(parseFloat(el.style.animationDelay) || 0)) : 45;
+        /* 14회차 — AL ②·AM ② 2인 일치: «비행 47px 대비 52~55% 로 «반쯤 큰 채» 툭 사라진다 ·
+           0 으로 수축하는 프레임이 한 장도 없다». **도착 크기 0.50 자체는 못 건드린다** — 23회차에
+           비평가 3명이 «잘 되어 있는 것» 으로 넣어 둔 값이다. 그래서 도착 «포즈» 는 그대로 두고
+           **주행이 끝난 뒤 페이드와 같이** 오므린다: 같은 translate 를 유지한 채 scale 만 다시 써서
+           기존 `transition:transform` 에 태운다(중심 불변 → 착지 판정에 영향 없음). */
+        if(f.ui){
+          const tdms = Math.round(1000*(parseFloat(el.style.animationDelay) || 0));
+          setTimeout(() => {
+            if(!el.isConnected) return;
+            el.style.transitionDuration = '.09s';
+            el.style.transform = el.style.transform.replace(/scale\([^)]*\)/, 'scale(.18)');
+          }, tdms);
+        }
         setTimeout(() => el.remove(), hold);
       }
       /* 93 — UI 발은 작고 짧은 펄스를 여러 번(도착 스태거에 맞춰 160ms 간격). 실제로 튄 도착에만
