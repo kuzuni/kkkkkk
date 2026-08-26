@@ -6000,14 +6000,18 @@
     border-left:14px solid #52433C;border-top:6px solid rgba(0,0,0,0);
     border-bottom:8px solid rgba(0,0,0,0);transform:rotate(45deg)}
   /* 탭 3개 ref y917 h70 — 활성은 콘텐츠 패널(#D0B195)과 이음새 없이 연결(2px 겹침) */
-  .pf-tab{top:402px;width:228px;height:69px;line-height:80px;text-align:center;
+  .pf-tab{top:402px;width:228px;height:69px;line-height:90px;text-align:center;   /* 126 10회차 — 잉크가 ref 보다 5px 위였다(937..968 vs 942..973). line-height +10 = 베이스라인 +5 */
     border-radius:16px 16px 0 0;background:#A5866A;cursor:pointer;
     box-shadow:inset 0 6px 0 #8C6D51,inset 6px 0 0 #8C6D51,inset -6px 0 0 #8C6D51,
       inset 0 12px 0 #BAA085,inset 12px 0 0 #BAA085,inset -12px 0 0 #BAA085;
     /* 126 ③ 9회차 — 19 팝업 라벨군은 r7 비평가 O(−48.4~−55.1%)·P(−50%)가 ③ 상위로 독립 일치한
        자리다. 4px 고정 = r .105 로, 같은 팝업 안에서 지적이 없던 `#pfTtl`(.194)·`#pfNick>i`(.172)와
        비교해도 절반이다. 크기대(33~45px) 토큰에 올린다 → 8.36px. */
-    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
+    /* 126 10회차 정정 — 측정표 19 4 가 ref 외곽선을 이미 적어 두었다: 활성 «검정 외곽선 ~3px» ·
+       비활성 «2~3px»(= 바깥 두께). 필요한 스트로크는 6px = r .158 이라 타이틀(.22 = 8.36 ·
+       바깥 4.18 = ref 대비 +39%)이 아니라 본문 토큰(.16 = 6.08 · 바깥 3.04)이 맞다.
+       9회차가 r7 비평가 O·P 의 «-50%» 만 보고 .105 -> .22 로 한 번에 올린 것을 반 칸 되내린다. */
+    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
   .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
@@ -6015,8 +6019,11 @@
   .pf-tab.on::before{content:'';position:absolute;inset:0 0 9px 0;border-radius:16px 16px 0 0;
     box-shadow:inset 0 4px 0 #A6896B,inset 4px 0 0 #A6896B,inset -4px 0 0 #A6896B,
       inset 0 10px 0 #E0CCB4,inset 10px 0 0 #E0CCB4,inset -10px 0 0 #E0CCB4}
-  .pf-tab>i{transform:scaleX(.9)}
-  .pf-tab.on>i{transform:scaleX(.82)}
+  /* 126 10회차 — 탭 라벨만 자폭이 따로 놀았다(높이는 ref 와 100% 일치인데 폭이 -7.7 ~ -14.5%).
+     실측 자연폭(scaleX 1 환산) 초상화 93.3 · 프레임 86.7 · 칭호 57.3 에 ref 91 · 88 · 55 이므로
+     세 칸을 한 값 .99 로 묶으면 +1.5 / -1.2 / +3.1% 안에 든다. 칸마다 다른 값을 주지 마라. */
+  .pf-tab>i{transform:scaleX(.99)}
+  .pf-tab.on>i{transform:scaleX(.96)}
   /* 콘텐츠 패널 ref (150,985) 780×544, r36, 테두리 없음 */
   .pf-grid{left:58px;top:470px;width:780px;height:544px;background:#D0B195;border-radius:36px;
     overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding:46px 30px 20px;z-index:1;
