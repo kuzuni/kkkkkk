@@ -3008,7 +3008,8 @@
   .rw-panel{position:absolute;left:0;right:0;top:4px;bottom:0;overflow:hidden;
     --rw-sp:calc(100% - 820px * var(--rwc,1));
     /* 아치 높이 — 기본 888, 짧은 프레임에서만 «발이 수반 위 28px» 를 지키도록 줄어든다 */
-    --rw-ah:min(calc(888px * var(--rwc,1)),calc(var(--rw-sp) * .72 + 460px * var(--rwc,1)))}
+    --rw-ah:min(calc(888px * var(--rwc,1)),calc(var(--rw-sp) * .72 + 460px * var(--rwc,1)));
+    /* (바닥선 ~ 수반 상단 여유는 .rw-steps 가 직접 계산한다 — 아래 주석 참조) */}
   .rw-panel>*{position:absolute}
   /* 배경 — 석벽(청흑) + 중앙 아치 + 갈색 석재 바닥 (아트 대기)
      120: 바닥 그라디언트의 px 정지점을 **1527 대비 %** 로 환산했다(980→64.178 · 1120→73.347 ·
@@ -3095,6 +3096,12 @@
          결은 «어두운 쪽으로만» 준다. 소멸은 바닥과 만나는 마지막 6% 에서만. */
       repeating-linear-gradient(180deg,rgba(78,68,50,.30) 0 2px,rgba(3,4,3,.30) 2px 5px,
         rgba(0,0,0,0) 5px 47px),
+      /* 9회차 — 비평 W: «벽 몰탈 그리드가 아치 안팎을 오프셋 없이 관통해 링이 평면 위에 그은 선이
+         된다». 가로 켜는 7회차에 위상 23px 로 어긋냈지만 **세로 이음매는 아치 안에 아예 없었다** —
+         통로 안쪽에도 자기 세로 이음매를 주되 주기(119px)와 위상을 벽(163px)과 다르게 해
+         «다른 면» 임이 드러나게 한다. */
+      repeating-linear-gradient(90deg,rgba(70,60,44,.22) 0 2px,rgba(3,4,3,.24) 2px 5px,
+        rgba(0,0,0,0) 5px 119px),
       radial-gradient(58% 26% at 50% 7%,rgba(2,3,2,.38) 0%,rgba(2,3,2,0) 100%),
       /* 아치 «안쪽» 결 — 세로 그라디언트만으로는 행마다 색이 1개라(고유색 1) 아래쪽 절반이
          여전히 평면으로 읽힌다. 문 안 어둠에 깊이를 주는 얼룩 3개(전부 어두운 쪽). */
@@ -3107,7 +3114,7 @@
          비평 M 이 «82%가 휘도 8 미만 = 채워진 구조가 아니라 뚫린 구멍» 으로 읽었다.
          벽(≈25)보다 «조금만» 어둡게(≈22) 올리고, 경계는 아래 문설주 립이 책임진다. */
       linear-gradient(180deg,#2A2721 0%,#252219 26%,#211E15 58%,#1D1A12 84%,#1B1810 100%);
-    background-position:0 23px,0 0,0 0,0 0,0 0,0 0,0 0,0 0;
+    background-position:0 23px,41px 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0;
     border-radius:295px 295px 0 0;
     /* 5회차 — **문설주(jamb) 립.** 4·5회차 비평 M·N 이 독립적으로 같은 1순위를 짚었다:
        «아치에 경계가 없다 — 좌우변 최대 |d휘도/dx| 가 0.45~3.1/px 뿐이고 페더가 50px 라
@@ -3169,7 +3176,7 @@
       rgba(58,47,32,.08) 70px,rgba(58,47,32,.08) 138px,
       rgba(80,68,49,.17) 138px,rgba(80,68,49,.17) 142px,/* 셋째 단 코 */
       rgba(7,6,4,.17) 142px,rgba(7,6,4,.17) 146px,
-      rgba(52,42,29,.07) 146px,rgba(46,37,25,.09) 62%,rgba(40,32,22,.13) 100%)}
+      rgba(58,47,32,.20) 146px,rgba(54,44,30,.26) 40%,rgba(48,39,27,.32) 100%)}
   /* 밑동 받침(플린스) — 아치 다리가 딛는 단. 좌우 끝이 x230/x847 에서 **세로로 끊겨야**
      «구조물의 바닥» 으로 읽힌다(지금까지는 전폭 띠뿐이라 벽 줄눈과 구분이 안 됐다). */
   .rw-floor::before{content:'';position:absolute;left:230px;width:617px;top:-16px;height:56px;
@@ -3177,10 +3184,34 @@
     background:linear-gradient(180deg,rgba(112,98,72,.55) 0 5px,rgba(6,6,4,.42) 5px 9px,
       rgba(74,62,44,.30) 9px 46px,rgba(5,5,3,.40) 46px 52px,rgba(0,0,0,0) 52px 56px);
     border-left:4px solid rgba(96,84,61,.45);border-right:4px solid rgba(10,9,6,.45)}
+  /* 받침에서 아래로 **넓어지며** 내려가는 계단 2단. 좌우 끝이 끊긴 단이라 «구조물의 계단» 으로
+     읽힌다 — 비평 V·W 공통 1순위(«받침 밑변~수반 사이 198~350px 에 계단·바닥선·접지가 전부 없다»). */
+  /* ⚠ `--rw-gap` 은 `100%` 를 품고 있어 **쓰는 자리의 컨테이닝 블록 높이**로 풀린다.
+     계단을 `.rw-floor`(높이 = 바닥선~패널바닥) 안에 두면 100% 가 그 높이로 풀려
+     2280 에서 gap 236 이 −231 로 뒤집혀 계단이 9px 로 찌그러졌다.
+     → 계단은 **패널 직속 래퍼**(`.rw-steps`)에 담아 100% 가 패널 높이로 풀리게 하고,
+        래퍼를 정확히 «바닥선 ~ 수반 상단» 구간에 맞춘 뒤 계단은 그 안에서 % 로 잡는다. */
+  .rw-steps{left:0;right:0;z-index:1;pointer-events:none;
+    top:calc(var(--rw-sp) * .5075 + 258px * var(--rwc,1) + var(--rw-ah) / 2);
+    height:calc(var(--rw-sp) * .36 + 258px * var(--rwc,1) - var(--rw-ah) / 2)}
+  .rw-steps>*{position:absolute}
+  .rw-st{position:absolute;left:50%;margin-left:0;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(104,90,66,.42) 0 5px,rgba(6,6,4,.34) 5px 10px,
+      rgba(70,58,41,.26) 10px 100%);
+    border-left:4px solid rgba(92,80,58,.34);border-right:4px solid rgba(9,8,5,.36)}
+  .rw-st1{width:717px;transform:translateX(-358.5px);top:10%;height:30%}
+  .rw-st2{width:837px;transform:translateX(-418.5px);top:40%;height:34%}
   /* 단의 «코» 는 가운데가 밝고 양끝이 어둡다 — 전폭 균일 띠로 두면 자처럼 보인다 */
   .rw-floor::after{content:'';position:absolute;inset:0;
     background:linear-gradient(90deg,rgba(0,0,0,.55) 0,rgba(0,0,0,0) 26%,
       rgba(0,0,0,0) 74%,rgba(0,0,0,.55) 100%)}
+  /* 좌우 벽기둥 — 비평 V: x0~90 / x987~1080(폭의 17%)이 y108~2100 전 구간에서 요소 0개.
+     측정표 §배경의 «좌우 기둥 암시» 를 세운다. 2행 슬롯이 x91 에서 시작하므로 폭 86 이면 침범 0. */
+  .rw-pil{top:0;bottom:0;width:86px;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,rgba(74,62,45,.26) 0 4px,rgba(58,48,35,.16) 4px 74px,
+      rgba(96,84,61,.30) 74px 79px,rgba(7,6,4,.34) 79px 84px,rgba(0,0,0,0) 84px 86px)}
+  .rw-pil.l{left:0}
+  .rw-pil.r{right:0;transform:scaleX(-1)}
   /* 아치 위 상인방(lintel) — 패널 상단~아치 정점 구간에 «전경 요소 0개» 라는 지적(S·U 공통).
      켜 줄눈보다 확실히 두꺼운 단 하나를 아치 머리 위에 얹어 벽면을 위·아래로 끊는다.
      아치에 종속된 위치라 프레임이 길어져도 아치와 함께 내려간다. */
@@ -3224,8 +3255,8 @@
     background:radial-gradient(closest-side ellipse at 50% 50%,#3E2B1D 0%,rgba(62,42,30,0) 72%);
     pointer-events:none}
   /* 수반 접지 그림자 — 밑동 바로 아래. 없으면 수반이 지면에 «얹힌» 것으로 안 읽힌다(비평 U) */
-  .rw-mid::after{content:'';position:absolute;left:-24px;width:448px;top:200px;height:34px;
-    background:radial-gradient(closest-side ellipse at 50% 50%,rgba(6,6,4,.55) 0%,rgba(6,6,4,0) 100%);
+  .rw-mid::after{content:'';position:absolute;left:-42px;width:484px;top:196px;height:52px;
+    background:radial-gradient(closest-side ellipse at 50% 50%,rgba(5,5,3,.72) 0%,rgba(5,5,3,0) 100%);
     z-index:1;pointer-events:none}
   /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
   .rw-basin{left:0;top:0;width:400px;height:216px;cursor:pointer;z-index:3}
@@ -8546,8 +8577,10 @@
     </div>
     <div class="rw-panel">
       <div class="rw-bg"></div>
+      <span class="rw-pil l"></span><span class="rw-pil r"></span>
       <div class="rw-lintel"></div>
       <div class="rw-floor"></div>
+      <div class="rw-steps"><span class="rw-st rw-st1"></span><span class="rw-st rw-st2"></span></div>
       <div class="rw-grid" id="rwGrid"></div>
       <!-- 120 — 중단 구획: 수반과 코스트 알약은 상대 위치가 고정이라 한 덩어리로 묶는다 -->
       <div class="rw-mid">
