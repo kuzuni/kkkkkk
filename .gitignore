@@ -126,3 +126,9 @@ docs/review/A2-r*-box.json
 docs/review/A2-r*-hard.png
 docs/review/A2-r*-labeloff.png
 docs/review/A2-r4b*
+
+# A1 capA1.js/scanA1.py 가 회차마다 새로 뽑는 차분 중간본 — 채점본(A1-r<n>.png ·
+# -open.png · -dom.json)만 저장소에 남긴다. 앞 세션이 `chore(A1): 차분 중간본
+# (-dA~-dE) 저장소에서 제외` 로 지웠지만 무시 규칙을 안 걸어 회차마다 다시 올라왔다.
+docs/review/A1-r*-d[A-E].png
+docs/review/A1-r*-scan.json
