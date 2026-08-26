@@ -2144,17 +2144,37 @@
        scale 이 예전보다 작아졌으므로 같은 화면 두께를 내려면 선언값이 커진다(예 50%: 12.52 → 14.32).
        80% 부터 raw 6 으로 떨군다 — 그 구간은 α 가 이미 0(70%)이라 화면에 없고, 선언값을 그대로 밀면
        6/.07 = 85px 짜리 판이 되기 때문이다(15회차가 90% 에서 같은 이유로 떨궜다). */
-    0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
-    10%{transform:scale(.883810);box-shadow:0 0 0 10.18px #241A12,inset 0 0 0 5px #FFFBF2}
-    13.33%{transform:scale(.845034);box-shadow:0 0 0 11.83px #241A12,inset 0 0 0 5px #FFFBF2}
-    20%{transform:scale(.767619);box-shadow:0 0 0 11.87px #241A12,inset 0 0 0 5px #FFFBF2}
-    30%{transform:scale(.651361);box-shadow:0 0 0 11.94px #241A12,inset 0 0 0 5px #FFFBF2}
-    40%{transform:scale(.535170);box-shadow:0 0 0 12.03px #241A12,inset 0 0 0 5px #FFFBF2}
-    43.33%{transform:scale(.496463);box-shadow:0 0 0 12.09px #241A12,inset 0 0 0 5px #FFFBF2}
-    50%{transform:scale(.418980);box-shadow:0 0 0 14.32px #241A12,inset 0 0 0 5px #FFFBF2}
-    60%{transform:scale(.302789);box-shadow:0 0 0 19.82px #241A12,inset 0 0 0 5px #FFFBF2}
-    70%{transform:scale(.186463);box-shadow:0 0 0 32.18px #241A12,inset 0 0 0 5px #FFFBF2}
-    80%{transform:scale(.070272);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
+    /* ★ 17회차 — 플래시를 **바깥에서 안쪽으로** 옮겼다. 15·16회차의 «6 → 10px 바깥 링» 은
+       강조를 내는 대신 **행 사이 5px 거터를 자기가 먹고 있었다.** 16회차에 margin 을 17px 로 붙들어
+       거터 융착을 없앴는데도(§7-2 ②) 비평가 Ξ 가 40ms 프레임에서 **하단 거터 0px** 을 실측했다 —
+       «삭제카드 하단선 y906–916 과 3행 상단선 y917–922 가 크림색 한 줄 없이 17px 통짜 검은 띠로 융착».
+       내 probe92 도 같은 것을 «거터 최소 0.99px» 로 재고 있었는데 나는 그걸 15회차가 계산해 둔
+       «설계 상한 1px» 이라며 통과로 읽었다. **1px 은 틈이 아니다** — 렌더링에서 한 줄은 사라진다.
+       15회차 스스로 «두께로 낼 수 있는 강조는 여기가 구조적 상한» 이라 적어 둔 그 상한이,
+       실은 **이미 넘어선 값**이었던 것이다.
+
+       → **바깥 링은 화면 6px 로 완전히 고정**(선언값 = 6 ÷ scale)해서 거터가 전 구간 **정확히 5px**.
+         플래시는 **안쪽 어두운 링 0 → 4 → 0px**(빛 테두리 5px 안쪽에 겹쳐 그린다)으로 낸다.
+       box-shadow 는 **먼저 적은 것이 위**에 깔리므로 `inset 5px 빛` 뒤에 `inset (5+f) 어둠` 을 두면
+       빛 테두리는 그대로 남고 그 **안쪽으로만** f 만큼 어두운 띠가 자란다. 화면 두께를 f 로 고정하려면
+       선언값이 `5 + f ÷ scale` 이어야 한다(빛 테두리 5 는 raw 라 화면에서 5·s 를 차지한다).
+
+       13회차에 X·Y 가 inset 을 기각한 근거는 «세로 필드의 10.5% 를 먹는데 가로는 1.9% 라 보이는 면이
+       5.65 → 6.2:1 로 눌린다» 였다. 그건 **inset 11px** 기준이다. 지금은 4px 이라 147 → 139 · 784 → 776,
+       면 비율 5.33 → **5.58:1(+4.7%)** 이고 130ms 만 지속한다. 그 대가로 **거터 5px 이 전 구간 산다.**
+       그리고 Ξ·Π·Z·Ω 네 명이 공통으로 지적한 «기하 진폭 0%» 도 이걸로 처음 0 이 아니게 된다 —
+       바깥으로 키우는 길은 거터가 막고 있어서(위 계산) **안쪽이 유일하게 남은 방향**이다. */
+    0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    10%{transform:scale(.883810);box-shadow:0 0 0 6.79px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 8.39px #241A12}
+    13.33%{transform:scale(.845034);box-shadow:0 0 0 7.10px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 9.73px #241A12}
+    20%{transform:scale(.767619);box-shadow:0 0 0 7.82px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 9.69px #241A12}
+    30%{transform:scale(.651361);box-shadow:0 0 0 9.21px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 8.99px #241A12}
+    40%{transform:scale(.535170);box-shadow:0 0 0 11.21px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 6.12px #241A12}
+    43.33%{transform:scale(.496463);box-shadow:0 0 0 12.09px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    50%{transform:scale(.418980);box-shadow:0 0 0 14.32px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    60%{transform:scale(.302789);box-shadow:0 0 0 19.82px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    70%{transform:scale(.186463);box-shadow:0 0 0 32.18px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
+    80%{transform:scale(.070272);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2,inset 0 0 0 5px #241A12}
     90%{transform:scale(.026395)}
     92%{transform:scale(.017619)}
     96%{transform:scale(.004422)}
