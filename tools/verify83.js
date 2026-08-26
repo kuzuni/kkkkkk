@@ -50,21 +50,33 @@ const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, consol
   ok(!st3.panel, '패널은 닫힌 상태(gmCloseAll 경로)');
   await p.evaluate(() => closeColl21());
 
-  /* [4] 레드닷 — 실제 데이터: 스킬 3종 보유(1티어 need 3) → on, 수령(claimColl) → off */
+  /* [4] 레드닷 — 실제 데이터로 «강화 가능할 때만» 을 확인한다.
+     ⚠ 147(2026-08-26) — 이 절은 **작업 91 이전(카테고리 티어) API** 로 굳어 있어 상시 FAIL 이었다:
+       `collReady('skill')` 은 이제 **세트 키**(`skill:0` 등)를 받고, 「스킬 3종 = 1티어」 규칙도 없다.
+       새 규칙 = «세트 전원이 그 Lv 를 넘겨야 그 단계가 열린다» → 세트 전원 Lv.1 로 심는다.
+     레드닷은 클래스(`.ibtn.on`)만 보지 말고 **실제로 그려지는지**(`.bdg` 의 computed display)도 본다
+     — 147 의 원인이 «클래스는 맞는데 CSS 특이성에 져서 항상 보였다» 였다. */
   console.log('[4] 레드닷');
-  const dot = () => p.evaluate(() => document.querySelector('#sideL .ibtn[data-pop="coll"]').classList.contains('on'));
+  const dotCls = () => p.evaluate(() => document.querySelector('#sideL .ibtn[data-pop="coll"]').classList.contains('on'));
+  const dotVis = () => p.evaluate(() => {
+    const b = document.querySelector('#sideL .ibtn[data-pop="coll"] .bdg');
+    return !!b && getComputedStyle(b).display !== 'none';
+  });
   await p.evaluate(() => {
     Object.assign(S, DEF());
-    SKILLS.slice(0, 3).forEach(k => { if (!S.own[k.id]) S.own[k.id] = { n: 0, l: 1 }; });
+    COLL_SET['skill:0'].it.forEach(id => S.own[id] = { n: 0, l: 1 });
     uiDirty = true; renderUI();
   });
   await p.waitForTimeout(150);
-  ok(await p.evaluate(() => collReady('skill')), '스킬 3종 보유 → collReady(skill)');
-  ok(await dot(), '레드닷 on');
-  await p.evaluate(() => { claimColl('skill'); closeModal(); uiDirty = true; renderUI(); });
+  ok(await p.evaluate(() => collReady('skill:0') && collAnyReady()),
+     '스킬·일반 세트 전원 Lv.1 → collReady(skill:0)');
+  ok(await dotCls(), '레드닷 on');
+  ok(await dotVis(), '레드닷이 실제로 그려진다');
+  await p.evaluate(() => { claimColl('skill:0'); closeModal(); uiDirty = true; renderUI(); });
   await p.waitForTimeout(150);
-  ok(await p.evaluate(() => !['skill','equip','pet','relic'].some(collReady)), '수령 후 남은 보너스 없음');
-  ok(!(await dot()), '수령 후 레드닷 off');
+  ok(await p.evaluate(() => !collAnyReady()), '수령 후 남은 보너스 없음');
+  ok(!(await dotCls()), '수령 후 레드닷 off');
+  ok(!(await dotVis()), '수령 후 레드닷이 실제로 사라진다');
 
   console.log('[5] 콘솔');
   ok(errs.length === 0, '콘솔 에러 0 ' + (errs.length ? JSON.stringify(errs.slice(0, 3)) : ''));

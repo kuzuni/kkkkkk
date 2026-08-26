@@ -5728,9 +5728,13 @@
      우리는 local (172,10) 22px 이라 7.5px 아래·2px 작았다. ※ 60 쥬시의 jzDotPulse(scale 1.14) 때문에
      색 마스크로는 bbox 가 번져 안 잡힌다 — CSS 값으로 맞춘다. */
   /* 91 — 알림점은 칸 우상단 고정. 214 기준 left 170(우끝에서 20) → 147 기준 **103**. */
-  .cltab>s.dot{display:none;left:103px;top:2.5px;width:24px;height:24px;border-radius:50%;
+  /* ⚠ 같은 특이성 함정(위 뱃지·효과 상자 주석) — 위쪽 `#collw s{display:inline-block}` 은 **ID 셀렉터**라
+     `.cltab>s.dot{display:none}`(클래스 2) 를 이긴다. 그래서 «강화 가능» 여부와 무관하게 6개 탭에
+     레드닷이 항상 떠 있었다(`.alert` 토글이 아무 효과가 없었다). 두 줄 다 `#collw` 로 올려 되찾는다.
+     레드닷 = `collTabReady(tab)` — 그 탭에 «받은 단계 < 가능 단계» 인 세트가 하나라도 있을 때만. */
+  #collw .cltab>s.dot{display:none;left:103px;top:2.5px;width:24px;height:24px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
-  .cltab.alert>s.dot{display:block}
+  #collw .cltab.alert>s.dot{display:block}
   /* ==========================================================================
      33 재화 «정보» 팝업 (#ciw) — 측정표 docs/measure/33-재화정보팝업.md
      전역 규칙(UI-REFERENCE 33): «모든 재화 아이콘은 클릭하면 이 정보 팝업이 뜬다».

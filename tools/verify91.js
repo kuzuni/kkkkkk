@@ -258,12 +258,23 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     closeColl21();
     S.own = {}; S.coll = {}; markDirty(); renderUI();
     openColl21('weapon');                          /* 탭 레드닷은 팝업이 그릴 때 갱신된다 */
-    const none = { any: collAnyReady(), dot: document.querySelectorAll('#collTabs .cltab.alert').length };
+    /* 147 — `.alert` «클래스» 만 세면 CSS 특이성 사고를 못 잡는다(`#collw s{display:inline-block}` 가
+       `.cltab>s.dot{display:none}` 을 이겨 6개 탭에 레드닷이 상시 떠 있었다). 실제로 그려지는 점도 센다. */
+    const dotVis = () => [...document.querySelectorAll('#collTabs .cltab>s.dot')]
+      .filter(d => getComputedStyle(d).display !== 'none').length;
+    const none = { any: collAnyReady(), dot: document.querySelectorAll('#collTabs .cltab.alert').length,
+                   vis: dotVis() };
     COLL_SET['skill:0'].it.forEach(id => S.own[id] = { n: 0, l: 2 });
     markDirty(); renderUI(); openColl21('skill');
     const some = { any: collAnyReady(), cat: collCatReady('skill'), tab: collTabReady('skill'),
                    other: collCatReady('pet'), dot: document.querySelectorAll('#collTabs .cltab.alert').length,
-                   side: !!document.querySelector('.side .ibtn[data-pop="coll"].on') };
+                   vis: dotVis(),
+                   visTab: [...document.querySelectorAll('#collTabs .cltab')]
+                     .filter(t => getComputedStyle(t.querySelector('s.dot')).display !== 'none')
+                     .map(t => t.dataset.ct).join(','),
+                   side: !!document.querySelector('.side .ibtn[data-pop="coll"].on'),
+                   sideVis: (() => { const b = document.querySelector('.side .ibtn[data-pop="coll"] .bdg');
+                     return !!b && getComputedStyle(b).display !== 'none'; })() };
     const g0 = collSteps();
     claimColl('skill:0');
     const g1 = collSteps(), cat1 = collCatSteps('skill');
@@ -273,9 +284,13 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
              cosTxt: cosReqText(AVATARS.find(a => a.id === 'av45')) };
   });
   ok(!link.none.any && link.none.dot === 0, '아무것도 없으면 레드닷 0');
+  ok(link.none.vis === 0, '147 — 아무것도 없으면 «그려지는» 레드닷도 0 (실측 ' + link.none.vis + ')');
   ok(link.some.any && link.some.cat && link.some.tab && !link.some.other, 'collAnyReady / collCatReady / collTabReady 판정');
   ok(link.some.dot === 1, '강화 가능한 탭에만 레드닷 (실측 ' + link.some.dot + ')');
+  ok(link.some.vis === 1 && link.some.visTab === 'skill',
+     '147 — «그려지는» 레드닷도 강화 가능한 탭 하나뿐 (실측 ' + link.some.vis + '개 [' + link.some.visTab + '])');
   ok(link.some.side, '좌측 사이드 «도감» 아이콘 레드닷(83)');
+  ok(link.some.sideVis, '147 — 좌측 «도감» 배지도 실제로 그려진다');
   ok(link.g1 === link.g0 + 1 && link.cat1 === 1, '가이드 미션 «도감 보너스 1회» 카운터 = 누적 단계 수 (' + link.g0 + ' → ' + link.g1 + ')');
   ok(!link.cosOff && /스킬 도감 누적 3단계/.test(link.cosTxt), '87 코스튬 해금 조건이 «카테고리 누적 단계» 로 (실측 "' + link.cosTxt + '")');
   const cos = await p.evaluate(() => {
