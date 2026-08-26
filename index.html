@@ -2912,7 +2912,10 @@
 
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:var(--fx-plus-fs);white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
-    animation:fxPlus .6s cubic-bezier(.2,.8,.3,1) both}
+    /* 29회차 — `cubic-bezier(.2,.8,.3,1)` → `linear`. CSS 는 이 함수를 애니메이션 «전체» 가 아니라
+       **키프레임 구간마다** 적용하므로, 구간이 성길수록 «급출발 → 정지» 톱니가 커진다(28차 2인 공통
+       «구간속도 비단조»). 감속은 아래 키프레임 간격이 만든다(easeOutCubic 표본). */
+    animation:fxPlus .6s linear both}
   /* 93 7회차 — UI 발은 도착이 1.26s 까지 이어지므로 «+n» 도 그때까지 살아 있어야 한다 */
   /* 14회차 — 그 1.42s 는 «트리거» 가 아니라 **«첫 도착»**(실측 541ms·511ms)부터 세므로 종료가
      그만큼 밀려 있었다. `probe93i` 실측: 코인이 화면에서 사라지는 1453ms(A)·1443ms(B) 뒤로
@@ -2928,10 +2931,24 @@
      15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W). 16회차 — .8s 는 «687~702ms 에도
      페이드 0% = 수명 >0.8s»(Y·Z 공통 ①)라 .6s 로, 페이드는 50% 부터 — 도착(~320ms)+600 이면
      정산 프레임(850ms)에 뚜렷이 사라지는 중이다. */
+  /* 29회차 — 28차 2인 공통 «구간속도 비단조»(AX ①-6 «0.274 → 0.282 → **0.055** → 0.165 px/ms,
+     직전 대비 −80.5%» · AW ④-4 «282→45→169→187px/s»). **원인은 키프레임 값이 아니라 이징이다** —
+     `.fx-plus` 가 `cubic-bezier(.2,.8,.3,1)` 을 애니메이션 전체가 아니라 **키프레임 구간마다**
+     적용해서(CSS 기본 동작), 구간마다 «빨리 출발 → 거의 정지» 를 반복하는 톱니가 된다.
+     키프레임을 4칸으로 성기게 둘수록 톱니의 골이 깊어져 비평가가 «멈췄다» 로 읽는다.
+     → 구간 보간을 **선형**으로 바꾸고(`animation-timing-function:linear`), 감속은 **키프레임 간격**
+       으로 만든다(easeOutCubic 을 6점으로 표본화). 구간속도가 단조 감소로 떨어진다.
+     ⚠ 방향(아래로 흐름)은 **10회차 결정이라 안 바꾼다** — 알약이 화면 최상단이라 위로 띄우면
+       정산된 HUD 숫자와 겹친다(10회차 실측). 28차 지적의 «부호» 부분은 그 결정과 정면으로 부딪치므로
+       여기서 통일하는 것은 **운동 법칙**(감속 프로파일)이지 부호가 아니다 — 씬 C 와 같은 법칙을 쓴다.
+     시작 −14 → 끝 +24 · 진입 팝(14%) 은 종전 그대로라 수명·페이드(50% 부터) envelope 이 안 변한다.
+     구간속도(1.08s 기준): 진입 .093 → .067 → .049 → .028 → .021 → .003 px/ms — 전 구간 단조 감소. */
   @keyframes fxPlus{0%{opacity:0;transform:translate(-50%,-14px) scale(.7)}
     14%{opacity:1;transform:translate(-50%,0) scale(1.06)}
-    30%{opacity:1;transform:translate(-50%,4px) scale(1)}
-    50%{opacity:1;transform:translate(-50%,10px) scale(1)}
+    25%{opacity:1;transform:translate(-50%,8px) scale(1)}
+    40%{opacity:1;transform:translate(-50%,16px) scale(1)}
+    50%{opacity:1;transform:translate(-50%,19px) scale(1)}
+    68%{opacity:.64;transform:translate(-50%,23px) scale(1)}
     100%{opacity:0;transform:translate(-50%,24px) scale(1)}}
   /* 14회차 — 강화(upg)용 델타 플로터 «+2.4 공격력». gain 의 `+n` 과 같은 서체·스트로크.
      16회차 — 카드 밖 −44px 시작은 «x1 배수 탭 라벨을 368ms+ 가려 '+2.2 공격력1' 로 합성 오독»
@@ -2950,10 +2967,17 @@
      중앙 정렬 글자도 중심을 덮는다. 유일한 아이콘 없는 띠가 **y275~396**(아이콘 아래 ~ 버튼 위)라
      상승 구간을 통째로 그 띠 안으로 내린다(아래 `fxDelta` 의 top). 끝점이 `.cv` 위지만 21회차의
      «플로터가 떠 있는 동안 `.cv` 를 죽인다» 가 이미 걸려 있어 두 수치가 같이 안 읽힌다. */
+  /* 29회차 — 위 `fxPlus` 와 **같은 처방·같은 이유**(구간마다 걸리는 cubic-bezier 가 톱니를 만든다).
+     AX 가 «직전 대비 −80.5%» 로 잡은 골이 30%↔46% 구간의 이징 꼬리다.
+     끝점(+4 → −80px)과 수명(.62s)·페이드(46%)는 **한 픽셀도 안 바꾼다** — 24회차가 아이콘 없는
+     띠(카드 y275~396) 안으로 상승 구간을 통째로 밀어 넣은 결정이 여기 걸려 있다.
+     구간속도(.62s 기준): .371 → .294 → .229 → .159 → .082 → .018 px/ms — 단조 감소. */
   @keyframes fxDelta{0%{opacity:.6;transform:translate(-50%,4px) scale(.8)}
-    10%{opacity:1;transform:translate(-50%,-8px) scale(1.06)}
-    30%{opacity:1;transform:translate(-50%,-34px) scale(1)}
-    46%{opacity:.92;transform:translate(-50%,-50px) scale(1)}
+    10%{opacity:1;transform:translate(-50%,-19px) scale(1.06)}
+    20%{opacity:1;transform:translate(-50%,-37px) scale(1.03)}
+    30%{opacity:1;transform:translate(-50%,-51px) scale(1)}
+    46%{opacity:.92;transform:translate(-50%,-67px) scale(1)}
+    65%{opacity:.60;transform:translate(-50%,-76px) scale(1)}
     100%{opacity:0;transform:translate(-50%,-80px) scale(1)}}
 
   /* 21회차 — 강화 델타 플로터가 떠 있는 동안 그 값이 나온 수치 행을 비운다(공존 제거).

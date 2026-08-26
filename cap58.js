@@ -63,7 +63,20 @@ function recorder(cdp){
    «166ms 동결» 로 잡은 것이 바로 이 중복이다 — probe58f 실측에는 정지 구간이 없다.
    → 목표 시각 순서대로 **아직 안 쓴 프레임 중에서만** 고른다(단조 증가 보장). 그래도 목표에서
    ±55ms 넘게 벗어난 프레임은 로그에 «WARN» 으로 남겨 비평가 전달문에 적게 한다. */
-function pick(buf, t0, tag, pre){
+/* 29회차 — ⚑ **프레임 «라벨» 도 낡아 있었다.** 28회차가 고친 것은 정답표 쪽뿐이다(밴드).
+   프레임을 고르는 이 함수는 여전히 «타임스탬프 dt» 로 골라서, 비평가에게 «이 장은 t=95ms» 라고
+   말하면서 실제로는 **t = 95 − lag** 의 DOM 을 보여 주고 있었다. lag 바닥이 56~68ms 라 95 슬롯은
+   구조적으로 «스폰(트리거 +35ms) 직전» 을 찍는다 — 28차 2인 공통 1순위 «씬 A 스폰 91ms 무반응»
+   (AX «금색 화소 518px = 기준과 Δ−4%» · AW «세 임계 전부 블롭 0개»)이 정확히 이것이다.
+   `probe58ae` 실측(5런): 첫 DOM 생성 트리거 +32~39ms · **16개 전부 «지름 16px 이상 + opacity≥.5»
+   가 트리거 +62.5~74ms**(지름 37.8~38.9px). 두 사람이 요구한 «t≈91ms 에 8개 이상» 은 게임에서
+   이미 성립하고 있었다 — 그 프레임을 못 보고 있었을 뿐이다.
+   → 목표 시각을 **프레임의 «진짜 DOM 시각»**(dt − lag) 으로 맞춘다. 로그·파일명·비평 브리프에
+     적히는 t 도 전부 이 진짜 시각이다. 정답표 밴드는 **원본 dt** 로 계속 뽑는다(이중 차감 금지) —
+     `__capT`(원본 dt) 와 `__capTrue`(진짜 시각)를 따로 들고 나가는 이유가 그것이다.
+   lag 을 못 쟀으면(교정 실패) med=0 이라 종전 거동 그대로다. */
+function pick(buf, t0, tag, pre, LAG){
+  const lagMed = LAG ? LAG.med : 0;
   /* -60 까지 허용하면 트리거 «이전» 프레임이 0ms 슬롯을 먹는다(14회차 upg: 8슬롯 중 2장이 기준) */
   const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -8);
   if(rel.length < (WANT_BY[tag] || WANT_UPG).length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
@@ -71,17 +84,25 @@ function pick(buf, t0, tag, pre){
   const gaps = rel.slice(1).map((f, i) => f.dt - rel[i].dt);
   const med = gaps.slice().sort((a,b) => a-b)[gaps.length >> 1] || 0;
   const WANT = WANT_BY[tag] || WANT_UPG;
-  const out = [{ want:'기준', got:Math.round(pre.t - t0), data:pre.data }];
+  /* `true` = 이 프레임이 실제로 그린 DOM 의 시각. 목표도 이 축에서 맞춘다. */
+  const out = [{ want:'기준', got:Math.round(pre.t - t0 - lagMed), raw:Math.round(pre.t - t0), data:pre.data }];
   let from = 0;
   for(const w of WANT){
     let bi = from;
     for(let i = from; i < rel.length; i++)
-      if(Math.abs(rel[i].dt - w) < Math.abs(rel[bi].dt - w)) bi = i;
-    out.push({ want:w, got:Math.round(rel[bi].dt), data:rel[bi].data });
+      if(Math.abs(rel[i].dt - lagMed - w) < Math.abs(rel[bi].dt - lagMed - w)) bi = i;
+    out.push({ want:w, got:Math.round(rel[bi].dt - lagMed), raw:Math.round(rel[bi].dt), data:rel[bi].data });
     from = Math.min(bi + 1, rel.length - 1);            /* 다음 목표는 이 프레임 «뒤» 에서만 고른다 */
   }
-  global.__capT = global.__capT || {};
-  global.__capT[tag] = out.slice(1).map(f => f.got);
+  /* 마지막 슬롯이 버퍼 끝에 닿았으면 «창이 lag 만큼 모자랐다» 는 뜻이다 — 조용히 넘어가면
+     뒤 슬롯 몇 장이 같은 마지막 프레임으로 채워진다(24회차의 «죽은 꼬리» 와 구별이 안 된다). */
+  if(lagMed && out[out.length-1].raw >= Math.round(rel[rel.length-1].dt) - 1)
+    console.log(`    ⚠ WARN ${tag}: 마지막 슬롯이 스크린캐스트 버퍼 끝(dt ${Math.round(rel[rel.length-1].dt)}ms)에 닿았다`
+      + ` — lag ${Math.round(lagMed)}ms 만큼 창이 모자란다. 뒤쪽 슬롯의 «정지» 는 캡처 탓일 수 있다.`);
+  global.__capT = global.__capT || {};                  /* 원본 dt — 정답표 밴드 계산용 */
+  global.__capTrue = global.__capTrue || {};            /* 진짜 DOM 시각 — 비평가에게 보이는 라벨 */
+  global.__capT[tag] = out.slice(1).map(f => f.raw);
+  global.__capTrue[tag] = out.slice(1).map(f => f.got);
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
   /* 23회차 — 비평가 AN·AP 가 **독립적으로** «quest f2(79)와 f3(185)가 바이트 단위로 동일 =
      106ms 정지 · 퍼짐이 293ms 늦다» 를 ① 축 최대 감점으로 냈다. 셋 다 틀렸다 — `probe58p` 로
@@ -99,7 +120,9 @@ function pick(buf, t0, tag, pre){
     + ` 비평가에게 «이 슬롯 쌍은 캡처가 같은 페인트를 두 번 쓴 것이니 «정지 프레임» 으로 세지 말 것»`
     + ` 이라고 반드시 알려라(23회차: 이걸 안 알려서 AN·AP 둘 다 ① 을 3점으로 냈다).`);
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
-  console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
+  console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms`
+    + (lagMed ? ` [**그려진 DOM 시각** — 원본 타임스탬프에서 lag ${Math.round(lagMed)}ms 를 뺀 값이다]` : '')
+    + ` (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
   if(worst > 55) console.log(`    ⚠ WARN ${tag}: 목표 대비 ±${worst}ms — 비평가에게 «프레임 시각은 파일명이 아니라 이 로그 기준» 이라고 알릴 것`);
   return worst;
 }
@@ -254,8 +277,11 @@ global.__capLog = {};
         await nf();
       }
       return { rows:out, spawn };
-    }, [waitMs || 1800, t0.t]);
-    const worst = pick(buf, t0.t, tag, pre);
+      /* 29회차 — 창을 lag 만큼 늘린다. 마지막 슬롯(1520ms)이 «진짜 DOM 시각» 축이 되면 필요한
+         원본 타임스탬프는 1520 + lag 이라, 종전 창(1800+260)으로는 부하가 걸린 실행에서 뒤 슬롯이
+         버퍼 끝에 붙는다. 이 루프가 도는 동안 스크린캐스트도 계속 프레임을 내보낸다. */
+    }, [(waitMs || 1800) + (LAG ? Math.ceil(LAG.hi) : 0), t0.t]);
+    const worst = pick(buf, t0.t, tag, pre, LAG);
     global.__capLog[tag] = log;
     return worst;
   };
@@ -359,9 +385,12 @@ global.__capLog = {};
       const a = at(ms - LAG.hi)[col], b = at(ms - LAG.lo)[col];
       return String(a) === String(b) ? a : a + '~' + b;
     };
-    console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수` +
-      (LAG ? ` · 프레임이 타임스탬프보다 ${LAG.lo.toFixed(0)}~${LAG.hi.toFixed(0)}ms 낡아 **밴드**로 적는다` : '') + '): ' +
-      T.map(ms => ms + ':' + band(ms,1) + '/' + band(ms,2) + '/' + band(ms,4)).join('  '));
+    /* 29회차 — 라벨은 «그려진 DOM 시각»(`__capTrue`), 조회는 «원본 타임스탬프»(`__capT`) 로 한다.
+       `band()` 가 이미 원본에서 lag 을 빼므로, 라벨 값으로 조회하면 lag 을 두 번 빼게 된다. */
+    const TT = (global.__capTrue && global.__capTrue[tag]) || T;
+    console.log(`  · ${tag} 정답표(t=트리거 기준 ms, **프레임이 그린 DOM 시각** · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수` +
+      (LAG ? ` · 프레임은 타임스탬프보다 ${LAG.lo.toFixed(0)}~${LAG.hi.toFixed(0)}ms 낡았고 슬롯이 그만큼 당겨져 있다` : '') + '): ' +
+      T.map((ms, i) => (TT[i] != null ? TT[i] : ms) + ':' + band(ms,1) + '/' + band(ms,2) + '/' + band(ms,4)).join('  '));
   }
   /* 24회차 — **부분 중복 페인트** 검사를 캡처의 일부로 붙인다.
      위 «⚠ 중복 페인트» 는 프레임 «전체» 가 바이트 동일할 때만 운다. 그런데 CDP 스크린캐스트는

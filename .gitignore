@@ -132,3 +132,6 @@ docs/review/A2-r4b*
 # (-dA~-dE) 저장소에서 제외` 로 지웠지만 무시 규칙을 안 걸어 회차마다 다시 올라왔다.
 docs/review/A1-r*-d[A-E].png
 docs/review/A1-r*-scan.json
+
+# 58 29회차 probe58af 가 before 비교용으로 git show 로 뽑는 임시 파일 (측정이 끝나면 지운다)
+.p58af-before.html
