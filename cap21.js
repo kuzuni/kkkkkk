@@ -1,6 +1,14 @@
 /* 21 도감 보너스 팝업 캡처 — 1080x2280 (2026-08-25 기준 해상도).
-   레퍼런스(docs/ref/21-도감-보너스-팝업.jpg)와 «같은 상태»를 만든다(04 교훈 1):
-   방어구 탭 · 블록1 Lv.5/6+6/6 · 블록2 3/4 · 블록3 1/2 · 스킬 탭 레드닷.
+   레퍼런스(docs/ref/21-도감-보너스-팝업.jpg)와 «같은 상태»를 만든다(04 교훈 1).
+
+   ⚑ 11회차(2026-08-26) — 91·118 이 도감을 «부위 × 등급 세트» 로 갈아엎으면서 이 하네스가 죽어 있었다.
+     구 구조: 탭 4개(무기·방어구·스킬·동료) · `COLL21[tab].sets` · 세트당 카드 2장.
+     신 구조: 탭 6개(스킬·무기·방패·목걸이·펫·유물) · `COLL_SETS`(`st.tab`) · 장비 세트당 카드 5장.
+     `openColl21('armor')` 는 이제 «없는 탭» 이라 `#collList` 가 통째로 비어서 나왔다(blocks: []).
+     → 탭은 레퍼런스의 «방어구» 에 가장 가까운 **방패(shield)** 로 잡는다.
+     ref 의 «5/6 · 6/6 / 3/4 / 1/2» 라벨은 «Lv. 현재/다음 단계 요구» 이므로 세트별 **받은 단계**
+     (`S.coll['equip:shield:n']`)와 아이템 레벨을 같이 심어야 재현된다. 카드 수(2 → 5)는
+     91 이 못박은 구성이라 ref 와 다르며, 이 차이는 비평 전달문에 명시한다.
    사용법: node cap21.js [출력경로]   (기본 docs/review/21-r1.png) */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -30,11 +38,14 @@ const settle = page => page.evaluate(() => Promise.all(
       gold: 1234567, dia: 3210, relic: 450, stage: 37, best: 37,
       buyQty: 1, autoBuy: false, tuto: 3,
       seen: { hero: 1, up: 1, adv: 1, box: 1, shop: 1 },
-      /* 레퍼런스 라벨 재현 — 5/6 · 6/6 · 3/4 · 3/4 · 1/2 · 1/2 */
-      own: { shield0:{n:1,l:5}, amulet0:{n:1,l:6}, shield1:{n:1,l:3}, amulet1:{n:1,l:3},
-             shield2:{n:1,l:1}, amulet2:{n:1,l:1}, shield3:{n:1,l:2}, shield4:{n:1,l:1},
-             shield5:{n:1,l:1}, amulet3:{n:1,l:1}, amulet4:{n:1,l:1},
-             slash:{n:1,l:4}, shuri:{n:1,l:3} }
+      /* 레퍼런스 라벨 재현(91 구조) — 블록1 «Lv. 5/6 · 6/6…» · 블록2 «3/4» · 블록3 «1/2».
+         라벨 = «아이템 Lv / (받은 단계+1)» 이므로 S.coll 의 받은 단계와 함께 심는다. */
+      own: { shield0:{n:1,l:5}, shield0_1:{n:1,l:6}, shield0_2:{n:1,l:6}, shield0_3:{n:1,l:6}, shield0_4:{n:1,l:6},
+             shield1:{n:1,l:3}, shield1_1:{n:1,l:3}, shield1_2:{n:1,l:4}, shield1_3:{n:1,l:4}, shield1_4:{n:1,l:4},
+             shield2:{n:1,l:1}, shield2_1:{n:1,l:1}, shield2_2:{n:1,l:2}, shield2_3:{n:1,l:2}, shield2_4:{n:1,l:2},
+             /* 스킬 탭 레드닷 = 그 탭에 «강화 가능한 세트» 가 있다(collTabReady) */
+             slash:{n:1,l:4}, shuri:{n:1,l:3} },
+      coll: { 'equip:shield:0': 5, 'equip:shield:1': 3, 'equip:shield:2': 1 }
     }));
   });
 
@@ -42,7 +53,7 @@ const settle = page => page.evaluate(() => Promise.all(
   await page.waitForTimeout(900);
   /* 28 교훈 3 — 캔버스의 흰 데미지 숫자가 잉크 스캔을 오염시킨다 */
   await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; });
-  await page.evaluate(() => openColl21('armor'));
+  await page.evaluate(() => openColl21('shield'));
   await page.waitForTimeout(500);
   await settle(page);
   await page.screenshot({ path: out });

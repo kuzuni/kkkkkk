@@ -37,8 +37,12 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
       gold: 1234567, dia: 3210, relic: 450, stage: 37, best: 37,
       buyQty: 1, autoBuy: false, tuto: 3,
       seen: { hero: 1, up: 1, adv: 1, box: 1, shop: 1 },
-      own: { shield0:{n:1,l:5}, amulet0:{n:1,l:6}, shield1:{n:1,l:3}, amulet1:{n:1,l:3},
-             shield2:{n:1,l:1}, amulet2:{n:1,l:1} }
+      /* 11회차 — 91·118 의 «부위 × 등급 세트» 구조. cap21.js 와 같은 상태를 쓴다. */
+      own: { shield0:{n:1,l:5}, shield0_1:{n:1,l:6}, shield0_2:{n:1,l:6}, shield0_3:{n:1,l:6}, shield0_4:{n:1,l:6},
+             shield1:{n:1,l:3}, shield1_1:{n:1,l:3}, shield1_2:{n:1,l:4}, shield1_3:{n:1,l:4}, shield1_4:{n:1,l:4},
+             shield2:{n:1,l:1}, shield2_1:{n:1,l:1}, shield2_2:{n:1,l:2}, shield2_3:{n:1,l:2}, shield2_4:{n:1,l:2},
+             slash:{n:1,l:4}, shuri:{n:1,l:3} },
+      coll: { 'equip:shield:0': 5, 'equip:shield:1': 3, 'equip:shield:2': 1 }
     }));
   });
   await page.goto('file://' + path.resolve('index.html'));
@@ -47,11 +51,13 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   /* 42 교훈 2 — 검증 중 플레이어가 죽으면 패배 화면(#defw)이 덮어 뒤 항목이 통째로 오염된다 */
   await page.evaluate(() => setInterval(() => { if (typeof player !== 'undefined' && player) player.inv = 1e9; }, 100));
 
-  /* ── 1. 진입점 — 보물상자 탭의 [📖 세트 도감] 버튼을 «실제 클릭» ── */
+  /* ── 1. 진입점 — 좌측 사이드 «도감» 아이콘을 «실제 클릭» ──
+     11회차: 89(유물 시스템 교체)가 보물상자 탭의 [📖 세트 도감] 버튼을 없애서 옛 진입점
+     `[data-opencoll]` 은 DOM 에 하나도 없다. 83 이 만든 좌측 5행 📚 가 유일한 진입점이다. */
+  const ENTRY = '.side .ibtn[data-pop="coll"]';
   console.log('\n[1] 진입점');
-  await page.evaluate(() => goTab('box', true));
   await page.waitForTimeout(900);
-  B('[data-opencoll] 버튼 존재', await page.locator('[data-opencoll]').count() > 0);
+  B(ENTRY + ' 버튼 존재', await page.locator(ENTRY).count() > 0);
   /* 6회차 — `locator.click()` 이 여기서 영원히 재시도한다. 원인은 21 이 아니라 **공용 `renderUI()`**:
      보물상자 탭이 열려 있으면 0.35초 루프가 `renderBanner('relic','bRel')` 로 패널 innerHTML 을
      통째로 갈아끼워, 버튼 노드가 초당 수십 번 detach 된다(MutationObserver 실측 3초에 87회).
@@ -60,17 +66,21 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
        클릭 자체는 페이지 안에서 `el.click()` 으로 쏜다(같은 위임 핸들러를 그대로 탄다).
      ※ 이 재렌더 폭주는 02·14 구간 버그다 — 21 작업 범위가 아니라 PROGRESS 비고에만 남긴다. */
   const hit = await page.evaluate(() => {
-    const el = document.querySelector('[data-opencoll]');
+    const el = document.querySelector('.side .ibtn[data-pop="coll"]');
     const r = el.getBoundingClientRect(), s = getComputedStyle(el);
     const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
     return { vis: s.visibility === 'visible' && s.display !== 'none' && +s.opacity > 0,
              sized: r.width > 0 && r.height > 0, self: !!top && (top === el || el.contains(top)) };
   });
   B('진입 버튼이 보이고 클릭 가능(hit target = 자기 자신)', hit.vis && hit.sized && hit.self);
-  await page.evaluate(() => document.querySelector('[data-opencoll]').click());
+  await page.evaluate(() => document.querySelector('.side .ibtn[data-pop="coll"]').click());
   await page.waitForTimeout(400);
   await settle(page);
   B('#collw 열림', await page.evaluate(() => $('collw').classList.contains('on')));
+  /* 아래 좌표·라벨 항목은 레퍼런스와 같은 상태(방패 탭)를 본다 — 사이드 진입의 기본 탭은 무기다. */
+  await page.evaluate(() => openColl21('shield'));
+  await page.waitForTimeout(250);
+  await settle(page);
 
   const geo = () => page.evaluate(() => {
     const app = document.getElementById('app').getBoundingClientRect();
@@ -134,22 +144,27 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   console.log('\n[4] 깃발 서브탭');
   T('탭 top', g.tabs[0].y, REF(1898), 1);
   T('탭1 x', g.tabs[0].x, 124, 1);
-  T('탭 pitch', g.tabs[1].x - g.tabs[0].x, 207, 2);
+  /* 11회차 — 91 이 탭을 4 → 6 으로 늘리면서 «폭 214 · pitch 207.7» 이 «폭 147 · pitch 138» 이 됐다
+     (컨테이너 폭 840 · 바깥 스팬 837 은 불변). 게이트가 옛 4탭 수치를 그대로 들고 있었다. */
+  T('탭 pitch', g.tabs[1].x - g.tabs[0].x, 138, 2);
+  T('탭 개수', g.tabs.length, 6, 0);
   T('비활성 탭 높이', g.tabs[0].h, 118, 2);
   const act = await page.evaluate(() => [...document.querySelectorAll('.cltab')].findIndex(t => t.classList.contains('on')));
   T('활성 탭 높이', g.tabs[act].h, 145, 2);
-  T('4탭 묶음 중심', (g.tabs[0].x + g.tabs[3].x + g.tabs[3].w) / 2, 542, 3);
+  T('탭 묶음 중심 = 모달 중심', (g.tabs[0].x + g.tabs[5].x + g.tabs[5].w) / 2, g.cl.x + g.cl.w / 2, 3);
 
   /* ── 5. 탭 전환 왕복 (실제 클릭) ── */
   console.log('\n[5] 탭 전환');
-  for (const k of ['weapon', 'skill', 'pet', 'armor']) {
+  /* 11회차 — 탭 4종(무기·방어구·스킬·동료) → 6종. 기대 블록 수는 옛 `COLL21[k].sets` 가 아니라
+     `COLL_SETS` 에서 그 탭의 세트 수를 센다(91: 부위 × 등급, 118: 유물 3세트). */
+  for (const k of ['weapon', 'skill', 'pet', 'relic', 'amulet', 'shield']) {
     await page.locator('.cltab[data-ct="' + k + '"]').click();
     await page.waitForTimeout(200);
     await settle(page);
     const st = await page.evaluate(k => ({
       on: document.querySelector('.cltab[data-ct="' + k + '"]').classList.contains('on'),
       n: document.querySelectorAll('#collList .clb').length,
-      want: COLL21[k].sets.length, tab: collTab }), k);
+      want: COLL_SETS.filter(s => s.tab === k).length, tab: collTab }), k);
     B('탭 ' + k + ' 활성', st.on && st.tab === k);
     T('탭 ' + k + ' 블록 수', st.n, st.want, 0);
   }
@@ -158,9 +173,10 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   console.log('\n[6] 실데이터 반영');
   const lab = await page.evaluate(() => [...document.querySelectorAll('#collList .clb')].slice(0, 3)
     .map(b => [...b.querySelectorAll('.cd .cl2')].map(i => i.textContent)));
-  B('블록1 라벨 = Lv. 5/6 · Lv. 6/6', lab[0].join('|') === 'Lv. 5/6|Lv. 6/6');
-  B('블록2 라벨 = Lv. 3/4 ×2', lab[1].join('|') === 'Lv. 3/4|Lv. 3/4');
-  B('블록3 라벨 = Lv. 1/2 ×2', lab[2].join('|') === 'Lv. 1/2|Lv. 1/2');
+  /* 91 구조 — 장비 세트는 카드 5장. 라벨 = «아이템 Lv / (받은 단계+1)» */
+  B('블록1 라벨 = Lv. 5/6 + 6/6 ×4', lab[0].join('|') === 'Lv. 5/6|Lv. 6/6|Lv. 6/6|Lv. 6/6|Lv. 6/6');
+  B('블록2 라벨 = Lv. 3/4 ×2 + 4/4 ×3', lab[1].join('|') === 'Lv. 3/4|Lv. 3/4|Lv. 4/4|Lv. 4/4|Lv. 4/4');
+  B('블록3 라벨 = Lv. 1/2 ×2 + 2/2 ×3', lab[2].join('|') === 'Lv. 1/2|Lv. 1/2|Lv. 2/2|Lv. 2/2|Lv. 2/2');
   const bdg = await page.evaluate(() => [...document.querySelectorAll('#collList .clb .clb-bdg > i.n')].slice(0, 3).map(i => i.textContent));
   B('뱃지 Lv = 세트 내 최저 레벨 (5·3·1)', bdg.join(',') === '5,3,1');
   /* 레벨을 올리면 라벨·뱃지가 따라 움직인다 */
@@ -177,28 +193,29 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   console.log('\n[7] 강화 버튼');
   const dis = await page.evaluate(() => [...document.querySelectorAll('#collList .clb-btn')].map(b => b.disabled));
   B('컬렉션 미충족 시 전부 비활성', dis.every(Boolean));
-  const rdy = await page.evaluate(() => {
-    /* 방어구 = equip 카테고리. 컬렉션 티어 조건을 실제로 채운다 */
-    COLL.equip.list.forEach(it => { S.own[it.id] = { n: 1, l: 10 }; });
+  /* 91 — «세트 전원의 최저 Lv» 이 받은 단계보다 높아야 한 단계 더 받을 수 있다. */
+  const SETK = 'equip:shield:0';
+  const rdy = await page.evaluate(k => {
+    COLL_SET[k].it.forEach(id => { S.own[id] = { n: 1, l: 10 }; });
     renderColl21();
-    return { ready: collReady('equip'), any: [...document.querySelectorAll('#collList .clb-btn')].some(b => !b.disabled) };
-  });
-  B('컬렉션 충족 시 collReady=true', rdy.ready);
+    return { ready: collReady(k), any: [...document.querySelectorAll('#collList .clb-btn')].some(b => !b.disabled) };
+  }, SETK);
+  B('세트 전원 Lv 충족 시 collReady=true', rdy.ready);
   B('충족 세트의 강화 버튼 활성', rdy.any);
-  const before = await page.evaluate(() => ({ c: S.coll.equip, g: S.gold }));
+  const before = await page.evaluate(k => ({ c: S.coll[k] | 0 }), SETK);
   await page.locator('#collList .clb-btn:not([disabled])').first().click();
   await page.waitForTimeout(300);
-  const after = await page.evaluate(() => ({ c: S.coll.equip, g: S.gold,
-    saved: JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}').coll }));
-  B('강화 클릭 → S.coll.equip 증가', after.c === before.c + 1);
-  B('세이브(localStorage)에 반영', after.saved && after.saved.equip === after.c);
+  const after = await page.evaluate(k => ({ c: S.coll[k] | 0,
+    saved: JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}').coll }), SETK);
+  B('강화 클릭 → S.coll["' + SETK + '"] 증가', after.c === before.c + 1);
+  B('세이브(localStorage)에 반영', !!after.saved && after.saved[SETK] === after.c);
 
   /* ── 8. 닫기 ── */
   console.log('\n[8] 닫기');
   await page.mouse.click(30, 60);
   await page.waitForTimeout(250);
   B('딤 클릭으로 닫힘', !(await page.evaluate(() => $('collw').classList.contains('on'))));
-  await page.evaluate(() => openColl21('armor'));
+  await page.evaluate(() => openColl21('shield'));
   await page.waitForTimeout(200);
   await page.evaluate(() => $('tabbar').click());
   await page.waitForTimeout(250);
@@ -212,7 +229,7 @@ const B = (name, got) => { got ? pass++ : fail++; console.log((got ? '  ok  ' : 
   for (const h of [1920, 2520]) {
     await page.setViewportSize({ width: 1080, height: h });
     await page.waitForTimeout(400);
-    await page.evaluate(() => openColl21('armor'));
+    await page.evaluate(() => openColl21('shield'));
     await page.waitForTimeout(250);
     const gg = await geo();
     /* 기준 프레임보다 «큰» 화면에서는 순수 중앙 앵커라 Δ=(frameH−2280)/2 로 정확히 예측된다.
