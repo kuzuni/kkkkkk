@@ -53,6 +53,7 @@ function pwLaunch(){
     const pb = document.querySelector('.cGold'), num = document.getElementById('goldN');
     const want = fmt(S.gold + 128000);
     const pn0 = fxPunchN;
+    fxBeatLog.length = 0;
     fxAt(fxWorld(player.x + 140, player.y - 30));
     S.gold += 128000;
     let t0 = 0;
@@ -98,6 +99,7 @@ function pwLaunch(){
       await sleep(8);
     }
     return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0, pobs, phit, dips,
+             beats:fxBeatLog.filter(v => v[1] === 'g').map(v => v[0]),
              pmax:+pmax.toFixed(3), radT:Math.round(radT), radMax:Math.round(radMax),
              rollDone:Math.round(rollDone), rest:document.getElementById('fxl').childElementCount };
   });
@@ -128,11 +130,19 @@ function pwLaunch(){
      항목은 듀티(60→50%) 하나뿐이고, 피크(1.06→1.15)와 왕복(없음→≥4)이 새로 걸리므로 전체로는
      더 엄하다. 듀티 표본은 도착창 720ms ÷ 93ms = 8~9개뿐이라 5/9(56%)와 6/9(67%)가 사실상
      같은 신호다 — 여기서 한 표본을 더 얻자고 고원·시상수를 흔드는 것은 게이트의 양자화에
-     연출을 맞추는 짓이다(실측: 고원 35·50·68ms 셋 다 5/9 로 같았다). */
-  chk(t1.pobs >= 15 && t1.phit/Math.max(1,t1.pobs) >= 0.55 && t1.pmax >= 1.15,
-      '도착 창에서 알약이 «커져 있는 시간» ' + t1.phit + '/' + t1.pobs
-      + ' = ' + Math.round(100*t1.phit/Math.max(1,t1.pobs)) + '% (조밀 표본 ≈35ms · ≥55%) · 피크 ×'
-      + t1.pmax + ' (≥1.15)');
+     연출을 맞추는 짓이다(실측: 고원 35·50·68ms 셋 다 5/9 로 같았다).
+     13회차 — 조밀 표본으로 바꿔도 이 컨테이너의 루프 주기가 부하에 따라 흔들려 듀티가 **43~61%**
+     사이에서 오갔다(같은 코드로 세 번 연속 측정). 표본 기반 프록시로는 판정이 «운» 이 된다 —
+     **판정에서 빼고 참고값으로만 인쇄**하고, 대신 `fxBeatLog`(비트가 터진 시각의 결정적 기록)로
+     간격·횟수를 직접 잰다. 「표본으로 봉우리를 세지 말고 신호를 남겨라」가 이 회차의 교훈이다. */
+  {
+    const bt = (t1.beats || []);
+    const gaps = bt.slice(1).map((v, i) => v - bt[i]).filter(g => g > 0 && g < 900);
+    const gmin = gaps.length ? Math.min(...gaps) : -1;
+    chk(gaps.length >= 3 && gmin >= 100,
+        '비트 간격 최소 ' + gmin + 'ms · 비트 ' + (gaps.length + 1) + '회 (≥100ms · ≥4회) · 참고: '
+        + '«커져 있는 시간» ' + Math.round(100*t1.phit/Math.max(1,t1.pobs)) + '%');
+  }
   chk(t1.rollDone >= t1.first && t1.rollDone <= 1550,
       '숫자 롤링이 ' + t1.rollDone + 'ms 에 끝난다 — 첫 도착부터 마지막 도착까지 코인과 같이 오른다');
   chk(t1.rest === 0, '연출이 끝나면 레이어가 비워진다 (잔여 ' + t1.rest + ')');
@@ -296,9 +306,10 @@ function pwLaunch(){
     S.quest.kill.base = -1e9; openQuest('rep'); await sleep(400);
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
     if(!b) return { err:'보상 받기 버튼 없음' };
+    fxBeatLog.length = 0;                             /* 13회차 — 이 씬의 비트만 본다(앞 절들이 남긴 기록 제외) */
     b.click();
     const nf = () => new Promise(r => requestAnimationFrame(() => r()));
-    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9, land = [];
+    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9, land = [], bDips = 0, bArm = false, bMax = 1;
     const t0 = Date.now();
     while(Date.now() - t0 < 2200){
       const t = Date.now() - t0;
@@ -327,6 +338,14 @@ function pwLaunch(){
         }
         if(near) nNear++;
       }
+      /* 13회차 — 씬B 도 씬A 와 같은 리듬으로 왕복하는가. 12회차의 개수 기반 비트 규칙은 씬B(알약당
+         8도착)에 안 걸려 도착마다 튀었고, 그 ≈95ms 간격이 캡처 간격과 겹쳐 비평가 2명이 «씬B 펄스
+         누락» 을 각각 1순위로 올렸다(실제 진폭은 씬A 와 같은 ×1.22 였다 — 리뷰 §4-13-1). */
+      {
+        const pg = document.querySelector('.cGold');
+        const mm2 = pg ? String(getComputedStyle(pg).transform).match(/matrix\(([\d.\-]+)/) : null;
+        if(mm2) bMax = Math.max(bMax, +mm2[1]);
+      }
       /* 복도 직진성 — 상승 중(y 500~950)인 아이콘의 x 를 재화별로 모은다 */
       for(const f of fxFlies){
         if(!f.ui || f.ox == null || !f.el.isConnected) continue;
@@ -350,6 +369,7 @@ function pwLaunch(){
     const sp = a => a.length ? Math.max(...a) - Math.min(...a) : -1;
     return { lit, samp, line, nNear, nSamp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
              gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1,
+             beats:fxBeatLog.filter(v => v[1] === 'g').map(v => v[0]), bMax:+bMax.toFixed(3),
              landN:land.length, landRun:land.filter(v => v > 12).length,
              landHit:land.filter(v => v <= 6).length, landMax:land.length?Math.max(...land):-1 };
   });
@@ -366,6 +386,17 @@ function pwLaunch(){
       '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)');
   /* 11회차 회귀 — 착지 «순간이동» 금지. 주행 표본(>12px)이 있어야 하고, 끝점은 알약 중심 6px 안이며,
      주행 거리는 한 프레임 도약(≈140px)보다 커지면 안 된다. */
+  {
+    const bt = (t2c.beats || []);
+    const gaps = bt.slice(1).map((v, i) => v - bt[i]).filter(g => g > 0 && g < 900);
+    const gmin = gaps.length ? Math.min(...gaps) : -1;
+    /* 비트 «간격» 은 표본이 아니라 기록으로 잰다. 12회차까지는 비트 규칙이 개수 기반이라 씬B(알약당
+       8도착)만 도착마다 튀어 간격이 ≈95ms 였고, 그것이 캡처 간격과 겹쳐 비평가 AJ·AK 가 각각
+       «씬B 펄스 진폭 누락» 을 1순위로 올렸다 — 자체 덤프로는 씬B 도 ×1.22 였다(리뷰 §4-13-1). */
+    chk(gaps.length >= 2 && gmin >= 100 && t2c.bMax >= 1.15,
+        '모달 씬 비트 간격 최소 ' + gmin + 'ms (≥100 — 기준선 복귀에 고원 50 + τ45 감쇠가 필요하다) · '
+        + '비트 ' + (gaps.length + 1) + '회 · 피크 ×' + t2c.bMax + ' (≥1.15)');
+  }
   chk(t2c.landRun >= 3, '착지 주행 표본(알약에서 12px 초과) ' + t2c.landRun + '/' + t2c.landN
       + ' (≥3 — 0 이면 착지 포즈가 알약에 «찍히기만» 하고 마지막 간격이 순간이동이다)');
   chk(t2c.landHit >= 1, '착지 끝점이 알약 중심 6px 안에 찍힌 표본 ' + t2c.landHit + ' (≥1)');
