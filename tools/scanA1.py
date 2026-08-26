@@ -125,18 +125,22 @@ def main():
     # 창을 칸 밖으로 넓히면 옆 칸의 레드닷·리본이 같이 잡혀 ⌀ 가 +440% 로 읽힌다.
     # 레드닷은 칸 안(오른쪽 −21)이므로 칸 경계 그대로, 리본만 왼쪽으로 넘칠 수 있어 −16 여유를 준다.
     for k, name, cx0, cx1 in CELLS:
-        b = diff_bbox(A, B, cx0 - (16 if k == 'shop' else 0), cx1, y0, y1, THR)
+        b = diff_bbox(A, B, cx0, cx1, y0, y1, THR)
         if not b:
             continue
         w, h = b[2] - b[0], b[3] - b[1]
         if k == 'shop':
-            print('  %-4s NEW 리본 %-28s | ref x864..1027 w164 · y2103..2193 h91  →  w %s · h %s · top Δ%+d'
-                  % (name, fmt(b), pct(w, 164), pct(h, 91), b[1] - 2103))
+            # 측정표 §7 정오표(A1 6회차): «w164 · h91» 은 주황 가게 아트를 문 값이다.
+            # 초록을 묶은 마스크로 다시 재면 x864..980 (w117) · y2163..2241 (h79) → 프레임 y2103..2181
+            print('  %-4s NEW 리본 %-28s | ref(정오) x864..980 w117 · y2103..2181 h79  →  w %s · h %s · top Δ%+d'
+                  % (name, fmt(b), pct(w, 117), pct(h, 79), b[1] - 2103))
             out['ribbon'] = {'bbox': b[:4], 'w': w, 'h': h}
         else:
             cxm, cym = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
-            print('  %-4s 레드닷  %-28s | ref 외곽포함 ⌀41 · 중심 x=%d y=2119.5  →  ⌀ %s · 중심 Δ(%+.1f, %+.1f)'
-                  % (name, fmt(b), cx1 - 21, pct(max(w, h), 41), cxm - (cx1 - 21), cym - 2119.5))
+            # 중심 y: ref 빨강 코어 2164..2195 → 2179.5(+19.5) · 검정 외곽 포함 2161..2201 → 2181(+21).
+            # 우리 캡처도 «외곽 포함» 으로 재므로 기준은 외곽 중심 2181 − 60 = 2121 이다.
+            print('  %-4s 레드닷  %-28s | ref 외곽포함 ⌀41 · 중심 x=%d y=2121  →  ⌀ %s · 중심 Δ(%+.1f, %+.1f)'
+                  % (name, fmt(b), cx1 - 21, pct(max(w, h), 41), cxm - (cx1 - 21), cym - 2121))
             out['cells'].setdefault(k, {})['dot'] = {'bbox': b[:4], 'd': max(w, h)}
 
     print('\n-- 바 껍데기 (dD − dE) --')
