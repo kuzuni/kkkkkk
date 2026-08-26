@@ -3253,14 +3253,14 @@
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
     background:#9DA3B8;border:3px solid #4A4E5A;box-sizing:border-box;cursor:pointer;
     /* 5회차 — J ② «돋보기 렌즈 외경 23 vs ref 28(−18%) · 글리프 잉크 −57%» → 34→41 */
-    font-size:36px;line-height:52px;text-align:center;color:#646A82;
+    font-size:32px;line-height:52px;text-align:center;color:#646A82;
     box-shadow:0 3px 3px rgba(0,0,0,.3)}
 
   /* Lv 알약 — 검정 캡슐, 글자 #7DE5ED */
   .shp-card .clv{left:55px;top:363px;width:89px;height:44px;border-radius:22px;background:#000;
     text-align:center;line-height:44px;z-index:2}
   /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
-  .shp-card .clv>i{font-size:24px;color:#7DE5ED;transform:scaleX(1.146);letter-spacing:-1px}
+  .shp-card .clv>i{font-size:21.5px;color:#7DE5ED;transform:translateY(2.5px) scaleX(1.286);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
   .shp-card .cbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
     box-sizing:border-box}
@@ -3270,8 +3270,9 @@
     background:linear-gradient(180deg,#FEC721,#FFB514)}
   /* 3회차: 경험치 글자는 «Lv 알약에 안 가리는 오른쪽 구간» 이 아니라 **트랙 전체**의 가운데다.
      ref 잉크 중심 dx269.5 ≈ 안쪽 트랙(116..418) 중심 267 / 구현은 left:53 탓에 293.5 로 26px 우측이었다. */
-  .shp-card .cbar>b{position:absolute;left:3px;right:3px;top:0;bottom:0;text-align:center;
-    line-height:32px;font-size:20px;color:#F3F3F2;transform:scaleX(.85);letter-spacing:-1px;z-index:2}
+  .shp-card .cbar>b{position:absolute;left:10px;right:3px;top:0;bottom:0;text-align:center;
+    line-height:33px;font-size:20px;color:#F3F3F2;transform:translateY(2px) scaleX(.85);
+    letter-spacing:-1px;z-index:2}
 
   /* 소환 버튼 3개 — 공통 3단 밴드 */
   /* 5회차 — 비평가 J ② «세 버튼 모두 좌우 인셋 링이 0px». 자체 가로 단면으로 확인:
