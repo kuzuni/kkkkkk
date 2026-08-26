@@ -19250,18 +19250,26 @@ function syncShopSumBtns(){
     if(!btn.dataset.shfree) btn.classList.toggle('rich', !lack);
   });
 }
-/* 73 ① — `focus` 로 상자 키(weapon/shield/amulet/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용) */
-function openShopPage(focus){
+/* 164 — 상점 카테고리 키. `#shopCats` 의 `data-cat` 3종과 «한 벌» 이다(45·124).
+   칸이 늘거나 줄면 마크업과 여기를 같이 고친다 — 여기만 고치면 착지 탭이 조용히 무시된다. */
+const SHOP_CATS = ['summon', 'coin', 'pass'];
+/* 73 ① — `focus` 로 상자 키(weapon/shield/amulet/skill)를 주면 그 카드까지 스크롤한다(가이드 배너 이동용)
+   164 — `cat` 으로 착지할 카테고리 탭을 준다(생략 = 옛 동작 그대로 «소환»).
+   이 함수는 열 때마다 `shopCat` 을 강제로 되돌리므로, «열고 나서 탭을 바꾸는» 순서로는
+   `renderShopPage()` 가 두 번 돈다(소환 한 번 + 목적 탭 한 번). 인자로 받아 **한 번만** 그린다. */
+function openShopPage(focus, cat){
   closeDungeon(); closeTrain();
   if(typeof closeRelw === 'function') closeRelw();
-  shopCat = 'summon';
+  shopCat = SHOP_CATS.indexOf(cat) >= 0 ? cat : 'summon';
   /* 96 — 공용 부품이라 «활성 알약 노드를 칸 사이로 옮기는» 처리가 사라졌다(클래스 하나로 끝난다) */
-  setShopCatTabs('summon');
+  setShopCatTabs(shopCat);
   renderShopPage();
   $('shopw').classList.add('on');
   const li = $('shopList');
   li.scrollTop = 0;
-  if(focus){
+  /* 164 — `focus` 는 «소환» 탭의 상자 카드 순번이다. 다른 탭에서는 리스트 내용이 아예 달라
+     `li.children[i]` 가 엉뚱한 노드를 가리키므로 소환 탭일 때만 쓴다. */
+  if(focus && shopCat === 'summon'){
     const i = SHOP_BOXES.findIndex(x => x.b === focus);
     const card = i >= 0 ? li.children[i] : null;
     if(card){
@@ -19273,6 +19281,9 @@ function openShopPage(focus){
   }
   syncShopNav(true);
 }
+/* 164 — «상점을 특정 탭으로 열기» 공용 헬퍼. 홍보 배너의 [이동] 계열이 전부 이 한 줄을 쓴다
+   (01 오프라인 보상 → 이용권, 157 축복 프로모 → 이용권 …). 이미 상점이 열려 있어도 탭을 갈아 끼운다. */
+function openShopTab(cat){ openShopPage(null, cat); }
 function closeShopPage(){ $('shopw').classList.remove('on'); syncShopNav(false); }
 /* 레퍼런스 10·13: 전체화면 상점이 열린 동안 하단 탭바의 «상점» 칸은 ✕(A1 의 .tab.close, 296px)로
    바뀐다. panelOpen 경로(syncPanel)와 같은 클래스 3종만 토글 — A1 의 CSS 를 그대로 재사용한다. */
@@ -23979,8 +23990,11 @@ loadAtlases(() => {
   $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
   $('ofrGet').onclick = () => claimOffline(1);
   $('ofrGet15').onclick = () => claimOffline(1.5);
-  /* 작업 68 — 구버전 패널 상점 대신 10 상점 페이지를 연다(이 [이동] 이 파란 구 UI 로 떨어지던 버그) */
-  $('ofrGo').onclick = () => { closeOfflineReward(); openShopPage(); };
+  /* 작업 68 — 구버전 패널 상점 대신 10 상점 페이지를 연다(이 [이동] 이 파란 구 UI 로 떨어지던 버그)
+     164 — 그런데 그 [이동] 은 바로 위 «오프라인 보상 최대 시간 4시간 증가» 홍보(.ofr-t1/.ofr-t2)의
+     버튼이다. 파는 곳은 **이용권 탭**(124 신설 · 151 이 그 탭에 «+4시간» 카드를 넣는다)인데
+     소환 탭이 열려 사용자가 상품을 못 찾았다. 홍보 문구와 착지 지점을 한 벌로 맞춘다. */
+  $('ofrGo').onclick = () => { closeOfflineReward(); openShopTab('pass'); };
   /* 124 — 광고 표식 동기화 + 자동 축복 오프라인 정산. 정산을 **오프라인 보상보다 먼저** 돌려야
      «꺼 둔 동안 축복이 켜져 있던 것» 이 그 시간의 골드 배율에도 반영된다. */
   syncNoAds();
