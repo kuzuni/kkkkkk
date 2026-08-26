@@ -20516,7 +20516,8 @@ function jzInit(){
 
    동작: pointerdown(캡처, #app 위임)에서 대상 노드와 «다시 찾는 법»(id 루트 + 구조
    경로 + data-* 셀렉터)·좌표를 기억한다. pointerup 에서 이동 < 10 프레임px 이면
-   (터치는 700ms 미만일 때만 — long-press 는 브라우저도 click 을 접는다. 마우스는
+   (터치는 700ms 미만일 때만 — long-press 는 브라우저도 click 을 접는다. **이 700ms 는
+    `e.timeStamp` 로 재는 «접촉 시간» 이지 핸들러가 돈 시각의 차가 아니다 — 작업 142. 마우스는
    시간 무제한: 데스크톱 «길게 눌렀다 떼기» 와 헤드리스 마우스 검증이 이 경로를 탄다)
    «지금 DOM» 에서 대상을 다시 찾아 합성 click 을 보낸다 — 재렌더로 노드가 갈렸어도
    같은 자리의 새 노드가 받는다. 네이티브(trusted) click 은 window 캡처에서 삼켜
@@ -20557,6 +20558,20 @@ function tapMark(t){
   return { rootId: n.id, path, q };
 }
 const tapVisible = el => !!(el && el.isConnected && el.getClientRects().length);
+/* 142 — 손가락이 «닿아 있던 시간» 은 `e.timeStamp`(이벤트가 **난** 시각)로 잰다.
+   ⚠ `performance.now() - rec.t`(핸들러가 **돈** 시각의 차)로 재면 안 된다 — 그 값에는
+     down↔up 사이의 **메인 스레드 정체가 통째로 섞인다.** 89 유물 페이지(#relw)가 열려 있을 때
+     프레임이 1.2~1.4초 밀리는 구간이 있어, 실제 접촉 235~378ms 짜리 «보통 탭» 이
+     1225~1408ms 로 재져 TAP_MS(700) 를 넘겼고, 합성기가 «롱프레스니까 click 을 접는다» 로
+     버렸다. 네이티브 click 은 아래 «삼키기» 가 이미 먹은 뒤라 **아무 일도 일어나지 않는다**
+     = 74 가 잡았던 «눌림 효과는 뜨는데 동작이 안 되는» 증상 그대로다(작업 142 · verify74 ⑤ 75%).
+   두 timeStamp 는 같은 시계에서 나오므로 **차이는 시간 원점이 뭐든 유효하다.** 값이 없거나
+   뒤집힌 브라우저에서는 옛 방식으로 되돌아간다(안전망). */
+function tapDur(rec, e){
+  const a = rec.ts, b = e.timeStamp;
+  if(a > 0 && b > 0 && b >= a) return b - a;
+  return performance.now() - rec.t;
+}
 function tapFind(rec, ux, uy){
   /* ① down 노드가 그대로 살아 있으면 그대로 — 대부분의 탭 (네이티브와 동일한 결과) */
   if(tapVisible(rec.el)) return rec.el;
@@ -20591,7 +20606,7 @@ function tapInit(){
   app.addEventListener('pointerdown', e => {
     if(e.isPrimary === false) return;
     tapRec = { el: e.target, loc: tapMark(e.target), x: e.clientX, y: e.clientY,
-               t: performance.now(), type: e.pointerType };
+               t: performance.now(), ts: e.timeStamp, type: e.pointerType };
   }, true);
   addEventListener('pointerup', e => {
     const rec = tapRec;
@@ -20599,7 +20614,7 @@ function tapInit(){
     rec.done = true;
     if(dsDragged) return;                       /* 95 — 이 제스처는 드래그 스크롤이었다(탭 아님) */
     if(Math.hypot(e.clientX - rec.x, e.clientY - rec.y) / scale() >= TAP_MOVE) return;
-    if(rec.type === 'touch' && performance.now() - rec.t >= TAP_MS) return;
+    if(rec.type === 'touch' && tapDur(rec, e) >= TAP_MS) return;
     const el = tapFind(rec, e.clientX, e.clientY);
     if(!el || el.disabled) return;
     const ov = el.closest ? el.closest(TAP_OV_SEL) : null;

@@ -113,9 +113,18 @@ const PTR = process.env.TAP_PTR || 'touch';        /* touch | mouse — 실기�
         await page.mouse.up();
       }
     : async (x, y) => {
-        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        /* 142 — touchStart 의 **ack 를 기다리면 안 된다.** `Input.dispatchTouchEvent` 는 렌더러가
+           그 이벤트를 처리할 때까지 resolve 되지 않으므로, 렌더러가 밀리는 구간에서는 그 정체 시간이
+           그대로 «손가락이 닿아 있던 시간» 에 더해진다 — 실측: #relw(89 유물)가 열려 있으면 헤드리스
+           소프트웨어 래스터가 0.5~1.0s 짜리 longtask 를 연달아 뱉어, HOLD=90ms 로 던진 탭의
+           touchStart↔touchEnd 간격이 **841ms** 가 됐다(작업 142 · tools/probe142.js).
+           그러면 74 합성기의 롱프레스 컷(TAP_MS 700)에 «제품이 아니라 하네스가» 걸린다.
+           실제 손가락은 화면이 멈춰도 90ms 만 닿아 있다 — CDP 는 명령 순서를 보존하므로
+           touchStart 는 보내 두고 기다리지 않는다. */
+        const started = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
         await new Promise(r => setTimeout(r, HOLD));
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await started.catch(() => {});
       };
   /* 110 — «조준» 단계. 좌표만 주던 것을 «그 좌표의 최상위 요소가 정말 대상인가» 까지 본다.
      이유: 닫힘 애니메이션(jzClose)이 도는 0.2~0.3초 동안 오버레이가 탭바·사이드 아이콘 위에
