@@ -31,9 +31,20 @@ const GEO = process.argv.includes('--geo');
     /* 레퍼런스와 같은 «10연은 살 수 있고 30연은 못 사는» 상태 —
        b2 는 rich(노랑), b3 는 lack(회색+빨강 숫자) 로 찍혀야 색·상태가 레퍼런스와 대응한다. */
     S.dia = 2000; S.gold = 1e9;
-    /* 레퍼런스와 같은 카드 상태 */
-    const set = (k, lv, exp) => { if (S.sum[k]) { S.sum[k].lv = lv; S.sum[k].exp = exp; } };
-    set('weapon', 2, 100); set('shield', 2, 120); set('skill', 3, 70);
+    /* 레퍼런스와 같은 카드 상태.
+       ⚠ 5회차 발견 — exp 를 레퍼런스 «숫자» 그대로(100/120/70) 넣으면 안 된다. 이 게임의
+       `sumNeedExp(2)` 는 9 라서 exp 100 은 채움률 1111% = **바가 꽉 찬 상태**로 찍힌다
+       (레퍼런스는 76.9%). 레퍼런스와 맞춰야 하는 것은 숫자가 아니라 **채움 비율**이다:
+       카드1 76.9% · 카드2 92.3% · 카드3 14%. */
+    const fill = (k, lv, pct) => {
+      if (!S.sum[k]) return;
+      S.sum[k].lv = lv;
+      S.sum[k].exp = Math.max(0, Math.round(sumNeedExp(lv) * pct) - 0);
+    };
+    /* ⚠ 카드 순서는 SHOP_BOXES 순이다 — 3번째 칸은 «스킬» 이 아니라 **목걸이**(76·106 이 배너를 늘렸다).
+       레퍼런스 3번째 카드의 채움 14% 는 그래서 amulet 에 줘야 한다. */
+    fill('weapon', 2, 0.769); fill('shield', 2, 0.923); fill('amulet', 3, 0.14);
+    fill('skill', 2, 0.5); fill('pet', 1, 0.3);
     S.daily = S.daily || {};
     S.daily.freeSum = {};                     /* 무료 2/2 로 복구 */
     openShopPage();

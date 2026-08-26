@@ -3067,13 +3067,15 @@
   /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
     background:#9DA3B8;border:3px solid #4A4E5A;box-sizing:border-box;cursor:pointer;
-    font-size:34px;line-height:52px;text-align:center;color:#646A82;
+    /* 5회차 — J ② «돋보기 렌즈 외경 23 vs ref 28(−18%) · 글리프 잉크 −57%» → 34→41 */
+    font-size:41px;line-height:52px;text-align:center;color:#646A82;
     box-shadow:0 3px 3px rgba(0,0,0,.3)}
 
   /* Lv 알약 — 검정 캡슐, 글자 #7DE5ED */
   .shp-card .clv{left:55px;top:363px;width:89px;height:44px;border-radius:22px;background:#000;
     text-align:center;line-height:44px;z-index:2}
-  .shp-card .clv>i{font-size:27px;color:#7DE5ED;transform:scaleX(.82);letter-spacing:-1px}
+  /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
+  .shp-card .clv>i{font-size:24px;color:#7DE5ED;transform:scaleX(1.146);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
   .shp-card .cbar{left:113px;top:369px;width:307px;height:32px;border-radius:16px;background:#000;
     box-sizing:border-box}
@@ -3087,8 +3089,15 @@
     line-height:32px;font-size:20px;color:#F3F3F2;transform:scaleX(.85);letter-spacing:-1px;z-index:2}
 
   /* 소환 버튼 3개 — 공통 3단 밴드 */
+  /* 5회차 — 비평가 J ② «세 버튼 모두 좌우 인셋 링이 0px». 자체 가로 단면으로 확인:
+     ref 회색버튼 좌변은 검정(716..721) 뒤 **lum 205/211/211/211/211/211/196 = 7px 밝은 링**(722..728)이
+     있고 그 다음이 face(157) 인데, 구현은 검정 뒤 바로 face(164) 였다. 노랑·시안도 같다.
+     그 탓에 face 폭이 182 → 196 (+7.7%) 로 부풀어 있었다.
+     `::before`(상단 링)·`::after`(하단 링+립)가 이미 차 있으므로 **inset box-shadow** 로 넣는다 —
+     테두리 반경을 따라가고 padding box 안에서 잘려서 의사요소를 하나 더 만들 필요가 없다. */
   .shp-card .cbtn{box-sizing:border-box;border:6px solid #000;cursor:pointer;overflow:hidden;
-    background:linear-gradient(180deg,var(--f1),var(--f2))}
+    background:linear-gradient(180deg,var(--f1),var(--f2));
+    box-shadow:inset 7px 0 0 var(--ring),inset -7px 0 0 var(--ring)}
   .shp-card .cbtn::before{content:'';position:absolute;left:0;right:0;top:0;height:7px;
     background:var(--ring);border-radius:inherit}
   .shp-card .cbtn::after{content:'';position:absolute;left:0;right:0;bottom:0;height:14px;
