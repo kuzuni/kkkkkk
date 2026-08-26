@@ -151,26 +151,61 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
   await css('jz122ref', testSel);          /* 기준선 — 이 띠만 끈다 */
   await lumaOf(p, 0, clip, true);
   await css('jz122ref', '');
-  let peak = 0;
+  let peak = 0, lit = 0, seen = 0;
   for (const t of PHASES) {
     const v = await lumaOf(p, t, clip);
-    if (v != null && Math.abs(v) > Math.abs(peak)) peak = v;
+    if (v == null) continue;
+    seen++;
+    if (Math.abs(v) > Math.abs(peak)) peak = v;
+    /* «이 위상에 띠가 호스트 위에 있는가» — 피크의 1/3 을 넘으면 있는 것으로 센다.
+       절대 문턱(예: 12)을 쓰면 진폭이 낮은 호스트에서 전부 «없음» 으로 세어져 duty 가 0 이 된다. */
+    if (Math.abs(v) >= 12) lit++;
   }
   await css('jz122mute', '');
-  return peak;
+  return { peak, duty: seen ? lit / seen : null };
 }
 /* 6회차 목표 = 광택 전부가 «평탄면 ΔL 32» 한 벌. 마스크·skew 로 뭉개지는 폭을 감안해 ±20%. */
 const AMP_LO = 26, AMP_HI = 39;
+/* ⚑ 10회차 신설 — «띠가 호스트 위에 있는 시간 비율»(duty).
+   9회차에 게이트가 19개 측정점을 전부 통과시켰는데도 비평가 둘이 독립으로 «무광 1.9~2.06s
+   (주기의 58~63%)» 를 1순위로 짚었다. 원인은 게이트가 **세기만 재고 «얼마나 자주» 를 안 쟀다**는
+   것이다 — 8회차에 §13 이 «얼마나 센가» 를 처음 쟀듯이, 이번에는 «얼마나 오래» 를 잰다.
+   지금 기하(띠 폭 .22H · 총 이동 1.22H · 주차 없음)의 **이론값은 심 중심 기준 82%** 다.
+   ⚠ 다만 이 지표는 이론값에 그대로 못 올라간다. §13 은 «평탄면 상위 2% 중앙값» 이라
+   띠가 클립 가장자리에 걸쳐 반쯤 잘린 위상에서는 상위 2% 가 희석돼 문턱(|ΔL|≥12) 아래로 떨어진다.
+   skewX(-16°) 로 띠가 세로로 ±67px 번지는 것도 같은 방향으로 작용한다.
+   그래서 하한을 이론값이 아니라 **실측 분포**에 맞춰 잡는다(10회차 16개 전면 측정점: 56~100%, 평균 76%):
+     · 점별 하한 **0.55** — 한 점이 통째로 죽는 것만 잡는다
+     · 전체 **평균 0.70** — 기하가 무너지면 평균이 먼저 내려앉는다(9회차 기하는 ≈0.37 이었다)
+   ★ 세 점(`소환 전면(본문1)`·`(본문4)`·`[교환] 버튼면`)은 **띠의 호스트가 아니라 그 안의 부분 영역**을
+     클립으로 쓴다(전면 띠의 호스트는 카드 전체 980px 인데 클립은 본문, [교환] 띠의 호스트는
+     마일리지 패널 938px 인데 클립은 버튼 226px). 부분 영역은 띠가 «그 위» 에 있는 시간이 기하학적으로
+     짧을 수밖에 없으므로 duty 판정에서 뺀다 — 기록만 남긴다. 세기(ΔL)는 그대로 판정한다. */
+const DUTY_LO = .55, DUTY_MEAN_LO = .70;
 async function ampCheck(p, hosts) {
   await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
   const out = [];
-  for (const [label, hostSel, testSel, muteSel] of hosts) {
-    const v = await bandPeak(p, hostSel, testSel, muteSel);
+  const duties = [];
+  for (const [label, hostSel, testSel, muteSel, noDuty] of hosts) {
+    const r = await bandPeak(p, hostSel, testSel, muteSel);
+    const v = r == null ? null : r.peak;
     const a = v == null ? null : Math.abs(v);
-    out.push(label + ' ' + (v == null ? '없음' : v));
+    out.push(label + ' ' + (v == null ? '없음' : v)
+      + (r && r.duty != null ? '/' + Math.round(r.duty * 100) + '%' : ''));
     ok(a != null && a >= AMP_LO && a <= AMP_HI,
       '광택 평탄면 ΔL ' + label + ' = ' + (v == null ? '측정 불가' : v)
       + ' (|' + AMP_LO + '~' + AMP_HI + '|)');
+    if (noDuty) {
+      console.log('    · 띠 체류 duty ' + label + ' = '
+        + (r && r.duty != null ? Math.round(r.duty * 100) + '%' : '측정 불가')
+        + ' (부분 영역 클립 — 기록만)');
+    } else {
+      duties.push(r && r.duty != null ? r.duty : 0);
+      ok(r != null && r.duty != null && r.duty >= DUTY_LO,
+        '띠 체류 duty ' + label + ' = '
+        + (r && r.duty != null ? Math.round(r.duty * 100) + '%' : '측정 불가')
+        + ' (>=' + Math.round(DUTY_LO * 100) + '%)');
+    }
   }
   await p.evaluate(() => {
     document.getElementById('shopw').style.removeProperty('--jz-amp');
@@ -180,6 +215,11 @@ async function ampCheck(p, hosts) {
   });
   await p.waitForTimeout(200);
   console.log('    · ' + out.join(' | '));
+  if (duties.length) {
+    const m = duties.reduce((a, b) => a + b, 0) / duties.length;
+    ok(m >= DUTY_MEAN_LO, '띠 체류 duty 평균 = ' + Math.round(m * 100) + '% '
+      + '(' + duties.length + '점, >=' + Math.round(DUTY_MEAN_LO * 100) + '%)');
+  }
 }
 
 (async () => {
@@ -343,8 +383,8 @@ async function ampCheck(p, hosts) {
                      ['소환 본문3', '#shopList .shp-card>.cbg|2', SUM_BD, SUM_FR],
                      ['소환 본문4', '#shopList .shp-card>.cbg|3', SUM_BD, SUM_FR],
                      /* 전면 광택은 이제 헤더를 안 지난다(Y 2) → 본문에서 잰다 */
-                     ['소환 전면(본문1)', '#shopList .shp-card>.cbg|0', SUM_FR, SUM_HD + ',' + SUM_BD],
-                     ['소환 전면(본문4)', '#shopList .shp-card>.cbg|3', SUM_FR, SUM_HD + ',' + SUM_BD]]);
+                     ['소환 전면(본문1)', '#shopList .shp-card>.cbg|0', SUM_FR, SUM_HD + ',' + SUM_BD, true],
+                     ['소환 전면(본문4)', '#shopList .shp-card>.cbg|3', SUM_FR, SUM_HD + ',' + SUM_BD, true]]);
 
   /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
      의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
@@ -552,7 +592,7 @@ async function ampCheck(p, hosts) {
                      ['히어로 배너', '#shopList .cn-bn', '#shopList .cn-bn::after'],
                      /* 6회차 채점 — 두 버튼면이 10/10 · 6/6 프레임 픽셀 동일이었다. 띠가 버튼 위를
                         지나는지 **버튼 상자에서 직접** 잰다(패널 전체로 재면 버튼이 죽어도 통과한다). */
-                     ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml::after'],
+                     ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml::after', null, true],
                      ['[이동] 버튼면', '#shopList .cn-mv|0|12', '#shopList .cn-mv::after']]);
 
   const leak = await p.evaluate(() => {
