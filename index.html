@@ -996,16 +996,29 @@
      font-size 하나로는 bbox 를 못 맞춘다(A2 가 같은 함정을 밟았다). 24종 평균 잉크가
      fs 66.5 에서 68.6×72.2 로 **폭은 맞고 높이만 −15%** 였다 → fs 를 78.3 으로 올려 높이를 85 로
      맞추고, 그때 같이 커진 폭(80.8)을 scaleX 로 68 에 되돌린다. 실측기 `node tools/inkA4.js` */
-  .slot2 .si3{display:block;font-size:78.3px;line-height:89px;text-align:center;width:89px;
+  .slot2 .si3{display:block;font-size:78.3px;line-height:87.6px;text-align:center;width:100%;
     position:relative;top:-1.5px;transform:scaleX(.842)}
   /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
      활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
      골드 링(r48~55) + well 가장자리 노란 안쪽 링(r36~43) + 바깥 노란 링(r60~66) 이 붙는 구조다 */
-  .slot2.ready{box-shadow:0 0 0 1.35px #030509,0 0 0 6.98px #fffe03}
+  /* ── 상태별 링대 (2026-08-26, 측정표 §7-2) ─────────────────────────────
+     레퍼런스는 **장착칸을 잠금칸보다 외곽 Ø 2.2px 크게** 그린다 — 배경(물색)을 기준으로
+     같은 임계로 잰 바깥 암선 바깥 반지름이 대기칸 r60.00 · 잠금칸 r58.92 로 갈린다(σ≤0.04).
+       잠금  well 89.06 · 3.55 · 링 7.31 · 3.53 → 외곽 117.84  (= `.slot2` 기본값)
+       장착  well 87.61 · 4.17 · 링 7.92 · 4.11 → 외곽 120.00
+     **레이아웃 상자는 8칸 모두 117.8 로 두고**(pitch 130 = 117.8 + gap 12.2), 커지는 1.1px 은
+     바깥으로 `box-shadow` 로 뻗는다 — 상자를 키우면 이웃 칸의 pitch 가 같이 밀린다.
+     이 «상태별 지름» 이 1차 라운드부터 외경을 117 / 119 / 120 으로 갈리게 한 범인이다:
+     재는 사람이 어느 칸을 골랐느냐에 따라 답이 달라졌다. ── */
+  .slot2:not(.empty){box-shadow:0 0 0 1.1px #030509}
+  .slot2:not(.empty)::before{inset:3.01px}
+  .slot2:not(.empty)::after{inset:10.93px}
+  .slot2:not(.empty) .cdw{inset:15.1px}
+  .slot2.ready{box-shadow:0 0 0 1.1px #030509,0 0 0 6.6px #fffe03}
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 8.4px #fefe0c}
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 7.4px #fefe0c}
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}
@@ -1015,9 +1028,9 @@
     filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
      아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
-  .slot2 .lvv2{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);
-    width:44px;height:44px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
-    font-size:21px;line-height:34px;text-align:center;font-weight:900;color:#fff;z-index:3}
+  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.35px;transform:translateX(-50%);
+    width:43.5px;height:39.5px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
+    font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
   /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============
      측정표 docs/measure/02-기본-메인-화면.md §3~5.

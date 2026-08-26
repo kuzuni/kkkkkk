@@ -67,12 +67,17 @@ function is(name, got, want) {
       rowBottom: rects[0].y + rects[0].h, tabTop: tab.y,
       cdwInset: px(cs(cdw).insetInlineStart || cs(cdw).left),
       cdwW: r(cdw).width,
+      lockCdwW: r(sl[4].querySelector('.cdw')).width,
+      lockCdwInset: px(cs(sl[4].querySelector('.cdw')).left),
+      eqShadow: cs(sl[1]).boxShadow,
+      eqCdwW: r(sl[1].querySelector('.cdw')).width,
       readyGlow: cs(sl[0]).boxShadow, cdwRing: cs(cdw).boxShadow,
       radius: cs(sl[0]).borderRadius,
       inkW: avg(0), inkH: avg(1), fs, sx,
       lkFs: px(cs(lk).fontSize), lkTr: cs(lk).transform,
       lkDy: (function () { const m = (cs(lk).transform || '').match(/matrix\([^)]*,\s*([-\d.]+)\)$/); return m ? parseFloat(m[1]) : 999; })(),
       bdgW: r(bdg).width, bdgH: r(bdg).height,
+      bdgCy: (r(bdg).y + r(bdg).height / 2) - (rects[0].y + rects[0].h / 2),
       bdgOut: (r(bdg).y + r(bdg).height) - (rects[0].y + rects[0].h),
       si3Parent: si3.parentElement.className,
       cdwOverflow: cs(cdw).overflow,
@@ -94,10 +99,15 @@ function is(name, got, want) {
   is('정원', d.radius, '50%');
 
   /* ---- [2] 링 4겹 (측정표 §2) ---- */
-  eq('well 지름', d.cdwW, 88.9, 0.3);
-  eq('well inset (= 링대 두께 14.45)', d.cdwInset, 14.45, 0.2);
-  tot++; if (/6\.98px/.test(d.readyGlow)) ok++; else fails.push('활성 바깥 노란 링 6.98px: ' + d.readyGlow);
-  tot++; if (/8\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 8.4px: ' + d.cdwRing);
+  /* 잠금칸 = 기본 링대 (well 89.06 · 3.55 · 7.31 · 3.53 · 외곽 117.84) */
+  eq('잠금칸 well 지름', d.lockCdwW, 88.9, 0.3);
+  eq('잠금칸 well inset (링대 14.45)', d.lockCdwInset, 14.45, 0.2);
+  /* 장착칸 = 레퍼런스가 2.2px 크게 그린다 (well 87.61 · 4.17 · 7.92 · 4.11 · 외곽 120.00).
+     레이아웃 상자는 그대로 117.8 이고 커지는 1.1px 은 바깥 box-shadow 로 뻗는다 (측정표 §7-2) */
+  eq('장착칸 well 지름', d.eqCdwW, 87.6, 0.3);
+  tot++; if (/1\.1px/.test(d.eqShadow)) ok++; else fails.push('장착칸 외곽 확장 1.1px: ' + d.eqShadow);
+  tot++; if (/6\.6px/.test(d.readyGlow)) ok++; else fails.push('활성 바깥 노란 링 6.6px: ' + d.readyGlow);
+  tot++; if (/7\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 7.4px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
   eq('아이콘 평균 잉크 w', +d.inkW.toFixed(1), 68, 4);
@@ -113,9 +123,11 @@ function is(name, got, want) {
   eq('자물쇠 세로 오프셋', d.lkDy, -2, 0.2);
 
   /* ---- [5] 하단 뱃지 (측정표 §2 «펫/동료 머리 뱃지») ---- */
-  eq('뱃지 외곽 지름 w', d.bdgW, 44, 0.5);
-  eq('뱃지 외곽 지름 h', d.bdgH, 44, 0.5);
-  eq('뱃지 하단 돌출', d.bdgOut, 10, 1.0);
+  /* 레퍼런스 뱃지는 정원이 아니라 «가로로 누운» 43×39 (비평가 N·P 독립 일치) */
+  eq('뱃지 외곽 폭', d.bdgW, 43.5, 0.5);
+  eq('뱃지 외곽 높이', d.bdgH, 39.5, 0.5);
+  eq('뱃지 하단 돌출', d.bdgOut, 9.35, 0.5);
+  eq('뱃지 중심 (슬롯 중심 기준)', d.bdgCy, 48.5, 0.5);
 
   if (fails.length) { console.log('실패 항목:'); fails.forEach(f => console.log('  ✗ ' + f)); }
   console.log('VERIFYA4 ' + ok + '/' + tot + ' ' + (fails.length ? 'FAIL' : 'PASS'));
