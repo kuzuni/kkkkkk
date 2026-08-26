@@ -27,7 +27,14 @@ const NOCLIP = args.includes('--noclip');   /* 잉크 원본 bbox 측정용 — 
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(900);
 
-  if (UNLOCK) await p.evaluate(() => { S.guide.idx = 99; });
+  /* ⚠ 72 8회차: `S.guide.idx` 만 올리면 **유물조각 2~4단은 안 열린다** — 90 이 그 셋을 «이전 단 N층
+     클리어»(`DUN_UI[].pre`) 로 바꿔 놓았기 때문이다. 그래서 `--unlock` 이 6장 중 3장을 잠근 채로
+     찍고 있었고, 그 캡처를 «전부 해금» 으로 읽으면 잠금 딤이 걸린 그림을 아트 문제로 오독하게 된다. */
+  if (UNLOCK) await p.evaluate(() => {
+    S.guide.idx = 99;
+    Object.keys(DUN_UI).forEach(id => { if (DUN_UI[id].pre) S.dun[id] = 1; });
+    Object.values(DUN_UI).forEach(u => { if (u.pre) S.dun[u.pre.id] = (u.pre.f | 0) + 1; });
+  });
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(450);
   await p.evaluate(() => { try { msgT = 0; } catch (e) {} const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });

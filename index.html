@@ -2768,7 +2768,7 @@
     mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 100%)}
   .dnc:not(.rd)>.th{--if-bw:5px;--if-rim:6px;--if-rr:.233;box-sizing:border-box;
     border:var(--if-bw) solid #000;border-radius:calc(var(--thw) * var(--if-rr));
-    background:linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.34) 78%),var(--i,#7D5A44);
+    background:linear-gradient(180deg,rgba(0,0,0,.22),rgba(0,0,0,.52) 78%),var(--i,#7D5A44);
     box-shadow:inset 0 0 0 var(--if-rim) var(--pt,#AC7B5B);
     /* 액자는 네 변이 다 보여야 한다 — 좌측 12px 페이드 마스크는 여기서만 걷어낸다 */
     -webkit-mask-image:none;mask-image:none}
@@ -14751,7 +14751,7 @@ function openQuest(tab){
    기하(--thw/--tht/--scn)는 **한 픽셀도 안 바뀐다**(해금 순간에 칸이 흔들리면 안 된다 — 97 ①). */
 const DUN_UI = {
   gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'),
-            thk:'dragon', thf:'f3', thi:'fly',        thbr:1.85, thw:'311px', tht:'36px',
+            thk:'dragon', thf:'f3', thi:'fly',        thbr:2.70, thw:'311px', tht:'36px',
             rw:['골드 획득 가능'], gm:0  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'),
             thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00, thw:'296px', tht:'52px',
@@ -14760,16 +14760,16 @@ const DUN_UI = {
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
   relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.15, thw:'330px', tht:'11px', scn:'7px',
+            thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, gm:15 },
   relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.45, thw:'330px', tht:'11px', scn:'7px',
+            thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
   relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
+            thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
   relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
-            thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.15, thw:'330px', tht:'11px', scn:'7px',
+            thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.

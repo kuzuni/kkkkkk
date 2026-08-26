@@ -161,8 +161,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
     ok(Math.abs(slack - PAD) <= 1,
        `카드${i + 1} 짧은 축이 액자를 채운다 — 프레임 여백 ${slack.toFixed(1)} = ${PAD}`);
-    ok(a.lum !== null && a.lum > c.frm.face - 20,
-       `카드${i + 1} 잉크 휘도 ${a.lum} > 액자 면 ${c.frm.face} − 20 (묻히지 않는다)`);
+    /* 97 [2] 는 «잉크 휘도 > 면 휘도 − 20» 이었는데, **면보다 어둡기만 안 하면 통과**라 카드1·5 가
+       비율 1.00·1.11 로 «있으나 안 보이는» 상태를 통과시켰다(126 «있는데 안 보이던 줄눈» 과 같은 종류).
+       비율로 바꾼다. 여기 `face` 는 `--i` 원색이고 실제 면은 그 위에 검정 22~52% 가 덮여 더 어두우므로,
+       ×1.3 이면 화면에서는 ≈1.9:1 이 된다(보수적 기준). */
+    ok(a.lum !== null && a.lum >= c.frm.face * 1.3,
+       `카드${i + 1} 잉크 휘도 ${a.lum} ≥ 액자 면 ${c.frm.face} × 1.3 = ${(c.frm.face * 1.3).toFixed(0)} (비율 ${(a.lum / c.frm.face).toFixed(2)})`);
     ok(a.bob === 'thBob', `카드${i + 1} 들썩 애니(thBob) 붙음 (${a.bob})`);
     /* transform-origin 은 계산값이 px 로 떨어진다 — 캔버스 «바닥» 인지 수치로 본다 */
     const oy = parseFloat(a.org.split(/\s+/)[1]);
