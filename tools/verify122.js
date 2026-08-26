@@ -885,6 +885,112 @@ async function ampCheck(p, hosts) {
     }
   }
 
+  /* ── §18 들썩 정점이 «캡처 격자에 걸리는가» (14회차 신설) ────────
+     13회차 채점에서 **두 비평가가 독립으로 같은 것**을 짚었다 — 목걸이 회전 0.0~0.24°(사양 ±3°) ·
+     이동 −4~−5px(사양 −6px). 코드는 사양대로였다. 즉 «있는데 안 보이는» 것이고,
+     지금까지의 게이트는 **키프레임에 값이 있는지**만 볼 수 있어 이걸 구조적으로 못 잡았다.
+     여기서는 **캡처 격자(t=80,400,…,2640 · 320ms)에서 실제로 읽히는 값**을 잰다 —
+     비평가가 재는 바로 그 표본이다. 정점을 순간으로 두면 이 격자에 안 걸려 FAIL 이 난다. */
+  console.log('§18 들썩 정점 — 320ms 캡처 격자에서 읽히는 회전·이동');
+  {
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const STOPS = [80, 400, 720, 1040, 1360, 1680, 2000, 2320, 2640];
+    const seen = new Map();
+    for (const t of STOPS) {
+      await seek(p, t);
+      const rows = await p.evaluate(() => [...document.querySelectorAll('#shopList .shp-card .cart')]
+        .map((e, i) => {
+          const s = getComputedStyle(e);
+          return [i + 1, Math.abs(parseFloat(s.rotate) || 0), Math.abs(parseFloat((s.translate || '').split(' ')[1] || '0') || 0)];
+        }));
+      for (const [i, r, y] of rows) {
+        const cur = seen.get(i) || { r: 0, y: 0 };
+        seen.set(i, { r: Math.max(cur.r, r), y: Math.max(cur.y, y) });
+      }
+    }
+    const got = [...seen.entries()].sort((a, b) => a[0] - b[0]);
+    console.log('    · ' + got.map(([i, v]) => '칸' + i + ' ' + v.r.toFixed(1) + '° / ' + v.y.toFixed(1) + 'px').join(' | '));
+    /* 사양 ±3° · −6px 의 **80%** 를 격자에서 읽을 수 있어야 한다(정점 유지 구간이 표본 간격과 맞먹는지). */
+    const badR = got.filter(([, v]) => v.r < 2.4).map(([i, v]) => '칸' + i + ' ' + v.r.toFixed(1) + '°');
+    const badY = got.filter(([, v]) => v.y < 4.8).map(([i, v]) => '칸' + i + ' ' + v.y.toFixed(1) + 'px');
+    ok(got.length >= 5, '들썩 측정 대상 ' + got.length + '칸 (>=5)');
+    ok(badR.length === 0, '캡처 격자에서 읽히는 회전이 전부 2.4° 이상'
+      + (badR.length ? ' — 미달 ' + badR.join(' , ') : ''));
+    ok(badY.length === 0, '캡처 격자에서 읽히는 이동이 전부 4.8px 이상'
+      + (badY.length ? ' — 미달 ' + badY.join(' , ') : ''));
+  }
+
+  /* ── §17 호흡 글로우·링 후광 진폭 (14회차 신설) ─────────────────
+     체크리스트가 13회차부터 열어 둔 항목이다 — «호흡 글로우 진폭 단일 기준 Δ22±3 ·
+     마일리지 Δ13.7 ↔ 재화 받기 버튼 Δ65 (4.7배 산포)». §13 은 «면 위를 지나는 띠» 를 재므로
+     **상자 밖으로 번지는 box-shadow** 는 한 번도 잰 적이 없다.
+     재는 법: 요소 테두리 **바깥 2~14px 띠**의 평균 루마를 한 주기 16위상에서 재고 최대−최소.
+     (안쪽을 넣으면 면·글자가 섞이고, 너무 멀리 나가면 이웃 요소가 섞인다.) */
+  console.log('§17 호흡 글로우·링 후광 진폭 — 상자 밖 2~14px 띠의 Δ루마');
+  {
+    const glowAmp = async (sel, per) => {
+      const clip = await p.evaluate(s => {
+        const e = document.querySelector(s);
+        if (!e) return null;
+        e.scrollIntoView({ block: 'center' });
+        const r = e.getBoundingClientRect();
+        const x = Math.round(r.x) - 14, y = Math.round(r.y) - 14;
+        const w = Math.round(r.width) + 28, h = Math.round(r.height) + 28;
+        if (x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight) return null;
+        return { x, y, width: w, height: h, iw: Math.round(r.width), ih: Math.round(r.height) };
+      }, sel);
+      if (!clip) return null;
+      const { iw, ih, ...box } = clip;
+      const vals = [];
+      for (let i = 0; i < 16; i++) {
+        await seek(p, Math.round(per * i / 16));
+        const b64 = (await p.screenshot({ clip: box })).toString('base64');
+        vals.push(await p.evaluate(async ([src, w, h]) => {
+          const img = new Image();
+          await new Promise(res => { img.onload = res; img.src = 'data:image/png;base64,' + src; });
+          const c = document.createElement('canvas');
+          c.width = img.width; c.height = img.height;
+          const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+          const d = g.getImageData(0, 0, c.width, c.height).data;
+          let s = 0, n = 0;
+          for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+            /* 테두리 바깥 2~14px 띠만 — 안쪽(요소 면)과 가장 바깥 2px(이웃 경계)은 뺀다 */
+            const inx = x >= 14 && x < 14 + w, iny = y >= 14 && y < 14 + h;
+            if (inx && iny) continue;
+            if (x < 2 || y < 2 || x >= c.width - 2 || y >= c.height - 2) continue;
+            const j = (y * c.width + x) * 4;
+            s += .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]; n++;
+          }
+          return n ? +(s / n).toFixed(2) : null;
+        }, [b64, iw, ih]));
+      }
+      const v = vals.filter(x => x != null);
+      return v.length ? +(Math.max(...v) - Math.min(...v)).toFixed(1) : null;
+    };
+    const GLOWS = [['강제 상자 테두리(2.8s)', '#shopList .shp-card.gm>.cfr', 2800],
+                   ['[무료] 링(0.9s)', '#shopList .shp-card .cbtn.b1:not(.lack)', 900]];
+    const amps = [];
+    for (const [label, sel, per] of GLOWS) {
+      const a = await glowAmp(sel, per);
+      amps.push([label, a]);
+    }
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    for (const [label, sel, per] of [['마일리지 패널(2.6s)', '#shopList .cn-ml', 2600],
+                                     ['[교환] 링(1.2s)', '#shopList .cn-ml>.ex', 1200],
+                                     ['[이동] 링(1.35s)', '#shopList .cn-mv', 1350],
+                                     ['[받기 AD] 링(1.15s)', '#shopList .cn-cd>.bt[data-cnad]', 1150]]) {
+      const a = await glowAmp(sel, per);
+      amps.push([label, a]);
+    }
+    console.log('    · ' + amps.map(([l, a]) => l + ' Δ' + (a == null ? '측정 불가' : a)).join(' | '));
+    const got = amps.filter(([, a]) => a != null).map(([, a]) => a);
+    ok(got.length >= 5, '글로우 측정점 ' + got.length + '개 (>=5)');
+    const spread = got.length ? Math.max(...got) / Math.max(.5, Math.min(...got)) : 99;
+    ok(spread <= 2.2, "글로우 진폭 산포 = " + spread.toFixed(1) + "배 (<=2.2배 · 13회차 4.7배 → 14회차 1.8배)");
+  }
+
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는

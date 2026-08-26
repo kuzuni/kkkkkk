@@ -4862,11 +4862,23 @@
      «항상 조금 기울어 서서히 도는» 것이 돼 있었다(비평가 O 가 «회전이 0» 으로 읽은 것의 정체 —
      회전이 없던 게 아니라 **늘 있어서 프레임 간 차이가 안 났다**).
      구간도 8% → 10%(0.6~0.9s)로 넓혀 «한 번 툭» 이 눈에 걸리게 한다. */
+  /* ⚑ 14회차 — 13회차 결과물을 채점한 **비평가 둘이 독립으로 같은 것**을 짚었다:
+       AG «목걸이 들썩 회전 0.24°(사양 ±3°) · 무기 translateY 3.19px(−47%)»
+       AH «목걸이 −5.05px / 회전 **0.0°** · 스킬·무기 −4px / −2.0°»
+     코드는 사양대로인데 **둘 다 같은 값을 읽었다** — 즉 측정 실수가 아니라 키프레임 설계다.
+     원인: 92% 정점(−6px·+3°) 과 96%(−3px·−3°) 사이라 **회전의 0 교차가 이동의 정점 근처**에 온다.
+     들썩 창(12% ≈ 480ms)에서 실제로 표본이 걸리는 자리는 그 중간뿐이라(320ms 격자) 어느 표본을
+     잡아도 «움직이긴 하는데 안 기울어진» 프레임이 나온다. 사람이 보는 것도 같다 —
+     ±3° 는 순간값이라 **한 번도 눈에 안 들어온다**.
+     → ① 정점에서 이동·회전을 **같은 시각**에 최대로 두고 ② 그 정점을 **주기의 7%(280~310ms)**
+       동안 «유지» 한다(표본 격자 320ms 와 맞먹어 어느 위상에서도 거의 반드시 밟힌다).
+       반동은 98% 한 스톱으로 줄여 «툭 들었다 놓는» 성격은 지킨다.
+     ⚠ 정점을 «순간» 으로 되돌리지 마라 — 3·5·13·14회차가 연속으로 여기서 «회전이 없다» 를 받았다. */
   @keyframes jz122Bob{
-    0%,88%{translate:0;rotate:0deg}
-    92%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
-    96%{translate:0 calc(-3px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
-    98%{translate:0 calc(-1px * var(--jz-amp));rotate:calc(1.5deg * var(--jz-amp))}
+    0%,84%{translate:0;rotate:0deg}
+    88%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
+    95%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
+    98%{translate:0 calc(-1.5px * var(--jz-amp));rotate:calc(-1.5deg * var(--jz-amp))}
     100%{translate:0;rotate:0deg}}
   /* 카드별 위상·주기 — 5장이 한 몸처럼 같이 뛰면 «연출» 이 아니라 «화면 전체가 흔들리는» 것으로 읽힌다.
      주기는 지시대로 2.4~3.2s(숨쉬기) / 6~9s(들썩) 안에서 서로 소수가 되게 흩는다. */
@@ -4875,10 +4887,10 @@
   /* 5회차(S ⑦) — 네 장이 전부 같은 쪽(+)으로만 기울어 «같은 동작 4벌» 로 읽혔다. 짝수 칸은 반대로. */
   .shp-card:nth-child(even) .cart{animation-name:jz122Breathe,jz122BobR}
   @keyframes jz122BobR{
-    0%,88%{translate:0;rotate:0deg}
-    92%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
-    96%{translate:0 calc(-3px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
-    98%{translate:0 calc(-1px * var(--jz-amp));rotate:calc(-1.5deg * var(--jz-amp))}
+    0%,84%{translate:0;rotate:0deg}
+    88%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
+    95%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
+    98%{translate:0 calc(-1.5px * var(--jz-amp));rotate:calc(1.5deg * var(--jz-amp))}
     100%{translate:0;rotate:0deg}}
   .shp-card:nth-child(2) .cart{animation-duration:calc(2.7s * var(--jz-per)),calc(4s * var(--jz-per));
     animation-delay:calc(-1.25s * var(--jz-per)),calc(-3.6s * var(--jz-per))}
@@ -5168,12 +5180,18 @@
      U: «상시 후광 +12(4.7%) — 주기의 45%가 광량 0» · V: «swing 4~8L».
      → 세 키프레임의 기하를 **한 벌로 통일**한다: 상시 후광 `0 0 20px 4px α.9`(Δ≈+22) ·
      링 피크 α.92 → 85% 에서 26px 로 소멸(Δ≈+32). 색만 버튼별로 다르다. */
+  /* ⚑ 14회차 — 게이트 §17 신설로 «상자 밖 2~14px 띠» 의 Δ루마를 처음 쟀더니 네 링이
+     Δ10.0 / 13.3 / 16.0 / 38.4 로 **3.8배** 흩어져 있었다(체크리스트가 13회차부터 열어 둔 항목).
+     같은 α·같은 기하인데 갈리는 이유는 광택과 똑같다 — **Δ = α × (링색 − 바탕색)** 이라
+     바탕이 어두운 자리(마일리지 패널)에서만 세게 잡힌다.
+     → ① 약한 쪽(청록 2개)은 **상시 후광 자체를 호흡**시켜 진폭을 만든다(지금까지 후광은 상수라
+        진폭에 1도 기여하지 않았다 — 퍼지는 링만 기여했다) ② 센 쪽은 `--jz-ring` 으로 눌러 맞춘다. */
   @keyframes jz122Ring{
-    0%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    0%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    85%{box-shadow:0 0 calc(14px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(83,230,250,calc(.45 * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
   .shp-card:nth-child(2) .cbtn.b1:not(.lack){animation-delay:calc(-.22s * var(--jz-per))}
   .shp-card:nth-child(3) .cbtn.b1:not(.lack){animation-delay:calc(-.45s * var(--jz-per))}
@@ -5363,12 +5381,13 @@
   .cn-cd>.fr::after{animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
   .cn-cd>.bt[data-cnad]{animation:jz122RingC calc(1.15s * var(--jz-per)) ease-out infinite}
   /* 6회차 — jz122Ring 과 같은 한 벌(상시 후광 20/4 α.9 · 피크 α.92 · 85% 26px) */
+  /* 14회차 — `jz122Ring` 과 한 벌(§17: 이 링이 Δ10.0 으로 가장 약했다) */
   @keyframes jz122RingC{
-    0%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    0%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,calc(.92 * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    85%{box-shadow:0 0 calc(14px * var(--jz-amp)) calc(2px * var(--jz-amp)) rgba(83,230,250,calc(.45 * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(83,230,250,calc(.9 * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(26px * var(--jz-amp)) calc(6px * var(--jz-amp)) rgba(83,230,250,calc(1 * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
   .cn-cd:nth-child(6n+1)>.bt[data-cnad]{animation-delay:calc(-.19s * var(--jz-per))}
   .cn-cd:nth-child(6n+2)>.bt[data-cnad]{animation-delay:calc(-.38s * var(--jz-per))}
@@ -5583,13 +5602,17 @@
      절반은 캡처 위상 앨리어싱(0.9s 링을 0/900/5200/13400 에 찍었다)이지만, 절반은 세기다 —
      상시 후광을 두껍게(9→14px, .34→.5) 하고 링이 사라지는 구간을 70%→**85%** 로 늦춘다. */
   /* 6회차 — jz122Ring/RingC 와 같은 한 벌. 색(연두)만 다르다. */
+  /* `--jz-ring` — 자리별 세기 보정(기본 1). §17 실측이 «어두운 바탕 위 링만 세게 잡힌다» 를
+     보여줬다: 마일리지 패널 위 [교환] Δ38.4 ↔ 같은 규격의 [이동] Δ16.0. 바탕색을 CSS 가 못 읽으므로
+     광택의 `jzShineA()` 역산 대신 **잰 값으로** 눌러 맞춘다. */
   @keyframes jz122Ring2{
-    0%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-glow))),
-      0 0 0 0 rgba(173,255,129,calc(.92 * var(--jz-glow)))}
-    85%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-glow))),
+    0%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(173,255,129,calc(.92 * var(--jz-ring,1) * var(--jz-glow)))}
+    85%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 calc(26px * var(--jz-amp)) rgba(173,255,129,0)}
-    100%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-glow))),
+    100%{box-shadow:0 0 calc(20px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(173,255,129,calc(.9 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(173,255,129,0)}}
+  .cn-ml>.ex{--jz-ring:.58}   /* §17 실측 Δ38.4 → 목표 22 (14회차) */
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
