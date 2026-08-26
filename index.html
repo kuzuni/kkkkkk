@@ -20505,11 +20505,20 @@ function fxToast(txt){
   if(stack > 3) return;
   const el = document.createElement('b');
   el.className = 'fx-toast';
-  el.style.top = (150 + stack*104) + 'px';
+  /* 22회차 — 토스트가 «STAGE n» 헤더에 닿는다. 21차 AJ #5 · 22차 AL #1 이 라운드를 건너 독립적으로
+     같은 것을 짚었고, `probe58m` 으로 프레임 상단 띠를 실측해 확정했다:
+       초상화 플레이트 하단 **142** · 토스트 79px · `#chapN`(STAGE) 상단 **227** → 빈 띠는 **82px** 뿐이다.
+     현재 top 150 이면 하단이 229 라 헤더를 문다. 그 82px 안에 들어가는 자리는 사실상 하나뿐이다.
+     ⚠ AL 의 처방 «top 105» 는 반대쪽(플레이트 142)을 37px 파고든다 — 실측 없이 위만 본 값이라 안 쓴다. */
+  el.style.top = (143 + stack*104) + 'px';
   el.innerHTML = txt;                            /* 125 — 화폐 아이콘(이미지 태그)이 들어온다 */
   L.appendChild(el);
-  setTimeout(() => el.classList.add('out'), 1200);
-  setTimeout(() => el.remove(), 1560);
+  /* 22회차 — 체류가 너무 길다(2인 공통): AL #1 «f5(400)~f15(1315) 915ms 픽셀 완전 동일 — 프리즈» ·
+     AM #12 «정지한 토스트가 전체 예산의 68%(960ms↑)를 점유». 두 사람의 처방(AL 350ms · AM 550+200)
+     사이로 잡는다 — 퇴장 시작 1200 → **760ms**, 소멸 1560 → **1060ms**.
+     `verify58` 의 «181ms 에 완전히 뜬다»·«1.3초 뒤 사라져 있다» 두 항목은 그대로 만족한다. */
+  setTimeout(() => el.classList.add('out'), 760);
+  setTimeout(() => el.remove(), 1060);
 }
 /* ==========================================================================
    113 «손가락» 가이드 포인터 — fxHand()  (2026-08-26, 저장소 주인 지시)
