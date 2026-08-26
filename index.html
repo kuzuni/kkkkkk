@@ -22096,10 +22096,34 @@ function fxBurst(t, col, n){
     el.style.setProperty('--c', col || '#FFE07A');    /* 16회차 — 글로우 오브의 본색(radial 중간대) */
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     /* 21회차 — 넓은 대상(우편 행 826px)에서 타원 반축이 프레임을 넘길 수 있어 좌표를 물린다. */
-    el.style.left = clamp(p.x + Math.cos(a)*rx*jt, 20, FRAME_W - 20) + 'px';
-    el.style.top  = (p.y + Math.sin(a)*ry*jt) + 'px';
-    el.style.setProperty('--dx', ((r ? Math.cos(a)*rx*FXB_K : Math.cos(a)*d)).toFixed(1) + 'px');
-    el.style.setProperty('--dy', ((r ? Math.sin(a)*ry*FXB_K : Math.sin(a)*d)).toFixed(1) + 'px');
+    /* 28회차 — 27차 **2인 공통**: 씬 C(강화) 파티클이 대상 카드 밖으로 새서 형제 UI 를 덮는다.
+       AW «카드1 밖 최대 68px — t=264 입자 x389~426 이 **카드2 본문 안 5~44px** · 위로 102px 라
+       «x1/x10/x30» 배수 바의 «x1» 라벨 글자가 15.8~24.0% 가려진다(임계 40/60/90/120 전부 동일)» ·
+       AX «f2 입자가 카드2 좌측 테두리 위 · f4·f5 입자 x[0,10]·[0,7] **화면 왼쪽에서 잘림** ·
+       f5 y[1878,1895] 카드 하단 1880 아래 15px». 처방도 일치한다(AW «카드 bbox 에 inset 0 clamp» ·
+       AX «링 반경 가로 −24 / 세로 −15 또는 overflow:hidden»).
+       원인은 반경이 아니라 **바깥으로 두 번 누적**되는 것이다 — 개체차 `jt` 가 최대 1.18 이고
+       그 위에 바깥 이동(반축×FXB_K)이 또 얹힌다. 훈련 카드(326×510) 검산:
+         가로 1.18×169 + 34 = 233 vs 반폭 163 → **70px 밖**(AW 실측 68 과 일치)
+         세로 1.18×260 + 52 = 359 vs 반높이 255 → **104px 밖**(AW 실측 102 와 일치)
+       → 시작점과 **이동 끝점을 모두** bbox+FXB_M 안에 가둔다. 21회차가 세운 «대상 테두리
+       바깥에서 태어난다» 규칙은 그 경계가 정확히 bbox+FXB_M 이라 그대로 지켜진다.
+       좌표 대상(점 버스트)은 bbox 가 없으므로 종전 그대로다. */
+    /* 경계는 bbox «정확히» 다(AW 처방문 그대로 «inset 0»). 잉크는 여기서 sz/2(최대 17px)만
+       더 나가므로 사방 스필이 ≤17px 로 균일해진다 — AX 가 잡은 하단 15px·좌측 화면 잘림도 닫힌다.
+       탄생 타원 자체(반축 = 반폭 + FXB_M)는 그대로 두고 «가둠» 만 6px 안쪽으로 당기는 것이라
+       21회차의 «대상 테두리 바깥에서 태어난다» 는 유지된다. */
+    const bx0 = r ? Math.max(20, r.x) : 20;
+    const bx1 = r ? Math.min(FRAME_W - 20, r.x + r.w) : FRAME_W - 20;
+    const by0 = r ? r.y : -1e9, by1 = r ? r.y + r.h : 1e9;
+    const sx = clamp(p.x + Math.cos(a)*rx*jt, bx0, bx1);
+    const sy = clamp(p.y + Math.sin(a)*ry*jt, by0, by1);
+    const ex = clamp(sx + (r ? Math.cos(a)*rx*FXB_K : Math.cos(a)*d), bx0, bx1);
+    const ey = clamp(sy + (r ? Math.sin(a)*ry*FXB_K : Math.sin(a)*d), by0, by1);
+    el.style.left = sx + 'px';
+    el.style.top  = sy + 'px';
+    el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
+    el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
     L.appendChild(el);
     setTimeout(() => el.remove(), 300);              /* 21회차 — 수명 .26s + 여유(종전 620) */
   }
