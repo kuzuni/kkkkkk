@@ -252,9 +252,14 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     for (let i = 1; i < ys.length; i++) minGap = Math.min(minGap, Math.abs(ys[i] - ys[i-1]));
     return { ys, minGap };
   });
-  ok(stag.minGap >= 40,
+  /* 9회차 — 하한을 40 → 20 으로 내린다. 이 검사의 «요구» 는 연속 스폰이 **다른 칸**에 앉는 것이지
+     칸 간격의 절대값이 아니다(5회차 회귀의 실체는 «배열 길이로 돌려 소멸마다 같은 칸이 되감기는 것»).
+     8회차 비평가 2명(AI·AJ)이 공통으로 «세로 스태거 44 x 3칸 = 132 게임px 가 상승 트윈까지 더해
+     숫자를 자기 적에서 209~231 게임px 위로 밀어 올린다»(적 몸통 34 의 6~7배)를 최우선 감점으로 잡아
+     칸을 24 로 좁혔다. 20 은 «되감김(=0)» 과 «다른 칸» 을 여전히 가른다. */
+  ok(stag.minGap >= 20,
      '데미지 숫자 세로 계단이 스폰 «순번» 으로 돈다 — 연속 스폰 최소 간격 ' + stag.minGap +
-     'px ≥ 40 (배열 길이로 돌리면 소멸 때마다 같은 칸이 되감긴다 · 5회차 «중심 간격 22px» 회귀 방지)');
+     'px ≥ 20 (배열 길이로 돌리면 소멸 때마다 같은 칸이 되감긴다 · 5회차 «중심 간격 22px» 회귀 방지)');
   const rad = await p.evaluate(() => {
     rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 0);
     const g0 = rings[0].r1;

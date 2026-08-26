@@ -106,12 +106,12 @@ const path = require('path');
     booms.length = 0;
     booms.push({ x: 500, y: 500, at: 0, afps: BOOM_FPS, aloop: false,
                  akey: 'boom', anim: 'boom', scale: 5.0, alpha: 0.5 });
-    const hr = 32 * 5.0 * 0.75;
+    const hr = 32 * 5.0 * 1.05;
     const at = (dx, dy) => {
       const nx = 500 + dx, ny = 500 + dy;
       let hot = 0;
       for (const bb of booms) {
-        const h = 32 * bb.scale * 0.75;
+        const h = 32 * bb.scale * 1.05;
         if ((bb.x - nx) * (bb.x - nx) + (bb.y - ny) * (bb.y - ny) < h * h) { hot = 1; break; }
       }
       return hot;
