@@ -12721,7 +12721,10 @@ function dmgNum(x, y, v, crit, src){
     if(q.src !== src || q.t > NUM_LIFE*0.62) continue;
     q.raw += v; q.v = fmt(q.raw);
     q.crit = q.crit || crit;
-    if(q.t > NUM_LIFE*0.25) q.t = NUM_LIFE*0.25;   /* 다시 읽을 시간을 준다(수명 연장이 아니라 되감기) */
+    /* 되감기는 «다시 읽을 시간» 을 주려는 것이지 수명 연장이 아니다. 무제한으로 되감으면
+       장판(맹독)·다연발처럼 계속 때리는 경우 라벨이 **영영 안 꺼진다** — 5회로 막는다.
+       한도 뒤에도 합산은 계속하되(값은 최신), 수명은 제 시각에 끝나고 다음 타격이 새 라벨을 연다 */
+    if((q.mg = (q.mg || 0) + 1) <= 5 && q.t > NUM_LIFE*0.25) q.t = NUM_LIFE*0.25;
     return;
   }
   nums.push({ x, y: y - (numSeq++ % 3)*24, v:fmt(v), raw:v, src, t:0, crit, ox:rnd(-32,32) });
