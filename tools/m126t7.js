@@ -35,13 +35,13 @@ const argRAD = argN('--rad', 5);    /* 흰 코어에서 근흑을 찾는 반경(
 const SCREENS = [
   {
     k: '02-메인', ref: 'docs/ref/02-기본-메인-화면.jpg', steps: [],
-    sels: ['.tab .tl', '#sideL .ibtn .sl', '#sideR .ibtn .sl'],
+    sels: ['.tab .tl', '#sideL .ibtn .sl', '#sideR .ibtn .sl', '#botleft .ubtn[data-util=town] .ul'],
     /* 라벨 뒤에 이모지 아이콘이 **겹쳐** 있다(`.tab .tl{margin-top:-22px}` · 레일도 같다).
        라벨만 숨겼다 찍으면 «드러난 아이콘 픽셀» 이 차분에 그대로 들어와 잉크로 읽힌다 —
        실제로 「상점」 흰 코어가 61×34(외곽선 포함 61×41 보다 큼 = 물리적으로 불가능)로 나왔고
        탭마다 높이가 28~34 로 흩어졌다. 이모지가 저마다 다른 흰 부위를 갖기 때문이다.
        그래서 **네 장 전부에서 아이콘·배지를 먼저 숨긴 채** 잰다. 뒤가 무엇이든 차분은 글자만 남는다. */
-    hide: ['.tab .ti', '.tab .bdg', '.tab .nw', '.ibtn .si', '.ibtn .bdg'],
+    hide: ['.tab .ti', '.tab .bdg', '.tab .nw', '.ibtn .si', '.ibtn .bdg', '#botleft .ui'],
   },
   {
     k: '22-퀘스트', ref: 'docs/ref/22-퀘스트-팝업.jpg', steps: ['.side .ibtn[data-pop="quest"]'],
