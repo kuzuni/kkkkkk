@@ -90,14 +90,16 @@ let br = null;
     }
   }
   /* 정의부(`function showMsg(t)`)는 위 정규식에 안 걸린다 — 호출부만 남는다 */
-  eq('소스 · 남은 showMsg 호출부 수', calls.length, 8);
+  /* 160 — 8 → 9. 작업 123(아레나)이 «아레나 중단» 한 줄을 더했다(94 규칙대로 12자 이내). */
+  eq('소스 · 남은 showMsg 호출부 수', calls.length, 9);
   /* 문자열 리터럴만으로 된 인자는 «짧게» 규칙을 문자 수로 검산한다(≤ 14자) */
   const lits = calls.filter(c => /^'[^']*'$/.test(c)).map(c => c.slice(1, -1));
   const tooLong = lits.filter(t => t.length > 14);
   eq('소스 · 리터럴 문구 중 14자 초과', tooLong.join(' | ') || 'none', 'none');
   yes('소스 · 리터럴 문구를 실제로 훑었다(≥ 5개)', lits.length >= 5);
   eq('소스 · 남은 리터럴 문구', lits.slice().sort().join('/'),
-     ['던전 중단', '레이드 시작', '레이드 중단', '부활 중...', '승급전 시작'].sort().join('/'));
+     /* 160 — «아레나 중단»(작업 123) 추가. 목록은 «어떤 문구가 남아 있는지»의 기록이다. */
+     ['던전 중단', '레이드 시작', '레이드 중단', '부활 중...', '승급전 시작', '아레나 중단'].sort().join('/'));
 
   /* data-why 는 이제 캔버스가 아니라 DOM 캡션 */
   eq('소스 · dataset.why 를 showMsg 로 띄우는 곳', (code.match(/showMsg\(el\.dataset\.why/g) || []).length, 0);
@@ -232,8 +234,28 @@ let br = null;
   eq('문구 · 파밍 중 보스 스테이지(보스전 아님)', keep.farmStage, 'STAGE 20');
 
   /* 클리어 문구 — 소스 형태로 검산(스테이지 클리어를 실제로 돌리면 세이브가 흔들린다) */
-  yes('문구 · 클리어는 «STAGE CLEAR!» + 💎 만', /let msg = 'STAGE CLEAR!';/.test(code) && /msg \+= ' 💎\+' \+ d;/.test(code));
+  /* 160 — 옛 단언은 `msg += ' 💎+' + d`(이모지)였다. 작업 125 가 그 자리를 `curIc('dia')`
+     = `<img class="cic" …>` **HTML 문자열**로 바꾸면서 캔버스에 원문이 그려졌고(주인 보고),
+     이 단언은 그때부터 죽어 있었다. 이제 «아이콘 없이 낱말 + 수치» 가 정답이다 —
+     125 의 «화폐는 이미지 1종» 원칙 때문에 💎 로도 되돌릴 수 없다(verify125 A1 이 잡는다). */
+  yes('문구 · 클리어는 «STAGE CLEAR!» + 낱말 다이아(아이콘 없음)',
+      /let msg = 'STAGE CLEAR!';/.test(code) && /msg \+= ' 다이아 \+' \+ fmt\(d\);/.test(code));
   eq('문구 · 클리어 문구에 골드 없음', (code.match(/STAGE CLEAR![^\n]*G'/g) || []).length, 0);
+  /* 160 — 캔버스 텍스트 싱크(showMsg → fillText · nums → fillText)에 HTML 이 흘러들면
+     태그가 «글자» 로 그려진다. 이 싱크로 가는 줄에 아이콘 마크업 생성기가 있으면 실패. */
+  {
+    const bad = code.split('\n').map((ln, i) => ({ ln, i }))
+      .filter(o => /showMsg\(|nums\.push\(|msgTxt\s*=/.test(o.ln))
+      .filter(o => /curIc\(|<img|&lt;img/.test(o.ln))
+      .map(o => (o.i + 1) + ': ' + o.ln.trim().slice(0, 60));
+    eq('문구 · 캔버스 싱크에 HTML 아이콘 0건', bad.join(' | ') || 'none', 'none');
+  }
+  /* 클리어 문구가 만들어지는 그 블록 자체에도 마크업 생성기가 없어야 한다(위 줄 단위 검사 보강) */
+  {
+    const blk = code.slice(code.indexOf("let msg = 'STAGE CLEAR!';"));
+    eq('문구 · 클리어 블록에 curIc 0건',
+       (blk.slice(0, blk.indexOf('showMsg(msg)') + 12).match(/curIc\(/g) || []).length, 0);
+  }
 
   /* ── ③-2 중복 무시 ── */
   const dedup = await ev('런타임 · 중복 무시 확인', async () => {

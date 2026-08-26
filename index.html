@@ -15529,11 +15529,15 @@ function step(dt){
     S.best = Math.max(S.best, S.stage);
     const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
     S.gold += bonusG; goldWin += bonusG;
-    /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다. 다이아만 짧게 붙인다. */
+    /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다. 다이아만 짧게 붙인다.
+       160 — 여기는 **캔버스 텍스트 싱크**다(showMsg → ctx.fillText). `curIc()`(125) 는 `<img …>`
+       HTML 문자열이라 캔버스에 원문 그대로 그려졌다(«STAGE CLEAR! <img class="cic" …>+80»).
+       125 의 «화폐는 이미지 1종» 원칙상 💎 이모지로 되돌릴 수도 없으므로 **아이콘 없이 낱말+수치**로 쓴다.
+       ⛔ showMsg·nums 등 캔버스 문자열에는 curIc()/HTML 을 절대 넣지 마라(게이트 verify94 §문구). */
     let msg = 'STAGE CLEAR!';
     if(first){
       const d = 35 + Math.floor(S.stage*3.6);
-      S.dia += d; msg += ' ' + curIc('dia') + '+' + d;
+      S.dia += d; msg += ' 다이아 +' + fmt(d);
     }
     spawnStage();
     showMsg(msg);
