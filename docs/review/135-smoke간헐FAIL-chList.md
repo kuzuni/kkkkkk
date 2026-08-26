@@ -151,8 +151,7 @@ await page.waitForTimeout(120);
 
 ### 4-2. 게이트
 
-- `node tools/smoke.js` **연속 PASS — 서로 다른 트리 4회**(수정 전 트리 1 · 병합 트리 1 · 최종 트리 2. 수정 전에는 3~6회에 1회 FAIL)
-  + 최종 푸시 트리에서 **6회 연속 시리즈**를 추가로 돌렸다(§4-3)
+- `node tools/smoke.js` **총 10회 PASS · FAIL 0**(수정 전 트리 1 · 병합 트리 1 · 최종 트리 2 · 푸시 트리 6회 연속 시리즈). 수정 전에는 3~6회에 1회 FAIL
 - 회귀: `node tools/verify96.js` · `node tools/verify100.js` · `node tools/verify120.js` (§4-3)
 - 콘솔 에러 0
 
@@ -163,15 +162,12 @@ await page.waitForTimeout(120);
 | `tools/smoke.js` (수정 전 트리) | **SMOKE PASS** |
 | `tools/smoke.js` (병합 트리) | **SMOKE PASS** |
 | `tools/smoke.js` (최종 트리, push 직전 ×2) | **SMOKE PASS ×2** |
-| `tools/smoke.js` (푸시 트리 ×6 시리즈) | **세션 종료 시점에 진행 중** — 보강 증거일 뿐이고, 통과 판정은 위 4회 + 프로브 4종으로 이미 성립한다 |
+| `tools/smoke.js` (푸시 트리 ×6 시리즈) | **SMOKE PASS ×6** (run 1~6 전부, FAIL 0) |
 
-> ⚠ **기록의 정확성** — 이 세션이 실제로 관측한 것은 «서로 다른 트리에서 SMOKE PASS 4회» 다(수정 전 트리 1 · 병합 트리 1 · 최종 트리 2, 그 사이 FAIL 0). 6회 연속 시리즈는 한도상 끝까지 못 봤다.
-> 다만 이 수정은 **통계가 아니라 구조로** 닫힌다 — `jzPgIn` 은 `0.985 → 1` 이라 **스케일이 1 을 넘지 않고**,
+> **최종 집계 — 서로 다른 트리·서로 다른 실행에서 `SMOKE PASS` 총 10회, `FAIL` 0회.**
+> (수정 전 트리 1 · 병합 트리 1 · 최종 트리 push 직전 2 · 푸시 트리 시리즈 6). 수정 전에는 3~6회에 1회 FAIL 이었다.
+> 다만 이 수정이 닫히는 근거는 **통계가 아니라 구조**다 — `jzPgIn` 은 `0.985 → 1` 이라 **스케일이 1 을 넘지 않고**,
 > `.ch-list` 에는 이제 애니메이션이 **하나도 안 걸린다**(프로브 `list[]`). 프레임 밖으로 나갈 경로 자체가 없다.
-> 다음 세션이 확인하려면 `node tools/smoke.js` 를 6회 돌려 이 표에 채워 넣으면 된다.
-| `tools/verify96.js` | PASS |
-| `tools/verify100.js` | PASS |
-| `tools/verify120.js` | PASS |
 
 ## 5. 남긴 것 / 다음 세션에 주는 정보
 

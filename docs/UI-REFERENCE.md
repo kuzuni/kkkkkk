@@ -2734,7 +2734,7 @@ X 는 ③ 위치·경로에 10점). 회차별 최저: 10회차 4 → 11회차 6/
 - [x] `tools/smoke.js` [3] 의 대기를 **고정 800ms → `jz*` 유한 애니메이션 종료 대기**로
       (`getAnimations({subtree:true})` · 무한 반복은 `jzFinite` 기준으로 제외 · 상한 3초 + `.catch()`)
 - [x] 진단 도구 `node tools/probe135.js [w] [h]` — 화면비 4종 전부 «프레임 밖 표본 0/60»
-- [x] 게이트 `node tools/smoke.js` **서로 다른 트리 4회 연속 PASS**(+ 푸시 트리 6회 시리즈) · 회귀 `verify96`·`verify100`·`verify120` PASS
+- [x] 게이트 `node tools/smoke.js` **총 10회 PASS · FAIL 0**(푸시 트리 6회 연속 시리즈 포함) · 회귀 `verify96`·`verify100`·`verify120` PASS
 
 ### 새 오버레이를 만들 때 지켜야 할 것 (135)
 
