@@ -5187,7 +5187,9 @@
       #FFF3D8 919px 926px,#F3E7CD 926px);
     /* 9회차(N P4): ref 는 테두리(6px) 직후 **밝은 립 3px** (249,230,198) 이 4변 전부에 있다.
        inset box-shadow 는 «먼저 적은 것이 위» 라 6px 테두리를 앞에, 9px 립을 뒤에 둔다 */
-    box-shadow:inset 0 0 0 6px #CDA26C,inset 0 0 0 9px #F9E6C6}
+    /* 19회차(α P5 · β P4 · γ P4 — 독립 3명): ref 테두리는 4변 모두 **5px** 인데 우리는 6px 이었다.
+       밝은 립 3px 은 그대로 유지되도록 두 번째 링도 9 → 8 로 같이 줄인다. */
+    box-shadow:inset 0 0 0 5px #CDA26C,inset 0 0 0 8px #F9E6C6}
   /* 11회차(R 인계 3번, 자체 차분 확인): 9회차가 넣은 밝은 립 3px 은 **트레이 틴트 구간에는 없다** —
      ref y1600 가로는 테두리(x17..22) 직후 곧장 틴트(x23..31)인데 우리는 x23..25 가 립(249,230,198)이었다.
      inset box-shadow 는 구간을 못 나누므로 틴트 밴드(박스 local 346..918 = 573px, 비평가 2명이
@@ -5379,7 +5381,9 @@
        종횡비를 어긋나게 했다. 높이를 폰트로 올리고(38→41.5) 폭은 되돌린다(1.12→0.95). */
     /* 16회차(W P4 «−13~15%» · X P8 «−11~12.5%» — 두 비평가 독립 일치): 잉크 **높이는 ref 와 동일(36/36)**
        인데 폭만 좁다(ref x10 69~72 / 우리 60~64). 높이는 건드리지 말고 scaleX 만 .95 → 1.03 (+8.4%). */
-    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill;transform:scaleX(1.03);font-size:41.5px}
+    /* 19회차(γ P9·δ P3 — 둘 다 «우리 잉크가 크다»): 동일기준 실측 ref 69x34 / 우리 68x36.
+       잉크 = 글리프 + 스트로크 6 이므로 글리프만 30 → 28 로: font 41.5 → 38.7, 폭은 scaleX 로 되돌린다. */
+    -webkit-text-stroke:6px #3A2415;paint-order:stroke fill;transform:scaleX(1.121);font-size:38.7px}
   .tr-qty>.q.on>i{color:#F9F1EF}
 
   /* §6 스탯 카드 3장 — y373 h510, 카드 w326 pitch 342 (박스 기준 x18/360/701) */
@@ -5420,11 +5424,15 @@
     /* 18회차(비평가 β P1 — 카드 3장 전부, 이 화면에서 **다섯 번째** 동심 radius 결함):
        ref 는 탠 밴드 좌상 코너에서 크림 쐐기가 직선부 3px → **최대 11px** 로 벌어진다(y1452 에서 ref 크림
        x50..60 · 우리 1px). 15회차에 0 → 20 으로 올렸는데 아직 모자랐다 — ref 실효 반경은 ≈26 이다. */
-    border-radius:35px 35px 0 0;
+    border-radius:40px 40px 0 0;
     background:
       linear-gradient(90deg,rgba(255,255,255,.57) 0,rgba(255,255,255,0) 5px),
       linear-gradient(270deg,rgba(0,0,0,.14) 0,rgba(0,0,0,0) 2px),
-      linear-gradient(180deg,#FAE8D1 0 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
+      /* 19회차(Z P5 · γ P2 — 독립 2명): ref 카드 **상단만** 검정 9px 이고 측·하단은 8px 이다.
+         우리는 4변 모두 8px(`inset 0 0 0 8px`)이라 상단이 1px 얇았고, 그 1px 을 크림 림이 먹어
+         림이 ref 4px → 우리 5~6px 로 반대로 두꺼웠다. inset 링은 비대칭이 안 되므로
+         헤더 밴드 첫 1px 을 검정으로 깔아 «상단만 9px» 를 만든다. */
+      linear-gradient(180deg,#141414 0 1px,#FAE8D1 1px 5px,#F2D299 5px 6px,#F3CC89 6px,#EEC889)}
   /* 16회차(W P5 «+8%» · X P3 «+10.8%» — 두 비평가 독립 일치): «Lv.» 잉크 높이가 ref 37~38 인데 우리는 41.
      잉크 = 글리프 + 스트로크 10 이므로 글리프만 31 → 27.5 로 줄인다: font-size 54 → 48 (−11%). */
   .tr-card>.ch>i{font-size:48px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;
@@ -5493,7 +5501,9 @@
      **높이는 맞고 폭만 +11%** 다(X P4 는 높이로 읽었다). 세로 중심도 ref 1752 / 우리 1747.5 (−4.5).
      → top 286 → 290.5 · 글자에 scaleX(.90). */
   .tr-card>.cv{left:0;right:0;top:290.5px;height:60px;line-height:60px;text-align:center}
-  .tr-card>.cv>i{font-size:51px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
+  /* 19회차(γ P7 · δ P6): 카드2·3 초록 잉크가 ref 35 / 우리 38~40 (+9~14%). 다만 카드1 은 ref 37 / 우리 38 로
+     Δ1 이라(문자열이 카드마다 다르다) 과교정을 피해 −5% 만 준다. */
+  .tr-card>.cv>i{font-size:48.5px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
     display:inline-block;transform:scaleX(.90)}
   /* 17회차(Y P9 «h −10% · 중심 −1.5~2.5» · Z P7 «중심 −2» — 10회차 O P3 과도 같은 방향):
      ref 라벨 잉크 h30 중심 1799.5 / 우리 h27 중심 1797.5 → top 340 → 342. 폰트는 아래에서 +10%. */
@@ -5531,7 +5541,9 @@
   /* 18회차(α P2 · W·Z 도 코인을 지적): ref 코인 잉크 53w x 55h (w/h 0.96) 인데 우리는 57x53 (1.08) 로
      **종횡비가 뒤집혀** 있었다. 높이를 폰트로 올리고(49 → 50.9) 폭은 scaleX 로 되돌린다(1.08 → .968). */
   .tr-card>.cb>s{font-size:50.9px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(.968)}
-  .tr-card>.cb>i{position:relative;top:-3px;font-size:52.5px;line-height:62px;color:#F9EB6E;
+  /* 19회차(Z · δ P4·P5 — 둘 다 «+9~12% 크고 위로 떠 있다»): ref 글자심 h33~34 · 코인 중심과 Δ−1 인데
+     우리는 h37 · Δ−4 였다. 글리프 28 → 24.5 (font 52.5 → 46), 그리고 2px 내린다(top −3 → −1). */
+  .tr-card>.cb>i{position:relative;top:-1px;font-size:46px;line-height:62px;color:#F9EB6E;
     -webkit-text-stroke:9px #141414;paint-order:stroke fill}
   /* 7회차: «ref 배지 지름 30» 으로 읽고 border-box 를 30 으로 줬는데 — **그 30 은 fill(핑크) 지름이었다.**
      10회차 재측(ref y1445 가로 단면, 카드1): 검정 332..337(6px) · 핑크 338..368(**31px**) · 검정 369..373(5px)
