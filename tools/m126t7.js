@@ -45,8 +45,12 @@ const SCREENS = [
   },
   {
     k: '22-퀘스트', ref: 'docs/ref/22-퀘스트-팝업.jpg', steps: ['.side .ibtn[data-pop="quest"]'],
-    sels: ['.qs-t'],
+    sels: ['.qs-t', '.mhead h2'],
   },
+  /* 8회차 — `.mhead h2` 는 **A5 공용 모달 헤더**라 22 만 보고 고치면 나머지가 같이 움직인다.
+     ref 가 있는 나머지 헤더 화면도 같이 재서 «22 를 맞추면 남이 어긋나는지» 를 먼저 본다. */
+  { k: '69-우편함', ref: 'docs/ref/69-우편함-팝업.jpg', steps: ['#menub', '#mnw [data-mn="mail"]'], sels: ['.mhead h2'] },
+  { k: '33-재화정보', ref: 'docs/ref/33-재화-정보-팝업.jpg', steps: ['[data-cur="gold"]'], sels: ['.mhead h2'] },
 ];
 
 const NOISE_TH = 18;

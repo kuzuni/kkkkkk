@@ -1333,8 +1333,17 @@
     background:linear-gradient(180deg,#5B4643 0,#5B4643 8px,#523E3D 8px,
       #523E3D calc(100% - 1px),#715B4E calc(100% - 1px))}
   /* letter-spacing 은 뒤쪽에도 붙으므로 같은 값의 text-indent 로 가운데를 되돌린다 */
-  .mhead h2{position:relative;top:-1px;margin:0;font-size:38px;line-height:38px;font-weight:900;color:#fff;
-    letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;
+  /* 126 8회차 ②-2 — 38px 은 22 「퀘스트」 잉크를 92×30 으로 냈고 ref 는 116×36 이다(§12 에서 비평가
+     K·L·5회차 측정자 3명 일치, `tools/m126t7.js` 가 4번째로 재확인). §11 처방대로 «높이로 fs 를 풀고
+     남은 폭을 sx 로» → fs 38×(36/30) = 45.6 · 그 크기에서 폭 110 이 되므로 sx 116/110 = 1.057.
+     ⚠ 이 자리는 A5 공용 헤더라 16·22·69·87·103 … 이 같이 움직인다 — 게이트 `tools/m126hd.js` 로 감시한다.
+     ref 헤더 타이틀이 화면마다 다르다는 것이 8회차에 드러났다(22 「퀘스트」 116×36 · 16 아이템명 h44 ·
+     69 「우편함」 89×31). 16 은 이 상향으로 −25%→−10% 로 같이 좋아지고, 69 만 반대로 간다 —
+     69 의 ref 는 «육각 타이틀 탭» 이고 우리는 지시(UI-REFERENCE 69)대로 공용 `.mhead` 로 통일한 자리라
+     구속 목표가 아니다(`docs/measure/69-우편함팝업.md` §2 가 그렇게 적어 뒀다). 화면별 override 로
+     가르지 않는 이유는 126 이 «토큰 1벌로 통일» 지시이기 때문 — §13-3 `.tab .tl` 과 같은 처리다. */
+  .mhead h2{position:relative;top:-1px;margin:0;font-size:45.6px;line-height:45.6px;font-weight:900;color:#fff;
+    letter-spacing:1.7px;text-indent:1.7px;paint-order:stroke fill;transform:scaleX(1.057);
     -webkit-text-stroke:calc(var(--st-title) * 1em) #000}   /* 126 ② — 10px 고정 = r .263 */
   /* 베이지 본문 + 별무늬. 레퍼런스 별은 팔이 두껍고(내반경/외반경 0.68) 위 꼭짓점이 본문 상단선에
      잘려 있다 → 타일을 10px 위로 올려 클립시킨다. 베벨 1px 은 좌·우·아래만 (헤더 아래엔 없다) */
@@ -1379,7 +1388,7 @@
      좌우 8·7·3 보다 편측 6px 더 나온다). A5 공용 껍데기를 건드리지 않도록 .sk8 에서만 준다 */
   .sk8 .mbox{border-bottom-width:10px;padding-bottom:9px}
   .sk8 .mbody{padding:24px 0 10px;background:#F0D9BA;text-align:center;border-bottom-width:4px}
-  .sk8 .mhead h2{font-size:46px;line-height:46px;-webkit-text-stroke:7px #000}
+  .sk8 .mhead h2{font-size:46px;line-height:46px;transform:none;-webkit-text-stroke:7px #000}   /* 126 8회차 — 이 자리는 이미 화면별 fs 를 갖고 있어 공용 sx 상향의 대상이 아니다 */
   /* 카드 800x701 — 본문 베이지 상단에서 24, 좌우 인셋 29 (실측 §2.0) */
   .skd{position:relative;width:800px;height:701px;margin:0 auto;background:#D7C0A1;border-radius:38px}
   .skd>*{position:absolute}
@@ -2104,7 +2113,7 @@
     background:linear-gradient(180deg,#FFF98F 0,#FFDF66 4px,#FFB53E 4px,#FFB53E 58px,
       #F59C36 58px,#F59C36 61px,#EA9133 61px)}
   /* 타이틀 잉크 47 → fs 50(잉크비 .93) · 외곽 편측 4 → text-stroke 8. 잉크 중심 = 밴드 중심 +2 */
-  .at70 .mhead h2{top:1px;font-size:50px;line-height:50px;-webkit-text-stroke:8px #000}
+  .at70 .mhead h2{top:1px;font-size:50px;line-height:50px;transform:none;-webkit-text-stroke:8px #000}   /* 126 8회차 — 위와 같은 이유로 공용 sx 제외 */
   /* 캘린더 고리 — 채움 35×122(외곽 포함 45×132), 중심 x = 팝업중심 ±340.5, 밴드 상단보다 66px 위 */
   .at-ring{position:absolute;top:-71px;width:45px;height:132px;box-sizing:border-box;
     border:5px solid #000;border-radius:23px;
