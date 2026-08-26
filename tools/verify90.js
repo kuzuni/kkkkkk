@@ -6,15 +6,12 @@
      [4] 저장   — 구 세이브(relic/growth/boss 키) 로드 · «고대 유적» 진행도가 relic1 로 이어짐
      [5] UI     — 03 카드 6장 · 리스트 세로 스크롤 성립 · 보상 알약 글자가 알약 밖으로 안 샘(LESSONS 46-①)
    기능 체크 표(review 파일에 붙일 것)는 `--table` 로 출력한다. */
-const { chromium } = require('playwright');
+/* 139 — 브라우저 부트스트랩은 110 공용 `tools/pwlaunch.js` 로 통일한다.
+   여기 복붙돼 있던 `launchOpts()` 는 `/opt/pw-browsers/chromium` 하나만 봐서
+   빌드 번호가 붙은 디렉터리(chromium-1194/…)를 못 찾는다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
-const fs = require('fs');
-
-function launchOpts(){
-  const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean);
-  for (const p of cands) { try { if (fs.existsSync(p)) return { executablePath: p }; } catch (e) {} }
-  return {};
-}
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ✗ ' + m)); };
@@ -24,9 +21,9 @@ const K   = { relic1: 1, relic2: 2.5, relic3: 6, relic4: 15 };
 const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'rel', relic4: 'rel' };
 
 (async () => {
-  let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  /* 139 — [5] 썸네일 판정이 캔버스 잉크를 읽는다. file:// 로 띄운 스프라이트는
+     캔버스를 오염시켜 `getImageData` 가 SecurityError 로 막히므로 72 게이트와 같은 플래그를 준다. */
+  const b = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -215,7 +212,19 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
       ids: cards.map(c => c.dataset.dcard),
       locked: cards.filter(c => c.querySelector('.lk')).map(c => c.dataset.dcard),
       lockTxt: cards.filter(c => c.querySelector('.lk')).map(c => c.querySelector('.lk u').textContent),
-      thumbs: cards.filter(c => c.querySelector('.th em') && c.querySelector('.th em').textContent).length,
+      /* 139 — 72 가 `6efe9e8` 에서 `.th>em`(이모지) → `.th>canvas.thcv`(스프라이트)로 갈았다.
+         여기서 보는 것은 «썸네일이 채워졌나» 하나뿐이므로, 판정을 72 가 verify72 §1-2 에 쓴 것과
+         같은 «캔버스가 있고 실제로 그려졌다»(알파>8 픽셀 수 > 0)로 좁힌다.
+         마크업 모양이 아니라 «칸이 비었나» 를 물어야 아트가 또 바뀌어도 안 깨진다. */
+      thumbs: cards.filter(c => {
+        const cv = c.querySelector('.th canvas.thcv');
+        if (!cv || !cv.width || !cv.height) return false;
+        let im;
+        try { im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; }
+        catch (e) { return false; }            /* 캔버스 오염 = 못 읽음 = 통과시키지 않는다 */
+        for (let i = 3; i < im.length; i += 4) if (im[i] > 8) return true;
+        return false;
+      }).length,
       scroll: { sh: list.scrollHeight, ch: list.clientHeight },
       pitch: cards.length > 1 ? Math.round(rect(cards[1]).y - rect(cards[0]).y) : 0,
       leaks
@@ -226,7 +235,7 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
   ok(ui.pitch === 360, '카드 pitch 360px 불변(350 + margin 10) — 실측 ' + ui.pitch);
   ok(ui.scroll.sh > ui.scroll.ch, '6장이 리스트 높이를 넘어 세로 스크롤 성립 ('
      + ui.scroll.sh + ' > ' + ui.scroll.ch + ')');
-  ok(ui.thumbs === 6, '72 카드 썸네일(.th) 6장 모두 채워짐 (실측 ' + ui.thumbs + ')');
+  ok(ui.thumbs === 6, '72 카드 썸네일(.th>canvas.thcv) 6장 모두 실제로 그려짐 (실측 ' + ui.thumbs + ')');
   ok(JSON.stringify(ui.locked) === JSON.stringify(['relic4']),
      'relic1~3 해금 · relic4 만 잠김 (실측 잠김 ' + (ui.locked.join(',') || '없음') + ')');
   ok(ui.lockTxt.every(t => /용의 무덤 5층 클리어/.test(t)),
