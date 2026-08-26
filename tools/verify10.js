@@ -1,0 +1,123 @@
+/* 작업 10 게이트 — 상점 «소환 탭» 기하 회귀 검사 (1080×2280).
+   근거: docs/measure/10-상점팝업소환탭.md §1·§2 + 3회차 픽셀 실측(docs/review/10-상점팝업소환탭.md).
+   변환은 «프레임 y = 레퍼런스 y − 84» 단 하나. 카드 내부는 카드 좌상단 기준 상대좌표.
+
+   실행: node tools/verify10.js        → 마지막 줄 «VERIFY10 n/n PASS»
+   실패하면 어느 항목이 몇 px 어긋났는지 찍는다.
+
+   ⚠ 여기 박힌 값은 «레퍼런스 실측» 이지 «지금 CSS» 가 아니다. CSS 를 바꿔서 이 게이트가 깨지면
+      게이트를 고치지 말고 CSS 를 되돌려라(레퍼런스가 바뀐 게 아니면).
+*/
+const { chromium } = require('playwright');
+const path = require('path');
+
+const T = [];   /* [이름, 실제값, 기대값, 허용오차] */
+const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
+
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  p.on('pageerror', (e) => errs.push(String(e)));
+  await p.goto('file://' + path.resolve(__dirname, '../index.html'));
+  await p.waitForTimeout(900);
+
+  const g = await p.evaluate(() => {
+    S.dia = 2000; S.gold = 1e9;
+    const set = (k, lv, exp) => { if (S.sum[k]) { S.sum[k].lv = lv; S.sum[k].exp = exp; } };
+    set('weapon', 2, 100); set('shield', 2, 120); set('skill', 3, 70);
+    S.daily = S.daily || {}; S.daily.freeSum = {};
+    openShopPage();
+    const A = document.getElementById('app').getBoundingClientRect();
+    const o = {};
+    const abs = (k, sel) => {
+      const e = document.querySelector(sel); if (!e) { o[k] = null; return; }
+      const r = e.getBoundingClientRect();
+      o[k] = { x: r.left - A.left, y: r.top - A.top, w: r.width, h: r.height,
+               bot: A.bottom - r.bottom };
+    };
+    abs('page', '#shopw'); abs('cats', '.shp-cats'); abs('tabbar', '#tabbar');
+    const cards = [...document.querySelectorAll('.shp-card')];
+    o.n = cards.length;
+    o.card = cards.slice(0, 3).map((c) => {
+      const r = c.getBoundingClientRect();
+      return { x: r.left - A.left, y: r.top - A.top, w: r.width, h: r.height };
+    });
+    const c1 = cards[0], or = c1.getBoundingClientRect();
+    const rel = (k, sel) => {
+      const e = c1.querySelector(sel); if (!e) { o[k] = null; return; }
+      const r = e.getBoundingClientRect();
+      o[k] = { dx: r.left - or.left, dy: r.top - or.top, w: r.width, h: r.height };
+    };
+    /* .cart 는 3회차부터 `transform:scaleX()` 로 폭을 채우므로 getBoundingClientRect 는
+       변환 후 박스를 준다 — 레이아웃 슬롯은 offset* 로 잰다(측정표 §2 #3 은 슬롯 기준). */
+    { const e = c1.querySelector('.cart');
+      o.art = { dx: e.offsetLeft, dy: e.offsetTop, w: e.offsetWidth, h: e.offsetHeight }; }
+    o.artScaleX = +getComputedStyle(c1.querySelector('.cart')).transform.split('(')[1].split(',')[0];
+    rel('hd', '.chd'); rel('mag', '.cmag'); rel('lv', '.clv');
+    rel('bar', '.cbar'); rel('b1', '.b1'); rel('b2', '.b2'); rel('b3', '.b3');
+    rel('ad', '.adbadge'); rel('pan', '.b2>.pan'); rel('exp', '.cbar>b');
+    /* 상태 색 — 레퍼런스와 같은 «10연 rich / 30연 lack» */
+    o.b2rich = c1.querySelector('.b2').classList.contains('rich');
+    o.b3lack = c1.querySelector('.b3').classList.contains('lack');
+    return o;
+  });
+
+  /* ── 껍데기 ── */
+  chk('페이지 top (HUD 하단)', g.page.y, 104);
+  chk('페이지 bottom (탭바 높이)', g.page.bot, 180);
+  chk('카테고리 바 x', g.cats.x, 45);
+  chk('카테고리 바 w', g.cats.w, 990);
+  chk('바 하단 ↔ 앱탭바 상단 (ref 42)', g.tabbar.y - (g.cats.y + g.cats.h), 41);
+
+  /* ── 카드 3장: ref 250/729/1209 − 84 ── */
+  [[166, 450], [645, 451], [1125, 450]].forEach(([y, h], i) => {
+    chk(`카드${i + 1} x`, g.card[i].x, 50);
+    chk(`카드${i + 1} w`, g.card[i].w, 980);
+    chk(`카드${i + 1} y (ref−84)`, g.card[i].y, y, 3);
+    chk(`카드${i + 1} h`, g.card[i].h, h, 2);
+  });
+  chk('카드 간 gap', g.card[1].y - (g.card[0].y + g.card[0].h), 29);
+
+  /* ── 카드 내부 (측정표 §2) ── */
+  const R = {
+    hd: [7, 8, 967, 96], art: [99, 160, 274, 204], mag: [381, 128, 59, 58],
+    lv: [55, 363, 89, 44], bar: [113, 369, 307, 32],
+    b1: [720, 146, 200, 98], b2: [476, 262, 208, 127], b3: [717, 262, 206, 127]
+  };
+  for (const [k, [dx, dy, w, h]] of Object.entries(R)) {
+    chk(`${k} dx`, g[k].dx, dx, 2); chk(`${k} dy`, g[k].dy, dy, 2);
+    chk(`${k} w`, g[k].w, w, 2);    chk(`${k} h`, g[k].h, h, 2);
+  }
+  /* 인셋 패널 — 측정표 §2 #19: 카드기준 (505,326) 150×37 */
+  chk('b2 인셋 패널 dx', g.pan.dx, 505, 2);
+  chk('b2 인셋 패널 dy', g.pan.dy, 326, 2);
+  chk('b2 인셋 패널 w', g.pan.w, 150, 2);
+  chk('b2 인셋 패널 h', g.pan.h, 37, 2);
+  /* 경험치 라벨은 «Lv 알약 오른쪽» 이 아니라 안쪽 트랙(dx116..418) 중앙 = 267 */
+  chk('경험치 라벨 중심 dx (트랙 중앙)', g.exp.dx + g.exp.w / 2, 267, 4);
+  /* ▶AD 뱃지 — 회전 전 박스 기준(측정표 §2 #15 은 65×53 @ (707,198)) */
+  /* 아트 슬롯은 이모지라 잉크가 슬롯보다 작다 — 폭을 scaleX 로 채운다(3회차 실측 1.334) */
+  chk('상자 아트 scaleX (잉크 폭 채움)', g.artScaleX, 1.334, .05);
+  chk('AD 뱃지 w(회전 bbox)', g.ad.w, 71, 4);
+  chk('AD 뱃지 h(회전 bbox)', g.ad.h, 60, 4);
+
+  /* ── 상태 ── */
+  T.push(['b2 = rich(노랑, 10연 구매 가능)', g.b2rich, true, 0]);
+  T.push(['b3 = lack(회색, 30연 부족)', g.b3lack, true, 0]);
+  T.push(['콘솔 에러 0', errs.length, 0, 0]);
+
+  let bad = 0;
+  for (const [n, got, want, tol] of T) {
+    const ok = typeof want === 'boolean' || typeof got === 'boolean'
+      ? got === want
+      : Math.abs(got - want) <= tol;
+    if (!ok) { bad++; console.log(`  ✗ ${n}: ${typeof got === 'number' ? got.toFixed(1) : got} (기대 ${want}${tol ? ' ±' + tol : ''})`); }
+  }
+  if (errs.length) console.log('  콘솔 에러:', errs.slice(0, 3));
+  console.log(`VERIFY10 ${T.length - bad}/${T.length} ${bad ? 'FAIL' : 'PASS'}`);
+  await b.close();
+  process.exit(bad ? 1 : 0);
+})();
