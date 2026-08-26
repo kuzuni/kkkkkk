@@ -5029,6 +5029,11 @@
       radial-gradient(circle at 1066px 56px,#71472E 0 5.5px,transparent 5.6px),
       linear-gradient(180deg,#A17D52 0 6px,#84583B 6px 73px,#73472E 73px 97px,#553622 97px 106px);
     box-shadow:inset 8px 0 0 #141414,inset -8px 0 0 #141414}
+  /* 18회차(α P4): 헤더 바닥 어두운 띠(ref y1025..1033)가 좌우 **inset 검정 테두리에 덮여** 양 끝
+     8x9px 씩 사라져 있었다 — inset box-shadow 는 배경 위에 그려지기 때문이다. ref 는 y1030 에서
+     x0..24 · x1056..1079 가 전부 갈색(풀블리드)이다. 의사요소는 그림자 위에 오므로 띠만 다시 덮는다. */
+  .tr-head::after{content:'';position:absolute;left:0;right:0;bottom:0;height:9px;
+    background:#553622;pointer-events:none}
   /* 16회차(비평가 W P4·P6 · X P6·P9 가 독립으로 같은 두 지적): 타이틀 잉크가 ref 87x50 인데 우리는 79x47
      (폭 −9% · 높이 −6%) 이었고, 세로 중심도 ref 976 / 우리 968 로 **8px 위**였다.
      → font-size 57 → 61.5 (+8%, 잉크 47 → 50.8 · 79 → 85) · top 14 → 22 (+8px). */
@@ -5275,7 +5280,10 @@
      카드 radius 28 · 검정 8px 이므로 **안쪽 도형 반경은 20**(동심). 비용밴드(.cb)는 이미 `0 0 20px 20px` 다.
      11·13·14회차와 같은 계열의 «각진 박스가 라운드 코너를 덮는» 결함이다. */
   .tr-card>.ch{left:8px;right:8px;top:8px;height:89px;text-align:center;line-height:90px;/* 16회차: Lv 잉크 세로 중심이 ref 1486.5 / 우리 1483 (−3.5) → line-height 83 → 90 */
-    border-radius:20px 20px 0 0;
+    /* 18회차(비평가 β P1 — 카드 3장 전부, 이 화면에서 **다섯 번째** 동심 radius 결함):
+       ref 는 탠 밴드 좌상 코너에서 크림 쐐기가 직선부 3px → **최대 11px** 로 벌어진다(y1452 에서 ref 크림
+       x50..60 · 우리 1px). 15회차에 0 → 20 으로 올렸는데 아직 모자랐다 — ref 실효 반경은 ≈26 이다. */
+    border-radius:35px 35px 0 0;
     background:
       linear-gradient(90deg,rgba(255,255,255,.57) 0,rgba(255,255,255,0) 5px),
       linear-gradient(270deg,rgba(0,0,0,.14) 0,rgba(0,0,0,0) 2px),
@@ -5366,7 +5374,10 @@
      밴드가 3px 왼쪽으로 가면 flex 콘텐츠 중심도 1.5px 따라가므로 padding-right 로 되돌린다(18 → 15). */
   /* 14회차: left 9 는 ref 첫 «밴드» 픽셀(x44)에 맞춘 값인데, ref 의 x43 은 검정과 밴드 사이 AA 이고
      우리 x43 은 **카드 흰 배경 1px 이 그대로 노출**됐다. 흰 실선이 남는 쪽이 더 나쁘므로 8 로 붙인다. */
-  .tr-card>.cb{left:8px;right:9px;top:396px;bottom:8px;display:flex;align-items:center;
+  /* 18회차(α P1 · Z P9 — 독립 2명): 밴드 **우측**이 검정 테두리에 1px 못 닿아 카드 흰 바탕이
+     y1832..1917 (86px) 세로로 비쳤다(카드 3장 전부). 좌측은 14회차에 left 9→8 로 이미 붙였는데
+     우측만 9 로 남아 있었다 — 좌우 대칭으로 8. (게이트 기대값 w310 과도 일치한다) */
+  .tr-card>.cb{left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
     justify-content:center;gap:2px;padding-right:16px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
@@ -5380,7 +5391,9 @@
       #AA7D53 103px)}
   /* 💰 는 ref 금화 스프라이트의 자리표시다 — «아트 자리 규칙» 대로 bbox 53x55 를 정확히 차지시킨다.
      이모지 잉크비는 w/fs 1.00 · h/fs 1.12 이라 fs49 로 높이를 맞추고 폭만 scaleX 로 넓힌다. */
-  .tr-card>.cb>s{font-size:49px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(1.08)}
+  /* 18회차(α P2 · W·Z 도 코인을 지적): ref 코인 잉크 53w x 55h (w/h 0.96) 인데 우리는 57x53 (1.08) 로
+     **종횡비가 뒤집혀** 있었다. 높이를 폰트로 올리고(49 → 50.9) 폭은 scaleX 로 되돌린다(1.08 → .968). */
+  .tr-card>.cb>s{font-size:50.9px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(.968)}
   .tr-card>.cb>i{position:relative;top:-3px;font-size:52.5px;line-height:62px;color:#F9EB6E;
     -webkit-text-stroke:9px #141414;paint-order:stroke fill}
   /* 7회차: «ref 배지 지름 30» 으로 읽고 border-box 를 30 으로 줬는데 — **그 30 은 fill(핑크) 지름이었다.**
