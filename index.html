@@ -4058,8 +4058,8 @@
   .shp-card>.chd::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:18%;pointer-events:none;
     --jz-run:1160px;   /* 헤더 966 + 띠 174 — 우단 밖으로 완전히 빠져나간다 */
     background:linear-gradient(90deg,rgba(255,255,255,0) 4%,
-      rgba(255,255,255,calc(.21 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.21 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
+      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
     transform:skewX(-16deg);
     translate:-140% 0;animation:jz122Sweep calc(4s * var(--jz-per)) linear infinite}
   /* 4회차(Q ①-3 · R ①) — 통과 0.87s / 4s = duty 22% 라 «헤더가 3.1초 동안 죽어 있다».
@@ -4150,10 +4150,10 @@
      띠를 **본문 배경 레이어(`.cbg`, 이미 `overflow:hidden`)** 안에 넣는다(입자 레이어와 같은 자리). */
   .shp-card>.cbg>.jzp::after{content:'';position:absolute;left:0;top:-30px;bottom:-30px;width:16%;
     pointer-events:none;--jz-run:1140px;   /* 본문 966 + 띠 155 */
-    /* 6회차 — 본문 광택을 §13 실측 30 에 맞춘다 (α .13 → .35) */
+    /* 6회차 — 바탕 휘도 144 → α = 32/(255−144) = .29 (평탄면 ΔL 32) */
     background:linear-gradient(90deg,rgba(255,255,255,0) 4%,
-      rgba(255,255,255,calc(.35 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.35 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
+      rgba(255,255,255,calc(.29 * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(.29 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(4.6s * var(--jz-per)) linear infinite}
   .shp-card:nth-child(2)>.cbg>.jzp::after{animation-delay:calc(-.92s * var(--jz-per))}
@@ -4172,9 +4172,11 @@
   .shp-card>.cfr::after{content:'';position:absolute;left:0;top:-30px;bottom:-30px;width:16%;
     pointer-events:none;--jz-run:1140px;   /* 창 966 + 띠 155 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
-      rgba(0,0,0,calc(.2 * var(--jz-glow))) 26%,
-      rgba(255,255,255,calc(.46 * var(--jz-glow))) 50%,
-      rgba(0,0,0,calc(.2 * var(--jz-glow))) 74%,rgba(0,0,0,0) 98%);
+      rgba(0,0,0,calc(.17 * var(--jz-glow))) 20%,rgba(0,0,0,calc(.17 * var(--jz-glow))) 30%,
+      rgba(255,255,255,calc(var(--jz-ga,.24) * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(var(--jz-ga,.24) * var(--jz-glow))) 60%,
+      rgba(0,0,0,calc(.17 * var(--jz-glow))) 70%,rgba(0,0,0,calc(.17 * var(--jz-glow))) 82%,
+      rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(5.4s * var(--jz-per)) linear infinite}
   .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(-1.08s * var(--jz-per))}
@@ -4334,9 +4336,11 @@
   .cn-cd>.fr::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
     --jz-run:350px;    /* 판 264 + 띠 58 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
-      rgba(0,0,0,calc(.155 * var(--jz-glow))) 26%,
-      rgba(255,255,255,calc(.38 * var(--jz-glow))) 50%,
-      rgba(0,0,0,calc(.155 * var(--jz-glow))) 74%,rgba(0,0,0,0) 98%);
+      rgba(0,0,0,calc(.136 * var(--jz-glow))) 20%,rgba(0,0,0,calc(.136 * var(--jz-glow))) 30%,
+      rgba(255,255,255,calc(.33 * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(.33 * var(--jz-glow))) 60%,
+      rgba(0,0,0,calc(.136 * var(--jz-glow))) 70%,rgba(0,0,0,calc(.136 * var(--jz-glow))) 82%,
+      rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(4.6s * var(--jz-per)) linear infinite}
   .cn-cd.done>.fr::after{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 */
@@ -4385,11 +4389,25 @@
     --jz-run:1210px;   /* 배너 948 + 띠 246 */
     /* 6회차 — 평생배너 광택을 §13 실측 30 에 맞춘다 (α .13 → .195) */
     background:linear-gradient(90deg,rgba(255,255,255,0) 8%,
-      rgba(255,255,255,calc(.195 * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(.195 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
+      rgba(255,255,255,calc(.31 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.31 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(5.2s * var(--jz-per)) linear infinite}
   #cnMove{animation:jz122Ring2 calc(1.35s * var(--jz-per)) ease-out infinite}
+  /* ⚠ 6회차 채점(W ③ · X 1) — [이동] 버튼면 224×104 가 **10/10 프레임 픽셀 동일**이었다.
+     `#cnMove`(`.cn-mv`)는 배너 `.cn-a2` 의 **형제**라 배너 띠가 구조적으로 못 덮는다.
+     → 버튼 자신에게 띠를 준다. 라임 면(휘도 219)이라 마일리지 [교환]과 같은 유리 광택. */
+  .cn-mv{overflow:hidden}
+  .cn-mv::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:34%;pointer-events:none;
+    --jz-run:350px;    /* 창 255 + 띠 91 */
+    background:linear-gradient(90deg,rgba(0,0,0,0) 4%,
+      rgba(0,0,0,calc(.146 * var(--jz-glow))) 20%,rgba(0,0,0,calc(.146 * var(--jz-glow))) 30%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 60%,
+      rgba(0,0,0,calc(.146 * var(--jz-glow))) 70%,rgba(0,0,0,calc(.146 * var(--jz-glow))) 82%,
+      rgba(0,0,0,0) 96%);
+    transform:skewX(-16deg);translate:-140% 0;
+    animation:jz122Sweep calc(5.2s * var(--jz-per)) linear infinite}
 
   /* ── ②-7 재화 탭의 «완전 정지 구역» (4회차 — Q ④-1 · R ④가 좌표·면적까지 같이 짚었다) ──
      상단 히어로 배너 1080×352 와 구획 리본 3개가 13.4초 동안 range 0 이었다. 카드만 살고 그 위아래가
@@ -4406,8 +4424,8 @@
   .cn-rb>b::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:20%;pointer-events:none;
     --jz-run:770px;    /* 리본 627 + 띠 125 */
     background:linear-gradient(90deg,rgba(255,255,255,0) 4%,
-      rgba(255,255,255,calc(.28 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.28 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
+      rgba(255,255,255,calc(var(--jz-ga,.28) * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(var(--jz-ga,.28) * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(6s * var(--jz-per)) linear infinite}
   /* ⚑ 6회차(7-3-5) — 광택이 리본 몸통(`>b`)에서만 돌고 좌우 «꼬리»(`.tl`)는 죽어 있었다.
@@ -4422,8 +4440,8 @@
   .cn-rb>.tl>s::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:123px;
     pointer-events:none;--jz-run:770px;
     background:linear-gradient(90deg,rgba(255,255,255,0) 4%,
-      rgba(255,255,255,calc(.28 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.28 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
+      rgba(255,255,255,calc(var(--jz-ga,.28) * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(var(--jz-ga,.28) * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(6s * var(--jz-per)) linear infinite}
   .cn-rb>.tl.l>s::after{animation-delay:calc((var(--jz-d,0s) - .133s) * var(--jz-per))}
@@ -4434,19 +4452,26 @@
      10프레임 range 0. 둘 다 카드에 쓴 것과 같은 문법(사선 광택 1장)으로 채운다.
      `.cn-ml` 은 이미 `overflow:hidden`(padding box = 테두리 5px 안쪽 938×226)이라 창이 있다.
      `.cn-hd` 는 갈색(휘도 96)이라 흰 띠 α .19 로 Δ≈30 이 나온다 — 유리 광택이 필요 없다. */
+  /* ⚠ 6회차 채점(W ③ · X 1) — 이 띠는 패널 배경 위에만 있고 **[교환] 버튼면(144×112)은
+     6/6 프레임 픽셀 동일**이었다. 의사요소는 «배경 위 · 위치 지정 자식 아래» 라 버튼을 못 지난다.
+     → `z-index:5` 로 버튼 위로 올리고, 라임 버튼면(휘도 219)에서도 Δ 가 나게 **유리 광택**
+     (어두운 양옆 32/219 = .146 + 흰 심 .125)으로 바꾼다 — 흰 띠만으로는 밝은 면에서 Δ 가 안 난다. */
   .cn-ml::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:26%;pointer-events:none;
-    --jz-run:1190px;   /* 창 938 + 띠 244 */
-    background:linear-gradient(90deg,rgba(255,255,255,0) 6%,
-      rgba(255,255,255,calc(.16 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.16 * var(--jz-glow))) 60%,rgba(255,255,255,0) 94%);
+    --jz-run:1190px;   /* 창 938 + 띠 244 */z-index:5;
+    background:linear-gradient(90deg,rgba(0,0,0,0) 4%,
+      rgba(0,0,0,calc(.146 * var(--jz-glow))) 20%,rgba(0,0,0,calc(.146 * var(--jz-glow))) 30%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 60%,
+      rgba(0,0,0,calc(.146 * var(--jz-glow))) 70%,rgba(0,0,0,calc(.146 * var(--jz-glow))) 82%,
+      rgba(0,0,0,0) 96%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(4.6s * var(--jz-per)) linear infinite}
   .cn-hd{overflow:hidden}
   .cn-hd::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:14%;pointer-events:none;
     --jz-run:1240px;   /* 밴드 1080 + 띠 151 */
     background:linear-gradient(90deg,rgba(255,255,255,0) 4%,
-      rgba(255,255,255,calc(.19 * var(--jz-glow))) 40%,
-      rgba(255,255,255,calc(.19 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
+      rgba(255,255,255,calc(.2 * var(--jz-glow))) 40%,
+      rgba(255,255,255,calc(.2 * var(--jz-glow))) 60%,rgba(255,255,255,0) 96%);
     transform:skewX(-16deg);translate:-140% 0;
     animation:jz122Sweep calc(5.6s * var(--jz-per)) linear infinite}
   /* 5회차(S ③) — `nth-child` 시드는 «리본이 리본끼리 연속한 형제» 일 때만 흩어진다.
@@ -15968,6 +15993,21 @@ function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f 
 /* 73 ④ — 레퍼런스 상점 카드 가격은 «1,000 / 3,000» 쉼표 표기다(측정표 10 §21·§26).
    공용 fmt() 는 알파벳 접미사(«1.00A»)라 이 화면에서는 12 결과 팝업과 같은 쉼표 표기를 쓴다. */
 const won = n => Math.round(n).toLocaleString('en-US');
+/* ── 122 6회차 «광택 한 벌» ─────────────────────────────────────────
+   흰 띠의 밝기 변화는 **ΔL = α × (255 − 바탕휘도)** 다. 바탕색이 칸마다 다르면
+   (소환 상자 헤더 `--hd` · 재화 리본 `--c`) 같은 α 가 칸마다 다른 세기로 보인다.
+   6회차 실측(평탄면 고원값): 소환 헤더 5장이 **23.3 / 34.8 / 27.5 / 37.9 / 31.6** — 최대 1.6배.
+   리본 3색도 α .28 에서 29.4 / 46.5 / 49.6 으로 벌어진다.
+   → 바탕색에서 **필요한 α 를 역산**해 칸마다 `--jz-ga` 로 박는다. 목표 ΔL = `JZ_SHINE`. */
+const JZ_SHINE = 32;
+function jzShineA(hex){
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(String(hex || '').trim());
+  if (!m) return '.21';
+  const v = parseInt(m[1], 16);
+  const L = .2126 * (v >> 16 & 255) + .7152 * (v >> 8 & 255) + .0722 * (v & 255);
+  return Math.max(.08, Math.min(.85, JZ_SHINE / Math.max(24, 255 - L))).toFixed(3);
+}
+
 function renderShopPage(){
   const list = $('shopList');
   list.classList.toggle('coin', shopCat === 'coin');
@@ -15984,7 +16024,9 @@ function renderShopPage(){
     /* 122 — `gm` = 73 가이드가 «이 상자를 소환하라» 고 지목한 칸(테두리 글로우 호흡).
        `.cbg>s.jzp` 는 상시 «빛 입자 상승» 레이어다(CSS 전용, JS 타이머 0줄). */
     h += '<div class="shp-card' + (gmFocus === x.b ? ' gm' : '')
-      +  '" style="--hd:' + x.hd + ';--hr:' + x.hr + ';--c1:' + x.c1 + ';--c2:' + x.c2 + '">'
+      +  '" style="--hd:' + x.hd + ';--hr:' + x.hr + ';--c1:' + x.c1 + ';--c2:' + x.c2
+      /* 122 6회차 — 헤더 광택의 α 를 그 칸의 헤더색에서 역산해 박는다(칸마다 세기가 같아진다) */
+      +  ';--jz-ga:' + jzShineA(x.hd) + '">'
       +  '<div class="cbg"><s class="jzp"><i></i></s></div>'
       +  '<div class="chd"><i>' + x.n + '</i></div>'
       +  '<div class="cart">' + x.ic + '</div>'
@@ -16256,7 +16298,7 @@ function renderCoinPage(list){
     + '<div class="cn-hl" style="top:449px"></div>'
     /* §4 초기화 알약(리본보다 아래 z) + §3-2 광고 상품 리본 */
     + '<div class="cn-rs"><em>⏱</em><i class="t1">초기화:</i><i class="t2">' + coinResetTxt() + '</i></div>'
-    + '<div class="cn-rb" style="--jz-d:0s;top:503px;--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
+    + '<div class="cn-rb" style="--jz-d:0s;top:503px;--jz-ga:' + jzShineA('#1AB4D6') + ';--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>광고 상품</i></div>';
   /* §5 상품 카드 3x2 — 열 x111/401/691, 행 local 689/1008 */
   COIN_ADS.forEach((a, i) => {
@@ -16286,7 +16328,7 @@ function renderCoinPage(list){
     + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
     + '<div class="cn-mv' + (na ? ' off' : '') + '" id="cnMove"><i>' + (na ? '구매 완료' : '이동') + '</i></div>'
     /* §7 다이아 상품 리본 (여기서부터 아래는 레퍼런스에 없는 «우리 게임 설계» — 작업 44) */
-    + '<div class="cn-rb" id="cnDiaRb" style="--jz-d:-1.5s;top:1698px;--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
+    + '<div class="cn-rb" id="cnDiaRb" style="--jz-d:-1.5s;top:1698px;--jz-ga:' + jzShineA('#5B4BE0') + ';--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>다이아 상품</i></div>';
   /* §7-1 다이아 판매 카드 5칸 — 열 x111/401/691, 행 local 1884/2203 (§5 와 같은 격자) */
   DIA_PACKS.forEach((p, i) => {
@@ -16307,7 +16349,7 @@ function renderCoinPage(list){
   });
   /* §8 마일리지 상품 리본 + 교환 패널 — 쿠폰 10개 → 다이아 250만(작업 116 «÷2») */
   const mil = S.mileage || 0, milOk = mil >= MILE_NEED;
-  h += '<div class="cn-rb" style="--jz-d:-3s;top:2587px;--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
+  h += '<div class="cn-rb" style="--jz-d:-3s;top:2587px;--jz-ga:' + jzShineA('#B420E6') + ';--c:#B420E6;--h:#D036F6;--s:#9419C2;--t:#9D1DC8;--ts:#57077A">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>마일리지 상품</i></div>'
     + '<div class="cn-ml' + (milOk ? '' : ' off') + '" id="cnMile"><em>' + curIc('mile') + '</em>'
     +   '<div class="tt">마일리지 쿠폰</div>'
@@ -16318,7 +16360,7 @@ function renderCoinPage(list){
   /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.
      `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물조각은 14/15 유물 소환의 재화라
      대체 획득처가 광고 상품뿐이었으므로 폐기하지 않고 옮긴다. */
-  h += '<div class="cn-rb" style="--jz-d:-4.5s;top:3084px;--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
+  h += '<div class="cn-rb" style="--jz-d:-4.5s;top:3084px;--jz-ga:' + jzShineA('#1AB4D6') + ';--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
   EXCHANGE.forEach((x, i) => {
     const px = [111, 401, 691][i % 3];

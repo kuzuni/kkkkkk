@@ -71,36 +71,62 @@ async function lumaOf(p, ms, clip, store) {
     const d = g.getImageData(0, 0, c.width, c.height).data;
     const n = c.width * c.height, L = new Float32Array(n);
     for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
-    if (keep) { window.__jzBase = L; return null; }
-    const B = window.__jzBase;
-    if (!B || B.length !== n) return -1;
-    /* 분위를 **97** 로 잡는다. 99.5 는 «검은 외곽선 위를 지나는 흰 심» 같은 극단 픽셀만 집어
-       (재화 카드 70 · 평생배너 66) 띠 자체의 세기를 대표하지 못했다. 띠는 호스트의 18~22% 를
-       덮고 그 중심부가 7~8% 이므로 97 분위가 정확히 «띠 중심의 밝기» 다. */
-    const h = new Int32Array(257);
-    for (let i = 0; i < n; i++) h[Math.min(256, Math.round(Math.abs(L[i] - B[i])))]++;
-    let acc = 0; const want = n * 0.97;
-    for (let v = 0; v <= 256; v++) { acc += h[v]; if (acc >= want) return v; }
-    return 256;
+    if (keep) {
+      window.__jzBase = L;
+      /* 그 호스트에서 **가장 넓은 평탄면**(최빈 휘도 ±12)을 기준면으로 잡아 둔다 */
+      const hh = new Int32Array(256);
+      for (let i = 0; i < n; i++) hh[Math.min(255, Math.round(L[i]))]++;
+      let mode = 0; for (let v = 0; v < 256; v++) if (hh[v] > hh[mode]) mode = v;
+      window.__jzMode = mode;
+      return mode;
+    }
+    const B = window.__jzBase, M = window.__jzMode;
+    if (!B || B.length !== n) return null;
+    const sig = [];
+    for (let i = 0; i < n; i++) {
+      if (Math.abs(B[i] - M) > 12) continue;          /* 평탄면 밖(잉크·테두리)은 뺀다 */
+      sig.push(L[i] - B[i]);
+    }
+    if (!sig.length) return null;
+    sig.sort((x, y) => Math.abs(y) - Math.abs(x));
+    /* 상위 **2%** 의 중앙값 = 띠 «고원». 5% 로 잡았더니 창이 띠의 심(호스트 면적의 3.2%)보다
+       넓어져, 좁은 띠에서는 심 대신 **양옆(어두운 쪽)** 이 잡혔다(소환 전면 −24.1). */
+    const k = Math.max(1, Math.round(sig.length * 0.02));
+    return +sig[Math.floor(k / 2)].toFixed(1);
   }, [b64, !!store]);
 }
-const PHASES = [0, 700, 1400, 2100, 2800, 3500, 4200, 4900];
-/* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 **픽셀별 루마 차 99.5 분위**의 최대값.
-   ⚠ 첫 시도 두 개를 버리고 여기 왔다 —
-     ① 위상끼리 비교: **표본 앨리어싱**. 재화 카드는 띠가 한 열을 스치는 시간이 0.34s 인데
-        표본 간격이 0.7s 라 «띠가 없는 두 프레임» 만 비교하는 열이 생겼다(4·5회차 비평가가 겪은 함정).
-        → 기준선을 **그 띠만 `opacity:0` 으로 끈 프레임**으로 잡아 해결.
-     ② 열 평균: 띠가 `skewX(-16deg)` 라 **호스트가 높을수록 한 열에서 띠가 차지하는 세로 비율이 준다**
-        (카드 450px → 기울기로 x 가 146px 흐른다 = 띠 폭과 맞먹는다). 그래서 같은 알파인데도
-        헤더 26.6 / 카드 전면 7.8 처럼 «높이 때문에» 갈렸다. 비평가는 픽셀로 읽으므로 픽셀로 잰다. */
+const PHASES = [0, 800, 1600, 2400, 3200, 4000];
+/* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 루마 차를, **그 호스트에서 가장 넓은 평탄면**
+   에서만 재어 상위 5% 의 중앙값을 취한 값(부호 포함). 비평가가 «평탄면 실측» 이라고 부르는 것이다.
+
+   ⚠ 여기 오기까지 세 번 갈아엎었다. 다음 세션이 같은 함정에 빠지지 않게 남긴다:
+     ① 위상끼리 비교(기준선 없음) → **표본 앨리어싱.** 재화 카드는 띠가 한 열을 스치는 시간이
+        0.34s 인데 표본 간격이 0.7s 라 «띠가 없는 두 프레임» 만 비교하는 열이 생긴다(실측 10.5).
+        4·5회차 비평가가 «연출이 아예 없다» 고 세 번 오독한 것과 **같은 원인**이다.
+        → 기준선을 «그 띠만 `opacity:0` 으로 끈 프레임» 으로 잡아 해결.
+     ② 열(column) 평균 → 띠가 `skewX(-16deg)` 라 호스트가 높을수록 한 열에서 띠가 차지하는 세로
+        비율이 준다(카드 450px → x 가 146px 흐른다 = 띠 폭과 맞먹음). 헤더 26.6 / 카드 전면 7.8 로 갈렸다.
+     ③ 전체 픽셀의 분위수 → **잉크 오염.** 검은 글자 외곽선·테두리 위를 흰 심이 지날 때만 잡혀
+        재화 카드가 94(99.5분위는 70)로 부풀었다. 잉크 비율이 호스트마다 다르니 비교가 안 된다.
+     ④ **평탄면 한정 + 상위 5% 중앙값** ← 채택. 소환 헤더 α .21 · 바탕 144 에서 23.3 이 나오고
+        이는 α×(255−144)=23.3 과 **소수점까지 일치**한다 — 즉 이 값은 물리량이다.
+
+   ⚠ 잴 때는 `--jz-amp:0` 으로 숨쉬기·들썩·둥실을 멈춘다(광택은 `--jz-amp` 를 안 탄다). */
 async function bandPeak(p, hostSel, testSel, muteSel) {
+  /* `sel|N|inset` — N 번째 요소를 쓰고, 상자를 inset px 만큼 좁힌다.
+     ⚠ inset 이 필요한 이유: 기준면을 «최빈 휘도» 로 잡는데, 버튼처럼 **면이 다단 그라디언트**
+     이고 **테두리가 균일한 검정**이면 최빈값이 테두리로 잡힌다. 띠는 테두리 안쪽에서만 도니까
+     «평탄면에서 아무 변화 없음» = 0 이 나온다([이동] 버튼에서 실제로 겪었다). */
   const clip = await p.evaluate(s => {
-    const e = document.querySelector(s);
+    const [sel, idxS, insS] = s.split('|');
+    const e = document.querySelectorAll(sel)[+(idxS || 0)];
     if (!e) return null;
+    const ins = +(insS || 0);
     e.scrollIntoView({ block: 'center' });
     const r = e.getBoundingClientRect();
-    const x = Math.max(0, Math.round(r.x)), y = Math.max(0, Math.round(r.y));
-    const w = Math.min(Math.round(r.width), innerWidth - x), h = Math.min(Math.round(r.height), innerHeight - y);
+    const x = Math.max(0, Math.round(r.x + ins)), y = Math.max(0, Math.round(r.y + ins));
+    const w = Math.min(Math.round(r.width - 2 * ins), innerWidth - x);
+    const h = Math.min(Math.round(r.height - 2 * ins), innerHeight - y);
     return (w > 4 && h > 4) ? { x, y, width: w, height: h } : null;
   }, hostSel);
   if (!clip) return null;
@@ -116,24 +142,33 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
   await lumaOf(p, 0, clip, true);
   await css('jz122ref', '');
   let peak = 0;
-  for (const t of PHASES) { const v = await lumaOf(p, t, clip); if (v > peak) peak = v; }
+  for (const t of PHASES) {
+    const v = await lumaOf(p, t, clip);
+    if (v != null && Math.abs(v) > Math.abs(peak)) peak = v;
+  }
   await css('jz122mute', '');
   return peak;
 }
-/* 6회차 목표 = 모든 광택 피크 Δ루마 30 한 벌. 합성·마스크로 가장자리가 뭉개지므로 폭을 넉넉히. */
-/* p97 는 표본 위상에 따라 ±3 흔들린다(같은 설정 재실행 24~30 관측) — 폭을 ±30% 로 둔다. */
-const AMP_LO = 22, AMP_HI = 40;
+/* 6회차 목표 = 광택 전부가 «평탄면 ΔL 32» 한 벌. 마스크·skew 로 뭉개지는 폭을 감안해 ±20%. */
+const AMP_LO = 26, AMP_HI = 39;
 async function ampCheck(p, hosts) {
   await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
   const out = [];
   for (const [label, hostSel, testSel, muteSel] of hosts) {
     const v = await bandPeak(p, hostSel, testSel, muteSel);
-    out.push(label + ' ' + (v == null ? '없음' : v.toFixed(0)));
-    ok(v != null && v >= AMP_LO && v <= AMP_HI,
-      '광택 피크 Δ루마 ' + label + ' = ' + (v == null ? '측정 불가' : v.toFixed(0))
-      + ' (' + AMP_LO + '~' + AMP_HI + ')');
+    const a = v == null ? null : Math.abs(v);
+    out.push(label + ' ' + (v == null ? '없음' : v));
+    ok(a != null && a >= AMP_LO && a <= AMP_HI,
+      '광택 평탄면 ΔL ' + label + ' = ' + (v == null ? '측정 불가' : v)
+      + ' (|' + AMP_LO + '~' + AMP_HI + '|)');
   }
-  await p.evaluate(() => document.getElementById('shopw').style.removeProperty('--jz-amp'));
+  await p.evaluate(() => {
+    document.getElementById('shopw').style.removeProperty('--jz-amp');
+    /* ⚠ §13 은 호스트마다 `scrollIntoView` 를 한다 — 리스트를 원위치로 돌려놓지 않으면
+       뒤따르는 §2 가 화면 밖으로 나간 카드를 찍어 «448B vs 448B» 로 오판한다. */
+    const l = document.getElementById('shopList'); if (l) l.scrollTop = 0;
+  });
+  await p.waitForTimeout(200);
   console.log('    · ' + out.join(' | '));
 }
 
@@ -284,9 +319,17 @@ async function ampCheck(p, hosts) {
   console.log('§13 광택 피크 Δ루마 한 벌 — 소환 탭');
   const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzp::after',
         SUM_FR = '#shopList .shp-card>.cfr::after';
-  await ampCheck(p, [['소환 헤더', '#shopList .shp-card>.chd', SUM_HD, SUM_FR],
+  /* 헤더는 칸마다 배경색(`--hd`)이 달라 **가장 밝은 칸과 가장 어두운 칸**을 같이 본다 —
+     `jzShineA()` 가 칸별 α 를 제대로 박고 있는지는 이 두 칸이 같은 값이어야 증명된다. */
+  await ampCheck(p, [['소환 헤더1', '#shopList .shp-card>.chd|0', SUM_HD, SUM_FR],
+                     ['소환 헤더4', '#shopList .shp-card>.chd|3', SUM_HD, SUM_FR],
                      ['소환 본문', '#shopList .shp-card>.cbg', SUM_BD, SUM_FR],
-                     ['소환 전면', '#shopList .shp-card>.cfr', SUM_FR, SUM_HD + ',' + SUM_BD]]);
+                     /* ⚠ 전면 광택은 **헤더 위에서 재야 한다.** 6회차에 카드 전체(`.cfr`)로 쟀더니
+                        평탄면이 본문 바탕(휘도 144)으로 잡혀 34.1 «정상» 이 나왔지만, 비평가 둘은
+                        헤더 바탕(휘도 98~119) 위에서 +57~82 를 읽었다 — 같은 띠가 지나는 **가장 어두운
+                        면**이 그 띠의 최대 세기다. 칸별 α 가 제대로 박혔는지도 두 칸을 비교해야 보인다. */
+                     ['소환 전면(헤더1 위)', '#shopList .shp-card>.chd|0', SUM_FR, SUM_HD + ',' + SUM_BD],
+                     ['소환 전면(헤더4 위)', '#shopList .shp-card>.chd|3', SUM_FR, SUM_HD + ',' + SUM_BD]]);
 
   /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
      의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
@@ -477,11 +520,18 @@ async function ampCheck(p, hosts) {
 
   /* ── §13 진폭 단일 기준 — 재화 탭 (6회차 신설) ─────────────── */
   console.log('§13 광택 피크 Δ루마 한 벌 — 재화 탭');
+  const RB = '#shopList .cn-rb>b';
   await ampCheck(p, [['재화 카드', '#shopList .cn-cd:not(.done)', '#shopList .cn-cd>.fr::after'],
-                     ['리본', '#shopList .cn-rb>b', '#shopList .cn-rb>b::after'],
+                     ['리본1 청록', RB + '|0', RB + '::after'],
+                     ['리본2 남보라', RB + '|1', RB + '::after'],
+                     ['리본3 자주', RB + '|2', RB + '::after'],
                      ['평생배너', '#shopList .cn-a2', '#shopList .cn-a2::after'],
                      ['마일리지', '#shopList .cn-ml', '#shopList .cn-ml::after'],
-                     ['상품 밴드', '#shopList .cn-hd', '#shopList .cn-hd::after']]);
+                     ['상품 밴드', '#shopList .cn-hd', '#shopList .cn-hd::after'],
+                     /* 6회차 채점 — 두 버튼면이 10/10 · 6/6 프레임 픽셀 동일이었다. 띠가 버튼 위를
+                        지나는지 **버튼 상자에서 직접** 잰다(패널 전체로 재면 버튼이 죽어도 통과한다). */
+                     ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml::after'],
+                     ['[이동] 버튼면', '#shopList .cn-mv|0|12', '#shopList .cn-mv::after']]);
 
   const leak = await p.evaluate(() => {
     /* 앞선 절에서 d5 칸으로 스크롤해 뒀으므로 «지금 화면 안에 온전히 있는» 칸을 골라야 한다
