@@ -287,5 +287,23 @@ global.__capLog = {};
     console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수): ` +
       T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[4]).join('  '));
   }
+  /* 24회차 — **부분 중복 페인트** 검사를 캡처의 일부로 붙인다.
+     위 «⚠ 중복 페인트» 는 프레임 «전체» 가 바이트 동일할 때만 운다. 그런데 CDP 스크린캐스트는
+     레이어별로 부분 재합성한 프레임도 내보낸다 — HUD 는 새로 그리고 `#fxl` 오버레이는 앞 프레임
+     페인트를 재사용하는 식이다. 그런 쌍은 프레임 전체가 서로 달라 md5 로는 절대 안 잡히는데,
+     비평가에게는 «연출이 70ms 멈췄다» 로 정직하게 보인다(24회차 AR ①-1 이 그것이었다 —
+     `probe58t` 로 DOM 을 재면 그 구간에 아이콘이 프레임마다 45~63px 씩 움직이고 있었고,
+     파일을 재면 연출 구역 변경이 이 씬 중앙값의 1.7% 였다).
+     `pxdup58.py` 가 구역별 변경량을 씬 자신의 중앙값과 비교해 그런 쌍을 찾아낸다. */
+  try{
+    const { execFileSync } = require('child_process');
+    const out = execFileSync('python3', [path.resolve(__dirname, 'pxdup58.py'), ROUND],
+      { encoding:'utf8', timeout:180000 });
+    console.log('\n── 부분 중복 페인트 검사(pxdup58) ──');
+    console.log(out.trim());
+  }catch(e){
+    console.log('\n⚠ pxdup58 를 못 돌렸다(' + (e.message || e) + ') — 손으로 `python3 pxdup58.py '
+      + ROUND + '` 를 돌려 결과를 비평가 브리프에 넣어라');
+  }
   console.log('\ncap58 OK — docs/review/58-' + ROUND + '-*.jpg');
 })().catch(e => { console.error('cap58 실패:', e.message); process.exit(1); });
