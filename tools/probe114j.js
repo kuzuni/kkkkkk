@@ -176,17 +176,35 @@ async function run(p) {
        둘 다 «살아 있는 링 하나» 를 프레임마다 따라가며 재면 확정된다. 그림이 아니라 상태를 읽는다. */
     try {
       const e = reset('slash');
-      S.lv.crit = 0;
+      /* ★ 17회차b — 첫 판(r17)에서 이 게이트가 **치명타를 안 켜고** 돌았다. 그래서 안쪽 링만 재고
+         **치명타 «바깥» 링은 한 번도 안 봤다** — BB[1] 이 정확히 그 자리를 잡아냈다
+         («안쪽 Ø52 는 4.3px 로 추종, 바깥 Ø95 는 3프레임 총 이동 1.6px»). 게이트가 못 본 곳에서
+         결함이 났으니 **게이트부터 넓힌다**: 치명타를 켜고 안쪽·바깥을 따로 잰다. */
+      /* `stat.crit` 에 직접 써도 소용없다 — `bonus()` 가 프레임마다 다시 계산해 덮는다(첫 시도가 그랬다:
+         «바깥 링 관측 0프레임»). 그래서 **시험 대상 함수를 직접 부른다**: 치명타 2겹을 만드는 것은
+         `hitRing(x, y, crit, tgt, toy)` 이고, 우리가 재려는 것도 그 함수가 심는 부착 정보다.
+         전투 난수를 통해 우회로 만들려다 «못 만든 채 PASS» 하는 것이 제일 나쁘다. */
+      rings.length = 0;
+      hitRing(e.x, e.y - e.r, 1, e, e.r);        /* 치명타 = 안쪽 Ø60 + 바깥 Ø97 두 겹 */
       let drift = 0, alphas = [], acc = 0, ring = null, seen = 0;
+      let driftIn = 0, driftOut = 0, nOut = 0;
       for (let i = 0; i < 400; i++) {
         e.hp = e.max = 1e12; e.slow = 0;      /* 적은 죽지 않고 계속 걷는다 — 드리프트의 원인 */
         step(1 / 60); draw();
         if (!ring) {
-          ring = rings.find(r => r.imp && r.t >= 0);
+          ring = rings.find(r => r.imp && r.t >= 0 && r.r1 <= 40);
           if (!ring) continue;
           acc = GRID;                          /* 표본 위상을 링 생성에 잠근다 */
         } else acc += 1 / 60;
         /* 링이 배열에서 빠졌으면(수명 끝) 알파 0 을 한 번 적고 끝낸다 */
+        /* 살아 있는 모든 피격 링을 표적과 견준다 — 안쪽(r1 ≈ 30)·바깥(r1 ≈ 48.6)을 나눠 적는다 */
+        for (const q of rings) {
+          if (!q.imp || q.t < 0) continue;
+          const qx = q.x - e.x, qy = q.y - (e.y - e.r);
+          const d = Math.sqrt(qx * qx + qy * qy);
+          if (q.r1 > 40) { driftOut = Math.max(driftOut, d); nOut++; }
+          else driftIn = Math.max(driftIn, d);
+        }
         const alive = rings.indexOf(ring) >= 0;
         if (alive) {
           const f = Math.min(Math.max(ring.t / ring.life, 0), 1);
@@ -197,7 +215,7 @@ async function run(p) {
           if (acc >= GRID - 1e-9) { acc -= GRID; alphas.push(a); }
         } else if (!seen) { seen = 1; alphas.push(0); break; }
       }
-      out.hit = { drift, life: ring ? ring.life : 0,
+      out.hit = { drift, driftIn, driftOut, nOut, life: ring ? ring.life : 0,
                   alphas: alphas.map(v => +v.toFixed(4)),
                   drops: alphas.slice(1).map((v, i) => +(alphas[i] - v).toFixed(4)) };
     } catch (err) { out.err.push('hit: ' + err.message); }
@@ -309,7 +327,11 @@ async function run(p) {
     console.log('  알파 열    : ' + r.hit.alphas.join(' → '));
     console.log('  프레임 낙차: ' + r.hit.drops.join(' / '));
     const md = r.hit.drops.length ? Math.max(...r.hit.drops) : 1;
+    console.log(`  치명타 2겹 표본 — 바깥 링 관측 ${r.hit.nOut}프레임`);
     line(r.hit.drift <= 5, `표적 드리프트 최대 ${r.hit.drift.toFixed(2)} 게임px (상한 5 — AZ[15] 처방 «±5 게임px»)`);
+    line(r.hit.driftIn <= 5, `  └ 안쪽 링(Ø52·Ø60) 드리프트 ${r.hit.driftIn.toFixed(2)} 게임px (상한 5)`);
+    line(r.hit.nOut > 0, `  └ 바깥 링(Ø97) 표본이 잡혔는가 (${r.hit.nOut}프레임 — 0 이면 게이트가 못 보고 있다)`);
+    line(r.hit.driftOut <= 5, `  └ 바깥 링(Ø97) 드리프트 ${r.hit.driftOut.toFixed(2)} 게임px (상한 5 — BB[1] 실측 27.7)`);
     line(r.hit.life >= 0.30, `수명 ${(r.hit.life * 1000).toFixed(0)}ms (하한 300ms — 58 규칙 «단발 0.3~0.8초»)`);
     line(md <= 0.45, `프레임당 최대 알파 낙차 ${md.toFixed(3)} (상한 0.45)`);
   }
