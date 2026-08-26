@@ -66,17 +66,33 @@ const STOPS = [0, 60, 120, 180, 240, 300, 360, 440];
   await p.screenshot({ path: path.resolve(__dirname, '..', `${pre}-pre.png`) });
   console.log(`frame pre (트리거 직전)     → ${pre}-pre.png`);
 
-  /* 클릭 — 260ms 재렌더 setTimeout 을 가로채 붙잡고, 접힘 애니메이션을 정지시킨다 */
+  /* 클릭 — 재렌더 setTimeout 을 가로채 붙잡고, 접힘 애니메이션을 정지시킨다.
+
+     ⚠ 6회차 교훈 — 여기서 `el.click()` 을 쓰면 **버튼 눌림이 캡처에 안 나온다.** 60 쥬시니스의
+     눌림(`jz-dn` scale .94 → `jz-up` 스프링 1.04)은 `pointerdown` 캡처 리스너에 걸려 있는데
+     합성 `click()` 은 pointer 이벤트를 **하나도 안 만든다**. 그래서 6회차 비평가 L 이
+     «탭 지점이 540ms 동안 완전 무반응, 채움색 픽셀 동일» 이라고 채점했다 — 실측하면 실제 입력에서는
+     305 → 286.7px(−6%)로 멀쩡히 눌린다. **캡처 아티팩트를 연출 결함으로 채점당한 3번째 사례다.**
+     → 진짜 마우스 입력으로 누르고, 눌림 애니메이션도 `mlOut` 과 **같은 타임라인으로 정지·탐색**한다
+     (안 그러면 눌림만 실시간으로 흘러 프레임과 어긋난다). */
   await p.evaluate(() => {
     window.__held = null;
-    const raw = window.setTimeout;
+    window.__raw = window.setTimeout;
     window.setTimeout = function (fn, ms) {
-      /* 92 삭제 재렌더(.40s + 스태거 + 20). 파티클 수명 타이머(620ms)와 섞이지 않게 400~600 만 */
-      if (ms >= 400 && ms <= 800) { window.__held = fn; return 0; }
-      return raw.apply(window, arguments);
+      /* 92 삭제 재렌더(.30s + 스태거 + 20). 파티클 수명 타이머와 섞이지 않게 300~800 만 */
+      if (ms >= 300 && ms <= 800) { window.__held = fn; return 0; }
+      return window.__raw.apply(window, arguments);
     };
-    document.getElementById('mailDel').click();
-    window.setTimeout = raw;
+  });
+  const bb = await p.evaluate(() => {
+    const r = document.getElementById('mailDel').getBoundingClientRect();
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  await p.mouse.move(bb.x, bb.y);
+  await p.mouse.down();
+  await p.mouse.up();
+  await p.evaluate(() => {
+    window.setTimeout = window.__raw;
     /* ⚠ `getAnimations()` 는 **스타일 재계산이 돈 뒤에야** 새 CSS 애니메이션을 안다.
        클릭 직후 동기로 부르면 0개가 나온다(3회차에 실제로 그랬다 — 2회차에는 `fxPop` 의
        `void offsetWidth` 가 우연히 플러시를 해 주고 있었다). 강제로 레이아웃을 읽어 플러시한다. */
@@ -85,7 +101,7 @@ const STOPS = [0, 60, 120, 180, 240, 300, 360, 440];
     /* 상자(`mlOut`)와 내용 페이드(`mlOutIn` 좌측 · `mlOutR` 우측)를 **전부 같이** 잡아
        같은 t 로 탐색한다 — 하나라도 빠지면 그 요소의 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => /^(mlOut|mlOutIn|mlOutR)$/.test(a.animationName));
+      .filter((a) => /^(mlOut|mlOutIn|mlOutR|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);
