@@ -3262,6 +3262,11 @@
      슬롯 274×204 를 채우려면 fs = 200×204/h, scaleX = 274/(w×204/h) 를 **칸마다** 따로 줘야 한다.
      🛡️ 는 폭이 다른 것들보다 18% 좁아서 공용 1.343 으로는 224px 밖에 안 찼다. */
   .shp-card:nth-child(2) .cart{font-size:185px;transform:scaleX(1.631)}   /* 🛡️ 182×221 */
+  /* ⚠ 8회차 — 비평가 N·O 가 «카드3 아트 높이 −28px» 이라고 했지만 **반증됐다**(임계 스윕).
+     레퍼런스에는 상자 뒤에 밝은 **방사 버스트**가 있고 우리는 2회차에 그걸 일부러 감광했다(비평가 C 지적).
+     그래서 «배경과의 색 거리» 마스크를 **낮은 임계**로 돌리면 레퍼런스만 버스트까지 «아트» 로 세어
+     ref 326×238 / 구현 274×215 처럼 보인다. 임계를 올려 둘 다 안정되는 구간(유클리드 70~95)에서는
+     **ref 278×216 cy257.5 vs 구현 273×214 cy258.5** 로 이미 맞다. 여기를 키우면 되레 15px 초과한다. */
   .shp-card:nth-child(3) .cart{font-size:185px;transform:scaleX(1.337)}   /* 📿 222×221 */
   .shp-card:nth-child(4) .cart{font-size:192px;transform:scaleX(1.277)}   /* 📜 223×212 */
   .shp-card:nth-child(5) .cart{font-size:207px;transform:scaleX(1.203)}   /* 🐾 220×197 */
@@ -3277,7 +3282,7 @@
   .shp-card .clv{left:55px;top:363px;width:89px;height:44px;border-radius:22px;background:#000;
     text-align:center;line-height:44px;z-index:2}
   /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
-  .shp-card .clv>i{font-size:21.5px;color:#7DE5ED;transform:translateY(2.5px) scaleX(1.286);letter-spacing:-1px}
+  .shp-card .clv>i{font-size:23px;color:#7DE5ED;transform:translateY(2px) scaleX(1.216);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
   .shp-card .cbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
     box-sizing:border-box}
@@ -3323,7 +3328,7 @@
     transform:scaleX(1.2);letter-spacing:-1px}
   .shp-card .cbtn>.cost em{display:inline;font-size:30px;-webkit-text-stroke:0;vertical-align:-2px}
   /* 시안 AD 버튼 */
-  .shp-card .b1{left:720px;top:146px;width:200px;height:98px;border-radius:37px;
+  .shp-card .b1{left:720px;top:146px;width:200px;height:98px;border-radius:35px;
     --f1:#3DD5EC;--f2:#18B1D3;--ring:#53E6FA;--lip:#0DA2CA}
   .shp-card .b1>.lab{top:14px}
   /* 3회차 실측: ref «2/2» 잉크 46×21, 2회차 구현 35×16 (−24%) → font-size 23→30
@@ -3340,12 +3345,17 @@
   /* 4회차 — G·H 공통 «▶AD 캡션이 좌상단으로 치우쳤다». ref 흰 잉크(«▶AD» 통째) 38×25 @ 카드기준
      중심 (749.5,232) / 구현 42×19 @ (736.5,227) — 13px 왼쪽·5px 위이고 종횡비도 2.2 vs 1.52 로 납작했다.
      ref 는 캡션이 금 플라크(709..759) 오른쪽으로 삐져나온다. */
-  .shp-card>.adbadge>i{font-size:30px;font-weight:900;color:#fff;
-    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:translate(8px,7px) scaleX(.62)}
+  /* 8회차 — 비평가 G(4회차)·P(8회차)가 독립적으로 같은 구조를 지적했다: 레퍼런스는 «▶ 는 태그 안 중앙 /
+     AD 라벨은 태그 **우하단 바깥**» 인데 구현은 «▶AD» 한 덩어리라 합산 bbox 만 맞고 부품이 각각 1.7~1.8배였다
+     (P 실측 ▶ ref 11×13 vs 구현 13×22 · AD 잉크 ref 12 vs 구현 21). 두 부품으로 쪼갠다. */
+  .shp-card>.adbadge>i{position:absolute;left:2px;right:-2px;top:0.5px;font-size:18px;font-weight:900;color:#fff;
+    -webkit-text-stroke:3px #000;paint-order:stroke fill;text-align:center}
+  .shp-card>.adbadge>b{position:absolute;left:37px;top:13px;font-size:17px;font-weight:900;color:#fff;
+    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-1px;white-space:nowrap}
   /* 10회 버튼(기하만) */
-  .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px}
+  .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:37px}
   /* 30회 버튼(기하만) */
-  .shp-card .b3{left:717px;top:262px;width:206px;height:127px;border-radius:36px}
+  .shp-card .b3{left:717px;top:262px;width:206px;height:127px;border-radius:34px}
   /* 작업 102 — 노랑/회색은 «10회 vs 30회» 가 아니라 «살 수 있다 vs 없다» 다.
      레퍼런스 10 은 다이아 1,000 상태(시작값)라 10회=1,000 은 노랑+흰 가격, 30회=3,000 은 회색+빨강 가격으로
      **같은 프레임에** 두 상태가 같이 찍혔다. 그 색을 버튼 순번에 박아 둔 것이 이 버그의 원인이다.
@@ -16036,7 +16046,7 @@ function renderShopPage(){
       +    '<b>' + (s.lv >= SUM_MAXLV ? 'MAX' : s.exp + '/' + need) + '</b></div>'
       +  '<div class="cbtn b1" data-shsum="' + x.b + '" data-shn="10" data-shfree="1">'
       +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u></div>'
-      +  '<div class="adbadge"><i>▶AD</i></div>'
+      +  '<div class="adbadge"><i>▶</i><b>AD</b></div>'
       +  '<div class="cbtn b2" data-shsum="' + x.b + '" data-shn="10">'
       +    '<u class="lab">10회 소환</u><div class="pan"><span class="gem">' + curIc('dia') + '</span></div>'
       +    '<u class="cost">' + won(c10) + '</u></div>'
