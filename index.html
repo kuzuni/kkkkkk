@@ -2424,6 +2424,11 @@
     46%{opacity:.92;transform:translate(-50%,-64px) scale(1)}
     100%{opacity:0;transform:translate(-50%,-104px) scale(1)}}
 
+  /* 21회차 — 강화 델타 플로터가 떠 있는 동안 그 값이 나온 수치 행을 비운다(공존 제거).
+     플로터 수명 660ms 중 «읽히는» 구간이 앞 ~420ms(상승 104px · 페이드 46%)라 그만큼만 비운다. */
+  @keyframes fxCvSwap{0%{opacity:.12}58%{opacity:.12}100%{opacity:1}}
+  .fx-cvswap{animation:fxCvSwap .46s ease-out both}
+
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
   .fx-pop{animation:fxPop .34s cubic-bezier(.34,1.56,.64,1) both}
@@ -2438,7 +2443,13 @@
      본색은 fxBurst 가 --c 로 준다. 끝 scale 도 .38→.5 — 중간 프레임이 12px 로 읽히던 것 방지. */
   .fx-spark{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
     background:radial-gradient(circle at 42% 38%, #FFF 0%, #FFF 26%, var(--c,#FFE07A) 62%, rgba(0,0,0,0) 88%);
-    box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .58s ease-out forwards}
+  /* 21회차 — 수명 .58s 는 «무엇을 얻었는지» 를 가린다. 20회차 비평 AG·AH 공통(#3·#5):
+     퀘스트 첫 199~299ms 에 화면에 있는 것이 «크림색 구슬 12~16개» 뿐이고 재화 아이콘은
+     205~299ms 에야 읽힌다 — 실측하면 아이콘은 47ms 부터 있으나 퍼짐 스케일 0.45 로 33px 이라
+     26px 크림 구슬과 **같은 어휘**로 뭉친다. 구슬을 .26s 로 줄여 그 창을 비운다(둘 다 «≤120ms
+     로 줄이거나 재화를 앞당겨라»). 95ms 캡처 리듬에서 95·190ms 두 프레임에 남으므로 «버스트
+     없음» 이 되지는 않는다(verify58 은 퀘스트 120ms · 강화 60ms 에 재므로 게이트도 안전). */
+    box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .26s ease-out forwards}
   @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
     62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
     100%{transform:translate(var(--dx),var(--dy)) scale(.62);opacity:0}}
@@ -19468,6 +19479,23 @@ function fx3Out(p){
   }
   return 0;
 }
+/* 21회차 — 메인 화면 흡수 경로가 상단 STAGE 헤더(진행바)를 관통한다(20회차 AG #4 · AH #7 공통).
+   목표 알약이 바 «위» 라 교차 자체는 기하학적으로 불가피하다 — 20회차 실측 x570~660 고정,
+   바 #stinfo x320~800 · y240~332, 관통 표본 18. AG 안(«±40px 스태거 + 그 구간만 opacity .75»)을
+   고른다: 경로를 다시 설계하지 않고 «같은 자리에 여러 개가 겹쳐 서는 것» 만 흩고, 겹치는
+   프레임에서만 바가 비쳐 보이게 한다. AH 안(제어점 x850)은 경로 재설계라 도착 정확도(Δ17px,
+   두 비평가가 «잘 되어 있는 것» 에 넣었다)를 다시 흔든다.
+   ⚠ 스태거는 **패널 없는 2차 호 구간에만** 건다 — 패널 안 두 구간 경로는 verify93 [2b]
+   «형제 행 관통 0» 이 걸려 있어 x 를 흔들면 그 게이트가 먼저 깨진다. */
+let fx3BarR = null;
+function fx3Band(){
+  const el = document.getElementById('stinfo');
+  const r = el ? fxRect(el) : null;
+  fx3BarR = (r && r.w > 200 && r.h > 10) ? r : null;
+  return fx3BarR;
+}
+const FX3_BARSTG = 40;                               /* 바 밴드에서 벌리는 좌우 스태거 폭 */
+const FX3_BARDIM = 0.75;                             /* 바와 겹치는 프레임의 불투명도 */
 const FXCUR = {
   gold:{ pill:'.cGold', pcb:'.pcb-g', cur:'gold', col:'#FFDE6A', fs:46, ics:55 },
   dia :{ pill:'.cDia',  pcb:'.pcb-d', cur:'dia',  col:'#8FE9FF', fs:42, ics:50 }
@@ -19596,6 +19624,7 @@ function fxFly(from, cur, n){
      앞섰다(비평가 H ④). 도착이 0.50~1.22s 에 균등 분배돼 있으므로 선형이면 «도착 개수 == 숫자 진행» 이다. */
   fxRollLin[cur] = !combat;
   const outX = combat ? 0 : fx3Out(p0);              /* 패널 안에서 출발하면 그 우측 바깥으로 뺀다 */
+  const band = combat ? null : fx3Band();            /* 21회차 — 상단 STAGE 헤더 밴드(관통 완화용) */
   /* 4회차 — 두 재화가 같이 날 때의 «각도 레인». −1 = 단독(부채꼴 전체를 쓴다) */
   const lane = combat ? -1 : (fxCnt2 ? (cur === 'dia' ? 0 : 1) : -1);
   for(let i=0;i<cnt;i++){
@@ -19648,7 +19677,10 @@ function fxFly(from, cur, n){
         d0:Math.hypot(to.x - ax, to.y - ay),            /* 6회차 — «잔여 20%» 판정 기준 거리 */
         /* 14회차 교훈의 3박자 판 — dt 누적으로 돌면 dt 가 0.1s 로 클램프돼 프레임이 길어질수록
            연출이 벽시계보다 늘어진다(1.26s 설계가 1.4s 로 찍혔다). **시작 시각 기준**으로 돈다. */
-        st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n };
+        st:performance.now(), t:0, dur:ha + ad, pill, batch, cur, n,
+        /* 21회차 — 스태거는 «양쪽 끝 0» 인 사인이라 출발점·도착점은 한 픽셀도 안 움직인다.
+           i 로 층화해 16개가 −40 → +40 을 고르게 채운다(랜덤이면 다시 한 줄로 몰린다). */
+        lat: outX ? 0 : ((cnt > 1 ? i/(cnt - 1) : 0.5)*2 - 1) * FX3_BARSTG, band };
       if(outX){
         /* 6회차 — 한 개의 3차 베지에로는 «복도를 지키면서 x583 알약까지» 가 안 된다.
            제어점을 아무리 오른쪽으로 밀어도 되꺾이는 구간이 행 밴드(y577~956)를 지나며
@@ -19879,6 +19911,9 @@ function fxPop(el){
   el.classList.add('fx-pop');
   setTimeout(() => el.classList && el.classList.remove('fx-pop'), 400);
 }
+/* 21회차 — 버스트 링 기하(요소 대상). 타원 반축 = bbox 반축 + FXB_M, 바깥 이동 = 반축 × FXB_K.
+   FXB_K 0.20 은 «대상 세로의 약 1.4배» 가 링 세로 상한이 되는 값이다(퀘스트 버튼 119 → 약 166). */
+const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
 function fxBurst(t, col, n){
   /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
@@ -19891,15 +19926,29 @@ function fxBurst(t, col, n){
      안쪽 78% 타원 안에는 한 개도 생기지 않으므로 아이콘·수치가 가려지지 않는다. */
   /* 12회차 — 링을 **짧은 변** 기준 원으로. 긴 변(카드 높이 505px)을 따라가면 반장축이 197px 이 돼
      아이콘은 피하는 대신 카드 하단 비용행(«💰 53»)을 새로 덮었다(비평가 R 실측). */
+  /* 21회차 — «짧은 변 78% 의 **원**» 이 세 화면에서 같은 결함을 냈다. 원은 대상이 정사각형이
+     아닌 순간 **대상 안쪽**으로 들어오므로 파티클이 라벨 «위에서» 태어난다:
+       · 22 퀘스트 «보상 받기» 197×119 — 링 122×121 이 라벨 잉크 126×47 을 덮어 20회차 실측
+         **10개 중 7개**가 0~110ms 동안 글자 위. 비평가 AG·AH 가 «6글자 중 2.5자만 남는다» 로 잡았다.
+       · 92 우편 «읽음 전체 삭제» · 3회차 E·F — 같은 산수(시작 45.6 < 반높이 58.5)로 아예 폐기됐다.
+       · 92 우편 행 784×147 — 세로 확산 127px 가 반높이 73.5 를 넘겨 이웃 행에 얹혔다(D-②).
+     원인은 «반경을 어느 변에서 뽑느냐» 가 아니라 **원을 쓴 것** 이다. → 대상 형상을 그대로 쓴다:
+     타원 반축을 **bbox 반축 + 여유**로 잡아 파티클이 대상 «테두리 바깥» 에서 태어나게 하고,
+     바깥 이동도 축마다 반축에 비례시켜 링이 대상의 종횡비를 유지하게 한다.
+     결과(같은 버튼): 라벨 겹침 7개 → **0개**, 링 세로 최대 197% → **약 140%**.
+     좌표 대상(점)은 종전대로 반경 22 원 + 80~150px 산포다. */
   const r = (t && t.nodeType) ? fxRect(t) : null;
-  const rr = r ? clamp(Math.min(r.w, r.h)/2*0.78, 22, 130) : 22;
-  const rx = rr, ry = rr;
+  const rx = r ? clamp(r.w/2 + FXB_M, FXB_RMIN, FXB_RMAX) : FXB_RMIN;
+  const ry = r ? clamp(r.h/2 + FXB_M, FXB_RMIN, FXB_RMAX) : FXB_RMIN;
   for(let i=0;i<cnt;i++){
     const el = document.createElement('s');
     /* 16회차 — 산포 95~195 는 카드 밖까지 흩어져 «±450px 드리프트» 로 읽혔다(Z ②) → 80~150.
        18회차 — 대상이 요소면 이동 거리를 그 경계 +40px 안으로 클램프(17회차 AD: 경계 밖 20~30px 스필). */
-    const dCap = r ? Math.max(70, Math.min(r.w, r.h)/2 + 40 - rr) : 150;
-    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18), d = rnd(Math.min(80, dCap), Math.min(150, dCap));
+    /* 21회차 — 요소 대상의 이동은 «축마다 반축 × FXB_K». 스칼라 d 를 쓰면 타원 둘레에서
+       출발해도 이동이 원이라 종횡비가 다시 무너진다(짧은 축만 상대적으로 크게 밀린다). */
+    const a = (i/cnt)*Math.PI*2 + rnd(-0.18, 0.18);
+    const jt = rnd(0.82, 1.18);                        /* 개체차 — 완전 균일 링은 «판때기» 로 읽힌다(15회차 X ②) */
+    const d = r ? 0 : rnd(80, 150);
     el.className = 'fx-spark';
     /* 15회차 — «24px 완전 균일·정원 배치라 크기 변주 0»(비평 X ②). 20~30px 지터를 준다 —
        평균은 그대로 24~26px 라 14회차에 맞춘 gain 코인과의 크기 어휘는 유지된다. */
@@ -19908,12 +19957,13 @@ function fxBurst(t, col, n){
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
     el.style.setProperty('--c', col || '#FFE07A');    /* 16회차 — 글로우 오브의 본색(radial 중간대) */
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
-    el.style.left = (p.x + Math.cos(a)*rx) + 'px';
-    el.style.top  = (p.y + Math.sin(a)*ry) + 'px';
-    el.style.setProperty('--dx', (Math.cos(a)*d).toFixed(1) + 'px');
-    el.style.setProperty('--dy', (Math.sin(a)*d).toFixed(1) + 'px');
+    /* 21회차 — 넓은 대상(우편 행 826px)에서 타원 반축이 프레임을 넘길 수 있어 좌표를 물린다. */
+    el.style.left = clamp(p.x + Math.cos(a)*rx*jt, 20, FRAME_W - 20) + 'px';
+    el.style.top  = (p.y + Math.sin(a)*ry*jt) + 'px';
+    el.style.setProperty('--dx', ((r ? Math.cos(a)*rx*FXB_K : Math.cos(a)*d)).toFixed(1) + 'px');
+    el.style.setProperty('--dy', ((r ? Math.sin(a)*ry*FXB_K : Math.sin(a)*d)).toFixed(1) + 'px');
     L.appendChild(el);
-    setTimeout(() => el.remove(), 620);
+    setTimeout(() => el.remove(), 300);              /* 21회차 — 수명 .26s + 여유(종전 620) */
   }
 }
 function fxFlash(el){
@@ -20000,6 +20050,21 @@ function fxDelta(el, txt){
   d.textContent = txt;
   L.appendChild(d);
   setTimeout(() => d.remove(), 660);
+  /* 21회차 — 20회차 AG #6 · AH #4 (19회차부터 3라운드 연속, 2인 공통):
+     «+2.2»(플로터)와 «+2.4»(카드) 가 동시에 보인다. 20회차에 색을 앰버로 갈랐는데도 남았고,
+     비평가 둘이 그때 «같은 초록» 이라고 적은 것은 오독이었다(실측 #FFD24A) — 즉 **색이 원인이
+     아니다**. 남은 진짜 문제는 «서로 다른 두 수치가 같은 순간에 보이는 것» 자체다.
+     둘 다 «실제 증가분 +0.2 를 띄워라» 로 처방했지만 그건 **거짓말**이다 — 플레이어가 방금 얻은
+     것은 0.2 가 아니라 2.2 다(19회차에 `trainCardData()` 를 읽고 이미 정정한 오진이다).
+     값을 바꾸지 않고 «동시» 만 없앤다: 플로터가 떠 있는 동안 그 값이 나온 자리(`.cv`)를 잠시
+     비웠다가 새 값으로 되채운다. 어느 순간에도 두 수치가 같이 있지 않고, 플로터가 바로 그
+     자리에서 떠오르므로 «이 줄의 값이 갱신되는 중» 으로 읽힌다. */
+  if(el && el.classList && el.classList.contains('cv')){
+    el.classList.remove('fx-cvswap');
+    void el.offsetWidth;                               /* 꾹 누르기 반복분에서도 다시 걸리게 리플로우 */
+    el.classList.add('fx-cvswap');
+    setTimeout(() => el.classList && el.classList.remove('fx-cvswap'), 520);
+  }
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
@@ -20322,7 +20387,11 @@ function fxTick(dt){
       if(f.t < f.sd){                                   /* (a) 퍼짐 — ease-out 으로 «튀어나감» */
         const q = f.t/f.sd, e = 1 - Math.pow(1 - q, 3);
         x = f.sx + (f.ax - f.sx)*e; y = f.sy + (f.ay - f.sy)*e;
-        s = 0.45 + 0.25*e; rot = f.rot*e;   /* 12회차 — 퍼짐 끝 1.10 → 0.70 (아래 주석) */
+        /* 21회차 — 시작 0.45 는 fs46 아이콘을 21px 로 만들어 26px 크림 구슬과 구별이 안 된다
+           (AG #3 · AH #5 «첫 199~299ms 동안 무엇을 얻었는지가 없다»). **끝값 0.70 은 그대로 두고**
+           시작만 올린다 — 퍼짐·머묾의 최대 은폐 면적이 안 커지므로 남은 문제 2(행 라벨 가림)와
+           충돌하지 않는다. 87ms 실측 33px → 약 42px. */
+        s = 0.58 + 0.12*e; rot = f.rot*e;   /* 12회차 — 퍼짐 끝 1.10 → 0.70 (아래 주석) */
         op = q < 0.18 ? (q/0.18) : 1;
       }else if(f.t < f.ha){                             /* (b) 머묾 — **눈에 보이게** 부유한다 */
         /* 1회차는 여기서 x 가 정확히 f.ax 로 고정돼 «576ms 동안 x 변화 0.0px»(G ①)·«원점 박스
@@ -20396,6 +20465,12 @@ function fxTick(dt){
         }else{
           x = v*v*f.ax + 2*v*e*f.cx + e*e*f.tx;
           y = v*v*f.ay + 2*v*e*f.cy + e*e*f.ty;
+          x += f.lat * Math.sin(Math.PI*e);           /* 21회차 — 바 밴드 스태거(끝에서 0 → 도착 좌표 불변) */
+        }
+        /* 21회차 — 바와 겹치는 프레임만 비친다. 아이콘 반폭은 fs46 × 스케일 1.1 의 절반 ≈ 28. */
+        if(f.band){
+          const b = f.band;
+          if(x + 28 > b.x && x - 28 < b.x + b.w && y + 28 > b.y && y - 28 < b.y + b.h) op = FX3_BARDIM;
         }
         /* 6회차 — 축소 시점을 «이징 진행률 e» 가 아니라 **알약까지 남은 거리**로 잰다.
            e 는 ease-in 이라 e .8 이 «남은 거리 20%» 와 안 맞고, 두 구간 경로에서는 더 어긋난다 —
