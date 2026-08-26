@@ -9,12 +9,14 @@
  * 항목 (PROGRESS 119 «검증 [3]-(가)» 가 요구한 것 + 111 교훈 1 의 «두 층» 분리):
  *   [A] ⓐ 옛것이 사라졌는가 = **소스 스캔** — `RELIC_COST_BASE = 800`·`RELIC_COST_PER = 22`·
  *       `relicCost` 의 `relicLvSum` 의존·정적 HTML 의 «822» 가 전부 부재. 런타임으로는 영영 못 본다.
+ *       (138, 2026-08-26) A5 는 `#rwCost` 의 **`b` 기본 숫자만** 본다 — 아이콘 마크업은 125 소관이라 A7 로 분리.
  *   [B] ⓑ 새것이 맞는가 = 새 세이브 `relicCost() === 100` · `#rwCost` 표시도 «100»
  *   [C] 1회 소환 후 **101** · 유물석이 정확히 100 만 차감
  *   [D] 50회 소환 후 **150** · 누적 차감 = Σ(100…149) = 6,225 (누적식이 아니라 «1씩» 인지)
  *   [E] **축 전환** — 유물 Lv 를 만들어도 비용 불변(구 «800+22×ΣLv» 라면 여기서 값이 튄다)
  *   [F] 홀드 연속 소환 — 매회 재계산 + `#rwCost` 숫자·`lack` 즉시 갱신 ·
- *       다음 1회분에 못 미치면 **홀드 중단**(남은 유물석은 다음 비용보다 작다)
+ *       다음 1회분에 못 미치면 **홀드 중단**(남은 유물석은 다음 비용보다 작다).
+ *       (138, 2026-08-26) 벽시계 1600ms 대기 → «홀드가 스스로 멈출 때까지» 대기로 교체(느린 기기 거짓 FAIL).
  *   [G] 부족 — 비용−1 이면 소환 실패(차감 0) · `lack` 클래스 · 안내 팝업
  *   [H] 구 세이브 — `S.cnt.sumRelic` 이 쌓여 있으면 **그대로 이어진다**(ΣLv 로 역산하지 않는다) ·
  *       옛 세이브의 문자열·null 카운터가 NaN 으로 새지 않는다
@@ -63,7 +65,17 @@ const setup = (page, relic, sum) => page.evaluate(([relic, sum]) => {
     ok(!!m && !/relicLvSum/.test(m[0]) && /sumRelic/.test(m[0]),
       'A4 relicCost() 가 ΣLv(relicLvSum) 가 아니라 S.cnt.sumRelic 기반', m ? m[0].trim() : '정의 못 찾음');
   }
-  ok(/id="rwCost"><i>🔮<\/i><b>100<\/b>/.test(SRC), 'A5 정적 HTML `#rwCost` 기본 표기 «822» → «100»');
+  {
+    /* 138 — 옛 A5 는 아이콘 마크업(`<i>🔮</i>`)까지 통째로 정규식에 물고 있어서 125(화폐 아이콘 통일)가
+     * `<i data-cur-slot="relic"></i>` 로 바꾸자 «비용 표기» 와 무관하게 깨졌다.
+     * 게이트는 자기가 지키려는 성질만 묻는다 → 119 의 성질은 «기본 표기 숫자» 뿐이므로 `b` 만 본다.
+     * 아이콘은 125 의 성질이라 A7 로 분리해서 «슬롯이 있는가» 만 따로 확인한다. */
+    const rw = SRC.match(/id="rwCost"[^>]*>([\s\S]*?)<\/div>/);
+    ok(!!rw && /<b>\s*100\s*<\/b>/.test(rw[1]) && !/822/.test(rw[1]),
+      'A5 정적 HTML `#rwCost` 기본 표기 «822» → «100»', rw ? rw[1].trim() : '#rwCost 못 찾음');
+    ok(!!rw && /data-cur-slot="relic"/.test(rw[1]),
+      'A7 `#rwCost` 아이콘은 125 의 화폐 슬롯(`data-cur-slot="relic"`) — 모양은 125 소관, 여기선 자리만 본다');
+  }
   ok(/relicLvSum/.test(SRC), 'A6 relicLvSum 자체는 살아 있음(61 미션·33 정보 팝업 공용 — 같이 지우면 안 된다)');
 
   /* ---- [B] 새 세이브 = 100 ---- */
@@ -109,7 +121,16 @@ const setup = (page, relic, sum) => page.evaluate(([relic, sum]) => {
   /* ---- [F] 홀드 연속 소환 — 매회 재계산 · 부족하면 중단 ---- */
   const F0 = await setup(page, 100 + 101 + 102 + 50, 0);      /* 3회분 + 50 (4회차는 못 산다) */
   await page.dispatchEvent('#rwBasin', 'pointerdown');
-  await page.waitForTimeout(1600);
+  /* 138 — 옛 코드는 «1600ms 기다리면 3회 다 돈다» 는 벽시계 가정이었다(delay 350 + iv 160×2 = 670ms).
+   * 이 게이트가 지키려는 성질은 «몇 ms 안에» 가 아니라 «잔액이 다음 1회분에 못 미치면 홀드가 스스로 멈춘다» 다.
+   * 메인 스레드가 붐비는 기기에서는 setTimeout 이 실측 770ms 까지 밀려 3회차가 창 밖으로 나가고
+   * F1~F5 가 통째로 거짓 FAIL 났다 → 시간이 아니라 **홀드 종료 자체**를 기다린다. 안 멈추면 F6 이 잡는다. */
+  let fStopped = true;
+  try {
+    await page.waitForFunction(() => S.cnt.sumRelic >= 1, null, { timeout: 20000 });
+    await page.waitForFunction(() => typeof rwHold === 'undefined' || !rwHold, null, { timeout: 20000 });
+  } catch (e) { fStopped = false; }
+  await page.waitForTimeout(60);
   await page.dispatchEvent('#rwBasin', 'pointerup');
   const F = await page.evaluate(() => ({
     sum: S.cnt.sumRelic, relic: S.relic, cost: relicCost(),
@@ -123,7 +144,8 @@ const setup = (page, relic, sum) => page.evaluate(([relic, sum]) => {
   ok(F.cost === 103, 'F3 홀드 뒤 비용 = 103 (매회 재계산)', String(F.cost));
   ok(F.txt === '103', 'F4 홀드 중에도 #rwCost 숫자 갱신 — 최종 표시 «103»', F.txt);
   ok(F.lack === true, 'F5 잔액 < 다음 1회분 → `lack` 즉시 갱신');
-  ok(F.holding === false, 'F6 유물석 부족으로 홀드 중단(rwHold = null)');
+  ok(F.holding === false && fStopped, 'F6 유물석 부족으로 홀드 중단(rwHold = null)',
+    fStopped ? '' : '20초 안에 스스로 멈추지 않았다');
 
   /* ---- [G] 부족 판정 ---- */
   const G = await page.evaluate(() => {
