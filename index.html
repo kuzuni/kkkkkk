@@ -7823,7 +7823,12 @@
     text-align:center;overflow:hidden}
   .rk-rb>i{display:block;font-size:20px;line-height:100%;color:#FFF175;
     -webkit-text-stroke:5px #000;paint-order:stroke fill}
-  .rk-pr1{left:439px;top:548px;width:210px;height:37px;background:#B44029;
+  /* 12회차 — left 439 → 435 (비평가 O ⑥ · P ⑧ 공통): 1위 칭호 리본만 기둥 중심에서 +4.5px 우측이었다.
+     ref 리본 x435..644 cx539.5 = 1위 기둥 면 중심(385..694 → 539.5)과 일치하는데 우리는 cx543.5 였고,
+     같은 기둥의 점수 알약(.rk-pp.q1)은 cx539.5 로 정중앙이라 **한 기둥 안에서 두 알약 축이 어긋나** 있었다.
+     8회차가 «H: 1위 리본 cx +4» 를 기각한 것은 리본 «잉크»(날개 포함) 를 쟀기 때문이고, O·P 는 둘 다
+     리본 **판(near:색)** 을 재서 독립적으로 같은 +4.5 를 얻었다. 2·3위(.rk-pr2/3)는 이미 맞아 안 건드린다. */
+  .rk-pr1{left:435px;top:548px;width:210px;height:37px;background:#B44029;
     box-shadow:inset 0 0 0 4px #FFCF52}
   .rk-pr2{left:111px;top:559px;width:208px;height:36px;background:#A83216;
     box-shadow:inset 0 0 0 4px #F4A139}
@@ -7862,8 +7867,18 @@
     transform:scaleX(.848)}
 
   /* ---- ④ 랭킹 리스트 패널 — 외곽 998×1083 @ (41,802), 테두리 9 #785341 1겹(검정 없음) ---- */
-  .rk-panel{left:41px;top:802px;width:998px;bottom:395px;box-sizing:border-box;
-    border:9px solid #785341;border-radius:21px;background:#3D2C25;
+  /* 12회차 — 테두리 9px → 1px (비평가 O ④ · P ② 공통 지적, 자체 열스캔으로 확증).
+     측정표 §11 «패널 테두리 9px · 외곽 41..1038 / 886..1968» 은 **오기**다 — 그 9 는 재지 않고
+     «안쪽 50..1029 / 895..1959» 에서 역산한 값이었다. ref 를 직접 훑으면 테두리 띠가 없다:
+       col 500 → ref 안쪽 …1959 · 1960 전이 1px · 1961 부터 페이지 배경 #603F36 (우리는 1876..1884 가 #785341 9px)
+       col 500 → ref 위쪽 페이지 배경 …894 · 895 부터 안쪽 (우리는 802..810 이 #785341 9px)
+     좌우는 ref 페이지 배경(#755548)이 테두리색(#785341)과 사실상 같은 색이라 경계가 안 보인다 —
+     그래서 8회차까지 «9px 테두리» 로 읽혔다. 위·아래에서만 갈리고, 거기서 우리 패널이 상하 각 8px 씩 크다.
+     **안쪽 상자(50..1029 / 811..1875)는 한 픽셀도 안 움직인다** — left/top/width/bottom 을 테두리 감소분만큼
+     되짚어 넣었다(49+1=50 · 810+1=811 · 49+982−1=1030 · 2280−403−1=1876). `.rk-list` 는 패딩 상자
+     기준이라 카드 x65..1014 도 그대로다. */
+  .rk-panel{left:49px;top:810px;width:982px;bottom:403px;box-sizing:border-box;
+    border:1px solid #785341;border-radius:21px;background:#3D2C25;
     padding:16px 15px 8px;overflow:hidden}
   .rk-list{position:absolute;left:15px;right:15px;top:16px;bottom:0;
     overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
@@ -7945,7 +7960,10 @@
   #rkw .rk-mn{left:0;top:63px;width:160px;height:48px;line-height:48px;display:block;
     text-align:center;font-size:46px;color:#fff;-webkit-text-stroke:5.5px #000;paint-order:stroke fill}
   .rk-me .rk-av{left:206px;top:21px;width:122px;height:118px}
-  .rk-me .rk-tt{left:343px;top:38px;width:278px;height:44px}
+  /* 12회차 — height 44 → 48 (비평가 M · P 공통, 열스캔 확증):
+     `col 480` ref 칭호판 검정 테두리 2028..2075 = **48px**(프레임 1944..1991) vs 우리 1943..1986 = 44px.
+     리스트 행의 `.rk-tt`(45px)와 달리 내 순위 바만 더 두껍다 — top:38 을 고정한 채 아래로 4px 자란다. */
+  .rk-me .rk-tt{left:343px;top:38px;width:278px;height:48px}
   #rkw .rk-me .rk-nm{left:345px;top:94px;width:430px;font-size:35px}
   /* 우측 플레이트 — 행과 같은 Δ29 기울기, 우측 끝 1071 */
   .rk-mrc{left:861px;top:5px;width:210px;height:164px;background:#9090B0;
