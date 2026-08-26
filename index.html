@@ -641,9 +641,26 @@
        (세로 잉크 0.93×24 + 1.6 = **23.9** ≈ ref 23~24. 그냥 굵히면 26 이 돼 +13% 가 된다)
        4자 라벨도 같은 비율로 20.4 → **18.7**.
      가로 폭은 stroke 가 lx 배로 같이 늘어나므로 **--lx 를 라벨마다 다시 풀었다**(아래 HTML 주석). */
+  /* ⚠ **126 ②-2 (5회차) 정정 — 위 «26 → 24» 보정은 근거가 사라졌는데 값만 남아 있었다.**
+     그 −2px 은 «흰 덧획 **1.6px 고정**» 이 잉크를 사방 0.8px 키우는 것을 상쇄하려던 값이다.
+     그런데 같은 4회차의 6-10 이 그 덧획을 **.025em(fs24 에서 0.6px)** 으로 낮췄다 — 상쇄할 대상이
+     1.6 → 0.6 으로 줄었는데 **폰트 보정은 그대로 두어** 라벨이 통째로 작아진 채 남았다.
+     여기에 `--st-small`(.145em) 검정 외곽선이 흰 코어를 안쪽으로 파먹는 몫까지 겹쳤다.
+     실측(`node tools/m126ink.js` · 차분 + min(rgb)>150 흰 채움 마스크, ref 는 측정표 §3 의
+     **오염되지 않은 칸만**. ※ 표시된 «우편»·«랭킹» 은 ref 쪽 표본이 HUD 에 오염돼 대조 불가):
+        | 라벨 | ref 흰 잉크 | lf 24(전) | lf 29(후) |
+        | 가방 | **45×24** | 37×20 (−17.8%) | **46×24** |
+        | 절전 | **42×23** | 34×20 (−19.0%) | **41×27** → lx 로 42 |
+        | 설정 | **43×24** | 35×20 (−18.6%) | **41×25** → lx 로 43 |
+        | 길라잡이 | **71×19** | 61×16 (−14.1%) | **73×19** → lx 로 71 |
+     세 칸이 전부 −18~−19% 로 같은 방향·같은 크기라 개별 자리의 문제가 아니라 **공통 상수**가 틀린 것이다.
+     → `--lf` 기본 **24 → 29** · 4자 라벨은 같은 비율(19/24)로 18.7 → **22.6**.
+     비평가 I·J 의 ② 1순위(«ref 대비 −20~−45%»)가 이 자리에서 실제로 −18~−19% 로 확인된다.
+     ⚠ 폰트를 다시 내리려거든 **덧획(.025em)·`--st-small`(.145em) 을 같이 보고 내려라** —
+        셋이 같은 잉크를 두고 겹쳐 있어 하나만 만지면 이번과 같은 «근거 없는 상수» 가 또 남는다. */
   #mnw .mn-l{position:absolute;left:-45px;right:-45px;top:66px;height:28px;line-height:28px;
-    text-align:center;font-size:var(--lf,24px);color:#FDFDFD;
-    /* 126 ② — 7px 고정이었다. 이 칸의 font-size 는 라벨마다 다르다(`--lf`: 기본 24 · «길라잡이» 18.7)라
+    text-align:center;font-size:var(--lf,29px);color:#FDFDFD;
+    /* 126 ② — 7px 고정이었다. 이 칸의 font-size 는 라벨마다 다르다(`--lf`: 기본 29 · «길라잡이» 22.6)라
        같은 7px 이 r .292 / **.374** 가 돼 전 화면에서 가장 심하게 막힌 자리였다(«우편»·«길라잡이» 의 ㅇ). */
     -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--lx,.82))}
@@ -9087,10 +9104,10 @@
            `.mn-col` 높이는 검산식대로 7칸×100 + 6갭×10 + 40.5 = 800.5 → **800**(9칸 1020 에서 −220). -->
       <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.933" data-t="우편">우편</i></div>
       <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.962" data-t="랭킹">랭킹</i></div>
-      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:18.7px;--lx:1.006" data-t="길라잡이">길라잡이</i></div>
-      <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.932" data-t="가방">가방</i></div>
-      <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.909" data-t="절전">절전</i></div>
-      <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.929" data-t="설정">설정</i></div>
+      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:22.6px;--lx:.978" data-t="길라잡이">길라잡이</i></div>
+      <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.912" data-t="가방">가방</i></div>
+      <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.931" data-t="절전">절전</i></div>
+      <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.974" data-t="설정">설정</i></div>
       <!-- ⚠ 마지막(7번째) 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
            임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고

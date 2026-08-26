@@ -100,22 +100,56 @@ const collect = (page) => page.evaluate(() => {
 });
 
 /* PNG 두 장을 캔버스로 디코드해 차분 잉크 bbox 를 낸다(의존성 0 — ink05.js 와 같은 방식). */
-async function inkOf(page, aB64, bB64, items) {
-  return page.evaluate(async ({ aB64, bB64, items }) => {
-    const load = (b64) => new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im); im.onerror = rej;
-      im.src = 'data:image/png;base64,' + b64;
+/* 세 장을 한 번에 넘기면 evaluate 인자가 너무 커져 그대로 죽는다 — 한 장씩 심어 둔다. */
+async function stash(page, slot, b64) {
+  await page.evaluate(async ({ slot, b64 }) => {
+    const im = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i); i.onerror = () => rej(new Error('decode ' + slot));
+      i.src = 'data:image/png;base64,' + b64;
     });
-    const [A, B] = await Promise.all([load(aB64), load(bB64)]);
-    const cv = (im) => {
-      const c = document.createElement('canvas');
-      c.width = im.width; c.height = im.height;
-      c.getContext('2d').drawImage(im, 0, 0);
-      return c.getContext('2d').getImageData(0, 0, im.width, im.height).data;
-    };
-    const da = cv(A), db = cv(B), W = A.width;
+    const c = document.createElement('canvas');
+    c.width = im.width; c.height = im.height;
+    const g = c.getContext('2d');
+    g.drawImage(im, 0, 0);
+    window.__m126 = window.__m126 || {};
+    window.__m126[slot] = g.getImageData(0, 0, im.width, im.height).data;
+    window.__m126.W = im.width;
+  }, { slot, b64 });
+}
+
+/* 자리 하나만 정밀 측정 — 창만 잘라 A·N1·N2(전부 «보이는» 상태) · B(그 요소만 숨김) 네 장을 찍는다.
+   화면 통째 차분은 그 자리 «주변» 이 움직이면 통째로 오염된다(22 보상 프레임의 122 쥬시 펄스에서
+   실제로 그랬다 — 3자리 숫자 잉크가 140px 로 읽혔다). N 을 두 장 두는 이유는 한 장짜리 기준선이
+   «그 순간 마침 같은 값» 인 펄스 위상을 못 걸러내기 때문이다. */
+async function inkOne(page, it) {
+  const clip = { x: it.win[0], y: it.win[2], width: it.win[1] - it.win[0], height: it.win[3] - it.win[2] };
+  if (clip.width < 2 || clip.height < 2) return Object.assign({}, it, { ink: null, fill: null, px: 0 });
+  const sel = `[data-m126ink="${it.i}"]`;
+  const shot = async () => (await page.screenshot({ clip })).toString('base64');
+  const a = await shot();
+  await page.waitForTimeout(110); const n1 = await shot();
+  await page.waitForTimeout(110); const n2 = await shot();
+  await page.evaluate((s) => { const e = document.querySelector(s); if (e) e.style.visibility = 'hidden'; }, sel);
+  await page.waitForTimeout(110);
+  const b = await shot();
+  await page.evaluate((s) => { const e = document.querySelector(s); if (e) e.style.visibility = ''; }, sel);
+  for (const [k, v] of [['a', a], ['n', n1], ['n2', n2], ['b', b]]) await stash(page, k, v);
+  const local = Object.assign({}, it, { win: [0, clip.width, 0, clip.height] });
+  const [r] = await inkOf(page, [local]);
+  return Object.assign({}, it, r, { win: it.win });
+}
+
+async function inkOf(page, items) {
+  return page.evaluate(({ items }) => {
+    const da = window.__m126.a, db = window.__m126.b, dn = window.__m126.n, dn2 = window.__m126.n2, W = window.__m126.W;
     const TH = 18;   /* 차분 문턱 — JPEG 가 아니라 PNG 라 잡음은 0 이지만 안티에일리어싱 꼬리는 자른다 */
+    /* 잡음 기준선 — «아무것도 안 바꾸고» 찍은 두 장(A,N)의 차분이다. 애니메이션을 멈춰도
+       캔버스 전투·스프라이트·`#fxl` 연출은 계속 다시 그려지므로, 그 픽셀은 글자를 숨기든 말든
+       움직인다. 이걸 빼지 않으면 창을 통째로 «잉크» 로 읽는다(52 메뉴에서 실제로 그랬다:
+       fs24 두 글자 라벨의 잉크가 202px = 창 전체로 나왔다). */
+    const diff = (p, q, o) => Math.abs(p[o] - q[o]) + Math.abs(p[o + 1] - q[o + 1]) + Math.abs(p[o + 2] - q[o + 2]);
+    const noisy = (o) => diff(da, dn, o) >= TH || (dn2 && diff(da, dn2, o) >= TH) || (dn2 && diff(dn, dn2, o) >= TH);
     /* 측정표는 두 규격을 섞어 쓴다 — «잉크(흰 채움)» 과 «잉크 bbox(외곽선 포함)».
        차분은 후자를 준다. 전자는 차분 안에서 «밝은 채움» 만 남겨 따로 낸다
        (52 box52.js 와 같은 마스크: min(rgb) > 150). 둘을 섞으면 외곽선 두께만큼
@@ -123,13 +157,13 @@ async function inkOf(page, aB64, bB64, items) {
     const FILL = 150;
     return items.map((it) => {
       const [x0, x1, y0, y1] = it.win;
-      let lo = 1e9, hi = -1e9, top = 1e9, bot = -1e9, n = 0;
+      let lo = 1e9, hi = -1e9, top = 1e9, bot = -1e9, n = 0, noise = 0;
       let wlo = 1e9, whi = -1e9, wtop = 1e9, wbot = -1e9, wn = 0;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
           const o = (y * W + x) * 4;
-          const d = Math.abs(da[o] - db[o]) + Math.abs(da[o + 1] - db[o + 1]) + Math.abs(da[o + 2] - db[o + 2]);
-          if (d < TH) continue;
+          if (diff(da, db, o) < TH) continue;
+          if (noisy(o)) { noise++; continue; }
           n++;
           if (x < lo) lo = x; if (x > hi) hi = x;
           if (y < top) top = y; if (y > bot) bot = y;
@@ -140,13 +174,16 @@ async function inkOf(page, aB64, bB64, items) {
           }
         }
       }
-      if (n < 6) return Object.assign({}, it, { ink: null, inkH: null, fill: null, fillH: null, px: n });
+      if (n < 6) return Object.assign({}, it, { ink: null, inkH: null, fill: null, fillH: null, px: n, noise });
+      const w = hi - lo + 1, h = bot - top + 1;
+      /* 창을 거의 꽉 채우면 글자가 아니라 배경을 읽은 것이다 — 값을 내지 말고 오염으로 표시한다. */
+      const dirty = w >= (x1 - x0) - 6 || h >= (y1 - y0) - 6;
       return Object.assign({}, it, {
-        ink: hi - lo + 1, inkH: bot - top + 1, px: n, x0: lo, x1: hi,
+        ink: w, inkH: h, px: n, x0: lo, x1: hi, noise, dirty,
         fill: wn < 6 ? null : whi - wlo + 1, fillH: wn < 6 ? null : wbot - wtop + 1, fillPx: wn,
       });
     });
-  }, { aB64, bB64, items });
+  }, { items });
 }
 
 (async () => {
@@ -166,12 +203,22 @@ async function inkOf(page, aB64, bB64, items) {
     const items = await collect(page);
     if (!items.length) { await ctx.close(); continue; }
     const a = (await page.screenshot()).toString('base64');
+    await page.waitForTimeout(120);
+    const nz = (await page.screenshot()).toString('base64');   /* 아무것도 안 바꾼 두 번째 장 = 잡음 기준선 */
     await page.evaluate(() => document.querySelectorAll('[data-m126ink]').forEach((e) => { e.style.visibility = 'hidden'; }));
     await page.waitForTimeout(120);
     const b = (await page.screenshot()).toString('base64');
     await page.evaluate(() => document.querySelectorAll('[data-m126ink]').forEach((e) => { e.style.visibility = ''; }));
 
-    const measured = await inkOf(page, a, b, items);
+    await stash(page, 'a', a); await stash(page, 'n', nz); await stash(page, 'n2', nz); await stash(page, 'b', b);
+    let measured = await inkOf(page, items);
+    /* 오염·잡음이 낀 자리만 «한 자리씩 클립 캡처» 로 다시 잰다 — 느리지만 정확하다. */
+    for (let k = 0; k < measured.length; k++) {
+      const m = measured[k];
+      if (!m.dirty && !(m.noise > 0)) continue;
+      measured[k] = await inkOne(page, items[k]);
+      measured[k].redone = true;
+    }
     measured.forEach((m) => rows.push(Object.assign({ screen: s.k }, m)));
     await ctx.close();
   }
@@ -194,7 +241,8 @@ async function inkOf(page, aB64, bB64, items) {
   console.log('  ' + ['sx', 'ink', 'nat', 'inkH', 'fill', 'natF', 'fillH', 'fs', '자리 «글자»'].join('\t'));
   for (const r of shown) {
     if (r.ink == null) { console.log(`  ${r.sx}\t-\t-\t-\t-\t-\t-\t${r.fs}\t${r.screen} ${r.key} «${r.text}»  [잉크 미검출 ${r.px}px]`); continue; }
-    console.log(`  ${r.sx}\t${r.ink}\t${r.nat}\t${r.inkH}\t${r.fill == null ? '-' : r.fill}\t${r.natF == null ? '-' : r.natF}\t${r.fillH == null ? '-' : r.fillH}\t${r.fs}\t${r.screen} ${r.key} «${r.text}»`);
+    const flag = r.dirty ? '  ⚠오염(창을 꽉 채움 — 값 쓰지 말 것)' : (r.noise > r.px ? `  ⚠잡음 ${r.noise}px` : '');
+    console.log(`  ${r.sx}\t${r.ink}\t${r.nat}\t${r.inkH}\t${r.fill == null ? '-' : r.fill}\t${r.natF == null ? '-' : r.natF}\t${r.fillH == null ? '-' : r.fillH}\t${r.fs}\t${r.screen} ${r.key} «${r.text}»${flag}`);
   }
   if (JSON_AT) { fs.writeFileSync(JSON_AT, JSON.stringify(rows, null, 1)); console.log('\nsaved ' + JSON_AT); }
 })();
