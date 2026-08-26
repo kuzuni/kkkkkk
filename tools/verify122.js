@@ -684,11 +684,15 @@ async function ampCheck(p, hosts) {
   /* ── §13 진폭 단일 기준 — 재화 탭 (6회차 신설) ─────────────── */
   console.log('§13 광택 피크 Δ루마 한 벌 — 재화 탭');
   const RB = '#shopList .cn-rb>b';
-  await ampCheck(p, [['재화 카드', '#shopList .cn-cd:not(.done)', '#shopList .cn-cd>.fr::after'],
+  /* ⚑ 15회차 — 재화 카드 띠가 **두 겹**이 됐다(측엽은 `.cn-cd::before`, 심은 `.fr::after`).
+     §13 은 «이 띠만 끈» 기준선과 비교하므로 testSel 이 **두 의사요소를 함께** 꺼야 한다 —
+     한쪽만 끄면 남은 겹이 기준선에 섞여 진폭이 실제보다 작게 나온다(소환 헤더 SUM_HD 와 같은 처리). */
+  const CD_BAND = '#shopList .cn-cd>.fr::after,#shopList .cn-cd::before';
+  await ampCheck(p, [['재화 카드', '#shopList .cn-cd:not(.done)', CD_BAND],
                      /* 7회차(Y 1) — 광고 카드와 다이아 카드의 헤더색이 달라 같은 α 가 1.62배로 갈렸다.
                         두 계열의 **헤더면**을 각각 잰다(카드 전체로 재면 크림판이 평탄면으로 잡힌다). */
-                     ['광고카드 헤더', '#shopList .cn-cd:not(.done)>.hd', '#shopList .cn-cd>.fr::after'],
-                     ['다이아카드 헤더', '#shopList .cn-cd.dia>.hd', '#shopList .cn-cd>.fr::after'],
+                     ['광고카드 헤더', '#shopList .cn-cd:not(.done)>.hd', CD_BAND],
+                     ['다이아카드 헤더', '#shopList .cn-cd.dia>.hd', CD_BAND],
                      ['리본1 청록', RB + '|0', RB + '::after'],
                      ['리본2 남보라', RB + '|1', RB + '::after'],
                      ['리본3 자주', RB + '|2', RB + '::after'],
@@ -744,7 +748,14 @@ async function ampCheck(p, hosts) {
      3열 격자의 세로 이웃(칸 번호 +3)을 15/14 ≡ 1/14 주기로 붙여 놓은 것이었다.
      여기서 재는 것은 코드가 아니라 **결과**다 — 칸의 실제 좌표로 이웃을 찾고,
      계산된 animation-delay/duration 으로 위상차를 원형 거리로 잰다. */
-  console.log('§14 이웃 칸 위상 분리 — 가로·세로 이웃이 주기의 20% 이상 벌어지는가');
+  /* ⚑ 15회차 — 이웃 집합을 **(±2, ±1) 까지** 넓혔다. 14회차 채점에서 비평가 AH 가
+     «2열 + 1행» 떨어진 쌍이 51ms(주기의 1.1%) 로 사실상 동위상인 것을 실측으로 짚었는데,
+     13회차판 §14 는 가로·세로만 봐서 **그 쌍을 아예 안 세고 있었다** — 게이트가 PASS 인 채로
+     결함이 살아남는 종류의 구멍이다(12·13회차 §17-4·§18-3 과 같은 계열).
+     문턱은 «시각 거리» 를 따라 두 단으로 준다 — 가까운 쌍(가로 290px · 세로 319px)은 25%,
+     더 먼 쌍(2열 580px · 대각 430~660px)은 **16%**. 16% 는 임의값이 아니라
+     이 격자의 **수학적 상한 1/6 = 16.7%** 바로 아래다(`tools/phase122.js` 가 증명·브루트포스). */
+  console.log('§14 이웃 칸 위상 분리 — 가로·세로 25% · 2열·대각 16% 이상 벌어지는가');
   const nb = await p.evaluate(() => {
     const cards = [...document.querySelectorAll('#shopList .cn-cd')].map(e => {
       const cs = getComputedStyle(e, '::after');   /* 칸 띠는 `.cn-cd>.fr::after` 지만 위상은 칸이 준다 */
@@ -763,20 +774,29 @@ async function ampCheck(p, hosts) {
       const a = cards[i], b = cards[j];
       if (a.dur !== b.dur) continue;               /* 주기가 다르면 «이웃» 비교가 성립하지 않는다 */
       const dx = Math.abs(a.x - b.x), dy = Math.abs(a.y - b.y);
-      const sameRow = dy < 40 && dx > 40 && dx < 400;    /* 가로 이웃 — 열 간격 290 */
-      const sameCol = dx < 40 && dy > 40 && dy < 400;    /* 세로 이웃 — 행 간격 319 */
-      if (!sameRow && !sameCol) continue;
-      out.push({ kind: sameRow ? '가로' : '세로', d: dist(a, b), ms: Math.round(dist(a, b) * a.dur),
+      /* dx/dy 를 열·행 «칸 수» 로 되돌린다(열 피치 290 · 행 피치 319, ±40px 창). */
+      const band = (v, pitch) => { for (let n = 0; n <= 2; n++) if (Math.abs(v - n * pitch) < 40) return n; return -1; };
+      const dc = band(dx, 290), dr = band(dy, 319);
+      if (dc < 0 || dr < 0 || (dc === 0 && dr === 0)) continue;
+      if (dr > 1) continue;                        /* 2행 넘게 떨어지면 한눈에 같이 안 들어온다 */
+      const near = (dc + dr === 1);                /* 맞닿은 쌍 — 가로 290px · 세로 319px */
+      out.push({ kind: dr === 0 ? (dc === 1 ? '가로' : '2열') : (dc === 0 ? '세로' : (dc === 1 ? '대각' : '2열대각')),
+                 near, lim: near ? .25 : .16,
+                 d: dist(a, b), ms: Math.round(dist(a, b) * a.dur),
                  at: '(' + a.x + ',' + a.y + ')-(' + b.x + ',' + b.y + ')' });
     }
     return out;
   });
   {
-    const bad = nb.filter(v => v.d < .20);
-    const worst = nb.length ? nb.reduce((m, v) => v.d < m.d ? v : m) : null;
-    ok(nb.length >= 6, '이웃 쌍 ' + nb.length + '개를 찾았다 (>=6)');
-    ok(bad.length === 0, '이웃 위상차가 전부 주기의 20% 이상'
-      + (worst ? ' — 최소 ' + Math.round(worst.d * 100) + '%(' + worst.ms + 'ms, ' + worst.kind + ' ' + worst.at + ')' : '')
+    const bad = nb.filter(v => v.d < v.lim);
+    const near = nb.filter(v => v.near), far = nb.filter(v => !v.near);
+    const least = a => a.length ? a.reduce((m, v) => v.d < m.d ? v : m) : null;
+    const wn = least(near), wf = least(far);
+    ok(nb.length >= 6, '이웃 쌍 ' + nb.length + '개를 찾았다 (>=6) — 맞닿음 ' + near.length + ' · 2열/대각 ' + far.length);
+    ok(far.length >= 4, '넓힌 이웃(2열·대각) 쌍 ' + far.length + '개 (>=4) — 13회차판은 이 쌍을 세지 않았다');
+    ok(bad.length === 0, '이웃 위상차가 전부 문턱 이상(맞닿음 25% · 2열/대각 16%)'
+      + (wn ? ' — 맞닿음 최소 ' + Math.round(wn.d * 100) + '%(' + wn.ms + 'ms, ' + wn.kind + ' ' + wn.at + ')' : '')
+      + (wf ? ' · 2열/대각 최소 ' + Math.round(wf.d * 100) + '%(' + wf.ms + 'ms, ' + wf.kind + ' ' + wf.at + ')' : '')
       + (bad.length ? ' — 미달 ' + bad.length + '쌍: ' + bad.slice(0, 4).map(v => v.kind + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
   }
 
@@ -882,6 +902,83 @@ async function ampCheck(p, hosts) {
       ok(base > 200, '헤더 제목 흰 잉크 기준선 = ' + base + 'px (>200 이어야 잴 수 있다)');
       ok(lo >= base * 0.9, '헤더 제목 흰 잉크 최솟값 = ' + lo + 'px / 기준선 ' + base
         + 'px (' + Math.round(lo / Math.max(1, base) * 100) + '% ≥ 90%) · 최댓값 ' + hi + 'px');
+    }
+  }
+
+  /* ── §19 재화 카드 글자 잉크 (15회차 신설) ─────────────────────
+     §16 은 **소환 헤더**만 잰다. 14회차 채점에서 AG·AH 가 독립으로 짚은 자리는 그게 아니라
+     **재화 카드**였다(AG «coin [받기] 대비 3.24 → 2.42:1» · AH «'보석' 타이틀 255 → 217»).
+     14회차 게이트는 그 자리를 재는 항목이 아예 없어서 «2인 일치» 지적이 게이트 PASS 를
+     그대로 통과했다 — §14 의 대각 구멍과 같은 계열이다. 그래서 같은 자를 여기에도 댄다.
+     ★ 음성항을 반드시 같이 돌린다: 글자의 z-index 를 걷어내면(= 15회차 이전 상태) 값이
+       실제로 떨어져야 한다. 안 떨어지면 «고쳤는데 안 움직인다» = 자를 의심할 자리다
+       (14회차 §19-4 에서 실제로 한 번 속았다). */
+  console.log('§19 재화 카드 글자 잉크 — 측엽이 카드 흰 글자를 깎지 않는가');
+  {
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const clips = await p.evaluate(() => {
+      const cd = document.querySelector('#shopList .cn-cd:not(.done)');
+      if (!cd) return null;
+      cd.scrollIntoView({ block: 'center' });
+      const out = [];
+      for (const sel of [':scope>.hd>i', ':scope>.bt>u.lab']) {
+        const e = cd.querySelector(sel);
+        if (!e) continue;
+        const r = e.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) continue;
+        out.push({ x: Math.max(0, Math.round(r.x)), y: Math.max(0, Math.round(r.y)),
+                   width: Math.round(r.width), height: Math.round(r.height) });
+      }
+      return out;
+    });
+    const ink = async (ms) => {
+      await seek(p, ms);
+      let n = 0;
+      for (const clip of clips) {
+        const b64 = (await p.screenshot({ clip })).toString('base64');
+        n += await p.evaluate(async src => {
+          const img = new Image();
+          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+          const c = document.createElement('canvas');
+          c.width = img.width; c.height = img.height;
+          const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+          const d = g.getImageData(0, 0, c.width, c.height).data;
+          let k = 0;
+          for (let j = 0; j < d.length; j += 4) {
+            if (.2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2] >= 240) k++;
+          }
+          return k;
+        }, b64);
+      }
+      return n;
+    };
+    const patch = txt => p.evaluate(x => {
+      let e = document.getElementById('jz122ink2');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'jz122ink2'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    if (!clips || clips.length < 2) ok(false, '재화 카드 글자를 못 찾음 (' + (clips ? clips.length : 0) + '자리)');
+    else {
+      const CD_ALL = '#shopList .cn-cd>.fr::after,#shopList .cn-cd>.fr::before,#shopList .cn-cd::before';
+      await patch(CD_ALL + '{opacity:0!important}');       /* 띠 3겹 전부 끈 기준선 */
+      const base = await ink(0);
+      await patch('');
+      const vals = [];
+      for (let i = 0; i < 16; i++) vals.push(await ink(Math.round(4800 * i / 16)));
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      /* 음성항 — 글자를 층에서 내리면(15회차 이전) 측엽이 다시 글자를 깎아야 한다 */
+      await patch('#shopList .cn-cd>.hd>i,#shopList .cn-cd>.qt,#shopList .cn-cd>.bt>u{z-index:auto!important}');
+      const neg = [];
+      for (let i = 0; i < 16; i++) neg.push(await ink(Math.round(4800 * i / 16)));
+      const nlo = Math.min(...neg);
+      await patch('');
+      ok(base > 200, '재화 카드 글자 흰 잉크 기준선 = ' + base + 'px (>200 이어야 잴 수 있다)');
+      ok(lo >= base * 0.9, '재화 카드 글자 흰 잉크 최솟값 = ' + lo + 'px / 기준선 ' + base
+        + 'px (' + Math.round(lo / Math.max(1, base) * 100) + '% ≥ 90%) · 최댓값 ' + hi + 'px');
+      ok(nlo < base * 0.9, '음성항 — 글자 z 를 걷으면 ' + nlo + 'px('
+        + Math.round(nlo / Math.max(1, base) * 100) + '%) 로 떨어진다 (자가 살아 있다는 증거)');
     }
   }
 

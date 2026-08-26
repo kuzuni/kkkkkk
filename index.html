@@ -5298,7 +5298,14 @@
       0 0 calc(15px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(255,231,120,calc(.78 * var(--jz-glow)))}}
 
   /* ── ②-1 재화 카드 아이콘 «둥실»(±3px) + 판 위 스파클 3점 순환(1.8s) ── */
-  .cn-cd>.pn>em{animation:jz122Float calc(2.6s * var(--jz-per)) ease-in-out infinite}
+  /* ⚑ 15회차 — 14회차 채점 AG «재화 1행 공물↔골드 둥실 위상차 286ms(사양 800ms, −64%)».
+     원인은 단순하다: 광택(`.fr::after`)에는 칸마다 `--jz-k` 를 박아 위상을 흩어 놓고
+     **둥실에는 딜레이를 한 줄도 안 줬다** — 14칸이 전부 위상 0 으로 같이 떠올랐다
+     (AG 가 잰 286ms 는 아이콘 잉크 높이가 달라 생긴 차이지 위상차가 아니다).
+     광택과 같은 `--jz-k`(주기의 −n/6)를 그대로 쓴다 → 맞닿은 가로 이웃이 2.6s × 1/3 = **867ms**,
+     세로 이웃이 1300ms 벌어진다. §14 가 푼 (1/3, 1/2) 격자를 둥실이 공짜로 물려받는다. */
+  .cn-cd>.pn>em{animation:jz122Float calc(2.6s * var(--jz-per)) ease-in-out infinite;
+    animation-delay:calc(2.6s * var(--jz-k,0) * var(--jz-per))}
   /* 2회차(N ②) — 1회차 실측 총 이동이 1.8~4.0px(카드마다 다름)로 스펙(총 6px)의 30~67% 였다 */
   @keyframes jz122Float{0%,100%{translate:0 calc(4px * var(--jz-amp))}
     50%{translate:0 calc(-4px * var(--jz-amp))}}
@@ -5413,16 +5420,46 @@
      크림은 255−L = 36 이라 흰 심이 신호를 못 떠맡는 «밝은 면» 이므로 D = 35 규칙을 적용해
      α = 35 / 219 = .16 → 실측 38.4 라 목표 35±3 위쪽으로 새므로 **.148** 로 되돌려 잡았다
      (skew 로 겹치는 폭 때문에 계산보다 8% 세게 나온다). [이동]·마일리지와 같은 규격이다. */
-  .cn-cd>.fr::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
+  /* ⚑ 15회차 — 재화 카드에도 «띠 두 겹» 을 넣는다. 14회차 채점에서 **2인 독립 일치**였다:
+       AG «coin [받기] 라벨 대비 3.24 → 2.42:1 (−25%)» · AH «'보석' 타이틀 255 → 217 (−15%)».
+     소환 헤더(§19-5)와 **같은 결함**이다 — 유리 광택의 어두운 측엽이 흰 글자 «위» 에 합성된다.
+     다만 처방을 그대로 못 옮긴다: 소환은 띠 호스트(`.chd`)가 글자의 **부모**라 z 로 끼우면 끝인데,
+     재화 카드는 띠 호스트(`.fr`)가 글자 판(`.hd`·`.bt`)의 **형제이고 DOM 뒤**라
+     `.fr` 안에서는 두 겹을 어떻게 나눠도 **둘 다 글자 위**다. 반대로 판을 통째로 올리면
+     이번엔 띠가 그 판을 못 지나 헤더·버튼이 죽는다(그래서 13·14회차가 손을 못 댔다).
+     → 어두운 겹을 **`.fr` 밖(카드 자신)** 으로 꺼내고 층을 넷으로 못 박는다:
+         z1 `.cn-cd::before` = **어두운 측엽만** — 판 배경 «위» · 글자 «아래»
+         z2 흰 글자 4종 (`.hd>i` · `.qt` · `.bt>u` · `.cp>i`)
+         z3 «구매 완료» 덮개 3종 (`.blk`·`.dim`·`.dn`) — 글자를 덮는 것이 일이라 글자보다 위
+         z4 `.fr` = 검은 테두리 + **흰 심만** 남은 `::after` (+ 크림 행 전용 `::before`)
+       그래서 글자는 **깎이지 않고 반짝이기만** 하고, 테두리는 여전히 전면이라
+       `.hd>i` 의 음수 인셋(−30px)이 새어도 검은 림이 덮는다(게다가 `.hd{overflow:hidden}` 이 먼저 자른다).
+     ⚠ 기하는 `.fr` 의 패딩상자(264×295 @ 7,7)에 **정확히** 맞춰야 한다 — 두 겹이 1px 만 어긋나도
+       «띠 하나» 로 안 보인다. 호스트가 278px 로 달라졌으므로 폭 22% 는 **58.08px 로 못 박았다**. */
+  .cn-cd{isolation:isolate}    /* 칸마다 층을 가둔다 — 격자에서 z 가 칸끼리 섞이지 않게 */
+  .cn-cd::before{content:'';position:absolute;left:7px;top:-17px;height:343px;width:58.08px;
+    z-index:1;pointer-events:none;
     --jz-run:264px;    /* 판 폭 그대로 — 10회차 기하 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(.148 * var(--jz-glow))) 22%,
       rgba(0,0,0,calc(.148 * var(--jz-glow))) 32%,
-      rgba(255,255,255,calc(var(--jz-ga,.33) * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(var(--jz-ga,.33) * var(--jz-glow))) 58%,
+      rgba(0,0,0,0) 42%,
+      rgba(0,0,0,0) 58%,
       rgba(0,0,0,calc(.148 * var(--jz-glow))) 68%,
       rgba(0,0,0,calc(.148 * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
+    transform:skewX(-16deg);translate:-100% 0;
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite;
+    animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
+  .cn-cd>.hd>i,.cn-cd>.qt,.cn-cd>.bt>u,.cn-cd>.cp>i{z-index:2}
+  .cn-cd>.blk,.cn-cd>.dim,.cn-cd>.dn{z-index:3}
+  .cn-cd>.fr{z-index:4}
+  .cn-cd>.fr::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
+    --jz-run:264px;    /* 판 폭 그대로 — 10회차 기하 */
+    background:linear-gradient(90deg,rgba(255,255,255,0) 32%,
+      rgba(255,255,255,calc(var(--jz-ga,.33) * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(var(--jz-ga,.33) * var(--jz-glow))) 58%,
+      rgba(255,255,255,0) 68%);
     transform:skewX(-16deg);translate:-100% 0;
     animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
   /* ⚑ 14회차 — 크림 판(#FCEAD6, 휘도 236.5) 전용 **흰 심 한 겹**을 덧댄다.
@@ -5443,7 +5480,8 @@
     transform:skewX(-16deg);translate:-100% 0;
     animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite;
     animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
-  .cn-cd.done>.fr::after,.cn-cd.done>.fr::before{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 */
+  .cn-cd.done>.fr::after,.cn-cd.done>.fr::before,
+  .cn-cd.done::before{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 (15회차: 새 측엽 겹도 같이 끈다) */
   /* ⚑ 10회차(AA ④6 · AB ③1 — 둘이 독립으로 «위상이 안 흩어졌다» 를 짚었다).
      9회차까지 규칙이 **6n+1 ~ 6n+4 네 개뿐**이라, 6칸 주기의 5·6번째 칸은 규칙이 없어
      기본값 0 으로 떨어졌다. 게다가 −.77 씩 = 주기 3.05s 를 4등분한 값이라 6칸에 안 맞았다.
@@ -18193,16 +18231,23 @@ function renderCoinPage(list){
      비평가 AE·AF 가 13회차 채점에서 **독립으로 같은 5쌍**을 짚었다(실측 182~245ms,
      심 위치 차 16~26px = 카드 폭의 6~10%). 각 열이 «위아래로 이어진 하나의 긴 사선» 으로 뭉쳐
      보이는 것이 이 회차 ①·④ 의 최대 감점 사유였다.
-     → 위상을 **열·행 두 축으로** 준다: 열마다 +1/4 주기, 행마다 +1/2 주기.
-       이웃 간격은 가로 1/4(800ms) · 세로 1/2(1600ms) · 대각 1/4(800ms) 이 되고,
-       **넷 중 최소가 1/4** 이다. (d(a)·d(b)·d(a±b) 를 동시에 1/3 이상으로 만드는 (a,b) 는
-       존재하지 않는다 — a=b=1/3 이면 a−b=0 이 된다. 그래서 1/4 가 이 격자의 상한이다.)
+     → 위상을 **열·행 두 축으로** 준다: 열마다 +a 주기, 행마다 +b 주기.
+     ⚑ 15회차 — 13회차가 고른 (a,b) = (1/4, 1/2) 는 **가로·세로만 보고 푼 값**이라
+       «2열 + 1행» 떨어진 칸이 2×(1/4) + 1/2 = 1 ≡ **0, 즉 완전 동위상**이 된다.
+       14회차 채점에서 비평가 AH 가 실측으로 짚었다(차 3~5px = 51ms = 주기의 1.1%).
+       이웃 집합을 **(±2, ±1) 까지** 넓혀 (a,b) 를 다시 풀었다(`d(dc·a + dr·b)` 의 원형 거리
+       최소값을 최대화 — N=60 까지 브루트포스, `tools/phase122.js`):
+         **최적은 min = 1/6 이고 (a, b) = (1/3, 1/2) 가 그것을 달성한다.**
+         가로 1/3(1600ms) · (2열) 1/3 · 세로 1/2(2400ms) · 대각 4종 전부 1/6(800ms).
+       13회차 값과 비교하면 **가까운 쌍이 오히려 좋아졌다**(가로 1/4 → 1/3), 그러면서
+       0% 이던 대각 두 종이 16.7% 로 올라온다. 1/6 은 이 격자의 **상한**이다 —
+       (2,0) 이 2a, (1,1)·(1,−1) 이 a±b 라 셋을 동시에 1/6 초과로 만드는 (a,b) 는 없다.
      `rowBase` 는 묶음마다 이어지는 행 번호다(광고 0~1 · 다이아 2~3 · 유물조각 4).
      칸 수가 3의 배수가 아닌 묶음(다이아 5칸)이 있어 전역 카운터로는 열이 어긋난다 —
      그래서 열은 **묶음 안 번호**(`i % 3`)에서 뽑는다. */
   const jzK = (i, rowBase) => {
     const col = i % 3, row = rowBase + ((i / 3) | 0);
-    return ';--jz-k:' + (-(((col * 3 + row * 6) % 12) / 12)).toFixed(4);
+    return ';--jz-k:' + (-(((col * 2 + row * 3) % 6) / 6)).toFixed(4);
   };
   let h = '<div class="cn-wrap">'
     /* §1 배너 아트 + §2 타이틀 */
