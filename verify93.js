@@ -273,7 +273,7 @@ function pwLaunch(){
     if(!b) return { err:'보상 받기 버튼 없음' };
     b.click();
     const nf = () => new Promise(r => requestAnimationFrame(() => r()));
-    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9;
+    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9, land = [];
     const t0 = Date.now();
     while(Date.now() - t0 < 2200){
       const t = Date.now() - t0;
@@ -308,13 +308,25 @@ function pwLaunch(){
         const r = f.el.getBoundingClientRect(), cy = r.top + r.height/2;
         if(cy > 500 && cy < 950) corr.push([f.cur, Math.round(r.left + r.width/2)]);
       }
+      /* 11회차 — 착지 포즈(.fx-land2)는 «알약 중심에 찍힌 한 점» 이 아니라 비행 마지막 위치에서
+         알약까지 70ms 를 **주행**해야 한다. 그 전에는 47~137px 이 한 프레임에 건너뛰어 비평가
+         AF·AG 가 둘 다 «닿기 전에 증발한다» 로 읽었다(리뷰 §4-11-1). 주행 중 표본과 끝점을 같이 센다. */
+      for(const le of document.querySelectorAll('#fxl .fx-land2')){
+        const r3 = le.getBoundingClientRect();
+        const cx = r3.left + r3.width/2, cy3 = r3.top + r3.height/2;
+        let dmin = 1e9;
+        for(const pv of [[583,54],[843,52]]) dmin = Math.min(dmin, Math.hypot(cx - pv[0], cy3 - pv[1]));
+        land.push(Math.round(dmin));
+      }
       await nf();
     }
     const g = corr.filter(c => c[0] === 'gold').map(c => c[1]);
     const d = corr.filter(c => c[0] === 'dia').map(c => c[1]);
     const sp = a => a.length ? Math.max(...a) - Math.min(...a) : -1;
     return { lit, samp, line, nNear, nSamp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
-             gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1 };
+             gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1,
+             landN:land.length, landRun:land.filter(v => v > 12).length,
+             landHit:land.filter(v => v <= 6).length, landMax:land.length?Math.max(...land):-1 };
   });
   chk(!t2c.err, '모달 보상 수령 트리거' + (t2c.err ? ' — ' + t2c.err : ''));
   chk(t2c.lit > 10, '딤 위 알약 복제판이 ' + t2c.lit + '프레임 떠 있다 (모달에서는 원본이 딤 아래라 안 보인다)');
@@ -327,6 +339,17 @@ function pwLaunch(){
       + ' (캡처 리듬 100ms · ≥3 — 종단 속도가 크면 «닿는 장면» 이 프레임 사이에 빠진다)');
   chk(t2c.gMin >= 970 && t2c.dMin >= 1010,
       '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)');
+  /* 11회차 회귀 — 착지 «순간이동» 금지. 주행 표본(>12px)이 있어야 하고, 끝점은 알약 중심 6px 안이며,
+     주행 거리는 한 프레임 도약(≈140px)보다 커지면 안 된다. */
+  chk(t2c.landRun >= 3, '착지 주행 표본(알약에서 12px 초과) ' + t2c.landRun + '/' + t2c.landN
+      + ' (≥3 — 0 이면 착지 포즈가 알약에 «찍히기만» 하고 마지막 간격이 순간이동이다)');
+  chk(t2c.landHit >= 1, '착지 끝점이 알약 중심 6px 안에 찍힌 표본 ' + t2c.landHit + ' (≥1)');
+  /* 씬B 는 두 구간 경로라 총연장이 ≈1900px 이고 종단 속도가 커서 마지막 간격이 200px 을 넘는다.
+     그래서 상한은 «비행이 통째로 일찍 끝나지 않았는가»(경로의 15% 이내) 만 본다 — 그 간격이
+     streak 로 안 보이게 하는 것은 거리가 아니라 **속도**이고, 그쪽은 착지 transition 길이를
+     `rem/1900` 으로 환산해(45~120ms ≈ 2000px/s 상한) index.html 쪽에서 묶는다. */
+  chk(t2c.landMax >= 0 && t2c.landMax <= 280,
+      '착지 주행 최대 거리 ' + t2c.landMax + 'px (≤280 = 씬B 총연장 ≈1900px 의 15% — 더 크면 비행이 너무 일찍 끝난 것이다)');
 
   console.log('[3] 전투 발(킬 골드)은 변화 0 — 개수 3~6 · #fxlc · 0.8초 안');
   const t3 = await page.evaluate(async () => {
