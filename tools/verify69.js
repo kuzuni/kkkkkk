@@ -269,7 +269,8 @@ async function fresh(browser, w = 1080, h = 2280) {
       ? ok('보상 요약 «N 외 n개» 형식') : fail('보상 요약 형식 이상: ' + data.map((d) => d.sum).join(' | '));
     data.every((d) => d.qty.length > 0 && !/NaN|undefined/.test(d.qty)) ? ok('수량 표기 정상') : fail('수량에 NaN/undefined');
     /* 대표 썸네일 = 값이 가장 큰 보상인지.
-       ⚠ 배지는 `fmtShort()` 표기다(«3K»). `fmt()` 의 «3.00K» 는 5자라 프레임 림과 충돌해서 바꿨다. */
+       ⚠ 배지는 `fmtShort()` 표기다(«3K»). `fmt()` 의 «3.00K» 는 5자라 프레임 림과 충돌해서 바꿨다.
+       150 뒤로는 **골드일 때만** 접는다 — 다이아·유물조각 배지는 «1,500» 처럼 숫자 그대로다. */
     /* 125(화폐 아이콘 통일) 뒤로 `rw.ic` 는 이모지 «글자» 가 아니라 `<img class="cic" data-cur-ic="…">`
        **마크업 문자열**이다. 그래서 `firstChild.textContent` 는 항상 '' 이고 이 항목이 영구 FAIL 로
        굳어 있었다(수량·아이콘은 실제로 맞게 그려진다). 텍스트가 아니라 «무엇을 그렸나» 로 비교한다. */
@@ -284,7 +285,9 @@ async function fresh(browser, w = 1080, h = 2280) {
         const rw = mailRw(m).slice().sort((a, b) => b.v - a.v)[0];
         const cell = document.querySelectorAll('.ml-r')[i];
         const q = cell.querySelector('.ml-i>i').textContent.trim();
-        return q === fmtShort(rw.v) && key(cell.querySelector('.ml-i').firstChild) === want(rw.ic);
+        /* 150 — 배지 표기는 재화별로 갈린다(골드만 알파벳 단위, 나머지는 «숫자 그대로»).
+           `fmtShort` 의 두 번째 인자가 그 갈래다 — 화면과 같은 인자로 불러야 같은 문자열이 나온다. */
+        return q === fmtShort(rw.v, rw.k === 'g' ? 'gold' : '') && key(cell.querySelector('.ml-i').firstChild) === want(rw.ic);
       });
     });
     topOk ? ok('대표 썸네일 = 최대 보상') : fail('대표 썸네일이 최대 보상이 아니다');

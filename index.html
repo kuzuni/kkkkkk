@@ -12216,10 +12216,44 @@ function fmt(n){
   if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
   /* 1000 이상은 접지 않고 세 자리 쉼표. 1e21 이상은 Number 가 지수 표기로 새므로 문자열로 끊는다. */
   const f = Math.floor(n);
+  /* 1e21 이상은 Number 의 toLocaleString·toFixed 가 «1e+21» 로 새므로 BigInt 로 자릿수를 찍는다
+     (Math.floor 를 거쳤으니 정수 — 2⁵³ 넘는 double 은 전부 정수다). */
   return f < 1e21 ? f.toLocaleString('en-US')
-                  : f.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                  : BigInt(f).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 const fmtCur = (k, n) => k === 'gold' ? fmtG(n) : fmt(n);
+/* 150 — «숫자 그대로» 는 자릿수가 자란다(다이아 18,000,000 = 잉크 222px vs 가방 칸 148px).
+   접거나 «…» 로 자르면 주인 지시를 어기는 것이므로 **한 글자도 버리지 않고 폭에만 맞춘다** —
+   그릇을 넘칠 때만 글자 크기를 눌러 넣는다(PROGRESS 150 비고의 «콤마 + 줄임 없이 폭 클램프»).
+   · 줄이는 축은 `font-size` 다. `transform` 을 쓰면 A3(`.cbox b` scaleX 1.156)·22(`.qs-i i.ifq`
+     scaleX 1.18) 처럼 **이미 scaleX 를 걸어 둔 남의 규칙을 덮어써** 그쪽 실측이 무너진다.
+   · 넘치지 않으면 인라인 스타일을 남기지 않는다 — 짧은 값에서는 CSS 원본이 그대로 보여야
+     104·141·inkA3 같은 기존 게이트가 흔들리지 않는다.
+   · 같은 문자열·같은 폭이면 다시 재지 않는다(drawHud 가 매 프레임 부른다). */
+const FITMIN = 0.55;
+function fitNum(el, maxW){
+  if(!el) return;
+  const t = el.textContent, box = maxW || el.clientWidth;
+  if(!box) return;
+  if(el.dataset.fitT === t && +el.dataset.fitB === box) return;
+  el.dataset.fitT = t; el.dataset.fitB = String(box);
+  el.style.fontSize = '';
+  const base = parseFloat(getComputedStyle(el).fontSize) || 0;
+  if(!base) return;
+  const rg = document.createRange();
+  const ink = () => { rg.selectNodeContents(el); return rg.getBoundingClientRect().width; };
+  /* 한 번에 안 닿는다 — `-webkit-text-stroke` 는 px 고정이라 글자를 줄여도 그 몫은 안 줄고,
+     비율 한 방(box/ink)은 늘 그만큼 넘친다(가방 배지 실측: 222 → 목표 148 인데 161 에 착지).
+     남은 초과분만큼 두 번 더 좁혀 수렴시킨다. 바닥(FITMIN)에 닿으면 거기서 멈춘다. */
+  let fs = base;
+  for(let i = 0; i < 3; i++){
+    const w = ink();
+    if(w <= box + 0.5) break;
+    fs = Math.max(base * FITMIN, fs * (box / w));
+    el.style.fontSize = fs.toFixed(2) + 'px';
+    if(fs <= base * FITMIN + 0.01) break;
+  }
+}
 const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
 const rnd = (a,b) => a + Math.random()*(b-a);
 const pct = v => (v*100).toFixed(v < 0.1 ? 1 : 0) + '%';
@@ -16600,13 +16634,13 @@ function renderPcb(){
   }
   if(d !== pcbDia){
     pcbDia = d;
-    document.querySelectorAll('.pcb-d>b').forEach(e => { e.textContent = d; });
+    document.querySelectorAll('.pcb-d>b').forEach(e => { e.textContent = d; fitNum(e); });   /* 150 */
   }
   /* 89 — 유물 페이지 알약(유물조각) */
   const r = fmt(fxVal('relic'));
   if(r !== pcbRel){
     pcbRel = r;
-    document.querySelectorAll('.pcb-r>b').forEach(e => { e.textContent = r; });
+    document.querySelectorAll('.pcb-r>b').forEach(e => { e.textContent = r; fitNum(e); });   /* 150 */
   }
 }
 
@@ -16615,11 +16649,13 @@ function drawHud(){
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
      레벨 · 경험치 · 유물조각 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
   $('cpN').textContent = fmt(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
+  fitNum($('cpN'));                                    /* 150 — 자릿수가 길어져도 한 글자도 안 버린다 */
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
   /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
   $('goldN').textContent = fmtG(fxVal('gold'));
   $('diaN').textContent = fmt(fxVal('dia'));
+  fitNum($('diaN'));                                   /* 150 — 골드(fmtG)는 5자를 안 넘어 필요 없다 */
   /* 33 — 정보 팝업이 열려 있으면 보유량 표시도 같이 갱신한다(열린 채로 값이 굳지 않게) */
   if(curInfoKey) renderCurInfo();
   /* 41 — 03·14 팝업 내장 재화 바도 같이 갱신 */
@@ -20396,10 +20432,12 @@ let bagTab = 'cur';
 /* 재화 탭 — 보유 재화 + S.own 보유 재료(등급 내림차순) */
 function bagCur(){
   const out = [
-    { ic:curIc('gold'), n:'골드',       g:1, q:S.gold | 0, k:'gold' },   /* 150 — 골드만 알파벳 단위 */
-    { ic:curIc('dia'), n:'다이아',     g:3, q:S.dia | 0 },
-    { ic:curIc('relic'), n:'유물조각',     g:2, q:S.relic | 0 },
-    { ic:curIc('mile'), n:'마일리지',   g:4, q:S.mileage | 0 }
+    /* 150 — `| 0` 은 int32 로 자른다: 2³¹ 를 넘는 보유량이 **음수**로 찍혔다(다이아 4.2e9 → -94,967,296).
+       111 시절엔 접미사 표기가 큰 자릿수를 가려 눈에 안 띄었고, «숫자 그대로» 로 바꾸자 드러났다. */
+    { ic:curIc('gold'), n:'골드',       g:1, q:Math.floor(S.gold) || 0, k:'gold' },   /* 골드만 알파벳 단위 */
+    { ic:curIc('dia'), n:'다이아',     g:3, q:Math.floor(S.dia) || 0 },
+    { ic:curIc('relic'), n:'유물조각',     g:2, q:Math.floor(S.relic) || 0 },
+    { ic:curIc('mile'), n:'마일리지',   g:4, q:Math.floor(S.mileage) || 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
   cat.forEach(it => {
@@ -20424,12 +20462,16 @@ function renderBag(){
       + ' data-bagk="' + (r.k || '') + '">'
       + '<u>' + r.ic + '</u><b class="ifq">' + fmtShort(r.q, r.k) + '</b></div>').join('');
   $('bagGrid').innerHTML = cells + '<div class="bg53-c ifr em"></div>'.repeat(Math.max(0, BAG_MIN - rows.length));
+  /* 150 — 수량이 «숫자 그대로» 라 길어질 수 있다. 칸 폭(148)을 넘으면 글자만 눌러 넣는다. */
+  $('bagGrid').querySelectorAll('.bg53-c>.ifq').forEach(e => fitNum(e, e.closest('.bg53-c').getBoundingClientRect().width));
   /* 활성 알약은 «오른쪽 칸» 에 붙어 있는 게 레퍼런스 상태다. 왼쪽 칸이 활성이면 알약을 왼쪽으로 옮긴다 */
   $('bagPill').style.marginLeft = bagTab === 'use' ? '0px' : '372px';
   $('bagTabs').querySelectorAll('[data-bagtab]').forEach(t =>
     t.classList.toggle('act', t.dataset.bagtab === bagTab));
 }
-function openBag(){ renderBag(); $('bagw').classList.add('on'); }
+/* 150 — «보이게 한 뒤» 그린다. 숨어 있는 동안(display:none) 그리면 칸 폭이 0 이라
+   150 의 폭 클램프(fitNum)가 잴 것이 없다. 한 프레임 안이라 깜빡임은 없다. */
+function openBag(){ $('bagw').classList.add('on'); renderBag(); }
 function closeBag(){ $('bagw').classList.remove('on'); }
 /* 딤(오버레이 자신)을 누르면 닫힌다 — 09·17·33 과 같은 관례 */
 $('bagw').addEventListener('click', e => { if(e.target.id === 'bagw') closeBag(); });
