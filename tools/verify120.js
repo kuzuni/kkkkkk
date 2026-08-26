@@ -56,11 +56,28 @@ const inter = (a, b) => {
       await page.goto(URL);
       await page.waitForTimeout(700);
 
-      const r = await page.evaluate(() => {
+      const r = await page.evaluate(async () => {
         RELICS.forEach((x, i) => { S.own[x.id] = { n: 0, l: [11, 10, 13, 9, 10, 12, 10, 11, 9, 10][i] }; });
         S.relic = 99999;
         openRelw();
         void document.body.offsetHeight;
+        /* 60 쥬시 오픈 팝인이 도는 경로(탭 클릭)로 들어오면 수축 프레임을 재게 된다 —
+           이 게이트는 openRelw() 직접 호출이라 애니메이션이 안 붙지만, 다음 세션이 경로를
+           바꿔도 조용히 틀린 값을 재지 않도록 기하가 멈출 때까지 기다린다(cap120 과 같은 처방). */
+        {
+          const sig = () => [...document.querySelectorAll('#relw .rw-c')]
+            .map(e => { const q = e.getBoundingClientRect();
+              return `${q.left.toFixed(2)},${q.top.toFixed(2)},${q.width.toFixed(2)}`; }).join('|');
+          const wait = ms => new Promise(r => setTimeout(r, ms));
+          let prev = '', same = 0, waited = 0;
+          while (waited < 4000) {
+            await wait(60); waited += 60;
+            const s = sig();
+            same = (s === prev && s !== '') ? same + 1 : 0;
+            prev = s;
+            if (same >= 3) break;
+          }
+        }
         const app = document.getElementById('app'), ar = app.getBoundingClientRect(), sc = ar.width / 1080;
         const F = el => { const q = el.getBoundingClientRect();
           return { l: (q.left - ar.left) / sc, t: (q.top - ar.top) / sc,
