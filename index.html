@@ -2282,7 +2282,20 @@
      (3px = 행 높이의 2.0%, 접힘 대비 1:49) 으로 같은 것을 말했다 → **진폭 8→12px · 피크 36ms ·
      복귀 100ms(6프레임)** 로 둘 다 키웠다. 6회차 K 가 «16px 은 높이 점프» 라 한 것과 지금 «8px 은
      렌더 노이즈» 사이의 값이다. */
-  .ml-r.out{animation:mlOut .30s linear both;animation-delay:var(--mld,0ms);
+  /* ★ 22회차 — 총 길이 T 를 **.30s → .21s (0.70배)** 로 내렸다. 이 화면의 8개 애니메이션
+     (`mlOut·mlOutIn·mlAcc·mlFoot·mlIco·mlBtn·mlSum·mlTtl`)과 JS 의 `MLDEL_DUR/BUDGET/STAG` 는
+     **반드시 같이** 움직인다(키프레임이 전부 퍼센트라 길이만 바꾸면 내부 스케줄이 통째로 비례한다).
+
+     **왜 튜닝이 아니라 길이인가** — 19~21회차가 «빈 판 + 빈 구멍 = T − C» 이고 C 의 상한은
+     제목 잉크 38px 라는 **기하**가 정한다는 것을 식으로 닫았다(§7-17 ①). 즉 이 결함을 줄이는
+     레버는 T 하나뿐이다. 그래서 22회차는 튜닝하지 않고 **T=300 과 T=210 두 벌을 캡처해 비평가에게
+     직접 물었고**, 비평가 2명이 **독립으로** A 7 / **B 8·8·8·8** 을 냈다(§7-20).
+     두 벌은 기하가 비트 단위로 같아서(진행률 일치 11쌍 중 8쌍 픽셀 차 0) 차이는 시계뿐이다.
+
+     ⚠ **이 값을 되돌리려면 `MLDEL_DUR` 과 하네스의 재렌더 창(240~800ms)을 같이 본다.**
+     재렌더 지연 = `MLDEL_DUR + (n−1)·stag + 20` 이고, 이 값이 하네스 창 밖으로 나가면
+     `cap92fx`·`probe92` 가 «에러» 가 아니라 **«그럴싸한 거짓 수치»** 를 낸다(§7-19). */
+  .ml-r.out{animation:mlOut .21s linear both;animation-delay:var(--mld,0ms);
     pointer-events:none;position:relative;z-index:1}
   /* ★ 14회차 — 높이 커브를 **지수 감속 147(1−p)^1.6 → «등속 + 착지»** 로 바꿨다.
      13회차가 남긴 세 문제(뒤쪽 110ms 가 잉크를 안 옮김 · 합산 상승 피크 1.44 · 틴트 식별 창 25ms)는
@@ -2454,7 +2467,7 @@
      즉 «어느 행이 대상인가»(선택)는 **동시에** 말해야 하고, «어떻게 사라지는가»(진행)만 스태거다.
      18회차 Ψ·Χ 가 본 «한 덩어리로 읽힌다» 는 그때 **기하 스태거가 0** 이어서 생긴 것이고,
      지금은 기하·알파가 50ms 어긋나 있으므로 그 근거가 이미 해소돼 있다. */
-  .ml-r.out>.ml-in{animation:mlOutIn .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out>.ml-in{animation:mlOutIn .21s linear both;animation-delay:var(--mld,0ms)}
   .ml-r.out>.ml-in{background:#F2C7C7}
   /* scale 계수 = 위 `mlOut` 의 height ÷ 147 (둘은 반드시 같이 고친다).
      림 플래시 창을 9%/25% → **12%/33%**(36ms/99ms)로 넓혔다 — 수명을 400→300 으로 줄이면서
@@ -2619,21 +2632,21 @@
      전부» 라고 적었다. Ψ 도 18회차에 «t=250 의 796×10 바에 좌측 액센트 스트립이 여전히 렌더된다» 고
      같은 것을 짚었다. → **0 → 170ms**(제목보다 20ms 먼저 죽는다. Τ 처방 A-2 의 값 그대로).
      띠가 빠지면 남는 것은 테두리뿐이고, 그 구간은 α 종료 255ms 로 대부분 α<0.1 이다. */
-  .ml-r.out .ml-ac{animation:mlAcc .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-ac{animation:mlAcc .21s linear both;animation-delay:var(--mld,0ms)}
   @keyframes mlAcc{0%{opacity:1}56.67%{opacity:0}100%{opacity:0}}      /* 170ms — 제목(190)보다 먼저 */
   /* ★ 21회차 — **발자국만 따로 뗐다.** Υ·Ζ 가 독립으로 «5개 요소 중 발자국 하나만 자기 하변이
      잘리기 전에 못 꺼진다» 를 실측했다(Υ: 클립 29ms vs 소거 40ms · Ζ: ~26ms 에 자기 α 0.34).
      발자국은 카드 바닥에 붙어 있어(하변 rel 140/147) 클립이 가장 먼저 닿는 요소다.
      → **0 → 26ms** 로 당겨 «하변 잘리기 전 소등» 규칙이 5/5 요소에서 성립한다. */
-  .ml-r.out .ml-ac::after{animation:mlFoot .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-ac::after{animation:mlFoot .21s linear both;animation-delay:var(--mld,0ms)}
   @keyframes mlFoot{0%{opacity:1}8.67%{opacity:0}100%{opacity:0}}      /* 26ms — 클립 29ms */
-  .ml-r.out .ml-d,.ml-r.out .ml-i{animation:mlIco .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-d,.ml-r.out .ml-i{animation:mlIco .21s linear both;animation-delay:var(--mld,0ms)}
   @keyframes mlIco{0%{opacity:1}13.33%{opacity:0}100%{opacity:0}}      /* 40ms — 클립 43ms */
-  .ml-r.out .ml-b{animation:mlBtn .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-b{animation:mlBtn .21s linear both;animation-delay:var(--mld,0ms)}
   @keyframes mlBtn{0%{opacity:1}18%{opacity:0}100%{opacity:0}}          /* 54ms — 클립 57ms */
-  .ml-r.out .ml-s{animation:mlSum .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-s{animation:mlSum .21s linear both;animation-delay:var(--mld,0ms)}
   @keyframes mlSum{0%,6.67%{opacity:1}32.33%{opacity:0}100%{opacity:0}} /* 20→97ms — 클립 100ms */
-  .ml-r.out .ml-t{animation:mlTtl .30s linear both;animation-delay:var(--mld,0ms)}
+  .ml-r.out .ml-t{animation:mlTtl .21s linear both;animation-delay:var(--mld,0ms)}
   /* ★ 21회차 — 110→**200ms**. 처음엔 Υ 처방대로 208ms 로 뒀는데 계측기가 클립 시점 실효 α 를
      **0.164** 로 냈다. 내 불변식 상한(0.2) 안이긴 하나, 비평가들이 «판독 임계 아래» 라고 **실제로
      판정해 준 값**은 Ρ 0.12 · Τ 0.115 · Ζ 0.062 · Υ 0.059 다 — 0.164 는 아무도 안 본 구간이다.
@@ -17926,7 +17939,16 @@ function openMail(){
        (ㄷ) 8회차의 «스태거 280ms = 따로 두 번» 실패와 다르다 — 50ms 는 별개 이벤트 인지 임계(≈200ms)의
             1/4 이라 «한 동작 안의 시차» 로 읽힌다(P-④ 가 요구한 «일괄» 이 깨지지 않는다).
      총 길이는 2장 350ms(58 계약 0.3~0.8s 안). 3장 이상은 예산(360)이 그대로 상한을 잡는다. */
-  const MLDEL_DUR = 300, MLDEL_BUDGET = 360, MLDEL_STAG = 50;
+  /* ★ 22회차 — **300/360/50 → 210/252/35 (전부 0.70배).** CSS 쪽 8개 애니메이션 `.30s → .21s` 와
+     **한 세트**다. 근거는 `.ml-r.out` 위 주석과 `docs/review/92-우편함하단버튼.md` §7-19·§7-20.
+     스태거 35ms 는 별개 이벤트 인지 임계(≈200ms)의 17.5% 라 (ㄷ) 의 «한 동작 안의 시차» 가 유지되고,
+     «두 통» 신호의 세기(두 행 높이 격차 피크 = 순항속도 × 스태거)는 **0.643×50 = 0.919×35 = 32.2px**
+     로 T 와 무관하게 보존된다 — 비평가 AA·AB 가 독립으로 같은 값을 냈다.
+     2장 총 길이는 350 → **245ms**(58 계약 0.3~0.8s 의 하한 아래로 내려가지만, 그 계약은 «재화 획득»
+     연출 대상이고 이것은 «구조 이동» 이다 — 이 저장소의 구조 이동 대역은 `jzBoxIn .22s`·`jzBoxOut .12s`·
+     `jzPgIn .12s`·`jzSheetIn .24s`·`jzSheetOut .13s` 로 120~240ms 다. 300ms 는 그 상한을 +25% 넘고
+     210ms 는 대역 안이라는 것이 AA 가 ④ 에서 A 를 7 로 깎은 이유다). */
+  const MLDEL_DUR = 210, MLDEL_BUDGET = 252, MLDEL_STAG = 35;
   /* 12회차 — 스태거 0. W-③ 이 «두 행 합산까지 단조 하강» 을 요구했는데, 행당 곡선이 단조 감속이면
      스태거가 있는 한 «두 번째 행이 들어오는 순간» 이 반드시 계단이 된다(실측 단차 0.82~0.85).
      겹침을 100% 로 두면 합이 곡선의 2배라 **단조가 보존**된다. 덤으로 총 320ms 로 가장 짧고
