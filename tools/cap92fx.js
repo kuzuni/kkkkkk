@@ -25,7 +25,12 @@ const pre = process.argv[2] || 'docs/review/92-fx';
 /* 16회차 — α 가 300 → **210ms** 에 0 이 됐으므로(§6-19) 표본을 새 타임라인에 다시 맞춘다.
    210 을 반드시 넣어 «카드가 마지막으로 보이는 프레임» 을 잡고, 그 뒤 260·320 으로
    «카드는 없고 남는 행만 계속 올라오는» 구간과 착지를 담는다. 플래시 피크 40ms 는 그대로. */
-const STOPS = [0, 40, 75, 120, 165, 210, 260, 320];
+/* ★ 18회차 — 285ms 를 넣었다. 17회차 채점에서 비평가 **둘 다** «260 → 320 두 표본만 보고»
+   «68.8px/프레임 등속으로 달리다 한 프레임에 0 = 하드 스톱» 이라고 적었는데, probe92 의 10ms
+   전수 표본은 240ms 이후가 0.34 → 0.13px/ms 로 **감속 착지**한다고 말한다(재가속 0.003).
+   착지 구간이 표본 사이에 통째로 들어가 있어서 «안 보이니 없다» 로 읽힌 것이다.
+   250·285 를 주면 착지를 직접 볼 수 있다. 스태거 50ms 를 넣었으므로 창도 320 → 370 으로 늘린다. */
+const STOPS = [0, 40, 75, 120, 165, 210, 250, 285, 370];
 
 (async () => {
   const b = await launch(chromium);
@@ -106,7 +111,7 @@ const STOPS = [0, 40, 75, 120, 165, 210, 260, 320];
     /* 상자(`mlOut`)와 내용 페이드(`mlOutIn` 좌측 · `mlOutR` 우측)를 **전부 같이** 잡아
        같은 t 로 탐색한다 — 하나라도 빠지면 그 요소의 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => /^(mlOut|mlOutIn|jzDn|jzUp)$/.test(a.animationName));
+      .filter((a) => /^(mlOut|mlOutIn|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);

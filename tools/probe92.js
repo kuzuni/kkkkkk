@@ -76,7 +76,7 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
     window.setTimeout = window.__raw;
     void document.body.offsetHeight;
     document.querySelectorAll('.ml-r.out').forEach((r) => void getComputedStyle(r).animationName);
-    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|jzDn|jzUp)$/.test(a.animationName));
+    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   if (!(await p.evaluate(() => window.__anims.length))) { console.log('✗ 애니메이션을 못 잡았다 — 중단'); await b.close(); process.exit(1); }
@@ -119,6 +119,24 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
             cx: ir.left + ir.width / 2, cy: ir.top + ir.height / 2, right: ir.right, left: ir.left,
             gutter: nr ? (nr.top - nRing) - (ir.bottom + myRing) : null,
             over: { t: rr.top - ir.top, b: ir.bottom - rr.bottom, r: ir.right - rr.right },
+            /* ★ 18회차 신설 — «읽히는데 잘린» 검출. 5~10회차가 축을 바꿔 가며 네 번 재발시킨
+               결함인데, 지금까지 계측기가 **한 번도 안 재고 있었다**(10회차가 등방 축소로 «구조적으로
+               불가능» 하게 만들면서 지표도 같이 사라졌다). 18회차는 다시 클리핑을 쓰므로 되살린다.
+               정의: 요소의 «로컬 하변»(레이아웃 좌표, 클립과 무관)이 카드 높이를 넘은 순간의
+               실효 α(= 요소 자신의 α × 행 α). 이 값이 0.2 를 넘는 표본이 있으면 그 프레임에
+               «읽을 수 있는데 잘린» 요소가 있는 것이다. */
+            cut: [...r.querySelectorAll('.ml-t,.ml-s,.ml-i,.ml-b,.ml-d')].map((e) => {
+              const bot = e.offsetTop + e.offsetHeight;
+              const ih2 = el.offsetHeight;
+              return bot > ih2 + 0.5
+                ? { n: e.className.split(' ')[0], depth: bot - ih2,
+                    ea: (+getComputedStyle(e).opacity) * (+getComputedStyle(r).opacity) }
+                : null;
+            }).filter(Boolean),
+            /* 내용 왜곡 계측용 — 제목 잉크 상자의 «렌더» w/h. `overflow:hidden` 은 이 값을 안 자른다
+               (레이아웃 상자 그대로 돌려준다) → **스케일만** 잡히고 클립은 안 잡힌다. 우리가 원하는 것이다. */
+            cw: (() => { const e = r.querySelector('.ml-t'); return e ? e.getBoundingClientRect().width : 0; })(),
+            ch: (() => { const e = r.querySelector('.ml-t'); return e ? e.getBoundingClientRect().height : 0; })(),
             ink: ink(r), ring: ringOf(r) };
         })
       };
@@ -133,7 +151,19 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
   const dA = alpha.map((v, i) => (i === 0 ? 0 : Math.abs(alpha[i - 1] - v) / STEP));
   const baseArea = base.w * base.h;
   const inkVis = rows.map((r) => r.out.reduce((a, o) => a + o.a * o.iw * o.ih, 0) / (baseArea * r.out.length || 1) * 100);
-  const aspect = rows.map((r) => (r.out[0] && r.out[0].ih > 0.5 ? (r.out[0].iw / r.out[0].ih) / (base.w / base.h) : null));
+  /* ★ 18회차 — «종횡비 왜곡» 의 **정의를 바꿨다**(수치를 통과시키려는 게 아니라 재던 대상이 바뀌었다).
+     10~17회차의 이 지표는 «`.ml-in` 의 w/h ÷ 정지 시 w/h» 였다. 그건 «상자와 내용을 한 몸으로
+     **등방 축소**한다» 는 전제 위에서만 «왜곡» 을 뜻한다 — 상자 종횡비가 변하면 곧 내용도 눌린 것이니까.
+     18회차는 상자를 일부러 세로로만 접으므로(폭 784 고정) 상자 종횡비는 **설계상** 5.33 → ∞ 로 간다.
+     옛 정의를 그대로 쓰면 «왜곡 275» 라는 무의미한 수가 나온다 — 접힘 그 자체를 왜곡이라 부르는 것이다.
+     내용은 **한 번도 스케일되지 않으므로**(클립만 한다) 진짜 왜곡은 정의상 0 이고, 그것을 직접 잰다:
+     내용 요소의 렌더 w/h 를 정지 시 w/h 와 비교한다. 상자 접힘 비율은 아래 «접힘» 으로 따로 낸다. */
+  const contentBase = rows[0].out[0].cw;
+  const aspect = rows.map((r) => {
+    const o = r.out[0];
+    if (!o || !o.cw || !contentBase) return null;
+    return (o.cw / o.ch) / (contentBase / rows[0].out[0].ch);
+  });
 
   console.log(`기준 카드 ${base.w.toFixed(1)}×${base.h.toFixed(1)} · 삭제 대상 ${rows[0].out.length}행 · 표본 ${rows.length}개 (0~${END}ms / ${STEP}ms)\n`);
   const c0 = { x: rows[0].out[0].cx, y: rows[0].out[0].cy, r: rows[0].out[0].right };
@@ -163,7 +193,20 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
   console.log(`종횡비 왜곡 최대    ${Math.max(...aspect.filter((v) => v !== null).map((v) => Math.abs(v - 1))).toFixed(4)}  (0 = 왜곡 없음)`);
   console.log(`잘림 최대(상·하·우) ${clip.toFixed(1)} px`);
   console.log(`카드−슬롯 최대차    ${gapMax.toFixed(2)} px`);
-  console.log(`«빈 판» 표본        ${blank}개`);
+  /* ★ 18회차 — «빈 판» 은 **개수만으로는 뜻이 없다**. 세로 접힘에서는 내용이 다 꺼진 뒤 남는 것이
+     «판» 이 아니라 폭 784 짜리 «닫히는 띠» 라서, 같은 표본 수라도 그때의 **높이**가 전혀 다른 것을
+     말한다. 등방 축소 시절의 «빈 판» 은 296×66 짜리 정체불명의 조각이었고(Σ D-1 실측),
+     세로 접힘의 그것은 784×44 → 784×0 으로 닫히는 행이다. 그래서 높이를 같이 낸다. */
+  const blankH = moving.filter((i) => rows[i].out.every((o) => o.ink < 1))
+    .reduce((m, i) => Math.max(m, ...rows[i].out.map((o) => o.ih)), 0);
+  console.log(`«빈 판» 표본        ${blank}개 (그때 카드 최대 높이 ${blankH.toFixed(1)}px · 폭 ${rows[0].out[0].iw.toFixed(0)}px 고정)`);
+  /* ★ 18회차 신설 — 이 회차 설계의 **불변식**이다. 4단 내용 소거(mlIco·mlBtn·mlSum·mlTtl)가
+     «클립이 하변에 닿기 전에 그 요소를 껐는가» 를 직접 검사한다. 0.2 초과면 설계가 깨진 것이다. */
+  let cutMax = 0, cutWho = '—';
+  rows.forEach((r) => r.out.forEach((o) => (o.cut || []).forEach((c) => {
+    if (c.ea > cutMax) { cutMax = c.ea; cutWho = `${c.n} t=${r.t}ms 깊이 ${c.depth.toFixed(0)}px`; }
+  })));
+  console.log(`«읽히는데 잘림» 최대 실효α ${cutMax.toFixed(3)} (${cutWho}) — 상한 0.200 ${cutMax <= 0.2 ? '✓' : '✗'}`);
   console.log(`보이는 잉크 1.5% 도달 t=${inkIdx < 0 ? '-' : rows[inkIdx].t}ms → 뒤쪽 ${tailMs}ms (${(tailMs / END * 100).toFixed(1)}%)`);
   console.log(`정지 구간(속도 0)   ${rise.filter((v, i) => i > 0 && Math.abs(v) < 0.02).length * STEP}ms`);
   /* 16회차 신설 — 보이는 구간(α>0.02)에서만 잰다. «안 보이는 프레임의 이탈» 은 채점 대상이 아니다. */
@@ -174,9 +217,18 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
      융착 검출은 플래시 밖에서 봐야 의미가 있으므로 두 값을 따로 낸다. */
   const gut = vis.map((o) => o.gutter).filter((v) => v !== null);
   const gutOut = moving.filter((i) => rows[i].t >= 140).map((i) => rows[i].out[0].gutter).filter((v) => v !== null);
+  /* ★ 18회차 — 융착이 «보이는» 창을 α>0.2 로 좁혔다. 세로 접힘에서는 카드가 죽기 직전(α<0.2, h<10px)에
+     **이웃 행의 바깥 링 6px 이 사라져 가는 1px 짜리 틈 위로 겹친다** — 거터가 산술적으로 음수가 된다.
+     그건 융착이 아니라 «이미 없는 행 자리를 이웃 테두리가 채우는 것» 이고, 이웃끼리의 구분선은
+     멀쩡하다. 17회차까지의 α>0.02 창은 등방 축소라 카드 하변이 원점 쪽으로 빨리 물러나 이 구간이
+     안 잡혔을 뿐이다. 두 값을 다 낸다 — 낮은 쪽을 숨기지 않는다. */
+  const gutSolid = moving.filter((i) => alpha[i] > 0.2).map((i) => rows[i].out[0].gutter).filter((v) => v !== null);
   console.log(`중심 이동(보이는 구간) 가로 ${dxMax.toFixed(1)}px · 세로 ${dyMax.toFixed(1)}px → 가로:세로 ${dyMax > 0.05 ? (dxMax / dyMax).toFixed(2) : '—'}:1`);
   console.log(`우변 이탈 최대(보이는) ${mabs((o) => c0.r - o.right).toFixed(1)} px`);
-  console.log(`행간 거터 최소(보이는) ${gut.length ? Math.min(...gut).toFixed(2) : '—'} px  (정지 시 ${gut.length ? gut[0].toFixed(2) : '—'} · 플래시 밖 ${gutOut.length ? Math.min(...gutOut).toFixed(2) : '—'})`);
+  console.log(`행간 거터 최소(α>0.2)  ${gutSolid.length ? Math.min(...gutSolid).toFixed(2) : '—'} px  (정지 시 ${gut.length ? gut[0].toFixed(2) : '—'})`);
+  console.log(`행간 거터 최소(α>0.02) ${gut.length ? Math.min(...gut).toFixed(2) : '—'} px  (플래시 밖 ${gutOut.length ? Math.min(...gutOut).toFixed(2) : '—'}) — 꼬리에서 이웃 링이 덮는 구간 포함`);
+  const foldMax = vis.reduce((m, o) => Math.max(m, base.h / Math.max(o.ih, 0.01)), 1);
+  console.log(`상자 접힘 최대(설계)   세로 1/${foldMax.toFixed(1)} · 가로 1/1.00 (폭 ${vis[0].iw.toFixed(0)}px 전 표본 고정)`);
   console.log(`console errors: ${errs.length}`);
   await b.close();
 })();
