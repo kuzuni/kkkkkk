@@ -2667,6 +2667,19 @@
      19회차의 상승 거리 104px 가 이미 맡고 있다 — 그 둘을 지우지 않는다. */
   @keyframes fxCvSwap{0%{transform:scale(.84)}55%{transform:scale(1.07)}100%{transform:scale(1)}}
   .fx-cvswap{animation:fxCvSwap .34s cubic-bezier(.34,1.56,.64,1) both}
+  /* 24회차 — 24차 비평 AQ ③-5·④-1 · AR ③-7·④-4 (2인 공통): 이번 회차가 델타 플로터를
+     «아이콘 아래 ~ 버튼 위» 띠로 내리자(착수점 5 회수, 아이콘 덮음 92%→0) 그 대가로
+     플로터가 카드 자신의 «+2.4»(`.cv`)·«공격력»(`.cn`) 과 **295ms 동안 이중 인쇄**된다.
+     19회차의 «상승 거리 104px» 이 동시 노출을 막던 두 장치 중 하나였는데 이번에 80 으로 줄인 탓이다.
+     카드 안에는 아이콘도 텍스트도 안 건드리는 자리가 **없다**(y1630 아이콘 하단 ~ y1767 버튼 상단
+     사이를 `.cv` 1659~1719 와 `.cn` 1713~1761 이 빈틈없이 채운다) — 그래서 교훈 8 의 처방을 쓴다:
+     **지나가는 것을 못 막으면 지나가는 «자리» 를 죽인다**(형제 퀘스트 행 `fxSolo` 와 같은 처방).
+     ⚠ 22회차가 «`.cv` 를 투명도로 지우지 마라(새 값은 0ms 부터 alpha 1.0)» 로 못 박았으므로
+     둘을 다르게 다룬다: **정적 라벨 `.cn` 은 확실히 죽이고**(플로터가 그 단어를 이미 말한다),
+     **`.cv` 는 새 값을 계속 읽을 수 있게 옅게만**(.42) — 지우는 것이 아니라 뒤로 물리는 것이다. */
+  .fx-hush{transition:opacity .10s linear}
+  .tr-card>.cn.fx-hush{opacity:.12}
+  .tr-card>.cv.fx-hush{opacity:.42}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -21184,6 +21197,17 @@ function fxDelta(el, txt){
   d.textContent = txt;
   L.appendChild(d);
   setTimeout(() => d.remove(), 660);
+  /* 24회차 — 위 `.fx-hush` 주석 참조. 플로터가 사는 동안만 그 아래 두 줄을 뒤로 물린다.
+     꾹 누르기 반복 강화에서 타이머가 겹쳐 «영원히 죽은 줄» 이 남지 않게 카드마다 하나만 건다. */
+  const card = el && el.closest ? el.closest('.tr-card') : null;
+  if(card){
+    const rows = [card.querySelector('.cv'), card.querySelector('.cn')].filter(Boolean);
+    rows.forEach(x => x.classList.add('fx-hush'));
+    if(card.__fxHushTo) clearTimeout(card.__fxHushTo);
+    card.__fxHushTo = setTimeout(() => {
+      card.__fxHushTo = 0; rows.forEach(x => x.classList.remove('fx-hush'));
+    }, 620);
+  }
   /* 21회차 — 20회차 AG #6 · AH #4 (19회차부터 3라운드 연속, 2인 공통):
      «+2.2»(플로터)와 «+2.4»(카드) 가 동시에 보인다. 20회차에 색을 앰버로 갈랐는데도 남았고,
      비평가 둘이 그때 «같은 초록» 이라고 적은 것은 오독이었다(실측 #FFD24A) — 즉 **색이 원인이
