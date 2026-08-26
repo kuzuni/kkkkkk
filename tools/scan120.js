@@ -37,9 +37,9 @@ const PT = Number(process.argv[3] || 108);
       return { uniq: s.size, mean: sum / n };
     };
 
-    /* 아치는 «격자 ± 186» 이다(120 2회차) — 격자 top = (H−820)×.452617 */
+    /* 아치는 «격자 ± 186» 이다(120 2회차) — 격자 top = (H−820)×.5075 (4회차 재배분) */
     const spare = H - 820;
-    const archTop = PT + spare * 0.452617 - 186;
+    const archTop = PT + spare * 0.5075 - 186;
     const archBot = archTop + 888;
 
     /* A. 아치 내부 — 상하 40px 을 뺀 구간을 20 행 샘플 */
@@ -54,14 +54,19 @@ const PT = Number(process.argv[3] || 108);
       const y = Math.round(PT + H * (0.72 + (0.98 - 0.72) * k / 14));
       floor.push({ y, ...rowStat(y, 20, 1060) });
     }
-    /* C. 아치 하변 부근 1차 차분 */
+    /* C. 아치 하변 부근 1차 차분.
+       ⚠ 창을 그냥 ±40 으로 잡으면 **짧은 프레임에서 수반 상단이 창 안에 들어온다**
+       (1600 → 아치 하변 1045 · 수반 상단 1035). 수반 림은 밝아서 Δ22 짜리 «급점프» 로
+       잡히는데 그건 아치 절단선이 아니다. 수반 구획 위로 창을 자른다. */
+    const midTop = PT + spare * 0.8675 + 516;
     const ab = Math.round(archBot);
+    const yLo = ab - 40, yHi = Math.round(Math.min(ab + 40, midTop - 12));
     const diff = [];
-    for (let y = ab - 40; y <= ab + 40; y++) diff.push(rowStat(y, 250, 826).mean);
+    for (let y = yLo; y <= yHi; y++) diff.push(rowStat(y, 250, 826).mean);
     let maxJump = 0, jumpY = 0;
     for (let i = 1; i < diff.length; i++) {
       const j = Math.abs(diff[i] - diff[i - 1]);
-      if (j > maxJump) { maxJump = j; jumpY = ab - 40 + i; }
+      if (j > maxJump) { maxJump = j; jumpY = yLo + i; }
     }
     return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY };
   }, { url: data, PT });
