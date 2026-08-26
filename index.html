@@ -13219,6 +13219,22 @@ const PART_CAP  = 400;
 const RING_CAP  = 44;       /* 링 상한 — 넘으면 가장 오래된 것부터 버린다 */
 const TRAIL_N   = 14;       /* 트레일 링버퍼 표본 수(등급으로 «쓰는 길이»만 늘린다) */
 const TRAIL_DT  = 0.022;    /* 표본 간격(초) — 14 × 22ms = 0.31s 분량의 궤적이 남는다(1회차 비평 ⑤) */
+/* 16회차 AU#4 · AV[15] 공통 — «직선 투사체가 논리 뷰포트(540×998) 밖까지 날아가 **가장자리에서
+   하드 클리핑**된다»(AU: 우측 발이 x534 에서 15 게임px 잘리고 그 순간 휘도 255).
+   15회차가 처방으로 넘긴 것은 «비행 거리 캡 260» 이었는데, **재 보고 넣지 않았다.**
+     `tools/probe114g.js` 실측 — 캡 260 은 전체 피해의 **2.01%** 를 없애고(비행 260 초과에서
+     들어오는 명중 107/1635회), 적이 멀리 있는 판(거리 330)에서는 피해가 **−41.8%** 다.
+     교전 거리 안(95·150·210)에서도 손실이 ±5% 로 흔들린다 — 관통 발의 명중 순서가 바뀐다.
+   → **사거리는 밸런스다. 손대지 않는다.** 지시서 [2] 의 밸런스 불변 원칙 그대로다.
+   비평가가 실제로 지적한 것은 «멀리 간다» 가 아니라 «화면 끝에서 **툭 잘린다**» 이고, 그건 연출이다.
+   그래서 **판정은 그대로 두고 그리기만** 고친다 — 화면 가장자리 EDGE_FADE 안에서 알파를 0 으로
+   흘려 «날아가 멀어진다» 로 읽히게 한다(아래 `edgeFade()`). 판정·속도·수명은 한 줄도 안 바뀐다.
+   34 = 적 몸통 히트박스 1개분. 이보다 좁으면 여전히 «잘린다» 로 읽히고, 넓으면 화면 안에서 사라진다. */
+const EDGE_FADE = 34;
+/* 투사체·잔상이 실제로 «보이는» 영역의 윗변. 화면 0 이 아니다 — 12회차 AP① 로 상단 HUD 위에
+   운석 꼬리가 그려지는 것을 막으려고 draw() 가 이 높이에서 클립한다. 페이드가 클립과 어긋나면
+   윗변만 여전히 툭 잘리므로 **두 곳이 같은 상수를 본다**(클립 rect 도 이 값을 쓴다) */
+const EDGE_TOP = 130;
 /* 14회차 AS#4·AT[2] 공통 — «창(640ms)의 뒤 절반이 완전 공백»(AS: f5~f8 320ms · AT: f7·f8 160ms).
    0.42s 는 80ms 그리드에서 5~6장이면 끝나 창을 못 채운다. 0.58 로 늘리면 알파 램프가
    1.0/0.75/0.58/0.41/0.28/0.17/0.08 로 **8장 전부에 무언가가 남는다**(AS 처방 «5프레임 감쇠
@@ -14240,7 +14256,10 @@ function step(dt){
     b.life -= dt;
     if(b.spin !== undefined) b.spin += dt*16;
     /* 114 ① — 트레일 링버퍼를 처음 쓰는 프레임에 풀에서 한 번만 빌린다(이후 프레임 할당 0) */
-    if(b.tr === undefined){ b.tr = trGet(); b.ti = 0; b.tn = 0; b.tt = 0; b.tl = trailLen(b); }
+    if(b.tr === undefined){ b.tr = trGet(); b.ti = 0; b.tn = 0; b.tt = 0; b.tl = trailLen(b);
+      b.x0 = b.x; b.y0 = b.y;   /* 16회차 — «이 발이 얼마나 날아왔나» 의 원점. 생성부가 9곳이라 여기서 한 번만 박는다.
+                                   판정에는 안 쓴다(사거리 캡은 재 보고 넣지 않았다 — EDGE_FADE 주석) —
+                                   `tools/probe114g.js` 가 명중 순간의 비행 거리를 재는 데 쓴다 */ }
 
     if(b.k === 'boomer'){
       b.back += dt;
@@ -14532,6 +14551,22 @@ function bossKillSfx(){ sfx('bosskill'); bgmSet('main'); }
    ========================================================================== */
 /* 114 ① — 투사체 잔상. 링버퍼를 «가장 오래된 표본 → 최신» 순으로 훑으며 f(0→1) 로 굵기·알파를 키운다.
    ctx 상태는 이 함수가 끝날 때 원래대로(합성 source-over · alpha 1) 돌려놓는다. */
+/* 16회차 AU#4·AV[15] — 화면 가장자리 페이드. 월드 좌표를 화면 좌표로 옮겨(화면 x = 월드 x + camOx)
+   네 변까지의 최단 거리를 재고, EDGE_FADE 안이면 0 까지 선형으로 흘린다.
+   ★ 그리기 전용이다 — 판정·속도·수명은 건드리지 않는다(사거리는 밸런스다. EDGE_FADE 주석 참조).
+   camOx/camOy 는 draw() 가 매 프레임 맨 앞에서 채운다. */
+function edgeFade(x, y, w){
+  const sx = x + camOx, sy = y + camOy;
+  const d = Math.min(sx, VW - sx, sy - EDGE_TOP, VH - sy);
+  const W = w || EDGE_FADE;
+  return d >= W ? 1 : (d <= 0 ? 0 : d / W);
+}
+/* 페이드 «폭» 은 발마다 다르다 — 고정 34 로 두면 빠른 발이 2프레임 만에 사라져 여전히 «툭» 이다.
+   실측: 표창 430 게임px/s = 프레임당 7.2 · 얼음 760 = 12.7. 34 면 알파 계단이 0.21 vs **0.37** 이다.
+   속도 × 0.09s 로 잡으면 어느 발이든 페이드가 **5.4프레임**(≈90ms)에 걸쳐 알파 계단이 0.185 로 같아진다.
+   하한 34(= 적 몸통 1개분, 느린 발이 화면 끝에서 갑자기 꺼지지 않게) · 상한 90(= 뷰포트 반폭의 1/3,
+   이보다 넓으면 화면 «안» 에서 흐려져 사거리를 거짓말한다) */
+function edgeW(b){ return clamp(Math.hypot(b.vx, b.vy)*0.09, EDGE_FADE, 90); }
 function drawTrails(){
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   /* 성능 예산(지시서 ⑤ «−10% 이내») — 표본마다 stroke 를 부르면 8스킬 난사에서 프레임당 stroke 가
@@ -14551,6 +14586,7 @@ function drawTrails(){
        68×71 게임px 한 덩어리로 겹쳐 보인다. 표본 3(≈66ms)이면 «뭉치» 를 만들지 않으면서
        80ms 프레임이 살아난다(실측 80ms 에 8/8) — 0ms 프레임은 아래 시전 플래시가 덮는다 */
     if(!b.tr || n < 3) continue;
+    const ew = edgeW(b);              /* 16회차 — 이 발의 가장자리 페이드 폭(속도 비례). 표본마다 다시 재지 않는다 */
     const k = b.k, fire = (k === 'boom' || k === 'meteor');
     let first = (b.ti - n + TRAIL_N*2) % TRAIL_N, nn = n;
     /* 6회차 R⑥·S⑥ — 꼬리가 «총구에 고정» 된 것처럼 보이고 캐릭터 실루엣을 덮었다.
@@ -14585,7 +14621,7 @@ function drawTrails(){
         const idx = (first + i) % TRAIL_N;
         const f = clamp(1 - (nn-1-i)/tl, 0, 1);      /* 최신 표본 1.0 → 나이 들수록 선형 감소 */
         /* 13회차 — f² 는 뒤쪽 4점을 알파 0.09 아래로 눌러 «보이는 잔상» 을 3점으로 잘랐다(위 주석) */
-        ctx.globalAlpha = f*0.55;
+        ctx.globalAlpha = f*0.55*edgeFade(b.tr[idx*2], b.tr[idx*2+1], ew);
         ctx.fillStyle = b.col;
         ctx.beginPath();
         /* 지름 테이퍼 30% → 100% (1회차 비평 ⑤ «테이퍼 없음») */
@@ -14598,7 +14634,7 @@ function drawTrails(){
       for(let i=0;i<nn-1;i+=lod){
         const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, nn-1)) % TRAIL_N;
         const f = (i+1)/(nn-1);
-        ctx.globalAlpha = f*f*0.5;
+        ctx.globalAlpha = f*f*0.5*edgeFade(b.tr[i1*2], b.tr[i1*2+1], ew);
         ctx.lineWidth = 3 + 12*f;
         ctx.beginPath();
         ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
@@ -14608,7 +14644,7 @@ function drawTrails(){
       for(let i=0;i<nn;i+=lod){
         const idx = (first + i) % TRAIL_N, f = (i+1)/nn;
         const x = b.tr[idx*2], y = b.tr[idx*2+1];
-        ctx.globalAlpha = 0.25 + f*0.6;
+        ctx.globalAlpha = (0.25 + f*0.6)*edgeFade(x, y, ew);
         ctx.fillStyle = i % 2 ? '#dff6ff' : b.col;
         const s2 = 2.4 + 5.0*f, off = (i % 3 - 1)*5.5*(1-f);
         ctx.beginPath();
@@ -14621,7 +14657,7 @@ function drawTrails(){
       for(let i=0;i<nn-1;i+=lod){
         const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, nn-1)) % TRAIL_N;
         const f = (i+1)/(nn-1);
-        ctx.globalAlpha = f*f*(fire ? 0.85 : 0.7);
+        ctx.globalAlpha = f*f*(fire ? 0.85 : 0.7)*edgeFade(b.tr[i1*2], b.tr[i1*2+1], ew);
         ctx.strokeStyle = fire ? (f > 0.6 ? '#ffdc8a' : b.col) : b.col;
         ctx.lineWidth = 1.2 + w*f;
         ctx.beginPath();
@@ -14640,7 +14676,7 @@ function drawTrails(){
       const first = (b.ti - n + TRAIL_N*2) % TRAIL_N;
       for(let i=0;i<n;i+=2){
         const idx = (first + i) % TRAIL_N, f = (i+1)/n;
-        ctx.globalAlpha = (1-f)*0.22;
+        ctx.globalAlpha = (1-f)*0.22*edgeFade(b.tr[idx*2], b.tr[idx*2+1], edgeW(b));
         ctx.beginPath(); ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 3 + 7*(1-f), 0, 6.283); ctx.fill();
       }
     }
@@ -14838,7 +14874,7 @@ function draw(){
      AQ 는 이 항을 적지 않았지만, 이번 회차에 캡처 lead 를 240 → 160ms 로 당겨 낙하 «앞» 이
      프레임에 더 들어오므로 그대로 두면 노출이 커진다. */
   ctx.save();
-  ctx.beginPath(); ctx.rect(-ox, 130 - oy, VW, VH); ctx.clip();
+  ctx.beginPath(); ctx.rect(-ox, EDGE_TOP - oy, VW, VH); ctx.clip();   /* 16회차 — edgeFade() 와 같은 상수를 본다 */
   /* 114 ① 투사체 트레일(잔상) — 본체보다 «먼저» 그린다. 종류별로 문법이 다르다:
      검기=넓은 잔상 띠 · 표창/부메랑=회전 고스트 · 얼음=서리 입자 · 화염구/운석=불꽃 꼬리 + 연기 점 */
   drawTrails();
@@ -14904,7 +14940,9 @@ function draw(){
     const pdx = b.x - player.x, pdy = b.y - (player.y - 22);
     const near = Math.sqrt(pdx*pdx + pdy*pdy);
     ctx.save();
-    if(near < 62) ctx.globalAlpha = clamp(0.28 + (near/62)*0.72, 0.28, 1);
+    /* 16회차 — 몸 겹침 감쇠와 화면 가장자리 페이드를 «곱한다». 둘 다 위치만 보는 그리기 감쇠라
+       순서가 없고, 하나만 쓰면 다른 하나가 통째로 지워진다(가장자리에서 시전하면 둘 다 걸린다) */
+    ctx.globalAlpha = (near < 62 ? clamp(0.28 + (near/62)*0.72, 0.28, 1) : 1) * edgeFade(b.x, b.y, edgeW(b));
     /* 12회차 AP① (+ 10회차 인수인계 6 = AK·AL 이 이미 같은 것을 적었고 11회차가 못 회수한 항목).
        운석이 620 게임px 위에서 떨어지므로 낙하 전반이 **상단 HUD 위로** 그려진다 —
        AP 실측 boom-2 에서 40×18 · boom-5 에서 32×30 게임px 중첩, 흰 꼬리가 게이지 트랙을 관통.
