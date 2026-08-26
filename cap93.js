@@ -46,19 +46,85 @@ function recorder(cdp){
   });
   return buf;
 }
+/* ── 15회차 — **라벨 바이어스 실측(프리롤 색시계)** ───────────────────────────────────────
+ * `Page.screencastFrame.metadata.timestamp` 는 그 프레임이 «그려진» 시각이 **아니다** — 전달
+ * 지연이 섞인다. 14회차가 `probe93j`(색시계)로 못 박았다: 라벨 − 실제 = 중앙 **+59ms**(22~119).
+ * 프레임 간격이 95ms 인데 편차가 반 프레임 이상이라, 저장된 프레임은 **라벨보다 이전의 그림**이고
+ * 비평가는 회차마다 «트리거 +180~230ms 까지 아무것도 없다» 로 ① 을 3~4점에 묶는다.
+ * 11회차는 그 오독을 믿고 **게임 코드**(`fxWatch` 디바운스)를 고쳤다 — 하네스가 원인인데.
+ *
+ * 고치는 법(14회차 §4-14-4 권장안): **트리거 «전» 프리롤 동안만** 색시계를 띄워 이 실행의
+ * 바이어스를 실측하고, 시계를 지운 뒤 트리거한다. 저장되는 연출 프레임에는 시계가 없다.
+ * 상수 59ms 를 박지 않는다 — 컨테이너·인코딩 설정이 바뀌면 틀린다(차선책이었던 이유).
+ *   시계: `rgb(v,255−v,40)`, `v = round(경과ms / CLK_STEP)` (6ms 해상도 · 1530ms 까지)
+ *   프리롤은 1500ms — 이 컨테이너의 프레임 간격이 100~110ms 라 640ms 로는 시계 프레임이 1장뿐이었다.
+ *   디코드: `python3 dec93.py`(PIL) — 저장소 선례 `scan147.py`
+ * ⚠ `position:fixed` 시계는 **`document.documentElement`** 에 붙인다. body 아래에 붙이면
+ *   `#wrap` 의 transform 이 포함 블록을 가로채 화면 밖으로 나간다(14회차가 데인 자리).           */
+const CLK_STEP = 6, CLK_MS = 1500, CLK_WARM = 500;
+async function measureBias(page, cdp, buf){
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cap93clk-'));
+  buf.length = 0;
+  const clk = await page.evaluate((step) => {
+    const c = document.createElement('div');
+    c.id = 'cap93clk';
+    c.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:200px;z-index:2147483647;background:rgb(0,255,40);pointer-events:none';
+    document.documentElement.appendChild(c);
+    const p0 = performance.now(), t0 = Date.now();
+    (function tick(){
+      const v = Math.max(0, Math.min(255, Math.round((performance.now() - p0) / step)));
+      c.style.background = `rgb(${v},${255-v},40)`;
+      if(document.getElementById('cap93clk')) requestAnimationFrame(tick);
+    })();
+    return { t0 };                                   /* 시계 원점의 절대시각(ms) */
+  }, CLK_STEP);
+  await page.waitForTimeout(CLK_MS);
+  const frames = buf.slice();
+  await page.evaluate(() => { const c = document.getElementById('cap93clk'); if(c) c.remove(); });
+  frames.forEach((f, i) => fs.writeFileSync(path.join(dir, `f${String(i).padStart(3,'0')}.jpg`), Buffer.from(f.data, 'base64')));
+  let out = '';
+  try { out = require('child_process').execFileSync('python3', [path.resolve(__dirname, 'dec93.py'), dir], { encoding:'utf8' }); }
+  catch(e){ fs.rmSync(dir, { recursive:true, force:true }); throw new Error('색시계 디코드 실패(python3+PIL) — ' + e.message); }
+  fs.rmSync(dir, { recursive:true, force:true });
+  const errs = [];
+  for(const line of out.trim().split('\n')){
+    const [name, r, g, b] = line.trim().split(/\s+/);
+    const R = +r, G = +g, B = +b, i = +name.slice(1, 4);
+    /* 시계 블록이 맞는지 두 번 확인한다 — 파랑 40 고정 + 초록이 255−R. 아니면 시계가 안 찍힌
+       프레임(시계 생성 전/제거 후)이라 표본에서 뺀다. 하나라도 통과 못 하면 그냥 버린다. */
+    if(process.env.CAP93_DEBUG) console.log(`    [clk] ${name} R${R} G${G} B${B} label${frames[i] ? Math.round(frames[i].t - clk.t0) : '?'}`);
+    if(Math.abs(B - 40) > 22 || Math.abs((255 - R) - G) > 20) continue;
+    const drawn = Math.round(R) * CLK_STEP;            /* 시계 원점 기준 «실제로 그려진» 시각 */
+    /* 시계를 **막 붙인 직후** 는 새 레이어의 합성·인코딩 백로그가 겹쳐 바이어스가 3~7배로 튄다
+       (실측 f004~f008: 100·224·327·348·349ms → 안정 구간은 46~91ms). 워밍업을 버리지 않으면
+       중앙값이 그 전이(轉移)에 끌려간다. 시계 원점 +CLK_WARM 이후에 «그려진» 프레임만 쓴다. */
+    if(drawn < CLK_WARM) continue;
+    errs.push(frames[i].t - (clk.t0 + drawn));         /* 라벨 − 실제 = 바이어스 */
+  }
+  if(errs.length < 4) throw new Error(`색시계 표본이 ${errs.length}장뿐이다 — 바이어스를 못 잰다`);
+  errs.sort((a, b) => a - b);
+  const med = Math.round(errs[errs.length >> 1]);
+  const q = p => Math.round(errs[Math.min(errs.length-1, Math.floor(errs.length*p))]);
+  console.log(`  · 라벨 바이어스 실측: 표본 ${errs.length}장(워밍업 ${CLK_WARM}ms 제외) · 중앙 ${med}ms · 사분위 ${q(.25)}~${q(.75)}ms · 폭 ${Math.round(errs[0])}~${Math.round(errs[errs.length-1])}ms — pick() 이 라벨에서 뺀다`);
+  return med;
+}
+
 /* 14회차 — «가장 가까운 프레임» 을 목표 시각마다 독립적으로 고르면 **같은 원본 프레임이
    이웃한 두 목표에 중복 선택**된다(원본 간격 74ms vs 목표 간격 90~130ms). 13회차 비평 U·V 가
    «166ms 동결» 로 잡은 것이 바로 이 중복이다 — probe58f 실측에는 정지 구간이 없다.
    → 목표 시각 순서대로 **아직 안 쓴 프레임 중에서만** 고른다(단조 증가 보장). 그래도 목표에서
    ±55ms 넘게 벗어난 프레임은 로그에 «WARN» 으로 남겨 비평가 전달문에 적게 한다. */
+let BIAS = 0;                                          /* measureBias() 가 이 실행에서 실측한 라벨 오차 */
 function pick(buf, t0, tag, pre){
   /* -60 까지 허용하면 트리거 «이전» 프레임이 0ms 슬롯을 먹는다(14회차 upg: 8슬롯 중 2장이 기준) */
-  const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -8);
+  /* 15회차 — 라벨에서 실측 바이어스를 뺀 것이 «그려진 시각» 이다(§ measureBias). */
+  const rel = buf.map(f => ({ dt: f.t - BIAS - t0, data: f.data })).filter(f => f.dt >= -8);
   if(rel.length < WANT.length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
   if(!pre) throw new Error(`${tag}: 트리거 직전 기준 프레임이 없다`);
   const gaps = rel.slice(1).map((f, i) => f.dt - rel[i].dt);
   const med = gaps.slice().sort((a,b) => a-b)[gaps.length >> 1] || 0;
-  const out = [{ want:'기준', got:Math.round(pre.t - t0), data:pre.data }];
+  const out = [{ want:'기준', got:Math.round(pre.t - BIAS - t0), data:pre.data }];
   let from = 0;
   for(const w of WANT){
     let bi = from;
@@ -129,6 +195,15 @@ global.__capLog = {};
      것**이다(rAF 기준 게이트는 정지 0/395). 인코딩 비용을 낮춰 드리프트를 줄인다. */
   await cdp.send('Page.startScreencast', { format:'jpeg', quality:55, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
   await page.waitForTimeout(300);
+
+  /* 15회차 — 연출을 찍기 «전» 에 이 실행의 라벨 바이어스를 잰다. 시계는 여기서만 뜨고 곧 지워지므로
+     저장되는 프레임에는 남지 않는다. 잰 뒤 버퍼를 비우고 한 박자 쉬어 시계 프레임이 기준 프레임으로
+     새어 들어가지 않게 한다. */
+  BIAS = await measureBias(page, cdp, buf);
+  /* 시계를 지운 «뒤» 에도 바이어스만큼은 시계가 든 프레임이 계속 도착한다(그게 바로 재고 있는 값이다).
+     넉넉히 흘려보내고 버퍼를 비워야 시계가 기준 프레임으로 새지 않는다. */
+  await page.waitForTimeout(Math.max(500, BIAS + 400));
+  buf.length = 0;
 
   const run = async (tag, trigger, waitMs) => {
     /* 트리거 «직전» 프레임을 기준으로 남긴다. 화면이 정지해 있으면 스크린캐스트가 프레임을 안 내보내므로
