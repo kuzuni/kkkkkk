@@ -12989,8 +12989,14 @@ function castSkill(s){
        있을 때 임팩트 링을 대신 되살려** 명중 링이 아예 안 생긴다(게이트 «임팩트 링 정렬» 이 46px 로 잡아냈다).
        그리고 `cast` 로 태깅한다 — 게이트 2곳이 «새로 생긴 첫 링 = 임팩트» 를 전제로 세는데,
        시전 플래시가 그 앞에 끼면 임팩트가 아니라 이 링을 재게 된다 */
-    fxRing(player.x, player.y - 22, 20.5, '#ffe9b8', 0.16, FX_W, 6, 0, 1);
-    rings[rings.length-1].cast = 1;
+    /* nd=1 로 공용 억제를 껐으니 «같은 플래시끼리» 는 여기서 막는다 — 재시전 간격이 수명(0.16s)보다
+       짧은 스킬(평타·연타)에서 발밑에 링이 2겹으로 상주하는 것을 방지한다 */
+    let dup = 0;
+    for(let i=rings.length-1;i>=0;i--){ const q = rings[i]; if(q.cast && q.t >= 0 && q.t < 0.10){ dup = 1; break; } }
+    if(!dup){
+      fxRing(player.x, player.y - 22, 20.5, '#ffe9b8', 0.16, FX_W, 6, 0, 1);
+      rings[rings.length-1].cast = 1;
+    }
   }
   return ok;
 }
