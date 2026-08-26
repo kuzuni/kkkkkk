@@ -50,6 +50,14 @@ const STOPS = [80, 400, 720, 1040, 1360, 1680, 2000, 2320, 2640, 8300];
    t=2548 카드3 **+3.00°/−6.0px**(부호 교차까지 의도대로). 카드 5장의 92% 지점을
    **전부** 넣어야 «있는데 못 본» 오독이 안 난다. */
 const DIA_STOPS = [80, 560, 1040, 1520, 2000, 2480];   /* 9회차 — 같은 이유로 480ms 등간격 한 주기 */
+/* ⚑ 17회차 신설 — **강제 상자(`gm`) 칸 전용**.
+   16회차 비평가 AL 이 «73 강제 상자 칸이 26장 어느 캡처에도 없다 — 채점 불가» 라고 적었다.
+   실측해 보니 «없다» 가 아니라 **잘려 있었다**: `gmBan()` 첫 미션이 `skill` 이라 강제 칸은
+   소환 4번째 칸(top 1603 · h 450)인데 `#shopList` 의 바닥이 1946 이라 **아래 107px 이 잘린다**.
+   글로우는 상자 «테두리 전체» 를 도는 연출이라 아래 변이 잘리면 진폭·주기를 못 잰다.
+   → 그 칸이 통째로 보이도록 스크롤해서 따로 찍는다. 시각은 `jz122Gm` 의 주기 **2.8s** 를
+     700ms 등간격(=1/4 주기)으로 채워 최저·상승·정점·하강이 한 장씩 잡히게 한다. */
+const GM_STOPS = [80, 780, 1480, 2180];
 
 /* 페이지 안에 «얼리기 · 세우기» 두 함수를 심는다.
    __jzFreeze() — jz122* 는 pause(무한 루프라 그대로 둔다), 그 밖은 finish()/cancel() 로 끝 상태 고정.
@@ -75,7 +83,8 @@ const INSTALL = () => {
   };
 };
 
-async function frames(p, tag) {
+async function frames(p, tag, stops) {
+  const SET = stops || STOPS;
   await p.evaluate(() => {
     /* 상시 연출만 남긴다 — 전투 로직·HUD 굴림이 프레임마다 숫자를 바꾸면
        비평가가 그 차이를 «연출» 로 읽는다(LESSONS 58-2 · 92 G 지적). */
@@ -86,8 +95,8 @@ async function frames(p, tag) {
     const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__jzFreeze();
   });
-  for (let i = 0; i < STOPS.length; i++) {
-    const t = STOPS[i];
+  for (let i = 0; i < SET.length; i++) {
+    const t = SET[i];
     /* seek 와 read 를 나누지 않는다 — 한 태스크 안에서 끝낸다(LESSONS 60-⑤ 2번째 함정) */
     await p.evaluate(ms => window.__jzSeek(ms), t);
     const f = path.join(OUT, '122-' + R + '-' + tag + '-' + (i + 1) + '.png');
@@ -146,6 +155,29 @@ async function frames(p, tag) {
     const f = path.join(OUT, '122-' + R + '-dia-' + (i + 1) + '.png');
     await p.screenshot({ path: f });
     console.log('  ' + path.basename(f) + '  t=' + t + 'ms');
+  }
+
+  /* 강제 상자(`gm`) 칸 — 17회차 신설. 소환 탭으로 돌아가 그 칸이 통째로 보이게 스크롤한다.
+     `gmBan()` 이 null 이면(가이드를 이미 지난 세이브) 강제 칸 자체가 없으므로 건너뛴다. */
+  await p.evaluate(() => {
+    document.getAnimations().forEach(a => { try { a.play(); } catch (_) {} });
+    shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage();
+  });
+  await p.waitForTimeout(900);
+  const gmOk = await p.evaluate(() => {
+    const c = document.querySelector('.shp-card.gm'), lw = document.getElementById('shopList');
+    if (!c || !lw) return false;
+    const cr = c.getBoundingClientRect(), lr = lw.getBoundingClientRect();
+    /* 칸 아래 변이 리스트 바닥에서 24px 위에 오도록 — 글로우가 상자 «테두리 전체» 를 돈다 */
+    lw.scrollTop += (cr.bottom - lr.bottom) + 24;
+    return true;
+  });
+  if (gmOk) {
+    await p.waitForTimeout(500);
+    console.log('[소환 탭 — 강제 상자(gm) 칸]');
+    await frames(p, 'gm', GM_STOPS);
+  } else {
+    console.log('[소환 탭 — 강제 상자(gm) 칸] gmBan() 이 null · 건너뜀');
   }
 
   console.log(errs.length ? '콘솔 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ') : '콘솔 에러 0');
