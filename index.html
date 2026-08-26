@@ -13803,6 +13803,27 @@ function wallProx(x, y){    /* 0 = 중앙권, 1 = 벽에 붙음 */
   return Math.max(0, Math.min(1,
     Math.max((m-x)/m, (x-(WORLD.w-m))/m, (m-y)/m, (y-(WORLD.h-m))/m)));
 }
+/* ★ 17회차 — «연쇄» 인데 다음 대상을 **거리와 무관하게** 뽑고 있었다:
+     `list[Math.floor(Math.random()*list.length)]`  (같은 적을 다시 뽑는 것도 막지 않는다)
+   그래서 링크가 사거리의 1.7~2.0배로 늘어나 번개 한 발이 화면의 절반을 덮었다 —
+   **네 회차 연속** 공통 지적이고(15회차 AV[3] 가 원인을 코드로 확정 · 16회차 AW[17]·AX[15] ·
+   17회차 AY[11] 57.4%×47.7% · AZ[12] 58%×47%), 처방도 «최근접 순» 으로 같다.
+   ⚠ **밸런스는 불변이다** — 링크 «개수»(cnt)도, 링크당 피해도, 치명 판정도 한 줄도 안 바뀐다.
+     바뀌는 것은 **어느 적이 그 링크를 받는가** 뿐이다(16회차 «사거리는 밸런스, 그리기는 연출» 과 같은 선).
+     이미 맞은 적을 빼는 것은 연쇄의 본래 뜻이고, 후보가 마르면 최근접으로 되돌아가 **링크 수를 유지**한다.
+   `nearest()` 를 그대로 못 쓰는 이유: 연쇄는 «시전자» 가 아니라 **직전 링크 끝**에서 재야 하고,
+   이번 시전에 이미 맞은 적을 빼야 한다. */
+function chainNext(x, y, used){
+  let best = null, bd = Infinity, alt = null, ad = Infinity;
+  for(const e of enemies){
+    if(e.born < 0.3) continue;
+    const d = (e.x-x)*(e.x-x) + (e.y-y)*(e.y-y);
+    if(d < ad){ ad = d; alt = e; }              /* 이미 맞은 적까지 포함한 최근접 — 후보가 마르면 이걸 쓴다 */
+    if(used.indexOf(e) >= 0) continue;
+    if(d < bd){ bd = d; best = e; }
+  }
+  return best || alt;
+}
 function nearest(x, y, maxD){
   let best = null, bd = maxD ? maxD*maxD : Infinity;
   for(const e of enemies){
@@ -13880,10 +13901,11 @@ function castGeneric(s, dmg){
     case 'chain': {
       let n = 0;
       let fx = px, fy = py-22;                /* 114 — 연쇄는 적 → 적으로 잇는다(위 bolt 와 같은 문법) */
+      const used = [];                        /* 17회차 — 최근접 순(위 chainNext). 링크 수·피해 불변 */
       for(let i=0;i<(s.cnt||3);i++){          /* 109 — 연쇄 대상 수는 cnt (n 은 이름) */
-        const list = enemies.filter(e => e.born >= 0.3);
-        if(!list.length) break;
-        const e = list[Math.floor(Math.random()*list.length)];
+        const e = chainNext(fx, fy, used);
+        if(!e) break;
+        used.push(e);
         const crit = Math.random() < stat.crit;
         bolts.push({ x1:fx, y1:fy, x2:e.x, y2:e.y - e.r, t:0, col:s.col });
         fx = e.x; fy = e.y - e.r;
@@ -14055,10 +14077,11 @@ function castSkillRaw(s){
       let n = 0;
       let fx = px, fy = py-22;                 /* 114 — «연쇄»: 첫 발만 시전자에서, 다음부터는 이전 적에서 잇는다
                                                   (대상 선정·피해는 한 줄도 안 건드렸다 = 밸런스 불변) */
+      const used = [];                         /* 17회차 — 최근접 순(chainNext). 링크 수·피해 불변 */
       for(let i=0;i<3;i++){
-        const list = enemies.filter(e => e.born >= 0.3);
-        if(!list.length) break;
-        const e = list[Math.floor(Math.random()*list.length)];
+        const e = chainNext(fx, fy, used);
+        if(!e) break;
+        used.push(e);
         const crit = Math.random() < stat.crit;
         bolts.push({ x1:fx, y1:fy, x2:e.x, y2:e.y - e.r, t:0 });
         fx = e.x; fy = e.y - e.r;

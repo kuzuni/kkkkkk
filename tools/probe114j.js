@@ -41,7 +41,7 @@ async function run(p) {
     if (typeof closeAll === 'function') try { closeAll(); } catch (e) {}
     document.querySelectorAll('.modal.on').forEach(m => m.classList.remove('on'));
 
-    const out = { boom: null, bolt: null, tier: null, hit: null, err: [] };
+    const out = { boom: null, bolt: null, tier: null, hit: null, chain: null, err: [] };
 
     /* ---------- 공용 하네스 ---------- */
     function reset(skill) {
@@ -202,6 +202,54 @@ async function run(p) {
                   drops: alphas.slice(1).map((v, i) => +(alphas[i] - v).toFixed(4)) };
     } catch (err) { out.err.push('hit: ' + err.message); }
 
+    /* ---------- ⑤ bolt 연쇄: 링크 길이 · 밸런스 불변 ---------- */
+    /* 17회차 AY[11](57.4%×47.7%) · AZ[12](58%×47%) · 16회차 AW[17]·AX[15] · 15회차 AV[3] —
+       **네 회차 연속** 공통 지적. 원인은 15회차가 코드로 확정했다(대상을 거리와 무관하게 뽑는다).
+       고친 뒤 반드시 **두 가지를 같이** 재야 한다:
+         ㄱ. 링크가 실제로 짧아졌는가            (연출 — 고치려던 것)
+         ㄴ. **링크 수·피해 총량이 그대로인가**  (밸런스 — 절대 바뀌면 안 되는 것)
+       16회차 «사거리 캡» 교훈: 연출을 고치다 밸런스를 건드리면 그 수정은 통째로 무효다. */
+    try {
+      const e0 = reset('bolt');
+      /* 적 6기를 거리 175 링에 고르게 세운다(cap114 의 bolt 장면과 같은 배치) */
+      enemies.length = 0;
+      for (let i = 0; i < 6; i++) makeEnemy('zombie');
+      enemies.forEach((en, i) => {
+        en.born = 1; en.hp = en.max = 1e12;
+        const a = i * 6.283 / 6;
+        en.x = player.x + Math.cos(a) * 175; en.y = player.y + Math.sin(a) * 175;
+      });
+      S.lv.crit = 0;                      /* 치명 난수를 빼고 «순 피해» 만 본다 */
+      let maxLink = 0, sumLink = 0, nLink = 0, casts = 0, dmgTotal = 0;
+      /* ★ «시전당 피해 합» 으로 견주면 안 된다 — 치명 판정이 링크마다 독립 난수라 40회를 돌려도
+         2% 안팎이 흔들린다(16회차 교훈: 노이즈에 도장을 찍지 마라). 대신 **치명이 안 뜬 링크의
+         피해**만 모으면 그 값은 정확히 `dmg` 라 **두 빌드가 소수점까지 같아야** 한다.
+         대상 선택이 피해에 영향을 주면 여기서 즉시 갈린다. */
+      let ncSum = 0, ncN = 0;
+      const realHit = hitEnemy;
+      hitEnemy = function (en, d, crit, a, b) {
+        dmgTotal += d;
+        if (!crit) { ncSum += d; ncN++; }
+        return realHit.apply(null, arguments);
+      };
+      for (let c = 0; c < 40; c++) {
+        bolts.length = 0; skillCd = {};
+        enemies.forEach(en => { en.hp = en.max = 1e12; en.slow = 0; });
+        if (!castSkill(SK.bolt)) continue;
+        casts++;
+        for (const l of bolts) {
+          const d = Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+          maxLink = Math.max(maxLink, d); sumLink += d; nLink++;
+        }
+        step(1 / 60);
+      }
+      hitEnemy = realHit;
+      out.chain = { maxLink, avgLink: nLink ? sumLink / nLink : 0, casts,
+                    linksPerCast: casts ? nLink / casts : 0,
+                    dmgPerCast: casts ? dmgTotal / casts : 0,
+                    dmgPerLink: ncN ? ncSum / ncN : 0, ncN };
+    } catch (err) { out.err.push('chain: ' + err.message); }
+
     /* ---------- ③ 링 계층 분리 ---------- */
     try {
       const T = RING_TIER;
@@ -264,6 +312,19 @@ async function run(p) {
     line(r.hit.drift <= 5, `표적 드리프트 최대 ${r.hit.drift.toFixed(2)} 게임px (상한 5 — AZ[15] 처방 «±5 게임px»)`);
     line(r.hit.life >= 0.30, `수명 ${(r.hit.life * 1000).toFixed(0)}ms (하한 300ms — 58 규칙 «단발 0.3~0.8초»)`);
     line(md <= 0.45, `프레임당 최대 알파 낙차 ${md.toFixed(3)} (상한 0.45)`);
+  }
+
+  console.log('\n== ⑤ bolt 연쇄: 링크 길이 · 밸런스 불변 ==');
+  if (!r.chain) { console.log('  (측정 실패)'); fail++; }
+  else {
+    const c = r.chain;
+    console.log(`  시전 ${c.casts}회 · 링크/시전 ${c.linksPerCast.toFixed(2)} · 시전당 피해 ${c.dmgPerCast.toFixed(1)} (치명 난수 포함 — 견주지 마라)`);
+    console.log(`  ★ 비치명 링크 ${c.ncN}개의 링크당 피해 = ${c.dmgPerLink.toFixed(6)}  ← 두 빌드가 «소수점까지» 같아야 한다`);
+    console.log(`  링크 길이 최대 ${c.maxLink.toFixed(1)} · 평균 ${c.avgLink.toFixed(1)} 게임px`);
+    /* 적이 반경 175 링에 6기 — 이웃 간 간격은 175 다. 최근접으로 이으면 링크는 그 언저리여야 하고,
+       거리를 안 보면 최대 350(지름)까지 뛴다. 상한은 «이웃 간격 + 여유 15%» = 201 로 잡는다. */
+    line(c.maxLink <= 201, `링크 최대 길이 ${c.maxLink.toFixed(1)} 게임px (상한 201 = 이웃 간격 175 + 15%)`);
+    line(Math.abs(c.linksPerCast - 3) < 0.001, `링크 수/시전 ${c.linksPerCast.toFixed(3)} (밸런스 — 3 불변)`);
   }
 
   console.log('\n== ④ 링 계층 분리 (피격 : 배경) ==');
