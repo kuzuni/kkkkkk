@@ -76,7 +76,19 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     await p.waitForTimeout(90);
     await shot(p, 'flow-' + (i + 1));
   }
-  console.log('flow 6장 — 배경 흐름 0/6/12/18/24/30s 위상');
+  /* ⚠ 5회차 — 6장이 0~30s 인데 `--bgt1` 은 40~90s 라 **루프 이음매(wrap) 위상이 표본에 하나도 없다**
+     (H 15). 즉 «이음매 팝» 을 그림으로 반증할 수가 없었다. 등간격 6장은 «등속성» 판정의 근거라
+     건드리지 않고(두 비평가 다 이 시리즈를 근거로 σ≤0.4px 를 냈다) **wrap 직전 1장을 덧붙인다.**
+     카드1 의 실제 --bgt1 을 읽어 99% 지점을 찍는다 — 주기를 또 바꿔도 안 빗나간다. */
+  const bgt1 = await p.evaluate(() => {
+    const el = document.querySelector('#dunList .dnc');
+    return parseFloat(getComputedStyle(el).getPropertyValue('--bgt1')) * 1000;
+  });
+  await seek(Math.round(bgt1 * 0.99));
+  await p.waitForTimeout(90);
+  await shot(p, 'flow-7');
+  console.log('flow 7장 — 배경 흐름 0/6/12/18/24/30s 위상 + wrap 직전 '
+    + (bgt1 * 0.99 / 1000).toFixed(1) + 's (--bgt1 ' + (bgt1 / 1000) + 's 의 99%)');
 
   /* ---- ② 썸네일 들썩 8단계 : 던전 카드1 확대 ---- */
   const card1 = await p.evaluate(() => {
