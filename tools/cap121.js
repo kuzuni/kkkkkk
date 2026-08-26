@@ -116,7 +116,13 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     const r = document.querySelector('#dunList .dnc.rd').getBoundingClientRect();
     return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
   });
-  const FR = await p.evaluate(() => (window.ATLAS.elves.a.blue_idle || []));
+  /* ⚠ 6회차 — «제품이 실제로 도는 프레임» 을 그대로 써야 표본이 거짓말을 안 한다.
+     아이들 창(`TH_IDLE`)이 생겼으므로 전 사이클이 아니라 그 창을 읽는다(창이 없으면 전 사이클). */
+  const FR = await p.evaluate(() => {
+    const cv = document.querySelector('#dunList canvas.thcv');
+    const key = cv && cv.dataset.thk, nm = cv && cv.dataset.thi;
+    return (TH_IDLE[key + '/' + nm] || (ATLAS[key] && ATLAS[key].a[nm]) || []);
+  });
   /* ⚠ 4회차 — 여기도 균등 8등분이면 안 된다(bob 은 3회차에 고쳤는데 raid 는 그대로였다).
      487.5ms 간격은 780ms 짧은 들썩에 대해 에일리어싱이라 84%·90% 를 비켜가고, 그래서
      비평가 E·F 가 둘 다 «컨텐츠 탭 표본에는 큰 점프가 아예 없다 — 실측 진폭이 실제의 55%» 로 적었다.
@@ -150,6 +156,41 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     await p.waitForTimeout(70);
     await shot(p, 'raid-' + (RAID.length + i + 1), rcard);
   }
+  /* ---- ④ 아레나 카드 4장 (6회차 신설 — 5회차 H 12: «표본 0장») ----
+     `.dnc.rd.arn2` 는 `fit:0` 이라 측정장 카드와 **같은 천장 절단 위험을 공유**하는데(5회차 ⓐ 의
+     최대 감점원이 바로 그 절단이었다) 판정할 그림이 한 장도 없었다. 게다가 이 카드만 썸네일이
+     둘(마주 본 기사 2명)이고 위상이 서로 달라야 하므로, 「둘이 한 몸처럼 움직이지 않는가」도
+     여기서만 볼 수 있다. 들썩 키프레임 중 **극단 4개**(착지 0 · 짧은 정점 50 · 깊은 웅크림 84 ·
+     큰 점프 정점 90)만 찍는다 — 절단은 정점에서, 겹침은 웅크림에서 난다. */
+  const acard = await p.evaluate(() => {
+    const el = document.querySelector('#dunList .dnc.rd.arn2');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
+  });
+  if (!acard) console.log('  ⚠ 아레나 카드 없음 — S.best 가 ARENA.open 미만인가?');
+  else {
+    const AFR = await p.evaluate(() => (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle) || []);
+    const ARN = [0, 50, 84, 90];
+    for (let i = 0; i < ARN.length; i++) {
+      await seek(Math.round(3900 * ARN[i] / 100));
+      /* 두 칸의 위상은 «내 칸/상대 칸» 으로 갈린다 — 하네스도 같은 규칙으로 프레임을 어긋나게 준다 */
+      await p.evaluate(([fa, fb]) => {
+        const me = document.querySelector('#dunList .dnc.rd.arn2 canvas.arn-me');
+        const op = document.querySelector('#dunList .dnc.rd.arn2 canvas.arn-op');
+        [[me, fa, true], [op, fb, false]].forEach(([cv, f, flip]) => {
+          if (!cv) return;
+          cv._fr = f;
+          drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint, flip });
+        });
+      }, [AFR[i % AFR.length], AFR[(i + 2) % AFR.length]]);
+      await p.waitForTimeout(70);
+      await shot(p, 'arn-' + (i + 1), acard);
+    }
+    console.log('arn ' + ARN.length + '장 — 아레나 카드 확대, 키프레임 위치 ' + ARN.map(v => v + '%').join('/')
+      + ', 기사 아이들 프레임 ' + AFR.length + '장 중 두 칸을 2프레임 어긋나게');
+  }
+
   console.log('raid ' + (RAID.length + 2) + '장 — 컨텐츠 카드1 확대, 키프레임 위치 '
     + RAID.map(v => v + '%').join('/') + ' + 번개 잔광 ' + FLASH.map(v => (v / 1000).toFixed(2) + 's').join('·')
     + ', 아이들 프레임 ' + FR.join(',') + ' 순환');
