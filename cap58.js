@@ -74,6 +74,8 @@ function pick(buf, t0, tag, pre){
     out.push({ want:w, got:Math.round(rel[bi].dt), data:rel[bi].data });
     from = Math.min(bi + 1, rel.length - 1);            /* 다음 목표는 이 프레임 «뒤» 에서만 고른다 */
   }
+  global.__capT = global.__capT || {};
+  global.__capT[tag] = out.slice(1).map(f => f.got);
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
   console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
@@ -101,6 +103,7 @@ function pwLaunch(){
     throw e;
   });
 }
+global.__capLog = {};
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await pwLaunch();
@@ -127,7 +130,10 @@ function pwLaunch(){
   const buf = recorder(cdp);
   /* 14회차 — png → jpeg. 1080×2280 PNG 인코딩이 프레임 전달을 74ms 로 묶고 있었다
      (probe58g 실측 rAF 는 32~43ms). jpeg q86 이면 인코딩이 절반 이하라 원본 밀도가 오른다. */
-  await cdp.send('Page.startScreencast', { format:'jpeg', quality:86, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
+  /* 19회차 — quality 86 → **55**. 93 6회차가 실측한 것: q86 은 이 컨테이너에서 인코딩이 rAF 를
+     따라가지 못해 **같은 합성 프레임이 두 번 실린다**. 13·14회차 비평가가 «166ms 동결» 로 잡은 것이
+     이것이고, rAF 기준 게이트에는 정지 구간이 없다(probe58f). 핸드오프 ⓓ «캡처 절차 재검» 이 이 줄이다. */
+  await cdp.send('Page.startScreencast', { format:'jpeg', quality:55, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
   await page.waitForTimeout(300);
 
   const run = async (tag, trigger, waitMs) => {
@@ -141,8 +147,30 @@ function pwLaunch(){
     buf.length = 0;
     const t0 = await page.evaluate(trigger);
     if(t0 && t0.err) throw new Error(`${tag}: ${t0.err}`);
-    await page.waitForTimeout(waitMs || 1800);
-    return pick(buf, t0.t, tag, pre);
+    /* 19회차 — 93 5회차의 «프레임별 정답표» 를 58 에도 옮긴다. 93 에서 비평가 6명 중 3명이 프레임에서
+       숫자를 잘못 읽어 **없는 결함을 1순위 감점**으로 올렸다. 화면을 다시 읽게 하지 말고 값을 준다.
+       시계 원점은 반드시 `t0.t`(페이지 안에서 트리거 직전에 찍은 Date.now) — evaluate 왕복분(93 5회차
+       버그: 200ms 어긋남)이 끼면 정답표가 프레임과 다른 시계를 쓰게 된다. */
+    const log = await page.evaluate(async ([ms, t]) => {
+      const out = []; let spawn = 0;
+      const nf = () => new Promise(r => requestAnimationFrame(() => r()));
+      while(Date.now() - t < ms + 260){
+        if(!spawn){
+          const f0 = (typeof fxFlies !== 'undefined') && fxFlies.find(f => f.ui);
+          if(f0) spawn = Math.round(Date.now() - (performance.now() - f0.st) - t);
+        }
+        out.push([Date.now() - t,
+                  (document.getElementById('goldN')||{}).textContent || '',
+                  (document.getElementById('diaN')||{}).textContent || '',
+                  (typeof fxFlies !== 'undefined') ? fxFlies.filter(f => f.ui).length : 0,
+                  document.querySelectorAll('#fxl .fx-fly').length]);
+        await nf();
+      }
+      return { rows:out, spawn };
+    }, [waitMs || 1800, t0.t]);
+    const worst = pick(buf, t0.t, tag, pre);
+    global.__capLog[tag] = log;
+    return worst;
   };
 
   /* ── 씬 1: 재화 획득 (전투 드랍 지점 → HUD 골드 알약) ── */
@@ -203,5 +231,13 @@ function pwLaunch(){
   await cdp.send('Page.stopScreencast').catch(() => {});
   await browser.close();
   if(errs.length){ console.log('콘솔 에러:'); errs.slice(0,8).forEach(e => console.log('  ! ' + e)); process.exit(1); }
+  /* 프레임별 «정답» 표 — 비평 전달문에 그대로 붙인다 */
+  for(const tag in global.__capLog){
+    const L = global.__capLog[tag].rows, SP = global.__capLog[tag].spawn;
+    const at = ms => { let b = L[0]; for(const r of L) if(Math.abs(r[0]-ms) < Math.abs(b[0]-ms)) b = r; return b; };
+    const T = (global.__capT && global.__capT[tag]) || [];
+    console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수): ` +
+      T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[4]).join('  '));
+  }
   console.log('\ncap58 OK — docs/review/58-' + ROUND + '-*.jpg');
 })().catch(e => { console.error('cap58 실패:', e.message); process.exit(1); });
