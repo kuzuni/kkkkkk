@@ -987,16 +987,20 @@
     background:#367cc1;pointer-events:none}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.62);height:0%}
   /* 아이콘은 well(.cdw) 안에 넣어 원형으로 클립한다 — 밖에 두면 이모지 모서리가 링을 뚫는다 */
-  .slot2 .si3{display:block;font-size:66.5px;line-height:88px;text-align:center;width:88px;
-    position:relative;top:-1.5px}
+  /* 잉크 정규화(측정표 §3 — 레퍼런스 아이콘 잉크 68×85). 이모지는 글리프마다 잉크비가 달라
+     font-size 하나로는 bbox 를 못 맞춘다(A2 가 같은 함정을 밟았다). 24종 평균 잉크가
+     fs 66.5 에서 68.6×72.2 로 **폭은 맞고 높이만 −15%** 였다 → fs 를 78.3 으로 올려 높이를 85 로
+     맞추고, 그때 같이 커진 폭(80.8)을 scaleX 로 68 에 되돌린다. 실측기 `node tools/inkA4.js` */
+  .slot2 .si3{display:block;font-size:78.3px;line-height:88px;text-align:center;width:88px;
+    position:relative;top:-1.5px;transform:scaleX(.842)}
   /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
      활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
      골드 링(r48~55) + well 가장자리 노란 안쪽 링(r36~43) + 바깥 노란 링(r60~66) 이 붙는 구조다 */
-  .slot2.ready{box-shadow:0 0 0 5px #fffe03}
+  .slot2.ready{box-shadow:0 0 0 7px #fffe03}
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 5px #fefe0c}
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 8px #fefe0c}
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}
