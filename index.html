@@ -2351,7 +2351,18 @@
     75%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
     100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
-  @keyframes fxToastOut{to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
+  /* 20회차 버그 — 이건 «연출 취향» 이 아니라 **CSS 함정**이다. `to{}` 만 쓴 키프레임의 암묵적
+     0% 는 «그 애니메이션을 뺀 계산값», 즉 규칙에 transform 선언이 없으므로 **`transform:none`** 이다
+     (앞의 `fxToastIn ... both` 가 들고 있던 `translate(-50%,0)` 이 아니다 — `.out` 이 붙는 순간
+     `animation` 이 통째로 교체돼 그 fill 이 사라진다).
+     그래서 퇴장이 시작되는 첫 프레임에 −50% 가 빠지며 토스트가 **자기 박스 폭의 절반만큼 오른쪽으로
+     순간이동**한 뒤 되돌아온다. 두 비평가가 라운드를 건너 독립적으로 같은 것을 쟀다:
+       AE(19회차) 중심 x 539 → 642 = **+103px** · AG(20회차) 539.5 → 651.5 = **+112px**
+     실제 박스 폭은 텍스트 144 + 좌우 패딩 68 + 테두리 8 = 220 → 절반 **110px** 로 두 실측과 맞는다.
+     → 0% 를 명시해 −50% 를 유지시킨다. LESSONS 의 «fill-mode 가 애니 시작 전 상태를 붙든다» 와
+     같은 뿌리(둘 다 «암묵적 키프레임이 어디서 오는가» 를 잘못 가정한 것)다. */
+  @keyframes fxToastOut{from{opacity:1;transform:translate(-50%,0) scale(1)}
+    to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
 
   /* ── 113 «손가락» 가이드 포인터 (2026-08-26, 저장소 주인 지시) ─────────────
      가이드 미션 배너를 눌러 목적지로 이동한 뒤, «여기를 누르라» 고 가리킨다.
