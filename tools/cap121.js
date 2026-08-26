@@ -70,13 +70,18 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     const r = document.querySelector('#dunList .dnc').getBoundingClientRect();
     return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
   });
-  /* 짧은 들썩 1바퀴 = --thb/5 (카드1 은 3.9s/5 = 780ms). 큰 점프까지 보려면 한 바퀴 전체(3.9s)를 8등분한다 */
-  for (let i = 0; i < 8; i++) {
-    await seek(Math.round(i * 3900 / 8));
+  /* ⚠ 한 바퀴를 «균등 8등분» 하면 안 된다 — 짧은 들썩 주기가 --thb/5(780ms)라 487ms 표본은
+     나이퀴스트(390ms)를 넘겨 **큰 점프(84% 깊은 웅크림 / 90% 정점)가 표본 사이로 빠진다.**
+     비평가 D 가 «8장 실측 최대 진폭 10.25px = 지시 14px 의 73%» 로 잡아낸 것이 이 에일리어싱이다.
+     그래서 균등 간격이 아니라 **키프레임 위치**를 찍는다: 착지·정점·깊은 웅크림·점프 정점이 전부 들어간다. */
+  const BOB = [0, 10, 20, 50, 70, 84, 90, 95];      /* % of --thb */
+  for (let i = 0; i < BOB.length; i++) {
+    await seek(Math.round(3900 * BOB[i] / 100));
     await p.waitForTimeout(70);
     await shot(p, 'bob-' + (i + 1), card1);
   }
-  console.log('bob 8장 — 카드1 확대, 들썩 한 바퀴(3.9s)를 8등분 (487ms 간격)');
+  console.log('bob ' + BOB.length + '장 — 카드1 확대, 키프레임 위치 ' + BOB.map(v => v + '%').join('/')
+    + ' (착지 0/20 · 짧은 들썩 정점 10/50/70 · 깊은 웅크림 84 · 큰 점프 정점 90)');
 
   /* ---- ③ 컨텐츠(레이드) 탭 8장 — 아이들 프레임 순환 ---- */
   await p.evaluate(() => setDunSub('raid'));
