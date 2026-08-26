@@ -5845,7 +5845,13 @@
      .tr-wave(검정 상단 테두리 링)도 동심이라 같이 34 로 내린다. */
   .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 104px);
     background:#E6C695;border-radius:34px 34px 0 0;overflow:hidden}
-  .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:#141414}
+  /* 24회차(비평가 η P1 — 이 회차 ② 최대 편차 +88%): ref 는 시트 바닥 검정이 y2161..2164 = **4px** 뿐인데
+     우리는 2161..2167 = 7.5px 이었다. 내역을 보면 우리 4px(이 ::after) + 하단 탭바 상단 테두리 3px 이고,
+     **ref 의 그 4px 이 곧 탭바 테두리**다(팝업이 탭바 위에 바로 얹히므로 둘이 겹친다).
+     10회차가 «우리 9px 중 4px 만 23 것» 이라고 정리했지만, 작업 63 이 탭바를 5→3px 로 줄인 뒤로는
+     이 ::after 가 통째로 잉여다. 1px 만 남겨(라운드 코너 아래 헤어라인) 합계 4px = ref Δ0.
+     남의 구간(탭바)은 건드리지 않는다. */
+  .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:#141414}
   .tr-sheet>*{position:absolute}
   /* 11회차(Q 인계 7번): 검정 상단 테두리가 «높이 8px 직사각형» 이라 라운드 코너에서 통째로 잘렸다 —
      ref x10 세로는 검정 932..946 뒤 밝은 립 947 인데(=코너에서 세로 15px) 우리는 x10 에 검정이 **0px**,
@@ -6066,12 +6072,18 @@
   /* §5 배수 탭 x1/x10/x30 — 바 x142 y265 w767 h73 (3칸 242/258/257) */
   /* 7회차: 바 폭이 767 이라 크림박스 안에서 우측으로 2.5px 편심(좌136/우131)이었다.
      ref 는 761 로 좌136/우137 대칭이고 **우측 끝에도 밝은 립 6px** 이 있다(좌측만 있었다). */
-  .tr-qty{left:142px;top:265px;width:761px;height:81px}
+  /* 24회차(비평가 θ P2 — 자체 차분으로 확인): 스트립 **바닥 밝은 띠**가 ref 5px / 우리 12px 이었다.
+     x450·x880 두 열 실측 — ref 는 y1398..1402(236,190,154) 5px 뒤 곧장 y1403..1408 이 트레이 경계 띠
+     (238,200,161)인데, 우리는 y1397..1408 이 통째로 (236,190,154) 라 **21회차에 전폭으로 편 경계 띠를
+     x160..919 구간에서 도로 덮고 있었다.** 즉 스트립 outer 가 ref 1328..1402(h75) / 우리 1328..1408(h81) 이다.
+     → 높이 81 → 75, 바닥 띠 기점 69 → 70(5px). 칩(top9 h56)·구분선(top22 h32)·레드닷(top −9)은 좌표 불변,
+     라벨도 line-height 64 의 첫 줄 상자라 불변이다. */
+  .tr-qty{left:142px;top:265px;width:761px;height:75px}
   /* 6회차: 칸 구분선은 «전체 높이 inset box-shadow» 가 아니다 — ref x664..667 세로 스캔상
      y1350..1381 (바 상단에서 22px, 길이 32px) 에만 있고 색도 (172,122,86) 로 훨씬 밝다(우리 #A06845 는 160,104,69).
      세로로 잘라내야 하므로 box-shadow 대신 background-image 레이어로 깐다. */
-  .tr-qty>.q{position:absolute;top:0;height:81px;cursor:pointer;text-align:center;line-height:64px;
-    background:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 69px,#ECBE9A 69px)}
+  .tr-qty>.q{position:absolute;top:0;height:75px;cursor:pointer;text-align:center;line-height:64px;
+    background:linear-gradient(180deg,#E7C4A2 0 5px,#C19068 5px 70px,#ECBE9A 70px)}
   /* 7회차: 구분선을 «칸의 오른쪽 모서리» 에 그리면 선택 칩(::before 가 right:0)이 1번 칸 구분선을
      통째로 덮는다 — 비평가 L 이 차분 스캔으로 «x1|x10 구분선 완전 소실» 을 잡아냈다.
      칸이 아니라 **바 위 오버레이**로 얹어 칩과 무관하게 만든다.
@@ -6278,8 +6290,10 @@
   /* 18회차(α P1 · Z P9 — 독립 2명): 밴드 **우측**이 검정 테두리에 1px 못 닿아 카드 흰 바탕이
      y1832..1917 (86px) 세로로 비쳤다(카드 3장 전부). 좌측은 14회차에 left 9→8 로 이미 붙였는데
      우측만 9 로 남아 있었다 — 좌우 대칭으로 8. (게이트 기대값 w310 과도 일치한다) */
+  /* 24회차(θ P3): 밴드 안쪽 중심 대비 내용 중심이 ref −5.5 / 우리 −8 로 카드 3장 모두 2.5px 더 왼쪽이었다.
+     밴드 좌표는 건드리면 안 되므로(14·18회차 확정) 8회차 방식 그대로 padding-right 로만 되돌린다: 16 → 11. */
   .tr-card>.cb{left:8px;right:8px;top:396px;bottom:8px;display:flex;align-items:center;
-    justify-content:center;gap:2px;padding-right:16px;border-radius:0 0 20px 20px;
+    justify-content:center;gap:2px;padding-right:11px;border-radius:0 0 20px 20px;
     /* 9회차(N P7 부분 채택): ref x200 세로는 밴드 (191,161,133) 가 **y1931 까지 유지**되고
        1932(180,144,108) · 1933..1934(173,134,93) · 1935..1937(170,125,83) 로 **6px 만 완만히** 어두워진다.
        N 의 «9px · (69,52,34) 까지» 는 그 아래 카드 검정 테두리(1938~)의 AA 가 섞인 값이다 —
