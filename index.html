@@ -23541,6 +23541,14 @@ function fxRenderLater(fn){
 const fxDisp = { gold:null, dia:null };
 const fxSeen = { gold:null, dia:null };
 const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0, dia:0 };
+/* 158 — «묶음의 발원» 은 **누적 시점** 에 스냅샷한다(발사 시점 판정이 버그의 뿌리였다).
+   종전에는 flush 때 `fxSrc(now)` 를 새로 물어봤는데, 전투 킬 골드는 최대 900ms 를 `fxAcc` 에
+   묶여 있다가 뒤늦게 발사된다 — 그 사이에 사용자가 하단 네비·팝업·✕ 를 누르면 탭 좌표(1200ms 유효)가
+   전투 좌표(600ms 유효)를 이겨서 **전투에서 번 골드가 방금 누른 버튼에서 튀어나왔다**
+   (주인 보고 2026-08-27 «골드 얻는 상황도 아닌데 골드 흡수 이펙트가 뜸»).
+   게다가 그렇게 뺏긴 출발점에는 combat 태그가 없어 77(⚑ «전투 발은 팝업 아래»)까지 같이 깨졌다.
+   재화가 실제로 늘어난 그 프레임의 출처를 적어 두면 이후 어떤 탭도 묶음을 가로챌 수 없다. */
+const fxAccSrc = { gold:null, dia:null };
 /* 비행이 «도착할 때까지» 표시값을 붙잡아 둔다(0 = 안 붙잡음). 도착이 없으면 1.2초 뒤 스스로 풀린다. */
 const fxHold = { gold:0, dia:0 };
 /* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
@@ -23571,6 +23579,9 @@ function fxWatch(now){
          1.26s 라 1400 이면 연출 중간에 풀려 숫자가 먼저 다 오른다. */
       if(!fxAcc[k]){ fxAccS[k] = now; if(!fxRoll[k]) fxHold[k] = now + 2000; }
       fxAcc[k] += d; fxAccT[k] = now;
+      /* 158 — 이 증가분이 «어디서 났는지» 를 지금 적어 둔다. 매 증가마다 갱신하므로 연속 킬에서는
+         마지막 킬 자리가 남고(종전 동작 유지), 획득이 멈춘 뒤의 UI 탭은 더 이상 끼어들지 못한다. */
+      fxAccSrc[k] = fxSrc(now) || fxAccSrc[k];
     }
   }
   /* 연속 킬처럼 잘게 들어오는 획득은 묶어서 한 번에 쏜다(70ms 정지 or 900ms 누적).
@@ -23586,12 +23597,16 @@ function fxWatch(now){
      묶음의 목적은 **연속 킬**(전투 발)이 아이콘 폭탄이 되는 것을 막는 데 있다 — 그쪽만 45ms 를
      유지하고, UI 발은 «다음 프레임»(같은 프레임에 더 들어오지 않으면 바로)에 쏜다.
      같은 프레임의 골드·다이아 동시 획득은 누적·발사 두 패스 구조라 그대로 한 묶음이 된다. */
-  const combatSrc = fxOrigSrc === 'combat' && (now - fxOrigT) < 600;
-  const quiet = combatSrc ? 45 : 0;
+  /* 158 — 묶음 성격(전투 발인가)도 «지금 fxOrigSrc 가 무엇인가» 가 아니라 **그 묶음의 스냅샷**으로
+     본다. 종전 전역 판정은 다이아(UI 발)와 골드(전투 발)가 같이 떠 있을 때 서로의 디바운스를 바꿨다. */
   for(const k in FXCUR){
+    const src = fxAccSrc[k];
+    const quiet = (src && src.combat) ? 45 : 0;
     if(fxAcc[k] > 0 && (flush || now - fxAccT[k] > quiet || now - fxAccS[k] > 900)){
-      fxFly(fxSrc(now), k, fxAcc[k]);
-      fxAcc[k] = 0;
+      /* 158 — 스냅샷을 **그대로** 쓴다. 여기서 `fxSrc(now)` 로 되묻으면 «누적 뒤에 누른 탭» 이
+         다시 끼어들 틈이 생긴다(스냅샷이 null 인 묶음 = 발원 불명 → fxFly 가 종전대로 화면 중앙 기본값). */
+      fxFly(src, k, fxAcc[k]);
+      fxAcc[k] = 0; fxAccSrc[k] = null;
     }
   }
   fxNow = false;
