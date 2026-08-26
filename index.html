@@ -22,6 +22,10 @@
     src:url('assets/fonts/Jua-subset.woff2') format('woff2');
     font-weight:400 900;font-style:normal;font-display:swap}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  /* 폼 컨트롤은 UA 가 자기 서체(Arial)를 쥐고 있어 body 의 상속이 끊긴다 — 실제로 32 튜토 배너의
+     «미션 · 1 · 받기» 와 12 의 `.sm-fat «10회 소환»` 4칸만 구서체로 남아 있었다(126 ①).
+     화면마다 `font-family:inherit` 를 다시 적는 대신 여기서 한 번에 잇는다. */
+  button,input,select,textarea{font-family:inherit}
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
   /* 안전영역(노치·홈 인디케이터)은 프레임 바깥에서 흡수한다.
@@ -1736,7 +1740,10 @@
      ref 밴드는 패널·카드 열보다 넓으므로(ref L1 x93..985) 블록을 본문 전폭(862)으로 잡아 여유를 준다.
      verify69 가 «각 줄이 정확히 1줄» 인지 회귀로 지킨다. */
   .ml-note{position:absolute;left:0;width:862px;bottom:211px;height:50px;text-align:center}
-  .ml-note i{display:block;font-size:22px;line-height:25px;font-weight:700;color:#7A6550}
+  /* 126 ⑤(2026-08-26) — 22 → 25px. 새 서체가 같은 크기에서 14.5% 좁아 안내 1줄 폭이
+     측정표의 .904 PW 에서 .773 으로 내려앉았다(verify69 하한 .80). 상자(862×50, 25px 줄 2개)는
+     그대로 두고 글자만 키워 .879 PW 로 되돌린다 — 줄 상자가 아니라 글리프만 커지므로 레이아웃 불변. */
+  .ml-note i{display:block;font-size:25px;line-height:25px;font-weight:700;color:#7A6550}
   /* 하단 버튼 2개 — ref 336×129 gap30 합 702(0.7105 PW), 좌우 여백 대칭 143.
      → 305×117 gap27 합 637, 좌우 여백 112. 둘은 **정확히 같은 크기**다(측정 §7). */
   .ml-btns{position:absolute;left:112px;width:638px;bottom:57px;height:117px}
@@ -5786,7 +5793,11 @@
      지시서의 176 은 «잉크 하변 = CSS bottom» 가정에서 나온 값이라 실측으로 1px 정정했다.
      .sm-btns 와 같은 짧은 프레임 보호 — 버튼이 위로 묶이면 이 문구도 같이 올려야 겹치지 않는다.
      1480 = 버튼 하변 1416 + 여유 20 + 잉크 44. 프레임 1655 이상에서는 175 가 그대로 이긴다(2280·1920 Δ0). */
-  .sm-close{position:absolute;left:0;right:0;bottom:min(175px,calc(100% - 1480px));text-align:center;
+  /* 126 ⑤(2026-08-26) — 175 → 170 (짧은 프레임 보호항도 1480 → 1475 로 같이 내린다).
+     서체를 «Jua» 로 바꾸자 같은 line-height 안에서 베이스라인이 5px 올라가 **잉크**가
+     측정표 자리(2064~2104)에서 그만큼 떠올랐다(verify84 4항목 Δ−5). 지시서 ⑤ «±3px 넘게
+     움직이면 측정표 값 우선» 대로 상자를 5px 내려 잉크를 원래 자리로 되돌린다. */
+  .sm-close{position:absolute;left:0;right:0;bottom:min(170px,calc(100% - 1475px));text-align:center;
     font-size:44px;line-height:44px;font-weight:900;color:#fff}
   .sm-close i{transform:scaleX(.96)}
 
@@ -14424,12 +14435,17 @@ function coinResetTxt(){
    가격(`won`)·쿠폰(`cp`)·`MILE_NEED` 는 그대로다(지시 ③). 구 세이브의 이미 받은 다이아도 안 건드린다(④).
    수량 라벨 `q` 는 **손으로 적지 않고 `fmt()` 로 파생**한다 — 111 의 알파벳 단위 규약이 이미 들어가 있어
    («×5.00A · ×35.0A · ×75.0A · ×450A · ×1.00B») 값과 라벨이 어긋날 수 없게 한다(LESSONS 111-1). */
+/* 126 ②(2026-08-26) — `qx` 는 «다섯 칸의 렌더 폭을 같게 맞추는» 칸별 가로 보정이다(verify116 C4, 편차 ≤ 6px).
+   시스템 폰트는 이 숫자열의 자연 폭이 다섯 칸 모두 131.7px 로 같아서 qx 가 거의 한 값(0.90)이면 됐지만,
+   게임 서체 «Jua» 는 숫자 폭이 글리프마다 달라(1 이 좁다) 자연 폭이 122.6~135.3px 로 갈라진다.
+   그래서 목표 폭을 교체 전과 같은 **118.5px** 로 두고 칸마다 `qx = 118.5 / 자연폭` 을 다시 계산했다
+   (구 서체 편차 0.6px → 새 서체 무보정 14.6px → 재보정 후 다시 ≤ 6px). 값·라벨·가격은 그대로다. */
 const DIA_PACKS = [
-  { id:'d1', dia:5000,    won:1000,   cp:0, qx:0.90 },
-  { id:'d2', dia:35000,   won:5000,   cp:0, qx:0.90 },
-  { id:'d3', dia:75000,   won:11000,  cp:0, qx:0.90 },
-  { id:'d4', dia:450000,  won:55000,  cp:1, qx:0.98 },
-  { id:'d5', dia:1000000, won:110000, cp:2, qx:0.90 }
+  { id:'d1', dia:5000,    won:1000,   cp:0, qx:0.876 },   /* ×5.00A 자연폭 135.3 */
+  { id:'d2', dia:35000,   won:5000,   cp:0, qx:0.893 },   /* ×35.0A 자연폭 132.7 */
+  { id:'d3', dia:75000,   won:11000,  cp:0, qx:0.878 },   /* ×75.0A 자연폭 135.0 */
+  { id:'d4', dia:450000,  won:55000,  cp:1, qx:0.928 },   /* ×450A  자연폭 127.7 */
+  { id:'d5', dia:1000000, won:110000, cp:2, qx:0.966 }    /* ×1.00B 자연폭 122.6 */
 ].map(p => Object.assign(p, { q: '×' + fmt(p.dia) }));
 const MILE_NEED = 10, MILE_DIA = 2500000;
 const wonTxt = w => String(w).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';

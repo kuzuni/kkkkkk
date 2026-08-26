@@ -100,7 +100,10 @@ const ok = (n, got, want, tol) => {
   R.push({ n: '.sm-btns 선언 = bottom', got: decl.replace(/\s+/g, ' ').trim().slice(0, 60),
     want: 'bottom:426px, top 없음', d: 0,
     pass: /bottom:\s*min\(426px/.test(decl) && !/(^|[;{])\s*top:/.test(decl), tol: 0 });
-  R.push({ n: '.sm-close bottom 앵커', got: g.closeAnchor, want: '175px', d: 0, pass: g.closeAnchor === '175px', tol: 0 });
+  /* 126 ①(2026-08-26): 서체가 «Jua» 로 바뀌면서 같은 line-height 안의 베이스라인이 5px 올라갔다.
+     이 항목이 지키려는 것은 «175 라는 숫자» 가 아니라 위 4항목이 재는 **잉크 자리(ref 2064~2104,
+     중심 2084)** 이므로, 잉크를 원래 자리에 두는 앵커 값 175 → 170 으로 갱신한다. */
+  R.push({ n: '.sm-close bottom 앵커', got: g.closeAnchor, want: '170px', d: 0, pass: g.closeAnchor === '170px', tol: 0 });
   R.push({ n: '콘솔 에러', got: errs.length, want: 0, d: errs.length, pass: errs.length === 0, tol: 0 });
 
   /* 짧은 프레임(#app 높이 clamp 하한 1600) — 하단 앵커로 바꾼 대가로 패널과 겹칠 수 있다.
