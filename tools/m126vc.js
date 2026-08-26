@@ -38,13 +38,19 @@ const PADX = argN('--padx', 2);  /* 가로는 상자를 거의 그대로 */
 const PADY = argN('--pady', 6);  /* 세로는 외곽선·그림자가 상자를 살짝 넘으므로 여유 */
 const RIMW = argN('--rimw', .82); /* 창 폭의 이 비율 이상을 가로지르면 rim 후보 */
 const RIMH = argN('--rimh', 10);  /* 그러면서 이만큼 납작하면 글자가 아니라 rim */
+const EDGEW = argN('--edgew', .90); /* «끊기지 않는 런» 이 창 폭의 이 비율 이상이면 그 행은 rim */
 const GATE = process.argv.includes('--gate');
-/* 12회차가 회수한 자리 — 다음 회차가 `top` 을 도로 지우면 여기서 걸린다(§21).
-   허용 ±2px: 표본마다 ±0.5 흔들리고, ref 는 JPEG 이라 그 이상은 못 따진다. */
-const GATE_SELS = ['.q22 .mhead h2', '.qs-t', '.qs-b b', '.qs-all b', '#pfw .pf-msn>i', '#pfw .pf-tgl .lb>i'];
-const GATE_TOL = argN('--tol', 2);
+/* 12·13회차가 회수한 자리 — 다음 회차가 top 을 도로 지우면 여기서 걸린다(§21·§22).
+   ⛔ .qs-all b(「모두 받기」)는 **게이트에 넣지 마라** — 버튼 면이 밝아 흰 코어 마스크가 글자를 못 가른다
+      (§22-2). 이 자리는 결손 프로파일로만 재고, 그 방법은 아직 이 도구에 없다.
+   허용 ±3px: ref 가 JPEG 이고 마스크 임계에 따라 표본이 ±1~2 흔들린다. 그 이상은 못 따진다. */
+const GATE_SELS = ['.q22 .mhead h2', '.qs-t', '.qs-b b', '#stinfo .chap', '#pfw .pf-msn>i', '#pfw .pf-tgl .lb>i'];
+const GATE_TOL = argN('--tol', 3);
 
 const SCREENS = [
+  /* 13회차 — W·X 가 «02 「STAGE」 −3px 위» 로 독립 일치. 측정표는 top:-13 을 ref 로 못 박아 뒀으므로
+     비평 두 건만으로 되돌리지 않고 이 도구로 먼저 확인한다. */
+  { k: '02-메인', ref: 'docs/ref/02-기본-메인-화면.jpg', steps: [], sels: ['#stinfo .chap'] },
   { k: '22-퀘스트', ref: 'docs/ref/22-퀘스트-팝업.jpg', steps: ['.side .ibtn[data-pop="quest"]'],
     /* 잉크가 흰색이 아닌 자리는 임계를 그 색에 맞춰 내린다 — 안 내리면 마스크가 글자를 통째로 놓치고
        엉뚱한 rim 을 문다(12회차에 「일일」#8DDDFF min 141 · 「반복」#A9A8AD min 168 이 그랬다).
@@ -91,7 +97,26 @@ function core(d, W, H, x0, x1, y0, y1, P) {
      (22 「모두 받기」·「반복」 이 실제로 그랬다: 띠 폭 = 창 폭 166·204, 높이 3~8).
      그래서 «창 폭의 RIMW 이상을 가로지르는 띠» 는 글자가 아니라고 보고 버리고 다시 찾는다. */
   const winW = X1 - X0;
-  let pool = px;
+  /* 12회차 2차 — rim 이 «납작한 띠» 로만 오는 게 아니다. 22 「모두 받기」에서는 버튼 rim 이 글자와
+     **세로로 이어져 한 밴드로 합쳐졌고**(폭 166 = 창 폭 · 높이 46), 높이가 커서 아래 rim 판정을
+     빠져나갔다. 그 결과 잉크 중심이 13px 위로 읽혀 12회차 1차가 +9px 를 넣는 과교정을 했다
+     (비평가 W 가 «+6px 아래로 뒤집혔다 · +3 이면 충분» 으로 잡아냈다).
+     → **행 단위로** 먼저 거른다: 창 폭의 EDGEW 이상을 가로지르는 «행» 은 rim 이다.
+       글자 행은 제 상자 안에서 80% 안팎이고, rim 은 창을 끝에서 끝까지 채운다. */
+  const rowX = new Map();
+  for (const [x, y] of px) { if (!rowX.has(y)) rowX.set(y, []); rowX.get(y).push(x); }
+  const rimRow = new Set();
+  for (const [y, xs] of rowX) {
+    /* «폭» 이 아니라 **끊기지 않는 런**으로 가른다 — 글자 행은 낱자·어절 사이가 반드시 끊기고
+       (「모두 받기」는 어절 공백에서), rim 은 창을 한 줄로 관통한다. 폭으로 자르면 제 상자를
+       꽉 채우는 인라인 글자(.qs-b b 는 rect 가 글자에 딱 붙어 폭이 100% 다)까지 같이 날아간다. */
+    xs.sort((a, b) => a - b);
+    let run = 1, best = 1;
+    for (let i = 1; i < xs.length; i++) { run = (xs[i] - xs[i - 1] <= 1) ? run + 1 : 1; if (run > best) best = run; }
+    if (best >= winW * P.EDGEW) rimRow.add(y);
+  }
+  let pool = px.filter(([, y]) => !rimRow.has(y));
+  if (pool.length < 8) pool = px;
   for (let round = 0; round < 4; round++) {
     if (pool.length < 8) break;
     const rc = new Map();
@@ -175,7 +200,7 @@ async function main() {
         out.push({ i: it.i, ours, ref });
       }
       return out;
-    }, { shot, refB64, refMime, items, P: { TH, BLK, RAD, RIMW, RIMH }, SRC: MEASURE });
+    }, { shot, refB64, refMime, items, P: { TH, BLK, RAD, RIMW, RIMH, EDGEW }, SRC: MEASURE });
 
     for (const r of res) rows.push(Object.assign({ screen: s.k }, items.find((x) => x.i === r.i), r));
     await ctx.close();

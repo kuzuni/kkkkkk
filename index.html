@@ -313,7 +313,10 @@
   /* 4회차 — 자간 2.5 는 잉크 폭을 ref 189 → 195(+3.2%)로 불렸고(비평가 A·B 독립 지적),
      `letter-spacing` 이 마지막 글자 뒤에도 붙어 중앙 정렬 잉크가 절반만큼 왼쪽으로 밀렸다
      (실측 중심 538 vs ref 540). 자간을 1.5 로 되돌리고 같은 값의 절반을 `text-indent` 로 되민다. */
-  #stinfo .chap{position:absolute;left:0;top:-13px;width:440px;text-align:center;
+  /* 126 ① 13회차 — W(−3.0) · X(−3) · m126vc(−3.5) 3자 일치로 잉크가 위로 쏠려 있다.
+     측정표 §1 의 «캡슐 상단을 13px 침범» 은 **잉크 상단** 기준인데 `top` 은 line box 를 옮기므로
+     서체가 바뀐 뒤로는 둘이 3.5px 어긋나 있었다. 잉크 중심을 ref 에 맞춘다(−13 → −9.5). */
+  #stinfo .chap{position:absolute;left:0;top:-9.5px;width:440px;text-align:center;
     font-size:38px;line-height:27px;font-weight:900;color:#fff;letter-spacing:1.5px;text-indent:.75px;white-space:nowrap;
     /* 126 10회차 — 측정표 02 1-2 로 확정: ref 는 잉크 bbox 446..634 / 외곽 442..639 = 바깥 4px.
        스트로크는 윤곽 중심에 그려지므로 필요한 값은 8px 이고, 5.5px(바깥 2.75)는 31% 얇았다.
@@ -1940,7 +1943,11 @@
   /* 126 ① 12회차 — m126vc 실측 Δcy **−9.0**. ⚠ 이 자리만 Δh +4(우리 46 vs ref 42)라 «순수 쏠림» 이
      아니다 — 중심을 맞추면 위 −2 / 아래 +2 가 남는다. ① 은 중심 정렬로 채점하므로 −9 를 그대로 회수하고,
      높이 +9.5% 는 ② 미해결로 review §21 에 남긴다(fs 46.6 은 5회차가 ref 43 으로 역산한 값이라 충돌한다). */
-  .qs-all b{position:relative;top:9px;font-size:46.6px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
+  /* 126 ① 13회차 — 12회차의 +9px 은 **과교정**이었다. W(+6.0 아래) · X(+4.5 아래)가 독립 일치했고,
+     직접 행 프로파일을 떠 보니 원인이 나왔다: 이 버튼은 **면 자체가 밝아**(창 폭 162px 전 행이 흰 코어)
+     흰 코어 마스크가 글자를 못 가른다. 글자는 «흰 결손» 으로만 보인다 — 결손 centroid 로 다시 재니
+     우리 1627.76 vs ref 1623.80 = **+3.96**. 9 − 4.5 = 4.5 로 내린다(세 값의 중앙). */
+  .qs-all b{position:relative;top:4.5px;font-size:46.6px;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);text-shadow:0 4px 0 #000}
   /* 일일/반복 토글 797×99 (ref 151,1801 → 40,1238) — 검정 테두리 없음, 밝은 갈색 라인 + 안쪽 어두운 라인 */
   .qs-tg{position:absolute;left:42px;bottom:43px;width:797px;height:99px;box-sizing:border-box;
     border-radius:49px;background:#61513D;border:5px solid #726252;box-shadow:inset 0 0 0 5px #473B2F}
@@ -1961,10 +1968,13 @@
     /* 126 ③ 11회차 2차 — V «ref 아래 7~8 · 오른쪽 6~7 vs 우리 사방 4~5».
        스트로크가 토큰이 아니라 고정 7px 이므로 «묻히는 몫» 3.5px 을 직접 적는다. */
     text-shadow:0 calc(3.5px + var(--sh-drop) * 1em) 0 #000}
-  .qs-tg b i{transform:scaleX(1.001)}
+  /* 126 ① 13회차 — W(일일 −6.5 · 반복 −5.0) · X(일일 −6 · 반복 −5) 독립 일치. m126vc 로는 못 재는
+     자리라(§21-4) **두 비평가 독립 일치** 규칙으로만 채택한다. 반복(기본) +5 · 일일(.on) 은 기존 −4 에서
+     +2 로 = 실이동 +6. 둘 사이의 «선택 칸이 3px 더 위» 라는 기존 관계는 그대로 유지된다. */
+  .qs-tg b i{position:relative;top:5px;transform:scaleX(1.001)}
   /* ref 는 **선택된 칸의 라벨이 6px 위로 들려** 있다(`반복` 코어 상단 1829 / `일일` 1835).
      비평가 2명이 독립적으로 «반복이 4px 아래» 로 잡았다. 상태 클래스로만 올린다. */
-  .qs-tg b.on i{position:relative;top:-4px}
+  .qs-tg b.on i{position:relative;top:2px}
   .qs-tg b.on{color:#8DDDFF;cursor:default}
 
   /* ── 69 우편함 팝업 — docs/measure/69-우편함팝업.md ───────────────────────────
@@ -6496,7 +6506,11 @@
      ⚠ 8회차 비평가 2명이 이 자리를 «외곽선 0px = 공용 stroke 토큰 미적용» 으로 지적했으나 **오진이다** —
      ref 도 외곽선이 없다(측정표 §7-2). «흰 코어 + 검정 띠» 잣대를 검정 글자에 대면 배경과의 경계가
      띠로 읽힌다. 여기에 stroke 를 넣지 마라. */
-  #pfw .pf-btn>i{font-size:68.2px;color:#000;transform:scaleX(.716);font-weight:700}
+  /* 126 ① 13회차 — W(−8.5) · X(−8) 독립 일치. 12회차는 «검정 잉크에 흰 코어 마스크» 함정(§21-3 ⓑ)을
+     피하려고 이 자리를 뺐는데, 그때 버린 m126vc 값 −8.5 가 두 비평가와 같은 수였다 — 마스크가 문 것은
+     버튼 «면» 이지만 그 면의 위·아래 경계는 글자가 만들므로 **중심 차이는 살아 있었다.**
+     ⚠ 그래도 이 자리 잉크 «높이» 는 이 도구로 못 잰다(W ② 1순위 «+33%» 는 별도 검증 필요). */
+  #pfw .pf-btn>i{position:relative;top:8px;font-size:68.2px;color:#000;transform:scaleX(.716);font-weight:700}
   /* 하단 토글 바 ref (156,1776) 770×95 — 검정 5 + 암갈 그라, r24 */
   .pf-tgl{left:64px;top:1261px;width:770px;height:95px;background:#000;border-radius:24px}
   .pf-tgl>.in{position:absolute;inset:5px;border-radius:20px;
