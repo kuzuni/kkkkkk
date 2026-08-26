@@ -109,7 +109,18 @@ async function lumaOf(p, ms, clip, store) {
     /* 상위 **2%** 의 중앙값 = 띠 «고원». 5% 로 잡았더니 창이 띠의 심(호스트 면적의 3.2%)보다
        넓어져, 좁은 띠에서는 심 대신 **양옆(어두운 쪽)** 이 잡혔다(소환 전면 −24.1). */
     const k = Math.max(1, Math.round(sig.length * 0.02));
-    return +sig[Math.floor(k / 2)].toFixed(1);
+    /* ⚑ 14회차 — 위 한 값은 «그 위상에서 **이긴** 쪽» 이다(부호 포함 절댓값 최대 2% 의 중앙값).
+       유리 광택은 심(밝음)과 측엽(어둠)이 **한 프레임에 같이** 있으므로, 이 값 하나로는
+       «심이 얼마나 밝은가» 를 영영 못 잰다 — 측엽이 더 세면 심이 아무리 밝아도 음수만 나온다.
+       실제로 14회차에 크림 판·라임 버튼의 심 α 를 .145→.42/.78 로 올렸는데 이 값은 **0.0 그대로**였다.
+       → 양수 쪽·음수 쪽을 **따로** 같은 창(2%)으로 잰다. §15 가 이 둘의 비를 본다. */
+    const pos = sig.filter(v => v > 0), neg = sig.filter(v => v < 0);
+    const pick = (arr, dir) => {
+      if (!arr.length) return 0;
+      arr.sort((x, y) => dir * (y - x));
+      return +arr[Math.min(arr.length - 1, Math.floor(k / 2))].toFixed(1);
+    };
+    return { v: +sig[Math.floor(k / 2)].toFixed(1), pos: pick(pos, 1), neg: pick(neg, -1) };
   }, [b64, !!store]);
 }
 /* 위상 표본 — «심을 반드시 한 번은 밟는다» 를 계산으로 보장한다(9회차).
@@ -135,7 +146,9 @@ const phasesFor = durMs => (!durMs || !isFinite(durMs) ? PHASES
   : Array.from({ length: 16 }, (_, i) => Math.round(durMs * i / 16)));
 /* 의사요소까지 포함해 그 띠의 실제 주기(ms)를 읽는다. `sel::after` → (sel, '::after') */
 const durOf = (p, sel) => p.evaluate(s => {
-  const m = String(s).split('::');
+  /* 14회차 — testSel 이 **셀렉터 목록**일 수 있다(헤더 띠가 심 `::before` + 측엽 `::after`
+     두 겹이라 둘을 함께 꺼야 기준선이 잡힌다). 주기는 한 벌이므로 첫 셀렉터에서 읽는다. */
+  const m = String(s).split(',')[0].split('::');
   const e = document.querySelector(m[0]);
   if (!e) return null;
   const d = getComputedStyle(e, m[1] ? '::' + m[1] : null).animationDuration || '';
@@ -205,11 +218,11 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
      둘 다 맞았고 **서로 다른 것을 재고 있었다**(내 probe122a 재집계: 같은 자리가 |ΔL| 기준 78%,
      흰 심만 기준 61%). 사람이 «빛난다» 고 읽는 것은 심이지 옆구리가 아니므로 심으로 센다.
      부호는 호스트마다 다르다(크림판은 심이 음수로 잡힌다) — 그래서 절대 부호가 아니라 **피크의 부호**다. */
-  const vs = [];
+  const vs = [], ps = [], ns = [];
   const ph = phasesFor(await durOf(p, testSel));   /* 13회차 — 그 띠의 한 주기를 16등분 */
   for (const t of ph) {
-    const v = await lumaOf(p, t, clip);
-    if (v != null) vs.push(v);
+    const r = await lumaOf(p, t, clip);
+    if (r != null) { vs.push(r.v); ps.push(r.pos); ns.push(r.neg); }
   }
   await css('jz122mute', '');
   if (!vs.length) return null;
@@ -217,7 +230,10 @@ async function bandPeak(p, hostSel, testSel, muteSel) {
   for (const v of vs) if (Math.abs(v) > Math.abs(peak)) peak = v;
   const sgn = peak >= 0 ? 1 : -1;
   const lit = vs.filter(v => v * sgn >= 12).length;
-  return { peak, duty: lit / vs.length };
+  /* ⚑ 14회차 §15 — «심(밝음)» 과 «측엽(어두움)» 을 따로 들고 나온다.
+     각 위상에서 양수 쪽·음수 쪽을 따로 잰 값(`lumaOf`)의 **위상 최대**가 각각 심·측엽의 세기다.
+     §13 은 `peak`(이긴 쪽 하나)만 봐서 이 둘의 «비» 를 못 잡았다(13회차 채점 AE ③). */
+  return { peak, duty: lit / vs.length, pos: Math.max(...ps), neg: Math.min(...ns) };
 }
 /* 6회차 목표 = 광택 전부가 «평탄면 ΔL 32» 한 벌. 마스크·skew 로 뭉개지는 폭을 감안해 ±20%. */
 const AMP_LO = 26, AMP_HI = 39;
@@ -237,6 +253,9 @@ const AMP_LO = 26, AMP_HI = 39;
      마일리지 패널 938px 인데 클립은 버튼 226px). 부분 영역은 띠가 «그 위» 에 있는 시간이 기하학적으로
      짧을 수밖에 없으므로 duty 판정에서 뺀다 — 기록만 남긴다. 세기(ΔL)는 그대로 판정한다. */
 const DUTY_LO = .55, DUTY_MEAN_LO = .70;
+/* ⚑ 14회차 §15 «심/측엽 극성 비» 수집기 — §13 이 도는 김에 같은 위상 표본에서 같이 걷는다
+   (측정이 비싸다: 점 하나에 16위상 × 스크린샷). 판정은 §15 절에서 한 번에 한다. */
+const POLAR = [];
 async function ampCheck(p, hosts) {
   await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
   const out = [];
@@ -245,6 +264,7 @@ async function ampCheck(p, hosts) {
     const r = await bandPeak(p, hostSel, testSel, muteSel);
     const v = r == null ? null : r.peak;
     const a = v == null ? null : Math.abs(v);
+    if (r != null) POLAR.push({ label, pos: r.pos, neg: r.neg });
     out.push(label + ' ' + (v == null ? '없음' : v)
       + (r && r.duty != null ? '/' + Math.round(r.duty * 100) + '%' : ''));
     /* ⚑ 12회차 — `noDuty === 'rec'` 은 **ΔL 도 판정하지 않고 기록만** 한다.
@@ -439,7 +459,11 @@ async function ampCheck(p, hosts) {
 
   /* ── §13 진폭 단일 기준 — 소환 탭 (6회차 신설) ─────────────── */
   console.log('§13 광택 피크 Δ루마 한 벌 — 소환 탭');
-  const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzs::after',
+  /* 14회차 — 헤더 띠는 **두 겹**이다(심 `::before` 는 글자 위 · 측엽 `::after` 는 글자 아래).
+     기준선을 잡으려면 둘을 함께 꺼야 한다 — 한쪽만 끄면 남은 겹이 기준선에 섞여
+     ΔL 이 «측엽만» 이나 «심만» 으로 잡힌다. */
+  const SUM_HD = '#shopList .shp-card>.chd::after,#shopList .shp-card>.chd::before',
+        SUM_BD = '#shopList .shp-card>.cbg>.jzs::after',
         SUM_FR = '#shopList .shp-card>.cfr::after';
   /* 13회차 — `.cbg` 안에서 **다섯 칸 전부 노출된** 최대 직사각형(`tools/probe122b.js` 실측).
      카드별 최대 빈칸은 220~260×148~152 로 갈리는데, 그중 **모든 칸에서 동시에 비어 있는** 구역이
@@ -675,7 +699,10 @@ async function ampCheck(p, hosts) {
                      ['히어로 배너', '#shopList .cn-bn', '#shopList .cn-bn::after'],
                      /* 6회차 채점 — 두 버튼면이 10/10 · 6/6 프레임 픽셀 동일이었다. 띠가 버튼 위를
                         지나는지 **버튼 상자에서 직접** 잰다(패널 전체로 재면 버튼이 죽어도 통과한다). */
-                     ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml::after', null, true],
+                     /* 14회차 — [교환] 은 이제 **자기 띠**를 쓴다(§15: 패널 띠의 심 α 는 어두운 패널
+                        기준이라 라임 버튼에서 그림자로 뒤집혔다). 호스트 = 띠의 주인이므로
+                        13회차까지 «부분 영역 클립» 이라 기록만 하던 duty 를 판정으로 되돌린다. */
+                     ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml>.ex::after'],
                      ['[이동] 버튼면', '#shopList .cn-mv|0|12', '#shopList .cn-mv::after']]);
 
   const leak = await p.evaluate(() => {
@@ -764,6 +791,42 @@ async function ampCheck(p, hosts) {
     : v + '  →  ' + k1[i] + '  /  ' + k2[i]).filter(Boolean);
   ok(kdiff.length === 0, '재화 탭 텍스트·버튼 bbox 3시각 동일' + (kdiff.length ? ' — ' + kdiff.slice(0, 3).join(' ;; ') : ''));
   ok(c1.mile, '마일리지 교환 가능 상태(글로우 대상) 존재');
+
+  /* ── §15 심/측엽 극성 비 (14회차 신설) ─────────────────────────
+     13회차 채점(AE ③)이 짚은 것: «광택» 이 밝은 호스트에서 **그림자로 뒤집힌다**.
+     재화 소형카드 본문(베이지)에서 심 +6.2 · 측엽 −35.4 로 어둠이 밝음의 5.7배였고,
+     극성 비가 호스트마다 0.22~5.7 로 **26배** 흩어져 있었다. §13 은 |ΔL| 최댓값 하나만
+     보므로(심이든 측엽이든 큰 쪽) 이 뒤집힘을 통째로 못 잡는다 — 13회차 게이트가
+     78/78 초록불이었는데 비평가가 같은 자리를 3점으로 매긴 이유가 이것이다.
+
+     재는 것: §13 이 이미 돈 같은 위상 표본에서 **가장 밝은 값(pos)** 과 **가장 어두운 값(neg)**.
+       r = |neg| / pos  — 1 이면 심과 측엽이 대칭, 크면 그림자, 작으면 순광택.
+     판정: 물리적 상한 때문에 «전 호스트 r 통일» 은 불가능하다(크림 L236.5 에서 흰 심의
+     상한은 +18.5 인데 검정 측엽은 −35 까지 간다). 그래서 **한 벌로 묶되 상한을 둔다** —
+       · 점별 r ≤ 2.4  (측엽이 심의 2.4배를 넘으면 사람이 «그림자» 로 읽는다)
+       · 점별 pos ≥ 9  (심이 아예 안 보이면 그건 광택이 아니다)
+       · 전체 산포 max(r)/min(r) ≤ 6  (13회차 26배) */
+  console.log('§15 심/측엽 극성 비 — 광택이 그림자로 뒤집히지 않는가');
+  const POL_R_HI = 2.4, POL_POS_LO = 9, POL_SPREAD_HI = 6;
+  {
+    const rows = POLAR.map(v => ({
+      label: v.label, pos: v.pos, neg: v.neg,
+      r: v.pos > .5 ? Math.abs(v.neg) / v.pos : 99,
+    }));
+    console.log('    · ' + rows.map(v => v.label + ' +' + v.pos.toFixed(1) + '/' + v.neg.toFixed(1)
+      + ' r=' + (v.r === 99 ? '∞' : v.r.toFixed(2))).join(' | '));
+    const flip = rows.filter(v => v.r > POL_R_HI);
+    ok(flip.length === 0, '측엽/심 비가 전부 ' + POL_R_HI + ' 이하'
+      + (flip.length ? ' — 초과 ' + flip.length + '점: '
+        + flip.slice(0, 5).map(v => v.label + ' ' + (v.r === 99 ? '∞' : v.r.toFixed(2))).join(' , ') : ''));
+    const dim = rows.filter(v => v.pos < POL_POS_LO);
+    ok(dim.length === 0, '심(밝은 쪽) ΔL 이 전부 ' + POL_POS_LO + ' 이상'
+      + (dim.length ? ' — 미달 ' + dim.length + '점: '
+        + dim.slice(0, 5).map(v => v.label + ' +' + v.pos.toFixed(1)).join(' , ') : ''));
+    const rs = rows.map(v => v.r).filter(v => v < 99);
+    const spread = rs.length ? Math.max(...rs) / Math.max(.05, Math.min(...rs)) : 99;
+    ok(spread <= POL_SPREAD_HI, '극성 비 산포 = ' + spread.toFixed(1) + '배 (<=' + POL_SPREAD_HI + '배)');
+  }
 
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:

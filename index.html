@@ -4774,7 +4774,7 @@
       640px  512px 0 0   rgba(255,255,255,calc(.55 * var(--jz-glow))),
      1012px  860px 0 1px rgba(255,255,255,calc(.36 * var(--jz-glow))),
       132px 1094px 0 0   rgba(255,255,255,calc(.60 * var(--jz-glow))),
-      748px  706px 0 1px rgba(255,255,255,calc(.42 * var(--jz-glow))),
+      748px  706px 0 1px rgba(255,255,255,calc(.60 * var(--jz-glow))),
       496px 1288px 0 0   rgba(255,255,255,calc(.52 * var(--jz-glow))),
       872px 1482px 0 1px rgba(255,255,255,calc(.38 * var(--jz-glow))),
        60px 1676px 0 0   rgba(255,255,255,calc(.57 * var(--jz-glow))),
@@ -4791,7 +4791,7 @@
       640px 2508px 0 0   rgba(255,255,255,calc(.55 * var(--jz-glow))),
      1012px 2856px 0 1px rgba(255,255,255,calc(.36 * var(--jz-glow))),
       132px 3090px 0 0   rgba(255,255,255,calc(.60 * var(--jz-glow))),
-      748px 2702px 0 1px rgba(255,255,255,calc(.42 * var(--jz-glow))),
+      748px 2702px 0 1px rgba(255,255,255,calc(.60 * var(--jz-glow))),
       496px 3284px 0 0   rgba(255,255,255,calc(.52 * var(--jz-glow))),
       872px 3478px 0 1px rgba(255,255,255,calc(.38 * var(--jz-glow))),
        60px 3672px 0 0   rgba(255,255,255,calc(.57 * var(--jz-glow))),
@@ -4912,18 +4912,35 @@
                  떠맡으므로 D = 35 (Z 처방 «16곳의 −ΔL 을 35±3 으로»).
        · 폭      호스트 폭의 **22%** — `--jz-run` = 호스트 × 1.22 (호스트 폭 + 띠 폭).
      게이트 §13 은 8위상 중 |ΔL| 최댓값을 보므로 옆구리가 붙어도 판정면(흰 심)은 그대로다. */
-  .shp-card>.chd::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:22%;pointer-events:none;
+  /* ⚑ 14회차 — 띠를 **두 겹으로 쪼갠다**(13회차 채점 AE ④: 「무기 상자」 흰 글자가 주기마다
+     255 → 227(−11%) 로 어두워지고 흰 임계 픽셀이 2626 → 1236(**−53%**) 로 준다).
+     원인은 유리 광택의 **어두운 측엽이 글자 «위»** 에 합성되는 것이다. 한 겹으로는 못 고친다 —
+     띠를 글자 아래로 내리면 광택이 글자를 아예 안 지나고(게임에서 제목 글리트는 핵심 손맛),
+     위에 두면 측엽이 글자를 깎는다.
+       · `::after`  = **어두운 측엽만** · 글자 **아래**(z 기본) — 판만 그늘진다
+       · `::before` = **흰 심만** · 글자 **위**(z-index:2) — 글자가 지나갈 때 «반짝» 한다
+     둘은 폭·skew·주기·딜레이가 같은 한 벌이라 눈에는 **여전히 띠 하나**다.
+     ⚠ §13 이 이 띠를 끄고 기준선을 잡으므로 게이트의 testSel 은 **두 의사요소를 함께** 꺼야 한다. */
+  .shp-card>.chd>i{position:relative;z-index:1}
+  .shp-card>.chd::after,.shp-card>.chd::before{content:'';position:absolute;left:0;top:-20px;bottom:-20px;
+    width:22%;pointer-events:none;
     --jz-run:966px;    /* 헤더 폭 그대로 — 10회차 기하(시작 −100% → 끝 +1.0H) */
+    transform:skewX(-16deg);
+    translate:-100% 0;animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+  .shp-card>.chd::after{
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 22%,
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 32%,
-      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 58%,
+      rgba(0,0,0,0) 42%,
+      rgba(0,0,0,0) 58%,
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 68%,
       rgba(0,0,0,calc(var(--jz-gd,.11) * var(--jz-glow))) 78%,
-      rgba(0,0,0,0) 98%);
-    transform:skewX(-16deg);
-    translate:-100% 0;animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+      rgba(0,0,0,0) 98%)}
+  .shp-card>.chd::before{z-index:2;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 32%,
+      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(var(--jz-ga,.21) * var(--jz-glow))) 58%,
+      rgba(255,255,255,0) 68%)}
   /* 4회차(Q ①-3 · R ①) — 통과 0.87s / 4s = duty 22% 라 «헤더가 3.1초 동안 죽어 있다».
      두 비평가가 같은 쪽으로 몰렸으므로 움직인다 — 통과를 주기의 **55%** 로 늦춘다. */
   /* ⚠ 5회차(S ①) — `translate` 의 %는 **자기 자신(띠) 폭 기준**이다. 4회차에 띠를 30%→18% 로
@@ -4969,15 +4986,33 @@
      띠 폭 .22H 이므로 심 중심이 호스트 좌변에 닿는 순간의 translate 는 정확히 **−50%**(띠 반폭),
      우변에 닿는 순간은 `--jz-run − 50%` 다(`--jz-run` = 호스트 폭, 전 호스트에서 불변).
      ⚠ % 는 «자기 자신 폭» 기준이므로(LESSONS 122-3) 이 −50% 는 호스트 크기와 무관하게 항상 띠 반폭이다. */
+  /* ⚑ 14회차 — 12회차의 «속도비 2.34배» 는 **이론값이고 실측이 그 60~76% 였다**
+     (13회차 채점: AE 1.79배 · AF 1.41배(소환) · AF 1.09배(재화 소형카드 = 사실상 등속)).
+     원인은 `cubic-bezier` 의 가감속이 **시간축 양 끝**에 몰려 있는데 비평가는 320ms 등간격
+     표본으로 **구간 평균 속도**를 재기 때문이다 — 표본 하나가 주기의 10% 를 덮으므로
+     베지어의 뾰족한 양 끝(각 6%)이 이웃 표본과 섞여 평탄해진다. 즉 «곡선은 맞는데 사람이
+     읽는 해상도에서는 등속» 이었다. 게이트도 §13·§14 가 세기·위상만 봐서 못 잡았다.
+     → 6스톱 **구간 등속**으로 다시 쓴다. 호스트 위 88% 를 5등분(각 17.6%)하고
+       이동 거리를 **.12 / .20 / .36 / .20 / .12** 로 나눈다 — 구간 속도비 **3.0배**.
+       표본 하나(주기의 10%)가 한 구간(17.6%)보다 좁으므로 이 3.0 은 **표본에 그대로 남는다**
+       (섞여도 하한 2.3배). 누적 위치는 0 / .12 / .32 / .68 / .88 / 1 이고 양 끝 6% 는
+       12회차 기하 그대로 호스트 밖 진입·이탈이다(duty 88% 불변 — 기하를 안 건드렸다).
+     ⚠ 구간마다 다시 `cubic-bezier` 를 걸지 마라. 구간 안에서 또 가감속하면 파형이 물결치고,
+       그게 바로 12회차가 «곡선인데 안 보인다» 로 실패한 자리다. 속도 계단은 «구간 사이» 에만 둔다. */
   @keyframes jz122Sweep{
     0%{translate:-100% 0;animation-timing-function:linear}
-    6%{translate:-50% 0;animation-timing-function:cubic-bezier(.3,.15,.7,.85)}
+    6%{translate:-50% 0;animation-timing-function:linear}
+    23.6%{translate:calc(var(--jz-run,100%) * .12 - 50%) 0;animation-timing-function:linear}
+    41.2%{translate:calc(var(--jz-run,100%) * .32 - 50%) 0;animation-timing-function:linear}
+    58.8%{translate:calc(var(--jz-run,100%) * .68 - 50%) 0;animation-timing-function:linear}
+    76.4%{translate:calc(var(--jz-run,100%) * .88 - 50%) 0;animation-timing-function:linear}
     94%{translate:calc(var(--jz-run,100%) - 50%) 0;animation-timing-function:linear}
     100%{translate:var(--jz-run,100%) 0}}
-  .shp-card:nth-child(2)>.chd::after{animation-delay:calc(var(--jz-sw) * -0.2 * var(--jz-per))}
-  .shp-card:nth-child(3)>.chd::after{animation-delay:calc(var(--jz-sw) * -0.4 * var(--jz-per))}
-  .shp-card:nth-child(4)>.chd::after{animation-delay:calc(var(--jz-sw) * -0.6 * var(--jz-per))}
-  .shp-card:nth-child(5)>.chd::after{animation-delay:calc(var(--jz-sw) * -0.8 * var(--jz-per))}
+  /* 14회차 — 심(::before)·측엽(::after) 두 겹이 **같은 딜레이**여야 한 벌로 보인다. */
+  .shp-card:nth-child(2)>.chd::after,.shp-card:nth-child(2)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.2 * var(--jz-per))}
+  .shp-card:nth-child(3)>.chd::after,.shp-card:nth-child(3)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.4 * var(--jz-per))}
+  .shp-card:nth-child(4)>.chd::after,.shp-card:nth-child(4)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.6 * var(--jz-per))}
+  .shp-card:nth-child(5)>.chd::after,.shp-card:nth-child(5)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.8 * var(--jz-per))}
 
   /* ── ①-3 본체 배경 «빛 입자 상승» 레이어(`.cbg>.jzp>i`) ──
      `.cbg` 의 ::before/::after 는 이미 방사 광선·바닥 그늘이 쓰고 있어 노드를 넣는다.
@@ -5279,7 +5314,25 @@
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
     animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
-  .cn-cd.done>.fr::after{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 */
+  /* ⚑ 14회차 — 크림 판(#FCEAD6, 휘도 236.5) 전용 **흰 심 한 겹**을 덧댄다.
+     13회차 채점 AE ③ 이 이 자리를 3점의 근거로 들었다: 심 +6.2 · 측엽 −35.4 —
+     «광택» 이 **그림자로 뒤집혀** 보인다(14회차 게이트 §15 로 수치화: pos 0.0 / neg −35.4).
+     한 겹으로는 못 고친다 — 이 띠는 **색 헤더(휘도 162)와 크림 본문(236.5) 두 면**을 같이 밟는데,
+     크림에서 심이 보이려면 α ≈ .8 이 필요하고 그 α 를 헤더에 쓰면 +68 로 §13 밴드(26~39)를 깬다.
+     → 심을 **크림 행(패딩상자 y 62~207)에만** 얹는 겹을 따로 둔다. 폭·skew·주기·딜레이가
+       `::after` 와 같은 한 벌이라 눈에는 띠 하나이고, 헤더 행은 건드리지 않는다.
+     α: 크림의 물리적 상한이 255−236.5 = **18.5** 라 α=.78 → ΔL ≈ +14.4(skew 겹침으로 실측은 +8%).
+     측엽 −35 과의 비 r ≈ 2.2 로 §15 상한 2.4 안에 든다. */
+  .cn-cd>.fr::before{content:'';position:absolute;left:0;top:62px;height:145px;width:22%;pointer-events:none;
+    --jz-run:264px;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 32%,
+      rgba(255,255,255,calc(.78 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.78 * var(--jz-glow))) 58%,
+      rgba(255,255,255,0) 68%);
+    transform:skewX(-16deg);translate:-100% 0;
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite;
+    animation-delay:calc(var(--jz-sw2) * var(--jz-k,0) * var(--jz-per))}
+  .cn-cd.done>.fr::after,.cn-cd.done>.fr::before{animation:none;opacity:0}   /* 구매 완료 칸은 죽은 칸이다 */
   /* ⚑ 10회차(AA ④6 · AB ③1 — 둘이 독립으로 «위상이 안 흩어졌다» 를 짚었다).
      9회차까지 규칙이 **6n+1 ~ 6n+4 네 개뿐**이라, 6칸 주기의 5·6번째 칸은 규칙이 없어
      기본값 0 으로 떨어졌다. 게다가 −.77 씩 = 주기 3.05s 를 4등분한 값이라 6칸에 안 맞았다.
@@ -5326,6 +5379,31 @@
     50%{box-shadow:inset 0 0 0 7px #F3C4FF,
       0 0 calc(18px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(217,139,255,calc(1 * var(--jz-glow)))}}
   .cn-ml:not(.off)>.ex{animation:jz122Ring2 calc(1.2s * var(--jz-per)) ease-out infinite}
+  /* ⚑ 14회차 — [교환] 버튼면도 §15 에서 **심 0.0 / 측엽 −35.1**(그림자로 뒤집힘)이었다.
+     여기는 [이동]과 달리 «심만 올리기» 로 못 고친다 — 이 버튼을 덮던 띠는 **패널(948px)의 띠**이고,
+     그 띠의 심 α(.31)는 어두운 패널 면(휘도 ≈162)에서 +29 를 내라고 박힌 값이다. 라임 버튼
+     (휘도 219)에서는 같은 α 가 +11 뿐이라 측엽(−23)에 진다. α 를 라임에 맞추면 패널이 +60 으로 깨진다.
+     → **[이동]과 같은 처방**: 버튼을 패널 띠 위로 올리고(`z-index:1`) **자기 띠**를 준다(6회차 선례).
+     라임 규격(측엽 .154 · 심 .42)은 [이동]과 한 벌이고, 위상만 반주기 어긋나게 둔다. */
+  /* z-index:6 — 패널 띠(`.cn-ml::after`)가 `z-index:5` 로 버튼 **위**를 지나게 돼 있다(6회차).
+     그 띠의 심 α(.145)는 어두운 패널 기준이라 라임 버튼에서는 측엽에 진다. 버튼을 그 띠 위로
+     올려 **자기 띠만** 보이게 한다. 딜레이 −.5 주기는 패널 띠가 버튼 자리(패딩상자 x624, 진행률
+     .665 → 주기의 ≈58%)에 닿는 시각과 맞춘 값이다 — 두 띠가 한 띠처럼 이어져 보인다. */
+  .cn-ml>.ex{z-index:6;overflow:hidden}
+  .cn-ml>.ex>i{z-index:1}
+  .cn-ml>.ex::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:22%;pointer-events:none;
+    --jz-run:255px;
+    background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
+      rgba(0,0,0,calc(.154 * var(--jz-glow))) 22%,
+      rgba(0,0,0,calc(.154 * var(--jz-glow))) 32%,
+      rgba(255,255,255,calc(.60 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.60 * var(--jz-glow))) 58%,
+      rgba(0,0,0,calc(.154 * var(--jz-glow))) 68%,
+      rgba(0,0,0,calc(.154 * var(--jz-glow))) 78%,
+      rgba(0,0,0,0) 98%);
+    transform:skewX(-16deg);translate:-100% 0;
+    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite;
+    animation-delay:calc(var(--jz-sw) * -.5 * var(--jz-per))}
   /* ── ②-6 재화 탭의 «나머지 화면» (3회차 — P G «첫 화면의 60%가 13.4초 동안 픽셀 하나 안 움직인다») ──
      지시 ② 는 카드만 적었지만, 같은 탭에서 카드만 살아 있으면 «두 탭이 한 게임으로 안 읽힌다» 는
      ④ 일관성 감점으로 돌아온다. 카드에 쓴 문법(둥실 · 스윕 · 링)을 그대로, 세기만 낮춰 얹는다. */
@@ -5351,14 +5429,21 @@
   /* ⚠ 6회차 채점(W ③ · X 1) — [이동] 버튼면 224×104 가 **10/10 프레임 픽셀 동일**이었다.
      `#cnMove`(`.cn-mv`)는 배너 `.cn-a2` 의 **형제**라 배너 띠가 구조적으로 못 덮는다.
      → 버튼 자신에게 띠를 준다. 라임 면(휘도 219)이라 마일리지 [교환]과 같은 유리 광택. */
+  /* ⚑ 14회차 — 두 라임 버튼([이동]·[교환])은 게이트 §15 에서 **심 0.0 / 측엽 −35.1** 이었다.
+     라임 면(휘도 219)에서 심 α .145 는 ΔL +5.2 뿐이라 상위 2% 신호를 측엽이 늘 이긴다 =
+     사람 눈에는 «광택» 이 아니라 **그늘이 지나간다**. 이 띠는 헤더 같은 어두운 면을 안 밟으므로
+     («버튼 자신의 띠» — 6회차) 심만 올리면 된다: α .145 → **.60** → +16(실측), r = 2.2(§15 상한 2.4).
+     글자는 띠 **위**로 올린다(`>i{z-index:1}`) — 측엽이 흰 글자를 깎는 것이 헤더에서 AE ④ 로
+     잡힌 그 결함이고, 55px 짜리 버튼 글자에서는 심을 얹어도 얻는 것보다 잃는 것이 크다. */
   .cn-mv{overflow:hidden}
+  .cn-mv>i{z-index:1}
   .cn-mv::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:22%;pointer-events:none;
     --jz-run:255px;    /* 창 폭 그대로 — 10회차 기하 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 22%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 32%,
-      rgba(255,255,255,calc(.145 * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(.145 * var(--jz-glow))) 58%,
+      rgba(255,255,255,calc(.60 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.60 * var(--jz-glow))) 58%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 68%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
