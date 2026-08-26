@@ -118,6 +118,46 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   if (gm.gmi >= 0) ok(gm.glow, '강제 상자 테두리 글로우 동작');
   else { pass++; console.log('  ✓ 지금은 강제 상자 없음 — 글로우도 없음(정상)'); }
 
+  /* ── §10 «들썩» 은 이따금 한 번이어야 한다 (3회차 신설) ─────────
+     `rotate:0` 은 무효 선언이라(<angle> 에 단위 없는 0 은 못 쓴다) 0%·100% 키프레임에서 rotate 가
+     사라지고, Chrome 이 «94% 3deg ↔ 바탕값 0deg» 를 주기 내내 보간한다 — «이따금 툭» 이
+     «늘 조금 기울어 서서히 도는» 것이 된다. 들썩 구간 **밖**에서 회전이 0 인지로 못 박는다. */
+  console.log('§10 들썩 — 구간 밖에서는 회전 0 · 구간 안에서만 ±3°');
+  const bobs = await p.evaluate(() => {
+    const out = [];
+    const cards = [...document.querySelectorAll('#shopList .shp-card .cart')];
+    const read = t => {
+      document.getAnimations().forEach(a => {
+        if (!/^jz122/.test(a.animationName || '')) return;
+        try { a.pause(); a.currentTime = t; } catch (_) {}
+      });
+      return cards.map(e => {
+        const cs = getComputedStyle(e);
+        /* `rotate` 는 «0deg» / «2.59deg» / «none», 그리고 **«4.9e-29deg» 같은 지수 표기**로도 온다 —
+           정규식으로 자르다가 지수부 «29» 를 각도로 읽어 «29°» 라는 헛값을 봤다. parseFloat 하나면 충분하다. */
+        return { rot: Math.abs(parseFloat(cs.rotate) || 0),
+          ty: Math.abs(parseFloat((cs.translate || '0').split(' ')[1] || '0') || 0) };
+      });
+    };
+    /* 카드 주기·딜레이를 «안다» 고 가정하지 않는다 — 한 바퀴(최장 7s)를 100ms 로 훑어
+       «세로 이동이 0.5px 미만인 시각(=쉬는 중)» 과 «−3px 넘게 뜬 시각(=들썩 중)» 을 직접 찾는다.
+       주기를 바꿀 때마다 게이트의 표본 시각을 손보지 않아도 된다. */
+    for (let t = 0; t <= 7000; t += 100) out.push({ t, v: read(t) });
+    return out;
+  });
+  const quiet = bobs.filter(f => f.v.every(c => c.ty < 0.5));
+  const loud = bobs.filter(f => f.v.some(c => c.ty > 3));
+  ok(quiet.length > 0, '들썩이 쉬는 시각이 있다 (' + quiet.length + '/' + bobs.length + ' 표본)');
+  ok(quiet.every(f => f.v.every(c => c.rot < 0.05)),
+    '쉬는 시각의 회전 = 0° (최대 ' + Math.max(0, ...quiet.flatMap(f => f.v.map(c => c.rot))).toFixed(2) + '°)');
+  ok(loud.length > 0 && loud.some(f => f.v.some(c => c.rot > 2.5)),
+    '들썩 구간에서는 ±3° 가 실제로 걸린다 (최대 ' + Math.max(0, ...loud.flatMap(f => f.v.map(c => c.rot))).toFixed(2) + '°)');
+
+  /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
+     의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
+     카드 왼쪽 바깥 띠를 두 위상에서 찍어 **픽셀이 같아야** 한다. */
+  console.log('§11 스윕 누출 — 카드 바깥 배경은 불변');
+
   /* ── §2 실제로 그림이 바뀌는가 ───────────────────────────────── */
   console.log('§2 캡처 — t=0 vs t=1500ms 픽셀 차');
   const box = await p.evaluate(() => {
@@ -243,6 +283,24 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   }));
   ok(cons.all > 0 && cons.sweep === cons.all, '재화 카드 광택 스윕 ' + cons.sweep + '/' + cons.all);
   ok(cons.ads > 0 && cons.ring === cons.ads, '[받기] 버튼 펄스 링 ' + cons.ring + '/' + cons.ads);
+
+  const leak = await p.evaluate(() => {
+    /* 앞선 절에서 d5 칸으로 스크롤해 뒀으므로 «지금 화면 안에 온전히 있는» 칸을 골라야 한다
+       (뷰포트 밖 칸의 rect 로 clip 을 만들면 screenshot 이 즉사한다). */
+    const c = [...document.querySelectorAll('#shopList .cn-cd')].find(e => {
+      const r = e.getBoundingClientRect();
+      return r.x > 70 && r.top > 60 && r.bottom < innerHeight - 20;
+    });
+    if (!c) return null;
+    const r = c.getBoundingClientRect();
+    return { x: Math.round(r.x) - 58, y: Math.round(r.y) + 40, width: 52, height: Math.round(r.height) - 80 };
+  });
+  if (!leak) { ok(false, '스윕 누출을 잴 «화면 안 카드» 를 못 찾음'); }
+  else {
+  const l0 = await shotAt(p, 0, leak), l1 = await shotAt(p, 1150, leak), l2 = await shotAt(p, 2300, leak);
+
+  ok(l0.equals(l1) && l0.equals(l2), '카드 왼쪽 바깥 52px 띠가 세 위상에서 픽셀 동일 (스윕이 안 샌다)');
+  }
 
   const CSEL = ['.cn-cd>.hd>i', '.cn-cd>.bt', '.cn-cd>.bt>u', '.cn-cd>.qt', '.cn-ml>.ex', '.cn-ml>.ex>i'];
   const crects = () => p.evaluate(sel => sel.flatMap(s => [...document.querySelectorAll('#shopList ' + s)]

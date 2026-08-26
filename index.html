@@ -3400,26 +3400,33 @@
      한 요소에 두 애니메이션을 걸지만 **건드리는 속성이 다르다**(scale / translate·rotate) —
      `transform` 한 칸을 놓고 싸우지 않으므로 둘 다 살아 있다. */
   .shp-card .cart{animation:jz122Breathe calc(2.8s * var(--jz-per)) ease-in-out infinite,
-    jz122Bob calc(7s * var(--jz-per)) ease-in-out infinite}
+    jz122Bob calc(5.8s * var(--jz-per)) ease-in-out infinite}
   @keyframes jz122Breathe{0%,100%{scale:1}50%{scale:calc(1 + .04 * var(--jz-amp))}}
   /* 들썩은 주기의 마지막 8%(≈560ms) 에만 산다 — 나머지 92% 는 정지값이라 «이따금 한 번» 이 된다 */
+  /* ⚠ 3회차 최대 발견 — 1·2회차의 `rotate:0` 은 **무효 선언**이다. `translate:0` 은 길이라 0 이 유효하지만
+     `rotate` 는 <angle> 이라 **단위 없는 0 을 받지 않는다**(선언째 버려진다). 그러면 0%·92%·100% 에서
+     rotate 가 사라져 Chrome 이 «94% 3deg» 와 «바탕값 0deg» 사이를 **주기 내내 선형 보간**한다 —
+     실측: 들썩 구간 밖(진행률 51.4%)에서 computed rotate = **1.74deg**. 즉 «이따금 한 번 들썩» 이
+     «항상 조금 기울어 서서히 도는» 것이 돼 있었다(비평가 O 가 «회전이 0» 으로 읽은 것의 정체 —
+     회전이 없던 게 아니라 **늘 있어서 프레임 간 차이가 안 났다**).
+     구간도 8% → 10%(0.6~0.9s)로 넓혀 «한 번 툭» 이 눈에 걸리게 한다. */
   @keyframes jz122Bob{
-    0%,92%{translate:0;rotate:0}
-    94%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
+    0%,88%{translate:0;rotate:0deg}
+    92%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
     96%{translate:0 calc(-3px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
     98%{translate:0 calc(-1px * var(--jz-amp));rotate:calc(1.5deg * var(--jz-amp))}
-    100%{translate:0;rotate:0}}
+    100%{translate:0;rotate:0deg}}
   /* 카드별 위상·주기 — 5장이 한 몸처럼 같이 뛰면 «연출» 이 아니라 «화면 전체가 흔들리는» 것으로 읽힌다.
      주기는 지시대로 2.4~3.2s(숨쉬기) / 6~9s(들썩) 안에서 서로 소수가 되게 흩는다. */
-  .shp-card:nth-child(1) .cart{animation-duration:calc(2.4s * var(--jz-per)),calc(6s * var(--jz-per));
+  .shp-card:nth-child(1) .cart{animation-duration:calc(2.4s * var(--jz-per)),calc(5s * var(--jz-per));
     animation-delay:calc(-.3s * var(--jz-per)),calc(-1.1s * var(--jz-per))}
-  .shp-card:nth-child(2) .cart{animation-duration:calc(2.7s * var(--jz-per)),calc(7s * var(--jz-per));
+  .shp-card:nth-child(2) .cart{animation-duration:calc(2.7s * var(--jz-per)),calc(5.5s * var(--jz-per));
     animation-delay:calc(-1.4s * var(--jz-per)),calc(-3.6s * var(--jz-per))}
-  .shp-card:nth-child(3) .cart{animation-duration:calc(3s * var(--jz-per)),calc(8s * var(--jz-per));
+  .shp-card:nth-child(3) .cart{animation-duration:calc(3s * var(--jz-per)),calc(6s * var(--jz-per));
     animation-delay:calc(-2.1s * var(--jz-per)),calc(-5.9s * var(--jz-per))}
   .shp-card:nth-child(4) .cart{animation-duration:calc(2.55s * var(--jz-per)),calc(6.5s * var(--jz-per));
     animation-delay:calc(-.8s * var(--jz-per)),calc(-2.4s * var(--jz-per))}
-  .shp-card:nth-child(5) .cart{animation-duration:calc(3.2s * var(--jz-per)),calc(9s * var(--jz-per));
+  .shp-card:nth-child(5) .cart{animation-duration:calc(3.2s * var(--jz-per)),calc(7s * var(--jz-per));
     animation-delay:calc(-2.7s * var(--jz-per)),calc(-7.2s * var(--jz-per))}
 
   /* ── ①-2 헤더 띠 사선 광택 스윕(4s 주기 1회, 흰 12%) ──
@@ -3439,7 +3446,7 @@
       rgba(255,255,255,calc(.12 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
     transform:skewX(-16deg);
     translate:-140% 0;animation:jz122Sweep calc(4s * var(--jz-per)) linear infinite}
-  @keyframes jz122Sweep{0%{translate:-140% 0}30%{translate:440% 0}100%{translate:440% 0}}
+  @keyframes jz122Sweep{0%{translate:-140% 0}34%{translate:440% 0}100%{translate:440% 0}}
   .shp-card:nth-child(2)>.chd::after{animation-delay:calc(-.8s * var(--jz-per))}
   .shp-card:nth-child(3)>.chd::after{animation-delay:calc(-1.6s * var(--jz-per))}
   .shp-card:nth-child(4)>.chd::after{animation-delay:calc(-2.4s * var(--jz-per))}
@@ -3477,7 +3484,7 @@
       830px 686px 0 1px rgba(255,255,255,calc(.28 * var(--jz-glow))),
       150px 776px 0 0 rgba(255,255,255,calc(.40 * var(--jz-glow))),
       610px 836px 0 1px rgba(255,255,255,calc(.32 * var(--jz-glow)));
-    animation:jz122Rise calc(9s * var(--jz-per)) linear infinite}
+    animation:jz122Rise calc(6.7s * var(--jz-per)) linear infinite}
   /* 2회차(N ③) — 1회차는 30px/s 라 카드 한 장을 지나는 데 11초가 걸렸고(«움직이는 줄 모르겠다»),
      다섯 장이 **같은 x 레인**(402/449/579/669/758)을 써서 «같은 그림 5장» 으로 읽혔다.
      → 436px/9s ≈ 48px/s 로 올리고, 좌우 ±5px 흔들림을 **같은 translate 칸 안에서** 준다
@@ -3488,12 +3495,12 @@
     50%{translate:0 -218px}
     75%{translate:calc(-5px * var(--jz-amp)) -327px}
     100%{translate:0 -436px}}
-  .shp-card:nth-child(2)>.cbg>.jzp>i{animation-duration:calc(10.5s * var(--jz-per));margin-left:63px}
-  .shp-card:nth-child(3)>.cbg>.jzp>i{animation-duration:calc(8s * var(--jz-per));margin-left:-41px;
+  .shp-card:nth-child(2)>.cbg>.jzp>i{animation-duration:calc(7.8s * var(--jz-per));margin-left:63px}
+  .shp-card:nth-child(3)>.cbg>.jzp>i{animation-duration:calc(6.1s * var(--jz-per));margin-left:-41px;
     animation-delay:calc(-3.2s * var(--jz-per))}
-  .shp-card:nth-child(4)>.cbg>.jzp>i{animation-duration:calc(11s * var(--jz-per));margin-left:104px;
+  .shp-card:nth-child(4)>.cbg>.jzp>i{animation-duration:calc(8.2s * var(--jz-per));margin-left:104px;
     animation-delay:calc(-6s * var(--jz-per))}
-  .shp-card:nth-child(5)>.cbg>.jzp>i{animation-duration:calc(9.5s * var(--jz-per));margin-left:-88px;
+  .shp-card:nth-child(5)>.cbg>.jzp>i{animation-duration:calc(7.1s * var(--jz-per));margin-left:-88px;
     animation-delay:calc(-2.1s * var(--jz-per))}
 
   /* ── ①-4 무료 횟수가 남은 카드의 [10회 소환(무료)] 버튼 — 펄스 링(0.9s) ──
@@ -3502,10 +3509,15 @@
   .shp-card .cbtn.b1:not(.lack){animation:jz122Ring calc(.9s * var(--jz-per)) ease-out infinite}
   /* 2회차(N ①②) — 1회차 피크가 +12/255(4.7%)에 확장 4px 라 «링» 이 아니라 제자리 점멸이었고,
      다섯 장이 **같은 프레임에 동시 발화**했다(위상 분산 0). 피크·확장을 키우고 칸마다 위상을 준다. */
+  /* 3회차(P H) — 링이 «퍼졌다 사라지는» 것만이라 10프레임 중 6장이 완전 소등이었다.
+     퍼지는 링 **뒤에 상시 후광 한 겹**을 깔아 어느 순간에도 «살아 있는 버튼» 으로 읽히게 한다. */
   @keyframes jz122Ring{
-    0%{box-shadow:0 0 0 0 rgba(83,230,250,calc(.85 * var(--jz-glow)))}
-    70%{box-shadow:0 0 0 calc(22px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 0 0 rgba(83,230,250,0)}}
+    0%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,calc(.85 * var(--jz-glow)))}
+    70%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 calc(22px * var(--jz-amp)) rgba(83,230,250,0)}
+    100%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,0)}}
   .shp-card:nth-child(2) .cbtn.b1:not(.lack){animation-delay:calc(-.22s * var(--jz-per))}
   .shp-card:nth-child(3) .cbtn.b1:not(.lack){animation-delay:calc(-.45s * var(--jz-per))}
   .shp-card:nth-child(4) .cbtn.b1:not(.lack){animation-delay:calc(-.67s * var(--jz-per))}
@@ -3514,12 +3526,15 @@
   /* ── ①-5 73 «강제 상자»(가이드 미션이 지목한 상자) — 테두리 글로우 호흡 ──
      테두리 레이어(`.cfr`)가 받는다. 안쪽 립 + 바깥 번짐 둘 다 한 선언에 넣어야
      키프레임이 서로를 지우지 않는다(box-shadow 는 목록 전체가 교체된다). */
-  .shp-card.gm>.cfr{animation:jz122Gm calc(1.6s * var(--jz-per)) ease-in-out infinite}
+  .shp-card.gm>.cfr{animation:jz122Gm calc(2.8s * var(--jz-per)) ease-in-out infinite}
   /* 2회차(N ②④) — 1회차는 골이 **완전 소등**(비발광 카드와 같은 값)이라 «지금 이 상자를 눌러라» 는
      상태 표시가 주기의 절반 동안 사라졌다. 골을 최대치의 35% 로 클램프한다. */
   @keyframes jz122Gm{
-    0%,100%{box-shadow:inset 0 0 calc(6px * var(--jz-amp)) rgba(255,231,120,calc(.19 * var(--jz-glow))),
-      0 0 calc(10px * var(--jz-amp)) 0 rgba(255,231,120,calc(.25 * var(--jz-glow)))}
+    /* ⚠ 3회차(O ①④) — 2회차 클램프는 알파와 **번짐 반경을 같이** 줄여서, 카드 바깥 30px 지점에서는
+       여전히 «완전 소등»(무연출 배경과 같은 값)으로 관측됐다. 골에서도 **반경·확산은 그대로 두고
+       알파만** 45% 로 내린다 — 그래야 어느 거리에서 재도 «꺼지지 않는» 호흡이 된다. */
+    0%,100%{box-shadow:inset 0 0 calc(14px * var(--jz-amp)) rgba(255,231,120,calc(.25 * var(--jz-glow))),
+      0 0 calc(26px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(255,231,120,calc(.32 * var(--jz-glow)))}
     50%{box-shadow:inset 0 0 calc(14px * var(--jz-amp)) rgba(255,231,120,calc(.55 * var(--jz-glow))),
       0 0 calc(26px * var(--jz-amp)) calc(3px * var(--jz-amp)) rgba(255,231,120,calc(.7 * var(--jz-glow)))}}
 
@@ -3531,54 +3546,70 @@
   /* 2회차(N ③) — 1회차는 «점 2개가 **늘 같은 좌표**에서 켜졌다 꺼지는» 점멸이었다(지시는 «2~3점 순환»).
      자리를 옮기는 것은 꺼져 있는 구간에 하므로 이동이 보이지 않고 «다른 점이 켜졌다» 로 읽힌다.
      한 주기(5.4s = 1.8s × 3)에 세 자리를 돈다. */
-  .cn-cd>.pn::before,.cn-cd>.pn::after{content:'';position:absolute;width:13px;height:13px;
-    border-radius:50%;background:#fff;opacity:0;pointer-events:none;
+  /* ⚠ 3회차(O ②) — 아이템 판이 크림(#FCEAD6, 휘도 233)이라 **흰 점은 휘도차 6%** 로 안 보였다.
+     흰 심 + 호박색 테로 바꾼다(호박 #FFB020 휘도 187 → 대비 ≈20%). 크기도 13 → 17px. */
+  .cn-cd>.pn::before,.cn-cd>.pn::after{content:'';position:absolute;width:17px;height:17px;
+    border-radius:50%;opacity:0;pointer-events:none;
+    background:radial-gradient(circle,#fff 0 26%,#FFC53D 44%,#FF9E12 62%,rgba(255,158,18,0) 78%);
     animation:jz122Spark calc(5.4s * var(--jz-per)) linear infinite}
   /* 2회차(M ③) — 1회차의 두 점은 아이콘 실루엣 **바깥 여백**(왼쪽 27px · 오른쪽 13px)에서 켜졌다.
      판(256×157) 안 아이콘 잉크(중심 ≈128,78 · 반경 ≈55)를 도는 자리로 다시 잡는다. */
-  .cn-cd>.pn::before{left:78px;top:30px}
-  .cn-cd>.pn::after{left:156px;top:104px;animation-delay:calc(-2.7s * var(--jz-per))}
+  .cn-cd>.pn::before{left:120px;top:22px}
+  .cn-cd>.pn::after{left:120px;top:126px;animation-delay:calc(-2.7s * var(--jz-per))}
+  /* ⚠ 3회차(O ③ · P C) — 2회차의 «꺼진 사이에 자리를 옮기는» 방식은 **어느 프레임에서 재도 위치가
+     같아 보였다**(비평가 둘이 독립으로 «중심 이동 ≤0.2px, 제자리 점멸» 이라고 실측).
+     이제 아이콘 중심(판 기준 128,78) 둘레 반경 ≈38px 원호를 **쉬지 않고 돌면서** 반짝인다 —
+     정지 프레임 어디를 잘라도 점의 위치가 다르다. 세 점은 120°씩 어긋난다(::before·::after·::after 의 두 번째 점). */
   @keyframes jz122Spark{
-    0%{opacity:0;scale:.5;translate:0 0}
-    4%{opacity:calc(.95 * var(--jz-glow));scale:1;translate:0 0}
-    11%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:0 0}
-    15%{opacity:0;scale:.5;translate:0 0}
-    20%{opacity:0;scale:.5;translate:56px 26px}
-    37%{opacity:calc(.95 * var(--jz-glow));scale:1;translate:56px 26px}
-    44%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:56px 26px}
-    48%{opacity:0;scale:.5;translate:56px 26px}
-    53%{opacity:0;scale:.5;translate:14px 74px}
-    70%{opacity:calc(.95 * var(--jz-glow));scale:1;translate:14px 74px}
-    77%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:14px 74px}
-    81%,100%{opacity:0;scale:.5;translate:14px 74px}}
-  /* ::after 는 반대쪽으로 돈다 — 두 점이 같은 궤도를 따라가면 «한 점이 두 번 켜진» 것으로 읽힌다 */
+    0%  {translate:0 0;      opacity:calc(.95 * var(--jz-glow));scale:1}
+    12% {translate:29px 25px;opacity:calc(.15 * var(--jz-glow));scale:.6}
+    25% {translate:38px 60px;opacity:calc(.85 * var(--jz-glow));scale:.95}
+    37% {translate:19px 88px;opacity:calc(.15 * var(--jz-glow));scale:.6}
+    50% {translate:-19px 88px;opacity:calc(.95 * var(--jz-glow));scale:1}
+    62% {translate:-38px 60px;opacity:calc(.15 * var(--jz-glow));scale:.6}
+    75% {translate:-29px 25px;opacity:calc(.85 * var(--jz-glow));scale:.95}
+    87% {translate:-10px 4px; opacity:calc(.15 * var(--jz-glow));scale:.6}
+    100%{translate:0 0;      opacity:calc(.95 * var(--jz-glow));scale:1}}
   .cn-cd>.pn::after{animation-name:jz122Spark2}
   @keyframes jz122Spark2{
-    0%{opacity:0;scale:.5;translate:0 0}
-    4%{opacity:calc(.9 * var(--jz-glow));scale:1;translate:0 0}
-    11%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:0 0}
-    15%{opacity:0;scale:.5;translate:0 0}
-    20%{opacity:0;scale:.5;translate:-70px -38px}
-    37%{opacity:calc(.9 * var(--jz-glow));scale:1;translate:-70px -38px}
-    44%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:-70px -38px}
-    48%{opacity:0;scale:.5;translate:-70px -38px}
-    53%{opacity:0;scale:.5;translate:16px -84px}
-    70%{opacity:calc(.9 * var(--jz-glow));scale:1;translate:16px -84px}
-    77%{opacity:calc(.3 * var(--jz-glow));scale:.8;translate:16px -84px}
-    81%,100%{opacity:0;scale:.5;translate:16px -84px}}
-  /* 3칸 격자라 열마다 위상을 흩는다 — 같은 행 3장이 동시에 반짝이면 «점멸» 로 읽힌다 */
-  .cn-cd:nth-child(3n+1)>.pn>em{animation-delay:calc(-.7s * var(--jz-per))}
-  .cn-cd:nth-child(3n+2)>.pn>em{animation-delay:calc(-1.6s * var(--jz-per))}
-  .cn-cd:nth-child(3n+1)>.pn::before{animation-delay:calc(-1.35s * var(--jz-per))}
-  .cn-cd:nth-child(3n+2)>.pn::before{animation-delay:calc(-3.6s * var(--jz-per))}
-  .cn-cd:nth-child(3n+1)>.pn::after{animation-delay:calc(-4.1s * var(--jz-per))}
-  .cn-cd:nth-child(3n+2)>.pn::after{animation-delay:calc(-.8s * var(--jz-per))}
+    0%  {translate:0 0;       opacity:calc(.2 * var(--jz-glow));scale:.65}
+    12% {translate:-29px -25px;opacity:calc(.9 * var(--jz-glow));scale:1}
+    25% {translate:-38px -60px;opacity:calc(.2 * var(--jz-glow));scale:.65}
+    37% {translate:-19px -88px;opacity:calc(.8 * var(--jz-glow));scale:.95}
+    50% {translate:19px -88px; opacity:calc(.2 * var(--jz-glow));scale:.65}
+    62% {translate:38px -60px; opacity:calc(.9 * var(--jz-glow));scale:1}
+    75% {translate:29px -25px; opacity:calc(.2 * var(--jz-glow));scale:.65}
+    87% {translate:10px -4px;  opacity:calc(.8 * var(--jz-glow));scale:.95}
+    100%{translate:0 0;       opacity:calc(.2 * var(--jz-glow));scale:.65}}
+  /* ⚠ 3회차(O ①④) — 2회차는 «열(3n)» 단위로 위상을 줘서 카드 6장이 **3박자**로 움직였다
+     (실측: 1행1열과 2행1열의 밝기 시계열이 소수점까지 겹친다). 격자는 3열이지만 **칸은 6개** 이므로
+     6주기로 흩는다. `.cn-cd` 는 `.cn-wrap` 안에서 리본·배너와 형제라 nth-child 값은 «위상 시드» 로만 쓴다. */
+  .cn-cd:nth-child(6n+1)>.pn>em{animation-delay:calc(-.43s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)>.pn>em{animation-delay:calc(-.86s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)>.pn>em{animation-delay:calc(-1.29s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)>.pn>em{animation-delay:calc(-1.72s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)>.pn>em{animation-delay:calc(-2.15s * var(--jz-per))}
+  .cn-cd:nth-child(6n+1)>.pn::before{animation-delay:calc(-.9s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)>.pn::before{animation-delay:calc(-1.8s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)>.pn::before{animation-delay:calc(-2.7s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)>.pn::before{animation-delay:calc(-3.6s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)>.pn::before{animation-delay:calc(-4.5s * var(--jz-per))}
+  .cn-cd:nth-child(6n+1)>.pn::after{animation-delay:calc(-4.1s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)>.pn::after{animation-delay:calc(-.8s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)>.pn::after{animation-delay:calc(-3.2s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)>.pn::after{animation-delay:calc(-1.7s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)>.pn::after{animation-delay:calc(-5s * var(--jz-per))}
   /* 구매 완료 칸은 죽은 칸이다 — 살아 있는 척하지 않는다 */
   .cn-cd.done>.pn>em,.cn-cd.done>.pn::before,.cn-cd.done>.pn::after{animation:none}
 
   /* ── ②-2 쿠폰 뱃지 «살짝 흔들림»(±4°, 3s) — 지시 ② 명시 항목(장식, 히트영역 아님) ── */
   .cn-cd>.cp{animation:jz122Wob calc(3s * var(--jz-per)) ease-in-out infinite}
-  .cn-cd:nth-child(3n+2)>.cp{animation-delay:calc(-1.5s * var(--jz-per))}   /* 2회차(N ①) — 뱃지 2개가 같은 각도였다 */
+  /* 2·3회차(N ① · O ④) — 뱃지 2개가 소수 둘째 자리까지 같은 각도였다. 6주기 시드로 흩는다 */
+  .cn-cd:nth-child(6n+1)>.cp{animation-delay:calc(-.5s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)>.cp{animation-delay:calc(-1s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)>.cp{animation-delay:calc(-1.5s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)>.cp{animation-delay:calc(-2s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)>.cp{animation-delay:calc(-2.5s * var(--jz-per))}
   @keyframes jz122Wob{0%,100%{rotate:calc(-4deg * var(--jz-amp))}50%{rotate:calc(4deg * var(--jz-amp))}}
 
   /* ── ②-3 가장 큰 다이아 상품(d5) — 아이템 판 뒤 골드 광선 20s 회전 ──
@@ -3586,53 +3617,87 @@
      카드 264×295 는 헤더 60 + 아이템 판 157 + 버튼 80 = 297 로 **몸통이 통째로 가려져 있다**
      (비평가 실측: t=0 과 t=5200 의 카드 배경 픽셀 차 0). → 광선을 **아이템 판(`.pn`) 안**,
      💎 아이콘 뒤로 옮긴다. 판은 `overflow:hidden` 이라 잘라 줄 것도 이미 있다. */
-  .cn-cd.dia.top>.pn>.ray{position:absolute;left:50%;top:50%;width:420px;height:420px;
-    margin:-210px 0 0 -210px;pointer-events:none;
+  /* 3회차(O ③) — 420px 짜리 부채는 판(256×157) 밖으로 대부분 빠져 «회전 각도에 따라 있다 없다» 였다.
+     300px · 45° 주기(8가닥)로 줄여 어느 각도에서도 판 안에 여러 가닥이 남게 한다. */
+  .cn-cd.dia.top>.pn>.ray{position:absolute;left:50%;top:50%;width:300px;height:300px;
+    margin:-150px 0 0 -150px;pointer-events:none;
     background:conic-gradient(from 0deg,
-      rgba(226,150,20,calc(.30 * var(--jz-glow))) 0deg 10deg,rgba(226,150,20,0) 10deg 30deg,
-      rgba(226,150,20,calc(.20 * var(--jz-glow))) 30deg 38deg,rgba(226,150,20,0) 38deg 60deg);
-    -webkit-mask-image:radial-gradient(circle,#000 0 22%,rgba(0,0,0,0) 62%);
-    mask-image:radial-gradient(circle,#000 0 22%,rgba(0,0,0,0) 62%);
+      rgba(226,150,20,calc(.32 * var(--jz-glow))) 0deg 8deg,rgba(226,150,20,0) 8deg 22deg,
+      rgba(226,150,20,calc(.22 * var(--jz-glow))) 22deg 29deg,rgba(226,150,20,0) 29deg 45deg);
+    -webkit-mask-image:radial-gradient(circle,#000 0 26%,rgba(0,0,0,0) 70%);
+    mask-image:radial-gradient(circle,#000 0 26%,rgba(0,0,0,0) 70%);
     animation:jz122Ray calc(20s * var(--jz-per)) linear infinite}
-  @keyframes jz122Ray{from{rotate:0}to{rotate:360deg}}
+  @keyframes jz122Ray{from{rotate:0deg}to{rotate:360deg}}
 
   /* ── ②-5 재화 카드 «광택 스윕» + [받기] 버튼 펄스 링 (2회차 — N ④ «탭 간 규칙이 어긋난다») ──
      1회차의 재화 탭은 아이콘 6개(화면 면적의 5.4%)만 움직이고 헤더띠·버튼·리본이 전부 정지였다.
      같은 화면 안에서 «살아 있는 카드» 의 정의가 소환 탭과 달라지면 그건 일관성 감점이다.
      → 소환 카드에 있는 두 규칙(헤더 스윕 · 무료 버튼 링)을 재화 카드에도 같은 문법으로 넣는다.
      카드 전면을 지나는 스윕이라 `clip-path` 로 카드 모서리 안에 가둔다(bbox 는 안 건드린다). */
+  /* ⚠ 3회차(O ③ — 이번 회차 최대 결함) — 2회차는 `clip-path` 로 띠를 가뒀다고 생각했지만
+     **의사요소의 clip-path 는 «그 의사요소 자신의 상자» 기준**이라 띠와 함께 움직인다.
+     그래서 띠가 카드 밖 페이지 배경까지 지나갔다(실측: 카드 왼쪽 바깥 배경 42.33 → **50.38**).
+     가두는 일은 **부모가** 해야 한다 — 소환 카드에서 `.chd{overflow:hidden}` 이 하던 것과 같다.
+     `.cn-cd` 의 자식은 전부 카드 안(프레임 `.fr` 이 정확히 카드 상자)이라 잘릴 것이 없다. */
+  .cn-cd{overflow:hidden;border-radius:35px}
   .cn-cd::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:34%;pointer-events:none;
     z-index:4;background:linear-gradient(90deg,rgba(255,255,255,0) 8%,
-      rgba(255,255,255,calc(.10 * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(.10 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
+      rgba(255,255,255,calc(.15 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.15 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
     transform:skewX(-16deg);translate:-140% 0;
-    clip-path:inset(24px 0 24px 0 round 35px);
     animation:jz122Sweep calc(4.6s * var(--jz-per)) linear infinite}
   .cn-cd.done::after{animation:none;opacity:0}       /* 구매 완료 칸은 죽은 칸이다 */
-  .cn-cd:nth-child(3n+1)::after{animation-delay:calc(-1.5s * var(--jz-per))}
-  .cn-cd:nth-child(3n+2)::after{animation-delay:calc(-3s * var(--jz-per))}
+  .cn-cd:nth-child(6n+1)::after{animation-delay:calc(-.77s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)::after{animation-delay:calc(-1.53s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)::after{animation-delay:calc(-2.3s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)::after{animation-delay:calc(-3.07s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)::after{animation-delay:calc(-3.83s * var(--jz-per))}
   .cn-cd>.bt[data-cnad]{animation:jz122RingC calc(1.15s * var(--jz-per)) ease-out infinite}
   @keyframes jz122RingC{
-    0%{box-shadow:0 0 0 0 rgba(83,230,250,calc(.8 * var(--jz-glow)))}
-    70%{box-shadow:0 0 0 calc(20px * var(--jz-amp)) rgba(83,230,250,0)}
-    100%{box-shadow:0 0 0 0 rgba(83,230,250,0)}}
-  .cn-cd:nth-child(3n+1)>.bt[data-cnad]{animation-delay:calc(-.28s * var(--jz-per))}
-  .cn-cd:nth-child(3n+2)>.bt[data-cnad]{animation-delay:calc(-.57s * var(--jz-per))}
+    0%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,calc(.95 * var(--jz-glow)))}
+    70%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
+    100%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(83,230,250,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(83,230,250,0)}}
+  .cn-cd:nth-child(6n+1)>.bt[data-cnad]{animation-delay:calc(-.19s * var(--jz-per))}
+  .cn-cd:nth-child(6n+2)>.bt[data-cnad]{animation-delay:calc(-.38s * var(--jz-per))}
+  .cn-cd:nth-child(6n+3)>.bt[data-cnad]{animation-delay:calc(-.57s * var(--jz-per))}
+  .cn-cd:nth-child(6n+4)>.bt[data-cnad]{animation-delay:calc(-.77s * var(--jz-per))}
+  .cn-cd:nth-child(6n+5)>.bt[data-cnad]{animation-delay:calc(-.96s * var(--jz-per))}
 
   /* ── ②-4 마일리지 교환 가능 — 패널 테두리 글로우 호흡 + [교환] 버튼 펄스 ──
      `.cn-ml` 의 안쪽 림 7px 는 정지 상태의 규격이다. 키프레임마다 같이 적어 둬야 지워지지 않는다. */
-  .cn-ml:not(.off){animation:jz122Mile calc(1.9s * var(--jz-per)) ease-in-out infinite}
+  .cn-ml:not(.off){animation:jz122Mile calc(2.6s * var(--jz-per)) ease-in-out infinite}
   /* 2회차(N ②④) — 골에서 «완전 평탄»(글로우 0)이라 «교환 가능» 표시가 절반의 시간 사라졌다 */
   @keyframes jz122Mile{
     0%,100%{box-shadow:inset 0 0 0 7px #E2A6FF,
-      0 0 calc(10px * var(--jz-amp)) 0 rgba(217,139,255,calc(.2 * var(--jz-glow)))}
+      0 0 calc(26px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(217,139,255,calc(.26 * var(--jz-glow)))}
     50%{box-shadow:inset 0 0 0 7px #F3C4FF,
       0 0 calc(26px * var(--jz-amp)) calc(4px * var(--jz-amp)) rgba(217,139,255,calc(.55 * var(--jz-glow)))}}
-  .cn-ml:not(.off)>.ex{animation:jz122Ring2 calc(1.1s * var(--jz-per)) ease-out infinite}
+  .cn-ml:not(.off)>.ex{animation:jz122Ring2 calc(.9s * var(--jz-per)) ease-out infinite}
+  /* ── ②-6 재화 탭의 «나머지 화면» (3회차 — P G «첫 화면의 60%가 13.4초 동안 픽셀 하나 안 움직인다») ──
+     지시 ② 는 카드만 적었지만, 같은 탭에서 카드만 살아 있으면 «두 탭이 한 게임으로 안 읽힌다» 는
+     ④ 일관성 감점으로 돌아온다. 카드에 쓴 문법(둥실 · 스윕 · 링)을 그대로, 세기만 낮춰 얹는다. */
+  .cn-ml>em{animation:jz122Float calc(2.6s * var(--jz-per)) ease-in-out infinite;
+    animation-delay:calc(-1.3s * var(--jz-per))}
+  .cn-a2>em{animation:jz122Float calc(3.1s * var(--jz-per)) ease-in-out infinite}
+  .cn-a2>.no{animation:jz122Breathe calc(2.9s * var(--jz-per)) ease-in-out infinite}
+  /* 평생 광고 제거 배너 — 카드와 같은 사선 광택. 배너에 이미 `overflow:hidden` 이 있어 띠가 안 샌다 */
+  .cn-a2::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:26%;pointer-events:none;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 8%,
+      rgba(255,255,255,calc(.13 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.13 * var(--jz-glow))) 58%,rgba(255,255,255,0) 92%);
+    transform:skewX(-16deg);translate:-140% 0;
+    animation:jz122Sweep calc(5.2s * var(--jz-per)) linear infinite}
+  #cnMove{animation:jz122Ring2 calc(1.05s * var(--jz-per)) ease-out infinite}
   @keyframes jz122Ring2{
-    0%{box-shadow:0 0 0 0 rgba(173,255,129,calc(.85 * var(--jz-glow)))}
-    70%{box-shadow:0 0 0 calc(22px * var(--jz-amp)) rgba(173,255,129,0)}
-    100%{box-shadow:0 0 0 0 rgba(173,255,129,0)}}
+    0%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(173,255,129,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(173,255,129,calc(.85 * var(--jz-glow)))}
+    70%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(173,255,129,calc(.34 * var(--jz-glow))),
+      0 0 0 calc(22px * var(--jz-amp)) rgba(173,255,129,0)}
+    100%{box-shadow:0 0 calc(9px * var(--jz-amp)) 0 rgba(173,255,129,calc(.34 * var(--jz-glow))),
+      0 0 0 0 rgba(173,255,129,0)}}
 
   /* ==========================================================================
      04 던전 세부 팝업 — 측정표 docs/measure/04-던전세부팝업.md
