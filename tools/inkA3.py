@@ -85,3 +85,52 @@ if mult:
     if txt:
         print('텍스트 fs 배수 중앙값 %.4f  (min %.4f / max %.4f)'
               % (float(np.median(txt)), min(txt), max(txt)))
+
+# ---------------------------------------------------------------------------
+# 게이트 모드 — `python3 tools/inkA3.py <캡처> --gate`
+#
+# 2차 폴리시 라운드 6회차에 잡은 회귀를 **다시는 조용히 넘어가지 않게** 박는다:
+# 작업 126 이 서체를 `GameKR` 로 갈아끼우자 A3 의 fs 값이 전부 옛 서체 기준이 되어
+# **잉크 «높이» 만 +12~26% 로 넘쳤다**(폭은 맞아 있어서 폭만 보면 정상으로 보였다).
+# 서체·이모지·SVG 자산 중 무엇이 바뀌어도 이 게이트가 먼저 빨개진다.
+#
+# 판정은 «ref 대비 몇 %» 로 한다. 허용치가 항목마다 다른 이유는 본문 주석에 적었다.
+#   (name, 폭 허용%, 높이 허용%)
+GATE = {
+    '닉네임 U_178750…': (5, 8),
+    '칭호/계급':        (6, 8),   # 폭 +4.2% 는 rankN 이 .ptitle 자신이라 안쪽 span 이 없어 미조치(7회차)
+    '전투력 1.33B':     (5, 8),
+    '전투력 🔥':        (8, 8),
+    '골드 39.20A':      (5, 8),
+    # 「1,300」: ref h28 = 숫자 25 + 쉼표 내림 3. GameKR 쉼표는 안 내려간다 → 높이만 느슨하게.
+    # 이 항목을 fs 로 메우면 골드가 +12% 로 도로 넘친다(측정표 «서체 대기» 참고).
+    '젬 1,300':         (6, 18),
+    # 코인: 실루엣 63×63 은 Δ0 인데 cur-gold.svg 의 주황 림 때문에 «노란 코어» 만 −10.5%.
+    # 125 자산 구간이라 A3 가 못 고친다 → 현 상태를 상한으로 박아 **더 나빠지는 것만** 잡는다.
+    '코인 아이콘':      (13, 13),
+    '젬 아이콘':        (8, 13),
+}
+if '--gate' in sys.argv:
+    bad = []
+    ok = 0
+    print()
+    print('== VERIFYA3 게이트 ==')
+    for name, (x, y, w, h), (mn, pred), pad in ITEMS:
+        br = bb(ref, y - pad, y + h + pad, x - pad, x + w + pad, pred)
+        bc = bb(cap, y - pad - DY, y + h + pad - DY, x - pad, x + w + pad, pred)
+        tw, th = GATE.get(name, (5, 8))
+        if br is None or bc is None:
+            bad.append('%s: 마스크 0' % name)
+            continue
+        dw = abs(bc[2] - br[2]) / br[2] * 100
+        dh = abs(bc[3] - br[3]) / br[3] * 100
+        for axis, d, lim in (('폭', dw, tw), ('높이', dh, th)):
+            if d > lim:
+                bad.append('%s %s %.1f%% > 허용 %d%%' % (name, axis, d, lim))
+            else:
+                ok += 1
+    n = ok + len(bad)
+    print('VERIFYA3 %d/%d %s' % (ok, n, 'PASS' if not bad else 'FAIL'))
+    for b in bad:
+        print('  ✗', b)
+    sys.exit(0 if not bad else 1)
