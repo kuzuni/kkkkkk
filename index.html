@@ -11213,6 +11213,9 @@ const IMP_K    = 1.62;      /* 바깥 링 = 안쪽 링 × 1.62 (전 프레임 �
    프레임 수를 줄이면 애니가 끊기므로 재생을 빠르게 하고(302ms) 뒤 45% 에 감쇠 커브를 얹는다 */
 const BOOM_FPS  = 76;       /* 23프레임 ÷ 76fps = 0.302s — 지적 «260~320ms» 범위 */
 const BOOM_FADE = 0.55;     /* 이 진행률부터 알파가 감쇠(꺼짐이 하드 컷으로 읽히지 않게) */
+/* 8회차 AG·AH 공통 — 데미지 숫자가 560ms(7프레임) 살아 있어 «가장 오래된 팝업» 이 화면에 계속 쌓였다.
+   상승 트윈이 0.40s 라 그 뒤 0.45s 는 제자리에서 흐려지기만 한다 → 수명을 상승 트윈 + 여운으로 줄인다 */
+const NUM_LIFE = 0.55;
 function boomFrames(){
   const A = ATLAS.boom;
   return A && A.a && A.a.boom ? A.a.boom.length : 0;
@@ -11254,11 +11257,16 @@ function burst(x, y, c, n, pw){
 }
 /* 파편 — burst 와 달리 중력(gy)을 받아 «튀어 올랐다 떨어진다». 흙·불 파편에 쓴다 */
 function debris(x, y, c, n, pw, gy){
+  /* 8회차 AG·AH 공통 — 파편이 «튀어 올랐다 떨어진다» 가 아니라 12프레임(960ms) 내내 70px/frame 로
+     올라가기만 했다(낙하 전환 0회 · 상반구 편중 87~91%). 중력 520 에 초속 620~780 이면 정점이
+     1.2~1.5s 라 파편 수명(0.34~0.68s)이 통째로 «상승 구간» 이었다 — 포물선의 절반도 못 보여 준다.
+     중력을 올리고 초속을 낮춰 **정점 ~0.15s · 착지 ~0.45s** 로 수명 안에 포물선이 끝나게 한다.
+     가로 퍼짐은 부채를 넓혀(±1.15 → ±1.45rad) 유지한다 */
   for(let i=0;i<n;i++){
     if(parts.length > PART_CAP) break;
-    const a = -Math.PI/2 + rnd(-1.15, 1.15), v = rnd(pw*0.45, pw);
+    const a = -Math.PI/2 + rnd(-1.45, 1.45), v = rnd(pw*0.30, pw*0.62);
     parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, life:rnd(.34,.68), t:0, c,
-                 r:rnd(6.0,13.0), gy: gy || 520 });
+                 r:rnd(6.0,13.0), gy: gy || 2200 });
   }
 }
 /* ② 타격 임팩트 — 진행 방향 «반대»로 튀는 스파크 3~6개 + 0.12s 플래시 링(치명타는 링 2겹) */
@@ -11361,7 +11369,9 @@ function dmgNum(x, y, v, crit){
 }
 function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
-  dmgNum(e.x, e.y - e.r*2.6, dmg, crit);
+  /* 8회차 AG — 스폰 오프셋이 적 머리 위 140~220px(스태거 포함)이라 «어느 적이 맞았는지» 가 안 붙었다.
+     스태거(numSeq%4 * 44)는 겹침 방지 게이트라 그대로 두고 «기본 높이» 만 낮춘다 */
+  dmgNum(e.x, e.y - e.r*1.4, dmg, crit);
   /* 46 레이드 — 샌드백은 죽지 않는다. 모든 피해 경로가 이 함수 한 곳을 지나므로
      여기서만 누적하면 스킬·평타·장판·투사체가 전부 집계된다. */
   if(e.raid){ raidDmg += dmg; e.hp = e.max; return; }
@@ -12080,7 +12090,7 @@ function step(dt){
     /* 114 — 속도+중력으로 띄우면 «+14px 떴다가 −12px 되내려앉는다»(5·6회차 P④·R① 연속 지적).
        위치는 그리기에서 t 로 직접 계산한다(단조 상승 easeOutCubic) — 여기서는 수명만 센다 */
     const n = nums[i]; n.t += dt;
-    if(n.t > 0.85) nums.splice(i,1);
+    if(n.t > NUM_LIFE) nums.splice(i,1);
   }
   for(let i=corpses.length-1;i>=0;i--){
     const c = corpses[i];
@@ -12648,7 +12658,7 @@ function draw(){
   /* 데미지 숫자 */
   ctx.textAlign = 'center';
   for(const n of nums){
-    const a = 1 - n.t/0.85;
+    const a = 1 - n.t/NUM_LIFE;
     ctx.globalAlpha = a;
     /* 114 ② — 치명타 숫자 «팝»: 0.22s 동안 1.6배에서 원래 크기로 줄어든다(임팩트 링과 같은 박자).
        외곽선은 폭발 백열 코어 위에서도 읽히게 두껍게 — 1회차 비평 ⑧ «대비 1.2:1 판독 불가» */
@@ -12681,9 +12691,22 @@ function draw(){
       const hr = 32*bb.scale*0.75;
       if((bb.x - nx)*(bb.x - nx) + (bb.y - ny)*(bb.y - ny) < hr*hr){ hot = 1; break; }
     }
+    /* 8회차 AG — 7회차의 «순백 채움» 은 대비를 못 만든다. 화구 코어가 (244~255,218~227,244~247) =
+       거의 흰색이라 흰 글자를 올리면 fill/bg 대비가 1.19~1.68:1 로 7회차 전(1.05:1)과 별 차이가 없다.
+       **글리프 뒤에 어두운 플레이트를 깔아야** 대비가 생긴다(AG 처방: 휘도 ≤40%).
+       두 비평가 공통으로 «외곽선이 얇은 팝업이 섞인다»(4px) 도 지적됐다 → 외곽선 하한을 6px 로 고정 */
+    if(hot){
+      const tw = ctx.measureText(n.v).width, ph = sz*1.06, pw2 = tw + sz*0.42;
+      ctx.fillStyle = 'rgba(10,7,5,.72)';
+      if(ctx.roundRect){
+        ctx.beginPath(); ctx.roundRect(nx - pw2/2, ny - ph*0.82, pw2, ph*1.12, sz*0.22); ctx.fill();
+      }else{
+        ctx.fillRect(nx - pw2/2, ny - ph*0.82, pw2, ph*1.12);
+      }
+    }
     ctx.fillStyle = (n.crit && !hot) ? '#ff9a2b' : '#fff';   /* 114 — 치명타를 주황으로 분리(6회차 R④) */
     ctx.strokeStyle = hot ? 'rgba(0,0,0,.95)' : 'rgba(0,0,0,.85)';
-    ctx.lineWidth = hot ? Math.max(5, n.crit ? 6 : 5) : (n.crit ? 6 : 5);
+    ctx.lineWidth = hot ? 6 : (n.crit ? 6 : 5);
     ctx.strokeText(n.v, nx, ny); ctx.fillText(n.v, nx, ny);
   }
   ctx.globalAlpha = 1;
