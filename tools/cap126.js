@@ -16,6 +16,8 @@ const SCREENS = [
   { k: 's10-상점', steps: ['.tab[data-t="shop"]'] },
   { k: 's22-퀘스트', steps: ['.side .ibtn[data-pop="quest"]'] },
   { k: 's19-프로필', steps: ['#profBtn'] },
+  /* 126 ② — 52 메뉴는 라벨 7칸이 전 화면에서 외곽선 비율이 가장 높았던 자리다(r .292~.374). */
+  { k: 's52-메뉴', steps: ['#menub'] },
 ];
 
 (async () => {
