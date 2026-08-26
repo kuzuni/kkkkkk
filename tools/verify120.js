@@ -32,8 +32,14 @@ const HEIGHTS = [1600, 1920, 2280, 2600];
    3회차에 그걸 키웠더니 비평 L 이 «안내문만 떨어져 나온다»(+147%)로 지적했다.
    K(하단 여백을 키워라)와 L(안내문을 수반에 붙여라)이 갈리는 지점이라 «큰 간극 → 하단» 만 옮긴다.
    2280 실측 595/422/38/117 — 격자↔수반:하단 = 570:50(12:1) → 422:117(3.6:1). */
-const GAP_W = [0.5075, 0.3600];   /* 상 · 격자↔수반 (나머지는 gap2 고정 + 하단) */
+const GAP_W = [0.5075, 0.8675];   /* 상(격자 top) · 누적(수반 top) — gap1 = GAP_W[1]×spare − gap0 */
 const GAP2_PX = 38;               /* 수반↔안내문 — 비례가 아니라 고정 */
+/* 11회차 ② — 상인방 위 스트립 300px 클램프(PROGRESS 120 «남은 문제» ②).
+   상인방은 격자 위 300px 이므로 «스트립 = 격자 top − 300» 이고, 격자 top 을 600 으로 묶으면
+   스트립이 300 을 못 넘는다. 2280 은 594.8 이라 불변이고 2600 만 757.2 → 600 으로 내려온다.
+   회수분 157.2px 은 gap1(받침↔수반 구간)으로 흘러 ①의 바닥면·③의 계단이 채운다. */
+const GT_MAX = 600;
+const LINTEL_STRIP_MAX = 300;
 
 let pass = 0, fail = 0;
 const bad = [];
@@ -109,6 +115,8 @@ const inter = (a, b) => {
           panel: q('.rw-panel'), bg: q('.rw-bg'), frame: q('.rw-frame'),
           fcbl: q('.rw-fc.bl'), fcbr: q('.rw-fc.br'),
           grid: q('.rw-grid'), mid: q('.rw-mid'), floor: q('.rw-floor'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
+          lintel: q('.rw-lintel'), ground: q('.rw-ground'), steps: q('.rw-steps'),
+          st1: q('.rw-st1'), st2: q('.rw-st2'),
           slots: [...relw.querySelectorAll('.rw-c')].map(F),
           labels: [...relw.querySelectorAll('.rw-c>u')].map(F),
           rwc: parseFloat(getComputedStyle(relw).getPropertyValue('--rwc')) || 0,
@@ -193,11 +201,16 @@ const inter = (a, b) => {
       /* gap2(수반↔안내문)는 **고정 38px** 이다 — 비례로 키우면 프레임이 길어질수록
          안내문이 수반에서 떨어져 «한 덩어리» 로 안 읽힌다(비평 L +147% · N +43%).
          나머지 3곳만 남는 높이를 비례 배분하고, 하단은 그 나머지를 받는다. */
-      const wantG = [spare * GAP_W[0], spare * GAP_W[1], GAP2_PX,
-                     P.h - 820 - spare * (GAP_W[0] + GAP_W[1]) - GAP2_PX];
+      const gt = Math.min(spare * GAP_W[0], GT_MAX);
+      const wantG = [gt, spare * GAP_W[1] - gt, GAP2_PX,
+                     P.h - 820 - spare * GAP_W[1] - GAP2_PX];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
-      ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27)대로 배분`, gErr < 1.0,
+      ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27) + 상단 클램프대로 배분`, gErr < 1.0,
         `실측 ${gaps.map(g => g.toFixed(1)).join('/')} vs 기대 ${wantG.map(g => g.toFixed(1)).join('/')} (최대 Δ${gErr.toFixed(2)})`);
+      /* 11회차 ② — «늘어난 높이가 상인방 위 죽은 벽으로 간다» 의 회귀 방지 */
+      ck(`[${H}] ② 상인방 위 스트립 ≤ ${LINTEL_STRIP_MAX}px`,
+        r.lintel.t - P.t <= LINTEL_STRIP_MAX + 0.6,
+        `${(r.lintel.t - P.t).toFixed(1)}px (상인방 상변 ${r.lintel.t.toFixed(1)})`);
 
       /* ⑦ 89 측정 규격 불변 */
       ck(`[${H}] ⑦ --rwc = 1 (내용 균일 축소 미발동)`, Math.abs(r.rwc - 1) < 1e-4, `${r.rwc}`);
@@ -209,6 +222,75 @@ const inter = (a, b) => {
         Math.abs(r.cost.w - 278) < 0.6 && Math.abs(r.cost.h - 53) < 0.6 &&
         Math.abs((r.basin.l + r.basin.r) / 2 - 540) < 0.6,
         `수반 ${r.basin.w.toFixed(1)}×${r.basin.h.toFixed(1)} · 코스트 ${r.cost.w.toFixed(1)}×${r.cost.h.toFixed(1)}`);
+
+      /* ── 11회차(2차 폴리시 라운드) 신설 게이트 ── */
+      /* ① 지면 접합선이 «받침 구조물의 밑변» 에 붙어 있는가.
+         10회차는 수반 밑변 높이라 받침보다 한참 아래였고, AA 가 «벽이 끊김 없이 이어진다» 로 읽었다. */
+      ck(`[${H}] ① 지면 접합선 = 계단 밑변 (Δ ≤ 1px)`,
+        Math.abs(r.ground.t - r.st2.b) < 1.0,
+        `접합선 ${r.ground.t.toFixed(1)} vs 계단 밑변 ${r.st2.b.toFixed(1)}`);
+      ck(`[${H}] ① 접합선이 수반 구획 위 · 바닥이 패널 하변까지`,
+        r.ground.t < r.mid.t - 0.6 && Math.abs(r.ground.b - P.b) < 0.6,
+        `${r.ground.t.toFixed(1)}..${r.ground.b.toFixed(1)} (수반 ${r.mid.t.toFixed(1)} · 패널 하변 ${P.b.toFixed(1)})`);
+      /* ③ 계단 높이 표류 금지 — 폭은 723/843 고정인데 높이만 프레임 따라 늘던 것을 묶었다 */
+      ck(`[${H}] ③ 계단 2단 높이 고정 (≤ 70 / 80px) · 폭 723 / 843`,
+        r.st1.h <= 70.6 && r.st2.h <= 80.6 && Math.abs(r.st1.w - 723) < 0.6 && Math.abs(r.st2.w - 843) < 0.6,
+        `${r.st1.w.toFixed(0)}×${r.st1.h.toFixed(1)} / ${r.st2.w.toFixed(0)}×${r.st2.h.toFixed(1)}`);
+      ck(`[${H}] ③ 계단이 계단 구간(바닥선~수반) 안 (잘림·돌출 0)`,
+        r.st1.t >= r.steps.t - 0.6 && r.st2.b <= r.steps.b + 0.6,
+        `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} · 계단 ${r.st1.t.toFixed(1)}..${r.st2.b.toFixed(1)}`);
+
+      /* ①③ 픽셀 — «넣긴 넣었는데 안 보이는» 것을 지표만 보고 «넣었다» 고 판단한 것이
+         이 작업에서 여섯 번 반복된 실수다(LESSONS 120). 넣은 구조물은 **대비를 직접 잰다**. */
+      {
+        /* 클립이 뷰포트 y=108 에서 시작하고 fit 스케일이 1 이라 «샷 y = 프레임 y − 108» 이다
+           (③ 센티넬 검사와 같은 좌표계). */
+        const shot2 = await page.screenshot({ clip: { x: 0, y: regTop, width: 1080, height: regBot - regTop } });
+        const m = await page.evaluate(async ({ dataUrl, gy, s2t, s2b }) => {
+          const img = new Image();
+          await new Promise(res => { img.onload = res; img.src = dataUrl; });
+          const c = document.createElement('canvas');
+          c.width = img.width; c.height = img.height;
+          const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+          const d = g.getImageData(0, 0, c.width, c.height).data;
+          const lum = (x, y) => { const i = ((y * c.width + x) << 2); return .2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2]; };
+          /* 행 평균 휘도 — 좌우는 .rw-floor::after 비네트가 먹으므로 중앙 폭만,
+             **수반(x340~740)은 빼고** 본다. 1600 은 접합선 2px 아래가 바로 수반이라
+             안 빼면 석재 림·시안 수면이 «바닥» 으로 섞여 부호가 뒤집힌다(실측 Δ−33.3). */
+          const row = y => {
+            let s = 0, n = 0;
+            for (let x = 200; x < 890; x += 3) { if (x >= 336 && x < 744) continue; s += lum(x, y); n++; }
+            return s / n;
+          };
+          const band = (y0, y1) => { let s = 0, n = 0; for (let y = Math.max(1, y0); y < Math.min(c.height - 1, y1); y++) { s += row(y); n++; } return n ? s / n : 0; };
+          /* ① 접합선 대비 — 접합선 위(벽 마지막 12px) vs 밝은 문지방 4px */
+          let peak = 0;
+          for (let y = gy - 2; y <= gy + 5; y++) peak = Math.max(peak, row(y));
+          const wallAbove = band(gy - 16, gy - 4);
+          /* ①-2 캐스트 그림자 — 접합선 밑 그림자대(14~46) vs 더 아래 바닥(120~180). 어두워야 정상 */
+          const shadow = band(gy + 14, gy + 46), floorFar = band(gy + 120, gy + 180);
+          /* ③ 디딤면 vs 챌면 — st2 안쪽 */
+          const tread = band(s2t + 10, s2t + 21), riser = band(s2t + 27, s2b - 4);
+          return { peak, wallAbove, shadow, floorFar, tread, riser };
+        }, {
+          dataUrl: 'data:image/png;base64,' + shot2.toString('base64'),
+          gy: Math.round(r.ground.t - regTop),
+          s2t: Math.round(r.st2.t - regTop), s2b: Math.round(r.st2.b - regTop),
+        });
+        ck(`[${H}] ① 접합선이 «보이는가» — 문지방 대비 ≥ 15`,
+          m.peak - m.wallAbove >= 15,
+          `문지방 ${m.peak.toFixed(1)} vs 위 벽 ${m.wallAbove.toFixed(1)} = Δ${(m.peak - m.wallAbove).toFixed(1)}`);
+        ck(`[${H}] ①-2 캐스트 그림자 부호 — 받침 밑이 먼 바닥보다 어둡다`,
+          m.floorFar - m.shadow >= 4,
+          `그림자대 ${m.shadow.toFixed(1)} vs 먼 바닥 ${m.floorFar.toFixed(1)} = Δ${(m.floorFar - m.shadow).toFixed(1)}`);
+        if (r.st2.h >= 40) {
+          ck(`[${H}] ③ 디딤면 / 챌면 대비 ≥ 12`,
+            m.tread - m.riser >= 12,
+            `디딤면 ${m.tread.toFixed(1)} vs 챌면 ${m.riser.toFixed(1)} = Δ${(m.tread - m.riser).toFixed(1)}`);
+        } else {
+          ck(`[${H}] ③ 계단 구간이 ${r.steps.h.toFixed(0)}px 뿐 — 디딤/챌면 대비 검사 생략`, true, '');
+        }
+      }
 
       /* ⑧ 탭바 히트테스트 회귀 */
       ck(`[${H}] ⑧ 탭바 25점 히트테스트 전부 탭바 자신`, r.hitBad === 0,
