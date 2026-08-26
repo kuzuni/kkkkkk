@@ -1880,7 +1880,10 @@
      **어느 규격으로 보든 −15%** 다. 높이로 fs 를 풀고(41 × 36/33) 폭은 sx 로 맞춘다.
      ⚠ 잉크를 잴 때 «흰 채움» 과 «외곽선 포함» 을 섞지 마라 — 외곽선 두께만큼 통째로 어긋난다. */
   .qs-tg b{position:absolute;top:-5px;height:99px;width:200px;display:flex;align-items:center;
-    justify-content:center;cursor:pointer;font-size:44.7px;color:#A9A8AD;-webkit-text-stroke:7px #000}
+    justify-content:center;cursor:pointer;font-size:44.7px;color:#A9A8AD;-webkit-text-stroke:7px #000;
+    /* 126 ③ 11회차 2차 — V «ref 아래 7~8 · 오른쪽 6~7 vs 우리 사방 4~5».
+       스트로크가 토큰이 아니라 고정 7px 이므로 «묻히는 몫» 3.5px 을 직접 적는다. */
+    text-shadow:0 calc(3.5px + var(--sh-drop) * 1em) 0 #000}
   .qs-tg b i{transform:scaleX(1.001)}
   /* ref 는 **선택된 칸의 라벨이 6px 위로 들려** 있다(`반복` 코어 상단 1829 / `일일` 1835).
      비평가 2명이 독립적으로 «반복이 4px 아래» 로 잡았다. 상태 클래스로만 올린다. */
@@ -6612,9 +6615,12 @@
      → font-size 49 → 53.5 (+9%) · em 53 → 57.8 · top 10 → 17 (+7px). */
   .tr-rib>u{position:absolute;left:0;right:0;top:17px;height:60px;line-height:60px;text-align:center;
     font-size:55.6px;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #141414;paint-order:stroke fill;z-index:3;
+    /* 126 ③ 11회차 2차 — V «ref 아래 7~8 vs 우리 4~5(−40%)» · U «낙차 2.95 vs −0.08».
+       그림자 색은 이 자리 외곽선과 같은 #141414 로 맞춘다(#000 이면 이음매가 보인다). */
+    text-shadow:0 var(--sh-b) 0 #141414;
     transform:scaleX(.93)}
   .tr-rib>u em{position:relative;top:4px;font-size:60px;color:#FA8153;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
-    paint-order:stroke fill;margin:0 4px}
+    paint-order:stroke fill;margin:0 4px;text-shadow:0 var(--sh-b) 0 #000}   /* 126 ③ 11회차 2차 — 리본 본문과 같은 계열 */
 
   /* §4 진행바 — 박스 기준 x177 y165 w662 h55, 검정 8px, 채움 #9EF12F */
   /* 4회차 색 정정 — ref 진행바 외곽선은 (1,0,0) 즉 순검정이다(#141414 아님).
