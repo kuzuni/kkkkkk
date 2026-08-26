@@ -59,12 +59,16 @@ async function run(p) {
       });
 
       /* 폭발 «전» 체력을 떠 둔다 — 피해 집합의 정답은 hp 변화다(조건식을 베끼면 순환 논증) */
-      const before = enemies.map(e => ({ e, hp: e.hp, x: e.x, y: e.y, r: e.r }));
+      const hp0 = enemies.map(e => e.hp);
       areaDamage(bx, by, R, 100, '#ffb45c');
+      const hurt = new Set();
+      enemies.forEach((e, i) => { if (e.hp < hp0[i]) hurt.add(e); });
+      /* ⚠ 자리는 **여기서** 뜬다. `areaDamage` → `hitEnemy` 가 넉백으로 적을 밀기 때문에
+         폭발 «전» 좌표로 견주면 링이 «빈 땅» 으로 잘못 잡힌다(게이트의 결함이지 코드의 결함이 아니다).
+         실제 순서도 «피해 → 넉백 → 여진» 이므로 여진이 보는 자리는 넉백 «후» 다. */
+      const before = enemies.map(e => ({ e, x: e.x, y: e.y, r: e.r }));
       /* 운석 착탄 경로와 **같은 인자**로 여진을 부른다(index.html 의 meteor 분기와 1:1) */
       chainBoomFx(bx, by, R, '#ffb45c', [0.42, 0.78], 0.45, 0.14);
-      const hurt = new Set();
-      before.forEach(s => { if (s.e.hp < s.hp) hurt.add(s.e); });
 
       /* 연쇄 여진 링만 고른다 — `bn`(연쇄 파티클 스펙)이 실린 링이 그것이다 */
       const ch = rings.filter(r => r.bn);
