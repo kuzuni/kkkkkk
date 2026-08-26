@@ -1265,6 +1265,9 @@
     border-top:4px solid #000;border-bottom:4px solid #000;box-shadow:0 4px 0 #7d1d17;
     font-size:34px;line-height:37px;font-weight:900;color:#f2e15d;text-align:center;
     letter-spacing:2px;z-index:4;overflow:hidden;
+    /* 8회차 — 리본은 레퍼런스대로 칸 왼쪽 경계를 6px 넘어간다. 장식이 남의 칸 탭을 삼키면
+       74/142 가 잡았던 «눌림 효과는 뜨는데 동작 안 함» 이 그대로 재발한다 → 히트를 통과시킨다. */
+    pointer-events:none;
     text-shadow:0 3px 0 #000,0 -3px 0 #000,3px 0 0 #000,-3px 0 0 #000}
   .tab.fresh .nw{display:block}
 
