@@ -149,8 +149,23 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
   }, [a, b2, w, h]);
   const PHC = [0, 195, 390, 585, 780, 1170, 1560, 1950, 2340, 2730, 3120, 3315, 3510, 3705];
   console.log('    카드        최대접촉  접촉위상수  위상별');
-  const ncut = await p.evaluate(() => document.querySelectorAll('#dunList .dnc').length);
   let cutBad = 0;
+  /* ⚠ 5회차 — 이 절은 **던전 탭 6장만** 돌고 있었다. 그래서 5회차 비평가 G·H 가 둘 다 독립으로
+     «컨텐츠(레이드) 카드가 8표본 중 4장에서 천장에 잘린다»(y=36 접촉 폭 최대 65px)를 잡아냈는데도
+     이 게이트는 «잘림 0» 이라고 초록으로 보고하고 있었다 — **게이트가 구조적으로 못 보는 카드**였다.
+     레이드·아레나 카드는 72 의 `fit` 이 0 이라(던전 카드는 TH_PAD 16) 상단 여유가 애초에 다르다.
+     탭을 넘겨 `.dnc.rd`(아레나 `.arn2` 포함)까지 같은 자로 잰다. */
+  const TABS = [['던전', 'dun'], ['컨텐츠', 'raid']];
+  for (const [tabName, sub] of TABS) {
+  if (sub === 'raid') {
+    await p.evaluate(() => setDunSub('raid'));
+    await p.waitForTimeout(900);
+    await p.evaluate(() => {
+      document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
+    });
+    console.log('    ── 컨텐츠(레이드) 탭 ──');
+  }
+  const ncut = await p.evaluate(() => document.querySelectorAll('#dunList .dnc').length);
   for (let i = 0; i < ncut; i++) {
     const info = await p.evaluate(i => {
       const el = document.querySelectorAll('#dunList .dnc')[i];
@@ -161,7 +176,8 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
                        width: Math.round(r.width), height: Math.round(r.height) } };
     }, i);
     await p.waitForTimeout(150);
-    if (!info.has) { console.log('  ' + CARD[i].padEnd(10) + '  (이모지 썸네일 아님 — 건너뜀)'); continue; }
+    const nm = sub === 'raid' ? '레이드' + (i + 1) : (CARD[i] || '카드' + (i + 1));
+    if (!info.has) { console.log('  ' + nm.padEnd(10) + '  (썸네일 없음 — 건너뜀)'); continue; }
     const vals = [];
     for (const t of PHC) {
       await seek(t); await p.waitForTimeout(45);
@@ -176,9 +192,19 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
     }
     const bad = vals.filter(v => v > 0).length;
     cutBad += bad;
-    console.log('  ' + CARD[i].padEnd(10) + String(Math.max(...vals)).padStart(8)
+    console.log('  ' + nm.padEnd(10) + String(Math.max(...vals)).padStart(8)
       + String(bad + '/' + PHC.length).padStart(12) + '  ' + vals.join(',') + (bad ? '  ⚠' : ''));
   }
+  }
+  await p.evaluate(() => setDunSub('dun'));
+  await p.waitForTimeout(700);
+  /* ⚠ 5회차 — 탭을 왕복하면 `renderDunPage()` 가 카드를 **다시 만들어** 애니메이션 객체가 새로 생긴다.
+     새 객체엔 `_css` 가 없어서 아래 `seek()` 가 «CSS paused 인 것» 으로 보고 통째로 건너뛴다 →
+     [2]·[3] 이 두 위상을 사실상 같은 그림으로 재서 **«움직임 0.4%» 라는 거짓 회귀**를 보고했다
+     (처음 이 절을 넓혔을 때 실제로 그렇게 찍혔다). 되돌아온 뒤 반드시 다시 얼린다. */
+  await p.evaluate(() => {
+    document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
+  });
   console.log('  → 천장 절단 위상 합계 ' + cutBad + (cutBad ? '  ⚠ 잘린다' : '  (잘림 0)'));
   await p.evaluate(() => { const s = document.getElementById('p121cut'); if (s) s.remove(); });
   if (process.argv.includes('cut')) { await b.close(); return; }

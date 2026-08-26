@@ -35,9 +35,14 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
      ⚠ 4회차 — 다만 **전부 해금하면 안 된다.** 3·4회차 하네스가 relic1~3 을 모두 열어 버려서
      비평가 E·F 가 둘 다 «지시 ④ 의 절반(잠금 카드 정지+어둡게)을 판정할 표본이 18장 중 0장» 이라고 적었다.
      relic1·2 만 열어 보라색 테마를 보여 주고 **relic3·4 는 잠근 채로 남겨** 같은 캡처 안에 대조군을 둔다. */
+  /* ⚠⚠ 5회차 — **잠금 대조군이 3회차 연속 0장이었다.** 비평가 G·H 가 독립으로 같은 뿌리를 짚었다:
+     `dunLocked(relic3)` 은 `(S.dun.relic2|0) <= pre.f(5)` 라서 여기서 `relic2 = 99` 를 넣으면
+     **relic3 까지 같이 해금된다.** 그 결과 유일하게 잠긴 카드가 relic4 = 카드 인덱스 5(y1957~2307)뿐인데
+     `#dunList` 가 y1939 에서 잘려 **화면 밖**이라 flow 6장 어디에도 잠금 카드가 안 찍혔다.
+     → `relic1` 만 연다. 그러면 relic2 가 **잠긴 채 카드 4번째 자리(전체 가시)** 에 남아 대조군이 된다. */
   await p.evaluate(() => {
     S.guide.idx = 99; S.best = 999;
-    ['relic1', 'relic2'].forEach(k => { S.dun[k] = 99; });
+    S.dun.relic1 = 99;
   });
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(800);
@@ -47,7 +52,13 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
   /* ---- 전부 일시정지 → 위상을 직접 찍는다 ---- */
   /* ⚠ CSS 로 paused 인 애니메이션(잠금 카드)은 **건드리지 않는다** — 억지로 위상을 찍으면
      캡처가 «잠금인데 움직인다» 는 거짓을 만들고, 비평가가 그 거짓을 지적으로 돌려준다(1회차에 실제로 그랬다). */
+  /* ⚠ 5회차 — `freeze()` 가 CSS 애니메이션만 멈추고 **스프라이트 아이들 타이머는 그대로 뒀다.**
+     그래서 `cv._fr` 로 프레임을 찍어 놔도 70ms 대기 중에 `raidIdleTick`(125ms 주기)이 자기 프레임으로
+     덮어써, «같은 CSS 상태인데 그림이 다른» 표본이 나왔다(G 4: bob-1 vs bob-3 잉크 상단 11px 차 ·
+     raid-2/4/5 mean|Δ| 14.98·15.50). 위상 정확성이 이 하네스의 존재 이유이므로 타이머도 같이 세운다.
+     `raidIdleTick` 은 `window.__idleFrozen` 을 보고 즉시 반환한다(index.html 5회차 3줄). */
   const freeze = () => p.evaluate(() => {
+    window.__idleFrozen = true;
     document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
   });
   const seek = ms => p.evaluate(t => {
@@ -111,15 +122,25 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     await p.waitForTimeout(70);
     await shot(p, 'raid-' + (i + 1), rcard);
   }
-  /* 번개 잔광 2장 — bgmFlash 의 발광 구간(86~94%)에 직접 앉힌다. 들썩은 7920 % 3900 = 120ms(3%)라
-     착지 근처로 같이 찍히므로 «잔광만» 비교하면 된다. */
+  /* 번개 잔광 2장 — bgmFlash 의 발광 구간(86~94%, 정점 90%)에 직접 앉힌다.
+     ⚠ 5회차 — 여기가 **상수 7920/8460 이었고 그건 «주기 9s» 를 가정한 값**이다. 실제 `--bgt3` 는
+     `bgmVars` 가 카드 인덱스에서 파생하므로 카드1 은 8.0s 였다 → 찍힌 위상이 99.0% / 5.75% 로
+     **둘 다 평탄 구간**이라 잔광이 10장 중 0장 잡혔다(G·H 독립 동일 지적: signed 차 +0.004/255).
+     이제 **그 카드의 실제 --bgt3 를 읽어** 90%·93% 를 계산해 찍는다 — 주기를 또 바꿔도 안 빗나간다. */
+  const bgt3 = await p.evaluate(() => {
+    const el = document.querySelector('#dunList .dnc.rd');
+    return parseFloat(getComputedStyle(el).getPropertyValue('--bgt3')) * 1000;
+  });
+  const FLASH = [Math.round(bgt3 * 0.90), Math.round(bgt3 * 0.93)];
+  console.log('  번개 잔광 스톱: --bgt3 ' + (bgt3 / 1000) + 's → ' + FLASH.join('ms / ') + 'ms (90% · 93%)');
   for (let i = 0; i < 2; i++) {
-    await seek([7920, 8460][i]);
+    await seek(FLASH[i]);
     await p.waitForTimeout(70);
     await shot(p, 'raid-' + (RAID.length + i + 1), rcard);
   }
   console.log('raid ' + (RAID.length + 2) + '장 — 컨텐츠 카드1 확대, 키프레임 위치 '
-    + RAID.map(v => v + '%').join('/') + ' + 번개 잔광 7.92s·8.46s, 아이들 프레임 ' + FR.join(',') + ' 순환');
+    + RAID.map(v => v + '%').join('/') + ' + 번개 잔광 ' + FLASH.map(v => (v / 1000).toFixed(2) + 's').join('·')
+    + ', 아이들 프레임 ' + FR.join(',') + ' 순환');
 
   console.log('콘솔 에러 ' + errs.length + '건' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await b.close();
