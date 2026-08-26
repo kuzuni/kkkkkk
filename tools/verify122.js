@@ -1291,9 +1291,20 @@ async function ampCheck(p, hosts) {
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는
      빈 화면의 rAF 조차 ~31fps 다(컨테이너 CPU 상한). 절대값으로 재면 122 와 무관하게 항상 FAIL 이다.
-     그래서 **같은 실행 안에서 ON/OFF 를 번갈아 4회씩 재고 중앙값을 비교**한다 —
-     122 의 연출이 스크롤 비용을 늘리지 않았는가가 실제로 물어야 할 것이다. 절대값은 기록만 남긴다. */
-  console.log('§8 스크롤 fps — ON/OFF 교차 4회 중앙값 (절대값은 러너 상한에 걸려 기록만)');
+     그래서 **같은 실행 안에서 ON/OFF 를 번갈아 재고 비교**한다 —
+     122 의 연출이 스크롤 비용을 늘리지 않았는가가 실제로 물어야 할 것이다. 절대값은 기록만 남긴다.
+
+     ⚑ 16회차 — 이 항목이 «간헐 FAIL» 이었다(15회차 6회 중 1회, 0.14fps 차로 뒤집힘).
+     원인은 «중앙값을 안 써서» 가 아니라 **중앙값을 잘못 쓴 것**이다. 15회차까지는
+     `median(ON) / median(OFF)` 를 봤는데, 이러면 두 중앙값이 **서로 다른 시각의 표본**이라
+     컨테이너 부하 드리프트가 상쇄되지 않는다 — 우연히 느린 ON 표본과 빠른 OFF 표본이
+     각자의 중앙 자리에 앉으면 그대로 비율이 무너진다.
+     → **쌍(pair)으로 먼저 나눈 뒤 그 비율의 중앙값**을 본다. on[i]·off[i] 는 등을 맞대고
+     연속으로 재므로 부하 드리프트가 쌍 안에서 공통항으로 지워지고, 튄 표본 하나는
+     «비율 하나» 로 격리돼 중앙값이 버린다.
+     표본을 4 → **5쌍**(홀수)으로 올려 중앙값이 진짜 가운데 원소가 되게 했고,
+     쌍마다 ON·OFF **순서를 번갈아** 단조 드리프트의 부호까지 상쇄한다. */
+  console.log('§8 스크롤 fps — ON/OFF 교차 5쌍 · 쌍별 비율의 중앙값 (절대값은 러너 상한에 걸려 기록만)');
   const OFFCSS = '#shopList *,#shopList *::after,#shopList *::before{animation-name:none!important}';
   const setCss = c => p.evaluate(x => {
     let s = document.getElementById('v122fps');
@@ -1311,22 +1322,29 @@ async function ampCheck(p, hosts) {
     };
     requestAnimationFrame(tick);
   }));
-  const med = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+  const med = a => a.slice().sort((x, y) => x - y)[(a.length - 1) >> 1];
+  const PAIRS = 5;
   for (const tab of ['coin', 'summon']) {
     await p.evaluate(t => { shopCat = t; setShopCatTabs(t); renderShopPage(); }, tab);
     await p.waitForTimeout(400);
     await p.evaluate(() => { document.getAnimations().forEach(a => { try { a.play(); } catch (_) {} }); });
     const on = [], off = [];
-    for (let i = 0; i < 4; i++) {
-      await setCss(''); await p.waitForTimeout(180); on.push(await scrollFps());
-      await setCss(OFFCSS); await p.waitForTimeout(180); off.push(await scrollFps());
+    const measOn = async () => { await setCss(''); await p.waitForTimeout(180); on.push(await scrollFps()); };
+    const measOff = async () => { await setCss(OFFCSS); await p.waitForTimeout(180); off.push(await scrollFps()); };
+    for (let i = 0; i < PAIRS; i++) {
+      /* 쌍마다 순서를 뒤집는다 — «ON 이 항상 먼저» 면 단조 드리프트가 한쪽에만 쌓인다 */
+      if (i % 2 === 0) { await measOn(); await measOff(); }
+      else { await measOff(); await measOn(); }
     }
     await setCss('');
-    const mOn = med(on), mOff = med(off);
-    console.log('   ' + (tab === 'coin' ? '재화' : '소환') + ' 탭 — ON ' + on.join('/') + ' (중앙 ' + mOn
-      + ') · OFF ' + off.join('/') + ' (중앙 ' + mOff + ')');
-    ok(mOn >= mOff * 0.9, (tab === 'coin' ? '재화' : '소환') + ' 탭 스크롤 비용 증가 없음 — ON '
-      + mOn + 'fps ≥ OFF ' + mOff + 'fps × 0.9');
+    const ratios = on.map((v, i) => +(v / off[i]).toFixed(3));
+    const mR = med(ratios), mOn = med(on), mOff = med(off);
+    console.log('   ' + (tab === 'coin' ? '재화' : '소환') + ' 탭 — ON ' + on.join('/')
+      + ' · OFF ' + off.join('/'));
+    console.log('     쌍별 비율 ' + ratios.join('/') + ' → 중앙 ' + mR
+      + '   (참고: 중앙값끼리의 비 ' + (mOn / mOff).toFixed(3) + ')');
+    ok(mR >= 0.9, (tab === 'coin' ? '재화' : '소환') + ' 탭 스크롤 비용 증가 없음 — 쌍별 ON/OFF 비율 중앙값 '
+      + mR + ' ≥ 0.9 (ON 중앙 ' + mOn + 'fps · OFF 중앙 ' + mOff + 'fps)');
   }
 
   /* ── §9 콘솔 ────────────────────────────────────────────────── */
