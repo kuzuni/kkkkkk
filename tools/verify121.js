@@ -325,14 +325,27 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     };
     requestAnimationFrame(step);
   }));
-  await runFps();                      /* 워밍업 — 첫 왕복은 큰 그라디언트 타일 래스터 비용이 섞인다 */
-  const fpsOn = await runFps();
-  await p.evaluate(() => document.querySelectorAll('#dunList .dnc>.bgm').forEach(e => e.style.display = 'none'));
-  await p.waitForTimeout(400);
-  await runFps();
-  const fpsOff = await runFps();
+  /* ⚠ 이 측정은 **머신 부하에 민감**하다. ON 을 먼저 다 재고 OFF 를 나중에 재면, 그 사이에 다른
+     게이트(smoke 등)가 돌기 시작한 것만으로 유지율이 108% → 83% 로 뒤집힌다 — 실제로 그렇게 한 번 죽었다.
+     그래서 ON/OFF 를 **번갈아 3쌍** 재고 쌍마다 비율을 낸 뒤 **중앙값**을 쓴다. 부하가 변해도 쌍 안에서는
+     같이 변하므로 비율이 살아남는다(LESSONS 28-③ «재현성 없는 회귀로 회차를 태우지 마라»). */
+  const setBgm = v => p.evaluate(v => document.querySelectorAll('#dunList .dnc>.bgm')
+    .forEach(e => e.style.display = v), v);
+  await setBgm(''); await runFps();    /* 워밍업 — 첫 왕복은 큰 그라디언트 타일 래스터 비용이 섞인다 */
+  const ons = [], offs = [], ratios = [];
+  for (let k = 0; k < 3; k++) {
+    await setBgm(''); await p.waitForTimeout(250);
+    const a = await runFps();
+    await setBgm('none'); await p.waitForTimeout(250);
+    const b = await runFps();
+    ons.push(a); offs.push(b); ratios.push(a.avg / b.avg);
+  }
+  await setBgm('');
+  const mid = arr => [...arr].sort((x, y) => x - y)[1];
+  const pick = (arr, k) => [...arr].sort((x, y) => x[k] - y[k])[1];
+  const fpsOn = pick(ons, 'avg'), fpsOff = pick(offs, 'avg');
   await p.evaluate(() => document.querySelectorAll('#dunList .dnc>.bgm').forEach(e => e.style.display = ''));
-  const keep = +(fpsOn.avg / fpsOff.avg * 100).toFixed(1);
+  const keep = +(mid(ratios) * 100).toFixed(1);   /* 쌍별 비율의 중앙값 — 부하 변동에 강하다 */
   console.log('  fps 표 (1080×2280 · 카드 6장 · 왕복 스크롤 120프레임)');
   console.log('  ┌────────────────┬────────┬────────────┬──────────┐');
   console.log('  │ 상태           │ 평균   │ 중앙 프레임│ 하위 5%  │');
@@ -340,7 +353,8 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   console.log(`  │ 배경 ON(121)   │ ${String(fpsOn.avg).padStart(6)} │ ${String(fpsOn.med + 'ms').padStart(10)} │ ${String(fpsOn.p95).padStart(8)} │`);
   console.log(`  │ 배경 OFF(기준) │ ${String(fpsOff.avg).padStart(6)} │ ${String(fpsOff.med + 'ms').padStart(10)} │ ${String(fpsOff.p95).padStart(8)} │`);
   console.log('  └────────────────┴────────┴────────────┴──────────┘');
-  ok(keep >= 90, `배경을 켠 채 스크롤해도 기준 대비 ${keep}% 유지 (≥ 90%)`);
+  console.log('  쌍별 유지율: ' + ratios.map(r => (r * 100).toFixed(1) + '%').join(' · ') + ' → 중앙값 ' + keep + '%');
+  ok(keep >= 90, `배경을 켠 채 스크롤해도 기준 대비 ${keep}% 유지 (≥ 90%, 3쌍 중앙값)`);
   /* 하위 5% 는 **기록만** 한다 — 이 러너의 소프트웨어 합성기는 프레임을 33/50/83ms 로 양자화해서,
      합성 레이어가 하나라도 돌면 무엇을 고쳐도 그 칸으로 떨어지고 실행마다 튄다(같은 코드로 20 → 12fps).
      여기를 판정에 쓰면 «재현성 없는 회귀» 로 다음 세션의 회차를 태운다(LESSONS 28-③·29-②).
