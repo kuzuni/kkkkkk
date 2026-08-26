@@ -30,6 +30,9 @@ const SPOTS = [
   ['52 메뉴 «길라잡이»',       '#menub', '#mnw [data-mn="guide"] .mn-l', 7],
   ['52 메뉴 «설정»',          '#menub', '#mnw [data-mn="conf"] .mn-l',  7],
   ['10 상점 «10회 소환»', '.tab[data-t="shop"]', '#shopList .shp-card .cbtn>.lab', 6],
+  ['10 상점 «1,000»',     '.tab[data-t="shop"]', '#shopList .shp-card .cbtn>.cost', 6],
+  /* 팝업 타이틀 — 4회차 2차에서 `--st-title` 을 .15 → .22 로 되올린 자리라 같이 지킨다 */
+  ['22 팝업 타이틀 «퀘스트»','.side .ibtn[data-pop="quest"]', '#mtitle', 10],
 ];
 
 const probe = (page, sel, oldSw) => page.evaluate(async ({ sel, oldSw }) => {
@@ -129,14 +132,22 @@ const probe = (page, sel, oldSw) => page.evaluate(async ({ sel, oldSw }) => {
   console.log('\n속공간 실측 — 검정에 갇힌 «바탕색 섬» 중 가장 큰 것(= ㅇ 의 속공간, 원본 px²)\n');
   console.log('| 자리 | fs | 옛 sw → 새 sw | 스트로크 0 | 옛 값 | 새 값 | 회복 |');
   console.log('|---|---|---|---|---|---|---|');
-  let bad = 0;
+  /* «스트로크 0» 에서도 섬이 안 잡히는 자리는 이 측정기로 **볼 수 없는** 자리다 —
+     막혔다는 뜻이 아니라 잣대가 그 글리프의 카운터를 못 찾는다는 뜻이므로 판정에서 뺀다.
+     (실제로 52 «설정» 이 그렇다: 스트로크를 아예 빼도 0 이 나온다. 그 상태로 FAIL 을 내면
+      «회수 실패» 로 오독된다.) */
+  let bad = 0, skip = 0;
   for (const r of rows) {
-    const ok = r.now > r.before * 1.2;
-    if (!ok) bad++;
+    const blind = r.free < 3;
+    const ok = !blind && r.now > r.before * 1.2;
+    if (blind) skip++; else if (!ok) bad++;
     console.log('| ' + r.name + ' | ' + r.fs + ' | ' + r.oldSw + ' → ' + r.nowSw + ' | ' + r.free
-      + ' | ' + r.before + ' | ' + r.now + ' | ' + (r.before ? (r.now / r.before).toFixed(1) + '×' : '—')
-      + (ok ? ' ✔' : ' **✗**') + ' |');
+      + ' | ' + r.before + ' | ' + r.now + ' | '
+      + (blind ? '— **측정 불가**(스트로크 0 에서도 섬 없음 = 잣대가 이 글리프를 못 본다)'
+               : (r.before ? (r.now / r.before).toFixed(1) + '×' : '—') + (ok ? ' ✔' : ' **✗**')) + ' |');
   }
-  console.log('\nCOUNTER126 ' + (rows.length - bad) + '/' + rows.length + ' ' + (bad ? 'FAIL' : 'PASS'));
+  const judged = rows.length - skip;
+  console.log('\nCOUNTER126 ' + (judged - bad) + '/' + judged + ' ' + (bad ? 'FAIL' : 'PASS')
+    + (skip ? '  (측정 불가 ' + skip + '건 제외)' : ''));
   process.exit(bad ? 1 : 0);
 })();
