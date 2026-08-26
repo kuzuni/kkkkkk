@@ -5685,8 +5685,15 @@
      본문에 `.shsc` 뷰포트를 넣어야 한다 — 그냥 두면 서브탭 바가 잘린다. */
   /* 9회차(M P5): 좌상단 코너를 열별로 재면 ref «첫 갈색 y» 가 x0:952 x10:931 x20:924 x30:921 x35:920 —
      원 반경 **≈40** 이다(r56 이면 x10 에서 944 여야 한다). */
+  /* 23회차(비평가 ζ P9 — 9회차 M P5 의 «≈40» 을 **같은 데이터로 다시 풀어** 정정한다).
+     M 은 열 기준으로 «첫 갈색 y» 를 재고(x10:931 · x20:924 · x30:921) r≈40 이라고 했지만,
+     그 세 점을 원식에 넣으면 40 이 아니라 **34** 가 나온다
+     (r=34 → x10:930.9 · x20:924.0 · x30:921.2 로 셋 다 Δ≤1. r=40 이면 934.5 · 926.4 로 어긋난다).
+     ζ 가 «행» 기준으로 독립 측정한 네 행(y924:20 · y927:15 · y930:11 · y933:8)도 r=34 에 Δ≤1 로 맞는다
+     (r=40 이면 24.8 · 17.6 · 13.9 · 10.9 = 우리 실측 23/17/14/11 그대로 = +2~3px). 두 데이터셋이 같은 답을 준다.
+     .tr-wave(검정 상단 테두리 링)도 동심이라 같이 34 로 내린다. */
   .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 104px);
-    background:#E6C695;border-radius:40px 40px 0 0;overflow:hidden}
+    background:#E6C695;border-radius:34px 34px 0 0;overflow:hidden}
   .tr-sheet::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4px;background:#141414}
   .tr-sheet>*{position:absolute}
   /* 11회차(Q 인계 7번): 검정 상단 테두리가 «높이 8px 직사각형» 이라 라운드 코너에서 통째로 잘렸다 —
@@ -5696,7 +5703,7 @@
      배경은 없애고 테두리만 남겨 헤더가 가운데로 그대로 비쳐 보이게 한다. 좌우 8px 은 헤더의 기존
      검정 옆테두리와 같은 색이라 겹쳐도 무해하다. */
   .tr-wave{left:0;right:0;top:0;height:56px;box-sizing:border-box;background:none;z-index:3;
-    pointer-events:none;border:8px solid #141414;border-bottom:0;border-radius:40px 40px 0 0}
+    pointer-events:none;border:8px solid #141414;border-bottom:0;border-radius:34px 34px 0 0}
 
   /* §1 헤더 «훈련» — ref y928..1033 (하이라이트 6 / 본체 91 / 그늘 9) */
   /* 4회차: ref 는 «연속 그라데이션» 이 아니라 y1001 에서 끊기는 **하드 2단 스텝**이다.
@@ -5781,11 +5788,16 @@
            28.9 → 16.5px 로 **12.4px 테이퍼**인데 우리는 26.0 → 26.9 (평행, 끝행에서 +63%)였다.
      → ① 우측 정점을 `50px 64px,47px 70px` → `47px 61px,58px 69px` 로 (아래로 갈수록 오른쪽 = 테이퍼).
        ② 좌·상·하 정점을 1.5px 씩 더 들여 [A]를 9.5px 로, 허리 노치(y40)만 10.5px 로.
-     8회차의 27점 외곽 폴리곤(전 행 Δ≤2)은 **건드리지 않는다** — 안쪽 채움만 옮긴다. */
+     8회차의 27점 외곽 폴리곤(전 행 Δ≤2)은 **건드리지 않는다** — 안쪽 채움만 옮긴다.
+     ── 22회차 정정(비평가 ε P7 + 자체 차분 4행): δ P2 의 «ref [A] 9.57/9.65» 는 **허리 부근에서만** 맞다.
+     ref 를 행별로 재면 y1140 8px · y1186 8px · y1187 8px 인데 **허리(y1166)에서만 9~10px** 이다
+     (δ 가 «허리에서 부푸는 가변» 이라고 쓴 그것이 전부였고, 평탄부는 8px 이다).
+     21회차가 전 정점에 1.5px 를 먹여 평탄부가 10px (+25%) 로 과교정됐다 → **허리 구간(local y35~56)만
+     남기고 나머지 정점은 8회차 값으로 되돌린다.** 허리에서 채움 시작 x288 = ref Δ0 은 그대로 유지된다. */
   .tr-rib>b::before{content:'';position:absolute;inset:0;background:#6B4A34;
-    clip-path:polygon(22.5px 9.5px,50px 9.5px,47px 61px,58px 69px,14px 71px,12.5px 68px,12.5px 61px,
-      13.5px 56px,15.5px 52px,18.5px 48px,20.5px 44px,24.5px 40px,20.5px 35px,17.5px 31px,14.5px 27px,
-      12.5px 22px,10.5px 18px,10.5px 13px,13.5px 10.5px)}
+    clip-path:polygon(21px 8px,50px 8px,47px 61px,58px 69px,14px 71px,11px 68px,11px 61px,
+      13.5px 56px,15.5px 52px,18.5px 48px,20.5px 44px,24.5px 40px,20.5px 35px,16px 31px,13px 27px,
+      11px 22px,9px 18px,9px 13px,12px 9px)}
   .tr-rib>b.l{left:0}
   /* 우측 꼬리는 좌측을 거울로 뒤집는다(ref 좌우 편차 ≤1px) */
   .tr-rib>b.r{right:0;transform:scaleX(-1)}
@@ -5814,7 +5826,10 @@
      우리는 y1228:215 · 1231:208 · 1249:194 로 사실상 완전 알약형이었다.
      그 탓에 **막대 중간 높이에서도 좌단이 4px 안쪽**이라(y1270 에서 ref 195 / 우리 199)
      V L4 의 «녹색 채움 좌측 인셋 누락» 이 같이 생겼다 — 별개 결함이 아니라 이 반경의 결과다. */
-  .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:10px 12px 12px 10px;
+  /* 23회차(ζ P10): 좌상 코너 반경이 ref 보다 작았다 — ref 좌끝 y1228:x206 · y1232:x198 (정상부 195)
+     은 r≈12 이고(우리 r10 은 y1228 에서 x202 = −4px), 14회차가 28 → 10 으로 내린 것이 1~2 지나쳤다.
+     우변은 이미 12 이므로 4변 12 로 통일한다. */
+  .tr-prog{left:177px;top:165px;width:668px;height:55px;border-radius:12px;
     background:#000}
   /* 9회차(비평가 N P1~P3, 자체 재확인) — ref x700 세로 구조는
      검정 **3px**(y1229..1231) → 인셋 그늘 **10px**(8,9,13) → 채움 36px(25,28,37)
@@ -5883,7 +5898,10 @@
      6회차: 잉크 치수를 ref 실측대로 다시 잡았다. ref 초록은 **머리 h29(최대폭 55) + 자루 h22(폭 27)
      = 전체 h51**, 잉크 중심이 버튼 중심보다 **7.5px 위**(광학 보정)다. 3회차 것은 h60·폭 62 로 크고 정중앙이었다.
      viewBox 를 잉크 55x51 + 스트로크 여유 8px 로 잡아야 stroke 가 SVG 밖으로 잘리지 않는다. */
-  .tr-up>svg{position:absolute;left:16.5px;top:9.5px;width:73px;height:69px}
+  /* 22회차(ε P15): 검정 링 두께는 6px 로 맞았는데 **화살표 전체가 2px 위**였다 —
+     ref 초록 잉크는 y1223..1274(중심 1248.5 = 버튼 중심 1255 보다 6.5px 위) 인데 우리는 1221..1272
+     (8.5px 위)였다. 잉크 높이 52 는 양쪽 같으므로(ε P8 «h 52=52») **SVG 만 2px 내린다.** */
+  .tr-up>svg{position:absolute;left:16.5px;top:11.5px;width:73px;height:69px}
   /* 10회차(P P5·P6): 초록 잉크는 ref 57x53 / 우리 55x53 으로 이미 Δ≤2 다(건드리지 않는다).
      차이는 **검정 외곽선 두께**뿐 — 자루 행(ref y1272)에서 ref 는 좌 5px(x889..893)·우 6px(x921..926) 인데
      stroke-width:16 은 한쪽 8px 이라 스트로크 포함 bbox 가 +3/+5px 컸다. 12 → 한쪽 6px. */
@@ -6082,7 +6100,10 @@
   /* 16회차(inkcmp23 동일기준 실측): 초록 «+값» 잉크가 ref 126x37 인데 우리는 140x38 —
      **높이는 맞고 폭만 +11%** 다(X P4 는 높이로 읽었다). 세로 중심도 ref 1752 / 우리 1747.5 (−4.5).
      → top 286 → 290.5 · 글자에 scaleX(.90). */
-  .tr-card>.cv{left:0;right:0;top:290.5px;height:60px;line-height:60px;text-align:center}
+  /* 22회차(ε P4): «+값 ↔ 라벨» 세로 간격이 ref 8px / 우리 5px 이었다. 라벨은 이미 Δ1
+     (ref 잉크 1785..1814 · 우리 1784..1813) 이므로 **움직일 것은 +값 쪽**이다 —
+     ref +값 잉크 1728..1776(중심 1752) / 우리 1731..1778(중심 1754.5) 로 2.5px 낮다. top 290.5 → 288. */
+  .tr-card>.cv{left:0;right:0;top:288px;height:60px;line-height:60px;text-align:center}
   /* 19회차(γ P7 · δ P6): 카드2·3 초록 잉크가 ref 35 / 우리 38~40 (+9~14%). 다만 카드1 은 ref 37 / 우리 38 로
      Δ1 이라(문자열이 카드마다 다르다) 과교정을 피해 −5% 만 준다. */
   .tr-card>.cv>i{font-size:48.5px;color:#8BE22C;-webkit-text-stroke:10px #000;paint-order:stroke fill;
