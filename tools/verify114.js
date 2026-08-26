@@ -236,9 +236,9 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     const main = rings.filter(r => r.t >= 0).sort((a,b) => b.r1 - a.r1)[0];
     return { r0: Math.round(main.r0), r1: Math.round(main.r1) };
   });
-  ok(wave.r0 >= 90 && wave.r1 >= 200,
-     '본 충격파가 화구 테두리에서 시작해 밖으로 나간다 — r ' + wave.r0 + ' → ' + wave.r1 +
-     'px (피해 반경 130 기준 0.75 → 1.7배)');
+  ok(wave.r0 >= 85 && wave.r1 >= 150 && wave.r1 <= 210,
+     '본 충격파가 화구 테두리에서 시작해 피해 반경을 조금 넘어선다 — r ' + wave.r0 + ' → ' + wave.r1 +
+     'px (피해 반경 130 기준 0.72 → 1.22배 · 캔버스 폭을 넘지 않는 상한)');
   /* 5회차 비평 ④ — 숫자 세로 계단이 «배열 길이» 면 소멸에 따라 같은 칸이 되감긴다 */
   const stag = await p.evaluate(() => {
     nums.length = 0;
