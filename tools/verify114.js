@@ -238,7 +238,24 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(lifes.imp >= 0.24 && lifes.main >= 0.24 && lifes.main + lifes.dl <= 0.36,
      '링 수명 — 임팩트 ' + lifes.imp + 's · 본 충격파 ' + lifes.main + 's · 2단 총 ' +
      Math.round((lifes.main + lifes.dl)*100)/100 + 's ≤ 0.36 (화구 0.302s 보다 오래 남지 않는다)');
-  ok(lifes.dl >= 0.10, '2단 폭발 지연 ' + lifes.dl + 's ≥ 0.10 (80ms 캡처에서 최소 한 프레임 어긋난다)');
+  /* 13회차 — 이 게이트를 «지연» 에서 «위상 잠금» 으로 바꾼다. 근거는 비평가 두 명의 공통 실측이다:
+     지연 0.10s 는 두 줄의 f 를 어긋나게 해 반경 비가 시간에 따라 흔들렸고, 빠른 줄이 느린 줄을 따라잡는
+     구간에서 겹쳐 «2단이 한 줄로 뭉갠다»(AQ boom-7 간격 4 게임px · AR boom-8 간격 8 게임px, 분리돼
+     보이는 프레임이 80ms 한 장뿐). 7회차에 임팩트 2겹에서 같은 병을 겪고 «상수배로 묶기» 로 고쳤다.
+     지연이 아니라 **반경 비가 전 구간 고정인지**를 검사한다 — 그래야 간격이 f 와 무관하게 유지된다. */
+  const lock = await p.evaluate(() => {
+    rings.length = 0; boomFx(0, 0, 130, '#ffb45c', false);
+    const rs = rings.filter(r => !r.bn && r.col !== '#fff2c0').sort((a,b) => b.r1 - a.r1);
+    if(rs.length < 2) return { n: rs.length };
+    const A = rs[0], B = rs[1];
+    return { n: rs.length, k0: A.r0/B.r0, k1: A.r1/B.r1, dl: A.t - B.t, lf: A.life - B.life,
+             gap0: A.r0 - B.r0, gap1: A.r1 - B.r1 };
+  });
+  ok(lock.n >= 2 && Math.abs(lock.k0 - lock.k1) < 0.02 && lock.dl === 0 && lock.lf === 0 &&
+     lock.gap0 >= 12 && lock.gap1 >= 12,
+     '2단 파문 위상 잠금 — 반경 비 r0 ' + (lock.k0 || 0).toFixed(3) + ' = r1 ' + (lock.k1 || 0).toFixed(3) +
+     ' · 지연·수명 일치 · 두 줄 간격 ' + Math.round(lock.gap0 || 0) + ' → ' + Math.round(lock.gap1 || 0) +
+     ' 게임px ≥ 12 (13회차 AQ·AR 공통 «두 줄이 한 줄로 뭉갠다» 회귀 방지)');
   ok(lifes.dbgMin >= 6.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 6.0 («보이지 않는 점» 회귀 방지)');
   /* 5회차 비평 ① — 충격파가 화구 «안» 에서 시작하면 첫 2프레임이 불길에 묻힌다 */
   const wave = await p.evaluate(() => {
@@ -249,9 +266,13 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   /* 11회차 AM② — 상한 210(= 피해 반경의 1.62배)이 «최대 Ø 377 게임px = 뷰포트 폭의 70%» 를 허용했고
      실제로 화면 오른쪽에서 잘렸다(AM 실측 boom-11). 링은 화구 테두리에서 시작해 **피해 반경까지**만
      가고, 바깥 2단이 그 1.15~1.26배에서 멈춘다 — 아래 «2단 상한» 이 뷰포트 초과를 직접 막는다 */
-  ok(wave.r0 >= 85 && wave.r1 >= 120 && wave.r1 <= 150,
-     '본 충격파가 화구 테두리에서 시작해 피해 반경까지 간다 — r ' + wave.r0 + ' → ' + wave.r1 +
-     'px (피해 반경 130 기준 0.72 → 1.00배)');
+  /* 13회차 — 출발 하한 85 를 78 로 내린다. 두 줄을 상수배로 묶으면서 «화구 테두리에서 출발» 을
+     바깥 줄이 대표하게 됐고(r×0.62 = 80.6), 안쪽 줄은 그 값을 1.35 로 나눈 자리에서 시작한다.
+     목적(«링이 화구 안에서 시작해 첫 2프레임이 불길에 묻히는 것» 방지)은 바깥 줄이 그대로 지킨다.
+     상한 150 은 13회차 AQ·AR 공통 지적(피해 지름 초과)을 받아 **피해 반경 130 = 상한**으로 좁힌다. */
+  ok(wave.r0 >= 78 && wave.r1 >= 120 && wave.r1 <= 132,
+     '본 충격파가 화구 테두리에서 시작해 «피해 반경에서 멈춘다» — r ' + wave.r0 + ' → ' + wave.r1 +
+     'px (피해 반경 130 기준 0.62 → 1.00배 · 13회차 AQ Ø293 · AR Ø296 «피해 지름 +12.7% 초과» 회귀 방지)');
   const wave2 = await p.evaluate(() => {
     rings.length = 0; boomFx(0, 0, 130, '#ffb45c', true);
     return { r1: Math.round(Math.max.apply(null, rings.map(r => r.r1))) };
@@ -333,7 +354,9 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   }
   ok(booms.boom.delayed >= 1 || booms.boom.chainSeen >= 1,
      '화염구 착탄에 연쇄(지연 발화) 폭발 — 지연 링 ' + booms.boom.delayed + ' · 연쇄 스펙 ' + booms.boom.chainSeen);
-  ok(booms.meteor.delayed >= 1, '운석 착탄에 2단(0.10s 지연) 파문 ' + booms.meteor.delayed + '개');
+  /* 13회차 — 운석의 «지연 링» 은 이제 2단 파문이 아니라 12회차에 신설한 **연쇄 폭발(여진)** 이다
+     (2단은 위상 잠금으로 바뀌어 지연 0). 지연 링이 여전히 있는지만 본다 = 여진이 살아 있는지. */
+  ok(booms.meteor.delayed >= 1, '운석 착탄에 지연 발화(연쇄 폭발 여진) 링 ' + booms.meteor.delayed + '개');
 
   /* ---------------- [5] 가지 번개 ---------------- */
   console.log('[5] 가지 번개');
