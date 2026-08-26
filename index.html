@@ -1195,9 +1195,16 @@
      글리프 윤곽 «중심» 에 그려지고 `paint-order:stroke fill` 이 안쪽 절반을 흰 채움으로 덮으므로
      **바깥 두께 = 값의 절반**이다. 6px(=바깥 3) 은 우리 서체의 가는 획에서 카운터를 메워
      흰 코어 면적이 ref 대비 −41% 였다(H) → **5px(=바깥 2.5)** 로 낮춘다. */
-  #tuto.todo .tbtn{left:168px;width:auto;text-align:center;top:5px;height:27px;
+  /* ★ 148(T1 버그, 2026-08-26) — **`scaleX(1.31)` 은 «줄 총폭» 만 맞추고 «글리프 폭» 을 31% 부풀렸다.**
+     그 결과 잉크가 서로를 먹어 `[미션-n]` 의 어간이 **−3 / −2 / −8 / −2 / +1**(ref 3/4/6/5/3) 이 됐고,
+     `션`+`-`+`1`+`]` 가 한 덩어리로 융착해 **글자로 안 읽혔다**(주인 보고 «미션 쪽 글씨가 심하게 깨짐»).
+     총폭이 ref 와 맞았던 것은 «넓은 잉크 + 음수 어간» 이 우연히 상쇄된 것이지 맞은 게 아니다.
+     → 부모 scaleX 를 **1.12** 로 내려 잉크 합을 ref 로 되돌리고, 벌어야 할 어간은 글리프별 margin 으로 준다
+       (`node tools/solve148.js` — 형제를 `visibility:hidden` 으로 지우고 글리프별 잉크 bbox 를 따로 재서 푼다).
+     결과: 총 잉크 **111**(ref 111) · 어간 전부 양수. `left` 는 중심 보정 168 → 169(ref 중심 793.5). */
+  #tuto.todo .tbtn{left:169px;width:auto;text-align:center;top:5px;height:27px;
     font-size:28px;line-height:27px;color:#83FFE7;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;
-    transform:translateZ(0) translateX(-50%) scaleX(1.31)}
+    transform:translateZ(0) translateX(-50%) scaleX(1.12)}
   /* L2 잉크 좌단은 ref 677 인데 우리는 673 이었다(−4) → 칸을 3px 오른쪽으로. top 은 +1
      (ref 는 L1 잉크하단 1878 → L2 잉크상단 1903 으로 25px 띄운다). */
   /* ★ 9회차 — 비평가 P·Q 가 독립으로 «L2 를 1px 내려라» 를 지시했다. 한 번에 두 어긋남이 잡힌다:
@@ -1246,32 +1253,47 @@
   #tuto.todo .tbtn u,#tuto.todo .tpg  u,#tuto.todo .tt u{
     display:inline-block;position:relative;vertical-align:baseline;
     font-style:normal;font-weight:900;text-decoration:none}
+  /* ★ 148(T1 버그) — **`<s>` 의 기본 `text-decoration:line-through` 를 아무도 껐던 적이 없다.**
+     `<u>` 는 위 규칙에서 껐는데 `<s>` 는 빠져 있었다. 취소선은 글자색으로 그려지지만
+     `-webkit-text-stroke`(3.7~4.5px)가 그 위에 얹혀 **검정 가로 막대**가 되고, 하필 슬래시·하이픈의
+     한가운데를 지나 `/` 를 위·아래 두 토막으로 잘랐다(비평 2인이 독립으로 «슬래시가 잘려 A 처럼 보임»).
+     하이픈 `-` 은 글리프 자체가 같은 높이라 막대에 가려 «하이픈이 사라진» 것처럼 보였다.
+     `<s>` 는 여기서 «슬래시·하이픈 글리프 종류» 를 뜻하는 태그일 뿐 취소선 의미가 아니다. */
+  #tuto.todo .tbtn s,#tuto.todo .tpg  s,#tuto.todo .tt s{text-decoration:none}
   /* ⚠ ref 의 `1` 은 폭 8 로 `0`(17~18)의 **절반**이다 = 비례 숫자(proportional figures).
      우리 기본 서체는 등폭이라 `1` 이 `0` 만큼 넓고, 그 한 글자 때문에 `(0/10)` 총 폭이 89→96 이 된다.
      `font-variant-numeric:proportional-nums` 를 시도했으나 **헤드리스 기본 서체가 pnum 을 안 갖고 있어
      아무 변화가 없었다** — 게임 서체가 들어와야 회수된다(측정표 §8 «아트 필요»).
      여기서 전체를 8% 줄이면 나머지 5개 글리프(Δ≤1)가 모두 틀어지므로 **줄이지 않는다.** */
   /* @32-GLYPH-TUNE (수치는 `node tools/probe32.js <캡처> runs` 로 글리프 열 런을 재서 맞춘다) */
-  #tuto.todo .tbtn b {font-size:26px;top:-1px;transform:scaleX(1.15);margin:0 -1px}
-  #tuto.todo .tbtn i {font-size:29px;top:0px;transform:scaleX(0.78);margin:0 -4px}
+  /* 148 — margin 은 «어간» 이 결정한다(부호도 바뀐다): 넓히는 글리프(`b` 1.15 · `s` 1.4)는 **양수**,
+     좁히는 글리프(`i` 0.78 · `em` 0.78)만 음수다. 예전 값은 넓히는 쪽에도 음수를 줘 이웃을 파먹었다.
+     `미`↔`션` 은 같은 `<i>` 안이라 margin 이 안 닿는다 → `letter-spacing` 으로 벌린다(ref 어간 4). */
+  #tuto.todo .tbtn b {font-size:26px;top:-1px;transform:scaleX(1.15);margin:0 1.25px 0 0}
+  #tuto.todo .tbtn i {font-size:29px;top:0px;transform:scaleX(0.78);margin:0 -0.5px 0 -1.75px;
+    letter-spacing:5px}
   /* ★ 9회차(비평가 Q) — L1 어간 재배분. `-`→`2` 가 ref 6 vs 우리 2(−67%), `7`→`]` 가 4 vs 2(−50%).
      늘린 어간만큼 `227` 잉크를 좁혀(scaleX .86→.78) **총폭을 지킨다**(우리 숫자가 ref 보다 자당 +2 넓다). */
-  #tuto.todo .tbtn s {font-size:30px;top:-1px;transform:scaleX(1.4);margin:0 0px}
-  #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.78);margin:0 -3px}
-  #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(0.95);margin:0 1px}
+  #tuto.todo .tbtn s {font-size:30px;top:-1px;transform:scaleX(1.4);margin:0 3.25px 0 3.5px}
+  #tuto.todo .tbtn em{font-size:33px;top:4px;transform:scaleX(0.78);margin:0 -2px 0 0.25px}
+  #tuto.todo .tpg  b {font-size:23px;top:-3px;transform:scaleX(0.95);margin:0 -1px 0 2.25px}
   /* `1` 만 좁힌다 — ref 잉크 폭 6.5(우리 등폭 17.5). 줄어든 레이아웃 폭은 margin 으로 상쇄. */
   /* ★ 7회차 — L3 `(0/10)` 의 «1»→«0» 어간이 ref 5 vs 우리 2 였다(자체 열 런 실측).
      `u` 우측 margin 만 −3.5 → −0.5 로 풀어 3px 를 되돌린다(좌측은 그대로). */
   #tuto.todo .tbtn u,#tuto.todo .tpg u,#tuto.todo .tt u{transform:scaleX(0.5);margin:0 -1.5px 0 -3.5px}
-  #tuto.todo .tpg  s {font-size:30px;top:1px;transform:scaleX(0.9);margin:0 1px 0 2px}
-  #tuto.todo .tpg  em{font-size:28px;top:1px;transform:scaleX(0.95);margin:0 -1px 0 -1px}
+  #tuto.todo .tpg  s {font-size:30px;top:1px;transform:scaleX(0.9);margin:0 2.25px 0 4.5px}
+  #tuto.todo .tpg  em{font-size:28px;top:1px;transform:scaleX(0.95);margin:0 0.25px 0 0.25px}
   /* @32-GLYPH-TUNE-END */
   #tuto .tpg{display:none}
-  /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서, 폭 89 는 scaleX 1.5 에서 나온다. */
-  #tuto.todo .tpg{display:inline-block;position:absolute;left:160px;width:auto;text-align:center;top:89px;
+  /* L3 잉크 89×23 @ ref (741,1934) — 높이 23 은 font-size 23 에서 나온다.
+     ★ 148 — 폭 89 를 `scaleX(1.4)` 로 만들던 것이 L1 과 같은 병이었다: 잉크 합이 ref 70 인데 **89** 로
+       부풀고 어간이 **6/1/2/−1**(ref 4/5/4/2) 로 눌려 `/` 가 `1` 의 검정 외곽선에 가로로 잘렸다.
+       scaleX **1.155** 로 잉크를 ref 로 되돌리고 어간은 margin 으로 준다 → 총 잉크 89(ref 89) · 어간 4/5/4/2.
+       `left` 는 중심 보정 160 → 158.5(ref 중심 785). */
+  #tuto.todo .tpg{display:inline-block;position:absolute;left:158.5px;width:auto;text-align:center;top:89px;
     height:23px;font-size:23px;line-height:23px;font-weight:900;color:#FFC26A;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;white-space:nowrap;
-    transform:translateZ(0) translateX(-50%) scaleX(1.4)}
+    transform:translateZ(0) translateX(-50%) scaleX(1.155)}
   /* 💎 이모지는 ref 의 «오각 컷 파란 보석» 보다 **가로로 29% 넓다** — 잉크 bbox 를 58×60 으로 맞춘다.
      ★ **ref 아이콘에는 두께 3.5~5px 의 하드 검정 컨투어가 있다**(비평가 G·H 가 독립으로 «최우선 누락
        레이어» 로 지목. 프레임 안 검정 화소 ref 2718 vs 우리 18 = −99%). 이모지엔 외곽선을 줄 수 없으므로

@@ -1,11 +1,11 @@
 /* 작업 148 — «미션 쪽 글씨가 깨져 보인다» 원인 특정용 캡처 (1080×2280).
-   실행: node tools/cap148.js  → docs/review/148-r1-*.png
-     148-r1-s1-배너미완.png   : 메인 + 우하단 가이드 미션 배너(미완 = `.todo` 3줄)
-     148-r1-s1c-배너미완.png  : 위 배너만 크롭(620..1080 / 1839..1989 → 프레임 좌표)
-     148-r1-s2-배너보상.png   : 메인 + 배너 보상받기 상태(`.ready` 2줄)
-     148-r1-s2c-배너보상.png  : 크롭
-     148-r1-s3-퀘스트.png     : 22 퀘스트(미션) 팝업
-     148-r1-s4-프로필.png     : 19 프로필 «해금 미션» 바
+   실행: node tools/cap148.js  → docs/review/148-r4-*.png
+     148-r4-s1-배너미완.png   : 메인 + 우하단 가이드 미션 배너(미완 = `.todo` 3줄)
+     148-r4-s1c-배너미완.png  : 위 배너만 크롭(620..1080 / 1839..1989 → 프레임 좌표)
+     148-r4-s2-배너보상.png   : 메인 + 배너 보상받기 상태(`.ready` 2줄)
+     148-r4-s2c-배너보상.png  : 크롭
+     148-r4-s3-퀘스트.png     : 22 퀘스트(미션) 팝업
+     148-r4-s4-프로필.png     : 19 프로필 «해금 미션» 바
    지시서 [5] — 이미지는 메인 세션이 직접 Read 하지 않는다. 서브에이전트 채점용. */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
@@ -40,8 +40,8 @@ const out = f => path.resolve(__dirname, '../docs/review/' + f);
     uiDirty = true; renderUI(); drawTuto();
   });
   await p.waitForTimeout(500);
-  await p.screenshot({ path: out('148-r1-s1-배너미완.png') });
-  await banner('148-r1-s1c-배너미완.png');
+  await p.screenshot({ path: out('148-r4-s1-배너미완.png') });
+  await banner('148-r4-s1c-배너미완.png');
 
   /* ── s2: 보상받기(ready) 배너 ── */
   await p.evaluate(() => {
@@ -52,18 +52,18 @@ const out = f => path.resolve(__dirname, '../docs/review/' + f);
     uiDirty = true; renderUI(); drawTuto();
   });
   await p.waitForTimeout(400);
-  await p.screenshot({ path: out('148-r1-s2-배너보상.png') });
-  await banner('148-r1-s2c-배너보상.png');
+  await p.screenshot({ path: out('148-r4-s2-배너보상.png') });
+  await banner('148-r4-s2c-배너보상.png');
 
   /* ── s3: 22 퀘스트(미션) 팝업 ── */
   await p.evaluate(() => { gmCloseAll(); closeModal(); openQuest(); });
   await p.waitForTimeout(600);
-  await p.screenshot({ path: out('148-r1-s3-퀘스트.png') });
+  await p.screenshot({ path: out('148-r4-s3-퀘스트.png') });
 
   /* ── s4: 19 프로필 «해금 미션» 바 ── */
   await p.evaluate(() => { closeModal(); gmCloseAll(); openProfile && openProfile(); });
   await p.waitForTimeout(600);
-  await p.screenshot({ path: out('148-r1-s4-프로필.png') });
+  await p.screenshot({ path: out('148-r4-s4-프로필.png') });
 
   await b.close();
   console.log('CAP148 ok — console errors: ' + errs.length);
