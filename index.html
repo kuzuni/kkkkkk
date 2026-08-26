@@ -3217,25 +3217,32 @@
      2280 에서 gap 236 이 −231 로 뒤집혀 계단이 9px 로 찌그러졌다.
      → 계단은 **패널 직속 래퍼**(`.rw-steps`)에 담아 100% 가 패널 높이로 풀리게 하고,
         래퍼를 정확히 «바닥선 ~ 수반 상단» 구간에 맞춘 뒤 계단은 그 안에서 % 로 잡는다. */
-  .rw-steps{left:0;right:0;z-index:1;pointer-events:none;
+  .rw-steps{left:0;right:0;z-index:1;pointer-events:none;overflow:hidden;
     top:calc(var(--rw-sp) * .5075 + 258px * var(--rwc,1) + var(--rw-ah) / 2);
     height:calc(var(--rw-sp) * .36 + 258px * var(--rwc,1) - var(--rw-ah) / 2)}
   .rw-steps>*{position:absolute}
   .rw-st{position:absolute;left:50%;margin-left:0;box-sizing:border-box;
-    background:linear-gradient(180deg,rgba(104,90,66,.42) 0 5px,rgba(6,6,4,.34) 5px 10px,
-      rgba(70,58,41,.26) 10px 100%);
-    border-left:4px solid rgba(92,80,58,.34);border-right:4px solid rgba(9,8,5,.36)}
-  .rw-st1{width:717px;transform:translateX(-358.5px);top:10%;height:30%}
-  .rw-st2{width:837px;transform:translateX(-418.5px);top:40%;height:34%}
+    /* 10회차 — 반투명(.26)이라 **벽 세로 격자선이 계단을 그대로 관통**해 «와이어프레임» 으로
+       읽혔다(비평 X: «구조물이 아니라 겹쳐진 선»). 불투명 솔리드로 바꿔 벽을 실제로 가린다. */
+    background:linear-gradient(180deg,#6B5C43 0 5px,#0B0A07 5px 10px,#3A3122 10px 100%);
+    border-left:4px solid #5C5039;border-right:4px solid #0C0B07}
+  .rw-st1{width:723px;transform:translateX(-361.5px);top:8%;height:max(15px,30%)}
+  .rw-st2{width:843px;transform:translateX(-421.5px);top:38%;height:max(15px,34%)}
   /* 단의 «코» 는 가운데가 밝고 양끝이 어둡다 — 전폭 균일 띠로 두면 자처럼 보인다 */
   .rw-floor::after{content:'';position:absolute;inset:0;
     background:linear-gradient(90deg,rgba(0,0,0,.55) 0,rgba(0,0,0,0) 26%,
       rgba(0,0,0,0) 74%,rgba(0,0,0,.55) 100%)}
+  /* 지면선 — 수반 밑변 높이의 전폭 바닥. 비평 X·Y 공통: «계단 밑~탭바까지 524px 에 지면선이
+     0개, 수반이 벽지 위에 떠 있다». 여기서 벽 격자를 끊고 아래를 다른 면(바닥)으로 만든다. */
+  .rw-ground{left:0;right:0;top:calc(var(--rw-sp) * .8675 + 732px * var(--rwc,1));
+    bottom:0;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(124,108,79,.55) 0 4px,rgba(8,7,5,.45) 4px 9px,
+      rgba(63,52,36,.34) 9px 100%)}
   /* 좌우 벽기둥 — 비평 V: x0~90 / x987~1080(폭의 17%)이 y108~2100 전 구간에서 요소 0개.
      측정표 §배경의 «좌우 기둥 암시» 를 세운다. 2행 슬롯이 x91 에서 시작하므로 폭 86 이면 침범 0. */
   .rw-pil{top:0;bottom:0;width:86px;z-index:1;pointer-events:none;
-    background:linear-gradient(90deg,rgba(74,62,45,.26) 0 4px,rgba(58,48,35,.16) 4px 74px,
-      rgba(96,84,61,.30) 74px 79px,rgba(7,6,4,.34) 79px 84px,rgba(0,0,0,0) 84px 86px)}
+    background:linear-gradient(90deg,rgba(96,82,60,.50) 0 5px,rgba(70,58,42,.34) 5px 72px,
+      rgba(126,110,80,.62) 72px 78px,rgba(6,5,4,.62) 78px 84px,rgba(0,0,0,0) 84px 86px)}
   .rw-pil.l{left:0}
   .rw-pil.r{right:0;transform:scaleX(-1)}
   /* 아치 위 상인방(lintel) — 패널 상단~아치 정점 구간에 «전경 요소 0개» 라는 지적(S·U 공통).
@@ -3244,9 +3251,9 @@
   .rw-lintel{left:0;right:0;top:calc(var(--rw-sp) * .5075 - 300px * var(--rwc,1));
     height:calc(66px * var(--rwc,1));z-index:1;pointer-events:none;
     transform:scale(var(--rwc,1));transform-origin:50% 0;
-    background:linear-gradient(180deg,rgba(104,91,67,.42) 0 5px,rgba(6,6,4,.34) 5px 10px,
-      rgba(70,59,42,.24) 10px 54px,rgba(96,84,61,.34) 54px 58px,rgba(5,5,3,.34) 58px 63px,
-      rgba(0,0,0,0) 63px 66px)}
+    background:linear-gradient(180deg,rgba(128,112,82,.60) 0 5px,rgba(6,6,4,.52) 5px 11px,
+      rgba(84,70,50,.40) 11px 54px,rgba(120,105,76,.52) 54px 59px,rgba(5,5,3,.52) 59px 64px,
+      rgba(0,0,0,0) 64px 66px)}
   /* 상인방 좌우 끝의 «까치발» — 전폭 띠만 두면 켜 줄눈과 구분이 안 된다 */
   .rw-lintel::before,.rw-lintel::after{content:'';position:absolute;top:-12px;width:30px;height:78px;
     background:linear-gradient(180deg,rgba(100,87,64,.34),rgba(60,50,36,.20) 70%,rgba(0,0,0,0));
@@ -3281,8 +3288,8 @@
     background:radial-gradient(closest-side ellipse at 50% 50%,#3E2B1D 0%,rgba(62,42,30,0) 72%);
     pointer-events:none}
   /* 수반 접지 그림자 — 밑동 바로 아래. 없으면 수반이 지면에 «얹힌» 것으로 안 읽힌다(비평 U) */
-  .rw-mid::after{content:'';position:absolute;left:-42px;width:484px;top:196px;height:52px;
-    background:radial-gradient(closest-side ellipse at 50% 50%,rgba(5,5,3,.72) 0%,rgba(5,5,3,0) 100%);
+  .rw-mid::after{content:'';position:absolute;left:-30px;width:460px;top:198px;height:44px;
+    background:radial-gradient(closest-side ellipse at 50% 50%,rgba(4,4,3,.80) 0%,rgba(4,4,3,0) 100%);
     z-index:1;pointer-events:none}
   /* 돌 수반 [유물 소환] 버튼 362×220 — 석재 림 타원 + 시안 액체 + 받침(아트 대기) */
   .rw-basin{left:0;top:0;width:400px;height:216px;cursor:pointer;z-index:3}
@@ -8672,6 +8679,7 @@
     </div>
     <div class="rw-panel">
       <div class="rw-bg"></div>
+      <div class="rw-ground"></div>
       <span class="rw-pil l"></span><span class="rw-pil r"></span>
       <div class="rw-lintel"></div>
       <div class="rw-floor"></div>
