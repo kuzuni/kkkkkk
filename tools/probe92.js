@@ -68,7 +68,14 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
 
   await p.evaluate(() => {
     window.__raw = window.setTimeout;
-    window.setTimeout = function (fn, ms) { if (ms >= 300 && ms <= 800) { window.__held = fn; return 0; } return window.__raw.apply(window, arguments); };
+    window.__heldMs = [];
+    /* ★ 22회차 — 하한 300 → **240**. 이 창이 놓치면 삭제 재렌더가 **실시간으로 그냥 실행돼**
+       계측 도중 행이 통째로 사라지고, 계측기는 그것을 «연출» 로 읽는다. T=210(스태거 35)을 재려다
+       실제로 당했다 — 재렌더가 210+35+20 = **265ms** 라 옛 창(300~800) 밖이었고, 요약이
+       «합산 상승 피크 28.06 px/ms · 정지 구간 230ms · 보이는 잉크 1.5% 도달 t=70ms» 라는
+       물리적으로 불가능한 값을 냈다. 계측기가 «틀린 값» 이 아니라 «그럴싸한 값» 을 냈으면
+       그대로 회차가 날아갔을 자리다. 붙잡은 값을 `__heldMs` 로 밖에 찍어 눈으로 확인한다. */
+    window.setTimeout = function (fn, ms) { if (ms >= 240 && ms <= 800) { window.__heldMs.push(ms); window.__held = fn; return 0; } return window.__raw.apply(window, arguments); };
   });
   const bb = await p.evaluate(() => { const r = document.getElementById('mailDel').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await p.mouse.move(bb.x, bb.y); await p.mouse.down(); await p.mouse.up();
@@ -80,6 +87,11 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
     window.__anims.forEach((a) => a.pause());
   });
   if (!(await p.evaluate(() => window.__anims.length))) { console.log('✗ 애니메이션을 못 잡았다 — 중단'); await b.close(); process.exit(1); }
+  /* 재렌더 타이머를 실제로 붙잡았는지 **먼저** 확인하고 중단한다 — 못 잡으면 아래 표는 전부 거짓이다.
+     창 안에는 토스트 수명(760ms)도 걸리므로 «마지막에 등록된 것» 이 재렌더다. */
+  const heldMs = await p.evaluate(() => window.__heldMs);
+  console.log(`붙잡은 타이머 [${heldMs.join(', ')}] ms — 마지막(${heldMs[heldMs.length - 1]})이 삭제 재렌더`);
+  if (!heldMs.length) { console.log('✗ 삭제 재렌더 타이머를 못 잡았다 — 계측 도중 행이 실시간으로 지워진다. 중단'); await b.close(); process.exit(1); }
 
   const rows = [];
   for (let t = 0; t <= END; t += STEP) {
