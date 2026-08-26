@@ -61,7 +61,8 @@ const BARS = [
     body: BODY_VIS, restore: 'heroSubGo("eq");' },
   { key: 'dun', name: '03 던전', sel: '#dunSub', host: '#dunw', n: 2,
     open: 'goTab("adv");', close: 'closeDungeon();',
-    click: '#dunSub [data-dsub="raid"]', afterSel: '#dunSub', afterLabel: '레이드',
+    /* 123 — 라벨이 «레이드» → «컨텐츠» 로 바뀌었다(data-dsub 키는 raid 유지) */
+    click: '#dunSub [data-dsub="raid"]', afterSel: '#dunSub', afterLabel: '컨텐츠',
     body: 'document.getElementById("dunList").innerHTML.length', restore: 'document.querySelector(\'#dunSub [data-dsub="dun"]\').click();' },
   /* 124 — «이용권» 탭이 붙어 2칸 → 3칸(.sp3) */
   { key: 'shop', name: '10 상점', sel: '#shopCats', host: '#shopw', n: 3,
