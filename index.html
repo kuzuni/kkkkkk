@@ -1656,11 +1656,20 @@
      카드 안쪽 폭 = 830 − 24 − 22 = 784 (ref 좌 26 / 우 24 인셋의 s 배). 부품은 22 `.qs-r` 과 같다. */
   /* S3 — ref 카드 반경 11(×s=10). 스트로크 6px 이 바깥으로 나가므로 안쪽 반경 5 → 외곽 11.
      S7 — ref 베벨 링은 상단만이 아니라 «4변 전부» 다(좌 x109..114 · 하 y726..731 실측). */
-  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px;background:#F7ECDA;border-radius:5px;
+  /* ★ 12회차 — 카드의 «그림»(면·모서리·테두리)을 `.ml-r` 에서 **`.ml-in` 으로 옮겼다.**
+     11회차는 내용만 등방 축소하고 **상자는 폭 784 고정**이라, 눈에 보이는 분홍 판은 오히려
+     5.3:1 → **63.8:1(실측)** 로 찌그러졌고 좌우에 최대 **359px** 씩 «내용 없는 틴트» 가 생겼다.
+     게다가 내용이 origin 50% 0 으로 수렴하느라 「완료」 버튼이 **278px** 가로 이동했다 —
+     8회차에 폐기한 가로 이동이 내용 레이어에서 그대로 되살아난 것이다(V·W 독립 일치, 내 실측 확인).
+     → `.ml-r` 은 **flow 수축(height)만** 하는 투명 스페이서, `.ml-in` 이 **카드 전체(면+테두리+내용)를
+     한 몸으로 등방 축소**한다. `transform` 은 box-shadow 까지 같이 줄이므로 테두리 두께도 비례한다.
+     내용-상자 상대 이동이 **정의상 0** 이고, 보이는 판의 종횡비도 보존된다. */
+  .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px}
+  .ml-r>.ml-in{background:#F7ECDA;border-radius:5px;
     box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
   .ml-r>.ml-in{position:absolute;left:0;top:0;width:784px;height:147px;transform-origin:50% 0}
   .ml-r:last-child{margin-bottom:0}
-  .ml-r.done{background:#E3D3BC}
+  .ml-r.done>.ml-in{background:#E3D3BC}
   /* 129 — 완료 표식을 클릭 즉시 입히므로(«죽은 버튼» 제거) 면색·썸네일 회색이 연출 도중에
      **탁 튄다**. 코인이 썸네일을 떠난 뒤(93: 첫 도착 0.56s) 서서히 넘어가게 지연을 준다.
      라벨·비활성은 지연 없이 즉시다 — 그게 이 버그의 본체다. `.out`(92 삭제)은 애니메이션이라
@@ -1671,7 +1680,12 @@
      m2 는 자기 틴트의 34% 지점에서 이미 소멸한다. 즉 «이 2장이 대상» 이라는 유일한 표식이
      연출 전반부 내내 없었다(0~144ms 프레임은 평상 베이지 227,211,188 그대로).
      4회차에 «붉은 기는 .out 이 붙는 즉시» 로 확정한 것이 129 의 뒤 커밋에 조용히 무효화된 것이다. */
-  .ml-r.out{transition:none}   /* 틴트는 .out 이 붙는 «즉시» — 4회차 확정 사항이다 */
+  .ml-r.out>.ml-in{transition:none;background:#F2C7C7}   /* 틴트는 .out 이 붙는 «즉시» — 4회차 확정 */
+  /* 12회차 — 비평가 3명(U·V·W)이 «연출은 420ms 연속인데 버튼만 재렌더 시점에 0ms 하드컷으로
+     빨강→회색이라, 그동안 아직 누를 수 있어 보인다» 를 독립 지적했다. 클릭 즉시 `disabled` 를 걸고
+     (`:disabled` 그라디언트는 공용이라 못 건드리니) **filter 를 140ms 로 램프**시켜 급전환을 뭉갠다. */
+  #mailDel{transition:filter .14s linear}
+  #mailDel:disabled{filter:grayscale(.55) brightness(.94)}
   .ml-i{transition:filter .34s ease .18s}
   /* 92 — [읽음 전체 삭제] 로 사라지는 행. 60 쥬시의 «밀려나며 접힘»: 오른쪽으로 밀어낸 뒤
      높이·여백을 0 으로 접는다. (`.jz-*` 공용 이름은 60 구간이라 69 안에 지역 클래스로 둔다.)
@@ -1741,38 +1755,24 @@
      복귀 100ms(6프레임)** 로 둘 다 키웠다. 6회차 K 가 «16px 은 높이 점프» 라 한 것과 지금 «8px 은
      렌더 노이즈» 사이의 값이다. */
   .ml-r.out{animation:mlOut .30s both;animation-delay:var(--mld,0ms);
-    pointer-events:none;overflow:hidden;position:relative;z-index:1;background:#F2C7C7}
+    pointer-events:none;position:relative;z-index:1}
+  /* 높이 커브 = **147(1−p)^1.6** — V·W 가 «꼬리가 감속이 아니라 +40% 재가속한다» 를 같은 수치로
+     독립 지적했다(186~258ms 0.417 → 279~291ms 0.583). 지수형으로 깔면 구간 속도가
+     0.85 → 0.75 → 0.70 → 0.64 → 0.53 → 0.44 → 0.33 → 0.29 → 0.10 **단조 하강**이라 재가속이 없다.
+     알파는 W-① 처방대로 12% 까지만 홀드하고 그 뒤 **등기울기 0.00379/ms** 로 깐다
+     (11회차는 한 키프레임 경계에서 기울기가 2.5배 튀었다). 내용 알파는 1 로 고정 —
+     상자 α × 내용 α 가 **곱해져** 실효값이 .053 까지 떨어지던 것이 V-④ 지적이다(«빈 판» 의 곱셈 재발). */
   @keyframes mlOut{
-    /* 전 구간 linear — 앤티시페이션은 box-shadow 창이 혼자 맡는다(6회차 ⓐ) */
-    0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);
-      box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    /* 임펄스 «한 방» — 피크 9%(36ms) · 복귀 25%(100ms) = 6프레임(P «5프레임 이상») */
-    9%{opacity:1;height:138px;margin-bottom:16px;
-      box-shadow:0 0 0 6px #241A12,inset 0 0 0 12px #FFF7EC;
-      animation-timing-function:linear}
-    25%{opacity:1;height:110px;margin-bottom:13px;
-      box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    35%{opacity:.95;height:92px;margin-bottom:11px;
-      box-shadow:0 0 0 5px #241A12,inset 0 0 0 4px #FFFBF2;
-      animation-timing-function:linear}
-    50%{opacity:.86;height:68px;margin-bottom:8px;
-      box-shadow:0 0 0 4px #241A12,inset 0 0 0 3px #FFFBF2;
-      animation-timing-function:linear}
-    /* 테두리 소멸 — 이 아래로는 «카드» 가 아니라 색 띠다(8회차 ⓓ, P·Q 둘 다 유지 확인) */
-    62%{opacity:.68;height:52px;margin-bottom:6px;
-      box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2;
-      animation-timing-function:linear}
-    74%{opacity:.46;height:37px;margin-bottom:4px;animation-timing-function:linear}
-    /* 꼬리는 이징이 아니라 **값 간격**으로 감속시킨다 — 커브를 걸면 높이는 가라앉는데 알파도
-       같이 앞으로 쏠려 «꺼짐» 절벽이 되살아난다(3회차에 실제로 그랬다).
-       P-③ «착지 직전 잔류속도 0.41px/ms 가 그대로 0 이 된다» → 마지막 두 구간을 3px 로 좁혔다. */
-    86%{opacity:.24;height:22px;margin-bottom:2px;animation-timing-function:linear}
-    93%{opacity:.11;height:10px;margin-bottom:1px;animation-timing-function:linear}
-    97%{opacity:.03;height:3px;margin-bottom:0;animation-timing-function:linear}
-    100%{opacity:0;height:0;margin-bottom:0;
-      box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
+    0%{opacity:1;height:147px;margin-bottom:17px;animation-timing-function:linear}
+    12%{opacity:1;height:124px;margin-bottom:14px;animation-timing-function:linear}
+    25%{opacity:.852;height:101px;margin-bottom:12px;animation-timing-function:linear}
+    35%{opacity:.739;height:84px;margin-bottom:10px;animation-timing-function:linear}
+    50%{opacity:.568;height:60px;margin-bottom:7px;animation-timing-function:linear}
+    62%{opacity:.432;height:42px;margin-bottom:5px;animation-timing-function:linear}
+    74%{opacity:.295;height:26px;margin-bottom:3px;animation-timing-function:linear}
+    86%{opacity:.159;height:12px;margin-bottom:1px;animation-timing-function:linear}
+    93%{opacity:.080;height:5px;margin-bottom:1px;animation-timing-function:linear}
+    100%{opacity:0;height:0;margin-bottom:0}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
      (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
 
@@ -1813,18 +1813,27 @@
      둘의 처방(«α 를 scale 에 붙여 일찍 지워라»)은 «빈 판» 을 도로 만든다 — 10회차에 0 으로 만든 값이다.
      등방 scale 은 **왜곡도 0, 빈 판도 0** 이라 둘을 맞바꾸지 않는 유일한 답이다. */
   .ml-r.out>.ml-in{animation:mlOutIn .30s both;animation-delay:var(--mld,0ms)}
+  /* scale 계수 = 위 `mlOut` 의 height ÷ 147 (둘은 반드시 같이 고친다).
+     림 플래시 창을 9%/25% → **12%/33%**(36ms/99ms)로 넓혔다 — 수명을 400→300 으로 줄이면서
+     퍼센트를 그대로 둬 1.6프레임으로 쪼그라들어 있었다(V-①). 진폭도 안쪽 5→12px 에 더해
+     **바깥 링 6→11px** 를 겹쳐 실효 1:21 → 1:12 로 키웠다(W-②). */
   @keyframes mlOutIn{
-    0%{opacity:1;transform:scale(1);animation-timing-function:linear}
-    9%{opacity:1;transform:scale(.939);animation-timing-function:linear}
-    25%{opacity:1;transform:scale(.748);animation-timing-function:linear}
-    35%{opacity:.97;transform:scale(.626);animation-timing-function:linear}
-    50%{opacity:.88;transform:scale(.463);animation-timing-function:linear}
-    62%{opacity:.70;transform:scale(.354);animation-timing-function:linear}
-    74%{opacity:.48;transform:scale(.252);animation-timing-function:linear}
-    86%{opacity:.22;transform:scale(.150);animation-timing-function:linear}
-    93%{opacity:.10;transform:scale(.068);animation-timing-function:linear}
-    97%{opacity:.03;transform:scale(.020);animation-timing-function:linear}
-    100%{opacity:0;transform:scale(0)}}
+    0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
+      animation-timing-function:linear}
+    12%{transform:scale(.847);box-shadow:0 0 0 11px #241A12,inset 0 0 0 12px #FFF7EC;
+      animation-timing-function:linear}
+    25%{transform:scale(.687);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
+      animation-timing-function:linear}
+    33%{transform:scale(.571);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
+      animation-timing-function:linear}
+    50%{transform:scale(.408);box-shadow:0 0 0 5px #241A12,inset 0 0 0 4px #FFFBF2;
+      animation-timing-function:linear}
+    62%{transform:scale(.286);box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2;
+      animation-timing-function:linear}
+    74%{transform:scale(.177);animation-timing-function:linear}
+    86%{transform:scale(.082);animation-timing-function:linear}
+    93%{transform:scale(.034);animation-timing-function:linear}
+    100%{transform:scale(0)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
@@ -14489,7 +14498,11 @@ function openMail(){
      동시에** 나가 목록이 가장 붐빌 때 순차감이 사라진다(5회차 I-③). 나눠 주면 둘 다 안 생긴다:
        2장 140ms(총 540) · 3장 140(680) · 4장 120(760) · 5장 90(760)  — **모든 행이 서로 다르게**
      출발하면서 총 길이는 항상 ≤ 760ms 다. */
-  const MLDEL_DUR = 300, MLDEL_BUDGET = 360, MLDEL_STAG = 100;   /* 11회차 — T·U 공통 «앞 90ms 에 높이의 7.5%만 소비하는 이즈-인» · U «520ms 는 관행 250~300 의 1.7~2.1배» → 감속형 커브 + 총 420ms */
+  const MLDEL_DUR = 300, MLDEL_BUDGET = 360, MLDEL_STAG = 0;
+  /* 12회차 — 스태거 0. W-③ 이 «두 행 합산까지 단조 하강» 을 요구했는데, 행당 곡선이 단조 감속이면
+     스태거가 있는 한 «두 번째 행이 들어오는 순간» 이 반드시 계단이 된다(실측 단차 0.82~0.85).
+     겹침을 100% 로 두면 합이 곡선의 2배라 **단조가 보존**된다. 덤으로 총 320ms 로 가장 짧고
+     (U «관행 250~300ms»), «읽음 **전체** 삭제» 라는 라벨과도 맞는다 — 한 동작으로 읽힌다. */
   /* 8회차 — 수명 300→280 · 스태거 140→**280(= 수명)**. M-② «남는 행 상승 피크 1.30px/ms = 행 높이의
      14.8%/프레임» 과 N-① «남는 행 상승이 삭제 행 이동보다 30% 빠르다» 는 **둘 다 두 행의 수축 구간이
      겹쳐 합산된 값**이다(처방은 M 80 · N 190 으로 정반대였지만 증상 진단은 같았다). 스태거를 수명과 같게 두면 겹침이 0 이라 합이 생기지 않는다
@@ -14518,6 +14531,7 @@ function openMail(){
     const stag = mlStag(rows.length);
     rows.forEach((r, i) => { r.style.setProperty('--mld', (i * stag) + 'ms'); r.classList.add('out'); });
     mailDelToast(rows.length);                  /* 9회차 Q-① — 확인 문구는 클릭 «즉시» */
+    $('mailDel').disabled = true;               /* 12회차 — 지울 것이 없어지는 건 «지금» 이다 */
     /* 남는 행의 «위로 당김» 은 접힘(height)이 만드는 flow 수축이 그대로 해 준다 — 연속 이동이다.
        2회차의 FLIP 은 클릭 시점 좌표로 되돌린 뒤 다시 올라오게 해서 **같은 이동을 두 번** 시켰다. */
     setTimeout(() => { delReadMail(); if(fxStillOpen('ml69')) openMail(); },
