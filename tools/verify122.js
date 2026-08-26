@@ -800,6 +800,76 @@ async function ampCheck(p, hosts) {
       + (bad.length ? ' — 미달 ' + bad.length + '쌍: ' + bad.slice(0, 4).map(v => v.kind + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
   }
 
+  /* ── §23 재화 아이콘 «둥실» 위상 격자 (17회차 신설) ────────────────
+     ⚑ 왜 이제야 만드는가 — 16회차의 **1순위 결함**이 이 자리였는데 게이트가 통째로 비어 있었다.
+       3회차가 남긴 `.cn-cd:nth-child(6n+k)>.pn>em`(특이도 0,3,1) 5줄이 15회차의
+       `.cn-cd>.pn>em{delay:calc(2.6s*var(--jz-k))}`(0,2,1)을 **이겨서**, 15회차가
+       «둥실이 광택의 (1/3, 1/2) 격자를 공짜로 물려받는다» 고 적은 것이 **한 칸에도 안 닿았다.**
+       비평가 AK·AL 이 화소로 먼저 찾았다(가로 3쌍 전부 15.5~16.5% · r1c0↔r1c1 **3ms = 0.1%**).
+     §14 는 **띠**(`.cn-cd>.fr::after`)의 위상만 잰다 — 둥실(`.pn>em`)은 **다른 애니메이션**이라
+       §14 가 초록불인 채로 이 결함이 살았다. 15회차 교훈 1 «자를 안 댄 곳은 자동으로 무결점» 그대로다.
+
+     재는 것은 코드가 아니라 **결과**다 — 칸의 실제 좌표로 이웃을 찾고 computed delay 로 위상을 푼다.
+     기대값은 `--jz-k = −((col·2 + row·3) mod 6)/6` 에서 나온다:
+       가로(col+1) **1/3** · 세로(row+1) **1/2** · 대각(col+1,row+1) 5/6 ≡ **1/6**.
+     문턱은 §0-1 위상 규약대로 맞닿은 쌍(가로·세로) **≥30%**, 대각·2열 **≥16%**(격자 상한 1/6 바로 아래).
+     가로 기대 33.3% 에 30% 를 두는 것은 반올림·`toFixed(4)` 절단분만 허용하는 폭이다. */
+  console.log('§23 재화 아이콘 둥실 위상 격자 — 가로 1/3 · 세로 1/2 · 대각 1/6 이 실제로 걸렸는가');
+  const floatPh = () => p.evaluate(() => {
+    const cells = [...document.querySelectorAll('#shopList .cn-cd>.pn>em')].map(e => {
+      const s = getComputedStyle(e);
+      const ms = v => parseFloat(v) * (/ms$/.test(String(v).trim()) ? 1 : 1000);
+      const r = e.getBoundingClientRect();
+      return { x: Math.round(r.x), y: Math.round(r.y + (window.__sc || 0)),
+               dur: ms(s.animationDuration), del: ms(s.animationDelay), nm: s.animationName };
+    }).filter(c => /jz122Float/.test(c.nm) && isFinite(c.dur) && c.dur > 0 && isFinite(c.del));
+    const ph = c => { let v = (-c.del % c.dur) / c.dur; if (v < 0) v += 1; return v; };
+    const dist = (a, b) => { const d = Math.abs(ph(a) - ph(b)) % 1; return Math.min(d, 1 - d); };
+    const out = [];
+    for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) {
+      const a = cells[i], b = cells[j];
+      if (a.dur !== b.dur) continue;
+      const band = (v, pitch) => { for (let n = 0; n <= 2; n++) if (Math.abs(v - n * pitch) < 40) return n; return -1; };
+      const dc = band(Math.abs(a.x - b.x), 290), dr = band(Math.abs(a.y - b.y), 319);
+      if (dc < 0 || dr < 0 || (dc === 0 && dr === 0) || dr > 1) continue;
+      const near = (dc + dr === 1);
+      out.push({ kind: dr === 0 ? (dc === 1 ? '가로' : '2열') : (dc === 0 ? '세로' : (dc === 1 ? '대각' : '2열대각')),
+                 near, lim: near ? .30 : .16, d: dist(a, b), ms: Math.round(dist(a, b) * a.dur) });
+    }
+    return { n: cells.length, out };
+  });
+  {
+    const { n, out } = await floatPh();
+    const bad = out.filter(v => v.d < v.lim);
+    const least = a => a.length ? a.reduce((m, v) => v.d < m.d ? v : m) : null;
+    const wn = least(out.filter(v => v.near)), wf = least(out.filter(v => !v.near));
+    ok(n >= 10, '둥실 아이콘 ' + n + '칸을 찾았다 (>=10)');
+    ok(out.length >= 6, '둥실 이웃 쌍 ' + out.length + '개 (>=6)');
+    ok(bad.length === 0, '둥실 이웃 위상차가 전부 문턱 이상(맞닿음 30% · 2열/대각 16%)'
+      + (wn ? ' — 맞닿음 최소 ' + Math.round(wn.d * 100) + '%(' + wn.ms + 'ms, ' + wn.kind + ')' : '')
+      + (wf ? ' · 2열/대각 최소 ' + Math.round(wf.d * 100) + '%(' + wf.ms + 'ms, ' + wf.kind + ')' : '')
+      + (bad.length ? ' — 미달 ' + bad.length + '쌍: '
+         + bad.slice(0, 4).map(v => v.kind + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
+
+    /* ⚑ 음성항 — 15회차 교훈 2 «신설 게이트 항목은 «음성항» 없이 믿지 마라».
+       16회차가 지운 그 5줄을 **되살려** 놓고 같은 자를 대 본다. 여기서 FAIL 이 안 나면
+       이 자는 «무엇을 재도 통과하는» 자이고 위 PASS 는 아무 뜻이 없다.
+       (3회차 규칙의 형태 그대로: 0.43s 배수를 `nth-child(6n+k)` 로 박는다 — 특이도 0,3,1 로 이긴다) */
+    await p.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v122neg';
+      s.textContent = [1, 2, 3, 4, 5].map(k =>
+        '#shopList .cn-cd:nth-child(6n+' + k + ')>.pn>em{animation-delay:-' + (0.43 * k).toFixed(2) + 's}').join('');
+      document.head.appendChild(s);
+    });
+    const neg = await floatPh();
+    const negBad = neg.out.filter(v => v.d < v.lim);
+    await p.evaluate(() => { const s = document.getElementById('v122neg'); if (s) s.remove(); });
+    ok(negBad.length > 0, '음성항 — 16회차가 지운 `nth-child(6n+k)` 5줄을 되살리면 이 자가 '
+      + negBad.length + '쌍을 FAIL 로 잡는다 (>0 이어야 자가 살아 있다)');
+    /* 되돌린 뒤 원래대로 통과하는지도 확인 — 음성항이 상태를 흘리면 뒤 절이 오염된다 */
+    ok((await floatPh()).out.filter(v => v.d < v.lim).length === 0, '음성항 제거 후 원상 복귀');
+  }
+
   const CSEL = ['.cn-cd>.hd>i', '.cn-cd>.bt', '.cn-cd>.bt>u', '.cn-cd>.qt', '.cn-ml>.ex', '.cn-ml>.ex>i'];
   const crects = () => p.evaluate(sel => sel.flatMap(s => [...document.querySelectorAll('#shopList ' + s)]
     .map(e => { const r = e.getBoundingClientRect(); return [s, r.x, r.y, r.width, r.height].join(','); })), CSEL);
