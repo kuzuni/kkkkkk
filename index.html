@@ -2981,21 +2981,37 @@
      진폭(8/14)·스쿼시(4%)·주기는 **한 값도 안 바꾸고** 레이드 계열만 기준선을 내린다.
      그래야 지시 ⑥ 의 «8 대 14 = +75%» 비율이 그대로 살아난다 — 4회차가 +12px 을 되돌린 이유(던전 카드
      여유 회복)는 던전에만 해당하므로 던전은 `--thby:0` 그대로다. */
+  /* ⚠ **6회차 — 스쿼시를 «비율» 이 아니라 «px» 로 준다.** 지시 ⑥ 은 translate −8/−14 와 scaleY .96 을
+     **동시에** 요구하는데, 눈에 보이는 것은 둘의 **합**이다: 잉크 상단은 `translate + 잉크높이×(1−s)`
+     만큼 움직인다. 비율로 주면 그 두 번째 항이 **잉크 높이에 비례**하므로 카드마다 값이 달라진다 —
+     6회차 실측(`tools/bobamp121.js`): 용(잉크 112px)은 21px, 유물석(266px)은 30px 로 **1.43배** 벌어졌고,
+     비평가 I·J 가 각각 «카드 간 2.8배 / 1.38배», «지시값의 129~179%» 로 독립 지적했다.
+     `thPlace` 가 카드마다 잉크 높이를 알고 있으므로 «스쿼시로 줄일 px» 을 고정하고 비율은 역산한다
+     (`--thsqA` 1.5px · `--thsqB` 3px). 그러면 **합이 지시값 8/14 로 떨어지고 카드 간 격차가 사라진다.**
+     translate 는 그 차액(6.5 / 11)이다 — 지시의 8/14 를 «화면에서» 지키기 위한 배분이다. */
   @keyframes thBob{
-    0%,20%,40%,60%,80%,100%{translate:0 var(--thby,0px);scale:1 .96}          /* 착지 — 웅크림(스쿼시 4%) */
-    10%,30%,50%,70%        {translate:0 calc(var(--thby,0px) - 8px);scale:1 1}  /* 짧은 들썩 −8px (지시 ⑥ 원문) */
-    84%                    {translate:0 var(--thby,0px);scale:1 .94}          /* 큰 점프 전 깊은 웅크림 */
-    90%                    {translate:0 calc(var(--thby,0px) - 14px);scale:1 1}}/* 큰 점프 −14px (지시 ⑥ 원문) */
-  /* 레이드·아레나(fit:0 이라 상단 여유 ~5px) 만 기준선을 내린다. 값은 probe121 cut 스윕으로 고른다. */
-  .dnc.rd>.th>canvas{--thby:14px}
+    0%,20%,40%,60%,80%,100%{translate:0 var(--thby,0px);scale:1 var(--thsqA,.96)}   /* 착지 — 웅크림 */
+    10%,30%,50%,70%        {translate:0 calc(var(--thby,0px) - 6.5px);scale:1 1}    /* 짧은 들썩 — 합 8px */
+    84%                    {translate:0 var(--thby,0px);scale:1 var(--thsqB,.94)}   /* 큰 점프 전 깊은 웅크림 */
+    90%                    {translate:0 calc(var(--thby,0px) - 11px);scale:1 1}}    /* 큰 점프 — 합 14px */
+  /* ⚠ **6회차 — `--thby:14px` 를 0 으로 되돌렸다.** 5회차의 이 우회는 `72.lock` 이 살아 있어
+     «잉크가 슬롯을 세로로 꽉 채운다» 를 못 건드린 상태에서 나온 것이었고, 여유가 애초에 0px 이라
+     **천장 절단을 바닥 절단으로 옮긴 것**뿐이었다(6회차 비평가 I·J 독립 확인 · 확장한
+     `probe121 cut` 실측 «레이드1 바닥 접촉 최대 101px · 14/14 위상 전부»).
+     72 가 완료·해제됐으므로 이제 원인을 고친다 — `TH_BOBPAD`(세로 16px)로 **여유를 만들었다.**
+     기준선은 다시 0 이고, 들썩은 그 여유 안에서 위로만 뻗는다. */
+  .dnc.rd>.th>canvas{--thby:0px}
   /* 72(2026-08-26) — 이모지 <em> 이 사라지고 던전 카드도 캔버스가 됐다. 선택자를 `.dnc>.th>canvas`
      로 넓혀 던전·레이드·아레나가 **같은 한 줄**을 탄다(둘로 갈라 두면 반드시 하나가 어긋난다). */
   .dnc>.th>canvas{
     animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s);
     animation-play-state:paused}
-  /* 스쿼시 축은 «잉크 발밑» = 캔버스 바닥이다. 캔버스는 슬롯(레이드) 또는 액자 안쪽(던전)을
-     꽉 채우므로 100% 가 곧 그 바닥이다. */
-  #dunw .dnc>.th>canvas{transform-origin:50% 100%}
+  /* 스쿼시 축은 «잉크 발밑» 이다. 6회차까지 이 자리는 «캔버스 바닥(100%)» 이었는데, 그 전제
+     («캔버스는 잉크로 꽉 찬다»)가 **던전 카드에서는 거짓**이다 — contain 이라 잉크 바닥이 캔버스
+     바닥보다 최대 78px 위에 있다(골드 실측). 그러면 4% 스쿼시가 잉크를 통째로 아래로 미는 이동이
+     돼 화면 진폭이 지시값의 1.8~2.4배가 된다(6회차 J ③-2·②-1). `thPlace` 가 그릴 때마다
+     실제 잉크 바닥(dy+dh)을 `--thpiv` 로 내보내므로 그 값을 축으로 쓴다. */
+  #dunw .dnc>.th>canvas{transform-origin:50% var(--thpiv,100%)}
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:11px;bottom:8px;overflow:hidden;
@@ -10155,10 +10171,16 @@ function drawSpriteTo(canvas, o){
      로봇 126×217(0.58) 처럼 슬롯 종횡(≈1.0)과 먼 스프라이트를 늘려 채우면 그림이 찌그러진다.
      여백은 121 들썩(아래로 최대 15px)이 액자 안에서 잘리지 않게 하는 여유이기도 하다.
      `o.fit` 이 없으면 dx/dy=0 · dw/dh=W/H 라 97 레이드 카드의 «꽉 채우기» 와 픽셀까지 같다. */
-  const sp = o.fit | 0;
+  /* 121 6회차 — `o.padY`(세로 인셋)는 «꽉 채우기»(fit 0) 쪽에만 붙는 세로 여유다.
+     레이드·아레나 카드는 97 규칙대로 잉크가 슬롯을 꽉 채우는데, 121 의 들썩(최대 −14px)이
+     들어갈 자리가 **0px** 이라 5회차가 기준선을 내려(`--thby:14px`) 천장 절단을 막자
+     절단이 그대로 **바닥으로 옮겨 갔다**(6회차 비평가 I·J 독립 확인 + `probe121 cut` 확장판
+     실측 «레이드1 바닥 접촉 최대 101px · 14/14 위상»). 가로는 그대로 꽉 채우고(97 의 종횡 규칙 유지)
+     **세로로만** 위아래 `padY` 를 비워 들썩이 잘리지 않고 들어갈 자리를 만든다. */
+  const sp = o.fit | 0, py = o.padY | 0;
   const k  = sp ? Math.min((W - sp*2) / fr[2], (H - sp*2) / fr[3]) : 0;
   const dw = sp ? Math.max(1, Math.round(fr[2] * k)) : W;
-  const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : H;
+  const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : Math.max(1, H - py*2);
   const dx = Math.round((W - dw) / 2), dy = Math.round((H - dh) / 2);
   g.imageSmoothingEnabled = false;
   g.save();
@@ -10180,7 +10202,13 @@ function drawSpriteTo(canvas, o){
     g.globalCompositeOperation = 'source-over';
   }
   g.restore();
-  return true;
+  /* 121 6회차 — «그렸다»(truthy) 에 더해 **어디에 그렸는지**를 돌려준다.
+     스쿼시 축(`transform-origin`)을 «잉크 발밑» 에 놓으려면 호출부가 `dy + dh` 를 알아야 하는데,
+     지금까지는 캔버스 바닥(100%)을 발밑으로 가정하고 있었다 — 던전 카드는 contain 이라 잉크 바닥이
+     캔버스 바닥보다 최대 78px 위에 있어서(골드 실측) 4% 스쿼시가 «제자리 압축» 이 아니라
+     머리를 +10.7px 밀어내는 **이동**이 됐다(6회차 비평가 J ③-2). 기존 호출부는 전부 truthy 로만
+     쓰므로(`raidPaint` 의 `.every`) 반환형을 넓혀도 동작이 안 바뀐다. */
+  return { dx, dy, dw, dh };
 }
 function setAnim(e, key, name, fps, loop){
   if(e.anim === name && e.akey === key) return;
@@ -15115,6 +15143,9 @@ const TH_INSET = (5 + 6) * 2;
 /* 액자 안쪽 여백 — 그림을 담고(contain) 남기는 사방 여백. 121 들썩이 아래로 최대 15px 내려가므로
    그보다 커야 액자 안에서 안 잘린다. */
 const TH_PAD = 16;
+/* 121 6회차 — 레이드·아레나 카드(«꽉 채우기», fit 0)가 들썩을 위해 세로로 비우는 여유.
+   큰 점프 14px + 여유 2px. 던전 카드는 TH_PAD 가 이미 그 역할을 한다. */
+const TH_BOBPAD = 16;
 /* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다.
    90 — 유물조각 2~4단은 대신 «이전 단 N층 클리어»(`pre`) 로 잠긴다. `S.dun[id]` 는 «도전 가능한 층»
    이므로 N 층을 깬 상태 = `S.dun[pre.id] > pre.f` 다. 04 세부 팝업의 해금 자리 규격을 그대로 쓴다. */
@@ -15412,7 +15443,30 @@ function raidEnt(cv){
   }
   return cv._an;
 }
-function raidDraw(cv){
+/* 121 6회차 — 스쿼시 축을 «잉크 발밑» 에 앉힌다.
+   `#dunw .dnc>.th>canvas{transform-origin:50% 100%}` 는 **캔버스 바닥**이었다. 던전 카드는 contain 이라
+   잉크 바닥이 캔버스 바닥보다 한참 위에 있고(골드 실측 227 vs 283 = 56px), 레이드는 padY 만큼 위에 있다.
+   축이 발밑보다 D px 아래에 있으면 스쿼시 s 는 «제자리 압축» 이 아니라 잉크 전체를 D×(1−s) 만큼
+   내리는 **이동**이 되고, 머리는 (D + 잉크높이)×(1−s) 만큼 더 움직인다 — 6회차 비평가 J 가
+   골드에서 +10.7px, 컨텐츠에서 +21px 로 실측해 «화면 진폭이 지시값의 1.8~2.4배» 의 원인으로 짚었다.
+   그리기가 끝난 자리(dy+dh)를 그대로 축으로 내보내면 그 증폭이 0 이 된다. */
+/* 스쿼시로 «줄일 px» — 카드마다 잉크 높이가 달라도 화면 진폭이 같아지도록 비율을 역산한다.
+   합이 지시값(짧은 들썩 8 · 큰 점프 14)이 되게 translate 쪽이 6.5 / 11 을 맡는다. */
+const TH_SQA = 1.5, TH_SQB = 3;
+function thPlace(cv, r){
+  if(r && typeof r === 'object'){
+    cv.style.setProperty('--thpiv', (r.dy + r.dh) + 'px');
+    const h = Math.max(1, r.dh);
+    cv.style.setProperty('--thsqA', ((h - TH_SQA) / h).toFixed(4));
+    cv.style.setProperty('--thsqB', ((h - TH_SQB) / h).toFixed(4));
+  }
+  return r;
+}
+/* `pin` 은 **캡처 하네스 전용** 두 번째 인자다(제품 호출은 전부 1인자라 undefined).
+   하네스가 위상을 직접 찍을 때 `drawSpriteTo` 를 따로 부르면 제품이 쓰는 옵션(padY·bright·fit)이
+   빠져 «표본이 화면과 다른 그림» 이 된다 — 5회차·6회차에 각각 한 번씩 그 이유로 표본이 갈렸다.
+   프레임만 고정하고 나머지는 **제품과 같은 경로**로 그린다. */
+function raidDraw(cv, pin){
   /* 123 — 아레나 카드의 두 칸은 «몬스터 프레임» 이 아니라 플레이어(기사) 스프라이트다.
      look(=코스튬 아바타) → 틴트는 80 `drawHeroTo` 와 **같은 데이터 경로**를 쓰되, 그리기는
      97 의 `drawSpriteTo` 로 한다 — 카드 아트 자리는 «잉크 rect 를 슬롯에 꽉 채우는» 규칙이고
@@ -15422,21 +15476,23 @@ function raidDraw(cv){
      `knight.idle` 6프레임의 잉크는 44~47×45~46(종횡 0.957~1.022)으로 서로 3px 이내라
      97-③ «슬롯 bbox 를 꽉 채운다» 를 지켜도 프레임 사이 폭 흔들림이 없다. */
   if(cv.dataset.arnav){
-    const f = thCurFrame(raidEnt(cv)) || (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle
+    const f = pin || thCurFrame(raidEnt(cv)) || (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle
       && ATLAS.knight.a.idle[0]);
     if(!f) return false;
     cv._fr = f;
-    return drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint,
-                              flip: cv.classList.contains('arn-me') });
+    return thPlace(cv, drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint,
+                              flip: cv.classList.contains('arn-me'), padY: TH_BOBPAD }));
   }
   /* 121 6회차 — 전 사이클이 아니라 «아이들 창»(TH_IDLE)을 돈다. 창이 없는 애니는 `curFrame` 과 같다. */
-  const f = cv.dataset.thi ? thCurFrame(raidEnt(cv)) : null;
+  const f = pin || (cv.dataset.thi ? thCurFrame(raidEnt(cv)) : null);
   cv._fr = f || cv.dataset.thf;
   /* 72(2026-08-26) — 던전 카드는 «액자» 라 그림을 늘리지 않고 담는다(contain, 사방 TH_PAD).
-     레이드·아레나 카드는 97 의 «슬롯을 꽉 채운다» 규칙 그대로다(fit 없음). */
-  const fit = cv.closest('.dnc.rd') ? 0 : TH_PAD;
-  return drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
-                            fit, bright: +cv.dataset.thbr || 1 });
+     레이드·아레나 카드는 97 의 «슬롯을 꽉 채운다» 규칙 그대로다(fit 없음) —
+     121 6회차부터 **세로로만** `TH_BOBPAD` 를 비운다(들썩이 들어갈 자리. `drawSpriteTo` 의 padY 주석 참고). */
+  const rd = !!cv.closest('.dnc.rd');
+  return thPlace(cv, drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
+                            fit: rd ? 0 : TH_PAD, padY: rd ? TH_BOBPAD : 0,
+                            bright: +cv.dataset.thbr || 1 }));
 }
 let raidIdleT0 = 0;
 function raidIdleTick(){

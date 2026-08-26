@@ -133,9 +133,11 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
   for (let i = 0; i < RAID.length; i++) {
     await seek(Math.round(3900 * RAID[i] / 100));
     /* 스프라이트 프레임은 타이머가 굴리므로 여기서 직접 지정해 그린다(정지 상태에서도 순환이 보이게) */
+    /* ⚠ 6회차 — 여기서 `drawSpriteTo` 를 **직접** 부르면 제품이 쓰는 옵션(padY·bright·fit·스쿼시 축)이
+       빠져 표본이 화면과 다른 그림이 된다(실제로 padY 가 생기자 갈렸다). 제품과 **같은 경로**로 그린다. */
     await p.evaluate(f => {
       const cv = document.querySelector('#dunList canvas.thcv');
-      if (cv) { cv._fr = f; drawSpriteTo(cv, { k: cv.dataset.thk, frame: f, tint: cv.dataset.thc }); }
+      if (cv) raidDraw(cv, f);
     }, FR[i % FR.length]);
     await p.waitForTimeout(70);
     await shot(p, 'raid-' + (i + 1), rcard);
@@ -178,11 +180,7 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
       await p.evaluate(([fa, fb]) => {
         const me = document.querySelector('#dunList .dnc.rd.arn2 canvas.arn-me');
         const op = document.querySelector('#dunList .dnc.rd.arn2 canvas.arn-op');
-        [[me, fa, true], [op, fb, false]].forEach(([cv, f, flip]) => {
-          if (!cv) return;
-          cv._fr = f;
-          drawSpriteTo(cv, { k:'knight', frame:f, tint:(AV[cv.dataset.arnav] || {}).tint, flip });
-        });
+        [[me, fa], [op, fb]].forEach(([cv, f]) => { if (cv) raidDraw(cv, f); });
       }, [AFR[i % AFR.length], AFR[(i + 2) % AFR.length]]);
       await p.waitForTimeout(70);
       await shot(p, 'arn-' + (i + 1), acard);

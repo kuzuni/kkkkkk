@@ -117,7 +117,7 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
      비평가가 실제로 보는 것은 **슬롯 최상단 행에 잉크가 닿아 만든 «직선»의 길이** 다. 그것을 직접 센다.
      접촉 폭 0 = 잘림 없음. 4회차에 이 표로 하강량을 스윕해 +12px 를 골랐다.
      `node tools/probe121.js cut [추가하강px]` 로 이 절만 돌린다(스윕용 인자). */
-  console.log('[0-2] 슬롯 «천장 접촉 폭»(px) — 0 이면 잘림 없음 (전 카드 × 14위상)');
+  console.log('[0-2] 슬롯 «천장·바닥 접촉 폭»(px) — 0 이면 잘림 없음 (전 카드 × 14위상)');
   const EXTRA = (() => { const a = process.argv.find(v => /^\d+$/.test(v)); return a ? Number(a) : 0; })();
   if (EXTRA) {
     await p.evaluate(o => {
@@ -135,20 +135,27 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
     const g = cv.getContext('2d', { willReadFrequently: true });
     g.drawImage(A, 0, 0); const da = g.getImageData(0, 0, W, H).data;
     g.clearRect(0, 0, W, H); g.drawImage(B, 0, 0); const db = g.getImageData(0, 0, W, H).data;
-    let best = 0;
-    for (let y = 0; y < 3; y++) {                 /* 최상단 3행 — 안티에일리어싱 한 줄을 흡수 */
-      let c = 0;
-      for (let x = 0; x < W; x++) {
-        const i = (y * W + x) * 4;
-        const d = (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2])) / 3;
-        if (d > 60) c++;                          /* 글로우를 빼려고 [1] 보다 높은 문턱 */
+    /* ⚠ 6회차 — 이 자는 **최상단 3행만** 재고 있었다. 5회차가 천장 절단을 `--thby:14px`(기준선을
+       아래로) 로 풀었으므로 절단은 사라진 게 아니라 **바닥으로 옮겨 갈 수 있는데**, 게이트가
+       바닥을 안 봐서 그대로 초록이었다(6회차 비평가 J 가 raid 표본 10장 중 9장에서 발끝이
+       평평하게 썰린 것을 잡아냈다 — 폭 100px · 약 8.7px). 위·아래를 **같은 자로** 잰다. */
+    const band = y0 => {
+      let best = 0;
+      for (let y = y0; y < y0 + 3; y++) {         /* 3행 — 안티에일리어싱 한 줄을 흡수 */
+        let c = 0;
+        for (let x = 0; x < W; x++) {
+          const i = (y * W + x) * 4;
+          const d = (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2])) / 3;
+          if (d > 60) c++;                        /* 글로우를 빼려고 [1] 보다 높은 문턱 */
+        }
+        if (c > best) best = c;
       }
-      if (c > best) best = c;
-    }
-    return best;
+      return best;
+    };
+    return { top: band(0), bot: band(H - 3) };
   }, [a, b2, w, h]);
   const PHC = [0, 195, 390, 585, 780, 1170, 1560, 1950, 2340, 2730, 3120, 3315, 3510, 3705];
-  console.log('    카드        최대접촉  접촉위상수  위상별');
+  console.log('    카드       천장 최대  접촉위상수    바닥 최대  접촉위상수');
   let cutBad = 0;
   /* ⚠ 5회차 — 이 절은 **던전 탭 6장만** 돌고 있었다. 그래서 5회차 비평가 G·H 가 둘 다 독립으로
      «컨텐츠(레이드) 카드가 8표본 중 4장에서 천장에 잘린다»(y=36 접촉 폭 최대 65px)를 잡아냈는데도
@@ -190,10 +197,15 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
         .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = ''; }, i);
       vals.push(await contact(w1, w0, info.clip.width, info.clip.height));
     }
-    const bad = vals.filter(v => v > 0).length;
-    cutBad += bad;
-    console.log('  ' + nm.padEnd(10) + String(Math.max(...vals)).padStart(8)
-      + String(bad + '/' + PHC.length).padStart(12) + '  ' + vals.join(',') + (bad ? '  ⚠' : ''));
+    const tops = vals.map(v => v.top), bots = vals.map(v => v.bot);
+    const badT = tops.filter(v => v > 0).length, badB = bots.filter(v => v > 0).length;
+    cutBad += badT + badB;
+    console.log('  ' + nm.padEnd(10) + '천장' + String(Math.max(...tops)).padStart(6)
+      + String(badT + '/' + PHC.length).padStart(10)
+      + '   바닥' + String(Math.max(...bots)).padStart(6)
+      + String(badB + '/' + PHC.length).padStart(10) + (badT || badB ? '  ⚠' : ''));
+    if (badB) console.log('       바닥 위상별  ' + bots.join(','));
+    if (badT) console.log('       천장 위상별  ' + tops.join(','));
   }
   }
   await p.evaluate(() => setDunSub('dun'));
@@ -205,7 +217,7 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
   await p.evaluate(() => {
     document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
   });
-  console.log('  → 천장 절단 위상 합계 ' + cutBad + (cutBad ? '  ⚠ 잘린다' : '  (잘림 0)'));
+  console.log('  → 천장+바닥 절단 위상 합계 ' + cutBad + (cutBad ? '  ⚠ 잘린다' : '  (잘림 0)'));
   await p.evaluate(() => { const s = document.getElementById('p121cut'); if (s) s.remove(); });
   if (process.argv.includes('cut')) { await b.close(); return; }
   console.log('');

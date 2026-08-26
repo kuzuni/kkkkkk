@@ -137,10 +137,19 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
        · 진폭은 절대값이 아니라 **max − min**(3회차까지의 `max(translate)` 는 기준선이 0 일 때만 맞았다).
      실제 잘림 여부는 산술이 아니라 픽셀로 봐야 한다 — `node tools/probe121.js cut`
      (6카드 × 14위상 천장 접촉 폭, 72 교체 후 재측정 **전부 0**). */
+  /* ⚠ **6회차 — 이 두 줄은 «CSS 선언값» 만 보고 있었고, 그래서 화면이 지시의 1.3~1.8배로
+     움직이는 동안 계속 초록이었다.** 눈에 보이는 잉크 이동은 `translate + 잉크높이×(1−scaleY)` 의
+     **합**이다. 6회차부터 스쿼시를 «px 고정»(1.5 / 3)으로 주고 translate 가 차액(6.5 / 11)을 맡아
+     **합이 지시값 8 / 14** 가 된다. 그러므로 여기서 물어야 할 것은 «translate 가 14 인가» 가 아니라
+     «translate + 스쿼시 = 14 인가» 다. 화면 실측은 `node tools/bobamp121.js` 가 잉크 bbox 로 직접 잰다
+     (7칸 전부 7 / 13~14px · 카드 간 격차 1.08배). 여기서는 배분의 산술만 지킨다. */
+  const SQA = 1.5, SQB = 3;
   const up = tr && -Math.min(...tr);
-  ok(up >= 12 && up <= 16, `큰 점프 위로 ${up}px (지시 14px)`);
+  ok(up + SQB >= 12 && up + SQB <= 16,
+     `큰 점프 = translate ${up}px + 스쿼시 ${SQB}px = ${up + SQB}px (지시 14px · 화면 실측은 bobamp121)`);
   const amp = tr && +(Math.max(...tr) - Math.min(...tr)).toFixed(2);
-  ok(amp >= 12 && amp <= 16, `큰 점프 진폭 ${amp}px = max ${tr && Math.max(...tr)} − min ${tr && Math.min(...tr)} (지시 14px)`);
+  ok(amp + SQB >= 12 && amp + SQB <= 16,
+     `큰 점프 진폭 ${amp} + ${SQB} = ${amp + SQB}px (max ${tr && Math.max(...tr)} − min ${tr && Math.min(...tr)})`);
 
   /* ---------- §3 «실제로 움직인다» — 픽셀 판정 ---------- */
   sec('§3 픽셀 — 배경 0s/3s · 썸네일 0s/0.4s');
@@ -200,13 +209,17 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   const org = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map(c => {
     const e = c.querySelector(':scope>.th>em, :scope>.th>canvas'); if (!e) return null;
     const cs = getComputedStyle(c);
-    const want = e.tagName === 'CANVAS' ? e.offsetHeight
-      : 541 - parseFloat(cs.getPropertyValue('--thcy')) - parseFloat(cs.getPropertyValue('--tht'));
+    /* ⚠ **6회차 — 기준이 «슬롯 바닥» 에서 «잉크 발밑» 으로 바뀌었다.**
+       캔버스는 contain(TH_PAD) 이라 잉크 바닥이 캔버스 바닥보다 16~56px 위에 있고, 축이 발밑보다
+       아래에 있으면 스쿼시가 «제자리 압축» 이 아니라 잉크를 통째로 내리는 이동이 된다
+       (6회차 비평가 J ③-2: 골드 +10.7px · 컨텐츠 +21px). `thPlace` 가 그릴 때마다 실제 잉크 바닥을
+       `--thpiv` 로 내보내므로 그 값과 맞는지 본다. */
+    const want = parseFloat(getComputedStyle(e).getPropertyValue('--thpiv'));
     const got = parseFloat(getComputedStyle(e).transformOrigin.split(' ')[1]);
     return { want: +want.toFixed(1), got: +got.toFixed(1) };
   }).filter(Boolean));
-  ok(org.length === 6 && org.every(o => Math.abs(o.want - o.got) <= 0.6),
-    `썸네일 스쿼시 축 = 슬롯 바닥 (${org.map(o => o.got + '/' + o.want).join(' · ')})`);
+  ok(org.length === 6 && org.every(o => Number.isFinite(o.want) && Math.abs(o.want - o.got) <= 0.6),
+    `썸네일 스쿼시 축 = «잉크 발밑»(--thpiv) (${org.map(o => o.got + '/' + o.want).join(' · ')})`);
   const hit = await p.evaluate(() => {
     const c = document.querySelector('#dunList .dnc'), r = c.getBoundingClientRect();
     const e = document.elementFromPoint(r.left + 250, r.top + 175);

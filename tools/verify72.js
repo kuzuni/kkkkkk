@@ -79,7 +79,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
                 k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi, src,
                 on, ink: on ? { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null,
                 lum: on ? Math.round(L / on) : null,
-                bob: cs2.animationName, org: cs2.transformOrigin };
+                bob: cs2.animationName, org: cs2.transformOrigin,
+                piv: cs2.getPropertyValue('--thpiv').trim() };
       }
       return {
         th: { dx: +(tr.left - cr.left).toFixed(1), dy: +(tr.top - cr.top).toFixed(1), w: +tr.width.toFixed(1), h: +tr.height.toFixed(1) },
@@ -168,9 +169,18 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(a.lum !== null && a.lum >= c.frm.face * 1.3,
        `카드${i + 1} 잉크 휘도 ${a.lum} ≥ 액자 면 ${c.frm.face} × 1.3 = ${(c.frm.face * 1.3).toFixed(0)} (비율 ${(a.lum / c.frm.face).toFixed(2)})`);
     ok(a.bob === 'thBob', `카드${i + 1} 들썩 애니(thBob) 붙음 (${a.bob})`);
-    /* transform-origin 은 계산값이 px 로 떨어진다 — 캔버스 «바닥» 인지 수치로 본다 */
+    /* transform-origin 은 계산값이 px 로 떨어진다.
+       ⚠ **121 6회차에 기준을 바꿨다: «캔버스 바닥» → «잉크 발밑».**
+       이 게이트는 «캔버스는 잉크로 꽉 찬다» 를 전제로 캔버스 바닥을 요구했는데, 던전 카드는
+       contain(TH_PAD) 이라 잉크 바닥이 캔버스 바닥보다 16~56px 위에 있다. 축이 발밑보다 D 아래에
+       있으면 4% 스쿼시가 «제자리 압축» 이 아니라 잉크를 D×0.04 만큼 내리는 **이동**이 되고,
+       121 의 들썩 진폭이 화면에서 지시값의 1.8~2.4배로 부풀었다(6회차 비평가 J ③-2 실측).
+       이제 `thPlace` 가 그릴 때마다 실제 잉크 바닥을 `--thpiv` 로 내보내고 축이 그것을 쓴다.
+       — «꽉 찬 캔버스» 인 경우(레이드 카드의 가로축 등)에는 두 값이 같으므로 판정이 안 느슨해진다. */
     const oy = parseFloat(a.org.split(/\s+/)[1]);
-    ok(Math.abs(oy - a.css[1]) <= 1, `카드${i + 1} 스쿼시 축이 캔버스 바닥 (${oy} = ${a.css[1]})`);
+    const piv = parseFloat(a.piv);
+    ok(Number.isFinite(piv) && Math.abs(oy - piv) <= 1,
+       `카드${i + 1} 스쿼시 축이 «잉크 발밑» (${oy} = --thpiv ${a.piv}, 캔버스 바닥 ${a.css[1]})`);
     seen.add(a.k + '/' + a.f);
   });
   ok(seen.size === d.length, `카드 ${d.length}장이 서로 다른 아트다 (${seen.size}종: ${[...seen].join(' · ')})`);
@@ -311,9 +321,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(c.ncv === (e.ncv || 1), `레이드 카드${i + 1} 캔버스 ${c.ncv}장 = ${e.ncv || 1}장`);
     /* «자리를 잡았다» 와 «자리를 채웠다» 는 다르다(LESSONS 72-③) — 잉크가 슬롯 4변에 5px 안으로 닿아야 한다 */
     ok(!!c.ink, `레이드 카드${i + 1} 스프라이트가 실제로 그려졌다`);
-    const tx = e.tx || 5, ty = e.ty || 5;
+    /* ⚠ **121 6회차 — 세로 판정에 `TH_BOBPAD` 를 더한다.**
+       97 의 «잉크가 슬롯 4변을 채운다» 는 정지 그림 기준으로 옳았지만, 121 의 들썩(최대 −14px)이
+       들어갈 자리를 0px 로 만들어 놓는 규칙이기도 했다. 5회차가 기준선을 내려(`--thby:14px`) 피하려
+       했으나 그건 천장 절단을 **바닥 절단으로 옮긴 것**이었다(6회차 I·J 독립 지적 · `probe121 cut`
+       확장판 «레이드1 바닥 접촉 101px · 14/14 위상»). 이제 `drawSpriteTo` 가 세로로만
+       `TH_BOBPAD`(16px) 를 비우므로, **가로는 그대로 엄격하게** 두고 세로만 그만큼 허용한다.
+       세로 여유가 16 을 넘으면(=그림이 더 쪼그라들면) 여전히 FAIL 이다. */
+    const BOBPAD = 16;
+    const tx = e.tx || 5, ty = (e.ty || 5) + BOBPAD;
     if (c.ink) ok(c.ink.x0 <= tx && c.ink.y0 <= ty && c.ink.x1 >= e.w - tx - 1 && c.ink.y1 >= e.h - ty - 1,
-       `레이드 카드${i + 1} 잉크가 슬롯 bbox 를 채운다 (${c.ink.x0},${c.ink.y0})~(${c.ink.x1},${c.ink.y1}) ±${tx}/${ty}`);
+       `레이드 카드${i + 1} 잉크가 슬롯을 채운다 — 가로 ±${tx} · 세로 ±${ty}(=${e.ty || 5}+들썩여유 ${BOBPAD}) (${c.ink.x0},${c.ink.y0})~(${c.ink.x1},${c.ink.y1})`);
     ok(c.pe === 'none', `레이드 카드${i + 1} 슬롯 pointer-events:none`);
     const iTh = c.kids.indexOf('th'), iSh = c.kids.indexOf('sh'), iFr = c.kids.indexOf('fr');
     ok(iTh > -1 && iTh < iSh && iTh < iFr, `레이드 카드${i + 1} 썸네일이 .sh/.fr 아래(${iTh} < ${iSh},${iFr})`);
