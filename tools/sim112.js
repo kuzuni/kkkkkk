@@ -65,8 +65,23 @@ function costCurve(id){
   if(m) return { b: parseFloat(m[1]), r: parseFloat(m[2]) };
   return upgCurve(id, 'cost');                       /* 112 이전 표기 */
 }
+/* 131 이후 val 도 두 표기를 받는다: `val:l => 18*Math.pow(1.12,l)`(131 이전)
+   와 `val:trainVal('atk',18,1.12)`(131 의 구간별 지수). [D] 표는 무릎 위쪽을 별도로 센다. */
+function valCurve(id){
+  const m = SRC.match(new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:trainVal\\('" + id + "',\\s*([\\d.]+),\\s*([\\d.]+)\\)"));
+  if(m) return { b: parseFloat(m[1]), r: parseFloat(m[2]) };
+  return upgCurve(id, 'val');                        /* 131 이전 표기 */
+}
 const COST = { atk: costCurve('atk'), hp: costCurve('hp'), regen: costCurve('regen') };
-const VAL  = { atk: upgCurve('atk','val'),  hp: upgCurve('hp','val'),  regen: upgCurve('regen','val')  };
+const VAL  = { atk: valCurve('atk'),  hp: valCurve('hp'),  regen: valCurve('regen')  };
+/* 131 이 설치한 val 무릎·배율(없으면 «131 미적용» = 단일 지수) */
+const VK_SRC = SRC.match(/const TRAIN_VAL_KNEE\s*=\s*(\d+)/);
+const VR_SRC = SRC.match(/const TRAIN_VAL_R\s*=\s*\{([^}]*)\}/);
+const VAL_KNEE = VK_SRC ? parseInt(VK_SRC[1], 10) : Infinity;
+const VAL_R = {};
+if(VR_SRC) VR_SRC[1].replace(/(\w+)\s*:\s*([\d.]+)/g, (_, k, v) => { VAL_R[k] = parseFloat(v); return ''; });
+const valAt = (id, l) => VAL[id].b * Math.pow(VAL[id].r, Math.min(l, VAL_KNEE))
+                       * Math.pow(VAL_R[id] || VAL[id].r, Math.max(0, l - VAL_KNEE));
 const STATS = ['atk','hp','regen'];
 /* 설치된 무릎·배율. 없으면 «무릎 없음»(112 이전 상태) 으로 본다. */
 const K_SRC = SRC.match(/const TRAIN_KNEE\s*=\s*(\d+)/);
@@ -234,11 +249,11 @@ console.log('  ④ H_MAX 민감도 — 유휴 가정은 «무릎 위치» 만 �
 });
 console.log('');
 
-console.log('[D] 곁가지 — 훈련 Lv 의 스탯값 vs 그 스테이지 적 (곡선 val 은 112 범위 밖, 기록만)');
+console.log('[D] 훈련 Lv 의 스탯값 vs 그 스테이지 적 — val 곡선은 **작업 131** 이 고쳤다(`node tools/sim131.js`)');
 console.log('     stage |    적 HP | 적 공격 |  훈련 Lv | 내 공격 | 공격/적HP |   내 체력 | 체력/적공격');
 [20,40,60,80].forEach(s => {
   const L = levelFor(T_NEW, CUM[s]), tb = 1 + T_BON*(stageOf(L)-1);
-  const atk = VAL.atk.b*Math.pow(VAL.atk.r, L)*tb, hp = VAL.hp.b*Math.pow(VAL.hp.r, L)*tb;
+  const atk = valAt('atk', L)*tb, hp = valAt('hp', L)*tb;
   const ehp = eHp(s)*H_ZOM, edmg = eDmg(s);
   console.log('     ' + String(s).padStart(5) + ' | ' + ehp.toExponential(2).padStart(8) + ' | ' + edmg.toExponential(2).padStart(7)
     + ' | ' + String(Math.round(L)).padStart(8) + ' | ' + atk.toExponential(2).padStart(7)
