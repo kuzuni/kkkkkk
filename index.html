@@ -234,12 +234,23 @@
      폭이 레퍼런스(168px)보다 커진다. 높이는 font-size 로, 폭은 scaleX 로 맞춘다. */
   /* translateZ(0) — scaleX 레이어에서 서브픽셀(LCD) 안티에일리어싱이 켜지면
      글자 가장자리에 RGB 색번짐이 생긴다. 레퍼런스는 완전 그레이스케일 AA. */
+  /* 6회차(2026-08-26) — 126 의 웹폰트(GameKR) 전환 뒤 «높이는 font-size, 폭은 scaleX» 규약이 깨져
+     있었다. fs 23 이 옛 시스템 서체에서 잉크 16 을 내던 값인데 GameKR 에서는 **20**(+25%)을 낸다.
+     폭은 반대로 이미 맞아 있어서(160 vs ref 168) «폭만 보면 정상» 으로 보인 것이 6회차 전까지
+     안 잡힌 이유다. 임계 스윕 T110~T245 에서 Δh 가 계속 +25% 라 JPEG 번짐이 아니다(작업 13 6회차와 같은 사고).
+     letter-spacing 음수는 LESSONS «폰트» 가 금지한다 — 폭은 전부 scaleX 로 낸다. */
   .pnick{width:269px;height:30px;line-height:30px;border-radius:11px;background:#000;
-    text-align:center;font-size:23px;letter-spacing:-.6px;font-weight:900;color:#fff;
+    text-align:center;font-size:18.4px;font-weight:900;color:#fff;
     white-space:nowrap;overflow:hidden;-moz-osx-font-smoothing:grayscale}
-  .pnick span{display:inline-block;transform:scaleX(.91) translateZ(0);
+  /* line-height 로 2.5px 내린다(6회차 S·T 독립 일치 — 알약은 ref/cap 둘 다 y12..41 로 같은데
+     **잉크 중심만** ref 27 / cap 24 였다). 알약을 옮기면 맞아 있는 껍데기가 틀어진다. */
+  .pnick{line-height:31.7px}
+  .pnick span{display:inline-block;transform:scaleX(1.14) translateZ(0);
     -webkit-text-stroke:.6px currentColor}
-  .ptitle{position:relative;z-index:0;margin-left:-1px;width:232px;height:41px;line-height:39px;text-align:center;
+  /* line-height 39 → 47 = 텍스트만 4px 하강(6회차 S·T 독립 일치, 둘 다 «잉크 y54..72 → y58..76»).
+     배너 껍데기(외곽 231×40)는 ref 와 Δ1 로 맞아 있으므로 `transform` 으로 통째로 밀면 안 된다 —
+     ::before/::after 베벨과 clip-path 까지 같이 움직인다. */
+  .ptitle{position:relative;z-index:0;margin-left:-1px;width:232px;height:41px;line-height:47px;text-align:center;
     font-size:22px;font-weight:700;color:#F4F2F2;white-space:nowrap;overflow:hidden;background:#000;
     -moz-osx-font-smoothing:grayscale;transform:translateZ(0);
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
@@ -255,10 +266,20 @@
   .pcp{display:flex;align-items:center;gap:11px;height:37px;margin-top:-1px}
   /* 🔥 글리프는 세로로 길쭉해 잉크 폭이 레퍼런스보다 좁다 — 높이는 font-size, 폭은 scaleX 로 */
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
-    font-style:normal;font-size:33px;line-height:1;color:#F16B09;
-    transform:scaleX(1.17) translate(1px,1px)}
-  .pcp b{font-size:37px;font-weight:900;color:rgb(186,252,100);white-space:nowrap;
-    transform:translate3d(0,2px,0);-webkit-font-smoothing:antialiased;
+    font-style:normal;font-size:29.6px;line-height:1;color:#F16B09;
+    transform:scaleX(1.12) translate(1px,2px)}
+  /* 6회차 — 잉크 h 가 ref 23 인데 29(+26%)였다. 폭은 82 로 이미 일치해서 폰트가 바뀐 것을 못 보고
+     지나갔다(닉네임과 같은 사고). fs 로 높이를 내리고 잃은 폭을 scaleX 로 되받는다 —
+     13 이 재화 탭에서 쓴 `fs↓ + scaleX` 와 같은 처방이다.
+     `-webkit-text-stroke:6px` 는 절대 px 라 fs 를 내려도 그대로다. ref 의 검정 링은 실측 4px 이고
+     우리도 4px(첫 글자 가로 프로필: ref lime 204 / dark 200, cap lime 207 / dark 203)이라 건드리지 않는다. */
+  /* transform-origin 을 **좌변**으로 박는 이유: `.pcp` 는 flex 행이라 fs 를 내리면 `b` 의 박스
+     좌변은 그대로고 폭만 줄어 **박스 중심이 왼쪽으로 이동**한다. 기본 origin(중심)으로 scaleX 를 걸면
+     그 이동한 중심을 기준으로 벌어져 잉크 좌변이 ref 201 → 192 로 9px 밀렸다(7회차 첫 캡처에서 실측).
+     좌변 고정으로 바꾸면 fs·scaleX 를 어떻게 조합해도 시작점이 안 움직인다. */
+  .pcp b{font-size:30px;font-weight:900;color:rgb(186,252,100);white-space:nowrap;
+    transform:translate3d(0,2px,0) scaleX(1.243);transform-origin:0 50%;
+    -webkit-font-smoothing:antialiased;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
 
   /* 재화 알약 2개 — 우측 정렬(right 26), 211x50, 간격 49 */
@@ -277,12 +298,26 @@
     1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
   .cGold i{font-size:52px}
   .cDia i{font-size:59px;transform:scaleX(.86)}
+  /* 6회차 — 보석 아이콘만 «폭» 이 모자란다. S(채도 마스크) ref w58 / cap w51, T(시안 마스크) ref w58 /
+     cap w49 로 **둘 다 독립적으로 «높이·중심 x 는 일치, 폭만 −12~15%»** 를 냈다. 원인은 A3 의 CSS 가
+     아니라 `assets/ui/cur-dia.svg` 의 도형이 viewBox 64 안에서 56×56(마름모)이라 가로가 덜 차는 것인데,
+     그 파일은 **작업 125 의 단일 출처**라 전 화면이 같이 바뀐다 — 여기서는 HUD 알약에서만 가로로 되돌린다.
+     `<i>` 가 아니라 **이미지 자신**에 건다: `.cbox i:has(>.cic){transform:none}`(125 교훈 4)이
+     `<i>` 쪽 transform 을 죽이도록 되어 있기 때문이다. 코인은 건드리지 않는다 — S 는 −6.8%,
+     T 는 «Δ2 = 일치» 로 **갈렸고**, 실루엣(63×63)은 측정표 값과 정확히 같다. */
+  #top .curs .cDia i>.cic{transform:scaleX(1.16)}
   /* translate3d + antialiased — 2D transform 레이어에서는 LCD 서브픽셀 AA 가 켜져 색번짐이 남는다 */
-  .cbox b{font-size:36px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;
-    text-overflow:ellipsis;transform:translate3d(0,1px,0);
+  /* 6회차 — 「39.20A」(내림 글리프 없음)로 재면 잉크 h 가 ref 25 인데 28(+12%)이었다.
+     「1,300」은 ref 28 / cap 27 로 «맞아» 보이는데, ref 의 28 은 «숫자 25 + 쉼표 내림 3» 이고
+     우리 서체(GameKR)의 쉼표는 베이스라인 아래로 내려가지 않아 **숫자 높이 그대로** 28 이 찍힌 것이다.
+     두 알약은 같은 규칙을 쓰므로 내림 글리프가 없는 골드 쪽을 기준으로 맞춘다 —
+     고친 뒤 「1,300」의 bbox 는 ref 보다 쉼표 내림분(≈3px)만큼 짧아진다. 그건 ⑥ 글리프 «모양» 이고
+     크기가 아니다(측정표 §7 «아트 필요» 에 등재). */
+  .cbox b{font-size:32.1px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;transform:translate3d(0,1px,0) scaleX(1.156);
     -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .cDia b{transform:translate3d(2px,1px,0)}
+  .cDia b{transform:translate3d(2px,1px,0) scaleX(1.156)}
 
   /* ============ 전투 화면 ============ */
   /* 세로 가변 구간: 프레임 높이에서 고정 요소를 뺀 나머지를 전부 먹는다 (기준 1920 -> 864px) */
