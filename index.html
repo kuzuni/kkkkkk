@@ -7936,6 +7936,19 @@
      윗면 위의 검정 6px 띠는 .rk-pod 자기 배경이 clip-path 밖으로 드러나며 자동으로 생긴다. */
   .rk-pod.p2>b{left:0;top:0;width:328px;height:76px;background:#91AFCB;
     clip-path:polygon(6.159% 31.579%,93.841% 7.895%,94.421% 73.684%,5.579% 73.684%)}
+  /* 3위 윗면 파라렐로그램 — 14회차 신설. 비평가 **4명(O·P·R·Q)** 이 각기 «3위만 윗면이 없다» 고 짚었다.
+     측정표 §3-1a 의 «3위는 윗면·앞면이 동색이라 밝은 슬래브가 아예 없다» 는 **오기**다 — 그 절은 x990·x735
+     두 열만 봤는데 x735 는 캐릭터에 가려 검정이고, x990 은 밴드 경계를 앞면 쪽(639)에서 끊었다.
+     x860 부터 오른쪽은 가림이 없어 윗면이 또렷하다(자체 열스캔, ref y):
+       col 880 → 검정 545..555 · 윗면 558..563… · col 950 → 검정 546..552 · 윗면 **555..603 (49px)** `#735435`(휘도 82)
+       col 995 → 검정 542..550 · 윗면 **553..603 (51px)** `#725334`  ← 그 아래 `#453118`(휘도 52)
+     → **가까운(아래) 모서리는 603 에서 평평**(프레임 519), 먼(위) 모서리는 x760 476 → x995 469 로 −7px 기운다.
+     상자는 p3(top 471 · height 221) 안에 두고 윗변만 기울였다: 좌 프레임 478 → 우 474(clip 14.58%/6.25% of 48).
+     **남은 차이**: ref 실루엣 상단이 x880~1010 에서 458~464 라 우리 471 보다 7~10px 위다(R ② · Q ③ 의 «3위가 9px 낮다»).
+     그것까지 맞추려면 p3 상자와 실루엣·채움 clip-path 백분율을 전부 다시 풀어야 해 다음 회차로 넘긴다. */
+  .rk-pod.p3>b{left:7px;top:0;width:311px;height:48px;
+    background:linear-gradient(90deg,#5E4429 0,#674C31 55%,#735435 100%);
+    clip-path:polygon(0 14.58%,100% 6.25%,100% 100%,0 100%)}
   /* 아트 자리 — 단상 위 캐릭터+탈것 ≈290×300. bbox 를 정확히 차지시킨다(아트 자리 규칙) */
   /* 아트 자리 — ref 실측 bbox(`bbox … light>78`): 2위 x24..380·y239..564 / 1위 x386..694·y230..530 /
      3위 x700..1041·y232..552. 2회차의 «290×300 고정» 은 세로 −50%·가로 −33~46% 였다(비평 D②).
@@ -8040,7 +8053,12 @@
   .rk-panel{left:49px;top:810px;width:982px;bottom:403px;box-sizing:border-box;
     border:1px solid #785341;border-radius:21px;background:#3D2C25;
     padding:16px 15px 8px;overflow:hidden}
-  .rk-list{position:absolute;left:15px;right:15px;top:16px;bottom:0;
+  /* bottom 0 → 6px (14회차 · 비평가 R ① · Q ② 공통, 자체 열스캔 확증):
+     `col 690` — ref 는 카드가 **1952 에서 잘리고** 그 아래 1954..1959 = **6px 짙은 림**(`#3D2A23` = 패널 바탕)이
+     7위 행을 닫아 준 뒤 1960 에서 바깥으로 나간다. 우리는 카드가 안쪽 바닥 1875 까지 그대로 내려가 림이 0px 이었다.
+     `.rk-list` 를 6px 띄우면 카드가 1869 에서 잘리고 1870..1875 가 패널 바탕으로 드러나 ref 와 같아진다
+     — 덤으로 7위 노출량도 59 → 53px 이 되어 ref(52~53, R·Q 독립 일치)와 맞는다. */
+  .rk-list{position:absolute;left:15px;right:15px;top:16px;bottom:6px;
     overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
   .rk-list::-webkit-scrollbar{display:none}
 
@@ -9043,7 +9061,7 @@
       <div class="rk-title"><s></s><i>스테이지 랭킹</i></div>
       <div class="rk-pod p2"><u></u><b></b></div>
       <div class="rk-pod p1"><u></u></div>
-      <div class="rk-pod p3"><u></u></div>
+      <div class="rk-pod p3"><u></u><b></b></div>
       <!-- 작업 80 — 단상 위 1·2·3위는 이모지가 아니라 «랭커의 외형 데이터(look)» 로 그리는 캔버스다.
            renderRank() 가 각 엔트리의 look 으로 drawHeroTo() 호출(79 와 같은 헬퍼·전투와 같은 틴트 경로).
            발밑 앵커 = 캔버스 바닥 중앙, 바닥 y = 단상 윗면(측정표 §3: ref 532/566/576 → 프레임 448/482/492).
