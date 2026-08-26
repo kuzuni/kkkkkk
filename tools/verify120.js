@@ -308,9 +308,23 @@ const inter = (a, b) => {
         ck(`[${H}] ③ 피치가 ${STEP_PITCH}±3px 안 (13회차가 없앤 ③ 표류 재발 방지)`,
           Math.abs(pitch - STEP_PITCH) <= 3.0,
           `${pitch.toFixed(2)}px (기준 ${STEP_PITCH})`);
-        const wBad = vis.find(e => !STEP_W.some(w => Math.abs(e.w - w) < 0.6));
-        ck(`[${H}] ③ 단 폭이 ${STEP_W.join('·')} 중 하나 (아래로 갈수록 넓어짐)`,
-          !wBad, vis.map(e => e.w.toFixed(0)).join(' / '));
+        /* ── 17회차 — 폭 단언을 «고정 목록» 에서 «관계» 로 바꾼다. ──
+           옛 항목은 842·810·…·618 목록 중 하나이기만 하면 통과라, **보이는 단이 적을 때 맨 위가
+           대석(617)보다 넓은 것**을 못 봤다(1920 은 단 하나가 842 = 편측 +112px). 비평가 3명이
+           각자 짚었다(AJ ⑤ · AL ⑤ · AM ②). 지켜야 할 것은 목록이 아니라 세 가지 관계다:
+             ⓐ 맨 위 단 = 아치 대석 617 (실루엣이 문간 안에서 시작한다)
+             ⓑ 맨 아래 단 = 842 (단이 2개 이상일 때)
+             ⓒ 아래로 갈수록 넓어지고 증분이 균등하다 */
+        const ws = vis.map(e => e.w).sort((a, b) => a - b);   /* 좁은 것 = 위 */
+        ck(`[${H}] ③ 맨 위 단 = 아치 대석 617 (단 ${vis.length}개)`,
+          Math.abs(ws[0] - 617) < 1.5, `${ws[0].toFixed(1)}px`);
+        ck(`[${H}] ③ 맨 아래 단 = 842 (단 2개 이상일 때)`,
+          vis.length < 2 || Math.abs(ws[ws.length - 1] - 842) < 1.5,
+          vis.length < 2 ? `단 1개 — 면제(폭 ${ws[0].toFixed(1)})` : `${ws[ws.length - 1].toFixed(1)}px`);
+        const dw = ws.slice(1).map((w, i) => w - ws[i]);
+        ck(`[${H}] ③ 증분이 균등 (Δ ≤ 1.5px — 아래로 갈수록 넓어짐)`,
+          dw.length === 0 || Math.max(...dw) - Math.min(...dw) < 1.5,
+          dw.length ? dw.map(d => d.toFixed(1)).join(' / ') : '단 1개 — 면제');
         /* ★ 11회차 최대 감점원의 회귀 방지 — «맨 아래 단의 밑변 = 수반 상단». 2600 에서 341px 벌어졌다. */
         ck(`[${H}] ③ 맨 아래 단이 수반에 닿는다 (공백 ≤ 1px — 11회차 341px 회귀 방지)`,
           Math.abs(r.st1.b - r.mid.t) < 1.0,

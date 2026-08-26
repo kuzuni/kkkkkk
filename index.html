@@ -4725,10 +4725,22 @@
      `--rw-sp1` 은 패널이 아니라 **`.rw-steps` 에서** 재정의한다.
      패널의 `--rw-sp1:84px` 는 그대로 두어 폴백으로 남긴다(`round()` 미지원 브라우저 대비). */
   .rw-steps{left:0;right:0;z-index:1;pointer-events:none;overflow:hidden;container-type:size;
-    --rw-sp1:calc(100cqh / max(1,round(nearest,100cqh / 84px,1)));
+    /* `--rw-n` = 이 프레임에서 실제로 보이는 단 수. 아래 폭·감광이 둘 다 이 값에 매인다. */
+    --rw-n:max(1,round(nearest,100cqh / 84px,1));
+    --rw-sp1:calc(100cqh / var(--rw-n));
     top:calc(var(--rw-fl) + var(--rw-gs));height:calc(var(--rw-sh) - var(--rw-gs))}
+  /* ── 17회차 [K] — **깊이 감광을 «단 인덱스» 가 아니라 «구간 안 위치» 로 옮긴다.** ──
+     16회차에 `--rw-sd` 를 st1(.0) → st8(.20) 으로 클래스마다 박았는데, 프레임마다 **보이는 단이
+     아래 N개**뿐이라 정규화가 안 됐다. 비평 AM ⑦ 실측: 대석 바로 아래 같은 자리의 «맨 위 단» 이
+     2600 = 감광 .202 · 2280 = **.098** · 1920 = **.0** — 같은 구도의 같은 요소가 프레임마다
+     19.6레벨 다르다. 클래스에 박는 방식으로는 못 고친다(CSS 가 «몇 단이 보이는지» 로 분기 못 함).
+     → 래퍼에 오버레이 한 장을 깔면 **보이는 구간 전체**에 걸쳐 자동 정규화된다 —
+       위(멀다) .20 → 아래(가깝다) 0. 단이 1개든 8개든 맨 위는 항상 .20, 맨 아래는 항상 0.
+     `.rw-steps` 는 `overflow:hidden` 이라 오버레이도 같이 잘려 구간 밖으로 안 샌다. */
+  .rw-steps::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,rgba(0,0,0,.20) 0,rgba(0,0,0,0) 100%)}
   .rw-steps>*{position:absolute}
-  .rw-st{position:absolute;left:50%;margin-left:0;box-sizing:border-box;--rw-jw:48px;--rw-sd:0;
+  .rw-st{position:absolute;left:50%;margin-left:0;box-sizing:border-box;--rw-jw:48px;--rw-k:1;
     /* 10회차 — 반투명(.26)이라 **벽 세로 격자선이 계단을 그대로 관통**해 «와이어프레임» 으로
        읽혔다(비평 X: «구조물이 아니라 겹쳐진 선»). 불투명 솔리드로 바꿔 벽을 실제로 가린다. */
     /* 11회차 ③ — **디딤면(tread) / 챌면(riser) 분리.** 10회차까지 코 5px 아래가 `#3A3122`
@@ -4760,9 +4772,6 @@
        두 결 레이어는 **챌면 밴드에만** 얹는다(`0 26px` 위치 + `100% calc(100% - 32px)` 크기) —
        코·디딤면·접지선까지 덮으면 14회차가 세운 5층이 도로 뭉갠다. */
     background:
-      /* 16회차 — 단별 감광(`--rw-sd`). 챌면·디딤면 위에 얹되 코 하이라이트(0~9px)는 비켜
-         나이징이 어느 단에서나 «한 단» 을 닫는 신호로 남게 한다. */
-      linear-gradient(180deg,rgba(0,0,0,var(--rw-sd)) 0 100%),
       repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 calc(var(--rw-jw) - 4px),
         rgba(10,8,5,.40) calc(var(--rw-jw) - 4px) var(--rw-jw)),
       repeating-linear-gradient(180deg,rgba(120,105,76,.20) 0 2px,rgba(10,8,5,.40) 2px 5px,
@@ -4775,9 +4784,9 @@
        띠였다(26px + 밑 6px = 피치의 39%). 실제 석조 계단도 줄눈은 디딤면을 가로질러 이어진다.
        코 4px 만은 남긴다 — 나이징이 «한 단» 을 닫는 신호라 여기까지 덮으면 [B] 가 도로 흐려진다.
        켜 줄눈(가로)은 챌면에만 둔다 — 디딤면은 «위에서 내려다보는 수평면» 이라 켜가 안 보인다. */
-    background-repeat:no-repeat,no-repeat,no-repeat,repeat;
-    background-position:0 9px,0 9px,0 26px,0 0;
-    background-size:100% calc(100% - 9px),100% calc(100% - 15px),100% calc(100% - 32px),auto;
+    background-repeat:no-repeat,no-repeat,repeat;
+    background-position:0 9px,0 26px,0 0;
+    background-size:100% calc(100% - 15px),100% calc(100% - 32px),auto;
     /* 14회차 — 오른쪽 테두리가 `#0C0B07`(휘도 11) 이라 벽(≈28)보다 어두워 **실루엣에서 빠져**
        계단 중심이 537.5 로 읽혔다(비평 AF ④ «면 기준 7갈래·산포 4px»). 그늘진 쪽이라는 것은
        유지하되 배경 위로 올려 좌우가 둘 다 실루엣에 잡히게 한다. */
@@ -4809,14 +4818,29 @@
      ── 깊이감은 «줄눈 주기» 가 아니라 **명암**으로 준다(AK ⑥ «챌면 바탕을 위 단부터 감광»).
      `--rw-sd` = 그 단의 챌면 어둡기(위로 갈수록 멀어지므로 어둡다). 맨 아래 0 → 맨 위 .20.
      이래야 «같은 크기의 돌이 멀어지며 어두워지는» 읽기가 된다 — 등축 도면과 갈리는 지점이다. */
-  .rw-st1{width:842px;--rw-sd:0;transform:translateX(-421px);bottom:0;height:min(var(--rw-sp1),100%)}
-  .rw-st2{width:810px;--rw-sd:.03;transform:translateX(-405px);bottom:calc(var(--rw-sp1) * 1)}
-  .rw-st3{width:778px;--rw-sd:.06;transform:translateX(-389px);bottom:calc(var(--rw-sp1) * 2)}
-  .rw-st4{width:746px;--rw-sd:.09;transform:translateX(-373px);bottom:calc(var(--rw-sp1) * 3)}
-  .rw-st5{width:714px;--rw-sd:.12;transform:translateX(-357px);bottom:calc(var(--rw-sp1) * 4)}
-  .rw-st6{width:682px;--rw-sd:.15;transform:translateX(-341px);bottom:calc(var(--rw-sp1) * 5)}
-  .rw-st7{width:650px;--rw-sd:.18;transform:translateX(-325px);bottom:calc(var(--rw-sp1) * 6)}
-  .rw-st8{width:618px;--rw-sd:.20;transform:translateX(-309px);bottom:calc(var(--rw-sp1) * 7)}
+  /* ── 17회차 [I] — **맨 위 단은 언제나 아치 대석(617)과 같은 폭이어야 한다.** ──
+     폭 수열이 «맨 아래 842 에서 위로 32 씩 좁힘» 이라 **보이는 단이 적으면 위가 대석보다 넓다**:
+     실측 1920 단 하나가 842(대석 617 대비 편측 **+112px**) · 2280 최상단 742(**+62px**) ·
+     2600 만 618 로 우연히 맞는다. 비평가 **세 명**이 각자 짚었다 — AJ ⑤(«1600·1920 +224px(36.2%)
+     · 2280 +128px») · AL ⑤(«굽받침이 좌우 113/65px 튀어나온 슬래브 위에 떠 있다») ·
+     AM ②(«1920 은 계단이 아니라 **선반**으로 읽힌다»).
+     → 아래(842)가 아니라 **위(617)를 앵커**로 잡고 증분을 단수로 나눈다:
+         w(k) = 617 + (n − k) × 225 / max(1, n − 1)      (k = 1 이 맨 아래)
+       n=8 → 842·810·778·746·714·682·650·**617**(증분 32, 기존과 동일)
+       n=4 → 842·767·692·**617**(증분 75)   ·   n=1 → **617** (대석과 일치)
+     `--rw-k` 는 그 단의 아래에서 센 번호. 폭이 `--rw-n` 에 매이므로 프레임마다 자동으로 맞는다.
+     ⚠ `transform` 을 `translateX(-50%)` 로 바꿨다 — 폭이 이제 변수라 «-폭/2» 를 손으로 적으면
+        16회차에 `--rw-jw` 와 폭이 어긋났던 것과 같은 사고가 난다. -50% 는 폭을 따라간다. */
+  .rw-st{width:calc(617px + (var(--rw-n) - var(--rw-k)) * 225px / max(1,var(--rw-n) - 1));
+    transform:translateX(-50%)}
+  .rw-st1{--rw-k:1;bottom:0;height:min(var(--rw-sp1),100%)}
+  .rw-st2{--rw-k:2;bottom:calc(var(--rw-sp1) * 1)}
+  .rw-st3{--rw-k:3;bottom:calc(var(--rw-sp1) * 2)}
+  .rw-st4{--rw-k:4;bottom:calc(var(--rw-sp1) * 3)}
+  .rw-st5{--rw-k:5;bottom:calc(var(--rw-sp1) * 4)}
+  .rw-st6{--rw-k:6;bottom:calc(var(--rw-sp1) * 5)}
+  .rw-st7{--rw-k:7;bottom:calc(var(--rw-sp1) * 6)}
+  .rw-st8{--rw-k:8;bottom:calc(var(--rw-sp1) * 7)}
   /* 단의 «코» 는 가운데가 밝고 양끝이 어둡다 — 전폭 균일 띠로 두면 자처럼 보인다 */
   .rw-floor::after{content:'';position:absolute;inset:0;
     background:linear-gradient(90deg,rgba(0,0,0,.55) 0,rgba(0,0,0,0) 26%,
@@ -4877,7 +4901,21 @@
               (간격이 아래로 갈수록 넓어진다)이 깨진다 — 게다가 기존 수열에 이미 156px 간격이
               있고 두 사람 다 그것은 안 짚었다. 그래서 «기존 수열의 꼬리 비(134→156 = 1.16)를
               한 칸만 연장» 하는 쪽으로 절충했다: 간격 156·166 은 기존 최대(156)와 같은 눈금이다. */
-        rgba(0,0,0,0) 716px 872px,rgba(94,82,60,.26) 872px 883px,rgba(5,4,3,.30) 883px 894px,
+        /* 17회차 — **16회차의 알파 2배는 되돌린다. 내가 넣은 회귀였다.**
+           16회차에 AK ⑨(«가까운 선일수록 흐려진다 = 원근 반대»)를 받아 이 줄만 .13/.16 → .26/.30
+           으로 올렸는데, AL ⑪ 이 둘 다 틀렸음을 실측으로 보였다:
+           ⓐ 이 줄(오프셋 872)은 **2600 에서만 보인다** — `.rw-ground` 높이가 426 · 509 · 790 · **1110**
+              이라 2280 의 마지막 보이는 줄은 여전히 오프셋 696(알파 .15)이다. AK 가 지적한
+              «마지막 줄이 흐리다» 는 2280 에서 **한 픽셀도 안 고쳐졌다.**
+           ⓑ 2600 에서는 마지막 줄(.26)이 바로 위 줄(.15)보다 진해져 **단조 램프가 깨졌다**
+              (AL 실측 진폭 706줄 6.7 → 886줄 10.6 = 1.38배).
+           즉 «줄 인덱스에 고정된 부스트» 라는 접근 자체가 틀렸다 — 프레임마다 마지막으로 보이는
+           줄이 다르기 때문이다. 기존 램프(.34→.31→.28→.25→.22→.19→.17→.15)를 그대로 이어
+           **.13** 으로 되돌린다.
+           ⚠ 램프의 «방향» 은 AK 와 AL 이 정면으로 갈린다 — AK 는 «아래로 갈수록 진해야 원근»,
+              AL 은 «아래로 갈수록 흐려지는 현행이 맞고 진해지는 것이 반원근». 12회차 설계는 AL 쪽
+              이고, 한 명이 반대한다고 뒤집을 근거가 못 된다. 전 9줄의 램프 방향 문제로 등재만 한다. */
+        rgba(0,0,0,0) 716px 872px,rgba(94,82,60,.13) 872px 883px,rgba(5,4,3,.16) 883px 894px,
         rgba(0,0,0,0) 894px),
       /* 4. 바닥 얼룩 — 행마다 고유색 1개(=평면)가 되지 않도록 */
       radial-gradient(circle at 22% 16%,rgba(98,82,57,.22) 0 120px,rgba(98,82,57,0) 212px),
