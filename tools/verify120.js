@@ -38,14 +38,14 @@ const GAP2_PX = 38;               /* 수반↔안내문 — 비례가 아니라 
    상인방은 격자 위 300px 이므로 «스트립 = 격자 top − 300» 이고, 격자 top 을 600 으로 묶으면
    스트립이 300 을 못 넘는다. 2280 은 594.8 이라 불변이고 2600 만 757.2 → 600 으로 내려온다.
    회수분 157.2px 은 gap1(받침↔수반 구간)으로 흘러 ①의 바닥면·③의 계단이 채운다. */
-const GT_MAX = 600;
-const LINTEL_STRIP_MAX = 300;
+const GT_MAX = 460;   /* 14회차 — 600 → 460 (상인방 위 스트립 300 → 160) */
+const LINTEL_STRIP_MAX = 160;
 /* 12회차 — 하단 여백을 «패널 바닥에서» 역산하고 clamp 로 묶었다(비평 AB ⑥·AC ⑥: 26 → 159px, 6.1배).
    1920·2280 은 clamp 안쪽이라 불변이고, 1600 만 하한 34 · 2600 만 상한 120 에 걸린다. */
-const G3_MIN = 34, G3_MAX = 120;
+const G3_MIN = 44, G3_MAX = 104;   /* 14회차 — 안내문 위 41px 고정과의 역전 해소 */
 const STEP_PITCH = 84;                 /* 단 면 높이 — 네 프레임 전부 동일 */
 /* 13회차 — 폭을 짝수로 바꿔 중심이 정확히 540 에 떨어지게 했다(비평 AD ⑨·AE ⑦: 세로 축 산포 2.5px) */
-const STEP_W = [842, 798, 754, 710, 666];
+const STEP_W = [842, 810, 778, 746, 714, 682, 650, 618];   /* 14회차 — 5단 → 8단 · Δ32 */
 const PLINTH_OFF = 40;                 /* 받침 밑동 = 바닥선 + 40 (구간이 그보다 얕으면 구간 전체) */
 
 let pass = 0, fail = 0;
@@ -216,8 +216,8 @@ const inter = (a, b) => {
       const g3 = Math.min(Math.max(spare * 0.1325 - 38, G3_MIN), G3_MAX);
       const bt = P.h - 88 - g3 - 38 - 216;          /* 수반 구획 상변(패널 기준) */
       const T = bt - 516;
-      const av = Math.min(186, (T - 219) / 2);
-      const gt = Math.max(av + 82, Math.min(Math.min(spare * GAP_W[0], GT_MAX), T - av - 137));
+      const av = Math.min(186, (T - 231) / 2);
+      const gt = Math.max(av + 94, Math.min(Math.min(spare * GAP_W[0], GT_MAX), T - av - 137));
       const wantG = [gt, T - gt, GAP2_PX, g3];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
       ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27) + 상단 클램프대로 배분`, gErr < 1.0,
@@ -278,8 +278,8 @@ const inter = (a, b) => {
       /* 13회차 — 아치 정점은 «격자 top − 186» 이 아니라 «격자 top − av» 다(짧은 프레임에서 아치가 눌린다).
          상인방은 네 프레임 전부 **66px 온전히** 보여야 한다(1600 에서 13px 잘렸다 — AD ⑦·AE ②). */
       const apex = r.grid.t - av;
-      ck(`[${H}] ② 상인방 66px 온전 · 패널 안 8px 이상 · 아치 정점 위`,
-        r.lintel.t >= P.t + 8 - 0.6 && Math.abs(r.lintel.h - 66) < 0.6 && r.lintel.b <= apex + 0.6,
+      ck(`[${H}] ② 상인방 66px 온전 · 패널 안 20px 이상(금테 내측 회피) · 아치 정점 위`,
+        r.lintel.t >= P.t + 20 - 0.6 && Math.abs(r.lintel.h - 66) < 0.6 && r.lintel.b <= apex + 0.6,
         `상인방 ${r.lintel.t.toFixed(1)}..${r.lintel.b.toFixed(1)} (h ${r.lintel.h.toFixed(1)}) · 아치 정점 ${apex.toFixed(1)} · 패널 상단 여백 ${(r.lintel.t - P.t).toFixed(1)}`);
       /* 13회차 신설 — «바닥이 실제로 존재한다»(계단 최소 1단). 1600 에서 0px 이던 것이 이 게이트다. */
       ck(`[${H}] ③ 바닥(접합선 → 수반)이 최소 한 단 ≥ ${STEP_PITCH}px`,

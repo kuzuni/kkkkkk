@@ -3726,7 +3726,10 @@
        하단 여백을 먼저 clamp 로 묶고 거기서 수반·안내문을 거꾸로 올린다.
        clamp 상한(120)에 걸리는 것은 2600 뿐이고 하한(34)에 걸리는 것은 1600 뿐이라
        **1920·2280 은 픽셀 하나 안 움직인다**(2280 실측 117.3 → 117.3). */
-    --rw-g3:clamp(34px,calc(var(--rw-sp) * .1325 - 38px),120px);
+    /* 14회차 — 비평 AF ③·AG ⑥: 수반→안내문 위 여백은 4장 전부 **41px 고정**인데 안내문 아래는
+       34 / 70 / 117 / 120 이라 **1600 은 아래(34) < 위(41) 로 역전**되고 2600 은 2.9:1 이었다.
+       하한을 41 위(44)로 올려 역전을 없애고 상한을 104 로 내려 진폭을 3.5배 → **2.4배**로 줄인다. */
+    --rw-g3:clamp(44px,calc(var(--rw-sp) * .1325 - 38px),104px);
     --rw-bt:calc(100% - 88px * var(--rwc,1) - var(--rw-g3) - 38px * var(--rwc,1) - 216px * var(--rwc,1));
     /* ── 13회차 — **세로 예산을 «위에서 내려오며» 가 아니라 «아치를 가운데 두고» 푼다.** ──
        12회차 채점에서 비평 AD·AE 가 **각자 1순위로 같은 것**을 짚었다: 1600 에서
@@ -3743,16 +3746,26 @@
           이미 6회차부터 하던 것이다**(옛 클램프도 1600 에서 800.6 으로 눌렀다). 13회차는 그 눌림을
           «수반 클리어런스 28» 이 아니라 «바닥이 실제로 존재할 것» 기준으로 다시 잡은 것이다. */
     --rw-tt:calc(var(--rw-bt) - 516px * var(--rwc,1));
-    --rw-av:min(calc(186px * var(--rwc,1)),calc((var(--rw-tt) - 219px * var(--rwc,1)) / 2));
+    /* 14회차 — 위쪽 최소 요구가 «8 + 상인방 66 + 8» = 82 였는데, 그 8px 는 **금색 프레임 안쪽 테두리**
+       (inset 2 + 두께 5 = 패널 상단 7px)를 못 피한다. AG ③ 실측 «상인방과 테두리 내측 사이 2px ·
+       밝은 띠 1행 잘림». 20px 로 올려 82 → **94**, 따라서 상한식의 219 → **231**. */
+    --rw-av:min(calc(186px * var(--rwc,1)),calc((var(--rw-tt) - 231px * var(--rwc,1)) / 2));
     --rw-ah:calc(516px * var(--rwc,1) + var(--rw-av) * 2);
-    --rw-gt:max(calc(var(--rw-av) + 82px * var(--rwc,1)),
-                min(min(calc(var(--rw-sp) * .5075),calc(600px * var(--rwc,1))),
+    /* 14회차 — **상인방 위 스트립 상한 300 → 160.** 11회차의 300 은 «455 보다는 낫다» 수준이었고,
+       비평가 **네 명**(AB ⑤ · AD ② · AE ③ · AG ①)이 회차를 넘어 같은 자리를 지적했다:
+       2280 288px · 2600 293px 가 «부재 0개 · 평균 휘도 29.6 · 66.6%가 32 미만» = 육안으로 검은 띠.
+       주인 지시문 «검은 여백 없이» 와 정면으로 어긋나는 유일한 구간이라 상한을 다시 내린다.
+       회수분(2280 135px · 2600 140px)은 전부 아래로 흘러 **계단이 단으로 채운다**(단 수 3→4 · 5→8).
+       ⚠ 이번에는 2280 도 움직인다 — 11~13회차 내내 안 건드렸지만, 그 프레임의 ⑤ 최대 감점원이
+          바로 이 띠였다(AD «2280 이 최악 49%»). 격자 top 594.8 → 460. */
+    --rw-gt:max(calc(var(--rw-av) + 94px * var(--rwc,1)),
+                min(min(calc(var(--rw-sp) * .5075),calc(460px * var(--rwc,1))),
                     calc(var(--rw-tt) - var(--rw-av) - 137px * var(--rwc,1))));
     --rw-fl:calc(var(--rw-gt) + 516px * var(--rwc,1) + var(--rw-av));
     --rw-sh:calc(var(--rw-bt) - var(--rw-fl));
     /* 상인방 — 13회차부터 **네 프레임 전부 66px 온전히** 보인다. 위로는 패널 안 8px 를 지키고,
        아래로는 아치 정점(격자 top − av)보다 8px 위에 선다. 1600 에서 13px 잘리던 것이 이 하한이다. */
-    --rw-lt:clamp(calc(8px * var(--rwc,1)),calc(var(--rw-gt) - 300px * var(--rwc,1)),
+    --rw-lt:clamp(calc(20px * var(--rwc,1)),calc(var(--rw-gt) - 300px * var(--rwc,1)),
                   calc(var(--rw-gt) - var(--rw-av) - 74px * var(--rwc,1)));
     --rw-sp1:84px;
     /* 받침 밑동 오프셋 — 접합선·계단이 바닥선에서 얼마나 아래인가. 받침(.rw-floor::before)이
@@ -3944,7 +3957,7 @@
     box-sizing:border-box;
     background:linear-gradient(180deg,rgba(112,98,72,.55) 0 5px,rgba(6,6,4,.42) 5px 9px,
       rgba(74,62,44,.30) 9px 46px,rgba(5,5,3,.40) 46px 52px,rgba(0,0,0,0) 52px 56px);
-    border-left:4px solid rgba(96,84,61,.45);border-right:4px solid rgba(10,9,6,.45)}
+    border-left:4px solid rgba(96,84,61,.45);border-right:4px solid rgba(70,60,44,.55)}
   /* 받침에서 아래로 **넓어지며** 내려가는 계단 2단. 좌우 끝이 끊긴 단이라 «구조물의 계단» 으로
      읽힌다 — 비평 V·W 공통 1순위(«받침 밑변~수반 사이 198~350px 에 계단·바닥선·접지가 전부 없다»). */
   /* ⚠ `--rw-gap` 은 `100%` 를 품고 있어 **쓰는 자리의 컨테이닝 블록 높이**로 풀린다.
@@ -3990,7 +4003,10 @@
     background:linear-gradient(180deg,#7C6C4F 0 4px,#0B0A07 4px 9px,
       #4E4331 9px 22px,#201B11 22px 26px,#332B1D 26px calc(100% - 6px),
       #191409 calc(100% - 6px) calc(100% - 2px),#0A0805 calc(100% - 2px) 100%);
-    border-left:4px solid #5C5039;border-right:4px solid #0C0B07;
+    /* 14회차 — 오른쪽 테두리가 `#0C0B07`(휘도 11) 이라 벽(≈28)보다 어두워 **실루엣에서 빠져**
+       계단 중심이 537.5 로 읽혔다(비평 AF ④ «면 기준 7갈래·산포 4px»). 그늘진 쪽이라는 것은
+       유지하되 배경 위로 올려 좌우가 둘 다 실루엣에 잡히게 한다. */
+    border-left:4px solid #5C5039;border-right:4px solid #463D2C;
     /* ①-2 캐스트 그림자 — 10회차엔 받침 아래가 주변보다 **8레벨 밝았다**(부호 반대).
        단 밑으로 드리우는 그림자를 실제로 넣어 부호를 뒤집는다. */
     box-shadow:0 7px 12px -3px rgba(0,0,0,.82)}
@@ -4000,11 +4016,18 @@
   .rw-st{bottom:0;height:var(--rw-sp1)}
   /* 맨 아래 단만 «구간보다 크면 줄어든다» — 1920 처럼 구간이 한 단보다 얕은 프레임에서
      위에서 잘리면 코·디딤면을 잃고 민짜 띠가 된다. 줄이면 디딤/챌면이 살아 있다. */
+  /* 14회차 — 5단 → **8단**. 2600 에서 «접합선 → 첫 계단» 이 85px 비어 있었다(AG ②) — 계단 피치가
+     84px 이니 **한 단이 들어갈 자리가 통째로 빈** 것이다. 스트립 상한을 내려 회수한 높이까지 더하면
+     2600 은 7~8단, 2280 은 4단이 든다. 폭 감소도 44 → **32px** 로 줄여 **맨 위 단(618)이 받침(617)보다
+     넓게** 유지된다 — 실루엣이 «내려갈수록 넓어진다» 에서 어느 프레임에서도 안 뒤집힌다. */
   .rw-st1{width:842px;transform:translateX(-421px);bottom:0;height:min(var(--rw-sp1),100%)}
-  .rw-st2{width:798px;transform:translateX(-399px);bottom:calc(var(--rw-sp1) * 1)}
-  .rw-st3{width:754px;transform:translateX(-377px);bottom:calc(var(--rw-sp1) * 2)}
-  .rw-st4{width:710px;transform:translateX(-355px);bottom:calc(var(--rw-sp1) * 3)}
-  .rw-st5{width:666px;transform:translateX(-333px);bottom:calc(var(--rw-sp1) * 4)}
+  .rw-st2{width:810px;transform:translateX(-405px);bottom:calc(var(--rw-sp1) * 1)}
+  .rw-st3{width:778px;transform:translateX(-389px);bottom:calc(var(--rw-sp1) * 2)}
+  .rw-st4{width:746px;transform:translateX(-373px);bottom:calc(var(--rw-sp1) * 3)}
+  .rw-st5{width:714px;transform:translateX(-357px);bottom:calc(var(--rw-sp1) * 4)}
+  .rw-st6{width:682px;transform:translateX(-341px);bottom:calc(var(--rw-sp1) * 5)}
+  .rw-st7{width:650px;transform:translateX(-325px);bottom:calc(var(--rw-sp1) * 6)}
+  .rw-st8{width:618px;transform:translateX(-309px);bottom:calc(var(--rw-sp1) * 7)}
   /* 단의 «코» 는 가운데가 밝고 양끝이 어둡다 — 전폭 균일 띠로 두면 자처럼 보인다 */
   .rw-floor::after{content:'';position:absolute;inset:0;
     background:linear-gradient(90deg,rgba(0,0,0,.55) 0,rgba(0,0,0,0) 26%,
@@ -4083,6 +4106,14 @@
      아치에 종속된 위치라 프레임이 길어져도 아치와 함께 내려간다. */
   /* 12회차 — 1600 에서 통째로 사라지던 것을 `--rw-lt`(0 하한 + 아치 정점 위 유지)로 살렸다.
      높이도 남는 자리에 맞춰 줄인다 — 1600 은 패널상단~아치정점이 63.7px 뿐이라 66 이 안 들어간다. */
+  /* 14회차 — **상단 코니스.** 스트립을 160 으로 줄여도 그 위가 «부재 0개» 인 것은 그대로라,
+     상인방 위 12px 에 2차 몰딩을 하나 더 얹어 띠를 위아래로 닫는다. 상인방에 종속시켰으므로
+     자리가 없는 짧은 프레임(1600 은 상인방 자체가 패널 상단 20px 에 붙는다)에서는 패널 밖으로
+     밀려 `overflow:hidden` 이 지운다 — 억지로 밀어 넣어 상인방과 겹치는 것보다 낫다. */
+  .rw-corn{left:0;right:0;top:calc(var(--rw-lt) - 42px * var(--rwc,1));
+    height:calc(30px * var(--rwc,1));z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(132,116,85,.62) 0 5px,rgba(5,5,3,.54) 5px 10px,
+      rgba(86,72,52,.42) 10px 24px,rgba(124,108,79,.54) 24px 28px,rgba(4,4,3,.50) 28px 30px)}
   .rw-lintel{left:0;right:0;top:var(--rw-lt);
     height:calc(66px * var(--rwc,1));z-index:1;pointer-events:none;
     transform:scale(var(--rwc,1));transform-origin:50% 0;
@@ -10131,6 +10162,7 @@
     <div class="rw-panel">
       <div class="rw-bg"></div>
       <span class="rw-pil l"></span><span class="rw-pil r"></span>
+      <div class="rw-corn"></div>
       <div class="rw-lintel"></div>
       <div class="rw-floor"></div>
       <!-- 12회차 — 칠 순서: 바닥(.rw-ground)이 .rw-floor 뒤(위)에 와서 접합선이 안 깎이고,
@@ -10139,7 +10171,8 @@
       <div class="rw-ground"></div>
       <!-- 12회차 — 계단은 아래(수반)에서 위로 5단. 단 크기는 고정이고 프레임이 길어지면
            «더 많이 보일» 뿐이다. 짧은 프레임은 .rw-steps 의 overflow:hidden 이 위쪽부터 자른다. -->
-      <div class="rw-steps"><span class="rw-st rw-st5"></span><span class="rw-st rw-st4"></span
+      <div class="rw-steps"><span class="rw-st rw-st8"></span><span class="rw-st rw-st7"></span
+        ><span class="rw-st rw-st6"></span><span class="rw-st rw-st5"></span><span class="rw-st rw-st4"></span
         ><span class="rw-st rw-st3"></span><span class="rw-st rw-st2"></span><span class="rw-st rw-st1"></span></div>
       <div class="rw-grid" id="rwGrid"></div>
       <!-- 120 — 중단 구획: 수반과 코스트 알약은 상대 위치가 고정이라 한 덩어리로 묶는다 -->
