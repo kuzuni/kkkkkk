@@ -17,6 +17,14 @@ let pass = 0, fail = 0;
 const ok = (n, c, d) => { if (c) { pass++; console.log('  PASS ' + n + (d ? ' — ' + d : '')); }
   else { fail++; console.log('  FAIL ' + n + (d ? ' — ' + d : '')); } };
 const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
+/* 122·60 — «300ms 면 열기 연출이 끝났겠지» 는 낡은 가정이다. 느린 러너에서는 페이지 등장 팝이
+   300~520ms 뒤에 끝나고, 그 중간에 재면 `#shopCats` 가 0.985 로 줄어든 채 찍혀 124 와 무관한
+   FAIL 이 뜬다(verify45 가 같은 이유로 먼저 겪었다). 애니메이션이 끝날 때까지 기다린다. */
+const settled = async page => {
+  await page.evaluate(() => Promise.all(
+    document.getElementById('shopw').getAnimations().map(a => a.finished.catch(() => {}))));
+  await page.waitForTimeout(60);
+};
 
 /* ── 게임과 **독립인** 축복 모델 (index.html 의 상수와 같은 값을 손으로 다시 적는다) ── */
 const B_KEYS = ['atk', 'hp', 'rate'];
@@ -76,7 +84,7 @@ function safeElapsed(bless, until0, cands) {
   ok('바가 .sp3 (.sp2 폐기)', mk.sp3 && !mk.sp2, 'sp3=' + mk.sp3 + ' sp2=' + mk.sp2);
 
   await page.evaluate(() => openShopPage());
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   const g = await page.evaluate(() => {
     const r = e => { const b = e.getBoundingClientRect(); return { x: b.x, w: b.width, cx: b.x + b.width / 2 }; };
     const bar = document.getElementById('shopCats');
@@ -105,7 +113,7 @@ function safeElapsed(bless, until0, cands) {
   /* ================= 2. 이용권 탭 — 카드 2장 ================= */
   console.log('\n[2] 이용권 탭 — 카드 2장 · 미보유 상태');
   await page.click('#shopCats .shp-ct[data-cat="pass"]');
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(350); await settled(page);
   const pv = await page.evaluate(() => {
     const cds = [...document.querySelectorAll('#shopList .cn-cd.pv')];
     const F = document.getElementById('app').getBoundingClientRect();
@@ -339,7 +347,7 @@ function safeElapsed(bless, until0, cands) {
   ok('콘솔 에러 0건', errs.length === 0, errs.length ? errs.slice(0, 3).join(' | ') : '0건');
 
   await page.evaluate(() => { document.querySelector('#shopCats [data-cat="pass"]').click(); });
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(300); await settled(page);
   await page.screenshot({ path: path.resolve(__dirname, '..', 'docs/review/124-r1.png') });
   await browser.close();
   console.log('\nVERIFY124 ' + pass + '/' + (pass + fail) + (fail ? ' — FAIL ' + fail : ' — PASS'));
