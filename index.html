@@ -4574,8 +4574,10 @@
   .cn-rb>b{position:absolute;inset:0;border:6px solid #000;border-radius:16px;z-index:2;
     background:linear-gradient(180deg,var(--h) 0 3px,var(--c) 3px 75px,var(--s) 75px 80px)}
   .cn-rb>i{position:absolute;left:0;right:0;top:26px;text-align:center;z-index:3;
-    font-size:44.9px;line-height:47px;color:#fff;-webkit-text-stroke:8px #000;
+    font-size:44.9px;line-height:47px;color:#fff;-webkit-text-stroke:10px #000;
     paint-order:stroke fill;transform:scaleX(.917)}
+  /* 9회차 — 「광고 상품」 잉크 높이가 ref 37 ↔ 우리 35 로 −5.4%. **비평가 AE·AF 가 독립으로 같은 −5.4%**.
+     fill(흰 코어)은 146×35 로 Δ0 이라 차이는 전부 외곽선이다 — 한쪽 4px → 5px (stroke 8 → 10). */
   /* §4 `⏱ 초기화: 5H 12M` 검은 알약 — 리본 몸통에 위쪽이 물린다(z 는 리본 아래) */
   .cn-rs{left:340px;top:583px;width:400px;height:56px;border-radius:28px;background:#000}
   .cn-rs>em{position:absolute;left:88px;top:13px;width:23px;height:29px;font-size:0;
@@ -4622,8 +4624,15 @@
   .cn-cd>.hd::after{content:'';position:absolute;left:6px;top:4px;width:70px;height:38px;
     border-radius:0 0 40px 0;background:linear-gradient(135deg,rgba(220,250,255,.85),rgba(140,244,255,0) 70%)}
   /* 박스를 글리프 advance 보다 넓게 잡는다 — 좁으면 넘친 글리프가 우측으로 밀린다(PROGRESS 교훈) */
+  /* 9회차 — 카드 헤더 제목에 **검정 외곽선이 아예 없었다**(비평가 AF 지적 + 같은 절차 픽셀 덤프로 확인:
+     ref y922 행은 시안(72,182,231) → 검정(0,38,55)(0,5,12) 4px → 흰(254) 인데, 우리 y838 행은
+     시안 → 흰 직행이다). fill 은 이미 Δ0(공물 54×31 = 54×31)이라 **stroke 만 얹는다** —
+     `paint-order:stroke fill` 이라 fill 크기는 안 변하고 잉크 블록만 ref 65 에 맞는다.
+     두께는 126 의 `--st-title`(=fs 의 .22 → 한쪽 4.3px) 을 쓴다 — 126 이 토큰 값의 단일 출처이고,
+     그 토큰을 13 요소에 적용하는 것은 13 의 몫이다(값을 13 이 따로 정하면 서체 교체 때 또 어긋난다). */
   .cn-cd>.hd>i{position:absolute;left:-30px;right:-30px;top:18px;text-align:center;color:#fff;
-    font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
+    font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1));
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
   .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
     text-align:center;overflow:hidden}
   /* 8회차 — 7회차 비평가 AC·AD 가 **독립적으로 일치**한 2건.
@@ -4697,7 +4706,9 @@
   .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
   .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:69px;line-height:82px;
     transform:scaleX(.989)}
-  .cn-a2t>s{color:#000;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+  /* 9회차 — 「평생 광고 제거」 잉크 높이 ref 70 ↔ 우리 65 (AE −7.1% · AF −5.8%, 2인 독립 일치).
+     금색 fill 은 370×55 ↔ 371×55 로 Δ0.3% 이므로 차이는 외곽선뿐 — 한쪽 5px → 7.5px. */
+  .cn-a2t>s{color:#000;-webkit-text-stroke:15px #000;paint-order:stroke fill}
   .cn-a2t>i{background:linear-gradient(180deg,#F6E7AC,#E6A64E);-webkit-background-clip:text;
     background-clip:text;color:transparent}
   .cn-mv{left:695px;top:1489px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
