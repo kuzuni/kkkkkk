@@ -37,8 +37,12 @@ const GEO = process.argv.includes('--geo');
     S.daily = S.daily || {};
     /* 레퍼런스 ① 칸 = 구매 완료. 나머지 5칸은 «받기»(남은 횟수 그대로) */
     S.daily.adBuy = { a1: 0 };
-    /* 레드닷 3개 상태(1차 라운드 4회차와 같은 주입) — 탭바 배지가 레퍼런스와 같아진다 */
-    try { S.seen = S.seen || {}; } catch (e) {}
+    /* 레퍼런스 탭바는 **NEW 리본이 없고 작은 레드닷만** 있다(측정표 §8: 리본 픽셀 0개).
+       NEW 리본은 «아직 한 번도 안 연 탭» 표식(`S.seen`)이라 캡처 상태 문제다 — 전부 본 것으로
+       놓고 `.fresh` 를 다시 계산한다(1차 라운드 4회차와 같은 주입). */
+    S.seen = S.seen || {};
+    document.querySelectorAll('#tabbar .tab').forEach((x) => { S.seen[x.dataset.t] = 1; });
+    document.querySelectorAll('#tabbar .tab').forEach((x) => x.classList.remove('fresh'));
     openShopPage();
   });
   await p.waitForTimeout(400);

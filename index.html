@@ -4125,19 +4125,22 @@
   .cn-bn>.ray{position:absolute;left:-30%;top:-70%;width:160%;height:210%;
     background:repeating-conic-gradient(from 0deg at 50% 34%,
       rgba(66,145,211,.85) 0deg 5deg,rgba(33,102,171,0) 5deg 13deg)}
+  /* 6회차 — 박스는 ref bbox(276×206) 그대로인데 **안의 글리프 잉크가 202×216** 이라 박스를 못 채우고
+     있었다(비평가 AA ④: 종횡비 ref 1.34 ↔ 우리 0.94 로 뒤집힘). A2 방식대로 «높이=font-size ·
+     폭=scaleX» 로 잉크를 박스에 정규화한다 — 나중에 일러스트로 바꿔 끼우기만 하면 되는 자리다. */
   .cn-bn>.art{position:absolute;left:240px;top:118px;width:276px;height:206px;
-    font-size:196px;line-height:206px;text-align:center}
+    font-size:186.9px;line-height:206px;text-align:center;transform:scaleX(1.433)}
   .cn-bn>.gem{position:absolute;font-size:74px;line-height:74px;color:#49CDF4}
   /* §2 `재화 상점` 타이틀 — 잉크 x686 y335(local 143) 268x65, 중심 819.5, #FFF8AA */
-  .cn-ti{left:674px;top:135px;width:301px;height:78px;text-align:center}
-  .cn-ti>i{font-size:70px;line-height:74px;color:#FFF8AA;-webkit-text-stroke:10px #000;
-    paint-order:stroke fill;transform:scaleX(.928);text-shadow:2px 5px 0 #000}
+  .cn-ti{left:670px;top:139px;width:301px;height:78px;text-align:center}
+  .cn-ti>i{font-size:81.2px;line-height:86px;color:#FFF8AA;-webkit-text-stroke:10px #000;
+    paint-order:stroke fill;transform:scaleX(.944);text-shadow:2px 5px 0 #000}
   /* §3-1 `상품` 갈색 밴드(전폭) — 검정8 + 채움85(2단, 경계 44px) + 검정8 */
   .cn-hl{left:0;width:1080px;height:8px;background:#000}
   .cn-hd{left:0;top:364px;width:1080px;height:85px;
     background:linear-gradient(180deg,#7D5A44 0 44px,#70513D 44px)}
-  .cn-hd>i{position:absolute;left:0;right:0;top:16px;text-align:center;font-size:49.5px;
-    line-height:50px;color:#FFF8AA;transform:scaleX(.9)}
+  .cn-hd>i{position:absolute;left:0;right:0;top:18px;text-align:center;font-size:55.7px;
+    line-height:56px;color:#FFF8AA;transform:scaleX(.933)}
 
   /* §3-2 · §7 리본 — 도형 동일, 색 토큰(--c 채움 / --h 상단림 / --s 하단그늘 / --t 꼬리)만 바꾼다 */
   .cn-rb{left:227px;width:627px;height:92px}
@@ -4150,9 +4153,9 @@
   .cn-rb>.tl.r>s{clip-path:polygon(0 0,0 100%,100% 100%,70% 50%,100% 0)}
   .cn-rb>b{position:absolute;inset:0;border:6px solid #000;border-radius:16px;z-index:2;
     background:linear-gradient(180deg,var(--h) 0 3px,var(--c) 3px 75px,var(--s) 75px 80px)}
-  .cn-rb>i{position:absolute;left:0;right:0;top:24px;text-align:center;z-index:3;
-    font-size:39.8px;line-height:42px;color:#fff;-webkit-text-stroke:8px #000;
-    paint-order:stroke fill;transform:scaleX(.9)}
+  .cn-rb>i{position:absolute;left:0;right:0;top:26px;text-align:center;z-index:3;
+    font-size:44.9px;line-height:47px;color:#fff;-webkit-text-stroke:8px #000;
+    paint-order:stroke fill;transform:scaleX(.917)}
   /* §4 `⏱ 초기화: 5H 12M` 검은 알약 — 리본 몸통에 위쪽이 물린다(z 는 리본 아래) */
   .cn-rs{left:340px;top:583px;width:400px;height:56px;border-radius:28px;background:#000}
   .cn-rs>em{position:absolute;left:88px;top:13px;width:23px;height:29px;font-size:0;
@@ -4160,9 +4163,9 @@
       linear-gradient(#FFF6C8,#FFF6C8) 10px 2px/3px 6px no-repeat}
   .cn-rs>em::after{content:'';position:absolute;left:11px;top:14px;width:2px;height:8px;
     background:#7A4B06;transform-origin:1px 1px;transform:rotate(38deg)}
-  .cn-rs>.t1{position:absolute;left:121px;top:17px;font-size:21.7px;line-height:22px;color:#fff;
+  .cn-rs>.t1{position:absolute;left:121px;top:17px;font-size:22.9px;line-height:22px;color:#fff;
     transform:scaleX(1.07);transform-origin:0 50%}
-  .cn-rs>.t2{position:absolute;left:196px;top:18px;font-size:25.7px;line-height:22px;color:#fff;
+  .cn-rs>.t2{position:absolute;left:196px;top:18px;font-size:24.3px;line-height:22px;color:#fff;
     transform:scaleX(1.04);transform-origin:0 50%}
 
   /* §5 상품 카드 3x2 — 278x309, 열 x111/401/691, 행 local 689/1008, 검정 7(오버레이), r35 */
@@ -4193,16 +4196,19 @@
   .cn-cd>.hd::after{content:'';position:absolute;left:6px;top:4px;width:70px;height:38px;
     border-radius:0 0 40px 0;background:linear-gradient(135deg,rgba(220,250,255,.85),rgba(140,244,255,0) 70%)}
   /* 박스를 글리프 advance 보다 넓게 잡는다 — 좁으면 넘친 글리프가 우측으로 밀린다(PROGRESS 교훈) */
-  .cn-cd>.hd>i{position:absolute;left:-30px;right:-30px;top:14px;text-align:center;color:#fff;
+  .cn-cd>.hd>i{position:absolute;left:-30px;right:-30px;top:18px;text-align:center;color:#fff;
     font-size:var(--fs,35.5px);line-height:38px;white-space:nowrap;transform:scaleX(var(--sx,1))}
   .cn-cd>.pn{left:11px;top:69px;width:256px;height:157px;border-radius:4px;background:#FCEAD6;
     text-align:center;overflow:hidden}
   .cn-cd>.pn>em{font-size:112px;line-height:157px}
   /* 구매 완료 카드는 본문 프레임도 초록(ref #135E3F = #1C8D5E×딤0.667) — 파랑 몸통이 슬리버로 비치지 않게 */
   .cn-cd.done>.bg{background:#1C8D5E}
-  /* 완료 카드의 ×N 은 ref 기준 «띠 아래(dy194)·카드 안 우측 정렬»(잉크 우단 x371~377, E·F 5회차 합의) */
-  .cn-cd.done>.qt{left:auto;right:14px;top:194px;transform-origin:100% 50%}
-  .cn-cd>.qt{left:167px;top:169px;height:30px;color:#fff;font-size:41.2px;line-height:30px;
+  /* 6회차 정오 — 5회차의 «띠 아래 dy194·우측 정렬» 은 **틀렸다**. 측정표 §5-4 의 «×100 잉크 y1020»
+     은 같은 자리의 「구매 완료」 글자를 잰 값이고(그래서 띠 안에 갇혀 있다), 실제 ref ×100 잉크는
+     **x279~376 · y1049~1080** 이다 — ②~⑥ 과 **완전히 같은 dx171·dy168** 자리이고 어두운 띠(1000~1069)
+     하단을 11px 만 걸친다. 6회차 비평가 AA 의 독립 실측(ref 98×31 @ x279 y1049)이 4회차 D 의
+     «ref (283,1070) w89 h9 비침» 과 같은 자리를 가리켜 둘이 맞물렸다. 따로 두던 규칙을 없앤다. */
+  .cn-cd>.qt{left:167px;top:174px;height:30px;color:#fff;font-size:39.3px;line-height:30px;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(var(--qx,1.3));transform-origin:0 50%}
   /* [받기] 버튼 — dx17 dy214 245x80 r28, 밴드 검정5 → 림4 → face55 → 림5 → 립5 */
@@ -4211,8 +4217,8 @@
       #1EB4D5 59px,#53E6FA 59px,#53E6FA 64px,#1EB3D1 64px,#14809D 69px)}
   .cn-cd>.bt>u{position:absolute;left:71px;width:165px;text-align:center;color:#fff;
     white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .cn-cd>.bt>.lab{top:5px;font-size:27px;line-height:28px;transform:scaleX(.99)}
-  .cn-cd>.bt>.cnt{top:35px;font-size:22.4px;line-height:26px;letter-spacing:2px;text-indent:2px;transform:scaleX(1.065)}
+  .cn-cd>.bt>.lab{top:7px;font-size:28.3px;line-height:29px;transform:scaleX(1.086)}
+  .cn-cd>.bt>.cnt{top:38px;font-size:22.4px;line-height:26px;letter-spacing:2px;text-indent:2px;transform:scaleX(1.128)}
   /* ▶AD 뱃지 — dx31 dy228 61x47 r9 (버튼 기준 dx14 dy14) */
   .cn-cd>.bt>.ad{position:absolute;left:9px;top:9px;width:61px;height:47px;border-radius:9px;
     border:4px solid #000;background:linear-gradient(180deg,#FED152 0,#FDB128 60%,#F1AA1E 100%)}
@@ -4227,7 +4233,7 @@
   .cn-cd>.dim{left:7px;top:7px;width:264px;height:295px;border-radius:28px;background:rgba(0,0,0,.335)}
   .cn-cd>.dn{left:7px;top:119px;width:264px;height:70px;background:rgba(0,0,0,.67)}
   .cn-cd>.dn>i{position:absolute;left:0;right:0;top:19px;text-align:center;color:#fff;
-    font-size:31.2px;line-height:33px}
+    font-size:34.8px;line-height:37px;transform:scaleX(1.046)}
   .cn-cd>.fr{left:0;top:0;width:278px;height:309px;border:7px solid #000;border-radius:35px;
     pointer-events:none}
 
@@ -4237,21 +4243,30 @@
       repeating-linear-gradient(45deg,rgba(58,167,232,.85) 0 34px,rgba(67,188,245,0) 34px 68px),
       linear-gradient(160deg,rgba(81,204,248,.55) 0 22%,rgba(67,188,245,0) 60%),#43BCF5;
     box-shadow:inset 0 0 0 7px #6AE8FF;overflow:hidden}
+  /* 6회차 — ref 아트는 «클래퍼보드 + 금지표시 + **보석 더미**» 한 덩어리로 배너 좌측 x148~462(w315)
+     ×y1598~1790(h193)를 채운다(비평가 AA ①: 우리는 150×160 = 폭 −52%). 클래퍼(🎬🚫)만으로는 절반이라
+     ref 와 같은 자리에 보석 더미 자리를 만들어 **합쳐서 ref bbox** 를 차지하게 한다 —
+     «아트 자리 규칙»: 나중에 일러스트 1장으로 바꿔 끼우면 되는 자리다. */
   .cn-a2>em{position:absolute;left:60px;top:32px;font-size:150px;line-height:170px}
+  .cn-a2>.gm{position:absolute;left:176px;top:50px;width:226px;height:176px}
+  .cn-a2>.gm>.cic{position:absolute}
+  .cn-a2>.gm>.cic:nth-child(1){left:0;top:66px;width:110px;height:110px}
+  .cn-a2>.gm>.cic:nth-child(2){left:88px;top:0;width:96px;height:96px}
+  .cn-a2>.gm>.cic:nth-child(3){left:120px;top:70px;width:106px;height:106px}
   .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
     opacity:.92}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
-  .cn-a2t{left:561px;top:1402px;width:420px;height:80px;text-align:center}
-  .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:59px;line-height:70px;
-    transform:scaleX(.985)}
+  .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
+  .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:69px;line-height:82px;
+    transform:scaleX(.989)}
   .cn-a2t>s{color:#000;-webkit-text-stroke:10px #000;paint-order:stroke fill}
   .cn-a2t>i{background:linear-gradient(180deg,#F6E7AC,#E6A64E);-webkit-background-clip:text;
     background-clip:text;color:transparent}
   .cn-mv{left:695px;top:1489px;width:269px;height:118px;border-radius:39px;border:7px solid #000;
     cursor:pointer;background:linear-gradient(180deg,#ABFF85 0,#ABFF85 6px,#78F34A 6px,
       #76D924 89px,#ADFF81 89px,#ADFF81 96px,#75DB54 96px,#3EBC2A 103px)}
-  .cn-mv>i{position:absolute;left:0;right:0;top:21px;text-align:center;color:#fff;font-size:49.5px;
-    line-height:52px;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.882)}
+  .cn-mv>i{position:absolute;left:0;right:0;top:23px;text-align:center;color:#fff;font-size:55.7px;
+    line-height:58px;-webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.980)}
 
   /* ==========================================================================
      44 다이아 판매 상품 5종 + 마일리지 교환 (2026-08-25 저장소 주인 지시)
@@ -16877,12 +16892,16 @@ $('rwBasin').addEventListener('pointerdown', () => {
 const COIN_ADS = [
   /* fs·sx: 3회차 자체 스캔 — 폭은 전부 ref Δ≤2 인데 높이만 +9~14% (서체 종횡비).
      ref_h/cap_h 만큼 fs 를 줄이고 폭 보존을 위해 sx 에 역수를 곱했다. qx 도 동일(×N 높이 28↔31). */
-  { id:'a1', n:'보석',                q:'×100', ic:curIc('dia'), cap:1, r:{ dia:100 },     fs:32.2, sx:0.952, qx:1.42 },
-  { id:'a2', n:'공물',                q:'×50',  ic:curIc('relic'), cap:1, r:{ rel:50 },      fs:34.3, sx:0.865, qx:1.26 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:33.3, sx:0.970, qx:0.90 },
-  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:28.6, sx:1.040, qx:1.10 },
-  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:32.2, sx:1.041, qx:1.24 },
-  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:30.9, sx:0.933, qx:0.90 }
+  /* 6회차(2차 라운드) — **126 의 웹폰트 GameKR(Jua) 로 갈아끼워지면서 같은 fs 가 −14~16% 작은 잉크**를
+     낸다. 1차 라운드에 Δ≤2 로 맞춰 둔 아래 값은 전부 옛 시스템 서체 기준이라 칸마다 다시 역산했다
+     (A2 의 «칸이 바뀌면 --sf/--sx 를 다시 재라» 와 같은 규약. 역산기 `tools/ink13.py`).
+     `qx`(×N)는 반대다 — 라틴·숫자는 서브셋에 없어 폴백 서체로 떨어져 오히려 +3~7% 컸다. */
+  { id:'a1', n:'보석',                q:'×100', ic:curIc('dia'), cap:1, r:{ dia:100 },     fs:37.0, sx:1.047, qx:1.24 },
+  { id:'a2', n:'공물',                q:'×50',  ic:curIc('relic'), cap:1, r:{ rel:50 },      fs:39.4, sx:0.894, qx:1.24 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:39.7, sx:0.995, qx:1.146 },
+  { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:32.3, sx:1.084, qx:1.15 },
+  { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:38.4, sx:1.050, qx:1.245 },
+  { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:33.3, sx:1.007, qx:1.21 }
 ];
 const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
 /* 일일 초기화까지 남은 시간 — 레퍼런스의 «⏱ 초기화: 5H 12M» 자리 */
@@ -16977,7 +16996,8 @@ function renderCoinPage(list){
      124: 이제 그 상품이 실제로 **이용권 탭**에 있으므로 [이동] 은 이용권 탭으로 보낸다.
      이미 샀으면 배너는 «구매 완료» 로 잠긴다(지시 ②). */
   const na = noAdsOn();
-  h += '<div class="cn-a2"><em>🎬</em><div class="no">🚫</div></div>'
+  h += '<div class="cn-a2"><em>🎬</em><div class="no">🚫</div>'
+    + '<div class="gm">' + curIc('dia') + curIc('dia') + curIc('dia') + '</div></div>'
     + '<div class="cn-nt" style="top:1417px"></div><div class="cn-nt" style="top:1480px"></div>'
     + '<div class="cn-nt" style="top:1543px"></div>'
     + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
@@ -16990,7 +17010,7 @@ function renderCoinPage(list){
     const x = [111, 401, 691][i % 3], y = i < 3 ? 1884 : 2203;
     /* 122 ②-3 — 가장 큰 상품 한 칸만 아이템 판 뒤에 «골드 광선 20s 회전»(`.pn>s.ray`). CSS 전용. */
     const top = i === DIA_PACKS.length - 1;
-    h += '<div class="cn-cd dia' + (top ? ' top' : '') + '" style="left:' + x + 'px;top:' + y + 'px;--fs:35.5px;--sx:.95'
+    h += '<div class="cn-cd dia' + (top ? ' top' : '') + '" style="left:' + x + 'px;top:' + y + 'px;--fs:40.8px;--sx:.98'
       + ';--qx:' + p.qx + ';--hd:#6B5BE8;--hr:#B0A6FF;--jz-ga:' + jzShineA('#6B5BE8') + ';--jz-gd:' + jzShadeA('#6B5BE8') + '">'
       /* 125 의 화폐 아이콘 공용 컴포넌트(`curIc`)와 122 의 광선 판을 **둘 다** 살린다 —
          광선은 «가려지는 몸통(.bg)» 이 아니라 아이템 판 안, 아이콘 뒤여야 보인다(122 2회차). */
@@ -17019,7 +17039,7 @@ function renderCoinPage(list){
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
   EXCHANGE.forEach((x, i) => {
     const px = [111, 401, 691][i % 3];
-    h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px;--fs:35.5px;--sx:.95'
+    h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px;--fs:40.8px;--sx:.98'
       +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5'
       +  ';--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + '">'
       +  '<div class="bg"></div><div class="hd"><i>유물조각</i></div>'
