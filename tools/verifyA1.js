@@ -85,7 +85,7 @@ const ok = (name, got, want, tol) => {
   /* box 1.267 → 1.2366 · shop 1.494 → 1.458 (11회차): 비평가 O·P 가 폭을 «유물 ref122 vs 우리125»
      로 **수치까지 동일하게**, 상점을 «ref 161~163 vs 우리 166» 으로 일치해 읽었다. 두 칸 다 세로는
      ref 와 0% 라 `--sf`(등방)가 아니라 `--sx`(가로)만 줄인 값이다 — A2 방식. */
-  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.2366, shop: 1.458 };
+  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.2366, shop: 1.476 };  /* shop 12회차 재정정: Q·R 둘 다 ref 164 (11회차 162 는 2px 과교정) */
   /* shop 7.8 → 6.5 (10회차): M «ref rel34 vs 우리 35» · N «ref local33 vs 우리 35» · 자체 스캔
      «ref 2134 vs 우리 2135» — 세 계측 모두 «1~2px 낮다» 로 부호가 같아 중앙값 1.3px 을 올렸다. */
   const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 6.5 };

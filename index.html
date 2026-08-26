@@ -1231,7 +1231,13 @@
      +0/+1/+1/+1.5px 우측» 로 2인이 «오른쪽으로 갔다» 에 일치했다(10회차 M·N 은 반대로 읽었다 —
      네 계측이 갈리는 자리라 «마지막 2인» 을 따른다). 폭 7 은 M·N·P 셋이 지지하므로 유지. */
   .tab:not(:last-child)::after{content:'';position:absolute;right:-3px;top:5px;bottom:0;width:7px;
-    background:linear-gradient(90deg,#42362A 0,#2A2219 25%,#110E0B 75%,#110E0B 100%);z-index:2}
+    /* 12회차 — bbox 는 맞는데 **명암이 한쪽으로 쏠려 있다.** 우리 그라디언트는 오른쪽 끝
+       25%(x217~219)만 완전 검정인 «편측 램프» 라, 폭이 맞아도 시각 중심이 2px 우측으로 밀린다.
+       Q «ref 는 어두운 심 2개(x213·x217) + 중앙 융기(x215) 의 좌우 대칭 채널, half-max 6~7px» ·
+       O «ref = 대칭 노치 vs 우리 = 왼쪽 1px 하이라이트 + 편측 램프» 로 2인이 **같은 형태**를 봤다.
+       R 이 «홈 bbox 4개 완전 동일» 이라고 한 것과도 모순되지 않는다 — 옮기는 게 아니라 대칭으로 만든다.
+       요소는 x212..219 이므로 20% = x213.4 · 43% = x215 · 71% = x217. */
+    background:linear-gradient(90deg,#42362A 0,#110E0B 20%,#2A2219 43%,#110E0B 71%,#42362A 100%);z-index:2}
   /* 아이콘: 높이 112(세로중심 +87). 이모지 글리프가 박스를 거의 채우도록 font-size 를 키운다.
      폭은 글리프 advance(104px 기준 130px)보다 넓게 잡는다 — 좁으면 넘친 글리프가 가운데 정렬되지
      않고 좌측 정렬돼 잉크가 8px 우측으로 밀린다. */
@@ -1255,7 +1261,7 @@
      이러면 height 가 이미 ref 와 Δ0~1% 이므로 bottom 도 자동으로 ref 와 같아진다. */
   .tab .ti{display:block;width:172px;height:112px;font-size:var(--sf,104px);line-height:112px;
     text-align:center;transform-origin:50% 50%;
-    transform:translateY(var(--dy,0px)) scaleX(var(--sx,1))}
+    transform:translate(var(--dx,-1.5px),var(--dy,0px)) scaleX(var(--sx,1))}
   .tab[data-t="grow"]{--sf:91.3px;--sx:1.488;--dy:13.5px}  /* ⚒️ ref 150x100 · top 2147 */
   .tab[data-t="adv"] {--sf:107.1px;--sx:.908;--dy:9.3px}   /* ⚔️ ref 109x120 · top 2131 */
   /* 11회차 — 유물 칸 «폭만» 2.5% 좁힌다. O «ref 122 vs 우리 125 (+2.5%)» · P «ref 122 vs 우리 125
@@ -1268,7 +1274,10 @@
   /* 11회차 폭 정정 — O «ref 161 vs 우리 166 (+3.1%)» · P «ref 163 vs 우리 166 (+1.8%)» 2인이
      «우리가 넓다» 로 일치(목표는 갈려 중간 162 를 겨냥). 세로 113 은 O·P 둘 다 «확정값과 0px»
      이라 `--sf` 는 그대로, `--sx` 만 1.494 × 162/166 = 1.458. */
-  .tab[data-t="shop"]{--sf:102px;--sx:1.458;--dy:6.5px}    /* 🏪 ref 162x113 · top 2134 (L 정오 · 11회차 폭 정정) */
+  /* 12회차 재정정 — 11회차의 166→162 는 **2px 과교정**이었다. Q «ref 164 vs 우리 161» ·
+     R «ref 164 vs 우리 162 — 좌변만 2px 넓혀라» 로 **둘 다 ref 를 164 로** 읽었다.
+     1.458 × 164/162 = 1.476. 세로 113 은 Q·R 둘 다 «확정값과 일치» 로 재확인했다. */
+  .tab[data-t="shop"]{--sf:102px;--sx:1.476;--dy:6.5px}    /* 🏪 ref 164x113 · top 2134 (12회차 폭 재정정) */
   .tab[data-t="hero"]{--sf:64px;--dy:4px}                  /* 🐾 + 금색 링 ref 121x121 · top 2131 */
   /* 영웅 칸의 금색 링은 선택 표시가 아니라 아이콘 아트다 (레퍼런스 23·10 에서 비활성일 때도 유지).
      잉크 bbox 를 지배하는 것은 글리프가 아니라 이 링이다 — ref 121x121 은 링 외곽(그림자 포함) 값이다.
@@ -1344,7 +1353,8 @@
   .tab.close .ti,.tab.close .tl,.tab.close .bdg,.tab.close .nw{display:none}
   .tab.close .tx{display:flex}
   /* 열림 시 아이콘만 0.85배(측정표 §4). 칸별 `--sx` 를 곱해 유지해야 «넓은 아트» 가 안 무너진다 */
-  #tabbar.open .tab:not(.close) .ti{transform:translateY(var(--dy,0px)) scale(.85) scaleX(var(--sx,1))}
+  /* 열림 상태도 `--dx` 를 같이 물려야 닫힘/열림에서 아이콘이 1.5px 튀지 않는다. */
+  #tabbar.open .tab:not(.close) .ti{transform:translate(var(--dx,-1.5px),var(--dy,0px)) scale(.85) scaleX(var(--sx,1))}
   /* NEW 리본 — 칸 좌상단 앵커, 우상향 20°, 아직 한 번도 연 적 없는 탭에만.
      A1 6회차 재역산. 레퍼런스 02 직접 실측(빨강 마스크): bbox x858..1027 · y2162..2254 =
      측정표 §7 의 «x864..1027 w164 · y2163..2253 h91» 과 일치. 프레임 y = ref y − 60 → y2103..2193.
@@ -1391,8 +1401,17 @@
        font-size 는 그대로 두고 **자간만** 넓힌다 — 'NEW' 3글자의 잉크 폭은 글리프 3개 + 자간 2개라
        자간 +4px 이 잉크 +8px = 49 → 57 이다. 자간은 마지막 글자 뒤에도 붙어 가운데 정렬 잉크를
        자간의 절반만큼 왼쪽으로 민다(2 → 6 이면 2px 추가 이동) → text-indent 4px 로 되민다. */
-    font-size:26px;line-height:29px;font-weight:900;color:#f2e15d;text-align:center;
-    letter-spacing:6px;text-indent:4px;z-index:4;overflow:hidden;
+    /* 12회차 — 밴드 상변은 맞았는데 **글자만 밴드 안에서 위로 떠 있다.** Q «ref rel15..50 vs
+       우리 rel10..48 — 3~5px 내려라» · R «상단 −5px / 하단 −2px — 2~4px 내려라» 로
+       **두 비평가의 실측 구간이 완전히 같다.** 글리프 크기는 건드리면 안 되므로(Q ⑥ 은 «+8.3% 높다»,
+       R 은 «장평을 넓혀라» 로 방향이 갈렸다) `line-height` 만 29 → 36 으로 늘려
+       **반-행간(半leading) 3.5px** 으로 잉크를 통째로 내린다. 잉크 높이·자간은 그대로다. */
+    font-size:26px;line-height:38px;font-weight:900;color:#f2e15d;text-align:center;
+    /* 12회차 — 잉크가 ref 보다 3px 오른쪽이다(Q «중심 2.5px 우» · R «+3px 우측» 일치).
+       11회차에 «자간이 마지막 글자 뒤에도 붙는다» 를 보정하려고 넣은 `text-indent:4px` 이
+       과교정이었다 — 가운데 정렬에서 text-indent 는 잉크를 indent/2 만큼 오른쪽으로 민다.
+       4 → −2 로 3px 되민다. 세로는 rel 14 로 ref 15 에 1px 못 미쳐 line-height 36 → 38. */
+    letter-spacing:6px;text-indent:-2px;z-index:4;overflow:hidden;
     /* 8회차 — 리본은 레퍼런스대로 칸 왼쪽 경계를 6px 넘어간다. 장식이 남의 칸 탭을 삼키면
        74/142 가 잡았던 «눌림 효과는 뜨는데 동작 안 함» 이 그대로 재발한다 → 히트를 통과시킨다. */
     pointer-events:none;
