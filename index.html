@@ -13667,6 +13667,13 @@ const player = {
 };
 let enemies = [], shots = [], parts = [], nums = [], corpses = [], zones = [], booms = [], bolts = [];
 let rings = [];     /* 114 — 충격파·임팩트 플래시 링(확장 원). 피해 판정 없는 «그림»뿐이다 */
+/* 114 ③ 20회차 — «접촉의 증거». 투사체 속도(표창 430 게임px/s = 프레임당 34.4)가 명중 반경(30)보다
+   커서 80ms 그리드의 마지막 표본이 최대 64 게임px 밖에 찍힌다 — 즉 «투사체가 적에 닿은 프레임» 이
+   캡처에 한 장도 안 남는다(19회차 BC[2]·BD[6] 2인 공통, 수치도 61~67 / 43~55 로 일치).
+   판정·사거리는 산술적으로 정상이므로 건드리지 않고(15·16·19회차가 세 번 기각), **명중한 자리에
+   투사체 스프라이트를 2프레임 남겨** 투사체와 피격 링 사이의 «빈 프레임» 만 메운다.
+   피해 판정 없는 순수한 그림이라 밸런스 불변. */
+let ghosts = [];
 let pets = [], spawnQ = [], skillCd = {};
 let killed = 0, msgTxt = '', msgT = 0, orbitAng = 0, auraTick = 0;
 let promo = null;   /* 승급전 진행 상태 */
@@ -13742,6 +13749,7 @@ function spawnStage(){
   enemies.length = 0; shots.length = 0; parts.length = 0; nums.length = 0;
   corpses.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0; spawnQ.length = 0;
   rings.length = 0;                                  /* 114 — 충격파 링도 전장과 함께 비운다 */
+  ghosts.length = 0;                                 /* 114 20회차 — 접촉 잔상 */
   killed = 0;
   if(!isBossStage()) S.bossFarm = false;   /* 28 — 보스 스테이지가 아니면 파밍 상태는 존재할 수 없다 */
   const s = S.stage, boss = inBossFight();
@@ -13943,6 +13951,9 @@ const BOOM_FPS  = 76;       /* 23프레임 ÷ 76fps = 0.302s — 지적 «260~32
    곡선 지수 1.15 는 번개 잔광이 15회차부터 쓰는 값과 같다 — 두 연출의 «사그라지는 문법» 이 맞는다(④). */
 const BOOM_TAIL = 0.14;     /* 애니가 끝난 뒤 마지막 프레임을 붙드는 시간(초) */
 const BOOM_REL  = 0.28;     /* 릴리스 길이(초) — 총 가시 0.442s 로 58 규칙 «0.3~0.8s» 안 */
+/* 20회차 ㄴ — 백열 코어 전용 릴리스. 스프라이트 애니(0.302s)와 무관하게 3프레임(240ms)+α 에 걸쳐
+   독립으로 사그라든다. 총 가시 0.442s 안이라 58 규칙·게이트 상한은 그대로다 */
+const BOOM_CORE = 0.30;
 /* 8회차 AG·AH 공통 — 데미지 숫자가 560ms(7프레임) 살아 있어 «가장 오래된 팝업» 이 화면에 계속 쌓였다.
    상승 트윈이 0.40s 라 그 뒤 0.45s 는 제자리에서 흐려지기만 한다 → 수명을 상승 트윈 + 여운으로 줄인다 */
 const NUM_LIFE = 0.55;
@@ -15141,6 +15152,13 @@ function step(dt){
         /* 114 ② — 방향성 스파크 + 플래시 링. 앵커는 «투사체가 멈춘 자리»가 아니라 **적 몸통 중심**이다:
            투사체 좌표로 찍으면 판정 반경(e.r+13)만큼 밖에 찍혀 그림자 아래로 내려간다(1회차 비평 ④) */
         impactFx(ex + (b.x-ex)*0.25, ey + (b.y-ey)*0.25, b.vx, b.vy, b.col, crit, b.g);
+        /* 114 ③ 20회차 — «접촉의 증거». 피격 링과 **같은 앵커**(적 몸통 25% 안쪽)에 투사체 스프라이트를
+           2프레임 남긴다. 링은 이미 여기 뜨므로 메우는 것은 «투사체 ↔ 링» 사이의 빈 프레임 하나다.
+           프레임당 34.4 게임px 로 날던 그림이 «사라졌다» 가 아니라 «닿아서 부서졌다» 로 읽힌다. */
+        if(ghosts.length >= 24) ghosts.shift();
+        ghosts.push({ k:b.k, col:b.col, a:b.a, spin:b.spin || 0,
+                      x:ex + (b.x-ex)*0.25, y:ey + (b.y-ey)*0.25,
+                      tg:e, toy:e.r - (b.y-ey)*0.25, t:0, life:0.16 });
         if(b.slow) e.slow = b.slow;
         hitEnemy(e, dmg, crit, b.vx*0.05, b.vy*0.05);
         /* 12회차 AO⑩·AP② 공통 — 관통 투사체(얼음창)가 **명중한 뒤에도** 계속 날아 좌측 UI 를 덮는다.
@@ -15195,6 +15213,12 @@ function step(dt){
     if(r.tg){ if(r.tg.dead || r.tg.hp <= 0) r.tg = null; else { r.x = r.tg.x; r.y = r.tg.y - r.toy; } }
     if(was <= 0 && r.t > 0 && r.bn){ burst(r.x, r.y, r.bc, r.bn, r.bp); r.bn = 0; }
     if(r.t >= r.life) rings.splice(i,1);
+  }
+  /* 114 20회차 — 접촉 잔상. 표적에 붙어 다니고(적이 살아 있으면) 수명 0.16s = 2프레임이다 */
+  for(let i=ghosts.length-1;i>=0;i--){
+    const q = ghosts[i]; q.t += dt;
+    if(q.tg){ if(q.tg.dead || q.tg.hp <= 0) q.tg = null; else { q.x = q.tg.x; q.y = q.tg.y - q.toy; } }
+    if(q.t >= q.life) ghosts.splice(i,1);
   }
   for(let i=parts.length-1;i>=0;i--){
     const p = parts[i]; p.t += dt;
@@ -15404,6 +15428,28 @@ function drawBoomSprites(){
     const sc = b.scale * (1 + 0.09*u);
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     drawFrameC('boom', fr, b.x, b.y, sc, false, b.alpha*dk);
+    /* 114 ① 20회차 ㄴ — «연기 잔향은 240ms 더 사는데 백열 코어만 한 프레임에 −98.4%»
+       (19회차 BC[4] min채널>140 화소 50.4k → 0.8k · BD[7] −94%, 2인 공통 · 두 회차째).
+       17회차가 넣은 벽시계 릴리스(dk)는 **알파**를 매끄럽게 폈지만 코어는 알파가 아니라
+       **스프라이트 자신**이 끊는다 — boom 아틀라스의 백열 프레임은 애니 앞쪽에만 있고,
+       릴리스가 붙드는 것은 그 뒤의 «연기 프레임» 이라 dk 가 아무리 매끄러워도 흰 화소는
+       애니가 끝나는 순간 통째로 사라진다. 아틀라스는 안 건드리고 **코어를 가산으로 따로 얹어**
+       3프레임(BOOM_CORE 0.30s)에 걸쳐 독립 릴리스한다 — 프레임당 낙차 0.31/0.29/0.26/0.15.
+       앞 2프레임은 스프라이트가 이미 포화(백열)라 겹쳐도 그림이 안 바뀌고, 늘어난 것은 «꼬리» 뿐이다.
+       순수 가산 그리기이므로 피해·판정 불변. */
+    const bf = (ATLAS['boom'] && ATLAS['boom'].f) ? ATLAS['boom'].f[fr] : null;
+    if(bf){
+      const cu = clamp(tc/BOOM_CORE, 0, 1);
+      const ca = Math.pow(1 - cu, 1.25) * (b.alpha === undefined ? 1 : b.alpha);
+      if(ca > 0.006){
+        const cr = bf[2]*sc*0.17*(1 + cu*0.55);      /* 흩어지며 커지고 흐려진다 */
+        const g = ctx.createRadialGradient(b.x, b.y, cr*0.15, b.x, b.y, cr);
+        g.addColorStop(0,    'rgba(255,250,225,' + ca.toFixed(3) + ')');
+        g.addColorStop(0.55, 'rgba(255,205,120,' + (ca*0.45).toFixed(3) + ')');
+        g.addColorStop(1,    'rgba(255,140,40,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, cr, 0, 6.283); ctx.fill();
+      }
+    }
     ctx.restore();
   }
 }
@@ -15825,29 +15871,10 @@ function draw(){
   }
 
   /* 투사체 */
-  for(const b of shots){
-    /* 5회차 P⑤ — 8발 볼리가 머즐 오프셋 0 으로 캐릭터 «위» 에 생성돼 실루엣의 35% 를 덮었다.
-       위치(=게임 판정)는 그대로 두고 «몸에 겹치는 동안만» 투명하게 흘린다 */
-    const pdx = b.x - player.x, pdy = b.y - (player.y - 22);
-    const near = Math.sqrt(pdx*pdx + pdy*pdy);
-    ctx.save();
-    /* 16회차 — 몸 겹침 감쇠와 화면 가장자리 페이드를 «곱한다». 둘 다 위치만 보는 그리기 감쇠라
-       순서가 없고, 하나만 쓰면 다른 하나가 통째로 지워진다(가장자리에서 시전하면 둘 다 걸린다) */
-    ctx.globalAlpha = (near < 62 ? clamp(0.28 + (near/62)*0.72, 0.28, 1) : 1) * edgeFade(b.x, b.y, edgeW(b));
-    /* 12회차 AP① (+ 10회차 인수인계 6 = AK·AL 이 이미 같은 것을 적었고 11회차가 못 회수한 항목).
-       운석이 620 게임px 위에서 떨어지므로 낙하 전반이 **상단 HUD 위로** 그려진다 —
-       AP 실측 boom-2 에서 40×18 · boom-5 에서 32×30 게임px 중첩, 흰 꼬리가 게이지 트랙을 관통.
-       DOM 실측(캔버스 원점 기준 게임px): `#chapN` 160..380 / 62..75 · `.kbar` 168..373 / 85..97 ·
-       `.kboss` 350..391 / 71..112 → 상단 STAGE 패널 바닥은 게임 y **112** 다.
-       하드 컬링하면 «낙하 궤적» 자체가 사라지므로(비평가들이 원하는 예고 요소다) 9회차가 숫자에
-       쓴 것과 같은 경계값 150 을 위쪽 끝으로 두고 112 → 150 구간에서 알파를 0 → 1 로 올린다 */
-    const scrY = b.y + oy;
-    if(scrY < 180) ctx.globalAlpha *= clamp((scrY - 130)/50, 0, 1);   /* 13회차 AR#11 — 클립선 112 → 130 에 맞춘 램프 */
-    /* 19회차 — «영영 못 맞는» 것으로 판정된 표창은 2프레임(SHURI_FADE)에 걸쳐 흐려진다.
-       하드 컷이면 «갑자기 없어졌다» 가 되어 ① 타이밍에서 도로 감점된다(17회차 화구 릴리스와 같은 문법).
-       판정은 살아 있으므로 밸런스는 불변이고, 다시 맞을 수 있게 되면 같은 속도로 도로 나타난다. */
-    if(b.mf !== undefined) ctx.globalAlpha *= b.mf;
-    ctx.translate(b.x, b.y);
+  /* 114 20회차 — 투사체 «그림» 만 떼어낸 것. 원점에 그린다(호출자가 translate/alpha 를 잡는다).
+     접촉 잔상(ghosts)이 투사체와 **한 글자도 다르지 않은 그림**을 써야 «닿아서 부서졌다» 로 읽힌다 —
+     따로 그리면 ④ 일관성에서 «못 보던 이펙트가 하나 더 생겼다» 가 된다. */
+  function shotBody(b){
     if(b.k === 'slash'){
       ctx.rotate(b.a);
       ctx.strokeStyle = 'rgba(150,220,255,.35)'; ctx.lineWidth = 11; ctx.lineCap = 'round';
@@ -15882,9 +15909,47 @@ function draw(){
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,b.col); g.addColorStop(1,'rgba(120,255,210,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,9,0,6.283); ctx.fill();
     }
+  }
+  for(const b of shots){
+    /* 5회차 P⑤ — 8발 볼리가 머즐 오프셋 0 으로 캐릭터 «위» 에 생성돼 실루엣의 35% 를 덮었다.
+       위치(=게임 판정)는 그대로 두고 «몸에 겹치는 동안만» 투명하게 흘린다 */
+    const pdx = b.x - player.x, pdy = b.y - (player.y - 22);
+    const near = Math.sqrt(pdx*pdx + pdy*pdy);
+    ctx.save();
+    /* 16회차 — 몸 겹침 감쇠와 화면 가장자리 페이드를 «곱한다». 둘 다 위치만 보는 그리기 감쇠라
+       순서가 없고, 하나만 쓰면 다른 하나가 통째로 지워진다(가장자리에서 시전하면 둘 다 걸린다) */
+    ctx.globalAlpha = (near < 62 ? clamp(0.28 + (near/62)*0.72, 0.28, 1) : 1) * edgeFade(b.x, b.y, edgeW(b));
+    /* 12회차 AP① (+ 10회차 인수인계 6 = AK·AL 이 이미 같은 것을 적었고 11회차가 못 회수한 항목).
+       운석이 620 게임px 위에서 떨어지므로 낙하 전반이 **상단 HUD 위로** 그려진다 —
+       AP 실측 boom-2 에서 40×18 · boom-5 에서 32×30 게임px 중첩, 흰 꼬리가 게이지 트랙을 관통.
+       DOM 실측(캔버스 원점 기준 게임px): `#chapN` 160..380 / 62..75 · `.kbar` 168..373 / 85..97 ·
+       `.kboss` 350..391 / 71..112 → 상단 STAGE 패널 바닥은 게임 y **112** 다.
+       하드 컬링하면 «낙하 궤적» 자체가 사라지므로(비평가들이 원하는 예고 요소다) 9회차가 숫자에
+       쓴 것과 같은 경계값 150 을 위쪽 끝으로 두고 112 → 150 구간에서 알파를 0 → 1 로 올린다 */
+    const scrY = b.y + oy;
+    if(scrY < 180) ctx.globalAlpha *= clamp((scrY - 130)/50, 0, 1);   /* 13회차 AR#11 — 클립선 112 → 130 에 맞춘 램프 */
+    /* 19회차 — «영영 못 맞는» 것으로 판정된 표창은 2프레임(SHURI_FADE)에 걸쳐 흐려진다.
+       하드 컷이면 «갑자기 없어졌다» 가 되어 ① 타이밍에서 도로 감점된다(17회차 화구 릴리스와 같은 문법).
+       판정은 살아 있으므로 밸런스는 불변이고, 다시 맞을 수 있게 되면 같은 속도로 도로 나타난다. */
+    if(b.mf !== undefined) ctx.globalAlpha *= b.mf;
+    ctx.translate(b.x, b.y);
+    shotBody(b);
     ctx.restore();
     ctx.globalAlpha = 1;
   }
+  /* 114 ③ 20회차 — 접촉 잔상. 투사체와 **똑같은 그림**을 명중 자리에서 2프레임에 걸쳐
+     «알파 1 → 0 · 크기 1 → 1.35» 로 흘린다. 하드 컷이면 «갑자기 없어졌다» 가 되어
+     ① 타이밍에서 도로 감점되는 것을 19회차가 표창 미스 페이드(SHURI_FADE)로 이미 확인했다. */
+  for(const q of ghosts){
+    const f = clamp(q.t/q.life, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = (1-f)*(1-f) * edgeFade(q.x, q.y, 26);
+    ctx.translate(q.x, q.y);
+    ctx.scale(1 + f*0.35, 1 + f*0.35);
+    shotBody(q);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
   ctx.restore();          /* 12회차 AP① — 상단 HUD 클립 해제(투사체·잔상 구간 끝) */
 
   /* 번개 — 114 ③: 굳힌 경로를 «잔광(넓고 흐린 선) → 코어(가는 밝은 선)» 2겹으로 긋고 가지도 같이 친다.
@@ -16002,7 +16067,14 @@ function draw(){
     const rr = r.r0 + (r.r1 - r.r0)*e;
     /* 17회차 — 계층(hit/blast/tele/amb)이 **선폭·불투명도** 두 축만 곱한다. 반경(rr)·수명·위상은 불변. */
     const tr = ringTier(r);
-    ctx.globalAlpha = (1-f*f)*(r.fl ? 0.8 : 0.95)*tr.a; /* 1회차 비평 ① — 선형 감쇠는 80ms 캡처에서 «1프레임 반짝» 으로 읽혔다 */
+    /* 114 ① 20회차 ㄷ — «피격 링이 α 0.37~0.40 에서 컷»(19회차 BC[6]·BD[13] 2인 공통).
+       17회차가 수명을 0.40s 로 올려 «낙차» 는 0.305 로 폈지만 **종료 문턱**은 남았다:
+       (1−f²) 는 80ms 그리드의 마지막 표본(f=0.8)에서 0.36 이고 그 다음이 곧장 splice 라
+       화면에는 «0.36 → 0» 한 칸이 그대로 보인다. 뒤쪽만 더 눌러 마지막 표본을 0.21 로 낮춘다
+       (표본 1·0.96·0.82·0.56·0.21 — 앞 두 프레임은 한 자리도 안 바뀐다).
+       ★ 최대 지름(rr)은 f 로만 정해지므로 7~9회차가 고정한 Ø52 · 치명 Ø97 은 불변이다. */
+    const f4 = f*f*f*f;
+    ctx.globalAlpha = (1-f*f)*(1-f4)*(r.fl ? 0.8 : 0.95)*tr.a; /* 1회차 비평 ① — 선형 감쇠는 80ms 캡처에서 «1프레임 반짝» 으로 읽혔다 */
     ctx.strokeStyle = r.col;
     /* 하한 1.2 를 계층 앞에 두면 amb(×0.55)가 가는 구간에서 바닥에 걸려 피격과 다시 같은 선폭이 된다
        → 하한도 함께 눌러 **계층 간 선폭 비(1.82배)가 수명 끝까지 유지**되게 한다 */
@@ -17083,6 +17155,7 @@ function startDunRun(d, f){
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
+  ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
@@ -18685,6 +18758,7 @@ function startRaid(r){
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
+  ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
@@ -18764,6 +18838,7 @@ function startArena(){
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
   rings.length = 0;
+  ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
   player.hp = stat.maxHp; player.dead = 0;
   { const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y; }
