@@ -13877,17 +13877,36 @@ function hitRing(x, y, crit, tgt, toy){
        t=0 으로 되감겨 자기 성장(Ø24→52 · 260ms)을 **한 번도 끝내지 못한다**(f 가 0.42 를 못 넘는다).
        아직 어린 링(수명 45% 이내)은 «그대로 두고 끝내게» 하고, 늙은 링만 되감는다 —
        겹침 억제는 그대로이고(새 링을 안 만든다) 성장은 매번 완주한다 */
-    if((q.x-x)*(q.x-x) + (q.y-y)*(q.y-y) < 2025){ if(q.t > IMP_LIFE*0.45) q.t = 0; return; }
+    if((q.x-x)*(q.x-x) + (q.y-y)*(q.y-y) < 2025){
+      /* ★ 19회차 BC[8]·BD[12] 2인 공통 — «같은 스킬 두 치명타의 링 구성이 다르다»
+         (BC 실측: 타격1 은 2겹 안 Ø45.5→63.5 / 바 Ø69.5→98, 타격2 는 **1겹 Ø37→54** 뿐인데
+         숫자는 둘 다 주황 치명타. BD[12] 도 같은 것을 «같은 의미에 두 어휘» 로 적었다).
+         원인이 바로 이 억제다: 치명타율 95% 라도 **첫 타가 5% 비치명**이면 비치명 링 1겹이 깔리고,
+         뒤이은 치명타는 여기서 그냥 `return` 해 **바깥 링을 영영 못 얹는다** — 숫자만 치명타가 된다.
+         → 억제는 유지하되(겹쳐 쌓기 금지) **«비치명 → 치명타» 승격만 허용**한다.
+         위상은 기존 링의 t 를 그대로 물려줘 7회차가 고정한 반경 비 IMP_K 가 안 흔들린다. */
+      /* ⚠ 되감기를 **먼저** 한다 — 승격 뒤에 되감으면 안쪽만 t=0 이 되고 바깥은 옛 t 를 물고 있어
+         두 링의 위상이 갈린다(7회차가 잡은 바로 그 결함을 되살리는 셈이다) */
+      if(q.t > IMP_LIFE*0.45) q.t = 0;
+      if(crit && !q.cr){
+        q.cr = 1; q.col = '#ffe27a'; q.w = FX_W2; q.r0 = 12; q.r1 = 30;
+        fxRing(q.x, q.y, 30*IMP_K, '#fff0b8', IMP_LIFE, FX_W, 12*IMP_K, 0, 1);
+        const o = rings[rings.length-1];
+        o.imp = 1; o.cr = 1; o.t = q.t;                 /* 위상 일치 = 반경 비 고정 */
+        o.tg = q.tg || tgt || null; o.toy = q.toy || toy || 0;
+      }
+      return;
+    }
   }
   /* r0 를 2 → 12 로 띄운다(AK: 첫 프레임부터 두 링 간격 ≥ 7.4 게임px = 선폭 6+4 합보다 큼).
      ★ 두 링의 r0 를 **같은 배수로** 올려야 한다 — 안쪽만 두고 바깥만 띄우면 7회차에 고정한
      반경 비 1.62(비평가 4명이 회수 확인)가 t=0 에서 9.7 로 깨진다 */
   fxRing(x, y, ir, crit ? '#ffe27a' : HIT_COL, IMP_LIFE, crit ? FX_W2 : FX_W, 12, 0, 1);
-  rings[rings.length-1].imp = 1;
+  rings[rings.length-1].imp = 1; rings[rings.length-1].cr = crit ? 1 : 0;   /* 19회차 — 승격 판정용 */
   rings[rings.length-1].tg = tgt || null; rings[rings.length-1].toy = toy || 0;
   if(crit){
     fxRing(x, y, ir*IMP_K, '#fff0b8', IMP_LIFE, FX_W, 12*IMP_K, 0, 1);   /* 치명타 = 링 2겹(비 고정) */
-    rings[rings.length-1].imp = 1;
+    rings[rings.length-1].imp = 1; rings[rings.length-1].cr = 1;
     rings[rings.length-1].tg = tgt || null; rings[rings.length-1].toy = toy || 0;
   }
 }
