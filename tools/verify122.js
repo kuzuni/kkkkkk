@@ -155,6 +155,37 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   ok(loud.length > 0 && loud.some(f => f.v.some(c => c.rot > 2.5)),
     '들썩 구간에서는 ±3° 가 실제로 걸린다 (최대 ' + Math.max(0, ...loud.flatMap(f => f.v.map(c => c.rot))).toFixed(2) + '°)');
 
+  /* ── §12 스윕이 «끝까지 지나가는가» (5회차 신설) ─────────────────
+     `translate` 의 %는 자기 자신(띠) 폭 기준이라, 띠 폭을 줄이면 이동거리가 같이 줄어
+     **호스트를 못 빠져나가고 중간에 얼어붙는다**(5회차 실측: 헤더 우측에 밝기 +27 고정).
+     띠가 지나간 뒤 «정지 구간의 그림» 이 «띠가 오기 전의 그림» 과 같아야 통과다. */
+  console.log('§12 스윕이 호스트를 완전히 빠져나가는가');
+  const runs = await p.evaluate(() => {
+    const out = [];
+    const chk = (sel, pseudo, hostW) => {
+      const e = document.querySelector(sel);
+      if (!e) { out.push(sel + ' 없음'); return; }
+      const cs = getComputedStyle(e, pseudo);
+      const bandW = parseFloat(cs.width) || 0;
+      const run = (cs.getPropertyValue('--jz-run') || '').trim();
+      /* `--jz-run` 이 없으면 키프레임의 기본값 440%(띠 폭 기준)가 쓰인다 — 그 값으로 계산해야
+         «이동거리가 모자라다» 는 진짜 이유가 메시지에 찍힌다. */
+      const runPx = run.endsWith('px') ? parseFloat(run)
+        : bandW * (run.endsWith('%') ? parseFloat(run) : 440) / 100;
+      const start = -1.4 * bandW;
+      /* 끝 위치(띠 좌변) + 띠 폭 이 호스트 폭을 넘어야 완전히 빠져나간 것이다 */
+      if (!(runPx + bandW >= hostW)) {
+        out.push(sel + pseudo + ' 이동 ' + Math.round(runPx) + '+띠' + Math.round(bandW)
+          + ' < 호스트 ' + Math.round(hostW) + ' (시작 ' + Math.round(start) + ')');
+      }
+    };
+    const w = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().width : 0; };
+    chk('#shopList .shp-card>.chd', '::after', w('#shopList .shp-card>.chd'));
+    chk('#shopList .shp-card>.cbg>.jzp', '::after', w('#shopList .shp-card>.cbg'));
+    return out;
+  });
+  ok(runs.length === 0, '소환 탭 스윕이 카드를 완전히 통과' + (runs.length ? ' — ' + runs.join(' , ') : ''));
+
   /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
      의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
      카드 왼쪽 바깥 띠를 두 위상에서 찍어 **픽셀이 같아야** 한다. */
@@ -288,6 +319,25 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
     ads: document.querySelectorAll('#shopList .cn-cd>.bt[data-cnad]').length,
   }));
   ok(cons.all > 0 && cons.sweep === cons.all, '재화 카드 광택 스윕 ' + cons.sweep + '/' + cons.all);
+  const runs2 = await p.evaluate(() => {
+    const out = [];
+    const chk = (sel, pseudo, hostSel) => {
+      const e = document.querySelector(sel), h = document.querySelector(hostSel || sel);
+      if (!e || !h) { out.push(sel + ' 없음'); return; }
+      const cs = getComputedStyle(e, pseudo);
+      const bandW = parseFloat(cs.width) || 0;
+      const run = (cs.getPropertyValue('--jz-run') || '').trim();
+      const runPx = run.endsWith('px') ? parseFloat(run) : bandW * (parseFloat(run) || 440) / 100;
+      const hostW = h.getBoundingClientRect().width;
+      if (!(runPx + bandW >= hostW)) out.push(sel + pseudo + ' ' + Math.round(runPx + bandW) + ' < ' + Math.round(hostW));
+    };
+    chk('#shopList .cn-cd', '::after');
+    chk('#shopList .cn-rb>b', '::after');
+    chk('#shopList .cn-a2', '::after');
+    return out;
+  });
+  ok(runs2.length === 0, '재화 탭 스윕(카드·리본·평생배너)이 전부 완전히 통과'
+    + (runs2.length ? ' — ' + runs2.join(' , ') : ''));
   ok(cons.ads > 0 && cons.ring === cons.ads, '[받기] 버튼 펄스 링 ' + cons.ring + '/' + cons.ads);
   /* 4회차 신설 — 비평가 둘이 «화면의 이 직사각형이 13.4초 내내 range 0» 이라고 좌표까지 짚었다.
      그런 «완전 정지 구역» 이 다시 생기지 않도록, 카드가 아닌 구역도 각각 연출을 갖는지 못 박는다. */
