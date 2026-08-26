@@ -5308,10 +5308,20 @@
      1차원판) **stride 1/3 이 최적이고 그때 ±1·±2 가 모두 1/3(1067ms)** 이다:
        1/5 → min(0.2, 0.4) = **0.20T**  ·  1/2 → min(0.5, 0.0) = **0**  ·  1/3 → min(1/3, 1/3) = **0.33T**
      카드 1·4 는 같은 위상이 되지만 3칸(1437px) 떨어져 한 화면에 같이 안 들어온다. */
-  .shp-card:nth-child(2)>.chd::after,.shp-card:nth-child(2)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.3333 * var(--jz-per))}
-  .shp-card:nth-child(3)>.chd::after,.shp-card:nth-child(3)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.6667 * var(--jz-per))}
-  .shp-card:nth-child(4)>.chd::after,.shp-card:nth-child(4)>.chd::before{animation-delay:calc(var(--jz-sw) * -1.0000 * var(--jz-per))}
-  .shp-card:nth-child(5)>.chd::after,.shp-card:nth-child(5)>.chd::before{animation-delay:calc(var(--jz-sw) * -1.3333 * var(--jz-per))}
+  /* ⚑ 16회차 — stride 1/3 → **1/4**. 1/3 은 «3칸 떨어진 쌍» 을 정확히 한 주기 차이로 만들어
+     **칸1↔칸4 가 완전 동위상**이었다(둘 다 −1.0000T ≡ 0). 16회차 비평가 **두 사람이 독립으로**
+     화소에서 짚었다 — AK «심 중심이 9위상 전부 0.0~0.5px 차, t=8300 도 731.8 vs 731.4» ·
+     AL «f2~f9 심 중심 93/159/264/385/584/759/858/941 vs 93/159/264/385/583/752/857/951,
+     최대 편차 9px = 행정의 0.9%». 그리고 **둘은 한 화면에 같이 보인다**(카드1 헤더 y176‑270 ·
+     카드4 헤더 y1613‑1707, 뷰포트 2280 안) — 소스가 기대던 «3칸이면 같이 안 보인다» 는 틀렸다.
+     1/4 면 ±1 25% · ±2 50% · ±3 25% 로 **동위상 쌍이 사라진다.** 칸1↔칸5(±4)가 0 이 되지만
+     4칸 떨어진 쌍은 한 화면에 같이 안 들어온다. 5칸을 원 위에 고르게 놓는 1/5 은 ±1 이 20% 라
+     못 쓴다(§22 문턱 25%). 게이트 §22 를 **±3 까지** 넓혀 이 구멍을 막았다 — 넓히자마자
+     1/3 이 «칸1↔4 0% · 칸2↔5 0%» 로 FAIL 하는 것을 먼저 확인하고 고쳤다. */
+  .shp-card:nth-child(2)>.chd::after,.shp-card:nth-child(2)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.2500 * var(--jz-per))}
+  .shp-card:nth-child(3)>.chd::after,.shp-card:nth-child(3)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.5000 * var(--jz-per))}
+  .shp-card:nth-child(4)>.chd::after,.shp-card:nth-child(4)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.7500 * var(--jz-per))}
+  .shp-card:nth-child(5)>.chd::after,.shp-card:nth-child(5)>.chd::before{animation-delay:calc(var(--jz-sw) * -1.0000 * var(--jz-per))}
 
   /* ── ①-3 본체 배경 «빛 입자 상승» 레이어(`.cbg>.jzp>i`) ──
      `.cbg` 의 ::before/::after 는 이미 방사 광선·바닥 그늘이 쓰고 있어 노드를 넣는다.
@@ -5428,7 +5438,16 @@
      두 띠(4s · 5.4s)가 같은 면에서 겹치면 ΔL 이 44.8~57.4 로 튀었다(표본 40장 중 6장 = 15%).
      → 전면 광택을 **헤더 아래(98px)부터** 시작시킨다. 겹침이 구조적으로 사라진다.
      α 도 헤더색이 아니라 본문색에서 역산한 `--jz-gb` 를 쓴다(이제 헤더를 안 지나므로). */
-  .shp-card>.cfr::after{animation-delay:calc(var(--jz-sw2) * -.5 * var(--jz-per));content:'';position:absolute;left:0;top:98px;bottom:-30px;width:22%;
+  /* ⚑ 16회차 — `animation-delay` 를 `animation:` 단축 **뒤로** 옮겼다.
+     15회차까지 이 선언이 블록 **맨 앞**에 있었는데, 뒤에 오는 `animation:` 단축 속성이
+     자기가 안 적은 하위 속성을 초기값으로 되돌리므로 **`animation-delay` 가 0s 로 리셋**됐다.
+     칸2~5 는 뒤따르는 `:nth-child()` 규칙이 딜레이를 다시 박아 줘서 멀쩡했고 **칸1 만** 죽었다 —
+     그래서 칸1 의 전면 광택이 본문 광택과 **같은 궤도로 포개져** 카드 오른쪽이 통째로 멈춰 있었다.
+     16회차 비평가 AL 이 화소로 짚었다: 칸2·3 은 매 프레임 띠가 **두 줄**인데 칸1 만 **한 줄**이고
+     (x450~1015 가 9프레임 전부 정확히 +0.0), 칸1 내부 **22.4%(91,681px)** 가 3.2s 내내 픽셀 동일 ·
+     띠 세기는 형제의 **1.7배**(ΔL 44.7~52.8 vs 24.5~41.6, 두 띠가 18px 어긋나 포개진 모양).
+     AL 의 ②-8 «칸1 본문 광택이 형제의 1.7배» 도 별건이 아니라 이것 하나의 증상이다. */
+  .shp-card>.cfr::after{content:'';position:absolute;left:0;top:98px;bottom:-30px;width:22%;
     pointer-events:none;--jz-run:966px;    /* 창 폭 그대로 — 10회차 기하 */
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(var(--jz-gd2,.11) * var(--jz-glow))) 22%,
@@ -5439,7 +5458,8 @@
       rgba(0,0,0,calc(var(--jz-gd2,.11) * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
-    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite}
+    animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite;
+    animation-delay:calc(var(--jz-sw2) * -.5 * var(--jz-per))}
   .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.7 * var(--jz-per))}
   .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.9 * var(--jz-per))}
   .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.1 * var(--jz-per))}
@@ -5470,10 +5490,15 @@
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
     100%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
-  .shp-card:nth-child(2) .cbtn.b1:not(.lack){animation-delay:calc(-.22s * var(--jz-per))}
+  /* ⚑ 16회차 — 헤더 스윕과 **같은 1/4 격자**로 맞춘다(0.9s 주기 → 0.225s 씩).
+     16회차 비평가 AL 실측: 최대시각 카드1 192 · 카드2 869 · 카드3 612 · 카드4 399ms →
+     이웃 차 223/257/212ms = **24.8 / 28.6 / 23.6%** 로 사양(33%)의 71~87% 였고,
+     카드5 만 −.34s 로 순서가 끊겨 있었다(1→2→3→4 는 대략 1/4 인데 5가 그 사이로 들어온다).
+     1/4 로 통일하면 ±1·±3 이 25% · ±2 가 50% 로, 헤더 스윕과 **같은 규칙 한 벌**이 된다(④ 일관성). */
+  .shp-card:nth-child(2) .cbtn.b1:not(.lack){animation-delay:calc(-.225s * var(--jz-per))}
   .shp-card:nth-child(3) .cbtn.b1:not(.lack){animation-delay:calc(-.45s * var(--jz-per))}
-  .shp-card:nth-child(4) .cbtn.b1:not(.lack){animation-delay:calc(-.67s * var(--jz-per))}
-  .shp-card:nth-child(5) .cbtn.b1:not(.lack){animation-delay:calc(-.34s * var(--jz-per))}
+  .shp-card:nth-child(4) .cbtn.b1:not(.lack){animation-delay:calc(-.675s * var(--jz-per))}
+  .shp-card:nth-child(5) .cbtn.b1:not(.lack){animation-delay:calc(-.9s * var(--jz-per))}
 
   /* ── ①-5 73 «강제 상자»(가이드 미션이 지목한 상자) — 테두리 글로우 호흡 ──
      테두리 레이어(`.cfr`)가 받는다. 안쪽 립 + 바깥 번짐 둘 다 한 선언에 넣어야
@@ -5503,8 +5528,14 @@
   .cn-cd>.pn>em{animation:jz122Float calc(2.6s * var(--jz-per)) ease-in-out infinite;
     animation-delay:calc(2.6s * var(--jz-k,0) * var(--jz-per))}
   /* 2회차(N ②) — 1회차 실측 총 이동이 1.8~4.0px(카드마다 다름)로 스펙(총 6px)의 30~67% 였다 */
-  @keyframes jz122Float{0%,100%{translate:0 calc(4px * var(--jz-amp))}
-    50%{translate:0 calc(-4px * var(--jz-amp))}}
+  /* ⚑ 16회차 — 4px → **3px**. 사양은 «둥실 ±3px(총 6px)» 인데 키프레임이 ±4px(총 8px)라
+     +33% 였다. 16회차 비평가 **두 사람이 독립으로** 초과를 쟀다 —
+     AK «+23~35%» · AL «진폭 4.10/3.87/3.83/4.08/4.31px, 총 이동 7.65~8.63px, 2‑D 어파인 SSD
+     교차확인 pp 8.00px». 2회차 주석이 «총 이동이 스펙(총 6px)의 30~67%» 라 올린 것인데,
+     그때 모자랐던 것은 진폭이 아니라 **위상이 격자에 안 걸린 것**이었다(그 뒤 여러 회차가 고쳤다).
+     ±3px 로 되돌려도 표본이 주기 2.6s 의 98.5% 를 덮으므로 최대치는 반드시 밟힌다(AL). */
+  @keyframes jz122Float{0%,100%{translate:0 calc(3px * var(--jz-amp))}
+    50%{translate:0 calc(-3px * var(--jz-amp))}}
   /* 2회차(N ③) — 1회차는 «점 2개가 **늘 같은 좌표**에서 켜졌다 꺼지는» 점멸이었다(지시는 «2~3점 순환»).
      자리를 옮기는 것은 꺼져 있는 구간에 하므로 이동이 보이지 않고 «다른 점이 켜졌다» 로 읽힌다.
      한 주기(5.4s = 1.8s × 3)에 세 자리를 돈다. */

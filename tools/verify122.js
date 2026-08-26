@@ -1058,8 +1058,18 @@ async function ampCheck(p, hosts) {
      AI «카드당 정확히 640ms = 0.200T» · AJ «연속 −640ms = P/5 … 같은 3.2s 층인데 재화 탭은 P/2».
      즉 게이트가 안 보는 자리에서 규칙이 갈려 있었다(§14 의 대각 구멍과 같은 계열).
      1열이라 «행 +1/2» 를 그대로 쓰면 1·3·5 칸이 동위상이 되므로, ±1·±2 칸을 이웃으로 놓고
-     min 원형거리를 최대화한 **stride 1/3** 이 정답이다(그때 ±1·±2 가 모두 1/3). */
-  console.log('§22 소환 1열 리스트 — 위아래 ±1·±2 칸 위상 분리');
+     min 원형거리를 최대화한 **stride 1/3** 이 정답이다(그때 ±1·±2 가 모두 1/3).
+
+     ⚑ 16회차 — **±3 을 빠뜨린 것이 구멍이었다.** stride 1/3 은 3칸 떨어진 쌍을 정확히 한 주기
+     차이로 만든다 → 칸1↔칸4 가 **완전 동위상**이다. 16회차 비평가 AK 가 화소로 짚었다:
+     «카드1 헤더(y176‑186)와 카드4 헤더(y1613‑1623)의 흰 심 중심이 9위상 전부 0.0~0.5px 차 ·
+     t=8300 도 731.8 vs 731.4» — 그리고 **둘은 한 화면에 같이 보인다**(리스트에 4장이 동시에 뜬다).
+     ±1·±2 만 보는 게이트는 이걸 볼 수 없었다(§14 의 대각 구멍·§22 자신의 신설 이유와 같은 계열).
+     → 이웃 집합을 **±3 까지** 넓힌다. 그러면 stride 1/3 은 여기서 FAIL 하고(0%),
+       stride **1/4** 가 ±1 25% · ±2 50% · ±3 25% 로 셋을 동시에 넘긴다.
+       1/4 는 칸1↔칸5(±4)가 동위상이 되지만 **4칸 떨어진 쌍은 한 화면에 같이 안 보인다** —
+       5칸을 원 위에 고르게 놓는 1/5 은 ±1 이 20% 로 문턱 아래라 못 쓴다. 이 격자의 최선이다. */
+  console.log('§22 소환 1열 리스트 — 위아래 ±1·±2·±3 칸 위상 분리');
   {
     await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
     await p.waitForTimeout(150);
@@ -1073,7 +1083,7 @@ async function ampCheck(p, hosts) {
         return { v, dur };
       }).filter(Boolean));
     const pairs = [];
-    for (let i = 0; i < ph.length; i++) for (const d of [1, 2]) {
+    for (let i = 0; i < ph.length; i++) for (const d of [1, 2, 3]) {
       const j = i + d; if (j >= ph.length) continue;
       let x = Math.abs(ph[i].v - ph[j].v) % 1; x = Math.min(x, 1 - x);
       pairs.push({ lab: '칸' + (i + 1) + '↔' + (j + 1), d: x, ms: Math.round(x * ph[i].dur) });
@@ -1081,7 +1091,7 @@ async function ampCheck(p, hosts) {
     console.log('    · ' + pairs.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%(' + v.ms + 'ms)').join(' | '));
     const bad = pairs.filter(v => v.d < .25);
     ok(ph.length >= 4, '소환 카드 ' + ph.length + '장의 헤더 띠 위상을 읽었다 (>=4)');
-    ok(bad.length === 0, '±1·±2 칸 위상차가 전부 주기의 25% 이상 (14회차는 ±1 이 20%)'
+    ok(bad.length === 0, '±1·±2·±3 칸 위상차가 전부 주기의 25% 이상 (14회차는 ±1 이 20% · 15회차는 ±3 이 0%)'
       + (bad.length ? ' — 미달 ' + bad.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
   }
 
@@ -1302,12 +1312,20 @@ async function ampCheck(p, hosts) {
      키우고(그 실행에서 쌍별 비율은 0.782~1.131 로 벌어졌다), 중앙값끼리의 비는 양쪽 잡음이
      각자 평균화돼 0.980 으로 안정적이었다. 즉 **15회차의 추정량이 옳았다** — 문제는 추정량이
      아니라 **표본 수**였다.
-     → 추정량은 `median(ON)/median(OFF)` 로 되돌리고, 표본을 4 → **7쌍**(홀수)으로 올린다.
-       쌍마다 ON·OFF 순서를 번갈아 단조 드리프트의 부호도 함께 상쇄하고,
-       쌍별 비율은 **판정이 아니라 진단**으로만 찍는다(다음 세션이 잡음 종류를 바로 보게).
+     → 추정량은 `median(ON)/median(OFF)` 로 되돌리고, 쌍마다 ON·OFF 순서를 번갈아 단조 드리프트의
+       부호도 함께 상쇄하고, 쌍별 비율은 **판정이 아니라 진단**으로만 찍는다.
+
+     ⚑ 그런데 표본을 4 → 7쌍으로 늘린 것만으로는 **안 고쳐졌다**(7회 돌려 1회 FAIL — 15회차의
+       6회 중 1회와 같은 수준). 표본 수가 아니라 **표본 하나의 분해능**이 문제였다:
+       이 러너의 소환 탭은 9~11fps 라 1500ms 창에 프레임이 **15개**밖에 안 들어간다.
+       프레임 «수» 를 세는 측정이므로 ±1프레임 = **±7%** 이고, 판정 문턱이 10% 라
+       잡음과 신호가 같은 크기다. 표본을 더 모아도 각 표본이 이만큼 양자화돼 있으면
+       중앙값이 문턱 근처에서 계속 뒤집힌다.
+       → 창을 1500 → **3500ms** 로 늘린다(35프레임 → ±1프레임 = ±2.9%). 대신 쌍은 7 → **5**로
+         줄여 총 소요는 그대로 둔다. 잡음을 문턱의 1/3 아래로 내리는 것이 요점이다.
      ⚠ 이 러너의 절대 fps 는 동시에 도는 다른 프로세스에 크게 눌린다(같은 세션에서
         서브에이전트 2명이 돌 때 소환 탭이 28fps → 9fps 로 떨어졌다). 절대값은 여전히 기록용이다. */
-  console.log('§8 스크롤 fps — ON/OFF 교차 7쌍 · 중앙값끼리 비교 (절대값은 러너 상한에 걸려 기록만)');
+  console.log('§8 스크롤 fps — ON/OFF 교차 5쌍 × 3.5s · 중앙값끼리 비교 (절대값은 러너 상한에 걸려 기록만)');
   const OFFCSS = '#shopList *,#shopList *::after,#shopList *::before{animation-name:none!important}';
   const setCss = c => p.evaluate(x => {
     let s = document.getElementById('v122fps');
@@ -1320,13 +1338,13 @@ async function ampCheck(p, hosts) {
     const tick = () => {
       n++; lw.scrollTop += 24 * dir;
       if (lw.scrollTop <= 0 || lw.scrollTop + lw.clientHeight >= lw.scrollHeight - 1) dir = -dir;
-      if (performance.now() - t0 < 1500) requestAnimationFrame(tick);
+      if (performance.now() - t0 < 3500) requestAnimationFrame(tick);
       else res(+(n / ((performance.now() - t0) / 1000)).toFixed(1));
     };
     requestAnimationFrame(tick);
   }));
   const med = a => a.slice().sort((x, y) => x - y)[(a.length - 1) >> 1];
-  const PAIRS = 7;
+  const PAIRS = 5;
   for (const tab of ['coin', 'summon']) {
     await p.evaluate(t => { shopCat = t; setShopCatTabs(t); renderShopPage(); }, tab);
     await p.waitForTimeout(400);
