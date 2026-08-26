@@ -5,9 +5,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>소탕! 방치형 헌터</title>
 <style>
+  /* ===== 126 ① 게임용 한글 서체 (저장소 동봉 · CDN 금지 · file:// 유지) =====
+     «Jua» (SIL OFL 1.1, Woowahan Brothers) — 후보 4종(Black Han Sans · Do Hyeon · Jua ·
+     Gothic A1 Black) 비교 캡처 `docs/review/126-font-candidates.png` 를 비평가 E·F 가 독립
+     채점한 결과, **둘의 최저 점수가 가장 높은** 1종(E 7 / F 5 — BHS 4/6 · GothicA1 4/5 · DoHyeon 3/4).
+     선정 근거: 자폭:자고 = 0.98 로 레퍼런스(0.87~1.0)에 후보 중 가장 가깝고, 종성·모음의
+     둥근 마감과 넉넉한 속공간이 레퍼런스의 «두껍고 통통한» 인상과 같은 계열이다.
+     유일한 약점인 «획이 레퍼런스보다 15% 얇다» 는 이 게임이 글자마다 이미 얹는
+     `-webkit-text-stroke`(4~10px) 가 메운다 — 반대로 Black Han Sans 는 획이 22% 라
+     스트로크를 얹으면 속공간이 막혀 뭉갠다(비평가 E ③4).
+     서브셋 = ASCII + KS X 1001 한글 2,350자 + UI 기호 → 180KB(상한 400KB).
+     라이선스 원문 `assets/fonts/OFL.txt` · 출처 표기 `assets/CREDITS.md`.
+     **폰트 지정은 이 한 곳뿐이다.** 나머지 전 화면은 `font-family:inherit` 로 받는다(126 ①). */
+  @font-face{
+    font-family:'GameKR';
+    src:url('assets/fonts/Jua-subset.woff2') format('woff2');
+    font-weight:400 900;font-style:normal;font-display:swap}
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
-    font-family:-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
+    font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
   /* 안전영역(노치·홈 인디케이터)은 프레임 바깥에서 흡수한다.
      따라서 #app 안의 좌표는 1080 프레임 기준값을 그대로 쓰면 된다. */
   /* 프레임은 항상 화면 중앙. 프레임이 화면비를 다 못 채우면 남는 영역은 검정
