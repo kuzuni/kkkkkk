@@ -93,8 +93,15 @@ const ok = (b, act, effect, detail) => {
     btn && btn.click();
     await sleep(90);
     const t = ($('mtitle') || {}).textContent || '';
-    return { title: t, leak: /img\s|cur-[a-z]+\.svg/.test(t),
-             bad: !!document.querySelector('.cDia.jz-bad, #fxl .jz-badp') };
+    /* 플래시는 «한 시점» 이 아니라 «구간» 이다 — 실측으로 클릭 +100ms 쯤 붙어 700ms 쯤 걷힌다.
+       고정 90ms 한 장으로 찍으면 시작 모서리에 딱 걸려 머신 속도에 따라 뜨고 진다(작업 145).
+       jzBadPill 의 수명(480ms) 안에서 «뜰 때까지» 기다렸다가 판정한다 — 뜨면 즉시 빠져나온다. */
+    let bad = false;
+    for (let i = 0; i < 30 && !bad; i++) {
+      bad = !!document.querySelector('.cDia.jz-bad, #fxl .jz-badp');
+      if (!bad) await sleep(20);
+    }
+    return { title: t, leak: /img\s|cur-[a-z]+\.svg/.test(t), bad };
   });
   ok(/부족/.test(lack.title) && !lack.leak,
      '다이아 부족 상태에서 [교환]', '부족 팝업 제목이 깨끗한 한글', JSON.stringify(lack.title));

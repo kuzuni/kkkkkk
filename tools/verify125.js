@@ -10,6 +10,7 @@
  *       비재화(등급·계급·메달·장비 이름·탭/메뉴 아이콘)는 **줄 단위 허용 목록**으로 명시하고,
  *       목록에 없는 잔여 이모지는 실패다. 허용 목록 자체가 «남겨 둔 것» 의 기록이 된다.
  *   [B] 단일 출처 — `assets/ui/cur-*.svg` 리터럴은 `CUR_ICON` 블록 안에만 있다(문자열에 경로 복제 금지).
+ *       [A] 와 **같은 주석 제거 소스**에서 센다 — 주석에 적힌 경로는 설명이지 복제가 아니다(작업 145).
  *   [C] 자산 — 화폐 7종 SVG 가 실제로 있고 유효하다(파일 · <svg> · viewBox).
  *   [D] 기하 — HUD `.cbox i` 아이콘 **63×63**(measure/A3) · 41 팝업 재화 바 `.pcb-p>i` **57×57**(measure/41),
  *       옛 이모지 보정(`scaleX`)이 이미지에 남아 있지 않다.
@@ -64,8 +65,11 @@ function stripComments(src) {
 }
 
 (async () => {
-  /* ---- [A] 소스 스캔 ---- */
-  const lines = stripComments(SRC).split('\n');
+  /* ---- [A] 소스 스캔 ----
+     `BARE` = 주석을 «같은 길이의 공백» 으로 지운 소스. 길이가 원본과 1:1 이라 문자 오프셋·줄 번호가
+     그대로 통한다 — [A] 와 [B] 가 같은 전처리를 공유하게 하려고 한 번만 만들어 둔다(작업 145). */
+  const BARE = stripComments(SRC);
+  const lines = BARE.split('\n');
   const leftovers = [];
   lines.forEach((ln, i) => {
     if (!CUR_EMOJI.some(e => ln.indexOf(e) >= 0)) return;
@@ -77,15 +81,20 @@ function stripComments(src) {
   const allowHits = lines.filter(ln => CUR_EMOJI.some(e => ln.indexOf(e) >= 0)).length;
   ok(allowHits <= ALLOW.length + 4, 'A2 허용 목록이 부풀지 않았다(비재화 줄 ' + allowHits + '개)', String(allowHits));
 
-  /* ---- [B] 단일 출처 ---- */
-  const decl = SRC.indexOf('const CUR_ICON = {');
-  const declEnd = SRC.indexOf('};', decl);
+  /* ---- [B] 단일 출처 ----
+     A1 과 **같은 `BARE`(주석 제거) 위에서** 센다. 원본을 훑으면 «주석에 경로를 적었다» 를
+     «코드가 경로를 복제했다» 로 오판한다 — 작업 144 가 남긴 설명 주석 한 줄 때문에 B1 이
+     상시 FAIL(23/24) 이었다(작업 145). 금지 대상은 «실행되는 코드의 경로 복제» 지 문서가 아니다. */
+  const decl = BARE.indexOf('const CUR_ICON = {');
+  const declEnd = BARE.indexOf('};', decl);
   const paths = [];
   let idx = -1;
-  while ((idx = SRC.indexOf('assets/ui/cur-', idx + 1)) >= 0) paths.push(idx);
+  while ((idx = BARE.indexOf('assets/ui/cur-', idx + 1)) >= 0) paths.push(idx);
   const outside = paths.filter(p => !(p > decl && p < declEnd));
-  ok(decl > 0 && outside.length === 0, 'B1 아이콘 경로는 CUR_ICON 블록 안에만 있다',
-     '총 ' + paths.length + '건 · 블록 밖 ' + outside.length + '건');
+  const outAt = outside.map(p => 'L' + (SRC.slice(0, p).split('\n').length));
+  ok(decl > 0 && outside.length === 0, 'B1 아이콘 경로는 CUR_ICON 블록 안에만 있다(주석 제외)',
+     '총 ' + paths.length + '건 · 블록 밖 ' + outside.length + '건'
+     + (outAt.length ? ' @ ' + outAt.slice(0, 6).join(',') : ''));
   ok(/function curIc\(/.test(SRC) && /function curIcEl\(/.test(SRC),
      'B2 헬퍼 curIc()/curIcEl() 존재');
 
