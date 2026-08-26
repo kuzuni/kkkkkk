@@ -118,16 +118,32 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   console.log('[8] 서브탭 «던전» 복귀 — 던전 카드가 그대로 돌아온다');
   await p.evaluate(() => document.querySelector('#dunSub [data-dsub="dun"]').click());
   await p.waitForTimeout(600);
-  const dn = await p.evaluate(() => ({
-    n: document.querySelectorAll('#dunList .dnc').length,
-    rd: document.querySelectorAll('#dunList .dnc.rd').length,
-    em: document.querySelectorAll('#dunList .dnc>.th>em').length,
-    cv: document.querySelectorAll('#dunList canvas.thcv').length }));
-  /* 72(2026-08-26 주인 재지시) — 던전 카드도 이모지 → 스프라이트 캔버스가 됐다.
-     이 항목이 보는 것은 «서브탭을 되돌리면 던전 카드가 그대로 돌아온다» 이므로 «이모지 6» 을
-     «캔버스 6 · 이모지 0» 으로 옮긴다(레이드 카드는 0장이어야 한다는 판정은 그대로). */
-  ok(dn.n === 6 && dn.rd === 0 && dn.em === 0 && dn.cv === 6,
-     `던전 카드 ${dn.n}장 · 스프라이트 캔버스 ${dn.cv} · 이모지 ${dn.em}`);
+  /* 140 — 72 가 `6efe9e8` 에서 `.dnc>.th>em`(이모지) → `.dnc>.th>canvas.thcv`(스프라이트)로 갈았고,
+     이 항목은 «이모지 6 · 캔버스 0» 을 계속 단언해 판정이 정확히 뒤집혀 있었다(19/20 FAIL).
+     72 워커도 같은 시각 곁가지로 «이모지 0 · 캔버스 6» 으로 옮겼다(`343ff0c`) — 그 단언은 그대로 살리고,
+     여기에 «칸이 실제로 채워졌나» 를 더한다. 캔버스가 «있다» 와 «그려졌다» 는 다르고,
+     이 항목이 원래 보려던 것은 재렌더 뒤에도 썸네일이 죽지 않았나 이기 때문이다.
+     기준은 139 가 verify90 에, 72 가 verify72 §1-2 에 쓴 것과 같다 — 캔버스가 있고 알파>8 픽셀 ≥ 1.
+     «레이드 캔버스 0» 은 `.dnc.rd` 0장(rd)이 직접 담보한다(전역 `canvas.thcv` 개수는
+     72 이후 던전 카드 자신의 썸네일까지 세어 원리적으로 통과 불가인 대리 지표였다). */
+  const dn = await p.evaluate(() => {
+    const cards = [...document.querySelectorAll('#dunList .dnc')];
+    const drawn = cards.filter((c) => {
+      const cv = c.querySelector('.th canvas.thcv');
+      if (!cv || !cv.width || !cv.height) return false;
+      let im;
+      try { im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; }
+      catch (e) { return false; }            /* 캔버스 오염 = 못 읽음 = 통과시키지 않는다 */
+      for (let i = 3; i < im.length; i += 4) if (im[i] > 8) return true;
+      return false;
+    }).length;
+    return { n: cards.length,
+             rd: document.querySelectorAll('#dunList .dnc.rd').length,
+             em: document.querySelectorAll('#dunList .dnc>.th>em').length,
+             drawn };
+  });
+  ok(dn.n === 6 && dn.rd === 0 && dn.em === 0 && dn.drawn === 6,
+     `던전 카드 ${dn.n}장 · 레이드 카드 ${dn.rd}장 · 이모지 ${dn.em} · 썸네일(.th>canvas.thcv) ${dn.drawn}장 실제로 그려짐`);
 
   console.log('[9] 콘솔 에러');
   ok(errs.length === 0, `콘솔 에러 ${errs.length}건`);
