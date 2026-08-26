@@ -236,7 +236,8 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     const imp = Math.max.apply(null, rings.map(r => r.life));
     const dbg = parts.filter(q => q.gy);
     return { main, dl: Math.round(-dl*100)/100, imp,
-             dbgMin: Math.min.apply(null, dbg.map(q => q.r)) };
+             dbgMin: Math.min.apply(null, dbg.map(q => q.r)),
+             dbgMax: Math.max.apply(null, dbg.map(q => q.r)) };
   });
   /* 11회차 AM③ — 이 두 하한은 «1프레임 반짝 방지» 가 목적인데, 값이 «화구(0.302s)보다 링이 300ms
      더 남는다» 를 강제하는 쪽으로 굳어 있었다(총 수명 0.20+0.40 = 0.60s). 목적은 유지하고
@@ -262,7 +263,14 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
      '2단 파문 위상 잠금 — 반경 비 r0 ' + (lock.k0 || 0).toFixed(3) + ' = r1 ' + (lock.k1 || 0).toFixed(3) +
      ' · 지연·수명 일치 · 두 줄 간격 ' + Math.round(lock.gap0 || 0) + ' → ' + Math.round(lock.gap1 || 0) +
      ' 게임px ≥ 12 (13회차 AQ·AR 공통 «두 줄이 한 줄로 뭉갠다» 회귀 방지)');
-  ok(lifes.dbgMin >= 6.0, '파편 최소 크기 ' + Math.round(lifes.dbgMin*10)/10 + 'px ≥ 6.0 («보이지 않는 점» 회귀 방지)');
+  /* 14회차 — 이 항은 «보이는가» 를 요구하면서 **그리지 않는 값**(`p.r`)에 하한을 걸고 있었다.
+     화면에 나오는 것은 한 변 `r×1.7` 이고, AS#17·AT[13] 이 공통으로 «개당 ~20 게임px = 몸통 59%,
+     조각이 아니라 상자» 로 잡은 것도 그 값이다. 재는 대상을 그려지는 한 변으로 바꾸고
+     **양쪽 끝**을 건다: 7 이상(보인다) · 12 이하(몸통 34 의 35% — AS 처방 «8~10»). */
+  const dbgSide = lifes.dbgMin * 1.7, dbgSideMax = lifes.dbgMax * 1.7;
+  ok(dbgSide >= 7.0 && dbgSideMax <= 12.0,
+     '파편 한 변(r×1.7) ' + (Math.round(dbgSide*10)/10) + '~' + (Math.round(dbgSideMax*10)/10) +
+     ' 게임px — 7 이상(«보이지 않는 점» 회귀 방지) · 12 이하(14회차 AS#17·AT[13] «몸통 59% 상자» 회귀 방지)');
   /* 5회차 비평 ① — 충격파가 화구 «안» 에서 시작하면 첫 2프레임이 불길에 묻힌다 */
   const wave = await p.evaluate(() => {
     rings.length = 0; boomFx(0, 0, 130, '#ffb45c', false);
