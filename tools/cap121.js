@@ -32,10 +32,12 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
   await p.waitForTimeout(1500);
   /* 기본 세이브는 6장 중 4장이 잠겨 있어 «테마 4종» 중 둘밖에 안 보인다.
      비평가가 유물석 보랏빛 안개·컨텐츠 붉은 열기를 볼 수 있도록 해금 상태로 찍는다.
-     (잠금 카드가 정지인지는 verify121 §2·§6 과 probe121 [2] 가 따로 본다) */
+     ⚠ 4회차 — 다만 **전부 해금하면 안 된다.** 3·4회차 하네스가 relic1~3 을 모두 열어 버려서
+     비평가 E·F 가 둘 다 «지시 ④ 의 절반(잠금 카드 정지+어둡게)을 판정할 표본이 18장 중 0장» 이라고 적었다.
+     relic1·2 만 열어 보라색 테마를 보여 주고 **relic3·4 는 잠근 채로 남겨** 같은 캡처 안에 대조군을 둔다. */
   await p.evaluate(() => {
     S.guide.idx = 99; S.best = 999;
-    ['relic1', 'relic2', 'relic3'].forEach(k => { S.dun[k] = 99; });
+    ['relic1', 'relic2'].forEach(k => { S.dun[k] = 99; });
   });
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(800);
@@ -92,8 +94,15 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     return { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) };
   });
   const FR = await p.evaluate(() => (window.ATLAS.elves.a.blue_idle || []));
-  for (let i = 0; i < 8; i++) {
-    await seek(Math.round(i * 3900 / 8));
+  /* ⚠ 4회차 — 여기도 균등 8등분이면 안 된다(bob 은 3회차에 고쳤는데 raid 는 그대로였다).
+     487.5ms 간격은 780ms 짧은 들썩에 대해 에일리어싱이라 84%·90% 를 비켜가고, 그래서
+     비평가 E·F 가 둘 다 «컨텐츠 탭 표본에는 큰 점프가 아예 없다 — 실측 진폭이 실제의 55%» 로 적었다.
+     bob 과 같은 키프레임 위치로 찍는다. 그리고 **번개 잔광(bgmFlash, 9s 주기의 86~94% 구간)** 은
+     3.9s 안에 절대 안 들어오므로 raid-9·10 을 그 시각(7.92s·8.46s)에 따로 찍는다 —
+     그 연출도 «18장 중 0장» 이라는 지적이 같이 나왔다. */
+  const RAID = [0, 10, 20, 50, 70, 84, 90, 95];
+  for (let i = 0; i < RAID.length; i++) {
+    await seek(Math.round(3900 * RAID[i] / 100));
     /* 스프라이트 프레임은 타이머가 굴리므로 여기서 직접 지정해 그린다(정지 상태에서도 순환이 보이게) */
     await p.evaluate(f => {
       const cv = document.querySelector('#dunList canvas.thcv');
@@ -102,7 +111,15 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     await p.waitForTimeout(70);
     await shot(p, 'raid-' + (i + 1), rcard);
   }
-  console.log('raid 8장 — 컨텐츠 카드1 확대, 아이들 프레임 ' + FR.join(',') + ' 순환');
+  /* 번개 잔광 2장 — bgmFlash 의 발광 구간(86~94%)에 직접 앉힌다. 들썩은 7920 % 3900 = 120ms(3%)라
+     착지 근처로 같이 찍히므로 «잔광만» 비교하면 된다. */
+  for (let i = 0; i < 2; i++) {
+    await seek([7920, 8460][i]);
+    await p.waitForTimeout(70);
+    await shot(p, 'raid-' + (RAID.length + i + 1), rcard);
+  }
+  console.log('raid ' + (RAID.length + 2) + '장 — 컨텐츠 카드1 확대, 키프레임 위치 '
+    + RAID.map(v => v + '%').join('/') + ' + 번개 잔광 7.92s·8.46s, 아이들 프레임 ' + FR.join(',') + ' 순환');
 
   console.log('콘솔 에러 ' + errs.length + '건' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await b.close();

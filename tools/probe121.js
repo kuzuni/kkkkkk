@@ -78,7 +78,7 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
   console.log('    카드        상단여유  하단여유   잉크h   슬롯h');
   await p.evaluate(() => {
     const st = document.createElement('style'); st.id = 'p121static';
-    st.textContent = '#dunList .dnc>.th>em{animation:none !important;translate:none !important;scale:none !important}';
+    st.textContent = '#dunList .dnc>.th>em,#dunList .dnc>.th>canvas{animation:none !important;translate:none !important;scale:none !important}';
     document.head.appendChild(st);
   });
   await p.waitForTimeout(160);
@@ -88,7 +88,7 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
       const el = document.querySelectorAll('#dunList .dnc')[i];
       el.scrollIntoView({ block: 'center' });
       const th = el.querySelector(':scope>.th'), r = th.getBoundingClientRect();
-      return { has: !!th.querySelector('em'), h: Math.round(r.height),
+      return { has: !!th.querySelector('em,canvas'), h: Math.round(r.height),
                clip: { x: Math.round(r.left), y: Math.round(r.top),
                        width: Math.round(r.width), height: Math.round(r.height) } };
     }, i);
@@ -96,11 +96,11 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
     if (!info.has) { console.log('  ' + CARD[i].padEnd(10) + '  (이모지 썸네일 아님 — 건너뜀)'); continue; }
     const withEm = await grab(info.clip);
     await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
-      .querySelector(':scope>.th>em').style.visibility = 'hidden'; }, i);
+      .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = 'hidden'; }, i);
     await p.waitForTimeout(60);
     const noEm = await grab(info.clip);
     await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
-      .querySelector(':scope>.th>em').style.visibility = ''; }, i);
+      .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = ''; }, i);
     const d = await diff(withEm, noEm, info.clip.width, info.clip.height);
     console.log('  ' + CARD[i].padEnd(10) + String(d.y0).padStart(8) + String(info.h - d.y1).padStart(10)
       + String(d.y1 - d.y0).padStart(8) + String(info.h).padStart(8)
@@ -109,6 +109,79 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
   await p.evaluate(() => { const s = document.getElementById('p121static'); if (s) s.remove(); });
   await p.waitForTimeout(120);
   if (process.argv.includes('static')) { await b.close(); return; }
+  console.log('');
+
+  /* ---------- [0-2] «천장 접촉 폭» — 비평가가 «평평하게 썰린 정수리» 로 보는 바로 그 양 ---------- */
+  /* ⚠ [1] 의 잉크 bbox 는 글리프의 **글로우까지** 잡아서 «몇 px 잘렸나» 를 못 센다(4회차에 확인:
+     scale 을 0.8 까지 줄여도 bbox 가 0/1 로 안 변한다 — 재는 것이 잉크가 아니라 글로우이기 때문).
+     비평가가 실제로 보는 것은 **슬롯 최상단 행에 잉크가 닿아 만든 «직선»의 길이** 다. 그것을 직접 센다.
+     접촉 폭 0 = 잘림 없음. 4회차에 이 표로 하강량을 스윕해 +12px 를 골랐다.
+     `node tools/probe121.js cut [추가하강px]` 로 이 절만 돌린다(스윕용 인자). */
+  console.log('[0-2] 슬롯 «천장 접촉 폭»(px) — 0 이면 잘림 없음 (전 카드 × 14위상)');
+  const EXTRA = (() => { const a = process.argv.find(v => /^\d+$/.test(v)); return a ? Number(a) : 0; })();
+  if (EXTRA) {
+    await p.evaluate(o => {
+      const st = document.createElement('style'); st.id = 'p121cut';
+      st.textContent = '#dunList .dnc>.th>em{margin-top:' + o + 'px !important}';
+      document.head.appendChild(st);
+    }, EXTRA);
+    await p.waitForTimeout(180);
+    console.log('    (시험용 추가 하강 ' + EXTRA + 'px 적용)');
+  }
+  const contact = (a, b2, w, h) => p.evaluate(async ([ia, ib, W, H]) => {
+    const load = s => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = s; });
+    const [A, B] = await Promise.all([load(ia), load(ib)]);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(A, 0, 0); const da = g.getImageData(0, 0, W, H).data;
+    g.clearRect(0, 0, W, H); g.drawImage(B, 0, 0); const db = g.getImageData(0, 0, W, H).data;
+    let best = 0;
+    for (let y = 0; y < 3; y++) {                 /* 최상단 3행 — 안티에일리어싱 한 줄을 흡수 */
+      let c = 0;
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        const d = (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2])) / 3;
+        if (d > 60) c++;                          /* 글로우를 빼려고 [1] 보다 높은 문턱 */
+      }
+      if (c > best) best = c;
+    }
+    return best;
+  }, [a, b2, w, h]);
+  const PHC = [0, 195, 390, 585, 780, 1170, 1560, 1950, 2340, 2730, 3120, 3315, 3510, 3705];
+  console.log('    카드        최대접촉  접촉위상수  위상별');
+  const ncut = await p.evaluate(() => document.querySelectorAll('#dunList .dnc').length);
+  let cutBad = 0;
+  for (let i = 0; i < ncut; i++) {
+    const info = await p.evaluate(i => {
+      const el = document.querySelectorAll('#dunList .dnc')[i];
+      el.scrollIntoView({ block: 'center' });
+      const th = el.querySelector(':scope>.th'), r = th.getBoundingClientRect();
+      return { has: !!th.querySelector('em,canvas'),
+               clip: { x: Math.round(r.left), y: Math.round(r.top),
+                       width: Math.round(r.width), height: Math.round(r.height) } };
+    }, i);
+    await p.waitForTimeout(150);
+    if (!info.has) { console.log('  ' + CARD[i].padEnd(10) + '  (이모지 썸네일 아님 — 건너뜀)'); continue; }
+    const vals = [];
+    for (const t of PHC) {
+      await seek(t); await p.waitForTimeout(45);
+      const w1 = await grab(info.clip);
+      await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+        .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = 'hidden'; }, i);
+      await p.waitForTimeout(40);
+      const w0 = await grab(info.clip);
+      await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+        .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = ''; }, i);
+      vals.push(await contact(w1, w0, info.clip.width, info.clip.height));
+    }
+    const bad = vals.filter(v => v > 0).length;
+    cutBad += bad;
+    console.log('  ' + CARD[i].padEnd(10) + String(Math.max(...vals)).padStart(8)
+      + String(bad + '/' + PHC.length).padStart(12) + '  ' + vals.join(',') + (bad ? '  ⚠' : ''));
+  }
+  console.log('  → 천장 절단 위상 합계 ' + cutBad + (cutBad ? '  ⚠ 잘린다' : '  (잘림 0)'));
+  await p.evaluate(() => { const s = document.getElementById('p121cut'); if (s) s.remove(); });
+  if (process.argv.includes('cut')) { await b.close(); return; }
   console.log('');
 
   /* ---------- [1] 썸네일 잉크 bbox — **전 카드** × 위상별 ---------- */
@@ -124,7 +197,7 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
       const el = document.querySelectorAll('#dunList .dnc')[i];
       el.scrollIntoView({ block: 'center' });
       const th = el.querySelector(':scope>.th'), r = th.getBoundingClientRect();
-      return { has: !!th.querySelector('em'),
+      return { has: !!th.querySelector('em,canvas'),
                clip: { x: Math.round(r.left), y: Math.round(r.top),
                        width: Math.round(r.width), height: Math.round(r.height) } };
     }, i);
@@ -135,11 +208,11 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
       await seek(t); await p.waitForTimeout(45);
       const withEm = await grab(info.clip);
       await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
-        .querySelector(':scope>.th>em').style.visibility = 'hidden'; }, i);
+        .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = 'hidden'; }, i);
       await p.waitForTimeout(40);
       const noEm = await grab(info.clip);
       await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
-        .querySelector(':scope>.th>em').style.visibility = ''; }, i);
+        .querySelector(':scope>.th>em,:scope>.th>canvas').style.visibility = ''; }, i);
       const d = await diff(withEm, noEm, info.clip.width, info.clip.height);
       tops.push(d.y0); hs.push(d.y1 - d.y0);
     }

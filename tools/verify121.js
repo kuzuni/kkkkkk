@@ -130,10 +130,19 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     if (was === 'running') a.play();
     return out;
   });
-  ok(tr && Math.min(...tr) >= -0.01,
-    `썸네일 translate 최소 ${tr && Math.min(...tr)}px ≥ 0 (위로 안 올라간다 = 머리 잘림 0)`);
-  ok(tr && Math.max(...tr) >= 12 && Math.max(...tr) <= 16,
-    `큰 점프 진폭 ${tr && Math.max(...tr)}px (지시 14px)`);
+  /* ⚠ 4회차 — 이 두 항목의 «기준» 이 바뀌었다. 3회차까지는 기준 자세(translate 0)가 곧 가장 높은 포즈라
+     `max(translate)` 가 그대로 진폭이었다. 그런데 그 기준 자세 자체가 이미 잉크를 슬롯 천장 위 10.3~10.5px
+     로 올려놓고 있어서(비평가 E·F 독립 실측) **정점마다 정수리가 잘렸다.** 4회차에 전 키프레임을 +12px
+     내렸으므로 이제 translate 는 14~27 구간을 오간다 —
+       · «위로 안 올라간다» 는 `min ≥ 0` 이 아니라 **`min ≥ 기준선(12)`** 으로 묻는다.
+       · 진폭은 절대값이 아니라 **`max − min`** 이다(지시 ⑥ 의 «큰 점프 14px»).
+     실제 잘림 여부는 이 산술이 아니라 픽셀로 봐야 한다 — `node tools/probe121.js cut`
+     (6카드 × 14위상 천장 접촉 폭, 4회차 실측 **전부 0**). */
+  const BASE = 12;
+  ok(tr && Math.min(...tr) >= BASE - 0.01,
+    `썸네일 translate 최소 ${tr && Math.min(...tr)}px ≥ 기준선 ${BASE}px (천장 위로 안 올라간다)`);
+  const amp = tr && +(Math.max(...tr) - Math.min(...tr)).toFixed(2);
+  ok(amp >= 12 && amp <= 16, `큰 점프 진폭 ${amp}px = max ${tr && Math.max(...tr)} − min ${tr && Math.min(...tr)} (지시 14px)`);
 
   /* ---------- §3 «실제로 움직인다» — 픽셀 판정 ---------- */
   sec('§3 픽셀 — 배경 0s/3s · 썸네일 0s/0.4s');
