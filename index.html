@@ -2993,8 +2993,18 @@
      이모지는 정사각 글리프라 274×204(가로가 긴 상자)를 한 축만으로는 못 채운다 →
      font-size 로 **높이**를 맞추고 `transform:scaleX()` 로 **폭**을 채운다.
      122 의 상시 연출은 개별 속성(`scale`/`translate`/`rotate`)만 쓰므로 `transform` 칸은 비어 있다 — 충돌 없음. */
-  .shp-card .cart{left:99px;top:160px;width:274px;height:204px;font-size:188px;line-height:204px;
-    text-align:center;transform:scaleX(1.334);filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+  .shp-card .cart{left:99px;top:158px;width:274px;height:204px;font-size:185px;line-height:204px;
+    text-align:center;transform:scaleX(1.343);filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+  /* 4회차 — 비평가 G·H 공통 지적 «카드2 아트 폭 −18%». 원인은 **이모지마다 글리프 종횡비가 다른데
+     scaleX 를 한 값으로 돌려쓴 것**이다. font-size 200 에서 잰 글리프 잉크(도구 없이 재현 가능:
+     흰 바탕에 fs200 으로 찍고 잉크 bbox):
+       🗡️ 221×221 · 🛡️ **182**×221 · 📿 222×221 · 📜 223×212 · 🐾 220×197
+     슬롯 274×204 를 채우려면 fs = 200×204/h, scaleX = 274/(w×204/h) 를 **칸마다** 따로 줘야 한다.
+     🛡️ 는 폭이 다른 것들보다 18% 좁아서 공용 1.343 으로는 224px 밖에 안 찼다. */
+  .shp-card:nth-child(2) .cart{font-size:185px;transform:scaleX(1.631)}   /* 🛡️ 182×221 */
+  .shp-card:nth-child(3) .cart{font-size:185px;transform:scaleX(1.337)}   /* 📿 222×221 */
+  .shp-card:nth-child(4) .cart{font-size:192px;transform:scaleX(1.277)}   /* 📜 223×212 */
+  .shp-card:nth-child(5) .cart{font-size:207px;transform:scaleX(1.203)}   /* 🐾 220×197 */
 
   /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
@@ -3057,8 +3067,11 @@
   .shp-card>.adbadge{left:702px;top:200px;width:66px;height:53px;border-radius:12px;
     background:linear-gradient(180deg,#E7A62B,#C26C16);border:7px solid #000;box-sizing:border-box;
     transform:rotate(-6deg);z-index:3;line-height:43px;text-align:center}
-  .shp-card>.adbadge>i{font-size:23px;font-weight:900;color:#fff;
-    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:scaleX(.9)}
+  /* 4회차 — G·H 공통 «▶AD 캡션이 좌상단으로 치우쳤다». ref 흰 잉크(«▶AD» 통째) 38×25 @ 카드기준
+     중심 (749.5,232) / 구현 42×19 @ (736.5,227) — 13px 왼쪽·5px 위이고 종횡비도 2.2 vs 1.52 로 납작했다.
+     ref 는 캡션이 금 플라크(709..759) 오른쪽으로 삐져나온다. */
+  .shp-card>.adbadge>i{font-size:30px;font-weight:900;color:#fff;
+    -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:translate(8px,7px) scaleX(.62)}
   /* 10회 버튼(기하만) */
   .shp-card .b2{left:476px;top:262px;width:208px;height:127px;border-radius:39px}
   /* 30회 버튼(기하만) */
@@ -3072,9 +3085,11 @@
   .shp-card .cbtn.lack>.lab{color:#DADADA}
   /* 3회차: ref 💎 잉크 37×37 (패널 좌단 +2, 패널 높이와 같은 37) / 구현 26×30 에 23px 우측이었다.
      아이콘은 `<img class=cic>` 라 글꼴 크기가 아니라 **박스 크기**로 잉크를 맞춘다(아이콘 내부 여백 ≈33%). */
-  .shp-card .cbtn>.pan .gem{position:absolute;left:-4px;top:-6px;width:50px;height:50px;
-    -webkit-text-stroke:0;line-height:50px;text-align:center}
-  .shp-card .cbtn>.pan .gem>.cic{width:50px;height:50px;vertical-align:top}
+  /* 4회차 — G·H 공통 «젬 38×42 vs ref 37×37, 패널 위로 9~11px 돌출». 아이콘 PNG 는 정사각이 아니라
+     50×50 박스에서 잉크가 38×42 로 나온다 → `object-fit:fill` 로 박스를 49×44 로 눌러 잉크 37×37 을 만든다. */
+  .shp-card .cbtn>.pan .gem{position:absolute;left:-8.7px;top:-2.7px;width:58px;height:47px;
+    -webkit-text-stroke:0;line-height:47px;text-align:center}
+  .shp-card .cbtn>.pan .gem>.cic{width:58px;height:47px;object-fit:fill;vertical-align:top}
   /* 부족한 값(가격 · 남은 무료 횟수)만 빨강. 충분하면 `.cbtn>u` 의 흰색을 그대로 쓴다. */
   .shp-card .cbtn.lack>.cost{color:#EB6D68;paint-order:stroke fill;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
