@@ -309,7 +309,7 @@ function pwLaunch(){
     fxBeatLog.length = 0;                             /* 13회차 — 이 씬의 비트만 본다(앞 절들이 남긴 기록 제외) */
     b.click();
     const nf = () => new Promise(r => requestAnimationFrame(() => r()));
-    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9, land = [], bDips = 0, bArm = false, bMax = 1;
+    let band = null, lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9, land = [], bDips = 0, bArm = false, bMax = 1;
     const t0 = Date.now();
     while(Date.now() - t0 < 2200){
       const t = Date.now() - t0;
@@ -346,11 +346,29 @@ function pwLaunch(){
         const mm2 = pg ? String(getComputedStyle(pg).transform).match(/matrix\(([\d.\-]+)/) : null;
         if(mm2) bMax = Math.max(bMax, +mm2[1]);
       }
-      /* 복도 직진성 — 상승 중(y 500~950)인 아이콘의 x 를 재화별로 모은다 */
-      for(const f of fxFlies){
+      /* 복도 직진성 — 상승 중인 아이콘의 x 를 재화별로 모은다.
+         93 16회차 — 창을 «y 500~950» 리터럴에서 **형제 행 밴드 실측치**로 바꿨다.
+         이 항목이 지키려는 불변식은 «형제 행 옆을 지날 때 행 우변(949)+반경(27) 안으로 안 들어온다»
+         이고(6·8회차), 500 은 그 밴드의 근사치로 쓴 숫자일 뿐 의미가 없다. 16회차가 코너 «높이» 를
+         재화별로 가르면서 골드가 y550 에서 꺾이자, 밴드 **밖**(y500~577)의 정상적인 좌향 복귀가
+         이 리터럴에 걸려 «복도가 휘었다» 로 찍혔다(실측 x901 — 그러나 그 y 에는 형제 행이 없다).
+         밴드는 [2b] 가 관통을 세는 그 행들에서 그대로 뽑는다. 행이 사라지면 게이트가 조용히
+         무력해지므로 밴드 높이 하한(250px)을 같이 건다. */
+      if(!band){
+        let lo = 1e9, hi = 0;
+        for(const rw of document.querySelectorAll('#mbox .qs-r')){
+          const q = rw.getBoundingClientRect();
+          if(!q.width || q.height < 40) continue;
+          lo = Math.min(lo, q.top); hi = Math.max(hi, q.bottom);
+        }
+        if(hi > lo) band = [Math.round(lo), Math.round(hi)];
+      }
+      if(band) for(const f of fxFlies){
         if(!f.ui || f.ox == null || !f.el.isConnected) continue;
         const r = f.el.getBoundingClientRect(), cy = r.top + r.height/2;
-        if(cy > 500 && cy < 950) corr.push([f.cur, Math.round(r.left + r.width/2)]);
+        /* «상승 중» 은 그 아이콘의 퍼짐 끝점(f.ay)보다 위로 올라온 표본이다 — 퍼짐·머묾 구간은
+           복도가 아니라 출발점이라 여기서 세면 안 된다(옛 리터럴 500 이 하던 일). */
+        if(cy > band[0] && cy < Math.min(band[1], f.ay - 40)) corr.push([f.cur, Math.round(r.left + r.width/2)]);
       }
       /* 11회차 — 착지 포즈(.fx-land2)는 «알약 중심에 찍힌 한 점» 이 아니라 비행 마지막 위치에서
          알약까지 70ms 를 **주행**해야 한다. 그 전에는 47~137px 이 한 프레임에 건너뛰어 비평가
@@ -367,7 +385,7 @@ function pwLaunch(){
     const g = corr.filter(c => c[0] === 'gold').map(c => c[1]);
     const d = corr.filter(c => c[0] === 'dia').map(c => c[1]);
     const sp = a => a.length ? Math.max(...a) - Math.min(...a) : -1;
-    return { lit, samp, line, nNear, nSamp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
+    return { band, lit, samp, line, nNear, nSamp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
              gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1,
              beats:fxBeatLog.filter(v => v[1] === 'g').map(v => v[0]), bMax:+bMax.toFixed(3),
              landN:land.length, landRun:land.filter(v => v > 12).length,
@@ -383,7 +401,10 @@ function pwLaunch(){
   chk(t2c.nNear >= 3, '알약 60px 안에서 아이콘이 잡히는 표본 ' + t2c.nNear + '/' + t2c.nSamp
       + ' (캡처 리듬 100ms · ≥3 — 종단 속도가 크면 «닿는 장면» 이 프레임 사이에 빠진다)');
   chk(t2c.gMin >= 970 && t2c.dMin >= 1010,
-      '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)');
+      '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)'
+      + ' · 밴드 실측 y ' + (t2c.band ? t2c.band[0] + '~' + t2c.band[1] : '없음'));
+  chk(!!t2c.band && t2c.band[1] - t2c.band[0] >= 250,
+      '형제 행 밴드가 실제로 잡혔다 — 높이 ' + (t2c.band ? t2c.band[1] - t2c.band[0] : 0) + 'px (≥250 — 밴드가 비면 위 두 항목이 조용히 무력해진다)');
   /* 11회차 회귀 — 착지 «순간이동» 금지. 주행 표본(>12px)이 있어야 하고, 끝점은 알약 중심 6px 안이며,
      주행 거리는 한 프레임 도약(≈140px)보다 커지면 안 된다. */
   {

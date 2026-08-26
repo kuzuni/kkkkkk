@@ -20985,6 +20985,9 @@ const FX3_OBROW = 76;                  /* 두 행 사이 간격(지름 45 보다
 const FX3_OUTM = 66, FX3_XCAP = FRAME_W - 40;
 const FX3_SPLIT = 0.55;                              /* 두 구간 경로의 시간 분할(leg1 : leg2) */
 const FX3_LANEX = 40;                                /* 복도에서 재화별로 벌리는 x 간격 */
+/* 16회차 — 코너 «높이» 차선(위 f.cy2 주석). PAD = 형제 행 밴드 윗변 위로 남기는 여유,
+   REF = «이만큼 되돌아가면 하한까지 내려간다» 는 좌향 복귀 기준 거리(골드 416 · 다이아 196). */
+const FX3_CY2PAD = 26, FX3_CY2REF = 420;
 /* 26회차 — 비행 크기 규격 2개(위 흡수 구간 주석). FLYS = 퍼짐 끝·머묾·흡수 내내 같은 배율,
    LAND = 도착 배율(23회차 확정값 — 세 비평가가 «잘된 점» 에 넣은 그림이라 못 바꾼다). */
 const FX3_FLYS = 0.70, FX3_LAND = 0.50;
@@ -21072,6 +21075,17 @@ function fx3Out(p){
    두 게이트를 동시에 세우는 자리는 이 밴드 하나뿐이다. */
 const FX3_ROW = '.qs-r, .ml-r';                      /* 재화가 «행 안» 에서 출발하는 리스트 행 */
 const FX3_EYPAD = 3, FX3_EYUP = 22, FX3_EYMIN = 14;  /* 밴드 여유 · 행 위로 빌리는 상한 · 최소 밴드 폭 */
+/* 16회차 — 형제 행 밴드의 «윗변». 코너 높이 차선(FX3_CY2PAD)이 내려갈 수 있는 하한이다.
+   행이 하나도 없으면 0 을 돌려 코너가 종전(패널 윗변)에 그대로 머물게 한다. */
+function fx3RowTop(){
+  let top = 0;
+  for(const el of document.querySelectorAll(FX3_ROW)){
+    const r = fxRect(el);
+    if(!r || r.h < 40 || !r.w) continue;
+    top = top ? Math.min(top, r.y) : r.y;
+  }
+  return top;
+}
 function fx3Escape(p){
   let row = null, rr = null;
   for(const el of document.querySelectorAll(FX3_ROW)){
@@ -21379,7 +21393,21 @@ function fxFly(from, cur, n){
         /* 7회차 — 복도 x 를 재화별로 벌린다. 팬에서 각도 레인을 나눠도 **복도에서 다시 한 줄로
            모여** 골드·다이아 중심거리가 21px(지름 47~52px → 26~28px 겹침)까지 붙었다(비평가 V ②). */
         f.ox = outX - (lane === 1 ? FX3_LANEX : 0);
-        f.cy2 = clamp((fx3Top || to.y + 240) - 20, to.y + 120, ay - 200);
+        /* 16회차 — 15차 2인 공통 ③ «씬B 경로가 L 자로 우회한다»(AN 직선 대비 최대 이탈 654px ·
+           AO «y970→568 402px 동안 dx 가 1px 도 안 줄어든다 = 세로 여정의 43%», 4명 2회차).
+           우회 자체는 **버그가 아니라 6회차의 설계**다(형제 행 위를 날면 «저 행도 완료됐나» 로
+           읽힌다 — verify93 [2c] 가 «복도 최소 x» 로 못 박고 있다). 그러나 AN 이 준 손잡이는
+           고칠 수 있다: **골드 차선 1000 · 다이아 1040 이 40px 밖에 안 떨어져 있는데 목표는 260px
+           떨어져 있다** — 두 재화가 «한 줄로 올라갔다가 서로 다른 각도로 꺾이는» 그림이 된다.
+           → 코너 «높이» 도 차선처럼 가른다. 좌향 복귀가 긴 재화(골드 416px)는 **더 낮은 데서**
+           꺾어 긴 대각을 쓰고, 짧은 재화(다이아 196px)는 종전대로 패널 윗변에서 꺾는다.
+           내려갈 수 있는 하한은 **형제 행 밴드 윗변 − FX3_CY2PAD** 다 — 그보다 아래에서 꺾으면
+           되꺾임이 행 밴드 안에서 일어나 [2b] 관통 게이트가 깨진다(6회차가 실측으로 확인한 것).
+           복도 규칙(x)은 한 픽셀도 안 건드린다. */
+        const cyHi = clamp((fx3Top || to.y + 240) - 20, to.y + 120, ay - 200);
+        const cyLo = clamp(fx3RowTop() - FX3_CY2PAD, cyHi, ay - 200);
+        const back = Math.abs(f.ox - to.x);
+        f.cy2 = cyHi + (cyLo - cyHi)*Math.min(1, back/FX3_CY2REF);
         /* 23회차 — 밴드가 «출발점보다 위» 이고 복도 코너보다 아래일 때만 쓴다(단조 감소 보장) */
         if(escY && ay < escY.cb + 3 && escY.ey < ay - 10 && escY.ey > f.cy2 + 10) f.ey = escY.ey;
         /* 10회차b — 축소 «잔여 20%» 를 직선거리로 재면, 두 구간 경로(실주행 ≈2000px)에서는
@@ -21439,6 +21467,30 @@ const fxPz = new Map();
    이미 쓴 처방을 그대로 쓴다: **알약을 복제해 `#fxl`(z60) 에 같은 bbox 로 다시 그린다.**
    복제본은 매 프레임 원본의 숫자를 따라가고, 펄스 배율도 같이 받는다. */
 const fxLit = new Map();
+/* 16회차 — 15차 2인 공통 ⑦ «HUD 알약이 첫 도착보다 460~480ms 먼저, 하드컷으로 켜진다».
+   AN 실측 골드 알약 휘도 27.6(t=−162) → **54.8(t=82 에 이미 만휘도, 0프레임 램프)**, 첫 골드
+   반영은 t=562 · AO 41.7 → 86.0(t=82) 로 두 사람이 «점등 시각·램프 0프레임» 을 각자 재서 일치.
+   AN 은 소등이 ~190ms 페이드라 **점등:소등 = 0:2.3 비대칭**이라고도 적었다.
+   → 복제판은 여전히 «어디로 가는지» 를 알려야 하므로 **트리거에 뜨되 하드컷을 없앤다**:
+     점등 램프의 끝을 **첫 도착 설계값(FX3_ARR0 0.50s)** 에 맞춘다 — 스폰이 트리거 +82ms 이므로
+     0.44s 램프면 만휘도가 t≈520ms 로 첫 도착(실측 562)과 겹친다. 「코인이 다가올수록 밝아진다」.
+   소등은 .09s → 0.22s 로 늘려 점등:소등 = 2:1 로 둔다(전 회차는 0:2.1 로 부호가 반대였다). */
+const FX3_LIT_IN = 0.44, FX3_LIT_OUT = 0.22;
+/* 16회차 — AN ⑦-ⓐ «다이아 최종값 390 이 **이미 소등된** 알약 위에 뜬다(f16)» · ⓑ «골드·다이아
+   소등이 96ms 어긋난다». 원인은 소등 트리거가 «펄스 진폭 감쇠» 라 재화별로 마지막 도착 시각을
+   그대로 물려받는 것이다. 소등을 **«숫자가 정착할 때까지» 유예**하고, 유예가 풀리는 프레임에
+   **대기 중인 알약을 한꺼번에** 끈다 — ⓐ 는 «최종값이 켜진 알약에 찍힌다» 로, ⓑ 는 0ms 로 닫힌다.
+   FX3_LIT_WAIT 은 백스톱이다(실전 전투는 S.gold 가 계속 올라 «정착» 이 안 온다). */
+const FX3_LIT_WAIT = 900;
+const fxLitWait = new Map();                         /* el → 유예 마감(performance.now 기준) */
+function fx3LitBusy(){
+  if(fxFlies.some(f => f.ui)) return true;           /* 아직 날고 있다 */
+  for(const k in fxDisp){                            /* 알약 숫자가 아직 구르고 있다 */
+    const d = fxDisp[k];
+    if(d != null && Number.isFinite(d) && Math.round(d) !== Math.round(S[k])) return true;
+  }
+  return false;
+}
 function fxLitOn(el){
   if(!el || fxLit.has(el)) return;
   const m = $('modal');
@@ -21456,7 +21508,13 @@ function fxLitOn(el){
   c.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
   c.style.width = r.w + 'px'; c.style.height = r.h + 'px';
   p.appendChild(c);
+  p.style.opacity = '0';
   L.appendChild(p);
+  /* 리플로우를 한 번 강제하지 않으면 append 와 같은 스타일 재계산에 묶여 램프가 통째로 생략된다
+     (opacity 0 → 1 이 «초기값» 으로 접힌다). 이 저장소가 `.jz-badp` 에서 이미 겪은 함정이다. */
+  void p.offsetWidth;
+  p.style.transition = 'opacity ' + FX3_LIT_IN + 's cubic-bezier(.25,.1,.25,1)';
+  p.style.opacity = '1';
   fxLit.set(el, { p, c });
 }
 function fxLitOff(el){
@@ -21466,9 +21524,10 @@ function fxLitOff(el){
   /* 10회차 — 그냥 remove 하면 딤 위 밝은 알약이 **한 프레임에 −58%** 로 꺼져 하드컷으로 읽힌다
      (비평가 AC ③). 짧게 크로스페이드시키고 지운다. */
   const p = t.p;
-  p.style.transition = 'opacity .09s linear';
+  fxLitWait.delete(el);
+  p.style.transition = 'opacity ' + FX3_LIT_OUT + 's linear';
   p.style.opacity = '0';
-  setTimeout(() => { if(p.parentNode) p.remove(); }, 120);
+  setTimeout(() => { if(p.parentNode) p.remove(); }, FX3_LIT_OUT*1000 + 40);
 }
 function fxPzHit(el, beat){
   if(!el) return false;
@@ -21501,6 +21560,12 @@ function fxPzHit(el, beat){
   return true;
 }
 function fxPzTick(dt){
+  /* 16회차 — 유예 중인 복제판을 «한 프레임에 같이» 끈다(위 FX3_LIT_WAIT 주석). fxPz 가 비어도
+     돌아야 하므로 아래 early return **앞**에 둔다. */
+  if(fxLitWait.size){
+    const busy = fx3LitBusy(), now = performance.now();
+    for(const [el, dl] of fxLitWait) if(!busy || now > dl) fxLitOff(el);   /* fxLitOff 가 대기표도 지운다 */
+  }
   if(!fxPz.size) return;
   /* 6회차 — 마지막 도착 뒤에도 +3.7~7.5% 가 200~350ms 남아 «안 꺼진다» 로 읽혔다(비평가 T ⑦).
      아직 날고 있는 UI 아이콘이 없으면 시상수를 1/3 로 줄여 빠르게 가라앉힌다. */
@@ -21512,7 +21577,10 @@ function fxPzTick(dt){
     if(h <= 0){ a = st.a*k; h = 0; }
     if(a < 0.004 || !el.isConnected){
       fxPz.delete(el);
-      fxLitOff(el);
+      /* 16회차 — 진폭이 다 죽어도 «숫자가 정착할 때까지» 는 복제판을 안 끈다(위 FX3_LIT_WAIT).
+         대기표에 올려 두면 다음 프레임부터 위 블록이 두 알약을 같은 프레임에 같이 끈다. */
+      if(el.isConnected && fxLit.has(el)) fxLitWait.set(el, performance.now() + FX3_LIT_WAIT);
+      else fxLitOff(el);
       if(el.style){ el.style.transform = ''; el.style.transformOrigin = ''; }
       continue;
     }
@@ -22238,7 +22306,13 @@ function fxTick(dt){
                11회차 AG ③-3 까지 3인 일치). leg2 는 이미 형제 행 밴드(y577~956) **위**에서만
                도므로 좌향 복귀를 앞당겨도 행 게이트와 무관하다 — 첫 제어점을 목표 쪽으로 25%
                당기고 둘째를 tx+90 → tx+20 으로 내린다(다이아 y239 에서 x≈923, 버튼 좌변까지 20px). */
-            const c1 = f.ox - (f.ox - f.tx)*0.25, c2 = f.tx + 20;
+            /* 16회차 — 좌향 복귀가 긴 재화일수록 첫 제어점을 더 당긴다(위 f.cy2 «코너 높이 차선»
+               과 같은 손잡이의 x 판). 0.25 고정은 골드(복귀 416px)에서 코너 직후 dx 가 거의 안
+               줄어 AO 의 «402px 동안 dx 가 1px 도 안 줄어든다» 를 leg2 까지 끌고 갔다.
+               leg2 는 이미 형제 행 밴드 **위**에서만 돌므로 좌향 복귀를 앞당겨도 [2b] 게이트와 무관하다
+               (12회차 주석이 같은 근거로 0.25 를 도입했다 — 여기서는 그 계수를 거리 비례로 연다). */
+            const c1 = f.ox - (f.ox - f.tx)*(0.25 + 0.25*Math.min(1, Math.abs(f.ox - f.tx)/FX3_CY2REF)),
+                  c2 = f.tx + 20;
             /* 7회차 — 첫 제어점을 코너보다 140px 위에 두니 곡선이 복도를 y≈243 까지 더 타고 올라가
                «좌향 복귀» 가 패널 윗변이 아니라 HUD 라인에서 일어났다(비평가 W ①: 전환점 +217px,
                그 결과 접근 코인이 알약 숫자의 35% 를 가렸다). 코너 바로 위(−34px)로 내린다. */
