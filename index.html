@@ -1770,7 +1770,11 @@
      (같은 6글자로 대조: ref `45/200` 총잉크 w92 vs 우리 `50/224` w70). 숫자는 이 서체가 좁다(05 «폰트»)
      → `<em>` 의 scaleX 로만 편다. 92/70 = 1.31. `<i>` 는 채움 바가 이미 쓰고 있어 `<em>` 을 쓴다. */
   .qs-p b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:22px;color:#FAFAFA;-webkit-text-stroke:calc(var(--st-body) * 1em) #000}
+    font-size:22px;color:#FAFAFA;
+    /* 126 10회차 — 측정표 22 5-4: ref 진행바 글자 외곽선은 바깥 2px(순검정 획 1~2).
+       필요한 스트로크는 4px = r .18 이라 본문(.16 = 3.52 · 바깥 1.76, ref 대비 -12%)이 아니라
+       HUD 토큰(.19 = 4.18 · 바깥 2.09, +4.5%)이 맞다. 토큰은 역할이 아니라 비율이다. */
+    -webkit-text-stroke:calc(var(--st-hud) * 1em) #000}
   .qs-p b em{display:block;transform:scaleX(1.31)}
   /* 보상 받기 195×118 — 검정 6, 회색(비활성)/초록(활성) 베벨.
      [모두 받기] 의 바닥 그림자 밴드가 14px 였다 — ref 는 7px(면이 그만큼 길다) 이라 되돌렸다.
@@ -3361,7 +3365,11 @@
 
   /* 던전명 — rel +42/+44, 잉크높이 52, #FDFF84, 검정 외곽선 4px */
   .dnc .nm{left:39px;top:40px;height:56px;line-height:56px;font-size:56px;font-weight:900;
-    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
+    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;
+    /* 126 10회차 — 측정표 03 던전 이름: ref 외곽선 바깥 4~5px(x86~90 검정 -> 91부터 노랑).
+       fs 56 에서 필요한 스트로크는 8~10px = r .143~.179 → 본문 토큰(.16 = 8.96 · 바깥 4.48)이
+       그 한가운데다. 작은라벨(.13 = 7.28 · 바깥 3.64)은 ref 하한보다 얇다. */
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;
     white-space:nowrap}
   .dnc .nm i{transform:scaleX(1)}
 
