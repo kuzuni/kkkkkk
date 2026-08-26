@@ -3421,9 +3421,15 @@
     box-shadow:inset 0 6px 0 var(--hr);text-align:center;line-height:97px}
   /* 헤더 제목 — 3회차 실측: ref 잉크(흰 채움) 182×41, 2회차 구현 147×38(폭 −19% 높이 −7%).
      높이는 font-size 로(47→51), 폭은 scaleX 로(.9→1.03) 채운다. */
-  /* 126 ③ 9회차 — 12px 고정 = r .235 로 **391곳 중 최대**다. r7 비평가 O(+18.1%)·P(+50%)가
-     ③ 에서 «두꺼운 쪽» 으로 든 유일한 자리이고 둘이 같은 자리를 짚었다(§17-4). 45px+ 토큰 → 9.69px. */
-  .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;
+  /* 126 ③ 9회차 — 12px 고정 = r .235 로 **391곳 중 최대**였다. 네 비평가가 두 회차·네 지표로
+     한 자리를 가리켰다: r7 O(+18.1%)·P(+50%), r8 **Q(+71.4%)·R(+71%)**.
+     r8 의 두 사람은 서로 다른 지표(bbox 차분 / 광선)인데 **우리 6.00px · ref 3.50px 로 숫자가
+     완전히 같다** — 이 작업 전체에서 가장 강한 근거다. 바깥 띠 = sw/2 이므로 목표 sw = 7.0px.
+     크기대로는 «45px+» 지만 이 자리의 실측 비율은 r = 7.0/51 = **.137** 이라 45px+ 토큰(.19 → 9.69,
+     ref 대비 +38%)으로는 못 맞춘다. 토큰은 «역할» 이 아니라 «비율» 이므로 값이 맞는 쪽에 올린다:
+     `--st-small`(.13) × 51 = **6.63px** → 바깥 3.31 vs ref 3.50 = **−5.4%**(두 비평가가 «사실상
+     일치» 로 부른 폭 안). 카드 헤더가 큰 글자인데도 외곽선이 얇은 것은 레퍼런스 자체가 그렇다. */
+  .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
     transform:scaleX(1.03) translateY(4px);letter-spacing:-1px}
   /* 검정 테두리 레이어 */
   .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
