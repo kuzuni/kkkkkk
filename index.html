@@ -5545,12 +5545,21 @@
     100%{translate:0 0;       opacity:calc(.45 * var(--jz-glow));scale:.75}}
   /* ⚠ 3회차(O ①④) — 2회차는 «열(3n)» 단위로 위상을 줘서 카드 6장이 **3박자**로 움직였다
      (실측: 1행1열과 2행1열의 밝기 시계열이 소수점까지 겹친다). 격자는 3열이지만 **칸은 6개** 이므로
-     6주기로 흩는다. `.cn-cd` 는 `.cn-wrap` 안에서 리본·배너와 형제라 nth-child 값은 «위상 시드» 로만 쓴다. */
-  .cn-cd:nth-child(6n+1)>.pn>em{animation-delay:calc(-.43s * var(--jz-per))}
-  .cn-cd:nth-child(6n+2)>.pn>em{animation-delay:calc(-.86s * var(--jz-per))}
-  .cn-cd:nth-child(6n+3)>.pn>em{animation-delay:calc(-1.29s * var(--jz-per))}
-  .cn-cd:nth-child(6n+4)>.pn>em{animation-delay:calc(-1.72s * var(--jz-per))}
-  .cn-cd:nth-child(6n+5)>.pn>em{animation-delay:calc(-2.15s * var(--jz-per))}
+     6주기로 흩는다. `.cn-cd` 는 `.cn-wrap` 안에서 리본·배너와 형제라 nth-child 값은 «위상 시드» 로만 쓴다.
+
+     ⚑⚑ 16회차 — **여기 있던 «둥실»(`>.pn>em`) 5줄을 지웠다. 그 5줄이 15회차의 위상 격자를
+     통째로 죽이고 있었다.** 15회차는 위(§②-1)에서 `.cn-cd>.pn>em{animation-delay:calc(2.6s *
+     var(--jz-k))}` 로 «광택과 같은 (1/3, 1/2) 격자를 둥실이 공짜로 물려받는다» 고 적었는데,
+     **물려받은 적이 없다** — 이 3회차 규칙이 `.cn-cd:nth-child(…)>.pn>em`(특이도 0,3,1)로
+     `.cn-cd>.pn>em`(0,2,1)을 이겨서, 렌더가 박아 주는 `--jz-k` 는 한 칸에도 안 닿았다.
+     실측(computed `animation-delay` 덤프): cd0 은 `--jz-k:0.0000` 인데 delay 가 **−0.86s** 였고,
+     0.43s 배수(3회차 값)와 `2.6×--jz-k` 값(−0.86658·−2.16658)이 **한 페이지에 섞여** 있었다 —
+     `6n+6` 자리만 규칙이 없어 그 칸들만 `--jz-k` 로 떨어졌기 때문이다.
+     16회차 비평가 AK 가 화소에서 같은 것을 짚었다: 실측 위상 `0 / 0.845 / 0.680 / 0.501 / 0.500`
+     (뜻한 값 `0 / .333 / .667 / .5 / .833`) · 맞닿은 가로 3쌍이 전부 **15.5~16.5%**(사양 33%) ·
+     r1c0↔r1c1 은 **3ms(0.1%) = 완전 동위상**.
+     → 5줄을 지우면 `--jz-k` 가 비로소 산다. 스파클(`::before`/`::after`)의 nth-child 규칙은
+       `--jz-k` 짝이 없는 **다른 애니메이션**이라 그대로 둔다. */
   .cn-cd:nth-child(6n+1)>.pn::before{animation-delay:calc(-.9s * var(--jz-per))}
   .cn-cd:nth-child(6n+2)>.pn::before{animation-delay:calc(-1.8s * var(--jz-per))}
   .cn-cd:nth-child(6n+3)>.pn::before{animation-delay:calc(-2.7s * var(--jz-per))}

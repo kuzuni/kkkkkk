@@ -1295,16 +1295,19 @@ async function ampCheck(p, hosts) {
      122 의 연출이 스크롤 비용을 늘리지 않았는가가 실제로 물어야 할 것이다. 절대값은 기록만 남긴다.
 
      ⚑ 16회차 — 이 항목이 «간헐 FAIL» 이었다(15회차 6회 중 1회, 0.14fps 차로 뒤집힘).
-     원인은 «중앙값을 안 써서» 가 아니라 **중앙값을 잘못 쓴 것**이다. 15회차까지는
-     `median(ON) / median(OFF)` 를 봤는데, 이러면 두 중앙값이 **서로 다른 시각의 표본**이라
-     컨테이너 부하 드리프트가 상쇄되지 않는다 — 우연히 느린 ON 표본과 빠른 OFF 표본이
-     각자의 중앙 자리에 앉으면 그대로 비율이 무너진다.
-     → **쌍(pair)으로 먼저 나눈 뒤 그 비율의 중앙값**을 본다. on[i]·off[i] 는 등을 맞대고
-     연속으로 재므로 부하 드리프트가 쌍 안에서 공통항으로 지워지고, 튄 표본 하나는
-     «비율 하나» 로 격리돼 중앙값이 버린다.
-     표본을 4 → **5쌍**(홀수)으로 올려 중앙값이 진짜 가운데 원소가 되게 했고,
-     쌍마다 ON·OFF **순서를 번갈아** 단조 드리프트의 부호까지 상쇄한다. */
-  console.log('§8 스크롤 fps — ON/OFF 교차 5쌍 · 쌍별 비율의 중앙값 (절대값은 러너 상한에 걸려 기록만)');
+     **먼저 «쌍별 비율의 중앙값» 으로 바꿨다가 되돌렸다.** 그 처방은 잡음이 «느린 드리프트» 일
+     때만 옳은데, 실측은 그렇지 않았다 — 한 실행 안에서
+       ON 10.5/8.6/8.8/11.2/9.7 (산포 30%) · OFF 9.7/11/9.9/9.9/10.8 (산포 13%)
+     처럼 **표본마다 독립으로 튄다.** 독립 잡음에서는 두 잡음값을 나눈 «비율» 이 오히려 분산을
+     키우고(그 실행에서 쌍별 비율은 0.782~1.131 로 벌어졌다), 중앙값끼리의 비는 양쪽 잡음이
+     각자 평균화돼 0.980 으로 안정적이었다. 즉 **15회차의 추정량이 옳았다** — 문제는 추정량이
+     아니라 **표본 수**였다.
+     → 추정량은 `median(ON)/median(OFF)` 로 되돌리고, 표본을 4 → **7쌍**(홀수)으로 올린다.
+       쌍마다 ON·OFF 순서를 번갈아 단조 드리프트의 부호도 함께 상쇄하고,
+       쌍별 비율은 **판정이 아니라 진단**으로만 찍는다(다음 세션이 잡음 종류를 바로 보게).
+     ⚠ 이 러너의 절대 fps 는 동시에 도는 다른 프로세스에 크게 눌린다(같은 세션에서
+        서브에이전트 2명이 돌 때 소환 탭이 28fps → 9fps 로 떨어졌다). 절대값은 여전히 기록용이다. */
+  console.log('§8 스크롤 fps — ON/OFF 교차 7쌍 · 중앙값끼리 비교 (절대값은 러너 상한에 걸려 기록만)');
   const OFFCSS = '#shopList *,#shopList *::after,#shopList *::before{animation-name:none!important}';
   const setCss = c => p.evaluate(x => {
     let s = document.getElementById('v122fps');
@@ -1323,7 +1326,7 @@ async function ampCheck(p, hosts) {
     requestAnimationFrame(tick);
   }));
   const med = a => a.slice().sort((x, y) => x - y)[(a.length - 1) >> 1];
-  const PAIRS = 5;
+  const PAIRS = 7;
   for (const tab of ['coin', 'summon']) {
     await p.evaluate(t => { shopCat = t; setShopCatTabs(t); renderShopPage(); }, tab);
     await p.waitForTimeout(400);
@@ -1339,12 +1342,14 @@ async function ampCheck(p, hosts) {
     await setCss('');
     const ratios = on.map((v, i) => +(v / off[i]).toFixed(3));
     const mR = med(ratios), mOn = med(on), mOff = med(off);
+    const r = mOn / mOff;
     console.log('   ' + (tab === 'coin' ? '재화' : '소환') + ' 탭 — ON ' + on.join('/')
       + ' · OFF ' + off.join('/'));
-    console.log('     쌍별 비율 ' + ratios.join('/') + ' → 중앙 ' + mR
-      + '   (참고: 중앙값끼리의 비 ' + (mOn / mOff).toFixed(3) + ')');
-    ok(mR >= 0.9, (tab === 'coin' ? '재화' : '소환') + ' 탭 스크롤 비용 증가 없음 — 쌍별 ON/OFF 비율 중앙값 '
-      + mR + ' ≥ 0.9 (ON 중앙 ' + mOn + 'fps · OFF 중앙 ' + mOff + 'fps)');
+    /* 진단용 — 쌍별 비율이 넓게 벌어져 있으면 잡음이 «드리프트» 가 아니라 «표본 독립» 이라는 뜻이다 */
+    console.log('     중앙 ON ' + mOn + ' / OFF ' + mOff + ' → 비 ' + r.toFixed(3)
+      + '   (진단: 쌍별 비율 ' + ratios.join('/') + ' · 그 중앙 ' + mR + ')');
+    ok(r >= 0.9, (tab === 'coin' ? '재화' : '소환') + ' 탭 스크롤 비용 증가 없음 — ON 중앙 '
+      + mOn + 'fps ≥ OFF 중앙 ' + mOff + 'fps × 0.9 (비 ' + r.toFixed(3) + ')');
   }
 
   /* ── §9 콘솔 ────────────────────────────────────────────────── */
