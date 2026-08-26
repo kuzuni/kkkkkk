@@ -11728,8 +11728,24 @@ function impactFx(x, y, vx, vy, col, crit, g){
      각자 다른 위상(f)으로 자라고 있었기 때문이다. **바깥 링을 안쪽 링의 상수배로 묶는다** —
      r0·r1 을 같은 배수로 주고 수명·지연을 일치시키면 f 가 항상 같아 비가 전 구간 IMP_K 로 고정된다 */
   const ir = crit ? 30 : 26;   /* 9회차 AI — 치명타 바깥 링이 Ø110 = 적 몸통(34)의 3.2배였다 → 바깥 Ø97 */
-  fxRing(x, y, ir, crit ? '#ffe27a' : col, IMP_LIFE, crit ? FX_W2 : FX_W, 2);
-  if(crit) fxRing(x, y, ir*IMP_K, '#fff0b8', IMP_LIFE, FX_W, 2*IMP_K, 0, 1);   /* 치명타 = 링 2겹(비 고정) */
+  /* 10회차 AK — 7회차에 «형제 링이 서로를 억제하는 것» 을 막으려고 넣은 `nd` 가 **남의 임팩트까지**
+     억제에서 빼 버렸다. 그래서 연타 때 치명타 바깥 링만 쌓여 한 적 위에 3겹(9.2/16.8/27.5 게임px)이 됐다.
+     억제는 «링 단위» 가 아니라 **«임팩트 단위»** 여야 한다: 이 타격을 그릴지 말지를 먼저 한 번 정하고,
+     그리기로 했으면 두 링을 형제로 함께 올린다(그때만 nd 로 서로를 안 죽이게 한다) */
+  for(let i=rings.length-1;i>=0;i--){
+    const q = rings[i];
+    if(q.t > IMP_LIFE*0.8 || q.t < 0 || !q.imp) continue;
+    if((q.x-x)*(q.x-x) + (q.y-y)*(q.y-y) < 2025){ q.t = 0; return; }   /* 45px 안 최근 임팩트 → 되살리고 끝 */
+  }
+  /* r0 를 2 → 12 로 띄운다(AK: 첫 프레임부터 두 링 간격 ≥ 7.4 게임px = 선폭 6+4 합보다 큼).
+     ★ 두 링의 r0 를 **같은 배수로** 올려야 한다 — 안쪽만 두고 바깥만 띄우면 7회차에 고정한
+     반경 비 1.62(비평가 4명이 회수 확인)가 t=0 에서 9.7 로 깨진다 */
+  fxRing(x, y, ir, crit ? '#ffe27a' : col, IMP_LIFE, crit ? FX_W2 : FX_W, 12, 0, 1);
+  rings[rings.length-1].imp = 1;
+  if(crit){
+    fxRing(x, y, ir*IMP_K, '#fff0b8', IMP_LIFE, FX_W, 12*IMP_K, 0, 1);   /* 치명타 = 링 2겹(비 고정) */
+    rings[rings.length-1].imp = 1;
+  }
 }
 /* ③ 폭발 충격파 — 확장 링 2겹 + 흙·불 파편 + 소폭 흔들림(3). 2단(지연 0.10s)으로 «크게 터지는 느낌» */
 function boomFx(x, y, r, col, big){
@@ -11814,7 +11830,10 @@ function hitEnemy(e, dmg, crit, kx, ky){
   e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
   /* 8회차 AG — 스폰 오프셋이 적 머리 위 140~220px(스태거 포함)이라 «어느 적이 맞았는지» 가 안 붙었다.
      스태거(numSeq%4 * 44)는 겹침 방지 게이트라 그대로 두고 «기본 높이» 만 낮춘다 */
-  dmgNum(e.x, e.y - e.r*1.4, dmg, crit);
+  /* 10회차 AK — 사다리 상한이 e.r*1.4(23.8) + 스태거 48 + 상승 38 = **109.8** 이라 목표 90 이
+     설정상 도달 불가였다(실측 최대 110 이 정확히 상한). 스태거 24 는 게이트(≥20)라 두고
+     기본 높이와 상승으로 맞춘다: 13.6 + 48 + 28 = **89.6** */
+  dmgNum(e.x, e.y - e.r*0.8, dmg, crit);
   /* 46 레이드 — 샌드백은 죽지 않는다. 모든 피해 경로가 이 함수 한 곳을 지나므로
      여기서만 누적하면 스킬·평타·장판·투사체가 전부 집계된다. */
   if(e.raid){ raidDmg += dmg; e.hp = e.max; return; }
@@ -13140,18 +13159,22 @@ function draw(){
     /* 9회차 — 상승 총량 67 은 적 몸통(34)의 2배라 사다리를 더 키웠다. 38(≈1.1 몸통)로 줄인다.
        그리고 세로도 가로처럼 클램프한다: bolt 장면에서 숫자가 캔버스 위쪽 STAGE 알약을 4프레임 연속
        침범했다(AI·AJ 공통). 화면 좌표로 환산해 HUD 아래(150)로 밀어 넣는다 */
-    const nyw = n.y - 38*(1 - Math.pow(1 - Math.min(n.t/0.40, 1), 3));
+    const nyw = n.y - 28*(1 - Math.pow(1 - Math.min(n.t/0.40, 1), 3));
     const ny = clamp(nyw + oy, 150, VH - 40) - oy;
     /* «글자가 실제로 그려지는 자리»(nx·ny)로 판정한다 — n.x·n.y 로 재면 위로 뜬 뒤에도 계속 hot 이다 */
     /* 9회차 AJ — hot 반경이 32*scale*0.75(=120) 인데 화구 발광 bbox 는 171게임px 까지 나간다.
        120~171 띠에 앉은 숫자는 플레이트 없이 주황으로 그려져 대비 2.02:1 이 됐다(플레이트본 6.42:1).
        스프라이트는 64px 프레임을 scale 배로 그리므로 **실제 반경은 32*scale** 이다 — 0.75 는 근거 없는
        축소였다. 그린 자리 전체를 덮도록 1.05 배(약간의 발광 여유)로 잡는다 */
-    let hot = 0;
+    /* 10회차 AK — 숫자가 화구보다 2프레임 더 살아서, 화구가 꺼지는 순간 플레이트가 1프레임 만에
+       사라지고 대비가 2.63 → 1.57 → 1.22:1 로 무너졌다(«플레이트 on→off 전환 0프레임»).
+       판정을 «지금 화구 안인가» 가 아니라 **«한 번이라도 화구 안이었나»** 로 래치한다 —
+       그 숫자는 남은 수명 동안 플레이트를 유지한다 */
     for(const bb of booms){
       const hr = 32*bb.scale*1.05;
-      if((bb.x - nx)*(bb.x - nx) + (bb.y - ny)*(bb.y - ny) < hr*hr){ hot = 1; break; }
+      if((bb.x - nx)*(bb.x - nx) + (bb.y - ny)*(bb.y - ny) < hr*hr){ n.hot = 1; break; }
     }
+    const hot = n.hot ? 1 : 0;
     /* 8회차 AG — 7회차의 «순백 채움» 은 대비를 못 만든다. 화구 코어가 (244~255,218~227,244~247) =
        거의 흰색이라 흰 글자를 올리면 fill/bg 대비가 1.19~1.68:1 로 7회차 전(1.05:1)과 별 차이가 없다.
        **글리프 뒤에 어두운 플레이트를 깔아야** 대비가 생긴다(AG 처방: 휘도 ≤40%).
@@ -13159,13 +13182,18 @@ function draw(){
     if(hot){
       /* 9회차 AJ — 플레이트가 글리프와 «같은 α» 로 같이 삭아 스폰 14.63:1 → 수명 끝 4.67:1(1/3.1)로
          무너졌다. 플레이트는 배경을 가리는 «판» 이라 글자보다 늦게 사라져야 한다 → α 하한 0.55 */
-      const tw = ctx.measureText(n.v).width, ph = sz*1.06, pw2 = tw + sz*0.42;
-      ctx.globalAlpha = Math.max(a, 0.75);   /* 9회차 AI — 0.55 로도 뒤 3프레임이 1.91~2.17:1 이었다 */
-      ctx.fillStyle = 'rgba(10,7,5,.72)';
+      /* 10회차 AK·AL 공통 — 9회차에 칸(스태거)을 44 → 24 로 좁히면서 **플레이트가 칸보다 커졌다**
+         (플레이트 높이 1.187*sz = 치명타 안착 27.8 vs 칸 24). 그래서 위 칸 글리프의 54.5% 가 아래
+         칸 플레이트에 먹히는 회귀가 났다(8회차엔 없던 문제). 판 높이를 **칸(24) 안에** 가둔다.
+         글리프 캡하이트가 ≈0.72*sz 라 0.98*sz 로도 글자는 전부 덮인다 */
+      const tw = ctx.measureText(n.v).width, pw2 = tw + sz*0.42;
+      const ph2 = Math.min(sz*0.98, 22), pty = ny - sz*0.36 - ph2/2;
+      ctx.globalAlpha = Math.max(a, 0.85);   /* AL — 0.75 로도 말미가 무너졌다 */
+      ctx.fillStyle = 'rgba(10,7,5,.78)';
       if(ctx.roundRect){
-        ctx.beginPath(); ctx.roundRect(nx - pw2/2, ny - ph*0.82, pw2, ph*1.12, sz*0.22); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(nx - pw2/2, pty, pw2, ph2, sz*0.22); ctx.fill();
       }else{
-        ctx.fillRect(nx - pw2/2, ny - ph*0.82, pw2, ph*1.12);
+        ctx.fillRect(nx - pw2/2, pty, pw2, ph2);
       }
       ctx.globalAlpha = a;
     }
