@@ -148,9 +148,15 @@ global.__capLog = {};
        `t0.t` 는 페이지 안에서 트리거 «직전» 에 찍은 Date.now() 인데, 이 로그는 그 evaluate 가
        왕복해 돌아온 «뒤» 에 자기 시계를 0 으로 잡았다. 트리거 시각을 넘겨 같은 원점을 쓴다. */
     const log = await page.evaluate(async ([ms, t]) => {
-      const out = [];
+      const out = []; let spawn = 0;
       const nf = () => new Promise(r => requestAnimationFrame(() => r()));
       while(Date.now() - t < ms + 260){
+        /* 스폰 시각은 «rAF 로 관측한 프레임» 이 아니라 아이콘 자신이 들고 있는 시작 시각(f.st)에서
+           역산한다 — 관측으로 잡으면 한 프레임(35~50ms) 늦게 찍혀 «도착이 그만큼 이르다» 로 읽힌다. */
+        if(!spawn){
+          const f0 = fxFlies.find(f => f.ui);
+          if(f0) spawn = Math.round(Date.now() - (performance.now() - f0.st) - t);
+        }
         out.push([Date.now() - t,
                   (document.getElementById('goldN')||{}).textContent || '',
                   (document.getElementById('diaN')||{}).textContent || '',
@@ -161,7 +167,8 @@ global.__capLog = {};
                   + ' G' + Math.round(S.gold)]);
         await nf();
       }
-      return out;
+      out.spawn = spawn;
+      return { rows:out, spawn };
     }, [waitMs || 1900, t0.t]);
     const worst = pick(buf, t0.t, tag, pre);
     if(global.__capLog) global.__capLog[tag] = log;
@@ -180,11 +187,15 @@ global.__capLog = {};
     const p = fxWorld(player.x + 12, player.y - 20);
     fxAt(p);
     S.gold += 128000;
-    const t0 = await new Promise(res => {
-      const iv = setInterval(() => { if(document.querySelector('#fxl .fx-fly')){ clearInterval(iv); res(Date.now()); } }, 8);
+    /* 7회차 — 원점을 **트리거 시각**으로 통일한다(quest 씬과 같게). 예전에는 여기서 «첫 아이콘이
+       생긴 뒤» 를 찍어서 정답표의 t 원점이 씬마다 달랐고, 비평가 2명이 gain 에서도 스폰 지연을
+       한 번 더 빼는 바람에 «도착이 49~140ms 이르다» 는 없는 결함을 두 회차 연속 보고했다. */
+    const tTrig = Date.now();
+    const ok = await new Promise(res => {
+      const iv = setInterval(() => { if(document.querySelector('#fxl .fx-fly')){ clearInterval(iv); res(1); } }, 8);
       setTimeout(() => { clearInterval(iv); res(0); }, 1500);
     });
-    return t0 ? { t:t0 } : { err:'비행 아이콘이 생성되지 않았다 — 트리거 실패' };
+    return ok ? { t:tTrig } : { err:'비행 아이콘이 생성되지 않았다 — 트리거 실패' };
   });
 
   /* ── 씬 2: 보상 수령 (퀘스트) ── */
@@ -217,10 +228,10 @@ global.__capLog = {};
   if(errs.length){ console.log('콘솔 에러:'); errs.slice(0,8).forEach(e => console.log('  ! ' + e)); process.exit(1); }
   /* 프레임별 «정답» 표 — 비평 전달문에 그대로 붙인다 */
   for(const tag in global.__capLog){
-    const L = global.__capLog[tag];
+    const L = global.__capLog[tag].rows, SP = global.__capLog[tag].spawn;
     const at = ms => { let b = L[0]; for(const r of L) if(Math.abs(r[0]-ms) < Math.abs(b[0]-ms)) b = r; return b; };
     const T = (global.__capT && global.__capT[tag]) || [];
-    console.log(`  · ${tag} 정답표(t: 골드/다이아/비행수): ` +
+    console.log(`  · ${tag} 정답표(t = 트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행수): ` +
       T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[3]).join('  '));
   }
   console.log('\ncap93 OK — docs/review/93-' + ROUND + '-*.jpg');

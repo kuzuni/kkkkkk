@@ -1937,6 +1937,8 @@
   .fx-plus{position:absolute;font-style:normal;font-weight:900;font-size:40px;white-space:nowrap;
     transform:translate(-50%,0);-webkit-text-stroke:7px rgba(0,0,0,.86);paint-order:stroke fill;
     animation:fxPlus .6s cubic-bezier(.2,.8,.3,1) both}
+  /* 93 7회차 — UI 발은 도착이 1.26s 까지 이어지므로 «+n» 도 그때까지 살아 있어야 한다 */
+  .fx-plus.ui{animation-duration:1.42s}
   /* 위로 떠오르게 하면 알약이 화면 최상단이라 **HUD 숫자 위로 올라가 겹친다**(10회차 지적:
      «+128K 가 정산된 128K 위에 겹쳐 읽기 어렵다»). 알약 아래에서 흘리며 사라지게 한다.
      15회차 — 하강 46→24px(«STAGE 타이틀로 파고든다», W). 16회차 — .8s 는 «687~702ms 에도
@@ -16689,6 +16691,11 @@ const FX3_HOLD0  = 0.12, FX3_HOLD1 = 0.20;           /* (b) 머묾 */
    독립적으로 «3박자가 아니라 퍼짐 → 0.9초 정지 → 우르르의 2박자»(①2~3점)로 잡았다.
    → 전원이 **0.58s 안에 출발**하고, 도착 간격은 «비행 길이 차이» 로 만든다(0.16s ~ 0.64s). */
 const FX3_LAUNCH = 0.16;                             /* 출발 스태거 총폭 */
+/* 7회차 — «첫 도착이 사양보다 49~140ms 이르다» 는 두 회차 연속 지적(비평가 W ④ · V ③)은
+   **하네스 탓이었다.** gain 씬의 트리거는 `Date.now()` 를 «첫 아이콘이 생긴 뒤» 에 찍고 quest 씬은
+   «클릭 직후» 에 찍어서, 정답표의 t 원점이 씬마다 달랐다(gain 은 이미 스폰 기준, quest 는 트리거 기준).
+   비평가들은 gain 에서도 스폰 지연 70~135ms 를 한 번 더 빼서 그만큼 이르게 계산했다.
+   원점을 양쪽 다 «트리거» 로 통일하고 스폰 지연을 따로 찍게 고쳤다 — envelope 은 설계대로 0.50/1.22 다. */
 const FX3_ARR0   = 0.50, FX3_ARR1 = 1.22;            /* 첫 도착 · 마지막 도착 (설계값 — 프레임 granularity 로 실측은 +40~70ms) */
 const FX3_ABS0   = 0.14, FX3_ABS1 = 0.90;            /* 흡수 비행 길이 클램프 */
 /* 5회차 — 겹침이 61~74% 로 «부채꼴이 한 덩어리» 로 읽힌다(비평가 S ④). 반경 폭을 74 → 90px 로
@@ -16715,6 +16722,7 @@ const FX3_PA0 = -19 * Math.PI/180, FX3_PA1 =  26 * Math.PI/180;   /* 패널 안 
    반경 + 여유 13px 를 빼서 «잘림 0» 을 보장한다. */
 const FX3_OUTM = 176, FX3_XCAP = FRAME_W - 40;
 const FX3_SPLIT = 0.55;                              /* 두 구간 경로의 시간 분할(leg1 : leg2) */
+const FX3_LANEX = 40;                                /* 복도에서 재화별로 벌리는 x 간격 */
 const FX3_PANEL = '#mbox, #panel, .eqp, .tr-sheet';
 /* 4회차 — UI 발 알약 펄스를 **CSS 애니메이션 재시작이 아니라 JS 값**으로 굴린다.
    3회차까지는 도착마다 `.fx-punch2` 를 remove→reflow→add 로 재시작했는데, 실측하면 20ms 간격
@@ -16903,8 +16911,11 @@ function fxFly(from, cur, n){
       const a = A0 + ((i + rnd(0.15, 0.85))/cnt) * (A1 - A0);
       const rb = ((i*5) % cnt + rnd(0.15, 0.85))/cnt;       /* 반경 등간 층화(슬롯을 섞어 이웃끼리 다르게) */
       const rr = FX3_R0 + rb*(FX3_R1 - FX3_R0);
-      const ax = clamp(sx0 + Math.cos(a)*rr, 40, FRAME_W - 40);
-      const ay = clamp(sy0 + Math.sin(a)*rr, 120, frameH - 120);
+      /* 7회차 — 퍼짐 «끝점» 은 지터가 안 섞인 **원점(p0)** 기준으로 잡는다. 스폰 지터를 끝점에도
+         태우면 부채꼴이 사양(−88°~−12° · 95~195px) 밖으로 최대 7.1°·±11% 벌어져 보인다
+         (비평가 W ②③ 실측 −95.1° / 85~202px). 지터는 «출발 위치» 에만 남긴다. */
+      const ax = clamp(p0.x + Math.cos(a)*rr, 40, FRAME_W - 40);
+      const ay = clamp(p0.y + Math.sin(a)*rr, 120, frameH - 120);
       const ha = FX3_SPREAD + (FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0)) + u*FX3_LAUNCH;  /* 흡수 시작 */
       const arr = FX3_ARR0 + u*(FX3_ARR1 - FX3_ARR0);                                  /* 도착 시각 */
       const ad = clamp(arr - ha, FX3_ABS0, FX3_ABS1);
@@ -16923,15 +16934,20 @@ function fxFly(from, cur, n){
              leg1  출발 → (outX, ay) 를 두 제어점으로 → 코너(outX, cornerY)   «수평 탈출 후 수직 상승»
              leg2  코너 → 알약                                                «패널 위에서 좌향 복귀»
            수치 검증: 행 관통 표본이 6.6% → 1.0% 로 줄고 역주행·프레임 이탈은 그대로 0 이다. */
-        f.ox = outX;
+        /* 7회차 — 복도 x 를 재화별로 벌린다. 팬에서 각도 레인을 나눠도 **복도에서 다시 한 줄로
+           모여** 골드·다이아 중심거리가 21px(지름 47~52px → 26~28px 겹침)까지 붙었다(비평가 V ②). */
+        f.ox = outX - (lane === 1 ? FX3_LANEX : 0);
         f.cy2 = clamp((fx3Top || to.y + 240) - 20, to.y + 120, ay - 200);
       }else{
         /* 패널이 없으면 종전 2차 호(58 7회차) — 메인 화면에서까지 x1030 까지 크게 돌 이유가 없다 */
         const vx = to.x - ax, vy = to.y - ay, vl = Math.hypot(vx, vy) || 1;
         /* 5회차 — i*0.012 는 16번째 아이콘에서 bow 가 0.42·vl 이라, 출발 x559 → 목표 x583 인
-           사실상 수직 경로에서도 후미가 x818 까지 나갔다(비평가 R ⑥ 실측 +235px). 0.004 로 낮춘다. */
-        const bow = vl * (0.24 + i*0.004);
-        f.cx = Math.min(FRAME_W - 40, Math.max(ax, to.x) + bow*0.8);
+           사실상 수직 경로에서도 후미가 x818 까지 나갔다(비평가 R ⑥ 실측 +235px). 0.004 로 낮춘다.
+           7회차 — 기본 계수 0.24 도 여전히 +231px 이라 STAGE 진행바를 6프레임 관통하고 보스 노드를
+           통째로 가렸다(비평가 W ⑥). 패널이 없는 화면에서는 크게 돌 이유가 자체가 없다(행 오독은
+           패널 안 이야기다) — 계수를 0.10 으로, 이탈 상한을 150px 로 못박는다. */
+        const bow = vl * (0.10 + i*0.004);
+        f.cx = Math.min(FRAME_W - 40, Math.max(ax, to.x) + Math.min(150, bow*0.8));
         f.cy = Math.max(120, (ay + to.y)/2 - Math.abs(vx/vl)*bow*0.5);
       }
       fxFlies.push(f);
@@ -17028,8 +17044,11 @@ function fxPlus(cur, n, combat){
   el.style.left = (r.x + r.w/2) + 'px';
   el.style.top  = (r.y + r.h + 8) + 'px';
   el.textContent = '+' + fmt(n);
+  /* 7회차 — UI 발 3박자는 카운터가 1.26s 까지 오르는데 «+n» 은 0.6s 짜리라 **총액을 먼저 밝히고
+     먼저 사라진다**(비평가 V ④ 실측: 카운터가 총액에 닿기 203ms 전에 소멸). 수명을 도착창에 맞춘다. */
+  if(!combat) el.classList.add('ui');
   L.appendChild(el);
-  setTimeout(() => el.remove(), 840);
+  setTimeout(() => el.remove(), combat ? 840 : 1500);
 }
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
@@ -17476,8 +17495,11 @@ function fxTick(dt){
             y = w3*f.ay + 3*w2*t2*f.ay + 3*w*s2*f.ay + s3*f.cy2;
           }else{
             const t2 = (e - FX3_SPLIT)/(1 - FX3_SPLIT), w = 1 - t2, w2 = w*w, w3 = w2*w, s2 = t2*t2, s3 = s2*t2;
-            x = w3*f.ox + 3*w2*t2*f.ox + 3*w*s2*(f.tx + 120) + s3*f.tx;
-            y = w3*f.cy2 + 3*w2*t2*(f.cy2 - 140) + 3*w*s2*f.ty + s3*f.ty;
+            /* 7회차 — 첫 제어점을 코너보다 140px 위에 두니 곡선이 복도를 y≈243 까지 더 타고 올라가
+               «좌향 복귀» 가 패널 윗변이 아니라 HUD 라인에서 일어났다(비평가 W ①: 전환점 +217px,
+               그 결과 접근 코인이 알약 숫자의 35% 를 가렸다). 코너 바로 위(−34px)로 내린다. */
+            x = w3*f.ox + 3*w2*t2*f.ox + 3*w*s2*(f.tx + 90) + s3*f.tx;
+            y = w3*f.cy2 + 3*w2*t2*(f.cy2 - 34) + 3*w*s2*f.ty + s3*f.ty;
           }
         }else{
           x = v*v*f.ax + 2*v*e*f.cx + e*e*f.tx;
@@ -17529,10 +17551,11 @@ function fxTick(dt){
        → 계단 모드는 «남은 차이를 45ms 시상수로 매 프레임 좁히는» 방식으로 바꾼다. 목표가 움직여도
        따라간다. 전투 발(비선형)은 종전 고정 길이 트윈 그대로. */
     if(fxRollLin[k]){
+      /* 7회차 — 계단 사이를 45ms 로 잇던 보간을 **없앤다.** 도착 간격(48~100ms)보다 짧아도
+         표본이 보간 «중간» 에 걸리면 «11/16 도착인데 85.4A(88.0A 여야)» 처럼 계단이 아닌 값이 찍힌다
+         (비평가 W ⑤). 계단은 계단이어야 한다 — 도착 이벤트마다 한 칸씩 즉시 올린다. */
       fxRoll[k] = null;
-      const d = t - fxDisp[k];
-      if(Math.abs(d) < 1){ fxDisp[k] = t; continue; }
-      fxDisp[k] += d * Math.min(1, dt/Math.max(0.016, fxRollDur[k] || FXROLL));
+      fxDisp[k] = t;
       continue;
     }
     const R = fxRoll[k];
