@@ -1688,59 +1688,54 @@
      림 플래시 inset 16 → **8px**(K: 16px 은 상하 32px = 겉높이의 22% 를 32ms 에 뺏는데 그 뒤 88ms
      실제 수축은 26px 뿐이라 «높이 점프» 로 읽힌다) · 대신 창을 0~7~20%(**60ms = 3.6프레임**)로 넓혔다
      (L: 32ms = 1.9프레임은 타격이 아니라 드랍프레임으로 읽힌다). 값은 내리고 시간은 늘린 것이다. */
-  /* 7회차 채점(M 5 / N 5) — 둘 다 6회차 수정 6건은 «되살아난 것 없음» 으로 독립 확인했고,
-     **가로 이동 자체가 값을 못 벌고 있다**는 데 둘이 겹쳤다.
-     ⓐ N-③: x 200px 중 클립선 뒤로 실제 들어가는 건 183px = 카드폭의 23.3% 뿐이고, 수명의 72%를
-        x 에 쓰고도 **601px(76.7%)이 제자리에 남는다**(판 폭 실측 60ms 644 · 240ms 697 · 300ms 643).
-        M-③: 게다가 삭제 행 우변이 살아있는 행보다 17px **바깥**에 서서 «접히는 중인데 옆으로 넓어진»
-        것으로 읽힌다. → x 를 **16px 임펄스**로 줄였다(패널 여백 17px 안 → 튀어나옴이 구조적으로 0)
-        그리고 그 216ms 를 통째로 «접힘» 에 넘겼다. 접힘이 주역이라고 6·7회차가 두 번 말했는데
-        정작 예산은 계속 x 가 갖고 있었다.
-     ⓑ M-② «66ms(수명 22%)에 카드 폭의 54% 잉크가 0 인데 h 는 아직 137(93%)» ·
-        N-② «남은 234ms(78%)가 내용 없는 판» — 빠른 그룹이 상자보다 한참 앞서 죽었다.
-        빠른 그룹의 존재 이유는 5회차의 «우측이 클립선에 먼저 닿는다» 였는데, **내용의 가로 이동을
-        빼면 그 이유가 통째로 사라진다**(N-③ 활주로 분석: 버튼 우변은 클립선까지 37px 뿐이라
-        6%→22% 곡선에서 28ms 부터 잘리고, 썸네일은 346px 이라 끝까지 닿지도 않는다 —
-        9.4배 다른 활주로를 한 곡선에 묶은 것이 잘못이었다). → 내용은 **세로로만** 움직인다.
-     ⓒ M-① 알파 절벽 — 255~282ms 27ms 에 .30→.08 = .00815/ms 로 3회차에 «절벽» 판정한 .0076/ms 보다
-        크다. → 낙차를 앞으로 펴 최대 기울기를 낮췄다.
-     ⓓ N-② «빈 판에도 검정 6 + 흰 3 = 9px 테두리가 남아 «내용을 못 그린 카드» 로 읽힌다» ·
-        M-④ «잉크 0 인 가로 막대가 리스트 사이 구분선/진행바로 읽힌다» → 테두리를 60% 에 0 으로 떨군다. */
-  .ml-r.out{animation:mlOut .28s both;animation-delay:var(--mld,0ms);
+  /* 8회차 채점(P 6 / Q 6 — 5에서 올랐다). 둘 다 7회차 수정 6건 유지를 독립 확인했고,
+     **«스태거를 수명과 같게 둔 단 하나의 결정»이 ①③④ 세 축에 동시에 증상을 만들었다**는 데 겹쳤다:
+       · P-① «m4 가 0~280ms(총 580 의 48%) 동안 h147/α1.00 로 전혀 안 변한다» ·
+         Q-① «네 표본 연속 h147 = 틴트만 켜진 정지 행» → 타임라인 전반부가 «1장 삭제» 만 담는다.
+       · P-③·Q-③ (독립 일치) «삭제 대상 m4 가 **자기 접힘 전에 pitch 164px 를 미리 올라간다**» —
+         눈이 따라 올라간 뒤 처음 본 자리와 다른 곳에서 사라진다(Q 실측 제목 y1006 → y862).
+       · P-④ «280ms 간격은 별개 이벤트 인지 임계(≈200ms)를 넘어 «따로 두 번» 으로 읽힌다» —
+         라벨이 «읽음 **전체** 삭제» 인데 일괄로 안 읽힌다.
+     8회차에 스태거를 280 으로 올린 건 7회차 비평(M·N)의 «남는 행 상승 합산 피크 1.30px/ms» 를
+     없애려던 것이었다. **결함이 사라진 게 아니라 자리를 옮긴 전형**이다(LESSONS 92-7, 이 작업에서 네 번째).
+     → 겹침을 되살리되(스태거 150) **수명을 280 → 400ms 로 늘려** 행당 수축 속도 자체를 낮췄다.
+        합산 피크는 속도×겹침이라, 속도를 0.80 → 0.60 으로 내리면 겹쳐도 1.05 언저리에 머문다.
+     겸해서 P-①·Q-② 가 겹친 «림 플래시가 약하다» — P는 시간(19.6ms = 1.2프레임), Q는 진폭
+     (3px = 행 높이의 2.0%, 접힘 대비 1:49) 으로 같은 것을 말했다 → **진폭 8→12px · 피크 36ms ·
+     복귀 100ms(6프레임)** 로 둘 다 키웠다. 6회차 K 가 «16px 은 높이 점프» 라 한 것과 지금 «8px 은
+     렌더 노이즈» 사이의 값이다. */
+  .ml-r.out{animation:mlOut .40s both;animation-delay:var(--mld,0ms);
     pointer-events:none;overflow:hidden;position:relative;z-index:1;background:#F2C7C7}
   @keyframes mlOut{
     /* 전 구간 linear — 앤티시페이션은 box-shadow 창이 혼자 맡는다(6회차 ⓐ) */
     0%{opacity:1;height:147px;margin-bottom:17px;transform:translateX(0);
       box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
       animation-timing-function:linear}
-    /* 임펄스 «한 방» — 밝기로 때리고(inset 8px), 가로 이동은 16px 로 끝낸다(여백 17px 안) */
-    7%{opacity:1;height:146px;margin-bottom:17px;transform:translateX(0);
-      box-shadow:0 0 0 6px #241A12,inset 0 0 0 8px #FFF7EC;
+    /* 임펄스 «한 방» — 피크 9%(36ms) · 복귀 25%(100ms) = 6프레임(P «5프레임 이상») */
+    9%{opacity:1;height:146px;margin-bottom:17px;
+      box-shadow:0 0 0 6px #241A12,inset 0 0 0 12px #FFF7EC;
       animation-timing-function:linear}
-    20%{opacity:1;height:138px;margin-bottom:16px;transform:translateX(0);
+    25%{opacity:1;height:136px;margin-bottom:16px;
       box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
       animation-timing-function:linear}
-    /* 여기서부터 끝까지 x 고정 — 남은 80% 는 «접힘» 하나만 보여 준다(ⓐ) */
-    30%{opacity:.94;height:126px;margin-bottom:14px;transform:translateX(0);
+    35%{opacity:.95;height:124px;margin-bottom:14px;
       box-shadow:0 0 0 5px #241A12,inset 0 0 0 4px #FFFBF2;
       animation-timing-function:linear}
-    45%{opacity:.84;height:102px;margin-bottom:11px;transform:translateX(0);
+    50%{opacity:.86;height:100px;margin-bottom:11px;
       box-shadow:0 0 0 4px #241A12,inset 0 0 0 3px #FFFBF2;
       animation-timing-function:linear}
-    /* 테두리 소멸 — 이 아래로는 «카드» 가 아니라 색 띠다(ⓓ) */
-    60%{opacity:.62;height:74px;margin-bottom:8px;transform:translateX(0);
+    /* 테두리 소멸 — 이 아래로는 «카드» 가 아니라 색 띠다(8회차 ⓓ, P·Q 둘 다 유지 확인) */
+    62%{opacity:.72;height:78px;margin-bottom:8px;
       box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2;
       animation-timing-function:linear}
+    74%{opacity:.54;height:54px;margin-bottom:6px;animation-timing-function:linear}
     /* 꼬리는 이징이 아니라 **값 간격**으로 감속시킨다 — 커브를 걸면 높이는 가라앉는데 알파도
        같이 앞으로 쏠려 «꺼짐» 절벽이 되살아난다(3회차에 실제로 그랬다).
-       ⓒ 낙차를 앞으로 펴 최대 기울기 .00815 → .0046/ms 아래로. */
-    72%{opacity:.42;height:50px;margin-bottom:5px;transform:translateX(0);
-      animation-timing-function:linear}
-    85%{opacity:.22;height:24px;margin-bottom:2px;transform:translateX(0);
-      animation-timing-function:linear}
-    94%{opacity:.08;height:7px;margin-bottom:1px;transform:translateX(0);
-      animation-timing-function:linear}
-    100%{opacity:0;height:0;margin-bottom:0;transform:translateX(0);
+       P-③ «착지 직전 잔류속도 0.41px/ms 가 그대로 0 이 된다» → 마지막 두 구간을 3px 로 좁혔다. */
+    86%{opacity:.32;height:26px;margin-bottom:3px;animation-timing-function:linear}
+    93%{opacity:.16;height:11px;margin-bottom:1px;animation-timing-function:linear}
+    97%{opacity:.06;height:3px;margin-bottom:0;animation-timing-function:linear}
+    100%{opacity:0;height:0;margin-bottom:0;
       box-shadow:0 0 0 0 #241A12,inset 0 0 0 0 #FFFBF2}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
      (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
@@ -1761,34 +1756,40 @@
      `.ml-d` 가 빠지자 `.ml-t`(y20~58, 하변이 272ms 에나 닿는다)를 70% → **78%** 까지 살릴 여유가
      생겨 «내용 없는 분홍판» 이 120ms → **88ms** 로 줄었다. `.ml-s`(y64~94)는 55% α .28 → **.12** 로
      낮춰 잘리는 구간의 α 를 .2 아래로 뒀다. */
-  /* 8회차 ⓑ — 내용의 **가로 이동을 없애고**, 그룹을 «활주로» 가 아니라 **«자기 하변이 접히는 하변에서
-     몇 px 떨어져 있나»** 로 다시 갈랐다. 7회차 비평 둘이 여기서 겹쳤다:
-       · 버튼 `.ml-b` 는 우변이 클립선까지 **37px** 뿐이라 6%→22% 곡선에서 **t=28ms 부터 잘리기 시작해**
-         56ms(α .20)까지 최대 폭의 32%가 잘린 채 그려졌다(M 주석 29.7~56.4ms · N-④ 28~56ms, 독립 일치).
-         7회차의 «잘린 프레임 0» 은 **상자 하변만 재는 반쪽 지표**라 이 우측 절단을 통째로 놓쳤다.
-       · 그런데 썸네일 `.ml-i` 는 활주로가 346px 이라 끝까지 클립선에 닿지도 않는데 같은 곡선에 묶여
-         66ms 에 죽었다 — 9.4배 다른 활주로를 한 곡선에 묶은 것이 잘못이다(N-③).
-     가로로 안 밀면 우측 절단은 **구조적으로 0** 이 된다. 그러면 남는 제약은 하변 하나뿐이고,
-     그건 요소마다 다르다 — 실측 하변: `.ml-t` 58 · `.ml-s` 94 · `.ml-b` 118 · `.ml-i`·`.ml-d` 128
-     (`.ml-ac` 는 top/bottom 앵커라 상자와 같이 줄어 언제나 안전하다).
-     그래서 **하변이 깊은 것부터 먼저 지운다**. 각 그룹의 α 는 «상자 하변이 그 요소 하변에 닿기 전»에
-     0.2 아래로 내려가고, translateY 가 그 시각을 더 뒤로 민다.
-     이 셋이 5회차 «좌우» · 6회차 «어느 변» 을 대체하는 최종 기준이다. */
-  /* 하변 58 — 가장 오래 산다(제목). `.ml-ac` 는 상자와 함께 줄어드는 앵커라 같이 둔다 */
-  .ml-r.out>.ml-ac,.ml-r.out>.ml-t{animation:mlOutA .28s both;animation-delay:var(--mld,0ms)}
-  @keyframes mlOutA{0%,16%{opacity:1;transform:translateY(0);animation-timing-function:linear}
-    70%{opacity:.20;transform:translateY(-36px);animation-timing-function:linear}
-    78%,100%{opacity:0;transform:translateY(-42px)}}
+  /* 내용의 가로 이동은 8회차에 폐기했다(밀지 않으면 우측 클립선에 닿을 일이 없다).
+     그룹 기준은 **«자기 하변이 접히는 하변에서 몇 px 떨어져 있나»**
+     (실측 하변: `.ml-t` 58 · `.ml-s` 94 · `.ml-b` 118 · `.ml-i`·`.ml-d` 128).
+
+     ⚠ 9회차 — Q-④ 가 **변위를 거꾸로 준 것**을 잡았다. 8회차는 하변이 가장 깊은 C(128)에 −16px,
+     가장 얕은 A(58)에 −42px 를 줬다. 정반대다: 접히는 하변에 먼저 닿는 쪽일수록 **더 많이 들어 올려야**
+     그 하변을 피한다. 거꾸로 줬으니 C 는 들어 올려 주지도 않은 채 **α 로만 버티다** 30%(84ms)에 죽어야 했고,
+     그래서 «상자는 아직 90% 인데 카드 우측 48% 가 이미 비었다»(Q-④ · 7회차 M-②·N-② 와 같은 지적이
+     세 회차 연속 나왔다)가 계속 재발했다. 변위를 **하변 깊이에 비례**하도록 뒤집으니
+     C 의 α0 가 84ms → **288ms** 로 밀렸다 — 같은 α 곡선을 쓰고도 «빈 판» 이 사라진다.
+     결함이 «α 곡선» 에 있다고 세 회차를 튜닝했는데 실은 **변위 배분**에 있었다. */
+  /* 좌측 악센트 밴드는 top/bottom 앵커라 상자와 같이 줄어든다 — 들어 올리면 오히려 위로 잘린다(변위 0) */
+  .ml-r.out>.ml-ac{animation:mlOutAc .40s both;animation-delay:var(--mld,0ms)}
+  @keyframes mlOutAc{0%,12%{opacity:1;animation-timing-function:linear}
+    70%{opacity:.40;animation-timing-function:linear}
+    92%,100%{opacity:0}}
+  /* 하변 58 — 가장 얕다 = 가장 늦게 닿는다 = 변위 최소, 수명 최대(제목) */
+  .ml-r.out>.ml-t{animation:mlOutA .40s both;animation-delay:var(--mld,0ms)}
+  @keyframes mlOutA{0%,12%{opacity:1;transform:translateY(0);animation-timing-function:linear}
+    70%{opacity:.40;transform:translateY(-20px);animation-timing-function:linear}
+    86%{opacity:.15;transform:translateY(-32px);animation-timing-function:linear}
+    92%,100%{opacity:0;transform:translateY(-38px)}}
   /* 하변 94 — 보상 요약 */
-  .ml-r.out>.ml-s{animation:mlOutB .28s both;animation-delay:var(--mld,0ms)}
-  @keyframes mlOutB{0%,12%{opacity:1;transform:translateY(0);animation-timing-function:linear}
-    48%{opacity:.20;transform:translateY(-20px);animation-timing-function:linear}
-    56%,100%{opacity:0;transform:translateY(-26px)}}
-  /* 하변 118~128 — 접히는 하변에 가장 먼저 닿는 것들(행 버튼·썸네일·기한 라벨) */
-  .ml-r.out>.ml-i,.ml-r.out>.ml-b,.ml-r.out>.ml-d{animation:mlOutC .28s both;animation-delay:var(--mld,0ms)}
+  .ml-r.out>.ml-s{animation:mlOutB .40s both;animation-delay:var(--mld,0ms)}
+  @keyframes mlOutB{0%,10%{opacity:1;transform:translateY(0);animation-timing-function:linear}
+    62%{opacity:.35;transform:translateY(-34px);animation-timing-function:linear}
+    78%{opacity:.15;transform:translateY(-48px);animation-timing-function:linear}
+    84%,100%{opacity:0;transform:translateY(-54px)}}
+  /* 하변 118~128 — 접히는 하변에 가장 먼저 닿는다 = **변위 최대**(행 버튼·썸네일·기한 라벨) */
+  .ml-r.out>.ml-i,.ml-r.out>.ml-b,.ml-r.out>.ml-d{animation:mlOutC .40s both;animation-delay:var(--mld,0ms)}
   @keyframes mlOutC{0%,8%{opacity:1;transform:translateY(0);animation-timing-function:linear}
-    24%{opacity:.20;transform:translateY(-10px);animation-timing-function:linear}
-    30%,100%{opacity:0;transform:translateY(-16px)}}
+    50%{opacity:.55;transform:translateY(-56px);animation-timing-function:linear}
+    66%{opacity:.20;transform:translateY(-70px);animation-timing-function:linear}
+    72%,100%{opacity:0;transform:translateY(-76px)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
   /* ref 밴드는 «평면 단색» 이다(#5A5140 이 152행 내내 일정) — 세로 그라디언트는 우리가 넣은 잉여다(S8) */
@@ -13068,12 +13069,16 @@ function claimAllMail(){
 }
 /* 92 — [읽음 전체 삭제]. **수령 완료(1) 인 우편만** 2 로 넘겨 목록에서 뺀다.
    미수령(0)은 손대지 않는다 — 보상이 사라지면 안 된다. 지운 id 를 돌려줘 연출이 그 행만 접게 한다. */
+function mailDelToast(n){ if(n) fxToast('읽은 우편 ' + n + '통 삭제'); }
 function delReadMail(){
   const ids = MAILS.filter(m => S.mail[m.id] === 1).map(m => m.id);
   if(!ids.length) return ids;
   ids.forEach(id => { S.mail[id] = 2; });
   uiDirty = true; save();
-  fxToast('읽은 우편 ' + ids.length + '통 삭제');
+  /* 9회차 Q-① — 토스트는 여기서 안 띄운다. 이 함수는 연출이 **다 끝난 뒤**(`MLDEL_DUR + 스태거 + 20`
+     = 570ms) 상태를 반영하려고 불리는데, 유일한 «문자» 확인인 토스트까지 거기 묶여 있어
+     0~570ms 전 구간에 확인 문구가 0건이었다(캡처 10장 중 end 프레임에만 존재).
+     호출부가 **클릭 즉시** `mailDelToast()` 를 부르고, 상태 반영만 570ms 에 남는다. */
   return ids;
 }
 
@@ -14086,7 +14091,7 @@ function openMail(){
      동시에** 나가 목록이 가장 붐빌 때 순차감이 사라진다(5회차 I-③). 나눠 주면 둘 다 안 생긴다:
        2장 140ms(총 540) · 3장 140(680) · 4장 120(760) · 5장 90(760)  — **모든 행이 서로 다르게**
      출발하면서 총 길이는 항상 ≤ 760ms 다. */
-  const MLDEL_DUR = 280, MLDEL_BUDGET = 360, MLDEL_STAG = 280;
+  const MLDEL_DUR = 400, MLDEL_BUDGET = 360, MLDEL_STAG = 150;
   /* 8회차 — 수명 300→280 · 스태거 140→**280(= 수명)**. M-② «남는 행 상승 피크 1.30px/ms = 행 높이의
      14.8%/프레임» 과 N-① «남는 행 상승이 삭제 행 이동보다 30% 빠르다» 는 **둘 다 두 행의 수축 구간이
      겹쳐 합산된 값**이다(처방은 M 80 · N 190 으로 정반대였지만 증상 진단은 같았다). 스태거를 수명과 같게 두면 겹침이 0 이라 합이 생기지 않는다
@@ -14103,7 +14108,7 @@ function openMail(){
          **라벨 «읽음 전체 삭제» 위에서 태어나고**, 확산 115.6px 가 반높이를 57px 넘겨 위쪽 안내문에
          얹혔다(E-② · F-②). 이건 `fxBurst` 의 `dCap` 문제인데 **58·60 공용 모듈**이라 여기서
          고치면 전 화면 버스트가 같이 바뀐다(ROUTINE [4] «남의 구간 절대 금지») → 쓰지 않는다.
-       임펄스는 **행 자신의 림 플래시**(`mlOut` 8%: inset 5 → 16px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
+       임펄스는 **행 자신의 림 플래시**(`mlOut` 9%: inset 5 → 12px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
        «버튼만 임펄스, 정작 사건 주체인 행은 등속 드리프트» 라는 층위 불일치도 같이 없어진다(F-④). */
     const rows = MAILS.filter(m => S.mail[m.id] === 1)
       .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
@@ -14114,6 +14119,7 @@ function openMail(){
        «이 행이 빠진다» 를 스스로 말한다 — 스필 0. */
     const stag = mlStag(rows.length);
     rows.forEach((r, i) => { r.style.setProperty('--mld', (i * stag) + 'ms'); r.classList.add('out'); });
+    mailDelToast(rows.length);                  /* 9회차 Q-① — 확인 문구는 클릭 «즉시» */
     /* 남는 행의 «위로 당김» 은 접힘(height)이 만드는 flow 수축이 그대로 해 준다 — 연속 이동이다.
        2회차의 FLIP 은 클릭 시점 좌표로 되돌린 뒤 다시 올라오게 해서 **같은 이동을 두 번** 시켰다. */
     setTimeout(() => { delReadMail(); if(fxStillOpen('ml69')) openMail(); },
