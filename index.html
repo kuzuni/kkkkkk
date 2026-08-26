@@ -20582,18 +20582,34 @@ function fxHand(hint){
   gmHandFrame();
 }
 
+/* 22회차 — 체크 원판을 대상 «중심» 에서 **우상단 모서리 도장**으로 옮긴다.
+   21회차에 버스트 링을 타원으로 고쳐 라벨 겹침을 0 으로 만들었더니, 가림의 주체가
+   `fxCheck` 로 옮겨간 것이 21차 비평에서 잡혔다(AJ #2). probe58l 로 DOM 실측하니
+   원판 Ø92 가 «보상 받기» 라벨 잉크(125×47)를 **최대 80% · 73.6% 를 600ms** 덮고 있었다 —
+   중심 배치라 대상이 «가로로 긴 버튼» 인 순간 라벨을 통째로 삼킨다. 21회차 링과 **같은 산수**다.
+   → 중심을 bbox 우상단 꼭짓점에 두는 모서리 도장으로 바꾼다(교차 3% 이하). 대상에 붙어
+   있는 것은 그대로라 «이 버튼이 처리됐다» 는 인과도 유지된다.
+   · 크기도 대상에 맞춘다: min(w,h) × FXC_K, FXC_MIN~FXC_MAX 로 클램프(작은 아이콘에서 도장이
+     대상보다 커지지 않게).
+   · 좌표 대상(점)은 붙일 bbox 가 없으므로 종전대로 그 점을 중심에 쓴다.
+   · 프레임 밖으로 나가지 않게 물린다(FXB 의 left 클램프와 같은 취지). */
+const FXC_K = 0.78, FXC_MIN = 56, FXC_MAX = 92;
 function fxCheck(el){
   const L = fxL(), p = fxPt(el); if(!L || !p) return;
   if(L.childElementCount >= FXMAX) return;
+  const r = (el && el.nodeType) ? fxRect(el) : null;
+  const sz = r ? Math.round(clamp(Math.min(r.w, r.h) * FXC_K, FXC_MIN, FXC_MAX)) : FXC_MAX;
+  const cx = r ? clamp(r.x + r.w, sz/2, 1080 - sz/2) : p.x;
+  const cy = r ? Math.max(r.y, sz/2) : p.y;
   const d = document.createElement('s');
   d.className = 'fx-check';
-  d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
+  d.style.left = cx + 'px'; d.style.top = cy + 'px';
   d.style.animation = 'fxCheckIn .6s ease-out both';   /* 보상 숫자를 오래 덮지 않게 */
   /* 18회차(17회차 비평 AC·AD 공통) — ① 스트로크를 흰색으로: 밝은초록-온-진초록은 205~250ms
      저대비 구간이 생긴다. ② 드로잉 delay 를 **음수(−0.08s)** 로: CSS 애니는 첫 페인트에서야 돌기
      시작하는데 이 컨테이너는 첫 페인트가 ~120ms 늦다 — 음수 delay 면 첫 페인트에 이미 44% 그려져
      있어 «205ms 스트로크 0%» 가 사라진다(체감은 여전히 드로잉으로 읽힌다). */
-  d.innerHTML = '<svg viewBox="0 0 100 100" width="92" height="92">'
+  d.innerHTML = '<svg viewBox="0 0 100 100" width="' + sz + '" height="' + sz + '">'
     + '<circle cx="50" cy="50" r="41" fill="rgba(10,40,16,.62)" stroke="#7BE88E" stroke-width="8"/>'
     + '<path d="M28 52 L44 68 L74 33" fill="none" stroke="#FFFFFF" stroke-width="12"'
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
