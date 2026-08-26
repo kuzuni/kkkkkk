@@ -977,18 +977,18 @@
         방사 50% 교차(서브픽셀, 180방향 중앙값)로 REF 4칸을 다시 재니 well 89.0 · 링 7.28 ·
         어두운 테 3.58 · 외곽 **117.9** 로 닫힌다(검산 89.0 + 2×14.44 = 117.88 = 실측 117.9).
         비평가 M 도 독립적으로 같은 결론(외곽 119.0 · 링 7.03)에 도달했다. 되돌리지 말 것. */
-  #slots{display:flex;gap:12.2px;justify-content:center;margin:26px 0 17px;padding-left:2.7px}
+  #slots{display:flex;gap:12px;justify-content:center;margin:26px 0 17px;padding-left:2px}
   /* 링 4겹을 레이어로 쌓는다(inset box-shadow 는 그라디언트가 안 되므로):
      .slot2 어두운 외곽 r56~59 > ::before 컬러 링 r48~55 > ::after 어두운 r44~47 > .cdw well r0~43 */
-  .slot2{flex:none;width:117.8px;height:117.8px;border-radius:50%;position:relative;
+  .slot2{flex:none;width:118px;height:118px;border-radius:50%;position:relative;
     display:flex;align-items:center;justify-content:center;font-size:84px;line-height:1;
     background:#030509}
   .slot2::before,.slot2::after{content:'';position:absolute;border-radius:50%}
   .slot2::before{inset:3.5px;background:conic-gradient(#25d8fe 0deg 102deg,#04bef6 110deg 253deg,
     #25d8fe 268deg 360deg)}
-  .slot2::after{inset:10.8px;background:#030509}
+  .slot2::after{inset:10.84px;background:#030509}
   /* ::after 는 마지막 자식이라 그냥 두면 well 을 덮는다 — z-index 로 위로 올린다 */
-  .slot2 .cdw{position:absolute;inset:14.45px;border-radius:50%;overflow:hidden;z-index:1;
+  .slot2 .cdw{position:absolute;inset:14.9px;border-radius:50%;overflow:hidden;z-index:1;
     background:#367cc1;pointer-events:none}
   .slot2 .cdv{position:absolute;left:0;right:0;bottom:0;background:rgba(6,9,20,.62);height:0%}
   /* 아이콘은 well(.cdw) 안에 넣어 원형으로 클립한다 — 밖에 두면 이모지 모서리가 링을 뚫는다 */
@@ -1010,26 +1010,27 @@
      바깥으로 `box-shadow` 로 뻗는다 — 상자를 키우면 이웃 칸의 pitch 가 같이 밀린다.
      이 «상태별 지름» 이 1차 라운드부터 외경을 117 / 119 / 120 으로 갈리게 한 범인이다:
      재는 사람이 어느 칸을 골랐느냐에 따라 답이 달라졌다. ── */
-  .slot2:not(.empty){box-shadow:0 0 0 1.1px #030509}
-  .slot2:not(.empty)::before{inset:3.01px}
-  .slot2:not(.empty)::after{inset:10.93px}
-  .slot2:not(.empty) .cdw{inset:15.1px}
-  .slot2.ready{box-shadow:0 0 0 1.1px #030509,0 0 0 6.6px #fffe03}
+  .slot2:not(.empty){box-shadow:0 0 0 1px #030509}
+  .slot2:not(.empty)::before{inset:3.11px}
+  .slot2:not(.empty)::after{inset:11.03px}
+  .slot2:not(.empty) .cdw{inset:15.2px}
+  .slot2.ready{box-shadow:0 0 0 1px #030509,0 0 0 6.7px #fffe03}
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 7.4px #fefe0c}
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 7px #fefe0c}
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
   .slot2 .lk{position:relative;z-index:2;display:block;font-size:64px;line-height:1;
-    transform:translateY(-2px) scaleY(.785);
-    filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)}
+    transform:translateY(-1.5px) scaleY(.785);
+    filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)
+      drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
      아트가 없으므로 같은 자리·같은 지름에 레벨 뱃지를 놓아 실루엣을 맞춘다 */
-  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.35px;transform:translateX(-50%);
-    width:43.5px;height:39.5px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
+  .slot2 .lvv2{position:absolute;left:50%;bottom:-9.3px;transform:translateX(-50%);
+    width:42.6px;height:39.6px;border-radius:50%;background:#2b2f45;border:3px solid #030509;
     font-size:21px;line-height:36.5px;text-align:center;font-weight:900;color:#fff;z-index:3}
 
   /* ============ ④ 좌하단 유틸 / 우하단 미션 배너 / 배속 ============

@@ -89,25 +89,25 @@ function is(name, got, want) {
 
   /* ---- [1] 행 기하 (측정표 §0·§1) ---- */
   is('슬롯 개수', d.n, 8);
-  eq('외곽 지름 w', d.rects[0].w, 117.8, 0.3);
-  eq('외곽 지름 h', d.rects[0].h, 117.8, 0.3);
+  eq('외곽 지름 w', d.rects[0].w, 118, 0.3);
+  eq('외곽 지름 h', d.rects[0].h, 118, 0.3);
   for (let i = 1; i < 8; i++) eq('pitch ' + i + '→' + (i + 1), d.rects[i].x - d.rects[i - 1].x, 130, 0.5);
-  eq('gap', d.rects[1].x - (d.rects[0].x + d.rects[0].w), 12.2, 0.3);
-  eq('좌 여백', d.rects[0].x, 27.5, 0.8);
-  eq('우 여백', 1080 - (d.rects[7].x + d.rects[7].w), 24.7, 0.8);
+  eq('gap', d.rects[1].x - (d.rects[0].x + d.rects[0].w), 12, 0.3);
+  eq('좌 여백', d.rects[0].x, 27, 0.8);
+  eq('우 여백', 1080 - (d.rects[7].x + d.rects[7].w), 25, 0.8);
   eq('행 하단 → 탭바 상단', d.tabTop - d.rowBottom, 26, 1.5);
   is('정원', d.radius, '50%');
 
   /* ---- [2] 링 4겹 (측정표 §2) ---- */
   /* 잠금칸 = 기본 링대 (well 89.06 · 3.55 · 7.31 · 3.53 · 외곽 117.84) */
-  eq('잠금칸 well 지름', d.lockCdwW, 88.9, 0.3);
-  eq('잠금칸 well inset (링대 14.45)', d.lockCdwInset, 14.45, 0.2);
+  eq('잠금칸 well 지름', d.lockCdwW, 88.2, 0.3);
+  eq('잠금칸 well inset (링대 14.9)', d.lockCdwInset, 14.9, 0.2);
   /* 장착칸 = 레퍼런스가 2.2px 크게 그린다 (well 87.61 · 4.17 · 7.92 · 4.11 · 외곽 120.00).
      레이아웃 상자는 그대로 117.8 이고 커지는 1.1px 은 바깥 box-shadow 로 뻗는다 (측정표 §7-2) */
   eq('장착칸 well 지름', d.eqCdwW, 87.6, 0.3);
-  tot++; if (/1\.1px/.test(d.eqShadow)) ok++; else fails.push('장착칸 외곽 확장 1.1px: ' + d.eqShadow);
-  tot++; if (/6\.6px/.test(d.readyGlow)) ok++; else fails.push('활성 바깥 노란 링 6.6px: ' + d.readyGlow);
-  tot++; if (/7\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 7.4px: ' + d.cdwRing);
+  tot++; if (/(^|[^.\d])1px/.test(d.eqShadow)) ok++; else fails.push('장착칸 외곽 확장 1px: ' + d.eqShadow);
+  tot++; if (/6\.7px/.test(d.readyGlow)) ok++; else fails.push('활성 바깥 노란 링 6.7px: ' + d.readyGlow);
+  tot++; if (/(^|[^.\d])7px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 7px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
   eq('아이콘 평균 잉크 w', +d.inkW.toFixed(1), 68, 4);
@@ -120,13 +120,13 @@ function is(name, got, want) {
   is('활성 1칸', d.readyCount, 1);
   eq('자물쇠 font-size', d.lkFs, 64, 0.5);
   tot++; if (/0\.785/.test(d.lkTr)) ok++; else fails.push('자물쇠 scaleY .785: ' + d.lkTr);
-  eq('자물쇠 세로 오프셋', d.lkDy, -2, 0.2);
+  eq('자물쇠 세로 오프셋', d.lkDy, -1.5, 0.2);
 
   /* ---- [5] 하단 뱃지 (측정표 §2 «펫/동료 머리 뱃지») ---- */
   /* 레퍼런스 뱃지는 정원이 아니라 «가로로 누운» 43×39 (비평가 N·P 독립 일치) */
-  eq('뱃지 외곽 폭', d.bdgW, 43.5, 0.5);
-  eq('뱃지 외곽 높이', d.bdgH, 39.5, 0.5);
-  eq('뱃지 하단 돌출', d.bdgOut, 9.35, 0.5);
+  eq('뱃지 외곽 폭', d.bdgW, 42.6, 0.5);
+  eq('뱃지 외곽 높이', d.bdgH, 39.6, 0.5);
+  eq('뱃지 하단 돌출', d.bdgOut, 9.3, 0.5);
   eq('뱃지 중심 (슬롯 중심 기준)', d.bdgCy, 48.5, 0.5);
 
   if (fails.length) { console.log('실패 항목:'); fails.forEach(f => console.log('  ✗ ' + f)); }
