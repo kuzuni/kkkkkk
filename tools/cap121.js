@@ -147,7 +147,18 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     if (!v || !isFinite(v.thb)) return Math.round(3900 * pct / 100);
     return Math.round(v.thb * pct / 100 - (isFinite(v.thd) ? v.thd : 0));
   };
-  const BOB = [0, 5, 10, 15, 20, 84, 87, 90, 93];   /* % of --thb — 짧은 들썩 곡선 5점 + 큰 점프 곡선 4점 */
+  /* ⚠⚠ 7회차 — **표본의 «빈 구간» 이 또 없는 결함을 만들었다.** 6회차가 중복 상태를 없애려고
+     0~20%(짧은 들썩 한 번)와 84~93%(큰 점프)만 남겼는데, 그 사이 20~84% 에 표본이 **한 장도 없다.**
+     7회차 비평가 K ①-5 와 L ①-4 가 **각각 독립으로** 그 공백을 「변위 0인 정지 구간이 주기의 64%」
+     로 읽었다(L 은 «raid-6 이 rest 와 0px 동일» 을 근거로 들었는데, 그건 84% = 깊은 웅크림이라
+     착지와 거의 같은 자리인 게 맞다). 실제로는 그 구간에 **똑같은 짧은 들썩이 3번 더** 있다 —
+     키프레임이 10/30/50/70% 이고, per-card 지연을 옳게 처리하는 `bobamp121` 이 50%·70% 에서
+     잉크 상단 114px(착지 121px)로 매번 재고 있다. 즉 정지 구간은 없다.
+     → 중간 구간 증거로 **50%(세 번째 짧은 들썩 정점)** 를 넣고, 큰 점프의 **착지 96%** 까지 찍어
+     아크가 닫히는 것을 보인다. 비평가 프롬프트에도 «20~84% 에 같은 들썩이 3번 더 있다» 를 명시한다.
+     (중복 상태를 다시 들이는 셈이지만 6회차가 겪은 오독 — 「한 바퀴에 3바퀴가 들어 있다」 — 은
+      표본이 아니라 **설명이 없어서** 난 것이다. 이번엔 설명을 같이 준다.) */
+  const BOB = [0, 5, 10, 15, 20, 50, 84, 87, 90, 93, 96];
   for (let i = 0; i < BOB.length; i++) {
     await seek(await phaseOf('#dunList .dnc>.th>canvas', BOB[i]));
     await p.waitForTimeout(70);
@@ -178,7 +189,7 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
      bob 과 같은 키프레임 위치로 찍는다. 그리고 **번개 잔광(bgmFlash, 9s 주기의 86~94% 구간)** 은
      3.9s 안에 절대 안 들어오므로 raid-9·10 을 그 시각(7.92s·8.46s)에 따로 찍는다 —
      그 연출도 «18장 중 0장» 이라는 지적이 같이 나왔다. */
-  const RAID = [0, 5, 10, 15, 20, 84, 87, 90, 93];   /* 6회차 — bob 과 같은 «곡선» 표본(중복 0쌍) */
+  const RAID = [0, 5, 10, 15, 20, 50, 84, 87, 90, 93, 96];   /* 7회차 — bob 과 같은 표본(중간 구간 50% · 착지 96% 추가) */
   for (let i = 0; i < RAID.length; i++) {
     await seek(await phaseOf('#dunList .dnc.rd>.th>canvas', RAID[i]));   /* 7회차 — 상수 3900 폐기(위 주석) */
     /* 스프라이트 프레임은 타이머가 굴리므로 여기서 직접 지정해 그린다(정지 상태에서도 순환이 보이게) */
@@ -222,7 +233,10 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
   if (!acard) console.log('  ⚠ 아레나 카드 없음 — S.best 가 ARENA.open 미만인가?');
   else {
     const AFR = await p.evaluate(() => (ATLAS.knight && ATLAS.knight.a && ATLAS.knight.a.idle) || []);
-    const ARN = [0, 50, 84, 90];
+    /* 7회차 — 아레나도 «짧은 들썩 / 큰 점프» 를 둘 다 잴 수 있게 6점으로. 두 비평가가 이 카드의
+       진폭을 최대 감점원으로 잡았는데 그건 위상이 어긋난 표본 탓이었다(위 phaseOf 주석) — 이제
+       제 위상으로 찍히므로 비평가가 규격(8/14)을 직접 검산할 수 있어야 한다. */
+    const ARN = [0, 10, 50, 84, 90, 96];
     for (let i = 0; i < ARN.length; i++) {
       /* 7회차 — **기준은 «내 칸»(arn-me)**. 상대 칸은 제 delay 대로 +10% 어긋난 채 따라온다(위 주석). */
       await seek(await phaseOf('#dunList .dnc.rd.arn2>.th>canvas.arn-me', ARN[i]));
