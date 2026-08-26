@@ -7106,7 +7106,10 @@
   /* 15회차 — P 가 네 모서리를 각각 재서 «ref 는 tr≈41 · br≈42 · bl≈42 로 거의 균일» 이라고 판정했고
      M 도 «우상·우하 둘 다 ≈40 대칭» 이었다. 13회차의 비대칭 32/42 는 내 tr 측정(30.5) 이 혼자 낮았던 탓이다.
      ⇒ 네 모서리 **42** 로 통일. */
-  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:42px;background:#A2927B;
+  /* 16회차 — R «ref tr≈37 · br≈39(코너 면적적분) vs 우리 43» · S «ref≈34 vs 우리 42» 로 **둘 다 «우리가 크다»**.
+     15회차의 42 는 P(41/42/42)·M(≈40) 근거였으니 네 측정(≈41 / ≈40 / 38 / 34)의 평균 ≈38.5 로 내린다.
+     우리 CSS 42 가 R 마스크에 43 으로 잡히므로(편향 +1) **CSS 38 ⇒ 실측 ≈39** — R 범위 안, S 방향으로 한 걸음. */
+  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:38px;background:#A2927B;
     display:flex;align-items:center;justify-content:center}
   /* ref 흰 코어 597 (15회차 재실측). scaleX .856→.81 로 좁혔더니 502(−16%)가 돼 .963 으로 되돌렸다 */
   /* 15회차 — P·Q 둘 다 «잉크 높이 ref 33 / 우리 31» ⇒ fs 36→38, 폭은 scaleX 로 되돌린다 */
@@ -7116,7 +7119,9 @@
   /* 13회차 3차분 — K 138 · M 139 · N 139 · 자체 135 로 «우리(134)가 좁다» 4자 일치. 우단 243 → 248 */
   .bls-lv{left:50px;top:181px;width:139px;height:68px;box-sizing:border-box;z-index:2;
     /* 15회차 — P: ref 는 완전 스타디움(h/2=34)이 아니라 r≈26 이다(dx0/8/18 에서 span 30/54/65) */
-    border:5px solid #000;border-radius:26px;background:#553E2E;
+    /* 16회차 — R «ref ≈29 / 우리 ≈26 (−10%)» · S «ref ≈28.5 / 우리 26» 독립 일치로 **우리가 작다**.
+       알약 바깥 w×h(138×69 vs 139×68)는 둘 다 «일치» 이므로 반경만 26 → 29. */
+    border:5px solid #000;border-radius:29px;background:#553E2E;
     display:flex;align-items:center;justify-content:center}
   /* 15회차 — P «흰 코어 ref 57 / 우리 49(−14%)» · Q «56 vs 49(−12.5%)» 일치. 높이는 25 vs 26 이라 폭만 넓힌다 */
   .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
@@ -7134,8 +7139,12 @@
   /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
   /* 13회차 3차분 — K·N·자체 실측 3자 일치: ref 카드 폭 **298** · 거터 **17**(우리 300·15).
      그리드 pitch 315 는 그대로고 카드만 2px 좁힌다(x 76/391/706 = ref). */
+  /* 16회차 — R «ref 카드 298/296/297 · 거터 19/18 vs 우리 298/298/298 · 17/17 (−8%)» ·
+     S «ref 거터가 우리보다 +2» 로 방향 일치. 그리드 바깥(x76..1003 = w928)은 R 이 «0 차이» 로 확인했으므로
+     **총폭은 그대로 두고 거터만 넓혀** 카드가 줄게 한다: gap 18.5 ⇒ 카드 (928−37)/3 = 297,
+     카드 좌단 76 / 391.5 / 707 (R 의 ref 76 / 393 / 707). verify34 J6·J7 기대값도 같이 갱신한다. */
   .bls-cards{left:16px;top:270px;width:928px;height:447px;
-    display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
+    display:grid;grid-template-columns:repeat(3,1fr);gap:18.5px}
   /* 10회차: 카드 모서리 반경 24 → 46. ref 좌상단 아크를 4점(y806 x95.5 · y812 x88.5 · y820 x82.5 · y830 x78.5)
      으로 원 방정식에 넣으면 R=44.8/45.2/45.9/48.3, 좌하단 3점도 45.9/49.1 → **R≈46**.
      (2차 비평 D «18→36» 의 방향이 맞았고 폭은 그보다 더 컸다) */
@@ -7333,7 +7342,10 @@
   /* 15회차 — 비평 P ②1순위 2건.
      ① 모서리 반경: ref 인셋(dy2/5/9 = 33/25/19) ⇒ r≈46. 우리 CSS 28(측정 27) ⇒ 28→46.
      ② ref 는 검정 테두리 «안쪽» 에 밝은 초록(178,249,143) 림이 좌·우 7px 씩 있다(우리는 상단 흰 하이라이트뿐). */
-    border:8px solid #000;border-radius:46px;cursor:pointer;
+    /* 16회차 — R «ref 좌6/우7/상7/하6 = 평균 6.5 vs 우리 8 (+23%)» · S «ref 6~7 vs 우리 8 (+33%)» 독립 일치.
+       두 사람 범위가 겹치는 7 로 내린다(12회차의 «6 복귀» 와도 같은 방향). 반경 46 은 R 이 면적적분으로
+       «ref 44.8 / 우리 45.1 — 일치» 라고 확인해 줬으므로 **건드리지 않는다**(S 의 34 는 단독 엇갈림). */
+    border:7px solid #000;border-radius:46px;cursor:pointer;
     background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
     box-shadow:inset 0 8px 0 rgba(255,255,255,.5),inset 7px 0 0 #B2F98F,inset -7px 0 0 #B2F98F;
     font-size:53px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
@@ -7341,8 +7353,18 @@
   /* 15회차 — 스트립을 252→249 로 줄이면 #blsw 세로 중앙정렬이 3px 움직여 **팝업 전체가 1.5px 내려간다**.
      흐름 높이를 그대로 두려고 margin 18→21 로 3px 되돌리고(=팝업 y345 유지),
      Q 가 잡은 «스트립 하단 → X 상단 ref 32 / 우리 27» 은 **레이아웃에 영향 없는** relative top 9→11 로 맞춘다. */
-  .bls-x{flex:none;position:relative;top:11px;margin:21px 0 auto;width:122px;height:122px;box-sizing:border-box;border:2px solid #8A2530;
-    border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
+  /* 16회차 — R·S 독립 일치: **ref 닫기 X 는 «적색 코어 118 + 검정 링 10px = 바깥 138»** 인데 우리는
+     링이 통째로 없어 바깥이 122 뿐이었다(−11.6%). R «ref x471..608=138, 코어 118 은 우리와 일치 —
+     차이는 전부 빠진 링» · S «ref 디스크 Ø118 + 링 좌9/우8 = 138, 우리 링 0».
+     ⇒ box-sizing:border-box 이므로 **바깥 138 + border 10 = 코어 118** 로 코어를 그대로 두고 링만 채운다.
+     ③ «스트립 하단 → X 간격» 도 같은 뿌리다(R ref 21 / 우리 32 · S ref 23 / 우리 33) — 링이 없어 X 상단이
+     10px 늦게 시작했다. 링을 채우면 상단이 그만큼 올라온다.
+     ⚠ 세로 흐름(§13-2 함정): 높이가 122→138 로 **+16px** 늘므로 margin-top 을 21→5 로 −16 해서
+     흐름 총합을 0 으로 묶는다(팝업 y345 유지). 시각 위치는 흐름에 영향 없는 relative top 으로만 잡는다:
+     스트립 하단 1771 + margin 5 + top 16 = **1792** ⇒ 간격 21(R 값). line-height 는 코어(118) 기준이라 그대로. */
+  .bls-x{flex:none;position:relative;top:16px;margin:5px 0 auto;width:138px;height:138px;box-sizing:border-box;border:10px solid #000;
+    border-radius:50%;background:#E04D57;box-shadow:inset 0 0 0 7px #9F2A30;
+    cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1;
     /* 13회차 3차분 — M·N 일치: ref 글리프 중심 x541.5(원 중심 +2) / 우리 537(−2.5). 크기 50x51 vs 51x51 은 일치.
        세로도 ref 1858 / 우리 1855 ⇒ 4.5px 오른쪽 · 3px 아래. `text-indent` 는 좌우 중앙정렬을 밀어낸다. */
