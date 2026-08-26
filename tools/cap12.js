@@ -3,14 +3,17 @@
    실행: node tools/cap12.js [출력경로] [--geo]
    LESSONS 28-③ — 캔버스가 잉크 스캔을 오염시키므로 캡처 직전 #view 를 숨긴다.
    LESSONS 51-③ — 유휴 루프가 굴리는 값은 픽셀 회귀에서 빼야 하므로 루프를 멈춘다. */
-const { chromium } = require('playwright');
+/* 작업 12 2차 라운드(4회차) — 작업 110/127 의 공용 부트스트랩으로 이관.
+   `chromium.launch()` 직접 호출은 이 러너(브라우저 빌드 1194 vs 드라이버 1234)에서 즉사한다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/12-84-r1.png';
 const GEO = process.argv.includes('--geo');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
