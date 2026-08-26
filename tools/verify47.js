@@ -63,7 +63,8 @@ const BARS = [
     open: 'goTab("adv");', close: 'closeDungeon();',
     click: '#dunSub [data-dsub="raid"]', afterSel: '#dunSub', afterLabel: '레이드',
     body: 'document.getElementById("dunList").innerHTML.length', restore: 'document.querySelector(\'#dunSub [data-dsub="dun"]\').click();' },
-  { key: 'shop', name: '10 상점', sel: '#shopCats', host: '#shopw', n: 2,
+  /* 124 — «이용권» 탭이 붙어 2칸 → 3칸(.sp3) */
+  { key: 'shop', name: '10 상점', sel: '#shopCats', host: '#shopw', n: 3,
     open: 'goTab("shop");', close: 'closeShopPage();',
     click: '#shopCats [data-cat="coin"]', afterSel: '#shopCats', afterLabel: '재화',
     body: 'document.getElementById("shopList").innerHTML.length', restore: 'document.querySelector(\'#shopCats [data-cat="summon"]\').click();' },
@@ -145,15 +146,23 @@ const SNAP = `(sel, host) => {
     /* ---- 2. 칸 격자 ---- */
     console.log('\n[2] ' + b.name + ' — 칸 격자');
     const cx = g.bar.x + BAR_BORDER, cw = g.bar.w - BAR_BORDER * 2;   /* 바 «콘텐츠» 상자 */
-    if (b.n === 2) {
-      ok('2칸 균등 (Δ ≤ 0.5)', near(g.cells[0].w, g.cells[1].w, 0.5),
+    /* 124 — 균등분할 바는 2칸(.sp2)·3칸(.sp3) 둘 다 «콘텐츠 상자 ÷ n» 규칙 하나로 본다 */
+    if (b.n === 2 || b.n === 3) {
+      const sw = cw / b.n;
+      ok(b.n + '칸 균등 (Δ ≤ 0.5)', g.cells.every(c => near(c.w, g.cells[0].w, 0.5)),
         g.cells.map(c => f1(c.w)).join(' / '));
-      ok('칸 폭 = 콘텐츠 절반 ' + f1(cw / 2), near(g.cells[0].w, cw / 2, 0.6), f1(g.cells[0].w));
-      ok('칸 경계 맞닿음 (빈틈·겹침 0)', near(g.cells[0].x + g.cells[0].w, g.cells[1].x, 0.5),
-        'Δ' + f1(g.cells[1].x - g.cells[0].x - g.cells[0].w));
-      ok('경계 = 바 콘텐츠 정중앙', near(g.cells[1].x, cx + cw / 2, 0.6),
-        f1(g.cells[1].x - cx) + ' vs ' + f1(cw / 2));
-      ok('구분선 0개 (2칸 바는 경계가 하나라 두지 않는다 — 96)', g.seps.length === 0, g.seps.length + '개');
+      ok('칸 폭 = 콘텐츠 ÷' + b.n + ' = ' + f1(sw), near(g.cells[0].w, sw, 0.6), f1(g.cells[0].w));
+      for (let i = 1; i < b.n; i++) {
+        ok('칸 경계' + i + ' 맞닿음 (빈틈·겹침 0)',
+          near(g.cells[i - 1].x + g.cells[i - 1].w, g.cells[i].x, 0.5),
+          'Δ' + f1(g.cells[i].x - g.cells[i - 1].x - g.cells[i - 1].w));
+        ok('경계' + i + ' = 콘텐츠 ' + i + '/' + b.n + ' 지점', near(g.cells[i].x, cx + sw * i, 0.6),
+          f1(g.cells[i].x - cx) + ' vs ' + f1(sw * i));
+      }
+      ok('마지막 칸 오른끝 = 콘텐츠 오른끝',
+        near(g.cells[b.n - 1].x + g.cells[b.n - 1].w, cx + cw, 0.6),
+        f1(g.cells[b.n - 1].x + g.cells[b.n - 1].w - cx) + ' vs ' + f1(cw));
+      ok('구분선 0개 (균등분할 바는 구분선을 두지 않는다 — 96)', g.seps.length === 0, g.seps.length + '개');
     } else {
       GRID4.forEach(([l, w], i) => {
         ok('칸' + (i + 1) + ' 격자 left ' + l + ' · w ' + w,

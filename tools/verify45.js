@@ -1,4 +1,7 @@
 /* 45 검증 — 상점 카테고리 탭 4→2 (소환 · 재화)
+   124(2026-08-26) — «이용권» 탭이 붙어 **3칸**(.sp3)이 됐다. 이 게이트의 «2칸» 기대값을
+   3칸으로 올리고, «칸 절반» 판정을 «콘텐츠 ÷ 3» 으로 바꾼다. 소환 카드 장수는 76(상자 4종)·
+   106(동료 배너) 이후 5장인데 게이트가 «3장» 으로 굳어 있어 SHOP_BOXES.length 로 파생시킨다.
    [3]-(가) 기계적 작업 검증: 레퍼런스 대조(비평가) 없이 «남은 미변환분 0 · 콘솔 에러 0 ·
    요소 겹침/잘림 0 · 탭 전환 실동작» 을 DOM 실측으로 판정한다.
    실행: node tools/verify45.js   (1080x2280 기준 · 헤드리스) */
@@ -45,18 +48,18 @@ const settled = async page => {
     shared: document.querySelectorAll('#shopCats.stabs > .stab').length,
     dead: document.querySelectorAll('.shp-new, .shp-soon, [data-cat="special"], [data-cat="daily"]').length,
   }));
-  ok('탭 2개', mk.cats.length === 2, JSON.stringify(mk.cats));
-  ok('data-cat = summon,coin', mk.cats.join(',') === 'summon,coin', mk.cats.join(','));
-  ok('라벨 = 소환,재화', mk.labels.join(',') === '소환,재화', mk.labels.join(','));
+  ok('탭 3개', mk.cats.length === 3, JSON.stringify(mk.cats));
+  ok('data-cat = summon,coin,pass', mk.cats.join(',') === 'summon,coin,pass', mk.cats.join(','));
+  ok('라벨 = 소환,재화,이용권', mk.labels.join(',') === '소환,재화,이용권', mk.labels.join(','));
   /* 96 — 공용 서브탭 부품(.stabs>.stab)으로 교체. ✦ 구분선·노랑 화살촉 알약은 폐기됐다 */
-  ok('96 공용 부품 .stabs > .stab 2칸', mk.shared === 2, mk.shared + '칸');
+  ok('96 공용 부품 .stabs > .stab 3칸', mk.shared === 3, mk.shared + '칸');
   ok('96 ✦ 구분선 폐기(0개)', mk.cs === 0, mk.cs + '개');
   ok('96 활성 알약 노드 폐기(0개)', mk.pills === 0, mk.pills + '개');
   ok('활성 칸 1개 = 소환', mk.on.join(',') === 'summon', mk.on.join(','));
   ok('제거 대상 잔존 0 (NEW리본·준비중·특별·일일)', mk.dead === 0, mk.dead + '개');
 
   /* ---- 2. 소환 탭 기하 — 바 990x107 유지 · 칸 2등분 · 알약/라벨/✦ 중앙 ---- */
-  console.log('\n[2] 소환 탭 기하 (바 990x107 · 칸 488 x2)');
+  console.log('\n[2] 소환 탭 기하 (바 990x99 · 칸 326 x3)');
   await page.evaluate(() => openShopPage());
   await page.waitForTimeout(300); await settled(page);
   const g = await page.evaluate(() => {
@@ -79,13 +82,15 @@ const settled = async page => {
   /* 96 — 바 껍데기가 공용 부품 규격(h99 · 검정 6)으로 통일됐다 */
   ok('바 높이 99 (96 공용 부품)', near(g.bar.h, 99), g.bar.h.toFixed(1));
   ok('바 좌 45', near(g.bar.x, 45), g.bar.x.toFixed(1));
-  const inner = g.bar.w - g.bw * 2;
-  ok('칸 2개가 패딩박스를 정확히 2등분', near(g.cells[0].w, inner / 2) && near(g.cells[1].w, inner / 2),
+  const inner = g.bar.w - g.bw * 2, sw = inner / 3;
+  ok('칸 3개가 패딩박스를 정확히 3등분', g.cells.length === 3 && g.cells.every(c => near(c.w, sw)),
     g.cells.map(c => c.w.toFixed(1)).join(' / ') + ' (패딩박스 ' + inner.toFixed(0) + ')');
-  ok('칸이 맞닿음(빈틈·겹침 0)', near(g.cells[0].x + g.cells[0].w, g.cells[1].x),
-    '경계 ' + (g.cells[0].x + g.cells[0].w).toFixed(1) + ' vs ' + g.cells[1].x.toFixed(1));
-  ok('칸2가 바 우측 안쪽 끝에서 끝남', near(g.cells[1].x + g.cells[1].w, g.bar.x + g.bar.w - g.bw),
-    (g.cells[1].x + g.cells[1].w).toFixed(1));
+  for (let i = 1; i < 3; i++)
+    ok('칸' + i + '↔' + (i + 1) + ' 맞닿음(빈틈·겹침 0)',
+      near(g.cells[i - 1].x + g.cells[i - 1].w, g.cells[i].x),
+      '경계 ' + (g.cells[i - 1].x + g.cells[i - 1].w).toFixed(1) + ' vs ' + g.cells[i].x.toFixed(1));
+  ok('칸3이 바 우측 안쪽 끝에서 끝남', near(g.cells[2].x + g.cells[2].w, g.bar.x + g.bar.w - g.bw),
+    (g.cells[2].x + g.cells[2].w).toFixed(1));
   g.labels.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 중앙 (±3px)',
     near(l.ink.cx, g.cells[i].cx, 3), '잉크중심 ' + l.ink.cx.toFixed(1) + ' vs 칸중심 ' + g.cells[i].cx.toFixed(1)));
   g.labels.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 안에 들어감(잘림 0)',
@@ -134,10 +139,12 @@ const settled = async page => {
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     coinCls: document.getElementById('shopList').classList.contains('coin'),
     cards: document.querySelectorAll('#shopList .shp-card').length,
+    boxes: (typeof SHOP_BOXES !== 'undefined') ? SHOP_BOXES.length : -1,
   }));
   ok('활성 탭 = 소환', s.onTab.join(',') === 'summon', s.onTab.join(','));
   ok('coin 클래스 해제', s.coinCls === false, String(s.coinCls));
-  ok('소환 상자 카드 3장', s.cards === 3, s.cards + '장');
+  /* 76·106 으로 상자가 늘어 «3장» 이 굳은 값이었다 — 데이터에서 파생시킨다 */
+  ok('소환 상자 카드 = SHOP_BOXES 수', s.cards === s.boxes && s.cards > 0, s.cards + '장 / SHOP_BOXES ' + s.boxes);
 
   /* ---- 5. 재화 탭에서 닫고 다시 열기 → 알약 리셋 (45 에서 고친 잔존 상태 버그) ---- */
   console.log('\n[5] 재화 탭 상태로 닫았다 다시 열기 (알약 리셋)');
@@ -150,9 +157,11 @@ const settled = async page => {
   const rz = await page.evaluate(() => ({
     onTab: [...document.querySelectorAll('#shopCats .shp-ct.on')].map(e => e.dataset.cat),
     cards: document.querySelectorAll('#shopList .shp-card').length,
+    boxes: (typeof SHOP_BOXES !== 'undefined') ? SHOP_BOXES.length : -1,
   }));
   ok('재진입 시 활성 탭 = 소환', rz.onTab.join(',') === 'summon', rz.onTab.join(','));
-  ok('재진입 시 소환 카드 3장', rz.cards === 3, rz.cards + '장');
+  ok('재진입 시 소환 카드 = SHOP_BOXES 수', rz.cards === rz.boxes && rz.cards > 0,
+    rz.cards + '장 / SHOP_BOXES ' + rz.boxes);
 
   /* ---- 6. 콘솔 에러 ---- */
   console.log('\n[6] 콘솔');

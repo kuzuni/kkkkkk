@@ -2168,6 +2168,14 @@
     background:#F0D9BA
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='235' height='235'%3E%3Cpolygon points='26.5,0 37.67,12.63 53.13,19.35 44.57,33.87 42.96,50.65 26.5,47 10.04,50.65 8.43,33.87 -0.13,19.35 15.33,12.63' fill='%23EBD3B1'/%3E%3C/svg%3E") 37px -10px/235px 235px repeat}
 
+  /* 124 — 자동 축복 이용권 «오프라인 정산» 한 줄. 기본 display:none 이라 01 의 측정표·비평 점수에
+     영향이 없다(이용권을 산 세션에서만 뜬다). 모달 상자(0..657) 밖 위쪽 딤 영역에 알림 칩으로 얹어
+     상자 안 요소와 겹치지 않는다 — #offw 는 flex 중앙 정렬이라 위쪽에 항상 딤 여백이 남는다. */
+  .ofrs .ofr-ab{left:140px;top:-86px;width:800px;height:62px;border-radius:31px;background:#000;
+    border:4px solid #6AE8FF;box-sizing:border-box;text-align:center;line-height:54px;
+    font-size:30px;white-space:nowrap;overflow:hidden;display:none}
+  .ofrs .ofr-ab.on{display:block}
+
   /* 최대 시간 안내 — 잉크 우단 685(알약 우측 690 - 5), 잉크중심 y 137.5 */
   .ofr-max{left:0;top:107px;width:690px;padding-right:1px;box-sizing:border-box;text-align:right;
     height:60px;line-height:60px;font-size:22px;font-weight:800;color:#9B6C54}
@@ -3116,6 +3124,53 @@
   .cn-ml.off>.ex{cursor:default;background:linear-gradient(180deg,#B9B9B9 0,#B9B9B9 6px,#9A9A9A 6px,
     #7C7C7C 89px,#BDBDBD 89px,#BDBDBD 96px,#8A8A8A 96px,#5C5C5C 103px)}
   .cn-ml.off>.ex>i{color:#DADADA}
+
+  /* ==========================================================================
+     124 — 10 상점 «이용권» 탭 (2026-08-26 저장소 주인 지시)
+     레퍼런스에 없는 «우리 게임 설계» 라 13(재화 탭)의 부품을 그대로 빌려 쓴다:
+     껍데기 `.cn-wrap`(높이만 다름) · 타이틀 `.cn-ti` · 밴드 `.cn-hl/.cn-hd` · 리본 `.cn-rb` ·
+     카드 `.cn-cd`(278×309, 열 x111/401 — §5 격자의 1·2열). 새 좌표계를 만들지 않는다.
+     ========================================================================== */
+  .shp-list.pass{padding-top:0}
+  .cn-wrap.pv{height:1180px}
+  /* 이용권 카드 — 몸통·헤더만 «금색(영구)»·«청록(기간제)» 로 구분한다(다이아·유물 카드와 같은 방식) */
+  .cn-cd.pv>.bg{background:linear-gradient(180deg,#F0C765 0,#F0C765 62px,#B98A2E 219px,
+    #9C7223 219px,#7A5716 295px)}
+  .cn-cd.pv.tm>.bg{background:linear-gradient(180deg,#6EE0C6 0,#6EE0C6 62px,#2E9F86 219px,
+    #23856F 219px,#166352 295px)}
+  /* 아이콘은 상태 줄(판 상단 38px)을 피해 아래로 내린다 — line-height 로만 밀어 판 높이는 안 바꾼다 */
+  .cn-cd.pv>.pn>em{font-size:96px;line-height:196px}
+  /* 상태 줄 — 아이템 판 **상단**에 물리는 검은 띠(«보유 중 · 28일 남음» / «미보유»).
+     하단(dy169~199)은 13 카드의 `.qt`(수량) 자리라 비워 둔다. */
+  .cn-cd>.st{left:11px;top:69px;width:256px;height:38px;background:rgba(0,0,0,.72)}
+  .cn-cd>.st>i{position:absolute;left:0;right:0;top:6px;text-align:center;color:#FFF8AA;
+    font-size:24px;line-height:26px;white-space:nowrap;transform:scaleX(.94)}
+  /* «평생 / 30일» 은 카드 폭을 넘길 수 있어 다이아·유물 카드와 같은 우측 앵커를 쓴다 */
+  .cn-cd.pv>.qt{left:auto;right:14px;transform-origin:100% 50%}
+  /* 보유 완료 카드는 다이아 가격 대신 초록 «보유 중» 띠 — 13 의 `.done` 규칙을 그대로 쓴다 */
+  .cn-cd.pv.done>.bg{background:#1C8D5E}
+  /* 안내문 — 카드 아래 2줄(효과 설명). 배너·패널을 새로 만들지 않고 텍스트만 둔다 */
+  .pv-nt{left:66px;width:948px;text-align:center;color:#D8D8E0;font-size:27px;line-height:36px;
+    white-space:nowrap}
+  /* 자동 축복 남은 기간 바 — §8 마일리지 패널의 트랙과 같은 규격(h46 r23 검정5) */
+  .pv-bar{left:111px;top:1046px;width:858px;height:46px;border-radius:23px;border:5px solid #000;
+    background:#2A3A46;overflow:hidden}
+  .pv-bar>s{position:absolute;left:0;top:0;bottom:0;border-radius:18px;
+    background:linear-gradient(180deg,#C9FFF3 0,#6EE0C6 8px,#2E9F86 100%)}
+  .pv-bt{left:111px;top:1104px;width:858px;text-align:center;color:#fff;font-size:26px;
+    line-height:32px;-webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
+
+  /* 124 — 광고 제거 이용권 보유 중에는 «광고 시청» 표식을 전부 감춘다(수령은 그대로 된다).
+     13 광고 상품 ▶AD · 10 무료 소환 ▶AD · 01 오프라인 1.5배 AD — 세 곳이 전부다. */
+  #app.noads .cn-cd>.bt>.ad{display:none}
+  #app.noads .cn-cd>.bt>.lab{left:9px;width:227px}
+  #app.noads .cn-cd>.bt>.cnt{left:9px;width:227px}
+  #app.noads .shp-card>.adbadge{display:none}
+  #app.noads .ofr-ad{display:none}
+  /* 배너는 «구매 완료» 상태 — [이동] 버튼을 회색 비활성으로 바꾼다(§8 마일리지 off 와 같은 색) */
+  .cn-mv.off{cursor:default;background:linear-gradient(180deg,#B9B9B9 0,#B9B9B9 6px,#9A9A9A 6px,
+    #7C7C7C 89px,#BDBDBD 89px,#BDBDBD 96px,#8A8A8A 96px,#5C5C5C 103px)}
+  .cn-mv.off>i{color:#DADADA;font-size:40px}
 
   /* §8 카테고리 탭 바 — **96 으로 탭 부품이 공용화됐다.** 13(재화 탭)에서 바 테두리·라벨 크기·✦ 를
      따로 덮어쓰던 규칙(`#shopList.coin ~ #shopCats …`)은 전부 폐기한다 — 그게 «탭마다 미묘하게
@@ -5168,6 +5223,12 @@
   .stabs.sp2>.stab{width:50%}
   .stabs.sp2>.stab:nth-of-type(1){left:0}
   .stabs.sp2>.stab:nth-of-type(2){left:50%}
+  /* 124 — 3칸 균등(10 상점: 소환·재화·이용권). sp2 와 같은 «패딩박스 균등분할» 규칙이라
+     바 폭(990)·테두리(6)가 바뀌어도 칸이 저절로 따라간다. 칸 폭 = (990−12)/3 = 326 */
+  .stabs.sp3>.stab{width:33.3333%}
+  .stabs.sp3>.stab:nth-of-type(1){left:0}
+  .stabs.sp3>.stab:nth-of-type(2){left:33.3333%}
+  .stabs.sp3>.stab:nth-of-type(3){left:66.6667%}
   /* 레드닷 — 옛 `.dns-t.r>s`(칸 안 절대좌표 371) 를 칸 우상단 기준으로 옮긴 것 */
   .stab>.bdg{position:absolute;right:23px;top:-6px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;
@@ -7691,6 +7752,8 @@
     <div class="ofr-max"><i id="ofrMax">최대 6시간 0분</i></div>
     <div class="ofr-pill"><b><i id="ofrTime">0시간 6분</i></b></div>
     <div class="ofr-clock">⏱️</div>
+    <!-- 124 — 자동 축복 이용권 오프라인 정산 결과(없으면 숨김) -->
+    <div class="ofr-ab ot" id="ofrAuto"><i></i></div>
     <div class="ofr-lead ot"><i>자리를 비우신 동안 사냥했어요!</i></div>
     <div class="ofr-rw"></div>
     <div class="ofr-fr"><i><b>🪙</b></i></div>
@@ -7733,10 +7796,12 @@
     <div class="shp-list" id="shopList"></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
          ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
-    <div class="shp-cats stabs sp2" id="shopCats">
-      <!-- 96 — 공용 서브탭 부품(.stabs.sp2 > .stab). `.shp-ct` 는 게이트(tools/verify45.js) 별칭. -->
+    <!-- 124(2026-08-26 주인 지시): «이용권» 탭 신설 → 2칸을 3칸으로 나눈다(.sp2 → .sp3). -->
+    <div class="shp-cats stabs sp3" id="shopCats">
+      <!-- 96 — 공용 서브탭 부품(.stabs.sp3 > .stab). `.shp-ct` 는 게이트(tools/verify45.js) 별칭. -->
       <div class="shp-ct stab on" data-cat="summon"><i class="ol4">소환</i></div>
       <div class="shp-ct stab" data-cat="coin"><i class="ol3">재화</i></div>
+      <div class="shp-ct stab" data-cat="pass"><i class="ol3">이용권</i></div>
     </div>
   </div>
   <!-- 89 유물 페이지 — «유물 소환 → 자동 강화». (다) 전체화면 페이지(03 던전·10 상점 동종).
@@ -9496,7 +9561,11 @@ const DEF = () => ({
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
   guide:{ idx:0, prog:0, gv:GUIDE_V },        /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선, gv=미션표 버전(73) */
-  pass:{ prem:{}, got:{} },                   /* 35·36 패스 — prem[탭]=1 활성화, got['탭:단계:칸']=1 */
+  /* 35·36 패스 — prem[탭]=1 활성화, got['탭:단계:칸']=1
+     124 — 10 상점 «이용권» 2종도 같은 주머니에 둔다(35·36 과 키가 겹치지 않는다. KEY 유지 — 44 교훈 2).
+       noAds          : 평생 광고 제거(영구, boolean)
+       autoBlessUntil : 자동 축복 이용권 만료 epoch(ms). 0 = 미보유 */
+  pass:{ prem:{}, got:{}, noAds:false, autoBlessUntil:0 },
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
@@ -9632,6 +9701,11 @@ function load(){
       if(k.split(':').length !== 2) return;                 /* 이미 새 키다 */
       b.pass.got['stage:' + k] = 1; delete b.pass.got[k];
     });
+    /* 124 이용권 — 44 교훈 2 와 같은 «없으면 기본값». 옛 세이브엔 두 키가 아예 없고,
+       문자열·null 이 들어와도 NaN 이 새지 않게 항목별로 못박는다(만료 epoch 는 유한한 0 이상). */
+    b.pass.noAds = !!b.pass.noAds;
+    b.pass.autoBlessUntil = Number.isFinite(b.pass.autoBlessUntil) && b.pass.autoBlessUntil > 0
+      ? Math.floor(b.pass.autoBlessUntil) : 0;
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     /* 105 — 구 세이브 «자동» 정리(KEY 유지 — 44 교훈 2). autoEquip 은 폐기 키라 지우고,
        autoBuy 는 «기본 true 시절에 켜진 것» 이므로 세이브당 딱 한 번만 꺼 준다.
@@ -13843,7 +13917,9 @@ const won = n => Math.round(n).toLocaleString('en-US');
 function renderShopPage(){
   const list = $('shopList');
   list.classList.toggle('coin', shopCat === 'coin');
+  list.classList.toggle('pass', shopCat === 'pass');
   if(shopCat === 'coin'){ renderCoinPage(list); return; }
+  if(shopCat === 'pass'){ renderPassPage(list); return; }   /* 124 이용권 탭 */
   /* 45: 카테고리는 소환·재화 2개뿐이다(특별·일일/주간 제거) — «준비 중» 분기도 같이 없앴다. */
   let h = '';
   const gmFocus = typeof gmBan === 'function' ? gmBan() : null;   /* 122 ①-5 */
@@ -14134,17 +14210,22 @@ function renderCoinPage(list){
       +  '<div class="qt">' + a.q + '</div>'
       +  (done
           ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>구매 완료</i></div>'
+          /* 124 — 광고 제거 이용권 보유 중에는 ▶AD 뱃지를 감추고(CSS) 라벨을 «무료 수령» 으로 바꾼다.
+             수령 경로·일일 횟수(adLeft)는 한 줄도 바뀌지 않는다. */
           : '<div class="bt" data-cnad="' + a.id + '"><div class="ad"><s></s><b>AD</b></div>'
-            + '<u class="lab">받기</u><u class="cnt">(' + left + '/' + a.cap + ')</u></div>')
+            + '<u class="lab">' + (noAdsOn() ? '무료 수령' : '받기') + '</u>'
+            + '<u class="cnt">(' + left + '/' + a.cap + ')</u></div>')
       +  '<div class="fr"></div></div>';
   });
-  /* §6 평생 광고 제거 배너 — 작업 68: [이동] 은 구버전 패널 상점이 아니라
-     **같은 페이지의 §7 다이아 상품** 으로 스크롤한다(구 UI 진입점 폐기). */
+  /* §6 평생 광고 제거 배너 — 작업 68: [이동] 은 구버전 패널 상점이 아니라 같은 페이지로 스크롤했다.
+     124: 이제 그 상품이 실제로 **이용권 탭**에 있으므로 [이동] 은 이용권 탭으로 보낸다.
+     이미 샀으면 배너는 «구매 완료» 로 잠긴다(지시 ②). */
+  const na = noAdsOn();
   h += '<div class="cn-a2"><em>🎬</em><div class="no">🚫</div></div>'
     + '<div class="cn-nt" style="top:1417px"></div><div class="cn-nt" style="top:1480px"></div>'
     + '<div class="cn-nt" style="top:1543px"></div>'
     + '<div class="cn-a2t"><s>평생 광고 제거</s><i>평생 광고 제거</i></div>'
-    + '<div class="cn-mv" id="cnMove"><i>이동</i></div>'
+    + '<div class="cn-mv' + (na ? ' off' : '') + '" id="cnMove"><i>' + (na ? '구매 완료' : '이동') + '</i></div>'
     /* §7 다이아 상품 리본 (여기서부터 아래는 레퍼런스에 없는 «우리 게임 설계» — 작업 44) */
     + '<div class="cn-rb" id="cnDiaRb" style="top:1698px;--c:#5B4BE0;--h:#7E70FF;--s:#4032B4;--t:#4C3ECB;--ts:#2E2380">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>다이아 상품</i></div>';
@@ -14194,9 +14275,9 @@ $('shopList').addEventListener('click', e => {
   /* 작업 68 — 구버전 패널 상점으로 떨어지던 [이동]. 이제 같은 페이지의 §7 다이아 상품으로 스크롤한다.
      offsetParent 에 의존하지 않도록 rect 차이로 목적지를 잡는다. */
   if(e.target.closest('#cnMove')){
-    const rb = $('cnDiaRb'), lw = $('shopList');
-    if(rb && lw) lw.scrollTo({ top: lw.scrollTop + rb.getBoundingClientRect().top
-      - lw.getBoundingClientRect().top - 40, behavior:'smooth' });
+    if(noAdsOn()) return;                    /* 124 — 구매 완료 상태에서는 잠긴다 */
+    /* 124 — 상품이 이용권 탭으로 옮겨졌으므로 그리로 보낸다(옛 §7 다이아 스크롤은 폐기) */
+    shopCat = 'pass'; setShopCatTabs('pass'); renderShopPage(); $('shopList').scrollTop = 0;
     return;
   }
   /* 작업 68 — §9 유물조각 교환(구버전 패널 상점에서 이관). 규칙은 구버전과 동일하다. */
@@ -14237,6 +14318,164 @@ $('shopList').addEventListener('click', e => {
   if(got && !a.r.freePet) popup('🎁 ' + a.n + ' 수령', '<p>' + got + ' 을(를) 받았습니다.</p>');
 });
 
+
+/* ==========================================================================
+   124 — 10 상점 «이용권» 탭 (2026-08-26 저장소 주인 지시)
+   ─ 지시 원문: «상점에 재화 말고 이용권 탭도 — 평생 광고 제거 이용권, 자동 축복 이용권.
+     광고 제거 구매 시 광고 전부 스킵되고 효과는 그대로. 자동 축복 이용권은 오프라인 때도
+     시간 되면 알아서 축복 쓴 걸로 — 서버 없이, 오랜만에 켜면 그동안 축복 시간 될 때마다 켰던
+     것으로 계산해서 축복 경험치·레벨이 올라 있으면 됨.»
+
+   ① 가격 — 44 규칙(결제 미연동)대로 원화가 아니라 **다이아 대체가**다. 13 다이아 상품표의
+      원화가에 맞춰 잡았다: 광고 제거 75,000💎 = d3(11,000원) · 자동 축복 35,000💎 = d2(5,000원).
+   ② 평생 광고 제거(`S.pass.noAds`) — 광고 SDK 가 없어 지금도 «시청 없이 즉시 수령» 이므로
+      기능 차이는 **표식과 문구**다: 13 광고 상품 6칸의 ▶AD 뱃지·10 무료 소환 ▶AD·01 «1.5배 받기» AD
+      가 사라지고 라벨이 «받기» → «무료 수령» 이 되며, 13 §6 배너가 «구매 완료» 로 잠긴다.
+      **일일 횟수 제한(adLeft)은 그대로**다 — 지시 명시.
+   ③ 자동 축복(`S.pass.autoBlessUntil`, 30일) — 온라인은 1초 틱이 만료를 보고 activateBless() 를
+      부르고, 오프라인은 로드 시 autoBlessSettle() 이 «만료 → 재발동» 을 시간순으로 시뮬한다.
+      3종이 **경험치·레벨을 공유**하므로 종별로 따로 나눠 세면 안 된다(레벨이 오르면 그 다음
+      발동부터 지속시간이 길어져 이후 발동 시각이 전부 달라진다) — 항상 «가장 먼저 만료되는 축복»
+      하나씩 시간순으로 처리한다. 이용권 만료 시각(또는 지금)에서 멈춘다.
+   ========================================================================== */
+const PASS_DAY_MS      = 24 * 3600 * 1000;
+const PASS_ADFREE_DIA  = 75000;                    /* 평생 광고 제거 — 13 d3(11,000원) 대체가 */
+const PASS_ABLESS_DIA  = 35000;                    /* 자동 축복 30일 — 13 d2(5,000원) 대체가 */
+const PASS_ABLESS_DAYS = 30;
+/* 오프라인 시뮬 상한 — 30일 ÷ 최소 지속 30분 × 3종 = 4,320 회가 최대다. 손댄 세이브가
+   말도 안 되는 만료 시각을 갖고 있어도 여기서 멈춘다(무한 루프 방지). */
+const PASS_SIM_MAX = 20000;
+
+const noAdsOn      = () => !!(S.pass && S.pass.noAds);
+/* ⚠ epoch(ms) 는 2^31 을 넘으므로 `|0` 을 쓰면 안 된다(32비트로 잘려 1970년이 된다) */
+const passAutoUntil = () => { const v = S.pass && S.pass.autoBlessUntil; return Number.isFinite(v) && v > 0 ? v : 0; };
+const autoBlessLeft = () => Math.max(0, passAutoUntil() - Date.now());
+const autoBlessOn   = () => autoBlessLeft() > 0;
+const autoBlessDays = () => Math.ceil(autoBlessLeft() / PASS_DAY_MS);
+
+/* 광고 표식 토글 — 상태를 바꾸는 모든 경로(구매·로드)가 이 한 줄만 부르면 된다 */
+function syncNoAds(){ const a = $('app'); if(a) a.classList.toggle('noads', noAdsOn()); }
+
+const PASS_ITEMS = [
+  { id:'noads', n:'광고 제거', ic:'🚫', dia:PASS_ADFREE_DIA, perm:true,
+    q:'평생', nt:'모든 광고 보상을 시청 없이 바로 받습니다 (일일 횟수 제한은 그대로)' },
+  { id:'abless', n:'자동 축복', ic:'✨', dia:PASS_ABLESS_DIA, perm:false,
+    q:'30일', nt:'축복 3종이 만료될 때마다 자동으로 다시 켜집니다 (게임을 꺼 둔 동안도 계산)' }
+];
+const passOwned = id => id === 'noads' ? noAdsOn() : autoBlessOn();
+function passStatusTxt(p){
+  if(p.id === 'noads') return noAdsOn() ? '보유 중 · 평생' : '미보유';
+  return autoBlessOn() ? '보유 중 · ' + autoBlessDays() + '일 남음' : '미보유';
+}
+function renderPassPage(list){
+  let h = '<div class="cn-wrap pv">'
+    + '<div class="cn-ti" style="top:40px"><i>이용권 상점</i></div>'
+    + '<div class="cn-hl" style="top:150px"></div>'
+    + '<div class="cn-hd" style="top:158px"><i>이용권</i></div>'
+    + '<div class="cn-hl" style="top:243px"></div>'
+    + '<div class="cn-rb" style="top:300px;--c:#E0A22B;--h:#FFD36A;--s:#B47C14;--t:#C98D1C;--ts:#7A5308">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>상시 판매</i></div>';
+  /* 카드 2장 — 13 §5 격자의 1·2열(x111/401) · 같은 규격(278×309) */
+  PASS_ITEMS.forEach((p, i) => {
+    const own = passOwned(p), x = [111, 401][i];
+    h += '<div class="cn-cd pv' + (p.perm ? '' : ' tm') + (own ? ' done' : '')
+      +  '" style="left:' + x + 'px;top:486px;--fs:35.5px;--sx:.95;--qx:1'
+      +  (own ? ';--hd:#68C338;--hr:#7FD955' : (p.perm ? ';--hd:#E0A22B;--hr:#FFD36A' : ';--hd:#2E9F86;--hr:#8CF4E4')) + '">'
+      +  '<div class="bg"></div><div class="hd"><i>' + p.n + '</i></div>'
+      +  '<div class="pn"><em>' + p.ic + '</em></div>'
+      +  '<div class="st"><i>' + passStatusTxt(p) + '</i></div>'
+      +  '<div class="qt">' + p.q + '</div>'
+      +  (own
+          ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>보유 중</i></div>'
+          : '<div class="bt buy" data-pvbuy="' + p.id + '"><u class="pr">💎 ' + fmt(p.dia) + '</u></div>')
+      +  '<div class="fr"></div></div>';
+  });
+  /* 안내문 2줄 — 카드 아래 */
+  PASS_ITEMS.forEach((p, i) => {
+    h += '<div class="pv-nt" style="top:' + (836 + i * 46) + 'px">· ' + p.nt + '</div>';
+  });
+  /* 자동 축복 남은 기간 바 — 보유 중일 때만 */
+  if(autoBlessOn()){
+    const left = autoBlessLeft(), full = PASS_ABLESS_DAYS * PASS_DAY_MS;
+    h += '<div class="pv-bar"><s style="width:' + Math.min(100, left / full * 100).toFixed(2) + '%"></s></div>'
+      +  '<div class="pv-bt">자동 축복 — ' + autoBlessDays() + '일 남음 · 축복 Lv.' + blessLv() + '</div>';
+  } else {
+    h += '<div class="pv-bt" style="top:1050px">보유 중인 기간제 이용권이 없습니다</div>';
+  }
+  h += '</div>';
+  list.innerHTML = h;
+}
+/* 구매 — 44 규칙대로 «결제 미연동» 이라 다이아로 산다. 지급 지점은 이 함수 하나뿐이다. */
+function buyPass(id){
+  const p = PASS_ITEMS.find(x => x.id === id);
+  if(!p || passOwned(p)) return false;
+  if(S.dia < p.dia){ popup('💎 다이아 부족', '<p>' + p.n + ' 이용권은 💎 ' + fmt(p.dia) + ' 입니다.</p>'); return false; }
+  S.dia -= p.dia;
+  if(p.id === 'noads'){ S.pass.noAds = true; syncNoAds(); }
+  else {
+    /* 기간은 «지금부터» 다 — 남은 기간이 있으면 이어 붙인다(중복 구매는 위에서 막히지만
+       나중에 연장 상품이 붙어도 이 식이 그대로 맞다) */
+    S.pass.autoBlessUntil = Math.max(Date.now(), passAutoUntil()) + PASS_ABLESS_DAYS * PASS_DAY_MS;
+    autoBlessTick();                                 /* 산 즉시 꺼져 있던 축복을 켠다 */
+  }
+  uiDirty = true; save(); renderUI();
+  renderPassPage($('shopList'));
+  popup('🎫 ' + p.n + ' 이용권', '<p>' + p.nt + '</p>'
+    + '<p>' + (p.perm ? '평생 적용됩니다.' : PASS_ABLESS_DAYS + '일간 적용됩니다.') + '</p>');
+  return true;
+}
+$('shopList').addEventListener('click', e => {
+  const b = e.target.closest('[data-pvbuy]');
+  if(b) buyPass(b.dataset.pvbuy);
+});
+/* 온라인 자동 축복 — 1초 틱. 이용권이 없으면 아무 것도 하지 않는다(옛 동작 그대로). */
+function autoBlessTick(){
+  if(!autoBlessOn()) return 0;
+  let n = 0;
+  BLESS.forEach(x => { if(!blessOn(x.k) && activateBless(x.k)) n++; });
+  return n;
+}
+setInterval(autoBlessTick, 1000);
+/* 오프라인 정산 — 로드 직후 1회. lastTime(마지막 저장 시각) ~ min(now, 이용권 만료) 구간 동안
+   «만료되면 즉시 재발동» 했을 때의 발동을 시간순으로 재생한다. 반환값은 01 팝업 한 줄용. */
+function autoBlessSettle(lastTime){
+  if(!Number.isFinite(lastTime) || lastTime <= 0) return null;
+  const until = passAutoUntil();
+  if(until <= 0) return null;
+  const end = Math.min(Date.now(), until);
+  if(end <= lastTime) return null;
+  const lv0 = blessLv(), t = {};
+  BLESS.forEach(x => { const v = S.bless.exp[x.k]; t[x.k] = Number.isFinite(v) && v > 0 ? v : 0; });
+  let fires = 0, guard = 0;
+  while(guard++ < PASS_SIM_MAX){
+    /* 가장 먼저 만료되는 축복 하나 — 이미 꺼져 있던 것은 lastTime 시점에 즉시 켜진 것으로 본다 */
+    let k = null, tm = Infinity;
+    BLESS.forEach(x => { if(t[x.k] < tm){ tm = t[x.k]; k = x.k; } });
+    const at = Math.max(tm, lastTime);
+    if(at > end) break;
+    /* activateBless() 와 **같은 순서** — 경험치를 먼저 올리고, 오른 레벨의 지속시간을 쓴다 */
+    if(blessLv() < BLESS_MAXLV){
+      if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
+    } else S.bless.prog = 0;
+    t[k] = at + blessDur();
+    fires++;
+  }
+  if(!fires) return null;
+  BLESS.forEach(x => { S.bless.exp[x.k] = t[x.k]; });
+  markDirty(); uiDirty = true; save();
+  return { n:fires, lv0:lv0, lv1:blessLv() };
+}
+/* 01 오프라인 보상 팝업 한 줄 — 팝업이 안 뜨는 경우(적립 60초 미만)에는 안내 팝업으로 떨어진다 */
+let autoBlessPend = null;
+function autoBlessLine(){
+  const r = autoBlessPend;
+  const el = $('ofrAuto');
+  if(!el) return;
+  if(!r){ el.classList.remove('on'); el.firstElementChild.textContent = ''; return; }
+  autoBlessPend = null;
+  el.firstElementChild.textContent = '✨ 자동 축복 ' + r.n + '회 발동 · 축복 Lv ' + r.lv0 + '→' + r.lv1;
+  el.classList.add('on');
+}
 
 /* ---- 05 무기 팝업 (딤 위 가운데 다이얼로그) — 측정표 docs/measure/05-무기팝업.md ----
    좌표는 전부 레퍼런스 실측 절대 px 이다. 격자는 **행 = 등급** 으로 묶는다:
@@ -16358,6 +16597,7 @@ function showOfflineReward(sec, gold, dia){
   $('ofrMax').textContent = '최대 ' + OFF_MAX_H + '시간 0분';
   $('ofrTime').textContent = hhmm(sec);
   $('ofrAmt').textContent = fmt(gold);
+  autoBlessLine();                            /* 124 — 자동 축복 정산 한 줄(없으면 숨김) */
   $('offw').classList.add('on');
 }
 function closeOfflineReward(){ $('offw').classList.remove('on'); offPend = null; }
@@ -17336,8 +17576,19 @@ loadAtlases(() => {
   $('ofrGet15').onclick = () => claimOffline(1.5);
   /* 작업 68 — 구버전 패널 상점 대신 10 상점 페이지를 연다(이 [이동] 이 파란 구 UI 로 떨어지던 버그) */
   $('ofrGo').onclick = () => { closeOfflineReward(); openShopPage(); };
+  /* 124 — 광고 표식 동기화 + 자동 축복 오프라인 정산. 정산을 **오프라인 보상보다 먼저** 돌려야
+     «꺼 둔 동안 축복이 켜져 있던 것» 이 그 시간의 골드 배율에도 반영된다. */
+  syncNoAds();
+  autoBlessPend = autoBlessSettle(lastTime);
   renderUI();
   offlineReward(lastTime);
+  /* 오프라인 보상 팝업이 안 떴으면(적립 60초 미만) 정산 결과가 갈 곳이 없다 — 안내 팝업으로 알린다 */
+  if(autoBlessPend){
+    const r = autoBlessPend; autoBlessPend = null;
+    setTimeout(() => popup('✨ 자동 축복',
+      '<p>자리를 비우신 동안 <b>' + r.n + '회</b> 자동 발동했습니다.</p>'
+      + '<p>축복 Lv <b>' + r.lv0 + ' → ' + r.lv1 + '</b></p>'), 600);
+  }
   /* 91 — 도감이 «세트» 단위로 바뀌면서 구 세이브의 카테고리 카운터를 버렸다. 지시대로 한 줄만 안내한다. */
   if(collLegacy) setTimeout(() => popup('📖 도감이 바뀌었습니다',
     '<p>도감이 <b>«부위 · 등급 세트»</b> 단위로 바뀌었습니다.<br>' +
