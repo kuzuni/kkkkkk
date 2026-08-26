@@ -273,18 +273,35 @@ function pwLaunch(){
     if(!b) return { err:'보상 받기 버튼 없음' };
     b.click();
     const nf = () => new Promise(r => requestAnimationFrame(() => r()));
-    let lit = 0, litMax = 1, samp = 0, corr = [];
+    let lit = 0, litMax = 1, samp = 0, corr = [], line = 0, nNear = 0, nSamp = 0, lastN = -1e9;
     const t0 = Date.now();
     while(Date.now() - t0 < 2200){
+      const t = Date.now() - t0;
       const L = document.querySelectorAll('#fxl .fx-lit');
       if(L.length){
         lit++;
         for(const p of L){
           const m = String(getComputedStyle(p).transform).match(/matrix\(([\d.\-]+)/);
           litMax = Math.max(litMax, m ? +m[1] : 1);
+          /* 판이나 그 자식에 취소선이 남아 있으면 숫자를 가로선이 관통한다 */
+          const bb = p.querySelector('b');
+          if(bb && /line-through/.test(String(getComputedStyle(bb).textDecorationLine))) line++;
+          if(/line-through/.test(String(getComputedStyle(p).textDecorationLine))) line++;
         }
       }
       samp++;
+      /* 9회차 — «알약에 닿는 그림» 이 캡처 리듬(100ms)에 걸리는가. 종단 속도가 너무 크면
+         마지막 180px 가 프레임 사이에 통째로 빠져 «닿는 장면이 한 번도 없다» 가 된다(비평가 AA ②). */
+      if(t - lastN >= 100){
+        lastN = t; nSamp++;
+        let near = false;
+        for(const el of document.querySelectorAll('#fxl .fx-fly')){
+          const r2 = el.getBoundingClientRect();
+          for(const pv of [[583,54],[843,52]])
+            if(Math.hypot(r2.left + r2.width/2 - pv[0], r2.top + r2.height/2 - pv[1]) <= 60) near = true;
+        }
+        if(near) nNear++;
+      }
       /* 복도 직진성 — 상승 중(y 500~950)인 아이콘의 x 를 재화별로 모은다 */
       for(const f of fxFlies){
         if(!f.ui || f.ox == null || !f.el.isConnected) continue;
@@ -296,7 +313,7 @@ function pwLaunch(){
     const g = corr.filter(c => c[0] === 'gold').map(c => c[1]);
     const d = corr.filter(c => c[0] === 'dia').map(c => c[1]);
     const sp = a => a.length ? Math.max(...a) - Math.min(...a) : -1;
-    return { lit, samp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
+    return { lit, samp, line, nNear, nSamp, litMax:+litMax.toFixed(3), gN:g.length, dN:d.length, gSp:sp(g), dSp:sp(d),
              gMin:g.length?Math.min(...g):-1, dMin:d.length?Math.min(...d):-1 };
   });
   chk(!t2c.err, '모달 보상 수령 트리거' + (t2c.err ? ' — ' + t2c.err : ''));
@@ -304,6 +321,10 @@ function pwLaunch(){
   chk(t2c.litMax >= 1.06, '복제판이 실제로 부푼다 ×' + t2c.litMax + ' (원본과 같은 배율)');
   chk(t2c.gSp >= 0 && t2c.gSp <= 14 && t2c.dSp >= 0 && t2c.dSp <= 14,
       '복도가 직선이다 — 상승 구간 x 흔들림 골드 ' + t2c.gSp + 'px · 다이아 ' + t2c.dSp + 'px (≤14px)');
+  chk(t2c.line === 0, '복제 알약 숫자를 가로선이 관통하는 프레임 ' + t2c.line
+      + '회 (9회차: 판을 <s> 로 만들어 line-through 가 상속되던 결함)');
+  chk(t2c.nNear >= 3, '알약 60px 안에서 아이콘이 잡히는 표본 ' + t2c.nNear + '/' + t2c.nSamp
+      + ' (캡처 리듬 100ms · ≥3 — 종단 속도가 크면 «닿는 장면» 이 프레임 사이에 빠진다)');
   chk(t2c.gMin >= 970 && t2c.dMin >= 1010,
       '복도 최소 x 골드 ' + t2c.gMin + ' · 다이아 ' + t2c.dMin + ' (형제 카드 우변 949 + 아이콘 반경 27 = 976 밖)');
 
