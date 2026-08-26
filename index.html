@@ -1121,18 +1121,23 @@
        4..9 갈색 림 5단 · 9.. 본문색으로 동일했다. 상세 `docs/review/63-탭바상단검정테두리.md`
      닫힘 5칸 균등 216 / 열림 ✕칸 296 + 나머지 196 · 구분홈 6px
      아이콘 세로중심 +87 · 라벨 잉크 top +124(높이 32, 자당 advance 30) · 하단 여백 24 */
-  /* 좌·우 3px 프레임은 칸 폭(216)을 깎지 않도록 border 가 아니라 inset 그림자로 얹는다 */
+  /* 좌·우 프레임은 칸 폭(216)을 깎지 않도록 border 가 아니라 inset 그림자로 얹는다.
+     A1 6회차 — 비평가 H ④: 좌우 다 5px 이면 «닫힘 플레이트 폭» 이 210/211/211/211/**207** 로
+     마지막 칸만 4px 좁아진다(ref 는 209 균등, 편차 0). ref 실측은 좌 3 · 우 4 라 그대로 쓴다. */
   #tabbar{flex:none;height:180px;display:flex;position:relative;
-    box-shadow:inset 5px 0 0 #1a1615,inset -5px 0 0 #1a1615;
+    box-shadow:inset 3px 0 0 #1a1615,inset -4px 0 0 #1a1615;
     background:linear-gradient(180deg,#14100D 0 3px,#241C11 3px 4px,   /* 검정 3 + 전이 1 (ref 2164 = (36,28,17)) */
       #584D38 4px 5px,#63543A 5px 6px,                                 /* 림 피크 2px */
       #5F5034 6px 7px,#53442E 7px 8px,#473A28 8px 9px,                 /* 감쇠 3px */
       #42362A 9px 104px,#33291D 104px 174px,#1F1C15 174px 176px,#101010 176px 180px)}
   .tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
     padding-top:31px;cursor:pointer;position:relative}
-  /* 탭 사이 어두운 구분홈 */
+  /* 탭 사이 어두운 구분홈 — 측정표 §2 «6px».
+     A1 6회차: 폭은 8px 로 잡혀 있었지만 그라디언트가 35% 지점까지 배경색이라 **어두운 심이 5px**
+     로만 찍혔다(비평가 H 실측 «우리 5 vs ref 7», G «5 vs 5» — 둘이 갈리므로 측정표의 6~7 을 따른다).
+     폭은 그대로 두고 **어두운 구간을 앞당겨** 심을 6~7px 로 만든다. */
   .tab:not(:last-child)::after{content:'';position:absolute;right:-4px;top:5px;bottom:0;width:8px;
-    background:linear-gradient(90deg,#42362A 0,#2A2219 35%,#110E0B 90%,#110E0B 100%);z-index:2}
+    background:linear-gradient(90deg,#42362A 0,#2A2219 12%,#110E0B 60%,#110E0B 100%);z-index:2}
   /* 아이콘: 높이 112(세로중심 +87). 이모지 글리프가 박스를 거의 채우도록 font-size 를 키운다.
      폭은 글리프 advance(104px 기준 130px)보다 넓게 잡는다 — 좁으면 넘친 글리프가 가운데 정렬되지
      않고 좌측 정렬돼 잉크가 8px 우측으로 밀린다. */
@@ -1163,10 +1168,13 @@
     background:radial-gradient(circle 48px at 86px 56px,#3c3f4e 0 48px,transparent 48px)}
   /* `*` 리셋은 의사요소를 잡지 못해 기본이 content-box 다 — 지정하지 않으면 테두리 18px 만큼
      커지고 중심이 9px 우측으로 밀린다.
-     115 + 그림자 3px 좌우 = 외곽 121 (측정표 §4 영웅 121x121). r6 실측은 117x109 였다. */
+     외곽 121 은 «금색 링 111 + 바깥 검정 5» 로 쪼갠다 — 6회차 비평가 2인이 **금색 링을 독립적으로
+     둘 다 ⌀111** 로 실측했고(G «링 지름 111 = 111, 0%», H «외경 ⌀111 · 링 두께 9px — ref 와 동일»),
+     H 는 이어서 «링 바깥 검정 외곽선 ref 5px vs 우리 3px(−40%)» 를 지적했다.
+     115+3 도 외곽은 121 이지만 금색이 4px 넓고 검정이 2px 얇아진다 → **111 + 5** 가 맞다. */
   .tab[data-t="hero"] .ti::before{content:'';position:absolute;left:50%;top:50%;box-sizing:border-box;
-    width:115px;height:115px;margin:-57.5px 0 0 -57.5px;border-radius:50%;
-    border:9px solid #e2bd23;box-shadow:0 0 0 3px #1a0f05}
+    width:111px;height:111px;margin:-55.5px 0 0 -55.5px;border-radius:50%;
+    border:9px solid #e2bd23;box-shadow:0 0 0 5px #1a0f05}
   /* 레퍼런스 라벨은 자당 advance 30px · 잉크 높이 33px 인 좁고 높은 게임 서체다.
      폭은 letter-spacing(36-6=30) 으로 맞추고, 라벨이 아이콘 하단을 ~19px 덮는다. */
   /* letter-spacing 은 마지막 글자 뒤에도 걸려 잉크가 박스 중심에서 3px 우측으로 밀린다 → left 로 되민다 */
