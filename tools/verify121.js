@@ -294,7 +294,14 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const g1 = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')].map(c => c._fr));
     ok(g0.length === 2 && g0.every((f, i) => f && g1[i] && f !== g1[i]),
       `해금 아레나 두 기사 아이들 순환 (${g0.map((f, i) => f + '→' + g1[i]).join(' · ')})`);
-    ok(g0.length === 2 && g0[0] !== g0[1], `두 기사가 같은 프레임이 아니다 (${g0.join(' / ')})`);
+    /* ⚠ «지금 이 순간 두 칸의 프레임이 다른가» 로 물으면 안 된다 — 위상차가 0.7프레임이라
+       Math.floor 결과가 같아지는 구간이 30% 있어 **실행마다 튀는 게이트**가 된다(실제로 한 번 거짓 FAIL 났다).
+       불변량은 «두 칸의 애니메이션 위상이 다르다» 이므로 엔티티의 at 차이를 잰다(항상 0.7). */
+    const at = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')]
+      .map(c => c._an && +c._an.at.toFixed(3)));
+    ok(at.length === 2 && at.every(v => typeof v === 'number')
+      && Math.abs((at[0] - at[1]) % 1) > 0.25 && Math.abs((at[0] - at[1]) % 1) < 0.75,
+      `두 기사의 아이들 위상차 ${at.length === 2 ? Math.abs(at[0] - at[1]).toFixed(2) : '?'}프레임 (한 몸처럼 안 뛴다)`);
     await p.evaluate(() => { S.best = 1; renderDunPage(); });
     await p.waitForTimeout(400);
   }
