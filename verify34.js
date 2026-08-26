@@ -153,7 +153,7 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   ok('J1 팝업 41,345,998x1157', near(geo.bls, [41, 345, 998, 1157]), JSON.stringify(geo.bls));
   ok('J2 헤더 h90', geo.head && Math.abs(geo.head[3] - 90) <= 1, geo.head && geo.head[3]);
   ok('J3 배너 89,486,900x100', near(geo.note, [89, 486, 900, 100]), JSON.stringify(geo.note));
-  ok('J4 Lv 알약 110,626,134x68', near(geo.lv, [110, 626, 134, 68]), JSON.stringify(geo.lv));
+  ok('J4 Lv 알약 110,626,139x68', near(geo.lv, [110, 626, 139, 68]), JSON.stringify(geo.lv));
   /* 10회차: 비평 E «ref h48» · F «ref 48~49, y636..684» 로 두 비평가 독립 일치 → 51→48, top 634→636 */
   /* 12회차: ref 트랙이 Lv 알약 아래로 파고든다(I 역산 233 · J 채움경계 748) → 좌측 16px 연장, 우단 925 불변 */
   ok('J5 진행바 227,636,698x48', near(geo.bar, [227, 636, 698, 48]), JSON.stringify(geo.bar));

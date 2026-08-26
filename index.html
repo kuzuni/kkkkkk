@@ -6671,13 +6671,14 @@
      ref 우상 30.5 · 우하 40.5 vs 우리 47.0(CSS 48, 편향 −1) ⇒ ref 실효 우상 ≈31 · 우하 ≈41.
      좌측 두 모서리는 ref 에서 **핑크 리본에 가려** 잡히지 않는다(rms 17~135) — 측정 못 한 값은
      건드리지 않고 48 을 유지한다. 순서는 tl tr br bl. */
-  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:48px 32px 42px 48px;background:#A2927B;
+  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:48px 37px 37px 48px;background:#A2927B;
     display:flex;align-items:center;justify-content:center}
   /* ref 문구 24자 코어 597(자당 24.9) — 우리 문구도 24자로 맞추고 자폭만 scaleX 로 좁힌다 */
   .bls-note>i{font-size:36px;color:#fff;-webkit-text-stroke:8px #4A3B2C;paint-order:stroke fill;transform:scaleX(.856)}
 
   /* §5 Lv 알약 + 진행바 (알약이 진행바 좌단을 덮는다) */
-  .bls-lv{left:50px;top:181px;width:134px;height:68px;box-sizing:border-box;z-index:2;
+  /* 13회차 3차분 — K 138 · M 139 · N 139 · 자체 135 로 «우리(134)가 좁다» 4자 일치. 우단 243 → 248 */
+  .bls-lv{left:50px;top:181px;width:139px;height:68px;box-sizing:border-box;z-index:2;
     border:5px solid #000;border-radius:34px;background:#553E2E;
     display:flex;align-items:center;justify-content:center}
   .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill}
@@ -6690,6 +6691,8 @@
     font-size:30px;color:#FCFEB3;-webkit-text-stroke:7px #2D2100;paint-order:stroke fill}
 
   /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
+  /* 13회차 3차분 — K·N·자체 실측 3자 일치: ref 카드 폭 **298** · 거터 **17**(우리 300·15).
+     그리드 pitch 315 는 그대로고 카드만 2px 좁힌다(x 76/391/706 = ref). */
   .bls-cards{left:15px;top:270px;width:930px;height:447px;
     display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
   /* 10회차: 카드 모서리 반경 24 → 46. ref 좌상단 아크를 4점(y806 x95.5 · y812 x88.5 · y820 x82.5 · y830 x78.5)
@@ -6699,7 +6702,11 @@
     display:flex;flex-direction:column}
   .bls-c>.h{flex:0 0 80px;background:#54413D;display:flex;align-items:center;justify-content:center}
   /* 1회차: 잉크 h51·자폭 43.3 (ref h42·자폭 33.8) → fs 42→35, scaleX .936 */
-  .bls-c>.h>i{font-size:35px;color:#fff;-webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.936)}
+  /* 13회차 3차분 — 잉크 높이 ref 43 / 우리 38(−12%) · 세로중심 ref 756 / 우리 751.5(4.5 위).
+     K «3px 내려라» · L «3px 내려라» · M «4px 내려라» 3자 일치. **폭은 건드리지 않는다** — ref 카드 라벨은
+     우리 «공격력»(85px)보다 긴 문구(170px)라 폭 비교 자체가 성립하지 않는다(§14-4 참고). */
+  .bls-c>.h>i{position:relative;top:4px;font-size:39px;color:#fff;-webkit-text-stroke:10px #000;
+    paint-order:stroke fill;transform:scaleX(.936)}
   /* ⚠⚠ 5회차의 «평면» 판정은 **스캐너의 한계에 속은 오판**이었다(8회차 정정).
      `row` 세그먼터는 «앞 픽셀과의 차이 > 26» 으로 끊는데, 두 톤 사이가 여러 픽셀에 걸쳐 부드럽게
      넘어가면 단계마다 26 미만이라 **한 덩어리로 보고**한다. 면적 히스토그램으로 다시 재니
@@ -6713,7 +6720,14 @@
   .bls-c>.b>*{position:absolute}
   /* 아트 자리 규칙 — ref 아이콘 잉크 150×153(카드1) 자리를 이모지가 그대로 차지하게 맞춘다.
      ref 잉크 세로중심 = 프레임 892 → .b(카드+78) 기준 top 16 + 166/2 */
-  .bls-c .ic{left:0;right:0;top:14px;height:166px;line-height:166px;text-align:center;font-size:140px}
+  /* 13회차 3차분 — N·자체 실측 일치. 잉크 세로 중심 ref 892/890.5/890 vs 우리 886/885/886 ⇒ 일괄 5px 아래.
+     잉크 폭은 우리가 세 장 모두 152~155 로 «슬롯을 꽉 채워» 그렸는데 ref 는 아트별로 151/145/133 이다
+     (아트 자리 규칙: 나중에 이미지로 갈아 끼우려면 bbox 가 ref 와 같아야 한다) ⇒ 카드별로 눌러 준다.
+     ❤️ 만 높이가 141 로 13px 낮아 font-size 를 먼저 올리고 폭을 scaleX 로 되돌린다. */
+  .bls-c .ic{left:0;right:0;top:19px;height:166px;line-height:166px;text-align:center;font-size:140px}
+  #blsC_atk  .ic{transform:scaleX(.974)}
+  #blsC_hp   .ic{font-size:153px;transform:scaleX(.858)}
+  #blsC_rate .ic{transform:scaleX(.875)}
   /* 1회차: 초록 코어 h29·w105 (ref h32·w119) → fs 42→46 */
   /* 13회차 — K «h +12.5%» · L «h +9%» 일치(둘 다 «이 줄만 혼자 크다» 로 위계 붕괴의 원인이라 지목).
      자체 초록 코어 ref 119x32 / 우리 112x35 ⇒ 높이는 −9%, 폭은 +6% 다 — fs 를 내리고 폭은 scaleX 로 돌려놓는다.
@@ -6726,7 +6740,7 @@
   /* 13회차 — 칩 모서리 반경: K «ref 24 / 우리 19» · L «ref 25 / 우리 22» · 자체 r34.py «ref 28 / 우리 20
      (CSS 22, 편향 −2 ⇒ ref 실효 30)». 셋 다 «우리가 작다» 로 같은 방향이고 값만 24·25·30 으로 갈려
      가운데인 26 을 쓴다. */
-  .bls-c .tm{left:42px;top:250px;width:214px;height:97px;border-radius:26px;background:#926A24;
+  .bls-c .tm{left:41px;top:250px;width:219px;height:97px;border-radius:28px;background:#926A24;
     box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center;
     /* ref 는 «시계+숫자» 덩어리가 칩 중심(225)에서 5px 왼쪽(중심 220)에 앉는다 — 그만큼 오른쪽에 여백 */
     box-sizing:border-box;padding-right:20px}
@@ -6746,7 +6760,11 @@
   .bls-c .tm>i{position:relative;top:2px;font-size:30px;line-height:97px;vertical-align:top;color:#fff;-webkit-text-stroke:6px #1A1206;
     paint-order:stroke fill;transform:scaleX(1.1);letter-spacing:.8px;margin-right:-.8px;
     -webkit-font-smoothing:antialiased}
-  .bls-c .glo{left:0;right:0;bottom:0;height:9px;background:#FFFF78}
+  /* 13회차 3차분 — 비평 M ②. ref 의 카드 하단 밝은 띠는 **전폭이 아니다**:
+     카드1 x199..347 · 카드2 514..661 · 카드3 829..976 → 셋 다 **폭 148~149**, 카드(76..373) 기준
+     좌여백 123 · 우여백 26 로 오른쪽에 치우쳐 있다. 우리는 `left:0;right:0` 라 260px(전폭)였다.
+     세로도 ref y1152..1162(11) vs 우리 1153..1161(9). */
+  .bls-c .glo{left:123px;right:26px;bottom:0;height:11px;background:#FFFF78}
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
   .bls-c.off>.b{background:repeating-linear-gradient(-45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
   .bls-c.off .vl{color:#D8D2C8}
@@ -6773,17 +6791,28 @@
   .bls-bn{left:15px;top:809px;width:930px;height:150px;border-radius:52px;overflow:hidden;
     background:repeating-linear-gradient(-45deg,#F0B048 0 26.2px,#F8C850 26.2px 50.9px)}
   .bls-bn>*{position:absolute}
-  /* 2차 비평 C: ref 보너스 바에는 카드와 같은 계열의 상 9px / 하 14px 밝은 띠가 있다(우리는 0px) */
-  .bls-bn::before,.bls-bn::after{content:'';position:absolute;left:0;right:0;background:#FFF878}
-  .bls-bn::before{top:0;height:9px}
-  .bls-bn::after{bottom:0;height:14px}
+  /* 13회차 3차분 — «2차 비평 C: ref 보너스 바에도 상 9px / 하 14px 밝은 띠가 있다» 는 **오독이었다.**
+     열 덤프(x300·x860)로 확인: ref 는 바 윗변에서 크림(240,217,186) → 주황(252,206,94) 으로 바로 넘어가고
+     아랫변도 (255,206,87) → 크림이다. **#FFF878 계열 픽셀이 한 줄도 없다.**
+     우리가 그리던 전폭 띠는 상 839px · 하 896px 짜리 노란 줄이라 바를 통째로 다르게 보이게 했다(M ② 4점의 주원인).
+     ref 바 위·아래에 잡히는 밝은 자국(x500..547 · x531..580, 폭 48~50)은 띠가 아니라 «+50%» 글자 주변 아트다. */
   /* ref 보너스 아이콘 잉크 172×136 @ 프레임 x82..253 · y1261..1396 → 바(75,1252) 기준 (7,9) */
   /* ref 잉크 x136..246 · y1356..1470 → 바(75,1252) 로컬 (61,20) 114x115. 셰브론은 그 우하단에 겹친다 */
   /* 잉크 실측 83x85 @x178 → ref 116x120 @x138: 이모지 잉크가 상자보다 작아 상자를 왼쪽으로 넓힌다 */
-  .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px}
+  /* 13회차 3차분 — M ②1순위. 실측 잉크(줄무늬 배경 제외):
+       ref  x138..252 (115) × y1274..1390 (117), 중심 (195, 1332)
+       우리 x78..249 (172) × y1268..1392 (125), 중심 (163.5, 1330)  ⇒ 폭 **+50%**, 좌로 32px 치우침.
+     `.ic`(이모지)와 `.ch`(초록 셰브론)는 형제라 «그룹 스케일» 이 안 된다. 그래서 **바 로컬 원점 기준의
+     같은 그룹 변환**(translate(60.7,9.93) · scale(.669,.849))을 각 요소의 자기 원점으로 환산해 나눠 준다:
+       요소가 로컬 (L,T) 에 있을 때  dx = 60.7 + .669·L − L ·  dy = 9.93 + .849·T − T
+     비율이 가로 .669 / 세로 .849 로 다른 이유는 ref 아트가 거의 정사각(115×117)인데 우리 조합은 1.38:1 이라서다.
+     아트가 들어오면 이 변환을 지우고 이미지 bbox 를 115×117 @(138,1274) 로 잡으면 된다. */
+  .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px;
+    transform-origin:0 0;transform:translate(60.04px,9.02px) scale(.669,.849)}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
-  .bls-bn .ch{left:125px;top:86px;width:46px;height:48px}
+  .bls-bn .ch{left:125px;top:86px;width:46px;height:48px;
+    transform-origin:0 0;transform:translate(19.33px,-3.06px) scale(.669,.849)}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
@@ -6796,9 +6825,15 @@
   /* 자폭은 상자 «전체» 에 scaleX 를 걸어 줄인다 — 전폭 상자라 축이 바 중심이라 중앙정렬이 유지된다
      (안쪽 <b> 에 걸면 잉크만 줄고 중심은 그대로여서 2차 비평의 «자당 +20%» 가 안 잡혔다) */
   .bls-bn .tx{left:0;right:0;top:38px;height:76px;line-height:76px;text-align:center;font-size:42px;color:#fff;
+    box-sizing:border-box;padding-left:11px;
     -webkit-text-stroke:11px #000;paint-order:stroke fill;transform:scaleX(.83)}
   /* ref 초록 «+50%» 잉크 113x32 — 숫자 글리프가 좁아 자간으로 폭을 맞춘다(01 교훈: 폭은 자폭으로) */
-  .bls-bn .tx em{color:#A6DC60;margin-left:18px;font-size:45px;letter-spacing:5px;text-indent:5px}
+  /* 13회차 3차분 — M·N 일치. 흰 문구 ref 180x37 / 우리 149x36(−17%) · 초록 «+50%» ref 113x32 / 우리 103x35.
+     한 노드에 섞여 있어 따로 못 고쳤으므로 흰 문구를 `<b>` 로 감쌌다(칩과 같은 처방).
+     간격은 두 덩어리를 다 넓히고 나서 ref 간격(흰 문구 끝 566 → 초록 시작 581 = 14)에 맞춰 margin-left 18→39, 블록 중심은 `.tx` padding-left 11 로 +5.5. */
+  .bls-bn .tx>b{transform:scaleX(1.21);-webkit-font-smoothing:antialiased}
+  .bls-bn .tx em{color:#A6DC60;margin-left:39px;font-size:41px;letter-spacing:5px;text-indent:5px;
+    transform:scaleX(1.21);-webkit-font-smoothing:antialiased}
   .bls-bn.off{background:repeating-linear-gradient(-45deg,#918576 0 26.2px,#9E9284 26.2px 50.9px)}
   .bls-bn.off .tx em{color:#D8D2C8}
 
@@ -6837,22 +6872,33 @@
       radial-gradient(circle 66px at 161px 66px,#FFD24A 0 64px,transparent 65px)}
   /* 비평 A·B 합의: ref 헤드라인 잉크 379x55(자당 47.4), 우끝 953 = 스트립 우인셋 55~61 → 우측 정렬 */
   /* 11회차 — G ⑥: 잉크 h 53 vs ref 59 → fs 56→62. 잉크 상단이 8px 아래라 top 24→19 */
-  .bls-promo .tx{left:420px;right:52px;top:20px;height:80px;line-height:80px;text-align:right;
-    font-size:60px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
+  /* 13회차 3차분 — M·N 이 독립적으로 «폭 −11.7%» 로 일치. 자체 검정 bbox ref 399x69 cy1585 / 우리 350x64 cy1582.5
+     ⇒ fs 60→65(높이 +8%·폭 +14%), top 20→22(중심 2.5 아래). 우측 정렬(우끝 959~961)은 그대로 유지된다. */
+  .bls-promo .tx{left:420px;right:52px;top:26px;height:80px;line-height:80px;text-align:right;
+    font-size:70px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
   /* 2차 비평 D: ref 버튼은 **검정 6px 외곽 + 내측 상단 하이라이트 8px** 이 있고 면이 (119,229,54) 로 밝다.
      비활성(.off)도 회녹(143,169,138)이 아니라 «조금 어두운 초록» 이어야 ref 와 대비가 맞는다. */
   .bls-promo .gb.off{background:linear-gradient(180deg,#7FCF63 0,#5FB03A 55%,#458F22 100%);cursor:default}
   /* 12회차 — 11회차의 «테두리 6→9»(G 단독)는 오판이었다. I «ref 좌6·상6·하6» · J «ref 6 vs 우리 9» 독립 일치 → 6 복귀.
      높이도 I(ref 114) · J(ref 115) 일치로 118→115, top 112→113. 라벨은 I·J 공통 «5px 아래» → padding-bottom 으로 올린다 */
-  .bls-promo .gb{left:625px;top:113px;width:267px;height:115px;box-sizing:border-box;padding-bottom:10px;
-    border:6px solid #000;border-radius:28px;cursor:pointer;
+  /* 13회차 3차분 — 12회차가 «I 114 / J 115» 로 118→115 로 내린 자리인데, 그건 **초록 채움(안쪽)** 높이다.
+     검정 외곽선까지 포함한 **바깥 실루엣**을 세 열(x740·760·900)에서 직접 훑으니
+     ref 는 위 테두리 1640..1647(8px) · 아래 1749..1757(9px) ⇒ **바깥 1640..1757 = 118**,
+     우리는 1641..1646(6) · 1750..1755(6) ⇒ 115. L·N 도 «테두리 ref 8 / 우리 6» 로 일치.
+     ⇒ 높이 115→118 · top 113→112(바깥 1640..1757 정렬) · 테두리 6→8. */
+  /* 라벨: 잉크 ref 81x45 cy1695 / 우리 76x39 cy1691 ⇒ fs 49→56 · padding-bottom 10→6(4px 아래) */
+  .bls-promo .gb{left:625px;top:112px;width:267px;height:118px;box-sizing:border-box;padding-bottom:1px;
+    border:8px solid #000;border-radius:28px;cursor:pointer;
     background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
     box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
-    font-size:49px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
+    font-size:53px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
   .bls-x{flex:none;position:relative;top:9px;margin:18px 0 auto;width:122px;height:122px;box-sizing:border-box;border:2px solid #8A2530;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
-    font-size:72px;font-weight:900;color:#FAF0F1}
+    font-size:72px;font-weight:900;color:#FAF0F1;
+    /* 13회차 3차분 — M·N 일치: ref 글리프 중심 x541.5(원 중심 +2) / 우리 537(−2.5). 크기 50x51 vs 51x51 은 일치.
+       세로도 ref 1858 / 우리 1855 ⇒ 4.5px 오른쪽 · 3px 아래. `text-indent` 는 좌우 중앙정렬을 밀어낸다. */
+    text-indent:9px;padding-top:3px;box-sizing:border-box}
   /* ==========================================================================
      35 패스 — 스테이지 패스 (측정표 docs/measure/35-패스.md)
      껍데기는 «딤 없는 전체화면 페이지»다(측정표 §0 — 순백 42,381px · 순흑 129,410px 로
@@ -8508,7 +8554,7 @@
         <div class="bls-bn" id="blsBonus">
           <s class="ic" data-cur-slot="gold"></s>
           <s class="ch"></s>
-          <s class="tx">골드 획득량<em id="blsBnV">+50%</em></s>
+          <s class="tx"><b>골드 획득량</b><em id="blsBnV">+50%</em></s>
         </div>
         <div class="bls-ft"><i>모든 축복을 활성화하면 보너스 축복이 활성화됩니다.</i></div>
       </div>
