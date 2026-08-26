@@ -123,8 +123,11 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     rd: document.querySelectorAll('#dunList .dnc.rd').length,
     em: document.querySelectorAll('#dunList .dnc>.th>em').length,
     cv: document.querySelectorAll('#dunList canvas.thcv').length }));
-  ok(dn.n === 6 && dn.rd === 0 && dn.em === 6 && dn.cv === 0,
-     `던전 카드 ${dn.n}장 · 이모지 썸네일 ${dn.em} · 레이드 캔버스 ${dn.cv}`);
+  /* 72(2026-08-26 주인 재지시) — 던전 카드도 이모지 → 스프라이트 캔버스가 됐다.
+     이 항목이 보는 것은 «서브탭을 되돌리면 던전 카드가 그대로 돌아온다» 이므로 «이모지 6» 을
+     «캔버스 6 · 이모지 0» 으로 옮긴다(레이드 카드는 0장이어야 한다는 판정은 그대로). */
+  ok(dn.n === 6 && dn.rd === 0 && dn.em === 0 && dn.cv === 6,
+     `던전 카드 ${dn.n}장 · 스프라이트 캔버스 ${dn.cv} · 이모지 ${dn.em}`);
 
   console.log('[9] 콘솔 에러');
   ok(errs.length === 0, `콘솔 에러 ${errs.length}건`);
