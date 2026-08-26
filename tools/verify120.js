@@ -128,6 +128,11 @@ const inter = (a, b) => {
           st1: q('.rw-st1'),
           slots: [...relw.querySelectorAll('.rw-c')].map(F),
           labels: [...relw.querySelectorAll('.rw-c>u')].map(F),
+          /* 16회차 — 아치 개구는 `.rw-bg::after` 라 rect 가 없다. 계산된 width/height 를 직접 읽는다.
+             비평가 4명(AH ⑦ · AI ④ · AJ ① · AK ①)이 두 회차에 걸쳐 «1600 만 아치가 눌렸다» 를
+             각자 화소로 쟀는데, 게이트에는 아치 «크기» 를 보는 항목이 하나도 없었다. */
+          archW: parseFloat(getComputedStyle(document.querySelector('.rw-bg'), '::after').width) / sc,
+          archH: parseFloat(getComputedStyle(document.querySelector('.rw-bg'), '::after').height) / sc,
           rwc: parseFloat(getComputedStyle(relw).getPropertyValue('--rwc')) || 0,
           hitBad, hitWho: hitWho.slice(0, 3),
         };
@@ -216,12 +221,25 @@ const inter = (a, b) => {
       const g3 = Math.min(Math.max(spare * 0.1325 - 38, G3_MIN), G3_MAX);
       const bt = P.h - 88 - g3 - 38 - 216;          /* 수반 구획 상변(패널 기준) */
       const T = bt - 516;
-      const av = Math.min(186, (T - 231) / 2);
+      /* 16회차 — «아래 최소» 137 → 80 (받침 40 + 접합선 띠 13 + 바닥 27). 계단 최소 1단 84 를 뺐다.
+         따라서 av 상한식의 231(=94+137) → 174(=94+80). 1600 만 이 상한에 걸리므로 1600 만 움직인다.
+         ⚠ 아래 gt 의 셋째 인자는 **137 그대로다** — 그쪽은 «아래에 이만큼 예약하라» 는 하한이라
+            낮추면 gt 가 위로 올라갈 여지를 얻어 바닥을 되레 빼앗는다(1920 이 1단 → 0단이 됐다). */
+      const av = Math.min(186, (T - 174) / 2);
       const gt = Math.max(av + 94, Math.min(Math.min(spare * GAP_W[0], GT_MAX), T - av - 137));
       const wantG = [gt, T - gt, GAP2_PX, g3];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
       ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27) + 상단 클램프대로 배분`, gErr < 1.0,
         `실측 ${gaps.map(g => g.toFixed(1)).join('/')} vs 기대 ${wantG.map(g => g.toFixed(1)).join('/')} (최대 Δ${gErr.toFixed(2)})`);
+      /* ── 16회차 신설 — ② 아치 종횡비. ──
+         «개구 588×888 고정» 은 사양인데, 짧은 프레임에서는 예산이 없어 다리를 누른다(6회차부터).
+         누르는 것 자체는 허용하되 **어디까지** 눌러도 되는지에 자가 없어서, 1600 이 1:1.15 까지
+         납작해진 것을 세 회차 동안 아무도 못 잡았다(비평가 4명이 두 회차에 걸쳐 각자 쟀다).
+         폭은 4장 공통 589 고정이므로 높이만 보면 된다. */
+      ck(`[${H}] ② 아치 개구 폭 589 고정`, Math.abs(r.archW - 589) < 1.5, `${r.archW.toFixed(1)}px`);
+      const archR = r.archH / r.archW;
+      ck(`[${H}] ② 아치 종횡비 ≥ 1:1.25 (사양 1:1.51 · 짧은 프레임의 눌림 하한)`,
+        archR >= 1.25 - 0.005, `${r.archH.toFixed(1)}×${r.archW.toFixed(1)} = 1:${archR.toFixed(3)}`);
       /* 11회차 ② — «늘어난 높이가 상인방 위 죽은 벽으로 간다» 의 회귀 방지 */
       ck(`[${H}] ② 상인방 위 스트립 ≤ ${LINTEL_STRIP_MAX}px`,
         r.lintel.t - P.t <= LINTEL_STRIP_MAX + 0.6,
@@ -256,9 +274,14 @@ const inter = (a, b) => {
       const vis = r.sts.filter(e => visH(e) > 0.5);
       /* 계단은 접합선 띠(문지방 4 + 그림자 9)를 덮지 않도록 14px 아래에서 시작한다 */
       const wantSt = Math.min(r.ground.t + 14, r.mid.t);
+      /* 16회차 — 계단이 «억제» 된 프레임(구간 < 60px)에서는 래퍼 높이가 0 이라 상변이 수반과 같다.
+         그 경우는 «접합선 +14 에서 시작» 을 요구하지 않는다 — 애초에 계단이 없다. */
+      const stSup = r.steps.h < 0.6;
       ck(`[${H}] ③ 계단 구간 = 접합선 +14 ~ 수반 (Δ ≤ 1px — 접합선을 안 덮는다)`,
-        Math.abs(r.steps.t - wantSt) < 1.0 && Math.abs(r.steps.b - r.mid.t) < 1.0,
-        `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} vs 기대 ${wantSt.toFixed(1)} · 수반 ${r.mid.t.toFixed(1)}`);
+        stSup ? Math.abs(r.steps.b - r.mid.t) < 1.0
+              : (Math.abs(r.steps.t - wantSt) < 1.0 && Math.abs(r.steps.b - r.mid.t) < 1.0),
+        stSup ? `계단 억제(구간 0) · 하변 ${r.steps.b.toFixed(1)} = 수반 ${r.mid.t.toFixed(1)}`
+              : `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} vs 기대 ${wantSt.toFixed(1)} · 수반 ${r.mid.t.toFixed(1)}`);
       if (vis.length) {
         /* ── 15회차 — **이 항목이 «머리 잘린 단» 을 놓쳤다.** ──
            14회차가 단 수를 8 로 늘렸을 때 2600 의 계단 구간은 650px, 피치는 84 고정이라
@@ -303,9 +326,13 @@ const inter = (a, b) => {
       ck(`[${H}] ② 상인방 66px 온전 · 패널 안 20px 이상(금테 내측 회피) · 아치 정점 위`,
         r.lintel.t >= P.t + 20 - 0.6 && Math.abs(r.lintel.h - 66) < 0.6 && r.lintel.b <= apex + 0.6,
         `상인방 ${r.lintel.t.toFixed(1)}..${r.lintel.b.toFixed(1)} (h ${r.lintel.h.toFixed(1)}) · 아치 정점 ${apex.toFixed(1)} · 패널 상단 여백 ${(r.lintel.t - P.t).toFixed(1)}`);
-      /* 13회차 신설 — «바닥이 실제로 존재한다»(계단 최소 1단). 1600 에서 0px 이던 것이 이 게이트다. */
-      ck(`[${H}] ③ 바닥(접합선 → 수반)이 최소 한 단 ≥ ${STEP_PITCH}px`,
-        r.mid.t - r.ground.t >= STEP_PITCH - 0.6,
+      /* 13회차 신설 — «바닥이 실제로 존재한다». 1600 에서 0px 이던 것이 이 게이트다.
+         16회차 — 문턱을 «계단 한 단(84)» 이 아니라 **«바닥 27px»** 로 바꾼다. 1600 은 아치 다리에
+         84px 을 내주고 계단을 억제했으므로(비평가 4명이 두 회차에 걸쳐 요구한 방향) 계단 한 단을
+         요구할 근거가 없어졌다. 지키려는 것은 «수반이 벽지 위에 떠 있지 않다» 이고, 그것은
+         접합선 아래에 **면이 실제로 있는가**로 재면 된다. 1600 실측 40px. */
+      ck(`[${H}] ③ 바닥(접합선 → 수반)이 실제로 존재한다 (≥ 27px)`,
+        r.mid.t - r.ground.t >= 27 - 0.6,
         `${(r.mid.t - r.ground.t).toFixed(1)}px`);
 
       /* ①③ 픽셀 — «넣긴 넣었는데 안 보이는» 것을 지표만 보고 «넣었다» 고 판단한 것이
