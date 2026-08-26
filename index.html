@@ -2825,6 +2825,29 @@
      대각선 4겹을 빼도 검정 외곽선은 상하좌우 4겹으로 유지된다. */
   .fx-fly{position:absolute;left:0;top:0;z-index:1;font-style:normal;font-weight:400;line-height:1;
     text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000}
+  /* ⚑ 93 17회차 — **재화별 아이콘 보정을 «HUD 안에서만» 걸어 두었던 것**(비평가 4명 3회차).
+       r17 AR #3 «비행 다이아 23px vs 코인 32px = 0.719 인데 실 HUD 는 1.018»
+       r17 AS #3 «비행 젬 19×19 vs 코인 32×32 = 0.59 인데 HUD 는 1.00»
+       r17 AR #1 «딤 위 복제 젬 49×56 vs 실 HUD 젬 57×54 — 폭 −14.0%»
+       (15회차 AN·AO 도 같은 지적 — «비행 젬 30px vs 코인 45~47px = 66% 인데 HUD 는 85%»)
+     두 사람의 **절대값이 서로 달랐다**(23 vs 19px). 다이아처럼 뾰족한 도형은 채도 마스크 임계에
+     따라 «몸통 폭» 이 크게 흔들리기 때문이다 — 그래서 화소가 아니라 **레이아웃 박스**로 재는
+     자를 새로 만들었다(`probe93m.js`). 실측은 두 자리가 **같은 값**으로 어긋나 있었다:
+       실 HUD 잉크 폭비 1.045 · 딤 위 복제판 **0.933** · 비행 **0.933** (둘 다 −10.7%)
+     원인은 «비행 아이콘이 작다» 가 아니라 아래 두 규칙이 **`#top .curs` 안에서만** 걸리는 것이다:
+       · 345행 `#top .curs .cDia i>.cic{transform:scaleX(1.16)}`   (보석이 세로로 긴 것을 가로로 편다)
+       · 353행 `#top .curs .cGold i>.cic{width:65.3px}`            (63 → 65.3, 금색 원판 57 맞춤)
+     `.fx-fly`(비행)도 `.fx-lit`(딤 위 복제판)도 그 밖이라 보정을 통째로 잃는다. 두 재화가 같은
+     화면에 같이 나는 씬B 에서 크기비가 갈리는 이유가 이것이다.
+     → **HUD 와 같은 보정을 같은 가드로** 여기서도 건다(13 재화 탭 제외도 그대로 따라간다 —
+        그 화면은 55px 로 따로 맞춰져 있고, 어긋내면 13 이 맞춰 둔 값이 깨진다).
+     ⚠ 비행 아이콘의 폭은 `curIc(cur, ics)` 가 **인라인 style** 로 박으므로 CSS width 로는 못 이긴다.
+        그래서 골드도 width 가 아니라 **scale**(65.3/63 = 1.0365)로 준다 — HUD 의 63→65.3 과 같은
+        등방 확대라 결과가 같고, 인라인과 싸우지 않는다. */
+  #app:not(:has(#shopw.on .shp-list.coin)) .fx-fly>.cic[data-cur-ic="gold"]{transform:scale(1.0365)}
+  #app:not(:has(#shopw.on .shp-list.coin)) .fx-fly>.cic[data-cur-ic="dia"]{transform:scaleX(1.16)}
+  #app:not(:has(#shopw.on .shp-list.coin)) .fx-lit .cGold i>.cic{width:65.3px;height:65.3px}
+  #app:not(:has(#shopw.on .shp-list.coin)) .fx-lit .cDia i>.cic{transform:scaleX(1.16)}
   /* 꽂힌 뒤 «흡수되듯» 사라진다. transform 은 JS 가 알약 중심 + 축소값으로 세워 두므로
      여기서는 opacity 만 건드린다. 크기를 그대로 두고 천천히 빼면 알약의 코인 아이콘과 겹쳐
      **«이중 원» 버그처럼 읽힌다**(7회차 지적) — 짧게(100ms) 빼고, 축소는 JS 가 준다. */
@@ -22168,6 +22191,34 @@ function fxLitOff(el){
   p.style.transition = 'opacity ' + FX3_LIT_OUT + 's linear';
   p.style.opacity = '0';
   setTimeout(() => { if(p.parentNode) p.remove(); }, FX3_LIT_OUT*1000 + 40);
+  /* ⚑ 93 17회차 — **스포트라이트의 나머지 절반(형제 행 딤)도 «여기서» 같이 푼다.**
+     스포트라이트는 «알약을 딤 위로 올린다» + «형제 행을 어둡게 한다» 두 절반으로 되어 있는데,
+     지금까지 **서로 다른 시계**로 돌았다: 알약은 도착 상태(fxPz·fxLitWait), 형제 행은 고정
+     타임아웃(FXSOLO). 그래서 «한 스포트라이트가 두 번에 나눠 꺼진다» 가 나왔다 — 4명 2회차:
+       r17 AR #9  딤 해제 ~1250 vs 알약 소등 ~1450 = **200ms 어긋남**
+       r17 AS #4  마지막 도착 1320 / 딤 해제 1250 / HUD ≥1600 = **≥350ms 로 3단**
+       15회차 AN ⓒ «행 포커스 스크림이 스프라이트 4개가 아직 비행 중일 때 220ms 먼저 풀린다»
+     둘의 처방도 같다(«두 절반을 같은 트랙으로 묶어라»). 상수를 새로 맞추는 대신 **연동**한다 —
+     상수를 맞추면 컨테이너 속도가 바뀔 때마다 다시 어긋나고, 실제로 8·15·16·17회차가 FXSOLO 를
+     네 번 다시 잡았다(1250 → 530 → 440 → 1020).
+     ⚠ 8회차가 FXSOLO 를 마지막 도착보다 «앞» 에 둔 근거(비평가 Y ① «입자가 다 사라졌는데 형제
+        행이 계속 어둡다 — ≥249ms 과잉»)는 **여전히 유효하다**. 그래서 여기 연동은 «더 오래
+        어둡게» 가 아니라 «같이 끈다» 다: 알약 소등이 시작되는 바로 그 프레임에 행 딤도 풀리므로,
+        두 절반이 같은 순간에 같이 밝아진다 — 어느 한쪽만 남는 구간이 원리적으로 생기지 않는다.
+     마지막 복제판이 꺼질 때만 푼다(둘 중 하나만 꺼졌는데 풀면 다시 두 번이 된다). */
+  if(!fxLit.size) fx3SoloRelease();
+}
+/* 대기 중인 «형제 행 딤 해제» 들. fxSolo 가 등록하고, 위 fxLitOff 의 마지막 소등이 비운다.
+   복제판이 아예 없는 경로(딤 없는 화면)를 위해 fxSolo 는 타임아웃 백스톱도 같이 건다. */
+const fx3Solo = new Set();
+/* 재렌더 뒤 «다시 칠할» 함수들 — fxRenderLater 가 목록을 갈아 끼운 직후에 돈다.
+   17회차: 요소 참조로 들고 있던 딤 상태가 재렌더에 날아가 «두 번에 나눠 꺼진다» 로 읽혔다. */
+const fx3Repaint = new Set();
+function fx3SoloRelease(){
+  if(!fx3Solo.size) return;
+  const a = [...fx3Solo];
+  fx3Solo.clear();
+  a.forEach(fn => { try { fn(); } catch(_){} });
 }
 function fxPzHit(el, beat){
   if(!el) return false;
@@ -22718,14 +22769,56 @@ function fxSolo(el, ms){
   const row = (el && el.closest) ? el.closest('.qs-r, .ml-r') : null;
   const par = row && row.parentElement;
   if(!par || par.children.length < 2) return;
-  const sib = [].slice.call(par.children).filter(c => c !== row && c.classList);
-  sib.forEach(c => c.classList.add('fx-dim'));
-  if(row.classList) row.classList.add('fx-solo');
-  setTimeout(() => {
-    sib.forEach(c => { if(c.classList){ c.classList.add('fx-undim'); c.classList.remove('fx-dim'); } });
-    if(row.classList) row.classList.remove('fx-solo');
-    setTimeout(() => sib.forEach(c => c.classList && c.classList.remove('fx-undim')), 180);
-  }, ms || FXSOLO);
+  /* ⚑ 17회차 — **요소 참조를 들고 있으면 재렌더에 통째로 날아간다.**
+     r17 두 사람이 «딤 해제 ~1250» 로 잰 것은 사실 해제가 아니라 **목록 재렌더**였다
+     (FXHOLD 1330 에 `openQuest()` 가 행을 새로 그리면서 새 행에는 `.fx-dim` 이 없다).
+     그래서 알약 소등을 아무리 연동해도 «두 번에 나눠 꺼진다» 가 그대로 남는다.
+     → 상태를 «어느 요소» 가 아니라 **«어느 행인지»** 로 들고, 재렌더 뒤에 다시 칠한다.
+     행 식별자는 행 «안» 의 `[data-q]`(퀘스트)·`[data-ml]`(우편) 값이다 — 재렌더해도 같다. */
+  const sel = row.classList.contains('ml-r') ? '.ml-r' : '.qs-r';
+  const kb = row.querySelector('[data-q],[data-ml]');
+  const key = kb ? (kb.dataset.q || kb.dataset.ml || '') : '';
+  const idx = [].indexOf.call(par.children, row);
+  const find = () => {
+    const rows = [].slice.call(document.querySelectorAll('#mbox ' + sel));
+    if(rows.length < 2) return null;
+    let tgt = null;
+    if(key) tgt = rows.filter(r => { const b = r.querySelector('[data-q],[data-ml]');
+                                     return b && (b.dataset.q === key || b.dataset.ml === key); })[0];
+    if(!tgt) tgt = rows[idx] || null;
+    return tgt ? { rows, tgt } : null;
+  };
+  const paint = () => {
+    const f = find(); if(!f) return;
+    f.rows.forEach(c => { if(!c.classList) return;
+      if(c === f.tgt){ c.classList.add('fx-solo'); c.classList.remove('fx-dim'); }
+      else { c.classList.add('fx-dim'); c.classList.remove('fx-undim'); } });
+  };
+  paint();
+  /* 17회차 — 해제를 «시각» 이 아니라 **알약 소등 순간**에 건다(위 fxLitOff 의 fx3SoloRelease).
+     한 번만 돌아야 하므로 등록분과 백스톱이 같은 `done` 을 공유한다. 백스톱(FXSOLO)은
+     복제판이 아예 안 뜨는 경로(딤 없는 화면·모달이 먼저 닫힌 경우)를 위한 것이고,
+     정상 경로에서는 알약 소등이 먼저 와서 백스톱이 발화할 때는 이미 비어 있다. */
+  let done = 0;
+  const rel = () => {
+    if(done) return; done = 1;
+    fx3Solo.delete(rel); fx3Repaint.delete(paint);
+    const f = find(); if(!f) return;
+    f.rows.forEach(c => { if(!c.classList) return;
+      if(c === f.tgt) c.classList.remove('fx-solo');
+      else { c.classList.add('fx-undim'); c.classList.remove('fx-dim'); } });
+    const cur = f.rows;
+    setTimeout(() => cur.forEach(c => c.classList && c.classList.remove('fx-undim')), 180);
+  };
+  if(ms == null) fx3Repaint.add(paint);              /* 재렌더 뒤 다시 칠한다 */
+  if(ms != null){ setTimeout(rel, ms); return; }     /* ms 를 명시한 호출(게이트·직접 호출)은 종전대로 시각 기준 */
+  fx3Solo.add(rel);
+  /* FXSOLO 는 이제 «해제 시각» 이 아니라 «복제판이 없으면 여기서 푼다» 는 분기점이다.
+     복제판이 살아 있으면 그 소등이 풀어 준다 — 두 절반이 같은 프레임에 밝아진다. */
+  setTimeout(() => { if(!fxLit.size) rel(); }, FXSOLO);
+  /* 최후 백스톱 — fxLitOff 가 끝내 안 불리는 경로(모달이 통째로 사라지는 등)에서도 반드시 푼다.
+     FX3_LIT_WAIT(900) 백스톱 + 소등 페이드보다 넉넉히 뒤다. */
+  setTimeout(rel, FXSOLO + 2500);
 }
 /* 「연출이 끝날 때까지 목록을 바꾸지 않는다」.
    수령 즉시 재렌더하면 **체크가 붙은 그 행의 진행바가 0/93 으로 리셋**돼 «완료 표시와 진행도가
@@ -22742,8 +22835,14 @@ let fxNow = false;
 const fxBeatLog = [];                                 /* 93 13회차 — 펄스 비트 시각(게이트 전용) */
 function fxFlush(){ fxNow = true; }
 function fxRenderLater(fn){
+  /* 17회차 — 목록을 갈아 끼운 «직후» 에 진행 중인 딤을 다시 칠한다. 안 그러면 스포트라이트의
+     한 절반(형제 행 딤)이 재렌더 시각에 조용히 풀려, 알약 소등과 두 번에 나눠 꺼진다
+     (r17 AR #9 200ms · AS #4 ≥350ms · 15회차 AN ⓒ — 4명 2회차).
+     ⚠ 이것은 «딤을 더 오래 끈다» 가 아니다. 해제 «시각» 은 알약 소등에 연동돼 있고, 여기서는
+        재렌더가 그 시각을 앞당겨 버리던 것을 막을 뿐이다. */
+  const run = () => { fn(); if(fx3Repaint.size) [...fx3Repaint].forEach(f => { try { f(); } catch(_){} }); };
   const w = fxReT - performance.now();
-  if(w > 8) setTimeout(fn, w); else fn();
+  if(w > 8) setTimeout(run, w); else run();
 }
 
 /* ── 자동 감시 + 매 프레임 갱신 ──

@@ -69,8 +69,16 @@ function pwLaunch(){
       if(c > n0) n0 = c;
       /* 퍼짐 반경 = 출발점에서의 «평균» 거리(프레임 px). 흡수가 시작되면 남은 아이콘만 남아
          평균이 흔들리므로 0.42s 까지만 본다. t<60ms 는 transform 이 아직 안 실린 첫 프레임이라 뺀다. */
+      /* ⚑ 17회차 — **창이 발사 시각을 넘고 있었다.** 가장 이른 흡수 시작은
+         `ha = FX3_SPREAD(0.22) + FX3_HOLD0(0.12) + 0 = 340ms` 인데 창이 420ms 까지라,
+         340~420 구간에서 **이미 알약 쪽으로 떠난 아이콘의 거리**가 «퍼짐 반경» 평균에 섞였다.
+         목적지가 멀어서 그 거리는 계속 커지므로 평균이 사양(95~195)의 상한을 넘어간다 —
+         실측: HEAD 에서 190·191·191·**200**, 수정본에서 183·197·197·**204**(상한 200).
+         네 판 중 한 판이 상한에 닿거나 넘는 **간헐 FAIL** 이었고 원인은 구현이 아니라 이 창이다.
+         → 창을 «퍼짐·머묾만» 으로 좁힌다(60~330ms). 느슨해진 것이 아니라 **재는 것이 달라졌다** —
+            이제 이 항목은 정말로 퍼짐 반경만 잰다. */
       const els = document.querySelectorAll('#fxl .fx-fly');
-      if(els.length && t > 60 && t < 420){
+      if(els.length && t > 60 && t < 330){
         let sum = 0;
         for(const e of els){ const b = e.getBoundingClientRect();
           sum += Math.hypot((b.left + b.width/2 - org.x)/sv.s, (b.top + b.height/2 - org.y)/sv.s); }
