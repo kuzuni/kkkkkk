@@ -22,6 +22,15 @@ const r = process.argv[2] || '1';
 const dir = path.resolve(__dirname, '../docs/review');
 const out = s => path.join(dir, 'A1-r' + r + (s ? '-' + s : '') + '.png');
 
+/* ⚠ 채점본을 «비평가가 읽고 있는 동안» 덮어쓰면 그 회차 채점이 통째로 무효가 된다.
+   실제로 7회차에 그랬다 — I·J 를 띄운 뒤 수정하고 같은 이름으로 다시 찍어, 두 비평가가
+   서로 다른 빌드를 봤을 수 있는 상태가 됐다. 이미 있는 회차는 `--force` 를 줘야 덮어쓴다. */
+if (require('fs').existsSync(out('')) && !process.argv.includes('--force')) {
+  console.error('A1-r' + r + '.png 이 이미 있다. 회차 번호를 올리거나 --force 를 줘라.\n' +
+    '(비평가가 읽는 중인 채점본을 덮어쓰면 그 회차는 무효다)');
+  process.exit(2);
+}
+
 const setup = () => {
   gmCloseAll(); closeModal();
   Object.assign(S, DEF());
