@@ -70,6 +70,47 @@ const CARD = ['골드', '다이아', '유물석1', '유물석2', '유물석3', '
              avg: +(sum / (W * H)).toFixed(2), max: Math.round(max) };
   }, [a, b2, w, h]);
 
+  /* ---------- [0] 정지 자세(thBob OFF) — «내 탓인가» 판정기 ---------- */
+  /* LESSONS 121-6: 움직임을 넣는 작업은 앞 작업의 정적 오차를 «드러낸다». 그래서 [1] 을 읽기 전에
+     **들썩을 통째로 끈 72 의 정지 자세**를 먼저 잰다 — 끄고도 여유가 0 이면 잘림은 121 이 만든 것이 아니다.
+     `node tools/probe121.js static` 으로 이 절만 돌릴 수도 있다. */
+  console.log('[0] 정지 자세(thBob OFF = 72 의 기준 자세) 슬롯 여유 — 0 이면 «움직이기 전에 이미» 천장에 닿아 있다');
+  console.log('    카드        상단여유  하단여유   잉크h   슬롯h');
+  await p.evaluate(() => {
+    const st = document.createElement('style'); st.id = 'p121static';
+    st.textContent = '#dunList .dnc>.th>em{animation:none !important;translate:none !important;scale:none !important}';
+    document.head.appendChild(st);
+  });
+  await p.waitForTimeout(160);
+  const nc0 = await p.evaluate(() => document.querySelectorAll('#dunList .dnc').length);
+  for (let i = 0; i < nc0; i++) {
+    const info = await p.evaluate(i => {
+      const el = document.querySelectorAll('#dunList .dnc')[i];
+      el.scrollIntoView({ block: 'center' });
+      const th = el.querySelector(':scope>.th'), r = th.getBoundingClientRect();
+      return { has: !!th.querySelector('em'), h: Math.round(r.height),
+               clip: { x: Math.round(r.left), y: Math.round(r.top),
+                       width: Math.round(r.width), height: Math.round(r.height) } };
+    }, i);
+    await p.waitForTimeout(140);
+    if (!info.has) { console.log('  ' + CARD[i].padEnd(10) + '  (이모지 썸네일 아님 — 건너뜀)'); continue; }
+    const withEm = await grab(info.clip);
+    await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+      .querySelector(':scope>.th>em').style.visibility = 'hidden'; }, i);
+    await p.waitForTimeout(60);
+    const noEm = await grab(info.clip);
+    await p.evaluate(i => { document.querySelectorAll('#dunList .dnc')[i]
+      .querySelector(':scope>.th>em').style.visibility = ''; }, i);
+    const d = await diff(withEm, noEm, info.clip.width, info.clip.height);
+    console.log('  ' + CARD[i].padEnd(10) + String(d.y0).padStart(8) + String(info.h - d.y1).padStart(10)
+      + String(d.y1 - d.y0).padStart(8) + String(info.h).padStart(8)
+      + (d.y0 <= 0 ? '  ⚠ 정지 상태에서 이미 천장' : ''));
+  }
+  await p.evaluate(() => { const s = document.getElementById('p121static'); if (s) s.remove(); });
+  await p.waitForTimeout(120);
+  if (process.argv.includes('static')) { await b.close(); return; }
+  console.log('');
+
   /* ---------- [1] 썸네일 잉크 bbox — **전 카드** × 위상별 ---------- */
   /* ⚠ 1·2회차 프로브는 카드1 만 봤다. 카드마다 --thcy(잉크 중심)·--thf(글리프 크기)·--tht(슬롯 인셋)이
      달라 **상단 여유가 카드마다 다르다** — 비평가 C 가 카드2·4 에서 잘림을 잡아냈고 카드1 만 보던
