@@ -108,9 +108,9 @@ function is(name, got, want) {
      레이아웃 상자는 그대로 117.8 이고 커지는 1.1px 은 바깥 box-shadow 로 뻗는다 (측정표 §7-2) */
   eq('장착칸 well 지름', d.eqCdwW, 87.6, 0.3);
   /* 활성 글로우는 «정원이 아니다» — 대각선으로 어긋난 그림자 4겹의 합집합이라야 REF 의 비원형이 난다 */
-  tot++; if ((d.readyGlow.match(/4\.3px/g) || []).length >= 4) ok++;
-  else fails.push('활성 글로우 4겹 대각 오프셋(±4.3px) 아님: ' + d.readyGlow);
-  tot++; if (/2\.55px/.test(d.readyGlow)) ok++; else fails.push('활성 글로우 spread 2.55px 아님: ' + d.readyGlow);
+  tot++; if ((d.readyGlow.match(/4\.8px/g) || []).length >= 4) ok++;
+  else fails.push('활성 글로우 4겹 대각 오프셋(±4.8px) 아님: ' + d.readyGlow);
+  tot++; if (/2\.09px/.test(d.readyGlow)) ok++; else fails.push('활성 글로우 spread 2.09px 아님: ' + d.readyGlow);
   tot++; if (/6\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 6.4px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
