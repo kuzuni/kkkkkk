@@ -145,7 +145,9 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
     for (let t = 0; t <= 7000; t += 100) out.push({ t, v: read(t) });
     return out;
   });
-  const quiet = bobs.filter(f => f.v.every(c => c.ty < 0.5));
+  /* «쉬는 중» 의 문턱은 넉넉하면 안 된다 — 들썩 주기를 줄이면 0.5px 문턱이 «들썩의 꼬리» 를
+     쉬는 것으로 잘못 세어 회전 0.15° 를 물고 온다. 정지 프레임만 세도록 0.05px 로 조인다. */
+  const quiet = bobs.filter(f => f.v.every(c => c.ty < 0.05));
   const loud = bobs.filter(f => f.v.some(c => c.ty > 3));
   ok(quiet.length > 0, '들썩이 쉬는 시각이 있다 (' + quiet.length + '/' + bobs.length + ' 표본)');
   ok(quiet.every(f => f.v.every(c => c.rot < 0.05)),
