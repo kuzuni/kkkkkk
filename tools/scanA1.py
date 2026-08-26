@@ -37,8 +37,16 @@ CELLS = [('hero', '영웅', 0, 216), ('grow', '훈련', 216, 432), ('adv', '던�
 # 측정표 §4 아이콘 / §3 라벨 — ref y 는 이미 프레임 좌표(−60)로 옮겨 적었다
 REF_ICON = {'hero': (121, 121, 2131), 'grow': (150, 100, 2147), 'adv': (109, 120, 2131),
             'box': (125, 96, 2131), 'shop': (165, 115, 2130)}
+# ⚠ 폭 대조가 유효한 칸은 «레퍼런스와 같은 단어» 인 **영웅·상점** 둘뿐이다.
+# 24 가 모험→«던전», 88/89 가 성장→«훈련»·보물상자→«유물» 로 개칭해 글자 수·조합이 달라졌다.
+# 특히 box 는 ref «보물상자»(4자, 121) vs 우리 «유물»(2자) 이라 폭을 그대로 비교하면 −50% 가 나온다.
 REF_LABEL_W = {'hero': 56, 'grow': 62, 'adv': 55, 'box': 121, 'shop': 60}
-REF_LABEL_TOP, REF_LABEL_H = 2224, 32          # ref +124 · 잉크 높이 32
+LABEL_SAME_WORD = {'hero', 'shop'}             # 폭 대조가 성립하는 칸
+# ⚠ 측정표 §3 의 «잉크 높이 32 · 폭 56/62/55/121/60» 은 **흰 코어** 값이고, 외곽선은 별도로 «≈4» 다.
+# 이 스캐너의 차분은 **검정 외곽선까지** 잡으므로 우리 값에서 외곽선(현재 text-shadow 6px)을 양쪽
+# 빼야 코어가 된다: 코어 = 차분 − 12. 그대로 대조하면 «높이 +44%» 같은 허수가 나온다(LESSONS 01).
+REF_LABEL_TOP, REF_LABEL_H = 2224, 32          # ref +124 · **코어** 잉크 높이 32
+LABEL_STROKE = 6                               # `.tab .tl` 의 text-shadow 두께(코어 환산용)
 
 
 def load(tag):
@@ -115,9 +123,12 @@ def main():
         rw = REF_LABEL_W[k]
         if b:
             w, h = b[2] - b[0], b[3] - b[1]
-            print('  %-4s %-28s | ref w %3d  →  w %s · h %s · top Δ%+d · 바닥여백 %d (ref 24)'
-                  % (name, fmt(b), rw, pct(w, rw), pct(h, REF_LABEL_H), b[1] - REF_LABEL_TOP, 2280 - b[3]))
-            out['cells'].setdefault(k, {})['label'] = {'bbox': b[:4], 'w': w, 'h': h, 'refW': rw}
+            cw, ch = w - 2 * LABEL_STROKE, h - 2 * LABEL_STROKE     # 검정 외곽선을 벗긴 흰 코어
+            wtxt = pct(cw, rw) if k in LABEL_SAME_WORD else '(개칭 — 대조 불가)'
+            print('  %-4s %-28s | 코어 %dx%d (ref %dx%d)  →  w %s · h %s · 코어 top Δ%+d · 코어 바닥여백 %d (ref 24)'
+                  % (name, fmt(b), cw, ch, rw, REF_LABEL_H, wtxt, pct(ch, REF_LABEL_H),
+                     (b[1] + LABEL_STROKE) - REF_LABEL_TOP, 2280 - (b[3] - LABEL_STROKE)))
+            out['cells'].setdefault(k, {})['label'] = {'bbox': b[:4], 'core': [cw, ch], 'refW': rw}
         else:
             print('  %-4s (잉크 없음)' % name)
 
