@@ -1871,7 +1871,19 @@
   .ml-r{position:relative;width:784px;height:147px;margin-bottom:17px}
   .ml-r>.ml-in{background:#F7ECDA;border-radius:5px;
     box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
-  .ml-r>.ml-in{position:absolute;left:0;top:0;width:784px;height:147px;transform-origin:0 0}
+  /* ★ 16회차 — 등방 축소의 **원점**을 `0 0` → `50% 0`(상변 중앙)으로 옮겼다.
+     15회차가 «저장주인 판단 필요» 로 남긴 갈림길 ①(A 등방·좌상단 고정 vs B 폭 784 고정)은
+     **둘 중 하나를 고를 필요가 없다** — 두 진영이 각자 내건 지표를 동시에 만족시키는 세 번째 자리가 있다.
+       · B 진영(Z·Ω·Θ)이 든 근거는 «지배적 움직임이 가로 5.6:1 · 우변이 731~795px 쓸린다» 였다.
+         원점이 좌상단이면 카드 **중심이 가로로 392px 이동**한다(세로 73.5px → 5.33:1, Z 실측 5.6:1 과 일치).
+         원점을 상변 중앙에 두면 **중심의 가로 이동이 정의상 0** 이고 좌·우변은 서로를 향해 대칭으로 좁혀진다.
+         우변 이탈도 절반이 된다(같은 시각에 784(1−s) → 784(1−s)/2).
+       · A 진영(Λ·X·Y)이 든 근거는 «종횡비 왜곡 0 · 빈 면이 전경이 아니라 배경» 이었다.
+         등방 축소를 그대로 두므로 왜곡은 **여전히 0**, 비는 면도 여전히 패널 바탕색(=배경)이다.
+     11회차의 «origin 50% 0 으로 「완료」 버튼이 278px 가로 이동» 과는 다른 것이다 —
+     그때는 **상자는 폭 784 고정인데 내용만** 50% 0 으로 수렴해 «내용이 상자 안에서» 움직였다.
+     12회차에 상자·내용을 `.ml-in` 한 몸으로 묶었으므로 내용-상자 상대 이동은 원점과 무관하게 0 이다. */
+  .ml-r>.ml-in{position:absolute;left:0;top:0;width:784px;height:147px;transform-origin:50% 0}
   .ml-r:last-child{margin-bottom:0}
   .ml-r.done>.ml-in{background:#E3D3BC}
   /* 129 — 완료 표식을 클릭 즉시 입히므로(«죽은 버튼» 제거) 면색·썸네일 회색이 연출 도중에
@@ -1997,22 +2009,54 @@
      알파는 20ms 만 홀드하고 100% 까지 **한 구간**으로 간다 — 중간 키프레임을 아예 안 적으면
      CSS 가 선형 보간하므로 기울기가 **정확히** 균일해진다(0.00357/ms, 13회차 0.00381 보다 완만).
      내용 알파는 1 로 고정 — 상자 α 와 곱해져 «빈 판» 이 재발하던 것이 V-④ 지적이다. */
+  /* ★ 16회차 — 두 가지를 같이 고쳤다. **둘 다 «남는 행의 상승»(pitch)은 1px 도 안 건드린다.**
+     이 연출에서 눈이 따라가는 잉크의 대부분은 삭제 카드가 아니라 **살아 있는 3행**이라
+     14·15회차가 만든 «합산 피크 1.141 · 재가속 0.005 · 단조 하강» 은 그대로 지켜야 한다.
+     그래서 **pitch P(u) = height + margin-bottom 을 예전과 글자 그대로 같은 값**으로 두고,
+     그 안에서 height 와 margin 의 **배분만** 바꿨다. (예전: height = 147·f · margin = 17·f
+     → P = 164·f. 지금: margin = min(17, 164f) · height = max(0, 164f − 17) → P = 164·f 로 동일.)
+
+     ① **α 를 높이보다 먼저 끝낸다** (Θ «h=40px 에서 α 0» · Λ «α 를 200~240ms 에 0» 독립 일치).
+        예전 α 는 h 와 **똑같이 300ms 에** 0 이 됐다. 그 결과 Θ 실측 **112~215ms(전체의 32%)** 가
+        «너무 작아 안 읽히는데 진하기는 α .4~.65» 인 죽은 밴드였고, 뒤쪽 100ms(29.4%)는 보이는 잉크가
+        1.5% 미만인 꼬리였다. → **6.67%(20ms) 부터 70%(210ms) 까지 한 구간 선형**으로 0 에 닿게 한다.
+        중간 키프레임을 안 적어 기울기가 **정확히 균일**(1/190 = .00526/ms)하다 — 14회차가 확정한
+        «절벽 금지» 를 지키면서 낼 수 있는 **최소의 최대기울기**다(같은 Δα=1 을 190ms 에 나누는 어떤
+        곡선도 .00526 아래로 못 내려간다). 식별 창(h>100 ∧ α>.7)은 82.5 → 77ms 로 5.5ms 만 준다.
+        덤 — 보이는 마지막 프레임의 우변 이탈이 **784(1−s)/2 에서 s 가 .27 이 아니라 .19 일 때** 로
+        끝나므로, 원점 이동(위 `.ml-in` 주석)과 합쳐 Λ 가 계산한 «−23.8%» 를 실제로 회수한다.
+
+     ② **행간 거터가 같이 접히던 것**(Λ ③감점2 · Θ ②-2)을 없앴다. 예전엔 margin 도 f 배로 줄어서
+        거터 = margin − 6(삭제 카드 바깥 링) − 6(이웃 링) = 17f − 12 가 **f=.706(t≈85ms)에서 0**이 되고
+        그 뒤로는 음수였다 — 접히는 카드의 링과 이웃의 링이 **융착**한다(Λ 실측 5.0 → 1.9px(165ms) → 0).
+        → **margin 을 17px 로 붙들어 두고 height 만 줄인다.** 거터가 **전 구간 5.0px 로 고정**된다.
+        margin 은 남은 pitch 가 17 이하로 떨어지는 86.03%(258ms, α 는 이미 0)부터 비로소 접는다.
+        15회차가 «여백 5px 이 상한» 이라며 플래시 링을 10px 로 정한 계산이 이제 t=0 뿐 아니라
+        **연출 내내** 성립한다. 대가로 카드 자신의 수축 속도는 0.49 → 0.570 px/ms 로 16% 빨라진다 —
+        이건 손해가 아니라 ③ 이 요구하던 «세로가 지배적인 움직임» 쪽으로 가는 것이다. */
   @keyframes mlOut{
     0%{opacity:1;height:147px;margin-bottom:17px}
     6.67%{opacity:1}
-    10%{height:131.69px;margin-bottom:15.23px}
-    13.33%{height:126.58px;margin-bottom:14.64px}
-    20%{height:116.38px;margin-bottom:13.46px}
-    30%{height:101.06px;margin-bottom:11.69px}
-    40%{height:85.75px;margin-bottom:9.92px}
-    43.33%{height:80.65px;margin-bottom:9.33px}
-    50%{height:70.44px;margin-bottom:8.15px}
-    60%{height:55.13px;margin-bottom:6.38px}
-    70%{height:39.81px;margin-bottom:4.60px}
-    80%{height:24.50px;margin-bottom:2.83px}
-    90%{height:9.19px;margin-bottom:1.06px}
-    92%{height:6.13px;margin-bottom:.71px}
-    96%{height:1.53px;margin-bottom:.18px}
+    10%{height:129.92px;margin-bottom:17px}
+    13.33%{height:124.22px;margin-bottom:17px}
+    20%{height:112.84px;margin-bottom:17px}
+    30%{height:95.75px;margin-bottom:17px}
+    40%{height:78.67px;margin-bottom:17px}
+    43.33%{height:72.98px;margin-bottom:17px}
+    50%{height:61.59px;margin-bottom:17px}
+    60%{height:44.51px;margin-bottom:17px}
+    70%{opacity:0;height:27.41px;margin-bottom:17px}
+    80%{height:10.33px;margin-bottom:17px}
+    /* ⚠ 80% 뒤로는 height 를 **0 으로 먼저 보내면 안 된다.** `.ml-pn` 은 `display:block` 이라
+       높이 0 인 행은 «self-collapsing block» 이 되어 자기 `margin-bottom` 이 앞뒤 마진과
+       **합쳐져 사라진다**. 첫 시도(86.03% 에 height 0, margin 은 17→0 을 계속)에서 실제로
+       t=258ms 에 남은 pitch 17px 이 **한 프레임에** 증발해 합산 상승 피크가 1.141 → **2.733**,
+       재가속이 0.005 → **1.595** 로 튀었다(probe92 실측). 14·15회차가 지켜 온 값을 그대로 깨는 것이다.
+       → 80% 이후는 height 와 margin 을 **같은 비율(17:10.33)로 함께** 0 으로 보낸다.
+       P = height + margin 은 여전히 예전과 같은 값이라 남는 행의 상승은 1px 도 안 변한다. */
+    90%{height:3.88px;margin-bottom:6.38px}
+    92%{height:2.59px;margin-bottom:4.25px}
+    96%{height:.65px;margin-bottom:1.06px}
     100%{opacity:0;height:0;margin-bottom:0}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
      (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
@@ -2094,20 +2138,26 @@
        **두께로 낼 수 있는 강조는 여기가 구조적 상한이다** — 더 키우려면 (ㄱ) 안쪽 inset 링(면을
        6.2:1 로 누른다 — 13회차에 X·Y 가 기각) 또는 (ㄴ) scale 오버슈트(카드가 슬롯을 3px 넘는다)
        뿐이고, 둘 다 이미 0 으로 만든 지표를 깎는다. 주인 판단이 필요하다(review §6-16 «미해결 갈림길 ②»). */
+    /* ★ 16회차 — scale = 위 `mlOut` 의 새 height ÷ 147 로 **전부 다시 계산**했다(퍼센트 목록도 글자까지 같다).
+       바깥 링의 «선언값 = 화면 두께 ÷ scale» 규칙은 그대로다. 화면 두께 목표 곡선(15회차 확정)
+       **6 → 9(30ms) → 10(40ms) → 9.11(60ms) → 7.78(90ms) → 6.44(120ms) → 6(130ms~)** 은 **1px 도 안 바꿨다**.
+       scale 이 예전보다 작아졌으므로 같은 화면 두께를 내려면 선언값이 커진다(예 50%: 12.52 → 14.32).
+       80% 부터 raw 6 으로 떨군다 — 그 구간은 α 가 이미 0(70%)이라 화면에 없고, 선언값을 그대로 밀면
+       6/.07 = 85px 짜리 판이 되기 때문이다(15회차가 90% 에서 같은 이유로 떨궜다). */
     0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
-    10%{transform:scale(.895833);box-shadow:0 0 0 10.05px #241A12,inset 0 0 0 5px #FFFBF2}
-    13.33%{transform:scale(.861111);box-shadow:0 0 0 11.61px #241A12,inset 0 0 0 5px #FFFBF2}
-    20%{transform:scale(.791667);box-shadow:0 0 0 11.51px #241A12,inset 0 0 0 5px #FFFBF2}
-    30%{transform:scale(.687500);box-shadow:0 0 0 11.31px #241A12,inset 0 0 0 5px #FFFBF2}
-    40%{transform:scale(.583333);box-shadow:0 0 0 11.04px #241A12,inset 0 0 0 5px #FFFBF2}
-    43.33%{transform:scale(.548611);box-shadow:0 0 0 10.94px #241A12,inset 0 0 0 5px #FFFBF2}
-    50%{transform:scale(.479167);box-shadow:0 0 0 12.52px #241A12,inset 0 0 0 5px #FFFBF2}
-    60%{transform:scale(.375000);box-shadow:0 0 0 16.00px #241A12,inset 0 0 0 5px #FFFBF2}
-    70%{transform:scale(.270833);box-shadow:0 0 0 22.15px #241A12,inset 0 0 0 5px #FFFBF2}
-    80%{transform:scale(.166667);box-shadow:0 0 0 36.00px #241A12,inset 0 0 0 5px #FFFBF2}
-    90%{transform:scale(.062500);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
-    92%{transform:scale(.041667)}
-    96%{transform:scale(.010417)}
+    10%{transform:scale(.883810);box-shadow:0 0 0 10.18px #241A12,inset 0 0 0 5px #FFFBF2}
+    13.33%{transform:scale(.845034);box-shadow:0 0 0 11.83px #241A12,inset 0 0 0 5px #FFFBF2}
+    20%{transform:scale(.767619);box-shadow:0 0 0 11.87px #241A12,inset 0 0 0 5px #FFFBF2}
+    30%{transform:scale(.651361);box-shadow:0 0 0 11.94px #241A12,inset 0 0 0 5px #FFFBF2}
+    40%{transform:scale(.535170);box-shadow:0 0 0 12.03px #241A12,inset 0 0 0 5px #FFFBF2}
+    43.33%{transform:scale(.496463);box-shadow:0 0 0 12.09px #241A12,inset 0 0 0 5px #FFFBF2}
+    50%{transform:scale(.418980);box-shadow:0 0 0 14.32px #241A12,inset 0 0 0 5px #FFFBF2}
+    60%{transform:scale(.302789);box-shadow:0 0 0 19.82px #241A12,inset 0 0 0 5px #FFFBF2}
+    70%{transform:scale(.186463);box-shadow:0 0 0 32.18px #241A12,inset 0 0 0 5px #FFFBF2}
+    80%{transform:scale(.070272);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
+    90%{transform:scale(.026395)}
+    92%{transform:scale(.017619)}
+    96%{transform:scale(.004422)}
     100%{transform:scale(0)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */

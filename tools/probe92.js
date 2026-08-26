@@ -107,7 +107,17 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
         lastLiveTop: live.length ? live[live.length - 1].getBoundingClientRect().top : null,
         out: out.map((r) => {
           const rr = r.getBoundingClientRect(); const el = inOf(r); const ir = el.getBoundingClientRect();
+          /* 16회차 신설 — ⓐ «지배적 움직임» 은 bbox 가 아니라 **중심의 이동**이 정의다(Z «가로:세로 5.6:1»).
+             ⓑ 행간 거터 = 다음 살아있는 행의 «링 윗면» − 이 카드의 «링 아랫면». 융착 검출(Λ ③감점2). */
+          let nx = r.nextElementSibling;
+          while (nx && !nx.classList.contains('ml-r')) nx = nx.nextElementSibling;
+          const nEl = nx ? nx.querySelector(':scope>.ml-in') : null;
+          const nr = nEl ? nEl.getBoundingClientRect() : null;
+          const myRing = ringOf(r) || 0;
+          const nRing = nx ? (ringOf(nx) || 0) : 0;
           return { rh: rr.height, ih: ir.height, iw: ir.width, a: +getComputedStyle(r).opacity,
+            cx: ir.left + ir.width / 2, cy: ir.top + ir.height / 2, right: ir.right, left: ir.left,
+            gutter: nr ? (nr.top - nRing) - (ir.bottom + myRing) : null,
             over: { t: rr.top - ir.top, b: ir.bottom - rr.bottom, r: ir.right - rr.right },
             ink: ink(r), ring: ringOf(r) };
         })
@@ -126,14 +136,16 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
   const aspect = rows.map((r) => (r.out[0] && r.out[0].ih > 0.5 ? (r.out[0].iw / r.out[0].ih) / (base.w / base.h) : null));
 
   console.log(`기준 카드 ${base.w.toFixed(1)}×${base.h.toFixed(1)} · 삭제 대상 ${rows[0].out.length}행 · 표본 ${rows.length}개 (0~${END}ms / ${STEP}ms)\n`);
-  console.log('   t │ 남는행 h  │ 상승속도 단차  │  알파  기울기 │ 종횡비 │ 잘림 상/하/우 │ 카드−슬롯 │ 잉크%  │ 링px');
-  console.log('─'.repeat(112));
+  const c0 = { x: rows[0].out[0].cx, y: rows[0].out[0].cy, r: rows[0].out[0].right };
+  console.log('   t │ 남는행 h  │ 상승속도 단차  │  알파  기울기 │ 종횡비 │ 잘림 상/하/우 │ 카드−슬롯 │ 잉크%  │ 링px │ 중심Δ가로 세로 │ 우변Δ │ 거터');
+  console.log('─'.repeat(148));
   rows.forEach((r, i) => {
     const o = r.out[0];
     const gap = o ? o.ih - o.rh : 0;
     console.log(
       `${String(r.t).padStart(4)} │ ${r.out.map((x) => x.rh.toFixed(0).padStart(3)).join(' ')} │ ${f2(rise[i])} ${f2(step[i])} │ ${f2(alpha[i])} ${f3(dA[i])} │ ${aspect[i] === null ? '  —   ' : aspect[i].toFixed(3)} │ ` +
-      `${o ? [o.over.t, o.over.b, o.over.r].map((v) => (v > 0.5 ? v.toFixed(0) : '0').padStart(3)).join(' ') : ''} │ ${f2(gap).padStart(9)} │ ${f2(inkVis[i])} │ ${o && o.ring !== null ? o.ring.toFixed(2) : '—'}`);
+      `${o ? [o.over.t, o.over.b, o.over.r].map((v) => (v > 0.5 ? v.toFixed(0) : '0').padStart(3)).join(' ') : ''} │ ${f2(gap).padStart(9)} │ ${f2(inkVis[i])} │ ${o && o.ring !== null ? o.ring.toFixed(2) : '—'} │ ` +
+      `${f2(o ? o.cx - c0.x : null)} ${f2(o ? o.cy - c0.y : null)} │ ${f2(o ? c0.r - o.right : null)} │ ${f2(o && o.gutter !== null ? o.gutter : null)}`);
   });
 
   const mx = (a, from = 0) => a.slice(from).reduce((m, v) => (v > m ? v : m), -Infinity);
@@ -154,6 +166,17 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
   console.log(`«빈 판» 표본        ${blank}개`);
   console.log(`보이는 잉크 1.5% 도달 t=${inkIdx < 0 ? '-' : rows[inkIdx].t}ms → 뒤쪽 ${tailMs}ms (${(tailMs / END * 100).toFixed(1)}%)`);
   console.log(`정지 구간(속도 0)   ${rise.filter((v, i) => i > 0 && Math.abs(v) < 0.02).length * STEP}ms`);
+  /* 16회차 신설 — 보이는 구간(α>0.02)에서만 잰다. «안 보이는 프레임의 이탈» 은 채점 대상이 아니다. */
+  const vis = moving.map((i) => rows[i].out[0]).filter(Boolean);
+  const mabs = (f) => vis.reduce((m, o) => Math.max(m, Math.abs(f(o))), 0);
+  const dxMax = mabs((o) => o.cx - c0.x), dyMax = mabs((o) => o.cy - c0.y);
+  /* 거터는 «플래시 창»(0~130ms, 바깥 링이 6→10→6px) 안에서는 설계상 눌린다(15회차: 17−10−6 = 1px 이 상한).
+     융착 검출은 플래시 밖에서 봐야 의미가 있으므로 두 값을 따로 낸다. */
+  const gut = vis.map((o) => o.gutter).filter((v) => v !== null);
+  const gutOut = moving.filter((i) => rows[i].t >= 140).map((i) => rows[i].out[0].gutter).filter((v) => v !== null);
+  console.log(`중심 이동(보이는 구간) 가로 ${dxMax.toFixed(1)}px · 세로 ${dyMax.toFixed(1)}px → 가로:세로 ${dyMax > 0.05 ? (dxMax / dyMax).toFixed(2) : '—'}:1`);
+  console.log(`우변 이탈 최대(보이는) ${mabs((o) => c0.r - o.right).toFixed(1)} px`);
+  console.log(`행간 거터 최소(보이는) ${gut.length ? Math.min(...gut).toFixed(2) : '—'} px  (정지 시 ${gut.length ? gut[0].toFixed(2) : '—'} · 플래시 밖 ${gutOut.length ? Math.min(...gutOut).toFixed(2) : '—'})`);
   console.log(`console errors: ${errs.length}`);
   await b.close();
 })();
