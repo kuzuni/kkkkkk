@@ -48,14 +48,16 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   await page.waitForTimeout(250);
   let a = await page.evaluate(() => ({ on: blessOn('atk'), atk: mulAtk(), dmg: stat.dmg,
                                        prog: S.bless.prog, left: blessLeft('atk'),
-                                       txt: document.querySelector('#blsC_atk .tm>i').textContent,
+                                       /* 13회차 — 칩 내용이 `<b class="ck">⏱</b>` + `<i>숫자</i>` 로 갈라졌다.
+                                          시계까지 같이 보려면 칩(`.tm`) 전체 textContent 를 읽어야 한다. */
+                                       txt: document.querySelector('#blsC_atk .tm').textContent,
                                        off: document.querySelector('#blsC_atk').classList.contains('off') }));
   ok('C1 공격력 카드 클릭 → 활성', a.on);
   ok('C2 mulAtk() ×1.20', Math.abs(a.atk / before.atk - 1.20) < 1e-6, (a.atk / before.atk).toFixed(4));
   ok('C3 stat.dmg 도 ×1.20', Math.abs(a.dmg / before.dmg - 1.20) < 1e-6, (a.dmg / before.dmg).toFixed(4));
   ok('C4 진행 +1', a.prog === before.prog + 1, before.prog + '→' + a.prog);
   ok('C5 지속시간 30분(±2초)', Math.abs(a.left - 30 * 60 * 1000) < 2000, a.left);
-  ok('C6 타이머 표시 HH:MM:SS', /^⏱ \d\d:\d\d:\d\d$/.test(a.txt), a.txt);
+  ok('C6 타이머 표시 HH:MM:SS', /^⏱\s*\d\d:\d\d:\d\d$/.test(a.txt), a.txt);
   ok('C7 활성 카드는 .off 해제', !a.off);
   ok('C8 체력·공속은 아직 그대로', await page.evaluate(() => mulHp()) === before.hp
      && await page.evaluate(() => mulRate()) === before.rate);
@@ -132,11 +134,11 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
                                           이 시점의 축복 레벨(E 에서 2가 돼 있다)로 기대값을 세운다. */
                                        exp: 1 + BLESS[0].v * blessScale(), lv: blessLv(),
                                        off: document.querySelector('#blsC_atk').classList.contains('off'),
-                                       txt: document.querySelector('#blsC_atk .tm>i').textContent }));
+                                       txt: document.querySelector('#blsC_atk .tm').textContent }));
   ok('I1 만료되면 비활성', !i.on);
   ok('I2 만료 즉시 배수 원복(캐시 무효화)', Math.abs(i.atk / gBefore - 1 / i.exp) < 1e-6,
      (i.atk / gBefore).toFixed(4) + ' (Lv' + i.lv + ' → ÷' + i.exp.toFixed(2) + ')');
-  ok('I3 만료 카드 .off + «받기» 표시', i.off && /받기/.test(i.txt), i.txt);
+  ok('I3 만료 카드 .off + «받기» 표시', i.off && /^⏱\s*받기$/.test(i.txt), i.txt);
 
   /* ── J. 기하(측정표 대조) ── */
   const geo = await page.evaluate(() => {

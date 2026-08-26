@@ -33,6 +33,18 @@ const path = require('path');
   await page.evaluate(() => { if (typeof paused !== 'undefined') { try { paused = true; } catch (e) {} } });
   await page.click('.side .ibtn[data-pop="bless"]');
   await page.waitForTimeout(500);
+  /* 13회차 — 타이머 문자열이 **회차마다 달랐다**. 위 addInitScript 의 `Date.now()+82000` 은
+     페이지 로드·클릭에 걸린 시간(가변)을 뺀 값이 표시되므로 «00:01:21» 이 나오다 «00:01:20» 이 나오다 한다.
+     ref 카드 3장은 각각 **00:01:20 / 00:01:21 / 00:01:22** 다 — 마지막 글자가 '0' 이냐 '1' 이냐에 따라
+     숫자 잉크 폭이 7px(−12%) 씩 달라져서, 12회차까지 «숫자가 12.7% 좁다» 는 **거짓 지적**이 나왔다.
+     여기서 렌더 시점 기준으로 다시 찍어 문자열을 고정한다(각 카드 여유 500ms). */
+  await page.evaluate(() => {
+    const t = Date.now();
+    /* hms() 는 Math.ceil 이라 «남은 ms 를 올림한 초» 가 표시된다 ⇒ 80/81/82초를 노려 500ms 아래로 준다 */
+    S.bless.exp = { atk: t + 79500, hp: t + 80500, rate: t + 81500 };
+    renderBless();
+  });
+  await page.waitForTimeout(80);
   await page.screenshot({ path: out });
 
   const m = await page.evaluate(() => {
@@ -51,7 +63,7 @@ const path = require('path');
     o._open = !!document.querySelector('#blsw.on');
     o._txt = { lv: (document.getElementById('blsLv') || {}).textContent,
                prog: (document.getElementById('blsProg') || {}).textContent,
-               tm: (document.querySelector('#blsC_atk .tm>i') || {}).textContent };
+               tm: (document.querySelector('#blsC_atk .tm') || {}).textContent };
     return o;
   });
   console.log(JSON.stringify(m, null, 1));
