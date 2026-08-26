@@ -108,7 +108,7 @@ const inter = (a, b) => {
           tabTop: F(tabbar).t,
           panel: q('.rw-panel'), bg: q('.rw-bg'), frame: q('.rw-frame'),
           fcbl: q('.rw-fc.bl'), fcbr: q('.rw-fc.br'),
-          grid: q('.rw-grid'), mid: q('.rw-mid'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
+          grid: q('.rw-grid'), mid: q('.rw-mid'), floor: q('.rw-floor'), basin: q('.rw-basin'), cost: q('.rw-cost'), cap: q('.rw-cap'),
           slots: [...relw.querySelectorAll('.rw-c')].map(F),
           labels: [...relw.querySelectorAll('.rw-c>u')].map(F),
           rwc: parseFloat(getComputedStyle(relw).getPropertyValue('--rwc')) || 0,
@@ -167,6 +167,13 @@ const inter = (a, b) => {
       ck(`[${H}] ④ 수반구획 × 안내문 겹침 0`, inter(r.mid, r.cap) === 0,
         `수반 하변 ${r.mid.b.toFixed(1)} → 안내문 상변 ${r.cap.t.toFixed(1)}`);
       ck(`[${H}] ④ 격자 × 안내문 겹침 0`, inter(r.grid, r.cap) === 0, '');
+      /* 6회차 — 아치 «발»(= 바닥선 .rw-floor 상단)이 수반 구획을 파고들면 안 된다.
+         1600 에서 격자↔수반 간극(177)이 아치가 격자 아래로 내려오는 깊이(186)보다 작아
+         바닥선이 수반 림을 9px 가로질렀다(비평 R). 아치 높이를 min() 으로 클램프해 고쳤고,
+         여기서 회귀를 막는다. */
+      ck(`[${H}] ④ 바닥선(아치 발)이 수반 구획 위에 (클리어런스 ≥ 20px)`,
+        r.mid.t - r.floor.t >= 20,
+        `바닥선 ${r.floor.t.toFixed(1)} → 수반 ${r.mid.t.toFixed(1)} = ${(r.mid.t - r.floor.t).toFixed(1)}px`);
       ck(`[${H}] ④ 코스트 알약이 수반 구획 안 (89 설계 = 받침 위 겹침)`,
         r.cost.l >= r.mid.l - 0.6 && r.cost.r <= r.mid.r + 0.6 &&
         r.cost.t >= r.mid.t - 0.6 && r.cost.b <= r.mid.b + 0.6,

@@ -119,7 +119,7 @@ const PT = Number(process.argv[3] || 108);
     const bandMean = (y0, y1) => { let s = 0, n = 0;
       for (let y = y0; y <= y1; y += 2) for (let x = 250; x <= 826; x += 2) { s += lum(x, y); n++; }
       return s / n; };
-    const gridTop = PT + spare * 0.5075, gridBot = gridTop + 516;
+    const gridTop = PT + spare * 0.5075, gridBot = gridTop + 516, gridBot0 = gridBot;
     const upper = bandMean(Math.round(archTop) + 20, Math.round(gridTop) - 12);
     const lower = bandMean(Math.round(gridBot) + 12, Math.round(archBot) - 20);
     /* 테두리 기울기 — 아치 좌변 x244 / 우변 x833 을 가로지르는 행들의 최대 |dL/dx| */
@@ -132,7 +132,27 @@ const PT = Number(process.argv[3] || 108);
         }
       }
     }
+    /* F. «전폭 무특징 띠» — 비평 S 의 지표. 행의 max−min < 25/255 이면 그 행은 사실상
+       한 색이다. 그런 행이 **연속으로 몇 px** 이어지는지가 «죽은 띠» 의 길이다.
+       ref 는 같은 기준으로 최장 111px(환산) 하나뿐이었다(S 실측). */
+    let run = 0, runMax = 0, runAt = 0, deadRows = 0;
+    for (let y = PT + 8; y < PB - 8; y++) {
+      let mn = 1e9, mx = -1e9;
+      for (let x = 12; x < 1068; x += 4) { const v = lum(x, y); if (v < mn) mn = v; if (v > mx) mx = v; }
+      if (mx - mn < 25) { run++; deadRows++; if (run > runMax) { runMax = run; runAt = y - run + 1; } }
+      else run = 0;
+    }
+    /* G. 아치 «안쪽» 에 에지가 있는가 — S 는 x400 의 y1210~1400 에서 검출 0 을 지적했다 */
+    let archEdges = 0;
+    {
+      const y0 = Math.round(gridBot0) + 10, y1 = Math.round(archBot) - 20;
+      for (let y = y0 + 1; y < y1; y++) {
+        let a = 0; for (const x of [340, 400, 460, 620, 700]) a += Math.abs(lum(x, y) - lum(x, y - 1));
+        if (a / 5 >= 2) archEdges++;
+      }
+    }
     return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY, medJump, atArch, atArchOut,
+      runMax, runAt, deadPct: deadRows / (PB - PT - 16) * 100, archEdges,
       flat1: b1 / bT * 100, flat2: b2 / bT * 100, blocks: bT,
       archUpper: upper, archLower: lower, edgeMax };
   }, { url: data, PT });
@@ -156,5 +176,8 @@ const PT = Number(process.argv[3] || 108);
   console.log(`   목표: std<1 < 30% (ref 환산 24.2% · M 실측)`);
   console.log(`\nE. 아치 안쪽 평균 휘도 — 슬롯 위 ${f(out.archUpper)} · 슬롯 아래 ${f(out.archLower)}   (목표 ≥ 22 — 더 어두우면 «뚫린 구멍»)`);
   console.log(`   아치 테두리 최대 기울기 ${f(out.edgeMax)} 휘도/px   (목표 ≥ 8 — 그 미만이면 «선이 없다»)`);
+  console.log(`\nF. 전폭 무특징 띠 — 최장 연속 ${out.runMax}px @y${out.runAt} · 무특징 행 비율 ${f(out.deadPct)}%`);
+  console.log(`   목표: 최장 < 110px (ref 최장 111px · S 실측)`);
+  console.log(`\nG. 아치 «안쪽» 세로 에지 행 수 ${out.archEdges}  (0 이면 통로 안이 무텍스처 — S ⑤-3)`);
   await b.close();
 })();
