@@ -4129,12 +4129,18 @@
   .cl-rib>s.bd{left:34px;right:35px;top:0;width:auto;height:91px;filter:none;
     background:linear-gradient(180deg,#38CBDF 0 3px,#1AB4D6 3px 92%,#19ACCE 92% 95%,#0D8EAE 95%);
     /* ref 단면(x540): 검정 상 346~353(8px) / 시안 355~430 / 검정 하 433~437(5px) — 상하 두께가 다르다 */
-    border:solid #000;border-width:8px 6px 5px;border-radius:10px;box-sizing:border-box;
+    /* 11회차 — 이월 항목 «리본 h 96 → 93» 은 **방향이 반대**였다(비평가 Y #2, 자체 실측 일치).
+       시안 fill: ref 269~364(h96) / 우리 271~363(h93) — 우리가 3px «짧다». 몸통 단면도 ref 269~347 /
+       우리 271~348 로 **윗검정테가 1.5px 두꺼워** 시안이 2px 늦게 시작한 것이다.
+       상 8 → 6.5 · 하 5 → 6 으로 옮겨 시안을 269~347.5 에 맞춘다(바깥 bbox·꼬리는 그대로). */
+    border:solid #000;border-width:6.5px 6px 6px;border-radius:10px;box-sizing:border-box;
     /* 접힘 음영 — ref 는 꼬리와 만나는 플레이트 안쪽 x308~317 / 762~771 이 10px 어둡다(12,137,167) */
     box-shadow:inset 5px 0 0 rgba(0,0,0,.22),inset -5px 0 0 rgba(0,0,0,.22)}
   /* ref 「도감」 코어 87x44 @ x497~583 y367~410(프레임 283~326) · 검정 외곽 포함 98x55.
      우리는 코어 폭 −4.6% · 4px 아래 · 외곽 3px 얇았다(비평 C ⑥ · D ⑥ 공통). */
-  .cl-rib>i{position:relative;font-size:48px;line-height:80px;color:#FEFEFE;
+  /* 11회차 — 126 서체 교체로 코어가 −13.6%(자체 실측 우리 73×38 @y280~317 / ref 86×44 @y283~326).
+     48 × 44/38 ≈ 56 — 폭도 73 × 56/48 = 85 로 ref 86 에 붙는다. line-height 로 중심을 304.5 에 맞춘다. */
+  .cl-rib>i{position:relative;font-size:56px;line-height:92px;color:#FEFEFE;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.945)}
   /* 우측 🔍 — 원형 d68, 반투명 흰 + 어두운 링 */
   .cl-srch{left:739px;top:17px;width:68px;height:68px;border-radius:50%;box-sizing:border-box;
@@ -4183,7 +4189,11 @@
   .clb-star{left:133px;top:0;height:80px;line-height:84px;font-size:25px;color:#999CBD}
   /* 7회차 — 헤더밴드를 81→80 으로 줄이면서 세트명 잉크가 밴드 안에서 1px 위로 떴다.
      ref 세트명 잉크 182x35 @x298 프레임 y434~468(밴드 상단 411.5 기준 +22.5) — line-height 로 되돌린다. */
-  .clb-nm{left:165px;top:0;height:80px;line-height:77px;font-size:38px;color:#fff;
+  /* 11회차(2026-08-26) — 126 의 게임 서체(GameKR) 교체로 «같은 font-size 인데 잉크가 작아졌다».
+     자체 실측(흰 코어 light≥200): ref 잉크 h35 @프레임 y434~468(중심 451) / 교체 후 우리 h31 @y432~462(중심 447)
+     = 높이 −11.4% · 중심 4px 위. 7회차가 구 시스템 서체로 맞춰 둔 38/77 이 서체와 함께 어긋난 것이다.
+     38 × 35/31 ≈ 43 으로 올리고 line-height 로 중심을 451 에 되돌린다. */
+  .clb-nm{left:165px;top:0;height:80px;line-height:85px;font-size:43px;color:#fff;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;transform:scaleX(.93);transform-origin:left center;white-space:nowrap}
   /* 아이템 카드 — 6회차 실측으로 121×121, pitch 129.25(gap 8.25), 검정 5 + 등급 rim 5, radius 33.
      ref 단면(y675): 카드1 검정 외곽 157~277, 카드2 286~ → 폭 121 · 갭 8 · pitch 129.
@@ -4197,7 +4207,10 @@
     overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
   .clb-cards::-webkit-scrollbar{display:none}
   /* 91 — 머리밴드 우측 «단계 받은/가능». 세트명(.clb-nm) 과 겹치지 않게 우측 정렬로 붙인다 */
-  .clb-st{right:26px;top:0;height:80px;line-height:77px;font-size:30px;color:#C9CBDE;
+  /* 11회차 — 이 칩은 91 이 신설한 것이라 ref 가 없다. 서체 교체로 세트명과 함께 −12% 줄었는데
+     세트명만 43 으로 되돌리면 머리밴드 안 위계가 깨진다 → 91 이 잡아 둔 비(30/38 = 0.79)를 그대로
+     43 에 적용해 34 로 올린다. line-height 는 세트명과 같은 85 로 맞춰 두 잉크의 중심을 나란히 둔다. */
+  .clb-st{right:26px;top:0;height:80px;line-height:85px;font-size:34px;color:#C9CBDE;
     -webkit-text-stroke:7px #000;paint-order:stroke fill;white-space:nowrap}
   .clb-st.rdy{color:#BAFD60}
   .clb .cd{position:relative;display:inline-block;width:121px;height:121px;margin:0 8.25px 0 0;
@@ -4222,18 +4235,25 @@
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:29px}
   /* 8회차 — K #16·L #9 가 «캡션 잉크 3~4px 위» 로 일치. 자체 행 프로파일(light>=150, x168~268):
      ref 잉크 y708~724 / 우리 703~721 → 5px 내린다. */
-  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:-3px;font-size:27px;line-height:29px;
-    transform:scaleX(1.08);-webkit-text-stroke:5px #000;paint-order:stroke fill}
+  /* 11회차 — 이 라벨만 «반대로» 커졌다(비평가 Z #8 + 자체 실측 일치): ref 85×20 @x175 프레임 y622~641 /
+     우리 91×21 @x172 y624~644 = 폭 +7.1% · 높이 +5% · 2.5px 아래. 다른 텍스트가 서체 교체로 −12% 인데
+     여기만 +7% 라 타입 스케일이 뒤집혀 보인다. 27 → 26 · scaleX 1.08 → 1.05 · bottom −3 → −0.5. */
+  .clb .cd>i.cl2{position:absolute;left:0;right:0;bottom:-0.5px;font-size:26px;line-height:29px;
+    transform:scaleX(1.05);-webkit-text-stroke:5px #000;paint-order:stroke fill}
   /* 효과 바 — 6회차 실측 ref x130.5~948.5 / y786.5~864.5 → 블록 local (0, +291), h78.
      (우리는 좌 131.5·h80 이라 좌로 1px 밀리고 아래로 2px 넘쳤다) */
   .clb-eff{left:0;top:291px;width:818px;height:78px;background:#D6BC99;border-radius:18px;
-    line-height:78px;padding-left:34px;box-sizing:border-box;font-size:33px;color:#FFF7AE;
+    /* 11회차 — 126 서체 교체로 잉크가 −12.9%(자체 실측 ref h31 @프레임 y727~757 / 우리 h27 @y725~751).
+       33 × 31/27 ≈ 38. line-height 로 잉크 중심을 ref 742 에 맞춘다. */
+    line-height:86px;padding-left:34px;box-sizing:border-box;font-size:38px;color:#FFF7AE;
     -webkit-text-stroke:9px #000;paint-order:stroke fill;white-space:nowrap}
   .clb-eff i.g{color:#BAFD60}
   /* 강화 버튼 — 6회차 실측 ref x716.5~955.5 · y779.5~869.5 → 239×90, 블록 local (586, 284).
      (블록이 1px 올라갔으므로 top 284 그대로가 ref 695.5 다. 우측이 바를 7px 넘는다) */
   .clb-btn{left:586px;top:284px;width:239px;height:90px;border-radius:45px;border:6px solid #000;
-    box-sizing:border-box;font:900 34px inherit;font-family:inherit;font-size:34px;color:#DFDFDF;
+    /* 11회차 — 126 서체 교체로 잉크가 −15.6%(자체 실측 ref 63×32 @x806 프레임 y720~751 /
+       우리 53×27 @x810 y721~747). 34 × 32/27 ≈ 40 — 폭도 53 × 40/34 = 62 로 ref 63 에 붙는다. */
+    box-sizing:border-box;font:900 40px inherit;font-family:inherit;font-size:40px;color:#DFDFDF;
     -webkit-text-stroke:10px #000;paint-order:stroke fill;
     background:linear-gradient(180deg,#A9A9A9,#8A8A8A);
     /* ref 세로 단면(x840): 상 검정테 → 밝은 림 210 → 본체 169→138 → **밝은 림 211(프레임 770)**
