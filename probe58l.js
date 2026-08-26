@@ -106,7 +106,8 @@ const ovl = (a, b) => {           /* 교차 면적 / b 면적 (%) */
         chk.push({ t, x:Math.round(r.left), y:Math.round(r.top), w:Math.round(r.width), h:Math.round(r.height),
                    op:+getComputedStyle(c.parentElement).opacity }); }
       const b2 = document.querySelector('#mbox [data-q="kill"]');
-      col.push({ t, bg: b2 ? getComputedStyle(b2).backgroundColor : 'none', gone: !b2 });
+      col.push({ t, bg: b2 ? (getComputedStyle(b2).getPropertyValue('--gb-mid').trim() || getComputedStyle(b2).backgroundColor) : 'none',
+                 dis: b2 ? !!b2.disabled : null, gone: !b2 });
       await sleep(60);
     }
     return { btn:{ x:Math.round(rb.left), y:Math.round(rb.top), w:Math.round(rb.width), h:Math.round(rb.height) },
@@ -147,7 +148,7 @@ const ovl = (a, b) => {           /* 교차 면적 / b 면적 (%) */
     if(worst) console.log(`  → 최대 가림 ${worst.pct}% @t${worst.t}ms (원판 ${worst.d}, 버튼 높이 대비 세로 ${(parseInt(worst.d)/q.btn.h*100).toFixed(0)}%)`);
     console.log('  배경색 타임라인:');
     let prev = null;
-    for(const c of q.col){ if(c.bg !== prev){ console.log(`   t${String(c.t).padStart(4)}ms  ${c.gone ? '(버튼 사라짐)' : c.bg}`); prev = c.bg; } }
+    for(const c of q.col){ const k = c.bg + '|' + c.dis; if(k !== prev){ console.log(`   t${String(c.t).padStart(4)}ms  ${c.gone ? '(버튼 사라짐)' : c.bg + '  disabled=' + c.dis}`); prev = k; } }
   }
 
   await browser.close();

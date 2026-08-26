@@ -205,6 +205,18 @@ global.__capLog = {};
   await run('quest', () => {
     const b = document.querySelector('#mbox [data-q="kill"]:not([disabled])');
     if(!b) return { err:'퀘스트 «보상 받기» 버튼을 찾지 못했다' };
+    /* 22회차 — **하네스 결함이었다.** 21차 비평 AJ #6 · AK #4 가 «클릭 후 95ms 동안 화면 변화 0px
+       (f1≡f2 md5 동일)» 을 2인 공통으로 잡았는데, 원인은 게임이 아니라 여기다: `el.click()` 은
+       `click` 만 발화하고 **`pointerdown` 은 안 낸다.** 60 쥬시의 누름 피드백(`jz-dn`)은 pointerdown
+       캡처 리스너에 걸려 있어(74 «탭 유실» 대책) 이 경로로는 **영원히 안 붙는다** — 실기기에서는
+       손가락이 pointerdown 을 내므로 있는 반응이, 캡처에만 없었다(`jzchk58.js` 로 확인:
+       `b.click()` → 클래스 그대로 · pointerdown 디스패치 → `jz-dn` 부착).
+       upg 씬은 작업 64 이후 pointerdown 으로 누르고 있어 이미 옳았다 — quest 만 어긋나 있었다. */
+    const rc = b.getBoundingClientRect();
+    const pe = t => new PointerEvent(t, { bubbles:true, cancelable:true,
+      clientX: rc.left + rc.width/2, clientY: rc.top + rc.height/2 });
+    b.dispatchEvent(pe('pointerdown'));
+    b.dispatchEvent(pe('pointerup'));
     b.click();                                         /* 페이지 안에서 resolve+click (25 교훈 5) */
     return { t: Date.now() };
   }, 1800);
@@ -234,7 +246,13 @@ global.__capLog = {};
   /* 프레임별 «정답» 표 — 비평 전달문에 그대로 붙인다 */
   for(const tag in global.__capLog){
     const L = global.__capLog[tag].rows, SP = global.__capLog[tag].spawn;
-    const at = ms => { let b = L[0]; for(const r of L) if(Math.abs(r[0]-ms) < Math.abs(b[0]-ms)) b = r; return b; };
+    /* 22회차 — 21차 비평 AJ·AK 가 **독립적으로 같은 어긋남**을 보고했다: 정답표가 실제 프레임보다
+       한 페인트 앞선다(AK 실측 — 첫 비영 프레임은 f7(570ms), 명목 스케줄의 f6(475ms)이 아니다).
+       원인은 «가장 가까운 표본» 이다 — 스크린캐스트 프레임이 보여 주는 것은 그 시각 «직전에 이미
+       합성된» 화면인데, 뒤쪽(아직 안 그려진) 표본이 더 가까우면 그걸 골라 버린다.
+       → **그 시각 이하의 마지막 표본**을 쓴다. 정답표는 오독을 막으려고 만든 장치라, 그게 틀리면
+       없느니만 못하다. */
+    const at = ms => { let b = L[0]; for(const r of L){ if(r[0] <= ms) b = r; else break; } return b; };
     const T = (global.__capT && global.__capT[tag]) || [];
     console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수): ` +
       T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[4]).join('  '));

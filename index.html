@@ -2516,9 +2516,16 @@
     100%{opacity:0;transform:translate(-50%,-104px) scale(1)}}
 
   /* 21회차 — 강화 델타 플로터가 떠 있는 동안 그 값이 나온 수치 행을 비운다(공존 제거).
-     플로터 수명 660ms 중 «읽히는» 구간이 앞 ~420ms(상승 104px · 페이드 46%)라 그만큼만 비운다. */
-  @keyframes fxCvSwap{0%{opacity:.12}58%{opacity:.12}100%{opacity:1}}
-  .fx-cvswap{animation:fxCvSwap .46s ease-out both}
+     플로터 수명 660ms 중 «읽히는» 구간이 앞 ~420ms(상승 104px · 페이드 46%)라 그만큼만 비운다.
+     22회차 — **되돌린다. 그 처방이 병보다 나빴다**(21차 비평 AJ #4 · AK #1, 2인 공통이고 AK 는
+     1순위로 올렸다): `opacity .12` 를 267ms 유지하면 이 연출이 전달해야 할 유일한 정보인 **새 수치가
+     판독 불가**해진다(AK 실측 — 배경 대비 1.31:1, 690ms 중 340ms = 49%). «두 수치 동시 노출» 을
+     없애려다 «어느 수치도 안 보이는 구간» 을 만든 것이다.
+     → 투명도로 지우지 말고 **팝 스케일**로 «이 줄이 방금 갱신됐다» 를 말한다. 새 값은 0ms 부터
+     alpha 1.0 이다. 동시 노출 문제는 20회차가 세운 색 분리(플로터 앰버 #FFD24A · 카드 스탯 초록)와
+     19회차의 상승 거리 104px 가 이미 맡고 있다 — 그 둘을 지우지 않는다. */
+  @keyframes fxCvSwap{0%{transform:scale(.84)}55%{transform:scale(1.07)}100%{transform:scale(1)}}
+  .fx-cvswap{animation:fxCvSwap .34s cubic-bezier(.34,1.56,.64,1) both}
 
   /* 보상 아이템 팝 — 0 → 1.2 → 1 */
   @keyframes fxPop{0%{transform:scale(0);opacity:0}55%{transform:scale(1.2);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -16196,6 +16203,14 @@ function openQuest(tab){
      가렸다(비평가 Q·R 공통 실측). 손맛은 손가락 밑에, 재화는 보상 자리에서 나가는 것이 맞다. */
   const fxQuest = (btn, el) => {
     if(btn){ fxCheck(btn); fxBurst(btn, '#FFE07A', 10); }   /* 18회차 — 시안 버블은 09·12·17 금색 콘페티 톤과 이질(AD ④) */
+    /* 22회차 — 21차 비평 AJ #3 · AK #17 (2인 공통): 수령했는데 버튼이 **1396ms 까지 «미수령 초록»**
+       으로 남아 있다가 재렌더 순간 1프레임 하드컷으로 회색이 된다(probe58l 실측 — `--gb-mid`
+       `#4CBA2E · disabled=false` → t1396ms `#8A8A8A · disabled=true`). 재화가 날아가는 내내
+       «아직 누를 수 있다» 로 보이고, 체크 도장이 사라지는 855ms 뒤에는 그것마저 없다.
+       지연 재렌더 자체는 유지해야 한다(`verify58` [11] — 비행 중 목록을 갈아 끼우면 출발점이 사라진다).
+       → 목록은 그대로 두고 **누른 버튼 한 개만** 즉시 소진 상태로 넘긴다. 체크·버스트와 같은 프레임에
+       바뀌므로 하드컷도 사라진다. 이중 지급은 원래 없다(수령 로직이 막는다 — 실측 확인). */
+    if(btn && btn.tagName === 'BUTTON') btn.disabled = true;
     if(el){ fxAt(el); fxSolo(el); }
     fxHoldList(); fxFlush();                     /* 연출이 끝난 뒤 목록 갱신 · 디바운스는 건너뛴다 */
     fxToast('퀘스트 완료');
@@ -20459,7 +20474,7 @@ function fxDelta(el, txt){
     el.classList.remove('fx-cvswap');
     void el.offsetWidth;                               /* 꾹 누르기 반복분에서도 다시 걸리게 리플로우 */
     el.classList.add('fx-cvswap');
-    setTimeout(() => el.classList && el.classList.remove('fx-cvswap'), 520);
+    setTimeout(() => el.classList && el.classList.remove('fx-cvswap'), 400);
   }
 }
 function fxToast(txt){
