@@ -89,6 +89,17 @@ const PT = Number(process.argv[3] || 108);
       const i = y - yLo;
       if (i >= 1 && i < diff.length) atArch = Math.max(atArch, Math.abs(diff[i] - diff[i - 1]));
     }
+    /* 6회차 — «절단선» 과 «접합부» 를 가른다.
+       6회차에 아치 하변과 **같은 y** 에 전폭 바닥선(.rw-floor)을 깔았다(비평 P·Q 공통 처방:
+       «아치가 착지하지 않는다»). 그러면 아치 안쪽은 거기서 끝나는 게 맞고, 그건 결함이 아니라
+       **바닥과 만나는 접합부**다. 둘의 차이는 «바깥에도 단이 있는가» 다 —
+       허공에서 잘리면 안쪽에만 단이 서고, 바닥에 닿으면 **전폭**이라 바깥에도 선다. */
+    let atArchOut = 0;
+    for (let y = ab - 4; y <= ab + 4; y++) {
+      const o0 = (rowStat(y - 1, 60, 200).mean + rowStat(y - 1, 880, 1020).mean) / 2;
+      const o1 = (rowStat(y, 60, 200).mean + rowStat(y, 880, 1020).mean) / 2;
+      atArchOut = Math.max(atArchOut, Math.abs(o1 - o0));
+    }
     /* D. «단색 평면» 비율 — 24×24 블록의 국소 표준편차. 비평 M 이 쓴 지표 그대로.
        ref 크롭을 같은 배율로 환산했을 때 std<1 = 24.2% · std<2 = 42.6% 였다(M 실측).
        E. 아치 «안쪽 평균 휘도» 와 «테두리 최대 기울기» — M 의 ⑤-2·⑤-4.
@@ -121,7 +132,7 @@ const PT = Number(process.argv[3] || 108);
         }
       }
     }
-    return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY, medJump, atArch,
+    return { w: c.width, h: c.height, PT, PB, archBottom: ab, arch, floor, maxJump, jumpY, medJump, atArch, atArchOut,
       flat1: b1 / bT * 100, flat2: b2 / bT * 100, blocks: bT,
       archUpper: upper, archLower: lower, edgeMax };
   }, { url: data, PT });
@@ -137,7 +148,10 @@ const PT = Number(process.argv[3] || 108);
   const fU = out.floor.map(r => r.uniq);
   console.log(`  고유색 최소 ${Math.min(...fU)} · 최대 ${Math.max(...fU)}`);
   console.log(`\nC. 아치 하변 절단선 — «안−밖» 차분 기준. 하변 자리(±3px) 점프 ${f(out.atArch)} vs 창 중앙값 ${f(out.medJump)}  (창 최대 ${f(out.maxJump)} @y${out.jumpY})`);
-  console.log(`   판정: ${out.atArch <= Math.max(3, out.medJump * 2.5) ? '절단선 없음' : '★ 절단선 의심'}`);
+  const junction = out.atArchOut >= 3;      /* 전폭 바닥선이 같은 자리에 있다 = 접합부 */
+  const bare = out.atArch > Math.max(3, out.medJump * 2.5) && !junction;
+  console.log(`   바깥(전폭) 단 ${f(out.atArchOut)} → ${junction ? '바닥선과 만나는 «접합부»' : '바깥엔 단 없음'}`);
+  console.log(`   판정: ${bare ? '★ 허공 절단선 의심' : '허공 절단선 없음'}`);
   console.log(`\nD. 단색 평면 비율 (24×24 블록 ${out.blocks}개) — std<1 ${f(out.flat1)}%  ·  std<2 ${f(out.flat2)}%`);
   console.log(`   목표: std<1 < 30% (ref 환산 24.2% · M 실측)`);
   console.log(`\nE. 아치 안쪽 평균 휘도 — 슬롯 위 ${f(out.archUpper)} · 슬롯 아래 ${f(out.archLower)}   (목표 ≥ 22 — 더 어두우면 «뚫린 구멍»)`);
