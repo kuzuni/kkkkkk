@@ -4621,9 +4621,14 @@
         레퍼런스는 아이콘을 패널 정중앙이 아니라 6~9px 위에 둔다.
      ⓑ 카드③(골드 상자) 아이콘이 **세로 +26~27%**(AC +27 · AD +26px) — ref 는 «넓고 납작한»
         상자 아트(126×95)인데 우리는 정사각 SVG(120×121)라 종횡비가 뒤집혀 있었다.
-     칸별 아트 bbox 는 `--iw`/`--ih` 로 박는다(«아트 자리 규칙» — 일러스트로 바꿔 끼울 자리다). */
+     칸별 아트 bbox 는 `--cn-iw`/`--cn-ih` 로 박는다(«아트 자리 규칙» — 일러스트로 바꿔 끼울 자리다).
+     ⚑ 9회차 버그 — 8회차는 이 변수를 `--iw`/`--ih` 로 지었는데, **`--ih` 는 A2 사이드 아이콘이
+        `layoutSide()` 에서 `#app` 에 직접 심는 이름**(index.html «app.style.setProperty('--ih'…)»)이라
+        아트 bbox 를 안 준 칸(①②·44 다이아·68 유물 카드 전부)이 폴백 120px 이 아니라 **A2 의 82px**
+        을 물려받아 아이콘 상자가 120×**82** 로 눌려 있었다. LESSONS 15 «var(--x, var(--y)) 폴백은
+        --x 가 어디에도 정의되지 않았을 때만 걸린다» 가 그대로 재발한 자리다 — 이름을 13 전용으로 바꾼다. */
   .cn-cd>.pn>em{position:relative;top:-7px;font-size:112px;line-height:157px}
-  .cn-cd>.pn>em>.cic{width:var(--iw,120px);height:var(--ih,120px)}
+  .cn-cd>.pn>em>.cic{width:var(--cn-iw,120px);height:var(--cn-ih,120px)}
   /* 구매 완료 카드는 본문 프레임도 초록(ref #135E3F = #1C8D5E×딤0.667) — 파랑 몸통이 슬리버로 비치지 않게 */
   .cn-cd.done>.bg{background:#1C8D5E}
   /* 6회차 정오 — 5회차의 «띠 아래 dy194·우측 정렬» 은 **틀렸다**. 측정표 §5-4 의 «×100 잉크 y1020»
@@ -18215,7 +18220,7 @@ const COIN_ADS = [
      `qx`(×N)는 반대다 — 라틴·숫자는 서브셋에 없어 폴백 서체로 떨어져 오히려 +3~7% 컸다. */
   { id:'a1', n:'보석',                q:'×100', ic:curIc('dia'), cap:1, r:{ dia:100 },     fs:37.0, sx:1.047, qx:1.24 },
   { id:'a2', n:'공물',                q:'×50',  ic:curIc('relic'), cap:1, r:{ rel:50 },      fs:39.4, sx:0.894, qx:1.24 },
-  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:39.7, sx:0.995, qx:1.146, iw:126, ih:95 },
+  { id:'a3', n:'골드 상자',           q:'×1',   ic:curIc('gold'), cap:1, r:{ goldMul:200 }, fs:39.7, sx:0.995, qx:1.146, iw:139, ih:113 },
   { id:'a4', n:'아티팩트 상자 열쇠',  q:'×10',  ic:'🗝️', cap:2, r:{ rel:10 },      fs:32.3, sx:1.084, qx:1.15 },
   { id:'a5', n:'아티팩트 강화석',     q:'×30',  ic:'💠', cap:2, r:{ rel:30 },      fs:38.4, sx:1.050, qx:1.245 },
   { id:'a6', n:'일반 동료 소환 열쇠', q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:33.3, sx:1.007, qx:1.21 }
@@ -18327,7 +18332,7 @@ function renderCoinPage(list){
          갈렸다. 소환 헤더·리본과 똑같이 그 칸의 헤더색에서 역산한다. */
       + ';--jz-ga:' + jzShineA(done ? '#68C338' : '#48B6E7') + ';--jz-gd:' + jzShadeA(done ? '#68C338' : '#48B6E7')
       /* 8회차 — 칸별 아트 bbox(«아트 자리 규칙»). 안 준 칸은 공용 120×120 */
-      + (a.iw ? ';--iw:' + a.iw + 'px;--ih:' + a.ih + 'px' : '') + '">'
+      + (a.iw ? ';--cn-iw:' + a.iw + 'px;--cn-ih:' + a.ih + 'px' : '') + '">'
       +  '<div class="bg"></div><div class="hd"><i>' + a.n + '</i></div>'
       +  '<div class="pn"><em>' + a.ic + '</em></div>'
       +  '<div class="qt">' + a.q + '</div>'
