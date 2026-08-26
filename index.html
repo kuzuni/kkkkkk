@@ -4330,7 +4330,12 @@
      안쪽 붉은 면 170~. 붉은 림이 통째로 빠져 있어 골드가 외곽선처럼 보였다(1회차 비평 A·B 공통 지적). */
   .clb-bdg>s.o{inset:0;background:#4F1106;
     filter:drop-shadow(1.5px 0 0 #000) drop-shadow(-1.5px 0 0 #000) drop-shadow(0 1.5px 0 #000)}
-  .clb-bdg>s.e{inset:4px;background:linear-gradient(180deg,#C24831,#B33B23)}
+  /* 12회차(2026-08-26) — 빨간 면이 «세로로만» 8px 짧았다. 비평가 AB 가 임계값 70~115 스윕에서 비율이
+     0.921~0.932 로 고정됨을 보여 JPEG AA 가 아님을 증명했고(Z 도 같은 방향), 자체 tol 스윕(25/40)도
+     **높이 ref 107~108 / 우리 99~100** 으로 일치했다. 폭은 ref 94(tol25)~99(tol40) / 우리 92~97 로 Δ≤3 노이즈다.
+     원인은 `inset:4px` 이 상하에도 걸린 것 — ref 는 **옆면에만 진홍 림이 있고 위·아래 꼭짓점은 빨강이 끝까지 간다**.
+     `inset:0 4px` 로 바꾸면 밴드 위 돌출 3.7 → 7(ref 7.7) · 밴드 아래 돌출 17.2 → 21(ref 21.6) 이 같이 회수된다. */
+  .clb-bdg>s.e{inset:0 4px;background:linear-gradient(180deg,#C24831,#B33B23)}
   .clb-bdg>s.g{inset:10px;background:#FFD64C}
   .clb-bdg>s.r{inset:15px;background:linear-gradient(180deg,#C24831,#B33B23)}
   .clb-bdg>i{position:relative;line-height:1;-webkit-text-stroke:4px rgba(0,0,0,.35);paint-order:stroke fill}
@@ -4469,7 +4474,10 @@
   .cltab.on>s.b{bottom:28px}
   /* 91 — 라벨도 칸 비율(147/214)만큼 줄인다: 37 → 31 · 스트로크 10 → 8 · 여백 17 → 21(중심 유지).
      최장 라벨 «목걸이» = 3자 × 31 × .99 ≈ 92px < 내부판 112px. */
-  .cltab>i{position:relative;margin-top:21px;font-size:31px;line-height:38px;color:#C2C3C5;
+  /* 12회차 — 라벨 «세로» 중심이 칸 상단 기준 local 37.5 인데 ref 는 40 이다(비평가 AA #6 «−3.5» ·
+     자체 실측 cap 1840~1864(cy1852)/ref 프레임 1838~1870(cy1854), 칸 상단 1814.5·1814).
+     칸은 «가로»만 좁아졌고 높이(118)는 ref 와 같으므로 세로 위치는 비례가 아니라 ref 값 그대로여야 한다. */
+  .cltab>i{position:relative;margin-top:23.5px;font-size:31px;line-height:38px;color:#C2C3C5;
     transform:scaleX(.99);-webkit-text-stroke:8px #000;paint-order:stroke fill}
   .cltab.on>i{color:#F7F4EF}
   /* 9회차 — K #8 «알림점이 작고 10px 아래». 자체 실측: ref 붉은 점 bbox **x711~734 · y1900~1924**
