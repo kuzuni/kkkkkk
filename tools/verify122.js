@@ -1018,6 +1018,154 @@ async function ampCheck(p, hosts) {
       + (badY.length ? ' — 미달 ' + badY.join(' , ') : ''));
   }
 
+  /* ── §20 숨쉬기 진폭이 «캡처 격자에 걸리는가» (15회차 신설) ──────
+     §18 과 같은 자를 숨쉬기(scale)에도 댄다. 14회차 채점에서 **둘이 독립으로** 진폭 미달을 쟀는데
+     (AI 3.4~3.7% · AJ 3.50~4.42%, 사양 4.0%) 코드는 1 → 1.04 로 사양대로였다 —
+     정점이 «순간» 이라 320ms 격자가 못 밟는 §18 과 **완전히 같은 사고**다.
+     주기 2.4~3.2s 에서 표본은 정점에서 최대 ±160ms 떨어지고, 그때 읽히는 값이 0.91×사양이다.
+     15회차 처방(44~56% 정점 유지)이 실제로 격자에 걸리는지를 여기서 판정한다. */
+  console.log('§20 숨쉬기 정점 — 320ms 캡처 격자에서 읽히는 scale');
+  {
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const STOPS = [80, 400, 720, 1040, 1360, 1680, 2000, 2320, 2640];
+    const seen = new Map();
+    for (const t of STOPS) {
+      await seek(p, t);
+      const rows = await p.evaluate(() => [...document.querySelectorAll('#shopList .shp-card .cart')]
+        .map((e, i) => [i + 1, parseFloat((getComputedStyle(e).scale || '1').split(' ')[0]) || 1]));
+      for (const [i, sc] of rows) {
+        const cur = seen.get(i) || { lo: 9, hi: 0 };
+        seen.set(i, { lo: Math.min(cur.lo, sc), hi: Math.max(cur.hi, sc) });
+      }
+    }
+    const got = [...seen.entries()].sort((a, b) => a[0] - b[0]);
+    const amp = ([, v]) => (v.hi - v.lo) * 100;
+    console.log('    · ' + got.map(g => '칸' + g[0] + ' ' + amp(g).toFixed(2) + '%').join(' | '));
+    /* 사양 4.0% 의 90% 이상이 격자에서 읽혀야 한다(정점 유지 구간이 표본 간격과 맞먹는지). */
+    const bad = got.filter(g => amp(g) < 3.6).map(g => '칸' + g[0] + ' ' + amp(g).toFixed(2) + '%');
+    ok(got.length >= 5, '숨쉬기 측정 대상 ' + got.length + '칸 (>=5)');
+    ok(bad.length === 0, '캡처 격자에서 읽히는 숨쉬기 진폭이 전부 3.6% 이상(사양 4.0%)'
+      + (bad.length ? ' — 미달 ' + bad.join(' , ') : ''));
+    /* 칸끼리의 편차도 본다 — AJ 가 «칸별 진폭 불균일» 을 ② 감점 사유로 들었다 */
+    const as = got.map(amp);
+    const dev = Math.max(...as) - Math.min(...as);
+    ok(dev <= 0.4, '칸별 숨쉬기 진폭 편차 = ' + dev.toFixed(2) + 'pp (<=0.4pp · 14회차 AJ 실측 0.92pp)');
+  }
+
+  /* ── §22 소환 1열 리스트의 이웃 위상 (15회차 신설) ────────────────
+     §14 는 재화 탭 3열 격자만 본다. 14회차 채점에서 **두 비평가가 독립으로** 소환 탭을 짚었다:
+     AI «카드당 정확히 640ms = 0.200T» · AJ «연속 −640ms = P/5 … 같은 3.2s 층인데 재화 탭은 P/2».
+     즉 게이트가 안 보는 자리에서 규칙이 갈려 있었다(§14 의 대각 구멍과 같은 계열).
+     1열이라 «행 +1/2» 를 그대로 쓰면 1·3·5 칸이 동위상이 되므로, ±1·±2 칸을 이웃으로 놓고
+     min 원형거리를 최대화한 **stride 1/3** 이 정답이다(그때 ±1·±2 가 모두 1/3). */
+  console.log('§22 소환 1열 리스트 — 위아래 ±1·±2 칸 위상 분리');
+  {
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const ph = await p.evaluate(() => [...document.querySelectorAll('#shopList .shp-card>.chd')]
+      .map(e => {
+        const s = getComputedStyle(e, '::before');
+        const dur = parseFloat(s.animationDuration) * (/ms$/.test(s.animationDuration.trim()) ? 1 : 1000);
+        const del = parseFloat(s.animationDelay) * (/ms$/.test(s.animationDelay.trim()) ? 1 : 1000);
+        if (!isFinite(dur) || dur <= 0 || !isFinite(del)) return null;
+        let v = (-del % dur) / dur; if (v < 0) v += 1;
+        return { v, dur };
+      }).filter(Boolean));
+    const pairs = [];
+    for (let i = 0; i < ph.length; i++) for (const d of [1, 2]) {
+      const j = i + d; if (j >= ph.length) continue;
+      let x = Math.abs(ph[i].v - ph[j].v) % 1; x = Math.min(x, 1 - x);
+      pairs.push({ lab: '칸' + (i + 1) + '↔' + (j + 1), d: x, ms: Math.round(x * ph[i].dur) });
+    }
+    console.log('    · ' + pairs.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%(' + v.ms + 'ms)').join(' | '));
+    const bad = pairs.filter(v => v.d < .25);
+    ok(ph.length >= 4, '소환 카드 ' + ph.length + '장의 헤더 띠 위상을 읽었다 (>=4)');
+    ok(bad.length === 0, '±1·±2 칸 위상차가 전부 주기의 25% 이상 (14회차는 ±1 이 20%)'
+      + (bad.length ? ' — 미달 ' + bad.map(v => v.lab + ' ' + Math.round(v.d * 100) + '%').join(' , ') : ''));
+  }
+
+  /* ── §21 골드 광선이 «보이는가» (15회차 신설) ────────────────────
+     14회차 채점에서 비평가 AJ 가 «최대 다이아 상품 판의 각도 방향 변화가 ≤0.5계조 —
+     없거나 안 보인다» 로 짚었다. 재 보니 **켜져 있는데 안 보이는** 쪽이었다:
+     회전도 애니메이션도 정상인데 판 평균 기여가 **0.23 계조**였다.
+     마스크가 한가운데(0~26%)에서 가장 진한데 그 자리는 아이콘이 통째로 덮고,
+     판이 실제로 보이는 바깥 고리는 페이드 꼬리라 알파가 0 에 가까웠다.
+     «연출 없음은 0점» 이므로 게이트로 내린다 — 판 위 기여도를 광선만 끈 기준선과 비교한다.
+     ⚠ 회전 검출은 **표본 앨리어싱**에 주의해야 한다: 원뿔 그라디언트가 45° 주기라
+     패턴은 20s/8 = **2.5s 마다 되돌아온다**. AJ 가 «회전 0.0°» 를 읽은 것도 Δt=2400ms 로 봐서다
+     (2400ms 면 43.2° = 45° 에서 1.8° 차라 사실상 제자리다). 여기서는 Δt=1250ms(반주기)로 본다. */
+  console.log('§21 골드 광선 — 판 위에서 실제로 보이는가');
+  {
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const box = await p.evaluate(() => {
+      const r = document.querySelector('#shopList .cn-cd.dia.top>.pn>.ray');
+      if (!r) return null;
+      r.scrollIntoView({ block: 'center' });
+      const b = r.parentElement.getBoundingClientRect();
+      return { x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) };
+    });
+    const shot = async () => {
+      const b64 = (await p.screenshot({ clip: box })).toString('base64');
+      return p.evaluate(async src => {
+        const img = new Image();
+        await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        const cx = c.width / 2, cy = c.height / 2;
+        let s = 0, n = 0;
+        const sec = new Array(12).fill(0), cnt = new Array(12).fill(0);
+        for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+          const j = (y * c.width + x) * 4;
+          const L = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
+          s += L; n++;
+          /* 아이콘이 덮는 안쪽은 빼고, 판이 보이는 고리(r 34~76px)만 각도별로 센다 */
+          const dx = x - cx, dy = y - cy, rr = Math.hypot(dx, dy);
+          if (rr < 34 || rr > 76) continue;
+          let a = Math.atan2(dy, dx) * 180 / Math.PI; if (a < 0) a += 360;
+          const k = Math.min(11, Math.floor(a / 30));
+          sec[k] += d[j] - d[j + 2]; cnt[k]++;      /* R−B = 황색도 (AJ 와 같은 지표) */
+        }
+        return { avg: s / n, sec: sec.map((v, i) => cnt[i] ? v / cnt[i] : 0) };
+      }, b64);
+    };
+    const pray = txt => p.evaluate(x => {
+      let e = document.getElementById('jz122ray');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'jz122ray'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    if (!box) ok(false, '골드 광선 요소를 못 찾음');
+    else {
+      await seek(p, 0); const on0 = await shot();
+      await seek(p, 1250); const on1 = await shot();
+      await pray('.cn-cd.dia.top>.pn>.ray{display:none!important}');
+      await seek(p, 0); const off = await shot();
+      await pray('');
+      /* ⚠ 판 «평균» 은 이 연출을 재는 자로 못 쓴다 — 원뿔 패턴이 45° 중 17° 만 불투명이라
+         광선이 뚜렷해도 판 전체 평균은 0.5 계조도 안 움직인다(실측 0.46).
+         비평가 AJ 가 쓴 지표(섹터별 황색도)와 같은 축으로, **광선을 끈 기준선 대비
+         섹터 최대 편차**를 본다. 이게 «보이는가» 에 대응하는 값이다. */
+      const contrib = Math.max(...on0.sec.map((v, i) => Math.abs(v - off.sec[i])));
+      const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length;
+        return Math.sqrt(a.reduce((x, y) => x + (y - m) * (y - m), 0) / a.length); };
+      const spin = Math.max(...on0.sec.map((v, i) => Math.abs(v - on1.sec[i])));
+      console.log('    · 기준선 대비 섹터 최대 편차 ' + contrib.toFixed(2) + ' · 섹터 산포 ' + sd(on0.sec).toFixed(2)
+        + ' · 반주기(1250ms) 섹터 최대 변화 ' + spin.toFixed(2));
+      ok(contrib >= 4, '골드 광선이 판에 실제로 보인다 — 기준선 대비 섹터 최대 편차 '
+        + contrib.toFixed(2) + ' (>=4 · 14회차 결과물은 섹터 산포 0.14 로 «없는 것»과 구별이 안 됐다)');
+      ok(sd(on0.sec) >= 1.5, '각도 섹터 산포 = ' + sd(on0.sec).toFixed(2)
+        + ' (>=1.5 · 14회차 AJ 실측 0.14)');
+      ok(spin >= 1.5, '반주기 뒤 섹터가 실제로 돌았다 — 최대 변화 ' + spin.toFixed(2) + ' (>=1.5)');
+    }
+    /* ⚠ 다음 절(§17)은 **소환 탭**에서 시작한다(강제 상자·[무료] 링이 거기에만 있다).
+       여기서 재화 탭을 열어 둔 채 끝내면 그 두 측정점이 통째로 사라져 «측정점 3개» 로 FAIL 이 난다. */
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+  }
+
   /* ── §17 호흡 글로우·링 후광 진폭 (14회차 신설) ─────────────────
      체크리스트가 13회차부터 열어 둔 항목이다 — «호흡 글로우 진폭 단일 기준 Δ22±3 ·
      마일리지 Δ13.7 ↔ 재화 받기 버튼 Δ65 (4.7배 산포)». §13 은 «면 위를 지나는 띠» 를 재므로

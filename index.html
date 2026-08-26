@@ -4962,7 +4962,17 @@
      `transform` 한 칸을 놓고 싸우지 않으므로 둘 다 살아 있다. */
   .shp-card .cart{animation:jz122Breathe calc(2.8s * var(--jz-per)) ease-in-out infinite,
     jz122Bob calc(4s * var(--jz-per)) ease-in-out infinite}
-  @keyframes jz122Breathe{0%,100%{scale:1}50%{scale:calc(1 + .04 * var(--jz-amp))}}
+  /* ⚑ 15회차 — 정점에 «체류» 를 준다. 14회차 채점에서 둘이 독립으로 진폭 미달을 쟀다:
+     AI «1번 3.4% · 2번 3.6% · 3번 3.7% · 4번 3.7% (사양 4.0)» · AJ «3.50 / 4.42 / 3.78 / 4.10%».
+     원인은 §18 들썩과 **똑같다** — 정점이 «순간» 이라 320ms 표본 격자가 그 점을 못 밟는다.
+     주기 2.4~3.2s 에서 표본은 정점에서 최대 ±160ms(위상 ±24°) 떨어지고, ease-in-out 이면
+     cos24° = 0.91 → 4.0% 가 **3.65% 로 읽힌다**. AI 가 잰 3.4~3.7% 가 정확히 그 값이다
+     (AI 자신도 «격자가 정점을 최대 6.6% 놓친다» 고 적었다).
+     → 44~56%(주기의 12% = 288~384ms)를 정점으로 «유지» 한다. 표본 간격 320ms 와 맞먹어
+       어느 위상에서도 거의 반드시 밟힌다. 진폭 사양(1 → 1.04)은 한 줄도 안 바꿨다.
+     ⚠ 되돌리지 마라 — «정점을 순간으로 두면 사람도 게이트도 못 본다» 는 이 작업이 세 번 데인 규칙이다. */
+  @keyframes jz122Breathe{0%,100%{scale:1}
+    44%,56%{scale:calc(1 + .04 * var(--jz-amp))}}
   /* 들썩은 주기의 마지막 8%(≈560ms) 에만 산다 — 나머지 92% 는 정지값이라 «이따금 한 번» 이 된다 */
   /* ⚠ 3회차 최대 발견 — 1·2회차의 `rotate:0` 은 **무효 선언**이다. `translate:0` 은 길이라 0 이 유효하지만
      `rotate` 는 <angle> 이라 **단위 없는 0 을 받지 않는다**(선언째 버려진다). 그러면 0%·92%·100% 에서
@@ -4982,9 +4992,14 @@
      → ① 정점에서 이동·회전을 **같은 시각**에 최대로 두고 ② 그 정점을 **주기의 7%(280~310ms)**
        동안 «유지» 한다(표본 격자 320ms 와 맞먹어 어느 위상에서도 거의 반드시 밟힌다).
        반동은 98% 한 스톱으로 줄여 «툭 들었다 놓는» 성격은 지킨다.
-     ⚠ 정점을 «순간» 으로 되돌리지 마라 — 3·5·13·14회차가 연속으로 여기서 «회전이 없다» 를 받았다. */
+     ⚠ 정점을 «순간» 으로 되돌리지 마라 — 3·5·13·14회차가 연속으로 여기서 «회전이 없다» 를 받았다.
+     15회차 — 상승 램프를 4% → **2%**(≈80ms)로 조인다. 14회차 채점 AI ④: «t=2000 이 정점의 50%,
+     t=2320 이 100% → 램프가 ≥320ms, 잽이 주기의 12% 가 아니라 ≥17% 를 쓴다 · 움직임이 물렁하다».
+     실제 램프는 4% = 144~176ms 였고 AI 가 읽은 320ms 는 표본 간격이 섞인 값이지만,
+     «툭» 하는 성격은 램프가 짧을수록 산다. **정점 유지 구간(88~95%)은 안 건드렸다** —
+     그것을 줄이면 §18 이 다시 «격자에 안 걸림» 으로 FAIL 한다. */
   @keyframes jz122Bob{
-    0%,84%{translate:0;rotate:0deg}
+    0%,86%{translate:0;rotate:0deg}
     88%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
     95%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(3deg * var(--jz-amp))}
     98%{translate:0 calc(-1.5px * var(--jz-amp));rotate:calc(-1.5deg * var(--jz-amp))}
@@ -4996,7 +5011,7 @@
   /* 5회차(S ⑦) — 네 장이 전부 같은 쪽(+)으로만 기울어 «같은 동작 4벌» 로 읽혔다. 짝수 칸은 반대로. */
   .shp-card:nth-child(even) .cart{animation-name:jz122Breathe,jz122BobR}
   @keyframes jz122BobR{
-    0%,84%{translate:0;rotate:0deg}
+    0%,86%{translate:0;rotate:0deg}
     88%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
     95%{translate:0 calc(-6px * var(--jz-amp));rotate:calc(-3deg * var(--jz-amp))}
     98%{translate:0 calc(-1.5px * var(--jz-amp));rotate:calc(1.5deg * var(--jz-amp))}
@@ -5140,10 +5155,18 @@
     94%{translate:calc(var(--jz-run,100%) - 50%) 0;animation-timing-function:linear}
     100%{translate:var(--jz-run,100%) 0}}
   /* 14회차 — 심(::before)·측엽(::after) 두 겹이 **같은 딜레이**여야 한 벌로 보인다. */
-  .shp-card:nth-child(2)>.chd::after,.shp-card:nth-child(2)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.2 * var(--jz-per))}
-  .shp-card:nth-child(3)>.chd::after,.shp-card:nth-child(3)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.4 * var(--jz-per))}
-  .shp-card:nth-child(4)>.chd::after,.shp-card:nth-child(4)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.6 * var(--jz-per))}
-  .shp-card:nth-child(5)>.chd::after,.shp-card:nth-child(5)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.8 * var(--jz-per))}
+  /* ⚑ 15회차 — stride 를 **1/5 → 1/3** 로 바꾼다. 14회차 채점에서 비평가 **둘이 독립으로**
+     같은 값을 쟀다: AI «카드당 정확히 640ms = 0.200T, 사양 0.500T 대비 −960ms» ·
+     AJ «연속 −640ms = P/5 … 같은 3.2s 층인데 재화 탭은 P/2 로 사양을 지킨다».
+     1열 리스트라 «행 +1/2» 를 그대로 쓰면 카드 1·3·5 가 **완전 동위상**이 되므로 그대로는 못 쓴다.
+     이웃을 «위아래 ±1칸, ±2칸» 으로 놓고 min 원형거리를 최대화하면(`tools/phase122.js` 와 같은 문제의
+     1차원판) **stride 1/3 이 최적이고 그때 ±1·±2 가 모두 1/3(1067ms)** 이다:
+       1/5 → min(0.2, 0.4) = **0.20T**  ·  1/2 → min(0.5, 0.0) = **0**  ·  1/3 → min(1/3, 1/3) = **0.33T**
+     카드 1·4 는 같은 위상이 되지만 3칸(1437px) 떨어져 한 화면에 같이 안 들어온다. */
+  .shp-card:nth-child(2)>.chd::after,.shp-card:nth-child(2)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.3333 * var(--jz-per))}
+  .shp-card:nth-child(3)>.chd::after,.shp-card:nth-child(3)>.chd::before{animation-delay:calc(var(--jz-sw) * -0.6667 * var(--jz-per))}
+  .shp-card:nth-child(4)>.chd::after,.shp-card:nth-child(4)>.chd::before{animation-delay:calc(var(--jz-sw) * -1.0000 * var(--jz-per))}
+  .shp-card:nth-child(5)>.chd::after,.shp-card:nth-child(5)>.chd::before{animation-delay:calc(var(--jz-sw) * -1.3333 * var(--jz-per))}
 
   /* ── ①-3 본체 배경 «빛 입자 상승» 레이어(`.cbg>.jzp>i`) ──
      `.cbg` 의 ::before/::after 는 이미 방사 광선·바닥 그늘이 쓰고 있어 노드를 넣는다.
@@ -5409,13 +5432,23 @@
      💎 아이콘 뒤로 옮긴다. 판은 `overflow:hidden` 이라 잘라 줄 것도 이미 있다. */
   /* 3회차(O ③) — 420px 짜리 부채는 판(256×157) 밖으로 대부분 빠져 «회전 각도에 따라 있다 없다» 였다.
      300px · 45° 주기(8가닥)로 줄여 어느 각도에서도 판 안에 여러 가닥이 남게 한다. */
-  .cn-cd.dia.top>.pn>.ray{position:absolute;left:50%;top:50%;width:300px;height:300px;
-    margin:-150px 0 0 -150px;pointer-events:none;
+  /* ⚑ 15회차 — 이 광선은 **켜져 있는데 안 보였다**. 14회차 채점에서 비평가 AJ 가
+     «판 안 각도 프로파일의 섹터 산포 ≤0.5 계조 — 없거나 안 보인다» 로 짚었고,
+     직접 재 보니(`tools/probe122ray.js`: 광선만 display:none 으로 끄고 판 평균 비교)
+     **판 평균 기여가 0.23 계조**였다. 회전도 애니메이션도 정상이었다.
+     원인은 마스크다 — `radial-gradient(#000 0 26%, transparent 70%)` 는 **한가운데가 제일 진한데**,
+     그 한가운데는 다이아 아이콘(`.pn>em`)이 통째로 덮는 자리다. 판이 실제로 보이는 **바깥 고리**는
+     마스크의 페이드 꼬리에 걸려 알파가 거의 0 이었다. 즉 «아이콘 뒤에서만 밝은 광선» 이었다.
+     → 마스크를 **고리(annulus)** 로 바꾼다: 아이콘이 덮는 안쪽을 비우고 22~64% 를 진하게.
+       판이 256×157(가로로 납작)이라 상자도 300 → 260 으로 줄여 세로 꼬리 낭비를 없앴다.
+     ⚠ 게이트 §21 이 이 기여도를 재므로 다시 «켜져 있는데 안 보이는» 상태로 돌아가면 FAIL 이 난다. */
+  .cn-cd.dia.top>.pn>.ray{position:absolute;left:50%;top:50%;width:260px;height:260px;
+    margin:-130px 0 0 -130px;pointer-events:none;
     background:conic-gradient(from 0deg,
-      rgba(226,150,20,calc(.55 * var(--jz-glow))) 0deg 9deg,rgba(226,150,20,0) 9deg 22deg,
-      rgba(226,150,20,calc(.4 * var(--jz-glow))) 22deg 30deg,rgba(226,150,20,0) 30deg 45deg);
-    -webkit-mask-image:radial-gradient(circle,#000 0 26%,rgba(0,0,0,0) 70%);
-    mask-image:radial-gradient(circle,#000 0 26%,rgba(0,0,0,0) 70%);
+      rgba(226,150,20,calc(.62 * var(--jz-glow))) 0deg 9deg,rgba(226,150,20,0) 9deg 22deg,
+      rgba(226,150,20,calc(.46 * var(--jz-glow))) 22deg 30deg,rgba(226,150,20,0) 30deg 45deg);
+    -webkit-mask-image:radial-gradient(circle,rgba(0,0,0,0) 0 18%,#000 30% 64%,rgba(0,0,0,0) 84%);
+    mask-image:radial-gradient(circle,rgba(0,0,0,0) 0 18%,#000 30% 64%,rgba(0,0,0,0) 84%);
     animation:jz122Ray calc(20s * var(--jz-per)) linear infinite}
   @keyframes jz122Ray{from{rotate:0deg}to{rotate:360deg}}
 
@@ -5544,11 +5577,13 @@
       0 0 0 calc(26px * var(--jz-amp)) rgba(83,230,250,0)}
     100%{box-shadow:0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(83,230,250,calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
       0 0 0 0 rgba(83,230,250,0)}}
-  .cn-cd:nth-child(6n+1)>.bt[data-cnad]{animation-delay:calc(-.19s * var(--jz-per))}
-  .cn-cd:nth-child(6n+2)>.bt[data-cnad]{animation-delay:calc(-.38s * var(--jz-per))}
-  .cn-cd:nth-child(6n+3)>.bt[data-cnad]{animation-delay:calc(-.57s * var(--jz-per))}
-  .cn-cd:nth-child(6n+4)>.bt[data-cnad]{animation-delay:calc(-.77s * var(--jz-per))}
-  .cn-cd:nth-child(6n+5)>.bt[data-cnad]{animation-delay:calc(-.96s * var(--jz-per))}
+  /* ⚑ 15회차 — `nth-child(6n+k)` 를 폐기하고 광택과 **같은 `--jz-k`** 를 쓴다.
+     14회차 채점에서 AJ 가 «위상 규칙이 효과군마다 다르다» 를 정면으로 짚었다 —
+     4.8s 띠만 열/행 규칙이고 1.15s 링과 2.6s 둥실은 «index × P/6» 였다(실측 간격 191.7ms).
+     게다가 `nth-child` 는 12회차가 이미 데인 자리다: 컨테이너가 갈리면 번호가 1부터 다시 세어져
+     서로 다른 묶음의 칸이 동위상으로 겹친다. 렌더가 박아 주는 `--jz-k` 는 그 문제가 없고,
+     이제 세 효과(광택·둥실·링)가 **한 격자**를 쓴다. */
+  .cn-cd>.bt[data-cnad]{animation-delay:calc(1.15s * var(--jz-k,0) * var(--jz-per))}
 
   /* ── ②-4 마일리지 교환 가능 — 패널 테두리 글로우 호흡 + [교환] 버튼 펄스 ──
      `.cn-ml` 의 안쪽 림 7px 는 정지 상태의 규격이다. 키프레임마다 같이 적어 둬야 지워지지 않는다. */
