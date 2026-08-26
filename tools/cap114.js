@@ -58,7 +58,12 @@ const SCENES = [
       S.opt.shake = true;
       /* 치명타 장면은 «확률» 에 맡기지 않는다 — 치명타 업그레이드 레벨을 올려 상한(95%)까지 띄운다.
          Math.random 을 고정하면 파티클 각도까지 한 방향으로 굳어 연출 자체가 달라지므로 쓰지 않는다 */
-      S.lv.crit = sc.crit ? 400 : (S.lv.crit || 0);
+      /* ★ 12회차 하네스 결함 1 (AO⑥) — `(S.lv.crit || 0)` 이 앞 장면의 400 을 **이월**한다.
+         SCENES 순서가 trail → impact(crit 1) → boom → bolt 이므로 impact 이후 boom·bolt 가
+         crit 0 선언인데도 치명타로 찍혔다. 실측 결과 trail 숫자는 잉크높이 9.0 게임px·판 없음,
+         impact/boom/bolt 는 11.5~15.5 + 판 최대 76.5×23.5 로 **같은 정보가 한 배치 안에서 두 언어**가 됐고
+         비평가가 ② 크기 비율·④ 일관성에서 이것을 감점했다. 선언대로 장면마다 다시 세운다. */
+      S.lv.crit = sc.crit ? 400 : 0;
       skillCd = {}; shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
       rings.length = 0; parts.length = 0; nums.length = 0; enemies.length = 0; spawnQ.length = 0;
       markDirty();
@@ -81,8 +86,18 @@ const SCENES = [
         window.__capT += dt;
         if (window.__capT >= window.__capRecast) { window.__capT = 0; S.eqSkill.forEach(id => { skillCd[id] = 0; }); }
       };
-      /* 트리거 — 첫 장이 «시전 직후» 가 되게 여기서 한 번 직접 쏜다 */
-      if (SK[sc.cast]) castSkill(SK[sc.cast]);
+      /* 트리거 — 첫 장이 «시전 직후» 가 되게 여기서 한 번 직접 쏜다.
+         장착 스킬을 **전부** 여기서 쏜다(trail 은 shuri+ice 두 발이 장면의 정의다) */
+      S.eqSkill.forEach(id => { if (SK[id]) castSkill(SK[id]); });
+      /* ★ 12회차 하네스 결함 2 (AO⑦) — 위 73~76 줄의 경고가 «쿨을 비우면 늦어진다» 만 보고
+         «비우면 창 안에 두 번 시전된다» 를 못 봤다. 비운 뒤 index.html 스킬 루프가
+         `skillCd[id] = rnd(0,0.4)` 로 재초기화하므로 **여기서 쏜 한 발 + 0~400ms 뒤 자동 한 발**이
+         겹친다. boom 은 예고 원이 2개(중심 간격 43.4 게임px)가 돼 11회차의 «판정 보류»(AN 이
+         «Ø 261 → 298 확대» 로 읽은 것)를 그대로 만들어 냈다 — 실측하면 그 298 은 겹친 두 예고의
+         **합집합 bbox 299×284 이고 5프레임 내내 불변**이다. bolt 는 320ms 에, trail 은 480ms 에
+         두 번째 시전이 들어와 감쇠를 채점 불가로 만들었다.
+         → 쿨을 «비우지» 말고 recast 를 **넣는다**. 재시전은 아래 __capWrap 이 recast 마다 0 으로 푼다. */
+      S.eqSkill.forEach(id => { skillCd[id] = sc.recast/1000; });
     }, sc);
     await p.waitForTimeout(40);
     /* ★ 프레임 간격을 «벽시계» 로 재면 스크린샷 지연(1080×2280 한 장에 150~400ms)이 그대로 더해져
