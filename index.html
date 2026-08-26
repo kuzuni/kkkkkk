@@ -2648,18 +2648,25 @@
   /* 슬롯은 «기하만» 남긴다. 2~6회차에 깔았던 검정 바닥판·가장자리 띠는 7회차에 걷어냈다 —
      비평가 Y 실측: 그 판은 경계 «접촉» 을 못 만들면서(우단 40%p 그대로) 우측 명도를 −57% 로 떨어뜨려
      레퍼런스의 «우측으로 밝아지는 선버스트» 와 명암 구배가 반대가 됐다. 아트가 들어오면 여기가 그대로 이미지 자리다. */
+  /* ⚠ **주인 재지시(2026-08-26) — «아트 대기» 해제.** 이모지 대체물을 폐기하고 **실제 스프라이트**를
+     캔버스로 넣되(97 레이드 카드와 같은 방식), 슬롯은 69 아이템 칸처럼 **«액자»** 로 읽히게 한다.
+     그래서 여기부터는 «레퍼런스의 흘러넘치는 일러스트» 가 아니라 «틀에 담긴 그림» 이 목표다 —
+     레퍼런스 대비 의도적 이탈이고, 측정표 03 §3-8 에 정오표로 남긴다(120 이 «꽉 채움» 을 남긴 것과 같은 규칙).
+     **슬롯 bbox(--thw × 341−--tht, 우단 inset 7)는 한 픽셀도 바꾸지 않는다** — 액자는 box-sizing:border-box
+     로 그 안쪽에 그려지므로 verify72 [1] 기하 게이트가 그대로 산다.
+     테두리·림 두께·코너 비율은 **104 공용 아이템 프레임 토큰**(--if-bw 5 / --if-rim 6 / --if-rr .233)을
+     그대로 쓴다. 104 규칙대로 «화면이 주는 것» 은 면·림 **색 두 개**뿐이다(카드 팔레트에서 --i/--pt).
+     레이드 카드(.dnc.rd)는 97 이 «슬롯을 꽉 채우는» 규칙으로 이미 통과했으므로 **건드리지 않는다**. */
   .dnc>.th{position:absolute;right:7px;top:var(--tht);width:var(--thw);
     height:calc(341px - var(--tht));overflow:hidden;border-radius:0 0 5px 0;pointer-events:none;
     -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 100%);
     mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 100%)}
-  /* 이모지 잉크비는 글리프마다 폭 0.81~1.13em · 높이 1.08~1.13em 으로 제각각이다(fs300 실측).
-     «아트 자리 규칙»(레퍼런스 bbox 를 정확히 차지)을 지키려면 카드마다 font-size(세로)와
-     scaleX(가로)를 따로 풀어야 한다. 400px 정사각 상자를 쓰면 잉크 중심 = 상자 중심이므로
-     --thcx/--thcy(슬롯 좌상단 기준 잉크 중심)로 «우측 6px·하단 16~18px 오버플로» 를 만든다. */
-  .dnc>.th>em{position:absolute;left:calc(var(--thcx) - 200px);top:calc(var(--thcy) - 200px);
-    width:400px;height:400px;font-size:var(--thf);line-height:400px;text-align:center;
-    font-style:normal;transform:scaleX(var(--tsx,1));
-    filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+  .dnc:not(.rd)>.th{--if-bw:5px;--if-rim:6px;--if-rr:.233;box-sizing:border-box;
+    border:var(--if-bw) solid #000;border-radius:calc(var(--thw) * var(--if-rr));
+    background:linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.34) 78%),var(--i,#7D5A44);
+    box-shadow:inset 0 0 0 var(--if-rim) var(--pt,#AC7B5B);
+    /* 액자는 네 변이 다 보여야 한다 — 좌측 12px 페이드 마스크는 여기서만 걷어낸다 */
+    -webkit-mask-image:none;mask-image:none}
   /* 121-⑥ — 썸네일 몬스터 «들썩» 아이들. 슬롯(.th) 기하는 **불변**이고 안의 잉크만 움직인다.
      `transform` 은 이미 폭 정규화(scaleX(--tsx))가 쓰고 있으므로 건드리지 않고, 개별 변환 속성
      `translate`(들썩)·`scale`(스쿼시)로 움직인다 — 다른 속성이라 충돌이 없고, 개별 속성은 transform
@@ -2688,18 +2695,14 @@
     10%,30%,50%,70%        {translate:0 4px;scale:1 1}      /* 짧은 들썩 (정점 여유 4px) */
     84%                    {translate:0 15px;scale:1 .97}   /* 큰 점프 전 깊은 웅크림 */
     90%                    {translate:0 2px;scale:1 1}}     /* 큰 점프 (정점 여유 2px) */
-  .dnc>.th>em,.dnc.rd>.th>canvas{
+  /* 72(2026-08-26) — 이모지 <em> 이 사라지고 던전 카드도 캔버스가 됐다. 선택자를 `.dnc>.th>canvas`
+     로 넓혀 던전·레이드·아레나가 **같은 한 줄**을 탄다(둘로 갈라 두면 반드시 하나가 어긋난다). */
+  .dnc>.th>canvas{
     animation:thBob var(--thb,4.3s) ease-in-out infinite var(--thd,0s);
     animation-play-state:paused}
-  /* ⚠ LESSONS 21-①·90-④ 재발 지점: 위 `#dunw i,#dunw em,#dunw b` 리셋(1-0-1)이 `.dnc>.th>em`(0-3-1)의
-     `transform-origin` 을 이긴다. 스쿼시는 «발밑» 을 축으로 눌려야 하므로 id 로 되받는다.
-     캔버스(레이드)는 em 이 아니라 리셋에 안 걸리지만 같은 줄에 적어 둔다 — 둘이 갈라지면 또 어긋난다. */
-  /* 스쿼시 축은 «잉크 발밑» = 슬롯 바닥이어야 한다. em 상자(400×400) 바닥은 슬롯 바닥보다 42~55px
-     아래라 그대로 쓰면 지렛대가 그만큼 길어져 4% 스쿼시가 상단에서 14.3px 로 증폭된다(비평가 A·C 실측).
-     상자 안에서 슬롯 바닥이 있는 지점 = (341 − tht) − (thcy − 200) = 541 − thcy − tht.
-     캔버스(레이드·아레나)는 슬롯을 꽉 채우므로 100% 가 곧 슬롯 바닥이다. */
-  #dunw .dnc>.th>em{transform-origin:50% calc(541px - var(--thcy) - var(--tht))}
-  #dunw .dnc.rd>.th>canvas{transform-origin:50% 100%}
+  /* 스쿼시 축은 «잉크 발밑» = 캔버스 바닥이다. 캔버스는 슬롯(레이드) 또는 액자 안쪽(던전)을
+     꽉 채우므로 100% 가 곧 그 바닥이다. */
+  #dunw .dnc>.th>canvas{transform-origin:50% 100%}
   /* 잠금 카드(3·4·5)는 레퍼런스가 우측 썸네일이 아니라 «카드 절반을 덮는 씬 아트» 다
      (잉크 좌단 실측 385/465/395). 딤 아래로 들어가는 자리라 임시 대체물은 벽돌 텍스처. */
   .dnc>.scn{position:absolute;left:var(--scn);right:7px;top:11px;bottom:8px;overflow:hidden;
@@ -2766,19 +2769,26 @@
   /* 97 — 레이드 카드 썸네일. 슬롯 기하(.dnc>.th)는 던전과 공용이고, 안에 드는 것만
      이모지 <em> 대신 스프라이트 <canvas> 다. 캔버스를 슬롯에 꽉 채워 «아트 자리 규칙»
      (bbox 를 정확히 차지)을 지킨다 — 픽셀 아트가 흐려지지 않게 확대 보간을 끈다. */
-  .dnc.rd>.th>canvas{position:absolute;left:0;top:0;width:100%;height:100%;
+  /* 72(2026-08-26) — 던전 카드도 같은 캔버스를 쓴다. 다른 점은 **액자 안쪽에 앉는다**는 것뿐이다:
+     `.th` 가 box-sizing:border-box + border 5 라 캔버스의 100% 는 이미 «테두리 안쪽» 이고,
+     거기서 림 두께(--if-rim)만큼 더 물려 «림 위에 그림이 올라타지» 않게 한다.
+     밝기 보정(data-thbr)은 CSS 가 아니라 `drawSpriteTo` 안에서 건다 — 캔버스 픽셀 자체가 밝아져야
+     게이트가 «잉크가 액자 면에 묻히지 않는가»(97 [2])를 화면과 같은 값으로 잴 수 있다. */
+  .dnc>.th>canvas{position:absolute;left:0;top:0;width:100%;height:100%;
     image-rendering:pixelated;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+  .dnc:not(.rd)>.th>canvas{left:var(--if-rim);top:var(--if-rim);
+    width:calc(100% - var(--if-rim) * 2);height:calc(100% - var(--if-rim) * 2)}
 
   /* ───── 121 — 재생 게이트. 기본은 «정지» 이고 «03 페이지가 열려 있을 때만» 돈다 ─────
      지시 ②: will-change 는 화면에 보이는 카드에만. 페이지가 닫히면 합성 레이어를 남기지 않는다.
      아래 4블록은 **명시도가 같아 «소스 순서» 로 이긴다** — 순서를 바꾸지 말 것.
      ① #dunw.on = 재생  ② #app.sv(56 절전) = 정지  ③ 잠금 카드(.lkd) = 정지 (지시 ④) */
   #dunw.on .dnc>.bgm::before,#dunw.on .dnc>.bgm::after{animation-play-state:running;will-change:transform}
-  #dunw.on .dnc>.th>em,#dunw.on .dnc.rd>.th>canvas{animation-play-state:running;will-change:translate,scale}
+  #dunw.on .dnc>.th>canvas{animation-play-state:running;will-change:translate,scale}
   #app.sv .dnc>.bgm::before,#app.sv .dnc>.bgm::after{animation-play-state:paused;will-change:auto}
-  #app.sv .dnc>.th>em,#app.sv .dnc.rd>.th>canvas{animation-play-state:paused;will-change:auto}
+  #app.sv .dnc>.th>canvas{animation-play-state:paused;will-change:auto}
   #dunw .dnc.lkd>.bgm::before,#dunw .dnc.lkd>.bgm::after{animation-play-state:paused;will-change:auto}
-  #dunw .dnc.lkd>.th>em,#dunw .dnc.lkd.rd>.th>canvas{animation-play-state:paused;will-change:auto}
+  #dunw .dnc.lkd>.th>canvas{animation-play-state:paused;will-change:auto}
   /* ⚠ 잠금 카드를 filter:brightness() 로 어둡게 하면 스크롤 fps 가 31.9 → 26.4 (−17%) 로 떨어진다
      (필터는 매 프레임 카드를 다시 래스터한다). 같은 «어둡게» 를 opacity 로 내면 합성만으로 끝난다. */
   #dunw .dnc.lkd>.bgm{opacity:.45}
@@ -9459,15 +9469,30 @@ function drawSpriteTo(canvas, o){
   const fr = A.f[o.frame];
   if(!fr) return false;
   const W = canvas.width, H = canvas.height;
+  /* 72(2026-08-26 주인 재지시) — 던전 카드 썸네일은 «흘러넘치는 일러스트» 가 아니라 «액자에 담긴 그림» 이다.
+     `o.fit`(사방 여백 px)이 있으면 늘리지 않고 **종횡비를 지켜 담는다(contain)** — 용 96×64(1.47)나
+     로봇 126×217(0.58) 처럼 슬롯 종횡(≈1.0)과 먼 스프라이트를 늘려 채우면 그림이 찌그러진다.
+     여백은 121 들썩(아래로 최대 15px)이 액자 안에서 잘리지 않게 하는 여유이기도 하다.
+     `o.fit` 이 없으면 dx/dy=0 · dw/dh=W/H 라 97 레이드 카드의 «꽉 채우기» 와 픽셀까지 같다. */
+  const sp = o.fit | 0;
+  const k  = sp ? Math.min((W - sp*2) / fr[2], (H - sp*2) / fr[3]) : 0;
+  const dw = sp ? Math.max(1, Math.round(fr[2] * k)) : W;
+  const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : H;
+  const dx = Math.round((W - dw) / 2), dy = Math.round((H - dh) / 2);
   g.imageSmoothingEnabled = false;
   g.save();
   if(o.flip){ g.translate(W, 0); g.scale(-1, 1); }
-  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, W, H);
+  /* 72(2026-08-26) — 밝기 보정은 **CSS filter 가 아니라 여기서** 한다. CSS 로 걸면 캔버스 픽셀은
+     원본 그대로라 «잉크가 배경에 묻히지 않는가»(97 [2]) 를 게이트가 잴 수 없다 — 화면과 게이트가
+     서로 다른 그림을 보게 된다. 틴트(multiply)는 어둡게만 되므로 어두운 스프라이트는 이쪽이 유일한 수단이다. */
+  if(o.bright && +o.bright !== 1) g.filter = 'brightness(' + (+o.bright) + ')';
+  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], dx, dy, dw, dh);
+  g.filter = 'none';
   if(o.tint){
     g.globalCompositeOperation = 'multiply';
-    g.fillStyle = o.tint; g.fillRect(0, 0, W, H);
+    g.fillStyle = o.tint; g.fillRect(dx, dy, dw, dh);
     g.globalCompositeOperation = 'destination-in';
-    g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, W, H);
+    g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], dx, dy, dw, dh);
     g.globalCompositeOperation = 'source-over';
   }
   g.restore();
@@ -14220,23 +14245,46 @@ function openQuest(tab){
    해금 조건은 레퍼런스 그대로 「가이드미션 N 클리어」 다(작업 61 에서 체인이 생기며 연결).
    구 조건이던 «최고 스테이지 15·25·40» 은 가이드 미션 14·17·20 번이 각각 그 스테이지 도달을
    목표로 갖고 있어 **게이팅이 그대로 보존된다** — 밸런스 영향 없음. */
+/* 72(2026-08-26 저장소 주인 재지시) — «던전들 행에 썸네일이 없다 — 넣게 하라».
+   이모지 대체물(🐉🐍🧌👺🐲👹)을 폐기하고 **실제 스프라이트 프레임 1장**을 캔버스로 넣는다
+   (97 이 레이드 카드에서 쓴 방식 그대로). 카드마다 필드 4개다:
+     thk  아틀라스 키   thf  정지 프레임(아틀라스가 아직 안 떴을 때·잠금 카드)
+     thi  아이들 애니(121-⑥ 8fps 순환. 없으면 정지)
+     thbr 밝기 보정 — 액자 면(카드 --i, 휘도 57~123) 위에서 97 [2] «잉크 휘도 > 배경 − 20» 을
+          지키기 위한 값. 틴트(multiply)는 어둡게만 되므로 어두운 스프라이트는 이쪽으로 올린다.
+   아트는 **6장 전부 서로 다른 아틀라스**다(용·새·고블린·좀비·로봇·군주) — 던전 6종이 그림으로
+   구분되게. 틴트는 안 쓴다: 원본 색이 이미 다르고, multiply 를 걸면 액자 면과의 대비만 잃는다.
+   기하(--thw/--tht/--scn)는 **한 픽셀도 안 바뀐다**(해금 순간에 칸이 흔들리면 안 된다 — 97 ①). */
 const DUN_UI = {
-  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'), th:'🐉', thw:'311px', tht:'36px', thf:'291px', tsx:1.158, thcx:'157px',   thcy:'159.5px',
+  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'),
+            thk:'dragon', thf:'f3', thi:'fly',        thbr:1.85, thw:'311px', tht:'36px',
             rw:['골드 획득 가능'], gm:0  },
-  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'), th:'🐍', thw:'296px', tht:'52px', thf:'282px', tsx:1.104, thcx:'147px',   thcy:'149.5px',
+  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'),
+            thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00, thw:'296px', tht:'52px',
             rw:['다이아 획득 가능'], gm:0  },
   /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
-  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'), th:'🧌', thw:'330px', tht:'11px', thf:'310px', tsx:1.055, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
+            thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.15, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, gm:15 },
-  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'), th:'👺', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
+            thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.45, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
-  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'), th:'🐲', thw:'330px', tht:'11px', thf:'305px', tsx:0.977, thcx:'171px',   thcy:'172px',   scn:'7px',
+  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
+            thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
-  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'), th:'👹', thw:'330px', tht:'11px', thf:'310px', tsx:0.994, thcx:'168px',   thcy:'172px',   scn:'7px',
+  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
+            thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.15, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
 };
+/* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
+   캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
+   캔버스가 흐려지므로 verify72 가 둘이 같은지 잰다. */
+const TH_INSET = (5 + 6) * 2;
+/* 액자 안쪽 여백 — 그림을 담고(contain) 남기는 사방 여백. 121 들썩이 아래로 최대 15px 내려가므로
+   그보다 커야 액자 안에서 안 잘린다. */
+const TH_PAD = 16;
 /* 61 — 「가이드미션 N 클리어」. N 번째 미션을 «수령» 해야 idx 가 N 이 된다.
    90 — 유물조각 2~4단은 대신 «이전 단 N층 클리어»(`pre`) 로 잠긴다. `S.dun[id]` 는 «도전 가능한 층»
    이므로 N 층을 깬 상태 = `S.dun[pre.id] > pre.f` 다. 04 세부 팝업의 해금 자리 규격을 그대로 쓴다. */
@@ -14276,14 +14324,18 @@ function renderDunPage(){
     const bgm = d.id.indexOf('relic') === 0 ? 'rel' : d.id;
     h += '<div class="dnc bgm-' + bgm + (lock ? ' lkd' : '')
       +  '" data-dcard="' + d.id + '" style="--s:' + u.s + ';--i:' + u.i
-      +  ';--r:' + u.r + ';--pt:' + u.pt + ';--tsx:' + u.tsx
-      +  ';--thw:' + u.thw + ';--tht:' + u.tht + ';--thf:' + u.thf
-      +  ';--thcx:' + u.thcx + ';--thcy:' + u.thcy + (u.scn ? ';--scn:' + u.scn : '')
+      +  ';--r:' + u.r + ';--pt:' + u.pt
+      +  ';--thw:' + u.thw + ';--tht:' + u.tht + (u.scn ? ';--scn:' + u.scn : '')
       +  (u.psx ? ';--psx:' + u.psx : '') + bgmVars(ci) + '">'  /* 90 — 긴 보상 라벨만 폭을 눌러 캡슐 안에 넣는다 */
       +  '<div class="bg"></div>'
       +  '<div class="bgm"></div>'                          /* 121 — 움직이는 배경 레이어(아트 대기) */
       +  (lock && u.scn ? '<div class="scn"></div>' : '')   /* 72 — 잠금 카드 씬 아트 자리 */
-      +  '<div class="th"><em>' + u.th + '</em></div>'      /* 72 — 우측 몬스터 썸네일(아트 자리) */
+      /* 72(2026-08-26 주인 재지시) — 이모지 대체물 → 실제 스프라이트 캔버스.
+         캔버스 픽셀 = 액자 «안쪽» 크기(슬롯 − 테두리 5 − 림 6, 양변)라 배율 1 에서 1:1 이다. */
+      +  '<div class="th"><canvas class="thcv" width="' + (parseInt(u.thw, 10) - TH_INSET)
+      +  '" height="' + (341 - parseInt(u.tht, 10) - TH_INSET) + '" data-thk="' + u.thk
+      +  '" data-thf="' + u.thf + '" data-thi="' + (u.thi || '')
+      +  '" data-thc="" data-thbr="' + u.thbr + '" data-thn="' + ci + '"></canvas></div>'
       +  '<div class="sh"></div><div class="fr"></div>'
       +  '<div class="nm"><i>' + d.n + '</i></div>'
       +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>' + u.ic
@@ -14296,6 +14348,7 @@ function renderDunPage(){
       +  '</div>';
   });
   $('dunList').innerHTML = h;
+  raidPaint();       /* 72 — 던전 카드도 스프라이트 캔버스다(97 과 같은 페인터를 쓴다) */
 }
 function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
@@ -14489,12 +14542,18 @@ function raidDraw(cv){
   }
   const f = cv.dataset.thi ? curFrame(raidEnt(cv)) : null;
   cv._fr = f || cv.dataset.thf;
-  return drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc });
+  /* 72(2026-08-26) — 던전 카드는 «액자» 라 그림을 늘리지 않고 담는다(contain, 사방 TH_PAD).
+     레이드·아레나 카드는 97 의 «슬롯을 꽉 채운다» 규칙 그대로다(fit 없음). */
+  const fit = cv.closest('.dnc.rd') ? 0 : TH_PAD;
+  return drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
+                            fit, bright: +cv.dataset.thbr || 1 });
 }
 let raidIdleT0 = 0;
 function raidIdleTick(){
   const w = document.getElementById('dunw');
-  const live = w && w.classList.contains('on') && dunSub === 'raid' && !saverOn && !document.hidden;
+  /* 72(2026-08-26) — 던전 서브탭에도 스프라이트 썸네일이 생겼으므로 «레이드일 때만» 조건을 뺀다.
+     페이지가 닫히거나 절전이면 그대로 쉰다(121 지시 ②). */
+  const live = w && w.classList.contains('on') && !saverOn && !document.hidden;
   if(!live){ raidIdleT0 = 0; return; }
   const now = performance.now();
   const dt = raidIdleT0 ? Math.min(0.25, (now - raidIdleT0)/1000) : 0;

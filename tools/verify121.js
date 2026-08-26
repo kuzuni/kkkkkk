@@ -114,9 +114,11 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   /* ⚠ 2회차 게이트 ②: 썸네일이 **위로는 안 간다**. 72 가 잉크를 슬롯 천장에 붙여 놨기 때문에
      위로 1px 만 올라가도 머리가 잘린다(`node tools/probe121.js` [1] 이 1회차에 상단 여유 0px·5/7 위상 잘림).
      기준 자세를 «가장 높은 포즈» 로 두고 아래로만 웅크리므로 translate 는 항상 ≥ 0 이어야 한다. */
+  /* 72(2026-08-26 주인 재지시) — 이모지 <em> 이 스프라이트 <canvas> 로 바뀌었다.
+     들썩 애니는 같은 `thBob` 이고 선택자만 옮겨 온다(둘 다 받아 두면 다음 교체에도 안 죽는다). */
   const tr = await p.evaluate(() => {
-    const em = document.querySelector('#dunList .dnc>.th>em');
-    const a = em.getAnimations()[0];
+    const em = document.querySelector('#dunList .dnc>.th>em, #dunList .dnc>.th>canvas');
+    const a = em && em.getAnimations()[0];
     if (!a) return null;
     const d = a.effect.getComputedTiming().duration, was = a.playState;
     a.pause();
@@ -185,13 +187,14 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   ok(txt.sp && Math.abs(txt.sp[0] - 84) <= 1 && Math.abs(txt.sp[1] - 277) <= 1, `값 알약 rel ${txt.sp} = 84,277`);
   /* LESSONS 21-①·90-④ — `#dunw i,#dunw em,#dunw b` 리셋이 transform-origin 을 이기는 자리다.
      스쿼시 축이 «발밑»(50% 100%)이 아니면 잉크가 위로 뜬다. */
-  /* 스쿼시 축은 «슬롯 바닥» 이어야 한다 — em 상자(400×400) 바닥은 슬롯 바닥보다 42~55px 아래라
-     그대로 쓰면 지렛대가 길어져 4% 스쿼시가 상단에서 14.3px 로 증폭된다(비평가 A·C 실측).
-     기대값은 카드가 가진 변수에서 파생시킨다: 541 − thcy − tht. */
+  /* 스쿼시 축은 «잉크 발밑» 이어야 한다.
+     ⚠ 72(2026-08-26): em 상자(400×400) 시절에는 상자 바닥이 슬롯 바닥보다 42~55px 아래라
+     기대값을 `541 − thcy − tht` 로 파생시켰다. 캔버스는 액자 안쪽을 꽉 채우므로 **바닥 = 자기 높이**다. */
   const org = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc')].map(c => {
-    const e = c.querySelector(':scope>.th>em'); if (!e) return null;
+    const e = c.querySelector(':scope>.th>em, :scope>.th>canvas'); if (!e) return null;
     const cs = getComputedStyle(c);
-    const want = 541 - parseFloat(cs.getPropertyValue('--thcy')) - parseFloat(cs.getPropertyValue('--tht'));
+    const want = e.tagName === 'CANVAS' ? e.offsetHeight
+      : 541 - parseFloat(cs.getPropertyValue('--thcy')) - parseFloat(cs.getPropertyValue('--tht'));
     const got = parseFloat(getComputedStyle(e).transformOrigin.split(' ')[1]);
     return { want: +want.toFixed(1), got: +got.toFixed(1) };
   }).filter(Boolean));

@@ -29,6 +29,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   await p.waitForTimeout(1200);
 
   const d = await p.evaluate(() => {
+    const lum = (css) => {                        /* 'rgb(r, g, b)' → 휘도 */
+      const m = String(css).match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+      return m ? Math.round(+m[1] * .299 + +m[2] * .587 + +m[3] * .114) : null;
+    };
     const cards = [...document.querySelectorAll('#dunList .dnc')];
     return cards.map((c) => {
       const cr = c.getBoundingClientRect();
@@ -36,11 +40,53 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
       if (!th) return { th: null };
       const tr = th.getBoundingClientRect();
       const kids = [...c.children].map((e) => e.className);
+      const cs = getComputedStyle(th);
+      const cv = th.querySelector('canvas.thcv');
+      /* 72(2026-08-26) — 액자 안 그림. «자리를 잡았다» 와 «자리를 채웠다» 는 다르므로(LESSONS 72-③)
+         잉크 bbox 와 평균 휘도를 실제 픽셀에서 잰다. */
+      let art = null;
+      if (cv) {
+        const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, on = 0, L = 0;
+        for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+          const i = (y * cv.width + x) * 4;
+          if (im[i + 3] > 8) {
+            on++; L += im[i] * .299 + im[i + 1] * .587 + im[i + 2] * .114;
+            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+          }
+        }
+        /* ⚠ getBoundingClientRect 는 121 들썩의 `scale`(±4%)이 섞여 실제 레이아웃 크기가 아니다.
+           offsetWidth/Height 로 잰다(변환 전 값). */
+        const cs2 = getComputedStyle(cv);
+        /* 원본 프레임의 «잉크» bbox — contain 이 늘리지 않았는지(종횡 왜곡 0) 재려면 필요하다 */
+        const A = ATLAS[cv.dataset.thk], fr = A && A.f[cv._fr || cv.dataset.thf];
+        let src = null;
+        if (A && A.image && fr) {
+          const t = document.createElement('canvas');
+          t.width = fr[2]; t.height = fr[3];
+          const tg = t.getContext('2d');
+          tg.imageSmoothingEnabled = false;
+          tg.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, fr[2], fr[3]);
+          const td = tg.getImageData(0, 0, t.width, t.height).data;
+          let a0 = 1e9, b0 = 1e9, a1 = -1, b1 = -1;
+          for (let y = 0; y < t.height; y++) for (let x = 0; x < t.width; x++) {
+            if (td[(y * t.width + x) * 4 + 3] > 8) {
+              if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; }
+          }
+          src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1 };
+        }
+        art = { px: [cv.width, cv.height], css: [cv.offsetWidth, cv.offsetHeight],
+                k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi, src,
+                on, ink: on ? { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null,
+                lum: on ? Math.round(L / on) : null,
+                bob: cs2.animationName, org: cs2.transformOrigin };
+      }
       return {
         th: { dx: +(tr.left - cr.left).toFixed(1), dy: +(tr.top - cr.top).toFixed(1), w: +tr.width.toFixed(1), h: +tr.height.toFixed(1) },
-        pe: getComputedStyle(th).pointerEvents,
-        emoji: (th.textContent || '').trim(),
-        sx: getComputedStyle(th.querySelector('em')).transform,
+        pe: cs.pointerEvents,
+        frm: { bw: parseFloat(cs.borderTopWidth), r: parseFloat(cs.borderTopLeftRadius),
+               sh: cs.boxShadow, face: lum(cs.backgroundColor) },
+        art,
         iTh: kids.indexOf('th'), iSh: kids.indexOf('sh'), iFr: kids.indexOf('fr'), iLk: kids.indexOf('lk'),
         locked: !!c.querySelector('.lk'),
         card: { w: +cr.width.toFixed(1), h: +cr.height.toFixed(1) }
@@ -66,9 +112,64 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(Math.abs(c.th.w - e.w) <= 1 && Math.abs(c.th.h - e.h) <= 1, `카드${i + 1} 슬롯 ${c.th.w}×${c.th.h} = ${e.w}×${e.h}`);
     ok(Math.abs(c.th.dx - (980 - 7 - e.w)) <= 1, `카드${i + 1} 슬롯 x offset ${c.th.dx} = ${980 - 7 - e.w} (우측 안쪽 정렬)`);
     ok(Math.abs(c.th.dy - e.dy) <= 1, `카드${i + 1} 슬롯 y offset ${c.th.dy} = ${e.dy}`);
-    ok(!!c.emoji, `카드${i + 1} 대체 아트 있음 (${c.emoji})`);
-    ok(/matrix\(/.test(c.sx), `카드${i + 1} 잉크 폭 정규화 scaleX 적용 (${c.sx})`);
   });
+
+  /* ───── 72 주인 재지시(2026-08-26) — 액자 + 실제 스프라이트 ─────
+     ① 이모지 대체물 폐기 → 스프라이트 캔버스. ② 슬롯이 69 아이템 칸처럼 «액자» 로 읽힌다
+     (테두리·림 두께·코너 비율은 104 공용 토큰 --if-bw 5 / --if-rim 6 / --if-rr .233).
+     ③ 그림은 늘리지 않고 담는다(contain) — 종횡비 왜곡 0. ④ 카드 6장이 서로 다른 아트다. */
+  const IF_BW = 5, IF_RIM = 6, IF_RR = .233, PAD = 16;
+  console.log('[1-1] 액자 — 104 공용 아이템 프레임 토큰(테두리 5 · 림 6 · 코너 폭×.233)');
+  d.forEach((c, i) => {
+    if (!c.th) return;
+    const e = EXP[i];
+    ok(Math.abs(c.frm.bw - IF_BW) <= 0.5, `카드${i + 1} 검정 테두리 ${c.frm.bw}px = ${IF_BW}px (--if-bw)`);
+    ok(Math.abs(c.frm.r - e.w * IF_RR) <= 1.5,
+       `카드${i + 1} 코너 ${c.frm.r}px = ${(e.w * IF_RR).toFixed(1)}px (폭 ${e.w} × ${IF_RR})`);
+    ok(new RegExp(`inset[^,]*\\b${IF_RIM}px`).test(c.frm.sh) || /inset/.test(c.frm.sh),
+       `카드${i + 1} 안쪽 림 inset box-shadow 있음`);
+    ok(c.frm.face !== null, `카드${i + 1} 액자 면 색이 있다 (휘도 ${c.frm.face})`);
+  });
+
+  console.log('[1-2] 액자 안 그림 — 실제 스프라이트 캔버스(이모지 폐기)');
+  const seen = new Set();
+  d.forEach((c, i) => {
+    if (!c.th) return;
+    const e = EXP[i], a = c.art;
+    ok(!!a, `카드${i + 1} 스프라이트 캔버스 존재(이모지 아님)`);
+    if (!a) return;
+    /* 캔버스 픽셀 = 액자 안쪽(슬롯 − 테두리 − 림, 양변) → 배율 1 에서 1:1 이라 안 흐려진다 */
+    const iw = e.w - (IF_BW + IF_RIM) * 2, ih = e.h - (IF_BW + IF_RIM) * 2;
+    ok(a.px[0] === iw && a.px[1] === ih, `카드${i + 1} 캔버스 픽셀 ${a.px} = [${iw},${ih}] (액자 안쪽)`);
+    ok(Math.abs(a.css[0] - iw) <= 1 && Math.abs(a.css[1] - ih) <= 1,
+       `카드${i + 1} 캔버스 CSS ${a.css} = 픽셀 크기 (1:1 — 확대 보간 없음)`);
+    ok(a.on > 0, `카드${i + 1} 스프라이트가 실제로 그려졌다 (${a.k}/${a.f}, 잉크 ${a.on}px)`);
+    if (!a.ink || !a.src) return;
+    /* contain — 사방 여백 ≥ PAD−1 (액자 안이고, 121 들썩이 아래로 15px 내려가도 안 잘린다) */
+    const mL = a.ink.x0, mT = a.ink.y0, mR = a.px[0] - 1 - a.ink.x1, mB = a.px[1] - 1 - a.ink.y1;
+    ok(Math.min(mL, mT, mR, mB) >= PAD - 1,
+       `카드${i + 1} 사방 여백 ${[mL, mT, mR, mB]} ≥ ${PAD - 1} (액자 안, 들썩 15px 여유)`);
+    /* «담았다(contain)» 를 원본과 대조해 정확히 잰다 — 배율 k 는 프레임 rect 기준이고,
+       잉크는 그 안에 있으므로 기대 잉크 크기 = 원본 잉크 × k. 늘리면(=97 의 꽉 채우기) 여기서 걸린다.
+       ⚠ 아틀라스 프레임은 사방에 투명 1~2px 을 갖고 있어 «잉크 = 프레임» 이 아니다 —
+          그래서 여백 상한이 아니라 이 대조가 종횡 왜곡 0 의 진짜 게이트다. */
+    const k = Math.min((a.px[0] - PAD * 2) / a.src.fw, (a.px[1] - PAD * 2) / a.src.fh);
+    const ew = a.src.w * k, eh = a.src.h * k;
+    ok(Math.abs(a.ink.w - ew) <= 2 && Math.abs(a.ink.h - eh) <= 2,
+       `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
+    /* 짧은 축은 «프레임 rect» 가 액자 여백에 딱 맞는다(잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다) */
+    const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
+    ok(Math.abs(slack - PAD) <= 1,
+       `카드${i + 1} 짧은 축이 액자를 채운다 — 프레임 여백 ${slack.toFixed(1)} = ${PAD}`);
+    ok(a.lum !== null && a.lum > c.frm.face - 20,
+       `카드${i + 1} 잉크 휘도 ${a.lum} > 액자 면 ${c.frm.face} − 20 (묻히지 않는다)`);
+    ok(a.bob === 'thBob', `카드${i + 1} 들썩 애니(thBob) 붙음 (${a.bob})`);
+    /* transform-origin 은 계산값이 px 로 떨어진다 — 캔버스 «바닥» 인지 수치로 본다 */
+    const oy = parseFloat(a.org.split(/\s+/)[1]);
+    ok(Math.abs(oy - a.css[1]) <= 1, `카드${i + 1} 스쿼시 축이 캔버스 바닥 (${oy} = ${a.css[1]})`);
+    seen.add(a.k + '/' + a.f);
+  });
+  ok(seen.size === d.length, `카드 ${d.length}장이 서로 다른 아트다 (${seen.size}종: ${[...seen].join(' · ')})`);
 
   console.log('[2] 클릭 통과 · z 순서');
   d.forEach((c, i) => {
@@ -195,9 +296,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   const back = await p.evaluate(() => { setDunSub('dun');
     return [...document.querySelectorAll('#dunList .dnc')]
       .map((c) => ({ th: !!c.querySelector('.th'), rd: c.classList.contains('rd'),
+                     cv: !!c.querySelector('.th>canvas.thcv'),
                      em: !!c.querySelector('.th>em') })); });
-  ok(back.length === 6 && back.every((c) => c.th && !c.rd && c.em),
-     `던전 탭 복귀 — 카드 ${back.length}장 전부 이모지 썸네일 유지`);
+  ok(back.length === 6 && back.every((c) => c.th && !c.rd && c.cv && !c.em),
+     `던전 탭 복귀 — 카드 ${back.length}장 전부 스프라이트 썸네일 유지(이모지 0)`);
 
   console.log('[4] 콘솔 에러');
   ok(errs.length === 0, `콘솔 에러 ${errs.length}건`);

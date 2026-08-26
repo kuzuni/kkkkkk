@@ -5,7 +5,9 @@
      --unlock  가이드미션 진행도를 올려 5장을 전부 해금 상태로 본다(기본은 레퍼런스와 같은 2해금·3잠금).
    LESSONS 04-① — 캡처 상태(해금 3잠금 2해금)가 레퍼런스와 같아야 그 회차 비평이 유효하다.
    LESSONS 30-② — 토스트가 캡처에 섞이지 않도록 msgT 를 0 으로 만든다. */
-const { chromium } = require('playwright');
+/* 110 — 번들 브라우저 폴백은 tools/pwlaunch.js 공용(클라우드 러너에서 직접 launch 는 즉사한다) */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const args = process.argv.slice(2);
@@ -16,7 +18,7 @@ const PROBE = args.includes('--probe');
 const NOCLIP = args.includes('--noclip');   /* 잉크 원본 bbox 측정용 — 슬롯 클리핑 해제 */
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
