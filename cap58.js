@@ -33,7 +33,15 @@ const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/'
    16회차 — 0 슬롯 제거(«무반응 프레임» 으로만 찍힌다, Y·Z 공통) · **850 정산 슬롯 신설**:
    620ms 재렌더는 이 컨테이너에서 페인트가 ~150ms 뒤에 얹혀 690 프레임엔 안 잡혔다(15회차 ①④
    최대 감점이 전부 여기서 났다). 850 이면 목록 갱신·딤 100% 복귀·플로터 페이드가 다 보인다. */
-const WANT = [100, 210, 320, 380, 550, 690, 850];
+/* 19회차 (2026-08-26) — **씬마다 창이 다르다.** 작업 93(주인 지시)이 «UI 발» 재화 흡수를
+   0.3~0.8초 → **1.1~1.4초 3박자**(첫 도착 0.50s · 마지막 도착 1.22s)로 바꿨다. 0~850ms 창으로는
+   흡수 구간의 뒤 2/3 가 통째로 안 잡혀 «연출이 끊겼다» 는 없는 결함이 보고된다(93 리뷰 §5 · 교훈).
+   → 재화 흡수가 걸린 gain·quest 는 `cap93.js` 와 **같은 16프레임(95~1520ms)**,
+     강화 피드백(upg)은 93 이 손대지 않은 구간이라 **기존 7프레임(100~850ms)** 을 그대로 쓴다.
+   씬마다 창이 다르므로 비평가 전달문에 «이 씬의 프레임 시각» 을 반드시 같이 적을 것. */
+const WANT_FX  = [95, 190, 285, 380, 475, 570, 665, 760, 855, 950, 1045, 1140, 1235, 1330, 1425, 1520];
+const WANT_UPG = [100, 210, 320, 380, 550, 690, 850];
+const WANT_BY  = { gain: WANT_FX, quest: WANT_FX, upg: WANT_UPG };
 
 /* ── 스크린캐스트 수집기 ── */
 function recorder(cdp){
@@ -52,10 +60,11 @@ function recorder(cdp){
 function pick(buf, t0, tag, pre){
   /* -60 까지 허용하면 트리거 «이전» 프레임이 0ms 슬롯을 먹는다(14회차 upg: 8슬롯 중 2장이 기준) */
   const rel = buf.map(f => ({ dt: f.t - t0, data: f.data })).filter(f => f.dt >= -8);
-  if(rel.length < WANT.length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
+  if(rel.length < (WANT_BY[tag] || WANT_UPG).length) throw new Error(`${tag}: 렌더 프레임이 ${rel.length}장뿐이다 — 스크린캐스트 실패`);
   if(!pre) throw new Error(`${tag}: 트리거 직전 기준 프레임이 없다`);
   const gaps = rel.slice(1).map((f, i) => f.dt - rel[i].dt);
   const med = gaps.slice().sort((a,b) => a-b)[gaps.length >> 1] || 0;
+  const WANT = WANT_BY[tag] || WANT_UPG;
   const out = [{ want:'기준', got:Math.round(pre.t - t0), data:pre.data }];
   let from = 0;
   for(const w of WANT){
@@ -67,7 +76,7 @@ function pick(buf, t0, tag, pre){
   }
   out.forEach((f, i) => fs.writeFileSync(path.join(OUT, `58-${ROUND}-${tag}-${i+1}.jpg`), Buffer.from(f.data, 'base64')));
   const worst = Math.max(...out.slice(1).map(f => Math.abs(f.got - f.want)));
-  console.log(`  ✓ ${tag}: 8장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
+  console.log(`  ✓ ${tag}: ${out.length}장 (1=기준) · 실제 t = ${out.map(f => f.got).join(', ')}ms (목표 대비 최대 ±${worst}ms, 원본 ${rel.length}프레임 · 중앙 간격 ${Math.round(med)}ms)`);
   if(worst > 55) console.log(`    ⚠ WARN ${tag}: 목표 대비 ±${worst}ms — 비평가에게 «프레임 시각은 파일명이 아니라 이 로그 기준» 이라고 알릴 것`);
   return worst;
 }
@@ -132,7 +141,7 @@ function pwLaunch(){
     buf.length = 0;
     const t0 = await page.evaluate(trigger);
     if(t0 && t0.err) throw new Error(`${tag}: ${t0.err}`);
-    await page.waitForTimeout(waitMs || 1100);
+    await page.waitForTimeout(waitMs || 1800);
     return pick(buf, t0.t, tag, pre);
   };
 
@@ -170,7 +179,7 @@ function pwLaunch(){
     if(!b) return { err:'퀘스트 «보상 받기» 버튼을 찾지 못했다' };
     b.click();                                         /* 페이지 안에서 resolve+click (25 교훈 5) */
     return { t: Date.now() };
-  }, 1400);
+  }, 1800);
 
   /* ── 씬 3: 강화 성공 (훈련 카드) ── */
   /* ⚠ `S.gold = 1e13` 자체가 «획득» 이라 재화 연출이 딸려 온다 — 그 «+10.0T» 플로터가 다음 씬의
