@@ -81,9 +81,9 @@ const ok = (name, got, want, tol) => {
 
   /* 아이콘 — 칸별 역산값이 «지금 이모지» 에 맞는지. 잉크가 아니라 «상자 × scaleX» 로 본다.
      ref bbox 는 측정표 §4. 실측 잉크가 상자를 꽉 채우는지는 scanA1.py 가 본다. */
-  const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 109.2, shop: 103.8 };
-  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.267, shop: 1.468 };
-  const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 4.9 };
+  const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 109.2, shop: 102 };
+  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.267, shop: 1.494 };
+  const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 7.8 };
   const GLYPH = { hero: '🐾', grow: '⚒️', adv: '⚔️', box: '🔮', shop: '🏪' };
   const marks = await p.evaluate(() => [...document.querySelectorAll('.tab')].map(e => ({
     t: e.dataset.t, g: e.querySelector('.ti').textContent.trim(),
@@ -132,11 +132,11 @@ const ok = (name, got, want, tol) => {
   T.push({ name: '열림 시 ✕ 칸이 하나 생김', got: closeTab ? closeTab.t : '없음', want: 'hero',
            tol: '-', pass: !!closeTab && closeTab.t === 'hero' });
   if (closeTab) {
-    ok('✕ 칸 폭 296', closeTab.cell.w, 296, 1.0);
+    ok('✕ 칸 폭 300', closeTab.cell.w, 300, 1.0);
     ok('✕ 원판 외곽 108', closeTab.tx.w, 108, 1.0);
     ok('✕ 원판 중심 y 2187', closeTab.tx.y + closeTab.tx.h / 2, 2187, 3.0);
     B.tabs.filter(t => t !== closeTab).forEach((t, i) =>
-      ok('열림 나머지 칸' + (i + 1) + ' 폭 196', t.cell.w, 196, 1.0));
+      ok('열림 나머지 칸' + (i + 1) + ' 폭 195', t.cell.w, 195, 1.0));
   }
   ok('열림 5칸 합 1080', B.tabs.reduce((s, t) => s + t.cell.w, 0), 1080, 1.0);
 
