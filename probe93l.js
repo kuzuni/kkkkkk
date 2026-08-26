@@ -52,26 +52,31 @@ function pwLaunch(){
     const gTarget = S.gold + 400 <= 0 ? null : null; void gTarget;
 
     const tr = [];                                     /* [t, goldOp, diaOp, 공중, goldTxt, diaTxt] */
-    let firstArr = -1, air0 = 0;
+    let firstArr = -1, air0 = 0; const arr = [];
     b.click();
     const t0 = performance.now();
     while(performance.now() - t0 < 2400){
       const t = Math.round(performance.now() - t0);
-      let go = null, dio = null;
+      let go = null, dio = null, gTx = '', dTx = '';
       for(const p of document.querySelectorAll('#fxl .fx-lit')){
         const isD = /cDia/.test(p.firstElementChild ? p.firstElementChild.className : '');
         const op = +getComputedStyle(p).opacity;
-        if(isD) dio = op; else go = op;
+        /* ⚑ 16회차b — 딤 위에서 «보이는» 숫자는 원본(#goldN, 딤 아래)이 아니라 이 복제판이다.
+           15·16회차가 원본을 읽어 «정착했다» 로 통과시킨 자리(비평가 AQ ⓑ). 복제판을 읽는다. */
+        const bb = p.querySelector('b');
+        if(isD){ dio = op; dTx = bb ? bb.textContent : ''; }
+        else { go = op; gTx = bb ? bb.textContent : ''; }
       }
       const air = fxFlies.filter(f => f.ui).length;
       if(air > air0) air0 = air;
       if(firstArr < 0 && air0 && air < air0) firstArr = t;
-      tr.push([t, go, dio, air,
+      tr.push([t, go, dio, air, gTx, dTx,
                (document.getElementById('goldN')||{}).textContent || '',
                (document.getElementById('diaN')||{}).textContent || '']);
+      if(air < (tr.length > 1 ? tr[tr.length-2][3] : 0)) arr.push([t, air]);
       await new Promise(r => requestAnimationFrame(() => r()));
     }
-    return { tr, firstArr, gEnd:(document.getElementById('goldN')||{}).textContent,
+    return { tr, arr, firstArr, gEnd:(document.getElementById('goldN')||{}).textContent,
              dEnd:(document.getElementById('diaN')||{}).textContent };
   });
   await browser.close();
@@ -102,12 +107,19 @@ function pwLaunch(){
 
   const gRamp = cross(1, 0.10, 0.95), dRamp = cross(2, 0.10, 0.95);
   const gFade = fadeStart(1), dFade = fadeStart(2);
-  const gSet = settle(4, r.gEnd), dSet = settle(5, r.dEnd);
+  const gSet = settle(4, r.gEnd), dSet = settle(5, r.dEnd);          /* 복제판(딤 위에 보이는 그것) */
+  const gSetO = settle(6, r.gEnd), dSetO = settle(7, r.dEnd);        /* 원본(딤 아래 — 참고용) */
   console.log(`첫 도착 ${r.firstArr}ms · 최종값 골드 "${r.gEnd}" 다이아 "${r.dEnd}"`);
   console.log(`① 점등 — 골드 생성 ${born(1)}ms · 램프 ${gRamp ? gRamp[0]+'→'+gRamp[1]+'ms ('+(gRamp[1]-gRamp[0])+'ms)' : '없음(하드컷)'}`);
   console.log(`         다이아 생성 ${born(2)}ms · 램프 ${dRamp ? dRamp[0]+'→'+dRamp[1]+'ms ('+(dRamp[1]-dRamp[0])+'ms)' : '없음(하드컷)'}`);
   if(gRamp) console.log(`② 만휘도(${gRamp[1]}ms) − 첫 도착(${r.firstArr}ms) = ${gRamp[1]-r.firstArr}ms  (음수 = 도착보다 이르다. 15회차 −460~−480ms)`);
   console.log(`③ 소등 시작 — 골드 ${gFade}ms · 다이아 ${dFade}ms · 차 ${Math.abs(gFade-dFade)}ms  (15회차 96ms)`);
-  console.log(`④ 최종값 정착 — 골드 ${gSet}ms(소등 ${gFade}) ${gSet>=0&&gSet<gFade?'✓ 켜진 알약 위':'✗ 이미 소등된 뒤'}`
-    + ` · 다이아 ${dSet}ms(소등 ${dFade}) ${dSet>=0&&dSet<dFade?'✓ 켜진 알약 위':'✗ 이미 소등된 뒤'}`);
+  console.log(`④ 최종값 정착 — **복제판**(딤 위에 보이는 것) 골드 ${gSet}ms(소등 ${gFade}) ${gSet>=0&&gSet<gFade?'✓ 켜진 알약 위':'✗ 안 찍히거나 소등 뒤'}`
+    + ` · 다이아 ${dSet}ms(소등 ${dFade}) ${dSet>=0&&dSet<dFade?'✓ 켜진 알약 위':'✗ 안 찍히거나 소등 뒤'}`);
+  console.log(`   (참고 — 원본 #goldN/#diaN 정착 ${gSetO} / ${dSetO}ms. 딤 아래라 화면에는 안 보인다)`);
+  const A = r.arr || [];
+  const gaps = A.slice(1).map((v,i) => v[0] - A[i][0]);
+  const gs = gaps.slice().sort((a,b)=>a-b);
+  console.log(`⑤ 도착 박자 — ${A.length}박 · 첫 ${A.length?A[0][0]:'-'}ms · 마지막 ${A.length?A[A.length-1][0]:'-'}ms`
+    + ` · 간격 중앙 ${gs.length?gs[gs.length>>1]:'-'}ms (씬A 는 16박 ≈44ms/박 · 15회차 씬B 는 8박 ≈103ms/박)`);
 })().catch(e => { console.error('probe93l 실패:', e.message); process.exit(1); });
