@@ -411,10 +411,21 @@ function staticSyntax() {
       /* 103 채팅은 «전체화면 페이지 + bottom 앵커 입력 바» 라 짧은 프레임에서 리스트만 줄어야 한다.
          입력 바(186px)가 프레임 밖으로 밀리거나 리스트 높이가 음수로 접히면 여기서 잡힌다. */
       await page.evaluate(() => { if (typeof openChat === 'function') openChat(); }).catch(() => {});
-      /* ⚠ 300ms 는 60 쥬시의 개봉 연출(`jz-o jz-dlg`, 최대 ~600ms)이 **아직 도는 중**이라
-         마지막에 연 오버레이가 scale 1.02 구간에서 잡혀 «프레임 밖» 오검출이 났다
-         (1920×1080 에서 #chw top −10 — 700ms 뒤 재측정하면 정확히 0). 연출이 끝난 뒤 잰다. */
-      await page.waitForTimeout(800);
+      /* ⚠ 300ms 는 60 쥬시의 개봉 연출(`jz-o …`, 최대 ~600ms)이 **아직 도는 중**이라
+         마지막에 연 오버레이가 scale 구간에서 잡혀 «프레임 밖» 오검출이 났다
+         (1920×1080 에서 #chw top −10 — 700ms 뒤 재측정하면 정확히 0). 연출이 끝난 뒤 잰다.
+         ⚠⚠ 작업 135 — **고정 800ms 로는 부족하다.** 오버레이 7개를 연달아 열면 아바타 캔버스·
+         아틀라스 때문에 메인 스레드가 막혀 CSS 애니메이션의 «첫 프레임» 자체가 밀린다:
+         프로브 실측(`node tools/probe135.js`)에서 `jzBoxIn` 이 **420ms 동안 currentTime 0** 에
+         멈춰 있다가 t≈450 에야 출발했다 → 800ms 시점이 연출 한복판이라 3~6회에 1회 FAIL 이 났다.
+         시계로 기다리지 말고 **`jz*` 애니메이션이 실제로 다 끝날 때까지** 기다린다(상한 3초). */
+      await page.waitForFunction(() => {
+        const app = document.getElementById('app'); if (!app) return true;
+        return !app.getAnimations({ subtree: true })
+          .some((a) => /^jz/.test(a.animationName || '') && a.playState === 'running'
+            && a.effect && a.effect.getTiming().iterations !== Infinity);
+      }, null, { timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(120);
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();

@@ -17924,8 +17924,18 @@ function jzWhy(el, txt){
 }
 
 /* ── ② 팝업·시트 열기/닫기 ── */
+/* ⚠ 작업 135 — «자식 수» 하나로 가르면 **전체화면 페이지가 다이얼로그로 오분류된다.**
+   `#chw`(103 채팅)는 자식이 `.ch-list` + `.ch-bar` 2개뿐이라 `jz-dlg` 로 잡혔고,
+   그러면 `.jz-o.jz-dlg>*`(jzBoxIn) 이 **프레임을 꽉 채운 자식**에 걸린다 —
+   62% 키프레임의 `scale:1.02` 가 2094px 짜리 리스트에서 **위아래 각 21px 프레임 밖**이 된다
+   (smoke [3] «chList top −21 bottom −166» 의 정체. `#relw` 도 같은 오분류였다).
+   다이얼로그는 «딤 위에 뜬 상자» 이므로 컨테이너 배경이 **반드시 반투명 딤**이고,
+   전체화면 페이지는 배경이 **불투명한 면**이다 — 자식 수보다 이쪽이 껍데기의 정의에 가깝다.
+   (딤이 아예 없는 «껍데기 없음» 연출류(#statw 등)는 알파 0 이라 옛 규칙 그대로 자식 수로 간다.) */
 function jzKind(el){
   if(JZ_SHEET[el.id]) return 'jz-sh2';
+  let bg = ''; try { bg = getComputedStyle(el).backgroundColor; } catch(_){}
+  if(jzAlpha(bg) === 1) return 'jz-pg';                 /* 불투명 배경 = 전체화면 페이지(딤이 아니다) */
   const n = el.childElementCount;
   return (n >= 1 && n <= 2) ? 'jz-dlg' : 'jz-pg';       /* 박스 1~2개 = 다이얼로그, 그 외 = 전체화면 페이지 */
 }
