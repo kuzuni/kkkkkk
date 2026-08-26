@@ -232,7 +232,8 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
     const main = Math.max.apply(null, rings.map(r => r.life));
     const dl = Math.min.apply(null, rings.map(r => r.t));      /* 가장 늦게 켜지는 링의 지연(음수) */
     rings.length = 0;
-    impactFx(100, 100, 300, 0, '#fff', false, 0);
+    /* 15회차 — 피격 링은 `hitRing` 이 만든다(전 경로 공용 규격). 재는 요구는 그대로 «≥3프레임 산다» */
+    hitRing(100, 100, false);
     const imp = Math.max.apply(null, rings.map(r => r.life));
     const dbg = parts.filter(q => q.gy);
     return { main, dl: Math.round(-dl*100)/100, imp,
@@ -314,26 +315,55 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(stag.minGap >= 20,
      '데미지 숫자 세로 계단이 스폰 «순번» 으로 돈다 — 연속 스폰 최소 간격 ' + stag.minGap +
      'px ≥ 20 (배열 길이로 돌리면 소멸 때마다 같은 칸이 되감긴다 · 5회차 «중심 간격 22px» 회귀 방지)');
+  /* 15회차 — 피격 링이 `impactFx` 에서 **`hitRing`** 으로 옮겨졌다(전 피해 경로 공용 규격 1벌).
+     이 두 검사의 «요구» 는 «impactFx 가 링을 만든다» 가 아니라 «피격 링의 반경이 고정이고
+     같은 자리 연타가 겹치지 않는다» 이므로, 재는 대상만 새 자리로 옮긴다(LESSONS 114-(5)(2) —
+     게이트는 «그때의 구현» 이 아니라 «요구» 를 재야 한다).
+     ★ 등급 무관성은 이제 **구조로** 보장된다 — `hitRing` 은 등급 인자를 받지 않는다. 그래도 검사는
+       남긴다: 등급이 다시 새어 들어오면 여기서 걸린다(2회차 «등급 배수가 반경까지 곱해져 Ø321» 회귀). */
   const rad = await p.evaluate(() => {
-    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 0);
+    rings.length = 0; hitRing(0, 0, false);
     const g0 = rings[0].r1;
-    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 5);
-    const g5 = rings[0].r1;
-    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', true, 0);
+    /* 등급 5 짜리 타격을 «경로» 로 흘려 봐도 반경이 같아야 한다 */
+    rings.length = 0; impactFx(0, 0, 300, 0, '#fff', false, 5); hitRing(0, 0, false);
+    const g5 = rings[rings.length-1].r1;
+    rings.length = 0; hitRing(0, 0, true);
     const cr = Math.max.apply(null, rings.map(r => r.r1));
     rings.length = 0;
     return { g0, g5, cr };
   });
   const dedup = await p.evaluate(() => {
     rings.length = 0;
-    for (let i = 0; i < 6; i++) impactFx(200, 200, 300, 0, '#fff', false, 0);   /* 같은 자리 연타 */
+    for (let i = 0; i < 6; i++) hitRing(200, 200, false);          /* 같은 자리 연타 */
     const same = rings.length;
     rings.length = 0;
-    for (let i = 0; i < 6; i++) impactFx(200 + i*60, 200, 300, 0, '#fff', false, 0); /* 다른 자리 */
+    for (let i = 0; i < 6; i++) hitRing(200 + i*60, 200, false);   /* 다른 자리 */
     const apart = rings.length;
     rings.length = 0;
     return { same, apart };
   });
+  /* ★ 15회차 신설 — «피격 표현이 장면마다 다르다»(13회차 AR#14 · 14회차 AS④·AT④ 3인 공통) 회귀 방지.
+     요구: **모든 피해 경로가 같은 피격 링을 붙인다.** 경로별로 부르지 말고 `hitEnemy()` 한 곳을
+     지나는지로 잰다 — 새 스킬이 늘어도 이 검사가 자동으로 덮는다. */
+  const uni = await p.evaluate(() => {
+    const seen = [];
+    for (const kind of ['direct', 'aoe', 'chain', 'zone']) {
+      rings.length = 0; enemies.length = 0;
+      makeEnemy('zombie');
+      const e = enemies[0];
+      e.born = 1; e.hp = e.max = 1e12; e.x = 400; e.y = 400;
+      hitEnemy(e, 1, false, 0, 0);                 /* 경로가 무엇이든 반드시 이 함수를 지난다 */
+      const r = rings.filter(q => q.imp);
+      seen.push({ kind, n: r.length, r1: r.length ? r[0].r1 : 0 });
+    }
+    rings.length = 0; enemies.length = 0;
+    return seen;
+  });
+  const uniOk = uni.every(s => s.n >= 1 && Math.abs(s.r1 - uni[0].r1) < 0.01);
+  ok(uniOk,
+     '피격 링이 **모든 피해 경로**에 같은 규격으로 붙는다 — ' +
+     uni.map(s => s.kind + ' ' + s.n + '겹/r' + s.r1).join(' · ') +
+     ' (15회차: 9개 경로 중 2개만 붙던 것 · 장면 부착률 격차 100%p → 0%p)');
   ok(dedup.same <= 2 && dedup.apart >= 5,
      '같은 자리 연타는 링이 겹치지 않는다 — 6연타 → ' + dedup.same + '겹 · 흩어진 6타 → ' +
      dedup.apart + '겹 (4회차 «동심 링 5~7겹 모아레» 회귀 방지)');
