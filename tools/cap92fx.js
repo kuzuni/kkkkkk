@@ -18,9 +18,9 @@ const { chromium } = pw();
 const path = require('path');
 
 const pre = process.argv[2] || 'docs/review/92-fx';
-/* ms — 10회차: 접힘 .36s + 행 스태거 140ms(겹침 220ms) → 관측 구간 0~520ms 를 8등분.
+/* ms — 11회차: 접힘 .30s + 행 스태거 100ms(겹침 200ms) → 관측 구간 0~420ms 를 8등분.
    `currentTime` 은 **딜레이 포함** 타임라인이라 스태거된 2번째 행도 같은 t 로 맞는다. */
-const STOPS = [0, 65, 130, 200, 270, 340, 430, 520];
+const STOPS = [0, 55, 110, 165, 220, 275, 340, 420];
 
 (async () => {
   const b = await launch(chromium);
