@@ -192,12 +192,22 @@ const BBOX = {
       ck('림 두께 = 05/53 기준 6px', near(r.frames[0].rim, 6, 0.05), r.frames[0].rim + 'px');
     }
 
-    console.log('\n[④ 코너 — 폭 대비 한 비율인가]');
+    console.log('\n[④ 코너 — 폭 대비 비율]');
+    /* 143 (2026-08-26) — 코너 비율도 ⑥ 배지 배율(141)과 같은 «화면별 입력»(`--if-rr`)이 됐다.
+       104 의 통일값 .233 은 그대로 기본값이고 **여섯 프레임이 그 값을 쓴다. 22 만 .2925** 다 —
+       104 주석이 스스로 «이 칸은 코너 비율이 혼자 .293» 이라고 적고 알고 깎은 그 손실을
+       되돌린 값이다(측정표 §12 정오표 r 30.9 · `node tools/rr143.js` 실측 31.40).
+       여기서 «나머지 여섯은 .233 그대로» 를 같이 못 박아 둔다 — 143 이 통일을 깬 것이 아니라
+       «레퍼런스가 잰 치수만» 화면별로 연 것임을 이 게이트가 지킨다(`--if-ic`·`--ifq-k` 와 같다). */
     {
-      const rr = r.frames.map(f => ({ label: f.label, v: f.radius / f.w }));
-      for (const x of rr) ck('코너비율 ' + x.label, near(x.v, 0.233, 0.004), x.v.toFixed(4));
-      const spread = Math.max(...rr.map(x => x.v)) - Math.min(...rr.map(x => x.v));
-      ck('코너비율 산포 ≤ .004', spread <= 0.004, spread.toFixed(4));
+      const IFRR = { '22 .qs-i': 0.2925 };
+      const BASE = 0.233;
+      const rr = r.frames.map(f => ({ label: f.label, v: f.radius / f.w, want: IFRR[f.label] != null ? IFRR[f.label] : BASE }));
+      for (const x of rr) ck('코너비율 ' + x.label, near(x.v, x.want, 0.004), x.v.toFixed(4) + ' (기준 ' + x.want + ')');
+      /* 통일 불변식은 «전부 한 값» 이 아니라 «화면별 기대값을 뺀 나머지가 전부 0» 이다 */
+      const base = rr.filter(x => IFRR[x.label] == null).map(x => x.v);
+      const spread = base.length ? Math.max(...base) - Math.min(...base) : 0;
+      ck('코너비율 산포 ≤ .004 (기본값 ' + base.length + '프레임)', spread <= 0.004, spread.toFixed(4));
     }
 
     console.log('\n[⑤ 면 합성]');
