@@ -111,7 +111,7 @@ const STOPS = [0, 40, 75, 120, 165, 210, 250, 285, 370];
     /* 상자(`mlOut`)와 내용 페이드(`mlOutIn` 좌측 · `mlOutR` 우측)를 **전부 같이** 잡아
        같은 t 로 탐색한다 — 하나라도 빠지면 그 요소의 알파가 프레임과 어긋난다. */
     window.__anims = document.getAnimations()
-      .filter((a) => /^(mlOut|mlOutIn|mlTint|mlAcc|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
+      .filter((a) => /^(mlOut|mlOutIn|mlAcc|mlFoot|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   const n = await p.evaluate(() => window.__anims.length);

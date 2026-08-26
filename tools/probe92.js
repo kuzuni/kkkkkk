@@ -76,7 +76,7 @@ const f3 = (v) => (v === null || v === undefined ? '   —   ' : v.toFixed(3).pa
     window.setTimeout = window.__raw;
     void document.body.offsetHeight;
     document.querySelectorAll('.ml-r.out').forEach((r) => void getComputedStyle(r).animationName);
-    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|mlTint|mlAcc|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
+    window.__anims = document.getAnimations().filter((a) => /^(mlOut|mlOutIn|mlAcc|mlFoot|mlIco|mlBtn|mlSum|mlTtl|jzDn|jzUp)$/.test(a.animationName));
     window.__anims.forEach((a) => a.pause());
   });
   if (!(await p.evaluate(() => window.__anims.length))) { console.log('✗ 애니메이션을 못 잡았다 — 중단'); await b.close(); process.exit(1); }
