@@ -41,7 +41,7 @@ async function run(p) {
     if (typeof closeAll === 'function') try { closeAll(); } catch (e) {}
     document.querySelectorAll('.modal.on').forEach(m => m.classList.remove('on'));
 
-    const out = { boom: null, bolt: null, tier: null, err: [] };
+    const out = { boom: null, bolt: null, tier: null, hit: null, err: [] };
 
     /* ---------- 공용 하네스 ---------- */
     function reset(skill) {
@@ -169,6 +169,39 @@ async function run(p) {
       out.bolt = { ink: drops(series, 'ink'), hot: drops(series, 'hot') };
     } catch (err) { out.err.push('bolt: ' + err.message); }
 
+    /* ---------- ④ 피격 링: 표적 드리프트 · 릴리스 ---------- */
+    /* 17회차 두 비평가 공통 —
+         ③ AY[6] 21.2/30.5 · AZ[1] 33.6 · AZ[15] 4.4~18.1 게임px  «링이 월드 고정, 적은 걷는다»
+         ① AZ[5][6] · AY[8]  «수명 3프레임 240ms · 피크의 21~36% 에서 한 프레임에 0»
+       둘 다 «살아 있는 링 하나» 를 프레임마다 따라가며 재면 확정된다. 그림이 아니라 상태를 읽는다. */
+    try {
+      const e = reset('slash');
+      S.lv.crit = 0;
+      let drift = 0, alphas = [], acc = 0, ring = null, seen = 0;
+      for (let i = 0; i < 400; i++) {
+        e.hp = e.max = 1e12; e.slow = 0;      /* 적은 죽지 않고 계속 걷는다 — 드리프트의 원인 */
+        step(1 / 60); draw();
+        if (!ring) {
+          ring = rings.find(r => r.imp && r.t >= 0);
+          if (!ring) continue;
+          acc = GRID;                          /* 표본 위상을 링 생성에 잠근다 */
+        } else acc += 1 / 60;
+        /* 링이 배열에서 빠졌으면(수명 끝) 알파 0 을 한 번 적고 끝낸다 */
+        const alive = rings.indexOf(ring) >= 0;
+        if (alive) {
+          const f = Math.min(Math.max(ring.t / ring.life, 0), 1);
+          const tr = ringTier(ring);
+          const a = (1 - f * f) * (ring.fl ? 0.8 : 0.95) * tr.a;
+          const dx = ring.x - e.x, dy = ring.y - (e.y - e.r);
+          drift = Math.max(drift, Math.sqrt(dx * dx + dy * dy));
+          if (acc >= GRID - 1e-9) { acc -= GRID; alphas.push(a); }
+        } else if (!seen) { seen = 1; alphas.push(0); break; }
+      }
+      out.hit = { drift, life: ring ? ring.life : 0,
+                  alphas: alphas.map(v => +v.toFixed(4)),
+                  drops: alphas.slice(1).map((v, i) => +(alphas[i] - v).toFixed(4)) };
+    } catch (err) { out.err.push('hit: ' + err.message); }
+
     /* ---------- ③ 링 계층 분리 ---------- */
     try {
       const T = RING_TIER;
@@ -219,6 +252,18 @@ async function run(p) {
       line(d.tailStep <= 0.45, `[${lens}] 소멸 낙차 ${d.tailStep.toFixed(3)} (상한 0.45)`);
       line(d.alive >= 3, `[${lens}] 살아 있는 프레임 ${d.alive} (하한 3 — «3~4프레임 ease-out»)`);
     }
+  }
+
+  console.log('\n== ③ 피격 링: 표적 드리프트 · 릴리스 ==');
+  if (!r.hit) { console.log('  (측정 실패)'); fail++; }
+  else {
+    console.log('  수명       : ' + (r.hit.life * 1000).toFixed(0) + 'ms');
+    console.log('  알파 열    : ' + r.hit.alphas.join(' → '));
+    console.log('  프레임 낙차: ' + r.hit.drops.join(' / '));
+    const md = r.hit.drops.length ? Math.max(...r.hit.drops) : 1;
+    line(r.hit.drift <= 5, `표적 드리프트 최대 ${r.hit.drift.toFixed(2)} 게임px (상한 5 — AZ[15] 처방 «±5 게임px»)`);
+    line(r.hit.life >= 0.30, `수명 ${(r.hit.life * 1000).toFixed(0)}ms (하한 300ms — 58 규칙 «단발 0.3~0.8초»)`);
+    line(md <= 0.45, `프레임당 최대 알파 낙차 ${md.toFixed(3)} (상한 0.45)`);
   }
 
   console.log('\n== ④ 링 계층 분리 (피격 : 배경) ==');
