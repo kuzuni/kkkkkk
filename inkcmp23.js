@@ -23,17 +23,19 @@ const jobs = JSON.parse(process.argv[2]);
       return { D: g.getImageData(0, 0, c.width, c.height).data, W: c.width }; };
     const R = await load(ru, 'a'), C = await load(cu, 'b');
     const px = (I, x, y) => { const i = (y * I.W + x) * 4; return [I.D[i], I.D[i + 1], I.D[i + 2]]; };
-    const test = (m, c) => {
+    const test = (m, c, j) => {
       const [r, g, bl] = c, L = (r + g + bl) / 3;
       if (m === 'dark') return L < 60;
       if (m === 'white') return r > 200 && g > 200 && bl > 195;
       if (m === 'green') return g > r + 30 && g > bl + 30;
+      /* notbg: 창의 배경색(j.bg)과 «다른» 픽셀 — 색이 제각각인 아이콘(코인 등)의 bbox 용 */
+      if (m === 'notbg') return Math.abs(r - j.bg[0]) + Math.abs(g - j.bg[1]) + Math.abs(bl - j.bg[2]) > (j.t || 60);
       return true;
     };
     const bbox = (I, j, dy) => {
       let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1, n = 0;
       for (let y = j.y0 - dy; y <= j.y1 - dy; y++) for (let x = j.x0; x <= j.x1; x++)
-        if (test(j.m, px(I, x, y))) { n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        if (test(j.m, px(I, x, y), j)) { n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
       return n ? { x0, x1, y0: y0 + dy, y1: y1 + dy, w: x1 - x0 + 1, h: y1 - y0 + 1,
         cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 + dy } : null;
     };

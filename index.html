@@ -4857,9 +4857,13 @@
      양쪽 동일하므로 인셋 3px 만 넣으면 스텝도 ref y1256 에 정확히 온다. */
   .tr-prog>.trk>i{position:absolute;left:3px;top:3px;bottom:3px;border-radius:4px;
     background:linear-gradient(180deg,#A0F32F 0 21px,#81D81D 21px)}
+  /* 17회차(비평가 W P5 «폭 +11%» · Z P3 «h −12% · w +10%» — 회차를 넘어 같은 방향):
+     inkcmp23 동일기준 실측으로 ref 119x24 @x539 / 우리 132x22 @x542.5 였다. **동일 문자열**이라 폭 비교가 유효하다.
+     → 잉크 높이를 폰트로 올리고(31 → 35.1, 잉크 = 글리프 + 스트로크 7) 폭은 scaleX 로 되돌린다(1.28 → 1.022),
+       가로 중심은 translateX 15 → 11.5. */
   .tr-prog>b{position:absolute;left:0;right:0;top:0;bottom:0;text-align:center;line-height:55px;
-    font-size:31px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
-    transform:translateX(15px) scaleX(1.28)}
+    font-size:35.1px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;z-index:2;
+    transform:translateX(11.5px) scaleX(1.022)}
   /* §4b ↑ 버튼 — x838 y140 w108 h105. 3종 상한을 다 채우기 전에는 은색(비활성) */
   /* ref 는 «바깥 밝은 림 > 면» 순서다 — 림을 면보다 밝게 유지할 것.
      ⚠ 4회차 정정: 3회차가 림 #A0A0A0(160)·면 #767676~#8E8E8E(118~142) 로 재보정했는데 **양쪽 다 과하게 어두웠다.**
