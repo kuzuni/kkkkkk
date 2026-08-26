@@ -198,7 +198,8 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
     return { n: cds.length,
       alive: cds.filter(c => c.getAnimations({ subtree: true }).some(a => /^jz122/.test(a.animationName || ''))).length,
       top: document.querySelectorAll('#shopList .cn-cd.dia.top').length,
-      ray: !!document.querySelector('#shopList .cn-cd.dia.top>.bg>.ray'),
+      /* 2회차 — 광선은 «몸통(.bg)» 이 아니라 «아이템 판(.pn)» 안에 있어야 보인다(1회차 실측: .bg 는 완전히 가려짐) */
+      ray: !!document.querySelector('#shopList .cn-cd.dia.top>.pn>.ray'),
       mile: !!document.querySelector('#shopList .cn-ml:not(.off)') };
   });
   ok(c1.n >= 10, '재화 카드 ' + c1.n + '장');
@@ -210,6 +211,39 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   });
   const q0 = await shotAt(p, 0, cbox), q1 = await shotAt(p, 1500, cbox);
   ok(!q0.equals(q1), '재화 카드1 그림이 t=0 과 t=1500ms 에서 다르다');
+  /* 2회차 신설 — «있다» 가 아니라 «보인다» 를 잰다.
+     1회차 게이트는 광선 판이 DOM 에 있는 것만 보고 통과시켰는데, 실제로는 카드 몸통이
+     헤더·아이템 판·버튼에 완전히 가려 **한 픽셀도 안 보였다**(비평가 N 실측 Δ=0).
+     이제 광선이 사는 영역을 20s 주기의 1/4 만큼 떨어진 두 시각에 찍어 픽셀 차를 요구한다. */
+  await p.evaluate(() => {
+    const c = document.querySelector('#shopList .cn-cd.dia.top');
+    if (c) c.scrollIntoView({ block: 'center' });
+  });
+  await p.waitForTimeout(300);
+  const rbox = await p.evaluate(() => {
+    const e = document.querySelector('#shopList .cn-cd.dia.top>.pn');
+    if (!e) return null;
+    const r = e.getBoundingClientRect();
+    return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
+  });
+  if (rbox) {
+    const y0 = await shotAt(p, 0, rbox), y1 = await shotAt(p, 5200, rbox);
+    ok(!y0.equals(y1), '골드 광선이 실제로 보인다 — 아이템 판 픽셀이 t=0 과 t=5200 에서 다르다');
+  } else ok(false, '골드 광선 판(.cn-cd.dia.top>.pn>.ray) 을 찾지 못함');
+  /* 2회차 신설 — 탭 간 규칙 일치(N ④): 재화 카드에도 헤더 스윕·버튼 링이 붙는가 */
+  const cons = await p.evaluate(() => ({
+    /* ⚠ 의사요소(::after)의 애니메이션은 `el.getAnimations()` 에 안 잡힌다(subtree 옵션이 필요하다).
+       여기서는 computed style 로 직접 묻는 쪽이 정확하다. */
+    sweep: [...document.querySelectorAll('#shopList .cn-cd:not(.done)')]
+      .filter(c => getComputedStyle(c, '::after').animationName === 'jz122Sweep').length,
+    all: document.querySelectorAll('#shopList .cn-cd:not(.done)').length,
+    ring: [...document.querySelectorAll('#shopList .cn-cd>.bt[data-cnad]')]
+      .filter(e => e.getAnimations().some(a => a.animationName === 'jz122RingC')).length,
+    ads: document.querySelectorAll('#shopList .cn-cd>.bt[data-cnad]').length,
+  }));
+  ok(cons.all > 0 && cons.sweep === cons.all, '재화 카드 광택 스윕 ' + cons.sweep + '/' + cons.all);
+  ok(cons.ads > 0 && cons.ring === cons.ads, '[받기] 버튼 펄스 링 ' + cons.ring + '/' + cons.ads);
+
   const CSEL = ['.cn-cd>.hd>i', '.cn-cd>.bt', '.cn-cd>.bt>u', '.cn-cd>.qt', '.cn-ml>.ex', '.cn-ml>.ex>i'];
   const crects = () => p.evaluate(sel => sel.flatMap(s => [...document.querySelectorAll('#shopList ' + s)]
     .map(e => { const r = e.getBoundingClientRect(); return [s, r.x, r.y, r.width, r.height].join(','); })), CSEL);

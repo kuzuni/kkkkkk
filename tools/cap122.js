@@ -27,7 +27,11 @@ const OUT = path.resolve(__dirname, '../docs/review');
 /* ms — 8장. 상시 연출의 가장 짧은 주기가 0.9s(무료 링)·1.8s(스파클)이고 가장 긴 것이 20s(광선)이라
    «짧은 것의 한 바퀴 + 긴 것의 눈에 띄는 변화» 를 같이 담으려면 등간격이 답이 아니다.
    앞 4장은 0.9~1.8s 주기를 훑고(0/230/450/900), 뒤 4장은 들썩(6~9s)·광선(20s)을 잡는다. */
-const STOPS = [0, 230, 450, 900, 2600, 5700, 6900, 13400];
+/* 2회차 — 1회차 stops 는 «들썩»(주기의 마지막 8%)을 **32샘플 중 0회** 잡았다.
+   비평가 N 이 «들썩이 아예 없다» 고 읽은 것의 절반은 이 캡처 탓이다(LESSONS 60 «내 연출과 내 캡처를
+   같은 무게로 의심해라»). 카드별 주기·딜레이(6/7/8/6.5/9s · −1.1/−3.6/−5.9/−2.4/−7.2s)로
+   «몇 장이 동시에 들썩 구간에 있는가» 를 풀어 t=1600(2장) · t=10200(3장) 을 넣었다. */
+const STOPS = [0, 230, 450, 900, 1600, 2600, 5700, 6900, 10200, 13400];
 
 /* 페이지 안에 «얼리기 · 세우기» 두 함수를 심는다.
    __jzFreeze() — jz122* 는 pause(무한 루프라 그대로 둔다), 그 밖은 finish()/cancel() 로 끝 상태 고정.
@@ -58,6 +62,10 @@ async function frames(p, tag) {
     /* 상시 연출만 남긴다 — 전투 로직·HUD 굴림이 프레임마다 숫자를 바꾸면
        비평가가 그 차이를 «연출» 로 읽는다(LESSONS 58-2 · 92 G 지적). */
     if (typeof window.step === 'function') window.step = () => {};
+    /* 2회차(M 채점 제외 항목) — 1회차 t=0 프레임에 **58 재화 획득 플라이**(전투 킬 골드 코인)가
+       소환 버튼 위를 덮어 «1,000 / 3,000» 가격을 가렸다. 122 연출이 아닌데 비평을 오도한다.
+       연출 레이어를 비우고, 그 뒤 남의 애니메이션은 finish()/cancel() 로 못 박는다. */
+    const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__jzFreeze();
   });
   for (let i = 0; i < STOPS.length; i++) {
@@ -112,6 +120,7 @@ async function frames(p, tag) {
   console.log('[재화 탭 — 다이아·마일리지]');
   await p.evaluate(() => {
     if (typeof window.step === 'function') window.step = () => {};
+    const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__jzFreeze();
   });
   for (const [i, t] of [0, 900, 5200, 13400].entries()) {
