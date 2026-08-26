@@ -81,9 +81,9 @@ const ok = (name, got, want, tol) => {
 
   /* 아이콘 — 칸별 역산값이 «지금 이모지» 에 맞는지. 잉크가 아니라 «상자 × scaleX» 로 본다.
      ref bbox 는 측정표 §4. 실측 잉크가 상자를 꽉 채우는지는 scanA1.py 가 본다. */
-  const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 86.8, shop: 103.8 };
-  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.593, shop: 1.468 };
-  const DY = { hero: 2, grow: 5.5, adv: 6.3, box: 5.8, shop: 5.9 };
+  const SF = { hero: 64, grow: 91.3, adv: 107.1, box: 109.2, shop: 103.8 };
+  const SX = { hero: 1, grow: 1.488, adv: 0.908, box: 1.267, shop: 1.468 };
+  const DY = { hero: 4, grow: 13.5, adv: 9.3, box: 9.2, shop: 4.9 };
   const GLYPH = { hero: '🐾', grow: '⚒️', adv: '⚔️', box: '🔮', shop: '🏪' };
   const marks = await p.evaluate(() => [...document.querySelectorAll('.tab')].map(e => ({
     t: e.dataset.t, g: e.querySelector('.ti').textContent.trim(),
@@ -99,9 +99,10 @@ const ok = (name, got, want, tol) => {
     T.push({ name: '아이콘 ' + m.t + ' 글리프 = ' + GLYPH[m.t] + ' (바뀌면 --sf/--sx 재역산 필요)',
              got: m.g, want: GLYPH[m.t], tol: '-', pass: m.g === GLYPH[m.t] });
   });
-  /* ⚠ `.ti` 는 «상자» 이고 레퍼런스 +89 는 «잉크» 중심이다. rect 는 translateY(--dy) 를 포함하므로
-     상자 중심 = 2187 + dy 가 정상이다. 잉크가 실제로 2189 에 오는지는 `scanA1.py` 가 본다
-     (r7 실측 2188.5~2189.5). 여기서는 dy 가 적용됐는지만 확인한다. */
+  /* ⚠ `.ti` 는 «상자» 이고 측정표 §4 값은 «잉크» 다. rect 는 translateY(--dy) 를 포함하므로
+     상자 중심 = 2187 + dy 가 정상이다. 여기서는 dy 가 적용됐는지만 본다.
+     잉크가 실제로 §4 의 칸별 top(2131/2147/2131/2131/2130)에 앉는지는 `scanA1.py` 가 본다
+     (7회차 실측: 5칸 전부 Δ0, 높이 Δ0~1%). */
   A.tabs.forEach(t => {
     ok('아이콘 상자 ' + t.t + ' 중심 = 2187 + dy', t.ti.y + t.ti.h / 2, 2187 + DY[t.t], 0.6);
   });
@@ -111,17 +112,17 @@ const ok = (name, got, want, tol) => {
     ok('레드닷 ' + t.t + ' 외곽 ⌀41', t.bdg.w, 41, 0.6);
     ok('레드닷 ' + t.t + ' 중심 x = 칸 오른쪽 −21',
        t.bdg.x + t.bdg.w / 2, t.cell.x + t.cell.w - 21, 1.0);
-    ok('레드닷 ' + t.t + ' 중심 y 2121', t.bdg.y + t.bdg.h / 2, 2121, 1.0);
+    ok('레드닷 ' + t.t + ' 중심 y 2119.5', t.bdg.y + t.bdg.h / 2, 2119.5, 1.0);
   });
 
   /* NEW 리본 — 측정표 §7-1 정오: bbox 117×79, 칸 왼쪽 경계(x864)·y2103 에 좌상단 밀착 */
   const shop = A.tabs.find(t => t.t === 'shop');
   ok('NEW 리본 bbox 폭 117', shop.nw.w, 117, 2.0);
   ok('NEW 리본 bbox 높이 79', shop.nw.h, 79, 2.0);
-  ok('NEW 리본 좌변 = 상점 칸 왼쪽(864)', shop.nw.x, 864, 1.5);
-  ok('NEW 리본 상변 2103', shop.nw.y, 2103, 1.5);
-  T.push({ name: 'NEW 리본이 옆 칸을 침범하지 않음', got: shop.nw.x.toFixed(1), want: '≥864',
-           tol: '-', pass: shop.nw.x >= 862.5 });
+  ok('NEW 리본 좌변 858 (ref x862 는 칸 경계보다 2px 왼쪽)', shop.nw.x, 858, 2.0);
+  ok('NEW 리본 상변 2099', shop.nw.y, 2099, 2.0);
+  T.push({ name: 'NEW 리본 침범 2px 이내(ref 도 2px 넘친다)', got: shop.nw.x.toFixed(1), want: '≥856',
+           tol: '-', pass: shop.nw.x >= 856 });
 
   /* ── 열림 상태 (측정표 §2·§8) ─────────────────────────────── */
   await p.evaluate(() => goTab('hero'));

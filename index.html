@@ -1139,7 +1139,7 @@
      로만 찍혔다(비평가 H 실측 «우리 5 vs ref 7», G «5 vs 5» — 둘이 갈리므로 측정표의 6~7 을 따른다).
      폭은 그대로 두고 **어두운 구간을 앞당겨** 심을 6~7px 로 만든다. */
   .tab:not(:last-child)::after{content:'';position:absolute;right:-4px;top:5px;bottom:0;width:8px;
-    background:linear-gradient(90deg,#42362A 0,#2A2219 12%,#110E0B 60%,#110E0B 100%);z-index:2}
+    background:linear-gradient(90deg,#42362A 0,#2A2219 25%,#110E0B 75%,#110E0B 100%);z-index:2}
   /* 아이콘: 높이 112(세로중심 +87). 이모지 글리프가 박스를 거의 채우도록 font-size 를 키운다.
      폭은 글리프 advance(104px 기준 130px)보다 넓게 잡는다 — 좁으면 넘친 글리프가 가운데 정렬되지
      않고 좌측 정렬돼 잉크가 8px 우측으로 밀린다. */
@@ -1154,15 +1154,21 @@
      font-size 하나로는 못 만든다 — A2 와 같은 방식으로 **높이는 `--sf`, 폭은 `--sx`(scaleX)** 로 가른다.
         --sf = 지금 fs × ref높이 / 실측높이 · --sx = ref폭 / (실측폭 × ref높이 / 실측높이)
      ⚠ 이 값들은 «그 칸의 이모지» 로 역산한 것이다. **칸의 이모지를 바꾸면 여기도 다시 재라.**
-     세로 중심은 측정표 §4 의 공통값 **+89(프레임 y2189)** 로 `--dy` 가 맞춘다. */
+     세로는 **측정표 §4 의 «칸별 잉크 top»** 에 `--dy` 로 맞춘다(프레임 = ref − 60):
+        영웅 2131 · 훈련 2147 · 던전 2131 · 유물 2131 · 상점 2130
+     ⚠ 6회차에는 §4 의 «공통 세로중심 +87~91» 에 맞췄는데, **§4 의 top·height·공통중심 셋은 서로
+     모순된다**(보물상자 top 31 + h96 → 중심 79 ≠ 89). 7회차 비평가 I 가 ④ 를 6 으로 묶으며
+     «REF 는 c0·c2·c3 세 칸이 정확히 +30 한 줄에 물리는데 OUR 은 c3 만 +41 로 13px 이탈» 을 지적했다.
+     top 은 라벨이 안 덮는 **직접 실측**이고 공통중심은 거기서 파생된 관찰이라 **top 을 심판으로 쓴다.**
+     이러면 height 가 이미 ref 와 Δ0~1% 이므로 bottom 도 자동으로 ref 와 같아진다. */
   .tab .ti{display:block;width:172px;height:112px;font-size:var(--sf,104px);line-height:112px;
     text-align:center;transform-origin:50% 50%;
     transform:translateY(var(--dy,0px)) scaleX(var(--sx,1))}
-  .tab[data-t="grow"]{--sf:91.3px;--sx:1.488;--dy:5.5px}   /* ⚒️ ref 150x100 */
-  .tab[data-t="adv"] {--sf:107.1px;--sx:.908;--dy:6.3px}   /* ⚔️ ref 109x120 */
-  .tab[data-t="box"] {--sf:86.8px;--sx:1.593;--dy:5.8px}   /* 🔮 ref 125x96  */
-  .tab[data-t="shop"]{--sf:103.8px;--sx:1.468;--dy:5.9px}  /* 🏪 ref 165x115 */
-  .tab[data-t="hero"]{--sf:64px;--dy:2px}                  /* 🐾 + 금색 링 ref 121x121 */
+  .tab[data-t="grow"]{--sf:91.3px;--sx:1.488;--dy:13.5px}  /* ⚒️ ref 150x100 · top 2147 */
+  .tab[data-t="adv"] {--sf:107.1px;--sx:.908;--dy:9.3px}   /* ⚔️ ref 109x120 · top 2131 */
+  .tab[data-t="box"] {--sf:109.2px;--sx:1.267;--dy:9.2px}  /* 🔮 ref 125x122 · top 2131 (§4 정오) */
+  .tab[data-t="shop"]{--sf:103.8px;--sx:1.468;--dy:4.9px}  /* 🏪 ref 165x115 · top 2130 */
+  .tab[data-t="hero"]{--sf:64px;--dy:4px}                  /* 🐾 + 금색 링 ref 121x121 · top 2131 */
   /* 영웅 칸의 금색 링은 선택 표시가 아니라 아이콘 아트다 (레퍼런스 23·10 에서 비활성일 때도 유지).
      잉크 bbox 를 지배하는 것은 글리프가 아니라 이 링이다 — ref 121x121 은 링 외곽(그림자 포함) 값이다.
      링 안쪽은 슬레이트 디스크로 채워지고, 글리프는 링 폭의 56%(=64px)로 들어간다. */
@@ -1205,7 +1211,7 @@
      (y2161..2201, 코어 y2164..2195)로 측정표 §6 과 정확히 일치한다. r6 의 30 은 −27% 였다.
      LESSONS «게이트의 상수는 레퍼런스 실측과 통일 상수를 갈라서 다뤄라» 에 해당하는 자리다.
      중심 x = 칸 오른쪽 −21 · 중심 y = 바 상단 +21 (ref 2181 − 60) → right/top 모두 0.5px */
-  .tab .bdg{position:absolute;top:.5px;right:.5px;width:41px;height:41px;border-radius:50%;
+  .tab .bdg{position:absolute;top:-1px;right:.5px;width:41px;height:41px;border-radius:50%;
     background:radial-gradient(circle at 50% 28%,#ff7991 0 16px,#f22e52 17px);
     border:5px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}
@@ -1238,7 +1244,7 @@
      r6 는 w100 h38 이라 띠가 **−16% 얇고** 칸 밖으로 16px 넘쳤다.
      위치: bbox 좌상단을 칸 왼쪽 경계(x864)·y2103 에 붙인다. 칸 기준 중심 (58.5, 42.5),
      따라서 left = 58.5 − 108/2 = 4.5 · top = 42.5 − 45/2 = 20. */
-  .tab .nw{display:none;position:absolute;left:4.5px;top:20px;width:108px;height:45px;
+  .tab .nw{display:none;position:absolute;left:-1.3px;top:16px;width:108px;height:45px;
     transform:rotate(-20deg);transform-origin:50% 50%;
     background:linear-gradient(90deg,#8f1f1c 0 8px,#b42826 8px calc(100% - 8px),#8f1f1c calc(100% - 8px) 100%);
     border-top:4px solid #000;border-bottom:4px solid #000;box-shadow:0 4px 0 #7d1d17;
