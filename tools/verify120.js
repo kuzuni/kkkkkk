@@ -260,9 +260,31 @@ const inter = (a, b) => {
         Math.abs(r.steps.t - wantSt) < 1.0 && Math.abs(r.steps.b - r.mid.t) < 1.0,
         `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} vs 기대 ${wantSt.toFixed(1)} · 수반 ${r.mid.t.toFixed(1)}`);
       if (vis.length) {
-        const hBad = vis.find(e => Math.abs(e.h - STEP_PITCH) > 0.6 && e.h > r.steps.h - 0.6 === false);
-        ck(`[${H}] ③ 보이는 단 ${vis.length}개 높이 = ${STEP_PITCH}px 고정 (구간보다 얕은 맨아래 단만 예외)`,
-          !hBad, vis.map(e => e.h.toFixed(1)).join(' / '));
+        /* ── 15회차 — **이 항목이 «머리 잘린 단» 을 놓쳤다.** ──
+           14회차가 단 수를 8 로 늘렸을 때 2600 의 계단 구간은 650px, 피치는 84 고정이라
+           맨 위 단이 84 를 못 채우고 `overflow:hidden` 에 **위쪽 22px** 이 잘렸다. 하필 잘리는
+           쪽에 나이징(코 하이라이트 4 + 그 밑 그림자 5)이 있어 «디딤면 없는 62px 민짜 띠» 가
+           됐는데, 이 자리는 **120/120 PASS** 였다 — 위 `e.h` 가 **DOM rect 의 height** 라
+           8칸 전부 84.0 으로 답했기 때문이다. 잘린 뒤 «보이는» 높이가 아니다.
+           비평 AH ⑤(«나이징 7개») · AI ⑧(«디딤면 밴드 7개뿐 · 최상단 76px») 2인 공통으로 잡혔다.
+           LESSONS 122 «자를 안 댄 곳은 자동으로 무결점» 과 같은 계열이라, 자를 **결과**에 댄다.
+           15회차 처방은 «피치를 구간의 정수 등분» 이므로 세 가지를 한꺼번에 못 박는다:
+             ⓐ 보이는 높이(`visH`, 잘린 뒤)가 전부 같다 — 머리 잘린 단이 있으면 여기서 깨진다
+             ⓑ 그 높이 × 단수 = 구간 (정확히 채운다 — 빈 바닥도, 넘침도 없다)
+             ⓒ 피치가 84±3 안 (13회차가 «84 고정» 으로 없앤 ③ 표류의 재발 상한.
+                11회차엔 8~71px 로 8.9배 흔들렸다. 실측 83 / 83 / 82.5 / 81.25 = 표류 2.2%)
+           ★ ⓑ 가 핵심이다 — ⓐ 만 있으면 «전부 똑같이 잘린» 상태를 통과시킨다. */
+        const vh = vis.map(e => visH(e));
+        const pitch = vh[0];
+        ck(`[${H}] ③ 보이는 단 ${vis.length}개의 «잘린 뒤» 높이가 전부 같다 (DOM rect 아님 — 머리 잘린 단 0)`,
+          vh.every(h => Math.abs(h - pitch) < 0.6),
+          vh.map(h => h.toFixed(2)).join(' / '));
+        ck(`[${H}] ③ 피치 × 단수 = 계단 구간 (Δ ≤ 1px — 빈 바닥도 넘침도 없다)`,
+          Math.abs(pitch * vis.length - r.steps.h) < 1.0,
+          `${pitch.toFixed(2)} × ${vis.length} = ${(pitch * vis.length).toFixed(2)} vs 구간 ${r.steps.h.toFixed(2)}`);
+        ck(`[${H}] ③ 피치가 ${STEP_PITCH}±3px 안 (13회차가 없앤 ③ 표류 재발 방지)`,
+          Math.abs(pitch - STEP_PITCH) <= 3.0,
+          `${pitch.toFixed(2)}px (기준 ${STEP_PITCH})`);
         const wBad = vis.find(e => !STEP_W.some(w => Math.abs(e.w - w) < 0.6));
         ck(`[${H}] ③ 단 폭이 ${STEP_W.join('·')} 중 하나 (아래로 갈수록 넓어짐)`,
           !wBad, vis.map(e => e.w.toFixed(0)).join(' / '));
