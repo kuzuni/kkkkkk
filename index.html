@@ -6702,7 +6702,16 @@
   /* ref 의 `1` 은 «윗 깃 9px · 세로획 5px» 짜리 좁은 게임용 숫자다(잉크폭 9).
      우리 서체는 같은 잉크높이에서 폭이 16 이라 +78% 로 읽힌다 → PROGRESS 규칙대로
      음수 letter-spacing 이 아니라 <i> 의 scaleX 로 좁힌다. */
-  .sm-c>u i{transform:scaleX(.80)}
+  .sm-c>u i{transform:scaleX(1.00)}
+  /* 12 4회차 — 배지가 «카드 바닥에 걸터앉은» 형태를 잃고 카드 안으로 9px 올라와 있었다.
+     ref 는 잉크 하단이 카드 바닥 외곽선보다 **8px 아래로 돌출**(1064 vs 1056)인데 우리는 1px 이었다.
+     비평가 4인이 «−9~10px 위 / 돌출 14→7 붕괴» 로 전원 일치했고, 6~10칸 전부 같은 값이라 계통 오차다.
+     원인은 126 서체 전환(같은 줄상자에서 베이스라인이 올라간다 — `.sm-close` 가 175→170 으로 겪은 것과 같다).
+     ⚠ 공용 `.ifr>.ifq` 의 `bottom`(-.093)·`--ifq-k` 는 05·53·22·69·70 이 함께 쓰고 **지금 141 이 잡고 있다**
+       → 건드리지 않는다. 22 가 쓴 «공용은 두고 화면 안에서만 덮는다» 패턴 그대로 `#sumw` 안에서만 덮는다.
+     --ifq-k .235→.218 : 잉크 높이 28 → ref 26 (−7.7%, 비평가 4인 «+8~12% 과대» 일치). */
+  #sumw .sm-c{--ifq-k:.218}
+  #sumw .sm-c>u.ifq{bottom:calc(var(--if-w) * -.150)}
 
   /* ── 리본 «소환 결과» — 면 bbox ref x249~831(583) y725~829(105) ──
      중앙 밴드 513x87 + 좌우 «모래시계형» 꼬리 77x81. 09 의 제비꼬리와 형상이 다르다
@@ -6726,9 +6735,14 @@
     background:linear-gradient(90deg,#FEEF88 0 17px,rgba(254,239,136,0) 24px)}
   /* 타이틀 잉크 456~625(w170) / 747~787(h41) → font-size 44, 밴드 세로중앙에서 1.5px 위.
      외곽선 실측 좌4·우5 → 한쪽 4.5px 를 내려면 -webkit-text-stroke 는 **9px**(안팎 절반씩). */
-  .sm-band>i{position:relative;top:19px;font-size:44px;line-height:44px;color:#fff;
+  /* 12 4회차 — `top` 19→25 · scaleX .923→1.060.
+     126 이 서체를 Jua 로 바꾸면서 **세로(베이스라인)만** 보정하고 가로를 안 되돌렸다. 이 화면의 scaleX 는
+     전부 «구 서체 기준으로 역산된 값» 이라 서체가 바뀌자 잉크가 통째로 눌렸다(171→148, −13%).
+     비평가 4인이 «−12.9~13.0%» 로 전원 일치. scaleX 는 렌더 결과에 **정확히 선형**이라 .923×170/148 로 역산한다.
+     세로도 같은 원인으로 6px 떠 있었다(ref 잉크 상단 747 = 프레임 663 / 실측 657). */
+  .sm-band>i{position:relative;top:25px;font-size:44px;line-height:44px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:9px #000;paint-order:stroke fill;
-    transform:scaleX(.923)}
+    transform:scaleX(1.060)}
   /* 꼬리 — 검정 실루엣(89x93) 위에 주황(77x81)을 6px 안쪽으로 얹는다.
      09 와 같은 «ㄴ 자» 클립: x>35 & y<62 는 비워 밴드가 그대로 보이게 하고,
      밴드 아래(y62~81)는 전 폭을 채워 밴드 바닥 검정띠를 덮는다(하나의 실루엣으로 보이게).
@@ -6782,7 +6796,15 @@
                                       #D3D3D3 122px 128px,#8B8B8B 128px 129px,
                                       #757575 129px 135px,#8B8B8B 135px 136px);
     box-shadow:inset 6px 0 0 #D3D3D3,inset -6px 0 0 #D3D3D3}
-  .sm-b:disabled{filter:grayscale(.5) brightness(.72);cursor:default}
+  /* 12 4회차(2026-08-26) — `:not(.lack)` 이 핵심이다. 102 가 `.lack`(색)과 `disabled`(입력 차단)를
+     **같은 조건**으로 걸면서, 레퍼런스가 찍힌 바로 그 «부족» 상태에 이 필터가 한 번 더 얹혔다.
+     그 결과 버튼 전 계조가 ref 의 **0.72 배**(밝은 림 211→152 · 면 171→121 · 가격 (252,113,108)→(142,92,90))
+     가 됐다 — 측정표 §11 «부족 상태의 픽셀은 한 개도 안 바뀐다» 와 정면으로 어긋난다.
+     비평가 4인이 독립적으로 «−28%» 로 같이 짚었고, grayscale(.5)+brightness(.72) 손계산이 캡처값과
+     정확히 일치해 원인이 산술로 확정됐다. `.lack` 자체가 이미 «못 산다» 를 색으로 말하므로 이중 감광은 불필요하다.
+     (규칙은 남긴다 — `.lack` 없이 disabled 되는 경로가 생기면 그때는 여전히 필요하다) */
+  .sm-b:disabled{cursor:default}
+  .sm-b:disabled:not(.lack){filter:grayscale(.5) brightness(.72)}
   .sm-b>*{position:absolute}
   .sm-b1{left:0}
   .sm-b2{left:299px}
@@ -6790,11 +6812,16 @@
   /* 타이틀 잉크 h30 → font-size 32, 색 #DFDFDF(순백이 아니다), 외곽선 3~4 → stroke 7.
      면 상단에서 잉크 상단까지 25. */
   /* 102 — 은색(부족) 라벨은 실측 #DFDFDF, 노랑·시안(충분) 라벨은 10 레퍼런스 실측 #F8F8F8 */
-  .sm-b .lab{left:0;right:0;top:22px;height:36px;line-height:36px;text-align:center;
-    font-size:33px;color:#F8F8F8;white-space:nowrap;
+  /* 12 4회차 — 126 가로 미보정분(140→122, −12.9%). 여기는 잉크 «높이» 도 29(ref 31)로 눌려 있어
+     scaleX 만으로는 못 맞춘다 → font-size 33→35 로 높이를 세우고, 그만큼 넓어진 폭을 scaleX 로 다시 잡는다.
+     top 22→26 은 잉크가 3~5px 떠 있던 것(비평가 4인 −3.5~−5 일치) + fs 상승분 보정이다. */
+  .sm-b .lab{left:0;right:0;top:26px;height:36px;line-height:36px;text-align:center;
+    font-size:35px;color:#F8F8F8;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
   .sm-b.lack .lab{color:#DFDFDF}
-  .sm-b .lab i{transform:scaleX(.978)}
+  /* .978 → 1.068 : fs 33→35 로 폭이 이미 1.061 배 넓어졌으므로 «.978 × 140/122 ÷ (35/33)» 로 역산.
+     ①② 140 / ③ 147 은 한 손잡이로 동시에 못 맞춰(ref 비 1.050 vs 우리 1.033) 두 오차가 균등해지는 값을 골랐다. */
+  .sm-b .lab i{transform:scaleX(1.055)}
   /* 내부 어두운 알약 — ref y1842~1877(h36) → 면기준 top 70, radius 18(완전 알약), 테두리 없음.
      102: 충분 상태의 알약은 «면보다 어두운 같은 색조» 다 — 노랑은 10 레퍼런스 실측(#C39313→#C38607),
      시안은 같은 명도비(면 대비 L −38%)로 맞춘 디자인 결정(레퍼런스에 시안+알약 조합이 없다). */
@@ -6806,21 +6833,34 @@
   .sm-b2 .pan,.sm-b3 .pan{left:19px;width:193px}
   /* 가격·횟수 잉크 h25 → 숫자 캡비 0.70 으로 36. 색 #FC716C, 외곽선 3 → stroke 6 */
   /* 102 — 빨강(#FC716C)은 «부족» 전용. 충분하면 10 레퍼런스의 노랑 버튼 가격과 같은 순백(#FFFFFF, 실측 n=643 평균 #F1F1F1 · 최빈 255,255,255) */
-  .sm-b .cost{top:62px;height:50px;line-height:50px;font-size:32px;color:#fff;
+  /* 12 4회차 — 숫자는 한글과 **반대 방향**으로 틀어져 있었다(비평가 4인 전원 일치):
+     한글 잉크는 −11~15% 좁은데 가격 숫자는 **+11~12% 넓고 −4~11% 낮다**(102×24, ref 91×25).
+     서체가 바뀌면서 글리프 폭·캡높이 비가 달라졌는데 구 서체용 scaleX(1.30) 가 그대로 남아 과보정된 것이다.
+     캡높이는 font-size 로(32→33), 넘치는 폭은 scaleX 로(1.30→1.125) 각각 잡는다.
+     top 62→65 는 잉크 중심이 2.5px 떠 있던 것(ref 중심 1860 = 프레임 1800 / 실측 1797.5). */
+  .sm-b .cost{top:65px;height:50px;line-height:50px;font-size:33px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   .sm-b.lack .cost{color:#FC716C}
   /* ②③ 가격만 — 캡높이는 font-size 로, 부족한 폭(자간 advance)은 scaleX 로 되돌린다.
      ① 의 «0/1» 은 글리프 구성이 달라 이미 Δ0 이므로 여기서 제외한다(아래 .sm-b1 .cost 가 덮어쓴다). */
-  .sm-b2 .cost i,.sm-b3 .cost i{transform:scaleX(1.30)}
-  .sm-b1 .cost{left:82px;width:132px;text-align:center;font-size:34px;top:62px;transform:scaleX(1.15)}
+  .sm-b2 .cost i,.sm-b3 .cost i{transform:scaleX(1.125)}
+  /* ① «0/2» — 비평가 3인이 «폭 +19% 과대» 로 짚었지만 **반영하지 않는다.** ref 는 `0/1`, 우리는 `0/2` 다
+     (SHOP_FREE 2 회 — 10 레퍼런스 «2/2» 를 따른 후속 설계 변경). 두 문자열은 advance 는 같고
+     **마지막 글리프 잉크만** 다르다 — `1` 은 자기 advance 안에서 잉크가 9px 뿐이고 `2` 는 꽉 채운다.
+     즉 ref 52 에 대응하는 «0/2» 잉크는 ≈60 이고 우리는 62 로 **Δ2** 다. 글자가 달라서 생긴 차이를
+     scaleX 로 좁히면 진짜로 −16% 어긋난다. 높이(24 vs 27)만 글자와 무관한 실제 차이라 fs 로 잡는다. */
+  .sm-b1 .cost{left:82px;width:132px;text-align:center;font-size:35px;top:65px;transform:scaleX(1.00)}
   .sm-b1 .cost i{transform:none}
   .sm-b2 .cost,.sm-b3 .cost{left:61px;width:146px;text-align:center}
   /* 젬 — 시안 아이콘 44x45(검정 외곽선 포함 50x53). **알약 좌측 캡을 완전히 덮는다**
      (젬 y1834~1886 이 알약 y1842~1877 보다 상하로 넓어 가림 없는 행이 없다 — 측정표 §9). */
   /* 💎 이모지는 잉크가 51x45 로 **가로만** ref(44x45) 보다 16% 넓다(1회차 비평 A).
-     세로가 맞으므로 font-size 를 줄이지 말고 scaleX 로만 좁힌다. */
+     세로가 맞으므로 font-size 를 줄이지 말고 scaleX 로만 좁힌다.
+     12 4회차 — **부호가 뒤집혔다.** 이모지 폰트가 바뀌어 같은 font-size 에서 잉크가 40x45(종횡비 .89)로
+     들어오는데 «넓다» 던 시절의 scaleX(.86) 이 그대로 남아 34x45(−26%)까지 좁혔다(비평가 3인 −20~26% 일치).
+     ref 44~46 을 되찾는 값으로 다시 역산한다 — 세로는 여전히 맞으므로 font-size 는 건드리지 않는다. */
   .sm-b .gem{left:14px;top:59px;width:56px;height:56px;line-height:56px;
-    text-align:center;font-size:46px;transform:scaleX(.86)}
+    text-align:center;font-size:52px;transform:scaleX(.983)}
   /* FREE 뱃지 — 면 **왼쪽 바깥으로** 튀어나온 리본형 태그(면 좌단보다 4px 왼쪽부터).
      라틴 대문자만이라 0.93 잉크비가 안 맞는다(측정표 §9) → 캡비 0.72 로 14/0.72 ≈ 19. */
   /* ⚠ 실측 «분홍 면 73x33» 은 검정 외곽선 **안쪽** 값이다. box-sizing:border-box 로 33 을 주면
@@ -6832,7 +6872,9 @@
        (local x70 에서 분홍이 y18/33 까지만 남는다 — 2회차 비평 D ②). */
     clip-path:polygon(0 0,77px 0,77px 4px,68px 39px,0 39px)}
   /* ref 는 글자 둘레에 1~2px 짙은 외곽이 있다(2회차 비평 D ⑥). 스트로크는 안팎 절반씩이라 3px. */
-  .sm-b1 .fr i{font-size:19px;line-height:33px;color:#F7EB73;letter-spacing:.5px;
+  /* 12 4회차 — 잉크 42x13 (ref 49x14). 다른 텍스트와 같은 126 가로 미보정분이다.
+     fs 19->20 으로 높이를 세우고, 그래도 모자란 폭은 scaleX 로 채운다(라틴 대문자라 자간이 아니라 자폭 문제). */
+  .sm-b1 .fr i{font-size:20px;line-height:33px;position:relative;top:3px;color:#F7EB73;letter-spacing:.5px;transform:scaleX(1.109);
     -webkit-text-stroke:3px #A6392F;paint-order:stroke fill}
 
   /* ── «터치하여 닫기» — 09 와 **완전히 같은 앵커**(ref 잉크하단 2164, 탭바 상단 2160) ──
@@ -6850,7 +6892,9 @@
      움직이면 측정표 값 우선» 대로 상자를 5px 내려 잉크를 원래 자리로 되돌린다. */
   .sm-close{position:absolute;left:0;right:0;bottom:min(170px,calc(100% - 1475px));text-align:center;
     font-size:44px;line-height:44px;font-weight:900;color:#fff}
-  .sm-close i{transform:scaleX(.96)}
+  /* 12 4회차 — .96 → 1.130. 위 `.sm-band>i` 와 같은 126 가로 미보정분(256→217, −15.2%).
+     세로는 126 이 이미 잡아 놨다(잉크 중심 Δ0) — 여기서는 가로만 되돌린다. */
+  .sm-close i{transform:scaleX(1.130)}
 
   /* ==========================================================================
      17 스탯업 보너스 팝업 연출 — 측정표 docs/measure/17-스탯업보너스팝업.md
