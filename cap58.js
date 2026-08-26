@@ -124,6 +124,53 @@ function pwLaunch(){
     throw e;
   });
 }
+/* 28회차 — 정답표 시계 교정. rAF 마다 R 채널이 STEP 씩 오르는 계단 막대를 좌상단에 얹고,
+   (계단번호, DOM Date.now()) 를 기록한 뒤 그 구간의 스크린캐스트 프레임에서 막대 색을 되읽어
+   «그 그림이 어느 시각의 DOM 인가» 를 낸다. 판독은 `probe58ad.py` 가 한다(같은 manifest 형식).
+   ⚠ 교정 프레임은 **씬 캡처 전에** 찍고 곧바로 `buf` 를 비우므로 채점용 프레임에는 안 들어간다.
+   ⚠ JPEG q55 로 오므로 계단 폭을 16(16계단)으로 넉넉히 잡고, 판독은 60×60 블록 평균을 쓴다. */
+async function calibrate(page, cdp, buf){
+  const os = require('os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cap58lag-'));
+  fs.mkdirSync(path.join(dir, 'f'), { recursive:true });
+  const mark = buf.length;
+  const rows = await page.evaluate(async () => {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:200px;z-index:99999;pointer-events:none;background:rgb(0,0,0)';
+    document.body.appendChild(bar);
+    const out = []; let i = 0; const t0 = Date.now();
+    await new Promise(res => {
+      const step = () => {
+        bar.style.background = `rgb(${(i % 16) * 16},0,0)`;
+        out.push([i, Date.now()]); i++;
+        if(Date.now() - t0 < 900) requestAnimationFrame(step); else res();
+      };
+      requestAnimationFrame(step);
+    });
+    bar.remove();
+    return out;
+  });
+  await page.waitForTimeout(260);                    /* 마지막 막대 프레임이 도착할 시간 */
+  const man = { rows, step:16, cycle:16, frames:[] };
+  buf.slice(mark).forEach((f, n) => {
+    const fp = path.join(dir, 'f', String(n).padStart(4,'0') + '.jpg');
+    fs.writeFileSync(fp, Buffer.from(f.data, 'base64'));
+    man.frames.push({ n, t:f.t, file:fp });
+  });
+  fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(man));
+  const { execFileSync } = require('child_process');
+  const out = execFileSync('python3', [path.resolve(__dirname, 'probe58ad.py'), path.join(dir, 'manifest.json')],
+                           { encoding:'utf8' });
+  fs.rmSync(dir, { recursive:true, force:true });
+  const m = /P58AD_LAG_LO=([\d.]+) P58AD_LAG_MED=([\d.]+) P58AD_LAG_HI=([\d.]+) P58AD_N=(\d+)/.exec(out);
+  if(!m) throw new Error('probe58ad.py 가 lag 을 못 냈다 — ' + out.trim().split('\n').pop());
+  const lag = { lo:+m[1], med:+m[2], hi:+m[3], n:+m[4] };
+  console.log(`  · 정답표 시계 교정(probe58ad, 프레임 ${lag.n}장): 프레임이 자기 타임스탬프보다 ` +
+              `**${lag.lo.toFixed(0)}~${lag.hi.toFixed(0)}ms 낡았다**(중앙 ${lag.med.toFixed(0)}ms). ` +
+              `정답표는 이 밴드로 적는다.`);
+  return lag;
+}
+
 global.__capLog = {};
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
@@ -156,6 +203,25 @@ global.__capLog = {};
      이것이고, rAF 기준 게이트에는 정지 구간이 없다(probe58f). 핸드오프 ⓓ «캡처 절차 재검» 이 이 줄이다. */
   await cdp.send('Page.startScreencast', { format:'jpeg', quality:55, maxWidth:1080, maxHeight:2280, everyNthFrame:1 });
   await page.waitForTimeout(300);
+
+  /* ── 28회차 신설 — **정답표 시계 교정** (`probe58ad`) ──
+     25·26차 비평이 2인 공통으로 «HUD 카운터가 정답표보다 한 계단 늦다» 를 냈다. 26회차의
+     `probe58z` 가 «크레딧 − 실도착 = 0»(전 프레임)을 내서 «카운터↔도착» 축은 이미 맞은 것이
+     확인됐으므로, 남은 축은 **«도착↔정답표»** — 즉 여기다.
+
+     아래 정답표는 `#goldN`.textContent 를 rAF 마다 찍어 두고 프레임 시각 T 에 «T 이하의 마지막
+     표본» 을 고른다(22회차). 그 규칙은 «타임스탬프 T 인 프레임의 그림 = 시각 T 의 DOM» 일 때만
+     옳은데, 합성 프레임이 그리는 것은 **마지막 커밋 시점의 DOM** 이라 T 보다 낡았다.
+     `probe58ad` 로 rAF 계단 막대를 심어 직접 재니 **4회 전부 · 프레임 117/117 이 rAF 한 칸보다
+     낡았다**(바닥 56~68ms, 부하가 걸리면 488ms). 정답표가 그만큼 «앞선» 값을 적고 있었고,
+     비평가는 그것을 정직하게 «카운터가 늦다» 로 읽었다.
+
+     교정은 «한 값을 빼기» 로는 안 된다 — lag 이 부하에 따라 3~15 rAF 칸으로 흔들린다.
+     이 실행의 lag 분포(p10~p90)를 재서 정답표를 **밴드**로 적는다. 밴드 안에서 값이 안 바뀌면
+     종전처럼 한 값이고, 바뀌면 «a~b» 로 적어 «이 프레임은 둘 중 하나» 임을 알린다. */
+  let LAG = null;
+  try { LAG = await calibrate(page, cdp, buf); } catch(e){ console.log('  ⚠ 시계 교정 실패 — ' + e.message); }
+  buf.length = 0;
 
   const run = async (tag, trigger, waitMs) => {
     /* 트리거 «직전» 프레임을 기준으로 남긴다. 화면이 정지해 있으면 스크린캐스트가 프레임을 안 내보내므로
@@ -284,8 +350,18 @@ global.__capLog = {};
        없느니만 못하다. */
     const at = ms => { let b = L[0]; for(const r of L){ if(r[0] <= ms) b = r; else break; } return b; };
     const T = (global.__capT && global.__capT[tag]) || [];
-    console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수): ` +
-      T.map(ms => ms + ':' + at(ms)[1] + '/' + at(ms)[2] + '/' + at(ms)[4]).join('  '));
+    /* 28회차 — 프레임은 자기 타임스탬프보다 lo~hi ms 낡았다(위 `calibrate` 참조).
+       그래서 «정답» 은 한 점이 아니라 [T−hi, T−lo] 구간의 값 집합이다. 구간 안에서 값이
+       안 변하면 종전과 똑같이 한 값으로 적히고, 변할 때만 «a~b» 로 적힌다 —
+       비평가가 «한 계단 어긋났다» 를 결함으로 올리는 것을 여기서 막는다. */
+    const band = (ms, col) => {
+      if(!LAG) return at(ms)[col];
+      const a = at(ms - LAG.hi)[col], b = at(ms - LAG.lo)[col];
+      return String(a) === String(b) ? a : a + '~' + b;
+    };
+    console.log(`  · ${tag} 정답표(t=트리거 기준 ms · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수` +
+      (LAG ? ` · 프레임이 타임스탬프보다 ${LAG.lo.toFixed(0)}~${LAG.hi.toFixed(0)}ms 낡아 **밴드**로 적는다` : '') + '): ' +
+      T.map(ms => ms + ':' + band(ms,1) + '/' + band(ms,2) + '/' + band(ms,4)).join('  '));
   }
   /* 24회차 — **부분 중복 페인트** 검사를 캡처의 일부로 붙인다.
      위 «⚠ 중복 페인트» 는 프레임 «전체» 가 바이트 동일할 때만 운다. 그런데 CDP 스크린캐스트는
