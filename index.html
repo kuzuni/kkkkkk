@@ -258,7 +258,12 @@
   /* 베벨은 상단 4px 하이라이트 · 하단 4px 그림자로 «비대칭» 이고,
      좌·우 셰브론 사선 «안쪽» 에도 5px 하이라이트가 돈다.
      ::before = 사선까지 도는 하이라이트 층, ::after = 그 안쪽 본체 */
-  .ptitle::before{content:'';position:absolute;inset:3px;z-index:-2;background:rgb(96,82,69);
+  /* 10회차 — 좌·우 «꼭짓점» 의 검정 외곽선만 얇았다. 외곽 실루엣은 ref 231 / 우리 232 로 맞는데
+     밝은 면(테두리 포함)의 최대폭이 ref 221 / 우리 226 이었다 = 꼭짓점 검정이 ref 5~6px / 우리 3~4px.
+     비평가 Y·Z 가 임계 5단계 스윕으로 독립 확인했고(양쪽 다 임계를 안 타 JPEG 번짐이 아니다),
+     Z 는 픽셀 직독까지 붙였다(좌 ref x150~154 5px / cap x150~152 3px · 우 ref x375~380 6px / cap x378~381 4px).
+     → **폭을 줄이면 안 된다**(외곽이 맞아 있다). 가로 inset 만 3 → 5 로 키워 검정을 두껍게 한다. */
+  .ptitle::before{content:'';position:absolute;inset:3px 5px;z-index:-2;background:rgb(96,82,69);
     clip-path:polygon(17px 0,calc(100% - 17px) 0,100% 50%,calc(100% - 17px) 100%,17px 100%,0 50%)}
   .ptitle::after{content:'';position:absolute;inset:3px 8px;z-index:-1;
     background:linear-gradient(rgb(98,82,69) 0 4px,#443B36 4px calc(100% - 4px),#635145 calc(100% - 4px));
