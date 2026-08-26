@@ -44,6 +44,99 @@ const seek = (p, ms) => p.evaluate(t => {
 
 async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screenshot({ clip }); }
 
+/* ── §13 (6회차 신설) «진폭 단일 기준» 측정기 ───────────────────
+   5회차 채점의 U·V 공통 1순위는 «광택마다 세기가 제각각 — 소환 탭만 쥬시하고 재화 탭은 정지 화면»
+   이었다(U 실측 Δ루마: 소환 헤더 +35~66 vs 재화 카드 +9~19 vs 마일리지 글로우 +10).
+   그래서 «연출이 있는가» 가 아니라 **«얼마나 센가» 를 재는 게이트**를 만든다.
+
+   재는 법: 호스트 상자를 여러 위상에서 찍어 **열(column)별 평균 루마**를 구하고,
+   같은 열의 위상 간 최대−최소 중 **가장 큰 값**을 그 호스트의 «광택 피크 Δ» 로 삼는다.
+   가로로 지나가는 띠는 신호가 x 축에 실리므로 열 평균이 그대로 띠의 세기가 된다.
+   ⚠ 잴 때는 `--jz-amp:0` 으로 **숨쉬기·들썩·둥실을 멈춘다** — 185px 짜리 상자 아트가 4% 커지는
+      것만으로도 열 평균이 광택보다 크게 흔들려 측정이 무의미해진다(광택은 `--jz-amp` 를 안 탄다). */
+async function lumaOf(p, ms, clip, store) {
+  await seek(p, ms);
+  /* ⚠ Playwright 의 screenshot 은 Buffer 를 돌려준다(Puppeteer 의 `encoding:'base64'` 옵션이 없다).
+     Node 쪽에서 base64 로 바꿔 넣어야 페이지의 <img> 가 디코딩한다. */
+  const b64 = (await p.screenshot({ clip })).toString('base64');
+  return await p.evaluate(async ([src, keep]) => {
+    const img = new Image();
+    await new Promise((res, rej) => {
+      img.onload = res; img.onerror = () => rej(new Error('PNG 디코딩 실패'));
+      img.src = 'data:image/png;base64,' + src;
+    });
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    const n = c.width * c.height, L = new Float32Array(n);
+    for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
+    if (keep) { window.__jzBase = L; return null; }
+    const B = window.__jzBase;
+    if (!B || B.length !== n) return -1;
+    /* 분위를 **97** 로 잡는다. 99.5 는 «검은 외곽선 위를 지나는 흰 심» 같은 극단 픽셀만 집어
+       (재화 카드 70 · 평생배너 66) 띠 자체의 세기를 대표하지 못했다. 띠는 호스트의 18~22% 를
+       덮고 그 중심부가 7~8% 이므로 97 분위가 정확히 «띠 중심의 밝기» 다. */
+    const h = new Int32Array(257);
+    for (let i = 0; i < n; i++) h[Math.min(256, Math.round(Math.abs(L[i] - B[i])))]++;
+    let acc = 0; const want = n * 0.97;
+    for (let v = 0; v <= 256; v++) { acc += h[v]; if (acc >= want) return v; }
+    return 256;
+  }, [b64, !!store]);
+}
+const PHASES = [0, 700, 1400, 2100, 2800, 3500, 4200, 4900];
+/* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 **픽셀별 루마 차 99.5 분위**의 최대값.
+   ⚠ 첫 시도 두 개를 버리고 여기 왔다 —
+     ① 위상끼리 비교: **표본 앨리어싱**. 재화 카드는 띠가 한 열을 스치는 시간이 0.34s 인데
+        표본 간격이 0.7s 라 «띠가 없는 두 프레임» 만 비교하는 열이 생겼다(4·5회차 비평가가 겪은 함정).
+        → 기준선을 **그 띠만 `opacity:0` 으로 끈 프레임**으로 잡아 해결.
+     ② 열 평균: 띠가 `skewX(-16deg)` 라 **호스트가 높을수록 한 열에서 띠가 차지하는 세로 비율이 준다**
+        (카드 450px → 기울기로 x 가 146px 흐른다 = 띠 폭과 맞먹는다). 그래서 같은 알파인데도
+        헤더 26.6 / 카드 전면 7.8 처럼 «높이 때문에» 갈렸다. 비평가는 픽셀로 읽으므로 픽셀로 잰다. */
+async function bandPeak(p, hostSel, testSel, muteSel) {
+  const clip = await p.evaluate(s => {
+    const e = document.querySelector(s);
+    if (!e) return null;
+    e.scrollIntoView({ block: 'center' });
+    const r = e.getBoundingClientRect();
+    const x = Math.max(0, Math.round(r.x)), y = Math.max(0, Math.round(r.y));
+    const w = Math.min(Math.round(r.width), innerWidth - x), h = Math.min(Math.round(r.height), innerHeight - y);
+    return (w > 4 && h > 4) ? { x, y, width: w, height: h } : null;
+  }, hostSel);
+  if (!clip) return null;
+  await p.waitForTimeout(120);
+  const css = (id, sel) => p.evaluate(([i, x]) => {
+    let e = document.getElementById(i);
+    if (!x) { if (e) e.remove(); return; }
+    if (!e) { e = document.createElement('style'); e.id = i; document.head.appendChild(e); }
+    e.textContent = x + '{opacity:0!important}';
+  }, [id, sel]);
+  await css('jz122mute', muteSel || '');
+  await css('jz122ref', testSel);          /* 기준선 — 이 띠만 끈다 */
+  await lumaOf(p, 0, clip, true);
+  await css('jz122ref', '');
+  let peak = 0;
+  for (const t of PHASES) { const v = await lumaOf(p, t, clip); if (v > peak) peak = v; }
+  await css('jz122mute', '');
+  return peak;
+}
+/* 6회차 목표 = 모든 광택 피크 Δ루마 30 한 벌. 합성·마스크로 가장자리가 뭉개지므로 폭을 넉넉히. */
+/* p97 는 표본 위상에 따라 ±3 흔들린다(같은 설정 재실행 24~30 관측) — 폭을 ±30% 로 둔다. */
+const AMP_LO = 22, AMP_HI = 40;
+async function ampCheck(p, hosts) {
+  await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
+  const out = [];
+  for (const [label, hostSel, testSel, muteSel] of hosts) {
+    const v = await bandPeak(p, hostSel, testSel, muteSel);
+    out.push(label + ' ' + (v == null ? '없음' : v.toFixed(0)));
+    ok(v != null && v >= AMP_LO && v <= AMP_HI,
+      '광택 피크 Δ루마 ' + label + ' = ' + (v == null ? '측정 불가' : v.toFixed(0))
+      + ' (' + AMP_LO + '~' + AMP_HI + ')');
+  }
+  await p.evaluate(() => document.getElementById('shopw').style.removeProperty('--jz-amp'));
+  console.log('    · ' + out.join(' | '));
+}
+
 (async () => {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -182,9 +275,18 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
     const w = sel => { const e = document.querySelector(sel); return e ? e.getBoundingClientRect().width : 0; };
     chk('#shopList .shp-card>.chd', '::after', w('#shopList .shp-card>.chd'));
     chk('#shopList .shp-card>.cbg>.jzp', '::after', w('#shopList .shp-card>.cbg'));
+    chk('#shopList .shp-card>.cfr', '::after', w('#shopList .shp-card>.cbg'));
     return out;
   });
   ok(runs.length === 0, '소환 탭 스윕이 카드를 완전히 통과' + (runs.length ? ' — ' + runs.join(' , ') : ''));
+
+  /* ── §13 진폭 단일 기준 — 소환 탭 (6회차 신설) ─────────────── */
+  console.log('§13 광택 피크 Δ루마 한 벌 — 소환 탭');
+  const SUM_HD = '#shopList .shp-card>.chd::after', SUM_BD = '#shopList .shp-card>.cbg>.jzp::after',
+        SUM_FR = '#shopList .shp-card>.cfr::after';
+  await ampCheck(p, [['소환 헤더', '#shopList .shp-card>.chd', SUM_HD, SUM_FR],
+                     ['소환 본문', '#shopList .shp-card>.cbg', SUM_BD, SUM_FR],
+                     ['소환 전면', '#shopList .shp-card>.cfr', SUM_FR, SUM_HD + ',' + SUM_BD]]);
 
   /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
      의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
@@ -311,7 +413,9 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
   const cons = await p.evaluate(() => ({
     /* ⚠ 의사요소(::after)의 애니메이션은 `el.getAnimations()` 에 안 잡힌다(subtree 옵션이 필요하다).
        여기서는 computed style 로 직접 묻는 쪽이 정확하다. */
-    sweep: [...document.querySelectorAll('#shopList .cn-cd:not(.done)')]
+    /* 6회차 — 띠의 호스트를 카드 상자에서 **테두리 레이어 `.fr` 의 안쪽(padding box)** 으로 옮겼다
+       (7-3-6 «광택이 검은 외곽선을 덮는다»). 검사 대상 선택자도 같이 옮긴다. */
+    sweep: [...document.querySelectorAll('#shopList .cn-cd:not(.done)>.fr')]
       .filter(c => getComputedStyle(c, '::after').animationName === 'jz122Sweep').length,
     all: document.querySelectorAll('#shopList .cn-cd:not(.done)').length,
     ring: [...document.querySelectorAll('#shopList .cn-cd>.bt[data-cnad]')]
@@ -331,9 +435,13 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
       const hostW = h.getBoundingClientRect().width;
       if (!(runPx + bandW >= hostW)) out.push(sel + pseudo + ' ' + Math.round(runPx + bandW) + ' < ' + Math.round(hostW));
     };
-    chk('#shopList .cn-cd', '::after');
+    chk('#shopList .cn-cd>.fr', '::after');
     chk('#shopList .cn-rb>b', '::after');
+    chk('#shopList .cn-rb>.tl.l>s', '::after', '#shopList .cn-rb>b');
+    chk('#shopList .cn-rb>.tl.r>s', '::after', '#shopList .cn-rb>b');
     chk('#shopList .cn-a2', '::after');
+    chk('#shopList .cn-ml', '::after');
+    chk('#shopList .cn-hd', '::after');
     return out;
   });
   ok(runs2.length === 0, '재화 탭 스윕(카드·리본·평생배너)이 전부 완전히 통과'
@@ -357,10 +465,23 @@ async function shotAt(p, ms, clip) { await seek(p, ms); return await p.screensho
       has('#shopList .cn-ml>em', 'jz122Float'),
       has('#shopList #cnMove', 'jz122Ring2'),
       has('#shopList .cn-ml:not(.off)>.ex', 'jz122Ring2'),
+      /* 6회차(7-3-2·7-3-5) — 새로 채운 «정지 섬» 과 리본 꼬리도 같이 못 박는다 */
+      has('#shopList .cn-ml', 'jz122Sweep', '::after'),
+      has('#shopList .cn-hd', 'jz122Sweep', '::after'),
+      has('#shopList .cn-rb>.tl.l>s', 'jz122Sweep', '::after'),
+      has('#shopList .cn-rb>.tl.r>s', 'jz122Sweep', '::after'),
     ].filter(Boolean);
   });
   ok(zones.length === 0, '카드 밖 구역(배너·리본·평생배너·마일리지·이동/교환 버튼)도 전부 연출 보유'
     + (zones.length ? ' — 빠짐: ' + zones.join(' , ') : ''));
+
+  /* ── §13 진폭 단일 기준 — 재화 탭 (6회차 신설) ─────────────── */
+  console.log('§13 광택 피크 Δ루마 한 벌 — 재화 탭');
+  await ampCheck(p, [['재화 카드', '#shopList .cn-cd:not(.done)', '#shopList .cn-cd>.fr::after'],
+                     ['리본', '#shopList .cn-rb>b', '#shopList .cn-rb>b::after'],
+                     ['평생배너', '#shopList .cn-a2', '#shopList .cn-a2::after'],
+                     ['마일리지', '#shopList .cn-ml', '#shopList .cn-ml::after'],
+                     ['상품 밴드', '#shopList .cn-hd', '#shopList .cn-hd::after']]);
 
   const leak = await p.evaluate(() => {
     /* 앞선 절에서 d5 칸으로 스크롤해 뒀으므로 «지금 화면 안에 온전히 있는» 칸을 골라야 한다
