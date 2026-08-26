@@ -83,7 +83,13 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   ok(mod.partCap > 320 && mod.partCap <= 480,
      '파티클 상한 PART_CAP = ' + mod.partCap + ' (지시서 ⑤ «320 → 480 까지만» 범위 안)');
   ok(mod.trailN === 14, '트레일 링버퍼 TRAIL_N = 14 · 표본 22ms = 0.31s 궤적 (실측 ' + mod.trailN + ')');
-  ok(mod.boltLife === 0.42, '번개 수명 BOLT_LIFE = 0.42s (코어 0.15 + 잔광 램프 · 실측 ' + mod.boltLife + ')');
+  /* 14회차 — 상수 하나를 «== 0.42» 로 못 박아 두었더니 **게이트가 결함을 강제하고 있었다**:
+     AS#4·AT[2] 가 공통으로 «창(640ms)의 뒤 절반이 공백» 을 지적했는데 그 원인이 이 수명이다
+     (LESSONS 114-(5)(2) 와 같은 종류의 사고 — 그때는 «2단 지연 ≥0.10s» 가 같은 짓을 했다).
+     상수값이 아니라 **요구**를 잰다: 코어 구간(0.15s)보다 길고, 80ms 캡처 8장 창을 채울 것. */
+  ok(mod.boltLife > 0.15 && mod.boltLife >= 0.56 && mod.boltLife <= 0.80,
+     '번개 수명 BOLT_LIFE ' + mod.boltLife + 's — 코어 0.15 초과 · 80ms×8 캡처 창(0.64s)을 덮는다 ' +
+     '(0.56~0.80. 14회차 AS#4·AT[2] «뒤 절반 공백» 회귀 방지)');
   ok(mod.ringsArr && mod.ringCap === 44, 'rings 배열 + 상한 44 (실측 ' + mod.ringCap + ')');
   ok(mod.w[0] === 4 && mod.w[1] === 6 && mod.flat === 0.62,
      '선 굵기 토큰 2종(FX_W 4 · FX_W2 6) · 눕는 링 비율 FX_FLAT 0.62 = 독 장판과 같은 발자국');
