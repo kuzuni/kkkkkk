@@ -234,7 +234,8 @@ const inter = (a, b) => {
       /* ── 11·12회차(2차 폴리시 라운드) 신설 게이트 ── */
       /* ① 접합선은 «받침 밑동»(바닥선 + 40, 구간이 얕으면 구간 전체)에 고정 — 프레임 무관 관계.
          11회차엔 «계단 밑변» 에 걸었는데 계단이 아래 앵커로 바뀌며 그 자리가 프레임마다 움직인다. */
-      const wantGd = Math.min(PLINTH_OFF, r.mid.t - r.floorEl.t);
+      /* 13회차 — 구간이 얕으면 접합선 띠(13px)가 수반 위로 넘어가므로 sh−14 로 한 번 더 묶는다 */
+      const wantGd = Math.min(PLINTH_OFF, Math.max(0, (r.mid.t - r.floorEl.t) - 14));
       ck(`[${H}] ① 지면 접합선 = 받침 밑동 (바닥선 +${PLINTH_OFF}, Δ ≤ 1px)`,
         Math.abs(r.ground.t - (r.floorEl.t + wantGd)) < 1.0,
         `접합선 ${r.ground.t.toFixed(1)} vs 바닥선 ${r.floorEl.t.toFixed(1)} + ${wantGd.toFixed(1)}`);
