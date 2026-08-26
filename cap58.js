@@ -269,11 +269,25 @@ global.__capLog = {};
           const f0 = (typeof fxFlies !== 'undefined') && fxFlies.find(f => f.ui);
           if(f0) spawn = Math.round(Date.now() - (performance.now() - f0.st) - t);
         }
+        /* 30회차 — **알약 펀치 배율을 정답표에 넣는다.** 29차 2인 공통 ②-2 «골드 +23~24% vs
+           다이아 +4~6% (임계 3종 부호 동일)» 는 게임이 아니라 **시간축 앨리어싱**이었다:
+           `p58pz2` 로 rAF 마다 rect 를 재니 두 알약 다 정확히 **+22.0%** 까지 부푼다. 그런데
+           비트 간격이 113~198ms · 봉우리 체류가 ≈95ms 라, 100ms 리듬 표본은 위상에 따라
+           «관측 최대» 가 골드 2.4~22.0% · 다이아 0.5~22.0% 로 갈린다 — 두 알약의 비트 열이
+           서로 엇물려 있어(16회차b 의 도착 깍지) **같은 리듬이 한쪽만 골짜기에서 표본**한다.
+           임계를 흔들어도 이건 안 잡힌다(공간이 아니라 시간에서 생기는 오차다). 13회차가 이미
+           같은 오진을 겪고 «자체 덤프로 기각» 했는데 회차가 바뀌자 그대로 되돌아왔다.
+           → 값을 주면 다시는 이걸로 감점하지 않는다. `--` 는 그 알약이 안 부푼 프레임이다. */
+        const pz = k => { try{ const p = fxPill(FXCUR[k]); if(!p) return '--';
+            const el = (typeof fxLit !== 'undefined' && fxLit.get(p)) ? fxLit.get(p).p : p;
+            const m = (el.style.transform||'').match(/scale\(([\d.]+)\)/);
+            return m ? ('x' + (+m[1]).toFixed(2)) : '--'; }catch(_){ return '--'; } };
         out.push([Date.now() - t,
                   (document.getElementById('goldN')||{}).textContent || '',
                   (document.getElementById('diaN')||{}).textContent || '',
                   (typeof fxFlies !== 'undefined') ? fxFlies.filter(f => f.ui).length : 0,
-                  document.querySelectorAll('#fxl .fx-fly').length]);
+                  document.querySelectorAll('#fxl .fx-fly').length,
+                  pz('gold'), pz('dia')]);
         await nf();
       }
       return { rows:out, spawn };
@@ -391,6 +405,11 @@ global.__capLog = {};
     console.log(`  · ${tag} 정답표(t=트리거 기준 ms, **프레임이 그린 DOM 시각** · 스폰 지연 ${SP}ms · 골드/다이아/비행아이콘수` +
       (LAG ? ` · 프레임은 타임스탬프보다 ${LAG.lo.toFixed(0)}~${LAG.hi.toFixed(0)}ms 낡았고 슬롯이 그만큼 당겨져 있다` : '') + '): ' +
       T.map((ms, i) => (TT[i] != null ? TT[i] : ms) + ':' + band(ms,1) + '/' + band(ms,2) + '/' + band(ms,4)).join('  '));
+    /* 30회차 — 알약 펀치 배율(위 `pz` 주석). 두 알약의 **사양 피크는 둘 다 x1.22** 이고,
+       프레임에 x1.02 로 찍히는 것은 그 프레임이 비트 사이 골짜기라서다. */
+    console.log(`  · ${tag} 알약 펀치 배율(골드/다이아 · **둘 다 사양 피크 x1.22**. 프레임에 작게 찍히면` +
+      ` 그 슬롯이 비트 골짜기인 것이지 진폭이 작은 것이 아니다 — 이걸로 «씬·재화마다 진폭이 다르다» 를 쓰지 마라): ` +
+      T.map((ms, i) => (TT[i] != null ? TT[i] : ms) + ':' + band(ms,5) + '/' + band(ms,6)).join('  '));
   }
   /* 24회차 — **부분 중복 페인트** 검사를 캡처의 일부로 붙인다.
      위 «⚠ 중복 페인트» 는 프레임 «전체» 가 바이트 동일할 때만 운다. 그런데 CDP 스크린캐스트는
