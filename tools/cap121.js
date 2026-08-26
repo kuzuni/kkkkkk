@@ -61,11 +61,27 @@ const shot = (p, name, clip) => p.screenshot({ path: path.join(OUT, `121-${R}-${
     window.__idleFrozen = true;
     document.getAnimations().forEach(a => { a._css = a.playState; try { a.pause(); } catch (_) {} });
   });
+  /* ⚠⚠ 7회차 2차 — **음수 시각을 감아 주지 않아 «위상 0%» 한 장이 거짓이었다.**
+     `phaseOf` 가 돌려주는 타임라인 시각은 `위상% × thb − thd` 다. `--thd` 가 양수인 카드
+     (= 목록 0번이 아닌 카드. 아레나가 그렇다)는 낮은 위상에서 이 값이 **음수**가 된다
+     (아레나 0% → −370ms). 그대로 `currentTime` 에 넣으면 애니메이션이 «시작 전(before) 구간» 에
+     걸려 **키프레임이 아예 적용되지 않은 맨 상태**(scale 1 · translate 0)로 찍힌다 —
+     0% 키프레임(`scale:1 var(--thsqA)`)과 다른 그림이다.
+     7회차 비평가 N 이 「arn-1(0%)과 arn-6(96%)은 CSS 상태가 같은데 잉크가 4px 어긋난다」로
+     이걸 잡아냈다(원인은 «8fps 프레임 재적합» 으로 지목했는데 그쪽은 아니다 — 캔버스 픽셀을
+     직접 재 보면 여섯 아이들 프레임 전부 `dy=16 · dh=257 · 잉크 y 22..272` 로 **완전히 동일**하다.
+     fill 모드는 프레임을 같은 상자에 늘려 담으므로 원본 높이 45/46 차이가 자리로 안 번진다).
+     `bobamp121` 은 처음부터 `while (v < 0) v += d` 로 감고 있었다 — 그래서 그 게이트만 옳았다.
+     주기 하나를 더해도 애니메이션은 무한 루프라 같은 위상이다. */
   const seek = ms => p.evaluate(t => {
     document.getAnimations().forEach(a => {
       if (a._css !== 'running') return;
       const d = a.effect && a.effect.getComputedTiming().duration;
-      if (typeof d === 'number' && d > 0) { try { a.currentTime = t % (d * 4); } catch (_) {} }
+      if (typeof d === 'number' && d > 0) {
+        let v = t % (d * 4);
+        while (v < 0) v += d;                       /* 음수 = «시작 전» 구간 → 한 주기씩 앞으로 감는다 */
+        try { a.currentTime = v; } catch (_) {}
+      }
     });
   }, ms);
   await freeze();
