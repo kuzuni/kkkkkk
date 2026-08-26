@@ -6869,30 +6869,39 @@
      ref 우상 30.5 · 우하 40.5 vs 우리 47.0(CSS 48, 편향 −1) ⇒ ref 실효 우상 ≈31 · 우하 ≈41.
      좌측 두 모서리는 ref 에서 **핑크 리본에 가려** 잡히지 않는다(rms 17~135) — 측정 못 한 값은
      건드리지 않고 48 을 유지한다. 순서는 tl tr br bl. */
-  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:48px 37px 37px 48px;background:#A2927B;
+  /* 15회차 — P 가 네 모서리를 각각 재서 «ref 는 tr≈41 · br≈42 · bl≈42 로 거의 균일» 이라고 판정했고
+     M 도 «우상·우하 둘 다 ≈40 대칭» 이었다. 13회차의 비대칭 32/42 는 내 tr 측정(30.5) 이 혼자 낮았던 탓이다.
+     ⇒ 네 모서리 **42** 로 통일. */
+  .bls-note{left:29px;top:41px;width:900px;height:100px;border-radius:42px;background:#A2927B;
     display:flex;align-items:center;justify-content:center}
-  /* ref 문구 24자 코어 597(자당 24.9) — 우리 문구도 24자로 맞추고 자폭만 scaleX 로 좁힌다 */
-  .bls-note>i{font-size:36px;color:#fff;-webkit-text-stroke:8px #4A3B2C;paint-order:stroke fill;transform:scaleX(.856)}
+  /* ref 흰 코어 597 (15회차 재실측). scaleX .856→.81 로 좁혔더니 502(−16%)가 돼 .963 으로 되돌렸다 */
+  /* 15회차 — P·Q 둘 다 «잉크 높이 ref 33 / 우리 31» ⇒ fs 36→38, 폭은 scaleX 로 되돌린다 */
+  .bls-note>i{font-size:38px;color:#fff;-webkit-text-stroke:8px #4A3B2C;paint-order:stroke fill;transform:scaleX(.963);-webkit-font-smoothing:antialiased}
 
   /* §5 Lv 알약 + 진행바 (알약이 진행바 좌단을 덮는다) */
   /* 13회차 3차분 — K 138 · M 139 · N 139 · 자체 135 로 «우리(134)가 좁다» 4자 일치. 우단 243 → 248 */
   .bls-lv{left:50px;top:181px;width:139px;height:68px;box-sizing:border-box;z-index:2;
-    border:5px solid #000;border-radius:34px;background:#553E2E;
+    /* 15회차 — P: ref 는 완전 스타디움(h/2=34)이 아니라 r≈26 이다(dx0/8/18 에서 span 30/54/65) */
+    border:5px solid #000;border-radius:26px;background:#553E2E;
     display:flex;align-items:center;justify-content:center}
-  .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill}
+  /* 15회차 — P «흰 코어 ref 57 / 우리 49(−14%)» · Q «56 vs 49(−12.5%)» 일치. 높이는 25 vs 26 이라 폭만 넓힌다 */
+  .bls-lv>i{font-size:33px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
+    transform:scaleX(1.14);-webkit-font-smoothing:antialiased}
   /* 12회차 — I ①-1: ref 트랙 좌단 역산 233(알약 우단 248 아래로 15px 파고듦) vs 우리 250. J 도 독립으로
      «3/4 채움 종료 ref 748 / 우리 752» 를 잡았다. 좌측으로 16px 늘려 알약 뒤로 넣는다(우단 925 유지). */
   .bls-bar{left:167px;top:191px;width:698px;height:48px;box-sizing:border-box;
     border:6px solid #000;border-radius:24px;background:#81839A;overflow:hidden}
   .bls-bar>s{position:absolute;left:0;top:0;bottom:0;background:#FDB419;border-radius:26px 0 0 26px}
   .bls-bar>i{position:absolute;left:0;right:0;top:0;bottom:0;line-height:36px;text-align:center;
-    font-size:30px;color:#FCFEB3;-webkit-text-stroke:7px #2D2100;paint-order:stroke fill}
+    /* 15회차 — «3/4» 잉크 높이: J(12회차) 22 vs ref 19 · N 22 vs 19 · Q 22 vs 19 로 3자 일치 ⇒ fs 30→26.
+       fs 를 내리면 폭도 같이 줄어(45→40) 폭만 scaleX 로 되돌린다 */
+    font-size:26px;transform:scaleX(1.12);-webkit-font-smoothing:antialiased;color:#FCFEB3;-webkit-text-stroke:7px #2D2100;paint-order:stroke fill}
 
   /* §6 축복 카드 3열 — 카드 297×447, gap 17, 좌우 인셋 15 */
   /* 13회차 3차분 — K·N·자체 실측 3자 일치: ref 카드 폭 **298** · 거터 **17**(우리 300·15).
      그리드 pitch 315 는 그대로고 카드만 2px 좁힌다(x 76/391/706 = ref). */
-  .bls-cards{left:15px;top:270px;width:930px;height:447px;
-    display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+  .bls-cards{left:16px;top:270px;width:928px;height:447px;
+    display:grid;grid-template-columns:repeat(3,1fr);gap:17px}
   /* 10회차: 카드 모서리 반경 24 → 46. ref 좌상단 아크를 4점(y806 x95.5 · y812 x88.5 · y820 x82.5 · y830 x78.5)
      으로 원 방정식에 넣으면 R=44.8/45.2/45.9/48.3, 좌하단 3점도 45.9/49.1 → **R≈46**.
      (2차 비평 D «18→36» 의 방향이 맞았고 폭은 그보다 더 컸다) */
@@ -6938,7 +6947,7 @@
   /* 13회차 — 칩 모서리 반경: K «ref 24 / 우리 19» · L «ref 25 / 우리 22» · 자체 r34.py «ref 28 / 우리 20
      (CSS 22, 편향 −2 ⇒ ref 실효 30)». 셋 다 «우리가 작다» 로 같은 방향이고 값만 24·25·30 으로 갈려
      가운데인 26 을 쓴다. */
-  .bls-c .tm{left:41px;top:250px;width:219px;height:97px;border-radius:28px;background:#926A24;
+  .bls-c .tm{left:41px;top:250px;width:219px;height:98px;border-radius:28px;background:#926A24;
     box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center;
     /* ref 는 «시계+숫자» 덩어리가 칩 중심(225)에서 5px 왼쪽(중심 220)에 앉는다 — 그만큼 오른쪽에 여백 */
     box-sizing:border-box;padding-right:20px}
@@ -6982,7 +6991,7 @@
   /* 1회차: 잉크 w184 (ref 161) → scaleX .875 */
   /* 13회차 — K «152x32 vs 125x28, 탭 중심 대비 6px 위» · L «153x32 vs 125x28» 일치.
      자체 순백 코어 ref 152x31(중심 y1228) / 우리 125x28(중심 y1221.5) ⇒ 높이 +10% · 폭 +18% · 6px 아래. */
-  .bls-btab>i{position:relative;top:6px;font-size:37px;color:#fff;-webkit-text-stroke:9px #000;
+  .bls-btab>i{position:relative;top:6px;font-size:38px;color:#fff;-webkit-text-stroke:9px #000;
     paint-order:stroke fill;transform:scaleX(.96);-webkit-font-smoothing:antialiased}
   /* 11회차 — 비평 G ③: 탭이 바 위로 튀어나온 «노출 립» 이 ref 59~57 인데 우리 55.
      자체 col x900 덤프: ref 바 상단 1254 · 하단 1403 (h150) vs 우리 1252..1403(h152) → 바만 2px 내리고 2px 줄인다 */
@@ -7001,16 +7010,16 @@
        ref  x138..252 (115) × y1274..1390 (117), 중심 (195, 1332)
        우리 x78..249 (172) × y1268..1392 (125), 중심 (163.5, 1330)  ⇒ 폭 **+50%**, 좌로 32px 치우침.
      `.ic`(이모지)와 `.ch`(초록 셰브론)는 형제라 «그룹 스케일» 이 안 된다. 그래서 **바 로컬 원점 기준의
-     같은 그룹 변환**(translate(60.7,9.93) · scale(.669,.849))을 각 요소의 자기 원점으로 환산해 나눠 준다:
-       요소가 로컬 (L,T) 에 있을 때  dx = 60.7 + .669·L − L ·  dy = 9.93 + .849·T − T
-     비율이 가로 .669 / 세로 .849 로 다른 이유는 ref 아트가 거의 정사각(115×117)인데 우리 조합은 1.38:1 이라서다.
+     같은 그룹 변환**(15회차 최종: translate(58.3, 7.9) · scale(.706,.748))을 각 요소의 자기 원점으로 환산해 나눠 준다:
+       요소가 로컬 (L,T) 에 있을 때  dx = 58.3 + .706·L − L ·  dy = 7.9 + .748·T − T
+     비율이 가로 .706 / 세로 .748 로 다른 이유는 ref 아트가 거의 정사각(115×117)인데 우리 조합은 1.38:1 이라서다.
      아트가 들어오면 이 변환을 지우고 이미지 bbox 를 115×117 @(138,1274) 로 잡으면 된다. */
   .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px;
-    transform-origin:0 0;transform:translate(60.04px,9.02px) scale(.669,.849)}
+    transform-origin:0 0;transform:translate(57.71px,7.62px) scale(.706,.748)}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
   .bls-bn .ch{left:125px;top:86px;width:46px;height:48px;
-    transform-origin:0 0;transform:translate(19.33px,-3.06px) scale(.669,.849)}
+    transform-origin:0 0;transform:translate(21.55px,-12.54px) scale(.706,.748)}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
@@ -7049,7 +7058,8 @@
 
   /* §9 팝업 «바깥» — 초록 프로모 스트립(간격 21) + 닫기 X(간격 31) */
   /* 12회차 — 스트립 모서리 반경: G ref≈17 · H ref≈20 · I ref≈18~19 로 3인이 «우리(30)가 크다» 로 수렴 → 20 */
-  .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:252px;box-sizing:border-box;
+  /* 15회차 — M «249 vs 252» · N «+2» · Q «+3» 3자 일치 */
+  .bls-promo{position:relative;flex:none;margin-top:21px;width:952px;height:249px;box-sizing:border-box;
     border:5px solid #000;border-radius:20px;overflow:hidden;
     background:linear-gradient(180deg,#0DCB69 0,#07C065 100%)}
   .bls-promo>*{position:absolute}
@@ -7086,12 +7096,18 @@
      ⇒ 높이 115→118 · top 113→112(바깥 1640..1757 정렬) · 테두리 6→8. */
   /* 라벨: 잉크 ref 81x45 cy1695 / 우리 76x39 cy1691 ⇒ fs 49→56 · padding-bottom 10→6(4px 아래) */
   .bls-promo .gb{left:625px;top:112px;width:267px;height:118px;box-sizing:border-box;padding-bottom:1px;
-    border:8px solid #000;border-radius:28px;cursor:pointer;
+  /* 15회차 — 비평 P ②1순위 2건.
+     ① 모서리 반경: ref 인셋(dy2/5/9 = 33/25/19) ⇒ r≈46. 우리 CSS 28(측정 27) ⇒ 28→46.
+     ② ref 는 검정 테두리 «안쪽» 에 밝은 초록(178,249,143) 림이 좌·우 7px 씩 있다(우리는 상단 흰 하이라이트뿐). */
+    border:8px solid #000;border-radius:46px;cursor:pointer;
     background:linear-gradient(180deg,#ADFF83 0,#77E536 22%,#4DBB18 100%);
-    box-shadow:inset 0 8px 0 rgba(255,255,255,.5);
+    box-shadow:inset 0 8px 0 rgba(255,255,255,.5),inset 7px 0 0 #B2F98F,inset -7px 0 0 #B2F98F;
     font-size:53px;font-weight:900;color:#fff;-webkit-text-stroke:9px #1B5A08;paint-order:stroke fill}
   /* 비평 A·B 합의: 붉은 원 지름 106 → ref 117~118. 블록이 12px 커진 만큼 padding-bottom 을 줄여 팝업 top 345 유지 */
-  .bls-x{flex:none;position:relative;top:9px;margin:18px 0 auto;width:122px;height:122px;box-sizing:border-box;border:2px solid #8A2530;
+  /* 15회차 — 스트립을 252→249 로 줄이면 #blsw 세로 중앙정렬이 3px 움직여 **팝업 전체가 1.5px 내려간다**.
+     흐름 높이를 그대로 두려고 margin 18→21 로 3px 되돌리고(=팝업 y345 유지),
+     Q 가 잡은 «스트립 하단 → X 상단 ref 32 / 우리 27» 은 **레이아웃에 영향 없는** relative top 9→11 로 맞춘다. */
+  .bls-x{flex:none;position:relative;top:11px;margin:21px 0 auto;width:122px;height:122px;box-sizing:border-box;border:2px solid #8A2530;
     border-radius:50%;background:#E04D57;cursor:pointer;line-height:118px;text-align:center;
     font-size:72px;font-weight:900;color:#FAF0F1;
     /* 13회차 3차분 — M·N 일치: ref 글리프 중심 x541.5(원 중심 +2) / 우리 537(−2.5). 크기 50x51 vs 51x51 은 일치.
