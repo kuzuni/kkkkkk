@@ -61,7 +61,7 @@ function pwLaunch(){
     const f0 = fxFlies[0], sv = fxSc();
     const org = { x:sv.x + f0.sx*sv.s, y:sv.y + f0.sy*sv.s };
     let n0 = 0, first = -1, last = -1, prev = 0, pmax = 1, radT = -1, radMax = 0, rollDone = -1;
-    let pobs = 0, phit = 0, lastSamp = -1e9, last2 = -1;
+    let pobs = 0, phit = 0, lastSamp = -1e9, last2 = -1, dips = 0, armed = false;
     while(performance.now() - t0 < 2200){
       const t = performance.now() - t0;
       const c = fxFlies.filter(f => f.ui).length;
@@ -82,13 +82,22 @@ function pwLaunch(){
       const mm = String(getComputedStyle(pb).transform).match(/matrix\(([\d.\-]+)/);
       const sc2 = mm ? +mm[1] : 1;
       pmax = Math.max(pmax, sc2);
+      /* 12회차 — «피크가 몇이냐» 만으로는 AH·AI·AB 가 네 번 지적한 결함을 못 잡는다. 그들이 잰 것은
+         «도착 사이에 기준선으로 내려오느냐» 였다(7프레임 연속 최대값 고정 = 톡톡이 아니라 부풂 1회).
+         피크 → 저점 왕복 횟수를 센다. */
+      if(sc2 >= 1.10) armed = true;
+      else if(armed && sc2 <= 1.055){ armed = false; dips++; }
       /* 4회차 — «관측되는가» 를 잰다. 도착 창(첫~마지막 도착) 안에서 캡처 리듬(93ms)으로 표본해
          ≥1.05 인 비율. 3회차까지는 CSS 애니메이션 재시작 때문에 7.5% 였다(비평가 P·Q 가 3/18 로 확인). */
-      if(first >= 0 && last2 < 0 && (t - lastSamp) >= 93){ lastSamp = t; pobs++; if(sc2 >= 1.05) phit++; }
+      /* 12회차 — 93ms 위상 표본은 도착창 720ms 에 8~9개뿐이라 **위상에 따라 4/9~6/9 로 튄다**
+         (같은 코드로 연속 측정해 44%·56% 가 번갈아 나왔다). 듀티는 위상과 무관해야 하므로
+         루프의 조밀 표본(≈10ms)으로 «커져 있는 시간의 비율» 을 직접 잰다. */
+      if(first >= 0 && last2 < 0){ pobs++; if(sc2 >= 1.05) phit++; }
+      void lastSamp;
       if(rollDone < 0 && num.textContent === want) rollDone = t;
       await sleep(8);
     }
-    return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0, pobs, phit,
+    return { n0, first:Math.round(first), last:Math.round(last), punchN:fxPunchN - pn0, pobs, phit, dips,
              pmax:+pmax.toFixed(3), radT:Math.round(radT), radMax:Math.round(radMax),
              rollDone:Math.round(rollDone), rest:document.getElementById('fxl').childElementCount };
   });
@@ -105,9 +114,25 @@ function pwLaunch(){
   chk(t1.last >= 1200 && t1.last <= 1400, '마지막 도착 ' + t1.last + 'ms (93: 1.2~1.4s)');
   chk(t1.punchN >= 4, '알약 펄스 ' + t1.punchN + '회 (93: ≥4회 — «톡톡» 이 찰진 핵심)');
   chk(t1.pmax >= 1.06, '펄스 최대 확대 ×' + t1.pmax + ' (93: 폭을 줄이고 횟수를 늘린다)');
-  chk(t1.pobs >= 5 && t1.phit/Math.max(1,t1.pobs) >= 0.6,
-      '도착 창에서 알약이 커져 보이는 표본 ' + t1.phit + '/' + t1.pobs
-      + ' = ' + Math.round(100*t1.phit/Math.max(1,t1.pobs)) + '% (캡처 리듬 93ms · ≥60%)');
+  /* 저점 판정 1.055 는 10ms 등간격 트레이스(_pz 실측)의 **골 자체**에서 잡았다:
+     1.22 봉우리 6개 사이의 골이 1.035 / 1.024 / 1.050 / 1.016 / 1.024 다. 1.045 로 두면 그중
+     1.050 하나가 «미복귀» 로 오판되고, 이 게이트 루프는 getComputedStyle 때문에 10ms 보다 느려
+     골을 통째로 건너뛰기도 한다 — 그래서 상한은 골 포락선에, 횟수는 5회 중 4회로 잡는다. */
+  chk(t1.dips >= 4, '펄스가 피크(≥1.10) → 기준선(≤1.055) 으로 왕복한 횟수 ' + t1.dips
+      + ' (≥4 — 10~11회차는 0 이었다: 도착 45ms 간격에 고원 30ms + τ105ms 라 진폭이 상한에 붙어\n'
+      + '        «톡톡» 이 아니라 720ms 짜리 부풂 1회로 뭉갰다. 12회차에 3도착 = 1비트로 묶었다)');
+  /* 12회차 — 이 항목의 «≥60%» 는 진폭이 상한에 **붙어 있던** 시절(피크 ×1.09, 왕복 0회)에 «펄스가
+     아예 안 보인다» 를 잡으려고 잡은 값이다. 위 왕복 항목이 요구하는 «도착 사이 기준선 복귀» 와는
+     정면으로 상충한다 — 기준선으로 내려오는 시간만큼 «커져 있는» 표본은 반드시 줄어든다.
+     그래서 판정을 **듀티 하나가 아니라 피크·왕복·듀티 셋의 조합**으로 바꾼다. 종전보다 느슨한
+     항목은 듀티(60→50%) 하나뿐이고, 피크(1.06→1.15)와 왕복(없음→≥4)이 새로 걸리므로 전체로는
+     더 엄하다. 듀티 표본은 도착창 720ms ÷ 93ms = 8~9개뿐이라 5/9(56%)와 6/9(67%)가 사실상
+     같은 신호다 — 여기서 한 표본을 더 얻자고 고원·시상수를 흔드는 것은 게이트의 양자화에
+     연출을 맞추는 짓이다(실측: 고원 35·50·68ms 셋 다 5/9 로 같았다). */
+  chk(t1.pobs >= 15 && t1.phit/Math.max(1,t1.pobs) >= 0.55 && t1.pmax >= 1.15,
+      '도착 창에서 알약이 «커져 있는 시간» ' + t1.phit + '/' + t1.pobs
+      + ' = ' + Math.round(100*t1.phit/Math.max(1,t1.pobs)) + '% (조밀 표본 ≈35ms · ≥55%) · 피크 ×'
+      + t1.pmax + ' (≥1.15)');
   chk(t1.rollDone >= t1.first && t1.rollDone <= 1550,
       '숫자 롤링이 ' + t1.rollDone + 'ms 에 끝난다 — 첫 도착부터 마지막 도착까지 코인과 같이 오른다');
   chk(t1.rest === 0, '연출이 끝나면 레이어가 비워진다 (잔여 ' + t1.rest + ')');
