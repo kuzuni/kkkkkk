@@ -53,6 +53,14 @@ const SCREENS = [
   /* 8회차 — r7 비평가 O·P 가 ② 2·4·5순위로 독립 일치한 19 자리들 */
   { k: '19-프로필', ref: 'docs/ref/19-프로필-팝업.jpg', steps: ['#profBtn'],
     sels: ['.pf-msn>i', '#pfw .pf-tgl .lb>i', '#pfw .pf-tgl .bn>i'] },
+  /* 14회차 — r13 비평가 Z 의 ② 1순위(«10 「소환」 탭 라벨은 폭은 맞는데 높이만 +20.7%»)를
+     같은 마스크로 다시 재려고 넣었다. `.stab` 은 96 이 만든 **공용 서브탭**이라 여기 하나를
+     고치면 03·06·13·23·47 이 같이 움직인다 — 반드시 이 표로 부호를 확인하고 손댄다. */
+  { k: '10-상점', ref: 'docs/ref/10-상점-팝업-소환-탭.jpg', steps: ['.tab[data-t="shop"]'],
+    sels: ['.shp-cats .stab>i'] },
+  /* 같은 공용 부품을 쓰는 다른 두 화면 — «10 한 화면만 어긋난 것인가, 부품이 어긋난 것인가» 를 가른다. */
+  { k: '03-던전', ref: 'docs/ref/03-던전-팝업.jpg', steps: ['.tab[data-t="adv"]'], sels: ['.stabs .stab>i'] },
+  { k: '23-훈련', ref: 'docs/ref/23-훈련-팝업.jpg', steps: ['.tab[data-t="grow"]'], sels: ['.stabs .stab>i'] },
 ];
 
 const NOISE_TH = 18;
