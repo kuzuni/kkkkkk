@@ -1771,24 +1771,59 @@
      (3px = 행 높이의 2.0%, 접힘 대비 1:49) 으로 같은 것을 말했다 → **진폭 8→12px · 피크 36ms ·
      복귀 100ms(6프레임)** 로 둘 다 키웠다. 6회차 K 가 «16px 은 높이 점프» 라 한 것과 지금 «8px 은
      렌더 노이즈» 사이의 값이다. */
-  .ml-r.out{animation:mlOut .30s both;animation-delay:var(--mld,0ms);
+  .ml-r.out{animation:mlOut .30s linear both;animation-delay:var(--mld,0ms);
     pointer-events:none;position:relative;z-index:1}
-  /* 높이 커브 = **147(1−p)^1.6** — V·W 가 «꼬리가 감속이 아니라 +40% 재가속한다» 를 같은 수치로
-     독립 지적했다(186~258ms 0.417 → 279~291ms 0.583). 지수형으로 깔면 구간 속도가
-     0.85 → 0.75 → 0.70 → 0.64 → 0.53 → 0.44 → 0.33 → 0.29 → 0.10 **단조 하강**이라 재가속이 없다.
-     알파는 W-① 처방대로 12% 까지만 홀드하고 그 뒤 **등기울기 0.00379/ms** 로 깐다
-     (11회차는 한 키프레임 경계에서 기울기가 2.5배 튀었다). 내용 알파는 1 로 고정 —
-     상자 α × 내용 α 가 **곱해져** 실효값이 .053 까지 떨어지던 것이 V-④ 지적이다(«빈 판» 의 곱셈 재발). */
+  /* ★ 14회차 — 높이 커브를 **지수 감속 147(1−p)^1.6 → «등속 + 착지»** 로 바꿨다.
+     13회차가 남긴 세 문제(뒤쪽 110ms 가 잉크를 안 옮김 · 합산 상승 피크 1.44 · 틴트 식별 창 25ms)는
+     서로 «처방이 다른 지표를 깎는» 관계로 보고돼 있었다. 산수로 풀면 셋이 동시에 되는 자리가 있다.
+
+     **왜 지수형이 세 축을 동시에 깎고 있었나** — (1−p)^1.6 은 시작이 평균의 **1.32배**로 빠르고
+     끝이 0 으로 잦아든다. 합산 상승 피크는 «시작 속도 × 겹침» 이라 앞이 빠를수록 커지고(1.44),
+     그 대가로 뒤쪽이 느려져 **남는 행 3장이 마지막 110ms 동안 사실상 멈춘다** — «잉크가 안 움직인다» 의
+     정체는 삭제 카드가 작아서가 아니라 **살아있는 행이 감속해 버린 것**이다(잉크는 h² 라 어떤 커브를
+     써도 꼬리에서 작다 — 실제로 움직이는 잉크의 대부분은 «남는 행 3장 × 전면 불투명» 쪽이다).
+     ⇒ 앞을 늦추면 피크가 내려가고, 뒤를 살리면 죽은 꼬리가 없어진다. **같은 한 번의 수정**이다.
+
+     새 커브: `h = 147(1 − 1.0417u)` 를 u≤0.92 까지 **등속**으로 깔고, 마지막 8%(6.1px)만
+     2차 감속으로 착지시킨다(3회차 ⑨ «착지 감속» 요구는 유지). 피크/평균이 1.32 → **1.042** 로 내려가
+     합산 피크가 **1.44 → 1.27** 이 되고(8회차가 «없애야 할 값» 으로 잡은 1.30 아래로 처음 내려왔다),
+     구간 속도는 0.567 ×9 → 0.44 → 0.16 **단조 하강**이라 재가속은 여전히 0 이다.
+
+     **홀드는 넣지 않는다 — 시도했고 실측으로 기각했다.** Y 의 «‹이 2통이 대상› 을 읽을 시간 25ms»
+     에 답하려고 0~30ms 를 h·scale 정지로 뒀더니 셋이 동시에 나빠졌다: 합산 피크 1.139 → **1.266**
+     (홀드만큼 나머지 구간이 빨라진다) · 재가속 0 → **+0.634**(정지에서 등속으로 올라서는 단차가
+     그대로 «속도 증가» 로 잡힌다. V·W 가 11회차에 «단조 하강» 으로 만들어 둔 값이다) · 정지 구간
+     40 → 60ms(8회차 P-① «정지 행» 의 재발). 그러면서 식별 창은 25 → 30ms, **1.4 프레임 늘 뿐**이었다.
+     그리고 애초에 홀드가 필요 없다 — **식별 창을 늘리는 건 등속화 자체**다. 지수형은 첫 60ms 에
+     37px(25%)을 쏟아 카드가 곧바로 작아졌지만, 등속에서는 «h>100 ∧ α>0.7» 인 «크고 진한» 구간이
+     **77ms → 92ms(+19%)** 로 늘어난다(h=100 도달 76.7 → 92.1ms · α=.7 도달 117 → 122ms).
+     정지가 아니라 «천천히 줄어드는» 형태로 읽을 시간을 준다.
+     림 플래시도 홀드가 필요 없다 — 13회차가 확정한 «scale 로 나눠 선언» 이 이미 화면 두께를 지킨다.
+     총 길이는 **320ms 그대로**(수명 .30s 불변 → JS `MLDEL_DUR` 무변경).
+
+     ⚠ 같이 고친 결함 — `mlOut` 은 35% 에 키프레임이 있는데 `mlOutIn` 은 33% 에 있어서, 그 사이에서
+     두 커브가 갈라져 **카드가 슬롯보다 최대 2.55px 크게** 렌더됐다(t≈100ms, 하변 초과 2.5px).
+     13회차 기록의 «잘림 0 · 카드=슬롯» 은 키프레임 «위» 에서만 잰 값이었다. 신설 `tools/probe92.js`
+     (10~20ms 간격 전수 표본)로 잡았다. → **두 keyframes 의 퍼센트 목록을 글자까지 같게** 맞췄다.
+     둘은 `scale = height ÷ 147` 로 묶여 있으므로 **반드시 같이 고친다.**
+
+     알파는 20ms 만 홀드하고 100% 까지 **한 구간**으로 간다 — 중간 키프레임을 아예 안 적으면
+     CSS 가 선형 보간하므로 기울기가 **정확히** 균일해진다(0.00357/ms, 13회차 0.00381 보다 완만).
+     내용 알파는 1 로 고정 — 상자 α 와 곱해져 «빈 판» 이 재발하던 것이 V-④ 지적이다. */
   @keyframes mlOut{
-    0%{opacity:1;height:147px;margin-bottom:17px;animation-timing-function:linear}
-    12%{opacity:1;height:124px;margin-bottom:14px;animation-timing-function:linear}
-    25%{opacity:.852;height:101px;margin-bottom:12px;animation-timing-function:linear}
-    35%{opacity:.739;height:84px;margin-bottom:10px;animation-timing-function:linear}
-    50%{opacity:.568;height:60px;margin-bottom:7px;animation-timing-function:linear}
-    62%{opacity:.432;height:42px;margin-bottom:5px;animation-timing-function:linear}
-    74%{opacity:.295;height:26px;margin-bottom:3px;animation-timing-function:linear}
-    86%{opacity:.159;height:12px;margin-bottom:1px;animation-timing-function:linear}
-    93%{opacity:.080;height:5px;margin-bottom:1px;animation-timing-function:linear}
+    0%{opacity:1;height:147px;margin-bottom:17px}
+    6.67%{opacity:1}
+    10%{height:131.69px;margin-bottom:15.23px}
+    20%{height:116.38px;margin-bottom:13.46px}
+    30%{height:101.06px;margin-bottom:11.69px}
+    40%{height:85.75px;margin-bottom:9.92px}
+    50%{height:70.44px;margin-bottom:8.15px}
+    60%{height:55.13px;margin-bottom:6.38px}
+    70%{height:39.81px;margin-bottom:4.60px}
+    80%{height:24.50px;margin-bottom:2.83px}
+    90%{height:9.19px;margin-bottom:1.06px}
+    92%{height:6.13px;margin-bottom:.71px}
+    96%{height:1.53px;margin-bottom:.18px}
     100%{opacity:0;height:0;margin-bottom:0}}
   /* 내용은 상자보다 «먼저» 나간다 — 지우기만 하면 잘리는 대상이 글자 → 행 버튼으로 옮겨 갈 뿐이고
      (E-③·F-④), 다 지운 뒤에는 «내용 없는 분홍 슬래브» 가 140ms 남는다. 옆으로 빼면 둘 다 없어진다.
@@ -1829,7 +1864,7 @@
      → **등방 `scale`** 로 바꿨다. 종횡비가 보존되므로 왜곡이 **0 이 되는 것이 정의상 보장**된다.
      둘의 처방(«α 를 scale 에 붙여 일찍 지워라»)은 «빈 판» 을 도로 만든다 — 10회차에 0 으로 만든 값이다.
      등방 scale 은 **왜곡도 0, 빈 판도 0** 이라 둘을 맞바꾸지 않는 유일한 답이다. */
-  .ml-r.out>.ml-in{animation:mlOutIn .30s both;animation-delay:var(--mld,0ms)}
+  .ml-r.out>.ml-in{animation:mlOutIn .30s linear both;animation-delay:var(--mld,0ms)}
   /* scale 계수 = 위 `mlOut` 의 height ÷ 147 (둘은 반드시 같이 고친다).
      림 플래시 창을 9%/25% → **12%/33%**(36ms/99ms)로 넓혔다 — 수명을 400→300 으로 줄이면서
      퍼센트를 그대로 둬 1.6프레임으로 쪼그라들어 있었다(V-①). 진폭도 안쪽 5→12px 에 더해
@@ -1844,23 +1879,24 @@
        가로는 1.9% 뿐이라 보이는 «면» 이 5.65 → 6.2:1(+10%)로 눌렸다(X-② · Y-② 독립 일치).
        테두리 0 키프레임(62%)도 없앴다 — 그 시점 렌더 두께가 이미 1.7px 이라 «소거» 가 눈에 0 기여였고,
        이후 134ms(42%)를 «테두리 있는 카드 3장 사이의 무테두리 판» 으로 보냈다(X-④ · Y-②). */
-    0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    12%{transform:scale(.847);box-shadow:0 0 0 13px #FFF7EC,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    25%{transform:scale(.687);box-shadow:0 0 0 8.7px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    33%{transform:scale(.612);box-shadow:0 0 0 9.8px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    50%{transform:scale(.408);box-shadow:0 0 0 14.7px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    62%{transform:scale(.286);box-shadow:0 0 0 21px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    74%{transform:scale(.177);box-shadow:0 0 0 34px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    86%{transform:scale(.082);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2;
-      animation-timing-function:linear}
-    93%{transform:scale(.034);animation-timing-function:linear}
+    /* scale = 위 `mlOut` 의 height ÷ 147. **퍼센트 목록이 글자까지 같아야 한다** — 13회차는
+       35%(mlOut) vs 33%(여기)로 어긋나 그 사이에서 카드가 슬롯보다 2.55px 커졌다(14회차 실측).
+       바깥 링은 «보이는 두께» 가 의미인 값이라 **scale 로 나눠 선언**한다(13회차 확정, LESSONS ⑩).
+       화면 목표: 6 → **13**(피크 t=30ms, 이웃 3행의 2.2배) → 8.5 → 6 이후 유지.
+       90% 부터는 6 을 그대로 둔다 — 그 시점 카드가 9.2px 짜리 조각이라(α .11) 6/s = 96px 은
+       «링» 이 아니라 화면을 덮는 판이 된다(13회차도 86% 에서 같은 이유로 6 으로 떨궜다). */
+    0%{transform:scale(1);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
+    10%{transform:scale(.895833);box-shadow:0 0 0 14.51px #FFF7EC,inset 0 0 0 5px #FFFBF2}
+    20%{transform:scale(.791667);box-shadow:0 0 0 10.74px #241A12,inset 0 0 0 5px #FFFBF2}
+    30%{transform:scale(.687500);box-shadow:0 0 0 8.73px #241A12,inset 0 0 0 5px #FFFBF2}
+    40%{transform:scale(.583333);box-shadow:0 0 0 10.29px #241A12,inset 0 0 0 5px #FFFBF2}
+    50%{transform:scale(.479167);box-shadow:0 0 0 12.52px #241A12,inset 0 0 0 5px #FFFBF2}
+    60%{transform:scale(.375000);box-shadow:0 0 0 16.00px #241A12,inset 0 0 0 5px #FFFBF2}
+    70%{transform:scale(.270833);box-shadow:0 0 0 22.15px #241A12,inset 0 0 0 5px #FFFBF2}
+    80%{transform:scale(.166667);box-shadow:0 0 0 36.00px #241A12,inset 0 0 0 5px #FFFBF2}
+    90%{transform:scale(.062500);box-shadow:0 0 0 6px #241A12,inset 0 0 0 5px #FFFBF2}
+    92%{transform:scale(.041667)}
+    96%{transform:scale(.010417)}
     100%{transform:scale(0)}}
   /* 카드 좌단 세로 악센트 밴드 ref 28px(x115..142) → 25px. 레퍼런스에선 «읽음» 마커지만
      우리 게임엔 읽음 개념이 없으므로(UI-REFERENCE 69 기능) **수령 여부** 마커로 쓴다. */
