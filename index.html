@@ -2862,8 +2862,11 @@
   #shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block;font-style:normal;
     font-weight:900;text-decoration:none;transform-origin:50% 50%}
 
-  /* 카드 스크롤 리스트 — 위 여백 59(ref 191→250), 아래는 카테고리 탭바 위까지 */
-  .shp-list{position:absolute;left:0;right:0;top:0;bottom:154px;padding-top:59px;
+  /* 카드 스크롤 리스트 — 아래는 카테고리 탭바 위까지.
+     3회차: 위 여백을 «HUD 하단에서 59» 가 아니라 **단일 변환 절대값**으로 다시 잡았다.
+     ref 카드1 top 250 → 프레임 250−84 = 166 이고 페이지 top 은 104 라 padding-top = 62
+     (59 는 «ref HUD 하단 191 → 프레임 104» 라는 화면별 보정을 섞은 값이라 3px 위로 떴다). */
+  .shp-list{position:absolute;left:0;right:0;top:0;bottom:154px;padding-top:62px;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .shp-list::-webkit-scrollbar{width:0;height:0}
 
@@ -2885,17 +2888,25 @@
   .shp-card>.chd{position:absolute;left:7px;top:7px;width:966px;height:97px;
     background:var(--hd);border-radius:19px 19px 0 0;box-sizing:border-box;
     box-shadow:inset 0 6px 0 var(--hr);text-align:center;line-height:97px}
-  .shp-card>.chd>i{font-size:47px;color:#fff;-webkit-text-stroke:6px #000;paint-order:stroke fill;
-    transform:scaleX(.9) translateY(2px);letter-spacing:-1px}
+  /* 헤더 제목 — 3회차 실측: ref 잉크(흰 채움) 182×41, 2회차 구현 147×38(폭 −19% 높이 −7%).
+     높이는 font-size 로(47→51), 폭은 scaleX 로(.9→1.03) 채운다. */
+  .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:12px #000;paint-order:stroke fill;
+    transform:scaleX(1.03) translateY(4px);letter-spacing:-1px}
   /* 검정 테두리 레이어 */
   .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
     box-sizing:border-box;pointer-events:none}
   .shp-card>*{position:absolute}
 
   /* 상자 아트(이모지 근사) — 아트 리소스 부재로 색·명암 감점 예상.
-     이모지 사이드베어링 탓에 글리프가 박스 중심보다 우측으로 밀려 left 를 24px 당겨 중심 x≈289 로 맞춘다 */
-  .shp-card .cart{left:79px;top:150px;width:274px;height:204px;font-size:162px;line-height:204px;
-    text-align:center;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+     3회차 «아트 자리 규칙» 적용 — 나중에 스프라이트로 갈아 끼우기만 하면 되도록
+     **레퍼런스 bbox 를 정확히 차지**하게 만든다. 픽셀 실측(ref/캡처 동일 마스크):
+       ref 잉크 dx101..374 dy149..352 = **274×204**, 중심 (237.5, 250.5)  ← 측정표 §2 #3 과 일치
+       2회차 구현 잉크 = 177×176 (폭 −35% · 높이 −14%), 중심 dx217
+     이모지는 정사각 글리프라 274×204(가로가 긴 상자)를 한 축만으로는 못 채운다 →
+     font-size 로 **높이**를 맞추고 `transform:scaleX()` 로 **폭**을 채운다.
+     122 의 상시 연출은 개별 속성(`scale`/`translate`/`rotate`)만 쓰므로 `transform` 칸은 비어 있다 — 충돌 없음. */
+  .shp-card .cart{left:99px;top:160px;width:274px;height:204px;font-size:188px;line-height:204px;
+    text-align:center;transform:scaleX(1.334);filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
 
   /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
@@ -2914,7 +2925,9 @@
     background:#373C4D;overflow:hidden}
   .shp-card .cbar>.trk>i{position:absolute;left:0;top:0;bottom:0;border-radius:13px;
     background:linear-gradient(180deg,#FEC721,#FFB514)}
-  .shp-card .cbar>b{position:absolute;left:53px;right:0;top:0;bottom:0;text-align:center;
+  /* 3회차: 경험치 글자는 «Lv 알약에 안 가리는 오른쪽 구간» 이 아니라 **트랙 전체**의 가운데다.
+     ref 잉크 중심 dx269.5 ≈ 안쪽 트랙(116..418) 중심 267 / 구현은 left:53 탓에 293.5 로 26px 우측이었다. */
+  .shp-card .cbar>b{position:absolute;left:3px;right:3px;top:0;bottom:0;text-align:center;
     line-height:32px;font-size:20px;color:#F3F3F2;transform:scaleX(.85);letter-spacing:-1px;z-index:2}
 
   /* 소환 버튼 3개 — 공통 3단 밴드 */
@@ -2928,25 +2941,33 @@
      .sub 23) → r 이 .207 / .231 / **.261** 로 벌어져 있었다. em 기준이면 셋 다 같은 비율이 된다. */
   .shp-card .cbtn>u{position:absolute;left:0;right:0;text-align:center;color:#fff;white-space:nowrap;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;z-index:2}
-  .shp-card .cbtn>.lab{top:24px;height:30px;line-height:30px;font-size:29px;transform:scaleX(.86)}
-  /* 인셋 패널(비용 행) */
-  .shp-card .cbtn>.pan{position:absolute;left:29px;right:29px;top:76px;height:37px;border-radius:15px;
+  /* 3회차 실측: ref «10회 소환» 잉크 112×25(b1)·112×24(b2), 2회차 구현 94×23·95×24 → 폭 −16%.
+     top 24→21 은 b2·b3 전용 보정(ref b2 라벨 중심 dy299.5 vs 구현 302.5). b1 은 아래 `.b1>.lab` 가 덮는다. */
+  .shp-card .cbtn>.lab{top:21px;height:30px;line-height:30px;font-size:31px;transform:scaleX(.95)}
+  /* 인셋 패널(비용 행) — 3회차: 측정표 §2 #19 는 카드기준 dy326 = 버튼기준 **64** 인데 76 이라 12px 낮았다.
+     ref 세로단면(dx788, b3)에서도 패널 밴드가 dy325..367 로 나와 같은 결론. 숫자 행도 같이 12px 올린다. */
+  .shp-card .cbtn>.pan{position:absolute;left:29px;right:29px;top:64px;height:37px;border-radius:15px;
     background:linear-gradient(180deg,var(--p1),var(--p2));z-index:1}
-  .shp-card .cbtn>.cost{top:82px;height:26px;line-height:26px;font-size:26px;transform:scaleX(.9);
-    letter-spacing:-1px}
-  .shp-card .cbtn>.cost em{display:inline;font-size:26px;-webkit-text-stroke:0;vertical-align:-2px}
+  /* 3회차: 비용 숫자는 버튼 중앙이 아니라 **젬 오른쪽**에 앉는다 — ref 중심 dx595.5(b2)·836.5(b3)
+     = 버튼 좌단 기준 둘 다 119.5 (버튼 중앙 104 보다 +15.5). left 31 로 그 중심을 만든다.
+     크기도 ref 82×22 vs 구현 53×19 (폭 −35%) 라 font-size 26→30 · scaleX .9→1.2 로 채운다. */
+  .shp-card .cbtn>.cost{left:31px;right:0;top:66px;height:26px;line-height:26px;font-size:30px;
+    transform:scaleX(1.2);letter-spacing:-1px}
+  .shp-card .cbtn>.cost em{display:inline;font-size:30px;-webkit-text-stroke:0;vertical-align:-2px}
   /* 시안 AD 버튼 */
   .shp-card .b1{left:720px;top:146px;width:200px;height:98px;border-radius:37px;
     --f1:#3DD5EC;--f2:#18B1D3;--ring:#53E6FA;--lip:#0DA2CA}
   .shp-card .b1>.lab{top:14px}
-  .shp-card .b1>.sub{top:48px;height:24px;line-height:24px;font-size:23px;color:#fff;
-    /* 126 ② — 6px 고정(fs23 = r .261). 전 화면에서 두 번째로 심한 «막힘 확실» 자리였다. */
+  /* 3회차 실측: ref «2/2» 잉크 46×21, 2회차 구현 35×16 (−24%) → font-size 23→30
+     (126 ② 의 em 기반 외곽선 토큰은 그대로 둔다 — 비율이 자동으로 따라온다) */
+  .shp-card .b1>.sub{top:48px;height:24px;line-height:24px;font-size:30px;color:#fff;
     -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;left:0;right:0;
     text-align:center;z-index:2}
   /* ▶AD 뱃지 — 시안 버튼 좌하단 코너 물림. 카드의 직속 자식이라 버튼 overflow:hidden 에 안 잘린다.
      측정표 §2 #15: 카드 좌상단 기준 (707,198) 65×53, −6° 회전 */
-  .shp-card>.adbadge{left:706px;top:198px;width:66px;height:53px;border-radius:12px;
-    background:linear-gradient(180deg,#E7A62B,#C26C16);border:5px solid #000;box-sizing:border-box;
+  /* 3회차: 바깥 65×53 은 맞지만 검정 테두리가 5px 라 금색 채움이 56×43(ref 51×41)으로 컸다 → 7px */
+  .shp-card>.adbadge{left:702px;top:200px;width:66px;height:53px;border-radius:12px;
+    background:linear-gradient(180deg,#E7A62B,#C26C16);border:7px solid #000;box-sizing:border-box;
     transform:rotate(-6deg);z-index:3;line-height:43px;text-align:center}
   .shp-card>.adbadge>i{font-size:23px;font-weight:900;color:#fff;
     -webkit-text-stroke:3px #000;paint-order:stroke fill;letter-spacing:-2px;transform:scaleX(.9)}
@@ -2961,8 +2982,11 @@
   .shp-card .cbtn.rich{--f1:#FCEF31;--f2:#FEC01D;--ring:#F6EF3E;--lip:#D87C0D;--p1:#C39313;--p2:#C38607}
   .shp-card .cbtn.lack{--f1:#A8A8A8;--f2:#989898;--ring:#D2D2D2;--lip:#747474;--p1:#747474;--p2:#6C6C6C}
   .shp-card .cbtn.lack>.lab{color:#DADADA}
-  .shp-card .cbtn>.pan .gem{position:absolute;left:14px;top:-1px;font-size:36px;
-    -webkit-text-stroke:0;line-height:37px}
+  /* 3회차: ref 💎 잉크 37×37 (패널 좌단 +2, 패널 높이와 같은 37) / 구현 26×30 에 23px 우측이었다.
+     아이콘은 `<img class=cic>` 라 글꼴 크기가 아니라 **박스 크기**로 잉크를 맞춘다(아이콘 내부 여백 ≈33%). */
+  .shp-card .cbtn>.pan .gem{position:absolute;left:-10px;top:-12px;width:50px;height:50px;
+    -webkit-text-stroke:0;line-height:50px;text-align:center}
+  .shp-card .cbtn>.pan .gem>.cic{width:50px;height:50px;vertical-align:top}
   /* 부족한 값(가격 · 남은 무료 횟수)만 빨강. 충분하면 `.cbtn>u` 의 흰색을 그대로 쓴다. */
   .shp-card .cbtn.lack>.cost{color:#EB6D68;paint-order:stroke fill;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
