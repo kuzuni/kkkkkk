@@ -33,7 +33,26 @@ const SPOTS = [
   ['10 상점 «1,000»',     '.tab[data-t="shop"]', '#shopList .shp-card .cbtn>.cost', 6],
   /* 팝업 타이틀 — 4회차 2차에서 `--st-title` 을 .15 → .22 로 되올린 자리라 같이 지킨다 */
   ['22 팝업 타이틀 «퀘스트»','.side .ibtn[data-pop="quest"]', '#mtitle', 10],
+  /* 9회차 — ③ 에서 스트로크를 «올린» 자리들. 여기서는 «옛 값» 이 4회차 이전 고정 px 가 아니라
+     **9회차 직전 값**이다(레일 2.32 · 19 라벨 4 · 「마을」 4). 즉 이 세 줄의 판정은
+     «옛 고정 px 보다 열렸나» 가 아니라 **«올린 뒤에도 카운터가 살아 있나»** 를 본다 —
+     회복 배율이 1.0 미만으로 내려가는 것은 정상이고, 새 값이 0 이 되면 절벽이다. */
+  ['02 레일 «승급전»',       null, '#sideL .ibtn[data-pop="promo"] .sl', 2.32, 'alive'],
+  ['02 레일 «축복»',         null, '#sideL .ibtn[data-pop="bless"] .sl', 2.32, 'alive'],
+  ['19 프로필 탭 «초상화»',   '#profBtn', '#pfw .pf-tab.t2>i', 4, 'alive'],
+  ['19 프로필 «해금 미션»',   '#profBtn', '#pfw .pf-msn>i', 4, 'alive'],
+  ['02 «마을»',              null, '#botleft .ubtn[data-util=town] .ul', 4, 'alive'],
 ];
+
+/* 판정 방향 —
+ *   'open'  (기본) 4회차가 고정 px 를 비율 토큰으로 «내린» 자리. 새 값이 옛 값보다 1.2배 넓어야 한다.
+ *   'alive' 9회차가 ③ 때문에 «올린» 자리. 넓어질 리가 없으므로 **절벽에 안 떨어졌는지**만 본다.
+ *
+ * 하한을 «자유 카운터의 몇 %» 로 잡으면 안 된다 — 위 'open' 4자리가 통과하는 지점이 각각
+ * 14% · 150% · 27% · 11% 로 흩어져 있어(글리프마다 자유 카운터가 다르다) 비율에는 공통 기준이 없다.
+ * 대신 **통과하는 자리들의 절대 면적 최솟값**을 쓴다: 10 상점 «1,000» 8.3 · 52 «우편» 8.9 가
+ * 이 디자인이 «열려 있다» 고 인정한 하한선이므로 **8.0 px²** 로 둔다. */
+const FLOOR_ABS = 8.0;
 
 const probe = (page, sel, oldSw) => page.evaluate(async ({ sel, oldSw }) => {
   const src = document.querySelector(sel);
@@ -118,13 +137,13 @@ const probe = (page, sel, oldSw) => page.evaluate(async ({ sel, oldSw }) => {
   const browser = await launch(chromium);
   const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
   const rows = [];
-  for (const [name, opener, sel, oldSw] of SPOTS) {
+  for (const [name, opener, sel, oldSw, dir] of SPOTS) {
     await page.goto(URL);
     await page.waitForTimeout(700);
     try { await page.click(opener, { timeout: 3000 }); } catch (_) {}
     await page.waitForTimeout(700);
     const r = await probe(page, sel, oldSw);
-    if (r) rows.push({ name, ...r });
+    if (r) rows.push({ name, dir: dir || 'open', ...r });
     else console.log('  (건너뜀 — 자리를 못 찾음) ' + name);
   }
   await browser.close();
@@ -139,12 +158,14 @@ const probe = (page, sel, oldSw) => page.evaluate(async ({ sel, oldSw }) => {
   let bad = 0, skip = 0;
   for (const r of rows) {
     const blind = r.free < 3;
-    const ok = !blind && r.now > r.before * 1.2;
+    const ok = !blind && (r.dir === 'alive' ? r.now >= FLOOR_ABS : r.now > r.before * 1.2);
     if (blind) skip++; else if (!ok) bad++;
     console.log('| ' + r.name + ' | ' + r.fs + ' | ' + r.oldSw + ' → ' + r.nowSw + ' | ' + r.free
       + ' | ' + r.before + ' | ' + r.now + ' | '
       + (blind ? '— **측정 불가**(스트로크 0 에서도 섬 없음 = 잣대가 이 글리프를 못 본다)'
-               : (r.before ? (r.now / r.before).toFixed(1) + '×' : '—') + (ok ? ' ✔' : ' **✗**')) + ' |');
+               : (r.dir === 'alive'
+                    ? r.now + ' px² (하한 ' + FLOOR_ABS + ')'
+                    : (r.before ? (r.now / r.before).toFixed(1) + '×' : '—')) + (ok ? ' ✔' : ' **✗**')) + ' |');
   }
   const judged = rows.length - skip;
   console.log('\nCOUNTER126 ' + (judged - bad) + '/' + judged + ' ' + (bad ? 'FAIL' : 'PASS')

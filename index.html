@@ -75,7 +75,13 @@
     --st-hud:.19;      /* HUD·대형 숫자(45px+) — 글자가 커서 같은 r 이라도 카운터 절대 면적이 크다 */
     --st-title:.22;    /* 팝업·카드 타이틀(33~45px) — 레퍼런스가 가장 두껍게 두르는 자리 */
     --st-body:.16;     /* 본문·버튼 라벨(25~33px) — fs26 바깥 2.08px. .175 부터 «1,000» 이 무너진다 */
-    --st-small:.145;   /* 작은 라벨·수량(<25px) — fs24 바깥 1.74px, 카운터 5.7(옛 값 2.1 의 2.7배) */
+    /* 126 ③ 9회차 — .145 → **.13**. 두 근거가 독립으로 같은 값에서 만났다:
+       ① §6-8 의 레퍼런스 35곳 조사에서 «작은 글자» 구간 환산 r = **.131**(그때도 «사실상 일치» 로
+          적어 두고 나중 회차가 .145 로 올렸던 값이다).
+       ② 9회차가 02 레일 「승급전」(fs 29)에 카운터 스윕을 돌린 결과 — r .12 → 12.1px² ·
+          **.13 → 8.3** · .145 → 4.7 · .16 → 3.4. 이 디자인이 «열려 있다» 고 인정한 하한이
+          8.0px²(10 상점 「1,000」 8.3 · 52 「우편」 8.9)이므로 **.13 이 절벽 직전의 최대치**다. */
+    --st-small:.13;    /* 작은 라벨·수량(<25px) + 02 레일 라벨(fs 29) */
   }
   html,body{height:100%;background:#05060c;overflow:hidden;color:#e8ecf5;user-select:none;
     font-family:'GameKR',-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif}
@@ -752,7 +758,14 @@
        레퍼런스 실측 외곽선은 «옆 1~2px · 아래 4px»(도감 y=920 가로 / 이벤트 x=960 세로 스캔)이다.
        두께는 «같은 글자(이벤트·특권)» 의 근흑:흰 픽셀 비로 맞췄다 — 레퍼런스 0.61 / 0.58 인데
        .13 은 1.52 / 1.03 으로 과중, .06 은 0.56 / 0.35 로 과소, **.08 에서 0.76 / 0.61** 로 붙는다. */
-    -webkit-text-stroke:calc(var(--ilf,32px)*var(--lf,.906)*.08) #000;
+    /* 126 ③ 9회차 — 위 «근흑:흰 픽셀 비» 근거로 고른 .08 을 버리고 **본문 토큰**에 올린다.
+       그 잣대는 «라벨 영역» 전체의 검정:흰 면적비인데, 이 자리는 라벨 뒤에 이모지 아이콘이
+       margin-top:-22px 로 겹쳐 있어(§13-2) 영역 안 검정이 글자 외곽선만의 것이 아니다 —
+       ref 쪽도 같은 자리에 일러스트가 깔려 있어 두 값 다 오염돼 있었다.
+       비평가 3명이 두 회차에 걸쳐 서로 다른 지표로 같은 결론을 냈다(N −33% · O −49.3/−58.3% ·
+       P «가장 얇은 계열»). r = sw/fs 로 줄을 세우면 이 자리가 391곳 중 최저(.080)이고,
+       두 비평가가 «이미 맞다» 고 본 자리들이 .16~.172 에 몰려 있다(§17-4 재해석 — §18-1). */
+    -webkit-text-stroke:calc(var(--ilf,32px)*var(--lf,.906)*var(--st-small)) #000;
     paint-order:stroke fill;letter-spacing:-.02em;white-space:nowrap;
     /* 126 ②-2 7회차 — §12 4순위. ref 와 «같은 단어» 인 표본은 퀘스트·도감 둘뿐이다
        (좌2·좌4·좌6 은 ref 가 패스·휴식·길드라 대조 표본이 아니다 — A2 측정표 §1-1).
@@ -851,7 +864,9 @@
   /* 라벨 잉크 중심은 ref 81 인데 컬럼 중심(83)에 그대로 붙어 83.5 였다 → 2.5px 왼쪽 */
   #botleft .ubtn[data-util=town] .ul{position:relative;left:-2.5px;
     margin-top:-5px;height:33px;font-size:36px;line-height:33px;
-    font-weight:900;color:#fff;-webkit-text-stroke:4px #000;paint-order:stroke fill;
+    /* 126 ③ 9회차 — 4px = r .111. 레일 라벨과 같은 계열인데 이 자리만 토큰 밖이었다.
+       ③ 지적이 직접 붙은 자리는 아니므로 크기대 토큰(.22)이 아니라 **본문 토큰**으로 한 단만 올린다. */
+    font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;
     /* 126 ②-2 7회차 — 흰 코어 48×30 vs ref 57×31(−15.8% / −3.2%, 비평가 N). 높이는 이미 맞다 →
        레일 라벨과 같은 «폭만» 자리다. 다만 이 자리 외곽선은 `4px 고정` 이라 sx 에 비선형이다
        (§11 「모두 받기」와 같은 함정) — 선형 예측 .86×57/48=1.021 로 한 번 재고 실측으로 되잡았다. */
@@ -3406,7 +3421,9 @@
     box-shadow:inset 0 6px 0 var(--hr);text-align:center;line-height:97px}
   /* 헤더 제목 — 3회차 실측: ref 잉크(흰 채움) 182×41, 2회차 구현 147×38(폭 −19% 높이 −7%).
      높이는 font-size 로(47→51), 폭은 scaleX 로(.9→1.03) 채운다. */
-  .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:12px #000;paint-order:stroke fill;
+  /* 126 ③ 9회차 — 12px 고정 = r .235 로 **391곳 중 최대**다. r7 비평가 O(+18.1%)·P(+50%)가
+     ③ 에서 «두꺼운 쪽» 으로 든 유일한 자리이고 둘이 같은 자리를 짚었다(§17-4). 45px+ 토큰 → 9.69px. */
+  .shp-card>.chd>i{font-size:51px;color:#fff;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;
     transform:scaleX(1.03) translateY(4px);letter-spacing:-1px}
   /* 검정 테두리 레이어 */
   .shp-card>.cfr{position:absolute;inset:0;border:7px solid #000;border-radius:26px;
@@ -3943,7 +3960,8 @@
      측정표 §「유물 소환」은 ref 잉크 **144×33** 이고 우리는 외곽선 포함 ≈130 이라 −10% 다.
      세로는 이미 맞으므로(높이 1px 차) **가로만** scaleX .84 → .93 으로 편다. */
   .rw-basin>b{left:0;right:0;top:97px;text-align:center;font-size:40px;color:#F2F2F2;
-    -webkit-text-stroke:5px #000;paint-order:stroke fill;z-index:2;transform:scaleX(.93)}
+    /* 126 ③ 9회차 — 5px = r .125 → 본문 토큰(6.4px) */
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;z-index:2;transform:scaleX(.93)}
   /* 코스트 필 262×51 — 수반 받침 위에 겹친다. 120: .rw-mid 기준(401−340 / 1322−1173) */
   .rw-cost{left:61px;top:149px;width:278px;height:53px;box-sizing:border-box;z-index:4;
     background:#191614;border:3px solid #000;border-radius:26.5px;
@@ -3951,7 +3969,8 @@
     /* 그룹 중심을 알약 중심보다 10px 왼쪽으로(측정표: 그룹 중심 x530 vs 알약 x540) */
     display:flex;align-items:center;justify-content:center;gap:10px;padding-right:20px}
   .rw-cost>i{font-size:36px;line-height:1}
-  .rw-cost>b{font-size:35px;color:#51EDFF;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+  /* 126 ③ 9회차 — 4px = r .114 → 본문 토큰(5.6px) */
+  .rw-cost>b{font-size:35px;color:#51EDFF;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .rw-cost.lack>b{color:#FF7A6F}
   /* 안내문 2줄 — 크림/탠골드, 행 피치 44. 120: 하단 구획(높이 88 = 44×2) */
   .rw-cap{left:0;right:0;top:calc(var(--rw-sp) * .8675 + 732px * var(--rwc,1) + 38px);
@@ -5670,7 +5689,10 @@
     border-radius:16px 16px 0 0;background:#A5866A;cursor:pointer;
     box-shadow:inset 0 6px 0 #8C6D51,inset 6px 0 0 #8C6D51,inset -6px 0 0 #8C6D51,
       inset 0 12px 0 #BAA085,inset 12px 0 0 #BAA085,inset -12px 0 0 #BAA085;
-    font-size:38px;color:#A9A8AD;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+    /* 126 ③ 9회차 — 19 팝업 라벨군은 r7 비평가 O(−48.4~−55.1%)·P(−50%)가 ③ 상위로 독립 일치한
+       자리다. 4px 고정 = r .105 로, 같은 팝업 안에서 지적이 없던 `#pfTtl`(.194)·`#pfNick>i`(.172)와
+       비교해도 절반이다. 크기대(33~45px) 토큰에 올린다 → 8.36px. */
+    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
   .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
   .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
@@ -5726,7 +5748,8 @@
     background:#604C4B;border-radius:20px 20px 0 0;
     /* 126 8회차 — r7 비평가 O·P 가 ② 2순위로 독립 일치(225×26 vs ref 278×30), `m126t7`(임계 150)이
        세 번째로 같은 값을 냈다. §11 처방 «높이로 fs, 남은 폭을 sx»: fs 32×(30/26) = 36.9. */
-    font-size:36.9px;color:#f2f2f2;-webkit-text-stroke:4px #000;paint-order:stroke fill}
+    /* 126 ③ 9회차 — O ③ 상위 · P ③ «해금 미션 −50%». 4px = r .108 → 크기대 토큰(8.12px). */
+    font-size:36.9px;color:#f2f2f2;-webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill}
   .pf-msn>i{transform:scaleX(1.017)}
   /* 크림 푸터 ref (150,1604) 780×148 — (255,238,212), 하단 r24 */
   .pf-ftr{left:58px;top:1089px;width:780px;height:148px;background:#FFEED4;
@@ -5755,7 +5778,8 @@
   .pf-tgl>.lb{position:absolute;left:0;top:0;width:376px;height:95px;line-height:89px;
     /* 126 8회차 — r7 비평가 O·P ② 5순위(109×31 vs ref 127×33) + `m126t7` 일치. fs 36×(33/31) = 38.3 */
     text-align:center;font-size:38.3px;color:#A5A4A9;
-    -webkit-text-stroke:4px #000;paint-order:stroke fill;cursor:pointer}
+    /* 126 ③ 9회차 — 4px = r .104(391곳 중 하위 5위). 크기대 토큰 → 8.43px */
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill;cursor:pointer}
   .pf-tgl>.lb>i{transform:scaleX(.963)}
   /* 활성 «프로필» 황색 화살 배너 — 몸통 (414,13) 335×68 + 양끝 팁 20px, 2톤 채움 */
   .pf-tgl>.bn{position:absolute;left:388px;top:13px;width:385px;height:68px;
@@ -5769,7 +5793,8 @@
      이 자리는 잉크가 하늘색(#8DDCFD)이라 «흰 채움» 마스크를 쓰는 `m126t7` 로는 못 잰다(값 null) —
      그래서 비평가 2명의 일치값만으로 푼다: fs 35×(30/27) = 38.9, 그 크기에서 폭 80 → sx .9×(84/80) = .945. */
   .pf-tgl>.bn>i{position:relative;font-size:38.9px;color:#8DDCFD;
-    -webkit-text-stroke:4px #001F2C;paint-order:stroke fill;transform:scaleX(.945)}
+    /* 126 ③ 9회차 — 4px = r .103. 잉크가 하늘색이라 외곽선 색만 #001F2C 로 다르다(값은 토큰). */
+    -webkit-text-stroke:calc(var(--st-title) * 1em) #001F2C;paint-order:stroke fill;transform:scaleX(.945)}
 
   /* ==========================================================================
      20 프로필 팝업 — 플레이어 스펙 정보(종합 스탯 탭) — 측정표 docs/measure/20-프로필팝업스펙정보.md
