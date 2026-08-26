@@ -95,7 +95,9 @@ async function lumaOf(p, ms, clip, store) {
     return +sig[Math.floor(k / 2)].toFixed(1);
   }, [b64, !!store]);
 }
-const PHASES = [0, 800, 1600, 2400, 3200, 4000];
+/* 위상 8개 — 6개로는 주기 5.4s·딜레이 −3.24s 인 띠가 표본에서 «주차 구간» 에만 걸려
+   심 대신 양옆이 잡혔다(소환 전면 −12.9). 표본을 늘려 앨리어싱을 줄인다. */
+const PHASES = [0, 700, 1400, 2100, 2800, 3500, 4200, 4900];
 /* 광택 세기 = «띠가 있을 때» 와 «띠가 없을 때» 의 루마 차를, **그 호스트에서 가장 넓은 평탄면**
    에서만 재어 상위 5% 의 중앙값을 취한 값(부호 포함). 비평가가 «평탄면 실측» 이라고 부르는 것이다.
 
@@ -328,8 +330,13 @@ async function ampCheck(p, hosts) {
                         평탄면이 본문 바탕(휘도 144)으로 잡혀 34.1 «정상» 이 나왔지만, 비평가 둘은
                         헤더 바탕(휘도 98~119) 위에서 +57~82 를 읽었다 — 같은 띠가 지나는 **가장 어두운
                         면**이 그 띠의 최대 세기다. 칸별 α 가 제대로 박혔는지도 두 칸을 비교해야 보인다. */
-                     ['소환 전면(헤더1 위)', '#shopList .shp-card>.chd|0', SUM_FR, SUM_HD + ',' + SUM_BD],
-                     ['소환 전면(헤더4 위)', '#shopList .shp-card>.chd|3', SUM_FR, SUM_HD + ',' + SUM_BD]]);
+                     /* 7회차(Y 7) — 본문도 칸마다 휘도가 다르다(99.6~165.4). 가장 밝은 칸(3)과
+                        가장 어두운 칸(4)을 둘 다 봐야 `--jz-gb` 가 제대로 박혔는지 보인다. */
+                     ['소환 본문3', '#shopList .shp-card>.cbg|2', SUM_BD, SUM_FR],
+                     ['소환 본문4', '#shopList .shp-card>.cbg|3', SUM_BD, SUM_FR],
+                     /* 전면 광택은 이제 헤더를 안 지난다(Y 2) → 본문에서 잰다 */
+                     ['소환 전면(본문1)', '#shopList .shp-card>.cbg|0', SUM_FR, SUM_HD + ',' + SUM_BD],
+                     ['소환 전면(본문4)', '#shopList .shp-card>.cbg|3', SUM_FR, SUM_HD + ',' + SUM_BD]]);
 
   /* ── §11 광택 스윕이 카드 밖으로 새지 않는가 (3회차 신설) ────────
      의사요소의 `clip-path` 는 «자기 상자» 기준이라 띠와 함께 움직인다 — 가두는 일은 부모의 몫이다.
@@ -500,6 +507,7 @@ async function ampCheck(p, hosts) {
       return v && v.indexOf(name) >= 0 ? null : sel + (pseudo || '') + '=' + v;
     };
     return [
+      has('#shopList .cn-bn', 'jz122Sweep', '::after'),
       has('#shopList .cn-bn>.art', 'jz122Float'),
       has('#shopList .cn-bn>.gem', 'jz122Float'),
       has('#shopList .cn-rb>b', 'jz122Sweep', '::after'),
@@ -522,12 +530,18 @@ async function ampCheck(p, hosts) {
   console.log('§13 광택 피크 Δ루마 한 벌 — 재화 탭');
   const RB = '#shopList .cn-rb>b';
   await ampCheck(p, [['재화 카드', '#shopList .cn-cd:not(.done)', '#shopList .cn-cd>.fr::after'],
+                     /* 7회차(Y 1) — 광고 카드와 다이아 카드의 헤더색이 달라 같은 α 가 1.62배로 갈렸다.
+                        두 계열의 **헤더면**을 각각 잰다(카드 전체로 재면 크림판이 평탄면으로 잡힌다). */
+                     ['광고카드 헤더', '#shopList .cn-cd:not(.done)>.hd', '#shopList .cn-cd>.fr::after'],
+                     ['다이아카드 헤더', '#shopList .cn-cd.dia>.hd', '#shopList .cn-cd>.fr::after'],
                      ['리본1 청록', RB + '|0', RB + '::after'],
                      ['리본2 남보라', RB + '|1', RB + '::after'],
                      ['리본3 자주', RB + '|2', RB + '::after'],
                      ['평생배너', '#shopList .cn-a2', '#shopList .cn-a2::after'],
                      ['마일리지', '#shopList .cn-ml', '#shopList .cn-ml::after'],
                      ['상품 밴드', '#shopList .cn-hd', '#shopList .cn-hd::after'],
+                     /* 8회차 신설 — 탭 첫 화면의 15.4% 를 차지하던 정지 배너 */
+                     ['히어로 배너', '#shopList .cn-bn', '#shopList .cn-bn::after'],
                      /* 6회차 채점 — 두 버튼면이 10/10 · 6/6 프레임 픽셀 동일이었다. 띠가 버튼 위를
                         지나는지 **버튼 상자에서 직접** 잰다(패널 전체로 재면 버튼이 죽어도 통과한다). */
                      ['[교환] 버튼면', '#shopList .cn-ml>.ex|0|12', '#shopList .cn-ml::after'],
