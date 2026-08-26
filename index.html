@@ -4172,6 +4172,10 @@
   /* 13: 재화 탭이 열린 동안 HUD 는 프로필 없는 민바 (레퍼런스 y100~190 — 다크바 + 재화 알약 2개뿐).
      coin 탭에만 스코프 — 10 소환 탭·02 메인의 HUD 는 건드리지 않는다. 알약 x: ref 537~745 / 838~1044. */
   #app:has(#shopw.on .shp-list.coin) #top :is(.pedge,.plate,.prof){display:none}
+  /* 7회차 — 비평가 AB 의 «알약이 +11~18px 우측» 은 **반증**. AB 가 «알약 좌변» 으로 읽은 489/787 은
+     알약 «몸통» 이 아니라 그 왼쪽으로 54px 삐져나온 **화폐 아이콘의 검정 외곽**(`.cbox i{left:-54px}`)이다.
+     알약 몸통 자체는 `--geo` 실측 538/838(w211) 로 1차 라운드 4회차의 ref 실측 541/844 와 Δ3/6 이다.
+     마스크가 다른 지적은 반영 전에 다시 재라 — 1차 라운드 교훈 2. 값은 그대로 둔다. */
   #app:has(#shopw.on .shp-list.coin) .curs{right:31px;gap:89px}
   /* ref 13 아이콘: 골드 49×47(중심 = 알약 좌변 −22.5) / 다이아 유닛도 동비율 축소 */
   #app:has(#shopw.on .shp-list.coin) .curs .cbox i{left:-54px}
