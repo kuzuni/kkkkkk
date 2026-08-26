@@ -18,8 +18,9 @@ const { chromium } = pw();
 const path = require('path');
 
 const pre = process.argv[2] || 'docs/review/92-fx';
-/* ms — 12회차: 접힘 .30s + 스태거 0(두 행 동시, 합산 단조) → 관측 구간 0~320ms 를 8등분. */
-const STOPS = [0, 40, 80, 120, 160, 210, 260, 320];
+/* ms — 13회차: 접힘 .30s + 스태거 0 → 관측 구간 0~320ms 를 8등분.
+   36ms(림 플래시 피크)를 반드시 포함시킨다 — 12회차까지 플래시 피크가 프레임 사이로 빠져 있었다. */
+const STOPS = [0, 36, 75, 120, 165, 215, 265, 320];
 
 (async () => {
   const b = await launch(chromium);
