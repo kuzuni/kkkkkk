@@ -828,6 +828,63 @@ async function ampCheck(p, hosts) {
     ok(spread <= POL_SPREAD_HI, '극성 비 산포 = ' + spread.toFixed(1) + '배 (<=' + POL_SPREAD_HI + '배)');
   }
 
+  /* ── §16 글자 잉크 어두워짐 (14회차 신설) ───────────────────────
+     13회차 채점 AE ④: 소환 카드 헤더의 「무기 상자」 흰 글자가 주기마다 255 → **227**(−11%) 로
+     떨어지고 흰 임계 픽셀이 2626 → 1236(**−53%**) 로 줄었다 — 유리 광택의 어두운 측엽이
+     글자 **위**에 합성되는 것이다. §13 은 «평탄면»(글자·테두리를 뺀 면)만 보므로 구조적으로 못 잡는다.
+     14회차 처방: 띠를 두 겹으로 쪼개 측엽은 글자 아래(`::after`) · 심은 글자 위(`::before`).
+     재는 법: 띠를 전부 끈 기준선의 «흰 잉크 픽셀 수»(L ≥ 240)와, 한 주기 16위상의 최솟값을 비교한다.
+     심이 글자를 **밝히는** 것은 늘어남이라 통과다(하한만 본다). */
+  console.log('§16 글자 잉크 어두워짐 — 측엽이 흰 글자를 깎지 않는가');
+  {
+    /* §13·§14 가 재화 탭에서 끝나므로 소환 탭으로 되돌린다(헤더 제목은 소환 카드에만 있다). */
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const white = async (ms, clip) => {
+      await seek(p, ms);
+      const b64 = (await p.screenshot({ clip })).toString('base64');
+      return await p.evaluate(async src => {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let j = 0; j < d.length; j += 4) {
+          if (.2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2] >= 240) n++;
+        }
+        return n;
+      }, b64);
+    };
+    const clip = await p.evaluate(() => {
+      const e = document.querySelector('#shopList .shp-card>.chd>i');
+      if (!e) return null;
+      e.scrollIntoView({ block: 'center' });
+      const r = e.getBoundingClientRect();
+      return { x: Math.max(0, Math.round(r.x)), y: Math.max(0, Math.round(r.y)),
+               width: Math.round(r.width), height: Math.round(r.height) };
+    });
+    if (!clip) ok(false, '헤더 제목 글자를 못 찾음');
+    else {
+      const off = sel => p.evaluate(x => {
+        let e = document.getElementById('jz122ink');
+        if (!x) { if (e) e.remove(); return; }
+        if (!e) { e = document.createElement('style'); e.id = 'jz122ink'; document.head.appendChild(e); }
+        e.textContent = x + '{opacity:0!important}';
+      }, sel);
+      await off('#shopList .shp-card>.chd::after,#shopList .shp-card>.chd::before');
+      const base = await white(0, clip);
+      await off('');
+      const vals = [];
+      for (let i = 0; i < 16; i++) vals.push(await white(Math.round(3200 * i / 16), clip));
+      const lo = Math.min(...vals), hi = Math.max(...vals);
+      ok(base > 200, '헤더 제목 흰 잉크 기준선 = ' + base + 'px (>200 이어야 잴 수 있다)');
+      ok(lo >= base * 0.9, '헤더 제목 흰 잉크 최솟값 = ' + lo + 'px / 기준선 ' + base
+        + 'px (' + Math.round(lo / Math.max(1, base) * 100) + '% ≥ 90%) · 최댓값 ' + hi + 'px');
+    }
+  }
+
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는
