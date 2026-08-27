@@ -113,6 +113,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       rwL: document.getElementById('dgdRwL').textContent,
       amt: document.getElementById('dgdAmt').textContent,
       tryN: document.getElementById('dgdTry').textContent,
+      tryMax: (typeof RAID_TRY === 'number' ? RAID_TRY : null),   /* 205 */
       prev: document.getElementById('dgdPrev').disabled,
       next: document.getElementById('dgdNext').disabled,
       box: (() => { const r = document.querySelector('.dgd-box').getBoundingClientRect();
@@ -122,7 +123,12 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('타이틀 = 측정장 이름', d.title === 'DPS 측정장', d.title);
     chk('«레벨» → «제한 시간» 60초', d.lvL === '제한 시간' && d.floor === '60초', `${d.lvL}/${d.floor}`);
     chk('«보상» → «최고 기록»(기록 없음)', d.rwL === '최고 기록' && d.amt === '기록 없음', `${d.rwL}/${d.amt}`);
-    chk('입장 횟수 무제한 ∞', d.tryN === '∞', d.tryN);
+    /* 205 (2026-08-27, 저장소 주인 지시 «DPS 랑 아레나 하루 딱 3번만») — 46 이 세워 둔
+       «입장 횟수 무제한 ∞» 는 46 자신이 «가정(주인 확인 필요)» 로 적어 둔 값이었고, 205 가 그
+       가정을 뒤집었다. LESSONS 185-④ «설계가 뒤집힌 단언은 지우지 말고 이사시켜라» 대로
+       묻는 것(«이 칸이 측정장의 입장 규칙을 말하는가»)은 그대로 두고 기대값만 새 규칙으로 옮긴다.
+       기대 문구는 리터럴로 박지 않는다(185-①) — `RAID_TRY` 에서 런타임 계산한다. */
+    chk(`입장 횟수 = 하루 ${d.tryMax}회 (205 — 종전 ∞ 폐기)`, d.tryN === `${d.tryMax}/${d.tryMax}`, d.tryN);
     chk('해금된 다른 측정장 없으면 ◀▶ 비활성', d.prev && d.next, `${d.prev}/${d.next}`);
 
     /* 123 — 측정장이 하나뿐이라 ◀▶ 는 «해금 후에도» 갈 곳이 없다(구 «단기/장기 측정장 이동» 검사 폐기) */

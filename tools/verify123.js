@@ -154,6 +154,11 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
     /* ---------- 4. 입장 = 1:1 대전 (지시 ④) ---------- */
     console.log('[4] «도전» → 아레나 입장 (상대 닉네임 · HP 바 · 30초 타이머)');
+    /* 205 (2026-08-27) — 아레나에 하루 3회 제한이 생겼다. 이 게이트는 한 세션에서 4번 넘게
+       들어가므로 «횟수 소진» 이 123 의 단언을 대신 깨뜨린다(게이트가 남의 규칙에 걸려 빨개지는 꼴).
+       205 의 횟수 규칙은 `tools/verify205.js` 가 따로 지키므로 여기서는 **매 입장 직전에 무료분을
+       채워 두고** 123 이 원래 묻던 것(대전 진행·보상·전적)만 본다. */
+    await page.evaluate(() => { S.daily.arena = ARENA_TRY; renderArenaDetail(); });
     await click(page, '#dgdGo');
     await page.waitForTimeout(700);
     const st = await page.evaluate(() => {
@@ -243,6 +248,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     /* ---------- 7. 패배 · 중단 ---------- */
     console.log('[7] 패배(내 HP 0) · ◀ 나가기 중단');
     const lose = await page.evaluate(async () => {
+      S.daily.arena = ARENA_TRY;           /* 205 — 위 [4] 주석 참고 */
       closeDungeon();
       startArena();
       await new Promise((r) => setTimeout(r, 400));
@@ -262,6 +268,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
     const quit = await page.evaluate(async () => {
       document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on'));
+      S.daily.arena = ARENA_TRY;           /* 205 — 위 [4] 주석 참고 */
       closeDungeon();
       startArena();
       await new Promise((r) => setTimeout(r, 400));
@@ -280,6 +287,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     /* ---------- 8. 다른 전투와 겹치지 않는다 ---------- */
     console.log('[8] 아레나 중에는 던전·측정장에 못 들어간다');
     const excl = await page.evaluate(async () => {
+      S.daily.arena = ARENA_TRY;           /* 205 */
       closeDungeon(); startArena();
       await new Promise((r) => setTimeout(r, 300));
       startDunRun(DUNGEONS[0], 1);
