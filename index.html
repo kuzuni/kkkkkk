@@ -15625,7 +15625,8 @@ function killEnemy(e){
   const big = isBossKind(e.tk);                                            /* 178 — 던전 보스도 «보스 처치» 연출 */
   burst(e.x, e.y - e.r, e.T.col, big ? 46 : 13, big ? 330 : 190);
   const corpse = { akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
-                   x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r };
+                   x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r,
+                   yo:e.T.yo || 0 };   /* 178 — 시체도 같은 발밑 보정을 이어받는다(안 그러면 죽는 순간 튄다) */
   corpses.push(corpse);
   if(e.tk === 'boss'){
     cam.shake = 12; bossT = 0; S.bossFarm = false;                       /* 28 — 클리어 → 자동 진행 재개 */
@@ -16913,7 +16914,7 @@ function draw(){
     const a = Math.min(1, c.life/0.6);
     const fr = curFrame(c);
     drawShadow(c.x, c.y, c.r*0.85);
-    if(!fr || !drawFrame(c.akey, fr, c.x, c.y, c.scale, c.flip, a*0.9)){
+    if(!fr || !drawFrame(c.akey, fr, c.x, c.y + (c.yo || 0), c.scale, c.flip, a*0.9)){
       ctx.globalAlpha = a*0.5; ctx.fillStyle = c.col;
       ctx.beginPath(); ctx.arc(c.x, c.y-c.r, c.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }
@@ -16987,13 +16988,19 @@ function draw(){
        플레이어 렌더(위 `aimg`)와 **같은 `tinted()` 경로**라 색이 픽셀 단위로 일치한다.
        틴트가 없는 기존 적(좀비·고블린·다크엘프·보스·승급)은 img 가 null 이라 한 줄도 안 바뀐다. */
     const eimg = e.tint ? tinted(T2.atlas, e.tint) : null;
-    const ok = fr && drawFrame(T2.atlas, fr, e.x, e.y, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow, eimg);
+    /* 178 — «발밑 여백» 보정. drawFrame 의 기준점은 논리 프레임 바닥인데, 아트에 따라 그 아래로
+       빈 칸이 남아 있다(robo `Running` 은 src 23px). 원래 크기에서는 안 보이지만 보스 배율로
+       키우면 그만큼 공중에 뜬다. 28 스테이지 보스의 여백(3.3px)을 기준으로 **차이만** 내린다.
+       ⚠ 그리기 전용이다 — `e.y` 자체는 안 건드리므로 그림자·판정·깊이 정렬·AI 는 그대로다.
+       `yo` 가 없는 기존 적(좀비·고블린·다크엘프·보스·승급·아레나)은 `||0` 이라 한 줄도 안 바뀐다. */
+    const ey = e.y + (T2.yo || 0);
+    const ok = fr && drawFrame(T2.atlas, fr, e.x, ey, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow, eimg);
     if(!ok){
       ctx.globalAlpha = sgrow; ctx.fillStyle = e.fx > 0 ? '#fff' : T2.col;
       ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*sgrow, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }else if(e.fx > 0){
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
-      drawFrame(T2.atlas, fr, e.x, e.y, T2.scale, e.flip, 1, eimg);
+      drawFrame(T2.atlas, fr, e.x, ey, T2.scale, e.flip, 1, eimg);
       ctx.restore();
     }
     if(e.slow > 0){
@@ -18593,20 +18600,41 @@ let dunRun = null;           /* { d, f, t, dmg, need, stage, bossQ } 또는 null
      ② 보스 체력은 스테이지 곡선이 아니라 **그 층의 요구 피해**에 비례한다(위 스폰부 주석).
      ③ `DUN_DMG_K`·`DUNGEONS`·`DUN_TRY` 는 한 줄도 안 건드린다.
    실측(tools/probe178.js, 기본 캐릭터·판당 30초·5판 평균 `dmg/need`)은 아래 «작업 178» 기록 참조. */
-const DUN_BOSS_AT  = 10;     /* 몹 국면 길이(초). 이만큼 지나면 보스가 등장한다 */
+/* 보스가 등장하는 지점 — **진행률이 먼저, 시간은 폴백**이다(등재문 «진행(처치 수 or 잔여 시간)»).
+   ⚠ 시간만 쓰면 안 된다: «cp = 요구 전투력» 인 딱 맞는 플레이어는 30초짜리 런을 **13~17초에**
+   끝낸다(tools/probe178.js 실측). `DUN_BOSS_AT` 10초 + 스폰 딜레이 1.4초면 이기는 판에서는
+   보스가 나오자마자 런이 끝나거나 아예 못 본다 — 주인이 보고 싶어 한 «던전 보스» 가 정작
+   이기는 판에서만 사라진다. 그래서 **요구 피해의 30% 를 채우면** 그 자리에서 세운다.
+   시간 폴백은 진행이 느린 판(=이 층에 아직 모자란 플레이어)에서도 보스가 나오게 한다. */
+const DUN_BOSS_P   = 0.30;   /* 진행률 트리거 — 누적 피해 / 요구 피해 */
+const DUN_BOSS_AT  = 10;     /* 시간 폴백(초). 45% 를 못 채워도 이만큼 지나면 등장한다 */
 const DUN_BOSS_HPK = 0.5;    /* 보스 체력 = 그 층의 요구 피해 × 이 값 */
 const DUN_BOSS_DLY = 1.4;    /* 스폰 딜레이 — 28 startBoss 와 같은 값(등장음이 울릴 틈) */
-const DUN_BOSS_H   = 221;    /* 28 스테이지 보스의 그려진 높이(px) = elves blue_idle_0 134 × 1.65 */
-/* 28 보스의 «그려진 폭 177px ↔ 판정 반경 54» 비. 폭이 다른 아트(용은 가로로 넓다)에서도
-   판정이 몸통에 붙게 이 비로 환산하고, 너무 작거나 큰 극단만 가둔다. */
-const DUN_BOSS_RK  = ETYPE.boss.r / 177;
+/* 목표 높이 = **28 스테이지 보스의 그려진 높이**. 숫자를 손으로 적지 않고 아틀라스에서 잰다 —
+   ETYPE.boss 의 배율·애니가 바뀌면 던전 보스도 같이 따라가야 하고, 손으로 적은 사본은 반드시
+   그 순간 갈라진다(LESSONS 90-①). 두 쪽 다 «그 애니에서 가장 큰 프레임» 으로 재야 값이 맞는다
+   (blue_idle 은 0프레임 134px 이지만 애니 중 135px 까지 커진다 — 게이트가 이 1.8px 차이를 잡았다). */
+const bossFrame = () => dunBossFrame({ thk:ETYPE.boss.atlas }, ETYPE.boss.walk);
+function bossDrawnH(){
+  const f = bossFrame();
+  return f ? f[3]*ETYPE.boss.scale : 221;
+}
+/* 논리 프레임 바닥(= drawFrame 의 기준점) 아래로 남은 빈 칸의 «그려진» 높이.
+   원래 크기에서는 몇 px 이라 안 보이지만, 보스 배율로 키우면 그만큼 공중에 뜬 것처럼 보인다. */
+const footGap = (f, sc) => (f[7] - f[5] - f[3]) * sc;
+/* 28 보스의 «그려진 폭 ↔ 판정 반경 54» 비. 폭이 다른 아트(용은 가로로 넓다)에서도 판정이
+   몸통에 붙게 이 비로 환산하고, 너무 작거나 큰 극단만 가둔다. 높이와 같은 이유로 실측한다. */
+function bossRK(){
+  const f = bossFrame();
+  return f ? ETYPE.boss.r / (f[2]*ETYPE.boss.scale) : 0.305;
+}
 /* 공격력 배수(= eDmg(S.stage) 에 곱한다). **28 보스의 22 를 그대로 쓰면 안 된다** —
    스테이지 보스는 «단독» 스폰이라 그 22 를 혼자 내지만, 던전 보스는 몹 50마리와 **동시에**
    때린다. 게다가 SOLO_CHASER 라 플레이어에게 계속 붙어 있어 접촉 빈도가 몹과 비교가 안 된다.
    22 로 두고 실측했더니(tools/probe178.js · 5판 평균) 판당 사망이 0.0→3.2 로 뛰면서
    `dmg/need` 가 S1 −22% · S12 −17% 로 내려앉았다 = 기존 층이 통째로 안 깨진다.
    아래 값은 «판당 사망·`dmg/need` 를 보스 없던 때와 같게» 로 실측해서 잡았다. */
-const DUN_BOSS_DMGK = 3;
+const DUN_BOSS_DMGK = 6;
 
 /* 아틀라스에 **실제로 있는** 애니만 고른다 — dragon/bird/robo 는 아이들 한 벌뿐이라
    공격·사망도 그것을 쓰고, zombie 는 사망만 따로 있다(Death). elves 는 색 접두사에서 파생된다. */
@@ -18635,10 +18663,12 @@ function dunBossFrame(u, anim){
 function dunBossType(d){
   const u = DUN_UI[d.id] || DUN_UI.gold;
   const a = dunBossAnims(u), f = dunBossFrame(u, a.walk);
-  const sc = f ? DUN_BOSS_H / f[3] : ETYPE.boss.scale;
+  const sc = f ? bossDrawnH() / f[3] : ETYPE.boss.scale;
   return { name: d.n + ' 수호자', atlas:u.thk, walk:a.walk, atk:a.atk, die:a.die,
            fps: ETYPE.boss.fps, scale: sc,
-           r: f ? clamp(Math.round(f[2]*sc*DUN_BOSS_RK), 24, 90) : ETYPE.boss.r,
+           r: f ? clamp(Math.round(f[2]*sc*bossRK()), 24, 90) : ETYPE.boss.r,
+           /* 발밑 여백 보정 — 28 보스와 같은 만큼만 뜨게 «차이» 를 내린다(그리기 전용, 위 draw 주석) */
+           yo: f ? Math.round(footGap(f, sc) - footGap(bossFrame(), ETYPE.boss.scale)) : 0,
            sp: ETYPE.boss.sp, hp: ETYPE.boss.hp, dmg: DUN_BOSS_DMGK, gold: ETYPE.boss.gold,
            col: u.pt || ETYPE.boss.col };
 }
@@ -18654,7 +18684,7 @@ function dunBossTick(){
   const r = dunRun; if(!r) return;
   if(player.dead > 0) return;                       /* 부활 연출 중에는 새로 세우지 않는다 */
   if(!r.bossQ){
-    if(r.t <= DUN_SEC - DUN_BOSS_AT) spawnDunBoss();
+    if(r.dmg >= r.need*DUN_BOSS_P || r.t <= DUN_SEC - DUN_BOSS_AT) spawnDunBoss();
     return;
   }
   const live = enemies.some(e => e.tk === 'dunboss') || spawnQ.some(q => q.t === 'dunboss');

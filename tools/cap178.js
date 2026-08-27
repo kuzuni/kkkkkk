@@ -29,9 +29,8 @@ const IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4'];
       S.daily.dun[d.id] = 9; S.dun[d.id] = 3;
       if (dunRun) endDunRun(false, true);
       startDunRun(d, 3);
-      /* 보스 국면으로 바로 넘긴다 — 30초를 기다리지 않는다 */
-      dunRun.t = DUN_SEC - DUN_BOSS_AT;
-      dunBossTick();
+      /* 보스 국면으로 바로 넘긴다 — 진행률·시간 트리거를 기다리지 않고 직접 세운다 */
+      spawnDunBoss();
       for (let k = 0; k < 200; k++) step(1 / 60);       /* 스폰 딜레이(1.4s) 통과 */
       const e = enemies.find(x => x.tk === 'dunboss');
       if (!e) return { err: '보스 미스폰' };
