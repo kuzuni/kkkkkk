@@ -6,11 +6,13 @@
  * 지시서(PROGRESS 116 «검증 [3]-(가)») 가 요구한 항목 그대로. [3]-(가) 기계적 작업이므로 비평가는 띄우지 않는다.
  *   [A] 상수 — `DIA_PACKS.map(p=>p.dia)` = 5,000 / 35,000 / 75,000 / 450,000 / 1,000,000 · `MILE_DIA` = 2,500,000
  *       옛 값(10000·70000·150000·900000·2000000·5000000)·옛 라벨(«×1만»류) 소스 스캔 부재
- *   [B] 라벨 — 카드 수량 문자열이 111 알파벳 단위 규약(«×5.00A · ×35.0A · ×75.0A · ×450A · ×1.00B») 과 일치.
+ *   [B] 라벨 — 카드 수량 문자열이 **150 규약(다이아 = 숫자 그대로 · 1000 이상 쉼표)** 과 일치.
  *       라벨은 손으로 적은 문자열이 아니라 `fmt(dia)` 파생이어야 한다(값·라벨 동시 이동 보장)
- *   [C] 폭 — 13 재화 탭 실캡처에서 라벨이 카드 안쪽(`.bg` 264px)을 넘치는 칸 0
+ *   [C] 폭 — 13 재화 탭 실캡처에서 라벨이 카드 안쪽(`.bg` 264px)을 넘치는 칸 0 ·
+ *       자릿수가 칸마다 다른 것은 150 이후 **정상**이므로 «폭» 이 아니라 **타입 크기·우변 정렬**을 잰다
  *   [D] 구매 — 헤드리스 `devBuyDia(id)` 5종의 `S.dia` 증가분 = 새 값 · 쿠폰(cp) 지급 = 0/0/0/1/2
- *   [E] 교환 — 쿠폰 10개로 `mileageExchange()` → 다이아 **+2,500,000** · 쿠폰 −10 · 부족하면 false(Δ0)
+ *   [E] 교환 — 쿠폰 10개로 `mileageExchange()` → 다이아 **+2,500,000** · 쿠폰 −10 · 부족하면 false(Δ0) ·
+ *       결과 안내는 149 이후 **팝업이 아니라 토스트**(`#fxl .fx-toast`)다
  *   [F] 44 회귀 — 가격 `won`(1,000/5,000/11,000/55,000/110,000)·`MILE_NEED`=10 불변 ·
  *       카드 [구매] 클릭은 «준비 중» 팝업만(지급 0) · 쿠폰 10 미만이면 교환 버튼에 `#cnExch` 자체가 없음
  *   [G] 구 세이브 — 이미 받은 다이아는 안 건드린다(마이그레이션 없음). 44 교훈 1 대로 `addInitScript` 로 심는다
@@ -28,7 +30,15 @@ const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const DIA = [5000, 35000, 75000, 450000, 1000000];
 const WON = [1000, 5000, 11000, 55000, 110000];
 const CP = [0, 0, 0, 1, 2];
-const LAB = ['×5.00A', '×35.0A', '×75.0A', '×450A', '×1.00B'];
+/* 217 (2026-08-27) — 라벨 기대값이 111 알파벳 단위(«×5.00A»…)에 굳어 있었다. 150(주인 지시)이
+   «골드 빼고 나머지 숫자는 A B C 안 쓰고 숫자 그대로» 로 표기층을 가른 뒤라 다이아는 `fmt` =
+   쉼표 숫자가 맞다 — **게임이 옳고 게이트가 111 시절에 멈춰 있었다**(212 `verify112` 와 같은 계열).
+   기대값은 화면이 쓴 식(`fmt(p.dia)`)을 다시 부르지 않고 **게이트가 자기 상수(DIA)에서 직접
+   만든다** — 페이지의 `fmt` 를 부르면 표기층이 망가져도 기대값이 같이 틀려 초록으로 샌다
+   (LESSONS 212-①: 기대값은 «화면이 쓴 식» 이 아니라 «화면이 써야 할 근거 데이터» 에서). */
+const comma = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const LAB = DIA.map(d => '×' + comma(d));       /* ×5,000 ×35,000 ×75,000 ×450,000 ×1,000,000 */
+const LAB111 = ['×5.00A', '×35.0A', '×75.0A', '×450A', '×1.00B'];  /* 옛 규약 — 되돌림 감지용 */
 
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
@@ -73,10 +83,17 @@ const openCoin = async page => page.evaluate(() => {
     q: DIA_PACKS.map(p => p.q),
     derived: DIA_PACKS.every(p => p.q === '×' + fmt(p.dia)),
     name: diaPackName(DIA_PACKS[0]),
+    /* 217 — «이 다섯 값에서 두 규약이 실제로 갈리는가». 갈리지 않는 크기(1000 미만)에서 재면
+       «골드 규약으로 되돌아간 회귀» 를 빨간 게 아니라 초록으로 통과시킨다(LESSONS 212-②). */
+    split: DIA_PACKS.map(p => fmtG(p.dia) !== fmt(p.dia)),
   }));
-  ok(JSON.stringify(B.q) === JSON.stringify(LAB), 'B1 라벨 = ×5.00A/×35.0A/×75.0A/×450A/×1.00B', B.q.join(' '));
+  ok(JSON.stringify(B.q) === JSON.stringify(LAB), 'B1 라벨 = ' + LAB.join('/') + ' (150 규약)', B.q.join(' '));
+  ok(B.split.every(Boolean), 'B1-1 다섯 값 전부에서 골드 규약(fmtG)과 기본 규약(fmt)이 갈린다 — 단언이 유효한 크기',
+     B.split.map(v => v ? 'o' : 'x').join(''));
+  ok(B.q.every((s, i) => s !== LAB111[i]), 'B1-2 옛 111 알파벳 단위 라벨(«×5.00A»류)로 되돌아가지 않았다',
+     B.q.filter((s, i) => s === LAB111[i]).join(' ') || '0건');
   ok(B.derived, 'B2 라벨은 손으로 적은 문자열이 아니라 fmt(dia) 파생');
-  ok(B.name === '다이아 5.00A개', 'B3 구매 팝업 상품명도 같은 표기', B.name);
+  ok(B.name === '다이아 ' + comma(DIA[0]) + '개', 'B3 구매 팝업 상품명도 같은 표기', B.name);
 
   /* ---- [C] 폭 — 실제 카드에서 안쪽(.bg 264px) 넘침 0 ---- */
   await openCoin(page);
@@ -87,7 +104,9 @@ const openCoin = async page => page.evaluate(() => {
       const q = cd.querySelector('.qt'), bg = cd.querySelector('.bg');
       const qr = q.getBoundingClientRect(), br = bg.getBoundingClientRect();
       out.push({ t: q.textContent, w: +qr.width.toFixed(1),
-        l: +(qr.left - br.left).toFixed(1), r: +(br.right - qr.right).toFixed(1) });
+        l: +(qr.left - br.left).toFixed(1), r: +(br.right - qr.right).toFixed(1),
+        fs: +parseFloat(getComputedStyle(q).fontSize).toFixed(2),
+        inline: (q.getAttribute('style') || '').includes('font-size') });
     });
     return out;
   });
@@ -97,9 +116,18 @@ const openCoin = async page => page.evaluate(() => {
   ok(over.length === 0, 'C3 라벨 카드 안쪽 넘침 0칸',
      over.length ? over.map(c => c.t + ' l' + c.l + '/r' + c.r).join(', ')
                  : 'left ' + Math.min(...C.map(c => c.l)).toFixed(1) + '~ · width ' + C.map(c => c.w).join('/'));
-  /* 다섯 칸이 제각각 튀지 않는지(폭 편차 ≤ 6px) — qx 재보정의 목적 */
-  const ws = C.map(c => c.w), dev = Math.max(...ws) - Math.min(...ws);
-  ok(dev <= 6, 'C4 라벨 렌더 폭 편차 ≤ 6px(qx 재보정)', dev.toFixed(1) + 'px');
+  /* 217 — 옛 C4 는 «다섯 칸 렌더 폭 편차 ≤ 6px» 였다. 111 규약에서는 다섯 라벨이 전부 6자
+     («×5.00A»…«×1.00B»)라 폭이 같아야 맞았지만, 150 이후 라벨은 «×5,000»(6자)~«×1,000,000»(10자)로
+     **자릿수가 칸마다 다른 것이 정상**이라 폭 편차 84.5px 는 결함이 아니라 설계다 — 전제가 죽은 단언이다.
+     LESSONS 185-④ 대로 지우지 않고, 이 자리가 원래 지키려던 것(«다섯 칸이 제각각 튀지 않는다»)을
+     150 에서도 살아 있는 축으로 이사시킨다: 폭은 자릿수를 따라가되 **타입 크기와 우변 정렬**은 같아야 한다.
+       · C4 타입 크기 — fitNum(150)이 한 칸만 눌러 넣으면 여기가 빨개진다(현재는 다섯 칸 다 클램프 없음).
+       · C5 우변 정렬 — `.qt` 는 우변 고정으로 왼쪽으로 자라므로, 자릿수가 달라도 우측 여백은 같다. */
+  const fss = C.map(c => c.fs), fsDev = Math.max(...fss) - Math.min(...fss);
+  ok(fsDev <= 0.5 && !C.some(c => c.inline), 'C4 라벨 타입 크기 다섯 칸 동일(편차 ≤ 0.5px) · fitNum 인라인 클램프 0칸',
+     fss.join('/') + 'px · 클램프 ' + C.filter(c => c.inline).length + '칸');
+  const rs = C.map(c => c.r), rDev = Math.max(...rs) - Math.min(...rs);
+  ok(rDev <= 1, 'C5 라벨 우변 정렬 유지 — 카드 안쪽 우측 여백 편차 ≤ 1px', 'r ' + rs.join('/') + ' · Δ' + rDev.toFixed(1) + 'px');
 
   /* ---- [D] 구매 지급 ---- */
   /* 153(2026-08-27) — 지급 «경로» 가 바뀌었다: 구매는 우편 1통을 만들고 재화는 수령 시에 들어온다.
@@ -133,12 +161,32 @@ const openCoin = async page => page.evaluate(() => {
   ok(E.okc.r === true && E.okc.d === 2500000, 'E2 쿠폰 10 → 우편 수령 시 다이아 +2,500,000', '+' + E.okc.d);
   ok(E.okc.dMail === 1, 'E2-1 교환 보상이 우편 1통으로 온다(153)', String(E.okc.dMail));
   ok(E.okc.m === 0, 'E3 쿠폰 −10', String(E.okc.m));
-  /* 팝업 안내문도 새 값으로(문자열은 fmt 파생) */
+  /* 교환 결과 안내문도 새 값으로(문자열은 fmt 파생).
+     217 — 이 단언은 부패가 **둘 겹쳐** 있었다(got `{has:false, old:false}` = 새 문자열도 옛 문자열도 없음).
+       ⓐ 표기 — 「2.50B」는 111 알파벳 단위다. 150 이후 다이아는 `fmt` = 「2,500,000」.
+       ⓑ 자리 — 149(주인 지시)가 «한 줄 안내는 팝업이 아니라 토스트» 로 뒤집어 안내는 `#fxl .fx-toast`
+          에 뜨고 **≈1초 뒤 스스로 사라진다**(206). 앞선 [E] 블록은 교환 뒤 `claimMail` 까지 태워
+          토스트가 여러 장 쌓이거나 이미 걷혔을 수 있어 «본문 어딘가에 있나» 로는 못 잰다.
+     215 가 `verify123` 에서 세운 처방 그대로 — **재는 자리만 이사**하고(185-④) 기대 문구는 리터럴로
+     박지 않고 게이트 상수에서 만든다(185-①·212-①). 토스트를 걷고 교환을 한 번 더 태워
+     «이 교환이 낸 안내» 만 보게 한 뒤 300ms 기다린다(185-⑥). «팝업으로 되돌아가면 잡힌다» 도 같이 박는다. */
   const E4 = await page.evaluate(() => {
-    const t = document.body.innerText;
-    return { has: t.includes('2.50B'), old: t.includes('5.00B') };
+    document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+    document.querySelectorAll('#modal.on, .modal.on').forEach(m => m.classList.remove('on'));
+    S.mileage = MILE_NEED;
+    mileageExchange();
+    return { split: fmtG(MILE_DIA) !== fmt(MILE_DIA) };
   });
-  ok(E4.has && !E4.old, 'E4 교환 결과 팝업 안내문 «💎 2.50B»(옛 5.00B 부재)', JSON.stringify(E4));
+  await page.waitForTimeout(300);
+  const E4r = await page.evaluate(() => ({
+    toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
+    modal: !!document.querySelector('.modal.on, #modal.on'),
+  }));
+  ok(E4r.toast.includes(comma(2500000)) && !E4r.toast.includes('2.50B'),
+     'E4 교환 결과 안내(149 토스트)에 «' + comma(2500000) + '»(옛 «2.50B» 부재)', E4r.toast || '(토스트 없음)');
+  ok(E4.split, 'E4-1 MILE_DIA 에서 골드 규약과 기본 규약이 갈린다 — 단언이 유효한 크기', String(E4.split));
+  ok(!E4r.modal, 'E4-2 교환 결과 안내는 팝업이 아니다(149)', String(E4r.modal));
+  await page.evaluate(() => { document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove()); });
   await page.evaluate(() => { document.querySelectorAll('.modal.on .x, .modal.on').forEach(m => m.classList && m.classList.remove('on')); });
 
   /* ---- [F] 44 회귀 ---- */
