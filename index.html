@@ -9490,11 +9490,22 @@
                         본문 #2A2835 단일색(무늬·그라데이션 없음)
                         안쪽베벨8 + 어두운2 + 금5 = 하단 크롬 15
      패널 높이는 그리드 행수에 따라 늘어나므로 크롬을 ::before/::after 로 분리했다. */
+  /* 작업 187(2026-08-27, 저장소 주인 지시 «30연 결과가 가려진다 — 2배 정도로») —
+     그리드가 335 고정이라 6열 **2행**만 보였다. 30연은 5행이라 대부분 가려진다.
+     → 패널 높이를 **결과 행수에 따라** 늘린다(`--sm-gh` 는 showSummonResult 가 준다):
+       2행 이하 335(= ref 케이스, **픽셀 Δ0**) · 3행 506 · 4행 이상 676(= 보이는 행 2배).
+     상한은 «패널 하변 + 20 ≤ 버튼 상변» 이라야 84 앵커와 안 겹친다. 버튼 상변은
+     bottom 앵커라 `프레임H − 574`(=426+148) 이므로 패널이 쓸 수 있는 최대 높이는
+     `프레임H − 574 − 20 − 709 = 100% − 1303`. 짧은 프레임에서는 이 값이 539 아래로
+     내려가므로 max() 로 ref 높이를 바닥으로 깔고, 그 아래는 .sm-btns 의 기존
+     `min(426px, 100% − 1416px)` 보호항이 그대로 받는다(1416 = ref 패널 하변 1248+148+20).
+     ⚠ 이 세 식은 한 벌이다 — 하나만 고치면 짧은 프레임에서 버튼이 패널에 올라탄다. */
   .sm-panel{position:absolute;left:0;right:0;top:709px;background:#2A2835;
     box-shadow:0 -3px 0 #000,0 5px 0 #000;
-    padding:106px 0 98px;box-sizing:border-box}
+    padding:106px 0 98px;box-sizing:border-box;
+    height:max(539px,min(calc(204px + var(--sm-gh,335px)),calc(100% - 1303px)))}
     /* 106 = 상단크롬14 + 본문위여백92 · 98 = (본문아래여백91 − 배지돌출8) + 하단크롬15
-       → 총 106+335+98 = 539 = ref 패널 높이(793~1331) */
+       → 총 106+335+98 = 539 = ref 패널 높이(793~1331) · 204 = 106+98 (border-box 패딩분) */
   .sm-panel::before,.sm-panel::after{content:'';position:absolute;left:0;right:0}
   .sm-panel::before{top:0;height:14px;
     background:linear-gradient(180deg,#FFDC38 0 3px,#F0BA1A 3px 5px,
@@ -9507,8 +9518,12 @@
      ref 는 10칸(6+4) 2행이라 높이 327 이다. 개수 배지가 카드 바닥 **아래로 8px** 튀어나오므로
      박스는 335 로 잡고 패널 아래 여백에서 8 을 뺐다(105 = 91 − 8 + 크롬15... → 아래 주석 참조).
      30연 소환은 5행이 되는데 우리 프레임에는 패널↔버튼 사이가 100px 뿐이라 들어가지 않는다
-     → **레퍼런스 케이스(2행)를 픽셀 그대로 두고 초과분만 스크롤**한다(09 의 «6칸 컷» 대신). */
-  .sm-grid{position:relative;left:36px;width:1008px;height:335px;
+     → **레퍼런스 케이스(2행)를 픽셀 그대로 두고 초과분만 스크롤**한다(09 의 «6칸 컷» 대신).
+     작업 187 — 위 «100px 뿐» 은 1920(9:16) 프레임 시절 값이다. 9:19(2280) 에서는 패널 하변
+     1248 ↔ 버튼 상변 1706 사이가 458px 있다. 그중 «패널 하변 + 20 ≤ 버튼 상변» 을 지키는
+     만큼(2280 기준 +341)을 그리드에 준다 → 4행 676px. 높이는 패널이 결정하므로 100%.
+     한 행 = 카드 158 + gap 12 = pitch 170 · n행 = 170n − 12 + 배지돌출 8 = 170n − 4. */
+  .sm-grid{position:relative;left:36px;width:1008px;height:100%;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .sm-grid::-webkit-scrollbar{width:0;height:0}
   /* 12 5회차 — 타일 157→158 · gap 13→12 (열 pitch 170 은 그대로: 158+12 = 157+13).
@@ -18196,6 +18211,13 @@ function showSummonResult(b, times, res, lvUp){
       + '<b>' + petIcon(a.it, 'sum') + '</b><u class="ifq"><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
   }).join('');
   petPaint($('sumGridIn'));
+  /* 작업 187 — 결과 행수만큼 패널을 늘린다(CSS `.sm-panel{height:…var(--sm-gh)}` 와 한 벌).
+     6열 · 한 행 pitch 170 · 배지가 8px 튀어나오므로 n행 = 170n − 4.
+     2행 이하는 **레퍼런스 케이스**라 335 를 그대로 써서 픽셀 Δ0 을 지킨다(verify12·verify84 회귀).
+     상한 4행(676) — 그 위는 지금처럼 스크롤한다(주인 지시: «2배 정도로» = 보이는 행 2→4). */
+  const smRows = Math.ceil(agg.length / 6);
+  const smGh = smRows <= 2 ? 335 : Math.min(170 * smRows - 4, 676);
+  $('sumGrid').parentElement.style.setProperty('--sm-gh', smGh + 'px');
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
   $('sumw').classList.add('on');
