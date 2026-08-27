@@ -53,7 +53,11 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     await page.waitForTimeout(400);
     const tabs = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => ({
       k: e.dataset.dsub, txt: e.textContent.trim() })));
-    chk('서브탭 2칸(컨텐츠 · 던전)', tabs.length === 2, JSON.stringify(tabs));
+    /* 209(2026-08-27, 주인 지시) — «탑» 칸이 3번째로 들어왔다. 123 이 지키려던 것은 «칸 개수» 가
+       아니라 ««레이드» 라벨이 사라지고 «컨텐츠» 가 그 자리에 있다» 이므로 개수는 컨텐츠·던전이
+       **둘 다 살아 있는지**로만 묻는다(LESSONS 194-4). */
+    chk('서브탭에 컨텐츠 · 던전이 그대로 있다 (+209 탑)',
+      ['raid', 'dun'].every((k) => tabs.some((t) => t.k === k)) && tabs.length === 3, JSON.stringify(tabs));
     chk('«레이드» 라벨이 화면에 남아 있지 않다', !tabs.some((t) => t.txt.includes('레이드')), JSON.stringify(tabs.map((t) => t.txt)));
     chk('«컨텐츠» 칸 존재 (data-dsub 키는 raid 유지)',
       tabs.some((t) => t.k === 'raid' && t.txt === '컨텐츠'), JSON.stringify(tabs));

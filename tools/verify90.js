@@ -58,7 +58,14 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
      «출석 1회가 주는 적립량 = 표기 분모» 이고 값은 2 다. 저장 위치도 S.daily.dun → S.dunTk. */
   ok(st.tries === 2, 'DUN_TRY === 2 (204 — 출석마다 던전별 +2 적립 · 표기 분모)');
   ok(st.names.length === new Set(st.names).size, '던전 이름 ' + IDS.length + '개 모두 다름 (' + st.names.join(' · ') + ')');
-  ok(IDS.every(id => st.uiKeys.includes(id)) && st.uiKeys.length === IDS.length, 'DUN_UI 키 ' + IDS.length + '개, DUNGEONS 와 1:1');
+  /* 209(2026-08-27, 주인 지시) — 「시련의 탑」은 **던전이 아니다**(DUNGEONS 에 없다). 다만 카드 기하와
+     178 던전 보스 스프라이트를 `DUN_UI[id]` 한 곳에서 읽으므로 UI 항목만 하나 더 있다.
+     90 이 지키려던 규칙은 «던전마다 UI 가 1개» 이므로 ⊇ 로 묻고, 던전이 아닌 키는 아래 화이트리스트로만
+     허용한다(LESSONS 194-4 — 개수 단언은 상한이 아니라 «그때 N개» 라는 기록이었다). */
+  const UI_EXTRA = ['tower'];
+  ok(IDS.every(id => st.uiKeys.includes(id))
+     && st.uiKeys.filter(k => !IDS.includes(k)).every(k => UI_EXTRA.includes(k)),
+     'DUN_UI ⊇ DUNGEONS ' + IDS.length + '개 + 던전 아닌 키는 ' + UI_EXTRA.join('·') + ' 뿐 (실측 ' + st.uiKeys.length + '개)');
   ok(IDS.every(id => st.stateKeys.includes(id)) && st.stateKeys.length === IDS.length, 'DUN_STATE 키 ' + IDS.length + '개, DUNGEONS 와 1:1');
 
   /* req·rw 배수 — relic1 을 1 로 두고 2.5 / 6 / 15 인지 실측 */

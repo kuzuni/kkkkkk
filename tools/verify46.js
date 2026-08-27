@@ -46,7 +46,12 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       k: e.dataset.dsub, txt: e.textContent.trim(), on: e.classList.contains('on'),
       x: Math.round(e.getBoundingClientRect().left), w: Math.round(e.getBoundingClientRect().width),
     })));
-    chk('서브탭 2칸', t.length === 2, t.map((x) => x.k).join(','));
+    /* 209(2026-08-27, 주인 지시) — «탑» 탭이 3번째 칸으로 들어왔다. 46 이 지키려던 것은 «칸 개수»가
+       아니라 «컨텐츠·던전 두 칸이 이 순서로 있고 기본이 던전» 이므로, 개수 대신 **그 두 칸**을 묻는다
+       (LESSONS 194-4 — «N칸까지만» 은 대개 «그때 N개였다» 는 기록이다). */
+    chk('서브탭 — 컨텐츠·던전이 앞 두 칸 (+209 탑)', t.length === 3
+      && t[0] && t[0].k === 'raid' && t[1] && t[1].k === 'dun' && t[2] && t[2].k === 'tower',
+      t.map((x) => x.k).join(','));
     /* 123 — 라벨이 «레이드» → «컨텐츠» 로 바뀌었다(data-dsub 키는 raid 유지) */
     chk('왼쪽 칸이 «컨텐츠»(자물쇠 아님)', t[0] && t[0].k === 'raid' && t[0].txt === '컨텐츠', t[0] && t[0].txt);
     chk('오른쪽 칸이 «던전»', t[1] && t[1].k === 'dun' && t[1].txt === '던전', t[1] && t[1].txt);

@@ -12365,11 +12365,14 @@
     <div class="dns-list" id="dunList"></div>
     <!-- 46(2026-08-25 주인 지시): 왼쪽 자물쇠 칸은 «레이드»(DPS 측정 던전) 다. -->
     <!-- 96 — 공용 서브탭 부품(.stabs.sp2 > .stab). `.dns-t` 는 게이트(tools/verify46.js) 별칭. -->
-    <div class="dns-sub stabs sp2" id="dunSub">
+    <!-- 209(2026-08-27, 저장소 주인 지시): «탑» 탭 신설 → 2칸을 3칸으로 나눈다(.sp2 → .sp3.
+         10 상점이 124 에서 같은 전환을 했다 — 칸 폭·좌표는 공용 부품이 전부 계산한다). -->
+    <div class="dns-sub stabs sp3" id="dunSub">
       <!-- 123(2026-08-26, 저장소 주인 지시) — 라벨 «레이드» → «컨텐츠».
            `data-dsub` 키는 raid 를 유지한다(46·97·smoke 오프너·verify 가 전부 이 키를 본다). -->
       <div class="stab dns-t off" data-dsub="raid"><i class="ol3">컨텐츠</i></div>
       <div class="stab dns-t on" data-dsub="dun"><i class="ol4">던전</i><s class="bdg"></s></div>
+      <div class="stab dns-t off" data-dsub="tower"><i class="ol3">탑</i></div>
     </div>
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
@@ -14580,6 +14583,30 @@ const DUN_TRY_OLD = 3;
 const RAID_TRY  = 3;
 const ARENA_TRY = 3;
 const ARENA_EXTRA_DIA = 100;   /* 아레나 추가 도전 1회 가격(다이아) */
+/* ── 209(2026-08-27, 저장소 주인 지시) — 「시련의 탑」 ─────────────────────────────
+   원문: «던전 팝업에 탭 추가해서 '탑' — 시련의 탑. 소탕 없고, 클리어마다 단계 오르고,
+   전 단계 재도전 불가, 클리어마다 유물석(→ 기존 재화 «유물조각/rel» 로 해석)».
+
+   던전(90)과 **의도적으로 다른 4가지**만 정리해 두면 나머지는 던전 부품을 그대로 쓴다:
+     ① 입장권이 없다 — `S.dunTk` 를 안 본다(적립·소모 경로 0곳). 실패해도 잃는 것이 없다.
+     ② **현재 층만** 도전한다 — 04 세부의 ◀▶ 는 둘 다 잠근다(층 선택 자체가 없다).
+     ③ **소탕 없음** — 04 [소탕] 은 레이드·아레나와 같은 자물쇠 상태(`dgdSweepLock`).
+     ④ 진행은 영구 1값(`S.tower`) — 일일 리셋과 무관하고 `S.dun` 과 섞지 않는다.
+   ⚠ 90 이 폐기한 «수련의 탑» 과 **다른 것**이다. 그건 «던전 목록 안의 카드 한 장»(입장권·소탕·
+      층 선택을 그대로 쓰는 던전)이었고, 이건 전용 탭을 쓰는 진행형 콘텐츠다. 목록(DUNGEONS)에
+      넣지 않는 이유도 그것이다 — 넣으면 입장권·소탕·◀▶ 가 전부 딸려 온다(그리고 verify90 의
+      «던전마다 UI·상태·보상 1:1» 이 참인 채로 규칙만 조용히 깨진다).
+   난이도·보상 곡선은 199 밸런스 라운드의 평가 대상이다. 지금 잡은 근거는 두 가지다:
+     · **1층은 갓 시작한 캐릭터가 깬다.** 던전은 전부 가이드미션 뒤에 있고 1층 요구가 2500~5000 인데
+       기본 캐릭터의 `cp()` 는 **505**(실측)라 «열려는 있는데 못 깨는» 콘텐츠가 하나 더 늘면 안 된다.
+       탑은 잠금이 없는 상시 콘텐츠이므로 첫 층을 505 아래(**420**)에 두어 바로 한 층을 준다.
+     · **층당 딱 한 번**이라 반복 수급이 없다 — 그래서 배수는 던전(1.72~1.78)보다 완만한 **1.65** 로
+       층 수를 벌고, 보상은 유물조각 1단(`200+150f`)보다 한 칸 높은 `250+200f` 로 둔다. */
+const TOWER = {
+  id:'tower', n:'시련의 탑', d:'유물조각을 획득',
+  req:f => 420*Math.pow(1.65, f-1),
+  rw:f => ({ rel: Math.round(250 + f*200) })
+};
 /* 90 ⑤ — 안내 문구가 «고대 유적» 을 상수로 박고 있었다. 지금 열려 있는 유물조각 던전 중
    가장 깊은 단을 이름으로 준다(전부 잠겨 있으면 1단). 던전 이름을 바꿔도 문구가 따라온다. */
 function relDunName(){
@@ -15185,6 +15212,10 @@ const DEF = () => ({
      출석 수령마다 던전마다 +DUN_TRY, 10 상점 재화 탭에서 다이아로도 산다.
      신규 세이브는 첫 출석 전에도 한 번은 돌아볼 수 있게 기준치(2장)로 시작한다. */
   dunTk: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
+  /* 209 — 시련의 탑에서 **지금 도전 가능한 층**. `S.dun[id]` 와 같은 의미(«도전 가능한 층» = 클리어한
+     층 + 1)라 표기·판정 문법을 던전과 나눠 쓴다. 영구값이고 일일 리셋과 무관하다.
+     구 세이브에는 이 키가 없다 — `Object.assign(b, d)` 가 기본값 1 을 채운다(44 교훈 2, KEY 안 올림). */
+  tower: 1,
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   arena:{ w:0, l:0 },                         /* 123 아레나 전적 — 승/패(더미 대전). 진짜 매칭·랭킹은 후속 작업 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
@@ -15235,6 +15266,10 @@ function load(){
       }
       DUNGEONS.forEach(x => { if(!Number.isFinite(b.dunTk[x.id])) b.dunTk[x.id] = DUN_TRY; });
     }
+    /* 209 — 손댄 세이브·구 세이브 방어. 층은 1 이상의 정수여야 한다(0·음수·NaN 이면 «도전 가능한 층»
+       이 사라져 탭이 통째로 죽는다). 194-5 와 같은 이유로 «정화» 는 load 한 곳에서만 한다. */
+    if(!Number.isFinite(b.tower) || b.tower < 1) b.tower = 1;
+    b.tower = Math.max(1, Math.floor(b.tower));
     /* 90 — 던전 재편(relic → relic1~4, growth·boss 폐기). KEY 는 올리지 않는다(44 교훈 2).
        구 세이브의 «고대 유적» 진행도(층)는 이름만 바뀐 같은 던전이므로 relic1 로 이어 준다.
        growth·boss 키는 남아 있어도 DUNGEONS 에 없으니 아무도 읽지 않는다. */
@@ -19633,6 +19668,22 @@ function challengeDungeon(d){
   startDunRun(d, S.dun[d.id]);
 }
 
+/* 209 — 시련의 탑 입장. `challengeDungeon` 과 나란한 «한 지점» 이다(LESSONS 46-③ — 입장은
+   여러 진입점에서 오므로 판정을 입장 함수 한 곳에 모은다). 다른 점은 **빼는 것**뿐이다:
+   잠금 없음 · 입장권 없음(차감 0) · 층 선택 없음. 그래서 실패해도 잃는 것이 없고 같은 층을
+   몇 번이든 다시 칠 수 있다(지시 ②의 «실패 시 같은 층 재도전은 가능»).
+   `S.cnt.dungeon` 은 «던전 입장 횟수» 통계라 탑은 세지 않는다(던전 일일 퀘스트가 이 값을 본다). */
+/* «지금 도는 것이 탑인가» 를 묻는 한 곳. `d === TOWER` 로 물으면 세이브를 거쳐 온 사본(구조가 같고
+   참조가 다른 객체)에서 조용히 거짓이 된다 — id 로 묻는다(던전 id 와 겹치지 않는다). */
+const isTower = d => !!d && d.id === TOWER.id;
+function challengeTower(){
+  if(dunRun || raidOn || arena){
+    notify('⚔ 다른 전투가 진행 중입니다');
+    return;
+  }
+  startDunRun(TOWER, S.tower);
+}
+
 /* ==========================================================================
    작업 30 — 던전 입장(전투) 모드.  측정표 docs/measure/30-던전입장.md
    04 [도전] → 즉시 판정 팝업이 아니라 **제한 시간 30초 실제 전투**로 전환한다.
@@ -19781,7 +19832,8 @@ function startDunRun(d, f){
      레퍼런스 30 에는 스테이지 표기가 0px 다(측정표 §8) → 입장하면서 지운다. */
   msgTxt = ''; msgT = 0;
   closeDungeon();                                /* 03 던전 페이지가 뒤에 남아 화면을 덮지 않게 */
-  $('dunTtl').textContent = d.n + ' - 레벨 ' + f;
+  /* 209 — 탑은 «레벨» 이 아니라 «층» 이다(03 카드·04 세부와 같은 낱말을 쓴다) */
+  $('dunTtl').textContent = d.n + (isTower(d) ? ' - ' + f + '층' : ' - 레벨 ' + f);
   $('app').classList.add('dunrun');
   drawDunHud();
   uiDirty = true;
@@ -19803,7 +19855,12 @@ function endDunRun(cleared, quit){
 function finishDunRun(r, cleared){
   const d = r.d, f = r.f;
   if(cleared){
-    S.dun[d.id]++;
+    /* 209 — 탑의 진행은 `S.tower` 하나다. `S.dun` 에 섞으면 «던전 목록에 없는 키» 가 세이브에 남고
+       `dunAlert`·일일 퀘스트 같은 «던전 전체» 순회가 조용히 그것까지 세게 된다.
+       ⚠ 이미 지나온 층을 다시 깰 수는 없지만(현재 층만 도전), 그래도 `++` 가 아니라 `max` 로 올린다 —
+         어떤 경로로든 옛 층을 클리어해도 진행이 **뒤로 가지 않는다**. */
+    if(isTower(d)) S.tower = Math.max(S.tower, f + 1);
+    else S.dun[d.id]++;
     giveReward(d.rw(f));
     uiDirty = true; save();
     openDunClear(d, f);                          /* 31 던전 클리어 화면 — 기존 경로 그대로 */
@@ -19856,14 +19913,17 @@ function openDunClear(d, f){
   else if(main[0] === 'gold'){ ic.textContent = ''; }              /* 골드는 배경 코인이 그린다 */
   else curIcEl(ic, main[0] === 'rel' ? 'relic' : 'dia', 63);   /* 아트 자리 63×65 를 그대로 차지 */
   $('dclAmt').textContent = fmtCur(main[0], main[1]);   /* 150 — 골드만 알파벳 단위 */
-  const left = S.dunTk[d.id];
-  $('dclTryL').textContent = left;
-  $('dclTryR').textContent = left;
+  /* 209 — 탑은 입장권이 없으므로 «남은 횟수» 자리에 무한 기호를 둔다(빈 칸으로 두면 «0» 처럼 읽힌다).
+     그리고 방금 깬 층은 **다시 도전할 수 없다**(지시 ②) — [재도전] 을 잠그고 [다음] 만 살린다. */
+  const tw = isTower(d);
+  const left = tw ? Infinity : S.dunTk[d.id];
+  $('dclTryL').textContent = tw ? '♾' : left;
+  $('dclTryR').textContent = tw ? '♾' : left;
   /* 남은 횟수가 없으면 재도전·다음을 눌러도 입장 못 한다 — 눌림을 막고 회색으로 */
   const off = left <= 0;
   [$('dclRe'), $('dclNx')].forEach(b => {
-    b.disabled = off;
-    b.style.filter = off ? 'grayscale(.75) brightness(.8)' : '';
+    b.disabled = off || (tw && b === $('dclRe'));
+    b.style.filter = b.disabled ? 'grayscale(.75) brightness(.8)' : '';
   });
   $('dclw').classList.add('on');
 }
@@ -19874,6 +19934,7 @@ $('dclOk').addEventListener('click', e => { e.stopPropagation(); closeDunClear()
 $('dclRe').addEventListener('click', e => {
   e.stopPropagation();
   const d = dclDun, f = dclFloor; if(!d) return;
+  if(isTower(d)) return;                       /* 209 ② — 깬 층은 다시 도전할 수 없다(버튼도 잠겨 있다) */
   closeDunClear();
   if(f < S.dun[d.id]) sweepDungeon(d); else challengeDungeon(d);
 });
@@ -19881,6 +19942,7 @@ $('dclNx').addEventListener('click', e => {
   e.stopPropagation();
   const d = dclDun; if(!d) return;
   closeDunClear();
+  if(isTower(d)){ challengeTower(); return; }  /* 209 — «다음» = 새로 열린 층 */
   challengeDungeon(d);
 });
 /* 작업 68 — `buyPack()` 폐기. 다이아 지급 경로는 `grantDiaPack()`(작업 44) 하나뿐이다.
@@ -20475,6 +20537,7 @@ $('bDun').addEventListener('click', e => {
 let dgdDun = null;      /* 지금 보고 있는 던전 */
 let dgdRaid = null;     /* 46 — 레이드 모드일 때 보고 있는 측정장(둘 중 하나만 채워진다) */
 let dgdArena = null;    /* 123 — 아레나 모드(셋 중 하나만 채워진다) */
+let dgdTower = null;    /* 209 — 시련의 탑 모드(넷 중 하나만 채워진다) */
 let dunSub = 'dun';     /* 46 — 03 던전 페이지 서브탭 'dun' | 'raid' (renderDunPage 가 읽는다) */
 let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
 let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
@@ -20486,7 +20549,7 @@ const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', 
 
 function openDunDetail(d){
   if(!d) return;
-  dgdDun = d; dgdRaid = null; dgdArena = null;   /* 123 */
+  dgdDun = d; dgdRaid = null; dgdArena = null; dgdTower = null;   /* 123 · 209 */
   dgdFloor = S.dun[d.id];
   /* 46 — 레이드가 갈아 끼운 라벨을 던전 문구로 되돌린다 */
   $('dgdLvL').textContent = '레벨';
@@ -20494,7 +20557,7 @@ function openDunDetail(d){
   renderDunDetail();
   $('dgdw').classList.add('on');
 }
-function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdRaid = null; dgdArena = null; }
+function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdRaid = null; dgdArena = null; dgdTower = null; }
 
 /* ---- 169 ① 배너 몬스터 썸네일 -----------------------------------------
    03 행 카드가 72/97 로 받은 실스프라이트를 04 세부 팝업 배너에도 그린다 — «행에서 본 몬스터가
@@ -20503,8 +20566,9 @@ function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdR
    123 분기 — 레이드는 그 측정장의 보스(`RAIDS[].ui` 가 행 카드와 같은 필드를 갖는다),
    아레나는 카드가 «마주 본 기사 2명» 이라 배너 한 칸으로 옮길 수 없어 **숨김**(종전 실루엣 유지). */
 function dgdThUi(){
-  if(dgdDun)  return DUN_UI[dgdDun.id] || null;
-  if(dgdRaid) return dgdRaid.ui || null;
+  if(dgdDun)   return DUN_UI[dgdDun.id] || null;
+  if(dgdRaid)  return dgdRaid.ui || null;
+  if(dgdTower) return DUN_UI.tower || null;    /* 209 — 행 카드와 같은 소스(같은 몬스터가 배너에 온다) */
   return null;                       /* 123 아레나 */
 }
 function dgdPaintTh(tries){
@@ -20519,7 +20583,9 @@ function dgdPaintTh(tries){
   cv.dataset.thc  = u.thc || '';
   cv.dataset.thbr = u.thbr || 1;
   /* 위상은 행 카드와 같은 규칙(카드 번호). 레이드는 던전 뒤 번호를 준다. */
-  const n = dgdDun ? DUNGEONS.findIndex(x => x.id === dgdDun.id) : DUNGEONS.length;
+  const n = dgdDun ? DUNGEONS.findIndex(x => x.id === dgdDun.id)
+          : dgdTower ? DUNGEONS.length + 1        /* 209 — 측정장 뒤 자리(위상만 정한다) */
+          : DUNGEONS.length;
   cv.dataset.thn = n < 0 ? 0 : n;
   /* 아틀라스가 아직 안 올라왔으면 `raidDraw` 가 false 를 낸다 — 03 의 `raidPaint` 와 같은 재시도.
      ⚠ 성공했을 때만 `th-on` 을 붙인다. 먼저 붙이면 실루엣을 끈 채 빈 캔버스가 남는다. */
@@ -20576,18 +20642,54 @@ function renderDunDetail(){
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
 }
 
+/* ---- 209 시련의 탑 세부 (04 팝업 재사용) --------------------------------------
+   레이드(46)·아레나(123)와 같은 «한 껍데기를 모드로 돌려 쓰기» 다. 탑에서 바뀌는 것은 4곳뿐:
+     ① ◀▶ 를 **둘 다** 잠근다 — 도전 대상은 언제나 현재 층 하나다(지시 ②: 이전 단계 재도전 불가).
+     ② [소탕] 은 자물쇠(지시 ③) — 레이드·아레나와 같은 `dgdSweepLock()`.
+     ③ 입장권 칸은 «무제한»(지시 ①: 입장 제한 없음).
+     ④ [도전] 은 항상 활성 — 막을 조건이 하나도 없다(전투 중복만 `dgdGo` 가 본다). */
+function openTowerDetail(){
+  dgdTower = TOWER; dgdDun = null; dgdRaid = null; dgdArena = null;
+  /* 46 이 갈아 끼웠을 수 있는 라벨을 탑 문구로 되돌린다(모드 전환의 상태 잔류 — 205 주석) */
+  $('dgdLvL').textContent = '층';
+  $('dgdRwL').textContent = '보상';
+  renderTowerDetail();
+  $('dgdw').classList.add('on');
+}
+function renderTowerDetail(){
+  const f = S.tower, rw = TOWER.rw(f);
+  $('dgdTitle').textContent = TOWER.n;
+  curIcEl($('dgdTki'), 'relic');                 /* 125 — 탑은 입장권이 없다. 권종 자리에 보상 재화를 둔다 */
+  $('dgdState').textContent = '끝없는 시련 상태';
+  $('dgdFloor').textContent = f;
+  $('dgdTry').textContent = '무제한';
+  $('dgdIcon').innerHTML = curIc('relic');       /* 125 — 화폐는 이미지 태그 문자열이다 */
+  $('dgdAmt').textContent = fmtCur('rel', rw.rel);
+  $('dgdPrev').disabled = true;                  /* ① 현재 층만 도전한다 */
+  $('dgdNext').disabled = true;
+  dgdGoLabel('도전', false);                     /* 205 — 아레나 가격 모드에서 돌아왔을 수 있다 */
+  $('dgdGo').disabled = false;
+  $('dgdGo').style.filter = '';
+  dgdSweepLock();                                /* ② 소탕 없음 */
+  dgdPaintTh();
+  $('dgdAuto').classList.toggle('on', dgdAutoOn);
+}
+
 $('dgdPrev').onclick = () => {
   if(dgdRaid){ raidStep(-1); return; }
+  if(dgdTower) return;                           /* 209 ① — 이전 층은 재도전할 수 없다 */
   if(dgdFloor > 1){ dgdFloor--; renderDunDetail(); }
 };
 $('dgdNext').onclick = () => {
   if(dgdRaid){ raidStep(1); return; }
+  if(dgdTower) return;                           /* 209 ① */
   if(dgdDun && dgdFloor < S.dun[dgdDun.id]){ dgdFloor++; renderDunDetail(); }
 };
 $('dgdAuto').onclick = () => {
   dgdAutoOn = !dgdAutoOn;
   if(dgdArena) renderArenaDetail();          /* 123 */
   else if(dgdRaid) renderRaidDetail();
+  else if(dgdTower) renderTowerDetail();     /* 209 */
   else renderDunDetail();
 };
 /* 169 — 종전 빈 함수(«레퍼런스의 잠긴 유료 버튼 — 아직 미구현»)를 실동작으로 잇는다.
@@ -20634,6 +20736,13 @@ $('dgdGo').onclick = () => {
     closeDunDetail();
     closeDungeon();
     startRaid(r);
+    return;
+  }
+  /* 209 — 탑은 «현재 층 도전» 하나뿐이다(소탕·층 선택이 없어 분기가 없다). */
+  if(dgdTower){
+    closeDunDetail();
+    closeDungeon();
+    challengeTower();
     return;
   }
   const d = dgdDun; if(!d) return;
@@ -21194,7 +21303,16 @@ const DUN_UI = {
      초반 성장 경로를 막지 않는다. */
   rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'), tk:curIc('tkRstone'),
             thk:'elves',  thf:'blue_attack_0', thi:'blue_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['룬강화석 획득 가능'], psx:0.966, gm:14 }
+            rw:['룬강화석 획득 가능'], psx:0.966, gm:14 },
+  /* 209 — 시련의 탑. **DUNGEONS 에는 없는 항목**이다(위 209 주석 참고) — 여기 있는 이유는
+     ① 카드 기하·색 ② 178 던전 보스가 스프라이트를 `DUN_UI[d.id]` 한 곳에서만 읽기 때문이다.
+     썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — elves 아틀라스에서 아직 아무도 안 쓰는
+     포즈 `green_attack` 을 쓴다(relic1 = green_idle · relic4 = blue_idle · rstone = blue_attack).
+     색은 «시련» 의 잿빛 자수정 — 던전 8장 어느 것과도 겹치지 않는다.
+     `gm`/`pre` 가 없으므로 `dunLocked()` 는 항상 false 다 = 탑은 처음부터 열려 있다. */
+  tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'), tk:curIc('tkRelic'),
+            thk:'elves',  thf:'green_attack_0', thi:'green_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
+            rw:['유물조각 획득 가능'], psx:0.966 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
@@ -21264,6 +21382,7 @@ function bgmVars(i){
 }
 function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
+  if(dunSub === 'tower'){ renderTowerPage(); return; } /* 209 — 서브탭 «탑» */
   let h = '';
   DUNGEONS.forEach((d, ci) => {
     const u = DUN_UI[d.id], lock = dunLocked(d), left = S.dunTk[d.id], f = S.dun[d.id];
@@ -21301,6 +21420,37 @@ function renderDunPage(){
   });
   $('dunList').innerHTML = h;
   raidPaint();       /* 72 — 던전 카드도 스프라이트 캔버스다(97 과 같은 페인터를 쓴다) */
+}
+/* 209 — «탑» 탭. 카드 문법은 던전 카드와 **한 글자도 다르지 않다**(같은 `.dnc` 부품·같은 페인터).
+   내용만 탑의 규칙을 말한다:
+     · 좌 캡슐 «층» = 지금 도전 가능한 층(`S.tower`) — 던전의 «레벨» 자리와 같은 뜻이다.
+     · 우 캡슐 «입장 제한» = «없음». 던전의 «남은 횟수»(입장권) 자리인데 탑은 입장권이 없다(지시 ①·③).
+       자리를 비우지 않고 **규칙을 적어 두는** 이유는, 비워 두면 «아직 안 만든 것» 으로 읽히기 때문이다.
+     · 레드닷은 166 규칙 그대로 «지금 깰 만한가»(요구 전투력 충족)일 때만 켠다 — 탑은 도전이 항상
+       가능해서 조건 없이 켜면 영영 안 꺼지는 상시 점등이 된다(166 ①이 등재한 바로 그 병).
+   카드가 한 장뿐이라 `bgmVars(0)` 이고, 배경 레이어는 유물 계열과 같은 `bgm-rel`(보랏빛 안개)이다. */
+function renderTowerPage(){
+  const f = S.tower, u = DUN_UI.tower, ready = cp() >= TOWER.req(f);
+  $('dunList').innerHTML =
+       '<div class="dnc bgm-rel" data-tcard="1" style="--s:' + u.s + ';--i:' + u.i
+    +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
+    +  (u.scn ? ';--scn:' + u.scn : '') + (u.psx ? ';--psx:' + u.psx : '') + bgmVars(0) + '">'
+    +  '<div class="bg"></div>'
+    +  '<div class="bgm"></div>'
+    /* 72 와 같은 규격 — 캔버스 픽셀 = 액자 «안쪽» 크기(슬롯 − 테두리 5 − 림 6, 양변) */
+    +  '<div class="th"><canvas class="thcv" width="' + (parseInt(u.thw, 10) - TH_INSET)
+    +  '" height="' + (341 - parseInt(u.tht, 10) - TH_INSET) + '" data-thk="' + u.thk
+    +  '" data-thf="' + u.thf + '" data-thi="' + u.thi
+    +  '" data-thc="" data-thbr="' + u.thbr + '" data-thn="0"></canvas></div>'
+    +  '<div class="sh"></div><div class="fr"></div>'
+    +  '<div class="nm"><i>' + TOWER.n + '</i></div>'
+    +  '<div class="pill"><em>' + u.ic + '</em><i>' + u.rw[0] + '</i></div>'
+    +  '<div class="lb a"><i>층</i></div><div class="lb b"><i>입장 제한</i></div>'
+    +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
+    +  '<div class="sp tk"><em>♾️</em><i>없음</i></div>'
+    +  (ready ? '<s class="dot"></s>' : '')
+    +  '</div>';
+  raidPaint();
 }
 function openDungeon(){
   if(typeof closeShopPage === 'function') closeShopPage();
@@ -21670,7 +21820,9 @@ function raidIdleTick(){
 setInterval(raidIdleTick, 125);
 /* 서브탭 전환 — 껍데기(#dunw)는 그대로 두고 리스트 내용과 선택 표시만 바꾼다 */
 function setDunSub(k){
-  dunSub = (k === 'raid') ? 'raid' : 'dun';
+  /* 209 — 화이트리스트로 고른다. «raid 아니면 dun» 식 2분기에 탭을 하나 더 얹으면
+     새 탭이 조용히 던전으로 떨어져 «눌리는데 아무 일도 안 일어나는» 74 계열 증상이 된다. */
+  dunSub = (k === 'raid' || k === 'tower') ? k : 'dun';
   [...document.querySelectorAll('#dunSub .stab')].forEach(t => {
     const me = t.dataset.dsub === dunSub;
     t.classList.toggle('on', me);
@@ -21685,6 +21837,8 @@ $('dunSub').addEventListener('click', e => {
   if(t) setDunSub(t.dataset.dsub);
 });
 $('dunList').addEventListener('click', e => {
+  /* 209 — «탑» 탭의 카드. 잠금·입장권이 없으므로 막을 것이 없다(바로 세부 팝업). */
+  if(e.target.closest('[data-tcard]')){ openTowerDetail(); return; }
   /* 123 — «컨텐츠» 탭의 2번째 카드(아레나). 측정장과 같은 잠금 안내를 쓴다 */
   const ac = e.target.closest('[data-arena]');
   if(ac){
