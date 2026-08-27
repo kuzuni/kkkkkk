@@ -75,6 +75,25 @@ const ok = (b, name, detail) => {
   ok(A.oldKept === 0, 'A4 구 54종 id 전부 보존', '누락 ' + A.oldKept);
   ok(A.vBad === 0, 'A5 v 전부 0.90~1.15', '위반 ' + A.vBad);
 
+  /* A6 — 260(2026-08-27, 주인 보고) 회귀 방지. 등급 안에서 «1번째가 최약 → 마지막이 최강» 이고
+     그 등급 최강이 다음 등급 최약을 못 넘는다. 종을 새로 덧붙이거나 v 를 손댈 때 여기서 잡힌다.
+     상세 판정·근거는 `tools/verify260.js` [A]. */
+  const A6 = await page.evaluate(() => {
+    const bad = [];
+    SLOTS.forEach(s => {
+      const tiers = GRADE.map((_, g) => EQUIPS.filter(e => e.slot === s.k && e.g === g));
+      tiers.forEach((t, g) => { for (let j = 1; j < t.length; j++)
+        if (!(t[j].v > t[j - 1].v)) bad.push(s.k + 'g' + g + '[' + j + ']'); });
+      for (let g = 0; g + 1 < tiers.length; g++) {
+        if (!tiers[g].length || !tiers[g + 1].length) continue;
+        if (!(gWear(g) * Math.max(...tiers[g].map(e => e.v))
+            < gWear(g + 1) * Math.min(...tiers[g + 1].map(e => e.v)))) bad.push(s.k + ' 경계 g' + g);
+      }
+    });
+    return bad;
+  });
+  ok(A6.length === 0, 'A6 등급 안 v 단조 증가 + 등급 경계 비역전 (260)', A6.slice(0, 4).join(' / ') || '위반 0');
+
   /* [B] 등급 상수 */
   const B = await page.evaluate(() => ({
     gl: GRADE.length, g6: GRADE[6].n, g7: GRADE[7].n, m6: GRADE[6].mul, m7: GRADE[7].mul,

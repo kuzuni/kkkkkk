@@ -37,10 +37,16 @@ const NEW = [
   { id:'lance',  g:5, axis:'dmg',  n:'천벌의 창' },
   { id:'nova',   g:5, axis:'dmg',  n:'창세의 폭발' }
 ];
-/* 구 세이브 호환을 위해 값이 바뀌면 안 되는 기존 13종 */
+/* 구 세이브 호환을 위해 «id·등급» 이 바뀌면 안 되는 기존 13종 (표는 [g, cd, m])
+   ⚠ 이 표가 지키는 것은 «86 의 리팩터가 기존 스킬을 건드리지 않았다» 이지 «m 을 영원히 못 고친다» 가
+   아니다 — 세이브는 id 로만 보유·장착을 저장하므로 m·cd 는 밸런스 값이다.
+   작업 260(2026-08-27, 저장소 주인 지시 «같은 등급 안에서 세기가 뒤죽박죽») 이 영웅(g3) 등급의
+   세기 편차 12.73 배를 조이면서 **drain 의 m 을 2.00 → 2.40 으로 올렸다**(그 등급 최약이라 올린 쪽).
+   여기 기대값도 같이 올린다 — 안 그러면 260 이 만든 «등급 안 편차 ≤ 3.0» 과 이 표가 서로를 부순다.
+   나머지 12종은 260 도 손대지 않았다(poison·boomer 는 `hits` 선언만 붙였고 m·cd·g·id 는 그대로다). */
 const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orbit:[1,0,0.45],
               ice:[1,1.60,1.30], aura:[2,0,0.55], bolt:[2,1.40,1.60], boom:[3,2.00,2.40],
-              poison:[3,3.20,0.80], drain:[3,2.60,2.00], boomer:[4,2.40,1.80],
+              poison:[3,3.20,0.80], drain:[3,2.60,2.40], boomer:[4,2.40,1.80],
               meteor:[4,4.00,5.00], holy:[5,3.00,4.00] };
 
 (async () => {
@@ -72,6 +78,22 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
   ok(st.over === 0, '스킬은 6등급까지만 쓴다 — 85 의 7·8등급(초월·불멸) 미적용 (초과 ' + st.over + '종)');
   const bad = st.old.filter(([id, g, cd, m]) => !OLD[id] || OLD[id][0] !== g || OLD[id][1] !== cd || OLD[id][2] !== m);
   ok(st.old.length === 13 && !bad.length, '기존 13종 id·등급·cd·m 불변 (어긋남 ' + bad.length + '건)');
+
+  /* 260(2026-08-27, 주인 지시) 회귀 방지 — 스킬은 «오름차순» 이 아니라 «등급 안 세기 편차» 를 본다.
+     척도는 stat.dps 가 쓰는 식 그대로(m × hits / cd, cd 0 은 m × 3), 상한 3.0. 상세는 verify260 [C]. */
+  const spread = await p.evaluate(() => {
+    const dpsOf = s => {
+      const hits = s.id === 'shuri' ? 8 : s.id === 'bolt' ? 3
+                 : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi') / 2), 9) : s.hits || 1;
+      return s.cd > 0 ? s.m * hits / s.cd : s.m * 3;
+    };
+    return GRADE.map((_, g) => SKILLS.filter(s => s.g === g && !s.sup))
+      .filter(t => t.length > 1)
+      .map((t, i) => { const d = t.map(dpsOf); return { g: t[0].g, r: Math.max(...d) / Math.min(...d) }; });
+  });
+  const over = spread.filter(x => x.r > 3.0 + 1e-9);
+  ok(over.length === 0, '등급 안 세기 편차 ≤ 3.0 (260) — '
+    + spread.map(x => 'g' + x.g + '=' + x.r.toFixed(2)).join(' '));
   ok(st.sup === 0, '193 — 보조(sup) 스킬 0종: 버프 5종 폐기 (실측 ' + st.sup + ')');
   NEW.forEach(x => ok(st.ids.includes(x.id), '신설 ' + x.n + '(' + x.id + ') 존재'));
 

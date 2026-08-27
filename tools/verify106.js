@@ -128,6 +128,19 @@ async function open(browser, seed) {
   ok(A.badN === 0, 'A6 이름이 «사람이 읽는 이름» (자동 생성 번호 금지)', String(A.badN));
   ok(A.sp === 'bird,dragon,robo' && A.noSprite === 0, 'A7 스프라이트 3종만 사용 · 전부 PET_SP 에 있음', A.sp);
 
+  /* A8 — 260(2026-08-27, 주인 보고) 회귀 방지. 등급 안 자리 순서 = 세기(m/cd) 오름차순.
+     펫을 새로 덧붙이거나 v·m·cd 를 손대면 여기서 잡힌다. 상세는 `tools/verify260.js` [B]. */
+  const A8 = await page.evaluate(() => {
+    const bad = [];
+    GRADE.forEach((_, g) => {
+      const t = PETS.filter(p => p.g === g);
+      for (let j = 1; j < t.length; j++)
+        if (!(t[j].m / t[j].cd > t[j - 1].m / t[j - 1].cd)) bad.push('g' + g + '[' + j + '] ' + t[j].id);
+    });
+    return bad;
+  });
+  ok(A8.length === 0, 'A8 등급 안 자리 순서 = 세기(m/cd) 오름차순 (260)', A8.slice(0, 4).join(' / ') || '위반 0');
+
   /* ---------------- [B] 곡선 ---------------- */
   const B = await page.evaluate(() => {
     const mErr = GRADE.map((g, i) => Math.abs(PET_M[i] - 0.45 * Math.pow(g.mul, 0.88)));
