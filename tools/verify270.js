@@ -148,6 +148,31 @@ const grade = (tag, g) => {
   (fills[0].got < fills[1].got && fills[1].got < fills[2].got ? ok : fail)(
     '  채움이 단조 증가: ' + fills.map(f => (f.got * 100).toFixed(1) + '%').join(' < '));
 
+  /* ---- [C0] 268 이 08 껍데기로 통일한 계열 — 펫 · 장비 · 유물 ----
+     268(1회차)이 `showItem()` 하나로 세 계열을 `.skd` 로 이관하면서 **옛 fill 추종 문법을
+     그대로 복사**해 왔다(내 작업과 같은 시각에 main 에 들어왔다). 같은 버그가 3계열에 번지므로
+     여기서 같이 잠근다 — 새 세부 팝업을 만들 때 인라인 좌표를 다시 박으면 이 칸이 빨개진다. */
+  console.log('[C0] 268 통일 계열(펫·장비·유물) 세부 — 재료 0 에서도 가운데');
+  const famIds = await page.evaluate(() => ({
+    pet: (typeof PETS !== 'undefined' && PETS[0]) ? PETS[0].id : null,
+    equip: (typeof EQUIPS !== 'undefined' && EQUIPS[0]) ? EQUIPS[0].id : null,
+    relic: (typeof RELICS !== 'undefined' && RELICS[0]) ? RELICS[0].id : null,
+  }));
+  for (const [fam, id] of Object.entries(famIds)) {
+    if (!id) { fail('  ' + fam + ' — 표본 id 를 못 찾았다'); continue; }
+    const shown = await page.evaluate((id) => {
+      if (typeof closeModal === 'function') closeModal();
+      S.own[id] = { l: 1, n: 0 };            /* 재료 0 = 가장 나쁜 칸 */
+      showItem(id);
+      return !!document.querySelector('#mbox .sk-pb');
+    }, id);
+    await page.waitForTimeout(150); await settle(page);
+    if (!shown) { ok('  ' + fam + ' — 이 계열엔 `.sk-pb` 가 없다(진행바 없음) — 해당 없음'); continue; }
+    const g = await page.evaluate(probe);
+    console.log('  · ' + fam + ' 라벨 «' + (g ? g.text : '?') + '»');
+    grade('  ' + fam + '(재료 0)', g);
+  }
+
   /* ---- [C] 코스튬 세부 — 보유 / 미보유(긴 🔒 문구) ---- */
   console.log('[C] 50 코스튬 세부 진행바 라벨 — 보유 / 미보유');
   /* AV 는 `byId(AVATARS)` 인 «맵» 이다 — 배열은 원본 `AVATARS` 쪽이다 */
