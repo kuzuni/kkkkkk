@@ -40,8 +40,14 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
 /* 표본 시각(ms, 트리거 = 0). 93 규격의 연출 길이가 «첫 도착 0.50s · 마지막 1.22s · 총 1.1~1.4s»
    이므로 gain·quest 는 95ms 간격 17장(0~1520ms)으로 그 봉투를 통째로 덮는다.
    upg(강화)는 `fxDelta .62s` + `fxFlash` 라 100ms 간격 8장(0~700ms)이면 충분하다. */
+/* ⚑ 32회차 — **씬마다 간격이 달라야 한다.** r32 는 씬 A 도 95ms 로 찍었는데, 씬 A 는 전투 발이라
+   총 길이가 ~480ms(UI 발 1500ms의 1/3)다. 그래서 «흡수» 구간(372~476ms, 약 100ms)이 통째로
+   프레임 사이(318 → 384 → 소멸)로 빠졌고, 비평가 BC 가 정직하게 «코인이 y<134 인 프레임이 0장 —
+   목표까지 279px 남기고 소실» 로 읽었다. `p58an` 이 10ms 로 재니 코인 최소 y 는 **27.5**,
+   알약 아이콘 중심 10px 안에 든 구간이 **372~476ms** 로 멀쩡히 있다(화면 밖 표본 0).
+   → 씬 A 는 40ms 간격으로 내린다. 봉투 길이에 표본을 맞추는 것이 «연속 프레임» 의 조건이다. */
 const SCENES = {
-  gain:  { stops: Array.from({ length: 17 }, (_, i) => i * 95) },
+  gain:  { stops: Array.from({ length: 17 }, (_, i) => i * 40) },
   quest: { stops: Array.from({ length: 17 }, (_, i) => i * 95) },
   upg:   { stops: Array.from({ length: 8 }, (_, i) => i * 100) },
 };
