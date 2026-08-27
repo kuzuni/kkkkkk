@@ -15717,9 +15717,46 @@ const ES_KNEE = 80;         /* 훈련 축의 지평 = 112 지평 · RANKS 플래
 const ES_M1   = 1.010;      /* 무릎 아래 저지수 — 훈련만으로 s ≤ 80 을 통과하는 상한(1.0108) 이내 */
 const ES_M2   = 1.127;      /* 무릎 위 지수 — RANKS 후반 요구 전투력 성장률에서 역산 */
 const ES_A    = 0.5872;     /* = ln(1.14)/ln(1.25) — 적 «맷집 대 화력» 비례 보존 */
-const eScale = s => (1 + ES_K*(s-1))
-                  * Math.pow(ES_M1, Math.min(s, ES_KNEE) - 1)
-                  * Math.pow(ES_M2, Math.max(0, s - ES_KNEE));
+/* ── 249 «톱니» (저장소 주인 지시 2026-08-27) ───────────────────────────────────
+   «플레이어 업글하든 장비든 쎄질 때 스테이지 깨는 체감이 밸런스 선 느낌이 톱니 느낌으로,
+    전형적인 방치형 rpg 느낌» = «벽에 막힘 → 성장 → 몇 스테이지 연속 돌파 → 다시 벽».
+
+   177 이 만든 위 곡선은 **매끈**하다. sim177 [E] 실측이 그 증거다 — s1..s80 한 판 소요가
+   0.6~0.9분으로 **거의 일정**하다(몹 0.49~0.77초 · 보스 10.8~16.3초). 성장 곡선과 적 곡선이
+   나란히 붙어 있으니 «벽» 도 «돌파» 도 생길 자리가 없다. 249 는 **그 총량을 그대로 두고
+   구간 안에서의 배분만** 바꾼다.
+
+   ① **구간 계단(`ES_BAND`)** — 적 스탯이 스테이지마다 조금씩 오르는 대신, **10 스테이지 구간
+      안에서는 그대로**이고 구간이 바뀔 때 그 구간 몫을 **한꺼번에** 오른다.
+        eScale(s) = eSmooth(eBand(s))   ·   eBand(s) = max(1, 10·floor(s/10))
+      구간 안에서는 적이 고정인데 플레이어만 자라므로 **뒤로 갈수록 빨라진다**(= 연속 돌파),
+      그리고 s = 10·k 에서 그 구간 성장분이 통째로 서 있다(= 벽). **눈대중 상수가 없다** —
+      이빨 높이는 우리가 고른 값이 아니라 **177 곡선 자신의 10스테이지 성장률**이다.
+      «10» 도 발명이 아니다: 162 가 폐기한 구 `isBossStage = S.stage % 10 === 0` —
+      **이 게임이 원래 쓰던 벽 주기**다(162 가 «모든 스테이지 = 보스» 로 바꾸면서 그 주기가
+      사라졌고, 주인이 지금 지적하는 «매끈함» 이 그 자리다).
+      새 곡선은 **어디서도 177 곡선보다 세지 않는다**(eBand(s) ≤ s · eSmooth 단조) —
+      구간 첫 스테이지(=벽)에서 정확히 같고 나머지는 그보다 아래다. 새 벽을 만드는 것이 아니라
+      **벽 사이를 비워** 톱니를 낸다. 그래서 177 의 «훈련만으로 s ≤ 80 무벽» 은 자동으로 유지된다.
+   ② **관문 보스(`BOSS_GATE_N`·`BOSS_GATE_HP`)** — 계단만으로는 이빨이 «보스 관문» 으로 읽히지
+      않는다(한 판의 70%가 몹 50마리다). 구 `isBossStage` 자리인 **10 의 배수 스테이지**의
+      스테이지 보스에만 체력 배수를 얹는다. 값은 고른 것이 아니라 **BOSS_SEC(30초) 예산에서
+      역산**한다 — «훈련만» 설계 플레이어가 유휴 밴드(0.5~6h) 어디에서도 s ≤ ES_KNEE 의 관문
+      보스를 제한 시간 안에 잡는 최대 배수(`node tools/sim249.js` [C] 가 매 실행 이분법으로 푼다).
+      공격력은 안 건드린다 — 관문은 «오래 걸리는 것» 이지 «즉사» 가 아니다(28 실패 = 파밍 전환).
+   ⛔ eGold(경제 축) · 훈련 비용/값 · ES_* 다섯 상수는 **한 글자도 안 바꾼다.**
+   게이트: `node tools/sim249.js`(톱니 진폭·주기 수치) · `node tools/verify249.js`(실동작)
+   기록 `docs/review/249-스테이지톱니.md` */
+const ES_BAND = 10;         /* 톱니 주기 = 구 isBossStage(s%10===0) 의 벽 주기 */
+const eBand   = s => Math.max(1, ES_BAND * Math.floor(s / ES_BAND));
+const eSmooth = a => (1 + ES_K*(a-1))
+                  * Math.pow(ES_M1, Math.min(a, ES_KNEE) - 1)
+                  * Math.pow(ES_M2, Math.max(0, a - ES_KNEE));
+const eScale = s => eSmooth(eBand(s));
+const BOSS_GATE_N  = ES_BAND;   /* 관문 스테이지 = 10 의 배수 */
+const BOSS_GATE_HP = 1.44;      /* 관문 보스 체력 배수 — sim249 [C] 가 BOSS_SEC 예산에서 역산(상한 1.4469) */
+const isGateStage  = s => s % BOSS_GATE_N === 0;
+const bossGateHp   = s => isGateStage(s) ? BOSS_GATE_HP : 1;
 const eHp   = s => 55 * eScale(s);
 const eDmg  = s => 6  * Math.pow(eScale(s), ES_A);
 const eGold = s => 4  * Math.pow(1.175, s-1);   /* 경제 축 — 112 가 이 배율에서 역산됐다. 건드리지 마라 */
@@ -16596,7 +16633,9 @@ function makeEnemy(tk){
   while((x < 60 || x > WORLD.w-60 || y < 60 || y > WORLD.h-60) && tries < 40);
   /* 링이 통째로 월드 밖인 극단(맵 구석)에서도 무한 루프가 되지 않게 마지막 값을 가둔다 */
   x = clamp(x, 60, WORLD.w-60); y = clamp(y, 60, WORLD.h-60);
-  const hp = eHp(s) * T2.hp;
+  /* 249 ② — 관문(10의 배수) 스테이지의 **스테이지 보스**만 체력 배수를 탄다.
+     던전 보스(178)·승급 수호자(208)·아레나(123)는 자기 체력식을 따로 쓰므로 여기 안 걸린다. */
+  const hp = eHp(s) * T2.hp * (tk === 'boss' ? bossGateHp(s) : 1);
   enemies.push({
     tk, T:T2, x, y, r:T2.r, hp, max:hp,
     dmg: eDmg(s)*T2.dmg, gold: eGold(s)*T2.gold,
@@ -21645,7 +21684,12 @@ function renderSt(){
     + '도감 <b>' + ownedTotal() + ' / ' + (SKILLS.length+EQUIPS.length+PETS.length+RELICS.length) + '</b> · 출석 <b>' + S.att.n + '일</b><br>'
     + '플레이 <b>' + hh + '시간 ' + mm + '분</b></p></div>'
     + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmtB(eHp(S.stage)) + '</b> · 공격 <b>' + fmtB(eDmg(S.stage))
-    + '</b><br>매 스테이지 적 <b>50마리</b>, 10스테이지마다 <b>보스</b></p></div>'
+    /* 249 — 이 줄은 162 이전(«10스테이지마다 보스») 문구로 굳어 있었다. 지금은 **매 스테이지**가
+       50킬 + 보스(162)이고, 10 의 배수 스테이지가 **관문**(보스 체력 ×BOSS_GATE_HP)이다.
+       구간 안에서는 적 스탯이 그대로라는 것도 여기서 알려 준다 — 톱니의 «돌파» 구간이 그 자리다. */
+    + '</b><br>매 스테이지 적 <b>' + ENEMY_COUNT + '마리</b> + <b>보스</b> · '
+    + '<b>' + ES_BAND + '스테이지</b>마다 <b>관문</b>(보스 체력 ×' + BOSS_GATE_HP + ')<br>'
+    + '관문을 넘으면 다음 관문까지 적이 <b>그대로</b>입니다 — 그동안은 계속 빨라집니다</p></div>'
     + '<div class="sect"><h3>💾 데이터</h3><p>진행 상황은 자동 저장됩니다.</p>'
     + '<button class="gbtn purple" id="resetBtn" style="margin-top:12px">전체 초기화</button></div>';
   setBody('bSt', h);

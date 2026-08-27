@@ -25,7 +25,7 @@ module.exports = function readECurve(SRC, tag){
   if(EG_B === null || EG_R === null) die('eGold 계수·배율');
   const eGold = s => EG_B * Math.pow(EG_R, s-1);
 
-  /* ── 표기 ①: 177 «선형 × 구간별 저지수» ── */
+  /* ── 표기 ①: 177 «선형 × 구간별 저지수» (+ 249 «구간 계단» 이 얹히면 form '249') ── */
   const K = one(/const ES_K\s*=\s*([\d.]+)/);
   if(K !== null){
     const KNEE = one(/const ES_KNEE\s*=\s*(\d+)/);
@@ -35,16 +35,30 @@ module.exports = function readECurve(SRC, tag){
     const HB   = one(/const eHp\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*eScale\(/);
     const DB   = one(/const eDmg\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(eScale\(/);
     if([KNEE,M1,M2,A,HB,DB].some(v => v === null)) die('177 적 곡선 상수(ES_KNEE·ES_M1·ES_M2·ES_A·eHp·eDmg 기저)');
-    const eScale = s => (1 + K*(s-1))
-                      * Math.pow(M1, Math.min(s, KNEE) - 1)
-                      * Math.pow(M2, Math.max(0, s - KNEE));
+    /* 249 — 구간 계단. `ES_BAND` 가 있으면 eScale 은 «구간 첫 스테이지(=벽)의 값» 을 구간 내내 든다.
+       없으면(177 만 설치) 밴드 1 = 스테이지마다 오르는 매끈한 곡선 그대로다. */
+    const BAND = one(/const ES_BAND\s*=\s*(\d+)/);
+    const GATE_N  = one(/const BOSS_GATE_N\s*=\s*(?:ES_BAND|(\d+))/);
+    const GATE_HP = one(/const BOSS_GATE_HP\s*=\s*([\d.]+)/);
+    const band = BAND ? (s => Math.max(1, BAND*Math.floor(s/BAND))) : (s => s);
+    const eSmooth = a => (1 + K*(a-1))
+                      * Math.pow(M1, Math.min(a, KNEE) - 1)
+                      * Math.pow(M2, Math.max(0, a - KNEE));
+    const eScale = s => eSmooth(band(s));
+    const gateN  = BAND ? (GATE_N || BAND) : null;
     return {
-      form: '177', K, KNEE, M1, M2, A, HB, DB, EG_B, EG_R, eScale,
+      form: BAND ? '249' : '177', K, KNEE, M1, M2, A, HB, DB, EG_B, EG_R,
+      BAND, GATE_N: gateN, GATE_HP, eSmooth, eBand: band, eScale,
       eHp:  s => HB * eScale(s),
       eDmg: s => DB * Math.pow(eScale(s), A),
+      /* 스테이지 보스의 실체력 배수 — 249 관문 스테이지에서만 1 이 아니다 */
+      bossGateHp: s => (BAND && GATE_HP && gateN && s % gateN === 0) ? GATE_HP : 1,
       eGold,
       desc: 'eHp ' + HB + '×eScale(s) · eDmg ' + DB + '×eScale(s)^' + A
-          + ' · eScale = (1+' + K + '(s-1))×' + M1 + '^min(s,' + KNEE + ')-1×' + M2 + '^max(0,s-' + KNEE + ')'
+          + ' · eSmooth = (1+' + K + '(a-1))×' + M1 + '^min(a,' + KNEE + ')-1×' + M2 + '^max(0,a-' + KNEE + ')'
+          + (BAND ? ' · a = eBand(s) = max(1,' + BAND + '×floor(s/' + BAND + ')) [249 구간 계단]'
+                  + ' · 관문 보스 ×' + GATE_HP + ' (s%' + gateN + '===0)'
+                  : ' · a = s [177 매끈]')
           + ' · eGold ' + EG_B + '×' + EG_R + '^(s-1)'
     };
   }

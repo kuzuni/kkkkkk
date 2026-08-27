@@ -160,8 +160,11 @@ const KNEE = KNEE_R ? 80 : RANKS[Math.min(3, RANKS.length-1)].s;
 const K_OF = h => (TPof(h,KNEE)/TPof(h,1) - 1) / (KNEE - 1);
 const K_DER = Math.min(...H_BAND.map(K_OF));
 const A_DER = Math.log(1.14) / Math.log(1.25);       /* 구 곡선의 «맷집 대 화력» 비례 — 게이트 자기 상수 */
-const EHB = EC.form === '177' ? EC.HB : EC.EH_B;
-const EDB = EC.form === '177' ? EC.DB : EC.ED_B;
+/* 249 — 곡선에 «구간 계단» 이 얹히면 form 이 '249' 가 된다. 177 이 푼 다섯 상수(ES_*)는
+   그대로라 이 시뮬의 역산·게이트는 두 표기에서 똑같이 성립한다 — 표기 이름만 넓힌다. */
+const IS177 = EC.form === '177' || EC.form === '249';
+const EHB = IS177 ? EC.HB : EC.EH_B;
+const EDB = IS177 ? EC.DB : EC.ED_B;
 
 const scaleOf = (K, M1, M2, s) => (1 + K*(s-1))
       * Math.pow(M1, Math.min(s, KNEE) - 1) * Math.pow(M2, Math.max(0, s - KNEE));
@@ -186,7 +189,7 @@ const G_LIN = Math.pow((1 + K_DER*(RL.s-1))/(1 + K_DER*(RK.s-1)), 1/(RL.s - RK.s
 const M2_DER = G_TOT / G_LIN;
 
 /* 설치본 */
-const INS = EC.form === '177'
+const INS = IS177
   ? { K: EC.K, KNEE: EC.KNEE, M1: EC.M1, M2: EC.M2, A: EC.A }
   : null;
 
@@ -323,7 +326,7 @@ const R = [];
 const ck = (n, pass, got) => R.push({ n, pass: !!pass, got: String(got) });
 const near = (n, a, b, tol) => ck(n, Math.abs(a-b) <= tol*Math.max(1,Math.abs(b)), a.toFixed(5) + ' vs ' + b.toFixed(5));
 
-ck('① 177 표기가 설치돼 있다 (eScale 선형×구간별 저지수)', EC.form === '177', EC.form);
+ck('① 177 표기가 설치돼 있다 (eScale 선형×구간별 저지수)', IS177, EC.form);
 ck('② 스테이지 1 은 구 곡선과 완전히 동일 — eHp ' + afterHp(1).toFixed(4) + ' · eDmg ' + afterDmg(1).toFixed(4),
    Math.abs(afterHp(1) - beforeHp(1)) < 1e-9 && Math.abs(afterDmg(1) - beforeDmg(1)) < 1e-9,
    afterHp(1) + '/' + afterDmg(1));
@@ -354,9 +357,14 @@ ck('⑧ 훈련만으로 s ≤ ' + KNEE + ' 무벽 — 유휴 0.5~6h 전 밴드�
 ck('⑨ 벽이 KNEE 위로 밀렸다 (before s' + ((WB.boss ?? S_END+1)-1) + ' → after s' + ((WA.boss ?? S_END+1)-1) + ')',
    WA.boss !== null && WA.boss > KNEE && (WB.boss === null || WA.boss > WB.boss), String(WA.boss));
 /* ⑩ 단조 증가 — 적이 어느 스테이지에서도 약해지지 않는다 */
-let mono = true;
-for(let s=1;s<S_END;s++) if(afterHp(s+1) <= afterHp(s) || afterDmg(s+1) <= afterDmg(s)) mono = false;
-ck('⑩ eHp·eDmg 가 s 1..' + S_END + ' 전 구간 단조 증가', mono, mono ? 'ok' : 'NG');
+/* 249 — «구간 계단» 이 얹히면 구간 안에서는 적 스탯이 **그대로**다(설계). 그래서 «전 구간 강증가» 는
+   «비감소 + 구간마다(밴드 앵커끼리) 강증가» 로 넓힌다. 적이 약해지는 스테이지는 여전히 0 이어야 한다. */
+const BAND_S = EC.BAND || 1;
+let mono = true, bandUp = true;
+for(let s=1;s<S_END;s++) if(afterHp(s+1) < afterHp(s) || afterDmg(s+1) < afterDmg(s)) mono = false;
+for(let s=1;s+BAND_S<=S_END;s+=BAND_S) if(afterHp(s+BAND_S) <= afterHp(s) || afterDmg(s+BAND_S) <= afterDmg(s)) bandUp = false;
+ck('⑩ eHp·eDmg 가 s 1..' + S_END + ' 비감소 + ' + BAND_S + '스테이지마다 강증가', mono && bandUp,
+   (mono ? 'ok' : '감소구간 있음') + '/' + (bandUp ? 'ok' : '구간 정체'));
 /* ⑪ 경제 축 불변 — 112 가 역산 근거로 쓴 eGold 배율이 그대로다 */
 const egR = EC.eGold(2)/EC.eGold(1);
 near('⑪ eGold 배율 불변 (112 가 TRAIN_COST_R 을 여기서 역산했다)', egR, 1.175, 1e-6);

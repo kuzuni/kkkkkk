@@ -35,10 +35,16 @@ const near = (n, got, want, tol) => R.push({
 
 /* 게이트 자기 상수 — 화면이 쓴 식을 다시 계산하는 «항등식» 을 피하려고, 기대값은 여기서 만든다
    (LESSONS 212-①). 설치본과 어긋나면 ① 에서 먼저 빨개진다. */
-const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6 };
-const scale = s => (1 + C.K*(s-1)) * Math.pow(C.M1, Math.min(s, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, s-C.KNEE));
+const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6, BAND:10, GATE_N:10, GATE_HP:1.44 };
+/* 249 — 곡선에 «구간 계단» 이 얹혔다: eScale(s) = eSmooth(eBand(s)) 이고, 10 의 배수 스테이지의
+   **스테이지 보스**만 체력 배수 GATE_HP 를 탄다. 177 이 푼 다섯 상수(K·KNEE·M1·M2·A)와
+   «s1 = 55/6» 은 그대로라 아래 대조는 전부 유효하다 — 기대식만 249 를 따라간다. */
+const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
+const band  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
+const scale = s => smooth(band(s));
 const wantHp  = s => C.HB * scale(s);
 const wantDmg = s => C.DB * Math.pow(scale(s), C.A);
+const wantBossHp = s => wantHp(s) * 22 * (s % C.GATE_N === 0 ? C.GATE_HP : 1);
 const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
 
 (async () => {
@@ -76,20 +82,19 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   /* ── ③ 불변 ── */
   eq('③ 스테이지 1 적 체력 = 55 (구 곡선과 동일)', live[0].hp, 55);
   eq('③ 스테이지 1 적 공격 = 6 (구 곡선과 동일)',  live[0].dmg, 6);
-  const shape = await p.evaluate(() => {
-    let mono = true, maxJump = 0;
-    for(let s=1;s<400;s++){
-      if(eHp(s+1) <= eHp(s) || eDmg(s+1) <= eDmg(s)) mono = false;
-      /* 무릎에서 «계단» 이 생기면 안 된다 — 인접 배율이 무릎 앞뒤에서 매끄럽게 갈리는지 본다 */
-      if(s >= 70 && s <= 90) maxJump = Math.max(maxJump, eHp(s+1)/eHp(s));
-    }
-    return { mono, maxJump, atKnee: eHp(81)/eHp(80), below: eHp(80)/eHp(79) };
-  });
-  yes('③ eHp·eDmg 가 s 1..400 단조 증가', shape.mono);
-  yes('③ 무릎 앞뒤 배율이 M2/M1 그대로다 (계단 없음) — s80→81 '
-      + shape.atKnee.toFixed(4) + ' vs s79→80 ' + shape.below.toFixed(4),
-      Math.abs(shape.atKnee - C.M2*(1+C.K*80)/(1+C.K*79)) < 1e-9
-      && Math.abs(shape.below - C.M1*(1+C.K*79)/(1+C.K*78)) < 1e-9);
+  const shape = await p.evaluate(B => {
+    let mono = true, bandUp = true;
+    for(let s=1;s<400;s++) if(eHp(s+1) < eHp(s) || eDmg(s+1) < eDmg(s)) mono = false;
+    /* 249 — 구간 안에서는 «그대로» 가 설계다. 강증가는 구간 앵커끼리 본다. */
+    for(let s=B;s+B<=400;s+=B) if(eHp(s+B) <= eHp(s) || eDmg(s+B) <= eDmg(s)) bandUp = false;
+    return { mono, bandUp, atKnee: eHp(90)/eHp(80), below: eHp(80)/eHp(70) };
+  }, C.BAND);
+  yes('③ eHp·eDmg 가 s 1..400 비감소 (249 — 구간 안은 그대로가 설계)', shape.mono);
+  yes('③ eHp·eDmg 가 구간(' + C.BAND + ')마다 강증가', shape.bandUp);
+  yes('③ 무릎 앞뒤 구간 배율이 M2/M1 그대로다 — s80→90 '
+      + shape.atKnee.toFixed(4) + ' vs s70→80 ' + shape.below.toFixed(4),
+      Math.abs(shape.atKnee - smooth(90)/smooth(80)) < 1e-9
+      && Math.abs(shape.below - smooth(80)/smooth(70)) < 1e-9);
 
   /* ── ④ 실제로 스폰된 개체 ── */
   const spawn = await p.evaluate(async ss => {
@@ -117,7 +122,8 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     }
     yes('④ s' + r.s + ' 보스가 실제로 스폰됐다', r.bossMax !== null);
     if(r.bossMax !== null){
-      near('④ s' + r.s + ' 스폰된 보스 체력 = eHp×22', r.bossMax, wantHp(r.s)*22, 1e-9);
+      near('④ s' + r.s + ' 스폰된 보스 체력 = eHp×22' + (r.s % C.GATE_N === 0 ? '×' + C.GATE_HP + '(249 관문)' : ''),
+           r.bossMax, wantBossHp(r.s), 1e-9);
       near('④ s' + r.s + ' 스폰된 보스 공격 = eDmg×22', r.bossDmg, wantDmg(r.s)*22, 1e-9);
     }
   });
