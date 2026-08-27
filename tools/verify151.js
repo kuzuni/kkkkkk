@@ -104,31 +104,45 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
     !(await page.evaluate(() => (PASS_ITEMS[1].bl || []).join('|'))).includes('4시간 증가'));
 
   /* ================= [B] 구매 한 벌 ================= */
-  console.log('\n[B] 구매 — 차감·즉시 보석·쿠폰·효과가 한 벌로');
+  /* ⚠ 153(상점 구매품 우편 지급, 2026-08-27 주인 지시)이 **151 의 재화 지급 경로를 우편으로 옮겼다**.
+     그래서 «구매 즉시 다이아가 늘어난다» 는 더 이상 참이 아니다 — 참인 것은
+     ⓐ 정가만큼 차감 ⓑ 권한(광고 제거·자동 축복·오프라인 +4h)은 **즉시** ⓒ 쿠폰·즉시 보석은
+     **우편 한 통**으로 가고, 그 우편을 수령하면 그때 재화가 된다. 세 층을 다 본다(LESSONS 156-2). */
+  console.log('\n[B] 구매 — 차감 · 권한 즉시 · 재화는 우편(153)');
   for (const id of ['noads', 'abless', 'offplus']) {
     const r = await page.evaluate(i => {
       S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
-      S.dia = 3e6; S.mileage = 0;
-      const p = PASS_ITEMS.find(x => x.id === i);
+      S.dia = 3e6; S.mileage = 0; S.mailx = []; S.mail = S.mail || {};
       const d0 = S.dia, m0 = S.mileage | 0;
       /* 같은 tick 안에서 Δ 를 잰다 — 자동 전투가 재화를 흔들 수 없다(LESSONS 156-3) */
       const okr = buyPass(i);
-      return { okr, dDia: S.dia - d0, dMile: (S.mileage | 0) - m0, want: -p.dia + p.once,
-        cp: p.cp, own: passOwned(i), twice: buyPass(i) };
+      const mails = (S.mailx || []).map(m => ({ t: m.t, c: m.c, m: m.m, src: m.src }));
+      const dBuy = S.dia - d0, mBuy = (S.mileage | 0) - m0;
+      /* 그 우편을 수령하면 그때 재화가 들어온다 */
+      const d1 = S.dia, m1 = S.mileage | 0;
+      (S.mailx || []).forEach(m => claimMail(m.id));
+      return { okr, dBuy, mBuy, mails, dClaim: S.dia - d1, mClaim: (S.mileage | 0) - m1,
+        own: passOwned(i), twice: buyPass(i) };
     }, id);
-    const e = EXPECT[id], want = -e.dia + e.once;
-    ok('B:' + id + ' 다이아 Δ = −대체가 + 즉시 보석', r.dDia === want, r.dDia + ' (기대 ' + want + ')');
-    ok('B:' + id + ' 마일리지 쿠폰 +' + e.cp, r.dMile === e.cp, '+' + r.dMile);
-    ok('B:' + id + ' 보유 상태로 전환', r.own === true);
+    const e = EXPECT[id];
+    ok('B:' + id + ' 정가만큼 차감', r.dBuy === -e.dia, r.dBuy + ' (기대 ' + (-e.dia) + ')');
+    ok('B:' + id + ' 구매 시점에는 재화가 안 들어온다(153 — 우편 경유)',
+      r.mBuy === 0, 'Δ쿠폰 ' + r.mBuy);
+    ok('B:' + id + ' 우편 1통 · 즉시 보석 ' + e.once + ' · 쿠폰 ' + e.cp,
+      r.mails.length === 1 && r.mails[0].c === e.once && r.mails[0].m === e.cp,
+      JSON.stringify(r.mails));
+    ok('B:' + id + ' 우편 수령 → 다이아 +' + e.once + ' · 쿠폰 +' + e.cp,
+      r.dClaim === e.once && r.mClaim === e.cp, '+' + r.dClaim + ' / +' + r.mClaim);
+    ok('B:' + id + ' 권한은 즉시 켜진다', r.own === true);
     ok('B:' + id + ' 중복 구매 차단', r.twice === false);
   }
   const lack = await page.evaluate(() => {
     S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
-    S.dia = 10; const d0 = S.dia; const r = buyPass('noads');
-    return { r, dDia: S.dia - d0, own: passOwned('noads') };
+    S.dia = 10; S.mailx = []; const d0 = S.dia; const r = buyPass('noads');
+    return { r, dDia: S.dia - d0, own: passOwned('noads'), mails: (S.mailx || []).length };
   });
-  ok('B:부족 다이아가 모자라면 구매도 지급도 없다',
-    lack.r === false && lack.dDia === 0 && lack.own === false, JSON.stringify(lack));
+  ok('B:부족 다이아가 모자라면 구매도 지급도 우편도 없다',
+    lack.r === false && lack.dDia === 0 && lack.own === false && lack.mails === 0, JSON.stringify(lack));
 
   /* ================= [C] 오프라인 상한 ================= */
   console.log('\n[C] 오프라인 보상 상한 6 → 10시간');

@@ -85,14 +85,27 @@ const CROP = process.argv.includes('--crop');
 
   await p.locator('#app').screenshot({ path: path.resolve(__dirname, '..', out) });
   if (CROP) {
+    /* 카드마다 «그 카드가 온전히 보이는 위치» 로 리스트를 굴린 뒤 잘라낸다.
+       1회차 크롭은 스크롤 없이 잘라 **3장째가 하단 탭바에 가려** 비평가가 채점을 못 했고,
+       위 여백도 30px 뿐이라 카드 윗변 밖으로 나온 상태 탭·가치 배지가 잘렸다(비평 A ⑪). */
     for (let i = 0; i < geo.cards.length; i++) {
-      const c = geo.cards[i];
+      const c0 = geo.cards[i];
+      const want = Math.max(0, c0.y - 300);
+      await p.evaluate((t) => { document.getElementById('shopList').scrollTop = t; }, want);
+      await p.waitForTimeout(120);
+      const c = await p.evaluate((id) => {
+        const A = document.getElementById('app').getBoundingClientRect();
+        const e = document.querySelector('.pvc[data-pv="' + id + '"]').getBoundingClientRect();
+        return { x: e.left - A.left, y: e.top - A.top, w: e.width, h: e.height };
+      }, c0.id);
       const app = await p.locator('#app').boundingBox();
       await p.screenshot({
         path: path.resolve(__dirname, '..', out.replace(/\.png$/, '-c' + (i + 1) + '.png')),
-        clip: { x: app.x + c.x - 12, y: app.y + c.y - 30, width: c.w + 24, height: c.h + 42 }
+        clip: { x: app.x + Math.max(0, c.x - 40), y: app.y + Math.max(0, c.y - 80),
+          width: Math.min(1080 - Math.max(0, c.x - 40), c.w + 80), height: c.h + 110 }
       });
     }
+    await p.evaluate(() => { document.getElementById('shopList').scrollTop = 0; });
   }
   if (GEO) console.log(JSON.stringify(geo, null, 1));
   console.log('errors:', errs.length ? errs.slice(0, 5) : 0);
