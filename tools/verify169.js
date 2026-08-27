@@ -272,14 +272,21 @@ async function openList(p) {
     });
     chk(!a.on && a.sil === 'block', 'D3 아레나 — 썸네일 숨김, 종전 실루엣 유지', `th-on=${a.on} sil=${a.sil}`);
     chk(a.lk && a.dis, 'D4 아레나 — 소탕 버튼은 자물쇠 + 비활성', `lk=${a.lk} dis=${a.dis}`);
-    /* 잠긴 버튼을 눌러도 아무 일도 없어야 한다 */
+    /* 잠긴 버튼을 눌러도 아무 일도 없어야 한다.
+       ⚠ 258(2026-08-27) — 이 단언은 원래 `S.gold` 도 같이 비교해서 **간헐 FAIL** 이었다.
+       팝업 뒤에서 방치 사냥이 계속 도므로 300ms 안에 몹이 하나만 죽어도 골드가 저 혼자 늘어난다
+       (3연속 실행에서 1회 FAIL — 258 착수 전 트리에서도 같다. 내 변경과 무관).
+       소탕이 실제로 도는지는 «저절로 변할 수 없는 값» 으로만 재야 한다 —
+       입장 횟수(`S.dunTk`) · 던전 클리어 카운터 · 31 클리어 화면(`#dclw`) 셋은 소탕 말고는 안 움직인다. */
     const inv = await p.evaluate(async () => {
-      const b0 = JSON.stringify({ g: S.gold, d: S.dia, dun: S.dunTk });
+      const b0 = JSON.stringify({ dun: S.dunTk, cnt: S.cnt.dungeon, d: S.dia });
       document.getElementById('dgdSweep').click();
       await new Promise(r => setTimeout(r, 300));
-      return b0 === JSON.stringify({ g: S.gold, d: S.dia, dun: S.dunTk });
+      return { same: b0 === JSON.stringify({ dun: S.dunTk, cnt: S.cnt.dungeon, d: S.dia }),
+               dcl: document.getElementById('dclw').classList.contains('on') };
     });
-    chk(inv, 'D5 아레나에서 소탕을 눌러도 재화·횟수 불변', String(inv));
+    chk(inv.same && !inv.dcl, 'D5 아레나에서 소탕을 눌러도 입장 횟수·클리어 카운터·클리어 화면 불변',
+      `불변=${inv.same} 클리어화면=${inv.dcl}`);
     await ctx.close();
   }
 
