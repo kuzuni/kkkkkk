@@ -7,7 +7,8 @@
      ③ 두 프레임(0s / 3s) 캡처 픽셀 차이 > 0 = «실제로 움직인다»
      ④ 텍스트·썸네일 bbox 불변 · 클릭 히트 불변
      ⑤ 썸네일 0s / 0.4s 캡처 픽셀 차 > 0 · 슬롯 밖 잉크 0
-     ⑥ 03 리스트 스크롤 중 fps 표(≥ 55fps)
+     ⑥ 03 리스트 스크롤 중 fps 표(지시 원문 «≥ 55fps». 이 러너는 소프트웨어 합성이라 절대 fps 가 안 나온다 —
+       판정은 239 가 «중앙 프레임 시간 비 · 떨군 프레임 비율» 로 옮겼다. §7 주석 참고)
      ⑦ 잠금 카드는 배경·썸네일 정지
 
    주의(LESSONS 29-②·28-③): «움직였는가» 를 애니메이션 플래그가 아니라 **픽셀**로 판정한다.
@@ -306,27 +307,62 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const ds = arn.thd.split(' ');
     ok(new Set(ds).size === 2, `아레나 두 칸의 들썩 위상이 다르다 (${arn.thd})`);
   }
-  /* 아이들 프레임이 «실제로» 바뀐다 — 잠금 카드는 안 바뀌어야 한다 */
-  const f0 = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map(c => c._fr));
-  await p.waitForTimeout(900);
-  const f1 = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')].map(c => c._fr));
-  const liveIdx = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')]
-    .map((c, i) => c.closest('.dnc.lkd') ? -1 : i).filter(i => i >= 0));
-  const lockIdx = await p.evaluate(() => [...document.querySelectorAll('#dunList canvas.thcv')]
-    .map((c, i) => c.closest('.dnc.lkd') ? i : -1).filter(i => i >= 0));
-  ok(liveIdx.length > 0 && liveIdx.every(i => f0[i] && f1[i] && f0[i] !== f1[i]),
-    `해금 칸 ${liveIdx.length}개 전부 아이들 프레임 순환 (${liveIdx.map(i => f0[i] + '→' + f1[i]).join(' · ')})`);
-  ok(lockIdx.length === 0 || lockIdx.every(i => f0[i] === f1[i]),
-    `잠금 칸 ${lockIdx.length}개 프레임 정지`);
+  /* 아이들 프레임이 «실제로» 바뀐다 — 잠금 카드는 안 바뀌어야 한다.
+     ⚠ **239(2026-08-27) — «900ms 두 점» 표본은 위상에 따라 통째로 거짓 FAIL 이었다.**
+     아이들 창(`TH_IDLE`)은 이름이 중복될 수 있다 — `elves/blue_idle` = [0,**1**,2,**1**] 이라
+     8fps 에서 900ms(=7.2프레임) 뒤가 같은 **이름**에 떨어지는 위상이 존재한다(오프셋 7 은 서로 다르지만
+     8 이면 한 바퀴 = 제자리, 오프셋 2 면 1↔1). `node tools/probe239.js A` 실측 **6시행 중 3시행 FAIL**,
+     그런데 그 사이 «순환» 자체는 6/6 시행 모두 정상이었다 — 재고 있던 것이 «순환» 이 아니라 «표본 운» 이었다.
+     → 표본을 **한 바퀴 이상 촘촘히**(50ms 간격) 훑어 «관측된 고유 프레임 수» 를 센다. 그러면 두 점 판정보다
+     **더 강하다** — «달랐다» 가 아니라 «창의 모든 프레임이 실제로 나왔다» 를 묻기 때문이다.
+     기대치는 상수로 적지 않고 페이지의 `TH_IDLE`/`ATLAS` 에서 파생시킨다(LESSONS 121-13 —
+     주기·창을 바꾸는 순간 하네스의 상수는 거짓이 된다). */
+  const IDLE_SEL = '#dunList canvas.thcv';
+  const idleSpec = sel => p.evaluate(sel => [...document.querySelectorAll(sel)].map(c => {
+    const arn = !!c.dataset.arnav;
+    const akey = arn ? 'knight' : c.dataset.thk, anim = arn ? 'idle' : c.dataset.thi;
+    const w = (typeof TH_IDLE !== 'undefined' && TH_IDLE[akey + '/' + anim]) || null;
+    const full = (ATLAS[akey] && ATLAS[akey].a && ATLAS[akey].a[anim]) || null;
+    const list = w || full || [];
+    const afps = (c._an && c._an.afps) || 8;
+    return { akey, anim, lkd: !!c.closest('.dnc.lkd'),
+             uniq: new Set(list).size, cycle: Math.round(list.length / afps * 1000) };
+  }), sel);
+  /* 창 한 바퀴 ×2 + 여유. 프레임 체류가 125ms 라 50ms 간격이면 모든 프레임이 한 바퀴에 두 번 이상 잡힌다. */
+  const idleSeen = (sel, span) => p.evaluate(async ([s, sp]) => {
+    const cs = [...document.querySelectorAll(s)];
+    const acc = cs.map(() => new Set());
+    const t0 = performance.now();
+    while (performance.now() - t0 < sp) {
+      cs.forEach((c, i) => acc[i].add(c._fr));
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return acc.map(x => x.size);
+  }, [sel, span]);
+
+  const spec = await idleSpec(IDLE_SEL);
+  const span = Math.max(300, ...spec.map(s => s.cycle)) * 2 + 300;
+  const seen = await idleSeen(IDLE_SEL, span);
+  const liveIdx = spec.map((s, i) => s.lkd ? -1 : i).filter(i => i >= 0);
+  const lockIdx = spec.map((s, i) => s.lkd ? i : -1).filter(i => i >= 0);
+  ok(liveIdx.length > 0 && liveIdx.every(i => spec[i].uniq >= 2 && seen[i] === spec[i].uniq),
+    `해금 칸 ${liveIdx.length}개 전부 아이들 창을 한 바퀴 돈다 — ${span}ms 동안 관측된 고유 프레임 ` +
+    liveIdx.map(i => `${spec[i].akey}/${spec[i].anim} ${seen[i]}/${spec[i].uniq}`).join(' · '));
+  ok(lockIdx.length === 0 || lockIdx.every(i => seen[i] === 1),
+    `잠금 칸 ${lockIdx.length}개 프레임 정지 (관측 고유 ${lockIdx.map(i => seen[i]).join(',') || '-'} = 전부 1)`);
   /* 아레나는 기본 세이브에서 잠겨 있다 — 해금해서 «두 기사가 서로 다른 위상으로 도는지» 까지 본다(지시 ⑥) */
   if (arn) {
     await p.evaluate(() => { S.best = 999; renderDunPage(); });
     await p.waitForTimeout(900);
-    const g0 = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')].map(c => c._fr));
-    await p.waitForTimeout(900);
-    const g1 = await p.evaluate(() => [...document.querySelectorAll('#dunList .dnc.arn2 canvas.thcv')].map(c => c._fr));
-    ok(g0.length === 2 && g0.every((f, i) => f && g1[i] && f !== g1[i]),
-      `해금 아레나 두 기사 아이들 순환 (${g0.map((f, i) => f + '→' + g1[i]).join(' · ')})`);
+    /* 239 — 여기도 «두 점» 이었다. 기사(knight/idle)는 고유 6프레임이라 900ms 오프셋에서 우연히
+       살아남고 있었을 뿐이고, 창이 바뀌면 elves 와 같은 이유로 죽는다. 같은 다점 표본으로 통일한다. */
+    const ARN_SEL = '#dunList .dnc.arn2 canvas.thcv';
+    const aspec = await idleSpec(ARN_SEL);
+    const aspan = Math.max(300, ...aspec.map(s => s.cycle)) * 2 + 300;
+    const aseen = await idleSeen(ARN_SEL, aspan);
+    ok(aspec.length === 2 && aspec.every((s, i) => s.uniq >= 2 && aseen[i] === s.uniq),
+      `해금 아레나 두 기사 아이들 순환 — ${aspan}ms 관측 고유 ` +
+      aspec.map((s, i) => `${aseen[i]}/${s.uniq}`).join(' · '));
     /* ⚠ «지금 이 순간 두 칸의 프레임이 다른가» 로 물으면 안 된다 — 위상차가 0.7프레임이라
        Math.floor 결과가 같아지는 구간이 30% 있어 **실행마다 튀는 게이트**가 된다(실제로 한 번 거짓 FAIL 났다).
        불변량은 «두 칸의 애니메이션 위상이 다르다» 이므로 엔티티의 at 차이를 잰다(항상 0.7). */
@@ -357,9 +393,11 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
       if (n < 120) requestAnimationFrame(step);
       else {
         const d = []; for (let i = 1; i < ts.length; i++) d.push(ts[i] - ts[i - 1]);
+        const long = d.filter(v => v > 40).length / d.length * 100;   /* 239 — «떨군 프레임» 비율 */
         d.sort((a, b) => a - b);
         res({ avg: +(1000 / (d.reduce((s, v) => s + v, 0) / d.length)).toFixed(1),
               med: +d[Math.floor(d.length / 2)].toFixed(1),
+              long: +long.toFixed(1),
               p95: +(1000 / d[Math.floor(d.length * 0.95)]).toFixed(1), n: d.length });
       }
     };
@@ -385,22 +423,32 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   const pick = (arr, k) => [...arr].sort((x, y) => x[k] - y[k])[1];
   const fpsOn = pick(ons, 'avg'), fpsOff = pick(offs, 'avg');
   await p.evaluate(() => document.querySelectorAll('#dunList .dnc>.bgm').forEach(e => e.style.display = ''));
-  const keep = +(mid(ratios) * 100).toFixed(1);   /* 쌍별 비율의 중앙값 — 부하 변동에 강하다 */
+  const keep = +(mid(ratios) * 100).toFixed(1);   /* 쌍별 비율의 중앙값 */
+  const longOn = mid(ons.map(o => o.long)), longOff = mid(offs.map(o => o.long));
   console.log('  fps 표 (1080×2280 · 카드 ' + DUN_TH.length + '장 · 왕복 스크롤 120프레임)');
-  console.log('  ┌────────────────┬────────┬────────────┬──────────┐');
-  console.log('  │ 상태           │ 평균   │ 중앙 프레임│ 하위 5%  │');
-  console.log('  ├────────────────┼────────┼────────────┼──────────┤');
-  console.log(`  │ 배경 ON(121)   │ ${String(fpsOn.avg).padStart(6)} │ ${String(fpsOn.med + 'ms').padStart(10)} │ ${String(fpsOn.p95).padStart(8)} │`);
-  console.log(`  │ 배경 OFF(기준) │ ${String(fpsOff.avg).padStart(6)} │ ${String(fpsOff.med + 'ms').padStart(10)} │ ${String(fpsOff.p95).padStart(8)} │`);
-  console.log('  └────────────────┴────────┴────────────┴──────────┘');
-  console.log('  쌍별 유지율: ' + ratios.map(r => (r * 100).toFixed(1) + '%').join(' · ') + ' → 중앙값 ' + keep + '%');
-  ok(keep >= 90, `배경을 켠 채 스크롤해도 기준 대비 ${keep}% 유지 (≥ 90%, 3쌍 중앙값)`);
-  /* 하위 5% 는 **기록만** 한다 — 이 러너의 소프트웨어 합성기는 프레임을 33/50/83ms 로 양자화해서,
-     합성 레이어가 하나라도 돌면 무엇을 고쳐도 그 칸으로 떨어지고 실행마다 튄다(같은 코드로 20 → 12fps).
-     여기를 판정에 쓰면 «재현성 없는 회귀» 로 다음 세션의 회차를 태운다(LESSONS 28-③·29-②).
-     판정은 실행마다 안정적인 **중앙 프레임 시간**과 평균 유지율이 한다. */
+  console.log('  ┌────────────────┬────────┬────────────┬──────────┬────────────┐');
+  console.log('  │ 상태           │ 평균   │ 중앙 프레임│ 하위 5%  │ >40ms 비율 │');
+  console.log('  ├────────────────┼────────┼────────────┼──────────┼────────────┤');
+  console.log(`  │ 배경 ON(121)   │ ${String(fpsOn.avg).padStart(6)} │ ${String(fpsOn.med + 'ms').padStart(10)} │ ${String(fpsOn.p95).padStart(8)} │ ${String(longOn + '%').padStart(10)} │`);
+  console.log(`  │ 배경 OFF(기준) │ ${String(fpsOff.avg).padStart(6)} │ ${String(fpsOff.med + 'ms').padStart(10)} │ ${String(fpsOff.p95).padStart(8)} │ ${String(longOff + '%').padStart(10)} │`);
+  console.log('  └────────────────┴────────┴────────────┴──────────┴────────────┘');
+  console.log('  쌍별 평균 유지율(기록만): ' + ratios.map(r => (r * 100).toFixed(1) + '%').join(' · ') + ' → 중앙값 ' + keep + '%');
+  /* ⚠ **239(2026-08-27) — «평균 유지율 ≥ 90%» 을 판정에서 뺐다. 문턱을 낮춘 것이 아니라 자를 바꿨다.**
+     `node tools/probe239.js B/C` 로 같은 실행 안에서 6쌍을 재 보면, 코드를 한 줄도 안 바꾼 채
+     평균 유지율이 **93.7 ~ 108.8%(폭 15.1%p)** 로 흔들린다. 그런데 .bgm 에 진짜 회귀를 주입했을 때의 값이
+     **76.1%(brightness) · 56.9%(blur3)** 다 — 등재된 «77~82%» 는 그 잡음대와 회귀대가 **겹치는 구간**이라,
+     이 자는 초록·빨강 어느 쪽도 뜻하지 않는다(같은 트리가 실행마다 양쪽에 다 떨어진다).
+     같은 6쌍에서 **중앙 프레임 시간 비는 1.00 이 6/6**(폭 0.00)이고 회귀를 넣으면 **1.50** 으로 뛴다.
+     «떨군 프레임(>40ms) 비율» 도 무회귀 4.2~13.4% vs 회귀 53.8~100% 로 갈린다.
+     → 판정은 이 두 축이 한다. 평균 유지율과 하위 5% 는 **표에 그대로 남기되 기록만** 한다
+     (LESSONS 121-14 «임계값을 낮춰 초록을 만들지 마라» 를 어기지 않는 길은 «더 낮은 문턱» 이 아니라
+     «흔들리지 않는 양» 이다 — 237 이 verify114 [8] 에서 가는 길과 같다).
+     ⚠ 판정 축을 갈았으면 **회귀를 주입해 빨간지** 확인하는 것까지가 한 벌이다(LESSONS 132):
+     `node tools/probe239.js C` 가 그 확인이고, 위 두 축은 주입 3케이스에서 전부 빨갛다. */
   ok(fpsOn.med <= fpsOff.med * 1.15,
-    `중앙 프레임 ${fpsOn.med}ms ≤ 기준 ${fpsOff.med}ms × 1.15 (스크롤 체감 유지)`);
+    `중앙 프레임 ${fpsOn.med}ms ≤ 기준 ${fpsOff.med}ms × 1.15 (스크롤 체감 유지 · 회귀 주입 시 1.50배)`);
+  ok(longOn <= longOff + 30,
+    `떨군 프레임(>40ms) ON ${longOn}% ≤ 기준 ${longOff}% + 30%p (무회귀 실측 최대 13.4%p · 회귀 주입 53.8~100%)`);
 
   sec('§8 콘솔');
   ok(errs.length === 0, `콘솔 에러 0건 (${errs.slice(0, 3).join(' | ')})`);
