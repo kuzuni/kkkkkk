@@ -56,10 +56,14 @@ function launchOpts(){
     R('tbhd', '.wm-tb .hd'); R('tbbd', '.wm-tb .bd'); R('tbdv', '.wm-tb .dv');
     R('h1', '.wm-tb .h1'); R('h2', '.wm-tb .h2'); R('l1', '.wm-tb .l1'); R('v1', '.wm-tb .v1');
     R('grid', '.wm-grid'); R('tot', '.wm-tot');
-    R('b1', '.wm-b1'); R('b2', '.wm-b2'); R('arL', '.wm-ar.l'); R('arR', '.wm-ar.r');
+    /* 186 — ◀▶ 페이지 화살표(`.wm-ar`)는 폐지됐다(8등급 40칸 일괄 + 세로 스크롤).
+       옛 arL/arR 는 언제나 null 이라 지웠다. 대신 격자가 8행을 담는지 여기서 같이 본다. */
+    R('b1', '.wm-b1'); R('b2', '.wm-b2');
     const cs = document.querySelectorAll('#wpnGrid .wgc');
     g.cardCount = cs.length;
-    [0, 1, 4, 5, 10, 15].forEach((i) => { if (cs[i]) R('c' + i, cs[i]); });
+    /* 186 — 마지막 행(불멸, c35~39)까지 찍는다. 격자는 스크롤 컨테이너라 아래 행은
+       화면 밖 좌표로 나온다(그게 정상이다 — 스크롤로 닿는다는 뜻). */
+    [0, 1, 4, 5, 10, 15, 20, 25, 30, 35, 39].forEach((i) => { if (cs[i]) R('c' + i, cs[i]); });
     return g;
   });
 
