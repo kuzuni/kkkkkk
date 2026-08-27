@@ -10,8 +10,10 @@
      [5] 번개    — 경로가 한 번만 굳고(프레임 간 불변) 가지 2~3개 · 잔광 수명 0.30s 인가
      [6] 등급    — 같은 종류에서 등급이 오르면 트레일 길이가 «+10%/등급» 으로 길어지는가
      [7] 밸런스  — 피해 계수(m)·쿨(cd)·폭발 반경이 하나도 안 바뀌었는가 (연출은 피해에 손대지 않는다)
-     [8] 성능    — 적 30 · 8스킬 동시 시전으로 60초 분량을 돌린 평균 프레임 ≥ 55fps · 파티클 상한 준수 ·
-                   트레일 버퍼가 풀에서 재사용되는가(프레임당 할당 0)
+     [8] 성능    — 적 30 · 8스킬 동시 시전 씬의 **프레임당 캔버스 명령 수**(러너 무관 작업량 예산) ·
+                   filter/shadowBlur 상시 사용 금지 · 같은 실행 안의 «부하/기준선» 시간 비율 ·
+                   파티클 상한 준수 · 트레일 버퍼가 풀에서 재사용되는가(프레임당 할당 0)
+                   (237 — 절대 fps 판정은 `V114_PERF=1` 전용 러너에서만. 이유는 아래 [8] 주석)
      [9] 게이트  — 55 «화면 흔들림» OFF 면 cam.shake 0 · 콘솔 에러 0
 
    실행: node tools/verify114.js       → 마지막 줄 VERIFY114 n/n PASS
@@ -474,38 +476,109 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   });
   ok(mBad.length === 0, '폭발 계열 피해 계수·쿨 불변 (어긋남 ' + mBad.length + '건)');
 
-  /* ---------------- [8] 성능 ---------------- */
+  /* ---------------- [8] 성능 ----------------
+     237(2026-08-27) — 판정을 «절대 fps» 에서 내렸다. 이 클라우드 러너는 크로미움이 소프트웨어 렌더라
+     연출을 통째로 꺼도 적 30 씬이 22~25ms(40~45fps)고, 컨테이너 부하에 따라 같은 커밋의 같은 씬이
+     19.4ms ↔ 30.5ms(40%)로 흔들린다 — «≥55fps» 는 무엇을 고쳐도 영영 빨간 자다(LESSONS 121-④).
+     대신 **러너 무관 축 = 프레임당 캔버스 명령 수(작업량)** 를 주 판정으로 삼는다. 실측 폭이 7.4%
+     (시간 40%)이고 FX 몫이 프레임의 72%(기준선 104 → 부하 373)라 «연출이 무거워졌다» 를 직접 잡는다.
+     시간 축은 버리지 않고 **같은 실행 안의 기준선 대비 비율**(A/B 3쌍 · 쌍별 비율의 중앙값)로 남겨
+     «명령 수는 그대로인데 느려지는» 부류(filter·shadowBlur·그림자)를 넉넉한 트립와이어로 받는다.
+     절대 fps 는 `V114_PERF=1` 을 준 전용 러너에서만 판정하고, 기본 실행에서는 참고로 찍는다. */
   console.log('[8] 성능 예산');
+  const PERF_ABS = process.env.V114_PERF === '1';
   const perf = await p.evaluate(() => {
-    /* 적 30 · 8칸을 폭발·투사체 계열로 채워 «최악» 부하를 만든다 */
-    sbufClear();
-    const eq = ['meteor','boom','holy','nova','gale','lance','bolt','shuri'];
-    S.own = {}; eq.forEach(id => S.own[id] = { n:0, l:1 });
-    S.eqSkill = eq.slice();
-    skillCd = {}; shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
-    rings.length = 0; parts.length = 0; enemies.length = 0; spawnQ.length = 0;
-    markDirty();
-    player.x = WORLD.w/2; player.y = WORLD.h/2; player.dead = 0; player.inv = 99;
-    for (let i = 0; i < 30; i++) makeEnemy('zombie');
-    enemies.forEach((e, i) => { e.born = 1; e.hp = e.max = 1e12;
-      const a = i*6.283/30; e.x = player.x + Math.cos(a)*(120 + (i%5)*40); e.y = player.y + Math.sin(a)*(120 + (i%5)*40); });
-    const N = 3600;                                    /* 60fps × 60초 */
-    let partMax = 0, ringMax = 0;
-    const t0 = performance.now();
-    for (let i = 0; i < N; i++) {
-      step(1/60); draw();
-      partMax = Math.max(partMax, parts.length);
-      ringMax = Math.max(ringMax, rings.length);
-      enemies.forEach(e => { if (e.hp < 1e11) e.hp = 1e12; });
+    const EQ = ['meteor','boom','holy','nova','gale','lance','bolt','shuri'];
+    /* 적 30 · 8칸을 폭발·투사체 계열로 채워 «최악» 부하를 만든다. withSkills=false 가 같은 러너의 기준선 */
+    function scene(withSkills){
+      sbufClear();
+      S.own = {}; EQ.forEach(id => S.own[id] = { n:0, l:1 });
+      S.eqSkill = withSkills ? EQ.slice() : [];
+      skillCd = {}; shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
+      rings.length = 0; parts.length = 0; enemies.length = 0; spawnQ.length = 0;
+      markDirty();
+      player.x = WORLD.w/2; player.y = WORLD.h/2; player.dead = 0; player.inv = 99;
+      for (let i = 0; i < 30; i++) makeEnemy('zombie');
+      enemies.forEach((e, i) => { e.born = 1; e.hp = e.max = 1e12;
+        const a = i*6.283/30; e.x = player.x + Math.cos(a)*(120 + (i%5)*40); e.y = player.y + Math.sin(a)*(120 + (i%5)*40); });
     }
-    const ms = (performance.now() - t0) / N;
-    return { ms: Math.round(ms*1000)/1000, fps: Math.round(1000/ms), partMax, ringMax,
-             pool: trPool.length, shots: shots.length };
+    function spin(withSkills, n){                      /* 씬을 n 프레임 돌리고 상한을 모은다 */
+      scene(withSkills);
+      let partMax = 0, ringMax = 0;
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) {
+        step(1/60); draw();
+        partMax = Math.max(partMax, parts.length);
+        ringMax = Math.max(ringMax, rings.length);
+        enemies.forEach(e => { if (e.hp < 1e11) e.hp = 1e12; });
+      }
+      return { ms: (performance.now() - t0) / n, partMax, ringMax, pool: trPool.length };
+    }
+
+    /* ⓐ 시간 — 기준선↔부하를 «번갈아» 3쌍. 한쪽을 다 재고 나중에 다른 쪽을 재면 그 사이의
+       컨테이너 부하 변화가 통째로 비율에 실린다(LESSONS 121-④ ⚠). */
+    spin(false, 60); spin(true, 60);                   /* 워밍업(JIT·스프라이트 캐시) */
+    const PAIRS = 3, N = 800;
+    const pair = [];
+    let partMax = 0, ringMax = 0, pool = 0, heavyMs = [];
+    for (let k = 0; k < PAIRS; k++) {
+      const a = spin(false, N), h = spin(true, N);
+      pair.push(h.ms / a.ms); heavyMs.push(h.ms);
+      partMax = Math.max(partMax, h.partMax); ringMax = Math.max(ringMax, h.ringMax); pool = h.pool;
+    }
+    const med = arr => arr.slice().sort((x, y) => x - y)[(arr.length - 1) >> 1];
+
+    /* ⓑ 작업량 — 캔버스 명령 수. 프로토타입을 래핑해 세고 끝나면 되돌린다(다음 절에 영향 없음). */
+    const CP = CanvasRenderingContext2D.prototype;
+    const OPS = ['fill','stroke','fillRect','strokeRect','drawImage','fillText','strokeText',
+                 'clearRect','putImageData','arc','ellipse','createRadialGradient','createLinearGradient'];
+    const cnt = {}, orig = {};
+    OPS.forEach(k => { const f = CP[k]; if (typeof f !== 'function') return; orig[k] = f;
+      CP[k] = function(){ cnt[k] = (cnt[k] || 0) + 1; return f.apply(this, arguments); }; });
+    /* 비싼 «상태» 2종은 명령 수가 적은데 시간만 폭발하는 부류라 따로 센다(LESSONS 121-③) */
+    const sd = {};
+    ['filter','shadowBlur'].forEach(k => {
+      const d = Object.getOwnPropertyDescriptor(CP, k); if (!d || !d.set) return; sd[k] = d;
+      Object.defineProperty(CP, k, { configurable: true, enumerable: d.enumerable, get: d.get,
+        set(v){ if (v && v !== 'none' && v !== 0) cnt[k] = (cnt[k] || 0) + 1; return d.set.call(this, v); } });
+    });
+    const opRun = (withSkills, n) => {
+      scene(withSkills);
+      Object.keys(cnt).forEach(k => delete cnt[k]);
+      for (let i = 0; i < n; i++) { step(1/60); draw();
+        enemies.forEach(e => { if (e.hp < 1e11) e.hp = 1e12; }); }
+      let tot = 0; const costly = (cnt.filter || 0) + (cnt.shadowBlur || 0);
+      Object.keys(cnt).forEach(k => { if (k !== 'filter' && k !== 'shadowBlur') tot += cnt[k]; });
+      const per = {}; Object.keys(cnt).forEach(k => per[k] = Math.round(cnt[k] / n * 10) / 10);
+      return { ops: Math.round(tot / n * 10) / 10, costly: Math.round(costly / n * 100) / 100, per };
+    };
+    const opB = opRun(true, 600), opA = opRun(false, 200);
+    OPS.forEach(k => { if (orig[k]) CP[k] = orig[k]; });
+    Object.keys(sd).forEach(k => Object.defineProperty(CP, k, sd[k]));
+
+    const hm = med(heavyMs);
+    return { ratio: Math.round(med(pair)*1000)/1000, pairs: pair.map(v => Math.round(v*100)/100),
+             ms: Math.round(hm*1000)/1000, fps: Math.round(1000/hm),
+             baseMs: Math.round(med(heavyMs.map((v, i) => v / pair[i]))*1000)/1000,
+             ops: opB.ops, opsBase: opA.ops, costly: opB.costly, per: opB.per,
+             partMax, ringMax, pool };
   });
-  ok(perf.fps >= 55, '적 30 · 8스킬 60초 평균 프레임 ' + perf.ms + 'ms = ' + perf.fps + 'fps ≥ 55');
+  /* 주 판정 — 작업량. 실측(2026-08-27, 5회) 357.9~385.6 · 중앙값 373.2 · 폭 7.4% → 자는 460(+19%). */
+  ok(perf.ops <= 460, '적 30 · 8스킬 프레임당 캔버스 명령 ' + perf.ops + ' ≤ 460 ' +
+     '(기준선 0칸 ' + perf.opsBase + ' · 연출 몫 ' + Math.round(100*(1 - perf.opsBase/perf.ops)) + '%)');
+  ok(perf.costly <= 0.5, '프레임당 filter·shadowBlur 사용 ' + perf.costly + ' ≤ 0.5 ' +
+     '(명령 수는 적고 시간만 먹는 부류 — 매 프레임 쓰면 안 된다)');
+  /* 보조 판정 — 같은 실행 안의 시간 비율. 실측 쌍별 1.13~1.82 · 중앙값 1.17~1.50 → 자는 2.4.
+     좁히지 않는 이유: «명령 수는 그대로인데 느려지는» 부류의 본체(filter·shadowBlur)는 바로 위에서
+     직접 세고 있고, 시간은 이 컨테이너에서 쌍 안에서도 ±20% 흔들려 좁히면 뜨고 지는 자가 된다. */
+  ok(perf.ratio <= 2.4, '연출 시간 몫 = 부하/기준선 중앙값 ' + perf.ratio + ' ≤ 2.4 ' +
+     '(3쌍 ' + perf.pairs.join('/') + ' · 기준선 ' + perf.baseMs + 'ms · 부하 ' + perf.ms + 'ms)');
   ok(perf.partMax <= 420, '파티클 상한 준수 최대 ' + perf.partMax + ' ≤ 420');
   ok(perf.ringMax <= 44, '링 상한 준수 최대 ' + perf.ringMax + ' ≤ 44');
   ok(perf.pool > 0, '트레일 버퍼가 풀로 되돌아와 재사용된다 (풀 ' + perf.pool + '개 · 프레임당 할당 0)');
+  if (PERF_ABS) ok(perf.fps >= 55, '[V114_PERF] 절대 프레임 ' + perf.ms + 'ms = ' + perf.fps + 'fps ≥ 55');
+  else console.log('    · 참고(판정 아님) 절대 프레임 ' + perf.ms + 'ms = ' + perf.fps + 'fps · ' +
+                   '전용 러너에서 판정하려면 V114_PERF=1');
 
   /* ---------------- [9] 게이트 ---------------- */
   console.log('[9] 게이트');
