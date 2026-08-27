@@ -1,17 +1,22 @@
 /* 작업 149 게이트 — «확인·선택이 필요 없는 단순 안내» 가 모달 팝업이 아니라 토스트로 뜨는가.
+ * 작업 206 이 그 기준을 **더 공격적으로** 좁혀 이 게이트를 이어받았다(2026-08-27, 주인 재지시).
  *
- * 주인 지시(2026-08-27): «부족 알림 같은 건 팝업 말고 토스트로 — 방치형 게임에서 보통 하는 대로».
+ * 주인 지시(149, 2026-08-27): «부족 알림 같은 건 팝업 말고 토스트로 — 방치형 게임에서 보통 하는 대로».
+ * 주인 재지시(206, 2026-08-27): «알림들 팝업 말고 꼭 토스트로 — 클릭 안 해도 1초 이따 자동으로 사라지는 류로».
  *
  * 이 게이트가 소유한 것은 **분류와 그 결과의 실동작**이다:
- *   ⓐ 단순 안내 경로를 실제로 밟으면 → `.fx-toast` 가 뜨고 `#modal` 은 **안 열린다**
- *   ⓑ 결과·의사결정 경로는 그대로 모달이다(과교정 회귀 방지 — 전부 토스트로 밀면 결과를 놓친다)
+ *   ⓐ 안내·결과 경로를 실제로 밟으면 → `.fx-toast` 가 뜨고 `#modal` 은 **안 열린다**
+ *   ⓑ 팝업으로 남는 것은 «선택·입력이 실제로 필요한 것» 6곳뿐이다(206 개정 — 149 의 20곳에서 좁혔다).
+ *      과교정이 아니라 **주인이 지시한 방향**이고, 반대로 그 6곳이 토스트로 밀리는 회귀는 여기서 막는다.
  *   ⓒ 토스트 문구가 프레임(1080) 밖으로 안 나간다 — `.fx-toast` 는 `white-space:nowrap` 이라
  *      문구가 길면 그대로 삐져나온다. 58 이 그 기하를 소유하므로 149 는 **문구 길이로** 지킨다.
  *      워스트케이스는 실데이터(던전·배너·코스튬·이용권·가방 이름 중 가장 긴 것)로 만든다.
  *   ⓓ 토스트가 58 이 실측해 둔 «빈 띠»(초상화 플레이트 하단 142 ↔ #chapN 상단 227) 안에 앉는다
+ *   ⓔ (206 ②) 토스트는 **클릭 없이 ≈1~1.5초 안에 스스로 사라진다** — §6 이 실측한다.
  *
- * ⚠ `fxToast()` 는 토스트가 4장 이상 쌓이면 **드롭한다**. 그래서 `notify()` 는 반환값이 없을 때만
- *    옛 팝업으로 되돌린다 — 안내가 통째로 사라지는 것이 이 작업의 유일한 회귀 위험이다(§4).
+ * ⚠ `fxToast()` 는 토스트가 4장 이상 쌓이면 **드롭한다**. 149 는 그때 옛 팝업으로 되돌렸지만,
+ *    그 폴백이 바로 주인이 없애라는 «안내성 팝업» 이다. 206 은 **큐**로 바꿨다 — 드롭되면 큐에
+ *    들어가 자리가 나는 대로 뜬다(§4). 안내가 통째로 사라지는 것이 여전히 유일한 회귀 위험이다.
  *
  * 실행: node tools/verify149.js           → 마지막 줄 VERIFY149 n/n PASS
  *       node tools/verify149.js --broken  → notify 를 popup 으로 되돌려 게이트가 실제로 잡는지(음성 테스트)
@@ -86,32 +91,35 @@ const TOAST_SITES = [
   ['패스 탭 — 미해금',           '아직 해금되지 않은 패스입니다'],
   ['패스 탭 — 준비 중',          '이 패스는 아직 준비 중입니다'],
   /* 189 — «🔒 배속 미해금» 토스트도 사라졌다(#spdb 째 삭제). */
+  /* ── 206 (2026-08-27, 주인 재지시) — 149 가 «결과» 라서 모달로 남겨 뒀던 14곳 ────────────
+     기준: «확인» 버튼 하나로 닫기만 하는 화면은 팝업이 아니다. 결과 수치는 화면에 이미 남는다. */
+  ['206 재료 환불 결과',   "도감 완성 — ' + curIc("],
+  ['206 도감 강화 결과',   "도감 <b>' + n + '단계</b>"],
+  ['206 가이드 전 미션 완료','📌 모든 가이드 미션 완료! 🎉'],
+  ['206 던전 층 실패',     "층 실패 — 피해 <b>"],
+  ['206 승급 실패',        '💀 승급 실패 — 시간 안에'],
+  ['206 합성 성공',        '⚗️ 합성 성공 — '],
+  ['206 레이드 결과',      "' — DPS <b>' + fmtB(dps)"],
+  ['206 아레나 결과',      "'🏅 아레나 승리' : '💀 아레나 패배'"],
+  ['206 다이아 상품 결제', '</b> — 결제 준비 중입니다'],
+  ['206 이용권 구매 완료', "'🎫 ' + p.n + ' 이용권 — '"],
+  ['206 랭킹 탭 미개방',   '랭킹은 아직 열리지 않았습니다'],
+  ['206 프리미엄 패스 결제','💳 프리미엄 패스 — 결제 연동 준비 중입니다'],
+  ['206 자동 축복 정산',   '✨ 자동 축복 <b>'],
+  ['206 도감 마이그레이션','📖 도감이 <b>«부위 · 등급 세트»</b>'],
 ];
-/* 결과·의사결정은 모달로 남는다 — 149 가 «전부 토스트» 로 밀지 않았다는 증거 */
+/* 206 — 팝업으로 남는 것은 «선택·입력이 실제로 필요한 것» 뿐이다.
+   버튼이 둘 이상이거나, 읽고 고를 **목록·장문**이 본문인 화면 6곳. 이 6곳이 토스트로 밀리면
+   (한 줄 nowrap 에 목록·UID·약관이 들어갈 리 없으므로) 정보가 통째로 사라진다 — 그 회귀를 막는다. */
 const POPUP_SITES = [
-  ['재료 환불 결과',   '♻️ 재료 환불'],
-  ['도감 강화 결과',   '🏆 도감 강화!'],
-  ['가이드 전 미션 완료', '📌 가이드 미션 완료!'],
-  ['던전 실패 결과',   '층 실패'],
   /* 182 — «👤 코스튬 획득!» 결제 팝업은 구매 경로와 함께 사라졌다. 코스튬 획득 결과는
-     이제 «🏅 승급 성공!» 팝업 안에서 알린다(바로 아래 줄이 그 자리를 지킨다). */
-  ['승급 성공',        '🏅 승급 성공!'],
-  ['승급 실패',        '💀 승급 실패'],
-  ['합성 성공',        '⚗️ 합성 성공!'],
-  ['레이드 결과',      '🏆 레이드 결과'],
-  ['아레나 결과',      '아레나 승리!'],
-  /* 153 — `diaPackName(p)` 는 이제 grantDiaPack 의 토스트에도 나온다(첫 출현이 그쪽이라
-     앵커가 흐려졌다). 결제 팝업만 가리키는 조각으로 좁힌다. */
-  ['다이아 상품 결제', '결제 준비 중입니다.'],
-  ['이용권 구매',      'p.n + \' 이용권\''],
-  ['개인정보 방침',    '🔒 개인정보 처리 방침'],
-  ['고객 지원',        '🎧 고객 지원'],
-  ['랭킹 목록',        '🏰 시련의 탑 랭킹'],
-  ['랭커 상세',        '위 · \' + r.n'],
-  ['프리미엄 패스 결제', '💳 프리미엄 패스'],
-  ['길라잡이',         '🗺️ 길라잡이'],
-  ['자동 축복 정산',   "popup('✨ 자동 축복',"],
-  ['도감 마이그레이션', '📖 도감이 바뀌었습니다'],
+     이제 «🏅 승급 성공!» 팝업 안에서 알린다 — 그 **코스튬 그리드(목록)** 가 이 팝업이 남는 이유다. */
+  ['승급 성공(코스튬 그리드)', '🏅 승급 성공!'],
+  ['개인정보 방침(장문)',      '🔒 개인정보 처리 방침'],
+  ['고객 지원(UID·Gamer Id)',  '🎧 고객 지원'],
+  ['랭커 상세(항목 목록)',     '위 · \' + r.n'],
+  ['길라잡이(진행·보상 목록)', '🗺️ 길라잡이'],
+  ['notify 폴백(레이어 부재)', "popup('알림'"],
 ];
 /* 조각 위치에서 뒤로 훑어 가장 가까운 `notify(` / `popup(` 중 어느 쪽이 앞서는지 본다 */
 function callerOf(frag){
@@ -143,12 +151,32 @@ const WORST = [
   { n: '광고 보상 수령',  f: 'D => "🎁 " + D.ad + " — " + D.icGold + " 999.99Z 획득"' },
   { n: '장비 일괄강화',   f: 'D => "강화할 수 있는 <b>" + D.wpn + "</b>가 없습니다"' },
   { n: '승급 조건 미달',  f: 'D => "🏅 " + D.rank + " 승급 조건 미달"' },
+  /* ── 206 이 토스트로 내린 «결과» 문구들. 수치는 150 표기의 최댓값(999.99Z)으로 민다 ── */
+  { n: '206 레이드 결과',   f: 'D => "🏆 " + D.raid + " — DPS <b>999.99Z</b> · " + D.icStone + " 999 · " + D.icRstone + " 999 · <b>신기록!</b>"' },
+  { n: '206 아레나 결과',   f: 'D => "🏅 아레나 승리 — 상대 전투력 <b>999.99Z</b> · " + D.icGold + " 999.99Z · " + D.icStone + " 999"' },
+  { n: '206 던전 층 실패',  f: 'D => "💀 " + D.dun + " 99층 실패 — 피해 <b>999.99Z</b> / 999.99Z"' },
+  /* ⚠ 효과 문구(`collEffText`)를 붙인 판은 최대 단계에서 **폭 1077/1080** 으로 프레임 양끝에
+     닿았다(1회차 실측). 제품 문구에서 뺐고, 여기 워스트케이스도 뺀 판으로 잰다. */
+  { n: '206 도감 강화',     f: 'D => "🏆 " + D.collSet + " 도감 <b>10단계</b> 강화!"' },
+  { n: '206 재료 환불',     f: 'D => "♻️ " + D.ban + " 도감 완성 — " + D.icDia + " <b>+999.99Z</b> 환불"' },
+  { n: '206 합성 성공',     f: 'D => "⚗️ 합성 성공 — " + D.grade + " <b>" + D.equip + "</b> 획득!"' },
+  { n: '206 이용권 구매',   f: 'D => "🎫 " + D.pass + " 이용권 — 30일 적용 · 보상은 우편함"' },
+  { n: '206 다이아 결제',   f: 'D => D.diaPack + " — 결제 준비 중입니다"' },
+  { n: '206 승급 실패',     f: 'D => "💀 승급 실패 — 시간 안에 <b>승급 수호자</b>를 못 잡았습니다"' },
+  { n: '206 프리미엄 패스', f: 'D => "💳 프리미엄 패스 — 결제 연동 준비 중입니다"' },
+  { n: '206 랭킹 탭',       f: 'D => "🏚️ 몬스터 농장 랭킹은 아직 열리지 않았습니다"' },
+  { n: '206 가이드 완료',   f: 'D => "📌 모든 가이드 미션 완료! 🎉"' },
+  { n: '206 자동 축복',     f: 'D => "✨ 자동 축복 <b>99999회</b> — 축복 Lv <b>999 → 999</b>"' },
+  { n: '206 도감 마이그레이션', f: 'D => "📖 도감이 <b>«부위 · 등급 세트»</b> 단위로 바뀌었습니다"' },
 ];
 
 (async () => {
   console.log('\n[§1 정적 — 분류가 소스에 그대로 박혀 있는가]');
   ck('§1-0 notify() 정의', /function notify\(txt\)\{[\s\S]{0,240}fxToast\(txt\)/.test(SRC),
-     'popup 폴백 ' + (/if\(!el\) popup\('알림'/.test(SRC) ? '있음' : '없음'));
+     '큐 ' + (/noteQ\.push\(txt\)/.test(SRC) ? '있음' : '없음'));
+  /* 206 ③ — 팝업 폴백은 «레이어 자체가 없을 때» 한 조건으로 좁혔다. 옛 «드롭 = 팝업» 이 돌아오면 FAIL */
+  ck('§1-0 폴백은 레이어 부재에만', /if\(!fxL\(\)\)\{ popup\('알림'/.test(SRC) && !/if\(!el\) popup\('알림'/.test(SRC),
+     /if\(!el\) popup\('알림'/.test(SRC) ? '옛 «드롭 = 팝업» 폴백이 되살아났다' : '큐 폴백');
   ck('§1-0 fxToast 가 el 을 반환', /setTimeout\(\(\) => el\.remove\(\), 1060\);\s*\n\s*return el;/.test(SRC));
   let tOk = 0;
   TOAST_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'notify') tOk++; else ck('§1 토스트 — ' + n, false, c ? '아직 ' + c + '()' : '조각을 못 찾음'); });
@@ -186,11 +214,11 @@ const WORST = [
                  modal: !!(md && md.classList.contains('on')) };
       };
       const out = [];
-      const run = (name, fn) => {
+      const run = (name, fn, allowModal) => {
         clear();
         let err = '';
         try { fn(); } catch (e) { err = String(e && e.message || e); }
-        out.push(Object.assign({ name, err }, seen()));
+        out.push(Object.assign({ name, err, allowModal: !!allowModal }, seen()));
       };
 
       /* 상태를 «막히는» 쪽으로 몰아 둔다 */
@@ -220,15 +248,56 @@ const WORST = [
       run('최고 계급',                () => { const keep = S.rank; S.rank = RANKS.length - 1; openPromo(); S.rank = keep; });
       run('이용권 — 다이아 부족',     () => { const p = PASS_ITEMS.find(x => !passOwned(x)); if (p) buyPass(p.id); else throw new Error('미보유 이용권 없음'); });
       run('설정 — 언어',              () => notify('💬 현재 <b>한국어</b>만 지원합니다'));
+
+      /* ── 206 — 149 가 «결과» 라서 모달로 남겼던 자리들. 전부 **제품 함수를 실제로 부른다**
+         (문구를 게이트에서 손으로 조립해 notify 에 넣으면 아무것도 검증하지 않는다).
+         †  = 그 경로가 자기 모달을 이미 열어 둔 채 알리는 자리 → 모달 ON 을 허용하고
+              «토스트가 떴는가» 만 본다(합성은 아이템 상세 팝업 안의 버튼이다). */
+      run('206 던전 층 실패',   () => { const d = DUNGEONS[0];
+        finishDunRun({ d, f: 3, dmg: 1.2e9, need: 5e9, stage: S.stage }, false); });
+      run('206 승급 실패',      () => { promo = { rank: RANKS[Math.min(1, RANKS.length - 1)] }; endPromo(false); });
+      run('206 아레나 결과',    () => { S.arena = { w: 3, l: 1 };
+        openArenaResult(true, { op: { n: '도전자', cp: 1.5e9 } }, curIc('gold') + ' 999.9M'); });
+      run('206 레이드 결과',    () => { raidOn = RAIDS[0]; raidT = 0; raidDmg = 4.4e10; raidStage = S.stage;
+        endRaid(true); });
+      run('206 도감 강화',      () => { const st = COLL_SETS[0];
+        st.it.forEach(id => { S.own[id] = { n: 1, l: 1 }; });
+        S.coll[st.key] = 0;
+        if (!collReady(st.key)) throw new Error('세트가 강화 가능 상태가 아니다');
+        claimColl(st.key); });
+      run('206 재료 환불',      () => { const bk = Object.keys(BANNERS)[0], B = BANNERS[bk];
+        B.list.forEach(it => { S.own[it.id] = { n: 3, l: maxLv(it) === Infinity ? MAX_LEVEL : maxLv(it) }; });
+        if (!allMaxed(B.list)) throw new Error('배너가 전부 최대가 아니다');
+        doRefund(bk); });
+      run('206 합성 성공 †',    () => { const it = EQUIPS.find(e => canCraft(e) || (!isTopGrade(e) && nextGradeItem(e)));
+        if (!it) throw new Error('합성 가능한 장비가 없다');
+        S.own[it.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
+        showItem(it.id);
+        const c = document.getElementById('mCraft');
+        if (!c) throw new Error('[합성] 버튼이 없다');
+        c.onclick(); }, true);
+      run('206 이용권 구매',    () => { const p = PASS_ITEMS.find(x => !passOwned(x.id));
+        if (!p) throw new Error('미보유 이용권 없음');
+        S.dia = 1e12;
+        if (buyPass(p.id) === false) throw new Error('구매가 막혔다'); });
+      run('206 다이아 상품 결제', () => { renderCoinPage($('shopList'));
+        const b = document.querySelector('#shopList [data-diabuy]');
+        if (!b) throw new Error('다이아 상품 칸이 없다'); b.click(); });
+      run('206 프리미엄 패스',  () => { const b = document.getElementById('psBuy');
+        if (!b || !b.onclick) throw new Error('#psBuy 가 없다'); b.onclick(); });
+      run('206 랭킹 탭 미개방', () => { const t = document.querySelector('#rkw [data-rktab="tower"]');
+        if (!t) throw new Error('랭킹 탭이 없다'); t.click(); });
+      /* 남은 3곳(가이드 체인 끝 · 자동 축복 정산 · 도감 마이그레이션)은 «부팅 1회» 또는
+         «가이드 전 미션 클리어» 라 런타임에서 그 조건을 만들 수 없다 → §1 정적 + §3 폭이 자다. */
       clear();
       return out;
     });
 
     RUN.forEach(r => {
-      const ok = !r.err && r.toast >= 1 && !r.modal;
+      const ok = !r.err && r.toast >= 1 && (r.allowModal || !r.modal);
       ck('§2 ' + r.name, ok,
          r.err ? '예외: ' + r.err
-               : '토스트 ' + r.toast + ' · 모달 ' + (r.modal ? 'ON(← 아직 팝업)' : 'off')
+               : '토스트 ' + r.toast + ' · 모달 ' + (r.modal ? (r.allowModal ? 'ON(자기 시트 — 허용)' : 'ON(← 아직 팝업)') : 'off')
                  + (r.txt ? ' · «' + r.txt.slice(0, 46) + '»' : ''));
     });
 
@@ -248,6 +317,14 @@ const WORST = [
         rank:    longest(RANKS, r => r.ic + ' ' + r.n).ic + ' ' + longest(RANKS, r => r.ic + ' ' + r.n).n,
         ad:      longest(COIN_ADS, a => a.n).n,
         icDia:   curIc('dia'), icRel: curIc('relic'), icGold: curIc('gold'),
+        icStone: curIc('stone'), icRstone: curIc('rstone'),
+        /* 206 — 새로 토스트가 된 결과 문구들의 워스트케이스 재료 */
+        collSet: longest(COLL_SETS, s => s.n).n,
+        grade:   Object.values(GRADE).map(g => g.n).reduce((a, b) => (b.length > a.length ? b : a), ''),
+        equip:   longest(EQUIPS, e => e.n).n,
+        pass:    longest(PASS_ITEMS, p => p.n).n,
+        diaPack: (() => { const p = longest(DIA_PACKS, x => diaPackName(x) + wonTxt(x.won));
+                          return diaPackName(p) + ' <b>' + wonTxt(p.won) + '</b>'; })(),
       };
       /* 가방 이름은 아이템 전체에서 가장 긴 것으로 */
       try {
@@ -293,21 +370,56 @@ const WORST = [
        first ? '토스트 y' + first.t.toFixed(0) + '..' + first.b.toFixed(0)
                + ' ⊂ 띠 y' + WID.band.top.toFixed(0) + '..' + WID.band.bot.toFixed(0) : '토스트 없음');
 
-    /* ── §4 폴백 — 토스트를 못 띄우면 안내가 사라지면 안 된다 ─────────────────── */
-    const FB = await page.evaluate(() => {
+    /* ── §4 큐 — 토스트를 못 띄워도 안내가 사라지면 안 되고, 팝업으로 되돌아가서도 안 된다 ───
+       206 ③: 149 의 «드롭 = 팝업 폴백» 이 바로 주인이 없애라는 안내성 팝업이었다.
+       이제 드롭분은 큐에 들어가 앞 토스트가 소멸(1060ms)하는 대로 실제로 뜬다. */
+    const FB = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
       document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
       try { closeModal(); } catch (e) {}
       for (let i = 0; i < 4; i++) fxToast('스택 ' + i);      /* 4장 → 다음 것은 fxToast 가 드롭한다 */
-      const el = notify('드롭된 안내');
+      const el = notify('큐로 밀린 안내');
       const md = document.getElementById('modal');
-      const r = { dropped: !el, modal: !!(md && md.classList.contains('on')),
-                  txt: md ? md.textContent.slice(0, 40) : '' };
+      const r = { dropped: !el, queued: noteQ.length === 1,
+                  modal: !!(md && md.classList.contains('on')),
+                  txt: md ? md.textContent.slice(0, 40) : '', shownMs: -1 };
+      /* 자리가 나면 실제로 뜨는가 — 최대 3초까지 20ms 간격으로 본다 */
+      const t0 = performance.now();
+      for (let i = 0; i < 150; i++) {
+        if ([...document.querySelectorAll('#fxl .fx-toast')].some(e => e.textContent.includes('큐로 밀린 안내'))) {
+          r.shownMs = performance.now() - t0; break;
+        }
+        await wait(20);
+      }
       try { closeModal(); } catch (e) {}
       document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+      noteQ.length = 0;
       return r;
     });
-    ck('§4 토스트 드롭 시 팝업 폴백', FB.dropped && FB.modal,
-       '드롭 ' + FB.dropped + ' · 폴백 모달 ' + FB.modal + (FB.txt ? ' «' + FB.txt.trim() + '»' : ''));
+    ck('§4 드롭분이 큐로 간다',      FB.dropped && FB.queued,
+       '드롭 ' + FB.dropped + ' · 큐 적재 ' + FB.queued);
+    ck('§4 폴백 팝업이 안 뜬다',     !FB.modal,
+       FB.modal ? '모달 ON «' + FB.txt.trim() + '» ← 149 의 옛 폴백' : '모달 off');
+    ck('§4 큐가 자리 나면 실제로 뜬다', FB.shownMs >= 0 && FB.shownMs <= 2500,
+       FB.shownMs < 0 ? '3초 안에 안 떴다 — 안내가 사라졌다' : Math.round(FB.shownMs) + 'ms 뒤 표시');
+
+    /* ── §6 체류 — 주인 기준 «클릭 안 해도 ≈1초 뒤 자동으로 사라진다»(206 ②) ──────────
+       58 이 이 기하를 소유한다. 206 은 값을 바꾸지 않고 **상한만** 자로 세운다:
+       너무 짧으면 못 읽고, 1.5초를 넘으면 주인이 말한 «1초 이따» 가 아니다. */
+    const LIFE = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+      const t0 = performance.now();
+      const el = fxToast('체류 측정');
+      if (!el) return -1;
+      for (let i = 0; i < 250; i++) {
+        if (!el.isConnected) return performance.now() - t0;
+        await wait(20);
+      }
+      return -2;
+    });
+    ck('§6 클릭 없이 자동 소멸 (0.7~1.5초)', LIFE >= 700 && LIFE <= 1500,
+       LIFE < 0 ? (LIFE === -1 ? '토스트를 못 띄웠다' : '5초 안에 안 사라졌다') : Math.round(LIFE) + 'ms');
 
     /* ── §189 삭제된 두 안내의 «부재» ────────────────────────────────────────────
        189(저장소 주인 지시)가 «마을»·«배속» 두 칸을 지우면서 그 안내 토스트 2건도 없어졌다.

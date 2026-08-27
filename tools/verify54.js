@@ -186,11 +186,13 @@ const GEO = [
   const before = await page.evaluate(() => document.getElementById('rkList').textContent.slice(0, 60));
   await page.evaluate(() => document.querySelector('[data-rktab="tower"]').click());
   await page.waitForTimeout(250);
+  /* 206(2026-08-27, 주인 재지시) — «아직 안 열렸다» 안내는 모달이 아니라 토스트다 */
   const after = await page.evaluate(() => ({
     same: document.getElementById('rkList').textContent.slice(0, 60),
-    pop: !!document.querySelector('#modal') && getComputedStyle(document.getElementById('modal')).display !== 'none'
+    pop: [...document.querySelectorAll('#fxl .fx-toast')].some(e => /랭킹은 아직/.test(e.textContent)),
+    modal: !!document.querySelector('#modal.on')
   }));
-  ck(after.pop, '잠금 탭(시련의 탑)을 눌러도 안내가 없다');
+  ck(after.pop && !after.modal, '잠금 탭(시련의 탑)을 눌러도 토스트 안내가 없다 (모달 ' + (after.modal ? 'ON ←' : 'off') + ')');
   ck(after.same === before, '잠금 탭이 리스트를 바꿔버렸다');
   await page.evaluate(() => { const b = document.querySelector('#modal .mbtn, #modal button'); if (b) b.click(); });
   await page.waitForTimeout(200);

@@ -158,13 +158,15 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     kept: S.coll['equip:weapon:0'] | 0,
     cap: collCap(COLL_SET['equip:weapon:0']),
     ready: collReady('equip:weapon:0'),
-    notice: !!document.querySelector('#modal.on')
+    /* 206(2026-08-27, 주인 재지시) — 이 «바뀌었습니다» 안내는 모달이 아니라 토스트로 뜬다 */
+    notice: [...document.querySelectorAll('#fxl .fx-toast')].some(e => /도감이/.test(e.textContent)),
+    modal: !!document.querySelector('#modal.on')
   }));
   ok(mig.keys.length === 1 && mig.keys[0] === 'equip:weapon:0',
      '구 카테고리 카운터 4개 폐기 · 세트 키만 보존 (남은 키 ' + JSON.stringify(mig.keys) + ')');
   ok(mig.kept === 2, '이미 받은 세트 단계(2)는 그대로 (실측 ' + mig.kept + ')');
   ok(mig.legacy === true, '구 세이브 감지 플래그(collLegacy)');
-  ok(mig.notice, '로드 후 «도감이 바뀌었습니다» 안내 1회 노출');
+  ok(mig.notice && !mig.modal, '206 — 로드 후 «도감이 바뀌었습니다» 안내가 토스트 1회 (모달 ' + (mig.modal ? 'ON ←' : 'off') + ')');
   ok(mig.cap === 5 && mig.ready, '되돌아온 진행도 — Lv.5 세트라 5단계까지 바로 재강화 가능 (cap ' + mig.cap + ')');
   await p.evaluate(() => { closeModal(); localStorage.removeItem(KEY); });
 
@@ -218,6 +220,8 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
              eff: document.querySelector('#collList .clb-eff').textContent,
              stepTxt: document.querySelector('#collList .clb-st').textContent },
              modal: !!document.querySelector('#modal.on'),
+             /* 206(2026-08-27, 주인 재지시) — 강화 «결과» 는 모달이 아니라 토스트다 */
+             toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
              modalTxt: (document.querySelector('#modal .mbox') || {}).textContent || '' };
   });
   ok(click.reachable, '[강화] 버튼이 실제로 눌리는 자리에 있다(hit-test)');
@@ -225,7 +229,7 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
   ok(click.after.cp > click.before.cp, '전투력 즉시 상승 (' + Math.round(click.before.cp) + ' → ' + Math.round(click.after.cp) + ')');
   ok(click.after.eff !== click.before.eff, '효과 바 갱신 ("' + click.before.eff + '" → "' + click.after.eff + '")');
   ok(click.after.stepTxt === '단계 1/4', '단계 표기 갱신 (실측 "' + click.after.stepTxt + '")');
-  ok(click.modal && /도감/.test(click.modalTxt), '강화 결과 팝업 노출');
+  ok(!click.modal && /도감/.test(click.toast), '206 — 강화 결과가 토스트로 «' + click.toast + '» (모달 ' + (click.modal ? 'ON ←' : 'off') + ')');
 
   const relic = await p.evaluate(() => {
     closeModal(); openColl21('relic');

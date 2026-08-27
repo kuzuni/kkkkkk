@@ -19004,8 +19004,8 @@ function doRefund(bkey){
   B.list.forEach(it => { if(S.own[it.id]) S.own[it.id].n = 0; });
   if(B.cur === 'rel') S.relic += amt; else S.dia += amt;
   uiDirty = true; save();
-  popup('♻️ 재료 환불', '<p><b>' + B.n + '</b> 도감을 모두 최대 레벨까지 완성했습니다!<br>'
-    + '남은 재료를 환불했습니다.<br>' + (B.cur === 'rel' ? '유물조각 <b>' + curIc('relic') + '+' : '다이아 <b>' + curIc('dia') + '+') + fmt(amt) + '</b></p>');
+  /* 206 — «환불했습니다» 는 결과 통보다. 도감 완성 사실은 도감 탭이 그대로 보여 준다 */
+  notify('♻️ ' + B.n + ' 도감 완성 — ' + curIc(B.cur === 'rel' ? 'relic' : 'dia') + ' <b>+' + fmt(amt) + '</b> 환불');
 }
 
 /* ==========================================================================
@@ -19283,8 +19283,9 @@ function claimColl(key){
   const n = collStep(key) + 1;
   S.coll[key] = n;
   markDirty(); uiDirty = true; save();
-  popup('🏆 도감 강화!', '<p><b>' + st.n + ' 도감</b> ' + n + '단계<br>'
-    + '<span style="color:#8ff0a8;font-size:28px">' + collEffText(st, n) + '</span><br>영구 적용됩니다!</p>');
+  /* 206 — 강화 «결과» 통보. 효과 문구(`collEffText`)는 붙이지 않는다 — 최대 단계 워스트케이스가
+     폭 1077/1080 으로 프레임 양끝에 닿았다(nowrap). 효과는 바로 뒤 재렌더된 도감 카드가 그대로 띄운다. */
+  notify('🏆 ' + st.n + ' 도감 <b>' + n + '단계</b> 강화!');
 }
 const questGoal  = q => Math.ceil(q.base * Math.pow(q.mul, S.quest[q.id].s));
 const questProg  = q => Math.max(0, q.get() - (S.quest[q.id].base || 0));
@@ -19444,9 +19445,8 @@ function claimGuide(){
   fxReward(rew || box);
   fxToast('가이드 미션 완료 — ' + curIc('dia') + ' ' + fmt(gmDia(m)));
   uiDirty = true; save();
-  if(!gmCur())                                 /* 체인 끝에서만 모달로 마무리한다 */
-    popup('📌 가이드 미션 완료!', '<p><b>' + m.n + '</b><br>다이아 <b>' + curIc('dia') + '+' + fmt(gmDia(m)) + '</b> 획득!</p>'
-      + '<p style="color:#8ff0a8;margin-top:10px">모든 가이드 미션 완료! 🎉</p>');
+  if(!gmCur())                                 /* 206 — 체인 끝 마무리도 토스트다(바로 위 줄이 보상을 이미 알렸다) */
+    notify('📌 모든 가이드 미션 완료! 🎉');
 }
 /* 92 — `S.mail[id]` 는 3상태다: **0/없음 = 미수령 · 1 = 수령 완료 · 2 = 삭제됨**(목록에서 제외).
    `MAILS` 원본은 불변이라 «삭제» 는 렌더 필터일 뿐이고, 미수령(0)은 절대 지워지지 않는다. */
@@ -19809,11 +19809,8 @@ function finishDunRun(r, cleared){
     openDunClear(d, f);                          /* 31 던전 클리어 화면 — 기존 경로 그대로 */
   }else{
     uiDirty = true; save();
-    /* A5 모달 본문은 크림 바탕이다 — 어두운 배경용 색을 쓰면 대비가 1.1:1 이라 안 보인다(46 교훈) */
-    popup('💀 ' + d.n + ' ' + f + '층 실패',
-      '<p>제한 시간 <b>' + DUN_SEC + '초</b> 안에 요구 피해를 채우지 못했습니다.<br>'
-      + '누적 피해 <b>' + fmtB(r.dmg) + '</b> / 요구 <b>' + fmtB(r.need) + '</b><br>'
-      + '더 성장한 뒤 다시 도전하세요!</p>');
+    /* 206 — 실패 «결과» 통보. 층·요구 피해는 03 던전 페이지 카드가 그대로 보여 준다 */
+    notify('💀 ' + d.n + ' ' + f + '층 실패 — 피해 <b>' + fmtB(r.dmg) + '</b> / ' + fmtB(r.need));
   }
 }
 /* HUD 갱신 — drawHud() 가 매 프레임 부른다(28 의 drawBossHud 와 같은 자리) */
@@ -20073,7 +20070,8 @@ function endPromo(win){
       promoCosFx();
     }
   }else{
-    popup('💀 승급 실패', '<p>제한 시간 안에 <b>승급 수호자</b>를 처치하지 못했습니다.<br>더 성장한 뒤 다시 도전하세요!</p>');
+    /* 206 — 실패 통보에는 고를 것이 없다. 승급 조건표는 승급전 모달이 그대로 들고 있다 */
+    notify('💀 승급 실패 — 시간 안에 <b>승급 수호자</b>를 못 잡았습니다');
   }
   spawnStage();
 }
@@ -20172,23 +20170,45 @@ function popup(title, html){
 }
 /* --------------------------------------------------------------------------
    149 «단순 안내는 팝업이 아니라 토스트» (2026-08-27, 저장소 주인 지시)
-   ── 분류 기준 ──────────────────────────────────────────────────────────────
-     · notify(): **확인·선택이 필요 없는 한 줄 안내** — 부족·소진·잠김·조건 미달·
-       «준비 중» · 즉시 확정된 소액 수령. 흐름을 끊지 않고 손도 안 옮긴다(방치형 관례).
-     · popup(): **결과·의사결정 화면** — 강화/합성/승급/레이드/아레나 결과, 코스튬·이용권
-       구매, 랭킹·약관·길라잡이 같은 목록·장문, 1회성 마이그레이션 안내.
+   206 «알림 전면 토스트화» (2026-08-27, 저장소 주인 재지시) — 기준을 더 공격적으로 좁혔다.
+     원문: «알림들 팝업 말고 꼭 토스트로 — 클릭 안 해도 1초 이따 자동으로 사라지는 류로»
+   ── 분류 기준 (206 개정) ───────────────────────────────────────────────────
+     · popup(): **사용자의 선택·입력이 실제로 필요한 것만** — 버튼이 둘 이상이거나(계정 삭제 확인),
+       읽고 고를 «목록·장문» 이 본문인 것(획득 코스튬 그리드 · 약관 · 고객지원 UID · 랭커 상세 ·
+       길라잡이). 즉 «확인» 버튼 하나로 닫기만 하는 화면은 팝업이 아니다.
+     · notify(): **그 밖 전부** — 부족·소진·잠김·조건 미달·«준비 중» 뿐 아니라
+       «~완료»·«~성공»·«~실패»·«~받았습니다» 류 **결과 통보도 전부 토스트**다.
+       결과 수치는 화면에 이미 남는다(레이드·아레나 기록 = 03 던전 페이지 카드 · 도감 단계 = 도감 탭).
    ── 문구 규칙 ──────────────────────────────────────────────────────────────
      `.fx-toast` 는 `white-space:nowrap` 이다(58 이 그 기하를 소유한다 — 여기서 안 건드린다).
      그래서 **문구는 한 줄로 짧게** 쓴다. 프레임 1080 안에 드는지는 `tools/verify149.js` 가 지킨다.
      화폐가 들어가면 옛 팝업과 같이 `curIc()` + `fmt()` 관례를 유지한다.
-   ── 폴백 ───────────────────────────────────────────────────────────────────
-     `#fxl` 은 정적 마크업이라 사실상 항상 있지만, 레이어가 없거나 토스트가 4장 이상
-     쌓여 `fxToast` 가 드롭하면 **안내가 통째로 사라진다**. 그때만 옛 팝업으로 되돌린다.
+   ── 체류 시간 (206 ②) ──────────────────────────────────────────────────────
+     58 의 `fxToast` 가 **퇴장 760ms · 소멸 1060ms** 다 = «클릭 없이 ≈1초 뒤 자동 소멸» — 주인
+     기준(1~1.5초) 안이라 **건드리지 않는다**(그 기하는 58 소유다. `verify149 §6` 이 상한을 지킨다).
+   ── 폴백 (206 ③ 개정) ──────────────────────────────────────────────────────
+     `fxToast` 는 토스트가 4장 이상 쌓이면 **드롭한다.** 149 는 그때 옛 팝업으로 되돌렸는데,
+     그 폴백이 바로 주인이 없애라는 «안내성 팝업» 이다. 206 은 **큐**로 바꿨다 — 자리가 나면
+     그때 띄운다. 팝업 폴백은 `#fxl` 레이어 자체가 없을 때(정적 마크업이라 사실상 불가)만 남는다.
    -------------------------------------------------------------------------- */
+const noteQ = [];
+let noteT = 0;
+function notePump(){
+  if(noteT) return;
+  noteT = setInterval(() => {
+    if(!noteQ.length || !fxL()){ clearInterval(noteT); noteT = 0; noteQ.length = 0; return; }
+    if(fxToast(noteQ[0])) noteQ.shift();
+  }, 120);
+}
 function notify(txt){
+  if(!txt) return null;
   const el = fxToast(txt);
-  if(!el) popup('알림', '<p>' + txt + '</p>');
-  return el;
+  if(el) return el;
+  /* 레이어가 아예 없을 때만 옛 팝업 — 그 밖(스택 4장 드롭)은 큐에 넣고 자리가 나면 띄운다 */
+  if(!fxL()){ popup('알림', '<p>' + txt + '</p>'); return null; }
+  if(noteQ.length < 12) noteQ.push(txt);
+  notePump();
+  return null;
 }
 
 /* ---- 강화 탭 ---- */
@@ -20413,8 +20433,8 @@ function showItem(id){
       if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl('#mbox .mrow'); };
     if(c) c.onclick = () => {
       const nx = craft(it);
-      if(nx) popup('⚗️ 합성 성공!', '<p><b style="color:' + GRADE[it.g].c + '">' + it.n + '</b> ' + CRAFT_NEED + '개 소모<br>'
-        + '<b style="color:' + GRADE[nx.g].c + ';font-size:30px">' + GRADE[nx.g].n + ' ' + nx.n + '</b> 획득!</p>');
+      /* 206 — 합성 «성공» 통보. 결과물은 바로 뒤 재렌더된 목록 카드가 보여 준다 */
+      if(nx) notify('⚗️ 합성 성공 — ' + GRADE[nx.g].n + ' <b>' + nx.n + '</b> 획득!');
     };
   }
 }
@@ -21818,16 +21838,10 @@ function endRaid(record){
        「룬의 제단」이 주 수급처가 되게 소액이고, 신기록 2배 규칙은 강화석과 같다. */
     const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1), rstone: RUNE_ST_RAID * (rec ? 2 : 1) });
     save(); uiDirty = true;
-    /* A5 모달 본문은 크림(#D7C0A1) 바탕이다 — 어두운 배경용 색(#ffd88a·#8fd6ff)을 쓰면
-       대비가 1.1:1 이라 사실상 안 보인다. 강조는 공용 `.mbody p b`(#B4571E) 에 맡기고
-       크기로만 준다(신기록만 진한 초록). */
-    popup('🏆 레이드 결과 — ' + r.n,
-      '<p>제한 시간 <b>' + r.sec + '초</b><br>'
-      + '총 피해량 <b style="font-size:32px">' + fmtB(dmg) + '</b><br>'
-      + '초당 피해(DPS) <b style="font-size:32px">' + fmtB(dps) + '</b><br>'
-      + '보상 <b>' + st + '</b><br>'                     /* 194 — 강화석 */
-      + (rec ? '<b style="color:#1F6B33">신기록!</b>'
-             : '최고 기록 <b>' + fmtB(b.dmg) + '</b> · DPS <b>' + fmtB(b.dps) + '</b>') + '</p>');
+    /* 206 — 결과 통보라 토스트다. 총 피해·최고 기록은 03 던전 페이지의 레이드 카드
+       (`renderDunPage` → `raidBest`)가 항상 띄워 두므로 한 줄에서 뺀다 — 남기는 것은
+       «이번 판이 얼마였나»(DPS) · «무엇을 받았나»(보상) · «갱신했나»(신기록) 셋뿐이다. */
+    notify('🏆 ' + r.n + ' — DPS <b>' + fmtB(dps) + '</b> · ' + st + (rec ? ' · <b>신기록!</b>' : ''));
   }else{
     save(); uiDirty = true;
     showMsg('레이드 중단')            /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 */;
@@ -21931,16 +21945,16 @@ function endArena(win){
   }
   if($('dunw').classList.contains('on')) renderDunPage();
 }
-/* 결과 화면 — 31 던전 클리어 화면과 같은 «딤 위 연출» 계열이지만 승/패 두 가지라
-   A5 공용 모달(팝업)로 낸다. 보상은 giveReward() 가 이미 지급했고 여기서는 «무엇을 받았는지»만 적는다. */
+/* 결과 화면 — 206(주인 지시)으로 모달에서 **토스트**로 내렸다. 고를 것이 없는 결과 통보이고,
+   전적(`S.arena`)은 03 던전 페이지의 아레나 카드가 항상 띄워 두고 있다(`renderDunPage` ~21503).
+   보상은 giveReward() 가 이미 지급했고 여기서는 «무엇을 받았는지»만 한 줄로 적는다. */
 function openArenaResult(win, a, got){
   sfx(win ? 'victory' : 'death');
   const rec = S.arena;
-  popup(win ? '🏅 아레나 승리!' : '💀 아레나 패배',
-    '<p><b>' + S.nick + '</b> vs <b>' + a.op.n + '</b><br>'
-    + '상대 전투력 <b>' + fmtB(a.op.cp) + '</b><br>'
-    + '보상 <b>' + got + '</b><br>'
-    + '전적 <b>' + rec.w + '승 ' + rec.l + '패</b></p>');
+  /* 전적(`rec`)은 03 던전 페이지의 아레나 카드·세부 시트가 그대로 띄운다(renderDun ~21235 · dgdAmt).
+     반대로 **상대 전투력은 이 줄이 유일한 표시처**라 반드시 남긴다(188 — 전투 수치는 `fmtB`). */
+  notify((win ? '🏅 아레나 승리' : '💀 아레나 패배')
+    + ' — 상대 전투력 <b>' + fmtB(a.op.cp) + '</b> · ' + (got || '보상 없음'));
 }
 /* HUD 갱신 — drawHud() 가 매 프레임 부른다(30 의 drawDunHud 와 같은 자리) */
 function drawArnHud(){
@@ -22546,10 +22560,8 @@ $('shopList').addEventListener('click', e => {
   const dp = e.target.closest('[data-diabuy]');
   if(dp){
     const p = DIA_PACKS.find(x => x.id === dp.dataset.diabuy);
-    if(p) popup(diaPackName(p),
-      '<p>' + wonTxt(p.won) + '</p>'
-      + (p.cp ? '<p>구매 시 ' + curIc('mile') + ' 마일리지 쿠폰 +' + p.cp + '</p>' : '')
-      + '<p>결제 준비 중입니다.</p>');
+    /* 206 — «준비 중» 안내에는 고를 것이 없다. 가격·마일리지는 그 상품 카드가 그대로 띄운다 */
+    if(p) notify(diaPackName(p) + ' <b>' + wonTxt(p.won) + '</b> — 결제 준비 중입니다');
     return;
   }
   if(e.target.closest('#cnExch')){ mileageExchange(); return; }
@@ -22799,11 +22811,9 @@ function buyPass(id){
   renderUI();
   renderPassPage($('shopList'));
   fxReward();                                        /* 58 — «얻은 순간» 피드백 */
-  popup(p.n + ' 이용권', '<p>' + p.nt + '</p>'
-    + (p.once ? '<p>' + curIc('dia') + ' <b>' + fmt(p.once) + '</b> 우편함으로 지급</p>' : '')   /* 153 */
-    + (p.daily ? '<p>매일 ' + curIc('dia') + ' <b>' + fmt(p.daily) + '</b> 우편함으로 지급</p>' : '')
-    + (p.cp ? '<p>' + curIc('mile') + ' 마일리지 쿠폰 <b>+' + p.cp + '</b> 우편함으로 지급</p>' : '')
-    + '<p>' + (p.perm ? '평생 적용됩니다.' : PASS_ABLESS_DAYS + '일간 적용됩니다.') + '</p>');
+  /* 206 — 구매 «완료» 통보다. 지급 내역은 153 대로 우편함에 남고, 효과·기간은 이용권 카드가
+     계속 띄워 두므로 한 줄만 남긴다(«무엇을 샀나 · 얼마나 가나 · 어디로 갔나») */
+  notify('🎫 ' + p.n + ' 이용권 — ' + (p.perm ? '평생' : PASS_ABLESS_DAYS + '일') + ' 적용 · 보상은 우편함');
   return true;
 }
 $('shopList').addEventListener('click', e => {
@@ -23890,9 +23900,8 @@ $('rkw').querySelector('.rk-nav').addEventListener('click', e => {
   if(!t) return;
   const k = t.dataset.rktab;
   if(k === 'stage'){ renderRank(); return; }
-  popup(k === 'tower' ? '🏰 시련의 탑 랭킹' : '🏚️ 몬스터 농장 랭킹',
-    '<p>해당 콘텐츠가 아직 열리지 않았습니다.</p>'
-    + '<p style="opacity:.7;font-size:.9em">지금은 «스테이지» 랭킹만 집계됩니다.</p>');
+  /* 206 — «아직 안 열렸다» 는 순수 안내다 */
+  notify((k === 'tower' ? '🏰 시련의 탑' : '🏚️ 몬스터 농장') + ' 랭킹은 아직 열리지 않았습니다');
 });
 /* 행을 누르면 그 유저의 기록 상세 */
 $('rkList').addEventListener('click', e => {
@@ -25153,8 +25162,8 @@ $('psTk').addEventListener('click', e => {
   const [i, c] = b.dataset.pt.split(':').map(Number);
   passClaim(i, c);
 });
-$('psBuy').onclick = () => popup('💳 프리미엄 패스',
-  '<p>결제 연동은 아직 준비 중입니다.</p><p>연동되면 이 버튼이 프리미엄을 활성화합니다.</p>');
+/* 206 — «준비 중» 안내라 토스트다 */
+$('psBuy').onclick = () => notify('💳 프리미엄 패스 — 결제 연동 준비 중입니다');
 
 /* 작업 35 가 «▦ 메뉴 placeholder» 안에 두었던 임시 패스 진입점(`#psGo`)은 여기서 정식 메뉴 항목으로 옮겼다.
    (35 주석의 인계 지시 + LESSONS 57-① — 신규 화면이 구버전을 대체하면 구버전 경로는 그때 지운다)
@@ -27426,18 +27435,14 @@ loadAtlases(() => {
     const n = passDailyPend; passDailyPend = 0;
     setTimeout(() => notify('이용권 매일 보석 ' + curIc('dia') + ' <b>' + fmt(n) + '</b> 우편함 발송'), 900);   /* 153 */
   }
-  /* 오프라인 보상 팝업이 안 떴으면(적립 60초 미만) 정산 결과가 갈 곳이 없다 — 안내 팝업으로 알린다 */
+  /* 오프라인 보상 팝업이 안 떴으면(적립 60초 미만) 정산 결과가 갈 곳이 없다 — 206 대로 토스트로 알린다 */
   if(autoBlessPend){
     const r = autoBlessPend; autoBlessPend = null;
-    setTimeout(() => popup('✨ 자동 축복',
-      '<p>자리를 비우신 동안 <b>' + r.n + '회</b> 자동 발동했습니다.</p>'
-      + '<p>축복 Lv <b>' + r.lv0 + ' → ' + r.lv1 + '</b></p>'), 600);
+    setTimeout(() => notify('✨ 자동 축복 <b>' + r.n + '회</b> — 축복 Lv <b>' + r.lv0 + ' → ' + r.lv1 + '</b>'), 600);
   }
-  /* 91 — 도감이 «세트» 단위로 바뀌면서 구 세이브의 카테고리 카운터를 버렸다. 지시대로 한 줄만 안내한다. */
-  if(collLegacy) setTimeout(() => popup('📖 도감이 바뀌었습니다',
-    '<p>도감이 <b>«부위 · 등급 세트»</b> 단위로 바뀌었습니다.<br>' +
-    '이전 도감 단계는 초기화됐지만, 세트 아이템 레벨만큼<br>' +
-    '<span style="color:#8ff0a8">바로 다시 강화</span>할 수 있습니다.</p>'), 900);
+  /* 91 — 도감이 «세트» 단위로 바뀌면서 구 세이브의 카테고리 카운터를 버렸다. 206 — 이것도 안내라 토스트다
+     («다시 강화할 수 있다» 는 도감 탭의 [강화] 버튼이 활성으로 그대로 보여 준다). */
+  if(collLegacy) setTimeout(() => notify('📖 도감이 <b>«부위 · 등급 세트»</b> 단위로 바뀌었습니다'), 900);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
   addEventListener('beforeunload', save);
   requestAnimationFrame(loop);

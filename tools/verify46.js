@@ -180,12 +180,14 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('HUD 숫자 = 누적 피해량', st.hpN && st.hpN !== '0' && !/NaN|undefined/.test(st.hpN), st.hpN);
 
     /* ---------- 7. 종료 → 결과 + 기록 저장 ---------- */
-    console.log('[7] 시간 만료 → 결과 팝업 + S.raidBest 저장');
+    /* 206(2026-08-27, 주인 재지시) — 레이드 «결과» 는 모달이 아니라 **토스트**다.
+       («알림들 팝업 말고 꼭 토스트로». 총 피해·최고 기록은 아래 [8] 이 보는 03 던전 카드가 들고 있다) */
+    console.log('[7] 시간 만료 → 결과 토스트 + S.raidBest 저장');
     await page.evaluate(() => { raidT = 0.15; });
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(400);        /* 토스트 체류가 1.06초다 — 사라지기 전에 잰다 */
     let r = await page.evaluate(() => ({
       on: !!raidOn, modal: document.getElementById('modal').classList.contains('on'),
-      /* A5 공용 모달은 <h2> 를 #mtitle 로 옮기고 본문만 #mbox 에 남긴다 */
+      toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
       title: document.getElementById('mtitle').textContent,
       txt: document.getElementById('mbox') ? document.getElementById('mbox').innerText : '',
       best: JSON.parse(JSON.stringify(S.raidBest)),
@@ -194,23 +196,11 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       tm: document.getElementById('bossTm').classList.contains('on'),
     }));
     chk('레이드 종료(raidOn null)', !r.on);
-    chk('결과 팝업 표시', r.modal && /레이드 결과/.test(r.title), r.title);
-    chk('결과에 총 피해량·DPS', /총 피해량/.test(r.txt) && /DPS/.test(r.txt));
-    chk('결과에 NaN/undefined 없음', !/NaN|undefined|Infinity/.test(r.txt), r.txt.replace(/\n/g, ' | '));
-    /* A5 모달 본문은 크림(#D7C0A1) 바탕 — 어두운 배경용 색을 쓰면 대비 1.1:1 로 안 보인다 */
-    const con = await page.evaluate(() => {
-      const lum = (c) => { const [r, g, b] = c.match(/\d+/g).map(Number).map((v) => {
-        const s = v / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-      const well = document.querySelector('#mbox .mwell') || document.getElementById('mbox');
-      const bg = lum(getComputedStyle(well).backgroundColor);
-      return [...document.querySelectorAll('#mbox b')].map((b) => {
-        const f = lum(getComputedStyle(b).color);
-        const r = (Math.max(f, bg) + 0.05) / (Math.min(f, bg) + 0.05);
-        return { t: b.textContent, r: +r.toFixed(2) };
-      });
-    });
-    chk('결과 팝업 강조 글자 대비 ≥ 2.5:1', con.every((c) => c.r >= 2.5), con);
+    chk('206 — 결과가 토스트로 뜬다', !!r.toast && /DPS/.test(r.toast), r.toast);
+    chk('206 — 결과 모달은 안 열린다', !r.modal, r.modal ? '모달 ON «' + r.title + '»' : 'off');
+    chk('결과에 NaN/undefined 없음', !/NaN|undefined|Infinity/.test(r.toast), r.toast);
+    /* 토스트는 어두운 판(rgba(24,17,10,.92)) 위 크림 글자다 — 모달의 크림 바탕 대비 규칙이 아니라
+       58 이 소유한 자기 기하를 따른다. 폭·자리·대비는 `verify149 §3` 이 잰다. */
     chk('S.raidBest.r60 기록', !!(r.best.r60 && r.best.r60.dmg > 0 && r.best.r60.dps > 0),
       r.best.r60 && `dmg ${Math.round(r.best.r60.dmg)} dps ${Math.round(r.best.r60.dps)}`);
     chk('localStorage 에 저장됨', !!(r.saved && r.saved.r60 && r.saved.r60.dps > 0));
@@ -219,8 +209,8 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     const rec1 = r.best.r60;
 
     console.log('[8] 카드·세부 팝업에 기록 반영');
-    await click(page, '#okBtn');
-    await page.waitForTimeout(200);
+    /* 206 — 닫을 팝업이 없다(결과가 토스트다). 토스트가 스스로 사라지기만 기다린다 */
+    await page.waitForTimeout(1200);
     await click(page, '.tab[data-t="adv"]');
     await page.waitForTimeout(400);
     const c2 = await page.$$eval('#dunList [data-rcard]', (els) => els.map((e) => ({
@@ -246,13 +236,14 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     const t0 = await page.evaluate(() => raidT);
     await click(page, '#dgdGo');
     await page.waitForTimeout(400);
+    /* 149 — «레이드 진행 중» 안내는 모달이 아니라 토스트다(206 이 그 규칙을 이어받았다) */
     const dup = await page.evaluate(() => ({
-      t: raidT, dmg: raidDmg, title: document.getElementById('mtitle').textContent,
+      t: raidT, dmg: raidDmg,
+      toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
       on: document.getElementById('modal').classList.contains('on') }));
-    chk('측정 중 재도전은 새로 시작하지 않음', dup.on && /레이드 진행 중/.test(dup.title) && dup.t < t0,
-      `${dup.title} t ${dup.t.toFixed(1)} < ${t0.toFixed(1)}`);
-    await click(page, '#okBtn');
-    await page.waitForTimeout(200);
+    chk('측정 중 재도전은 새로 시작하지 않음', !dup.on && /진행 중/.test(dup.toast) && dup.t < t0,
+      `${dup.toast} t ${dup.t.toFixed(1)} < ${t0.toFixed(1)}`);
+    await page.waitForTimeout(1200);       /* 토스트 자연 소멸 대기 */
     await click(page, '.tab[data-t="adv"]');   /* 던전 페이지 닫기 → 전투 화면 */
     await page.waitForTimeout(400);
     await click(page, '#bossGv');
