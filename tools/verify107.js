@@ -20,7 +20,11 @@
  *   [E] 포인터를 쥔 «동안» 재생성 보류 — 누른 채 상태를 바꿔도 변이 0건, 떼면 반영
  *   [F] 값 갱신 회귀 — ① 이 UI 를 얼리지 않는다(골드를 바꾸면 성장 탭 표시가 따라온다)
  *   [G] 형제 시트 점검표(지시 ④) — 26 동료·50 코스튬·성장·던전·06 장비·10 상점
- *   [I] 실제 마우스 드래그 — 끌고 손을 뗀 뒤 3초 동안 되돌아가지 않는다(주인 보고 그대로 재현)
+ *   [I] 실제 마우스 드래그 — 끌고 손을 뗀 뒤 되돌아가지 않는다(주인 보고 그대로 재현). 4항:
+ *       ⓐ 95 관성이 «유한 시간에» 멎는다(옛 900ms 상수를 대신하는 자리 — 작업 236)
+ *       ⓑ 드래그가 먹혔다(0px 면 95 회귀)
+ *       ⓒ 멎은 뒤 3초 동안 **한 프레임도** 안 움직인다(옛 물음 그대로, 두 점 → 전 프레임)
+ *       ⓓ 손 뗀 뒤 «위로 되돌아간 프레임» 0 — 주인이 보고한 문장 그대로
  *   [H] 콘솔 에러 / pageerror 0건
  * 통과: 실패 0건
  */
@@ -37,7 +41,18 @@ const { chromium } = (() => {
   console.error('playwright 없음 — npm i --no-save playwright@1.56.0'); process.exit(2);
 })();
 
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+/* V107_SRC — 되돌림 시험(`tools/neg236.js`)이 갈아 끼운 사본을 **새로 열어** 재게 하는 손잡이.
+   살아 있는 페이지에 CSS·JS 를 주입해서 재면 거짓 초록이 난다(LESSONS 191 · 96·219 선례). */
+const URL = 'file://' + path.resolve(process.env.V107_SRC || path.join(__dirname, '..', 'index.html')).replace(/\\/g, '/');
+/* V107_FAST=1 — [C] 전투 30초 대기와 [F]·[G] 절을 건너뛰고 [A][B][D][E][I][H] 만 본다.
+   되돌림 시험이 사본 6벌을 돌려야 해서 둔 손잡이다. **평상시 게이트는 절대 이걸 쓰지 않는다**
+   (환경변수가 없으면 전 항목을 돈다 — 조용히 줄어드는 일이 없게). */
+const FAST = process.env.V107_FAST === '1';
+/* [I] 감시창 — «관성이 멎기까지(제품이 정하는 시각)» + «renderUI 가 8~9회 도는 3초».
+   앞의 항을 상수로 고르지 않는 것이 236 의 핵심이다(아래 [I] 주석). 여기 값은 그 둘을
+   **넉넉히 덮는 창** 일 뿐이라, 관성이 길어져도 판정이 뒤집히지 않는다 —
+   창이 모자라면 ⓐ 가 «안 멎었다» 로 빨개져 «늘려라» 를 말해 준다(조용한 오판이 아니다). */
+const I_WATCH = 4200;
 const fails = [];
 const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
 const ok = (m) => console.log('  ✓ ' + m);
@@ -116,11 +131,14 @@ async function openSheet(pg, expr) {
     else fail('[B] renderUI 10회 후 scrollTop ' + b.set + ' → ' + b.now);
 
     /* [C] 전투 30초 */
-    process.stdout.write('  … 전투 30초 대기\n');
-    await pg.waitForTimeout(30000);
-    const c = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
-    if (c === b.set) ok('[C] 전투 30초 후 scrollTop ' + c + ' 유지');
-    else fail('[C] 전투 30초 후 scrollTop ' + b.set + ' → ' + c);
+    if (FAST) process.stdout.write('  … [C] 전투 30초 — V107_FAST 로 건너뜀\n');
+    else {
+      process.stdout.write('  … 전투 30초 대기\n');
+      await pg.waitForTimeout(30000);
+      const c = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
+      if (c === b.set) ok('[C] 전투 30초 후 scrollTop ' + c + ' 유지');
+      else fail('[C] 전투 30초 후 scrollTop ' + b.set + ' → ' + c);
+    }
 
     /* [D] 장착/해제 = 구조가 실제로 바뀌는 재렌더 */
     const d = await pg.evaluate(async () => {
@@ -172,31 +190,86 @@ async function openSheet(pg, expr) {
     if (e.after > 0) ok('[E] 떼면 곧바로 반영(변이 ' + e.after + '회)');
     else fail('[E] 포인터를 뗐는데도 갱신이 안 붙었다 — 보류가 안 풀린다');
 
-    /* [I] 주인이 실제로 한 조작 그대로 — 진짜 마우스로 아래로 끌고, 손을 뗀 뒤 3초 지켜본다.
-           («아래로 끌었는데 자꾸 위로 올라간다» 를 합성 이벤트가 아닌 입력으로 재현) */
+    /* [I] 주인이 실제로 한 조작 그대로 — 진짜 마우스로 아래로 끌고, 손을 뗀 뒤 지켜본다.
+           («아래로 끌었는데 자꾸 위로 올라간다» 를 합성 이벤트가 아닌 입력으로 재현)
+
+       ⚠ 2026-08-27 (작업 236) — 옛 형태는 **두 점 표본**이었다: 손 뗀 뒤 «900ms 면 95 관성이
+       멎어 있다» 를 전제로 900ms 와 +3000ms 를 찍어 같은지만 봤다. 그 전제는 **격자가 짧아
+       관성이 바닥에 걸려 일찍 끊겼던 덕분**에만 참이었다(107 당시 max 455 · 관성 종료 ≈0.36s).
+       193 이 스킬을 8종 늘려 스크롤 여지가 **455 → 675px** 이 되자 관성이 제 수명(≈0.92~0.98s)을
+       다 살아, 900ms 가 «아직 미끄러지는 중» 이 되어 Δ2~3px 로 **간헐 FAIL** 했다 — 제품은 멀쩡한데
+       게이트만 빨갛다. 여기서 대기 시간을 1200ms 로 다시 고르면 격자가 더 길어질 때 또 낡는다
+       (LESSONS 185넉백-① — 문턱을 정교하게 만들지 말고 방해 항을 끌 손잡이를 찾아라).
+       그래서 ① **관성이 실제로 멎을 때까지 기다린 뒤** 재고, ② 궤적을 rAF 로 통째로 떠서
+       «되돌아간 프레임» 을 직접 센다. 두 점 표본은 «갔다가 돌아온» 튐을 원리적으로 놓친다. */
     await pg.evaluate(() => { document.querySelector('#bSk .sk-gp').scrollTop = 0; });
     const box = await pg.evaluate(() => {
       const r = document.querySelector('#bSk .sk-gp').getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
     });
+    /* 손 뗀 순간부터 rAF 마다 [t, scrollTop, 관성 살아있음] 을 적는다 */
+    await pg.evaluate(() => {
+      window.__tr = [];
+      window.__rec = () => {
+        const gp = document.querySelector('#bSk .sk-gp');
+        window.__tr.push([Math.round(performance.now() - window.__t0),
+                          gp ? +gp.scrollTop.toFixed(2) : -1,
+                          (typeof dsGlide !== 'undefined' && dsGlide) ? 1 : 0]);
+        window.__raf = requestAnimationFrame(window.__rec);
+      };
+    });
     await pg.mouse.move(box.x, box.y + box.h * 0.35);
     await pg.mouse.down();
     for (let i = 1; i <= 8; i++) { await pg.mouse.move(box.x, box.y + box.h * 0.35 - i * 40); await pg.waitForTimeout(16); }
     await pg.mouse.up();
-    await pg.waitForTimeout(900);                       /* 95 관성이 멎을 때까지 */
-    const dragged = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
-    await pg.waitForTimeout(3000);                      /* renderUI 가 8~9회 도는 동안 */
-    const after = await pg.evaluate(`window.__sc('#bSk .sk-gp')`);
-    if (dragged <= 0) fail('[I] 마우스 드래그로 스크롤이 아예 안 됐다(scrollTop ' + dragged + ') — 95 회귀');
-    else if (after === dragged) ok('[I] 마우스 드래그 ' + dragged + 'px → 3초 뒤에도 ' + after + ' (되돌아가지 않음)');
-    else fail('[I] 드래그 ' + dragged + ' → 3초 뒤 ' + after + ' 로 되돌아갔다 (주인이 보고한 증상)');
+    await pg.evaluate(() => { window.__t0 = performance.now(); window.__rec(); });
+    await pg.waitForTimeout(I_WATCH);                   /* 관성 + renderUI 가 8~9회 도는 동안 */
+    const tr = await pg.evaluate(() => { cancelAnimationFrame(window.__raf); return window.__tr; });
+
+    if (tr.length < 30) fail('[I] 궤적 프레임이 ' + tr.length + '개뿐이다 — rAF 기록기가 안 붙었다(측정 불가)');
+    else {
+      const last = tr[tr.length - 1];
+      /* ⓐ 관성이 «유한 시간에» 멎는다 — 옛 900ms 상수를 대신하는 자리. 안 멎으면 아래를 잴 수 없다 */
+      const glideEndIdx = tr.map(r => r[2]).lastIndexOf(1);
+      const settleT = glideEndIdx < 0 ? 0 : tr[glideEndIdx][0];
+      if (glideEndIdx === tr.length - 1)
+        fail('[I]ⓐ 손 뗀 뒤 ' + last[0] + 'ms 동안 95 관성이 안 멎었다 (dsFling 종료 조건 회귀)');
+      else ok('[I]ⓐ 95 관성이 ' + settleT + 'ms 에 멎었다 (감시창 ' + I_WATCH + 'ms)');
+
+      /* ⓑ 드래그가 먹혔다 — 95 회귀(0px) 방지. 관성이 멎은 시점 값으로 본다 */
+      const rest = tr.filter(r => r[0] >= settleT);
+      const settled = Math.round(rest[0][1]);
+      if (settled <= 0) fail('[I]ⓑ 마우스 드래그로 스크롤이 아예 안 됐다(scrollTop ' + settled + ') — 95 회귀');
+      else ok('[I]ⓑ 마우스 드래그로 ' + settled + 'px 스크롤됐다');
+
+      /* ⓒ 멎은 뒤로는 **한 프레임도** 안 움직인다 — 옛 물음(«3초 뒤에도 그대로») 그대로,
+             다만 끝점 한 번이 아니라 그 사이 전 프레임을 본다 */
+      const moved = rest.filter(r => Math.abs(r[1] - rest[0][1]) > 0.5);
+      const watch = last[0] - settleT;
+      if (settled > 0 && moved.length === 0)
+        ok('[I]ⓒ 멎은 뒤 ' + watch + 'ms · ' + rest.length + '프레임 동안 ' + settled + ' 유지 (되돌아가지 않음)');
+      else if (settled > 0)
+        fail('[I]ⓒ 멎은 뒤 ' + moved.length + '프레임이 움직였다 — ' + settled + ' → ' +
+             Math.round(moved[moved.length - 1][1]) + ' (t=' + moved[0][0] + 'ms 부터, 주인이 보고한 증상)');
+
+      /* ⓓ 손 뗀 순간부터 **뒤로(위로) 간 프레임 0** — 주인이 보고한 문장 그대로다.
+             ⓒ 는 «멎은 뒤» 만 보므로, 관성 중에 0 으로 튀었다가 돌아오는 튐은 여기서만 잡힌다 */
+      let back = 0, worst = 0, worstT = -1;
+      for (let i = 1; i < tr.length; i++) {
+        const d = tr[i][1] - tr[i - 1][1];
+        if (d < -0.5) { back++; if (d < worst) { worst = d; worstT = tr[i][0]; } }
+      }
+      if (back === 0) ok('[I]ⓓ 손 뗀 뒤 ' + tr.length + '프레임 중 위로 되돌아간 프레임 0');
+      else fail('[I]ⓓ 위로 되돌아간 프레임 ' + back + '개 — 최대 ' + worst.toFixed(1) +
+                'px (t=' + worstT + 'ms) · 주인이 보고한 «자꾸 위로 올라간다»');
+    }
 
     allErrs.push(...errs);
     await ctx.close();
   }
 
   /* ---------------- [F] 값 갱신 회귀 ---------------- */
-  {
+  if (!FAST) {
     console.log('\n[F] 값 갱신 회귀 — «내용이 같으면 건너뛴다» 가 UI 를 얼리지 않는가');
     const { ctx, pg, errs } = await fresh(br);
     await openSheet(pg, `goTab('grow', true)`);   /* 성장 패널(#bUp) 은 forceOpen 으로만 열린다 — 무인자 goTab('grow') 는 23 훈련 시트로 간다 */
@@ -228,7 +301,7 @@ async function openSheet(pg, expr) {
   }
 
   /* ---------------- [G] 형제 시트 점검표 ---------------- */
-  {
+  if (!FAST) {
     console.log('\n[G] 형제 시트 점검표 (지시 ④)');
     /* [이름, 여는 식, 스크롤러 셀렉터, 재생성 감시 대상(=본문 껍데기), 프레임 높이] */
     const SHEETS = [
@@ -278,6 +351,6 @@ async function openSheet(pg, expr) {
   else ok('[H] 콘솔 에러 0건');
 
   await br.close();
-  console.log('\n' + (fails.length ? 'VERIFY107 FAIL ' + fails.length + '건' : 'VERIFY107 PASS'));
+  console.log('\n' + (fails.length ? 'VERIFY107 FAIL ' + fails.length + '건' : 'VERIFY107 PASS') + (FAST ? ' (V107_FAST — [C][F][G] 미실행)' : ''));
   process.exit(fails.length ? 1 : 0);
 })();
