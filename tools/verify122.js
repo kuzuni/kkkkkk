@@ -1146,6 +1146,134 @@ async function ampCheck(p, hosts) {
       }
     }
 
+    /* ── §26 칸별 [무료] 링 세기 — **두 자로** 잰다 (20회차 신설) ──────────
+       19회차 비평가 2인이 독립으로 «칸마다 1.7~2.6배» 를 짚었고(AP[1]·AO[13]), 격리 실측도
+       Δ루마 2.05배로 재현했다. 그런데 **자를 하나 더 대니 부호가 갈렸다.**
+
+       Δ루마 자는 칸3(금색 면)을 «가장 약함(13.3)» 으로 읽는데, 같은 표본을 **ΔE(CIELAB)** 로 재면
+       칸3 이 **가장 셈(22.0)** 이다. 청록 링(luma 200)과 금색 면(luma 195)은 **밝기가 거의 같고
+       색상만 반대**라, 글로우가 얹혀도 루마가 안 움직인다 — 루마 자가 구조적으로 못 보는 자리다.
+       Δ루마 처방(칸3 ×1.66)을 따랐으면 «가장 튀는 링을 두 배로 더 키울» 뻔했다(12회차 «계측 정의가
+       다르면 일치해도 틀린다» 의 재발).
+
+       그래서 이 절은 **두 산포를 같이 잰다.** 한쪽만 조이면 다른 쪽이 무너지기 때문이다 —
+       ΔE 만 맞추면 칸3 이 rk .42 까지 눌려 Δ루마가 7.4 가 되고(14회차가 «너무 약하다» 며 올린 자리),
+       Δ루마만 맞추면 ΔE 가 무너진다. 20회차 배정은 «ΔE 산포를 기준보다 나쁘게 않으면서 Δ루마
+       산포를 최소화» 한 값이다(2.05 → 1.65배 · ΔE 1.43배 유지).
+       ⚠ 칸1 은 §17 이 [무료] 링을 재는 칸이라 rk 1.0 고정이다 — 내리면 §17 밴드 하한에 붙는다. */
+    console.log('§26 칸별 [무료] 링 세기 — Δ루마 · ΔE(Lab) 두 자 (20회차 신설)');
+    {
+      const SPREAD_L = 1.85, SPREAD_E = 1.55;
+      await p.evaluate(() => { S.daily.freeSum = {}; renderShopPage(); });
+      await p.waitForTimeout(200);
+      const on26 = async sel => {
+        await p.evaluate(() => {
+          const st = document.getElementById('v122iso26') || document.createElement('style');
+          st.id = 'v122iso26';
+          st.textContent = '*,*::before,*::after{animation-name:none !important}';
+          document.head.appendChild(st);
+          document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
+        });
+        if (sel) await p.evaluate(s2 => {
+          document.getElementById('v122iso26').textContent += s2 + '{animation-name:jz122Ring !important}';
+        }, sel);
+      };
+      const off26 = async () => {
+        await p.evaluate(() => {
+          const s2 = document.getElementById('v122iso26');
+          if (s2) s2.textContent = '*,*::before,*::after{animation-name:none !important}';
+          document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
+          const s3 = document.getElementById('v122iso26'); if (s3) s3.remove();
+        });
+        await p.waitForTimeout(60);
+      };
+      /* 한 요소를 한 주기 훑어 (Δ루마, ΔE) 를 같이 낸다 — 버튼 밖 2~14px 띠(§17 과 같은 마스크) */
+      const both = async sel => {
+        const clip = await p.evaluate(s2 => {
+          const e = document.querySelector(s2); if (!e) return null;
+          e.scrollIntoView({ block: 'center' });
+          const r = e.getBoundingClientRect();
+          const x = Math.round(r.x) - 14, y = Math.round(r.y) - 14;
+          const w = Math.round(r.width) + 28, h = Math.round(r.height) + 28;
+          if (x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight) return null;
+          return { x, y, width: w, height: h, iw: Math.round(r.width), ih: Math.round(r.height) };
+        }, sel);
+        if (!clip) return null;
+        const { iw, ih, ...box } = clip, cols = [], lum = [];
+        for (let i = 0; i < 10; i++) {
+          const b64 = (await shotAt(p, Math.round(900 * i / 10), box)).toString('base64');
+          const v = await p.evaluate(async ([src, w, h]) => {
+            const img = new Image();
+            await new Promise(res => { img.onload = res; img.src = 'data:image/png;base64,' + src; });
+            const c = document.createElement('canvas');
+            c.width = img.width; c.height = img.height;
+            const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+            const d = g.getImageData(0, 0, c.width, c.height).data;
+            let R = 0, G = 0, B = 0, L = 0, n = 0;
+            for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+              if (x >= 14 && x < 14 + w && y >= 14 && y < 14 + h) continue;
+              if (x < 2 || y < 2 || x >= c.width - 2 || y >= c.height - 2) continue;
+              const j = (y * c.width + x) * 4;
+              R += d[j]; G += d[j + 1]; B += d[j + 2];
+              L += .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]; n++;
+            }
+            return n ? [[R / n, G / n, B / n], L / n] : null;
+          }, [b64, iw, ih]);
+          if (v) { cols.push(v[0]); lum.push(v[1]); }
+        }
+        if (!lum.length) return null;
+        const lab = ([R, G, B]) => {
+          const f = v => { v /= 255; return v <= .04045 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+          const r = f(R), g = f(G), b = f(B);
+          const X = (.4124 * r + .3576 * g + .1805 * b) / .95047;
+          const Y = (.2126 * r + .7152 * g + .0722 * b);
+          const Z = (.0193 * r + .1192 * g + .9505 * b) / 1.08883;
+          const k = t => t > .008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116);
+          return [116 * k(Y) - 16, 500 * (k(X) - k(Y)), 200 * (k(Y) - k(Z))];
+        };
+        const L2 = cols.map(lab);
+        let dE = 0;
+        for (let i = 0; i < L2.length; i++) for (let j = i + 1; j < L2.length; j++)
+          dE = Math.max(dE, Math.hypot(L2[i][0] - L2[j][0], L2[i][1] - L2[j][1], L2[i][2] - L2[j][2]));
+        return { dL: +(Math.max(...lum) - Math.min(...lum)).toFixed(2), dE: +dE.toFixed(2) };
+      };
+      const got = [];
+      for (let i = 1; i <= 5; i++) {
+        const sel = '#shopList .shp-card:nth-child(' + i + ') .cbtn.b1';
+        const live = await p.evaluate(s2 => {
+          const e = document.querySelector(s2);
+          return !!e && !e.classList.contains('lack');
+        }, sel);
+        if (!live) continue;
+        await on26(sel);
+        const m = await both(sel);
+        await off26();
+        if (m) got.push({ i, ...m });
+      }
+      if (got.length >= 4) {
+        console.log('    · ' + got.map(g => '칸' + g.i + ' L' + g.dL + '/E' + g.dE).join(' | '));
+        const Ls = got.map(g => g.dL), Es = got.map(g => g.dE);
+        const sL = Math.max(...Ls) / Math.min(...Ls), sE = Math.max(...Es) / Math.min(...Es);
+        console.log('    · 산포 — Δ루마 ' + sL.toFixed(2) + '배 (20회차 이전 2.05배) · ΔE '
+          + sE.toFixed(2) + '배');
+        ok(sL <= SPREAD_L, '칸별 Δ루마 산포 ' + sL.toFixed(2) + '배 ≤ ' + SPREAD_L
+          + ' (19회차 AP[1]·AO[13] 2인 일치 지적 — 그때 2.05배)');
+        ok(sE <= SPREAD_E, '칸별 ΔE(Lab) 산포 ' + sE.toFixed(2) + '배 ≤ ' + SPREAD_E
+          + ' — 루마만 맞추다 색차가 무너지는 것을 막는 자');
+      } else ok(false, '칸별 링을 4칸 이상 못 쟀다 (' + got.length + '칸)');
+      /* ⓝ 음성항 — 링을 끄면 ΔE 가 무너져야 한다. 15회차 교훈 2: 새 자에는 음성항을 같은 회차에.
+         (이 자가 «링이 아니라 딴것» 을 보고 있으면 여기서 0 이 안 나온다) */
+      await on26('#shopList .shp-card:nth-child(3) .cbtn.b1');
+      await p.evaluate(() => {
+        document.getElementById('v122iso26').textContent +=
+          '#shopList .shp-card:nth-child(3) .cbtn.b1{box-shadow:none !important}';
+      });
+      const neg26 = await both('#shopList .shp-card:nth-child(3) .cbtn.b1');
+      await off26();
+      ok(neg26 && neg26.dE < 2, 'ⓝ 음성항 — 링 box-shadow 를 끄면 ΔE 가 '
+        + (neg26 ? neg26.dE : '?') + ' 로 무너진다 (< 2)');
+    }
+
     await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
     await p.waitForTimeout(200);
   }
