@@ -9,13 +9,14 @@
 
    측정 방법: 실제 `.si3` 규격 그대로 오프스크린에 글자를 그리고, 캔버스 알파로 잉크 bbox 를 잡는다.
    (DOM 의 getBoundingClientRect 는 글리프 advance 박스라 «잉크» 가 아니다 — A1 이 밟은 함정) */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const GATE = process.argv.includes('--gate');
 const REF_W = 68, REF_H = 85;   // 측정표 §3 (재측정 금지)
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const p = await (await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 })).newPage();
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(1000);

@@ -1049,7 +1049,13 @@
   .slot2.ready::before{background:conic-gradient(#ffae2b 0deg 20deg,#ffe52c 45deg 100deg,
     #fec621 110deg,#fdb321 120deg,#fd9722 135deg 195deg,#ffc620 225deg 250deg,
     #fee42b 270deg 292deg,#fead2b 315deg 340deg,#ffae2b 360deg)}
-  .slot2.ready .cdw{box-shadow:inset 0 0 0 6.4px #fefe0c}
+  /* 안쪽 노란 링 두께 — 바깥 반지름은 well 이 정한다(장착 inset 15.2 → r43.8). 그러니 이 값은
+     «REF 안쪽 노란 링의 **안쪽** 반지름» 으로 잡아야 한다: 43.8 − 36.35 = **7.45**.
+     6.4 는 안쪽 반지름을 37.4 에 두어 REF(36.35)보다 1.05px 안쪽이었다 — 링이 그만큼 얇았다.
+     `python3 tools/edgeA4.py` 가 f=0.3/0.5/0.7 세 임계 **전부에서 부호가 같게**(REF 8.10/7.44/6.76
+     vs CAP 6.91/6.07/5.36) «우리가 얇다» 고 말한다. 측정표 §7 재실측(두께 7.27)과도 닫힌다.
+     ⚠ 두께를 «노란 픽셀 세기» 로 재지 마라 — 6·7회차가 그 마스크로 5→8→7.5 로 세 번 흔들렸다(A4-③). */
+  .slot2.ready .cdw{box-shadow:inset 0 0 0 7.45px #fefe0c}
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}

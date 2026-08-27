@@ -112,7 +112,8 @@ function is(name, got, want) {
   tot++; if ((d.readyGlow.match(/4\.8px/g) || []).length >= 4) ok++;
   else fails.push('활성 글로우 4겹 대각 오프셋(±4.8px) 아님: ' + d.readyGlow);
   tot++; if (/2\.09px/.test(d.readyGlow)) ok++; else fails.push('활성 글로우 spread 2.09px 아님: ' + d.readyGlow);
-  tot++; if (/6\.4px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 6.4px: ' + d.cdwRing);
+  /* 23회차: 6.4 → 7.45. 바깥은 well(r43.8) 이 정하므로 이 값은 «REF 안쪽 반지름 36.35» 를 만드는 두께다 */
+  tot++; if (/7\.45px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 7.45px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
   eq('아이콘 평균 잉크 w', +d.inkW.toFixed(1), 68, 4);
