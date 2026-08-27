@@ -18947,10 +18947,12 @@ $('dclNx').addEventListener('click', e => {
    이 7에서 멈춘다). 등급 순서로 묶어 나누면 7번의 승급이 50종을 전부 덮는다.
    수 배분 — 승급 7회 vs 코스튬 6등급이라 양 끝을 한 칸씩 접었다: 첫 승급은 저등급 둘(일반+고급)을
    한꺼번에, 마지막 세 승급은 신화 4종을 2·1·1 로 나눠 «마지막까지 받을 게 남는» 모양으로 뒀다.
-   배분: 22 · 10 · 8 · 6 · 2 · 1 · 1 = **50종**(= AVATARS.length. `tools/verify182.js` §1 이 매 실행 검산). */
+   배분: 21 · 10 · 8 · 6 · 2 · 1 · 1 = **49종** + 기본 지급 av0 = 50(= AVATARS.length.
+   `tools/verify182.js` §1 이 매 실행 검산). av0 «견습 기사» 만 묶음에서 뺀다 — 처음부터 입고 있는
+   기본 외형이라(`DEF().avatars = {av0:1}`) 보상으로 적으면 «이미 보유» 한 칸을 매번 세게 된다. */
 const cosOfGrade = g => AVATARS.filter(a => a.g === g).map(a => a.id);
 const PROMO_COS = {
-  1: cosOfGrade(0).concat(cosOfGrade(1)),   /* 🥈 실버         — 일반 12 + 고급 10 */
+  1: cosOfGrade(0).filter(id => id !== 'av0').concat(cosOfGrade(1)),  /* 🥈 실버 — 일반 11(기본 제외) + 고급 10 */
   2: cosOfGrade(2),                         /* 🥇 골드         — 희귀 10 */
   3: cosOfGrade(3),                         /* 💠 플래티넘     — 영웅 8  (구 `{k:'rank',v:3}` ∋ av41) */
   4: cosOfGrade(4),                         /* 💎 다이아       — 전설 6 */
@@ -18965,6 +18967,7 @@ const COS_RANK = (() => {
   Object.keys(PROMO_COS).forEach(r => PROMO_COS[r].forEach(id => { m[id] = +r; }));
   return m;
 })();
+/* 0 = 어느 승급전도 주지 않는다 = 기본 지급(av0 하나뿐) */
 const cosRankOf = id => COS_RANK[id] || 0;
 /* 도전 계급 index → 그 승급전을 깨면 받는 코스튬 묶음(없으면 빈 배열) */
 const promoCosList = ri => (PROMO_COS[ri] || []).map(id => AV[id]).filter(Boolean);
@@ -22930,8 +22933,10 @@ function cosReqOk(a){
   return cosOwn(a.id) || (S.rank|0) >= cosRankOf(a.id);
 }
 function cosReqText(a){
-  const r = RANKS[cosRankOf(a && a.id)];
-  return r ? r.ic + ' ' + r.n + ' 승급전 클리어' : '기본 지급';
+  const ri = cosRankOf(a && a.id), r = RANKS[ri];
+  /* ri 0 = 어느 묶음에도 없는 칸 = 기본 외형(av0). RANKS[0] 도 실재하는 계급이므로
+     «r 가 있느냐» 로 갈리면 av0 이 «🥉 브론즈 승급전 클리어» 라는 거짓말을 한다. */
+  return (ri >= 1 && r) ? r.ic + ' ' + r.n + ' 승급전 클리어' : '기본 지급';
 }
 /* 착용(외형 변경). 182 로 구매 경로가 없어져 «가진 것을 입는» 동작만 남았다 */
 function wearAvatar(id){

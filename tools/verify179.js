@@ -53,7 +53,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
     `구 계급 조건 ${q.id}→rank ${q.v} 를 매핑이 그대로 따른다 (실제 ${q.at})`));
   /* 182 — 구매 경로가 없으므로 «어느 묶음에도 안 든 코스튬» 은 영원히 못 얻는 코스튬이다 */
   ok(map.uniq === map.covered, `묶음에 중복 배정된 코스튬 없음 (${map.covered}칸 / 고유 ${map.uniq}종)`);
-  ok(map.uniq === map.total, `50종 전부가 어느 승급전엔가 배정됨 (${map.uniq}/${map.total})`);
+  /* av0 «견습 기사» 는 처음부터 입고 있는 기본 외형(DEF().avatars={av0:1})이라 묶음 밖이다 */
+  ok(map.uniq === map.total - 1, `기본 외형 av0 을 뺀 49종 전부가 어느 승급전엔가 배정됨 (${map.uniq}/${map.total - 1})`);
 
   /* ---- [1][2][3] 계급 7단 팝업 ---- */
   console.log('[1][2][3] 팝업 — 본문 배율 · 넘침 · 보상 표시');

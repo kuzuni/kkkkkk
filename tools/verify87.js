@@ -84,8 +84,10 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     + data.filter(a => a.cost !== null).length + '개');
   ok(data.every(a => a.req === null), '조건 해금(req) 데이터 폐기 확인 — 남은 칸 '
     + data.filter(a => a.req !== null).length + '개');
-  ok(data.every(a => a.rank >= 1), '50종 전부가 «어느 승급전이 주는지» 를 갖는다 (rank 0 인 칸 '
-    + data.filter(a => a.rank < 1).length + '개)');
+  /* av0 «견습 기사» 는 기본 외형이라 묶음 밖(rank 0 = 기본 지급)이다 — 그 한 칸만 예외다 */
+  ok(data.filter(a => a.rank < 1).map(a => a.id).join(',') === 'av0',
+    '49종이 «어느 승급전이 주는지» 를 갖고, 기본 지급은 av0 하나뿐 (rank 0 인 칸 '
+    + data.filter(a => a.rank < 1).map(a => a.id).join(',') + ')');
 
   /* ---------------- §2 틴트 색차 ---------------- */
   console.log('\n§2 틴트 (CIE76 ΔE)');
