@@ -9191,12 +9191,15 @@
   .eqrb>b>i{transform:scaleX(.96)}
 
   /* ---- 장비 슬롯 228x228 (x724 고정) ---- */
-  /* 바깥 검정 6 → 밝은 초록 림 7 → 채움. 우5/하6 드롭섀도 */
+  /* 바깥 검정 6 → 밝은 등급 림 7 → 채움. 우5/하6 드롭섀도 */
+  /* 261 — 림·채움 색을 «장착한 장비의 등급색» 으로 연다(저장소 주인 보고 2026-08-27).
+     폴백값 3개는 **레퍼런스 실측 그대로**(측정표 §2-6)이고, 그것이 곧 `EQSL_G[1]`(고급) 이다 —
+     레퍼런스 상태(고급 장착)에서는 1px 도 안 바뀐다. 빈 칸은 변수를 안 받아 폴백 = 초록으로 남는다. */
   .eqsl{left:724px;width:228px;height:228px;border-radius:40px;background:#000;
     box-shadow:5px 6px 0 #686052;cursor:pointer}
-  .eqsl>.rim{position:absolute;inset:6px;border-radius:34px;background:#C7E746}
+  .eqsl>.rim{position:absolute;inset:6px;border-radius:34px;background:var(--r,#C7E746)}
   .eqsl>.rim>.fi{position:absolute;inset:7px;border-radius:27px;overflow:hidden;
-    background:linear-gradient(180deg,#9CC638,#97BD36)}
+    background:linear-gradient(180deg,var(--f,#9CC638),var(--fb,#97BD36))}
   /* 아이템 아트 — 실측상 슬롯 안쪽을 거의 꽉 채운다(여백 ≈14) */
   .eqsl>.rim>.fi>em{position:absolute;left:0;right:0;top:6px;height:150px;
     text-align:center;font-size:126px;line-height:150px}
@@ -9207,9 +9210,11 @@
   .eqsl>u>i{transform:scaleX(.906)}
   .eqsl.empty>.rim>.fi{background:linear-gradient(180deg,#7E9C2C,#7A982A)}
 
-  /* 부위 뱃지 Ø78 — 슬롯 좌상단 기준 (−20,−19). 검정 6 → 밝은 초록 6 → 채움 */
-  .eqbd{left:704px;width:78px;height:78px;border-radius:50%;background:#7C9A38;
-    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 12px #ACC640,inset 0 0 0 16px #9EBA3C}
+  /* 부위 뱃지 Ø78 — 슬롯 좌상단 기준 (−20,−19). 검정 6 → 밝은 등급 링 6 → 중간 링 4 → 채움 */
+  /* 261 — 뱃지는 슬롯 모서리에 걸친 «같은 부품» 이라 슬롯과 같이 등급색을 탄다.
+     폴백 3색도 레퍼런스 실측(측정표 §2-6-1) 그대로 = `EQSL_G[1]` 의 뱃지 3색이다. */
+  .eqbd{left:704px;width:78px;height:78px;border-radius:50%;background:var(--bf,#7C9A38);
+    box-shadow:inset 0 0 0 6px #000,inset 0 0 0 12px var(--br,#ACC640),inset 0 0 0 16px var(--bm,#9EBA3C)}
   .eqbd>em{position:absolute;left:0;right:0;top:14px;height:50px;line-height:50px;
     text-align:center;font-size:38px;filter:grayscale(1) brightness(3) drop-shadow(0 0 2px #000)}
 
@@ -25472,13 +25477,34 @@ function showCosDetail(id){
 const EQP_GEO = { rb:167, sl:[256, 656, 1056], st:1330, sw:1317, hp:1326 };
 const EQP_CARD = { n:'용사', rb:'#F87D2F', rd:'#C7501D', rt:'#E86F2A' }; /* ic(🦸) 는 작업 79 로 폐기 — 스프라이트 캔버스 */
 
-/* 슬롯 1칸 HTML. 뱃지는 슬롯 좌상단 모서리에 걸치므로 슬롯 **뒤에** 그린다(뒤 형제가 위) */
-function eqpSlot(y, badge, ic, lv, attr){
-  return '<div class="eqsl' + (ic ? '' : ' empty') + '" style="top:' + y + 'px" ' + attr + '>'
+/* ── 261 부위 슬롯 등급색 (저장소 주인 보고 2026-08-27 · 스크린샷) ─────────────────
+   버그: `.eqsl`·`.eqbd` 의 초록이 CSS 상수라, 일반을 껴도 신화를 껴도 세 칸이 전부 같은 초록이었다
+   (`eqpSlot()` 이 등급을 아예 안 넘겼다). 등급색을 쓰는 다른 자리는 전부 이미 «칸 → 팔레트[g]» 다
+   (05 `WGRADE` · 07 `SK_FILL/SK_RIM` · 12·69 `SUM_CARD` · 21 `COLL21_CARD` · 53 `BAG_G`) — 06 만 빠져 있었다.
+   팔레트는 **05 의 `WGRADE`** 를 쓴다. 06 슬롯을 누르면 그대로 05 팝업이 열리므로(`openWeapon(null,part)`),
+   같은 아이템이 두 화면에서 다른 색이면 안 된다 — 07 의 `SK_FILL`(스킬 팔레트)을 끌어오면 그 꼴이 된다.
+   ⚠ 레퍼런스 이탈 방지: **g=1(고급) 칸만 06 측정표 §2-6·§2-6-1 실측값을 그대로 박았다.**
+   레퍼런스 스크린샷은 고급 장비를 낀 상태라 그 초록이 곧 «고급 색» 이고, 이렇게 두면 레퍼런스
+   상태에서 슬롯·뱃지가 1px 도 안 바뀐다(측정표에 정오표로 남긴다).
+   나머지 7등급은 레퍼런스 표본이 없으므로 g=1 에서 잰 «슬롯 → 뱃지» 명암비로 파생한다:
+     뱃지 밝은 링 ≈ 슬롯 림 ×0.87 · 뱃지 중간 링 ≈ 슬롯 면 ×0.97 · 뱃지 채움 ≈ 슬롯 면 ×0.80
+     슬롯 면 아래쪽(세로 그라디언트 끝) ≈ 위쪽 ×0.96 (측정표 «거의 평면, 매우 약한 세로 그라디언트») */
+const eqTone = (h, k) => '#' + [1, 3, 5].map(i =>
+  Math.min(255, Math.round(parseInt(h.substr(i, 2), 16) * k)).toString(16).padStart(2, '0')).join('');
+const EQSL_G = WGRADE.map((w, g) => g === 1
+  ? { r:'#C7E746', f:'#9CC638', fb:'#97BD36', br:'#ACC640', bm:'#9EBA3C', bf:'#7C9A38' }   /* 레퍼런스 실측 */
+  : { r:w.r, f:w.c, fb:eqTone(w.c, .96), br:eqTone(w.r, .87), bm:eqTone(w.c, .97), bf:eqTone(w.c, .80) });
+
+/* 슬롯 1칸 HTML. 뱃지는 슬롯 좌상단 모서리에 걸치므로 슬롯 **뒤에** 그린다(뒤 형제가 위)
+   `col` = `EQSL_G[g]` 또는 null(빈 칸). null 이면 변수를 안 실어 CSS 폴백 = «비었음» 초록이 남는다 */
+function eqpSlot(y, badge, ic, lv, attr, col){
+  const cv = col ? ';--r:' + col.r + ';--f:' + col.f + ';--fb:' + col.fb : '';
+  const bv = col ? ';--br:' + col.br + ';--bm:' + col.bm + ';--bf:' + col.bf : '';
+  return '<div class="eqsl' + (ic ? '' : ' empty') + '" style="top:' + y + 'px' + cv + '" ' + attr + '>'
        +   '<div class="rim"><div class="fi"><em>' + (ic || '') + '</em></div></div>'
        +   (lv == null ? '' : '<u><i>Lv. ' + lv + '</i></u>')
        + '</div>'
-       + '<div class="eqbd" style="top:' + (y - 19) + 'px"><em>' + badge + '</em></div>';
+       + '<div class="eqbd" style="top:' + (y - 19) + 'px' + bv + '"><em>' + badge + '</em></div>';
 }
 /* 작업 79 — 시트 캐릭터의 idle 애니메이션 상태. 전투 player 초기화(akey knight·idle·8fps)와 동일 규격.
    rAF 는 시트가 보이는 동안만 돌고(#eqw.on 해제 시 다음 틱에서 자멸) 닫히면 정지한다. */
@@ -25506,7 +25532,7 @@ function renderEqPage(){
   SLOTS.forEach((s, j) => {
     const id = S.eqSlot[s.k], it = id ? EQ[id] : null;
     h += eqpSlot(g.sl[j], s.ic, it ? it.ic : '', it ? oLv(it.id) : null,
-                 'data-eqslot="' + s.k + '"');
+                 'data-eqslot="' + s.k + '"', it ? EQSL_G[Math.min(it.g, EQSL_G.length - 1)] : null);
   });
   /* 알약 → 아이콘 순서. 06 부터 «아이콘 먼저» 였는데 뒤 형제가 위로 오므로 알약이 검·하트를
      잘라먹고 있었다(하트 우측 로브가 통째로 잘려 세로 54 → 50). 레퍼런스는 아이콘이 알약 위다 */
