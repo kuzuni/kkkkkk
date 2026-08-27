@@ -99,10 +99,10 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
   ok('#sideL 에 mail 없음', !keys.includes('mail'), keys.join(','));
   ok(`#sideL 순서 = ${ROSTER.join(',')}`, keys.join(',') === ROSTER.join(','), keys.join(','));
   /* 48·71·83 주석이 되풀이 약속하는 «행 그리드가 안 흔들리는 이유» = 라벨행 수가 SIDE.N 과 같다는 것.
-     ROSTER 와 **따로** 못 박는다 — 칸을 하나 더 늘리며 SIDE.N 도 같이 올리면 ROSTER 만으로는 안 잡힌다. */
+     상수(`SIDE.N = 5`)와 관계(«라벨행 수 = SIDE.N»)를 **따로** 못 박는다 — 한 줄에 묶으면
+     «칸을 늘리며 SIDE.N 도 같이 올리는» 회귀에서 어느 쪽이 깨졌는지 안 보이고, 관계 쪽은 그때
+     **초록으로 샌다**(되돌림 N5·N6 이 두 경우를 갈라 때린다). */
   const nLab = side.rows.filter(r => !r.solo).length, nSolo = side.rows.filter(r => r.solo).length;
-  /* 상수와 관계를 **따로** 못 박는다 — 한 줄에 묶어 두면 «칸을 늘리며 SIDE.N 도 같이 올리는»
-     회귀에서 어느 쪽이 깨진 건지 안 보인다(되돌림 N5·N6 이 두 경우를 갈라 때린다). */
   ok('SIDE.N = 5(A2 행 그리드 규격 — 48·71·83 이 되풀이 약속한 값)', side.N === 5, side.N);
   ok('라벨행 수 = SIDE.N · 단독행 1개', nLab === side.N && nSolo === 1,
      `SIDE.N=${side.N} / 라벨 ${nLab} / 단독 ${nSolo}`);
