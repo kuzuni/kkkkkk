@@ -35,6 +35,16 @@ const near = (n, got, want, tol) => R.push({
 (async () => {
   /* ── ① 소스 ─────────────────────────────────────────────────────── */
   const src = fs.readFileSync(SRC, 'utf8');
+
+  /* 168 이 설치되면 이 게이트는 스스로 물러난다 — sim131.js 와 같은 이유.
+     131 이 단언하던 것(무릎 · 배율 · 무릎 아래 불변)은 168 이 구조째 폐기했다. */
+  if(/const TRAIN_VAL_K\s*=/.test(src) && !/const TRAIN_VAL_KNEE\s*=/.test(src)){
+    console.log('VERIFY131 SUPERSEDED — 작업 168 이 val 곡선을 선형(TRAIN_VAL_K)으로 교체했다.');
+    console.log('  → 실동작은 `node tools/verify168.js` · 수치는 `node tools/sim168.js` 를 보라.');
+    console.log('VERIFY131 PASS (대체됨)');
+    process.exit(0);
+  }
+
   eq('① trainVal 정의 1곳',        (src.match(/const trainVal = /g) || []).length, 1);
   eq('① TRAIN_VAL_KNEE 정의 1곳',  (src.match(/const TRAIN_VAL_KNEE\s*=/g) || []).length, 1);
   eq('① TRAIN_VAL_R 정의 1곳',     (src.match(/const TRAIN_VAL_R\s*=/g) || []).length, 1);

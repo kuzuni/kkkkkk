@@ -65,13 +65,21 @@ function costCurve(id){
   if(m) return { b: parseFloat(m[1]), r: parseFloat(m[2]) };
   return upgCurve(id, 'cost');                       /* 112 이전 표기 */
 }
-/* 131 이후 val 도 두 표기를 받는다: `val:l => 18*Math.pow(1.12,l)`(131 이전)
-   와 `val:trainVal('atk',18,1.12)`(131 의 구간별 지수). [D] 표는 무릎 위쪽을 별도로 센다. */
+/* val 은 표기 **세 벌**을 받는다(LESSONS 140 — 남이 내 구간을 고치면 내 게이트가 먼저 깨진다):
+     · `val:l => 18*Math.pow(1.12,l)`   131 이전 = 단일 지수
+     · `val:trainVal('atk',18,1.12)`    131 = 구간별 지수(무릎 위쪽은 [D] 표가 따로 센다)
+     · `val:trainVal('atk',18)`         **168 = 선형** `b + TRAIN_VAL_K[id]×l` */
 function valCurve(id){
+  const lin = SRC.match(new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:trainVal\\('" + id + "',\\s*([\\d.]+)\\s*\\)"));
+  if(lin) return { b: parseFloat(lin[1]), k: VAL_K[id], lin: true };
   const m = SRC.match(new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:trainVal\\('" + id + "',\\s*([\\d.]+),\\s*([\\d.]+)\\)"));
   if(m) return { b: parseFloat(m[1]), r: parseFloat(m[2]) };
   return upgCurve(id, 'val');                        /* 131 이전 표기 */
 }
+/* 168 선형 기울기 (없으면 선형 미적용) */
+const VKS = SRC.match(/const TRAIN_VAL_K\s*=\s*\{([^}]*)\}/);
+const VAL_K = {};
+if(VKS) VKS[1].replace(/(\w+)\s*:\s*([\d.]+)/g, (_, k, v) => { VAL_K[k] = parseFloat(v); return ''; });
 const COST = { atk: costCurve('atk'), hp: costCurve('hp'), regen: costCurve('regen') };
 const VAL  = { atk: valCurve('atk'),  hp: valCurve('hp'),  regen: valCurve('regen')  };
 /* 131 이 설치한 val 무릎·배율(없으면 «131 미적용» = 단일 지수) */
@@ -80,8 +88,10 @@ const VR_SRC = SRC.match(/const TRAIN_VAL_R\s*=\s*\{([^}]*)\}/);
 const VAL_KNEE = VK_SRC ? parseInt(VK_SRC[1], 10) : Infinity;
 const VAL_R = {};
 if(VR_SRC) VR_SRC[1].replace(/(\w+)\s*:\s*([\d.]+)/g, (_, k, v) => { VAL_R[k] = parseFloat(v); return ''; });
-const valAt = (id, l) => VAL[id].b * Math.pow(VAL[id].r, Math.min(l, VAL_KNEE))
-                       * Math.pow(VAL_R[id] || VAL[id].r, Math.max(0, l - VAL_KNEE));
+const valAt = (id, l) => VAL[id].lin
+  ? VAL[id].b + VAL[id].k * l                                   /* 168 선형 */
+  : VAL[id].b * Math.pow(VAL[id].r, Math.min(l, VAL_KNEE))
+    * Math.pow(VAL_R[id] || VAL[id].r, Math.max(0, l - VAL_KNEE));
 const STATS = ['atk','hp','regen'];
 /* 설치된 무릎·배율. 없으면 «무릎 없음»(112 이전 상태) 으로 본다. */
 const K_SRC = SRC.match(/const TRAIN_KNEE\s*=\s*(\d+)/);

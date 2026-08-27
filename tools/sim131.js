@@ -29,6 +29,20 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+/* ---------- 168 이 설치되면 이 게이트는 스스로 물러난다 ----------
+   131 은 «구간별 지수»(무릎 + 배율)를 판정하는 게이트다. 작업 168(주인 지시 2026-08-27)이
+   그 구조 자체를 폐기하고 val 을 **선형**(`TRAIN_VAL_K`)으로 갈아치웠으므로, 131 의 등식
+   (배율 역산 · 무릎 아래 불변 · 비 불변)은 판정할 대상이 없다 — «FAIL» 이 아니라 «대체됨» 이다.
+   수치 판정은 `node tools/sim168.js` 가, 실동작은 `node tools/verify168.js` 가 이어받았다. */
+if(/const TRAIN_VAL_K\s*=/.test(SRC) && !/const TRAIN_VAL_KNEE\s*=/.test(SRC)){
+  console.log('SIM131 SUPERSEDED — 작업 168 이 val 곡선을 선형(TRAIN_VAL_K)으로 교체했다.');
+  console.log('  131 의 «무릎 + 배율» 구조는 폐기됐으므로 판정할 등식이 없다.');
+  console.log('  → 수치는 `node tools/sim168.js` · 실동작은 `node tools/verify168.js` 를 보라.');
+  console.log('SIM131 PASS (대체됨)');
+  process.exit(0);
+}
+
 function pick(re, what){
   const m = SRC.match(re);
   if(!m){ console.error('SIM131 FAIL — index.html 에서 «' + what + '» 를 못 찾았다: ' + re); process.exit(1); }
