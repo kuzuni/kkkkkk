@@ -20,7 +20,10 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
 
 (async () => {
   /* ── 0. 소스 레벨: 지운 것이 정말 지워졌나 (죽은 데이터·분기 포함) ───────────── */
-  const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
+  /* 229 — 되돌림 시험(`tools/neg229.js`)이 «한 곳만 갈아 끼운 사본» 을 **새로 열어** 이 게이트를
+     통째로 돌릴 수 있게 한다(219 선례 `V96_SRC`. 살아 있는 페이지에 주입하면 거짓 초록 — LESSONS 191). */
+  const TARGET = path.resolve(process.env.V71_SRC || path.join(__dirname, '..', 'index.html'));
+  const src = fs.readFileSync(TARGET, 'utf8');
   /* 주석은 빼고 «코드» 에만 남아 있는지 본다 — 주석의 «작업 71 로 지웠다» 설명은 잔여물이 아니다 */
   const code = src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   ok('src 좌측 data-pop="mail" 0건', !/data-pop="mail"/.test(code));
@@ -44,7 +47,7 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
-  await page.goto('file://' + path.resolve(__dirname, '..', 'index.html'));
+  await page.goto('file://' + TARGET);
   await page.waitForTimeout(1200);
   /* 180 — 이 게이트의 레드닷·행수 단언은 전부 **고정 우편 `MAILS`** 를 표본으로 쓴다
      («전부 수령» 을 `MAILS.forEach` 로 만들고 `mailLeft()`(= allMails 기준) 으로 확인한다).
@@ -59,26 +62,72 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
     sideAlert('mail', mailLeft() > 0);
   });
 
-  /* ── 1. 좌측 사이드 — 5행(우편 없음) · 남은 행 좌표가 A2 그리드 그대로 ────────── */
+  /* ── 1. 좌측 사이드 — 우편 없음 · 행 좌표가 A2 측정표(ref−84) 그대로 ──────────
+     229: «5행» 은 71 당시의 행수다. 83 이 «도감» 을 넣어 지금은 6행(단독 1 + 라벨 5=SIDE.N)이다. */
   const side = await page.evaluate(() => {
     const app = document.getElementById('app'), ar = app.getBoundingClientRect(), sc = ar.width / 1080;
     const F = el => { const b = el.getBoundingClientRect();
       return { x: +((b.left - ar.left) / sc).toFixed(1), y: +((b.top - ar.top) / sc).toFixed(1),
                w: +(b.width / sc).toFixed(1), h: +(b.height / sc).toFixed(1) }; };
-    const rows = [...document.querySelectorAll('#sideL .ibtn')].map(b => ({ k: b.dataset.pop, box: F(b) }));
+    const rows = [...document.querySelectorAll('#sideL .ibtn')].map(b => ({
+      k: b.dataset.pop, solo: b.classList.contains('solo'), box: F(b) }));
     const cs = getComputedStyle(app);
     return { rows, vars: { ih: cs.getPropertyValue('--ih').trim(), igap: cs.getPropertyValue('--igap').trim(),
                            itop: cs.getPropertyValue('--itop').trim() },
+             N: (typeof SIDE === 'object' && SIDE) ? SIDE.N : null,
              sideR: !!document.getElementById('sideR') };
   });
   const keys = side.rows.map(r => r.k);
-  ok('#sideL 행 5개', side.rows.length === 5, keys.join(','));
+  /* 229(2026-08-27) — 이 절의 기대값은 «71 이 지나간 그때의 스냅샷» 이었다(LESSONS 185-①).
+     ⓐ 행 목록: 71 뒤 5칸이었는데 **작업 83(2026-08-26, 주인 보고)이 «도감»(coll)을 ref 5행에 넣고
+        축복을 ref 6행(길드 y958)으로 내렸다** — 측정표 §7 «좌5 도감 top 736 · 좌6 축복 top 874» 가 근거다.
+        제품이 옳고 이 표가 굳은 것이라 **행 목록·y 를 측정표 기준으로 이사**시킨다(185-④).
+     ⓑ y 표: 옛 값 471/605/739 는 «라벨행 pitch 균등 134» 로 **깔아서** 만든 것인데,
+        측정표 **§0 정오표**가 그 가정을 이미 폐기했다(2→3 **135** · 3→4 **131** · 4→5 **133** · 5→6 **138**;
+        균등 134 로 깔면 3~5행이 1~3px 어긋난다 → A2 4회차가 `nth-child` 슬롯 보정으로 해결).
+        그래서 옛 표는 quest 를 −1 · promo 를 +2 틀리게 갖고 있었고, quest 는 허용오차 1.5 에
+        **우연히 걸려 초록**이었다(부패가 부패인 줄 모르는 상태 — 212-②).
+     ⇒ 기대값의 출처를 «옛 실측 스냅샷» 에서 **«측정표의 ref 좌표»** 로 바꾼다(212-①: 화면이 쓴 식이 아니라
+        화면이 **따라야 할 근거 데이터**에서 만든다). 변환은 지시서 [2] 의 단 하나 — **프레임 y = ref y − 84**. */
+  const SB = 84;                                    /* 레퍼런스 최상단 상태바(안전영역) */
+  /* A2 측정표 §1-1·§1-2 «셀 top»(ref 1080×2340 좌표) + §7 칸 배정 */
+  const REF_TOP = { attend: 260, roul: 421, quest: 556, promo: 686, coll: 820, bless: 958 };
+  /* 측정표 §7 이 배정한 좌1~좌6. 게이트 자기 상수다 — 페이지에서 읽어 오면 항등식이 된다(212-①). */
+  const ROSTER = ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'];
+  ok(`#sideL 행 ${ROSTER.length}개(1 단독 + 라벨 ${ROSTER.length - 1})`,
+     side.rows.length === ROSTER.length, keys.join(','));
   ok('#sideL 에 mail 없음', !keys.includes('mail'), keys.join(','));
-  ok('#sideL 순서 = attend,roul,quest,promo,bless',
-     keys.join(',') === 'attend,roul,quest,promo,bless', keys.join(','));
-  /* A2 규격: 단독행 top 176(=--itop 72 + HUD 오프셋) · 라벨행 pitch 134. 제거 전 실측 y 와 같아야 한다. */
-  const EXP = { attend: 176, roul: 337, quest: 471, promo: 605, bless: 739 };
-  side.rows.forEach(r => ok(`행 ${r.k} y=${EXP[r.k]}`, near(r.box.y, EXP[r.k], 1.5), r.box.y));
+  ok(`#sideL 순서 = ${ROSTER.join(',')}`, keys.join(',') === ROSTER.join(','), keys.join(','));
+  /* 48·71·83 주석이 되풀이 약속하는 «행 그리드가 안 흔들리는 이유» = 라벨행 수가 SIDE.N 과 같다는 것.
+     ROSTER 와 **따로** 못 박는다 — 칸을 하나 더 늘리며 SIDE.N 도 같이 올리면 ROSTER 만으로는 안 잡힌다. */
+  const nLab = side.rows.filter(r => !r.solo).length, nSolo = side.rows.filter(r => r.solo).length;
+  /* 상수와 관계를 **따로** 못 박는다 — 한 줄에 묶어 두면 «칸을 늘리며 SIDE.N 도 같이 올리는»
+     회귀에서 어느 쪽이 깨진 건지 안 보인다(되돌림 N5·N6 이 두 경우를 갈라 때린다). */
+  ok('SIDE.N = 5(A2 행 그리드 규격 — 48·71·83 이 되풀이 약속한 값)', side.N === 5, side.N);
+  ok('라벨행 수 = SIDE.N · 단독행 1개', nLab === side.N && nSolo === 1,
+     `SIDE.N=${side.N} / 라벨 ${nLab} / 단독 ${nSolo}`);
+  side.rows.forEach(r => {
+    const exp = REF_TOP[r.k] != null ? REF_TOP[r.k] - SB : null;
+    ok(`행 ${r.k} y=${exp == null ? '?' : exp}(=ref ${REF_TOP[r.k]} − ${SB})`,
+       exp != null && near(r.box.y, exp, 1.5), r.box.y);
+  });
+  /* pitch — 측정표 §1-2·§0 정오표의 «균등이 아니다» 를 그대로 못 박는다.
+     셀 top 차분(161/135/130/134/138)과 §1-2 pitch 행(161/135/131/133/138)이 **3·4행에서 1px 엇갈리는데**
+     제품은 pitch 행을 따른다(promo 603 = 472+131, ref−84 는 602 — 둘 다 허용오차 안이고 coll 에서 다시 합류한다).
+     여기서는 **제품이 따르는 pitch 행**을 정본으로 재고, 위 y 단언이 ref 절대좌표를 따로 잡는다. */
+  const REF_PITCH = [161, 135, 131, 133, 138];
+  const gotPitch = side.rows.slice(1).map((r, i) => +(r.box.y - side.rows[i].box.y).toFixed(2));
+  /* 허용오차 0.5 — 실측이 화면비 4종(1600·1920·2280·2600)에서 **Δ0.00** 이다(`tools/probe229.js`).
+     y 쪽 1.5 와 달리 여기를 조일 수 있는 이유: pitch 는 차분이라 --itop·HUD 오프셋이 소거되고,
+     측정표의 1px 내부 불일치(위 주석)도 절대좌표에만 걸린다. */
+  REF_PITCH.forEach((p, i) => ok(`pitch ${i + 1}→${i + 2} = ${p}(§1-2)`,
+     gotPitch[i] != null && near(gotPitch[i], p, 0.5), gotPitch[i]));
+  /* 「균등 134」로 되돌아가는 회귀를 그 자리에서 잡는다 — 위 pitch 단언과 축이 겹치지만,
+     이 한 줄이 없으면 «옛 가정이 부활했다» 가 개별 px 오차로만 보이고 원인이 안 보인다(214-④ «세 벌»). */
+  const lab = gotPitch.slice(1);
+  ok('라벨행 pitch 균등 아님(§0 정오표 — 균등 134 가정 폐기)',
+     lab.length === 4 && Math.max(...lab) - Math.min(...lab) >= 4,
+     `${lab.join('/')} (편차 ${(Math.max(...lab) - Math.min(...lab)).toFixed(2)})`);
   ok('행 그리드 변수 불변(--ih 82 · --igap 20 · --itop 72)',
      side.vars.ih === '82.00px' && side.vars.igap === '20.00px' && side.vars.itop === '72.00px',
      JSON.stringify(side.vars));
