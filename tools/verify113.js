@@ -2,10 +2,10 @@
    실행: node tools/verify113.js   → 마지막 줄이 `VERIFY113 n/n PASS` 여야 한다.
 
    본다:
-     §1 데이터 — GUIDE 21개의 hint 유무가 설계대로다(전투 계열 5개만 hint 없음).
-     §2 이동 뒤 손가락 — 힌트가 있는 미션 16개 전수: gmGo() 후 대상이 실제로 존재하고
+     §1 데이터 — GUIDE 20개의 hint 유무가 설계대로다(전투 계열 6개만 hint 없음. 154 로 21→20).
+     §2 이동 뒤 손가락 — 힌트가 있는 미션 14개 전수: gmGo() 후 대상이 실제로 존재하고
         #fxHand·#fxHandR 이 뜨며 손 bbox 가 대상 bbox 와 **40px 이내로 접한다**.
-     §3 전투 계열 — hint 없는 미션 5개는 손가락이 뜨지 않는다(이동만).
+     §3 전투 계열 — hint 없는 미션 6개는 손가락이 뜨지 않는다(이동만).
      §4 74 회귀 — 손가락·링이 아래 버튼의 탭을 가로채지 않는다.
         (오버레이 좌표에서 elementFromPoint 가 대상을 돌려주고, 실제 클릭도 먹는다)
      §5 소멸 — ① 대상 클릭 ② 탭바 이동 ③ 대상이 사라짐 ④ 8초 경과.
@@ -86,9 +86,10 @@ const goAndRead = async (p, i, mut) => {
     names: GUIDE.map(m => m.n),
     ms: GM_HAND_MS, seek: GM_HAND_SEEK
   }));
-  ok(meta.n === 21, `미션 21개 (순서·개수 불변) — ${meta.n}`);
+  /* 154 — «출석 보상 받기»(구 idx 11) 삭제로 21 → 20 개. 아래 인덱스는 전부 그만큼 당겨졌다. */
+  ok(meta.n === 20, `미션 20개 (순서·개수 불변) — ${meta.n}`);
   /* 전투로만 달성하는 미션 = 적 처치 · 스테이지 5/15/25/40 · 보스 → 힌트 없음 */
-  const NOHINT = [7, 8, 14, 17, 19, 20];
+  const NOHINT = [7, 8, 13, 16, 18, 19];
   const wantHint = meta.hint.map((_, i) => !NOHINT.includes(i));
   ok(JSON.stringify(meta.hint) === JSON.stringify(wantHint),
     `hint 배치 = 전투 계열 ${NOHINT.length}개만 없음 (실제 없음: ${meta.hint.map((h, i) => h ? null : i).filter(x => x !== null).join(',')})`);
@@ -101,20 +102,20 @@ const goAndRead = async (p, i, mut) => {
     /* 미장착 보유 스킬 1개 → 07 격자의 그 카드를 가리켜야 한다(잠금 슬롯 폴백이 아니라) */
     1:  "S.own['slash']={l:1,n:0}; S.eqSkill=[];",
     /* 장착된 무기 → 06 의 «찬» 슬롯을 가리켜야 한다(05 세부의 [강화]로 가는 길) */
-    13: "const _w=EQUIPS.find(e=>e.slot==='weapon'); S.own[_w.id]={l:1,n:0}; S.eqSlot.weapon=_w.id;",
+    12: "const _w=EQUIPS.find(e=>e.slot==='weapon'); S.own[_w.id]={l:1,n:0}; S.eqSlot.weapon=_w.id;",
     /* 세트 전원을 보유시켜 도감 강화 대기(.rdy) 버튼을 만든다 */
-    18: "const _s=COLL_SETS[0]; collTab=_s.tab; _s.it.forEach(id=>{S.own[id]={l:1,n:0}});"
+    17: "const _s=COLL_SETS[0]; collTab=_s.tab; _s.it.forEach(id=>{S.own[id]={l:1,n:0}});"
   };
   /* 폴백이 아니라 «의도한» 대상을 잡았는지까지 본다(빈 슬롯 폴백은 통과가 아니다) */
   const WANT = {
     1:  ['sk-card',  '07 격자의 미장착 보유 카드'],
     3:  ['empty',    '06 의 빈 부위 슬롯'],
     4:  ['tr-card',  '23 공격력 훈련 카드'],
-    16: ['tr-card',  '23 공격력 훈련 카드'],
-    13: ['!empty',   '06 의 장착된 부위 슬롯'],
-    18: ['rdy',      '21 도감의 강화 가능 버튼']
+    15: ['tr-card',  '23 공격력 훈련 카드'],
+    12: ['!empty',   '06 의 장착된 부위 슬롯'],
+    17: ['rdy',      '21 도감의 강화 가능 버튼']
   };
-  const HINTED = [0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 15, 16, 18];
+  const HINTED = [0, 1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 14, 15, 17];
   for (const i of HINTED) {
     const s = await goAndRead(p, i, MUT[i]);
     ok(s.hand && s.ring && s.target,

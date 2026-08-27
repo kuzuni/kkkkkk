@@ -8,7 +8,8 @@
      §3 목걸이 무료 10연 2회 소진 — 2→1→0, 3번째는 «무료 소환 소진» 팝업 + 상태 불변.
      §4 구 세이브 호환 — ⓐ freeSum 에 amulet 키 없음 → freeLeft 가 SHOP_FREE 폴백 + dailyCheck 가 채움
         ⓑ S.sum 에 amulet 없음 → load() 가 {lv:1,exp:0} 로 채움
-        ⓒ 가이드 gv≤2 · idx≥6 → idx+1 이관, idx<6 은 그대로, gv=3 은 무이관, idx=20(완주) → 21 클램프.
+        ⓒ 가이드 gv≤2 · idx≥6 → idx+1 이관, idx<6 은 그대로, gv=3 은 무이관, idx=20(완주) → GUIDE.length 클램프
+           (154 로 미션이 21→20 개가 되면서 그 클램프값도 20 이다).
      §5 11 확률 정보 팝업 — openProbInfo('amulet') 가 열리고 목록이 목걸이 아이템만이다.
      §6 미션표 — idx5 «방패 1회 소환하기»(보상 = 목걸이 10연 1,000) · idx6 «목걸이 1회 소환하기»(ban:amulet) ·
         가이드 이동 gmShop('amulet') 이 목걸이 카드로 스크롤.
@@ -132,13 +133,16 @@ async function launchAny(){
     oldSave.guide = { idx: 7, prog: 0, gv: 3 };  const r3 = run(oldSave);
     oldSave.guide = { idx: 20, prog: 0, gv: 2 }; const r4 = run(oldSave);
     Object.assign(S, JSON.parse(snap)); save();  /* 원상 복구 */
-    return { r1, r2, r3, r4, glen: GUIDE.length };
+    return { r1, r2, r3, r4, glen: GUIDE.length, ver: GUIDE_V };
   });
   ok(mig.r1.free === 2 && mig.r1.sum, 'ⓐⓑ amulet 키 없음 → freeLeft 2(폴백) · S.sum.amulet {lv1,exp0}');
-  ok(mig.r1.idx === 8 && mig.r1.prog === -1 && mig.r1.gv === 3, `ⓒ gv2·idx7 → idx8 이관 + 기준선 -1 (실제 idx${mig.r1.idx})`);
+  /* 154 — 이관 후 gv 는 «그때의 최신 버전» 이다(3 고정이 아니다). 76 이 보는 것은 «idx 가 8 로
+     밀렸는가 · 기준선이 미확정으로 돌아갔는가» 이므로 버전은 현재 GUIDE_V 와 대조한다. */
+  ok(mig.r1.idx === 8 && mig.r1.prog === -1 && mig.r1.gv === mig.ver, `ⓒ gv2·idx7 → idx8 이관 + 기준선 -1 (실제 idx${mig.r1.idx}·gv${mig.r1.gv})`);
   ok(mig.r2.idx === 5, `ⓒ gv2·idx5(삽입점 앞) → 그대로 5 (실제 ${mig.r2.idx})`);
   ok(mig.r3.idx === 7, `ⓒ gv3 세이브는 무이관 (실제 ${mig.r3.idx})`);
-  ok(mig.r4.idx === 21 && mig.glen === 21, `ⓒ 완주(20) → 21 = GUIDE.length 클램프 (실제 ${mig.r4.idx}/${mig.glen})`);
+  /* 154 — «출석 보상 받기» 삭제로 21 → 20. v2 완주 세이브는 +1(v3) 후 −1(v5) 로 20 = 새 GUIDE.length 다. */
+  ok(mig.r4.idx === 20 && mig.glen === 20, `ⓒ 완주(20) → 20 = GUIDE.length 클램프 (실제 ${mig.r4.idx}/${mig.glen})`);
 
   /* ── §5 확률 정보 팝업 ───────────────────────────────────────── */
   console.log('§5 11 확률 정보 팝업 — 목걸이');
