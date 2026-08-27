@@ -95,7 +95,7 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   await wait(700);
   /* (a) 새 세이브 그대로: cp 503 < 요구 2500 이라 **한 장도 켜지면 안 된다**(166 이전엔 2장이 켜졌다) */
   const dunFresh = await ev(() => {
-    const want = DUNGEONS.filter(d => !dunLocked(d) && S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id])).length;
+    const want = DUNGEONS.filter(d => !dunLocked(d) && S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id])).length;
     return { want, got: document.querySelectorAll('#dunList .dnc > .dot').length,
              cp: cp(), req: DUNGEONS[0].req(S.dun[DUNGEONS[0].id]) };
   });
@@ -107,14 +107,14 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
     window.__req0 = DUNGEONS.map(d => d.req);
     DUNGEONS.forEach(d => { d.req = () => 0; });
     renderDunPage();
-    return { want: DUNGEONS.filter(d => !dunLocked(d) && S.daily.dun[d.id] > 0).length,
+    return { want: DUNGEONS.filter(d => !dunLocked(d) && S.dunTk[d.id] > 0).length,
              got: document.querySelectorAll('#dunList .dnc > .dot').length };
   });
   ok('던전 카드 — 요구 충족 + 횟수 남으면 켜진다', dunOn.got === dunOn.want && dunOn.want > 0,
     'dot ' + dunOn.got + ' / 기대 ' + dunOn.want);
   /* (c) 입장 횟수를 다 쓰면 다시 꺼진다 */
   const dunUsed = await ev(() => {
-    DUNGEONS.forEach(d => { S.daily.dun[d.id] = 0; });
+    DUNGEONS.forEach(d => { S.dunTk[d.id] = 0; });
     renderDunPage();
     return document.querySelectorAll('#dunList .dnc > .dot').length;
   });
@@ -127,7 +127,7 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   });
   ok('던전 서브탭 배지 — 입장 횟수 0(=알림 없음)이면 꺼짐',
     sub0.disp === 'none' && sub0.alert === false, sub0.disp + ' / .alert ' + sub0.alert);
-  await ev(() => { DUNGEONS.forEach(d => { S.daily.dun[d.id] = 3; }); uiDirty = true; renderUI(); });
+  await ev(() => { DUNGEONS.forEach(d => { S.dunTk[d.id] = 3; }); uiDirty = true; renderUI(); });
   await wait(500);
   const sub1 = await ev(() => {
     const t = document.querySelector('#dunSub [data-dsub="dun"]');

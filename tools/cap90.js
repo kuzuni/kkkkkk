@@ -33,7 +33,7 @@ function launchOpts(){
     S.dun.relic1 = locked ? 1 : 6;
     S.dun.relic2 = locked ? 1 : 6;
     S.dun.relic3 = 1; S.dun.relic4 = 1;
-    S.daily.dun = { gold: 2, dia: 3, relic1: 3, relic2: 1, relic3: 3, relic4: 3 };
+    S.dunTk = { gold: 2, dia: 3, relic1: 3, relic2: 1, relic3: 3, relic4: 3, stone: 3 };
     dunSub = 'dun';
     msgTxt = ''; msgT = 0;                 /* LESSONS 30-② — 로드 직후 토스트가 캡처에 섞이지 않게 */
     openDungeon();

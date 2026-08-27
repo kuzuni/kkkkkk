@@ -46,7 +46,7 @@ function maxSat(css) {
     [...EQUIPS, ...SKILLS, ...PETS].forEach(it => { S.own[it.id] = { l: 1, n: 1e12 }; });
     AVATARS.forEach(a => { if (a.id !== 'av0') delete S.avatars[a.id]; });
     S.avatars.av0 = 1; S.avatar = 'av0';
-    if (S.daily && S.daily.dun) Object.keys(S.daily.dun).forEach(k => S.daily.dun[k] = 5);
+    if (S.dunTk) Object.keys(S.dunTk).forEach(k => S.dunTk[k] = 5);
     markDirty(); uiDirty = true; save(); renderUI();
   });
   await page.waitForTimeout(400);

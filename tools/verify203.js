@@ -302,13 +302,13 @@ const table = [];
   console.log('[7] 획득처 — 룬강화석 던전 · DPS 측정장이 실제로 지급한다');
   const dun = await p.evaluate(() => {
     S.guide.idx = 99; S.rstone = 0; S.dun.rstone = 1;
-    DUNGEONS.forEach(d => S.daily.dun[d.id] = 3);
+    DUNGEONS.forEach(d => S.dunTk[d.id] = 3);
     const d = DUNGEONS.find(x => x.id === 'rstone');
-    const before = { st: S.rstone, f: S.dun.rstone, left: S.daily.dun.rstone };
+    const before = { st: S.rstone, f: S.dun.rstone, left: S.dunTk.rstone };
     challengeDungeon(d);
     const entered = !!dunRun && dunRun.d.id === 'rstone';
     if (entered) { dunRun.dmg = dunRun.need; endDunRun(true); }
-    const after = { st: S.rstone, f: S.dun.rstone, left: S.daily.dun.rstone };
+    const after = { st: S.rstone, f: S.dun.rstone, left: S.dunTk.rstone };
     const clr = document.getElementById('dclw').classList.contains('on');
     closeDunClear();
     return { entered, before, after, clr, rw: d.rw(1), name: d.n,

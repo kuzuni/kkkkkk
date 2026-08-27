@@ -52,7 +52,9 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
   ok(JSON.stringify(st.ids) === JSON.stringify(IDS), 'id 순서 ' + IDS.join('·') + ' (실측 ' + st.ids.join('·') + ')');
   ok(!st.ids.includes('growth') && !st.ids.includes('boss'), 'growth(수련의 탑)·boss(마왕의 성) 폐기');
   ok(!st.ids.includes('relic'), '구 id `relic` 없음 — relic1~4 로 대체');
-  ok(st.tries === 3, 'DUN_TRY === 3 (던전별 하루 입장, 유물조각 최대 4×3=12런)');
+  /* 204(2026-08-27, 주인 지시) — 90 ④ 의 «하루 3회 리필» 은 폐기됐다. DUN_TRY 는 이제
+     «출석 1회가 주는 적립량 = 표기 분모» 이고 값은 2 다. 저장 위치도 S.daily.dun → S.dunTk. */
+  ok(st.tries === 2, 'DUN_TRY === 2 (204 — 출석마다 던전별 +2 적립 · 표기 분모)');
   ok(st.names.length === new Set(st.names).size, '던전 이름 ' + IDS.length + '개 모두 다름 (' + st.names.join(' · ') + ')');
   ok(IDS.every(id => st.uiKeys.includes(id)) && st.uiKeys.length === IDS.length, 'DUN_UI 키 ' + IDS.length + '개, DUNGEONS 와 1:1');
   ok(IDS.every(id => st.stateKeys.includes(id)) && st.stateKeys.length === IDS.length, 'DUN_STATE 키 ' + IDS.length + '개, DUNGEONS 와 1:1');
@@ -83,17 +85,17 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
       S.guide.idx = 99;
       all.forEach(x => { S.dun[x] = 99; });           /* 상위 단 해금(이전 단 5층 초과) */
       S.dun[id] = 1;
-      DUNGEONS.forEach(d => S.daily.dun[d.id] = 3);
+      DUNGEONS.forEach(d => S.dunTk[d.id] = 3);
       S.gold = 0; S.dia = 0; S.relic = 0; S.stone = 0;   /* 194 */
       const before = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone,
-                       floor: S.dun[id], left: S.daily.dun[id], cnt: S.cnt.dungeon };
+                       floor: S.dun[id], left: S.dunTk[id], cnt: S.cnt.dungeon };
       const d = DUNGEONS.find(x => x.id === id);
       challengeDungeon(d);                            /* 30 — 제한 시간 전투로 입장 */
       const entered = !!dunRun && dunRun.d.id === id;
       const need = entered ? dunRun.need : 0;
       if (entered) { dunRun.dmg = dunRun.need; endDunRun(true); }   /* 요구 피해를 채워 클리어 */
       const after = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone,
-                      floor: S.dun[id], left: S.daily.dun[id], cnt: S.cnt.dungeon };
+                      floor: S.dun[id], left: S.dunTk[id], cnt: S.cnt.dungeon };
       const clr = document.getElementById('dclw').classList.contains('on');
       const amt = document.getElementById('dclAmt').textContent;
       closeDunClear();
@@ -138,9 +140,9 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     /* 잠긴 던전은 입장·소탕이 막힌다 */
     S.guide.idx = 99; S.dun.relic1 = 1; S.dun.relic2 = 1;
     const d2 = DUNGEONS.find(x => x.id === 'relic2');
-    const l0 = S.daily.dun.relic2, f0 = S.dun.relic2;
+    const l0 = S.dunTk.relic2, f0 = S.dun.relic2;
     challengeDungeon(d2); sweepDungeon(d2);
-    out.blocked = (S.daily.dun.relic2 === l0) && !dunRun && (S.dun.relic2 === f0);
+    out.blocked = (S.dunTk.relic2 === l0) && !dunRun && (S.dun.relic2 === f0);
     if (dunRun) endDunRun(false, true);
     closeModal && closeModal();
     return out;
@@ -162,6 +164,10 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     const old = JSON.parse(keep || '{}');
     /* 던전 재편 이전 세이브 모양 그대로 */
     old.dun = { gold: 4, dia: 2, relic: 7, growth: 3, boss: 2 };
+    /* 204 — 이 세이브는 «현재 세이브를 복사해» 만든다. 204 이후로는 거기에 `dunTk`(영구 입장권)가
+       들어 있어서, 지우지 않으면 «이미 개편된 세이브» 로 읽혀 90 의 승계 경로를 아예 안 탄다.
+       구 세이브를 흉내 내는 것이 이 절의 목적이므로 새 키를 떨군다. */
+    delete old.dunTk;
     old.daily = Object.assign({}, old.daily || {}, {
       date: (() => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); })(),
       dun: { gold: 1, dia: 0, relic: 2, growth: 3, boss: 3 } });
@@ -171,10 +177,10 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     try { r = load(); } catch (e) { errs.push(String(e)); }
     const out = { err: errs, loaded: r !== undefined,
                   relic1: S.dun.relic1, gold: S.dun.gold, dia: S.dun.dia,
-                  tryRelic1: S.daily.dun.relic1,
+                  tryRelic1: S.dunTk.relic1,
                   newKeys: ['relic1','relic2','relic3','relic4'].map(k => S.dun[k]),
                   nan: Object.keys(S.dun).filter(k => !Number.isFinite(S.dun[k])),
-                  dailyNan: Object.keys(S.daily.dun).filter(k => !Number.isFinite(S.daily.dun[k])) };
+                  dailyNan: Object.keys(S.dunTk).filter(k => !Number.isFinite(S.dunTk[k])) };
     if (keep) localStorage.setItem(KEYN, keep);
     return out;
   });
@@ -184,7 +190,7 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
   ok(mig.gold === 4 && mig.dia === 2, '골드·다이아 던전 층 보존 (' + mig.gold + ' · ' + mig.dia + ')');
   ok(mig.newKeys.every(v => Number.isFinite(v) && v >= 1), 'relic1~4 층이 전부 유효값 (' + mig.newKeys.join(',') + ')');
   ok(mig.nan.length === 0 && mig.dailyNan.length === 0,
-     'S.dun · S.daily.dun 에 NaN/undefined 0건' + (mig.nan.length ? ' — ' + mig.nan.join(',') : ''));
+     'S.dun · S.dunTk 에 NaN/undefined 0건' + (mig.nan.length ? ' — ' + mig.nan.join(',') : ''));
 
   /* ---------------- [5] UI — 03 카드 IDS.length 장 ---------------- */
   console.log('[5] UI — 03 던전 카드');

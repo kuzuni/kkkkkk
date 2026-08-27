@@ -52,7 +52,7 @@ const CASES = [
     S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
     S.stage = stage; S.best = stage; S.guide.idx = 99;
     const d = DUNGEONS.find(x => x.id === dunId);
-    S.daily.dun[d.id] = 9;
+    S.dunTk[d.id] = 9;
     S.dun[d.id] = Math.max(S.dun[d.id] | 0, f);
     /* «자기 전투력 = 요구 전투력» 인 플레이어를 만든다 — 훈련 레벨을 균일하게 올린다.
        실제 플레이어의 배분과 똑같지는 않지만, 두 팔에 **같은 캐릭터**가 들어가므로 차분은 유효하다. */

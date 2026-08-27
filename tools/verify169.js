@@ -34,7 +34,7 @@ const chk = (c, t, d) => (c ? ok : no)(t, d);
 /* 던전을 전부 열고 층·입장 횟수를 준다. 소탕 조건은 목록 행과 같은 `left > 0 && f > 1` 이다. */
 const SEED = () => {
   S.guide.idx = 99; S.best = 99;
-  DUNGEONS.forEach(d => { S.dun[d.id] = 5; S.daily.dun[d.id] = 2; });
+  DUNGEONS.forEach(d => { S.dun[d.id] = 5; S.dunTk[d.id] = 2; });
   save();
 };
 
@@ -179,7 +179,7 @@ async function openList(p) {
     chk(s.dis && /grayscale/.test(s.fil), 'B3 1층뿐이면 비활성(회색)', `dis=${s.dis} filter=${s.fil}`);
 
     /* left == 0 — 오늘 입장 횟수 소진 */
-    await p.evaluate(() => { S.dun.gold = 5; S.daily.dun.gold = 0; openDunDetail(DUNGEONS[0]); });
+    await p.evaluate(() => { S.dun.gold = 5; S.dunTk.gold = 0; openDunDetail(DUNGEONS[0]); });
     await p.waitForTimeout(250);
     s = await p.evaluate(SWEEP);
     chk(s.dis && /grayscale/.test(s.fil), 'B4 입장 횟수 0 이면 비활성(회색)', `dis=${s.dis} filter=${s.fil}`);
@@ -188,7 +188,7 @@ async function openList(p) {
     const agree = await p.evaluate(() => {
       const out = [];
       for (const f of [1, 2, 5]) for (const left of [0, 1]) {
-        S.dun.gold = f; S.daily.dun.gold = left;
+        S.dun.gold = f; S.dunTk.gold = left;
         openDunDetail(DUNGEONS[0]);
         out.push({ f, left, det: !document.getElementById('dgdSweep').disabled, row: left > 0 && f > 1 });
       }
@@ -204,22 +204,22 @@ async function openList(p) {
   {
     const { ctx, p, errs } = await boot(b, 2280);
     await openList(p);
-    await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.daily.dun.gold = 2; openDunDetail(DUNGEONS[0]); });
+    await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
     await p.waitForTimeout(300);
     const before = await p.evaluate(() => ({
-      gold: S.gold, left: S.daily.dun.gold, cnt: S.cnt.dungeon,
+      gold: S.gold, left: S.dunTk.gold, cnt: S.cnt.dungeon,
       want: DUNGEONS[0].rw(S.dun.gold - 1).gold,
       hud: document.getElementById('hudGold') ? document.getElementById('hudGold').textContent : null,
     }));
     await p.evaluate(() => document.getElementById('dgdSweep').click());
     await p.waitForTimeout(500);
     const after = await p.evaluate(() => ({
-      gold: S.gold, left: S.daily.dun.gold, cnt: S.cnt.dungeon,
+      gold: S.gold, left: S.dunTk.gold, cnt: S.cnt.dungeon,
       dgdOpen: document.getElementById('dgdw').classList.contains('on'),
       dclOpen: document.getElementById('dclw').classList.contains('on'),
       dclAmt: document.getElementById('dclAmt').textContent,
       wantTxt: fmtCur('gold', DUNGEONS[0].rw(4).gold),
-      saved: (() => { try { return JSON.parse(localStorage.getItem(KEY)).daily.dun.gold; } catch (e) { return 'ERR'; } })(),
+      saved: (() => { try { return JSON.parse(localStorage.getItem(KEY)).dunTk.gold; } catch (e) { return 'ERR'; } })(),
     }));
     chk(after.left === before.left - 1, 'C1 입장 횟수 −1', `${before.left} → ${after.left}`);
     chk(Math.abs((after.gold - before.gold) - before.want) < 1,
@@ -271,10 +271,10 @@ async function openList(p) {
     chk(a.lk && a.dis, 'D4 아레나 — 소탕 버튼은 자물쇠 + 비활성', `lk=${a.lk} dis=${a.dis}`);
     /* 잠긴 버튼을 눌러도 아무 일도 없어야 한다 */
     const inv = await p.evaluate(async () => {
-      const b0 = JSON.stringify({ g: S.gold, d: S.dia, dun: S.daily.dun });
+      const b0 = JSON.stringify({ g: S.gold, d: S.dia, dun: S.dunTk });
       document.getElementById('dgdSweep').click();
       await new Promise(r => setTimeout(r, 300));
-      return b0 === JSON.stringify({ g: S.gold, d: S.dia, dun: S.daily.dun });
+      return b0 === JSON.stringify({ g: S.gold, d: S.dia, dun: S.dunTk });
     });
     chk(inv, 'D5 아레나에서 소탕을 눌러도 재화·횟수 불변', String(inv));
     await ctx.close();
@@ -293,13 +293,13 @@ async function openList(p) {
     fs.writeFileSync(NEG1, src.replace(HANDLER, "$('dgdSweep').onclick = () => {};"));
     {
       const { ctx, p } = await boot(b, 2280, 'file://' + NEG1);
-      await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.daily.dun.gold = 2; openDunDetail(DUNGEONS[0]); });
+      await p.evaluate(() => { S.gold = 0; S.dun.gold = 5; S.dunTk.gold = 2; openDunDetail(DUNGEONS[0]); });
       await p.waitForTimeout(300);
       const same = await p.evaluate(async () => {
-        const g0 = S.gold, l0 = S.daily.dun.gold;
+        const g0 = S.gold, l0 = S.dunTk.gold;
         document.getElementById('dgdSweep').click();
         await new Promise(r => setTimeout(r, 400));
-        return g0 === S.gold && l0 === S.daily.dun.gold;
+        return g0 === S.gold && l0 === S.dunTk.gold;
       });
       chk(same, 'E1 음성항 — 옛 빈 핸들러로 되돌리면 눌러도 아무 일이 없다', String(same));
       await ctx.close();
@@ -332,11 +332,11 @@ async function openList(p) {
   /* ================= [F] 회귀 — 도전 버튼·팝업 흐름 불변 ================= */
   {
     const { ctx, p, errs } = await boot(b, 2280);
-    await p.evaluate(() => { S.dun.gold = 5; S.daily.dun.gold = 0; openDunDetail(DUNGEONS[0]); });
+    await p.evaluate(() => { S.dun.gold = 5; S.dunTk.gold = 0; openDunDetail(DUNGEONS[0]); });
     await p.waitForTimeout(280);
     const g0 = await p.evaluate(() => ({ dis: document.getElementById('dgdGo').disabled }));
     chk(g0.dis, 'F1 [도전] — 입장 횟수 0 이면 비활성(종전 규칙 불변)', `dis=${g0.dis}`);
-    await p.evaluate(() => { S.daily.dun.gold = 2; renderDunDetail(); });
+    await p.evaluate(() => { S.dunTk.gold = 2; renderDunDetail(); });
     await p.waitForTimeout(200);
     const g1 = await p.evaluate(() => ({ dis: document.getElementById('dgdGo').disabled }));
     chk(!g1.dis, 'F2 [도전] — 횟수가 있으면 활성', `dis=${g1.dis}`);
@@ -347,7 +347,10 @@ async function openList(p) {
       tryTxt: document.getElementById('dgdTry').textContent,
       amt: document.getElementById('dgdAmt').textContent,
     }));
-    chk(f.title === '황금 동굴' && f.floor === '5' && f.tryTxt === '2/3' && f.amt.length > 0,
+    /* 204 — 분모는 «하루 입장 횟수 3» 이 아니라 «표기 기준 DUN_TRY(=2)» 다. 상한이 없어 N 이
+       분모를 넘을 수 있으므로 여기서도 상수에서 뽑아 쓴다(값을 다시 박으면 또 굳는다). */
+    const den = await p.evaluate(() => DUN_TRY);
+    chk(f.title === '황금 동굴' && f.floor === '5' && f.tryTxt === '2/' + den && f.amt.length > 0,
       'F3 세부 팝업 표시 필드 불변', JSON.stringify(f));
     chk(errs.length === 0, 'F4 콘솔·런타임 에러 0', `${errs.length}건`);
     await ctx.close();

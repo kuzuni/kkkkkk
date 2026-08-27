@@ -35,7 +35,7 @@ const near = (label, got, want, tol) => {
   const started = await page.evaluate(() => {
     S.dia = 1e9; S.gold = 1e9;
     const d = DUNGEONS[0];
-    S.daily.dun[d.id] = 3;
+    S.dunTk[d.id] = 3;
     challengeDungeon(d);
     return !!dunRun && document.getElementById('app').classList.contains('dunrun');
   });
@@ -177,7 +177,7 @@ const near = (label, got, want, tol) => {
 
   console.log('\n[G] 클리어 / 실패 경로');
   const clear = await page.evaluate(async () => {
-    const d = DUNGEONS[0]; S.daily.dun[d.id] = 3;
+    const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
     const f0 = S.dun[d.id];
     challengeDungeon(d);
     dunRun.dmg = dunRun.need;                 /* 요구치 즉시 충족 */
@@ -189,7 +189,7 @@ const near = (label, got, want, tol) => {
   await page.evaluate(() => { const m = document.querySelector('.modal.on'); if (m) m.classList.remove('on'); closeModal && closeModal(); });
   await page.waitForTimeout(200);
   const failp = await page.evaluate(async () => {
-    const d = DUNGEONS[1]; S.daily.dun[d.id] = 3;
+    const d = DUNGEONS[1]; S.dunTk[d.id] = 3;
     const f0 = S.dun[d.id];
     challengeDungeon(d);
     dunRun.t = 0.01; dunRun.dmg = 0; dunRun.need = 1e30;

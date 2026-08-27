@@ -16,7 +16,7 @@ const out = process.argv[2] || 'docs/review/30-r1.png';
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(900);
   await p.evaluate(() => {
-    const d = DUNGEONS[0]; S.daily.dun[d.id] = 3;
+    const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
     challengeDungeon(d);
     /* 레퍼런스와 같은 «막 들어온» 상태로 고정한다(캡처마다 흔들리지 않게) */
     dunRun.t = 29.6;

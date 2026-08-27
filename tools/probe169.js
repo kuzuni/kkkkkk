@@ -11,7 +11,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 /* 던전을 전부 열고 층·입장 횟수를 넉넉히 준다 — 소탕 조건(`left>0 && f>1`)을 만족시키기 위함 */
 const SEED = () => {
   S.guide.idx = 99;
-  DUNGEONS.forEach(d => { S.dun[d.id] = 5; S.daily.dun[d.id] = 2; });
+  DUNGEONS.forEach(d => { S.dun[d.id] = 5; S.dunTk[d.id] = 2; });
   S.best = 99;
   save();
 };

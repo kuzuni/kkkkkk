@@ -47,10 +47,11 @@ const TOAST_SITES = [
   ['가이드 소환 차단',           '소환</b>을 먼저 해주세요'],
   ['룰렛 무료 소진',             '무료 룰렛 소진'],
   ['던전 잠김(상세)',            '\' + dunLockTxt(d) + \' 필요\');\n    return;'],
-  ['던전 입장 소진(상세)',       '입장 횟수 소진 — 내일'],
+  /* 204 — «내일 N회 리필» 폐기 → «출석 보상마다 +N장 적립» */
+  ['던전 입장 소진(상세)',       '입장권 없음 — 출석 보상마다'],
   ['소탕 — 던전 잠김',           'if(dunLocked(d)){ notify('],
   ['소탕 불가',                  '을 클리어해야 소탕합니다'],
-  ['소탕 — 입장 소진',           '오늘 입장 횟수를 모두 사용했습니다'],
+  ['소탕 — 입장 소진',           '입장권이 없습니다 — 출석 보상마다'],   /* 204 */
   /* 182 — «코스튬 해금 조건 미달»·«코스튬 다이아 부족» 두 자리는 **경로째 폐기**됐다
      (구매 폐지 → `buyAvatar()` 삭제). 코스튬이 남긴 단순 안내는 아래 «미보유 코스튬» 하나다. */
   ['승급 조건 미달',             '승급 조건 미달'],
@@ -125,7 +126,8 @@ function callerOf(frag){
 /* ── §3 워스트케이스 문구 — 실데이터에서 «가장 긴 이름» 을 골라 조립한다 ─────────── */
 const WORST = [
   { n: '던전 잠김',       f: 'D => "🔒 " + D.dun + " — " + D.dunLock + " 필요"' },
-  { n: '던전 입장 소진',  f: 'D => "<b>" + D.dun + "</b> 입장 횟수 소진 — 내일 <b>3회</b>"' },
+  /* 204 — 문구가 «출석 보상마다 +N장» 으로 바뀌었다(N = DUN_TRY, 페이지 안에서 읽는다) */
+  { n: '던전 입장 소진',  f: 'D => "<b>" + D.dun + "</b> 입장권 없음 — 출석 보상마다 <b>+" + DUN_TRY + "장</b>"' },
   { n: '무료 소환 소진',  f: 'D => "<b>" + D.ban + "</b> 무료 소환 소진 — 내일 충전"' },
   { n: '가이드 소환 차단',f: 'D => "📌 <b>" + D.ban + " 소환</b>을 먼저 해주세요"' },
   /* 182 — 옛 «코스튬 조건 미달» 토스트(이름 + 해금 조건)는 구매 폐지와 함께 사라졌다.
@@ -202,7 +204,7 @@ const WORST = [
       run('코스튬 — 미보유 착용',     () => { const a = AVATARS.find(x => !S.avatars[x.id]); if (!a) throw new Error('미보유 코스튬 없음'); cosSel = a.id; if (!wearAvatar(cosSel)) notify('\u{1F512} 승급전에서 획득해야 착용합니다'); });
       run('승급 조건 미달',           () => { S.best = 0; startPromo(); });
       run('던전 잠김 — 소탕',         () => { const d = DUNGEONS.find(x => dunLocked(x)); if (d) sweepDungeon(d); else throw new Error('잠긴 던전 없음'); });
-      run('던전 입장 소진 — 소탕',    () => { const d = DUNGEONS.find(x => !dunLocked(x)); S.dun[d.id] = 2; S.daily.dun[d.id] = 0; sweepDungeon(d); });
+      run('던전 입장 소진 — 소탕',    () => { const d = DUNGEONS.find(x => !dunLocked(x)); S.dun[d.id] = 2; S.dunTk[d.id] = 0; sweepDungeon(d); });
       run('스킬 슬롯 부족',           () => { S.eqSkill = SKILLS.slice(0, 8).map(x => x.id); const s = SKILLS.find(x => !S.eqSkill.includes(x.id)); if (!S.own[s.id]) S.own[s.id] = { n: 1, l: 1 }; toggleEquip(s, 'skill'); });
       run('펫 슬롯 부족',             () => { S.eqPet = PETS.slice(0, 3).map(x => x.id); const p = PETS.find(x => !S.eqPet.includes(x.id)); if (!S.own[p.id]) S.own[p.id] = { n: 1, l: 1 }; toggleEquip(p, 'pet'); });
       run('쿠폰 — 잘못된 코드',       () => { if (!S.opt.cp) S.opt.cp = {}; const code = 'NOPE'; if (!CF_CODES[code]) notify('🎟 사용할 수 없는 코드입니다'); });

@@ -135,7 +135,7 @@ function stripComments(src) {
   /* 재화를 넉넉히 넣어 «부족» 분기가 아닌 정상 표시를 본다 */
   await page.evaluate(() => {
     S.gold = 4.2e12; S.dia = 3.5e6; S.relic = 88000; S.mileage = 12;
-    S.dun = S.dun || {}; DUNGEONS.forEach(d => { S.daily.dun[d.id] = DUN_TRY; });
+    S.dun = S.dun || {}; DUNGEONS.forEach(d => { S.dunTk[d.id] = DUN_TRY; });
     if (typeof fxDisp === 'object') { fxDisp.gold = S.gold; fxDisp.dia = S.dia; }
     drawHud();
   });

@@ -23,7 +23,7 @@ const OUT = path.join(ROOT, 'docs', 'review');
   await page.waitForTimeout(500);
   await page.evaluate(() => {
     S.gold = 4.2e12; S.dia = 3.5e6; S.relic = 88000; S.mileage = 12;
-    DUNGEONS.forEach(d => { S.daily.dun[d.id] = DUN_TRY; });
+    DUNGEONS.forEach(d => { S.dunTk[d.id] = DUN_TRY; });
     if (typeof fxDisp === 'object') { fxDisp.gold = S.gold; fxDisp.dia = S.dia; }
     drawHud();
   });

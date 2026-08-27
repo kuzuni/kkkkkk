@@ -39,7 +39,7 @@ const near = (m, got, want, tol) => {
     S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
     S.stage = 12; S.best = 12; S.guide.idx = 99;
     const d = DUNGEONS.find(x => x.id === id);
-    S.daily.dun[d.id] = 9; S.dun[d.id] = Math.max(S.dun[d.id] | 0, f);
+    S.dunTk[d.id] = 9; S.dun[d.id] = Math.max(S.dun[d.id] | 0, f);
     if (dunRun) endDunRun(false, true);
     startDunRun(d, f);
     const need = dunRun.need;
@@ -140,7 +140,7 @@ const near = (m, got, want, tol) => {
     /* 던전 보스는 스테이지 진행을 건드리지 않는다 */
     enemies.length = 0; spawnQ.length = 0; bossOn = false; stageWin = false; S.bossFarm = false;
     const d = DUNGEONS[0];
-    S.daily.dun[d.id] = 9; S.dun[d.id] = 2; S.guide.idx = 99;
+    S.dunTk[d.id] = 9; S.dun[d.id] = 2; S.guide.idx = 99;
     startDunRun(d, 2);
     spawnDunBoss();
     for (let k = 0; k < 200; k++) step(1 / 60);

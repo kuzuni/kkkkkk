@@ -311,7 +311,7 @@ function staticSyntax() {
       const { ctx, page, errs } = await fresh(browser, 1080, 2280);
       const enter = await page.evaluate(() => {
         if (typeof challengeDungeon !== 'function' || typeof DUNGEONS === 'undefined') return 'challengeDungeon 없음';
-        const d = DUNGEONS[0]; S.daily.dun[d.id] = 3;
+        const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
         challengeDungeon(d);
         return (typeof dunRun !== 'undefined' && dunRun) ? null : '던전 런이 시작되지 않음';
       }).catch((e) => String(e.message || e));

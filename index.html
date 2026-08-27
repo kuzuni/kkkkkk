@@ -5644,6 +5644,11 @@
   .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
     opacity:.92}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
+  /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
+     리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
+  .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
+  .cn-tknt>i{font-size:30px;line-height:46px;color:#F0D9AE;
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
   .cn-a2t{left:561px;top:1404px;width:420px;height:80px;text-align:center}
   .cn-a2t>s,.cn-a2t>i{position:absolute;left:0;right:0;top:0;font-size:69px;line-height:82px;
     transform:scaleX(.989)}
@@ -5691,6 +5696,14 @@
   .cn-cd.rel>.pn>em{font-size:104px}
   /* 수량이 «×10,000» 까지 길어지므로 다이아 카드와 같은 우측 앵커 */
   .cn-cd.rel>.qt{left:auto;right:14px;transform-origin:100% 50%}
+
+  /* 204 — §10 던전 입장권 교환 카드. §5·§7·§9 와 **같은 격자(x111/401/691 · 278×309)** 를 쓰고
+     색만 «입장권» 계열(황동)로 구분한다. 아이콘은 그 던전의 권종(`dunTk`)이라 03 카드·04 세부·
+     53 가방과 같은 그림이 나온다 — 125 의 화폐 아이콘 공용 컴포넌트를 그대로 쓴다. */
+  .cn-cd.dtk>.bg{background:linear-gradient(180deg,#E8B45E 0,#E8B45E 62px,#B0762A 219px,
+    #8E5C1C 219px,#6B4212 295px)}
+  .cn-cd.dtk>.pn>em{font-size:104px}
+  .cn-cd.dtk>.qt{left:auto;right:14px;transform-origin:100% 50%}
 
   /* ② 마일리지 패널 — §6 배너와 같은 규격(x66 948×h, r20, 검정5 + 림7)의 보라 판 */
   .cn-ml{left:66px;top:2773px;width:948px;height:236px;border-radius:20px;border:5px solid #000;
@@ -14548,9 +14561,17 @@ const DUNGEONS = [
   { id:'rstone', n:'룬의 제단', ic:curIc('rstone'), d:'룬강화석을 획득',
     req:f => 4600*Math.pow(1.76,f-1), rw:f => ({ rstone: 120 + f*95 }) }
 ]);
-/* 던전별 하루 입장 횟수 — 90 ④: 유물조각 하루 최대 수급 = 4던전 × 3회(= 12런) 로
-   89 의 소환 비용 곡선(하루 5~10회 소환)과 맞춘다. 던전 수가 늘어도 이 값은 그대로다. */
-const DUN_TRY = 3;
+/* 던전 입장권 — 204(2026-08-27, 저장소 주인 지시 «리필이 아니라 출석마다 2개씩,
+   안 쓰면 5/2 식으로 쌓임»). 90 ④ 의 «하루 3회 리필» 은 폐기했다.
+   이 상수는 이제 두 가지를 동시에 뜻한다:
+     ⓐ **출석 1회가 주는 적립량**(`claimAttend` — 던전마다 +2)
+     ⓑ **표기용 분모**(«N/2»). 상한이 없으므로 안 쓰면 3/2 · 5/2 처럼 **분모를 넘는 것이 정상**이다.
+   저장 위치도 같이 옮겼다: `S.daily.dun`(일일 리셋) → **`S.dunTk`(영구)**. 일일 리셋 경로가
+   더는 이 값을 건드리지 않으므로 `dailyCheck()` 에서 빠졌다. 구 세이브는 `load()` 가 승계한다.
+   ⚠ 던전이 늘어도(194 강화석 · 203 룬) 이 값은 그대로다 — 적립은 «던전마다» 다. */
+const DUN_TRY = 2;
+/* 204 이전의 «하루 리필량». 구 세이브 승계에만 쓴다(아래 `load()` 주석 참고). */
+const DUN_TRY_OLD = 3;
 /* 205(2026-08-27, 저장소 주인 지시 «DPS 랑 아레나 하루 딱 3번만, 누적으로 쌓이는 거 없게») —
    123 «컨텐츠» 탭 두 콘텐츠의 하루 입장 횟수. **204 던전 입장권과 정반대로 순수 리셋형**이다:
    안 쓰면 그냥 사라지고 이월·적립이 없다(`dailyCheck()` 가 매일 3 으로 되돌린다).
@@ -14944,6 +14965,21 @@ const EXCHANGE = [
   { dia:80000, rel:10000 }
 ];
 
+/* ---- 204 던전 입장권 교환 (다이아 → 던전별 입장권) ----
+   주인 지시(2026-08-27): «상점에서 다이아로 던전별 입장권 교환 · 얼마여야 하는지는 밸런스 평가자가».
+   ⚠ **교환가는 199(최종 밸런스 비평 라운드)의 평가 대상이다** — 여기 값은 «굴러가는 잠정치» 이고,
+   199 가 수급 총량표(다이아 유입 vs 씽크)를 세울 때 이 표를 정한다. 그때 고칠 곳은 이 상수 하나다.
+   잠정치의 근거(눈대중 아님): 기준가 `DUN_EX_BASE` × 던전 난이도 계수 k.
+     k 는 던전 요구 전투력 곡선의 배수를 그대로 쓴다 — 유물 1단(relic1)이 1, REL_DUN 의 k 가 2.5/6/15,
+     골드·다이아·강화석 던전은 relic1 의 `req` 계수(2500·4000·4200 / 5000)를 반올림한 0.5/0.8/0.8.
+     15배(relic4)를 그대로 곱하면 4,500 다이아라 «다이아로는 사실상 못 산다» 가 되므로 상위 단은
+     제곱근으로 눌렀다(√k) — 상위 던전일수록 «출석 적립» 이 주 수급처라는 성질은 남기면서
+     막차는 열어 둔다. 표시가는 십의 자리에서 끊는다. */
+const DUN_EX_BASE = 300;
+const DUN_EX_K = { gold:0.5, dia:0.8, relic1:1, relic2:Math.sqrt(2.5), relic3:Math.sqrt(6), relic4:Math.sqrt(15),
+                   stone:0.8, rstone:0.9 };   /* 194 강화석 4200 / 203 룬강화석 4600 ÷ relic1 5000 */
+const dunExPrice = id => Math.round(DUN_EX_BASE * (DUN_EX_K[id] || 1) / 10) * 10;
+
 /* 작업 68 — 구버전 `PACKS`(다이아 패키지 데모)는 폐기했다. 다이아 판매는 `DIA_PACKS`(작업 44) 가 유일한 출처다. */
 
 /* ---- 적 ----
@@ -15127,15 +15163,19 @@ const DEF = () => ({
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   /* 205 — `raid`·`arena` 는 «오늘 남은 도전 횟수» 다. 구 세이브엔 이 두 키가 없지만
      `load()` 의 `Object.assign(DEF().daily, d.daily)` 가 기본값(3)으로 채워 준다
-     (44 교훈 2 «없는 키는 기본값» — 저장 구조가 아니라 값이 하나 는 것이라 KEY 는 안 올린다). */
+     (44 교훈 2 «없는 키는 기본값» — 저장 구조가 아니라 값이 하나 는 것이라 KEY 는 안 올린다).
+     204 — `dun`(하루 리필 던전 입장 횟수) 은 폐기됐다. 던전 입장권은 아래 `dunTk`(영구)다. */
   daily:{ date:'', spins:ROUL_FREE, raid:RAID_TRY, arena:ARENA_TRY,
-          dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
           /* 190 — 그 중 «광고 없이» 쓸 수 있는 남은 횟수. 키가 없는 구 세이브는 noAdSumLeft() 가
              cap(SHOP_NOAD)으로 폴백한다(«없는 키는 cap» 관례 — freeLeft 와 같다. KEY 안 올린다). */
           noAdSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {}),
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
+  /* 204 — 던전별 **입장권 보유 수(영구)**. 일일 리셋 없음 · 상한 없음.
+     출석 수령마다 던전마다 +DUN_TRY, 10 상점 재화 탭에서 다이아로도 산다.
+     신규 세이브는 첫 출석 전에도 한 번은 돌아볼 수 있게 기준치(2장)로 시작한다. */
+  dunTk: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   arena:{ w:0, l:0 },                         /* 123 아레나 전적 — 승/패(더미 대전). 진짜 매칭·랭킹은 후속 작업 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
@@ -15161,15 +15201,37 @@ function load(){
     Object.assign(b, d);
     ['lv','eqSlot','coll','quest','cnt','att','sum','dun'].forEach(k => b[k] = Object.assign(DEF()[k], d[k] || {}));
     b.daily = Object.assign(DEF().daily, d.daily || {});
-    b.daily.dun = Object.assign(DEF().daily.dun, (d.daily && d.daily.dun) || {});
+    delete b.daily.dun;                       /* 204 — 폐기된 일일 키. 남겨 두면 아무도 안 읽는 죽은 값이 저장된다 */
+    /* 204 — 던전 입장권을 «일일 리필(S.daily.dun)» → «영구 보유(S.dunTk)» 로 옮겼다.
+       KEY 는 올리지 않는다(44 교훈 2 — 저장 «구조» 가 아니라 키 하나가 이사한 것이고,
+       없는 키는 기본값으로 채워진다). 승계 규칙(주인 지시 «현재 잔여 횟수 승계»):
+         ⓐ `dunTk` 가 이미 있으면 그것이 진실이다 — 두 번 돌아도 결과가 같다(멱등).
+         ⓑ 없으면 구 세이브의 «오늘 남은 입장 횟수» 를 그대로 입장권으로 준다.
+         ⓒ 날짜가 지난 세이브는 옛 규칙이었다면 접속하는 순간 DUN_TRY_OLD(3) 로 **리필**됐을
+            것이므로 그 몫을 준다 — 개편 때문에 손해 보는 세이브가 없게. */
+    {
+      const hadTk = d.dunTk && typeof d.dunTk === 'object';
+      b.dunTk = Object.assign(DEF().dunTk, hadTk ? d.dunTk : {});
+      if(!hadTk){
+        const od = Object.assign({}, (d.daily && d.daily.dun) || {});
+        /* 90 — 던전 재편(relic → relic1~4) 때 이름만 바뀐 «고대 유적». 잔여 횟수도 같이 이사한다.
+           **아래 폴백보다 먼저** 해야 한다 — relic1 키가 없다고 «리필분» 으로 채워 버리면
+           이미 1회 써서 2장 남은 세이브가 3장으로 늘어난다(승계가 아니라 지급이 된다). */
+        if(Number.isFinite(od.relic) && !Number.isFinite(od.relic1)) od.relic1 = od.relic;
+        const fresh = !d.daily || d.daily.date !== today();
+        DUNGEONS.forEach(x => {
+          const q = od[x.id];
+          b.dunTk[x.id] = (!fresh && Number.isFinite(q)) ? Math.max(0, q | 0) : DUN_TRY_OLD;
+        });
+      }
+      DUNGEONS.forEach(x => { if(!Number.isFinite(b.dunTk[x.id])) b.dunTk[x.id] = DUN_TRY; });
+    }
     /* 90 — 던전 재편(relic → relic1~4, growth·boss 폐기). KEY 는 올리지 않는다(44 교훈 2).
-       구 세이브의 «고대 유적» 진행도(층·남은 입장 횟수)는 이름만 바뀐 같은 던전이므로 relic1 로
-       이어 준다. growth·boss 키는 남아 있어도 DUNGEONS 에 없으니 아무도 읽지 않는다. */
+       구 세이브의 «고대 유적» 진행도(층)는 이름만 바뀐 같은 던전이므로 relic1 로 이어 준다.
+       growth·boss 키는 남아 있어도 DUNGEONS 에 없으니 아무도 읽지 않는다. */
     {
       const of = d.dun && d.dun.relic;
       if(Number.isFinite(of) && of > (b.dun.relic1 | 0)) b.dun.relic1 = of | 0;
-      const ot = d.daily && d.daily.dun && d.daily.dun.relic;
-      if(Number.isFinite(ot) && d.daily && d.daily.date === today()) b.daily.dun.relic1 = Math.max(0, Math.min(DUN_TRY, ot | 0));
     }
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.daily.noAdSum = Object.assign(DEF().daily.noAdSum, (d.daily && d.daily.noAdSum) || {});   /* 190 */
@@ -15396,7 +15458,8 @@ function dailyCheck(){
     /* 205 — 순수 리셋. 어제 남은 횟수는 «더해지지 않고» 버려진다(204 던전 입장권과 반대). */
     S.daily.raid  = RAID_TRY;
     S.daily.arena = ARENA_TRY;
-    DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
+    /* 204 — 던전 입장권은 여기서 리필하지 않는다(«매일 리필» 폐기, 주인 지시).
+       적립은 출석 수령(`claimAttend`)과 10 상점 재화 탭 교환뿐이고, 미사용분은 그대로 쌓인다. */
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
     S.daily.noAdSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {});   /* 190 — 무광고 1회도 매일 충전 */
     S.daily.adBuy = {};               /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
@@ -18580,7 +18643,7 @@ function facLeftText(){
   return d > 0 ? d + 'D ' + h + 'H' : (h > 0 ? h + 'H ' + (m%60) + 'M' : m + 'M');
 }
 function facFreeCount(){
-  return S.daily.spins + DUNGEONS.reduce((a, x) => a + (S.daily.dun[x.id]||0), 0);
+  return S.daily.spins + DUNGEONS.reduce((a, x) => a + (S.dunTk[x.id]||0), 0);
 }
 function drawFac(){
   const tm = $('facTm'), bg = $('facBg');
@@ -19501,8 +19564,15 @@ function claimAttend(at){
   const day = S.att.n % 28, r = ATTEND[day];
   S.att.n++; S.att.date = today();
   if(at){ fxAt(at); fxCheck(at); }             /* 연출 DOM 은 #fxl 에 — 재렌더에 안 지워진다 */
-  const txt = giveReward(r);
-  fxToast((day+1) + '일차 출석 보상');
+  let txt = giveReward(r);
+  /* 204 — 출석 수령마다 **던전마다 입장권 +DUN_TRY**(주인 지시). 상한 없음 = 안 쓰면 쌓인다.
+     ATTEND 표(날짜별 보상)와는 별개로 «출석했다는 사실» 이 주는 몫이라 여기서 준다 —
+     날짜를 갈아 끼워도(28일 순환) 적립량이 흔들리지 않는다. `S.att.date` 가 하루 1회를 못 박는다. */
+  DUNGEONS.forEach(x => { S.dunTk[x.id] = (S.dunTk[x.id] | 0) + DUN_TRY; });
+  /* 125 — 재화 자리에 이모지를 쓰지 않는다. 입장권은 던전마다 권종이 달라(`dunTk`) 대표 아이콘이
+     없으므로 아이콘 없이 글자로만 적는다(가방·카드에서는 그 던전의 권종 아이콘이 그려진다). */
+  txt = (txt ? txt + ' · ' : '') + '던전 입장권 ×' + DUN_TRY;
+  fxToast((day+1) + '일차 출석 보상 · 던전 입장권 +' + DUN_TRY);
   uiDirty = true; save();
   sideAlert('attend', false);
   return txt;
@@ -19533,11 +19603,13 @@ function challengeDungeon(d){
     notify('🔒 ' + d.n + ' — ' + dunLockTxt(d) + ' 필요');
     return;
   }
-  if(S.daily.dun[d.id] <= 0){
-    notify('<b>' + d.n + '</b> 입장 횟수 소진 — 내일 <b>' + DUN_TRY + '회</b>');
+  if(S.dunTk[d.id] <= 0){
+    /* 204 — 더는 «내일 리필» 이 아니다. 적립처(출석)를 그대로 알려 준다.
+       상점 교환은 149 의 토스트 폭 예산 안에 넣기엔 길어서 재화 탭 안내(§10)에 둔다. */
+    notify('<b>' + d.n + '</b> 입장권 없음 — 출석 보상마다 <b>+' + DUN_TRY + '장</b>');
     return;
   }
-  S.daily.dun[d.id]--; S.cnt.dungeon++;
+  S.dunTk[d.id]--; S.cnt.dungeon++;
   uiDirty = true; save();
   /* 30 — 즉시 판정하지 않는다. «던전 입장 화면»(제한 시간 전투)으로 들어간다.
      클리어·실패 처리는 endDunRun() → finishDunRun() 이 한다. */
@@ -19740,8 +19812,8 @@ function sweepDungeon(d){
   if(dunLocked(d)){ notify('🔒 ' + d.n + ' — ' + dunLockTxt(d) + ' 필요'); return; }
   const f = S.dun[d.id] - 1;
   if(f < 1){ notify('먼저 <b>1층</b>을 클리어해야 소탕합니다'); return; }
-  if(S.daily.dun[d.id] <= 0){ notify('오늘 입장 횟수를 모두 사용했습니다'); return; }
-  S.daily.dun[d.id]--; S.cnt.dungeon++;
+  if(S.dunTk[d.id] <= 0){ notify('<b>' + d.n + '</b> 입장권이 없습니다 — 출석 보상마다 <b>+' + DUN_TRY + '장</b>'); return; }
+  S.dunTk[d.id]--; S.cnt.dungeon++;
   giveReward(d.rw(f));
   uiDirty = true; save();
   openDunClear(d, f);   /* 31 — 소탕도 «클리어 보상» 결과 화면을 그대로 쓴다 */
@@ -19770,7 +19842,7 @@ function openDunClear(d, f){
   else if(main[0] === 'gold'){ ic.textContent = ''; }              /* 골드는 배경 코인이 그린다 */
   else curIcEl(ic, main[0] === 'rel' ? 'relic' : 'dia', 63);   /* 아트 자리 63×65 를 그대로 차지 */
   $('dclAmt').textContent = fmtCur(main[0], main[1]);   /* 150 — 골드만 알파벳 단위 */
-  const left = S.daily.dun[d.id];
+  const left = S.dunTk[d.id];
   $('dclTryL').textContent = left;
   $('dclTryR').textContent = left;
   /* 남은 횟수가 없으면 재도전·다음을 눌러도 입장 못 한다 — 눌림을 막고 회색으로 */
@@ -20290,10 +20362,11 @@ function showItem(id){
 /* ---- 던전 탭 ---- */
 function renderDun(){
   let h = '<div class="sect"><h3><span>🏰 던전</span><em>전투력으로 도전</em></h3>'
-    + '<p>내 전투력 <b>' + fmtB(cp()) + '</b> · 던전마다 하루 <b>' + DUN_TRY + '회</b> 입장<br>'
+    /* 204 — «하루 N회 리필» 폐기. 입장권은 출석마다 던전별 +2 로 쌓이고 상한이 없다(«N/2» 의 N > 2 정상). */
+    + '<p>내 전투력 <b>' + fmtB(cp()) + '</b> · 입장권은 출석마다 던전별 <b>+' + DUN_TRY + '장</b> 적립(안 쓰면 쌓입니다)<br>'
     + '요구 전투력을 넘으면 클리어하고 다음 층이 열립니다. <b>소탕</b>은 이전 층 보상을 즉시 받습니다.</p></div>';
   DUNGEONS.forEach(d => {
-    const f = S.dun[d.id], need = d.req(f), left = S.daily.dun[d.id], ok = cp() >= need;
+    const f = S.dun[d.id], need = d.req(f), left = S.dunTk[d.id], ok = cp() >= need;
     const rw = d.rw(f);
     const rwTxt = [rw.gold ? curIc('gold') + fmtG(rw.gold) : '', rw.dia ? curIc('dia') + fmt(rw.dia) : '',
                    rw.rel ? curIc('relic') + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
@@ -20397,7 +20470,7 @@ function dgdGoLabel(html, lack){
 
 function renderDunDetail(){
   const d = dgdDun; if(!d) return;
-  const cur = S.dun[d.id], left = S.daily.dun[d.id], rw = d.rw(dgdFloor);
+  const cur = S.dun[d.id], left = S.dunTk[d.id], rw = d.rw(dgdFloor);
   $('dgdTitle').textContent = d.n;
   /* 125 — 입장권은 던전 계열 3종(골드·다이아·유물)뿐이다. 세부 팝업의 권종도 그 던전 것으로 맞춘다. */
   curIcEl($('dgdTki'), dunTk(d.id));
@@ -21105,7 +21178,7 @@ function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
   let h = '';
   DUNGEONS.forEach((d, ci) => {
-    const u = DUN_UI[d.id], lock = dunLocked(d), left = S.daily.dun[d.id], f = S.dun[d.id];
+    const u = DUN_UI[d.id], lock = dunLocked(d), left = S.dunTk[d.id], f = S.dun[d.id];
     /* 121 — 테마는 id 에서 파생한다(유물석 1~4 는 한 테마 + 카드 색 --pt/--r 이 층 단계를 준다) */
     const bgm = d.id.indexOf('relic') === 0 ? 'rel' : d.id;
     h += '<div class="dnc bgm-' + bgm + (lock ? ' lkd' : '')
@@ -22235,7 +22308,11 @@ function renderCoinPage(list){
     const col = i % 3, row = rowBase + ((i / 3) | 0);
     return ';--jz-k:' + (-(((col * 2 + row * 3) % 6) / 6)).toFixed(4);
   };
-  let h = '<div class="cn-wrap">'
+  /* 204 §10 — 아래로 «던전 입장권 교환» 칸이 붙어 껍데기가 길어진다. 던전 수가 늘어도(194 강화석 ·
+     203 룬) 따라오도록 여기서 계산해 인라인으로 덮는다 — CSS 의 `.cn-wrap{height:3636px}` 은
+     §9(유물조각 교환)까지의 값이고, 그 값을 고치면 던전이 하나 늘 때마다 CSS 를 또 고쳐야 한다. */
+  const dxTop = 3844, dxPitch = 319, dxRows = Math.ceil(DUNGEONS.length / 3);
+  let h = '<div class="cn-wrap" style="height:' + (dxTop + (dxRows - 1) * dxPitch + 309 + 57) + 'px">'
     /* §1 배너 아트 + §2 타이틀 */
     + '<div class="cn-bn"><div class="art">🎁</div>'
     +   '<div class="gem" style="left:96px;top:236px">' + curIc('dia') + '</div>'
@@ -22331,6 +22408,25 @@ function renderCoinPage(list){
       +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">' + curIc('dia') + ' ' + fmt(x.dia) + '</u></div>'
       +  '<div class="fr"></div></div>';
   });
+  /* §10 던전 입장권 교환 — 204(주인 지시 «상점에서 다이아로 던전별 입장권 교환»).
+     §9 와 같은 격자(열 x111/401/691 · 행 pitch 319)를 그대로 쓴다. 던전마다 한 칸이고
+     권종 아이콘은 그 던전의 것(`dunTk`)이라 03 카드·04 세부·53 가방과 같은 그림이 나온다.
+     안내 한 줄로 «N/2 의 N 이 분모를 넘는 것이 정상» 임을 명시한다(주인 지시). */
+  h += '<div class="cn-rb" style="--jz-d:-3.2s;top:3654px;--jz-ga:' + jzShineA('#D08A2A') + ';--jz-gd:' + jzShadeA('#D08A2A') + ';--c:#D08A2A;--h:#F0AE4C;--s:#A96A16;--t:#B8761C;--ts:#7A4A08">'
+    +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>던전 입장권</i></div>'
+    + '<div class="cn-tknt"><i>출석 보상마다 던전별 +' + DUN_TRY + '장 적립 · 안 쓰면 쌓입니다(3/'
+    +   DUN_TRY + ' · 5/' + DUN_TRY + ')</i></div>';
+  DUNGEONS.forEach((d, i) => {
+    const px = [111, 401, 691][i % 3], py = dxTop + ((i / 3) | 0) * dxPitch, pr = dunExPrice(d.id);
+    h += '<div class="cn-cd dtk" style="left:' + px + 'px;top:' + py + 'px' + jzK(i, 5) + ';--fs:40.8px;--sx:.98'
+      +  ';--qx:1;--hd:#D08A2A;--hr:#FFD79A'
+      +  ';--jz-ga:' + jzShineA('#D08A2A') + ';--jz-gd:' + jzShadeA('#D08A2A') + '">'
+      +  '<div class="bg"></div><div class="hd"><i>' + d.n + '</i></div>'
+      +  '<div class="pn"><em>' + curIc(dunTk(d.id)) + '</em></div>'
+      +  '<div class="qt">×1</div>'
+      +  '<div class="bt buy" data-dunex="' + d.id + '"><u class="pr">' + curIc('dia') + ' ' + fmt(pr) + '</u></div>'
+      +  '<div class="fr"></div></div>';
+  });
   h += '</div>';
   list.innerHTML = h;
 }
@@ -22356,6 +22452,26 @@ $('shopList').addEventListener('click', e => {
     uiDirty = true; save();
     renderCoinPage($('shopList'));
     notify(curIc('dia') + ' <b>' + fmt(ex.dia) + '</b> → ' + curIc('relic') + ' <b>' + fmt(ex.rel) + '</b> 우편함 발송');
+    return;
+  }
+  /* 204 §10 — 다이아 → 던전별 입장권. 유물조각 교환(§9)과 달리 **즉시 지급**한다:
+     153 «상점 지급품은 우편으로» 는 우편이 실어 나를 수 있는 재화(g·c·r·m)에 대한 규약이고,
+     던전 입장권은 재화가 아니라 던전별 카운터(`S.dunTk`)라 우편 스키마에 자리가 없다.
+     여기서 우편 스키마를 늘리면 153·69·92(수령·전체수령·삭제)까지 같이 건드려야 해서
+     204 구간을 넘는다 — 151 «즉시 보석» 과 같은 처리로 두고, 대신 58 연출로 지급을 보여 준다. */
+  const dx = e.target.closest('[data-dunex]');
+  if(dx){
+    const d = DUNGEONS.find(v => v.id === dx.dataset.dunex);
+    if(!d) return;
+    const pr = dunExPrice(d.id);
+    if(S.dia < pr){ notify(curIc('dia') + ' <b>' + fmt(pr - S.dia) + '</b> 더 필요합니다'); return; }
+    S.dia -= pr;
+    S.dunTk[d.id] = (S.dunTk[d.id] | 0) + 1;
+    fxReward();                               /* 58 — 다른 교환·수령과 같은 피드백 */
+    uiDirty = true; save();
+    renderCoinPage($('shopList'));
+    notify(curIc('dia') + ' <b>' + fmt(pr) + '</b> → <b>' + d.n + '</b> 입장권 <b>×1</b> (보유 '
+      + (S.dunTk[d.id] | 0) + '장)');
     return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
@@ -23284,8 +23400,10 @@ function bagCur(){
 }
 /* 소모품 탭 — 오늘 남은 횟수 계열(전부 실제 S.daily 값) */
 function bagUse(){
-  const d = S.daily || {}, out = [];
-  DUNGEONS.forEach(x => { const q = (d.dun || {})[x.id] | 0; if(q > 0) out.push({ ic:curIc(dunTk(x.id)), n:x.n + ' 입장권', g:2, q }); });
+  const d = S.daily || {}, tk = S.dunTk || {}, out = [];
+  /* 204 — 던전 입장권은 «오늘 남은 횟수» 가 아니라 **영구 보유 소모품**(S.dunTk)이 됐다.
+     소모품 탭에 그대로 남는다 — 쓰면 줄고, 출석·상점 교환으로 는다. */
+  DUNGEONS.forEach(x => { const q = tk[x.id] | 0; if(q > 0) out.push({ ic:curIc(dunTk(x.id)), n:x.n + ' 입장권', g:2, q }); });
   SHOP_BOXES.forEach(x => { const q = (d.freeSum || {})[x.b] | 0; if(q > 0) out.push({ ic:'🎁', n:x.n + ' 무료 소환', g:3, q }); });
   if((d.spins | 0) > 0) out.push({ ic:'🎰', n:'룰렛 횟수', g:4, q:d.spins | 0 });
   return out.sort((a, b) => b.g - a.g);
@@ -25101,7 +25219,7 @@ function renderUI(){
     }
     else if(curTab === 'adv')  renderDun();
   }
-  const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
+  const dunAlert = DUNGEONS.some(d => S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
     /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다.

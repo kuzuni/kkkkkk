@@ -26,7 +26,7 @@ const IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4'];
       S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
       S.stage = 12; S.best = 12; S.guide.idx = 99;
       const d = DUNGEONS.find(x => x.id === dunId);
-      S.daily.dun[d.id] = 9; S.dun[d.id] = 3;
+      S.dunTk[d.id] = 9; S.dun[d.id] = 3;
       if (dunRun) endDunRun(false, true);
       startDunRun(d, 3);
       /* 보스 국면으로 바로 넘긴다 — 진행률·시간 트리거를 기다리지 않고 직접 세운다 */
