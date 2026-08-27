@@ -64,9 +64,9 @@ const tap = (page, sel) => page.evaluate((s) => {
       eq('시트 껍데기 높이', await page.$eval('#panel', (e) => Math.round(e.getBoundingClientRect().height / (e.getBoundingClientRect().width / 1080))), 1484);
       /* 06 시트 서브탭 · 시트 안 서브탭이 같은 4칸이어야 한다 */
       eq('06 서브탭 라벨', await page.$$eval('#eqTabs .eqtc', (els) => els.map((e) => e.textContent.trim())),
-        ['장비', '스킬', '코스튬', '동료']);
+        ['장비', '스킬', '코스튬', '펫']);
       eq('시트 안 서브탭 라벨', await page.$$eval('#bCos .sk-tab', (els) => els.map((e) => e.textContent.trim())),
-        ['장비', '스킬', '코스튬', '동료']);
+        ['장비', '스킬', '코스튬', '펫']);
       eq('잠금 아이콘 0개(06+시트)',
         await page.evaluate(() => document.querySelectorAll('#eqTabs .eqli, #bCos .sk-tabs .sk-lock').length), 0);
       eq('활성 칸 = 코스튬', await page.$eval('#bCos .sk-tab.on', (e) => e.textContent.trim()), '코스튬');
@@ -74,11 +74,11 @@ const tap = (page, sel) => page.evaluate((s) => {
       await tap(page, '#bCos [data-costab="sk"]'); await page.waitForTimeout(350);
       eq('시트 안 «스킬» → #bSk', await page.$eval('#bSk', (e) => e.classList.contains('on')), true);
       eq('07 서브탭 라벨', await page.$$eval('#bSk .sk-tab', (els) => els.map((e) => e.textContent.trim())),
-        ['장비', '스킬', '코스튬', '동료']);
+        ['장비', '스킬', '코스튬', '펫']);
       await tap(page, '#bSk [data-sktab="pet"]'); await page.waitForTimeout(350);
-      eq('시트 안 «동료» → #bPet', await page.$eval('#bPet', (e) => e.classList.contains('on')), true);
+      eq('시트 안 «펫» → #bPet', await page.$eval('#bPet', (e) => e.classList.contains('on')), true);
       eq('26 서브탭 라벨', await page.$$eval('#bPet .sk-tab', (els) => els.map((e) => e.textContent.trim())),
-        ['장비', '스킬', '코스튬', '동료']);
+        ['장비', '스킬', '코스튬', '펫']);
       await tap(page, '#bPet [data-pttab="eq"]'); await page.waitForTimeout(350);
       eq('시트 안 «장비» → 06 오버레이', await page.$eval('#eqw', (e) => e.classList.contains('on')), true);
       if (errs.length) errs.forEach((e) => no('진입 중 ' + e)); else ok('콘솔 에러 0');

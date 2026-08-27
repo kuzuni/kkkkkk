@@ -148,7 +148,7 @@ async function open(browser, seed) {
              btns: card ? card.querySelectorAll('[data-shsum="pet"]').length : 0 };
   });
   ok(D.boxes === 5 && D.cards === 5, 'D1 상점 소환 탭 상자 5장', D.cards + '장');
-  ok(D.i === 4 && D.name === '동료 상자', 'D2 5번째 카드 = «동료 상자»', D.name);
+  ok(D.i === 4 && D.name === '펫 상자', 'D2 5번째 카드 = «펫 상자»', D.name);
   ok(D.btns === 3, 'D3 소환 버튼 3개(무료 10연 / 💎10연 / 💎30연)', String(D.btns));
   ok(D.c10 === 2250 && D.c30 === 6750, 'D4 펫 가격 현행 유지(73 «펫 현행 유지»)', D.c10 + '/' + D.c30);
   ok(D.cost.join('/') === '2,250/6,750', 'D5 카드 가격 표기 쉼표', D.cost.join('/'));

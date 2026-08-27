@@ -63,8 +63,8 @@ async function launchAny(){
   ok(!cards.hasArmorWord, '상점 DOM 에 «방어구» 문자열 없음');
   ok(new Set(cards.boxes.map(x => x.hd)).size === cards.boxes.length,
     '헤더 색 ' + cards.boxes.length + '종 전부 다름 (목걸이 = 4번째 톤 · 동료 = 5번째 톤)');
-  ok(cards.boxes.length === 5 && cards.boxes[4].b === 'pet' && cards.dom[4] === '동료 상자',
-    '106 — 5번째 «동료 상자» (' + cards.dom.join(',') + ')');
+  ok(cards.boxes.length === 5 && cards.boxes[4].b === 'pet' && cards.dom[4] === '펫 상자',
+    '106 — 5번째 «펫 상자»(173 개명) (' + cards.dom.join(',') + ')');
 
   /* ── §2 목걸이 10연 실동작 ───────────────────────────────────── */
   console.log('§2 목걸이 10연 — 차감·카운터·소환레벨·부위');
