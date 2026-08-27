@@ -35,6 +35,10 @@ async function run(p) {
 
     function board() {
       sbufClear();
+      /* ★ 20회차 — 이 한 줄이 없어서 게이트가 3회 중 1회 FAIL 했다. 장착 스킬 자동 발동이
+         측정 창(step 5회 = 400ms) 안에서 **같은 적에 새 피격 링을 얹어**, «승격된 두 겹» 대신
+         «옛 링 + 갓 태어난 링» 을 재게 만들었다(그래서 비 1.04 가 섞였다). 시전을 끄면 결정적이다. */
+      S.eqSkill.length = 0;
       skillCd = {}; shots.length = 0; rings.length = 0; parts.length = 0; nums.length = 0;
       enemies.length = 0; spawnQ.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
       player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.dead = 0; player.inv = 9999;
@@ -56,11 +60,15 @@ async function run(p) {
       let g = on(e);
       out.upgrade = g.length;
       /* 두 겹의 반경 비를 수명 전 구간에서 본다 */
+      /* ★ 20회차 — 회차마다 «비 1.04» 가 섞여 3회 중 1회 FAIL 하던 자리를 고쳤다.
+         매 표본마다 `on(e)` 로 **다시 고르면**, 그 사이 자동 평타가 같은 적에 새 링을 얹은 순간
+         «승격된 두 겹» 이 아니라 «옛 링 + 새 링» 을 재게 된다(그래서 갓 태어난 링과의 비 1.04 가 나온다).
+         재는 대상은 처음에 잡은 **그 두 링 자체**다 — 객체로 붙들고 반경만 따라간다. */
+      const pair = on(e).slice(0, 2);
       const ratios = [];
       for (let i = 0; i < 5; i++) {
-        const cur = on(e);
-        if (cur.length === 2) {
-          const rr = cur.map(r => {
+        if (pair.length === 2 && pair.every(r => rings.indexOf(r) >= 0)) {
+          const rr = pair.map(r => {
             const f = clamp(r.t / r.life, 0, 1);
             return r.r0 + (r.r1 - r.r0) * f;
           }).sort((a, b) => a - b);
