@@ -13359,6 +13359,11 @@
      체공 칸에 넣는 값은 접지 칸들의 평균이다 — 그래야 한 주기 평균이 접지 요구 평균과 같아져
      «주기 전체로는 스프라이트가 요구하는 속도로 달린다» 가 유지된다. */
   var LD_FEET  = [35.33, 25.04, 17.79, 11.50, 35.33, 25.04, 18.00, 11.50];  /* 접지발 x (src px) */
+  /* ★ 8회차 — 아트가 **이미 들어 놓은** 양(프레임 박스 바닥과 잉크 바닥 사이, src px).
+     체공 프레임(f3·f7)은 아틀라스에서 발이 1px 위에 그려져 있는데(배율 12 = 12px) 아치는 칸 경계에서 0 이라,
+     7회차 비평 K·L 이 각각 «도약 진입·이탈마다 발이 12~13px 순간이동한다»(L: t=631 하단 1330 → t=632 1343)로 짚었다.
+     이 표를 아치에 더해 **발 높이를 연속**시킨다. `probe163b.py --gate` 가 아틀라스와 대조한다. */
+  var LD_LIFT  = [0, 0, 0, 1, 0, 0, 0, 1];
   var LD_GAPS = [], LD_AIRF = [], LD_STEPS = [], LD_CUM = [], LD_CYC = 0;
   (function () {
     var i, d, sw = 0, n = 0;
@@ -13375,9 +13380,27 @@
     }
   })();
   var LD_STEP  = LD_CYC / LD_STEPS.length;   /* 프레임 한 장의 **평균** 이동 거리(px) — 표시·게이트용 */
+  /* 체공 한 번의 길이(ms) = 등속 구간에서 체공 칸을 가는 데 걸리는 시간. 손으로 적지 않는다(8회차). */
+  var LD_AIRMS = (function () {
+    var i, cruise = Math.abs(LD_X0) * LD_CRZD / (LD_RUN * LD_CRZ);   /* px/ms */
+    for (i = 0; i < LD_AIRF.length; i++) if (LD_AIRF[i]) return LD_STEPS[i] / cruise;
+    return 0;
+  })();
   var LD_FOOT  = LD_STEP / LD_SC;            /* 같은 값의 src px 판(옛 상수 7.67 의 자리) */
   /* «등속 구간에서 평균 한 칸을 가는 데 걸리는 시간» — 표시·게이트용 파생값이고 프레임 선택에는 안 쓴다 */
   var LD_RUNMS = Math.round(LD_STEP / (Math.abs(LD_X0) * LD_CRZD / (LD_RUN * LD_CRZ)));
+  /* ★ 8회차 — **체공은 시간이다.** 7회차까지 아치를 «칸 안의 이동 거리» 로 돌렸더니, 감속 구간에 걸친
+     마지막 도약만 체공이 **113ms**(앞 도약 47ms 의 2.4배)가 되어 «내려오다 멈춘 뒤 스쿼시» 가 됐다 —
+     K «착지 수직속도가 이륙의 4.1%» · L «유효 중력 0.17배, 낙차의 41%가 1프레임 스텝» 으로 둘 다 1순위로 짚었다.
+     그래서 체공 길이를 **등속 구간에서 그 칸을 가는 데 걸리는 시간**으로 못 박고(모든 도약이 같은 체공),
+     그 시간이 지나면 칸이 안 끝났어도 **다음(접지) 프레임으로 넘어간다** — 감속 중에 도약 자세로 얼어 있지 않게.
+     시간을 알려면 «거리 → 시각» 이 필요하다: ldAt 의 역함수다(조각별 해석해라 표본이 아니다). */
+  function ldTimeAt(d) {
+    var D = Math.abs(LD_X0), e = Math.min(1, Math.max(0, d / D));
+    if (e <= LD_CRZD) return LD_RUN * LD_CRZ * (e / LD_CRZD);
+    var q = 1 - Math.sqrt(Math.max(0, 1 - (e - LD_CRZD) / (1 - LD_CRZD)));
+    return LD_RUN * (LD_CRZ + q * (1 - LD_CRZ));
+  }
   /* 이동 거리 → {프레임 번호, 그 칸 안의 진행률}. 케이던스·아치가 **같은 자**를 쓰게 하는 창구다. */
   function ldFrameAt(dist) {
     var c = dist % LD_CYC, i = 0;
@@ -13508,13 +13531,25 @@
        5회차까지는 «주기의 뒤 25%» 라는 비율로 아치를 얹었는데(균일 자 시절의 근사),
        칸 길이가 프레임마다 다른 지금은 그 비율이 체공 칸과 안 겹친다.
        이제 **체공 프레임에서만** 뜬다 — 접지 프레임은 arc 가 정확히 0(발이 붙어 있다). */
-    var fr = ldFrameAt(Math.abs(LD_X0) - Math.abs(x));
+    var d = Math.abs(LD_X0) - Math.abs(x);
+    var fr = ldFrameAt(d);
+    /* ★ 8회차 — 체공은 **고정 시간**이다(위 LD_AIRMS). 칸에 들어선 시각을 거리에서 역산해 경과 비율 τ 를 얻고,
+       τ 가 1 을 넘으면(= 감속으로 칸이 길어진 경우) 도약을 끝내고 **다음 접지 프레임**으로 넘긴다. */
+    var tau = 0;
+    if (LD_AIRF[fr.i] && LD_AIRMS > 0) {
+      var seg = Math.floor(d / LD_CYC) * LD_CYC + LD_CUM[fr.i];
+      tau = (t - ldTimeAt(seg)) / LD_AIRMS;
+      if (tau >= 1) { fr = { i: (fr.i + 1) % LD_STEPS.length, u: 0 }; tau = 0; }
+    }
     var arc = 0;
     /* ★ 7회차 — «감속 구간은 아치 0» 이라는 옛 조건을 **뺐다.** 그 조건은 이동 거리가 체공 칸과
        무관하던 시절의 임시방편이었고, 지금은 등장이 **체공 칸이 끝나는 지점에서 끝나므로**
        마지막 도약이 감속 구간에 걸친다 — 조건을 두면 그 도약만 «다리는 공중, 몸은 평평» 이 된다
        (7회차 캡처에서 t=560ms 가 실제로 그렇게 나왔다). 사인은 칸 끝에서 0 이라 **착지는 저절로 평평**하다. */
-    if (LD_AIRF[fr.i] && p < 1) arc = -Math.round(LD_ARC * Math.sin(Math.PI * fr.u));
+    /* 아치 = «아트가 이미 들어 놓은 양(LD_LIFT)» 을 상쇄한 위에 도약 곡선을 얹는다 —
+       그래야 도약 진입·이탈에서 **발 높이가 연속**이다(7회차 비평 K·L: 12~13px 순간이동). */
+    arc = LD_LIFT[fr.i] * LD_SC;
+    if (LD_AIRF[fr.i] && p < 1) arc -= Math.round(LD_ARC * Math.sin(Math.PI * Math.min(1, tau)));
     /* 착지 스쿼시 — 그림자와 **몸통 둘 다**. 세로로 눌리고 가로로 퍼진다 */
     var k = p < 1 ? 0 : Math.max(0, 1 - (t - ldRun) / LD_SQ);
     if (cv && A && A.image && A.a) {
@@ -13559,6 +13594,7 @@
        (등장 translate·착지 스쿼시 scale)을 이미 먹은 값이라, 스쿼시가 살아 있는 순간에 재면
        화면배율 k 가 1.1 로 나와 dx·dy 가 10% 씩 어긋난다(게이트가 Δy 14~19px·Δx 309px 로 잡았다).
        그래서 오프셋 체인으로 «transform 없는» 발 위치를 프레임 로컬 px 로 구한다. */
+    if (!cv.offsetParent) return false;   /* display:none 이면 offset 체인이 0 이라 델타가 절대좌표가 된다(7회차 하네스 사고) */
     var lr = el('loading').getBoundingClientRect();
     var k = lr.width / 1080 || 1;                          /* 화면 px / 프레임 로컬 px(fit 배율) */
     var fx = cv.offsetWidth / 2 - LD_FDX, fy = cv.offsetHeight, n = cv, stop = el('loading');
@@ -13566,7 +13602,9 @@
     var dx = (t.x - lr.left) / k - fx, dy = (t.y - lr.top) / k - fy;
     var s = 1 + (t.sc / LD_SC - 1) * f;
     cv.style.transform = 'translate(' + (dx * f).toFixed(1) + 'px,' + (dy * f).toFixed(1) + 'px) scale(' + s.toFixed(4) + ')';
-    if (sh) { sh.style.transform = 'translateX(' + (dx * f).toFixed(1) + 'px) scale(' + s.toFixed(4) + ')'; sh.style.opacity = (1 - f).toFixed(3); }
+    /* ★ 8회차 — 그림자도 **세로까지** 따라간다. 7회차는 `translateX` 뿐이라 트윈 중간에 발과 그림자가
+       120px(f=.5) ~ 221px(f=1) 벌어졌다(비평 L 실측). 페이드 한복판이라 그대로 보인다. */
+    if (sh) { sh.style.transform = 'translate(' + (dx * f).toFixed(1) + 'px,' + (dy * f).toFixed(1) + 'px) scale(' + s.toFixed(4) + ')'; sh.style.opacity = (1 - f).toFixed(3); }
     return true;
   }
 
@@ -13640,7 +13678,7 @@
     FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, SQA: LD_SQA,
     RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD, FOOT: LD_FOOT, AIR: LD_AIR, STEP: LD_STEP,
     FEET: LD_FEET, GAPS: LD_GAPS, STEPS: LD_STEPS, CUM: LD_CUM, CYC: LD_CYC, AIRF: LD_AIRF,
-    FDX: LD_FDX, frameAt: ldFrameAt,
+    FDX: LD_FDX, frameAt: ldFrameAt, timeAt: ldTimeAt, AIRMS: LD_AIRMS, LIFT: LD_LIFT,
     /* 캡처 하네스 전용 — 시계를 멈추고(hold) 원하는 위상을 **제품 코드로** 그린다(paint).
        hold 는 rAF 재예약만 끊는다: 이 뒤로 화면은 paint(t) 가 부르는 자리에만 움직인다. */
     hold: function () { ldHeld = true; if (ldRaf) { cancelAnimationFrame(ldRaf); ldRaf = 0; } },

@@ -140,10 +140,14 @@ const N = OFF.length;
       const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
       /* ★ 7회차 — 이 합성은 **핸드오프 트윈의 중간**이다. 부팅이 이미 트윈을 걸어 놨으므로
          전이를 끄고 `LD.hand(.5)` 로 **제품 코드에게** 절반 지점을 그리게 한다(하네스가 다시 구현하지 않는다). */
-      cv.style.transition = 'none';
-      LD.hand(.5);
+      /* ⚠ 순서가 중요하다 — 7회차에 이 두 줄이 뒤바뀌어 있어서 `display:none` 인 오버레이에서 `LD.hand(.5)`
+         가 돌았고, offset 체인이 0 이라 **델타 자리에 절대좌표가 들어가** 발 기준선이 프레임 밖 (1147, 2485)
+         으로 향하는 표본이 나왔다. 비평가 K·L 이 둘 다 그 한 장을 «무효» 로 판정했다.
+         (제품 쪽에도 `if (!cv.offsetParent) return false` 가드를 넣었다 — 같은 오용을 두 번 하지 않도록.) */
       el.classList.remove('off', 'out');
       el.classList.add('thru');
+      cv.style.transition = 'none';
+      LD.hand(.5);
       el.style.transition = 'none'; el.style.opacity = '.5';
       return { cls: el.className, op: +getComputedStyle(el).opacity, el: Math.round(LD.RUN + 400),
                x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };

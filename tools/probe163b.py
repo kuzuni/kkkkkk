@@ -82,6 +82,16 @@ def gate():
             chk(cx is not None and abs(cx - got[i]) <= .05,
                 f'f{i} 접지발 x = 아틀라스 실측 (표 {got[i]} · 실측 {cx:.4f})' if cx is not None else f'f{i} 접지 잉크 있음',
                 f'차 {abs(cx - got[i]):.3f}' if cx is not None else '바닥 밴드에 잉크 0')
+    # 체공 프레임의 «아트가 이미 들어 놓은 양» — LD_LIFT 와 대조(8회차)
+    ml = re.search(r'var LD_LIFT\s*=\s*\[([^\]]*)\]', src)
+    chk(ml is not None, 'index.html 에 LD_LIFT 표가 있다')
+    lift = [float(x) for x in ml.group(1).split(',')] if ml else []
+    for i, n in enumerate(run):
+        ink, fw, fh = rows(im, frames[n])
+        gap = fh - 1 - max(y for _, y in ink)
+        if i < len(lift):
+            chk(abs(gap - lift[i]) < .01, f'f{i} 잉크 바닥 간격 = 표 ({lift[i]} · 실측 {gap})', f'차 {abs(gap-lift[i])}')
+
     # 발 축 편심 — LD_FDX 와 대조
     f0 = frames[anims['idle'][0]]
     ink, fw, fh = rows(im, f0)

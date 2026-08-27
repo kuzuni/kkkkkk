@@ -132,8 +132,15 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      **감속 구간에서 미끄럼이 23.6% → 62.0% → 90.6%** 로 벌어진다(몸은 느려지는데 다리는 61ms 고정).
      거리 기준이면 멈출 때 다리도 멈춘다 — 재방문의 압축 경로(등속의 5배 속도)도 저절로 맞는다. */
   eq('프레임 한 장의 평균 이동 거리 = 접지발 평균 × 배율', Math.round(K.STEP * 100), Math.round(K.FOOT * K.SC * 100));
-  ok(/run\[fr\.i % run\.length\]/.test(SRC) && /var fr = ldFrameAt\(Math\.abs\(LD_X0\) - Math\.abs\(x\)\)/.test(SRC),
+  ok(/run\[fr\.i % run\.length\]/.test(SRC) && /var fr = ldFrameAt\(d\);/.test(SRC)
+      && /var d = Math\.abs\(LD_X0\) - Math\.abs\(x\);/.test(SRC),
     '★ 달리기 프레임을 **이동 거리**로 뽑는다(시간 기준이면 감속 구간이 트레드밀이 된다)');
+  /* ★ 8회차 — 단, **체공만은 시간**이다(고정 LD_AIRMS). 감속 구간에서 도약이 늘어지지 않게 하는 예외이고,
+     τ 가 1 을 넘으면 다음 접지 프레임으로 넘긴다. 아치에는 아트의 들림(LD_LIFT)을 상쇄해 발 높이를 잇는다. */
+  ok(/tau = \(t - ldTimeAt\(seg\)\) \/ LD_AIRMS;/.test(SRC) && /if \(tau >= 1\)/.test(SRC),
+    '체공은 고정 시간이고, 그 시간이 끝나면 접지 프레임으로 넘어간다');
+  ok(/arc = LD_LIFT\[fr\.i\] \* LD_SC;/.test(SRC),
+    '아치가 아트의 «이미 들린 양»(LD_LIFT)을 상쇄한다 = 도약 진입·이탈에서 발 높이 연속');
   ok(/if \(LD_AIRF\[fr\.i\] && p < 1\)/.test(SRC),
     '아치가 케이던스와 **같은 자**(ldFrameAt)를 써서 딛는 프레임의 arc=0 이 유지된다');
   /* ★ 6회차 — 케이던스 자가 «한 값» 이 아니라 «표» 다. 5회차 인계 ① 이 요구한 것이고,
