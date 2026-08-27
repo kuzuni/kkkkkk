@@ -13992,8 +13992,11 @@ const SK = byId(SKILLS), EQ = byId(EQUIPS), PT = byId(PETS), RL = byId(RELICS), 
 /* ---- 소환 배너 (무기 · 방패 · 목걸이 따로) ---- */
 /* 작업 73 ④ (2026-08-25, 저장소 주인 지시) — 무기·방어구(방패)·목걸이·스킬 상자는
    **10회 = 1,000 다이아 · 30회 = 3,000 다이아** 로 통일한다. `cost:100` + `flat:1`(10연 할인 없음)
-   이면 `summonCost` 가 정확히 1,000 / 3,000 을 낸다. 펫·유물은 «현행 유지» 지시라
-   `cost`·10연 할인(0.9)을 그대로 둔다(펫 10연 2,250 · 유물 10연 3,600 불변). */
+   이면 `summonCost` 가 정확히 1,000 / 3,000 을 낸다.
+   작업 195 (2026-08-27, 저장소 주인 지시 «펫도 다른 거랑 소환 가격 같게») — **펫 배너도 같은 규격**으로
+   옮겼다(`cost:250` → `cost:100 + flat:1`). 73 이 남긴 «펫 현행 유지»(10연 2,250 · 30연 6,750)는 폐기다.
+   이제 `flat` 이 없는 배너는 하나도 없지만, `summonCost` 의 0.9 분기는 **지우지 않는다** —
+   유물(#relw 균등 소환)이 되돌아오거나 새 배너가 생길 때의 기본값이고, 지우면 산식이 한 갈래로 굳는다. */
 /* `g8:1` = 8등급 표(GRADE_ROLL_EQ · 초월 Lv55 · 불멸 Lv75)를 쓰는 배너.
    85 에서 장비 3종에 붙었고, 106 에서 **펫**이 8등급 36종이 되면서 같은 표를 쓴다(지시 ③). */
 const BANNERS = {
@@ -14001,7 +14004,7 @@ const BANNERS = {
   weapon: { n:'무기',   ic:'⚔️', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'weapon') },
   shield: { n:'방패',   ic:'🛡️', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'shield') },
   amulet: { n:'목걸이', ic:'📿', cost:100, flat:1, g8:1, cur:'dia', coll:'equip', list:EQUIPS.filter(e => e.slot === 'amulet') },
-  pet:    { n:'펫',     ic:'🐾', cost:250, g8:1, cur:'dia', coll:'pet',   list:PETS }   /* 173 — 사용자 노출 명칭은 «펫» 으로 통일(주인 재지시 2026-08-27) */
+  pet:    { n:'펫',     ic:'🐾', cost:100, flat:1, g8:1, cur:'dia', coll:'pet', list:PETS }   /* 173 — 사용자 노출 명칭은 «펫» 으로 통일(주인 재지시 2026-08-27) · 195 — 가격·산식을 4배너와 동일하게 */
 };   /* 89 — BANNERS.relic(유물 소환 배너) 폐기: 유물은 #relw 페이지의 균등 소환만 쓴다 */
 const BKEYS = Object.keys(BANNERS);
 /* 작업 57 — `EQ_BANNERS`(구버전 장비 패널의 무기·방패·목걸이 서브탭) 폐기.
@@ -18336,7 +18339,8 @@ function sumAddExp(b, n){
   return up;
 }
 /* 작업 73 ④ — `flat` 배너(무기·방패·목걸이·스킬)는 10연 할인을 받지 않는다(10회 1,000 / 30회 3,000,
-   30회는 10회의 정확히 3배). 펫·유물은 종전대로 10연 이상 0.9 할인. */
+   30회는 10회의 정확히 3배). 작업 195 — **펫도 `flat` 로 합류**해 5배너 전부 같은 값·같은 산식이다.
+   0.9 분기는 `flat` 없는 배너용 기본값으로 남겨 둔다(현재 해당 배너 없음). */
 const summonCost = (b, n) => { const B = BANNERS[b];
   return Math.round(B.cost * n * ((n >= 10 && !B.flat) ? 0.9 : 1)); };
 function payFor(b, cost){

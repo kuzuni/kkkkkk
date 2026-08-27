@@ -2,9 +2,9 @@
    실행: node tools/verify73.js   → 마지막 줄이 `VERIFY73 n/n PASS` 여야 한다.
 
    본다:
-     §1 ④ 가격 통일 — summonCost 4종이 10회 1,000 / 30회 3,000 이고 30회 = 10회×3.
-                       펫·유물은 «현행 유지»(2,250 / 3,600) 그대로.
-     §2 ④ 표시 = 실제 차감 — 10 상점 카드 3장의 `.cost` 표기와 실제 다이아 감소액이 같다.
+     §1 ④ 가격 통일 — summonCost **5종 전수**가 10회 1,000 / 30회 3,000 이고 30회 = 10회×3
+                       (195 — 73 이 뒀던 «펫 현행 유지 2,250/6,750» 예외 폐기. 유물은 89 가 배너를 없앴다).
+     §2 ④ 표시 = 실제 차감 — 10 상점 카드 5장의 `.cost` 표기와 실제 다이아 감소액이 같다.
      §3 ② 보상 체인 — 초기 다이아 ≥ 1,000 · 소환 미션 직전 미션 보상 ≥ 그 소환의 10연 값.
      §4 ③ 소환 차단 — 스킬 소환 미션 중 방어구 상자(유료·무료)를 눌러도 재화·카운터·무료횟수 불변 + 안내 토스트
                        (230 — 149 가 «안내» 를 팝업 → `#fxl .fx-toast` 로 뒤집었다. «팝업이 아니다» 도 같이 본다).
@@ -65,15 +65,18 @@ async function launchAny(){
        undefined.cost 로 즉사해 §1 에서 게이트 전체가 멈춘다(89 이후 73 회귀는 한 번도 못 돌았다). */
     ['skill', 'weapon', 'shield', 'amulet', 'pet'].forEach(k =>
       o[k] = { c1: summonCost(k, 1), c10: summonCost(k, 10), c30: summonCost(k, 30) });
-    return { cost: o, hasRelicBanner: 'relic' in BANNERS,
+    const noFlat = BKEYS.filter(k => !BANNERS[k].flat);
+    return { cost: o, noFlat, flatAll: noFlat.length === 0, hasRelicBanner: 'relic' in BANNERS,
              relicCostFn: typeof relicCost === 'function', relicCost: typeof relicCost === 'function' ? relicCost() : null };
   });
-  ['skill', 'weapon', 'shield', 'amulet'].forEach(k => {
+  /* 195 (2026-08-27, 주인 지시 «펫도 다른 거랑 소환 가격 같게») — 73 이 예외로 뒀던 펫이 합류했다.
+     예외 목록을 지우고 **다섯 배너 전수**를 같은 단언에 태운다(예외가 없어야 다음에 또 안 갈린다). */
+  ['skill', 'weapon', 'shield', 'amulet', 'pet'].forEach(k => {
     ok(cost.cost[k].c10 === 1000, `${k} 10회 = 1,000 (실제 ${cost.cost[k].c10})`);
     ok(cost.cost[k].c30 === 3000, `${k} 30회 = 3,000 (실제 ${cost.cost[k].c30})`);
     ok(cost.cost[k].c30 === cost.cost[k].c10 * 3, `${k} 30회 = 10회×3 (할인 없음)`);
   });
-  ok(cost.cost.pet.c10 === 2250 && cost.cost.pet.c30 === 6750, `펫 가격 현행 유지 (${cost.cost.pet.c10}/${cost.cost.pet.c30})`);
+  ok(cost.flatAll, `195 — 배너 전수가 flat(10연 0.9 할인 대상 0개) [${cost.noFlat.join(',') || '없음'}]`);
   /* 유물은 «현행 유지» 대상이었지만 89 가 소환 배너 자체를 없애고 #relw 페이지 균등 소환으로 옮겼다.
      가격 숫자는 119(주인 지시 «100 에서 시작, 1씩 증가») 로 또 바뀔 예정이라 값이 아니라 **경로**만 본다. */
   ok(!cost.hasRelicBanner, '89 — BANNERS.relic 폐기 유지 (유물은 소환 배너가 아니다)');
@@ -90,20 +93,20 @@ async function launchAny(){
       c30: c.querySelector('.cbtn.b3 .cost').textContent.trim()
     }));
   });
-  /* 133 — 106 이 «동료 상자» 를 SHOP_BOXES 에 추가해 카드가 3장 → 5장이 됐다.
-     73 ④ «가격 통일» 대상은 flat 배너 4종뿐이고 펫은 현행 유지(2,250/6,750)다. */
-  shown.forEach(s => {
-    if (s.box === 'pet') ok(s.c10 === '2,250' && s.c30 === '6,750', `${s.box} 카드 표기 ${s.c10} / ${s.c30} (현행 유지)`);
-    else                 ok(s.c10 === '1,000' && s.c30 === '3,000', `${s.box} 카드 표기 ${s.c10} / ${s.c30}`);
-  });
-  for (const box of ['weapon', 'shield', 'amulet', 'skill']) {
+  /* 133 — 106 이 «펫 상자» 를 SHOP_BOXES 에 추가해 카드가 3장 → 5장이 됐다.
+     195 — 그 펫 예외가 폐기돼 이제 **다섯 장 전부** 같은 표기다. */
+  shown.forEach(s => ok(s.c10 === '1,000' && s.c30 === '3,000', `${s.box} 카드 표기 ${s.c10} / ${s.c30}`));
+  /* 195 — 펫도 같은 값이 됐으니 실차감 시험에도 태운다(표기만 같고 차감이 다르면 이 절이 잡는다).
+     펫 카운터는 `S.cnt.sumPet` 이라 «뽑은 개수» 는 세 카운터 합의 증분으로 센다. */
+  for (const box of ['weapon', 'shield', 'amulet', 'skill', 'pet']) {
     const r = await p.evaluate((box) => {
+      const cnt = () => S.cnt.sumEquip + S.cnt.sumSkill + S.cnt.sumPet;
       S.dia = 99999; S.guide.idx = GUIDE.length;              /* 차단 해제 상태에서 순수 가격만 본다 */
-      const before = S.dia, n0 = S.cnt.sumEquip + S.cnt.sumSkill;
+      const before = S.dia, n0 = cnt();
       doSummon(box, 10);
       const paid10 = before - S.dia;
       const b2 = S.dia; doSummon(box, 30);
-      return { paid10, paid30: b2 - S.dia, got: (S.cnt.sumEquip + S.cnt.sumSkill) - n0 };
+      return { paid10, paid30: b2 - S.dia, got: cnt() - n0 };
     }, box);
     ok(r.paid10 === 1000 && r.paid30 === 3000 && r.got === 40,
       `${box} 실제 차감 ${r.paid10}/${r.paid30} · 획득 ${r.got}개`);

@@ -10,7 +10,7 @@
  *   [B] 곡선     PET_M = 0.45·mul^0.88 · PET_CD = 1.30·mul^-0.20 · 신설분 m = PET_M[g]·v
  *                · 등급 간 DPS(m/cd) 단조(등급 g 최댓값 < 등급 g+1 최솟값)
  *   [C] 확률표   rollOf('pet') = 8행(GRADE_ROLL_EQ) · 해금 Lv55/75 · 확률 합 1 · 이정표 8개
- *   [D] 상점     SHOP_BOXES 5장 · «동료 상자» 카드 DOM · 가격 2,250/6,750 · 무료 2/2
+ *   [D] 상점     SHOP_BOXES 5장 · «펫 상자» 카드 DOM · 가격 = 나머지 배너와 동일(195: 1,000/3,000) · 무료 2/2
  *   [E] 실동작   10연 → 다이아 차감 · 결과 팝업 10장 · S.cnt.sumPet +10 · 보유 종 수 증가 · 소환 Lv 상승
  *   [F] 구 세이브 구 9종 보유 + eqPet 3마리 세이브를 로드해도 보유·장착·레벨 그대로
  *   [G] 26 시트  카드 36장 · 격자 안쪽 스크롤 성립 · [동료 소환] → 상점 동료 상자로 이동
@@ -192,13 +192,24 @@ async function open(browser, seed) {
     return { boxes: SHOP_BOXES.length, i, cards: cards.length, on: $('shopw').classList.contains('on'),
              name: card ? card.querySelector('.chd i').textContent : null, cost, free,
              c10: summonCost('pet', 10), c30: summonCost('pet', 30),
+             /* 195 — 비교 기준: 펫을 뺀 나머지 배너가 전부 같은 값인지 먼저 접어서 하나로 만든다 */
+             ref10: [...new Set(BKEYS.filter(k => k !== 'pet').map(k => summonCost(k, 10)))].join('|'),
+             ref30: [...new Set(BKEYS.filter(k => k !== 'pet').map(k => summonCost(k, 30)))].join('|'),
+             flat: !!BANNERS.pet.flat,
              btns: card ? card.querySelectorAll('[data-shsum="pet"]').length : 0 };
   });
   ok(D.boxes === 5 && D.cards === 5, 'D1 상점 소환 탭 상자 5장', D.cards + '장');
   ok(D.i === 4 && D.name === '펫 상자', 'D2 5번째 카드 = «펫 상자»', D.name);
   ok(D.btns === 3, 'D3 소환 버튼 3개(무료 10연 / 💎10연 / 💎30연)', String(D.btns));
-  ok(D.c10 === 2250 && D.c30 === 6750, 'D4 펫 가격 현행 유지(73 «펫 현행 유지»)', D.c10 + '/' + D.c30);
-  ok(D.cost.join('/') === '2,250/6,750', 'D5 카드 가격 표기 쉼표', D.cost.join('/'));
+  /* 195 (2026-08-27, 주인 지시 «펫도 다른 거랑 소환 가격 같게») — 73 이 남긴 «펫 현행 유지»(2,250/6,750) 폐기.
+     값을 다시 박지 않고 **4배너와 같은지**로 묻는다 — 가격이 또 바뀌어도 «같다» 는 불변식은 안 깨진다. */
+  /* ref10/ref30 은 «펫 뺀 배너들의 값 집합» 을 `|` 로 이은 것 — 값이 갈리면 «1000|1350» 처럼 남아
+     숫자 하나와 절대 같아지지 않는다. 즉 이 한 줄이 «4배너끼리도 같다 + 펫도 그와 같다» 를 동시에 판정한다. */
+  ok(String(D.c10) === D.ref10 && String(D.c30) === D.ref30, 'D4 펫 가격 = 다른 배너와 동일(195)',
+    '펫 ' + D.c10 + '/' + D.c30 + ' vs 나머지 배너 ' + D.ref10 + '/' + D.ref30);
+  ok(D.c10 === 1000 && D.c30 === 3000, 'D4b 그 공통값이 10회 1,000 · 30회 3,000', D.c10 + '/' + D.c30);
+  ok(D.cost.join('/') === '1,000/3,000', 'D5 카드 가격 표기 쉼표', D.cost.join('/'));
+  ok(D.flat === true, 'D5b 펫 배너도 `flat:1`(10연 0.9 할인 제외)', String(D.flat));
   ok(D.free === '2/2', 'D6 무료 10연 2/2 (SHOP_FREE 자동 적용)', String(D.free));
 
   /* ---------------- [E] 10연 실동작 ---------------- */
@@ -227,7 +238,7 @@ async function open(browser, seed) {
              onlyPets: petsOnly.length === Object.keys(S.own).filter(k => PT[k]).length,
              stray: Object.keys(S.own).filter(k => !PT[k] && !SK[k] && !EQ[k] && !RL[k]) };
   });
-  ok(E.paid === 2250, 'E1 다이아 2,250 차감', String(E.paid));
+  ok(E.paid === 1000, 'E1 다이아 1,000 차감 (195 — 4배너와 동일)', String(E.paid));
   ok(E.cnt === 10, 'E2 S.cnt.sumPet +10', String(E.cnt));
   ok(E.open && E.n === 10, 'E3 12 결과 팝업 열림 · 카드 개수 합 10', E.cards + '칸 / 합 ' + E.n);
   ok(E.gained > 0, 'E4 보유 동료 종 수 증가', '+' + E.gained + '종');
