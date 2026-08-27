@@ -6,7 +6,8 @@
                        펫·유물은 «현행 유지»(2,250 / 3,600) 그대로.
      §2 ④ 표시 = 실제 차감 — 10 상점 카드 3장의 `.cost` 표기와 실제 다이아 감소액이 같다.
      §3 ② 보상 체인 — 초기 다이아 ≥ 1,000 · 소환 미션 직전 미션 보상 ≥ 그 소환의 10연 값.
-     §4 ③ 소환 차단 — 스킬 소환 미션 중 방어구 상자(유료·무료)를 눌러도 재화·카운터·무료횟수 불변 + 안내 팝업.
+     §4 ③ 소환 차단 — 스킬 소환 미션 중 방어구 상자(유료·무료)를 눌러도 재화·카운터·무료횟수 불변 + 안내 토스트
+                       (230 — 149 가 «안내» 를 팝업 → `#fxl .fx-toast` 로 뒤집었다. «팝업이 아니다» 도 같이 본다).
                        지정 상자는 정상 소환. 유물은 차단 안 함. 미션 완료 후 차단 해제.
      §5 ① 이동 — 미션 20개 전수(76 «목걸이 소환» 삽입 · 154 «출석 보상 받기» 삭제 반영). 배너를 누르면 각 미션의 목표 화면이 실제로 열린다.
      §6 배너 상태 — 미완이어도 커서 pointer · `[미션-n]` 라벨이 클릭을 배너로 흘린다 · 기하 불변.
@@ -18,7 +19,9 @@ const path = require('path');
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++; console.log('  ✗', m); } };
-const URL = 'file://' + path.resolve(__dirname, '../index.html');
+/* 230 — 되돌림 시험(`tools/neg230.js`)이 «한 곳만 갈아 끼운 사본» 을 새로 열어 돌린다.
+   살아 있는 페이지에 주입하면 거짓 초록이 난다(LESSONS 191) → 소스 경로를 밖에서 준다(96 선례 `V96_SRC`). */
+const URL = 'file://' + path.resolve(process.env.V73_SRC || path.join(__dirname, '../index.html'));
 
 /* 미션 i 를 «현재 · 미완» 으로 만든다.
    ⚠ `localStorage.clear()` + reload 로는 초기화되지 않는다 — 아직 살아 있는 옛 페이지의 자동 save()
@@ -127,29 +130,49 @@ async function launchAny(){
   await p.reload(); await p.waitForTimeout(700);
   await setMission(p, 0);                                     /* 스킬 1회 소환 미션 */
   await p.evaluate(() => openShopPage());
+  /* 230(2026-08-27) — «차단 안내» 를 재는 자리를 모달 → `#fxl .fx-toast` 로 **이사**시켰다.
+     149(주인 지시)가 `notify()` 를 `fxToast` 로 뒤집은 뒤 `gmBlocked()` 의 안내는 모달을 한 번도
+     안 만든다 → `.modal.on` 은 원리적으로 항상 false 라 이 한 항목이 굳어 빨갰다(64/65).
+     물음(«막았으면 왜 막혔는지 말하는가»)은 그대로 두고 자리만 옮긴다(LESSONS 185-④).
+     · 기대 문구는 리터럴 금지 — `BANNERS[gmBan()].n` 으로 **런타임 계산**한다(185-①).
+       옛 단언의 「가이드 진행」 은 그 시절 문안의 스냅샷이고, 지금 문안은 «… 소환을 먼저 해주세요» 다.
+     · 대기는 필요 없다(185-⑥ 의 예외) — `doSummon` → `gmBlocked` → `notify` → `fxToast` 의
+       `appendChild` 까지가 **한 동기 흐름**이라 같은 evaluate 안에서 읽으면 퇴장(760/1060ms)과 무관하다.
+       대신 재기 «전» 에 남은 토스트를 비운다 — `fxToast` 는 4장부터 드롭한다(stack > 3). */
   const blk = await p.evaluate(() => {
     S.dia = 99999; closeModal && closeModal();
+    const fxTxt   = () => Array.from(document.querySelectorAll('#fxl .fx-toast')).map(t => t.textContent).join(' | ');
+    const clearFx = () => document.querySelectorAll('#fxl .fx-toast').forEach(t => t.remove());
     const snap = () => ({ dia: S.dia, eq: S.cnt.sumEquip, sk: S.cnt.sumSkill,
                           free: JSON.parse(JSON.stringify(S.daily.freeSum)), sum: S.summons });
     const a = snap();
+    clearFx();
+    const need = gmBan();                                     /* 지금 강제되는 상자 = 기대 문구의 근거 */
+    const wantName = need && BANNERS[need] ? BANNERS[need].n : null;
     doSummon('shield', 10);                                   /* 유료 — 막혀야 한다 */
     const afterPaid = snap();
+    const blockTxt = fxTxt();                                 /* 149 이후 안내가 뜨는 자리 */
     const modalOn = $('modal').classList.contains('on');
-    const modalTxt = $('mtitle').textContent + ' ' + $('mbox').textContent;
-    closeModal && closeModal();
+    clearFx(); closeModal && closeModal();
     /* 무료 10연 경로 — 차감 «전» 에 막히는지 (freeSum 이 그대로여야 한다) */
     const btn = document.querySelector('#shopList .shp-card:nth-child(2) [data-shfree]');
     if (btn) btn.click();
     const afterFree = snap();
-    closeModal && closeModal();
+    const freeTxt = fxTxt();
+    clearFx(); closeModal && closeModal();
     doSummon('skill', 10);                                    /* 지정 상자 — 통과해야 한다 */
     const afterOk = snap();
-    return { a, afterPaid, afterFree, afterOk, modalOn, modalTxt };
+    clearFx();                                                /* 뒷정리 — 다음 절에 토스트를 흘리지 않는다 */
+    return { a, afterPaid, afterFree, afterOk, modalOn, blockTxt, freeTxt, need, wantName };
   });
   ok(blk.afterPaid.dia === blk.a.dia && blk.afterPaid.eq === blk.a.eq && blk.afterPaid.sum === blk.a.sum,
     '유료 방어구 10연 차단 — 다이아·카운터 불변');
-  ok(blk.modalOn && /가이드 진행/.test(blk.modalTxt) && /무기|방패|스킬/.test(blk.modalTxt),
-    '차단 시 안내 팝업 노출');
+  ok(!!blk.wantName && blk.blockTxt.includes(blk.wantName + ' 소환') && /먼저/.test(blk.blockTxt),
+    `차단 시 안내 토스트 노출 — «${blk.wantName} 소환» (got "${blk.blockTxt}")`);
+  ok(!blk.modalOn,
+    '차단 안내는 팝업이 아니다 — 149(주인 지시) 토스트화 유지');
+  ok(!!blk.wantName && blk.freeTxt.includes(blk.wantName + ' 소환'),
+    '무료 10연 차단도 같은 안내를 낸다');
   ok(JSON.stringify(blk.afterFree.free) === JSON.stringify(blk.a.free) && blk.afterFree.eq === blk.a.eq,
     '무료 10연 차단 — 무료 횟수 «차감 전» 에 막힘');
   ok(blk.afterOk.sk === blk.a.sk + 10 && blk.afterOk.dia === blk.a.dia - 1000,
