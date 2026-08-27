@@ -13108,10 +13108,39 @@ const fmtB = n => fmtG(n);
      104·141·inkA3 같은 기존 게이트가 흔들리지 않는다.
    · 같은 문자열·같은 폭이면 다시 재지 않는다(drawHud 가 매 프레임 부른다). */
 const FITMIN = 0.55;
+/* 235 — «그릇 폭» 은 el.clientWidth 가 아니다. 그 값은 fitNum 이 방금 줄여 놓은 **제 폭**이라,
+   부를 때마다 상한이 같이 내려앉는 래칫이 된다(호출 3번이면 34.5 → 31.4 → 28.6 → 26.0 …
+   실측으로 전투력·다이아가 FITMIN 바닥 0.55 까지 내려가 있었다 — VERIFYA3 9/16 FAIL ·
+   verify81 바 밴드 diff 2,730px. 상점 바는 열린 채 값이 바뀌어 줄었고, 던전 바는 닫혀 있어
+   clientWidth 0 으로 early-return 되어 안 줄어서 «같은 5,000 이 두 페이지에서 다른 크기» 였다).
+   그릇은 **부모가 이 요소에 내주는 폭**이다 — 부모 콘텐츠 폭에서 흐름에 있는 형제와 gap 을 뺀다.
+   부모 폭이 내용에 맞춰 늘어나면(= 남는 자리가 제 폭과 같으면) 가둘 그릇 자체가 없으므로 0. */
+function fitRoom(el){
+  const p = el.parentElement;
+  if(!p) return 0;
+  const pcs = getComputedStyle(p);
+  let room = p.clientWidth - (parseFloat(pcs.paddingLeft) || 0) - (parseFloat(pcs.paddingRight) || 0);
+  let n = 0;
+  for(const s of p.children){
+    const scs = getComputedStyle(s);
+    if(scs.display === 'none') continue;
+    if(scs.position === 'absolute' || scs.position === 'fixed') continue;   /* 흐름 밖 = 자리를 안 먹는다 */
+    n++;
+    if(s === el) continue;
+    /* offsetWidth 는 «레이아웃» 폭이다 — transform(scaleX) 이 들어간 형제도 자리는 원래 폭만 먹는다 */
+    room -= s.offsetWidth + (parseFloat(scs.marginLeft) || 0) + (parseFloat(scs.marginRight) || 0);
+  }
+  if(n > 1) room -= (parseFloat(pcs.columnGap) || 0) * (n - 1);   /* flex 가 아니면 normal → 0 */
+  return room <= 0 || room - el.offsetWidth <= 0.5 ? 0 : room;
+}
 function fitNum(el, maxW){
   if(!el) return;
-  const t = el.textContent, box = maxW || el.clientWidth;
-  if(!box) return;
+  const t = el.textContent, box = maxW || fitRoom(el);
+  if(!box){
+    /* 그릇이 없거나 아직 안 그려진 상태 — 전에 눌러 둔 인라인 fs 는 되돌린다(래칫 잔재 청소) */
+    if(el.dataset.fitT !== undefined){ el.style.fontSize = ''; delete el.dataset.fitT; delete el.dataset.fitB; }
+    return;
+  }
   if(el.dataset.fitT === t && +el.dataset.fitB === box) return;
   el.dataset.fitT = t; el.dataset.fitB = String(box);
   el.style.fontSize = '';
