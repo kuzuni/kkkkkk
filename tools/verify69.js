@@ -52,6 +52,17 @@ async function fresh(browser, w = 1080, h = 2280) {
   await page.waitForTimeout(800);
   /* 유휴 루프가 재화를 굴리지 못하게 자동화를 끈다 */
   await page.evaluate(() => { if (typeof S === 'object') { S.autoBuy = false; S.spAuto = false; } });
+  /* 180 — 이 게이트가 재는 것은 **고정 우편 `MAILS`** 의 렌더다([1] «행 n개 = MAILS n통» ·
+     [3] «행 순서 = MAILS 순서» 가 위치로 짝을 맞춘다). 180 이 부팅 직후 «월별 다이아» 동적 우편
+     한 통을 넣으면서 그 짝이 한 칸씩 어긋나 [3] 이 `MAILS[i] === undefined` 로 즉사했다.
+     동적 우편(153·180)의 렌더는 `verify153`·`verify180` 의 몫이므로, 여기서는 **표본을 고정 우편으로
+     되돌린다** — 달 열쇠를 이번 달로 채워 두면 `monthlyCheck()` 가 다시 보내지 않는다. */
+  await page.evaluate(() => {
+    if (typeof S !== 'object') return;
+    S.mailx = []; S.mailSeq = 0; S.mail = {};
+    const d = new Date();
+    S.lastMonthly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  });
   return { ctx, page, errs };
 }
 
