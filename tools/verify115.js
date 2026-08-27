@@ -1,13 +1,18 @@
 #!/usr/bin/env node
-/* 115 검증 — «불멸» 등급은 소환 만렙(Lv 100)에서도 실효 ≈0.1% 만 나온다
+/* 115 검증 — «불멸» 등급은 소환 만렙(SUM_MAXLV)에서도 실효 ≈0.1% 만 나온다
+ *
+ * 196 (2026-08-27) — 만렙이 100 → **25** 로 줄고 해금 사다리가 55/75 → **20/24** 로 옮겨졌다.
+ * 이 게이트가 묻는 것은 «만렙에서 0.1%» 이지 «Lv100 에서 0.1%» 가 아니므로, 리터럴 100·75·90 을
+ * 전부 **표에서 뽑은 값**(SUM_MAXLV · GRADE_ROLL_EQ[7].unlock)으로 바꿨다. 만렙이 또 바뀌어도
+ * 이 게이트는 굳지 않는다(LESSONS 106-1 «값이 식을 따라야 한다» 의 게이트판).
  *
  *   node tools/verify115.js
  *
  * 지시서(PROGRESS 115 «검증 [3]-(가)») 가 요구한 항목 그대로:
  *   [A] 상수 — 목표 실효 확률 상수(IMMORTAL_P_MAX = 0.0010) 가 있고, 표의 p1 은 «손으로 적은 값» 이 아니라
- *       그 상수에서 역산한 값이다(p1 = T·Σ다른행/(1−T)). 옛 리터럴 0.03 부재. 해금 Lv75 유지.
+ *       그 상수에서 역산한 값이다(p1 = T·Σ다른행/(1−T)). 옛 리터럴 0.03 부재. 해금 Lv 20/24(196).
  *   [B] gradeProbs 만렙 — 장비·동료 배너 불멸 = 0.0010 ± 0.0001 (구현 = 2.75% 였다)
- *   [C] Lv75 = 0 (해금 시점은 0) · 76~100 단조 증가 · Lv90 은 (0, 0.0010) 사이
+ *   [C] 해금 Lv = 0 (해금 시점은 0) · 해금→만렙 단조 증가 · 램프 중간점은 (0, 0.0010) 사이
  *   [D] 100만 회 시뮬 — 불멸 빈도 0.08~0.12%
  *   [E] 11 확률 팝업 — 무기 MAX 단계 불멸 헤더가 «0.10%» · «0%»·빈 문자열·NaN 0건
  *   [F] 표기 함수 fmtProbPct — 0.10 → «0.10» · 0.001 → «<0.01» · 5 → «5» · 0 → «0»
@@ -48,7 +53,7 @@ const ok = (b, name, detail) => {
     tr: GRADE_ROLL_EQ[6].p1,
   }));
   ok(A.tgt === 0.0010, 'A1 목표 실효 확률 상수 IMMORTAL_P_MAX = 0.0010', String(A.tgt));
-  ok(A.len === 8 && A.u6 === 55 && A.u7 === 75, 'A2 8행 표 · 해금 Lv 55/75 유지', A.u6 + '/' + A.u7);
+  ok(A.len === 8 && A.u6 === 20 && A.u7 === 24, 'A2 8행 표 · 해금 Lv 20/24 (196)', A.u6 + '/' + A.u7);
   ok(Math.abs(A.p1 - A.calc) < 1e-12, 'A3 표의 p1 은 상수에서 역산한 값(손으로 적은 값 아님)',
      A.p1.toFixed(8) + ' vs ' + A.calc.toFixed(8));
   ok(Math.abs(A.tr - 0.06) < 1e-12, 'A4 초월 가중치 0.06 미변경(② 는 제안만)', String(A.tr));
@@ -58,7 +63,7 @@ const ok = (b, name, detail) => {
   const B = await page.evaluate(() => {
     const at = (b, L) => { const o = S.sum[b].lv; S.sum[b].lv = L; const p = gradeProbs(b); S.sum[b].lv = o; return p; };
     const r = {};
-    ['weapon', 'shield', 'amulet', 'pet'].forEach(b => { const p = at(b, 100); r[b] = { g7: p[7], g6: p[6], sum: p.reduce((a, c) => a + c, 0) }; });
+    ['weapon', 'shield', 'amulet', 'pet'].forEach(b => { const p = at(b, SUM_MAXLV); r[b] = { g7: p[7], g6: p[6], sum: p.reduce((a, c) => a + c, 0) }; });
     return r;
   });
   ['weapon', 'shield', 'amulet', 'pet'].forEach(b => {
@@ -69,21 +74,24 @@ const ok = (b, name, detail) => {
   ok(B.weapon.g6 > B.weapon.g7 * 20, 'B6 초월 ≫ 불멸 (간격 확보)',
      '초월 ' + (B.weapon.g6 * 100).toFixed(3) + '% / 불멸 ' + (B.weapon.g7 * 100).toFixed(3) + '%');
 
-  /* ---- [C] 해금 구간 — Lv75 = 0, 76→100 단조 증가 ---- */
+  /* ---- [C] 해금 구간 — 해금 Lv = 0, 해금 → 만렙 단조 증가 ----
+     196: 해금(24)과 만렙(25) 사이에 «정수 레벨» 이 없다. gradeProbsAt 은 L 을 그대로 받는 순수
+     함수라 **소수 레벨로 곡선을 훑는다**(20 등분). 램프가 1레벨이어도 t^0.9 곡선 자체는 그대로다. */
   const C = await page.evaluate(() => {
-    const seq = [];
-    for (let L = 74; L <= 100; L++) seq.push(gradeProbsAt('weapon', L)[7]);
-    return { l74: seq[0], l75: seq[1], l90: seq[16], seq,
-             mono: seq.slice(1).every((v, i) => i === 0 || v > seq[i]) };
+    const U = GRADE_ROLL_EQ[7].unlock, span = SUM_MAXLV - U, N = 20, seq = [];
+    for (let i = 0; i <= N; i++) seq.push(gradeProbsAt('weapon', U + span * i / N)[7]);
+    return { before: gradeProbsAt('weapon', U - 1)[7], at0: seq[0], mid: seq[N / 2], end: seq[N],
+             U, span, mono: seq.slice(1).every((v, i) => v > seq[i]) };
   });
-  ok(C.l74 === 0 && C.l75 === 0, 'C1 Lv74·Lv75 불멸 = 0 (해금 시점 t=0)', C.l74 + '/' + C.l75);
-  ok(C.mono, 'C2 Lv76~100 단조 증가');
-  ok(C.l90 > 0 && C.l90 < 0.0010, 'C3 Lv90 은 0 과 0.10% 사이', (C.l90 * 100).toFixed(4) + '%');
-  ok(Math.abs(C.seq[26] - 0.0010) <= 0.0001, 'C4 Lv100 종점 = 0.10%', (C.seq[26] * 100).toFixed(4) + '%');
+  ok(C.before === 0 && C.at0 === 0, 'C1 해금 직전·해금 시점 불멸 = 0 (t=0)',
+     'Lv' + (C.U - 1) + '=' + C.before + ' / Lv' + C.U + '=' + C.at0);
+  ok(C.mono, 'C2 해금 → 만렙 단조 증가', 'Lv' + C.U + '~' + (C.U + C.span) + ' 20등분');
+  ok(C.mid > 0 && C.mid < 0.0010, 'C3 램프 중간점은 0 과 0.10% 사이', (C.mid * 100).toFixed(4) + '%');
+  ok(Math.abs(C.end - 0.0010) <= 0.0001, 'C4 만렙 종점 = 0.10%', (C.end * 100).toFixed(4) + '%');
 
   /* ---- [D] 100만 회 시뮬 (summonOne 과 동일한 누적 추첨) ---- */
   const D = await page.evaluate(() => {
-    const o = S.sum.weapon.lv; S.sum.weapon.lv = 100;
+    const o = S.sum.weapon.lv; S.sum.weapon.lv = SUM_MAXLV;
     const p = gradeProbs('weapon'); S.sum.weapon.lv = o;
     const N = 1e6; let hit = 0;
     for (let k = 0; k < N; k++) {
@@ -100,7 +108,7 @@ const ok = (b, name, detail) => {
 
   /* ---- [E] 11 확률 팝업 표시 ---- */
   const E = await page.evaluate(() => {
-    openProbInfo('weapon', 100);
+    openProbInfo('weapon', SUM_MAXLV);
     const h = document.getElementById('prbList').innerHTML;
     const m = h.match(/불멸 \(([^)]*)\)/);
     const t = h.match(/초월 \(([^)]*)\)/);
@@ -126,7 +134,7 @@ const ok = (b, name, detail) => {
 
   /* ---- [G] 스킬 배너(6행 표) 불변 ---- */
   const G = await page.evaluate(() => {
-    const o = S.sum.skill.lv; S.sum.skill.lv = 100;
+    const o = S.sum.skill.lv; S.sum.skill.lv = SUM_MAXLV;
     const p = gradeProbs('skill'); S.sum.skill.lv = o;
     return { rows: GRADE_ROLL.length, g5: p[5], g6: p[6], g7: p[7] };
   });

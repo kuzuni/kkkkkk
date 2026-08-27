@@ -9,9 +9,9 @@
  *   [A] 데이터   PETS 36종 · 분포 (5,5,5,5,5,5,5,1) · 무기 종 수와 동일 · id 중복 0 · 구 9종 완전 보존
  *   [B] 곡선     PET_M = 0.45·mul^0.88 · PET_CD = 1.30·mul^-0.20 · 신설분 m = PET_M[g]·v
  *                · 등급 간 DPS(m/cd) 단조(등급 g 최댓값 < 등급 g+1 최솟값)
- *   [C] 확률표   rollOf('pet') = 8행(GRADE_ROLL_EQ) · 해금 Lv55/75 · 확률 합 1 · 이정표 8개
+ *   [C] 확률표   rollOf('pet') = 8행(GRADE_ROLL_EQ) · 해금 Lv20/24(196) · 확률 합 1 · 이정표 8개
  *   [D] 상점     SHOP_BOXES 5장 · «펫 상자» 카드 DOM · 가격 = 나머지 배너와 동일(195: 1,000/3,000) · 무료 2/2
- *   [E] 실동작   10연 → 다이아 차감 · 결과 팝업 10장 · S.cnt.sumPet +10 · 보유 종 수 증가 · 소환 Lv 상승
+ *   [E] 실동작   10연 → 다이아 차감 · 결과 팝업 10장 · S.cnt.sumPet +10 · 보유 종 수 증가 · 소환 경험치 연동(196)
  *   [F] 구 세이브 구 9종 보유 + eqPet 3마리 세이브를 로드해도 보유·장착·레벨 그대로
  *   [G] 26 시트  카드 36장 · 격자 안쪽 스크롤 성립 · [동료 소환] → 상점 동료 상자로 이동
  *   [H] 도감     pet 세트 8개 · 구성원 합 36 · 세트 키 pet:0~7
@@ -165,19 +165,23 @@ async function open(browser, seed) {
     const steps = prbSteps().join(',');
     prbBank = 'weapon';
     return { rows: r.length, eq: r === GRADE_ROLL_EQ, u6: r[6] && r[6].unlock, u7: r[7] && r[7].unlock,
-             len: at(100).length, s100: sum(at(100)), s1: sum(at(1)),
-             p6at54: at(54)[6], p7at74: at(74)[7], p6at100: at(100)[6], p7at100: at(100)[7],
-             nan: at(100).concat(at(1)).some(x => !isFinite(x)), steps,
+             /* 196 — «만렙» 을 리터럴 100 으로 적지 않는다(만렙이 또 바뀌면 여기가 먼저 굳는다).
+                해금 직전 레벨도 표에서 뽑는다: 초월 unlock−1 · 불멸 unlock−1. */
+             len: at(SUM_MAXLV).length, s100: sum(at(SUM_MAXLV)), s1: sum(at(1)),
+             p6at54: at(r[6].unlock - 1)[6], p7at74: at(r[7].unlock - 1)[7],
+             p6at100: at(SUM_MAXLV)[6], p7at100: at(SUM_MAXLV)[7],
+             nan: at(SUM_MAXLV).concat(at(1)).some(x => !isFinite(x)), steps,
              skillRows: rollOf('skill').length };
   });
   ok(C.rows === 8 && C.eq, 'C1 rollOf(\'pet\') = 8행 표(GRADE_ROLL_EQ)', String(C.rows));
-  ok(C.u6 === 55 && C.u7 === 75, 'C2 초월 Lv55 · 불멸 Lv75 해금(85 와 동일)', C.u6 + '/' + C.u7);
+  /* 196 — 만렙 25 로 축소되며 사다리가 20/24 로 옮겨졌다(85 와 «동일» 이라는 단언은 그대로). */
+  ok(C.u6 === 20 && C.u7 === 24, 'C2 초월 Lv20 · 불멸 Lv24 해금(85 와 동일 · 196)', C.u6 + '/' + C.u7);
   ok(near(C.s100, 1, 1e-9) && near(C.s1, 1, 1e-9) && !C.nan, 'C3 확률 합 1 · NaN 0',
     C.s100.toFixed(6) + ' / ' + C.s1.toFixed(6));
   ok(C.p6at54 === 0 && C.p7at74 === 0 && C.p6at100 > 0 && C.p7at100 > 0,
-    'C4 해금 전 0 · 만렙 >0', 'Lv54 g6=' + C.p6at54 + ' · Lv74 g7=' + C.p7at74
-    + ' · Lv100 g6=' + (C.p6at100 * 100).toFixed(2) + '% g7=' + (C.p7at100 * 100).toFixed(2) + '%');
-  ok(C.steps === '1,5,15,30,40,55,75,100', 'C5 11 확률 팝업 이정표 8개', C.steps);
+    'C4 해금 전 0 · 만렙 >0', '초월해금−1 g6=' + C.p6at54 + ' · 불멸해금−1 g7=' + C.p7at74
+    + ' · 만렙 g6=' + (C.p6at100 * 100).toFixed(2) + '% g7=' + (C.p7at100 * 100).toFixed(2) + '%');
+  ok(C.steps === '1,5,8,12,16,20,24,25', 'C5 11 확률 팝업 이정표 8개 (196)', C.steps);
   ok(C.skillRows === 6, 'C6 스킬 배너는 6행 표 그대로(회귀)', String(C.skillRows));
 
   /* ---------------- [D] 상점 ---------------- */
@@ -227,7 +231,8 @@ async function open(browser, seed) {
 
   const E = await page.evaluate(async () => {
     S.dia = 100000; S.cnt.sumPet = 0; S.sum.pet.lv = 1; S.sum.pet.exp = 0;
-    const before = { dia: S.dia, own: Object.keys(S.own).filter(k => PT[k]).length, lv: S.sum.pet.lv };
+    const before = { dia: S.dia, own: Object.keys(S.own).filter(k => PT[k]).length,
+                     lv: S.sum.pet.lv, exp: S.sum.pet.exp, need: sumNeedExp(S.sum.pet.lv) };
     doSummon('pet', 10);
     await new Promise(r => setTimeout(r, 250));
     const cards = [...document.querySelectorAll('#sumGridIn .sm-c')];
@@ -235,6 +240,10 @@ async function open(browser, seed) {
     const petsOnly = Object.keys(S.own).filter(k => PT[k]);
     return { paid: before.dia - S.dia, cnt: S.cnt.sumPet, open: $('sumw').classList.contains('on'),
              cards: cards.length, n, gained: petsOnly.length - before.own, lvUp: S.sum.pet.lv - before.lv,
+             expUp: S.sum.pet.exp - before.exp, need: before.need,
+             /* 196 — 표 한 칸을 정확히 채우면 여전히 1단계 오른다(경험치 연동의 «끝단» 확인) */
+             lvUp2: (() => { S.sum.pet.lv = 1; S.sum.pet.exp = 0;
+                             const u = sumAddExp('pet', sumNeedExp(1)); return { u, lv: S.sum.pet.lv }; })(),
              onlyPets: petsOnly.length === Object.keys(S.own).filter(k => PT[k]).length,
              stray: Object.keys(S.own).filter(k => !PT[k] && !SK[k] && !EQ[k] && !RL[k]) };
   });
@@ -242,7 +251,12 @@ async function open(browser, seed) {
   ok(E.cnt === 10, 'E2 S.cnt.sumPet +10', String(E.cnt));
   ok(E.open && E.n === 10, 'E3 12 결과 팝업 열림 · 카드 개수 합 10', E.cards + '칸 / 합 ' + E.n);
   ok(E.gained > 0, 'E4 보유 동료 종 수 증가', '+' + E.gained + '종');
-  ok(E.lvUp > 0, 'E5 소환 Lv 상승(경험치 연동)', '+' + E.lvUp);
+  /* 196 — 필요 경험치가 주인 확정표(Lv1 = 50)로 바뀌어 **10연 한 번으로는 안 오른다**(구 곡선은 need 5).
+     이 절이 묻는 것은 «소환이 소환 경험치로 이어지는가» 이므로, 판정을 «10연 = exp +10» 과
+     «표 한 칸을 채우면 1단계 상승» 둘로 나눈다. 리터럴 need 는 안 쓴다(표가 또 바뀌어도 안 굳는다). */
+  ok(E.expUp === 10 && E.lvUp === (10 >= E.need ? 1 : 0),
+    'E5 소환 Lv 경험치 연동 — 10연 = exp +10 (need ' + E.need + ')', '+' + E.expUp + 'exp / +' + E.lvUp + 'Lv');
+  ok(E.lvUp2.u === 1 && E.lvUp2.lv === 2, 'E5b 표 한 칸(need)을 채우면 Lv +1 (196)', JSON.stringify(E.lvUp2));
   ok(E.stray.length === 0, 'E6 S.own 에 미확인 id 유입 0', E.stray.join(',') || '없음');
 
   /* [E7] 11 확률 팝업이 펫 배너로 열리고 36행이 나온다 */

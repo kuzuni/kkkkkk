@@ -5,7 +5,7 @@
  *
  * 검사 항목:
  *   [A] 데이터 — EQUIPS 108종 · 부위별 등급 분포 [5,5,5,5,5,5,5,1] · id 유일 · 구 54종 id 전부 보존
- *   [B] 등급 상수 — GRADE 8단(초월·불멸) · REFUND/SUM_CARD/WGRADE/BAG_G 8행 · GRADE_ROLL_EQ 8행(55/75 해금)
+ *   [B] 등급 상수 — GRADE 8단(초월·불멸) · REFUND/SUM_CARD/WGRADE/BAG_G 8행 · GRADE_ROLL_EQ 8행(20/24 해금 — 196)
  *   [C] 최고 등급 판정 — topG: 장비 g7 만 top, g6 은 아님 · «신화 스킬 = MAX» 유지(비장비는 5 가 top)
  *   [D] 확률 — 장비 배너 Lv100 에서 g6·g7 > 0, 합 = 1 · 스킬 배너는 g6·g7 = 0 (6행 표 유지)
  *   [E] 소환 시뮬 — 무기 10연 ×300 (Lv100) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
@@ -86,9 +86,11 @@ const ok = (b, name, detail) => {
   ok(B.m6 === 16 && B.m7 === 26, 'B2 mul 16·26 기하급수', B.m6 + '/' + B.m7);
   ok(B.refund === 8 && B.sumCard === 8 && B.wg === 8 && B.bag === 8, 'B3 REFUND·SUM_CARD·WGRADE·BAG_G 8행',
     [B.refund, B.sumCard, B.wg, B.bag].join('/'));
-  ok(B.rollEq === 8 && B.roll === 6 && B.u6 === 55 && B.u7 === 75, 'B4 장비 8행 표(55/75) · 공용 6행 유지',
+  /* 196 — 만렙 100 → 25 로 줄면서 해금 사다리가 5/8/12/16/**20/24** 로 옮겨졌다.
+     묻는 것은 그대로다 — «장비 배너는 8행 표를 쓰고 초월·불멸 해금이 만렙 밑에 있는가». */
+  ok(B.rollEq === 8 && B.roll === 6 && B.u6 === 20 && B.u7 === 24, 'B4 장비 8행 표(20/24) · 공용 6행 유지',
     'eq=' + B.rollEq + ' base=' + B.roll + ' unlock=' + B.u6 + '/' + B.u7);
-  ok(B.steps === '1,5,15,30,40,55,75,100', 'B5 PRB_STEPS_EQ 이정표', B.steps);
+  ok(B.steps === '1,5,8,12,16,20,24,25', 'B5 PRB_STEPS_EQ 이정표 (196)', B.steps);
 
   /* [C] 최고 등급 판정 */
   const C = await page.evaluate(() => ({

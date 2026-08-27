@@ -14110,15 +14110,19 @@ const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/
    ⓒ 소진 순서는 «무광고 먼저» 다(useFreeSum). 그래야 뱃지가 «있다 → 없다» 로 뒤집히지 않는다. */
 const SHOP_NOAD = 1;   /* 상자별 하루 «광고 없이» 소환 횟수 (SHOP_FREE 안에서 앞의 n 회) */
 
-/* 소환 레벨 1~100 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
-const SUM_MAXLV = 100;
+/* 소환 레벨 1~25 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
+/* 작업 196 (2026-08-27, 저장소 주인 지시) — 소환 만렙 **100 → 25**, 필요 경험치는 주인 확정표.
+   ⚠ 해금 사다리를 같이 옮기지 않으면 «전설 이상이 영원히 안 나온다»(구 해금 30·40·55·75 가 전부
+   새 만렙 25 를 넘는다). 주인 지시의 예시 사다리 **5 / 8 / 12 / 16 / 20 / 24** 를 그대로 쓴다
+   (희귀5 · 영웅8 · 전설12 · 신화16 · 초월20 · 불멸24 — 불멸만 만렙 직전 1레벨 램프다). */
+const SUM_MAXLV = 25;
 const GRADE_ROLL = [
   { unlock:1,  p0:0.80, p1:0.05 },
   { unlock:1,  p0:0.20, p1:0.15 },
   { unlock:5,  p0:0.00, p1:0.30 },
-  { unlock:15, p0:0.00, p1:0.25 },
-  { unlock:30, p0:0.00, p1:0.15 },
-  { unlock:40, p0:0.00, p1:0.10 }
+  { unlock:8,  p0:0.00, p1:0.25 },
+  { unlock:12, p0:0.00, p1:0.15 },
+  { unlock:16, p0:0.00, p1:0.10 }
 ];
 /* 85 — 장비 배너(무기·방패·목걸이)가 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
    106 — **동료 배너도 같은 8행 표**(지시 ③ «소환 확률표는 85 의 8행 표를 그대로 재사용, Lv 해금 동일»).
@@ -14129,18 +14133,24 @@ const GRADE_ROLL = [
      실효 = p1 / (Σ다른행 p1 + p1) = TARGET   →   p1 = TARGET × Σ다른행 p1 / (1 − TARGET)
    Σ다른행 p1 = 1.00(6행 표) + 0.06(초월) = 1.06 → p1 = 0.001 × 1.06 / 0.999 ≈ 0.00106106
    (옛 값 p1 = 0.03 은 실효 0.03/1.09 ≈ **2.75%** 로 지시의 27배였다.)
-   해금 Lv75 는 그대로 — 75→100 구간은 t^0.9 로 0 에서 0.1% 까지 단조 상승한다.
+   해금 Lv 는 196 에서 **24** 로 내려왔다(만렙 25) — 24→25 구간을 t^0.9 로 0 에서 0.1% 까지 오른다.
+   실효 0.1% 라는 «만렙 종점» 자체는 만렙 값이 바뀌어도 그대로다(아래 식은 레벨을 안 쓴다).
    ⚠ 값을 손으로 적지 말 것: 6행 표나 초월 가중치가 바뀌면 아래 식이 자동으로 따라간다(LESSONS 106-1). */
 const TRANSCEND_P1   = 0.06;     /* 초월 가중치 — 115 에서는 미변경(② 제안만, 주인 확인 대기) */
 const IMMORTAL_P_MAX = 0.0010;   /* ★ 불멸 «목표 실효 확률» @ 만렙 = 0.10% */
 const IMMORTAL_P1 = IMMORTAL_P_MAX * (GRADE_ROLL.reduce((a, g) => a + g.p1, 0) + TRANSCEND_P1)
                     / (1 - IMMORTAL_P_MAX);
 const GRADE_ROLL_EQ = GRADE_ROLL.concat([
-  { unlock:55, p0:0.00, p1:TRANSCEND_P1 },
-  { unlock:75, p0:0.00, p1:IMMORTAL_P1 }
+  { unlock:20, p0:0.00, p1:TRANSCEND_P1 },
+  { unlock:24, p0:0.00, p1:IMMORTAL_P1 }
 ]);
 const rollOf = b => BANNERS[b].g8 ? GRADE_ROLL_EQ : GRADE_ROLL;
-const sumNeedExp = lv => 5 + (lv-1)*4;
+/* 196 — 필요 경험치는 «식» 이 아니라 **주인 확정표**다. 표는 Lv1→2 부터 Lv16→17 까지 16칸이고,
+   그 뒤(Lv17~24)는 마지막 값 5,000 을 유지한다. 경험치 1 = 소환 1회(`sumAddExp(b, times)`)이므로
+   만렙까지 총 **76,450 회** 다(표 합 36,450 + 5,000×8). Lv25 는 만렙이라 need 를 읽지 않는다. */
+const SUM_EXP_TABLE = [50, 200, 500, 800, 1200, 1500, 1800, 2100, 2300, 2600,
+                       3000, 3300, 3600, 4000, 4500, 5000];
+const sumNeedExp = lv => SUM_EXP_TABLE[Math.min(Math.max(lv | 0, 1), SUM_EXP_TABLE.length) - 1];
 
 /* ---- 컬렉션(도감) — 작업 91 (2026-08-26, 저장소 주인 지시) : «부위 × 등급 세트» 단위로 전면 교체 ----
    구 구조(카테고리 4개 × «보유 종 수 ≥ need → 티어») 는 **폐기**한다.
@@ -14790,6 +14800,19 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
+    /* 196 — 소환 만렙 100 → 25. 구 세이브의 `sum[b].lv` 는 25 를 넘을 수 있으므로 클램프한다
+       (44 교훈 2 — KEY 는 올리지 않는다. 저장 «구조» 는 `{lv,exp}` 그대로고 값만 새 상한으로 잘린다).
+       ⓐ lv 는 1~SUM_MAXLV ⓑ 만렙이면 exp = 0(`sumAddExp` 와 같은 규약이라 바가 MAX 로 찍힌다)
+       ⓒ 그 밖에는 `need` 미만으로 자른다 — 구 곡선(need 5~401)에서 쌓인 exp 는 새 표(50~5000)
+       아래라 실제로 깎이는 세이브는 없지만, 손댄 세이브가 need 를 넘겨 오면 채움률이 1000% 로
+       찍히므로 여기서 한 번 못박는다. 두 번 돌아도 결과가 같다(멱등). */
+    BKEYS.forEach(k => {
+      const s = (b.sum[k] && typeof b.sum[k] === 'object') ? b.sum[k] : {};
+      const lv = Math.min(SUM_MAXLV, Math.max(1, Number.isFinite(s.lv) ? Math.floor(s.lv) : 1));
+      let exp = (Number.isFinite(s.exp) && s.exp > 0) ? Math.floor(s.exp) : 0;
+      exp = (lv >= SUM_MAXLV) ? 0 : Math.min(exp, sumNeedExp(lv) - 1);
+      b.sum[k] = { lv, exp };
+    });
     /* 194 — 강화석·코스튬 강화 레벨. 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
        구 세이브엔 두 키가 없다 → 강화석 0 · 전 코스튬 Lv 0 에서 시작한다(보유 코스튬은 그대로).
        레벨은 **실재하는 코스튬 id 만** 남기고 0~COS_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
@@ -22201,8 +22224,14 @@ $('eqCards').addEventListener('click', e => {
    확률은 실제 소환 로직(gradeProbs → 등급확률, 등급 내 균등 추첨)에서 그대로 계산한다.
    ◀▶ 로 «단계»(= 소환 레벨 이정표 1·5·15·30·40·100)를 넘겨 등급 해금·확률 변화를 열람한다.
    ========================================================================== */
-const PRB_STEPS    = [1, 5, 15, 30, 40, SUM_MAXLV];             /* 각 등급 해금 레벨 + 만렙 */
-const PRB_STEPS_EQ = [1, 5, 15, 30, 40, 55, 75, SUM_MAXLV];     /* 85 — 장비 배너는 초월 55·불멸 75 이정표 포함 */
+/* 196 — 이정표를 손으로 적지 않는다. 해금 사다리가 바뀔 때마다(85 → 106 → 196) 이 두 줄이
+   따로 굳어 «표는 옮겼는데 팝업은 옛 레벨» 이 되기 쉬웠다 → **표에서 그대로 뽑는다**.
+   = 각 등급의 해금 레벨(중복 제거) + 만렙. 6행 6개 · 8행 8개는 그대로다. */
+const prbStepsOf = roll => roll.map(g => g.unlock).filter((v, i, a) => a.indexOf(v) === i)
+                               .concat(SUM_MAXLV).filter((v, i, a) => a.indexOf(v) === i)
+                               .sort((a, b) => a - b);
+const PRB_STEPS    = prbStepsOf(GRADE_ROLL);      /* 각 등급 해금 레벨 + 만렙 */
+const PRB_STEPS_EQ = prbStepsOf(GRADE_ROLL_EQ);   /* 85 — 장비 배너는 초월·불멸 이정표 포함 */
 const prbSteps = () => BANNERS[prbBank].g8 ? PRB_STEPS_EQ : PRB_STEPS;   /* 106 — 동료 배너도 8행 표(g8) */
 let prbBank = 'weapon', prbStep = 0;
 /* 특정 레벨 L 에서의 등급별 확률(소환 로직과 동일 공식, L 을 명시적으로 받음) */
