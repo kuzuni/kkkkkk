@@ -12537,7 +12537,10 @@
      그래서 간격을 상수로 적지 않고 **등속 속도에서 역산**한다 — 게이트가 매 실행 다시 계산해 대조한다.
      («스트라이드 2회» 는 이 이동 거리에서 발 속도와 양립하지 않는다: 2바퀴엔 1,472px 가 필요하다.) */
   var LD_FOOT  = 7.67;  /* run 프레임당 접지발 이동(src px) — 아틀라스 실측 */
-  var LD_RUNMS = Math.round(LD_FOOT * LD_SC / (Math.abs(LD_X0) * LD_CRZD / (LD_RUN * LD_CRZ)));
+  var LD_STEP  = LD_FOOT * LD_SC;   /* ★ 프레임 한 장이 감당하는 **이동 거리**(px). 케이던스의 진짜 단위다 */
+  /* 아래는 «등속 구간에서 그 거리를 가는 데 걸리는 시간» — 이제 **표시·게이트용 파생값**이고
+     프레임 선택에는 안 쓴다(4회차에 거리 기준으로 바꿨다). */
+  var LD_RUNMS = Math.round(LD_STEP / (Math.abs(LD_X0) * LD_CRZD / (LD_RUN * LD_CRZ)));
 
   var LD_ARC   = 20;    /* 상하 아치(px). ★ **주기뿐 아니라 «위상» 까지 스프라이트에 맞춰야 한다.**
                            아틀라스 바닥행 실측(3회차 비평 E): f0 = 발끝 2px · f1 = 발바닥 전체 9px ·
@@ -12634,14 +12637,23 @@
     /* 아치 — 등속 구간에서 **두 번** 뛴다(접지 2회). 감속 구간(뒤 25%)은 0 = 발이 붙은 채로 선다 */
     var arc = 0;
     if (p < LD_CRZ) {                              /* 감속 구간은 발이 붙은 채로 선다 */
-      var u = (t % (LD_RUNMS * 4)) / (LD_RUNMS * 4);
+      /* 아치도 **거리 기준**이다 — 프레임 인덱스와 같은 자로 재야 «딛는 프레임에서 arc=0» 이 유지된다 */
+      var d = (Math.abs(LD_X0) - Math.abs(ldAt(t))) / (LD_STEP * 4);
+      var u = d - Math.floor(d);
       if (u >= LD_AIR) arc = -Math.round(LD_ARC * Math.sin(Math.PI * (u - LD_AIR) / (1 - LD_AIR)));
     }
     /* 착지 스쿼시 — 그림자와 **몸통 둘 다**. 세로로 눌리고 가로로 퍼진다 */
     var k = p < 1 ? 0 : Math.max(0, 1 - (t - ldRun) / LD_SQ);
     if (cv && A && A.image && A.a) {
       var run = A.a.run, idle = A.a.idle;
-      var frame = p < 1 ? run[Math.floor(t / LD_RUNMS) % run.length]
+      /* ★ 달리기 프레임은 **시간이 아니라 이동 거리**로 뽑는다(4회차 비평 G).
+         `floor(t / LD_RUNMS)` 는 등속 구간에서는 맞지만 **감속 구간에서 그대로 트레드밀**이 된다 —
+         몸은 느려지는데 다리 케이던스가 61ms 로 고정이라 마지막 세 프레임에서 미끄럼이
+         23.6% → 62.0% → 90.6%(합 120px = 등장의 14.1%)까지 벌어졌다.
+         거리 기준으로 뽑으면 «LD_STEP(=7.67×배율=92px) 갈 때마다 한 장» 이라 케이던스가
+         몸속도를 자동으로 따라간다 — 멈추면 다리도 멈춘다. 재방문의 압축 경로(등속의 5배)도
+         같은 식으로 저절로 맞는다(시간 기준이었다면 프레임당 미끄럼이 439% 였다). */
+      var frame = p < 1 ? run[Math.floor((Math.abs(LD_X0) - Math.abs(x)) / LD_STEP) % run.length]
                         : idle[Math.floor((t - ldRun) / LD_IDMS) % idle.length];
       cv.style.transform = 'translate(' + x + 'px,' + arc + 'px) scale(' +
         (1 + LD_SQA * k).toFixed(3) + ',' + (1 - LD_SQA * k).toFixed(3) + ')';
@@ -12709,7 +12721,7 @@
   window.LD = {
     MIN: LD_MIN, RUN: LD_RUN, RUNMS: LD_RUNMS, IDMS: LD_IDMS, GRACE: LD_GRACE,
     FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, SQA: LD_SQA,
-    RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD, FOOT: LD_FOOT, AIR: LD_AIR,
+    RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD, FOOT: LD_FOOT, AIR: LD_AIR, STEP: LD_STEP,
     total: function () { return total; },
     at: ldAt,
     run: function () { return ldRun; },

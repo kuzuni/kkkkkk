@@ -109,7 +109,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   const K = await page.evaluate(() => ({
     MIN: LD.MIN, RUN: LD.RUN, GRACE: LD.GRACE, FADE: LD.FADE, X0: LD.X0, SC: LD.SC,
     RUNMS: LD.RUNMS, IDMS: LD.IDMS, RTAIL: LD.RTAIL, ARC: LD.ARC,
-    CRZ: LD.CRZ, CRZD: LD.CRZD, FOOT: LD.FOOT, AIR: LD.AIR,
+    CRZ: LD.CRZ, CRZD: LD.CRZD, FOOT: LD.FOOT, AIR: LD.AIR, STEP: LD.STEP,
     runFrames: ATLAS.knight.a.run.length,
     trans: Math.round(parseFloat(getComputedStyle(document.getElementById('loading')).transitionDuration) * 1000),
     atlas: Object.keys(ATLAS).length, total: LD.total()
@@ -124,12 +124,19 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      그려져 있는데 40ms 간격에서는 몸이 그 66% 만 나가, 프레임당 31px 씩 밀리고 등속 480ms 동안
      누적 282px(등장의 33%)가 미끄러졌다. 그래서 «요구 속도 = 실제 속도» 를 직접 잰다.
      («스트라이드 2회» 는 이 이동 거리에서 발 속도와 양립 불가 — 2바퀴엔 1,472px 가 필요하다.) */
-  const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);      /* px/ms */
-  const need = K.FOOT * K.SC / cruise;                            /* 한 프레임이 버텨야 하는 ms */
+  /* ★ 케이던스의 단위는 «시간» 이 아니라 «거리» 다(4회차 비평 G). 시간 기준이면 등속 구간만 맞고
+     **감속 구간에서 미끄럼이 23.6% → 62.0% → 90.6%** 로 벌어진다(몸은 느려지는데 다리는 61ms 고정).
+     거리 기준이면 멈출 때 다리도 멈춘다 — 재방문의 압축 경로(등속의 5배 속도)도 저절로 맞는다. */
+  eq('프레임 한 장의 이동 거리 = 접지발 이동 × 배율', Math.round(K.STEP * 100), Math.round(K.FOOT * K.SC * 100));
+  ok(/run\[Math\.floor\(\(Math\.abs\(LD_X0\) - Math\.abs\(x\)\) \/ LD_STEP\)/.test(SRC),
+    '★ 달리기 프레임을 **이동 거리**로 뽑는다(시간 기준이면 감속 구간이 트레드밀이 된다)');
+  ok(/var d = \(Math\.abs\(LD_X0\) - Math\.abs\(ldAt\(t\)\)\) \/ \(LD_STEP \* 4\)/.test(SRC),
+    '아치도 같은 «거리» 자로 재서 딛는 프레임의 arc=0 이 유지된다');
+  /* 등속 구간에서의 케이던스(파생값)가 스프라이트 요구와 맞는지도 같이 본다 */
+  const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);
+  const need = K.STEP / cruise;
   ok(Math.abs(K.RUNMS - need) / need <= .05,
-    `달리기 프레임 간격이 스프라이트의 발 속도와 맞는다 (요구 ${need.toFixed(1)}ms · 실제 ${K.RUNMS}ms · 오차 ${(Math.abs(K.RUNMS - need) / need * 100).toFixed(1)}%)`);
-  ok(/LD_RUNMS = Math\.round\(LD_FOOT \* LD_SC/.test(SRC),
-    '간격을 상수로 안 적고 **등속 속도에서 역산**한다(CSS·거리가 바뀌면 따라온다)');
+    `등속 구간 케이던스가 스프라이트 발 속도와 맞는다 (요구 ${need.toFixed(1)}ms · 파생 ${K.RUNMS}ms)`);
   ok(K.SC === Math.round(K.SC) && K.SC >= 10, `정수 배율이고 ≥10 (${K.SC}) — 1회차 5는 «캐릭터가 진행바보다 작다»`);
   /* 잘림 0 — 가장 큰 run/idle 프레임이 캔버스 안에 통째로 들어가는가(아틀라스에서 유도) */
   const fit = await page.evaluate(() => {
@@ -149,9 +156,9 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      «발이 바닥 2px 이내인 시간이 주기의 3.2%» 였다(비평 E). 접지 구간은 arc 가 정확히 0 이어야 한다. */
   ok(K.AIR > 0 && K.AIR < 1, `접지 비율 상수가 있다 (${K.AIR})`);
   const arcPhase = await page.evaluate(() => {
-    const P = LD.RUNMS * 4, out = [];
-    for (let i = 0; i < 40; i++) {
-      const t = P * i / 40, u = (t % P) / P;
+    const out = [];
+    for (let i = 0; i < 40; i++) {          /* 한 주기(4프레임 = LD_STEP×4 px) 를 거리로 훑는다 */
+      const u = i / 40;
       out.push({ u: +u.toFixed(3), grounded: u < LD.AIR,
         arc: u >= LD.AIR ? -Math.round(LD.ARC * Math.sin(Math.PI * (u - LD.AIR) / (1 - LD.AIR))) : 0 });
     }
