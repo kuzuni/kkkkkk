@@ -10,9 +10,25 @@
  *   ② 수렴 구간(첫 접촉 이후) 평균 거리 ≤ 사거리(e.r+player.r+6) + 50px
  *      — 전체 평균이 아니라 «수렴» 평균으로 본다. 보스는 플레이어 반경 300~700px 링(67)에 스폰하므로
  *        전체 평균에는 «아직 붙기 전» 의 스폰 거리가 통째로 섞인다.
- *   ③ 수렴 구간 «멀어지는 구간»(직전 표본보다 거리가 +2px 이상 늘어난 표본) < 10%
+ *   ③ 수렴 구간 «추격 표본» 중 멀어진 표본(직전 표본보다 거리가 +2px 이상 늘어난 표본) < 4%
+ *      — «추격 표본» = 표본 창(6프레임 = 0.1초) 안에 **공격 모션(`e.atkT > 0`)이 한 프레임도 없던** 표본.
+ *      — 추격 표본이 30개 미만이면 «③ 을 잴 표본이 없다» 로 FAIL (표본이 사라져서 통과하는 것을 막는다).
  *   ④ 30초 동안 보스 공격 ≥ 1회 (붙기만 하고 안 때리면 실패)
  *   ⑤ 콘솔 pageerror 0건
+ *
+ * ③ 이 «추격 표본만» 을 세는 이유 (작업 234 · 2026-08-27 — 233 의 처방을 그대로 옮겼다) ────────
+ * 원래 ③ 은 수렴 구간의 **모든** 표본에서 «직전보다 +2px 멀어졌나» 를 셌다. 그런데 66 이 넣은
+ * `if(e.atkT > 0 && d < e.r + player.r + 6) spd = 0`(index.html ~16372) 때문에 **공격 모션 0.45초 동안
+ * 보스는 설계대로 제자리에 서고**, 그 사이 카이팅(59)하는 플레이어만 움직여 거리가 벌어진다.
+ * 즉 그 표본의 «멀어짐» 은 추격이 밀린 것이 아니라 **지금 때리고 있다는 뜻**이다
+ * («때리는가» 는 ④ 공격 횟수 축이 이미 따로 잰다).
+ *   그래서 옛 ③ 은 **부호가 뒤집힌 자**였다 — 보스가 잘 붙어 공격이 늘수록 값이 올라간다.
+ *   실측(`tools/probe185away.js` · 승급 수호자 30초): away 표본의 **100%** 가 모션 걸친 표본이고,
+ *   모션이 없는 표본의 away 는 **0.0%**(모션 표본 171개 중 16.4% · 비모션 표본 128개 중 0.0%).
+ *   이 파일에서도 같은 병이 «뜨고 지는 FAIL» 로 났다 — 같은 트리 연속 2회에 12.5% FAIL → 9.3/9.4% PASS.
+ * 처방은 «문턱 완화» 가 아니라 **재정의**다(177-③ 계열). 옛 정의 값은 `convAwayRaw` 로 표에만 남기고
+ * 판정에서는 뺐다 — 그 값은 8.6~12.5% 로 10% 선을 걸치고 진동한다(그래서 간헐 FAIL 이었다).
+ * 자세한 근거는 `docs/review/233-verify172-멀어짐게이트재정의.md` · `docs/review/234-verify66-멀어짐게이트재정의.md`.
  *
  * 59 교훈 1 — 실시간 30초를 기다리지 않는다. rAF 를 가상 시계(고정 dt 1/60s)로 갈아끼워
  * CPU 속도로 돌린다. dt 고정이라 회차 간 재현성도 확보된다.
@@ -48,7 +64,8 @@ const SEC = Number(process.env.V66_SEC || 30);
 const STAGES = (process.env.V66_STAGES || '10,30').split(',').map(Number);
 const REF = process.env.V66_REF || '';
 const SLACK = 50;          /* ① 허용 여유 — 사거리 + 이 값 */
-const LIM_AWAY = 10;       /* ② 멀어지는 구간 상한 (%) */
+const LIM_AWAY = 4;        /* ③ «추격 표본» 멀어짐 상한 (%) — 234 에서 10 → 4 (재정의 뒤 실측이 전부 0.0%) */
+const MIN_CHASE = 30;      /* ③ 추격 표본 최소 개수 — 이보다 적으면 ③ 을 잰 것이 아니다 */
 const ROOT = path.resolve(__dirname, '..');
 
 /* 페이지 안에서 가상 rAF 로 보스전을 돌리며 보스↔플레이어 거리를 10Hz 로 샘플링 */
@@ -63,6 +80,9 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
   const NEAR = reach + 20;                        /* «붙었다» 판정 반경 */
   let n = 0, away = 0, near = 0, sumD = 0, maxD = 0, prev = null, noBoss = 0;
   let cn = 0, cAway = 0, cSum = 0, cPrev = null;  /* 수렴 구간(첫 접촉 이후) */
+  /* 234 — ③ 은 «추격 표본»(표본 창 안에 공격 모션이 한 프레임도 없던 표본)만 센다.
+     모션 중에는 보스가 서 있으라고 66 자신이 못 박아 둔 것이라, 그때 벌어진 거리는 추격의 실패가 아니다. */
+  let chN = 0, chAway = 0, atkSampN = 0, sawAtk = false;
   let tClose = -1;                                /* 첫 접촉까지 걸린 시간(초) */
   let sumSp = 0, spN = 0, atk = 0;                /* 보스 실제 이동 속도 평균 · 공격 시도 횟수 */
   let bx = null, by = null;
@@ -80,8 +100,9 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
     window.__v66tick();
     const b = enemies.find(e => e.tk === 'boss');
     if (b && cd0 !== null && b.cd > cd0) atk++;      /* 쿨다운이 «올라간» 프레임 = 공격 시작 */
+    if (b && b.atkT > 0) sawAtk = true;              /* 234 — 이 표본 창에 공격 모션이 걸쳤나 */
     if (f % sampleEvery === 0) {
-      if (!b) { noBoss++; prev = null; continue; }
+      if (!b) { noBoss++; prev = null; sawAtk = false; continue; }
       const d = Math.hypot(player.x - b.x, player.y - b.y);
       if (prev !== null && d > prev + 2) away++;
       prev = d;
@@ -90,18 +111,27 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
       n++;
       if (tClose >= 0) {                          /* 접근이 끝난 뒤 = «수렴» 구간 */
         cSum += d; cn++;
-        if (cPrev !== null && d > cPrev + 2) cAway++;
+        const isAway = cPrev !== null && d > cPrev + 2;
+        if (isAway) cAway++;
+        if (cPrev !== null) {                     /* 234 — 모션 걸친 표본은 분자·분모에서 «함께» 뺀다 */
+          if (sawAtk) atkSampN++;
+          else { chN++; if (isAway) chAway++; }
+        }
         cPrev = d;
       }
       if (bx !== null) { sumSp += Math.hypot(b.x - bx, b.y - by) / (sampleEvery / 60); spN++; }
       bx = b.x; by = b.y;
+      sawAtk = false;
     }
     if (f % 900 === 0) await new Promise(r => setTimeout(r, 0));
   }
   return {
     n, noBoss, reach, meanD: sumD / Math.max(1, n), maxD, tClose,
     away: away / Math.max(1, n) * 100, near: near / Math.max(1, n) * 100,
-    cn, convD: cn ? cSum / cn : Infinity, convAway: cn ? cAway / cn * 100 : 100, atk,
+    cn, convD: cn ? cSum / cn : Infinity, atk,
+    /* ③ 본체 — 추격 표본만. convAwayRaw 는 옛 정의(모션 표본 포함)로, 판정에는 안 쓰고 표에만 남긴다. */
+    chaseN: chN, convAway: chN ? chAway / chN * 100 : 100,
+    atkSampN, convAwayRaw: cn ? cAway / cn * 100 : 100,
     bossSp: sumSp / Math.max(1, spN), pSpeed: stat.speed, stage: S.stage,
   };
 };
@@ -160,7 +190,7 @@ function checkoutRef(sha) {
         process.stdout.write(`[·] ${t.tag} · stage ${st} · ${SEC}초 보스전 … `);
         const r = await runOne(browser, url, st);
         rows.push({ tag: t.tag, st, ...r });
-        console.log(`수렴거리 ${r.cn ? Math.round(r.convD) : '—'}px · 멀어짐 ${r.convAway.toFixed(1)}% · 접촉까지 ${r.tClose < 0 ? '없음' : r.tClose.toFixed(1) + 's'}`);
+        console.log(`수렴거리 ${r.cn ? Math.round(r.convD) : '—'}px · 추격 멀어짐 ${r.convAway.toFixed(1)}%(옛 정의 ${r.convAwayRaw.toFixed(1)}%) · 접촉까지 ${r.tClose < 0 ? '없음' : r.tClose.toFixed(1) + 's'}`);
         if (r.errs.length) console.log('    pageerror: ' + r.errs.slice(0, 3).join(' | '));
       }
     }
@@ -169,11 +199,11 @@ function checkoutRef(sha) {
     if (refFile) { try { fs.unlinkSync(refFile); } catch (e) {} }
   }
 
-  console.log('\n| 빌드 | stage | 표본 | 사거리 | 전체 평균 | 접촉까지 | 수렴 평균 | 수렴 멀어짐% | 붙어있음% | 최대거리 | 보스속도 | 플레이어속도 | 보스 공격 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('\n| 빌드 | stage | 표본 | 사거리 | 전체 평균 | 접촉까지 | 수렴 평균 | **추격 멀어짐%** | 추격 표본 | 모션 표본 | 옛 정의% | 붙어있음% | 최대거리 | 보스속도 | 플레이어속도 | 보스 공격 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rows)
     console.log(`| ${r.tag} | ${r.st} | ${r.n} | ${r.reach}px | ${Math.round(r.meanD)}px | ${r.tClose < 0 ? '—' : r.tClose.toFixed(1) + 's'} | `
-      + `${r.cn ? Math.round(r.convD) + 'px' : '—'} | ${r.convAway.toFixed(1)}% | ${r.near.toFixed(1)}% | ${Math.round(r.maxD)}px | `
+      + `${r.cn ? Math.round(r.convD) + 'px' : '—'} | **${r.convAway.toFixed(1)}%** | ${r.chaseN} | ${r.atkSampN} | ${r.convAwayRaw.toFixed(1)}% | ${r.near.toFixed(1)}% | ${Math.round(r.maxD)}px | `
       + `${Math.round(r.bossSp)}px/s | ${Math.round(r.pSpeed)}px/s | ${r.atk}회 |`);
 
   const fails = [];
@@ -182,7 +212,10 @@ function checkoutRef(sha) {
     if (r.n < SEC * 10 * 0.8) fails.push(`stage ${r.st}: 표본 부족 ${r.n} (보스 없음 ${r.noBoss})`);
     if (r.tClose < 0) fails.push(`stage ${r.st}: ${SEC}초 안에 사거리+20 안으로 «한 번도» 못 붙음`);
     else if (r.convD > r.reach + SLACK) fails.push(`stage ${r.st}: 수렴 구간 평균 거리 ${Math.round(r.convD)}px > 사거리+${SLACK} (${r.reach + SLACK}px)`);
-    if (r.convAway >= LIM_AWAY) fails.push(`stage ${r.st}: 수렴 구간 멀어짐 ${r.convAway.toFixed(1)}% ≥ ${LIM_AWAY}%`);
+    if (r.chaseN < MIN_CHASE)
+      fails.push(`stage ${r.st}: 추격 표본 ${r.chaseN} < ${MIN_CHASE} — ③ 을 잴 표본이 없다(모션 표본 ${r.atkSampN})`);
+    else if (r.convAway >= LIM_AWAY)
+      fails.push(`stage ${r.st}: 수렴 구간 «추격» 표본 멀어짐 ${r.convAway.toFixed(1)}% ≥ ${LIM_AWAY}% (추격 표본 ${r.chaseN} · 모션 표본 ${r.atkSampN} 제외 · 옛 정의로는 ${r.convAwayRaw.toFixed(1)}%)`);
     if (r.atk < 1) fails.push(`stage ${r.st}: 보스가 ${SEC}초 동안 «공격을 한 번도» 하지 않음`);
   }
   if (fails.length) { fails.forEach(f => console.log('  ✗ ' + f)); console.log('\nV66 FAIL'); process.exit(1); }
