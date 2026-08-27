@@ -13755,6 +13755,51 @@ function tinted(key, color){
   return c;
 }
 
+/* 작업 243 — «가로 잉크 앵커» 보정 `xo`. 178 이 세로(`yo` = 발밑 여백)로 고친 것과 **같은 병의 가로 짝**이다.
+   drawFrame 의 x 앵커는 «논리 프레임 가운데» 인데, 트림된 잉크가 그 칸 안에서 한쪽으로 쏠려 있는
+   아트가 있다(elves green_idle 은 265px 칸 안에서 +72.5px 오른쪽 · knight idle 은 79px 칸 안에서
+   −12.5px 왼쪽). 그러면 그림자·판정원은 `e.x` 에, 그림은 그 옆에 선다. 원래 크기에서는 십수 px 이라
+   안 보이지만 **배율에 정비례**해 커진다(28 스테이지 보스 = 잉크 폭의 60%). 게다가 `flip` 은 이 쏠림을
+   반대로 뒤집으므로, 방향을 트는 순간 스프라이트가 쏠림의 **2배**만큼 순간이동한다(기사 249px).
+   79·80 `drawHeroTo` 와 163 로딩 씬은 이미 각자 `c0`(idle 0프레임 잉크 중심)로 이 보정을 하고
+   있었다 — 그 식을 그대로 공용으로 올린다.
+   ⚠ **그리기 전용이다** — `e.x`·판정 반경·깊이 정렬·AI·그림자는 한 줄도 안 바뀐다(178 `yo` 규약).
+   ⚠ 기준은 **캐릭터마다 하나**다(아틀라스 통짜도, 애니마다도 아니다).
+     - 통짜로 잡으면 elves 한 장에 든 blue/green 두 캐릭터 중 한쪽이 135px 밀린다.
+     - 애니마다 잡으면 «애니 사이의 진짜 움직임» 이 지워진다 — 기사 `attack_B` 0프레임은 idle 보다
+       5px 앞으로 내밀고 시작하는데, 애니 기준이면 그 내지름이 0 으로 깎인다.
+     그래서 «논리 칸(fr[6]×fr[7])이 같은 애니 = 같은 캐릭터» 로 묶는다. 원본 시트가 다르면 칸이
+     다르다(elves blue 235×138 vs green 265×134 · 좀비 walk 256×251 vs Death 352×466 — 좌표계가
+     아예 따로라 묶으면 안 되는 것들이 정확히 갈린다). 묶음의 기준 애니는 **서 있는 자세**를 고른다
+     (idle → walk → run → fly → anim 순, 없으면 첫 애니).
+   ⚠ 애니 **안**의 흔들림과 애니 **사이**의 움직임은 둘 다 그대로 살아 있다 — 빠지는 것은 캐릭터마다
+     상수 하나뿐이다(elves 가 쓰러지며 왼쪽으로 눕는 `die` 는 그대로 눕는다).
+   ⚠ 보정은 `ctx.scale(-1,1)` **뒤** 좌표에 더한다 — 뒤집힌 공간의 0 은 월드에서도 0 이라 부호가
+   저절로 맞는다(앵커 `x` 쪽에 더했다면 flip 마다 부호를 뒤집어야 한다). */
+const frXoCache = {};
+const XO_REST = [/idle/i, /walk/i, /run/i, /fly/i, /^anim$/i];
+function frameXo(key, A){
+  let m = frXoCache[key];
+  if(m) return m;
+  m = frXoCache[key] = {};
+  const an = A.a || {}, cell = {};
+  for(const g in an){
+    const f0 = an[g] && A.f[an[g][0]];
+    if(!f0) continue;
+    const ck = f0[6] + 'x' + f0[7];
+    (cell[ck] || (cell[ck] = [])).push(g);
+  }
+  for(const ck in cell){
+    const gs = cell[ck];
+    let ref = gs[0];
+    for(const rx of XO_REST){ const hit = gs.find(g => rx.test(g)); if(hit){ ref = hit; break; } }
+    const f0 = A.f[an[ref][0]];
+    const c0 = f0[6]/2 - f0[4] - f0[2]/2;
+    for(const g of gs) for(const fn of an[g]) m[fn] = c0;
+  }
+  return m;
+}
+
 /* 프레임 그리기 (기준점 = 발밑) */
 function drawFrame(key, frameName, x, y, scale, flip, alpha, img){
   const A = ATLAS[key];
@@ -13763,16 +13808,18 @@ function drawFrame(key, frameName, x, y, scale, flip, alpha, img){
   if(!src) return false;
   const fr = A.f[frameName];
   if(!fr) return false;
+  const xo = frameXo(key, A)[frameName] || 0;
   ctx.save();
   if(alpha !== undefined && alpha < 1) ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   if(flip) ctx.scale(-1, 1);
   ctx.drawImage(src, fr[0], fr[1], fr[2], fr[3],
-    -fr[6]*scale/2 + fr[4]*scale, -fr[7]*scale + fr[5]*scale, fr[2]*scale, fr[3]*scale);
+    (-fr[6]/2 + fr[4] + xo)*scale, -fr[7]*scale + fr[5]*scale, fr[2]*scale, fr[3]*scale);
   ctx.restore();
   return true;
 }
-/* 중앙 기준 (펫·이펙트) */
+/* 중앙 기준 (펫·이펙트) — 243 의 가로 보정은 여기도 같다(펫 robo 는 잉크 폭의 16% 밀려 있었다).
+   폭발·미사일처럼 트림이 대칭인 아트는 `xo` 가 0 이라 한 줄도 안 바뀐다. */
 function drawFrameC(key, frameName, x, y, scale, flip, alpha, img){
   const A = ATLAS[key];
   if(!A) return false;
@@ -13780,12 +13827,13 @@ function drawFrameC(key, frameName, x, y, scale, flip, alpha, img){
   if(!src) return false;
   const fr = A.f[frameName];
   if(!fr) return false;
+  const xo = frameXo(key, A)[frameName] || 0;
   ctx.save();
   if(alpha !== undefined && alpha < 1) ctx.globalAlpha = alpha;
   ctx.translate(x, y);
   if(flip) ctx.scale(-1, 1);
   ctx.drawImage(src, fr[0], fr[1], fr[2], fr[3],
-    -fr[6]*scale/2 + fr[4]*scale, -fr[7]*scale/2 + fr[5]*scale, fr[2]*scale, fr[3]*scale);
+    (-fr[6]/2 + fr[4] + xo)*scale, -fr[7]*scale/2 + fr[5]*scale, fr[2]*scale, fr[3]*scale);
   ctx.restore();
   return true;
 }
