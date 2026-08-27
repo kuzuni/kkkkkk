@@ -87,11 +87,23 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       const u = DUN_UI[did];
-      return { seen: !!b, atlas: b && b.T.atlas, want: u && u.thk, hpk: b ? b.max / dunRun.need : null, bossIn: dunRun.bossIn };
+      /* 257 — 보스가 여럿인 던전이 생겼다. 체력은 **머릿수로 나뉜** 값이고 총량만 0.3 이다
+         (index.html «결정 ②» — 수는 연출 축이지 난이도 축이 아니다). 그래서 이 절은
+         «1마리 = 0.3» 이 아니라 «1마리 = 0.3/bn · 동시 등장 합 = 0.3» 을 잰다. */
+      const bs = enemies.filter((e) => e.tk === 'dunboss');
+      return { seen: !!b, atlas: b && b.T.atlas, want: u && u.thk,
+               hpk: b ? b.max / dunRun.need : null,
+               bn: dunRun.bossN, mode: dunRun.bossMode, up: bs.length,
+               sumk: bs.reduce((s, e) => s + e.max, 0) / dunRun.need,
+               bossIn: dunRun.bossIn };
     }, [id]);
     r.seen ? ok(id + ' — 보스가 섰다 (' + r.atlas + ')') : no(id + ' — 보스가 안 선다');
     is(id + ' — 보스 아틀라스 = 카드 썸네일 아틀라스', r.atlas, r.want);
-    if (r.hpk != null) near(id + ' — 보스 체력 / 요구 피해', r.hpk, 0.3, 0.001);
+    if (r.hpk != null) near(id + ' — 보스 1마리 체력 / 요구 피해 (보스 ' + r.bn + '마리)', r.hpk, 0.3 / r.bn, 0.001);
+    /* 257 — «동시» 던전은 첫 국면에 bn 마리가 한꺼번에 서고 그 체력 합이 0.3 이다.
+       «페이즈» 는 1마리씩이라 합이 0.3/bn 이고, 나머지는 잡을 때마다 뒤에 선다([C] 가 잰다). */
+    is(id + ' — 첫 국면 등장 수 (' + r.mode + ')', r.up, r.mode === 'all' ? r.bn : 1);
+    near(id + ' — 첫 국면 보스 체력 합 / 요구 피해', r.sumk, r.mode === 'all' ? 0.3 : 0.3 / r.bn, 0.001);
     is(id + ' — bossIn 깃발이 섰다', r.bossIn, true);
     await cleanup();
   }
@@ -113,16 +125,29 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       if (!b) return { err: '보스 없음' };
+      /* 257 — «전부» 잡아야 클리어다. 한 마리를 잡고도 깃발이 서면 안 되고(아래 mid),
+         남은 마리(동시는 필드에, 페이즈는 다음 국면)를 마저 잡으면 그때 선다. */
+      const bn = dunRun.bossN;
       killEnemy(b);
+      const mid = !!(dunRun && dunRun.bossDown);       /* 1마리째 격파 직후의 깃발 */
+      for (let g = 0; g < 400 && dunRun && !dunRun.bossDown; g++) {
+        const nb = enemies.find((e) => e.tk === 'dunboss');
+        if (nb) { killEnemy(nb); continue; }
+        dunBossTick();                                 /* 페이즈 — 다음 보스를 세운다 */
+        spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
+        step(1 / 60);
+      }
       const down = !!(dunRun && dunRun.bossDown);
       step(1 / 60);                                   /* 판정은 step() 던전 분기가 한다 */
       giveReward = origGive;
       const rw = d.rw(f0), key = Object.keys(rw)[0];
-      return { down, run: !!dunRun, f1: S.dun[did],
+      return { down, mid, bn, run: !!dunRun, f1: S.dun[did],
                rwKey: key, paid: paid ? paid[key] : null, want: rw[key],
                cls: document.getElementById('app').classList.contains('dunrun') };
     }, [id, p.f]);
     if (r.err) { no(id + ' — ' + r.err); await cleanup(); continue; }
+    /* 257 — 보스가 여럿인 던전은 1마리째 격파로 클리어되면 안 된다(«전부 잡아야 클리어») */
+    is(id + ' — 1마리째 격파로는 안 끝난다 (보스 ' + r.bn + '마리)', r.mid, r.bn <= 1);
     is(id + ' — 격파가 bossDown 깃발을 세운다', r.down, true);
     is(id + ' — 격파 다음 틱에 런이 끝난다', r.run, false);
     is(id + ' — .dunrun 해제', r.cls, false);

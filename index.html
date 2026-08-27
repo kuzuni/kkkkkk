@@ -15801,6 +15801,10 @@ const BOSS_SEC = 30;                                  /* 보스전 제한 시간
    1.08 은 붙은 뒤 «공격 모션 0.45초 정지» 로 벌어지는 간격도 되따라잡는 최소값이다.
    더 올리면(1.15) 오히려 플레이어를 지나쳐 스쳐 지나가는 구간이 늘어 «멀어짐» 이 9.6% 로 튄다. */
 const BOSS_CHASE = 1.08;
+/* 257 — «단독 개체» 끼리의 분리 계수. 몹의 2.9 보다 약하게 둬 추격 성분이 계속 우세하게 한다
+   (그래야 66 이 고친 «반대편으로 도망치는 것처럼 보이는» 병이 다중 보스에서 되살아나지 않는다).
+   필드에 단독 개체가 하나뿐이면 걸리는 힘이 0 이라 1마리 던전의 거동은 불변이다. */
+const BOSS_SEP = 1.2;
 /* 172(2026-08-27, 주인 보고 «보스가 뒤로 밀리는 건지 플레이어 반대편으로 자꾸 가더라») —
    66 이 만든 «직진 추격» 예외가 `tk === 'boss'` **한 종에만** 걸려 있었다. 등재문 ① 대로
    스폰 경로별 tk 를 전수로 훑으니 1:1 단독 개체가 둘 더 있고, 둘 다 예외가 «안 걸려» 있었다:
@@ -17276,8 +17280,13 @@ function killEnemy(e){
   else if(e.tk === 'dunboss'){
     cam.shake = 12; bossKillSfx();
     /* 255 — **보스 격파 = 던전 클리어**. 여기서 endDunRun 을 직접 부르지 않고 깃발만 세운다
-       (step() 던전 분기가 받는다 — 위 162 와 같은 이유). 탑은 옛 판정이라 깃발을 안 세운다. */
-    if(dunRun && !isTower(dunRun.d)) dunRun.bossDown = true;
+       (step() 던전 분기가 받는다 — 위 162 와 같은 이유). 탑은 옛 판정이라 깃발을 안 세운다.
+       257 — 보스가 여럿인 던전은 **전부 잡아야** 클리어다. 격파 수를 먼저 세고, 마지막 한 마리에서만
+       깃발이 선다(남은 보스는 «동시» 면 이미 필드에 있고, «페이즈» 면 dunBossTick 이 다음을 세운다). */
+    if(dunRun){
+      dunRun.bossKilled++;
+      if(!isTower(dunRun.d) && dunRun.bossKilled >= dunRun.bossN) dunRun.bossDown = true;
+    }
   }
   /* 208 ③ — 승급 수호자도 «보스 크기» 가 됐으므로 처치 대접을 같이 받는다(흔들림 + 처치음 +
      메인 BGM 복귀). 스테이지 진행·파밍 플래그는 건드리지 않는다 — 승급전은 스테이지와 무관하고
@@ -17726,13 +17735,19 @@ function step(dt){
       makeEnemy(tk); spawnQ.splice(i,1);
       /* 108 — 67 의 등장 팬·줌·hold 는 폐기(주인 지시). 남는 것은 78 의 등장음·보스 BGM 뿐이다.
          46 레이드 샌드백(startRaid 가 makeEnemy 를 직접 부른다)은 큐를 타지 않으므로 여기서 걸리지 않는다 */
-      if(isBossKind(tk) && !raidOn) bossInSfx(enemies[enemies.length-1]);
+      /* 257 — 동시 등장(2·3마리)은 같은 프레임에 여럿이 선다. 등장음·보스 BGM 은 **첫 마리에서만**
+         울린다 — 3중으로 겹치면 78 오디오의 «등장음 1회» 규격이 깨진다(볼륨이 3배로 튄다). */
+      if(isBossKind(tk) && !raidOn
+         && !(tk === 'dunboss' && enemies.filter(e => e.tk === 'dunboss').length > 1))
+        bossInSfx(enemies[enemies.length-1]);
       /* 178 — 던전 보스의 체력만 스테이지 곡선이 아니라 «그 던전의 요구 피해» 에서 나온다.
          eHp(S.stage) 로 두면 같은 던전이 저스테이지에서는 벽, 고스테이지에서는 즉사가 된다
          (요구 피해 need 는 스테이지와 무관하게 층으로 정해지기 때문이다 — 30 §밸런스). */
+      /* 257 — 보스가 여럿이면 그 체력을 **머릿수로 나눈다**. 총량 `need × DUN_BOSS_HPK` 는
+         수·방식과 무관하게 같다(결정 ②) — 255 가 18/18 로 맞춰 둔 난이도를 보존한다. */
       if(tk === 'dunboss' && dunRun){
         const b = enemies[enemies.length-1];
-        b.hp = b.max = Math.max(1, dunRun.need * DUN_BOSS_HPK);
+        b.hp = b.max = Math.max(1, dunRun.need * DUN_BOSS_HPK / dunRun.bossN);
       }
     }
   }
@@ -17955,6 +17970,22 @@ function step(dt){
         if(od > 0.01 && od < md){ const w = (md-od)/md; ax += ox/od*w*2.9; ay += oy/od*w*2.9; }
       }
     }
+    /* 257 — 동시 등장 보스끼리만 미는 분리. 무리 몹과의 분리는 여전히 꺼 둔다(66/172 의 직진 추격) —
+       그래서 **필드에 단독 개체가 하나뿐이면 이 루프의 힘은 정확히 0** 이고 보스 1마리 던전·
+       스테이지 보스·승급 수호자·아레나의 거동은 한 줄도 달라지지 않는다(verify66·172 회귀).
+       계수는 몹의 2.9 보다 약한 1.2 — 추격이 계속 우세해야 «반대편으로 도망치는» 66 의 병이 안 돈다. */
+    if(isBoss){
+      for(let j=0;j<enemies.length;j++){
+        if(j === i) continue;
+        const o = enemies[j];
+        if(!SOLO_CHASER[o.tk]) continue;
+        const ox = e.x-o.x, oy = e.y-o.y;
+        const od = Math.hypot(ox, oy), md = e.r + o.r + 10;
+        /* 완전히 겹친 순간(od≈0)은 나눗셈이 죽으므로 인덱스로 갈리는 고정 방향으로 떼어 놓는다 */
+        if(od <= 0.01){ const a2 = (i - j) * 1.7; ax += Math.cos(a2)*BOSS_SEP; ay += Math.sin(a2)*BOSS_SEP; }
+        else if(od < md){ const w = (md-od)/md; ax += ox/od*w*BOSS_SEP; ay += oy/od*w*BOSS_SEP; }
+      }
+    }
     const al = Math.hypot(ax, ay) || 1;
     let spd = (isBoss ? Math.max(e.sp, stat.speed*BOSS_CHASE) : e.sp) * (e.slow > 0 ? 0.55 : 1);
     if(isBoss){
@@ -17968,6 +17999,26 @@ function step(dt){
     e.y += (ay/al)*spd * dt;
     e.x = clamp(e.x, e.r, WORLD.w-e.r);
     e.y = clamp(e.y, e.r, WORLD.h-e.r);
+    /* 257 — 겹침 «해소». 위의 조향력만으로는 부족하다 — 둘 다 같은 점(플레이어)을 향해 달리고,
+       사거리에 들면 공격 모션 중 `spd = 0` 으로 **얼어붙은 채** 겹쳐 선다(실측 minSep 0.17 =
+       중심 거리가 반지름 합의 17%, 사실상 한 마리로 보인다). 그래서 위치를 직접 떼어 놓는다.
+       ⚠ 미는 대상은 **단독 개체끼리만**이고, 절반씩 나눠 밀므로 필드에 하나뿐이면 아무 일도
+       일어나지 않는다(스테이지 보스·승급 수호자·아레나·보스 1마리 던전 = 좌표 불변). */
+    if(isBoss){
+      for(let j=0;j<enemies.length;j++){
+        if(j === i) continue;
+        const o = enemies[j];
+        if(!SOLO_CHASER[o.tk]) continue;
+        let ox = e.x-o.x, oy = e.y-o.y;
+        let od = Math.hypot(ox, oy);
+        const md = e.r + o.r;
+        if(od >= md) continue;
+        if(od <= 0.01){ const a2 = (i - j) * 1.7; ox = Math.cos(a2); oy = Math.sin(a2); od = 1; }
+        const push = (md - od) / 2;
+        e.x = clamp(e.x + ox/od*push, e.r, WORLD.w-e.r);
+        e.y = clamp(e.y + oy/od*push, e.r, WORLD.h-e.r);
+      }
+    }
     e.flip = dx < 0;
 
     e.cd -= dt;
@@ -20643,6 +20694,11 @@ const DUN_BOSS_AT  = 10;     /* 시간 폴백(초). 45% 를 못 채워도 이만
    된다(0.2 는 보스가 형식이 된다). 30초 예산에서 가장 오래 걸린 판이 20.7초로 9초 남는다. */
 const DUN_BOSS_HPK = 0.3;
 const DUN_BOSS_DLY = 1.4;    /* 스폰 딜레이 — 28 startBoss 와 같은 값(등장음이 울릴 틈) */
+/* 257 — **2번째 이후** 페이즈 보스의 등장 딜레이. 첫 보스는 «몹 국면 → 보스 국면» 전환이라
+   등장음이 울릴 1.4초를 그대로 쓰지만, 페이즈 사이는 이미 보스 국면 안이라 그 틈이 필요 없다.
+   1.4 를 그대로 쓰면 3마리 던전에서 **때릴 대상이 없는 시간이 2.8초** 생겨 30초 예산을 깎는다
+   (255 실측 최장 판 20.7초 + 2.8 = 23.5초 — 여유가 6.5초로 준다). 0.5 면 1.0초로 줄어든다. */
+const DUN_PHASE_DLY = 0.5;
 /* 목표 높이 = **28 스테이지 보스의 그려진 높이**. 숫자를 손으로 적지 않고 아틀라스에서 잰다 —
    ETYPE.boss 의 배율·애니가 바뀌면 던전 보스도 같이 따라가야 하고, 손으로 적은 사본은 반드시
    그 순간 갈라진다(LESSONS 90-①). 두 쪽 다 «그 애니에서 가장 큰 프레임» 으로 재야 값이 맞는다
@@ -20691,8 +20747,19 @@ function dunBossFrame(u, anim){
   for(const n of list){ const f = A.f[n]; if(f && (!best || f[3] > best[3])) best = f; }
   return best;
 }
+/* 257 — 이 던전의 «보스 수 · 등장 방식». 표(`DUN_UI`)가 유일한 출처이고, 없는 값은
+   1마리·페이즈로 읽는다 = 이 표를 안 건드린 던전·탑의 거동은 256 이전과 한 줄도 다르지 않다.
+   ⚠ `dunBossN` 은 **런 밖에서도**(03 카드·04 세부·게이트) 부를 수 있어야 하므로 `dunRun` 을 안 본다. */
+const dunBossN  = d => clamp((DUN_UI[d && d.id] || {}).bn | 0 || 1, 1, 3);
+const dunBossMd = d => ((DUN_UI[d && d.id] || {}).bm === 'all' ? 'all' : 'phase');
+/* 동시에 필드에 서는 보스 수 — 공격력을 이 수로 나눠 «총 위협» 을 보스 1마리 때와 같게 둔다.
+   페이즈는 언제나 1마리씩이라 나눌 것이 없다(결정 ②). */
+const dunBossAtOnce = d => (dunBossMd(d) === 'all' ? dunBossN(d) : 1);
+/* 04 세부 팝업이 상태 리본 뒤에 붙이는 꼬리표. 보스가 하나면 **빈 문자열**이다. */
+const dunBossTag = d => (dunBossN(d) <= 1 ? ''
+  : ' · 보스 ' + dunBossN(d) + (dunBossMd(d) === 'all' ? ' (동시)' : ' (순차)'));
 /* 이 던전의 보스 ETYPE 항목. makeEnemy·이동·공격·시체·그리기가 전부 `ETYPE[tk]` 한 곳만
-   보므로 칸 하나를 갈아 끼우면 된다(런은 한 번에 하나뿐이라 칸도 하나면 충분하다). */
+   보므로 칸 하나를 갈아 끼우면 된다(한 런의 보스는 수가 몇이든 같은 종이라 칸도 하나면 충분하다). */
 function dunBossType(d){
   const u = DUN_UI[d.id] || DUN_UI.gold;
   const a = dunBossAnims(u), f = dunBossFrame(u, a.walk);
@@ -20702,15 +20769,22 @@ function dunBossType(d){
            r: f ? clamp(Math.round(f[2]*sc*bossRK()), 24, 90) : ETYPE.boss.r,
            /* 발밑 여백 보정 — 28 보스와 같은 만큼만 뜨게 «차이» 를 내린다(그리기 전용, 위 draw 주석) */
            yo: f ? Math.round(footGap(f, sc) - footGap(bossFrame(), ETYPE.boss.scale)) : 0,
-           sp: ETYPE.boss.sp, hp: ETYPE.boss.hp, dmg: DUN_BOSS_DMGK, gold: ETYPE.boss.gold,
+           sp: ETYPE.boss.sp, hp: ETYPE.boss.hp,
+           /* 257 — 동시 등장이면 «머릿수만큼» 접촉 빈도가 곱해진다. 178 이 DUN_BOSS_DMGK 를
+              «판당 사망·dmg/need 를 보스 없던 때와 같게» 로 실측해 잡았으므로, 그 총 위협을
+              보존하려면 동시에 서는 수로 나눠야 한다(결정 ②. 페이즈는 언제나 1이라 그대로다). */
+           dmg: DUN_BOSS_DMGK / dunBossAtOnce(d), gold: ETYPE.boss.gold,
            col: u.pt || ETYPE.boss.col };
 }
-/* 보스 한 마리를 예약한다. 처치되면 국면 판정이 다시 불러 «보스가 끊기지 않는» 후반부가 된다. */
-function spawnDunBoss(){
+/* 보스를 예약한다(257 — `n` 마리, `dly` 초 뒤). 178 까지는 언제나 «1마리 · 1.4초» 였다.
+   처치되면 국면 판정이 다시 불러 «보스가 끊기지 않는» 후반부가 된다. */
+function spawnDunBoss(n, dly){
   const r = dunRun; if(!r) return;
   ETYPE.dunboss = dunBossType(r.d);
   r.bossQ = true;
-  spawnQ.push({ t:'dunboss', delay:DUN_BOSS_DLY });
+  const k = Math.max(1, n | 0);
+  for(let i = 0; i < k; i++) spawnQ.push({ t:'dunboss', delay: dly > 0 ? dly : DUN_BOSS_DLY });
+  r.bossUp += k;                                    /* 지금까지 «세운» 보스 수(스폰 대기 포함) */
 }
 /* 매 프레임 국면 판정 — step() 의 던전 분기가 부른다 */
 function dunBossTick(){
@@ -20718,20 +20792,30 @@ function dunBossTick(){
   if(r.bossDown) return;                            /* 255 — 격파 깃발이 섰으면 이 틱에 런이 끝난다 */
   if(player.dead > 0) return;                       /* 부활 연출 중에는 새로 세우지 않는다 */
   if(!r.bossQ){
-    if(r.dmg >= r.need*DUN_BOSS_P || r.t <= DUN_SEC - DUN_BOSS_AT) spawnDunBoss();
+    /* 257 — 첫 국면. «한꺼번에» 던전은 여기서 `bn` 마리를 통째로 세우고, «페이즈» 는 1마리만 */
+    if(r.dmg >= r.need*DUN_BOSS_P || r.t <= DUN_SEC - DUN_BOSS_AT)
+      spawnDunBoss(r.bossMode === 'all' ? r.bossN : 1, DUN_BOSS_DLY);
     return;
   }
   const live = enemies.some(e => e.tk === 'dunboss') || spawnQ.some(q => q.t === 'dunboss');
   /* 255 — «보스가 필드에 실제로 섰다» 는 사실을 남긴다. 실패 통보(206)가 «미등장» 과
      «잡다 말았다» 를 구분하는 근거이고, 스폰 딜레이 1.4초 동안은 아직 선 것이 아니다. */
   if(live){ if(enemies.some(e => e.tk === 'dunboss')) r.bossIn = true; return; }
-  spawnDunBoss();                                   /* 탑(264 몫)은 격파해도 런이 안 끝나므로 다음 보스를 세운다 */
+  /* 257 — 필드가 비었다. 아직 안 세운 보스가 남았으면 **다음 페이즈**다(딜레이는 짧게). */
+  if(r.bossUp < r.bossN){ spawnDunBoss(1, DUN_PHASE_DLY); return; }
+  /* 탑(264 몫)은 격파해도 런이 안 끝나므로 «다시 한 바퀴» 를 세운다. 일반 던전은 여기 오지 않는다
+     — 마지막 보스를 잡은 그 틱에 killEnemy 가 bossDown 을 세워 위에서 걸러진다. */
+  r.bossUp = 0; r.bossKilled = 0;
+  spawnDunBoss(r.bossMode === 'all' ? r.bossN : 1, DUN_PHASE_DLY);
 }
 
 function startDunRun(d, f){
   if(dunRun || raidOn || arena) return;      /* 123 — 아레나 중에는 던전에 못 들어간다 */
-  /* 178 — bossQ = 보스 국면 시작 여부 · 255 — bossIn = 보스가 필드에 실제로 섰다 / bossDown = 격파(=클리어) */
-  dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage, bossQ:false, bossIn:false, bossDown:false, bossLeft:1 };
+  /* 178 — bossQ = 보스 국면 시작 여부 · 255 — bossIn = 보스가 필드에 실제로 섰다 / bossDown = 격파(=클리어)
+     257 — bossN = 이 던전의 보스 수 · bossMode = 등장 방식 · bossUp = 지금까지 세운 수 · bossKilled = 격파 수.
+     수·방식은 **런이 시작될 때 한 번** 표에서 굳힌다 — 런 도중에 데이터가 바뀌어도 판정이 흔들리지 않는다. */
+  dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage, bossQ:false, bossIn:false, bossDown:false, bossLeft:1,
+             bossN: dunBossN(d), bossMode: dunBossMd(d), bossUp:0, bossKilled:0 };
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -20748,7 +20832,10 @@ function startDunRun(d, f){
   msgTxt = ''; msgT = 0;
   closeDungeon();                                /* 03 던전 페이지가 뒤에 남아 화면을 덮지 않게 */
   /* 209 — 탑은 «레벨» 이 아니라 «층» 이다(03 카드·04 세부와 같은 낱말을 쓴다) */
-  $('dunTtl').textContent = d.n + (isTower(d) ? ' - ' + f + '층' : ' - 레벨 ' + f);
+  /* 257 — 타이틀은 «이름 - 레벨 n» 그대로이고, 보스가 둘 이상인 던전에만 남은 수 ●●○ 가 붙는다
+     (결정 ③). `bn === 1` 인 기존 8던전·탑은 문자열이 바이트 단위로 예전과 같다 = 30 측정표 무영향. */
+  dunTtlBase = d.n + (isTower(d) ? ' - ' + f + '층' : ' - 레벨 ' + f);
+  dunTtlPip = null;                                /* 다음 drawDunHud 가 반드시 한 번 쓰게 */
   $('app').classList.add('dunrun');
   drawDunHud();
   uiDirty = true;
@@ -20758,8 +20845,12 @@ function endDunRun(cleared, quit){
   const r = dunRun; if(!r) return;
   /* 255 — 실패 통보(206)가 쓸 «보스 체력이 얼마나 남았나» 를 여기서 걷는다.
      아래 spawnStage() 가 전장을 갈아엎으므로 finishDunRun 시점에는 보스 개체가 이미 없다. */
-  { const b = enemies.find(e => e.tk === 'dunboss');
-    r.bossLeft = r.bossDown ? 0 : (b && b.max > 0 ? clamp(b.hp/b.max, 0, 1) : 1); }
+  /* 257 — 보스가 여럿이면 «남은 체력» 도 **합** 이다(진행바와 같은 자). 아직 안 나온 페이즈 보스는
+     만피로, 잡은 보스는 0 으로 센다 — 3마리 중 2마리를 잡고 졌으면 «33% 남음» 이 된다. */
+  { const tot = r.need * DUN_BOSS_HPK, per = tot / Math.max(1, r.bossN);
+    let left = (r.bossN - r.bossKilled) * per;
+    for(const b of enemies) if(b.tk === 'dunboss' && b.max > 0) left -= (b.max - clamp(b.hp, 0, b.max));
+    r.bossLeft = r.bossDown ? 0 : (tot > 0 ? clamp(left/tot, 0, 1) : 1); }
   dunRun = null;
   /* 178 — 보스가 등장하면 bossInSfx 가 보스 BGM 으로 갈아 놓는다. 런을 나가면서 되돌리지 않으면
      메인 화면이 보스 트랙을 문 채로 남는다(28 failBoss 가 같은 이유로 같은 줄을 쓴다). */
@@ -20802,10 +20893,24 @@ function dunRunProg(){
   const r = dunRun; if(!r) return 0;
   if(isTower(r.d)) return clamp(r.dmg/r.need, 0, 1);
   if(r.bossDown) return 1;
-  const b = enemies.find(e => e.tk === 'dunboss');
-  /* 보스가 아직 안 섰으면(스폰 딜레이 포함) 앞 국면 — DUN_BOSS_P 에서 멈춘다 */
-  if(!b || !(b.max > 0)) return clamp(r.dmg/(r.need*DUN_BOSS_P), 0, 1) * DUN_BOSS_P;
-  return DUN_BOSS_P + (1 - DUN_BOSS_P) * clamp(1 - b.hp/b.max, 0, 1);
+  const live = enemies.filter(e => e.tk === 'dunboss' && e.max > 0);
+  /* 보스가 한 마리도 안 섰고 아직 하나도 못 잡았으면(스폰 딜레이 포함) 앞 국면 — DUN_BOSS_P 에서 멈춘다 */
+  if(!live.length && !r.bossKilled) return clamp(r.dmg/(r.need*DUN_BOSS_P), 0, 1) * DUN_BOSS_P;
+  /* 257 — 뒷 국면은 «보스 체력 **합**» 이다(결정 ③ — 던전 HUD 에는 체력바가 이 진행바 하나뿐이다).
+     아직 안 나온 페이즈 보스는 «満피» 로 세고, 잡은 보스는 0 으로 빠진다 — 그래서 바가 끝에
+     닿는 순간이 몇 마리짜리 던전이든 곧 클리어다. 총량은 수와 무관하게 need×HPK 다(결정 ②). */
+  const tot = r.need * DUN_BOSS_HPK, per = tot / r.bossN;
+  let left = (r.bossN - r.bossKilled) * per;
+  for(const b of live) left -= (b.max - clamp(b.hp, 0, b.max));
+  return DUN_BOSS_P + (1 - DUN_BOSS_P) * clamp(1 - left/tot, 0, 1);
+}
+/* 257 — 남은 보스 표기 «●●○». 보스가 하나뿐인 던전·탑에서는 **빈 문자열**이다. */
+let dunTtlBase = '', dunTtlPip = null;
+function dunPipTxt(r){
+  if(!r || r.bossN <= 1 || isTower(r.d)) return '';
+  let s = ' ';
+  for(let k = 0; k < r.bossN; k++) s += (k < r.bossKilled ? '○' : '●');
+  return s;
 }
 /* HUD 갱신 — drawHud() 가 매 프레임 부른다(28 의 drawBossHud 와 같은 자리) */
 function drawDunHud(){
@@ -20813,6 +20918,9 @@ function drawDunHud(){
   $('dunTmN').textContent = Math.max(0, dunRun.t).toFixed(1);
   $('dunBarF').style.width = (dunRunProg() * 574) + 'px';
   $('dunBarN').textContent = fmtB(dunRun.dmg);
+  /* 타이틀은 «격파 수가 바뀐 때만» 다시 쓴다 — 매 프레임 textContent 를 갈면 레이아웃이 다시 돈다 */
+  const pip = dunPipTxt(dunRun);
+  if(pip !== dunTtlPip){ dunTtlPip = pip; $('dunTtl').textContent = dunTtlBase + pip; }
 }
 /* 123 — ◀ 나가기는 던전 런과 아레나가 공용이다(같은 `#app.dunrun` 상태를 탄다). */
 $('dunOut').addEventListener('click', () => { if(arena) endArena(null); else endDunRun(false, true); });
@@ -21604,7 +21712,9 @@ function renderDunDetail(){
   $('dgdTitle').textContent = d.n;
   /* 125 — 입장권은 던전 계열 3종(골드·다이아·유물)뿐이다. 세부 팝업의 권종도 그 던전 것으로 맞춘다. */
   curIcEl($('dgdTki'), dunTk(d.id));
-  $('dgdState').textContent = DUN_STATE[d.id] || '어두운 밤 상태';
+  /* 257 — 보스가 둘 이상인 던전은 «몇 마리 · 어떻게 나오는지» 를 들어가기 전에 알려 준다.
+     `bn === 1` 이면 한 글자도 안 붙어 기존 문구 그대로다(리본 폭 600px · fs 28 — 18자까지 든다). */
+  $('dgdState').textContent = (DUN_STATE[d.id] || '어두운 밤 상태') + dunBossTag(d);
   $('dgdFloor').textContent = dgdFloor;
   $('dgdTry').textContent = left + '/' + DUN_TRY;
   /* 보상은 대표 재화 1종만 크게 보여준다 (레퍼런스와 동일 구조) */
@@ -22266,29 +22376,52 @@ function openQuest(tab){
    으로 통일했다. 되돌리지 마라 — verify72 [1]·verify121 §4 가 8장 동일값으로 단언한다.
    ⚠ 레이드·아레나 카드(`RAIDS[].ui`·`ARENA.ui`)는 **별개**다 — 97 «슬롯을 꽉 채운다» 규칙이라
    기하가 던전과 같을 이유가 없고, 주인 지적 대상도 아니다(311/36 · 296/52 그대로 둔다). */
+/* ── 257(2026-08-27, 저장소 주인 재지시 — 이전 지시 유실분) — 던전 «보스 수 · 등장 방식» ────
+   지시 원문: «보스 1개짜리 던전, 2개짜리 던전, 3개짜리 던전 그런 거 만들라 했는데 /
+   던전 보스들 한꺼번에 등장이랑 / 페이즈 식으로 등장하는 것도 만들라 했음».
+
+   두 축을 **이 표**에 둔다(등재문 «붙일 자리») — 썸네일 `thk/thf/thi` 와 같은 칸이라
+   «카드에 그려진 놈이 나온다»(178)가 보스 수가 늘어도 그대로 유지된다:
+     · `bn` — 보스 수 1/2/3 (없으면 1)
+     · `bm` — 등장 방식 `'all'`(한꺼번에) / `'phase'`(1마리 처치 → 다음 등장). 없으면 `'phase'`
+   **결정 ① «던전별» 이다(층별 아님)** — 주인 원문이 «보스 n개짜리 던전» 이라 던전의 성격으로
+   읽는 것이 맞고, 층마다 갈리면 03 카드·04 세부가 «이 던전이 어떤 던전인지» 를 말할 수 없다.
+   **결정 ② 체력·보상은 총량 보존** — 보스 1마리 체력 = `need × DUN_BOSS_HPK ÷ bn`(스폰부),
+   공격력도 «동시에 서 있는 수» 로 나눈다(`dunBossType`). 255 가 18/18 로 맞춰 둔 난이도를
+   보스 수가 흔들지 않게 하기 위해서다 — 수는 «연출·리듬» 축이지 난이도 축이 아니다(199 의 몫).
+   **결정 ③ 체력바** — 던전 HUD 에는 `#bossHp` 가 아예 없고 진행바 한 줄뿐이다(30 측정표).
+   그 바가 이미 «보스 체력 합» 을 그리므로 바는 그대로 두고, 남은 수만 타이틀에 ●●○ 로 붙인다
+   (`bn === 1` 이면 한 글자도 안 붙어 기존 8던전·탑의 타이틀이 바이트 단위로 같다).
+   **결정 ④ 제한 시간 `DUN_SEC` 30 초 그대로** — 총 체력이 같으므로 때리는 시간은 같고,
+   페이즈 사이의 빈 시간만 늘어난다. 그래서 2번째 이후 등장 딜레이만 `DUN_PHASE_DLY` 로 줄였다.
+   실측은 `node tools/probe257.js` · 게이트 `node tools/verify257.js`. */
 const DUN_UI = {
   gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'),
             thk:'dragon', thf:'f3', thi:'fly',        thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
-            rw:['골드 획득 가능'], gm:0  },
+            rw:['골드 획득 가능'], gm:0, bn:1  },
   dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'),
             thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00, thw:'330px', tht:'11px', scn:'7px',
-            rw:['다이아 획득 가능'], gm:0  },
+            rw:['다이아 획득 가능'], gm:0, bn:1  },
   /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
   relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, gm:14 },   /* 154 — 15→14. 게이트 미션은 그대로
+            rw:['유물조각 획득 가능'], psx:0.966, gm:14, bn:1 },   /* 154 — 15→14. 게이트 미션은 그대로
             «스테이지 15 도달하기» 다(idx 14→13). 출석 미션이 빠져 번호만 한 칸 당겨졌다. */
   relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 } },
+            /* 257 — 2마리 «페이즈»: 유물 2단이 «보스가 둘» 을 처음 만나는 자리다.
+               한 마리씩 순차라 난도 체감이 완만하다(총 체력·공격력은 1마리 때와 같다). */
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 }, bn:2, bm:'phase' },
   relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
+            /* 257 — 2마리 «동시»: 같은 2마리라도 한꺼번에 서면 카이팅 경로가 갈린다 */
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 }, bn:2, bm:'all' },
   relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } },
+            /* 257 — 3마리 «페이즈»: 유물 최종 4단은 3연전이다 */
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 }, bn:3, bm:'phase' },
   /* 194 — 강화석 던전. 색은 강화석 아이콘(주황·호박)에서 뽑았고, 카드 기하는 relic 4단과 같은
      규격(썸네일 330×· 상단 인셋 11 · 씬 7)이다. 썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) —
      기존 아틀라스 중 «불꽃/주황» 계열인 dragon 의 다른 포즈(f1)를 쓴다.
@@ -22296,7 +22429,8 @@ const DUN_UI = {
      초반 성장 경로를 막지 않으므로 유물 1단과 같은 문턱에 둔다. */
   stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'), tk:curIc('tkStone'),
             thk:'dragon', thf:'f1', thi:'fly', thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
-            rw:['강화석 획득 가능'], psx:0.966, gm:14 },
+            /* 257 — 2마리 «동시» */
+            rw:['강화석 획득 가능'], psx:0.966, gm:14, bn:2, bm:'all' },
   /* 203 — 룬강화석 던전. 색은 룬강화석 아이콘(청록)에서 뽑았다 — 던전 6장 중 유일한 청록 계열이라
      강화석(주황)·다이아(초록)와 카드가 갈린다. 카드 기하는 relic 4단·강화석과 같은 규격이다.
      썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — 기존 elves 아틀라스의 «blue_attack» 포즈를
@@ -22305,7 +22439,8 @@ const DUN_UI = {
      초반 성장 경로를 막지 않는다. */
   rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'), tk:curIc('tkRstone'),
             thk:'elves',  thf:'blue_attack_0', thi:'blue_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['룬강화석 획득 가능'], psx:0.966, gm:14 },
+            /* 257 — 3마리 «동시»: 여덟 던전 중 가장 붐비는 판 */
+            rw:['룬강화석 획득 가능'], psx:0.966, gm:14, bn:3, bm:'all' },
   /* 209 — 시련의 탑. **DUNGEONS 에는 없는 항목**이다(위 209 주석 참고) — 여기 있는 이유는
      ① 카드 기하·색 ② 178 던전 보스가 스프라이트를 `DUN_UI[d.id]` 한 곳에서만 읽기 때문이다.
      썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — elves 아틀라스에서 아직 아무도 안 쓰는
@@ -22314,7 +22449,8 @@ const DUN_UI = {
      `gm`/`pre` 가 없으므로 `dunLocked()` 는 항상 false 다 = 탑은 처음부터 열려 있다. */
   tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'green_attack_0', thi:'green_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966 },
+            /* 257 — 탑은 «층 하나 = 보스 하나» 다(264 의 몫이라 수·방식을 늘리지 않는다) */
+            rw:['유물조각 획득 가능'], psx:0.966, bn:1 },
   /* 210 ② — 절망의 탑. 209 시련의 탑 칸과 **같은 기하**(thw/tht/scn/psx/thbr 동일)이고
      색과 몬스터·보상 재화만 갈린다 — 카드 두 장이 같은 격자 위에 나란히 선다.
      ⚠ **아트 대기 · 썸네일은 재사용이다.** 97 «없는 몬스터를 그리지 않는다» 를 지키려면 실재하는
@@ -22324,7 +22460,7 @@ const DUN_UI = {
      이 두 줄(thk/thf/thi)만 갈아 끼운다(측정표 «아트 필요» 표에 등재). */
   despair:{ s:'#3E2430', i:'#5F3242', r:'#7C4055', pt:'#E0A8B8', ic:curIc('tstone'), tk:curIc('tstone'),
             thk:'zombie', thf:'walk_004', thi:'walk', thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
-            rw:['단련석 획득 가능'], psx:0.966 }
+            rw:['단련석 획득 가능'], psx:0.966, bn:1 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면

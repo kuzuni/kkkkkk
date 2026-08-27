@@ -65,7 +65,7 @@ const near = (m, got, want, tol) => {
       atlas: e.T.atlas, walk: e.T.walk, atk: e.T.atk, die: e.T.die,
       cardAtlas: u.thk, cardIdle: u.thi,
       drawnH: mh * e.T.scale, drawnW: mw * e.T.scale,
-      r: e.T.r, hp: e.hp, max: e.max, need,
+      r: e.T.r, hp: e.hp, max: e.max, need, bossN: dunRun ? dunRun.bossN : 1,
       /* 178 — 그려진 «발밑» 이 땅에서 얼마나 떠 있나. 보정(yo) 을 반영한 값이다 */
       foot: (function(){
         let fr = null;
@@ -109,9 +109,12 @@ const near = (m, got, want, tol) => {
     is('③ 현재 프레임이 아틀라스에 있다(폴백 원이 아니다)', r.frameOK, true);
     /* ④ 172 와 같은 «1:1 단독 개체» 예외를 탄다 */
     is('④ SOLO_CHASER 직진 추격', r.solo, true);
-    /* ⑤ 체력 = 그 층의 요구 피해 × DUN_BOSS_HPK */
+    /* ⑤ 체력 = 그 층의 요구 피해 × DUN_BOSS_HPK.
+       257 — 보스가 여럿인 던전은 그 총량을 **머릿수로 나눠** 가진다(index.html «결정 ②»).
+       총량은 수·방식과 무관하게 DUN_BOSS_HPK 그대로다 = 178 이 잰 난이도는 보존된다. */
     const hpk = await page.evaluate(() => DUN_BOSS_HPK);
-    near('⑤ 체력 = 요구 피해 × ' + hpk, r.hp / r.need, hpk, 0.001);
+    near('⑤ 체력 = 요구 피해 × ' + hpk + ' ÷ 보스 ' + r.bossN + '마리',
+         r.hp / r.need, hpk / r.bossN, 0.001);
     /* ⑥ 판정 반경이 몸통 안에 든다(스프라이트 폭의 1/4~2/3) */
     (r.r >= r.drawnW * 0.22 && r.r <= r.drawnW * 0.7 ? ok : no)(
       '⑥ 판정 반경 ' + r.r + ' 이 그려진 폭 ' + r.drawnW.toFixed(0) + ' 의 22~70% 안');
