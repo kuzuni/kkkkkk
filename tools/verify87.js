@@ -3,16 +3,17 @@
  *   node tools/verify87.js
  *
  * 검사 항목
- *   §1 데이터   — 50종 이상 · id 유일 · 구 6종(av0~av5) 이름/등급/보유 효과 «한 값도 안 변함»
+ *   §1 데이터   — 50종 이상 · id 유일 · 구 6종(av0~av5) **이름** 보존 · 194 등급 폐지 확인
+ *                 (194: 효과 값은 전 코스튬 동일 · `a.g` 폐기 · `a.pal` 은 색 파라미터일 뿐)
  *                 (182 — `cost`·`req` 는 구매 폐지와 함께 데이터째 사라졌다. 대신 «50종 전부가
  *                  계급 축 하나로 획득 조건을 갖는가» 를 본다)
- *   §2 틴트     — 50색 쌍별 CIE76 ΔE 최소값(색상환 배분이 실제로 구분되는지) · 등급 안 최소값
+ *   §2 틴트     — 50색 쌍별 CIE76 ΔE 최소값(색상환 배분이 실제로 구분되는지) · 밴드 안 최소값
  *   §3 밸런스   — 전부 보유 시 bonus() 배수 상한 검산(atk/hp/gold)
  *   §4 실동작   — 착용 전환 · 획득 조건(계급 축) 거부/허용 · [승급전] 버튼 · 저장·재로드 보존
  *                 (182 — 구매 3항목은 경로째 폐기. 지급 실동작은 `tools/verify182.js` 가 소유한다)
  *   §5 색 일치  — 격자 카드(lite 경로) 픽셀 == 전투/79/80 이 쓰는 tinted() 경로 픽셀
  *   §6 구 세이브 — 6종 시절 세이브가 그대로 로드되고 보유·착용·보너스가 유지됨
- *   §7 UI       — 50칸 격자가 전부 그려짐 · 등급 섹션 헤더 6개 · 격자 내부 스크롤 가능 · 잠금 표기
+ *   §7 UI       — 50칸 격자가 전부 그려짐 · **등급 섹션 헤더 0개(194 폐지)** · 격자 내부 스크롤 · 잠금 표기
  */
 const path = require('path');
 /* 127 — 여기 복붙돼 있던 모듈 해석 블록은 «모듈» 만 찾고 «브라우저 바이너리» 는 안 찾아서,
@@ -28,13 +29,15 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
 
 /* 구 6종의 «고정값» — 이 표와 어긋나면 구 세이브의 체감이 바뀐 것이다.
    182 — 가격 열은 뺐다(구매 폐지로 `cost` 필드 자체가 없다). 체감을 만드는 값 3개는 그대로다. */
+/* 194 — 등급·등급별 효과가 폐기돼 «구 6종 보존» 은 **이름과 색 밴드**만 남았다.
+   (효과 값은 이제 전 코스튬 동일 = COS_OWN. 그 «동일함» 자체를 아래에서 따로 잰다) */
 const LEGACY = {
-  av0: ['견습 기사',   0, 0.00, 0.00, 0.00],
-  av1: ['강철 기사',   1, 0.10, 0.10, 0.05],
-  av2: ['백은의 용사', 2, 0.25, 0.20, 0.12],
-  av3: ['흑염 기사',   3, 0.55, 0.40, 0.25],
-  av4: ['용살자',      4, 1.20, 0.80, 0.50],
-  av5: ['신성 기사',   5, 2.50, 1.60, 1.00]
+  av0: ['견습 기사',   0],
+  av1: ['강철 기사',   1],
+  av2: ['백은의 용사', 2],
+  av3: ['흑염 기사',   3],
+  av4: ['용살자',      4],
+  av5: ['신성 기사',   5]
 };
 
 /* sRGB hex → CIE Lab → CIE76 ΔE */
@@ -63,21 +66,26 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   /* ---------------- §1 데이터 ---------------- */
   console.log('\n§1 데이터');
   const data = await page.evaluate(() => AVATARS.map(a =>
-    ({ id: a.id, n: a.n, g: a.g, tint: a.tint, atk: a.atk, hp: a.hp, gold: a.gold,
+    ({ id: a.id, n: a.n, g: a.g === undefined ? null : a.g, pal: a.pal, tint: a.tint,
+       atk: a.atk, hp: a.hp, gold: a.gold,
        cost: a.cost === undefined ? null : a.cost, req: a.req || null, rank: cosRankOf(a.id) })));
+  const OWN = await page.evaluate(() => ({ atk: COS_OWN.atk, hp: COS_OWN.hp, gold: COS_OWN.gold }));
   ok(data.length >= 50, '코스튬 ' + data.length + '종 (>= 50)');
   ok(new Set(data.map(a => a.id)).size === data.length, 'id 유일 ' + new Set(data.map(a => a.id)).size + '/' + data.length);
   let legOk = true;
   Object.keys(LEGACY).forEach(id => {
     const a = data.find(x => x.id === id), L = LEGACY[id];
-    const same = a && a.n === L[0] && a.g === L[1]
-      && a.atk === L[2] && a.hp === L[3] && a.gold === L[4];
+    const same = a && a.n === L[0] && a.pal === L[1];
     if (!same) { legOk = false; console.log('    ' + id + ' 변경됨: ' + JSON.stringify(a)); }
   });
-  ok(legOk, '구 6종(av0~av5) 이름·등급·보유 효과 보존');
-  const cnt = [0, 0, 0, 0, 0, 0]; data.forEach(a => cnt[a.g]++);
-  ok(cnt.every(c => c > 0) && cnt.length === 6, '등급 배분 ' + cnt.join('·') + ' (6등급 — 코스튬 최고는 신화)');
-  ok(data.every(a => a.g <= 5), '초월·불멸(장비 전용 7·8등급) 미사용');
+  ok(legOk, '구 6종(av0~av5) 이름·색 밴드 보존');
+  /* 194 — 등급 폐지: 항목에 `g` 가 아예 없어야 하고, 효과 값은 50종이 전부 같아야 한다 */
+  ok(data.every(a => a.g === null), '194 등급(`g`) 필드 폐기 — 남은 칸 '
+    + data.filter(a => a.g !== null).length + '개');
+  ok(data.every(a => a.atk === OWN.atk && a.hp === OWN.hp && a.gold === OWN.gold),
+    '194 보유 효과가 전 코스튬 동일 (COS_OWN atk ' + OWN.atk + ' · hp ' + OWN.hp + ' · gold ' + OWN.gold + ')');
+  const cnt = [0, 0, 0, 0, 0, 0]; data.forEach(a => cnt[a.pal]++);
+  ok(cnt.every(c => c > 0) && cnt.length === 6, '색 밴드 배분 ' + cnt.join('·') + ' (6밴드 — 틴트 파라미터일 뿐)');
   /* 182 — 구매·조건 해금 데이터가 남아 있으면 «죽은 데이터» 다(LESSONS 68-③). 대신 50종 전부가
      계급 축 하나로 획득 조건을 갖는지 본다 — 어느 하나라도 rank 0 이면 «아무도 안 주는 코스튬» 이다. */
   ok(data.every(a => a.cost === null), '가격(cost) 데이터 폐기 확인 — 남은 칸 '
@@ -98,12 +106,12 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   for (let i = 0; i < tints.length; i++) for (let j = i + 1; j < tints.length; j++) {
     const d = dE(tints[i].tint, tints[j].tint);
     if (d < minAll) { minAll = d; minPair = tints[i].id + '↔' + tints[j].id; }
-    if (tints[i].g === tints[j].g && d < minSame) { minSame = d; minSamePair = tints[i].id + '↔' + tints[j].id; }
+    if (tints[i].pal === tints[j].pal && d < minSame) { minSame = d; minSamePair = tints[i].id + '↔' + tints[j].id; }
   }
-  console.log('    전체 최소 ΔE ' + minAll.toFixed(1) + ' (' + minPair + ') · 같은 등급 최소 ΔE '
+  console.log('    전체 최소 ΔE ' + minAll.toFixed(1) + ' (' + minPair + ') · 같은 밴드 최소 ΔE '
     + minSame.toFixed(1) + ' (' + minSamePair + ')');
   ok(minAll >= 8, '어떤 두 코스튬도 ΔE >= 8 (실제 최소 ' + minAll.toFixed(1) + ')');
-  ok(minSame >= 10, '같은 등급 안 최소 ΔE >= 10 (실제 ' + minSame.toFixed(1) + ')');
+  ok(minSame >= 10, '같은 밴드 안 최소 ΔE >= 10 (실제 ' + minSame.toFixed(1) + ')');
 
   /* ---------------- §3 밸런스 상한 ---------------- */
   console.log('\n§3 밸런스');
@@ -117,15 +125,19 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   ok(bal.hp < 300 && bal.gold < 100, '체력·골드 배수 상한');
   /* bonus() 가 실제로 그 배수를 내는지 — 전부 보유 전/후 공격력 비 */
   const bonusRatio = await page.evaluate(() => {
-    /* bonus() 는 bonusDirty 로 캐시된다 — markDirty() 없이 재호출하면 옛 값이 그대로 나온다 */
-    const keep = Object.assign({}, S.avatars);
+    /* bonus() 는 bonusDirty 로 캐시된다 — markDirty() 없이 재호출하면 옛 값이 그대로 나온다.
+       194 — 기준선(av0 만 보유)에서도 av0 이 효과를 준다(전 코스튬 동일). 따라서 이 비는
+       «전부 보유 ÷ av0 하나» = 나머지 49종의 곱이다. 아래 기댓값도 같은 식으로 만든다.
+       레벨은 전부 0 으로 두어 «보유 축» 만 잰다(강화 축은 §8 이 따로 잰다). */
+    const keep = Object.assign({}, S.avatars), keepLv = S.cosLv; S.cosLv = {};
     S.avatars = { av0: 1 }; markDirty(); const before = bonus().atk;
     AVATARS.forEach(a => S.avatars[a.id] = 1); markDirty(); const after = bonus().atk;
-    S.avatars = keep; markDirty();
+    S.avatars = keep; S.cosLv = keepLv; markDirty();
     return after / before;
   });
-  ok(Math.abs(bonusRatio / bal.atk - 1) < 0.02,
-    'bonus() 합산이 데이터 배수와 일치 (' + bonusRatio.toFixed(1) + ' vs ' + bal.atk.toFixed(1) + ')');
+  const balNo0 = bal.atk / (1 + (data.find(a => a.id === 'av0') || { atk: 0 }).atk);
+  ok(Math.abs(bonusRatio / balNo0 - 1) < 0.02,
+    'bonus() 합산이 데이터 배수와 일치 (av0 제외 ' + bonusRatio.toFixed(1) + ' vs ' + balNo0.toFixed(1) + ')');
 
   /* ---------------- §4 실동작 ---------------- */
   console.log('\n§4 실동작 (버튼을 눌렀을 때 무엇이 바뀌나)');
@@ -137,8 +149,9 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
 
   const cards = await page.$$eval('#bCos .sk-card', els => els.length);
   ok(cards === data.length, '격자 카드 ' + cards + '장 = 코스튬 ' + data.length + '종');
+  /* 194 — 등급 폐지. 섹션 헤더가 «없어야» 정상이다(평평한 5열 격자) */
   const heads = await page.$$eval('#bCos .cos-hd', els => els.map(e => e.textContent));
-  ok(heads.length === 6, '등급 섹션 헤더 ' + heads.length + '개 (' + heads.join(' / ') + ')');
+  ok(heads.length === 0, '194 등급 섹션 헤더 폐기 — 실측 ' + heads.length + '개');
 
   /* 카드 한 번 누르면 «선택», 선택된 카드를 다시 누르면 08 상세 */
   const sel = await page.evaluate(() => {
@@ -201,17 +214,26 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   ok(battleTint === (data.find(a => a.id === wear.b1) || {}).tint, '착용 코스튬 틴트가 전투 경로(AV[cosCur()])와 동일');
 
   /* 182 — [구매] 자리를 물려받은 [승급전] 버튼이 실제로 승급전 팝업을 연다 */
+  /* 194 — 시트의 2번 버튼은 [승급전] → **[강화]** 로 바뀌었다. 승급전 진입은 상세 팝업이 갖는다
+     (미보유 카드를 열면 [승급전] 버튼이 있다). 두 자리를 각각 실제로 눌러 확인한다. */
   const pbtn = await page.evaluate(() => {
     const gone = !document.querySelector('#bCos [data-cosbuy]');
-    document.querySelector('#bCos [data-cospromo]').click();
+    const up = !!document.querySelector('#bCos [data-cosup]');
+    /* 미보유 코스튬 하나를 열어 [승급전] 버튼을 누른다 */
+    const id = AVATARS.map(a => a.id).find(x => !cosOwn(x));
+    showCosDetail(id);
+    const b = document.getElementById('mLv');
+    const label = b ? b.textContent : '';
+    if (b && !b.disabled) b.click();
     const open = document.querySelector('#modal').classList.contains('on');
     const promo = !!document.querySelector('#mbox .pr179');
     closeModal();
-    return { gone, open, promo };
+    return { gone, up, open, promo, label };
   });
   await page.waitForTimeout(200);
   ok(pbtn.gone, '[버튼] 시트에서 [구매](data-cosbuy) 가 사라짐');
-  ok(pbtn.open && pbtn.promo, '[버튼] [승급전] 이 승급전 팝업(.pr179)을 연다');
+  ok(pbtn.up, '194 [버튼] 시트 2번 칸이 [강화](data-cosup)');
+  ok(pbtn.open && pbtn.promo, '[버튼] 상세의 [' + pbtn.label + '] 이 승급전 팝업(.pr179)을 연다');
 
   /* 저장·재로드 보존 */
   await page.evaluate(() => save());
@@ -225,7 +247,7 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   /* ---------------- §5 lite 경로 색 일치 ---------------- */
   console.log('\n§5 격자 카드(lite) vs 전투(tinted) 색 일치');
   const same = await page.evaluate(() => {
-    const id = AVATARS.find(a => a.tint && a.g === 3).id;
+    const id = AVATARS.find(a => a.tint && a.pal === 3).id;
     const mk = lite => { const c = document.createElement('canvas'); c.width = 96; c.height = 96;
       drawHeroTo(c, { avatar: id, scale: 1, lite: lite }); return c; };
     const a = mk(true).getContext('2d').getImageData(0, 0, 96, 96).data;
@@ -256,7 +278,10 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     atk: AVATARS.reduce((m, a) => S.avatars[a.id] ? m * (1 + a.atk) : m, 1), dia: S.dia }));
   ok(mig.av === 'av3', '구 세이브 착용(av3) 유지');
   ok(mig.own.join(',') === 'av0,av1,av3', '구 세이브 보유 3종 유지 (' + mig.own.join(',') + ')');
-  ok(Math.abs(mig.atk - 1.10 * 1.55) < 1e-9, '구 세이브 보유 효과 배수 불변 (×' + mig.atk.toFixed(4) + ')');
+  /* 194 — 등급별 값이 폐기돼 «×1.10 × 1.55»(av1·av3 의 옛 등급값) 는 더 이상 기대값이 아니다.
+     구 세이브에서 보존돼야 하는 것은 «어느 코스튬을 갖고 있는가» 이고, 효과는 그 보유 수 × 동일값이다. */
+  ok(Math.abs(mig.atk - Math.pow(1 + OWN.atk, mig.own.length)) < 1e-9,
+    '구 세이브 보유 ' + mig.own.length + '종 × 동일 효과 = ×' + mig.atk.toFixed(4));
   /* 구 세이브에도 신규 44종이 «미보유» 로 보이고 살 수 있어야 한다 */
   const shown = await p2.evaluate(() => {
     document.querySelector('.tab[data-t="hero"]').click();

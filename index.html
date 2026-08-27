@@ -9056,11 +9056,9 @@
   #bCos .sk-gp::-webkit-scrollbar{width:0;height:0}
   #bCos .cos-in{position:relative;width:100%}
   #bCos .cos-pad{position:absolute;left:0;width:1px;height:30px}   /* 마지막 행 아래 여백 */
-  /* 등급 섹션 헤더 — 격자 안에서 «어디부터 어느 등급인지» 를 가르는 띠(레퍼런스 없음, 설계) */
-  #bCos .cos-hd{position:absolute;left:24px;width:952px;height:46px;line-height:46px;
-    border-radius:23px;background:#000;box-shadow:inset 0 0 0 3px var(--r)}
-  #bCos .cos-hd>i{position:absolute;left:24px;font-size:30px;font-style:normal}
-  #bCos .cos-hd>em{position:absolute;right:24px;font-size:28px;font-style:normal;color:#E8DCC8}
+  /* 194 — 옛 «등급 섹션 헤더»(`.cos-hd`) 규칙은 등급 폐지와 함께 삭제했다.
+     격자는 이제 헤더 없는 평평한 5열이고, 칸을 구분하는 것은 그림(틴트)과 Lv 뿐이다.
+     (LESSONS 68-③ «구버전 폐기 = 죽은 CSS 까지») */
   /* 카드·슬롯·상세의 그림 — 이모지가 아니라 그 코스튬 틴트로 그린 기사 캔버스(80 look 과 같은 경로).
      08 상세 껍데기(`#mbox .sk-ic`) 안에서도 쓰이므로 `#bCos` 로 가두지 않는다. */
   .cos-cv{display:block;margin:0 auto;image-rendering:pixelated}
@@ -9079,6 +9077,10 @@
   #bCos .sk-si,#modal.sk8 .sk-ic{display:flex;align-items:flex-end;justify-content:center}
   /* 조건 해금 카드의 진행바 — 가격 대신 조건이라 글자가 길다(작게 + 자물쇠 톤) */
   #bCos .sk-bar.rq>b{font-size:21px;color:#FFD9A0}
+  /* 194 — «지금 강화할 수 있는» 카드. 166 의 «있을 때만» 규칙대로 강화석이 충분하고 만렙이 아닐 때만
+     붙는다. 새 배지를 얹지 않고 **진행바 채움색만** 초록으로 바꾼다 — 카드 bbox·pitch 불변. */
+  #bCos .sk-bar.up>i{background:linear-gradient(180deg,#8CE84A 0 9px,#79DC38 9px 11px,#63CE28 11px)}
+
   /* 50 코스튬 — 하단 [착용]/[구매] 버튼의 대상이 되는 «선택 카드». 07·26 에는 선택 개념이 없어
      여기서만 쓴다. 기하(w/h/radius/inset 링)는 건드리지 않고 **바깥으로만** 나가는 링을 더해
      카드 bbox 와 그리드 pitch 가 1px 도 안 바뀌게 한다(아트 교체 시 그대로 벗겨진다). */
@@ -13135,15 +13137,19 @@ const $ = id => document.getElementById(id);
    골드 이미지 여러 종류 ㄴㄴ, 한 종류로.»
    ⇒ 화폐 아이콘은 **여기서만** 정한다. 문자열·데이터 배열에 이모지를 직접 박지 마라
      (게이트 `tools/verify125.js` 가 소스에서 화폐 이모지 0건을 검사한다).
-   입장권은 «던전 계열» 로만 갈린다 — 골드/다이아/유물 3종까지만 허용(🎟️/🎫 혼용 폐기). */
+   입장권은 «던전 계열» 로만 갈린다 — 골드/다이아/유물/**강화석** 4종만 허용
+     (194 — 강화석 던전 신설로 계열이 하나 늘었다. 「3종」은 못박은 상한이 아니라 그때 있던
+      던전 계열의 수였다. 125 의 규칙은 «재화 하나에 이미지 하나» 다)(🎟️/🎫 혼용 폐기). */
 const CUR_ICON = {
   gold:    'assets/ui/cur-gold.svg',
   dia:     'assets/ui/cur-dia.svg',
   relic:   'assets/ui/cur-relic.svg',
+  stone:   'assets/ui/cur-stone.svg',
   mile:    'assets/ui/cur-mile.svg',
   tkGold:  'assets/ui/cur-ticket-gold.svg',
   tkDia:   'assets/ui/cur-ticket-dia.svg',
-  tkRelic: 'assets/ui/cur-ticket-relic.svg'
+  tkRelic: 'assets/ui/cur-ticket-relic.svg',
+  tkStone: 'assets/ui/cur-ticket-stone.svg'
 };
 /* 코드 곳곳의 짧은 키(보상 객체 `r.rel` · 우편 행 `k:'g'` · 가방 `relic` 등)를 한곳에서 흡수한다 */
 const CUR_ALIAS = { g:'gold', c:'dia', d:'dia', rel:'relic', r:'relic', frag:'relic',
@@ -13170,8 +13176,10 @@ function curIcEl(el, k, size){
   el.appendChild(im);
   return im;
 }
-/* 던전 id → 입장권 종류. 유물조각 던전 4단(relic1~4)은 같은 «유물 던전권» 을 쓴다. */
-const dunTk = id => id === 'gold' ? 'tkGold' : id === 'dia' ? 'tkDia' : 'tkRelic';
+/* 던전 id → 입장권 종류. 유물조각 던전 4단(relic1~4)은 같은 «유물 던전권» 을 쓴다.
+   194 — 강화석 던전(`stone`)이 4번째 계열이다. */
+const dunTk = id => id === 'gold' ? 'tkGold' : id === 'dia' ? 'tkDia'
+                  : id === 'stone' ? 'tkStone' : 'tkRelic';
 
 /* ---------------- 화면 맞춤 ---------------- */
 /* 기준 프레임 1080x1920(9:16). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
@@ -13884,15 +13892,21 @@ const RELICS = [
 const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률', rate:'공격 속도',
                     gold:'골드 획득', regen:'체력 재생', cdmg:'치명타 피해', all:'전 스탯' };
 
-/* ---- 코스튬(구 «아바타») 50종 — 다이아 구매 · 보유 효과 영구 합산 · 외형(틴트) 변경 ----
+/* ---- 코스튬(구 «아바타») 50종 — 보유 효과 영구 합산 · 강화석 강화 · 외형(틴트) 변경 ----
    작업 87 (2026-08-26, 저장소 주인 지시 «코스튬은 50개 이상»): 6종 → **50종**.
+   작업 194 (2026-08-27, 저장소 주인 지시): **① 강화석으로 강화(맥스 500) ② 등급 폐지
+   (전 코스튬 동일 효율 곡선) ③ 강화석은 전용 던전 + DPS 측정장 + 아레나에서 획득.**
    · **id 는 «몇 번째» 가 아니라 고정 값**이다. 구 세이브(`S.avatar`·`S.avatars.av3`)가 그대로
-     살아야 하므로 av0~av5 는 이름·등급·가격·보유 효과를 **한 값도 안 바꿨다**(`COS_LEGACY`).
-     신규 44종은 av6~av49 이고, 표의 «순서» 가 바뀌어도 세이브는 id 로만 붙는다.
+     살아야 하므로 이름·id 는 한 값도 안 바꿨다. 신규 44종은 av6~av49 이고,
+     표의 «순서» 가 바뀌어도 세이브는 id 로만 붙는다.
+     ⚠ 194 로 **효과 값은 전 코스튬 동일**이 됐다(등급 폐지). 옛 `COS_LEGACY`(구 6종 전용 값)는
+       폐기했다 — 세이브에 들어가는 것은 «보유 여부(S.avatars)»·«강화 레벨(S.cosLv)» 뿐이라
+       호환은 그대로다.
    · 아트가 없어 외형은 «단일 knight 아틀라스 + tint» 뿐이다 → **틴트만으로 50종을 구분**한다:
-     일반~영웅 39종(av0 = 기본 = 무틴트)은 색상환을 39등분(9.23°)한 빗을 **stride 11 로 건너뛰며**
-     나눠 줘 같은 등급 안에서 최소 46° 벌어지고, 등급이 오를수록 채도·명도가 오른다(`COS_BAND`).
-     전설·신화 10종은 지시대로 «금·은·무지개» 계열이라 색상환에서 빼고 **명도·채도 축**으로 벌린다(`COS_HI`).
+     밴드 0~3 의 39종(av0 = 기본 = 무틴트)은 색상환을 39등분(9.23°)한 빗을 **stride 19 로 건너뛰며**
+     나눠 줘 같은 밴드 안에서 크게 벌어지고, 밴드가 오를수록 채도·명도가 오른다(`COS_BAND`).
+     밴드 4·5 의 10종은 «금·은·무지개» 계열이라 색상환에서 빼고 **명도·채도 축**으로 벌린다(`COS_HI`).
+     ⚠ 194 이후 «밴드» 는 **색 파라미터일 뿐 게임 규칙이 아니다** — 효율·조건·라벨 어디에도 안 쓴다.
      쌍별 최소 색차는 `tools/verify87.js` 가 CIE76 ΔE 로 잰다(기록: docs/review/87-코스튬50종.md).
    · 틴트는 80 `look` → `drawHeroTo` → `tinted('knight', …)` 를 그대로 지나므로
      **전투 · 79 장비 시트 · 80 랭킹 단상이 같은 색**을 낸다(50칸 격자만 아래 «lite» 경로).
@@ -13908,86 +13922,141 @@ function hsl2hex(h, s, l){
   const hx = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
   return '#' + hx(r) + hx(g) + hx(b);
 }
-/* 등급별 정원 · 기준 보유 효과 · 틴트 채도/명도(전설·신화는 COS_HI 가 색을 준다)
-   182 — «기준가(cost)» 는 구매 경로와 함께 폐기했다. 보유 효과 값은 한 자리도 안 건드렸다. */
+/* 194 — «등급» 폐지 후의 **색 밴드**(팔레트 밴드) 표. 정원 k 와 틴트 채도/명도만 남았다.
+   ⚠ 이건 등급이 **아니다.** 게임 규칙(효율·조건·라벨)에 한 번도 쓰이지 않고, 오직 50종의 틴트를
+   서로 구분되게 뿌리기 위한 색 파라미터다(87 이 ΔE 로 잰 값이 그대로 살아 있어야 하므로
+   숫자를 한 자리도 안 바꿨다 — 밴드 배분 12·10·10·8·6·4 도 그대로다).
+   182 — «기준가(cost)» 는 구매 경로와 함께 폐기했다.
+   194 — 등급별 보유 효과(atk/hp/gold)는 폐기했다: 전 코스튬이 `COS_OWN` 한 값을 공유한다. */
 const COS_BAND = [
-  { k:12, atk:0.010, hp:0.008, gold:0.006, s:58,  l:68 },
-  { k:10, atk:0.025, hp:0.020, gold:0.014, s:72,  l:71 },
-  { k:10, atk:0.045, hp:0.036, gold:0.024, s:86,  l:74 },
-  { k:8,  atk:0.070, hp:0.056, gold:0.036, s:100, l:77 },
-  { k:6,  atk:0.120, hp:0.095, gold:0.060 },
-  { k:4,  atk:0.200, hp:0.160, gold:0.100 }
+  { k:12, s:58,  l:68 },
+  { k:10, s:72,  l:71 },
+  { k:10, s:86,  l:74 },
+  { k:8,  s:100, l:77 },
+  { k:6  },
+  { k:4  }
 ];
+/* 194 ① — 코스튬 강화. 저장소 주인 지시(2026-08-27):
+   «코스튬 강화석으로 강화, 맥스 500, 등급 없이 다 똑같이 효율 상승».
+   ⇒ **보유 효과는 전 코스튬 동일**(`COS_OWN`) · **강화 레벨만이 유일한 효율 축**(`COS_LV`).
+   ─ 두 축의 결합 방식이 다르다(LESSONS 91-1 «세트마다 곱하기 vs 축별로 더한 뒤 한 번 곱하기»):
+     · 보유 효과 — 예전처럼 코스튬마다 곱한다. 50종 전부 = ×(1.10)^50 ≈ **×117 공격력**
+       (등급 차등이 있던 옛 값의 ×159.8 과 같은 자릿수다 — 평평하게 편 만큼만 낮다).
+     · 강화 효과 — **전 코스튬의 레벨을 먼저 더한 뒤 한 번만** 곱한다. 만렙 상한이
+       50종 × 500Lv × 0.004 = +100 → ×101 로 서는 자리다. 코스튬마다 곱했다면
+       (1+2.0)^50 ≈ 7e23 이 되어 밸런스가 통째로 터진다.
+   ─ 최종 수치 확정은 199(최종 밸런스 비평 라운드)의 몫이다. 여기서 정한 것은 **구조**와 1차 값이다. */
+const COS_MAXLV = 500;                              /* 주인 확정 — 코스튬당 강화 상한 */
+const COS_OWN = { atk:0.10, hp:0.08, gold:0.05 };   /* 보유(Lv 무관) — 전 코스튬 동일, 곱연산 */
+const COS_LV  = { atk:0.004, hp:0.003, gold:0.002 };/* 레벨 1당 — 전 코스튬 동일, 합산 후 1회 곱 */
+/* 강화 비용(강화석) — Lv l → l+1 이 `2 × 1.012^l`. 전 코스튬 동일 곡선(주인 지시 «다 똑같이»).
+   1레벨 2 · 100레벨 7 · 250레벨 40 · 499레벨 778 → **한 코스튬 만렙 누적 ≈ 64,700 강화석**.
+   50종 전부 만렙 ≈ 3.23M. 「각성의 동굴」 하루 3런(150+120f)이 f=100 에서 36,450/일이므로
+   한 코스튬은 이틀, 전부는 장기 목표가 된다. 수치 확정은 199 의 몫. */
+const COS_ST_BASE = 2, COS_ST_R = 1.012;
+/* 194 ② — 등급 폐지 후 코스튬 카드·슬롯의 면/림 색. 옛 `SK_FILL[g]`/`SK_RIM[g]` 8단은
+   «등급» 을 눈으로 말하던 자리라 그대로 쓰면 폐지가 반쪽이 된다 → **한 벌**로 고정한다.
+   칸을 구분하는 것은 이제 색 면이 아니라 **그 코스튬의 틴트로 그린 기사 그림**이다(87 이 ΔE 10.3 을 보장).
+   값은 SK_FILL/SK_RIM 의 중립 갈색 계열(옛 0번 «일반» 칸)과 같은 톤이라 07·26 시트와 어긋나지 않는다. */
+const COS_FILL = '#78553F', COS_RIM = '#AB7A5C';
 /* 색상환 배분 상수 — 39색을 «stride 19» 로 건너뛰며 나눠 주고, 등급 안에서 3칸마다
    명도·채도를 한 단씩 흔들어 색상이 가까운 쌍의 색차를 벌린다.
    ⚠ 이 세 값은 **눈대중이 아니라 탐색으로 고른 것**이다 — 색상 간격만으로는 부족했다:
    처음 쓴 (stride 11, 흔들림 없음) 은 쌍별 최소 ΔE 가 3.3(av7↔av14, 둘 다 연녹)까지 떨어졌다.
    Lab 에서 «색상 11° 차이» 는 밝은 저채도 구간에서 거의 같은 색이기 때문이다.
-   지금 값은 쌍별 최소 ΔE **10.3** · 같은 등급 안 최소 **11.0**(verify87 §2 가 매 실행 재측정).
+   지금 값은 쌍별 최소 ΔE **10.3** · 같은 밴드 안 최소 **11.0**(verify87 §2 가 매 실행 재측정).
    COS_BAND 의 s/l 이나 아래 세 상수를 손대면 반드시 verify87 §2 를 다시 돌릴 것. */
 const COS_STRIDE = 19, COS_LADL = [-14, 0, 14], COS_LADS = [-20, 0, 20];
-/* 같은 등급 안 «소폭 분산» — 합은 비슷하게 두고 성향만 바꾼다(균형·공격·수호·행운) */
-const COS_VAR = [ [1.00,1.00,1.00], [1.30,0.70,0.90], [0.70,1.40,0.95], [0.85,0.85,1.60] ];
-/* 전설(금·은) · 신화(무지개·신성). 각 등급 첫 칸은 구 av4·av5 색 그대로 */
+/* 194 — 옛 `COS_VAR`(같은 등급 안 성향 분산)·`COS_LEGACY`(구 6종 전용 효과)는 폐기했다.
+   둘 다 «코스튬마다 효율이 다르다» 를 만들던 자리인데, 주인 지시가 «등급 없이 다 똑같이» 이므로
+   남겨 두면 죽은 데이터가 아니라 **지시를 어기는 데이터**가 된다(LESSONS 68-③).
+   ⚠ 세이브 호환에는 영향이 없다 — 세이브에 들어가는 것은 `S.avatars`(보유)·`S.cosLv`(레벨)뿐이고
+   효과 값은 코드가 매번 계산한다. */
+/* 색 밴드 4·5(금·은 / 무지개·신성). 각 밴드 첫 칸은 구 av4·av5 색 그대로 */
 const COS_HI = [ ['#ffb648','#eef2f8','#ffbfae','#c98b46','#9fb0c4','#8a7030'],
                  ['#ff8fa0','#c07bff','#63d8ff','#8dff9e'] ];
-/* 구 6종의 보유 효과 — 여기 값이 표보다 우선한다(세이브 호환. 182 에서 `cost` 만 뺐다) */
-const COS_LEGACY = {
-  av0:{ atk:0.00, hp:0.00, gold:0.00 },
-  av1:{ atk:0.10, hp:0.10, gold:0.05 },
-  av2:{ atk:0.25, hp:0.20, gold:0.12 },
-  av3:{ atk:0.55, hp:0.40, gold:0.25 },
-  av4:{ atk:1.20, hp:0.80, gold:0.50 },
-  av5:{ atk:2.50, hp:1.60, gold:1.00 }
-};
-/* [id, 이름, 등급] — 등급 순서대로 12·10·10·8·6·4 = 50종
-   182 — 4번째 칸(`req` 조건 해금 7종)은 폐기했다. 획득 조건은 이제 `PROMO_COS` 하나가 말한다. */
+/* [id, 이름, **색 밴드**] — 밴드 순서대로 12·10·10·8·6·4 = 50종
+   182 — 4번째 칸(`req` 조건 해금 7종)은 폐기했다. 획득 조건은 이제 `PROMO_COS` 하나가 말한다.
+   194 — 3번째 칸은 이제 «등급» 이 아니라 **틴트 밴드**다. 배열의 순서는 그대로 두었다 —
+   PROMO_COS 가 이 **순번**으로 승급 묶음을 자르므로(아래) 순서를 흔들면 지급표가 바뀐다. */
 const COS_LIST = [
-  /* 일반 12 */
+  /* 밴드 0 — 12종 */
   ['av0','견습 기사',0],   ['av6','수련 기사',0],   ['av7','마을 위병',0],   ['av8','견습 궁수',0],
   ['av9','순찰 기사',0],   ['av10','낡은 갑주',0],  ['av11','목검 수련생',0],['av12','방랑 검객',0],
   ['av13','신참 창병',0],  ['av14','광부 갑주',0],  ['av15','숲의 사냥꾼',0],['av16','자경단원',0],
-  /* 고급 10 */
+  /* 밴드 1 — 10종 */
   ['av1','강철 기사',1],   ['av17','청동 근위병',1],['av18','은빛 창기사',1],['av19','숲의 순찰자',1],
   ['av20','강철 방패병',1],['av21','화염 견습',1],  ['av22','서리 검사',1],  ['av23','사막 용병',1],
   ['av24','늪지 추적자',1],['av25','폭풍 척후병',1],
-  /* 희귀 10 */
+  /* 밴드 2 — 10종 */
   ['av2','백은의 용사',2], ['av26','심해 기사',2],  ['av27','벽력 검호',2],  ['av28','성채 수호병',2],
   ['av29','그림자 자객',2],['av30','취록 정령사',2],['av31','홍옥 기사단장',2],['av32','백야 순찰자',2],
   ['av33','화산 파수꾼',2],   ['av34','청람 도끼병',2],
-  /* 영웅 8 */
+  /* 밴드 3 — 8종 */
   ['av3','흑염 기사',3],   ['av35','서리심장 기사',3],['av36','뇌명의 성기사',3],['av37','심연 추적자',3],
   ['av38','태양문 수호자',3],['av39','맹독의 그림자',3],
   ['av40','비취 무투가',3],['av41','황혼 기사',3],
-  /* 전설 6 — 금·은 */
+  /* 밴드 4 — 6종 (금·은) */
   ['av4','용살자',4],      ['av42','백금 성기사',4],['av43','여명의 장미',4],['av44','청동 거신',4],
   ['av45','은월 검성',4],   ['av46','흑금 폭군',4],
-  /* 신화 4 — 무지개·신성 */
+  /* 밴드 5 — 4종 (무지개·신성) */
   ['av5','신성 기사',5],   ['av47','자수정 대군주',5],
   ['av48','창천의 화신',5], ['av49','만상의 무지개',5]
 ];
+/* 194 — 코스튬 항목. `g`(등급) 은 **폐기**하고 색 파라미터 `pal`(밴드) 만 남았다.
+   보유 효과(atk/hp/gold)는 전 코스튬 동일값(`COS_OWN`)이라 항목마다 들고 있을 이유가 없지만,
+   **`bonus()`·시트·상세·게이트가 이미 `a.atk` 를 읽는 자리를 그대로 쓰게** 같은 이름으로 둔다
+   (값이 전부 같다는 것이 곧 «등급 폐지» 다). 틴트 계산은 87 그대로 — 한 색도 바뀌지 않는다. */
 const AVATARS = (() => {
   const seat = [0,0,0,0,0,0];
-  let comb = 0;                                  /* 색상환 빗 진행(일반~영웅 39종만) */
+  let comb = 0;                                  /* 색상환 빗 진행(밴드 0~3 의 39종만) */
   return COS_LIST.map(row => {
-    const id = row[0], g = row[2], B = COS_BAND[g], j = seat[g]++, L = COS_LEGACY[id];
-    const v = COS_VAR[j % COS_VAR.length];
-    const a = {
-      id: id, n: row[1], g: g,
+    const id = row[0], pal = row[2], B = COS_BAND[pal], j = seat[pal]++;
+    return {
+      id: id, n: row[1], pal: pal,
       tint: id === 'av0' ? null
-          : g >= 4      ? COS_HI[g-4][j]
+          : pal >= 4    ? COS_HI[pal-4][j]
           :               hsl2hex(((comb++ * COS_STRIDE) % 39) * (360/39),
                                   B.s + COS_LADS[j % 3], B.l + COS_LADL[j % 3]),
-      atk:  L ? L.atk  : +(B.atk  * v[0]).toFixed(4),
-      hp:   L ? L.hp   : +(B.hp   * v[1]).toFixed(4),
-      gold: L ? L.gold : +(B.gold * v[2]).toFixed(4)
+      atk:  COS_OWN.atk,
+      hp:   COS_OWN.hp,
+      gold: COS_OWN.gold
     };
-    return a;
   });
 })();
 
 const byId = a => a.reduce((o,x) => (o[x.id]=x, o), {});
 const SK = byId(SKILLS), EQ = byId(EQUIPS), PT = byId(PETS), RL = byId(RELICS), AV = byId(AVATARS);
+
+/* ---- 194 코스튬 강화 (강화석) ----
+   주인 지시(2026-08-27): «코스튬 강화석으로 강화, 맥스 500, 등급 없이 다 똑같이 효율 상승».
+   저장은 `S.cosLv[id]`(0~COS_MAXLV) 한 곳이고, 값 계산은 전부 아래 다섯 함수를 지난다 —
+   시트·상세·`bonus()`·게이트가 같은 식을 보게 하기 위한 것이다(표기층이 두 벌이 되면 조용히 갈라진다).
+   ⚠ 강화는 **보유한 코스튬만** 된다(미보유 칸은 승급전이 먼저다). 착용 여부와는 무관 —
+      보유 효과와 마찬가지로 강화 효과도 «갖고만 있으면» 상시 적용된다. */
+const cosLvOf   = id => Math.min(COS_MAXLV, Math.max(0, (S.cosLv && S.cosLv[id]) | 0));
+const cosMaxed  = id => cosLvOf(id) >= COS_MAXLV;
+/* Lv l → l+1 비용(강화석). 전 코스튬 동일 곡선 */
+const cosCost   = l => Math.ceil(COS_ST_BASE * Math.pow(COS_ST_R, Math.max(0, l)));
+/* 지금 이 코스튬을 강화할 수 있는가 — 보유 · 만렙 아님 · 강화석 충분 */
+function cosUpOk(id){
+  return !!(S.avatars && S.avatars[id]) && !cosMaxed(id) && S.stone >= cosCost(cosLvOf(id));
+}
+/* 실제 강화 1회. 성공하면 true — 재화 차감 · 레벨 +1 · bonus() 캐시 무효화 · 저장까지 여기서 한다
+   (LESSONS 87-4 — 파생값 캐시를 흔들면 무효화 함수까지 같이 불러야 한다) */
+function cosUpgrade(id){
+  if(!cosUpOk(id)) return false;
+  const l = cosLvOf(id);
+  S.stone -= cosCost(l);
+  if(!S.cosLv || typeof S.cosLv !== 'object') S.cosLv = {};
+  S.cosLv[id] = l + 1;
+  markDirty(); uiDirty = true; save();
+  return true;
+}
+/* 보유한 코스튬의 강화 레벨 총합 — 강화 효과는 **여기서 한 번 더한 뒤 한 번만** 곱한다 */
+const cosLvSum  = () => AVATARS.reduce((n, a) => n + ((S.avatars && S.avatars[a.id]) ? cosLvOf(a.id) : 0), 0);
+/* 강화 총효과(축 → 배수 −1). 표기와 bonus() 가 같은 식을 본다 */
+const cosLvVal  = k => cosLvSum() * COS_LV[k];
 
 /* ---- 소환 배너 (무기 · 방패 · 목걸이 따로) ---- */
 /* 작업 73 ④ (2026-08-25, 저장소 주인 지시) — 무기·방어구(방패)·목걸이·스킬 상자는
@@ -14164,7 +14233,15 @@ const DUNGEONS = [
   id:r.id, n:r.n, ic:r.ic, d:'유물조각을 획득',
   req:f => 5000*r.k*Math.pow(1.78,f-1),
   rw:f => ({ rel: Math.round((200 + f*150)*r.k) })
-})));
+}))).concat([
+  /* 194(2026-08-27, 저장소 주인 지시 «강화석은 새 던전 만들어 얻게») — 코스튬 강화 전용 재화의
+     **주 수급처**. 요구 전투력 곡선은 유물 1단(relic1)과 같은 모양이되 조금 낮게 잡아
+     («강화석은 새 던전이 주 수급처» 지시대로) 초반부터 코스튬 강화가 굴러가게 한다.
+     보상 `stone` 은 층에 선형(150 + 120f) — 유물조각의 «층 선형» 관례를 그대로 따른다.
+     DPS 측정장(123)·아레나도 강화석을 주지만 그쪽은 부수입이다(COS_ST_RAID / arenaReward 참고). */
+  { id:'stone',  n:'각성의 동굴', ic:curIc('stone'), d:'강화석을 획득',
+    req:f => 4200*Math.pow(1.76,f-1), rw:f => ({ stone: 150 + f*120 }) }
+]);
 /* 던전별 하루 입장 횟수 — 90 ④: 유물조각 하루 최대 수급 = 4던전 × 3회(= 12런) 로
    89 의 소환 비용 곡선(하루 5~10회 소환)과 맞춘다. 던전 수가 늘어도 이 값은 그대로다. */
 const DUN_TRY = 3;
@@ -14592,6 +14669,8 @@ const DEF = () => ({
      시작 다이아가 300 이면 첫 미션부터 유료 경로가 막힌다. 지시대로 1,000 이상으로 올린다.
      180(주인 지시 2026-08-27) — 그 하한을 그대로 만족하면서 100만으로 올렸다. */
   gold:0, dia:NEW_DIA, relic:0, stage:1, best:1, rank:0,
+  stone:0,                                    /* 194 — 강화석(코스튬 강화 전용 재화) */
+  cosLv:{},                                   /* 194 — 코스튬 id → 강화 레벨 0~COS_MAXLV(없으면 0) */
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   /* 88 — 캐릭터 레벨·스탯 포인트·스탯 훈련 키 제거. 구 세이브의 잔존 키는 Object.assign 으로
@@ -14693,6 +14772,20 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
+    /* 194 — 강화석·코스튬 강화 레벨. 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       구 세이브엔 두 키가 없다 → 강화석 0 · 전 코스튬 Lv 0 에서 시작한다(보유 코스튬은 그대로).
+       레벨은 **실재하는 코스튬 id 만** 남기고 0~COS_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
+       `cosVal()` 이 곡선 밖으로 나가지 않는다. */
+    if(!Number.isFinite(b.stone) || b.stone < 0) b.stone = 0; else b.stone = Math.floor(b.stone);
+    {
+      const c = (d.cosLv && typeof d.cosLv === 'object') ? d.cosLv : {}, out = {};
+      Object.keys(c).forEach(id => {
+        if(!AV[id]) return;
+        const v = c[id];
+        if(Number.isFinite(v) && v > 0) out[id] = Math.min(COS_MAXLV, Math.floor(v));
+      });
+      b.cosLv = out;
+    }
     /* 119 — S.cnt.sumRelic 이 «미션 카운터» 에서 «유물 소환 가격의 축» 이 됐다. 옛 세이브가 문자열·null 을
        갖고 있으면 relicCost() 가 NaN 이 되어 가격 표시·부족 판정이 통째로 깨지므로(smoke NaN 게이트),
        카운터 8종을 여기서 «유한한 0 이상 정수» 로 못박는다(44 교훈 2 — KEY 는 올리지 않는다). */
@@ -14903,11 +14996,18 @@ function bonus(){
     else if(r.eff === 'rate') b.rate *= 1+v;
     else b[r.eff] *= 1+v;
   });
-  /* 아바타: 보유한 모든 아바타 효과 합산 */
+  /* 코스튬(구 «아바타») — 두 축이 결합 방식이 다르다(194 · LESSONS 91-1):
+     ① 보유 효과 — 코스튬마다 곱한다(전 코스튬 동일값 COS_OWN. 50종 전부 ≈ ×117 공격력)
+     ② 강화 효과 — 보유분 레벨을 **전부 더한 뒤 한 번만** 곱한다(만렙 상한 ×101 공격력).
+        코스튬마다 곱하면 (1+2.0)^50 ≈ 7e23 이 되어 밸런스가 통째로 터진다. */
   AVATARS.forEach(a => {
     if(!S.avatars[a.id]) return;
     b.atk *= 1+a.atk; b.hp *= 1+a.hp; b.gold *= 1+a.gold;
   });
+  {
+    const n = cosLvSum();
+    if(n){ b.atk *= 1 + n*COS_LV.atk; b.hp *= 1 + n*COS_LV.hp; b.gold *= 1 + n*COS_LV.gold; }
+  }
   /* 91 도감 — «받은 단계 수 × 단계당 값» 을 축별로 전부 더한 뒤 한 번만 곱한다.
      (세트마다 곱하면 37세트가 전부 만단계일 때 공격력이 ×673 까지 튄다 — COLL_BASE 주석 참고) */
   {
@@ -18859,6 +18959,8 @@ function giveReward(r){
   const out = [];
   if(r.dia){     S.dia += r.dia;     out.push(curIc('dia') + ' ' + fmt(r.dia)); }
   if(r.rel){     S.relic += r.rel;   out.push(curIc('relic') + ' ' + fmt(r.rel)); }
+  /* 194 — 강화석(코스튬 강화 전용). 다이아·유물조각과 같은 «숫자 그대로» 표기(150) */
+  if(r.stone){   S.stone += r.stone; out.push(curIc('stone') + ' ' + fmt(r.stone)); }
   if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmtG(g)); }
   if(r.frag){
@@ -19200,16 +19302,23 @@ $('dclNx').addEventListener('click', e => {
    배분: 21 · 10 · 8 · 6 · 2 · 1 · 1 = **49종** + 기본 지급 av0 = 50(= AVATARS.length.
    `tools/verify182.js` §1 이 매 실행 검산). av0 «견습 기사» 만 묶음에서 뺀다 — 처음부터 입고 있는
    기본 외형이라(`DEF().avatars = {av0:1}`) 보상으로 적으면 «이미 보유» 한 칸을 매번 세게 된다. */
-const cosOfGrade = g => AVATARS.filter(a => a.g === g).map(a => a.id);
-const PROMO_COS = {
-  1: cosOfGrade(0).filter(id => id !== 'av0').concat(cosOfGrade(1)),  /* 🥈 실버 — 일반 11(기본 제외) + 고급 10 */
-  2: cosOfGrade(2),                         /* 🥇 골드         — 희귀 10 */
-  3: cosOfGrade(3),                         /* 💠 플래티넘     — 영웅 8  (구 `{k:'rank',v:3}` ∋ av41) */
-  4: cosOfGrade(4),                         /* 💎 다이아       — 전설 6 */
-  5: ['av5', 'av47'],                       /* 🔱 마스터       — 신화 신성 기사 · 자수정 대군주 */
-  6: ['av48'],                              /* 👑 그랜드마스터 — 신화 창천의 화신 (구 `{k:'rank',v:6}` 그대로) */
-  7: ['av49']                               /* 🔥 챌린저       — 신화 만상의 무지개 */
-};
+/* 194 ⚠ — 182 의 묶음은 «등급» 으로 잘라져 있었다. 등급이 폐기됐으므로 **순번**으로 자른다
+   (194 등재문: «승급 1회당 지급 코스튬 목록을 순번 기반으로 재설계»).
+   컷 21·10·8·6·2·1·1 은 182 가 고른 그 배분 그대로이고, `COS_LIST` 의 순서도 그대로라
+   **지급표는 한 칸도 바뀌지 않는다**(av41 → r3 · av48 → r6 두 앵커 포함. verify182 §1 이 검산).
+   av0 «견습 기사» 만 뺀다 — 처음부터 입고 있는 기본 외형이라 보상으로 적으면 «이미 보유» 를 매번 센다. */
+const PROMO_CUT = [21, 10, 8, 6, 2, 1, 1];
+const PROMO_COS = (() => {
+  const pool = COS_LIST.map(r => r[0]).filter(id => id !== 'av0');
+  const out = {};
+  let at = 0;
+  PROMO_CUT.forEach((c, i) => {
+    /* 마지막 칸은 «남는 것 전부» — 코스튬이 늘어도 이 표를 안 고치게(LESSONS 91-4) */
+    out[i+1] = (i === PROMO_CUT.length - 1) ? pool.slice(at) : pool.slice(at, at + c);
+    at += c;
+  });
+  return out;
+})();
 /* 코스튬 id → 그것을 주는 도전 계급 index. 시트·상세의 «획득 조건» 표기가 이 한 표를 읽는다
    (182 ⑤ — 옛 `req` 의 stage/coll 축을 **계급 축 하나로 일원화**한 자리). */
 const COS_RANK = (() => {
@@ -19286,9 +19395,12 @@ function endPromo(win){
       /* 182 ③ — «획득한 코스튬» 을 글자로만 알리지 않고 실제 스프라이트로 보여 준다.
          50 시트의 `data-cosav` 캔버스와 같은 경로(cosPaint)라 시트에서 보는 그 색·그 그림이다. */
       + (gotCos.length ? '<div class="pr182"><h3>획득한 코스튬</h3><div class="pg-grid">'
-          + gotCos.map(a => '<div class="pg-c" data-pgc="' + a.id + '" style="--r:' + GRADE[a.g].c + '">'
+          /* 194 — 등급 폐지. 림 색은 «등급 색» 이 아니라 **그 코스튬 자신의 틴트**(av0 은 무틴트라
+             기본 림)이고, 라벨은 등급명이 아니라 코스튬 이름이다 — 등급이 없어진 뒤로
+             칸을 구분하는 정보는 그 둘뿐이다. */
+          + gotCos.map(a => '<div class="pg-c" data-pgc="' + a.id + '" style="--r:' + (a.tint || COS_RIM) + '">'
               + '<canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id + '" data-coslite></canvas>'
-              + '<u class="ol1">' + GRADE[a.g].n + '</u></div>').join('')
+              + '<u class="ol1">' + a.n + '</u></div>').join('')
           + '</div></div>' : ''));
     if(gotCos.length){
       cosPaint($('mbox'));                       /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
@@ -19681,7 +19793,8 @@ let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
 let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
 
 const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic1:'고대의 잔향 상태',
-                    relic2:'잊힌 새벽 상태', relic3:'용의 숨결 상태', relic4:'창세의 여명 상태' };
+                    relic2:'잊힌 새벽 상태', relic3:'용의 숨결 상태', relic4:'창세의 여명 상태',
+                    stone:'불꽃 노을 상태' };   /* 194 — 강화석 던전 */
 
 function openDunDetail(d){
   if(!d) return;
@@ -20356,7 +20469,15 @@ const DUN_UI = {
             rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 } },
   relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } }
+            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 } },
+  /* 194 — 강화석 던전. 색은 강화석 아이콘(주황·호박)에서 뽑았고, 카드 기하는 relic 4단과 같은
+     규격(썸네일 330×· 상단 인셋 11 · 씬 7)이다. 썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) —
+     기존 아틀라스 중 «불꽃/주황» 계열인 dragon 의 다른 포즈(f1)를 쓴다.
+     해금은 유물 2단과 같은 자리 = 「가이드미션 14 클리어」 — 강화석은 코스튬 강화에만 쓰여
+     초반 성장 경로를 막지 않으므로 유물 1단과 같은 문턱에 둔다. */
+  stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'), tk:curIc('tkStone'),
+            thk:'dragon', thf:'f1', thi:'fly', thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
+            rw:['강화석 획득 가능'], psx:0.966, gm:14 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
@@ -20510,7 +20631,7 @@ $('dunList').addEventListener('click', e => {
    구 세이브의 `S.raidBest` 에 남아 있는 r30/r120 기록은 load() 에서 정리한다(이월은 r60 만). */
 const RAIDS = [
   { id:'r60',  n:'DPS 측정장', sec:60,  open:1,
-    ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','DPS 기록 갱신'],
+    ui:{ s:'#5A2320', i:'#8A3A2E', r:'#A5493A', pt:'#DCA894', rw:['총 피해량 측정','강화석 획득 가능'],
          /* 틴트는 multiply 다 — 어두운 색을 곱하면 배경보다 «어두운» 스프라이트가 된다.
             초판 #E2907F(휘도 163)는 카드1 의 붉은 배경(#8A3A2E, 휘도 81) 위에서 잉크 평균이
             배경보다 낮아 묻혔다(실측 68.8 vs 86.5). 카드2·3 급(휘도 200 안팎)으로 올린다. */
@@ -20522,7 +20643,7 @@ const RAIDS = [
    위에서는 기사 스프라이트(틴트 후 휘도 61)가 배경에 묻혀 97 의 «잉크가 배경보다 어둡지 않을 것»
    판정을 통과하지 못한다(fnchk97 [2] 실측). 보라(#453380, 휘도 57)에서는 두 칸 다 살아난다. */
 const ARENA = { id:'arena', n:'아레나', sec:30, open:5,
-  ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['1:1 대전 (더미)'],
+  ui:{ s:'#2B1F52', i:'#453380', r:'#563F9C', pt:'#B6A9DF', rw:['강화석 획득 가능'],
        thw:'296px', tht:'52px' } };
 const raidLocked = r => S.best < r.open;
 const raidBest = id => S.raidBest[id] || { dmg:0, dps:0 };
@@ -20918,6 +21039,11 @@ function endRaid(record){
   if(record){
     const b = raidBest(r.id), rec = dps > b.dps;
     if(rec) S.raidBest[r.id] = { dmg, dps };
+    /* 194 ③ⓑ — DPS 측정장 보상에 **강화석**을 붙인다(주인 지시 «DPS 측정장·아레나에서도 지급»).
+       측정장은 하루 제한이 없으므로(205 가 3회 제한을 등재해 두었지만 아직 미착수) 던전이 주
+       수급처가 되게 소액이다. 신기록에는 2배 — 「측정장은 기록을 갱신하러 가는 곳」이라는
+       이 콘텐츠의 목적과 보상이 같은 방향을 보게 한다. */
+    const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1) });
     save(); uiDirty = true;
     /* A5 모달 본문은 크림(#D7C0A1) 바탕이다 — 어두운 배경용 색(#ffd88a·#8fd6ff)을 쓰면
        대비가 1.1:1 이라 사실상 안 보인다. 강조는 공용 `.mbody p b`(#B4571E) 에 맡기고
@@ -20926,6 +21052,7 @@ function endRaid(record){
       '<p>제한 시간 <b>' + r.sec + '초</b><br>'
       + '총 피해량 <b style="font-size:32px">' + fmtB(dmg) + '</b><br>'
       + '초당 피해(DPS) <b style="font-size:32px">' + fmtB(dps) + '</b><br>'
+      + '보상 <b>' + st + '</b><br>'                     /* 194 — 강화석 */
       + (rec ? '<b style="color:#1F6B33">신기록!</b>'
              : '최고 기록 <b>' + fmtB(b.dmg) + '</b> · DPS <b>' + fmtB(b.dps) + '</b>') + '</p>');
   }else{
@@ -20958,9 +21085,15 @@ function arenaLook(i){
 }
 /* 보상 — «준비 중» 없이 소량 확정치(주인 지시 ④). 승리는 전액, 패배는 참가 위로금 1/5.
    골드는 스테이지 곡선을 타고(성장에 따라 의미가 유지된다), 다이아는 고정 소액이다. */
+/* 194 ③ⓑⓒ — 측정장·아레나가 주는 강화석. 「각성의 동굴」이 주 수급처가 되게 소액으로 둔다
+   (던전 1런 = 150+120f 이고 f 가 오를수록 벌어진다). 최종 수치는 199 의 몫. */
+const COS_ST_RAID  = 60;    /* DPS 측정장 1회(신기록이면 ×2) */
+const COS_ST_ARENA = 40;    /* 아레나 승리(패배는 1/5 = 8) */
 function arenaReward(win){
   const g = Math.max(100, Math.round(eGold(Math.max(1, S.best)) * 40));
-  return win ? { gold:g, dia:20 } : { gold:Math.round(g/5), dia:4 };
+  /* 194 — 승/패 비율(전액 vs 1/5)은 기존 골드·다이아 규칙을 그대로 따른다 */
+  return win ? { gold:g, dia:20, stone:COS_ST_ARENA }
+             : { gold:Math.round(g/5), dia:4, stone:Math.round(COS_ST_ARENA/5) };
 }
 function startArena(){
   if(arena || raidOn || dunRun) return;
@@ -22138,7 +22271,12 @@ const CURINFO = {
   relic: { ic:curIc('relic'), n:'유물조각',
     get:() => S.relic,
     d:'유물을 소환하고 강화할 때 사용합니다.',
-    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic1') || {}).n + '» 외 3', '룰렛 보상', '다이아 교환'] }
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'relic1') || {}).n + '» 외 3', '룰렛 보상', '다이아 교환'] },
+  /* 194 — 강화석. 획득처 3곳(주인 지시 ③)을 그대로 적는다: 전용 던전 · DPS 측정장 · 아레나 */
+  stone: { ic:curIc('stone'), n:'강화석',
+    get:() => S.stone,
+    d:'코스튬을 강화할 때 사용합니다. 강화 레벨은 코스튬마다 최대 ' + COS_MAXLV + '입니다.',
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'stone') || {}).n + '»', 'DPS 측정장 기록 갱신', '아레나 대전 보상'] }
 };   /* 88 — sp(스탯 포인트) 항목 폐기 */
 let curInfoKey = null;
 /* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
@@ -22459,6 +22597,7 @@ function bagCur(){
     { ic:curIc('gold'), n:'골드',       g:1, q:Math.floor(S.gold) || 0, k:'gold' },   /* 골드만 알파벳 단위 */
     { ic:curIc('dia'), n:'다이아',     g:3, q:Math.floor(S.dia) || 0 },
     { ic:curIc('relic'), n:'유물조각',     g:2, q:Math.floor(S.relic) || 0 },
+    { ic:curIc('stone'), n:'강화석',     g:3, q:Math.floor(S.stone) || 0 },   /* 194 */
     { ic:curIc('mile'), n:'마일리지',   g:4, q:Math.floor(S.mileage) || 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
@@ -22916,8 +23055,9 @@ function openPromo(){
   const ri = S.rank + 1;                 /* 도전 계급 index — nextRank() 가 가리키는 그 칸 */
   /* 179 — 클리어 보상. 코스튬(스프라이트 미리보기) + 칭호. 칭호는 별도 데이터가 아니라
      «도달한 계급 = 보유 칭호» 라서(renderProfile 의 `own = i <= S.rank`) 승급 자체가 지급이다. */
-  /* 182 — 보상이 «묶음» 이 됐다. 미리보기는 대표 1종(묶음의 최상위 칸) 그대로 두고,
-     부제에 «등급 코스튬 n종» 과 이미 가진 수를 적는다(재도전이면 실제로 받을 게 줄어든다). */
+  /* 182 — 보상이 «묶음» 이 됐다. 미리보기는 대표 1종(묶음의 마지막 칸) 그대로 두고,
+     부제에 «코스튬 n종» 과 이미 가진 수를 적는다(재도전이면 실제로 받을 게 줄어든다).
+     194 — 등급 폐지로 «등급명» 은 빠졌다. */
   const rwList = promoCosList(ri), rw = promoCos(ri);
   const rwLeft = rwList.filter(a => !cosOwn(a.id)).length;
   const rwOwn = rwLeft === 0;
@@ -22931,9 +23071,11 @@ function openPromo(){
     + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
             + rw.id + '" data-cossc="3"></canvas></div>' : '')
     + '<div class="pr-rw-t">'
-    + (rw ? '<b style="color:' + GRADE[rw.g].c + '">' + rw.n
+    /* 194 — 등급 폐지. 대표 이름의 색은 «등급 색» 이 아니라 그 코스튬의 **틴트**이고(av0 은
+       묶음에 없으므로 틴트가 항상 있다), 부제는 «등급명 코스튬 n종» → «코스튬 n종» 이다. */
+    + (rw ? '<b style="color:' + (rw.tint || '#E8DCC8') + '">' + rw.n
             + (rwList.length > 1 ? ' <em>외 ' + (rwList.length - 1) + '종</em>' : '') + '</b>'
-            + '<i>' + GRADE[rw.g].n + ' 코스튬 ' + rwList.length + '종'
+            + '<i>코스튬 ' + rwList.length + '종'
             + (rwOwn ? ' <em>(이미 보유)</em>' : rwLeft < rwList.length ? ' <em>(' + rwLeft + '종 남음)</em>' : '')
             + '</i>' : '')
     + '<i>칭호 <em>' + r.n + '</em></i></div></div></div>'
@@ -23215,73 +23357,71 @@ function renderCos(){
   /* 작업 51 — 07·26 과 동일. 슬롯~버튼(본문)만 스크롤 뷰포트에 담는다 */
   h += '<div class="shsc"><div class="shsc-in">';
 
-  /* 2 착용 슬롯 1칸 */
-  const cv = AV[cur];
+  /* 2 착용 슬롯 1칸.
+     194 — 슬롯 라벨이 «등급명» 에서 **Lv.n** 으로 바뀌었다(07 스킬 슬롯과 같은 자리·같은 뜻).
+     면·림은 등급 8단이 아니라 COS_FILL/COS_RIM 한 벌이다. */
   h += '<div class="sk-eqp">'
     +  '<div class="sk-slot" data-cosun="' + cur + '" style="left:461px'
-    +  ';--f:' + SK_FILL[cv.g] + ';--r:' + SK_RIM[cv.g] + '">'
+    +  ';--f:' + COS_FILL + ';--r:' + COS_RIM + '">'
     +  '<b class="sk-si"><canvas class="cos-cv" width="96" height="126" data-cosav="' + cur
-    +    '" data-cossc="2"></canvas></b><u class="sk-slv ol2">' + GRADE[cv.g].n + '</u>'
+    +    '" data-cossc="2"></canvas></b><u class="sk-slv ol2">Lv. ' + cosLvOf(cur) + '</u>'
     +  '<s class="sk-eq m"></s></div></div>';
 
-  /* 3 코스튬 격자 — 87 로 6칸 → **50칸**이 되어 격자 «안»이 세로 스크롤이 된다.
-     시트 바깥 규격(슬롯·격자 상자 1000×680·총효과·버튼)은 07 측정치 그대로 두고,
-     `.sk-gp` 를 뷰포트로 만들어 등급별 섹션(헤더 + 5열 행들)을 그 안에 쌓는다.
-     열 pitch 190 · 행 pitch 220 · 카드 168×171 은 07 과 동일하다. */
+  /* 3 코스튬 격자 — 194 로 **등급 섹션이 없어졌다**. 50칸이 평평한 5열 격자로 이어지고,
+     격자 «안» 세로 스크롤(87)만 그대로다. 열 pitch 190 · 행 pitch 220 · 카드 168×171 은 07 과 동일.
+     카드 하단 진행바는 «가격/보유» 도 «재료 n/N» 도 아니라 **강화 진행도(Lv/500)** 다 —
+     미보유 칸만 어느 승급전이 주는지를 말한다. */
   h += '<div class="sk-gp"><div class="cos-in">';
-  let y = 20;
-  GRADE.forEach((G, g) => {
-    const list = AVATARS.filter(a => a.g === g);
-    if(!list.length) return;
-    const ownd = list.filter(a => cosOwn(a.id)).length;
-    h += '<div class="cos-hd" style="top:' + y + 'px;--r:' + SK_RIM[g] + '">'
-      +  '<i class="ol2" style="color:' + G.c + '">' + G.ic + ' ' + G.n + '</i>'
-      +  '<em class="ol2">' + ownd + ' / ' + list.length + '</em></div>';
-    y += 62;
-    list.forEach((a, i) => {
-      const own = cosOwn(a.id), on = a.id === cur, lock = !own && !cosReqOk(a);
-      const f = on ? skDim(SK_FILL[a.g]) : SK_FILL[a.g];
-      const r = on ? skDim(SK_RIM[a.g])  : SK_RIM[a.g];
-      h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
-        +  '" data-cosit="' + a.id + '" '
-        +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (y + ((i/5)|0)*220) + 'px'
-        +  ';--f:' + f + ';--r:' + r + '">'
-        /* 82 — 미보유도 «어떤 것인지» 보여야 한다. 코스튬은 아이콘이 곧 외형이라
-           이모지가 아니라 그 코스튬의 틴트로 그린 기사(80 look 과 같은 경로)를 넣는다 */
-        +  '<b class="sk-ci"><canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id
-        +    '" data-coslite></canvas></b>' + (own ? '' : '<span class="sk-lock"></span>')
-        +  '<u class="sk-clv ol2">' + GRADE[a.g].n + '</u>'
-        +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
-        +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
-        /* 진행바 자리 — 182 로 «가격» 이 사라졌다. 보유는 «보유», 미보유는 **어느 승급전이 주는지**.
-           (계급을 이미 지났는데 미보유인 칸은 없다 — 승급이 곧 지급이다. 그래도 lock 분기는
-           남겨 둔다: 구세이브에서 계급만 높고 코스튬이 없는 경우 다음 승급 때 채워진다) */
-        +  '<div class="sk-bar' + (lock ? ' rq' : '') + '"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-        +  '<b class="ol1">' + (own ? '보유' : '🔒' + cosReqText(a))
-        +  '</b></div></div>';
-    });
-    y += Math.ceil(list.length/5) * 220;
+  const TOP = 20;
+  AVATARS.forEach((a, i) => {
+    const own = cosOwn(a.id), on = a.id === cur, lock = !own && !cosReqOk(a);
+    const lv = cosLvOf(a.id), upOk = cosUpOk(a.id);
+    const f = on ? skDim(COS_FILL) : COS_FILL;
+    const r = on ? skDim(COS_RIM)  : COS_RIM;
+    h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + (a.id === cosSel ? ' sel' : '')
+      +  '" data-cosit="' + a.id + '" '
+      +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (TOP + ((i/5)|0)*220) + 'px'
+      +  ';--f:' + f + ';--r:' + r + '">'
+      /* 82 — 미보유도 «어떤 것인지» 보여야 한다. 코스튬은 아이콘이 곧 외형이라
+         이모지가 아니라 그 코스튬의 틴트로 그린 기사(80 look 과 같은 경로)를 넣는다 */
+      +  '<b class="sk-ci"><canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id
+      +    '" data-coslite></canvas></b>' + (own ? '' : '<span class="sk-lock"></span>')
+      +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
+      +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
+      +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
+      /* 194 — 「강화 가능」 칸은 카드 자체가 말한다(166·202 계열의 «있을 때만» 규칙: 강화석이
+         모자라거나 만렙이면 안 뜬다). 별도 레드닷을 새로 만들지 않고 진행바 색으로만 표시한다. */
+      +  '<div class="sk-bar' + (lock ? ' rq' : upOk ? ' up' : '') + '">'
+      +    '<i style="width:' + (own ? (lv / COS_MAXLV * 100).toFixed(2) : 0) + '%"></i>'
+      +    '<b class="ol1">' + (own ? lv + '/' + COS_MAXLV : '🔒' + cosReqText(a))
+      +  '</b></div></div>';
   });
-  h += '<div class="cos-pad" style="top:' + (y - 30) + 'px"></div>';
+  /* 87 — 절대배치 카드만으로는 스크롤 높이가 서지 않으므로 스페이서로 내용 높이를 세운다 */
+  h += '<div class="cos-pad" style="top:' + (TOP + Math.ceil(AVATARS.length/5)*220 - 30) + 'px"></div>';
   h += '</div></div>';
 
-  /* 7 총 보유 효과 — bonus() 의 코스튬 합산과 같은 곱연산으로 낸다(공격력 기준).
-     87 로 50종이 되어 «몇 종을 모았는지» 도 같이 보여 준다(격자가 스크롤이라 한눈에 안 보인다) */
-  const tot = AVATARS.reduce((m, a) => cosOwn(a.id) ? m * (1 + a.atk) : m, 1) - 1;
+  /* 7 총 보유 효과 — bonus() 와 **같은 두 축**으로 낸다(194):
+     보유는 코스튬마다 곱하고, 강화는 레벨 총합에 한 번 곱한다. 두 식이 갈라지면 표기가 거짓이 된다. */
+  const own1 = AVATARS.reduce((m, a) => cosOwn(a.id) ? m * (1 + a.atk) : m, 1);
+  const tot  = own1 * (1 + cosLvVal('atk')) - 1;
   const nOwn = AVATARS.filter(a => cosOwn(a.id)).length;
-  h += '<div class="sk-tot"><i class="ol3">보유 ' + nOwn + '/' + AVATARS.length + ' · 총 보유 효과:</i>'
+  h += '<div class="sk-tot"><i class="ol3">보유 ' + nOwn + '/' + AVATARS.length
+    +  ' · 강화 ' + cosLvSum() + 'Lv · 총효과:</i>'
     +  '<em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
-  /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [승급전]
-     182 — [구매] 폐지. 자리를 비우면 8점 받은 이 시트의 버튼 2칸 레이아웃이 깨지므로, 같은 칸에
-     **획득 경로로 가는 버튼**을 놓는다(«어디서 얻나» 를 시트에서 바로 답한다). 22 승급전 팝업으로 간다.
+  /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [강화]
+     194 — 182 가 놓아 둔 [승급전] 자리를 **[강화]** 가 받는다. 코스튬 시트에서 매번 하는 행동은
+     이제 강화이고(승급전은 계급당 한 번뿐), 승급전 진입은 상세 팝업(`showCosDetail`)의
+     같은 자리에 그대로 남겨 «어디서 얻나» 도 답할 수 있게 했다.
      171 — 버튼 상태색: 선택 카드 기준 «지금 눌러서 되는가» 를 그대로 색에 싣는다.
-       [착용] 보유 + 착용 중 아님 · [승급전] 도전할 계급이 남아 있음(`nextRank`) */
+       [착용] 보유 + 착용 중 아님 · [강화] 보유 + 만렙 아님 + 강화석 충분 */
   const selOwn = cosOwn(cosSel);
   const wearOk = selOwn && cosSel !== cur;
-  const promoOk = !!nextRank();
+  const upOkS  = cosUpOk(cosSel);
+  const cost   = cosCost(cosLvOf(cosSel));
   h += '<div class="sk-btn sk-b1 ' + (wearOk ? 'ok' : 'no') + '" data-coswear="1"><i class="ol3">착용</i></div>'
-    +  '<div class="sk-btn sk-b2 ' + (promoOk ? 'ok' : 'no') + '" data-cospromo="1"><i class="ol3">승급전</i></div>';
+    +  '<div class="sk-btn sk-b2 ' + (upOkS ? 'ok' : 'no') + '" data-cosup="1"><i class="ol3">강화 '
+    +  (selOwn && cosMaxed(cosSel) ? 'MAX' : curIc('stone', 30) + ' ' + fmt(cost)) + '</i></div>';
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -23298,7 +23438,7 @@ function renderCos(){
   if(gp){
     gp.scrollTop = cosScroll;
     /* 선택이 «바뀐» 렌더에서만 그 카드로 이동한다(매 틱 renderUI 에 스크롤을 뺏기지 않게).
-       첫 렌더에서는 착용 중인 코스튬이 화면에 들어온다 — 50칸이라 아래 등급은 안 보인다. */
+       첫 렌더에서는 착용 중인 코스튬이 화면에 들어온다 — 50칸이라 아래쪽은 안 보인다. */
     const sel = bd.querySelector('.sk-card.sel');
     if(sel && cosSelShown !== cosSel){
       const t = sel.offsetTop;
@@ -23320,8 +23460,21 @@ $('bCos').addEventListener('click', e => {
     else notify('🔒 승급전에서 획득해야 착용합니다');
     return;
   }
-  /* 182 — [구매] → [승급전]. 코스튬을 주는 유일한 자리로 보낸다 */
+  /* 182 — [구매] → [승급전]. 코스튬을 주는 유일한 자리로 보낸다(194 이후에는 상세 팝업에만 있다) */
   if(e.target.closest('[data-cospromo]')){ openPromo(); return; }
+  /* 194 — [강화]. 선택 카드 1레벨. 재화 부족·만렙·미보유는 149 규약대로 **토스트**로만 알린다 */
+  if(e.target.closest('[data-cosup]')){
+    /* LESSONS 22 — 연출 대상 노드는 **재렌더 전에** 잡아 둔다(renderUI 가 카드를 갈아끼운다).
+       연출 DOM 자체는 #fxl 로 나가므로 카드가 사라져도 살아남는다. */
+    const card = $('bCos').querySelector('.sk-card.sel');
+    if(cosUpgrade(cosSel)){
+      fxUpOk(card, card, 'Lv. ' + cosLvOf(cosSel));   /* 17 «성공» 과 같은 한 세트(58 톤) */
+      renderUI();
+    }else if(!cosOwn(cosSel))      notify('🔒 승급전에서 획득해야 강화합니다');
+    else if(cosMaxed(cosSel))      notify('이미 <b>최대 레벨</b>입니다');
+    else                           notify(curIc('stone') + ' <b>강화석</b>이 부족합니다');
+    return;
+  }
   const t = e.target.closest('[data-costab]');
   if(t){ heroSubGo(t.dataset.costab); return; }
   const c = e.target.closest('[data-cosit]');
@@ -23334,45 +23487,64 @@ $('bCos').addEventListener('click', e => {
 /* 코스튬 상세 — 08 스킬 세부 팝업 껍데기(`.sk8`)를 재사용한다(UI-REFERENCE §50) */
 function showCosDetail(id){
   const a = AV[id]; if(!a) return;
-  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur();
+  const own = cosOwn(id), on = id === cosCur();
+  const lv = cosLvOf(id), maxed = cosMaxed(id), cost = cosCost(lv), upOk = cosUpOk(id);
   /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 못 받은 외형» 이라 미보유도 이름·그림을 보여 준다
-     (82 규칙). 182 이후 상태 줄은 «미보유» 와 «어느 승급전이 주는가» 를 말한다. */
+     (82 규칙). 182 이후 상태 줄은 «미보유» 와 «어느 승급전이 주는가» 를 말한다.
+     194 — «등급» 칸은 폐기했다. 그 자리는 이제 **강화 레벨**이 갖는다(등급이 없어졌으므로
+     이 코스튬이 다른 코스튬과 다른 점은 «외형» 과 «내가 얼마나 키웠나» 둘뿐이다). */
   $('mtitle').textContent = a.n;
   $('mbox').innerHTML =
       '<div class="skd">'
     +   '<div class="sk-ic"><canvas class="cos-cv" width="150" height="189" data-cosav="' + id
     +     '" data-cossc="3"></canvas></div>'
-    +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
+    +   '<div class="sk-gr"><b>Lv. ' + lv + '</b></div>'
     +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
-    +   '<div class="sk-pb"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-    +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">'
-    +       (own ? '보유' : '🔒' + cosReqText(a)) + '</b></div>'
+    /* 진행바 — 보유 칸은 «강화 진행도», 미보유 칸은 0% + 획득 조건(182 그대로) */
+    +   '<div class="sk-pb"><i style="width:' + (own ? (lv/COS_MAXLV*100).toFixed(2) : 0) + '%"></i>'
+    +     '<b style="left:calc(' + (own ? Math.min(100, lv/COS_MAXLV*100).toFixed(2) : 0) + '% + 3px)">'
+    +       (own ? lv + '/' + COS_MAXLV : '🔒' + cosReqText(a)) + '</b></div>'
     +   '<div class="sk-ct">'
-    /* 182 — «가격» 칸 폐기. 이 자리는 이제 **획득 조건(어느 승급전)** 하나만 말한다 */
-    +     '<div class="hd"><div><b>획득 조건</b></div><div class="nt"><b>등급</b></div></div>'
+    +     '<div class="hd"><div><b>획득 조건</b></div><div class="nt"><b>강화 비용</b></div></div>'
     +     '<div class="vl"><div><b>' + cosReqText(a) + '</b></div>'
-    +       '<div class="nt"><b>' + G.n + '</b></div></div>'
+    +       '<div class="nt"><b>' + (own && maxed ? 'MAX' : curIc('stone', 26) + ' ' + fmt(cost)) + '</b></div></div>'
     +   '</div>'
     +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
+    /* 194 — 08 껍데기(801×701)에는 «보유 효과» 바 아래로 34px 밖에 안 남아 두 번째 알약 행을
+       놓을 자리가 없다(측정표 08 §2.8). 강화 효과는 **설명 박스 안 한 줄**로 낸다 —
+       칸 기하를 1px 도 안 건드리므로 08·50 의 기존 점수에 영향이 없다. */
     +   '<div class="sk-db"><p>' + (own
-          ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
-          : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
+          ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.<br>'
+            + '<em>강화석</em>으로 최대 <em>Lv. ' + COS_MAXLV + '</em>까지 강화할 수 있습니다 '
+            + '(효율 곡선은 <em>모든 코스튬이 동일</em>).<br>'
+            + '강화 효과 <em>Lv. ' + lv + '</em> — 공격 <em>+' + pct(lv*COS_LV.atk) + '</em> · 체력 <em>+'
+            + pct(lv*COS_LV.hp) + '</em> · 골드 <em>+' + pct(lv*COS_LV.gold) + '</em>'
+          : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용되고, '
+            + '<em>강화석</em>으로 <em>Lv. ' + COS_MAXLV + '</em>까지 키울 수 있습니다.') + '</p></div>'
+    /* 194 — 두 줄로 나눈다: «보유 효과»(코스튬마다 곱) · «강화 효과»(레벨 1당, 총합에 1회 곱).
+       숫자는 전부 bonus() 와 같은 상수(COS_OWN·COS_LV)에서 나온다 */
     +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
     +     '<div class="v"><b>공격 <em>+' + pct(a.atk) + '</em> 체력 <em>+' + pct(a.hp)
     +       '</em> 골드 <em>+' + pct(a.gold) + '</em></b></div></div>'
     + '</div>'
     + '<div class="sk-act">'
     +   '<button class="sk-e" id="mEq"' + (own && !on ? '' : ' disabled') + '><b>착용</b></button>'
-    /* 182 — [구매] → [승급전]. 이미 가진 코스튬에는 갈 곳이 없으므로 비활성이다.
+    /* 194 — 보유 칸은 [강화](이 팝업에서 바로 올린다), 미보유 칸은 182 의 [승급전] 그대로.
        171 의 «`.lack` = 색 · `disabled` = 입력 차단» 두 축 분리는 그대로 지킨다. */
-    +   '<button class="sk-u" id="mLv"' + (own || !nextRank() ? ' disabled' : '') + '><b>승급전</b></button>'
+    +   (own
+        ? '<button class="sk-u' + (upOk ? '' : ' lack') + '" id="mLv"' + (upOk ? '' : ' disabled') + '><b>'
+          + (maxed ? 'MAX' : '강화') + '</b></button>'
+        : '<button class="sk-u" id="mLv"' + (nextRank() ? '' : ' disabled') + '><b>승급전</b></button>')
     + '</div>';
   $('mbox').scrollTop = 0;
   cosPaint($('mbox'));
   $('modal').classList.add('on', 'sk8');
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
-  if(b && !b.disabled) b.onclick = () => { closeModal(); openPromo(); };
+  if(b && !b.disabled) b.onclick = own
+    ? () => { const at = $('mbox').querySelector('.sk-ic');
+              if(cosUpgrade(id)){ fxUpOk(at, at, 'Lv. ' + cosLvOf(id)); renderUI(); showCosDetail(id); } }
+    : () => { closeModal(); openPromo(); };
 }
 
 /* ==========================================================================

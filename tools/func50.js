@@ -159,7 +159,9 @@ const tap = (page, sel) => page.evaluate((s) => {
       await page.evaluate(() => { renderCos(); });
       await page.waitForTimeout(250);
       eq('카드 잠금 해제', await page.$eval('#bCos [data-cosit="av2"]', (e) => e.classList.contains('lk')), false);
-      eq('카드 바닥 «보유»', await page.$eval('#bCos [data-cosit="av2"] .sk-bar>b', (e) => e.textContent), '보유');
+      /* 194 — 보유 카드의 진행바는 «보유» 가 아니라 **강화 진행도(Lv/500)** 다 */
+      eq('카드 바닥 강화 진행도', await page.$eval('#bCos [data-cosit="av2"] .sk-bar>b', (e) => e.textContent),
+        await S(page, "'0/' + COS_MAXLV"));
       /* 182 ③ — 승급 성공 팝업이 획득 코스튬을 **그림으로** 보여 준다 */
       await page.evaluate(() => { S.rank = 2; promo = { t: 60, max: 60, rank: nextRank() }; endPromo(true); });
       await page.waitForTimeout(300);
@@ -183,13 +185,18 @@ const tap = (page, sel) => page.evaluate((s) => {
       const { ctx, page } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 1e9 });
       await toCos(page);
       eq('[구매] 버튼 없음', await page.$$eval('#bCos [data-cosbuy]', (e) => e.length), 0);
-      eq('[승급전] 버튼 있음', await page.$$eval('#bCos [data-cospromo]', (e) => e.length), 1);
+      /* 194 — 시트 2번 칸은 [승급전] → **[강화]** 로 바뀌었다(승급전 진입은 상세 팝업이 갖는다) */
+      eq('[강화] 버튼 있음', await page.$$eval('#bCos [data-cosup]', (e) => e.length), 1);
+      eq('시트에서 [승급전] 은 빠짐', await page.$$eval('#bCos [data-cospromo]', (e) => e.length), 0);
       eq('buyAvatar() 폐기', await S(page, "typeof buyAvatar"), 'undefined');
       eq('AVATARS 에 cost 필드 없음', await S(page, 'AVATARS.every(a => a.cost === undefined)'), true);
       eq('다이아가 아무리 많아도 보유가 안 늘어난다',
         await S(page, 'Object.keys(S.avatars).length'), 1);
-      /* [승급전] 버튼은 승급전 팝업으로 간다 */
-      await tap(page, '#bCos [data-cospromo]'); await page.waitForTimeout(400);
+      /* 194 — 상세 팝업의 [승급전] 이 승급전 팝업으로 간다(미보유 카드에서만 뜬다) */
+      await page.evaluate(() => showCosDetail('av2'));
+      await page.waitForTimeout(300);
+      eq('상세 버튼 라벨', await page.$eval('#mLv b', (e) => e.textContent), '승급전');
+      await tap(page, '#mLv'); await page.waitForTimeout(400);
       eq('[승급전] → 승급전 팝업', await page.$$eval('#mbox .pr179', (e) => e.length), 1);
       await page.evaluate(() => closeModal());
       await ctx.close();
@@ -206,8 +213,9 @@ const tap = (page, sel) => page.evaluate((s) => {
       await tap(page, '#bCos [data-coswear]'); await page.waitForTimeout(600);
       eq('착용 변경', await S(page, 'S.avatar'), 'av3');
       eq('저장 반영', (await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY)).avatar, 'av3');
-      eq('슬롯 등급 라벨', await page.$eval('#bCos .sk-eqp .sk-slv', (e) => e.textContent),
-        await S(page, 'GRADE[AV.av3.g].n'));
+      /* 194 — 슬롯 라벨은 «등급명» → **Lv.n**(07 스킬 슬롯과 같은 자리·같은 뜻) */
+      eq('슬롯 Lv 라벨', await page.$eval('#bCos .sk-eqp .sk-slv', (e) => e.textContent),
+        await S(page, "'Lv. ' + cosLvOf('av3')"));
       /* 전투 렌더에 실제로 쓰이는가 — 아바타 tint 가 플레이어 스프라이트 경로에 들어간다 */
       eq('전투 렌더 tint 연결', await S(page, "AV[S.avatar].tint !== null"), true);
       /* 카드의 [+] 뱃지로도 착용된다 */

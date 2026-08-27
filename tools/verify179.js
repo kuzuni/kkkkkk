@@ -34,8 +34,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
     /* 182 — 표 한 칸이 «1종» 에서 «묶음» 이 됐다. 미리보기 대표는 묶음에서 파생된다(promoCos). */
     const rows = Object.keys(PROMO_COS).map(k => {
       const a = promoCos(+k);
-      return { ri: +k, id: a ? a.id : null, ok: !!a, g: a ? a.g : -1, n: a ? a.n : null,
-               size: PROMO_COS[k].length };
+      /* 194 — 등급(`g`) 폐기. 대표가 «묶음의 마지막 칸» 이라는 파생 규칙만 남는다 */
+      return { ri: +k, id: a ? a.id : null, ok: !!a, n: a ? a.n : null,
+               size: PROMO_COS[k].length, last: PROMO_COS[k][PROMO_COS[k].length - 1],
+               pal: a ? a.pal : -1 };
     });
     /* 182 이전 `COS_LIST` 가 못 박아 두었던 계급 조건 2건. 데이터는 폐기됐지만 **약속은 남는다** —
        매핑이 이 두 점에서 벗어나면 «같은 코스튬을 두 규칙이 다르게 준다» 가 된다(179 매핑 근거). */
@@ -47,8 +49,13 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
   });
   ok(map.rows.length === map.ranks - 1, `승급 ${map.ranks - 1}회 전부에 보상이 있다 (표 ${map.rows.length}칸)`);
   map.rows.forEach(r => ok(r.ok, `PROMO_COS[${r.ri}] 대표 = ${r.id} 는 실재 코스튬 (${r.n} · 묶음 ${r.size}종)`));
-  map.rows.forEach(r => ok(r.g === Math.min(r.ri, 5),
-    `PROMO_COS[${r.ri}] 대표 등급 ${r.g} = min(${r.ri},5) — 179 곡선 위에 그대로 있다`));
+  /* 194 — 옛 «대표 등급 = min(ri,5)» 는 등급 폐지로 성립하지 않는다. 그 단언이 실제로 지키던 것은
+     «대표가 묶음에서 파생된다(별도 표가 아니다)» 였고(179 «두 벌로 늘리지 말라»), 그건 그대로 잰다.
+     색 밴드가 계급을 따라 단조 증가하는 것도 같이 본다 — 179 가 고른 «점점 화려해지는» 미리보기 곡선. */
+  map.rows.forEach(r => ok(r.id === r.last,
+    `PROMO_COS[${r.ri}] 대표 = 묶음의 마지막 칸 ${r.id} (별도 표 없음)`));
+  map.rows.forEach(r => ok(r.pal === Math.min(r.ri, 5),
+    `PROMO_COS[${r.ri}] 대표 색 밴드 ${r.pal} = min(${r.ri},5) — 179 미리보기 곡선 유지`));
   map.pinned.forEach(q => ok(q.at === q.v && q.inBundle,
     `구 계급 조건 ${q.id}→rank ${q.v} 를 매핑이 그대로 따른다 (실제 ${q.at})`));
   /* 182 — 구매 경로가 없으므로 «어느 묶음에도 안 든 코스튬» 은 영원히 못 얻는 코스튬이다 */
@@ -154,8 +161,11 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
 
     renderCos();                                    /* 50 코스튬 시트 */
     const card = document.querySelector('#bCos [data-cosit="' + exp + '"]');
+    /* 194 — 보유 카드의 진행바는 «보유» 가 아니라 **강화 진행도(Lv/500)** 를 적는다.
+       «보유로 그린다» 의 뜻은 그대로다: 자물쇠(.lk) 가 없고 잠금 문구가 아니다. */
+    const barTxt = card ? card.querySelector('.sk-bar b').textContent : '';
     const cosOwnUi = !!card && !card.classList.contains('lk')
-      && /보유/.test(card.querySelector('.sk-bar b').textContent);
+      && /^\d+\/\d+$/.test(barTxt.trim());
 
     renderProfile();                                /* 19 프로필 — 칭호 잠금 해제 */
     const cards = [...document.querySelectorAll('#pfCards .pf-card')];

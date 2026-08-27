@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 강화석 던전 입장권 — 작업 194(던전 계열 4번째) · 125 단일 출처 -->
+  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#6B3A14" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#E08B44"/>
+  <path d="M32 25l7 4.5 3.5 7.5-3.5 7.5-7 1.5-7-1.5-3.5-7.5L25 29.5z" fill="#FFFFFF" opacity=".92" stroke="#6B3A14" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>
