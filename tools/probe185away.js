@@ -41,25 +41,36 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
   /* 구간별 카운터: 0 = 접근(d > NEAR) · 1 = 밀착(d ≤ NEAR) */
   const n = [0, 0], away = [0, 0];
   let convN = 0, convAway = 0;                 /* verify172 ③ 과 «같은 정의» 의 대조군 */
+  /* 「공격 모션 중에는 보스가 선다」(index.html ~16346 `if(e.atkT>0 && d<reach) spd=0`) 가
+     away 표본을 만드는지 — 표본 구간에 공격 모션이 걸쳐 있었나로 쪼갠다 */
+  let atkN = 0, atkAway = 0, idleN = 0, idleAway = 0, atkCnt = 0, atkFrames = 0;
+  let sawAtk = false, cd0 = null;
   for (let f = 0; f < frames; f++) {
     const b0 = find();
     if (b0) b0.hp = b0.max;
     player.inv = 9; player.hp = stat.maxHp; player.dead = 0;
     bossT = 9999;
     if (typeof promo !== 'undefined' && promo) promo.t = 9999;
+    const c0 = b0 ? b0.cd : null;
     window.__p185tick();
+    const bf = find();
+    if (bf) {
+      if (bf.atkT > 0) { sawAtk = true; atkFrames++; }
+      if (c0 !== null && bf.cd > c0) atkCnt++;      /* 쿨다운이 «올라간» 프레임 = 공격 시작 */
+    }
     if (f % sampleEvery === 0) {
       const b = find();
-      if (!b) { prev = null; continue; }
+      if (!b) { prev = null; sawAtk = false; continue; }
       const d = Math.hypot(player.x - b.x, player.y - b.y);
       const band = d <= NEAR ? 1 : 0;
       if (d <= NEAR && tClose < 0) tClose = f / 60;
       if (prev !== null) {
         const isAway = d > prev + 2;
         n[band]++; if (isAway) away[band]++;
+        if (sawAtk) { atkN++; if (isAway) atkAway++; } else { idleN++; if (isAway) idleAway++; }
         if (tClose >= 0) { convN++; if (isAway) convAway++; }
       }
-      prev = d;
+      prev = d; sawAtk = false;
     }
     if (f % 900 === 0) await new Promise(r => setTimeout(r, 0));
   }
@@ -69,6 +80,10 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
     nearN: n[1], nearAway: n[1] ? away[1] / n[1] * 100 : 0,
     nearShare: (n[0] + n[1]) ? n[1] / (n[0] + n[1]) * 100 : 0,
     convN, convAwayPct: convN ? convAway / convN * 100 : 0,
+    atkCnt, atkFrames,
+    atkN, atkAwayPct: atkN ? atkAway / atkN * 100 : 0,
+    idleN, idleAwayPct: idleN ? idleAway / idleN * 100 : 0,
+    awayFromAtk: (away[0] + away[1]) ? atkAway / (away[0] + away[1]) * 100 : 0,
   };
 };
 
@@ -117,4 +132,10 @@ async function runOne(browser, url) {
   for (const r of rows)
     console.log(`| ${r.tag} | ${r.tClose < 0 ? '—' : r.tClose.toFixed(1) + 's'} | ${r.apprN} | ${r.apprAway.toFixed(1)}% | ${r.nearN} | `
       + `**${r.nearAway.toFixed(1)}%** | **${r.nearShare.toFixed(1)}%** | ${r.convAwayPct.toFixed(1)}% |`);
+
+  console.log('\n| 빌드 | 공격 | 공격 모션 프레임 | 모션 걸친 표본 | **그중 away%** | 모션 없는 표본 | **그중 away%** | away 표본 중 «모션» 비중 |');
+  console.log('|---|---|---|---|---|---|---|---|');
+  for (const r of rows)
+    console.log(`| ${r.tag} | ${r.atkCnt}회 | ${r.atkFrames} | ${r.atkN} | **${r.atkAwayPct.toFixed(1)}%** | ${r.idleN} | `
+      + `**${r.idleAwayPct.toFixed(1)}%** | ${r.awayFromAtk.toFixed(0)}% |`);
 })().catch(e => { console.error(e); process.exit(2); });
