@@ -1916,7 +1916,12 @@
     border:6px solid #000;border-radius:17px;overflow:hidden;
     background:linear-gradient(180deg,#8182A0 0 21px,#6F7799 21px)}
   .sk-pb i{display:block;height:100%;background:#FCB414}
-  .sk-pb b{position:absolute;top:0;height:100%;display:flex;align-items:center;
+  /* 270 — 라벨은 «채움 끝» 을 따라다니지 않고 **바 내부 가운데 고정**이다 (주인 지시).
+     측정표 §2.4 의 ref 는 채움 끝 3px 뒤(fill 추종)지만, 재료가 적어 p 가 0~10% 면
+     글자가 좌단에 처박히고 6px 스트로크가 테두리와 겹쳐 못 읽는다 → 의도적 이탈(§15 정오표).
+     left/right 0 은 padding box 기준이라 검정 6px 테두리 안쪽 트랙의 정가운데다. */
+  .sk-pb b{position:absolute;left:0;right:0;top:0;height:100%;
+    display:flex;align-items:center;justify-content:center;
     font-size:25px;color:#F4F6B0;-webkit-text-stroke:6px #000}
 
   /* 쿨타임 표 750x132 — 헤더행 50 / 검정 구분선 4 / 값행 69, 세로선은 값행 안쪽 상4·하8 인셋 */
@@ -21168,7 +21173,7 @@ function showSkillDetail(id){
     +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
     +   '<div class="sk-lv"><b>Lv. ' + lv + '</b></div>'
     +   '<div class="sk-pb"><i style="width:' + p + '%"></i>'
-    +     '<b style="left:calc(' + p + '% + 3px)">' + (maxed ? 'MAX' : have + '/' + need) + '</b></div>'
+    +     '<b>' + (maxed ? 'MAX' : have + '/' + need) + '</b></div>'   /* 270 — 바 내부 가운데 고정(CSS) */
     +   '<div class="sk-ct">'
     +     '<div class="hd"><div><b>쿨타임</b></div><div class="nt"><b>피해량</b></div></div>'
     +     '<div class="vl"><div><b>' + cool + '</b></div><div class="nt"><b>' + dmgTxt + '</b></div></div>'
@@ -25458,7 +25463,7 @@ function showCosDetail(id){
     +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
     /* 진행바 — 보유 칸은 «강화 진행도», 미보유 칸은 0% + 획득 조건(182 그대로) */
     +   '<div class="sk-pb"><i style="width:' + (own ? (lv/COS_MAXLV*100).toFixed(2) : 0) + '%"></i>'
-    +     '<b style="left:calc(' + (own ? Math.min(100, lv/COS_MAXLV*100).toFixed(2) : 0) + '% + 3px)">'
+    +     '<b>'   /* 270 — 바 내부 가운데 고정(CSS). 미보유 칸의 긴 획득 조건도 좌단에 안 처박힌다 */
     +       (own ? lv + '/' + COS_MAXLV : '🔒' + cosReqText(a)) + '</b></div>'
     +   '<div class="sk-ct">'
     +     '<div class="hd"><div><b>획득 조건</b></div><div class="nt"><b>강화 비용</b></div></div>'
