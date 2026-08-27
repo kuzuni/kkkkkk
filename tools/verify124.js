@@ -168,17 +168,42 @@ function safeElapsed(bless, until0, cands) {
   /* ================= 4. 광고 제거 구매 → 표식·문구·저장 ================= */
   console.log('\n[4] 평생 광고 제거 구매');
   const buy = await page.evaluate(() => {
-    S.dia = 1e9;
-    const p = PASS_ITEMS.find(x => x.id === 'noads'), d0 = S.dia;
+    S.dia = 1e9; S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
+    const p = PASS_ITEMS.find(x => x.id === 'noads'), d0 = S.dia, m0 = S.mileage || 0;
     const r = buyPass('noads');
-    /* 151 — 구매에 «즉시 보석 지급» 이 붙었으므로 순차감은 정가 − 즉시분이다 */
-    return { r: r, cost: d0 - S.dia, price: p.dia - (p.once || 0), noAds: !!S.pass.noAds,
+    /* 153 — «즉시 보석»·마일리지 쿠폰은 **상점 구매품** 이라 우편함으로 간다(`grantPass()` 의
+       `sendMail()`). 그래서 구매 순간 지갑에서 나가는 것은 **정가 그대로**이고, once 는 우편을
+       수령해야 비로소 들어온다. 옛 기대식(`p.dia − p.once`)은 153 이전의 «즉시 입금» 을 전제한
+       것이라 부패했다 — 기대값은 게이트 상수가 아니라 PASS_ITEMS·S.mailx 런타임에서 뽑는다. */
+    const cost = d0 - S.dia, price = p.dia;
+    const mail = (S.mailx || []).find(m => (m.t || '').indexOf(p.n) >= 0) || null;
+    const c0 = S.dia, cp0 = S.mileage || 0;
+    if (mail) claimMail(mail.id);
+    return { r: r, cost: cost, price: price, once: p.once || 0, cp: p.cp || 0,
+      dCp: cp0 - m0, mails: (S.mailx || []).length,
+      mailC: mail ? mail.c : null, mailM: mail ? mail.m : null,
+      claimedDia: S.dia - c0, claimedCp: (S.mileage || 0) - cp0,
+      noAds: !!S.pass.noAds,
       cls: document.getElementById('app').classList.contains('noads'),
       saved: !!(JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}').pass || {}).noAds };
   });
   await page.evaluate(() => closeModal && closeModal());
-  ok('구매 성공 · 다이아 순차감 = 정가 − 즉시 보석(151)', buy.r === true && buy.cost === buy.price,
+  ok('구매 성공 · 다이아 순차감 = 정가 그대로(153 — 즉시 보석은 우편)',
+    buy.r === true && buy.cost === buy.price,
     '차감 ' + buy.cost + ' / 기대 ' + buy.price);
+  /* 위 단언만으로는 «once 를 0 으로 지워도» 통과한다 — 즉시 보석이 실제로 존재하고 우편으로
+     갔음을 같이 못 박는다(153 을 되돌려 지갑에 직입금하면 cost 가 어긋나 위가, once 를 없애면
+     아래가 빨개진다). 값이 «잴 수 있는 크기» 인지도 함께 본다. */
+  ok('즉시 보석·쿠폰이 0 이 아니다(단언이 빈 값을 통과시키지 않게)',
+    buy.once > 0 && buy.cp > 0, 'once=' + buy.once + ' cp=' + buy.cp);
+  ok('153 — 구매 순간 지갑에 즉시 보석·쿠폰이 들어오지 않는다',
+    buy.dCp === 0 && buy.cost === buy.price, 'Δ쿠폰=' + buy.dCp + ' Δ다이아=' + buy.cost);
+  ok('153 — 구매가 우편 1통을 만든다(즉시 보석 + 쿠폰)',
+    buy.mails === 1 && buy.mailC === buy.once && buy.mailM === buy.cp,
+    buy.mails + '통 · c=' + buy.mailC + '/' + buy.once + ' m=' + buy.mailM + '/' + buy.cp);
+  ok('153 — 우편 수령으로 즉시 보석·쿠폰이 들어온다',
+    buy.claimedDia === buy.once && buy.claimedCp === buy.cp,
+    'Δ다이아=' + buy.claimedDia + '/' + buy.once + ' Δ쿠폰=' + buy.claimedCp + '/' + buy.cp);
   ok('S.pass.noAds = true', buy.noAds === true, String(buy.noAds));
   ok('#app.noads 클래스', buy.cls === true, String(buy.cls));
   ok('localStorage 에 저장됨', buy.saved === true, String(buy.saved));
