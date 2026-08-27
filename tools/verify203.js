@@ -323,7 +323,7 @@ const table = [];
   ok(Object.keys(dun.rw).join(',') === 'rstone', '보상 종류는 rstone 1종', Object.keys(dun.rw).join(','));
   ok(dun.apart, '194 「각성의 동굴」과 별개 던전이다(둘 다 목록에 있다)');
   ok(dun.ui && dun.state, '03 카드 테마(DUN_UI)·04 세부 상태문구(DUN_STATE) 등재');
-  table.push({ k: '던전 1층 보상', v: dun.rw.rstone + ' 룬강화석 (하루 3런)' });
+  table.push({ k: '던전 1층 보상', v: dun.rw.rstone + ' 룬강화석 (입장 횟수는 204 입장권 규칙 그대로)' });
 
   const raid = await p.evaluate(() => {
     S.rstone = 0; S.best = 50;
