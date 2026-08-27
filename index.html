@@ -13670,52 +13670,79 @@ const GRADE = [
    파라미터만 다르게 재사용**한다 — `castGeneric()`(castSkill 의 default 분기) 하나가 전부 처리한다.
      t:'proj'  투사체(k=그리기 종류 slash/shuri/ice · n 발수 · sp 속도 · spread 부채각 · ring 전방위 · pierce 가산)
      t:'chain' 무작위 n명 즉발(bolt 재사용) · t:'area' 제자리 범위폭발(holy 재사용)
-     t:'buff'  자기 강화(bk 키 · bv 값 · bt 초) · `heal` 은 즉시 회복 비율(최대체력 대비)
    `sup:1` = 보조(직접 피해 없음) — `stat.dps` 합산에서 제외한다(전투력 부풀림 방지).
-   등급 mul 은 `GRADE` 6단계 그대로 쓴다 — **85 의 7·8등급은 스킬에 적용하지 않는다.** */
+   등급 mul 은 `GRADE` 6단계 그대로 쓴다 — **85 의 7·8등급은 스킬에 적용하지 않는다.**
+
+   작업 193(2026-08-27, 저장소 주인 지시) — **버프 5종 폐기 + 공격 스킬 8종 신설 → 27종.**
+   · 폐기: `vigor`(기합) `mend`(치유의 빛) `haste`(신속의 축복) `ward`(수호의 결계) `rage`(광란).
+     주인 지시 «버프 스킬은 어차피 없앨 것이므로 그 자리에 신규 8종을 넣는다».
+     구 세이브의 보유·장착은 `load()` 의 `SK193_MOVE` 가 **같은 등급의 후임 스킬로 이관**한다.
+     `sbuf` 런타임(addSbuf·sbufTick·sbufClear·sbAtk 등)은 **남긴다** — 14개 게이트·프로브 하네스가
+     직접 호출하는 공용 배관이고, 값은 이제 항상 0 이라 전투에 관여하지 않는다. 발동 경로
+     (`castGeneric` 의 `case 'buff'`)만 지웠다.
+   · 신설 8종의 발동 타입(전부 `castGeneric` 안에서 처리):
+     t:'proj' 확장 — `cv` 곡률(rad/s, 곡선탄) · `wb` 화면 벽 반사 횟수(반사탄) · `bnc` 적→적 도약 횟수
+                     (바운스탄) · `zk`/`zr`/`zlife` 착탄 장판(화염병) · `r0` 발사 반경(주변 참격)
+     t:'spiral' 플레이어 중심에서 각속도·반경이 같이 커지는 나선 방출
+     t:'drone'  소환수 2기 + 연사 타이머(신규 `drones` 배열)
+     t:'beam'   적을 지지는 지속 빔(`zones` 에 `k:'laser'` 로 얹는다 — 수명·틱·정리 경로 재사용)
+   · 등급 분포는 [4,4,5,5,5,4] = 27. 24 를 5 빼고 8 더하면 27 이라 «등급당 4종» 이 산술로 불가능해
+     4~5 로 고르게 폈다(근거 `docs/review/193-신규공격스킬8종.md` §2).
+   · 185(넉백 폐지) 준수 — 신규 8종 어디에도 `e.kx/e.ky` 를 건드리는 코드가 없다.
+     184(풀스크린 플래시 금지) 준수 — `magicFlash`(바닥 마법진)·`fxRing` 만 쓴다. */
 const SKILLS = [
   /* ── 일반 ── */
   { id:'slash',  n:'검기',      g:0, ic:'🗡️', cd:0.85, m:1.00, d:'가장 가까운 적에게 검기를 1발 날린다' },
   { id:'shuri',  n:'표창 난사', g:0, ic:'✴️', cd:2.20, m:0.55, d:'8방향으로 표창을 뿌린다' },
   { id:'stone',  n:'돌팔매',    g:0, ic:'🪨', cd:1.30, m:1.35, d:'묵직한 돌덩이를 던져 적을 꿰뚫는다',
     t:'proj', k:'shuri', cnt:1, sp:470, pierce:1, col:'#cbb08a', life:1.6, hits:1 },
-  { id:'vigor',  n:'기합',      g:0, ic:'💢', cd:9.00, m:0.70, sup:1, d:'5초간 스킬 피해가 18% 증가한다',
-    t:'buff', bk:'atk', bv:0.18, bt:5.0 },
+  { id:'curve',  n:'곡선탄',    g:0, ic:'🌙', cd:1.60, m:0.90, d:'좌우로 휘어 날아가는 마탄 2발을 쏜다',
+    t:'proj', k:'ice', cnt:2, sp:520, spread:0.34, cv:2.6, pierce:2, col:'#a8ffd0', life:1.6, hits:2 },
   /* ── 고급 ── */
   { id:'multi',  n:'멀티 검기', g:1, ic:'🔱', cd:1.10, m:0.80, d:'부채꼴로 검기 여러 발을 발사' },
   { id:'orbit',  n:'회전검',    g:1, ic:'💫', cd:0.00, m:0.45, d:'주위를 도는 칼날 (지속)' },
   { id:'ice',    n:'얼음창',    g:1, ic:'❄️', cd:1.60, m:1.30, d:'적을 관통하고 둔화시킨다' },
-  { id:'mend',   n:'치유의 빛', g:1, ic:'💚', cd:11.00, m:0.75, sup:1, d:'체력을 12% 회복하고 6초간 재생이 크게 오른다',
-    t:'buff', bk:'regen', bv:1.20, bt:6.0, heal:0.12 },
+  { id:'whirl',  n:'주변 참격',  g:1, ic:'🌀', cd:1.60, m:1.10, d:'몸 주위를 8방향으로 짧게 베어 넘긴다',
+    t:'proj', k:'slash', cnt:8, ring:1, r0:30, sp:460, pierce:99, col:'#dff2ff', life:0.34, hits:2 },
   /* ── 희귀 ── */
   { id:'aura',   n:'신성 오라', g:2, ic:'🔥', cd:0.00, m:0.55, d:'주위 적에게 지속 피해 (지속)' },
   { id:'bolt',   n:'연쇄 번개', g:2, ic:'⚡', cd:1.40, m:1.60, d:'무작위 적 3명에게 번개' },
   { id:'arrow',  n:'꿰뚫는 화살', g:2, ic:'🏹', cd:1.50, m:1.15, d:'빠른 화살 2발이 적을 길게 관통한다',
     t:'proj', k:'ice', cnt:2, sp:900, spread:0.13, pierce:6, col:'#ffe6a8', life:1.4, hits:2 },
-  { id:'haste',  n:'신속의 축복', g:2, ic:'🌀', cd:12.00, m:0.80, sup:1, d:'6초간 스킬 발동 속도가 30% 빨라진다',
-    t:'buff', bk:'rate', bv:0.30, bt:6.0 },
+  { id:'rico',   n:'반사탄',    g:2, ic:'🔷', cd:2.00, m:1.60, d:'화면 벽에 튕기며 오래 날아다니는 탄 2발',
+    t:'proj', k:'rico', cnt:2, sp:600, spread:0.55, wb:4, pierce:1, col:'#7ce8ff', life:3.0, hits:2 },
+  { id:'spiral', n:'나선탄',    g:2, ic:'🍥', cd:2.60, m:0.95, d:'몸 주위를 돌며 바깥으로 퍼지는 탄 6발',
+    t:'spiral', cnt:6, av:5.2, rv:190, r0:26, col:'#ffc8f0', life:1.5, hits:6 },
   /* ── 영웅 ── */
   { id:'boom',   n:'화염구',    g:3, ic:'🔴', cd:2.00, m:2.40, d:'폭발하는 화염구를 던진다' },
   { id:'poison', n:'맹독 안개', g:3, ic:'☠️', cd:3.20, m:0.80, d:'바닥에 독 장판을 남긴다' },
   { id:'drain',  n:'흡혈의 검', g:3, ic:'🩸', cd:2.60, m:2.00, d:'피해를 주고 체력을 흡수' },
   { id:'frost',  n:'서리 연쇄', g:3, ic:'🧊', cd:2.10, m:1.45, d:'무작위 적 4명을 얼려 둔화시킨다',
     t:'chain', cnt:4, slow:0.50, col:'#a8e8ff', hits:4 },
+  { id:'bounce', n:'도약 연쇄탄', g:3, ic:'🎾', cd:2.20, m:1.40, d:'맞은 적에서 가장 가까운 적으로 연달아 튕긴다',
+    t:'proj', k:'rico', cnt:1, sp:700, bnc:4, pierce:1, col:'#ffe27a', life:2.2, hits:5 },
   /* ── 전설 ── */
   { id:'boomer', n:'부메랑',    g:4, ic:'🪃', cd:2.40, m:1.80, d:'나갔다 돌아오는 부메랑' },
   { id:'meteor', n:'운석 낙하', g:4, ic:'☄️', cd:4.00, m:5.00, d:'무작위 위치에 운석을 떨어뜨린다' },
   { id:'gale',   n:'폭풍의 칼날', g:4, ic:'🌪️', cd:2.80, m:1.05, d:'전방위로 칼날 12개를 흩뿌린다',
     t:'proj', k:'slash', cnt:12, ring:1, sp:560, pierce:2, col:'#c9ffe8', life:1.5, hits:12 },
-  { id:'ward',   n:'수호의 결계', g:4, ic:'🛡️', cd:14.00, m:1.40, sup:1, d:'체력을 15% 회복하고 7초간 받는 피해가 35% 줄어든다',
-    t:'buff', bk:'def', bv:0.35, bt:7.0, heal:0.15 },
+  { id:'drone',  n:'드론 소환',  g:4, ic:'🛸', cd:6.00, m:0.85, d:'양옆에 드론 2기를 띄워 짧게 연사한 뒤 사라진다',
+    t:'drone', cnt:2, vol:8, gap:0.13, dur:1.6, sp:700, col:'#9ff0ff', hits:16 },
+  { id:'flask',  n:'화염병',    g:4, ic:'🧨', cd:3.60, m:1.30, d:'던진 자리가 한동안 불타 지속 피해를 준다',
+    t:'proj', k:'flask', cnt:1, sp:420, pierce:1, col:'#ffb45c', life:1.1,
+    zk:'fire', zr:105, zlife:4.5, hits:4.5 },   /* hits = 실제 총 타격량(틱 0.4 × 4.5s ÷ 0.4) — 전투력 부풀림 방지 */
   /* ── 신화 ── */
   { id:'holy',   n:'심판의 빛', g:5, ic:'🌟', cd:3.00, m:4.00, d:'주변 전체에 성스러운 폭발' },
   { id:'lance',  n:'천벌의 창', g:5, ic:'🔻', cd:2.30, m:3.20, d:'심판의 창 3자루가 적을 모조리 관통한다',
     t:'proj', k:'ice', cnt:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
   { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:5.20, d:'아주 넓은 범위를 통째로 날려버린다',
     t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2, hits:1 },
-  { id:'rage',   n:'광란',      g:5, ic:'😡', cd:16.00, m:2.60, sup:1, d:'8초간 스킬 피해 40% · 발동 속도 25% 증가',
-    t:'buff', bk:'atk', bv:0.40, bk2:'rate', bv2:0.25, bt:8.0 }
+  { id:'laser',  n:'레이저',    g:5, ic:'🔆', cd:3.40, m:3.40, d:'적을 지지는 빔을 1.7초간 뿜는다',
+    t:'beam', dur:1.7, len:430, w:26, tick:0.18, col:'#ff86f0', hits:1.7 }   /* hits = dur (틱당 dmg×tick) */
 ];
+/* 193 — 폐기한 버프 5종 → 후임 스킬(같은 등급). `load()` 의 세이브 이관과 게이트가 같은 표를 본다.
+   같은 등급으로만 옮기므로 도감 세트(`skill:{g}`)의 «세트 최저 Lv» 가 이관 때문에 내려가지 않는다. */
+const SK193_MOVE = { vigor:'curve', mend:'whirl', haste:'rico', ward:'drone', rage:'laser' };
 
 /* ---- 장비 (무기 · 방패 · 목걸이) ---- */
 const SLOTS = [
@@ -14765,7 +14792,21 @@ function load(){
        (a105 표식을 찍은 뒤 플레이어가 다시 켜면 그 선택은 그대로 유지된다.) */
     delete b.autoEquip;
     if(!d.a105){ b.autoBuy = false; b.a105 = 1; }
-    b.eqSkill = (d.eqSkill || []).filter(i => SK[i]);
+    /* 193 (2026-08-27, 저장소 주인 지시) — 버프 5종 폐기. 구 세이브의 보유(`own`)·장착(`eqSkill`)에
+       남은 버프 id 를 **같은 등급의 후임 스킬로 이관**한다(버리지 않는다 — 소환으로 얻은 것이라
+       그냥 지우면 다이아를 태운 결과가 사라진다). 레벨·보유 수는 큰 쪽을 남긴다(멱등).
+       KEY 는 올리지 않는다(44 교훈 2 — 저장 «구조» 는 그대로고 키 이름만 옮긴다). */
+    Object.keys(SK193_MOVE).forEach(o => {
+      const nw = SK193_MOVE[o], v = b.own[o];
+      if(!v) return;
+      const t = b.own[nw];
+      b.own[nw] = t ? { n:Math.max(t.n|0, v.n|0), l:Math.max(t.l || 1, v.l || 1) }
+                    : { n:v.n|0, l:v.l || 1 };
+      delete b.own[o];
+    });
+    const eqSeen = {};
+    b.eqSkill = (d.eqSkill || []).map(i => SK193_MOVE[i] || i)
+                                 .filter(i => SK[i] && !eqSeen[i] && (eqSeen[i] = 1));
     b.eqPet   = (d.eqPet || []).filter(i => PT[i]);
     /* 89 — 유물 장착·재료(n) 폐기: eqRelic 은 버리고, own.rl* 은 l(=Lv)만 남긴다 */
     delete b.eqRelic;
@@ -14950,6 +14991,7 @@ const player = {
   akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false
 };
 let enemies = [], shots = [], parts = [], nums = [], corpses = [], zones = [], booms = [], bolts = [];
+let drones = [];    /* 193 — 드론 소환(소환수 엔티티). 전장 정리 4곳에서 zones 와 함께 비운다 */
 let rings = [];     /* 114 — 충격파·임팩트 플래시 링(확장 원). 피해 판정 없는 «그림»뿐이다 */
 /* 114 ③ 20회차 — «접촉의 증거». 투사체 속도(표창 430 게임px/s = 프레임당 34.4)가 명중 반경(30)보다
    커서 80ms 그리드의 마지막 표본이 최대 64 게임px 밖에 찍힌다 — 즉 «투사체가 적에 닿은 프레임» 이
@@ -15038,7 +15080,7 @@ function syncPets(){
 
 function spawnStage(){
   enemies.length = 0; shots.length = 0; parts.length = 0; nums.length = 0;
-  corpses.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0; spawnQ.length = 0;
+  corpses.length = 0; zones.length = 0; booms.length = 0; bolts.length = 0; spawnQ.length = 0; drones.length = 0;
   rings.length = 0;                                  /* 114 — 충격파 링도 전장과 함께 비운다 */
   ghosts.length = 0;                                 /* 114 20회차 — 접촉 잔상 */
   killed = 0;
@@ -15814,6 +15856,18 @@ const sbRate  = () => 1 + sbuf.rate;
 const sbDef   = () => 1 - sbuf.def;
 const sbRegen = () => 1 + sbuf.regen;
 
+/* 193 ⑧ — 투사체가 «착탄 장판»(zk)을 남기고 사라지는 공용 자리. 화염병이 유일한 사용처지만
+   생성부가 두 곳(수명 만료 · 적 접촉)이라 한 함수로 묶는다. 장판 자체는 독 장판(zones)과
+   같은 배열·같은 틱을 타고, 색(col)·틱 간격(tk)만 다르다. */
+function spawnSkillZone(b){
+  const r = b.zr || 100;
+  zones.push({ k:b.zk, x:b.x, y:b.y, r, dps:b.dmg, life:b.zlife || 4.0, t:0, tick:0,
+               col:b.col, tk:0.4 });
+  magicFlash(b.x, b.y, r, b.col);                    /* 114 ③ — 장판 시전 바닥 플래시 */
+  booms.push({ x:b.x, y:b.y, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom',
+               scale:2.4, alpha:0.5 });
+}
+
 /* ---------------- 86 — 신설 스킬 공용 발동기 (기존 타입 재사용, 파라미터만 다름) ---------------- */
 function castGeneric(s, dmg){
   const px = player.x, py = player.y - 22;
@@ -15832,11 +15886,56 @@ function castGeneric(s, dmg){
       const step = ring ? 6.283/n : (s.spread || 0);
       for(let i=0;i<n;i++){
         const a = ring ? base + i*step : base + (i-(n-1)/2)*step;
-        shots.push({ k:s.k, x:px, y:py, vx:Math.cos(a)*s.sp, vy:Math.sin(a)*s.sp, a,
+        /* 193 — `r0` 은 «발사 반경»(주변 참격). 0 이면 종전대로 손끝에서 난다 */
+        const r0 = s.r0 || 0;
+        shots.push({ k:s.k, x:px + Math.cos(a)*r0, y:py + Math.sin(a)*r0*0.75,
+                     vx:Math.cos(a)*s.sp, vy:Math.sin(a)*s.sp, a,
                      dmg, life:s.life || 1.3, pierce:stat.pierce + (s.pierce || 0),
-                     hit:[], col:s.col, spin:s.k === 'shuri' ? 0 : undefined, slow:s.slow });
+                     hit:[], col:s.col, spin:s.k === 'shuri' ? 0 : undefined, slow:s.slow,
+                     /* 193 — 곡률(rad/s) · 화면 벽 반사 횟수 · 적→적 도약 횟수 · 착탄 장판 */
+                     cv:s.cv, wb:s.wb, bnc:s.bnc, zk:s.zk, zr:s.zr, zlife:s.zlife,
+                     /* 곡선탄은 부채의 양 끝이 서로 **반대로** 휘어야 «곡선» 으로 읽힌다 */
+                     cvs:(n > 1 && s.cv) ? (i < n/2 ? -1 : 1) : 1 });
       }
       if(s.k === 'slash') player.atkFx = 0.22;
+      return true;
+    }
+    /* 193 ③ 나선탄 — 플레이어 중심의 극좌표(각 sa · 반경 sr)로 난다. 각속도 av · 반경속도 rv 가
+       둘 다 양수라 «돌돌 돌며 바깥으로» 퍼진다. 위치는 update 가 극좌표에서 다시 계산한다. */
+    case 'spiral': {
+      if(!nearest(px, py)) return false;
+      const n = s.cnt || 6, step = 6.283/n, base = orbitAng*0.7;
+      for(let i=0;i<n;i++){
+        const a = base + i*step;
+        shots.push({ k:'spiral', x:px + Math.cos(a)*(s.r0 || 26), y:py + Math.sin(a)*(s.r0 || 26)*0.75,
+                     vx:0, vy:0, a, dmg, life:s.life || 1.5,
+                     pierce:stat.pierce + (s.pierce || 1), hit:[], col:s.col,
+                     sox:px, soy:py, sa:a, sr:(s.r0 || 26), sav:s.av || 5.2, srv:s.rv || 190 });
+      }
+      return true;
+    }
+    /* 193 ① 드론 — 소환수 2기를 양옆에 띄운다. 각 드론이 gap 초마다 vol 발까지 연사하고
+       dur 초 뒤 사라진다(«따다다닥» 폭딜). 피해는 시전 시점의 dmg 를 발당 그대로 쓴다. */
+    case 'drone': {
+      if(!nearest(px, py)) return false;
+      const n = s.cnt || 2;
+      for(let i=0;i<n;i++){
+        const side = i % 2 ? 1 : -1, row = Math.floor(i/2);
+        drones.push({ x:px + side*54, y:py - 16 - row*26, ox:side*54, oy:-16 - row*26,
+                      dmg, life:s.dur || 1.6, cd:0.10 + i*0.05, gap:s.gap || 0.13,
+                      left:s.vol || 8, sp:s.sp || 700, col:s.col, born:0 });
+      }
+      burst(px, py, s.col, 10, 150);
+      return true;
+    }
+    /* 193 ⑥ 레이저 — `zones` 에 얹는다(수명·틱·전장 정리 경로를 그대로 재사용).
+       원형 장판이 아니라 «플레이어에서 뻗는 캡슐» 이라 `k:'laser'` 로 갈라 판정·그리기를 따로 둔다. */
+    case 'beam': {
+      const tg = nearest(px, py);
+      if(!tg) return false;
+      zones.push({ k:'laser', x:px, y:py, r:s.w || 26, len:s.len || 430,
+                   ang:Math.atan2(tg.y - tg.r - py, tg.x - px),
+                   dps:dmg, life:s.dur || 1.7, t:0, tick:0, tk:s.tick || 0.18, col:s.col });
       return true;
     }
     case 'chain': {
@@ -15866,16 +15965,8 @@ function castGeneric(s, dmg){
       cam.shake = Math.max(cam.shake, s.shake || 6);
       return true;
     }
-    case 'buff': {
-      /* 이미 걸려 있는 동안 다시 켜서 쿨을 낭비하지 않는다 — 남은 시간이 절반 넘게 남았으면 보류 */
-      if(sbufT[s.bk] > (s.bt || 0)*0.5) return false;
-      addSbuf(s.bk, s.bv, s.bt);
-      if(s.bk2) addSbuf(s.bk2, s.bv2, s.bt);
-      if(s.heal) player.hp = Math.min(stat.maxHp, player.hp + stat.maxHp*s.heal);
-      burst(px, py, s.bk === 'regen' ? '#8fffb0' : s.bk === 'def' ? '#9fd6ff' : '#ffd08a', 16, 180);
-      player.buffFx = 0.5;
-      return true;
-    }
+    /* 193 — `case 'buff'`(자기 강화 발동)은 폐기했다. 버프 스킬 5종이 사라져 데이터 쪽에서
+       `t:'buff'` 를 쓰는 항목이 한 개도 없다. `sbuf` 런타임 자체는 남아 있다(SKILLS 주석 참조). */
   }
   return false;
 }
@@ -15893,7 +15984,12 @@ const SK_CAST_SFX = {
   /* 전격      */ bolt:'skzap',
   /* 둔탁한 발사*/ boom:'skcast', meteor:'skcast', holy:'skcast', nova:'skcast',
   /* 독 장판    */ poison:'skbubble',
-  /* 버프·치유  */ vigor:'skchime', mend:'skchime', haste:'skchime', ward:'skchime', rage:'skchime'
+  /* 193 — 버프 5종 폐기로 skchime 매핑이 통째로 비었다. 신설 8종을 **기존 7계열 안에서만**
+     배분한다(새 오디오 파일을 만들지 않는다 = 98 볼륨 정규화 표가 그대로 유효하다):
+       휘두름 whirl · 투척 curve/spiral/rico/bounce/flask · 발사 drone/laser */
+  /* 검기 휘두름 */ whirl:'skwhoosh',
+  /* 투척      */ curve:'skthrow', spiral:'skthrow', rico:'skthrow', bounce:'skthrow', flask:'skthrow',
+  /* 둔탁한 발사*/ drone:'skcast', laser:'skcast'
   /* orbit·aura 는 지속 스킬 — 시전음 없음 */
 };
 const SK_SFX_GAP = 90;                  /* 시전음 공용 최소 간격(ms) */
@@ -16450,8 +16546,37 @@ function step(dt){
       if(b.mf === undefined) b.mf = 1;
       b.mf = tgt > b.mf ? Math.min(tgt, b.mf + dt/SHURI_FADE) : Math.max(tgt, b.mf - dt/SHURI_FADE);
     }
+    /* 193 ② 곡선탄 — 속도 벡터를 매 프레임 `cv`(rad/s) 만큼 돌린다. 부채의 좌·우 절반이
+       `cvs` 로 반대 부호를 받아 두 발이 서로 벌어지며 휜다(직선 볼리와 구분된다). */
+    if(b.cv){
+      const th = b.cv*(b.cvs || 1)*dt, cs = Math.cos(th), sn = Math.sin(th);
+      const nvx = b.vx*cs - b.vy*sn, nvy = b.vx*sn + b.vy*cs;
+      b.vx = nvx; b.vy = nvy; b.a = Math.atan2(nvy, nvx);
+    }
+    /* 193 ③ 나선탄 — 이 발만 «극좌표» 로 난다. 각(sa)·반경(sr)을 먼저 굴리고 그 목표점으로 가는
+       속도를 되돌려 넣는다 — 아래 공용 `b.x += b.vx*dt` 한 줄이 정확히 그 자리로 옮겨 주고,
+       트레일·명중 판정·가장자리 페이드는 다른 투사체와 **같은 코드**를 그대로 탄다. */
+    if(b.sav !== undefined){
+      b.sa += b.sav*dt; b.sr += b.srv*dt;
+      const nx = b.sox + Math.cos(b.sa)*b.sr, ny = b.soy + Math.sin(b.sa)*b.sr*0.75;
+      const idt = 1/Math.max(dt, 1e-4);
+      b.vx = (nx - b.x)*idt; b.vy = (ny - b.y)*idt;
+      b.a = Math.atan2(b.vy, b.vx);
+    }
     if(b.gy) b.vy += b.gy*dt;          /* 13회차 — 낙하 가속(운석). 없는 투사체는 예전 그대로 등속이다 */
     b.x += b.vx*dt; b.y += b.vy*dt;
+    /* 193 ⑤ 반사탄 — 주인 지시대로 **월드가 아니라 카메라(화면) 범위**의 벽에 튕긴다.
+       화면 좌표 = 월드 + camOx/camOy(draw 가 매 프레임 채운다). 위쪽 경계는 상단 HUD 클립선(150)
+       아래로 잡아 탄이 게이지 뒤로 숨지 않게 한다. 튕길 때 `hit` 를 비워 같은 적을 다시 맞힐 수 있다. */
+    if(b.wb > 0){
+      const L = -camOx + 16, R = -camOx + VW - 16, T = -camOy + 150, B = -camOy + VH - 16;
+      let bo = 0;
+      if(b.x < L && b.vx < 0){ b.x = L; b.vx = -b.vx; bo = 1; }
+      else if(b.x > R && b.vx > 0){ b.x = R; b.vx = -b.vx; bo = 1; }
+      if(b.y < T && b.vy < 0){ b.y = T; b.vy = -b.vy; bo = 1; }
+      else if(b.y > B && b.vy > 0){ b.y = B; b.vy = -b.vy; bo = 1; }
+      if(bo){ b.wb--; b.a = Math.atan2(b.vy, b.vx); b.hit.length = 0; burst(b.x, b.y, b.col, 4, 110); }
+    }
     /* 표본은 «움직인 뒤» 찍는다 — 안 그러면 잔상이 한 프레임 앞서 그려진다 */
     b.tt -= dt;
     if(b.tt <= 0){
@@ -16491,6 +16616,9 @@ function step(dt){
         booms.push({ x:b.x, y:b.y, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.5 });
         chainBoomFx(b.x, b.y, b.r, '#ffb45c');            /* 114 ④ — 착탄 주변 3연쇄 소폭발(그림뿐) */
       }
+      /* 193 ⑧ 화염병 — 수명이 다한 자리(=던진 지점)에 불 장판을 남긴다.
+         월드 밖으로 나간 발은 장판을 남기지 않는다(빈 땅에 불이 붙어 보인다) */
+      if(b.zk && b.life <= 0) spawnSkillZone(b);
       trPut(b); shots.splice(i,1); continue;
     }
 
@@ -16501,6 +16629,11 @@ function step(dt){
       const ex = e.x, ey = e.y - e.r;
       if((b.x-ex)*(b.x-ex) + (b.y-ey)*(b.y-ey) < (e.r+13)*(e.r+13)){
         b.hit.push(e);
+        /* 193 ⑧ — 화염병은 적에 닿는 순간 그 자리에 불 장판을 깔고 소멸한다(직접 타격은 없다) */
+        if(b.zk){
+          spawnSkillZone(b);
+          trPut(b); shots.splice(i,1); break;
+        }
         if(b.k === 'boom'){
           areaDamage(b.x, b.y, b.r, b.dmg, '#ffb45c');
           booms.push({ x:b.x, y:b.y, at:0, afps:BOOM_FPS, aloop:false, akey:'boom', anim:'boom', scale:3.4, alpha:0.5 });
@@ -16530,6 +16663,22 @@ function step(dt){
            좌측 아이콘 열은 실측 게임 x 23..73 · y 36..442 다. 관통이 남았어도 **남은 수명을 0.12s 로
            깎아** 오버런을 772×0.12 ≈ 93 게임px(몸통 2.7배)로 묶는다 — 근처의 두 번째 표적은
            93 게임px 안이면 여전히 맞는다 */
+        /* 193 ⑦ 바운스탄 — 맞은 적에서 **가장 가까운 다른 적**으로 방향을 꺾어 계속 난다.
+           `chainNext` 를 쓰므로 bolt 의 «무작위» 와 달리 근접 연쇄이고, 즉발이 아니라 실제로
+           날아간다(튕김 비행 연출). 도약이 성사되면 관통을 소비하지 않는다 — 총 타격 수는
+           1 + bnc 로 고정이다. */
+        if(b.bnc > 0){
+          const nx2 = chainNext(b.x, b.y, b.hit);
+          if(nx2){
+            b.bnc--;
+            const ang = Math.atan2((nx2.y - nx2.r) - b.y, nx2.x - b.x);
+            const sp2 = Math.hypot(b.vx, b.vy) || 700;
+            b.vx = Math.cos(ang)*sp2; b.vy = Math.sin(ang)*sp2; b.a = ang;
+            b.life = Math.max(b.life, 0.7);
+            burst(b.x, b.y, b.col, 5, 140);
+            break;
+          }
+        }
         if(--b.pierce <= 0){ trPut(b); shots.splice(i,1); break; }
         b.life = Math.min(b.life, 0.12);
       }
@@ -16540,18 +16689,70 @@ function step(dt){
   for(let i=zones.length-1;i>=0;i--){
     const z = zones[i];
     z.t += dt; z.life -= dt; z.tick -= dt;
+    /* 193 ⑥ 레이저 — 원형 장판이 아니라 «플레이어에서 뻗는 캡슐». 빔은 플레이어를 따라 움직이고
+       표적 쪽으로 초당 3.4rad 까지만 돌아 «지지는» 느낌을 준다(즉발 회전이면 딸깍 붙는다). */
+    if(z.k === 'laser'){
+      z.x = player.x; z.y = player.y - 22;
+      const ltg = nearest(z.x, z.y);
+      if(ltg){
+        const want = Math.atan2(ltg.y - ltg.r - z.y, ltg.x - z.x);
+        const d = ((want - z.ang + Math.PI*3) % 6.283) - Math.PI;
+        z.ang += clamp(d, -3.4*dt, 3.4*dt);
+      }
+      const ltk = z.tk || 0.18;
+      if(z.tick <= 0){
+        z.tick = ltk;
+        const cs = Math.cos(z.ang), sn = Math.sin(z.ang);
+        for(let j=enemies.length-1;j>=0;j--){
+          const e = enemies[j];
+          if(!e) break;                 /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
+          if(e.born < 0.3) continue;
+          const dx = e.x-z.x, dy = (e.y-e.r)-z.y;
+          const tp = clamp(dx*cs + dy*sn, 0, z.len);      /* 빔 축 위 투영 거리 */
+          const qx = dx - cs*tp, qy = dy - sn*tp;
+          if(qx*qx + qy*qy < (z.r + e.r)*(z.r + e.r)) hitEnemy(e, z.dps*ltk, false);
+        }
+        if(parts.length < PART_CAP*0.75)
+          burst(z.x + cs*z.len*0.45, z.y + sn*z.len*0.45, z.col || '#ff86f0', 2, 60);
+      }
+      if(z.life <= 0) zones.splice(i,1);
+      continue;
+    }
+    const tk = z.tk || 0.4;             /* 193 — 틱 간격을 장판별로 (독 0.4 그대로 · 불도 0.4) */
     if(z.tick <= 0){
-      z.tick = 0.4;
+      z.tick = tk;
       for(let j=enemies.length-1;j>=0;j--){
         const e = enemies[j];
         if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3) continue;
         const dx = e.x-z.x, dy = (e.y-e.r)-z.y;
-        if(dx*dx + dy*dy < z.r*z.r) hitEnemy(e, z.dps*0.4, false);
+        if(dx*dx + dy*dy < z.r*z.r) hitEnemy(e, z.dps*tk, false);
       }
-      if(parts.length < PART_CAP*0.75) burst(z.x + rnd(-z.r*0.6, z.r*0.6), z.y + rnd(-z.r*0.4, z.r*0.4), '#8ce06a', 2, 40);
+      if(parts.length < PART_CAP*0.75) burst(z.x + rnd(-z.r*0.6, z.r*0.6), z.y + rnd(-z.r*0.4, z.r*0.4), z.col || '#8ce06a', 2, 40);
     }
     if(z.life <= 0) zones.splice(i,1);
+  }
+  /* ---- 193 ① 드론(소환수) ---- */
+  for(let i=drones.length-1;i>=0;i--){
+    const q = drones[i];
+    q.born += dt; q.life -= dt; q.cd -= dt;
+    /* 플레이어 옆자리를 부드럽게 따라간다(펫과 같은 문법) + 살짝 부유 */
+    const tx = player.x + q.ox, ty = player.y - 22 + q.oy + Math.sin(q.born*6.2)*4;
+    q.x += (tx - q.x) * Math.min(1, dt*9);
+    q.y += (ty - q.y) * Math.min(1, dt*9);
+    if(q.cd <= 0 && q.left > 0){
+      const tg = nearest(q.x, q.y);
+      if(tg){
+        q.cd = q.gap; q.left--;
+        const ang = Math.atan2((tg.y - tg.r) - q.y, tg.x - q.x);
+        shots.push({ k:'drone', x:q.x, y:q.y, vx:Math.cos(ang)*q.sp, vy:Math.sin(ang)*q.sp, a:ang,
+                     dmg:q.dmg, life:1.0, pierce:stat.pierce, hit:[], col:q.col });
+      }else q.cd = 0.10;
+    }
+    if(q.life <= 0 || (q.left <= 0 && q.cd <= 0)){
+      burst(q.x, q.y, q.col, 8, 160);
+      drones.splice(i,1);
+    }
   }
   /* ---- 폭발 / 번개 ---- */
   for(let i=booms.length-1;i>=0;i--){
@@ -16983,12 +17184,40 @@ function draw(){
   ctx.strokeStyle = '#4a5a96'; ctx.lineWidth = 2;
   ctx.strokeRect(0, 0, WORLD.w, WORLD.h);
 
-  /* 독 장판 */
+  /* 독 장판 · 193 ⑧ 불 장판 · 193 ⑥ 레이저 */
   for(const z of zones){
+    if(z.k === 'laser'){
+      /* 193 ⑥ — 캡슐(판정)과 같은 축·같은 폭으로 그린다. 184 준수: 화면 전체 플래시가 아니라
+         빔 몸통 + 발사구 코어만 밝힌다 */
+      const la = clamp(z.life/0.35, 0, 1) * (0.72 + 0.18*Math.sin(z.t*34));
+      const ex = z.x + Math.cos(z.ang)*z.len, ey = z.y + Math.sin(z.ang)*z.len;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = la*0.30; ctx.strokeStyle = z.col || '#ff86f0'; ctx.lineWidth = z.r*2;
+      ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.globalAlpha = la*0.75; ctx.lineWidth = z.r*0.85;
+      ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.globalAlpha = la; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = z.r*0.30;
+      ctx.beginPath(); ctx.moveTo(z.x, z.y); ctx.lineTo(ex, ey); ctx.stroke();
+      ctx.globalAlpha = la*0.9; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(z.x, z.y, z.r*0.42, 0, 6.283); ctx.fill();
+      ctx.restore();
+      continue;
+    }
+    const fire = z.k === 'fire';
     const a = clamp(z.life/1.2, 0, 1)*0.5;
     const g = ctx.createRadialGradient(z.x, z.y, z.r*0.2, z.x, z.y, z.r);
-    g.addColorStop(0, 'rgba(120,230,110,' + (a*0.55) + ')');
-    g.addColorStop(1, 'rgba(60,180,80,0)');
+    if(fire){
+      /* 불 팔레트 — 독(초록)과 한눈에 갈린다. 숨쉬듯 밝기가 오르내려 «타고 있다» 로 읽힌다 */
+      const fl = 0.85 + 0.15*Math.sin(z.t*7.4);
+      g.addColorStop(0, 'rgba(255,190,90,' + (a*0.72*fl) + ')');
+      g.addColorStop(0.55, 'rgba(255,120,40,' + (a*0.42*fl) + ')');
+      g.addColorStop(1, 'rgba(180,50,20,0)');
+    }else{
+      g.addColorStop(0, 'rgba(120,230,110,' + (a*0.55) + ')');
+      g.addColorStop(1, 'rgba(60,180,80,0)');
+    }
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.ellipse(z.x, z.y, z.r, z.r*0.62, 0, 0, 6.283); ctx.fill();
   }
@@ -17287,8 +17516,9 @@ function draw(){
       ctx.fillStyle = b.col;
       ctx.beginPath(); ctx.moveTo(18,0); ctx.lineTo(-10,6); ctx.lineTo(-6,0); ctx.lineTo(-10,-6);
       ctx.closePath(); ctx.fill();
-    }else if(b.k === 'boom' || b.k === 'meteor'){
-      const rr = b.k === 'meteor' ? 15 : 11;
+    }else if(b.k === 'boom' || b.k === 'meteor' || b.k === 'flask'){
+      /* 193 ⑧ — 화염병도 «불덩이» 계열 그림을 그대로 쓴다(착탄 뒤 장판만 다르다) */
+      const rr = b.k === 'meteor' ? 15 : b.k === 'flask' ? 9 : 11;
       const g = ctx.createRadialGradient(0,0,2,0,0,rr*1.9);
       g.addColorStop(0,'#fff2c0'); g.addColorStop(0.45,'#ff9a3c'); g.addColorStop(1,'rgba(255,80,20,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,rr*1.9,0,6.283); ctx.fill();
@@ -17298,6 +17528,29 @@ function draw(){
       g.addColorStop(0,'#ffffff'); g.addColorStop(0.5,b.col); g.addColorStop(1,'rgba(120,255,210,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0,0,9,0,6.283); ctx.fill();
     }
+  }
+  /* 193 ① 드론 — 소환수 2기. 몸통(캡슐) + 프로펠러 링 + 총구 점멸. 아트가 들어오면 이 자리에
+     스프라이트만 얹으면 되게 bbox(28×16)를 고정으로 잡았다(측정표 «아트 필요» 표) */
+  for(const q of drones){
+    const a = clamp(q.life/0.3, 0, 1) * clamp(q.born/0.12, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = a * edgeFade(q.x, q.y, 20);
+    drawShadow(q.x, q.y + 20, 11);
+    ctx.translate(q.x, q.y);
+    ctx.fillStyle = 'rgba(20,30,50,.85)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = q.col;
+    ctx.beginPath(); ctx.ellipse(0, -1, 9, 5, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = q.col; ctx.lineWidth = 2; ctx.globalAlpha = a*0.55;
+    const pr = 13 + Math.sin(q.born*26)*2;
+    ctx.beginPath(); ctx.ellipse(-11, -5, pr*0.42, 3, 0, 0, 6.283); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(11, -5, pr*0.42, 3, 0, 0, 6.283); ctx.stroke();
+    if(q.cd > q.gap*0.55){                       /* 방금 쐈다 — 총구 섬광 */
+      ctx.globalAlpha = a; ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(0, 4, 4.5, 0, 6.283); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
   for(const b of shots){
     /* 5회차 P⑤ — 8발 볼리가 머즐 오프셋 0 으로 캐릭터 «위» 에 생성돼 실루엣의 35% 를 덮었다.
@@ -18802,7 +19055,7 @@ function startDunRun(d, f){
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
   ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
@@ -20636,7 +20889,7 @@ function startRaid(r){
   raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
   ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
@@ -20716,7 +20969,7 @@ function startArena(){
   /* 30·46 과 같은 «전장 초기화» 절차 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
-  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; killed = 0;
+  zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;
   ghosts.length = 0;                                 /* 114 20회차 */
   player.x = WORLD.w/2; player.y = WORLD.h/2;
