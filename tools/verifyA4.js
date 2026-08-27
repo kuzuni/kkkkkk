@@ -6,7 +6,8 @@
      · 링 반지름은 **CSS 기하**(요소 inset·spread)이지 스크린샷 마스크가 아니다.
        스크린샷으로 재면 경계 AA 때문에 양끝이 0.5~1px 씩 깎여 나온다(scanA4b 참고).
      · 아이콘 «잉크» 는 캔버스 알파 bbox 다 — getBoundingClientRect 의 advance 박스가 아니다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 let ok = 0, tot = 0;
@@ -22,7 +23,7 @@ function is(name, got, want) {
 }
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const p = await (await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 })).newPage();
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(1000);

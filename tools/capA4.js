@@ -11,14 +11,15 @@
      ② 대기 슬롯을 만들 때 `.ready` 만 벗기고 자물쇠 DOM 을 그대로 두면 «시안 링 + 흰 자물쇠» 가 된다.
    → 여기서는 **게임 코드 그대로 `buildSlots()` 로 만들고**(장착 3 + 빈칸 5), `drawSlots` 를 잠시 멈춘 뒤
      1번만 `.ready` 를 켠다. 쿨타임 판(`.cdv`)은 레퍼런스에 없으므로 전부 0% 로 둔다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const r = process.argv[2] || '1';
 const out = path.resolve(__dirname, '../docs/review/A4-r' + r + '.png');
 const outc = path.resolve(__dirname, '../docs/review/A4-r' + r + '-crop.png');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];
