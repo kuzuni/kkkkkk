@@ -47,6 +47,7 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     rw1:  DUNGEONS.map(d => d.rw(1)),
     rw3:  DUNGEONS.map(d => d.rw(3)),
     uiKeys: Object.keys(DUN_UI),
+    towerIds: (typeof TOWERS !== 'undefined' ? TOWERS : [TOWER]).map(t => t.id),   /* 210 */
     stateKeys: Object.keys(DUN_STATE),
     pills: DUNGEONS.map(d => (DUN_UI[d.id] || {}).rw)
   }));
@@ -62,7 +63,10 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
      178 던전 보스 스프라이트를 `DUN_UI[id]` 한 곳에서 읽으므로 UI 항목만 하나 더 있다.
      90 이 지키려던 규칙은 «던전마다 UI 가 1개» 이므로 ⊇ 로 묻고, 던전이 아닌 키는 아래 화이트리스트로만
      허용한다(LESSONS 194-4 — 개수 단언은 상한이 아니라 «그때 N개» 라는 기록이었다). */
-  const UI_EXTRA = ['tower'];
+  /* 210 ②(2026-08-27, 주인 지시) — 「절망의 탑」이 시련의 탑과 나란히 서면서 «던전 아닌 키» 가
+     둘이 됐다. 화이트리스트를 손으로 늘리면 탑이 늘 때마다 여기가 빨개지므로 `TOWERS` 를 그대로
+     읽는다 — 이 절이 지키려던 «던전이 아닌 키는 탑뿐» 은 그대로 참이다. */
+  const UI_EXTRA = st.towerIds;
   ok(IDS.every(id => st.uiKeys.includes(id))
      && st.uiKeys.filter(k => !IDS.includes(k)).every(k => UI_EXTRA.includes(k)),
      'DUN_UI ⊇ DUNGEONS ' + IDS.length + '개 + 던전 아닌 키는 ' + UI_EXTRA.join('·') + ' 뿐 (실측 ' + st.uiKeys.length + '개)');

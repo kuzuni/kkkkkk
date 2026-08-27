@@ -14725,10 +14725,38 @@ const ARENA_EXTRA_DIA = 100;   /* 아레나 추가 도전 1회 가격(다이아)
      · **층당 딱 한 번**이라 반복 수급이 없다 — 그래서 배수는 던전(1.72~1.78)보다 완만한 **1.65** 로
        층 수를 벌고, 보상은 유물조각 1단(`200+150f`)보다 한 칸 높은 `250+200f` 로 둔다. */
 const TOWER = {
-  id:'tower', n:'시련의 탑', d:'유물조각을 획득',
+  id:'tower', n:'시련의 탑', d:'유물조각을 획득', fk:'tower',
   req:f => 420*Math.pow(1.65, f-1),
   rw:f => ({ rel: Math.round(250 + f*200) })
 };
+/* 210 ② — 절망의 탑의 이름. 33 재화 정보·단련 탭 안내가 **같은 문자열 하나**를 본다.
+   ⚠ 선언 자리가 여기인 이유: 아래 `TOWER_D` 가 이 값을 읽는다(단련 절에 두면 TDZ 로 즉사한다). */
+const TOWER_DESPAIR_N = '절망의 탑';
+/* ── 210 ②(2026-08-27, 저장소 주인 지시) — 「절망의 탑」 ───────────────────────────
+   원문: «209 «탑» 탭에 시련의 탑과 나란히 «절망의 탑» 추가 — 규칙은 209 준용(클리어마다 단계+1 ·
+   이전 단계 재도전 불가 · 소탕 없음), 보상 = 단련 재료».
+   ⚑ **규칙을 새로 쓰지 않는다.** 209 가 세운 탑 문법(입장권 없음 · 현재 층만 · 소탕 없음 ·
+     영구 1값 진행)을 **한 글자도 안 바꾸고** 그대로 쓰고, 다른 것은 셋뿐이다:
+       ⓐ 진행값이 `S.tower` 가 아니라 `S.tower2` 다(탑마다 제 층을 따로 센다 — 섞으면 한 탑을
+         깰 때 다른 탑 층이 같이 오른다). 어느 키를 쓰는지는 `fk` 한 곳에만 적는다.
+       ⓑ 보상이 유물조각이 아니라 **단련석**(`tstone`)이다 — 단련의 **유일한 수급처**다.
+       ⓒ 시련의 탑보다 한 단 어렵다: 첫 층 요구를 기본 캐릭터 `cp()` 505 **위**(900)에 두어
+         «시련의 탑을 좀 올린 뒤에 오는 탑» 이 되게 하고, 배수는 같은 1.65 를 쓴다.
+   난이도·보상 곡선(900 · 1.65 · 60+45f)은 209 와 같이 **199 밸런스 라운드의 평가 대상**이다.
+   여기서 못 박은 것은 주인이 준 것뿐이다: 이름 · 209 준용 · 보상이 단련 재료라는 사실. */
+const TOWER_D = {
+  id:'despair', n:TOWER_DESPAIR_N, d:'단련석을 획득', fk:'tower2',
+  req:f => 900*Math.pow(1.65, f-1),
+  rw:f => ({ tstone: Math.round(60 + f*45) })
+};
+/* 두 탑을 한 목록으로 둔다 — 카드 렌더·세부 팝업·진행 기록이 전부 이 목록 하나를 본다.
+   ⚠ `DUNGEONS` 에 넣지 않는 이유는 209 주석 그대로다(넣으면 입장권·소탕·◀▶ 가 딸려 온다). */
+const TOWERS = [TOWER, TOWER_D];
+const towerById = id => TOWERS.find(t => t.id === id) || TOWER;
+/* 탑의 «지금 도전 가능한 층». 진행 키가 탑마다 다르므로 읽기·쓰기를 여기 한 곳으로 모은다
+   (LESSONS 46-③ 와 같은 이유 — 두 곳에서 키를 고르면 한쪽이 조용히 어긋난다). */
+const towerFloor = t => Math.max(1, Math.floor(S[towerById(t.id).fk]) || 1);
+const towerSetFloor = (t, f) => { const k = towerById(t.id).fk; S[k] = Math.max(towerFloor(t), f); };
 /* 90 ⑤ — 안내 문구가 «고대 유적» 을 상수로 박고 있었다. 지금 열려 있는 유물조각 던전 중
    가장 깊은 단을 이름으로 준다(전부 잠겨 있으면 1단). 던전 이름을 바꿔도 문구가 따라온다. */
 function relDunName(){
@@ -15131,9 +15159,6 @@ function runeTry(id, pay){
    ─ **88 «스탯 훈련» 의 부활이 아니다.** 88 이 폐기한 것은 «캐릭터 레벨·경험치에 연동된 포인트»
      였고 이번은 «재료(단련석) 수급형 포인트» 다 — 레벨·경험치 개념이 없다(혼동 금지).
    ========================================================================== */
-/* 주인 지시 ② — 단련석의 수급처 이름. 콘텐츠 본체(층 진행·클리어 판정)는 **209 «탑» 탭**의
-   구간이라 여기서는 이름만 한곳에 둔다. 33 재화 정보·단련 탭 안내가 같은 문자열을 본다. */
-const TOWER_DESPAIR_N  = '절망의 탑';
 const TEMPER_SEG       = 100;     /* 주인 확정 — 비용 계단의 구간 폭 */
 const TEMPER_RESET_DIA = 1000;    /* 주인 확정 — 회수(전액 리셋) 1회 비용 */
 const TEMPER_PT_COST   = 1;       /* 단련석 → 포인트 전환비(1:1). 199 평가 대상 */
@@ -15435,6 +15460,9 @@ const DEF = () => ({
      층 + 1)라 표기·판정 문법을 던전과 나눠 쓴다. 영구값이고 일일 리셋과 무관하다.
      구 세이브에는 이 키가 없다 — `Object.assign(b, d)` 가 기본값 1 을 채운다(44 교훈 2, KEY 안 올림). */
   tower: 1,
+  /* 210 — 절망의 탑 진행(단련석 수급처). 209 의 `tower` 와 **같은 문법·다른 키**다 —
+     탑마다 제 층을 따로 센다(어느 키인지는 TOWER_D.fk 한 곳에만 적혀 있다). */
+  tower2: 1,
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   arena:{ w:0, l:0 },                         /* 123 아레나 전적 — 승/패(더미 대전). 진짜 매칭·랭킹은 후속 작업 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
@@ -15487,8 +15515,13 @@ function load(){
     }
     /* 209 — 손댄 세이브·구 세이브 방어. 층은 1 이상의 정수여야 한다(0·음수·NaN 이면 «도전 가능한 층»
        이 사라져 탭이 통째로 죽는다). 194-5 와 같은 이유로 «정화» 는 load 한 곳에서만 한다. */
-    if(!Number.isFinite(b.tower) || b.tower < 1) b.tower = 1;
-    b.tower = Math.max(1, Math.floor(b.tower));
+    /* 210 — 탑이 둘이 됐다. 진행 키를 손으로 두 번 적지 않고 `TOWERS` 의 `fk` 를 그대로 돈다
+       (탑이 더 늘어도 이 블록은 안 바뀐다 — 키를 두 곳에서 고르면 한쪽이 조용히 어긋난다). */
+    TOWERS.forEach(t => {
+      const k = t.fk;
+      if(!Number.isFinite(b[k]) || b[k] < 1) b[k] = 1;
+      b[k] = Math.max(1, Math.floor(b[k]));
+    });
     /* 90 — 던전 재편(relic → relic1~4, growth·boss 폐기). KEY 는 올리지 않는다(44 교훈 2).
        구 세이브의 «고대 유적» 진행도(층)는 이름만 바뀐 같은 던전이므로 relic1 로 이어 준다.
        growth·boss 키는 남아 있어도 DUNGEONS 에 없으니 아무도 읽지 않는다. */
@@ -19919,13 +19952,14 @@ function challengeDungeon(d){
    `S.cnt.dungeon` 은 «던전 입장 횟수» 통계라 탑은 세지 않는다(던전 일일 퀘스트가 이 값을 본다). */
 /* «지금 도는 것이 탑인가» 를 묻는 한 곳. `d === TOWER` 로 물으면 세이브를 거쳐 온 사본(구조가 같고
    참조가 다른 객체)에서 조용히 거짓이 된다 — id 로 묻는다(던전 id 와 겹치지 않는다). */
-const isTower = d => !!d && d.id === TOWER.id;
-function challengeTower(){
+const isTower = d => !!d && TOWERS.some(t => t.id === d.id);
+function challengeTower(id){
   if(dunRun || raidOn || arena){
     notify('⚔ 다른 전투가 진행 중입니다');
     return;
   }
-  startDunRun(TOWER, S.tower);
+  const t = towerById(id);
+  startDunRun(t, towerFloor(t));
 }
 
 /* ==========================================================================
@@ -20103,7 +20137,7 @@ function finishDunRun(r, cleared){
        `dunAlert`·일일 퀘스트 같은 «던전 전체» 순회가 조용히 그것까지 세게 된다.
        ⚠ 이미 지나온 층을 다시 깰 수는 없지만(현재 층만 도전), 그래도 `++` 가 아니라 `max` 로 올린다 —
          어떤 경로로든 옛 층을 클리어해도 진행이 **뒤로 가지 않는다**. */
-    if(isTower(d)) S.tower = Math.max(S.tower, f + 1);
+    if(isTower(d)) towerSetFloor(d, f + 1);      /* 210 — 탑마다 제 진행 키에 쓴다 */
     else S.dun[d.id]++;
     giveReward(d.rw(f));
     uiDirty = true; save();
@@ -20186,7 +20220,7 @@ $('dclNx').addEventListener('click', e => {
   e.stopPropagation();
   const d = dclDun; if(!d) return;
   closeDunClear();
-  if(isTower(d)){ challengeTower(); return; }  /* 209 — «다음» = 새로 열린 층 */
+  if(isTower(d)){ challengeTower(d.id); return; }  /* 209 — «다음» = 새로 열린 층 */
   challengeDungeon(d);
 });
 /* 작업 68 — `buyPack()` 폐기. 다이아 지급 경로는 `grantDiaPack()`(작업 44) 하나뿐이다.
@@ -20812,7 +20846,7 @@ function closeDunDetail(){ $('dgdw').classList.remove('on'); dgdDun = null; dgdR
 function dgdThUi(){
   if(dgdDun)   return DUN_UI[dgdDun.id] || null;
   if(dgdRaid)  return dgdRaid.ui || null;
-  if(dgdTower) return DUN_UI.tower || null;    /* 209 — 행 카드와 같은 소스(같은 몬스터가 배너에 온다) */
+  if(dgdTower) return DUN_UI[dgdTower.id] || null;  /* 209·210 — 행 카드와 같은 소스(탑마다 제 칸) */
   return null;                       /* 123 아레나 */
 }
 function dgdPaintTh(tries){
@@ -20892,8 +20926,8 @@ function renderDunDetail(){
      ② [소탕] 은 자물쇠(지시 ③) — 레이드·아레나와 같은 `dgdSweepLock()`.
      ③ 입장권 칸은 «무제한»(지시 ①: 입장 제한 없음).
      ④ [도전] 은 항상 활성 — 막을 조건이 하나도 없다(전투 중복만 `dgdGo` 가 본다). */
-function openTowerDetail(){
-  dgdTower = TOWER; dgdDun = null; dgdRaid = null; dgdArena = null;
+function openTowerDetail(id){
+  dgdTower = towerById(id); dgdDun = null; dgdRaid = null; dgdArena = null;
   /* 46 이 갈아 끼웠을 수 있는 라벨을 탑 문구로 되돌린다(모드 전환의 상태 잔류 — 205 주석) */
   $('dgdLvL').textContent = '층';
   $('dgdRwL').textContent = '보상';
@@ -20901,14 +20935,17 @@ function openTowerDetail(){
   $('dgdw').classList.add('on');
 }
 function renderTowerDetail(){
-  const f = S.tower, rw = TOWER.rw(f);
-  $('dgdTitle').textContent = TOWER.n;
-  curIcEl($('dgdTki'), 'relic');                 /* 125 — 탑은 입장권이 없다. 권종 자리에 보상 재화를 둔다 */
-  $('dgdState').textContent = '끝없는 시련 상태';
+  /* 210 — 탑이 둘이 됐다. 「무엇이 다른가」는 `t`·`ck` 두 값뿐이고 나머지 규칙(◀▶ 잠금·소탕 없음·
+     무제한 입장·항상 활성)은 209 가 쓴 그대로다 — 탑이 더 늘어도 이 함수는 안 바뀐다. */
+  const t = dgdTower || TOWER, f = towerFloor(t), rw = t.rw(f);
+  const ck = Object.keys(rw)[0];                 /* 보상 재화 키(rel · tstone …) */
+  $('dgdTitle').textContent = t.n;
+  curIcEl($('dgdTki'), ck);                      /* 125 — 탑은 입장권이 없다. 권종 자리에 보상 재화를 둔다 */
+  $('dgdState').textContent = t === TOWER ? '끝없는 시련 상태' : '절망이 내린 상태';
   $('dgdFloor').textContent = f;
   $('dgdTry').textContent = '무제한';
-  $('dgdIcon').innerHTML = curIc('relic');       /* 125 — 화폐는 이미지 태그 문자열이다 */
-  $('dgdAmt').textContent = fmtCur('rel', rw.rel);
+  $('dgdIcon').innerHTML = curIc(ck);            /* 125 — 화폐는 이미지 태그 문자열이다 */
+  $('dgdAmt').textContent = fmtCur(ck, rw[ck]);
   $('dgdPrev').disabled = true;                  /* ① 현재 층만 도전한다 */
   $('dgdNext').disabled = true;
   dgdGoLabel('도전', false);                     /* 205 — 아레나 가격 모드에서 돌아왔을 수 있다 */
@@ -20984,9 +21021,10 @@ $('dgdGo').onclick = () => {
   }
   /* 209 — 탑은 «현재 층 도전» 하나뿐이다(소탕·층 선택이 없어 분기가 없다). */
   if(dgdTower){
+    const tid = dgdTower.id;
     closeDunDetail();
     closeDungeon();
-    challengeTower();
+    challengeTower(tid);
     return;
   }
   const d = dgdDun; if(!d) return;
@@ -21556,7 +21594,17 @@ const DUN_UI = {
      `gm`/`pre` 가 없으므로 `dunLocked()` 는 항상 false 다 = 탑은 처음부터 열려 있다. */
   tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'green_attack_0', thi:'green_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966 }
+            rw:['유물조각 획득 가능'], psx:0.966 },
+  /* 210 ② — 절망의 탑. 209 시련의 탑 칸과 **같은 기하**(thw/tht/scn/psx/thbr 동일)이고
+     색과 몬스터·보상 재화만 갈린다 — 카드 두 장이 같은 격자 위에 나란히 선다.
+     ⚠ **아트 대기 · 썸네일은 재사용이다.** 97 «없는 몬스터를 그리지 않는다» 를 지키려면 실재하는
+     아틀라스 포즈만 쓸 수 있는데, `elves` 는 green/blue 두 색뿐이고 idle·attack 4칸이 이미
+     relic1·relic4·rstone·tower 에 나가 있다(남은 것은 `*_die` = 쓰러진 포즈뿐이라 카드에 못 쓴다).
+     그래서 relic2 와 **같은 좀비 걸음**을 쓰고 카드 색으로만 가른다 — 전용 씬이 들어오면
+     이 두 줄(thk/thf/thi)만 갈아 끼운다(측정표 «아트 필요» 표에 등재). */
+  despair:{ s:'#3E2430', i:'#5F3242', r:'#7C4055', pt:'#E0A8B8', ic:curIc('tstone'), tk:curIc('tstone'),
+            thk:'zombie', thf:'walk_004', thi:'walk', thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
+            rw:['단련석 획득 가능'], psx:0.966 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
@@ -21674,26 +21722,30 @@ function renderDunPage(){
        가능해서 조건 없이 켜면 영영 안 꺼지는 상시 점등이 된다(166 ①이 등재한 바로 그 병).
    카드가 한 장뿐이라 `bgmVars(0)` 이고, 배경 레이어는 유물 계열과 같은 `bgm-rel`(보랏빛 안개)이다. */
 function renderTowerPage(){
-  const f = S.tower, u = DUN_UI.tower, ready = cp() >= TOWER.req(f);
-  $('dunList').innerHTML =
-       '<div class="dnc bgm-rel" data-tcard="1" style="--s:' + u.s + ';--i:' + u.i
+  /* 210 ② — 탑이 둘이 됐다(시련 · 절망). 209 가 쓴 카드 문법을 **한 글자도 안 바꾸고** 목록으로만
+     돌린다 — `data-tcard` 가 «1» 이 아니라 탑 id 를 들고 있어 클릭이 어느 탑인지 스스로 안다.
+     `bgmVars(i)` 에 카드 index 를 준다(121 «카드마다 배경 속도가 다르다» — 둘이 같은 위상이면 빨개진다). */
+  $('dunList').innerHTML = TOWERS.map((t, i) => {
+    const f = towerFloor(t), u = DUN_UI[t.id], ready = cp() >= t.req(f);
+    return '<div class="dnc bgm-rel" data-tcard="' + t.id + '" style="--s:' + u.s + ';--i:' + u.i
     +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
-    +  (u.scn ? ';--scn:' + u.scn : '') + (u.psx ? ';--psx:' + u.psx : '') + bgmVars(0) + '">'
+    +  (u.scn ? ';--scn:' + u.scn : '') + (u.psx ? ';--psx:' + u.psx : '') + bgmVars(i) + '">'
     +  '<div class="bg"></div>'
     +  '<div class="bgm"></div>'
     /* 72 와 같은 규격 — 캔버스 픽셀 = 액자 «안쪽» 크기(슬롯 − 테두리 5 − 림 6, 양변) */
     +  '<div class="th"><canvas class="thcv" width="' + (parseInt(u.thw, 10) - TH_INSET)
     +  '" height="' + (341 - parseInt(u.tht, 10) - TH_INSET) + '" data-thk="' + u.thk
     +  '" data-thf="' + u.thf + '" data-thi="' + u.thi
-    +  '" data-thc="" data-thbr="' + u.thbr + '" data-thn="0"></canvas></div>'
+    +  '" data-thc="" data-thbr="' + u.thbr + '" data-thn="' + i + '"></canvas></div>'
     +  '<div class="sh"></div><div class="fr"></div>'
-    +  '<div class="nm"><i>' + TOWER.n + '</i></div>'
+    +  '<div class="nm"><i>' + t.n + '</i></div>'
     +  '<div class="pill"><em>' + u.ic + '</em><i>' + u.rw[0] + '</i></div>'
     +  '<div class="lb a"><i>층</i></div><div class="lb b"><i>입장 제한</i></div>'
     +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
     +  '<div class="sp tk"><em>♾️</em><i>없음</i></div>'
     +  (ready ? '<s class="dot"></s>' : '')
     +  '</div>';
+  }).join('');
   raidPaint();
 }
 function openDungeon(){
@@ -22082,7 +22134,10 @@ $('dunSub').addEventListener('click', e => {
 });
 $('dunList').addEventListener('click', e => {
   /* 209 — «탑» 탭의 카드. 잠금·입장권이 없으므로 막을 것이 없다(바로 세부 팝업). */
-  if(e.target.closest('[data-tcard]')){ openTowerDetail(); return; }
+  {
+    const tc = e.target.closest('[data-tcard]');
+    if(tc){ openTowerDetail(tc.dataset.tcard); return; }   /* 210 — 어느 탑을 눌렀는지 카드가 말한다 */
+  }
   /* 123 — «컨텐츠» 탭의 2번째 카드(아레나). 측정장과 같은 잠금 안내를 쓴다 */
   const ac = e.target.closest('[data-arena]');
   if(ac){

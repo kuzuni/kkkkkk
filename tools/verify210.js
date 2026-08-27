@@ -407,6 +407,100 @@ const table = [];
   ok(neg.d, 'ⓓ 효과가 레벨에 비례한다(계수가 0 이 아니다)');
   ok(neg.e, 'ⓔ 포인트가 모자라면 투자가 실제로 막힌다');
 
+  /* ================= [I] 절망의 탑 (주인 지시 ②) ================= */
+  console.log('[I] 절망의 탑 — 209 «탑» 탭에 나란히 · 규칙 209 준용 · 보상 = 단련석');
+  const tw = await p.evaluate(() => ({
+    n: TOWER_D.n, id: TOWER_D.id, fk: TOWER_D.fk,
+    list: TOWERS.map(t => t.id).join(','),
+    /* 보상이 «단련 재료» 한 종인가 — 주인 지시 ② */
+    rwKeys: Object.keys(TOWER_D.rw(1)),
+    rw: [1, 2, 5, 10].map(f => TOWER_D.rw(f).tstone),
+    req: [1, 2, 5, 10].map(f => Math.round(TOWER_D.req(f))),
+    /* 209 와 **다른 진행 키** — 한 탑을 깬다고 다른 탑 층이 오르면 안 된다 */
+    apartKey: TOWER.fk !== TOWER_D.fk,
+    inDun: DUNGEONS.some(d => d.id === TOWER_D.id),   /* 209 규약 — 던전 목록에 안 들어간다 */
+    hasUi: !!DUN_UI[TOWER_D.id],
+    def: DEF().tower2,
+    /* 209 의 «탑인가» 판정이 절망의 탑도 잡는가 — 못 잡으면 ①③④(입장권·소탕·층선택)가 딸려 온다 */
+    isT: isTower(TOWER_D) && isTower(TOWER) && !isTower(DUNGEONS[0])
+  }));
+  ok(tw.n === '절망의 탑' && tw.id === 'despair', '「절망의 탑」 이 모델에 있다', tw.n);
+  ok(tw.list === 'tower,despair', '탑 목록에 시련의 탑과 **나란히** 선다', tw.list);
+  ok(tw.rwKeys.join(',') === 'tstone', '★ 클리어 보상 = 단련석 한 종(주인 지시 ②)', tw.rwKeys.join(','));
+  ok(tw.rw.every((v, i) => v > 0 && (i === 0 || v > tw.rw[i - 1])), '보상이 층에 비례해 증가', tw.rw.join(' → '));
+  ok(tw.req.every((v, i) => v > 0 && (i === 0 || v > tw.req[i - 1])), '요구 전투력이 층마다 단조 증가',
+    tw.req.join(' → '));
+  ok(tw.req[0] > 505, '첫 층이 기본 캐릭터 cp() 505 위 — 시련의 탑보다 한 단 어렵다', String(tw.req[0]));
+  ok(tw.apartKey && tw.def === 1, '진행 키가 시련의 탑과 별개(S.tower2, 기본 1층)', tw.fk);
+  ok(!tw.inDun && tw.hasUi, '209 규약 준용 — DUNGEONS 에는 없고 DUN_UI 칸만 있다');
+  ok(tw.isT, 'isTower() 가 절망의 탑도 «탑» 으로 잡는다(입장권·소탕·층선택이 안 딸려 온다)');
+
+  const twRun = await p.evaluate(() => {
+    S.tower = 3; S.tower2 = 1; S.tstone = 0; S.relic = 0;
+    openDungeon(); setDunSub('tower');
+    const cards = [...document.querySelectorAll('#dunList [data-tcard]')].map(e => e.dataset.tcard);
+    /* 절망의 탑 카드를 눌러 세부를 연다 — 어느 탑을 눌렀는지 카드가 말한다 */
+    openTowerDetail('despair');
+    const det = { title: document.getElementById('dgdTitle').textContent,
+                  floor: document.getElementById('dgdFloor').textContent,
+                  amt: document.getElementById('dgdAmt').textContent,
+                  icon: /cur-tstone\.svg/.test(document.getElementById('dgdIcon').innerHTML),
+                  prev: document.getElementById('dgdPrev').disabled,
+                  next: document.getElementById('dgdNext').disabled,
+                  sweep: document.getElementById('dgdSweep').disabled
+                         || document.getElementById('dgdSweep').classList.contains('lk') };
+    closeDunDetail();
+    /* 실제로 한 층을 돌려서 깬다 — 단련석이 들어오고 «절망의 탑만» 층이 오른다 */
+    const relBefore = S.relic, t1Before = S.tower;
+    challengeTower('despair');
+    const running = !!dunRun && dunRun.f === 1 && dunRun.d.id === 'despair';
+    endDunRun(true, false);
+    return { cards: cards.join(','), det, running,
+             t1: S.tower, t1Before, t2: S.tower2, tstone: S.tstone,
+             relSame: S.relic === relBefore };
+  });
+  ok(twRun.cards === 'tower,despair', '«탑» 탭에 카드 2장이 나란히 뜬다', twRun.cards);
+  ok(twRun.det.title === '절망의 탑' && twRun.det.floor === '1', '세부 팝업이 절망의 탑 1층을 연다',
+    twRun.det.title + ' ' + twRun.det.floor);
+  ok(twRun.det.icon && twRun.det.amt !== '', '보상 칸이 단련석 아이콘·수량을 그린다(125)', twRun.det.amt);
+  ok(twRun.det.prev && twRun.det.next, '209 ② 준용 — ◀▶ 둘 다 잠김(현재 층만 도전)');
+  ok(twRun.det.sweep, '209 ③ 준용 — [소탕] 잠김');
+  ok(twRun.running, '[도전] 이 절망의 탑 1층 런을 실제로 시작한다');
+  ok(twRun.t2 === 2 && twRun.tstone > 0, '★ 클리어 → 절망의 탑 층 +1 · 단련석이 실제로 들어온다',
+    '층 ' + twRun.t2 + ' · 단련석 ' + twRun.tstone);
+  ok(twRun.t1 === twRun.t1Before && twRun.relSame,
+    '★ 시련의 탑 층·유물조각은 1도 안 움직인다(탑끼리 진행이 안 섞인다)', '시련 ' + twRun.t1 + '층');
+
+  const twSave = await p.evaluate(() => {
+    save();
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    const d = JSON.parse(localStorage.getItem(KEY));
+    delete d.tower2; localStorage.setItem(KEY, JSON.stringify(d)); load();
+    const old = S.tower2;
+    const d2 = JSON.parse(localStorage.getItem(KEY));
+    d2.tower2 = -3; localStorage.setItem(KEY, JSON.stringify(d2)); load();
+    return { raw: raw.tower2, old, bad: S.tower2 };
+  });
+  ok(twSave.raw === 2, '절망의 탑 진행이 세이브에 남는다', String(twSave.raw));
+  ok(twSave.old === 1 && twSave.bad === 1,
+    '구 세이브(키 없음)·손댄 값이 1층으로 정화된다(209 와 같은 자)', twSave.old + '/' + twSave.bad);
+  /* 단련의 «수급 → 전환 → 투자» 가 실제로 한 바퀴 도는가 — 기능 완성 규칙의 핵심 */
+  const loop = await p.evaluate(() => {
+    S.tower2 = 1; S.tstone = 0; S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
+    markDirty(); const atk0 = bonus().atk;
+    challengeTower('despair'); endDunRun(true, false);      /* 절망의 탑 1층 클리어 */
+    const got = Math.floor(S.tstone);
+    const pts = temperCharge();                             /* 전환 */
+    const up = temperUp('atk');                             /* 투자 */
+    markDirty();
+    return { got, pts, up, lv: temperLv('atk'), atkUp: bonus().atk > atk0,
+             bag: bagCur().some(r => r.n === '단련석') };
+  });
+  ok(loop.got > 0, '★ 절망의 탑 클리어 → 단련석 획득', String(loop.got));
+  ok(loop.pts === loop.got, '★ 전환 → 단련 포인트', String(loop.pts));
+  ok(loop.up && loop.lv === 1, '★ 투자 → 공격력 단련 Lv1');
+  ok(loop.atkUp, '★ 그 결과가 bonus() 전투력에 실제로 반영된다(목업 아님 — 기능 완성 규칙)');
+
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
   if (process.argv.includes('--table')) {

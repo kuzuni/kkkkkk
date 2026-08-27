@@ -40,6 +40,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     inDun: DUNGEONS.some(d => d.id === 'tower'),
     dunIds: DUNGEONS.map(d => d.id),
     uiKeys: Object.keys(DUN_UI),
+    towerIds: TOWERS.map(t => t.id),               /* 210 — 탑 목록은 모델이 말한다 */
     stateKeys: Object.keys(DUN_STATE),
     hasUi: !!DUN_UI.tower,
     thk: (DUN_UI.tower || {}).thk, thi: (DUN_UI.tower || {}).thi,
@@ -62,9 +63,12 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   ok(st.hasUi, 'DUN_UI.tower 존재 — 카드 기하·178 보스 스프라이트가 한 소스에서 나온다');
   /* 194-4 — «N종까지만» 은 대개 «그때 N개였다» 는 기록이다. 지키려던 규칙은 «던전마다 UI 가 1개»
      이므로 ⊇ 로 묻고, 던전이 아닌 추가 키는 아래 화이트리스트로만 허용한다. */
+  /* 210 ② — «절망의 탑» 이 나란히 서면서 던전 아닌 키가 tower 하나 → **탑 목록 전부**가 됐다.
+     화이트리스트를 손으로 늘리지 않고 `TOWERS` 를 그대로 읽는다 — 탑이 또 늘어도 여기는 안 바뀌고,
+     «던전이 아닌 키는 탑뿐» 이라는 원래 규칙은 그대로 참이다(이 절이 지키려던 것이 그것이다). */
   ok(st.dunIds.every(id => st.uiKeys.includes(id))
-     && st.uiKeys.filter(k => !st.dunIds.includes(k)).join(',') === 'tower',
-     'DUN_UI = DUNGEONS 전부 + 던전 아닌 키는 tower 하나뿐 (' + st.uiKeys.length + '개)');
+     && st.uiKeys.filter(k => !st.dunIds.includes(k)).sort().join(',') === st.towerIds.slice().sort().join(','),
+     'DUN_UI = DUNGEONS 전부 + 던전 아닌 키는 탑들뿐 (' + st.uiKeys.length + '개 · 탑 ' + st.towerIds.join('·') + ')');
   ok(st.dunIds.every(id => st.stateKeys.includes(id)) && st.stateKeys.length === st.dunIds.length,
      'DUN_STATE 는 DUNGEONS 와 1:1 그대로 — 탑은 자체 문구를 쓴다 (' + st.stateKeys.length + '개)');
   ok(st.animExists, '썸네일 애니가 아틀라스에 실재한다 (' + st.thk + '/' + st.thi + ')');
@@ -92,11 +96,14 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     cards: document.querySelectorAll('#dunList .dnc').length,
     tcards: document.querySelectorAll('#dunList [data-tcard]').length,
     dcards: document.querySelectorAll('#dunList [data-dcard]').length,
-    rcards: document.querySelectorAll('#dunList [data-rcard]').length
+    rcards: document.querySelectorAll('#dunList [data-rcard]').length,
+    towerN: TOWERS.length                          /* 210 — 탑 개수는 모델이 말한다 */
   }));
   ok(after.sub === 'tower' && after.on.join(',') === 'tower', '탭을 누르면 «탑» 만 활성 (실측 ' + after.on.join(',') + ')');
-  ok(after.tcards === 1 && after.dcards === 0 && after.rcards === 0,
-     '리스트가 탑 카드 1장으로 바뀐다 (탑 ' + after.tcards + ' · 던전 ' + after.dcards + ' · 측정장 ' + after.rcards + ')');
+  /* 210 ② — 탑 카드가 «시련 · 절망» 2장이 됐다. 이 단언이 지키려던 것은 «탭을 누르면 목록이
+     탑으로 갈린다»(던전·측정장 카드가 0) 이지 «카드가 1장» 이 아니다 — 개수는 TOWERS 를 따라간다. */
+  ok(after.tcards === after.towerN && after.dcards === 0 && after.rcards === 0,
+     '리스트가 탑 카드만 ' + after.towerN + '장으로 바뀐다 (탑 ' + after.tcards + ' · 던전 ' + after.dcards + ' · 측정장 ' + after.rcards + ')');
 
   /* ---------------- [3] 카드 내용 · 레드닷 규칙 ---------------- */
   console.log('[3] 탑 카드');
