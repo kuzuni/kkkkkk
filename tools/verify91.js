@@ -70,7 +70,9 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
      '키 형식 equip:{slot}:{g} · skill:{g} · pet:{g} · relic:{0..2}(118)');
   ok(st.dupIt === 0, '한 아이템이 두 세트에 속하지 않음 (중복 ' + st.dupIt + ')');
   ok(JSON.stringify(st.wCounts) === '[5,5,5,5,5,5,5,1]', '무기 세트 구성원 5×7 + 최종등급 1 (실측 ' + JSON.stringify(st.wCounts) + ')');
-  ok(JSON.stringify(st.skCounts) === '[4,4,4,4,4,4]', '스킬 세트 구성원 4×6 (실측 ' + JSON.stringify(st.skCounts) + ')');
+  /* 193(2026-08-27, 주인 지시) — 버프 5종 폐기 + 공격 8종 신설로 스킬은 27종 · [4,4,5,5,5,4].
+     91 이 지키려는 것은 «세트가 그 등급의 전 종을 담는다» 이므로 수치만 이관한다. */
+  ok(JSON.stringify(st.skCounts) === '[4,4,5,5,5,4]', '스킬 세트 구성원 [4,4,5,5,5,4](193) (실측 ' + JSON.stringify(st.skCounts) + ')');
   ok(st.petCounts.reduce((a, c) => a + c, 0) === 36, '펫 세트 구성원 합 36종 (106 — 실측 ' + JSON.stringify(st.petCounts) + ')');
   ok(JSON.stringify(st.relic) === '[3,4,3]', '118 — 유물 3세트 3·4·3 (실측 ' + JSON.stringify(st.relic) + ')');
   ok(st.relicMul.every((m, i) => near(m, [1.6, 3.875, 5.833333333333333][i], 0.001)),

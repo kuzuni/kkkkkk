@@ -3,7 +3,7 @@
 
    검사 항목
      [1] 모듈    — 공용 fx 함수·상수가 전부 살아 있는가(PART_CAP 480 · TRAIL_N · BOLT_LIFE)
-     [2] 트레일  — 24종을 각각 강제 시전해 투사체가 나가는 종류는 «트레일 표본 ≥ 2» 가 쌓이는가
+     [2] 트레일  — 전 종(193 이후 27종)을 각각 강제 시전해 투사체가 나가는 종류는 «트레일 표본 ≥ 2» 가 쌓이는가
      [3] 임팩트  — 명중 순간 링(rings)이 생기고 치명타는 2겹인가 · 방향성 스파크가 진행 반대인가
      [4] 폭발    — 폭발형 4종(화염구·운석·심판의 빛·창세의 폭발)이 충격파 링 ≥ 3 · 흙/불 파편(gy) ·
                    cam.shake 상승 · 연쇄 폭발(지연 링)을 내는가
@@ -95,7 +95,7 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
      '선 굵기 토큰 2종(FX_W 4 · FX_W2 6) · 눕는 링 비율 FX_FLAT 0.62 = 독 장판과 같은 발자국');
 
   /* ---------------- [2] 트레일 ---------------- */
-  console.log('[2] 트레일 — 24종 강제 시전');
+  console.log('[2] 트레일 — 전 종 강제 시전');
   const trails = await p.evaluate((PROJ) => {
     const out = [];
     for (const s of SKILLS) {
@@ -463,8 +463,10 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
   }, BOOM_R);
   const rBad = Object.keys(BOOM_R).filter(k => bal.rs[k] !== BOOM_R[k]);
   ok(rBad.length === 0, '폭발 반경 4종 불변 boom78/meteor130/holy190/nova250 (어긋남 ' + rBad.length + '건)');
-  ok(bal.len === 24 && bal.dist.join() === '4,4,4,4,4,4',
-     'SKILLS 24종 · 등급 분포 [4,4,4,4,4,4] 불변 (86 도감·확률표 호환)');
+  /* 193(2026-08-27, 주인 지시) — 버프 5종 폐기 + 공격 8종 신설 → 27종 · [4,4,5,5,5,4].
+     114 가 지키려던 것은 «연출이 스킬 표를 흔들지 않는다» 이므로 수치만 193 으로 이관한다. */
+  ok(bal.len === 27 && bal.dist.join() === '4,4,5,5,5,4',
+     'SKILLS 27종 · 등급 분포 [4,4,5,5,5,4] 불변 (193 도감·확률표 호환)');
   const OLDM = { slash:[1.00,0.85], boom:[2.40,2.00], meteor:[5.00,4.00], holy:[4.00,3.00], nova:[5.20,3.60] };
   const mBad = Object.keys(OLDM).filter(id => {
     const row = bal.m.find(r => r[0] === id);

@@ -1,9 +1,9 @@
 /* 99 스킬 시전음 게이트 — node tools/verify99.js → 마지막 줄 VERIFY99 PASS
    지시서 [3]-(가) 기계적/기능 검증(비평가 없음).
-   §A 테이블·파일   SK_CAST_SFX 가 SKILLS 24종 중 지속형 2종(orbit·aura)을 뺀 22종을 덮는지 ·
+   §A 테이블·파일   SK_CAST_SFX 가 SKILLS 27종(193 이후) 중 지속형 2종(orbit·aura)을 뺀 25종을 덮는지 ·
                     7계열 파일 ogg/mp3 존재 · SFX ≤50KB · CREDITS.md 등재 ·
                     AU_SFX/AU_GAIN 등재 · 게인 0.25~0.35 · SK_SFX_GAP = 90ms
-   §B 매핑 실동작    적이 있는 전투에서 24종을 각각 castSkill() 강제 호출 →
+   §B 매핑 실동작    적이 있는 전투에서 27종을 각각 castSkill() 강제 호출 →
                     스텁이 «계열 매핑대로» 정확히 1회 불렸는지(지속형 2종은 0회)
    §C 실패 케이스    적을 비우고 대상 필요 스킬을 호출 → return false · 시전음 0회
    §D 공용 간격      90ms 안에 연속 호출하면 1회만 발화(계열이 달라도)
@@ -35,13 +35,16 @@ const SK_CAST_SFX = eval('(' + mapSrc + ')'), SK_SFX_GAP = +gapSrc,
 const HOLD = ['orbit', 'aura'];                       /* cd 0 지속 스킬 — castSkill 을 거치지 않는다 */
 const FAMS = [...new Set(Object.values(SK_CAST_SFX))];
 /* 대상이 없으면 실패하는 스킬(지시서 ③) — 버프·장판은 대상 없이도 성공한다 */
+/* 193 — 신설 8종은 전부 «대상이 없으면 발동 실패» 다(버프가 사라져 예외가 줄었다).
+   장판형이던 화염병도 표적 방향으로 던지므로 대상이 필요하다. */
 const NEEDS_TARGET = ['slash', 'multi', 'shuri', 'ice', 'boom', 'drain', 'boomer', 'holy',
-                      'stone', 'arrow', 'gale', 'lance', 'nova'];
+                      'stone', 'arrow', 'gale', 'lance', 'nova',
+                      'curve', 'whirl', 'rico', 'spiral', 'bounce', 'drone', 'flask', 'laser'];
 
 /* ---------------- §A ---------------- */
 console.log('§A 테이블·파일');
 const ids = SKILLS.map(s => s.id);
-ck('SKILLS 24종', ids.length === 24, String(ids.length));
+ck('SKILLS 27종(193)', ids.length === 27, String(ids.length));   /* 193 — 버프 5종 폐기 + 공격 8종 신설 */
 const uncovered = ids.filter(i => !HOLD.includes(i) && !SK_CAST_SFX[i]);
 const strayHold = HOLD.filter(i => SK_CAST_SFX[i]);
 ck('SK_CAST_SFX 가 지속형 2종을 뺀 ' + (ids.length - HOLD.length) + '종을 전부 덮음',
@@ -106,7 +109,7 @@ function launchOpts(){
   ck('§B 전투에 적 스폰됨', spawned);
 
   /* ---------------- §B 매핑 실동작 ---------------- */
-  console.log('§B 24종 castSkill() 강제 호출 → 계열 매핑');
+  console.log('§B 27종 castSkill() 강제 호출 → 계열 매핑');
   const r = await page.evaluate((arg) => {
     const { ids, hold } = arg;
     const orig = window.sfx;

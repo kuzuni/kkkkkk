@@ -13714,7 +13714,7 @@ const SKILLS = [
   { id:'multi',  n:'멀티 검기', g:1, ic:'🔱', cd:1.10, m:0.80, d:'부채꼴로 검기 여러 발을 발사' },
   { id:'orbit',  n:'회전검',    g:1, ic:'💫', cd:0.00, m:0.45, d:'주위를 도는 칼날 (지속)' },
   { id:'ice',    n:'얼음창',    g:1, ic:'❄️', cd:1.60, m:1.30, d:'적을 관통하고 둔화시킨다' },
-  { id:'whirl',  n:'주변 참격',  g:1, ic:'🌀', cd:1.60, m:1.10, d:'몸 주위를 8방향으로 짧게 베어 넘긴다',
+  { id:'whirl',  n:'주변 참격',  g:1, ic:'🌀', cd:1.60, m:0.95, d:'몸 주위를 8방향으로 짧게 베어 넘긴다',
     t:'proj', k:'slash', cnt:8, ring:1, r0:30, sp:460, pierce:99, col:'#dff2ff', life:0.34, hits:2 },
   /* ── 희귀 ── */
   { id:'aura',   n:'신성 오라', g:2, ic:'🔥', cd:0.00, m:0.55, d:'주위 적에게 지속 피해 (지속)' },
@@ -13749,8 +13749,8 @@ const SKILLS = [
     t:'proj', k:'ice', cnt:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
   { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:5.20, d:'아주 넓은 범위를 통째로 날려버린다',
     t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2, hits:1 },
-  { id:'laser',  n:'레이저',    g:5, ic:'🔆', cd:3.40, m:3.40, d:'적을 지지는 빔을 1.7초간 뿜는다',
-    t:'beam', dur:1.7, len:430, w:26, tick:0.18, col:'#ff86f0', hits:1.7 }   /* hits = dur (틱당 dmg×tick) */
+  { id:'laser',  n:'레이저',    g:5, ic:'🔆', cd:3.40, m:6.00, d:'적을 지지는 빔을 1.7초간 뿜는다',
+    t:'beam', dur:1.7, len:470, w:34, tick:0.18, col:'#ff86f0', hits:1.7 }   /* hits = dur (틱당 dmg×tick) */
 ];
 /* 193 — 폐기한 버프 5종 → 후임 스킬(같은 등급). `load()` 의 세이브 이관과 게이트가 같은 표를 본다.
    같은 등급으로만 옮기므로 도감 세트(`skill:{g}`)의 «세트 최저 Lv» 가 이관 때문에 내려가지 않는다. */

@@ -15,7 +15,7 @@
    이 게이트가 보는 것:
      ① 소스 스캔 — 데이터 배열의 객체 리터럴에 **중복 키 0건**(런타임으로는 영영 못 본다. 이미 덮인 뒤다)
      ② 런타임 — SKILLS·EQUIPS·PETS·RELICS 전 항목의 `n` 이 **비어 있지 않은 문자열**
-     ③ 발수 회귀 — 5종의 `cnt` 가 설계값이고, `castGeneric()` 이 실제로 그 수만큼 투사체/연쇄를 만든다
+     ③ 발수 회귀 — 5종 + 193 신설 7종의 `cnt` 가 설계값이고, `castGeneric()` 이 실제로 그 수만큼 투사체/연쇄를 만든다
      ④ 53 가방 — 5종 재료 보유 상태에서 «재화»·«소모품» 두 탭이 크래시 없이 그려지고 칸 이름이 문자열
      ⑤ 이름 표시 — 이름이 **글자로 나오는** 화면(08 스킬 세부 `#mtitle` · 11 확률 정보 `.prb-row .nm`)에 숫자 이름 0건
         (PROGRESS 109 행의 «04/07/12/21» 은 오기다 — 그 넷은 스킬 이름을 글자로 그리지 않는다. 파일 아래 ⑤ 절 주석 참고)
@@ -32,7 +32,19 @@ const SRC = path.resolve(__dirname, '../index.html');
 const FILE = 'file://' + SRC;
 
 /* 109 가 고친 5종과 설계 발수(주석·`hits` 와 일치해야 한다) */
+/* 193(2026-08-27) — 신설 8종 중 `cnt`(발사 수/소환 수)를 가진 7종을 표에 이어 적는다.
+   ⚠ `hits`(전투력 추정용 «한 번 시전하면 몇 대 맞나»)와 `cnt` 는 **원래 같지 않아도 되는 수**다.
+   109 시절엔 «볼리 = 발수 = 타격 수» 인 5종뿐이라 우연히 같았을 뿐이다. 193 이 그 등식이
+   성립하지 않는 4종을 들여왔으므로 **예외를 표로 못박고** 나머지에만 등식을 건다:
+     whirl  8발 링 참격이지만 한 적이 실제로 받는 것은 ≈2발  → hits 2
+     bounce 1발이 4번 도약해 최대 5대                        → hits 5
+     drone  드론 2기 × 8발 연사                              → hits 16
+     flask  1병이 만드는 «불 장판» 의 총 틱 수(4.5s ÷ 0.4s ×0.4) → hits 4.5 */
 const CNT = { stone: 1, arrow: 2, frost: 4, gale: 12, lance: 3 };
+/* 193 이 들여온 `cnt` 보유 7종. **`CNT` 는 건드리지 않는다** — 109 의 이름·53 가방·08 제목 절이
+   «중복 키 n 에 이름이 숫자로 덮였던 바로 그 5종» 을 지목하는 표라서다(회귀의 원본 표본). */
+const CNT193 = { curve: 2, whirl: 8, rico: 2, spiral: 6, bounce: 1, drone: 2, flask: 1 };
+const HITS_NE_CNT = { whirl: 2, bounce: 5, drone: 16, flask: 4.5 };
 
 const R = [];
 const eq = (n, got, want) => R.push({ n, got: String(got), want: String(want), pass: String(got) === String(want) });
@@ -163,9 +175,13 @@ const probeNames = () => {
   const cnts = await p.evaluate(() => SKILLS.filter(s => s.cnt !== undefined)
     .reduce((o, s) => (o[s.id] = s.cnt, o), {}));
   Object.keys(CNT).forEach(id => eq('발수 · ' + id + '.cnt', cnts[id], CNT[id]));
-  eq('발수 · cnt 를 가진 스킬 수', Object.keys(cnts).length, Object.keys(CNT).length);
-  yes('발수 · `hits` 와 `cnt` 일치(proj/chain)', await p.evaluate(() =>
-    SKILLS.filter(s => s.cnt !== undefined).every(s => s.hits === s.cnt)));
+  Object.keys(CNT193).forEach(id => eq('발수(193) · ' + id + '.cnt', cnts[id], CNT193[id]));
+  eq('발수 · cnt 를 가진 스킬 수', Object.keys(cnts).length,
+     Object.keys(CNT).length + Object.keys(CNT193).length);
+  yes('발수 · `hits` 와 `cnt` 일치(예외 4종 제외)', await p.evaluate((exc) =>
+    SKILLS.filter(s => s.cnt !== undefined && !(s.id in exc)).every(s => s.hits === s.cnt), HITS_NE_CNT));
+  yes('발수 · 예외 4종의 `hits` 가 설계표와 일치(193)', await p.evaluate((exc) =>
+    Object.keys(exc).every(id => SK[id] && SK[id].hits === exc[id]), HITS_NE_CNT));
 
   /* castGeneric 실사격: 적을 하나 놓고 스킬별로 쏜 뒤 shots/bolts 증가분을 센다 */
   const fired = await p.evaluate(ids => {
@@ -178,15 +194,21 @@ const probeNames = () => {
       for (let i = 0; i < 8; i++)
         enemies.push({ x: player.x + 120 + i * 10, y: player.y, r: 30, hp: 1e9, mhp: 1e9,
                        born: 1, dmg: 0, spd: 0, gold: 0, xp: 0, type: 'n' });
+      drones.length = 0;                       /* 193 — 드론은 shots 가 아니라 소환수 배열을 만든다 */
       const ok = castGeneric(s, 1);
-      out[id] = { ok, made: s.t === 'chain' ? bolts.length : shots.length };
+      out[id] = { ok, made: s.t === 'chain' ? bolts.length
+                          : s.t === 'drone' ? drones.length : shots.length };
     });
-    shots.length = 0; bolts.length = 0; enemies.length = 0;
+    shots.length = 0; bolts.length = 0; enemies.length = 0; drones.length = 0;
     return out;
-  }, Object.keys(CNT));
+  }, Object.keys(CNT).concat(Object.keys(CNT193)));
   Object.keys(CNT).forEach(id => {
     yes('실사격 · ' + id + ' 발동', fired[id].ok === true);
     eq('실사격 · ' + id + ' 생성 수', fired[id].made, CNT[id]);
+  });
+  Object.keys(CNT193).forEach(id => {
+    yes('실사격(193) · ' + id + ' 발동', fired[id].ok === true);
+    eq('실사격(193) · ' + id + ' 생성 수', fired[id].made, CNT193[id]);
   });
 
   /* ── ④ 53 가방 — 5종 재료 보유 상태에서 두 탭 ── */
