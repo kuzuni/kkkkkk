@@ -76,13 +76,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
           src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1 };
         }
         art = { px: [cv.width, cv.height], css: [cv.offsetWidth, cv.offsetHeight],
-                k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi, src,
+                k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi,
+                /* 245 — 설계값 «시작 프레임». `f` 는 «지금 그려진 프레임» 이라 시간에 흔들린다. */
+                f0: cv.dataset.thf, src,
                 on, ink: on ? { x0, y0, x1, y1, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null,
                 lum: on ? Math.round(L / on) : null,
                 bob: cs2.animationName, org: cs2.transformOrigin,
                 piv: cs2.getPropertyValue('--thpiv').trim() };
       }
       return {
+        id: c.dataset.dcard || '',
         th: { dx: +(tr.left - cr.left).toFixed(1), dy: +(tr.top - cr.top).toFixed(1), w: +tr.width.toFixed(1), h: +tr.height.toFixed(1) },
         pe: cs.pointerEvents,
         frm: { bw: parseFloat(cs.borderTopWidth), r: parseFloat(cs.borderTopLeftRadius),
@@ -186,9 +189,30 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     const piv = parseFloat(a.piv);
     ok(Number.isFinite(piv) && Math.abs(oy - piv) <= 1,
        `카드${i + 1} 스쿼시 축이 «잉크 발밑» (${oy} = --thpiv ${a.piv}, 캔버스 바닥 ${a.css[1]})`);
-    seen.add(a.k + '/' + a.f);
+    seen.add(a.k + '/' + a.i + '/' + a.f0);
   });
-  ok(seen.size === d.length, `카드 ${d.length}장이 서로 다른 아트다 (${seen.size}종: ${[...seen].join(' · ')})`);
+  /* ⚠ 245(2026-08-27) — 이 단언은 «지금 그려진 프레임»(`a.f` = `cv._fr`)을 비교해 **뜨고 지는 FAIL** 이었다.
+     골드(dragon/fly/`f3`)와 194 강화석(dragon/fly/`f1`)은 **같은 아틀라스의 같은 애니**를 시작 프레임만
+     달리해 갈라 둔 쌍이라, 8fps 아이들이 돌다 위상이 맞는 순간 «정당하게» 같은 프레임이 된다 —
+     프로브 실측 **표본 120회 중 41회(34.2%)가 gold+stone → dragon/f3 충돌**(설계값 쪽은 0회).
+     72 가 지키려는 것은 «카드마다 다른 그림» 이고 그것을 정하는 것은 **설계값**(아틀라스/애니/시작 프레임)
+     이므로, 재는 자리를 «그려진 프레임» → «설계값» 으로 옮긴다(LESSONS 185-④ 와 같은 처방).
+     ※ 아트 대기: gold·stone 은 아틀라스·애니가 같아 순환 중 실제로 같은 포즈를 지난다. 97 «없는 몬스터를
+        그리지 않는다» 를 지키는 한 남는 아틀라스가 없어 CSS·게이트로는 못 푼다 — 전용 씬이 들어오면
+        `DUN_UI.stone` 의 `thk/thf/thi` 세 줄만 갈아 끼운다(측정표 03 «아트 필요»). */
+  ok(seen.size === d.length,
+     `카드 ${d.length}장이 서로 다른 아트다 — 설계값 아틀라스/애니/시작프레임 ${seen.size}종 (${[...seen].join(' · ')})`);
+  /* 같은 «아틀라스+애니» 를 쓰는 카드끼리는 시작 프레임이 반드시 갈려 있어야 한다(위 단언의 부분집합이지만,
+     겹친 쌍을 이름으로 찍어 «아트 빚» 이 조용히 늘지 않게 한다). */
+  const byAnim = new Map();
+  d.forEach((c) => { if (!c.art) return; const k = c.art.k + '/' + c.art.i;
+                     byAnim.set(k, (byAnim.get(k) || []).concat(`${c.id}:${c.art.f0}`)); });
+  const dup = [...byAnim.entries()].filter(([, v]) => v.length > 1);
+  console.log(`  · 아틀라스+애니 재사용 ${dup.length}쌍${dup.length ? ' — ' + dup.map(([k, v]) => `${k} = ${v.join(' vs ')}`).join(' / ') : ''} (아트 대기 등재분)`);
+  dup.forEach(([k, v]) => {
+    const fs = new Set(v.map((s) => s.split(':')[1]));
+    ok(fs.size === v.length, `재사용 «${k}» 는 시작 프레임이 서로 다르다 (${v.join(' vs ')})`);
+  });
 
   /* [1-3] 아이들 애니 **전 프레임**에서 안 잘린다.
      위 [1-2] 는 «한 순간» 만 잰다. 아틀라스 애니는 프레임마다 rect 크기가 다르고
