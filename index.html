@@ -19588,6 +19588,9 @@ const SUM_CARD = [
   { face:'#8F90AE', rim:'#D9DAEE' }    /* 7 불멸 — 85 확장 */
 ];
 let sumCtx = null;   /* 재소환 버튼이 어느 배너를 다시 굴릴지 */
+/* 작업 252 — 결과 카드 «순차 팝» 의 칸당 간격(초). 58 이 박아 둔 0.055 를 상수로만 올렸다(값 불변):
+   10칸이면 마지막 카드가 0.495s 에 시작해 총 길이가 예전과 정확히 같다(verify12·verify84 픽셀 회귀 보존). */
+const SUM_POP_STEP = 0.055;
 
 function showSummonResult(b, times, res, lvUp){
   sumCtx = b;
@@ -19598,11 +19601,15 @@ function showSummonResult(b, times, res, lvUp){
     const f = agg.find(a => a.it.id === r.it.id);
     if(f) f.n++; else agg.push({ it:r.it, n:1 });
   });
-  /* 58 — «카드가 등급 순으로 순차 팝». DOM 순서(=레이아웃)는 12 규격 그대로 두고
-     animation-delay 만 등급 오름차순으로 매겨 낮은 등급부터 터지게 한다. */
-  const dly = new Array(agg.length).fill(0);
-  agg.map((a, i) => ({ i, g:a.it.g })).sort((x, y) => x.g - y.g || x.i - y.i)
-     .forEach((o, k) => { dly[o.i] = k * 0.055; });
+  /* 작업 252 — «첫 장부터 작았다가 커지며 순차 등장» (저장소 주인 보고 2026-08-27).
+     58 은 여기서 animation-delay 를 **등급 오름차순**으로 매겼다(«낮은 등급부터 터지게»). 그런데
+     DOM 순서(=그리드 자리)는 뽑은 순서 그대로라, 지연만 등급 순이면 **칸이 제자리를 건너뛰며 튄다** —
+     주인이 본 «랜덤처럼» 이 이것이다. 실측(`tools/probe252.js`, 수정 전): 등장 시각 순서
+     `0,1,2,4,7,3,5,6,8,9` 가 «등급 오름차순 i» 와 **정확히 일치**(DOM 순서와는 불일치).
+     → 지연을 **DOM 순서 = 뽑은 순서**로 되돌린다. 곡선 자체(`fxPop` 0 → 1.2 → 1 «작았다가 커진다»)와
+     칸당 간격(0.055s)은 58 것을 그대로 쓴다. 등재문이 의심한 `jzStagger`(--jzd·jz-st)는 이 그리드에
+     **애초에 안 걸린다**(probe252 [A]: `--jzd` 전 칸 공백 · 이긴 animation-name 은 `fxPop`). */
+  const dly = agg.map((_, i) => i * SUM_POP_STEP);
   $('sumGridIn').innerHTML = agg.map((a, i) => {
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
     return '<div class="sm-c ifr fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
@@ -28560,7 +28567,15 @@ function jzStagger(root){
       const kids = p.children;
       if(kids.length >= 3 && kids[0].className && kids[0].className === kids[1].className
          && kids[1].className === kids[2].className){
-        jzStagGo(kids, Math.min(kids.length, 20));
+        /* 작업 252 — **화면이 자기 등장 연출을 이미 걸어 둔 그리드에는 스태거를 얹지 않는다.**
+           얹으면 «한 요소에 등장 애니메이션 2개» 가 되는데, 둘 다 `animation` 단축 속성을 쓰므로
+           스태거가 붙어 있는 동안 `.jz-st`(문서 뒤) 가 화면 것을 통째로 이긴다 — 그리고 `jzStagLife`
+           가 클래스를 떼는 순간 화면 것이 **처음부터 다시** 시작된다.
+           12 소환 결과에서 실측된 모습(probe252): t0 `fxPop` scale 0 → t133 `.jz-st` 가 붙어
+           `jzSt`(scale .94→1.02) 로 바뀌고 transform 은 `none` → t551 클래스가 떨어지며 다시
+           `fxPop` scale 0 → **같은 카드가 두 번 등장한다.** 주인이 본 «랜덤처럼» 의 나머지 절반이다.
+           `fx-pop` 은 이 저장소에서 «내 등장은 내가 건다» 는 표시다(fxPop 0→1.2→1). */
+        if(!kids[0].classList.contains('fx-pop')) jzStagGo(kids, Math.min(kids.length, 20));
         continue;                                       /* 그리드를 찾았으면 그 아래로는 안 내려간다 */
       }
       for(let i = 0; i < kids.length && next.length < 40; i++) next.push(kids[i]);
