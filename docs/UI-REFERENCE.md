@@ -1549,6 +1549,13 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
       `openRoulette(hit,txt)` 재렌더 구조 → `openRoulette()` 렌더 1회 + `roulSpinTo`/`roulFinish` 제자리 갱신.
       `node verify29.js` **66/66 PASS**(8칸 전수 정렬 중심 오차 0.00deg) · `node tools/smoke.js` SMOKE PASS.
       기록 `docs/review/29-룰렛원판화.md`. 연출(58)·쥬시(60)와 아트 5종은 범위 밖으로 남겼다
+- [x] **룰렛 보상 = 다이아만 100~1000** (155번 작업, 2026-08-27 주인 지시) — **완료 (2026-08-27, sess-0017-31710).**
+      8칸 전부 `dia`: **100·200·300·400·500·600·800·1000**, 가중치 24/20/16/13/10/8/6/3(**합 100 = 백분율**,
+      낮은 값일수록 큼) → **기대값 340/회 · 하루 5회 1,700 다이아/일**. 골드(`goldMul`)·유물조각(`rel`)·🎁대박 칸 폐기.
+      곁들여 죽은 코드 정리: `ROUL_SEGC` 를 보상 종류별 팔레트 4벌 → **칸 구분 2색 배열**, `roulLabel()` 을 `fmt(r.dia)` 한 줄로.
+      원판은 29 설계대로 **배열에서 자동 생성**이라 CSS·마크업 0줄. `giveReward()` 의 `goldMul` 분기는 70 출석이 아직 쓰므로 유지.
+      `node tools/verify155.js` **28/28 PASS**(8칸 전수 지급액 + 회전각 역산) · `verify65` PASS · `node tools/smoke.js` SMOKE PASS.
+      기록 `docs/review/155-룰렛다이아.md`
 - [x] **전투 화면 터치 조이스틱 — 캐릭터 수동 이동** (42번 작업, 2026-08-25 확정) — **완료 (2026-08-24, sess-2142-9112).**
       캔버스(`#view`)를 직접 누른 자리에 플로팅 조이스틱(베이스 **Ø220** 흰 .15 / 노브 **Ø100** 흰 .30,
       테두리 흰 .35 — 설계의 «흰 반투명 15~35%» 안)이 뜨고, 노브는 반경 **110** 안으로 clamp,

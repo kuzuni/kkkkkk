@@ -13382,16 +13382,20 @@ for(let i=1;i<=28;i++){
   ATTEND.push(r);
 }
 
-/* ---- 룰렛 (하루 5회) ---- */
+/* ---- 룰렛 (하루 5회) ----
+   155(2026-08-27, 저장소 주인 지시): «룰렛에는 다이아만, 100~1000개로».
+   골드(goldMul)·유물조각(rel)·🎁대박 칸은 폐기했다 — 8칸 전부 `dia` 한 종류다.
+   가중치 w 는 합이 100 이라 그대로 백분율이고, **낮은 값일수록 크다**(100 이 24% · 1000 이 3%).
+   기대값 = Σ(dia·w)/100 = **340 다이아/회** · 하루 5회(ROUL_FREE) = **1,700 다이아/일**. */
 const ROULETTE = [
-  { ic:curIc('gold'), t:'골드',   goldMul:25,  w:22 },
-  { ic:curIc('dia'), t:'다이아', dia:400,     w:20 },
-  { ic:curIc('relic'), t:'유물조각', rel:150,     w:16 },
-  { ic:curIc('gold'), t:'골드',   goldMul:80,  w:14 },
-  { ic:curIc('dia'), t:'다이아', dia:900,     w:12 },
-  { ic:curIc('relic'), t:'유물조각', rel:400,     w:8  },
-  { ic:curIc('dia'), t:'다이아', dia:2500,    w:5  },
-  { ic:'🎁', t:'대박!',  dia:6000, rel:1500, w:3 }
+  { ic:curIc('dia'), t:'다이아', dia:100,  w:24 },
+  { ic:curIc('dia'), t:'다이아', dia:200,  w:20 },
+  { ic:curIc('dia'), t:'다이아', dia:300,  w:16 },
+  { ic:curIc('dia'), t:'다이아', dia:400,  w:13 },
+  { ic:curIc('dia'), t:'다이아', dia:500,  w:10 },
+  { ic:curIc('dia'), t:'다이아', dia:600,  w:8  },
+  { ic:curIc('dia'), t:'다이아', dia:800,  w:6  },
+  { ic:curIc('dia'), t:'다이아', dia:1000, w:3  }
 ];
 const ROUL_FREE = 5;
 
@@ -18315,18 +18319,13 @@ const ROUL_TURNS = 6, ROUL_MS = 3600;            /* 최소 6바퀴 · 3.6초 감
 const ROUL_OVER = 6, ROUL_BACK_MS = 260;
 /* 회전 중 «원판만 움직인다» 를 CSS 로 강제하는 표식 — 붙이고 떼는 곳은 여기 두 곳뿐이다 */
 function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
-const ROUL_SEGC = { 골드:['#F8CE63','#E9AE33'], 다이아:['#8FDCF7','#4FB3DE'],
-                    유물조각:['#CFA6F2','#A473DC'], '대박!':['#FF9A64','#F2703B'] };
+/* 155 — 보상이 다이아 한 종류가 되면서 «보상 종류별 팔레트» 도 필요 없어졌다.
+   골드·유물조각·대박 전용 색은 죽은 코드라 지웠고, 남은 것은 칸 구분용 «다이아 2색 교대» 뿐이다. */
+const ROUL_SEGC = ['#8FDCF7', '#4FB3DE'];
 let rouRot = 0, rouSpinning = false;
-function roulSegColor(i){ const c = ROUL_SEGC[ROULETTE[i].t] || ['#F8CE63','#E9AE33']; return c[i % 2]; }
-/* 세그먼트 라벨도 ROULETTE 배열에서 만든다 — 보상이 바뀌면 원판이 따라간다 */
-function roulLabel(r){
-  const v = [];
-  if(r.goldMul) v.push('×' + r.goldMul);
-  if(r.dia)     v.push((r.rel ? curIc('dia') : '') + fmt(r.dia));
-  if(r.rel)     v.push((r.dia ? curIc('relic') : '') + fmt(r.rel));
-  return v.join(r.dia && r.rel ? '<br>' : ' ');
-}
+function roulSegColor(i){ return ROUL_SEGC[i % 2]; }
+/* 세그먼트 라벨도 ROULETTE 배열에서 만든다 — 값이 바뀌면 원판이 따라간다(155 이후 전 칸 다이아) */
+function roulLabel(r){ return fmt(r.dia); }
 function openRoulette(){
   const n = ROULETTE.length, seg = 360 / n;
   let cg = [], segs = '';
