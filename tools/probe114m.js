@@ -120,11 +120,18 @@ async function run(p) {
        한 글자도 다르지 않으므로 |B − B2| 가 이 하네스의 «똑같은 것을 두 번 재면 얼마나 갈리는가» 다.
        아래 판정은 |A − B| 를 이 자로 견준다(고정 문턱이 아니라 자기교정 자). */
     const B2 = trial(1e9, N);
+    /* ★ 20회차 — 잡음 바닥을 **한 표본**(|B−B2|)으로 잡던 것이 이 게이트의 결함이었다.
+       그 한 표본 자체가 흔들리는 확률변수라(같은 트리에서 2.39 ~ 43.05 = 0.06% ~ 1.01%),
+       A·B 는 소수점까지 고정인데도 문턱만 오르내려 **같은 빌드가 3회 중 1회 FAIL** 했다.
+       **A 도 B 와 똑같이 흔들린다**(같은 트리에서 |A−B| 가 26.3 ↔ 45.4 로 갈렸다).
+       그래서 두 조건을 «각각 두 번» 돌려 **평균끼리** 견주고, 자는 두 집단의 자기 폭 중 큰 쪽으로 잡는다 —
+       한쪽만 반복하던 비대칭 자가 이 게이트를 3회 중 1회 FAIL 시키던 원인이다. */
+    const A2 = trial(40, N);
     Math.random = rnd0;
     window.sfx = sfx0;
     performance.now = now0;
     SHURI_MISS_M = 40;
-    return { A, B, B2, N, fade: SHURI_FADE };
+    return { A, A2, B, B2, N, fade: SHURI_FADE };
   });
 }
 
@@ -138,7 +145,7 @@ async function run(p) {
 
   const o = await run(p);
   await b.close();
-  const { A, B, B2, N } = o;
+  const { A, A2, B, B2, N } = o;
 
   console.log('\n== 19회차 프로브 — «영영 못 맞는 표창» 정리 (볼리 ' + N + '회 · 적 6기 · 거리 210) ==');
   console.log('              | 명중(적 수) | 총 피해            | 최장 생존 | 흐려진 프레임 | 완전 소거');
@@ -160,12 +167,15 @@ async function run(p) {
      (A 와 B 가 실행을 바꿔 가며 서로의 값을 내놓는다 = 두 조건이 통계적으로 같다는 뜻이다).
      그래서 «비트 일치» 대신 **같은 실행에서 잰 잡음 바닥(|B − B2|)** 으로 견준다 —
      자를 고정 문턱으로 두면 그것대로 임의값이 되므로 자기교정 자를 쓴다. */
-  const noise = Math.abs(B.dmg - B2.dmg);
-  const gap   = Math.abs(A.dmg - B.dmg);
-  const lim   = Math.max(noise * 2, B.dmg * 0.005);
-  ok(gap <= lim, 'B. 총 피해가 **하네스 잡음 안** — |A−B| ' + gap.toFixed(3) +
-     ' ≤ 자 ' + lim.toFixed(3) + ' (잡음 바닥 |B−B2| ' + noise.toFixed(3) + ' · B 의 0.5% ' +
-     (B.dmg * 0.005).toFixed(3) + ') = 시각만 건드렸다는 증명');
+  /* 두 조건을 각각 2회 돌려 **평균끼리** 견준다. 자 = 두 집단이 «자기 자신과» 벌어지는 폭 중 큰 쪽 */
+  const spA   = Math.abs(A.dmg - A2.dmg), spB = Math.abs(B.dmg - B2.dmg);
+  const noise = Math.max(spA, spB);
+  const gap   = Math.abs((A.dmg + A2.dmg)/2 - (B.dmg + B2.dmg)/2);
+  const lim   = Math.max(noise, B.dmg * 0.01);   /* 바닥 1% — 실측 드리프트가 최대 1.06% 였다 */
+  ok(gap <= lim, 'B. 총 피해가 **하네스 잡음 안** — |Ā−B̄| ' + gap.toFixed(3) +
+     ' (' + (gap / B.dmg * 100).toFixed(2) + '%) ≤ 자 ' + lim.toFixed(3) +
+     ' (같은 조건 재실행 폭 A ' + spA.toFixed(3) + ' · B ' + spB.toFixed(3) +
+     ' · B 의 1% ' + (B.dmg * 0.01).toFixed(3) + ') = 시각만 건드렸다는 증명');
   ok(A.maxAlive === B.maxAlive, 'C. 발의 수명 불변 — ' + A.maxAlive.toFixed(2) + 's ≡ ' + B.maxAlive.toFixed(2) + 's (판정을 안 건드렸다는 증명)');
   ok(A.faded > 0 && B.faded === 0, 'D. 그래도 «영영 못 맞는» 발은 사라진다 — 완전 소거 A ' + A.faded + '장 · B ' + B.faded + '장');
   ok(errs.length === 0, '콘솔/페이지 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs[0] : ''));
