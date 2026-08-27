@@ -176,15 +176,39 @@ const near = (label, got, want, tol) => {
   (after.stage === before.stage) ? ok('스테이지 복원 (' + after.stage + ')') : no('스테이지 복원 실패');
 
   console.log('\n[G] 클리어 / 실패 경로');
+  /* 255 — 던전의 클리어 조건이 «누적 피해 ≥ 요구 피해» 에서 **보스 격파**로 바뀌었다.
+     그래서 옛 방식(`dunRun.dmg = dunRun.need`)으로는 이제 클리어되지 않는 것이 정상이다.
+     두 가지를 다 본다: ⓐ 요구치를 채워도 안 끝난다(= 255 가 실제로 걸렸다) ⓑ 보스를 잡으면 끝난다. */
+  const dmgOnly = await page.evaluate(async () => {
+    const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
+    challengeDungeon(d);
+    dunRun.dmg = dunRun.need * 10;            /* 요구치를 열 배로 채워도 */
+    await new Promise((r) => setTimeout(r, 400));
+    const still = !!dunRun;
+    if (dunRun) endDunRun(false, true);
+    return { still };
+  });
+  dmgOnly.still ? ok('255 — 누적 피해만으로는 클리어되지 않는다(보스 격파가 조건)')
+                : no('255 — 요구 피해만 채웠는데 런이 끝났다(옛 판정이 살아 있다)');
+  await page.evaluate(() => { const m = document.querySelector('.modal.on'); if (m) m.classList.remove('on'); closeModal && closeModal(); });
+  await page.waitForTimeout(200);
   const clear = await page.evaluate(async () => {
     const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
     const f0 = S.dun[d.id];
     challengeDungeon(d);
-    dunRun.dmg = dunRun.need;                 /* 요구치 즉시 충족 */
+    dunRun.dmg = dunRun.need * DUN_BOSS_P;    /* 보스 소환 눈금을 채우고 */
+    dunBossTick();
+    spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
+    await new Promise((r) => setTimeout(r, 300));
+    const boss = enemies.find((e) => e.tk === 'dunboss');
+    const seen = !!boss;
+    if (boss) killEnemy(boss);                          /* 보스를 잡는다 */
     await new Promise((r) => setTimeout(r, 500));
-    return { run: !!dunRun, f0, f1: S.dun[d.id], cls: document.getElementById('app').classList.contains('dunrun') };
+    return { seen, run: !!dunRun, f0, f1: S.dun[d.id], cls: document.getElementById('app').classList.contains('dunrun') };
   });
-  (!clear.run && clear.f1 === clear.f0 + 1) ? ok('요구 피해 충족 → 클리어 + 층 해금 ' + clear.f0 + '→' + clear.f1)
+  clear.seen ? ok('255 — 소환 눈금(요구 피해 × ' + '30%' + ')을 채우면 보스가 선다')
+             : no('보스가 안 선다 ' + JSON.stringify(clear));
+  (!clear.run && clear.f1 === clear.f0 + 1) ? ok('보스 격파 → 클리어 + 층 해금 ' + clear.f0 + '→' + clear.f1)
                                             : no('클리어 경로 이상 ' + JSON.stringify(clear));
   await page.evaluate(() => { const m = document.querySelector('.modal.on'); if (m) m.classList.remove('on'); closeModal && closeModal(); });
   await page.waitForTimeout(200);
