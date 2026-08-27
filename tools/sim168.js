@@ -8,7 +8,7 @@
    역산 대상이 아니다. 그래서 이 도구가 하는 일은 «값 고르기» 가 아니라 **결과 재기** 다.
 
    ★ 이 교체의 본체는 «적 스케일과의 정합» 이다(PROGRESS 168 등재문의 ⚠).
-     적 HP·공격은 스테이지당 지수(×EH_R / ×ED_R)인데 훈련 스탯이 선형이면, 훈련 축은
+     적 HP·공격이 스테이지당 지수인데 훈련 스탯이 선형이면, 훈련 축은
      **어느 스테이지에서든 반드시 벽에 부딪힌다** — 수학적으로 피할 수 없다.
      그러므로 이 시뮬의 판정 대상은 «벽이 있느냐»(있다. 설계다)가 아니라 **«벽이 어디에 서는가»** 다.
      그 지점을 실측해 작업 177(적 곡선 재조정 — 주인 확정 지시)의 입력으로 남긴다.
@@ -37,10 +37,10 @@ const num = (re, what) => parseFloat(pick(re, what)[1]);
 /* ---------- [A] index.html 실측 상수 (sim112/sim131 과 같은 방식) ---------- */
 const EG_B = num(/const eGold\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,        'eGold 계수');
 const EG_R = num(/const eGold\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/, 'eGold 배율');
-const EH_B = num(/const eHp\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,          'eHp 계수');
-const EH_R = num(/const eHp\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/,   'eHp 배율');
-const ED_B = num(/const eDmg\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,         'eDmg 계수');
-const ED_R = num(/const eDmg\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/,  'eDmg 배율');
+/* 177 — 적 곡선의 «표기» 가 갈렸다(구 순수 지수 / 177 선형×구간별 저지수).
+   정규식을 여기 두면 곡선을 갈아 끼울 때마다 이 시뮬이 먼저 죽는다(LESSONS 168-③) —
+   표기 해석은 `tools/ecurve.js` 한 곳으로 모았다. 이 파일은 «값» 만 쓴다. */
+const EC = require('./ecurve')(SRC, 'SIM168');
 const N_MOB = num(/const ENEMY_COUNT\s*=\s*(\d+)/,        'ENEMY_COUNT');
 const OFF_H = num(/const OFF_MAX_H\s*=\s*(\d+)/,          'OFF_MAX_H');
 const CAP_S = num(/const TRAIN_CAP_STEP\s*=\s*(\d+)/,     'TRAIN_CAP_STEP');
@@ -101,8 +101,8 @@ const ARG_H = process.argv.find(a => a.startsWith('--h='));
 const H_MAX = ARG_H ? parseFloat(ARG_H.slice(4)) : 3.0;
 const T_STAGE = 40, S_END = 80, L_MAX = 1200;
 const eGold = s => EG_B*Math.pow(EG_R, s-1);
-const eHp   = s => EH_B*Math.pow(EH_R, s-1);
-const eDmg  = s => ED_B*Math.pow(ED_R, s-1);
+const eHp   = EC.eHp;
+const eDmg  = EC.eDmg;
 const isBoss = s => s % 10 === 0;
 const mobGoldMul = s => s<3 ? G_ZOM : s<5 ? 0.44*G_GOB+0.56*G_ZOM : 0.44*G_GOB+0.16*G_DRK+0.40*G_ZOM;
 const mobHpMul   = s => s<3 ? H_ZOM : s<5 ? 0.44*H_GOB+0.56*H_ZOM : 0.44*H_GOB+0.16*H_DRK+0.40*H_ZOM;
@@ -135,7 +135,7 @@ const f2 = n => n.toExponential(2);
 console.log('SIM168 — 훈련 val 곡선 «지수 → 선형» (index.html 실측 상수)');
 console.log('');
 console.log('[A] 설치 상수');
-console.log('  적    eHp ' + EH_B + '×' + EH_R + '^(s-1) · eDmg ' + ED_B + '×' + ED_R + '^(s-1) · 보스 HP ×' + H_BOS + ' · 제한 ' + BSEC + '초');
+console.log('  적    ' + EC.desc + ' · 보스 HP ×' + H_BOS + ' · 제한 ' + BSEC + '초');
 console.log('  훈련  val(선형) ' + STATS.map(id => id + ' ' + LIN_B[id] + '+' + LIN_K[id] + '×l').join(' · '));
 console.log('  훈련  비용(112 무릎 Lv ' + C_KNEE + ' 이후 ×' + C_R + ') — **168 이 안 건드린 축**');
 console.log('  단계  상한 ' + CAP_S + '/단계 · 단계당 전 스탯 +' + (T_BON*100) + '% — **168 이 안 건드린 축**');
@@ -189,9 +189,9 @@ console.log('    체력/적공격 < 1 (한 방 사망) | ' + String(wall(oldVal,
 console.log('  → 훈련 축 단독 사거리는 스테이지 **' + (W_BOSS ? W_BOSS - 1 : S_END) + '** 까지다.');
 console.log('    그 위는 장비·유물·소환·펫(지수 축)이 메워야 한다 = 주인이 의도한 구조.');
 console.log('    적 곡선을 완화할지는 **작업 177**(주인 확정 지시)의 몫 — 168 은 손대지 않는다(곁가지 금지).');
-console.log('    177 이 쓸 입력: 벽을 스테이지 N 으로 밀려면 적 HP 배율을 ' + EH_R + ' → '
-          + '«훈련 선형 증가율에 맞춘 값» 으로 내려야 한다(레벨당 +' + LIN_K.atk + ' 는 스테이지당 ×'
-          + (1 + LIN_K.atk*((LV[80]-LV[20])/60) / newVal('atk', LV[40])).toFixed(4) + ' 수준 — s40 부근 접선).');
+console.log('    적 곡선을 어떻게 바꿨는지는 **작업 177 이 이미 처리**했다 — 지금 설치된 곡선은 «' + EC.form
+          + '» 표기다. 이 시뮬은 그 곡선을 그대로 읽어 «훈련 축만» 의 사거리를 재는 도구로 남는다'
+          + ' (177 의 판정은 `node tools/sim177.js`).');
 console.log('');
 
 /* ---------- [E] 게이트 — 등식을 단언한다(표를 베끼지 않는다. LESSONS 112-③) ---------- */
@@ -219,8 +219,14 @@ const g7 = bossSec(newVal,10) < BSEC && mobSec(newVal,10) <= 1;
 const XOVER = {};
 STATS.forEach(id => { XOVER[id] = null;
   for(let l=1;l<=400;l++) if(newVal(id,l) < oldVal(id,l)){ XOVER[id] = l; break; } });
-/* ⑧ 벽이 실제로 존재하고 (설계) 그 위치를 이 도구가 수치로 집어낸다 — 177 의 입력 */
-const g8 = W_BOSS !== null && W_MOB1 !== null;
+/* ⑧ 이 항목의 **전제가 177 로 갈렸다**(LESSONS 168-②: 판정할 등식이 바뀌면 완화가 아니라 재정의다).
+   168 이 쓴 원문은 «지수 적 곡선 앞에서 선형 훈련은 반드시 벽에 부딪힌다 — 그 위치를 177 에 넘긴다» 였다.
+   177 이 그 입력을 받아 적 곡선을 «선형 항 × 구간별 저지수» 로 바꿨으므로, s ≤ 80 에서는 **무벽이 정상**이다.
+   그래서 곡선 표기에 따라 **서로 반대 방향으로** 단언한다 — 어느 쪽이든 «집어낸 수치» 가 있어야 통과다.
+     · 구 순수 지수 표기 → 벽이 반드시 있다(원문 그대로)
+     · 177 표기        → s ≤ 80 에 벽이 없다(177 게이트 ⑧ 과 같은 사실을 훈련 축 쪽에서 본 것) */
+const g8 = EC.form === '177' ? (W_BOSS === null && W_MOB1 === null)
+                             : (W_BOSS !== null && W_MOB1 !== null);
 console.log('[E] 게이트');
 console.log('  ① Lv 0 스탯 불변 — ' + STATS.map(id => id + ' ' + newVal(id,0)).join(' · ') + ' : ' + (g1?'PASS':'FAIL'));
 console.log('  ② 기울기 = 주인 확정 — atk +' + LIN_K.atk + ' · hp +' + LIN_K.hp + ' · regen +' + LIN_K.regen + '/Lv : ' + (g2?'PASS':'FAIL'));
@@ -235,7 +241,11 @@ console.log('     ※ before 대비로는 s1~5 가 크게 쉬워지고(몹 처�
           + mobSec(newVal,10).toFixed(3) + '초, +' + ((mobSec(newVal,10)/mobSec(oldVal,10)-1)*100).toFixed(1) + '%).');
 console.log('     ※ 교차점(선형이 구곡선 아래로) — ' + STATS.map(id => id + ' Lv ' + (XOVER[id] ?? '없음')).join(' · ')
           + ' : 그 아래는 선형이 더 후하고 그 위는 더 박하다. 기울기가 주인 확정값이라 이는 «결과» 이지 «조절 대상» 이 아니다.');
-console.log('  ⑧ 벽 위치가 수치로 잡힌다(177 입력) — 몹>1초 s' + W_MOB1 + ' · 보스>' + BSEC + '초 s' + W_BOSS + ' : ' + (g8?'PASS':'FAIL'));
+console.log('  ⑧ ' + (EC.form === '177'
+            ? '177 곡선 설치본 — s ≤ ' + S_END + ' 에 벽이 없다(몹>1초 ' + (W_MOB1 ?? '없음')
+              + ' · 보스>' + BSEC + '초 ' + (W_BOSS ?? '없음') + ') : ' + (g8?'PASS':'FAIL')
+            : '벽 위치가 수치로 잡힌다(177 입력) — 몹>1초 s' + W_MOB1 + ' · 보스>' + BSEC + '초 s' + W_BOSS
+              + ' : ' + (g8?'PASS':'FAIL')));
 console.log('  ⑨ 유휴 가정 민감도 — 선형이라 «도달 Lv» 만 움직이고 곡선 모양은 안 움직인다');
 [0.5,1.0,3.0,6.0].forEach(h => {
   let cum = 0, l80 = 0;

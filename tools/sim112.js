@@ -29,10 +29,10 @@ const num = (re, what) => parseFloat(pick(re, what)[1]);
 /* ---------- index.html 에서 뽑는 상수 ---------- */
 const EG_B = num(/const eGold\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,        'eGold 계수');
 const EG_R = num(/const eGold\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/, 'eGold 배율');
-const EH_B = num(/const eHp\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,          'eHp 계수');
-const EH_R = num(/const eHp\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/,   'eHp 배율');
-const ED_B = num(/const eDmg\s*=\s*s\s*=>\s*([\d.]+)\s*\*\s*Math\.pow\(/,         'eDmg 계수');
-const ED_R = num(/const eDmg\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/,  'eDmg 배율');
+/* 177 — 적 곡선의 «표기» 가 갈렸다(구 순수 지수 / 177 선형×구간별 저지수).
+   정규식을 여기 두면 곡선을 갈아 끼울 때마다 이 시뮬이 먼저 죽는다(LESSONS 168-③) —
+   표기 해석은 `tools/ecurve.js` 한 곳으로 모았다. 이 파일은 «값» 만 쓴다. */
+const EC = require('./ecurve')(SRC, 'SIM112');
 const N_MOB = num(/const ENEMY_COUNT\s*=\s*(\d+)/,        'ENEMY_COUNT');
 const OFF_H = num(/const OFF_MAX_H\s*=\s*(\d+)/,          'OFF_MAX_H');
 const CAP_S = num(/const TRAIN_CAP_STEP\s*=\s*(\d+)/,     'TRAIN_CAP_STEP');
@@ -117,8 +117,8 @@ const T_STAGE = 40;                 /* 스테이지 1개 능동 클리어 시간
 const S_END = 80;
 
 const eGold = s => EG_B * Math.pow(EG_R, s-1);
-const eHp   = s => EH_B * Math.pow(EH_R, s-1);
-const eDmg  = s => ED_B * Math.pow(ED_R, s-1);
+const eHp   = EC.eHp;
+const eDmg  = EC.eDmg;
 const isBoss = s => s % 10 === 0;
 
 /* 일반 파도의 몹 종류별 기대 골드 배수 (queueMobs 의 분기 그대로) */
@@ -186,7 +186,7 @@ const fx = n => n >= 1e6 ? n.toExponential(3) : Math.round(n).toLocaleString('en
 const csv = process.argv.includes('--csv');
 
 console.log('SIM112 — 23 훈련 밸런스 (index.html 실측 상수)');
-console.log('  eGold ' + EG_B + '×' + EG_R + '^(s-1) · eHp ' + EH_B + '×' + EH_R + '^(s-1) · eDmg ' + ED_B + '×' + ED_R + '^(s-1)');
+console.log('  ' + EC.desc);
 console.log('  몹 ' + N_MOB + '마리/스테이지 · 클리어 ×' + CLEAR_K + ' · 오프라인 ' + OFF_A + '×' + OFF_B + '/초(상한 ' + OFF_H + 'h)'
           + ' · 골드던전 ' + fx(DUN_G) + '/일 · 유휴 h(s)=' + H_MAX + '×s/80');
 console.log('  훈련 상한 ' + CAP_S + '/단계 · 단계 보너스 +' + (T_BON*100) + '%');
