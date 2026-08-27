@@ -251,8 +251,12 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
 
   /* ---------------- §6 05 무기 팝업 ---------------- */
   console.log('\n§6 05 무기 팝업 [장착]·[일괄 강화] (전역 감사가 잡은 두 번째 건)');
-  const CYAN_W  = 'rgb(68, 218, 239)';    /* .wm-b1:not(.off) 활성(#44DAEF) */
-  const GREEN_W = 'rgb(143, 220, 51)';    /* .wm-b2:not(.off) 활성(#8FDC33) */
+  /* 202 (주인 확정 2026-08-27) — «장착 버튼은 초록». 171 이 세운 «장착=청록» 은 08 `.sk-e` 와
+     짝을 맞춘 171 자체 판단이었고 레퍼런스 근거가 없었다(05 ref 는 두 버튼 다 회색 면).
+     기대값을 청록 → 초록으로 옮긴다. `CYAN_W` 는 지우지 않고 **음성항**으로 남긴다 —
+     되돌리면 그 자리에서 빨개진다(LESSONS 185-④ «이사», 219 N3·N4 관례). */
+  const CYAN_W  = 'rgb(68, 218, 239)';    /* 202 이전 `.wm-b1:not(.off)` 값(#44DAEF) — 이제 나오면 안 된다 */
+  const GREEN_W = 'rgb(143, 220, 51)';    /* .wm-b2:not(.off)·202 이후 `.wm-b1:not(.off)` 활성(#8FDC33) */
   const GRAY_W  = 'rgb(168, 168, 168)';   /* .wm-btn 회색(#A8A8A8) */
 
   const w1 = await page.evaluate(() => {
@@ -267,8 +271,10 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
   await page.waitForTimeout(200);
   ok(!w1.upOff && w1.upBg.includes(GREEN_W),
     '[05 일괄 강화] 강화 가능 ' + w1.n + '개(«' + w1.upTxt + '») → 초록');
-  ok(w1.eqOff ? w1.eqBg.includes(GRAY_W) : w1.eqBg.includes(CYAN_W),
-    '[05 장착] ' + (w1.eqOff ? '장착 중/미보유 → 회색' : '장착 가능 → 청록'));
+  ok(w1.eqOff ? w1.eqBg.includes(GRAY_W) : w1.eqBg.includes(GREEN_W),
+    '[05 장착] ' + (w1.eqOff ? '장착 중/미보유 → 회색' : '장착 가능 → 초록') + ' (202)');
+  ok(!w1.eqBg.includes(CYAN_W),
+    '[05 장착] 202 이전 청록(#44DAEF)이 한 곳도 안 남음 (되돌림 감지 음성항)');
 
   const w2 = await page.evaluate(() => {
     EQUIPS.forEach(it => { if (S.own[it.id]) S.own[it.id].n = 0; });
