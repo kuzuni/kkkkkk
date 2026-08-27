@@ -310,6 +310,30 @@ async function open(browser) {
       e2.after.got > 0 ? ok(`매일 보석 정산액 = ${e2.after.got}`) : fail('3일치 정산인데 0 이 나왔다');
     }
 
+    /* ========= [F] 새 보상 키(마일리지 쿠폰)가 행에 제대로 앉는가 ========= */
+    console.log('[F] MAIL_RW 확장 — 마일리지 쿠폰이 행 썸네일·배지로 그려진다');
+    const f1 = await d.page.evaluate(() => {
+      S.mailx = []; S.mailSeq = 0; S.mail = {};
+      sendMail({ t:'🛒 쿠폰만', m:2 });                  /* 쿠폰 단독 = 대표 썸네일이 쿠폰이 된다 */
+      openMail();
+      const row = [...document.querySelectorAll('#mbox .ml-r')]
+        .find(r => r.querySelector('[data-ml^="x"]'));
+      if (!row) return { err: '행이 없다' };
+      const fr = row.querySelector('.ml-i');
+      const g4 = SUM_CARD[4];
+      return { sum: (row.querySelector('.ml-s i') || {}).textContent,
+               q: (row.querySelector('.ifq') || {}).textContent,
+               face: fr && fr.style.getPropertyValue('--face').trim(), want: g4.face,
+               ic: !!(fr && fr.querySelector('img[data-cur-ic="mile"]')) };
+    });
+    if (f1.err) fail(f1.err);
+    else {
+      eq('쿠폰 단독 우편 — 보상 요약', f1.sum, '마일리지 쿠폰');
+      eq('쿠폰 단독 우편 — 수량 배지', f1.q, '2');
+      eq('쿠폰 단독 우편 — 프레임 색(SUM_CARD[4])', f1.face, f1.want);
+      f1.ic ? ok('쿠폰 썸네일이 125 화폐 아이콘(mile)이다') : fail('쿠폰 썸네일이 CUR_ICON 을 안 쓴다');
+    }
+
     const errs = d.errs.filter(e => !/favicon|net::ERR/i.test(e));
     eq('콘솔 에러', errs.length, 0);
     if (errs.length) errs.slice(0, 3).forEach(e => console.log('       ' + e));
