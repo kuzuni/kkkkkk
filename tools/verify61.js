@@ -103,11 +103,23 @@ const snap = page => page.evaluate(() => {
   /* «보상이 단조 증가» 는 단언하지 않는다 — 76 의 소환 미션 2건은 `dia:() => summonCost(…)` 라
      시세를 따라가고, 실제 체인은 300/1000/400/… 로 톱니다. 설계에 없는 기준을 게이트가
      발명하면 게이트가 틀린 것이지 데이터가 틀린 게 아니다(LESSONS 168-①). */
-  /* 154 가 «출석» 을 폐지했다(주인 재지시). 나머지 계통 커버리지는 61 의 설계 그대로 본다. */
-  ok('§0 체인에 소환·강화·장비장착·훈련·던전·보스·스킬장착·룰렛이 모두 있다',
-     ['소환','강화','장비 장착','훈련','던전','보스','스킬 장착','룰렛']
+  /* 154 가 «출석» 을 폐지했다(주인 재지시). 나머지 계통 커버리지는 61 의 설계 그대로 본다.
+     256(2026-08-27, 주인 지시) — 목표축이 «행위 반복» → «상태 도달» 로 바뀌면서 미션 «이름» 도
+     바뀌었다(«… 1회 소환하기» → «… 1종 보유하기», «적 100마리 처치» → «전투력 N 도달»).
+     묻는 것은 그대로다: **체인이 게임의 계통을 골고루 훑는가.** 열쇠말만 새 축으로 옮긴다. */
+  ok('§0 체인에 보유·강화·장비장착·훈련·던전·보스·스킬장착·룰렛·전투력·스테이지가 모두 있다',
+     ['보유','강화','장비 장착','훈련','던전','보스','스킬 장착','룰렛','전투력','스테이지']
        .every(k => G.some(m => m.n.includes(k))),
      G.map(m => m.n).join(' / '));
+  /* 256 ★ — 주인이 지목한 **세 형태**가 체인에 다시 들어오지 못하게 막는다(음성항).
+       ⓐ «… n회 소환»  ⓑ «적 n마리 처치»  ⓒ «훈련 n회»
+     남은 «던전/룰렛/도감/보스/아이템 1회 …» 는 «지금부터 n번 더» 가 아니라 **한 번 하면 끝나는
+     온보딩 행동**이고 253 이 이미 abs 로 닫았다 — 주인의 폐기 목록에 없다(GUIDE 표 «작업 256» ①). */
+  for (const [tag, re] of [['ⓐ 소환', /소환/], ['ⓑ 마리 처치', /마리/], ['ⓒ 훈련 n회', /훈련\s*\d+\s*회/]])
+    ok('§0 256 — 폐기 형태 ' + tag + ' 문구 0개',
+       !G.some(m => re.test(m.n)), G.map(m => m.n).filter(n => re.test(n)).join(' / '));
+  ok('§0 256 — 델타형 미션 0개(전부 abs)', G.every(m => !!m.abs),
+     G.filter(m => !m.abs).map(m => m.n).join(' / '));
 
   /* ---------- §1 초기 상태 ---------- */
   let s = await snap(page);
@@ -115,7 +127,16 @@ const snap = page => page.evaluate(() => {
   ok('§1 미완료(todo) 상태', s.todo && !s.ready, JSON.stringify({ todo: s.todo, ready: s.ready }));
   eq('§1 라벨 [미션-1]', s.label, '[미션-1]');
   eq('§1 문구 = 미션 이름', s.name, G[0].n);
-  eq('§1 3번째 줄 «(진행/목표)»', s.pg, '(0/' + G[0].goal + ')');
+  /* 256 — 첫 미션은 «스킬 2종 보유» 이고 부팅이 시작 스킬 `slash` 를 쥐여 주므로 시작 진행이 «0» 이
+     아니라 «1» 이다. 리터럴 0 을 박으면 그 설계를 게이트가 «틀렸다» 고 우기게 된다(185-①).
+     묻는 것은 «신규 세이브에서 첫 미션이 아직 미달성인가» 다 — 형식과 부등식으로 단언한다. */
+  {
+    const m = /^\((\d[\d,]*)\/(\d[\d,]*)\)$/.exec(s.pg);
+    ok('§1 3번째 줄이 «(진행/목표)» 형식', !!m, s.pg);
+    const cur = m ? +m[1].replace(/,/g, '') : NaN, gl = m ? +m[2].replace(/,/g, '') : NaN;
+    eq('§1 3번째 줄의 목표 = 첫 미션 goal', gl, G[0].goal);
+    ok('§1 신규 세이브에서 첫 미션은 미달성(진행 < 목표)', cur < gl, s.pg);
+  }
   ok('§1 미완료는 3번째 줄이 보인다', s.pgVis !== 'none', s.pgVis);
   ok('§1 미완료 바탕은 반투명 검정(그라디언트 아님)', s.bg === 'rgba(0, 0, 0, 0.55)', s.bg);
   ok('§1 미완료는 테두리가 안 보인다', /transparent|rgba\(0, 0, 0, 0\)/.test(s.bc), s.bc);
@@ -132,19 +153,31 @@ const snap = page => page.evaluate(() => {
      ![s.label, s.name, s.sub].some(t => /NaN|undefined|null/.test(t)),
      [s.label, s.name, s.sub].join(' | '));
 
-  /* ---------- §2 진행 반영 (델타형) ---------- */
-  /* 미션 8 «적 100마리 처치»(76 삽입으로 idx 7) 로 옮겨 놓고 절반만 올린다 */
-  await page.evaluate(() => { S.guide.idx = 7; gmStart(); drawTuto(); });
+  /* ---------- §2 진행 반영 ----------
+     256 전에는 여기서 idx 7 «적 100마리 처치»(델타)를 몰았다. 그 미션은 «전투력 도달» 로 바뀌었고
+     cp() 는 여러 축이 곱해진 값이라 «정확히 절반» 을 만들 수 없다. 진행 표기를 재는 자리를
+     idx 15 «훈련 공격력 80레벨 도달»(get = lv('atk'))로 **이사**시킨다 — 물음은 그대로
+     «카운터가 오르면 배너 진행이 따라 오르는가» 다(185-④: 지우지 말고 옮긴다). */
+  const DRV = 15;                                   /* 진행 표기를 모는 미션 idx */
+  await page.evaluate(i => { S.guide.idx = i; gmStart(); drawTuto(); }, DRV);
   await page.waitForTimeout(80);
-  const kill0 = await page.evaluate(() => S.totalKills);
-  await page.evaluate(() => { S.totalKills += 40; drawTuto(); });
+  const half = Math.floor(G[DRV].goal / 2);
+  await page.evaluate(v => { S.lv.atk = v; drawTuto(); }, half);
   await page.waitForTimeout(80);
   s = await snap(page);
-  eq('§2 진행이 카운터를 따라 오른다', s.pg, '(40/' + G[7].goal + ')');
+  eq('§2 진행이 카운터를 따라 오른다', s.pg, '(' + half + '/' + G[DRV].goal + ')');
   ok('§2 아직 미완료', s.todo && s.dis === true);
 
-  /* ---------- §6 델타형 기준선 ---------- */
-  ok('§6 기준선이 미션 시작 시점 카운터로 찍혔다', s.prog === kill0, `prog=${s.prog} kill0=${kill0}`);
+  /* ---------- §6 256 — 델타형 폐지 ----------
+     253 까지는 여기서 «델타형 미션의 기준선이 시작 시점 카운터로 찍히는가» 를 봤다.
+     256 이 델타형을 통째로 없앴으므로(주인 지시) 그 자리에 **음성항**을 세운다:
+     기준선을 아무 값으로 오염시켜도 진행이 안 흔들려야 abs 다(«prog 를 아무도 안 읽는다»). */
+  ok('§6 abs 미션의 기준선은 0', s.prog === 0, 'prog=' + s.prog);
+  const poisoned = await page.evaluate(v => {
+    S.guide.prog = 12345; drawTuto();
+    return document.getElementById('tutoPg').textContent;
+  }, half);
+  eq('§6 기준선을 오염시켜도 진행 불변(prog 를 읽지 않는다)', poisoned, '(' + half + '/' + G[DRV].goal + ')');
 
   /* ---------- §5 미완료 클릭 → Δ0 ---------- */
   const before = { idx: s.idx, dia: s.dia };
@@ -155,12 +188,12 @@ const snap = page => page.evaluate(() => {
      `idx ${before.idx}→${s.idx} dia ${before.dia}→${s.dia}`);
 
   /* ---------- §3 보상받기 전이 ---------- */
-  await page.evaluate(() => { S.totalKills += 60; drawTuto(); });
+  await page.evaluate(v => { S.lv.atk = v; drawTuto(); }, G[DRV].goal);
   await page.waitForTimeout(120);
   s = await snap(page);
   ok('§3 ready 상태로 전이', s.ready && !s.todo, JSON.stringify({ todo: s.todo, ready: s.ready }));
   eq('§3 라벨 [보상받기]', s.label, '[보상받기]');
-  eq('§3 문구 (100/100)', s.pg, '(100/100)');
+  eq('§3 문구 (goal/goal)', s.pg, '(' + G[DRV].goal + '/' + G[DRV].goal + ')');
   ok('§3 버튼 enabled', s.dis === false);
   ok('§3 보상받기는 3번째 줄이 숨는다', s.pgVis === 'none', s.pgVis);
   ok('§3 보상받기 바탕은 금색 그라디언트', s.bg === 'gradient', s.bg);
@@ -180,21 +213,23 @@ const snap = page => page.evaluate(() => {
   ok('§12 토스트 1개 이상', fx.toast > 0, 'toast=' + fx.toast);
 
   s = await snap(page);
-  eq('§4 idx +1', s.idx, 8);
-  eq('§4 다이아 +보상', s.dia, diaBefore + G[7].dia);
-  eq('§4 배너가 다음 미션으로', s.name, G[8].n);
-  eq('§4 라벨이 [미션-9] 로', s.label, '[미션-9]');
+  eq('§4 idx +1', s.idx, DRV + 1);
+  eq('§4 다이아 +보상', s.dia, diaBefore + G[DRV].dia);
+  eq('§4 배너가 다음 미션으로', s.name, G[DRV + 1].n);
+  eq('§4 라벨이 다음 번호로', s.label, '[미션-' + (DRV + 2) + ']');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('idle_hunter_save_v4')).guide);
-  ok('§4 localStorage 에 저장됨', stored && stored.idx === 8, JSON.stringify(stored));
+  ok('§4 localStorage 에 저장됨', stored && stored.idx === DRV + 1, JSON.stringify(stored));
 
   /* ---------- §7 절대형(abs) ---------- */
-  /* 미션 9 «스테이지 5 도달» = abs. 기준선을 쓰지 않고 누적값이 그대로 진행이다 */
+  /* 다음 미션(«스테이지 25 도달»)도 abs — 기준선을 쓰지 않고 누적값이 그대로 진행이다.
+     256 이후로는 **모든** 미션이 이 갈래다(§0 이 그것을 단언한다). */
   ok('§7 abs 미션의 기준선은 0', s.prog === 0, 'prog=' + s.prog);
-  await page.evaluate(() => { S.best = 3; drawTuto(); });
+  const NX = DRV + 1, nxGoal = G[NX].goal, nxHalf = Math.floor(nxGoal / 2);
+  await page.evaluate(v => { S.best = v; drawTuto(); }, nxHalf);
   await page.waitForTimeout(120);
   s = await snap(page);
-  eq('§7 abs 진행 = 누적값', s.pg, '(3/5)');
-  await page.evaluate(() => { S.best = 5; drawTuto(); });
+  eq('§7 abs 진행 = 누적값', s.pg, '(' + nxHalf + '/' + nxGoal + ')');
+  await page.evaluate(v => { S.best = v; drawTuto(); }, nxGoal);
   await page.waitForTimeout(120);
   s = await snap(page);
   ok('§7 abs 목표 도달 → ready', s.ready, s.label);

@@ -11,7 +11,8 @@
  *   [E] 구 세이브 호환 — plv/pexp/sp/spAtk/spHp/spRegen/spAuto/statStage 가 든 세이브가 에러 없이 로드
  *       + 그 키들이 전투력에 영향 없음(포인트 유무로 cp() 동일 = «아무 곳에서도 읽지 않음»)
  *   [F] 킬 경험치 폐기 — 적 처치를 겪어도 S.pexp/S.plv 가 생기지 않는다
- *   [G] 가이드 미션 — idx16 = «훈련 30회 하기»(같은 자리 교체) · GUIDE_V 4 · 카운터 S.upgrades 연동
+ *   [G] 가이드 미션 — 스탯 미션 자리를 훈련 미션이 대신한다 · GUIDE_V ≥ 4 · 카운터 연동
+ *       (256 이 축을 S.upgrades → 훈련 공격력 레벨 lv('atk') 로 갈았다)
  *   [H] 프로필 정보 탭 — «레벨/경험치» 문구 없음 · «최고 스테이지» 로 대체
  *   [I] 재화 정보 — CURINFO.sp 없음 · openCurInfo('sp') 는 조용히 무시
  *   [J] 가방 — «스탯 포인트» 행 없음
@@ -171,27 +172,34 @@ const ok = (b, name, detail) => {
      goal 30 쪽이다. 그래서 이름만으로 «하나뿐인가» 를 물으면 안 된다. 88 의 미션은 goal 30 으로
      집고, 카운터는 **훈련 미션 전부**가 S.upgrades 를 세는지로 본다.
      표의 이름·순서·개수 자체는 154 의 `verify154` §1 이 통째로 못 박으므로 여기서 겹쳐 박지 않는다. */
+  /* ⚠ 256(2026-08-27, 주인 지시)이 훈련 미션의 **목표축**을 갈았다 — «훈련 n회 하기»(누적 강화
+     횟수 S.upgrades)에서 «훈련 공격력 N레벨 도달»(상태 lv('atk'))로. 88 이 소유한 성질 넷 중
+     ①④ 는 그대로고 ②③ 이 새 축으로 이사한다: ② 88 이 스탯 미션 자리에 넣은 «훈련» 미션이
+     체인 뒤쪽(스테이지 15↔25 구간)에 그대로 있다 ③ 훈련 미션의 카운터가 **훈련 공격력 레벨**이다.
+     «goal 30 / 이름의 n = goal» 은 폐기된 축의 흔적이라 그 축의 성질(레벨 목표 단조 증가)로 바꾼다. */
   const G = await page.evaluate(() => {
-    const tr = GUIDE.map((g, i) => ({ i, n: g.n, goal: g.goal })).filter(g => /^훈련 \d+회 하기$/.test(g.n));
+    const tr = GUIDE.map((g, i) => ({ i, n: g.n, goal: g.goal })).filter(g => /^훈련 /.test(g.n));
     const stat = GUIDE.map(g => g.n).filter(n => /스탯/.test(n));
-    const mine = tr.filter(g => g.n === '훈련 30회 하기');
+    const mine = tr.filter(g => g.i > 8);            /* 88 의 것 = 체인 뒤쪽(스탯 미션이 있던 자리) */
     /* 카운터는 «지금 같나» 가 아니라 «따라 움직이나» 로 잰다 — 둘 다 0 인 순간의 항등식은 단언이 아니다(212-①) */
-    const keep = S.upgrades;
-    S.upgrades = keep + 37;
+    const keep = lv('atk');
+    S.lv.atk = keep + 37;
     const moved = tr.map(g => GUIDE[g.i].get());
-    S.upgrades = keep;
+    S.lv.atk = keep;
     const back = tr.map(g => GUIDE[g.i].get());
     return { tr, stat, mine, v: GUIDE_V, len: GUIDE.length, probe: { base: keep, moved, back } };
   });
   const gt = G.mine[0];
-  ok(G.mine.length === 1 && G.stat.length === 0 && gt.goal === 30,
-    '[G] «스탯» 미션 폐기 + 88 의 «훈련 30회 하기» 1개 (이름의 n = goal)',
-    (gt ? 'idx ' + gt.i + ' «' + gt.n + '» goal ' + gt.goal : '«훈련 30회 하기» ' + G.mine.length + '개')
-    + (G.stat.length ? ' · 스탯 잔존: ' + G.stat.join(',') : '') + ' · 표 ' + G.len + '행');
-  ok(G.v >= 4, '[G] GUIDE_V ≥ 4 (88 의 기준선 리셋이 살아 있다)', 'v' + G.v + ' — 88 이 3→4 · 154 가 4→5');
+  ok(G.mine.length === 1 && G.stat.length === 0 && G.tr.length === 2
+     && G.tr[0].goal < G.tr[1].goal,
+    '[G] «스탯» 미션 폐기 + 88 이 넣은 훈련 미션 1개가 체인 뒤쪽에 (목표는 앞 훈련 미션보다 크다)',
+    (gt ? 'idx ' + gt.i + ' «' + gt.n + '» goal ' + gt.goal : '뒤쪽 훈련 미션 ' + G.mine.length + '개')
+    + (G.stat.length ? ' · 스탯 잔존: ' + G.stat.join(',') : '')
+    + ' · 훈련 미션 ' + G.tr.map(g => 'idx' + g.i + ':' + g.goal).join('/') + ' · 표 ' + G.len + '행');
+  ok(G.v >= 4, '[G] GUIDE_V ≥ 4 (88 의 기준선 리셋이 살아 있다)', 'v' + G.v + ' — 88 이 3→4 · 154 가 4→5 · 256 이 5→6');
   ok(G.tr.length >= 1 && G.probe.moved.every(v => v === G.probe.base + 37)
     && G.probe.back.every(v => v === G.probe.base),
-    '[G] 훈련 미션 카운터 = S.upgrades (값을 37 움직여 확인)',
+    '[G] 훈련 미션 카운터 = 훈련 공격력 레벨 lv(\'atk\') (값을 37 움직여 확인 · 256)',
     '미션 ' + G.tr.map(g => 'idx' + g.i).join('/') + ' · ' + G.probe.base + '→'
     + G.probe.moved.join(',') + ' (기대 ' + (G.probe.base + 37) + ')');
 

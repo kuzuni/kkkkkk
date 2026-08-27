@@ -3,7 +3,7 @@
 
    본다:
      §1 미션표      «출석 보상 받기» 가 없다 · 개수 21→20 · 나머지 20개의 «순서» 가 그대로다.
-     §2 버전        GUIDE_V === 5.
+     §2 버전        GUIDE_V === 6 (154 는 5 였다 — 256 이 미션 8개의 get() 을 갈면서 올렸다).
      §3 세이브 이관 gv ≤ 4 세이브의 idx 가 «같은 미션» 을 계속 가리킨다(idx ≥ 12 → −1).
                     구 idx 11(출석 진행 중)은 다음 미션(«유물 1회 소환하기»)으로 넘어간다.
                     v3 이관(gv ≤ 2, idx ≥ 6 → +1)과 겹쳐도 어긋나지 않는다.
@@ -35,13 +35,19 @@ const setMission = (p, i) => p.evaluate((i) => {
 }, i);
 
 /* 154 이후의 미션표 — 순서까지 못 박는다(«순서·개수 불변» 규약의 새 기준선). */
+/* 256 (2026-08-27, 주인 지시) — 미션 8개의 «목표축» 이 «행위 반복» → «상태 도달» 로 바뀌면서
+   이름도 같이 바뀌었다. **개수 20 · 순서 · 자리는 그대로**이므로 154 의 주제(«출석» 삭제분이
+   되살아나지 않는가 · 순서 불변)는 이 표를 갱신해야 계속 물을 수 있다(185-① — 옛 스냅샷을
+   그대로 두면 게이트가 «설계» 가 아니라 «옛 문자열» 을 지킨다). */
 const WANT = [
-  '스킬 1회 소환하기', '스킬 장착하기', '무기 1회 소환하기', '장비 장착하기', '훈련 10회 하기',
-  '방패 1회 소환하기', '목걸이 1회 소환하기', '적 100마리 처치하기', '스테이지 5 도달하기',
-  '던전 1회 입장하기', '룰렛 1회 돌리기', '유물 1회 소환하기', '아이템 1회 강화하기',
-  '스테이지 15 도달하기', '유물 Lv 3 모으기', '훈련 30회 하기', '스테이지 25 도달하기',
+  '스킬 2종 보유하기', '스킬 장착하기', '무기 1종 보유하기', '장비 장착하기', '훈련 공격력 10레벨 도달',
+  '방패 1종 보유하기', '목걸이 1종 보유하기', '전투력 5000 도달하기', '스테이지 5 도달하기',
+  '던전 1회 입장하기', '룰렛 1회 돌리기', '유물 1종 보유하기', '아이템 1회 강화하기',
+  '스테이지 15 도달하기', '유물 Lv 3 모으기', '훈련 공격력 80레벨 도달', '스테이지 25 도달하기',
   '도감 보너스 1회 받기', '보스 1회 처치하기', '스테이지 40 도달하기'
 ];
+/* «출석 보상 받기» 는 154 가 지운 미션이다 — 이름이 바뀌어도 이것만은 영영 없어야 한다(음성항) */
+const GONE = '출석 보상 받기';
 
 (async () => {
   const browser = await launch(chromium);
@@ -65,13 +71,14 @@ const WANT = [
     ver: GUIDE_V
   }));
   ok(!g.names.some(n => /출석/.test(n)), '«출석» 이 들어간 미션이 없다', g.names.filter(n => /출석/.test(n)).join(','));
+  ok(!g.names.includes(GONE), '154 가 지운 «' + GONE + '» 가 되살아나지 않았다');
   eq('§1 미션 개수', g.n, 20);
   ok(JSON.stringify(g.names) === JSON.stringify(WANT), '남은 20개의 이름·순서가 설계 그대로다',
      g.names.map((n, i) => n === WANT[i] ? null : `${i}:${n}≠${WANT[i]}`).filter(Boolean).join(' | '));
 
   /* ── §2 버전 ─────────────────────────────────────────────────── */
   console.log('§2 GUIDE_V');
-  eq('§2 GUIDE_V', g.ver, 5);
+  eq('§2 GUIDE_V', g.ver, 6);   /* 154:5 → 256:6. 개수·순서는 그대로라 idx 이관은 없다 */
 
   /* ── §3 세이브 이관 ──────────────────────────────────────────── */
   console.log('§3 세이브 이관 — gv ≤ 4 는 idx ≥ 12 이면 −1');
@@ -97,17 +104,17 @@ const WANT = [
   /* v4: idx < 12 그대로 · idx ≥ 12 는 −1 */
   [[0, 0], [5, 5], [10, 10], [11, 11], [12, 11], [13, 12], [20, 19], [21, 20]].forEach(([i, w]) =>
     eq(`§3 v4 idx ${i} →`, at(4, i).got, w));
-  ok(at(4, 11).got === 11 && g.names[11] === '유물 1회 소환하기',
-    '§3 구 idx 11(출석 진행 중) 은 다음 미션 «유물 1회 소환하기» 로 넘어간다');
+  ok(at(4, 11).got === 11 && g.names[11] === WANT[11],
+    '§3 구 idx 11(출석 진행 중) 은 다음 미션 «' + WANT[11] + '» 로 넘어간다');
   /* gv ≤ 2: 먼저 +1(idx ≥ 6) 그다음 −1(idx ≥ 12).
      v2 idx 11 은 11+1=12 → 12−1=11 로 «제자리» 로 보이지만 우연이 아니다 —
      v2 의 11번 미션이 곧 v5 의 11번(«유물 1회 소환하기») 이다(삽입 1칸 + 삭제 1칸이 상쇄). */
   [[5, 5], [6, 7], [11, 11], [12, 12], [20, 20]].forEach(([i, w]) =>
     eq(`§3 v2 idx ${i} → (+1 후 −1)`, at(2, i).got, w));
-  eq('§3 v2 idx 11 이 가리키는 미션', g.names[at(2, 11).got], '유물 1회 소환하기');
-  eq('§3 이미 v5 인 세이브는 불변', at(5, 15).got, 15);
-  ok(M.filter(r => r.gv !== 5).every(r => r.prog === -1 && r.newGv === 5),
-    '§3 이관된 세이브는 기준선 미확정(-1) + gv 5 로 찍힌다');
+  eq('§3 v2 idx 11 이 가리키는 미션', g.names[at(2, 11).got], WANT[11]);
+  eq('§3 이미 현행 gv 인 세이브는 불변', at(5, 15).got, 15);
+  ok(M.filter(r => r.gv !== g.ver).every(r => r.prog === -1 && r.newGv === g.ver),
+    '§3 이관된 세이브는 기준선 미확정(-1) + 현행 gv 로 찍힌다');
   ok(M.every(r => Number.isFinite(r.got) && r.got >= 0 && r.got <= 20),
     '§3 이관 결과가 전부 0~20 범위 안 (클램프)');
 
@@ -147,20 +154,20 @@ const WANT = [
     label: $('tutoBtn') ? $('tutoBtn').textContent.replace(/\s+/g, '') : '',
     cur: GUIDE[S.guide.idx].n
   }));
-  eq('§6 idx 11 의 미션', b11.cur, '유물 1회 소환하기');
-  ok(/유물 1회 소환하기/.test(b11.name), '§6 배너 문구 = «유물 1회 소환하기»', b11.name);
+  eq('§6 idx 11 의 미션', b11.cur, WANT[11]);
+  ok(b11.name.includes(WANT[11]), '§6 배너 문구 = «' + WANT[11] + '»', b11.name);
   ok(/미션-12/.test(b11.label), '§6 배너 라벨 = [미션-12]', b11.label);
 
   /* 수령 — 미션을 완료 상태로 만들고 배너를 누른다 */
   const claim = await p.evaluate(() => {
     S.guide.idx = 11; S.guide.prog = -1;
-    /* 253 — 이 미션은 델타형에서 **abs 형으로 바뀌었다**(«이미 소환해 뒀으면 달성»). 옛 코드는
-       `gmBase()` 를 부른 «부작용»(S.guide.prog 에 기준선이 찍힌다)에 기대 목표치를 계산했는데,
-       abs 미션에서 gmBase 는 prog 를 건드리지 않고 0 을 돌려준다 → prog 가 -1 그대로라
-       목표치가 0 이 돼 «수령 가능» 이 안 됐다. **반환값**을 쓰면 두 형태 모두에서 맞는다.
-       154 의 주제(«출석» 삭제·순서·이관)와는 무관한 헬퍼 한 줄이다. */
-    S.cnt.sumRelic = gmBase(GUIDE[11]) + GUIDE[11].goal;
-    uiDirty = true; renderUI(); drawTuto();
+    /* 253 — 목표치는 «부작용» 이 아니라 **반환값**으로 만든다(`gmBase(m) + m.goal`).
+       256 — 이 미션의 축이 «소환 카운터» → «유물 보유 종수» 로 바뀌었다. 그러니 카운터에
+       숫자를 꽂는 대신 **실제 유물을 쥐여 준다**(제품이 보는 그 상태를 그대로 만든다).
+       목표치는 여전히 반환값으로 센다 — 형태(abs/델타)가 또 바뀌어도 이 줄은 안 틀린다. */
+    const need = gmBase(GUIDE[11]) + GUIDE[11].goal;
+    for (const r of RELICS) { if (ownedRelic() >= need) break; if (!S.own[r.id]) S.own[r.id] = { n:0, l:1 }; }
+    markDirty(); uiDirty = true; renderUI(); drawTuto();
     const dia0 = S.dia, ready = gmReady();
     $('tuto').click();
     save();
@@ -169,11 +176,11 @@ const WANT = [
     return { ready, dia0, dia: S.dia, idx: S.guide.idx, saved: st.guide ? st.guide.idx : null,
              next: S.guide.idx < GUIDE.length ? GUIDE[S.guide.idx].n : null };
   });
-  ok(claim.ready, '§6 «유물 1회 소환하기» 가 수령 가능 상태가 된다');
+  ok(claim.ready, '§6 «' + WANT[11] + '» 가 수령 가능 상태가 된다');
   eq('§6 수령 후 idx', claim.idx, 12);
   ok(claim.dia > claim.dia0, `§6 다이아가 실제로 늘었다 (${claim.dia0} → ${claim.dia})`);
   eq('§6 localStorage 반영', claim.saved, 12);
-  eq('§6 다음 미션', claim.next, '아이템 1회 강화하기');
+  eq('§6 다음 미션', claim.next, WANT[12]);
 
   const last = await p.evaluate(() => {
     S.guide.idx = GUIDE.length; S.guide.prog = 0; drawTuto();

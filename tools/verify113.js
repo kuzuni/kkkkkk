@@ -2,7 +2,7 @@
    실행: node tools/verify113.js   → 마지막 줄이 `VERIFY113 n/n PASS` 여야 한다.
 
    본다:
-     §1 데이터 — GUIDE 20개의 hint 유무가 설계대로다(전투 계열 6개만 hint 없음. 154 로 21→20).
+     §1 데이터 — GUIDE 20개의 hint 유무가 설계대로다(전투 계열만 hint 없음. 154 로 21→20 · 256 으로 6→5).
      §2 이동 뒤 손가락 — 힌트가 있는 미션 14개 전수: gmGo() 후 대상이 실제로 존재하고
         #fxHand·#fxHandR 이 뜨며 손 bbox 가 대상 bbox 와 **40px 이내로 접한다**.
      §3 전투 계열 — hint 없는 미션 6개는 손가락이 뜨지 않는다(이동만).
@@ -89,7 +89,9 @@ const goAndRead = async (p, i, mut) => {
   /* 154 — «출석 보상 받기»(구 idx 11) 삭제로 21 → 20 개. 아래 인덱스는 전부 그만큼 당겨졌다. */
   ok(meta.n === 20, `미션 20개 (순서·개수 불변) — ${meta.n}`);
   /* 전투로만 달성하는 미션 = 적 처치 · 스테이지 5/15/25/40 · 보스 → 힌트 없음 */
-  const NOHINT = [7, 8, 13, 16, 18, 19];
+  /* 256 — idx 7 이 «적 100마리 처치»(전투, 가리킬 버튼 없음) → «전투력 5000 도달»(23 훈련의
+     공격력 카드를 가리킨다) 로 바뀌었다. 이제 hint 없는 미션은 «스테이지 N 도달·보스» 5개다. */
+  const NOHINT = [8, 13, 16, 18, 19];
   const wantHint = meta.hint.map((_, i) => !NOHINT.includes(i));
   ok(JSON.stringify(meta.hint) === JSON.stringify(wantHint),
     `hint 배치 = 전투 계열 ${NOHINT.length}개만 없음 (실제 없음: ${meta.hint.map((h, i) => h ? null : i).filter(x => x !== null).join(',')})`);

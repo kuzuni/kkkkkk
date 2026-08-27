@@ -15302,23 +15302,63 @@ const MAILS = [
      바뀐 것은 판정 기준선뿐이며 `abs` 는 `S.guide.prog` 를 **아예 읽지 않는다**(gmBase 첫 줄).
      오히려 버전을 올리면 `prog = -1` 이관이 돌아 **델타로 남은 미션의 기준선까지 지금 값으로 다시
      찍혀** 진행 중이던 «훈련 10회 (7/10)» 이 (0/10) 으로 되돌아간다. 올리는 쪽이 회귀다. */
+/* 작업 256 (2026-08-27, 저장소 주인 지시) — 미션 «종류» 개편. 253 이 «판정»(ⓐ)을 고쳤다면
+   256 은 «목표축»(ⓑ)을 고친다. 원문: «이미 햇엇으면 완료로 / 소환 더 시도하라는 퀘스트같은거나
+   몬스터처치 종류 말고 / 훈련에서 몇회강화하라 말고 훈련 공격력 300레벨 도달해라 이런식».
+
+   ① 폐기한 형태 — «행위 반복»(그 행동을 «지금부터 n번 더» 세는 것). 바꾼 자리는 8개다:
+        소환 5종  «스킬/무기/방패/목걸이/유물 1회 소환하기» → «… 1종 보유하기»(보유 종수 상태)
+        몬스터    «적 100마리 처치하기»                     → «전투력 5000 도달하기»(cp 상태)
+        훈련 2종  «훈련 10회 하기»·«훈련 30회 하기»          → «훈련 공격력 N레벨 도달»(레벨 상태)
+      남긴 8개(«장착»·«스테이지 N 도달»·«유물 Lv 3»·«아이템 1회 강화»·«던전/룰렛/도감/보스»)는
+      **이미 상태값**이거나 253 이 abs 로 닫은 «한 번 하면 끝» 온보딩이라 «n번 더» 형이 아니다.
+   ② 그 결과 **표에 델타형이 한 개도 안 남는다** — 가이드 미션은 전부 `abs:1` 이다.
+      253-② 가 «abs 로 못 간다» 고 남긴 소환 3종의 사정(`S.cnt.sumEquip` 한 카운터를 셋이 공유)은
+      **카운터를 안 보게 되면서 사라졌다** — 부위별 보유 종수(`ownedEq(부위)`)는 원래부터 전용 상태다.
+      `ban`(다른 상자 차단)은 그대로 둔다. 이제 «이미 무기를 갖고 있으면 그 미션은 즉시 달성» 이
+      **주인 지시대로의 정상 동작**이다(253-② 가 막던 «공짜 달성» 은 카운터 공유가 이유였다).
+   ③ 목표 수치는 눈대중이 아니라 **실측**이다 — `node tools/measure256.js`.
+        훈련 레벨(sim112, 누적 골드를 3스탯 균등): 스테이지 3→Lv10 · 5→15 · 15→55 · 20→78 · 25→100.
+          idx 4 는 «스테이지 5 도달»(idx 8) 앞 → **Lv 10**(≈스테이지 3).
+          idx 15 는 «스테이지 15 도달»(idx 13)과 «스테이지 25 도달»(idx 16) 사이 → **Lv 80**(≈스테이지 20).
+        전투력 cp(): idx 6 종료 시점 1,628 · 스테이지 5 지점 23,324 → idx 7 = **5000**(그 사이).
+      ⚠ 주인이 든 예시 수치 «300레벨» 은 sim112 상 **스테이지 78~80 지점**(훈련 4단계)이라
+        스테이지 40 에서 끝나는 이 체인 안에서는 **어느 자리에 놓아도 도달 불가**다. 그래서
+        «훈련 공격력 N레벨 도달» 이라는 **형식은 그대로 쓰고 수치만 자리에 맞췄다.** 문자 그대로
+        300 을 원하면 `GM_ATK2` 한 줄만 바꾸면 된다(게이트 `verify256` §2 가 그 임계를 규칙으로 잰다).
+   ⑤ 목표 수치는 «신규 플레이어의 시작 상태» 위에서 정한다 — idx 0 만 goal 2 다(시작 스킬 `slash`).
+      실측(`tools/verify256.js` §1): 신규 세이브의 시작값은 스킬 1종 · 무기/방패/목걸이/유물 0종 ·
+      훈련 공격력 Lv 0 · 전투력 505. 그래서 나머지 «1종 보유» 는 그대로 «1회 소환» 을 요구한다.
+   ④ 22 퀘스트(`QUESTS`)는 **건드리지 않았다.** 그쪽은 반복 수령형 누적 퀘스트라 «상태 도달» 로
+      바꾸면 한 번 달성 후 영영 다시 안 뜬다 — 별개 표이자 별개 사양이다(등재문의 «확인 필요»에 대한 답).
+   ⚠ `GUIDE_V` 는 **올린다(5→6)**. 253 과 반대다 — 253 은 미션의 내용·카운터를 하나도 안 바꿨지만
+     256 은 8개의 `get()` 을 통째로 갈았다. 다만 이관이 하는 일(`prog = -1`)은 이제 **무해**하다:
+     델타형이 하나도 없어 `S.guide.prog` 를 읽는 미션이 없다(253-③ 이 경고한 회귀가 성립하지 않는다).
+     개수·순서는 그대로라 `S.guide.idx` 이동도 없다(DUN_UI.gm 도 그대로). */
+const GM_ATK1 = 10;     /* idx 4  — 훈련 공격력 레벨 (측정: 스테이지 3 지점) */
+const GM_ATK2 = 80;     /* idx 15 — 훈련 공격력 레벨 (측정: 스테이지 20 지점 · 훈련 1단계 상한 100 아래) */
+const GM_CP1  = 5000;   /* idx 7  — 전투력 (측정: idx 6 종료 1,628 < 5000 < 스테이지 5 지점 23,324) */
 const GUIDE = [
-  { n:'스킬 1회 소환하기',     goal:1,   dia:300,  abs:1, get:() => S.cnt.sumSkill,  ban:'skill',  go:() => gmShop('skill'),
+  /* 256 ⑤ — 여기만 «2종» 이다. 부팅 경로가 모든 플레이어에게 시작 스킬 `slash` 를 쥐여 주므로
+     («if(!has('slash'))» — 세이브가 없어도 1종은 이미 보유) «1종» 으로 두면 신규 플레이어에게도
+     첫 미션이 열리자마자 달성돼 온보딩 한 칸이 통째로 사라진다. 2종 = «시작 스킬 + 1회 소환». */
+  { n:'스킬 2종 보유하기',     goal:2,   dia:300,  abs:1, get:() => ownedSkill(),    ban:'skill',  go:() => gmShop('skill'),
                                          hint:() => gmHintShop('skill') },
   { n:'스킬 장착하기',         goal:1,   abs:1,    get:() => S.eqSkill.length, dia:() => summonCost('weapon', 10), go:() => gmHero('sk'),
                                          hint:gmHintSkill },
-  { n:'무기 1회 소환하기',     goal:1,   dia:400,  get:() => S.cnt.sumEquip,  ban:'weapon', go:() => gmShop('weapon'),
+  { n:'무기 1종 보유하기',     goal:1,   dia:400,  abs:1, get:() => ownedEq('weapon'), ban:'weapon', go:() => gmShop('weapon'),
                                          hint:() => gmHintShop('weapon') },
   { n:'장비 장착하기',         goal:1,   dia:400,  abs:1, get:() => eqWorn(),  go:() => gmHero('eq'),
                                          hint:() => gmHintEq(0) },
-  { n:'훈련 10회 하기',        goal:10,  get:() => S.upgrades, dia:() => summonCost('shield', 10), go:() => gmTrain('train'),
+  { n:'훈련 공격력 10레벨 도달', goal:GM_ATK1, abs:1, get:() => lv('atk'), dia:() => summonCost('shield', 10), go:() => gmTrain('train'),
                                          hint:gmHintTrain },
-  { n:'방패 1회 소환하기',     goal:1,   get:() => S.cnt.sumEquip,  ban:'shield', go:() => gmShop('shield'),
+  { n:'방패 1종 보유하기',     goal:1,   abs:1, get:() => ownedEq('shield'),  ban:'shield', go:() => gmShop('shield'),
                                          dia:() => summonCost('amulet', 10),    /* 다음 미션 = 목걸이 소환 */
                                          hint:() => gmHintShop('shield') },
-  { n:'목걸이 1회 소환하기',   goal:1,   dia:500,  get:() => S.cnt.sumEquip,  ban:'amulet', go:() => gmShop('amulet'),
+  { n:'목걸이 1종 보유하기',   goal:1,   dia:500,  abs:1, get:() => ownedEq('amulet'), ban:'amulet', go:() => gmShop('amulet'),
                                          hint:() => gmHintShop('amulet') },
-  { n:'적 100마리 처치하기',   goal:100, dia:600,  get:() => S.totalKills,     go:() => gmBattle() },
+  { n:'전투력 5000 도달하기',  goal:GM_CP1, dia:600, abs:1, get:() => cp(),  go:() => gmTrain('train'),
+                                         hint:gmHintTrain },
   { n:'스테이지 5 도달하기',   goal:5,   dia:600,  abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'던전 1회 입장하기',     goal:1,   dia:700,  abs:1, get:() => S.cnt.dungeon,    go:() => gmPage('dunw', openDungeon),
                                          hint:gmHintDun },
@@ -15326,14 +15366,14 @@ const GUIDE = [
                                          hint:'#rouBtn' },
   /* 154 (2026-08-27, 저장소 주인 재지시) — 여기 있던 «출석 보상 받기»(idx 11, dia 800) 를 뺐다.
      뒤 미션의 idx 가 전부 −1 로 밀리므로 GUIDE_V 5 이관(아래)과 DUN_UI.gm(15→14)이 같이 움직인다. */
-  { n:'유물 1회 소환하기',     goal:1,   dia:800,  abs:1, get:() => S.cnt.sumRelic,   go:() => gmPage('relw', openRelw),
+  { n:'유물 1종 보유하기',     goal:1,   dia:800,  abs:1, get:() => ownedRelic(),     go:() => gmPage('relw', openRelw),
                                          hint:'#rwBasin' },
   { n:'아이템 1회 강화하기',   goal:1,   dia:900,  abs:1, get:() => S.cnt.levelUps,   go:() => gmHero('eq'),
                                          hint:() => gmHintEq(1) },   /* 장착된 슬롯 → 05 세부의 [강화] */
   { n:'스테이지 15 도달하기',  goal:15,  dia:1000, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'유물 Lv 3 모으기',      goal:3,   dia:1000, abs:1, get:() => relicLvSum(),     go:() => gmPage('relw', openRelw),
                                          hint:'#rwBasin' },
-  { n:'훈련 30회 하기',        goal:30,  dia:1200, get:() => S.upgrades,       go:() => gmTrain(),   /* 88 — 구 «스탯 포인트 10 투자» 를 같은 자리에 교체(인덱스 호환) */
+  { n:'훈련 공격력 80레벨 도달', goal:GM_ATK2, dia:1200, abs:1, get:() => lv('atk'), go:() => gmTrain(),   /* 88 — 구 «스탯 포인트 10 투자» 자리(인덱스 호환). 256 이 «30회» → «80레벨» */
                                          hint:gmHintTrain },
   { n:'스테이지 25 도달하기',  goal:25,  dia:1500, abs:1, get:() => S.best,    go:() => gmBattle() },
   { n:'도감 보너스 1회 받기',  goal:1,   dia:1500, abs:1, get:() => collSteps(),
@@ -15350,8 +15390,11 @@ const GUIDE = [
    v5 (154): idx 11 «출석 보상 받기» **삭제**(개수 21→20) — v3 삽입의 정확한 반대다.
              gv ≤ 4 세이브는 idx ≥ 12 이면 −1 이관(같은 미션을 계속 가리킨다). idx 11 을 «진행 중»
              이던 세이브는 이관하지 않는다 — 그 자리가 이미 다음 미션(«유물 1회 소환하기»)이라
-             자연히 다음 미션으로 넘어간다(지난 구간으로 되돌리지 않는다는 v3 원칙 그대로). */
-const GUIDE_V = 5;
+             자연히 다음 미션으로 넘어간다(지난 구간으로 되돌리지 않는다는 v3 원칙 그대로).
+   v6 (256): 미션 8개의 «목표축» 교체(소환 5 → 보유 종수 · 적 처치 → 전투력 · 훈련 2 → 공격력 레벨).
+             **개수·순서는 그대로**라 idx 이관은 없다. `get()` 이 바뀌었으니 규약대로 버전을 올리고,
+             이관(`prog = -1`)은 이제 무해하다 — 델타형이 한 개도 안 남아 `prog` 를 읽는 미션이 없다. */
+const GUIDE_V = 6;
 /* 장착 중인 장비 부위 수(25 확정 — 무기·방패·목걸이 3칸) */
 const eqWorn      = () => ['weapon','shield','amulet'].reduce((n,k) => n + (S.eqSlot[k] ? 1 : 0), 0);
 /* 처치한 보스 수 — 보스전을 이겨야만 스테이지가 10 의 배수를 넘어간다(28). 전용 카운터 불필요. */
@@ -16296,6 +16339,11 @@ const has  = id => !!S.own[id];
 const oLv  = id => (S.own[id] ? S.own[id].l : 0);
 const frag = id => (S.own[id] ? S.own[id].n : 0);
 const ownedTotal = () => Object.keys(S.own).length;
+/* 256 — 가이드 미션의 «보유 종수» 목표축. 별도 카운터를 두지 않고 `S.own` 만 읽는다
+   (도감 세트와 같은 규약 — 91). 부위별로 갈리므로 소환 카운터 `S.cnt.sumEquip` 공유 문제가 없다. */
+const ownedSkill = ()  => SKILLS.reduce((n, s) => n + (has(s.id) ? 1 : 0), 0);
+const ownedEq    = k   => EQUIPS.reduce((n, e) => n + (e.slot === k && has(e.id) ? 1 : 0), 0);
+const ownedRelic = ()  => RELICS.reduce((n, r) => n + (has(r.id) ? 1 : 0), 0);
 const skillEquipped = id => S.eqSkill.indexOf(id) >= 0;
 /* ---- 272 스킬 슬롯 해금 (2026-08-27, 저장소 주인 지시) ----------------------
    구: 8칸 중 «비어 있는 칸» 을 전부 자물쇠로 그렸다 → 해금된 빈 칸과 미해금 칸이 구별되지 않았다
@@ -20300,9 +20348,10 @@ function claimAllQuests(){
    진행도는 «카운터 − 기준선» 이다. 기준선(S.guide.prog)은 미션이 현재로 올라온 순간 찍는다.
    구 세이브에서 이관된 직후에는 prog = -1(미확정)이라 여기서 처음 읽힐 때 지금 값으로 자동 확정된다
    — 그래야 «이미 100만 마리 잡았으니 적 100마리 미션이 즉시 완료» 같은 오작동이 없다.
-   ⚠ 253(2026-08-27, 주인 지시) 이후 **델타는 «goal > 1 인 n회 더» 형과 카운터를 나눠 쓰는 소환 3종에만**
-     남았다. `goal:1` + 전용 카운터 미션은 전부 `abs:1` 이다(«이미 해 뒀으면 달성»). 판단 근거는
-     GUIDE 표 위 «작업 253» 주석에 있다 — 새 미션을 얹을 때 그 두 갈래 중 어디인지 먼저 정할 것. */
+   ⚠ 256(2026-08-27, 주인 지시) 이후 **GUIDE 에 델타형은 한 개도 없다** — 전부 `abs:1` 이고
+     «행위 반복»(n회 더) 목표축 자체가 폐기됐다(상태 도달만 쓴다). 그래서 `S.guide.prog` 는 지금
+     **아무 미션도 읽지 않는다**. 아래 델타 경로는 세이브 호환과 «앞으로도 안 쓴다» 를 못 박기 위해
+     남겨 둔 것이다 — 새 미션을 얹을 때 **델타를 다시 만들지 마라**(GUIDE 표 위 «작업 256» 주석 ①). */
 const gmCur   = () => S.guide.idx < GUIDE.length ? GUIDE[S.guide.idx] : null;
 /* 32 — 레퍼런스 게임 서체는 **비례 숫자**라 `1` 의 폭이 `0` 의 **절반**(잉크 6.5 vs 17)이다.
    우리 기본 서체는 등폭이라 `1` 이 `0` 만큼 넓어 `(0/10)` 이 통째로 8.5% 길어진다

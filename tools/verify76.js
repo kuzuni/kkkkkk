@@ -12,7 +12,8 @@
         ⓒ 가이드 gv≤2 · idx≥6 → idx+1 이관, idx<6 은 그대로, gv=3 은 무이관, idx=20(완주) → GUIDE.length 클램프
            (154 로 미션이 21→20 개가 되면서 그 클램프값도 20 이다).
      §5 11 확률 정보 팝업 — openProbInfo('amulet') 가 열리고 목록이 목걸이 아이템만이다.
-     §6 미션표 — idx5 «방패 1회 소환하기»(보상 = 목걸이 10연 1,000) · idx6 «목걸이 1회 소환하기»(ban:amulet) ·
+     §6 미션표 — idx5 = 방패 미션(보상 = 목걸이 10연 1,000) · idx6 = 목걸이 미션(ban:amulet) ·
+                 (256 이 이름을 «… 1회 소환하기» → «… 1종 보유하기» 로 갈았다 — 자리·배선은 그대로) ·
         가이드 이동 gmShop('amulet') 이 목걸이 카드로 스크롤.
      §7 콘솔 에러 0 */
 const { pw, launch } = require('./pwlaunch');
@@ -207,8 +208,11 @@ async function launchAny(){
              shopOn: $('shopw').classList.contains('on'),
              inView: cr.top >= lr.top - 1 && cr.bottom <= lr.bottom + 1 };
   });
-  ok(gm.n5 === '방패 1회 소환하기' && gm.d5 === 1000, `idx5 «${gm.n5}» 보상 ${gm.d5} = 목걸이 10연`);
-  ok(gm.n6 === '목걸이 1회 소환하기' && gm.ban6 === 'amulet', `idx6 «${gm.n6}» ban:${gm.ban6}`);
+  /* 256(2026-08-27, 주인 지시) — 목표축이 «n회 소환» → «n종 보유» 로 바뀌면서 이름이 갈렸다.
+     76 이 묻는 것은 이름이 아니라 **자리와 배선**이다: idx5 가 방패 · idx6 이 목걸이(ban:amulet) ·
+     idx5 의 보상이 목걸이 10연(1,000)을 감당하는가. 부위 낱말로 단언을 옮긴다(185-④). */
+  ok(/방패/.test(gm.n5) && gm.d5 === 1000, `idx5 «${gm.n5}» 보상 ${gm.d5} = 목걸이 10연`);
+  ok(/목걸이/.test(gm.n6) && gm.ban6 === 'amulet', `idx6 «${gm.n6}» ban:${gm.ban6}`);
   ok(gm.shopOn && gm.inView, '미완 배너 클릭 → 상점 열림 + 목걸이 카드 뷰 안');
 
   /* ── §7 콘솔 ─────────────────────────────────────────────────── */

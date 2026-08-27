@@ -220,7 +220,9 @@ async function launchAny(){
     { i: 4,  d: '23 훈련(단일 화면)',   ck: s => s.trw },
     { i: 5,  d: '10 상점 · 방패 상자',  ck: s => s.shopw && s.shopFocus && s.shopFocus.shield.inView && s.handBox === 'shield' },
     { i: 6,  d: '10 상점 · 목걸이 상자', ck: s => s.shopw && s.shopFocus && s.shopFocus.amulet.inView && s.handBox === 'amulet' },
-    { i: 7,  d: '전투(메인)',           ck: s => s.clean },
+    /* 256 — idx 7 이 «적 100마리 처치»(전투) → «전투력 5000 도달» 로 바뀌었다. 73 의 규칙은
+       «그 미션을 **할 수 있는** 화면으로 간다» 이고, 전투력을 올리는 화면은 전투가 아니라 23 훈련이다. */
+    { i: 7,  d: '23 훈련(단일 화면)',   ck: s => s.trw },
     { i: 8,  d: '전투(메인)',           ck: s => s.clean },
     { i: 9,  d: '03 던전',              ck: s => s.dunw },
     { i: 10, d: '룰렛',                 ck: s => s.modal },
