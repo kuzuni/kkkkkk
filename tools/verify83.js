@@ -51,20 +51,46 @@ const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, consol
   ok(!st3.panel, '패널은 닫힌 상태(gmCloseAll 경로)');
   await p.evaluate(() => closeColl21());
 
-  /* [4] 레드닷 — 실제 데이터: 스킬 3종 보유(1티어 need 3) → on, 수령(claimColl) → off */
+  /* [4] 레드닷 — 실제 데이터: 스킬 세트 하나를 «구성원 전원» 보유 → on, 수령(claimColl) → off
+
+     ⚑ 232(2026-08-27) — 이 절은 죽은 키 모양 위에 서 있었다. 91·118 이 도감을 «부위/등급 세트»
+     로 다시 키잉한 뒤 `COLL_SET` 의 키는 `skill:0`…`skill:5` · `equip:<슬롯>:<등급>` ·
+     `pet:<등급>` · `relic:0~2` 인데, 게이트만 옛 **카테고리 이름**(`'skill'`)을 물고 있었다.
+       - `collReady('skill')` → `COLL_SET['skill'] === undefined` → **원리적으로 항상 false**(빨강 2건).
+       - 반대로 `['skill','equip','pet','relic'].some(collReady)` 는 네 이름이 전부 없는 키라
+         **항상 false** → 부정이 항상 참 → «수령 후» 2건이 **아무것도 안 재면서 초록**이었다(헛초록).
+     카테고리 단위 질의는 `collReady` 가 아니라 **`collCatReady(cat)`** 가 담당한다(index.html ~14127).
+     설정도 같이 죽어 있었다. 다만 **원인은 PROGRESS 232 행이 적어 둔 «등급이 섞여» 가 아니다** —
+     `SKILLS.slice(0,3)`(slash·shuri·stone)은 셋 다 g:0 으로 등급이 같다. 진짜 원인은 **개수**다:
+     91 이후 세트 단계는 «보유 종 수 ≥ need» 가 아니라 **구성원 전원의 최저 Lv**(`collLv` = min)라
+     `skill:0` = [slash, shuri, stone, **vigor**] 4종 중 vigor 를 안 켜면 min = 0 → `cap 0` → 영영 false 다.
+     («need 3» 은 91 이 폐기한 옛 규칙이고, 옛 셋업의 3종은 그 규칙 시절의 잔재다.)
+     → 세트 하나를 **그 세트의 구성원 전원**으로 채운다.
+     세트 구성은 데이터에서 읽어 온다(종수·등급이 늘어도 이 파일을 다시 안 고치게 — LESSONS 91-4). */
   console.log('[4] 레드닷');
   const dot = () => p.evaluate(() => document.querySelector('#sideL .ibtn[data-pop="coll"]').classList.contains('on'));
-  await p.evaluate(() => {
+  const st4 = await p.evaluate(() => {
     Object.assign(S, DEF());
-    SKILLS.slice(0, 3).forEach(k => { if (!S.own[k.id]) S.own[k.id] = { n: 0, l: 1 }; });
+    const st = COLL_SETS.find(s => s.cat === 'skill');       /* 첫 스킬 세트(= 최저 등급) */
+    if (!st) return null;
+    st.it.forEach(id => { if (!S.own[id]) S.own[id] = { n: 0, l: 1 }; });
     uiDirty = true; renderUI();
+    return { key: st.key, n: st.n, cnt: st.it.length, cap: collCap(st), step: collStep(st.key) };
   });
   await p.waitForTimeout(150);
-  ok(await p.evaluate(() => collReady('skill')), '스킬 3종 보유 → collReady(skill)');
+  /* 키 모양이 또 바뀌면 여기가 **먼저** 빨개진다 — 232 가 겪은 «헛초록» 재발 방지용 앵커 */
+  ok(!!st4 && (await p.evaluate(k => !!COLL_SET[k], st4.key)),
+     '스킬 세트 키가 COLL_SET 에 실재한다 (' + (st4 ? st4.key : 'null') + ')');
+  ok(!!st4 && st4.cap >= 1 && st4.step === 0,
+     '세트 «' + (st4 ? st4.n : '?') + '» 구성원 ' + (st4 ? st4.cnt : 0) + '종 전원 Lv1 → cap '
+     + (st4 ? st4.cap : 0) + ' / 받은 단계 ' + (st4 ? st4.step : -1));
+  ok(await p.evaluate(k => collReady(k), st4.key), '세트 전원 보유 → collReady(' + st4.key + ')');
+  ok(await p.evaluate(() => collCatReady('skill')), '카테고리 질의 → collCatReady(skill)');
   ok(await dot(), '레드닷 on');
-  await p.evaluate(() => { claimColl('skill'); closeModal(); uiDirty = true; renderUI(); });
+  await p.evaluate(k => { claimColl(k); closeModal(); uiDirty = true; renderUI(); }, st4.key);
   await p.waitForTimeout(150);
-  ok(await p.evaluate(() => !['skill','equip','pet','relic'].some(collReady)), '수령 후 남은 보너스 없음');
+  ok(await p.evaluate(k => !collReady(k), st4.key), '수령 후 그 세트는 더 이상 ready 아님');
+  ok(await p.evaluate(() => !['skill','equip','pet','relic'].some(collCatReady)), '수령 후 남은 보너스 없음');
   ok(!(await dot()), '수령 후 레드닷 off');
 
   console.log('[5] 콘솔');
