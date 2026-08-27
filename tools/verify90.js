@@ -1,10 +1,10 @@
 /* 작업 90 — 03 던전 구성(골드 1 · 다이아 1 · 유물조각 1~4).  실행: node tools/verify90.js
    지시서 [3]-(가) + «기능 완성 규칙»(T2 는 실제 게임 데이터로 동작해야 완료).
      [1] 구조   — DUNGEONS 6종 · id 단언 · growth/boss 폐기 · req/rw 배수 1 / 2.5 / 6 / 15
-     [2] 기능   — 각 던전 헤드리스 1회 클리어 → 보상 종류가 gold/dia/rel/stone 만 · 층 +1 · 입장 −1
+     [2] 기능   — 각 던전 헤드리스 1회 클리어 → 보상 종류가 gold·dia·rel·stone·rstone 만 · 층 +1 · 입장 −1
      [3] 해금   — relic2~4 잠금 → 이전 단 5층 클리어 후 해금 (03 카드 `.lk` 문구까지)
      [4] 저장   — 구 세이브(relic/growth/boss 키) 로드 · «고대 유적» 진행도가 relic1 로 이어짐
-     [5] UI     — 03 카드 7장 · 리스트 세로 스크롤 성립 · 보상 알약 글자가 알약 밖으로 안 샘(LESSONS 46-①)
+     [5] UI     — 03 카드 IDS.length 장 · 리스트 세로 스크롤 성립 · 보상 알약 글자가 알약 밖으로 안 샘(LESSONS 46-①)
    194(2026-08-27) — 강화석 던전(`stone`)이 7번째로 붙었다. 90 의 «6종» 단언은 그때 있던
    던전 수였지 못박은 상한이 아니다 → IDS·CUR 에 stone 을 더하고 개수 단언을 IDS.length 로 돌린다.
    기능 체크 표(review 파일에 붙일 것)는 `--table` 로 출력한다. */
@@ -18,10 +18,12 @@ const path = require('path');
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, console.log('  ✗ ' + m)); };
 
-const IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone'];   /* 194 — +stone */
+const IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone', 'rstone'];
+/* 194 — +stone(강화석) · 203 — +rstone(룬강화석). 90 의 개수 단언은 «그때 있던 던전 수» 이지
+   못박은 상한이 아니다 — 던전 계열이 늘면 IDS·CUR 에 더하고 개수는 IDS.length 로 따라간다. */
 const K   = { relic1: 1, relic2: 2.5, relic3: 6, relic4: 15 };
 const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'rel', relic4: 'rel',
-              stone: 'stone' };   /* 194 */
+              stone: 'stone', rstone: 'rstone' };   /* 194 · 203 */
 
 (async () => {
   /* 139 — [5] 썸네일 판정이 캔버스 잉크를 읽는다. file:// 로 띄운 스프라이트는
@@ -67,11 +69,11 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     ok(Math.abs(kr - K[id]) < 1e-9, id + ' 요구 전투력 배수 ' + K[id] + ' (실측 ' + kr.toFixed(3) + ')');
     ok(Math.abs(kw - K[id]) < 0.02, id + ' 유물조각 보상 배수 ≈' + K[id] + ' (실측 ' + kw.toFixed(3) + ')');
   });
-  /* 보상 종류가 gold/dia/rel/stone 뿐인가 — frag(도감 재료)·복합 보상은 폐기했다(194 — +stone) */
+  /* 보상 종류가 한 던전당 1종뿐인가 — frag(도감 재료)·복합 보상은 폐기했다(194 +stone · 203 +rstone) */
   const kinds = new Set();
   st.rw1.concat(st.rw3).forEach(r => Object.keys(r).forEach(k => kinds.add(k)));
-  ok([...kinds].every(k => ['gold', 'dia', 'rel', 'stone'].includes(k)),
-     '보상 종류가 gold/dia/rel/stone 뿐 (실측 ' + [...kinds].join(',') + ')');
+  ok([...kinds].every(k => ['gold', 'dia', 'rel', 'stone', 'rstone'].includes(k)),
+     '보상 종류가 gold·dia·rel·stone·rstone 뿐 (실측 ' + [...kinds].join(',') + ')');
   st.ids.forEach((id, i) => ok(Object.keys(st.rw1[i]).length === 1 && st.rw1[i][CUR[id]] > 0,
     id + ' 보상은 ' + CUR[id] + ' 1종'));
   ok(st.pills.every(r => r.length === 1), '03 카드 보상 알약은 던전당 1개 (폭 초과분 폐기)');
@@ -85,16 +87,16 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
       S.guide.idx = 99;
       all.forEach(x => { S.dun[x] = 99; });           /* 상위 단 해금(이전 단 5층 초과) */
       S.dun[id] = 1;
-      DUNGEONS.forEach(d => S.dunTk[d.id] = 3);
-      S.gold = 0; S.dia = 0; S.relic = 0; S.stone = 0;   /* 194 */
-      const before = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone,
+      DUNGEONS.forEach(d => S.dunTk[d.id] = 3);          /* 204 — 입장권 적립식 */
+      S.gold = 0; S.dia = 0; S.relic = 0; S.stone = 0; S.rstone = 0;   /* 194 · 203 */
+      const before = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone, rstone: S.rstone,
                        floor: S.dun[id], left: S.dunTk[id], cnt: S.cnt.dungeon };
       const d = DUNGEONS.find(x => x.id === id);
       challengeDungeon(d);                            /* 30 — 제한 시간 전투로 입장 */
       const entered = !!dunRun && dunRun.d.id === id;
       const need = entered ? dunRun.need : 0;
       if (entered) { dunRun.dmg = dunRun.need; endDunRun(true); }   /* 요구 피해를 채워 클리어 */
-      const after = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone,
+      const after = { gold: S.gold, dia: S.dia, rel: S.relic, stone: S.stone, rstone: S.rstone,
                       floor: S.dun[id], left: S.dunTk[id], cnt: S.cnt.dungeon };
       const clr = document.getElementById('dclw').classList.contains('on');
       const amt = document.getElementById('dclAmt').textContent;
@@ -105,7 +107,8 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
     if (r.err) { ok(false, id + ' — 평가 실패: ' + r.err); continue; }
     const cur = CUR[id];
     const gained = { gold: r.after.gold - r.before.gold, dia: r.after.dia - r.before.dia,
-                     rel: r.after.rel - r.before.rel, stone: r.after.stone - r.before.stone };   /* 194 */
+                     rel: r.after.rel - r.before.rel, stone: r.after.stone - r.before.stone,
+                     rstone: r.after.rstone - r.before.rstone };   /* 194 · 203 */
     const only = Object.keys(gained).filter(k => gained[k] > 0);
     ok(r.entered, id + ' — [도전] 이 30초 던전 전투로 입장(요구 피해 ' + Math.round(r.need).toLocaleString() + ')');
     ok(only.length === 1 && only[0] === cur, id + ' — 획득 재화가 ' + cur + ' 1종 (실측 ' + (only.join(',') || '없음') + ')');

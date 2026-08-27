@@ -19,7 +19,7 @@
  *   [F] 유출 — 스윕 중 화면 텍스트에 `<img` 0건(= 이미지 태그를 textContent 로 박은 자리 없음) ·
  *       화면 텍스트에 화폐 이모지 0건 · NaN/undefined 0건.
  *   [G] 58 연출 — 재화 비행 파티클이 이모지가 아니라 CUR_ICON 이미지다(fxFly 직후 `.fx-fly>img.cic`).
- *   [H] 입장권 — 던전 계열 4종(골드·다이아·유물·강화석)만 쓰인다. 던전 카드 권종이 계열과 일치.
+ *   [H] 입장권 — 던전 계열 5종(골드·다이아·유물·강화석·룬강화석)만 쓰인다. 던전 카드 권종이 계열과 일치.
  *   [I] 콘솔 에러 0건.
  */
 const path = require('path');
@@ -35,11 +35,13 @@ const CUR_EMOJI = ['\u{1FA99}', '\u{1F4B0}', '\u{1F947}', '\u{1F48E}', '\u{1F4A0
 /* 화면 텍스트에 남으면 무조건 실패인 «순수 화폐» 글리프 — 나머지(💎🔮💠🥇)는 등급·계급·탭 아이콘으로도
    쓰이므로 런타임 텍스트로는 못 가른다(그쪽은 [A] 소스 스캔이 줄 단위로 잡는다. LESSONS 111-①). */
 const PURE = ['\u{1FA99}', '\u{1F4B0}', '\u{1F39F}', '\u{1F3AB}'];
-/* 194 — 강화석(재화)·강화석 던전권이 붙어 7종 → **9종**. «7» 은 못박은 상한이 아니라
-   그때 통일돼 있던 화폐의 수였다(125 의 규칙은 «재화 하나에 이미지 하나»). */
-const ICONS = ['cur-gold.svg', 'cur-dia.svg', 'cur-relic.svg', 'cur-stone.svg', 'cur-mile.svg',
+/* 194 — 강화석(재화)·강화석 던전권이 붙어 7종 → 9종. 203 — 룬강화석(재화)·룬 던전권이 붙어 **11종**.
+   «7»·«9» 는 못박은 상한이 아니라 그때 통일돼 있던 화폐의 수였다
+   (125 의 규칙은 «재화 하나에 이미지 하나» — 재화가 늘면 이 목록도 같이 는다). */
+const ICONS = ['cur-gold.svg', 'cur-dia.svg', 'cur-relic.svg', 'cur-stone.svg', 'cur-rstone.svg',
+               'cur-mile.svg',
                'cur-ticket-gold.svg', 'cur-ticket-dia.svg', 'cur-ticket-relic.svg',
-               'cur-ticket-stone.svg'];
+               'cur-ticket-stone.svg', 'cur-ticket-rstone.svg'];
 
 /* 화폐가 «아닌» 자리 — 남겨 두기로 한 것들. 줄에 이 조각이 있으면 그 줄의 이모지는 통과시킨다.
    (등급·계급·메달·장비 이름·화면 아이콘은 재화 표시가 아니다 — 지시 ③ «비재화 제외 목록») */
@@ -54,8 +56,8 @@ const ALLOW = [
   "{ n:'골드',     ic:", "{ n:'플래티넘', ic:", "{ n:'다이아',   ic:",  /* 랭킹 계급 엠블럼 */
   "n:'아티팩트 강화석'",                      /* 출석 보상 «아이템»(재화가 아니라 재료 상자) */
   /* ── 작업 211 판정: 🎟 «쿠폰» 은 화폐가 아니다 ──────────────────────────────
-     125 가 통일한 화폐는 9종이다(194 이후) — 골드·다이아·유물조각·강화석·마일리지 +
-     **던전 입장권** 4종(`cur-ticket-gold/dia/relic/stone.svg`, H1 이 던전 카드 권종으로 못 박는다).
+     125 가 통일한 화폐는 11종이다(203 이후) — 골드·다이아·유물조각·강화석·룬강화석·마일리지 +
+     **던전 입장권** 5종(`cur-ticket-*.svg` 5장, H1 이 던전 카드 권종으로 못 박는다).
      쿠폰 코드(`CF_CODES`)는 그 어느 것도 아니라서 `curIc('tkDia')`/`curIc('tkRelic')` 로
      옮기면 **던전 입장권 아이콘을 쿠폰 알림에 붙이는 오표기**가 된다. 실제 «지급물» 인
      다이아는 이미 같은 줄에서 `curIc('dia')` 로 나가고 있다(= 화폐 자리는 이미 통일됨).
@@ -294,11 +296,12 @@ function stripComments(src) {
   ok(G.src === 'assets/ui/cur-gold.svg', 'G1 재화 비행 파티클이 CUR_ICON 이미지', String(G.src) + ' ×' + G.n);
   ok(G.txt === '', 'G2 파티클에 이모지 글자가 남지 않았다', JSON.stringify(G.txt));
 
-  /* ---- [H] 입장권 4종(194 — 강화석 던전 계열 신설) ---- */
+  /* ---- [H] 입장권 5종(194 — 강화석 계열 · 203 — 룬강화석 계열 신설) ---- */
   const H = await page.evaluate(() => {
     openDungeon();
     const want = { gold: 'cur-ticket-gold.svg', dia: 'cur-ticket-dia.svg',
-                   stone: 'cur-ticket-stone.svg' };   /* 194 — 4번째 던전 계열 */
+                   stone: 'cur-ticket-stone.svg',     /* 194 — 4번째 던전 계열 */
+                   rstone: 'cur-ticket-rstone.svg' }; /* 203 — 5번째 던전 계열 */
     const got = DUNGEONS.map(d => {
       const m = String(DUN_UI[d.id].tk).match(/cur-ticket-[a-z]+\.svg/);
       return { id: d.id, tk: m ? m[0] : null,
@@ -307,9 +310,10 @@ function stripComments(src) {
     return got;
   });
   const tkBad = H.filter(x => x.tk !== x.want);
-  ok(tkBad.length === 0, 'H1 던전 ' + H.length + '개의 입장권이 계열 4종과 일치',
+  ok(tkBad.length === 0, 'H1 던전 ' + H.length + '개의 입장권이 계열 5종과 일치',
      tkBad.length ? tkBad.map(x => x.id + '→' + x.tk).join(',') : H.map(x => x.id + ':' + x.tk.replace('cur-ticket-', '').replace('.svg', '')).join(' · '));
-  ok(new Set(H.map(x => x.tk)).size === 4, 'H2 입장권 종류는 4종뿐(골드·다이아·유물·강화석)', [...new Set(H.map(x => x.tk))].join(','));
+  ok(new Set(H.map(x => x.tk)).size === 5,
+     'H2 입장권 종류는 5종뿐(골드·다이아·유물·강화석·룬강화석)', [...new Set(H.map(x => x.tk))].join(','));
 
   /* ---- [J] 제목 자리 금지 규칙 ----
      showModal 은 `<h2>` 를 **textContent** 로 넣고 앞머리 기호를 떼기까지 한다(«레퍼런스 헤더에는 이모지가 없다»).
