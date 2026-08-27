@@ -31,12 +31,15 @@ const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${
 const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
-/* ★ 기준선 850ms 의 유도(실측). 이 저장소의 게이트·하네스는 `goto(waitUntil:'load')` 뒤에 대기한다.
-   load 이벤트는 아틀라스까지 다 받은 **550ms**(`tools/probe163.js` 로 잰 값)에 뜨고,
-   goto 뒤 **최단 대기가 300ms**(verify78·verify113 — 둘 다 DOM 검사라 `.thru` 로 통과한다),
-   실제로 **화면을 찍는** 하네스는 400ms 이상(cap113·scan116·verify125 …)이다.
-   → 가장 이른 «화면을 읽는» 시각 ≈ 850ms. 오버레이는 그 전에 **안 보여야** 한다. */
-const GATE_MS = 850;
+/* ★ 기준선은 **절대 시각이 아니라 «부팅 + 300ms»** 다(3회차에 바로잡았다).
+   이 저장소의 게이트·하네스는 `goto(waitUntil:'load')` 뒤에 대기하는데, load 이벤트는
+   «아틀라스까지 다 받은 시점» = 부팅과 거의 같다. 그리고 goto 뒤 **최단 대기가 300ms**
+   (verify78·verify113 — 둘 다 DOM 검사라 `.thru` 로 통과한다), 실제로 **화면을 찍는** 하네스는
+   400ms 이상이다(cap113·scan116·verify125 …).
+   절대값(850ms)으로 박아 두면 이 컨테이너의 부팅 시각이 430~650ms 로 흔들릴 때
+   **실행마다 뜨고 지는 FAIL**(136 계열)이 된다 — 실제로 그렇게 헛불렸다. */
+const TAIL_MS = 300;   /* 부팅 뒤 오버레이가 «보여도 되는» 시간 */
+const ABS_MS = 1200;   /* 그래도 이보다 늦으면 무언가 잘못된 것이다 */
 
 /* ★ 계측이 대상을 흔든다 — 두 벌로 나눈 이유.
    1차 게이트는 «전이 시각 관찰 + rAF 궤적 추적» 을 한 페이지에서 같이 했다. 그 rAF 루프가
@@ -105,13 +108,13 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   console.log('§2 상수 정합');
   const K = await page.evaluate(() => ({
     MIN: LD.MIN, RUN: LD.RUN, GRACE: LD.GRACE, FADE: LD.FADE, X0: LD.X0, SC: LD.SC,
-    RUNMS: LD.RUNMS, IDMS: LD.IDMS, HOLD: LD.HOLD, HARD: LD.HARD, ARC: LD.ARC,
+    RUNMS: LD.RUNMS, IDMS: LD.IDMS, RTAIL: LD.RTAIL, ARC: LD.ARC,
     runFrames: ATLAS.knight.a.run.length,
     trans: Math.round(parseFloat(getComputedStyle(document.getElementById('loading')).transitionDuration) * 1000),
     atlas: Object.keys(ATLAS).length, total: LD.total()
   }));
   eq('JS 페이드(LD_FADE) = CSS transition-duration', K.trans, K.FADE);
-  ok(K.HARD + K.FADE < GATE_MS, `등장 대기 마감 + 페이드 < ${GATE_MS}ms (${K.HARD}+${K.FADE}=${K.HARD + K.FADE})`);
+  ok(K.FADE < TAIL_MS * .6, `페이드가 꼬리 예산의 60% 안 (${K.FADE} < ${Math.round(TAIL_MS * .6)}ms)`);
   ok(K.RUN >= 380, `등장 길이 ≥380ms — 1회차 300ms 는 «인지 하한 미달» 지적을 받았다 (${K.RUN})`);
   /* ★ 한 스트라이드가 정확히 한 번 완결되는가. 상수를 손으로 «52» 라고 적어 두고 run 프레임 수가
      바뀌면 조용히 어긋나므로, 게이트가 **아틀라스에서 프레임 수를 다시 세서** 대조한다. */
@@ -150,8 +153,9 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      불투명도 전이는 **컴포지터**가 돌리므로 페이드 시작 + LD_FADE 면 확실히 안 보인다
      (display:none 을 붙이는 setTimeout/transitionend 는 부팅 직후 메인 스레드에 밀려 100~350ms 늦는다 —
      그걸 기준선으로 삼으면 게이트가 실행마다 뜨고 지는 FAIL 이 된다. 136 «뜨고 지는 FAIL» 의 예방판). */
-  ok(fade !== null && fade + K.FADE < GATE_MS,
-    `${GATE_MS}ms 전에 **안 보이게** 된다 (페이드 시작 ${fade} + ${K.FADE} = ${fade + K.FADE}ms)`);
+  ok(fade !== null && boot !== null && fade + K.FADE <= boot + TAIL_MS,
+    `부팅 + ${TAIL_MS}ms 전에 **안 보이게** 된다 (페이드 끝 ${fade + K.FADE} ≤ 부팅 ${boot} + ${TAIL_MS} = ${boot + TAIL_MS}ms)`);
+  ok(fade !== null && fade + K.FADE < ABS_MS, `절대값으로도 ${ABS_MS}ms 전 (${fade + K.FADE}ms)`);
   ok(gone !== null && gone < 1600, `display:none 도 결국 붙는다 (실측 ${gone}ms)`);
   /* «부팅 → 사라짐» 이 아니라 «페이드 시작 → 사라짐» 을 잰다. 그 사이가 페이드 길이다.
      부팅~페이드 사이는 LD_MIN·LD_GRACE 가 정하는 «의도된 체류» 라 여기서 볼 것이 아니다. */
@@ -221,7 +225,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
 
   /* ---------------- B. 궤적 ---------------- */
   /* ★ 궤적은 **첫 접속을 흉내 낸 페이지**에서 본다. 전부 캐시된 재방문(로컬 file:// 포함)에서는
-     아틀라스가 ~430ms 에 다 와서 등장이 LD_HARD 에 잘린다 — 그건 의도된 동작이라(위 LD_HARD 주석)
+     아틀라스가 ~430ms 에 다 와서 등장이 **페이드 안으로 압축된다** — 의도된 동작이라(index.html ldFinish)
      «끝까지 갔나» 를 그 경로에서 물으면 안 된다. knight 만 빨리 주고 나머지를 늦춰 첫 접속을 만든다. */
   const px = await ctx.newPage();
   await px.route('**/*.png', async (r) => {
@@ -295,6 +299,49 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   await px.close();
 
   /* ---------------- C. knight 가 깨진 경우 — 무한 로딩이 되면 안 된다 ---------------- */
+  console.log('§11 재방문 경로 — 등장이 «잘리지 않고 압축되어» 끝난다');
+  /* 전부 캐시된 재방문에서는 부팅 뒤 남는 예산이 300ms 도 안 된다(페이드 150 포함).
+     3회차까지는 640ms 등장을 그대로 두어 **몸의 43% 만 들어온 채 화면이 녹았다.**
+     이제 ldFinish 가 «위치는 이어서, 길이만» 줄이므로 캐릭터가 중앙에 **도착한 뒤** 사라진다.
+     이 절이 빨개지면 그 압축이 사라진 것이다. */
+  const warm = [];
+  for (let i = 0; i < 3; i++) {
+    const w = await ctx.newPage();
+    await w.addInitScript(() => {
+      window.__x = null;
+      const boot = () => {
+        const el = document.getElementById('loading');
+        if (!el) { requestAnimationFrame(boot); return; }
+        new MutationObserver(() => {
+          /* 착지는 페이드 «끝» 에 본다 — 3회차부터 등장은 페이드 안에서 마무리된다 */
+          if (el.classList.contains('out') && window.__x === null) {
+            window.__x = 'pending';
+            setTimeout(() => {
+              const cv = document.getElementById('ldHero');
+              const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
+              window.__x = { x: m ? +m[1] : null, run: Math.round(LD.run()) };
+            }, LD.FADE + 30);
+          }
+        }).observe(el, { attributes: true, attributeFilter: ['class'] });
+      };
+      boot();
+    });
+    await w.goto(URL, { waitUntil: 'load' });
+    await w.waitForTimeout(1400);
+    /* 관찰기가 `.out` 순간을 놓쳤으면(관찰기 부착보다 전이가 빨랐거나 프레임이 굶었으면)
+       그때의 최종 상태로 대신 읽는다 — 등장이 끝났으면 transform 은 어차피 0 이다. */
+    warm.push(await w.evaluate(() => (window.__x && window.__x !== 'pending' ? window.__x : null) || (() => {
+      const cv = document.getElementById('ldHero');
+      const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
+      return { x: m ? +m[1] : null, run: Math.round(LD.run()), late: true };
+    })()));
+    await w.close();
+  }
+  const bad = warm.filter(r => !r || r.x === null || Math.abs(r.x) > Math.abs(K.X0) * .15);
+  ok(bad.length === 0,
+    `페이드가 끝날 때 캐릭터가 중앙에 도착해 있다 (x = ${warm.map(r => (r ? r.x : '?')).join(', ')} · 허용 ±${Math.round(Math.abs(K.X0) * .15)}px)`);
+  ok(warm.every(r => r && r.run <= K.RUN), `재방문에서는 등장 길이가 줄어든다 (${warm.map(r => (r ? r.run : '?')).join(', ')}ms ≤ ${K.RUN})`);
+
   console.log('§7 무한 로딩 방지 (knight 아틀라스 깨짐)');
   const p2 = await ctx.newPage();
   await p2.addInitScript(WATCH_T);

@@ -3425,7 +3425,7 @@
     /* 바닥이 살짝 데워진 어둠 — 1회차는 완전 균일 #0b0d18 이라 페이드 뒤 게임 화면(따뜻한 보라·금)과
        평균 휘도가 6.4배 튀었다(비평 ④). 목적지 쪽 색을 아주 옅게 깔아 층을 하나 만든다 */
     background:radial-gradient(120% 62% at 50% 78%,#181528 0%,#0e1020 45%,#0b0d18 100%);
-    font-size:36px;font-weight:800;color:#9db0d8;transition:opacity .15s linear}
+    font-size:36px;font-weight:800;color:#9db0d8;transition:opacity .13s linear}
   #loading.out{opacity:0}
   #loading.thru{pointer-events:none}
   #loading.off{display:none}
@@ -12405,20 +12405,15 @@
      1.067 → 1.6 (**+50%**) 으로 튀어, 감속해야 할 자리에서 오히려 가속했다(게이트 §4 가 잡았다).
      이음매에서 속도가 이어지려면 CRZD·(1−CRZ) = 2·CRZ·(1−CRZD) 여야 하고, 풀면 아래 한 줄이다. */
   var LD_CRZD  = 2 * LD_CRZ / (1 + LD_CRZ);
-  var LD_HOLD  = 90;    /* 착지 뒤 여운 — 선 자세를 한 박자 보여 주고 나간다 */
-  /* ★ LD_HARD — «이 시각을 넘겨서까지 등장을 기다리지는 않는다» 는 마감. 실측으로 유도한 값이다:
-       이 저장소의 게이트·하네스는 `goto(waitUntil:'load')` 뒤에 대기하고 찍는데,
-       load 이벤트가 **550ms**(아틀라스까지 다 받은 시점) 이고 **최단 대기가 300ms**(cap126font·verify78·verify113)
-       → 가장 이른 «화면을 읽는» 게이트가 ≈850ms(그중 300ms 짜리들은 DOM 검사라 `.thru` 로 통과한다.
-       실제로 **찍는** 하네스는 대기 400ms 이상 = ≈950ms). 850 을 기준으로 잡고 페이드 110 과
-       타이머 굶주림 여유를 빼면 530ms 다. 굶주림은 실행마다 **20~115ms** 로 흔들려서(실측)
-       여유를 넉넉히 잡아야 «뜨고 지는 FAIL»(136 계열)이 안 된다.
-     즉 «전부 캐시된 재방문» 에서는 등장이 잘린다(그때 캐릭터는 이미 이동의 94% 지점이라 서 있는 것으로 읽힌다).
-     주인 지시가 가리키는 **첫 접속**(1.8MB 를 네트워크로 받는 경우)에는 부팅이 훨씬 늦어 등장이 통째로 보인다. */
-  var LD_HARD  = 530;
+  /* ★ 부팅 뒤 «꼬리» 예산은 실측상 **300ms 남짓**이다 — 게이트가 `goto(waitUntil:'load')` 뒤
+     300ms 만에 화면을 읽는데, load 이벤트는 부팅과 거의 같은 시각이다. 그 300 안에
+     페이드(LD_FADE)와 **타이머 굶주림(부팅 직후 메인 스레드가 막혀 실측 90~180ms)** 이 다 들어가야 한다.
+     그래서 «등장을 끝내고 나서 페이드» 는 예산을 넘는다. 대신 **페이드 안에서 등장을 끝낸다** —
+     아래 ldFinish 가 남은 등장을 페이드 길이에 압축해 넣고, 화면이 녹는 동안 캐릭터가 달려와 선다. */
+  var LD_RTAIL = .8;    /* 압축된 등장이 페이드의 몇 배 안에 끝나야 하나(0.8 = 페이드가 끝나기 직전 착지) */
   var LD_IDMS  = 125;   /* 대기 프레임 간격(8fps) — 전투 setAnim(player,'knight','idle',8) 과 같은 속도 */
   var LD_GRACE = 90;    /* knight 가 늦게 와도 캐릭터를 최소 이만큼은 보여 준다(«연출 0프레임» 방지) */
-  var LD_FADE  = 150;   /* 페이드아웃 — CSS #loading{transition:opacity .11s} 와 한 벌(게이트 §2 가 대조) */
+  var LD_FADE  = 130;   /* 페이드아웃 — CSS #loading{transition:opacity .11s} 와 한 벌(게이트 §2 가 대조) */
   var LD_SC    = 12;    /* 79 규격 정수 배율. 1회차 5(잉크 222px = 프레임 세로의 9.7%)를 두 비평가가
                            «히어로 등장인데 진행바가 더 크다» 로 지적 → 8 로 올렸는데, 2회차에 캔버스
                            backing(480×320)이 CSS 표시 크기(720×512)와 달라 **1.5×/1.6× 비균등 CSS 확대**가
@@ -12442,7 +12437,8 @@
   var LD_SQ    = 170;   /* 착지 스쿼시 길이 */
   var LD_SQA   = .10;   /* 착지 스쿼시 진폭. 2회차 .06 은 실측 −1.8% 로 «160ms 를 쓰고 얻은 임팩트가 1.8%»(D) */
 
-  var ldRunAt = 0, ldDone = false, ldFading = false, ldOff = false, ldRaf = 0, ldCb = null, ldTileOK = false;
+  var ldRunAt = 0, ldRun = LD_RUN;      /* ldRun 은 상수가 아니다 — 부팅 시점에 예산에 맞춰 줄어든다 */
+  var ldDone = false, ldFading = false, ldOff = false, ldRaf = 0, ldCb = null, ldTileOK = false;
   var el = function (id) { return document.getElementById(id); };
   var now = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
 
@@ -12498,7 +12494,7 @@
      로딩 구간에서 표본 시각이 실행 시각보다 최대 140ms 뒤처져 «이징이 틀렸다» 로 오독된다
      (2회차에 실제로 322px 오차로 헛불렸다). 곡선은 여기서 직접 재고, 배선은 따로 한 번 본다. */
   function ldAt(t) {
-    var p = Math.min(1, Math.max(0, t / LD_RUN)), e;
+    var p = Math.min(1, Math.max(0, t / ldRun)), e;
     /* ★ easeOutCubic 을 버렸다(2회차). 그 곡선은 앞 38% 시간에 거리의 93% 를 써 버려서, 남은 구간에
        **다리는 도는데 몸이 안 나가는 트레드밀**이 됐다(D 실측: 속도가 250ms 안에 28.6배 붕괴).
        달리기는 «등속으로 오다가 마지막에 선다» 다 — 시간의 앞 LD_CRZ 를 등속으로 LD_CRZD 만큼 가고,
@@ -12521,16 +12517,16 @@
     ldRaf = 0;
     if (ldOff || !ldRunAt) return;
     var cv = el('ldHero'), sh = el('ldSh'), A = A0.knight;
-    var t = now() - ldRunAt, p = Math.min(1, t / LD_RUN);
+    var t = now() - ldRunAt, p = Math.min(1, t / ldRun);
     var x = ldAt(t);
     /* 아치 — 등속 구간에서 **두 번** 뛴다(접지 2회). 감속 구간(뒤 25%)은 0 = 발이 붙은 채로 선다 */
     var arc = p < LD_CRZ ? -Math.round(LD_ARC * Math.abs(Math.sin(Math.PI * t / (LD_RUNMS * 4)))) : 0;
     /* 착지 스쿼시 — 그림자와 **몸통 둘 다**. 세로로 눌리고 가로로 퍼진다 */
-    var k = p < 1 ? 0 : Math.max(0, 1 - (t - LD_RUN) / LD_SQ);
+    var k = p < 1 ? 0 : Math.max(0, 1 - (t - ldRun) / LD_SQ);
     if (cv && A && A.image && A.a) {
       var run = A.a.run, idle = A.a.idle;
       var frame = p < 1 ? run[Math.floor(t / LD_RUNMS) % run.length]
-                        : idle[Math.floor((t - LD_RUN) / LD_IDMS) % idle.length];
+                        : idle[Math.floor((t - ldRun) / LD_IDMS) % idle.length];
       cv.style.transform = 'translate(' + x + 'px,' + arc + 'px) scale(' +
         (1 + LD_SQA * k).toFixed(3) + ',' + (1 - LD_SQA * k).toFixed(3) + ')';
       ldDraw(cv, frame);
@@ -12549,6 +12545,19 @@
   window.ldFinish = function () {
     var l = el('loading');
     if (l) l.classList.add('thru');
+    /* ★ 남은 등장을 **페이드 안에** 압축해 넣는다. 전부 캐시된 재방문에서는 knight 도착(~400ms) 직후
+       바로 부팅이라 640ms 짜리 등장이 통째로 남는데, 그걸 다 기다리면 꼬리 예산(≈300ms)을 넘는다.
+       **길이만 줄이고 위치는 이어서** 간다 — 지금 진행 비율 p 를 유지한 채 남은 (1−p) 를
+       «지금부터 페이드가 거의 끝날 때까지» 에 담는다. 화면에서는 속도만 붙고, 결과적으로
+       «화면이 녹는 동안 캐릭터가 달려와 선다». 부팅이 늦은 첫 접속에서는 p 가 이미 1 이라 아무것도 안 바뀐다. */
+    if (ldRunAt) {
+      var n = now(), p = Math.min(1, (n - ldRunAt) / ldRun);
+      if (p < 1) {
+        var target = n + LD_FADE * LD_RTAIL;
+        var d = (target - n) / (1 - p);
+        if (d < ldRun) { ldRun = d; ldRunAt = target - d; }
+      }
+    }
     ldExit();
   };
 
@@ -12556,12 +12565,10 @@
      rAF 가 아니라 setTimeout 으로 도는 이유: 탭이 백그라운드면 rAF 가 멈춰 영영 안 끝난다. */
   function ldExit() {
     if (ldOff || ldFading || !ldDone) return;
+    /* 등장은 ldFinish 가 페이드 안에 넣어 놨으므로 여기서 더 기다릴 것이 없다.
+       남는 조건은 «전부 즉시 캐시된» 극단에서 한 박자는 보이게 하는 LD_MIN 하나뿐이다. */
     var n = now(), until = LD_MIN;
-    if (ldRunAt) {
-      /* 등장 + 착지 여운까지 기다리되, LD_HARD 를 넘겨서까지는 안 기다린다.
-         단 캐릭터가 뜬 직후라면 최소 LD_GRACE 는 보여 준다(«연출 0프레임» 방지). */
-      until = Math.max(until, Math.min(ldRunAt + LD_RUN + LD_HOLD, Math.max(LD_HARD, ldRunAt + LD_GRACE)));
-    }
+    if (ldRunAt && ldRunAt + LD_GRACE > until) until = ldRunAt + LD_GRACE;
     if (n < until) { setTimeout(ldExit, Math.ceil(until - n)); return; }
     ldFading = true;
     var l = el('loading');
@@ -12586,9 +12593,10 @@
   window.LD = {
     MIN: LD_MIN, RUN: LD_RUN, RUNMS: LD_RUNMS, IDMS: LD_IDMS, GRACE: LD_GRACE,
     FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, SQA: LD_SQA,
-    HOLD: LD_HOLD, HARD: LD_HARD, CRZ: LD_CRZ, CRZD: LD_CRZD,
+    RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD,
     total: function () { return total; },
     at: ldAt,
+    run: function () { return ldRun; },
     runAt: function () { return ldRunAt; },
     draw: ldDraw
   };
