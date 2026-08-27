@@ -13757,7 +13757,9 @@ const DEF = () => ({
   /* 105 — «알아서 되는 것» 은 전부 기본 OFF(저장소 주인 지시). autoEquip 키는 폐기(아무도 읽지 않는다),
      autoBuy(23 훈련 자동 구매)는 강화 탭의 «자동 ON/OFF» 토글이 남아 있으므로 기본값만 false 로 내린다.
      a105 = 구 세이브 1회 정리 표식(켜 둔 플레이어의 선택을 두 번 끄지 않는다). */
-  buyQty:1, autoBuy:false, a105:1, eqTab:'weapon', heroTab:'eq',
+  /* 159 — `heroTab` 세이브 키는 폐기했다(영웅 팝업은 열 때마다 장비 탭에서 시작한다).
+     `eqTab`(06 시트 안 무기/방어구 탭)은 그대로 — 그건 시트 내부 상태라 별개다. */
+  buyQty:1, autoBuy:false, a105:1, eqTab:'weapon',
   opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false },  /* 55 설정 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
@@ -17331,7 +17333,12 @@ function gmCloseAll(){
 }
 function gmBattle(){ gmCloseAll(); uiDirty = true; renderUI(); }          /* 전투로 달성하는 미션 */
 function gmPage(id, open){ const w = $(id); gmCloseAll(); if(!w || !w.classList.contains('on')) open(); }
-function gmHero(sub){ gmCloseAll(); heroTab = sub; S.heroTab = sub; goTab('hero', true); }
+/* 159 — 영웅 팝업은 «열 때마다» 장비 탭에서 시작한다(주인 지시 2026-08-27).
+   그러니 여기서 `heroTab` 을 직접 세워 봐야 goTab() 이 곧바로 'eq' 로 되돌린다.
+   가이드 미션 이동은 그 리셋의 **유일한 예외**라, 목적 서브탭을 `heroSubReq` 로 «예약» 해
+   goTab() 이 1회만 존중하게 한다(쓰고 나면 즉시 비운다 — 다음 수동 진입까지 남으면 안 된다). */
+let heroSubReq = null;
+function gmHero(sub){ gmCloseAll(); heroSubReq = sub; goTab('hero', true); }
 function gmTrain(){ gmCloseAll(); openTrain(); }   /* 88 — 서브탭 폐기, 훈련 단일 화면 */
 /* 10 상점 소환 탭을 열고 **그 상자 카드까지 스크롤**한다(레퍼런스 3칸 중 어느 것인지 바로 보이게) */
 function gmShop(box){ gmCloseAll(); openShopPage(box); }
@@ -21952,7 +21959,9 @@ function syncPanel(){
    영웅 탭을 «처음 열 때» 는 이 경로가 아니라 goTab() 이라 시트 등장 연출이 그대로 붙는다. */
 function heroSubGo(k){
   if(!k || k === heroTab) return;
-  jzHush(() => { heroTab = k; S.heroTab = k; syncPanel(); });
+  /* 159 — `S.heroTab` 저장은 폐기했다. 서브탭은 «팝업이 열려 있는 동안만» 사는 값이라
+     세이브에 남길 이유가 없다(남기면 재열기·재접속 때 마지막 탭이 되살아난다). */
+  jzHush(() => { heroTab = k; syncPanel(); });
   uiDirty = true; renderUI();
 }
 function goTab(k, forceOpen){
@@ -22000,6 +22009,13 @@ function goTab(k, forceOpen){
   }
   closeDungeon(); closeShopPage(); closeRelw(); closeTrain();   /* 다른 탭으로 이동하면 페이지를 닫는다 */
   if(!forceOpen && panelOpen && k === curTab){ panelOpen = false; syncPanel(); return; }
+  /* 159 — 영웅 팝업을 «여는 순간» 서브탭을 장비로 리셋한다(주인 지시 2026-08-27).
+     여기까지 왔다는 건 «닫혀 있던 영웅을 연다» 이거나 «다른 탭에서 영웅으로 온다» 이다
+     (같은 탭 재클릭 = 닫기는 바로 위에서 return 했다). 서브탭 이동(heroSubGo)은 이 경로를
+     타지 않으므로 열려 있는 동안의 탭 전환은 그대로 살아 있다.
+     예외는 가이드 미션이 예약한 `heroSubReq` 하나뿐 — 1회 쓰고 비운다. */
+  if(k === 'hero'){ heroTab = (heroSubReq && (heroSubReq === 'eq' || HEROBODY[heroSubReq])) ? heroSubReq : 'eq'; }
+  heroSubReq = null;
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
   syncPanel();
@@ -24381,8 +24397,9 @@ loadAtlases(() => {
   setAnim(player, 'knight', 'idle', 8, true);
   syncPets();
   spawnStage();
-  /* 작업 57 — 'eq' 는 HEROBODY 에 없다(06 은 패널 본문이 아니라 전용 오버레이). 유효 키를 직접 나열한다 */
-  heroTab = (S.heroTab === 'eq' || HEROBODY[S.heroTab]) ? S.heroTab : 'eq';
+  /* 159 — 세이브에서 «마지막 서브탭» 을 복원하던 줄을 걷어냈다(주인 지시 2026-08-27:
+     영웅 팝업은 열 때마다 장비 탭). 전역 초기값이 이미 'eq' 라 여기서 세울 것이 없다.
+     구 세이브에 남은 `S.heroTab` 키는 아무도 읽지 않는다(44 교훈 «없으면 기본값»의 역방향). */
   syncPanel();
   /* 레퍼런스 팝업은 헤더에 ✕ 가 없다(22·07·06·03 전부). 대신 딤을 눌러도 닫히게 한다 */
   $('modal').onclick = e => { if(e.target === $('modal')) closeModal(); };
