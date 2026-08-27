@@ -163,16 +163,58 @@ const seedPets = p => p.evaluate(() => {
       const t2 = document.createElement('canvas'); t2.width = cv.width; t2.height = cv.height;
       drawSpriteTo(t2, { k: got.sp, frame: list[0], tint: null, fit: +cv.dataset.ufit });
       const bare = ink(t2);
+      /* «똑같은 이미지» 의 근거 — 밝기 보정(72 `bright`)을 **안 걸었다**. 걸었다면 여기서 갈린다. */
+      const t3 = document.createElement('canvas'); t3.width = cv.width; t3.height = cv.height;
+      drawSpriteTo(t3, { k: got.sp, frame: list[0], tint: cv.dataset.utc || null, fit: +cv.dataset.ufit, bright: 1.6 });
+      const lifted = ink(t3);
       return { sp: got.sp, tint: cv.dataset.utc || null, sig: got.ink && got.ink.sig,
-               refSig: same && same.sig, bareSig: bare && bare.sig, frames: list.length };
+               refSig: same && same.sig, bareSig: bare && bare.sig, frames: list.length,
+               liftSig: lifted && lifted.sig };
     });
   }, { C: CELL, I: INK });
   s5.forEach(r => {
-    ok(r.sig === r.refSig, `${r.sp}: 썸네일 = 전투 아틀라스 ${r.frames}프레임 중 0번(지문 일치)`,
+    ok(r.sig === r.refSig,
+       `${r.sp}: 썸네일 = 전투 아틀라스 ${r.frames}프레임 중 0번 + 그 틴트(지문 일치)`,
        r.sig + ' vs ' + r.refSig);
     if (r.tint) ok(r.sig !== r.bareSig, `${r.sp}: 틴트 ${r.tint} 가 실제로 픽셀을 바꾼다`);
     else ok(r.sig === r.bareSig, `${r.sp}: 틴트 없는 종은 원본 그대로`);
+    /* 주인 지시는 «전투씬과 똑같은 이미지» 다 — 보기 좋으라고 밝히지 않았다는 근거 */
+    ok(r.sig !== r.liftSig, `${r.sp}: 밝기 보정 없음(72 bright 를 걸면 지문이 갈린다)`);
   });
+
+  /* ── §5b 대비 — 97-⑤ 의 펫 판. 카드 면은 등급별(`SK_FILL` 8단, 휘도 48~170)이라 «어두운 스프라이트가
+     어두운 면에 묻히는» 조합이 실제로 나온다. **이 작업은 그것을 고치지 않는다** — 주인 지시가
+     «전투씬과 똑같은 이미지» 라 픽셀을 밝히면 전제가 깨지고, 72 식 상수 하나로는 8가지 면을 못 맞춘다
+     (1회차에 «면 휘도 + 45» 자동 보정을 실제로 만들어 봤더니 밝은 면 위의 밝은 종이 포화해 오히려
+     51.2% → 66.5% 로 나빠졌다 — 되돌렸다. 근거는 docs/review/174-*.md).
+     그래서 여기서는 **재서 기록**하고, «아예 안 보이는 수준» 만 막는다. 후속은 PROGRESS 221. ── */
+  console.log('§5b 대비 — 잉크가 등급 면에 완전히 묻히지는 않는다(수치는 기록용)');
+  const s5b = await p.evaluate(() => {
+    const L = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const hex = h => { h = h.trim(); const m = /^#([0-9a-f]{6})$/i.exec(h);
+      if (m) return [0, 2, 4].map(i => parseInt(m[1].substr(i, 2), 16));
+      const q = /rgba?\(([^)]+)\)/.exec(h); return q ? q[1].split(',').slice(0, 3).map(Number) : [0, 0, 0]; };
+    return [...document.querySelectorAll('#bPet .sk-gp .sk-card')].map(card => {
+      const cv = card.querySelector('canvas'); if (!cv) return null;
+      const face = L(...hex(getComputedStyle(card).getPropertyValue('--f')));
+      const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      let n = 0, bur = 0;
+      for (let q = 0; q < d.length; q += 4) {
+        if (d[q + 3] < 8) continue;
+        n++; if (Math.abs(L(d[q], d[q + 1], d[q + 2]) - face) < 25) bur++;
+      }
+      return { id: card.dataset.ptit, buried: n ? Math.round(bur / n * 1000) / 10 : 100, face: Math.round(face) };
+    }).filter(Boolean);
+  });
+  const worst = s5b.reduce((a, b) => a.buried > b.buried ? a : b);
+  const over = s5b.filter(c => c.buried >= 30).length;
+  ok(s5b.length === 36, `대비를 잰 카드 ${s5b.length}장`);
+  console.log(`  · 기록 — 30% 이상 묻힌 카드 ${over}장 / 최악 ${worst.id} ${worst.buried}%(면 휘도 ${worst.face})`);
+  ok(worst.buried < 80,
+     `가장 묻힌 카드 ${worst.id}: 잉크 ${worst.buried}% 가 면(휘도 ${worst.face})과 같은 대역 — «안 보임»(≥80%) 은 아니다`);
+  /* 11 = 이 게이트의 시드(3종 보유·장착) 기준 실측. 전 종 보유 기준으로는 9장이다 —
+     장착 카드는 면이 `skDim`(×0.65)으로 더 어두워져 2장이 더 걸린다. 시드가 바뀌면 이 수도 바뀐다. */
+  ok(over <= 11, `30% 이상 묻힌 카드 ${over}장 (1회차 실측 11장에서 더 나빠지지 않았다)`);
 
   /* ── §6 12 소환 결과 (+ 과교정 잠금) ── */
   console.log('§6 12 — 펫 결과는 캔버스, 무기 결과는 이모지 그대로');
