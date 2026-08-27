@@ -1059,6 +1059,10 @@
   .slot2.empty::before{background:conic-gradient(#b9bccb 0deg 112deg,#9fa4ba 133deg 232deg,
     #b9bccb 250deg 360deg)}
   .slot2.empty .cdw{background:#454464}
+  /* 222 — 해금됐지만 비어 있는 칸: 자물쇠 대신 흐린 [+] (미해금 칸만 자물쇠를 단다) */
+  .slot2 .pl3{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;
+    background:linear-gradient(#dfe4f5,#dfe4f5) center/38px 10px no-repeat,
+               linear-gradient(#dfe4f5,#dfe4f5) center/10px 38px no-repeat;opacity:.5}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
   .slot2 .lk{position:relative;z-index:2;display:block;font-size:64px;line-height:1;
     transform:translateY(-1.5px) scaleY(.8);
@@ -9004,8 +9008,27 @@
   /* Lv.n 잉크 h19 · 잉크상단 = 슬롯상단+83 (라틴+숫자라 캡하이트 기준 fs26) */
   .sk-slv{position:absolute;left:0;right:0;top:76px;height:32px;text-align:center;
     font-size:27px;line-height:32px;color:#fff}
-  /* 슬롯 자물쇠 52x60 · 슬롯상단+26 (기준 49x57 을 1.061 배) */
-  .sk-slot.lock>.sk-lock{left:50%;top:28px;margin-left:-24.5px;transform:scale(1.061)}
+  /* 슬롯 자물쇠 52x60 · 슬롯상단+26 (기준 49x57 을 1.061 배)
+     222 — 자물쇠 밑에 «St.n»(해금 스테이지)을 적으므로 자물쇠를 8px 올려 자리를 낸다 */
+  .sk-slot.lock>.sk-lock{left:50%;top:20px;margin-left:-24.5px;transform:scale(1.061)}
+  /* 222 — 미해금 칸의 해금 스테이지 라벨 (`.sk-slv` 와 같은 자리·같은 상자) */
+  .sk-slk{position:absolute;left:0;right:0;top:80px;height:28px;text-align:center;
+    font-size:24px;line-height:28px;color:#FFD9A0}
+  /* 222 — «해금됐지만 비어 있는» 칸. 자물쇠가 아니라 [+] 자리다(주인 지시 2026-08-27) */
+  .sk-slot.free{background:#9E8A70;box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D8C4A8;
+    cursor:default}
+  .sk-plus{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;
+    background:linear-gradient(#fff,#fff) center/52px 14px no-repeat,
+               linear-gradient(#fff,#fff) center/14px 52px no-repeat;
+    filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000)
+           drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000);
+    opacity:.92;pointer-events:none}
+  /* 222 — 슬롯 줄 아래 해금 안내 한 줄(격자 패널 top 387 과 패널 하단 346 사이 빈 41px) */
+  .sk-slnote{position:absolute;left:33px;right:33px;top:350px;height:32px;line-height:32px;
+    text-align:center;font-size:24px;color:#fff;white-space:nowrap}
+  /* ⚠ 이 시트 안에서 `b` 는 다른 규칙이 display:block 으로 잡아 둔다 — 인라인으로 되돌리지 않으면
+     한 줄 안내가 두 줄로 접혀 격자 패널 밑으로 잘린다(222 1회차에서 실제로 그랬다) */
+  :is(#bSk,#bPet,#bCos) .sk-slnote b{display:inline;color:#FFD24A}
 
   /* 3 그리드 패널 ref(40,1070) 1000x680 · #CBB397 · radius 28 · 테두리 없음 */
   /* 86 — 스킬 24종(5열 x 5행)이 되면서 격자 내용이 패널(680)보다 길어진다.
@@ -9073,6 +9096,9 @@
     background:linear-gradient(#fff,#fff) center/41px 12px no-repeat,
                linear-gradient(#fff,#fff) center/12px 41px no-repeat}
   .sk-eq.m{height:20px;top:10px;background:linear-gradient(#000,#000) center/49px 20px no-repeat}
+  /* 222 — 해제는 이 [─] 하나뿐이므로(슬롯 본체는 상세 보기) 잉크는 그대로 두고 «누르는 범위» 만
+     바깥으로 넓힌다. 49x20(≈ 실기기 18x7px)은 손가락으로 겨누기엔 너무 작다. */
+  .sk-slot>.sk-eq.m::before{content:'';position:absolute;left:-10px;right:-10px;top:-14px;bottom:-14px}
   .sk-eq.m::after{background:linear-gradient(#fff,#fff) center/41px 12px no-repeat}
 
   /* 5 재료 진행바 — 밴드 = 카드 전폭, 트랙 카드+132..+164(h33), 상단 검정 6 */
@@ -13616,8 +13642,11 @@ const GRADE = [
    파라미터만 다르게 재사용**한다 — `castGeneric()`(castSkill 의 default 분기) 하나가 전부 처리한다.
      t:'proj'  투사체(k=그리기 종류 slash/shuri/ice · n 발수 · sp 속도 · spread 부채각 · ring 전방위 · pierce 가산)
      t:'chain' 무작위 n명 즉발(bolt 재사용) · t:'area' 제자리 범위폭발(holy 재사용)
-     t:'buff'  자기 강화(bk 키 · bv 값 · bt 초) · `heal` 은 즉시 회복 비율(최대체력 대비)
    `sup:1` = 보조(직접 피해 없음) — `stat.dps` 합산에서 제외한다(전투력 부풀림 방지).
+   작업 222(2026-08-27, 저장소 주인 지시 «버프류 스킬은 없었으면 함») — 86 이 넣었던 보조 5종
+   (`vigor`·`mend`·`haste`·`ward`·`rage` = `t:'buff'`)을 **전부 직접 피해 스킬로 갈아치웠다.**
+   id·등급·자리는 그대로라 구 세이브(보유·장착·도감·확률표)는 한 칸도 안 흔들린다.
+   `t:'buff'` 분기와 `sbuf*` 기계 자체는 남겨 둔다(다른 계통이 쓸 수 있게) — **쓰는 스킬이 0종**이다.
    등급 mul 은 `GRADE` 6단계 그대로 쓴다 — **85 의 7·8등급은 스킬에 적용하지 않는다.** */
 const SKILLS = [
   /* ── 일반 ── */
@@ -13625,21 +13654,21 @@ const SKILLS = [
   { id:'shuri',  n:'표창 난사', g:0, ic:'✴️', cd:2.20, m:0.55, d:'8방향으로 표창을 뿌린다' },
   { id:'stone',  n:'돌팔매',    g:0, ic:'🪨', cd:1.30, m:1.35, d:'묵직한 돌덩이를 던져 적을 꿰뚫는다',
     t:'proj', k:'shuri', cnt:1, sp:470, pierce:1, col:'#cbb08a', life:1.6, hits:1 },
-  { id:'vigor',  n:'기합',      g:0, ic:'💢', cd:9.00, m:0.70, sup:1, d:'5초간 스킬 피해가 18% 증가한다',
-    t:'buff', bk:'atk', bv:0.18, bt:5.0 },
+  { id:'vigor',  n:'기합 파동',  g:0, ic:'💢', cd:2.00, m:1.30, d:'기합을 질러 주위를 통째로 후려친다',
+    t:'area', r:150, col:'#ffd08a', shake:4, scale:2.2, hits:1 },
   /* ── 고급 ── */
   { id:'multi',  n:'멀티 검기', g:1, ic:'🔱', cd:1.10, m:0.80, d:'부채꼴로 검기 여러 발을 발사' },
   { id:'orbit',  n:'회전검',    g:1, ic:'💫', cd:0.00, m:0.45, d:'주위를 도는 칼날 (지속)' },
   { id:'ice',    n:'얼음창',    g:1, ic:'❄️', cd:1.60, m:1.30, d:'적을 관통하고 둔화시킨다' },
-  { id:'mend',   n:'치유의 빛', g:1, ic:'💚', cd:11.00, m:0.75, sup:1, d:'체력을 12% 회복하고 6초간 재생이 크게 오른다',
-    t:'buff', bk:'regen', bv:1.20, bt:6.0, heal:0.12 },
+  { id:'mend',   n:'덩굴 가시',  g:1, ic:'🌿', cd:1.70, m:0.95, d:'가시 3발이 적을 꿰뚫는다',
+    t:'proj', k:'ice', cnt:3, sp:640, spread:0.22, pierce:2, col:'#8fffb0', life:1.4, hits:3 },
   /* ── 희귀 ── */
   { id:'aura',   n:'신성 오라', g:2, ic:'🔥', cd:0.00, m:0.55, d:'주위 적에게 지속 피해 (지속)' },
   { id:'bolt',   n:'연쇄 번개', g:2, ic:'⚡', cd:1.40, m:1.60, d:'무작위 적 3명에게 번개' },
   { id:'arrow',  n:'꿰뚫는 화살', g:2, ic:'🏹', cd:1.50, m:1.15, d:'빠른 화살 2발이 적을 길게 관통한다',
     t:'proj', k:'ice', cnt:2, sp:900, spread:0.13, pierce:6, col:'#ffe6a8', life:1.4, hits:2 },
-  { id:'haste',  n:'신속의 축복', g:2, ic:'🌀', cd:12.00, m:0.80, sup:1, d:'6초간 스킬 발동 속도가 30% 빨라진다',
-    t:'buff', bk:'rate', bv:0.30, bt:6.0 },
+  { id:'haste',  n:'질풍참',     g:2, ic:'🌬️', cd:1.40, m:0.85, d:'질풍처럼 검기 3발을 부채꼴로 흩뿌린다',
+    t:'proj', k:'slash', cnt:3, sp:760, spread:0.30, pierce:3, col:'#cfe9ff', life:1.2, hits:3 },
   /* ── 영웅 ── */
   { id:'boom',   n:'화염구',    g:3, ic:'🔴', cd:2.00, m:2.40, d:'폭발하는 화염구를 던진다' },
   { id:'poison', n:'맹독 안개', g:3, ic:'☠️', cd:3.20, m:0.80, d:'바닥에 독 장판을 남긴다' },
@@ -13651,16 +13680,16 @@ const SKILLS = [
   { id:'meteor', n:'운석 낙하', g:4, ic:'☄️', cd:4.00, m:5.00, d:'무작위 위치에 운석을 떨어뜨린다' },
   { id:'gale',   n:'폭풍의 칼날', g:4, ic:'🌪️', cd:2.80, m:1.05, d:'전방위로 칼날 12개를 흩뿌린다',
     t:'proj', k:'slash', cnt:12, ring:1, sp:560, pierce:2, col:'#c9ffe8', life:1.5, hits:12 },
-  { id:'ward',   n:'수호의 결계', g:4, ic:'🛡️', cd:14.00, m:1.40, sup:1, d:'체력을 15% 회복하고 7초간 받는 피해가 35% 줄어든다',
-    t:'buff', bk:'def', bv:0.35, bt:7.0, heal:0.15 },
+  { id:'ward',   n:'수호의 반격', g:4, ic:'🛡️', cd:3.00, m:3.20, d:'결계가 터지며 넓은 범위를 쓸어버린다',
+    t:'area', r:210, col:'#9fd6ff', shake:6, scale:3.2, hits:1 },
   /* ── 신화 ── */
   { id:'holy',   n:'심판의 빛', g:5, ic:'🌟', cd:3.00, m:4.00, d:'주변 전체에 성스러운 폭발' },
   { id:'lance',  n:'천벌의 창', g:5, ic:'🔻', cd:2.30, m:3.20, d:'심판의 창 3자루가 적을 모조리 관통한다',
     t:'proj', k:'ice', cnt:3, sp:820, spread:0.30, pierce:8, col:'#ffd0ff', life:1.5, hits:3 },
   { id:'nova',   n:'창세의 폭발', g:5, ic:'💥', cd:3.60, m:5.20, d:'아주 넓은 범위를 통째로 날려버린다',
     t:'area', r:250, col:'#ffd6ff', shake:9, scale:4.2, hits:1 },
-  { id:'rage',   n:'광란',      g:5, ic:'😡', cd:16.00, m:2.60, sup:1, d:'8초간 스킬 피해 40% · 발동 속도 25% 증가',
-    t:'buff', bk:'atk', bv:0.40, bk2:'rate', bv2:0.25, bt:8.0 }
+  { id:'rage',   n:'광란의 살기', g:5, ic:'😡', cd:2.60, m:1.80, d:'붉은 살기가 적 5명을 연달아 꿰뚫는다',
+    t:'chain', cnt:5, col:'#ff8f8f', hits:5 }
 ];
 
 /* ---- 장비 (무기 · 방패 · 목걸이) ---- */
@@ -14667,6 +14696,23 @@ const oLv  = id => (S.own[id] ? S.own[id].l : 0);
 const frag = id => (S.own[id] ? S.own[id].n : 0);
 const ownedTotal = () => Object.keys(S.own).length;
 const skillEquipped = id => S.eqSkill.indexOf(id) >= 0;
+/* ---- 222 스킬 슬롯 해금 (2026-08-27, 저장소 주인 지시) ----------------------
+   구: 8칸 중 «비어 있는 칸» 을 전부 자물쇠로 그렸다 → 해금된 빈 칸과 미해금 칸이 구별되지 않았다
+       («스킬 장착부분이 Lock 표시가 되있는게 문제»).
+   신: 자물쇠는 **아직 해금 안 된 칸에만** 붙고, 해금 규칙은 «최고 도달 스테이지(S.best)» 다.
+       해금된 빈 칸은 자물쇠가 아니라 [+] 빈 칸(`.sk-slot.free` · `.slot2.free`)으로 그린다.
+   ⚠ 구 세이브가 해금 칸 수보다 많이 장착하고 있어도 **빼앗지 않는다**(그 칸은 그대로 장착 칸으로 그린다).
+      새로 장착할 때만 해금 칸 수를 상한으로 쓴다 — 되돌릴 수 없는 강제 해제를 만들지 않기 위해서다. */
+const SK_SLOT_ST = [1, 1, 5, 10, 18, 30, 50, 80];      /* 칸 i 가 열리는 최소 «최고 스테이지» */
+const skSlotMax = () => {                              /* 지금 열려 있는 칸 수(앞에서부터 연속) */
+  let n = 0;
+  for(let i = 0; i < SK_SLOT_ST.length; i++){ if(S.best < SK_SLOT_ST[i]) break; n++; }
+  return n;
+};
+/* 구 세이브 유예분 포함 «표시용» 칸 수. 판정은 칸 번호로 한다(아래 buildSlots·renderSkill) —
+   `S.eqSkill` 에 빈 칸(null)이 섞인 하네스 상태에서도 «칸 i 가 열렸나» 가 흔들리지 않게. */
+const skSlotCap  = () => Math.max(skSlotMax(), S.eqSkill.filter(Boolean).length);
+const skSlotNeed = i => SK_SLOT_ST[i] || 0;            /* 칸 i 해금에 필요한 스테이지 */
 const petEquipped   = id => S.eqPet.indexOf(id) >= 0;
 const eqEquipped    = it => S.eqSlot[it.slot] === it.id;
 const gMul  = g => GRADE[g].mul;
@@ -15734,7 +15780,10 @@ const SK_CAST_SFX = {
   /* 전격      */ bolt:'skzap',
   /* 둔탁한 발사*/ boom:'skcast', meteor:'skcast', holy:'skcast', nova:'skcast',
   /* 독 장판    */ poison:'skbubble',
-  /* 버프·치유  */ vigor:'skchime', mend:'skchime', haste:'skchime', ward:'skchime', rage:'skchime'
+  /* 222 — 구 보조 5종을 직접 피해로 갈아치우며 시전음도 새 계열로 옮겼다(버프음 skchime 은 미사용) */
+  /* 범위 폭발  */ vigor:'skcast', ward:'skcast',
+  /* 관통 투척  */ mend:'skthrow', haste:'skwhoosh',
+  /* 연쇄      */ rage:'skzap'
   /* orbit·aura 는 지속 스킬 — 시전음 없음 */
 };
 const SK_SFX_GAP = 90;                  /* 시전음 공용 최소 간격(ms) */
@@ -16505,8 +16554,11 @@ function step(dt){
     if(stageWin){
       /* ① 보스 격파 = 스테이지 클리어 */
       stageWin = false;
+      const slot0 = skSlotMax();                    /* 222 — 이번 클리어로 스킬 슬롯이 열리는가 */
       S.stage++; S.bossFarm = false;                /* 28 — 다음 스테이지는 항상 «미도전» 상태로 */
       S.best = Math.max(S.best, S.stage);
+      /* 222 — 칸이 열리면 그 자리에서 알린다(스킬 시트를 열어 봐야 아는 해금은 없는 것과 같다) */
+      if(skSlotMax() > slot0) notify('🔓 <b>스킬 슬롯</b>이 한 칸 열렸습니다! (' + skSlotMax() + '/8)');
       const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
       S.gold += bonusG; goldWin += bonusG;
       /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다.
@@ -17486,26 +17538,33 @@ function draw(){
    HUD / 오버레이
    ========================================================================== */
 /* 하단 스킬 슬롯 (쿨다운 표시) */
-let slotEls = [], slotBox = [], slotIds = [];
+let slotEls = [], slotBox = [], slotIds = [], slotOpen = -1;   /* 222 — slotOpen = 마지막으로 그린 해금 칸 수 */
 function buildSlots(){
   const box = $('slots');
   if(!box || !box.querySelectorAll) return;
   let h = '';
+  const open = skSlotMax();                    /* 222 — 여기까지가 «해금된» 칸이다 */
   for(let i=0;i<8;i++){
     const id = S.eqSkill[i], sk = id && SK[id];
-    h += '<div class="slot2' + (sk ? ' ready' : ' empty') + '">'
-      + (sk ? '' : '<span class="lk">🔒</span>')
+    /* 222 — 자물쇠는 미해금 칸에만. 해금된 빈 칸은 [+] 자리로 그린다(구: 빈 칸 = 전부 자물쇠) */
+    const free = !sk && i < open;
+    h += '<div class="slot2' + (sk ? ' ready' : free ? ' empty free' : ' empty') + '"'
+      + (sk || free ? '' : ' title="스테이지 ' + skSlotNeed(i) + ' 해금"') + '>'
+      + (sk || free ? '' : '<span class="lk">🔒</span>')
       + (sk ? '<div class="lvv2">' + oLv(id) + '</div>' : '')
       + '<div class="cdw">' + (sk ? '<span class="si3">' + sk.ic + '</span>' : '')
+      + (free ? '<span class="pl3"></span>' : '')
       + '<div class="cdv"></div></div></div>';
   }
   box.innerHTML = h;
   slotEls = Array.prototype.slice.call(box.querySelectorAll('.cdv'));
   slotBox = Array.prototype.slice.call(box.querySelectorAll('.slot2'));
   slotIds = S.eqSkill.slice(0, 8);
+  slotOpen = skSlotMax();
 }
 function drawSlots(){
-  if(slotIds.join() !== S.eqSkill.slice(0,8).join()) buildSlots();
+  /* 222 — 장착 목록뿐 아니라 «해금 칸 수» 가 바뀌어도(스테이지 돌파) 다시 그린다 */
+  if(slotIds.join() !== S.eqSkill.slice(0,8).join() || slotOpen !== skSlotMax()) buildSlots();
   for(let i=0;i<slotEls.length;i++){
     const id = slotIds[i], sk = id && SK[id], b = slotBox[i];
     let r = 0;                                    // 0..1 남은 쿨타임 비율
@@ -18041,7 +18100,12 @@ function toggleEquip(it, cat){
     const i = S.eqSkill.indexOf(it.id);
     if(i >= 0) S.eqSkill.splice(i,1);
     else{
-      if(S.eqSkill.length >= 8){ notify('스킬은 최대 <b>8개</b>까지 장착합니다'); return; }
+      const cap = skSlotMax();                     /* 222 — 상한은 «해금된 칸 수» 다 */
+      if(S.eqSkill.length >= cap){
+        notify(cap >= 8 ? '스킬은 최대 <b>8개</b>까지 장착합니다'
+                        : '슬롯이 <b>' + cap + '칸</b>뿐입니다 — <b>스테이지 ' + skSlotNeed(cap) + '</b> 도달 시 한 칸 더 열립니다');
+        return;
+      }
       S.eqSkill.push(it.id); skillCd[it.id] = 0;
     }
   }else if(cat === 'pet'){
@@ -18077,7 +18141,7 @@ function equipFillNew(ids){
   const sk = fresh.filter(id => SK[id] && !S.eqSkill.includes(id))
                   .sort((a,b) => power(SK[b],'skill') - power(SK[a],'skill'));
   for(const id of sk){
-    if(S.eqSkill.length >= 8) break;
+    if(S.eqSkill.length >= skSlotMax()) break;        /* 222 — 자동 채움도 해금 칸까지만 */
     S.eqSkill.push(id); skillCd[id] = 0; changed = true;
   }
   /* 펫 3칸 */
@@ -18206,7 +18270,9 @@ function gmHintShop(box){
 function gmHintSkill(){
   for(const c of document.querySelectorAll('#bSk .sk-card'))
     if(!c.classList.contains('lk') && !c.classList.contains('dim')) return c;
-  return document.querySelector('#bSk .sk-slot.lock') || document.querySelector('#bSk .sk-slot');
+  /* 222 — 빈 칸은 이제 `.free`(해금) / `.lock`(미해금) 로 갈린다. 가리킬 곳은 «채울 수 있는» 칸이다 */
+  return document.querySelector('#bSk .sk-slot.free') || document.querySelector('#bSk .sk-slot.lock')
+      || document.querySelector('#bSk .sk-slot');
 }
 /* 06 장비 시트 부위 슬롯. full=1 이면 «장착된» 슬롯(→ 05 세부에서 강화), 아니면 빈 슬롯 */
 function gmHintEq(full){
@@ -19182,7 +19248,7 @@ function renderSt(){
     + 'DPS <b>' + fmt(stat.dps) + '</b> · 공격력 <b>' + fmt(stat.dmg) + '</b><br>'
     + '체력 <b>' + fmt(stat.maxHp) + '</b> · 재생 <b>' + fmt(stat.regen) + '/s</b><br>'
     + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/1.4).toFixed(2) + '</b><br>'
-    + '스킬 <b>' + S.eqSkill.length + '/8</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
+    + '스킬 <b>' + S.eqSkill.length + '/' + skSlotCap() + '</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
     + '<div class="sect"><h3>🏆 누적 보너스</h3><p>'
     + '공격 <b>×' + fmt(b.atk) + '</b> · 체력 <b>×' + fmt(b.hp) + '</b><br>'
     + '재생 <b>×' + fmt(b.regen) + '</b> · 골드 <b>×' + fmt(b.gold) + '</b> · 펫 <b>×' + b.pet.toFixed(2) + '</b></p></div>'
@@ -22301,16 +22367,27 @@ function renderSkill(){
 
   /* 2 장착 슬롯 8칸 — 앞에서부터 장착 스킬, 나머지는 잠금 슬롯 */
   h += '<div class="sk-eqp">';
+  const open = skSlotMax();                      /* 222 — 여기까지가 «해금된» 칸 */
   for(let i = 0; i < 8; i++){
     const id = eq[i], it = id ? SK[id] : null, L = 'left:' + (24 + i*125) + 'px';
+    /* 222 ① 자물쇠는 «미해금» 칸에만 — 해금된 빈 칸은 [+] 자리(`.free`)로 그리고 해금 스테이지를 적는다.
+           ② 해제는 [─] 뱃지(`[data-skun]`)에만 건다 — 구조에서는 슬롯 전체가 해제 버튼이라
+              아이콘·레벨 어디를 눌러도 장착이 풀렸다(주인 보고 «"-" 누른 게 아닌데 장착 해제»). */
     h += it
-      ? '<div class="sk-slot" data-skun="' + id + '" style="' + L
+      ? '<div class="sk-slot" data-skslot="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
         + '<b class="sk-si">' + it.ic + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
-        + '<s class="sk-eq m"></s></div>'
-      : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span></div>';
+        + '<s class="sk-eq m" data-skun="' + id + '"></s></div>'
+      : i < open
+        ? '<div class="sk-slot free" style="' + L + '"><span class="sk-plus"></span></div>'
+        : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span>'
+          + '<u class="sk-slk ol2">St.' + skSlotNeed(i) + '</u></div>';
   }
   h += '</div>';
+  /* 222 — 슬롯 줄 아래 한 줄 안내(해금 규칙을 화면에서 바로 읽을 수 있게) */
+  h += '<div class="sk-slnote ol3">' + (open >= 8
+        ? '스킬 슬롯 8칸 전부 해금'
+        : '슬롯 ' + open + '/8 · 다음 칸은 <b>스테이지 ' + skSlotNeed(open) + '</b> 도달 시 해금') + '</div>';
 
   /* 3 보유 스킬 격자 5열 — 86 으로 24종 = 5행(열 pitch 190 · 행 pitch 220 유지, 넘치면 안쪽 스크롤) */
   h += '<div class="sk-gp">';
@@ -22354,8 +22431,10 @@ function renderSkill(){
   setBody('bSk', h);
 }
 $('bSk').addEventListener('click', e => {
-  const un = e.target.closest('[data-skun]');
+  const un = e.target.closest('[data-skun]');       /* 222 — [─] 뱃지에만 걸린다 */
   if(un){ toggleEquip(SK[un.dataset.skun], 'skill'); save(); uiDirty = true; renderUI(); return; }
+  const sl = e.target.closest('[data-skslot]');     /* 슬롯 본체 = 상세 보기(해제 아님) */
+  if(sl){ showItem(sl.dataset.skslot); return; }
   const q = e.target.closest('[data-skeq]');
   if(q){ toggleEquip(SK[q.dataset.skeq], 'skill'); save(); uiDirty = true; renderUI(); return; }
   if(e.target.closest('[data-sksum]')){ goTab('shop'); return; }   /* 그 자리 소환 X → 10 상점 소환 탭 */
@@ -22392,11 +22471,13 @@ function renderPet(){
   for(let i = 0; i < 3; i++){
     const id = eq[i], it = id ? PT[id] : null, L = 'left:' + (336 + i*125) + 'px';
     h += it
-      ? '<div class="sk-slot" data-ptun="' + id + '" style="' + L
+      ? '<div class="sk-slot" data-ptslot="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
         + '<b class="sk-si">' + itemIcon(it) + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
-        + '<s class="sk-eq m"></s></div>'
-      : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span></div>';
+        + '<s class="sk-eq m" data-ptun="' + id + '"></s></div>'
+      /* 222 — 동료 3칸은 스테이지 해금이 없다 → 빈 칸은 자물쇠가 아니라 [+] 자리다.
+               해제도 스킬과 같이 [─] 뱃지에만 건다(슬롯 아무 데나 눌러 풀리던 것 차단) */
+      : '<div class="sk-slot free" style="' + L + '"><span class="sk-plus"></span></div>';
   }
   h += '</div>';
 
@@ -22440,8 +22521,10 @@ function renderPet(){
   setBody('bPet', h);
 }
 $('bPet').addEventListener('click', e => {
-  const un = e.target.closest('[data-ptun]');
+  const un = e.target.closest('[data-ptun]');       /* 222 — [─] 뱃지에만 걸린다 */
   if(un){ toggleEquip(PT[un.dataset.ptun], 'pet'); save(); uiDirty = true; renderUI(); return; }
+  const sl = e.target.closest('[data-ptslot]');     /* 슬롯 본체 = 상세 보기(해제 아님) */
+  if(sl){ showItem(sl.dataset.ptslot); return; }
   const q = e.target.closest('[data-pteq]');
   if(q){ toggleEquip(PT[q.dataset.pteq], 'pet'); save(); uiDirty = true; renderUI(); return; }
   /* 106 — 상점에 «동료 상자» 가 생겼다. 73 이 «막다른 길»(상점에 펫 카드가 없다)로 남긴 경로를

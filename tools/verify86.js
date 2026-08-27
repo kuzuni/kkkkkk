@@ -24,16 +24,16 @@ const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, consol
 /* 86 이 신설한 11종 — 기대 효과 축까지 같이 적는다 */
 const NEW = [
   { id:'stone',  g:0, axis:'dmg',  n:'돌팔매' },
-  { id:'vigor',  g:0, axis:'atk',  n:'기합' },
-  { id:'mend',   g:1, axis:'heal', n:'치유의 빛' },
+  { id:'vigor',  g:0, axis:'dmg',  n:'기합 파동' },
+  { id:'mend',   g:1, axis:'dmg',  n:'덩굴 가시' },
   { id:'arrow',  g:2, axis:'dmg',  n:'꿰뚫는 화살' },
-  { id:'haste',  g:2, axis:'rate', n:'신속의 축복' },
+  { id:'haste',  g:2, axis:'dmg',  n:'질풍참' },
   { id:'frost',  g:3, axis:'dmg',  n:'서리 연쇄' },
   { id:'gale',   g:4, axis:'dmg',  n:'폭풍의 칼날' },
-  { id:'ward',   g:4, axis:'def',  n:'수호의 결계' },
+  { id:'ward',   g:4, axis:'dmg',  n:'수호의 반격' },
   { id:'lance',  g:5, axis:'dmg',  n:'천벌의 창' },
   { id:'nova',   g:5, axis:'dmg',  n:'창세의 폭발' },
-  { id:'rage',   g:5, axis:'atk',  n:'광란' }
+  { id:'rage',   g:5, axis:'dmg',  n:'광란의 살기' }
 ];
 /* 구 세이브 호환을 위해 값이 바뀌면 안 되는 기존 13종 */
 const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orbit:[1,0,0.45],
@@ -62,6 +62,7 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
     ids: SKILLS.map(s => s.id),
     old: SKILLS.filter(s => !s.t).map(s => [s.id, s.g, s.cd, s.m]),
     sup: SKILLS.filter(s => s.sup).length,
+    buff: SKILLS.filter(s => s.t === 'buff').length,
     gradeLen: GRADE.length
   }));
   ok(st.len === 24, 'SKILLS.length === 24 (실측 ' + st.len + ')');
@@ -70,7 +71,10 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
   ok(st.over === 0, '스킬은 6등급까지만 쓴다 — 85 의 7·8등급(초월·불멸) 미적용 (초과 ' + st.over + '종)');
   const bad = st.old.filter(([id, g, cd, m]) => !OLD[id] || OLD[id][0] !== g || OLD[id][1] !== cd || OLD[id][2] !== m);
   ok(st.old.length === 13 && !bad.length, '기존 13종 id·등급·cd·m 불변 (어긋남 ' + bad.length + '건)');
-  ok(st.sup === 5, '보조(sup) 5종 — DPS 합산 제외 대상');
+  /* 166(2026-08-27, 주인 지시 «버프류 스킬은 없었으면 함») — 보조 5종을 직접 피해로 갈아치웠다.
+     이제 보조(sup)는 0종이고 24종 전부가 stat.dps 합산 대상이다. */
+  ok(st.sup === 0, '보조(sup) 0종 — 166 이후 전 종이 직접 피해다 (실측 ' + st.sup + ')');
+  ok(st.buff === 0, "t:'buff' 스킬 0종 (실측 " + st.buff + ')');
   NEW.forEach(x => ok(st.ids.includes(x.id), '신설 ' + x.n + '(' + x.id + ') 존재'));
 
   /* ---------------- [2] 기능 — 신설 11종 실동작 ---------------- */
@@ -127,18 +131,21 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
     table.push({ id: sk.id, n: sk.n, g: sk.g, axis: sk.axis, note, good });
   }
 
-  /* rage 는 2축(atk+rate) 이므로 따로 확인 */
+  /* 166 — 구 «광란 2축 버프» 검사는 폐기(버프 스킬이 없다). 대신 시전이 «적을 실제로 때리는가» 를 본다 */
   const rage = await p.evaluate(() => {
     sbufClear(); S.own = { rage: { n: 0, l: 1 } }; S.eqSkill = ['rage']; skillCd = {};
-    enemies.length = 0; player.dead = 0; player.x = WORLD.w / 2; player.y = WORLD.h / 2;
-    for (let i = 0; i < 3; i++) makeEnemy('zombie');
-    enemies.forEach(e => { e.born = 1; e.hp = e.max = 1e12; });
+    enemies.length = 0; bolts.length = 0; player.dead = 0; player.x = WORLD.w / 2; player.y = WORLD.h / 2;
+    for (let i = 0; i < 5; i++) makeEnemy('zombie');
+    enemies.forEach(e => { e.born = 1; e.hp = e.max = 1e12;
+                           e.x = player.x + (Math.random() * 160 - 80); e.y = player.y + (Math.random() * 160 - 80); });
+    const hp0 = enemies.reduce((a, e) => a + e.hp, 0);
     castSkill(SK.rage);
-    return { atk: sbuf.atk, rate: sbuf.rate };
+    return { links: bolts.length, dmg: hp0 - enemies.reduce((a, e) => a + e.hp, 0), buff: sbuf.atk + sbuf.rate };
   });
-  ok(rage.atk > 0 && rage.rate > 0, '광란은 2축 동시 버프 (피해 +' + Math.round(rage.atk * 100) + '% · 속도 +' + Math.round(rage.rate * 100) + '%)');
+  ok(rage.links > 0 && rage.dmg > 0 && rage.buff === 0,
+     '광란의 살기는 연쇄 피해다 — 링크 ' + rage.links + ' · 피해 ' + Math.round(rage.dmg) + ' · 버프 0');
 
-  /* 버프가 실제로 피해 계산에 곱해지는가 — 같은 스킬을 버프 전/후로 발동해 dmg 비교 */
+  /* 버프 «기계»(sbuf)는 남겨 뒀다 — 쓰는 스킬은 0종이지만 다른 계통이 쓸 수 있게 동작은 검사한다 */
   const bmul = await p.evaluate(() => {
     sbufClear(); S.own = { slash: { n: 0, l: 1 } }; S.eqSkill = ['slash']; markDirty();
     enemies.length = 0; player.dead = 0; player.x = WORLD.w / 2; player.y = WORLD.h / 2;

@@ -33,6 +33,9 @@ const FILE = 'file://' + SRC;
 
 /* 109 가 고친 5종과 설계 발수(주석·`hits` 와 일치해야 한다) */
 const CNT = { stone: 1, arrow: 2, frost: 4, gale: 12, lance: 3 };
+/* 166 — 버프 5종을 직접 피해로 갈아치우며 `cnt` 를 쓰는 스킬이 3종 늘었다(덩굴 가시·질풍참·광란의 살기).
+   위 CNT(109 가 고친 5종)는 이름·가방·08 상세 검사에 그대로 쓰고, «발수» 검사만 전 종으로 넓힌다. */
+const CNT_ALL = Object.assign({}, CNT, { mend: 3, haste: 3, rage: 5 });
 
 const R = [];
 const eq = (n, got, want) => R.push({ n, got: String(got), want: String(want), pass: String(got) === String(want) });
@@ -162,8 +165,8 @@ const probeNames = () => {
   /* ── ③ 발수 회귀 — cnt 값 + castGeneric 이 실제로 그만큼 만든다 ── */
   const cnts = await p.evaluate(() => SKILLS.filter(s => s.cnt !== undefined)
     .reduce((o, s) => (o[s.id] = s.cnt, o), {}));
-  Object.keys(CNT).forEach(id => eq('발수 · ' + id + '.cnt', cnts[id], CNT[id]));
-  eq('발수 · cnt 를 가진 스킬 수', Object.keys(cnts).length, Object.keys(CNT).length);
+  Object.keys(CNT_ALL).forEach(id => eq('발수 · ' + id + '.cnt', cnts[id], CNT_ALL[id]));
+  eq('발수 · cnt 를 가진 스킬 수', Object.keys(cnts).length, Object.keys(CNT_ALL).length);
   yes('발수 · `hits` 와 `cnt` 일치(proj/chain)', await p.evaluate(() =>
     SKILLS.filter(s => s.cnt !== undefined).every(s => s.hits === s.cnt)));
 
