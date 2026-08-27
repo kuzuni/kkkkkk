@@ -1850,6 +1850,40 @@
   .mbody .slot{background:#F7ECDA;border-color:#C8B091}
   .mbody .gbtn:disabled,.mbody .mini:disabled{background:#9E9E9E;color:#EFEFEF;box-shadow:none}
 
+  /* ── 179 승급전 팝업 본문 확대 (2026-08-27, 저장소 주인 지시 «글씨 너무 작으니까 2배로») ──
+     A5 공용 모달을 그대로 쓰되 **승급전 본문만** 2배로 키운다. 스코프를 `#modal` 이 아니라
+     본문 안 래퍼 `.pr179` 로 잡은 이유: `showModal()`/`closeModal()` 의 클래스 목록은
+     08·16·22·69·70 이 공유하는 자리라 여기서 늘리면 그 다섯 화면의 구간을 건드리게 된다.
+     `.mbody .pr179 p` 는 특이도 0-2-1 이라 `.mbody p`(0-1-1)를 확실히 이긴다.
+     **헤더(`.mhead h2`)는 2배 대상이 아니다** — 높이 91px 고정 바를 126 이 소유하고 있고
+     45.6 → 91.2 은 그 바를 통째로 넘긴다(본문 = `.mbody` 라는 뜻으로 읽었다. review §2). */
+  .mbody .pr179 p{font-size:48px;line-height:1.7}
+  /* 본문이 2배가 되면서 «전투력 2,000,000,000 / 1,000,000,000,000» 같은 긴 조건이 두 줄로 접히는
+     계급(플래티넘 이상)에서 `.mbox` 상한 1497px 을 10px 넘겼다. 글자를 도로 줄이는 대신
+     **베이지 본문 패딩**(65/48 = A5 공용값)을 승급전에서만 줄여 자리를 만든다 — 41px 확보. */
+  .mbody:has(.pr179){padding-top:40px;padding-bottom:32px}
+  /* 조건 상자 — 옛 인라인 스타일(#0e1428 · radius 20 · padding 18/22 · margin-top 18)을 클래스로
+     옮기고 글자와 같은 배율로 키운다. 글자만 2배로 하고 상자를 두면 글자가 상자를 뚫는다. */
+  .mbody .pr179 .pr-cond{text-align:left;background:#0e1428;border-radius:40px;
+    padding:36px 44px;margin-top:36px}
+  /* 상자만 남색이라 베이지 본문의 갈색 글자(`.mbody p{color:#5A4634}`)가 그대로 깔리면
+     남색 위 짙은 갈색이 된다 — 179 가 «안 보인다» 를 고치는 작업이므로 여기서 같이 뒤집는다 */
+  .mbody .pr179 .pr-cond p{color:#EADCC6}
+  .mbody .pr179 .pr-note{margin-top:32px}
+  /* 클리어 보상 — 코스튬 스프라이트(50 `cos-cv`) + 칭호. 라벨은 본문과 같은 48px 계열이되
+     «표제» 라 한 단 작게(40) 두고, 부제(등급·보유 효과)는 36 이다. */
+  .mbody .pr179 .pr-rw{margin-top:36px;background:#F7ECDA;border:3px solid #C8B091;
+    border-radius:40px;padding:26px 30px 30px}
+  .mbody .pr179 .pr-rw>h3{margin:0 0 20px;font-size:40px;line-height:40px;font-weight:900;color:#B4571E}
+  .mbody .pr179 .pr-rw-b{display:flex;align-items:center;justify-content:center;gap:28px}
+  .mbody .pr179 .pr-rw-c{flex:0 0 auto;width:150px;height:189px;display:flex;
+    align-items:flex-end;justify-content:center;background:#0e1428;border-radius:24px}
+  .mbody .pr179 .pr-rw-t{flex:0 1 auto;text-align:left}
+  .mbody .pr179 .pr-rw-t b{display:block;font-size:44px;line-height:1.3;font-weight:900}
+  .mbody .pr179 .pr-rw-t i{display:block;font-size:36px;line-height:1.45;font-style:normal;
+    font-weight:700;color:#7A6550}
+  .mbody .pr179 .pr-rw-t em{color:#B4571E;font-style:normal}
+
   /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
      껍데기는 A5 공용 모달을 그대로 쓰고, 08 에서만 다른 3가지만 `.sk8` 로 override 한다:
      딤 65%→55%, 본문 별무늬 없음(08 베이지 5구역 std 0.41~0.53 = JPEG 노이즈), 제목 잉크 46 → 49px.
@@ -18829,6 +18863,41 @@ function buyAvatar(a){
     + '보유 효과 — 공격 <b>+' + pct(a.atk) + '</b> · 체력 <b>+' + pct(a.hp) + '</b> · 골드 <b>+' + pct(a.gold) + '</b></p>');
 }
 
+/* ---- 179 승급전 «클리어 보상» (2026-08-27, 저장소 주인 추가 지시) --------------------
+   지시: «승급전 팝업에 클리어 시 지급되는 코스튬도 보여줄 것 — 스프라이트 미리보기 + 클리어 보상 라벨,
+   칭호도 지급되면 함께 표기». 표기만 하고 실제로는 안 주면 팝업이 거짓말이 되므로(ROUTINE «기능 완성
+   규칙») **표시와 지급을 이 함수 하나로 묶는다.**
+
+   ⚠ 작업 182(«코스튬 획득 = 승급전 클리어» 전면 전환)가 이 매핑의 주인이다. 182 를 잡는 세션은
+      아래 표를 **옮기거나 넓히되 두 벌로 늘리지 마라** — 표시(openPromo)와 지급(endPromo)이 같은
+      함수를 보고 있어야 «보여준 것과 준 것» 이 갈리지 않는다.
+
+   매핑 근거 — 기존 데이터가 이미 두 점을 못 박아 두었다. `COS_LIST` 의 조건 해금 중 계급 조건은
+   **av41 황혼 기사(영웅=등급 3) → `{k:'rank',v:3}`** 와 **av48 창천의 화신(신화=등급 5) → `{k:'rank',v:6}`**
+   둘뿐이다. 이 두 점을 지나는 가장 단순한 곡선이 «도전 계급 index r → 코스튬 등급 min(r,5)» 다
+   (r=3→3 ✓, r=6→5 ✓). 182 가 적어 둔 기본 규칙 «n 회차 승급 → 해당 등급 코스튬» 과도 같은 모양이고,
+   계급 8단(승급 7회) vs 코스튬 6등급의 수 차이는 최상위 3계급이 신화를 나눠 갖는 것으로 흡수된다.
+   1종씩 준다(182 가 «1종씩인지 묶음인지는 재량» 이라고 적어 둔 자리 — 묶음은 등급 하나가 12종이라
+   승급 한 번에 12개가 들어와 «다음 승급의 보상» 이 남지 않는다). */
+const PROMO_COS = {
+  1:'av18',   /* 🥈 실버        — 고급 은빛 창기사 */
+  2:'av31',   /* 🥇 골드        — 희귀 홍옥 기사단장 */
+  3:'av41',   /* 💠 플래티넘    — 영웅 황혼 기사   (COS_LIST 의 {k:'rank',v:3} 그대로) */
+  4:'av42',   /* 💎 다이아      — 전설 백금 성기사 */
+  5:'av47',   /* 🔱 마스터      — 신화 자수정 대군주 */
+  6:'av48',   /* 👑 그랜드마스터 — 신화 창천의 화신 (COS_LIST 의 {k:'rank',v:6} 그대로) */
+  7:'av5'     /* 🔥 챌린저      — 신화 신성 기사 */
+};
+/* 도전 계급 index → 그 승급전을 깨면 받는 코스튬(없으면 null) */
+const promoCos = ri => AV[PROMO_COS[ri]] || null;
+/* 승급 성공 시 실제 지급. 이미 갖고 있으면 아무것도 안 준다(중복 지급·가짜 «획득» 표기 방지) */
+function grantPromoCos(ri){
+  const a = promoCos(ri);
+  if(!a || cosOwn(a.id)) return null;
+  S.avatars[a.id] = 1;
+  return a;
+}
+
 /* 승급전 */
 function startPromo(){
   const r = nextRank();
@@ -18854,9 +18923,16 @@ function endPromo(win){
   enemies.length = 0;
   if(win){
     S.rank++;
+    /* 179 — 승급전 팝업이 «클리어 보상» 으로 보여 준 코스튬을 여기서 실제로 준다.
+       보여주기만 하고 안 주면 그 표기가 거짓이 된다(ROUTINE «기능 완성 규칙»).
+       ⚠ 182 는 이 한 줄을 지우지 말고 **넓혀라** — 표시(openPromo)와 지급이 같은 `PROMO_COS` 를 본다. */
+    const gotCos = grantPromoCos(S.rank);
     markDirty(); uiDirty = true; save();
     popup('🏅 승급 성공!', '<p><b style="font-size:32px">' + r.ic + ' ' + r.n + '</b> 달성!<br>'
-      + '계급 보너스 — 공격력 · 최대 체력 <b>+25%</b> (누적)<br>다음 계급에 도전해 보세요!</p>');
+      + '계급 보너스 — 공격력 · 최대 체력 <b>+25%</b> (누적)<br>'
+      + '칭호 <b>' + r.n + '</b> 획득!'
+      + (gotCos ? '<br>코스튬 <b style="color:' + GRADE[gotCos.g].c + '">' + gotCos.n + '</b> 획득!' : '')
+      + '<br>다음 계급에 도전해 보세요!</p>');
   }else{
     popup('💀 승급 실패', '<p>제한 시간 안에 <b>승급 수호자</b>를 처치하지 못했습니다.<br>더 성장한 뒤 다시 도전하세요!</p>');
   }
@@ -22468,15 +22544,28 @@ function openPromo(){
   const r = nextRank();
   if(!r){ notify('🏅 이미 최고 계급입니다! 🎉'); return; }
   const okS = S.best >= r.stage, okC = cp() >= r.cp;
-  showModal('<h2>🏅 승급전</h2>'
-    + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#ffd45e">' + r.ic + ' ' + r.n + '</b></p>'
-    + '<div style="text-align:left;background:#0e1428;border-radius:20px;padding:18px 22px;margin-top:18px">'
+  const ri = S.rank + 1;                 /* 도전 계급 index — nextRank() 가 가리키는 그 칸 */
+  /* 179 — 클리어 보상. 코스튬(스프라이트 미리보기) + 칭호. 칭호는 별도 데이터가 아니라
+     «도달한 계급 = 보유 칭호» 라서(renderProfile 의 `own = i <= S.rank`) 승급 자체가 지급이다. */
+  const rw = promoCos(ri), rwOwn = rw && cosOwn(rw.id);
+  showModal('<h2>🏅 승급전</h2><div class="pr179">'
+    + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#B4571E">' + r.ic + ' ' + r.n + '</b></p>'
+    + '<div class="pr-cond">'
+    /* 상자 배경이 남색(#0e1428)이라 여기만 «밝은» 초록·빨강을 그대로 쓴다(베이지 본문 톤이 아니다) */
     + '<p>최고 스테이지 <b style="color:' + (okS ? '#8ff0a8' : '#ff6b7f') + '">' + S.best + ' / ' + r.stage + '</b></p>'
     + '<p>전투력 <b style="color:' + (okC ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(cp()) + ' / ' + fmt(r.cp) + '</b></p></div>'
-    + '<p style="margin-top:16px">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
-    + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p>'
+    + '<div class="pr-rw"><h3>클리어 보상</h3><div class="pr-rw-b">'
+    + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
+            + rw.id + '" data-cossc="3"></canvas></div>' : '')
+    + '<div class="pr-rw-t">'
+    + (rw ? '<b style="color:' + GRADE[rw.g].c + '">' + rw.n + '</b>'
+            + '<i>' + GRADE[rw.g].n + ' 코스튬' + (rwOwn ? ' <em>(이미 보유)</em>' : '') + '</i>' : '')
+    + '<i>칭호 <em>' + r.n + '</em></i></div></div></div>'
+    + '<p class="pr-note">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
+    + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p></div>'
     + '<button class="gbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '>승급전 시작</button>'
     + '<button class="gbtn green" id="pclose">닫기</button>');
+  cosPaint($('mbox'));                   /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
   $('pclose').onclick = closeModal;
   $('pgo').onclick = startPromo;
 }
