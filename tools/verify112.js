@@ -101,10 +101,21 @@ const near = (n, got, want, tol) => R.push({
   yes('④ 공격력(stat.dmg) 이 실제로 올랐다', buy1.dmg > buy1.before.dmg);
   eq('④ 카드 레벨 표기 갱신', buy1.card, 'Lv. 1');
 
-  /* HUD 는 drawHud() 가 그린다 — 58 롤링 캐시를 밀어 놓고 한 프레임 그린다(LESSONS 111-2) */
+  /* HUD 는 drawHud() 가 그린다 — 58 롤링 캐시를 밀어 놓고 한 프레임 그린다(LESSONS 111-2)
+     212 — 작업 150 이 «골드만 알파벳 단위» 로 표기층을 갈라(`fmtG` 골드 전용 / `fmt` 나머지)
+     HUD 를 `$('goldN').textContent = fmtG(fxVal('gold'))` 로 바꿨는데 이 단언만 `fmt(S.gold)`
+     로 남아 게이트가 36/37 로 썩어 있었다(index.html 은 정상 — 게이트 부패).
+     ⓐ 표시값 = `fmtG(S.gold)`. 값의 출처를 `fxVal('gold')` 가 아니라 `S.gold` 로 잡는 이유는
+        바로 위에서 `fxDisp.gold = S.gold` 로 롤링 캐시를 밀어 둘이 같기 때문이고, 그래야
+        fxVal 경로가 망가져도(= HUD 가 엉뚱한 값을 그려도) 이 단언이 잡는다.
+     ⓑ 같은 부패가 다시 나면(표기가 `fmt` 로 되돌아가면) ⓐ 만으로도 잡히지만, 그때 «두 표기가
+        애초에 같아서 통과» 하는 일이 없도록 두 표기가 실제로 갈리는 크기인지도 못 박는다. */
   const hud = await p.evaluate(() => { fxDisp.gold = S.gold; drawHud();
-    return { txt: $('goldN').textContent, want: fmt(S.gold) }; });
-  eq('④ HUD 골드 = fmt(S.gold)', hud.txt, hud.want);
+    return { txt: $('goldN').textContent, want: fmtG(S.gold),
+             plain: fmt(S.gold), gold: S.gold }; });
+  eq('④ HUD 골드 = fmtG(S.gold)', hud.txt, hud.want);
+  yes('④ HUD 골드가 fmt 원시 표기와 갈린다(150 표기층 회귀 감지)',
+      hud.gold >= 1000 && hud.txt !== hud.plain);
 
   /* ── ⑤ x10 ── */
   const buy10 = await p.evaluate(async () => {
