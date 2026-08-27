@@ -243,6 +243,25 @@ async function frames(p, tag, stops) {
     console.log('[소환 탭 — 강제 상자(gm) 칸] gmBan() 이 null · 건너뜀');
   }
 
+  /* ⚑ 19회차 — 17회차 AN[17] «[무료] 버튼이 30장 어디에도 없다 — 사양 한 줄이 통째로 미검증».
+     «없다» 가 아니라 **표본에 안 들어왔다**가 맞다: 무료 링은 `.cbtn.b1:not(.lack)` 인데
+     ① 게이트·자동 플레이가 무료 횟수를 소진시키면 `.lack` 이 되어 링이 꺼지고
+     ② 소환 리스트가 굴러 있으면 그 버튼이 프레임 밖으로 밀린다.
+     무료 횟수를 채운 상태로 1번 카드를 화면 가운데에 세우고 **링 주기(0.9s)를 4등분**해 찍는다.
+     19회차에 신설한 가격 버튼 보조 링(b2·b3)도 같은 프레임에 들어온다 — 세 버튼의 위상차
+     (1/3 격자)를 한 장씩 비교할 수 있는 유일한 표본이다. */
+  const FREE_STOPS = [80, 305, 530, 755];
+  const freeOk = await p.evaluate(() => {
+    S.daily.freeSum = {};                 /* freeLeft() 는 «없는 키 → SHOP_FREE» 폴백이다 */
+    renderShopPage();
+    const c = document.querySelector('#shopList .shp-card');
+    if (c) c.scrollIntoView({ block: 'center' });
+    return [...document.querySelectorAll('#shopList .cbtn.b1')].filter(e => !e.classList.contains('lack')).length;
+  });
+  await p.waitForTimeout(400);
+  console.log('[소환 탭 — [무료] 링이 켜진 상태] 무료 버튼 ' + freeOk + '칸');
+  if (freeOk > 0) await frames(p, 'free', FREE_STOPS);
+
   console.log(errs.length ? '콘솔 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ') : '콘솔 에러 0');
   await b.close();
 })();

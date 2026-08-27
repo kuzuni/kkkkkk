@@ -950,6 +950,202 @@ async function ampCheck(p, hosts) {
       + (negInk && negInk.n ? negInk.rise.toFixed(2) : '?') + ' >= ' + INK_RISE_HI + ')');
     const back = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
     ok(!!(back && back.n && back.rise < INK_RISE_HI), '음성항 제거 후 원상 복귀');
+    /* ── §25 가격 버튼 [10회]·[30회] 보조 링 (19회차 신설) ────────────────
+       18회차 자체 실측(§23-7)이 잡은 «죽은 버튼» 의 실체다 — 소환 카드 버튼 3개 중
+       `b2`·`b3` 만 **자기 애니메이션이 0** 이라, 지나가는 본문 광택(4.8s)의 위상에 따라
+       한 카드 안에서 «어떤 버튼은 살아 있고 어떤 버튼은 죽어 보이는» ④ 일관성 감점이 났다.
+       17회차 두 비평가가 «죽은 섬» 으로 서로 다른 칸을 지목해(AM 은 게이지, AN 은 C3 버튼)
+       그때는 채택하지 않았는데, 둘이 본 것의 공통 원인이 여기였다.
+
+       ⚠ 이 절이 재는 것은 «있는가» 가 아니라 **«세기가 [무료]의 절반인가»** 다.
+       가격 버튼이 주 CTA([무료])만큼 세면 시선이 갈라진다 — 그래서 §17 의 한 벌 밴드(Δ22±3)를
+       그대로 쓰면 **안 된다**. 보조 링은 자기 밴드(Δ7~16)와 «[무료] 대비 30~65%» 로 잰다.
+       15회차 교훈 2 대로 음성항(애니메이션을 다시 끄면 Δ 가 무너진다)을 같이 둔다. */
+    console.log('§25 가격 버튼 보조 링 — 있는가 · 세기가 [무료]의 절반인가 · bbox Δ0 (19회차 신설)');
+    {
+      const RP_LO = 7, RP_HI = 15, RATIO_LO = .30, RATIO_HI = .65;
+      /* ⚠ 19회차에 이 절이 **두 번 틀렸다**. 자를 대기 전에 둘 다 되돌린다.
+         ⓐ §17 이 «뱃지 있는 상태» 를 만들려고 무료 횟수를 **소진**시켜 놓는다 → `.b1` 이 `.lack` 이 되어
+            링 규칙(`.b1:not(.lack)`)이 통째로 안 붙고, «카드 안 위상» 도 [무료] Δ 도 못 잰다.
+            §25 는 무료가 **켜진** 상태를 재야 하므로 여기서 되돌린다(`freeLeft()` 는 «없는 키 → SHOP_FREE» 폴백).
+         ⓑ 버튼 밖 2~14px 띠에는 **본문 광택(4.8s)·숨쉬기(2.8s)가 같이 지나간다.** 그것들을 켜 둔 채
+            재면 max−min 이 그 신호로 채워져, 링을 꺼도 Δ 가 **한 소수점까지 똑같이** 나온다
+            (첫 실행 실측: ON 17.47 / 링 끔 17.47 — 음성항이 이 오염을 그대로 잡아냈다).
+            15회차 교훈 1 «자를 댔는데 끝을 못 밟는다» 의 변주이자, «자를 안 댄 곳은 무결점» 의 반대 짝이다.
+            → **링만 남기고 나머지 jz122 를 끈 채** 잰다(격리). 격리 자체가 부작용을 낳지 않는다는 것은
+            음성항(링까지 끄면 Δ 가 무너진다)이 보증한다. */
+      await p.evaluate(() => { S.daily.freeSum = {}; renderShopPage(); });
+      await p.waitForTimeout(200);
+      /* ⚠ 격리에는 순서가 있다 — 19회차에 이것도 틀렸다(LESSONS 60-⑤ 첫 함정의 재발).
+         `seek()` 가 한 번이라도 `pause()` 한 CSS 애니메이션은 **API 소유**가 되어, 규칙을 지워도
+         취소되지 않는다. 그래서 «animation-name:none 만» 으로 만든 음성항은 링이 그대로 살아 있어
+         ON 과 **소수점까지 같은 값**을 냈다(둘 다 15.86). 반대로 cancel 만 하면, 규칙이 그대로일 때
+         UA 는 애니메이션을 다시 만들지 않아 대상까지 죽는다(둘 다 0).
+         → ① 전부 끄고 ② cancel 로 API 소유분을 걷어낸 뒤 ③ **그 다음에** 대상만 다시 켠다
+           (computed animation-name 이 «바뀌어야» 새 애니메이션이 생긴다). 이 순서로 음성항이 0 이 된다. */
+      const isoOn = async sel => {
+        await p.evaluate(() => {
+          const st = document.getElementById('v122iso25') || document.createElement('style');
+          st.id = 'v122iso25';
+          st.textContent = '*,*::before,*::after{animation-name:none !important}';
+          document.head.appendChild(st);
+          document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
+        });
+        if (sel) await p.evaluate(s => {
+          const st = document.getElementById('v122iso25');
+          st.textContent += s + '{animation-name:' + (/b1/.test(s) ? 'jz122Ring' : 'jz122RingP') + ' !important}';
+        }, sel);
+      };
+      /* 격리를 풀 때도 순서가 있다. 대상 링은 seek 가 pause 해서 **API 소유**가 된 상태인데,
+         스타일만 지우면 그 링의 computed animation-name 은 그대로(jz122RingP)라 소유가 안 풀린다
+         — 뒤 절이 «멈춘 링» 을 보게 된다. 이름을 한 번 none 으로 **바꿨다가** 되돌려 새 애니메이션을
+         만들게 한다(다른 요소들은 격리 규칙이 지워지는 것만으로 이름이 바뀌어 저절로 새로 산다). */
+      const isoOff = async () => {
+        await p.evaluate(() => {
+          const s = document.getElementById('v122iso25');
+          if (s) s.textContent = '*,*::before,*::after{animation-name:none !important}';
+          document.getAnimations().forEach(a => { try { a.cancel(); } catch (_) {} });
+        });
+        await p.evaluate(() => { const s = document.getElementById('v122iso25'); if (s) s.remove(); });
+        await p.waitForTimeout(60);
+      };
+      /* ① 10칸(5카드 × b2·b3) 전부에 `jz122RingP` 가 걸렸는가 — 선언이 아니라 computed 로 본다 */
+      const anim = await p.evaluate(() => [...document.querySelectorAll('#shopList .shp-card')]
+        .flatMap(c => ['b2', 'b3'].map(k => {
+          const e = c.querySelector('.cbtn.' + k);
+          return e ? getComputedStyle(e).animationName : 'none';
+        })));
+      ok(anim.length >= 8 && anim.every(v => v === 'jz122RingP'),
+        '가격 버튼 ' + anim.length + '칸 전부 jz122RingP (' + anim.filter(v => v === 'jz122RingP').length + '/' + anim.length + ')');
+      /* ② 카드 안 위상 격자 — b1↔b2↔b3 가 각각 주기의 1/3(33.3%) 만큼 벌어졌는가.
+         `--jz-per` 배율이 걸리므로 «초» 가 아니라 **주기 대비 비율**로 잰다. */
+      const ph = await p.evaluate(() => {
+        const c = document.querySelector('#shopList .shp-card'); if (!c) return null;
+        const g = k => {
+          const e = c.querySelector('.cbtn.' + k); if (!e) return null;
+          const s = getComputedStyle(e);
+          const T = parseFloat(s.animationDuration) * (/ms$/.test(s.animationDuration) ? .001 : 1);
+          const d = parseFloat(s.animationDelay) * (/ms$/.test(s.animationDelay) ? .001 : 1);
+          return T > 0 ? { T, d } : null;
+        };
+        const b1 = g('b1'), b2 = g('b2'), b3 = g('b3');
+        if (!b1 || !b2 || !b3) return null;
+        const frac = (a, b) => { const v = Math.abs((a.d - b.d) / a.T % 1); return +(Math.min(v, 1 - v) * 100).toFixed(1); };
+        return { p12: frac(b1, b2), p23: frac(b2, b3), p13: frac(b1, b3) };
+      });
+      if (ph) {
+        console.log('    · 카드 안 위상차 b1↔b2 ' + ph.p12 + '% | b2↔b3 ' + ph.p23 + '% | b1↔b3 ' + ph.p13 + '%');
+        ok([ph.p12, ph.p23, ph.p13].every(v => v >= 30),
+          '카드 안 맞닿은 3칸이 전부 위상 규약(≥33%, 오차 3%p) 안 — 최소 '
+          + Math.min(ph.p12, ph.p23, ph.p13) + '%');
+      } else ok(false, '카드 안 위상을 못 읽었다(b1·b2·b3 중 하나가 없다)');
+      /* ②-2 본문 전면 광택의 **카드 사이** stride — 19회차에 0.2T → 0.4T 로 옮긴 자리(2인 일치).
+         자를 안 두면 다음 세션이 딜레이 다섯 줄 중 하나만 고쳐도 아무도 모른다. */
+      const swPh = await p.evaluate(() => {
+        const cs = [...document.querySelectorAll('#shopList .shp-card')].slice(0, 5).map(c => {
+          const s = getComputedStyle(c.querySelector('.cfr'), '::after');
+          const num = v => parseFloat(v) * (/ms$/.test(v) ? .001 : 1);
+          return { T: num(s.animationDuration), d: num(s.animationDelay) };
+        });
+        if (cs.length < 2 || !cs[0].T) return null;
+        const T = cs[0].T;
+        const frac = (a, b) => { const v = Math.abs((a - b) / T % 1); return +(Math.min(v, 1 - v) * 100).toFixed(1); };
+        return { T, nb: cs.slice(1).map((c, i) => frac(c.d, cs[i].d)) };
+      });
+      if (swPh) {
+        console.log('    · 본문 전면 광택(T=' + swPh.T + 's) 맞닿은 카드 위상차 ' + swPh.nb.join('% / ') + '%');
+        ok(swPh.nb.every(v => v >= 33), '본문 전면 광택도 맞닿은 쌍 ≥33% — 최소 ' + Math.min(...swPh.nb)
+          + '% (19회차 이전 20.0% · AO[1]·AP[7] 2인 일치)');
+      } else ok(false, '본문 전면 광택 위상을 못 읽었다');
+      /* ③ 버튼 밖 2~14px 띠의 Δ루마 — §17 과 같은 자, 밴드만 다르다 */
+      const bandAmp = async (sel, per, phases) => {
+        const clip = await p.evaluate(s => {
+          const e = document.querySelector(s); if (!e) return null;
+          e.scrollIntoView({ block: 'center' });
+          const r = e.getBoundingClientRect();
+          const x = Math.round(r.x) - 14, y = Math.round(r.y) - 14;
+          const w = Math.round(r.width) + 28, h = Math.round(r.height) + 28;
+          if (x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight) return null;
+          return { x, y, width: w, height: h, iw: Math.round(r.width), ih: Math.round(r.height) };
+        }, sel);
+        if (!clip) return null;
+        const { iw, ih, ...box } = clip, vals = [];
+        for (let i = 0; i < phases; i++) {
+          const b64 = (await shotAt(p, Math.round(per * i / phases), box)).toString('base64');
+          vals.push(await p.evaluate(async ([src, w, h]) => {
+            const img = new Image();
+            await new Promise(res => { img.onload = res; img.src = 'data:image/png;base64,' + src; });
+            const c = document.createElement('canvas');
+            c.width = img.width; c.height = img.height;
+            const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+            const d = g.getImageData(0, 0, c.width, c.height).data;
+            let s = 0, n = 0;
+            for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+              if (x >= 14 && x < 14 + w && y >= 14 && y < 14 + h) continue;
+              if (x < 2 || y < 2 || x >= c.width - 2 || y >= c.height - 2) continue;
+              const j = (y * c.width + x) * 4;
+              s += .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]; n++;
+            }
+            return n ? +(s / n).toFixed(2) : null;
+          }, [b64, iw, ih]));
+        }
+        const v = vals.filter(x => x != null);
+        return v.length ? +(Math.max(...v) - Math.min(...v)).toFixed(2) : null;
+      };
+      await isoOn('#shopList .shp-card .cbtn.b2');
+      const dP = await bandAmp('#shopList .shp-card .cbtn.b2', 900, 12);
+      await isoOn('#shopList .shp-card .cbtn.b1');
+      const dF = await bandAmp('#shopList .shp-card .cbtn.b1', 900, 12);
+      await isoOff();
+      console.log('    · [10회] 보조 링 Δ' + dP + ' | 같은 카드 [무료] 링 Δ' + dF
+        + ' → 비 ' + (dP != null && dF ? (dP / dF).toFixed(2) : '?') + '  (둘 다 링만 남긴 격리 측정)');
+      ok(dP != null && dP >= RP_LO && dP <= RP_HI,
+        '보조 링 Δ루마 ' + dP + ' 가 보조 밴드(' + RP_LO + '~' + RP_HI + ') 안');
+      ok(dP != null && dF > 0 && dP / dF >= RATIO_LO && dP / dF <= RATIO_HI,
+        '보조 링이 [무료]의 ' + (dP != null && dF ? Math.round(dP / dF * 100) : '?') + '% — 주 CTA 우위 유지('
+        + (RATIO_LO * 100) + '~' + (RATIO_HI * 100) + '%)');
+      /* ④ bbox Δ0 — box-shadow 만 움직이므로 버튼 기하·히트영역은 한 픽셀도 안 변해야 한다
+         (⚠ 이 자리에서 transform 을 쓰면 VERIFY102 가 깨진다 — 작업 136 이 데인 자리) */
+      const brects = () => p.evaluate(() => [...document.querySelectorAll('#shopList .cbtn')]
+        .map(e => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(v => v.toFixed(2)).join(','); }));
+      await seek(p, 0); const r0 = await brects();
+      await seek(p, 300); const r1 = await brects();
+      await seek(p, 765); const r2 = await brects();
+      const rdiff = r0.map((v, i) => (v === r1[i] && v === r2[i]) ? null : v + ' → ' + r1[i] + ' / ' + r2[i]).filter(Boolean);
+      ok(r0.length >= 8 && rdiff.length === 0, '소환 버튼 bbox 3위상 동일 (' + r0.length + '칸)'
+        + (rdiff.length ? ' — ' + rdiff.slice(0, 2).join(' ;; ') : ''));
+      /* ⑤ 음성항 — 같은 격리 상태에서 링까지 끄면 Δ 가 무너져야 한다.
+         (이 음성항이 19회차 첫 실행에서 «자가 링을 안 보고 있다» 를 잡아낸 자다 — 없었으면
+          Δ17.47 을 «보조 링이 세다» 로 읽고 진짜 세기를 못 본 채 상수만 만졌을 것이다.) */
+      await isoOn(null);
+      const dNeg = await bandAmp('#shopList .shp-card .cbtn.b2', 900, 12);
+      ok(dNeg != null && dNeg < RP_LO,
+        'ⓝ 음성항 — 격리 상태에서 링까지 끄면 Δ 가 ' + dNeg + ' 로 무너진다 (< ' + RP_LO + ')');
+      await isoOn('#shopList .shp-card .cbtn.b2');
+      const dBack = await bandAmp('#shopList .shp-card .cbtn.b2', 900, 12);
+      await isoOff();
+      ok(dBack != null && dBack >= RP_LO && dBack <= RP_HI, 'ⓝ 원상 복귀 — Δ' + dBack);
+
+      /* ⑥ 버튼 글자 잉크 — §24 는 **헤더 제목**만 봤다. 19회차 AP[2] 가 그 밖(가격 버튼)에서
+         잉크 상승 +9~11 을 쟀고, «자를 안 댄 곳은 자동으로 무결점» 이 다섯 번째로 재발했다.
+         ⚠ 다만 AP 의 자는 **`.cost` 상자 전체의 luma<40** 이라 글자 획 말고 가격 알약(`.pan`)·젬
+         아이콘의 어두운 화소까지 같이 센다. 내 실측: 글자 z-index 를 2 → 9 로 올려도 상승은
+         9.04 → 8.80 으로 **안 움직였고**(광택 위였다면 0 이 됐어야 한다), `.pan` 을 빼면 3.78 로 떨어졌다.
+         → 여기서는 **획만 있는 라벨 행**(`.lab`)에 자를 대 회귀를 막고, 가격 행의 잔여분은
+         review 19회차에 수치로 남겨 20회차가 «알약을 뺀 마스크» 로 다시 판정한다. */
+      const LAB_HI = 3.0;
+      const labStops = [40, 280, 520, 760, 1000, 1240, 1480, 1720, 1960, 2200, 2440, 2680, 2920, 3160, 3400, 3640, 3880, 4120, 4360, 4600];
+      for (const [nth, key] of [[1, 'b1'], [1, 'b3'], [4, 'b3']]) {
+        const sel = '#shopList .shp-card:nth-child(' + nth + ') .cbtn.' + key + '>.lab';
+        const r = await inkRise(p, sel, labStops);
+        if (r && r.n) {
+          console.log('    · 칸' + nth + ' ' + key + ' 라벨 잉크 ' + r.n + 'px · 한 주기 최대 상승 ' + r.rise.toFixed(2));
+          ok(r.rise < LAB_HI, '칸' + nth + ' ' + key + ' 라벨 잉크 상승 ' + r.rise.toFixed(2) + ' < ' + LAB_HI
+            + ' (본문 전면 광택이 버튼 글자를 못 깎는다)');
+        } else ok(false, '칸' + nth + ' ' + key + ' 라벨 잉크 마스크를 못 떴다');
+      }
+    }
+
     await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
     await p.waitForTimeout(200);
   }

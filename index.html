@@ -6406,10 +6406,16 @@
     transform:skewX(-16deg);translate:-100% 0;
     animation:jz122Sweep calc(var(--jz-sw2) * var(--jz-per)) linear infinite;
     animation-delay:calc(var(--jz-sw2) * -.5 * var(--jz-per))}
-  .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.7 * var(--jz-per))}
-  .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.9 * var(--jz-per))}
-  .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.1 * var(--jz-per))}
-  .shp-card:nth-child(5)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.3 * var(--jz-per))}
+  /* ⚑ 19회차 — **stride 0.2T → 0.4T(2/5)**. 두 비평가가 독립으로 같은 값을 쟀다:
+     AO[1] «칸3[t]=칸2[t+960ms], 칸1[t]=칸2[t−960ms] 가 표본 6개 전부 ±2px 이내 → 인접 위상차
+     정확히 960ms = 0.200T» · AP[7] «칸2 가 칸1 보다 960ms(0.200T) 선행, 칸3 1920, 칸4 2880».
+     위상 규약(맞닿은 쌍 ≥33%) 대비 −39% 다. 헤더 띠·[무료] 링·19회차 보조 링이 전부 2/5 인데
+     본문 전면 광택만 1/5 였다 — 16·18회차가 «한 벌» 로 통일한 규칙에서 이 한 줄만 빠져 있었다.
+     0.4T 로 옮기면 맞닿은 쌍 40% · 건너뛴 쌍 20% 로 헤더와 **같은 값**이 된다. */
+  .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.9 * var(--jz-per))}
+  .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.3 * var(--jz-per))}
+  .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.7 * var(--jz-per))}
+  .shp-card:nth-child(5)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -2.1 * var(--jz-per))}
 
   /* ── ①-4 무료 횟수가 남은 카드의 [10회 소환(무료)] 버튼 — 펄스 링(0.9s) ──
      «남았는가» 는 102 의 `.lack` 이 이미 들고 있다(syncShopSumBtns). 상태를 두 번 적지 않는다.
@@ -6448,6 +6454,44 @@
   .shp-card:nth-child(3) .cbtn.b1:not(.lack){animation-delay:calc(-.72s * var(--jz-per))}
   .shp-card:nth-child(4) .cbtn.b1:not(.lack){animation-delay:calc(-1.08s * var(--jz-per))}
   .shp-card:nth-child(5) .cbtn.b1:not(.lack){animation-delay:calc(-1.44s * var(--jz-per))}
+
+  /* ── ①-4b 가격 버튼 [10회]·[30회] — 보조 펄스 링(0.9s · 카드 안 1/3 격자) ──
+     ⚑ 19회차 신설. 18회차 자체 실측(§23-7)이 «소환 카드 버튼 3개 중 b2·b3 는 어느 카드에서도
+     자기 애니메이션이 0» 임을 잡았다 — 지나가는 본문 광택(4.8s)에만 기대므로 위상에 따라
+     «이 버튼만 죽었다» 로 읽혔다. 17회차 두 비평가가 «죽은 섬» 으로 서로 다른 칸을 지목한
+     (그래서 그때는 채택하지 않은) ④ 감점의 실체가 여기였다.
+     ⚠ 이 자리에서 `rect` 를 흔들면 **VERIFY102 가 깨진다**(작업 136 이 데인 자리) —
+     `box-shadow` 만 쓴다. transform·width·padding 금지. bbox·히트영역 Δ0 이다.
+     ⚠ `.cbtn` 의 기본 box-shadow 는 **좌우 7px 안쪽 링**이다. box-shadow 는 목록 전체가
+     교체되므로 키프레임마다 그 두 항을 같이 적어야 링이 지워지지 않는다(gm 글로우와 같은 함정).
+     세기는 [무료]의 절반(.42/.34)이다 — 주 CTA 는 [무료]고, 가격 버튼은 «살아 있다» 만 읽히면 된다.
+     색은 102 의 상태색을 따른다(rich 노랑 246,239,62 / lack 은색 210,210,210). */
+  /* 세기 .42/.34 는 첫 실측에서 [무료] 대비 **73%** 였다(격리 Δ 15.86 vs 21.64) — «절반» 이 아니다.
+     알파는 같은 바탕에서 Δ루마에 거의 비례하므로 .42 × (10.8/15.86) ≈ .28 로 눌러 50% 를 맞춘다. */
+  .shp-card .cbtn:is(.b2,.b3){--jz-pc:246,239,62;--jz-ring:.28;
+    animation:jz122RingP calc(.9s * var(--jz-per)) ease-out infinite}
+  .shp-card .cbtn:is(.b2,.b3).lack{--jz-pc:210,210,210;--jz-ring:.23}
+  @keyframes jz122RingP{
+    0%{box-shadow:inset 7px 0 0 var(--ring),inset -7px 0 0 var(--ring),
+      0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(var(--jz-pc),calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(var(--jz-pc),calc(.92 * var(--jz-ring,1) * var(--jz-glow)))}
+    85%{box-shadow:inset 7px 0 0 var(--ring),inset -7px 0 0 var(--ring),
+      0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(var(--jz-pc),calc(var(--jz-floor,.60) * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 calc(26px * var(--jz-amp)) rgba(var(--jz-pc),0)}
+    100%{box-shadow:inset 7px 0 0 var(--ring),inset -7px 0 0 var(--ring),
+      0 0 calc(30px * var(--jz-amp)) calc(23px * var(--jz-amp)) rgba(var(--jz-pc),calc(.95 * var(--jz-ring,1) * var(--jz-glow))),
+      0 0 0 0 rgba(var(--jz-pc),0)}}
+  /* 위상 — 카드 **사이**는 [무료]와 같은 2/5 격자(−.36s), 카드 **안** 3칸은 1/3 격자(−.3s).
+     맞닿은 쌍이 b1↔b2 33.3% · b2↔b3 33.3% · b1↔b3 33.3% 로 위상 규약(≥33%) 하한을 정확히 밟고,
+     세로로 맞닿은 카드 사이 같은 칸끼리는 40% 다. 카드 딜레이는 `--jz-cd` 한 자리로 모은다
+     (b1 의 기존 5줄은 건드리지 않는다 — 값이 같아 통일해도 되지만 회귀 위험을 지지 않는다). */
+  .shp-card{--jz-cd:0s}
+  .shp-card:nth-child(2){--jz-cd:-.36s}
+  .shp-card:nth-child(3){--jz-cd:-.72s}
+  .shp-card:nth-child(4){--jz-cd:-1.08s}
+  .shp-card:nth-child(5){--jz-cd:-1.44s}
+  .shp-card .cbtn.b2{animation-delay:calc((var(--jz-cd) - .3s) * var(--jz-per))}
+  .shp-card .cbtn.b3{animation-delay:calc((var(--jz-cd) - .6s) * var(--jz-per))}
 
   /* ── ①-5 73 «강제 상자»(가이드 미션이 지목한 상자) — 테두리 글로우 호흡 ──
      테두리 레이어(`.cfr`)가 받는다. 안쪽 립 + 바깥 번짐 둘 다 한 선언에 넣어야
