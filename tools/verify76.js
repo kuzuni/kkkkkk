@@ -5,7 +5,8 @@
      §1 카드 4장 — 순서 무기→방패→목걸이→스킬 · 이름에 «방어구» 없음 · 목걸이 카드 색 테마 4번째 톤.
      §2 목걸이 10연 실동작 — 다이아 1,000 차감 · S.cnt.sumEquip +10 · S.sum.amulet.exp 증가 ·
         획득이 전부 목걸이 부위(EQUIPS slot==='amulet').
-     §3 목걸이 무료 10연 2회 소진 — 2→1→0, 3번째는 «무료 소환 소진» 팝업 + 상태 불변.
+     §3 목걸이 무료 10연 2회 소진 — 2→1→0, 3번째는 «무료 소환 소진» 안내 + 상태 불변.
+        (218 — 안내 자리는 149 이후 팝업이 아니라 `#fxl .fx-toast` 다. 아래 §3 주석 참조)
      §4 구 세이브 호환 — ⓐ freeSum 에 amulet 키 없음 → freeLeft 가 SHOP_FREE 폴백 + dailyCheck 가 채움
         ⓑ S.sum 에 amulet 없음 → load() 가 {lv:1,exp:0} 로 채움
         ⓒ 가이드 gv≤2 · idx≥6 → idx+1 이관, idx<6 은 그대로, gv=3 은 무이관, idx=20(완주) → GUIDE.length 클램프
@@ -86,6 +87,21 @@ async function launchAny(){
   ok(buy.allAmu, '획득 아이템 전부 목걸이 부위');
 
   /* ── §3 무료 10연 2회 소진 ───────────────────────────────────── */
+  /* 218 (2026-08-27) — 소진 단언이 «모달» 을 보고 있어 굳어 있었다(22/23, `got` 이 빈 팝업).
+     149(주인 지시)가 «부족·소진·잠김 같은 한 줄 안내는 팝업이 아니라 토스트» 로 뒤집은 뒤라
+     `$('modal').classList.contains('on')` 은 원리적으로 항상 false 다 — 215(`verify123`)·
+     214(`verify94`)·217(`verify116`) 과 같은 계열의 게이트 부패다.
+     `tools/probe218.js` 로 실측해 «진짜 회귀» 를 먼저 배제했다: 소진 클릭은 지금도
+     `#fxl .fx-toast` 에 «목걸이 무료 소환 소진 — 내일 충전» 을 띄우고 다이아·획득 수는 안 변한다.
+     LESSONS 185-④ 대로 묻는 것(«소진되면 더 안 나가고 화면이 그 이유를 말하는가»)은 그대로 두고
+     재는 자리만 `.modal` → `.fx-toast` 로 옮긴다.
+       · 기대 문구를 리터럴로 박지 않는다(185-①) — 상자 이름은 `BANNERS.amulet.n` 에서 런타임 계산한다
+         (173 이 «동료»→«펫» 으로 개명했듯 이름은 바뀐다. 횟수·획득 수도 `SHOP_FREE` 에서 센다).
+       · 클릭과 판정을 가른다 — 토스트는 시간에 걸려 있다(760ms 퇴장 시작 · 1060ms 제거) → 300ms(185-⑥).
+         probe218 실측: t=0~500ms 온전, t=700ms `out`, t=900ms 제거. 300ms 는 양쪽에 여유가 있다.
+       · 소진 클릭 «전» 에 앞 회차의 토스트를 치운다 — `fxToast` 는 4장부터 드롭해서(`stack > 3`)
+         쌓인 채로 재면 «안내 없음» 으로 오독한다.
+       · «소진 안내는 팝업이 아니다» 를 같이 박는다 — 팝업으로 되돌아가면 그 자리에서 잡힌다. */
   console.log('§3 목걸이 무료 10연 — 2회 소진 후 차단');
   const free = await p.evaluate(() => {
     Object.assign(S, DEF());
@@ -94,21 +110,38 @@ async function launchAny(){
     renderShopPage();
     const seq = [freeLeft('amulet')];
     const eq0 = S.cnt.sumEquip;
-    for (let k = 0; k < 3; k++) {
+    for (let k = 0; k < SHOP_FREE; k++) {        /* 무료 잔량을 0 까지 태운다 */
       closeModal && closeModal();
       /* 소환 때마다 renderShopPage() 가 innerHTML 재렌더 — 노드를 매번 다시 잡아야
          위임 리스너(#shopList)까지 버블이 산다(떼어진 노드 click 은 무음 무효) */
       document.querySelector('#shopList .shp-card:nth-child(3) [data-shfree]').click();
       seq.push(freeLeft('amulet'));
     }
-    return { seq, got: S.cnt.sumEquip - eq0, dia: S.dia,
-             modalOn: $('modal').classList.contains('on'),
-             modalTxt: $('mtitle').textContent + ' ' + $('mbox').textContent };
+    closeModal && closeModal();
+    document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+    const n = +document.querySelector('#shopList .shp-card:nth-child(3) [data-shfree]').dataset.shn;
+    return { seq, eq0, name: BANNERS.amulet.n, free: SHOP_FREE, want: SHOP_FREE * n };
   });
-  ok(free.seq.join(',') === '2,1,0,0', `무료 횟수 2→1→0→0 (실제 ${free.seq.join(',')})`);
-  ok(free.got === 20 && free.dia === 0, `무료로 20개 획득 · 다이아 0 유지 (획득 ${free.got})`);
-  ok(free.modalOn && /무료 소환 소진/.test(free.modalTxt) && /목걸이/.test(free.modalTxt),
-    '3번째는 «무료 소환 소진» 팝업 (목걸이 명시)');
+  /* 소진(잔량 0) 상태에서 한 번 더 — 149 이후 안내는 토스트라 클릭과 판정을 갈라야 한다 */
+  await p.evaluate(() => { document.querySelector('#shopList .shp-card:nth-child(3) [data-shfree]').click(); });
+  await p.waitForTimeout(300);
+  const blocked = await p.evaluate(() => ({
+    left: freeLeft('amulet'), got: S.cnt.sumEquip, dia: S.dia,
+    toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
+    modal: !!document.querySelector('.modal.on, #modal.on')
+  }));
+  const seq = [...free.seq, blocked.left].join(',');
+  const wantSeq = [...Array(free.free + 1).keys()].map(i => free.free - i).concat(0).join(',');
+  ok(seq === wantSeq, `무료 횟수 ${wantSeq.replace(/,/g, '→')} (실제 ${seq.replace(/,/g, '→')})`);
+  ok(blocked.got - free.eq0 === free.want && blocked.dia === 0,
+    `무료로 ${free.want}개 획득 · 다이아 0 유지 (획득 ${blocked.got - free.eq0})`);
+  ok(blocked.toast.includes('무료 소환 소진') && blocked.toast.includes(free.name),
+    `3번째는 «무료 소환 소진» 안내 (149 토스트 — «${free.name}» 명시) [${blocked.toast}]`);
+  ok(!blocked.modal, '소진 안내는 팝업이 아니다 (149)');
+  await p.evaluate(() => {
+    document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+    document.querySelectorAll('#modal.on, .modal.on').forEach(m => m.classList.remove('on'));
+  });
 
   /* ── §4 구 세이브 호환 ───────────────────────────────────────── */
   console.log('§4 구 세이브(3상자 시절) 마이그레이션');
