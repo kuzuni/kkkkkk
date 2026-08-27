@@ -26,10 +26,12 @@ const path = require('path');
 const TAG = process.argv[2] || 'r1';
 const OUT = path.resolve(__dirname, '../docs/shots');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
-const SLOW = 1500;   /* knight 를 뺀 아틀라스 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간 */
+const SLOW = 2800;   /* knight 를 뺀 아틀라스 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간.
+                        넉넉히 잡는 이유: 로드마다 브라우저가 100~1500ms 씩 흔들려서, 로딩 화면이
+                        짧게 살면 표본 한두 장이 «이미 끝난 뒤» 에 찍힌다(빈 무대로 나온다). */
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
 /* 등장 시작(#ldHero.on) 기준 표본 시각(ms). 1~5 = 등장 300ms 구간 · 6~7 = 선 뒤 대기(idle) · 8 = 전환 */
-const OFF = [15, 85, 155, 225, 300, 470, 900, null];   /* null = «.out 이 붙은 순간 + 55ms»(전환) */
+const OFF = [20, 90, 160, 235, 320, 440, 900, null];   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
 const N = OFF.length;
 
 (async () => {

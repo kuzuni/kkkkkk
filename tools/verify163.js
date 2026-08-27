@@ -31,7 +31,12 @@ const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${
 const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
-const GATE_MS = 800;   /* 저장소 게이트들의 «goto 후 대기» 기준선 */
+/* ★ 기준선 850ms 의 유도(실측). 이 저장소의 게이트·하네스는 `goto(waitUntil:'load')` 뒤에 대기한다.
+   load 이벤트는 아틀라스까지 다 받은 **550ms**(`tools/probe163.js` 로 잰 값)에 뜨고,
+   goto 뒤 **최단 대기가 300ms**(verify78·verify113 — 둘 다 DOM 검사라 `.thru` 로 통과한다),
+   실제로 **화면을 찍는** 하네스는 400ms 이상(cap113·scan116·verify125 …)이다.
+   → 가장 이른 «화면을 읽는» 시각 ≈ 850ms. 오버레이는 그 전에 **안 보여야** 한다. */
+const GATE_MS = 850;
 
 /* ★ 계측이 대상을 흔든다 — 두 벌로 나눈 이유.
    1차 게이트는 «전이 시각 관찰 + rAF 궤적 추적» 을 한 페이지에서 같이 했다. 그 rAF 루프가
@@ -57,25 +62,6 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     look();
   };
   boot();
-};
-
-const WATCH_X = () => {                          /* 궤적 전용 — 시각은 안 따진다 */
-  window.__tr = [];
-  /* ★ 이 추적 rAF 는 ldTick 보다 **먼저** 등록돼 있어서, 한 프레임 안에서 ldTick 이 갱신하기
-     «전» 값을 읽는다. 즉 지금 읽는 x 는 **직전 프레임**의 것이다. 그래서 시각도 직전 프레임의
-     타임스탬프(prev)로 찍는다 — 이 한 줄이 없으면 등장 초반(16ms 에 90px)에서 예측과 109px 씩
-     벌어져 «이징이 틀렸다» 로 오독된다(1차 실측). */
-  let prev = 0;
-  const trace = (ts) => {
-    const cv = document.getElementById('ldHero');
-    if (cv && cv.style.transform && prev) {
-      const m = /(-?\d+)/.exec(cv.style.transform);
-      window.__tr.push({ t: prev, x: m ? +m[1] : 0 });
-    }
-    prev = ts;
-    if (ts < 4000) requestAnimationFrame(trace);
-  };
-  requestAnimationFrame(trace);
 };
 
 (async () => {
@@ -113,18 +99,26 @@ const WATCH_X = () => {                          /* 궤적 전용 — 시각은 
 
   console.log('§2 상수 정합');
   const K = await page.evaluate(() => ({
-    MIN: LD_MIN, RUN: LD_RUN, GRACE: LD_GRACE, FADE: LD_FADE, X0: LD_X0, SC: LD_SC,
-    RUNMS: LD_RUNMS, IDMS: LD_IDMS,
+    MIN: LD.MIN, RUN: LD.RUN, GRACE: LD.GRACE, FADE: LD.FADE, X0: LD.X0, SC: LD.SC,
+    RUNMS: LD.RUNMS, IDMS: LD.IDMS, HOLD: LD.HOLD, HARD: LD.HARD, ARC: LD.ARC,
+    runFrames: ATLAS.knight.a.run.length,
     trans: Math.round(parseFloat(getComputedStyle(document.getElementById('loading')).transitionDuration) * 1000),
-    atlas: Object.keys(ATLAS).length
+    atlas: Object.keys(ATLAS).length, total: LD.total()
   }));
   eq('JS 페이드(LD_FADE) = CSS transition-duration', K.trans, K.FADE);
-  ok(K.MIN + K.FADE < GATE_MS, `최소 체류 + 페이드 < ${GATE_MS}ms (${K.MIN}+${K.FADE}=${K.MIN + K.FADE})`);
-  ok(K.RUN >= 200 && K.RUN <= 600, `등장 길이 200~600ms (${K.RUN})`);
-  ok(K.X0 <= -400, `등장 시작이 프레임 밖 (${K.X0}px)`);
-  eq('정수 배율(픽셀아트)', K.SC, Math.round(K.SC));
+  ok(K.HARD + K.FADE < GATE_MS, `등장 대기 마감 + 페이드 < ${GATE_MS}ms (${K.HARD}+${K.FADE}=${K.HARD + K.FADE})`);
+  ok(K.RUN >= 380, `등장 길이 ≥380ms — 1회차 300ms 는 «인지 하한 미달» 지적을 받았다 (${K.RUN})`);
+  /* ★ 한 스트라이드가 정확히 한 번 완결되는가. 상수를 손으로 «52» 라고 적어 두고 run 프레임 수가
+     바뀌면 조용히 어긋나므로, 게이트가 **아틀라스에서 프레임 수를 다시 세서** 대조한다. */
+  const stride = K.RUNMS * K.runFrames;
+  ok(Math.abs(stride - K.RUN) <= 30,
+    `달리기 한 스트라이드(${K.runFrames}프레임 × ${K.RUNMS}ms = ${stride}ms) ≈ 등장 길이 ${K.RUN}ms`);
+  ok(K.SC === Math.round(K.SC) && K.SC >= 7, `정수 배율이고 ≥7 (${K.SC}) — 1회차 5는 «캐릭터가 진행바보다 작다»`);
   ok(K.IDMS === 125, `대기 프레임 간격 = 전투 idle 8fps (${K.IDMS}ms)`);
-  ok(/const LD_MIN\b/.test(SRC) && /const LD_RUN\b/.test(SRC), '상수가 index.html 에 이름으로 있다');
+  ok(K.ARC > 0, `달리는 동안 상하 아치가 있다 (${K.ARC}px) — 1회차는 세로 변위 0px 였다`);
+  ok(/var LD_MIN\b/.test(SRC) && /var LD_RUN\b/.test(SRC), '상수가 index.html 에 이름으로 있다');
+  ok(SRC.indexOf('window.ldReady') < SRC.indexOf('function loadAtlases'),
+    '로딩 모듈이 본 스크립트보다 **앞에** 있다(파싱 400ms 를 안 기다린다)');
 
   console.log('§3 시간축 (★ 게이트 40여 개의 800ms 기준선 보호)');
   const ev = await page.evaluate(() => window.__ev.map(e => ({ k: e.k, t: Math.round(e.t) })));
@@ -138,7 +132,7 @@ const WATCH_X = () => {                          /* 궤적 전용 — 시각은 
      그걸 기준선으로 삼으면 게이트가 실행마다 뜨고 지는 FAIL 이 된다. 136 «뜨고 지는 FAIL» 의 예방판). */
   ok(fade !== null && fade + K.FADE < GATE_MS,
     `${GATE_MS}ms 전에 **안 보이게** 된다 (페이드 시작 ${fade} + ${K.FADE} = ${fade + K.FADE}ms)`);
-  ok(gone !== null && gone < 1500, `display:none 도 결국 붙는다 (실측 ${gone}ms)`);
+  ok(gone !== null && gone < 1600, `display:none 도 결국 붙는다 (실측 ${gone}ms)`);
   /* «부팅 → 사라짐» 이 아니라 «페이드 시작 → 사라짐» 을 잰다. 그 사이가 페이드 길이다.
      부팅~페이드 사이는 LD_MIN·LD_GRACE 가 정하는 «의도된 체류» 라 여기서 볼 것이 아니다. */
   ok(fade !== null && gone !== null && gone - fade <= K.FADE + 140,
@@ -164,7 +158,8 @@ const WATCH_X = () => {                          /* 궤적 전용 — 시각은 
     num: document.getElementById('ldNum').textContent,
     w: document.getElementById('ldBarF').style.width
   }));
-  eq('«n/총계» 가 아틀라스+타일셋 수로 끝난다', prog.num, `${K.atlas + 1}/${K.atlas + 1}`);
+  eq('«n/총계» 가 아틀라스+타일셋 수로 끝난다', prog.num, `${K.total}/${K.total}`);
+  eq('총계 = ATLAS 종수 + 타일셋 1', K.total, K.atlas + 1);
   eq('진행바 100%', prog.w, '100%');
   ok(!/ldNum">\s*\d/.test(SRC), '총계를 마크업에 하드코딩하지 않았다(ATLAS 에서 파생)');
 
@@ -174,42 +169,78 @@ const WATCH_X = () => {                          /* 궤적 전용 — 시각은 
   ok(booted.hp, '플레이어가 살아 있다(spawnStage 까지 지났다)');
   ok(/ldFinish\(\);/.test(SRC) && !/\$\('loading'\)\.classList\.add\('off'\)/.test(SRC),
     '부팅 콜백이 «즉시 off» 가 아니라 ldFinish() 를 부른다');
+  ok(!/new Image\(\);[\s\S]{0,200}A\.img/.test(SRC.slice(SRC.indexOf('function loadAtlases'), SRC.indexOf('function loadAtlases') + 400)),
+    '본 스크립트가 아틀라스를 **다시** 받지 않는다(ldReady 로 넘겨받는다)');
+  console.log('§10 앵커 산식 (로딩 ldDraw ≡ 게임 drawHeroTo)');
+  /* 로딩 화면의 그리기는 본 스크립트를 못 기다려서 ldDraw 로 따로 있다. 두 앵커 산식이 갈라지면
+     로딩 화면과 게임 안 캐릭터가 다른 자리에 선다 — 같은 프레임·같은 배율로 둘 다 그려 **픽셀로** 댄다. */
+  /* file:// 에서는 캔버스가 tainted 라 getImageData 를 못 쓴다. 대신 **drawImage 인자와
+     그때의 변환행렬**을 가로채 비교한다 — 앵커 산식이 갈라지는 것은 결국 이 숫자들이므로
+     픽셀 비교보다 오히려 직접적이다. */
+  const same = await page.evaluate(() => {
+    const mk = () => { const c = document.createElement('canvas'); c.width = 720; c.height = 512; return c; };
+    const proto = CanvasRenderingContext2D.prototype;
+    const orig = proto.drawImage;
+    const log = [];
+    proto.drawImage = function () {
+      const m = this.getTransform();
+      log.push([].slice.call(arguments, 1).map(v => Math.round(v * 1000) / 1000)
+        .concat([m.a, m.b, m.c, m.d, m.e, m.f]).join(','));
+    };
+    try {
+      const fr = ATLAS.knight.a.run[2];
+      LD.draw(mk(), fr);
+      drawHeroTo(mk(), { frame: fr, scale: LD.SC });
+    } finally { proto.drawImage = orig; }
+    return { n: log.length, a: log[0], b: log[1] };
+  });
+  eq('두 경로가 각각 한 번씩 그린다', same.n, 2);
+  ok(same.a === same.b, '앵커·배율·변환행렬이 완전히 같다', `\n      로딩 ldDraw : ${same.a}\n      게임 drawHeroTo: ${same.b}`);
+
   await page.close();
 
-  /* ---------------- B. 궤적 — 시각을 안 따지는 별도 페이지에서 rAF 로 잰다 ---------------- */
-  console.log('§4 궤적 (easeOutCubic — 감속해서 선다)');
+  /* ---------------- B. 궤적 ---------------- */
   const px = await ctx.newPage();
-  await px.addInitScript(WATCH_X);
   await px.goto(URL, { waitUntil: 'load' });
   await px.waitForTimeout(1600);
-  const trj = await px.evaluate(() => ({
-    tr: window.__tr.map(r => ({ t: r.t, x: r.x })),
-    runAt: ldRunAt, RUN: LD_RUN, X0: LD_X0
-  }));
-  const xs = trj.tr.map(r => r.x);
-  ok(xs.length >= 3, `이동 표본 3장 이상 (${xs.length})`, JSON.stringify(xs.slice(0, 8)));
-  ok(xs.length > 0 && xs[xs.length - 1] === 0, `마지막이 중앙 정지 (${xs[xs.length - 1]}px)`);
-  ok(xs.every((v, i) => i === 0 || v >= xs[i - 1]), '오른쪽으로만 간다(되돌아가지 않는다)');
-  /* ★ «증분이 줄어드는가» 로 이징을 보면 표본이 성길 때 헛불린다(로딩 중 rAF 가 굶는다).
-     대신 **각 표본의 시각에 대한 easeOutCubic 예측치**와 대조한다 — 표본 간격과 무관하게
-     이징 구현 자체를 잰다. 등속으로 바꾸면 여기서 수십 px 씩 벌어져 빨개진다. */
-  /* ★ 표본은 **한 프레임 늦다.** 추적 rAF 가 ldTick 보다 먼저 등록돼 있어, 같은 프레임에서
-     ldTick 이 갱신하기 «전» 값을 읽는다. 등장 초반은 16ms 에 90px 가 움직이므로 그대로 대조하면
-     최대 109px 오차가 나 «이징이 틀렸다» 로 오독된다(1차 실측). 그래서 **±1프레임 창(0~26ms)
-     안에서 가장 잘 맞는 시각**과 대조한다 — 창을 준 만큼 등속·가속과의 구분력이 줄지 않도록
-     바로 아래에서 같은 창으로 linear 도 맞춰 보고, 그쪽이 크게 벌어지는 것까지 확인한다.
-     (161 교훈 ③·149 «애니메이션이 걸린 것을 재려면 무엇을 재는지부터 고정하라») */
-  const fit = (f) => trj.tr.map(r => {
-    let best = Infinity;                          /* ldTick 은 프레임 타임스탬프보다 몇 ms 뒤에 실행된다 */
-    for (let dt = 0; dt <= 20; dt += 2) best = Math.min(best, Math.abs(r.x - f(r.t + dt)));
-    return best;
+  console.log('§4 궤적 (easeOutCubic — 감속해서 선다)');
+  /* ★ 표본으로 이징을 재려던 2회차 시도는 실패했다 — 로딩 구간에는 rAF 콜백이 프레임 시각보다
+     최대 140ms 늦게 실행돼서, 찍은 x 가 «언제의 값인지» 를 표본 쪽에서 못 정한다(오차 322px).
+     그래서 **곡선은 순수 함수 `LD.at(t)` 로 직접 재고**, «그 함수가 실제로 화면을 움직이는가» 는
+     아래에서 한 번 확인한다. 149·161 «틀린 계측은 FAIL 로 위장하고 온다» 의 네 번째 표본. */
+  const curve = await px.evaluate(() => {
+    const N = 24, out = [];
+    for (let i = 0; i <= N; i++) out.push(LD.at(LD.RUN * i / N));
+    return { out, X0: LD.X0, RUN: LD.RUN };
   });
-  const ease = (t) => { const p = Math.min(1, Math.max(0, (t - trj.runAt) / trj.RUN)); return Math.round(trj.X0 * Math.pow(1 - p, 3)); };
-  const linf = (t) => { const p = Math.min(1, Math.max(0, (t - trj.runAt) / trj.RUN)); return Math.round(trj.X0 * (1 - p)); };
-  const worst = Math.max.apply(null, fit(ease));
-  const worstL = Math.max.apply(null, fit(linf));
-  ok(worst <= 10, `모든 표본이 easeOutCubic 예측과 ±10px 안 (최대 오차 ${worst}px, 표본 ${trj.tr.length}장)`);
-  ok(worstL > 40, `같은 창으로 linear 를 맞추면 크게 벌어진다 = 등속이 아니다 (최대 오차 ${worstL}px)`);
+  eq('t=0 은 시작 오프셋', curve.out[0], curve.X0);
+  eq('t=RUN 은 중앙(0)', curve.out[curve.out.length - 1], 0);
+  ok(curve.out.every((v, i) => i === 0 || v >= curve.out[i - 1]), '오른쪽으로만 간다(되돌아가지 않는다)');
+  const dd = curve.out.slice(1).map((v, i) => v - curve.out[i]);
+  ok(dd.every((v, i) => i === 0 || v <= dd[i - 1] + 1), `증분이 단조 감소한다 = 감속 (${dd[0]} → ${dd[dd.length - 1]})`);
+  const ez = curve.out.every((v, i) => Math.abs(v - Math.round(curve.X0 * Math.pow(1 - i / 24, 3))) <= 1);
+  ok(ez, 'easeOutCubic 과 ±1px 안에서 일치');
+  const linMax = Math.max.apply(null, curve.out.map((v, i) => Math.abs(v - Math.round(curve.X0 * (1 - i / 24)))));
+  ok(linMax > 40, `등속이 아니다 (linear 가정 시 최대 오차 ${linMax}px)`);
+  /* «잉크가 완전히 프레임 밖에서 시작하는가» — 1회차 −560 은 잉크 우변이 +100 이라 몸의 39%가
+     화면 안에서 켜졌다(비평 A ③). 캔버스 좌변 + 잉크 오프셋으로 실제 우변을 계산해 확인한다. */
+  const edge = await px.evaluate(() => {
+    const cv = document.getElementById('ldHero'), A = ATLAS.knight;
+    const fr = A.f[A.a.run[0]], f0 = A.f[A.a.idle[0]];
+    const c0 = f0[6] / 2 - f0[4] - f0[2] / 2;
+    const left = cv.offsetLeft;                       /* #ldStage 기준 캔버스 좌변 */
+    const inkL = left + cv.width / 2 + (-fr[6] / 2 + fr[4] + c0) * LD.SC;
+    return { inkR: Math.round(inkL + fr[2] * LD.SC + LD.X0) };
+  });
+  ok(edge.inkR <= 0, `등장 t=0 에 잉크가 완전히 프레임 밖 (잉크 우변 x=${edge.inkR} ≤ 0)`);
+
+  /* 배선 — 실제 DOM transform 이 LD.at() 을 따라간다(정지 시점에서 한 번, 값이 안 흔들릴 때) */
+  const wired = await px.evaluate(() => {
+    const cv = document.getElementById('ldHero');
+    const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
+    return { x: m ? +m[1] : null, at1: LD.at(LD.RUN + 999) };
+  });
+  ok(wired.x === wired.at1, `정지 후 DOM transform = LD.at(끝) (${wired.x} = ${wired.at1})`);
   await px.close();
 
   /* ---------------- C. knight 가 깨진 경우 — 무한 로딩이 되면 안 된다 ---------------- */

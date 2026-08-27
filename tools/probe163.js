@@ -54,7 +54,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   await page.waitForTimeout(2000);
   const { ev, tr, k } = await page.evaluate(() => ({
     ev: window.__ev, tr: window.__tr,
-    k: { LD_MIN, LD_RUN, LD_GRACE, LD_FADE, LD_X0, ldRunAt: Math.round(ldRunAt) }
+    k: { LD_MIN: LD.MIN, LD_RUN: LD.RUN, LD_GRACE: LD.GRACE, LD_FADE: LD.FADE, LD_X0: LD.X0, ldRunAt: Math.round(LD.runAt()) }
   }));
 
   const at = (n) => { const e = ev.find(x => x.k === n); return e ? Math.round(e.t) : null; };
