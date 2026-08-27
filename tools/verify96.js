@@ -22,7 +22,35 @@ const CELL_PROPS = ['backgroundImage', 'backgroundColor', 'borderTopWidth', 'bor
   'borderRadius', 'boxShadow', 'color', 'fontSize', 'fontWeight', 'fontFamily', 'lineHeight'];
 const BAR_PROPS = ['backgroundImage', 'backgroundColor', 'borderTopWidth', 'borderTopColor',
   'borderRadius', 'height', 'boxSizing'];
-const INK_PROPS = ['fontSize', 'fontWeight', 'color', 'textShadow', 'transform', 'webkitTextStrokeWidth'];
+/* 219 — 잉크 축에서 `textShadow` 를 뺐다. 96 의 «한 부품이면 네 자리가 같다» 는 전제가
+   **외곽선 축에서만** 죽었다: 126 ③ 17·18회차가 10 상점 ref 실측으로 `#shopCats .stab>i.ol3/.ol4`
+   덧칠(드롭 2항)과 활성 링 −30% 를 얹었고, 그 주석이 «확산은 그 화면 ref 실측이 생긴 뒤에 한다» 로
+   범위를 못 박았다. 나머지 다섯 축(크기·굵기·색·보정 transform·stroke)은 네 자리가 그대로 같으므로
+   여기서 계속 Δ0 로 지킨다. 외곽선은 지우지 않고 **[1-b] 로 이사**시킨다(LESSONS 168-②·185-④·214-④). */
+const INK_PROPS = ['fontSize', 'fontWeight', 'color', 'transform', 'webkitTextStrokeWidth'];
+const SH_PROPS = ['textShadow', 'fontSize'];
+
+/* [1-b] 기대값 — **게이트 자기 상수**로 둔다. 페이지의 CSS 변수를 다시 읽어 비교하면 항등식이라
+   토큰이 통째로 망가져도 같이 틀려 초록으로 샌다(LESSONS 212-①). */
+const RING = { off: { r: 3, d: 2 }, on: { r: 4, d: 3 } };         /* 공용 `.ol3`/`.ol4` 등방 링(직교/대각) */
+const SHOP = { off: { r: 3, d: 2 }, on: { r: 2.8, d: 2.1 } };     /* 126 ③ 18회차 — 활성만 ref 실측으로 −30% */
+const DROP = 0.053, DROPX = 0.040;                                 /* :root `--sh-drop` / `--sh-dropx` (em) */
+const EPS = 0.02;
+
+/* "rgb(0, 0, 0) 3px 0px 0px, …" → [{x,y}] — 괄호 안 쉼표를 피해 자른다 */
+const parseSh = ts => (!ts || ts === 'none') ? [] : ts.split(/,(?![^()]*\))/).map(s => {
+  const m = s.trim().match(/(-?[\d.]+)px\s+(-?[\d.]+)px\s+(-?[\d.]+)px/);
+  return m ? { x: +m[1], y: +m[2], b: +m[3] } : { raw: s.trim() };
+});
+/* 등방 링 8항인가 — 직교 4항 r · 대각 4항 d. 순서는 안 따지고 «집합» 으로 본다 */
+const ringOk = (terms, r, d) => {
+  const t = terms.slice(0, 8);
+  if (t.length !== 8 || t.some(v => v.raw !== undefined)) return false;
+  const key = v => v.x.toFixed(2) + '/' + v.y.toFixed(2);
+  const want = [[r, 0], [-r, 0], [0, r], [0, -r], [d, d], [d, -d], [-d, d], [-d, -d]]
+    .map(([x, y]) => x.toFixed(2) + '/' + y.toFixed(2)).sort().join(' ');
+  return t.map(key).sort().join(' ') === want;
+};
 
 const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
   props.forEach(p => o[p] = cs[p]); return o; }`;
@@ -35,7 +63,9 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', e => errs.push(String(e)));
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
-    await page.goto('file://' + path.resolve(__dirname, '..', 'index.html'));
+    /* 219 — 되돌림 시험(`tools/neg219.js`)이 «갈아 끼운 사본» 을 새로 열어 재기 위한 문. 기본값은 실물이다.
+       LESSONS 191: 레이아웃이 끝난 뒤 `head` 에 규칙을 주입하면 정렬이 다시 안 풀려 게이트가 거짓 초록을 낸다. */
+    await page.goto('file://' + path.resolve(process.env.V96_SRC || path.join(__dirname, '..', 'index.html')));
     await page.waitForTimeout(900);
 
     /* ---------- ③ 폐기 부품 잔존 0 ---------- */
@@ -69,42 +99,46 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     /* 영웅 — 스킬 시트를 연다 */
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(600);
-    const hero = await page.evaluate(([g, cp, bp, ip]) => {
+    const hero = await page.evaluate(([g, cp, bp, ip, sp]) => {
       const G = eval(g), bar = document.querySelector('#bSk .stabs');
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
-        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip) };
-    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS]);
+        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 06 장비 — 같은 영웅 탭의 오버레이 */
     await page.evaluate(() => heroSubGo('eq'));
     await page.waitForTimeout(600);
-    const eq = await page.evaluate(([g, cp, bp, ip]) => {
+    const eq = await page.evaluate(([g, cp, bp, ip, sp]) => {
       const G = eval(g), bar = document.getElementById('eqTabs');
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
-        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip) };
-    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS]);
+        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 03 던전 */
     await page.evaluate(() => { goTab('adv'); });
     await page.waitForTimeout(600);
-    const dun = await page.evaluate(([g, cp, bp, ip]) => {
+    const dun = await page.evaluate(([g, cp, bp, ip, sp]) => {
       const G = eval(g), bar = document.getElementById('dunSub');
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
-        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip) };
-    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS]);
+        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 10 상점 */
     await page.evaluate(() => goTab('shop'));
     await page.waitForTimeout(600);
-    const shop = await page.evaluate(([g, cp, bp, ip]) => {
+    const shop = await page.evaluate(([g, cp, bp, ip, sp]) => {
       const G = eval(g), bar = document.getElementById('shopCats');
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
-        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip) };
-    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS]);
+        offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+    }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     const diff = (a, b) => Object.keys(a).filter(k => a[k] !== b[k]).map(k => k + ': ' + a[k] + ' ≠ ' + b[k]);
     const cmp = (label, key, props) => {
@@ -121,6 +155,44 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     /* 활성이 «비활성과 구별» 되기는 해야 한다 — 전부 같아 버리면 위 비교는 무의미하다 */
     ok('활성 ≠ 비활성 (구별은 남아 있다)', diff(hero.on, hero.off).length > 0,
       diff(hero.on, hero.off).length + '개 속성 차이');
+
+    /* ---------- ①-b 라벨 외곽선 — 219 이사분 ----------
+       원래 단언은 «네 자리의 `textShadow` 문자열 Δ0» 하나였고, 126 ③ 이 10 상점에만 ref 실측
+       덧칠을 얹으면서 등식을 잃었다. 지우지 않고 **살아 있는 규칙 세 벌**로 쪼갠다(LESSONS 214-④):
+         ⓐ ref 실측이 없는 세 자리(영웅·06·03)는 여전히 **문자열까지 같다**
+         ⓑ 그 세 자리는 «공용 등방 링 8항뿐 · 덧칠 0» 이다 — 근거 없는 덧칠이 번지면 여기서 잡힌다
+         ⓒ 10 상점의 갈림은 «링 8항 + 덧칠 2항» 이라는 **정해진 모양** 안에 있고,
+            보이는 드롭 = (링+drop) − 링 = drop 이라는 126 의 불변식을 만족한다 */
+    console.log('\n[1-b] 라벨 외곽선 — 공용 3자리는 Δ0 · 10 상점 덧칠은 126 ref 실측 모양 안');
+    const SHARED = [['영웅', hero], ['06 장비', eq], ['03 던전', dun]];
+    [['비활성', 'offS', 'off'], ['활성', 'onS', 'on']].forEach(([st, k, rk]) => {
+      /* ⓐ 세 자리 문자열 Δ0 */
+      SHARED.slice(1).forEach(([n, o]) => {
+        ok(st + ' 외곽선 — 영웅 vs ' + n + ' Δ0', hero[k].textShadow === o[k].textShadow,
+          hero[k].textShadow === o[k].textShadow ? '문자열 동일' : o[k].textShadow);
+      });
+      /* ⓑ 공용 3자리 = 등방 링 8항뿐 (덧칠 0) */
+      const bad = SHARED.filter(([, o]) => {
+        const t = parseSh(o[k].textShadow);
+        return t.length !== 8 || !ringOk(t, RING[rk].r, RING[rk].d);
+      }).map(([n]) => n);
+      ok(st + ' 외곽선 — 공용 3자리는 등방 링 ' + RING[rk].r + '/' + RING[rk].d + ' 8항뿐(덧칠 0)',
+        bad.length === 0, bad.length ? '어긋남: ' + bad.join('·') : '영웅·06·03 3자리');
+      /* ⓒ 10 상점 — 링 8항 + 덧칠 2항 */
+      const sh = parseSh(shop[k].textShadow), fs = parseFloat(shop[k].fontSize);
+      ok(st + ' 외곽선 — 10 상점 = 링 8항 + 덧칠 2항', sh.length === 10, sh.length + '항');
+      ok(st + ' 외곽선 — 10 상점 링 = 126 ref 실측 ' + SHOP[rk].r + '/' + SHOP[rk].d,
+        ringOk(sh, SHOP[rk].r, SHOP[rk].d),
+        sh.slice(0, 8).map(v => v.x + '/' + v.y).join(' '));
+      /* 보이는 드롭 = (링 + drop·em) − 링 = drop·em — 링을 얼마로 바꾸든 성립해야 하는 126 의 불변식 */
+      const dy = sh[8], dx = sh[9];
+      const ey = dy && dy.x === 0 ? (dy.y - SHOP[rk].r) / fs : NaN;
+      const ex = dx && dx.y === 0 ? (dx.x - SHOP[rk].r) / fs : NaN;
+      ok(st + ' 외곽선 — 10 상점 보이는 드롭 세로 = --sh-drop ' + DROP + 'em',
+        Math.abs(ey - DROP) <= EPS, 'fs ' + fs + ' · ' + (dy ? dy.y : '없음') + 'px → ' + (isNaN(ey) ? '측정 불가' : ey.toFixed(4) + 'em'));
+      ok(st + ' 외곽선 — 10 상점 보이는 드롭 가로 = --sh-dropx ' + DROPX + 'em',
+        Math.abs(ex - DROPX) <= EPS, 'fs ' + fs + ' · ' + (dx ? dx.x : '없음') + 'px → ' + (isNaN(ex) ? '측정 불가' : ex.toFixed(4) + 'em'));
+    });
 
     /* ---------- ② 스킬↔장비 전환 8프레임 — #eqw bbox 이동 0 ---------- */
     console.log('\n[2] 영웅 스킬↔장비 전환 — #eqw 가 아래에서 다시 올라오지 않는다');
