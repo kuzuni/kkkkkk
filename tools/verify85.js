@@ -99,7 +99,7 @@ const ok = (b, name, detail) => {
     gl: GRADE.length, g6: GRADE[6].n, g7: GRADE[7].n, m6: GRADE[6].mul, m7: GRADE[7].mul,
     refund: REFUND.length, sumCard: SUM_CARD.length, wg: WGRADE.length, bag: BAG_G.length,
     rollEq: GRADE_ROLL_EQ.length, u6: GRADE_ROLL_EQ[6].unlock, u7: GRADE_ROLL_EQ[7].unlock,
-    roll: GRADE_ROLL.length, steps: PRB_STEPS_EQ.join(',')
+    roll: GRADE_ROLL.length, steps: PRB_STEPS_EQ.join(','), maxlv: SUM_MAXLV
   }));
   ok(B.gl === 8 && B.g6 === '초월' && B.g7 === '불멸', 'B1 GRADE 8단 (초월·불멸)', B.g6 + '/' + B.g7);
   ok(B.m6 === 16 && B.m7 === 26, 'B2 mul 16·26 기하급수', B.m6 + '/' + B.m7);
@@ -109,7 +109,10 @@ const ok = (b, name, detail) => {
      묻는 것은 그대로다 — «장비 배너는 8행 표를 쓰고 초월·불멸 해금이 만렙 밑에 있는가». */
   ok(B.rollEq === 8 && B.roll === 6 && B.u6 === 20 && B.u7 === 24, 'B4 장비 8행 표(20/24) · 공용 6행 유지',
     'eq=' + B.rollEq + ' base=' + B.roll + ' unlock=' + B.u6 + '/' + B.u7);
-  ok(B.steps === '1,5,8,12,16,20,24,25', 'B5 PRB_STEPS_EQ 이정표 (196)', B.steps);
+  /* 250 — 이정표(1,5,8,12,16,20,24,25) 폐기. 단계는 소환 레벨 1..만렙 연속이다.
+     묻는 것은 그대로 — «장비 배너 단계에 초월·불멸 해금 레벨과 만렙이 들어 있는가». */
+  ok(B.steps === Array.from({ length: B.maxlv }, (_, i) => i + 1).join(','),
+    'B5 PRB_STEPS_EQ = 소환 레벨 1..' + B.maxlv + ' 연속 (250)', B.steps.slice(0, 40) + '…');
 
   /* [C] 최고 등급 판정 */
   const C = await page.evaluate(() => ({

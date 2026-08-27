@@ -183,7 +183,7 @@ async function open(browser, seed) {
              len: at(SUM_MAXLV).length, s100: sum(at(SUM_MAXLV)), s1: sum(at(1)),
              p6at54: at(r[6].unlock - 1)[6], p7at74: at(r[7].unlock - 1)[7],
              p6at100: at(SUM_MAXLV)[6], p7at100: at(SUM_MAXLV)[7],
-             nan: at(SUM_MAXLV).concat(at(1)).some(x => !isFinite(x)), steps,
+             nan: at(SUM_MAXLV).concat(at(1)).some(x => !isFinite(x)), steps, maxlv: SUM_MAXLV,
              skillRows: rollOf('skill').length };
   });
   ok(C.rows === 8 && C.eq, 'C1 rollOf(\'pet\') = 8행 표(GRADE_ROLL_EQ)', String(C.rows));
@@ -194,7 +194,9 @@ async function open(browser, seed) {
   ok(C.p6at54 === 0 && C.p7at74 === 0 && C.p6at100 > 0 && C.p7at100 > 0,
     'C4 해금 전 0 · 만렙 >0', '초월해금−1 g6=' + C.p6at54 + ' · 불멸해금−1 g7=' + C.p7at74
     + ' · 만렙 g6=' + (C.p6at100 * 100).toFixed(2) + '% g7=' + (C.p7at100 * 100).toFixed(2) + '%');
-  ok(C.steps === '1,5,8,12,16,20,24,25', 'C5 11 확률 팝업 이정표 8개 (196)', C.steps);
+  /* 250 — 이정표 8개 폐기. 동료 배너(g8)도 단계는 소환 레벨 1..만렙 연속이다. */
+  ok(C.steps === Array.from({ length: C.maxlv }, (_, i) => i + 1).join(','),
+    'C5 11 확률 팝업 단계 = 소환 레벨 1..' + C.maxlv + ' 연속 (250)', C.steps.slice(0, 40) + '…');
   ok(C.skillRows === 6, 'C6 스킬 배너는 6행 표 그대로(회귀)', String(C.skillRows));
 
   /* ---------------- [D] 상점 ---------------- */

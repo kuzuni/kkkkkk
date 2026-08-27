@@ -131,7 +131,8 @@ const ok = (b, name, detail) => {
   /* ================= [E] 11 확률 팝업 이정표 ================= */
   console.log('[E] 확률 팝업 이정표');
   const E = await page.evaluate(() => {
-    const out = { steps: PRB_STEPS.join(','), stepsEq: PRB_STEPS_EQ.join(','), bad: [], empty: [] };
+    const out = { steps: PRB_STEPS.join(','), stepsEq: PRB_STEPS_EQ.join(','),
+                  maxlv: SUM_MAXLV, bad: [], empty: [] };
     ['weapon', 'skill'].forEach(b => {
       const ST = BANNERS[b].g8 ? PRB_STEPS_EQ : PRB_STEPS;
       ST.forEach((L, i) => {
@@ -144,8 +145,11 @@ const ok = (b, name, detail) => {
     closeProbInfo();
     return out;
   });
-  ok(E.steps === '1,5,8,12,16,25', 'E1 PRB_STEPS = 1,5,8,12,16,25', E.steps);
-  ok(E.stepsEq === '1,5,8,12,16,20,24,25', 'E2 PRB_STEPS_EQ = 1,5,8,12,16,20,24,25', E.stepsEq);
+  /* 250 — 이정표 나열이 «띄엄띄엄» 이라 폐기됐다(주인 지시). 두 배너 모두 1..만렙 연속.
+     196 이 지키려던 «만렙을 리터럴로 굳히지 않는다» 는 SUM_MAXLV 로 세는 형태로 유지. */
+  const CONSEC = Array.from({ length: E.maxlv }, (_, i) => i + 1).join(',');
+  ok(E.steps === CONSEC, 'E1 PRB_STEPS = 소환 레벨 1..' + E.maxlv + ' 연속 (250)', E.steps.slice(0, 40) + '…');
+  ok(E.stepsEq === CONSEC, 'E2 PRB_STEPS_EQ = 소환 레벨 1..' + E.maxlv + ' 연속 (250)', E.stepsEq.slice(0, 40) + '…');
   ok(!/PRB_STEPS\s*=\s*\[1,\s*5,\s*15/.test(SRC), 'E3 옛 리터럴 이정표 [1,5,15,30,40,…] 부재(소스 스캔)');
   ok(E.bad.length === 0, 'E4 전 단계 렌더 NaN/undefined 0건', E.bad.join(' '));
   ok(E.empty.length === 0, 'E5 전 단계에 항목 행이 그려진다(빈 확률 0건)', E.empty.join(' '));
