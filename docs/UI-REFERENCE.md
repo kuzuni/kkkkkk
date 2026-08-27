@@ -1128,8 +1128,12 @@ if(window.visualViewport){ visualViewport.addEventListener('resize', fit); }
 - [x] **실사용** — 헤더 초상화를 진짜 포인터로 클릭하면 19 가 열린다(캔버스가 클릭을 안 먹는다).
 - [x] **게이트** `node tools/verify201.js` → **74/74 PASS** · `node tools/smoke.js` **SMOKE PASS** ·
       `m126counter` 6/6 · `verify137` 152/152 · `verify179` 134/134 · `verify20` 32/32.
-- 곁가지 등재: **240**(`.pf-tab` 「칭호」 ㅇ 속공간 4.6px² — 하한 8 미만) ·
-  **241**(19 `.pf` 가 9:16 에서 바닥 227px 프레임 밖 【⚑】).
+- 곁가지 등재: ~~**240**(`.pf-tab` 「칭호」 ㅇ 속공간 4.6px² — 하한 8 미만)~~ →
+  **✅ 완료(2026-08-27, sess-1746-14270 워커 C · 1회차)**. 이 자리 전용 토큰 `--st-pft`(.115 = 4.37px)로
+  격리 4.6 → **17.8** · 화면(드롭 포함) 3.4 → **9.6**(하한 8.0). 드롭(dy 1.9 · dx 1.06)·기하는 불변.
+  게이트 `node tools/verify240.js` **36/36 PASS**(§2 음성 대조 포함) · `m126counter` **7/7**(빠져 있던
+  `.pf-tab.t1` 자리 복원). 근거 `docs/measure/240-*.md` · `docs/review/240-*.md` ·
+  **241**(19 `.pf` 가 9:16 에서 바닥 227px 프레임 밖 【⚑】) — 미착수.
 
 ---
 
