@@ -191,6 +191,18 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   /* ⚠ 한 칸만 표본으로 보면 안 된다 — 도감 탭 6칸은 «클래스 셀렉터가 ID 셀렉터에게 진» 사례였다
      (`#collw s{display:inline-block}` 이 `.cltab>s.dot{display:none}` 을 이겨 6칸 상시 점등).
      그래서 **호스트를 전수**로 돌린다. */
+  /* 202 — 영웅 서브탭에도 배지가 생겼다(«일괄 강화 가능»). 그 바는 두 종류이고
+     **07·26·50 시트 쪽이 이 감사의 재발 사례**였다: `:is(#bSk,#bPet,#bCos) s{display:block}`(ID 급)이
+     `.stab>.bdg{display:none}`(클래스 급)을 이겨 도감 탭과 **똑같이** 상시 점등이었다.
+     시트 안 바는 패널이 열려야 DOM 에 생기므로 감사 전에 한 번 열어 둔다. */
+  await ev(() => { goTab('hero'); heroSubGo('sk'); renderUI(); });
+  await wait(500);
+  /* ⚠ 그리고 **패널을 다시 닫는다.** 열린 탭 칸은 `.tab.close` 로 ✕ 로 치환되고
+     `.tab.close .bdg{display:none}` 이라, 열어 둔 채로 감사하면 `.tab .bdg` 절이 그 칸 하나 때문에
+     «켜짐 위반 1» 로 빨개진다(실제로 그렇게 됐다 — 게이트를 넓힐 때의 함정). 시트 DOM 은
+     닫아도 남으므로 서브탭 바는 그대로 잰다. */
+  await ev(() => { const t = document.querySelector('#tabbar .tab[data-t="hero"]'); if (t) t.click(); });
+  await wait(400);
   const audit = await ev(() => {
     const SITES = [
       { n: '#menub .bdg',  host: '#menub',                    bdg: '.bdg',   cls: 'alert' },
@@ -198,6 +210,9 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
       { n: '.tab .bdg',    host: '#tabbar .tab[data-t]',      bdg: '.bdg',   cls: 'alert' },
       { n: '.stab>.bdg',   host: '#dunSub .stab',             bdg: '.bdg',   cls: 'alert' },
       { n: '.cltab>s.dot', host: '#collw .cltab',             bdg: 's.dot',  cls: 'alert' },
+      /* 202 신설 — 영웅 서브탭 «일괄 강화 가능» 배지, 두 호스트를 각각 전수로 */
+      { n: '.stab>.bdg (06 #eqTabs)',       host: '#eqTabs .stab[data-upk]',  bdg: '.bdg', cls: 'alert' },
+      { n: '.stab>.bdg (07·26·50 시트 안)', host: ':is(#bSk,#bPet,#bCos) .stab[data-upk]', bdg: '.bdg', cls: 'alert' },
     ];
     return SITES.map(s => {
       const hosts = [...document.querySelectorAll(s.host)].filter(h => h.querySelector(s.bdg));
