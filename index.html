@@ -4051,7 +4051,7 @@
      30초 동안 밝기만 부푼다» 고 했다(고주파 시간에너지 1.17~2.34 vs 골드 8.06 = 6.9배).
      안개는 그대로 두고 **결(빛줄기) 한 겹**을 얹어 «추적 가능한 특징» 을 만든다.
      각도는 골드(102°)·레이드(74°)와 겹치지 않게 128° 로 벌린다 — 테마가 «형태» 로 갈리게. */
-  .dnc.bgm-rel{                                                    /* 유물석 1~4 — 보랏빛 안개(층별 색 단계) */
+  .dnc.bgm-rel,.dnc.bgm-rstone{                                    /* 유물석 1~4 — 보랏빛 안개(층별 색 단계) */
     /* ⚠ 보라 지분을 키워 보았지만(30%/#B074FF) 유물석3 이 오히려 4.77% 로 더 죽었다 — 그 카드의 원색
        (#1D53CE)과 색상이 가까워 대비가 준다. 45%/#C79BFF 가 실측상 낫다(6.83%). 되돌리지 말 것. */
     --bgc:color-mix(in srgb,var(--pt) 45%,#C79BFF);
@@ -4082,7 +4082,11 @@
       radial-gradient(circle at 82% 68%,var(--bgc) 0 4.5px,transparent 6.2px),
       radial-gradient(closest-side at 44% 62%,var(--bgc) 0%,transparent 100%);
     --bgz2:246px 168px;--bgw2:246px;--bgo2:.52}
-  .dnc.bgm-raid{                                                   /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
+  /* 203 — 룬강화석 던전. 194 가 강화석에 한 것과 같은 방식으로 **기하 전부를 위 블록에서 물려받고
+     색 한 줄만** 덮는다(청록 룬빛). 카드 원색(--i #12606B)과 대비되게 밝은 민트다 —
+     다이아(#9BE0FF, 푸른 결정)보다 초록이 짙어 두 카드가 갈린다. */
+  .dnc.bgm-rstone{--bgc:#5FF0D5}
+  .dnc.bgm-raid{                                                  /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
     --bgc:#FF9A5E;
     /* ⚠ 5회차 — 같은 이음매 교정(골드 주석 참고). 74° → 가로주기 96/0.9613 = 99.87px, 타일 192px 이라
        1.9225 주기 = 끝 간격 92.3%(4회차 E·F 의 «−7.9%»). 192 × sin74° / 2 = 92.28 로 맞춘다. */
@@ -8782,6 +8786,75 @@
 
   /* 88 — «스탯 훈련» 서브탭 폐기(저장소 주인 지시): §7 서브탭 바(.tr-sub) 규격 삭제. 훈련 단일 화면. */
 
+  /* ── 203 룬 탭 (2026-08-27, 저장소 주인 지시 «훈련 팝업에 훈련·룬 탭») ──────────
+     ⚑ **23 의 측정 좌표는 한 값도 안 건드린다.** 서브탭 바는 `.tr-box` local 883(카드 바닥)~1093
+       사이의 **원래 비어 있던 210px** 에 들어가고, 룬 본문은 훈련 요소들과 «같은 자리를 번갈아»
+       쓰는 형제라(둘 중 하나만 display) 훈련 탭의 렌더 결과가 픽셀 단위로 종전과 같다.
+       그 사실은 게이트 `verify203` [1] 이 탭 전환 전후로 5개 요소 bbox 를 재서 Δ0 으로 확인한다.
+     바 폭·자리는 03 던전(.dns-sub: 폭 794 · 바닥에서 40)의 관례를 그대로 따르고,
+     박스 폭 1046 안에서 좌우 대칭이 되게 left = (1046−794)/2 = 126 이다(96 «다른 공용 바는 전부 대칭»). */
+  .tr-subs{left:126px;bottom:40px;width:794px}
+  /* 탭 상태 — 훈련/룬 중 하나만 보인다. `.tr-box.rune` 한 클래스가 다섯 요소를 한꺼번에 뒤집는다
+     (렌더 함수가 style 을 직접 만지면 «재렌더에 진» 상태가 생긴다 — LESSONS 50-①). */
+  .tr-box>.tr-runes{display:none}
+  .tr-box.rune>.tr-rib,.tr-box.rune>.tr-prog,.tr-box.rune>.tr-up,
+  .tr-box.rune>.tr-qty,.tr-box.rune>.tr-cards{display:none}
+  .tr-box.rune>.tr-runes{display:block}
+  /* 룬 본문 — 세로 예산이 이 절의 전부다. 쓸 수 있는 자리는 리본 자리(박스 local 34)부터
+     서브탭 바 위(954 = 1093 − 40 − 99)까지 **920px** 이고, 그 안에
+       카드 268 × 3 + 줄간격 18 × 2 = 840  ·  총효과 요약 46  ·  둘 사이 12  = 898
+     로 짠다(바닥 여유 22). ⚠ 카드 높이를 키우려면 이 뺄셈부터 다시 하라 —
+     처음 288 로 잡았다가 요약줄이 3번 카드 위로 66px 올라탔다(게이트 [2] 가 겹침 0 을 잰다). */
+  .tr-runes{left:24px;top:34px;width:998px;height:900px}
+  .tr-rn{position:absolute;left:0;width:998px;height:268px;border-radius:28px;background:#FFFDF2;
+    /* 카드 껍데기는 훈련 카드(.tr-card)의 베벨·그림자 체계를 그대로 쓴다 — 같은 팝업 안에서
+       두 벌의 카드 문법이 생기지 않게 한다(96 «부품은 하나»). */
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
+  /* 줄 자리는 클래스로 못 박는다 — `nth-of-type` 은 같은 부모의 총효과 요약(.rsum)까지 세어
+     한 칸씩 밀린다(형제가 늘면 조용히 어긋나는 선택자를 쓰지 않는다) */
+  .tr-rn.k0{top:0}
+  .tr-rn.k1{top:286px}
+  .tr-rn.k2{top:572px}
+  .tr-rn>*{position:absolute}
+  /* 아이콘 액자 — 194 코스튬 카드와 같은 «면 + 검정 테» 규격. 이모지는 아트 자리이고
+     bbox(120×120)를 정확히 차지한다(지시서 [3] «아트 자리 규칙» — 이미지로 교체만 하면 된다) */
+  .tr-rn>.ri{left:30px;top:24px;width:120px;height:120px;border-radius:22px;
+    background:var(--rt,#7FD8E8);box-shadow:inset 0 0 0 6px #141414;
+    text-align:center;line-height:120px;font-size:72px}
+  .tr-rn>.rn{left:170px;top:20px;height:52px;line-height:52px;font-size:44px;color:#2C1E10}
+  .tr-rn>.rl{left:170px;top:78px;height:42px;line-height:42px;font-size:33px;color:#7A5A34}
+  .tr-rn>.rd{left:30px;top:196px;width:360px;height:36px;line-height:36px;font-size:26px;color:#5E4823}
+  /* 진행바 — 06/50 의 `.sk-slv` 계열과 같은 «트랙 + 채움» 2겹 */
+  .tr-rn>.rb{left:170px;top:126px;width:420px;height:26px;border-radius:13px;background:#D8C39C;
+    box-shadow:inset 0 0 0 4px #141414}
+  .tr-rn>.rb>i{position:absolute;left:4px;top:4px;bottom:4px;border-radius:9px;
+    background:linear-gradient(180deg,#8FDC33 0,#63B41C 100%);transition:width .18s}
+  /* 성공 확률 — 오른쪽 위. 이 시스템의 핵심 수치라 카드에서 제일 큰 글자다(숫자 위 · 라벨 아래) */
+  .tr-rn>.rp{right:30px;top:14px;width:320px;text-align:right}
+  .tr-rn>.rp>i{height:58px;line-height:58px;font-size:48px;color:#B4571E}
+  .tr-rn>.rp>s{height:34px;line-height:34px;font-size:26px;color:#7A5A34;text-decoration:none}
+  /* 두 개의 시도 버튼 — 재료 / 다이아(주인 지시 ③ «재료 or 다이아 선택») */
+  .tr-rn>.rbt{top:172px;width:280px;height:78px;border-radius:20px;cursor:pointer;
+    text-align:center;line-height:78px;font-size:31px;color:#fff;
+    background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
+  .tr-rn>.rbt.b1{right:326px}
+  .tr-rn>.rbt.b2{right:30px}
+  .tr-rn>.rbt.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
+  .tr-rn>.rbt .cic{vertical-align:-4px;margin-right:6px}
+  /* 잠긴 룬 — 카드를 어둡게 덮고 개방 조건만 읽히게 한다(186 관례) */
+  .tr-rn.lk>.rlk{display:block}
+  .tr-rn>.rlk{display:none;left:8px;top:8px;right:8px;bottom:8px;border-radius:22px;
+    background:rgba(26,20,12,.72);text-align:center;line-height:252px;font-size:36px;color:#F2D8A8}
+  /* 만렙 룬 — 두 버튼 자리를 «MAX» 한 장으로 덮는다 */
+  .tr-rn>.rmax{right:30px;top:172px;width:576px;height:78px;border-radius:20px;
+    text-align:center;line-height:78px;font-size:34px;color:#7A5A34;
+    background:#E4D6BC;box-shadow:inset 0 0 0 5px #141414}
+  /* 룬 탭 하단 총효과 요약 — 「지금 룬이 나에게 주는 것」을 한 줄로. bonus() 와 같은 식(runeSum) */
+  .tr-runes>.rsum{position:absolute;left:0;right:0;top:852px;height:46px;line-height:46px;
+    text-align:center;font-size:31px;color:#5E4823}
+
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
   #eqw i,#eqw em,#eqw b,#eqw u{display:inline-block;font-style:normal;text-decoration:none;
@@ -12334,6 +12407,15 @@
           <path d="M36.5 8 L65 41 H50 V61 H23 V41 H8 Z"/></svg></div>
         <div class="tr-qty" id="trQty"></div>
         <div class="tr-cards" id="trCards"></div>
+        <!-- 203 — 룬 탭 본문. 훈련 탭이 켜져 있으면 display:none 이라 23 의 측정 좌표는 한 픽셀도 안 움직인다. -->
+        <div class="tr-runes" id="trRunes"></div>
+        <!-- 203 ① — 팝업 탭 «훈련 · 룬». 96 공용 서브탭 부품(.stabs.sp2>.stab) 그대로이고
+             자리는 03 던전(.dns-sub)과 같은 «본문 아래 바닥» 관례다. 박스 local 883(카드 바닥)~1093
+             사이의 빈 210px 에 들어가므로 훈련 탭의 기존 요소는 아무것도 안 밀린다. -->
+        <div class="stabs sp2 tr-subs" id="trSubs">
+          <div class="stab on" data-trsub="train"><i class="ol3">훈련</i></div>
+          <div class="stab" data-trsub="rune"><i class="ol3">룬</i><s class="bdg"></s></div>
+        </div>
       </div>
     </div>
   </div>
@@ -13247,19 +13329,25 @@ const $ = id => document.getElementById(id);
    골드 이미지 여러 종류 ㄴㄴ, 한 종류로.»
    ⇒ 화폐 아이콘은 **여기서만** 정한다. 문자열·데이터 배열에 이모지를 직접 박지 마라
      (게이트 `tools/verify125.js` 가 소스에서 화폐 이모지 0건을 검사한다).
-   입장권은 «던전 계열» 로만 갈린다 — 골드/다이아/유물/**강화석** 4종만 허용
-     (194 — 강화석 던전 신설로 계열이 하나 늘었다. 「3종」은 못박은 상한이 아니라 그때 있던
-      던전 계열의 수였다. 125 의 규칙은 «재화 하나에 이미지 하나» 다)(🎟️/🎫 혼용 폐기). */
+   입장권은 «던전 계열» 로만 갈린다 — 골드 · 다이아 · 유물 · **강화석** · **룬강화석** 5종만 허용
+     (194 — 강화석 던전 신설로 계열이 하나 늘었다. 203 — 룬강화석 던전으로 또 하나.
+      「3종」은 못박은 상한이 아니라 그때 있던 던전 계열의 수였다.
+      125 의 규칙은 «재화 하나에 이미지 하나» 다)(🎟️/🎫 혼용 폐기).
+   ⚠ 주석 안에서 «별표 두 개로 강조를 닫은 바로 뒤에 슬래시» 를 쓰지 마라 — 그 이음매에
+     주석 종료 기호가 생겨 **블록 주석이 그 자리에서 닫힌다**(203 이 실제로 그렇게 스크립트를
+     통째로 깼다: 이 줄의 재화 목록을 슬래시로 이어 쓰다가). 구분자는 가운뎃점(·)을 쓴다. */
 const CUR_ICON = {
   gold:    'assets/ui/cur-gold.svg',
   dia:     'assets/ui/cur-dia.svg',
   relic:   'assets/ui/cur-relic.svg',
   stone:   'assets/ui/cur-stone.svg',
+  rstone:  'assets/ui/cur-rstone.svg',            /* 203 — 룬강화석(룬 전용) */
   mile:    'assets/ui/cur-mile.svg',
   tkGold:  'assets/ui/cur-ticket-gold.svg',
   tkDia:   'assets/ui/cur-ticket-dia.svg',
   tkRelic: 'assets/ui/cur-ticket-relic.svg',
-  tkStone: 'assets/ui/cur-ticket-stone.svg'
+  tkStone: 'assets/ui/cur-ticket-stone.svg',
+  tkRstone:'assets/ui/cur-ticket-rstone.svg'      /* 203 */
 };
 /* 코드 곳곳의 짧은 키(보상 객체 `r.rel` · 우편 행 `k:'g'` · 가방 `relic` 등)를 한곳에서 흡수한다 */
 const CUR_ALIAS = { g:'gold', c:'dia', d:'dia', rel:'relic', r:'relic', frag:'relic',
@@ -13287,9 +13375,9 @@ function curIcEl(el, k, size){
   return im;
 }
 /* 던전 id → 입장권 종류. 유물조각 던전 4단(relic1~4)은 같은 «유물 던전권» 을 쓴다.
-   194 — 강화석 던전(`stone`)이 4번째 계열이다. */
+   194 — 강화석 던전(`stone`)이 4번째 계열이다. 203 — 룬강화석 던전(`rstone`)이 5번째다. */
 const dunTk = id => id === 'gold' ? 'tkGold' : id === 'dia' ? 'tkDia'
-                  : id === 'stone' ? 'tkStone' : 'tkRelic';
+                  : id === 'stone' ? 'tkStone' : id === 'rstone' ? 'tkRstone' : 'tkRelic';
 
 /* ---------------- 화면 맞춤 ---------------- */
 /* 기준 프레임 1080x1920(9:16). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
@@ -14423,7 +14511,13 @@ const DUNGEONS = [
      보상 `stone` 은 층에 선형(150 + 120f) — 유물조각의 «층 선형» 관례를 그대로 따른다.
      DPS 측정장(123)·아레나도 강화석을 주지만 그쪽은 부수입이다(COS_ST_RAID / arenaReward 참고). */
   { id:'stone',  n:'각성의 동굴', ic:curIc('stone'), d:'강화석을 획득',
-    req:f => 4200*Math.pow(1.76,f-1), rw:f => ({ stone: 150 + f*120 }) }
+    req:f => 4200*Math.pow(1.76,f-1), rw:f => ({ stone: 150 + f*120 }) },
+  /* 203(2026-08-27, 저장소 주인 지시 «룬강화석 던전 신설») — 룬 전용 재화의 **주 수급처**.
+     194 의 「각성의 동굴」과 **별개 던전**이고 재화도 별개다(강화석 = 코스튬 / 룬강화석 = 룬).
+     요구 전투력·보상 곡선은 194 와 같은 모양으로 두되 한 칸 위(재료 단가가 룬 쪽이 더 크다) —
+     최종 수치는 199 의 몫이다. DPS 측정장도 룬강화석을 주지만 그쪽은 부수입이다(RUNE_ST_RAID). */
+  { id:'rstone', n:'룬의 제단', ic:curIc('rstone'), d:'룬강화석을 획득',
+    req:f => 4600*Math.pow(1.76,f-1), rw:f => ({ rstone: 120 + f*95 }) }
 ]);
 /* 던전별 하루 입장 횟수 — 90 ④: 유물조각 하루 최대 수급 = 4던전 × 3회(= 12런) 로
    89 의 소환 비용 곡선(하루 5~10회 소환)과 맞춘다. 던전 수가 늘어도 이 값은 그대로다. */
@@ -14699,6 +14793,113 @@ const trainMax   = () => TRAIN_STATS.length * TRAIN_CAP_STEP;   /* 300 고정 */
 const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
 /* 88 — «스탯 훈련»(포인트 재화 훈련)은 캐릭터 레벨·스탯 포인트 시스템과 함께 폐기됐다(저장소 주인 지시). */
 
+/* ---- 203 룬 (2026-08-27, 저장소 주인 지시) --------------------------------
+   «훈련 팝업에 룬 탭. 일반 → 고급 → 천상 3종, 각 맥스 500. 룬강화석 던전 새로 만들고
+    DPS 측정장에서도 나오게. 50 다이아로도 1회. 확률은 초반 넉넉하다가 Lv18 쯤부터
+    5% → 2% → 1% → 0.5% 로 떨어지고 그 뒤로 유지. 실패해도 레벨은 안 떨어짐.
+    확률이 낮은 대신 1레벨당 효과가 계단으로 크게 체감되게.»
+
+   ─ 구조가 이 작업의 산출물이고 **최종 수치는 199(밸런스 비평 라운드)의 몫**이다
+     (구간 경계 레벨·계수·비용 곡선 전부). 여기서 못 박은 것은 주인이 직접 준 값뿐이다:
+     맥스 500 · 다이아 50/회 · 사다리 순서 · 확률 4단(5/2/1/0.5%) · 실패 시 레벨 유지.
+
+   ─ **사다리**: 일반룬 Lv500 → 고급룬 개방 → 고급룬 Lv500 → 천상룬 개방.
+     잠긴 룬도 탭 안에 나란히 보이고 개방 조건을 적는다(186 관례).
+
+   ─ **효과 결합**: 세 룬의 효과를 축별로 **먼저 더한 뒤 `bonus()` 에서 한 번만** 곱한다
+     (LESSONS 91-1 · 194 코스튬 강화와 같은 규칙 — 룬마다 곱하면 만렙에서 배율이 터진다).
+
+   ─ **계단**(197 문법): 레벨 1당 효과가 `RUNE_STEP_EVERY` 레벨마다 한 칸씩 커진다.
+     그래서 «다음 1레벨» 이 앞 레벨보다 항상 크고, 계단을 밟는 순간이 체감된다.
+     표기·`bonus()`·게이트가 **같은 식(`runeVal`)** 을 보게 한다 — 표기층이 두 벌이 되면 조용히 갈라진다.
+   -------------------------------------------------------------------------- */
+const RUNE_MAXLV = 500;                       /* 주인 확정 — 룬 하나당 상한 */
+const RUNE_DIA   = 50;                        /* 주인 확정 — 다이아 1회 시도 비용 */
+/* ④ 확률 곡선. `to` 는 «이 레벨 미만» 구간이고 마지막 칸이 0.5% 유지분이다.
+   Lv 0~17 은 넉넉한 초반 곡선(아래 `runeRate`)이라 표에 p 가 없다. */
+const RUNE_KNEE  = 18;                        /* 주인이 준 «Lv18 부근» — 5% 구간의 시작 */
+const RUNE_P0    = 0.90;                      /* Lv0 성공률(«넉넉») */
+const RUNE_BANDS = [
+  { to:60,       p:0.05 },
+  { to:150,      p:0.02 },
+  { to:300,      p:0.01 },
+  { to:Infinity, p:0.005 }
+];
+/* Lv l → l+1 성공률. 무릎 아래는 RUNE_P0 → 0.05 를 **기하로** 잇는다 —
+   l=RUNE_KNEE 에서 정확히 0.05 라 표의 첫 칸과 이음매가 없다(계단이 아니라 연속). */
+function runeRate(l){
+  l = Math.max(0, l | 0);
+  if(l < RUNE_KNEE) return RUNE_P0 * Math.pow(RUNE_BANDS[0].p / RUNE_P0, l / RUNE_KNEE);
+  for(const b of RUNE_BANDS) if(l < b.to) return b.p;
+  return RUNE_BANDS[RUNE_BANDS.length - 1].p;
+}
+/* ⑤ 계단 — 100 레벨마다 «1레벨당 효과» 가 한 칸 커진다(5칸 = 500레벨). */
+const RUNE_STEP_EVERY = 100;
+const RUNE_STEP = [1, 1.8, 3.0, 4.6, 6.6];
+/* 세 룬. `eff` 는 **1레벨당(1계단 기준)** 값이고 실제 값은 계단 배수를 탄다.
+   위 단계일수록 재료도 비싸고 확률 곡선도 같지만 «1레벨의 무게» 가 배로 커진다. */
+const RUNES = [
+  { id:'r1', n:'일반룬', ic:'🔹', tone:'#7FD8E8', cost:{ base:12, r:1.0060 },
+    eff:{ atk:0.010, hp:0.008 } },
+  { id:'r2', n:'고급룬', ic:'🔷', tone:'#4FA8E0', cost:{ base:30, r:1.0062 },
+    eff:{ atk:0.020, hp:0.016, gold:0.010 } },
+  { id:'r3', n:'천상룬', ic:'💠', tone:'#E3C15F', cost:{ base:75, r:1.0064 },
+    eff:{ atk:0.040, hp:0.032, gold:0.020 } }
+];
+const RN = byId(RUNES);
+const RUNE_AXIS = { atk:'공격력', hp:'체력', gold:'골드 획득' };
+const runeLvOf  = id => Math.min(RUNE_MAXLV, Math.max(0, (S.rune && S.rune[id]) | 0));
+const runeMaxed = id => runeLvOf(id) >= RUNE_MAXLV;
+/* 사다리 — 첫 룬은 항상 열려 있고, 그 뒤는 «앞 룬이 만렙» 이어야 열린다 */
+function runeOpen(id){
+  const i = RUNES.findIndex(r => r.id === id);
+  if(i <= 0) return i === 0;
+  return runeMaxed(RUNES[i-1].id);
+}
+const runeReqText = id => {
+  const i = RUNES.findIndex(r => r.id === id);
+  return i <= 0 ? '' : RUNES[i-1].n + ' Lv.' + RUNE_MAXLV + ' 달성 시 개방';
+};
+/* Lv l → l+1 재료 비용(룬강화석) */
+const runeCost = (r, l) => Math.ceil(r.cost.base * Math.pow(r.cost.r, Math.max(0, l)));
+/* 계단을 밟은 «누적» 효과. Σ_{i=1..L} eff[k] × RUNE_STEP[floor((i-1)/EVERY)]
+   — 구간이 5칸뿐이라 닫힌 식으로 접는다(레벨마다 루프를 돌지 않는다). */
+function runeVal(id, k){
+  const r = RN[id]; if(!r || !r.eff[k]) return 0;
+  let l = runeLvOf(id), n = 0, seg = 0;
+  while(l > 0 && seg < RUNE_STEP.length){
+    const take = Math.min(l, RUNE_STEP_EVERY);
+    n += take * RUNE_STEP[seg];
+    l -= take; seg++;
+  }
+  return r.eff[k] * n;
+}
+/* 축별 총효과(배수 −1) — 표기와 bonus() 가 같은 식을 본다 */
+const runeSum = k => RUNES.reduce((s, r) => s + runeVal(r.id, k), 0);
+/* «지금 이 룬을 한 번 시도할 수 있는가» — 개방 · 만렙 아님 · 재화 충분 */
+function runeTryOk(id, pay){
+  const r = RN[id];
+  if(!r || !runeOpen(id) || runeMaxed(id)) return false;
+  return pay === 'dia' ? S.dia >= RUNE_DIA : S.rstone >= runeCost(r, runeLvOf(id));
+}
+/* 실제 시도 1회. 재화를 먼저 소모하고 확률을 굴린다 — **실패해도 레벨은 그대로**(주인 지시 ④).
+   결과는 `{ ok, up, lv, rate, pay, cost }` 로 돌려준다(UI·게이트가 같은 값을 본다). */
+function runeTry(id, pay){
+  const r = RN[id];
+  if(!runeTryOk(id, pay)) return { ok:false };
+  const l = runeLvOf(id), rate = runeRate(l);
+  const cost = pay === 'dia' ? RUNE_DIA : runeCost(r, l);
+  if(pay === 'dia') S.dia -= cost; else S.rstone -= cost;
+  const up = Math.random() < rate;
+  if(up){
+    if(!S.rune || typeof S.rune !== 'object') S.rune = {};
+    S.rune[id] = l + 1;
+    markDirty();                              /* 효과가 bonus() 파이프에 있으므로 캐시를 깬다 */
+  }
+  uiDirty = true; save();
+  return { ok:true, up, lv:runeLvOf(id), rate, pay, cost };
+}
+
 /* ---- 유물조각 교환 (다이아 → 유물조각) ---- */
 const EXCHANGE = [
   { dia:1000,  rel:100 },
@@ -14854,6 +15055,8 @@ const DEF = () => ({
   gold:0, dia:NEW_DIA, relic:0, stage:1, best:1, rank:0,
   stone:0,                                    /* 194 — 강화석(코스튬 강화 전용 재화) */
   cosLv:{},                                   /* 194 — 코스튬 id → 강화 레벨 0~COS_MAXLV(없으면 0) */
+  rstone:0,                                   /* 203 — 룬강화석(룬 강화 전용 재화) */
+  rune: RUNES.reduce((o,r) => (o[r.id]=0, o), {}),   /* 203 — 룬 id → 레벨 0~RUNE_MAXLV */
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   /* 88 — 캐릭터 레벨·스탯 포인트·스탯 훈련 키 제거. 구 세이브의 잔존 키는 Object.assign 으로
@@ -14985,6 +15188,19 @@ function load(){
        레벨은 **실재하는 코스튬 id 만** 남기고 0~COS_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
        `cosVal()` 이 곡선 밖으로 나가지 않는다. */
     if(!Number.isFinite(b.stone) || b.stone < 0) b.stone = 0; else b.stone = Math.floor(b.stone);
+    /* 203 — 룬강화석·룬 레벨. 194 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       구 세이브엔 두 키가 없다 → 룬강화석 0 · 세 룬 전부 Lv 0 에서 시작한다.
+       레벨은 **실재하는 룬 id 만** 남기고 0~RUNE_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
+       `runeVal()` 이 계단 표(RUNE_STEP 5칸) 밖으로 나가지 않는다. */
+    if(!Number.isFinite(b.rstone) || b.rstone < 0) b.rstone = 0; else b.rstone = Math.floor(b.rstone);
+    {
+      const rr = (d.rune && typeof d.rune === 'object') ? d.rune : {}, out = {};
+      RUNES.forEach(r => {
+        const v = rr[r.id];
+        out[r.id] = (Number.isFinite(v) && v > 0) ? Math.min(RUNE_MAXLV, Math.floor(v)) : 0;
+      });
+      b.rune = out;
+    }
     {
       const c = (d.cosLv && typeof d.cosLv === 'object') ? d.cosLv : {}, out = {};
       Object.keys(c).forEach(id => {
@@ -15240,6 +15456,14 @@ function bonus(){
   {
     const n = cosLvSum();
     if(n){ b.atk *= 1 + n*COS_LV.atk; b.hp *= 1 + n*COS_LV.hp; b.gold *= 1 + n*COS_LV.gold; }
+  }
+  /* 203 룬 — 194 코스튬 강화와 **같은 규칙**: 세 룬의 효과를 축별로 먼저 더한 뒤 한 번만 곱한다
+     (룬마다 곱하면 만렙 셋에서 배율이 터진다 — LESSONS 91-1). 계단 배수는 `runeVal()` 안에 있다. */
+  {
+    const ra = runeSum('atk'), rh = runeSum('hp'), rg = runeSum('gold');
+    if(ra) b.atk  *= 1 + ra;
+    if(rh) b.hp   *= 1 + rh;
+    if(rg) b.gold *= 1 + rg;
   }
   /* 91 도감 — «받은 단계 수 × 단계당 값» 을 축별로 전부 더한 뒤 한 번만 곱한다.
      (세트마다 곱하면 37세트가 전부 만단계일 때 공격력이 ×673 까지 튄다 — COLL_BASE 주석 참고) */
@@ -19210,6 +19434,8 @@ function giveReward(r){
   if(r.rel){     S.relic += r.rel;   out.push(curIc('relic') + ' ' + fmt(r.rel)); }
   /* 194 — 강화석(코스튬 강화 전용). 다이아·유물조각과 같은 «숫자 그대로» 표기(150) */
   if(r.stone){   S.stone += r.stone; out.push(curIc('stone') + ' ' + fmt(r.stone)); }
+  /* 203 — 룬강화석(룬 강화 전용). 강화석과 같은 «숫자 그대로» 표기(150) */
+  if(r.rstone){  S.rstone += r.rstone; out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
   if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmtG(g)); }
   if(r.frag){
@@ -20058,7 +20284,8 @@ let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복
 
 const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic1:'고대의 잔향 상태',
                     relic2:'잊힌 새벽 상태', relic3:'용의 숨결 상태', relic4:'창세의 여명 상태',
-                    stone:'불꽃 노을 상태' };   /* 194 — 강화석 던전 */
+                    stone:'불꽃 노을 상태',    /* 194 — 강화석 던전 */
+                    rstone:'푸른 룬빛 상태' };  /* 203 — 룬강화석 던전 */
 
 function openDunDetail(d){
   if(!d) return;
@@ -20741,7 +20968,16 @@ const DUN_UI = {
      초반 성장 경로를 막지 않으므로 유물 1단과 같은 문턱에 둔다. */
   stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'), tk:curIc('tkStone'),
             thk:'dragon', thf:'f1', thi:'fly', thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
-            rw:['강화석 획득 가능'], psx:0.966, gm:14 }
+            rw:['강화석 획득 가능'], psx:0.966, gm:14 },
+  /* 203 — 룬강화석 던전. 색은 룬강화석 아이콘(청록)에서 뽑았다 — 던전 6장 중 유일한 청록 계열이라
+     강화석(주황)·다이아(초록)와 카드가 갈린다. 카드 기하는 relic 4단·강화석과 같은 규격이다.
+     썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — 기존 elves 아틀라스의 «blue_attack» 포즈를
+     쓴다(relic4 는 같은 아틀라스의 blue_idle 이라 자세가 갈린다).
+     해금은 강화석 던전과 같은 자리 = 「가이드미션 14 클리어」 — 룬강화석도 룬에만 쓰여
+     초반 성장 경로를 막지 않는다. */
+  rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'), tk:curIc('tkRstone'),
+            thk:'elves',  thf:'blue_attack_0', thi:'blue_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
+            rw:['룬강화석 획득 가능'], psx:0.966, gm:14 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
@@ -21312,7 +21548,9 @@ function endRaid(record){
        측정장은 하루 제한이 없으므로(205 가 3회 제한을 등재해 두었지만 아직 미착수) 던전이 주
        수급처가 되게 소액이다. 신기록에는 2배 — 「측정장은 기록을 갱신하러 가는 곳」이라는
        이 콘텐츠의 목적과 보상이 같은 방향을 보게 한다. */
-    const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1) });
+    /* 203 ③ — 같은 자리에 **룬강화석**도 붙는다(주인 지시 «DPS 측정장 보상에도 추가»).
+       「룬의 제단」이 주 수급처가 되게 소액이고, 신기록 2배 규칙은 강화석과 같다. */
+    const st = giveReward({ stone: COS_ST_RAID * (rec ? 2 : 1), rstone: RUNE_ST_RAID * (rec ? 2 : 1) });
     save(); uiDirty = true;
     /* A5 모달 본문은 크림(#D7C0A1) 바탕이다 — 어두운 배경용 색(#ffd88a·#8fd6ff)을 쓰면
        대비가 1.1:1 이라 사실상 안 보인다. 강조는 공용 `.mbody p b`(#B4571E) 에 맡기고
@@ -21358,6 +21596,9 @@ function arenaLook(i){
    (던전 1런 = 150+120f 이고 f 가 오를수록 벌어진다). 최종 수치는 199 의 몫. */
 const COS_ST_RAID  = 60;    /* DPS 측정장 1회(신기록이면 ×2) */
 const COS_ST_ARENA = 40;    /* 아레나 승리(패배는 1/5 = 8) */
+/* 203 ③ — 측정장이 주는 룬강화석. 주인 지시는 «룬강화석 던전 + DPS 측정장» 둘이라
+   아레나에는 붙이지 않는다(194 강화석과 획득처가 일부러 다르다). 최종 수치는 199 의 몫. */
+const RUNE_ST_RAID = 35;    /* DPS 측정장 1회(신기록이면 ×2) */
 function arenaReward(win){
   const g = Math.max(100, Math.round(eGold(Math.max(1, S.best)) * 40));
   /* 194 — 승/패 비율(전액 vs 1/5)은 기존 골드·다이아 규칙을 그대로 따른다 */
@@ -22570,7 +22811,13 @@ const CURINFO = {
   stone: { ic:curIc('stone'), n:'강화석',
     get:() => S.stone,
     d:'코스튬을 강화할 때 사용합니다. 강화 레벨은 코스튬마다 최대 ' + COS_MAXLV + '입니다.',
-    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'stone') || {}).n + '»', 'DPS 측정장 기록 갱신', '아레나 대전 보상'] }
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'stone') || {}).n + '»', 'DPS 측정장 기록 갱신', '아레나 대전 보상'] },
+  /* 203 — 룬강화석. 획득처 2곳(주인 지시 ③)을 그대로 적는다: 전용 던전 · DPS 측정장 */
+  rstone:{ ic:curIc('rstone'), n:'룬강화석',
+    get:() => S.rstone,
+    d:'룬을 강화할 때 사용합니다. 룬 레벨은 룬마다 최대 ' + RUNE_MAXLV + '입니다.',
+    ways:['던전 «' + (DUNGEONS.find(d => d.id === 'rstone') || {}).n + '»', 'DPS 측정장',
+          '다이아 ' + RUNE_DIA + '개로 1회 대체'] }
 };   /* 88 — sp(스탯 포인트) 항목 폐기 */
 let curInfoKey = null;
 /* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
@@ -22894,6 +23141,7 @@ function bagCur(){
     { ic:curIc('dia'), n:'다이아',     g:3, q:Math.floor(S.dia) || 0 },
     { ic:curIc('relic'), n:'유물조각',     g:2, q:Math.floor(S.relic) || 0 },
     { ic:curIc('stone'), n:'강화석',     g:3, q:Math.floor(S.stone) || 0 },   /* 194 */
+    { ic:curIc('rstone'), n:'룬강화석',   g:3, q:Math.floor(S.rstone) || 0 },  /* 203 */
     { ic:curIc('mile'), n:'마일리지',   g:4, q:Math.floor(S.mileage) || 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
@@ -24066,6 +24314,10 @@ function renderTrainLive(){
     else if(!c.ok && dot) dot.remove();
   });
   trSyncHead();
+  /* 203 — 룬 탭도 «값만 고쳐 쓰는» 이 주기를 탄다. 룬 카드는 노드 수가 고정(RUNES 3개)이고
+     비용·확률·버튼 상태가 재화 변동으로 바뀌므로 통째로 다시 그려도 싸다(0.35초 주기).
+     ⚠ 훈련 탭일 때도 서브탭 배지(재료로 시도 가능한 룬이 생겼나)는 갱신돼야 하므로 조건 없이 부른다. */
+  renderRunes();
 }
 function renderTrain(){
   trSyncHead();
@@ -24083,7 +24335,87 @@ function renderTrain(){
     + '<span class="cn"><i>' + c.name + '</i></span>'
     + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
+  renderRunes();                                        /* 203 — 룬 탭 본문 + 탭 상태 */
 }
+
+/* ==========================================================================
+   203 룬 탭 — 23 훈련 팝업 «훈련 · 룬» 두 번째 탭 (2026-08-27, 저장소 주인 지시)
+   데이터·판정은 전부 위 룬 모델(runeRate/runeVal/runeTry)을 지난다 — 여기서는 그리기만 한다.
+   ========================================================================== */
+let trSub = 'train';                                    /* 'train' | 'rune' */
+/* 룬 탭 레드닷 — «지금 재료로 시도할 수 있는 룬이 있다» 일 때만(166 «누를 게 있다» 규약).
+   다이아는 상시 가능하므로 점등 조건에서 뺀다 — 그러면 배지가 영원히 켜져 있다. */
+const runeAlert = () => RUNES.some(r => runeTryOk(r.id, 'mat'));
+function setTrSub(k){
+  trSub = (k === 'rune') ? 'rune' : 'train';
+  renderTrain();
+}
+function renderRunes(){
+  const box = document.querySelector('#trw .tr-box');
+  if(box) box.classList.toggle('rune', trSub === 'rune');
+  document.querySelectorAll('#trSubs [data-trsub]').forEach(el => {
+    el.classList.toggle('on', el.dataset.trsub === trSub);
+    if(el.dataset.trsub === 'rune') el.classList.toggle('alert', runeAlert());
+  });
+  const w = $('trRunes'); if(!w) return;
+  /* ⚠ 이 함수는 `renderTrainLive()` 를 타고 **0.35초마다** 불린다. 무조건 innerHTML 을 갈아 끼우면
+     pointerdown 과 click 사이에 버튼 노드가 사라져 탭이 통째로 유실된다
+     (LESSONS 50-① «재렌더에 진 클릭» · 작업 74·142 가 같은 병으로 등재됐다).
+     그래서 «화면에 보이는 값이 실제로 달라졌을 때만» 다시 그린다 — 서명이 같으면 노드를 그대로 둔다.
+     서명에는 그리기에 들어가는 입력이 전부 들어간다(탭·레벨 3개·두 재화). */
+  const sig = trSub + '|' + RUNES.map(r => runeLvOf(r.id)).join(',')
+            + '|' + Math.floor(S.rstone) + '|' + Math.floor(S.dia);
+  if(w.dataset.sig === sig) return;
+  w.dataset.sig = sig;
+  let h = '';
+  RUNES.forEach((r, i) => {
+    const open = runeOpen(r.id), l = runeLvOf(r.id), max = runeMaxed(r.id);
+    const rate = runeRate(l), cost = runeCost(r, l);
+    const okM = runeTryOk(r.id, 'mat'), okD = runeTryOk(r.id, 'dia');
+    /* 효과 표기는 bonus() 와 **같은 식**(runeVal)을 지난다 — 두 벌이 되면 표기가 거짓이 된다 */
+    const eff = Object.keys(r.eff).map(k => RUNE_AXIS[k] + ' +' + pct(runeVal(r.id, k))).join(' · ');
+    h += '<div class="tr-rn k' + i + (open ? '' : ' lk') + '" data-rune="' + r.id + '"'
+      +  ' style="--rt:' + r.tone + '">'
+      +  '<span class="ri">' + r.ic + '</span>'
+      +  '<span class="rn"><i>' + r.n + '</i></span>'
+      +  '<span class="rl"><i>Lv. ' + l + ' / ' + RUNE_MAXLV + '</i></span>'
+      +  '<span class="rb"><i style="width:' + (l / RUNE_MAXLV * 100).toFixed(2) + '%"></i></span>'
+      +  '<span class="rp"><i>' + (max ? 'MAX' : (rate*100).toFixed(rate < 0.01 ? 2 : 1) + '%')
+      +    '</i><br><s>' + (max ? '더 올릴 수 없음' : '성공 확률') + '</s></span>'
+      +  '<span class="rd"><i>' + eff + '</i></span>'
+      +  (max
+          ? '<span class="rmax"><i>최대 레벨</i></span>'
+          : '<span class="rbt b1' + (okM ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="mat">'
+            + '<i>' + curIc('rstone', 34) + fmt(cost) + '</i></span>'
+            + '<span class="rbt b2' + (okD ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="dia">'
+            + '<i>' + curIc('dia', 34) + fmt(RUNE_DIA) + '</i></span>')
+      +  '<span class="rlk"><i>🔒 ' + runeReqText(r.id) + '</i></span>'
+      +  '</div>';
+  });
+  h += '<div class="rsum"><i>룬 총효과 — '
+    +  Object.keys(RUNE_AXIS).map(k => RUNE_AXIS[k] + ' +' + pct(runeSum(k))).join(' · ')
+    +  '</i></div>';
+  w.innerHTML = h;
+}
+/* 시도 1회 — 성공·실패 모두 토스트로 알린다(206 방향: 확인 팝업 없이 자동으로 사라지는 알림).
+   실패해도 레벨은 그대로다(주인 지시 ④) — 문구가 그 사실을 분명히 말한다. */
+function runeBuy(id, pay){
+  const r = RN[id]; if(!r) return false;
+  if(!runeOpen(id)){ notify('🔒 ' + r.n + ' — ' + runeReqText(id)); return false; }
+  if(runeMaxed(id)){ notify(r.n + ' 은(는) 이미 최대 레벨입니다'); return false; }
+  if(!runeTryOk(id, pay)){
+    notify(pay === 'dia' ? curIc('dia') + ' <b>다이아</b>가 부족합니다'
+                         : curIc('rstone') + ' <b>룬강화석</b>이 부족합니다');
+    sfx('err'); return false;
+  }
+  const res = runeTry(id, pay);
+  if(!res.ok) return false;
+  if(res.up){ sfx('up'); fxReward(); notify(r.n + ' 강화 성공! <b>Lv. ' + res.lv + '</b>'); }
+  else      { sfx('err'); notify(r.n + ' 강화 실패 — 레벨은 그대로입니다 (Lv. ' + res.lv + ')'); }
+  renderTrain();
+  return res.up;
+}
+
 function openTrain(){
   if(typeof closeDungeon === 'function') closeDungeon();
   renderTrain();
@@ -24109,6 +24441,13 @@ function syncTrainNav(on){
   });
 }
 $('trw').addEventListener('click', e => {
+  /* 203 — 팝업 탭 «훈련 · 룬». 배수 탭보다 먼저 본다(둘 다 같은 팝업 안의 위임 핸들러다) */
+  const sb = e.target.closest('[data-trsub]');
+  if(sb){ setTrSub(sb.dataset.trsub); return; }
+  /* 203 — 룬 강화 시도(재료 / 다이아). 훈련 카드와 달리 «꾹 누르기» 가 없다 —
+     확률 시도라 연타로 자원이 훅 빠지는 것을 막는다(한 번 누르면 한 번). */
+  const rb = e.target.closest('[data-runebuy]');
+  if(rb){ runeBuy(rb.dataset.runebuy, rb.dataset.pay); return; }
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
   if(e.target.closest('#trUp')){

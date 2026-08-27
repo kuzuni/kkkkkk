@@ -179,6 +179,10 @@ function staticSyntax() {
       await page.waitForTimeout(400);
       const dsubs = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => e.dataset.dsub)).catch(() => []);
       dsubs.forEach((k) => openers.push({ label: 'dunsub:' + k, sel: null, dun: `#dunSub [data-dsub="${k}"]` }));
+      /* 203 — 23 훈련 팝업(#trw) 안의 «훈련 · 룬» 탭. 진입이 «훈련 탭 → 팝업 안 서브탭» 2단계라
+         위 수집(.tab/.side/[data-cur])에 안 걸린다. 칸이 늘면 이 목록이 자동으로 따라간다. */
+      const tsubs = await page.$$eval('#trSubs [data-trsub]', (els) => els.map((e) => e.dataset.trsub)).catch(() => []);
+      tsubs.forEach((k) => openers.push({ label: 'trsub:' + k, sel: null, tr: `#trSubs [data-trsub="${k}"]` }));
       /* 19 프로필(#pfw) · 20 스펙 정보(#specw) — 상단 HUD 초상화가 19 를 열고, 19 의 하단 토글이 20 을 연다.
          둘 다 위 셀렉터 수집(.tab/.side/[data-cur])에 안 걸리는 오프너다(작업 20). */
       if (await page.$('#profBtn')) {
@@ -234,6 +238,12 @@ function staticSyntax() {
           await page.waitForTimeout(400);
           const hit = await page.$eval(o.dun, (el) => { el.click(); return true; }).catch(() => false);
           if (!hit) await page.click(o.dun, { timeout: 3000, force: true });
+        } else if (o.tr) {
+          /* 203 — 하단 «훈련» 탭이 23 팝업을 열고, 그 안의 서브탭을 한 번 더 누른다.
+             query+click 을 한 evaluate 안에서 한다(renderTrain 이 본문을 갈아끼운다 — LESSONS 50-①). */
+          await page.click('.tab[data-t="grow"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.evaluate((s2) => { const el = document.querySelector(s2); if (el) el.click(); }, o.tr);
         } else if (o.pass) {
           /* 35 — «▦ 메뉴 → 🎫 패스» 로 페이지를 연 뒤, 필요하면 하단 패스 탭까지 한 번 더 누른다.
              query+click 을 한 evaluate 안에 넣는다(LESSONS 50-①). */
