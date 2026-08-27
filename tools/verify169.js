@@ -24,7 +24,10 @@ const URL = 'file://' + path.join(ROOT, 'index.html');
 const HEIGHTS = [1600, 1920, 2280, 2600];
 /* 194 — 강화석 던전(`stone`)이 7번째로 붙었다. 개수 단언은 전부 이 배열 길이로 돈다
    (90 → 97 → 72 → 121 에 이어 «구성이 늘 때마다 개수를 박은 게이트가 빨개지는» 다섯 번째 자리다). */
-const DUN_IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone'];
+/* 258(2026-08-27) — 203 이 룬강화석 던전(`rstone`)을 8번째로 붙였는데 이 배열이 7 에 멈춰 있어
+   A0 이 4화면비 전부 «7장 기대 / 8장 실측» 으로 빨갰다(258 착수 전부터. 내 변경과 무관하다).
+   위 주석이 예고한 «여섯 번째 자리» 다 — 목록을 늘려 게이트를 되살린다. */
+const DUN_IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone', 'rstone'];
 
 let pass = 0, fail = 0;
 const ok = (t, d) => { pass++; console.log(`PASS ${t}${d ? ' — ' + d : ''}`); };

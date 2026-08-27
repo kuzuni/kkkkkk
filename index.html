@@ -21027,7 +21027,13 @@ function dgdPaintTh(tries){
   if(cv.dataset.thk !== u.thk || cv.dataset.thf !== u.thf){ cv._an = null; cv._fr = null; }
   cv.dataset.thk  = u.thk;
   cv.dataset.thf  = u.thf;
-  cv.dataset.thi  = u.thi || '';
+  /* 258 — 배너는 **정지 한 장**이다(주인 보고: 팝업이 열려 있는 동안 깜빡거린다).
+     `raidDraw` 는 `data-thi` 가 있으면 아이들 창의 «지금 프레임» 을, 없으면 `data-thf`(그 몬스터의
+     기준 포즈)를 그린다. 아이들을 끄면서 순환 프레임에 멈춰 세우면 `rstone`·`tower` 처럼
+     아이들 창이 없어 **공격 사이클**을 돌던 칸이 «칼을 뻗은 중간 포즈» 로 굳는다(probe258d —
+     `blue_attack_3` 은 기준 포즈보다 폭이 1.8배다). 기준 포즈로 고정하는 것이 정지 상태의 정답이다.
+     행 카드(`#dunList`)는 종전대로 `data-thi` 를 달고 121 «들썩» 을 돈다 — 여기만 비운다. */
+  cv.dataset.thi  = '';
   cv.dataset.thc  = u.thc || '';
   cv.dataset.thbr = u.thbr || 1;
   /* 위상은 행 카드와 같은 규칙(카드 번호). 레이드는 던전 뒤 번호를 준다. */
@@ -22257,22 +22263,33 @@ function raidIdleTick(){
      테스트 하네스만 세우는 스위치이고, 제품 실행에서는 undefined 라 아무 영향이 없다. */
   if(window.__idleFrozen) return;
   const w = document.getElementById('dunw');
-  /* 169 — 04 세부 팝업 배너에도 같은 썸네일이 생겼다. 그 팝업은 03 목록을 안 거치고도 열리므로
-     («도전» 버튼·113 가이드 손가락) `#dgdw` 단독으로도 살아 있어야 한다. */
-  const dw = document.getElementById('dgdw');
+  /* 258(2026-08-27, 주인 보고 «04 세부 팝업이 열려 있는 동안 깜빡거린다») —
+     169 가 배너 캔버스(`#dgdw canvas.dgd-th`)를 이 타이머에 편입했던 것을 **되돌린다**.
+     측정(`tools/probe258*.js`): 팝업이 열려 있는 동안 `.dgd-box` 안에서 픽셀이 바뀌는 자리는
+     배너 썸네일 **한 곳뿐**이고(격자 히트맵 — 로컬 x240~560 · y320~420 = `#dgdTh` 안),
+     `__idleFrozen` 으로 이 타이머만 멈추면 던전 7종 전부 프레임간 diff 가 **평균 5.8k~13.2k px → 0px** 이 된다.
+     즉 «깜빡임» = 이 타이머가 배너를 8fps 로 다시 칠하는 것 그 자체다. 두 가지가 겹친다 —
+       ① 배너는 96×64 스프라이트를 268×179 로 **2.8배 확대**해 놓은 큰 정지 일러스트 면이라
+          3프레임 루프가 «움직임» 이 아니라 «번쩍임» 으로 읽힌다(gold: 평균 13,193px/프레임 변화).
+       ② `drawSpriteTo(fit)` 는 **그 프레임의 아틀라스 rect** 를 contain 하므로 프레임마다 배율이 달라진다 —
+          `probe258d` 실측 폭 흔들림 relic2·despair 12.9% · relic3 16.7% · tower 40.3% · rstone **45.9%**
+          (아이들 창이 없는 키는 `blue_attack`·`green_attack` 같은 **공격** 사이클을 통째로 돈다).
+     03 행 카드의 121 «들썩» 은 그대로 둔다(121 의 작업 구간이고, 주인 지적은 팝업 한정이다).
+     배너는 `dgdPaintTh` 가 칠한 한 장에서 멈춘다 — `stepAnim` 을 안 부르니 `raidEnt(cv).at` 이
+     초기 위상 그대로라 프레임이 결정적이고, 아틀라스 지연은 `dgdPaintTh` 의 200ms 재시도가 덮는다.
+     따라서 «#dgdw 단독으로도 살아 있어야 한다» 던 169 의 liveness 분기도 같이 걷어낸다. */
   /* 72(2026-08-26) — 던전 서브탭에도 스프라이트 썸네일이 생겼으므로 «레이드일 때만» 조건을 뺀다.
      페이지가 닫히거나 절전이면 그대로 쉰다(121 지시 ②). */
-  const live = ((w && w.classList.contains('on')) || (dw && dw.classList.contains('on')))
-    && !saverOn && !document.hidden;
+  const live = (w && w.classList.contains('on')) && !saverOn && !document.hidden;
   if(!live){ raidIdleT0 = 0; return; }
   const now = performance.now();
   const dt = raidIdleT0 ? Math.min(0.25, (now - raidIdleT0)/1000) : 0;
   raidIdleT0 = now;
   if(dt <= 0) return;
-  document.querySelectorAll('#dunList canvas.thcv, #dgdw canvas.dgd-th').forEach(cv => {
+  document.querySelectorAll('#dunList canvas.thcv').forEach(cv => {   /* 258 — 배너(`.dgd-th`) 제외 */
     if(!cv.dataset.thi && !cv.dataset.arnav) return;
     if(cv.closest('.dnc.lkd')) return;          /* 지시 ④ — 잠금 카드는 정지 */
-    /* 169 — 닫힌 페이지(03 목록을 닫고 세부만 열린 경우)·숨긴 캔버스(아레나)는 그리지 않는다.
+    /* 169 — 숨긴 캔버스(아레나)는 그리지 않는다.
        `offsetParent` 는 display:none 조상이 있으면 null 이라 «지금 보이는 것»만 남는다. */
     if(!cv.offsetParent) return;
     const e = raidEnt(cv);
