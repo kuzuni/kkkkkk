@@ -143,12 +143,12 @@ const hud = (p) => p.evaluate(() => {
   const cleared = await p.evaluate(() => {
     for (let i = 0; i < 120 && !enemies.some(e => e.tk === 'boss'); i++) step(0.05);
     const b = enemies.find(e => e.tk === 'boss');
-    const diaB = S.dia;
+    const diaB = S.dia, goldB = S.gold;
     killEnemy(b);
     const win = stageWin;
     step(0.016);
     return { stage: S.stage, win, bossOn, farm: S.bossFarm, killed, total: stageTotal(),
-             mobs: spawnQ.length, dia: S.dia - diaB, pending: stageWin };
+             mobs: spawnQ.length, dia: S.dia - diaB, gold: S.gold - goldB, pending: stageWin };
   });
   eq('§4 보스를 잡으면 스테이지 +1', cleared.stage, 13);
   ok(cleared.win, '§4 격파 프레임에 클리어가 예약된다(stageWin)');
@@ -157,7 +157,11 @@ const hud = (p) => p.evaluate(() => {
   eq('§4 다음 스테이지 killed 0', cleared.killed, 0);
   eq('§4 다음 스테이지 분모 ENEMY_COUNT', cleared.total, N.mobs);
   eq('§4 다음 스테이지 몹 큐 ENEMY_COUNT', cleared.mobs, N.mobs);
-  ok(cleared.dia > 0, '§4 최고 기록 갱신 시 다이아 보상(28·기존 거동)');
+  /* 170(2026-08-27) — 주인 지시로 클리어·보스 킬 다이아가 **폐지**됐다. «다이아 > 0» 은 감시할
+     등식을 잃었으므로 지우지 않고 뒤집어 이사시킨다(LESSONS 168-②): 최고 기록을 갱신해도
+     다이아는 0, 대신 골드 보너스는 그대로 들어온다 — 되살아나면 여기서 빨개진다. */
+  eq('§4 최고 기록 갱신이어도 다이아 0 (170 — 클리어·보스 킬 다이아 폐지)', cleared.dia, 0);
+  ok(cleared.gold > 0, '§4 클리어 보상은 골드뿐 (170)');
 
   /* ── §5 실패 → 파밍 → 재도전 ────────────────────────────────── */
   console.log('§5 보스 실패 → 파밍 + 재도전 (28 루프를 매 스테이지에 재사용)');

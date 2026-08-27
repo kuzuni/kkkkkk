@@ -238,8 +238,13 @@ let br = null;
      = `<img class="cic" …>` **HTML 문자열**로 바꾸면서 캔버스에 원문이 그려졌고(주인 보고),
      이 단언은 그때부터 죽어 있었다. 이제 «아이콘 없이 낱말 + 수치» 가 정답이다 —
      125 의 «화폐는 이미지 1종» 원칙 때문에 💎 로도 되돌릴 수 없다(verify125 A1 이 잡는다). */
-  yes('문구 · 클리어는 «STAGE CLEAR!» + 낱말 다이아(아이콘 없음)',
-      /let msg = 'STAGE CLEAR!';/.test(code) && /msg \+= ' 다이아 \+' \+ fmt\(d\);/.test(code));
+  /* 170(2026-08-27) — 주인 지시로 **클리어 다이아 보상 자체가 폐지**됐다. 160 이 고쳐 둔
+     «낱말 다이아» 단언은 감시할 등식을 잃었으므로(LESSONS 168-② SUPERSEDED) 지우지 않고
+     **뒤집어 이사**시킨다: 문구는 «STAGE CLEAR!» 한 낱말뿐이고 뒤에 아무것도 안 붙는다. */
+  yes('문구 · 클리어는 «STAGE CLEAR!» 뿐 (170 — 다이아 조각 폐지)',
+      /const msg = 'STAGE CLEAR!';/.test(code) &&
+      !/msg\s*\+=/.test(code.slice(code.indexOf("const msg = 'STAGE CLEAR!';"),
+                                   code.indexOf('showMsg(msg)') + 12)));
   eq('문구 · 클리어 문구에 골드 없음', (code.match(/STAGE CLEAR![^\n]*G'/g) || []).length, 0);
   /* 160 — 캔버스 텍스트 싱크(showMsg → fillText · nums → fillText)에 HTML 이 흘러들면
      태그가 «글자» 로 그려진다. 이 싱크로 가는 줄에 아이콘 마크업 생성기가 있으면 실패. */
@@ -252,7 +257,7 @@ let br = null;
   }
   /* 클리어 문구가 만들어지는 그 블록 자체에도 마크업 생성기가 없어야 한다(위 줄 단위 검사 보강) */
   {
-    const blk = code.slice(code.indexOf("let msg = 'STAGE CLEAR!';"));
+    const blk = code.slice(code.indexOf("const msg = 'STAGE CLEAR!';"));
     eq('문구 · 클리어 블록에 curIc 0건',
        (blk.slice(0, blk.indexOf('showMsg(msg)') + 12).match(/curIc\(/g) || []).length, 0);
   }

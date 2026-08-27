@@ -15554,7 +15554,9 @@ function killEnemy(e){
      실제 비행은 fxWatch() 가 증가분을 묶어서 한 번에 쏜다(연속 킬이 아이콘 폭탄이 되지 않게). */
   fxAt(fxWorld(e.x, e.y - e.r), 'combat');   /* 77 — 전투 발 태그: 코인 비행이 팝업 아래 #fxlc 로 간다 */
   S.gold += g; goldWin += g; S.totalKills++; killed++;
-  if(e.tk === 'boss' && S.stage >= S.best) S.dia += 250 + S.stage*25;
+  /* 170 — ⛔ 보스 킬 다이아(`250 + S.stage*25`, 최고 기록 갱신 시)는 **폐지**했다(주인 지시 2026-08-27:
+     «스테이지 클리어했다고 다이아 보상 주면 안 됨 — 골드만»). 162 이후 보스 격파 = 스테이지 클리어라
+     이 줄이 곧 클리어 보상이었다. 전투 보상은 골드(위 `S.gold += g`)뿐이다 — 되살리지 마라. */
   burst(e.x, e.y - e.r, e.T.col, e.tk === 'boss' ? 46 : 13, e.tk === 'boss' ? 330 : 190);
   const corpse = { akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
                    x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r };
@@ -16499,21 +16501,18 @@ function step(dt){
     if(stageWin){
       /* ① 보스 격파 = 스테이지 클리어 */
       stageWin = false;
-      const first = S.stage >= S.best;              /* 최고 기록 갱신 시에만 다이아 */
       S.stage++; S.bossFarm = false;                /* 28 — 다음 스테이지는 항상 «미도전» 상태로 */
       S.best = Math.max(S.best, S.stage);
       const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
       S.gold += bonusG; goldWin += bonusG;
-      /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다. 다이아만 짧게 붙인다.
+      /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다.
+         170 — ⛔ **스테이지 클리어 보상은 골드뿐이다(주인 지시 2026-08-27).** 최고 기록 첫 돌파 시
+         주던 다이아(`35 + ⌊stage×3.6⌋`)와 그 문구(« 다이아 +n»)는 **폐지**했다 — 되살리지 마라.
+         같은 지시로 killEnemy 의 보스 킬 다이아(`250 + stage×25`)도 함께 폐지했다(~15540 주석).
          160 — 여기는 **캔버스 텍스트 싱크**다(showMsg → ctx.fillText). `curIc()`(125) 는 `<img …>`
          HTML 문자열이라 캔버스에 원문 그대로 그려졌다(«STAGE CLEAR! <img class="cic" …>+80»).
-         125 의 «화폐는 이미지 1종» 원칙상 💎 이모지로 되돌릴 수도 없으므로 **아이콘 없이 낱말+수치**로 쓴다.
          ⛔ showMsg·nums 등 캔버스 문자열에는 curIc()/HTML 을 절대 넣지 마라(게이트 verify94 §문구). */
-      let msg = 'STAGE CLEAR!';
-      if(first){
-        const d = 35 + Math.floor(S.stage*3.6);
-        S.dia += d; msg += ' 다이아 +' + fmt(d);
-      }
+      const msg = 'STAGE CLEAR!';
       spawnStage();
       showMsg(msg);
       sfx('clear');                                       /* 78 — 스테이지 클리어 */
