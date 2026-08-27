@@ -11,7 +11,7 @@
  *   [E] 소환 시뮬 — 무기 10연 ×300 (Lv100) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
  *   [F] 합성 — weapon5(Lv100+5개) → g6 5종 중 하나 · weapon6 → 'weapon7' 고정 · weapon7 은 canCraft false
  *   [G] 11 확률 팝업 — 무기 MAX 단계에 «초월·불멸» 행 · 스킬 팝업엔 없음 · NaN/undefined 0건
- *   [H] 05 팝업 — wpnPages()=2 · 2페이지에 초월·불멸 행 렌더 · NaN/undefined 0건
+ *   [H] 05 팝업 — (186) 페이징 폐지: 한 화면에 8행 40칸 · 초월·불멸 행 렌더 · NaN/undefined 0건
  *   [I] 도감 — COLL.equip.tiers 마지막 need === 108(전 종 수집)
  *   [J] 구 세이브 호환 — weapon5 lv120(옛 무한강화) 이 로드돼도 판정 함수들이 안 깨진다
  *   [K] 콘솔 에러 0건
@@ -166,17 +166,31 @@ const ok = (b, name, detail) => {
   ok(!G.s6, 'G2 스킬 확률 팝업엔 초월·불멸 없음');
   ok(!G.bad, 'G3 확률 팝업 NaN/undefined 0건');
 
-  /* [H] 05 팝업 2페이지 */
+  /* [H] 05 팝업 — 186(2026-08-27, 주인 지시 «(잠긴 등급도) 미리 보여야지») 이 4행 페이징을
+     폐지했다. 묻는 것은 그대로다: **초월·불멸 행이 실제로 보이는가.** 옛 판정은 «2페이지로
+     넘겨서 보이는가» 였고, 지금 같은 단언은 «넘기지 않아도 한 격자에 8행 40칸이 있는가» 다.
+     ◀▶(`#wpnPrev`/`#wpnNext`)·`wpnPages()` 가 되살아나면 H3 이 잡는다(되돌림 감지). */
   const H = await page.evaluate(() => {
     openWeapon(null, 'weapon');
-    const pages = wpnPages();
-    document.getElementById('wpnNext').onclick();
-    const h = document.getElementById('wpnGrid').innerHTML;
+    const g = document.getElementById('wpnGrid');
+    const h = g.innerHTML, cells = g.children.length;
+    /* 스크롤 없이 «격자 안에» 8행이 다 들어와 있는지 — 마지막 칸의 격자-로컬 bottom */
+    const last = g.children[cells - 1];
+    const lastBottom = last ? last.offsetTop + last.offsetHeight : 0;
+    const scrollable = g.scrollHeight > g.clientHeight + 1;
+    /* 맨이름 `typeof` — 최상위 `const` 는 window 에 안 붙어서 `window.wpnPages` 로 물으면
+       폐지 전에도 undefined 다(186 되돌림 시험에서 확인). */
+    const dead = !!(document.getElementById('wpnPrev') || document.getElementById('wpnNext')
+                    || typeof wpnPages === 'function');
     closeWeapon();
-    return { pages, hasG7: h.includes('♾️'), hasG6: h.includes('🌀'), bad: /NaN|undefined/.test(h) };
+    return { cells, lastBottom, scrollable, dead,
+             hasG7: h.includes('♾️'), hasG6: h.includes('🌀'), bad: /NaN|undefined/.test(h) };
   });
-  ok(H.pages === 2, 'H1 wpnPages() === 2', String(H.pages));
-  ok(H.hasG6 && H.hasG7 && !H.bad, 'H2 2페이지에 초월·불멸 행 렌더 · NaN 없음');
+  ok(H.cells === 40, 'H1 격자가 8등급 × 5칸 = 40칸을 한 번에 렌더', String(H.cells) + '칸');
+  ok(H.hasG6 && H.hasG7 && !H.bad, 'H2 페이지 넘김 없이 초월·불멸 행 렌더 · NaN 없음');
+  ok(!H.dead, 'H3 ◀▶ 페이지 화살표·wpnPages() 잔존 0건(186 되돌림 감지)');
+  ok(H.scrollable && H.lastBottom > 1400,
+    'H4 8행이 격자 스크롤 안에 쌓인다(마지막 칸 bottom > 1400)', String(H.lastBottom));
 
   /* [I] 도감 — 91 이 «카테고리 × need 티어» 를 «부위 × 등급 세트» 로 전면 교체하면서
      이 절이 읽던 `COLL.equip.tiers` 가 사라져 게이트가 여기서 즉사하고 있었다(85 이후 줄곧 미실행).

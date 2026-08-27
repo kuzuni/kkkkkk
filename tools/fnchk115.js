@@ -133,22 +133,23 @@ const ok = (b, act, expect, got) => {
   });
   ok(f8 === '0.10%', '동료(펫) 배너 확률 팝업', '같은 8행 표라 코드 수정 없이 0.10%', '불멸=' + f8);
 
-  /* 9 — 05 무기 팝업 2페이지(85 확률 경로) */
+  /* 9 — 05 무기 팝업 불멸 행 렌더(85 확률 경로).
+     186(2026-08-27) 이 4행 페이징을 폐지해 `wpnPage = 1` 이라는 «2페이지로 넘긴다» 단계가 없어졌다.
+     묻는 것은 그대로다: 불멸 무기를 선택한 채 열었을 때 «불멸» 표기가 살아 있고 NaN 이 없는가. */
   const f9 = await page.evaluate(() => {
     let err = null, h = '';
     let rows = 0;
     try {
       const g7 = EQUIPS.find(e => e.slot === 'weapon' && e.g === 7);
       openWeapon(g7.id, 'weapon');                 /* 불멸 무기를 선택한 채로 연다 */
-      wpnPage = 1; renderWpn();                    /* 2페이지 = 등급 4~7 행 */
       h = document.getElementById('wpnw').innerHTML;
       rows = document.getElementById('wpnGrid').children.length;
       closeWeapon();
     } catch (e) { err = String(e); }
     return { err, rows, imm: /불멸/.test(h), bad: /NaN|undefined/.test(h) };
   });
-  ok(!f9.err && f9.imm && !f9.bad && f9.rows > 0, '05 무기 팝업 2페이지 렌더(불멸 무기 선택)',
-     '«불멸» 표기 유지 · NaN 0건 (85 경로 무회귀)',
+  ok(!f9.err && f9.imm && !f9.bad && f9.rows === 40, '05 무기 팝업 8등급 일괄 렌더(불멸 무기 선택)',
+     '«불멸» 표기 유지 · 40칸 · NaN 0건 (85·186 경로 무회귀)',
      '에러=' + (f9.err || '없음') + ' 불멸표기=' + f9.imm + ' 칸=' + f9.rows + ' NaN=' + f9.bad);
 
   /* 10 — 세이브 왕복 */
