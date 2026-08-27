@@ -129,7 +129,9 @@ async function run(scene, span) {
     return {
       frames, rows, cards, p0, leftover,
       goldPill: pillC('gold'), diaPill: pillC('dia'),
+      outX: (typeof fx3Out === 'function' && p0) ? fx3Out(p0) : 0,
       K: {
+        BSOM: typeof FX3_BSOM === 'number' ? FX3_BSOM : 70,
         ARR0: typeof FX3_ARR0 === 'number' ? FX3_ARR0 : 0.50,
         ARR1: typeof FX3_ARR1 === 'number' ? FX3_ARR1 : 1.22,
         PZMAX: typeof FX3_PZ_MAX === 'number' ? FX3_PZ_MAX : 0.22,
@@ -164,15 +166,28 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
 
   const K = q.K;
 
-  /* ── [1] 퍼짐 봉투 ───────────────────────────────────────── */
-  console.log('[1] (a) 퍼짐 — 반경 상한 (93 §4-17-5: 상한 200px)');
+  /* ── [1] 퍼짐 봉투 ───────────────────────────────────────────────────────
+     ⚠ 93 §4-17-5 의 «퍼짐 최대 **반경** ≤200px» 을 그대로 쓰면 안 된다 — 그 항목은 **17회차**,
+     즉 밴드 스프레이(58 23~30회차)가 생기기 «전» 의 부채꼴 기준이다. 밴드는 사양상 가로로
+     `슬롯 수 × FX3_BSPITCH`(16×44 = 704px)까지 벌리도록 30회차에 정해졌으므로, 원형 반경
+     하나로 재면 **사양이 지시한 배치를 게이트가 막는다**.
+     → 같은 봉투를 두 축으로 나눠 선다(둘 다 소스에 선언된 상수에서 온다):
+        가로 = 밴드 상한 `outX − FX3_BSOM`(복도를 침범하면 안 된다) + 아이콘 반경 27
+        세로 = 부채꼴 반경 상한 FX3_R1/FX3_PR1(184) + 지터 → §4-17-5 의 200 그대로 */
+  console.log('[1] (a) 퍼짐 봉투 — 가로 = 밴드 상한(복도 앞) · 세로 = 부채꼴 반경 200 (93 §4-17-5)');
   const org = q.p0;
-  let rmax = 0, rmaxT = 0;
+  let rmax = 0, rmaxT = 0, xmax = -1e9;
   for (const f of q.frames) {
     if (f.t > 330) break;                              /* 퍼짐 .22s + 머묾 .12s = 흡수 개시 전 */
-    for (const s of f.list) { if (!placed(s)) continue; const d = Math.hypot(s.x - org.x, s.y - org.y); if (d > rmax) { rmax = d; rmaxT = f.t; } }
+    for (const s of f.list) {
+      if (!placed(s)) continue;
+      const d = Math.abs(s.y - org.y); if (d > rmax) { rmax = d; rmaxT = f.t; }
+      if (s.x > xmax) xmax = s.x;
+    }
   }
-  ok(rmax > 40 && rmax <= 200, `퍼짐 최대 반경 ${rmax.toFixed(1)}px @${rmaxT}ms (40 < r ≤ 200)`);
+  const XCAP = q.outX - q.K.BSOM + 27;
+  ok(xmax <= XCAP, `퍼짐 최대 x ${xmax.toFixed(1)} (≤ ${XCAP.toFixed(0)} = outX ${q.outX} − FX3_BSOM ${q.K.BSOM} + 27)`);
+  ok(rmax > 10 && rmax <= 200, `퍼짐 세로 반경 ${rmax.toFixed(1)}px @${rmaxT}ms (10 < r ≤ 200)`);
   const spreadN = Math.max(...q.frames.filter(f => f.t >= 120 && f.t <= 330).map(f => f.list.filter(placed).length), 0);
   ok(spreadN >= 8, `퍼짐 구간에 동시 ${spreadN}개 (≥8 — «퍼짐» 이 프레임에 실재한다)`);
 

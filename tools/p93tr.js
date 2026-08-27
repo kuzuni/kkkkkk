@@ -111,6 +111,25 @@ const SCENE = process.argv[2] || 'quest';
   for (const f of frames) { if (f.t > 330) break; for (const g of f.list) { if (!placedS(g)) continue; const d = Math.hypot(g.x - org.x, g.y - org.y); if (d > rmax) { rmax = d; rmaxT = f.t; } } }
   console.log(`퍼짐 최대 반경(≤330ms = 퍼짐+머묾, 배치 전 프레임 제외) ${rmax.toFixed(1)}px @${rmaxT}ms`);
 
+  /* 32차 2인 공통5 의 자 — 머묾 구간의 bbox · 최근접 중심거리 · 충전율.
+     BC «123×162px 충전율 82%» · BD «111×163px · 평균 중심간격 34px < FX3_MIND 37 · 상호 가림 16.5%» */
+  console.log('\n머묾 구간(180~330ms) 퍼짐 품질');
+  for (const f of frames) {
+    if (f.t < 180 || f.t > 330) continue;
+    const l = f.list.filter(placedS);
+    if (l.length < 4) continue;
+    const xs = l.map(g => g.x), ys = l.map(g => g.y);
+    const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+    let mind = 1e9, sum = 0, np = 0;
+    for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) {
+      const d = Math.hypot(l[i].x - l[j].x, l[i].y - l[j].y);
+      mind = Math.min(mind, d); sum += d; np++;
+    }
+    /* 충전율 = 아이콘 잉크 면적 합 ÷ bbox 면적 (잉크 지름 32.5 = 리뷰가 쓰는 값) */
+    const fill = l.length * Math.PI * 16.25 * 16.25 / Math.max(1, w * h);
+    console.log(`  t=${f.t}ms n=${l.length} bbox ${w.toFixed(0)}×${h.toFixed(0)} · 최근접 ${mind.toFixed(1)} · 평균 ${(sum / np).toFixed(1)} · 충전율 ${(fill * 100).toFixed(0)}%`);
+  }
+
   /* 형제 행 관통 — 아이콘 «중심» 이 출발 행이 아닌 행 상자 안에 든 표본 수 (딤 무시) */
   const inRow = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r.y + r.h;
   const homeIdx = rows.findIndex(r => p0 && inRow(r, p0));
