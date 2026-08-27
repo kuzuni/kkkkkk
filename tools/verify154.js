@@ -180,13 +180,16 @@ const WANT = [
   console.log('§7 70 출석 팝업 자체는 그대로');
   const att = await p.evaluate(() => {
     gmCloseAll(); closeModal();
-    openAttend();
+    /* 진입 경로 자체를 본다 — 좌측 사이드 «출석» 아이콘 클릭(함수 직접 호출이 아니라 실제 UI 경로) */
+    const btn = document.querySelector('.side .ibtn[data-pop="attend"]');
+    if (btn) btn.click();
     const on = $('modal').classList.contains('on');
     const has = !!$('mbox').querySelector('[data-att]') || /출석/.test($('mtitle').textContent);
     closeModal();
-    return { on, has, title: $('mtitle').textContent.trim() };
+    return { btn: !!btn, on, has, title: $('mtitle').textContent.trim() };
   });
-  ok(att.on, '§7 openAttend() 로 출석 팝업이 열린다');
+  ok(att.btn, '§7 좌측 사이드 «출석» 아이콘이 남아 있다');
+  ok(att.on, '§7 그 아이콘을 누르면 출석 팝업이 열린다');
   ok(att.has, '§7 출석 팝업 내용이 살아 있다', att.title);
 
   /* ── §8 콘솔 ─────────────────────────────────────────────────── */
