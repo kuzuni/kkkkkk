@@ -114,12 +114,15 @@ const seedPets = p => p.evaluate(() => {
   eq('이모지로 남은 슬롯', s2.filter(c => !c.canvas).length, 0);
   eq('슬롯 sp 순서', s2.map(c => c.sp).join(','), seeded.map(s => s.sp).join(','));
   s2.forEach(c => {
-    eq(`슬롯 ${c.sp}: 캔버스 크기`, `${c.cw}x${c.ch}`, '69x69');
+    eq(`슬롯 ${c.sp}: 캔버스 크기`, `${c.cw}x${c.ch}`, '69x59');
     eq(`슬롯 ${c.sp}: 칸 박스`, `${c.hostW}x${c.hostH}`, '115x70');
     ok(!!c.ink && c.ink.px > 200, `슬롯 ${c.sp}: 잉크 픽셀 ${c.ink ? c.ink.px : 0}개 (>200)`);
     ok(Math.abs(c.dx) <= 1 && Math.abs(c.dy) <= 1,
        `슬롯 ${c.sp}: 캔버스가 칸 정중앙 (Δ${c.dx},${c.dy})`);
-    if (c.ink) inRange(`슬롯 ${c.sp}: 잉크 최대변`, Math.max(c.ink.w, c.ink.h), 58, 64);
+    /* 이모지 잉크 박스 63x53 을 그대로 물려받는다 — «최대변» 이 아니라 **박스 자체**를 본다
+       (1회차가 최대변만 보고 정사각으로 잡아 세로가 18% 커졌다). */
+    if (c.ink) ok(c.ink.w <= 64 && c.ink.h <= 54 && Math.max(c.ink.w, c.ink.h) >= 45,
+      `슬롯 ${c.sp}: 잉크 ${c.ink.w}x${c.ink.h} 가 이모지 박스 63x53 안 (최대변 ≥45)`);
   });
 
   /* ── §3 카드 격자 ── */
@@ -128,12 +131,15 @@ const seedPets = p => p.evaluate(() => {
     .map(eval(C)), CELL);
   eq('카드 칸 수', s3.length, 36);
   eq('이모지로 남은 카드', s3.filter(c => !c.canvas).length, 0);
-  eq('캔버스 크기가 92x92 가 아닌 카드', s3.filter(c => `${c.cw}x${c.ch}` !== '92x92').length, 0);
+  eq('캔버스 크기가 92x79 가 아닌 카드', s3.filter(c => `${c.cw}x${c.ch}` !== '92x79').length, 0);
   eq('잉크가 없는 카드', s3.filter(c => !c.ink || c.ink.px < 200).length, 0);
   eq('칸 중앙(±1)을 벗어난 카드', s3.filter(c => Math.abs(c.dx) > 1 || Math.abs(c.dy) > 1).length, 0);
+  /* 이모지 잉크 박스 84x71 을 그대로 물려받는다. 카드 라벨(«Lv.n» 상단 14~46 · «장착 중» 63~107)과
+     겹치는 정도가 이모지 시절과 같아야 하므로 **세로가 71 을 넘으면 안 된다**(1회차 회귀 지점). */
+  eq('잉크가 이모지 박스 84x71 을 넘은 카드', s3.filter(c => c.ink && (c.ink.w > 85 || c.ink.h > 72)).length, 0);
   const mx = s3.filter(c => c.ink).map(c => Math.max(c.ink.w, c.ink.h));
-  inRange('카드 잉크 최대변 — 최솟값', Math.min(...mx), 78, 84);
-  inRange('카드 잉크 최대변 — 최댓값', Math.max(...mx), 78, 84);
+  inRange('카드 잉크 최대변 — 최솟값', Math.min(...mx), 60, 85);
+  inRange('카드 잉크 최대변 — 최댓값', Math.max(...mx), 78, 85);
 
   /* ── §4 82 규칙(미보유 카드) ── */
   console.log('§4 82 — 미보유 카드도 그림이 보이고 흐림이 먹는다');
@@ -231,7 +237,7 @@ const seedPets = p => p.evaluate(() => {
   }, CELL);
   eq('펫 결과 칸 수', s6.pets.length, 3);
   eq('펫 결과 중 이모지로 남은 칸', s6.pets.filter(c => !c.canvas).length, 0);
-  eq('펫 결과 캔버스 크기가 78x63 이 아닌 칸', s6.pets.filter(c => `${c.cw}x${c.ch}` !== '78x63').length, 0);
+  eq('펫 결과 캔버스 크기가 75x64 가 아닌 칸', s6.pets.filter(c => `${c.cw}x${c.ch}` !== '75x64').length, 0);
   eq('펫 결과 중 잉크 없는 칸', s6.pets.filter(c => !c.ink || c.ink.px < 200).length, 0);
   eq('무기 결과 중 캔버스가 생긴 칸(과교정)', s6.wpns.filter(c => c.canvas).length, 0);
   eq('무기 결과 중 글자가 빈 칸', s6.wpns.filter(c => !c.txt).length, 0);
