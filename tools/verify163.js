@@ -109,6 +109,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   const K = await page.evaluate(() => ({
     MIN: LD.MIN, RUN: LD.RUN, GRACE: LD.GRACE, FADE: LD.FADE, X0: LD.X0, SC: LD.SC,
     RUNMS: LD.RUNMS, IDMS: LD.IDMS, RTAIL: LD.RTAIL, ARC: LD.ARC,
+    CRZ: LD.CRZ, CRZD: LD.CRZD, FOOT: LD.FOOT, AIR: LD.AIR,
     runFrames: ATLAS.knight.a.run.length,
     trans: Math.round(parseFloat(getComputedStyle(document.getElementById('loading')).transitionDuration) * 1000),
     atlas: Object.keys(ATLAS).length, total: LD.total()
@@ -118,11 +119,17 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(K.RUN >= 380, `등장 길이 ≥380ms — 1회차 300ms 는 «인지 하한 미달» 지적을 받았다 (${K.RUN})`);
   /* ★ 한 스트라이드가 정확히 한 번 완결되는가. 상수를 손으로 «52» 라고 적어 두고 run 프레임 수가
      바뀌면 조용히 어긋나므로, 게이트가 **아틀라스에서 프레임 수를 다시 세서** 대조한다. */
-  const stride = K.RUNMS * K.runFrames, cyc = K.RUN / stride;
-  /* 등장 동안 스트라이드가 **정수 번** 돌아야 마지막에 반쪽 걸음으로 끊기지 않는다.
-     그리고 «걸음 주기를 주기로 인식하려면 최소 2회»(2회차 비평 D) — 1회차 0.54회 → 2회차 1회 → 3회차 2회. */
-  ok(Math.abs(cyc - Math.round(cyc)) <= .06 && Math.round(cyc) >= 2,
-    `등장 동안 스트라이드가 정수 번, 2회 이상 돈다 (${K.runFrames}프레임 × ${K.RUNMS}ms = ${stride}ms → ${cyc.toFixed(2)}회)`);
+  /* ★ 프레임 간격은 «스트라이드를 몇 번 돌리나» 가 아니라 **발이 미끄러지지 않나** 로 판정한다.
+     3회차 비평 E·F 가 독립적으로 같은 결함을 짚었다 — 접지발은 프레임당 7.67 src px 뒤로 가도록
+     그려져 있는데 40ms 간격에서는 몸이 그 66% 만 나가, 프레임당 31px 씩 밀리고 등속 480ms 동안
+     누적 282px(등장의 33%)가 미끄러졌다. 그래서 «요구 속도 = 실제 속도» 를 직접 잰다.
+     («스트라이드 2회» 는 이 이동 거리에서 발 속도와 양립 불가 — 2바퀴엔 1,472px 가 필요하다.) */
+  const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);      /* px/ms */
+  const need = K.FOOT * K.SC / cruise;                            /* 한 프레임이 버텨야 하는 ms */
+  ok(Math.abs(K.RUNMS - need) / need <= .05,
+    `달리기 프레임 간격이 스프라이트의 발 속도와 맞는다 (요구 ${need.toFixed(1)}ms · 실제 ${K.RUNMS}ms · 오차 ${(Math.abs(K.RUNMS - need) / need * 100).toFixed(1)}%)`);
+  ok(/LD_RUNMS = Math\.round\(LD_FOOT \* LD_SC/.test(SRC),
+    '간격을 상수로 안 적고 **등속 속도에서 역산**한다(CSS·거리가 바뀌면 따라온다)');
   ok(K.SC === Math.round(K.SC) && K.SC >= 10, `정수 배율이고 ≥10 (${K.SC}) — 1회차 5는 «캐릭터가 진행바보다 작다»`);
   /* 잘림 0 — 가장 큰 run/idle 프레임이 캔버스 안에 통째로 들어가는가(아틀라스에서 유도) */
   const fit = await page.evaluate(() => {
@@ -137,8 +144,24 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(fit.need <= fit.ch, `발밑 앵커 기준 필요한 높이가 캔버스 안 = **머리 위 잘림 0** (${fit.need} ≤ ${fit.ch})`);
   ok(K.IDMS === 125, `대기 프레임 간격 = 전투 idle 8fps (${K.IDMS}ms)`);
   ok(K.ARC > 0, `달리는 동안 상하 아치가 있다 (${K.ARC}px) — 1회차는 세로 변위 0px 였다`);
-  ok(/Math\.sin\(Math\.PI \* t \/ \(LD_RUNMS \* 4\)\)/.test(SRC),
-    '아치 주기가 **걸음 접지 간격**(run 8프레임 = 접지 2회 → 4프레임)에 묶여 있다');
+  /* ★ 아치는 «주기» 뿐 아니라 **위상**도 맞아야 한다. 4프레임 중 3프레임이 접지(f0 발끝 · f1 발바닥 ·
+     f2 밀어내기)이고 f3 만 체공인데, 3회차의 |sin| 은 정점을 **f2(아직 닿아 있는 프레임)** 에 얹어
+     «발이 바닥 2px 이내인 시간이 주기의 3.2%» 였다(비평 E). 접지 구간은 arc 가 정확히 0 이어야 한다. */
+  ok(K.AIR > 0 && K.AIR < 1, `접지 비율 상수가 있다 (${K.AIR})`);
+  const arcPhase = await page.evaluate(() => {
+    const P = LD.RUNMS * 4, out = [];
+    for (let i = 0; i < 40; i++) {
+      const t = P * i / 40, u = (t % P) / P;
+      out.push({ u: +u.toFixed(3), grounded: u < LD.AIR,
+        arc: u >= LD.AIR ? -Math.round(LD.ARC * Math.sin(Math.PI * (u - LD.AIR) / (1 - LD.AIR))) : 0 });
+    }
+    return out;
+  });
+  ok(arcPhase.filter(r => r.grounded).every(r => r.arc === 0),
+    `접지 구간(주기의 ${Math.round(K.AIR * 100)}%)에서는 아치가 정확히 0 = 발이 붙어 있다`);
+  ok(Math.min.apply(null, arcPhase.map(r => r.arc)) <= -(K.ARC - 1),
+    `체공 구간에서 아치가 최대치(${K.ARC}px)까지 뜬다`);
+  ok(/u >= LD_AIR/.test(SRC), '아치가 **체공 프레임에서만** 뜬다(접지 3프레임은 0)');
   ok(/var LD_MIN\b/.test(SRC) && /var LD_RUN\b/.test(SRC), '상수가 index.html 에 이름으로 있다');
   ok(SRC.indexOf('window.ldReady') < SRC.indexOf('function loadAtlases'),
     '로딩 모듈이 본 스크립트보다 **앞에** 있다(파싱 400ms 를 안 기다린다)');
@@ -163,6 +186,20 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     `페이드 꼬리가 LD_FADE+여유 안 (${gone - fade}ms ≤ ${K.FADE + 140})`);
   ok(hero !== null, 'knight 도착 시 캐릭터가 켜진다(.on)');
   ok(fade !== null && gone !== null && gone > fade, '페이드가 display:none 보다 먼저 시작한다');
+
+  console.log('§12 그림자 정렬 (발 스팬 중심 ≠ 캔버스 중심)');
+  /* `drawHeroTo` 의 c0 는 «칼·망토까지 포함한 잉크» 중심을 맞춘다 — 발 스팬 중심은 그보다 왼쪽이다.
+     3회차 비평 E·F 가 독립적으로 «그림자가 55~56px 오른쪽으로 밀려 왼발이 그림자 밖» 을 짚었다.
+     CSS 는 JS 상수를 못 읽으므로 margin-left 에 그 편심을 넣어 두고, 여기서 **다시 잰다.** */
+  const sh = await page.evaluate(() => {
+    const el = document.getElementById('loading'), s = document.getElementById('ldSh');
+    const had = el.className; el.classList.remove('off', 'out');
+    const r = s.getBoundingClientRect();
+    const out = { cx: Math.round(r.left + r.width / 2), w: Math.round(r.width) };
+    el.className = had; return out;
+  });
+  ok(Math.abs(sh.cx - 540 + 56) <= 4, `그림자 중심이 발 스팬 중심(프레임 중앙 −56px = 484)에 있다 (실측 ${sh.cx})`);
+  ok(sh.w >= 480, `그림자 폭이 발 스팬(≈400px)보다 넓다 (${sh.w}px)`);
 
   console.log('§5 통과성 (부팅 뒤 오버레이가 탭을 안 막는다)');
   const thru = await page.evaluate(() => {

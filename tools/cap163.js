@@ -26,9 +26,15 @@ const path = require('path');
 const TAG = process.argv[2] || 'r1';
 const OUT = path.resolve(__dirname, '../docs/shots');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
-const SLOW = 4200;   /* knight 를 뺀 아틀라스 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간.
+const SLOW = 4200;   /* knight 를 뺀 아틀라스의 **최대** 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간.
                         넉넉히 잡는 이유: 로드마다 브라우저가 100~1500ms 씩 흔들려서, 로딩 화면이
                         짧게 살면 표본 한두 장이 «이미 끝난 뒤» 에 찍힌다(빈 무대로 나온다). */
+/* ★ 지연을 파일마다 **어긋나게** 준다. 3회차까지는 knight 를 뺀 전부를 같은 값으로 늦춰서
+   진행바가 표본 7장 내내 «1/8» 로 얼어 있었고, 비평가 두 명이 그걸 «진행 상태가 안 읽힌다» 로
+   감점했다 — 실제 네트워크에서는 파일이 하나씩 도착한다. 하네스가 그 사실을 못 흉내 낸 것이다.
+   실제 크기 비율에 맞춰(zombie·elves 가 크고 bird·dragon 이 작다) 도착 순서를 벌린다. */
+const STAGGER = { 'bird.png': .10, 'stormlord-dragon96x64.png': .18, 'buch-dungeon-tileset.png': .28,
+                  'explosion.png': .42, 'robo.png': .62, 'elves-craft-pixel.png': .82, 'zombie.png': 1 };
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
 /* 등장 시작(#ldHero.on) 기준 표본 시각(ms). 1~5 = 등장 300ms 구간 · 6~7 = 선 뒤 대기(idle) · 8 = 전환 */
 const OFF = [25, 130, 250, 375, 490, 640, 1000, null];   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
@@ -52,8 +58,9 @@ const N = OFF.length;
       page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
       page.on('pageerror', e => errs.push(String(e)));
       await page.route('**/*.png', async (route) => {
-        const slow = !/knight\.png$/.test(route.request().url());
-        await new Promise(r => setTimeout(r, slow ? SLOW : FAST));
+        const n = route.request().url().split('/').pop();
+        const d = /knight\.png$/.test(n) ? FAST / SLOW : (STAGGER[n] !== undefined ? STAGGER[n] : 1);
+        await new Promise(r => setTimeout(r, Math.round(SLOW * d)));
         await route.continue();
       });
       page.goto(URL, { waitUntil: 'load' }).catch(() => {});
@@ -90,7 +97,7 @@ const N = OFF.length;
   {
     const page = await ctx.newPage();
     await page.route('**/*.png', async (route) => {
-      await new Promise(r => setTimeout(r, /knight\.png$/.test(route.request().url()) ? 6000 : SLOW));
+      await new Promise(r => setTimeout(r, /knight\.png$/.test(route.request().url()) ? 9000 : SLOW));
       await route.continue();
     });
     page.goto(URL, { waitUntil: 'load' }).catch(() => {});
