@@ -55,12 +55,15 @@ const ok = (b, name, detail) => {
 
   /* ================= [A] 상수 ================= */
   console.log('[A] 상수');
-  const A = await page.evaluate(() => ({
-    max: SUM_MAXLV, tbl: SUM_EXP_TABLE.slice(), len: SUM_EXP_TABLE.length
-  }));
+  /* 되돌림 시험(구 소스)에서 `SUM_EXP_TABLE` 이 아예 없으면 evaluate 가 던져 게이트가 «즉사» 한다 —
+     즉사는 FAIL 보고가 아니다. typeof 로 감싸 «없음» 도 한 건의 FAIL 로 세게 한다. */
+  const A = await page.evaluate(() => {
+    const t = (typeof SUM_EXP_TABLE !== 'undefined' && Array.isArray(SUM_EXP_TABLE)) ? SUM_EXP_TABLE.slice() : null;
+    return { max: typeof SUM_MAXLV === 'number' ? SUM_MAXLV : null, tbl: t, len: t ? t.length : -1 };
+  });
   ok(A.max === MAXLV, 'A1 SUM_MAXLV = 25 (100 → 25)', String(A.max));
-  ok(A.len === TBL.length && A.tbl.every((v, i) => v === TBL[i]),
-    'A2 SUM_EXP_TABLE 16칸이 주인 확정표와 값·순서 일치', A.tbl.join(','));
+  ok(!!A.tbl && A.len === TBL.length && A.tbl.every((v, i) => v === TBL[i]),
+    'A2 SUM_EXP_TABLE 16칸이 주인 확정표와 값·순서 일치', A.tbl ? A.tbl.join(',') : '(SUM_EXP_TABLE 없음)');
   ok(!/sumNeedExp\s*=\s*lv\s*=>\s*5\s*\+/.test(SRC), 'A3 옛 식 `sumNeedExp = lv => 5 + (lv-1)*4` 부재(소스 스캔)');
   ok(!/const\s+SUM_MAXLV\s*=\s*100\b/.test(SRC), 'A4 옛 리터럴 `SUM_MAXLV = 100` 부재(소스 스캔)');
 
