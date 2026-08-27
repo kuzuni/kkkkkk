@@ -89,9 +89,15 @@ let br = null;
       calls.push(s.trim());
     }
   }
-  /* 정의부(`function showMsg(t)`)는 위 정규식에 안 걸린다 — 호출부만 남는다 */
-  /* 160 — 8 → 9. 작업 123(아레나)이 «아레나 중단» 한 줄을 더했다(94 규칙대로 12자 이내). */
-  eq('소스 · 남은 showMsg 호출부 수', calls.length, 9);
+  /* 160 — 8 → 9. 작업 123(아레나)이 «아레나 중단» 한 줄을 더했다(94 규칙대로 12자 이내).
+     214 — 9 → 10. 작업 162 가 «몹 50킬 → 보스 도전 → 보스 격파» 3단계로 나누면서
+     **한 줄이던 스테이지 문구가 두 자리로 갈렸다**: `spawnStage()` 는 언제나 `'STAGE ' + s`,
+     `'BOSS ' + S.stage` 는 새로 생긴 `startBoss()` 로 이사했다(index.html ~14905·~14918 주석).
+     둘 다 94 규칙(짧고 HTML 없음 — 최대 «BOSS 9999» 9자)을 지키므로 **기대값을 현행화**한다.
+     ⚠ 위 정규식은 정의부(`function showMsg(t)`)도 함께 센다 — 그래서 «호출부 9 + 정의 1 = 10» 이다.
+     맨 숫자만 올리면 다음 부패 때 또 «누가 늘렸나» 를 처음부터 뒤져야 하므로,
+     아래 «인자 원문 목록» 두 줄이 그 숫자의 근거다(리터럴 6 + 비리터럴 4). */
+  eq('소스 · 남은 showMsg 호출부 수', calls.length, 10);
   /* 문자열 리터럴만으로 된 인자는 «짧게» 규칙을 문자 수로 검산한다(≤ 14자) */
   const lits = calls.filter(c => /^'[^']*'$/.test(c)).map(c => c.slice(1, -1));
   const tooLong = lits.filter(t => t.length > 14);
@@ -100,6 +106,16 @@ let br = null;
   eq('소스 · 남은 리터럴 문구', lits.slice().sort().join('/'),
      /* 160 — «아레나 중단»(작업 123) 추가. 목록은 «어떤 문구가 남아 있는지»의 기록이다. */
      ['던전 중단', '레이드 시작', '레이드 중단', '부활 중...', '승급전 시작', '아레나 중단'].sort().join('/'));
+  /* 214 — 리터럴이 아닌 인자(동적 문구·정의부)도 목록으로 못 박는다. 여기가 비어 있으면
+     «호출부 수» 단언이 맨 숫자가 되어, 동적 문구가 하나 늘어도 다른 하나가 줄면 조용히 지나간다.
+     동적 문구는 «14자» 리터럴 규칙으로 검산할 수 없으므로 **어떤 식이 남아 있는지**로 감시한다. */
+  const dyn = calls.filter(c => !/^'[^']*'$/.test(c)).map(c => c.replace(/\s+/g, ' '));
+  eq('소스 · 남은 비리터럴 showMsg 인자', dyn.slice().sort().join(' / '),
+     [ 't',                    /* 정의부 `function showMsg(t)` — 정규식이 함께 센다 */
+       "'STAGE ' + s",         /* spawnStage() — 162 이후 스테이지 시작은 언제나 몹 구간 */
+       "'BOSS ' + S.stage",    /* startBoss() — 162 가 여기로 이사시켰다 */
+       'msg',                  /* 보스 격파 = 스테이지 클리어(`const msg = 'STAGE CLEAR!'`) */
+     ].sort().join(' / '));
 
   /* data-why 는 이제 캔버스가 아니라 DOM 캡션 */
   eq('소스 · dataset.why 를 showMsg 로 띄우는 곳', (code.match(/showMsg\(el\.dataset\.why/g) || []).length, 0);
@@ -182,55 +198,103 @@ let br = null;
   eq('클램프 · 12자는 원문 그대로', F('12자').cut, false);
   eq('클램프 · 12자는 축소하지 않는다', F('12자').fs, 28);
 
-  /* ── ⑤ 파밍 3웨이브 — 중앙 텍스트 0회 (픽셀 테스트 «전» 에: 진짜 step 이 필요하다) ──
-     보스전 실패 → 파밍 상태에서 웨이브가 전멸할 때마다 step() 의 파밍 분기가 돈다. */
+  /* ── ⑤ 파밍 3바퀴 — 중앙 텍스트 0회 (픽셀 테스트 «전» 에: 진짜 step 이 필요하다) ──
+     보스전 실패 → 파밍 상태에서 «한 바퀴»(몹 ENEMY_COUNT 킬)를 돌 때마다 step() 의 파밍 분기가 돈다.
+
+     214 — 이 하네스는 162 전까지 «전장을 비우면 = 웨이브 전멸» 이라는 전제로 돌았다.
+     162 가 스테이지를 «몹 50킬 → 보스 도전 → 보스 격파» 3단계로 바꾸면서 파밍 보너스
+     (index.html ~16530 `if(S.bossFarm){ bonusG = eGold(S.stage)*12*goldMul }`)가
+     **`killed >= ENEMY_COUNT` 분기 «안»** 으로 들어갔다. `enemies`/`spawnQ` 만 비우고 `killed` 를
+     그대로 0 으로 두면 그 분기가 아니라 «④ 전장이 비었으니 다시 채운다»(queueMobs) 로 빠져
+     골드가 0 이다 — `파밍 · 3회 모두 골드는 들어온다` 가 false,false,false 로 굳은 원인이 이것이다.
+     실측(`tools/probe214.js`): 실제 킬 경로로 50킬을 채우면 3바퀴 모두 **205 = eGold(10)×12×goldMul**
+     가 정확히 들어온다. **지급 누락이 아니라 하네스가 분기에 못 닿은 것**이므로 index.html 은 0줄이고,
+     하네스를 162 흐름(진짜 킬)으로 옮긴다.
+
+     비교하는 값도 «> g0»(막연히 늘었나) 에서 **공식과의 일치**로 좁혔다 — 몹 드랍 골드가 섞여
+     늘어나기만 해도 통과하던 자리라, 보너스가 통째로 빠져도 초록일 수 있었다(LESSONS 212-② 계열). */
   const farm = await ev('런타임 · 파밍 시뮬레이션', () => {
     const rec = [];
     const orig = showMsg;
     showMsg = t => { rec.push(String(t)); orig(t); };
-    const out = { fail: [], waves: [], msgT: [], gold: [], err: '' };
+    const out = { fail: [], waves: [], msgT: [], gold: [], boss: [], first: null, err: '' };
     try {
-      /* 보스 스테이지(10 의 배수) + 미파밍 = 보스전 중 */
       S.stage = 10; S.bossFarm = false; promo = null; raidOn = null; dunRun = null;
-      bossT = 30; player.dead = 0; msgT = 0; msgTxt = ''; msgLast = '';
-      rec.length = 0;
-      failBoss('패배');                      /* ① 실패 — 문구 0건이어야 한다 */
+      player.dead = 0; msgT = 0; msgTxt = ''; msgLast = '';
+      spawnStage();                          /* 162 — 스테이지는 언제나 몹 구간부터 */
+      /* 한 바퀴 = 실제 킬 경로(killEnemy — S.gold += e.gold 가 지나는 그 함수)로 ENEMY_COUNT 채우기.
+         반환값은 그 구간의 msgT 최고치 = «몹 잡는 동안 중앙 문구가 떴는가». */
+      const drive = () => {
+        let guard = 0, peak = 0;
+        while (killed < ENEMY_COUNT && guard++ < 4000) {
+          step(0.016);
+          if (msgT > peak) peak = msgT;
+          while (enemies.length && killed < ENEMY_COUNT) killEnemy(enemies[0]);
+        }
+        return Math.round(peak * 1000) / 1000;
+      };
+      /* ① 첫 도전 — 파밍이 아니므로 보너스는 «없어야» 한다(이중 지급 방지, index.html ~16527) */
+      drive();
+      let g0 = S.gold;
+      step(0.016);                           /* killed >= ENEMY_COUNT → 보스 도전 */
+      out.first = { bonus: Math.round(S.gold - g0), bossOn: !!bossOn };
+      /* ② 보스전 실패 — 문구 0건이어야 한다 */
+      rec.length = 0; msgT = 0; msgTxt = ''; msgLast = '';
+      bossT = 30; player.dead = 0;
+      failBoss('패배');
       out.fail = rec.slice(); out.msgT.push(msgT);
-      for (let w = 0; w < 3; w++) {          /* ② 웨이브 전멸 3회 */
-        rec.length = 0;
-        enemies.length = 0; spawnQ.length = 0; player.dead = 0;
-        const g0 = S.gold;
-        step(0.016);                          /* 파밍 분기 진입 */
+      for (let w = 0; w < 3; w++) {          /* ③ 파밍 한 바퀴 × 3 */
+        rec.length = 0; msgT = 0; msgTxt = ''; msgLast = '';
+        out.msgT.push(drive());              /* 몹 50킬 구간 — 문구 0건 · msgT 0 유지 */
         out.waves.push(rec.slice());
-        out.gold.push(S.gold > g0);           /* 골드는 그대로 들어와야 한다(58 코인 비행이 보여 준다) */
-        out.msgT.push(msgT);
+        g0 = S.gold;
+        rec.length = 0;
+        step(0.016);                         /* 파밍 분기 진입 */
+        const want = eGold(S.stage) * 12 * stat.goldMul;
+        out.gold.push(want > 0 && Math.abs((S.gold - g0) - want) < 1e-6);
+        out.boss.push(rec.slice().join(' | '));   /* 분기 끝의 startBoss() 가 남기는 문구 */
+        bossT = 30; player.dead = 0; failBoss('패배');   /* 다음 바퀴 */
       }
     } catch (e) { out.err = String(e && e.message || e); }
     showMsg = orig;
     /* 상태 원복 */
-    try { S.stage = 3; S.bossFarm = false; bossT = 0; spawnStage(); msgT = 0; msgTxt = ''; msgLast = ''; }
+    try { S.stage = 3; S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false; spawnStage(); msgT = 0; msgTxt = ''; msgLast = ''; }
     catch (e) { out.err = out.err || String(e && e.message || e); }
     return out;
-  }, null, { fail: ['<게이트가 읽지 못함>'], waves: [], msgT: [1], gold: [], err: '읽지 못함' });
+  }, null, { fail: ['<게이트가 읽지 못함>'], waves: [], msgT: [1], gold: [], boss: [], first: null, err: '읽지 못함' });
   eq('파밍 · 시뮬레이션 에러', farm.err || 'none', 'none');
+  eq('파밍 · 첫 도전은 보너스 없음(이중 지급 방지)', farm.first ? farm.first.bonus : -1, 0);
+  yes('파밍 · 첫 50킬이 보스 도전으로 이어졌다', !!(farm.first && farm.first.bossOn));
   eq('파밍 · 보스전 실패 시 showMsg 호출', farm.fail.join(' | ') || 'none', 'none');
-  eq('파밍 · 웨이브 3회 showMsg 호출', farm.waves.flat().join(' | ') || 'none', 'none');
-  eq('파밍 · 웨이브를 실제로 3회 돌렸다', farm.waves.length, 3);
-  eq('파밍 · 3회 모두 골드는 들어온다', farm.gold.join(','), 'true,true,true');
+  eq('파밍 · 50킬 구간 showMsg 호출', farm.waves.flat().join(' | ') || 'none', 'none');
+  eq('파밍 · 바퀴를 실제로 3회 돌렸다', farm.waves.length, 3);
+  eq('파밍 · 3회 모두 보너스 골드가 공식대로 들어온다', farm.gold.join(','), 'true,true,true');
   eq('파밍 · msgT 는 내내 0', farm.msgT.filter(v => v !== 0).length, 0);
+  /* 162 이후 파밍 한 바퀴의 끝은 «보스 재도전» 이다. 여기서 나오는 문구는 startBoss() 의
+     «BOSS n» 하나뿐이어야 한다 — 94 가 지운 «파밍 +1.2KG — [재도전] 으로…» 가 되살아나면 여기서 걸린다. */
+  eq('파밍 · 바퀴 끝 문구는 «BOSS n» 뿐', farm.boss.join(' / '), 'BOSS 10 / BOSS 10 / BOSS 10');
 
   /* ── ⑤-2 남는 문구는 그대로 뜬다 ── */
   const keep = await ev('런타임 · 남는 문구 확인', () => {
     const out = {};
     const shot = (fn) => { msgT = 0; msgTxt = ''; msgLast = ''; fn(); return msgTxt; };
     out.stage = shot(() => { S.stage = 7; S.bossFarm = false; spawnStage(); });
-    out.boss = shot(() => { S.stage = 20; S.bossFarm = false; spawnStage(); });
+    /* 214 — 옛 단언 `spawnStage()@stage20 → 'BOSS 20'` 은 **판정할 등식을 잃었다**(LESSONS 168-②).
+       162 가 «10 스테이지마다 보스» 를 폐기하고 «어느 스테이지든 몹 50킬을 채운 뒤에야 보스» 로
+       바꿨으므로, 스테이지 시작(spawnStage)은 20 이든 7 이든 언제나 «STAGE n» 이 맞다.
+       지우지 않고 **문구가 실제로 이사한 자리(startBoss)로 옮긴다** — 그래야 «BOSS n» 이
+       통째로 사라지는 회귀를 계속 잡는다. */
+    out.stage20 = shot(() => { S.stage = 20; S.bossFarm = false; spawnStage(); });
+    out.boss = shot(() => { S.stage = 20; S.bossFarm = false; bossOn = false; startBoss(); });
+    out.bossOdd = shot(() => { S.stage = 7; S.bossFarm = false; bossOn = false; startBoss(); });
     out.farmStage = shot(() => { S.stage = 20; S.bossFarm = true; spawnStage(); });
-    S.stage = 3; S.bossFarm = false; bossT = 0; spawnStage(); msgT = 0; msgTxt = ''; msgLast = '';
+    S.stage = 3; S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false; spawnStage(); msgT = 0; msgTxt = ''; msgLast = '';
     return out;
   }, null, {});
   eq('문구 · 일반 스테이지', keep.stage, 'STAGE 7');
-  eq('문구 · 보스 스테이지', keep.boss, 'BOSS 20');
+  eq('문구 · 스테이지 시작은 20 에서도 «STAGE n»(162 — 10 배수 특례 폐지)', keep.stage20, 'STAGE 20');
+  eq('문구 · 보스 도전(startBoss)', keep.boss, 'BOSS 20');
+  eq('문구 · 보스 도전은 10 의 배수가 아니어도 뜬다', keep.bossOdd, 'BOSS 7');
   eq('문구 · 파밍 중 보스 스테이지(보스전 아님)', keep.farmStage, 'STAGE 20');
 
   /* 클리어 문구 — 소스 형태로 검산(스테이지 클리어를 실제로 돌리면 세이브가 흔들린다) */
