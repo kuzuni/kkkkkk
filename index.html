@@ -439,8 +439,11 @@
      `.kbar` 는 z-index 를 주지 않아야 스태킹 문맥을 안 만들고 자식 `>i` 가 노드보다 위로 갈 수 있다. */
   #stinfo .kbar{position:absolute;left:15px;top:34px;width:410px;height:24px;
     border-radius:12px;background:#000}
-  /* 채움은 트랙 안쪽으로 6px inset, 높이 12, 단색 #FFBF17 (그라디언트 아님) */
-  #stinfo .kbar>i{position:absolute;left:6px;top:6px;height:12px;width:0%;max-width:398px;
+  /* 채움은 트랙 안쪽으로 6px inset, 높이 12, 단색 #FFBF17 (그라디언트 아님)
+     161 — 폭은 drawHud() 가 **px** 로 준다. `%` 는 트랙의 padding box(410)를 기준으로 풀려
+     실제 이동 거리 398 보다 3% 앞서 갔다(50% 인데 선단이 x226 — 중간 노드 중심 x220 을 이미 지나침).
+     max-width 는 그 오버런을 100% 에서만 잘라 주는 땜질이었다 — 이제 상한이자 안전망으로만 남는다. */
+  #stinfo .kbar>i{position:absolute;left:6px;top:6px;height:12px;width:0;max-width:398px;
     border-radius:6px;background:#FFBF17;z-index:2}
   /* 레퍼런스 진행바에는 숫자 표기가 없다 — 요소는 남기고 감춘다(값은 계속 갱신됨) */
   #stinfo .kbar span{display:none}
@@ -449,6 +452,11 @@
   #stinfo .n1{left:17px;width:48px;height:48px;background:#FFBF17;border:4px solid #000}
   /* 중간 노드 (540,370) Ø40 검정 단색 */
   #stinfo .n2{left:200px;top:26px;width:40px;height:40px;background:#000;border:0;z-index:3}
+  /* 161 — 채움 선단이 중간 노드 중심(#stinfo x220 = 채움 21..419 의 정확히 50%)에 닿으면 점등.
+     외경 Ø40 은 그대로 두고(box-sizing:border-box) n1 관례대로 «노랑 + 검정 테 4» 로 바뀐다.
+     transition 은 채움(width)이 아니라 색만 — 채움은 매 프레임 갱신되므로 부드럽게 켜지기만 하면 된다. */
+  #stinfo .n2{transition:background-color .18s ease-out,border-color .18s ease-out}
+  #stinfo .n2.on{background:#FFBF17;border:4px solid #000}
   /* 보스 해골 (740,370) 외경 82 = 검정 6 → 시안 5 → 네이비 원판 */
   #stinfo .kboss{position:absolute;left:379px;top:5px;width:82px;height:82px;border-radius:50%;z-index:3;
     background:#141414;display:flex;align-items:center;justify-content:center;font-size:53px;line-height:1}
@@ -11557,7 +11565,7 @@
       <div class="chap" id="chapN">1-1 <em>스테이지</em></div>
       <div class="kwrap">
         <div class="kbar"><i id="prF"></i><span id="prT"></span></div>
-        <b class="knode n1"></b><b class="knode n2"></b><b class="kboss"><i>💀</i></b>
+        <b class="knode n1"></b><b class="knode n2" id="kn2"></b><b class="kboss"><i>💀</i></b>
       </div>
     </div>
     <!-- 28 보스전 — ⏱ 남은 시간 · 보스 체력바 · 액션 버튼(포기하기 / 스테이지 재도전).
@@ -16795,6 +16803,11 @@ function renderPcb(){
   }
 }
 
+/* 161 — 스테이지 진행바 기하(#stinfo 프레임 좌표, CSS 실측).
+   채움 `.kbar>i` 는 x21(트랙 left15 + inset6)에서 시작해 폭 KBAR_W 만큼 뻗고,
+   중간 노드 `.n2` 는 left200·Ø40 이라 중심이 x220 → 선단이 노드 중심에 닿는 진행률은
+   (220 − 21) / 398 = 정확히 0.5 다. 두 값은 CSS 를 옮기면 같이 옮겨야 한다(verify161 §1 이 역산 대조). */
+const KBAR_W = 398, KNODE2_AT = (220 - 21) / KBAR_W;
 function drawHud(){
   const maxHp = stat.maxHp;
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
@@ -16819,14 +16832,20 @@ function drawHud(){
   drawArnHud();                      /* 123 — 아레나 HUD(타이머·양쪽 닉네임·HP 바) */
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
+  let prR;                                             /* 161 — 진행바 채움 비율(0~1). 중간 노드 점등 판정에 쓴다 */
   if(promo){
-    $('prF').style.width = (clamp(promo.t/promo.max, 0, 1)*100) + '%';
+    prR = clamp(promo.t/promo.max, 0, 1);
     $('prT').textContent = '⚔ 승급전 ' + promo.t.toFixed(1) + '초';
   }else{
     const total = stageTotal();
-    $('prF').style.width = (killed/total*100) + '%';
+    prR = total > 0 ? clamp(killed/total, 0, 1) : 0;   /* total 0 이면 NaN 폭이 나간다 */
     $('prT').textContent = killed + ' / ' + total;
   }
+  /* 161 — px 로 준다. `%` 는 트랙 padding box(410) 기준이라 실제 이동 거리(398)보다 앞서 갔다 */
+  $('prF').style.width = (prR*KBAR_W) + 'px';
+  /* 161 — 중간 노드는 채움 선단이 제 중심에 닿는 순간(정확히 50%) n1 과 같은 노랑으로 점등한다.
+     채움 트랙은 #stinfo 좌표로 x21..419(폭 398), 노드 중심은 x220 → (220−21)/398 = 0.5 */
+  $('kn2').classList.toggle('on', prR >= KNODE2_AT);
   drawSlots();
   /* 좌측 아이콘 알림 */
   sideAlert('attend', S.att.date !== today());
