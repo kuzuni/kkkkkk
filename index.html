@@ -17842,7 +17842,7 @@ const PET_TH = {
 /* `it` 이 펫이면 스프라이트 캔버스, 아니면 원래 이모지(`ic`) 그대로. 호출부는 분기하지 않는다 —
    장비·스킬이 섞인 목록(09 결과·12 소환 결과)에서 «펫만» 바뀌게 하는 것이 이 함수의 일이다.
    ⚠ 대비(«어두운 면 위의 어두운 스프라이트») 는 **여기서 손대지 않는다** — 주인 지시가 «전투씬과
-   똑같은 이미지» 라 픽셀을 밝히면 전제가 깨진다. 실측·후속은 docs/review/174-*.md 와 PROGRESS 221. */
+   똑같은 이미지» 라 픽셀을 밝히면 전제가 깨진다. 실측·후속은 docs/review/174-*.md 와 PROGRESS 224. */
 function petIcon(it, kind){
   if(!(it && it.sp && PET_SP[it.sp])) return it && it.ic || '❔';
   const T = PET_TH[kind] || PET_TH.up;
