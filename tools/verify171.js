@@ -12,6 +12,7 @@
  *   §3 07 스킬 · 26 동료 [일괄 강화] — 강화 가능 유무로 초록↔회색 (같은 `.sk-btn` 부품)
  *   §4 08 세부 팝업 `.sk-u` — 50 [구매] 가능/부족/불가 · 08 [강화] 가능/불가
  *   §5 회귀 — 회색이어도 클릭이 살아 있고(안내), 상태가 바뀌면 색이 «실제로» 따라온다 · 콘솔 에러 0
+ *   §6 05 무기 팝업 — 전역 감사(`tools/audit171.js`)가 잡은 두 번째 «가능한데 회색»
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
@@ -242,6 +243,47 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
     '[레이아웃 보존] 버튼 left = ' + pos.wx + ' / ' + pos.bx + ' (측정치 240 / 551)');
   ok(pos.ww === 275 && pos.bw === 275 && pos.wy === 1158,
     '[레이아웃 보존] 버튼 275x' + ' top ' + pos.wy + ' (측정치 275 wide · top 1158)');
+
+  /* ---------------- §6 05 무기 팝업 ---------------- */
+  console.log('\n§6 05 무기 팝업 [장착]·[일괄 강화] (전역 감사가 잡은 두 번째 건)');
+  const CYAN_W  = 'rgb(68, 218, 239)';    /* .wm-b1:not(.off) 활성(#44DAEF) */
+  const GREEN_W = 'rgb(143, 220, 51)';    /* .wm-b2:not(.off) 활성(#8FDC33) */
+  const GRAY_W  = 'rgb(168, 168, 168)';   /* .wm-btn 회색(#A8A8A8) */
+
+  const w1 = await page.evaluate(() => {
+    S.gold = 1e18; EQUIPS.forEach(it => { S.own[it.id] = { l: 1, n: 1e12 }; });
+    markDirty(); uiDirty = true; goTab('hero'); openWeapon(null, 'weapon');
+    const eq = document.getElementById('wpnBtnEq'), up = document.getElementById('wpnBtnUp');
+    return { n: EQUIPS.filter(canLevel).length,
+             upTxt: up.textContent.trim(), upOff: up.classList.contains('off'),
+             upBg: getComputedStyle(up).backgroundImage,
+             eqOff: eq.classList.contains('off'), eqBg: getComputedStyle(eq).backgroundImage };
+  });
+  await page.waitForTimeout(200);
+  ok(!w1.upOff && w1.upBg.includes(GREEN_W),
+    '[05 일괄 강화] 강화 가능 ' + w1.n + '개(«' + w1.upTxt + '») → 초록');
+  ok(w1.eqOff ? w1.eqBg.includes(GRAY_W) : w1.eqBg.includes(CYAN_W),
+    '[05 장착] ' + (w1.eqOff ? '장착 중/미보유 → 회색' : '장착 가능 → 청록'));
+
+  const w2 = await page.evaluate(() => {
+    EQUIPS.forEach(it => { if (S.own[it.id]) S.own[it.id].n = 0; });
+    renderWpn();
+    const up = document.getElementById('wpnBtnUp');
+    return { off: up.classList.contains('off'), bg: getComputedStyle(up).backgroundImage,
+             txt: up.textContent.trim(), n: EQUIPS.filter(canLevel).length };
+  });
+  await page.waitForTimeout(200);
+  ok(w2.n === 0 && w2.off && w2.bg.includes(GRAY_W),
+    '[05 일괄 강화] 강화 가능 0개(«' + w2.txt + '») → 회색 (레퍼런스가 찍힌 그 상태)');
+
+  /* 05 의 ①~④ 는 색만 바꿨으니 그대로여야 한다 — 버튼 자리·크기 재확인 */
+  const wpos = await page.evaluate(() => {
+    const a = document.getElementById('wpnBtnEq'), b = document.getElementById('wpnBtnUp');
+    return { ax: a.offsetLeft, bx: b.offsetLeft, ay: a.offsetTop, aw: a.offsetWidth, ah: a.offsetHeight };
+  });
+  ok(wpos.ax === 137 && wpos.bx === 447 && wpos.ay === 1184 && wpos.aw === 274 && wpos.ah === 131,
+    '[05 레이아웃 보존] 버튼 ' + wpos.aw + 'x' + wpos.ah + ' @ ' + wpos.ax + '/' + wpos.bx
+    + ' top ' + wpos.ay + ' (측정치 274x131 · 137/447 · 1184)');
 
   ok(errs.length === 0, '콘솔·런타임 에러 0건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
