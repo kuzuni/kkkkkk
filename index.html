@@ -10087,8 +10087,18 @@
   .jz-cdok{animation:jzCdOk .34s ease-out both}
   @keyframes jzCdOk{0%{filter:brightness(1.9) drop-shadow(0 0 10px #FFE9A8)}100%{filter:none}}
 
-  /* ⑧ 보스 등장·처치 — 붉은 비네트 0.6s / 「BOSS」 리본 슬램 / 처치 흰 플래시 0.15s
-     #fxl(z60·pointer-events:none) 안에 얹으므로 입력을 막지 않는다(58 공통 규칙과 동일). */
+  /* ⑧ 보스 등장 — 붉은 비네트 0.6s / 「BOSS」 리본 슬램.
+     ★ 184(2026-08-27, 주인 지시) — 두 가지를 고쳤다. 되돌리지 마라.
+       ① **레이어**: 종전에는 `#fxl`(z60)에 얹혀 **팝업·탭바를 뚫고** 나왔다. 보스 등장은
+          «전투씬 발(發)» 연출이므로 77/158 규칙대로 `#fxlc`(z7 · 팝업 아래)로 내렸다.
+          호출부는 `jzFx(cls, ms, txt, true)` — 네 번째 인자가 전투 발 표식이다.
+       ② **처치 흰 플래시 `.jz-wf` 폐지**: `inset:0` 순백 opacity .86 → 0 (0.15s) 로
+          «화면 전체가 팍» 번쩍이던 것. 주인 «정신사나우니 하지 말라» → CSS·키프레임·호출부 전부 삭제.
+          레이어 이동이 아니라 **제거**다. 다시 넣지 마라.
+     풀스크린 플래시 전수 조사 결과는 `docs/review/184-보스연출레이어-플래시폐지.md` §2 —
+     `inset:0` + 흰/적 + opacity 애니메이션은 `.jz-wf` 하나뿐이었고, 나머지(`.jz-badov`·`.fx-flash`·
+     `jz-cast/cdok`·전투 캔버스 `e.fx` 흰 틴트)는 **대상 요소 한정**이라 그대로 둔다.
+     두 연출 모두 `pointer-events:none` 이라 입력을 막지 않는다(58 공통 규칙과 동일). */
   .jz-vig{position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(ellipse at 50% 50%,rgba(255,0,0,0) 42%,rgba(180,0,10,.62) 100%);
     animation:jzVig .6s ease-out both}
@@ -10100,8 +10110,7 @@
   @keyframes jzSlam{0%{opacity:0;translate:0 -260px;scale:1.6}
     30%{opacity:1;translate:0 0;scale:.92}42%{scale:1.06}52%{scale:1}
     78%{opacity:1}100%{opacity:0;scale:1.1}}
-  .jz-wf{position:absolute;inset:0;pointer-events:none;background:#fff;animation:jzWf .15s ease-out both}
-  @keyframes jzWf{0%{opacity:.86}100%{opacity:0}}
+  /* 184 — `.jz-wf`(처치 흰 풀스크린 플래시) + `@keyframes jzWf` 삭제됨. 위 ⑧ 주석 참고. */
 
   /* ══════════════════════════════════════════════════════════════════════════
      34 축복(버프) 팝업 — 측정표 docs/measure/34-축복버프팝업.md
@@ -25644,8 +25653,13 @@ function jzSlotWatch(m){
   if(p === undefined || p === r) return;
   jzOn(el, r ? 'jz-cdok' : 'jz-cast', 380);             /* 대기→활성 = 쿨 완료 글로우 / 활성→대기 = 발동 */
 }
-function jzFx(cls, ms, txt){
-  const L = (typeof fxL === 'function') ? fxL() : $('fxl');
+/* 184 — `combat` 이 참이면 **전투 발(發)** 레이어 `#fxlc`(z7 · 팝업 아래)에 그린다.
+   77/158 의 «전투씬 발 연출은 팝업 아래, UI 발만 팝업 위» 규칙과 같은 처방이다 —
+   보스 등장 비네트·슬램이 `#fxl`(z60)에 얹혀 팝업·탭바를 뚫고 나오던 것이 원인이었다. */
+function jzFx(cls, ms, txt, combat){
+  const L = combat
+    ? ((typeof fxLC === 'function') ? fxLC() : $('fxlc'))
+    : ((typeof fxL === 'function') ? fxL() : $('fxl'));
   if(!L) return;
   const d = document.createElement('s');
   d.className = cls;
@@ -25741,8 +25755,9 @@ function jzInit(){
       const n = si.classList.contains('bfight');
       if(n === bf) return;
       bf = n;
-      if(n){ jzFx('jz-vig', 700); jzFx('jz-slam', 1000, 'BOSS'); }
-      else if(!si.classList.contains('bfarm')) jzFx('jz-wf', 200);   /* 처치 — 시간초과(bfarm)는 제외 */
+      /* 184 — 등장 연출은 전투 발이므로 #fxlc(팝업 아래). 처치 흰 플래시(jz-wf)는
+         «화면 전체가 팍 번쩍» 이라 주인 지시로 **전면 폐지**(레이어 이동이 아니라 제거). */
+      if(n){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, 'BOSS', true); }
     }).observe(si, { attributes:true, attributeFilter:['class'] });
   }
 
