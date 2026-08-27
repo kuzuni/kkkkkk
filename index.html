@@ -3425,49 +3425,48 @@
     /* 바닥이 살짝 데워진 어둠 — 1회차는 완전 균일 #0b0d18 이라 페이드 뒤 게임 화면(따뜻한 보라·금)과
        평균 휘도가 6.4배 튀었다(비평 ④). 목적지 쪽 색을 아주 옅게 깔아 층을 하나 만든다 */
     background:radial-gradient(120% 62% at 50% 78%,#181528 0%,#0e1020 45%,#0b0d18 100%);
-    font-size:36px;font-weight:800;color:#9db0d8;transition:opacity .11s linear}
+    font-size:36px;font-weight:800;color:#9db0d8;transition:opacity .15s linear}
   #loading.out{opacity:0}
   #loading.thru{pointer-events:none}
   #loading.off{display:none}
 
   /* 무대 — 폭은 프레임 그대로(1080). 캐릭터가 왼쪽 프레임 밖에서 들어오므로 overflow 는 #loading 이 자른다 */
-  #ldStage{position:relative;width:1080px;height:600px;flex:none}
+  #ldStage{position:relative;width:1080px;height:720px;flex:none}
   /* 바닥선 — **프레임을 가로지른다.** 1회차는 left/right 150px 라 잉크가 x221..857 뿐이었고,
      등장 경로의 43% 구간에 발밑 기준선이 없어 «날아 들어온다» 로 읽혔다(비평 ③). */
-  #ldGr{position:absolute;left:0;right:0;bottom:74px;height:8px;
-    background:linear-gradient(90deg,rgba(78,102,166,0) 0%,rgba(96,124,196,.62) 38%,
-      rgba(96,124,196,.62) 62%,rgba(78,102,166,0) 100%)}
+  #ldGr{position:absolute;left:120px;right:120px;bottom:70px;height:8px;
+    background:linear-gradient(90deg,rgba(108,138,214,0) 0%,rgba(124,156,232,.86) 22%,
+      rgba(124,156,232,.86) 78%,rgba(108,138,214,0) 100%)}
   /* 그림자 — ★ 검정을 쓰면 안 된다. 배경이 이미 #0b0d18 이라 1회차의 rgba(0,0,0,.62) 는
      명도비 1.045:1 로 «사실상 안 보이는» 그림자였다(비평 ③ 실측). 어두운 무대에서 접지를 읽히게
      하는 것은 그늘이 아니라 **발밑에 고인 빛**이다. 폭 320 은 발 스팬(≈262px)보다 넓다. */
-  #ldSh{position:absolute;left:50%;bottom:56px;width:320px;height:46px;margin-left:-160px;
+  #ldSh{position:absolute;left:50%;bottom:52px;width:420px;height:54px;margin-left:-210px;
     border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,
-      rgba(126,158,224,.34) 0%,rgba(126,158,224,.16) 46%,rgba(126,158,224,0) 74%);
+      rgba(2,3,8,.88) 0%,rgba(2,3,8,.62) 34%,rgba(132,166,236,.30) 58%,rgba(132,166,236,0) 78%);
     opacity:0}
   #ldSh.on{opacity:1}
   /* 캐릭터 — 79×63 논리 프레임 × 8 = 632×504. 캔버스는 그보다 크게(720×512) 잡아
      프레임별 ox 차이로 잉크가 잘리지 않게 한다. transform-origin 은 발밑(착지 스쿼시 기준점).
      ★ opacity 전이(1회차 .12s)는 **없앴다** — 등장 300ms 중 78%(439px)가 반투명으로 지나가
      «온전히 보이는 달리기가 38px» 이 됐다(비평 ①). 등장은 프레임 밖에서 시작하므로 페이드가 필요 없다. */
-  #ldHero{position:absolute;left:50%;bottom:78px;width:720px;height:512px;margin-left:-360px;
+  #ldHero{position:absolute;left:50%;bottom:78px;width:720px;height:624px;margin-left:-360px;
     display:block;image-rendering:pixelated;transform-origin:50% 100%;opacity:0}
   #ldHero.on{opacity:1}
 
   #ldTx{margin-top:16px;animation:ldBreath 1.4s ease-in-out infinite}
   @keyframes ldBreath{0%{opacity:.66}50%{opacity:1}100%{opacity:.66}}
   /* 진행바는 캐릭터 잉크(352px)보다 **좁아야** 한다 — 위계가 뒤집히면 로딩 크롬이 주인공이 된다 */
-  #ldBar{position:relative;width:300px;height:16px;margin-top:30px;border-radius:8px;background:#161c30;
-    box-shadow:inset 0 0 0 2px #232c47;overflow:hidden}
-  #ldBar>i{display:block;height:100%;width:0;border-radius:8px;
+  #ldBar{position:relative;width:400px;height:18px;margin-top:30px;border-radius:9px;background:#2f3a5c;
+    box-shadow:inset 0 0 0 2px #46557f;overflow:hidden}
+  #ldBar>i{display:block;height:100%;width:0;border-radius:9px;
     background:linear-gradient(90deg,#4f7dd0,#8ea0c7);transition:width .12s linear}
   /* ★ 훑고 지나가는 하이라이트. 아틀라스는 8개뿐이라 큰 파일 하나를 받는 동안 진행바가
      수백 ms 씩 **한 픽셀도 안 움직인다**(비평 ④ 실측: 745ms 정지 = 표본 창의 83%).
      받는 양을 모르는 구간에서 «살아 있다» 를 알리는 것은 채움이 아니라 이 스윕이다. */
-  #ldBar::after{content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;
-    background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,0) 34%,
-      rgba(180,205,255,.30) 50%,rgba(255,255,255,0) 66%,rgba(255,255,255,0) 100%);
-    transform:translateX(-100%);animation:ldSweep 1.15s linear infinite}
-  @keyframes ldSweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  #ldBar::after{content:"";position:absolute;top:0;bottom:0;left:-28px;right:-28px;pointer-events:none;
+    background:repeating-linear-gradient(115deg,rgba(212,228,255,.13) 0 14px,rgba(212,228,255,0) 14px 28px);
+    animation:ldSweep .7s linear infinite}
+  @keyframes ldSweep{0%{transform:translateX(0)}100%{transform:translateX(28px)}}
   /* min-height — 진행 표기는 로딩 모듈이 시작해야 채워진다. 자리를 미리 잡아 두지 않으면
      그 순간 위 요소들이 밀려 «로딩 화면이 한 번 덜컹» 한다 */
   #ldNum{margin-top:16px;min-height:30px;font-size:26px;font-weight:700;color:#7286ae;letter-spacing:.5px}
@@ -12366,7 +12365,7 @@
     <div id="ldStage">
       <u id="ldGr"></u>
       <i id="ldSh"></i>
-      <canvas id="ldHero" width="480" height="320"></canvas>
+      <canvas id="ldHero" width="720" height="624"></canvas>
     </div>
     <div id="ldTx">스프라이트 불러오는 중...</div>
     <div id="ldBar"><i id="ldBarF"></i></div>
@@ -12396,32 +12395,52 @@
 
   /* ---- 상수 (2회차 — 1회차 비평 A·B 의 수치 지적을 반영해 다시 잡았다) ---- */
   var LD_MIN   = 400;   /* 오버레이 최소 체류(ms, 내비게이션 시작 기준) — 전부 캐시된 재방문에서도 한 박자는 보이게 */
-  var LD_RUN   = 420;   /* 등장 길이. 1회차 300ms 는 A «이동의 93%가 앞 155ms 에 몰린다» · B «인지 하한 200ms 미달» */
-  var LD_RUNMS = 52;    /* 달리기 프레임 간격 — run 8프레임 × 52 = 416ms ≈ LD_RUN. **한 스트라이드가 정확히 한 번 완결된다.**
-                           1회차 70ms 는 560ms 스트라이드의 53.6% 만 재생해 두 비평가 모두 «걸음이 안 끝난다» 로 감점했다. */
+  var LD_RUN   = 640;   /* 등장 길이. 1회차 300 → 2회차 420 → 3회차 640.
+                           2회차 비평 D: «+160ms 이후 260ms 동안 56px(10.4%)만 가는데 달리기 프레임은 5장이 더 돈다 —
+                           다리는 도는데 몸이 안 나가는 **트레드밀**». 원인은 길이가 아니라 이징이었다(아래 ldAt). */
+  var LD_RUNMS = 40;    /* 달리기 프레임 간격 — run 8프레임 × 40 = 320ms → 640ms 안에 **스트라이드가 두 번** 돈다.
+                           «걸음 주기를 주기로 인식하려면 최소 2회» (2회차 비평 D). 게이트가 아틀라스에서 프레임 수를 다시 센다. */
+  var LD_CRZ   = .75;   /* 등속 구간의 시간 비율 */
+  /* ★ 등속 구간이 가는 거리 비율은 **손으로 적으면 안 된다.** .80 으로 적었더니 이음매에서 속도가
+     1.067 → 1.6 (**+50%**) 으로 튀어, 감속해야 할 자리에서 오히려 가속했다(게이트 §4 가 잡았다).
+     이음매에서 속도가 이어지려면 CRZD·(1−CRZ) = 2·CRZ·(1−CRZD) 여야 하고, 풀면 아래 한 줄이다. */
+  var LD_CRZD  = 2 * LD_CRZ / (1 + LD_CRZ);
   var LD_HOLD  = 90;    /* 착지 뒤 여운 — 선 자세를 한 박자 보여 주고 나간다 */
   /* ★ LD_HARD — «이 시각을 넘겨서까지 등장을 기다리지는 않는다» 는 마감. 실측으로 유도한 값이다:
        이 저장소의 게이트·하네스는 `goto(waitUntil:'load')` 뒤에 대기하고 찍는데,
        load 이벤트가 **550ms**(아틀라스까지 다 받은 시점) 이고 **최단 대기가 300ms**(cap126font·verify78·verify113)
        → 가장 이른 «화면을 읽는» 게이트가 ≈850ms(그중 300ms 짜리들은 DOM 검사라 `.thru` 로 통과한다.
        실제로 **찍는** 하네스는 대기 400ms 이상 = ≈950ms). 850 을 기준으로 잡고 페이드 110 과
-       타이머 굶주림 여유(실측 70~85ms)를 빼면 620ms 다.
+       타이머 굶주림 여유를 빼면 530ms 다. 굶주림은 실행마다 **20~115ms** 로 흔들려서(실측)
+       여유를 넉넉히 잡아야 «뜨고 지는 FAIL»(136 계열)이 안 된다.
      즉 «전부 캐시된 재방문» 에서는 등장이 잘린다(그때 캐릭터는 이미 이동의 94% 지점이라 서 있는 것으로 읽힌다).
      주인 지시가 가리키는 **첫 접속**(1.8MB 를 네트워크로 받는 경우)에는 부팅이 훨씬 늦어 등장이 통째로 보인다. */
-  var LD_HARD  = 620;
+  var LD_HARD  = 530;
   var LD_IDMS  = 125;   /* 대기 프레임 간격(8fps) — 전투 setAnim(player,'knight','idle',8) 과 같은 속도 */
   var LD_GRACE = 90;    /* knight 가 늦게 와도 캐릭터를 최소 이만큼은 보여 준다(«연출 0프레임» 방지) */
-  var LD_FADE  = 110;   /* 페이드아웃 — CSS #loading{transition:opacity .11s} 와 한 벌(게이트 §2 가 대조) */
-  var LD_SC    = 8;     /* 79 규격 정수 배율. 1회차 5(잉크 222px = 프레임 세로의 9.7%)를 두 비평가가
-                           «히어로 등장인데 진행바가 더 크다» 로 지적 → 8(잉크 ≈355px = 15.6%). */
-  var LD_X0    = -450;  /* 등장 시작 x. 정지 자세의 잉크 우변이 x=432 이므로 −450 이면 잉크 우변이 −18,
-                           **딱 프레임 밖**에서 시작한다(게이트 §4 가 아틀라스에서 다시 계산해 대조).
-                           1회차 −560 은 A 실측대로 잉크 우변이 +100 이라 «몸의 39%가 화면 안에서 켜졌고»,
-                           2회차 중간의 −760 은 반대로 **328px 을 화면 밖에서 흘려보내** 등장 420ms 중
-                           앞 72ms(17%)가 빈 무대였다. 여분 없이 딱 맞추면 프레임당 이동도 같이 줄어든다
-                           — 52ms 첫 스텝 148px = 몸통 352px 의 42%(비평 ① «126% = 순간이동» 의 상한 50% 이내). */
-  var LD_ARC   = 26;    /* 달리는 동안 상하 아치(px) — A ③ «경로가 완전 수평, 세로 변위 0px» */
-  var LD_SQ    = 160;   /* 착지 스쿼시 길이. 1회차엔 그림자에만 걸려 A ① 이 «몸통 스쿼시 0px» 로 짚었다 */
+  var LD_FADE  = 150;   /* 페이드아웃 — CSS #loading{transition:opacity .11s} 와 한 벌(게이트 §2 가 대조) */
+  var LD_SC    = 12;    /* 79 규격 정수 배율. 1회차 5(잉크 222px = 프레임 세로의 9.7%)를 두 비평가가
+                           «히어로 등장인데 진행바가 더 크다» 로 지적 → 8 로 올렸는데, 2회차에 캔버스
+                           backing(480×320)이 CSS 표시 크기(720×512)와 달라 **1.5×/1.6× 비균등 CSS 확대**가
+                           걸려 있었다 — 비평가 C 실측: 가로 소스픽셀이 12px 인데 세로는 13,13,13,13,12 로
+                           **1/5 행만 높이가 달라 캐릭터가 6.7% 늘어났고**, 백버퍼가 40 소스픽셀뿐이라
+                           **run 프레임의 위 20%(칼끝·투구 깃)가 평평하게 잘려** 있었다.
+                           그래서 backing 을 CSS 와 **1:1(720×624)** 로 맞추고 배율을 **12** 로 올렸다 —
+                           화면에 보이던 크기(잉크 612×600)는 그대로면서 정수 균등 배율이 되고 잘림이 0 이 된다. */
+  var LD_X0    = -850;  /* 등장 시작 x. 정지 자세의 잉크 우변은 x=**828**(캔버스 좌변 180 + 720/2 + 앵커 −324 + 51×12)
+                           이므로 −850 이면 우변이 −22, **딱 프레임 밖**에서 시작한다.
+                           ★ 2회차의 −450 은 **게이트가 틀린 값을 줘서** 나온 숫자였다 — §4 가
+                           `display:none` 인 오버레이에서 `offsetLeft` 를 읽어 0(실제 180)이 나왔고,
+                           CSS 확대(1.5×)도 안 쳤다. 비평가 C 가 «첫 프레임에 몸의 89%가 이미 화면 안» 으로
+                           독립 확인했다. 게이트는 이제 오버레이를 **보이는 상태로 만들어 놓고** 재고,
+                           backing 이 CSS 박스와 1:1 인지도 같이 본다. */
+  var LD_ARC   = 20;    /* 상하 아치(px). **주기를 걸음에 맞춘다** — run 8프레임 = 접지 2회이므로
+                           접지 간격은 4프레임 = LD_RUNMS×4 다. 아치를 그 주기의 |sin| 으로 두면
+                           **발이 딛는 순간 arc=0**(접지) 이고 정점이 그 사이에 온다.
+                           2회차는 등장 전체에 반주기 하나를 걸어서 «정점이 딛는 프레임과 겹치고»(C)
+                           «420ms 내내 발이 떠 있다»(D) 는 지적을 동시에 받았다. */
+  var LD_SQ    = 170;   /* 착지 스쿼시 길이 */
+  var LD_SQA   = .10;   /* 착지 스쿼시 진폭. 2회차 .06 은 실측 −1.8% 로 «160ms 를 쓰고 얻은 임팩트가 1.8%»(D) */
 
   var ldRunAt = 0, ldDone = false, ldFading = false, ldOff = false, ldRaf = 0, ldCb = null, ldTileOK = false;
   var el = function (id) { return document.getElementById(id); };
@@ -12479,8 +12498,14 @@
      로딩 구간에서 표본 시각이 실행 시각보다 최대 140ms 뒤처져 «이징이 틀렸다» 로 오독된다
      (2회차에 실제로 322px 오차로 헛불렸다). 곡선은 여기서 직접 재고, 배선은 따로 한 번 본다. */
   function ldAt(t) {
-    var p = Math.min(1, Math.max(0, t / LD_RUN));
-    return Math.round(LD_X0 * Math.pow(1 - p, 3));   /* easeOutCubic — 달려 와서 «감속해 선다» */
+    var p = Math.min(1, Math.max(0, t / LD_RUN)), e;
+    /* ★ easeOutCubic 을 버렸다(2회차). 그 곡선은 앞 38% 시간에 거리의 93% 를 써 버려서, 남은 구간에
+       **다리는 도는데 몸이 안 나가는 트레드밀**이 됐다(D 실측: 속도가 250ms 안에 28.6배 붕괴).
+       달리기는 «등속으로 오다가 마지막에 선다» 다 — 시간의 앞 LD_CRZ 를 등속으로 LD_CRZD 만큼 가고,
+       남은 시간에 남은 거리를 2차 감속으로 처리한다. 프레임당 이동이 균일해져 스트로브도 같이 준다. */
+    if (p < LD_CRZ) e = LD_CRZD * p / LD_CRZ;
+    else { var q = (p - LD_CRZ) / (1 - LD_CRZ); e = LD_CRZD + (1 - LD_CRZD) * (1 - (1 - q) * (1 - q)); }
+    return Math.round(LD_X0 * (1 - e));
   }
 
   function ldHeroIn() {
@@ -12498,8 +12523,8 @@
     var cv = el('ldHero'), sh = el('ldSh'), A = A0.knight;
     var t = now() - ldRunAt, p = Math.min(1, t / LD_RUN);
     var x = ldAt(t);
-    /* 아치 — 달리는 동안만 위아래로 한 번 뛴다(수평 슬라이딩으로 안 읽히게). 착지에서 0 으로 수렴 */
-    var arc = p < 1 ? -Math.round(LD_ARC * Math.sin(Math.PI * p)) : 0;
+    /* 아치 — 등속 구간에서 **두 번** 뛴다(접지 2회). 감속 구간(뒤 25%)은 0 = 발이 붙은 채로 선다 */
+    var arc = p < LD_CRZ ? -Math.round(LD_ARC * Math.abs(Math.sin(Math.PI * t / (LD_RUNMS * 4)))) : 0;
     /* 착지 스쿼시 — 그림자와 **몸통 둘 다**. 세로로 눌리고 가로로 퍼진다 */
     var k = p < 1 ? 0 : Math.max(0, 1 - (t - LD_RUN) / LD_SQ);
     if (cv && A && A.image && A.a) {
@@ -12507,12 +12532,12 @@
       var frame = p < 1 ? run[Math.floor(t / LD_RUNMS) % run.length]
                         : idle[Math.floor((t - LD_RUN) / LD_IDMS) % idle.length];
       cv.style.transform = 'translate(' + x + 'px,' + arc + 'px) scale(' +
-        (1 + .06 * k).toFixed(3) + ',' + (1 - .06 * k).toFixed(3) + ')';
+        (1 + LD_SQA * k).toFixed(3) + ',' + (1 - LD_SQA * k).toFixed(3) + ')';
       ldDraw(cv, frame);
     }
     if (sh) {
       /* 그림자는 캐릭터를 따라가고, 공중(arc)에서는 작고 옅어진다 */
-      var air = p < 1 ? Math.abs(arc) / LD_ARC : 0;
+      var air = Math.abs(arc) / LD_ARC;
       sh.style.transform = 'translateX(' + x + 'px) scale(' +
         (1 + .30 * k - .18 * air).toFixed(3) + ',' + (1 - .30 * k - .18 * air).toFixed(3) + ')';
       sh.style.opacity = (1 - .45 * air).toFixed(3);
@@ -12560,7 +12585,8 @@
   /* 게이트(verify163)가 상수·내부 상태를 재는 창구. 연출 로직은 이 객체를 안 읽는다. */
   window.LD = {
     MIN: LD_MIN, RUN: LD_RUN, RUNMS: LD_RUNMS, IDMS: LD_IDMS, GRACE: LD_GRACE,
-    FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, HOLD: LD_HOLD, HARD: LD_HARD,
+    FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, SQA: LD_SQA,
+    HOLD: LD_HOLD, HARD: LD_HARD, CRZ: LD_CRZ, CRZD: LD_CRZD,
     total: function () { return total; },
     at: ldAt,
     runAt: function () { return ldRunAt; },

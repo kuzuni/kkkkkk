@@ -26,12 +26,12 @@ const path = require('path');
 const TAG = process.argv[2] || 'r1';
 const OUT = path.resolve(__dirname, '../docs/shots');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
-const SLOW = 2800;   /* knight 를 뺀 아틀라스 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간.
+const SLOW = 4200;   /* knight 를 뺀 아틀라스 지연(ms) — 첫 접속의 «나머지가 아직 오는 중» 구간.
                         넉넉히 잡는 이유: 로드마다 브라우저가 100~1500ms 씩 흔들려서, 로딩 화면이
                         짧게 살면 표본 한두 장이 «이미 끝난 뒤» 에 찍힌다(빈 무대로 나온다). */
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
 /* 등장 시작(#ldHero.on) 기준 표본 시각(ms). 1~5 = 등장 300ms 구간 · 6~7 = 선 뒤 대기(idle) · 8 = 전환 */
-const OFF = [20, 90, 160, 235, 320, 440, 900, null];   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
+const OFF = [25, 130, 250, 375, 490, 640, 1000, null];   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
 const N = OFF.length;
 
 (async () => {
@@ -42,40 +42,62 @@ const N = OFF.length;
   const shots = [];
 
   for (let i = 0; i < N; i++) {
+    /* ★ 표본 한 장마다 «찍은 뒤에» 상태를 다시 확인하고, 로딩 화면이 이미 지났으면 다시 찍는다.
+       `page.screenshot()` 이 폰트·안정화를 기다리느라 혼잡할 때 수백 ms~3s 늦게 캡처되는 일이 있어
+       2·3회차에 표본 한두 장이 **게임 화면**으로 찍혔다(스캐너가 «화면 전체가 다르다» 로 잡아냈다).
+       DOM 을 캡처 «전» 에 읽으면 로딩 화면이라고 나오므로, 순서를 뒤집어야 잡힌다. */
+    let st = null, tries = 0;
+    while (tries++ < 3) {
+      const page = await ctx.newPage();
+      page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+      page.on('pageerror', e => errs.push(String(e)));
+      await page.route('**/*.png', async (route) => {
+        const slow = !/knight\.png$/.test(route.request().url());
+        await new Promise(r => setTimeout(r, slow ? SLOW : FAST));
+        await route.continue();
+      });
+      page.goto(URL, { waitUntil: 'load' }).catch(() => {});
+      await page.waitForFunction(() => {
+        const cv = document.getElementById('ldHero');
+        return !!(cv && cv.classList.contains('on'));
+      }, null, { timeout: 20000 });
+      if (OFF[i] === null) {
+        await page.waitForFunction(() => document.getElementById('loading').classList.contains('out'),
+          null, { polling: 'raf', timeout: 20000 });
+      } else {
+        await page.waitForFunction((off) => performance.now() - LD.runAt() >= off, OFF[i],
+          { polling: 'raf', timeout: 20000 });
+      }
+      await page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
+      st = await page.evaluate(() => {
+        const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
+        return { cls: el.className, op: +getComputedStyle(el).opacity,
+                 el: Math.round(performance.now() - LD.runAt()),
+                 x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
+      }).catch(() => null);
+      await page.close();
+      /* 마지막 «전환» 표본만 .out 을 허용한다. 나머지는 로딩 화면이 온전히 떠 있어야 한다 */
+      const okShot = st && !/\boff\b/.test(st.cls) && (OFF[i] === null || !/\bout\b/.test(st.cls));
+      if (okShot) break;
+      console.log(`  (${i + 1}번 재촬영 — 캡처가 늦어 «${st ? st.cls : '?'}» 상태였다)`);
+    }
+    shots.push({ i: i + 1, t: OFF[i] === null ? '전환' : OFF[i], real: st ? st.el : -1, ...(st || {}) });
+  }
+
+  /* 배경 플레이트 — knight 를 아주 늦춰 «캐릭터 없는 같은 화면» 을 한 장 남긴다.
+     scan163.py 가 이것과 차분해서 캐릭터 잉크만 뽑는다. 배경이 radial-gradient 라
+     «단색 배경과 다른 픽셀» 로는 못 가른다(2회차에 실제로 bbox 가 배경까지 삼켰다). */
+  {
     const page = await ctx.newPage();
-    page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-    page.on('pageerror', e => errs.push(String(e)));
     await page.route('**/*.png', async (route) => {
-      const slow = !/knight\.png$/.test(route.request().url());
-      await new Promise(r => setTimeout(r, slow ? SLOW : FAST));
+      await new Promise(r => setTimeout(r, /knight\.png$/.test(route.request().url()) ? 6000 : SLOW));
       await route.continue();
     });
     page.goto(URL, { waitUntil: 'load' }).catch(() => {});
-    await page.waitForFunction(() => {
-      const cv = document.getElementById('ldHero');
-      return !!(cv && cv.classList.contains('on'));
-    }, null, { timeout: 20000 });
-    const t0 = Date.now();
-    if (OFF[i] === null) {
-      /* 마지막 한 장은 «게임으로 녹아드는» 순간이다 — 시각이 아니라 상태(.out)로 잡는다.
-         부팅 시각은 아틀라스 지연에 딸려 흔들려서 오프셋으로는 못 밟는다. */
-      /* 페이드는 120ms 뿐이라 «감지 → 대기 → 캡처» 로는 못 잡는다(1차 시도에서 .out 을 본 뒤
-         55ms 를 더 기다렸더니 이미 display:none 이었다). 감지 즉시 찍는다. */
-      await page.waitForFunction(() => document.getElementById('loading').classList.contains('out'),
-        null, { polling: 'raf', timeout: 20000 });
-    } else {
-      const wait = OFF[i] - (Date.now() - t0);
-      if (wait > 0) await page.waitForTimeout(wait);
-    }
-    const shotP = page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
-    const st = await page.evaluate(() => {
-      const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
-      return { cls: el.className, op: +getComputedStyle(el).opacity,
-               x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
-    }).catch(() => ({}));
-    await shotP;
-    shots.push({ i: i + 1, t: OFF[i] === null ? '전환' : OFF[i], real: Date.now() - t0, ...st });
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: path.join(OUT, `163-${TAG}-bg.png`) });
     await page.close();
+    console.log('  bg 배경 플레이트 → docs/shots/163-' + TAG + '-bg.png');
   }
   shots.forEach(s => console.log(`  ${s.i}  등장+${String(s.t).padStart(4)}ms(실제 ${String(s.real).padStart(4)})  op=${(s.op || 0).toFixed(2)}  ${s.x || '(캐릭터 없음)'}  ${s.num || ''}  [${s.cls || ''}]`));
   console.log('  → docs/shots/163-' + TAG + '-1..' + N + '.png   콘솔 에러', errs.length);
