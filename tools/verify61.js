@@ -281,14 +281,16 @@ const snap = page => page.evaluate(() => {
     const others = {};
     /* #battlefoot 는 전폭 «빈 컨테이너» 라 bbox 로 재면 배너와 늘 스치게 나온다.
        실제로 보이는 자식(#slots)만 본다 — #hpwrap 은 02 가 display:none 으로 껐다. */
-    ['#tabbar', '#botleft', '#spdb', '#slots'].forEach(k => {
+    /* 189(2026-08-27) — `#spdb`(배속)은 주인 지시로 삭제됐다. 목록에 남겨 두면
+       `querySelector` 가 null 을 주고 «겹침 0» 이 저절로 초록이 된다(헛초록). 뺀다. */
+    ['#tabbar', '#botleft', '#slots'].forEach(k => {
       const el = document.querySelector(k); if (el) others[k] = F(el);
     });
     return { t, others, over: Object.keys(others).filter(k => hit(t, others[k])) };
   });
   ok('§13 배너가 프레임 안에 (좌·상·하)', geo.t.x >= 0 && geo.t.y >= 0 && geo.t.y + geo.t.h <= 2280,
      JSON.stringify(geo.t));
-  ok('§13 탭바·좌하단 유틸·배속·슬롯과 겹침 0', geo.over.length === 0,
+  ok('§13 탭바·좌하단 유틸·슬롯과 겹침 0', geo.over.length === 0,
      geo.over.join(',') + ' / ' + JSON.stringify(geo.others));
 
   /* ---------- §14 최장 문자열 bbox (46 교훈 1) ----------

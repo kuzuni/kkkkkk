@@ -92,7 +92,7 @@ function maxSat(css) {
     if (err) { rows.push({ screen: name, label: '(열기 실패)', note: err }); continue; }
 
     const found = await page.evaluate(sel => {
-      /* 02 메인의 상시 요소(💬·🌳마을·미션 배너)가 모든 화면에 중복으로 잡히지 않게,
+      /* 02 메인의 상시 요소(💬 채팅·미션 배너 — 🌳마을은 189 에서 삭제)가 모든 화면에 중복으로 잡히지 않게,
          «지금 맨 위에 열린 오버레이» 안쪽만 훑는다. 열린 게 없으면 프레임 전체(=02 메인)를 본다. */
       const ovs = [...document.querySelectorAll('.pop.on, .ov.on, #panel.on, [id$="w"].on')]
         .filter(e => e.getBoundingClientRect().width > 300);

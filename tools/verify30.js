@@ -65,7 +65,7 @@ const near = (label, got, want, tol) => {
   console.log('\n[A] 사라져야 하는 것 (측정표 §0)');
   for (const [sel, name] of [['#top', '상단 HUD'], ['#tabbar', '하단 탭바'], ['#stinfo', '스테이지 헤더'],
                              ['#menub', '우상단 ▦ 메뉴'], ['#sideL', '좌측 사이드 아이콘'],
-                             ['#botleft', '좌하단 채팅·마을'], ['#tuto', '우하단 미션 배너']]) {
+                             ['#botleft', '좌하단 채팅'], ['#tuto', '우하단 미션 배너']]) {
     const g = await geo(sel);
     (g && g.hidden) ? ok(name + ' 숨김(' + sel + ')') : no(name + ' 가 아직 보인다: ' + JSON.stringify(g));
   }
@@ -108,12 +108,13 @@ const near = (label, got, want, tol) => {
     near('뒤로가기 bottom(프레임 하단 기준 212)', H - (out.y + out.h), 212, 3);
   } else no('#dunOut 없음');
 
+  /* 189(2026-08-27, 저장소 주인 지시) — 배속 버튼(#spdb)은 삭제됐다.
+     30 의 던전 런 규격에는 «배속만 자리를 옮긴다»(right 36 · bottom 198) 가 있었지만 그 대상이
+     없어졌다. 죽은 단언을 지우기만 하면 되살아나도 아무도 모르므로(177-③: 전제가 죽은 게이트는
+     «삭제» 가 아니라 «재정의») **부재 자체를 자로 삼는다**. */
   const spd = await geo('#spdb');
-  if (spd && !spd.hidden) {
-    near('배속 Ø', spd.w, 81, 2);
-    near('배속 right(프레임 우단 기준 36)', W - (spd.x + spd.w), 36, 2);
-    near('배속 bottom(프레임 하단 기준 198)', H - (spd.y + spd.h), 198, 3);
-  } else no('#spdb 없음');
+  spd === null ? ok('배속 버튼 삭제됨(#spdb 없음 — 189)')
+               : no('#spdb 가 되살아났다: ' + JSON.stringify(spd));
 
   console.log('\n[C] 스킬 슬롯 — 탭바가 빠지며 +180 내려온다 (측정표 §7)');
   const slots = await geo('#slots');

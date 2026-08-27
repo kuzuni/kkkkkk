@@ -35,7 +35,9 @@ const argRAD = argN('--rad', 5);    /* 흰 코어에서 근흑을 찾는 반경(
 const SCREENS = [
   {
     k: '02-메인', ref: 'docs/ref/02-기본-메인-화면.jpg', steps: [],
-    sels: ['.tab .tl', '#sideL .ibtn .sl', '#sideR .ibtn .sl', '#botleft .ubtn[data-util=town] .ul'],
+    /* `#sideR`(작업 49) · `#botleft ... [data-util=town]`(작업 189) 는 삭제된 자리라 뺐다 —
+       0 매치 셀렉터는 표본을 안 만들 뿐이지만, 남겨 두면 «쟀는데 없다» 와 구별이 안 된다. */
+    sels: ['.tab .tl', '#sideL .ibtn .sl'],
     /* 라벨 뒤에 이모지 아이콘이 **겹쳐** 있다(`.tab .tl{margin-top:-22px}` · 레일도 같다).
        라벨만 숨겼다 찍으면 «드러난 아이콘 픽셀» 이 차분에 그대로 들어와 잉크로 읽힌다 —
        실제로 「상점」 흰 코어가 61×34(외곽선 포함 61×41 보다 큼 = 물리적으로 불가능)로 나왔고

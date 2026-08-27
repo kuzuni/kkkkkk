@@ -79,11 +79,11 @@ const TOAST_SITES = [
   ['펫 일괄강화 재료 부족',      '강화 가능한 <b>펫</b>'],
   ['미보유 코스튬',              '승급전에서 획득해야 착용합니다'],
   /* 182 — «이미 보유한 코스튬» 은 [구매] 버튼 분기였다. 버튼째 사라져 이 안내도 없다. */
-  ['마을 준비 중',               '마을은 아직 준비 중입니다'],
+  /* 189 — «🌳 마을 준비 중» 토스트도 같은 이유로 사라졌다(마을 칸째 삭제). */
   ['패스 — 프리미엄 잠금',       '를 활성화하면 받습니다'],
   ['패스 탭 — 미해금',           '아직 해금되지 않은 패스입니다'],
   ['패스 탭 — 준비 중',          '이 패스는 아직 준비 중입니다'],
-  ['배속 미해금',                '전투 배속은 아직 해금되지 않았습니다'],
+  /* 189 — «🔒 배속 미해금» 토스트도 사라졌다(#spdb 째 삭제). */
 ];
 /* 결과·의사결정은 모달로 남는다 — 149 가 «전부 토스트» 로 밀지 않았다는 증거 */
 const POPUP_SITES = [
@@ -212,8 +212,8 @@ const WORST = [
         if (i < 0) throw new Error('해금된 패스 단계가 없다');
         if (passClaim(i, 1) !== false) throw new Error('프리미엄 잠금이 안 걸렸다');
       });
-      run('배속 미해금',              () => document.getElementById('spdb').onclick());
-      run('마을 준비 중',             () => document.querySelector('#botleft .ubtn:not([data-util="chat"])').onclick());
+      /* 189(2026-08-27, 저장소 주인 지시) — «배속»·«마을» 두 칸이 삭제돼 그 토스트 2건도 없어졌다.
+         자리만 비우면 되살아나도 아무도 모른다(177-③) → 아래 [189] 절이 «부재» 를 자로 삼는다. */
       run('최고 계급',                () => { const keep = S.rank; S.rank = RANKS.length - 1; openPromo(); S.rank = keep; });
       run('이용권 — 다이아 부족',     () => { const p = PASS_ITEMS.find(x => !passOwned(x)); if (p) buyPass(p.id); else throw new Error('미보유 이용권 없음'); });
       run('설정 — 언어',              () => notify('💬 현재 <b>한국어</b>만 지원합니다'));
@@ -305,6 +305,21 @@ const WORST = [
     });
     ck('§4 토스트 드롭 시 팝업 폴백', FB.dropped && FB.modal,
        '드롭 ' + FB.dropped + ' · 폴백 모달 ' + FB.modal + (FB.txt ? ' «' + FB.txt.trim() + '»' : ''));
+
+    /* ── §189 삭제된 두 안내의 «부재» ────────────────────────────────────────────
+       189(저장소 주인 지시)가 «마을»·«배속» 두 칸을 지우면서 그 안내 토스트 2건도 없어졌다.
+       위 목록에서 줄만 빼면 되살아나도 초록이므로(177-③), 부재를 자로 세운다 —
+       ⓐ 소스에 문구가 남아 있지 않고 ⓑ DOM 에 그 칸이 없다. */
+    const GONE = await page.evaluate(() => ({
+      spdb: !!document.getElementById('spdb'),
+      town: !!document.querySelector('#botleft .ubtn[data-util="town"]'),
+      chat: !!document.querySelector('#botleft .ubtn[data-util="chat"]')
+    }));
+    ck('§189 #spdb(배속) 없음',        !GONE.spdb, GONE.spdb ? '되살아났다' : '없음');
+    ck('§189 «마을» 칸 없음',          !GONE.town, GONE.town ? '되살아났다' : '없음');
+    ck('§189 💬 채팅 칸은 남아 있다',   GONE.chat, GONE.chat ? '있음' : '채팅까지 사라졌다');
+    ck('§189 «마을 준비 중» 문구 0건',  !SRC.includes('마을은 아직 준비 중입니다'), '소스 grep');
+    ck('§189 «배속 미해금» 문구 0건',   !SRC.includes('전투 배속은 아직 해금되지 않았습니다'), '소스 grep');
 
     ck('§5 콘솔 에러 0', errs.length === 0, errs.length ? errs.slice(0, 3).join(' / ') : '0건');
     await ctx.close();

@@ -154,6 +154,7 @@
        ★ 이 «비율» 설계가 옳다는 근거 — U 가 잰 ref 낙차와 `.053em` 이 자동으로 만드는 값이
          자리마다 따로 맞춘 적이 없는데도 붙는다:
            23 제목(fs61.5) ref 3.14 ↔ 3.26 (+0.12) · 02 「마을」(fs36) ref 1.90 ↔ 1.91 (**+0.01**)
+           ※ 02 「마을」 칸은 189(2026-08-27, 주인 지시)에서 삭제됐다 — 위 수치는 그때까지의 실측 근거로만 남긴다.
            22 제목(fs45.6) ref 2.57 ↔ 2.42 (−0.15) · 23 단계판(fs48) ref 2.95 ↔ 2.54 (−0.41)
            19 아이디(fs23) ref 1.50 ↔ 1.22 (−0.28)                        ← 8곳 중 5곳이 ±0.5px
          빗나가는 둘은 **작은 버튼 숫자**다(10 「10회 소환」 ref 0.88 ↔ 1.64 · 「1,000」 0.53 ↔ 1.38).
@@ -555,13 +556,6 @@
   #app.dunrun #slots{margin-bottom:16px}
   /* 탭바(180)를 없애면 #stagearea 가 그만큼 자라고, 바닥에 붙은 #battlefoot 이 통째로 내려간다
      → 슬롯 행이 정확히 +180 이동해 ref 2195..2313 에 앉는다(측정표 §7). 슬롯 규칙은 손대지 않는다. */
-  /* 배속 버튼만 자리를 옮긴다 — ref (963,2059,81,82) → right 37 · bottom 200 */
-  #app.dunrun #spdb{right:36px;bottom:198px;width:81px;height:81px;background:rgba(0,0,0,.60)}
-  /* 비평 1회차 A5/B3 — 자물쇠 잉크가 ref 36×43 인데 32×46 이었다(종횡비 −21%) */
-  #app.dunrun #spdb .sk{transform:translateX(-50%) translateY(-3px) scale(1.12,.93)}
-  /* 배율 라벨 잉크 h — ref 16, 캡처 14 (−12.5%) */
-  #app.dunrun #spdb .sv{font-size:24px;line-height:19px}
-
   /* 던전 HUD 묶음 — 타이틀 · ⏱ 타이머 · 진행바. 캔버스 위 표시 전용(z3, 포인터 통과) */
   #dunHud{position:absolute;left:0;top:0;width:1080px;height:320px;display:none;z-index:3;
     pointer-events:none}
@@ -1074,39 +1068,17 @@
      측정표 docs/measure/02-기본-메인-화면.md §3~5.
      하단 고정 요소는 «stagearea 기준 bottom = 2160 − ref_bottom» 으로 잡는다. */
 
-  /* 좌하단 — 채팅(Ø100 반투명 원판) + 마을(배경판 없는 아트 + 흰 라벨). 사이 간격 21 */
-  #botleft{position:absolute;left:17px;bottom:170px;width:132px;z-index:3;
-    display:flex;flex-direction:column;align-items:center;gap:21px}
+  /* 좌하단 — 채팅(Ø100 반투명 원판) 한 칸.
+     189(2026-08-27, 저장소 주인 지시) — 🌳 «마을» 칸 삭제. 컬럼이 한 칸이 되면서 앵커가 바뀌었다:
+     옛 bottom 170 은 «마을 라벨 외곽선 하단(ref 1990)» 기준이었고, 지금 바닥에 앉는 것은
+     채팅이므로 **채팅 하단 ref 1812 → bottom = 2160 − 1812 = 348**(측정표 §3). gap 은 무의미해 뺐다. */
+  #botleft{position:absolute;left:17px;bottom:348px;width:132px;z-index:3;
+    display:flex;flex-direction:column;align-items:center}
   #botleft .ubtn{position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center}
   #botleft .ubtn[data-util=chat]{width:100px;height:100px;border-radius:50%;background:rgba(0,0,0,.35);
     justify-content:center;left:1.5px}   /* 원 중심 ref 84.5 (컬럼 중심 83 보다 1.5 오른쪽) */
   #botleft .ubtn[data-util=chat] .ui{font-size:54px;line-height:1;
     filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.7))}
-  /* 마을: 아트 132x130 + 라벨 잉크 33(폰트 36)이 아트 하단에 5px 겹쳐 내려온다 */
-  /* 4회차 — 아트 자리 규칙(레퍼런스 bbox 를 정확히 차지). 초록 캐노피 잉크를 같은 마스크로 재면
-     ref 115x121 @ 중심 x83 · y1842..1962 인데 우리는 113x92 @ 중심 x77 · y1833..1924 였다
-     (비평가 A «높이 −16%» · B «중심 −5.5px, 하단 −8px» 와 같은 방향).
-     ★ 5회차 — 비평가 B·C·D **셋 모두** «폭 −8.5~11.5%» 로 봤다. 우리 초록 캐노피만 재면 ref 와 폭이
-     같지만, **레퍼런스 아트는 검정 외곽선 ≈7px 을 두르고 있어 실제 차지하는 상자가 132x130**(측정표 §3)
-     이다. 우리 이모지는 어두운 전투 배경 위라 외곽선을 둘러도 안 보이므로, «아트 자리 규칙» 대로
-     **보이는 잉크가 그 상자를 채우게** 키운다(콘텐츠가 아니라 자리를 맞추는 것). 목표 132x130 @ 중심 (82.5,1898). */
-  #botleft .ubtn[data-util=town] .ui{width:132px;height:130px;font-size:116px;line-height:130px;
-    text-align:center;transform:translate(-7px,15.5px) scale(1.138,1.206);
-    filter:drop-shadow(0 0 3px #000) drop-shadow(0 3px 5px rgba(0,0,0,.8))}
-  /* 라벨 잉크 중심은 ref 81 인데 컬럼 중심(83)에 그대로 붙어 83.5 였다 → 2.5px 왼쪽 */
-  #botleft .ubtn[data-util=town] .ul{position:relative;left:-2.5px;
-    margin-top:-5px;height:33px;font-size:36px;line-height:33px;
-    /* 126 ③ 9회차 — 4px = r .111. 레일 라벨과 같은 계열인데 이 자리만 토큰 밖이었다.
-       ③ 지적이 직접 붙은 자리는 아니므로 크기대 토큰(.22)이 아니라 **본문 토큰**으로 한 단만 올린다. */
-    font-weight:900;color:#fff;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;
-    /* 126 ③ 11회차 2차 — U ref 낙차 1.90 vs 우리 0.23. 비율 토큰이 만드는 1.91 이
-       실측과 **Δ+0.01** 로 붙는 자리다(«비율» 설계의 가장 강한 증거). */
-    text-shadow:0 var(--sh-b) 0 #000;
-    /* 126 ②-2 7회차 — 흰 코어 48×30 vs ref 57×31(−15.8% / −3.2%, 비평가 N). 높이는 이미 맞다 →
-       레일 라벨과 같은 «폭만» 자리다. 다만 이 자리 외곽선은 `4px 고정` 이라 sx 에 비선형이다
-       (§11 「모두 받기」와 같은 함정) — 선형 예측 .86×57/48=1.021 로 한 번 재고 실측으로 되잡았다. */
-    letter-spacing:-.02em;white-space:nowrap;transform:scaleX(1.021)}
-
   /* 우하단 진행형 미션 배너 — 620..1080 / 1839..1989. 우측은 화면 밖으로 bleed 하므로 오른쪽 테두리·radius 없음.
      레퍼런스는 «배너 전체가 [보상받기] 버튼» 이라 별도 버튼 박스가 없다. 진행바도 없다. */
   /* 높이는 **150** 이다 — 32 실측(1840..1989 = 150행)이 픽셀 스캔이고, 02 표의 151 은 육안 실측이다.
@@ -1195,7 +1167,7 @@
   /* ── 잉크 폭 보정(32 1회차 실측, `node tools/probe32.js`) ────────────────────────
      레퍼런스 게임 서체는 **숫자·괄호가 거의 정사각**이다(`(0/10)` 의 `0` 이 17×17).
      우리 기본 서체는 같은 잉크 높이에서 세로로 길어 **폭만 17~24% 모자란다** — 높이를 ref 에 맞춘 뒤
-     `scaleX()` 로 폭을 채운다(A2 마을 라벨 `scaleX(.86)` · 23 훈련 팝업과 같은 처방).
+     `scaleX()` 로 폭을 채운다(A2 마을 라벨 `scaleX(.86)` — 그 칸은 189 에서 삭제됐다 · 23 훈련 팝업과 같은 처방).
      ⚠ `scaleX` 를 건 글자에는 `-webkit-font-smoothing:antialiased` + `translateZ(0)` 를 반드시 같이 —
        안 주면 서브픽셀 AA 로 색번짐이 생긴다(16 교훈 ③). */
   #tuto.todo .tbtn,#tuto.todo .tpg,#tuto.todo .tsub,#tuto.todo .trew .ri{
@@ -1338,24 +1310,9 @@
 
   /* 레퍼런스 02 에는 «스킬 슬롯 위 플레이어 HP 바»가 없다(측정표 §6 · A4 측정표 §66 동일 결론).
      요소·JS 갱신은 그대로 두고 표시만 끈다 — 되돌리려면 이 한 줄만 지우면 된다.
-     (켜 두면 좌하단 마을 라벨·우하단 미션 배너와 세로로 겹친다) */
+     (켜 두면 우하단 미션 배너와 세로로 겹친다. 189 이전에는 좌하단 «마을» 라벨과도 겹쳤다 —
+      그 칸은 189 에서 삭제됐고, 남은 겹침 사유는 미션 배너 하나다) */
   #hpwrap{display:none}
-
-  /* 배속 버튼 — Ø82 원형, 중심 (1010,1775), 검정 72%. 잠금 상태 톤 그대로 */
-  #spdb{position:absolute;right:29px;bottom:343px;width:82px;height:82px;border-radius:50%;
-    background:rgba(0,0,0,.72);z-index:3;cursor:pointer}
-  /* 4회차 — 자물쇠 잉크가 ref 36x39 인데 31x45 였다(비평가 A·B 가 독립으로 **같은 수치**).
-     잉크 상단(ref 1754)은 이미 맞으므로 **상단을 고정한 채** 가로로 펴고 세로로 누른다. */
-  /* 측정표 §5 «재생 삼각형 1025/1760 · 18x30 · #616161» — 잠금 비활성 톤. 5회차 신설.
-     `::before` 라 자물쇠(.sk)보다 **먼저** 칠해져 레퍼런스처럼 뒤에 깔린다.
-     #spdb 좌상단(969,1734) 기준 상대 좌표 = (56, 26). */
-  #spdb::before{content:'';position:absolute;left:56px;top:26px;width:0;height:0;
-    border-left:18px solid #616161;border-top:15px solid transparent;border-bottom:15px solid transparent}
-  #spdb .sk{position:absolute;left:50%;top:19px;transform:translateX(-50%) scale(1.16,.87);
-    transform-origin:50% 0;font-size:44px;line-height:41px;
-    filter:grayscale(1) brightness(2.8) drop-shadow(0 0 2px #000)}
-  #spdb .sv{position:absolute;left:0;right:0;bottom:1px;text-align:center;
-    font-size:24px;line-height:17px;font-weight:900;color:#606060;transform:scaleX(.92)}
 
   /* ============ 패널 ============ */
   /* 고정 높이(844 = 기존 422 x2). 넘치는 내용은 .body 내부 스크롤로 흡수 */
@@ -12135,10 +12092,12 @@
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
          우측에 남는 UI 는 위의 우상단 ▦ 메뉴 버튼(#menub) 하나뿐이다. -->
-    <!-- ④ 좌하단 유틸(채팅·마을) / 우하단 진행형 미션 배너 + 배속 버튼 -->
+    <!-- ④ 좌하단 유틸(채팅) / 우하단 진행형 미션 배너
+         작업 189(2026-08-27, 저장소 주인 지시): 🌳 «마을» 버튼과 우하단 «배속»(#spdb) 잠금 버튼 삭제.
+         좌하단에는 💬 채팅(103)만 남는다 — 컬럼이 한 칸이 되므로 #botleft 의 bottom 을
+         «마을 라벨 하단 기준 170» 에서 «채팅 하단 기준 348»(= 2160 − ref 1812)로 다시 잡았다. -->
     <div id="botleft">
       <div class="ubtn" data-util="chat"><span class="ui">💬</span></div>
-      <div class="ubtn" data-util="town"><span class="ui">🌳</span><span class="ul">마을</span></div>
     </div>
     <div id="tuto">
       <button class="tbtn" id="tutoBtn">진행중</button>
@@ -12150,7 +12109,6 @@
 
       <div class="trew"><span class="ri" id="tutoRew" data-cur-slot="dia"></span><span class="tsub" id="tutoSub">300</span></div>
     </div>
-    <div id="spdb"><span class="sv">×1.3</span><span class="sk">🔒</span></div>
     <div id="battlefoot">
       <div id="hpwrap"><i id="hpF"></i><span id="hpT"></span></div>
       <div id="slots"></div>
@@ -17575,7 +17533,11 @@ function draw(){
        제거돼 존재하지 않는다** — DOM 을 직접 재서 값을 다시 세웠다(11회차 교훈: 증상은 받고
        진단은 코드에서 다시 세운다). 실측 우측 점유는 **게임 x ≥ 470 · y 786..912** 한 띠뿐이다
        (`#spdb` 배속 485..526/786..827 · `.trew` 474..533/846..905 · `#tutoSub` 470..537/895..912).
-       그래서 좌측과 똑같이 «띠 안에서만» 민다: 띠 안 450(=470 − 글리프 반폭 20) · 띠 밖 VW−24 */
+       그래서 좌측과 똑같이 «띠 안에서만» 민다: 띠 안 450(=470 − 글리프 반폭 20) · 띠 밖 VW−24.
+       ★ 189(2026-08-27) — `#spdb` 는 주인 지시로 **삭제됐다**. 남은 우측 점유는 `.trew` 846..905 와
+       `#tutoSub` 895..912 뿐이라 실제 띠는 **836..922** 로 줄었다. 아래 상수 776..922 는 그 띠의
+       **상위집합**이라 판정이 틀리지 않는다(더 넓게 미는 쪽으로만 보수적이다) — 좁히는 것은
+       이 클램프를 소유한 작업 94 의 몫이라 189 는 근거만 갱신하고 숫자는 그대로 뒀다. */
     const nyChk = n.y + oy;
     /* 13회차 AQ①·AR#10 공통 — 좌측 아이콘 침범이 **다시** 나왔다(AQ: 라벨 게임px 44..61.5 가 «축복»
        아이콘과 단일 연결성분으로 검출 · AR: 가로 23.5 게임px 관통). 11·12회차가 잡은 클램프 자체는
@@ -23584,13 +23546,12 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = e => {
    (`gmGo()` 가 완료/미완을 갈라 수령 또는 이동을 한다). */
 $('tutoBtn').onclick = e => { e.stopPropagation(); gmGo(); };
 $('tuto').onclick    = gmGo;
-/* ④ 좌하단 유틸 · 우상단 메뉴 · 배속 — 레퍼런스 02번 구성.
+/* ④ 좌하단 유틸 · 우상단 메뉴 — 레퍼런스 02번 구성.
    작업 103(2026-08-26, 저장소 주인 지시): 💬 는 «준비 중» 안내가 아니라 **채팅 페이지(#chw)** 로 간다.
-   🌳 마을은 아직 레퍼런스도 지시도 없어 안내 그대로다. */
+   작업 189(2026-08-27, 저장소 주인 지시): 🌳 «마을» 칸이 사라져 좌하단은 채팅 한 칸뿐이다.
+   위임은 그대로 두되(칸이 다시 늘어날 때 분기만 넣으면 된다) 갈래는 채팅 하나다. */
 document.querySelectorAll('#botleft .ubtn').forEach(b => {
-  b.onclick = () => b.dataset.util === 'chat'
-    ? openChat()
-    : notify('🌳 마을은 아직 준비 중입니다');
+  b.onclick = () => { if(b.dataset.util === 'chat') openChat(); };
 });
 /* ==========================================================================
    35 패스 — 스테이지 패스 (#psw). 측정표 docs/measure/35-패스.md
@@ -23795,7 +23756,8 @@ $('mnw').querySelector('.mn-col').onclick = e => {
   else if(k === 'conf')   openConf();                 /* 작업 55 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */
   else if(k === 'pass')   openPass('stage');          /* 작업 35 인계 — 레퍼런스에 없는 임시 칸 */
 };
-$('spdb').onclick = () => notify('🔒 전투 배속은 아직 해금되지 않았습니다');
+/* 189(2026-08-27, 저장소 주인 지시) — 우하단 «배속»(#spdb) 잠금 버튼 삭제.
+   구현된 배속 로직은 처음부터 없었다(잠금 장식 + 안내 토스트뿐) — 장식·핸들러 모두 없앴다. */
 
 /* ---- 56 절전 모드 (#svw) --------------------------------------------------
    스펙: docs/UI-REFERENCE.md 56 · 측정표 docs/measure/56-절전모드.md · 기록 docs/review/56-절전모드.md

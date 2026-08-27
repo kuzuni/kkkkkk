@@ -46,7 +46,8 @@ const out = path.resolve(__dirname, '../docs/review/02-r' + r + '.png');
   const box = await p.evaluate(() => {
     const g = id => { const e = document.getElementById(id); if (!e) return null;
       const r = e.getBoundingClientRect(); return { x: +r.x.toFixed(1), y: +r.y.toFixed(1), w: +r.width.toFixed(1), h: +r.height.toFixed(1) }; };
-    return { stinfo: g('stinfo'), menub: g('menub'), tuto: g('tuto'), spdb: g('spdb'), app: g('app') };
+    /* 189 — `spdb`(배속)은 삭제됐다. 늘 null 로 찍혀 «못 쟀다» 와 구별이 안 되므로 뺀다. */
+    return { stinfo: g('stinfo'), menub: g('menub'), tuto: g('tuto'), app: g('app') };
   });
   await b.close();
   console.log('CAP02 r' + r + ' →', path.basename(out));
