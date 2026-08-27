@@ -4341,6 +4341,15 @@
   /* ⚠ 잠금 카드를 filter:brightness() 로 어둡게 하면 스크롤 fps 가 31.9 → 26.4 (−17%) 로 떨어진다
      (필터는 매 프레임 카드를 다시 래스터한다). 같은 «어둡게» 를 opacity 로 내면 합성만으로 끝난다. */
   #dunw .dnc.lkd>.bgm{opacity:.45}
+  /* 205 — «오늘 도전을 다 쓴» 카드. 잠금(.lkd)과 다른 상태다: 여전히 눌러서 세부 팝업을 볼 수 있으므로
+     `.lk` 자물쇠 배지를 씌우지 않고 **면만** 어둡게 한다.
+     ⚠ 위 `.lkd` 주석과 같은 이유로 `filter:` 를 쓰지 않는다 — 필터는 매 프레임 카드를 다시
+       래스터해 스크롤 fps 를 17% 깎는다. 같은 «회색» 을 합성만 하는 반투명 오버레이로 낸다.
+     `.dnc>*{position:absolute}` 는 의사요소를 잡지 않으므로 inset 을 직접 적는다(A1 비고의 함정).
+     ::after 는 자식 전부보다 뒤에 그려져 이름·알약·썸네일까지 한 번에 덮는다. */
+  #dunw .dnc.out::after{content:'';position:absolute;left:7px;right:7px;top:8px;bottom:8px;
+    border-radius:5px;pointer-events:none;background:rgba(24,24,20,.55)}
+  #dunw .dnc.out>.bgm{opacity:.28}
   /* 123 아레나 카드 — 썸네일 슬롯을 좌·우 절반으로 갈라 «마주 본 플레이어 2명» 을 세운다.
      기하(슬롯 296×289)는 46·97 과 공용이고, 여기서는 캔버스 2장의 좌우 배치만 정한다. */
   .dnc.arn2>.th>canvas{width:50%;height:100%}
@@ -7088,6 +7097,12 @@
     background:#FEF9B7;border:6px solid #000;border-radius:14px}
   /* 169 — 한 버튼이 두 얼굴을 갖는다: `.lk` = 레퍼런스의 «잠긴 유료 버튼»(소탕이 없는 모드),
      `.lk` 없음 = 글자 버튼(던전 모드). 둘 중 하나만 보이게 서로를 끈다. */
+  /* 205 — 102 «가격 표시 모드» 의 부족 상태. 초록 면 → 은색 면 + 빨간 가격
+     (10 소환 버튼 `.lack` 과 같은 색값: 면 #DFDFDF 계열 · 가격 #FC716C). */
+  .dgd-b.g.lack{background:linear-gradient(180deg,#E7E7E7 0 8px,#CFCFCF 8px,#A9A9A9 84%,
+      #DFDFDF 84% 91%,#7A7A7A 91%);color:#FC716C}
+  /* 가격 알약 안 화폐 아이콘 — 글자 높이에 맞춘다(125 규약: 화폐는 정해진 이미지 1개) */
+  .dgd-b>i>img.cic{width:.95em;height:.95em;vertical-align:-.12em}
   .dgd-b.lk>i{display:none}
   .dgd-b:not(.lk) .dgd-lk{display:none}
   .dgd-b:disabled{cursor:default}
@@ -14536,6 +14551,14 @@ const DUNGEONS = [
 /* 던전별 하루 입장 횟수 — 90 ④: 유물조각 하루 최대 수급 = 4던전 × 3회(= 12런) 로
    89 의 소환 비용 곡선(하루 5~10회 소환)과 맞춘다. 던전 수가 늘어도 이 값은 그대로다. */
 const DUN_TRY = 3;
+/* 205(2026-08-27, 저장소 주인 지시 «DPS 랑 아레나 하루 딱 3번만, 누적으로 쌓이는 거 없게») —
+   123 «컨텐츠» 탭 두 콘텐츠의 하루 입장 횟수. **204 던전 입장권과 정반대로 순수 리셋형**이다:
+   안 쓰면 그냥 사라지고 이월·적립이 없다(`dailyCheck()` 가 매일 3 으로 되돌린다).
+   ⚑ 아레나만 예외 — 3회를 다 쓴 뒤에도 **다이아로 추가 도전**을 살 수 있다(횟수 상한 없음).
+      DPS 측정장은 예외 없이 딱 3회다(주인 지시). 값은 199 밸런스 라운드의 평가 대상. */
+const RAID_TRY  = 3;
+const ARENA_TRY = 3;
+const ARENA_EXTRA_DIA = 100;   /* 아레나 추가 도전 1회 가격(다이아) */
 /* 90 ⑤ — 안내 문구가 «고대 유적» 을 상수로 박고 있었다. 지금 열려 있는 유물조각 던전 중
    가장 깊은 단을 이름으로 준다(전부 잠겨 있으면 1단). 던전 이름을 바꿔도 문구가 따라온다. */
 function relDunName(){
@@ -15102,7 +15125,11 @@ const DEF = () => ({
   pass:{ prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} },  /* 151 — 뒤 두 키 */
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
-  daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
+  /* 205 — `raid`·`arena` 는 «오늘 남은 도전 횟수» 다. 구 세이브엔 이 두 키가 없지만
+     `load()` 의 `Object.assign(DEF().daily, d.daily)` 가 기본값(3)으로 채워 준다
+     (44 교훈 2 «없는 키는 기본값» — 저장 구조가 아니라 값이 하나 는 것이라 KEY 는 안 올린다). */
+  daily:{ date:'', spins:ROUL_FREE, raid:RAID_TRY, arena:ARENA_TRY,
+          dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
           /* 190 — 그 중 «광고 없이» 쓸 수 있는 남은 횟수. 키가 없는 구 세이브는 noAdSumLeft() 가
              cap(SHOP_NOAD)으로 폴백한다(«없는 키는 cap» 관례 — freeLeft 와 같다. KEY 안 올린다). */
@@ -15366,6 +15393,9 @@ function dailyCheck(){
   if(S.daily.date !== t){
     S.daily.date = t;
     S.daily.spins = ROUL_FREE;
+    /* 205 — 순수 리셋. 어제 남은 횟수는 «더해지지 않고» 버려진다(204 던전 입장권과 반대). */
+    S.daily.raid  = RAID_TRY;
+    S.daily.arena = ARENA_TRY;
     DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
     S.daily.noAdSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {});   /* 190 — 무광고 1회도 매일 충전 */
@@ -20356,6 +20386,14 @@ function dgdSweepReady(on){
   b.classList.remove('lk'); b.disabled = !on;
   b.style.filter = on ? '' : 'grayscale(.75) brightness(.8)';
 }
+/* 205 — [도전] 버튼의 «글자 / 가격» 두 얼굴. 세 모드(던전·측정장·아레나)가 같은 버튼 하나를
+   돌려 쓰므로 **한 함수로만** 갈아 끼운다 — 각 renderer 가 제각기 innerHTML 을 쓰면 아레나에서
+   켠 가격표가 던전 모드에 그대로 남는다(74 «탭 유실» 계열의 상태 잔류). */
+function dgdGoLabel(html, lack){
+  const b = $('dgdGo');
+  b.innerHTML = '<i>' + html + '</i>';
+  b.classList.toggle('lack', !!lack);
+}
 
 function renderDunDetail(){
   const d = dgdDun; if(!d) return;
@@ -20375,6 +20413,7 @@ function renderDunDetail(){
   $('dgdNext').disabled = dgdFloor >= cur;
   /* 버튼 문구는 레퍼런스대로 항상 «도전» 이다. 이미 클리어한 이전 층을 고르면
      즉시 보상(소탕)으로 처리되지만, 그것도 «그 층에 도전한다» 의 결과이므로 문구를 나누지 않는다. */
+  dgdGoLabel('도전', false);              /* 205 — 아레나 가격 모드에서 돌아왔을 수 있다 */
   $('dgdGo').disabled = left <= 0;
   $('dgdGo').style.filter = left <= 0 ? 'grayscale(.75) brightness(.8)' : '';
   /* 169 ② — 소탕 조건은 목록 행과 **글자 그대로 같다**(`left > 0 && f > 1`).
@@ -20416,6 +20455,12 @@ $('dgdGo').onclick = () => {
       notify('⚔ 다른 전투가 진행 중입니다');
       return;
     }
+    /* 205 — 팝업을 닫기 **전에** 판정한다. 닫고 나서 startArena 가 거절하면
+       «버튼은 눌렸는데 아무 일도 안 일어난 채 화면만 닫히는» 74 계열 증상이 된다. */
+    if(!arenaCanEnter()){
+      notify(curIc('dia') + ' 다이아 부족 — 추가 도전 <b>' + ARENA_EXTRA_DIA + '</b> 필요');
+      return;
+    }
     closeDunDetail();
     closeDungeon();
     startArena();
@@ -20426,6 +20471,11 @@ $('dgdGo').onclick = () => {
     const r = dgdRaid;
     if(raidOn){   /* 이미 측정 중이면 기록을 날리지 않도록 새로 시작하지 않는다 */
       notify('⚔ ' + raidOn.n + ' 진행 중 · 남은 <b>' + Math.max(0, raidT).toFixed(1) + '초</b>');
+      return;
+    }
+    /* 205 — 아레나와 같은 이유로 닫기 전에 판정한다(측정장은 다이아 추가 도전이 없다). */
+    if(raidLeft() <= 0){
+      notify('<b>' + r.n + '</b> 오늘 도전 소진 — 내일 <b>' + RAID_TRY + '회</b>');
       return;
     }
     closeDunDetail();
@@ -21166,12 +21216,30 @@ const ARENA = { id:'arena', n:'아레나', sec:30, open:5,
        thw:'296px', tht:'52px' } };
 const raidLocked = r => S.best < r.open;
 const raidBest = id => S.raidBest[id] || { dmg:0, dps:0 };
+/* ───── 205 — 하루 도전 횟수(순수 리셋형) ────────────────────────────────────
+   ⚑ 「남은 횟수」를 읽는 곳이 카드·세부 팝업·입장 3곳이라 **한 함수로 모은다** —
+     세 곳이 각자 `S.daily.raid` 를 읽으면 구 세이브의 `undefined` 가 «NaN/3» 으로 새어 나간다
+     (LESSONS: 없는 키는 읽는 쪽에서 한 번만 정화한다). */
+const raidLeft  = () => Math.max(0, S.daily.raid  | 0);
+const arenaLeft = () => Math.max(0, S.daily.arena | 0);
+/* 아레나만 «3회 소진 뒤 다이아로 추가 도전». 상한은 없다(주인 지시 기본값). */
+const arenaCanEnter = () => arenaLeft() > 0 || S.dia >= ARENA_EXTRA_DIA;
+/* 입장 1회를 실제로 «차감» 한다. 무료분이 있으면 무료분, 없으면 다이아.
+   ⚑ 차감은 반드시 여기 한 곳만 지난다 — `startArena()` 안에 두어 어느 진입점(카드·세부 팝업·
+     게이트 스크립트)으로 들어와도 두 번 깎이거나 공짜로 들어가는 길이 없게 한다. */
+function arenaPay(){
+  if(arenaLeft() > 0){ S.daily.arena = arenaLeft() - 1; return true; }
+  /* ⚠ `S.cnt.paid` 는 «원화 결제 횟수» 다(22086). 다이아 소모는 결제가 아니므로 건드리지 않는다. */
+  if(S.dia >= ARENA_EXTRA_DIA){ S.dia -= ARENA_EXTRA_DIA; return true; }
+  return false;
+}
 
 function renderRaidPage(){
   let h = '';
   RAIDS.forEach((r, ci) => {
     const u = r.ui, lock = raidLocked(r), b = raidBest(r.id);
-    h += '<div class="dnc rd bgm-raid' + (lock ? ' lkd' : '')
+    const left = raidLeft();                                   /* 205 */
+    h += '<div class="dnc rd bgm-raid' + (lock ? ' lkd' : '') + (!lock && left <= 0 ? ' out' : '')
       +  '" data-rcard="' + r.id + '" style="--s:' + u.s + ';--i:' + u.i
       +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
       +  bgmVars(ci) + '">'
@@ -21185,7 +21253,12 @@ function renderRaidPage(){
       +  '" data-thc="' + u.thc + '" data-thn="' + ci + '"></canvas></div>'
       +  '<div class="sh"></div><div class="fr"></div>'
       +  '<div class="nm"><i>' + r.n + '</i></div>'
-      +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
+      /* 205 — 두 번째 알약을 «남은 도전 N/3» 으로 바꾼다. 오른쪽 캡슐(`.sp.tk`)은 213·216 이
+         «최고 DPS» 자리로 못 박아 둔 곳이라(폭 클램프가 썸네일 슬롯을 기준으로 역산된다)
+         건드리지 않고, 194 가 넣은 «강화석» 문구와 한 알약에 같이 태운다.
+         길이: 30px·자간 −2.5 에서 잉크 ≈218px + left 58 = 276 < 알약 288 (넘치지 않는다). */
+      +  [u.rw[0], '강화석 · 남은 ' + left + '/' + RAID_TRY]
+           .map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
       /* 단위(초)는 라벨에 둔다 — 알약 안에 «120초» 를 넣으면 폭이 195 가 돼
          옆 알약 아이콘(카드 기준 x261)을 침범한다(던전 카드는 층 번호라 2자면 충분했다) */
       +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>최고 DPS</i></div>'
@@ -21194,7 +21267,8 @@ function renderRaidPage(){
       /* 166 (2026-08-27) — 종전 `!lock` 은 «열려 있기만 하면» 켜져서, 측정장은 입장 제한이 없으므로
          해금 뒤 영영 꺼지지 않는 상시 점등이었다(① 조건 없는 dot). 레드닷은 «누를 게 있다» 신호이므로
          **아직 한 번도 기록을 못 낸 측정장**(최고 DPS 없음)에만 켠다 — 한 번 재고 나면 스스로 꺼진다. */
-      +  (!lock && !(b.dps > 0) ? '<s class="dot"></s>' : '')
+      /* 205 — 오늘 도전을 다 썼으면 «누를 게 없다» 이므로 dot 도 함께 꺼진다(166 규칙). */
+      +  (!lock && left > 0 && !(b.dps > 0) ? '<s class="dot"></s>' : '')
       +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')
       +  '</div>';
   });
@@ -21233,10 +21307,13 @@ function raidFitNums(){
    썸네일은 «마주 본 플레이어 2명» 이라 캔버스가 1장이 아니라 2장이다(내 look · 상대 look). */
 function arenaCardHTML(){
   const u = ARENA.ui, lock = arenaLocked(), rec = S.arena || { w:0, l:0 };
+  /* 205 — 아레나는 3회를 다 써도 «다이아 추가 도전» 이 남아 있다. 그래서 «소진 = 회색» 이 아니라
+     «소진 + 다이아도 부족» 일 때만 회색이다(171 규칙 «불가 = 회색» 의 불가는 다이아까지 본다). */
+  const left = arenaLeft(), canGo = arenaCanEnter();
   /* 121 과 같은 부품을 쓴다 — `bgm-raid` 배경 레이어 + `lkd`(잠금 정지) + 카드 순번 위상(bgmVars).
      순번은 측정장 다음 자리이므로 RAIDS.length. */
   const ci = RAIDS.length;
-  return '<div class="dnc rd arn2 bgm-raid' + (lock ? ' lkd' : '')
+  return '<div class="dnc rd arn2 bgm-raid' + (lock ? ' lkd' : '') + (!lock && !canGo ? ' out' : '')
     +  '" data-arena="1" style="--s:' + u.s + ';--i:' + u.i
     +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
     +  bgmVars(ci) + '">'
@@ -21252,13 +21329,17 @@ function arenaCardHTML(){
     +  '" height="' + (341 - parseInt(u.tht, 10)) + '" data-arnav="' + arenaLook(1).avatar + '"></canvas></div>'
     +  '<div class="sh"></div><div class="fr"></div>'
     +  '<div class="nm"><i>' + ARENA.n + '</i></div>'
-    +  u.rw.map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
+    /* 205 — 아레나 카드는 알약이 하나뿐이라 비어 있던 p2 자리에 «남은 도전» 을 넣는다.
+       소진 후에는 같은 자리가 «추가 도전 💎100»(102 가격 표시 관례)으로 바뀐다. */
+    +  [u.rw[0], left > 0 ? '남은 도전 ' + left + '/' + ARENA_TRY
+                          : '추가 도전 ' + curIc('dia') + ARENA_EXTRA_DIA]
+         .map((t, k) => '<div class="pill' + (k ? ' p2' : '') + '"><em>⚔️</em><i>' + t + '</i></div>').join('')
     +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>전적 (승-패)</i></div>'
     +  '<div class="sp lv"><em>⏱️</em><i>' + ARENA.sec + '</i></div>'
     +  '<div class="sp tk"><em>🏅</em><i>' + rec.w + '-' + rec.l + '</i></div>'
     /* 166 (2026-08-27) — 측정장 카드와 같은 처리. 아레나도 입장 제한이 없어 `!lock` 만으로는 상시 점등이었다.
        «전적 0-0»(아직 한 판도 안 해봤다)일 때만 켠다 — 한 판 하면 꺼진다. */
-    +  (!lock && rec.w + rec.l === 0 ? '<s class="dot"></s>' : '')
+    +  (!lock && canGo && rec.w + rec.l === 0 ? '<s class="dot"></s>' : '')   /* 205 — 들어갈 수 없으면 dot 도 끈다 */
     +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + ARENA.open + '</b> 클리어</u></div>' : '')
     +  '</div>';
 }
@@ -21480,14 +21561,21 @@ function renderRaidDetail(){
   $('dgdRwL').textContent = '최고 기록';
   $('dgdIcon').textContent = '🏆';        /* 레이드 최고 기록 — 재화가 아니라 트로피다 */
   $('dgdAmt').textContent = b.dmg > 0 ? fmtB(b.dmg) + ' (DPS ' + fmtB(b.dps) + ')' : '기록 없음';
-  $('dgdTry').textContent = '∞';
+  /* 205 — 종전 «∞»(입장 제한 없음) 자리를 그대로 «남은 횟수» 로 쓴다(던전 세부 팝업과 같은 칸).
+     권종 아이콘은 비운다 — 이 횟수는 입장«권»이 아니라 매일 리셋되는 순수 카운터라
+     204 의 적립식 입장권 아이콘을 여기 두면 «쌓이는 것» 으로 오독된다. */
+  const rleft = raidLeft();
+  $('dgdTry').textContent = rleft + '/' + RAID_TRY;
+  curIcEl($('dgdTki'), null);
   $('dgdCbL').textContent = '연속 도전';
   /* 레이드는 층이 없다 — ◀▶ 는 다른 측정장(제한 시간)으로 옮긴다 */
   const i = RAIDS.indexOf(r);
   $('dgdPrev').disabled = !RAIDS.slice(0, i).some(x => !raidLocked(x));
   $('dgdNext').disabled = !RAIDS.slice(i+1).some(x => !raidLocked(x));
-  $('dgdGo').disabled = false;
-  $('dgdGo').style.filter = '';
+  /* 205 — DPS 측정장은 예외 없이 딱 3회다(다이아 추가 도전 없음) → 소진 = 회색 + 입력 차단. */
+  dgdGoLabel('도전', false);
+  $('dgdGo').disabled = rleft <= 0;
+  $('dgdGo').style.filter = rleft <= 0 ? 'grayscale(.75) brightness(.8)' : '';
   dgdSweepLock();                                      /* 169 ② — 레이드는 소탕이 없다 */
   dgdPaintTh();                                        /* 169 ① — 그 측정장의 보스 */
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
@@ -21508,12 +21596,27 @@ function renderArenaDetail(){
   $('dgdRwL').textContent = '전적';
   $('dgdIcon').textContent = '🏅';
   $('dgdAmt').textContent = rec.w + '승 ' + rec.l + '패';
-  $('dgdTry').textContent = '∞';
+  /* 205 — 남은 도전 N/3 (측정장과 같은 칸·같은 이유로 권종 아이콘은 비운다) */
+  const aleft = arenaLeft();
+  $('dgdTry').textContent = aleft + '/' + ARENA_TRY;
+  curIcEl($('dgdTki'), null);
   $('dgdCbL').textContent = '연속 도전';
   $('dgdPrev').disabled = true;
   $('dgdNext').disabled = true;
-  $('dgdGo').disabled = false;
-  $('dgdGo').style.filter = '';
+  /* 205 — 아레나는 소진돼도 «회색» 이 아니라 **가격 표시 모드**로 바뀐다(주인 지시).
+     102 규칙 그대로: 다이아가 충분하면 초록(활성) + 흰 가격, 부족하면 은색 면 + 빨간 가격.
+     ⚠ 무료분이 남아 있을 때 다시 «도전» 으로 되돌리는 것까지가 한 쌍이다 — 안 되돌리면
+       하루가 바뀐 뒤에도 가격표가 굳는다(LESSONS: 상태를 켜는 코드는 끄는 코드와 같이 쓴다). */
+  if(aleft > 0){
+    dgdGoLabel('도전', false);
+    $('dgdGo').disabled = false;
+    $('dgdGo').style.filter = '';
+  }else{
+    const rich = S.dia >= ARENA_EXTRA_DIA;
+    dgdGoLabel(curIc('dia') + ARENA_EXTRA_DIA, !rich);
+    $('dgdGo').disabled = !rich;
+    $('dgdGo').style.filter = '';        /* 102 — «부족» 은 필터가 아니라 `.lack` 면·글자색으로 준다 */
+  }
   dgdSweepLock();                                      /* 169 ② — 아레나도 소탕이 없다 */
   dgdPaintTh();                                        /* 169 ① — 아레나는 썸네일 숨김(실루엣 유지) */
   $('dgdAuto').classList.toggle('on', dgdAutoOn);
@@ -21530,6 +21633,14 @@ function raidStep(dir){
    공격력 0 이라 플레이어는 피해를 입지 않는다. 스테이지 진행은 step() 에서 멈춘다. */
 function startRaid(r){
   if(raidOn || dunRun || arena) return;      /* 123 */
+  /* 205 — 입장 차감은 **여기 한 곳**만 지난다(어느 진입점으로 들어와도 같은 자를 탄다).
+     소진이면 시작 자체를 하지 않는다 — 버튼은 이미 회색이지만 게이트·키보드 경로가 남아 있다. */
+  if(raidLeft() <= 0){
+    notify('<b>' + r.n + '</b> 오늘 도전 소진 — 내일 <b>' + RAID_TRY + '회</b>');
+    return;
+  }
+  S.daily.raid = raidLeft() - 1;
+  save(); uiDirty = true;
   raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -21621,6 +21732,12 @@ function arenaReward(win){
 }
 function startArena(){
   if(arena || raidOn || dunRun) return;
+  /* 205 — 무료 3회 → 없으면 다이아 100. 둘 다 안 되면 시작하지 않는다(차감은 arenaPay 한 곳). */
+  if(!arenaPay()){
+    notify(curIc('dia') + ' 다이아 부족 — 추가 도전 <b>' + ARENA_EXTRA_DIA + '</b> 필요');
+    return;
+  }
+  save(); uiDirty = true;
   const look = arenaLook();
   const myCp = Math.max(1, cp());
   const foeCp = Math.max(1, Math.round(myCp * rnd(0.8, 1.2)));   /* 주인 지시 ④ — 내 전투력 ×0.8~1.2 */
