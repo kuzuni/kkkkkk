@@ -5418,10 +5418,10 @@
   .pvc.pg{--c:#39C28C;--s:#219161;--h:#48F291;--d:#1B7C51}   /* 2장 초록 (ref 실측) */
   .pvc.pp{--c:#A874E8;--s:#7A45BE;--h:#D5B4FF;--d:#6C3AAE}   /* 3장 보라 (151 신설 — 제3색) */
   /* 몸통 + 안쪽 밝은 림. ref 림은 **좌·우·아래 3변에만** 있고 윗변에는 없다(헤더 밴드가 물린다) */
-  .pvc>.bg{left:9px;top:9px;right:9px;bottom:9px;background:var(--c);
+  .pvc>.bg{left:10px;top:10px;right:10px;bottom:10px;background:var(--c);
     border:12px solid var(--h);border-top:0;border-radius:31px}
-  .pvc>.hdb{left:9px;top:9px;right:9px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
-  .pvc>.fr{left:0;top:0;right:0;bottom:0;border:9px solid #000;border-radius:40px;pointer-events:none}
+  .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
+  .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
     border:7px solid #000;border-bottom:0;background:var(--d)}
@@ -5453,7 +5453,7 @@
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
   .pvc>.pvt{left:38px;top:31px;right:200px;height:64px}
-  .pvc>.pvt>s{position:absolute;left:0;top:14px;font-size:30px;line-height:30px;color:var(--h)}
+  .pvc>.pvt>s{position:absolute;left:0;top:16px;font-size:24px;line-height:27px;color:var(--h)}
   .pvc>.pvt>i{position:absolute;left:35px;top:0;font-size:55px;line-height:60px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   /* ⑤-1 티켓형 배너(1장) — 네 모서리가 «물린» 노랑 표. 좌 36% 크림 · 우 64% 노랑(ref 실측) */
@@ -5472,19 +5472,23 @@
   .pvc>.pvl>.pvb>s{position:absolute;left:18px;top:14px;font-size:38px;line-height:44px;color:#FCC12B}
   .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:18px;font-size:32px;line-height:36px;
     color:#fff;white-space:nowrap}
-  /* 우측 일러스트 자리 — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10 A1·A3) */
-  .pvc>.art{left:500px;top:135px;width:462px;height:303px}
+  /* 우측 일러스트 «자리» — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10 A1·A3).
+     ⚠ 이모지를 ref bbox 까지 늘리는 방법은 **글리프마다 배율이 달라져** 셋을 따로 맞춰야 했다
+     (▶ 는 세로가 길고 🎟 는 가로가 길다). 대신 **자리 자체를 옅은 판으로 그려** bbox 를 고정하고,
+     이모지는 그 안에 자연 비율로 앉힌다 — 나중에 이미지로 교체할 때 판만 지우면 된다. */
+  .pvc>.art{left:500px;top:135px;width:462px;height:303px;
+    background:rgba(255,255,255,.09);border-radius:22px}
   .pvc.ban1>.art{left:531px;top:78px;width:390px;height:239px}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
-    font-size:300px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
-  .pvc.ban1>.art>em{font-size:240px;line-height:239px}
+    font-size:225px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+  .pvc.ban1>.art>em{font-size:180px;line-height:239px}
   /* ⑥ 빨강 리본 2줄 — 카드 좌변 밖으로 4px 물려 시작(ref 크림 꼬리)하고,
      오른끝에 금색 판 + 그 아래 수량이 붙는다. 카드 아래쪽에서 bottom 기준으로 앉힌다 */
   .pvc>.rb{left:-3px;height:72px;border:6px solid #000;border-radius:8px;
     background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 55px,#C4343C 55px 72px);
     display:flex;align-items:center;padding:0 24px 0 45px}
   /* ref 리본 왼끝은 «접힌 종이» 크림 캡이다(ref 13×31 → 27×64). 검정 테 안쪽에 물린다 */
-  .pvc>.rb::before{content:'';position:absolute;left:0;top:4px;width:27px;height:56px;
+  .pvc>.rb::before{content:'';position:absolute;left:-3px;top:4px;width:30px;height:56px;
     background:#FFFCF3;border-radius:2px}
   /* 세로 자리는 ref 대로 카드 바닥에서 잰다(불릿형 771 / 배너형 534 기준) */
   .pvc>.rb1{bottom:200px}
@@ -5506,9 +5510,9 @@
   .pvc>.bt{right:72px;bottom:31px;width:308px;height:101px;border-radius:40px;border:6px solid #000;
     background:linear-gradient(180deg,#ADFF83 0 8px,#77E536 8px 56px,#76DA25 56px 88px,
       #3EBC2C 88px 101px);cursor:pointer}
-  .pvc>.bt>i{position:absolute;left:0;right:0;top:16px;text-align:center;color:#fff;
-    font-size:70px;line-height:68px;white-space:nowrap;-webkit-text-stroke:10px #000;
-    paint-order:stroke fill;transform:scaleX(.74)}
+  .pvc>.bt>i{position:absolute;left:0;right:0;top:24px;text-align:center;color:#fff;
+    font-size:50px;line-height:50px;white-space:nowrap;-webkit-text-stroke:7px #000;
+    paint-order:stroke fill;transform:scaleX(1.09)}
   .pvc>.bt.on{background:#1C8D5E;cursor:default}
   /* 보유 중 카드 — 몸통을 한 단 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
   .pvc.own>.bg,.pvc.own>.hdb{filter:brightness(.72) saturate(.8)}
@@ -20013,7 +20017,7 @@ function renderPassPage(list){
     /* 리본 한 줄 — 빨강 바(라벨) + 오른끝 금색 판(보석) + 판 아래 수량. ref 구조 그대로다 */
     /* 리본 폭·금색 판 위치는 ref 가 카드 종류마다 다르다(측정표 §7-1):
        배너형은 두 줄 다 «판이 띠 안 + 오른쪽에 빨강 꼬리», 불릿형은 리본1 만 «판이 띠 끝 밖» 이다. */
-    const RB = p.ban ? { w1:427, g1:31, w2:524, g2:39 } : { w1:353, g1:-91, w2:529, g2:29 };
+    const RB = p.ban ? { w1:427, g1:25, w2:524, g2:33 } : { w1:353, g1:-97, w2:529, g2:23 };
     const rib = (cls, lab, n, w, gx) => '<div class="rb ' + cls + '" style="width:' + w
       + 'px;--gx:' + gx + 'px"><i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
     h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
@@ -20027,8 +20031,8 @@ function renderPassPage(list){
       ? '<div class="ban"><em>' + p.art + '</em><i>' + p.ban + '</i></div>'
       : '<div class="pvl">' + p.bl.map(t => '<div class="pvb"><s>★</s><i>' + t + '</i></div>').join('') + '</div>';
     h += '<div class="art"><em>' + p.art + '</em></div>'
-      +  rib('rb1', '매일 보석 지급', p.daily, 353)
-      +  rib('rb2', '구매 즉시 보석 지급', p.once, 529)
+      +  rib('rb1', '매일 보석 지급', p.daily, RB.w1, RB.g1)
+      +  rib('rb2', '구매 즉시 보석 지급', p.once, RB.w2, RB.g2)
       +  (own
           ? '<div class="bt on"><i>이용 중</i></div>'
           : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
