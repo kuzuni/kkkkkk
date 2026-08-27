@@ -19949,7 +19949,7 @@ function craft(it){
   const isNew = !has(nx.id);
   if(isNew) S.own[nx.id] = { n:0, l:1 }; else S.own[nx.id].n++;
   markDirty(); uiDirty = true;
-  if(isNew) equipFillNew([nx.id]);   /* 105 — 합성 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
+  /* 263 — 합성물 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
   return nx;
 }
@@ -20085,7 +20085,7 @@ function doSummon(b, times){
   const res = [];
   for(let i=0;i<times;i++) res.push(summonOne(b));
   markDirty(); uiDirty = true;
-  equipFillNew(res.filter(r => r.isNew).map(r => r.it.id));   /* 105 — 소환 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
+  /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
   showSummonResult(b, times, res, lvUp);
 }
@@ -20103,7 +20103,7 @@ function doSummonFree(b, times, viaReward){
   const res = [];
   for(let i=0;i<times;i++) res.push(summonOne(b));
   markDirty(); uiDirty = true;
-  equipFillNew(res.filter(r => r.isNew).map(r => r.it.id));   /* 105 — 소환 뒤 전체 재계산 폐기. 처음 얻은 것 + 빈 칸일 때만 */
+  /* 263 — 소환 결과 자동 장착 폐지(주인 지시 2026-08-27). 장착은 플레이어가 카드에서 한 것만. */
   save();
   showSummonResult(b, times, res, lvUp);
 }
@@ -20255,44 +20255,19 @@ function power(it, cat){
   if(cat === 'pet')   return petDmg(it) / it.cd;
   /* 197 — 장비 칸의 «최강» 은 실제로 장착했을 때 붙는 값(equipVal)의 순서여야 하므로 gWear 로 잰다.
      gMul 로 재면 계단 이후 «희귀 Lv100 이 전설 Lv0 보다 위» 라는 거짓 순서가 나온다. */
-  return gWear(it.g) * lvWear(oLv(it.id)) * eqv(it);   /* 105 — 빈 칸 채움이 개체차까지 반영해 최강을 고른다 */
+  return gWear(it.g) * lvWear(oLv(it.id)) * eqv(it);   /* 263 — 자동 장착이 사라진 뒤로는 «등급 안 세기 순서»(260)·게이트(86·197·260)의 자 */
 }
-/* 105 — «자동 장착» 폐기(저장소 주인 지시 2026-08-26).
-   구: `autoEquipAll()` 이 보유 전체를 power 순으로 정렬해 8칸·3칸·부위 3칸을 **통째로 덮어썼고**,
-       전투 루프가 그것을 2초마다 불렀다 → 플레이어가 해제해도 되돌아왔다.
-   신: 장착은 **플레이어가 카드에서 한 것만** 남는다. 유일한 예외가 이 함수 —
-       «이번에 **처음** 얻은 것» 이 «빈 칸» 을 만났을 때 1회 채움.
-       후보를 이번 획득분(ids)으로만 한정하므로, 이미 갖고 있다가 **해제한 것은 절대 되돌아오지 않는다**
-       (중복 획득분 n++ 도 isNew 가 아니라 후보가 아니다). */
-function equipFillNew(ids){
-  const fresh = [...new Set(ids || [])].filter(id => has(id));
-  if(!fresh.length) return;
-  let changed = false, pets = false;
-  /* 스킬 8칸 — 빈 칸 수만큼 강한 것부터 */
-  const sk = fresh.filter(id => SK[id] && !S.eqSkill.includes(id))
-                  .sort((a,b) => power(SK[b],'skill') - power(SK[a],'skill'));
-  for(const id of sk){
-    if(S.eqSkill.length >= skSlotMax()) break;        /* 272 — 자동 채움도 해금 칸까지만 */
-    S.eqSkill.push(id); skillCd[id] = 0; changed = true;
-  }
-  /* 펫 3칸 */
-  const pt = fresh.filter(id => PT[id] && !S.eqPet.includes(id))
-                  .sort((a,b) => power(PT[b],'pet') - power(PT[a],'pet'));
-  for(const id of pt){
-    if(S.eqPet.length >= 3) break;
-    S.eqPet.push(id); changed = true; pets = true;
-  }
-  /* 장비 — 부위별 칸이 **비어 있을 때만**(다른 것이 끼워져 있으면 건드리지 않는다) */
-  SLOTS.forEach(s => {
-    if(S.eqSlot[s.k]) return;
-    const best = fresh.filter(id => EQ[id] && EQ[id].slot === s.k)
-                      .sort((a,b) => power(EQ[b],'equip') - power(EQ[a],'equip'))[0];
-    if(best){ S.eqSlot[s.k] = best; changed = true; }
-  });
-  if(!changed) return;
-  if(pets) syncPets();
-  markDirty(); uiDirty = true;
-}
+/* 105(2026-08-26) → **263(2026-08-27) 로 완결** — «자동 장착» 전면 폐지(저장소 주인 지시).
+   구: `autoEquipAll()` 이 보유 전체를 power 순으로 정렬해 스킬·펫·부위 칸을 **통째로 덮어썼고**,
+       전투 루프가 그것을 2초마다 불렀다 → 플레이어가 해제해도 되돌아왔다. 105 가 이것을 폐기하면서
+       «이번에 처음 얻은 것 + 빈 칸» 1회 채움(`equipFillNew`) **하나만 예외로** 남겼다.
+   신: **263 이 그 예외까지 없앴다.** 소환·무료 소환·합성 어느 경로로 무엇을 얻어도 장착 목록
+       (`S.eqSkill` · `S.eqPet` · `S.eqSlot`)은 **한 글자도 바뀌지 않는다.** 장착은 플레이어가
+       카드에서 `toggleEquip` 을 부른 것만이다.
+   유일하게 남은 «끼워 주는» 자리는 **첫 실행 시작 지급**(`if(!has('slash')){ … S.eqSkill = ['slash'] }`)
+   하나뿐이다 — 전투력 0 으로 시작하지 않게 하는 별개 경로이고, 획득 경로가 아니다.
+   빈 칸으로 남는 체감은 «장착하라» 유도(가이드 미션 · 레드닷 166 · 빈 칸 [+] 표시 222)가 대신한다.
+   → **되살리지 마라.** 회귀는 `node tools/verify263.js` 와 `verify105` [H]~[J] 가 잡는다. */
 
 /* ==========================================================================
    컬렉션 · 퀘스트 · 튜토리얼 · 우편

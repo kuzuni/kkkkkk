@@ -75,7 +75,10 @@ async function open(browser, seed) {
   const dead = ['autoEquipAll', 'autoEquipTick', 'autoEqT', 'S.autoEquip', 'autoEquip:'];
   const hits = dead.filter(t => code.includes(t));
   ok(hits.length === 0, '[A] 자동 장착 식별자 0건 (주석 제외)', hits.length ? '잔존: ' + hits.join(', ') : 'autoEquipAll/Tick/autoEqT/S.autoEquip');
-  ok(code.includes('function equipFillNew('), '[A] 대체 함수 equipFillNew() 존재');
+  /* 263(2026-08-27) — 105 가 «유일한 예외» 로 남겼던 빈 칸 1회 채움(equipFillNew)까지 폐지됐다.
+     그래서 이 줄은 «존재» 가 아니라 «0건» 을 묻는다. 전용 게이트는 tools/verify263.js. */
+  ok(!code.includes('equipFillNew'), '[A] 빈 칸 1회 채움 equipFillNew() 도 0건 (263)',
+    code.includes('equipFillNew') ? '잔존' : '자동 장착 경로 전무');
 
   const browser = await launch();
   const allErrs = [];
@@ -170,41 +173,42 @@ async function open(browser, seed) {
     '[F] 차 있는 장비 칸 불변', JSON.stringify(sum.af.slot));
   ok(sum.af.slot.weapon === null, '[G] 해제한 무기 칸은 중복 획득으로 되돌아오지 않음', String(sum.af.slot.weapon));
 
-  /* [H] 빈 칸 + 처음 얻은 것 → 1회 채움 (허용된 예외) */
+  /* [H] 263 — 빈 칸 + 처음 얻은 것이어도 **안 낀다**(105 의 예외가 폐지됐다).
+     ★ 「불변」 은 아무 일도 안 일어나도 참이므로, «신규 획득이 실제로 발생했는지» 를 같이 잰다. */
   const fill = await page.evaluate(() => {
     /* 무기 배너를 «하나도 없는» 상태로 되돌리고 칸을 비운다 */
     BANNERS.weapon.list.forEach(e => delete S.own[e.id]);
-    S.eqSlot.weapon = null; S.dia = 1e9;
-    doSummon('weapon', 1); closeSummonResult && closeSummonResult();
-    const w1 = S.eqSlot.weapon;
-    /* 스킬: 빈 칸(7/8) + 처음 얻는 스킬 */
+    S.eqSlot.weapon = null; S.dia = 1e9; S.guide.idx = 99;
+    const ownB = Object.keys(S.own).length;
+    doSummon('weapon', 10); closeSummonResult && closeSummonResult();
+    const w1 = S.eqSlot.weapon, gained = Object.keys(S.own).length - ownB;
+    /* 스킬: 빈 칸 + 처음 얻는 스킬 */
     const unown = SKILLS.find(s => !S.eqSkill.includes(s.id));
     delete S.own[unown.id];
     const skBefore = S.eqSkill.length;
-    equipFillNew([unown.id]);                       /* 미보유 id — has() 가 걸러 아무 일도 없어야 한다 */
-    const skMid = S.eqSkill.length;
     S.own[unown.id] = { n: 0, l: 1 };
-    equipFillNew([unown.id]);                       /* 이제 «처음 얻은 것» → 빈 칸에 들어간다 */
-    return { w1, own: !!(w1 && S.own[w1]), skBefore, skMid, skAfter: S.eqSkill.length, newSk: unown.id, has: S.eqSkill.includes(unown.id) };
+    return { w1, gained, skBefore, skAfter: S.eqSkill.length, newSk: unown.id, has: S.eqSkill.includes(unown.id) };
   });
-  ok(!!fill.w1 && fill.own, '[H] 빈 무기 칸 + 처음 얻은 무기 → 1회 채움', String(fill.w1));
-  ok(fill.skMid === fill.skBefore, '[H] 미보유 id 는 채움 후보가 아니다', fill.skBefore + '→' + fill.skMid);
-  ok(fill.skAfter === fill.skBefore + 1 && fill.has, '[H] 빈 스킬 칸 + 처음 얻은 스킬 → 1회 채움', fill.newSk);
+  ok(fill.gained > 0, '[H] 무기 10연이 실제로 신규를 줬다(음성항 방지)', fill.gained + '종');
+  ok(fill.w1 === null, '[H] 263 — 빈 무기 칸 + 처음 얻은 무기여도 안 낀다', String(fill.w1));
+  ok(fill.skAfter === fill.skBefore && !fill.has, '[H] 263 — 빈 스킬 칸 + 처음 얻은 스킬이어도 안 낀다',
+    fill.skBefore + '→' + fill.skAfter + ' (' + fill.newSk + ')');
 
-  /* [I] 차 있는 칸은 신규 획득으로도 안 바뀜 */
+  /* [I] 차 있는 칸도 당연히 안 바뀐다 — 플레이어가 끼운 것은 신규 획득에 밀리지 않는다 */
   const keep = await page.evaluate(() => {
+    const mine = BANNERS.weapon.list.find(e => has(e.id));
+    if (!mine) return { skip: true };
+    toggleEquip(mine, 'equip');                       /* 플레이어가 직접 장착 */
     const cur = S.eqSlot.weapon;
-    const strong = BANNERS.weapon.list.slice().sort((a, b) => power(b, 'equip') - power(a, 'equip'))
-      .find(e => e.id !== cur && !has(e.id));
-    if (!strong) return { skip: true };
-    S.own[strong.id] = { n: 0, l: 1 };
-    equipFillNew([strong.id]);
-    return { cur, strong: strong.id, now: S.eqSlot.weapon };
+    const ownB = Object.keys(S.own).length;
+    doSummon('weapon', 20);                           /* 더 강한 것이 섞여 나와도 */
+    return { cur, gained: Object.keys(S.own).length - ownB, now: S.eqSlot.weapon };
   });
+  ok(keep.skip || !!keep.cur, '[I] 플레이어가 누른 장착은 남는다(대조군)', keep.skip ? '건너뜀' : String(keep.cur));
   ok(keep.skip || keep.now === keep.cur, '[I] 차 있는 칸은 더 강한 신규가 나와도 그대로',
-    keep.skip ? '후보 없음(건너뜀)' : keep.cur + ' (신규 ' + keep.strong + ' 무시)');
+    keep.skip ? '후보 없음(건너뜀)' : keep.cur + ' (신규 ' + keep.gained + '종 무시)');
 
-  /* [J] 합성 — 빈 칸이면 채우고, 차 있으면 그대로 */
+  /* [J] 263 — 합성 뒤에도 장착 목록이 그대로다(등재문이 지정한 단언) */
   const cr = await page.evaluate(() => {
     /* nextGradeItem 은 다음 등급 풀에서 «무작위» 로 고른다 — 풀 전체를 미보유로 만들어야
        craft 가 무엇을 뽑든 «처음 얻은 것» 이 된다 */
@@ -216,21 +220,23 @@ async function open(browser, seed) {
     S.eqSlot.shield = null;
     const made = craft(base);
     const filled = S.eqSlot.shield;
-    /* 두 번째: 칸이 차 있으면 그대로 (역시 다음 등급 풀을 비워 «신규» 로 만든다) */
+    /* 두 번째: 플레이어가 끼워 둔 칸도 그대로 */
     const base2 = BANNERS.shield.list.find(e => !isTopGrade(e) && e.id !== base.id && e.id !== (made && made.id));
-    let keptSame = true, made2 = null;
+    let keptSame = true, made2 = null, cur = null;
     if (base2) {
+      if (made) toggleEquip(EQ[made.id] || made, 'equip');   /* 플레이어가 직접 장착 */
+      cur = S.eqSlot.shield;
       S.own[base2.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
       clearNext(base2);
-      const cur = S.eqSlot.shield;
       made2 = craft(base2);
       keptSame = S.eqSlot.shield === cur;
     }
-    return { made: made && made.id, filled, keptSame, made2: made2 && made2.id };
+    return { made: made && made.id, filled, keptSame, cur, made2: made2 && made2.id };
   });
-  ok(cr.skip || (cr.made && cr.filled === cr.made), '[J] 합성 — 처음 만든 등급 + 빈 칸 → 채움',
-    cr.skip ? '후보 없음' : cr.made + ' → ' + cr.filled);
-  ok(cr.skip || cr.keptSame, '[J] 합성 — 칸이 차 있으면 그대로', cr.skip ? '' : '신규 ' + cr.made2 + ' 무시');
+  ok(cr.skip || !!cr.made, '[J] 합성이 실제로 상위 등급을 만들었다(음성항 방지)', cr.skip ? '후보 없음' : String(cr.made));
+  ok(cr.skip || cr.filled === null, '[J] 263 — 합성 뒤 빈 부위는 빈 채로', cr.skip ? '' : cr.made + ' → ' + String(cr.filled));
+  ok(cr.skip || cr.keptSame, '[J] 263 — 플레이어가 끼운 칸도 합성으로 안 바뀐다',
+    cr.skip ? '' : String(cr.cur) + ' (신규 ' + cr.made2 + ' 무시)');
 
   /* [K2] 훈련 자동 구매 토글 — 기본 OFF 지만 «플레이어가 켜면» 그대로 동작해야 한다 */
   await page.evaluate(() => { goTab('grow'); renderUp(); });
@@ -260,7 +266,7 @@ async function open(browser, seed) {
     dgd: typeof dgdAutoOn !== 'undefined' ? dgdAutoOn : null
   }));
   console.log('\n[L] «자동» 감사표 (105 ④ — 주인 지시 없이 알아서 바뀌는 것)');
-  console.log('  · 자동 장착(autoEquipAll/Tick) ........ 폐기 — 빈 칸 1회 채움(equipFillNew)만 남음');
+  console.log('  · 자동 장착(autoEquipAll/Tick) ........ 폐기 — **263 으로 빈 칸 1회 채움(equipFillNew)까지 폐지**, 남은 경로 0');
   console.log('  · 훈련 자동 구매(S.autoBuy) .......... 기본 OFF(현재 ' + audit.autoBuy + ') · 강화 탭 토글 유지=' + audit.buyToggle);
   console.log('  · 스탯 자동 분배(spAuto) ............. 88 에서 시스템째 폐기(식별자 0건)');
   console.log('  · 던전 «연속 도전» 체크(dgdAutoOn) ... 표시 전용(현재 ' + audit.dgd + ') — 자동 반복 로직 없음');

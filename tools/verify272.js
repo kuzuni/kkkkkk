@@ -109,15 +109,20 @@ const yes = (m, c, note) => { tot++; if (c) ok++; else fails.push(m + (note ? ' 
     S.best = 10;                                          /* 4칸 */
     SKILLS.slice(0, 5).forEach(s => { if (!skillEquipped(s.id)) toggleEquip(s, 'skill'); });
     const cap4 = S.eqSkill.length;
-    /* 자동 채움(새로 얻은 것)도 상한을 지킨다 */
+    /* 263 — 「신규 획득 자동 채움」 자체가 폐지됐다(105 의 마지막 예외). 그래서 여기서 재는 것은
+       «자동 채움도 상한을 지키나» 가 아니라 «자동 채움이 아예 없나» 다 — 6종을 새로 얻어도 0칸. */
     S.best = 1; S.eqSkill = []; S.own = {};
+    S.dia = 1e12; S.guide.idx = 99;
     SKILLS.slice(0, 6).forEach(s => S.own[s.id] = { n: 0, l: 1 });
-    equipFillNew(SKILLS.slice(0, 6).map(s => s.id));
-    return { cap2, cap4, fill: S.eqSkill.length };
+    const ownB = Object.keys(S.own).length;
+    doSummon('skill', 10);                                /* 실제 획득 경로로 돌린다 */
+    const gained = Object.keys(S.own).length - ownB;
+    return { cap2, cap4, fill: S.eqSkill.length, gained };
   });
   is('스테이지 1 에서는 2칸까지만 장착', d5.cap2, 2);
   is('스테이지 10 이면 4칸까지', d5.cap4, 4);
-  is('신규 획득 자동 채움도 해금 칸까지', d5.fill, 2);
+  is('263 — 신규 획득으로는 한 칸도 자동 장착되지 않는다', d5.fill, 0);
+  yes('   ↑ 그 사이 신규 획득은 실제로 있었다(음성항 방지)', d5.gained > 0, d5.gained + '종');
 
   /* ---------------- [5-2] 구 세이브 유예 — 이미 장착한 것은 빼앗지 않는다 ---------------- */
   const d52 = await p.evaluate(() => {
