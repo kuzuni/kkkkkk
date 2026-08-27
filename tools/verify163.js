@@ -131,11 +131,39 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   /* ★ 케이던스의 단위는 «시간» 이 아니라 «거리» 다(4회차 비평 G). 시간 기준이면 등속 구간만 맞고
      **감속 구간에서 미끄럼이 23.6% → 62.0% → 90.6%** 로 벌어진다(몸은 느려지는데 다리는 61ms 고정).
      거리 기준이면 멈출 때 다리도 멈춘다 — 재방문의 압축 경로(등속의 5배 속도)도 저절로 맞는다. */
-  eq('프레임 한 장의 이동 거리 = 접지발 이동 × 배율', Math.round(K.STEP * 100), Math.round(K.FOOT * K.SC * 100));
-  ok(/run\[Math\.floor\(\(Math\.abs\(LD_X0\) - Math\.abs\(x\)\) \/ LD_STEP\)/.test(SRC),
+  eq('프레임 한 장의 평균 이동 거리 = 접지발 평균 × 배율', Math.round(K.STEP * 100), Math.round(K.FOOT * K.SC * 100));
+  ok(/run\[fr\.i % run\.length\]/.test(SRC) && /var fr = ldFrameAt\(Math\.abs\(LD_X0\) - Math\.abs\(x\)\)/.test(SRC),
     '★ 달리기 프레임을 **이동 거리**로 뽑는다(시간 기준이면 감속 구간이 트레드밀이 된다)');
-  ok(/var d = \(Math\.abs\(LD_X0\) - Math\.abs\(ldAt\(t\)\)\) \/ \(LD_STEP \* 4\)/.test(SRC),
-    '아치도 같은 «거리» 자로 재서 딛는 프레임의 arc=0 이 유지된다');
+  ok(/if \(p < LD_CRZ && LD_AIRF\[fr\.i\]\)/.test(SRC),
+    '아치가 케이던스와 **같은 자**(ldFrameAt)를 써서 딛는 프레임의 arc=0 이 유지된다');
+  /* ★ 6회차 — 케이던스 자가 «한 값» 이 아니라 «표» 다. 5회차 인계 ① 이 요구한 것이고,
+     비평 H 가 «f0→f1 126 vs f1→f2 90 = 1.40:1 인데 자는 92 한 값» 으로 짚은 자리다.
+     표의 진위(아틀라스와 같은가)는 `python3 tools/probe163b.py --gate` 가 픽셀에서 다시 재고,
+     여기서는 **그 표가 실제로 프레임 선택을 굴리는가**(구조·불변식)를 본다. */
+  const tab = await page.evaluate(() => ({
+    feet: LD.FEET, gaps: LD.GAPS, steps: LD.STEPS, cum: LD.CUM, cyc: LD.CYC, airf: LD.AIRF,
+    run: ATLAS.knight.a.run.length,
+    /* 한 주기를 200 등분해 «어느 프레임이 몇 번 나오나 · 아치가 언제 뜨나» 를 훑는다 */
+    sweep: Array.from({ length: 200 }, (_, i) => LD.frameAt(LD.CYC * i / 200))
+  }));
+  eq('접지발 표의 길이 = run 프레임 수', tab.feet.length, tab.run);
+  eq('칸 수 = 프레임 수', tab.steps.length, tab.run);
+  ok(tab.steps.every(s => s > 0), '모든 칸이 양수 거리다');
+  const mx = Math.max.apply(null, tab.gaps), mn = Math.min.apply(null, tab.gaps);
+  ok(mx / mn >= 1.3, `★ 칸이 **균일하지 않다** — 균일 자로 되돌리면 여기서 빨개진다 (최대/최소 ${(mx / mn).toFixed(2)}:1)`);
+  /* 접지 칸은 아틀라스가 요구하는 값과 정확히 같아야 한다(체공 칸만 자유) */
+  const req = tab.feet.map((v, i) => v - tab.feet[(i + 1) % tab.feet.length]);
+  const off = req.map((d, i) => (d > 0 && Math.abs(d - tab.gaps[i]) > 1e-6) ? i : -1).filter(i => i >= 0);
+  ok(off.length === 0, `접지 칸의 거리 = 접지발이 프레임 안에서 뒤로 간 거리 (어긋난 칸 ${off.join(',') || '없음'})`);
+  eq('체공 칸 수(발이 바뀌는 칸)', tab.airf.filter(Boolean).length, 2);
+  ok(tab.airf.every((a, i) => a === (req[i] <= 0)), '체공 판정이 표에서 나온다(손으로 적은 비율이 아니다)');
+  ok(Math.abs(tab.cyc - tab.steps.reduce((a, b) => a + b, 0)) < 1e-6, '한 주기 길이 = 칸 합');
+  /* 프레임 선택이 표를 따르는가 — 각 프레임이 «자기 칸 길이에 비례해» 나온다 */
+  const cnt = tab.steps.map((_, i) => tab.sweep.filter(f => f.i === i).length);
+  const share = cnt.map((c, i) => Math.abs(c / 200 - tab.steps[i] / tab.cyc));
+  ok(Math.max.apply(null, share) < .02,
+    `프레임별 노출 비율이 칸 길이에 비례한다 (최대 오차 ${(Math.max.apply(null, share) * 100).toFixed(1)}%p)`);
+  ok(tab.sweep.every(f => f.u >= 0 && f.u < 1), '칸 안의 진행률이 0..1 이다');
   /* 등속 구간에서의 케이던스(파생값)가 스프라이트 요구와 맞는지도 같이 본다 */
   const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);
   const need = K.STEP / cruise;
@@ -158,21 +186,24 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   /* ★ 아치는 «주기» 뿐 아니라 **위상**도 맞아야 한다. 4프레임 중 3프레임이 접지(f0 발끝 · f1 발바닥 ·
      f2 밀어내기)이고 f3 만 체공인데, 3회차의 |sin| 은 정점을 **f2(아직 닿아 있는 프레임)** 에 얹어
      «발이 바닥 2px 이내인 시간이 주기의 3.2%» 였다(비평 E). 접지 구간은 arc 가 정확히 0 이어야 한다. */
-  ok(K.AIR > 0 && K.AIR < 1, `접지 비율 상수가 있다 (${K.AIR})`);
+  ok(K.AIR > 0 && K.AIR < 1, `접지 비율이 표에서 파생된다 (${K.AIR})`);
+  /* ★ 아치는 «주기의 뒤 몇 %» 가 아니라 **체공 프레임**에서만 떠야 한다. 칸 길이가 프레임마다
+     다른 6회차부터는 비율로 얹으면 체공 칸과 안 겹친다 — 그래서 실제 식(ldTick)과 같은 식으로
+     한 주기를 거리로 훑어서, 접지 프레임에서 arc 가 **정확히 0** 인지 본다. */
   const arcPhase = await page.evaluate(() => {
     const out = [];
-    for (let i = 0; i < 40; i++) {          /* 한 주기(4프레임 = LD_STEP×4 px) 를 거리로 훑는다 */
-      const u = i / 40;
-      out.push({ u: +u.toFixed(3), grounded: u < LD.AIR,
-        arc: u >= LD.AIR ? -Math.round(LD.ARC * Math.sin(Math.PI * (u - LD.AIR) / (1 - LD.AIR))) : 0 });
+    for (let i = 0; i < 240; i++) {                   /* 한 주기(LD_CYC px)를 거리로 훑는다 */
+      const f = LD.frameAt(LD.CYC * i / 240);
+      out.push({ i: f.i, grounded: !LD.AIRF[f.i],
+        arc: LD.AIRF[f.i] ? -Math.round(LD.ARC * Math.sin(Math.PI * f.u)) : 0 });
     }
     return out;
   });
   ok(arcPhase.filter(r => r.grounded).every(r => r.arc === 0),
-    `접지 구간(주기의 ${Math.round(K.AIR * 100)}%)에서는 아치가 정확히 0 = 발이 붙어 있다`);
+    `접지 프레임(주기의 ${Math.round(K.AIR * 100)}%)에서는 아치가 정확히 0 = 발이 붙어 있다`);
   ok(Math.min.apply(null, arcPhase.map(r => r.arc)) <= -(K.ARC - 1),
-    `체공 구간에서 아치가 최대치(${K.ARC}px)까지 뜬다`);
-  ok(/u >= LD_AIR/.test(SRC), '아치가 **체공 프레임에서만** 뜬다(접지 3프레임은 0)');
+    `체공 프레임에서 아치가 최대치(${K.ARC}px)까지 뜬다`);
+  ok(arcPhase.some(r => !r.grounded), '체공 프레임이 실제로 주기 안에 나온다');
   ok(/var LD_MIN\b/.test(SRC) && /var LD_RUN\b/.test(SRC), '상수가 index.html 에 이름으로 있다');
   ok(SRC.indexOf('window.ldReady') < SRC.indexOf('function loadAtlases'),
     '로딩 모듈이 본 스크립트보다 **앞에** 있다(파싱 400ms 를 안 기다린다)');
@@ -196,12 +227,35 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(fade !== null && gone !== null && gone - fade <= K.FADE + 140,
     `페이드 꼬리가 LD_FADE+여유 안 (${gone - fade}ms ≤ ${K.FADE + 140})`);
   ok(hero !== null, 'knight 도착 시 캐릭터가 켜진다(.on)');
-  ok(fade !== null && gone !== null && gone > fade, '페이드가 display:none 보다 먼저 시작한다');
+  /* ★ 시각이 **같을 수 있다.** 관찰기 콜백 한 번에 `out`·`off` 가 둘 다 보이면(부팅 직후 굶주림으로
+     두 전이가 한 배치에 몰리면) 두 마크가 같은 performance.now() 를 받는다 — 그때 `>` 로 재면
+     «뜨고 지는 FAIL» 이 된다. 순서는 마크가 쌓인 **차례**로 보고, 시각은 «늦지 않다» 로 본다. */
+  const oi = ev.findIndex(e => e.k === 'fade'), gi = ev.findIndex(e => e.k === 'gone');
+  ok(oi >= 0 && gi > oi && gone >= fade,
+    `페이드가 display:none 보다 먼저 시작한다 (순서 ${oi} < ${gi} · 시각 ${fade} ≤ ${gone})`);
 
-  console.log('§12 그림자 정렬 (발 스팬 중심 ≠ 캔버스 중심)');
-  /* `drawHeroTo` 의 c0 는 «칼·망토까지 포함한 잉크» 중심을 맞춘다 — 발 스팬 중심은 그보다 왼쪽이다.
-     3회차 비평 E·F 가 독립적으로 «그림자가 55~56px 오른쪽으로 밀려 왼발이 그림자 밖» 을 짚었다.
-     CSS 는 JS 상수를 못 읽으므로 margin-left 에 그 편심을 넣어 두고, 여기서 **다시 잰다.** */
+  console.log('§12 축 정렬 (6회차 — 발이 프레임 중앙에 선다)');
+  /* `drawHeroTo` 의 c0 는 «칼·망토까지 포함한 잉크» 중심을 맞춘다 — 발 스팬 중심은 그보다 −54px 이다.
+     3~5회차는 그 편심을 **그림자에** 넣어 발을 따라가게 했는데(그림자 중심 484), 그러면 화면에
+     축이 둘 생긴다: 발·그림자 484 vs 바닥선·진행바·문구 540. 5회차 비평 E·H 가 짚은 자리다.
+     6회차는 편심을 **캐릭터 캔버스에** 넣어(margin-left −306 = −360 + LD_FDX) 발을 540 에 세우고,
+     그림자는 다시 중앙 정렬로 돌렸다 — 축이 하나다. CSS 는 JS 상수를 못 읽으므로 여기서 대조한다. */
+  const axis = await page.evaluate(() => {
+    const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
+    const had = el.className; el.classList.remove('off', 'out');
+    const cs = getComputedStyle(cv);
+    const out = {
+      ml: parseFloat(cs.marginLeft), w: cv.offsetWidth,
+      org: parseFloat(cs.transformOrigin.split(' ')[0]),
+      foot: Math.round(cv.offsetLeft + cv.offsetWidth / 2 - LD.FDX),   /* 발 축(레이아웃 좌표) */
+      FDX: LD.FDX
+    };
+    el.className = had; return out;
+  });
+  eq('캐릭터 캔버스 margin-left = −(폭/2) + LD_FDX', axis.ml, -(axis.w / 2) + axis.FDX);
+  ok(Math.abs(axis.org - (axis.w / 2 - axis.FDX)) <= 1,
+    `착지 스쿼시 기준점(transform-origin x)이 **발밑**이다 (${axis.org}px · 기대 ${axis.w / 2 - axis.FDX})`);
+  eq('발 축이 프레임 중앙(540)', axis.foot, 540);
   const sh = await page.evaluate(() => {
     /* ★ `getBoundingClientRect()` 로 재면 안 된다 — ldTick 이 그림자에 `translateX` 를 걸어
        캐릭터를 따라다니게 하므로, 등장이 아직 안 끝난 순간에 재면 그 이동분이 섞인다
@@ -211,7 +265,8 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     const out = { cx: Math.round(s.offsetLeft + s.offsetWidth / 2), w: s.offsetWidth };
     el.className = had; return out;
   });
-  ok(Math.abs(sh.cx - 540 + 56) <= 4, `그림자 중심이 발 스팬 중심(프레임 중앙 −56px = 484)에 있다 (실측 ${sh.cx})`);
+  ok(Math.abs(sh.cx - 540) <= 4, `그림자 중심이 **발 축 = 프레임 중앙(540)** 에 있다 (실측 ${sh.cx})`);
+  ok(Math.abs(sh.cx - axis.foot) <= 4, `그림자 중심 = 캐릭터 발 축 (${sh.cx} vs ${axis.foot}) — 축은 하나다`);
   ok(sh.w >= 480, `그림자 폭이 발 스팬(≈400px)보다 넓다 (${sh.w}px)`);
   /* ★ 폭만으로는 부족하다 — 4회차 비평 H 가 «어두운 코어가 180px = 발 스팬의 45% 라 발이 딛는
      자리 100%가 밝은 테 위» 라고 실측했다. 그래디언트의 **어두운 구간 반경**을 직접 재서
@@ -380,7 +435,10 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
             setTimeout(() => {
               const cv = document.getElementById('ldHero');
               const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
-              window.__x = { x: m ? +m[1] : null, run: Math.round(LD.run()) };
+              /* ★ 6회차 — 표본에 «예정» 을 같이 담는다. 아래 판정문 참고: 굶주림으로 rAF 가 한 번도
+                 안 돌면 DOM 은 옛 프레임에 멈춰 있고, 그건 설계가 아니라 러너 상태다. */
+              window.__x = { x: m ? +m[1] : null, run: Math.round(LD.run()),
+                             el: Math.round(performance.now() - LD.runAt()) };
             }, LD.FADE + 30);
           }
         }).observe(el, { attributes: true, attributeFilter: ['class'] });
@@ -391,16 +449,26 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     await w.waitForTimeout(1400);
     /* 관찰기가 `.out` 순간을 놓쳤으면(관찰기 부착보다 전이가 빨랐거나 프레임이 굶었으면)
        그때의 최종 상태로 대신 읽는다 — 등장이 끝났으면 transform 은 어차피 0 이다. */
-    warm.push(await w.evaluate(() => (window.__x && window.__x !== 'pending' ? window.__x : null) || (() => {
+    warm.push(await w.evaluate(() => {
       const cv = document.getElementById('ldHero');
-      const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
-      return { x: m ? +m[1] : null, run: Math.round(LD.run()), late: true };
-    })()));
+      const fin = /translate\((-?\d+)px/.exec(cv.style.transform || '');    /* 1.4초 뒤 = 최종 위치 */
+      const s = (window.__x && window.__x !== 'pending') ? window.__x : null;
+      return Object.assign({ fin: fin ? +fin[1] : null, run: Math.round(LD.run()),
+                             el: Math.round(performance.now() - LD.runAt()) }, s || { late: true });
+    }));
     await w.close();
   }
-  const bad = warm.filter(r => !r || r.x === null || Math.abs(r.x) > Math.abs(K.X0) * .15);
-  ok(bad.length === 0,
-    `페이드가 끝날 때 캐릭터가 중앙에 도착해 있다 (x = ${warm.map(r => (r ? r.x : '?')).join(', ')} · 허용 ±${Math.round(Math.abs(K.X0) * .15)}px)`);
+  /* ★ 6회차 — 이 절이 «뜨고 지는 FAIL» 이었다(고치기 전 트리에서도 2회 중 1회 x=−139 로 빨갰다).
+     원인은 제품이 아니라 **자**였다: 페이드 시작 직후는 부팅으로 메인 스레드가 굶어 rAF 가 한 번도
+     안 도는 실행이 있고, 그러면 DOM transform 은 옛 프레임에 멈춰 있다(그리기 지연). 설계가 지키는 것은
+     «압축된 등장이 페이드 «안»에 끝나도록 **예정**되어 있다» 이므로, 판정을 그 예정(=경과 ≥ 압축된 길이)과
+     «결국 도착한다»(최종 transform) 둘로 나눈다. 압축이 사라지면 둘 다 빨개진다 —
+     예정은 어긋나고(경과 < run), 최종도 0 이 아니다(잘린 채 사라졌으므로). */
+  ok(warm.every(r => r && r.el >= r.run),
+    `페이드 끝 시점에 압축된 등장이 **예정상 끝나 있다** (경과 ${warm.map(r => r.el).join(', ')}ms ≥ 길이 ${warm.map(r => r.run).join(', ')}ms)`);
+  ok(warm.every(r => r && r.fin === 0),
+    `캐릭터가 결국 중앙에 도착한다 (최종 x = ${warm.map(r => (r ? r.fin : '?')).join(', ')})`);
+  console.log(`     (참고 — 페이드 끝의 DOM x: ${warm.map(r => (r.x === undefined ? '?' : r.x)).join(', ')} · 그리기 지연은 러너 상태다)`);
   ok(warm.every(r => r && r.run <= K.RUN), `재방문에서는 등장 길이가 줄어든다 (${warm.map(r => (r ? r.run : '?')).join(', ')}ms ≤ ${K.RUN})`);
 
   console.log('§7 무한 로딩 방지 (knight 아틀라스 깨짐)');

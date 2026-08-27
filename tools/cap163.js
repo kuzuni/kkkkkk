@@ -36,7 +36,10 @@ const SLOW = 4200;   /* knight 를 뺀 아틀라스의 **최대** 지연(ms) —
 const STAGGER = { 'bird.png': .10, 'stormlord-dragon96x64.png': .18, 'buch-dungeon-tileset.png': .28,
                   'explosion.png': .42, 'robo.png': .62, 'elves-craft-pixel.png': .82, 'zombie.png': 1 };
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
-const OFF = [30, 150, 280, 410, 540, 660, 1050, null];   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
+const OFF = [30, 120, 200, 300, 440, 580, 700, null];   /* ★ 6회차 — 위상을 **케이던스 표에 맞춰** 골랐다:
+   30 f0(등장 시작·잉크가 막 들어온다) · 120 f1(접지) · 200 **f3 체공**(아치 정점) · 300 f4(접지)
+   · 440 **f7 체공**(두 번째 도약) · 580 f0(감속·거의 도착) · 700 착지 스쿼시 중(RUN+60, k=.5) · null 전환.
+   5회차까지의 등속 간격은 8장 중 **체공을 한 장도 안 잡았고**(아치를 채점할 수 없었다) 뒤 넉 장이 같은 그림이었다. */
 const N = OFF.length;
 
 (async () => {
@@ -69,49 +72,77 @@ const N = OFF.length;
   }
 
 
-  for (let i = 0; i < N; i++) {
-    /* ★ 표본 한 장마다 «찍은 뒤에» 상태를 다시 확인하고, 로딩 화면이 이미 지났으면 다시 찍는다.
-       `page.screenshot()` 이 폰트·안정화를 기다리느라 혼잡할 때 수백 ms~3s 늦게 캡처되는 일이 있어
-       2·3회차에 표본 한두 장이 **게임 화면**으로 찍혔다(스캐너가 «화면 전체가 다르다» 로 잡아냈다).
-       DOM 을 캡처 «전» 에 읽으면 로딩 화면이라고 나오므로, 순서를 뒤집어야 잡힌다. */
-    let st = null, tries = 0;
-    while (tries++ < 3) {
-      const page = await ctx.newPage();
-      page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-      page.on('pageerror', e => errs.push(String(e)));
-      await page.route('**/*.png', async (route) => {
-        const n = route.request().url().split('/').pop();
-        const d = /knight\.png$/.test(n) ? FAST / SLOW : (STAGGER[n] !== undefined ? STAGGER[n] : 1);
-        await new Promise(r => setTimeout(r, Math.round(SLOW * d)));
-        await route.continue();
-      });
-      page.goto(URL, { waitUntil: 'load' }).catch(() => {});
-      await page.waitForFunction(() => {
-        const cv = document.getElementById('ldHero');
-        return !!(cv && cv.classList.contains('on'));
-      }, null, { timeout: 20000 });
-      if (OFF[i] === null) {
-        await page.waitForFunction(() => document.getElementById('loading').classList.contains('out'),
-          null, { polling: 'raf', timeout: 20000 });
-      } else {
-        await page.waitForFunction((off) => performance.now() - LD.runAt() >= off, OFF[i],
-          { polling: 'raf', timeout: 20000 });
-      }
-      await page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
-      st = await page.evaluate(() => {
+  /* ★ 6회차 — 표본을 **제품 시계에서 떼어** 찍는다.
+     5회차까지는 「등장 +30ms 를 찍어라」 하고 그 시각에 `page.screenshot()` 을 걸었는데,
+     이 러너에서 캡처 한 장이 300~400ms 를 먹어서 실제로는 **+437ms 짜리 그림**이 나왔다
+     (6회차 첫 시도 로그: 요청 30·150·280·410·540·660 → 실제 437·452·564·899·1046·1010 —
+     뒤 넉 장이 전부 «이미 서 있는» 같은 그림이었다). 그 8장으로 ① 타이밍을 채점하면
+     비평가는 연출이 아니라 **러너 지연**을 채점하게 된다(3·4회차 «하네스가 두 사람을 나란히 틀리게 했다»).
+     그래서 이제 `LD.hold()` 로 rAF 재예약을 끊고 `LD.paint(t)` 로 원하는 위상을 **제품 코드가** 그리게 한 뒤
+     시간 압박 없이 찍는다. 하네스는 이징·프레임 선택을 **다시 구현하지 않는다** — 그 순간 브리핑이 거짓이 된다.
+     한 페이지에서 연속으로 찍으므로 진행바는 그동안 실제로 도착한 아틀라스를 반영한다(멈춰 있지 않다). */
+  {
+    const page = await ctx.newPage();
+    page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+    page.on('pageerror', e => errs.push(String(e)));
+    await page.route('**/*.png', async (route) => {
+      const n = route.request().url().split('/').pop();
+      const d = /knight\.png$/.test(n) ? FAST / SLOW : (STAGGER[n] !== undefined ? STAGGER[n] : 1);
+      await new Promise(r => setTimeout(r, Math.round(SLOW * d)));
+      await route.continue();
+    });
+    page.goto(URL, { waitUntil: 'load' }).catch(() => {});
+    await page.waitForFunction(() => {
+      const cv = document.getElementById('ldHero');
+      return !!(cv && cv.classList.contains('on'));
+    }, null, { timeout: 20000 });
+    await page.evaluate(() => LD.hold());
+    for (let i = 0; i < N; i++) {
+      if (OFF[i] === null) continue;                    /* 전환 표본은 아래에서 실시간으로 */
+      const st = await page.evaluate((off) => {
+        LD.paint(off);                                  /* ★ 그리는 것은 제품 코드다 */
         const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
-        return { cls: el.className, op: +getComputedStyle(el).opacity,
-                 el: Math.round(performance.now() - LD.runAt()),
+        return { cls: el.className, op: +getComputedStyle(el).opacity, el: off,
                  x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
-      }).catch(() => null);
-      await page.close();
-      /* 마지막 «전환» 표본만 .out 을 허용한다. 나머지는 로딩 화면이 온전히 떠 있어야 한다 */
-      const okShot = st && !/\boff\b/.test(st.cls) && (OFF[i] === null || !/\bout\b/.test(st.cls));
-      if (okShot) break;
-      console.log(`  (${i + 1}번 재촬영 — 캡처가 늦어 «${st ? st.cls : '?'}» 상태였다)`);
+      }, OFF[i]);
+      await page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
+      shots.push({ i: i + 1, t: OFF[i], real: OFF[i], ...st });
     }
-    shots.push({ i: i + 1, t: OFF[i] === null ? '전환' : OFF[i], real: st ? st.el : -1, ...(st || {}) });
+    await page.close();
   }
+
+  /* 전환(마지막) 표본만 실시간이다 — «게임으로 녹아드는» 순간은 멈춘 시계로는 못 만든다 */
+  for (let i = 0; i < N; i++) {
+    if (OFF[i] !== null) continue;
+    /* ★ 6회차 — «전환» 한 장은 **합성**이다(브리핑에 그대로 적는다).
+       제품 페이드는 130ms 인데 이 러너의 캡처 한 장이 300~400ms 라 실시간으로는 중간을 못 잡는다 —
+       5·6회차 모두 세 번 재촬영하고도 전부 `off`(이미 게임 화면)였다. CSS 전이만 늘리는 것도 안 된다:
+       `display:none` 을 붙이는 타이머는 **JS 의 LD_FADE** 를 쓰므로 전이가 끝나기 전에 화면이 꺼진다.
+       그래서 «게임이 부팅된 뒤 오버레이를 불투명도 0.5 로 되살려» 그 합성을 만든다.
+       이 표본이 답하는 것은 «녹는 속도» 가 아니라 5회차 인계 ③ — **로딩 캐릭터와 게임 캐릭터의
+       크기·발 기준선·휘도 낙차**다. 그 셋은 정지 합성으로 정확히 보인다. */
+    const page = await ctx.newPage();
+    page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+    page.on('pageerror', e => errs.push(String(e)));
+    page.goto(URL, { waitUntil: 'load' }).catch(() => {});          /* 지연 없음 = 게임까지 부팅 */
+    await page.waitForFunction(() => document.getElementById('loading').classList.contains('off'),
+      null, { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(600);                                  /* 게임 첫 프레임들이 그려질 시간 */
+    const st = await page.evaluate(() => {
+      const el = document.getElementById('loading');
+      LD.hold(); LD.paint(LD.RUN + 400);                             /* 도착·서 있는 자세(제품 코드) */
+      el.classList.remove('off', 'out');
+      el.classList.add('thru');
+      el.style.transition = 'none'; el.style.opacity = '.5';
+      const cv = document.getElementById('ldHero');
+      return { cls: el.className, op: +getComputedStyle(el).opacity, el: Math.round(LD.RUN + 400),
+               x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
+    });
+    await page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
+    await page.close();
+    shots.push({ i: i + 1, t: '전환', real: st ? st.el : -1, ...(st || {}) });
+  }
+  shots.sort((a, b) => a.i - b.i);
 
   shots.forEach(s => console.log(`  ${s.i}  등장+${String(s.t).padStart(4)}ms(실제 ${String(s.real).padStart(4)})  op=${(s.op || 0).toFixed(2)}  ${s.x || '(캐릭터 없음)'}  ${s.num || ''}  [${s.cls || ''}]`));
   console.log('  → docs/shots/163-' + TAG + '-1..' + N + '.png   콘솔 에러', errs.length);
