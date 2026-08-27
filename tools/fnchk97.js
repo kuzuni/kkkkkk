@@ -73,24 +73,36 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     if (x) x.click(); else $('dgdw').classList.remove('on'); });
   await p.waitForTimeout(400);
 
-  console.log('[5] 잠금 카드 — 썸네일 위를 눌러도 «해금 조건» 안내가 뜬다');
+  /* 213 (2026-08-27) — 이 절은 «모달이 뜨나» 를 묻고 있었다. 149(주인 지시)가 «부족·잠김 같은
+     한 줄 안내는 팝업이 아니라 토스트» 로 뒤집었으므로 그 물음은 원리적으로 항상 false 다
+     (게이트 부패 — LESSONS 185-④ «설계가 뒤집힌 단언은 지우지 말고 이사시켜라»).
+     묻는 것은 그대로 «해금 조건을 화면이 말하는가» 이고, 재는 자리만 `.modal` → `.fx-toast` 로 옮긴다.
+     · 기대 문구는 리터럴로 박지 않고 **게임 데이터에서 계산**한다(185-① — `ARENA.open`/`r.open`).
+     · 대기는 토스트 수명에 걸려 있다(760ms 퇴장 시작 · 1060ms 제거) → 300ms(185-⑥).
+     · 덤으로 «모달은 안 뜬다» 를 같이 박는다 — 팝업으로 되돌아가면 그 자리에서 잡힌다. */
+  console.log('[5] 잠금 카드 — 썸네일 위를 눌러도 «해금 조건» 안내가 뜬다 (149 토스트)');
   const lk = await p.evaluate(() => {
     const cs = [...document.querySelectorAll('#dunList .dnc.rd')];
     const c = cs.find((x) => x.querySelector('.lk'));
     if (!c) return { none: true };
+    const id = c.dataset.rcard || (c.dataset.arena ? 'arena' : '?');
+    /* 해금 조건은 그 카드의 게임 데이터에서 읽는다 — 게이트가 «그때의 값» 을 굳히지 않게 */
+    const need = id === 'arena' ? ARENA.open : (RAIDS.find((r) => r.id === id) || {}).open;
     const r = c.getBoundingClientRect();
     const t = document.elementFromPoint(r.left + 820, r.top + 180);
     (t.closest('.dnc') || c).click();
-    return { id: c.dataset.rcard };
+    return { id, need };
   });
-  await p.waitForTimeout(500);
-  ok(!lk.none, `잠긴 레이드 카드가 있다 (${lk.id})`);
-  const mo = await p.evaluate(() => {
-    const m = document.querySelector('.modal.on, #modal.on, .modal[style*="display: block"]');
-    return { on: !!m, txt: m ? m.textContent.slice(0, 60) : (document.body.textContent.includes('클리어하면 열립니다') ? 'inline' : '') };
-  });
-  ok(mo.on || mo.txt === 'inline', `잠금 안내가 뜬다 (${mo.txt})`);
-  await p.evaluate(() => { if (typeof closePopup === 'function') closePopup();
+  await p.waitForTimeout(300);
+  ok(!lk.none, `잠긴 «컨텐츠» 카드가 있다 (${lk.id} — 스테이지 ${lk.need} 필요)`);
+  const mo = await p.evaluate(() => ({
+    toast: [...document.querySelectorAll('#fxl .fx-toast')].map((e) => e.textContent).join(' | '),
+    modal: !!document.querySelector('.modal.on, #modal.on') }));
+  /* 「스테이지 <필요값>」이 문구에 들어 있어야 «해금 조건» 을 말한 것이다 (숫자만 세면 «현재 n» 에 걸린다) */
+  ok(mo.toast.includes('스테이지 ' + lk.need),
+     `잠금 안내 토스트가 해금 조건을 말한다 («${mo.toast}»)`);
+  ok(!mo.modal, `잠금 안내는 팝업이 아니다 (149 — 모달 ${mo.modal ? '떴다' : '안 뜬다'})`);
+  await p.evaluate(() => { document.querySelectorAll('#fxl .fx-toast').forEach((e) => e.remove());
     document.querySelectorAll('.modal.on').forEach((m) => m.classList.remove('on')); });
   await p.waitForTimeout(300);
 

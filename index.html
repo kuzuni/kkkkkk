@@ -4304,7 +4304,11 @@
   .dnc.arn2>.th>canvas.arn-op{left:auto;right:0}
   .dnc.rd .sp{width:auto;min-width:156px;padding-right:22px}
   .dnc.rd .sp.lv>i,.dnc.rd .sp.tk>i{position:relative;left:0;margin-left:64px}
-  .dnc.rd .sp.tk>i{margin-left:71px}
+  /* 213 — 자간을 px 에서 **em** 으로 옮긴다. 41px 기준 4/41 = .0976em 이라 기본 크기에서는
+     한 픽셀도 안 바뀌지만(던전 카드 `.dnc .sp.tk>i{letter-spacing:4px}` 는 그대로 둔다),
+     150 의 폭 클램프(`fitNum`)가 글자를 눌러 넣을 때 **자간도 같이 줄어든다.**
+     px 로 두면 17자 × 4px = 68px 이 안 줄어 클램프 바닥(FITMIN .55)에서도 자리를 못 맞춘다(실측). */
+  .dnc.rd .sp.tk>i{margin-left:71px;letter-spacing:.0976em}
 
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
   .dnc .dot{left:956px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
@@ -19889,6 +19893,32 @@ function renderRaidPage(){
   h += arenaCardHTML();                       /* 123 — «컨텐츠» 탭 2번째 카드 */
   $('dunList').innerHTML = h;
   raidPaint();
+  raidFitNums();                              /* 213 — 기록 자릿수가 썸네일 슬롯을 침범하지 않게 */
+}
+/* 213 (2026-08-27) — «기록 알약이 썸네일 슬롯을 침범» 버그.
+   측정표 03 §레이드는 «`최고 DPS` 알약 우단은 자릿수에 따라 늘어나되(`.dnc.rd .sp{width:auto}`)
+   최악(9.9e12)에서도 496.8 이라 슬롯 좌단과 146px 이상 떨어진다» 로 설계를 못 박아 뒀다.
+   그 496.8 은 **`fmt(9.9e12)`가 «9.9C» 이던 시절**의 수치다 — 150(주인 지시)이 골드 말고는
+   단위 접기를 폐지해 같은 값이 «9,900,000,000,000»(17자)이 되면서 우단이 811.1 로 자랐다.
+   ⇒ 알약 폭을 `max-width` 로 자르면 «상자만» 멈추고 글자는 그대로 슬롯 위로 넘는다(게이트만 속인다).
+     150 이 정한 처방 그대로 **한 글자도 안 버리고 폭에만 맞춘다** — 남은 자리에 `fitNum`.
+   슬롯 좌단은 카드마다 다르므로(`--thw` 311/296) 상수로 박지 않고 실측해서 역산한다
+   (LESSONS 161-② — «상수 하나로 적은 임계값은 CSS 가 움직이면 조용히 어긋난다»). */
+const RD_SPGAP = 16;                          /* 알약 우단 ~ 슬롯 좌단 최소 여백(프레임 px) */
+function raidFitNums(){
+  document.querySelectorAll('#dunList .dnc.rd').forEach(c => {
+    const th = c.querySelector('.th'), sp = c.querySelector('.sp.tk');
+    const i = sp && sp.querySelector('i');
+    if(!th || !i) return;
+    const cw = c.getBoundingClientRect().width;
+    if(!cw) return;                           /* 페이지가 안 떠 있으면 잴 것이 없다 */
+    const sc = cw / 980;                      /* 프레임 → 화면 배율(fit()) — 양변을 화면 px 로 맞춘다 */
+    const padR = parseFloat(getComputedStyle(sp).paddingRight) || 0;
+    /* 알약 우단 = 잉크 우단 + padding-right. 그 우단이 «슬롯 좌단 − 여백» 안에 들어와야 한다. */
+    const room = th.getBoundingClientRect().left - (RD_SPGAP + padR) * sc
+               - i.getBoundingClientRect().left;
+    if(room > 0) fitNum(i, room);
+  });
 }
 /* 123 — 아레나 카드. 측정장 카드와 같은 `.dnc.rd` 부품을 쓰되 값 3곳만 다르다:
    ① 알약 = «1:1 대전 (더미)» ② 좌측 캡슐 = 제한 시간 ③ 우측 캡슐 = 전적(승-패).
