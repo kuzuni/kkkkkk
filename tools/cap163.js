@@ -35,11 +35,12 @@ const SLOW = 4200;   /* knight 를 뺀 아틀라스의 **최대** 지연(ms) —
    실제 크기 비율에 맞춰(zombie·elves 가 크고 bird·dragon 이 작다) 도착 순서를 벌린다. */
 const STAGGER = { 'bird.png': .10, 'stormlord-dragon96x64.png': .18, 'buch-dungeon-tileset.png': .28,
                   'explosion.png': .42, 'robo.png': .62, 'elves-craft-pixel.png': .82, 'zombie.png': 1 };
+const HOLD_SLOW = 12000;  /* held 페이지(위상 표본) 전용 — 이 페이지는 끝까지 부팅하면 안 된다 */
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
-const OFF = [30, 120, 200, 300, 440, 580, 700, null];   /* ★ 6회차 — 위상을 **케이던스 표에 맞춰** 골랐다:
-   30 f0(등장 시작·잉크가 막 들어온다) · 120 f1(접지) · 200 **f3 체공**(아치 정점) · 300 f4(접지)
-   · 440 **f7 체공**(두 번째 도약) · 580 f0(감속·거의 도착) · 700 착지 스쿼시 중(RUN+60, k=.5) · null 전환.
-   5회차까지의 등속 간격은 8장 중 **체공을 한 장도 안 잡았고**(아치를 채점할 수 없었다) 뒤 넉 장이 같은 그림이었다. */
+const OFF = [30, 120, 160, 280, 400, 560, 700, null];   /* ★ 7회차 — 이동 거리가 1.5주기(1,144px)로 늘면서
+   위상이 다시 잡혔다: 30 f0(등장 시작) · 120 f2(접지) · 160 **f3 체공** · 280 f5(접지) · 400 f0(접지)
+   · 560 **f3 체공 = 마지막 도약**(감속 구간이라 길다) · 700 착지 스쿼시 중(RUN+60) · null 전환 합성.
+   등장은 이제 **체공 칸이 끝나는 순간 = 도착** 이라 착지에 원인이 있다(6회차 비평 I·J 공통 지적). */
 const N = OFF.length;
 
 (async () => {
@@ -85,17 +86,21 @@ const N = OFF.length;
     const page = await ctx.newPage();
     page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     page.on('pageerror', e => errs.push(String(e)));
+    /* ★ 7회차 — 이 페이지는 **부팅하면 안 된다.** 아틀라스가 다 도착하면 오버레이가 꺼져서
+       (7회차 첫 캡처에서 2~7번이 전부 `thru off` = 게임 화면으로 찍혔다) 표본이 통째로 헛것이 된다.
+       그래서 held 페이지에서만 지연을 크게 잡되(HOLD_SLOW), 같은 STAGGER 비율을 써서
+       **캡처가 도는 3초 동안 진행바는 계속 차오르게** 한다(1/8 → 3/8). 마지막 파일은 끝내 안 온다. */
     await page.route('**/*.png', async (route) => {
       const n = route.request().url().split('/').pop();
-      const d = /knight\.png$/.test(n) ? FAST / SLOW : (STAGGER[n] !== undefined ? STAGGER[n] : 1);
-      await new Promise(r => setTimeout(r, Math.round(SLOW * d)));
+      const d = /knight\.png$/.test(n) ? FAST / HOLD_SLOW : (STAGGER[n] !== undefined ? STAGGER[n] : 1);
+      await new Promise(r => setTimeout(r, Math.round(HOLD_SLOW * d)));
       await route.continue();
     });
-    page.goto(URL, { waitUntil: 'load' }).catch(() => {});
+    page.goto(URL, { waitUntil: 'domcontentloaded' }).catch(() => {});
     await page.waitForFunction(() => {
       const cv = document.getElementById('ldHero');
       return !!(cv && cv.classList.contains('on'));
-    }, null, { timeout: 20000 });
+    }, null, { timeout: 30000 });
     await page.evaluate(() => LD.hold());
     for (let i = 0; i < N; i++) {
       if (OFF[i] === null) continue;                    /* 전환 표본은 아래에서 실시간으로 */
@@ -106,6 +111,9 @@ const N = OFF.length;
                  x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
       }, OFF[i]);
       await page.screenshot({ path: path.join(OUT, `163-${TAG}-${i + 1}.png`) });
+      const after = await page.evaluate(() => document.getElementById('loading').className);
+      if (/\boff\b/.test(st.cls) || /\boff\b/.test(after))
+        console.log(`  ⚠ ${i + 1}번이 로딩 화면이 아니다(«${after}») — HOLD_SLOW 를 늘려라`);
       shots.push({ i: i + 1, t: OFF[i], real: OFF[i], ...st });
     }
     await page.close();
@@ -129,12 +137,14 @@ const N = OFF.length;
       null, { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(600);                                  /* 게임 첫 프레임들이 그려질 시간 */
     const st = await page.evaluate(() => {
-      const el = document.getElementById('loading');
-      LD.hold(); LD.paint(LD.RUN + 400);                             /* 도착·서 있는 자세(제품 코드) */
+      const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
+      /* ★ 7회차 — 이 합성은 **핸드오프 트윈의 중간**이다. 부팅이 이미 트윈을 걸어 놨으므로
+         전이를 끄고 `LD.hand(.5)` 로 **제품 코드에게** 절반 지점을 그리게 한다(하네스가 다시 구현하지 않는다). */
+      cv.style.transition = 'none';
+      LD.hand(.5);
       el.classList.remove('off', 'out');
       el.classList.add('thru');
       el.style.transition = 'none'; el.style.opacity = '.5';
-      const cv = document.getElementById('ldHero');
       return { cls: el.className, op: +getComputedStyle(el).opacity, el: Math.round(LD.RUN + 400),
                x: cv ? cv.style.transform : '', num: (document.getElementById('ldNum') || {}).textContent };
     });

@@ -134,7 +134,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   eq('프레임 한 장의 평균 이동 거리 = 접지발 평균 × 배율', Math.round(K.STEP * 100), Math.round(K.FOOT * K.SC * 100));
   ok(/run\[fr\.i % run\.length\]/.test(SRC) && /var fr = ldFrameAt\(Math\.abs\(LD_X0\) - Math\.abs\(x\)\)/.test(SRC),
     '★ 달리기 프레임을 **이동 거리**로 뽑는다(시간 기준이면 감속 구간이 트레드밀이 된다)');
-  ok(/if \(p < LD_CRZ && LD_AIRF\[fr\.i\]\)/.test(SRC),
+  ok(/if \(LD_AIRF\[fr\.i\] && p < 1\)/.test(SRC),
     '아치가 케이던스와 **같은 자**(ldFrameAt)를 써서 딛는 프레임의 arc=0 이 유지된다');
   /* ★ 6회차 — 케이던스 자가 «한 값» 이 아니라 «표» 다. 5회차 인계 ① 이 요구한 것이고,
      비평 H 가 «f0→f1 126 vs f1→f2 90 = 1.40:1 인데 자는 92 한 값» 으로 짚은 자리다.
@@ -164,6 +164,16 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(Math.max.apply(null, share) < .02,
     `프레임별 노출 비율이 칸 길이에 비례한다 (최대 오차 ${(Math.max.apply(null, share) * 100).toFixed(1)}%p)`);
   ok(tab.sweep.every(f => f.u >= 0 && f.u < 1), '칸 안의 진행률이 0..1 이다');
+  /* ★ 7회차 — **착지에 원인이 있는가.** 6회차 비평 I·J 가 둘 다 «마지막 체공이 t=472ms 에 끝나고
+     167.6ms(등장의 26%) 를 평평하게 미끄러진 뒤 아무 낙하 없이 스쿼시만 터진다» 로 짚었다.
+     이동 거리를 **체공 칸이 끝나는 누적 지점**에 맞추면 «마지막 발이 닿는 순간 = 도착» 이 된다.
+     되돌려서 거리를 아무 값으로 바꾸면 여기서 빨개진다. */
+  const ends = tab.airf.map((a, i) => (a ? tab.cum[i] + tab.steps[i] : -1)).filter(v => v >= 0);
+  const trav = Math.abs(K.X0) % tab.cyc;
+  const near = ends.concat([0, tab.cyc]).map(v => Math.abs(trav - v));
+  ok(Math.min.apply(null, near) <= 3,
+    `등장 이동(${Math.abs(K.X0)}px)이 **체공 칸이 끝나는 지점**에서 멈춘다 = 착지가 마지막 발디딤이다 (주기 나머지 ${trav.toFixed(1)} · 체공 끝 ${ends.map(v => v.toFixed(1)).join('/')})`);
+  ok(Math.abs(K.X0) / tab.cyc >= 1.4, `등장이 최소 1.4주기를 돈다 = 다리가 세 걸음 이상 (${(Math.abs(K.X0) / tab.cyc).toFixed(2)}주기)`);
   /* 등속 구간에서의 케이던스(파생값)가 스프라이트 요구와 맞는지도 같이 본다 */
   const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);
   const need = K.STEP / cruise;
@@ -307,8 +317,8 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   const booted = await page.evaluate(() => ({ stage: typeof S !== 'undefined' && S && S.stage, hp: player && player.hp > 0 }));
   ok(booted.stage >= 1, `세이브 로드·스테이지 시작됨 (stage ${booted.stage})`);
   ok(booted.hp, '플레이어가 살아 있다(spawnStage 까지 지났다)');
-  ok(/ldFinish\(\);/.test(SRC) && !/\$\('loading'\)\.classList\.add\('off'\)/.test(SRC),
-    '부팅 콜백이 «즉시 off» 가 아니라 ldFinish() 를 부른다');
+  ok(/ldFinish\(\(\) => \{/.test(SRC) && !/\$\('loading'\)\.classList\.add\('off'\)/.test(SRC),
+    '부팅 콜백이 «즉시 off» 가 아니라 ldFinish(목표좌표) 를 부른다');
   ok(!/new Image\(\);[\s\S]{0,200}A\.img/.test(SRC.slice(SRC.indexOf('function loadAtlases'), SRC.indexOf('function loadAtlases') + 400)),
     '본 스크립트가 아틀라스를 **다시** 받지 않는다(ldReady 로 넘겨받는다)');
   console.log('§10 앵커 산식 (로딩 ldDraw ≡ 게임 drawHeroTo)');
@@ -345,10 +355,13 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      «끝까지 갔나» 를 그 경로에서 물으면 안 된다. knight 만 빨리 주고 나머지를 늦춰 첫 접속을 만든다. */
   const px = await ctx.newPage();
   await px.route('**/*.png', async (r) => {
-    if (!/knight\.png$/.test(r.request().url())) await new Promise(z => setTimeout(z, 2400));
+    if (!/knight\.png$/.test(r.request().url())) await new Promise(z => setTimeout(z, 6000));
     await r.continue();
   });
-  await px.goto(URL, { waitUntil: 'load' }).catch(() => {});
+  /* ★ 7회차 — `waitUntil:'load'` 를 버렸다. load 는 «아틀라스까지 다 온 시점» 이라 그때는 이미 부팅이고,
+     부팅은 핸드오프 트윈(§13)을 건다 — 그러면 여기서 재는 것이 등장 궤적이 아니라 **트윈 중간값**이 된다
+     (실제로 «CSS 확대 0.94» 로 헛불렸다. 149·161 «틀린 계측은 FAIL 로 위장하고 온다» 의 다섯 번째 표본). */
+  await px.goto(URL, { waitUntil: 'domcontentloaded' }).catch(() => {});
   await px.waitForFunction(() => LD.runAt() > 0 && performance.now() - LD.runAt() > LD.RUN + 200,
     null, { timeout: 20000 });
   console.log('§4 궤적 (easeOutCubic — 감속해서 선다)');
@@ -434,7 +447,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
             window.__x = 'pending';
             setTimeout(() => {
               const cv = document.getElementById('ldHero');
-              const m = /translate\((-?\d+)px/.exec(cv.style.transform || '');
+              const m = /translate\((-?[\d.]+)px/.exec(cv.style.transform || '');
               /* ★ 6회차 — 표본에 «예정» 을 같이 담는다. 아래 판정문 참고: 굶주림으로 rAF 가 한 번도
                  안 돌면 DOM 은 옛 프레임에 멈춰 있고, 그건 설계가 아니라 러너 상태다. */
               window.__x = { x: m ? +m[1] : null, run: Math.round(LD.run()),
@@ -451,9 +464,10 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
        그때의 최종 상태로 대신 읽는다 — 등장이 끝났으면 transform 은 어차피 0 이다. */
     warm.push(await w.evaluate(() => {
       const cv = document.getElementById('ldHero');
-      const fin = /translate\((-?\d+)px/.exec(cv.style.transform || '');    /* 1.4초 뒤 = 최종 위치 */
+      const fin = /translate\((-?[\d.]+)px/.exec(cv.style.transform || '');  /* 1.4초 뒤 = 최종 위치 */
       const s = (window.__x && window.__x !== 'pending') ? window.__x : null;
       return Object.assign({ fin: fin ? +fin[1] : null, run: Math.round(LD.run()),
+                             handed: LD.handed(),
                              el: Math.round(performance.now() - LD.runAt()) }, s || { late: true });
     }));
     await w.close();
@@ -466,8 +480,11 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      예정은 어긋나고(경과 < run), 최종도 0 이 아니다(잘린 채 사라졌으므로). */
   ok(warm.every(r => r && r.el >= r.run),
     `페이드 끝 시점에 압축된 등장이 **예정상 끝나 있다** (경과 ${warm.map(r => r.el).join(', ')}ms ≥ 길이 ${warm.map(r => r.run).join(', ')}ms)`);
-  ok(warm.every(r => r && r.fin === 0),
-    `캐릭터가 결국 중앙에 도착한다 (최종 x = ${warm.map(r => (r ? r.fin : '?')).join(', ')})`);
+  /* ★ 7회차 — «도착했다» 의 증거가 둘이다: 중앙에 서 있거나(fin≈0), **핸드오프 트윈이 걸렸거나**.
+     트윈은 «등장이 이미 끝났을 때만» 걸리므로(ldExit), 걸렸다는 사실 자체가 도착의 증거다.
+     그 뒤의 transform 은 게임 히어로 자리로 가는 값이라 0 이 아니다. */
+  ok(warm.every(r => r && (Math.abs(r.fin) <= 1 || r.handed)),
+    `캐릭터가 결국 도착한다 (최종 x = ${warm.map(r => (r ? r.fin : '?')).join(', ')} · 핸드오프 ${warm.map(r => (r && r.handed ? 'Y' : 'n')).join('')})`);
   console.log(`     (참고 — 페이드 끝의 DOM x: ${warm.map(r => (r.x === undefined ? '?' : r.x)).join(', ')} · 그리기 지연은 러너 상태다)`);
   ok(warm.every(r => r && r.run <= K.RUN), `재방문에서는 등장 길이가 줄어든다 (${warm.map(r => (r ? r.run : '?')).join(', ')}ms ≤ ${K.RUN})`);
 
@@ -483,6 +500,49 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(gone2 !== undefined && gone2 < 2000, `그 경우에도 2초 안에 (${gone2}ms)`);
   ok(!ev2.some(e => e.k === 'hero'), '캐릭터는 안 켜진다(그릴 게 없다)');
   await p2.close();
+
+  console.log('§13 핸드오프 트윈 (7회차 — 로딩 히어로 → 게임 히어로)');
+  /* 6회차 비평 I·J 의 공통 1순위: «640ms 를 들여 세운 히어로가 페이드 130ms 만에 6.00배 작아지고
+     발 기준선이 259~263px 위로 순간이동한다». 그래서 페이드 동안 로딩 캐릭터를 게임 캐릭터의
+     **크기·발자리로 이어 보낸다.** 여기서는 그 트윈이 (ⓐ 걸렸는가 ⓑ 끝점이 게임 히어로와 맞는가) 를 잰다.
+     되돌리면(트윈 제거) ⓐ 가, 끝점을 대충 적으면 ⓑ 가 빨개진다. */
+  const hp = await ctx.newPage();
+  await hp.goto(URL, { waitUntil: 'load' });
+  await hp.waitForFunction(() => document.getElementById('loading').classList.contains('off'), null, { timeout: 20000 }).catch(() => {});
+  await hp.waitForTimeout(400);
+  const hand = await hp.evaluate(() => {
+    const cv = document.getElementById('ldHero'), el = document.getElementById('loading');
+    const had = el.className; el.classList.remove('off', 'out');
+    const m = /scale\(([\d.]+)\)/.exec(cv.style.transform || '');
+    const r = cv.getBoundingClientRect(), k = r.width / cv.width / (m ? +m[1] : 1);
+    const vr = document.getElementById('view').getBoundingClientRect();
+    const kk = vr.width / document.getElementById('view').width;
+    const out = {
+      handed: LD.handed(),
+      s: m ? +m[1] : null, want: LD.SC ? 2 / LD.SC : null,
+      /* 트윈 끝의 «발 축» 화면 좌표 vs 게임 플레이어의 발 화면 좌표 */
+      footX: r.left + (cv.width / 2 - LD.FDX) * k * (m ? +m[1] : 1),
+      footY: r.bottom,
+      /* ⚠ player.x/y 는 **월드** 좌표다 — 화면 좌표 = 월드 + camOx/camOy. 이걸 빼면 Δ가 1,300px 로 벌어진다 */
+      gameX: vr.left + (player.x + camOx) * 2 * kk, gameY: vr.top + (player.y + camOy) * 2 * kk,
+      to: LD.handTo(),                                  /* 트윈을 걸 때 실제로 쓴 목표(스냅숏) */
+      tr: cv.style.transition
+    };
+    el.className = had; return out;
+  });
+  await hp.close();
+  ok(hand.handed, '부팅 시 핸드오프 트윈이 걸린다(등장이 끝난 경로)');
+  ok(hand.s !== null && Math.abs(hand.s - hand.want) < .01,
+    `트윈 끝 배율 = 게임 배율 / 로딩 배율 (${hand.s} · 기대 ${hand.want && hand.want.toFixed(4)})`);
+  /* ★ 판정을 둘로 나눈다 — 게임 히어로는 **트윈이 걸린 뒤에도 계속 움직인다**(자동 전투). 그래서
+     ⓐ «트윈이 자기가 받은 목표에 정확히 갔나» 는 스냅숏(LD.handTo)과 ±2px 로 딱 재고,
+     ⓑ «그 목표가 게임 히어로였나» 는 지금 위치와 느슨하게 본다(가로는 아레나 폭만큼 움직일 수 있고,
+        세로는 바닥 밴드라 좁다). 좌표계를 틀리면(월드↔화면) ⓑ 가 Δ1,300/2,000px 로 바로 빨개진다 — 실제로 그렇게 잡았다. */
+  ok(hand.to && Math.abs(hand.footX - hand.to.x) <= 2 && Math.abs(hand.footY - hand.to.y) <= 2,
+    `ⓐ 트윈 끝 발자리 = 받은 목표 (Δx ${hand.to ? Math.round(hand.footX - hand.to.x) : '?'} · Δy ${hand.to ? Math.round(hand.footY - hand.to.y) : '?'} · 허용 ±2px)`);
+  ok(hand.to && Math.abs(hand.to.x - hand.gameX) <= 340 && Math.abs(hand.to.y - hand.gameY) <= 80,
+    `ⓑ 그 목표가 게임 히어로였다 (Δx ${hand.to ? Math.round(hand.to.x - hand.gameX) : '?'} · Δy ${hand.to ? Math.round(hand.to.y - hand.gameY) : '?'} · 허용 ±340/±80px — 히어로는 그 사이에도 움직인다)`);
+  ok(/transform \d+ms/.test(hand.tr || ''), `트윈이 페이드 길이 안에서 돈다 (${hand.tr})`);
 
   console.log('§9 콘솔');
   eq('콘솔 에러 0', errs.length, 0);

@@ -95,6 +95,23 @@ def gate():
     chk(abs(want - fdx) <= 1, f'LD_FDX = (잉크 중심 − 발 중심) × 배율 (표 {fdx} · 실측 {want:.1f})')
     span = (max(feet) - min(feet) + 1) * sc
     chk(span > 0, f'발 스팬 {span:.0f}px (그림자 코어 기준값)')
+    # ★ 잉크 bbox — 6회차 비평 I·J 가 둘 다 «브리핑의 612×600 / 528×504 는 잉크가 아니라 프레임 박스» 라고
+    #   실측으로 잡아 줬다(정지 세로가 36px 틀렸다). 이제 여기서 알파 bbox 를 직접 재서 문서·브리핑에 쓴다.
+    def ink_box(names):
+        w = h = 0
+        for n in names:
+            ink, fw, fh = rows(im, frames[n])
+            w = max(w, max(x for x, _ in ink) - min(x for x, _ in ink) + 1)
+            h = max(h, max(y for _, y in ink) - min(y for _, y in ink) + 1)
+        return w * sc, h * sc
+    rw, rh = ink_box(anims['run'])
+    iw, ih = ink_box(anims['idle'])
+    print(f'  잉크 실측 — 달리기 최대 {rw:.0f}×{rh:.0f}px · 정지 최대 {iw:.0f}×{ih:.0f}px (배율 {sc:.0f})')
+    doc = open('docs/measure/163-로딩화면.md', encoding='utf-8').read()
+    chk(f'{rw:.0f} × {rh:.0f}' in doc or f'{rw:.0f}×{rh:.0f}' in doc,
+        f'측정표가 달리기 잉크를 실측값({rw:.0f}×{rh:.0f})으로 적고 있다')
+    chk(f'{iw:.0f} × {ih:.0f}' in doc or f'{iw:.0f}×{ih:.0f}' in doc,
+        f'측정표가 정지 잉크를 실측값({iw:.0f}×{ih:.0f})으로 적고 있다')
     tot = ok + fail
     print(f'\nPROBE163B {ok}/{tot} {"PASS" if fail == 0 else "FAIL"}')
     return 1 if fail else 0
