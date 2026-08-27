@@ -38,7 +38,11 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
    400ms 이상이다(cap113·scan116·verify125 …).
    절대값(850ms)으로 박아 두면 이 컨테이너의 부팅 시각이 430~650ms 로 흔들릴 때
    **실행마다 뜨고 지는 FAIL**(136 계열)이 된다 — 실제로 그렇게 헛불렸다. */
-const TAIL_MS = 300;   /* 부팅 뒤 오버레이가 «보여도 되는» 시간 */
+/* 부팅 뒤 오버레이가 «보여도 되는» 시간. 300 은 **DOM 검사** 게이트(verify78·verify113)의 대기이고
+   그것들은 `.thru`(pointer-events:none) 로 통과한다. 실제로 **화면을 찍는** 하네스는 400 이상
+   (cap113·scan116·verify125 …)이므로 기준을 그 사이인 340 으로 둔다 — 타이머 굶주림이
+   실행마다 90~180ms 흔들려서 300 으로 조이면 «뜨고 지는 FAIL»(136 계열)이 된다. */
+const TAIL_MS = 340;
 const ABS_MS = 1200;   /* 그래도 이보다 늦으면 무언가 잘못된 것이다 */
 
 /* ★ 계측이 대상을 흔든다 — 두 벌로 나눈 이유.
@@ -199,14 +203,27 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      3회차 비평 E·F 가 독립적으로 «그림자가 55~56px 오른쪽으로 밀려 왼발이 그림자 밖» 을 짚었다.
      CSS 는 JS 상수를 못 읽으므로 margin-left 에 그 편심을 넣어 두고, 여기서 **다시 잰다.** */
   const sh = await page.evaluate(() => {
+    /* ★ `getBoundingClientRect()` 로 재면 안 된다 — ldTick 이 그림자에 `translateX` 를 걸어
+       캐릭터를 따라다니게 하므로, 등장이 아직 안 끝난 순간에 재면 그 이동분이 섞인다
+       (실제로 484 / 452 로 실행마다 다르게 나왔다). **레이아웃 위치**(offsetLeft)로 잰다. */
     const el = document.getElementById('loading'), s = document.getElementById('ldSh');
     const had = el.className; el.classList.remove('off', 'out');
-    const r = s.getBoundingClientRect();
-    const out = { cx: Math.round(r.left + r.width / 2), w: Math.round(r.width) };
+    const out = { cx: Math.round(s.offsetLeft + s.offsetWidth / 2), w: s.offsetWidth };
     el.className = had; return out;
   });
   ok(Math.abs(sh.cx - 540 + 56) <= 4, `그림자 중심이 발 스팬 중심(프레임 중앙 −56px = 484)에 있다 (실측 ${sh.cx})`);
   ok(sh.w >= 480, `그림자 폭이 발 스팬(≈400px)보다 넓다 (${sh.w}px)`);
+  /* ★ 폭만으로는 부족하다 — 4회차 비평 H 가 «어두운 코어가 180px = 발 스팬의 45% 라 발이 딛는
+     자리 100%가 밝은 테 위» 라고 실측했다. 그래디언트의 **어두운 구간 반경**을 직접 재서
+     발 스팬(≈396px)을 덮는지 본다. */
+  const core = await page.evaluate(() => {
+    const s = getComputedStyle(document.getElementById('ldSh')).backgroundImage;
+    const m = /rgba\(2, ?3, ?8, ?0?\.55\) (\d+)%/.exec(s);
+    const w = parseFloat(getComputedStyle(document.getElementById('ldSh')).width);
+    return { pct: m ? +m[1] : null, w };
+  });
+  ok(core.pct !== null && core.w * core.pct / 100 >= 396,
+    `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
 
   console.log('§5 통과성 (부팅 뒤 오버레이가 탭을 안 막는다)');
   const thru = await page.evaluate(() => {
