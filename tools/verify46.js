@@ -53,7 +53,16 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('기본 선택 = 던전', !!(t[1] && t[1].on && !t[0].on));
     const noLock = await page.$$eval('#dunSub .dns-t.lk, #dunSubLock', (e) => e.length).catch(() => 0);
     chk('구버전 자물쇠 칸 잔재 0건 (57 교훈 1)', noLock === 0, noLock);
-    chk('던전 카드 5장', (await page.$$eval('#dunList [data-dcard]', (e) => e.length)) === 5);
+    /* 242 — 옛 단언은 «던전 카드 5장» 이었다. 그 5 는 «46 당시 표가 5칸이었다» 는 기록일 뿐이라
+       90(6장)·194(7장)·203(8장)이 표를 늘릴 때마다 빨개졌다(236 ④ «데이터가 늘어도 전제는 죽는다»).
+       카드 수는 **근거 데이터인 `DUNGEONS` 표에서 파생**시키고, 표 자체가 줄지 않았다는 하한
+       (46 당시 5칸 · gold·dia 상시)을 «안 바뀌어야 하는 쪽» 으로 같이 못박는다(200 ③). */
+    const dunIds = await page.evaluate(() => DUNGEONS.map((d) => d.id));
+    const cardIds = await page.$$eval('#dunList [data-dcard]', (e) => e.map((x) => x.dataset.dcard));
+    chk('던전 카드 = DUNGEONS 표 전부 (수·순서까지)', cardIds.join(',') === dunIds.join(','),
+      `카드 ${cardIds.length} [${cardIds.join(',')}] / 표 ${dunIds.length} [${dunIds.join(',')}]`);
+    chk('표가 46 당시(5칸) 아래로 줄지 않음 + gold·dia 상시', dunIds.length >= 5
+      && dunIds.includes('gold') && dunIds.includes('dia'), dunIds.length);
 
     /* ---------- 2. 레이드 탭 ---------- */
     console.log('[2] «컨텐츠» 칸 → 카드 리스트 (123: 측정장 1 + 아레나 1)');
@@ -127,7 +136,11 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
        «입장 횟수 무제한 ∞» 는 46 자신이 «가정(주인 확인 필요)» 로 적어 둔 값이었고, 205 가 그
        가정을 뒤집었다. LESSONS 185-④ «설계가 뒤집힌 단언은 지우지 말고 이사시켜라» 대로
        묻는 것(«이 칸이 측정장의 입장 규칙을 말하는가»)은 그대로 두고 기대값만 새 규칙으로 옮긴다.
-       기대 문구는 리터럴로 박지 않는다(185-①) — `RAID_TRY` 에서 런타임 계산한다. */
+       기대 문구는 리터럴로 박지 않는다(185-①) — `RAID_TRY` 에서 런타임 계산한다.
+       242 — 206 과 같은 회차에 같은 자리를 고쳤다(병합). 기대값을 화면이 쓰는 `raidLeft()` 가
+       아니라 근거 상수에서 만든다는 점이 같아 206 쪽 형태를 살리고, 242 는 이 상수를 [8] 의
+       «차감이 실제로 반영되는가» 에 재사용한다. */
+    const RTRY = d.tryMax;
     chk(`입장 횟수 = 하루 ${d.tryMax}회 (205 — 종전 ∞ 폐기)`, d.tryN === `${d.tryMax}/${d.tryMax}`, d.tryN);
     chk('해금된 다른 측정장 없으면 ◀▶ 비활성', d.prev && d.next, `${d.prev}/${d.next}`);
 
@@ -223,6 +236,9 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     await page.waitForTimeout(300);
     const amt = await page.evaluate(() => document.getElementById('dgdAmt').textContent);
     chk('세부 팝업 «최고 기록» 갱신', /DPS/.test(amt) && !/기록 없음/.test(amt), amt);
+    /* 242 — 205 의 하루 횟수가 «표시만» 이 아니라 실제로 깎이는지: [5] 에서 1회 돌았으므로 (3−1)/3 */
+    const tryAfter = await page.evaluate(() => document.getElementById('dgdTry').textContent);
+    chk('1회 도전이 남은 횟수에 반영 (205)', tryAfter === `${RTRY - 1}/${RTRY}`, tryAfter);
 
     /* ---------- 9. 포기하기 = 기록 미저장 ---------- */
     console.log('[9] [포기하기] → 중단(기록 저장 안 함)');
@@ -233,17 +249,37 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     await page.waitForTimeout(400);
     await click(page, '#dunList [data-rcard="r60"]');
     await page.waitForTimeout(300);
+    /* 242 — 옛 단언은 «모달 #mtitle 이 «레이드 진행 중»» 이었다. **149(2026-08-27, 저장소 주인 지시
+       «단순 안내는 팝업이 아니라 토스트»)** 가 이 안내를 `notify()` 로 옮겨(~20606) 모달이 아예 안 뜬다 —
+       그래서 이 자리는 «직전 결과 팝업의 제목» 을 읽고 있었다. 안내는 `.fx-toast` 로 확인하고,
+       토스트가 1060ms 만에 스스로 사라지므로 고정 대기 대신 **MutationObserver 로 등장을 받아 적는다**(236 ②). */
     const t0 = await page.evaluate(() => raidT);
+    const dmg0 = await page.evaluate(() => raidDmg);
+    await page.evaluate(() => {
+      window.__t242 = [];
+      const L = document.getElementById('fxl') || document.body;
+      window.__o242 = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((nd) => {
+        if (nd.nodeType === 1 && nd.classList.contains('fx-toast')) window.__t242.push(nd.textContent.trim());
+      })));
+      window.__o242.observe(L, { childList: true });
+    });
     await click(page, '#dgdGo');
     await page.waitForTimeout(400);
-    /* 149 — «레이드 진행 중» 안내는 모달이 아니라 토스트다(206 이 그 규칙을 이어받았다) */
-    const dup = await page.evaluate(() => ({
-      t: raidT, dmg: raidDmg,
-      toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
-      on: document.getElementById('modal').classList.contains('on') }));
-    chk('측정 중 재도전은 새로 시작하지 않음', !dup.on && /진행 중/.test(dup.toast) && dup.t < t0,
-      `${dup.toast} t ${dup.t.toFixed(1)} < ${t0.toFixed(1)}`);
-    await page.waitForTimeout(1200);       /* 토스트 자연 소멸 대기 */
+    /* 149 — «레이드 진행 중» 안내는 모달이 아니라 토스트다(206 이 그 규칙을 이어받았다).
+       242 — 같은 자리를 206 과 나란히 고쳤다(병합). «계약»(판이 안 리셋된다)과 «표현»(토스트 한 줄)을
+       두 단언으로 가르고, 토스트가 1060ms 만에 스스로 사라지므로 클릭 전에 건 MutationObserver 로
+       등장을 받아 적는다(236 ② — 체류 시간이 또 바뀌어도 안 깨진다). */
+    const dup = await page.evaluate(() => {
+      window.__o242.disconnect();
+      return { t: raidT, dmg: raidDmg, on: !!raidOn, id: raidOn && raidOn.id,
+        toast: window.__t242.slice(), modal: document.getElementById('modal').classList.contains('on') };
+    });
+    chk('측정 중 재도전은 새로 시작하지 않음 — 같은 판이 계속 돈다',
+      dup.on && dup.id === 'r60' && dup.t < t0 && dup.dmg >= dmg0,
+      `raidOn ${dup.id} t ${dup.t.toFixed(1)} < ${t0.toFixed(1)} · dmg ${Math.round(dup.dmg)} ≥ ${Math.round(dmg0)}`);
+    chk('안내는 토스트 한 줄(149) — 팝업으로 흐름을 끊지 않음',
+      !dup.modal && dup.toast.some((s) => /진행 중/.test(s)), `modal ${dup.modal} · ${JSON.stringify(dup.toast)}`);
+    await page.waitForTimeout(1200);       /* 206 — 토스트 자연 소멸 대기 */
     await click(page, '.tab[data-t="adv"]');   /* 던전 페이지 닫기 → 전투 화면 */
     await page.waitForTimeout(400);
     await click(page, '#bossGv');
@@ -271,7 +307,10 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       raid: document.querySelectorAll('#dunList [data-rcard]').length,
       on: document.querySelector('#dunSub [data-dsub="dun"]').classList.contains('on'),
     }));
-    chk('던전 카드 5장 복귀', back.cards === 5 && back.raid === 0, `${back.cards}/${back.raid}`);
+    /* 242 — §1 과 같은 이유로 표 길이 파생. «복귀» 가 묻는 것은 «5장» 이 아니라
+       «레이드 카드가 사라지고 던전 표가 통째로 돌아왔는가» 다. */
+    chk('던전 표 전부 복귀 + 레이드 카드 0장', back.cards === dunIds.length && back.raid === 0,
+      `${back.cards}/${back.raid} (표 ${dunIds.length})`);
     chk('선택 표시가 던전으로 이동', back.on);
     await click(page, '#dunList [data-dcard="gold"]');
     await page.waitForTimeout(300);
