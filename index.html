@@ -5398,27 +5398,107 @@
      13 에서 빌려온 `.cn-ti` 는 `left:670px;width:301px`(잉크 중심 820.5) 인데, 그 값은 13 의
      **배너 아트(`.cn-bn` 좌측 🎁·보석)를 피해 오른쪽에 앉힌** 레퍼런스 실측이다. 이용권 탭은
      배너가 없어서 피할 대상이 없고, 그래서 타이틀만 프레임 중앙(540)에서 **+280.5px** 오른쪽에
-     혼자 박혀 있었다(좌측 여백 678 ↔ 우측 117.5). 이 페이지의 나머지는 전부 540 중심이다 —
-     밴드 글자 `.cn-hd>i`(전폭 center) · 리본 `.cn-rb`(227+627/2=540.5) · 안내문 `.pv-nt`(66+948/2=540) ·
-     기간 바 `.pv-bar`(111+858/2=540) · `.pv-bt`(540). 그 규칙에 타이틀만 맞춘다.
+     혼자 박혀 있었다(좌측 여백 678 ↔ 우측 117.5). 이 페이지의 나머지는 전부 540 중심이다.
      **13 의 `.cn-ti` 원값은 건드리지 않는다**(그쪽은 레퍼런스가 요구하는 치우침이다 — 병렬 규칙 3). */
   .cn-wrap.pv>.cn-ti{left:0;width:1080px}
-  /* 이용권 카드 — 몸통·헤더만 «금색(영구)»·«청록(기간제)» 로 구분한다(다이아·유물 카드와 같은 방식) */
-  .cn-cd.pv>.bg{background:linear-gradient(180deg,#F0C765 0,#F0C765 62px,#B98A2E 219px,
-    #9C7223 219px,#7A5716 295px)}
-  .cn-cd.pv.tm>.bg{background:linear-gradient(180deg,#6EE0C6 0,#6EE0C6 62px,#2E9F86 219px,
-    #23856F 219px,#166352 295px)}
-  /* 아이콘은 상태 줄(판 상단 38px)을 피해 아래로 내린다 — line-height 로만 밀어 판 높이는 안 바꾼다 */
-  .cn-cd.pv>.pn>em{font-size:96px;line-height:196px}
-  /* 상태 줄 — 아이템 판 **상단**에 물리는 검은 띠(«보유 중 · 28일 남음» / «미보유»).
-     하단(dy169~199)은 13 카드의 `.qt`(수량) 자리라 비워 둔다. */
-  .cn-cd>.st{left:11px;top:69px;width:256px;height:38px;background:rgba(0,0,0,.72)}
-  .cn-cd>.st>i{position:absolute;left:0;right:0;top:6px;text-align:center;color:#FFF8AA;
-    font-size:24px;line-height:26px;white-space:nowrap;transform:scaleX(.94)}
-  /* «평생 / 30일» 은 카드 폭을 넘길 수 있어 다이아·유물 카드와 같은 우측 앵커를 쓴다 */
-  .cn-cd.pv>.qt{left:auto;right:14px;transform-origin:100% 50%}
-  /* 보유 완료 카드는 다이아 가격 대신 초록 «보유 중» 띠 — 13 의 `.done` 규칙을 그대로 쓴다 */
-  .cn-cd.pv.done>.bg{background:#1C8D5E}
+
+  /* ==========================================================================
+     151 — 이용권 카드 (2026-08-27 주인 지시 · 레퍼런스 docs/ref/151-이용권-카드.png)
+     ref 는 «카드 2장만» 잘라 낸 504×709 크롭이라 «프레임 y = ref y − 84» 변환 대상이 아니다.
+     비교 단위는 «카드 하나» 이고, CSS 값은 전부 **ref 카드 외곽(474×372) → 폭 978 환산**이다
+     (측정표 `docs/measure/151-이용권카드.md` §9). 카드 안 좌표는 카드 좌상단 기준.
+     124 의 `.cn-cd.pv`(13 카드를 빌려 쓴 278×309 격자)는 이 카드로 **완전히 대체**됐다.
+     ========================================================================== */
+  .pvc{position:absolute;left:51px;width:978px;height:768px}
+  .pvc>*{position:absolute}
+  /* 몸통 — ref 는 «위 밝은 띠 → 본색 → 아래 어두운 단» 3단이다(13 카드와 같은 문법) */
+  .pvc>.bg{left:0;top:0;width:978px;height:768px;border-radius:34px;
+    background:linear-gradient(180deg,var(--h) 0 26px,var(--c) 26px 700px,var(--s) 700px 768px)}
+  .pvc>.fr{left:0;top:0;width:978px;height:768px;border:10px solid #000;border-radius:34px;
+    pointer-events:none}
+  .pvc.pb{--c:#43BCF5;--h:#8FE4FF;--s:#3A86D4;--d:#1E5E9E}   /* 1장 파랑 */
+  .pvc.pg{--c:#39C48D;--h:#7CF2C0;--s:#219161;--d:#136349}   /* 2장 초록 */
+  .pvc.pp{--c:#A874E8;--h:#D5B4FF;--s:#7A45BE;--d:#4E2A80}   /* 3장 보라(151 신설) */
+  /* ① 상태 탭 — 카드 윗변에 «걸쳐» 위로 삐져나온다(ref 돌출 52px) */
+  .pvc>.stt{left:50px;top:-52px;width:228px;height:82px;border-radius:20px 20px 0 0;
+    border:8px solid #000;border-bottom:0;background:var(--d)}
+  .pvc>.stt>i{position:absolute;left:0;right:0;top:12px;text-align:center;color:#C9C9C9;
+    font-size:30px;line-height:34px;white-space:nowrap;transform:scaleX(.94)}
+  .pvc.own>.stt{background:#1C8D5E}
+  .pvc.own>.stt>i{color:#FFF8AA}
+  /* ③ 마일리지 쿠폰 알약 — ref 상단 알약 2개(불꽃·Ⓜ) 자리에 **1개만**(주인 지시 ⓐ) */
+  .pvc>.pil{left:320px;top:-46px;height:76px;padding:0 22px;border-radius:38px;border:7px solid #000;
+    background:linear-gradient(180deg,#FFE9A0 0 8px,#FDC63A 8px 62px,#D89A18 62px 76px);
+    display:flex;align-items:center;gap:10px}
+  .pvc>.pil>em{width:44px;height:44px;font-size:0;display:block}
+  .pvc>.pil>em>.cic{width:44px;height:44px}
+  .pvc>.pil>i{color:#fff;font-size:30px;line-height:34px;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* ② 가치 배지 — 우상단 폭발형. 카드 우변·윗변 밖으로 나간다 */
+  .pvc>.bdg{right:-30px;top:-42px;width:168px;height:168px}
+  .pvc>.bdg>s{position:absolute;inset:0;background:#FF3E7F;
+    clip-path:polygon(50% 0,60% 15%,75% 6%,77% 24%,94% 21%,88% 38%,100% 50%,88% 62%,94% 79%,
+      77% 76%,75% 94%,60% 85%,50% 100%,40% 85%,25% 94%,23% 76%,6% 79%,12% 62%,0 50%,12% 38%,
+      6% 21%,23% 24%,25% 6%,40% 15%)}
+  .pvc>.bdg>i{position:absolute;left:0;right:0;top:44px;text-align:center;color:#fff;
+    font-size:38px;line-height:40px;-webkit-text-stroke:7px #000;paint-order:stroke fill;
+    transform:scaleX(.9)}
+  .pvc>.bdg>b{position:absolute;left:0;right:0;top:88px;text-align:center;color:#fff;
+    font-size:30px;line-height:32px;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* ④ 타이틀 행 — ✦ + 상품명 */
+  .pvc>.pvt{left:44px;top:52px;right:210px;height:60px}
+  .pvc>.pvt>s{position:absolute;left:0;top:0;font-size:46px;line-height:60px;color:#FFE9A0}
+  .pvc>.pvt>i{position:absolute;left:56px;top:0;font-size:48px;line-height:60px;color:#fff;
+    white-space:nowrap;-webkit-text-stroke:10px #000;paint-order:stroke fill}
+  /* ⑤-1 본문 «티켓형 배너»(1장) — 좌우가 반원으로 파인 노랑 표 */
+  .pvc>.ban{left:44px;top:140px;width:520px;height:104px;border-radius:16px;border:8px solid #000;
+    background:linear-gradient(180deg,#FFE9A0 0 10px,#FFCF4A 10px 84px,#D89A18 84px 104px)}
+  .pvc>.ban>.n{position:absolute;top:26px;width:36px;height:36px;border-radius:50%;
+    border:8px solid #000;background:var(--c)}
+  .pvc>.ban>.n.l{left:-26px}
+  .pvc>.ban>.n.r{right:-26px}
+  .pvc>.ban>i{position:absolute;left:0;right:0;top:22px;text-align:center;color:#fff;
+    font-size:40px;line-height:44px;white-space:nowrap;-webkit-text-stroke:9px #000;
+    paint-order:stroke fill}
+  /* ⑤-2 본문 «★ 불릿»(2·3장) — 어두운 판 위 3줄 */
+  .pvc>.bls{left:44px;top:132px;width:520px;height:264px;border-radius:18px;
+    background:rgba(0,0,0,.30)}
+  .pvc>.bls>.bl{position:absolute;left:18px;right:14px;height:64px}
+  .pvc>.bls>.bl:nth-child(1){top:14px}
+  .pvc>.bls>.bl:nth-child(2){top:96px}
+  .pvc>.bls>.bl:nth-child(3){top:178px}
+  .pvc>.bls>.bl>s{position:absolute;left:0;top:0;font-size:34px;line-height:44px;color:#FFD34F}
+  .pvc>.bls>.bl>i{position:absolute;left:46px;right:0;top:0;font-size:29px;line-height:34px;
+    color:#fff}
+  /* 우측 일러스트 자리 — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10) */
+  .pvc>.art{right:52px;top:128px;width:300px;height:270px}
+  .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
+    font-size:190px;line-height:270px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.45))}
+  /* ⑥ 빨강 리본 2줄 — 카드 좌변에 물려 시작한다(ref 는 좌 inset 22/474) */
+  .pvc>.rb{left:22px;height:60px;border-radius:12px;border:7px solid #000;
+    background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 46px,#C4343C 46px 60px);
+    display:flex;align-items:center;padding:0 20px;gap:14px}
+  .pvc>.rb1{top:430px}
+  .pvc>.rb2{top:518px}
+  .pvc>.rb>i{color:#FFF8AA;font-size:30px;line-height:34px;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .pvc>.rb>b{color:#fff;font-size:32px;line-height:36px;white-space:nowrap;font-weight:400;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill;display:flex;align-items:center;gap:8px}
+  .pvc>.rb>b>.cic{width:38px;height:38px}
+  /* ⑦ 가격 버튼 — 우하단 초록. 원화 표기(주인 지시) + 다이아 대체가(44 결제 미연동 관례) */
+  .pvc>.bt{right:44px;top:600px;width:340px;height:118px;border-radius:26px;border:8px solid #000;
+    background:linear-gradient(180deg,#8CF08C 0 8px,#3FC85A 8px 92px,#1E8E3A 92px 118px);
+    cursor:pointer}
+  .pvc>.bt>i{position:absolute;left:0;right:0;top:14px;text-align:center;color:#fff;
+    font-size:44px;line-height:48px;white-space:nowrap;-webkit-text-stroke:9px #000;
+    paint-order:stroke fill}
+  .pvc>.bt>u{position:absolute;left:0;right:0;top:66px;text-align:center;color:#EAFFEA;
+    font-size:25px;line-height:28px;text-decoration:none;white-space:nowrap}
+  .pvc>.bt>u>.cic{width:28px;height:28px;vertical-align:-5px}
+  .pvc>.bt.on{background:#1C8D5E;cursor:default}
+  .pvc>.bt.on>i{top:32px}
+  /* 보유 중 카드 — 몸통을 한 단 어둡게 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
+  .pvc.own>.bg{filter:brightness(.72) saturate(.8)}
   /* 안내문 — 카드 아래 2줄(효과 설명). 배너·패널을 새로 만들지 않고 텍스트만 둔다 */
   .pv-nt{left:66px;width:948px;text-align:center;color:#D8D8E0;font-size:27px;line-height:36px;
     white-space:nowrap}
@@ -13619,7 +13699,7 @@ const DEF = () => ({
      124 — 10 상점 «이용권» 2종도 같은 주머니에 둔다(35·36 과 키가 겹치지 않는다. KEY 유지 — 44 교훈 2).
        noAds          : 평생 광고 제거(영구, boolean)
        autoBlessUntil : 자동 축복 이용권 만료 epoch(ms). 0 = 미보유 */
-  pass:{ prem:{}, got:{}, noAds:false, autoBlessUntil:0 },
+  pass:{ prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} },  /* 151 — 뒤 두 키 */
   bless:{ lv:1, prog:0, exp:{} },             /* 34 축복 — lv=축복 레벨, prog=n/4, exp[k]=만료 epoch(ms) */
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
@@ -13760,6 +13840,17 @@ function load(){
     b.pass.noAds = !!b.pass.noAds;
     b.pass.autoBlessUntil = Number.isFinite(b.pass.autoBlessUntil) && b.pass.autoBlessUntil > 0
       ? Math.floor(b.pass.autoBlessUntil) : 0;
+    /* 151 — 신설 두 키도 같은 규칙(KEY 유지). `dailyAt` 은 상품별 «마지막 일일 보석 지급 시각» 이라
+       미래·비유한 값이 들어오면 통째로 버린다(과거로 잘못 잡히면 다음 틱이 폭탄 지급을 한다). */
+    b.pass.offPlus = !!b.pass.offPlus;
+    {
+      const da = (b.pass.dailyAt && typeof b.pass.dailyAt === 'object') ? b.pass.dailyAt : {};
+      b.pass.dailyAt = {};
+      PASS_ITEMS.forEach(p => {
+        const v = da[p.id];
+        if(Number.isFinite(v) && v > 0 && v <= Date.now()) b.pass.dailyAt[p.id] = Math.floor(v);
+      });
+    }
     b.guide.idx = Math.max(0, Math.min(GUIDE.length, Math.floor(b.guide.idx)));
     /* 105 — 구 세이브 «자동» 정리(KEY 유지 — 44 교훈 2). autoEquip 은 폐기 키라 지우고,
        autoBuy 는 «기본 true 시절에 켜진 것» 이므로 세이브당 딱 한 번만 꺼 준다.
@@ -19740,10 +19831,35 @@ $('shopList').addEventListener('click', e => {
       발동부터 지속시간이 길어져 이후 발동 시각이 전부 달라진다) — 항상 «가장 먼저 만료되는 축복»
       하나씩 시간순으로 처리한다. 이용권 만료 시각(또는 지금)에서 멈춘다.
    ========================================================================== */
+/* --------------------------------------------------------------------------
+   151 — 이용권 카드 전면 교체 (2026-08-27 저장소 주인 지시)
+   ─ 지시 원문: «이 이미지와 똑같은 방식으로, 불꽃·마일리지 알약만 빼고 마일리지 쿠폰 +1/+2 로 —
+     지금 이용권 탭 카드들 대신 이 디자인이 들어가면 됨» + «3번째 카드: 오프라인 보상 +4시간 ₩7,500».
+     레퍼런스 `docs/ref/151-이용권-카드.png` · 측정표 `docs/measure/151-이용권카드.md`.
+
+   ⓐ 가격 표기는 **원화**다(지시). 결제 SDK 는 없으므로 **구매 동작은 124 경로 그대로**
+      (다이아 대체가 차감 → 지급). 대체가는 카드에도 적어 «₩ 를 눌렀더니 다이아가 빠졌다» 가
+      되지 않게 한다 — 44 «결제 미연동» 관례를 표기로 드러내는 것까지가 이 작업 범위다.
+   ⓑ ref 상단 알약 2개(불꽃 +1000/+1600 · Ⓜ +100/+160)는 **빼고** «마일리지 쿠폰 +n» 알약 1개만.
+      쿠폰은 13 의 `S.mileage`(MILE_NEED 10개 → 다이아 교환) 와 **같은 재화**다.
+   ⓒ 리본 2줄(«매일 보석 지급» · «구매 즉시 보석 지급»)은 **실제로 지급**된다 —
+      즉시분은 구매 시 1회, 매일분은 `passDailyTick()` 이 «마지막 지급 시각» 기준으로 계산한다.
+      시각 기준이라 **게임을 꺼 둔 동안도 그대로 쌓인다**(자동 축복과 같은 방식, 서버 없음).
+   ⓓ 3번째 카드 «오프라인 보상 +4시간»(`S.pass.offPlus`) — 01 오프라인 보상의 상한 `offMaxH()`
+      한 곳만 늘린다. 그래서 2번 카드(자동 축복)의 ref 불릿 «오프라인 보상 최대 시간 4시간 증가»
+      는 **뺐다**(같은 효과를 두 상품이 파는 것을 막는다 — PROGRESS 151 «기본» 지시).
+   -------------------------------------------------------------------------- */
 const PASS_DAY_MS      = 24 * 3600 * 1000;
 const PASS_ADFREE_DIA  = 75000;                    /* 평생 광고 제거 — 13 d3(11,000원) 대체가 */
 const PASS_ABLESS_DIA  = 35000;                    /* 자동 축복 30일 — 13 d2(5,000원) 대체가 */
+const PASS_OFFPLUS_DIA = 50000;                    /* 오프라인 +4시간 — ₩7,500 (d2 5,000 ↔ d3 11,000 사이) */
 const PASS_ABLESS_DAYS = 30;
+const PASS_OFF_PLUS_H  = 4;                        /* 오프라인 보상 상한 증가분(시간) */
+/* 01 오프라인 보상 상한 — 기본 6시간, 「오프라인 보상 증가」 이용권 보유 시 +4시간.
+   **선언이 여기 있는 이유**: PASS_ITEMS 의 불릿 문구가 이 값에서 파생되고, 그 배열이
+   파일 위쪽에서 평가되기 때문이다(01 블록에 두면 TDZ 로 즉사한다). 쓰는 곳은 01 두 군데뿐. */
+const OFF_MAX_H = 6;
+const offMaxH = () => OFF_MAX_H + (passOffPlus() ? PASS_OFF_PLUS_H : 0);
 /* 오프라인 시뮬 상한 — 30일 ÷ 최소 지속 30분 × 3종 = 4,320 회가 최대다. 손댄 세이브가
    말도 안 되는 만료 시각을 갖고 있어도 여기서 멈춘다(무한 루프 방지). */
 const PASS_SIM_MAX = 20000;
@@ -19758,72 +19874,154 @@ const autoBlessDays = () => Math.ceil(autoBlessLeft() / PASS_DAY_MS);
 /* 광고 표식 토글 — 상태를 바꾸는 모든 경로(구매·로드)가 이 한 줄만 부르면 된다 */
 function syncNoAds(){ const a = $('app'); if(a) a.classList.toggle('noads', noAdsOn()); }
 
+/* 151 — 카드 격자. ref 카드 외곽 474×372(측정표 §1) 을 **폭 978**(51..1029, 카테고리 탭 바와 같은
+   콘텐츠 폭)로 환산한 값이다. 세로는 폭 비율 그대로 — 눈대중으로 줄이지 않는다(지시서 [2]).
+   상태 탭·가치 배지는 카드 윗변 «위로» 삐져나가므로 카드 사이 간격(PVC_PITCH − PVC_H)이 그 자리다. */
+const PVC_W = 978, PVC_H = 768, PVC_PITCH = 830, PV_Y0 = 452;
+/* 151 — 카드 3장. `won`(표기) · `dia`(대체 결제) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
+   `bl`(★ 불릿) · `ban`(1번 카드 티켓형 배너 문구) 이 한 상품의 전부다.
+   ref 팔레트: 1장 파랑 · 2장 초록 · 3장(신설)은 둘과 구분되는 **보라**. */
 const PASS_ITEMS = [
-  { id:'noads', n:'광고 제거', ic:'🚫', dia:PASS_ADFREE_DIA, perm:true,
-    q:'평생', nt:'모든 광고 보상을 시청 없이 바로 받습니다 (일일 횟수 제한은 그대로)' },
-  { id:'abless', n:'자동 축복', ic:'✨', dia:PASS_ABLESS_DIA, perm:false,
-    q:'30일', nt:'축복 3종이 만료될 때마다 자동으로 다시 켜집니다 (게임을 꺼 둔 동안도 계산)' }
+  { id:'noads', n:'광고 제거', ic:'🚫', dia:PASS_ADFREE_DIA, won:14900, perm:true, cp:1,
+    q:'평생', pal:'b', val:'2000%', daily:1500, once:10000,
+    ban:'모든 광고 평생 스킵', art:'▶',
+    bl:['모든 광고 보상을 시청 없이 즉시 수령', '광고 표식 전부 제거', '일일 수령 횟수 제한은 그대로'],
+    nt:'모든 광고 보상을 시청 없이 바로 받습니다 (일일 횟수 제한은 그대로)' },
+  { id:'abless', n:'전투 효율 증가', ic:'✨', dia:PASS_ABLESS_DIA, won:22900, perm:false, cp:2,
+    q:'30일', pal:'g', val:'2000%', daily:1500, once:16000,
+    art:'🎟',
+    bl:['축복 만료 시 자동 재발동', '게임을 꺼 둔 동안도 자동 축복 계산', '축복 경험치·레벨 그대로 누적'],
+    nt:'축복 3종이 만료될 때마다 자동으로 다시 켜집니다 (게임을 꺼 둔 동안도 계산)' },
+  { id:'offplus', n:'오프라인 보상 증가', ic:'⏰', dia:PASS_OFFPLUS_DIA, won:7500, perm:true, cp:1,
+    q:'평생', pal:'p', val:'1000%', daily:750, once:5000,
+    art:'⏳',
+    bl:['오프라인 보상 최대 시간 ' + PASS_OFF_PLUS_H + '시간 증가',
+        '최대 ' + (OFF_MAX_H + PASS_OFF_PLUS_H) + '시간까지 적립', '한 번 사면 평생 적용'],
+    nt:'오프라인 보상 적립 상한이 ' + OFF_MAX_H + '시간 → ' + (OFF_MAX_H + PASS_OFF_PLUS_H) + '시간이 됩니다' }
 ];
-const passOwned = id => id === 'noads' ? noAdsOn() : autoBlessOn();
+const passOffPlus = () => !!(S.pass && S.pass.offPlus);
+const passOwned = id => id === 'noads' ? noAdsOn() : id === 'offplus' ? passOffPlus() : autoBlessOn();
 function passStatusTxt(p){
-  if(p.id === 'noads') return noAdsOn() ? '보유 중 · 평생' : '미보유';
-  return autoBlessOn() ? '보유 중 · ' + autoBlessDays() + '일 남음' : '미보유';
+  if(!passOwned(p.id)) return '비활성화';
+  return p.perm ? '이용 중 · 평생' : '이용 중 · ' + autoBlessDays() + '일 남음';
 }
 function renderPassPage(list){
-  let h = '<div class="cn-wrap pv">'
+  /* 151 — 카드가 커져(978×PVC_H) 페이지가 길어지므로 껍데기 좌표도 같이 잡는다.
+     타이틀·밴드·리본은 124 값 그대로(152 가 중앙 정렬을 확정한 자리) */
+  let h = '<div class="cn-wrap pv" style="height:' + (PV_Y0 + PASS_ITEMS.length * PVC_PITCH + 120) + 'px">'
     + '<div class="cn-ti" style="top:40px"><i>이용권 상점</i></div>'
     + '<div class="cn-hl" style="top:150px"></div>'
     + '<div class="cn-hd" style="top:158px"><i>이용권</i></div>'
     + '<div class="cn-hl" style="top:243px"></div>'
     + '<div class="cn-rb" style="top:300px;--c:#E0A22B;--h:#FFD36A;--s:#B47C14;--t:#C98D1C;--ts:#7A5308">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>상시 판매</i></div>';
-  /* 카드 2장 — 13 §5 격자의 1·2열(x111/401) · 같은 규격(278×309) */
   PASS_ITEMS.forEach((p, i) => {
-    const own = passOwned(p), x = [111, 401][i];
-    h += '<div class="cn-cd pv' + (p.perm ? '' : ' tm') + (own ? ' done' : '')
-      +  '" style="left:' + x + 'px;top:486px;--fs:35.5px;--sx:.95;--qx:1'
-      +  (own ? ';--hd:#68C338;--hr:#7FD955' : (p.perm ? ';--hd:#E0A22B;--hr:#FFD36A' : ';--hd:#2E9F86;--hr:#8CF4E4')) + '">'
-      +  '<div class="bg"></div><div class="hd"><i>' + p.n + '</i></div>'
-      +  '<div class="pn"><em>' + p.ic + '</em></div>'
-      +  '<div class="st"><i>' + passStatusTxt(p) + '</i></div>'
-      +  '<div class="qt">' + p.q + '</div>'
+    const own = passOwned(p.id);
+    h += '<div class="pvc p' + p.pal + (own ? ' own' : '') + '" data-pv="' + p.id + '"'
+      +  ' style="top:' + (PV_Y0 + i * PVC_PITCH) + 'px">'
+      /* 몸통 → 겉장식 → 글자 순. 검정 테(.fr)는 맨 위에 얹어 모서리를 덮는다(13 카드와 같은 방식) */
+      +  '<div class="bg"></div>'
+      +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'
+      +  '<div class="pil"><em>' + curIc('mile') + '</em><i>마일리지 쿠폰 +' + p.cp + '</i></div>'
+      +  '<div class="bdg"><s></s><i>' + p.val + '</i><b>가치</b></div>'
+      +  '<div class="pvt"><s>✦</s><i>' + p.n + '</i></div>';
+    /* 본문 — 1번 카드만 ref 처럼 «티켓형 배너 + 일러스트», 나머지는 ★ 불릿 */
+    if(p.ban){
+      h += '<div class="ban"><s class="n l"></s><s class="n r"></s><i>' + p.ban + '</i></div>';
+    } else {
+      h += '<div class="bls">'
+        + p.bl.map(t => '<div class="bl"><s>★</s><i>' + t + '</i></div>').join('')
+        + '</div>';
+    }
+    h += '<div class="art"><em>' + p.art + '</em></div>'
+      +  '<div class="rb rb1"><i>매일 보석 지급</i><b>' + curIc('dia') + ' ' + fmt(p.daily) + '</b></div>'
+      +  '<div class="rb rb2"><i>구매 즉시 보석 지급</i><b>' + curIc('dia') + ' ' + fmt(p.once) + '</b></div>'
+      /* 가격 — 표기는 원화(주인 지시), 실제 결제는 미연동이라 다이아 대체가로 산다(44 관례).
+         둘 다 적어야 «₩ 를 눌렀는데 다이아가 빠졌다» 가 안 된다. */
       +  (own
-          ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>보유 중</i></div>'
-          : '<div class="bt buy" data-pvbuy="' + p.id + '"><u class="pr">' + curIc('dia') + ' ' + fmt(p.dia) + '</u></div>')
+          ? '<div class="bt on"><i>이용 중</i></div>'
+          : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i>'
+            + '<u>' + curIc('dia') + ' ' + fmt(p.dia) + '</u></div>')
       +  '<div class="fr"></div></div>';
   });
-  /* 안내문 2줄 — 카드 아래 */
-  PASS_ITEMS.forEach((p, i) => {
-    h += '<div class="pv-nt" style="top:' + (836 + i * 46) + 'px">· ' + p.nt + '</div>';
-  });
-  /* 자동 축복 남은 기간 바 — 보유 중일 때만 */
+  /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
+  const barY = PV_Y0 + PASS_ITEMS.length * PVC_PITCH + 8;
   if(autoBlessOn()){
     const left = autoBlessLeft(), full = PASS_ABLESS_DAYS * PASS_DAY_MS;
-    h += '<div class="pv-bar"><s style="width:' + Math.min(100, left / full * 100).toFixed(2) + '%"></s></div>'
-      +  '<div class="pv-bt">자동 축복 — ' + autoBlessDays() + '일 남음 · 축복 Lv.' + blessLv() + '</div>';
+    h += '<div class="pv-bar" style="top:' + barY + 'px"><s style="width:'
+      +  Math.min(100, left / full * 100).toFixed(2) + '%"></s></div>'
+      +  '<div class="pv-bt" style="top:' + (barY + 58) + 'px">자동 축복 — ' + autoBlessDays()
+      +  '일 남음 · 축복 Lv.' + blessLv() + '</div>';
   } else {
-    h += '<div class="pv-bt" style="top:1050px">보유 중인 기간제 이용권이 없습니다</div>';
+    h += '<div class="pv-bt" style="top:' + (barY + 4) + 'px">보유 중인 기간제 이용권이 없습니다</div>';
   }
   h += '</div>';
   list.innerHTML = h;
 }
-/* 구매 — 44 규칙대로 «결제 미연동» 이라 다이아로 산다. 지급 지점은 이 함수 하나뿐이다. */
-function buyPass(id){
+/* 151 — 이용권 «지급» 한 곳. 결제 콜백이 붙어도 이 함수를 그대로 쓴다(44 `grantDiaPack` 과 같은 꼴).
+   차감은 하지 않는다 — 차감은 buyPass() 몫이다. */
+function grantPass(id){
   const p = PASS_ITEMS.find(x => x.id === id);
-  if(!p || passOwned(p)) return false;
-  /* 125 — 화폐 표시는 CUR_ICON 이미지로. 모달 «제목» 에는 아이콘을 넣지 않는다(showModal 이 글자로 흘린다) */
-  if(S.dia < p.dia){ notify(curIc('dia') + ' <b>' + fmt(p.dia - S.dia) + '</b> 더 필요합니다'); return false; }
-  S.dia -= p.dia;
+  if(!p) return null;
+  S.pass = S.pass || {};
   if(p.id === 'noads'){ S.pass.noAds = true; syncNoAds(); }
+  else if(p.id === 'offplus'){ S.pass.offPlus = true; }
   else {
-    /* 기간은 «지금부터» 다 — 남은 기간이 있으면 이어 붙인다(중복 구매는 위에서 막히지만
+    /* 기간은 «지금부터» 다 — 남은 기간이 있으면 이어 붙인다(중복 구매는 buyPass 가 막지만
        나중에 연장 상품이 붙어도 이 식이 그대로 맞다) */
     S.pass.autoBlessUntil = Math.max(Date.now(), passAutoUntil()) + PASS_ABLESS_DAYS * PASS_DAY_MS;
     autoBlessTick();                                 /* 산 즉시 꺼져 있던 축복을 켠다 */
   }
-  uiDirty = true; save(); renderUI();
+  if(p.cp) S.mileage = (S.mileage || 0) + p.cp;      /* 마일리지 쿠폰 — 13 과 같은 재화 */
+  if(p.once) S.dia += p.once;                        /* 리본 «구매 즉시 보석 지급» */
+  /* 리본 «매일 보석 지급» 의 기산점. 지금 찍어 두면 첫 일일분은 24시간 뒤에 들어온다 */
+  S.pass.dailyAt = S.pass.dailyAt || {};
+  S.pass.dailyAt[p.id] = Date.now();
+  uiDirty = true; save();
+  return { cp:S.mileage || 0, dia:S.dia };
+}
+/* 결제가 없는 동안 지급 경로를 실제로 굴려 보기 위한 유일한 디버그 진입점(44 devBuyDia 와 같은 꼴) */
+window.devBuyPass = id => grantPass(id);
+
+/* 151 — 리본 «매일 보석 지급». 시각 기준이라 **꺼 둔 동안도 그대로 쌓인다**(서버 없음).
+   기간제 이용권은 만료 시각을 넘겨서는 세지 않는다. 반환값은 이번에 지급한 다이아. */
+function passDailyTick(){
+  if(!S.pass) return 0;
+  const now = Date.now();
+  S.pass.dailyAt = S.pass.dailyAt || {};
+  let got = 0;
+  PASS_ITEMS.forEach(p => {
+    if(!p.daily || !passOwned(p.id)) return;
+    const t0 = S.pass.dailyAt[p.id];
+    if(!Number.isFinite(t0) || t0 <= 0){ S.pass.dailyAt[p.id] = now; return; }
+    /* 기간제는 «만료 시각까지» 만 — 만료 뒤 다시 사면 그 시점부터 다시 센다 */
+    const end = p.perm ? now : Math.min(now, passAutoUntil());
+    const n = Math.floor((end - t0) / PASS_DAY_MS);
+    if(n <= 0) return;
+    S.pass.dailyAt[p.id] = t0 + n * PASS_DAY_MS;
+    S.dia += n * p.daily; got += n * p.daily;
+  });
+  if(got){ uiDirty = true; save(); }
+  return got;
+}
+setInterval(passDailyTick, 60000);        /* 온라인 — 1분마다. 오프라인분은 로드 직후 1회로 정산된다 */
+let passDailyPend = 0;                    /* 로드 정산분 — 149 규칙대로 «단순 안내» 는 토스트로 */
+
+/* 구매 — 44 규칙대로 «결제 미연동» 이라 다이아로 산다. 지급 지점은 grantPass() 하나뿐이다. */
+function buyPass(id){
+  const p = PASS_ITEMS.find(x => x.id === id);
+  if(!p || passOwned(p.id)) return false;
+  /* 125 — 화폐 표시는 CUR_ICON 이미지로. 모달 «제목» 에는 아이콘을 넣지 않는다(showModal 이 글자로 흘린다) */
+  if(S.dia < p.dia){ notify(curIc('dia') + ' <b>' + fmt(p.dia - S.dia) + '</b> 더 필요합니다'); return false; }
+  S.dia -= p.dia;
+  grantPass(p.id);                                   /* 151 — 효과·쿠폰·즉시 보석이 여기 한 곳에 모인다 */
+  renderUI();
   renderPassPage($('shopList'));
+  fxReward();                                        /* 58 — «얻은 순간» 피드백 */
   popup(p.n + ' 이용권', '<p>' + p.nt + '</p>'
+    + (p.once ? '<p>' + curIc('dia') + ' <b>' + fmt(p.once) + '</b> 즉시 지급</p>' : '')
+    + (p.daily ? '<p>매일 ' + curIc('dia') + ' <b>' + fmt(p.daily) + '</b> 지급</p>' : '')
+    + (p.cp ? '<p>' + curIc('mile') + ' 마일리지 쿠폰 <b>+' + p.cp + '</b></p>' : '')
     + '<p>' + (p.perm ? '평생 적용됩니다.' : PASS_ABLESS_DAYS + '일간 적용됩니다.') + '</p>');
   return true;
 }
@@ -22021,7 +22219,8 @@ function renderUI(){
 }
 
 /* ---- 오프라인 보상 (화면 01) ---- */
-const OFF_MAX_H = 6;                        /* 최대 적립 시간 */
+/* 기본 상한 `OFF_MAX_H` 와 이용권 반영 상한 `offMaxH()` 는 **151 이용권 블록**(위쪽)에 있다 —
+   PASS_ITEMS 의 불릿 문구(«최대 n시간까지 적립»)가 그 값에서 파생되기 때문이다. */
 let offPend = null;                         /* {sec, gold, dia} — 아직 안 받은 보상 */
 
 const hhmm = sec => Math.floor(sec/3600) + '시간 ' + Math.floor(sec%3600/60) + '분';
@@ -22029,7 +22228,7 @@ const hhmm = sec => Math.floor(sec/3600) + '시간 ' + Math.floor(sec%3600/60) +
 /* 보상을 계산해 팝업을 띄운다. mul 배를 곱해 지급한다. */
 function showOfflineReward(sec, gold, dia){
   offPend = { sec: sec, gold: gold, dia: dia };
-  $('ofrMax').textContent = '최대 ' + OFF_MAX_H + '시간 0분';
+  $('ofrMax').textContent = '최대 ' + offMaxH() + '시간 0분';   /* 151 — 이용권 보유 시 +4시간 */
   $('ofrTime').textContent = hhmm(sec);
   $('ofrAmt').textContent = fmtG(gold);
   autoBlessLine();                            /* 124 — 자동 축복 정산 한 줄(없으면 숨김) */
@@ -22047,7 +22246,7 @@ function claimOffline(mul){
 
 function offlineReward(lastTime){
   if(!lastTime) return;
-  const sec = Math.min((Date.now()-lastTime)/1000, OFF_MAX_H*3600);
+  const sec = Math.min((Date.now()-lastTime)/1000, offMaxH()*3600);   /* 151 — 이용권 보유 시 +4시간 */
   if(sec < 60) return;
   const gold = eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5;
   const dia = Math.floor(sec/20);          /* 분당 3 다이아 */
@@ -24065,9 +24264,16 @@ loadAtlases(() => {
   /* 124 — 광고 표식 동기화 + 자동 축복 오프라인 정산. 정산을 **오프라인 보상보다 먼저** 돌려야
      «꺼 둔 동안 축복이 켜져 있던 것» 이 그 시간의 골드 배율에도 반영된다. */
   syncNoAds();
+  /* 151 — 리본 «매일 보석 지급» 오프라인분. 시각 기준이라 이 한 줄이 정산 전부다. */
+  passDailyPend = passDailyTick();
   autoBlessPend = autoBlessSettle(lastTime);
   renderUI();
   offlineReward(lastTime);
+  /* 151 — 일일 보석 정산은 «단순 안내» 라 149 규칙대로 토스트 한 줄로 알린다 */
+  if(passDailyPend){
+    const n = passDailyPend; passDailyPend = 0;
+    setTimeout(() => notify('이용권 매일 보석 ' + curIc('dia') + ' <b>' + fmt(n) + '</b> 지급'), 900);
+  }
   /* 오프라인 보상 팝업이 안 떴으면(적립 60초 미만) 정산 결과가 갈 곳이 없다 — 안내 팝업으로 알린다 */
   if(autoBlessPend){
     const r = autoBlessPend; autoBlessPend = null;
