@@ -341,6 +341,36 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
   ok('G7 보유 카드는 «이용 중» 상태 표기', G7.own && /on/.test(G7.bt) && /이용 중/.test(G7.stt),
     JSON.stringify(G7));
 
+  /* ---- G8 (작업 207) 리본 금색 판 안에서 다이아 아이콘이 정확히 가운데 ----
+     `#shopw i,em,b,u,s{display:inline-block}` 이라는 ID 특이도 태그 리셋이
+     `.pvc>.rb>b{display:flex}` 를 이겨 버리면 아이콘이 판 좌상단으로 붙는다(Δ −9.5,−9.5).
+     선택자에서 `#shopw` 가 빠지는 순간 되돌아오는 종류의 결함이라 게이트로 못 박는다. */
+  const G8 = await page.evaluate(() => {
+    const rows = [];
+    document.querySelectorAll('.pvc > .rb').forEach((rb) => {
+      const pl = rb.querySelector(':scope > b'), ic = pl && pl.querySelector(':scope > .cic'),
+            qt = rb.querySelector(':scope > u');
+      if (!pl || !ic) return;
+      const pr = pl.getBoundingClientRect(), ir = ic.getBoundingClientRect(),
+            qr = qt ? qt.getBoundingClientRect() : null;
+      rows.push({
+        who: (rb.closest('.pvc') || {}).dataset ? rb.closest('.pvc').dataset.pv + '/' + rb.className.replace('rb ', '') : '?',
+        dx: +((ir.left + ir.width / 2) - (pr.left + pr.width / 2)).toFixed(2),
+        dy: +((ir.top + ir.height / 2) - (pr.top + pr.height / 2)).toFixed(2),
+        qdx: qr ? +((qr.left + qr.width / 2) - (pr.left + pr.width / 2)).toFixed(2) : 0,
+        disp: getComputedStyle(pl).display
+      });
+    });
+    return rows;
+  });
+  ok('G8-a 리본 6줄(카드 3 × 2) 전부 잡힘', G8.length === 6, 'n=' + G8.length);
+  G8.forEach((r) => {
+    ok('G8 ' + r.who + ' 금색 판 = flex(태그 리셋에 안 짐)', r.disp === 'flex', r.disp);
+    ok('G8 ' + r.who + ' 다이아 아이콘이 판 정중앙 (|Δ| ≤ 0.6)',
+      Math.abs(r.dx) <= 0.6 && Math.abs(r.dy) <= 0.6, 'Δ=' + r.dx + ',' + r.dy);
+    ok('G8 ' + r.who + ' 수량이 판과 같은 세로축 (|Δx| ≤ 0.6)', Math.abs(r.qdx) <= 0.6, 'Δx=' + r.qdx);
+  });
+
   console.log('\n콘솔 에러: ' + (errs.length ? errs.slice(0, 5).join(' | ') : 0));
   ok('Z 콘솔 에러 0', errs.length === 0);
   console.log('\nVERIFY151 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

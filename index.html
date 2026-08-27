@@ -5783,7 +5783,13 @@
   .pvc>.rb>i{color:#ECE975;font-size:34px;line-height:38px;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
   /* 금색 판 + 보석 — ref 는 리본 위로 19px 솟고 수량은 리본 아래로 내려간다 */
-  .pvc>.rb>b{position:absolute;right:var(--gx);top:-19px;width:91px;height:91px;border-radius:20px;
+  /* ⚠ 207 — 선택자에 `#shopw` 를 붙여 두는 것이 이 규칙의 핵심이다.
+     이 페이지에는 4356행 `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block}`
+     이라는 **ID 특이도(1,0,1)** 태그 리셋이 있어서, 클래스만으로 쓴 `.pvc>.rb>b`(0,3,1) 의
+     `display:flex` 가 조용히 진다 — `align-items/justify-content` 는 남고 display 만 블록화돼
+     안의 `.cic` 이 가운데가 아니라 **판 안쪽 좌상단**에 붙었다(실측 Δ −9.5,−9.5 = 여백 19 의 절반).
+     `#shopw` 안에서 i·em·b·u·s 에 display 를 새로 주는 규칙은 전부 이 리셋을 이겨야 한다. */
+  #shopw .pvc>.rb>b{position:absolute;right:var(--gx);top:-19px;width:91px;height:91px;border-radius:20px;
     border:6px solid #FDC532;background:#D47D14;display:flex;align-items:center;
     justify-content:center;font-weight:400}
   .pvc>.rb>b>.cic{width:60px;height:60px}
