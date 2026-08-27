@@ -20908,8 +20908,11 @@ function dunRunProg(){
 let dunTtlBase = '', dunTtlPip = null;
 function dunPipTxt(r){
   if(!r || r.bossN <= 1 || isTower(r.d)) return '';
+  /* 남은 놈이 **앞쪽**에 찬다 — 3마리 중 1마리를 잡으면 ●●○ 다(등재문 ③ 의 표기 그대로).
+     잡은 쪽을 앞에 두면 «○●●» 가 되어 «몇 마리 남았나» 가 한눈에 안 읽힌다. */
+  const left = clamp(r.bossN - r.bossKilled, 0, r.bossN);
   let s = ' ';
-  for(let k = 0; k < r.bossN; k++) s += (k < r.bossKilled ? '○' : '●');
+  for(let k = 0; k < r.bossN; k++) s += (k < left ? '●' : '○');
   return s;
 }
 /* HUD 갱신 — drawHud() 가 매 프레임 부른다(28 의 drawBossHud 와 같은 자리) */
