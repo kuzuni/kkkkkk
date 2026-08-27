@@ -8,7 +8,8 @@
      ④ 텍스트·썸네일 bbox 불변 · 클릭 히트 불변
      ⑤ 썸네일 0s / 0.4s 캡처 픽셀 차 > 0 · 슬롯 밖 잉크 0
      ⑥ 03 리스트 스크롤 중 fps 표(지시 원문 «≥ 55fps». 이 러너는 소프트웨어 합성이라 절대 fps 가 안 나온다 —
-       판정은 239 가 «중앙 프레임 시간 비 · 떨군 프레임 비율» 로 옮겼다. §7 주석 참고)
+       239 가 «중앙 프레임 시간 비 · 떨군 프레임 비율» 로 옮겼고, **246 이 다시 «비싼 상태 · 합성 전용 속성 ·
+       카드당 레이어 면적» 이라는 폭 0 의 축으로 옮겼다**. 시간 판정은 `V121_PERF=1` 옵트인. §7 주석 참고)
      ⑦ 잠금 카드는 배경·썸네일 정지
 
    주의(LESSONS 29-②·28-③): «움직였는가» 를 애니메이션 플래그가 아니라 **픽셀**로 판정한다.
@@ -378,13 +379,76 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     await p.waitForTimeout(400);
   }
 
-  sec('§7 스크롤 fps — 카드가 전부 도는 채로 03 리스트를 굴린다');
+  sec('§7 스크롤 성능 예산 — 배경 레이어가 스크롤을 잡아먹지 않는다');
+  /* ⚠ **246(2026-08-27) — 판정을 시간 축에서 구조·작업량 축으로 옮겼다. 문턱을 늘린 것이 아니라 자를 바꿨다.**
+     239 는 «중앙 프레임 시간 비 ≤ 1.15» 와 «떨군 프레임 비율 ≤ 기준 +30%p» 를 판정으로 골랐는데,
+     이 클라우드 러너에서는 코드를 한 줄도 안 바꾼 채 그 두 줄이 상시 빨갛다(146/148).
+     `node tools/probe246.js` 가 그 이유와 대안을 같은 표에서 보여 준다 —
+
+       주입        중앙프레임 비(3쌍)        >40ms ON      카드당 레이어 면적   비싼 상태 / 애니 속성
+       none        1.50 · 1.00 · 1.50        99~100%       3.76배               없음 / [transform]
+       brightness  2.00 · 2.00 · 2.00        100%          3.76배               filter=brightness(1.02)
+       blur(3px)   2.50 · 2.49 · 2.49        100%          3.76배               filter=blur(3px)
+       layout주입  2.00 · 2.00 · 1.99        99~100%       3.76배               없음 / [transform, **width**]
+       레이어 4배  1.50 · 1.00 · 1.00        98~100%       **15.05배**          없음 / [transform]
+
+     ① 소프트웨어 합성(SwiftShader)이라 프레임 시간이 16.7ms 배수로 **양자화**된다. ON 이 한 칸
+        (33.4 → 50.1) 밀리면 비가 곧바로 **1.50** 이고, 그 1.50 은 239 가 «회귀 주입 값» 으로 적어 둔 수다 —
+        **무회귀대와 회귀대가 같은 칸에서 겹친다**(위 표 1행 vs 나머지). 자가 초록·빨강 어느 쪽도 뜻하지 않는다.
+     ② 더 나쁜 것은 시간 축이 **진짜 회귀를 놓친다**는 것이다 — 레이어 면적을 4배로 부풀린 마지막 행에서
+        중앙 프레임 비는 1.00(초록)이다. >40ms 비율도 무회귀에서 이미 99~100% 라 머리끝까지 포화돼 있다.
+     ③ 반대로 구조·기하 축은 **폭이 0**이고(같은 값이 3쌍 내내) 주입 4종을 전부 잡는다.
+     → 판정은 아래 세 축이 한다. 시간 표는 **그대로 출력하되 기록만** 하고, 절대·상대 시간 판정은
+        `V121_PERF=1` 을 준 전용 러너에서만 켠다(237 이 verify114 [8] 에서 간 길과 같다.
+        LESSONS 121-14 «임계값을 낮춰 초록을 만들지 마라» 를 어기지 않는 길은 «더 낮은 문턱» 이 아니라
+        «흔들리지 않는 양» 이다).
+     ⚠ 축을 갈았으면 **회귀를 주입해 빨간지** 확인하는 것까지가 한 벌이다(LESSONS 132) — 위 표가 그 확인이고,
+        `node tools/probe246.js [brightness|blur|layout|big]` 로 언제든 다시 뽑는다. */
+
+  /* .bgm 계열의 «비싼 상태 · 애니메이션이 건드리는 속성 · 카드당 레이어 면적» 을 한 번에 읽는다.
+     셋 다 스크롤을 돌리지 않고 얻는 양이라 러너 부하와 무관하다(폭 0). */
+  const bgmShape = () => p.evaluate(() => {
+    const EXP = ['filter', 'backdropFilter', 'boxShadow'];
+    const bad = [], props = new Set(), per = [];
+    for (const el of document.querySelectorAll('#dunList .dnc>.bgm')) {
+      const cr = el.parentElement.getBoundingClientRect();
+      let a = 0;
+      for (const pe of ['::before', '::after']) {
+        const cs = getComputedStyle(el, pe);
+        a += (parseFloat(cs.width) || 0) * (parseFloat(cs.height) || 0);
+        EXP.forEach(k => { const v = cs[k]; if (v && v !== 'none') bad.push(pe + ' ' + k + '=' + v); });
+      }
+      const cs = getComputedStyle(el);
+      EXP.forEach(k => { const v = cs[k]; if (v && v !== 'none') bad.push('.bgm ' + k + '=' + v); });
+      if (cr.width * cr.height) per.push(+(a / (cr.width * cr.height)).toFixed(2));
+      for (const an of (el.getAnimations ? el.getAnimations({ subtree: true }) : [])) {
+        let kf = []; try { kf = an.effect.getKeyframes(); } catch (_) {}
+        kf.forEach(f => Object.keys(f).forEach(k => {
+          if (!['offset', 'computedOffset', 'easing', 'composite'].includes(k)) props.add(k);
+        }));
+      }
+    }
+    return { bad: [...new Set(bad)], props: [...props].sort(), per };
+  });
+  /* 두 서브탭을 다 본다 — 레이드 테마만 opacity(bgmFlash)를 쓰고 ::after 가 더 높다(--bgh2). */
+  const shRaid = await bgmShape();
   await p.evaluate(() => setDunSub('dun'));
   await p.waitForTimeout(600);
-  /* ⚠ 이 러너의 크로미움은 소프트웨어 렌더(SwiftShader)라 «절대 55fps» 는 배경을 통째로 꺼도 안 나온다
-     (기준 30.3fps 실측). 그래서 지시의 «≥55fps» 를 **같은 러너에서 잰 기준 대비 손실률**로 옮긴다 —
-     .bgm 을 내린 상태를 기준으로 잡고, 배경을 켠 상태가 그 90% 이상이면 통과다.
-     절대 fps 표는 그대로 출력한다(지시 «스크롤 fps 표»). 실기기 60fps 환경에서는 손실률 그대로 55fps 이상이 된다. */
+  const shDun = await bgmShape();
+  const shBad = [...new Set([...shRaid.bad, ...shDun.bad])];
+  const shProps = [...new Set([...shRaid.props, ...shDun.props])].sort();
+  const shPer = [...shRaid.per, ...shDun.per];
+  const shMax = Math.max(...shPer);
+  const COMPOSITED = ['opacity', 'transform'];
+  ok(shBad.length === 0,
+    `비싼 상태 0건 — .bgm·의사요소에 filter·backdrop-filter·box-shadow 없음 (${shBad.join(' · ') || '없음'})`);
+  ok(shProps.length > 0 && shProps.every(k => COMPOSITED.includes(k)),
+    `배경 애니메이션이 합성 전용 속성만 건드린다 [${shProps.join(', ')}] ⊆ [transform, opacity] ` +
+    `(레이아웃·페인트 유발 속성이 끼면 매 프레임 메인 스레드가 돈다)`);
+  ok(shPer.length > 0 && shMax <= 6,
+    `카드당 애니메이션 레이어 면적 최대 ${shMax}배 ≤ 6배 (실측 던전 3.76 · 레이드 4.78 · 폭 0 · 레이어 4배 주입 시 19.11)`);
+
+  /* ---- 아래는 기록용 시간 표. 판정은 V121_PERF=1 일 때만 켠다(위 주석 ③). ---- */
   const runFps = () => p.evaluate(() => new Promise(res => {
     const el = document.getElementById('dunList');
     const ts = []; let n = 0, dir = 1;
@@ -443,15 +507,24 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
      이 자는 초록·빨강 어느 쪽도 뜻하지 않는다(같은 트리가 실행마다 양쪽에 다 떨어진다).
      같은 6쌍에서 **중앙 프레임 시간 비는 1.00 이 6/6**(폭 0.00)이고 회귀를 넣으면 **1.50** 으로 뛴다.
      «떨군 프레임(>40ms) 비율» 도 무회귀 4.2~13.4% vs 회귀 53.8~100% 로 갈린다.
-     → 판정은 이 두 축이 한다. 평균 유지율과 하위 5% 는 **표에 그대로 남기되 기록만** 한다
+     → **(246 로 폐기 — 아래 두 줄은 이제 `V121_PERF=1` 옵트인이다.** 이 러너에서는 «중앙 프레임 시간 비» 도
+        양자화 때문에 무회귀에서 1.50 을 찍어 회귀대와 겹치고, 레이어 면적 4배 회귀는 1.00 으로 놓친다.
+        §7 머리 주석의 표 참고.) 평균 유지율과 하위 5% 는 **표에 그대로 남기되 기록만** 한다
      (LESSONS 121-14 «임계값을 낮춰 초록을 만들지 마라» 를 어기지 않는 길은 «더 낮은 문턱» 이 아니라
      «흔들리지 않는 양» 이다 — 237 이 verify114 [8] 에서 가는 길과 같다).
      ⚠ 판정 축을 갈았으면 **회귀를 주입해 빨간지** 확인하는 것까지가 한 벌이다(LESSONS 132):
      `node tools/probe239.js C` 가 그 확인이고, 위 두 축은 주입 3케이스에서 전부 빨갛다. */
-  ok(fpsOn.med <= fpsOff.med * 1.15,
-    `중앙 프레임 ${fpsOn.med}ms ≤ 기준 ${fpsOff.med}ms × 1.15 (스크롤 체감 유지 · 회귀 주입 시 1.50배)`);
-  ok(longOn <= longOff + 30,
-    `떨군 프레임(>40ms) ON ${longOn}% ≤ 기준 ${longOff}% + 30%p (무회귀 실측 최대 13.4%p · 회귀 주입 53.8~100%)`);
+  /* 246 — 이 두 줄은 **GPU 합성이 있는 기기**에서만 뜻이 있다. 기본 실행에서는 값만 찍고(위 표),
+     `V121_PERF=1 node tools/verify121.js` 로 켠다. 그 값은 러너 부하와 함께 움직인다는 것을 알고 볼 것. */
+  if (process.env.V121_PERF) {
+    ok(fpsOn.med <= fpsOff.med * 1.15,
+      `[V121_PERF] 중앙 프레임 ${fpsOn.med}ms ≤ 기준 ${fpsOff.med}ms × 1.15 (스크롤 체감 유지 · 회귀 주입 시 1.50배)`);
+    ok(longOn <= longOff + 30,
+      `[V121_PERF] 떨군 프레임(>40ms) ON ${longOn}% ≤ 기준 ${longOff}% + 30%p (무회귀 실측 최대 13.4%p · 회귀 주입 53.8~100%)`);
+  } else {
+    console.log(`  (판정 아님) 중앙 프레임 ON ${fpsOn.med}ms / 기준 ${fpsOff.med}ms = ${(fpsOn.med / fpsOff.med).toFixed(2)}배` +
+      ` · 떨군 프레임 ON ${longOn}% / 기준 ${longOff}%  — 시간 판정은 V121_PERF=1 에서만 (§7 주석 246)`);
+  }
 
   sec('§8 콘솔');
   ok(errs.length === 0, `콘솔 에러 0건 (${errs.slice(0, 3).join(' | ')})`);
