@@ -54,7 +54,11 @@ const ROOT = path.resolve(__dirname, '..');
 /* 페이지 안에서 가상 rAF 로 보스전을 돌리며 보스↔플레이어 거리를 10Hz 로 샘플링 */
 const RUN = async ({ frames, sampleEvery, stage }) => {
   S.stage = stage; S.best = Math.max(S.best || 1, stage); S.bossFarm = false;
-  spawnStage();                                   /* 보스 단독 스폰(28) */
+  spawnStage();
+  /* 172(2026-08-27) — 162 이후 `spawnStage()` 는 «몹 구간» 만 깐다(보스는 50킬 뒤 `startBoss()`).
+     이 게이트는 그 전제(구 `isBossStage` → 보스 단독 스폰)로 쓰여 있어 162 이후 «보스 없음 300»
+     으로 항상 FAIL 했다. 재는 대상은 그대로 «보스전» 이므로 여기서 보스 구간을 직접 연다. */
+  startBoss();                                    /* 보스 단독 스폰(28·162) */
   const reach = ETYPE.boss.r + player.r + 6;
   const NEAR = reach + 20;                        /* «붙었다» 판정 반경 */
   let n = 0, away = 0, near = 0, sumD = 0, maxD = 0, prev = null, noBoss = 0;
@@ -68,6 +72,9 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
        무적으로 두는 이유: 세이브를 비우고 시작하므로 플레이어는 «강화 0» 상태이고,
        stage 10 보스(dmg ×22) 앞에서 몇 초 만에 죽어 표본이 끊긴다. 추격 «거동» 만 재기 위한 처리다. */
     if (b0) b0.hp = b0.max;
+    /* 172 — 30초 제한(BOSS_SEC)이 표본 끝에서 failBoss() 를 부르면 보스가 사라져 마지막 표본이 오염된다.
+       거동만 재는 하니스 조건이라 제한 시간을 재충전한다(이동 로직은 원본 그대로). */
+    bossT = 9999;
     player.inv = 9; player.hp = stat.maxHp; player.dead = 0;
     const cd0 = b0 ? b0.cd : null;
     window.__v66tick();
