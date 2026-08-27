@@ -230,6 +230,23 @@ const CARDS = `(function(){
     `02 캔버스가 초상화 카드 안(${d5.hudArt.w}×${d5.hudArt.h})`);
   /* 이모지 잉크(19 ≈104px · 02 ≈66px) 대역을 벗어나 «아트 자리» 가 커지거나 작아지지 않았는가 */
   ok(d5.pf.sig === d5.hud.sig, '두 자리가 픽셀까지 같은 그림이다');
+  /* 실사용 — 캔버스가 초상화 «버튼»(#profBtn) 위에 얹혔으므로 진짜 포인터 클릭이 아직 통하는지
+     본다(LESSONS 65-② · 74 탭 유실). 캔버스는 이벤트를 막지 않아야 한다. */
+  await p.evaluate(() => closeProfile());
+  await p.waitForTimeout(200);
+  /* ⚠ 시계로 기다리면 안 된다 — 19 를 닫아도 60 쥬시의 «닫힘» 연출이 도는 동안 `#pfw` 가
+     그 점을 계속 덮고 있어서(실측: 400ms 뒤에도 elementFromPoint = pfw) 클릭이 오버레이로 간다.
+     **그 점의 최상위 요소가 초상화 버튼 안으로 들어올 때까지** 기다린다(smoke 의 jz 대기와 같은 규칙). */
+  await p.waitForFunction(() => {
+    const cv = document.getElementById('porCv'); if (!cv) return false;
+    const r = cv.getBoundingClientRect();
+    const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return !!(e && e.closest && e.closest('#profBtn'));
+  }, null, { timeout: 5000 });
+  await p.click('#top .pface canvas');
+  await p.waitForTimeout(400);
+  ok(await p.evaluate(() => document.getElementById('pfw').classList.contains('on')),
+    '헤더 초상 캔버스를 진짜로 클릭하면 19 프로필이 열린다(캔버스가 클릭을 안 먹는다)');
 
   /* ── §6 ③ 코스튬을 갈아입으면 같이 바뀐다 ── */
   console.log('§6 ③ 코스튬 추종 — 50 시트·전투와 같은 색');
@@ -298,7 +315,7 @@ const CARDS = `(function(){
       const out = { tabs: document.querySelectorAll('#pfw .pf-tab').length, esc: 0 };
       /* 201 이 만들거나 옮긴 요소만 잰다. ⚠ `#pfw .pf`(패널 껍데기)는 **일부러 뺐다** —
          top431 + h1396 = 1827 이라 9:16(frameH 1600)에서 바닥 227px 이 원래부터 프레임 밖이고
-         (`.pf-btn` +55 · `.pf-tgl` +187), 이는 201 과 무관한 19 구간의 결함이라 **작업 239 로 등재**했다.
+         (`.pf-btn` +55 · `.pf-tgl` +187), 이는 201 과 무관한 19 구간의 결함이라 **작업 241 로 등재**했다.
          남의 결함을 내 게이트가 «측정 대상» 으로 안고 가면 빨강이 내 것처럼 보이고,
          반대로 문턱을 그 값에 맞춰 열어 주면 진짜 회귀를 못 본다(233-①). */
       ['#pfw .pf-tab', '#pfw .pf-grid', '#pfPor', '#porCv'].forEach(s => {
@@ -308,7 +325,7 @@ const CARDS = `(function(){
            || q.top < app.top - 0.5 || q.bottom > app.bottom + 0.5) out.esc++;
         });
       });
-      /* 239 의 현재 값을 «표에» 남긴다(233-③) — 고쳐지면 0 이 되고, 나빠지면 여기서 먼저 보인다 */
+      /* 241 의 현재 값을 «표에» 남긴다(233-③) — 고쳐지면 0 이 되고, 나빠지면 여기서 먼저 보인다 */
       const pf = document.querySelector('#pfw .pf').getBoundingClientRect();
       out.pfOver = Math.round(Math.max(0, pf.bottom - app.bottom));
       const cv = document.getElementById('pfPor');
@@ -320,7 +337,7 @@ const CARDS = `(function(){
     eq(`[${h}] 탭 1칸`, r.tabs, 1);
     eq(`[${h}] 201 구간 요소의 프레임 밖 이탈`, r.esc, 0);
     ok(r.ink > 500, `[${h}] 초상 스프라이트가 그려져 있다 (${r.ink}px)`);
-    console.log('      · [' + h + '] 참고 — .pf 바닥 프레임 밖 ' + r.pfOver + 'px (201 무관 · 작업 239 등재분)');
+    console.log('      · [' + h + '] 참고 — .pf 바닥 프레임 밖 ' + r.pfOver + 'px (201 무관 · 작업 241 등재분)');
   }
   eq('콘솔/런타임 에러', errs.length, 0, errs.slice(0, 3).join(' | '));
 
