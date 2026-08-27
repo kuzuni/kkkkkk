@@ -5326,8 +5326,24 @@
     box-shadow:inset 0 0 0 2px #8A6732,0 0 0 1px #35210F;
     /* 7회차: 글로우 중심을 좁혀 슬롯 내부 평균 휘도 감쇠(G — ref 55 vs 99, +80% 지적) */
     background:radial-gradient(circle at 50% 46%,var(--cg) 0%,var(--ce) 62%)}
-  .rw-c>i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:126px;line-height:1}
+  /* 191 «아이콘이 전부 옆으로 밀림» — **상자가 글리프보다 좁아서 가운데 정렬이 통째로 무효였다.**
+     이모지 advance 는 126px × 1.248 = **157.2px** 인데 옛 상자는 `inset:0` = 슬롯 151 − 테두리 4×2
+     = **143px** 이라 14.2px 이 넘친다. 넘치는 순간 `justify-content:center` 도 `text-align:center` 도
+     **start 로 떨어진다**(둘 다 «남는 여백» 을 나눠 주는 규칙이라 여백이 음수면 할 일이 없다 —
+     둘을 차례로 넣어 보고 실측으로 확인했다. 넣어도 Δ 는 +7.11 그대로였다).
+     그래서 advance 좌변이 상자 좌변에 물리고 초과분이 **전부 오른쪽으로만** 흘러 10칸이 **똑같이**
+     +7.11px 밀렸다 — 주인이 «개별이 아니라 다 밀렸다» 고 본 것이 이것이다.
+     처방은 정렬 속성이 아니라 **상자를 글리프보다 넓히는 것**: 좌우 −40px(= `.rw-c>u` 와 같은 폭)이면
+     상자 223 > advance 157.2 라 여백이 +65.8 로 양수가 되어 `text-align:center` 가 비로소 걸린다.
+     상자는 padding box 기준 좌우 대칭 확장이라 중심은 슬롯 중심 그대로 → 실측 10칸 전부 **Δ0.00**.
+     세로도 같은 계열이었다 — 옛 `align-items:center` + `line-height:1` 은 «126px 줄상자» 를 143 안에
+     넣을 뿐이라 폰트 ascent/descent 비대칭이 그대로 남아 advance 중심이 **8.5px 위**였다.
+     `line-height:143px` 로 반줄간격을 상자에 맞추면 **Δ−0.50** 으로 닫힌다.
+     `pointer-events:none` — 상자를 넓혔으니 클릭 판정까지 넓어지면 안 된다(부모 `.rw-c` 가 그대로 받는다).
+     ⚠ font-size 를 줄여 맞추면 안 된다 — 측정표 §「유물 아이콘 ×10」이 «~130×130» 을 못 박는다.
+     잉크 중심이 이모지마다 ±3px 다른 것은 아트 고유값이라 «아트 대기»(A4 가 스킬 24칸에서 쓴 기준). */
+  .rw-c>i{position:absolute;left:-40px;right:-40px;top:0;bottom:0;pointer-events:none;
+    display:block;text-align:center;font-size:126px;line-height:143px}
   .rw-c.off>i{filter:grayscale(.85) brightness(.5)}   /* 82 규칙 — 미보유도 어떤 유물인지 보인다 */
   .rw-c>u{position:absolute;left:-40px;right:-40px;top:123px;text-align:center;z-index:3;
     font-size:35px;color:#fff;-webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
