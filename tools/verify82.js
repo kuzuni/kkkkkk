@@ -33,23 +33,88 @@ async function meanBrightness(decoder, buf, lockRect){
   }, { b64: buf.toString('base64'), lock: lockRect });
 }
 
-/* 두 캡처(아이콘 표시/숨김)를 «아이콘 밴드(y 20~116/210) − 자물쇠 bbox» 에서 픽셀 대조.
-   카드 바탕이 밝은 색이라 «평균 밝기 상승» 대신 «달라진 픽셀 비율 + 평균 Δ» 로 가시성을 증명한다 */
-function diffStats(A, B, lock, bandRel){
-  const w = Math.min(A.w, B.w), h = Math.min(A.h, B.h);
-  const band = bandRel ? { y0: h * bandRel.y0, y1: h * bandRel.y1 }
-                       : { y0: h * 20 / 210, y1: h * 116 / 210 };
-  const k = { x0: lock.x0 * w, x1: lock.x1 * w, y0: lock.y0 * h, y1: lock.y1 * h };
-  let n = 0, changed = 0, sum = 0, brighterA = 0, brighterB = 0;
-  for(let y = Math.ceil(band.y0); y < band.y1; y++) for(let x = 0; x < w; x++){
-    if(x >= k.x0 && x <= k.x1 && y >= k.y0 && y <= k.y1) continue; /* 자물쇠 영역 제외 */
-    const i = (y * w + x) * 4;
+/* ── 225: 재는 자를 «DOM 실측» 으로 바꾼다 ────────────────────────────────────
+   옛 §0·§3 은 제외 사각형을 손으로 적었다 — 카드 178x210 기준 x 중심±34 · y 45~122.
+   진짜 자물쇠는 49x57 @ (중심±24.5 · y 55~112) 이라, 그 패딩은 **좌우 9.5px · 상하 10px**
+   더 넓다. 그 몫이 그대로 «아이콘이 보이는 자리» 였고, 잉크가 작은 아이콘
+   (🔻 48.7x42.6 · 🔥 44.5x59.7 — 자물쇠보다 작다)은 통째로 삼켜져 **0%** 가 됐다.
+   → 제외 사각형은 그 카드의 `.sk-lock`/`.lock` **bbox + 2px**(안티에일리어싱 몫)로 잰다.
+   밴드도 «20~116» 같은 상수가 아니라 그 카드 **아이콘 상자의 rect** 를 쓴다.
+   (LESSONS 221-① «게이트가 빨간 이유는 단언이 낡았다 말고 재는 법이 틀렸다도 있다») */
+function cardStats(A, B, c, sr, sx, sy){
+  const M = 2;                                    /* 자물쇠 테두리 안티에일리어싱 여유 */
+  const x0 = Math.round((c.x - sr.x) * sx), x1 = Math.round((c.x + c.w - sr.x) * sx);
+  const by0 = (c.iy - sr.y) * sy, by1 = (c.iy + c.ih - sr.y) * sy;   /* 아이콘 상자 = 밴드 */
+  const k = { x0: (c.lx - M - sr.x) * sx, x1: (c.lx + c.lw + M - sr.x) * sx,
+              y0: (c.ly - M - sr.y) * sy, y1: (c.ly + c.lh + M - sr.y) * sy };
+  let n = 0, changed = 0, sum = 0, mx = 0;
+  for(let y = Math.ceil(by0); y < by1; y++) for(let x = x0; x < x1; x++){
+    if(x >= k.x0 && x <= k.x1 && y >= k.y0 && y <= k.y1) continue;   /* 자물쇠 영역 제외 */
+    if(x < 0 || y < 0 || x >= A.w || y >= A.h) continue;
+    const i = (y * A.w + x) * 4;
     const la = (A.d[i] + A.d[i+1] + A.d[i+2]) / 3, lb = (B.d[i] + B.d[i+1] + B.d[i+2]) / 3;
-    const dd = Math.abs(la - lb); n++; sum += dd;
-    if(dd > 8){ changed++; if(la > lb) brighterA++; else brighterB++; }
+    const dd = Math.abs(la - lb); n++; sum += dd; if(dd > mx) mx = dd;
+    if(dd > 8) changed++;
   }
-  return { ratio: changed / n, mean: sum / n, brighterA, brighterB };
+  return { ratio: n ? changed / n : 0, mean: n ? sum / n : 0, max: mx, n };
 }
+
+/* 잠금 카드를 **전부** 잰다(옛 §3 은 앞에서 3장만 봤다 — 그 창 밖에 있던 «안 보이는 칸» 을
+   통째로 놓쳤고, 그래서 225 는 «한 칸» 으로 등재됐다. 실제로는 23칸 중 5칸이었다).
+   칸마다 두 번 찍으면 59칸 = 118장이라 느리므로 **스크롤 페이지 단위로 두 장씩**만 찍고
+   그 안에 통째로 들어와 있는 칸들을 잘라서 잰다. 스크롤러 밖으로 잘린 칸은 다음 페이지에서 잡는다
+   (`.sk-gp` 는 `overflow:hidden auto` 라 «rect 는 멀쩡한데 화면에는 없는» 칸이 생긴다). */
+async function scanLocked(page, decoder, o){
+  await page.evaluate(cs => {
+    document.querySelectorAll(cs).forEach((c, i) => c.setAttribute('data-v82', i));
+  }, o.cardSel);
+  const geo = await page.evaluate(sc => {
+    const e = document.querySelector(sc); if(!e) return null;
+    return { ch: e.clientHeight, sh: e.scrollHeight };
+  }, o.scroller);
+  if(!geo) return [];
+  const step = Math.max(40, geo.ch - 20);
+  const pages = Math.max(1, Math.ceil(geo.sh / step) + 1);
+  const seen = new Set(), out = [];
+  for(let p = 0; p < pages; p++){
+    await page.evaluate(({ sc, t }) => { const e = document.querySelector(sc); if(e) e.scrollTop = t; },
+                        { sc: o.scroller, t: p * step });
+    await page.waitForTimeout(140);
+    const pick = await page.evaluate(({ sc, cs, ls, is }) => {
+      const e = document.querySelector(sc), sr = e.getBoundingClientRect();
+      const list = [];
+      document.querySelectorAll(cs).forEach(c => {
+        const r = c.getBoundingClientRect();
+        if(r.y < sr.y + 1 || r.y + r.height > sr.y + sr.height - 1) return;   /* 잘린 칸 제외 */
+        const lo = c.querySelector(ls), ic = c.querySelector(is);
+        if(!lo || !ic) return;
+        const lr = lo.getBoundingClientRect(), ir = ic.getBoundingClientRect();
+        list.push({ key: c.getAttribute('data-v82'),
+                    id: c.dataset.skit || c.dataset.ptit || c.getAttribute('data-v82'),
+                    x: r.x, y: r.y, w: r.width, h: r.height,
+                    lx: lr.x, ly: lr.y, lw: lr.width, lh: lr.height,
+                    iy: ir.y, ih: ir.height });
+      });
+      return { sr: { x: sr.x, y: sr.y, w: sr.width, h: sr.height }, list };
+    }, { sc: o.scroller, cs: o.cardSel, ls: o.lockSel, is: o.iconSel });
+    const fresh = pick.list.filter(c => !seen.has(c.key));
+    if(!fresh.length) continue;
+    const clip = { x: pick.sr.x, y: pick.sr.y, width: pick.sr.w, height: pick.sr.h };
+    const shown = await page.screenshot({ clip });
+    await page.addStyleTag({ content: o.hideCss });
+    const hidden = await page.screenshot({ clip });
+    await page.evaluate(() => { const s = [...document.querySelectorAll('style')].pop(); s && s.remove(); });
+    const A = await meanBrightness(decoder, shown), B = await meanBrightness(decoder, hidden);
+    const sx = A.w / clip.width, sy = A.h / clip.height;
+    for(const c of fresh){ seen.add(c.key); out.push({ id: c.id, ...cardStats(A, B, c, pick.sr, sx, sy) }); }
+  }
+  await page.evaluate(sc => { const e = document.querySelector(sc); if(e) e.scrollTop = 0; }, o.scroller);
+  return out;
+}
+
+/* (225) 옛 `diffStats` — «상수로 적은 자물쇠 패딩 + 상수 밴드» 로 재던 함수는 지웠다.
+   판정 규칙 자체(«아이콘 표시/숨김 두 캡처에서 달라진 픽셀 비율»)는 `cardStats` 가 그대로 잇고,
+   달라진 것은 **어디를 빼고 재느냐** 뿐이다(상수 패딩 → DOM 실측 자물쇠 bbox+2px). */
 
 (async () => {
   await new Promise(ok => srv.listen(0, '127.0.0.1', ok));
@@ -79,28 +144,21 @@ function diffStats(A, B, lock, bandRel){
     await page.evaluate(() => { openWeapon(); });
     await page.waitForTimeout(500);
     await page.evaluate(() => { window.__ru82 = window.renderUI; window.renderUI = () => {}; });
-    const vals = [];
-    for(let i = 0; i < 3; i++){
-      const bb = await page.locator('#wpnw .wgc.lk').nth(i).boundingBox().catch(() => null);
-      if(!bb) continue;
-      const clip = { x: bb.x, y: bb.y, width: bb.width, height: bb.height };
-      const shown = await page.screenshot({ clip });
-      await page.addStyleTag({ content: '.wgc.lk .ic{visibility:hidden!important}' });
-      const hidden = await page.screenshot({ clip });
-      await page.evaluate(() => { const s = [...document.querySelectorAll('style')].pop(); s && s.remove(); });
-      /* .wgc 148x158 · .ic top 8 h 100 · .lock 49x55 @ left 50%-25, top 38 */
-      const lockRect = { x0: (74 - 34) / 148, x1: (74 + 34) / 148, y0: 28 / 158, y1: 100 / 158 };
-      const A = await meanBrightness(decoder, shown, lockRect);
-      const B = await meanBrightness(decoder, hidden, lockRect);
-      const st0 = diffStats(A, B, lockRect, { y0: 8 / 158, y1: 108 / 158 });
-      vals.push(st0.ratio);
-    }
+    /* 225 — 스킬·펫과 **같은 자**(자물쇠 bbox+2px · 아이콘 상자 밴드)로 재야 «같은 수준» 비교가 성립한다.
+       (LESSONS A3-ⓔ «마스크가 다르면 다른 것을 잰다» — 자가 다르면 두 값은 비교 대상이 아니다) */
+    const cal = await scanLocked(page, decoder, {
+      scroller: '#wpnGrid', cardSel: '#wpnw .wgc.lk', lockSel: '.lock', iconSel: '.ic',
+      hideCss: '.wgc.lk .ic{visibility:hidden!important}'
+    });
+    const vals = cal.map(r => r.ratio);
     await page.evaluate(() => { window.renderUI = window.__ru82; closeWeapon(); });
     if(vals.length >= 2){
       vals.sort((a, b) => a - b);
       const med = vals[(vals.length / 2) | 0];
       floor = Math.max(0.008, med / 2);
-      calTxt = '05 기준 ' + vals.map(v => (v * 100).toFixed(1) + '%').join('·') + ' → 하한 ' + (floor * 100).toFixed(1) + '%';
+      const pc = v => (v * 100).toFixed(1) + '%';
+      calTxt = '05 기준 ' + vals.length + '칸 최저 ' + pc(vals[0]) + ' · 중앙 ' + pc(med)
+             + ' · 최고 ' + pc(vals[vals.length - 1]) + ' → 하한 ' + pc(floor);
     }
     ck('§0 캘리브레이션 — 05 무기 잠금 카드 프로브 ≥2장', vals.length >= 2, calTxt || String(vals.length));
   }
@@ -153,35 +211,25 @@ function diffStats(A, B, lock, bandRel){
        st.own.every(r => r.hasIcon && !r.hasLock && r.op === 1 && r.fil === 'none'),
        st.own[0] ? st.own[0].op + ' / ' + st.own[0].fil : '(보유 0장)');
 
-    /* §3 픽셀 — 자물쇠 bbox(49x57, left 50%-24.5, top 55 / 카드 178x210)를 뺀 평균 밝기 비교.
-       게임 루프가 패널을 재렌더해 element 핸들이 떨어지므로 clip 캡처 + 전역 style 토글로 잰다 */
-    let pix = [], okAll = true;
+    /* §3 픽셀 — «자물쇠 bbox(DOM 실측)+2px 을 뺀 아이콘 상자» 에서 아이콘 표시/숨김 픽셀 대조.
+       게임 루프가 패널을 재렌더해 element 핸들이 떨어지므로 clip 캡처 + 전역 style 토글로 잰다.
+       225 — 옛 §3 은 **앞에서 3장만** 봤다. 그 창 밖의 «안 보이는 칸» 은 영원히 초록이라,
+       23칸 중 5칸이 사라진 채로 게이트가 통과하고 있었다 → 이제 **전 칸**을 잰다. */
     await page.evaluate(() => { window.__ru82 = window.renderUI; window.renderUI = () => {}; }); /* 캡처 중 재렌더 동결 */
-    const boxes = [];
-    for(let t = 0; t < 5 && boxes.length < 3; t++){
-      boxes.length = 0;
-      for(let i = 0; i < 3; i++){
-        const bb = await page.locator('#' + bodyId + ' .sk-gp .sk-card.lk').nth(i).boundingBox().catch(() => null);
-        if(bb) boxes.push(bb);
-      }
-      if(boxes.length < 3) await page.waitForTimeout(150);
-    }
-    for(const bb of boxes){
-      const clip = { x: bb.x, y: bb.y, width: bb.width, height: bb.height };
-      const shown = await page.screenshot({ clip });
-      await page.addStyleTag({ content: '.sk-gp .sk-card.lk .sk-ci{visibility:hidden!important}' });
-      const hidden = await page.screenshot({ clip });
-      await page.evaluate(() => { const s = [...document.querySelectorAll('style')].pop(); s && s.remove(); });
-      const lockRect = { x0: (89 - 34) / 178, x1: (89 + 34) / 178, y0: 45 / 210, y1: 122 / 210 };
-      const A = await meanBrightness(decoder, shown, lockRect);
-      const B = await meanBrightness(decoder, hidden, lockRect);
-      const st3 = diffStats(A, B, lockRect);
-      pix.push((st3.ratio * 100).toFixed(1) + '%/Δ' + st3.mean.toFixed(2));
-      if(!(st3.ratio >= floor)) okAll = false;
-    }
+    const rows = await scanLocked(page, decoder, {
+      scroller: '#' + bodyId + ' .sk-gp', cardSel: '#' + bodyId + ' .sk-gp .sk-card.lk',
+      lockSel: '.sk-lock', iconSel: '.sk-ci',
+      hideCss: '.sk-gp .sk-card.lk .sk-ci{visibility:hidden!important}'
+    });
     await page.evaluate(() => { window.renderUI = window.__ru82; });
-    ck('§3 ' + label + ' 미보유 3장: 자물쇠 바깥 아이콘 밴드에서 아이콘 픽셀이 보임(05 대비 하한 ' + (floor * 100).toFixed(1) + '%)',
-       okAll && pix.length === 3, pix.join(' · '));
+    rows.sort((a, b) => a.ratio - b.ratio);
+    const under = rows.filter(r => !(r.ratio >= floor));
+    const pc = r => r.id + ' ' + (r.ratio * 100).toFixed(1) + '%/Δ' + r.mean.toFixed(2);
+    ck('§3 ' + label + ' 미보유 카드 **전 칸**: 자물쇠 바깥 아이콘 상자에서 아이콘 픽셀이 보임(05 대비 하한 '
+       + (floor * 100).toFixed(1) + '%)',
+       rows.length >= 3 && under.length === 0,
+       rows.length + '칸 · 최저 ' + rows.slice(0, 3).map(pc).join(' · ')
+       + (under.length ? ' | ✗ 미달 ' + under.length + '칸: ' + under.map(r => r.id).join(',') : ''));
   }
 
   ck('콘솔 에러 0', errs.length === 0, errs.slice(0, 3).join(' | '));

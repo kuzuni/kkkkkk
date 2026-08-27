@@ -9069,8 +9069,16 @@
     color:#fff}
   .sk-card.dim>.sk-clv,.sk-card.lk>.sk-clv{color:#ACACAC}
   /* 82 — 미보유 카드도 아이콘이 자물쇠 뒤에 비쳐 보이게(05 .wgc.lk>.ic 와 동일 컨셉).
-     brightness(0) 완전 실루엣 금지(주인 지시) — 흐린 회색 */
-  .sk-card.lk>.sk-ci{opacity:.35;filter:grayscale(1)}
+     brightness(0) 완전 실루엣 금지(주인 지시) — 흐린 회색
+     225 — `grayscale(1)` 은 색을 **휘도 하나로 접는다.** 채도 높은 빨강·주황 아이콘은 접히고 나면
+     휘도가 카드 면색과 거의 같아지고, `opacity .35` 가 남은 차이를 ÷3 해서 **완전히 사라진다**
+     (실측: 💢 최대 Δ18.7 · 🌀 Δ6 · 🔥 Δ7 · 🩸 Δ1.3 — 23칸 중 5칸이 05 기준 하한 미달).
+     색상에 기대지 않는 자는 «윤곽» 뿐이라 **알파 기반 후광**을 두른다 — 검정 2px 한 겹으로 밝은
+     면색을, 흰색 2px 두 겹으로 어두운 면색을 각각 받아 낸다(면색이 무엇이든 한쪽은 반드시 대비된다).
+     `drop-shadow` 는 잉크 자체를 **한 픽셀도 옮기지 않는다** — 아트 자리 규칙(bbox) 그대로다.
+     `text-shadow` 가 아니라 `filter` 인 이유: 174 이후 펫·50 코스튬 아이콘은 글자가 아니라 `<canvas>` 다. */
+  .sk-card.lk>.sk-ci{opacity:.35;
+    filter:grayscale(1) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #fff) drop-shadow(0 0 2px #fff)}
   /* 카드 자물쇠 49x57 · 카드상단+55 */
   .sk-card>.sk-lock{left:50%;top:55px;margin-left:-24.5px}
   /* 87 — 코스튬 격자만 «상자 안» 세로 스크롤이 된다(50칸). 상자(1000x680)·카드·pitch 는
