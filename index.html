@@ -15146,7 +15146,7 @@ function makeEnemy(tk){
     tk, T:T2, x, y, r:T2.r, hp, max:hp,
     dmg: eDmg(s)*T2.dmg, gold: eGold(s)*T2.gold,
     sp: (110 + 3*s*0.2) * T2.sp * rnd(0.9, 1.1),
-    cd: rnd(0, 0.6), born:0, fx:0, kx:0, ky:0, ph:Math.random()*6.28, flip:false, slow:0,
+    cd: rnd(0, 0.6), born:0, fx:0, ph:Math.random()*6.28, flip:false, slow:0,   /* 185 — kx/ky 폐지 */
     akey:T2.atlas, anim:T2.walk, at:Math.random()*4, afps:T2.fps, aloop:true, adone:false, atkT:0
   });
 }
@@ -15692,8 +15692,11 @@ function dmgNum(x, y, v, crit, src){
   }
   nums.push({ x, y: ny, v:fmt(v), raw:v, src, t:0, crit, ox:nox });
 }
-function hitEnemy(e, dmg, crit, kx, ky){
-  e.hp -= dmg; e.fx = 0.12; e.kx += kx || 0; e.ky += ky || 0;
+/* 185 (주인 지시 2026-08-27) — «스킬 맞고 적이 밀려나지 않게». 넉백 인자(kx/ky)를 함수에서
+   아예 걷어냈다. 값만 0 으로 넘기면 «다음에 누군가 다시 채워 넣을 수 있는 문» 이 남는다.
+   피격 반응은 `e.fx`(피격 플래시) + `hitRing`(피격 링) 이 그대로 맡는다 — 지운 것은 «이동» 뿐이다. */
+function hitEnemy(e, dmg, crit){
+  e.hp -= dmg; e.fx = 0.12;
   /* 15회차 — 피격 링을 **여기** 한 곳에서 건다. 모든 피해 경로(폭발·연쇄 번개·장판·회전검·즉발·
      투사체·검기)가 이 함수를 지나므로, 경로가 아니라 «맞았다» 는 사실에 연출이 붙는다.
      ⚠ 적 몸통 중심에 건다 — 라벨(아래 dmgNum)과 같은 앵커라 «어느 적이 맞았는지» 가 한 벌로 읽힌다.
@@ -15797,7 +15800,7 @@ function areaDamage(x, y, r, dmg, col){
     if(!e) break;                       /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
     if(e.born < 0.3) continue;
     const ex = e.x-x, ey = (e.y - e.r) - y;
-    if(ex*ex + ey*ey < (r+e.r)*(r+e.r)) hitEnemy(e, d, crit, ex*0.4, ey*0.4);
+    if(ex*ex + ey*ey < (r+e.r)*(r+e.r)) hitEnemy(e, d, crit);   /* 185 — 반경 밀치기(ex*0.4) 폐지 */
   }
   burst(x, y, col || '#ffd08a', 12, 220);
   /* 114 — 모든 폭발형(화염구·운석·심판의 빛·창세의 폭발·86 area 계열)이 이 한 곳을 지난다.
@@ -15866,7 +15869,7 @@ function castGeneric(s, dmg){
         bolts.push({ x1:fx, y1:fy, x2:e.x, y2:e.y - e.r, t:0, col:s.col });
         fx = e.x; fy = e.y - e.r;
         if(s.slow) e.slow = s.slow;
-        hitEnemy(e, dmg*(crit?stat.cdmg:1), crit, 0, 0);
+        hitEnemy(e, dmg*(crit?stat.cdmg:1), crit);
         burst(e.x, e.y - e.r, s.col, 7, 190);
         n++;
       }
@@ -16046,7 +16049,7 @@ function castSkillRaw(s){
         const crit = Math.random() < stat.crit;
         bolts.push({ x1:fx, y1:fy, x2:e.x, y2:e.y - e.r, t:0 });
         fx = e.x; fy = e.y - e.r;
-        hitEnemy(e, dmg*(crit?stat.cdmg:1), crit, 0, 0);
+        hitEnemy(e, dmg*(crit?stat.cdmg:1), crit);
         burst(e.x, e.y - e.r, '#bfe4ff', 7, 190);
         n++;
       }
@@ -16071,7 +16074,7 @@ function castSkillRaw(s){
       if(!tg) return false;
       const crit = Math.random() < stat.crit;
       const d = dmg*(crit?stat.cdmg:1);
-      hitEnemy(tg, d, crit, 0, 0);
+      hitEnemy(tg, d, crit);
       const heal = Math.min(stat.maxHp*0.05, d*0.25);
       player.hp = Math.min(stat.maxHp, player.hp + heal);
       bolts.push({ x1:tg.x, y1:tg.y - tg.r, x2:px, y2:py-22, t:0, col:'#ff6b8a' });   /* 114 */
@@ -16272,7 +16275,7 @@ function step(dt){
         if(dx*dx + dy*dy < (e.r+16)*(e.r+16)){
           e.orbCd = 0.3;
           const crit = Math.random() < stat.crit;
-          hitEnemy(e, od*(crit?stat.cdmg:1), crit, Math.cos(a)*70, Math.sin(a)*70);
+          hitEnemy(e, od*(crit?stat.cdmg:1), crit);   /* 185 — 접선 밀치기(cos(a)*70) 폐지 */
           burst(bx, by, '#ffd9a0', 4, 120);
           /* 114 ② — 지속형(회전검)도 «맞는 순간» 은 투사체와 같은 문법으로 읽혀야 한다.
              칼날은 접선 방향으로 도는 중이므로 스파크는 접선 반대로 튄다 */
@@ -16296,7 +16299,7 @@ function step(dt){
         if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3) continue;
         const dx = e.x-player.x, dy = (e.y - e.r*0.7)-(player.y-20);
-        if(dx*dx + dy*dy < R*R) hitEnemy(e, d, false, 0, 0);
+        if(dx*dx + dy*dy < R*R) hitEnemy(e, d, false);
       }
     }
   }
@@ -16372,9 +16375,10 @@ function step(dt){
       /* 사거리 안에 들어오면 공격 «모션 중에만» 멈춘다 — 쿨다운 중에는 계속 붙어 따라간다 */
       if(e.atkT > 0 && d < e.r + player.r + 6) spd = 0;
     }
-    e.x += ((ax/al)*spd + e.kx) * dt;
-    e.y += ((ay/al)*spd + e.ky) * dt;
-    e.kx *= Math.pow(0.02, dt); e.ky *= Math.pow(0.02, dt);
+    /* 185 — 이동은 «추격» 하나뿐이다. 넉백 속도항(e.kx/e.ky)과 그 감쇠를 걷어냈다.
+       172 가 실측한 넉백 평균 |k| 9.5px/s(추격의 8%)만큼 진행 방향 정렬이 1.000 에 붙는다. */
+    e.x += (ax/al)*spd * dt;
+    e.y += (ay/al)*spd * dt;
     e.x = clamp(e.x, e.r, WORLD.w-e.r);
     e.y = clamp(e.y, e.r, WORLD.h-e.r);
     e.flip = dx < 0;
@@ -16536,7 +16540,7 @@ function step(dt){
                       x:ex + (b.x-ex)*0.25, y:ey + (b.y-ey)*0.25,
                       tg:e, toy:e.r - (b.y-ey)*0.25, t:0, life:0.16 });
         if(b.slow) e.slow = b.slow;
-        hitEnemy(e, dmg, crit, b.vx*0.05, b.vy*0.05);
+        hitEnemy(e, dmg, crit);   /* 185 — 투사체 관통 밀치기(b.vx*0.05) 폐지 */
         /* 12회차 AO⑩·AP② 공통 — 관통 투사체(얼음창)가 **명중한 뒤에도** 계속 날아 좌측 UI 를 덮는다.
            AO 실측: trail-2 (231.5,438) → trail-7 (81.5,168) = 772 게임px/s 로 명중 후 **219 게임px**
            (화면 폭의 41%)를 더 간다. AP 실측: trail-7 에 창 bbox 게임 x66~94/y142~185 로
@@ -16561,7 +16565,7 @@ function step(dt){
         if(!e) break;                   /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
         if(e.born < 0.3) continue;
         const dx = e.x-z.x, dy = (e.y-e.r)-z.y;
-        if(dx*dx + dy*dy < z.r*z.r) hitEnemy(e, z.dps*0.4, false, 0, 0);
+        if(dx*dx + dy*dy < z.r*z.r) hitEnemy(e, z.dps*0.4, false);
       }
       if(parts.length < PART_CAP*0.75) burst(z.x + rnd(-z.r*0.6, z.r*0.6), z.y + rnd(-z.r*0.4, z.r*0.4), '#8ce06a', 2, 40);
     }
@@ -19002,7 +19006,7 @@ function startPromo(){
   promo = { t:60, max:60, rank:r };
   const T2 = ETYPE.promo, s = S.stage, hp = eHp(s)*60;
   enemies.push({ tk:'promo', T:T2, x:player.x + 200, y:player.y, r:T2.r, hp, max:hp,
-    dmg:eDmg(s)*T2.dmg, gold:0, sp:(110+3*s*0.2)*T2.sp, cd:0.5, born:0, fx:0, kx:0, ky:0,
+    dmg:eDmg(s)*T2.dmg, gold:0, sp:(110+3*s*0.2)*T2.sp, cd:0.5, born:0, fx:0,   /* 185 — kx/ky 폐지 */
     ph:Math.random()*6.28, flip:false, slow:0,
     akey:T2.atlas, anim:T2.walk, at:0, afps:T2.fps, aloop:true, adone:false, atkT:0 });
   player.hp = stat.maxHp;
