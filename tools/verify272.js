@@ -111,18 +111,21 @@ const yes = (m, c, note) => { tot++; if (c) ok++; else fails.push(m + (note ? ' 
     const cap4 = S.eqSkill.length;
     /* 263 — 「신규 획득 자동 채움」 자체가 폐지됐다(105 의 마지막 예외). 그래서 여기서 재는 것은
        «자동 채움도 상한을 지키나» 가 아니라 «자동 채움이 아예 없나» 다 — 6종을 새로 얻어도 0칸. */
-    S.best = 1; S.eqSkill = []; S.own = {};
-    S.dia = 1e12; S.guide.idx = 99;
-    SKILLS.slice(0, 6).forEach(s => S.own[s.id] = { n: 0, l: 1 });
-    const ownB = Object.keys(S.own).length;
-    doSummon('skill', 10);                                /* 실제 획득 경로로 돌린다 */
-    const gained = Object.keys(S.own).length - ownB;
-    return { cap2, cap4, fill: S.eqSkill.length, gained };
+    S.best = 1; S.eqSkill = []; S.own = {};                /* 해금 칸 2개가 **비어 있는** 상태 */
+    S.dia = 1e12; S.guide.idx = 99;                        /* 가이드 배너 잠금(gmBlocked)을 풀어 둔다 */
+    const ownB = Object.keys(S.own).length, cntB = S.cnt.sumSkill | 0;
+    doSummon('skill', 10);                                 /* 실제 획득 경로로 돌린다 */
+    /* ★ 음성항 방지 — 「0칸」 은 소환이 실패해도 참이다. 그래서 «소환이 실제로 돌았나»(횟수 +10)와
+       «새 종이 실제로 들어왔나»(보유 증가)를 같이 들고 나간다. 미리 6종을 쥐여 주면 낮은 등급 풀이
+       전부 중복이 되어 «신규 0종» 이 나온다 — 그래서 빈 보유에서 뽑는다. */
+    return { cap2, cap4, fill: S.eqSkill.length,
+             gained: Object.keys(S.own).length - ownB, drew: (S.cnt.sumSkill | 0) - cntB };
   });
   is('스테이지 1 에서는 2칸까지만 장착', d5.cap2, 2);
   is('스테이지 10 이면 4칸까지', d5.cap4, 4);
   is('263 — 신규 획득으로는 한 칸도 자동 장착되지 않는다', d5.fill, 0);
-  yes('   ↑ 그 사이 신규 획득은 실제로 있었다(음성항 방지)', d5.gained > 0, d5.gained + '종');
+  yes('   ↑ 그 사이 소환이 실제로 돌았다(음성항 방지)', d5.drew === 10, '소환 횟수 +' + d5.drew);
+  yes('   ↑ 그 사이 새 스킬이 실제로 들어왔다(음성항 방지)', d5.gained > 0, d5.gained + '종');
 
   /* ---------------- [5-2] 구 세이브 유예 — 이미 장착한 것은 빼앗지 않는다 ---------------- */
   const d52 = await p.evaluate(() => {
