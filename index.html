@@ -15076,8 +15076,13 @@ const ETYPE = {
   /* 작업 28 — 보스는 일반 몹(좀비) 대비 체력 ×22 · 공격력 ×22 (dmg 3.0 → 22) */
   boss:   { name:'군주',     atlas:'elves',  walk:'blue_idle',  atk:'blue_attack',  die:'blue_die',
             fps:7,  scale:1.65, r:54, sp:0.48, hp:22,   dmg:22,  gold:20,  col:'#ffca5c' },
-  promo:  { name:'승급 수호자', atlas:'elves', walk:'blue_idle', atk:'blue_attack', die:'blue_die',
-            fps:7,  scale:1.9,  r:60, sp:0.55, hp:1,    dmg:4.5, gold:0,   col:'#ff6b7f' },
+  /* 208(2026-08-27, 주인 지시 «승급전 보스의 모습은 해당 코스튬 모습이어야 하고, 크기는 보스 크기여야 함») —
+     아틀라스가 `elves`(다크엘프 파랑) 에서 **`knight`(= 플레이어·아레나와 같은 몸)** 으로 바뀌었다.
+     그 위에 «이번 승급이 줄 코스튬» 의 틴트를 입혀 179 팝업 미리보기 ↔ 실전 수호자 ↔ 클리어 보상이
+     한 코스튬으로 이어진다. 아래 `scale`·`r`·`yo` 는 **폴백 값**이다 — 실제 값은 스폰 때
+     `promoType()` 이 28 보스의 «그려진 높이» 에서 역산해 갈아 끼운다(178 던전 보스와 같은 식). */
+  promo:  { name:'승급 수호자', atlas:'knight', walk:'idle',      atk:'attack_A',     die:'die',
+            fps:7,  scale:4.84, r:66, sp:0.55, hp:1,    dmg:4.5, gold:0,   col:'#ff6b7f' },
   /* 123 아레나 상대 — **몬스터가 아니라 «플레이어 스프라이트를 쓰는 특수 적»** 이다(주인 지시 ④).
      아틀라스·배율·반경을 플레이어(`drawFrame('knight', …, 1.0)` · `player.r 16`)와 같게 맞춰
      «같은 종족 1:1» 로 읽히게 한다. 체력·공격력은 ETYPE 배수를 안 쓰고 startArena 가 직접 박는다
@@ -15085,6 +15090,10 @@ const ETYPE = {
   arena:  { name:'도전자',  atlas:'knight', walk:'idle',      atk:'attack_A',     die:'die',
             fps:8,  scale:1.0,  r:16, sp:0.72, hp:1,    dmg:1,   gold:0,   col:'#ff9f6b' }
 };
+/* 208 — `ETYPE.promo` 는 승급마다 `promoType()` 이 갈아 끼우므로(178 의 `ETYPE.dunboss` 와 같은 칸 쓰기),
+   «갈아 끼우기 전» 원본을 여기서 한 번 붙잡아 둔다. 이것이 없으면 두 번째 승급전부터 스케일을
+   «이미 계산된 값» 위에 다시 계산하게 되어 배율이 누적된다. */
+const PROMO_BASE = ETYPE.promo;
 
 /* ==========================================================================
    세이브
@@ -16430,7 +16439,10 @@ function killEnemy(e){
   burst(e.x, e.y - e.r, e.T.col, big ? 46 : 13, big ? 330 : 190);
   const corpse = { akey:e.T.atlas, anim:e.T.die, at:0, afps:10, aloop:false,
                    x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:1.6, col:e.T.col, r:e.r,
-                   yo:e.T.yo || 0 };   /* 178 — 시체도 같은 발밑 보정을 이어받는다(안 그러면 죽는 순간 튄다) */
+                   yo:e.T.yo || 0,     /* 178 — 시체도 같은 발밑 보정을 이어받는다(안 그러면 죽는 순간 튄다) */
+                   /* 208 ③ — 틴트도 이어받는다. 이게 없으면 «죽는 순간 색이 벗겨진» 무틴트 기사가 된다
+                      (208 승급 수호자 · 123 아레나 도전자 둘 다 해당. 틴트 없는 적은 null 이라 불변). */
+                   tint:e.tint || null };
   corpses.push(corpse);
   if(e.tk === 'boss'){
     cam.shake = 12; bossT = 0; S.bossFarm = false;                       /* 28 — 클리어 → 자동 진행 재개 */
@@ -16443,6 +16455,10 @@ function killEnemy(e){
   /* 178 — 던전 보스는 스테이지 진행과 무관하다(스테이지 클리어도, 파밍 해제도 아니다).
      흔들림·처치음만 스테이지 보스와 같이 주고, 다음 보스는 던전 런 쪽 국면 판정이 다시 세운다. */
   else if(e.tk === 'dunboss'){ cam.shake = 12; bossKillSfx(); }
+  /* 208 ③ — 승급 수호자도 «보스 크기» 가 됐으므로 처치 대접을 같이 받는다(흔들림 + 처치음 +
+     메인 BGM 복귀). 스테이지 진행·파밍 플래그는 건드리지 않는다 — 승급전은 스테이지와 무관하고
+     그 뒷정리는 `endPromo()` 한 곳이 한다. 실패(시간 초과)로 끝난 경우의 BGM 복귀도 거기 있다. */
+  else if(e.tk === 'promo'){ cam.shake = 12; bossKillSfx(); }
 }
 /* 작업 59 — 플레이어 자동 이동 AI 상수 (구석·벽 체류 최소화).
    속도·사거리·피해는 손대지 않는다 = 밸런스 불변. 42 조이스틱 수동 중엔 적용되지 않는다. */
@@ -17906,7 +17922,8 @@ function draw(){
     const a = Math.min(1, c.life/0.6);
     const fr = curFrame(c);
     drawShadow(c.x, c.y, c.r*0.85);
-    if(!fr || !drawFrame(c.akey, fr, c.x, c.y + (c.yo || 0), c.scale, c.flip, a*0.9)){
+    if(!fr || !drawFrame(c.akey, fr, c.x, c.y + (c.yo || 0), c.scale, c.flip, a*0.9,
+                         c.tint ? tinted(c.akey, c.tint) : null)){
       ctx.globalAlpha = a*0.5; ctx.fillStyle = c.col;
       ctx.beginPath(); ctx.arc(c.x, c.y-c.r, c.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }
@@ -19959,6 +19976,30 @@ function promoCosFx(){
   }, 70 * i));
 }
 
+/* 208 — 이번 승급전 수호자의 ETYPE 항목. 178 `dunBossType()` 과 **같은 식**이다:
+   «28 스테이지 보스의 그려진 높이» 를 목표로 잡고 이 아틀라스의 프레임 높이에서 배율을 역산한다.
+   그래야 아트가 달라도(엘프 106×135 vs 기사 44×46) 화면에서 «같은 덩치» 로 읽힌다.
+     · scale — bossDrawnH() / 프레임 높이
+     · r     — 그려진 폭 × 보스의 «폭↔반경» 비(bossRK). 판정이 몸통에 붙게.
+     · yo    — 발밑 여백 차이만 내린다(그리기 전용 · e.y 는 안 건드린다)
+   틴트는 «이번 승급이 줄 코스튬» — 179 팝업 미리보기가 쓰는 `promoCos(ri)` 그 칸이라
+   미리보기 ↔ 실전 수호자 ↔ 클리어 보상이 한 코스튬으로 이어진다(주인 지시 «그 모습이어야 함»).
+   `col`(스폰 링 · 처치 파편 · 데미지 틴트)도 그 코스튬 색으로 맞춘다 — 몸 색과 파편 색이 갈리면
+   «그 코스튬을 입은 수호자» 로 안 읽힌다. 코스튬이 없는 칸(데이터가 비면)은 PROMO_BASE 그대로. */
+function promoType(ri){
+  const B = PROMO_BASE;
+  const cos = (typeof promoCos === 'function') ? promoCos(ri) : null;
+  const f = dunBossFrame({ thk:B.atlas }, B.walk);
+  if(!f) return Object.assign({}, B, cos && cos.tint ? { col:cos.tint } : null);
+  const sc = bossDrawnH() / f[3];
+  return Object.assign({}, B, {
+    scale: sc,
+    r: clamp(Math.round(f[2]*sc*bossRK()), 24, 90),
+    yo: Math.round(footGap(f, sc) - footGap(bossFrame(), ETYPE.boss.scale)),
+    col: (cos && cos.tint) || B.col
+  });
+}
+
 /* 승급전 */
 function startPromo(){
   const r = nextRank();
@@ -19969,12 +20010,27 @@ function startPromo(){
   }
   enemies.length = 0; spawnQ.length = 0;
   promo = { t:60, max:60, rank:r };
-  const T2 = ETYPE.promo, s = S.stage, hp = eHp(s)*60;
+  const ri = S.rank + 1;                 /* 도전 계급 index — openPromo 가 미리보기에 쓰는 그 칸 */
+  /* 208 — 칸 하나를 갈아 끼운다(178 `ETYPE.dunboss` 와 같은 규약). 이동·공격·시체·그리기가
+     전부 `e.T` 한 곳만 보므로 여기서 바꾸면 그 뒤로는 한 줄도 더 고칠 게 없다. */
+  const T2 = ETYPE.promo = promoType(ri), s = S.stage, hp = eHp(s)*60;
+  const cos = promoCos(ri);
   enemies.push({ tk:'promo', T:T2, x:player.x + 200, y:player.y, r:T2.r, hp, max:hp,
     dmg:eDmg(s)*T2.dmg, gold:0, sp:(110+3*s*0.2)*T2.sp, cd:0.5, born:0, fx:0,   /* 185 — kx/ky 폐지 */
     ph:Math.random()*6.28, flip:false, slow:0,
+    /* 208 ① — 123 아레나와 같은 `e.tint` 경로(전투 렌더가 `tinted(T.atlas, e.tint)` 로 그린다).
+       틴트가 없으면(코스튬 데이터가 빈 칸) img 가 null 이라 무틴트 기사로 그려진다. */
+    tint: (cos && cos.tint) || null,
     akey:T2.atlas, anim:T2.walk, at:0, afps:T2.fps, aloop:true, adone:false, atkT:0 });
   player.hp = stat.maxHp;
+  /* 208 ③ — «보스급» 은 크기만이 아니라 대접도 같이 받는다. 등장음·보스 BGM 은 28/178 보스와
+     같은 헬퍼를 그대로 쓰고, 등장 연출은 `jzFx(…, combat=true)` = **#fxlc(팝업 아래)** 라
+     184 의 «팝업 관통 금지» 를 지킨다. 풀스크린 흰 플래시(jz-wf)는 184 가 폐지했으므로 안 쓴다.
+     ⚠ 60 의 보스 훅은 `#stinfo.bfight` 토글을 관찰하는데 그 클래스는 **스테이지 보스 전용**이고
+     (승급전은 자기 HUD `#prT` 를 쓴다) 켜면 승급전 타이머가 숨는다 — 그래서 관찰자에 기대지 않고
+     같은 연출을 여기서 직접 부른다. */
+  bossInSfx(enemies[enemies.length-1]);
+  if(typeof jzFx === 'function'){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, '승급전', true); }
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
   closeModal();
 }
@@ -19982,6 +20038,10 @@ function endPromo(win){
   const r = promo.rank;
   promo = null;
   enemies.length = 0;
+  /* 208 ③ — 등장 때 `bossInSfx` 가 보스 트랙으로 갈아 놓았다. 되돌리지 않으면 메인 화면이
+     보스 BGM 을 문 채로 남는다(178 `endDunRun`·28 `failBoss` 가 같은 이유로 같은 줄을 쓴다).
+     승리 경로는 `killEnemy` 의 `bossKillSfx()` 가 이미 되돌렸고, 이 줄은 멱등이다. */
+  bgmSet('main');
   if(win){
     S.rank++;
     /* 179 — 승급전 팝업이 «클리어 보상» 으로 보여 준 코스튬을 여기서 실제로 준다.
