@@ -234,13 +234,19 @@ function safeElapsed(bless, until0, cands) {
   ok('광고 상품 클릭 → 즉시 수령(재화 증가)', claim.got === claim.want, '+' + claim.got + ' / 기대 ' + claim.want);
   ok('일일 횟수 제한은 유지된다', claim.l1 === claim.l0 - 1, claim.l0 + ' → ' + claim.l1);
 
+  /* ⚠ 190 이후 — 10 소환 칸의 ▶AD 는 **두 가지 이유**로 숨는다: ① 이용권(`#app.noads`, 이 절이 재는 것)
+     ② 오늘 «무광고 1회» 가 남아 있음(`.shp-card.nofad`). 그냥 재면 ② 때문에 항상 초록이라
+     이 단언이 «헛초록» 이 된다(LESSONS 232 ①). 그래서 먼저 ② 를 소진시켜 놓고 ① 만 남긴다. */
   const adOther = await page.evaluate(() => {
+    SHOP_BOXES.forEach(x => useFreeSum(x.b));          /* 190 ② 소진 — 뱃지를 숨길 이유를 ① 하나로 */
     document.querySelector('#shopCats [data-cat="summon"]').click();
     const b = document.querySelector('#shopList .shp-card .adbadge');
     const of = document.querySelector('.ofr-ad');
     return { sum: b ? getComputedStyle(b).display : 'missing',
+      nofad: !!document.querySelector('#shopList .shp-card.nofad'),
       ofr: of ? getComputedStyle(of).display : 'missing' };
   });
+  ok('190 ② 가 소진돼 있다(이 절이 ① 만 재는지 확인)', adOther.nofad === false, String(adOther.nofad));
   ok('10 무료 소환 ▶AD 숨김', adOther.sum === 'none', adOther.sum);
   ok('01 오프라인 «1.5배 받기» AD 숨김', adOther.ofr === 'none', adOther.ofr);
 

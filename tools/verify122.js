@@ -1377,6 +1377,16 @@ async function ampCheck(p, hosts) {
      (안쪽을 넣으면 면·글자가 섞이고, 너무 멀리 나가면 이웃 요소가 섞인다.) */
   console.log('§17 호흡 글로우·링 후광 진폭 — 상자 밖 2~14px 띠의 Δ루마');
   {
+    /* 190 — ▶AD 뱃지는 «오늘 무광고 1회» 가 남아 있는 동안 감춰진다(`.shp-card.nofad`). 그 뱃지는
+       [무료] 버튼 좌하단을 물고 있어 **링 후광 띠(바깥 2~14px) 안**에 들어오므로, 있고 없고에 따라
+       이 절의 Δ 가 흔들린다(190 도입 직후 Δ22.x → 25.5 로 밴드를 벗어났다). 122 가 재는 것은
+       «연출의 세기» 지 «오늘 광고를 봤나» 가 아니다 — 제품의 문으로 무광고분을 소진시켜
+       **뱃지가 있는** 상태(13~18회차가 잰 그 상태)로 고정하고 잰다. */
+    await p.evaluate(() => {
+      SHOP_BOXES.forEach(x => { if (freeLeft(x.b) > 0) useFreeSum(x.b); else S.daily.noAdSum[x.b] = 0; });
+      renderShopPage();
+    });
+    await p.waitForTimeout(150);
     const glowAmp = async (sel, per) => {
       const clip = await p.evaluate(s => {
         const e = document.querySelector(s);

@@ -5838,6 +5838,10 @@
   #app.noads .cn-cd>.bt>.cnt{left:9px;width:227px}
   #app.noads .shp-card>.adbadge{display:none}
   #app.noads .ofr-ad{display:none}
+  /* 190 — «오늘 무광고 1회가 남은» 상자 칸도 ▶AD 를 감춘다. 124(영구)와 **같은 표현**을 쓴다:
+     플레이어에게 두 상태는 «지금 광고 없이 뽑는다» 로 똑같고, 표식이 두 벌이면 그게 더 안 읽힌다.
+     기하는 안 건드린다 — 뱃지는 카드 직속 자식이고 버튼 3개는 자기 좌표를 그대로 쓴다(verify10). */
+  .shp-card.nofad>.adbadge{display:none}
   /* 배너는 «구매 완료» 상태 — [이동] 버튼을 회색 비활성으로 바꾼다(§8 마일리지 off 와 같은 색) */
   .cn-mv.off{cursor:default;background:linear-gradient(180deg,#B9B9B9 0,#B9B9B9 6px,#9A9A9A 6px,
     #7C7C7C 89px,#BDBDBD 89px,#BDBDBD 96px,#8A8A8A 96px,#5C5C5C 103px)}
@@ -14095,6 +14099,16 @@ const SHOP_BOXES = [
   { b:'pet',    n:'펫 상자',     ic:'🐾', hd:'#3E7A46', hr:'#5A9464', c1:'#7BD86A', c2:'#3F8F4F' }   /* 173 — «동료 상자» → «펫 상자» */
 ];
 const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/2») */
+/* 190 (2026-08-27 저장소 주인 지시 «광고 보고 소환하는 거 매일 1번씩은 광고 없이 소환할 수 있게,
+   가독성 있게 그럴 때는 광고 표시 없게») — 무료 10연 SHOP_FREE 회 중 **그날 앞의 n 회는 무광고**다.
+   ⓐ 광고 SDK 는 없으므로(124 ②) «광고를 본다» 는 지금도 **표식뿐**이다 — 즉 이 작업이 바꾸는 것은
+      «▶AD 뱃지를 언제 보이느냐» 하나이고, 소환 자체의 동작·비용·횟수는 1도 안 바뀐다.
+      «광고 절차를 지운다» 가 아니라 «지울 절차가 없다» 는 것을 여기 적어 둔다(LESSONS 189 ②).
+   ⓑ 단위는 **배너별 1회**다(PROGRESS 190 등재 «기본»). 무료 소환권 자체가 상자별 주머니라
+      계정 전체 1회로 잡으면 «어느 상자에서 썼는지» 를 또 기억해야 하고, 5칸 중 1칸만 뱃지가
+      사라져 오히려 덜 읽힌다.
+   ⓒ 소진 순서는 «무광고 먼저» 다(useFreeSum). 그래야 뱃지가 «있다 → 없다» 로 뒤집히지 않는다. */
+const SHOP_NOAD = 1;   /* 상자별 하루 «광고 없이» 소환 횟수 (SHOP_FREE 안에서 앞의 n 회) */
 
 /* 소환 레벨 1~100 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
 const SUM_MAXLV = 100;
@@ -14699,6 +14713,9 @@ const DEF = () => ({
   att:{ n:0, date:'' },                       /* 출석 누적일 / 마지막 수령일 */
   daily:{ date:'', spins:ROUL_FREE, dun: DUNGEONS.reduce((o,d) => (o[d.id]=DUN_TRY, o), {}),
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
+          /* 190 — 그 중 «광고 없이» 쓸 수 있는 남은 횟수. 키가 없는 구 세이브는 noAdSumLeft() 가
+             cap(SHOP_NOAD)으로 폴백한다(«없는 키는 cap» 관례 — freeLeft 와 같다. KEY 안 올린다). */
+          noAdSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {}),
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
@@ -14737,6 +14754,7 @@ function load(){
       if(Number.isFinite(ot) && d.daily && d.daily.date === today()) b.daily.dun.relic1 = Math.max(0, Math.min(DUN_TRY, ot | 0));
     }
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
+    b.daily.noAdSum = Object.assign(DEF().daily.noAdSum, (d.daily && d.daily.noAdSum) || {});   /* 190 */
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
     /* 153 — 동적 우편. 구 세이브엔 두 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다).
        id·수량을 여기서 한 번 정화해 두면 `mailRowHtml` 이 NaN 을 그릴 길이 없다. */
@@ -14925,7 +14943,8 @@ function dailyCheck(){
     S.daily.spins = ROUL_FREE;
     DUNGEONS.forEach(d => S.daily.dun[d.id] = DUN_TRY);
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
-    S.daily.adBuy = {};                 /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
+    S.daily.noAdSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {});   /* 190 — 무광고 1회도 매일 충전 */
+    S.daily.adBuy = {};               /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
     S.daily.q = {}; S.daily.qb = dqSnap();   /* 일일 퀘스트 리셋 (22) */
     uiDirty = true;
   }
@@ -18603,7 +18622,7 @@ $('sumBF').onclick = () => {
   if(gmBlocked(b)) return;                       /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
   if(allMaxed(BANNERS[b].list)){ doSummon(b, 10); return; }
   if(freeLeft(b) <= 0) return;
-  S.daily.freeSum[b] = freeLeft(b) - 1;
+  useFreeSum(b);                                 /* 190 — 무광고분 먼저 차감 */
   doSummonFree(b, 10);
   { const sw=$('shopw'); if(sw && sw.classList.contains('on')) renderShopPage(); }
 };
@@ -21182,6 +21201,18 @@ function drawArnHud(){
    좌표는 카드 좌상단 기준 상대좌표(측정표 §2)를 그대로 CSS 로 박았고, 여기서는 상태값만 채운다. */
 let shopCat = 'summon';
 function freeLeft(b){ const f = S.daily.freeSum && S.daily.freeSum[b]; return f == null ? SHOP_FREE : f; }
+/* 190 — 그 상자에서 오늘 «광고 없이» 쓸 수 있는 남은 무료 소환 횟수.
+   freeLeft 와 같은 «없는 키는 cap 으로 폴백» 규약이다(구 세이브는 오늘 치 1회를 받는다). */
+function noAdSumLeft(b){ const f = S.daily.noAdSum && S.daily.noAdSum[b]; return f == null ? SHOP_NOAD : f; }
+/* 190 — «다음 무료 소환이 무광고인가». 뱃지 표시의 유일한 판정식이며, 이용권(124)으로 광고를
+   영구히 지운 경우는 `#app.noads` CSS 가 따로 덮는다(두 조건은 OR 로 합성된다 — 충돌 없음). */
+function noAdSumReady(b){ return noAdSumLeft(b) > 0; }
+/* 190 — 무료 소환 1회 차감. **무광고분을 먼저** 태운다(뱃지가 «없다 → 있다» 한 방향으로만 바뀐다).
+   무료 소환을 소비하는 경로는 10 상점 카드와 12 결과 팝업 두 곳뿐이고, 둘 다 이 문으로 들어온다. */
+function useFreeSum(b){
+  if(noAdSumLeft(b) > 0){ if(!S.daily.noAdSum) S.daily.noAdSum = {}; S.daily.noAdSum[b] = noAdSumLeft(b) - 1; }
+  S.daily.freeSum[b] = freeLeft(b) - 1;
+}
 /* 73 ④ — 레퍼런스 상점 카드 가격은 «1,000 / 3,000» 쉼표 표기다(측정표 10 §21·§26).
    공용 fmt() 는 알파벳 접미사(«1.00A»)라 이 화면에서는 12 결과 팝업과 같은 쉼표 표기를 쓴다. */
 const won = n => Math.round(n).toLocaleString('en-US');
@@ -21261,7 +21292,9 @@ function renderShopPage(){
     const c10 = summonCost(x.b, 10), c30 = summonCost(x.b, 30), fl = freeLeft(x.b);
     /* 122 — `gm` = 73 가이드가 «이 상자를 소환하라» 고 지목한 칸(테두리 글로우 호흡).
        `.cbg>s.jzp` 는 상시 «빛 입자 상승» 레이어다(CSS 전용, JS 타이머 0줄). */
-    h += '<div class="shp-card' + (gmFocus === x.b ? ' gm' : '')
+    /* 190 — 오늘 무광고 1회가 남아 있으면 이 칸의 ▶AD 뱃지를 감춘다(«그럴 때는 광고 표시 없게»).
+       칸 단위 클래스인 이유: 뱃지는 카드의 직속 자식이고 상자마다 남은 횟수가 다르다. */
+    h += '<div class="shp-card' + (gmFocus === x.b ? ' gm' : '') + (noAdSumReady(x.b) ? ' nofad' : '')
       +  '" style="--hd:' + x.hd + ';--hr:' + x.hr + ';--c1:' + x.c1 + ';--c2:' + x.c2
       /* 122 6회차 — 헤더 광택의 α 를 그 칸의 헤더색에서 역산해 박는다(칸마다 세기가 같아진다) */
       +  ';--jz-ga:' + jzShineA(x.hd) + ';--jz-gd:' + jzShadeA(x.hd)
@@ -21367,7 +21400,7 @@ $('shopList').addEventListener('click', e => {
     if(gmBlocked(b)) return;                     /* 73 ③ — 무료 횟수 차감 «전» 에 막는다 */
     if(allMaxed(BANNERS[b].list)){ doSummon(b, n); renderShopPage(); return; }
     if(freeLeft(b) <= 0){ notify('<b>' + BANNERS[b].n + '</b> 무료 소환 소진 — 내일 충전'); return; }
-    S.daily.freeSum[b] = freeLeft(b) - 1;
+    useFreeSum(b);                               /* 190 — 무광고분 먼저 차감 */
     doSummonFree(b, n);
     renderShopPage();
     return;

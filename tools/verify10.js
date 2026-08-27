@@ -30,6 +30,12 @@ const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
     const set = (k, lv, exp) => { if (S.sum[k]) { S.sum[k].lv = lv; S.sum[k].exp = exp; } };
     set('weapon', 2, 100); set('shield', 2, 120); set('skill', 3, 70);
     S.daily = S.daily || {}; S.daily.freeSum = {};
+    /* 190 — ▶AD 뱃지는 이제 **상태에 달렸다**: «오늘 무광고 1회» 가 남아 있는 동안은 감춰지고,
+       그 1회를 쓴 뒤부터 나온다(주인 지시 «그럴 때는 광고 표시 없게»). 레퍼런스 10 이 찍은 것은
+       뱃지가 **보이는** 상태(= 광고 소환)이므로, 제품이 실제로 쓰는 문(`useFreeSum`)으로 그 상태를
+       만든 뒤 잰다 — 여기서 `noAdSum` 을 손으로 0 으로 적으면 그 문이 검사 밖으로 빠진다.
+       뱃지 기하는 카드 직속 자식이라 남은 횟수(2/2 → 1/2)와 무관하다. */
+    SHOP_BOXES.forEach(x => useFreeSum(x.b));
     openShopPage();
     const A = document.getElementById('app').getBoundingClientRect();
     const o = {};
