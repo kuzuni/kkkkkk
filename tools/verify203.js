@@ -105,7 +105,12 @@ const table = [];
     const after = KEYS.map(loc);
     return {
       cells: cells.length, keys: cells.map(c => c.dataset.trsub),
-      shared: bar.classList.contains('stabs') && bar.classList.contains('sp2')
+      /* 210 — 세 번째 탭 «단련» 이 붙어 칸이 3등분됐다(`.sp2` → `.sp3`).
+         203 이 여기서 재는 것은 «96 공용 부품을 쓰는가» 이지 «칸이 몇 개인가» 가 아니다 —
+         칸 수를 못 박으면 탭이 늘 때마다 여기가 빨개진다(10 상점이 124 에서 겪은 그 자리).
+         그래서 «.stabs + .spN 격자 + 자식이 전부 .stab» 으로만 본다. 훈련 탭이 안 밀린 사실은
+         아래 `pinned`/`same` 이 여전히 bbox 로 재고, 3칸 자체는 verify210 [B] 가 못 박는다. */
+      shared: bar.classList.contains('stabs') && /(^| )sp\d( |$)/.test(bar.className)
               && cells.every(c => c.classList.contains('stab')),
       pinned: KEYS.every((k, i) => JSON.stringify(before[i]) === JSON.stringify(PIN[k])),
       same: JSON.stringify(before) === JSON.stringify(after),
@@ -116,8 +121,11 @@ const table = [];
       showTrain: getComputedStyle(document.querySelector('.tr-cards')).display
     };
   }, PIN23);
-  ok(tab.cells === 2 && tab.keys.join(',') === 'train,rune', '팝업 탭이 «훈련 · 룬» 2칸', tab.keys.join(','));
-  ok(tab.shared, '96 공용 서브탭 부품(.stabs.sp2 > .stab) 을 그대로 쓴다');
+  /* 210 — «훈련 · 룬» 두 칸이 **이 순서로 앞에 있는가** 만 본다. 뒤에 탭이 더 붙는 것은
+     203 이 막을 일이 아니다(210 «단련» 이 실제로 붙었다). 칸 수 자체는 verify210 [B] 소관. */
+  ok(tab.keys.slice(0, 2).join(',') === 'train,rune' && tab.cells >= 2,
+    '팝업 탭 앞 두 칸이 «훈련 · 룬»', tab.keys.join(','));
+  ok(tab.shared, '96 공용 서브탭 부품(.stabs.spN > .stab) 을 그대로 쓴다');
   ok(tab.pinned, '★ 훈련 5요소의 박스 local 좌표가 203 이전 값과 Δ0 — 탭을 붙여도 23 이 안 밀렸다',
     tab.pinned ? '' : JSON.stringify(tab.before));
   ok(tab.same, '룬 탭에 갔다 와도 훈련 좌표가 그대로(왕복 Δ0)',

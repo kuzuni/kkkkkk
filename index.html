@@ -8897,6 +8897,74 @@
   .tr-runes>.rsum{position:absolute;left:0;right:0;top:852px;height:46px;line-height:46px;
     text-align:center;font-size:31px;color:#5E4823}
 
+  /* ── 210 단련 탭 (2026-08-27, 저장소 주인 지시 «훈련 팝업 3번째 탭») ──────────
+     203 이 세운 규약을 그대로 잇는다: **23 의 측정 좌표는 한 값도 안 건드린다.**
+     본문은 룬 본문과 «같은 자리를 번갈아» 쓰는 세 번째 형제이고, 서브탭 바는 `.sp2` → `.sp3`
+     로 칸만 3등분된다(바 자체의 left/bottom/width 불변 — 96 공용 부품이 칸을 나눈다).
+     그 사실은 게이트 verify210 [A] 가 탭 3장을 오가며 훈련 5요소 bbox 를 재서 Δ0 으로 확인한다.
+     세로 예산도 룬과 **같은 뺄셈**이다 — 쓸 수 있는 자리는 리본 자리(박스 local 34)부터
+     서브탭 바 위(954)까지 920px 이고, 그 안에
+       충전 줄 88 · 14 · 카드 222 × 3 + 줄간격 14 × 2 = 694 · 14 · 회수 줄 88  =  **898**
+     로 짠다(룬 본문과 같은 898 · 바닥 여유 22). 실제 top: 0 / 102 / 338 / 574 / 810.
+     ⚠ 카드 높이를 키우려면 이 뺄셈부터 다시 하라(게이트 [B] 가 다섯 줄의 겹침 0 을 잰다). */
+  .tr-box>.tr-temp{display:none}
+  .tr-box.temper>.tr-rib,.tr-box.temper>.tr-prog,.tr-box.temper>.tr-up,
+  .tr-box.temper>.tr-qty,.tr-box.temper>.tr-cards,.tr-box.temper>.tr-runes{display:none}
+  .tr-box.temper>.tr-temp{display:block}
+  .tr-temp{left:24px;top:34px;width:998px;height:900px}
+  .tr-temp>*{position:absolute}
+  /* 충전 줄 — 보유 포인트(왼쪽)와 «단련석 → 포인트» 버튼(오른쪽). 카드 껍데기와 같은 베벨 체계 */
+  .tr-temp>.tp-hd{left:0;top:0;width:998px;height:88px;border-radius:22px;background:#FFFDF2;
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
+  .tr-temp>.tp-hd>*{position:absolute}
+  .tr-temp>.tp-hd>.pv{left:28px;top:16px;height:56px;line-height:56px;font-size:36px;color:#2C1E10}
+  .tr-temp>.tp-hd>.pv b{color:#B4571E}
+  .tr-temp>.tp-hd>.cg{right:20px;top:12px;width:392px;height:64px;border-radius:18px;cursor:pointer;
+    text-align:center;line-height:64px;font-size:29px;color:#fff;
+    background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #3F7412}
+  /* 202 — 누를 게 없으면 회색. 상태색은 이 두 클래스가 전부다(하드코딩 분기 없음) */
+  .tr-temp>.tp-hd>.cg.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #5E594F}
+  .tr-temp>.tp-hd .cic{vertical-align:-4px;margin-right:6px}
+  /* 축 카드 3장 — 자리는 클래스로 못 박는다(nth-of-type 은 형제가 늘면 조용히 어긋난다: 203 교훈) */
+  .tr-tp{width:998px;height:222px;border-radius:26px;background:#FFFDF2;
+    box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
+  .tr-tp.k0{top:102px}
+  .tr-tp.k1{top:338px}
+  .tr-tp.k2{top:574px}
+  .tr-tp>*{position:absolute}
+  /* 아이콘 액자 — 룬 카드(.ri)와 같은 «면 + 검정 테» 규격을 축소한 것. 이모지는 아트 자리이고
+     bbox(104×104)를 정확히 차지한다(지시서 [3] «아트 자리 규칙») */
+  .tr-tp>.ti{left:26px;top:22px;width:104px;height:104px;border-radius:20px;
+    background:var(--tt,#E0654F);box-shadow:inset 0 0 0 6px #141414;
+    text-align:center;line-height:104px;font-size:62px}
+  .tr-tp>.tn{left:150px;top:18px;height:50px;line-height:50px;font-size:42px;color:#2C1E10}
+  .tr-tp>.tl{left:150px;top:72px;height:40px;line-height:40px;font-size:31px;color:#7A5A34}
+  .tr-tp>.td{left:26px;top:150px;width:560px;height:36px;line-height:36px;font-size:26px;color:#5E4823}
+  /* 지금 서 있는 구간의 1업글 비용 — 주인 지시 ⓑ-2 «UI 에 현재 구간 비용 표기» 가 이 줄이다 */
+  .tr-tp>.tc{right:26px;top:14px;width:420px;text-align:right}
+  .tr-tp>.tc>i{height:52px;line-height:52px;font-size:40px;color:#B4571E}
+  .tr-tp>.tc>s{height:32px;line-height:32px;font-size:25px;color:#7A5A34;text-decoration:none}
+  .tr-tp>.tb{right:26px;top:128px;width:300px;height:74px;border-radius:20px;cursor:pointer;
+    text-align:center;line-height:74px;font-size:31px;color:#fff;
+    background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
+  .tr-tp>.tb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
+  /* 회수 줄 — 왼쪽에 «돌려받을 총량», 오른쪽에 다이아 가격 버튼(102 «가격을 버튼에 적는다») */
+  .tr-temp>.tp-ft{left:0;top:810px;width:998px;height:88px;border-radius:22px;background:#F2E8D2;
+    box-shadow:inset 0 0 0 6px #141414}
+  .tr-temp>.tp-ft>*{position:absolute}
+  .tr-temp>.tp-ft>.rs{left:26px;top:16px;height:56px;line-height:56px;font-size:28px;color:#5E4823}
+  .tr-temp>.tp-ft>.rb{right:18px;top:11px;width:330px;height:66px;border-radius:18px;cursor:pointer;
+    text-align:center;line-height:66px;font-size:29px;color:#fff;
+    background:linear-gradient(180deg,#F0894A 0,#DF6E2C 55%,#B4571E 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #7A3A10}
+  .tr-temp>.tp-ft>.rb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
+    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #5E594F}
+  .tr-temp>.tp-ft .cic{vertical-align:-4px;margin-right:6px}
+
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
   #eqw i,#eqw em,#eqw b,#eqw u{display:inline-block;font-style:normal;text-decoration:none;
@@ -12454,12 +12522,17 @@
         <div class="tr-cards" id="trCards"></div>
         <!-- 203 — 룬 탭 본문. 훈련 탭이 켜져 있으면 display:none 이라 23 의 측정 좌표는 한 픽셀도 안 움직인다. -->
         <div class="tr-runes" id="trRunes"></div>
-        <!-- 203 ① — 팝업 탭 «훈련 · 룬». 96 공용 서브탭 부품(.stabs.sp2>.stab) 그대로이고
+        <!-- 210 — 단련 탭 본문. 룬 본문과 같은 자리를 번갈아 쓰는 세 번째 형제다. -->
+        <div class="tr-temp" id="trTemper"></div>
+        <!-- 203 ① — 팝업 탭 «훈련 · 룬». 96 공용 서브탭 부품(.stabs>.stab) 그대로이고
              자리는 03 던전(.dns-sub)과 같은 «본문 아래 바닥» 관례다. 박스 local 883(카드 바닥)~1093
-             사이의 빈 210px 에 들어가므로 훈련 탭의 기존 요소는 아무것도 안 밀린다. -->
-        <div class="stabs sp2 tr-subs" id="trSubs">
+             사이의 빈 210px 에 들어가므로 훈련 탭의 기존 요소는 아무것도 안 밀린다.
+             210 — 세 번째 탭 «단련» 이 붙어 칸이 3등분된다(`.sp2` → `.sp3`, 10 상점이 124 에서 쓴 그 칸).
+             바 자신의 left/bottom/width 는 그대로라 훈련 탭 좌표는 여전히 한 값도 안 움직인다. -->
+        <div class="stabs sp3 tr-subs" id="trSubs">
           <div class="stab on" data-trsub="train"><i class="ol3">훈련</i></div>
           <div class="stab" data-trsub="rune"><i class="ol3">룬</i><s class="bdg"></s></div>
+          <div class="stab" data-trsub="temper"><i class="ol3">단련</i><s class="bdg"></s></div>
         </div>
       </div>
     </div>
@@ -13387,6 +13460,7 @@ const CUR_ICON = {
   relic:   'assets/ui/cur-relic.svg',
   stone:   'assets/ui/cur-stone.svg',
   rstone:  'assets/ui/cur-rstone.svg',            /* 203 — 룬강화석(룬 전용) */
+  tstone:  'assets/ui/cur-tstone.svg',            /* 210 — 단련석(단련 전용) */
   mile:    'assets/ui/cur-mile.svg',
   tkGold:  'assets/ui/cur-ticket-gold.svg',
   tkDia:   'assets/ui/cur-ticket-dia.svg',
@@ -14985,6 +15059,99 @@ function runeTry(id, pay){
   return { ok:true, up, lv:runeLvOf(id), rate, pay, cost };
 }
 
+/* ==========================================================================
+   210 «단련» — 23 훈련 팝업 세 번째 탭 (2026-08-27, 저장소 주인 지시)
+   --------------------------------------------------------------------------
+   ─ 주인이 못 박은 것만 상수로 굳힌다. 그 밖의 값(효과 계수·전환비·재료 수급량)은
+     **199(최종 밸런스 비평 라운드)의 몫**이다 — 203 룬과 같은 취급이다.
+       ⓐ 공격력·체력·체력회복 3종에 **포인트 자유 배분**(골고루 강제 없음 — 한 스탯 올빵 가능)
+       ⓑ **맥스 없음**
+       ⓑ-2 업글 비용이 레벨 구간마다 **계단으로 상승** — 주인 예시 «~99: 1pt · 100~: 3pt · 200~: 6pt»
+       ⓒ **회수 = 1000 다이아**, 회수량은 계단 비용을 정확히 반영(**실제로 소모한 포인트 총량 전액**)
+       ⓓ 포인트당 효과 계수는 199 평가 대상 — 168 선형 훈련·203 룬과 겹치지 않는 **별도 축**이다
+
+   ─ **비용 계단의 연장(주인 예시 1/3/6 의 뒤)**: 구간 s(0-based)의 1업글 비용을 `(s+1)(s+2)/2`
+     로 둔다 — 1 · 3 · 6 · 10 · 15 … 삼각수다. 주인이 준 세 값과 **정확히 일치**하면서 «맥스 없음»
+     을 만족하는 가장 단순한 연장이고, 계차가 1씩 커져 상위 구간이 저절로 무거워진다.
+
+   ─ **회수 보존(ⓒ)이 이 절의 핵심 불변식**이다. 반환액은 «레벨 수 × 무엇» 이 아니라
+     `temperSpent(lv)` — 계단을 밟아 실제로 낸 총액의 **닫힌 식**이다. 투자 1회가 빼는 값과
+     같은 표를 지나므로 «투자 → 회수 → 재투자» 왕복에서 총 포인트가 **1pt 도 어긋나지 않는다**
+     (게이트 verify210 [D] 가 무작위 배분 왕복으로 확인한다).
+     ⚠ 누적 소모액을 따로 저장하지 않는 이유: 두 벌이 되면 조용히 갈라진다(203 «표기층» 교훈과 같은 자리).
+
+   ─ **88 «스탯 훈련» 의 부활이 아니다.** 88 이 폐기한 것은 «캐릭터 레벨·경험치에 연동된 포인트»
+     였고 이번은 «재료(단련석) 수급형 포인트» 다 — 레벨·경험치 개념이 없다(혼동 금지).
+   ========================================================================== */
+/* 주인 지시 ② — 단련석의 수급처 이름. 콘텐츠 본체(층 진행·클리어 판정)는 **209 «탑» 탭**의
+   구간이라 여기서는 이름만 한곳에 둔다. 33 재화 정보·단련 탭 안내가 같은 문자열을 본다. */
+const TOWER_DESPAIR_N  = '절망의 탑';
+const TEMPER_SEG       = 100;     /* 주인 확정 — 비용 계단의 구간 폭 */
+const TEMPER_RESET_DIA = 1000;    /* 주인 확정 — 회수(전액 리셋) 1회 비용 */
+const TEMPER_PT_COST   = 1;       /* 단련석 → 포인트 전환비(1:1). 199 평가 대상 */
+/* 구간 s 의 «1업글당 포인트». 주인 예시와 일치: s0=1 · s1=3 · s2=6 (그 뒤 10 · 15 …) */
+const temperSegCost = s => (s + 1) * (s + 2) / 2;
+/* 축 3종. 아이콘은 아트 자리(이모지)이고 훈련 카드와 같은 bbox 를 차지한다 */
+const TEMPERS = [
+  { k:'atk',   n:'공격력',   ic:'⚔️', tone:'#E0654F' },
+  { k:'hp',    n:'체력',     ic:'❤️', tone:'#4FA8E0' },
+  { k:'regen', n:'체력회복', ic:'✨', tone:'#8FDC33' }
+];
+/* 포인트 1당 효과(배수 −1). 축별로 **먼저 더한 뒤 bonus() 에서 한 번만** 곱한다
+   (LESSONS 91-1 · 194 코스튬 강화 · 203 룬과 같은 규칙). 값 자체는 199 의 몫이다. */
+const TEMPER_EFF = { atk:0.02, hp:0.02, regen:0.02 };
+
+const temperObj = () => (S.temper && typeof S.temper === 'object') ? S.temper : (S.temper = { pts:0, alloc:{} });
+const temperPts = () => Math.max(0, Math.floor(temperObj().pts) || 0);
+const temperLv  = k => { const a = temperObj().alloc || {}; return Math.max(0, Math.floor(a[k]) || 0); };
+/* 다음 1레벨의 비용 — «지금 서 있는 구간» 의 값이다(UI 가 이 수를 그대로 적는다: 주인 지시 ⓑ-2) */
+const temperCost = k => temperSegCost(Math.floor(temperLv(k) / TEMPER_SEG));
+/* 레벨 L 까지 올리는 데 실제로 낸 포인트 총액 — 닫힌 식.
+   f = 완주한 구간 수, rem = 그 위 남은 레벨.
+   Σ_{s<f} TEMPER_SEG·(s+1)(s+2)/2 = TEMPER_SEG · f(f+1)(f+2)/6  (+ rem × 현재 구간 비용) */
+function temperSpent(l){
+  l = Math.max(0, Math.floor(l) || 0);
+  const f = Math.floor(l / TEMPER_SEG), rem = l - f * TEMPER_SEG;
+  return TEMPER_SEG * (f * (f + 1) * (f + 2) / 6) + rem * temperSegCost(f);
+}
+const temperSpentAll = () => TEMPERS.reduce((s, t) => s + temperSpent(temperLv(t.k)), 0);
+/* 축 하나의 효과(배수 −1) — 표기·bonus()·게이트가 **같은 식**을 본다 */
+const temperVal = k => (TEMPER_EFF[k] || 0) * temperLv(k);
+const temperUpOk = k => temperPts() >= temperCost(k);
+/* 투자 1회 — 확정 구매다(확률 없음). 포인트를 빼고 그 축 레벨을 1 올린다. */
+function temperUp(k){
+  if(!TEMPERS.some(t => t.k === k) || !temperUpOk(k)) return false;
+  const o = temperObj(), c = temperCost(k);
+  if(!o.alloc || typeof o.alloc !== 'object') o.alloc = {};
+  o.pts = temperPts() - c;
+  o.alloc[k] = temperLv(k) + 1;
+  markDirty(); uiDirty = true; save();
+  return true;
+}
+/* 단련석 → 포인트 전환. n 을 안 주면 보유분 전부를 바꾼다. */
+function temperCharge(n){
+  const have = Math.max(0, Math.floor(S.tstone) || 0);
+  const use  = Math.max(0, Math.min(have, Math.floor(n == null ? have : n) || 0));
+  if(use < TEMPER_PT_COST) return 0;
+  const got = Math.floor(use / TEMPER_PT_COST), pay = got * TEMPER_PT_COST;
+  S.tstone = have - pay;
+  temperObj().pts = temperPts() + got;
+  uiDirty = true; save();
+  return got;
+}
+/* 회수(전액 리셋) — 주인 지시 ⓒ. 다이아를 내고 **소모한 포인트 총량을 전액** 돌려받는다.
+   레벨은 3축 전부 0 으로 돌아가고 포인트는 그대로 남아 즉시 재배분할 수 있다. */
+const temperResetOk = () => S.dia >= TEMPER_RESET_DIA && temperSpentAll() > 0;
+function temperReset(){
+  if(!temperResetOk()) return 0;
+  const back = temperSpentAll(), o = temperObj();
+  S.dia -= TEMPER_RESET_DIA;
+  o.alloc = {};
+  o.pts = temperPts() + back;
+  markDirty(); uiDirty = true; save();
+  return back;
+}
+
 /* ---- 유물조각 교환 (다이아 → 유물조각) ---- */
 const EXCHANGE = [
   { dia:1000,  rel:100 },
@@ -15166,6 +15333,10 @@ const DEF = () => ({
   cosLv:{},                                   /* 194 — 코스튬 id → 강화 레벨 0~COS_MAXLV(없으면 0) */
   rstone:0,                                   /* 203 — 룬강화석(룬 강화 전용 재화) */
   rune: RUNES.reduce((o,r) => (o[r.id]=0, o), {}),   /* 203 — 룬 id → 레벨 0~RUNE_MAXLV */
+  tstone:0,                                   /* 210 — 단련석(단련 포인트 전환 전용 재화) */
+  /* 210 — 단련. `pts` = 미배분 포인트 · `alloc` = 축별 투자 레벨(상한 없음).
+     누적 소모액은 저장하지 않는다 — `temperSpent(lv)` 가 계단 표에서 역산한다(두 벌 금지). */
+  temper:{ pts:0, alloc: TEMPERS.reduce((o,t) => (o[t.k]=0, o), {}) },
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스전 실패 후 그 스테이지 파밍 대기(재도전 버튼 노출) */
   /* 88 — 캐릭터 레벨·스탯 포인트·스탯 훈련 키 제거. 구 세이브의 잔존 키는 Object.assign 으로
@@ -15347,6 +15518,21 @@ function load(){
         out[r.id] = (Number.isFinite(v) && v > 0) ? Math.min(RUNE_MAXLV, Math.floor(v)) : 0;
       });
       b.rune = out;
+    }
+    /* 210 — 단련석·단련 배분. 203 과 같은 «없으면 기본값» 마이그레이션(KEY 유지).
+       구 세이브엔 두 키가 없다 → 단련석 0 · 포인트 0 · 3축 전부 Lv 0.
+       레벨은 **실재하는 축만** 남긴다. 상한은 «맥스 없음»(주인 지시 ⓑ)이라 자르지 않지만,
+       손댄 세이브가 넣은 음수·NaN·비정수는 여기서 0/내림으로 막는다 — `temperSpent()` 의
+       닫힌 식이 정수 구간 밖으로 나가면 회수 보존(ⓒ)이 깨진다. */
+    if(!Number.isFinite(b.tstone) || b.tstone < 0) b.tstone = 0; else b.tstone = Math.floor(b.tstone);
+    {
+      const t = (d.temper && typeof d.temper === 'object') ? d.temper : {};
+      const a = (t.alloc && typeof t.alloc === 'object') ? t.alloc : {}, out = {};
+      TEMPERS.forEach(x => {
+        const v = a[x.k];
+        out[x.k] = (Number.isFinite(v) && v > 0) ? Math.floor(v) : 0;
+      });
+      b.temper = { pts: (Number.isFinite(t.pts) && t.pts > 0) ? Math.floor(t.pts) : 0, alloc: out };
     }
     {
       const c = (d.cosLv && typeof d.cosLv === 'object') ? d.cosLv : {}, out = {};
@@ -15615,6 +15801,14 @@ function bonus(){
     if(ra) b.atk  *= 1 + ra;
     if(rh) b.hp   *= 1 + rh;
     if(rg) b.gold *= 1 + rg;
+  }
+  /* 210 단련 — 168 선형 훈련·203 룬과 **겹치지 않는 별도 축**이다(주인 지시 ⓓ).
+     축별로 «포인트 × 계수» 를 한 번만 곱한다(축이 하나뿐이라 합칠 것이 없지만 규칙은 같다). */
+  {
+    const ta = temperVal('atk'), th = temperVal('hp'), tr = temperVal('regen');
+    if(ta) b.atk   *= 1 + ta;
+    if(th) b.hp    *= 1 + th;
+    if(tr) b.regen *= 1 + tr;
   }
   /* 91 도감 — «받은 단계 수 × 단계당 값» 을 축별로 전부 더한 뒤 한 번만 곱한다.
      (세트마다 곱하면 37세트가 전부 만단계일 때 공격력이 ×673 까지 튄다 — COLL_BASE 주석 참고) */
@@ -19595,6 +19789,8 @@ function giveReward(r){
   if(r.stone){   S.stone += r.stone; out.push(curIc('stone') + ' ' + fmt(r.stone)); }
   /* 203 — 룬강화석(룬 강화 전용). 강화석과 같은 «숫자 그대로» 표기(150) */
   if(r.rstone){  S.rstone += r.rstone; out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
+  /* 210 — 단련석(단련 포인트 전환 전용). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
+  if(r.tstone){  S.tstone += r.tstone; out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
   if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmtG(g)); }
   if(r.frag){
@@ -23296,7 +23492,12 @@ const CURINFO = {
     get:() => S.rstone,
     d:'룬을 강화할 때 사용합니다. 룬 레벨은 룬마다 최대 ' + RUNE_MAXLV + '입니다.',
     ways:['던전 «' + (DUNGEONS.find(d => d.id === 'rstone') || {}).n + '»', 'DPS 측정장',
-          '다이아 ' + RUNE_DIA + '개로 1회 대체'] }
+          '다이아 ' + RUNE_DIA + '개로 1회 대체'] },
+  /* 210 — 단련석. 획득처는 주인 지시 ② 그대로 «절망의 탑» 한 곳이다(단일 수급처). */
+  tstone:{ ic:curIc('tstone'), n:'단련석',
+    get:() => S.tstone,
+    d:'단련 포인트로 바꿔 공격력·체력·체력회복에 자유롭게 투자합니다. 상한은 없습니다.',
+    ways:[TOWER_DESPAIR_N, '단련석 ' + TEMPER_PT_COST + ' = 단련 포인트 1'] }
 };   /* 88 — sp(스탯 포인트) 항목 폐기 */
 let curInfoKey = null;
 /* 다른 코드(검증 스크립트 포함)가 «지금 값» 을 물어볼 수 있게 얇은 접근자를 둔다 */
@@ -23621,6 +23822,7 @@ function bagCur(){
     { ic:curIc('relic'), n:'유물조각',     g:2, q:Math.floor(S.relic) || 0 },
     { ic:curIc('stone'), n:'강화석',     g:3, q:Math.floor(S.stone) || 0 },   /* 194 */
     { ic:curIc('rstone'), n:'룬강화석',   g:3, q:Math.floor(S.rstone) || 0 },  /* 203 */
+    { ic:curIc('tstone'), n:'단련석',     g:3, q:Math.floor(S.tstone) || 0 },  /* 210 */
     { ic:curIc('mile'), n:'마일리지',   g:4, q:Math.floor(S.mileage) || 0 }
   ].filter(r => r.q > 0 || r.n === '골드' || r.n === '다이아');
   const cat = [].concat(SKILLS, EQUIPS, PETS, RELICS);
@@ -24798,6 +25000,7 @@ function renderTrainLive(){
      비용·확률·버튼 상태가 재화 변동으로 바뀌므로 통째로 다시 그려도 싸다(0.35초 주기).
      ⚠ 훈련 탭일 때도 서브탭 배지(재료로 시도 가능한 룬이 생겼나)는 갱신돼야 하므로 조건 없이 부른다. */
   renderRunes();
+  renderTemper();                                       /* 210 — 단련 탭 본문 + 탭 상태 */
 }
 function renderTrain(){
   trSyncHead();
@@ -24816,26 +25019,32 @@ function renderTrain(){
     + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
   renderRunes();                                        /* 203 — 룬 탭 본문 + 탭 상태 */
+  renderTemper();                                       /* 210 — 단련 탭 본문 */
 }
 
 /* ==========================================================================
    203 룬 탭 — 23 훈련 팝업 «훈련 · 룬» 두 번째 탭 (2026-08-27, 저장소 주인 지시)
    데이터·판정은 전부 위 룬 모델(runeRate/runeVal/runeTry)을 지난다 — 여기서는 그리기만 한다.
    ========================================================================== */
-let trSub = 'train';                                    /* 'train' | 'rune' */
+let trSub = 'train';                                    /* 'train' | 'rune' | 'temper'(210) */
 /* 룬 탭 레드닷 — «지금 재료로 시도할 수 있는 룬이 있다» 일 때만(166 «누를 게 있다» 규약).
    다이아는 상시 가능하므로 점등 조건에서 뺀다 — 그러면 배지가 영원히 켜져 있다. */
 const runeAlert = () => RUNES.some(r => runeTryOk(r.id, 'mat'));
+const TRSUBS = ['train', 'rune', 'temper'];             /* 210 — 3칸 */
 function setTrSub(k){
-  trSub = (k === 'rune') ? 'rune' : 'train';
+  trSub = TRSUBS.indexOf(k) >= 0 ? k : 'train';
   renderTrain();
 }
 function renderRunes(){
   const box = document.querySelector('#trw .tr-box');
-  if(box) box.classList.toggle('rune', trSub === 'rune');
+  if(box){
+    box.classList.toggle('rune', trSub === 'rune');
+    box.classList.toggle('temper', trSub === 'temper');   /* 210 */
+  }
   document.querySelectorAll('#trSubs [data-trsub]').forEach(el => {
     el.classList.toggle('on', el.dataset.trsub === trSub);
     if(el.dataset.trsub === 'rune') el.classList.toggle('alert', runeAlert());
+    if(el.dataset.trsub === 'temper') el.classList.toggle('alert', temperAlert());   /* 210 */
   });
   const w = $('trRunes'); if(!w) return;
   /* ⚠ 이 함수는 `renderTrainLive()` 를 타고 **0.35초마다** 불린다. 무조건 innerHTML 을 갈아 끼우면
@@ -24896,6 +25105,92 @@ function runeBuy(id, pay){
   return res.up;
 }
 
+/* ==========================================================================
+   210 단련 탭 — 23 훈련 팝업 «훈련 · 룬 · 단련» 세 번째 탭 (2026-08-27, 저장소 주인 지시)
+   데이터·판정은 전부 위 단련 모델(temperCost/temperUp/temperCharge/temperReset)을 지난다 —
+   여기서는 그리기만 한다. 표기에 쓰는 식은 bonus()·게이트가 보는 그 식이다(두 벌 금지).
+   ========================================================================== */
+/* 서브탭 레드닷 — «지금 누를 게 있다» 일 때만(166 규약): 전환할 단련석이 있거나,
+   가진 포인트로 실제로 올릴 수 있는 축이 있을 때. 다이아 회수는 상시 가능하므로 뺀다. */
+const temperAlert = () => (Math.floor(S.tstone) || 0) >= TEMPER_PT_COST
+                       || TEMPERS.some(t => temperUpOk(t.k));
+function renderTemper(){
+  const w = $('trTemper'); if(!w) return;
+  /* ⚠ renderRunes 와 같은 이유로 «보이는 값이 달라졌을 때만» 다시 그린다 —
+     0.35초 주기 재렌더가 pointerdown 과 click 사이에 버튼을 지우면 탭이 통째로 유실된다
+     (LESSONS 50-① · 작업 74·142). 서명에 그리기 입력이 전부 들어간다. */
+  const sig = trSub + '|' + TEMPERS.map(t => temperLv(t.k)).join(',')
+            + '|' + temperPts() + '|' + (Math.floor(S.tstone) || 0) + '|' + Math.floor(S.dia);
+  if(w.dataset.sig === sig) return;
+  w.dataset.sig = sig;
+  const have = Math.floor(S.tstone) || 0, canCharge = have >= TEMPER_PT_COST;
+  const back = temperSpentAll(), canReset = temperResetOk();
+  let h = '<div class="tp-hd">'
+    + '<span class="pv"><i>단련 포인트 <b>' + fmt(temperPts()) + '</b></i></span>'
+    + '<span class="cg' + (canCharge ? '' : ' no') + '" data-tpchg="1"><i>'
+    + curIc('tstone', 34) + fmt(have) + ' → 포인트 ' + fmt(Math.floor(have / TEMPER_PT_COST))
+    + '</i></span></div>';
+  TEMPERS.forEach((t, i) => {
+    const l = temperLv(t.k), c = temperCost(t.k), ok = temperUpOk(t.k);
+    const seg = Math.floor(l / TEMPER_SEG);
+    h += '<div class="tr-tp k' + i + '" data-temper="' + t.k + '" style="--tt:' + t.tone + '">'
+      +  '<span class="ti">' + t.ic + '</span>'
+      +  '<span class="tn"><i>' + t.n + ' 단련</i></span>'
+      +  '<span class="tl"><i>Lv. ' + fmt(l) + '</i></span>'
+      +  '<span class="td"><i>' + t.n + ' +' + pct(temperVal(t.k))
+      +    ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]) + '</i></span>'
+      +  '<span class="tc"><i>' + fmt(c) + ' pt</i><br><s>'
+      +    (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당</s></span>'
+      +  '<span class="tb' + (ok ? '' : ' no') + '" data-tempup="' + t.k + '"><i>투자 '
+      +    fmt(c) + ' pt</i></span>'
+      +  '</div>';
+  });
+  h += '<div class="tp-ft">'
+    +  '<span class="rs"><i>회수하면 투자한 <b>' + fmt(back) + ' pt</b> 를 전액 돌려받습니다</i></span>'
+    +  '<span class="rb' + (canReset ? '' : ' no') + '" data-tpreset="1"><i>'
+    +  curIc('dia', 32) + fmt(TEMPER_RESET_DIA) + ' 회수</i></span></div>';
+  w.innerHTML = h;
+}
+/* 단련석 → 포인트 전환(보유분 전부) */
+function temperChargeBtn(){
+  if((Math.floor(S.tstone) || 0) < TEMPER_PT_COST){
+    notify(curIc('tstone') + ' <b>단련석</b>이 부족합니다 — ' + TOWER_DESPAIR_N + '에서 얻습니다');
+    sfx('err'); return false;
+  }
+  const got = temperCharge();
+  sfx('up'); fxReward();
+  notify('단련 포인트 <b>+' + fmt(got) + '</b>');
+  renderTrain();
+  return true;
+}
+/* 투자 1회 — 확정 구매다(룬과 달리 확률이 없다). 그래서 실패 문구도 «부족» 하나뿐이다. */
+function temperUpBtn(k){
+  const t = TEMPERS.find(x => x.k === k); if(!t) return false;
+  if(!temperUpOk(k)){
+    notify('단련 포인트가 부족합니다 — ' + t.n + ' 다음 1레벨 <b>' + fmt(temperCost(k)) + ' pt</b>');
+    sfx('err'); return false;
+  }
+  if(!temperUp(k)) return false;
+  sfx('up');
+  notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>');
+  renderTrain();
+  return true;
+}
+/* 회수 — 주인 지시 ⓒ. 전액이고, 돌려받는 값은 «실제로 낸 총량» 이다(계단을 정확히 반영). */
+function temperResetBtn(){
+  if(temperSpentAll() <= 0){ notify('아직 투자한 단련이 없습니다'); sfx('err'); return false; }
+  if(S.dia < TEMPER_RESET_DIA){
+    notify(curIc('dia') + ' <b>다이아</b>가 부족합니다 (' + fmt(TEMPER_RESET_DIA) + ')');
+    sfx('err'); return false;
+  }
+  const back = temperReset();
+  if(!back) return false;
+  sfx('up'); fxReward();
+  notify('단련 회수 — 단련 포인트 <b>' + fmt(back) + ' pt</b> 를 전액 돌려받았습니다');
+  renderTrain();
+  return true;
+}
+
 function openTrain(){
   if(typeof closeDungeon === 'function') closeDungeon();
   renderTrain();
@@ -24928,6 +25223,11 @@ $('trw').addEventListener('click', e => {
      확률 시도라 연타로 자원이 훅 빠지는 것을 막는다(한 번 누르면 한 번). */
   const rb = e.target.closest('[data-runebuy]');
   if(rb){ runeBuy(rb.dataset.runebuy, rb.dataset.pay); return; }
+  /* 210 — 단련 탭 세 버튼. 전부 확정 처리라 룬과 달리 «꾹 누르기» 도 확률도 없다. */
+  if(e.target.closest('[data-tpchg]')){ temperChargeBtn(); return; }
+  const tu = e.target.closest('[data-tempup]');
+  if(tu){ temperUpBtn(tu.dataset.tempup); return; }
+  if(e.target.closest('[data-tpreset]')){ temperResetBtn(); return; }
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
   if(e.target.closest('#trUp')){

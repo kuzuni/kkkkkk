@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 단련석 — 작업 210(단련 전용 재료) · 125 단일 출처
+       앞선 두 «돌» 과 형태·색이 모두 갈린다:
+         194 강화석  = 주황 육각 원석      · 203 룬강화석 = 청록 세로 비석(룬 문양 ᛉ)
+         210 단련석  = **붉은 사각 주괴(모루에서 두들긴 쇳덩이)** · 새김은 망치 문양
+       그래서 33 재화 정보·53 가방에서 셋이 한 줄에 나란히 놓여도 색·실루엣으로 즉시 갈린다. -->
+  <path d="M10 20l8-10h28l8 10v24l-8 10H18l-8-10z" fill="#7A1E1E" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M16 21.5l6-7.5h20l6 7.5v21l-6 7.5H22l-6-7.5z" fill="#E04B3C"/>
+  <path d="M16 21.5h32M16 42.5h32" stroke="#7A1E1E" stroke-width="2.2"/>
+  <!-- 새겨진 망치 문양 — 이 재화가 «단련» 전용임을 형태로 알린다 -->
+  <path d="M23 24h18v7H23z" fill="#3B0C0C"/>
+  <path d="M30.5 31v13" stroke="#3B0C0C" stroke-width="5" stroke-linecap="round"/>
+  <path d="M24.5 25.5h15" stroke="#FFD9CF" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+  <path d="M18 14l4 6-4 2z" fill="#FFCFC4" opacity=".85"/>
+</svg>
