@@ -144,19 +144,29 @@ const RAWNUM = /\d,\d/;
     renderDun();
     await sleep(120);
     const dun = (document.getElementById('bDun') || {}).textContent || '';
-    out.dunCp   = (dun.match(/내 전투력\s*([\d.,]+[A-Z]{0,2})/) || [])[1];
-    out.dunNeed = [...dun.matchAll(/요구 전투력\s*([\d.,]+[A-Z]{0,2})/g)].map(m => m[1]);
+    /* 값 뒤에 닉네임(«U_1787…»)·라벨이 바로 이어 붙는 자리가 있다 — 접미사 뒤에 영숫자가 오면
+       그것은 단위가 아니라 옆 글자다. 경계를 걸지 않으면 «1.22B» 를 «1.22BU» 로 집어 헛통과한다. */
+    const PICK = lab => new RegExp(lab + '\\s*([\\d.,]+[A-Z]{0,2})(?![A-Za-z0-9_])');
+    out.dunCp   = (dun.match(PICK('내 전투력')) || [])[1];
+    out.dunNeed = [...dun.matchAll(/요구 전투력\s*([\d.,]+[A-Z]{0,2})(?![A-Za-z0-9_])/g)].map(m => m[1]);
 
-    /* 19 스펙 시트(renderSt) — DPS·공격력·체력·재생·적 체력 */
+    /* 19 스펙 시트(renderSt) — DPS·공격력·체력·재생·적 체력.
+       ⚠ 시트 전체 textContent 를 정규식으로 긁으면 «전투력 1.22B» 뒤에 **닉네임(«U_1787…»)이 바로
+       이어 붙어** 접미사와 구분이 안 된다(경계를 걸면 이번엔 «2» 로 잘린다). 값은 **그 값을 담은
+       요소**에서 꺼낸다 — 절(sect)을 짚어 그 안의 <b>/<em> 만 읽는다. */
     renderSt();
     await sleep(120);
-    const st = (document.getElementById('bSt') || {}).textContent || '';
+    const sects = [].slice.call(document.querySelectorAll('#bSt .sect'));
+    const sectOf = k => sects.find(x => (x.querySelector('h3') || {}).textContent.includes(k));
+    const bOf = (k, i) => { const q = sectOf(k); if (!q) return ''; const bs = q.querySelectorAll('p b');
+      return bs[i] ? bs[i].textContent.trim() : ''; };
     out.stPick = {
-      전투력:  (st.match(/전투력\s*([\d.,]+[A-Z]{0,2})/) || [])[1],
-      DPS:     (st.match(/DPS\s*([\d.,]+[A-Z]{0,2})/) || [])[1],
-      공격력:  (st.match(/공격력\s*([\d.,]+[A-Z]{0,2})/) || [])[1],
-      체력:    (st.match(/·\s*체력\s*([\d.,]+[A-Z]{0,2})/) || st.match(/체력\s*([\d.,]+[A-Z]{0,2})/) || [])[1],
-      적체력:  (st.match(/적 체력\s*([\d.,]+[A-Z]{0,2})/) || [])[1],
+      전투력:  ((sects[0] && sects[0].querySelector('h3 em') || {}).textContent || '').replace('전투력', '').trim(),
+      DPS:     bOf('전투력 상세', 0),
+      공격력:  bOf('전투력 상세', 1),
+      체력:    bOf('전투력 상세', 2),
+      재생:    bOf('전투력 상세', 3).replace('/s', ''),
+      적체력:  bOf('현재 스테이지', 0),
     };
     return out;
   });
