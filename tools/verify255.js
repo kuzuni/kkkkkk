@@ -220,7 +220,13 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     await cleanup();
   }
 
-  console.log('\n[F] 회귀 — 탑(209·210)은 옛 «누적 피해» 판정 그대로다 (264 의 몫)');
+  /* 264(2026-08-27, 저장소 주인 지시 «시련의 탑도 보스가 떠야 하는 거고») — 탑도 255 판정으로 넘어왔다.
+     255 가 여기에 «탑은 옛 누적 피해 판정 그대로» 로 못박아 둔 두 단언을 **뒤집는다**:
+       ① 요구 피해를 다 채워도 그것만으로는 클리어가 아니다(런이 계속된다 · 층 불변)
+       ② 보스를 잡은 그 틱에 클리어된다(층 +1)
+     ⚠ 근거를 손으로 적지 않는다 — 탑도 던전과 **같은 경로**(killEnemy → bossDown → step)를 탄다는
+       사실 자체를 재는 것이라, 아래 절차는 [B] 던전 절과 한 글자도 다르지 않다. */
+  console.log('\n[F] 264 — 탑(209·210)도 «보스 격파 = 클리어» 다');
   for (const tid of ['tower', 'despair']) {
     const r = await page.evaluate(async ([id]) => {
       localStorage.clear(); Object.assign(S, DEF());
@@ -229,13 +235,25 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       challengeTower(id);
       if (!dunRun) return { err: 'challengeTower 실패' };
       const t = dunRun.d, f0 = towerFloor(t);
+      /* ① 요구 피해를 통째로 채워 본다 — 옛 판정이면 여기서 끝났다 */
       dunRun.dmg = dunRun.need;
       step(1 / 60);
-      return { run: !!dunRun, f0, f1: towerFloor(t) };
+      const mid = { run: !!dunRun, f: towerFloor(t) };
+      if (!dunRun) return { err: '요구 피해만으로 런이 끝났다(옛 판정이 남아 있다)', f0, mid };
+      /* ② 보스를 실제로 세우고 잡는다 */
+      dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
+      const b = enemies.find((e) => e.tk === 'dunboss');
+      if (!b) return { err: '탑에 보스가 안 선다', f0, mid };
+      const bn = dunRun.bossN;
+      killEnemy(b); step(1 / 60);
+      return { f0, mid, bn, run: !!dunRun, f1: towerFloor(t) };
     }, [tid]);
     if (r.err) { no(tid + ' — ' + r.err); continue; }
-    is(tid + ' — 요구 피해 충족 → 클리어(옛 판정 유지)', r.run, false);
-    is(tid + ' — 층 ' + r.f0 + '→' + r.f1, r.f1, r.f0 + 1);
+    is(tid + ' — 보스가 1마리다 (층 하나 = 보스 하나)', r.bn, 1);
+    is(tid + ' — ① 요구 피해를 채워도 런이 계속된다', r.mid.run, true);
+    is(tid + ' — ① 그때 층은 그대로 ' + r.f0, r.mid.f, r.f0);
+    is(tid + ' — ② 보스 격파 → 런 종료', r.run, false);
+    is(tid + ' — ② 층 ' + r.f0 + '→' + r.f1, r.f1, r.f0 + 1);
     await cleanup();
   }
 

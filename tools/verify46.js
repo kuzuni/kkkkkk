@@ -98,6 +98,9 @@ const settleBox = (page, sel, cap = 3000) => page.evaluate(async ({ sel, cap }) 
        카드 수는 **근거 데이터인 `DUNGEONS` 표에서 파생**시키고, 표 자체가 줄지 않았다는 하한
        (46 당시 5칸 · gold·dia 상시)을 «안 바뀌어야 하는 쪽» 으로 같이 못박는다(200 ③). */
     const dunIds = await page.evaluate(() => DUNGEONS.map((d) => d.id));
+    /* 264 — 측정장 제한 시간은 **표(RAIDS[0].sec)가 유일한 출처**다. 아래 단언들이 이 값을 쓴다
+       (60 → 30 처럼 주인이 창을 바꿔도 게이트가 «그때 60이었다» 로 굳지 않게 — LESSONS 194-4). */
+    const raidSec = await page.evaluate(() => RAIDS[0].sec);
     const cardIds = await page.$$eval('#dunList [data-dcard]', (e) => e.map((x) => x.dataset.dcard));
     chk('던전 카드 = DUNGEONS 표 전부 (수·순서까지)', cardIds.join(',') === dunIds.join(','),
       `카드 ${cardIds.length} [${cardIds.join(',')}] / 표 ${dunIds.length} [${dunIds.join(',')}]`);
@@ -122,7 +125,9 @@ const settleBox = (page, sel, cap = 3000) => page.evaluate(async ({ sel, cap }) 
     chk('카드 규격 = 03 던전과 동일 980×350', cards.every((c) => c.w === 980 && c.h === 350),
       `${cards[0] && `${cards[0].w}×${cards[0].h}`} (등장 애니 정지까지 ${rcSettle.waited}ms · ${rcSettle.settled ? '정지' : '미정지'})`);
     chk('카드 규격을 «등장 애니 정지 후» 에 쟀다 (뜨고 지는 FAIL 방지)', rcSettle.settled, `${rcSettle.waited}ms`);
-    chk('첫 카드 해금 + 제한 시간 60', !!(cards[0] && !cards[0].lock && cards[0].lvl === '60'), cards[0] && cards[0].lvl);
+    /* 264 — 주인 지시로 제한 시간이 60 → **30** 이 됐다(«30초 만에 얼마나 넣는지»).
+       기대값을 손으로 적지 않고 표(RAIDS)에서 읽는다 — 창이 또 바뀌어도 이 줄은 안 썩는다. */
+    chk('첫 카드 해금 + 제한 시간 = RAIDS[0].sec', !!(cards[0] && !cards[0].lock && cards[0].lvl === String(raidSec)), `${cards[0] && cards[0].lvl} (표 ${raidSec})`);
     chk('라벨이 «제한 시간(초) / 최고 DPS»', !!(cards[0] && cards[0].la === '제한 시간(초)' && cards[0].lb === '최고 DPS'),
       cards[0] && `${cards[0].la}/${cards[0].lb}`);
     chk('기록 없으면 «-»', cards[0] && cards[0].best === '-', cards[0] && cards[0].best);
@@ -182,7 +187,7 @@ const settleBox = (page, sel, cap = 3000) => page.evaluate(async ({ sel, cap }) 
     chk('규격을 «등장 애니 정지 후» 에 쟀다 (뜨고 지는 FAIL 방지)', dgdSettle.settled,
       `${dgdSettle.waited}ms → ${dgdSettle.box}`);
     chk('타이틀 = 측정장 이름', d.title === 'DPS 측정장', d.title);
-    chk('«레벨» → «제한 시간» 60초', d.lvL === '제한 시간' && d.floor === '60초', `${d.lvL}/${d.floor}`);
+    chk('«레벨» → «제한 시간» = RAIDS[0].sec 초', d.lvL === '제한 시간' && d.floor === `${raidSec}초`, `${d.lvL}/${d.floor}`);
     chk('«보상» → «최고 기록»(기록 없음)', d.rwL === '최고 기록' && d.amt === '기록 없음', `${d.rwL}/${d.amt}`);
     /* 205 (2026-08-27, 저장소 주인 지시 «DPS 랑 아레나 하루 딱 3번만») — 46 이 세워 둔
        «입장 횟수 무제한 ∞» 는 46 자신이 «가정(주인 확인 필요)» 로 적어 둔 값이었고, 205 가 그
@@ -222,11 +227,11 @@ const settleBox = (page, sel, cap = 3000) => page.evaluate(async ({ sel, cap }) 
       sandDmg: (enemies.find((e) => e.raid) || {}).dmg,
       others: enemies.filter((e) => !e.raid).length,
     }));
-    chk('raidOn = r60 60초', st.on && st.id === 'r60' && st.sec === 60, `${st.id}/${st.sec}`);
+    chk('raidOn = r60 · 제한 시간 = 표의 sec', st.on && st.id === 'r60' && st.sec === raidSec, `${st.id}/${st.sec} (표 ${raidSec})`);
     chk('세부 팝업·던전 페이지가 닫힘', !st.dgd && !st.dun, `${st.dgd}/${st.dun}`);
     chk('샌드백 1마리만 스폰(일반 몹 없음)', st.sand === 1 && st.others === 0, `${st.sand}/${st.others}`);
     chk('샌드백 공격력 0 (플레이어 무피해)', st.sandDmg === 0, st.sandDmg);
-    chk('⏱ 타이머 HUD 켜짐 + 카운트다운', st.tm && Number(st.tmN) > 0 && Number(st.tmN) < 60, st.tmN);
+    chk('⏱ 타이머 HUD 켜짐 + 카운트다운', st.tm && Number(st.tmN) > 0 && Number(st.tmN) <= raidSec, `${st.tmN} (표 ${raidSec})`);
     chk('바·[포기하기] HUD 켜짐', st.hp && st.gv);
 
     console.log('[6] 피해 집계 · 샌드백 불사 · 스테이지 정지');
