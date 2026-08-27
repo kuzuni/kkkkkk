@@ -129,7 +129,12 @@ function diffStats(A, B, lock, bandRel){
           lockAfterIcon: !!(ci && lo) && !!(ci.compareDocumentPosition(lo) & Node.DOCUMENT_POSITION_FOLLOWING),
           op: ci ? +getComputedStyle(ci).opacity : null,
           fil: ci ? getComputedStyle(ci).filter : null,
-          iconText: ci ? ci.textContent : ''
+          iconText: ci ? ci.textContent : '',
+          /* 174 — 펫 아이콘이 이모지에서 **스프라이트 캔버스**가 됐다(주인 지시 «펫 그림 = 전투 씬 그대로»).
+             «글자가 있다» 는 자가 그 자리에서 죽는다 — 82 가 지키려는 것은 «미보유 칸에도 그림이 있다» 이므로
+             축을 «글자 또는 캔버스» 로 옮긴다(212-①. 지우지 않고 옮겨 심는다). 캔버스가 정말 그려졌는지는
+             §3 픽셀 검사와 `tools/verify174.js` 가 따로 본다. */
+          iconArt: !!ci && (ci.textContent.trim().length > 0 || !!ci.querySelector('canvas'))
         };
         (rec.lk ? out.lk : out.own).push(rec);
       });
@@ -137,8 +142,9 @@ function diffStats(A, B, lock, bandRel){
     }, bodyId);
 
     ck('§1 ' + label + ' 미보유 카드 ≥3', st.lk.length >= 3, String(st.lk.length));
-    ck('§1 ' + label + ' .lk 전 카드에 아이콘+자물쇠, 자물쇠가 아이콘 뒤 형제',
-       st.lk.every(r => r.hasIcon && r.hasLock && r.lockAfterIcon && r.iconText.trim().length > 0));
+    ck('§1 ' + label + ' .lk 전 카드에 아이콘(글자 또는 캔버스)+자물쇠, 자물쇠가 아이콘 뒤 형제',
+       st.lk.every(r => r.hasIcon && r.hasLock && r.lockAfterIcon && r.iconArt),
+       st.lk.filter(r => !r.iconArt).length + '칸이 빈 아이콘');
     ck('§2 ' + label + ' .lk>.sk-ci opacity=.35 + grayscale(1)',
        st.lk.every(r => Math.abs(r.op - 0.35) < 0.01 && /grayscale\(1\)/.test(r.fil)),
        st.lk[0] ? st.lk[0].op + ' / ' + st.lk[0].fil : '');

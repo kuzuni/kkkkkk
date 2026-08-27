@@ -9053,6 +9053,18 @@
   /* 카드·슬롯·상세의 그림 — 이모지가 아니라 그 코스튬 틴트로 그린 기사 캔버스(80 look 과 같은 경로).
      08 상세 껍데기(`#mbox .sk-ic`) 안에서도 쓰이므로 `#bCos` 로 가두지 않는다. */
   .cos-cv{display:block;margin:0 auto;image-rendering:pixelated}
+  /* 174 — 펫 그림(전투 스프라이트) 캔버스. 크기는 `PET_TH` 가 칸별로 준다(이모지 잉크 bbox 실측).
+     `.pt` 는 그 캔버스를 «이모지가 앉아 있던 자리 정중앙» 에 앉히는 스위치다 — 이모지는
+     `line-height`·`text-align` 으로 앉았지만 캔버스는 블록이라 그 규칙이 안 먹는다. */
+  .pt-cv{display:block;image-rendering:pixelated}
+  /* ⚠ 시트 공용 리셋 `:is(#bSk,#bPet,#bCos) b{display:block}` 는 `:is()` 안의 **ID 특정도**를 갖는다
+     (1,0,1). 클래스 두 개(`.sk-si.pt` = 0,2,0)로는 못 이겨서 캔버스가 칸 좌단에 붙었다 —
+     같은 형태로 되받는다(1,2,1). `:is()` 특정도 = 인자 중 가장 센 것. */
+  :is(#bSk,#bPet) b.sk-si.pt,:is(#bSk,#bPet) b.sk-ci.pt{
+    display:flex;align-items:center;justify-content:center}
+  /* 21 도감 칸 — 이모지 폭 보정 scaleX(1.15) 는 캔버스를 가로로 늘린다(그림이 찌그러진다).
+     박스(66x70)는 ref 아트 bbox 라 그대로 두고 변형만 끈다. */
+  #collw .clb .cd>i.cdic.pt{transform:none}
   #bCos .sk-si,#modal.sk8 .sk-ic{display:flex;align-items:flex-end;justify-content:center}
   /* 조건 해금 카드의 진행바 — 가격 대신 조건이라 글자가 길다(작게 + 자물쇠 톤) */
   #bCos .sk-bar.rq>b{font-size:21px;color:#FFD9A0}
@@ -17742,30 +17754,54 @@ const UPR_MAX = 6;
       `drawSpriteTo` 는 잉크 rect(fr[0..3])만 보므로 칸 중앙에 정확히 앉는다. */
 const UPR_ART = 13;    /* 90x90 칸의 사방 여백 → 잉크 최대변 64 (이모지 잉크 51~65 와 같은 급) */
 const UPR_FB  = { dragon:'🐉', bird:'🐦', robo:'🤖' };   /* 아틀라스가 아직 없을 때만 쓰는 폴백 */
-function uprIcon(it){
+/* 174 (T2 주인 지시, 2026-08-27 «펫 이미지가 전투씬에 있을 때랑 똑같은 이미지로 슬롯 썸네일에
+   있어야 하는데 안 그렇게 됨») — 192 가 09 결과 팝업 한 자리에서만 쓰던 스프라이트 캔버스를
+   **펫 그림이 뜨는 자리 전부**로 넓힌다. 그리기 경로(`drawSpriteTo` + sp/tint)가 하나라
+   전투 씬·슬롯·카드·소환 결과·도감이 **같은 픽셀**을 낸다(80 `look` 이 코스튬에서 한 것과 같은 규칙).
+
+   칸마다 다른 것은 «잉크가 차지해야 할 자리» 뿐이다. 지금 그 자리를 차지하고 있는 것은
+   이모지 폴백이므로 그 **잉크 bbox 를 실측해서**(`tools/measure174.js` → docs/measure/174-*.md)
+   캔버스 크기·여백으로 옮겨 적는다 — 72 «아트 자리 규칙»(나중에 일러스트로 갈아 끼우면 그대로 맞는다).
+   ⚠ 정사각 캔버스에 contain 으로 담으면 **세 스프라이트의 잉크 최대변이 전부 `w − fit*2`** 로 같다
+     (bird 82x95 · robo 126x216 은 세로가, dragon 96x64 는 가로가 물린다). 슬롯·카드가 정사각인
+     이유가 이것이다 — 박스 폭(115·156)을 그대로 쓰면 dragon 만 림을 뚫고 나간다. */
+const PET_TH = {
+  up:   { w:90, h:90, fit:13 },   /* 09 일괄 강화 결과 `.upr-card>b` — 192 가 정한 값(잉크 최대변 64) */
+  slot: { w:69, h:69, fit:3 },    /* 07/26 장착 슬롯 `.sk-si`  박스 115x70 · 이모지 잉크 63x53 → 63 */
+  card: { w:92, h:92, fit:4 },    /* 07/26 카드 `.sk-ci`      박스 156x96 · 이모지 잉크 84x71 → 84 */
+  sum:  { w:78, h:63, fit:3 },    /* 12 소환 결과 `.sm-c>b`   박스  78x63 · 이모지 잉크 69x58 */
+  coll: { w:66, h:70, fit:3 }     /* 21 도감 `.cdic` — 이모지가 아니라 **ref 아트 bbox 66x70** 이 자다 */
+};
+/* `it` 이 펫이면 스프라이트 캔버스, 아니면 원래 이모지(`ic`) 그대로. 호출부는 분기하지 않는다 —
+   장비·스킬이 섞인 목록(09 결과·12 소환 결과)에서 «펫만» 바뀌게 하는 것이 이 함수의 일이다. */
+function petIcon(it, kind){
   if(!(it && it.sp && PET_SP[it.sp])) return it && it.ic || '❔';
-  return '<canvas width="90" height="90" data-usp="' + it.sp + '"'
+  const T = PET_TH[kind] || PET_TH.up;
+  return '<canvas class="pt-cv" width="' + T.w + '" height="' + T.h + '"'
+       + ' data-usp="' + it.sp + '" data-ufit="' + T.fit + '"'
        + (it.tint ? ' data-utc="' + it.tint + '"' : '') + '></canvas>';
 }
 /* 그리기는 삽입 «후» 다. 실패(아틀라스 미로딩·프레임 없음)하면 캔버스를 이모지로 되돌린다 —
    빈 캔버스를 남기면 ❔ 보다 더 나쁜 «빈 칸» 이 된다. */
-function uprPaint(root){
+function petPaint(root){
+  if(!root) return;                       /* setBody 가 재생성을 건너뛰면 null 이 온다(LESSONS 2253) */
   root.querySelectorAll('canvas[data-usp]').forEach(cv => {
     const k = cv.dataset.usp, A = ATLAS[k], sp = PET_SP[k];
     const list = A && A.a && sp && A.a[sp.anim];
     const okd = A && A.image && list && list.length
-      && drawSpriteTo(cv, { k, frame:list[0], tint:cv.dataset.utc || null, fit:UPR_ART });
+      && drawSpriteTo(cv, { k, frame:list[0], tint:cv.dataset.utc || null,
+                            fit: cv.dataset.ufit != null ? +cv.dataset.ufit : UPR_ART });
     if(!okd && cv.parentNode) cv.parentNode.textContent = UPR_FB[k] || '❔';
   });
 }
 function openUpAll(ups){
   if(!ups || !ups.length) return false;
   $('upCards').innerHTML = ups.slice(0, UPR_MAX).map(u =>
-      '<div class="upr-cel"><div class="upr-card"><b>' + uprIcon(u.it) + '</b></div>'
+      '<div class="upr-cel"><div class="upr-card"><b>' + petIcon(u.it, 'up') + '</b></div>'
     + '<div class="upr-lv"><i>' + u.from + '</i>'
     + '<em><svg viewBox="0 0 24 23"><path d="M0 5H10V-1l14 12.5L10 24v-5H0z"/></svg></em>'
     + '<i>' + u.to + '</i></div></div>').join('');
-  uprPaint($('upCards'));
+  petPaint($('upCards'));
   $('upw').classList.add('on');
   sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
@@ -17971,8 +18007,10 @@ function showSummonResult(b, times, res, lvUp){
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
     return '<div class="sm-c ifr fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
       + ';animation-delay:' + dly[i].toFixed(3) + 's">'
-      + '<b>' + itemIcon(a.it) + '</b><u class="ifq"><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
+      /* 174 — 펫만 스프라이트 캔버스로. 장비·스킬은 `ic` 가 있어 이모지 그대로다(표시 불변) */
+      + '<b>' + petIcon(a.it, 'sum') + '</b><u class="ifq"><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
   }).join('');
+  petPaint($('sumGridIn'));
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
   $('sumw').classList.add('on');
@@ -21601,7 +21639,8 @@ setInterval(blessTick, 1000);
    세트 = 표시 전용 정적 그룹(기존 아이템·레벨을 그대로 읽는다). 뱃지 Lv = 세트 내 최저 레벨.
    강화 버튼 = «세트 전원 요구 레벨 충족 + 해당 카테고리 collReady» 일 때만 활성 →
    기존 claimColl(카테고리) 를 그대로 부른다. 저장 구조 미변경(KEY 유지). */
-const COLL21_PETIC = { bird:'\U0001F426', robo:'\U0001F916', dragon:'\U0001F409' };
+/* 174 — 펫 칸 이모지 표 `COLL21_PETIC` 폐기. 펫 칸은 스프라이트 캔버스(`petIcon(it,'coll')`)이고,
+   아틀라스가 없을 때의 폴백 이모지는 `UPR_FB` 한 벌만 남긴다(같은 표가 둘이었다). */
 /* 카드 등급색 [fill, rim, 라벨밴드 상단, 라벨밴드 하단] — 커먼·언커먼은 실측, 레어 이상은 게임 팔레트 추정.
    91 — 85 의 7·8등급(초월·불멸)이 도감 세트로 들어오면서 6 → 8행이 됐다. */
 const COLL21_CARD = [
@@ -21627,8 +21666,12 @@ function renderColl21(){
            const it = itemById(id), c = COLL21_CARD[Math.min(it.g, 7)], l = oLv(id);
 /* ref 카드 단면(y660): 검정 ~161 / **어두운 단 162~163** / 밝은 rim 164~167 / 면 169~ */
            return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 2px rgba(0,0,0,.42),inset 0 0 0 7px ' + c[1] + '">'
-             + '<i class="cdic"' + (l ? '' : ' style="filter:grayscale(1) brightness(.55)"') + '>'
-             + (it.ic || COLL21_PETIC[it.sp] || '❔') + '</i>'
+             /* 174 — 펫 칸은 이모지(COLL21_PETIC) 대신 전투 스프라이트. 미달성 칸의 흐림은
+                부모 `.cdic` 인라인 filter 라 캔버스에도 그대로 먹는다. `.pt` 는 이모지 폭 보정
+                `scaleX(1.15)` 를 끈다 — 캔버스에 걸면 그림이 가로로 늘어난다. */
+             + '<i class="cdic' + (it.ic ? '' : ' pt') + '"'
+             + (l ? '' : ' style="filter:grayscale(1) brightness(.55)"') + '>'
+             + (it.ic || petIcon(it, 'coll')) + '</i>'
              + '<s class="cb" style="background:linear-gradient(180deg,' + c[2] + ',' + c[3] + ')"></s>'
              + '<i class="cl2" style="color:' + ((max || l >= req) ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l
              + (max ? '' : '/' + req) + '</i></div>';
@@ -21640,6 +21683,7 @@ function renderColl21(){
       +  '</div>';
   });
   $('collList').innerHTML = h;
+  petPaint($('collList'));                              /* 174 — 펫 칸 스프라이트 */
   document.querySelectorAll('#collTabs .cltab').forEach(t => {
     t.classList.toggle('on', t.dataset.ct === collTab);
     t.classList.toggle('alert', collTabReady(t.dataset.ct));    /* 레드닷 = 그 탭에 강화 가능한 세트가 있다 */
@@ -22394,7 +22438,8 @@ function renderPet(){
     h += it
       ? '<div class="sk-slot" data-ptun="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
-        + '<b class="sk-si">' + itemIcon(it) + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
+        /* 174 — 이모지(🐦/🤖/🐉) 폐기. 전투 씬과 같은 sp+tint 스프라이트 캔버스 */
+        + '<b class="sk-si pt">' + petIcon(it, 'slot') + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
         + '<s class="sk-eq m"></s></div>'
       : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span></div>';
   }
@@ -22410,8 +22455,10 @@ function renderPet(){
     h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + '" data-ptit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
-      /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조) */
-      +  '<b class="sk-ci">' + itemIcon(it) + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
+      /* 82 — 미보유도 아이콘을 항상 그리고 그 위에 자물쇠(05 무기 카드와 동일 구조)
+         174 — 그 아이콘이 이모지가 아니라 전투 스프라이트다. `.lk` 의 흐림(opacity .35 + grayscale)은
+               부모 `.sk-ci` 에 걸리므로 캔버스에도 그대로 먹는다(82 규칙 유지). */
+      +  '<b class="sk-ci pt">' + petIcon(it, 'card') + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
       +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-pteq="' + it.id + '"></s>' : '')
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
@@ -22437,7 +22484,9 @@ function renderPet(){
   /* 9 시트 안쪽 서브탭 4개 — 동료 활성 */
   h += subTabs('pet', 'pttab');
 
-  setBody('bPet', h);
+  /* 174 — 캔버스는 innerHTML 로 «내용» 이 안 따라온다. 갈아끼운 «직후» 에만 그린다
+     (건너뛴 렌더는 null 이 오고, 그때는 이미 그려진 캔버스가 그대로 살아 있다 — 87 cosPaint 와 같은 규약) */
+  petPaint(setBody('bPet', h));
 }
 $('bPet').addEventListener('click', e => {
   const un = e.target.closest('[data-ptun]');

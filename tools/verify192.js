@@ -89,7 +89,9 @@ const seedPets = (p) => p.evaluate(() => {
   eq('ic 를 가진 펫', d1.withIc, 0);
   eq('PET_SP 에 없는 sp 를 쓰는 펫', d1.badSp.length, 0);
   ok(JSON.stringify(d1.sps) === JSON.stringify(d1.petSp), `sp 집합 = PET_SP 키 (${d1.sps.join(',')})`);
-  ok(/uprIcon\(u\.it\)/.test(SRC), 'openUpAll 이 uprIcon() 을 쓴다(❔ 직결 폐기)');
+  /* 174 — 같은 부품을 슬롯·카드·12·21 에서도 쓰게 되면서 `uprIcon(it)` → `petIcon(it, kind)` 로 넓혔다.
+     이 단언이 지키는 것은 «openUpAll 이 ❔ 직결이 아니라 스프라이트 헬퍼를 쓴다» 이므로 이름만 옮긴다. */
+  ok(/petIcon\(u\.it, *'up'\)/.test(SRC), "openUpAll 이 petIcon(u.it,'up') 을 쓴다(❔ 직결 폐기)");
 
   /* ── §2 실사용 경로 ── */
   console.log('§2 실사용 — 영웅 → 동료 → [일괄 강화] 진짜 클릭');
