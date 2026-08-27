@@ -257,17 +257,58 @@ async function open(browser) {
       eq('클릭 수령 후 우편 상태', dGot.state, 1);
     }
 
-    /* ================= [E] 과교정 방지 — 이용권은 즉시 ================= */
-    console.log('[E] 과교정 방지 — 이용권(계정 권한)은 즉시 반영');
+    /* ================= [E] 이용권 — 권한은 즉시 · 재화는 우편 ================= */
+    console.log('[E] 이용권(151) — 계정 권한은 즉시, 쿠폰·보석은 우편');
     const e1 = await d.page.evaluate(() => {
-      S.mailx = []; S.mailSeq = 0; S.pass.noAds = false; S.dia = 1e9;
+      S.mailx = []; S.mailSeq = 0; S.mail = {}; S.pass.noAds = false; S.dia = 1e9; S.mileage = 0;
       openShopPage(); shopCat = 'pass'; setShopCatTabs('pass'); renderShopPage();
+      const p = PASS_ITEMS.find(x => x.id === 'noads');
+      const d0 = S.dia, m0 = S.mileage || 0;
       const r = buyPass('noads');
-      return { r, noAds: !!S.pass.noAds, mails: S.mailx.length };
+      const bought = { dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, mails: S.mailx.length };
+      const mail = S.mailx[0];
+      const c0 = S.dia, cp0 = S.mileage || 0;
+      if (mail) claimMail(mail.id);
+      return { r, noAds: !!S.pass.noAds, want: { once: p.once || 0, cp: p.cp || 0 }, bought,
+               mail: mail ? { c: mail.c, m: mail.m } : null,
+               claimed: { dDia: S.dia - c0, dCp: (S.mileage || 0) - cp0 } };
     });
     eq('이용권 구매 반환값', e1.r, true);
-    eq('이용권 — 구매 즉시 권한', e1.noAds, true);
-    eq('이용권 — 우편을 만들지 않는다', e1.mails, 0);
+    eq('이용권 — 구매 즉시 권한(계정 권한은 우편에 담지 않는다)', e1.noAds, true);
+    /* 구매 직후 다이아 Δ는 «가격만» 나가야 한다 — 즉시 보석이 여기서 들어오면 우편을 우회한 것이다 */
+    eq('이용권 구매 직후 Δ쿠폰', e1.bought.dCp, 0);
+    eq('이용권 구매로 생긴 우편 통수', e1.bought.mails, e1.want.once || e1.want.cp ? 1 : 0);
+    if (e1.mail) {
+      eq('이용권 우편 — 즉시 보석', e1.mail.c, e1.want.once);
+      eq('이용권 우편 — 마일리지 쿠폰', e1.mail.m, e1.want.cp);
+      eq('이용권 우편 수령 후 Δ다이아', e1.claimed.dDia, e1.want.once);
+      eq('이용권 우편 수령 후 Δ쿠폰', e1.claimed.dCp, e1.want.cp);
+    }
+
+    /* E-2 «매일 보석» 누적분도 우편으로 — 며칠치가 밀려도 한 통이다 */
+    const e2 = await d.page.evaluate(() => {
+      S.mailx = []; S.mailSeq = 0; S.mail = {};
+      const p = PASS_ITEMS.find(x => x.daily && x.perm);
+      if (!p) return { skip: true };
+      S.pass.noAds = true; S.pass.offPlus = true;
+      S.pass.dailyAt = {};
+      PASS_ITEMS.forEach(x => { S.pass.dailyAt[x.id] = Date.now() - 3 * PASS_DAY_MS - 1000; });
+      const d0 = S.dia;
+      const got = passDailyTick();
+      const after = { dDia: S.dia - d0, mails: S.mailx.length, got };
+      const sum = S.mailx.reduce((a, m) => a + m.c, 0);
+      const c0 = S.dia;
+      S.mailx.slice().forEach(m => claimMail(m.id));
+      return { after, sum, dClaim: S.dia - c0 };
+    });
+    if (e2.skip) fail('daily 보석이 붙은 영구 이용권이 없다 — 표가 바뀌었으면 게이트를 고칠 것');
+    else {
+      eq('매일 보석 3일치 — 정산 직후 ΔS.dia', e2.after.dDia, 0);
+      eq('매일 보석 3일치 — 우편 통수(모아서 1통)', e2.after.mails, 1);
+      eq('매일 보석 우편 합계 = 정산액', e2.sum, e2.after.got);
+      eq('매일 보석 수령 후 ΔS.dia', e2.dClaim, e2.after.got);
+      e2.after.got > 0 ? ok(`매일 보석 정산액 = ${e2.after.got}`) : fail('3일치 정산인데 0 이 나왔다');
+    }
 
     const errs = d.errs.filter(e => !/favicon|net::ERR/i.test(e));
     eq('콘솔 에러', errs.length, 0);

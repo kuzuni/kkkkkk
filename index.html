@@ -20060,8 +20060,10 @@ function grantPass(id){
     S.pass.autoBlessUntil = Math.max(Date.now(), passAutoUntil()) + PASS_ABLESS_DAYS * PASS_DAY_MS;
     autoBlessTick();                                 /* 산 즉시 꺼져 있던 축복을 켠다 */
   }
-  if(p.cp) S.mileage = (S.mileage || 0) + p.cp;      /* 마일리지 쿠폰 — 13 과 같은 재화 */
-  if(p.once) S.dia += p.once;                        /* 리본 «구매 즉시 보석 지급» */
+  /* 153 — 권한(위)은 즉시, **재화(아래)는 우편함**으로 간다. 쿠폰·즉시 보석은 «상점 구매품» 이다. */
+  if(p.cp || p.once)
+    sendMail({ t:'🛒 이용권 구매 보상 — ' + p.n, c:p.once || 0, m:p.cp || 0,
+      b:'상점에서 구매하신 이용권의 지급 보상입니다. 보관 기간은 없습니다.' });
   /* 리본 «매일 보석 지급» 의 기산점. 지금 찍어 두면 첫 일일분은 24시간 뒤에 들어온다 */
   S.pass.dailyAt = S.pass.dailyAt || {};
   S.pass.dailyAt[p.id] = Date.now();
@@ -20091,8 +20093,12 @@ function passDailyTick(){
     const n = Math.min(PASS_DAILY_MAX_D, Math.floor((end - t0) / PASS_DAY_MS));
     if(n <= 0) return;
     S.pass.dailyAt[p.id] = t0 + n * PASS_DAY_MS;
-    S.dia += n * p.daily; got += n * p.daily;
+    got += n * p.daily;                        /* 153 — 여기서 더하지 않는다. 아래에서 우편 한 통으로 나간다 */
   });
+  /* 153 — 매일 보석도 «상점 구매품의 지급분» 이라 우편함으로 간다. 며칠치가 밀려 있어도
+     한 통으로 모아 보낸다(오프라인 정산이 30통을 쌓는 것을 막는다). */
+  if(got) sendMail({ t:'🛒 이용권 매일 보석', c:got,
+    b:'이용권 «매일 보석 지급» 누적분입니다. 보관 기간은 없습니다.' });
   if(got){ uiDirty = true; save(); }
   return got;
 }
@@ -20111,9 +20117,9 @@ function buyPass(id){
   renderPassPage($('shopList'));
   fxReward();                                        /* 58 — «얻은 순간» 피드백 */
   popup(p.n + ' 이용권', '<p>' + p.nt + '</p>'
-    + (p.once ? '<p>' + curIc('dia') + ' <b>' + fmt(p.once) + '</b> 즉시 지급</p>' : '')
-    + (p.daily ? '<p>매일 ' + curIc('dia') + ' <b>' + fmt(p.daily) + '</b> 지급</p>' : '')
-    + (p.cp ? '<p>' + curIc('mile') + ' 마일리지 쿠폰 <b>+' + p.cp + '</b></p>' : '')
+    + (p.once ? '<p>' + curIc('dia') + ' <b>' + fmt(p.once) + '</b> 우편함으로 지급</p>' : '')   /* 153 */
+    + (p.daily ? '<p>매일 ' + curIc('dia') + ' <b>' + fmt(p.daily) + '</b> 우편함으로 지급</p>' : '')
+    + (p.cp ? '<p>' + curIc('mile') + ' 마일리지 쿠폰 <b>+' + p.cp + '</b> 우편함으로 지급</p>' : '')
     + '<p>' + (p.perm ? '평생 적용됩니다.' : PASS_ABLESS_DAYS + '일간 적용됩니다.') + '</p>');
   return true;
 }
@@ -24364,7 +24370,7 @@ loadAtlases(() => {
   /* 151 — 일일 보석 정산은 «단순 안내» 라 149 규칙대로 토스트 한 줄로 알린다 */
   if(passDailyPend){
     const n = passDailyPend; passDailyPend = 0;
-    setTimeout(() => notify('이용권 매일 보석 ' + curIc('dia') + ' <b>' + fmt(n) + '</b> 지급'), 900);
+    setTimeout(() => notify('이용권 매일 보석 ' + curIc('dia') + ' <b>' + fmt(n) + '</b> 우편함 발송'), 900);   /* 153 */
   }
   /* 오프라인 보상 팝업이 안 떴으면(적립 60초 미만) 정산 결과가 갈 곳이 없다 — 안내 팝업으로 알린다 */
   if(autoBlessPend){
