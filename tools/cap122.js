@@ -250,7 +250,27 @@ async function frames(p, tag, stops) {
      무료 횟수를 채운 상태로 1번 카드를 화면 가운데에 세우고 **링 주기(0.9s)를 4등분**해 찍는다.
      19회차에 신설한 가격 버튼 보조 링(b2·b3)도 같은 프레임에 들어온다 — 세 버튼의 위상차
      (1/3 격자)를 한 장씩 비교할 수 있는 유일한 표본이다. */
-  const FREE_STOPS = [80, 305, 530, 755];
+  /* ⚑ 20회차 — 이 격자가 **두 번 틀렸고 비평가 넷이 그 때문에 나란히 오독했다.**
+
+     ⓐ **한 주기를 다 안 돈다.** [80,305,530,755] 는 span 675ms = 0.9s 주기의 **75%** 뿐이다.
+        카드 사이 stride 가 2/5(−0.36s)라 칸마다 «자기 주기의 다른 토막» 이 잡히고, 그래서
+        **칸별 세기 비교가 캡처 격자에 좌우된다.** 20회차 실측: 같은 링을 격리 12위상으로 재면
+        칸별 Δ루마 산포 **1.63배**인데 이 4장으로 재면 **3.11배** — 칸3 은 4장 모두 저조 구간에
+        걸려 6.14 로 읽힌다(격리값 13.25). 19·20회차 비평가 넷이 «칸3 링이 약하다» 를 지적한 것의
+        상당 부분이 여기서 나왔다.
+        → **한 주기를 «정확히» 8등분한다**(112.5ms). 균등 격자가 한 주기를 꽉 채우면 카드별
+          위상 오프셋과 무관해진다 — 어느 칸을 재도 같은 8위상을 밟는다(오프셋 불변).
+
+     ⓑ **칸5(초록)가 프레임 밖이었다.** 카드1 을 가운데 세우면 버튼 y 는 312/791/1270/1749/**2228**
+        이라 다섯 번째가 잘린다. 20회차 비평가 **둘이 독립으로** «칸5 는 14장 어디에도 없다 —
+        이번 회차가 고쳤다는 다섯 값 중 하나를 검증할 수 없다» 고 적었다.
+        ⚠ 한 장에 다 담으려 했다가 **기하로 불가능**하다는 것을 실측으로 확인했다: 리스트의
+        보이는 영역은 캔버스(2280)가 아니라 **하단 탭바에 잘려 ~1860px** 인데, [무료] 버튼 5칸의
+        세로 span 은 **2014px** 다. `innerHeight` 로 «프레임 안» 을 판정하면 탭바 **뒤에** 숨은
+        버튼을 «보인다» 로 세어 로그만 5칸이 된다(20회차에 실제로 그렇게 속았다).
+        → **스크롤 두 자리로 나눠 찍는다**: `free`(칸1~3) + `freeb`(칸3~5). 칸3 이 두 묶음에
+          겹쳐 들어가 밝기 비교의 기준칸이 된다. */
+  const FREE_STOPS = [80, 192, 305, 417, 530, 642, 755, 867];
   const freeOk = await p.evaluate(() => {
     S.daily.freeSum = {};                 /* freeLeft() 는 «없는 키 → SHOP_FREE» 폴백이다 */
     renderShopPage();
@@ -259,8 +279,44 @@ async function frames(p, tag, stops) {
     return [...document.querySelectorAll('#shopList .cbtn.b1')].filter(e => !e.classList.contains('lack')).length;
   });
   await p.waitForTimeout(400);
-  console.log('[소환 탭 — [무료] 링이 켜진 상태] 무료 버튼 ' + freeOk + '칸');
+  /* ⚠ 칸5 를 프레임 안으로 넣는 보정은 **`scrollIntoView` 가 끝난 뒤** 따로 해야 한다.
+     같은 evaluate 안에서 이어 하면 스크롤이 아직 정착 중이라 보정이 덮인다 —
+     20회차에 그렇게 해서 «5칸» 이라고 로그를 찍고도 캡처에는 칸5 가 여전히 없었다.
+     (자기 로그를 믿지 말고 «찍힌 그림» 을 확인할 것. 이 절이 그 교훈으로 만들어졌다.) */
+  const freeIn = await p.evaluate(() => {
+    const btns = [...document.querySelectorAll('#shopList .cbtn.b1')];
+    const last = btns[btns.length - 1];
+    const lw = document.getElementById('shopList');
+    if (last && lw) {
+      const over = last.getBoundingClientRect().bottom - (innerHeight - 40);
+      if (over > 0) lw.scrollTop += over;
+    }
+    /* ⚠ «프레임 안» 을 innerHeight 로 재면 **탭바 뒤에 숨은** 버튼까지 «보인다» 로 센다.
+       리스트의 보이는 상자(clientRect)를 기준으로 재야 한다. */
+    const lr = lw.getBoundingClientRect();
+    return btns.filter(e => {
+      const r = e.getBoundingClientRect();
+      return r.top >= lr.top && r.bottom <= lr.bottom;
+    }).length;
+  });
+  await p.waitForTimeout(250);
+  console.log('[소환 탭 — [무료] 링이 켜진 상태] 무료 버튼 ' + freeOk + '칸 · 이 스크롤에서 프레임 안 ' + freeIn + '칸');
   if (freeOk > 0) await frames(p, 'free', FREE_STOPS);
+  /* 두 번째 자리 — 리스트를 끝까지 굴려 칸3~5 를 담는다(칸5 가 여기서만 보인다) */
+  if (freeOk > 0) {
+    const freeIn2 = await p.evaluate(() => {
+      const lw = document.getElementById('shopList');
+      if (lw) lw.scrollTop = lw.scrollHeight;
+      const lr = lw.getBoundingClientRect();
+      return [...document.querySelectorAll('#shopList .cbtn.b1')].filter(e => {
+        const r = e.getBoundingClientRect();
+        return r.top >= lr.top && r.bottom <= lr.bottom;
+      }).length;
+    });
+    await p.waitForTimeout(300);
+    console.log('[소환 탭 — [무료] 링 · 리스트 바닥] 프레임 안 ' + freeIn2 + '칸 (칸5 포함)');
+    await frames(p, 'freeb', FREE_STOPS);
+  }
 
   console.log(errs.length ? '콘솔 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ') : '콘솔 에러 0');
   await b.close();
