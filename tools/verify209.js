@@ -182,16 +182,23 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
 
   /* ---------------- [6] ② 실패 → 층 불변 · 같은 층 재도전 가능 ---------------- */
   console.log('[6] ② 실패 처리');
+  /* ⚠ 실패 통보는 **팝업이 아니라 토스트**다(206 «알림 전면 토스트화», 주인 지시).
+     `#modal.on` 을 물으면 206 이 병합된 순간부터 조용히 빨개진다 — 실제로 이 게이트 1회차가
+     그렇게 깨졌다. 30 던전과 **같은 경로**(finishDunRun)이므로 탑도 자동으로 그 규칙을 탄다. */
   const failRun = await p.evaluate(() => {
+    if (!dunRun) challengeTower();                 /* 앞 절의 런이 이미 끝났을 수 있다 — 검사를 자립시킨다 */
+    [...document.querySelectorAll('.fx-toast')].forEach(e => e.remove());
     endDunRun(false, false);                       /* 시간 초과 = 실패 */
-    const t = S.tower, pop = document.getElementById('modal').classList.contains('on');
-    if (typeof closeModal === 'function') closeModal(); else document.getElementById('modal').classList.remove('on');
+    const t = S.tower;
+    const toast = [...document.querySelectorAll('.fx-toast')].map(e => e.textContent).join(' | ');
+    const pop = document.getElementById('modal').classList.contains('on');
     challengeTower();                              /* 같은 층 재도전 */
     const again = { running: !!dunRun, f: dunRun && dunRun.f };
-    return { t, pop, again };
+    return { t, toast, pop, again };
   });
   ok(failRun.t === 1, '실패해도 층은 그대로 1 (실측 ' + failRun.t + ')');
-  ok(failRun.pop, '실패 안내가 뜬다');
+  ok(/시련의 탑 1층 실패/.test(failRun.toast) && !failRun.pop,
+     '실패 안내가 **토스트**로 뜬다(206 — 팝업 아님) — 실측 "' + failRun.toast + '"');
   ok(failRun.again.running && failRun.again.f === 1, '② 실패한 «같은 층» 은 몇 번이든 다시 도전할 수 있다');
 
   /* ---------------- [7] ② 클리어 → 층 +1 · 유물조각 지급 · 저장 ---------------- */
