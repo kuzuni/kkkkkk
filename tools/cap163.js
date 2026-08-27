@@ -36,8 +36,7 @@ const SLOW = 4200;   /* knight 를 뺀 아틀라스의 **최대** 지연(ms) —
 const STAGGER = { 'bird.png': .10, 'stormlord-dragon96x64.png': .18, 'buch-dungeon-tileset.png': .28,
                   'explosion.png': .42, 'robo.png': .62, 'elves-craft-pixel.png': .82, 'zombie.png': 1 };
 const FAST = 140;    /* knight 지연 — 캐릭터가 등장할 수 있게 되는 시점 */
-/* 등장 시작(#ldHero.on) 기준 표본 시각(ms). 1~5 = 등장 300ms 구간 · 6~7 = 선 뒤 대기(idle) · 8 = 전환 */
-const OFF = [25, 130, 250, 375, 490, 640, 1000, null];   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
+const OFF = [30, 150, 280, 410, 540, 660, 1050, null];   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 640ms · 7 = 선 뒤 대기 · null = 전환 */   /* 1~6 = 등장 420ms · 7 = 선 뒤 대기 · null = 전환 */
 const N = OFF.length;
 
 (async () => {
@@ -46,6 +45,29 @@ const N = OFF.length;
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const errs = [];
   const shots = [];
+
+  /* 배경 플레이트 — knight 를 아주 늦춰 «캐릭터 없는 같은 화면» 을 한 장 남긴다.
+     scan163.py 가 이것과 차분해서 캐릭터 잉크만 뽑는다. 배경이 radial-gradient 라
+     «단색 배경과 다른 픽셀» 로는 못 가른다(2회차에 실제로 bbox 가 배경까지 삼켰다).
+     ★ **표본보다 먼저, 그리고 자기 컨텍스트에서** 찍는다 — 표본을 8장 찍은 뒤에 같은 컨텍스트로
+     열면 png 가 브라우저 캐시에서 나와 `page.route` 의 지연이 안 먹고, 플레이트가 «게임 화면» 으로
+     찍힌다(4회차에 실제로 그렇게 나왔고 스캐너가 «화면 전체가 다르다» 로 잡아냈다). */
+  {
+    const pctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await pctx.newPage();
+    await page.route('**/*.png', async (route) => {
+      await new Promise(r => setTimeout(r, /knight\.png$/.test(route.request().url()) ? 9000 : SLOW));
+      await route.continue();
+    });
+    page.goto(URL, { waitUntil: 'load' }).catch(() => {});
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: path.join(OUT, `163-${TAG}-bg.png`) });
+    const ok = await page.evaluate(() => !document.getElementById('loading').classList.contains('off'))
+      .catch(() => false);
+    console.log('  bg 배경 플레이트 → docs/shots/163-' + TAG + '-bg.png' + (ok ? '' : '  ⚠ 로딩 화면이 아니다!'));
+    await pctx.close();
+  }
+
 
   for (let i = 0; i < N; i++) {
     /* ★ 표본 한 장마다 «찍은 뒤에» 상태를 다시 확인하고, 로딩 화면이 이미 지났으면 다시 찍는다.
@@ -91,21 +113,6 @@ const N = OFF.length;
     shots.push({ i: i + 1, t: OFF[i] === null ? '전환' : OFF[i], real: st ? st.el : -1, ...(st || {}) });
   }
 
-  /* 배경 플레이트 — knight 를 아주 늦춰 «캐릭터 없는 같은 화면» 을 한 장 남긴다.
-     scan163.py 가 이것과 차분해서 캐릭터 잉크만 뽑는다. 배경이 radial-gradient 라
-     «단색 배경과 다른 픽셀» 로는 못 가른다(2회차에 실제로 bbox 가 배경까지 삼켰다). */
-  {
-    const page = await ctx.newPage();
-    await page.route('**/*.png', async (route) => {
-      await new Promise(r => setTimeout(r, /knight\.png$/.test(route.request().url()) ? 9000 : SLOW));
-      await route.continue();
-    });
-    page.goto(URL, { waitUntil: 'load' }).catch(() => {});
-    await page.waitForTimeout(1200);
-    await page.screenshot({ path: path.join(OUT, `163-${TAG}-bg.png`) });
-    await page.close();
-    console.log('  bg 배경 플레이트 → docs/shots/163-' + TAG + '-bg.png');
-  }
   shots.forEach(s => console.log(`  ${s.i}  등장+${String(s.t).padStart(4)}ms(실제 ${String(s.real).padStart(4)})  op=${(s.op || 0).toFixed(2)}  ${s.x || '(캐릭터 없음)'}  ${s.num || ''}  [${s.cls || ''}]`));
   console.log('  → docs/shots/163-' + TAG + '-1..' + N + '.png   콘솔 에러', errs.length);
   if (errs.length) console.log(errs.slice(0, 3));
