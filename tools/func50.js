@@ -94,10 +94,34 @@ const tap = (page, sel) => page.evaluate((s) => {
         await S(page, 'AVATARS.length'));
       eq('«착용 중» 라벨 1개', await page.$$eval('#bCos .sk-on', (e) => e.map((x) => x.textContent)), ['착용 중']);
       eq('착용 중 카드 = av1', await page.$eval('#bCos .sk-card.dim', (e) => e.dataset.cosit), 'av1');
-      eq('미보유 카드 = 잠금 4장', await page.$$eval('#bCos .sk-card.lk', (e) => e.map((x) => x.dataset.cosit)),
-        ['av2', 'av3', 'av4', 'av5']);
-      eq('미보유 카드에 다이아 가격 표시',
-        await page.$eval('#bCos .sk-card.lk .sk-bar>b', (e) => e.textContent.startsWith('💎')), true);
+      /* 185 — 87 이 코스튬을 6종 → **50종** 으로 늘렸다. «잠금 4장 = [av2..av5]» 같은 **고정 목록**은
+         데이터가 늘 때마다 썩는다(이 단언이 그렇게 죽어 있었다). 기대값을 게임 데이터에서 런타임에
+         계산해 **집합으로** 비교한다 — 격자는 등급별로 묶여 DOM 순서가 id 순이 아니다. */
+      const lkGot  = (await page.$$eval('#bCos .sk-card.lk', (e) => e.map((x) => x.dataset.cosit))).sort();
+      const lkWant = (await S(page, 'AVATARS.filter(a => !S.avatars[a.id]).map(a => a.id)')).sort();
+      eq('미보유 카드 = AVATARS − 보유', lkGot, lkWant);
+      eq('미보유 장수 = 전체 − 보유 2', lkGot.length, (await S(page, 'AVATARS.length')) - 2);
+      /* 185 — 87 ③ 이 미보유 카드 바닥을 «다이아 가격» 한 가지에서 **두 가지**로 갈랐다:
+         해금 조건이 있는 것은 `🔒<조건>`(`.sk-bar.rq`), 그 밖은 다이아 가격.
+         가격 앞 💎 는 125 이후 `<img alt="">` 라 `textContent` 에 안 잡힌다 — 숫자(`fmt`)로 본다. */
+      const bar = await page.evaluate(() => {
+        const o = {};
+        document.querySelectorAll('#bCos .sk-card.lk').forEach((c) => {
+          const b = c.querySelector('.sk-bar>b'), w = c.querySelector('.sk-bar');
+          o[c.dataset.cosit] = { rq: !!w && w.classList.contains('rq'), t: b ? b.textContent : null };
+        });
+        return o;
+      });
+      const priceId = await S(page, "(AVATARS.find(a => !S.avatars[a.id] && cosReqOk(a)) || {}).id");
+      const reqId   = await S(page, "(AVATARS.find(a => !S.avatars[a.id] && !cosReqOk(a)) || {}).id");
+      eq('미보유(조건 충족) 카드에 다이아 가격', bar[priceId] && bar[priceId].t,
+        await S(page, `fmt(AV[${JSON.stringify(priceId)}].cost)`));
+      eq('가격 카드는 .rq 아님', bar[priceId] && bar[priceId].rq, false);
+      if (reqId) {
+        eq('미보유(조건 미달) 카드는 🔒 + 해금 조건', bar[reqId] && bar[reqId].t,
+          await S(page, `'🔒' + cosReqText(AV[${JSON.stringify(reqId)}])`));
+        eq('조건 카드는 .rq', bar[reqId] && bar[reqId].rq, true);
+      } else no('조건 해금 코스튬이 하나도 없다 — 87 ③ 이 사라졌는지 확인');
       eq('착용 슬롯 1칸', await page.$$eval('#bCos .sk-eqp .sk-slot', (e) => e.map((x) => x.dataset.cosun)), ['av1']);
       /* 총 보유 효과가 실제 곱연산(bonus() 의 아바타 합산)과 같은가 */
       const shown = await page.$eval('#bCos .sk-tot em', (e) => e.textContent);
@@ -140,11 +164,17 @@ const tap = (page, sel) => page.evaluate((s) => {
     {
       const { ctx, page } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 0 });
       await toCos(page);
-      await tap(page, '#bCos [data-cosit="av5"]'); await page.waitForTimeout(200);
-      await tap(page, '#bCos [data-cosbuy]'); await page.waitForTimeout(500);
-      eq('모달 열림', await page.$eval('#modal', (e) => e.classList.contains('on')), true);
-      eq('다이아 부족 안내', await page.$eval('#mtitle', (e) => e.textContent.includes('다이아 부족')), true);
-      eq('보유 안 됨', await S(page, '!!S.avatars.av5'), false);
+      /* 185 — 대상도 런타임에 고른다. «미보유 + 해금 조건 충족» 이라야 걸리는 가드가 «다이아 부족» 이다
+         (조건 미달 코스튬을 누르면 87 ③ 의 «🔒 조건» 안내가 먼저 나가 다른 것을 재게 된다). */
+      const poor = await S(page, "AVATARS.find(a => !S.avatars[a.id] && cosReqOk(a) && a.cost > 0).id");
+      await tap(page, `#bCos [data-cosit="${poor}"]`); await page.waitForTimeout(200);
+      await tap(page, '#bCos [data-cosbuy]'); await page.waitForTimeout(300);
+      /* 185 — 149 가 안내를 **모달 → 토스트**(`notify` → `fxToast`)로 바꿨다. 옛 «#modal 이 열린다» 단언은
+         원리적으로 다시 참이 될 수 없다. 토스트는 760ms 에 퇴장·1060ms 에 제거되므로 300ms 안에 읽는다. */
+      eq('토스트 안내', await page.$$eval('.fx-toast', (e) => e.length), 1);
+      eq('다이아 부족 문구', await page.$eval('.fx-toast', (e) => e.textContent.includes('더 필요합니다')), true);
+      eq('모달은 안 뜬다', await page.$eval('#modal', (e) => e.classList.contains('on')), false);
+      eq('보유 안 됨', await S(page, `!!S.avatars[${JSON.stringify(poor)}]`), false);
       eq('다이아 그대로', await S(page, 'S.dia'), 0);
       await ctx.close();
     }
@@ -169,9 +199,11 @@ const tap = (page, sel) => page.evaluate((s) => {
       eq('카드 뱃지 착용', await S(page, 'S.avatar'), 'av0');
       /* 미보유 착용 가드 */
       await tap(page, '#bCos [data-cosit="av4"]'); await page.waitForTimeout(200);
-      await tap(page, '#bCos [data-coswear]'); await page.waitForTimeout(500);
+      await tap(page, '#bCos [data-coswear]'); await page.waitForTimeout(300);
       eq('미보유 착용 차단', await S(page, 'S.avatar'), 'av0');
-      eq('미보유 착용 안내', await page.$eval('#mtitle', (e) => e.textContent.includes('미보유')), true);
+      /* 185 — §4 와 같이 149 의 토스트 이관. «#mtitle 에 미보유» 는 이제 상세 팝업(§6)의 것이다. */
+      eq('미보유 착용 안내(토스트)',
+        await page.$eval('.fx-toast', (e) => e.textContent.includes('먼저 구매해야 착용합니다')), true);
       await ctx.close();
     }
 
@@ -184,7 +216,12 @@ const tap = (page, sel) => page.evaluate((s) => {
       await tap(page, '#bCos [data-cosit="av1"]'); await page.waitForTimeout(250);
       await tap(page, '#bCos [data-cosit="av1"]'); await page.waitForTimeout(450);
       eq('08 껍데기(.sk8)', await page.$eval('#modal', (e) => e.classList.contains('sk8')), true);
-      eq('제목 = ???(미보유)', await page.$eval('#mtitle', (e) => e.textContent), '???');
+      /* 185 — 82·87 이 «미보유는 ???» 를 뒤집었다: 코스튬은 «이름을 모르는 것» 이 아니라
+         «아직 안 산 외형» 이라 미보유도 이름·그림을 보여 주고, **상태 줄**이 미보유를 말한다.
+         그래서 «미보유임» 을 재는 자리는 제목이 아니라 `.sk-lv` 다. */
+      eq('제목 = 코스튬 이름(미보유도 노출)', await page.$eval('#mtitle', (e) => e.textContent),
+        await S(page, 'AV.av1.n'));
+      eq('상태 줄 = 미보유', await page.$eval('#mbox .sk-lv b', (e) => e.textContent), '미보유');
       eq('[착용] 비활성(미보유)', await page.$eval('#mEq', (e) => e.disabled), true);
       eq('[구매] 활성', await page.$eval('#mLv', (e) => e.disabled), false);
       await tap(page, '#mLv'); await page.waitForTimeout(600);
@@ -202,20 +239,51 @@ const tap = (page, sel) => page.evaluate((s) => {
     console.log('[7] 구버전 아바타 섹션 폐기 · 레드닷');
     {
       const { ctx, page } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 999999 });
-      /* 구버전 상점 패널(#bShop)을 강제로 열어 «👤 아바타» 섹션이 정말 없는지 본다.
-         LESSONS 57-② «안 보이니까 없는 것이 아니다» — 렌더 결과를 직접 읽는다. */
-      await page.evaluate(() => { goTab('shop', true); });
+      /* 185 — 이 블록이 `FUNC50 CRASH` 의 자리였다. 작업 68 이 구버전(파란 스킨) 상점 패널 `#bShop` 을
+         **통째로 폐기**했는데 여기는 아직 그 패널을 열어 «안에 아바타가 없는지» 를 물었다 —
+         `page.$eval('#bShop', …)` 이 «셀렉터 없음» 으로 던져 §7·§8 이 아예 안 돌았다.
+         물음을 뒤집는다: «패널 안에 아바타가 없다» → **«패널 자체가 없다»**.
+         LESSONS 57-② «안 보이니까 없는 것이 아니다» 는 그대로 지킨다 — 상점 탭을 실제로 눌러
+         렌더가 끝난 뒤에 DOM 전역을 읽는다(마크업뿐 아니라 렌더 경로에서도 안 살아나야 한다). */
+      await tap(page, '.tab[data-t="shop"]');
+      await page.waitForTimeout(600);
+      eq('상점 탭 → 10 상점 페이지(#shopw)', await page.$eval('#shopw', (e) => e.classList.contains('on')), true);
+      eq('구버전 패널 #bShop 없음', await page.evaluate(() => document.querySelector('#bShop') === null), true);
+      eq('구버전 [data-av] 0개(문서 전역)', await page.$$eval('[data-av]', (e) => e.length), 0);
+      eq('구버전 [data-pack] 0개(문서 전역)', await page.$$eval('[data-pack]', (e) => e.length), 0);
+      eq('빈 #panel 이 열리지 않음', await page.$eval('#panel', (e) => !e.classList.contains('on')), true);
+      /* 이관된 두 가지는 «없어졌나» 가 아니라 «어디로 갔나» 로 묻는다 — 둘 다 13 재화 탭
+         (`renderCoinPage`, `#shopList`)이다: 유물조각 교환 §9 `[data-ex]` · 44 다이아 상품 §7 `[data-diabuy]`. */
+      await page.evaluate(() => { openShopPage(null, 'coin'); });
       await page.waitForTimeout(500);
-      eq('#bShop 렌더됨', await page.$eval('#bShop', (e) => e.innerHTML.length > 0), true);
-      eq('구버전 [data-av] 0개', await page.$$eval('#bShop [data-av]', (e) => e.length), 0);
-      eq('«아바타» 문자열 0회', await page.$eval('#bShop', (e) => (e.textContent.match(/아바타/g) || []).length), 0);
-      eq('유물석 교환소는 보존', await page.$$eval('#bShop [data-ex]', (e) => e.length > 0), true);
-      eq('다이아 상점은 보존', await page.$$eval('#bShop [data-pack]', (e) => e.length > 0), true);
-      /* 레드닷: 살 수 있는 코스튬이 있으면 영웅 탭에 붙고 상점 탭엔 안 붙는다 */
-      await page.evaluate(() => { uiDirty = true; renderUI(); });
+      eq('13 재화 탭 활성', await S(page, "shopCat === 'coin'"), true);
+      eq('유물조각 교환소 보존(13 재화 탭)', await page.$$eval('#shopList [data-ex]', (e) => e.length > 0), true);
+      eq('교환 칸 수 = EXCHANGE 수', await page.$$eval('#shopList [data-ex]', (e) => e.length),
+        await S(page, 'EXCHANGE.length'));
+      eq('다이아 상점 보존(13 재화 탭)', await page.$$eval('#shopList [data-diabuy]', (e) => e.length),
+        await S(page, 'DIA_PACKS.length'));
+      eq('재화 탭에 «아바타» 문자열 0회',
+        await page.$eval('#shopList', (e) => (e.textContent.match(/아바타/g) || []).length), 0);
+      await page.evaluate(() => { closeShopPage(); });
+      await page.waitForTimeout(350);
+      /* 레드닷: 살 수 있는 코스튬이 있으면 영웅 탭에 붙고 상점 탭엔 안 붙는다.
+         185 — 여기가 이 게이트에서 **한 번도 실행된 적 없는** 단언이었다(위 §7 크래시에 가려 있었다).
+         그대로 켜면 «상점 탭 레드닷 없음» 이 틀린다 — 166 ③ 이 상점 탭 레드닷에 **자기 조건**
+         (`SHOP_BOXES.some(freeLeft > 0)` = 상자별 하루 무료 10연 잔여)을 새로 실었기 때문이고,
+         이 게이트가 물어야 하는 «상점 탭이 코스튬 때문에 켜지지는 않는가» 와는 다른 축이다.
+         그래서 **무료 10연을 소진시켜 166 축을 끈 뒤** 코스튬 축만 남겨 놓고 묻는다. */
+      await page.evaluate((bs) => {
+        S.daily.freeSum = S.daily.freeSum || {};
+        bs.forEach((b) => { S.daily.freeSum[b] = 0; });
+        uiDirty = true; renderUI();
+      }, await S(page, 'SHOP_BOXES.map(x => x.b)'));
       await page.waitForTimeout(300);
+      eq('무료 10연 잔여 0(166 축 끔)', await S(page, 'SHOP_BOXES.some(x => freeLeft(x.b) > 0)'), false);
+      eq('살 수 있는 코스튬 있음', await S(page,
+        'AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a))'), true);
       eq('영웅 탭 레드닷', await page.$eval('.tab[data-t="hero"]', (e) => e.classList.contains('alert')), true);
-      eq('상점 탭 레드닷 없음', await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), false);
+      eq('상점 탭 레드닷 없음(코스튬으로는 안 켜진다)',
+        await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), false);
       await ctx.close();
     }
 
