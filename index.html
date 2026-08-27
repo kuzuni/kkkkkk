@@ -5475,18 +5475,19 @@
     font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
     paint-order:stroke fill}
   /* ⑤-2 ★ 불릿(2·3장) — ref 는 반투명 어두운 행 4개(높이 72 · pitch 82) */
-  .pvc>.pvl{left:41px;top:133px;width:545px}
+  .pvc>.pvl{left:41px;top:133px;width:545px;z-index:1}
   .pvc>.pvl>.pvb{position:relative;height:72px;margin-bottom:10px;border-radius:18px;
     background:rgba(61,20,10,.56)}
-  .pvc>.pvl>.pvb>s{position:absolute;left:18px;top:14px;font-size:38px;line-height:44px;color:#FCC12B}
+  .pvc>.pvl>.pvb>s{position:absolute;left:18px;top:14px;font-size:38px;line-height:44px;color:#FCC12B;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
   .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:20px;font-size:32px;line-height:36px;
-    color:#fff;white-space:nowrap}
+    color:#fff;white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   /* 우측 일러스트 «자리» — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10 A1·A3).
      ⚠ 이모지를 ref bbox 까지 늘리는 방법은 **글리프마다 배율이 달라져** 셋을 따로 맞춰야 했다
      (▶ 는 세로가 길고 🎟 는 가로가 길다). 대신 **자리 자체를 옅은 판으로 그려** bbox 를 고정하고,
      이모지는 그 안에 자연 비율로 앉힌다 — 나중에 이미지로 교체할 때 판만 지우면 된다. */
   .pvc>.art{left:500px;top:135px;width:462px;height:303px;
-    background:rgba(255,255,255,.09);border-radius:22px}
+    background:rgba(255,255,255,.12);border-radius:22px}
   .pvc.ban1>.art{left:531px;top:78px;width:390px;height:239px}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
     font-size:225px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
