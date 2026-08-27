@@ -131,7 +131,14 @@ const SNAP = `(sel, host) => {
     console.log('\n[1] ' + b.name + ' — 부품 규격 (' + b.sel + ')');
     await page.evaluate(o => eval(o), b.open);
     await page.waitForTimeout(650);
+    /* 작업 166 — `.stab>.bdg` 는 «기본 꺼짐 + .alert 로 점등» 이 됐다(종전에는 마크업만으로 상시 점등).
+       이 게이트가 지키는 것은 «배지가 켜졌을 때의 기하»(27x27 · 칸 안)이지 «언제 켜지는가» 가 아니므로,
+       측정 동안만 강제로 보이게 한다. `.alert` 클래스로 켜면 renderUI() 가 0.35초마다 조건대로 되돌려
+       스냅샷 직전에 다시 꺼지므로, 토글이 못 이기는 `!important` 스타일로 켠다(측정 후 제거).
+       점등 «조건» 은 작업 166 의 전용 게이트 `tools/verify166.js` 가 본다. */
+    const bdgOn = await page.addStyleTag({ content: '.stab>.bdg{display:block!important}' });
     const g = await page.evaluate(([fn, sel, host]) => eval(fn)(sel, host), [SNAP, b.sel, b.host]);
+    await bdgOn.evaluate(el => el.remove());
     snaps[b.key] = g;
     if (g.missing) { ok('바 존재', false, b.sel + ' 없음 — 이후 절 건너뜀'); continue; }
 

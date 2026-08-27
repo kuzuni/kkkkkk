@@ -7437,9 +7437,15 @@
      우리는 local (172,10) 22px 이라 7.5px 아래·2px 작았다. ※ 60 쥬시의 jzDotPulse(scale 1.14) 때문에
      색 마스크로는 bbox 가 번져 안 잡힌다 — CSS 값으로 맞춘다. */
   /* 91 — 알림점은 칸 우상단 고정. 214 기준 left 170(우끝에서 20) → 147 기준 **103**. */
-  .cltab>s.dot{display:none;left:103px;top:2.5px;width:24px;height:24px;border-radius:50%;
+  /* 166 (2026-08-27) — ⚠ **같은 특이성 함정**(아래 §뱃지 7215 · §설명상자 7262 주석과 같은 건).
+     이 파일 위쪽 `#collw i,#collw s,#collw b,#collw em{display:inline-block}`(7118)은 **ID 셀렉터**라
+     `.cltab>s.dot{display:none}`(클래스 2 + 타입 1)을 이긴다 → `display:none` 이 한 번도 먹은 적이 없고,
+     `.alert` 토글(`collTabReady`, ~21060)도 무의미했다. 도감 탭 6칸이 **강화 가능 여부와 무관하게
+     상시 빨간점**이었다(주인 지적 «무조건 떠 있는 곳» 의 한 사례 — 훈련 배수 탭과 같은 계열).
+     ID 를 붙여 특이성을 맞춘다. 기하값은 9·91회차 실측 그대로이므로 한 줄도 안 건드린다. */
+  .cltab>s.dot,#collw .cltab>s.dot{display:none;left:103px;top:2.5px;width:24px;height:24px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
-  .cltab.alert>s.dot{display:block}
+  .cltab.alert>s.dot,#collw .cltab.alert>s.dot{display:block}
   /* ==========================================================================
      33 재화 «정보» 팝업 (#ciw) — 측정표 docs/measure/33-재화정보팝업.md
      전역 규칙(UI-REFERENCE 33): «모든 재화 아이콘은 클릭하면 이 정보 팝업이 뜬다».
@@ -8474,12 +8480,11 @@
      13회차(비평가 U P6): border-box 31 은 맞지만 **핑크 코어가 23 으로 ref 21 보다 +10%** 였다
      (ref 가로 단면: 검정 388..391 · AA 392 · 핑크 393..413 · AA 414 · 검정 415..418).
      링을 4 → 5 로 올리면 검정 388..392 · 핑크 393..413 으로 ref 와 정확히 겹친다. */
-  .tr-qty .dot{position:absolute;left:229px;top:-9px;width:31px;height:31px;border-radius:50%;
-    background:#EF3457;box-shadow:inset 0 0 0 5px #000;z-index:4}
-  /* 21회차(γ P8): 레드닷 3개 중심이 ref 는 403 · 657 · **909**(간격 253, 252.5) 인데
-     우리는 403 · 656.5 · **911.5**(간격 253, 255) 였다 — 칸 폭이 253·255·253 이라 3번 칸만 2px 밀린다.
-     3번 칸 dot 만 −2.5px (칸 자체를 옮기면 7회차에 확정된 칸 경계 x159/412/667 이 깨진다). */
-  .tr-qty>.q:nth-child(3) .dot{left:226.5px}
+  /* 166 (2026-08-27) — `.tr-qty .dot` 규격(31 · 링 5 · left 229 / 3번 칸 226.5)은 **삭제**한다.
+     배수 탭은 수량 선택 스위치라 알림 대상이 아닌데 렌더가 조건 없이 dot 을 박아 상시 점등이었다
+     (주인 보고: «훈련 x1/x10/x30 에 강화 불가능한데도 빨간 알림»). 렌더에서 뺐으므로 CSS 도 같이 뺀다 —
+     남겨 두면 «죽은 선택자» 가 된다(작업 134 `.tr-sub>.sg.on>.dot` 과 같은 처리).
+     위 12·13·21회차 실측(ref 배지 체계 트레이 31 / 카드 42 / 서브탭 45)은 `.tr-card>.dot` 쪽에 살아 있다. */
 
   /* 88 — «스탯 훈련» 서브탭 폐기(저장소 주인 지시): §7 서브탭 바(.tr-sub) 규격 삭제. 훈련 단일 화면. */
 
@@ -8897,9 +8902,14 @@
   .stabs.sp3>.stab:nth-of-type(2){left:33.3333%}
   .stabs.sp3>.stab:nth-of-type(3){left:66.6667%}
   /* 레드닷 — 옛 `.dns-t.r>s`(칸 안 절대좌표 371) 를 칸 우상단 기준으로 옮긴 것 */
+  /* 166 (2026-08-27) — 이 배지는 마크업(`<s class="bdg">`)에만 있고 **켜고 끄는 곳이 한 군데도 없어**
+     던전 서브탭에서 상시 점등이었다(입장 횟수를 다 써도, 전투력이 모자라도 빨간점). 다른 배지들과 같은
+     규약으로 통일한다: 기본 꺼짐 + `.alert` 로 점등. 조건은 탭바 «던전» 칸과 **같은 `dunAlert`**
+     (남은 입장 횟수 > 0 && 요구 전투력 충족) — renderUI() 가 매 틱 토글한다. */
   .stab>.bdg{position:absolute;right:23px;top:-6px;width:27px;height:27px;border-radius:50%;
-    background:#F22E52;text-decoration:none;transform:none;
+    background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  .stab.alert>.bdg{display:block}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
@@ -9879,7 +9889,8 @@
      display:none ↔ block 전환만으로 애니메이션이 «처음부터» 다시 돈다(별도 JS 불필요). */
   /* 작업 71 — 좌측 📬 에서 ▦ 메뉴 버튼으로 옮겨 온 «우편» 레드닷도 같은 손맛을 받게 넣는다(④ 일관성). */
   /* 작업 134 — `.tr-sub>.sg.on>.dot` 은 88 이 폐기한 훈련 서브탭의 잔재라 어디에도 걸리지 않는다(죽은 선택자). 삭제. */
-  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot{
+  /* 작업 166 — 던전 서브탭 배지도 조건부(.stab.alert)가 됐으므로 같은 손맛 한 벌을 받는다. */
+  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot,.stab.alert>.bdg{
     animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
   @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
   @keyframes jzDotPulse{0%,72%,100%{scale:1}84%{scale:1.14}}
@@ -19326,7 +19337,12 @@ function renderDunPage(){
       +  '<div class="lb a"><i>레벨</i></div><div class="lb b"><i>남은 횟수</i></div>'
       +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
       +  '<div class="sp tk"><em>' + u.tk + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
-      +  (!lock && left > 0 ? '<s class="dot"></s>' : '')
+      /* 166 (2026-08-27) — 레드닷 조건에 «요구 전투력 충족» 을 더한다. 종전 `!lock && left > 0` 은
+         전투력이 모자라 들어가 봐야 지는 던전에도 빨간점을 켰다(② «불가능한데 뜨는 dot»). 탭바 «던전» 칸의
+         `dunAlert`(남은 횟수 > 0 && cp() >= req)와 **같은 기준**이라 이제 탭·카드가 함께 켜지고 함께 꺼진다.
+         ⚠ 113 가이드 손가락(`gmHintDun`)이 이 dot 으로 «입장 가능 카드» 를 찾는다 — 조건이 좁아져도
+           dot 이 하나도 없으면 첫 카드로 폴백하므로 손가락이 사라지지는 않는다. */
+      +  (!lock && left > 0 && cp() >= d.req(f) ? '<s class="dot"></s>' : '')
       +  (lock ? '<div class="lk"><em>🔒</em><u>' + dunLockTxt(d) + '</u></div>' : '')
       +  '</div>';
   });
@@ -19433,7 +19449,10 @@ function renderRaidPage(){
       +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>최고 DPS</i></div>'
       +  '<div class="sp lv"><em>⏱️</em><i>' + r.sec + '</i></div>'
       +  '<div class="sp tk"><em>🏆</em><i>' + (b.dps > 0 ? fmt(b.dps) : '-') + '</i></div>'
-      +  (!lock ? '<s class="dot"></s>' : '')
+      /* 166 (2026-08-27) — 종전 `!lock` 은 «열려 있기만 하면» 켜져서, 측정장은 입장 제한이 없으므로
+         해금 뒤 영영 꺼지지 않는 상시 점등이었다(① 조건 없는 dot). 레드닷은 «누를 게 있다» 신호이므로
+         **아직 한 번도 기록을 못 낸 측정장**(최고 DPS 없음)에만 켠다 — 한 번 재고 나면 스스로 꺼진다. */
+      +  (!lock && !(b.dps > 0) ? '<s class="dot"></s>' : '')
       +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')
       +  '</div>';
   });
@@ -19469,7 +19488,9 @@ function arenaCardHTML(){
     +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>전적 (승-패)</i></div>'
     +  '<div class="sp lv"><em>⏱️</em><i>' + ARENA.sec + '</i></div>'
     +  '<div class="sp tk"><em>🏅</em><i>' + rec.w + '-' + rec.l + '</i></div>'
-    +  (!lock ? '<s class="dot"></s>' : '')
+    /* 166 (2026-08-27) — 측정장 카드와 같은 처리. 아레나도 입장 제한이 없어 `!lock` 만으로는 상시 점등이었다.
+       «전적 0-0»(아직 한 판도 안 해봤다)일 때만 켠다 — 한 판 하면 꺼진다. */
+    +  (!lock && rec.w + rec.l === 0 ? '<s class="dot"></s>' : '')
     +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + ARENA.open + '</b> 클리어</u></div>' : '')
     +  '</div>';
 }
@@ -22301,8 +22322,12 @@ function renderTrainLive(){
 }
 function renderTrain(){
   trSyncHead();
+  /* 166 (주인 보고 2026-08-27) — 배수 탭은 «수량 선택 스위치» 라 알림 대상이 아니다.
+     여기서 조건 없이 `em.dot` 을 박아 강화 불가(재화 부족·캡 도달)여도 3칸이 상시 점등했다.
+     레드닷은 «누를 게/받을 게 있다» 신호로만 쓴다 — 배수 칸에서는 제거. 「강화 가능」 알림은
+     카드 자신의 `.tr-card>.dot`(c.ok = 비용 충족 + 캡 미달)이 이미 조건부로 맡고 있다. */
   $('trQty').innerHTML = TRAIN_QTYS.map(q => '<span class="q' + (trainQty() === q ? ' on' : '')
-    + '" data-trq="' + q + '"><i>x' + q + '</i><em class="dot"></em></span>').join('');
+    + '" data-trq="' + q + '"><i>x' + q + '</i></span>').join('');
   $('trCards').innerHTML = trainCardData().map(c =>
     '<div class="tr-card' + (c.ok ? '' : ' no') + (c.full ? ' full' : '') + '" data-tr="' + c.k + '">'
     + '<span class="ch"><i>' + c.lvTxt + '</i></span>'
@@ -22866,10 +22891,20 @@ function renderUI(){
                               /* 87 — 조건 해금(req) 이 안 열린 코스튬은 «살 수 있음» 이 아니다 */
                               || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a)))
              : k === 'grow' ? false   /* 88 — 스탯 포인트 폐기, 성장 탭 레드닷 조건 삭제 */
+                                      /* 166 — «훈련 강화 가능» 은 여기에 올리지 않는다: 골드는 방치로 계속
+                                         차오르므로 사실상 상시 점등이 되어 주인이 지적한 그 노이즈로 되돌아간다.
+                                         카드별 `.tr-card>.dot`(c.ok) 가 이미 자리에서 알려 준다. */
              : k === 'adv'  ? dunAlert
              : k === 'box'  ? collCatReady('relic')
+                                      /* 166 ③ — «받을 게 있는데 안 뜨던» 자리. 상자별 하루 무료 10연이
+                                         남아 있으면 «받을 게 있다» 가 맞다(다 쓰면 꺼지고 자정에 되돌아온다). */
+             : k === 'shop' ? SHOP_BOXES.some(x => freeLeft(x.b) > 0)
              : false;
     t.classList.toggle('alert', !!al);
+  });
+  /* 166 — 던전 서브탭 배지: 탭바 «던전» 칸과 같은 기준으로 켠다(마크업에만 있고 토글이 없어 상시 점등이었다) */
+  document.querySelectorAll('#dunSub .stab').forEach(t => {
+    t.classList.toggle('alert', t.dataset.dsub === 'dun' && dunAlert);
   });
   uiDirty = false;
 }
