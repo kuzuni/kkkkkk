@@ -153,8 +153,13 @@ const WANT = [
 
   /* 수령 — 미션을 완료 상태로 만들고 배너를 누른다 */
   const claim = await p.evaluate(() => {
-    S.guide.idx = 11; S.guide.prog = -1; gmBase(GUIDE[11]);
-    S.cnt.sumRelic = S.guide.prog + GUIDE[11].goal;      /* 델타형 — 기준선 + goal */
+    S.guide.idx = 11; S.guide.prog = -1;
+    /* 253 — 이 미션은 델타형에서 **abs 형으로 바뀌었다**(«이미 소환해 뒀으면 달성»). 옛 코드는
+       `gmBase()` 를 부른 «부작용»(S.guide.prog 에 기준선이 찍힌다)에 기대 목표치를 계산했는데,
+       abs 미션에서 gmBase 는 prog 를 건드리지 않고 0 을 돌려준다 → prog 가 -1 그대로라
+       목표치가 0 이 돼 «수령 가능» 이 안 됐다. **반환값**을 쓰면 두 형태 모두에서 맞는다.
+       154 의 주제(«출석» 삭제·순서·이관)와는 무관한 헬퍼 한 줄이다. */
+    S.cnt.sumRelic = gmBase(GUIDE[11]) + GUIDE[11].goal;
     uiDirty = true; renderUI(); drawTuto();
     const dia0 = S.dia, ready = gmReady();
     $('tuto').click();
