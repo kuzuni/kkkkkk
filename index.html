@@ -21725,7 +21725,7 @@ function mileageExchange(){
     b:'마일리지 쿠폰 ' + MILE_NEED + '개를 교환한 보상입니다. 보관 기간은 없습니다.' });
   uiDirty = true; save();
   renderCoinPage($('shopList'));
-  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA) + '</b> 우편함으로 발송 · 남은 쿠폰 ' + S.mileage + '개');
+  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA) + '</b> 우편함으로 발송 · 남은 마일리지 ' + S.mileage + '개');
   return true;
 }
 function renderCoinPage(list){
@@ -21822,7 +21822,9 @@ function renderCoinPage(list){
       +  '<div class="pn">' + (top ? '<s class="ray"></s>' : '') + '<em>' + curIc('dia') + '</em></div>'
       +  '<div class="qt">' + p.q + '</div>'
       /* 122(5회차 S ⑧) — 뱃지 2개가 같은 각도로 같이 흔들렸다. 상품 인덱스로 반주기씩 어긋낸다. */
-      +  (p.cp ? '<div class="cp" style="--jz-d:' + (-1.5 * (i % 2)) + 's"><i>쿠폰 +' + p.cp + '</i></div>' : '')
+      /* 200 — 뱃지 문구는 «쿠폰 +n» → «마일리지 +n»(주인 지시 2026-08-27, 가독성).
+         «쿠폰» 단독은 55 «쿠폰 코드»(별개 기능)와 헷갈린다. 좁은 자리라 «마일리지 쿠폰» 이 아니라 «마일리지». */
+      +  (p.cp ? '<div class="cp" style="--jz-d:' + (-1.5 * (i % 2)) + 's"><i>마일리지 +' + p.cp + '</i></div>' : '')
       +  '<div class="bt buy" data-diabuy="' + p.id + '"><u class="pr">' + wonTxt(p.won) + '</u></div>'
       +  '<div class="fr"></div></div>';
   });
@@ -21834,7 +21836,7 @@ function renderCoinPage(list){
     +   '<div class="tt">마일리지 쿠폰</div>'
     +   '<div class="ct">' + mil + ' / ' + MILE_NEED + '</div>'
     +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
-    +   '<div class="rw">쿠폰 ' + MILE_NEED + '개 → ' + curIc('dia') + ' ' + fmt(MILE_DIA) + '</div>'
+    +   '<div class="rw">마일리지 ' + MILE_NEED + '개 → ' + curIc('dia') + ' ' + fmt(MILE_DIA) + '</div>'
     +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
   /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.
      `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물조각은 14/15 유물 소환의 재화라
