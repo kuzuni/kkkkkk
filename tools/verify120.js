@@ -38,8 +38,15 @@ const GAP2_PX = 38;               /* 수반↔안내문 — 비례가 아니라 
    상인방은 격자 위 300px 이므로 «스트립 = 격자 top − 300» 이고, 격자 top 을 600 으로 묶으면
    스트립이 300 을 못 넘는다. 2280 은 594.8 이라 불변이고 2600 만 757.2 → 600 으로 내려온다.
    회수분 157.2px 은 gap1(받침↔수반 구간)으로 흘러 ①의 바닥면·③의 계단이 채운다. */
-const GT_MAX = 460;   /* 14회차 — 600 → 460 (상인방 위 스트립 300 → 160) */
-const LINTEL_STRIP_MAX = 160;
+/* 18회차 [L] — GT_MAX(460 고정 클램프)를 폐기하고 **레퍼런스 비 1:3.797** 로 갈았다.
+   아래 `wantGt()` 가 새 규칙이다. 옛 상수는 «어디서 왔는지» 를 남겨 두려고 주석으로만 보존한다. */
+const AB_RATIO = 3.797;   /* 아치 위:아래 = ref 133:505 (패널 환산 1080×1527) */
+/* 18회차 [L] — 스트립 상한 160 → **190**. 14회차가 160 으로 내린 근거는 «2280 288px · 2600 293px 가
+   평균 휘도 29.6 · 66.6%가 32 미만 = 육안으로 검은 띠» 였는데, 12회차 이후 벽 결이 들어와
+   **그 전제가 더는 참이 아니다**. r18 실측(2600 프레임 y112~232): 행별 고유색 330~378 ·
+   행 std 15.9~16.3 · 평균 휘도 32.7~36.6. [L] 이 만드는 최대치는 2600 의 182.8px 이라
+   «띠» 라 불린 288~293 의 63% 다. 상한은 남겨 둔다 — 규칙이 다시 풀리면 잡아야 하므로. */
+const LINTEL_STRIP_MAX = 190;
 /* 12회차 — 하단 여백을 «패널 바닥에서» 역산하고 clamp 로 묶었다(비평 AB ⑥·AC ⑥: 26 → 159px, 6.1배).
    1920·2280 은 clamp 안쪽이라 불변이고, 1600 만 하한 34 · 2600 만 상한 120 에 걸린다. */
 const G3_MIN = 44, G3_MAX = 104;   /* 14회차 — 안내문 위 41px 고정과의 역전 해소 */
@@ -226,11 +233,26 @@ const inter = (a, b) => {
          ⚠ 아래 gt 의 셋째 인자는 **137 그대로다** — 그쪽은 «아래에 이만큼 예약하라» 는 하한이라
             낮추면 gt 가 위로 올라갈 여지를 얻어 바닥을 되레 빼앗는다(1920 이 1단 → 0단이 됐다). */
       const av = Math.min(186, (T - 174) / 2);
-      const gt = Math.max(av + 94, Math.min(Math.min(spare * GAP_W[0], GT_MAX), T - av - 137));
+      /* ── 18회차 [L] — gt 를 «클램프 두 개» 가 아니라 **레퍼런스 비 하나**로 푼다. ──
+         A(아치 위) : B(아치 아래) = ref 133 : 505 = 1 : 3.797 을 프레임 무관 상수로 놓는다.
+           A + B = P − 516 − 2·av = spare + 304 − 2·av      ⟹  gt = (A+B)/(1+3.797) + av
+         하한 `av+94`(상인방 온전 + 금테 회피)와 상한 `T−av−137`(아래 예약)은 그대로 지킨다 —
+         1600 은 그 하한이 규칙보다 크게 나오므로 **1600 만 규칙이 안 먹는다**(13·16회차가 확정한
+         «1600 은 예산이 없다» 자리). 나머지 세 프레임은 A:B 가 정확히 1:3.80 으로 붙는다. */
+      const gtRule = (spare + 304 - 2 * av) / (1 + AB_RATIO) + av;
+      const gt = Math.max(av + 94, Math.min(gtRule, T - av - 137));
       const wantG = [gt, T - gt, GAP2_PX, g3];
       const gErr = Math.max(...gaps.map((g, i) => Math.abs(g - wantG[i])));
-      ck(`[${H}] ⑥ 여백이 레퍼런스 비율(320:337:23:27) + 상단 클램프대로 배분`, gErr < 1.0,
+      ck(`[${H}] ⑥ 여백이 «아치 위:아래 = ref 1:3.797» 배분 규칙대로`, gErr < 1.0,
         `실측 ${gaps.map(g => g.toFixed(1)).join('/')} vs 기대 ${wantG.map(g => g.toFixed(1)).join('/')} (최대 Δ${gErr.toFixed(2)})`);
+      /* [L1] 규칙이 «실제로 상수인가» 를 결과에서 되잰다 — 위 항목은 식을 다시 쓴 것이라
+         식과 코드가 함께 틀리면 둘 다 통과한다. 이건 렌더 결과의 A:B 를 직접 나눈다.
+         1600 은 하한이 이겨 규칙 밖이므로 «규칙이 먹은 프레임» 에서만 잰다. */
+      const A = gaps[0] - av, B = P.h - gaps[0] - 516 - av;
+      const ruleBinds = Math.abs(gt - gtRule) < 0.6;
+      ck(`[${H}] ⑥ A:B ${ruleBinds ? '= 1:3.797 (규칙 적용)' : '— 하한이 이김(1600 예산 없음)'}`,
+        ruleBinds ? Math.abs(B / A - AB_RATIO) < 0.02 : gt <= gtRule + 0.6,
+        `A ${A.toFixed(1)} : B ${B.toFixed(1)} = 1:${(B / A).toFixed(3)}`);
       /* ── 16회차 신설 — ② 아치 종횡비. ──
          «개구 588×888 고정» 은 사양인데, 짧은 프레임에서는 예산이 없어 다리를 누른다(6회차부터).
          누르는 것 자체는 허용하되 **어디까지** 눌러도 되는지에 자가 없어서, 1600 이 1:1.15 까지
@@ -272,16 +294,26 @@ const inter = (a, b) => {
          (1600 은 래퍼가 0px 이라 단이 4개 있어도 화면엔 하나도 안 나온다.) */
       const visH = e => Math.min(e.b, r.steps.b) - Math.max(e.t, r.steps.t);
       const vis = r.sts.filter(e => visH(e) > 0.5);
+      /* 18회차 — 보이는 단 중 **가장 위**(= 가장 먼) 것. `vis` 는 위→아래 순이다
+         (아래 «맨 아래 단 = 842» 가 `ws[ws.length-1]` 를 쓰는 것과 같은 전제). 깊이 감광 검사에 쓴다. */
+      const stTop = vis.length >= 2 ? vis[0] : null;
       /* 계단은 접합선 띠(문지방 4 + 그림자 9)를 덮지 않도록 14px 아래에서 시작한다 */
       const wantSt = Math.min(r.ground.t + 14, r.mid.t);
       /* 16회차 — 계단이 «억제» 된 프레임(구간 < 60px)에서는 래퍼 높이가 0 이라 상변이 수반과 같다.
          그 경우는 «접합선 +14 에서 시작» 을 요구하지 않는다 — 애초에 계단이 없다. */
       const stSup = r.steps.h < 0.6;
-      ck(`[${H}] ③ 계단 구간 = 접합선 +14 ~ 수반 (Δ ≤ 1px — 접합선을 안 덮는다)`,
+      /* ── 18회차 [M] — 구간을 «피치 84 의 정수배» 로 자른다. ──
+         옛 항목은 «구간 상변 = 접합선 +14» 를 **정확히** 요구했는데, 그러면 구간 높이가
+         84 의 배수가 아닌 임의값이 되고 `--rw-n = round(nearest, R/84)` 이 R ∈ [42,126) 을
+         전부 1단으로 뭉개 **피치가 42~126 을 오간다**(이번에 1920 123.3 으로 터진 자리).
+         새 요구는 두 가지다: ⓐ 구간 상변이 접합선 +14 **아래**(= 접합선을 안 덮는다) ·
+         ⓑ 접합선 +14 부터 구간 상변까지의 잔여(민 바닥)가 **한 단 미만**(= 들어갈 단을 안 버렸다). */
+      const rem = stSup ? 0 : r.steps.t - wantSt;
+      ck(`[${H}] ③ 계단 구간 = 84 정수배 · 접합선 +14 아래 · 잔여 < 84`,
         stSup ? Math.abs(r.steps.b - r.mid.t) < 1.0
-              : (Math.abs(r.steps.t - wantSt) < 1.0 && Math.abs(r.steps.b - r.mid.t) < 1.0),
+              : (rem > -1.0 && rem < STEP_PITCH - 0.001 && Math.abs(r.steps.b - r.mid.t) < 1.0),
         stSup ? `계단 억제(구간 0) · 하변 ${r.steps.b.toFixed(1)} = 수반 ${r.mid.t.toFixed(1)}`
-              : `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} vs 기대 ${wantSt.toFixed(1)} · 수반 ${r.mid.t.toFixed(1)}`);
+              : `구간 ${r.steps.t.toFixed(1)}..${r.steps.b.toFixed(1)} (h ${r.steps.h.toFixed(1)} = 84×${(r.steps.h / 84).toFixed(2)}) · 접합선+14 ${wantSt.toFixed(1)} · 잔여 ${rem.toFixed(1)}`);
       if (vis.length) {
         /* ── 15회차 — **이 항목이 «머리 잘린 단» 을 놓쳤다.** ──
            14회차가 단 수를 8 로 늘렸을 때 2600 의 계단 구간은 650px, 피치는 84 고정이라
@@ -355,7 +387,7 @@ const inter = (a, b) => {
         /* 클립이 뷰포트 y=108 에서 시작하고 fit 스케일이 1 이라 «샷 y = 프레임 y − 108» 이다
            (③ 센티넬 검사와 같은 좌표계). */
         const shot2 = await page.screenshot({ clip: { x: 0, y: regTop, width: 1080, height: regBot - regTop } });
-        const m = await page.evaluate(async ({ dataUrl, gy, s1t, s1b }) => {
+        const m = await page.evaluate(async ({ dataUrl, gy, s1t, s1b, snt }) => {
           const img = new Image();
           await new Promise(res => { img.onload = res; img.src = dataUrl; });
           const c = document.createElement('canvas');
@@ -381,12 +413,26 @@ const inter = (a, b) => {
           const shadow = band(gy + 4, gy + 16), below = band(gy + 24, gy + 76);
           /* ③ 디딤면 vs 챌면 — 항상 온전히 보이는 **맨 아래 단** 안에서 */
           const tread = band(s1t + 10, s1t + 21), riser = band(s1t + 27, s1b - 4);
-          return { peak, wallAbove, shadow, below, tread, riser };
+          /* 18회차 — 맨 «위» 단의 같은 자리. 깊이 감광이 실제로 걸려 있으면 여기가 더 어둡다.
+             snt < 0 이면 단이 하나뿐인 프레임이라 비교 대상이 없다. */
+          const treadTop = snt >= 0 ? band(snt + 10, snt + 21) : -1;
+          /* 18회차 [N] — 접합선 «검은 띠» 감시. 문지방 바로 밑 9px 의 행평균 휘도 자체를 잰다.
+             위 ①-2 는 «아래보다 어두운가»(부호)만 봐서 L 8.8 짜리 순검정 띠를 통과시켰다. */
+          const seamDark = band(gy + 4, gy + 12);
+          return { peak, wallAbove, shadow, below, tread, riser, treadTop, seamDark };
         }, {
           dataUrl: 'data:image/png;base64,' + shot2.toString('base64'),
           gy: Math.round(r.ground.t - regTop),
           s1t: Math.round(r.st1.t - regTop), s1b: Math.round(r.st1.b - regTop),
+          snt: stTop ? Math.round(stTop.t - regTop) : -1,
         });
+        /* ── 18회차 [N] — 접합선이 «검은 띠» 가 되지 않았는가. ──
+           r18 채점에서 비평 AN 이 ⑤ 3점의 유일한 근거로 짚은 자리다: 문지방 밑 9px 이
+           **폭 1075 · 행평균 휘도 8.7~8.9 · 고유색 32~39개** 로 화면을 가로로 절단했다.
+           주인 지시가 «검은 영역이 없게» 이므로 이건 부호가 아니라 **절대 휘도**로 잰다.
+           목표 L ≥ 20(주변 바닥 32~40 대비 Δ ≤ 20). 음성 대조: 알파를 옛 .88 로 되돌리면 8.2. */
+        ck(`[${H}] ⑤ 접합선 그림자가 «검은 띠» 가 아니다 — 휘도 ≥ 20`,
+          m.seamDark >= 20, `문지방 밑 9px 행평균 ${m.seamDark.toFixed(1)} (옛 .88 알파 = 8.2)`);
         ck(`[${H}] ① 접합선이 «보이는가» — 문지방 대비 ≥ 15`,
           m.peak - m.wallAbove >= 15,
           `문지방 ${m.peak.toFixed(1)} vs 받침 위 벽 ${m.wallAbove.toFixed(1)} = Δ${(m.peak - m.wallAbove).toFixed(1)}`);
@@ -397,6 +443,19 @@ const inter = (a, b) => {
           ck(`[${H}] ③ 디딤면 / 챌면 대비 ≥ 12 (맨 아래 단)`,
             m.tread - m.riser >= 12,
             `디딤면 ${m.tread.toFixed(1)} vs 챌면 ${m.riser.toFixed(1)} = Δ${(m.tread - m.riser).toFixed(1)}`);
+          /* ── 18회차 — **깊이 감광이 «실제로 걸려 있는가».** ──
+             이번 회차에 `.rw-steps::after` 의 알파를 `calc(… var(--rw-n) …)` 로 썼다가
+             **네 프레임 전부 알파 0** 이 됐는데(미해결 토큰이 alpha 자리에서 0 으로 접힌다)
+             게이트가 한 항목도 안 깨졌다 — r17 [K] 가 통째로 사라진 채 초록불이었다.
+             LESSONS 120-(2) «넣긴 넣었는데 안 보이는 것을 넣었다고 판단했다» 그대로라 자를 댄다.
+             단이 2개 이상인 프레임에서 «맨 위 단 디딤면 < 맨 아래 단 디딤면» 이어야 한다. */
+          if (m.treadTop >= 0) {
+            ck(`[${H}] ③ 깊이 감광이 걸려 있다 — 맨 위 단 디딤면이 맨 아래보다 어둡다`,
+              m.tread - m.treadTop >= 3,
+              `맨 위 ${m.treadTop.toFixed(1)} vs 맨 아래 ${m.tread.toFixed(1)} = Δ${(m.tread - m.treadTop).toFixed(1)}`);
+          } else {
+            ck(`[${H}] ③ 단 1개 — 깊이 감광 비교 대상 없음(오버레이 높이 0 이 정상)`, true, '');
+          }
         } else {
           ck(`[${H}] ③ 맨 아래 단이 ${r.st1.h.toFixed(1)}px — 디딤/챌면 대비 검사 생략`, true, '');
         }
