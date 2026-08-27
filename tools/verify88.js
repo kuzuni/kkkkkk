@@ -4,8 +4,10 @@
  *   node tools/verify88.js
  *
  * 검사 항목:
- *   [A] 소스 — spAtk/statStage/plvNeed/pexp 등 폐기 식별자가 코드(주석 제외)에 0건
- *   [B] 23 훈련 팝업 — 서브탭(#trSub/[data-trsub]) 없음 · 리본 «훈련 n 단계» · 카드 3장 💰 재화
+ *   [A] 소스 — spAtk/statStage/plvNeed/pexp 등 폐기 식별자가 코드(주석 제외)에 0건 (식별자 경계로 대조)
+ *   [A2] «스탯» 서브탭 부활 금지 — 88 의 바(#trSub/.tr-sub)·stat 칸 0건 (203/210 의 «훈련·룬·단련» 바는 별개)
+ *   [A3] 매처 자가검사 — 금지어는 잡고, 203/210 의 이름은 안 잡는다 (277 회귀 방지)
+ *   [B] 23 훈련 팝업 — «스탯» 서브탭·분배 UI 없음 · 리본 «훈련 n 단계» · 카드 3장 💰 재화
  *   [C] 훈련 실동작 — 카드 탭 → 골드 감소 + Lv 상승 + S.upgrades 증가 (88 이후에도 골드 훈련은 산다)
  *   [D] 강화 탭 — «⚒️ 강화 / 🧬 스탯» 서브탭 없음([data-uptab]/[data-sp]/[data-spauto]/[data-spreset] 0)
  *   [E] 구 세이브 호환 — plv/pexp/sp/spAtk/spHp/spRegen/spAuto/statStage 가 든 세이브가 에러 없이 로드
@@ -41,14 +43,61 @@ const ok = (b, name, detail) => {
 };
 
 (async () => {
-  /* [A] 소스 검사 — 주석을 걷어낸 코드에서 폐기 식별자 0건 */
+  /* [A] 소스 검사 — 주석을 걷어낸 코드에서 폐기 식별자 0건
+     ────────────────────────────────────────────────────────────────────────────────
+     277(2026-08-27) — 이 절이 `trSub` · `data-trsub` 2건으로 **빨간 채 방치**돼 있었다.
+     제품은 옳았다. 88 이 지운 것은 «훈련 | 스탯» 두 칸짜리 바(`#trSub` · `.tr-sub` · `trIsTrain`)이고
+     그것은 지금도 없다. 지금의 `#trSubs`(«훈련 · 룬 · 단련»)는 **203·210 이 저장소 주인 지시로 새로
+     세운 다른 물건**이라, 88 이 막으려던 것과 이름만 겹쳤다 → **게이트 쪽이 틀렸다**(185-①: 손으로 박은
+     금지 목록은 «기능» 이 아니라 «그때의 이름» 을 감시한다).
+       ① 금지 목록에서 `trSub`·`data-trsub` 를 뺀다 — 지금 그 이름의 주인은 203/210 이다.
+       ② 대신 88 의 **주제**(«스탯» 칸의 부활 금지)를 [A2] 로 좁혀 새로 박는다. 단언을 지우면 감시하는
+          눈이 사라지므로 **이사시킨다**(185-④): «이름이 있나» → «스탯 칸이 있나».
+       ③ 매칭을 `includes` → **식별자 경계**로 바꾼다. 부분문자열 대조가 `setTrSub`·`trSubs` 같은 남의
+          이름을 통째로 빨갛게 만든 것이 이번 오진의 기계적 원인이다.
+       ④ «0건» 단언은 **매처가 고장 나도 초록**이다(185-② 의 반대 방향) → [A3] 자가검사로 «금지어를
+          실제로 잡는가» · «203/210 의 이름은 안 잡는가» 를 같이 못 박아 이 회귀를 재발시키지 않는다. */
   const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
   const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
   const dead = ['spAtk', 'spHp', 'spRegen', 'spAuto', 'statStage', 'statCap', 'statLv(', 'plvNeed',
     'S.plv', 'S.pexp', 'S.sp ', 'S.sp;', 'S.sp)', 'S.sp,', 'addStat', 'autoSpend', 'resetStat',
-    'SP_PER_LV', 'SP_VALUE', 'gainExp', 'statTrain', 'renderStat(', 'trSub', 'trIsTrain', 'upTab', 'data-trsub'];
-  const hits = dead.filter(t => code.includes(t));
-  ok(hits.length === 0, '[A] 폐기 식별자 0건 (주석 제외)', hits.length ? '잔존: ' + hits.join(', ') : '');
+    'SP_PER_LV', 'SP_VALUE', 'gainExp', 'statTrain', 'renderStat(', 'trIsTrain', 'upTab'];
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  /* 앞 경계는 `.` 을 **허용**해야 한다 — `S.pexp` 의 `pexp`, `S.upTab` 의 `upTab` 을 놓치면 안 된다. */
+  const rx = t => new RegExp((/^[A-Za-z0-9_$]/.test(t) ? '(?<![A-Za-z0-9_$])' : '') + esc(t)
+    + (/[A-Za-z0-9_$]$/.test(t) ? '(?![A-Za-z0-9_$])' : ''));
+  const hits = dead.filter(t => rx(t).test(code));
+  ok(hits.length === 0, '[A] 폐기 식별자 0건 (주석 제외)', hits.length ? '잔존: ' + hits.join(', ') : dead.length + '개 전부 0건');
+
+  /* [A2] 88 의 주제 — «스탯» 서브탭의 부활 금지. 이름이 아니라 **칸**으로 묻는다.
+     먼저 전제(«서브탭 바를 실제로 읽었다»)를 박는다 — 파싱이 빗나가면 결론이 아니라 전제가 빨개진다(185-③). */
+  const barKeys = [...code.matchAll(/data-trsub\s*=\s*"([^"]*)"/g)].map(m => m[1]);
+  const trsubsSrc = ((code.match(/const\s+TRSUBS\s*=\s*\[([^\]]*)\]/) || [, ''])[1])
+    .split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+  ok(trsubsSrc.length > 0 && barKeys.length > 0 && barKeys.every(k => trsubsSrc.includes(k)),
+    '[A2] 전제 — 서브탭 바를 읽었다(마크업 칸 ⊆ TRSUBS)',
+    '칸 ' + (barKeys.join('/') || '없음') + ' · TRSUBS ' + (trsubsSrc.join('/') || '없음'));
+  /* 88 의 바는 «id `trSub` · class `tr-sub`» 였다. 선택자 표기(`#trSub`/`.tr-sub`)만 보면 마크업의
+     `id="trSub"`·`class="tr-sub"` 를 놓친다(277 반증 시험에서 실제로 놓쳤다) → **둘 다** 본다.
+     `trSubs`·`tr-subs`(203) 가 부분문자열로 겹치므로 id 는 값 전체로, class 는 **토큰**으로 가른다. */
+  const idVals = [...code.matchAll(/id\s*=\s*"([^"]*)"/g)].map(m => m[1])
+    .concat([...code.matchAll(/getElementById\(\s*['"]([^'"]*)['"]/g)].map(m => m[1]));
+  const clsToks = [...code.matchAll(/class\s*=\s*"([^"]*)"/g)].flatMap(m => m[1].split(/\s+/));
+  const oldBar = idVals.includes('trSub') || clsToks.includes('tr-sub')
+    || /#trSub(?![\w-])/.test(code) || /\.tr-sub(?![\w-])/.test(code);
+  ok(!oldBar && !barKeys.includes('stat') && !trsubsSrc.includes('stat'),
+    '[A2] «스탯» 서브탭 부활 없음 — 88 의 바(#trSub/.tr-sub)도 stat 칸도 0건',
+    oldBar ? '88 의 서브탭 바 규격이 되살아났다' : '칸 ' + barKeys.join('/'));
+
+  /* [A3] 매처 자가검사 — «0건» 은 매처가 죽어도 초록이라, 잡아야 하는 것과 잡으면 안 되는 것을 둘 다 건다. */
+  const missed = dead.filter(t => !rx(t).test('\n' + t + '\n'));
+  ok(missed.length === 0, '[A3] 금지어 매처가 금지어 자신을 잡는다',
+    missed.length ? '못 잡음: ' + missed.join(', ') : dead.length + '개 전부 검출');
+  const alive = ["let trSub = 'train';", 'function setTrSub(k){', '#trSubs [data-trsub]',
+    '<div class="stab" data-trsub="rune">', 'el.dataset.trsub === trSub'];
+  const falsePos = alive.filter(s => dead.some(t => rx(t).test(s)));
+  ok(falsePos.length === 0, '[A3] 203/210 의 «훈련·룬·단련» 바 이름은 안 잡는다 (277 회귀 방지)',
+    falsePos.length ? '오탐: ' + falsePos.join(' | ') : alive.length + '줄 전부 통과');
 
   let browser;
   try { browser = await chromium.launch(); }
@@ -97,9 +146,16 @@ const ok = (b, name, detail) => {
      화면이 멀쩡한데 원리적으로 항상 false 였다. 아이콘은 **키**로 재고, 가격 칸은 «잴 수 있는
      값인가» 를 같이 못 박는다(212-②) — 아이콘만 보면 `.cb` 가 통째로 비어도 «gold 0개» 로
      조용히 통과할 수 있다. 88 이 지키는 성질은 «훈련 카드 3장이 골드로 산다» 다. */
+  /* 277 — 옛 `sub` 단언은 «[data-trsub] 요소가 하나라도 있나» 였다. 203·210 이 «훈련·룬·단련» 바를
+     주인 지시로 세운 뒤로는 **항상 참**이라 88 과 무관하게 빨갛다. 물음을 88 의 주제로 좁힌다:
+     «서브탭이 있나» → «**스탯** 칸(과 스탯 분배 UI)이 부활했나». 바 자체는 전제로 따로 잰다. */
   const B = await page.evaluate(() => ({
     on: document.getElementById('trw').classList.contains('on'),
-    sub: !!document.querySelector('#trSub, [data-trsub], .tr-sub'),
+    statSub: !!document.querySelector('#trSub, .tr-sub, [data-trsub="stat"]')
+      || [...document.querySelectorAll('#trw [data-trsub]')].some(el => /스탯/.test(el.textContent)),
+    statUI: !!document.querySelector('#trw [data-sp], #trw [data-spauto], #trw [data-spreset], #trw [data-uptab]'),
+    subKeys: [...document.querySelectorAll('#trw [data-trsub]')].map(el => el.dataset.trsub).sort(),
+    trsubs: typeof TRSUBS !== 'undefined' ? TRSUBS.slice().sort() : null,
     rib: document.getElementById('trRib').textContent,
     cards: [...document.querySelectorAll('#trw .tr-card')].length,
     coins: [...document.querySelectorAll('#trw .tr-card .cb s')].map(e => {
@@ -109,7 +165,11 @@ const ok = (b, name, detail) => {
     costs: [...document.querySelectorAll('#trw .tr-card .cb > i')].map(e => e.textContent.trim())
   }));
   ok(B.on, '[B] 훈련 팝업 열림');
-  ok(!B.sub, '[B] 서브탭(스탯 훈련) 요소 없음');
+  ok(B.trsubs !== null && B.subKeys.length === B.trsubs.length && B.subKeys.every((k, i) => k === B.trsubs[i]),
+    '[B] 전제 — 서브탭 바는 203/210 의 것(화면 칸 = TRSUBS)',
+    (B.subKeys.join('/') || '없음') + ' vs ' + (B.trsubs ? B.trsubs.join('/') : 'TRSUBS 없음'));
+  ok(!B.statSub && !B.statUI, '[B] «스탯» 서브탭·분배 UI 없음 (88 의 주제)',
+    '칸 ' + (B.subKeys.join('/') || '없음') + ' · 스탯 UI ' + (B.statUI ? '있음' : '없음'));
   ok(/^훈련 \d+ 단계$/.test(B.rib.replace(/\s+/g, ' ').trim()), '[B] 리본 «훈련 n 단계»', B.rib);
   ok(B.cards === 3 && B.coins.length === 3 && B.coins.every(c => c === 'gold'),
     '[B] 카드 3장 · 재화 = 골드 아이콘(img[data-cur-ic="gold"])', B.cards + '장 · ' + B.coins.join('/'));
