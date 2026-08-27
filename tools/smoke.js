@@ -441,7 +441,16 @@ function staticSyntax() {
       const cut = await page.evaluate(() => {
         const app = document.getElementById('app'); if (!app) return null;
         const A = app.getBoundingClientRect();
-        const cands = [...document.querySelectorAll('#panel, #trw, #eqw, #relw, #shopw, #dunw, #ciw, #pfw, #specw, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav, #chw .ch-list, #chw .ch-bar')]
+        /* ⚠ 작업 241(2026-08-27) — 후보에 **오버레이를 적으면 안 된다.**
+           `#pfw{inset:0}`·`#trw{top:0;bottom:180}`·`#shopw{top:104;bottom:180}` 는 전부
+           프레임에 앵커된 껍데기라 «항상 프레임과 같은 크기» 다 → 그 팝업은 **원리적으로
+           절대 안 걸린다**(189-③ «헛초록»). 실제로 19 프로필 `.pf` 가 9:16 에서 바닥 227px
+           잘려 있는데도 이 절은 계속 초록이었다 — `#pfw` 를 재고 있었기 때문이다.
+           그래서 껍데기 8개를 전부 **안쪽 박스**로 바꿨다(오버레이 → 내용이 든 상자):
+             #pfw→.pf · #specw→.spc · #ciw→.ci · #trw→.tr-sheet · #eqw→.eqp
+             · #shopw→.shp-list · #dunw→.dns-list · #relw→.rw-grid
+           전수 확인은 `node tools/audit241.js`(읽기 전용) — 화면비 4종 × 상자 22개. */
+        const cands = [...document.querySelectorAll('#panel, #trw .tr-sheet, #eqw .eqp, #relw .rw-grid, #shopw .shp-list, #dunw .dns-list, #ciw .ci, #pfw .pf, #specw .spc, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav, #chw .ch-list, #chw .ch-bar')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {

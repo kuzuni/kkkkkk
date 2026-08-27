@@ -7744,7 +7744,21 @@
   #pfw.on{display:block}
   #pfw i,#pfw em,#pfw b,#pfw s{display:inline-block;font-style:normal;text-decoration:none;
     font-weight:900}
-  .pf{position:absolute;left:92px;top:431px;width:896px;height:1396px;background:#000;
+  /* 작업 241(2026-08-27) — 9:16(frameH 1600)에서 바닥 227px 이 프레임 밖이었다.
+     431 + 1396 = 1827 인데 짧은 프레임은 1600 이라 «장착 중» 버튼(+55)과 하단 토글(+187)이
+     통째로 안 보였다. **기준 프레임(2280)·1920 의 top 431 은 한 픽셀도 안 바뀌어야 한다** —
+     19 는 ①~④ 8점 통과 화면이다. 그래서 «값을 바꾸는» 대신 «상한을 씌웠다»:
+       clamp(104px, 431px, calc(100% - 1404px))
+       · 최대값 `100% − (1396 + 8)` = 패널 바닥이 프레임 안에 8px 여유로 들어오는 top.
+         frameH 2280 → 876 · 1920 → 516 · 둘 다 431 보다 커서 **431 이 그대로 이긴다.**
+         frameH 1600 → **196** 이라 이때만 패널이 235px 위로 붙는다(바닥 1592 = 프레임 안).
+       · 최소값 104px = 상단 HUD(0..104) 가드. 프레임 최솟값이 1600(fit() clamp)이라
+         지금은 안 걸리지만, 더 짧아져도 HUD 밑으로는 안 들어간다.
+     51(«와이드 화면 바닥 시트 잘림»)의 ⓐ «max-height + 본문 스크롤» 을 안 쓴 이유 —
+     `.pf` 자식 좌표는 전부 «패널 local»(측정표 19 서두)이라 상자만 눌러도 자식은 안 따라온다.
+     여기는 패널 전체(1396)가 1600 안에 **들어가므로** 통째로 올리는 것이 옳다. */
+  .pf{position:absolute;left:92px;top:clamp(104px, 431px, calc(100% - 1404px));
+    width:896px;height:1396px;background:#000;
     border-radius:45px}
   /* 갈색 링 11px = 밝은 (86,68,58) 7 + 어두운 (71,57,46) 4 */
   .pf-ring{position:absolute;inset:7px;border-radius:39px;
