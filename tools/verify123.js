@@ -104,15 +104,32 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     /* ---------- 3. 04 세부 팝업 (지시 ④ 진입) ---------- */
     console.log('[3] 아레나 카드 → 04 세부 팝업');
     /* 잠금 상태에서는 안내만 뜨고 안 열린다 */
+    /* 215 (2026-08-27) — 이 단언은 «세부 팝업 대신 «모달» 안내가 뜨나» 를 묻고 있었다.
+       149(주인 지시)가 «부족·잠김 같은 한 줄 안내는 팝업이 아니라 토스트» 로 뒤집은 뒤라
+       `.modal.on` 은 원리적으로 항상 false 다(게이트 부패 — got "false/").
+       LESSONS 185-④ «설계가 뒤집힌 단언은 지우지 말고 이사시켜라» 대로 묻는 것(«세부 팝업이
+       안 열리고, 화면이 해금 조건을 말하는가»)은 그대로 두고 재는 자리만 `.modal` → `.fx-toast` 로 옮긴다.
+       처방·실측 근거는 213 이 `fnchk97` [5] 에서 이미 세워 뒀다(`docs/review/213-레이드기록알약침범.md` §2).
+       · 기대 문구를 리터럴로 박지 않는다(185-①) — `ARENA.open` 에서 런타임 계산한다.
+         (숫자만 세면 안내문의 «현재 n» 에 걸리므로 「스테이지 <필요값>」 으로 본다.)
+       · 대기는 토스트 수명에 걸려 있다(760ms 퇴장 시작 · 1060ms 제거) → 300ms(185-⑥).
+       · «모달은 안 뜬다» 를 같이 박는다 — 팝업으로 되돌아가면 그 자리에서 잡힌다. */
+    const need = await page.evaluate(() => (typeof ARENA === 'object' ? ARENA.open : null));
     await click(page, '#dunList [data-arena]');
     await page.waitForTimeout(300);
     const locked = await page.evaluate(() => ({
       dgd: document.getElementById('dgdw').classList.contains('on'),
-      pop: (document.querySelector('#modal.on .mhead, .modal.on .mhead') || {}).textContent || '',
+      toast: [...document.querySelectorAll('#fxl .fx-toast')].map((e) => e.textContent).join(' | '),
+      modal: !!document.querySelector('.modal.on, #modal.on'),
     }));
-    chk('스테이지 미달이면 세부 팝업 대신 «해금» 안내', !locked.dgd && /아레나/.test(locked.pop),
-      `${locked.dgd}/${locked.pop}`);
-    await page.evaluate(() => { document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on')); });
+    chk(`스테이지 미달이면 세부 팝업 대신 «해금» 안내 (149 토스트 — 스테이지 ${need} 필요)`,
+      !locked.dgd && locked.toast.includes('스테이지 ' + need),
+      `${locked.dgd}/${locked.toast}`);
+    chk('잠금 안내는 팝업이 아니다 (149)', !locked.modal, locked.modal);
+    await page.evaluate(() => {
+      document.querySelectorAll('#fxl .fx-toast').forEach((e) => e.remove());
+      document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on'));
+    });
     await page.evaluate(() => { S.best = 999; renderDunPage(); });
     await page.waitForTimeout(300);
     await click(page, '#dunList [data-arena]');
