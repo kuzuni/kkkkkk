@@ -1910,6 +1910,12 @@
      기본 배색이므로 비활성 딤을 겹치면 −16% 어두워진다(1회차 비평 A ⑤). 딤은 청록 «장착» 에만 건다 */
   .sk-act .sk-e:disabled{filter:saturate(.3) brightness(.82)}
   .sk-act button:disabled{cursor:default}
+  /* 171 — 위 주석의 «회색이 기본 배색» 은 **레퍼런스가 재료 부족(4/9) 상태일 때** 그렇다는 말이다.
+     주인 지시(2026-08-27): «가능한데 회색» 은 가독성 결함이다 → 지금 눌러서 되는 08 강화 · 50 구매만
+     초록으로 뜬다. 못 하는 상태(`:disabled` = 미보유·조건 미달·MAX, `.lack` = 재화 부족)는 회색 그대로라
+     레퍼런스가 찍힌 그 상태의 배색은 바뀌지 않는다. */
+  .sk-act .sk-u:not(:disabled):not(.lack){background:linear-gradient(180deg,#8FDC33,#63B41C);
+    box-shadow:inset 0 0 0 7px #ADFF86,inset 0 -13px 0 -6px #2F8F1E}
 
 
   /* ==========================================================================
@@ -8887,6 +8893,16 @@
     background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
       #ABFF85 103px 109px,#3EBC2A 109px)}
   .sk-b2{left:551px;color:#DFDFDF;--hl:#D3D3D3;
+    background:linear-gradient(180deg,#D3D3D3 0 9px,#A8A8A8 11px,#8B8B8B 101px,
+      #D2D2D2 103px 109px,#757575 109px)}
+  /* 171 — 상태색. `.sk-b1/.sk-b2` 는 이제 «자리»(left)와 기본 배색만 정하고,
+     «지금 눌러서 되는가» 는 `.ok`(초록) / `.no`(회색)가 덮어쓴다. 자리와 색을 분리했으므로
+     같은 부품을 쓰는 07 스킬 · 26 동료 · 50 코스튬 세 시트가 한 벌로 움직인다.
+     `.no` 도 클릭은 살려 둔다 — 눌러야 «다이아 N 더 필요» 안내가 뜬다(102 의 «색과 입력차단은 별개 축»). */
+  .sk-btn.ok{color:#fff;--hl:#ADFF86;
+    background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
+      #ABFF85 103px 109px,#3EBC2A 109px)}
+  .sk-btn.no{color:#DFDFDF;--hl:#D3D3D3;cursor:default;
     background:linear-gradient(180deg,#D3D3D3 0 9px,#A8A8A8 11px,#8B8B8B 101px,
       #D2D2D2 103px 109px,#757575 109px)}
 
@@ -21889,8 +21905,11 @@ function renderSkill(){
   h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — [스킬 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §7, 작업 27) */
-  h += '<div class="sk-btn sk-b1" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
-    +  '<div class="sk-btn sk-b2" data-skup="1"><i class="ol3">일괄 강화</i></div>';
+  /* 171 — [스킬 소환] 은 10 상점으로 보내는 «항상 되는» 버튼이라 늘 초록,
+     [일괄 강화] 는 강화 가능한 스킬이 하나라도 있을 때만 초록이다(없으면 눌러도 안내만 뜬다). */
+  h += '<div class="sk-btn sk-b1 ok" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
+    +  '<div class="sk-btn sk-b2 ' + (SKILLS.some(canLevel) ? 'ok' : 'no') + '" data-skup="1">'
+    +  '<i class="ol3">일괄 강화</i></div>';
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -21974,8 +21993,10 @@ function renderPet(){
   h += '<div class="sk-tot"><i class="ol3">총 보유 효과:</i><em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
-  h += '<div class="sk-btn sk-b1" data-ptsum="1"><i class="ol3">동료 소환</i></div>'
-    +  '<div class="sk-btn sk-b2" data-ptup="1"><i class="ol3">일괄 강화</i></div>';
+  /* 171 — 07 스킬 시트와 같은 규칙(같은 부품이다) */
+  h += '<div class="sk-btn sk-b1 ok" data-ptsum="1"><i class="ol3">동료 소환</i></div>'
+    +  '<div class="sk-btn sk-b2 ' + (PETS.some(canLevel) ? 'ok' : 'no') + '" data-ptup="1">'
+    +  '<i class="ol3">일괄 강화</i></div>';
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -22111,8 +22132,14 @@ function renderCos(){
     +  '<em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [구매] */
-  h += '<div class="sk-btn sk-b1" data-coswear="1"><i class="ol3">착용</i></div>'
-    +  '<div class="sk-btn sk-b2" data-cosbuy="1"><i class="ol3">구매</i></div>';
+  /* 171 — 버튼 상태색(주인 보고: «구매 가능한데 회색»). 선택 카드(`cosSel`) 기준으로
+     «지금 눌러서 되는가» 를 그대로 색에 싣는다. 재화가 변하면 renderUI 의 0.35s 재렌더가 갱신한다.
+       [착용] 보유 + 착용 중 아님 · [구매] 미보유 + 해금 조건 충족(`cosReqOk`) + 다이아 충분 */
+  const selA = AV[cosSel], selOwn = cosOwn(cosSel);
+  const wearOk = selOwn && cosSel !== cur;
+  const buyOk  = !!selA && !selOwn && cosReqOk(selA) && S.dia >= selA.cost;
+  h += '<div class="sk-btn sk-b1 ' + (wearOk ? 'ok' : 'no') + '" data-coswear="1"><i class="ol3">착용</i></div>'
+    +  '<div class="sk-btn sk-b2 ' + (buyOk  ? 'ok' : 'no') + '" data-cosbuy="1"><i class="ol3">구매</i></div>';
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -22198,7 +22225,10 @@ function showCosDetail(id){
     + '</div>'
     + '<div class="sk-act">'
     +   '<button class="sk-e" id="mEq"' + (own && !on ? '' : ' disabled') + '><b>착용</b></button>'
-    +   '<button class="sk-u" id="mLv"' + (own || !rq ? ' disabled' : '') + '><b>구매</b></button>'
+    /* 171 — 다이아가 모자란 «부족» 은 입력을 막지 않고 색만 회색으로 둔다(눌러야 얼마 모자란지 안내가 뜬다).
+       102 의 «`.lack` = 색 · `disabled` = 입력 차단» 두 축 분리를 그대로 따른다. */
+    +   '<button class="sk-u' + (!own && rq && S.dia < a.cost ? ' lack' : '') + '" id="mLv"'
+    +     (own || !rq ? ' disabled' : '') + '><b>구매</b></button>'
     + '</div>';
   $('mbox').scrollTop = 0;
   cosPaint($('mbox'));
