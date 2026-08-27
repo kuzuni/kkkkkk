@@ -5426,7 +5426,8 @@
   .pvc.pg{--c:#39C28C;--s:#219161;--h:#48F291;--d:#1B7C51}   /* 2장 초록 (ref 실측) */
   .pvc.pp{--c:#A874E8;--s:#7A45BE;--h:#D5B4FF;--d:#6C3AAE}   /* 3장 보라 (151 신설 — 제3색) */
   /* 몸통 + 안쪽 밝은 림. ref 림은 **좌·우·아래 3변에만** 있고 윗변에는 없다(헤더 밴드가 물린다) */
-  .pvc>.bg{left:10px;top:10px;right:10px;bottom:10px;background:var(--c);
+  .pvc>.bg{left:10px;top:10px;right:10px;bottom:10px;
+    background:repeating-linear-gradient(45deg,transparent 0 30px,rgba(0,0,0,.05) 30px 60px),var(--c);
     border:12px solid var(--h);border-top:0;border-radius:31px}
   .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
   .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none}
@@ -5460,7 +5461,7 @@
     font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
-  .pvc>.pvt{left:38px;top:31px;right:200px;height:64px}
+  .pvc>.pvt{left:38px;top:37px;right:200px;height:64px}
   .pvc>.pvt>s{position:absolute;left:0;top:16px;font-size:24px;line-height:27px;color:var(--h)}
   .pvc>.pvt>i{position:absolute;left:35px;top:0;font-size:57px;line-height:60px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:12px #000;paint-order:stroke fill}
@@ -5478,7 +5479,7 @@
   .pvc>.pvl>.pvb{position:relative;height:72px;margin-bottom:10px;border-radius:18px;
     background:rgba(61,20,10,.56)}
   .pvc>.pvl>.pvb>s{position:absolute;left:18px;top:14px;font-size:38px;line-height:44px;color:#FCC12B}
-  .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:18px;font-size:32px;line-height:36px;
+  .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:20px;font-size:32px;line-height:36px;
     color:#fff;white-space:nowrap}
   /* 우측 일러스트 «자리» — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10 A1·A3).
      ⚠ 이모지를 ref bbox 까지 늘리는 방법은 **글리프마다 배율이 달라져** 셋을 따로 맞춰야 했다
@@ -5496,11 +5497,14 @@
     background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 55px,#C4343C 55px 72px);
     display:flex;align-items:center;padding:0 24px 0 41px}
   /* ref 리본 왼끝은 «접힌 종이» 크림 캡이다(ref 13×31 → 27×64). 검정 테 안쪽에 물린다 */
-  .pvc>.rb::before{content:'';position:absolute;left:-6px;top:-2px;width:33px;height:64px;
+  .pvc>.rb::before{content:'';position:absolute;left:0;top:0;width:27px;height:60px;
     background:#FFFCF3;border-radius:3px;z-index:1}
   /* 세로 자리는 ref 대로 카드 바닥에서 잰다(불릿형 771 / 배너형 534 기준) */
   .pvc>.rb1{bottom:200px}
-  .pvc>.rb2{bottom:66px;clip-path:polygon(0 0,calc(100% - 25px) 0,100% 50%,calc(100% - 25px) 100%,0 100%)}
+  .pvc>.rb2{bottom:66px}
+  /* 리본2 오른끝 «제비꼬리» — 자식을 자르지 않도록 clip-path 대신 몸통색 삼각형을 덧댄다 */
+  .pvc>.rb2::after{content:'';position:absolute;right:-6px;top:-6px;width:26px;height:72px;
+    background:var(--c);clip-path:polygon(100% 0,100% 100%,0 50%)}
   .pvc.ban1>.rb1{bottom:167px}
   .pvc.ban1>.rb2{bottom:49px}
   .pvc>.rb>i{color:#ECE975;font-size:34px;line-height:38px;white-space:nowrap;
