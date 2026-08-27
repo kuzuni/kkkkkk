@@ -215,7 +215,8 @@ console.log('SIM177 — 스테이지(적) 곡선 재설계 (index.html 실측 �
 console.log('');
 console.log('[A] 설치 상수');
 console.log('  적    ' + EC.desc);
-console.log('  표기  ' + (EC.form === '177' ? '177 «선형 × 구간별 저지수»' : '구 «순수 지수» (177 미설치)'));
+console.log('  표기  ' + (EC.form === '249' ? '177 «선형 × 구간별 저지수» + 249 «구간 계단»'
+                        : EC.form === '177' ? '177 «선형 × 구간별 저지수»' : '구 «순수 지수» (177 미설치)'));
 console.log('  훈련  val(선형·168) ' + STATS.map(id => id + ' ' + LIN_B[id] + '+' + LIN_K[id] + '×l').join(' · ') + ' — **177 이 안 건드린 축**');
 console.log('  훈련  비용(112 무릎 Lv ' + C_KNEE + ' 이후 ×' + C_R + ') — **177 이 안 건드린 축**');
 console.log('  페이싱 162 «모든 스테이지 = ' + N_MOB + '킬 + 보스» : ' + (PACE_162 ? '확인' : '⚠ 구 isBossStage 잔존'));

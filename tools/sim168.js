@@ -225,7 +225,10 @@ STATS.forEach(id => { XOVER[id] = null;
    그래서 곡선 표기에 따라 **서로 반대 방향으로** 단언한다 — 어느 쪽이든 «집어낸 수치» 가 있어야 통과다.
      · 구 순수 지수 표기 → 벽이 반드시 있다(원문 그대로)
      · 177 표기        → s ≤ 80 에 벽이 없다(177 게이트 ⑧ 과 같은 사실을 훈련 축 쪽에서 본 것) */
-const g8 = EC.form === '177' ? (W_BOSS === null && W_MOB1 === null)
+/* 249 — 곡선에 «구간 계단» 이 얹히면 form 이 '249' 가 된다. 249 는 177 곡선을 구간 안에서
+   **더 낮추기만** 하므로 «s ≤ 80 무벽» 이라는 이 항목의 단언은 그대로 성립한다(표기 이름만 넓힌다). */
+const F177 = EC.form === '177' || EC.form === '249';
+const g8 = F177 ? (W_BOSS === null && W_MOB1 === null)
                              : (W_BOSS !== null && W_MOB1 !== null);
 console.log('[E] 게이트');
 console.log('  ① Lv 0 스탯 불변 — ' + STATS.map(id => id + ' ' + newVal(id,0)).join(' · ') + ' : ' + (g1?'PASS':'FAIL'));
@@ -241,7 +244,7 @@ console.log('     ※ before 대비로는 s1~5 가 크게 쉬워지고(몹 처�
           + mobSec(newVal,10).toFixed(3) + '초, +' + ((mobSec(newVal,10)/mobSec(oldVal,10)-1)*100).toFixed(1) + '%).');
 console.log('     ※ 교차점(선형이 구곡선 아래로) — ' + STATS.map(id => id + ' Lv ' + (XOVER[id] ?? '없음')).join(' · ')
           + ' : 그 아래는 선형이 더 후하고 그 위는 더 박하다. 기울기가 주인 확정값이라 이는 «결과» 이지 «조절 대상» 이 아니다.');
-console.log('  ⑧ ' + (EC.form === '177'
+console.log('  ⑧ ' + (F177
             ? '177 곡선 설치본 — s ≤ ' + S_END + ' 에 벽이 없다(몹>1초 ' + (W_MOB1 ?? '없음')
               + ' · 보스>' + BSEC + '초 ' + (W_BOSS ?? '없음') + ') : ' + (g8?'PASS':'FAIL')
             : '벽 위치가 수치로 잡힌다(177 입력) — 몹>1초 s' + W_MOB1 + ' · 보스>' + BSEC + '초 s' + W_BOSS
