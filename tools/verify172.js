@@ -23,8 +23,23 @@
  * 통과 조건 — **보스·승급 수호자만**(66 과 같은 «붙어서 때리는가» 축):
  *   ① 제한 시간 안에 «사거리+20» 안으로 한 번은 붙는다(첫 접촉 = 수렴 구간의 시작)
  *   ② 수렴 구간(첫 접촉 이후) 평균 거리 ≤ 사거리 + 50px
- *   ③ 수렴 구간 «멀어지는 구간»(직전 표본보다 +2px 이상) < 10%
+ *   ③ 수렴 구간 «추격 표본» 중 멀어진 표본(직전 표본보다 +2px 이상) < 4%
+ *      — «추격 표본» = 표본 창(6프레임) 안에 **공격 모션(e.atkT > 0)이 한 프레임도 없던** 표본.
  *   ④ 제한 시간 동안 그 개체의 공격 ≥ 1회
+ *
+ * ③ 이 «추격 표본만» 을 세는 이유 (작업 233 · 2026-08-27 — 185 후속) ─────────────────
+ * 원래 ③ 은 수렴 구간의 **모든** 표본에서 «직전보다 +2px 멀어졌나» 를 셌다. 그런데 66 이 넣은
+ * `if(e.atkT > 0 && d < 사거리) spd = 0`(index.html ~16372) 때문에 **공격 모션 0.45초 동안 대상은
+ * 제자리에 서고**, 그 사이 카이팅(59)하는 플레이어만 움직여 거리가 벌어진다. 즉 그 표본의 «멀어짐» 은
+ * 추격이 밀린 것이 아니라 **때리고 있다는 뜻**이다.
+ *   185(스킬 넉백 폐지)가 대상을 «더 잘 붙게» 만들자 공격이 20 → 30회로 늘었고, ③ 만 3.0% → 11.8%
+ *   로 올라 빨개졌다 — 같은 표의 다른 열은 전부 좋아졌는데도(접촉까지 6.7 → 1.2s · 붙어있음
+ *   75.7 → 96.0% · 정렬 0.999 → 1.000). **잘 될수록 빨개지는, 부호가 뒤집힌 자였다.**
+ *   실측(`tools/probe185away.js` · 승급 수호자 30초): away 표본의 **100%** 가 모션 걸친 표본이고,
+ *   모션이 없는 표본의 away 는 **0.0%**(모션 표본 171 개 중 16.4% · 비모션 표본 128 개 중 0.0%).
+ * 처방은 «문턱 완화» 가 아니라 **재정의**다(177-③ 계열: 전제가 죽은 자는 무디게 하는 게 아니라 다시
+ * 정의한다). 모션 프레임이 걸친 표본을 분모·분자에서 **함께** 뺐다 — «때리는가» 는 ④ 가 이미 따로 잰다.
+ * 재정의 뒤 실측은 세 개체 전부 **0.0%** 라 문턱을 10% → **4%** 로 조였다(옛 정의 값은 표에 같이 남긴다).
  *   아레나가 ①~④ 에서 빠지는 이유는 아래 «아레나» 주석에 적었다 — 원인이 추격 규칙이 아니라
  *   123 의 스폰 배치(플레이어 반경 300~700px 링)라서, 172 가 손댈 구간이 아니다.
  *
@@ -50,7 +65,12 @@ const SCN = (process.env.V172_SCN || 'boss,promo,arena').split(',').map(s => s.t
 const REF = process.env.V172_REF || '';
 const STAGE = Number(process.env.V172_STAGE || 30);
 const SLACK = 50;          /* ② 허용 여유 — 사거리 + 이 값 */
-const LIM_AWAY = 10;       /* ③ 멀어지는 구간 상한 (%) */
+/* ③ 상한 (%) — «추격 표본»(공격 모션이 안 걸친 표본) 중 멀어진 표본의 비율.
+   실측(2026-08-27 · 스테이지 30 · 30초 · 3회): 스테이지 보스 0.0/0.0/0.0 · 승급 수호자 0.0/0.0/0.0.
+   옛 정의(모션 표본 포함)의 8~12% 와 달리 이 자는 0 에 붙어 있으므로 4% 로 조인다.
+   ※ 문턱을 «올려서» 통과시키는 것은 금지다 — 자가 무뎌질 뿐 부호는 그대로다(작업 233 주석). */
+const LIM_AWAY = 4;
+const MIN_CHASE = 30;      /* ③ 추격 표본 최소 개수 — 이보다 적으면 ③ 을 잰 것이 아니다 */
 /* ⑥ 진행 방향 정렬 하한 — 접선 스월(±0.55)이 걸리면 진행 방향이 최대 28.8° 틀어진다(거리 가중
    clamp(d/220,0.25,1) 때문에 붙을수록 약해져 평균은 18° 안팎으로 나온다). 직진 추격이면
    넉백(실측 평균 9.5px/s)만큼만 깎인다.
@@ -78,6 +98,9 @@ const RUN = async ({ frames, sampleEvery, stage, scn }) => {
   const NEAR = reach + 20;                        /* «붙었다» 판정 반경 */
   let n = 0, away = 0, near = 0, sumD = 0, maxD = 0, prev = null, noFoe = 0;
   let cn = 0, cAway = 0, cSum = 0, cPrev = null;  /* 수렴 구간(첫 접촉 이후) */
+  /* 233 — ③ 은 «추격 표본»(표본 창 안에 공격 모션이 한 프레임도 없던 표본)만 센다.
+     모션 중에는 대상이 서 있으라고 66 이 못 박아 둔 것이라, 그때 벌어진 거리는 추격의 실패가 아니다. */
+  let chN = 0, chAway = 0, atkSampN = 0, sawAtk = false;
   let tClose = -1;
   let sumSp = 0, spN = 0, atk = 0;
   let sumAl = 0, alN = 0;                         /* 진행 방향 ↔ 플레이어 방향 코사인 정렬 */
@@ -94,8 +117,9 @@ const RUN = async ({ frames, sampleEvery, stage, scn }) => {
     window.__v172tick();
     const b = find();
     if (b && cd0 !== null && b.cd > cd0) atk++;      /* 쿨다운이 «올라간» 프레임 = 공격 시작 */
+    if (b && b.atkT > 0) sawAtk = true;              /* 233 — 이 표본 창에 공격 모션이 걸쳤나 */
     if (f % sampleEvery === 0) {
-      if (!b) { noFoe++; prev = null; continue; }
+      if (!b) { noFoe++; prev = null; sawAtk = false; continue; }
       const d = Math.hypot(player.x - b.x, player.y - b.y);
       if (prev !== null && d > prev + 2) away++;
       prev = d;
@@ -112,18 +136,27 @@ const RUN = async ({ frames, sampleEvery, stage, scn }) => {
       n++;
       if (tClose >= 0) {
         cSum += d; cn++;
-        if (cPrev !== null && d > cPrev + 2) cAway++;
+        const isAway = cPrev !== null && d > cPrev + 2;
+        if (isAway) cAway++;
+        if (cPrev !== null) {
+          if (sawAtk) atkSampN++;
+          else { chN++; if (isAway) chAway++; }
+        }
         cPrev = d;
       }
       if (bx !== null) { sumSp += Math.hypot(b.x - bx, b.y - by) / (sampleEvery / 60); spN++; }
       bx = b.x; by = b.y;
+      sawAtk = false;
     }
     if (f % 900 === 0) await new Promise(r => setTimeout(r, 0));
   }
   return {
     scn, n, noFoe, reach, meanD: sumD / Math.max(1, n), maxD, tClose,
     away: away / Math.max(1, n) * 100, near: near / Math.max(1, n) * 100,
-    cn, convD: cn ? cSum / cn : Infinity, convAway: cn ? cAway / cn * 100 : 100, atk,
+    cn, convD: cn ? cSum / cn : Infinity, atk,
+    /* ③ 본체 — 추격 표본만. convAwayRaw 는 옛 정의(모션 표본 포함) 로, 판정에는 안 쓰고 표에만 남긴다. */
+    chaseN: chN, convAway: chN ? chAway / chN * 100 : 100,
+    atkSampN, convAwayRaw: cn ? cAway / cn * 100 : 100,
     foeSp: sumSp / Math.max(1, spN), pSpeed: stat.speed, stage: S.stage,
     align: alN ? sumAl / alN : 0,
   };
@@ -177,7 +210,7 @@ const NAME = { boss: '스테이지 보스(28·162)', promo: '승급 수호자', 
         process.stdout.write(`[·] ${t.tag} · ${NAME[scn] || scn} · ${SEC}초 … `);
         const r = await runOne(browser, url, scn);
         rows.push({ tag: t.tag, ...r });
-        console.log(`수렴거리 ${r.cn ? Math.round(r.convD) : '—'}px · 멀어짐 ${r.convAway.toFixed(1)}% · 접촉까지 ${r.tClose < 0 ? '없음' : r.tClose.toFixed(1) + 's'}`);
+        console.log(`수렴거리 ${r.cn ? Math.round(r.convD) : '—'}px · 추격 멀어짐 ${r.convAway.toFixed(1)}%(옛 정의 ${r.convAwayRaw.toFixed(1)}%) · 접촉까지 ${r.tClose < 0 ? '없음' : r.tClose.toFixed(1) + 's'}`);
         if (r.errs.length) console.log('    pageerror: ' + r.errs.slice(0, 3).join(' | '));
       }
     }
@@ -186,11 +219,12 @@ const NAME = { boss: '스테이지 보스(28·162)', promo: '승급 수호자', 
     if (refFile) { try { fs.unlinkSync(refFile); } catch (e) {} }
   }
 
-  console.log('\n| 빌드 | 대상 | 표본 | 사거리 | 전체 평균 | 접촉까지 | 수렴 평균 | 수렴 멀어짐% | 붙어있음% | 최대거리 | 대상속도 | 플레이어속도 | 정렬 | 공격 |');
-  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  console.log('\n| 빌드 | 대상 | 표본 | 사거리 | 전체 평균 | 접촉까지 | 수렴 평균 | **추격 멀어짐%(③)** | 추격 표본 | 모션 표본 | 옛 정의 멀어짐% | 붙어있음% | 최대거리 | 대상속도 | 플레이어속도 | 정렬 | 공격 |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rows)
     console.log(`| ${r.tag} | ${NAME[r.scn] || r.scn} | ${r.n} | ${r.reach}px | ${Math.round(r.meanD)}px | ${r.tClose < 0 ? '—' : r.tClose.toFixed(1) + 's'} | `
-      + `${r.cn ? Math.round(r.convD) + 'px' : '—'} | ${r.convAway.toFixed(1)}% | ${r.near.toFixed(1)}% | ${Math.round(r.maxD)}px | `
+      + `${r.cn ? Math.round(r.convD) + 'px' : '—'} | **${r.convAway.toFixed(1)}%** | ${r.chaseN} | ${r.atkSampN} | ${r.convAwayRaw.toFixed(1)}% | `
+      + `${r.near.toFixed(1)}% | ${Math.round(r.maxD)}px | `
       + `${Math.round(r.foeSp)}px/s | ${Math.round(r.pSpeed)}px/s | ${r.align.toFixed(3)} | ${r.atk}회 |`);
 
   const fails = [];
@@ -217,7 +251,11 @@ const NAME = { boss: '스테이지 보스(28·162)', promo: '승급 수호자', 
     if (r.scn === 'arena') continue;
     if (r.tClose < 0) fails.push(`${nm}: ${SEC}초 안에 사거리+20 안으로 «한 번도» 못 붙음`);
     else if (r.convD > r.reach + SLACK) fails.push(`${nm}: 수렴 구간 평균 거리 ${Math.round(r.convD)}px > 사거리+${SLACK} (${r.reach + SLACK}px)`);
-    if (r.convAway >= LIM_AWAY) fails.push(`${nm}: 수렴 구간 멀어짐 ${r.convAway.toFixed(1)}% ≥ ${LIM_AWAY}%`);
+    /* ③ — 추격 표본(공격 모션이 안 걸친 표본)만. 모션 표본은 «때리느라 서 있는» 것이라 ④ 의 몫이다. */
+    if (r.chaseN < MIN_CHASE)
+      fails.push(`${nm}: 추격 표본 ${r.chaseN} < ${MIN_CHASE} — ③ 을 잴 표본이 없다(모션 표본 ${r.atkSampN})`);
+    else if (r.convAway >= LIM_AWAY)
+      fails.push(`${nm}: 수렴 구간 «추격» 표본 멀어짐 ${r.convAway.toFixed(1)}% ≥ ${LIM_AWAY}% (추격 표본 ${r.chaseN} · 모션 표본 ${r.atkSampN} 제외 · 옛 정의로는 ${r.convAwayRaw.toFixed(1)}%)`);
     if (r.atk < 1) fails.push(`${nm}: ${SEC}초 동안 «공격을 한 번도» 하지 않음`);
   }
   if (fails.length) { fails.forEach(f => console.log('  ✗ ' + f)); console.log('\nV172 FAIL'); process.exit(1); }
