@@ -7735,7 +7735,18 @@
        비활성 «2~3px»(= 바깥 두께). 필요한 스트로크는 6px = r .158 이라 타이틀(.22 = 8.36 ·
        바깥 4.18 = ref 대비 +39%)이 아니라 본문 토큰(.16 = 6.08 · 바깥 3.04)이 맞다.
        9회차가 r7 비평가 O·P 의 «-50%» 만 보고 .105 -> .22 로 한 번에 올린 것을 반 칸 되내린다. */
-    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill}
+    font-size:38px;color:#A9A8AD;-webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;
+    /* 126 ③ 20회차 — `.pf-tab`(칭호·초상화·프레임) 라벨에도 **드롭이 통째로 없었다.**
+       19회차에 AL 단독이라 못 넣었던 자리를 «둘 다 재라» 로 지정해 20회차에 닫았다 —
+       **세 명이 두 라운드에 걸쳐 같은 답**을 냈다:
+         AL(r19)  ref dx +0.94 / dy +2.12
+         AM(r20)  ref dx **+1.14** / dy **+2.07** (l3.79 r4.93 t3.39 b5.46) vs 우리 +0.24 / +0.08
+         AN(r20)  ref dx **+0.95** / dy **+1.69** (l2.60 r3.55 t2.50 b4.20) vs 우리 −0.07 / +0.03
+       세 값의 중앙을 취해 **dx +1.05 · dy +1.9** 로 놓는다(세 사람 다 그 사이에 든다).
+       ⚠ `.pf-tab>i` 는 `scaleX(.99)`(활성은 `.96`)이라 가로가 거의 안 줄지만 보정해 1.06px 로 쓴다.
+       ⚠ stroke 는 두 사람 다 정상이라 **손대지 않는다** — 드롭만 얹는다. */
+    text-shadow:0 calc(var(--st-body) / 2 * 1em + 1.9px) 0 #000,
+                calc(var(--st-body) / 2 * 1em + 1.06px) 0 0 #000}
   .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
   .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
@@ -7841,8 +7852,19 @@
      ⚠ 그래도 이 자리 잉크 «높이» 는 이 도구로 못 잰다(W ② 1순위 «+33%» 는 별도 검증 필요). */
   /* 19회차 2차 — 첫 역산(fs 58.2 · sx .80)은 실루엣이 **135×56**(ref 136×53)으로 높이만 +3 넘쳤다.
      높이·폭 둘 다 fs 에 선형이므로 fs ×(53/56) = 55.1 로 내리고 폭은 sx ×(136/127.7) = **.852** 로 되돌린다. */
+  /* 126 ③ 20회차 — 19회차가 «코어+stroke 만 넣고 드롭은 20회차로» 넘긴 그 드롭이다.
+     두 사람의 ref 실측이 소수점 첫째 자리까지 모였다(이 라운드에서 가장 잘 모인 값):
+       AM  ref dx **+1.45~+1.53** / dy **+2.45~+2.61** (자 4단 스윕 전부) vs 우리 +0.04~+0.30 / −0.07~+0.08
+       AN  ref dx **+1.39** / dy **+2.54** (bg 5점 스윕 ΔR −1.65~−1.75 · ΔB −2.16~−2.46) vs 우리 +0.01 / −0.01
+     둘 다 «stroke 는 이미 ref 와 맞으니 건드리지 말고 drop 만 추가하라» 로 처방까지 같다
+     (AM 실측 우리 좌 3.11 · 위 3.72 vs ref 3.33 · 3.25 = 계통오차 이내).
+     ⚠ **가로 오프셋은 `scaleX(.852)` 가 같이 줄인다** — 보이는 dx 1.42 를 만들려면 CSS 로는 1.42/.852 = **1.67px**.
+     세로는 스케일이 안 걸리므로 2.55 를 그대로 쓴다. (§20-8 «움직여야 할 변만»: 좌·위는 손대지 않는다.)
+     묻히는 몫은 이 자리의 stroke(`--st-small`) 바깥 반지름이다(§20-2 음성항). */
   #pfw .pf-btn>i{position:relative;top:8px;font-size:55.1px;color:#DFDFDF;transform:scaleX(.852);font-weight:700;
-    -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill}
+    -webkit-text-stroke:calc(var(--st-small) * 1em) #000;paint-order:stroke fill;
+    text-shadow:0 calc(var(--st-small) / 2 * 1em + 2.55px) 0 #000,
+                calc(var(--st-small) / 2 * 1em + 1.67px) 0 0 #000}
   /* 하단 토글 바 ref (156,1776) 770×95 — 검정 5 + 암갈 그라, r24 */
   .pf-tgl{left:64px;top:1261px;width:770px;height:95px;background:#000;border-radius:24px}
   .pf-tgl>.in{position:absolute;inset:5px;border-radius:20px;
@@ -7853,7 +7875,18 @@
     /* 126 8회차 — r7 비평가 O·P ② 5순위(109×31 vs ref 127×33) + `m126t7` 일치. fs 36×(33/31) = 38.3 */
     text-align:center;font-size:38.3px;color:#A5A4A9;
     /* 126 ③ 9회차 — 4px = r .104(391곳 중 하위 5위). 크기대 토큰 → 8.43px */
-    -webkit-text-stroke:calc(var(--st-title) * 1em) #000;paint-order:stroke fill;cursor:pointer;
+    /* 126 ③ 20회차 정정 — **9회차의 `--st-title` 승급이 과했다.** 19회차에 드롭을 얹고 나서
+       두 사람이 이 자리의 «잉크 4변» 을 재니 둘 다 ref 대비 크게 넘쳤다:
+         AM  우리 l4.33 r5.89 t4.47 b6.21 vs ref l3.17 r4.35 t2.67 b4.98 → **+1.16 / +1.54 / +1.80 / +1.23**
+         AN  우리 L4.23 R5.39 T4.11 B6.01 vs ref L2.76 R4.19 T2.37 B4.33 → **4변 +1.3~+1.7 (+55~70%)**
+       AN 은 bg 3점 × 통계 4종(p10·p25·중앙값·최빈) 전부에서 부호가 안 바뀌는 것까지 확인했다.
+       순수 stroke 만 나오는 좌·위가 우리 4.2~4.5 vs ref 2.7~3.2 이므로 바깥 반지름을 약 **1.3px** 내려야 한다:
+       현재 `--st-title`(.22) → 8.43 총폭 · 바깥 4.21 → 목표 바깥 ≈ 2.9 → 총폭 5.72 → r .149.
+       **`--st-body`(.16 → 총폭 6.13 · 바깥 3.06)가 그 자리**다(목표와 +0.2, 두 사람의 계통오차 이내).
+       자리마다 매직넘버를 새로 잡지 않고 크기대 토큰 한 칸을 내리는 것이 126 «토큰 1벌» 지시에도 맞는다.
+       ⚠ 아래 드롭 두 겹의 «묻히는 몫» 도 **같이** `--st-body` 로 내린다 — 안 그러면 stroke 만 얇아지고
+       그림자가 1.15px 씩 더 튀어나와 19회차에 맞춰 놓은 드롭이 망가진다(§26-6 의 불변식과 같은 이유). */
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;paint-order:stroke fill;cursor:pointer;
     /* 126 ③ 19회차 — **드롭섀도가 통째로 없었다.** 이 자리는 스트로크만 있어 4변이 균일하다.
        18회차에 AJ 가 단독으로 지적해 «1인» 이라 못 넣었던 자리를, 19회차에 AK · AL 이 둘 다 재서 닫았다:
          AK  ref 좌2.90 우4.10 위2.60 아래4.60 → **dx +1.20 / dy +2.00** vs 우리 4.10/4.00/4.10/4.20 → dx −0.10 / dy +0.10
@@ -7867,8 +7900,8 @@
        (AK 1.20 · AL 1.28 사이보다 약간 위) — §26-6 «값 고르는 법» 대로 자리마다 매직넘버를 새로 잡지 않는다.
        ⚠ `--sh-b`/`--sh-s` 를 쓰면 안 된다. 그것들은 묻히는 몫을 `--st-body`/`--st-small` 로 잡아
        이 자리(`--st-title`)에서는 그림자가 스트로크에 통째로 묻힌다(§26 의 `--sh-t` 사고와 같은 형태). */
-    text-shadow:0 calc((var(--st-title) / 2 + var(--sh-drop)) * 1em) 0 #000,
-                calc((var(--st-title) / 2 + var(--sh-dropx)) * 1em) 0 0 #000}
+    text-shadow:0 calc((var(--st-body) / 2 + var(--sh-drop)) * 1em) 0 #000,
+                calc((var(--st-body) / 2 + var(--sh-dropx)) * 1em) 0 0 #000}
   /* 126 ① 12회차 — m126vc 실측 Δcy **−6.0**(Δh 0 = 순수 쏠림). */
   .pf-tgl>.lb>i{position:relative;top:6px;transform:scaleX(.963)}
   /* 활성 «프로필» 황색 화살 배너 — 몸통 (414,13) 335×68 + 양끝 팁 20px, 2톤 채움 */
