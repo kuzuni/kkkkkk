@@ -30,6 +30,53 @@ const ok = (b, name, detail) => {
 };
 const near = (a, b, e) => Math.abs(a - b) <= e;
 
+/* ── 226 — G6 «펫 상자 카드까지 스크롤» 이 왜 뜨고 지었나 ─────────────────────
+   증상: 4회 중 2회 FAIL, `586 ≈ 590` / `586 ≈ 591`(허용 ±2). 어긋남은 늘 **want 쪽**이 +4~5.
+   G6 은 제품(`openShopPage(focus)`)과 **글자 그대로 같은 식**을 다시 계산해 비교한다:
+       top  = card.offsetTop − children[0].offsetTop        (= 1916, 실측 고정)
+       want = clamp(top, 0, scrollHeight − clientHeight)
+   펫 상자는 마지막 칸이라 `top` 이 스크롤 여지를 한참 넘어 **클램프가 항상 이긴다** →
+   want 는 사실상 `scrollHeight − clientHeight` 하나다. 즉 흔들린 것은 `#shopList.scrollHeight` 다.
+   진단(`tools/probe226.js` · `tools/probe226b.js`, 프레임 단위 표본): 기준 2428 이 300~410ms 구간에서만
+   2429~2433 으로 튀고, 그 프레임에서 리스트 바닥을 미는 노드는 **`DIV.shp-card jz-st`**(마지막 칸)였다.
+   원인은 136 이 `verify102` 에서 잡은 것과 **같은 연출**이다 — 60 `jzStagger` 의 카드 등장
+   `.jz-st{animation:jzSt .2s}` 는 키프레임이 `scale:.94 → 1.02 → 1` 이고,
+   **CSS 의 스크롤 가능 오버플로 영역은 «변환된» 박스들의 합집합**이라 `scale(1.02)` 이 걸린 동안
+   마지막 카드가 자기 중심 아래로 450 × .02 / 2 = **4.5px** 삐져나온다 → `scrollHeight` +4~5
+   → want +4~5. 관측된 어긋남(+4 / +5)과 산술이 정확히 맞는다.
+   마지막 칸(5번째)의 위상은 `--jzd = 60 + 4×25 = 160ms` · 길이 .2s 이고, 실측 절대 시각으로는
+   **클릭 후 ≈530~560ms** 에 배율이 1 을 넘는다(스태거는 `openShopPage()` 의 렌더·`jz-pg` 뒤에 출발한다).
+   게이트의 고정 대기가 **500ms** 라 그 창의 바로 앞턱에 서 있었고, 부하에 따라 물기도 비켜 가기도 했다(= «간헐»).
+   `tools/probe226d.js` 로 클릭 후 1.2초를 프레임마다 훑으면 실행마다 0~1 프레임이 걸리고,
+   걸린 프레임의 값이 `scrolled=586 want=589~591`(scale 1.0128~1.02)로 **보고된 FAIL 값과 같다**.
+   (헤드리스에서 rAF 가 ~70ms 로 throttle 돼 1.2초에 15~17 프레임뿐이라 «한 프레임» 이 그대로 «한 회» 다.)
+   제품 결함이 아니다: 제품은 연출 중이라 부풀어 있던 값으로 `scrollTop` 을 넣어도 브라우저가
+   연출이 끝나면 실제 최대치로 **다시 클램프**하므로 착지점(586)은 언제나 옳다. 실제로 `scrollTop` 은
+   전 표본에서 586 으로 고정이었다 — 흔들린 쪽은 오직 **게이트가 재는 시점**이다.
+   처방(지시서 [3] «flake 는 근본 원인이 아니다» · LESSONS 120 «고정 대기 대신 기하 정지 폴링»):
+   고정 대기를 늘리지 않고 **기하가 멈출 때까지 폴링**한 뒤 잰다. 상수를 키우는 처방은
+   102 가 이미 기각했다 — 스태거 시작 시각이 부하에 따라 100ms 넘게 밀려 어떤 상수도 언젠가 깨진다.
+   수렴하지 않으면 그 사실 자체를 FAIL 로 드러낸다(rect 를 움직이는 무한 연출이 새로 붙으면 여기서 잡힌다). */
+const settleList = (p, sel) => p.evaluate(async s => {
+  const rd = () => {
+    const li = document.querySelector(s);
+    if (!li) return s + ':없음';
+    const last = li.children[li.children.length - 1];
+    const r = last ? last.getBoundingClientRect() : { top: 0, bottom: 0 };
+    return [li.scrollHeight, li.clientHeight, li.scrollTop, r.top.toFixed(3), r.bottom.toFixed(3)].join(',');
+  };
+  const raf = () => new Promise(r => requestAnimationFrame(() => r()));
+  const t0 = performance.now();
+  let prev = rd(), same = 0;
+  while (performance.now() - t0 < 4000) {
+    await raf();
+    const cur = rd();
+    if (cur === prev) { if (++same >= 4) return { ok: true, ms: Math.round(performance.now() - t0), last: cur }; }
+    else { same = 0; prev = cur; }
+  }
+  return { ok: false, ms: Math.round(performance.now() - t0), last: prev };
+}, sel);
+
 /* 세이브를 심고 새 컨텍스트를 연다(87 교훈 3 · 91 교훈 2 — 살아 있는 페이지에 심으면 자동 저장과 경합한다) */
 async function open(browser, seed) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -233,15 +280,26 @@ async function open(browser, seed) {
     b.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
   await page.waitForTimeout(500);
+  /* 226 — 재기 전에 60 스태거(`jz-st`)가 끝나기를 기다린다. 위 주석 참고:
+     연출 중에는 `scale(1.02)` 이 걸린 마지막 카드가 스크롤 오버플로를 4~5px 부풀린다. */
+  const G5s = await settleList(page, '#shopList');
   const G5 = await page.evaluate(() => {
     const li = $('shopList'), i = SHOP_BOXES.findIndex(x => x.b === 'pet');
     const card = li.children[i];
     const top = card ? card.offsetTop - li.children[0].offsetTop : -1;
+    const lr = li.getBoundingClientRect(), cr = card ? card.getBoundingClientRect() : null;
     return { on: $('shopw').classList.contains('on'), cat: shopCat, scrolled: li.scrollTop,
-             want: Math.max(0, Math.min(top, li.scrollHeight - li.clientHeight)) };
+             want: Math.max(0, Math.min(top, li.scrollHeight - li.clientHeight)),
+             /* «카드까지 스크롤» 의 사용자 쪽 뜻 — 펫 칸이 리스트 뷰포트 안에 통째로 들어왔나
+                (클램프 산술과 무관하게 성립해야 하는 값이다) */
+             vis: cr ? Math.round(Math.min(cr.bottom, lr.bottom) - Math.max(cr.top, lr.top)) : -1,
+             ch: cr ? Math.round(cr.height) : -1 };
   });
   ok(G5.on && G5.cat === 'summon', 'G5 [동료 소환] → 10 상점 소환 탭 열림', G5.cat);
+  /* 226 — «잰 순간이 연출 도중이 아니었다» 를 못 박는다(102 [5] 선례). settle 이 죽으면 여기가 빨개진다 */
+  ok(G5s.ok, 'G5b 리스트 기하 정지 후 측정(60 스태거 종료)', (G5s.ok ? '수렴 ' : '수렴 실패 ') + G5s.ms + 'ms · ' + G5s.last);
   ok(near(G5.scrolled, G5.want, 2), 'G6 동료 상자 카드까지 스크롤', G5.scrolled + ' ≈ ' + G5.want);
+  ok(G5.vis === G5.ch && G5.ch > 0, 'G6b 펫 상자 칸이 리스트 안에 통째로 보인다', G5.vis + '/' + G5.ch + 'px');
 
   /* ---------------- [H] 도감 ---------------- */
   const H = await page.evaluate(() => {
