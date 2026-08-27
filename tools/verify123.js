@@ -15,7 +15,9 @@
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+/* 247 — 되돌림 시험(`tools/neg247.js`)이 «한 곳만 갈아 끼운 사본» 을 물릴 수 있게 열어 둔다.
+   살아 있는 페이지에 주입하면 거짓 초록이 난다(LESSONS 191) — 반드시 «파일을 새로 연다». */
+const URL = 'file://' + path.resolve(process.env.V123_SRC || path.join(__dirname, '..', 'index.html')).replace(/\\/g, '/');
 
 const fails = [];
 let n = 0;
@@ -217,22 +219,65 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('hitEnemy 로 상대 HP 가 줄었다', !!hit && hit.hp < hit.max, hit && `${Math.round(hit.hp)}/${Math.round(hit.max)}`);
     chk('상대 HP 바 폭이 실제로 줄었다', w1 < w0 - 5, `${Math.round(w0)} → ${Math.round(w1)}`);
 
-    /* ---------- 6. 승리 → 결과 화면 + 보상 + 전적 ---------- */
-    console.log('[6] 상대 HP 0 → 승리 결과 화면 · 보상 지급 · 전적 반영');
+    /* ---------- 247 — 결과 통보 채집기 (2026-08-27) ----------------------------------
+       206(주인 지시)이 아레나 결과를 **모달 → 토스트**로 내렸다(index.html `openArenaResult`
+       «결과 화면 — 206(주인 지시)으로 모달에서 토스트로 내렸다»). 옛 [6]·[7] 은 `#modal.on .mhead`
+       를 물어 `got ""` 로 굳어 있었다 — 제품 회귀가 아니라 **재는 자리**가 낡은 것이다
+       (211·213·214·215·217·218·219·230·231 과 같은 계열 · LESSONS 231-①).
+       처방도 그 계열의 세 줄 관례다: ⓐ 자리만 이사(185-④) ⓑ 기대 문구는 런타임 계산(185-①)
+       ⓒ «팝업이 아니다» 동반 단언(230-③).
+
+       ⚠ 다만 이 화면은 앞선 계열과 **한 가지가 다르다** — 클릭 한 번으로 안내가 나는 동기 흐름이
+       아니라 «hitEnemy → 게임 루프 → endArena» 라 **비동기 경계**가 있다. 그런데 토스트는 스스로
+       사라진다(58 — 퇴장 760ms · 소멸 1060ms). [6] 이 아레나 종료를 기다리는 900ms 뒤에 DOM 을
+       읽으면 소멸까지 여유가 **160ms** 뿐이라, 고쳐 놓고도 «뜨고 지는 FAIL»(226·135 계열)을 새로
+       만드는 자가 된다. 그래서 레이어에 **태어난 순간을 기록**해 시간축에서 떼어 놓는다.
+       LESSONS 185-⑥ 의 취지(«놓치지 마라»)를 대기 없이 만족시키는 자다.
+       비우는 것은 그대로 필요하다 — `fxToast` 는 4장부터 조용히 드롭한다(LESSONS 230-②). */
+    const armToasts = () => page.evaluate(() => {
+      const L = document.getElementById('fxl');
+      window.__t123 = [];
+      if (!window.__t123obs) {
+        window.__t123obs = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((nd) => {
+          if (nd.nodeType === 1 && nd.classList && nd.classList.contains('fx-toast')) window.__t123.push(nd.textContent);
+        })));
+        window.__t123obs.observe(L, { childList: true });
+      }
+      L.querySelectorAll('.fx-toast').forEach((e) => e.remove());
+      document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on'));
+    });
+    const readToasts = () => page.evaluate(() => ({
+      toast: (window.__t123 || []).join(' | '),
+      modal: !!document.querySelector('#modal.on, .modal.on'),
+    }));
+
+    /* ---------- 6. 승리 → 결과 통보 + 보상 + 전적 ---------- */
+    console.log('[6] 상대 HP 0 → 승리 결과 통보(206 토스트) · 보상 지급 · 전적 반영');
     const before = await page.evaluate(() => ({ gold: S.gold, dia: S.dia, w: S.arena.w, l: S.arena.l, stage: S.stage }));
+    await armToasts();
+    /* 기대 문구는 리터럴로 박지 않는다(185-① · 212-①) — 제품이 그 줄을 만들 때 쓰는 재료를
+       그대로 게이트에서 계산한다. 상대 전투력은 **이 통보가 유일한 표시처**이므로(index.html
+       `openArenaResult` 주석 · 188 «전투 수치는 fmtB») 표기 규약이 흔들리면 여기가 먼저 빨개진다. */
+    const opCp = await page.evaluate(() => fmtB(arena.op.cp));
     await page.evaluate(() => { const e = enemies.find((x) => x.arena); if (e) hitEnemy(e, e.max * 99, false, 0, 0); });
     await page.waitForTimeout(900);
     const win = await page.evaluate(() => ({
       on: !!arena, gold: S.gold, dia: S.dia, w: S.arena.w, l: S.arena.l, stage: S.stage,
       cls: document.getElementById('app').className,
-      head: (document.querySelector('#modal.on .mhead') || {}).textContent || '',
-      body: (document.querySelector('#modal.on .mbox') || {}).textContent || '',
       foes: enemies.filter((e) => e.arena).length,
       top: !!document.getElementById('top').getBoundingClientRect().width,
     }));
+    const winT = await readToasts();
     chk('대전이 끝났다(arena = null)', win.on === false, win.on);
-    chk('승리 결과 화면이 떴다', /아레나 승리/.test(win.head), win.head);
-    chk('결과에 상대·전적이 적혀 있다', /전적/.test(win.body) && /승/.test(win.body), win.body.slice(0, 60));
+    chk('승리 결과 통보가 떴다(206 — 모달 아닌 토스트)', /아레나 승리/.test(winT.toast), winT.toast || '(통보 없음)');
+    /* 값만 «어딘가에 있나» 로 물으면 보상 숫자와 우연히 같아도 초록이다 — 라벨 바로 뒤인지를 본다
+       (231-② «런타임 계산의 재료는 화면이 이미 그리고 있는 라벨»). 라벨이 사라져도 여기가 잡는다. */
+    chk('승리 통보에 상대 전투력이 적혀 있다(런타임 fmtB)',
+      new RegExp('상대 전투력\\s*' + opCp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(winT.toast),
+      `상대 전투력 ${opCp} ⊂ ${winT.toast.slice(0, 70)}`);
+    /* 206 되돌림(토스트 → 팝업)을 **이름으로** 잡는 자리다 — 이것이 없으면 문구 항목 하나만
+       빨개져 «문안이 바뀌었나» 로 오진한다(LESSONS 230-③ · 214-④ · 215-② · 217-②). */
+    chk('승리 통보는 팝업이 아니다(206)', winT.modal === false, winT.modal);
     chk('승수 +1', win.w === before.w + 1 && win.l === before.l, `${win.w}승 ${win.l}패`);
     chk('보상(골드·다이아)이 실제로 지급됐다', win.gold > before.gold && win.dia > before.dia,
       `+${Math.round(win.gold - before.gold)}G +${win.dia - before.dia}💎`);
@@ -240,7 +285,11 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     chk('상대가 전장에서 치워졌다', win.foes === 0, win.foes);
     chk('상단 HUD·탭바 복귀(dunrun/arn 해제)', win.top && !/\barn\b/.test(win.cls), win.cls);
 
-    /* 카드의 전적 칸이 갱신됐는지 — 다른 화면 반영(기능 완성 규칙) */
+    /* 카드의 전적 칸이 갱신됐는지 — 다른 화면 반영(기능 완성 규칙).
+       247 — 옛 «결과에 상대·전적이 적혀 있다» 는 **한 물음에 둘**이 묶여 있었고, 206 이 그 둘을
+       서로 다른 화면으로 갈라 놓았다(상대 전투력 = 통보 한 줄 · 전적 = 03 던전 페이지 아레나 카드).
+       그래서 «자리 이사» 도 둘로 갈랐다 — 상대는 위 토스트 단언이, **전적은 아래 이 항목**이 잰다.
+       둘을 한 항목으로 되묶지 마라. 그러면 어느 화면이 죽었는지 게이트가 말하지 못한다. */
     await page.evaluate(() => { document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on')); });
     await click(page, '.tab[data-t="adv"]');
     await page.waitForTimeout(400);
@@ -251,6 +300,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
     /* ---------- 7. 패배 · 중단 ---------- */
     console.log('[7] 패배(내 HP 0) · ◀ 나가기 중단');
+    await armToasts();
     const lose = await page.evaluate(async () => {
       S.daily.arena = ARENA_TRY;           /* 205 — 위 [4] 주석 참고 */
       closeDungeon();
@@ -262,16 +312,20 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       player.hp = 0; player.dead = 2.4;
       await new Promise((r) => setTimeout(r, 700));
       return { b, on: !!arena, w: S.arena.w, l: S.arena.l, gold: S.gold,
-               head: (document.querySelector('#modal.on .mhead') || {}).textContent || '',
                def: document.getElementById('defw').classList.contains('on') };
     });
+    const loseT = await readToasts();
     chk('내 HP 0 → 아레나 패배로 끝난다', lose.on === false && lose.l === lose.b.l + 1, `${lose.w}승 ${lose.l}패`);
-    chk('패배 결과 화면이 떴다', /아레나 패배/.test(lose.head), lose.head);
+    chk('패배 결과 통보가 떴다(206 — 모달 아닌 토스트)', /아레나 패배/.test(loseT.toast), loseT.toast || '(통보 없음)');
+    chk('패배 통보는 팝업이 아니다(206)', loseT.modal === false, loseT.modal);
     chk('18 패배 화면이 겹쳐 뜨지 않는다', lose.def === false, lose.def);
     chk('패배에도 위로 보상이 지급된다', lose.gold > lose.b.gold, `+${Math.round(lose.gold - lose.b.gold)}G`);
 
+    /* 247 — 안내를 재는 절에는 «그 안내가 지키려던 상태 불변식» 을 짝으로 붙인다(LESSONS 231-③).
+       여기서는 반대 방향이다: 중단(`endArena(null)`)은 전적·보상이 없듯 **결과 통보도 없어야** 한다.
+       승/패 통보만 물으면 «중단인데도 승리라고 알리는» 회귀를 아무도 말해 주지 않는다. */
+    await armToasts();
     const quit = await page.evaluate(async () => {
-      document.querySelectorAll('#modal.on, .modal.on').forEach((m) => m.classList.remove('on'));
       S.daily.arena = ARENA_TRY;           /* 205 — 위 [4] 주석 참고 */
       closeDungeon();
       startArena();
@@ -283,7 +337,9 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
                cls: document.getElementById('app').className,
                top: !!document.getElementById('top').getBoundingClientRect().width };
     });
+    const quitT = await readToasts();
     chk('◀ 나가기 → 대전 중단', quit.on === false, quit.on);
+    chk('중단은 승/패 결과 통보를 내지 않는다', !/아레나 (승리|패배)/.test(quitT.toast), quitT.toast || '(통보 없음)');
     chk('중단은 전적에 안 들어간다', quit.w === quit.b.w && quit.l === quit.b.l, `${quit.w}승 ${quit.l}패`);
     chk('중단은 보상도 없다', quit.gold === quit.b.gold, `${Math.round(quit.gold)} vs ${Math.round(quit.b.gold)}`);
     chk('중단 후 기본 화면 복귀', quit.top && !/\barn\b/.test(quit.cls), quit.cls);
