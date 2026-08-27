@@ -53,7 +53,10 @@ const tap = (page, sel) => page.evaluate((s) => {
 }, sel);
 
 (async () => {
-  const browser = await launch(chromium);
+  /* 182 — §3 이 «승급 성공 팝업의 코스튬 그림이 실제로 칠해졌나» 를 픽셀로 본다.
+     file:// 에서 아틀라스를 그린 캔버스는 기본적으로 «오염» 되어 getImageData 가 막힌다
+     (verify87 이 같은 이유로 같은 플래그를 쓴다). */
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   try {
     /* ---------- 1. 진입 · 서브탭 구조 ---------- */
     console.log('[1] 진입 · 서브탭 4칸');
@@ -298,11 +301,23 @@ const tap = (page, sel) => page.evaluate((s) => {
       }, await S(page, 'SHOP_BOXES.map(x => x.b)'));
       await page.waitForTimeout(300);
       eq('무료 10연 잔여 0(166 축 끔)', await S(page, 'SHOP_BOXES.some(x => freeLeft(x.b) > 0)'), false);
-      eq('살 수 있는 코스튬 있음', await S(page,
-        'AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a))'), true);
-      eq('영웅 탭 레드닷', await page.$eval('.tab[data-t="hero"]', (e) => e.classList.contains('alert')), true);
+      /* 182 — «살 수 있는 코스튬» 레드닷 항이 폐기됐다(구매 경로 소멸). 미보유 49종 + 다이아 1e9
+         이어도 영웅 탭은 안 켜져야 하고, 승급 알림은 사이드 `promo` 아이콘이 갖는다. */
+      eq('미보유 코스튬 49종 + 다이아 넉넉', await S(page,
+        'AVATARS.filter(a => !S.avatars[a.id]).length > 0 && S.dia > 1e5'), true);
+      eq('영웅 탭 레드닷 안 켜짐(코스튬 항 폐기)',
+        await page.$eval('.tab[data-t="hero"]', (e) => e.classList.contains('alert')), false);
       eq('상점 탭 레드닷 없음(코스튬으로는 안 켜진다)',
         await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), false);
+      /* 승급 조건을 채우면 사이드 «승급» 아이콘이 그 자리를 대신 알린다 */
+      await page.evaluate(() => {
+        const nx = nextRank(); S.best = Math.max(S.best, nx.stage); S.stage = S.best;
+        for (let i = 0; i < 4000 && cp() < nx.cp; i++) { S.lv.atk = (S.lv.atk | 0) + 50; S.lv.hp = (S.lv.hp | 0) + 50; }
+        markDirty(); uiDirty = true; renderUI();
+      });
+      await page.waitForTimeout(300);
+      eq('승급 가능 → 사이드 «승급» 아이콘 점등',
+        await page.$eval('.side .ibtn[data-pop="promo"]', (e) => e.classList.contains('alert') || e.classList.contains('on')), true);
       await ctx.close();
     }
 
@@ -313,13 +328,17 @@ const tap = (page, sel) => page.evaluate((s) => {
          구매 결과를 덮어쓰고 «저장이 안 됐다» 로 오진한다(LESSONS 43-① «내가 쓴 assert 를 먼저 의심하라»).
          다이아는 페이지 안에서 올린다. */
       const { ctx, page } = await open(browser);
-      await page.evaluate(() => { S.dia = 9e6; save(); });
-      await toCos(page);
-      await tap(page, '#bCos [data-cosit="av4"]'); await page.waitForTimeout(200);
-      await tap(page, '#bCos [data-cosbuy]'); await page.waitForTimeout(800);
+      /* 182 — 획득은 승급전이다. 계급 4(다이아) 승급전을 통과시켜 전설 묶음(av4 포함)을 받고 착용한다 */
+      await page.evaluate(() => {
+        S.rank = 3; promo = { t: 60, max: 60, rank: nextRank() };
+        endPromo(true); closeModal();
+        S.avatar = 'av4'; save();
+      });
+      await page.waitForTimeout(500);
       await page.reload(); await page.waitForTimeout(900);
       eq('reload 후 보유', await S(page, '!!S.avatars.av4'), true);
       eq('reload 후 착용', await S(page, 'S.avatar'), 'av4');
+      eq('reload 후 계급', await S(page, 'S.rank'), 4);
       await toCos(page);
       eq('reload 후 화면 반영', await page.$eval('#bCos .sk-card.dim', (e) => e.dataset.cosit), 'av4');
       /* 옛 세이브(코스튬 필드 없음)도 죽지 않는가 — LESSONS 44-② */
