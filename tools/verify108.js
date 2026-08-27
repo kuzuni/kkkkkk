@@ -12,6 +12,11 @@
  *      · 보스 등장/처치를 1회 이상 지나도 그 값이 흔들리지 않는다 · 오류 0
  *
  * verify59 와 같이 rAF 를 가상 시계(고정 dt 1/60s)로 갈아끼워 CPU 속도로 «전투 60초» 를 돌린다.
+ *
+ * 223(2026-08-27) — ④ 의 «보스» 표본을 만드는 방법이 낡아 21/22 로 굳어 있었다. 보스는 더 이상
+ * «10 의 배수 스테이지» 에 있지 않고(162 가 `isBossStage` 를 폐기했다) 모든 스테이지에서
+ * «몹 ENEMY_COUNT 킬 → startBoss()» 로만 나온다. 세우는 길과 처치하는 길을 둘 다 제품 함수로
+ * 갈아 끼웠다(RUN 안 주석 참고). ①②③ 정적 검사와 카메라 판정식은 한 줄도 바뀌지 않았다.
  */
 const path = require('path');
 const fs = require('fs');
@@ -37,6 +42,9 @@ function launchOpts() {
 const ROOT = path.resolve(__dirname, '..');
 const SEC = Number(process.env.V108_SEC || 60);
 const LAG_MAX = 60;          /* 클램프가 걸리지 않은 프레임의 카메라–플레이어 허용 거리(월드 px) */
+/* 223 — 보스가 전장에 선 뒤 처치까지 지나 보낼 프레임 수(가상 60fps 기준 1.5초).
+   «등장 직후 카메라» 와 «처치 직후 카메라» 를 둘 다 표본에 넣기 위한 값이다. */
+const KILL_AFTER = 90;
 const fails = [];
 const okline = [];
 const ok = (cond, msg) => { (cond ? okline : fails).push(msg); return cond; };
@@ -77,21 +85,40 @@ for (const f of ['tools/verify67.js', 'tools/cap67.js'])
   ok(!fs.existsSync(path.join(ROOT, f)), `${f} 삭제됨`);
 
 /* ── ④ 런타임 검사 ────────────────────────────────────────────────────────── */
-const RUN = async ({ frames, lagMax }) => {
-  /* 보스 스테이지(10 의 배수)로 올려 «보스 단독 스폰 + 30초 제한» 흐름을 그대로 태운다 */
+const RUN = async ({ frames, lagMax, killAfter }) => {
+  /* «보스 단독 스폰 + 30초 제한» 흐름을 그대로 태운다.
+     ── 223(2026-08-27) — 옛 코드는 `S.stage = 10`(10 의 배수 = 보스 스테이지) 하나로 보스를 불렀다.
+     그 규칙은 **162 가 폐기**했다(index.html ~14498 «구 isBossStage 폐기»): 이제 보스는 **모든**
+     스테이지에 있고, 길은 «일반 몹 ENEMY_COUNT 킬 → startBoss()» 하나뿐이다. 그래서 `spawnStage()`
+     는 보스가 아니라 잡몹 50마리를 깔았고, 60초(가상) 안에 50킬이 안 나 «보스 등장 0회» 로
+     굳어 있었다 — 카메라가 아니라 **게이트의 전제**가 낡은 것이다(index.html 무관).
+     기대값을 «화면이 쓴 식» 이 아니라 «근거 데이터» 에서 가져온다(212-①): 제품이 실제로 보스를
+     세우는 길 = step() 의 «③ 몹을 다 채웠다 → 보스 도전» 분기다. verify162 의 `killed = ENEMY_COUNT`
+     관례와 같은 자를 쓴다(tools/verify162.js killTo). */
   S.stage = 10; S.best = Math.max(S.best || 1, 10); S.bossFarm = false;
   spawnStage();
+  player.dead = 0; player.hp = stat.maxHp;
+  enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT;   /* 다음 step 이 startBoss() 를 부른다 */
   const r = {
     n: 0, zBad: 0, zMin: Infinity, zMax: -Infinity,
     lagBad: 0, lagMax: 0, lagMaxFree: 0, clamped: 0,
     bossSeen: 0, bossKilled: 0, shakeMax: 0, nan: 0,
     keys: Object.keys(cam).sort().join(','),
   };
-  let hadBoss = false;
+  let hadBoss = false, bossLive = 0, didKill = false;
   for (let f = 0; f < frames; f++) {
     window.__v108tick();
     const boss = enemies.find(e => e.tk === 'boss' && e.hp > 0);
-    if (boss) { if (!hadBoss) { r.bossSeen++; hadBoss = true; } }
+    if (boss) {
+      if (!hadBoss) { r.bossSeen++; hadBoss = true; bossLive = 0; }
+      /* 223 — 헤더 ④ 는 «보스 등장/처치를 1회 이상 지나도» 라고 적어 두었지만 처치 프레임은
+         한 번도 지나간 적이 없다: 스테이지 10 보스는 체력 ×22 라 기본 스탯으로는 BOSS_SEC(30초)
+         제한 안에 안 죽고, 그대로 시간 초과 → 파밍으로 빠진다. 그래서 «슬로모·줌·복귀가 폐기됐다»
+         는 ④ 의 런타임 확인이 통째로 비어 있었다.
+         제품의 처치 경로 `killEnemy()` 를 그대로 부른다(verify162 §4 와 같은 자). 보스가 살아 있는
+         프레임을 killAfter 만큼 먼저 지나 보내 «등장 → 추격 → 처치 → 복귀» 를 순서대로 태운다. */
+      if (!didKill && ++bossLive >= killAfter) { didKill = true; killEnemy(boss); }
+    }
     else if (hadBoss) { r.bossKilled++; hadBoss = false; }
 
     const z = cam.z;
@@ -143,7 +170,7 @@ const RUN = async ({ frames, lagMax }) => {
     await page.goto('file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/'), { waitUntil: 'load' });
     await page.waitForFunction(() => typeof player !== 'undefined' && typeof cam !== 'undefined', null, { timeout: 20000 });
     await page.evaluate(() => { for (let i = 0; i < 600; i++) window.__v108tick(); });   /* 워밍업 10초(가상) */
-    r = await page.evaluate(RUN, { frames: Math.round(SEC * 60), lagMax: LAG_MAX });
+    r = await page.evaluate(RUN, { frames: Math.round(SEC * 60), lagMax: LAG_MAX, killAfter: KILL_AFTER });
     await ctx.close();
   } finally { await browser.close(); }
 
@@ -158,6 +185,7 @@ const RUN = async ({ frames, lagMax }) => {
   ok(r.keys === 'shake,x,y,z', `cam 필드 = {${r.keys}} (기대: shake,x,y,z)`);
   ok(r.lagBad === 0, `클램프 밖에서 카메라–플레이어 ${LAG_MAX}px 초과 프레임 ${r.lagBad} (최대 ${r.lagMaxFree.toFixed(1)}px)`);
   ok(r.bossSeen >= 1, `보스 등장 ${r.bossSeen}회 (1회 이상 필요)`);
+  ok(r.bossKilled >= 1, `보스 처치/소멸 ${r.bossKilled}회 (1회 이상 필요 — 처치 직후 카메라를 봐야 한다)`);
   ok(r.nan === 0, `NaN/Infinity ${r.nan} 건`);
   ok(errs.length === 0, `pageerror ${errs.length} 건`);
 
