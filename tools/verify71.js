@@ -46,6 +46,18 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
   await page.goto('file://' + path.resolve(__dirname, '..', 'index.html'));
   await page.waitForTimeout(1200);
+  /* 180 — 이 게이트의 레드닷·행수 단언은 전부 **고정 우편 `MAILS`** 를 표본으로 쓴다
+     («전부 수령» 을 `MAILS.forEach` 로 만들고 `mailLeft()`(= allMails 기준) 으로 확인한다).
+     180 이 부팅 직후 «월별 다이아» 동적 우편을 한 통 넣으면서 그 둘이 갈라졌다 —
+     동적 우편은 `verify153`·`verify180` 의 몫이므로 여기서는 표본을 고정 우편으로 되돌린다.
+     달 열쇠를 이번 달로 채워 두면 `monthlyCheck()` 가 다시 보내지 않는다. */
+  await page.evaluate(() => {
+    if (typeof S !== 'object') return;
+    S.mailx = []; S.mailSeq = 0; S.mail = {};
+    const d = new Date();
+    S.lastMonthly = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    sideAlert('mail', mailLeft() > 0);
+  });
 
   /* ── 1. 좌측 사이드 — 5행(우편 없음) · 남은 행 좌표가 A2 그리드 그대로 ────────── */
   const side = await page.evaluate(() => {

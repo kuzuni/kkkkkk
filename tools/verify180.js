@@ -126,6 +126,24 @@ const MK_JS = `(d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'
     bGot.dia >= MIN_START_DIA
       ? ok(`[I] 73 ② 하한 유지 — 초기 다이아 ${bGot.dia} ≥ ${MIN_START_DIA}`)
       : fail(`[I] 73 ② 하한 붕괴 — 초기 다이아 ${bGot.dia} < ${MIN_START_DIA}`);
+    /* ★ 자릿수가 4 → 7 로 늘었다. 「1,000,000」 이 HUD 알약을 넘거나 골드 알약과 겹치면
+       그것은 이 작업이 만든 결함이다 — 화면비를 바꿔 가며 실측한다(수령 후 1,100,000 도 같은 자릿수). */
+    for (const [w, h] of [[1080, 2280], [1080, 1920], [1024, 768]]) {
+      await b.page.setViewportSize({ width: w, height: h });
+      await b.page.waitForTimeout(300);
+      const fit = await b.page.evaluate(() => {
+        const box = document.querySelector('.cbox.cDia').getBoundingClientRect();
+        const num = document.getElementById('diaN').getBoundingClientRect();
+        const gold = document.querySelector('.cbox.cGold').getBoundingClientRect();
+        return { over: +(num.right - box.right).toFixed(1), lap: +(gold.right - box.left).toFixed(1) };
+      });
+      fit.over <= 0 ? ok(`${w}×${h} — 다이아 숫자가 알약 안 (여백 ${-fit.over}px)`)
+        : fail(`${w}×${h} — 다이아 숫자가 알약을 ${fit.over}px 넘친다`);
+      fit.lap <= 0 ? ok(`${w}×${h} — 골드 알약과 겹침 0 (간격 ${-fit.lap}px)`)
+        : fail(`${w}×${h} — 골드 알약과 ${fit.lap}px 겹친다`);
+    }
+    await b.page.setViewportSize({ width: 1080, height: 2280 });
+    await b.page.waitForTimeout(200);
 
     /* ================= [C] 첫 달 우편 ================= */
     console.log('\n[C] 첫 달 «월별 다이아» 우편');
