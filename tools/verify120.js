@@ -434,7 +434,18 @@ const inter = (a, b) => {
           /* 18회차 [N] — 접합선 «검은 띠» 감시. 문지방 바로 밑 9px 의 행평균 휘도 자체를 잰다.
              위 ①-2 는 «아래보다 어두운가»(부호)만 봐서 L 8.8 짜리 순검정 띠를 통과시켰다. */
           const seamDark = band(gy + 4, gy + 12);
-          return { peak, wallAbove, shadow, below, tread, riser, treadTop, seamDark };
+          /* ── 20회차 [Q] — **위 `band()` 는 x336~744 를 빼고 잰다.** 수반을 피하려고 둔 창인데,
+             접합선 행에는 수반이 없고 **바로 그 중앙이 가장 어두웠다**(캐스트 그림자가 겹친다).
+             18회차에 세운 [N] 항목이 «행평균 31.8» 로 초록불인 동안 x=540 은 **7.1** 이었다 —
+             비평 AQ #1 이 그 좌표를 직접 재서야 드러났다. 중앙 띠를 따로 잰다. */
+          const centreBand = (y0, y1) => {
+            let s = 0, n = 0;
+            for (let y = Math.max(1, y0); y < Math.min(c.height - 1, y1); y++)
+              for (let x = 440; x < 640; x += 2) { s += lum(x, y); n++; }
+            return n ? s / n : 0;
+          };
+          const seamCentre = centreBand(gy + 4, gy + 14);
+          return { peak, wallAbove, shadow, below, tread, riser, treadTop, seamDark, seamCentre };
         }, {
           dataUrl: 'data:image/png;base64,' + shot2.toString('base64'),
           gy: Math.round(r.ground.t - regTop),
@@ -448,6 +459,13 @@ const inter = (a, b) => {
            목표 L ≥ 20(주변 바닥 32~40 대비 Δ ≤ 20). 음성 대조: 알파를 옛 .88 로 되돌리면 8.2. */
         ck(`[${H}] ⑤ 접합선 그림자가 «검은 띠» 가 아니다 — 휘도 ≥ 20`,
           m.seamDark >= 20, `문지방 밑 9px 행평균 ${m.seamDark.toFixed(1)} (옛 .88 알파 = 8.2)`);
+        /* 20회차 [Q] — 위 항목의 사각지대. 같은 자리를 **중앙 200px 만** 다시 잰다.
+           문턱을 15 로 둔 이유: 여기는 구조물이 실제로 그림자를 던지는 자리라 옆보다 어두운 것이
+           «정상» 이다(12회차 설계 · ①-2 부호 항목이 그것을 요구한다). 막으려는 것은 «어둡다» 가
+           아니라 «검다» 이고, 옛 값 7.1 과 새 값 21.6 사이에서 여유를 남겨 잡는다.
+           음성 대조: 캐스트 알파를 옛 .86 으로 되돌리면 x540 이 8.4 로 떨어져 FAIL 한다. */
+        ck(`[${H}] ⑤ 접합선 «중앙 200px» 도 검지 않다 — 휘도 ≥ 15`,
+          m.seamCentre >= 15, `x440~640 평균 ${m.seamCentre.toFixed(1)} (옛 캐스트 .86 = 8.4)`);
         ck(`[${H}] ① 접합선이 «보이는가» — 문지방 대비 ≥ 15`,
           m.peak - m.wallAbove >= 15,
           `문지방 ${m.peak.toFixed(1)} vs 받침 위 벽 ${m.wallAbove.toFixed(1)} = Δ${(m.peak - m.wallAbove).toFixed(1)}`);
