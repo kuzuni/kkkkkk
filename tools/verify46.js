@@ -26,6 +26,41 @@ const launchOpts = () => {
 };
 const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
+/* 244 — 기하를 재기 전에 «그 요소가 멈출 때까지» 기다린다.
+   60 쥬시의 팝업 등장 `jzBoxIn` 은 오버슛(796×1197 → 810×1218 → 796×1197)이고 **정확히 300ms** 에
+   끝난다. 여기는 `waitForTimeout(300)` 뒤에 바로 쟀기 때문에 러너가 조금만 밀려도 감속 구간
+   (800×1203 · 806×1212)을 집어 뜨고 지는 FAIL 이 났다 — 제품이 아니라 «자» 가 흔들린 것이다.
+   전역 `document.getAnimations()` 로는 못 기다린다: `thBob`·`jzDotPulse`·`bgmA` 같은 **상시 아이들
+   애니메이션이 끝나지 않아** 영원히 대기한다(그래서 cap120 도 요소 bbox 서명으로 판정한다).
+   그런데 bbox 서명«만» 으로도 안 된다 — `jzBoxIn` 은 **시작 키프레임이 평평해서**(0~100ms 가
+   732×1101 로 동일) 러너가 밀리면 그 시작 고원에서 «연속 3회 같음» 이 먼저 차 버리고, 등장이
+   끝나기도 전에 «정지» 로 속는다(실제로 부하를 걸어 재현: got 732×1101 · 정지).
+   그래서 **잰 대상 자신의 애니메이션**(`el.getAnimations()` — 상시 아이들은 다른 요소에 붙어 있어
+   안 걸린다)이 전부 끝난 것을 먼저 보고, 그 다음에 bbox 가 연속 3회 같은지를 본다.
+   카드 목록처럼 여러 칸을 한 번에 재는 자리도 같은 병을 앓는다(60 `jzStagger` 등장 — 부하를 걸면
+   980×350 대신 974×348 을 집는다). 그래서 셀렉터에 걸리는 **전부**를 대상으로 본다. */
+const settleBox = (page, sel, cap = 3000) => page.evaluate(async ({ sel, cap }) => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const all = () => [...document.querySelectorAll(sel)];
+  const running = () => all().reduce((n, e) => n + (e.getAnimations
+    ? e.getAnimations().filter((a) => a.playState !== 'finished' && a.playState !== 'idle').length : 0), 0);
+  const sig = () => all().map((e) => { const r = e.getBoundingClientRect();
+    return `${r.width.toFixed(2)}×${r.height.toFixed(2)}`; }).join('|');
+  let waited = 0, anim = 0;
+  /* ① 자기 등장 애니메이션이 끝날 때까지 */
+  while (waited < cap) { anim = running(); if (!anim) break; await wait(50); waited += 50; }
+  /* ② 그 다음 bbox 가 연속 3회(≈150ms) 완전히 같을 때까지 */
+  let prev = '', same = 0;
+  while (waited < cap) {
+    await wait(50); waited += 50;
+    const s = sig();
+    same = (s === prev && s !== '') ? same + 1 : 0;
+    prev = s;
+    if (same >= 3 && !running()) break;
+  }
+  return { waited, settled: same >= 3 && !running(), box: prev || sig() };
+}, { sel, cap });
+
 (async () => {
   let browser;
   try { browser = await launch(chromium); } catch (e) { browser = await launch(chromium, launchOpts()); }
@@ -73,6 +108,9 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     console.log('[2] «컨텐츠» 칸 → 카드 리스트 (123: 측정장 1 + 아레나 1)');
     await click(page, '#dunSub [data-dsub="raid"]');
     await page.waitForTimeout(300);
+    /* 244 — 카드 규격(980×350)을 재기 전에 60 `jzStagger` 등장이 끝난 것을 확인한다.
+       부하 없이 돌리면 이미 끝나 있어 안 보이지만, 러너가 밀리면 974×348 을 집는다. */
+    const rcSettle = await settleBox(page, '#dunList [data-rcard], #dunList [data-arena]');
     const cards = await page.$$eval('#dunList [data-rcard]', (els) => els.map((e) => ({
       id: e.dataset.rcard, lock: !!e.querySelector('.lk'), nm: e.querySelector('.nm').textContent.trim(),
       lvl: e.querySelector('.sp.lv i').textContent.trim(), best: e.querySelector('.sp.tk i').textContent.trim(),
@@ -82,7 +120,8 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     /* 123 — 측정장은 r60 하나만 남았다(r30·r120 폐기). 아레나 카드는 `data-arena` 라 이 수집에 안 걸린다. */
     chk('측정장 카드 1장 (r30·r120 폐기)', cards.length === 1, cards.length);
     chk('카드 규격 = 03 던전과 동일 980×350', cards.every((c) => c.w === 980 && c.h === 350),
-      cards[0] && `${cards[0].w}×${cards[0].h}`);
+      `${cards[0] && `${cards[0].w}×${cards[0].h}`} (등장 애니 정지까지 ${rcSettle.waited}ms · ${rcSettle.settled ? '정지' : '미정지'})`);
+    chk('카드 규격을 «등장 애니 정지 후» 에 쟀다 (뜨고 지는 FAIL 방지)', rcSettle.settled, `${rcSettle.waited}ms`);
     chk('첫 카드 해금 + 제한 시간 60', !!(cards[0] && !cards[0].lock && cards[0].lvl === '60'), cards[0] && cards[0].lvl);
     chk('라벨이 «제한 시간(초) / 최고 DPS»', !!(cards[0] && cards[0].la === '제한 시간(초)' && cards[0].lb === '최고 DPS'),
       cards[0] && `${cards[0].la}/${cards[0].lb}`);
@@ -119,6 +158,9 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
     console.log('[3] 카드 클릭 → 04 세부 팝업(레이드 모드)');
     await click(page, '#dunList [data-rcard="r60"]');
     await page.waitForTimeout(300);
+    /* 244 — `jzBoxIn` 오버슛이 끝난 뒤에 잰다(위 settleBox 주석). 대기 300ms 는 애니메이션 길이와
+       «같은» 값이라 경계에 걸린다 — 멈춘 것을 확인하고 넘어간다. */
+    const dgdSettle = await settleBox(page, '.dgd-box');
     let d = await page.evaluate(() => ({
       on: document.getElementById('dgdw').classList.contains('on'),
       title: document.getElementById('dgdTitle').textContent,
@@ -133,7 +175,12 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
       box: (() => { const r = document.querySelector('.dgd-box').getBoundingClientRect();
         return `${Math.round(r.width)}×${Math.round(r.height)}`; })(),
     }));
-    chk('#dgdw 열림 (04 규격 재사용)', d.on && d.box === '796×1197', d.box);
+    chk('#dgdw 열림 (04 규격 재사용)', d.on && d.box === '796×1197',
+      `${d.box} (등장 애니 정지까지 ${dgdSettle.waited}ms · ${dgdSettle.settled ? '정지' : '미정지'})`);
+    /* 244 — «멈춘 뒤에 쟀다» 자체를 단언으로 남긴다. settleBox 가 상한(3s)까지 못 멈추면
+       위 규격 단언이 우연히 맞아떨어져도 그건 잰 게 아니라 걸린 것이다. */
+    chk('규격을 «등장 애니 정지 후» 에 쟀다 (뜨고 지는 FAIL 방지)', dgdSettle.settled,
+      `${dgdSettle.waited}ms → ${dgdSettle.box}`);
     chk('타이틀 = 측정장 이름', d.title === 'DPS 측정장', d.title);
     chk('«레벨» → «제한 시간» 60초', d.lvL === '제한 시간' && d.floor === '60초', `${d.lvL}/${d.floor}`);
     chk('«보상» → «최고 기록»(기록 없음)', d.rwL === '최고 기록' && d.amt === '기록 없음', `${d.rwL}/${d.amt}`);
