@@ -1959,6 +1959,11 @@
 
   /* 버튼 250x120 · gap 90 · 라벨은 버튼 세로중심보다 4.5px 위 (padding-bottom 9 로 맞춘다) */
   .sk-act{display:flex;gap:90px;height:120px;align-items:center;justify-content:center;margin-top:25px}
+  /* 268 — 08 껍데기를 쓰는 계열 중 **장비·펫만** 버튼이 3개다(장착 · 강화 · 최대 강화).
+     버튼 규격(250x120)은 레퍼런스 그대로 두고 gap 만 줄인다: 250*3 + 40*2 = 830 ≤ 본문 폭 868
+     (#modal padding 91 · .mbox border 8 + padding 7 → 1080−182−30 = 868).
+     레퍼런스가 찍힌 «버튼 2개» 배치(gap 90)는 이 클래스가 없으므로 08 점수에 영향이 없다. */
+  .sk-act.n3{gap:40px}
   .sk-act button{width:250px;height:120px;box-sizing:border-box;padding:0 0 9px;cursor:pointer;
     border:7px solid #000;border-radius:39px;font-family:inherit;
     display:flex;align-items:center;justify-content:center}
@@ -19619,7 +19624,13 @@ const PET_TH = {
   slot: { w:69, h:59, fit:3 },    /* 07/26 장착 슬롯 `.sk-si`  박스 115x70 · 이모지 잉크 **63x53** */
   card: { w:92, h:79, fit:4 },    /* 07/26 카드 `.sk-ci`      박스 156x96 · 이모지 잉크 **84x71** */
   sum:  { w:75, h:64, fit:3 },    /* 12 소환 결과 `.sm-c>b`   박스  78x63 · 이모지 잉크 **69x58** */
-  coll: { w:66, h:70, fit:3 }     /* 21 도감 `.cdic` — 이모지가 아니라 **ref 아트 bbox 66x70** 이 자다 */
+  coll: { w:66, h:70, fit:3 },    /* 21 도감 `.cdic` — 이모지가 아니라 **ref 아트 bbox 66x70** 이 자다 */
+  /* 268 — 08 세부 팝업 아이콘 박스 `.sk-ic`(149x149 · font-size 86). 그 자리를 차지하던 폴백
+     이모지(🐉 82x96 · 🐦 93x78 · 🤖 96x96 — `tools/probe268.js` 실측)의 **최대 잉크 96x96** 을
+     그림 자리로 잡는다. 캔버스를 칸(149)과 같게 두고 `fit` 로 96 을 만드는 이유는
+     `#modal.sk8 .sk-ic{align-items:flex-end}` 때문이다 — 칸보다 작은 캔버스는 바닥에 붙어
+     이모지가 앉던 자리보다 아래로 내려간다. 칸과 같은 크기면 align 이 무의미해져 정확히 가운데다. */
+  det:  { w:149, h:149, fit:26 }  /* 149 − 26*2 = 97 ≈ 이모지 잉크 최대변 96 */
 };
 /* `it` 이 펫이면 스프라이트 캔버스, 아니면 원래 이모지(`ic`) 그대로. 호출부는 분기하지 않는다 —
    장비·스킬이 섞인 목록(09 결과·12 소환 결과)에서 «펫만» 바뀌게 하는 것이 이 함수의 일이다.
@@ -21183,72 +21194,113 @@ function showSkillDetail(id){
 }
 
 
+/* 268 (T1 «버그/통일», 2026-08-27 저장소 주인 지적 «08 세부 팝업이 계열마다 디자인이 다르다 —
+   펫(장비·유물 포함) 세부가 스킬 세부와 딴판») —
+   구: 08 규격 껍데기(`.skd`)를 쓰는 것은 **스킬**(`showSkillDetail`)과 **코스튬**(`showCosDetail`) 둘뿐이고,
+       펫·장비·유물은 이 함수가 A5 공용 팝업에 `<h2>`+`<p>`+**인라인 style 하드코딩 색**(`#0e1428` 등)으로
+       그렸다. 같은 «아이템 세부» 인데 화면이 두 갈래였다.
+   신: 네 계열 전부 `.skd` 08 껍데기로 모은다. **껍데기 기하는 1px 도 안 건드린다**(08 측정표 그대로) —
+       코스튬이 이미 «08 껍데기를 다른 데이터로 채운» 선례라 새 CSS 는 3버튼 gap 하나(`.sk-act.n3`)뿐이다.
+       계열마다 다른 것은 «표 2열에 무엇을 넣나» 뿐:
+         스킬 = 쿨타임/피해량 · 펫 = 공격 주기/피해량 · 장비 = 부위/효과 · 유물 = 효과/소환 Lv.
+   ⚠ 사라진 것과 그 자리 —
+     · `[닫기]`(`mClose`): 08 껍데기에는 닫기 버튼이 없다(스킬·코스튬도 없다). 딤 탭으로 닫는다
+       (`#modal` 배경 클릭 = `closeModal`). 267(«팝업 [닫기] 제거») 방향과도 같다.
+     · 유물의 `[장착하기]`: `toggleEquip(_, 'relic')` 은 89 이후 **아무 일도 안 하는 빈 함수**였다
+       (유물은 보유만으로 상시 적용). 강화도 없다(소환이 곧 Lv+1). 그래서 유물만 버튼 행이 없다 —
+       죽은 버튼 2개를 남기는 것보다 낫다.
+     · `[가능한 만큼 강화]` 는 08 규격 버튼 `[최대 강화]` 로 이름만 줄여 그대로 남는다(폭 250 에 맞춘다). */
 function showItem(id){
   const it = itemById(id);
   if(!it) return;
   if(SK[id]) return showSkillDetail(id);   /* 스킬은 08 전용 상세 팝업으로 */
-  const cat = catOf(it), G = GRADE[it.g], own = has(id), need = fragNeed(oLv(id));
-  const eq = cat === 'skill' ? skillEquipped(id) : cat === 'pet' ? petEquipped(id)
-           : cat === 'relic' ? false : eqEquipped(it);
-  let eff = '', ownTxt = '', eqTxt = '';
-  if(cat === 'skill'){
-    eff = it.d + '<br>피해 <b>' + fmtB(skillDmg(it)) + '</b>' + (it.cd > 0 ? ' · 쿨타임 <b>' + it.cd.toFixed(2) + '초</b>' : ' · <b>지속형</b>');
-    ownTxt = '공격력 +' + pct(ownVal(it)); eqTxt = '전투에서 자동 발동';
-  }else if(cat === 'pet'){
-    eff = '플레이어를 따라다니며 자동 공격<br>피해 <b>' + fmtB(petDmg(it)) + '</b> · 주기 <b>' + it.cd.toFixed(2) + '초</b>';
-    ownTxt = '공격력 +' + pct(ownVal(it)*0.6) + ' · 골드 +' + pct(ownVal(it)); eqTxt = '전투에 참여해 공격';
-  }else if(cat === 'relic'){
-    eff = RELIC_EFF[it.eff] + ' 상승 유물 · 소환할 때마다 Lv +1';
-    ownTxt = RELIC_EFF[it.eff] + ' +' + pct(relicVal(it));
-    eqTxt = '장착 없이 항상 적용';
-  }else{
-    const s = SLOTS.find(x => x.k === it.slot);
-    eff = '부위 <b>' + s.n + '</b> · 효과 <b>' + s.stat + '</b>';
-    ownTxt = s.stat + ' +' + pct(ownVal(it)); eqTxt = s.stat + ' +' + pct(equipVal(it));
+  const cat = catOf(it), G = GRADE[it.g], own = has(id), lv = oLv(id);
+  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
+  const rel = cat === 'relic';
+  const eq = cat === 'pet' ? petEquipped(id) : rel ? false : eqEquipped(it);
+  const slot = cat === 'equip' ? SLOTS.find(x => x.k === it.slot) : null;
+  const kindN = cat === 'pet' ? '동료' : cat === 'equip' ? '장비' : '유물';
+  /* 진행바 — 펫·장비는 «강화 재료 have/need», 유물은 강화 재료가 없다(89: 소환이 곧 Lv+1) */
+  const rate = rel ? (own ? 100 : 0) : own ? (maxed ? 100 : Math.min(1, have / need) * 100) : 0;
+  const p = rate.toFixed(1);
+  const pTxt = rel ? (own ? '소환할 때마다 Lv +1' : '미보유')
+             : own ? (maxed ? 'MAX' : have + '/' + need) : '0/' + need;
+  /* 표 2열 — 계열이 갈리는 자리는 여기뿐이다 */
+  const ct = cat === 'pet'   ? ['공격 주기', '피해량', it.cd.toFixed(2) + '초', own ? fmtB(petDmg(it)) : '—']
+           : cat === 'equip' ? ['부위', '효과', slot.n, slot.stat]
+           :                   ['효과', '소환 Lv', RELIC_EFF[it.eff], String(lv)];
+  /* 설명문의 수치는 08 규격대로 주황(`.sk-db p em`)으로 강조한다 */
+  const desc = !own
+    ? '아직 획득하지 못했습니다.<br>' + kindN + ' 소환으로 획득하세요.'
+    : cat === 'pet'
+      ? '플레이어를 따라다니며 <em>' + it.cd.toFixed(2) + '초</em>마다 자동 공격합니다.<br>'
+        + '장착 효과 — 전투에 참여해 <em>' + fmtB(petDmg(it)) + '</em> 피해.<br>'
+        + '동료는 최대 <em>3마리</em>까지 장착합니다.'
+    : cat === 'equip'
+      ? '<em>' + slot.n + '</em> 부위에 장착하는 장비입니다.<br>'
+        + '장착 효과 — ' + slot.stat + ' <em>+' + pct(equipVal(it)) + '</em><br>'
+        + (isTopGrade(it)
+            ? '최고 등급 장비라 <em>무한 강화</em>됩니다.'
+            : 'Lv. <em>' + MAX_LEVEL + '</em> 달성 후 같은 장비 <em>' + CRAFT_NEED + '개</em>로<br>'
+              + '<em>' + GRADE[it.g+1].n + '</em> 등급으로 합성할 수 있습니다.')
+      : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.<br>'
+        + '장착 없이 <em>보유</em>만으로 항상 적용됩니다.<br>'
+        + '유물을 소환할 때마다 유물 하나가 <em>Lv +1</em> 됩니다.';
+  const ownTxt = cat === 'pet'
+      ? '공격 <em>+' + (own ? pct(ownVal(it)*0.6) : '0%') + '</em> 골드 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
+    : cat === 'equip'
+      ? slot.stat + ' <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
+      : RELIC_EFF[it.eff] + ' <em>+' + (own ? pct(relicVal(it)) : '0%') + '</em>';
+  /* 버튼 행 — 08 규격(250x120). 유물은 할 수 있는 행동이 없어 행 자체를 안 낸다(위 주석). */
+  const canUp = own && !maxed && canLevel(it);
+  const crafting = own && maxed && cat === 'equip' && !isTopGrade(it);
+  let acts = '';
+  if(!rel){
+    acts = '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>' + (eq ? '해제' : '장착') + '</b></button>'
+      + (crafting
+          ? '<button class="sk-u" id="mCraft"' + (canCraft(it) ? '' : ' disabled') + '><b>합성</b></button>'
+          : '<button class="sk-u" id="mLv"' + (canUp ? '' : ' disabled') + '><b>'
+            + (own && maxed ? 'MAX' : '강화') + '</b></button>')
+      + (canUp ? '<button class="sk-u" id="mLvAll"><b>최대 강화</b></button>' : '');
   }
-  let h = '<h2 style="color:' + G.c + '">' + itemIcon(it) + ' ' + (own ? it.n : '???') + '</h2>'
-    + '<p><b style="color:' + G.c + '">' + G.ic + ' ' + G.n + '</b>' + (own ? ' · Lv.' + oLv(id) : '') + '</p>'
-    + '<p>' + (own ? eff : '아직 획득하지 못했습니다. 소환으로 획득하세요.') + '</p>'
-    + '<div style="text-align:left;background:#0e1428;border-radius:20px;padding:16px 20px;margin-top:18px">'
-    + '<p style="color:#8fd6ff">보유 효과 — <b style="color:#8ff0a8">' + ownTxt + '</b></p>'
-    + '<p style="color:#ffb648">장착 효과 — <b style="color:#8ff0a8">' + eqTxt + '</b></p></div>';
-  if(own){
-    const maxed = atMax(it), lim = maxLv(it);
-    h += '<p style="margin-top:16px">레벨 <b>' + oLv(id) + ' / ' + (lim === Infinity ? '∞' : lim) + '</b>'
-      +  (maxed ? ' <span style="color:#ffd45e">MAX</span>' : '') + '<br>보유 재료 <b>' + fmt(frag(id)) + '</b>'
-      +  (maxed ? '' : ' / 필요 <b>' + need + '</b>') + '</p>'
-      +  '<div class="mrow"><button class="gbtn green" id="mEq">' + (eq ? '장착 해제' : '장착하기') + '</button>'
-      +  (maxed
-          ? (cat === 'equip'
-              ? '<button class="gbtn purple" id="mCraft"' + (canCraft(it) ? '' : ' disabled') + '>합성 ('
-                + CRAFT_NEED + '개 → ' + GRADE[Math.min(it.g+1, GRADE.length-1)].n + ')</button>'
-              : '<button class="gbtn" disabled>최대 레벨</button>')
-          : '<button class="gbtn blue" id="mLv"' + (canLevel(it) ? '' : ' disabled') + '>강화 (Lv.' + (oLv(id)+1) + ')</button>')
-      +  '</div>'
-      +  (maxed ? '' : '<button class="gbtn blue" id="mLvAll"' + (canLevel(it) ? '' : ' disabled') + '>가능한 만큼 강화</button>');
-    if(cat === 'equip' && !isTopGrade(it) && !maxed)
-      h += '<p style="margin-top:14px;font-size:21px;color:#7d8bad">Lv.' + MAX_LEVEL + ' 달성 후 같은 장비 '
-        + CRAFT_NEED + '개로 <b>' + GRADE[it.g+1].n + '</b> 합성 가능</p>';
-    if(cat === 'equip' && isTopGrade(it))
-      h += '<p style="margin-top:14px;font-size:21px;color:#ffb648">최고 등급 장비는 <b>무한 강화</b>됩니다.</p>';
-  }
-  h += '<button class="gbtn" id="mClose">닫기</button>';
-  showModal(h);
-  $('mClose').onclick = closeModal;
-  if(own){
-    $('mEq').onclick = () => { toggleEquip(it, cat); showItem(id); };
-    const a = $('mLv'), b = $('mLvAll'), c = $('mCraft');
-    /* 58 — 강화 성공 연출. 이 팝업은 «대상 카드» 가 따로 없어 버튼 행을 플래시한다 */
-    if(a) a.onclick = () => { const t = $('mbox').querySelector('.mrow');
-      if(levelUp(it)){ fxUpOk(t, a); showItem(id); fxHitEl('#mbox .mrow'); } };
-    if(b) b.onclick = () => { const t = $('mbox').querySelector('.mrow'); const n = levelUpMax(it);
-      if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl('#mbox .mrow'); };
-    if(c) c.onclick = () => {
-      const nx = craft(it);
-      /* 206 — 합성 «성공» 통보. 결과물은 바로 뒤 재렌더된 목록 카드가 보여 준다 */
-      if(nx) notify('⚗️ 합성 성공 — ' + GRADE[nx.g].n + ' <b>' + nx.n + '</b> 획득!');
-    };
-  }
+
+  $('mtitle').textContent = own ? it.n : '???';
+  $('mbox').innerHTML =
+      '<div class="skd">'
+    +   '<div class="sk-ic">' + (cat === 'pet' ? petIcon(it, 'det') : itemIcon(it)) + '</div>'
+    +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
+    +   '<div class="sk-lv"><b>Lv. ' + lv + '</b></div>'
+    +   '<div class="sk-pb"><i style="width:' + p + '%"></i>'
+    +     '<b style="left:calc(' + p + '% + 3px)">' + pTxt + '</b></div>'
+    +   '<div class="sk-ct">'
+    +     '<div class="hd"><div><b>' + ct[0] + '</b></div><div class="nt"><b>' + ct[1] + '</b></div></div>'
+    +     '<div class="vl"><div><b>' + ct[2] + '</b></div><div class="nt"><b>' + ct[3] + '</b></div></div>'
+    +   '</div>'
+    +   '<div class="sk-sl"><b>' + kindN + ' 설명</b></div>'
+    +   '<div class="sk-db"><p>' + desc + '</p></div>'
+    +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
+    +     '<div class="v"><b>' + ownTxt + '</b></div></div>'
+    + '</div>'
+    + (acts ? '<div class="sk-act' + (canUp ? ' n3' : '') + '">' + acts + '</div>' : '');
+  $('mbox').scrollTop = 0;
+  if(cat === 'pet') petPaint($('mbox'));     /* 174 규약 — 스프라이트 캔버스는 삽입 «후» 한 번 칠한다 */
+  $('modal').classList.add('on', 'sk8');
+  const e = $('mEq'), l = $('mLv'), b = $('mLvAll'), c = $('mCraft');
+  if(e && own) e.onclick = () => { toggleEquip(it, cat); showItem(id); };
+  /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리) */
+  if(l && !l.disabled) l.onclick = () => {
+    const t = $('mbox').querySelector('.sk-lv');
+    if(levelUp(it)){ fxUpOk(t, l); showItem(id); fxHitEl('#mbox .sk-lv'); }
+  };
+  if(b) b.onclick = () => {
+    const t = $('mbox').querySelector('.sk-lv'), n = levelUpMax(it);
+    if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl('#mbox .sk-lv');
+  };
+  if(c) c.onclick = () => {
+    const nx = craft(it);
+    /* 206 — 합성 «성공» 통보. 결과물은 바로 뒤 재렌더된 목록 카드가 보여 준다 */
+    if(nx) notify('⚗️ 합성 성공 — ' + GRADE[nx.g].n + ' <b>' + nx.n + '</b> 획득!');
+  };
 }
 
 /* ---- 던전 탭 ---- */

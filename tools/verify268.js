@@ -1,0 +1,376 @@
+/* 작업 268 회귀 게이트 — «08 세부 팝업이 계열마다 디자인이 다르다» (2026-08-27 주인 지적, T1 «버그/통일»).
+   실행: node tools/verify268.js  → 마지막 줄이 `VERIFY268 n/n PASS` 여야 한다.
+
+   구: `.skd` 08 껍데기를 쓰는 것은 스킬(`showSkillDetail`)·코스튬(`showCosDetail`) 둘뿐이었고,
+       펫·장비·유물은 `showItem` 이 A5 공용 팝업에 `<h2>`+`<p>`+**인라인 style 하드코딩 색**으로 그렸다.
+   신: 네 계열 전부 `.skd` 를 쓴다. 껍데기 기하는 08 측정표 그대로(1px 불변).
+
+   본다:
+     §1 구조   스킬·펫·장비·유물 4계열이 전부 `#modal.sk8` + `.skd` 이고, 08 부품
+               (`.sk-ic .sk-gr .sk-lv .sk-pb .sk-ct .sk-sl .sk-db .sk-ow`) 8개가 빠짐없이 있다.
+     §2 기하   4계열의 `.skd` 와 부품 8개 bbox 가 **스킬(레퍼런스가 찍힌 계열)과 픽셀 동일**하다
+               — «껍데기를 안 건드렸다» 의 증거이자, 누가 계열별로 갈라 놓으면 여기서 걸린다.
+     §3 잔재   구 경로의 흔적이 하나도 안 남았다: `.mwell`(A5 본문 패널) · `.gbtn` · `#mClose` ·
+               인라인 `style="...background:#0e1428"` · `<h2>` 가 본문 안에 0개.
+     §4 내용   계열마다 다른 것은 표 2열뿐이다(펫 공격주기/피해량 · 장비 부위/효과 · 유물 효과/소환Lv)
+               + 등급 알약·Lv·진행바·설명 헤더가 그 계열 값으로 채워진다.
+     §5 버튼   08 규격 250x120. 펫·장비는 [장착]/[강화](+[최대 강화]) · 유물은 행 없음.
+               3개일 때만 `.n3` 이고 행 폭이 본문 폭(868)을 안 넘는다.
+     §6 기능   실제로 동작한다 — [장착] 토글이 S 에 반영 · [강화] 가 Lv 를 올림 ·
+               [최대 강화] 가 재료를 다 씀 · [합성](`mCraft`)이 다음 등급을 준다.
+     §7 펫 그림 174 규칙 — 펫 아이콘은 이모지가 아니라 스프라이트 캔버스이고 잉크가 칸 중앙에 있다.
+     §8 회귀   스킬 세부(`showSkillDetail`)는 한 픽셀도 안 바뀐다 · 콘솔/페이지 에러 0. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+const fs = require('fs');
+const path = require('path');
+
+let pass = 0, fail = 0;
+const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓', m); } else { fail++; console.log('  ✗', m, d === undefined ? '' : '— ' + d); } };
+const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${got})`);
+const URL = 'file://' + path.resolve(__dirname, '../index.html');
+const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+
+const PARTS = ['.sk-ic', '.sk-gr', '.sk-lv', '.sk-pb', '.sk-ct', '.sk-sl', '.sk-db', '.sk-ow'];
+
+/* 한 계열의 팝업을 열고 «껍데기 · 부품 · 내용 · 버튼» 을 한 번에 읽는다. */
+const READ = (partList) => {
+  const box = document.getElementById('mbox');
+  const rr = (sel) => { const el = box.querySelector(sel); if (!el) return null;
+    const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+    return { x: Math.round((r.left - b.left) * 100) / 100, y: Math.round((r.top - b.top) * 100) / 100,
+             w: Math.round(r.width * 100) / 100, h: Math.round(r.height * 100) / 100 }; };
+  const txt = (sel) => { const el = box.querySelector(sel); return el ? el.textContent.trim() : null; };
+  const skd = box.querySelector('.skd');
+  const act = box.querySelector('.sk-act');
+  return {
+    sk8: document.getElementById('modal').classList.contains('sk8'),
+    on: document.getElementById('modal').classList.contains('on'),
+    skd: !!skd, skdRect: rr('.skd'),
+    parts: partList.map(s => ({ s, has: !!box.querySelector(s), rect: rr(s) })),
+    title: document.getElementById('mtitle').textContent,
+    grade: txt('.sk-gr'), lv: txt('.sk-lv'), pb: txt('.sk-pb b'),
+    pbFill: (() => { const i = box.querySelector('.sk-pb i'); return i ? i.style.width : null; })(),
+    ctHd: [...box.querySelectorAll('.sk-ct .hd b')].map(x => x.textContent.trim()),
+    ctVl: [...box.querySelectorAll('.sk-ct .vl b')].map(x => x.textContent.trim()),
+    sl: txt('.sk-sl'), desc: txt('.sk-db'), ow: txt('.sk-ow'),
+    /* 구 경로 잔재 */
+    legacy: { mwell: box.querySelectorAll('.mwell').length, gbtn: box.querySelectorAll('.gbtn').length,
+              mClose: box.querySelectorAll('#mClose').length, h2: box.querySelectorAll('h2').length,
+              inlineBg: [...box.querySelectorAll('[style]')]
+                .filter(el => /background\s*:\s*#/i.test(el.getAttribute('style'))).length },
+    act: act ? {
+      n3: act.classList.contains('n3'),
+      rect: rr('.sk-act'),
+      /* ⚠ `.sk-act` 는 블록이라 rect.w 가 언제나 본문 폭이다(버튼 수와 무관) —
+         «행이 넘치는가» 는 첫 버튼 좌변 ~ 마지막 버튼 우변의 **스팬**으로 재야 한다. */
+      span: (() => { const bs = [...act.querySelectorAll('button')];
+        if (!bs.length) return 0;
+        const l = Math.min(...bs.map(b => b.getBoundingClientRect().left));
+        const r = Math.max(...bs.map(b => b.getBoundingClientRect().right));
+        return Math.round((r - l) * 100) / 100; })(),
+      btns: [...act.querySelectorAll('button')].map(b => ({
+        id: b.id, cls: b.className, label: b.textContent.trim(), dis: b.disabled,
+        w: Math.round(b.getBoundingClientRect().width * 100) / 100,
+        h: Math.round(b.getBoundingClientRect().height * 100) / 100 }))
+    } : null,
+    icon: (() => { const el = box.querySelector('.sk-ic'); if (!el) return null;
+      const cv = el.querySelector('canvas');
+      return { canvas: !!cv, sp: cv ? cv.dataset.usp : null,
+               cw: cv ? cv.width : 0, ch: cv ? cv.height : 0,
+               txt: cv ? '' : el.textContent.trim() }; })()
+  };
+};
+
+(async () => {
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('pageerror', e => errs.push('pageerror: ' + e));
+  p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+  await p.goto(URL);
+  await p.waitForFunction(() => typeof EQUIPS !== 'undefined' && EQUIPS.length > 0);
+  await p.waitForTimeout(1400);
+
+  /* 4계열의 대표 항목을 보유시킨다 — 재료는 «강화 1번은 되고 만렙은 아닌» 정도로 둔다. */
+  const seed = await p.evaluate(() => {
+    const sk = SKILLS[0];
+    const pet = PETS.find(x => x.sp === 'dragon') || PETS[0];
+    const eqp = EQUIPS.find(x => x.slot === 'weapon' && !isTopGrade(x));
+    const rl = RELICS[0];
+    [sk, pet, eqp].forEach(x => { S.own[x.id] = { n: 40, l: 3 }; });
+    S.own[rl.id] = { n: 0, l: 4 };
+    S.eqSkill = []; S.eqPet = []; S.eqSlot = { weapon: null, shield: null, amulet: null };
+    save(); uiDirty = true;
+    return { sk: sk.id, pet: pet.id, eqp: eqp.id, rl: rl.id, petSp: pet.sp,
+             eqSlotN: SLOTS.find(s => s.k === eqp.slot).n,
+             eqStat: SLOTS.find(s => s.k === eqp.slot).stat,
+             rlEff: RELIC_EFF[rl.eff], petCd: pet.cd.toFixed(2) + '초' };
+  });
+
+  /* 135 의 교훈 — 60 쥬시(`jzBoxIn`)는 62% 에서 scale 1.02 를 지난다. 고정 대기로 재면
+     «연출 한복판» 을 재게 되어 같은 껍데기가 계열마다 다른 수로 나온다(첫 실행에서 실제로
+     스킬만 801.03x701.91 로 읽혔다). smoke [3] 과 같은 기준으로 유한 애니메이션이 끝나기를 기다린다. */
+  const settle = async () => {
+    await p.waitForFunction(() => {
+      const app = document.getElementById('app'); if (!app) return true;
+      return !app.getAnimations({ subtree: true })
+        .some(a => /^jz/.test(a.animationName || '') && a.playState === 'running'
+          && a.effect && a.effect.getTiming().iterations !== Infinity);
+    }, null, { timeout: 3000 }).catch(() => {});
+    await p.waitForTimeout(120);
+  };
+  const open = async (id) => {
+    await p.evaluate(i => { closeModal(); showItem(i); }, id);
+    await settle();
+    return p.evaluate(READ, PARTS);
+  };
+
+  const D = { skill: await open(seed.sk), pet: await open(seed.pet),
+              equip: await open(seed.eqp), relic: await open(seed.rl) };
+
+  /* ── §1 구조 ── */
+  console.log('§1 구조 — 4계열이 전부 08 껍데기(.skd)를 쓴다');
+  Object.entries(D).forEach(([k, d]) => {
+    ok(d.on && d.sk8, `[${k}] #modal 이 .on + .sk8`);
+    ok(d.skd, `[${k}] 본문에 .skd 카드가 있다`);
+    const miss = d.parts.filter(x => !x.has).map(x => x.s);
+    eq(`[${k}] 08 부품 누락`, miss.length, 0);
+  });
+
+  /* ── §2 기하 — 스킬(레퍼런스 계열)과 픽셀 동일 ── */
+  console.log('\n§2 기하 — 껍데기·부품 bbox 가 스킬과 픽셀 동일 (08 측정표 불변)');
+  const same = (a, b) => a && b && a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+  const S0 = D.skill;
+  ['pet', 'equip', 'relic'].forEach(k => {
+    ok(same(S0.skdRect, D[k].skdRect),
+       `[${k}] .skd bbox = 스킬`, JSON.stringify(D[k].skdRect) + ' vs ' + JSON.stringify(S0.skdRect));
+    PARTS.forEach((sel, i) => {
+      ok(same(S0.parts[i].rect, D[k].parts[i].rect),
+         `[${k}] ${sel} bbox = 스킬`,
+         JSON.stringify(D[k].parts[i].rect) + ' vs ' + JSON.stringify(S0.parts[i].rect));
+    });
+  });
+  eq('.skd 폭', S0.skdRect.w, 800);
+  eq('.skd 높이', S0.skdRect.h, 701);
+
+  /* ── §3 구 경로 잔재 0 ── */
+  console.log('\n§3 잔재 — 구 A5 경로(.mwell/.gbtn/#mClose/<h2>/인라인 배경색) 0');
+  Object.entries(D).forEach(([k, d]) => {
+    const L = d.legacy;
+    ok(!L.mwell && !L.gbtn && !L.mClose && !L.h2 && !L.inlineBg,
+       `[${k}] 잔재 0`, JSON.stringify(L));
+  });
+  /* 소스에서도 «구 팝업 문자열» 이 showItem 에서 사라졌는지 본다(다시 기어들면 여기서 걸린다) */
+  const fn = SRC.slice(SRC.indexOf('function showItem(id){'));
+  const body = fn.slice(0, fn.indexOf('\n}\n') + 3);
+  ok(body.length > 200, 'showItem 본문을 소스에서 찾았다');
+  ok(!/#0e1428/.test(body), 'showItem 에 하드코딩 색 #0e1428 없음');
+  ok(!/gbtn/.test(body), 'showItem 에 .gbtn 없음');
+  ok(!/mClose/.test(body), 'showItem 에 #mClose 없음');
+  ok(/showModal\(/.test(body) === false, 'showItem 이 A5 showModal() 을 안 쓴다');
+  ok(/class="skd"/.test(body), 'showItem 이 .skd 를 쓴다');
+
+  /* ── §4 내용 ── */
+  console.log('\n§4 내용 — 계열이 갈리는 자리는 표 2열뿐');
+  eq('[펫] 표 헤더 좌', D.pet.ctHd[0], '공격 주기');
+  eq('[펫] 표 헤더 우', D.pet.ctHd[1], '피해량');
+  eq('[펫] 표 값 좌 = cd', D.pet.ctVl[0], seed.petCd);
+  ok(D.pet.ctVl[1] && D.pet.ctVl[1] !== '—' && D.pet.ctVl[1] !== '0', '[펫] 표 값 우 = 피해량', D.pet.ctVl[1]);
+  eq('[장비] 표 헤더', D.equip.ctHd.join('/'), '부위/효과');
+  eq('[장비] 표 값 좌 = 부위', D.equip.ctVl[0], seed.eqSlotN);
+  eq('[장비] 표 값 우 = 스탯', D.equip.ctVl[1], seed.eqStat);
+  eq('[유물] 표 헤더', D.relic.ctHd.join('/'), '효과/소환 Lv');
+  eq('[유물] 표 값 좌 = 효과', D.relic.ctVl[0], seed.rlEff);
+  eq('[유물] 표 값 우 = Lv', D.relic.ctVl[1], '4');
+  eq('[펫] 설명 헤더', D.pet.sl, '동료 설명');
+  eq('[장비] 설명 헤더', D.equip.sl, '장비 설명');
+  eq('[유물] 설명 헤더', D.relic.sl, '유물 설명');
+  eq('[펫] Lv 칸', D.pet.lv, 'Lv. 3');
+  eq('[유물] Lv 칸', D.relic.lv, 'Lv. 4');
+  ['pet', 'equip', 'relic'].forEach(k => {
+    ok(!!D[k].grade && D[k].grade.length > 0, `[${k}] 등급 알약이 채워졌다`, D[k].grade);
+    ok(!!D[k].desc && D[k].desc.length > 10, `[${k}] 설명 박스가 채워졌다`);
+    ok(/보유 효과/.test(D[k].ow), `[${k}] 보유 효과 행`, D[k].ow);
+  });
+  eq('[펫] 진행바 라벨(재료 40/7)', D.pet.pb, '40/7');
+  eq('[유물] 진행바 라벨', D.relic.pb, '소환할 때마다 Lv +1');
+
+  /* 설명 박스가 넘치지 않는다(overflow:hidden 이라 잘리면 안 보인다) */
+  const fits = await p.evaluate(() => {
+    const el = document.querySelector('#mbox .sk-db');
+    return el ? { sh: el.scrollHeight, ch: el.clientHeight } : null;
+  });
+  ok(fits && fits.sh <= fits.ch + 2, '[유물] 설명이 박스 안에 담긴다', JSON.stringify(fits));
+
+  /* ── §5 버튼 ── */
+  console.log('\n§5 버튼 — 08 규격 250x120 · 유물은 행 없음');
+  eq('[유물] 버튼 행', D.relic.act === null, true);
+  ['pet', 'equip'].forEach(k => {
+    const a = D[k].act;
+    ok(!!a, `[${k}] 버튼 행이 있다`);
+    if (!a) return;
+    eq(`[${k}] 버튼 수`, a.btns.length, 3);
+    eq(`[${k}] 버튼 id`, a.btns.map(b => b.id).join(','), 'mEq,mLv,mLvAll');
+    ok(a.btns.every(b => b.w === 250 && b.h === 120), `[${k}] 버튼 250x120`,
+       JSON.stringify(a.btns.map(b => b.w + 'x' + b.h)));
+    ok(a.n3, `[${k}] 3개 → .n3`);
+    ok(a.span <= 868, `[${k}] 버튼 3개 스팬 ${a.span} ≤ 본문 868`);
+    ok(Math.abs(a.span - 830) <= 1, `[${k}] 스팬 ${a.span} = 250*3 + gap 40*2 = 830`);
+    eq(`[${k}] 장착 라벨`, a.btns[0].label, '장착');
+    eq(`[${k}] 강화 라벨`, a.btns[1].label, '강화');
+    eq(`[${k}] 최대 강화 라벨`, a.btns[2].label, '최대 강화');
+    ok(a.btns[0].cls.includes('sk-e'), `[${k}] 장착은 .sk-e`);
+    ok(a.btns.slice(1).every(b => b.cls.includes('sk-u')), `[${k}] 강화 계열은 .sk-u`);
+    ok(!a.btns[0].dis && !a.btns[1].dis, `[${k}] 보유 + 재료 충분 → 활성`);
+  });
+  /* 미보유 칸 — 두 버튼 다 비활성이고 3번째는 안 난다(08 스킬과 같은 형태) */
+  const notOwn = await p.evaluate(() => {
+    const x = EQUIPS.find(e => !S.own[e.id]); closeModal(); showItem(x.id);
+    const bs = [...document.querySelectorAll('#mbox .sk-act button')];
+    return { n: bs.length, dis: bs.map(b => b.disabled), title: document.getElementById('mtitle').textContent,
+             n3: document.querySelector('#mbox .sk-act').classList.contains('n3') };
+  });
+  eq('[미보유 장비] 버튼 수', notOwn.n, 2);
+  ok(notOwn.dis.every(Boolean), '[미보유 장비] 두 버튼 다 비활성', JSON.stringify(notOwn.dis));
+  eq('[미보유 장비] 제목', notOwn.title, '???');
+  ok(!notOwn.n3, '[미보유 장비] 버튼 2개라 .n3 아님');
+
+  /* 만렙 장비 — [합성] 버튼(mCraft)이 그 자리에 온다 (verify149 가 이 id 를 쓴다) */
+  const maxedEq = await p.evaluate(() => {
+    const x = EQUIPS.find(e => !isTopGrade(e) && nextGradeItem(e));
+    S.own[x.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
+    closeModal(); showItem(x.id);
+    const bs = [...document.querySelectorAll('#mbox .sk-act button')];
+    return { id: x.id, ids: bs.map(b => b.id), labels: bs.map(b => b.textContent.trim()),
+             dis: bs.map(b => b.disabled), pb: document.querySelector('#mbox .sk-pb b').textContent.trim() };
+  });
+  eq('[만렙 장비] 버튼 id', maxedEq.ids.join(','), 'mEq,mCraft');
+  eq('[만렙 장비] 합성 라벨', maxedEq.labels[1], '합성');
+  ok(!maxedEq.dis[1], '[만렙 장비] 합성 가능 → 활성');
+  eq('[만렙 장비] 진행바 MAX', maxedEq.pb, 'MAX');
+  /* 만렙 펫 — 합성이 없으므로 «MAX» 비활성 */
+  const maxedPet = await p.evaluate(() => {
+    const x = PETS[0]; S.own[x.id] = { n: 0, l: MAX_LEVEL };
+    closeModal(); showItem(x.id);
+    const bs = [...document.querySelectorAll('#mbox .sk-act button')];
+    return { ids: bs.map(b => b.id), labels: bs.map(b => b.textContent.trim()), dis: bs.map(b => b.disabled) };
+  });
+  eq('[만렙 펫] 버튼 id', maxedPet.ids.join(','), 'mEq,mLv');
+  eq('[만렙 펫] 라벨', maxedPet.labels[1], 'MAX');
+  ok(maxedPet.dis[1], '[만렙 펫] MAX 는 비활성');
+
+  /* ── §6 기능 — «만들어 놓음» 이 아니라 실제로 동작하는가 ── */
+  console.log('\n§6 기능 — 버튼이 실제로 상태를 바꾼다');
+  const fEq = await p.evaluate(i => {
+    closeModal(); showItem(i);
+    const before = S.eqSlot.weapon;
+    document.getElementById('mEq').onclick();
+    const mid = S.eqSlot.weapon, lab1 = document.querySelector('#mbox .sk-e b').textContent.trim();
+    document.getElementById('mEq').onclick();
+    return { before, mid, after: S.eqSlot.weapon, lab1,
+             lab2: document.querySelector('#mbox .sk-e b').textContent.trim() };
+  }, seed.eqp);
+  ok(fEq.before === null && fEq.mid === seed.eqp, '[장착] 눌러서 S.eqSlot 에 들어간다', JSON.stringify(fEq));
+  eq('[장착] 후 라벨', fEq.lab1, '해제');
+  ok(fEq.after === null, '[해제] 다시 눌러서 빠진다');
+  eq('[해제] 후 라벨', fEq.lab2, '장착');
+
+  const fPet = await p.evaluate(i => {
+    closeModal(); showItem(i);
+    document.getElementById('mEq').onclick();
+    return { on: S.eqPet.includes(i), lab: document.querySelector('#mbox .sk-e b').textContent.trim() };
+  }, seed.pet);
+  ok(fPet.on, '[펫 장착] S.eqPet 에 들어간다');
+  eq('[펫 장착] 후 라벨', fPet.lab, '해제');
+
+  const fLv = await p.evaluate(i => {
+    S.own[i] = { n: 40, l: 3 }; closeModal(); showItem(i);
+    const b = document.getElementById('mLv'); b.onclick();
+    return { lv: S.own[i].l, n: S.own[i].n, shown: document.querySelector('#mbox .sk-lv').textContent.trim() };
+  }, seed.eqp);
+  eq('[강화] Lv 가 올랐다', fLv.lv, 4);
+  ok(fLv.n < 40, '[강화] 재료가 줄었다', fLv.n);
+  eq('[강화] 팝업 Lv 표기 갱신', fLv.shown, 'Lv. 4');
+
+  const fAll = await p.evaluate(i => {
+    S.own[i] = { n: 40, l: 3 }; closeModal(); showItem(i);
+    document.getElementById('mLvAll').onclick();
+    return { lv: S.own[i].l, n: S.own[i].n,
+             shown: document.querySelector('#mbox .sk-lv').textContent.trim() };
+  }, seed.eqp);
+  ok(fAll.lv > 4, '[최대 강화] 여러 레벨이 한 번에 올랐다', 'Lv ' + fAll.lv);
+  ok(fAll.n < 7, '[최대 강화] 남은 재료가 다음 필요분 미만', fAll.n);
+  eq('[최대 강화] 팝업 Lv 표기 갱신', fAll.shown, 'Lv. ' + fAll.lv);
+
+  const fCraft = await p.evaluate(() => {
+    const x = EQUIPS.find(e => !isTopGrade(e) && nextGradeItem(e));
+    S.own[x.id] = { n: CRAFT_NEED, l: MAX_LEVEL };
+    closeModal(); showItem(x.id);
+    /* 85 ⑤ — 합성 결과는 «다음 등급 5종 중 랜덤» 이라 지급물을 id 로 못 집는다.
+       그 등급 풀 전체의 보유 수가 늘었는지로 본다. */
+    const pool = EQUIPS.filter(e => e.slot === x.slot && e.g === x.g + 1);
+    const before = pool.filter(e => S.own[e.id]).length;
+    document.getElementById('mCraft').onclick();
+    return { id: x.id, gone: !S.own[x.id] || S.own[x.id].n < CRAFT_NEED,
+             got: pool.filter(e => S.own[e.id]).length > before,
+             toast: document.querySelectorAll('.fx-toast').length };
+  });
+  ok(fCraft.gone, '[합성] 재료가 소모됐다');
+  ok(fCraft.got, '[합성] 다음 등급 장비를 얻었다');
+
+  /* ── §7 펫 그림 (174 규칙) ── */
+  console.log('\n§7 펫 그림 — 이모지가 아니라 스프라이트 캔버스');
+  const petIco = await p.evaluate(i => {
+    closeModal(); showItem(i);
+    const cv = document.querySelector('#mbox .sk-ic canvas');
+    if (!cv) return { canvas: false };
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0;
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      if (d[(y * cv.width + x) * 4 + 3] < 8) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y; n++;
+    }
+    return { canvas: true, sp: cv.dataset.usp, cw: cv.width, ch: cv.height, px: n,
+             ink: n ? { x0, y0, w: x1 - x0 + 1, h: y1 - y0 + 1 } : null };
+  }, seed.pet);
+  ok(petIco.canvas, '[펫] .sk-ic 안이 캔버스다');
+  eq('[펫] 캔버스 크기', petIco.cw + 'x' + petIco.ch, '149x149');
+  ok(petIco.px > 0, '[펫] 캔버스에 잉크가 그려졌다', petIco.px + 'px');
+  if (petIco.ink) {
+    const cx = petIco.ink.x0 + petIco.ink.w / 2, cy = petIco.ink.y0 + petIco.ink.h / 2;
+    ok(Math.abs(cx - 74.5) <= 2, `[펫] 잉크 가로 중심 ${cx} ≈ 74.5`);
+    ok(Math.abs(cy - 74.5) <= 2, `[펫] 잉크 세로 중심 ${cy} ≈ 74.5`);
+    ok(Math.max(petIco.ink.w, petIco.ink.h) <= 97, `[펫] 잉크 최대변 ${Math.max(petIco.ink.w, petIco.ink.h)} ≤ 97 (이모지 잉크 96 대역)`);
+  }
+  /* 과교정 잠금 — 장비·유물은 이모지 그대로다(펫만 캔버스) */
+  ok(!D.equip.icon.canvas && D.equip.icon.txt.length > 0, '[장비] 아이콘은 이모지 그대로', D.equip.icon.txt);
+  ok(!D.relic.icon.canvas && D.relic.icon.txt.length > 0, '[유물] 아이콘은 이모지 그대로', D.relic.icon.txt);
+  ok(!D.skill.icon.canvas, '[스킬] 아이콘은 이모지 그대로');
+
+  /* ── §8 회귀 ── */
+  console.log('\n§8 회귀 — 08 스킬 세부 불변 · 에러 0');
+  eq('[스킬] 표 헤더', D.skill.ctHd.join('/'), '쿨타임/피해량');
+  eq('[스킬] 설명 헤더', D.skill.sl, '스킬 설명');
+  eq('[스킬] 버튼 수', D.skill.act.btns.length, 2);
+  eq('[스킬] 버튼 id', D.skill.act.btns.map(b => b.id).join(','), 'mEq,mLv');
+  ok(!D.skill.act.n3, '[스킬] 버튼 2개 → .n3 아님 (레퍼런스 gap 90 유지)');
+  ok(Math.abs(D.skill.act.span - 590) <= 1, `[스킬] 버튼 스팬 ${D.skill.act.span} = 250*2 + gap 90 = 590`);
+  /* 코스튬 세부도 같은 껍데기를 계속 쓴다 */
+  const cos = await p.evaluate(() => {
+    closeModal(); showCosDetail(AVATARS[0].id);
+    return { skd: !!document.querySelector('#mbox .skd'),
+             sk8: document.getElementById('modal').classList.contains('sk8') };
+  });
+  ok(cos.skd && cos.sk8, '[코스튬] 08 껍데기 유지');
+
+  eq('콘솔·페이지 에러', errs.length, 0);
+  if (errs.length) errs.slice(0, 5).forEach(e => console.log('    ', e));
+
+  await browser.close();
+  const total = pass + fail;
+  console.log(`\nVERIFY268 ${pass}/${total} ${fail ? 'FAIL' : 'PASS'}`);
+  process.exit(fail ? 1 : 0);
+})();
