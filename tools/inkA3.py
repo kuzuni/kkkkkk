@@ -114,11 +114,59 @@ GATE = {
     '코인 아이콘':      (9, 9),
     '젬 아이콘':        (8, 13),
 }
+# 238 — 게이트의 **0번 관문: 이 캡처가 폭을 잴 수 있는 캡처인가.**
+# 잉크 «폭» 은 글자 수가 같을 때만 비교된다. 실제 게임은 칭호 대신 계급(「브론즈」·3글자)을 쓰고
+# 숫자도 우리 표기(「39.2A」·5글자)라, `A3_REFSTR=1` 없이 찍은 캡처를 이 게이트에 물리면
+# 레퍼런스(「칭호 없음」5글자 · 「39.20A」6글자)와의 **글자 수 차이**가 그대로 «폭 −29.6% / −19.0% 결함»
+# 으로 나온다 — 작업 238 로 등재된 4건 중 3건이 그것이었고, CSS 는 한 줄도 안 틀렸다.
+# 나머지 1건(«전투력 폭 +13.4% = scaleX 가 13% 넓다»)도 같은 뿌리다: `capA3.js` 가 화면이 쓰는
+# `fmtB`(→`1.33B`) 대신 `fmt`(→`1,330,000`·9글자)로 덮어써서 창(pad 10 = 104px)이 **잘라 잰** 폭이었다.
+# 그래서 사이드카(`A3-r*.json`)의 문자열을 먼저 대조한다 — 틀리면 «어느 문자열이 무엇이어야 하는지»
+# 이름을 대고 빨개진다. 표기 규약(150·188 계열)이 또 바뀌어 `capA3.js` 만 낡아도 여기서 먼저 잡힌다.
+REFSTR = {'nick': 'U_1787501115822', 'rank': '칭호 없음',
+          'cp': '1.33B', 'gold': '39.20A', 'dia': '1,300'}
+
+
+def sidecar_check(cap_path):
+    """(ok 건수, 실패 목록, 사이드카 있었나) — 사이드카가 없으면 (0, [], False)."""
+    import json
+    import os
+    side = cap_path[:-4] + '.json' if cap_path.endswith('.png') else cap_path + '.json'
+    if not os.path.exists(side):
+        return 0, [], False
+    with open(side, encoding='utf-8') as f:
+        meta = json.load(f)
+    fails = []
+    ok = 0
+    if not meta.get('refstr'):
+        fails.append('캡처가 측정 모드가 아니다 — `A3_REFSTR=1 node tools/capA3.js <회차>` 로 다시 찍어라'
+                     ' (폭은 글자 수가 같아야만 비교된다)')
+    else:
+        ok += 1
+    got = meta.get('text') or {}
+    for key, want in REFSTR.items():
+        have = got.get(key)
+        if have != want:
+            fails.append('캡처 문자열 %s = %r 인데 레퍼런스는 %r — 글자 수가 다르면 «폭» 은 못 잰다'
+                         ' (capA3.js 가 화면과 다른 포매터를 쓰고 있는지 볼 것)' % (key, have, want))
+        else:
+            ok += 1
+    return ok, fails, True
+
+
 if '--gate' in sys.argv:
     bad = []
     ok = 0
     print()
     print('== VERIFYA3 게이트 ==')
+    s_ok, s_bad, s_has = sidecar_check(CAP)
+    if s_has:
+        ok += s_ok
+        bad += s_bad
+    else:
+        print('  ⚠ 사이드카(%s.json) 없음 — 문자열 대조를 건너뛴다.' % CAP[:-4])
+        print('    폭 지적이 나오면 **결함이라고 믿기 전에** `A3_REFSTR=1 node tools/capA3.js <회차>` 로'
+              ' 다시 찍어서 재현되는지부터 볼 것(작업 238).')
     for name, (x, y, w, h), (mn, pred), pad in ITEMS:
         br = bb(ref, y - pad, y + h + pad, x - pad, x + w + pad, pred)
         bc = bb(cap, y - pad - DY, y + h + pad - DY, x - pad, x + w + pad, pred)

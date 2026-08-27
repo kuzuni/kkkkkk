@@ -42,9 +42,14 @@ const outHud = path.resolve(__dirname, '../docs/review/A3-r' + r + '-hud.png');
     if (panelOpen) { panelOpen = false; syncPanel(); }
     uiDirty = true; renderUI(); drawHud(); drawTuto();
   });
-  /* 전투력은 게임 진행도에서 나오는 값이라 기본 세이브에서는 3자리(471)다. 레퍼런스는 `1.33B` 6자리라
-     글자 «자당 폭» 이 아니라 «문자열 폭» 으로 비교하면 유령 지적이 나온다 — 우리 `fmt()` 로 레퍼런스와
-     같은 문자열이 나오는 값(1,330,000)을 넣어 표시만 맞춘다(우리 포맷 그대로다). */
+  /* 전투력은 게임 진행도에서 나오는 값이라 기본 세이브에서는 3자리(471)다. 레퍼런스는 `1.33B` 5글자라
+     글자 «자당 폭» 이 아니라 «문자열 폭» 으로 비교하면 유령 지적이 나온다 — 화면이 실제로 쓰는 포매터로
+     레퍼런스와 같은 문자열이 나오는 값(1,330,000)을 넣어 표시만 맞춘다(우리 포맷 그대로다).
+     ⚠ 작업 238(2026-08-27): 이 줄은 오래 `fmt(1330000)` 이었는데, 150·188 이 표기 규약을 갈면서
+     «전투력 = `fmtB`(알파벳 단위)» 로 바뀌어 `fmt` 는 **`1,330,000`(9글자)** 를 냈다. 화면은 18328 줄에서
+     `fmtB` 로 찍는데 하네스만 `fmt` 로 덮어써서, `inkA3.py` 의 전투력 창(pad 10 = 104px)이 9글자를
+     **잘라 재고** 그 잘린 폭을 «scaleX 가 13% 넓다» 로 읽었다 — 실제 CSS 는 한 곳도 안 틀렸다.
+     **화면이 쓰는 포매터와 반드시 같은 것을 쓴다**(`fmtB`). 표기 규약이 또 바뀌면 여기도 같이 바꿀 것. */
   await p.waitForTimeout(1600);   /* 펀치·스태거가 완전히 가라앉을 때까지 */
   /* `renderUI()` 가 0.35초마다 `cpN` 을 다시 쓰고 60 롤링이 매 프레임 덮으므로,
      캡처 직전에 두 갱신 경로를 세운 뒤에 넣는다 */
@@ -55,7 +60,7 @@ const outHud = path.resolve(__dirname, '../docs/review/A3-r' + r + '-hud.png');
      `renderUI`/`drawHud` 를 세운 **뒤에** 넣어야 0.35초 갱신에 덮이지 않는다. */
   await p.evaluate((refstr) => {
     window.renderUI = () => {}; window.drawHud = () => {};
-    const e = document.getElementById('cpN'); if (e) e.textContent = fmt(1330000);
+    const e = document.getElementById('cpN'); if (e) e.textContent = fmtB(1330000);
     if (refstr) {
       const set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t; };
       set('rankN', '칭호 없음'); set('goldN', '39.20A'); set('diaN', '1,300');
@@ -82,7 +87,16 @@ const outHud = path.resolve(__dirname, '../docs/review/A3-r' + r + '-hud.png');
     };
   });
   await b.close();
-  console.log('CAPA3 r' + r + ' →', path.basename(out), '/', path.basename(outHud));
+  /* 238 — 캡처 옆에 «이 png 가 무엇을 담고 있는지» 를 사이드카로 남긴다.
+     `tools/inkA3.py --gate` 는 잉크 폭을 **글자 수가 같을 때만** 비교할 수 있는데, 사이드카가 없으면
+     게이트는 «잘못된 캡처» 와 «CSS 결함» 을 구별하지 못한다 — 238 이 정확히 그 사고였다
+     (A3_REFSTR 없이 찍은 캡처의 「브론즈」·「39.2A」 글자 수 차이가 «폭 −29.6%/−19.0% 결함» 으로 등재됐다).
+     사이드카가 있으면 게이트가 먼저 문자열을 대조해서 **어느 쪽 잘못인지 이름을 대고** 빨개진다. */
+  const side = out.replace(/\.png$/, '.json');
+  require('fs').writeFileSync(side, JSON.stringify({
+    refstr: process.env.A3_REFSTR === '1', errors: errs.length, text: box.text, box,
+  }, null, 1));
+  console.log('CAPA3 r' + r + ' →', path.basename(out), '/', path.basename(outHud), '/', path.basename(side));
   console.log('errors:', errs.length ? errs : 0);
   console.log(JSON.stringify(box, null, 1));
 })();
