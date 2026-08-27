@@ -7730,6 +7730,9 @@
   .pf-por>.k{position:absolute;inset:17px;background:#000}
   .pf-por>.art{position:absolute;inset:21px;background:linear-gradient(180deg,#4075C5,#5A97E7);
     text-align:center;font-size:104px;line-height:134px;overflow:hidden}
+  /* 201 ③ — 초상 스프라이트는 아트 자리(137×134) 정중앙. 아트 «면»(파란 그라디언트)은 그대로다 —
+     교체 대상은 그 위에 얹히던 이모지 한 글자뿐이고, bbox 도 이모지 잉크(≈90px)와 같은 대역(88×92)이다. */
+  .pf-por>.art>.por-cv{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
   /* 육각 배너 공통 — 양끝 뾰족(테이퍼 14px). 검정 외곽 + (옵션 금링) + 채움 */
   .hx{text-align:center}
   .hx>s{position:absolute;inset:0;
@@ -7785,7 +7788,8 @@
        ⚠ stroke 는 두 사람 다 정상이라 **손대지 않는다** — 드롭만 얹는다. */
     text-shadow:0 calc(var(--st-body) / 2 * 1em + 1.9px) 0 #000,
                 calc(var(--st-body) / 2 * 1em + 1.06px) 0 0 #000}
-  .pf-tab.t1{left:84px}.pf-tab.t2{left:333px;width:230px}.pf-tab.t3{left:584px}
+  /* 201 ① — `.t2`(초상화)·`.t3`(프레임)는 폐기했다(마크업·CSS·라벨 폭 근거까지). 남은 칸은 t1 뿐이다. */
+  .pf-tab.t1{left:84px}
   /* 활성 탭은 하단 테두리 없이 콘텐츠 패널과 연결 — 베벨을 상·좌·우에만 건다 */
   .pf-tab.on{height:71px;background:#D0B195;z-index:2;font-size:38px;color:#FFF8C1;
     box-shadow:none}
@@ -7794,7 +7798,9 @@
       inset 0 10px 0 #E0CCB4,inset 10px 0 0 #E0CCB4,inset -10px 0 0 #E0CCB4}
   /* 126 10회차 — 탭 라벨만 자폭이 따로 놀았다(높이는 ref 와 100% 일치인데 폭이 -7.7 ~ -14.5%).
      실측 자연폭(scaleX 1 환산) 초상화 93.3 · 프레임 86.7 · 칭호 57.3 에 ref 91 · 88 · 55 이므로
-     세 칸을 한 값 .99 로 묶으면 +1.5 / -1.2 / +3.1% 안에 든다. 칸마다 다른 값을 주지 마라. */
+     세 칸을 한 값 .99 로 묶으면 +1.5 / -1.2 / +3.1% 안에 든다. 칸마다 다른 값을 주지 마라.
+     201 ① — 세 칸 중 «칭호» 만 남았지만 값은 그대로 둔다: 칭호 단독으로도 57.3 → ref 55 (+3.1%)
+     로 이미 맞는 값이고, 남은 한 칸에 맞춰 다시 재면 126 이 세 칸을 묶어 정한 근거가 사라진다. */
   .pf-tab>i{transform:scaleX(.99)}
   .pf-tab.on>i{transform:scaleX(.96)}
   /* 콘텐츠 패널 ref (150,985) 780×544, r36, 테두리 없음 */
@@ -12023,7 +12029,10 @@
     <div class="pedge"></div>
     <div class="plate"></div>
     <div class="prof" id="profBtn">
-      <div class="pface"><i>🛡️</i></div>
+      <!-- 201 ③ — 02 헤더 초상화도 19 팝업과 «같은 소스»(현재 착용 코스튬)를 그린다.
+           칠하는 자는 `porHud()`(drawHud 안, 코스튬·아틀라스 상태가 바뀔 때만 다시 칠한다). -->
+      <div class="pface"><i><canvas class="cos-cv por-cv" id="porCv" width="88" height="92"
+        data-cosav="av0" data-cossc="2" data-coslite></canvas><em class="por-em" style="display:none">🛡️</em></i></div>
       <div class="pcol">
         <div class="pnick"><span id="nickN">U_0000000000000</span></div>
         <div class="ptitle" id="rankN">브론즈</div>
@@ -12534,13 +12543,19 @@
       <div class="pf-ring"></div>
       <div class="pf-fill"></div>
       <div class="pf-gid" id="pfGid"></div>
-      <div class="pf-por"><div class="b"></div><div class="k"></div><div class="art">🐹</div></div>
+      <!-- 201 ③ — 초상 = 현재 착용 코스튬(50 `cos-cv`/`cosPaint` 경로 재사용).
+           캔버스 88×92 는 knight idle0 잉크(44×46)의 **정수 2배**라 픽셀이 안 흐려지고,
+           drawHeroTo 의 «발밑 앵커» 가 캔버스 바닥과 정확히 맞물린다(잔여 여백 0). -->
+      <div class="pf-por"><div class="b"></div><div class="k"></div><div class="art">
+        <canvas class="cos-cv por-cv" id="pfPor" width="88" height="92" data-cosav="av0" data-cossc="2" data-coslite></canvas><em class="por-em" style="display:none">🐹</em></div></div>
       <div class="pf-ttl hx"><s class="o"></s><s class="f"></s><i id="pfTtl">칭호 없음</i></div>
       <div class="pf-nick" id="pfNick"></div>
       <div class="pf-edit" id="pfEdit">✎</div>
+      <!-- 201 ① (2026-08-27 주인 지시) — «초상화»·«프레임» 탭 폐기. 남는 탭은 «칭호» 하나뿐이고,
+           탭 자체를 없애지 않은 이유는 그것이 이 패널의 **유일한 라벨**이기 때문이다(격자만 남기면
+           «무엇의 목록인가» 를 말하는 글자가 사라진다). 자리·크기는 측정표 §5-2 그대로 둔다 —
+           8점을 받은 다른 요소의 앵커가 이 탭 행(y402~471)을 기준으로 서 있다(LESSONS 189-①). -->
       <div class="pf-tab t1 on"><i>칭호</i></div>
-      <div class="pf-tab t2"><i>초상화</i></div>
-      <div class="pf-tab t3"><i>프레임</i></div>
       <div class="pf-grid"><div class="pf-cards" id="pfCards"></div></div>
       <div class="pf-msn"><i>해금 미션: 미션 없음</i></div>
       <div class="pf-ftr"></div>
@@ -14800,6 +14815,11 @@ const DEF = () => ({
   own:{},                                     /* id → {n:재료, l:레벨} */
   eqSkill:[], eqSlot:{ weapon:null, shield:null, amulet:null }, eqPet:[],
   avatar:'av0', avatars:{ av0:1 },
+  /* 201 ② — 칭호 보유. «계급 index → 1». 브론즈(0)는 기본 지급이고, 그 위는 **승급 성공 1회당 1개**만
+     들어온다(지급 경로는 `grantRankTitle()` 하나 — 182 코스튬과 같은 훅·같은 규칙).
+     이전에는 `i <= S.rank` 로 «파생» 시켰는데, 파생은 계급이 내려가면 칭호도 같이 회수돼
+     «승급 성공 시에만 지급» 이라는 규칙을 표현하지 못한다(주인 지시 2026-08-27). */
+  titles:{ 0:1 },
   sum: BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {}),
   coll:{},                                    /* 91 — 도감 «세트 키 → 받은 단계 수» (구 카테고리 카운터 폐기) */
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
@@ -14863,6 +14883,9 @@ function load(){
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.daily.noAdSum = Object.assign(DEF().daily.noAdSum, (d.daily && d.daily.noAdSum) || {});   /* 190 */
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
+    /* 201 ② — 칭호 보유. 구 세이브엔 이 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다 —
+       저장 «구조» 는 그대로고 값만 채워진다). 소급은 아래 `grantRankTitle` 루프가 한다. */
+    b.titles = (d.titles && typeof d.titles === 'object') ? d.titles : {};
     /* 153 — 동적 우편. 구 세이브엔 두 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다).
        id·수량을 여기서 한 번 정화해 두면 `mailRowHtml` 이 NaN 을 그릴 길이 없다. */
     b.mailx = (Array.isArray(d.mailx) ? d.mailx : []).filter(m => m && typeof m.id === 'string')
@@ -15052,6 +15075,11 @@ function load(){
        이미 가진 것은 건드리지 않는다(182 ④ 회수 금지). KEY 는 올리지 않는다(44 교훈 2) —
        저장 «구조» 는 그대로고 값만 채워지며, 두 번 돌아도 결과가 같다(멱등). */
     for(let r = 1; r <= (S.rank|0); r++) grantPromoCos(r);
+    /* 201 ② — 칭호도 같은 소급 규칙이다. 0(브론즈)은 기본 지급, 1..S.rank 는 «이미 지난 승급의 몫».
+       구 세이브는 칭호를 `i <= S.rank` 로 파생해 보여 주고 있었으므로, 소급을 안 하면
+       **화면에서 이미 열려 있던 칸이 잠긴다**(주인 지시 «구세이브에 이미 열린 칭호는 회수 금지»).
+       182 와 같이 멱등이고(이미 있으면 건너뛴다) KEY 도 올리지 않는다. */
+    for(let r = 0; r <= (S.rank|0); r++) grantRankTitle(r);
     return d.time || null;
   }catch(e){ return null; }
 }
@@ -18329,6 +18357,7 @@ function drawHud(){
   fitNum($('cpN'), cpRoom());                          /* 150 — 자릿수가 길어져도 한 글자도 안 버린다 */
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
+  porHud();                                            /* 201 ③ — 헤더 초상화 = 현재 착용 코스튬 */
   /* 58 — 뚝 바뀌지 않고 롤링한다(fxTick 이 fxDisp 를 실제 값으로 수렴시킨다) */
   $('goldN').textContent = fmtG(fxVal('gold'));
   $('diaN').textContent = fmt(fxVal('dia'));
@@ -19514,6 +19543,18 @@ function grantPromoCos(ri){
   promoCosList(ri).forEach(a => { if(!cosOwn(a.id)){ S.avatars[a.id] = 1; got.push(a); } });
   return got;
 }
+/* ---- 201 ② 칭호 지급 — «승급 성공 1회당 1개» (2026-08-27 주인 지시) ------------------
+   칭호 목록은 별도 표가 아니라 `RANKS` 자체다(계급 수 = 칭호 수). 지급 경로는 이 함수 하나뿐이고,
+   부르는 자는 두 곳이다: ① `endPromo(true)` — 승급 성공 ② `load()` 소급(이미 지난 승급의 몫).
+   ⚠ **파생(`i <= S.rank`)으로 되돌리지 마라.** 그러면 계급이 내려가는 순간 칭호가 회수되고,
+   «승급 성공 시에만 지급» 이라는 규칙이 코드 어디에도 남지 않는다(182 코스튬과 같은 이유). */
+const titleOwn = ri => !!(S.titles && S.titles[ri]);
+function grantRankTitle(ri){
+  if(!RANKS[ri] || titleOwn(ri)) return false;
+  if(!S.titles) S.titles = {};
+  S.titles[ri] = 1;
+  return true;
+}
 /* 182 ③ — 승급 성공 팝업의 «획득한 코스튬» 연출. 17 스탯업 «성공» 과 **같은 한 세트**를 쓴다
    (`fxUpOk` = 흰 플래시 + 스케일 펄스 + 앰버 파티클) — 새 톤을 만들면 09·12·17 과 어긋난다.
    카드마다 70ms 스태거로 걸어 «한 장씩 들어오는» 인과를 만든다. 파티클은 앞 8칸까지만 —
@@ -19559,10 +19600,13 @@ function endPromo(win){
        182 — 1종 → **묶음**. `grantPromoCos()` 가 «새로 받은 것» 만 배열로 준다(재도전·구세이브
        중복 지급 없음). 표시(openPromo)와 지급이 같은 `PROMO_COS` 를 보는 구조는 그대로다. */
     const gotCos = grantPromoCos(S.rank);
+    /* 201 ② — 칭호도 «보여 준 것을 실제로 준다». 아래 팝업이 «칭호 n 획득!» 이라고 적으므로
+       지급이 없으면 그 표기가 거짓이 된다(ROUTINE «기능 완성 규칙»). 재도전으로 두 번 와도 멱등. */
+    const gotTtl = grantRankTitle(S.rank);
     markDirty(); uiDirty = true; save();
     popup('🏅 승급 성공!', '<p><b style="font-size:32px">' + r.ic + ' ' + r.n + '</b> 달성!<br>'
       + '계급 보너스 — 공격력 · 최대 체력 <b>+25%</b> (누적)<br>'
-      + '칭호 <b>' + r.n + '</b> 획득!'
+      + (gotTtl ? '칭호 <b>' + r.n + '</b> 획득!' : '칭호 <b>' + r.n + '</b> (이미 보유)')
       + (gotCos.length ? '<br>코스튬 <b style="color:#B4571E">' + gotCos.length + '종</b> 획득!' : '')
       + '<br>다음 계급에 도전해 보세요!</p>'
       /* 182 ③ — «획득한 코스튬» 을 글자로만 알리지 않고 실제 스프라이트로 보여 준다.
@@ -22700,9 +22744,11 @@ function renderProfile(){
   $('pfGid').innerHTML = '<i>Gamer Id: ' + pfGamerId() + '</i>';
   $('pfNick').innerHTML = ''; { const i = document.createElement('i'); i.textContent = S.nick; $('pfNick').appendChild(i); }
   $('pfTtl').textContent = rankOf().n;
+  porPaint($('pfPor'));            /* 201 ③ — 초상 = 현재 착용 코스튬 */
   let h = '';
   RANKS.forEach((r, i) => {
-    const own = i <= S.rank, eq = i === S.rank, bn = PF_BN[i] || PF_BN[0];
+    /* 201 ② — 보유는 «계급 index 이하» 파생이 아니라 **실제로 지급받았는가**(S.titles)다. */
+    const own = titleOwn(i), eq = i === S.rank, bn = PF_BN[i] || PF_BN[0];
     h += '<div class="pf-card' + (own ? ' own' : '') + (eq ? ' eq' : '') + '">'
       +  '<div class="pf-bn hx' + (i === 4 || i === 5 ? ' g2' : '') + '" style="--gc:' + bn.gc + ';--bv:' + bn.bv
       +  (bn.ring ? ';--gr:' + bn.ring : '') + '">'
@@ -23550,6 +23596,36 @@ function cosPaint(root){
   root.querySelectorAll('canvas[data-cosav]').forEach(cv => {
     drawHeroTo(cv, { avatar: cv.dataset.cosav, scale: +cv.dataset.cossc || 1, lite: cv.hasAttribute('data-coslite') });
   });
+}
+/* ---- 201 ③ 프로필 초상 = **현재 착용 코스튬** (2026-08-27 주인 지시) ---------------------
+   자리는 두 곳이고 «같은 소스» 다: 19 팝업 `#pfPor`(아트 자리 137×134) · 02 헤더 `#porCv`(111×112).
+   그리기는 50 시트와 **같은 경로**(`data-cosav` → `drawHeroTo` → `tinted('knight', …)`)라
+   시트·전투 씬과 픽셀 단위로 같은 색·같은 그림이다(174 «그림 = 실제 외형»).
+   ⚠ 캔버스 88×92 는 knight idle0 잉크(44×46)의 **정수 2배**다 — drawHeroTo 의 발밑 앵커가
+     캔버스 바닥과 맞물려 잉크가 캔버스를 정확히 채우므로, 가운데 정렬은 CSS 한 줄로 끝난다.
+     배율을 정수로 두는 이유는 픽셀 아트 흐림 방지(79/80 규칙). 크기를 바꾸려면 46 의 배수로 바꿔라.
+   ⚠ 아틀라스는 비동기라 첫 호출이 실패할 수 있다. **빈 캔버스는 이모지보다 나쁘다**(192) —
+     실패하면 옆의 폴백 이모지(`.por-em`)를 되살린다. */
+function porPaint(cv){
+  if(!cv) return false;
+  const id = cosCur();
+  cv.dataset.cosav = id;
+  const ok = drawHeroTo(cv, { avatar:id, scale:+cv.dataset.cossc || 2, lite:true });
+  cv.style.display = ok ? '' : 'none';
+  const em = cv.parentNode && cv.parentNode.querySelector('.por-em');
+  if(em) em.style.display = ok ? 'none' : '';
+  return ok;
+}
+/* 02 헤더는 `drawHud()`(매 프레임)가 부른다 — 캔버스를 매 프레임 다시 칠하지 않도록
+   «코스튬 id + 아틀라스 준비 여부» 가 바뀔 때만 실제로 그린다(72 brightCache 와 같은 규칙). */
+let porKey = '';
+function porHud(){
+  const cv = $('porCv');
+  if(!cv) return;
+  const A = ATLAS.knight;
+  const k = cosCur() + '|' + (A && A.image && A.image.complete ? 1 : 0);
+  if(k === porKey) return;
+  if(porPaint(cv)) porKey = k;
 }
 function renderCos(){
   const cur = cosCur();
