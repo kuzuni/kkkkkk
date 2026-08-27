@@ -9325,6 +9325,10 @@
   /* 아이콘 잉크는 아트마다 51~65 로 제각각 → 90x90 안에 contain.
      76px 은 이모지 잉크가 65~80 으로 나와 레퍼런스(51~65)보다 컸다(비평 1회차 B) → 66px */
   .upr-card>b{font-size:57px;line-height:90px;height:90px}
+  /* 192 — 펫은 `ic`(이모지)가 없다. 전투 스프라이트를 같은 90x90 아이콘 칸에 그린다.
+     캔버스는 칸 전체(90)를 차지하고 **그림은 그 안에 액자처럼 담긴다**(`drawSpriteTo` 의 fit=UPR_ART)
+     — 잉크 최대변이 이모지 잉크(51~65)와 같은 급이 되도록 여백을 잡았다. 72 «액자» 규칙과 같다. */
+  .upr-card>b>canvas{display:block;width:90px;height:90px;image-rendering:pixelated}
   /* «4 ➡ 5» — 목표 잉크높이 23px.
      ⚠ 숫자는 잉크가 **캡하이트**라 «÷0.93» 이 안 통한다(측정표 §2.3 경고).
      25px 으로 넣었더니 실측 잉크 17~18px(비평 1회차 A·B 공통 지적)이라 캡비 0.70 으로 역산해
@@ -17706,13 +17710,39 @@ function levelUpAll(list){
    껍데기 없는 «딤 위 연출». 레퍼런스는 카드 3칸이지만 실제 강화 결과는 개수가 가변이라
    한 줄에 들어가는 6칸(151*6−14 = 892 < 1080)까지만 보여 준다. */
 const UPR_MAX = 6;
+/* 192 (T1 «버그», 2026-08-27 주인 보고 «펫 일괄 강화 했더니 슬롯이 ? 로 뜸») —
+   `EQUIPS`·`SKILLS` 는 `ic`(이모지)를 갖지만 **`PETS` 는 안 갖는다**(sp+tint 스프라이트다).
+   그래서 펫이 섞인 결과가 통째로 «❔» 로 떴다. 174 가 «펫 그림 = 전투 스프라이트» 로 확정했으므로
+   이모지 `ic` 를 채워 넣는 게 아니라 **스프라이트 캔버스**를 그린다.
+   ⚠ 97-② — 카드 썸네일은 «씬에 세우기»(drawHeroTo, 앵커=발밑)가 아니라 «액자에 담기» 다.
+      논리 프레임 앵커를 쓰면 잉크가 칸 한쪽으로 몰린다(elves 논리폭 235 vs 잉크 107 사례).
+      `drawSpriteTo` 는 잉크 rect(fr[0..3])만 보므로 칸 중앙에 정확히 앉는다. */
+const UPR_ART = 13;    /* 90x90 칸의 사방 여백 → 잉크 최대변 64 (이모지 잉크 51~65 와 같은 급) */
+const UPR_FB  = { dragon:'🐉', bird:'🐦', robo:'🤖' };   /* 아틀라스가 아직 없을 때만 쓰는 폴백 */
+function uprIcon(it){
+  if(!(it && it.sp && PET_SP[it.sp])) return it && it.ic || '❔';
+  return '<canvas width="90" height="90" data-usp="' + it.sp + '"'
+       + (it.tint ? ' data-utc="' + it.tint + '"' : '') + '></canvas>';
+}
+/* 그리기는 삽입 «후» 다. 실패(아틀라스 미로딩·프레임 없음)하면 캔버스를 이모지로 되돌린다 —
+   빈 캔버스를 남기면 ❔ 보다 더 나쁜 «빈 칸» 이 된다. */
+function uprPaint(root){
+  root.querySelectorAll('canvas[data-usp]').forEach(cv => {
+    const k = cv.dataset.usp, A = ATLAS[k], sp = PET_SP[k];
+    const list = A && A.a && sp && A.a[sp.anim];
+    const okd = A && A.image && list && list.length
+      && drawSpriteTo(cv, { k, frame:list[0], tint:cv.dataset.utc || null, fit:UPR_ART });
+    if(!okd && cv.parentNode) cv.parentNode.textContent = UPR_FB[k] || '❔';
+  });
+}
 function openUpAll(ups){
   if(!ups || !ups.length) return false;
   $('upCards').innerHTML = ups.slice(0, UPR_MAX).map(u =>
-      '<div class="upr-cel"><div class="upr-card"><b>' + (u.it.ic || '❔') + '</b></div>'
+      '<div class="upr-cel"><div class="upr-card"><b>' + uprIcon(u.it) + '</b></div>'
     + '<div class="upr-lv"><i>' + u.from + '</i>'
     + '<em><svg viewBox="0 0 24 23"><path d="M0 5H10V-1l14 12.5L10 24v-5H0z"/></svg></em>'
     + '<i>' + u.to + '</i></div></div>').join('');
+  uprPaint($('upCards'));
   $('upw').classList.add('on');
   sfx('up');                                            /* 78 — 일괄 강화 결과 */
   return true;
