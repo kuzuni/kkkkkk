@@ -171,7 +171,17 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   /* ── ⑥ 파급 ── */
   const ripple = await p.evaluate(() => { S.stage = 40; return { promoHp: eHp(S.stage)*60 }; });
   near('⑥ 승급 수호자 체력 = eHp(s)×60 (새 곡선을 그대로 탄다)', ripple.promoHp, wantHp(40)*60, 1e-9);
-  yes('⑥ 승급 수호자 hp 식이 eHp(s)*60 그대로다', /const T2 = ETYPE\.promo, s = S\.stage, hp = eHp\(s\)\*60;/.test(src));
+  /* 275 — 이 항목이 지키려는 성질은 «승급 수호자 hp 가 eHp(s)×60 을 그대로 탄다» 하나뿐인데,
+     옛 판정식은 같은 문장의 `T2 = ETYPE.promo` 표기까지 통째로 물고 있었다. 208(승급 보스 아틀라스
+     교체)이 그 자리를 `ETYPE.promo = promoType(ri)` 로 갈아 끼우자 hp 식은 한 글자도 안 바뀌었는데
+     빨개졌다 — LESSONS 138-1(«정규식에 이웃 요소를 끼워 넣으면 남의 작업이 내 게이트를 깬다») 재발.
+     처방도 같다: 문장을 **먼저 떼어 내고** 성질별로 항목을 쪼갠다.
+       ⑥a 문장 존재(스폰 자리가 사라지면 잡는다) · ⑥b s = S.stage · ⑥c hp = eHp(s)*60
+     남의 표기(`= promoType(ri)`)는 이제 어느 항목도 안 본다. */
+  const promoStmt = (src.match(/^[^\n]*const T2 = ETYPE\.promo[^\n]*$/m) || [''])[0];
+  yes('⑥ 승급 수호자 스폰 문장이 살아 있다 (const T2 = ETYPE.promo …)', promoStmt !== '');
+  yes('⑥ 승급 수호자 스테이지가 S.stage 다', /\bs = S\.stage\b/.test(promoStmt));
+  yes('⑥ 승급 수호자 hp 식이 eHp(s)*60 그대로다', /\bhp = eHp\(s\)\*60;/.test(promoStmt));
 
   /* ── ⑦ 경제 축 ── */
   const econ = await p.evaluate(() => ({ r: eGold(2)/eGold(1), g1: eGold(1), g80: eGold(80),
