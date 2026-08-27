@@ -82,14 +82,26 @@ const push = (btn, before, after, note) => rows.push({ btn, before, after, note 
        'Lv+1 · 경험치 되감기 · **효과 +20%→+22%** · 지속 ' + lvup.left + '분 · 토스트 ' +
        JSON.stringify(lvup.toast) + ' · 카드 팝 ' + lvup.pop + '장');
 
-  /* 5. «모든 축복 받기» */
+  /* 5. 스트립 [이동] — 157(주인 지시 2026-08-27)로 «모든 축복 받기»(일괄 활성화)가 폐기되고
+        «자동으로 모든 축복 받기» 크로스 프로모 + 상점 이용권 탭 이동이 됐다.
+        ⇒ 여기서 보는 것은 «축복 상태가 안 바뀌고 화면이 이용권 탭으로 넘어가는가» 다. */
   await page.evaluate(() => { S.bless.exp = { atk: 0, hp: 0, rate: 0 }; markDirty(); renderBless(); });
   b = await snap();
-  await page.click('#blsAll'); await page.waitForTimeout(300);
+  await page.click('#blsAll'); await page.waitForTimeout(400);
+  const navTo = await page.evaluate(() => ({
+    bls: document.getElementById('blsw').classList.contains('on'),
+    shop: document.getElementById('shopw').classList.contains('on'),
+    cat: typeof shopCat !== 'undefined' ? shopCat : null,
+  }));
   a = await snap();
-  push('스트립 [받기] «모든 축복 받기»', fmt(b), fmt(a), '비활성 3종을 한 번에 활성 · 경험치 +3');
+  push('스트립 [이동] «자동으로 모든 축복 받기»', fmt(b), fmt(a),
+       '축복 무변화 + 축복팝업 닫힘(' + !navTo.bls + ') · 상점 열림(' + navTo.shop + ') · 탭 «' + navTo.cat + '»');
 
-  /* 6. 이미 켜진 카드 재클릭 */
+  /* 6. 이미 켜진 카드 재클릭 — 5번이 화면을 상점으로 옮겼으므로 축복 팝업으로 되돌린다 */
+  await page.evaluate(() => { closeShopPage(); openBless(); });
+  await page.waitForTimeout(300);
+  await page.click('#blsC_atk'); await page.waitForTimeout(250);   /* 5번이 일괄 활성화를 안 하므로 여기서 켠다 */
+  await page.waitForTimeout(150);
   b = await snap();
   await page.click('#blsC_atk'); await page.waitForTimeout(250);
   a = await snap();

@@ -10068,7 +10068,22 @@
   /* 11회차 — G ⑥: 잉크 h 53 vs ref 59 → fs 56→62. 잉크 상단이 8px 아래라 top 24→19 */
   /* 13회차 3차분 — M·N 이 독립적으로 «폭 −11.7%» 로 일치. 자체 검정 bbox ref 399x69 cy1585 / 우리 350x64 cy1582.5
      ⇒ fs 60→65(높이 +8%·폭 +14%), top 20→22(중심 2.5 아래). 우측 정렬(우끝 959~961)은 그대로 유지된다. */
-  .bls-promo .tx{left:420px;right:52px;top:26px;height:80px;line-height:80px;text-align:right;
+  /* 157 (2026-08-27, 주인 지시) — 문구가 «모든 축복 받기!»(13자) → «자동으로 모든 축복 받기»(13자,
+     한글 7→10) 로 길어졌다. fs 70 그대로면 advance 402.5 → **627.7** 로 상자(470)를 훌쩍 넘어
+     **두 줄로 접히고 두 번째 줄이 [이동] 버튼(local top 112) 위로 내려앉는다** — 실측으로 잡았다
+     (getClientRects 2개: y1559 w436.4 / y1639 w191.3, 버튼 상단 1640).
+     fs 를 내리면 13회차가 ref 74 에 맞춰 놓은 **잉크 높이**가 같이 무너지므로, 높이는 fs 70 으로
+     지키고 **가로만 scaleX 로 조인다**(A3 ⓓ 교훈대로 `transform-origin:100% 50%` 로 박아 우측
+     정렬·우인셋을 그대로 유지). 627.7 × .739 = **463.9 ≤ 470**(여유 6px — 폰트 폴백으로 advance 가
+     흔들려도 안 접히게 둔 몫). `white-space:nowrap` 은 «어떤 경우에도 접히지 않는다» 는 못이다.
+     ⇒ 잉크 높이·cy 1587.5·우끝 959 불변, 폭만 ref 399 → 464. 자세한 근거는 docs/review/157-*.md §2.
+     ⚠ **상자를 470 그대로 두면 안 된다** — advance 가 상자보다 넓으면 Chrome 은 `text-align:right`
+     를 버리고 줄을 **좌측 시작점에 붙인 뒤 우측으로 흘린다**(LESSONS 의 «advance 보다 좁은 박스»
+     함정과 같은 것. 실측: 잉크 우끝이 959 가 아니라 **1075** 로 스트립 밖으로 나갔다).
+     그래서 `left` 를 버리고 **상자 자체를 advance 보다 넓은 636** 으로 잡는다 — 우변(`right:52`)과
+     `transform-origin:100% 50%` 이 고정점이라 **화면에 보이는 상자는 여전히 x420..890(=470)** 이다. */
+  .bls-promo .tx{right:52px;width:636px;top:26px;height:80px;line-height:80px;text-align:right;
+    white-space:nowrap;transform:scaleX(.739);transform-origin:100% 50%;
     font-size:70px;color:#FFF06A;-webkit-text-stroke:12px #063D1E;paint-order:stroke fill}
   /* 2차 비평 D: ref 버튼은 **검정 6px 외곽 + 내측 상단 하이라이트 8px** 이 있고 면이 (119,229,54) 로 밝다.
      비활성(.off)도 회녹(143,169,138)이 아니라 «조금 어두운 초록» 이어야 ref 와 대비가 맞는다. */
@@ -11947,8 +11962,8 @@
     </div>
     <div class="bls-promo">
       <s class="ic">⚔️❤️⚡</s>
-      <s class="tx">모든 축복 받기!</s>
-      <button class="gb" id="blsAll">받기</button>
+      <s class="tx">자동으로 모든 축복 받기</s>
+      <button class="gb" id="blsAll">이동</button>
     </div>
     <div class="bls-x" id="blsX">✕</div>
   </div>
@@ -20534,8 +20549,10 @@ function renderBless(){
   $('blsBonus').classList.toggle('off', !blessAll());
   /* ⚠ 비평 B 1순위: 이 버튼을 «숨겼더니» 스트립 CTA 레이어가 통째로 없는 그림이 돼
      ①②③④ 가 한꺼번에 깎였다(스트립 하단 54px 공백·우측 정렬 97px 붕괴). ref 에는 항상 있는
-     레이어다 — 숨기지 말고 «비활성» 표시만 한다. */
-  $('blsAll').classList.toggle('off', !blessAny());
+     레이어다 — 숨기지 말고 «비활성» 표시만 한다.
+     157 — «받기»(일괄 활성화) → «이동»(상점 이용권 탭). 이동 버튼은 축복 상태와 무관하므로
+     `.off`(비활성 표시) 토글을 없애고 **항상 활성**으로 둔다. 레이어 자체는 그대로 남는다. */
+  $('blsAll').classList.remove('off');
 }
 let blsBuilt = false;
 function buildBlessCards(){
@@ -20556,7 +20573,10 @@ $('blsw').addEventListener('click', e => {
   if(c) activateBless(c.dataset.bless);
 });
 $('blsX').onclick  = closeBless;
-$('blsAll').onclick = () => { let n = 0; BLESS.forEach(x => { if(activateBless(x.k)) n++; }); if(!n) renderBless(); };
+/* 157 (주인 지시 2026-08-27) — 프로모 행은 «자동 축복 이용권» 크로스 프로모다(레퍼런스와 같은 역할:
+   측정표 34 §«초록 스트립 축복 자동 갱신! + [이동]»). 일괄 활성화 기능은 폐기하고 **판매처로 이동**한다.
+   이용권 보유자는 어차피 자동 갱신이고, 미보유자는 카드를 개별 클릭한다(전제는 PROGRESS 157 비고). */
+$('blsAll').onclick = () => { closeBless(); openShopTab('pass'); };
 /* 만료는 시간이 지나면서 갈리므로 1초마다 확인한다 — 만료 순간에만 캐시를 깨고(=재계산) 다시 그린다. */
 let blsWas = '';
 function blessTick(){
