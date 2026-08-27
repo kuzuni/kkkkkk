@@ -138,6 +138,10 @@ const inter = (a, b) => {
           /* 16회차 — 아치 개구는 `.rw-bg::after` 라 rect 가 없다. 계산된 width/height 를 직접 읽는다.
              비평가 4명(AH ⑦ · AI ④ · AJ ① · AK ①)이 두 회차에 걸쳐 «1600 만 아치가 눌렸다» 를
              각자 화소로 쟀는데, 게이트에는 아치 «크기» 를 보는 항목이 하나도 없었다. */
+          /* 19회차 [O] — 중심축. 아치·받침은 `left:50%` + `translateX(-50%)` 이므로
+             **시각 중심 = computed left**(translateX 가 폭의 절반을 되돌린다). 패널 중심과 맞아야 한다. */
+          archCx: parseFloat(getComputedStyle(document.querySelector('.rw-bg'), '::after').left),
+          plinthCx: parseFloat(getComputedStyle(document.querySelector('.rw-floor'), '::before').left),
           archW: parseFloat(getComputedStyle(document.querySelector('.rw-bg'), '::after').width) / sc,
           archH: parseFloat(getComputedStyle(document.querySelector('.rw-bg'), '::after').height) / sc,
           rwc: parseFloat(getComputedStyle(relw).getPropertyValue('--rwc')) || 0,
@@ -258,6 +262,13 @@ const inter = (a, b) => {
          누르는 것 자체는 허용하되 **어디까지** 눌러도 되는지에 자가 없어서, 1600 이 1:1.15 까지
          납작해진 것을 세 회차 동안 아무도 못 잡았다(비평가 4명이 두 회차에 걸쳐 각자 쟀다).
          폭은 4장 공통 589 고정이므로 높이만 보면 된다. */
+      /* ── 19회차 [O] — **중심축 하나.** 비평가 6명이 회차를 넘어 짚은 자리다.
+         DOM 은 전부 540.0 인데 `left` 를 px 로 박은 아치(244+589/2)·받침(230+617/2)만 **538.5** 였다.
+         음성 대조: `left:244px`(transform 없음)로 되돌리면 아치 중심이 538.5 로 떨어져 FAIL 한다. */
+      const panelCx = (P.l + P.r) / 2;
+      ck(`[${H}] ④ 중심축 1개 — 아치·받침이 패널 중심과 일치 (Δ ≤ 0.6px)`,
+        Math.abs(r.archCx - panelCx) < 0.6 && Math.abs(r.plinthCx - panelCx) < 0.6,
+        `아치 ${r.archCx.toFixed(1)} · 받침 ${r.plinthCx.toFixed(1)} vs 패널 ${panelCx.toFixed(1)} (옛 값 538.5)`);
       ck(`[${H}] ② 아치 개구 폭 589 고정`, Math.abs(r.archW - 589) < 1.5, `${r.archW.toFixed(1)}px`);
       const archR = r.archH / r.archW;
       ck(`[${H}] ② 아치 종횡비 ≥ 1:1.25 (사양 1:1.51 · 짧은 프레임의 눌림 하한)`,

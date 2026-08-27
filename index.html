@@ -4751,7 +4751,17 @@
      (패널 면적의 34.4%)가 전부 RGB(14,16,14) 한 값이라 «평면 슬래브» 로 읽혔고(비평 G ⑤ 1순위),
      하변이 바닥 램프의 불투명 구간에 떨어져 **폭 589 수평 절단선**까지 생겼다.
      하단 8%를 알파 0 으로 빼서 바닥으로 녹아들게 한다(문턱 밴드 대용). */
-  .rw-bg::after{content:'';position:absolute;left:244px;width:589px;
+  /* ── 19회차 [O] — **중심축을 하나로.** 비평가 **여섯 명**이 회차를 넘어 같은 것을 짚었다
+     (AH ⑩ · AI ⑪ · AJ · AK · AM ⑫ · AN #12 · AO #12). DOM 실측으로 원인이 잡혔다:
+       `.rw-panel` `.rw-grid` `.rw-mid` `.rw-basin` `.rw-cap` `.rw-steps` `.rw-st*` `.rw-cost`
+       = **전부 중심 540.0** 인데, `left` 를 px 로 박은 둘만 다르다 —
+       아치 `left:244 + 589/2` = **538.5** · 받침 `left:230 + 617/2` = **538.5**.
+     폭 589·617 이 홀수라 «정수 left» 로는 540 에 못 맞춘다. 계단(`.rw-st`)이 같은 홀수 폭으로
+     이미 540 에 앉아 있는 방법을 그대로 쓴다 — **`left:50%` + `translateX(-50%)`**.
+     폭은 한 픽셀도 안 바뀌므로 게이트의 «아치 개구 폭 589 고정» · «맨 위 단 = 617» 과 무충돌이다.
+     ⚠ 17회차가 [I] 에서 계단 폭을 변수로 바꾸며 «−폭/2 를 손으로 적으면 어긋난다» 로 이미
+        translateX 로 옮겼다. 같은 처방을 남은 두 곳에 적용하는 것이다. */
+  .rw-bg::after{content:'';position:absolute;left:50%;transform:translateX(-50%);width:589px;
     top:calc(var(--rw-gt) - var(--rw-av));   /* = 구 «gt − 186 + (888 − ah)/2» 를 av 로 정리한 것 */
     /* 6회차 — 높이는 888 이 기본이지만, **짧은 프레임에서는 아치 발이 수반을 파고든다**:
        격자↔수반 간극이 1600 에서 177px 인데 아치는 격자 아래로 186px 내려오므로
@@ -4872,7 +4882,9 @@
       rgba(58,47,32,.20) 146px,rgba(54,44,30,.26) 40%,rgba(48,39,27,.32) 100%)}
   /* 밑동 받침(플린스) — 아치 다리가 딛는 단. 좌우 끝이 x230/x847 에서 **세로로 끊겨야**
      «구조물의 바닥» 으로 읽힌다(지금까지는 전폭 띠뿐이라 벽 줄눈과 구분이 안 됐다). */
-  .rw-floor::before{content:'';position:absolute;left:230px;width:617px;top:-16px;height:56px;
+  /* 19회차 [O] — 받침도 아치와 같은 이유로 538.5 였다(230 + 617/2). `left:50%` + translateX 로 540. */
+  .rw-floor::before{content:'';position:absolute;left:50%;transform:translateX(-50%);
+    width:617px;top:-16px;height:56px;
     box-sizing:border-box;
     background:linear-gradient(180deg,rgba(112,98,72,.55) 0 5px,rgba(6,6,4,.42) 5px 9px,
       rgba(74,62,44,.30) 9px 46px,rgba(5,5,3,.40) 46px 52px,rgba(0,0,0,0) 52px 56px);
