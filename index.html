@@ -1884,6 +1884,24 @@
     font-weight:700;color:#7A6550}
   .mbody .pr179 .pr-rw-t em{color:#B4571E;font-style:normal}
 
+  /* ── 182 승급 «성공» 팝업의 «획득한 코스튬» 격자 (2026-08-27) ──
+     승급전 팝업(`.pr179`)과 달리 여기는 **2배 본문이 아니다** — 성공 팝업의 글자 크기는 179 가
+     손대지 않은 A5 공용값이고, 이 작업이 바꿀 이유가 없다. 상자 톤(베이지 #F7ECDA · 테두리 #C8B091 ·
+     표제 #B4571E)만 `.pr-rw` 에서 그대로 가져와 «같은 화면의 같은 보상 상자» 로 읽히게 한다.
+     칸은 50 시트 카드(168×171)의 축소판이고 테두리는 등급색(--r)이라 무엇을 받았는지 색으로도 읽힌다. */
+  .mbody .pr182{margin-top:18px;background:#F7ECDA;border:3px solid #C8B091;
+    border-radius:28px;padding:16px 18px 20px}
+  .mbody .pr182>h3{margin:0 0 14px;font-size:30px;line-height:30px;font-weight:900;color:#B4571E}
+  .mbody .pr182 .pg-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  /* 칸 96×118 · 5열 기준 폭 = 5×96 + 4×12 = 528 < 본문 폭. 22칸(계급 1)이면 5행이 된다 */
+  .mbody .pr182 .pg-c{position:relative;box-sizing:border-box;width:96px;height:118px;
+    background:#0e1428;border:3px solid var(--r,#C8B091);border-radius:16px;
+    display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+  .mbody .pr182 .pg-c>canvas{display:block;width:84px;height:84px;margin-bottom:20px}
+  .mbody .pr182 .pg-c>u{position:absolute;left:0;right:0;bottom:4px;text-align:center;
+    font-size:20px;line-height:20px;font-weight:900;font-style:normal;text-decoration:none;
+    color:var(--r,#EADCC6)}
+
   /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
      껍데기는 A5 공용 모달을 그대로 쓰고, 08 에서만 다른 3가지만 `.sk8` 로 override 한다:
      딤 65%→55%, 본문 별무늬 없음(08 베이지 5구역 std 0.41~0.53 = JPEG 노이즈), 제목 잉크 46 → 49px.
@@ -13869,7 +13887,10 @@ const RELIC_EFF = { atk:'공격력', hp:'최대 체력', crit:'치명타 확률'
      쌍별 최소 색차는 `tools/verify87.js` 가 CIE76 ΔE 로 잰다(기록: docs/review/87-코스튬50종.md).
    · 틴트는 80 `look` → `drawHeroTo` → `tinted('knight', …)` 를 그대로 지나므로
      **전투 · 79 장비 시트 · 80 랭킹 단상이 같은 색**을 낸다(50칸 격자만 아래 «lite» 경로).
-   · 획득은 다이아 구매가 기본이고, 7종만 **조건 해금**(`req` — 스테이지·계급·도감)이 추가로 붙는다. */
+   · 획득 경로는 **승급전 클리어 지급 하나뿐**이다(작업 182, 2026-08-27 주인 지시 «스킨은 직접 구매
+     말고 승급전 깰 때마다 주는 거로»). 다이아 구매(`cost`)·조건 해금(`req` — 스테이지·도감)은
+     **데이터까지 폐기**했다(LESSONS 68-③ «구버전 폐기 = 죽은 데이터까지»). 어느 승급전이 어느 코스튬을
+     주는지는 `PROMO_COS` 한 표가 소유한다(표시 `openPromo` · 지급 `endPromo` 가 같은 표를 본다). */
 function hsl2hex(h, s, l){
   h = ((h % 360) + 360) % 360;
   s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
@@ -13878,14 +13899,15 @@ function hsl2hex(h, s, l){
   const hx = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
   return '#' + hx(r) + hx(g) + hx(b);
 }
-/* 등급별 정원 · 기준가 · 기준 보유 효과 · 틴트 채도/명도(전설·신화는 COS_HI 가 색을 준다) */
+/* 등급별 정원 · 기준 보유 효과 · 틴트 채도/명도(전설·신화는 COS_HI 가 색을 준다)
+   182 — «기준가(cost)» 는 구매 경로와 함께 폐기했다. 보유 효과 값은 한 자리도 안 건드렸다. */
 const COS_BAND = [
-  { k:12, cost:1000,    atk:0.010, hp:0.008, gold:0.006, s:58,  l:68 },
-  { k:10, cost:3000,    atk:0.025, hp:0.020, gold:0.014, s:72,  l:71 },
-  { k:10, cost:15000,   atk:0.045, hp:0.036, gold:0.024, s:86,  l:74 },
-  { k:8,  cost:70000,   atk:0.070, hp:0.056, gold:0.036, s:100, l:77 },
-  { k:6,  cost:300000,  atk:0.120, hp:0.095, gold:0.060 },
-  { k:4,  cost:1500000, atk:0.200, hp:0.160, gold:0.100 }
+  { k:12, atk:0.010, hp:0.008, gold:0.006, s:58,  l:68 },
+  { k:10, atk:0.025, hp:0.020, gold:0.014, s:72,  l:71 },
+  { k:10, atk:0.045, hp:0.036, gold:0.024, s:86,  l:74 },
+  { k:8,  atk:0.070, hp:0.056, gold:0.036, s:100, l:77 },
+  { k:6,  atk:0.120, hp:0.095, gold:0.060 },
+  { k:4,  atk:0.200, hp:0.160, gold:0.100 }
 ];
 /* 색상환 배분 상수 — 39색을 «stride 19» 로 건너뛰며 나눠 주고, 등급 안에서 3칸마다
    명도·채도를 한 단씩 흔들어 색상이 가까운 쌍의 색차를 벌린다.
@@ -13900,16 +13922,17 @@ const COS_VAR = [ [1.00,1.00,1.00], [1.30,0.70,0.90], [0.70,1.40,0.95], [0.85,0.
 /* 전설(금·은) · 신화(무지개·신성). 각 등급 첫 칸은 구 av4·av5 색 그대로 */
 const COS_HI = [ ['#ffb648','#eef2f8','#ffbfae','#c98b46','#9fb0c4','#8a7030'],
                  ['#ff8fa0','#c07bff','#63d8ff','#8dff9e'] ];
-/* 구 6종의 가격·보유 효과 — 여기 값이 표보다 우선한다(세이브 호환) */
+/* 구 6종의 보유 효과 — 여기 값이 표보다 우선한다(세이브 호환. 182 에서 `cost` 만 뺐다) */
 const COS_LEGACY = {
-  av0:{ cost:0,       atk:0.00, hp:0.00, gold:0.00 },
-  av1:{ cost:3000,    atk:0.10, hp:0.10, gold:0.05 },
-  av2:{ cost:15000,   atk:0.25, hp:0.20, gold:0.12 },
-  av3:{ cost:70000,   atk:0.55, hp:0.40, gold:0.25 },
-  av4:{ cost:300000,  atk:1.20, hp:0.80, gold:0.50 },
-  av5:{ cost:1500000, atk:2.50, hp:1.60, gold:1.00 }
+  av0:{ atk:0.00, hp:0.00, gold:0.00 },
+  av1:{ atk:0.10, hp:0.10, gold:0.05 },
+  av2:{ atk:0.25, hp:0.20, gold:0.12 },
+  av3:{ atk:0.55, hp:0.40, gold:0.25 },
+  av4:{ atk:1.20, hp:0.80, gold:0.50 },
+  av5:{ atk:2.50, hp:1.60, gold:1.00 }
 };
-/* [id, 이름, 등급, (조건 해금)] — 등급 순서대로 12·10·10·8·6·4 = 50종 */
+/* [id, 이름, 등급] — 등급 순서대로 12·10·10·8·6·4 = 50종
+   182 — 4번째 칸(`req` 조건 해금 7종)은 폐기했다. 획득 조건은 이제 `PROMO_COS` 하나가 말한다. */
 const COS_LIST = [
   /* 일반 12 */
   ['av0','견습 기사',0],   ['av6','수련 기사',0],   ['av7','마을 위병',0],   ['av8','견습 궁수',0],
@@ -13922,17 +13945,17 @@ const COS_LIST = [
   /* 희귀 10 */
   ['av2','백은의 용사',2], ['av26','심해 기사',2],  ['av27','벽력 검호',2],  ['av28','성채 수호병',2],
   ['av29','그림자 자객',2],['av30','취록 정령사',2],['av31','홍옥 기사단장',2],['av32','백야 순찰자',2],
-  ['av33','화산 파수꾼',2,{k:'stage',v:60}],       ['av34','청람 도끼병',2],
+  ['av33','화산 파수꾼',2],   ['av34','청람 도끼병',2],
   /* 영웅 8 */
   ['av3','흑염 기사',3],   ['av35','서리심장 기사',3],['av36','뇌명의 성기사',3],['av37','심연 추적자',3],
-  ['av38','태양문 수호자',3,{k:'stage',v:120}],    ['av39','맹독의 그림자',3],
-  ['av40','비취 무투가',3],['av41','황혼 기사',3,{k:'rank',v:3}],
+  ['av38','태양문 수호자',3],['av39','맹독의 그림자',3],
+  ['av40','비취 무투가',3],['av41','황혼 기사',3],
   /* 전설 6 — 금·은 */
   ['av4','용살자',4],      ['av42','백금 성기사',4],['av43','여명의 장미',4],['av44','청동 거신',4],
-  ['av45','은월 검성',4,{k:'coll',c:'skill',v:3}], ['av46','흑금 폭군',4,{k:'stage',v:220}],
+  ['av45','은월 검성',4],   ['av46','흑금 폭군',4],
   /* 신화 4 — 무지개·신성 */
   ['av5','신성 기사',5],   ['av47','자수정 대군주',5],
-  ['av48','창천의 화신',5,{k:'rank',v:6}],         ['av49','만상의 무지개',5,{k:'coll',c:'equip',v:4}]
+  ['av48','창천의 화신',5], ['av49','만상의 무지개',5]
 ];
 const AVATARS = (() => {
   const seat = [0,0,0,0,0,0];
@@ -13946,12 +13969,10 @@ const AVATARS = (() => {
           : g >= 4      ? COS_HI[g-4][j]
           :               hsl2hex(((comb++ * COS_STRIDE) % 39) * (360/39),
                                   B.s + COS_LADS[j % 3], B.l + COS_LADL[j % 3]),
-      cost: L ? L.cost : Math.round(B.cost * (1 + 0.12*j) / 100) * 100,
       atk:  L ? L.atk  : +(B.atk  * v[0]).toFixed(4),
       hp:   L ? L.hp   : +(B.hp   * v[1]).toFixed(4),
       gold: L ? L.gold : +(B.gold * v[2]).toFixed(4)
     };
-    if(row[3]) a.req = row[3];
     return a;
   });
 })();
@@ -14768,6 +14789,12 @@ function load(){
     delete b.eqRelic;
     Object.keys(b.own).forEach(k => { if(k.slice(0,2) === 'rl' && RL[k] && b.own[k]) b.own[k].n = 0; });
     S = b;
+    /* 182 — 소급 지급. «승급 = 지급» 이 규칙이 된 이상 **이미 지난 승급의 몫**이 비어 있으면 안 된다.
+       두 자리가 그렇다: ① 계급만 높고 코스튬은 안 산 구 세이브 ② 이미 최고 계급이라 더 깰 승급전이
+       없는 세이브 — ②는 소급이 없으면 50종을 영원히 못 받는다(구매 경로가 사라졌으므로).
+       이미 가진 것은 건드리지 않는다(182 ④ 회수 금지). KEY 는 올리지 않는다(44 교훈 2) —
+       저장 «구조» 는 그대로고 값만 채워지며, 두 번 돌아도 결과가 같다(멱등). */
+    for(let r = 1; r <= (S.rank|0); r++) grantPromoCos(r);
     return d.time || null;
   }catch(e){ return null; }
 }
@@ -18897,52 +18924,70 @@ $('dclNx').addEventListener('click', e => {
 });
 /* 작업 68 — `buyPack()` 폐기. 다이아 지급 경로는 `grantDiaPack()`(작업 44) 하나뿐이다.
    덤으로 `S.cnt.paid` 의 의미가 «누적 원화»(구) / «결제 횟수»(신) 로 갈리던 것도 «횟수» 로 정리됐다. */
-function buyAvatar(a){
-  if(S.avatars[a.id]){ S.avatar = a.id; uiDirty = true; save(); return; }
-  /* 87 ③ — 조건 해금(7종)은 다이아가 있어도 조건을 채우기 전에는 못 산다 */
-  if(!cosReqOk(a)){
-    notify('🔒 <b style="color:' + GRADE[a.g].c + '">' + a.n + '</b> — ' + cosReqText(a)); return;
-  }
-  if(S.dia < a.cost){ notify(curIc('dia') + ' <b>' + fmt(a.cost - S.dia) + '</b> 더 필요합니다'); return; }
-  S.dia -= a.cost; S.avatars[a.id] = 1; S.avatar = a.id;
-  markDirty(); uiDirty = true; save();
-  popup('👤 코스튬 획득!', '<p><b style="color:' + GRADE[a.g].c + '">' + a.n + '</b><br>'
-    + '보유 효과 — 공격 <b>+' + pct(a.atk) + '</b> · 체력 <b>+' + pct(a.hp) + '</b> · 골드 <b>+' + pct(a.gold) + '</b></p>');
-}
+/* 182 — `buyAvatar()` 폐기(2026-08-27 주인 지시). 코스튬은 다이아로 사는 것이 아니라
+   승급전 클리어로만 들어온다. 지급 경로는 `grantPromoCos()` 하나다(LESSONS 68-① — 구버전
+   진입점까지 같은 커밋에서 지운다: 시트 [구매] 버튼 · 상세 [구매] 버튼 · 영웅 탭 레드닷 · 가격 표기). */
 
-/* ---- 179 승급전 «클리어 보상» (2026-08-27, 저장소 주인 추가 지시) --------------------
-   지시: «승급전 팝업에 클리어 시 지급되는 코스튬도 보여줄 것 — 스프라이트 미리보기 + 클리어 보상 라벨,
-   칭호도 지급되면 함께 표기». 표기만 하고 실제로는 안 주면 팝업이 거짓말이 되므로(ROUTINE «기능 완성
-   규칙») **표시와 지급을 이 함수 하나로 묶는다.**
+/* ---- 179+182 승급전 «클리어 보상» = 코스튬의 유일한 획득 경로 --------------------
+   179(2026-08-27) 지시: «승급전 팝업에 클리어 시 지급되는 코스튬도 보여 줄 것 — 스프라이트
+   미리보기 + 클리어 보상 라벨, 칭호도 지급되면 함께 표기».
+   182(2026-08-27) 지시: «스킨은 직접 구매 말고 승급전 깰 때마다 주는 거로» — 다이아 구매를
+   폐지하고 **50종 전부**를 이 표가 나눠 갖는다. 표시(openPromo)와 지급(endPromo)은 여전히
+   **이 표 한 벌**만 본다 — 179 가 남긴 경고대로 «옆으로 넓혔고, 두 벌로 늘리지 않았다».
 
-   ⚠ 작업 182(«코스튬 획득 = 승급전 클리어» 전면 전환)가 이 매핑의 주인이다. 182 를 잡는 세션은
-      아래 표를 **옮기거나 넓히되 두 벌로 늘리지 마라** — 표시(openPromo)와 지급(endPromo)이 같은
-      함수를 보고 있어야 «보여준 것과 준 것» 이 갈리지 않는다.
-
-   매핑 근거 — 기존 데이터가 이미 두 점을 못 박아 두었다. `COS_LIST` 의 조건 해금 중 계급 조건은
-   **av41 황혼 기사(영웅=등급 3) → `{k:'rank',v:3}`** 와 **av48 창천의 화신(신화=등급 5) → `{k:'rank',v:6}`**
-   둘뿐이다. 이 두 점을 지나는 가장 단순한 곡선이 «도전 계급 index r → 코스튬 등급 min(r,5)» 다
-   (r=3→3 ✓, r=6→5 ✓). 182 가 적어 둔 기본 규칙 «n 회차 승급 → 해당 등급 코스튬» 과도 같은 모양이고,
-   계급 8단(승급 7회) vs 코스튬 6등급의 수 차이는 최상위 3계급이 신화를 나눠 갖는 것으로 흡수된다.
-   1종씩 준다(182 가 «1종씩인지 묶음인지는 재량» 이라고 적어 둔 자리 — 묶음은 등급 하나가 12종이라
-   승급 한 번에 12개가 들어와 «다음 승급의 보상» 이 남지 않는다). */
+   매핑 근거 — 폐기 전 `COS_LIST` 의 계급 조건 2건이 두 점을 못 박아 두었다:
+   **av41 황혼 기사(영웅=등급 3) → rank 3** · **av48 창천의 화신(신화=등급 5) → rank 6**.
+   아래 묶음은 그 두 점을 **정확히** 지난다(r=3 묶음 = 영웅 8종 ∋ av41 · r=6 묶음 = {av48}).
+   «묶음» 을 고른 이유: 182 가 «1종씩인지 묶음인지는 재량» 이라고 적어 둔 자리인데, 구매 경로가
+   없어진 이상 1종씩이면 승급 7회 × 1 = **7종만 얻고 43종은 영원히 못 가진다**(시트의 «보유 n/50»
+   이 7에서 멈춘다). 등급 순서로 묶어 나누면 7번의 승급이 50종을 전부 덮는다.
+   수 배분 — 승급 7회 vs 코스튬 6등급이라 양 끝을 한 칸씩 접었다: 첫 승급은 저등급 둘(일반+고급)을
+   한꺼번에, 마지막 세 승급은 신화 4종을 2·1·1 로 나눠 «마지막까지 받을 게 남는» 모양으로 뒀다.
+   배분: 22 · 10 · 8 · 6 · 2 · 1 · 1 = **50종**(= AVATARS.length. `tools/verify182.js` §1 이 매 실행 검산). */
+const cosOfGrade = g => AVATARS.filter(a => a.g === g).map(a => a.id);
 const PROMO_COS = {
-  1:'av18',   /* 🥈 실버        — 고급 은빛 창기사 */
-  2:'av31',   /* 🥇 골드        — 희귀 홍옥 기사단장 */
-  3:'av41',   /* 💠 플래티넘    — 영웅 황혼 기사   (COS_LIST 의 {k:'rank',v:3} 그대로) */
-  4:'av42',   /* 💎 다이아      — 전설 백금 성기사 */
-  5:'av47',   /* 🔱 마스터      — 신화 자수정 대군주 */
-  6:'av48',   /* 👑 그랜드마스터 — 신화 창천의 화신 (COS_LIST 의 {k:'rank',v:6} 그대로) */
-  7:'av5'     /* 🔥 챌린저      — 신화 신성 기사 */
+  1: cosOfGrade(0).concat(cosOfGrade(1)),   /* 🥈 실버         — 일반 12 + 고급 10 */
+  2: cosOfGrade(2),                         /* 🥇 골드         — 희귀 10 */
+  3: cosOfGrade(3),                         /* 💠 플래티넘     — 영웅 8  (구 `{k:'rank',v:3}` ∋ av41) */
+  4: cosOfGrade(4),                         /* 💎 다이아       — 전설 6 */
+  5: ['av5', 'av47'],                       /* 🔱 마스터       — 신화 신성 기사 · 자수정 대군주 */
+  6: ['av48'],                              /* 👑 그랜드마스터 — 신화 창천의 화신 (구 `{k:'rank',v:6}` 그대로) */
+  7: ['av49']                               /* 🔥 챌린저       — 신화 만상의 무지개 */
 };
-/* 도전 계급 index → 그 승급전을 깨면 받는 코스튬(없으면 null) */
-const promoCos = ri => AV[PROMO_COS[ri]] || null;
-/* 승급 성공 시 실제 지급. 이미 갖고 있으면 아무것도 안 준다(중복 지급·가짜 «획득» 표기 방지) */
+/* 코스튬 id → 그것을 주는 도전 계급 index. 시트·상세의 «획득 조건» 표기가 이 한 표를 읽는다
+   (182 ⑤ — 옛 `req` 의 stage/coll 축을 **계급 축 하나로 일원화**한 자리). */
+const COS_RANK = (() => {
+  const m = {};
+  Object.keys(PROMO_COS).forEach(r => PROMO_COS[r].forEach(id => { m[id] = +r; }));
+  return m;
+})();
+const cosRankOf = id => COS_RANK[id] || 0;
+/* 도전 계급 index → 그 승급전을 깨면 받는 코스튬 묶음(없으면 빈 배열) */
+const promoCosList = ri => (PROMO_COS[ri] || []).map(id => AV[id]).filter(Boolean);
+/* 미리보기 대표 1종 = 묶음의 **마지막 칸**(그 묶음에서 가장 나중 = 최상위 칸). 별도 표가 아니라
+   묶음에서 **파생**시킨다 — 179 의 «두 벌로 늘리지 말라» 를 지키는 자리다. r=3 → av41, r=6 → av48 로
+   179 가 고른 대표와 구 계급 조건 두 점이 그대로 살아남는다. */
+const promoCos = ri => { const l = promoCosList(ri); return l.length ? l[l.length-1] : null; };
+/* 승급 성공 시 실제 지급. 이미 갖고 있는 것은 건너뛴다(중복 지급·가짜 «획득» 표기 방지).
+   구세이브에서 이미 산 코스튬은 그대로 둔다(182 ④ — 회수 금지). **새로 받은 것만** 배열로 돌려준다. */
 function grantPromoCos(ri){
-  const a = promoCos(ri);
-  if(!a || cosOwn(a.id)) return null;
-  S.avatars[a.id] = 1;
-  return a;
+  const got = [];
+  promoCosList(ri).forEach(a => { if(!cosOwn(a.id)){ S.avatars[a.id] = 1; got.push(a); } });
+  return got;
+}
+/* 182 ③ — 승급 성공 팝업의 «획득한 코스튬» 연출. 17 스탯업 «성공» 과 **같은 한 세트**를 쓴다
+   (`fxUpOk` = 흰 플래시 + 스케일 펄스 + 앰버 파티클) — 새 톤을 만들면 09·12·17 과 어긋난다.
+   카드마다 70ms 스태거로 걸어 «한 장씩 들어오는» 인과를 만든다. 파티클은 앞 8칸까지만 —
+   한 승급이 22종을 주는 칸(계급 1)에서 FXMAX 를 넘겨 **연출이 통째로 드롭**되기 때문이다
+   (fxBurst 는 `childElementCount + cnt > FXMAX` 면 조용히 반환한다). 나머지 칸도 플래시·펄스는 받는다. */
+function promoCosFx(){
+  const cards = [].slice.call($('mbox').querySelectorAll('.pg-c'));
+  if(!cards.length) return;
+  cards.forEach((el, i) => setTimeout(() => {
+    if(!el.isConnected) return;
+    if(i < 8) fxUpOk(el, el);
+    else { fxFlash(el); fxHitEl(el); }
+  }, 70 * i));
 }
 
 /* 승급전 */
@@ -18972,14 +19017,26 @@ function endPromo(win){
     S.rank++;
     /* 179 — 승급전 팝업이 «클리어 보상» 으로 보여 준 코스튬을 여기서 실제로 준다.
        보여주기만 하고 안 주면 그 표기가 거짓이 된다(ROUTINE «기능 완성 규칙»).
-       ⚠ 182 는 이 한 줄을 지우지 말고 **넓혀라** — 표시(openPromo)와 지급이 같은 `PROMO_COS` 를 본다. */
+       182 — 1종 → **묶음**. `grantPromoCos()` 가 «새로 받은 것» 만 배열로 준다(재도전·구세이브
+       중복 지급 없음). 표시(openPromo)와 지급이 같은 `PROMO_COS` 를 보는 구조는 그대로다. */
     const gotCos = grantPromoCos(S.rank);
     markDirty(); uiDirty = true; save();
     popup('🏅 승급 성공!', '<p><b style="font-size:32px">' + r.ic + ' ' + r.n + '</b> 달성!<br>'
       + '계급 보너스 — 공격력 · 최대 체력 <b>+25%</b> (누적)<br>'
       + '칭호 <b>' + r.n + '</b> 획득!'
-      + (gotCos ? '<br>코스튬 <b style="color:' + GRADE[gotCos.g].c + '">' + gotCos.n + '</b> 획득!' : '')
-      + '<br>다음 계급에 도전해 보세요!</p>');
+      + (gotCos.length ? '<br>코스튬 <b style="color:#B4571E">' + gotCos.length + '종</b> 획득!' : '')
+      + '<br>다음 계급에 도전해 보세요!</p>'
+      /* 182 ③ — «획득한 코스튬» 을 글자로만 알리지 않고 실제 스프라이트로 보여 준다.
+         50 시트의 `data-cosav` 캔버스와 같은 경로(cosPaint)라 시트에서 보는 그 색·그 그림이다. */
+      + (gotCos.length ? '<div class="pr182"><h3>획득한 코스튬</h3><div class="pg-grid">'
+          + gotCos.map(a => '<div class="pg-c" data-pgc="' + a.id + '" style="--r:' + GRADE[a.g].c + '">'
+              + '<canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id + '" data-coslite></canvas>'
+              + '<u class="ol1">' + GRADE[a.g].n + '</u></div>').join('')
+          + '</div></div>' : ''));
+    if(gotCos.length){
+      cosPaint($('mbox'));                       /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
+      promoCosFx();
+    }
   }else{
     popup('💀 승급 실패', '<p>제한 시간 안에 <b>승급 수호자</b>를 처치하지 못했습니다.<br>더 성장한 뒤 다시 도전하세요!</p>');
   }
@@ -22594,7 +22651,11 @@ function openPromo(){
   const ri = S.rank + 1;                 /* 도전 계급 index — nextRank() 가 가리키는 그 칸 */
   /* 179 — 클리어 보상. 코스튬(스프라이트 미리보기) + 칭호. 칭호는 별도 데이터가 아니라
      «도달한 계급 = 보유 칭호» 라서(renderProfile 의 `own = i <= S.rank`) 승급 자체가 지급이다. */
-  const rw = promoCos(ri), rwOwn = rw && cosOwn(rw.id);
+  /* 182 — 보상이 «묶음» 이 됐다. 미리보기는 대표 1종(묶음의 최상위 칸) 그대로 두고,
+     부제에 «등급 코스튬 n종» 과 이미 가진 수를 적는다(재도전이면 실제로 받을 게 줄어든다). */
+  const rwList = promoCosList(ri), rw = promoCos(ri);
+  const rwLeft = rwList.filter(a => !cosOwn(a.id)).length;
+  const rwOwn = rwLeft === 0;
   showModal('<h2>🏅 승급전</h2><div class="pr179">'
     + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#B4571E">' + r.ic + ' ' + r.n + '</b></p>'
     + '<div class="pr-cond">'
@@ -22605,8 +22666,11 @@ function openPromo(){
     + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
             + rw.id + '" data-cossc="3"></canvas></div>' : '')
     + '<div class="pr-rw-t">'
-    + (rw ? '<b style="color:' + GRADE[rw.g].c + '">' + rw.n + '</b>'
-            + '<i>' + GRADE[rw.g].n + ' 코스튬' + (rwOwn ? ' <em>(이미 보유)</em>' : '') + '</i>' : '')
+    + (rw ? '<b style="color:' + GRADE[rw.g].c + '">' + rw.n
+            + (rwList.length > 1 ? ' <em>외 ' + (rwList.length - 1) + '종</em>' : '') + '</b>'
+            + '<i>' + GRADE[rw.g].n + ' 코스튬 ' + rwList.length + '종'
+            + (rwOwn ? ' <em>(이미 보유)</em>' : rwLeft < rwList.length ? ' <em>(' + rwLeft + '종 남음)</em>' : '')
+            + '</i>' : '')
     + '<i>칭호 <em>' + r.n + '</em></i></div></div></div>'
     + '<p class="pr-note">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
     + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p></div>'
@@ -22854,22 +22918,18 @@ let cosScroll = 0;                       /* 87 — 50칸 격자의 내부 스크
 let cosSelShown = null;                  /* 87 — 마지막으로 «그려진» 선택(선택이 바뀔 때만 스크롤 이동) */
 const cosCur = () => AV[S.avatar] ? S.avatar : 'av0';
 const cosOwn = id => !!S.avatars[id];
-/* 87 ③ — 조건 해금. 다이아 구매 경로는 그대로고 이 조건이 **추가로** 걸린다(7종) */
+/* 182 ⑤ — 옛 87 ③ «조건 해금»(스테이지·도감·계급 3축)을 **계급 축 하나로 일원화**했다.
+   구매 경로가 없어진 지금 코스튬의 조건은 «어느 승급전을 깼는가» 뿐이고, 그 답은 `COS_RANK`
+   한 표가 갖고 있다. 이미 가진 것(구세이브로 산 것 포함)은 조건과 무관하게 «충족» 이다 — 회수 금지(④). */
 function cosReqOk(a){
-  const q = a && a.req; if(!q) return true;
-  if(q.k === 'stage') return (S.best|0)        >= q.v;
-  if(q.k === 'rank')  return (S.rank|0)        >= q.v;
-  if(q.k === 'coll')  return collCatSteps(q.c)  >= q.v;
-  return true;
+  if(!a) return true;
+  return cosOwn(a.id) || (S.rank|0) >= cosRankOf(a.id);
 }
 function cosReqText(a){
-  const q = a && a.req; if(!q) return '';
-  if(q.k === 'stage') return '스테이지 ' + q.v + ' 도달';
-  if(q.k === 'rank')  return (RANKS[q.v] ? RANKS[q.v].ic + ' ' + RANKS[q.v].n : '계급 ' + q.v) + ' 승급';
-  if(q.k === 'coll')  return (COLL_CATN[q.c] || q.c) + ' 도감 누적 ' + q.v + '단계';
-  return '';
+  const r = RANKS[cosRankOf(a && a.id)];
+  return r ? r.ic + ' ' + r.n + ' 승급전 클리어' : '기본 지급';
 }
-/* 착용(외형 변경) — 구매는 기존 `buyAvatar()` 를 그대로 쓴다(보유 시 착용까지 해 준다) */
+/* 착용(외형 변경). 182 로 구매 경로가 없어져 «가진 것을 입는» 동작만 남았다 */
 function wearAvatar(id){
   if(!cosOwn(id)) return false;
   S.avatar = id; uiDirty = true; save(); return true;
@@ -22926,9 +22986,11 @@ function renderCos(){
         +  '<u class="sk-clv ol2">' + GRADE[a.g].n + '</u>'
         +  (own && !on ? '<s class="sk-eq" data-coseq="' + a.id + '"></s>' : '')
         +  (on ? '<em class="sk-on ol4">착용 중</em>' : '')
-        /* 진행바 자리 — 보유는 «보유», 조건 미달은 해금 조건, 그 밖은 다이아 가격 */
+        /* 진행바 자리 — 182 로 «가격» 이 사라졌다. 보유는 «보유», 미보유는 **어느 승급전이 주는지**.
+           (계급을 이미 지났는데 미보유인 칸은 없다 — 승급이 곧 지급이다. 그래도 lock 분기는
+           남겨 둔다: 구세이브에서 계급만 높고 코스튬이 없는 경우 다음 승급 때 채워진다) */
         +  '<div class="sk-bar' + (lock ? ' rq' : '') + '"><i style="width:' + (own ? 100 : 0) + '%"></i>'
-        +  '<b class="ol1">' + (own ? '보유' : lock ? '🔒' + cosReqText(a) : curIc('dia') + fmt(a.cost))
+        +  '<b class="ol1">' + (own ? '보유' : '🔒' + cosReqText(a))
         +  '</b></div></div>';
     });
     y += Math.ceil(list.length/5) * 220;
@@ -22943,15 +23005,16 @@ function renderCos(){
   h += '<div class="sk-tot"><i class="ol3">보유 ' + nOwn + '/' + AVATARS.length + ' · 총 보유 효과:</i>'
     +  '<em class="ol3">공격력 +' + pct(tot) + '</em></div>';
 
-  /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [구매] */
-  /* 171 — 버튼 상태색(주인 보고: «구매 가능한데 회색»). 선택 카드(`cosSel`) 기준으로
-     «지금 눌러서 되는가» 를 그대로 색에 싣는다. 재화가 변하면 renderUI 의 0.35s 재렌더가 갱신한다.
-       [착용] 보유 + 착용 중 아님 · [구매] 미보유 + 해금 조건 충족(`cosReqOk`) + 다이아 충분 */
-  const selA = AV[cosSel], selOwn = cosOwn(cosSel);
+  /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [승급전]
+     182 — [구매] 폐지. 자리를 비우면 8점 받은 이 시트의 버튼 2칸 레이아웃이 깨지므로, 같은 칸에
+     **획득 경로로 가는 버튼**을 놓는다(«어디서 얻나» 를 시트에서 바로 답한다). 22 승급전 팝업으로 간다.
+     171 — 버튼 상태색: 선택 카드 기준 «지금 눌러서 되는가» 를 그대로 색에 싣는다.
+       [착용] 보유 + 착용 중 아님 · [승급전] 도전할 계급이 남아 있음(`nextRank`) */
+  const selOwn = cosOwn(cosSel);
   const wearOk = selOwn && cosSel !== cur;
-  const buyOk  = !!selA && !selOwn && cosReqOk(selA) && S.dia >= selA.cost;
+  const promoOk = !!nextRank();
   h += '<div class="sk-btn sk-b1 ' + (wearOk ? 'ok' : 'no') + '" data-coswear="1"><i class="ol3">착용</i></div>'
-    +  '<div class="sk-btn sk-b2 ' + (buyOk  ? 'ok' : 'no') + '" data-cosbuy="1"><i class="ol3">구매</i></div>';
+    +  '<div class="sk-btn sk-b2 ' + (promoOk ? 'ok' : 'no') + '" data-cospromo="1"><i class="ol3">승급전</i></div>';
 
   h += '</div></div>';   /* 작업 51 — 본문 뷰포트 닫음 */
 
@@ -22987,14 +23050,11 @@ $('bCos').addEventListener('click', e => {
   if(q){ wearAvatar(q.dataset.coseq); cosSel = q.dataset.coseq; renderUI(); return; }
   if(e.target.closest('[data-coswear]')){
     if(wearAvatar(cosSel)) renderUI();
-    else notify('🔒 먼저 구매해야 착용합니다');
+    else notify('🔒 승급전에서 획득해야 착용합니다');
     return;
   }
-  if(e.target.closest('[data-cosbuy]')){
-    if(cosOwn(cosSel)) notify('👤 이미 가지고 있는 코스튬입니다');
-    else buyAvatar(AV[cosSel]);
-    renderUI(); return;
-  }
+  /* 182 — [구매] → [승급전]. 코스튬을 주는 유일한 자리로 보낸다 */
+  if(e.target.closest('[data-cospromo]')){ openPromo(); return; }
   const t = e.target.closest('[data-costab]');
   if(t){ heroSubGo(t.dataset.costab); return; }
   const c = e.target.closest('[data-cosit]');
@@ -23007,47 +23067,45 @@ $('bCos').addEventListener('click', e => {
 /* 코스튬 상세 — 08 스킬 세부 팝업 껍데기(`.sk8`)를 재사용한다(UI-REFERENCE §50) */
 function showCosDetail(id){
   const a = AV[id]; if(!a) return;
-  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur(), rq = cosReqOk(a);
-  /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 안 산 외형» 이라 미보유도 이름·그림을 보여 준다
-     (82 규칙 — 무엇인지 알아야 살지 말지 정한다). 대신 상태 줄이 «미보유/조건 미달» 을 말한다. */
+  const G = GRADE[a.g], own = cosOwn(id), on = id === cosCur();
+  /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 못 받은 외형» 이라 미보유도 이름·그림을 보여 준다
+     (82 규칙). 182 이후 상태 줄은 «미보유» 와 «어느 승급전이 주는가» 를 말한다. */
   $('mtitle').textContent = a.n;
   $('mbox').innerHTML =
       '<div class="skd">'
     +   '<div class="sk-ic"><canvas class="cos-cv" width="150" height="189" data-cosav="' + id
     +     '" data-cossc="3"></canvas></div>'
     +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
-    +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : rq ? '미보유' : '🔒 조건 미달') + '</b></div>'
+    +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
     +   '<div class="sk-pb"><i style="width:' + (own ? 100 : 0) + '%"></i>'
     +     '<b style="left:calc(' + (own ? 100 : 0) + '% + 3px)">'
-    +       (own ? '보유' : rq ? curIc('dia') + fmt(a.cost) : '🔒' + cosReqText(a)) + '</b></div>'
+    +       (own ? '보유' : '🔒' + cosReqText(a)) + '</b></div>'
     +   '<div class="sk-ct">'
-    +     '<div class="hd"><div><b>' + (a.req ? '해금 조건' : '가격') + '</b></div><div class="nt"><b>등급</b></div></div>'
-    +     '<div class="vl"><div><b>' + (a.req ? cosReqText(a) : a.cost ? curIc('dia') + fmt(a.cost) : '기본') + '</b></div>'
+    /* 182 — «가격» 칸 폐기. 이 자리는 이제 **획득 조건(어느 승급전)** 하나만 말한다 */
+    +     '<div class="hd"><div><b>획득 조건</b></div><div class="nt"><b>등급</b></div></div>'
+    +     '<div class="vl"><div><b>' + cosReqText(a) + '</b></div>'
     +       '<div class="nt"><b>' + G.n + '</b></div></div>'
     +   '</div>'
     +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
     +   '<div class="sk-db"><p>' + (own
-          ? '구매한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
-          : !rq
-          ? '<em>' + cosReqText(a) + '</em> 을(를) 달성하면 다이아 <em>' + curIc('dia') + fmt(a.cost) + '</em> 로 구매할 수 있습니다.'
-          : '아직 구매하지 않았습니다.<br>다이아로 구매하면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
+          ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.'
+          : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용됩니다.') + '</p></div>'
     +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
     +     '<div class="v"><b>공격 <em>+' + pct(a.atk) + '</em> 체력 <em>+' + pct(a.hp)
     +       '</em> 골드 <em>+' + pct(a.gold) + '</em></b></div></div>'
     + '</div>'
     + '<div class="sk-act">'
     +   '<button class="sk-e" id="mEq"' + (own && !on ? '' : ' disabled') + '><b>착용</b></button>'
-    /* 171 — 다이아가 모자란 «부족» 은 입력을 막지 않고 색만 회색으로 둔다(눌러야 얼마 모자란지 안내가 뜬다).
-       102 의 «`.lack` = 색 · `disabled` = 입력 차단» 두 축 분리를 그대로 따른다. */
-    +   '<button class="sk-u' + (!own && rq && S.dia < a.cost ? ' lack' : '') + '" id="mLv"'
-    +     (own || !rq ? ' disabled' : '') + '><b>구매</b></button>'
+    /* 182 — [구매] → [승급전]. 이미 가진 코스튬에는 갈 곳이 없으므로 비활성이다.
+       171 의 «`.lack` = 색 · `disabled` = 입력 차단» 두 축 분리는 그대로 지킨다. */
+    +   '<button class="sk-u" id="mLv"' + (own || !nextRank() ? ' disabled' : '') + '><b>승급전</b></button>'
     + '</div>';
   $('mbox').scrollTop = 0;
   cosPaint($('mbox'));
   $('modal').classList.add('on', 'sk8');
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
-  if(b && !b.disabled) b.onclick = () => { buyAvatar(a); cosSel = id; renderUI(); showCosDetail(id); };
+  if(b && !b.disabled) b.onclick = () => { closeModal(); openPromo(); };
 }
 
 /* ==========================================================================
@@ -23782,10 +23840,11 @@ function renderUI(){
   const dunAlert = DUNGEONS.some(d => S.daily.dun[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
-    /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다 */
-    const al = k === 'hero' ? (collCatReady('equip') || collCatReady('skill') || collCatReady('pet')
-                              /* 87 — 조건 해금(req) 이 안 열린 코스튬은 «살 수 있음» 이 아니다 */
-                              || AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a)))
+    /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다.
+       182 — 구매 경로가 없어져 «살 수 있는 코스튬» 이라는 상태 자체가 사라졌다(지급은 승급전에서만
+       일어나고 그 알림은 사이드 `promo` 아이콘이 이미 갖고 있다 — `sideAlert('promo', canPromote())`).
+       구버전 폐기 = 진입점까지(LESSONS 68-①) 라 이 항도 같이 지운다. 도감 3종만 남는다. */
+    const al = k === 'hero' ? (collCatReady('equip') || collCatReady('skill') || collCatReady('pet'))
              : k === 'grow' ? false   /* 88 — 스탯 포인트 폐기, 성장 탭 레드닷 조건 삭제 */
                                       /* 166 — «훈련 강화 가능» 은 여기에 올리지 않는다: 골드는 방치로 계속
                                          차오르므로 사실상 상시 점등이 되어 주인이 지적한 그 노이즈로 되돌아간다.

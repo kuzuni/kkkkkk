@@ -270,7 +270,9 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     const g1 = collSteps(), cat1 = collCatSteps('skill');
     closeColl21();
     return { none, some, g0, g1, cat1,
-             cosOff: cosReqOk(AVATARS.find(a => a.id === 'av45')),
+             /* 182 — 코스튬 해금이 «도감 누적 단계» 에서 떨어져 나가 계급 축 하나가 됐다.
+                이 게이트가 여기서 보는 것은 «도감이 코스튬을 더 이상 잠그지 않는다» 뿐이다. */
+             cosRank: cosRankOf('av45'),
              cosTxt: cosReqText(AVATARS.find(a => a.id === 'av45')) };
   });
   ok(!link.none.any && link.none.dot === 0, '아무것도 없으면 레드닷 0');
@@ -278,12 +280,23 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
   ok(link.some.dot === 1, '강화 가능한 탭에만 레드닷 (실측 ' + link.some.dot + ')');
   ok(link.some.side, '좌측 사이드 «도감» 아이콘 레드닷(83)');
   ok(link.g1 === link.g0 + 1 && link.cat1 === 1, '가이드 미션 «도감 보너스 1회» 카운터 = 누적 단계 수 (' + link.g0 + ' → ' + link.g1 + ')');
-  ok(!link.cosOff && /스킬 도감 누적 3단계/.test(link.cosTxt), '87 코스튬 해금 조건이 «카테고리 누적 단계» 로 (실측 "' + link.cosTxt + '")');
+  /* 182 — 옛 «av45 = 스킬 도감 누적 3단계» 조건은 데이터째 폐기됐다(구매 폐지 → 조건 해금 폐기).
+     91 이 여기서 지키는 것은 «도감 진행도가 코스튬 해금과 더 이상 얽혀 있지 않다» 는 사실이다. */
+  ok(link.cosRank >= 1 && /승급전 클리어$/.test(link.cosTxt),
+    '182 — 코스튬 해금 조건이 계급 축 하나로 (av45 → 도전 계급 ' + link.cosRank + ' · "' + link.cosTxt + '")');
   const cos = await p.evaluate(() => {
+    const keep = Object.assign({}, S.avatars), kr = S.rank;
+    delete S.avatars.av45;
     S.coll = {}; COLL_SETS.filter(s => s.cat === 'skill').forEach(s => S.coll[s.key] = 1);
-    return { steps: collCatSteps('skill'), ok: cosReqOk(AVATARS.find(a => a.id === 'av45')) };
+    S.rank = 0;
+    const byColl = cosReqOk(AVATARS.find(a => a.id === 'av45'));   /* 도감을 채워도 안 열린다 */
+    S.rank = cosRankOf('av45');
+    const byRank = cosReqOk(AVATARS.find(a => a.id === 'av45'));   /* 계급으로만 열린다 */
+    S.avatars = keep; S.rank = kr; markDirty();
+    return { steps: collCatSteps('skill'), byColl, byRank };
   });
-  ok(cos.steps === 6 && cos.ok, '스킬 세트 6개 × 1단계 = 누적 6단계 → av45 해금 (실측 ' + cos.steps + ')');
+  ok(cos.steps === 6, '스킬 세트 6개 × 1단계 = 누적 6단계 (실측 ' + cos.steps + ')');
+  ok(!cos.byColl && cos.byRank, '182 — 도감 6단계로는 av45 가 안 열리고, 계급으로만 열린다');
 
   ok(errs.length === 0, '콘솔/페이지 에러 0건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 

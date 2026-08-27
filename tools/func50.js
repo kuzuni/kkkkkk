@@ -101,9 +101,8 @@ const tap = (page, sel) => page.evaluate((s) => {
       const lkWant = (await S(page, 'AVATARS.filter(a => !S.avatars[a.id]).map(a => a.id)')).sort();
       eq('미보유 카드 = AVATARS − 보유', lkGot, lkWant);
       eq('미보유 장수 = 전체 − 보유 2', lkGot.length, (await S(page, 'AVATARS.length')) - 2);
-      /* 185 — 87 ③ 이 미보유 카드 바닥을 «다이아 가격» 한 가지에서 **두 가지**로 갈랐다:
-         해금 조건이 있는 것은 `🔒<조건>`(`.sk-bar.rq`), 그 밖은 다이아 가격.
-         가격 앞 💎 는 125 이후 `<img alt="">` 라 `textContent` 에 안 잡힌다 — 숫자(`fmt`)로 본다. */
+      /* 182 — 87 ③ 이 갈라 놓았던 «가격 / 🔒조건» 두 갈래가 **한 갈래**로 합쳐졌다:
+         구매가 없어져 미보유 카드 바닥은 전부 «🔒 <계급> 승급전 클리어» 다. */
       const bar = await page.evaluate(() => {
         const o = {};
         document.querySelectorAll('#bCos .sk-card.lk').forEach((c) => {
@@ -112,16 +111,16 @@ const tap = (page, sel) => page.evaluate((s) => {
         });
         return o;
       });
-      const priceId = await S(page, "(AVATARS.find(a => !S.avatars[a.id] && cosReqOk(a)) || {}).id");
-      const reqId   = await S(page, "(AVATARS.find(a => !S.avatars[a.id] && !cosReqOk(a)) || {}).id");
-      eq('미보유(조건 충족) 카드에 다이아 가격', bar[priceId] && bar[priceId].t,
-        await S(page, `fmt(AV[${JSON.stringify(priceId)}].cost)`));
-      eq('가격 카드는 .rq 아님', bar[priceId] && bar[priceId].rq, false);
-      if (reqId) {
-        eq('미보유(조건 미달) 카드는 🔒 + 해금 조건', bar[reqId] && bar[reqId].t,
-          await S(page, `'🔒' + cosReqText(AV[${JSON.stringify(reqId)}])`));
-        eq('조건 카드는 .rq', bar[reqId] && bar[reqId].rq, true);
-      } else no('조건 해금 코스튬이 하나도 없다 — 87 ③ 이 사라졌는지 확인');
+      const ids = Object.keys(bar);
+      eq('미보유 카드 바닥이 전부 «🔒 …승급전 클리어»',
+        ids.every((id) => bar[id].t && bar[id].t.indexOf('🔒') === 0
+                       && /승급전 클리어$/.test(bar[id].t)), true);
+      eq('가격(💎 숫자) 표기가 한 칸도 없다',
+        ids.some((id) => /\d/.test(bar[id].t || '')), false);
+      const reqId = ids[0];
+      eq('미보유 카드 문구 = cosReqText', bar[reqId].t,
+        await S(page, `'🔒' + cosReqText(AV[${JSON.stringify(reqId)}])`));
+      eq('계급 미달 카드는 .rq', bar[reqId].rq, true);
       eq('착용 슬롯 1칸', await page.$$eval('#bCos .sk-eqp .sk-slot', (e) => e.map((x) => x.dataset.cosun)), ['av1']);
       /* 총 보유 효과가 실제 곱연산(bonus() 의 아바타 합산)과 같은가 */
       const shown = await page.$eval('#bCos .sk-tot em', (e) => e.textContent);
@@ -130,52 +129,66 @@ const tap = (page, sel) => page.evaluate((s) => {
       await ctx.close();
     }
 
-    /* ---------- 3. [구매] 버튼 ---------- */
-    console.log('[3] [구매] — 다이아 차감 · 보유 · 저장 · 전투력');
+    /* ---------- 3. 지급 = 승급전 클리어 (182) ---------- */
+    console.log('[3] 승급전 클리어 → 코스튬 지급 · 저장 · 전투력');
     {
-      const { ctx, page, errs } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 999999 });
+      const { ctx, page, errs } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 999999, rank: 0 });
       await toCos(page);
-      const before = await S(page, '({dia:S.dia, own:!!S.avatars.av2, cp:cp()})');
-      await tap(page, '#bCos [data-cosit="av2"]');   /* 선택 */
-      await page.waitForTimeout(250);
-      eq('선택 링(.sel) = av2', await page.$eval('#bCos .sk-card.sel', (e) => e.dataset.cosit), 'av2');
-      await tap(page, '#bCos [data-cosbuy]');
+      const before = await S(page, '({own:!!S.avatars.av2, n:Object.keys(S.avatars).length, cp:cp()})');
+      /* 계급 2(골드) 승급전을 실제로 통과시킨다 — av2 백은의 용사는 희귀 = 그 묶음이다 */
+      await page.evaluate(() => {
+        S.rank = 1; promo = { t: 60, max: 60, rank: nextRank() };
+        endPromo(true);
+      });
       await page.waitForTimeout(700);
-      const after = await S(page, '({dia:S.dia, own:!!S.avatars.av2, cur:S.avatar, cp:cp()})');
-      const cost = await S(page, 'AV.av2.cost');
-      eq('다이아 차감', before.dia - after.dia, cost);
-      eq('보유 처리', after.own, true);
-      eq('구매 즉시 착용', after.cur, 'av2');
+      const after = await S(page, '({own:!!S.avatars.av2, n:Object.keys(S.avatars).length, cp:cp(), cur:S.avatar})');
+      const want  = await S(page, 'PROMO_COS[2].length');
+      eq('묶음이 통째로 지급됨', after.n - before.n, want);
+      eq('av2 보유 처리', after.own, true);
+      eq('착용은 안 바뀐다(구매 시절의 «즉시 착용» 은 없다)', after.cur, 'av0');
       ok(`전투력 ${before.cp} → ${after.cp} (보유 효과 반영: ${after.cp > before.cp ? '증가' : '변화 없음'})`);
-      if (!(after.cp > before.cp)) no('구매해도 전투력이 안 오른다 — bonus() 합산 미반영');
+      if (!(after.cp > before.cp)) no('지급해도 전투력이 안 오른다 — bonus() 합산 미반영');
       /* 저장(S) 반영 — localStorage 까지 */
       const raw = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
       eq('localStorage.avatars.av2', !!raw.avatars.av2, true);
-      eq('localStorage.avatar', raw.avatar, 'av2');
-      /* 화면 반영 — 착용 슬롯·카드 상태가 다시 그려졌는가 */
-      eq('착용 슬롯 갱신', await page.$eval('#bCos .sk-eqp .sk-slot', (e) => e.dataset.cosun), 'av2');
-      eq('«착용 중» 카드 갱신', await page.$eval('#bCos .sk-card.dim', (e) => e.dataset.cosit), 'av2');
-      if (errs.length) errs.forEach((e) => no('구매 중 ' + e)); else ok('콘솔 에러 0');
+      eq('localStorage.rank', raw.rank, 2);
+      /* 화면 반영 — 카드가 «보유» 로 다시 그려졌는가 */
+      await page.evaluate(() => { renderCos(); });
+      await page.waitForTimeout(250);
+      eq('카드 잠금 해제', await page.$eval('#bCos [data-cosit="av2"]', (e) => e.classList.contains('lk')), false);
+      eq('카드 바닥 «보유»', await page.$eval('#bCos [data-cosit="av2"] .sk-bar>b', (e) => e.textContent), '보유');
+      /* 182 ③ — 승급 성공 팝업이 획득 코스튬을 **그림으로** 보여 준다 */
+      await page.evaluate(() => { S.rank = 2; promo = { t: 60, max: 60, rank: nextRank() }; endPromo(true); });
+      await page.waitForTimeout(300);
+      const fx = await page.evaluate(() => ({
+        cards: document.querySelectorAll('#mbox .pr182 .pg-c').length,
+        painted: [...document.querySelectorAll('#mbox .pr182 canvas')].filter((c) => {
+          try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            for (let i = 3; i < d.length; i += 4) if (d[i] > 8) return true; } catch (e) {} return false;
+        }).length
+      }));
+      eq('승급 성공 팝업에 획득 코스튬 격자', fx.cards, await S(page, 'PROMO_COS[3].length'));
+      eq('격자 스프라이트가 실제로 그려짐', fx.painted, fx.cards);
+      await page.evaluate(() => closeModal());
+      if (errs.length) errs.forEach((e) => no('지급 중 ' + e)); else ok('콘솔 에러 0');
       await ctx.close();
     }
 
-    /* ---------- 4. [구매] — 다이아 부족 ---------- */
-    console.log('[4] [구매] — 다이아 부족 가드');
+    /* ---------- 4. 구매 경로 폐기 확인 (182) ---------- */
+    console.log('[4] 구매 경로 폐기 — 버튼·함수·가격 표기가 전부 없다');
     {
-      const { ctx, page } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 0 });
+      const { ctx, page } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 1e9 });
       await toCos(page);
-      /* 185 — 대상도 런타임에 고른다. «미보유 + 해금 조건 충족» 이라야 걸리는 가드가 «다이아 부족» 이다
-         (조건 미달 코스튬을 누르면 87 ③ 의 «🔒 조건» 안내가 먼저 나가 다른 것을 재게 된다). */
-      const poor = await S(page, "AVATARS.find(a => !S.avatars[a.id] && cosReqOk(a) && a.cost > 0).id");
-      await tap(page, `#bCos [data-cosit="${poor}"]`); await page.waitForTimeout(200);
-      await tap(page, '#bCos [data-cosbuy]'); await page.waitForTimeout(300);
-      /* 185 — 149 가 안내를 **모달 → 토스트**(`notify` → `fxToast`)로 바꿨다. 옛 «#modal 이 열린다» 단언은
-         원리적으로 다시 참이 될 수 없다. 토스트는 760ms 에 퇴장·1060ms 에 제거되므로 300ms 안에 읽는다. */
-      eq('토스트 안내', await page.$$eval('.fx-toast', (e) => e.length), 1);
-      eq('다이아 부족 문구', await page.$eval('.fx-toast', (e) => e.textContent.includes('더 필요합니다')), true);
-      eq('모달은 안 뜬다', await page.$eval('#modal', (e) => e.classList.contains('on')), false);
-      eq('보유 안 됨', await S(page, `!!S.avatars[${JSON.stringify(poor)}]`), false);
-      eq('다이아 그대로', await S(page, 'S.dia'), 0);
+      eq('[구매] 버튼 없음', await page.$$eval('#bCos [data-cosbuy]', (e) => e.length), 0);
+      eq('[승급전] 버튼 있음', await page.$$eval('#bCos [data-cospromo]', (e) => e.length), 1);
+      eq('buyAvatar() 폐기', await S(page, "typeof buyAvatar"), 'undefined');
+      eq('AVATARS 에 cost 필드 없음', await S(page, 'AVATARS.every(a => a.cost === undefined)'), true);
+      eq('다이아가 아무리 많아도 보유가 안 늘어난다',
+        await S(page, 'Object.keys(S.avatars).length'), 1);
+      /* [승급전] 버튼은 승급전 팝업으로 간다 */
+      await tap(page, '#bCos [data-cospromo]'); await page.waitForTimeout(400);
+      eq('[승급전] → 승급전 팝업', await page.$$eval('#mbox .pr179', (e) => e.length), 1);
+      await page.evaluate(() => closeModal());
       await ctx.close();
     }
 
@@ -203,7 +216,7 @@ const tap = (page, sel) => page.evaluate((s) => {
       eq('미보유 착용 차단', await S(page, 'S.avatar'), 'av0');
       /* 185 — §4 와 같이 149 의 토스트 이관. «#mtitle 에 미보유» 는 이제 상세 팝업(§6)의 것이다. */
       eq('미보유 착용 안내(토스트)',
-        await page.$eval('.fx-toast', (e) => e.textContent.includes('먼저 구매해야 착용합니다')), true);
+        await page.$eval('.fx-toast', (e) => e.textContent.includes('승급전에서 획득해야 착용합니다')), true);
       await ctx.close();
     }
 
@@ -223,11 +236,17 @@ const tap = (page, sel) => page.evaluate((s) => {
         await S(page, 'AV.av1.n'));
       eq('상태 줄 = 미보유', await page.$eval('#mbox .sk-lv b', (e) => e.textContent), '미보유');
       eq('[착용] 비활성(미보유)', await page.$eval('#mEq', (e) => e.disabled), true);
-      eq('[구매] 활성', await page.$eval('#mLv', (e) => e.disabled), false);
+      /* 182 — 상세의 두 번째 버튼도 [구매] → [승급전] 이다 */
+      eq('[승급전] 활성(미보유 + 도전 계급 남음)', await page.$eval('#mLv', (e) => e.disabled), false);
+      eq('[승급전] 라벨', await page.$eval('#mLv', (e) => e.textContent.trim()), '승급전');
+      eq('획득 조건 행', await page.$eval('#mbox .sk-ct .hd b', (e) => e.textContent), '획득 조건');
+      eq('획득 조건 값 = cosReqText', await page.$eval('#mbox .sk-ct .vl b', (e) => e.textContent),
+        await S(page, 'cosReqText(AV.av1)'));
       await tap(page, '#mLv'); await page.waitForTimeout(600);
-      eq('상세에서 구매 → 보유', await S(page, '!!S.avatars.av1'), true);
-      eq('상세 갱신(제목)', await page.$eval('#mtitle', (e) => e.textContent), await S(page, 'AV.av1.n'));
+      eq('상세에서 [승급전] → 승급전 팝업', await page.$$eval('#mbox .pr179', (e) => e.length), 1);
+      eq('상세 [승급전] 은 코스튬을 주지 않는다', await S(page, '!!S.avatars.av1'), false);
       /* 착용 슬롯을 눌러도 상세가 열린다 */
+      await page.evaluate(() => closeModal());
       await tap(page, '#modal'); await page.waitForTimeout(350);
       await tap(page, '#bCos [data-cosun]'); await page.waitForTimeout(450);
       eq('착용 슬롯 → 상세', await page.$eval('#modal', (e) => e.classList.contains('on') && e.classList.contains('sk8')), true);

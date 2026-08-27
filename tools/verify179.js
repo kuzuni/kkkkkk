@@ -31,20 +31,29 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
   /* ---- [6] 매핑 무결 ---- */
   console.log('[6] 매핑');
   const map = await p.evaluate(() => {
+    /* 182 — 표 한 칸이 «1종» 에서 «묶음» 이 됐다. 미리보기 대표는 묶음에서 파생된다(promoCos). */
     const rows = Object.keys(PROMO_COS).map(k => {
-      const a = AV[PROMO_COS[k]];
-      return { ri: +k, id: PROMO_COS[k], ok: !!a, g: a ? a.g : -1, n: a ? a.n : null };
+      const a = promoCos(+k);
+      return { ri: +k, id: a ? a.id : null, ok: !!a, g: a ? a.g : -1, n: a ? a.n : null,
+               size: PROMO_COS[k].length };
     });
-    /* COS_LIST 가 이미 못 박아 둔 계급 조건 — 매핑이 이것과 어긋나면 «같은 코스튬을 두 규칙이 다르게 준다» */
-    const pinned = AVATARS.filter(a => a.req && a.req.k === 'rank').map(a => ({ id: a.id, v: a.req.v, g: a.g }));
-    return { rows, pinned, ranks: RANKS.length };
+    /* 182 이전 `COS_LIST` 가 못 박아 두었던 계급 조건 2건. 데이터는 폐기됐지만 **약속은 남는다** —
+       매핑이 이 두 점에서 벗어나면 «같은 코스튬을 두 규칙이 다르게 준다» 가 된다(179 매핑 근거). */
+    const pinned = [{ id: 'av41', v: 3 }, { id: 'av48', v: 6 }].map(q =>
+      ({ id: q.id, v: q.v, at: cosRankOf(q.id), inBundle: (PROMO_COS[q.v] || []).indexOf(q.id) >= 0 }));
+    const covered = Object.keys(PROMO_COS).reduce((n, k) => n + PROMO_COS[k].length, 0);
+    const uniq = new Set([].concat.apply([], Object.keys(PROMO_COS).map(k => PROMO_COS[k]))).size;
+    return { rows, pinned, ranks: RANKS.length, covered, uniq, total: AVATARS.length };
   });
   ok(map.rows.length === map.ranks - 1, `승급 ${map.ranks - 1}회 전부에 보상이 있다 (표 ${map.rows.length}칸)`);
-  map.rows.forEach(r => ok(r.ok, `PROMO_COS[${r.ri}] = ${r.id} 는 실재 코스튬 (${r.n})`));
+  map.rows.forEach(r => ok(r.ok, `PROMO_COS[${r.ri}] 대표 = ${r.id} 는 실재 코스튬 (${r.n} · 묶음 ${r.size}종)`));
   map.rows.forEach(r => ok(r.g === Math.min(r.ri, 5),
-    `PROMO_COS[${r.ri}] 등급 ${r.g} = min(${r.ri},5) — 곡선 위에 있다`));
-  map.pinned.forEach(q => ok(map.rows.some(r => r.ri === q.v && r.id === q.id),
-    `COS_LIST 계급 조건 ${q.id}→rank ${q.v} 를 매핑이 그대로 따른다`));
+    `PROMO_COS[${r.ri}] 대표 등급 ${r.g} = min(${r.ri},5) — 179 곡선 위에 그대로 있다`));
+  map.pinned.forEach(q => ok(q.at === q.v && q.inBundle,
+    `구 계급 조건 ${q.id}→rank ${q.v} 를 매핑이 그대로 따른다 (실제 ${q.at})`));
+  /* 182 — 구매 경로가 없으므로 «어느 묶음에도 안 든 코스튬» 은 영원히 못 얻는 코스튬이다 */
+  ok(map.uniq === map.covered, `묶음에 중복 배정된 코스튬 없음 (${map.covered}칸 / 고유 ${map.uniq}종)`);
+  ok(map.uniq === map.total, `50종 전부가 어느 승급전엔가 배정됨 (${map.uniq}/${map.total})`);
 
   /* ---- [1][2][3] 계급 7단 팝업 ---- */
   console.log('[1][2][3] 팝업 — 본문 배율 · 넘침 · 보상 표시');
@@ -73,7 +82,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
         fs: ps.map(e => +getComputedStyle(e).fontSize.replace('px', '')),
         lh: ps.map(lh),
         scrollH: mb.scrollHeight, clientH: mb.clientHeight, boxH: box.getBoundingClientRect().height,
-        cosId: cv ? cv.dataset.cosav : null, cosExp: PROMO_COS[ri] || null, inkPx,
+        cosId: cv ? cv.dataset.cosav : null, cosExp: (promoCos(ri) || {}).id || null, inkPx,
         rwTxt: (mb.querySelector('.pr-rw') || {}).textContent || ''
       };
     }, ri);
@@ -95,17 +104,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
     const r = await p.evaluate((ri) => {
       closeModal();
       S.rank = ri - 1;
-      const exp = PROMO_COS[ri];
-      delete S.avatars[exp];                       /* 미보유 상태에서 출발 */
+      const bundle = PROMO_COS[ri].slice(), exp = (promoCos(ri) || {}).id;
+      bundle.forEach(id => delete S.avatars[id]);  /* 묶음 전체를 미보유 상태에서 출발 */
       const before = !!S.avatars[exp];
       promo = { t: 60, max: 60, rank: nextRank() };
       endPromo(true);
+      const allGot = bundle.every(id => !!S.avatars[id]);
       const txt = document.querySelector('#modal .mbody').textContent;
       const ttl = rankOf().n;                      /* 칭호 = 도달한 계급(renderProfile 의 own 규칙) */
       closeModal();
-      return { exp, before, after: !!S.avatars[exp], rank: S.rank, ttl, txt };
+      return { exp, bundle: bundle.length, allGot, before, after: !!S.avatars[exp], rank: S.rank, ttl, txt };
     }, ri);
-    ok(!r.before && r.after, `계급 ${ri} — 승급 성공으로 ${r.exp} 가 S.avatars 에 들어갔다`);
+    ok(!r.before && r.after, `계급 ${ri} — 승급 성공으로 대표 ${r.exp} 가 S.avatars 에 들어갔다`);
+    ok(r.allGot, `계급 ${ri} — 묶음 ${r.bundle}종이 **전부** 들어갔다(182 — 보여 준 등급을 통째로 준다)`);
     ok(r.rank === ri, `계급 ${ri} — S.rank 가 ${r.rank} 로 올라갔다(= 칭호 «${r.ttl}» 해금)`);
     ok(r.txt.includes('코스튬') && r.txt.includes('칭호'), `계급 ${ri} — 성공 팝업이 코스튬·칭호 획득을 알린다`);
   }
@@ -114,16 +125,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
   console.log('[5] 중복 지급 없음 · 기보유 표기');
   const dup = await p.evaluate(() => {
     closeModal();
-    S.rank = 0; const exp = PROMO_COS[1];
-    S.avatars[exp] = 1;                                   /* 이미 보유 */
+    S.rank = 0; const exp = (promoCos(1) || {}).id;
+    PROMO_COS[1].forEach(id => { S.avatars[id] = 1; });    /* 묶음 전체를 이미 보유 */
     const g = grantPromoCos(1);
     openPromo();
     const txt = document.querySelector('#modal .mbody').textContent;
     const cnt = Object.keys(S.avatars).filter(k => k === exp).length;
     closeModal();
-    return { grant: g, cnt, dup: txt.includes('이미 보유') };
+    return { grant: g.length, cnt, dup: txt.includes('이미 보유') };
   });
-  ok(dup.grant === null, '이미 보유한 코스튬은 재지급하지 않는다 (grantPromoCos → null)');
+  ok(dup.grant === 0, '이미 보유한 코스튬은 재지급하지 않는다 (grantPromoCos → 빈 배열)');
   ok(dup.cnt === 1, 'S.avatars 에 중복 키가 생기지 않는다');
   ok(dup.dup, '팝업이 «(이미 보유)» 로 바뀐다');
 
@@ -132,7 +143,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
   const refl = await p.evaluate(() => {
     closeModal();
     S.rank = 0; S.avatar = 'av0';
-    const exp = PROMO_COS[1]; delete S.avatars[exp];
+    const exp = (promoCos(1) || {}).id; PROMO_COS[1].forEach(id => delete S.avatars[id]);
     /* bonus() 는 `bonusDirty` 캐시다 — 상태를 바꾼 뒤 무효화하지 않고 읽으면
        앞 케이스(계급 7 · 코스튬 7종)의 값이 그대로 나와 비교가 뒤집힌다 */
     markDirty();

@@ -3,10 +3,13 @@
  *   node tools/verify87.js
  *
  * 검사 항목
- *   §1 데이터   — 50종 이상 · id 유일 · 구 6종(av0~av5) 이름/등급/가격/보유 효과 «한 값도 안 변함»
+ *   §1 데이터   — 50종 이상 · id 유일 · 구 6종(av0~av5) 이름/등급/보유 효과 «한 값도 안 변함»
+ *                 (182 — `cost`·`req` 는 구매 폐지와 함께 데이터째 사라졌다. 대신 «50종 전부가
+ *                  계급 축 하나로 획득 조건을 갖는가» 를 본다)
  *   §2 틴트     — 50색 쌍별 CIE76 ΔE 최소값(색상환 배분이 실제로 구분되는지) · 등급 안 최소값
- *   §3 밸런스   — 전부 보유 시 bonus() 배수 상한 검산(atk/hp/gold) · 총 구매 비용
- *   §4 실동작   — 구매(다이아 차감·보유·즉시 착용) · 착용 전환 · 조건 해금 거부/허용 · 저장·재로드 보존
+ *   §3 밸런스   — 전부 보유 시 bonus() 배수 상한 검산(atk/hp/gold)
+ *   §4 실동작   — 착용 전환 · 획득 조건(계급 축) 거부/허용 · [승급전] 버튼 · 저장·재로드 보존
+ *                 (182 — 구매 3항목은 경로째 폐기. 지급 실동작은 `tools/verify182.js` 가 소유한다)
  *   §5 색 일치  — 격자 카드(lite 경로) 픽셀 == 전투/79/80 이 쓰는 tinted() 경로 픽셀
  *   §6 구 세이브 — 6종 시절 세이브가 그대로 로드되고 보유·착용·보너스가 유지됨
  *   §7 UI       — 50칸 격자가 전부 그려짐 · 등급 섹션 헤더 6개 · 격자 내부 스크롤 가능 · 잠금 표기
@@ -23,14 +26,15 @@ const KEY = 'idle_hunter_save_v4';
 let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 
-/* 구 6종의 «고정값» — 이 표와 어긋나면 구 세이브의 체감이 바뀐 것이다 */
+/* 구 6종의 «고정값» — 이 표와 어긋나면 구 세이브의 체감이 바뀐 것이다.
+   182 — 가격 열은 뺐다(구매 폐지로 `cost` 필드 자체가 없다). 체감을 만드는 값 3개는 그대로다. */
 const LEGACY = {
-  av0: ['견습 기사',   0, 0,       0.00, 0.00, 0.00],
-  av1: ['강철 기사',   1, 3000,    0.10, 0.10, 0.05],
-  av2: ['백은의 용사', 2, 15000,   0.25, 0.20, 0.12],
-  av3: ['흑염 기사',   3, 70000,   0.55, 0.40, 0.25],
-  av4: ['용살자',      4, 300000,  1.20, 0.80, 0.50],
-  av5: ['신성 기사',   5, 1500000, 2.50, 1.60, 1.00]
+  av0: ['견습 기사',   0, 0.00, 0.00, 0.00],
+  av1: ['강철 기사',   1, 0.10, 0.10, 0.05],
+  av2: ['백은의 용사', 2, 0.25, 0.20, 0.12],
+  av3: ['흑염 기사',   3, 0.55, 0.40, 0.25],
+  av4: ['용살자',      4, 1.20, 0.80, 0.50],
+  av5: ['신성 기사',   5, 2.50, 1.60, 1.00]
 };
 
 /* sRGB hex → CIE Lab → CIE76 ΔE */
@@ -59,21 +63,29 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   /* ---------------- §1 데이터 ---------------- */
   console.log('\n§1 데이터');
   const data = await page.evaluate(() => AVATARS.map(a =>
-    ({ id: a.id, n: a.n, g: a.g, tint: a.tint, cost: a.cost, atk: a.atk, hp: a.hp, gold: a.gold, req: a.req || null })));
+    ({ id: a.id, n: a.n, g: a.g, tint: a.tint, atk: a.atk, hp: a.hp, gold: a.gold,
+       cost: a.cost === undefined ? null : a.cost, req: a.req || null, rank: cosRankOf(a.id) })));
   ok(data.length >= 50, '코스튬 ' + data.length + '종 (>= 50)');
   ok(new Set(data.map(a => a.id)).size === data.length, 'id 유일 ' + new Set(data.map(a => a.id)).size + '/' + data.length);
   let legOk = true;
   Object.keys(LEGACY).forEach(id => {
     const a = data.find(x => x.id === id), L = LEGACY[id];
-    const same = a && a.n === L[0] && a.g === L[1] && a.cost === L[2]
-      && a.atk === L[3] && a.hp === L[4] && a.gold === L[5];
+    const same = a && a.n === L[0] && a.g === L[1]
+      && a.atk === L[2] && a.hp === L[3] && a.gold === L[4];
     if (!same) { legOk = false; console.log('    ' + id + ' 변경됨: ' + JSON.stringify(a)); }
   });
-  ok(legOk, '구 6종(av0~av5) 이름·등급·가격·보유 효과 보존');
+  ok(legOk, '구 6종(av0~av5) 이름·등급·보유 효과 보존');
   const cnt = [0, 0, 0, 0, 0, 0]; data.forEach(a => cnt[a.g]++);
   ok(cnt.every(c => c > 0) && cnt.length === 6, '등급 배분 ' + cnt.join('·') + ' (6등급 — 코스튬 최고는 신화)');
   ok(data.every(a => a.g <= 5), '초월·불멸(장비 전용 7·8등급) 미사용');
-  ok(data.filter(a => a.req).length >= 3, '조건 해금 ' + data.filter(a => a.req).length + '종');
+  /* 182 — 구매·조건 해금 데이터가 남아 있으면 «죽은 데이터» 다(LESSONS 68-③). 대신 50종 전부가
+     계급 축 하나로 획득 조건을 갖는지 본다 — 어느 하나라도 rank 0 이면 «아무도 안 주는 코스튬» 이다. */
+  ok(data.every(a => a.cost === null), '가격(cost) 데이터 폐기 확인 — 남은 칸 '
+    + data.filter(a => a.cost !== null).length + '개');
+  ok(data.every(a => a.req === null), '조건 해금(req) 데이터 폐기 확인 — 남은 칸 '
+    + data.filter(a => a.req !== null).length + '개');
+  ok(data.every(a => a.rank >= 1), '50종 전부가 «어느 승급전이 주는지» 를 갖는다 (rank 0 인 칸 '
+    + data.filter(a => a.rank < 1).length + '개)');
 
   /* ---------------- §2 틴트 색차 ---------------- */
   console.log('\n§2 틴트 (CIE76 ΔE)');
@@ -95,10 +107,10 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   console.log('\n§3 밸런스');
   const bal = await page.evaluate(() => {
     const m = k => AVATARS.reduce((p, a) => p * (1 + a[k]), 1);
-    return { atk: m('atk'), hp: m('hp'), gold: m('gold'), cost: AVATARS.reduce((s, a) => s + a.cost, 0) };
+    return { atk: m('atk'), hp: m('hp'), gold: m('gold') };
   });
   console.log('    전부 보유 시 배수 — 공격 ×' + bal.atk.toFixed(1) + ' · 체력 ×' + bal.hp.toFixed(1)
-    + ' · 골드 ×' + bal.gold.toFixed(1) + ' / 총 구매 비용 💎' + bal.cost.toLocaleString());
+    + ' · 골드 ×' + bal.gold.toFixed(1));
   ok(bal.atk < 1000, '공격 배수 상한 (×' + bal.atk.toFixed(1) + ' < ×1000)');
   ok(bal.hp < 300 && bal.gold < 100, '체력·골드 배수 상한');
   /* bonus() 가 실제로 그 배수를 내는지 — 전부 보유 전/후 공격력 비 */
@@ -140,41 +152,40 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   ok(sel.a, '[카드 클릭] ' + sel.id + ' 가 «선택(.sel)» 으로 바뀜');
   ok(sel.open && sel.title.length > 0, '[선택 카드 재클릭] 08 상세 열림 (제목 «' + sel.title + '»)');
 
-  /* 레드닷 — 조건 미해금 코스튬은 «살 수 있음» 으로 세지 않는다 */
+  /* 182 — 레드닷: «살 수 있는 코스튬» 항이 통째로 사라졌다. 코스튬을 전부 미보유로 만들고
+     다이아를 잔뜩 줘도 영웅 탭 레드닷이 켜지면 안 된다(도감 3종만 켤 수 있다). */
   const dot = await page.evaluate(() => {
-    const keep = Object.assign({}, S.avatars), kd = S.dia, kb = S.best, kr = S.rank;
-    const kc = { skill: S.coll.skill, equip: S.coll.equip };
-    AVATARS.forEach(a => S.avatars[a.id] = 1);                 /* 조건 해금 7종만 미보유로 남긴다 */
-    AVATARS.filter(a => a.req).forEach(a => delete S.avatars[a.id]);
-    S.dia = 1e9; S.best = 0; S.rank = 0; S.coll.skill = 0; S.coll.equip = 0;
-    const locked = AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a));
-    S.best = 1e6; S.rank = 7; S.coll.skill = 9; S.coll.equip = 9;
-    const opened = AVATARS.some(a => !S.avatars[a.id] && S.dia >= a.cost && cosReqOk(a));
-    S.avatars = keep; S.dia = kd; S.best = kb; S.rank = kr;
-    S.coll.skill = kc.skill; S.coll.equip = kc.equip; markDirty();
-    return { locked, opened };
+    const keep = Object.assign({}, S.avatars), kd = S.dia, kc = Object.assign({}, S.coll);
+    S.avatars = { av0: 1 }; S.dia = 1e9; S.coll = {}; markDirty(); renderUI();
+    const on = document.querySelector('.tab[data-t="hero"]').classList.contains('alert');
+    S.avatars = keep; S.dia = kd; S.coll = kc; markDirty(); renderUI();
+    return { on };
   });
-  ok(!dot.locked, '[레드닷] 조건 미달 코스튬만 남으면 «살 수 있음» 으로 세지 않음');
-  ok(dot.opened, '[레드닷] 조건을 채우면 다시 «살 수 있음» 으로 셈');
+  ok(!dot.on, '[레드닷] 미보유 코스튬 50종 + 다이아 1e9 이어도 영웅 탭 레드닷 안 켜짐(구매 항 폐기)');
 
-  /* 구매 — 다이아가 줄고, 보유가 되고, 즉시 착용된다 */
-  const buy = await page.evaluate(() => {
-    const target = AVATARS.find(a => !S.avatars[a.id] && !a.req);
-    const d0 = S.dia, own0 = !!S.avatars[target.id];
-    document.querySelector('[data-cosit="' + target.id + '"]').click();          /* 선택 */
-    document.querySelector('#bCos [data-cosbuy]').click();                       /* 구매 */
-    return { id: target.id, cost: target.cost, d0, d1: S.dia, own0, own1: !!S.avatars[target.id], worn: S.avatar };
+  /* 182 — 획득 조건은 계급 축 하나다. 계급이 모자라면 «잠김», 그 승급전을 통과한 계급이면 «열림».
+     (실제 지급은 endPromo 가 한다 — 그 실동작은 verify182 가 소유한다) */
+  const gate = await page.evaluate(() => {
+    const a = AVATARS.find(x => cosRankOf(x.id) === 3);            /* 영웅 묶음 = 도전 계급 3 */
+    const keep = Object.assign({}, S.avatars), kr = S.rank;
+    delete S.avatars[a.id];
+    S.rank = 0; const before = cosReqOk(a);
+    S.rank = 2; const near   = cosReqOk(a);
+    S.rank = 3; const after  = cosReqOk(a);
+    const txt = cosReqText(a);
+    S.avatars = keep; S.rank = kr; markDirty();
+    return { id: a.id, before, near, after, txt };
   });
-  await page.waitForTimeout(200);
-  ok(!buy.own0 && buy.own1, '[구매] ' + buy.id + ' 보유로 바뀜');
-  ok(buy.d0 - buy.d1 === buy.cost, '[구매] 다이아 ' + buy.cost.toLocaleString() + ' 정확히 차감 ('
-    + buy.d0.toLocaleString() + '→' + buy.d1.toLocaleString() + ')');
-  ok(buy.worn === buy.id, '[구매] 구매 즉시 착용됨(S.avatar=' + buy.worn + ')');
+  ok(!gate.before && !gate.near, '[획득 조건] ' + gate.id + ' — 계급 0·2 에서는 잠김');
+  ok(gate.after, '[획득 조건] ' + gate.id + ' — 계급 3 에서 열림');
+  ok(/승급전 클리어$/.test(gate.txt), '[획득 조건] 표기가 계급 축 한 줄 («' + gate.txt + '»)');
 
   /* 착용 전환 — 다른 보유 코스튬으로 갈아입기 */
   await page.evaluate(() => { closeModal && closeModal(); document.querySelector('#modal').classList.remove('on'); });
   const wear = await page.evaluate(() => {
-    const other = AVATARS.find(a => S.avatars[a.id] && a.id !== S.avatar);
+    /* 182 — 구매가 없어져 «보유 2종» 을 게이트가 직접 만든다(av0 + 아무 한 종) */
+    const other = AVATARS.find(a => a.id !== S.avatar);
+    S.avatars[other.id] = 1; markDirty(); renderCos();
     const b0 = S.avatar;
     document.querySelector('[data-cosit="' + other.id + '"]').click();
     document.querySelector('#bCos [data-coswear]').click();
@@ -187,22 +198,18 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   const battleTint = await page.evaluate(() => AV[cosCur()].tint);
   ok(battleTint === (data.find(a => a.id === wear.b1) || {}).tint, '착용 코스튬 틴트가 전투 경로(AV[cosCur()])와 동일');
 
-  /* 조건 해금 — 조건 미달이면 다이아가 있어도 거부, 조건을 채우면 통과 */
-  const gate = await page.evaluate(() => {
-    const a = AVATARS.find(x => x.req && x.req.k === 'stage');
-    S.best = 0; save();
-    const before = { ok: cosReqOk(a), own: !!S.avatars[a.id] };
-    buyAvatar(a);
-    const denied = !S.avatars[a.id];
-    S.best = a.req.v; save();
-    const after = cosReqOk(a);
-    buyAvatar(a);
-    const bought = !!S.avatars[a.id];
-    return { id: a.id, need: a.req.v, before: before.ok, denied, after, bought };
+  /* 182 — [구매] 자리를 물려받은 [승급전] 버튼이 실제로 승급전 팝업을 연다 */
+  const pbtn = await page.evaluate(() => {
+    const gone = !document.querySelector('#bCos [data-cosbuy]');
+    document.querySelector('#bCos [data-cospromo]').click();
+    const open = document.querySelector('#modal').classList.contains('on');
+    const promo = !!document.querySelector('#mbox .pr179');
+    closeModal();
+    return { gone, open, promo };
   });
   await page.waitForTimeout(200);
-  ok(!gate.before && gate.denied, '[조건 해금] ' + gate.id + ' — 스테이지 미달이면 다이아가 있어도 구매 거부');
-  ok(gate.after && gate.bought, '[조건 해금] ' + gate.id + ' — 스테이지 ' + gate.need + ' 도달 후 구매 성공');
+  ok(pbtn.gone, '[버튼] 시트에서 [구매](data-cosbuy) 가 사라짐');
+  ok(pbtn.open && pbtn.promo, '[버튼] [승급전] 이 승급전 팝업(.pr179)을 연다');
 
   /* 저장·재로드 보존 */
   await page.evaluate(() => save());
