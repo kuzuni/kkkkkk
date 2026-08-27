@@ -188,10 +188,15 @@ async function openWith(browser, save){
       await new Promise(r => setTimeout(r, 700));
       const hit = cards.filter(c => c.classList.contains('fx-hit') || c.classList.contains('fx-flash')).length;
       const parts = document.querySelectorAll('#fxl > *').length;
-      /* 격자가 팝업 밖으로 넘치지 않는가 */
-      const box = document.querySelector('#modal .mbox').getBoundingClientRect();
-      const grid = document.querySelector('#mbox .pr182').getBoundingClientRect();
-      const inside = grid.left >= box.left - 1 && grid.right <= box.right + 1 && grid.bottom <= box.bottom + 1;
+      /* 격자가 팝업 밖으로 넘치지 않는가.
+         ⚠ 격자 자체가 없으면 `getBoundingClientRect` 로 즉사한다 — 게이트는 죽지 말고 **FAIL** 해야
+         한다(LESSONS 127 «죽은 게이트»). 되돌림 시험 N3(격자 제거)이 실제로 이 자리를 때린다. */
+      const boxEl = document.querySelector('#modal .mbox'), gridEl = document.querySelector('#mbox .pr182');
+      let inside = false;
+      if (boxEl && gridEl) {
+        const box = boxEl.getBoundingClientRect(), grid = gridEl.getBoundingClientRect();
+        inside = grid.left >= box.left - 1 && grid.right <= box.right + 1 && grid.bottom <= box.bottom + 1;
+      }
       const txt = document.querySelector('#modal .mbody').textContent.replace(/\s+/g, ' ');
       closeModal();
       return { n: cards.length, painted, hit, parts, inside, cnt: /코스튬 (\d+)종 획득/.exec(txt) };
