@@ -102,26 +102,36 @@ const openCoin = async page => page.evaluate(() => {
   ok(dev <= 6, 'C4 라벨 렌더 폭 편차 ≤ 6px(qx 재보정)', dev.toFixed(1) + 'px');
 
   /* ---- [D] 구매 지급 ---- */
+  /* 153(2026-08-27) — 지급 «경로» 가 바뀌었다: 구매는 우편 1통을 만들고 재화는 수령 시에 들어온다.
+     116 이 지키려는 것은 «수량» 이므로 «구매 → 그 우편을 수령» 까지 한 뒤 잰다.
+     경로 자체(구매 직후 Δ0)는 VERIFY153 이 본다. */
   const D = await page.evaluate(ids => ids.map(id => {
-    const d0 = S.dia, m0 = S.mileage || 0, p0 = S.cnt.paid || 0;
+    const d0 = S.dia, m0 = S.mileage || 0, p0 = S.cnt.paid || 0, n0 = (S.mailx || []).length;
     devBuyDia(id);
-    return { id, dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, dPaid: (S.cnt.paid || 0) - p0 };
+    const dMail = S.mailx.length - n0;
+    claimMail(S.mailx[S.mailx.length - 1].id);
+    return { id, dDia: S.dia - d0, dCp: (S.mileage || 0) - m0, dPaid: (S.cnt.paid || 0) - p0, dMail };
   }), ['d1', 'd2', 'd3', 'd4', 'd5']);
-  D.forEach((r, i) => ok(r.dDia === DIA[i], 'D' + (i + 1) + ' ' + r.id + ' 구매 → S.dia +' + DIA[i], '+' + r.dDia));
+  D.forEach((r, i) => ok(r.dDia === DIA[i], 'D' + (i + 1) + ' ' + r.id + ' 구매 → 우편 수령 시 S.dia +' + DIA[i], '+' + r.dDia));
   ok(JSON.stringify(D.map(r => r.dCp)) === JSON.stringify(CP), 'D6 쿠폰 지급 0/0/0/1/2 유지', D.map(r => r.dCp).join('/'));
   ok(D.every(r => r.dPaid === 1), 'D7 누적 결제수 S.cnt.paid 각 +1', D.map(r => r.dPaid).join('/'));
+  ok(D.every(r => r.dMail === 1), 'D8 구매마다 우편 1통(153)', D.map(r => r.dMail).join('/'));
 
   /* ---- [E] 마일리지 교환 ---- */
   const E = await page.evaluate(() => {
     S.mileage = 3;
     const d0 = S.dia, r0 = mileageExchange(), lack = { r: r0, d: S.dia - d0, m: S.mileage };
     S.mileage = 10;
-    const d1 = S.dia, r1 = mileageExchange();
-    return { lack, okc: { r: r1, d: S.dia - d1, m: S.mileage } };
+    const d1 = S.dia, n1 = (S.mailx || []).length, r1 = mileageExchange();
+    /* 153 — 교환 보상도 우편으로 온다. 수량 검사는 그 우편을 받은 뒤에 한다. */
+    const dMail = S.mailx.length - n1;
+    if (dMail) claimMail(S.mailx[S.mailx.length - 1].id);
+    return { lack, okc: { r: r1, d: S.dia - d1, m: S.mileage, dMail } };
   });
   ok(E.lack.r === false && E.lack.d === 0 && E.lack.m === 3, 'E1 쿠폰 부족(3/10) → false · 다이아 Δ0',
      'r=' + E.lack.r + ' Δ' + E.lack.d);
-  ok(E.okc.r === true && E.okc.d === 2500000, 'E2 쿠폰 10 → 다이아 +2,500,000', '+' + E.okc.d);
+  ok(E.okc.r === true && E.okc.d === 2500000, 'E2 쿠폰 10 → 우편 수령 시 다이아 +2,500,000', '+' + E.okc.d);
+  ok(E.okc.dMail === 1, 'E2-1 교환 보상이 우편 1통으로 온다(153)', String(E.okc.dMail));
   ok(E.okc.m === 0, 'E3 쿠폰 −10', String(E.okc.m));
   /* 팝업 안내문도 새 값으로(문자열은 fmt 파생) */
   const E4 = await page.evaluate(() => {

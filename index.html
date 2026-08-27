@@ -13707,6 +13707,9 @@ const DEF = () => ({
   coll:{},                                    /* 91 — 도감 «세트 키 → 받은 단계 수» (구 카테고리 카운터 폐기) */
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
+  /* 153 — 상점 구매분은 «동적 우편» 으로 지급된다(주인 지시 2026-08-27). 고정 `MAILS` 와 달리
+     세이브에 들어간다. 보관 기간은 없다 — 수령 전에는 어떤 경로로도 지워지지 않는다. */
+  mailx:[], mailSeq:0,
   guide:{ idx:0, prog:0, gv:GUIDE_V },        /* 61 가이드 미션 — idx=현재 미션, prog=델타형 기준선, gv=미션표 버전(73) */
   /* 35·36 패스 — prem[탭]=1 활성화, got['탭:단계:칸']=1
      124 — 10 상점 «이용권» 2종도 같은 주머니에 둔다(35·36 과 키가 겹치지 않는다. KEY 유지 — 44 교훈 2).
@@ -13754,6 +13757,15 @@ function load(){
     }
     b.daily.freeSum = Object.assign(DEF().daily.freeSum, (d.daily && d.daily.freeSum) || {});
     b.own = d.own || {}; b.mail = d.mail || {}; b.avatars = d.avatars || { av0:1 };
+    /* 153 — 동적 우편. 구 세이브엔 두 키가 없다(44 교훈 2 «없으면 기본값», KEY 는 올리지 않는다).
+       id·수량을 여기서 한 번 정화해 두면 `mailRowHtml` 이 NaN 을 그릴 길이 없다. */
+    b.mailx = (Array.isArray(d.mailx) ? d.mailx : []).filter(m => m && typeof m.id === 'string')
+      .map(m => ({ id:m.id, t:String(m.t || '우편'), b:String(m.b || ''),
+                   g:Math.max(0, m.g | 0), c:Math.max(0, m.c | 0), r:Math.max(0, m.r | 0),
+                   m:Math.max(0, m.m | 0), src:m.src || 'shop', ts:Number(m.ts) || 0 }))
+      .filter(m => m.g + m.c + m.r + m.m > 0 && b.mail[m.id] !== 2);
+    b.mailSeq = Math.max(Number(d.mailSeq) || 0,
+      ...b.mailx.map(m => (/^x(\d+)$/.exec(m.id) || [0, 0])[1] | 0), 0);
     b.seen = d.seen || {};
     /* 91 — 도감 구조 교체. 구 세이브의 카테고리 카운터 4개(`coll.skill/equip/pet/relic` 숫자)는 «세트 키» 가
        아니므로 버린다(지시 ①). 새 규칙은 «세트 최저 Lv» 로 다시 강화하면 되므로 진행도 손해가 없다.
@@ -17379,9 +17391,33 @@ function claimGuide(){
 }
 /* 92 — `S.mail[id]` 는 3상태다: **0/없음 = 미수령 · 1 = 수령 완료 · 2 = 삭제됨**(목록에서 제외).
    `MAILS` 원본은 불변이라 «삭제» 는 렌더 필터일 뿐이고, 미수령(0)은 절대 지워지지 않는다. */
-const mailLeft = () => MAILS.filter(m => !S.mail[m.id]).length;
-const mailList = () => MAILS.filter(m => S.mail[m.id] !== 2);      /* 화면에 남는 우편 */
-const mailDelable = () => MAILS.filter(m => S.mail[m.id] === 1).length;   /* 지울 수 있는 = 수령 완료분 */
+/* ---- 153 — 상점 구매분 우편 지급 (2026-08-27 저장소 주인 지시) ----------------
+   원문: «상점에서 구매한 것들은 전부 우편함으로 지급, 상점 구매분은 우편함 기간 무한».
+   고정 우편(`MAILS` 5통)은 그대로 두고 구매마다 `S.mailx` 에 한 통을 쌓는다. 목록·수령·삭제는
+   전부 `allMails()` 를 지나므로 두 출처가 한 화면에서 같은 규칙으로 돈다.
+   «기간 무한» 은 우리 우편에 만료가 아예 없어(69 «기한 없음») 구조적으로 만족된다 —
+   우편이 사라지는 유일한 경로는 [읽음 전체 삭제]이고 그것은 **수령 완료(1)** 만 고른다(`delReadMail`).
+   ⚠ 스코프 — 소환(가챠) 결과는 관례대로 즉시 결과 팝업(12) 유지, 이용권(124/151)은 «지급품» 이
+   아니라 계정 권한이라 즉시 반영이다. 근거는 PROGRESS 153 비고. */
+const allMails = () => MAILS.concat(S.mailx || []);
+const mailLeft = () => allMails().filter(m => !S.mail[m.id]).length;
+const mailList = () => allMails().filter(m => S.mail[m.id] !== 2);      /* 화면에 남는 우편 */
+const mailDelable = () => allMails().filter(m => S.mail[m.id] === 1).length;   /* 지울 수 있는 = 수령 완료분 */
+/* 상점발 우편 한 통을 쌓는다. 보상 키는 `MAIL_RW` 와 같다(g 골드 · c 다이아 · r 유물조각 · m 마일리지 쿠폰).
+   id 는 `x<seq>` 라 고정 우편(m1~m5)과 절대 겹치지 않는다. */
+function sendMail(o){
+  if(!Array.isArray(S.mailx)) S.mailx = [];
+  const m = { id:'x' + (S.mailSeq = (S.mailSeq | 0) + 1), t:o.t, b:o.b || '',
+              g:o.g || 0, c:o.c || 0, r:o.r || 0, m:o.m || 0, src:o.src || 'shop', ts:Date.now() };
+  if(m.g + m.c + m.r + m.m <= 0) return null;   /* 보상 0통은 만들지 않는다 — 행 썸네일이 설 자리가 없다 */
+  S.mailx.push(m);
+  sideAlert('mail', true);                      /* ▦ 메뉴 레드닷 — 받을 우편이 생겼다 */
+  uiDirty = true; save();
+  /* 우편함을 열어 둔 채 샀으면 그 자리에서 늘어난다. `fxStillOpen` 은 파일 아래쪽의 `const` 라
+     로드 도중(TDZ)에도 안전하도록 typeof 로 가린다 — 이 함수는 그때 불릴 일이 없지만 값싼 보험이다. */
+  if(typeof fxStillOpen === 'function' && fxStillOpen('ml69')) openMail();
+  return m;
+}
 /* ---- 69 우편함 — 보상 목록화 · 행별 수령 -------------------------------------
    레퍼런스 행은 «보상 썸네일 1칸 + 초록 요약(«햇병아리 외 2개»)» 이다. 우리 우편의 보상은
    골드·다이아·유물조각 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
@@ -17389,7 +17425,9 @@ const mailDelable = () => MAILS.filter(m => S.mail[m.id] === 1).length;   /* 지
 const MAIL_RW = [
   { k:'g', ic:curIc('gold'), n:'골드',   g:0 },
   { k:'c', ic:curIc('dia'), n:'다이아', g:2 },
-  { k:'r', ic:curIc('relic'), n:'유물조각', g:3 }
+  { k:'r', ic:curIc('relic'), n:'유물조각', g:3 },
+  /* 153 — 상점발 우편이 마일리지 쿠폰(44)을 실어 나른다. 프레임 색은 4(전설 금색) = 쿠폰 톤 */
+  { k:'m', ic:curIc('mile'), n:'마일리지 쿠폰', g:4 }
 ];
 const mailRw = m => MAIL_RW.map(t => ({ ...t, v: m[t.k] || 0 })).filter(t => t.v > 0);
 /* 아이템 프레임 안 수량 배지용 «짧은» 표기. 골드는 111 단위를 접어야 배지 폭에 들어간다
@@ -17403,33 +17441,46 @@ function fmtShort(n, k){
   return (n >= 10 ? String(Math.floor(n)) : n.toFixed(1).replace(/\.0$/, '')) + SUF[i];
 }
 function claimMail(id){
-  const m = MAILS.find(x => x.id === id);
+  const m = allMails().find(x => x.id === id);
   if(!m || S.mail[id]) return;
   S.mail[id] = 1;
-  S.gold += m.g; S.dia += m.c; S.relic += m.r || 0;
+  /* 153 — 동적 우편은 키가 빠져 있을 수 있어 전부 `|| 0` 으로 받는다(undefined 를 더하면 NaN 이 된다) */
+  S.gold += m.g || 0; S.dia += m.c || 0; S.relic += m.r || 0;
+  if(m.m) S.mileage = (S.mileage || 0) + m.m;
   fxReward();                                 /* 58 */
   uiDirty = true; save();
   fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · '));   /* 150 */
 }
 function claimAllMail(){
-  let g = 0, c = 0, r = 0, n = 0;
-  MAILS.forEach(m => { if(S.mail[m.id]) return; S.mail[m.id] = 1; g += m.g; c += m.c; r += m.r || 0; n++; });
+  let g = 0, c = 0, r = 0, mi = 0, n = 0;
+  allMails().forEach(m => {
+    if(S.mail[m.id]) return;
+    S.mail[m.id] = 1; g += m.g || 0; c += m.c || 0; r += m.r || 0; mi += m.m || 0; n++;
+  });
   if(!n) return;
   S.gold += g; S.dia += c; S.relic += r;
+  if(mi) S.mileage = (S.mileage || 0) + mi;
   fxReward();                                 /* 58 */
   uiDirty = true; save();
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
   fxToast('우편 ' + n + '통 수령 — ' + curIc('gold') + ' ' + fmtG(g) + ' · ' + curIc('dia') + ' ' + fmt(c)
-    + (r ? ' · ' + curIc('relic') + ' ' + fmt(r) : ''));
+    + (r ? ' · ' + curIc('relic') + ' ' + fmt(r) : '')
+    + (mi ? ' · ' + curIc('mile') + ' ' + fmt(mi) : ''));   /* 153 */
 }
 /* 92 — [읽음 전체 삭제]. **수령 완료(1) 인 우편만** 2 로 넘겨 목록에서 뺀다.
    미수령(0)은 손대지 않는다 — 보상이 사라지면 안 된다. 지운 id 를 돌려줘 연출이 그 행만 접게 한다. */
 function mailDelToast(n){ if(n) fxToast('읽은 우편 ' + n + '통 삭제'); }
 function delReadMail(){
-  const ids = MAILS.filter(m => S.mail[m.id] === 1).map(m => m.id);
+  const ids = allMails().filter(m => S.mail[m.id] === 1).map(m => m.id);
   if(!ids.length) return ids;
   ids.forEach(id => { S.mail[id] = 2; });
+  /* 153 — 고정 우편은 원본이 상수라 상태(2)로만 남기지만, 동적 우편은 세이브에서 아예 뺀다
+     (안 그러면 `S.mailx` 가 구매 횟수만큼 무한히 자란다). 미수령(0)은 어느 쪽도 안 건드린다. */
+  if(Array.isArray(S.mailx) && S.mailx.length){
+    S.mailx = S.mailx.filter(m => S.mail[m.id] !== 2);
+    ids.forEach(id => { if(id.charAt(0) === 'x') delete S.mail[id]; });
+  }
   uiDirty = true; save();
   /* 9회차 Q-① — 토스트는 여기서 안 띄운다. 이 함수는 연출이 **다 끝난 뒤**(`MLDEL_DUR + 스태거 + 20`
      = 570ms) 상태를 반영하려고 불리는데, 유일한 «문자» 확인인 토스트까지 거기 묶여 있어
@@ -18374,7 +18425,8 @@ function roulFinish(idx, txt){
 function mailRowHtml(m){
   const done = !!S.mail[m.id];
   const rw = mailRw(m);
-  const top = rw.slice().sort((a, b) => b.v - a.v)[0];          /* 대표 썸네일 = 값이 가장 큰 보상 */
+  /* 153 — 보상 0통은 `sendMail` 이 만들지 않지만, 손댄 세이브가 들어와도 행이 죽지 않게 폴백을 둔다 */
+  const top = rw.slice().sort((a, b) => b.v - a.v)[0] || { n:'보상', ic:curIc('gold'), g:0, k:'g', v:0 };
   const sum = top.n + (rw.length > 1 ? ' 외 ' + (rw.length - 1) + '개' : '');
   /* 10회차 — 내용을 **고정 높이 147px 래퍼**로 감싼다. 상자는 접히는데 자식은 안 접혀서
      «잘린 채 읽히는 프레임» 이 4회차째 축을 바꿔 가며 재발했다(하변 → 우변 → **상변**).
@@ -18515,7 +18567,7 @@ function openMail(){
          고치면 전 화면 버스트가 같이 바뀐다(ROUTINE [4] «남의 구간 절대 금지») → 쓰지 않는다.
        임펄스는 **행 자신의 림 플래시**(`mlOut` 9%: inset 5 → 12px `#FFF7EC`)로 옮겼다 — 스필 0 이고,
        «버튼만 임펄스, 정작 사건 주체인 행은 등속 드리프트» 라는 층위 불일치도 같이 없어진다(F-④). */
-    const rows = MAILS.filter(m => S.mail[m.id] === 1)
+    const rows = allMails().filter(m => S.mail[m.id] === 1)   /* 153 — 상점발 우편도 같은 연출을 탄다 */
       .map(m => $('mbox').querySelector('[data-ml="' + m.id + '"]'))
       .map(el => el && el.closest('.ml-r')).filter(Boolean);
     /* 행에는 파티클을 뿌리지 않는다 — `fxBurst` 의 링 반경은 대상 짧은 변에서 나오는데
@@ -19636,24 +19688,30 @@ const MILE_NEED = 10, MILE_DIA = 2500000;
 const wonTxt = w => String(w).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원';
 const diaPackName = p => '다이아 ' + p.q.slice(1) + '개';
 /* 다이아 상품 지급 — 결제 성공 시 호출될 지점. 재화·쿠폰·누적 결제수를 한 번에 반영하고 저장한다. */
+/* 153(2026-08-27 주인 지시) — 지급은 **우편함**으로 간다. 재화·쿠폰을 여기서 바로 더하지 않는다.
+   결제 카운터(`S.cnt.paid`)만 «구매» 사건이므로 즉시 오른다 — 수령 여부와 무관한 결제 이력이다. */
 function grantDiaPack(p){
   if(!p) return null;
-  S.dia += p.dia;
-  if(p.cp) S.mileage = (S.mileage || 0) + p.cp;
   S.cnt.paid = (S.cnt.paid || 0) + 1;
+  const m = sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0,
+    b:'상점에서 구매하신 상품입니다. 보관 기간은 없으니 언제든 수령하세요.' });
   uiDirty = true; save();
   const sw = $('shopw');
   if(sw && sw.classList.contains('on') && shopCat === 'coin') renderCoinPage($('shopList'));
-  return { dia:S.dia, mileage:S.mileage, paid:S.cnt.paid };
+  notify('🛒 ' + diaPackName(p) + ' — 우편함으로 발송되었습니다');
+  return { dia:S.dia, mileage:S.mileage, paid:S.cnt.paid, mail:m && m.id };
 }
 /* 디버그 지급 — 결제가 없는 동안 마일리지 적립·교환을 실제로 굴려 보기 위한 유일한 경로 */
 window.devBuyDia = id => grantDiaPack(DIA_PACKS.find(x => x.id === id));
 function mileageExchange(){
   if((S.mileage || 0) < MILE_NEED) return false;
-  S.mileage -= MILE_NEED; S.dia += MILE_DIA;
+  /* 153 — 쿠폰은 즉시 차감(교환 행위)하고 보상 다이아는 우편으로 보낸다 */
+  S.mileage -= MILE_NEED;
+  sendMail({ t:'📦 마일리지 교환 보상', c:MILE_DIA,
+    b:'마일리지 쿠폰 ' + MILE_NEED + '개를 교환한 보상입니다. 보관 기간은 없습니다.' });
   uiDirty = true; save();
   renderCoinPage($('shopList'));
-  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA) + '</b> 획득 · 남은 쿠폰 ' + S.mileage + '개');
+  notify(curIc('dia') + ' <b>' + fmt(MILE_DIA) + '</b> 우편함으로 발송 · 남은 쿠폰 ' + S.mileage + '개');
   return true;
 }
 function renderCoinPage(list){
@@ -19798,9 +19856,13 @@ $('shopList').addEventListener('click', e => {
     const ex = EXCHANGE.find(v => v.dia === +ex0.dataset.ex);
     if(!ex) return;
     if(S.dia < ex.dia){ notify(curIc('dia') + ' <b>' + fmt(ex.dia - S.dia) + '</b> 더 필요합니다'); return; }
-    S.dia -= ex.dia; S.relic += ex.rel; uiDirty = true; save();
+    /* 153 — 다이아는 즉시 나가고 유물조각은 우편으로 온다(상점 구매분 = 우편 지급) */
+    S.dia -= ex.dia;
+    sendMail({ t:'📦 유물조각 교환', r:ex.rel,
+      b:'상점에서 교환하신 유물조각입니다. 보관 기간은 없습니다.' });
+    uiDirty = true; save();
     renderCoinPage($('shopList'));
-    notify(curIc('dia') + ' <b>' + fmt(ex.dia) + '</b> → ' + curIc('relic') + ' <b>' + fmt(ex.rel) + '</b>');
+    notify(curIc('dia') + ' <b>' + fmt(ex.dia) + '</b> → ' + curIc('relic') + ' <b>' + fmt(ex.rel) + '</b> 우편함 발송');
     return;
   }
   /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
@@ -19980,6 +20042,10 @@ function renderPassPage(list){
   h += '</div>';
   list.innerHTML = h;
 }
+/* 153(2026-08-27) — «상점 구매품은 전부 우편함으로» 의 대상은 **지급품(재화·패키지)** 이다.
+   이용권은 물건이 아니라 계정 권한(`S.pass.*`)이라 우편에 담을 것이 없고, 담으면 «수령 전에는
+   광고가 그대로 뜨는» 이상한 상태가 생긴다 → 즉시 반영을 유지한다(근거는 PROGRESS 153 비고).
+   ⚠ 이용권 카드에 «구매 즉시/매일 보석 지급» 이 붙으면 **그 재화분만** `sendMail()` 로 보낼 것. */
 /* 151 — 이용권 «지급» 한 곳. 결제 콜백이 붙어도 이 함수를 그대로 쓴다(44 `grantDiaPack` 과 같은 꼴).
    차감은 하지 않는다 — 차감은 buyPass() 몫이다. */
 function grantPass(id){
