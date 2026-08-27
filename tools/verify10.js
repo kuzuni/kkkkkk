@@ -8,14 +8,15 @@
    ⚠ 여기 박힌 값은 «레퍼런스 실측» 이지 «지금 CSS» 가 아니다. CSS 를 바꿔서 이 게이트가 깨지면
       게이트를 고치지 말고 CSS 를 되돌려라(레퍼런스가 바뀐 게 아니면).
 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const T = [];   /* [이름, 실제값, 기대값, 허용오차] */
 const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

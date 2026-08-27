@@ -16,7 +16,8 @@
  * getImageData 를 쓰므로 --allow-file-access-from-files 로 띄운다(verify80.js 와 같다).
  * 사용: node tools/verify147.js
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -36,11 +37,11 @@ const SPEC = [
 (async () => {
   const args = ['--allow-file-access-from-files'];
   let browser;
-  try { browser = await chromium.launch({ args }); }
+  try { browser = await launch(chromium, { args }); }
   catch (e) {
     const p = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
     if (!fs.existsSync(p)) throw e;
-    browser = await chromium.launch({ executablePath: p, args });
+    browser = await launch(chromium, { executablePath: p, args });
   }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();

@@ -4,7 +4,8 @@
      --geo   `.ofrs` 스테이지 좌표 + 프레임 좌표 + ref 환산(frame y + 84)을 찍는다.
    좌표계: `.ofrs`(1080×972) 는 ref 원점 y772 짜리 1:1 프레임이므로 ref y = stage y + 772.
    LESSONS 28-③ — 전투 캔버스가 잉크 스캔을 오염시키므로 캡처 직전 #view 를 숨기고 평탄한 중간톤을 깐다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -20,8 +21,8 @@ function launchOpts(){
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

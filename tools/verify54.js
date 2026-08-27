@@ -2,7 +2,8 @@
    기하는 측정표 docs/measure/54-랭킹팝업.md 의 «프레임 좌표(= ref y − 84)» 를 그대로 기대값으로 쓴다.
    기능은 «눌렀을 때 무엇이 바뀌는지» 를 헤드리스로 실제 확인한다(ROUTINE «기능 완성 규칙»).
    사용: node tools/verify54.js */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -75,8 +76,8 @@ const GEO = [
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

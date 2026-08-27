@@ -5,7 +5,8 @@
  * 비평(점수)은 하지 않는다 — 회귀만 본다.
  */
 const path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
@@ -29,7 +30,7 @@ const GEO = [
 ];
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const browser = await launch(chromium, { executablePath: '/opt/pw-browsers/chromium' });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

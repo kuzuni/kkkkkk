@@ -1,11 +1,12 @@
 /* 114 7회차 — «남은 문제 B» 5건의 회수 실측.
    각 항목이 6회차에 비평가가 잰 값에서 어디로 갔는지를 수치로 남긴다(review §7 표의 근거).
    실행: NODE_PATH=/opt/node22/lib/node_modules node tools/probe114b.js */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const p = await b.newPage({ viewport: { width: 1080, height: 2280 } });
   const errs = [];
   p.on('pageerror', e => errs.push(String(e)));

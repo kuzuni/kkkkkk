@@ -4,7 +4,8 @@
  *   · 접속일 2 · 프리미엄 미활성(프리미엄 칸 🔒) · 리스트 스크롤 최상단(«접속일» 알약이 보인다)
  *   node tools/cap36.js [출력이름]   → docs/review/36-r{n}.png
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -28,8 +29,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
     [KEY, JSON.stringify(SAVE)]);

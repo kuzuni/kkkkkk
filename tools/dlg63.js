@@ -13,7 +13,8 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
@@ -65,8 +66,8 @@ const PROBE = (hostSel, boxSel) => `(() => {
   const exePath = ['/opt/pw-browsers/chromium', process.env.PW_CHROMIUM]
     .filter(Boolean).find(p => { try { return fs.existsSync(p); } catch (e) { return false; } });
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { browser = await chromium.launch({ executablePath: exePath }); }
+  try { browser = await launch(chromium); }
+  catch (e) { browser = await launch(chromium, { executablePath: exePath }); }
 
   const out = {};
   for (const H of HEIGHTS) {

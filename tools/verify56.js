@@ -1,7 +1,8 @@
 /* 작업 56 — 절전 모드 «실동작» 게이트.
    레이아웃이 아니라 «절전이 실제로 절전인가 / 전투는 계속 도는가 / 해제가 되는가» 만 본다.
    실행: node tools/verify56.js   → 마지막 줄이 `VERIFY56 PASS n/n` 이어야 한다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -16,8 +17,8 @@ const ok = (n, c, d) => { R.push({ n, c }); console.log((c ? '  ✓ ' : '  ✗ '
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

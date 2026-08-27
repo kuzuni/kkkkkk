@@ -12,7 +12,8 @@
      §6 배너 상태 — 미완이어도 커서 pointer · `[미션-n]` 라벨이 클릭을 배너로 흘린다 · 기하 불변.
      §7 세이브 — 수령 시 다이아가 실제로 늘고 localStorage 에 반영된다.
      §8 콘솔 에러 0 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 let pass = 0, fail = 0;
@@ -34,12 +35,12 @@ const setMission = (p, i, mut) => p.evaluate(([i, mut]) => {
 
 /* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 (76) */
 async function launchAny(){
-  try { return await chromium.launch(); }
+  try { return await launch(chromium); }
   catch (e) {
     const fs = require('fs');
     const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(x => { try { return fs.existsSync(x); } catch (_) { return false; } });
     if (!cand) throw e;
-    return await chromium.launch({ executablePath: cand });
+    return await launch(chromium, { executablePath: cand });
   }
 }
 

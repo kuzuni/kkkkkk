@@ -5,7 +5,8 @@
      --day N  «오늘» 이 N일차가 되도록 S.att.n 을 주입한다(기본 3 → 4일차가 오늘).
    LESSONS 28-③ — 캔버스가 잉크 스캔을 오염시키므로 캡처 직전 #view 를 숨기고 평탄한 중간톤을 깐다.
    playwright 번들 브라우저가 없으면 /opt/pw-browsers/chromium 으로 떨어진다(smoke.js 와 같은 처방). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -23,8 +24,8 @@ function launchOpts(){
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

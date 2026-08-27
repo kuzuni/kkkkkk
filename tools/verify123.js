@@ -13,7 +13,8 @@
  *   7. ◀ 나가기 = 중단(전적·보상 없음)  8. 구 세이브(r30·r120 기록) 로드 정상
  */
 const path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 
 const fails = [];
@@ -35,8 +36,8 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
   let browser;
   /* 썸네일 잉크를 getImageData 로 재려면 file:// 캔버스 오염을 풀어야 한다(verify72 와 같은 인자) */
   const ARGS = { args: ['--allow-file-access-from-files'] };
-  try { browser = await chromium.launch(ARGS); }
-  catch (e) { browser = await chromium.launch(Object.assign({}, launchOpts(), ARGS)); }
+  try { browser = await launch(chromium, ARGS); }
+  catch (e) { browser = await launch(chromium, Object.assign({}, launchOpts(), ARGS)); }
   const errs = [];
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();

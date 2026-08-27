@@ -8,7 +8,8 @@
  *   D. 격자 — 항상 20칸, 등급 내림차순, 빈 칸은 플레이스홀더 없음
  *   E. 닫기 — 딤 클릭으로 닫힌다
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
@@ -30,8 +31,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

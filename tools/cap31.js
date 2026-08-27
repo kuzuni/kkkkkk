@@ -6,7 +6,8 @@
  * (임시 주입으로 화면만 띄우지 않고 «실제 클리어 경로» 를 타는 이유: T3 도 기능 연결을
  *  가능한 범위에서 확인하라는 지시서 [-1] T3 항목 때문이다.)
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -23,8 +24,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
 
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   /* 전투력을 크게 올려 1층 요구치를 확실히 넘긴다 */

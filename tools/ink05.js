@@ -4,7 +4,8 @@
    크로미움에게 시킨다(54 verify54 와 같은 방식 — npm 의존성 0).
    실행: node tools/ink05.js [캡처경로]   (기본 docs/review/05-r8.png)
    좌표계 = 캡처(1080x2280). ref 값은 측정표 §7·§8 에서 −84 환산. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -36,8 +37,8 @@ function launchOpts() {
   const b64 = fs.readFileSync(file).toString('base64');
 
   let br;
-  try { br = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; br = await chromium.launch(o); }
+  try { br = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; br = await launch(chromium, o); }
   const p = await br.newPage();
   const out = await p.evaluate(async ({ b64, WINS }) => {
     const img = new Image();

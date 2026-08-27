@@ -3,13 +3,14 @@
  * 지시서 ⑥ «61 팝업 캡처(스크롤 3구간)» 를 위한 것.
  */
 const path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const KEY = 'idle_hunter_save_v4';
 const out = n => path.resolve(__dirname, '..', 'docs', 'review', n);
 
 (async () => {
-  const browser = await chromium.launch({ args: ['--allow-file-access-from-files'] });
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   /* 절반쯤 모은 계정 — 보유/미보유/조건 잠금이 한 화면에 같이 나오게 */
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} }, [KEY, JSON.stringify({

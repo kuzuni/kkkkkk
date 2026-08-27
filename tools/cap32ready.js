@@ -1,10 +1,11 @@
 /* 작업 32 — **보상받기(02 ④) 상태** 캡처. 32 의 수정이 `.todo` 밖으로 새지 않았음을 눈으로 확인하는 증거.
    실행: node tools/cap32ready.js [출력경로]   */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const out = process.argv[2] || 'docs/review/32-ready-r4.png';
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

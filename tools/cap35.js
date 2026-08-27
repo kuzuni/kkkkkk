@@ -6,7 +6,8 @@
  * 캡처 오염 방지: 렌더 루프를 세우고(41-④) · 캔버스를 내리고(28-③) · 게임 로직을 멈춘다(58-②).
  *   node tools/cap35.js [출력이름]   → docs/review/35-r{n}.png
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -29,8 +30,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
     [KEY, JSON.stringify(SAVE)]);

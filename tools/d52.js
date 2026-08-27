@@ -3,7 +3,8 @@
    전투 콘텐츠(캐릭터·몹·데미지)는 원래 다르므로 큰 차분이 나오지만,
    고정 UI(HUD·탭바·사이드)는 Δ≈0 이라 «새로 생긴 UI» 가 선명하게 드러난다.
    사용: node tools/d52.js [A.jpg] [B.jpg] [step]  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -14,7 +15,7 @@ const ST = parseInt(process.argv[4] || '20', 10);
 (async () => {
   const a64 = fs.readFileSync(path.resolve(A)).toString('base64');
   const b64 = fs.readFileSync(path.resolve(B)).toString('base64');
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const page = await browser.newPage();
   await page.setContent('<canvas id=x></canvas><canvas id=y></canvas>');
   const out = await page.evaluate(async ([a64, b64, ST]) => {

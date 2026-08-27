@@ -1,6 +1,7 @@
 /* 55 설정 팝업 회귀 게이트 — 기하(캡처 실측 대조) + 기능(누르면 무엇이 바뀌는지).
    사용: node tools/verify55.js   → 마지막 줄 `VERIFY55 n/n` */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs'); const path = require('path');
 function launchOpts(){ for(const p of [process.env.PW_CHROMIUM,'/opt/pw-browsers/chromium'].filter(Boolean)){
   try{ if(fs.existsSync(p)) return { executablePath:p }; }catch(e){} } return {}; }
@@ -11,8 +12,8 @@ const eq = (n, got, want, tol = 1.5) => {
 };
 const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, bad.push(`${n}: ${got} ≠ ${want}`)); };
 (async () => {
-  let browser; try { browser = await chromium.launch(); }
-  catch(e){ const o = launchOpts(); if(!o.executablePath) throw e; browser = await chromium.launch(o); }
+  let browser; try { browser = await launch(chromium); }
+  catch(e){ const o = launchOpts(); if(!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport:{ width:1080, height:2280 }, deviceScaleFactor:1 });
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => errs.push(String(e)));

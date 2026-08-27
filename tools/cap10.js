@@ -11,14 +11,15 @@
 
    실행: node tools/cap10.js [출력경로] [--geo]
 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/10-r3.png';
 const GEO = process.argv.includes('--geo');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

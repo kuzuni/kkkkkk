@@ -3,7 +3,8 @@
    대신 **경계를 사이에 둔 두 점의 색차** 를 행마다 재면, 요소가 있는 행에서만 차가 커진다.
    사용: node tools/edge52.js <img> <xL> <xR> <y0> <y1>
      xL/xR = 경계 좌우 표본 x. 출력: y, Δ(맨해튼), 두 색 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -13,7 +14,7 @@ const Y0 = +process.argv[5], Y1 = +process.argv[6];
 
 (async () => {
   const b64 = fs.readFileSync(path.resolve(IMG)).toString('base64');
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const page = await browser.newPage();
   await page.setContent('<canvas id=c></canvas>');
   const out = await page.evaluate(async ([b64, XL, XR, Y0, Y1]) => {

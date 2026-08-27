@@ -8,7 +8,8 @@
  *   · 앵커는 측정표의 «ref 절대 y − 84» 에서만 가져온다(프레임 높이 차로 유도하지 않는다).
  *   · 영속성 검사에 addInitScript 를 쓰지 않는다(LESSONS 50-②) — 페이지 안에서 올리고 reload 한다.
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -41,8 +42,8 @@ const openAttTab = async (page) => {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const errs = [];
 
   /* ---------- 1. 탭 전환 · 슬롯 (측정표 §9-2) ---------- */

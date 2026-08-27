@@ -5,7 +5,8 @@
 
    사용: node tools/probe147b.js [TH]   (TH 기본 100)
 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -14,8 +15,8 @@ const TH = +(process.argv[2] || 100);
 (async () => {
   const args = ['--allow-file-access-from-files'];
   let browser;
-  try { browser = await chromium.launch({ args }); }
-  catch (e) { browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args }); }
+  try { browser = await launch(chromium, { args }); }
+  catch (e) { browser = await launch(chromium, { executablePath: '/opt/pw-browsers/chromium', args }); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   await page.goto('file://' + path.resolve('index.html'), { waitUntil: 'load' });

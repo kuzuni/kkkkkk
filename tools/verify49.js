@@ -8,7 +8,8 @@
    사용: node tools/verify49.js [불러올.html] [출력.json]
    브라우저: PW_CHROMIUM 또는 /opt/pw-browsers/chromium-1194/chrome-linux/chrome */
 const fs = require('fs'), path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 function launchOpts(){
   const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium',
@@ -21,8 +22,8 @@ function launchOpts(){
   const target = process.argv[2] || path.resolve(__dirname, '..', 'index.html');
   const out = process.argv[3] || null;
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });

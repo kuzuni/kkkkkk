@@ -1,7 +1,8 @@
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const p = await b.newPage({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));
   await p.waitForTimeout(800);

@@ -4,14 +4,15 @@
      --geo  주요 요소의 프레임 좌표를 JSON + 표로 찍는다.
    LESSONS 28-③ — 캔버스가 잉크 스캔을 오염시키므로 캡처 직전 #view 를 숨기고 평탄한 중간톤을 깐다.
    LESSONS 51-③ — 유휴 루프가 굴리는 값(전투력·닉네임)은 픽셀 회귀에서 빼야 하므로 루프를 멈춘다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/69-r1.png';
 const GEO = process.argv.includes('--geo');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

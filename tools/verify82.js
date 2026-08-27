@@ -5,7 +5,8 @@
    §3 픽셀: 미보유 카드 3장 이상에서 «자물쇠 바깥 영역 평균 밝기(아이콘 표시) > (아이콘 숨김)»
    §4 스킬(#bSk)·펫(#bPet) 양쪽 모두 · 콘솔 에러 0 */
 const fs = require('fs'), path = require('path'), http = require('http');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 let fails = [], checks = 0;
 const ck = (name, ok, info) => { checks++; console.log((ok ? '  ✓ ' : '  ✗ ') + name + (info ? ' — ' + info : '')); if(!ok) fails.push(name); };
@@ -55,12 +56,12 @@ function diffStats(A, B, lock, bandRel){
   const PORT = srv.address().port;
   const ARGS = { args: [] };
   let browser;
-  try { browser = await chromium.launch(ARGS); }
+  try { browser = await launch(chromium, ARGS); }
   catch (e) {
     const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean)
       .find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
     if (!cand) throw e;
-    browser = await chromium.launch({ ...ARGS, executablePath: cand });
+    browser = await launch(chromium, { ...ARGS, executablePath: cand });
   }
   const page = await browser.newPage({ viewport: { width: 540, height: 1140 } });
   const errs = [];

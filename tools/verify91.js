@@ -9,7 +9,8 @@
      [5] UI  — 21 팝업 탭 6개 · 세트 카드 · [강화] 버튼 실동작(단계 +1 · 전투력 상승) · 유물 3세트 3·4·3(118)
      [6] 연동 — 레드닷(사이드·탭·서브탭) · 가이드 미션 «도감 보너스 1회» · 87 코스튬 해금 조건
    기능 체크 표는 `--table` 로 출력한다(review 파일에 붙일 것). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -30,8 +31,8 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();

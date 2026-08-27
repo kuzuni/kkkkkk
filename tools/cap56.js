@@ -5,7 +5,8 @@
    LESSONS 30-② — 「STAGE N」 토스트 같은 시간 의존 상태가 캡처마다 다르게 찍히면
    회차마다 다른 화면을 채점하게 된다. 캡처 직전에 msgT 를 0 으로 눕힌다.
    playwright 번들 브라우저가 없으면 /opt/pw-browsers/chromium 으로 떨어진다(smoke.js 와 같은 처방). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -21,8 +22,8 @@ function launchOpts(){
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

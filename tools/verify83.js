@@ -2,7 +2,8 @@
    기하(행 그리드·잉크 bbox)는 tools/verifyA2.js + tools/scanA2.py 담당. 여기서는
    ① 클릭 → #collw.on ② 다른 팝업이 열려 있어도 걷고 연다 ③ 레드닷 = collReady 연동
    ④ 수령 후 레드닷 소멸 ⑤ 닫기 → 메인 복귀 를 실제 게임 데이터로 확인한다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -17,8 +18,8 @@ const ok = (c, m) => { c ? (pass++, console.log('  ✓ ' + m)) : (fail++, consol
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();

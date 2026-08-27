@@ -6,7 +6,8 @@
      [4] UI     — 04 스킬 격자 5열 x 5행 · 안쪽 스크롤 성립 · .sk-tot/.sk-btn y 불변
      [5] 도감   — COLL.skill 마지막 티어 need = 전 종 수(24) · 11 확률 팝업 24행
    기능 체크 표(review 파일에 붙일 것)는 `--table` 로 출력한다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -42,8 +43,8 @@ const OLD = { slash:[0,0.85,1.00], shuri:[0,2.20,0.55], multi:[1,1.10,0.80], orb
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();

@@ -5,7 +5,8 @@
    [3]-(가) 기계적 작업 검증: 레퍼런스 대조(비평가) 없이 «남은 미변환분 0 · 콘솔 에러 0 ·
    요소 겹침/잘림 0 · 탭 전환 실동작» 을 DOM 실측으로 판정한다.
    실행: node tools/verify45.js   (1080x2280 기준 · 헤드리스) */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const W = 1080, H = 2280;
@@ -27,8 +28,8 @@ const settled = async page => {
 (async () => {
   /* 번들 브라우저가 없으면 컨테이너의 chromium-1194 로 떨어진다(LESSONS 57 환경 메모) */
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }); }
+  try { browser = await launch(chromium); }
+  catch (e) { browser = await launch(chromium, { executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }); }
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const errs = [];
   const page = await ctx.newPage();

@@ -6,7 +6,8 @@
  * 캡처 오염 방지: 캔버스를 내리고(28-③) 렌더 루프를 세운다(41-④).
  *   node tools/cap16.js [출력이름]   → docs/review/16-r{n}.png
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 const KEY = 'idle_hunter_save_v4';
@@ -27,12 +28,12 @@ function launchOpts(){
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
+  try { browser = await launch(chromium); }
   catch (e) {
     const o = launchOpts();
     if (!o.executablePath) throw e;
     console.log('[i] 번들 브라우저 없음 → ' + o.executablePath);
-    browser = await chromium.launch(o);
+    browser = await launch(chromium, o);
   }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   await ctx.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },

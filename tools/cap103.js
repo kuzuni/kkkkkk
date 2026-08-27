@@ -3,7 +3,8 @@
    ref 는 리스트가 **바닥까지 스크롤된** 상태이고 맨 위 행이 반쯤 잘려 있다 → openChat() 이 그 상태로 연다.
    사용: node tools/cap103.js [출력경로]
    출력: 스크린샷 + 실측 bbox JSON + «CAP103 …» 요약(측정표 §1·§3·§5·§6 대조용). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -18,8 +19,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

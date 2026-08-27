@@ -2,7 +2,8 @@
    예) node tools/cap91.js weapon 91-r1     → docs/review/91-r1.png
    실제 게임 데이터를 넣는다(세트별로 레벨을 달리 줘 «가능/불가/MAX» 상태가 한 화면에 다 보이게).
    1080×2280 · 애니메이션이 끝난 뒤 찍는다(LESSONS 21(2)-1). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -16,8 +17,8 @@ const OUT = process.argv[3] || ('91-' + TAB);
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   await p.goto('file://' + path.resolve(__dirname, '../index.html'));

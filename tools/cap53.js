@@ -4,7 +4,8 @@
    그래서 S.own 을 그 분포 그대로 주입한 뒤 찍는다.
    주입은 렌더 루프를 세운 뒤에 한다 — 유휴 루프가 값을 덮어쓰면 그 회차 채점이 통째로 무효다(LESSONS 41-④).
    사용: node tools/cap53.js [출력경로] */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -20,8 +21,8 @@ function launchOpts() {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

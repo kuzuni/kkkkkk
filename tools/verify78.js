@@ -4,7 +4,8 @@
       BGM main 자동 시작 · bgmSet('boss') 전환 · BGM 토글 정지 · 콘솔 에러 0
    §C el 폴백(file://): auMode 'el' · sfx 예외 0 · 콘솔 에러 0 */
 const fs = require('fs'), path = require('path'), http = require('http');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const AUD = path.join(ROOT, 'assets', 'audio');
 let fails = [], checks = 0;
@@ -50,12 +51,12 @@ const srv = http.createServer((req, res) => {
   /* smoke.js 와 같은 폴백 — 번들 브라우저가 없으면 /opt/pw-browsers/chromium 을 쓴다 */
   const ARGS = { args: ['--autoplay-policy=no-user-gesture-required'] };
   let browser;
-  try { browser = await chromium.launch(ARGS); }
+  try { browser = await launch(chromium, ARGS); }
   catch (e) {
     const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean)
       .find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
     if (!cand) throw e;
-    browser = await chromium.launch({ ...ARGS, executablePath: cand });
+    browser = await launch(chromium, { ...ARGS, executablePath: cand });
   }
 
   /* ---------- §B ctx (http) ---------- */

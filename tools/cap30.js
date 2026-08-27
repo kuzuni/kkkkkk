@@ -1,12 +1,13 @@
 /* 작업 30 — 던전 입장 화면 캡처 (1080×2280).
    레퍼런스 30 과 같은 상태를 만든다: 황금 동굴 입장 직후, 타이머 29.6, 진행바 83% 부근.
    실행: node tools/cap30.js [출력경로]   */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/30-r1.png';
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

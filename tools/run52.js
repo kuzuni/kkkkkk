@@ -6,7 +6,8 @@
      예) 레퍼런스 「설정」 라벨: node tools/run52.js docs/ref/52-메뉴-버튼-클릭시.jpg 808 851 962 986
          우리 캡처 「설정」 라벨: node tools/run52.js docs/review/52-r6.png 808 850 768 792
    출력: 런 길이별 개수 + 최빈값 + 잉크 밀도(bbox 대비). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -17,7 +18,7 @@ const MIME = /\.png$/i.test(IMG) ? 'data:image/png;base64,' : 'data:image/jpeg;b
 
 (async () => {
   const b64 = fs.readFileSync(path.resolve(IMG)).toString('base64');
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const p = await (await b.newContext()).newPage();
   const r = await p.evaluate(async ({ src, X0, X1, Y0, Y1, TH }) => {
     const im = new Image();

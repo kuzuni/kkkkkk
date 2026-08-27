@@ -7,7 +7,8 @@
    시각 경계 문제: 페이지의 Date.now() 는 하네스가 세이브를 쓴 시각보다 수백 ms 뒤다.
    그래서 «마지막 발동 ~ 지금» 과 «지금 ~ 다음 발동» 이 **둘 다 90초 이상** 떨어지는
    경과시간을 후보 중에서 골라 쓴다(경계에 걸려 발동 수가 1 흔들리는 것을 원천 차단). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const W = 1080, H = 2280;
@@ -59,8 +60,8 @@ function safeElapsed(bless, until0, cands) {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }); }
+  try { browser = await launch(chromium); }
+  catch (e) { browser = await launch(chromium, { executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }); }
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const errs = [];
   const page = await ctx.newPage();

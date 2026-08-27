@@ -2,7 +2,8 @@
    요소가 반투명이라 절대색으로는 못 찾는다 → 요소 밖 표본(xOut)과의 색차가 임계값을 넘는
    첫 x 를 좌변으로 본다. LESSONS 22-② 대로 단일 코너 원호가 아니라 «여러 행» 으로 r 을 피팅한다.
    사용: node tools/rad52.js <img> <xOut> <xSearch0> <xSearch1> <yTop> <rows> */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -11,7 +12,7 @@ const [IMG, XOUT, XS0, XS1, YTOP, ROWS] = [
 
 (async () => {
   const b64 = fs.readFileSync(path.resolve(IMG)).toString('base64');
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const page = await browser.newPage();
   await page.setContent('<canvas id=c></canvas>');
   const rows = await page.evaluate(async ([b64, XOUT, XS0, XS1, YTOP, ROWS]) => {

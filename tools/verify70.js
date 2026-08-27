@@ -1,7 +1,8 @@
 /* 작업 70 — 출석 보상 팝업 «실동작» 게이트 (T2 기능 완성 규칙).
    레이아웃이 아니라 «버튼을 눌렀을 때 무엇이 바뀌는지» 만 본다.
    실행: node tools/verify70.js   → 마지막 줄이 `VERIFY70 PASS n/n` 이어야 한다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -16,8 +17,8 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

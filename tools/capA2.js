@@ -5,7 +5,8 @@
        docs/review/A2-r<회차>-nolabel.png (라벨만 숨김 — 아이콘 잉크만 잰다)
    3회차 교훈: 임계값 마스크는 드롭섀도를 물어 수 px 틀린다. 크기는 «숨긴 캡처와의 차분» 으로 잰다.
    상태는 레퍼런스 02 와 동일(패널 닫힘 · STAGE 37 · 배너 보상받기). cap02.js 와 같은 절차. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const r = process.argv[2] || '1';
 const dir = path.resolve(__dirname, '../docs/review');
@@ -22,7 +23,7 @@ const setup = () => {
 };
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

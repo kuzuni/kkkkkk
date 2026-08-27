@@ -1,7 +1,8 @@
 /* 작업 135 진단용 프로브 — smoke [3] 과 같은 순서로 오버레이를 열고
    `#chList` 의 프레임 대비 top/bottom 과 그 순간 걸린 애니메이션을 시간축으로 찍는다.
    (일회성 조사 도구. 게이트가 아니다) */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
 
@@ -9,7 +10,7 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
   const W = +(process.argv[2] || 1080), H = +(process.argv[3] || 2280);
   const fs = require('fs');
   const ep = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(p => { try { return fs.existsSync(p); } catch (_) { return false; } });
-  const browser = await chromium.launch(ep ? { executablePath: ep } : {});
+  const browser = await launch(chromium, ep ? { executablePath: ep } : {});
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   page.on('console', m => { if (m.type() === 'error') console.log('  [console] ' + m.text()); });

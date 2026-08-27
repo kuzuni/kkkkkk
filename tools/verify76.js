@@ -14,7 +14,8 @@
      §6 미션표 — idx5 «방패 1회 소환하기»(보상 = 목걸이 10연 1,000) · idx6 «목걸이 1회 소환하기»(ban:amulet) ·
         가이드 이동 gmShop('amulet') 이 목걸이 카드로 스크롤.
      §7 콘솔 에러 0 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 let pass = 0, fail = 0;
@@ -23,12 +24,12 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
 /* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 */
 async function launchAny(){
-  try { return await chromium.launch(); }
+  try { return await launch(chromium); }
   catch (e) {
     const fs = require('fs');
     const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(x => { try { return fs.existsSync(x); } catch (_) { return false; } });
     if (!cand) throw e;
-    return await chromium.launch({ executablePath: cand });
+    return await launch(chromium, { executablePath: cand });
   }
 }
 

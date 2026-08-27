@@ -3,7 +3,8 @@
    ② **보상받기(ready·02 ④) 상태가 회귀하지 않았는가** — 32 의 수정은 전부 `.todo` 안에만 있어야 한다
    ③ 짧은/긴 미션 이름에서도 세 줄이 배너를 벗어나지 않는가
    실행: node tools/verify32.js        → 'VERIFY32 PASS n/n' 이면 통과 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 let pass = 0, fail = 0;
@@ -15,12 +16,12 @@ const ck = (name, got, want, tol = 0) => {
 
 /* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 (76) */
 async function launchAny(){
-  try { return await chromium.launch(); }
+  try { return await launch(chromium); }
   catch (e) {
     const fs = require('fs');
     const cand = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium'].filter(Boolean).find(x => { try { return fs.existsSync(x); } catch (_) { return false; } });
     if (!cand) throw e;
-    return await chromium.launch({ executablePath: cand });
+    return await launch(chromium, { executablePath: cand });
   }
 }
 

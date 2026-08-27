@@ -7,7 +7,8 @@
  * 버튼마다 «눌렀을 때 무엇이 바뀌는지» 를 DOM/상태로 대조한다.
  */
 const path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 
 const fails = [];
@@ -27,7 +28,7 @@ const click = (page, sel) => page.$eval(sel, (el) => el.click());
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); } catch (e) { browser = await chromium.launch(launchOpts()); }
+  try { browser = await launch(chromium); } catch (e) { browser = await launch(chromium, launchOpts()); }
   const errs = [];
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();

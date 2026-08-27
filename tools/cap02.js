@@ -4,13 +4,14 @@
      · 하단 패널 닫힘(순수 전투 화면)   · STAGE 37
      · 스테이지 진행바 채움 ≈ 32%(레퍼런스 실측 128/398)
      · 가이드 배너는 «보상받기»(금색) 상태 — 미완료(어두운 .todo)는 작업 32 의 화면이다 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const r = process.argv[2] || '1';
 const out = path.resolve(__dirname, '../docs/review/02-r' + r + '.png');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

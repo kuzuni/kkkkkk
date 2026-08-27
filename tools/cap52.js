@@ -4,14 +4,15 @@
      --geo  캡처 대신(겸해서) 주요 요소의 프레임 좌표를 JSON 으로 찍는다.
    LESSONS 28-③ — 캔버스가 흰 잉크 스캔을 오염시키므로 캡처 직전에 #view 를 숨긴다.
    LESSONS 51-③ — 유휴 루프가 굴리는 값(닉네임·전투력)은 픽셀 회귀에서 빼야 한다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/52-r1.png';
 const GEO = process.argv.includes('--geo');
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

@@ -7,7 +7,8 @@
  *   · 하단바는 bottom 앵커라 프레임이 길어져도 제자리 — 화면비 3종에서 같이 본다.
  *   · 영속성 검사에는 addInitScript 를 쓰지 않는다(LESSONS 50-②) — 페이지 안에서 올리고 reload 한다.
  */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
@@ -38,8 +39,8 @@ const openPassPage = async (page) => {
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
 
   /* ---------- 1. 껍데기 좌표 (측정표 §0-1: frame y = ref y − 84) ---------- */
   console.log('[1] 껍데기 앵커 — 1080×2280');

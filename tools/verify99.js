@@ -9,7 +9,8 @@
    §D 공용 간격      90ms 안에 연속 호출하면 1회만 발화(계열이 달라도)
    §E 전투 실측      전투 60초(실시간) 동안 스킬 시전음 발화 ≤ 11회/s (= 1000/90) */
 const fs = require('fs'), path = require('path'), http = require('http');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const AUD = path.join(ROOT, 'assets', 'audio');
 const HTML = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -86,10 +87,10 @@ function launchOpts(){
   const PORT = srv.address().port;
   const ARGS = { args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'] };
   let browser;
-  try{ browser = await chromium.launch(ARGS); }
+  try{ browser = await launch(chromium, ARGS); }
   catch(e){
     const o = launchOpts(); if(!o.executablePath) throw e;
-    browser = await chromium.launch(Object.assign({}, ARGS, o));
+    browser = await launch(chromium, Object.assign({}, ARGS, o));
   }
   const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
   const cerr = [];

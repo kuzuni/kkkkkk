@@ -3,12 +3,13 @@
    배너 텍스트를 **레퍼런스와 같은 문자열**로 주입한다(측정표 61 §2 — 세 줄 모두 중심 정렬이라
    문자열 길이가 다르면 잉크 bbox 가 통째로 달라져 비교가 불가능하다).
    실행: node tools/cap32.js [출력경로]   */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const out = process.argv[2] || 'docs/review/32-r1.png';
 (async () => {
-  const b = await chromium.launch();
+  const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
   const errs = [];

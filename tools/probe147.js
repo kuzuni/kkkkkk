@@ -6,7 +6,8 @@
 
    사용: node tools/probe147.js [TH]   (TH 기본 100)
 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -23,8 +24,8 @@ function launchOpts() {
   /* getImageData 를 쓰므로 verify80.js 와 같이 --allow-file-access-from-files 로 띄운다. */
   const args = ['--allow-file-access-from-files'];
   let browser;
-  try { browser = await chromium.launch({ args }); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch({ ...o, args }); }
+  try { browser = await launch(chromium, { args }); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, { ...o, args }); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

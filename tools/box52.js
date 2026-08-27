@@ -4,7 +4,8 @@
    아이콘/라벨은 두 덩어리 사이의 «빈 행» 으로 가른다.
    아트 자리 규칙(지시서 [3] 4번) — 여기 나온 w×h·중심이 나중에 이미지로 교체될 bbox 다.
    사용: node tools/box52.js [img] [x0 x1 top pitch h n th] */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
 
@@ -22,7 +23,7 @@ const MODE = (process.argv[10] || 'white');
 
 (async () => {
   const b64 = fs.readFileSync(path.resolve(IMG)).toString('base64');
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const page = await browser.newPage();
   await page.setContent('<canvas id=c></canvas>');
   const out = await page.evaluate(async ([b64, X0, X1, TOP, PITCH, BH, N, TH, MIME, MODE]) => {

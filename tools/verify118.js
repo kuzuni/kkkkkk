@@ -7,7 +7,8 @@
      [4] 저장 — 구 세이브의 `relic:0` 단계는 새 «세트 1» 로 이월, 나머지 세트는 0. 구 카테고리 카운터는 버림
      [5] UI  — 유물 탭 = 블록 3개(3·4·3칸) · 칸 규격이 장비 탭과 동일(±2px) · 가로 스크롤 불필요
    기능 체크 표는 `--table` 로 출력한다(review 파일에 붙일 것). */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
@@ -29,8 +30,8 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
 
 (async () => {
   let b;
-  try { b = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await chromium.launch(o); }
+  try { b = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; b = await launch(chromium, o); }
   const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();

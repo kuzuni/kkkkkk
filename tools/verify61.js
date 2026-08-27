@@ -23,7 +23,8 @@
    사용: node tools/verify61.js [불러올.html] [출력.json]
    브라우저: PW_CHROMIUM 또는 /opt/pw-browsers/chromium */
 const fs = require('fs'), path = require('path');
-const { chromium } = require('playwright');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
 
 function launchOpts(){
   const cands = [process.env.PW_CHROMIUM, '/opt/pw-browsers/chromium',
@@ -68,8 +69,8 @@ const snap = page => page.evaluate(() => {
   const outp   = process.argv[3] || null;
   const url    = 'file://' + path.resolve(target);
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  try { browser = await launch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await launch(chromium, o); }
 
   const errs = [];
   const newPage = async ctx => {

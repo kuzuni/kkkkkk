@@ -1,9 +1,10 @@
 /* 54 — 단상 캐릭터 캔버스의 «실제 잉크 bbox» 를 캔버스 안에서 직접 잰다(PIL 불필요). */
-const { chromium } = require('playwright'); const fs = require('fs'); const path = require('path');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw(); const fs = require('fs'); const path = require('path');
 function lo(){ for(const p of [process.env.PW_CHROMIUM,'/opt/pw-browsers/chromium'].filter(Boolean)){ try{ if(fs.existsSync(p)) return {executablePath:p}; }catch(e){} } return {}; }
 (async()=>{
   const args=['--allow-file-access-from-files'];
-  let b; try{ b = await chromium.launch({args}); }catch(e){ b = await chromium.launch(Object.assign({args},lo())); }
+  let b; try{ b = await launch(chromium, {args}); }catch(e){ b = await launch(chromium, Object.assign({args},lo())); }
   const ctx = await b.newContext({viewport:{width:1080,height:2280},deviceScaleFactor:1});
   const p = await ctx.newPage();
   await p.goto('file://'+path.resolve('index.html'),{waitUntil:'load'});
