@@ -13093,12 +13093,14 @@ for(let i=0;i<26;i++) for(let j=0;j<26;j++) SUF.push(String.fromCharCode(SUF_CC+
 /* 150 (저장소 주인 지시 2026-08-27) — «골드 빼고 나머지 숫자들은 A B C 단위 안 쓰고 숫자 그대로».
    111 의 부분 되돌림이다. 표기층이 두 갈래로 갈린다:
      · `fmtG(n)` — **골드 전용**. 111 의 알파벳 단위(구 `fmt`). 여기 말고는 SUF 를 쓰지 마라.
-     · `fmt(n)`  — **기본**. 단위 접기 없이 숫자 그대로(1000 이상 쉼표). 다이아·유물조각·전투력·
-                   데미지·체력·비용·보상·랭킹 점수… 골드가 아닌 모든 수는 이쪽이다.
+     · `fmt(n)`  — **기본**. 단위 접기 없이 숫자 그대로(1000 이상 쉼표). 다이아·유물조각·마일리지·
+                   가격·개수·레벨·층수… 골드도 전투 수치도 아닌 모든 수는 이쪽이다.
      · `fmtCur(k,n)` — 재화 종류가 **런타임에 갈리는** 자리(HUD 획득 연출·던전 보상 대표값·가방·
                    재화 정보 팝업) 전용 디스패처. `k==='gold'` 만 `fmtG`.
-   ⚠ 새 코드에서 «수를 화면에 찍는» 자리는 기본이 `fmt` 다. 골드라고 확신할 때만 `fmtG`.
-   게이트: `node tools/verify150.js`(소스 스캔 + 런타임 표시값). */
+   ⚠ 188(주인 정정 2026-08-27)이 **전투 수치(데미지·체력·공격력·재생·DPS·전투력)를 `fmtB` 로** 떼어 갔다 —
+     150 당시 이 줄이 «데미지·체력도 fmt» 라고 적어 두었던 것은 그 시점 규약이고, 지금은 아래 `fmtB` 절이 맞다.
+   ⚠ 새 코드에서 «수를 화면에 찍는» 자리는 기본이 `fmt` 다. 골드면 `fmtG`, 전투 수치면 `fmtB`.
+   게이트: `node tools/verify150.js`(소스 스캔 + 런타임 표시값) · `node tools/verify188.js`(전투 수치). */
 function fmtG(n){
   if(!isFinite(n)) return '∞';
   if(n < 1000) return n < 10 ? (Math.round(n*10)/10).toString() : Math.floor(n).toString();
@@ -13122,6 +13124,17 @@ function fmt(n){
                   : BigInt(f).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 const fmtCur = (k, n) => k === 'gold' ? fmtG(n) : fmt(n);
+/* 188 (저장소 주인 정정 2026-08-27) — «데미지 같은 경우는 a b c 식으로 표시돼야 함 — 체력이랑».
+   150 이 «골드만 접는다» 로 갈라 놓은 것을 **골드 + 전투 수치** 로 넓힌 것이다. 여기서 «전투 수치» 란
+   싸움의 크기를 나타내는 수 — 데미지 · 체력(플레이어·보스·적) · 공격력 · 체력 재생 · DPS · 전투력 —
+   이고, 재화(다이아·유물조각·마일리지·쿠폰)·가격·개수·레벨·층수는 **150 그대로 숫자 그대로**다.
+   ⚠ 본체를 복제하지 않고 `fmtG` 를 그대로 부른다 — 표기 규칙(111)이 두 벌이 되면 조용히 갈라진다.
+     · `fmtB(n)` — 전투 수치. 알파벳 단위(`4.20E`).
+     · `fmtG(n)` — 골드.     같은 규칙이지만 «왜 접는지» 가 다르므로 이름을 나눠 둔다.
+   전투력(cp)·DPS 는 주인 원문에 없지만 «데미지·체력에서 파생된 전투 수치» 라 같이 접는다
+   (등재문 지시: «기본 포함하되 근거를 비고에, 주인 이의 시 되물음»).
+   게이트: `node tools/verify188.js` · 150 쪽 규약은 `node tools/verify150.js` 가 계속 지킨다. */
+const fmtB = n => fmtG(n);
 /* 150 — «숫자 그대로» 는 자릿수가 자란다(다이아 18,000,000 = 잉크 222px vs 가방 칸 148px).
    접거나 «…» 로 자르면 주인 지시를 어기는 것이므로 **한 글자도 버리지 않고 폭에만 맞춘다** —
    그릇을 넘칠 때만 글자 크기를 눌러 넣는다(PROGRESS 150 비고의 «콤마 + 줄임 없이 폭 클램프»).
@@ -14390,7 +14403,7 @@ const trainVal = (id, b) => l => b + TRAIN_VAL_K[id] * l;
 /* ---- 기본 강화 (골드) ---- */
 const UPG = [
   { id:'atk',   name:'공격력',      icon:'⚔️', cost:trainCost(45,1.19),
-    val:trainVal('atk',18),     show:l => '피해 ' + fmt(U.atk.val(l)*mulAtk()) },
+    val:trainVal('atk',18),     show:l => '피해 ' + fmtB(U.atk.val(l)*mulAtk()) },
   { id:'aspd',  name:'공격 속도',   icon:'⚡', cost:l => 40*Math.pow(1.20,l),
     val:l => Math.min(1.4 + 0.11*l, 14), show:l => '초당 ' + (U.aspd.val(l)*mulRate()).toFixed(2) + '회' },
   { id:'crit',  name:'치명타 확률', icon:'🎯', cost:l => 90*Math.pow(1.23,l),
@@ -14400,9 +14413,9 @@ const UPG = [
   { id:'pierce',name:'관통',        icon:'🏹', cost:l => 400*Math.pow(2.05,l),
     val:l => 1 + l, show:l => U.pierce.val(l) + '명 관통' },
   { id:'hp',    name:'최대 체력',   icon:'❤️', cost:trainCost(30,1.17),
-    val:trainVal('hp',160), show:l => fmt(U.hp.val(l)*mulHp()) },
+    val:trainVal('hp',160), show:l => fmtB(U.hp.val(l)*mulHp()) },
   { id:'regen', name:'체력 재생',   icon:'✨', cost:trainCost(55,1.19),
-    val:trainVal('regen',4), show:l => '초당 ' + fmt(U.regen.val(l)*mulRegen()) },
+    val:trainVal('regen',4), show:l => '초당 ' + fmtB(U.regen.val(l)*mulRegen()) },
   { id:'def',   name:'방어력',      icon:'🛡️', cost:l => 70*Math.pow(1.20,l),
     val:l => 1 - Math.min(0.75, l*0.022), show:l => '받는 피해 -' + pct(1-U.def.val(l)) },
   { id:'spd',   name:'이동 속도',   icon:'👟', cost:l => 60*Math.pow(1.18,l),
@@ -15665,7 +15678,7 @@ function dmgNum(x, y, v, crit, src){
        창을 **수명 전체**로 넓혀 살아 있는 동안은 언제나 합산한다. 대신 아래 되감기 한도를
        5 → 3 으로 줄여 «영영 안 꺼지는 라벨» 이 생기지 않게 한다(둘은 트레이드다) */
     if(q.src !== src || q.t >= NUM_LIFE) continue;
-    q.raw += v; q.v = fmt(q.raw);
+    q.raw += v; q.v = fmtB(q.raw);
     q.crit = q.crit || crit;
     /* 되감기는 «다시 읽을 시간» 을 주려는 것이지 수명 연장이 아니다. 무제한으로 되감으면
        장판(맹독)·다연발처럼 계속 때리는 경우 라벨이 **영영 안 꺼진다** — 5회로 막는다.
@@ -15701,7 +15714,7 @@ function dmgNum(x, y, v, crit, src){
     if(!hit) break;
     ny -= 20;
   }
-  nums.push({ x, y: ny, v:fmt(v), raw:v, src, t:0, crit, ox:nox });
+  nums.push({ x, y: ny, v:fmtB(v), raw:v, src, t:0, crit, ox:nox });
 }
 /* 185 (주인 지시 2026-08-27) — «스킬 맞고 적이 밀려나지 않게». 넉백 인자(kx/ky)를 함수에서
    아예 걷어냈다. 값만 0 으로 넘기면 «다음에 누군가 다시 채워 넣을 수 있는 문» 이 남는다.
@@ -17770,7 +17783,7 @@ function drawBossHud(){
     const el = Math.max(0.001, raidOn.sec - raidT), dps = raidDmg / el;
     const bestDps = (S.raidBest[raidOn.id] || {}).dps || 0;
     $('bossHpF').style.width = (clamp(bestDps > 0 ? dps/bestDps : (raidDmg > 0 ? 1 : 0), 0, 1) * 671) + 'px';
-    $('bossHpN').textContent = fmt(raidDmg);
+    $('bossHpN').textContent = fmtB(raidDmg);
     return;
   }
   /* 162 — 파밍은 «보스전에 한 번 졌다» 뿐이므로 스테이지 번호 조건(구 isBossStage)이 없다 */
@@ -17789,7 +17802,7 @@ function drawBossHud(){
   const hp = b ? Math.max(0, b.hp) : eHp(S.stage) * ETYPE.boss.hp;
   const max = b ? b.max : hp;
   $('bossHpF').style.width = (clamp(hp/max, 0, 1) * 671) + 'px';
-  $('bossHpN').textContent = fmt(hp);
+  $('bossHpN').textContent = fmtB(hp);
 }
 const TOTAL_ITEMS = SKILLS.length + EQUIPS.length + PETS.length + RELICS.length;
 /* 41 — 03·14 팝업 내장 재화 바 갱신. 바는 페이지마다 하나씩(=2개) 있으므로 id 가 아니라
@@ -17823,7 +17836,7 @@ function drawHud(){
   const maxHp = stat.maxHp;
   /* 상단 HUD 는 A3 이후 초상화 · 닉네임 · 칭호 · 전투력 / 재화 2종만 표시한다.
      레벨 · 경험치 · 유물조각 · 도감 수는 프로필 모달(renderSt)에서 확인한다. */
-  $('cpN').textContent = fmt(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
+  $('cpN').textContent = fmtB(jzRollVal('cp', cp()));   /* 60 — 전투력도 뚝 바뀌지 않고 롤링한다 */
   fitNum($('cpN'));                                    /* 150 — 자릿수가 길어져도 한 글자도 안 버린다 */
   $('nickN').textContent = S.nick;
   $('rankN').textContent = rankOf().n;
@@ -17842,7 +17855,7 @@ function drawHud(){
   drawDunHud();                      /* 30 — 던전 런 HUD(타이머·진행바) */
   drawArnHud();                      /* 123 — 아레나 HUD(타이머·양쪽 닉네임·HP 바) */
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
-  $('hpT').textContent = fmt(Math.max(0, player.hp)) + ' / ' + fmt(maxHp);
+  $('hpT').textContent = fmtB(Math.max(0, player.hp)) + ' / ' + fmtB(maxHp);
   let prR;                                             /* 161 — 진행바 채움 비율(0~1). 중간 노드 점등 판정에 쓴다 */
   if(promo){
     prR = clamp(promo.t/promo.max, 0, 1);
@@ -18870,7 +18883,7 @@ function finishDunRun(r, cleared){
     /* A5 모달 본문은 크림 바탕이다 — 어두운 배경용 색을 쓰면 대비가 1.1:1 이라 안 보인다(46 교훈) */
     popup('💀 ' + d.n + ' ' + f + '층 실패',
       '<p>제한 시간 <b>' + DUN_SEC + '초</b> 안에 요구 피해를 채우지 못했습니다.<br>'
-      + '누적 피해 <b>' + fmt(r.dmg) + '</b> / 요구 <b>' + fmt(r.need) + '</b><br>'
+      + '누적 피해 <b>' + fmtB(r.dmg) + '</b> / 요구 <b>' + fmtB(r.need) + '</b><br>'
       + '더 성장한 뒤 다시 도전하세요!</p>');
   }
 }
@@ -18879,7 +18892,7 @@ function drawDunHud(){
   if(!dunRun) return;
   $('dunTmN').textContent = Math.max(0, dunRun.t).toFixed(1);
   $('dunBarF').style.width = (clamp(dunRun.dmg/dunRun.need, 0, 1) * 574) + 'px';
-  $('dunBarN').textContent = fmt(dunRun.dmg);
+  $('dunBarN').textContent = fmtB(dunRun.dmg);
 }
 /* 123 — ◀ 나가기는 던전 런과 아레나가 공용이다(같은 `#app.dunrun` 상태를 탄다). */
 $('dunOut').addEventListener('click', () => { if(arena) endArena(null); else endDunRun(false, true); });
@@ -19303,7 +19316,7 @@ function showSkillDetail(id){
   /* 레퍼런스는 «낮/밤 쿨타임» 2열이지만 이 게임에는 낮·밤 개념이 없다.
      표의 격자·색·간격은 그대로 두고 열 내용만 실제 데이터(쿨타임·피해량)로 채운다. */
   const cool = it.cd > 0 ? it.cd.toFixed(2) + '초' : '지속형';
-  const dmgTxt = own ? fmt(skillDmg(it)) : '—';
+  const dmgTxt = own ? fmtB(skillDmg(it)) : '—';
   /* 설명문의 수치는 레퍼런스처럼 주황(#F88050)으로 강조한다 */
   const desc = (own ? it.d : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')
     .replace(/(\d+(?:\.\d+)?)(%|초|발|방향|명|개)?/g, '<em>$1$2</em>');
@@ -19350,10 +19363,10 @@ function showItem(id){
            : cat === 'relic' ? false : eqEquipped(it);
   let eff = '', ownTxt = '', eqTxt = '';
   if(cat === 'skill'){
-    eff = it.d + '<br>피해 <b>' + fmt(skillDmg(it)) + '</b>' + (it.cd > 0 ? ' · 쿨타임 <b>' + it.cd.toFixed(2) + '초</b>' : ' · <b>지속형</b>');
+    eff = it.d + '<br>피해 <b>' + fmtB(skillDmg(it)) + '</b>' + (it.cd > 0 ? ' · 쿨타임 <b>' + it.cd.toFixed(2) + '초</b>' : ' · <b>지속형</b>');
     ownTxt = '공격력 +' + pct(ownVal(it)); eqTxt = '전투에서 자동 발동';
   }else if(cat === 'pet'){
-    eff = '플레이어를 따라다니며 자동 공격<br>피해 <b>' + fmt(petDmg(it)) + '</b> · 주기 <b>' + it.cd.toFixed(2) + '초</b>';
+    eff = '플레이어를 따라다니며 자동 공격<br>피해 <b>' + fmtB(petDmg(it)) + '</b> · 주기 <b>' + it.cd.toFixed(2) + '초</b>';
     ownTxt = '공격력 +' + pct(ownVal(it)*0.6) + ' · 골드 +' + pct(ownVal(it)); eqTxt = '전투에 참여해 공격';
   }else if(cat === 'relic'){
     eff = RELIC_EFF[it.eff] + ' 상승 유물 · 소환할 때마다 Lv +1';
@@ -19412,7 +19425,7 @@ function showItem(id){
 /* ---- 던전 탭 ---- */
 function renderDun(){
   let h = '<div class="sect"><h3><span>🏰 던전</span><em>전투력으로 도전</em></h3>'
-    + '<p>내 전투력 <b>' + fmt(cp()) + '</b> · 던전마다 하루 <b>' + DUN_TRY + '회</b> 입장<br>'
+    + '<p>내 전투력 <b>' + fmtB(cp()) + '</b> · 던전마다 하루 <b>' + DUN_TRY + '회</b> 입장<br>'
     + '요구 전투력을 넘으면 클리어하고 다음 층이 열립니다. <b>소탕</b>은 이전 층 보상을 즉시 받습니다.</p></div>';
   DUNGEONS.forEach(d => {
     const f = S.dun[d.id], need = d.req(f), left = S.daily.dun[d.id], ok = cp() >= need;
@@ -19423,7 +19436,7 @@ function renderDun(){
       +  f + '층</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
       +  left + '/' + DUN_TRY + '</span></div>'
       +  '<div class="ls">' + d.d + '<br>보상 ' + rwTxt + ' · 요구 전투력 <b style="color:'
-      +  (ok ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(need) + '</b></div>'
+      +  (ok ? '#8ff0a8' : '#ff6b7f') + '">' + fmtB(need) + '</b></div>'
       +  '<div class="lf"><button class="mini gold" data-sweep="' + d.id + '"' + (left > 0 && f > 1 ? '' : ' disabled') + '>⚡ 소탕</button>'
       +  '<button class="mini" data-dun="' + d.id + '"' + (left > 0 ? '' : ' disabled') + '>도전</button></div></div>';
   });
@@ -19607,16 +19620,16 @@ function renderSt(){
   const t = S.playtime, b = bonus();
   const hh = Math.floor(t/3600), mm = Math.floor(t%3600/60);
   const nr = nextRank();
-  let h = '<div class="sect"><h3><span>' + rankOf().ic + ' ' + rankOf().n + '</span><em>전투력 ' + fmt(cp()) + '</em></h3>'
+  let h = '<div class="sect"><h3><span>' + rankOf().ic + ' ' + rankOf().n + '</span><em>전투력 ' + fmtB(cp()) + '</em></h3>'
     /* 88 — 캐릭터 레벨·경험치 폐기. Lv 자리는 최고 스테이지로 대체(계급은 이미 h3 에 있다). */
     + '<p>' + S.nick + ' — 최고 스테이지 <b>' + S.best + '</b></p>'
-    + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmt(nr.cp) + '</b><br>'
+    + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmtB(nr.cp) + '</b><br>'
           + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
           + '<button class="gbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '>승급전 도전</button>'
         : '<p>최고 계급 달성! 🎉</p>') + '</div>'
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
-    + 'DPS <b>' + fmt(stat.dps) + '</b> · 공격력 <b>' + fmt(stat.dmg) + '</b><br>'
-    + '체력 <b>' + fmt(stat.maxHp) + '</b> · 재생 <b>' + fmt(stat.regen) + '/s</b><br>'
+    + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
+    + '체력 <b>' + fmtB(stat.maxHp) + '</b> · 재생 <b>' + fmtB(stat.regen) + '/s</b><br>'
     + '치명타 <b>' + pct(stat.crit) + '</b> ×<b>' + stat.cdmg.toFixed(2) + '</b> · 공속 <b>×' + (stat.rate/1.4).toFixed(2) + '</b><br>'
     + '스킬 <b>' + S.eqSkill.length + '/8</b> · 펫 <b>' + S.eqPet.length + '/3</b> · 유물 Lv <b>' + relicLvSum() + '</b></p></div>'
     + '<div class="sect"><h3>🏆 누적 보너스</h3><p>'
@@ -19627,7 +19640,7 @@ function renderSt(){
     + '소환 <b>' + fmt(S.summons) + '</b>회 · 강화 <b>' + fmt(S.upgrades) + '</b>회 · 유물조각 <b>' + curIc('relic') + ' ' + fmt(S.relic) + '</b><br>'
     + '도감 <b>' + ownedTotal() + ' / ' + (SKILLS.length+EQUIPS.length+PETS.length+RELICS.length) + '</b> · 출석 <b>' + S.att.n + '일</b><br>'
     + '플레이 <b>' + hh + '시간 ' + mm + '분</b></p></div>'
-    + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmt(eHp(S.stage)) + '</b> · 공격 <b>' + fmt(eDmg(S.stage))
+    + '<div class="sect"><h3>👾 현재 스테이지</h3><p>적 체력 <b>' + fmtB(eHp(S.stage)) + '</b> · 공격 <b>' + fmtB(eDmg(S.stage))
     + '</b><br>매 스테이지 적 <b>50마리</b>, 10스테이지마다 <b>보스</b></p></div>'
     + '<div class="sect"><h3>💾 데이터</h3><p>진행 상황은 자동 저장됩니다.</p>'
     + '<button class="gbtn purple" id="resetBtn" style="margin-top:12px">전체 초기화</button></div>';
@@ -20318,7 +20331,7 @@ function renderRaidPage(){
          옆 알약 아이콘(카드 기준 x261)을 침범한다(던전 카드는 층 번호라 2자면 충분했다) */
       +  '<div class="lb a"><i>제한 시간(초)</i></div><div class="lb b"><i>최고 DPS</i></div>'
       +  '<div class="sp lv"><em>⏱️</em><i>' + r.sec + '</i></div>'
-      +  '<div class="sp tk"><em>🏆</em><i>' + (b.dps > 0 ? fmt(b.dps) : '-') + '</i></div>'
+      +  '<div class="sp tk"><em>🏆</em><i>' + (b.dps > 0 ? fmtB(b.dps) : '-') + '</i></div>'
       /* 166 (2026-08-27) — 종전 `!lock` 은 «열려 있기만 하면» 켜져서, 측정장은 입장 제한이 없으므로
          해금 뒤 영영 꺼지지 않는 상시 점등이었다(① 조건 없는 dot). 레드닷은 «누를 게 있다» 신호이므로
          **아직 한 번도 기록을 못 낸 측정장**(최고 DPS 없음)에만 켠다 — 한 번 재고 나면 스스로 꺼진다. */
@@ -20607,7 +20620,7 @@ function renderRaidDetail(){
   $('dgdFloor').textContent = r.sec + '초';
   $('dgdRwL').textContent = '최고 기록';
   $('dgdIcon').textContent = '🏆';        /* 레이드 최고 기록 — 재화가 아니라 트로피다 */
-  $('dgdAmt').textContent = b.dmg > 0 ? fmt(b.dmg) + ' (DPS ' + fmt(b.dps) + ')' : '기록 없음';
+  $('dgdAmt').textContent = b.dmg > 0 ? fmtB(b.dmg) + ' (DPS ' + fmtB(b.dps) + ')' : '기록 없음';
   $('dgdTry').textContent = '∞';
   $('dgdCbL').textContent = '연속 도전';
   /* 레이드는 층이 없다 — ◀▶ 는 다른 측정장(제한 시간)으로 옮긴다 */
@@ -20692,10 +20705,10 @@ function endRaid(record){
        크기로만 준다(신기록만 진한 초록). */
     popup('🏆 레이드 결과 — ' + r.n,
       '<p>제한 시간 <b>' + r.sec + '초</b><br>'
-      + '총 피해량 <b style="font-size:32px">' + fmt(dmg) + '</b><br>'
-      + '초당 피해(DPS) <b style="font-size:32px">' + fmt(dps) + '</b><br>'
+      + '총 피해량 <b style="font-size:32px">' + fmtB(dmg) + '</b><br>'
+      + '초당 피해(DPS) <b style="font-size:32px">' + fmtB(dps) + '</b><br>'
       + (rec ? '<b style="color:#1F6B33">신기록!</b>'
-             : '최고 기록 <b>' + fmt(b.dmg) + '</b> · DPS <b>' + fmt(b.dps) + '</b>') + '</p>');
+             : '최고 기록 <b>' + fmtB(b.dmg) + '</b> · DPS <b>' + fmtB(b.dps) + '</b>') + '</p>');
   }else{
     save(); uiDirty = true;
     showMsg('레이드 중단')            /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 */;
@@ -20791,7 +20804,7 @@ function openArenaResult(win, a, got){
   const rec = S.arena;
   popup(win ? '🏅 아레나 승리!' : '💀 아레나 패배',
     '<p><b>' + S.nick + '</b> vs <b>' + a.op.n + '</b><br>'
-    + '상대 전투력 <b>' + fmt(a.op.cp) + '</b><br>'
+    + '상대 전투력 <b>' + fmtB(a.op.cp) + '</b><br>'
     + '보상 <b>' + got + '</b><br>'
     + '전적 <b>' + rec.w + '승 ' + rec.l + '패</b></p>');
 }
@@ -22171,8 +22184,8 @@ function renderSpec(){
   const b = bonus();
   const pc = v => fmtPct((v - 1) * 100, 2) + '%';
   const rows = [
-    ['햄지 공격력', fmt(stat.dmg)],
-    ['햄지 체력', fmt(stat.maxHp)],
+    ['햄지 공격력', fmtB(stat.dmg)],
+    ['햄지 체력', fmtB(stat.maxHp)],
     ['햄지 공격력', pc(b.atk)],
     ['햄지 체력', pc(b.hp)],
     ['햄지 일반 공격 피해량', '100%'],
@@ -22181,7 +22194,7 @@ function renderSpec(){
     ['햄지 치명타 확률', pct(stat.crit)],
     ['햄지 치명타 피해량', Math.round(stat.cdmg * 100) + '%'],
     ['햄지 공격 속도', fmtPct((stat.rate / 1.4 - 1) * 100, 2) + '%'],
-    ['햄지 체력 재생', fmt(stat.regen) + '/s'],
+    ['햄지 체력 재생', fmtB(stat.regen) + '/s'],
     ['햄지 골드 획득량', pc(b.gold)],
     ['햄지 이동 속도', '0%']
   ];
@@ -22591,7 +22604,7 @@ function chCardHTML(m, i){
     return '<div class="' + cls + '">' + chAvHTML('chVs' + i + k).replace('ch-av', 'ch-cav')
       + (win ? '<b class="ch-wl">승리</b>' : '')
       + '<b class="ch-cnk">' + chEsc(p.n) + '</b>'
-      + '<b class="ch-ccp"><u>⚔️</u>' + fmt(rkCp(p.best)) + '</b></div>';
+      + '<b class="ch-ccp"><u>⚔️</u>' + fmtB(rkCp(p.best)) + '</b></div>';
   };
   return '<div class="ch-cd">' + cell('ch-cw', 'w', m.vs[0], 1) + cell('ch-cl', 'l', m.vs[1], 0) + '</div>'
        + '<div class="ch-rp">▶</div>';
@@ -22671,7 +22684,7 @@ $('rkList').addEventListener('click', e => {
   popup('🏆 ' + r.p + '위 · ' + r.n,
     '<p>칭호 <b>' + (rkTitle(r.t) || '칭호 없음') + '</b></p>'
     + '<p>최고 스테이지 <b>' + r.best + '</b></p>'
-    + '<p>전투력 <b>' + fmt(r.cp) + '</b></p>'
+    + '<p>전투력 <b>' + fmtB(r.cp) + '</b></p>'
     + (r.me ? '<p style="color:#8ff0a8;margin-top:10px">내 기록입니다.</p>' : ''));
 });
 /* 52 ▦ 메뉴의 «랭킹» 칸이 이걸 부른다 */
@@ -22694,7 +22707,7 @@ function openPromo(){
     + '<div class="pr-cond">'
     /* 상자 배경이 남색(#0e1428)이라 여기만 «밝은» 초록·빨강을 그대로 쓴다(베이지 본문 톤이 아니다) */
     + '<p>최고 스테이지 <b style="color:' + (okS ? '#8ff0a8' : '#ff6b7f') + '">' + S.best + ' / ' + r.stage + '</b></p>'
-    + '<p>전투력 <b style="color:' + (okC ? '#8ff0a8' : '#ff6b7f') + '">' + fmt(cp()) + ' / ' + fmt(r.cp) + '</b></p></div>'
+    + '<p>전투력 <b style="color:' + (okC ? '#8ff0a8' : '#ff6b7f') + '">' + fmtB(cp()) + ' / ' + fmtB(r.cp) + '</b></p></div>'
     + '<div class="pr-rw"><h3>클리어 보상</h3><div class="pr-rw-b">'
     + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
             + rw.id + '" data-cossc="3"></canvas></div>' : '')
@@ -23203,8 +23216,8 @@ function renderEqPage(){
   });
   /* 알약 → 아이콘 순서. 06 부터 «아이콘 먼저» 였는데 뒤 형제가 위로 오므로 알약이 검·하트를
      잘라먹고 있었다(하트 우측 로브가 통째로 잘려 세로 54 → 50). 레퍼런스는 아이콘이 알약 위다 */
-  h += '<div class="eqst a" style="top:' + g.st + 'px"><i>' + fmt(stat.dmg) + '</i></div>'
-    +  '<div class="eqst b" style="top:' + g.st + 'px"><i>' + fmt(stat.maxHp) + '</i></div>'
+  h += '<div class="eqst a" style="top:' + g.st + 'px"><i>' + fmtB(stat.dmg) + '</i></div>'
+    +  '<div class="eqst b" style="top:' + g.st + 'px"><i>' + fmtB(stat.maxHp) + '</i></div>'
     +  '<div class="eqic sw" style="top:' + g.sw + 'px"><i></i></div>'
     +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i></i></div>';
   $('eqCards').innerHTML = h;
@@ -23241,7 +23254,7 @@ function trainCardData(){
     const u = U[k], l = lv(k), bi = trainBuyInfo(k);
     const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
     return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-      gain:'+' + fmt(gain), cost:fmtG(bi.cost), coin:curIc('gold'),
+      gain:'+' + fmtB(gain), cost:fmtG(bi.cost), coin:curIc('gold'),
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }

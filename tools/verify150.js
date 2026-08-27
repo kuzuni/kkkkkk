@@ -93,10 +93,15 @@ const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got ==
   });
   eq('③ HUD 골드 4.2e15 (알파벳 = 111 규약 유지)', run.gold, '4.20E');
   eq('③ HUD 다이아 2.36e9 (숫자 그대로 · 옛 규약이면 «2.36C»)', run.dia, '2,360,000,000');
-  yes('③ HUD 전투력 «' + run.cp + '» 알파벳 접미사 없음', /^[\d,]+(\.\d+)?$/.test(run.cp));
-  eq('③ 전투 데미지 1.234e7 (숫자 그대로)', run.dmg, '12,340,000');
+  /* 188(주인 정정 2026-08-27) — 전투 수치(데미지·체력·전투력·DPS)는 골드와 같이 **알파벳 단위**로 옮겼다.
+     150 이 여기서 «숫자 그대로» 를 단언하던 두 줄은 그 지시를 따라 뒤집는다(값 단언은 verify188). */
+  /* 초기 상태의 cp 는 세 자리(1000 미만)라 두 표기층이 같은 글자를 낸다 — «알파벳이 붙어 있다» 로는
+     못 가른다. 갈리는 지점은 **1000 이상에서 쉼표를 찍느냐** 다(fmt 는 «1,234», fmtB 는 «1.23A»). */
+  yes('③ HUD 전투력 «' + run.cp + '» 쉼표 원시 표기 아님(188 — 전투 수치)',
+    /^\d{1,3}(\.\d+)?[A-Z]{0,2}$/.test(run.cp));
+  eq('③ 전투 데미지 1.234e7 (188 — 알파벳 단위)', run.dmg, '12.3B');
 
-  /* ── ④ 스윕 — 골드가 아닌 자리에 알파벳 접미사 0건 ── */
+  /* ── ④ 스윕 — 골드·전투 수치가 아닌 자리에 알파벳 접미사 0건 ── */
   const sweep = await p.evaluate(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     S.gold = 4.2e15; S.dia = 2.36e9; S.relic = 3.3e6; S.mileage = 12;
@@ -107,7 +112,11 @@ const yes = (n, got) => R.push({ n, got: String(got), want: 'true', pass: got ==
     const UNIT = /^\d{1,3}(\.\d+)?[A-Z]{1,2}$/;
     /* 골드를 그리는 자리(=알파벳 단위가 정상인 곳) */
     const GOLDSEL = ['#goldN', '.pcb-g>b', '#svG', '#ofrAmt', '.tr-cost', '.uc'];
-    const isGold = el => GOLDSEL.some(s => el.matches && (el.matches(s) || el.closest(s)))
+    /* 188(주인 정정 2026-08-27) — 전투 수치도 알파벳 단위다. 데미지·체력·공격력·재생·DPS·전투력을
+       그리는 자리는 이 스윕의 «위반» 이 아니다(그쪽 값 단언은 verify188 이 따로 한다). */
+    const WARSEL = ['#cpN', '#hpT', '#bossHpN', '#dunBarN', '#dgdAmt', '.eqst', '.sp.tk',
+                    '.spc-row .vl', '.ch-ccp', '.uv', '.tr-card .cv', '#trCards .cv'];
+    const isGold = el => GOLDSEL.concat(WARSEL).some(s => el.matches && (el.matches(s) || el.closest(s)))
       /* 아이콘이 골드면 그 옆 수치도 골드다 — 카드/행 단위로 본다 */
       || !!(el.closest('.bg53-c,.ml-i,.dcl-w,.dgd-w,.ifr') || {}).querySelector?.('[data-cur-ic="gold"]');
     const found = [];

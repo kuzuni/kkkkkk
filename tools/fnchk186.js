@@ -139,7 +139,8 @@ const ok = (b, act, want, got) => {
              tag: !!document.querySelector('#wpnGrid [data-wpn="' + g7.id + '"] .eqt') };
   });
   await page.waitForTimeout(1200);                       /* 60 롤링이 목표에 닿을 시간 */
-  const f7b = await page.evaluate(() => ({ hud: document.getElementById('cpN').textContent, cp: fmt(cp()) }));
+  /* 188(주인 정정 2026-08-27) — HUD 전투력은 `fmtB`(전투 수치 알파벳 단위)로 찍힌다. `fmt` 가 아니다. */
+  const f7b = await page.evaluate(() => ({ hud: document.getElementById('cpN').textContent, cp: fmtB(cp()) }));
   ok(f7a.eq === f7a.want && f7a.tag && f7a.cp1 > f7a.cp0 && f7b.hud === f7b.cp, '[장착] 버튼',
     'S.eqSlot.weapon 교체 · 칸에 «장착 중» · 전투력 상승이 HUD 까지 도달',
     'eqSlot=' + f7a.eq + ' 라벨=' + f7a.tag + ' cp ' + f7a.cp0 + '→' + f7a.cp1
