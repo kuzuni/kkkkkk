@@ -3,7 +3,8 @@
    지시서 [3]-(가) + «기능 완성 규칙»(T2 는 실제로 동작해야 완료).
 
    [1] 구조   — 27종 · 등급 분포 [4,4,5,5,5,4] · 버프 5종 부재 · 신설 8종 존재 ·
-                기존 19종(id·등급·cd·m) 불변 = 구 세이브 밸런스 불변
+                기존 19종 (a) id·등급·cd 불변 = 구 세이브 호환 ·
+                          (b) `m` 이동은 등재분(260)뿐 = 밸런스 이력이 게이트에 남는다
    [2] 기능   — 신설 8종 각각 «시전 → 무엇이 생기고 적이 얼마나 깎이는가» 헤드리스 실측 +
                 **8종 고유 메커니즘**을 수치로 확인(휨 각속도 · 나선 반경 증가 · 벽 반사 ·
                 적→적 도약 · 드론 2기 연사 · 빔 축 · 착탄 장판 · 링 발사 반경)
@@ -34,7 +35,11 @@ const NEW = [
 ];
 /* 193 이 폐기한 버프 5종 → 후임(같은 등급) */
 const MOVE = { vigor: 'curve', mend: 'whirl', haste: 'rico', ward: 'drone', rage: 'laser' };
-/* 193 이 **한 글자도 건드리지 않은** 기존 19종 (id: [g, cd, m]) — 구 세이브 밸런스 불변의 근거 */
+/* 193 이 **한 글자도 건드리지 않은** 기존 19종 (id: [g, cd, m]) — 193 시점 기준선.
+   ⚠ 이 표가 지키는 것은 «193 의 증설이 기존 스킬을 안 건드렸다» 이지 «m 을 영원히 못 고친다» 가
+   아니다 — 세이브는 **id 로만** 보유·장착을 저장하므로 m·cd 는 밸런스 값이다(verify86 OLD 표와 같은 근거).
+   따라서 **아래 표는 기준선 그대로 두고**, 뒤에 온 밸런스 작업의 이동분은 `M_MOVED` 에 «누가·왜» 와 함께
+   따로 등재한다 — 그래야 «어느 작업이 무엇을 옮겼나» 가 게이트에 남는다(기대값을 제품에서 베끼면 사라진다). */
 const KEEP = {
   slash: [0, 0.85, 1.00], shuri: [0, 2.20, 0.55], stone: [0, 1.30, 1.35],
   multi: [1, 1.10, 0.80], orbit: [1, 0.00, 0.45], ice: [1, 1.60, 1.30],
@@ -42,6 +47,18 @@ const KEEP = {
   boom: [3, 2.00, 2.40], poison: [3, 3.20, 0.80], drain: [3, 2.60, 2.00], frost: [3, 2.10, 1.45],
   boomer: [4, 2.40, 1.80], meteor: [4, 4.00, 5.00], gale: [4, 2.80, 1.05],
   holy: [5, 3.00, 4.00], lance: [5, 2.30, 3.20], nova: [5, 3.60, 5.20]
+};
+/* 193 이후 기존 19종의 `m` 을 옮긴 작업 — id: [옮긴 값, 근거].
+   작업 260(2026-08-27, 저장소 주인 지시 «같은 등급 안에서 세기가 뒤죽박죽») 이 «등급 안 세기 편차 ≤ 3.0»
+   을 맞추려고 5건을 조였다(영웅 12.73 · 전설 6.00 · 신화 3.13 → 전부 ≤ 3.0). 그중 bounce 는 193 신설분이라
+   KEEP 대상이 아니고, 여기 오는 것은 **기존 19종 중 4건**이다. 갱신하지 않으면 260 의 기준선과 이 표가
+   서로를 부순다(둘 다 통과할 수 없다). 같은 5건을 verify86 은 자기 OLD 표에서 이미 갱신했다.
+   ※ 260 은 `m` 만 건드렸다 — g·cd·id 는 19종 전부 193 기준선 그대로여야 한다(아래 [1-a] 가 그것을 가른다). */
+const M_MOVED = {
+  drain: [2.40, '260 — 영웅 등급 최약이라 올림'],
+  frost: [1.25, '260 — 영웅 등급 최강이라 내림(hits 4)'],
+  gale:  [0.85, '260 — 전설 등급 최강이라 내림(hits 12)'],
+  lance: [3.00, '260 — 신화 등급 최강이라 내림(hits 3)']
 };
 /* 같은 등급 기존 스킬 — [5] 밸런스 대조군 */
 const PEER = { 0: ['slash', 'stone'], 1: ['ice', 'multi'], 2: ['arrow', 'bolt'],
@@ -133,12 +150,31 @@ const RUN = ({ id, frames, chase, ring }) => {
     '신설 ' + x.n + '(' + x.id + ', ' + GN[x.g] + ') 존재 — ' + x.mech));
   const gBad = NEW.filter(x => { const r = st.all.find(a => a[0] === x.id); return !r || r[1] !== x.g; });
   ok(!gBad.length, '신설 8종 등급 배치가 표와 일치 (어긋남 ' + gBad.length + '건)');
-  const keepBad = Object.keys(KEEP).filter(id => {
+  /* [1-a] 세이브가 실제로 의존하는 축 — id·등급·cd 는 19종 전부 193 기준선 그대로여야 한다.
+     밸런스 작업이 지나가도 여기는 안 움직인다(260 은 `m` 만 건드렸다). */
+  const axisBad = Object.keys(KEEP).filter(id => {
     const r = st.all.find(a => a[0] === id);
-    return !r || r[1] !== KEEP[id][0] || r[2] !== KEEP[id][1] || r[3] !== KEEP[id][2];
+    return !r || r[1] !== KEEP[id][0] || r[2] !== KEEP[id][1];
   });
-  ok(keepBad.length === 0 && Object.keys(KEEP).length === 19,
-     '기존 19종 id·등급·cd·m 불변 = 구 세이브 밸런스 불변 (어긋남 ' + keepBad.length + '건)');
+  ok(axisBad.length === 0 && Object.keys(KEEP).length === 19,
+     '기존 19종 id·등급·cd 불변 = 구 세이브 호환 (어긋남 ' + axisBad.length + '건'
+     + (axisBad.length ? ': ' + axisBad.join(',') : '') + ')');
+  /* [1-b] `m` 은 밸런스 값이라 움직일 수 있다 — 단 «움직인 것이 등재된 것뿐» 이어야 한다.
+     기준선에서 벗어난 id 집합이 M_MOVED 의 키 집합과 **정확히 같아야** 통과: 미등재 이동(누가 몰래
+     조였다)도, 등재해 놓고 제품이 안 따라온 것(260 이 되돌려졌다)도 여기서 빨개진다. */
+  const mOf = id => (st.all.find(a => a[0] === id) || [])[3];
+  const drift = Object.keys(KEEP).filter(id => mOf(id) !== KEEP[id][2]);
+  const declared = Object.keys(M_MOVED);
+  const undeclared = drift.filter(id => !M_MOVED[id]);                       /* 등재 없이 움직임 */
+  const wrongVal = declared.filter(id => mOf(id) !== M_MOVED[id][0]);        /* 등재값과 제품이 다름 */
+  ok(undeclared.length === 0 && wrongVal.length === 0
+     && drift.length === declared.length && declared.length === 4,
+     '기존 19종 `m` 이동은 등재분 4건뿐 — 260(등급 안 편차 ≤ 3.0)이 옮긴 '
+     + declared.map(id => id + ' ' + KEEP[id][2].toFixed(2) + '→' + M_MOVED[id][0].toFixed(2)).join(' · ')
+     + ' · 나머지 ' + (Object.keys(KEEP).length - declared.length) + '종은 193 기준선 그대로'
+     + (undeclared.length ? ' — 미등재 이동: ' + undeclared.join(',') : '')
+     + (wrongVal.length ? ' — 등재값 불일치: '
+        + wrongVal.map(id => id + ' 기대 ' + M_MOVED[id][0] + ' 실측 ' + mOf(id)).join(',') : ''));
   ok(st.move && JSON.stringify(st.move) === JSON.stringify(MOVE),
      'SK193_MOVE 이관표가 게이트와 같다 (' + JSON.stringify(st.move) + ')');
   ok(st.sfx.length === 0, '시전음 매핑 누락 0건(지속형 cd 0 제외)'
