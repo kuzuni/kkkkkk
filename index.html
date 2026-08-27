@@ -24221,9 +24221,20 @@ function fxWorld(x, y){
   const z = cam.z || 1;                 /* 67 — 보스 연출 줌 중에도 출발점이 «죽은 자리» 에 맞게 */
   return { x:((x - cam.x)*z + VW/2) * SC, y:fxStageTop() + ((y - cam.y)*z + VH/2) * SC };
 }
+/* 227 — 힌트의 «나이» 는 **벽시계가 아니라 프레임이 실제로 돌아간 시간** 으로 잰다.
+   패널을 여는 무거운 렌더 한 번이 메인 스레드를 700~800ms 잡아먹으면(실측: 하단 네비 연타 8초에
+   120ms 넘는 프레임 공백 15~16건, 최대 803ms), 킬 직후에 찍힌 전투 힌트는 **프레임이 돌아오기도
+   전에** 600ms 창이 만료되는데 탭 힌트는 1200ms 창이라 살아남는다 — 그래서 얼어붙은 프레임이
+   풀리는 순간 fxWatch 가 «전투 골드» 를 마지막으로 누른 탭에 붙여 #fxl(팝업 위)로 쏜다.
+   158 이 스냅샷을 «누적 시점» 으로 옮겼어도 그 누적 시점 자체가 정지에 밀려 늦게 오므로 남아 있던 구멍이다.
+   프레임이 멈춰 있는 동안에는 새 힌트가 들어올 수 없으니, 정지 구간은 한 프레임 몫(FX_STEP)만 센다. */
+const FX_STEP = 120;                                  /* 한 프레임이 흡수하는 진행량 상한(ms) — 이보다 긴 공백은 «멈춰 있었다» 로 본다 */
+let fxClock = 0, fxClockAt = performance.now();
+function fxClk(){ return fxClock + Math.min(performance.now() - fxClockAt, FX_STEP); }
+function fxClockTick(now){ fxClock += Math.min(now - fxClockAt, FX_STEP); fxClockAt = now; }
 let fxOrig = null, fxOrigT = -1e9, fxOrigSrc = null;
 /* 77 — src:'combat' 은 전투씬 발(fxWorld 좌표) 출발 표시. 킬 경로(killEnemy)만 붙인다. */
-function fxAt(t, src){ const p = fxPt(t); if(p){ fxOrig = p; fxOrigT = performance.now(); fxOrigSrc = src || null; } }
+function fxAt(t, src){ const p = fxPt(t); if(p){ fxOrig = p; fxOrigT = fxClk(); fxOrigSrc = src || null; } }
 /* «획득 지점» 기본값 — 마지막으로 누른 버튼·카드. 화면이 fxAt() 를 부르지 않아도
    «수령 버튼에서 재화가 날아가는» 그림이 되도록 전역 캡처 리스너 하나로 좌표를 기억한다.
    (33 «전역 규칙은 리스너 하나 + 위임» 의 연출 판 — 새 화면은 아무것도 안 해도 편입된다) */
@@ -24231,13 +24242,17 @@ let fxTapEl = null, fxTapT = -1e9;
 addEventListener('pointerdown', ev => {
   const t = ev.target;
   fxTapEl = (t && t.closest) ? (t.closest('button,[data-q],[data-tr],[data-cur],.qs-r,.rc,.gbtn,.sg') || t) : null;
-  fxTapT = performance.now();
+  fxTapT = fxClk();                                   /* 227 — 힌트 나이는 프레임 시계로(위 FX_STEP 주석) */
 }, true);
 /* 명시 힌트(fxAt)와 마지막 탭 중 «더 최근» 것을 출발점으로 쓴다.
    자동 전투는 킬마다 fxAt 를 부르므로 전투 중에는 항상 적이 죽은 자리가 이긴다. */
+/* 227 — 인자 `now` 는 호출부 호환으로만 남긴다. 유효 창 판정은 **프레임 시계**(fxClk)로 한다:
+   벽시계로 재면 «정지 구간» 이 나이에 그대로 들어가 두 창(600/1200)이 서로 다른 배수로 만료돼,
+   더 최근에 찍힌 전투 힌트가 먼저 죽고 더 오래된 탭이 이기는 역전이 생긴다. */
 function fxSrc(now){
-  const a = (now - fxOrigT < 600 && fxOrig) ? fxOrigT : -1e9;
-  const b = (now - fxTapT < 1200 && fxTapEl && fxTapEl.isConnected) ? fxTapT : -1e9;
+  const t = fxClk();
+  const a = (t - fxOrigT < 600 && fxOrig) ? fxOrigT : -1e9;
+  const b = (t - fxTapT < 1200 && fxTapEl && fxTapEl.isConnected) ? fxTapT : -1e9;
   if(a < -1e8 && b < -1e8) return null;
   /* 77 — 출처를 좌표와 함께 돌려준다. combat 이면 fxFly/fxBurst 가 #fxlc(팝업 아래)를 고른다. */
   if(a >= b) return fxOrigSrc === 'combat' ? { x:fxOrig.x, y:fxOrig.y, combat:true } : fxOrig;
@@ -25785,6 +25800,10 @@ function loop(now){
   /* 108 — 처치 슬로모(camTimeScale) 폐기. 게임 시간은 언제나 실시간 그대로다 */
   step(dt);
 
+  /* 227 — 프레임 시계는 **절전 모드에서도** 돈다. fxTick 안에 두면 절전 중에 시계가 얼어붙어
+     힌트가 영원히 «신선» 해지고, 절전이 풀리는 순간 그동안 쌓인 골드가 절전 직전에 누른 버튼에서
+     튀어나온다(158 이 없앤 그 그림이 그대로 돌아온다). 루프가 도는 한 시계도 돈다. */
+  fxClockTick(performance.now());
   /* 56 절전 모드 — «전투는 계속, 렌더는 정지». step(dt) 은 위에서 이미 돌았고 여기서는
      캔버스·HUD·연출·UI 재렌더를 통째로 건너뛴다(측정표 §6-2 — 화면이 완전 불투명 검정이라 그릴 이유가 없다).
      세이브(saveT)·일일 갱신(dayT)은 아래에서 그대로 돈다 — 멈추면 방치 진행이 유실된다. */

@@ -15,6 +15,13 @@
  *   [C] 출발점 좌표 — 비행 시작점이 «누른 버튼» 이 아니라 «킬 자리» 근처다
  *   [D] UI 발 회귀 — 버튼에서 준 보상은 종전대로 그 버튼에서 #fxl 로 난다 (58/93 회귀 방지)
  *   [E] 통합 — 자동 전투를 돌리며 하단 네비·팝업 ✕ 를 8초간 연타: #fxl 에 재화 비행 0건
+ *   [F] 프레임 정지(227) — 킬 직후 메인 스레드가 700ms 얼어붙어도 묶음의 발원이 combat 이다
+ *
+ * 227(2026-08-27): [E] 가 5회 중 1회 빨갰다. 원인은 게이트가 아니라 **제품**이었다 —
+ *   힌트의 «나이» 를 벽시계로 재던 `fxSrc` 가, 하단 네비를 누를 때 나는 645~803ms 짜리 프레임 정지에서
+ *   전투 힌트(600ms 창)만 만료시키고 탭 힌트(1200ms 창)는 살려 «더 오래된 탭» 이 이겼다.
+ *   [E] 는 그 정지가 «킬 직후» 에 걸려야만 빨개져 간헐이었으므로, 같은 실패를 **결정적으로** 세우는
+ *   [F] 를 신설했다(정지를 합성한다). [E] 는 통합 스모크로 남긴다.
  */
 const path = require('path');
 const fs = require('fs');
@@ -181,6 +188,10 @@ function launchOpts(){
           }
       }).observe(document.getElementById(id), { childList: true });
       watch('fxl'); watch('fxlc');
+      /* 227 — «창이 실제로 열렸나» 의 증거. 하단 네비 렌더가 메인 스레드를 얼리는 구간을 센다
+         (실측 120ms 넘는 공백 13~16건 · 최대 645~803ms). 판정은 결정적인 [F] 가 하고 여기서는 기록만 한다. */
+      window.__c158.gap = []; let __last = performance.now();
+      (function loop(){ const n = performance.now(); if (n - __last > 120) window.__c158.gap.push(Math.round(n - __last)); __last = n; requestAnimationFrame(loop); })();
       /* 실제 자동 전투만으로는 8초에 킬 1~2건이라 «누적 중에 탭» 이라는 창이 잘 안 열린다.
          킬 경로(killEnemy)와 **같은 순서**로 합성 킬을 130ms 간격으로 넣어 그 창을 확실히 만든다:
          fxAt(전투좌표,'combat') → S.gold += g. 좌표는 전투 캔버스 한복판, 탭 지점(탭바)과 멀다. */
@@ -211,6 +222,49 @@ function launchOpts(){
     if (r.fxlc > 0) ok(`전투 연출 ${r.fxlc}건 → #fxlc`); else fail('전투 연출이 #fxlc 에 0건');
     if (r.fxl === 0) ok('#fxl 0건 — 누른 버튼에서 튀는 재화 연출 없음');
     else fail(`#fxl 에 ${r.fxl}건 — 네비·팝업 탭이 전투 골드를 가로채 팝업 위로 튄다 (${(r.seen || []).join(' · ')})`);
+    const gp = r.gap || [];
+    console.log(`  · 프레임 공백 ${gp.length}건 (최대 ${gp.length ? Math.max(...gp) : 0}ms) — 227 의 실패 창. 판정은 [F] 가 한다`);
+  }
+
+  /* ---------- [F] 227 — 킬 직후 프레임이 700ms 얼어붙어도 발원을 안 뺏긴다 ---------- */
+  console.log('[F] 킬 직후 메인 스레드 700ms 정지 — 묶음의 발원이 combat 을 지킨다');
+  {
+    const r = await page.evaluate(async () => {
+      const h = await window.__v158({});
+      /* 실패가 났던 배치 그대로: **탭이 킬보다 먼저** 온다(실측 tapAge 887 · origAge 697).
+         벽시계 나이로 재면 뒤에 온 전투 힌트가 600ms 로 먼저 죽고 앞선 탭이 1200ms 로 살아남는다. */
+      const btn = document.querySelector('#tabbar .tab');
+      const br = btn.getBoundingClientRect();
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: br.left + br.width / 2, clientY: br.top + br.height / 2 }));
+      await h.wait(140);
+      const KX = 300, KY = 1500;
+      fxAt({ x: KX, y: KY }, 'combat');
+      S.gold += 500;
+      /* 메인 스레드를 통째로 막는다 — 무거운 패널 렌더가 실제로 하는 일. 이 동안 rAF·타이머 전부 정지. */
+      const t0 = performance.now();
+      while (performance.now() - t0 < 700) { /* busy */ }
+      const froze = Math.round(performance.now() - t0);
+      const before = h.snap();
+      await h.wait(320);
+      const after = h.snap();
+      const shot = h.log().find((e) => e.cur === 'gold');
+      const bp = h.toFrame(br);
+      const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
+      const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
+      return { froze, shotCombat: shot ? shot.combat : null,
+               newFl: after.fl - before.fl, newLc: after.lc - before.lc,
+               dKill: d(fp, { x: KX, y: KY }), dTap: d(fp, bp) };
+    });
+    if (r.froze >= 690) ok(`메인 스레드를 ${r.froze}ms 얼렸다 (600ms 창을 확실히 넘긴다)`);
+    else fail(`정지가 ${r.froze}ms 뿐이라 이 검사가 헛돈다`);
+    if (r.shotCombat === true) ok('정지 뒤 발사된 묶음의 발원 = combat');
+    else fail(`정지가 발원을 뺏었다 — combat=${r.shotCombat} (킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px)`);
+    if (r.newLc > 0) ok(`정지 뒤 묶음 → #fxlc ${r.newLc}개 (팝업 아래)`);
+    else fail('정지 뒤 묶음이 #fxlc 에 안 떴다');
+    if (r.newFl === 0) ok('#fxl 0건');
+    else fail(`#fxl 에 ${r.newFl}개 — 정지 동안 만료된 전투 힌트를 탭이 가로챘다(=227 재현)`);
+    if (r.dKill >= 0 && r.dKill < 4) ok(`발원 좌표 = 킬 자리 (오차 ${Math.round(r.dKill)}px · 탭까지는 ${Math.round(r.dTap)}px)`);
+    else fail(`발원이 «누른 탭» 쪽이다 — 킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px`);
   }
 
   if (errs.length) errs.forEach((e) => fail(e));
