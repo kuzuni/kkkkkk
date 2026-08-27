@@ -285,11 +285,15 @@ const READ = (partList) => {
   ok(fPet.on, '[펫 장착] S.eqPet 에 들어간다');
   eq('[펫 장착] 후 라벨', fPet.lab, '해제');
 
-  const fLv = await p.evaluate(i => {
-    S.own[i] = { n: 40, l: 3 }; closeModal(); showItem(i);
-    const b = document.getElementById('mLv'); b.onclick();
-    return { lv: S.own[i].l, n: S.own[i].n, shown: document.querySelector('#mbox .sk-lv').textContent.trim() };
-  }, seed.eqp);
+  /* 262(2026-08-27) — [강화]는 click 이 아니라 **pointerdown** 으로 옮겨졌다(«꾹 누르면 연속 강화»).
+     `b.onclick()` 직접 호출은 그 뒤로 «is not a function» 으로 즉사한다 — 진짜 포인터 탭으로 바꾼다.
+     (탭 1회 = Lv +1 은 262 게이트 §2 가 따로 못 박는다) */
+  await p.evaluate(i => { S.own[i] = { n: 40, l: 3 }; closeModal(); showItem(i); }, seed.eqp);
+  await p.click('#mLv');
+  await p.waitForTimeout(200);
+  const fLv = await p.evaluate(i =>
+    ({ lv: S.own[i].l, n: S.own[i].n, shown: document.querySelector('#mbox .sk-lv').textContent.trim() }),
+    seed.eqp);
   eq('[강화] Lv 가 올랐다', fLv.lv, 4);
   ok(fLv.n < 40, '[강화] 재료가 줄었다', fLv.n);
   eq('[강화] 팝업 Lv 표기 갱신', fLv.shown, 'Lv. 4');

@@ -21480,19 +21480,102 @@ function paintPetIcons(root){
 /* 89 — renderBanner/bindBanner(구 배너 패널 공용 렌더러) 폐기: 마지막 사용처가 유물 배너(#bRel)였다 */
 const itemById = id => SK[id] || EQ[id] || PT[id] || RL[id];
 
+/* ==========================================================================
+   262 (T2, 2026-08-27 저장소 주인 보고 «아이템 «강화» 버튼을 꾹 눌러도 연속 강화가 안 된다») —
+   08 세부 팝업 [강화] 의 «꾹 누르면 연속». 64(23 훈련 카드)·119(89 유물 소환)가 각자 갖고 있던
+   규칙을 **공용 부품 한 벌**로 뽑았다 — 세 자리가 같은 상수를 공유해야 «같은 손맛» 이 된다.
+   규칙(64 원본 그대로): pointerdown 즉시 1회 → `TR_HOLD_DELAY`(350ms) 뒤 반복 시작 →
+     `TR_HOLD_IV0`(160ms)에서 ×`TR_HOLD_ACCEL`(0.86) 가속, 최소 `TR_HOLD_IVMIN`(60ms).
+     뗌·취소·버튼 밖 이탈·팝업 닫힘 → 즉시 정지.
+   ⚠ 64 교훈 1·2 와 74(탭 유실)를 그대로 지킨다:
+     ⓐ click 이 아니라 **pointerdown** 에서 처리한다. click 을 같이 두면 «누를 때 1 + 뗄 때 1» 로 두 번 사진다
+        — 그래서 이 버튼들의 `onclick` 은 남기지 않는다(꾹 누르기 대상이 아닌 [장착]·[최대 강화]·[합성]은 click 그대로).
+     ⓑ **누른 노드를 innerHTML 로 날리면 터치의 암묵적 포인터 캡처가 끊긴다.** 강화 성공마다
+        `showItem()`/`showSkillDetail()`/`showCosDetail()` 가 팝업 본문을 통째로 다시 그리므로,
+        홀드 중에는 통짜 재렌더 대신 **숫자만**(`mdLive`) 고쳐 쓰고 손을 뗀 «뒤» 에 한 번만 통짜 재렌더한다.
+        (같은 이유로 `$('mbox').scrollTop = 0` 이 반복마다 스크롤을 걷어차던 것도 사라진다)
+     ⓒ 재료·비용이 모자라면 **조용히** 멈춘다(119 G4 — 반복분은 무알림). 첫 누름부터 실패면 60 shake 1회.
+   ⚠ 대상은 «확정 강화» 뿐이다. 203 룬 [강화]는 **확률 시도**라 203 이 «한 번 누르면 한 번» 으로
+     의도해 둔 자리이므로 건드리지 않는다(그 판단은 review §5 에 적어 뒀다).
+   -------------------------------------------------------------------------- */
+let upHold = null;              /* {btn, once, live, end, n, iv, timer} — 누르고 있는 동안에만 존재 */
+function upHoldStop(bad){
+  const h = upHold; if(!h) return;
+  upHold = null; clearTimeout(h.timer);
+  h.end(h.n, bad);
+}
+function upHoldTick(){
+  const h = upHold; if(!h) return;
+  if(!$('modal').classList.contains('on')){ upHoldStop(false); return; }   /* 팝업이 닫히면 같이 멈춘다 */
+  if(!h.once()){ upHoldStop(true); return; }                              /* 부족·상한 → 조용히 정지 */
+  h.n++; h.live();
+  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.timer = setTimeout(upHoldTick, h.iv);
+}
+/* 홀드 중 «숫자만» 갱신하는 08 껍데기 공용 라이터. 넘기지 않은 자리는 건드리지 않는다.
+   `cell`·`own`·`desc` 는 아이콘(<img>)·<em> 이 섞이는 자리라 innerHTML 이다. */
+function mdLive(v){
+  const b = $('mbox'); if(!b) return;
+  const put = (sel, txt, html) => {
+    const n = b.querySelector(sel);
+    if(n && txt != null){ if(html) n.innerHTML = txt; else n.textContent = txt; }
+  };
+  put(v.lvSel || '.sk-lv b', v.lv);
+  const bar = b.querySelector('.sk-pb i');
+  if(bar && v.p != null) bar.style.width = v.p + '%';
+  put('.sk-pb b', v.pTxt);
+  put('.sk-ct .vl .nt b', v.cell, true);
+  put('.sk-db p', v.desc, true);
+  put('.sk-ow .v b', v.own, true);
+}
+/* 버튼 하나에 홀드를 붙인다 — o.once() = 1회 강화(성공하면 true) · o.fx(btn) = 첫 1회 연출 ·
+   o.live() = 숫자만 갱신 · o.full(n) = 손 뗀 뒤 통짜 재렌더(정합 맞추기).
+   버튼 노드는 재렌더마다 새로 나므로 렌더 끝에서 매번 다시 붙인다(리스너가 노드와 함께 사라진다). */
+function bindUpHold(btn, o){
+  if(!btn || btn.disabled) return;
+  const shake = n => { if(n && typeof jzOn === 'function') jzOn(n, 'jz-sh', 380); };
+  btn.addEventListener('pointerdown', () => {
+    upHoldStop(false);
+    if(!o.once()){ shake(btn); return; }        /* 첫 누름부터 실패 → 반복 없음 + 흔들림 */
+    if(o.fx) o.fx(btn);                         /* 58 — 반복분은 연출을 걸지 않는다(60ms 로 쏘면 #fxl 이 막힌다) */
+    o.live();
+    upHold = { btn, once:o.once, live:o.live, n:1, iv:TR_HOLD_IV0, timer:0,
+               end:(n, bad) => { o.full(n); if(bad) shake($('mLv') || btn); } };
+    upHold.timer = setTimeout(upHoldTick, TR_HOLD_DELAY);
+  });
+}
+/* 뗌·취소는 버튼 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다(64 와 같은 규칙) */
+addEventListener('pointerup', () => upHoldStop(false));
+addEventListener('pointercancel', () => upHoldStop(false));
+/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 좌표로 판정한다 */
+addEventListener('pointermove', e => {
+  if(!upHold) return;
+  const t = document.elementFromPoint(e.clientX, e.clientY);
+  if(!t || !t.closest || t.closest('button') !== upHold.btn) upHoldStop(false);
+});
+
 /* ── 08 스킬 세부 팝업 ── 측정표: docs/measure/08-스킬세부팝업.md
    레퍼런스 08 은 A5 공용 모달 껍데기(가운데 다이얼로그) 안에 «카드 한 장 + 버튼 2개» 가 들어간 형태다.
    카드 안 요소는 좌표를 전부 실측했으므로 카드 좌상단 기준 절대 배치로 그린다.
    레퍼런스에는 헤더 ✕ 도 «닫기» 버튼도 없다 — 딤을 눌러 닫는다(#modal 배경 클릭 핸들러가 이미 있다). */
 function showSkillDetail(id){
   const it = SK[id], G = GRADE[it.g], own = has(id), lv = oLv(id), eq = skillEquipped(id);
-  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
-  const rate = own ? (maxed ? 1 : Math.min(1, have / need)) : 0;
-  const p = (rate * 100).toFixed(1);
+  const maxed = atMax(it);   /* 262 — need/have 는 아래 pbNow() 안으로 들어갔다(홀드 중에도 매번 다시 읽는다) */
+  /* 262 — 레벨에 따라 바뀌는 네 자리는 **함수 한 벌**로 뽑았다: 통짜 재렌더와 홀드 중
+     «숫자만» 갱신(mdLive)이 반드시 같은 식을 보게 하기 위한 것이다(표기층이 두 벌이 되면 조용히 갈라진다). */
+  const pbNow = () => {
+    const l2 = oLv(id), mx = atMax(it), nd = fragNeed(l2), hv = frag(id);
+    return { p: ((own ? (mx ? 1 : Math.min(1, hv / nd)) : 0) * 100).toFixed(1),
+             t: mx ? 'MAX' : hv + '/' + nd };
+  };
+  const dmgNow = () => own ? fmtB(skillDmg(it)) : '—';
+  const ownNow = () => '공격력 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>';
+  const liveSk = () => { const b2 = pbNow(); mdLive({ lv:'Lv. ' + oLv(id), p:b2.p, pTxt:b2.t, cell:dmgNow(), own:ownNow() }); };
+  const p = pbNow().p;
   /* 레퍼런스는 «낮/밤 쿨타임» 2열이지만 이 게임에는 낮·밤 개념이 없다.
      표의 격자·색·간격은 그대로 두고 열 내용만 실제 데이터(쿨타임·피해량)로 채운다. */
   const cool = it.cd > 0 ? it.cd.toFixed(2) + '초' : '지속형';
-  const dmgTxt = own ? fmtB(skillDmg(it)) : '—';
+  const dmgTxt = dmgNow();
   /* 설명문의 수치는 레퍼런스처럼 주황(#F88050)으로 강조한다 */
   const desc = (own ? it.d : '아직 획득하지 못했습니다.<br>스킬 소환으로 획득하세요.')
     .replace(/(\d+(?:\.\d+)?)(%|초|발|방향|명|개)?/g, '<em>$1$2</em>');
@@ -21504,7 +21587,7 @@ function showSkillDetail(id){
     +   '<div class="sk-gr"><b>' + G.n + '</b></div>'
     +   '<div class="sk-lv"><b>Lv. ' + lv + '</b></div>'
     +   '<div class="sk-pb"><i style="width:' + p + '%"></i>'
-    +     '<b>' + (maxed ? 'MAX' : have + '/' + need) + '</b></div>'   /* 270 — 바 내부 가운데 고정(CSS) */
+    +     '<b>' + pbNow().t + '</b></div>'   /* 270 — 바 내부 가운데 고정(CSS) */
     +   '<div class="sk-ct">'
     +     '<div class="hd"><div><b>쿨타임</b></div><div class="nt"><b>피해량</b></div></div>'
     +     '<div class="vl"><div><b>' + cool + '</b></div><div class="nt"><b>' + dmgTxt + '</b></div></div>'
@@ -21512,7 +21595,7 @@ function showSkillDetail(id){
     +   '<div class="sk-sl"><b>스킬 설명</b></div>'
     +   '<div class="sk-db"><p>' + desc + '</p></div>'
     +   '<div class="sk-ow"><div class="k"><b>보유 효과</b></div>'
-    +     '<div class="v"><b>공격력 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em></b></div></div>'
+    +     '<div class="v"><b>' + ownNow() + '</b></div></div>'
     + '</div>'
     + '<div class="sk-act">'
     +   '<button class="sk-e" id="mEq"' + (own ? '' : ' disabled') + '><b>' + (eq ? '해제' : '장착') + '</b></button>'
@@ -21522,11 +21605,15 @@ function showSkillDetail(id){
   $('modal').classList.add('on', 'sk8');
   const e = $('mEq'), l = $('mLv');
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
-  /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클 */
-  if(l && !l.disabled) l.onclick = () => {
-    const tgt = $('mbox').querySelector('.sk-lv');
-    if(levelUp(it)){ fxUpOk(tgt, l); showSkillDetail(id); fxHitEl('#mbox .sk-lv'); }
-  };
+  /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클
+     262 — click → pointerdown «꾹 누르면 연속»(공용 bindUpHold). click 분기는 두지 않는다(64 교훈 2:
+     click 을 같이 두면 «누를 때 1 + 뗄 때 1» 로 두 번 강화된다). */
+  bindUpHold(l, {
+    once: () => levelUp(it),
+    fx:   b => fxUpOk($('mbox').querySelector('.sk-lv'), b),
+    live: liveSk,
+    full: () => { showSkillDetail(id); fxHitEl('#mbox .sk-lv'); }
+  });
 }
 
 
@@ -21551,22 +21638,30 @@ function showItem(id){
   if(!it) return;
   if(SK[id]) return showSkillDetail(id);   /* 스킬은 08 전용 상세 팝업으로 */
   const cat = catOf(it), G = GRADE[it.g], own = has(id), lv = oLv(id);
-  const maxed = atMax(it), need = fragNeed(lv), have = frag(id);
+  const maxed = atMax(it);   /* 262 — need/have 는 아래 pbNow() 안으로 들어갔다 */
   const rel = cat === 'relic';
   const eq = cat === 'pet' ? petEquipped(id) : rel ? false : eqEquipped(it);
   const slot = cat === 'equip' ? SLOTS.find(x => x.k === it.slot) : null;
   const kindN = cat === 'pet' ? '동료' : cat === 'equip' ? '장비' : '유물';
   /* 진행바 — 펫·장비는 «강화 재료 have/need», 유물은 강화 재료가 없다(89: 소환이 곧 Lv+1) */
-  const rate = rel ? (own ? 100 : 0) : own ? (maxed ? 100 : Math.min(1, have / need) * 100) : 0;
-  const p = rate.toFixed(1);
-  const pTxt = rel ? (own ? '소환할 때마다 Lv +1' : '미보유')
-             : own ? (maxed ? 'MAX' : have + '/' + need) : '0/' + need;
-  /* 표 2열 — 계열이 갈리는 자리는 여기뿐이다 */
-  const ct = cat === 'pet'   ? ['공격 주기', '피해량', it.cd.toFixed(2) + '초', own ? fmtB(petDmg(it)) : '—']
-           : cat === 'equip' ? ['부위', '효과', slot.n, slot.stat]
-           :                   ['효과', '소환 Lv', RELIC_EFF[it.eff], String(lv)];
+  /* 262 — 레벨에 따라 바뀌는 자리(진행바·표 2열 값·설명문·보유 효과)는 **함수 한 벌**로 뽑았다:
+     통짜 재렌더와 홀드 중 «숫자만» 갱신(mdLive)이 반드시 같은 식을 보게 하기 위한 것이다. */
+  const pbNow = () => {
+    const l2 = oLv(id), mx = atMax(it), nd = fragNeed(l2), hv = frag(id);
+    return { p: (rel ? (own ? 100 : 0) : own ? (mx ? 100 : Math.min(1, hv / nd) * 100) : 0).toFixed(1),
+             t: rel ? (own ? '소환할 때마다 Lv +1' : '미보유')
+                    : own ? (mx ? 'MAX' : hv + '/' + nd) : '0/' + nd };
+  };
+  const p = pbNow().p, pTxt = pbNow().t;
+  /* 표 2열 — 계열이 갈리는 자리는 여기뿐이다. 4번째 칸만 레벨을 탄다(펫 피해량 · 유물 소환 Lv) */
+  const ct3Now = () => cat === 'pet'   ? (own ? fmtB(petDmg(it)) : '—')
+                     : cat === 'equip' ? slot.stat
+                     :                   String(oLv(id));
+  const ct = cat === 'pet'   ? ['공격 주기', '피해량', it.cd.toFixed(2) + '초', ct3Now()]
+           : cat === 'equip' ? ['부위', '효과', slot.n, ct3Now()]
+           :                   ['효과', '소환 Lv', RELIC_EFF[it.eff], ct3Now()];
   /* 설명문의 수치는 08 규격대로 주황(`.sk-db p em`)으로 강조한다 */
-  const desc = !own
+  const descNow = () => !own
     ? '아직 획득하지 못했습니다.<br>' + kindN + ' 소환으로 획득하세요.'
     : cat === 'pet'
       ? '플레이어를 따라다니며 <em>' + it.cd.toFixed(2) + '초</em>마다 자동 공격합니다.<br>'
@@ -21582,11 +21677,15 @@ function showItem(id){
       : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.<br>'
         + '장착 없이 <em>보유</em>만으로 항상 적용됩니다.<br>'
         + '유물을 소환할 때마다 유물 하나가 <em>Lv +1</em> 됩니다.';
-  const ownTxt = cat === 'pet'
+  const ownNow = () => cat === 'pet'
       ? '공격 <em>+' + (own ? pct(ownVal(it)*0.6) : '0%') + '</em> 골드 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
     : cat === 'equip'
       ? slot.stat + ' <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
       : RELIC_EFF[it.eff] + ' <em>+' + (own ? pct(relicVal(it)) : '0%') + '</em>';
+  const desc = descNow(), ownTxt = ownNow();
+  /* 262 — 홀드 중에는 이 다섯 자리만 고쳐 쓴다(통짜 재렌더는 누른 버튼 노드를 날린다) */
+  const liveIt = () => { const b2 = pbNow();
+    mdLive({ lv:'Lv. ' + oLv(id), p:b2.p, pTxt:b2.t, cell:ct3Now(), desc:descNow(), own:ownNow() }); };
   /* 버튼 행 — 08 규격(250x120). 유물은 할 수 있는 행동이 없어 행 자체를 안 낸다(위 주석). */
   const canUp = own && !maxed && canLevel(it);
   const crafting = own && maxed && cat === 'equip' && !isTopGrade(it);
@@ -21623,11 +21722,15 @@ function showItem(id){
   $('modal').classList.add('on', 'sk8');
   const e = $('mEq'), l = $('mLv'), b = $('mLvAll'), c = $('mCraft');
   if(e && own) e.onclick = () => { toggleEquip(it, cat); showItem(id); };
-  /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리) */
-  if(l && !l.disabled) l.onclick = () => {
-    const t = $('mbox').querySelector('.sk-lv');
-    if(levelUp(it)){ fxUpOk(t, l); showItem(id); fxHitEl('#mbox .sk-lv'); }
-  };
+  /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리)
+     262 — click → pointerdown «꾹 누르면 연속»(공용 bindUpHold). 옆의 [최대 강화]·[합성]은
+     꾹 누르기 대상이 아니라 click 그대로 둔다(64 교훈 2 — pointerdown 으로 옮기면 드래그 오조작이 는다). */
+  bindUpHold(l, {
+    once: () => levelUp(it),
+    fx:   b => fxUpOk($('mbox').querySelector('.sk-lv'), b),
+    live: liveIt,
+    full: () => { showItem(id); fxHitEl('#mbox .sk-lv'); }
+  });
   if(b) b.onclick = () => {
     const t = $('mbox').querySelector('.sk-lv'), n = levelUpMax(it);
     if(n) fxUpOk(t, b); showItem(id); if(n) fxHitEl('#mbox .sk-lv');
@@ -25822,7 +25925,24 @@ $('bCos').addEventListener('click', e => {
 function showCosDetail(id){
   const a = AV[id]; if(!a) return;
   const own = cosOwn(id), on = id === cosCur();
-  const lv = cosLvOf(id), maxed = cosMaxed(id), cost = cosCost(lv), upOk = cosUpOk(id);
+  const lv = cosLvOf(id), maxed = cosMaxed(id), upOk = cosUpOk(id);   /* 262 — cost 는 cosCellNow() 안으로 */
+  /* 262 — 레벨을 타는 네 자리(레벨 칩·진행바·강화 비용·설명문 마지막 줄)를 **함수 한 벌**로 뽑았다:
+     통짜 재렌더와 홀드 중 «숫자만» 갱신(mdLive)이 같은 식을 보게 하기 위한 것이다.
+     ⚠ 코스튬은 08 껍데기에서 레벨이 `.sk-lv` 가 아니라 **`.sk-gr`** 칸에 앉는다(194) — mdLive 에 lvSel 로 넘긴다. */
+  const cosPbNow  = () => ({ p: own ? (cosLvOf(id)/COS_MAXLV*100).toFixed(2) : '0',
+                             t: own ? cosLvOf(id) + '/' + COS_MAXLV : '🔒' + cosReqText(a) });
+  const cosCellNow = () => (own && cosMaxed(id)) ? 'MAX' : curIc('stone', 26) + ' ' + fmt(cosCost(cosLvOf(id)));
+  const cosDescNow = () => { const l2 = cosLvOf(id); return own
+      ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.<br>'
+        + '보유 효과는 <em>' + COS_STEP_EVERY + '개마다 한 계단</em>씩 커집니다.<br>'
+        + '<em>강화석</em>으로 최대 <em>Lv. ' + COS_MAXLV + '</em>까지 강화할 수 있습니다 '
+        + '(효율 곡선은 <em>모든 코스튬이 동일</em>).<br>'
+        + '강화 효과 <em>Lv. ' + l2 + '</em> — 공격 <em>+' + pct(l2*COS_LV.atk) + '</em> · 체력 <em>+'
+        + pct(l2*COS_LV.hp) + '</em> · 골드 <em>+' + pct(l2*COS_LV.gold) + '</em>'
+      : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용되고, '
+        + '<em>강화석</em>으로 <em>Lv. ' + COS_MAXLV + '</em>까지 키울 수 있습니다.'; };
+  const liveCos = () => { const b2 = cosPbNow();
+    mdLive({ lvSel:'.sk-gr b', lv:'Lv. ' + cosLvOf(id), p:b2.p, pTxt:b2.t, cell:cosCellNow(), desc:cosDescNow() }); };
   /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 못 받은 외형» 이라 미보유도 이름·그림을 보여 준다
      (82 규칙). 182 이후 상태 줄은 «미보유» 와 «어느 승급전이 주는가» 를 말한다.
      194 — «등급» 칸은 폐기했다. 그 자리는 이제 **강화 레벨**이 갖는다(등급이 없어졌으므로
@@ -25835,27 +25955,19 @@ function showCosDetail(id){
     +   '<div class="sk-gr"><b>Lv. ' + lv + '</b></div>'
     +   '<div class="sk-lv"><b>' + (on ? '착용 중' : own ? '보유' : '미보유') + '</b></div>'
     /* 진행바 — 보유 칸은 «강화 진행도», 미보유 칸은 0% + 획득 조건(182 그대로) */
-    +   '<div class="sk-pb"><i style="width:' + (own ? (lv/COS_MAXLV*100).toFixed(2) : 0) + '%"></i>'
+    +   '<div class="sk-pb"><i style="width:' + cosPbNow().p + '%"></i>'
     +     '<b>'   /* 270 — 바 내부 가운데 고정(CSS). 미보유 칸의 긴 획득 조건도 좌단에 안 처박힌다 */
-    +       (own ? lv + '/' + COS_MAXLV : '🔒' + cosReqText(a)) + '</b></div>'
+    +       cosPbNow().t + '</b></div>'
     +   '<div class="sk-ct">'
     +     '<div class="hd"><div><b>획득 조건</b></div><div class="nt"><b>강화 비용</b></div></div>'
     +     '<div class="vl"><div><b>' + cosReqText(a) + '</b></div>'
-    +       '<div class="nt"><b>' + (own && maxed ? 'MAX' : curIc('stone', 26) + ' ' + fmt(cost)) + '</b></div></div>'
+    +       '<div class="nt"><b>' + cosCellNow() + '</b></div></div>'
     +   '</div>'
     +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
     /* 194 — 08 껍데기(801×701)에는 «보유 효과» 바 아래로 34px 밖에 안 남아 두 번째 알약 행을
        놓을 자리가 없다(측정표 08 §2.8). 강화 효과는 **설명 박스 안 한 줄**로 낸다 —
        칸 기하를 1px 도 안 건드리므로 08·50 의 기존 점수에 영향이 없다. */
-    +   '<div class="sk-db"><p>' + (own
-          ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.<br>'
-            + '보유 효과는 <em>' + COS_STEP_EVERY + '개마다 한 계단</em>씩 커집니다.<br>'
-            + '<em>강화석</em>으로 최대 <em>Lv. ' + COS_MAXLV + '</em>까지 강화할 수 있습니다 '
-            + '(효율 곡선은 <em>모든 코스튬이 동일</em>).<br>'
-            + '강화 효과 <em>Lv. ' + lv + '</em> — 공격 <em>+' + pct(lv*COS_LV.atk) + '</em> · 체력 <em>+'
-            + pct(lv*COS_LV.hp) + '</em> · 골드 <em>+' + pct(lv*COS_LV.gold) + '</em>'
-          : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용되고, '
-            + '<em>강화석</em>으로 <em>Lv. ' + COS_MAXLV + '</em>까지 키울 수 있습니다.') + '</p></div>'
+    +   '<div class="sk-db"><p>' + cosDescNow() + '</p></div>'
     /* 194 — 두 줄로 나눈다: «보유 효과»(코스튬마다 곱) · «강화 효과»(레벨 1당, 총합에 1회 곱).
        숫자는 전부 bonus() 와 같은 상수(COS_OWN·COS_LV)에서 나온다.
        197 — 보유 효과가 **획득 순번의 계단**이 됐으므로 «이 칸이 몇 번째인가»(cosOwnIdx)를 같이 보여준다.
@@ -25879,10 +25991,15 @@ function showCosDetail(id){
   $('modal').classList.add('on', 'sk8');
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
-  if(b && !b.disabled) b.onclick = own
-    ? () => { const at = $('mbox').querySelector('.sk-ic');
-              if(cosUpgrade(id)){ fxUpOk(at, at, 'Lv. ' + cosLvOf(id)); renderUI(); showCosDetail(id); } }
-    : () => { closeModal(); openPromo(); };
+  /* 262 — 보유 칸의 [강화]는 «꾹 누르면 연속»(공용 bindUpHold). 미보유 칸의 [승급전]은
+     화면을 옮기는 버튼이라 click 그대로 둔다(꾹 누르기 대상이 아니다). */
+  if(own) bindUpHold(b, {
+    once: () => cosUpgrade(id),
+    fx:   () => { const at = $('mbox').querySelector('.sk-ic'); fxUpOk(at, at, 'Lv. ' + cosLvOf(id)); },
+    live: liveCos,
+    full: () => { renderUI(); showCosDetail(id); }
+  });
+  else if(b && !b.disabled) b.onclick = () => { closeModal(); openPromo(); };
 }
 
 /* ==========================================================================
