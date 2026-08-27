@@ -58,7 +58,11 @@ const snap = page => page.evaluate(() => {
     dot:   getComputedStyle(document.getElementById('tuto').querySelector('.trew'), '::after').display,
     bg:    getComputedStyle(b).backgroundImage === 'none' ? getComputedStyle(b).backgroundColor : 'gradient',
     bc:    getComputedStyle(b).borderTopColor,
+    /* 125 이후 화폐는 `<img class="cic" data-cur-ic alt="">` 다 — textContent 에 안 잡힌다
+       (LESSONS 175-② · 185-⑤). «무엇이 그려졌나» 는 아이콘 키로 묻는다. */
     rew:   document.getElementById('tutoRew').textContent,
+    rewIc: (document.getElementById('tutoRew').querySelector('img.cic') || {}).dataset?.curIc || '',
+    rewN:  document.getElementById('tutoRew').querySelectorAll('img.cic').length,
     sub:   document.getElementById('tutoSub').textContent,
     idx:   S.guide.idx, prog: S.guide.prog, dia: S.dia
   };
@@ -87,10 +91,21 @@ const snap = page => page.evaluate(() => {
   /* 체인 정의를 한 번 읽어 둔다 — 기대값을 코드가 아니라 데이터에서 만든다 */
   /* 73 부터 dia 가 함수인 미션이 있다(evaluate 의 JSON 직렬화에서 undefined 로 떨어진다) → gmDia 로 값을 읽는다 */
   const G = await page.evaluate(() => GUIDE.map(m => ({ n: m.n, goal: m.goal, dia: gmDia(m), abs: !!m.abs })));
-  ok('§0 체인 21개(76 목걸이 삽입)', G.length === 21, 'len=' + G.length);
+  /* 옛 «체인 21개» 는 76 시점의 스냅샷이었다 — 154 가 «출석 보상 받기» 를 빼면서 20 이 됐고,
+     기능은 한 번도 안 깨졌는데 게이트만 빨개졌다(LESSONS 185-①).
+     길이 리터럴 대신 **체인이 갖춰야 할 성질**을 단언한다. 길이는 결과로 찍어만 둔다. */
+  ok('§0 체인이 비어 있지 않다', G.length > 0, 'len=' + G.length);
+  ok('§0 미션마다 이름·목표가 있다', G.every(m => m.n && m.goal > 0),
+     G.filter(m => !(m.n && m.goal > 0)).map(m => m.n).join(' / '));
+  ok('§0 미션 이름 중복 없음', new Set(G.map(m => m.n)).size === G.length,
+     'len=' + G.length + ' uniq=' + new Set(G.map(m => m.n)).size);
   ok('§0 보상은 전부 다이아(>0)', G.every(m => m.dia > 0));
-  ok('§0 체인에 소환·강화·장비장착·훈련·던전·보스·스킬장착·룰렛·출석이 모두 있다',
-     ['소환','강화','장비 장착','훈련','던전','보스','스킬 장착','룰렛','출석']
+  /* «보상이 단조 증가» 는 단언하지 않는다 — 76 의 소환 미션 2건은 `dia:() => summonCost(…)` 라
+     시세를 따라가고, 실제 체인은 300/1000/400/… 로 톱니다. 설계에 없는 기준을 게이트가
+     발명하면 게이트가 틀린 것이지 데이터가 틀린 게 아니다(LESSONS 168-①). */
+  /* 154 가 «출석» 을 폐지했다(주인 재지시). 나머지 계통 커버리지는 61 의 설계 그대로 본다. */
+  ok('§0 체인에 소환·강화·장비장착·훈련·던전·보스·스킬장착·룰렛이 모두 있다',
+     ['소환','강화','장비 장착','훈련','던전','보스','스킬 장착','룰렛']
        .every(k => G.some(m => m.n.includes(k))),
      G.map(m => m.n).join(' / '));
 
@@ -105,7 +120,12 @@ const snap = page => page.evaluate(() => {
   ok('§1 미완료 바탕은 반투명 검정(그라디언트 아님)', s.bg === 'rgba(0, 0, 0, 0.55)', s.bg);
   ok('§1 미완료는 테두리가 안 보인다', /transparent|rgba\(0, 0, 0, 0\)/.test(s.bc), s.bc);
   ok('§1 미완료는 레드닷 없음', s.dot === 'none', s.dot);
-  eq('§1 보상 아이콘 💎', s.rew, '💎');
+  /* 125 가 이모지를 SVG `<img>` 로 갈았다. 옛 단언(`textContent === '💎'`)은 화면이 멀쩡해도
+     원리적으로 항상 false 다(LESSONS 175-②). 자리를 «아이콘 키» 로 옮긴다 —
+     삭제하면 «보상이 다이아임을 배너가 말하는가» 를 보는 눈이 사라진다(185-④). */
+  eq('§1 보상 아이콘 = 다이아 SVG', s.rewIc, 'dia');
+  eq('§1 보상 아이콘은 1개만', s.rewN, 1);
+  ok('§1 보상칸에 맨 이모지가 남아 있지 않다', s.rew.trim() === '', JSON.stringify(s.rew));
   eq('§1 보상 수량', s.sub, String(G[0].dia));
   ok('§1 버튼 disabled', s.dis === true);
   ok('§1 NaN/undefined 표기 0건',
@@ -188,18 +208,66 @@ const snap = page => page.evaluate(() => {
     });
     return { cards, gm: Object.keys(DUN_UI).reduce((o, k) => (o[k] = DUN_UI[k].gm, o), {}) };
   });
+  /* 89 가 유물 던전 키를 `relic` → `relic1`(4단) 으로 갈고 «수련·마왕» 던전을 없앴으며,
+     154 가 `relic1.gm` 을 15 → 14 로 당겼다. 옛 §10 은 그 셋을 리터럴로 박고 있어서
+     `find('relic')` 이 undefined → 즉사했고, 그 뒤 §10~§14 가 한 번도 실행된 적이 없다
+     (LESSONS 185-② · 175-①: 원인이 «발견자가 본 하나» 가 아니라 여럿이었다).
+
+     복구 원칙(185-①): 기대값을 손으로 박지 말고 **게임 데이터에서 런타임에 만든다.**
+     지금 잠금은 두 갈래다 — ⓐ 가이드미션(`gm`) ⓑ 이전 단 N층(`pre`, 90). 없어진 «수련·마왕»
+     단언은 지우지 않고 ⓑ 쪽으로 **이사**시킨다(185-④): 물음은 «그 던전이 잠겼나» 가 아니라
+     «모든 던전의 잠금 조건이 정의돼 있고, 경계에서 정확히 열리나» 다. */
+  const M = await page.evaluate(() => Object.keys(DUN_UI).reduce((o, k) => (
+    o[k] = { gm: DUN_UI[k].gm | 0, pre: DUN_UI[k].pre ? { id: DUN_UI[k].pre.id, f: DUN_UI[k].pre.f } : null }, o), {}));
+  const dunIds  = await page.evaluate(() => DUNGEONS.map(d => d.id));
+  const gmIds   = dunIds.filter(k => M[k] && !M[k].pre && M[k].gm > 0);
+  const preIds  = dunIds.filter(k => M[k] && M[k].pre);
+
+  /* 전제를 단언으로 같이 박는다(185-③) — 전제가 무너지면 결론이 아니라 여기가 빨개진다 */
+  ok('§10 모든 던전에 DUN_UI 항목이 있다', dunIds.every(k => M[k]), dunIds.filter(k => !M[k]).join(','));
+  ok('§10 가이드미션으로 잠기는 던전이 1개 이상', gmIds.length > 0, 'gm=' + JSON.stringify(gmIds));
+  ok('§10 이전 단 클리어로 잠기는 던전이 1개 이상 (90)', preIds.length > 0, 'pre=' + JSON.stringify(preIds));
+  ok('§10 잠금 조건은 gm·pre 중 정확히 하나', dunIds.every(k => !(M[k].pre && M[k].gm > 0)),
+     JSON.stringify(M));
+  /* 154 처럼 체인이 짧아지면 «영영 못 여는 던전» 이 생긴다 — 길이 리터럴 대신 이 관계를 본다 */
+  ok('§10 모든 gm 잠금이 체인 안에서 도달 가능(max gm ≤ 체인 길이)',
+     gmIds.every(k => M[k].gm <= G.length),
+     'maxGm=' + Math.max(0, ...gmIds.map(k => M[k].gm)) + ' chain=' + G.length);
+
+  /* ⓐ 가이드미션 잠금 — 경계 idx=gm−1 잠김 / idx=gm 해금. 숫자는 데이터에서 온다 */
+  for (const id of gmIds) {
+    const need = M[id].gm;
+    await page.evaluate(n => { S.guide.idx = n; gmStart(); drawTuto(); }, need - 1);
+    let dl = await dunLock();
+    const c = dl.cards.find(x => x.id === id);
+    ok(`§10 [${id}] idx=${need - 1} 에서 잠김`, c && c.locked, JSON.stringify(c));
+    ok(`§10 [${id}] 잠금 라벨이 «가이드미션 N 클리어»`,
+       !!c && /가이드미션/.test(c.label) && !/스테이지/.test(c.label), c && c.label);
+    ok(`§10 [${id}] 라벨의 N 이 DUN_UI.gm(${need}) 과 같다`,
+       !!c && new RegExp('가이드미션\\s*' + need + '\\s*클리어').test(c.label), c && c.label);
+    await page.evaluate(n => { S.guide.idx = n; gmStart(); renderDunPage(); }, need);
+    dl = await dunLock();
+    const c2 = dl.cards.find(x => x.id === id);
+    ok(`§10 [${id}] idx=${need} → 해금`, !!c2 && !c2.locked, JSON.stringify(c2));
+  }
+
+  /* ⓑ 이전 단 잠금(90) — «N 층을 깬 상태 = S.dun[pre.id] > pre.f» 가 경계다 */
+  for (const id of preIds) {
+    const p = M[id].pre;
+    await page.evaluate(a => { S.dun[a.id] = a.f; renderDunPage(); }, p);
+    let dl = await dunLock();
+    const c = dl.cards.find(x => x.id === id);
+    ok(`§10 [${id}] ${p.id} ${p.f}층 미클리어 → 잠김`, !!c && c.locked, JSON.stringify(c));
+    ok(`§10 [${id}] 잠금 라벨이 «N층 클리어»(가이드미션 아님)`,
+       !!c && /층\s*클리어/.test(c.label) && !/가이드미션/.test(c.label), c && c.label);
+    await page.evaluate(a => { S.dun[a.id] = a.f + 1; renderDunPage(); }, p);
+    dl = await dunLock();
+    const c2 = dl.cards.find(x => x.id === id);
+    ok(`§10 [${id}] ${p.id} ${p.f}층 클리어 → 해금`, !!c2 && !c2.locked, JSON.stringify(c2));
+  }
+
+  /* 뒤 절(§13 기하)이 «미완료 배너» 를 전제로 하므로 상태를 되돌린다 */
   await page.evaluate(() => { S.guide.idx = 0; gmStart(); drawTuto(); });
-  let dl = await dunLock();
-  const relic = dl.cards.find(c => c.id === 'relic');
-  ok('§10 유물 던전이 잠겨 있다', relic && relic.locked, JSON.stringify(relic));
-  ok('§10 잠금 라벨이 «가이드미션 N 클리어»', /가이드미션/.test(relic.label) && !/스테이지/.test(relic.label), relic.label);
-  eq('§10 유물 던전 요구 미션', dl.gm.relic, 15);
-  eq('§10 수련 던전 요구 미션', dl.gm.growth, 18);
-  eq('§10 마왕 던전 요구 미션', dl.gm.boss, 21);
-  await page.evaluate(() => { S.guide.idx = 15; gmStart(); renderDunPage(); });
-  dl = await dunLock();
-  ok('§10 idx=15 → 유물 던전 해금', !dl.cards.find(c => c.id === 'relic').locked);
-  ok('§10 idx=15 에서도 마왕 던전은 잠김', dl.cards.find(c => c.id === 'boss').locked);
   await page.evaluate(() => { const b = document.querySelector('#dunw .dnw-x, #dunw [data-close]'); if (b) b.click(); });
 
   /* ---------- §13 기하 ---------- */
@@ -270,7 +338,8 @@ const snap = page => page.evaluate(() => {
     { t: 'guide:"x" (문자열)',      save: { guide: 'x', dia: 100 },                  wantIdx: 0 },
     { t: 'guide 필드 결손',         save: { guide: {}, dia: 100 },                   wantIdx: 0 },
     { t: 'guide idx 문자열',        save: { guide: { idx: 'a', prog: 'b' }, dia: 100 }, wantIdx: 0 },
-    { t: 'guide idx 초과',          save: { guide: { idx: 999, prog: 0 }, dia: 100 }, wantIdx: 21 }
+    /* «체인 길이» 로 잘린다 = 완주 상태. 21 은 154 이전 스냅샷이었다(185-①) → 데이터에서 만든다 */
+    { t: 'guide idx 초과',          save: { guide: { idx: 999, prog: 0 }, dia: 100 }, wantIdx: G.length }
   ];
   for (const v of variants) {
     const c2 = await browser.newContext({ viewport: { width: 1080, height: 2280 } });
