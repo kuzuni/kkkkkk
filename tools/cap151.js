@@ -75,7 +75,7 @@ const CROP = process.argv.includes('--crop');
       o.art = sub(c, '.art');
       o.rb1 = sub(c, '.rb1'); o.rb2 = sub(c, '.rb2');
       o.bt = sub(c, '.bt'); o.btI = sub(c, '.bt>i');
-      o.lines = [...c.querySelectorAll('.bl')].map((l) => box(l.getBoundingClientRect()));
+      o.lines = [...c.querySelectorAll('.pvb')].map((l) => box(l.getBoundingClientRect()));
       return o;
     });
     g.scrollTop = document.getElementById('shopList').scrollTop;

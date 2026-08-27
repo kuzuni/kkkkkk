@@ -68,7 +68,8 @@ const eq = (label, got, want) => (got === want ? ok(label + ' = ' + JSON.stringi
     pv:      !!document.querySelector('#shopList .cn-wrap.pv'),
     ti:      (document.querySelector('#shopList .cn-ti i') || {}).textContent || '',
     boxes:   document.querySelectorAll('#shopList [data-shsum]').length,
-    passCards: document.querySelectorAll('#shopList .cn-cd.pv').length,
+    /* 151 — 이용권 카드는 `.pvc` 3장으로 교체됐다(옛 `.cn-cd.pv` 는 폐기) */
+    passCards: document.querySelectorAll('#shopList .pvc').length,
     scroll:  $('shopList').scrollTop,
   }));
   eq('  오프라인 팝업 닫힘', A.offOn, false);

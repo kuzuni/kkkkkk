@@ -82,7 +82,7 @@ function ck(name, ok, detail){
         tiInk: tii ? box(tii.getBoundingClientRect()) : null,
         lh: tii ? parseFloat(getComputedStyle(tii).lineHeight) / sc : 0,
         hd: rect('.cn-hd'), hdI: rect('.cn-hd>i'), rb: rect('.cn-rb'),
-        nt: rect('.pv-nt'), bt: rect('.pv-bt'),
+        nt: rect('.pvc'), bt: rect('.pv-bt'),   /* 151 — 안내문 .pv-nt 는 카드 안 ★ 불릿으로 흡수됐다. 같은 «중앙 540» 규칙을 카드로 잰다 */
       };
     });
     if (!m || !m.tiInk) { ck('이용권 타이틀 존재', false, '.cn-ti 를 못 찾음'); await ctx.close(); continue; }
@@ -102,7 +102,7 @@ function ck(name, ok, detail){
             : '.cn-hd 없음');
 
     /* ⑤ 같은 페이지의 다른 부품과 같은 중심 */
-    [['밴드 글자 .cn-hd>i', m.hdI], ['리본 .cn-rb', m.rb], ['안내문 .pv-nt', m.nt], ['하단 문구 .pv-bt', m.bt]]
+    [['밴드 글자 .cn-hd>i', m.hdI], ['리본 .cn-rb', m.rb], ['이용권 카드 .pvc', m.nt], ['하단 문구 .pv-bt', m.bt]]
       .forEach(([n, r]) => {
         if (!r) { ck('⑤ ' + n + ' 중심 540±3', false, '요소 없음'); return; }
         ck('⑤ ' + n + ' 중심 540±3', Math.abs(r.c - 540) <= 3, '중심 ' + r.c.toFixed(1));

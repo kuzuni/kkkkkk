@@ -110,48 +110,47 @@ function safeElapsed(bless, until0, cands) {
     '잉크 ' + l.x.toFixed(1) + '~' + (l.x + l.w).toFixed(1) + ' / 칸 ' + g.cells[i].x.toFixed(1)
     + '~' + (g.cells[i].x + g.cells[i].w).toFixed(1)));
 
-  /* ================= 2. 이용권 탭 — 카드 2장 ================= */
-  console.log('\n[2] 이용권 탭 — 카드 2장 · 미보유 상태');
+  /* ================= 2. 이용권 탭 — 카드(151 이 규격을 교체했다) ================= */
+  /* ⚠ 151(2026-08-27 주인 지시)이 이 탭의 카드를 **레퍼런스 디자인 `.pvc` 3장**으로 갈아 끼웠다.
+     124 시절의 `.cn-cd.pv`(13 카드를 빌려 쓴 278×309 2장)는 더 이상 없다. 그래서 이 절은
+     «124 가 만든 것» 중 151 이 이어받은 불변식만 본다 — 카드 규격·문구는 `tools/verify151.js` 소관. */
+  console.log('\n[2] 이용권 탭 — 카드 · 미보유 상태 (규격은 151, 여기선 공통 불변식만)');
   await page.click('#shopCats .shp-ct[data-cat="pass"]');
   await page.waitForTimeout(350); await settled(page);
   const pv = await page.evaluate(() => {
-    const cds = [...document.querySelectorAll('#shopList .cn-cd.pv')];
-    const F = document.getElementById('app').getBoundingClientRect();
-    const s = F.width / 1080;
+    const cds = [...document.querySelectorAll('#shopList .pvc')];
     return {
       cat: shopCat, cls: document.getElementById('shopList').classList.contains('pass'),
       n: cds.length,
-      names: cds.map(c => c.querySelector('.hd>i').textContent),
-      st: cds.map(c => c.querySelector('.st>i').textContent),
+      old: document.querySelectorAll('#shopList .cn-cd.pv').length,
+      names: cds.map(c => c.querySelector('.pvt>i').textContent),
+      st: cds.map(c => c.querySelector('.stt>i').textContent),
       buy: cds.map(c => { const b = c.querySelector('[data-pvbuy]'); return b ? b.dataset.pvbuy : null; }),
-      price: cds.map(c => { const b = c.querySelector('[data-pvbuy] .pr'); return b ? b.textContent : null; }),
-      /* 카드 안 요소가 카드 밖으로 새지 않는지(잘림·삐져나옴 0) */
+      /* 카드 안 요소가 카드 밖으로 새지 않는지. 151 은 **상태 탭·알약·가치 배지·리본**이
+         레퍼런스대로 카드 밖으로 일부러 나온다(ref 탭 −27 · 알약 −25 · 리본 좌 −2 × k) */
       spill: cds.map(c => {
         const cb = c.getBoundingClientRect();
+        const out = ['stt', 'pil', 'bdg', 'rb'];
         return [...c.querySelectorAll('*')].filter(e => {
-          /* `.hd>i` 는 «박스를 글리프 advance 보다 넓게» 규약(A1 교훈)이라 일부러 카드보다 넓다 */
-          if (e.parentElement && e.parentElement.classList.contains('hd')) return false;
+          if (out.some(k => e.closest('.' + k))) return false;
           const b = e.getBoundingClientRect();
-          return b.width > 0 && (b.x < cb.x - 1 || b.right > cb.right + 1 || b.y < cb.y - 1 || b.bottom > cb.bottom + 1);
+          return b.width > 0 && (b.x < cb.x - 1 || b.right > cb.right + 1
+            || b.y < cb.y - 1 || b.bottom > cb.bottom + 1);
         }).map(e => e.className || e.tagName);
       }),
-      /* 상태 띠와 수량(.qt) 이 겹치지 않는지 */
-      overlap: cds.map(c => {
-        const a = c.querySelector('.st').getBoundingClientRect(), b = c.querySelector('.qt').getBoundingClientRect();
-        return !(a.bottom <= b.y || b.bottom <= a.y || a.right <= b.x || b.right <= a.x);
-      }),
-      wrapH: Math.round(document.querySelector('#shopList .cn-wrap.pv').getBoundingClientRect().height / s),
+      wrapH: Math.round(document.querySelector('#shopList .cn-wrap.pv').getBoundingClientRect().height
+        / (document.getElementById('app').getBoundingClientRect().width / 1080)),
     };
   });
   ok('shopCat = pass · #shopList.pass', pv.cat === 'pass' && pv.cls, pv.cat + ' / ' + pv.cls);
-  ok('이용권 카드 2장', pv.n === 2, pv.n + '장');
-  ok('카드 이름 = 광고 제거 · 자동 축복', pv.names.join(',') === '광고 제거,자동 축복', pv.names.join(','));
-  ok('둘 다 «미보유»', pv.st.join(',') === '미보유,미보유', pv.st.join(','));
-  ok('구매 버튼 2개 (noads · abless)', pv.buy.join(',') === 'noads,abless', pv.buy.join(','));
-  ok('가격이 다이아로 표시된다', pv.price.every(p => p && p.indexOf('💎') === 0), JSON.stringify(pv.price));
-  ok('카드 밖으로 새는 요소 0', pv.spill.every(a => a.length === 0), JSON.stringify(pv.spill));
-  ok('상태 띠 ↔ 수량 겹침 0', pv.overlap.every(v => v === false), JSON.stringify(pv.overlap));
-  ok('페이지 높이 = 카드·안내문·바를 담는다(≥1100)', pv.wrapH >= 1100, pv.wrapH + 'px');
+  ok('이용권 카드 3장(151)', pv.n === 3, pv.n + '장');
+  ok('124 의 옛 카드(.cn-cd.pv) 0장', pv.old === 0, pv.old + '장');
+  ok('첫 카드 = 광고 제거', pv.names[0] === '광고 제거', pv.names.join(','));
+  ok('전부 «비활성화»', pv.st.every(t => t === '비활성화'), pv.st.join(','));
+  ok('구매 버튼 3개 (noads · abless · offplus)',
+    pv.buy.join(',') === 'noads,abless,offplus', pv.buy.join(','));
+  ok('카드 밖으로 새는 요소 0 (의도한 돌출 제외)', pv.spill.every(a => a.length === 0), JSON.stringify(pv.spill));
+  ok('페이지 높이 = 카드 3장을 담는다(≥2000)', pv.wrapH >= 2000, pv.wrapH + 'px');
 
   /* ================= 3. 다이아 부족 → 구매 거절 ================= */
   console.log('\n[3] 다이아 부족 시 구매 거절 (재화가 줄지 않는다)');
@@ -171,13 +170,14 @@ function safeElapsed(bless, until0, cands) {
     S.dia = 1e9;
     const p = PASS_ITEMS.find(x => x.id === 'noads'), d0 = S.dia;
     const r = buyPass('noads');
-    return { r: r, cost: d0 - S.dia, price: p.dia, noAds: !!S.pass.noAds,
+    /* 151 — 구매에 «즉시 보석 지급» 이 붙었으므로 순차감은 정가 − 즉시분이다 */
+    return { r: r, cost: d0 - S.dia, price: p.dia - (p.once || 0), noAds: !!S.pass.noAds,
       cls: document.getElementById('app').classList.contains('noads'),
       saved: !!(JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}').pass || {}).noAds };
   });
   await page.evaluate(() => closeModal && closeModal());
-  ok('구매 성공 · 다이아가 정가만큼 빠짐', buy.r === true && buy.cost === buy.price,
-    '차감 ' + buy.cost + ' / 정가 ' + buy.price);
+  ok('구매 성공 · 다이아 순차감 = 정가 − 즉시 보석(151)', buy.r === true && buy.cost === buy.price,
+    '차감 ' + buy.cost + ' / 기대 ' + buy.price);
   ok('S.pass.noAds = true', buy.noAds === true, String(buy.noAds));
   ok('#app.noads 클래스', buy.cls === true, String(buy.cls));
   ok('localStorage 에 저장됨', buy.saved === true, String(buy.saved));

@@ -5404,101 +5404,109 @@
 
   /* ==========================================================================
      151 — 이용권 카드 (2026-08-27 주인 지시 · 레퍼런스 docs/ref/151-이용권-카드.png)
-     ref 는 «카드 2장만» 잘라 낸 504×709 크롭이라 «프레임 y = ref y − 84» 변환 대상이 아니다.
-     비교 단위는 «카드 하나» 이고, CSS 값은 전부 **ref 카드 외곽(474×372) → 폭 978 환산**이다
-     (측정표 `docs/measure/151-이용권카드.md` §9). 카드 안 좌표는 카드 좌상단 기준.
+     ref 는 «카드 2장만» 잘라 낸 504×709 크롭이라 «프레임 y = ref y − 84» 변환 대상이 **아니다**.
+     비교 단위는 «카드 하나» 이고, 아래 값은 전부 **ref 카드 외곽 474 → 폭 978 환산(k = 2.0633)**
+     이다(측정표 `docs/measure/151-이용권카드.md`). 카드 안 좌표는 카드 좌상단 기준.
      124 의 `.cn-cd.pv`(13 카드를 빌려 쓴 278×309 격자)는 이 카드로 **완전히 대체**됐다.
+     ⚠ 카드 높이는 «본문이 정한다» — ref 두 장이 259 / 374 로 서로 다르다(배너형 vs 불릿형).
+       그래서 높이는 CSS 상수가 아니라 렌더가 인라인으로 준다(PVC_H_BAN / PVC_H_BL).
      ========================================================================== */
-  .pvc{position:absolute;left:51px;width:978px;height:768px}
-  .pvc>*{position:absolute}
-  /* 몸통 — ref 는 «위 밝은 띠 → 본색 → 아래 어두운 단» 3단이다(13 카드와 같은 문법) */
-  .pvc>.bg{left:0;top:0;width:978px;height:768px;border-radius:34px;
-    background:linear-gradient(180deg,var(--h) 0 26px,var(--c) 26px 700px,var(--s) 700px 768px)}
-  .pvc>.fr{left:0;top:0;width:978px;height:768px;border:10px solid #000;border-radius:34px;
-    pointer-events:none}
-  .pvc.pb{--c:#43BCF5;--h:#8FE4FF;--s:#3A86D4;--d:#1E5E9E}   /* 1장 파랑 */
-  .pvc.pg{--c:#39C48D;--h:#7CF2C0;--s:#219161;--d:#136349}   /* 2장 초록 */
-  .pvc.pp{--c:#A874E8;--h:#D5B4FF;--s:#7A45BE;--d:#4E2A80}   /* 3장 보라(151 신설) */
-  /* ① 상태 탭 — 카드 윗변에 «걸쳐» 위로 삐져나온다(ref 돌출 52px) */
-  .pvc>.stt{left:50px;top:-52px;width:228px;height:82px;border-radius:20px 20px 0 0;
-    border:8px solid #000;border-bottom:0;background:var(--d)}
-  .pvc>.stt>i{position:absolute;left:0;right:0;top:12px;text-align:center;color:#C9C9C9;
-    font-size:30px;line-height:34px;white-space:nowrap;transform:scaleX(.94)}
+  .pvc{position:absolute;left:51px;width:978px}
+  .pvc>*{position:absolute;box-sizing:border-box}
+  /* 팔레트 — ref: 몸통 / 헤더 밴드(몸통보다 어두운 단) / 안쪽 밝은 림 / 상태 탭 */
+  .pvc.pb{--c:#43BCF5;--s:#3A86D4;--h:#6AE8FF;--d:#3376BC}   /* 1장 파랑 (ref 실측) */
+  .pvc.pg{--c:#39C28C;--s:#219161;--h:#48F291;--d:#1B7C51}   /* 2장 초록 (ref 실측) */
+  .pvc.pp{--c:#A874E8;--s:#7A45BE;--h:#D5B4FF;--d:#6C3AAE}   /* 3장 보라 (151 신설 — 제3색) */
+  /* 몸통 + 안쪽 밝은 림. ref 림은 **좌·우·아래 3변에만** 있고 윗변에는 없다(헤더 밴드가 물린다) */
+  .pvc>.bg{left:8px;top:8px;right:8px;bottom:8px;background:var(--c);
+    border:12px solid var(--h);border-top:0;border-radius:28px}
+  .pvc>.hdb{left:8px;top:8px;right:8px;height:100px;background:var(--s);border-radius:28px 28px 0 0}
+  .pvc>.fr{left:0;top:0;right:0;bottom:0;border:8px solid #000;border-radius:35px;pointer-events:none}
+  /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
+  .pvc>.stt{left:29px;top:-56px;width:252px;height:66px;border-radius:21px 21px 0 0;
+    border:6px solid #000;border-bottom:0;background:var(--d)}
+  .pvc>.stt>i{position:absolute;left:0;right:0;top:9px;text-align:center;color:#AFAFAF;
+    font-size:36px;line-height:40px;white-space:nowrap;transform:scaleX(.94)}
   .pvc.own>.stt{background:#1C8D5E}
   .pvc.own>.stt>i{color:#FFF8AA}
-  /* ③ 마일리지 쿠폰 알약 — ref 상단 알약 2개(불꽃·Ⓜ) 자리에 **1개만**(주인 지시 ⓐ) */
-  .pvc>.pil{left:320px;top:-46px;height:76px;padding:0 22px;border-radius:38px;border:7px solid #000;
-    background:linear-gradient(180deg,#FFE9A0 0 8px,#FDC63A 8px 62px,#D89A18 62px 76px);
-    display:flex;align-items:center;gap:10px}
-  .pvc>.pil>em{width:44px;height:44px;font-size:0;display:block}
-  .pvc>.pil>em>.cic{width:44px;height:44px}
-  .pvc>.pil>i{color:#fff;font-size:30px;line-height:34px;white-space:nowrap;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  /* ② 가치 배지 — 우상단 폭발형. 카드 우변·윗변 밖으로 나간다 */
-  .pvc>.bdg{right:-30px;top:-42px;width:168px;height:168px}
-  .pvc>.bdg>s{position:absolute;inset:0;background:#FF3E7F;
-    clip-path:polygon(50% 0,60% 15%,75% 6%,77% 24%,94% 21%,88% 38%,100% 50%,88% 62%,94% 79%,
-      77% 76%,75% 94%,60% 85%,50% 100%,40% 85%,25% 94%,23% 76%,6% 79%,12% 62%,0 50%,12% 38%,
-      6% 21%,23% 24%,25% 6%,40% 15%)}
-  .pvc>.bdg>i{position:absolute;left:0;right:0;top:44px;text-align:center;color:#fff;
-    font-size:38px;line-height:40px;-webkit-text-stroke:7px #000;paint-order:stroke fill;
-    transform:scaleX(.9)}
-  .pvc>.bdg>b{position:absolute;left:0;right:0;top:88px;text-align:center;color:#fff;
-    font-size:30px;line-height:32px;-webkit-text-stroke:6px #000;paint-order:stroke fill}
-  /* ④ 타이틀 행 — ✦ + 상품명 */
-  .pvc>.pvt{left:44px;top:52px;right:210px;height:60px}
-  .pvc>.pvt>s{position:absolute;left:0;top:0;font-size:46px;line-height:60px;color:#FFE9A0}
-  .pvc>.pvt>i{position:absolute;left:56px;top:0;font-size:48px;line-height:60px;color:#fff;
-    white-space:nowrap;-webkit-text-stroke:10px #000;paint-order:stroke fill}
-  /* ⑤-1 본문 «티켓형 배너»(1장) — 좌우가 반원으로 파인 노랑 표 */
-  .pvc>.ban{left:44px;top:140px;width:520px;height:104px;border-radius:16px;border:8px solid #000;
-    background:linear-gradient(180deg,#FFE9A0 0 10px,#FFCF4A 10px 84px,#D89A18 84px 104px)}
-  .pvc>.ban>.n{position:absolute;top:26px;width:36px;height:36px;border-radius:50%;
-    border:8px solid #000;background:var(--c)}
-  .pvc>.ban>.n.l{left:-26px}
-  .pvc>.ban>.n.r{right:-26px}
-  .pvc>.ban>i{position:absolute;left:0;right:0;top:22px;text-align:center;color:#fff;
-    font-size:40px;line-height:44px;white-space:nowrap;-webkit-text-stroke:9px #000;
+  /* ③ 마일리지 쿠폰 알약 — ref 상단 알약 **2개(불꽃·Ⓜ) 자리에 1개만**(주인 지시 ⓐ).
+     ref 알약 블록은 카드 기준 x140..287 이고, 알약 1개짜리라 그 왼끝에서 시작한다 */
+  .pvc>.pil{left:289px;top:-54px;height:68px;padding:0 20px;border-radius:16px;
+    border:6px solid #000;background:linear-gradient(180deg,#F8CF47 0 6px,#F5B927 6px 34px,
+      #EC8B2F 34px 62px,#F8CF47 62px 68px);display:flex;align-items:center;gap:10px}
+  .pvc>.pil>em{width:40px;height:40px;font-size:0;display:block}
+  .pvc>.pil>em>.cic{width:40px;height:40px}
+  .pvc>.pil>i{color:#fff;font-size:28px;line-height:32px;white-space:nowrap;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+  /* ② 가치 배지 — 우상단 폭발형(ref 로브 10~11 · r 38→46). 카드 윗변·우변 밖으로 나간다 */
+  .pvc>.bdg{left:819px;top:-37px;width:184px;height:182px}
+  .pvc>.bdg>s{position:absolute;inset:0;background:#F43171;border:6px solid #000;border-radius:50%;
+    clip-path:polygon(50% 0,58.7% 12.4%,73.2% 6.7%,76.1% 22.4%,91.1% 21.5%,88.2% 37.1%,
+      100% 46.9%,89.8% 58.4%,97.3% 72.1%,82.1% 76.6%,83.6% 92.2%,68.5% 88.3%,63.5% 100%,
+      50% 92.3%,36.5% 100%,31.5% 88.3%,16.4% 92.2%,17.9% 76.6%,2.7% 72.1%,10.2% 58.4%,
+      0 46.9%,11.8% 37.1%,8.9% 21.5%,23.9% 22.4%,26.8% 6.7%,41.3% 12.4%)}
+  .pvc>.bdg>i{position:absolute;left:0;right:0;top:38px;text-align:center;color:#FFFC7E;
+    font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
+    transform:rotate(-10deg)}
+  .pvc>.bdg>b{position:absolute;left:0;right:0;top:88px;text-align:center;color:#FFFC7E;
+    font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
+    paint-order:stroke fill;transform:rotate(-10deg)}
+  /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
+  .pvc>.pvt{left:39px;top:37px;right:210px;height:60px}
+  .pvc>.pvt>s{position:absolute;left:0;top:-4px;font-size:34px;line-height:52px;color:var(--h)}
+  .pvc>.pvt>i{position:absolute;left:39px;top:0;font-size:55px;line-height:56px;color:#fff;
+    white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* ⑤-1 티켓형 배너(1장) — 네 모서리가 «물린» 노랑 표. 좌 36% 크림 · 우 64% 노랑(ref 실측) */
+  .pvc>.ban{left:50px;top:138px;width:462px;height:113px;border:7px solid #000;border-radius:10px;
+    background:linear-gradient(90deg,#FDE7CF 0 36%,#F3BA4F 36% 100%);
+    clip-path:polygon(7% 0,93% 0,100% 24%,100% 76%,93% 100%,7% 100%,0 76%,0 24%)}
+  .pvc>.ban>i{position:absolute;left:150px;right:12px;top:36px;text-align:center;color:#fff;
+    font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
     paint-order:stroke fill}
-  /* ⑤-2 본문 «★ 불릿»(2·3장) — 어두운 판 위 3줄 */
-  .pvc>.bls{left:44px;top:132px;width:520px;height:264px;border-radius:18px;
-    background:rgba(0,0,0,.30)}
-  .pvc>.bls>.bl{position:absolute;left:18px;right:14px;height:64px}
-  .pvc>.bls>.bl:nth-child(1){top:14px}
-  .pvc>.bls>.bl:nth-child(2){top:96px}
-  .pvc>.bls>.bl:nth-child(3){top:178px}
-  .pvc>.bls>.bl>s{position:absolute;left:0;top:0;font-size:34px;line-height:44px;color:#FFD34F}
-  .pvc>.bls>.bl>i{position:absolute;left:46px;right:0;top:0;font-size:29px;line-height:34px;
-    color:#fff}
-  /* 우측 일러스트 자리 — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10) */
-  .pvc>.art{right:52px;top:128px;width:300px;height:270px}
+  /* ⑤-2 ★ 불릿(2·3장) — ref 는 반투명 어두운 행 4개(높이 72 · pitch 82) */
+  .pvc>.pvl{left:41px;top:134px;width:545px}
+  .pvc>.pvl>.pvb{position:relative;height:72px;margin-bottom:10px;border-radius:16px;
+    background:rgba(0,0,0,.48)}
+  .pvc>.pvl>.pvb>s{position:absolute;left:15px;top:13px;font-size:38px;line-height:44px;color:#FCC12B}
+  .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:18px;font-size:32px;line-height:36px;
+    color:#fff;white-space:nowrap}
+  /* 우측 일러스트 자리 — 아트가 들어오면 이 bbox 를 그대로 채운다(측정표 §10 A1·A3) */
+  .pvc>.art{left:516px;top:144px;width:446px;height:279px}
+  .pvc.ban1>.art{left:530px;top:60px;width:406px;height:300px}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
-    font-size:190px;line-height:270px;filter:drop-shadow(0 6px 0 rgba(0,0,0,.45))}
-  /* ⑥ 빨강 리본 2줄 — 카드 좌변에 물려 시작한다(ref 는 좌 inset 22/474) */
-  .pvc>.rb{left:22px;height:60px;border-radius:12px;border:7px solid #000;
-    background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 46px,#C4343C 46px 60px);
-    display:flex;align-items:center;padding:0 20px;gap:14px}
-  .pvc>.rb1{top:430px}
-  .pvc>.rb2{top:518px}
-  .pvc>.rb>i{color:#FFF8AA;font-size:30px;line-height:34px;white-space:nowrap;
+    font-size:200px;line-height:279px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
+  /* ⑥ 빨강 리본 2줄 — 카드 좌변 밖으로 4px 물려 시작(ref 크림 꼬리)하고,
+     오른끝에 금색 판 + 그 아래 수량이 붙는다. 카드 아래쪽에서 bottom 기준으로 앉힌다 */
+  .pvc>.rb{left:-4px;height:78px;border:6px solid #000;border-radius:10px;
+    background:linear-gradient(180deg,#FF8A90 0 6px,#FF565D 6px 60px,#C4343C 60px 78px);
+    display:flex;align-items:center;padding:0 100px 0 47px}
+  .pvc>.rb1{bottom:184px}
+  .pvc>.rb2{bottom:50px}
+  .pvc>.rb>i{color:#ECE975;font-size:32px;line-height:36px;white-space:nowrap;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .pvc>.rb>b{color:#fff;font-size:32px;line-height:36px;white-space:nowrap;font-weight:400;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill;display:flex;align-items:center;gap:8px}
-  .pvc>.rb>b>.cic{width:38px;height:38px}
-  /* ⑦ 가격 버튼 — 우하단 초록. 원화 표기(주인 지시) + 다이아 대체가(44 결제 미연동 관례) */
-  .pvc>.bt{right:44px;top:600px;width:340px;height:118px;border-radius:26px;border:8px solid #000;
-    background:linear-gradient(180deg,#8CF08C 0 8px,#3FC85A 8px 92px,#1E8E3A 92px 118px);
-    cursor:pointer}
-  .pvc>.bt>i{position:absolute;left:0;right:0;top:14px;text-align:center;color:#fff;
-    font-size:44px;line-height:48px;white-space:nowrap;-webkit-text-stroke:9px #000;
-    paint-order:stroke fill}
-  .pvc>.bt>u{position:absolute;left:0;right:0;top:66px;text-align:center;color:#EAFFEA;
+  /* 금색 판 + 보석 — ref 는 리본 위로 19px 솟고 수량은 리본 아래로 내려간다 */
+  .pvc>.rb>b{position:absolute;right:-6px;top:-19px;width:91px;height:89px;border-radius:20px;
+    border:6px solid #FDC532;background:#D47D14;display:flex;align-items:center;
+    justify-content:center;font-weight:400}
+  .pvc>.rb>b>.cic{width:45px;height:45px}
+  .pvc>.rb>u{position:absolute;right:-6px;top:70px;width:91px;text-align:center;color:#fff;
+    font-size:30px;line-height:34px;text-decoration:none;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  /* ⑦ 가격 버튼 — 우하단 초록(ref 외곽 307×98 · 우 여백 73 · 바닥 31).
+     표기는 원화(주인 지시), 실제 결제는 미연동이라 다이아 대체가를 함께 적는다(44 관례) */
+  .pvc>.bt{right:73px;bottom:31px;width:305px;height:98px;border-radius:20px;border:6px solid #000;
+    background:linear-gradient(180deg,#AEFF84 0 8px,#6EDB36 8px 52px,#76D924 52px 84px,
+      #3EBC2C 84px 98px);cursor:pointer}
+  .pvc>.bt>i{position:absolute;left:0;right:0;top:10px;text-align:center;color:#fff;
+    font-size:74px;line-height:70px;white-space:nowrap;-webkit-text-stroke:10px #000;
+    paint-order:stroke fill;transform:scaleX(.72)}
+  .pvc>.bt>u{position:absolute;left:0;right:0;top:60px;text-align:center;color:#EAFFEA;
     font-size:25px;line-height:28px;text-decoration:none;white-space:nowrap}
-  .pvc>.bt>u>.cic{width:28px;height:28px;vertical-align:-5px}
+  .pvc>.bt>u>.cic{width:26px;height:26px;vertical-align:-5px}
   .pvc>.bt.on{background:#1C8D5E;cursor:default}
-  .pvc>.bt.on>i{top:32px}
-  /* 보유 중 카드 — 몸통을 한 단 어둡게 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
-  .pvc.own>.bg{filter:brightness(.72) saturate(.8)}
+  .pvc>.bt.on>i{top:24px}
+  /* 보유 중 카드 — 몸통을 한 단 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
+  .pvc.own>.bg,.pvc.own>.hdb{filter:brightness(.72) saturate(.8)}
   /* 안내문 — 카드 아래 2줄(효과 설명). 배너·패널을 새로 만들지 않고 텍스트만 둔다 */
   .pv-nt{left:66px;width:948px;text-align:center;color:#D8D8E0;font-size:27px;line-height:36px;
     white-space:nowrap}
@@ -19866,6 +19874,7 @@ const PASS_ABLESS_DIA  = 35000;                    /* 자동 축복 30일 — 13
 const PASS_OFFPLUS_DIA = 50000;                    /* 오프라인 +4시간 — ₩7,500 (d2 5,000 ↔ d3 11,000 사이) */
 const PASS_ABLESS_DAYS = 30;
 const PASS_OFF_PLUS_H  = 4;                        /* 오프라인 보상 상한 증가분(시간) */
+const PASS_DAILY_MAX_D = 60;                       /* 매일 보석 1회 정산 상한(일) — 깨진 세이브 방어 */
 /* 01 오프라인 보상 상한 — 기본 6시간, 「오프라인 보상 증가」 이용권 보유 시 +4시간.
    **선언이 여기 있는 이유**: PASS_ITEMS 의 불릿 문구가 이 값에서 파생되고, 그 배열이
    파일 위쪽에서 평가되기 때문이다(01 블록에 두면 TDZ 로 즉사한다). 쓰는 곳은 01 두 군데뿐. */
@@ -19888,7 +19897,11 @@ function syncNoAds(){ const a = $('app'); if(a) a.classList.toggle('noads', noAd
 /* 151 — 카드 격자. ref 카드 외곽 474×372(측정표 §1) 을 **폭 978**(51..1029, 카테고리 탭 바와 같은
    콘텐츠 폭)로 환산한 값이다. 세로는 폭 비율 그대로 — 눈대중으로 줄이지 않는다(지시서 [2]).
    상태 탭·가치 배지는 카드 윗변 «위로» 삐져나가므로 카드 사이 간격(PVC_PITCH − PVC_H)이 그 자리다. */
-const PVC_W = 978, PVC_H = 768, PVC_PITCH = 830, PV_Y0 = 452;
+/* ref 카드 외곽 474 → 폭 978 (k = 2.0633). **높이는 본문이 정한다** — ref 두 장이 259 / 374 로
+   서로 다르다(배너형 / 불릿 4행). 불릿 한 행이 82(= ref 39.7 × k)이므로 행 수에서 파생시킨다.
+   카드 사이 간격 74(ref 36) 안에 아래 카드의 상태 탭(위로 56)이 들어간다 — ref 와 같은 물림이다. */
+const PVC_W = 978, PVC_H_BAN = 534, PVC_H_BL4 = 772, PVC_BL_ROW = 82, PVC_GAP = 74, PV_Y0 = 470;
+const pvCardH = p => p.ban ? PVC_H_BAN : PVC_H_BL4 - (4 - p.bl.length) * PVC_BL_ROW;
 /* 151 — 카드 3장. `won`(표기) · `dia`(대체 결제) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
    `bl`(★ 불릿) · `ban`(1번 카드 티켓형 배너 문구) 이 한 상품의 전부다.
    ref 팔레트: 1장 파랑 · 2장 초록 · 3장(신설)은 둘과 구분되는 **보라**. */
@@ -19917,9 +19930,12 @@ function passStatusTxt(p){
   return p.perm ? '이용 중 · 평생' : '이용 중 · ' + autoBlessDays() + '일 남음';
 }
 function renderPassPage(list){
-  /* 151 — 카드가 커져(978×PVC_H) 페이지가 길어지므로 껍데기 좌표도 같이 잡는다.
-     타이틀·밴드·리본은 124 값 그대로(152 가 중앙 정렬을 확정한 자리) */
-  let h = '<div class="cn-wrap pv" style="height:' + (PV_Y0 + PASS_ITEMS.length * PVC_PITCH + 120) + 'px">'
+  /* 151 — 카드가 커져 페이지가 길어진다. 카드 높이가 장마다 달라 위에서부터 쌓아 내려간다. */
+  const tops = []; let y = PV_Y0;
+  PASS_ITEMS.forEach(p => { tops.push(y); y += pvCardH(p) + PVC_GAP; });
+  const pageH = y + 150;
+  /* 껍데기(타이틀·밴드·리본)는 124 값 그대로 — 152 가 중앙 정렬을 확정한 자리다 */
+  let h = '<div class="cn-wrap pv" style="height:' + pageH + 'px">'
     + '<div class="cn-ti" style="top:40px"><i>이용권 상점</i></div>'
     + '<div class="cn-hl" style="top:150px"></div>'
     + '<div class="cn-hd" style="top:158px"><i>이용권</i></div>'
@@ -19928,27 +19944,22 @@ function renderPassPage(list){
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>상시 판매</i></div>';
   PASS_ITEMS.forEach((p, i) => {
     const own = passOwned(p.id);
-    h += '<div class="pvc p' + p.pal + (own ? ' own' : '') + '" data-pv="' + p.id + '"'
-      +  ' style="top:' + (PV_Y0 + i * PVC_PITCH) + 'px">'
-      /* 몸통 → 겉장식 → 글자 순. 검정 테(.fr)는 맨 위에 얹어 모서리를 덮는다(13 카드와 같은 방식) */
-      +  '<div class="bg"></div>'
+    /* 리본 한 줄 — 빨강 바(라벨) + 오른끝 금색 판(보석) + 판 아래 수량. ref 구조 그대로다 */
+    const rib = (cls, lab, n, w) => '<div class="rb ' + cls + '" style="width:' + w + 'px">'
+      + '<i>' + lab + '</i><b>' + curIc('dia') + '</b><u>' + fmt(n) + '</u></div>';
+    h += '<div class="pvc p' + p.pal + (p.ban ? ' ban1' : '') + (own ? ' own' : '') + '"'
+      +  ' data-pv="' + p.id + '" style="top:' + tops[i] + 'px;height:' + pvCardH(p) + 'px">'
+      +  '<div class="bg"></div><div class="hdb"></div>'
       +  '<div class="stt"><i>' + passStatusTxt(p) + '</i></div>'
       +  '<div class="pil"><em>' + curIc('mile') + '</em><i>마일리지 쿠폰 +' + p.cp + '</i></div>'
       +  '<div class="bdg"><s></s><i>' + p.val + '</i><b>가치</b></div>'
       +  '<div class="pvt"><s>✦</s><i>' + p.n + '</i></div>';
-    /* 본문 — 1번 카드만 ref 처럼 «티켓형 배너 + 일러스트», 나머지는 ★ 불릿 */
-    if(p.ban){
-      h += '<div class="ban"><s class="n l"></s><s class="n r"></s><i>' + p.ban + '</i></div>';
-    } else {
-      h += '<div class="bls">'
-        + p.bl.map(t => '<div class="bl"><s>★</s><i>' + t + '</i></div>').join('')
-        + '</div>';
-    }
+    h += p.ban
+      ? '<div class="ban"><i>' + p.ban + '</i></div>'
+      : '<div class="pvl">' + p.bl.map(t => '<div class="pvb"><s>★</s><i>' + t + '</i></div>').join('') + '</div>';
     h += '<div class="art"><em>' + p.art + '</em></div>'
-      +  '<div class="rb rb1"><i>매일 보석 지급</i><b>' + curIc('dia') + ' ' + fmt(p.daily) + '</b></div>'
-      +  '<div class="rb rb2"><i>구매 즉시 보석 지급</i><b>' + curIc('dia') + ' ' + fmt(p.once) + '</b></div>'
-      /* 가격 — 표기는 원화(주인 지시), 실제 결제는 미연동이라 다이아 대체가로 산다(44 관례).
-         둘 다 적어야 «₩ 를 눌렀는데 다이아가 빠졌다» 가 안 된다. */
+      +  rib('rb1', '매일 보석 지급', p.daily, 456)
+      +  rib('rb2', '구매 즉시 보석 지급', p.once, 547)
       +  (own
           ? '<div class="bt on"><i>이용 중</i></div>'
           : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i>'
@@ -19956,7 +19967,7 @@ function renderPassPage(list){
       +  '<div class="fr"></div></div>';
   });
   /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
-  const barY = PV_Y0 + PASS_ITEMS.length * PVC_PITCH + 8;
+  const barY = y + 10;
   if(autoBlessOn()){
     const left = autoBlessLeft(), full = PASS_ABLESS_DAYS * PASS_DAY_MS;
     h += '<div class="pv-bar" style="top:' + barY + 'px"><s style="width:'
@@ -20002,12 +20013,16 @@ function passDailyTick(){
   S.pass.dailyAt = S.pass.dailyAt || {};
   let got = 0;
   PASS_ITEMS.forEach(p => {
-    if(!p.daily || !passOwned(p.id)) return;
+    if(!p.daily) return;
+    /* 정산 끝점 — 영구권은 «지금», 기간제는 «만료 시각». **기간제는 지금 꺼져 있어도 센다** —
+       자리를 비운 사이에 만료됐다면 만료 전까지의 일수는 이미 받은 몫이다(안 그러면 조용히 사라진다). */
+    const end = p.perm ? (passOwned(p.id) ? now : 0) : Math.min(now, passAutoUntil());
+    if(end <= 0) return;
     const t0 = S.pass.dailyAt[p.id];
-    if(!Number.isFinite(t0) || t0 <= 0){ S.pass.dailyAt[p.id] = now; return; }
-    /* 기간제는 «만료 시각까지» 만 — 만료 뒤 다시 사면 그 시점부터 다시 센다 */
-    const end = p.perm ? now : Math.min(now, passAutoUntil());
-    const n = Math.floor((end - t0) / PASS_DAY_MS);
+    if(!Number.isFinite(t0) || t0 <= 0){ if(passOwned(p.id)) S.pass.dailyAt[p.id] = now; return; }
+    /* 손댄·깨진 세이브가 아주 오래된 시각을 들고 있어도 폭탄 지급이 되지 않게 일수를 자른다.
+       구매 시각이 기산점이라 정상 플레이로는 이 상한에 닿을 수 없다(닿으면 그건 손댄 세이브다). */
+    const n = Math.min(PASS_DAILY_MAX_D, Math.floor((end - t0) / PASS_DAY_MS));
     if(n <= 0) return;
     S.pass.dailyAt[p.id] = t0 + n * PASS_DAY_MS;
     S.dia += n * p.daily; got += n * p.daily;
