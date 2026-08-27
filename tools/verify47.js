@@ -22,9 +22,21 @@
  *
  * [3]-(가) 기계적 검증: 레퍼런스 대조가 아니라 DOM 실측 판정이라 비평가를 띄우지 않는다.
  *
- * 측정 주의 — **프레임 스케일**: 03·10 은 전체화면 페이지가 `transform:scale()` 로 앉으므로
- *   `getBoundingClientRect()` 값이 프레임 px 가 아니다(바 h 99 → 실측 97.5).
- *   바의 `rect.width / offsetWidth` 로 스케일을 구해 **프레임 px 로 환산한 뒤** 판정한다.
+ * 측정 주의 — **스케일 s 의 정체**(221 에서 확정): 프레임(`#app`)은 1080x2280 뷰포트에서 scale 1 이고,
+ *   `rect ≠ 프레임 px` 가 되는 구간은 **페이지가 열리는 120ms 뿐**이다 —
+ *   60·122 쥬시의 입장 연출 `.jz-o.jz-pg{animation:jzPgIn .12s}` / `@keyframes jzPgIn{0%{scale:.985}→100%{scale:1}}`
+ *   이 **호스트(#dunw·#shopw)를 통째로** 축소한 채 시작한다(바 794 → 782.1 · h 99 → 97.5).
+ *   바의 `rect.width / offsetWidth` 로 그 s 를 구해 **프레임 px 로 환산한 뒤** 판정한다.
+ *
+ *   ⚠ ÷s 는 **크기만** 되살린다. `rect.x` 는 «화면 절대 좌표» 라 축소 중심(프레임 중앙 540)이 함께
+ *   들어가 있어서 ÷s 로도 안 지워진다:  x' = 540 + (x−540)·s  →  x'/s − x = **540·(1/s−1)**.
+ *   s=.985 이면 정확히 **+8.22px**, 그리고 이 값은 x 와 무관하므로 **모든 칸·두 바가 똑같이 8.2** 어긋난다.
+ *   221 의 «재진입 Δ8.2 간헐 FAIL» 이 바로 이것이었다(제품은 무변경 — 스냅샷을 입장 연출 도중에 찍었을 뿐).
+ *   그래서 이 게이트는 두 가지를 지킨다:
+ *     ① 스냅샷 전에 `jzPg*`/`jzSheet*` 입장 연출이 **끝나기를 기다린다**(settle).
+ *     ② 스냅샷끼리 비교하는 위치는 절대 x 가 아니라 **«바 안에서의 위치»·«호스트 안에서의 바 위치»**
+ *        처럼 같은 스냅샷 안의 차분으로만 본다(차분은 균일 축소에 불변).
+ *   한 스냅샷 «안» 의 비교([2]·[3])는 원래부터 차분이라 안전하다.
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
@@ -43,6 +55,14 @@ const BAR_H = 99, BAR_BORDER = 6, CELL_H = 85;
 const PILL_LIP = 14;
 /* 4칸 격자 — 바 콘텐츠 기준 상대 좌표(.stab-c1~c4) */
 const GRID4 = [[0, 224], [220, 261], [481, 223], [709, 229]];
+
+/* 입장 연출 settle — `jzPgIn`(.12s) · `jzSheetIn`(.24s) 이 끝나기를 기다린다.
+   무한 루프 연출(`jzDotPulse`·`jz122*`·`bgm*`)은 `finished` 가 영원히 안 오므로 이름으로 걸러낸다.
+   끝난 뒤 rAF 2 프레임을 더 줘서 스타일이 확정된 프레임에서 재게 한다. */
+const SETTLE = `() => { const A = document.getAnimations ? document.getAnimations() : [];
+  const P = A.filter(a => /^jz(Pg|Sheet)/.test(a.animationName || '')).map(a => a.finished.catch(() => 0));
+  return Promise.all(P).then(() => new Promise(r =>
+    requestAnimationFrame(() => requestAnimationFrame(() => r(P.length))))); }`;
 
 /* 본문 반응 probe — «지금 보이는 본문 컨테이너» 를 이름으로 돌려준다.
    `!!document.querySelector('#bSk')` 류는 노드가 늘 남아 있어 true→true 로 **아무것도 검사하지 않는다**. */
@@ -110,8 +130,11 @@ const SNAP = `(sel, host) => {
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));
   await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
-  await page.goto('file://' + path.resolve(__dirname, '..', 'index.html'));
+  /* `V47_SRC` — 되돌림 시험(tools/neg221.js)이 «한 곳만 갈아 끼운 사본» 을 물릴 때 쓴다 */
+  await page.goto('file://' + path.resolve(process.env.V47_SRC || path.join(__dirname, '..', 'index.html')));
   await page.waitForTimeout(900);
+  /* 스냅샷 직전마다 부른다 — 입장 연출 도중에 재면 s ≠ 1 이 되고, 절대 x 가 540·(1/s−1) 만큼 밀린다(221) */
+  const settle = () => page.evaluate(o => eval(o)(), SETTLE);
 
   /* ---- 0. 47 의 «옛 대상» 은 폐기됐다 (88) ---- */
   console.log('\n[0] 옛 대상(23 훈련 서브탭) 폐기 확인 — 되살아나면 이 게이트의 전제가 깨진다');
@@ -131,6 +154,7 @@ const SNAP = `(sel, host) => {
     console.log('\n[1] ' + b.name + ' — 부품 규격 (' + b.sel + ')');
     await page.evaluate(o => eval(o), b.open);
     await page.waitForTimeout(650);
+    await settle();
     /* 작업 166 — `.stab>.bdg` 는 «기본 꺼짐 + .alert 로 점등» 이 됐다(종전에는 마크업만으로 상시 점등).
        이 게이트가 지키는 것은 «배지가 켜졌을 때의 기하»(27x27 · 칸 안)이지 «언제 켜지는가» 가 아니므로,
        측정 동안만 강제로 보이게 한다. `.alert` 클래스로 켜면 renderUI() 가 0.35초마다 조건대로 되돌려
@@ -230,6 +254,7 @@ const SNAP = `(sel, host) => {
     const clicked = await page.evaluate(sel => { const e = document.querySelector(sel); if (!e) return false; e.click(); return true; }, b.click);
     ok('비활성 칸 클릭 가능 (' + b.click + ')', clicked);
     await page.waitForTimeout(600);
+    await settle();
     const g2 = await page.evaluate(([fn, sel, host]) => eval(fn)(sel, host), [SNAP, b.afterSel, b.host]);
     const after = await page.evaluate(o => eval(o), b.body);
     ok('활성이 «' + b.afterLabel + '» 칸으로 이동 · 활성 1개',
@@ -259,14 +284,33 @@ const SNAP = `(sel, host) => {
     await page.waitForTimeout(400);
     await page.evaluate(o => eval(o), b.open);              /* 다시 연다 */
     await page.waitForTimeout(650);
+    await settle();
     const g = await page.evaluate(([fn, sel, host]) => eval(fn)(sel, host), [SNAP, b.sel, b.host]);
     const g0 = snaps[key];
     ok(b.name + ' 재진입 — 칸 ' + b.n + '개 · 활성 1개',
       !g.missing && g.cells.length === b.n && g.onN === 1,
       g.missing ? '바 없음' : g.cells.length + '칸 · .on ' + g.onN + '개');
-    ok(b.name + ' 재진입 — 칸 폭·위치 그대로 (Δ ≤ 0.6)',
-      !g.missing && g.cells.every((c, i) => near(c.x, g0.cells[i].x, 0.6) && near(c.w, g0.cells[i].w, 0.6)),
-      g.missing ? '-' : g.cells.map((c, i) => 'Δ' + f1(c.x - g0.cells[i].x) + '/' + f1(c.w - g0.cells[i].w)).join(' '));
+    /* 221 — «위치» 는 화면 절대 x 가 아니라 **바 안에서의 위치**로 본다.
+       절대 x 는 입장 연출(jzPgIn scale .985) 이 걸리면 모든 칸이 한꺼번에 540·(1/s−1)=8.2px 밀려
+       «칸이 하나도 안 움직였는데» 빨개진다(간헐 FAIL 의 정체). 바 기준 차분은 균일 축소에 불변이다. */
+    ok(b.name + ' 재진입 — 칸 폭·바 안 위치 그대로 (Δ ≤ 0.6)',
+      !g.missing && g.cells.every((c, i) =>
+        near(c.x - g.bar.x, g0.cells[i].x - g0.bar.x, 0.6) && near(c.w, g0.cells[i].w, 0.6)),
+      g.missing ? '-' : g.cells.map((c, i) =>
+        'Δ' + f1((c.x - g.bar.x) - (g0.cells[i].x - g0.bar.x)) + '/' + f1(c.w - g0.cells[i].w)).join(' '));
+    /* 위 단언이 «바째로 옮겨간» 회귀를 놓치지 않도록, 바 자신도 호스트 기준으로 같이 본다 */
+    ok(b.name + ' 재진입 — 바 폭·호스트 안 위치 그대로 (Δ ≤ 0.6)',
+      !g.missing && !!g.host && !!g0.host
+      && near(g.bar.x - g.host.x, g0.bar.x - g0.host.x, 0.6)
+      && near(g.bar.y - g.host.y, g0.bar.y - g0.host.y, 0.6)
+      && near(g.bar.w, g0.bar.w, 0.6) && near(g.bar.h, g0.bar.h, 0.6),
+      g.missing || !g.host || !g0.host ? '-'
+        : 'Δx' + f1((g.bar.x - g.host.x) - (g0.bar.x - g0.host.x))
+          + ' Δy' + f1((g.bar.y - g.host.y) - (g0.bar.y - g0.host.y))
+          + ' Δw' + f1(g.bar.w - g0.bar.w) + ' Δh' + f1(g.bar.h - g0.bar.h));
+    /* 그리고 «잰 순간이 연출 도중이 아니었다» 는 것 자체를 못 박는다 — settle 이 죽으면 여기가 빨개진다 */
+    ok(b.name + ' 재진입 — 입장 연출 종료 후 측정 (s = 1)', !g.missing && near(g.scale, 1, 0.002),
+      g.missing ? '-' : 's ' + (Math.round(g.scale * 10000) / 10000));
   }
 
   /* ---- 6. 콘솔 ---- */
@@ -274,7 +318,8 @@ const SNAP = `(sel, host) => {
   ok('에러 0건', errs.length === 0, errs.slice(0, 3).join(' | '));
 
   /* 캡처 — 네 바를 한눈에 볼 수 있게 상점 바 주변만 잘라 남긴다 */
-  const sc = snaps.shop;
+  /* 되돌림 시험(V47_SRC)은 «일부러 망가뜨린 사본» 이라 산출물을 덮어쓰면 안 된다 */
+  const sc = process.env.V47_SRC ? null : snaps.shop;
   if (sc && !sc.missing) {
     await page.evaluate(o => eval(o), BARS.find(b => b.key === 'shop').open);
     await page.waitForTimeout(600);
