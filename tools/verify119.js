@@ -17,7 +17,17 @@
  *   [F] 홀드 연속 소환 — 매회 재계산 + `#rwCost` 숫자·`lack` 즉시 갱신 ·
  *       다음 1회분에 못 미치면 **홀드 중단**(남은 유물석은 다음 비용보다 작다).
  *       (138, 2026-08-26) 벽시계 1600ms 대기 → «홀드가 스스로 멈출 때까지» 대기로 교체(느린 기기 거짓 FAIL).
- *   [G] 부족 — 비용−1 이면 소환 실패(차감 0) · `lack` 클래스 · 안내 팝업
+ *   [G] 부족 — 비용−1 이면 소환 실패(차감 0) · `lack` 클래스 · 첫 누름만 안내
+ *       (175, 2026-08-27) G3 의 기대값이 **작업 149 이전 것**이라 항상 FAIL 이었다.
+ *       149 가 «클릭 없이 사라지는 단순 안내» 를 전부 토스트로 옮겼고(`notify()` → `fxToast`),
+ *       125 가 이모지 «🔮» 를 화폐 아이콘 `<img data-cur-ic="relic">` 로 바꿨다. 그래서
+ *       옛 기대 «본문 텍스트에 «유물조각 부족» 이 보인다» 는 **두 겹으로** 깨져 있었다 —
+ *       ⓐ 팝업이 아니라 토스트라 `#modal` 이 안 열리고 ⓑ 문구도 «🔮 N 더 필요합니다» 로 바뀌었으며
+ *       그 «🔮» 는 `<img alt="">` 라 innerText 에 한 글자도 안 남는다.
+ *       **게임 동작이 아니라 게이트가 낡은 것이다**(149 가 의도한 거동 그대로다) — 기대값만 옮겼다:
+ *       G3 = 첫 누름 부족이면 `.fx-toast` 가 뜨고(문구 = 화폐 아이콘 + 부족분 + «더 필요합니다»)
+ *       **`#modal` 은 안 열린다**, G4 = 홀드 반복분(quiet)은 **조용하다**(토스트 0 — index.html 의
+ *       «반복 중 부족은 조용히(shake만), 첫 누름 부족만 안내» 를 양쪽에서 못 박는다).
  *   [H] 구 세이브 — `S.cnt.sumRelic` 이 쌓여 있으면 **그대로 이어진다**(ΣLv 로 역산하지 않는다) ·
  *       옛 세이브의 문자열·null 카운터가 NaN 으로 새지 않는다
  *   [I] 콘솔 에러 0건 · 유물 페이지 텍스트에 NaN/undefined 0건
@@ -156,12 +166,36 @@ const setup = (page, relic, sum) => page.evaluate(([relic, sum]) => {
   });
   ok(G.got === null && G.spent === 0 && G.dSum === 0, 'G1 비용−1(99)이면 소환 실패 · 차감 0 · 카운터 0');
   ok(G.lack === true, 'G2 부족 상태에서 `lack` 클래스 on');
+  /* 149 이후 «단순 안내» 는 팝업이 아니라 토스트(`#fxl .fx-toast`)다 — 175 에서 기대값을 옮겼다.
+     쌓여 있던 토스트를 먼저 비워야 «이 누름이 띄운 것» 만 센다(verify149 §2 의 clear/seen 규약). */
   const G2 = await page.evaluate(() => {
-    S.relic = 99; summonRelic();                                   /* quiet 아님 → 안내 팝업 */
-    const t = document.body.innerText;
-    return { open: /유물조각 부족/.test(t), need: /\b1\b/.test(t) };
+    /* 토스트만 지우면 안 된다 — G3 이 폴백 팝업을 띄운 채면 그게 G4 로 새어 «조용하지 않다» 는
+       거짓 FAIL 이 된다(N1 음성 시험에서 실제로 걸렸다). 모달도 같이 닫아 두 항목을 독립시킨다. */
+    const clear = () => {
+      document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
+      try { closeModal(); } catch (e) {}
+    };
+    const seen  = () => {
+      const t = [...document.querySelectorAll('#fxl .fx-toast')];
+      const md = document.getElementById('modal');
+      return { n: t.length, txt: t.map(e => e.textContent).join(' | '),
+               ic: t.some(e => e.querySelector('img[data-cur-ic="relic"]')),
+               modal: !!(md && md.classList.contains('on')) };
+    };
+    clear(); S.relic = 99; summonRelic();          /* quiet 아님 = 첫 누름 → 안내 1건 */
+    const loud = seen();
+    clear(); S.relic = 99; summonRelic(true);      /* quiet = 홀드 반복분 → 조용해야 한다 */
+    const quiet = seen();
+    return { loud, quiet };
   });
-  ok(G2.open, 'G3 첫 누름 부족은 «🔮 유물조각 부족» 안내 팝업');
+  ok(G2.loud.n === 1 && !G2.loud.modal && /더 필요합니다/.test(G2.loud.txt)
+     && /\b1\b/.test(G2.loud.txt) && G2.loud.ic,
+    'G3 첫 누름 부족은 안내 토스트 1건(화폐 아이콘 + 부족분 «1» + «더 필요합니다») · 팝업 아님',
+    '토스트 ' + G2.loud.n + '건 «' + G2.loud.txt.trim() + '» · 아이콘 ' + (G2.loud.ic ? 'O' : 'X')
+    + ' · #modal ' + (G2.loud.modal ? 'on' : 'off'));
+  ok(G2.quiet.n === 0 && !G2.quiet.modal,
+    'G4 홀드 반복분(quiet) 부족은 조용하다 — 토스트·팝업 0건',
+    '토스트 ' + G2.quiet.n + '건 · #modal ' + (G2.quiet.modal ? 'on' : 'off'));
 
   /* ---- [H] 구 세이브 — 쌓인 sumRelic 을 그대로 이어받는다 ---- */
   const mk = async save => {
