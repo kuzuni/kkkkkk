@@ -125,9 +125,17 @@ const tap = (page, sel) => page.evaluate((s) => {
         await S(page, `'🔒' + cosReqText(AV[${JSON.stringify(reqId)}])`));
       eq('계급 미달 카드는 .rq', bar[reqId].rq, true);
       eq('착용 슬롯 1칸', await page.$$eval('#bCos .sk-eqp .sk-slot', (e) => e.map((x) => x.dataset.cosun)), ['av1']);
-      /* 총 보유 효과가 실제 곱연산(bonus() 의 아바타 합산)과 같은가 */
+      /* 총 보유 효과가 실제 곱연산(bonus() 의 코스튬 합산)과 같은가.
+         197 이관(2026-08-27) — 194 의 «전 코스튬 동일값 a.atk 를 개수만큼 곱» 은 폐기됐다.
+         보유 효과는 이제 **획득 순번의 계단**(`cosOwnStep(k, n)`)이므로 기대값도 그 계단의 곱에서
+         나와야 한다(LESSONS 212-① «기대값은 화면이 쓴 식이 아니라 근거 데이터에서»).
+         여기서 `cosOwnMul` 을 그냥 부르지 않고 **계단을 손으로 다시 곱하는** 이유는, 그러면
+         «화면이 쓰는 함수» 를 그대로 되읽어 아무것도 못 잡기 때문이다 — 근거는 COS_OWN·COS_STEP 이다. */
       const shown = await page.$eval('#bCos .sk-tot em', (e) => e.textContent);
-      const want = await S(page, "'공격력 +' + pct(AVATARS.reduce((m,a)=>S.avatars[a.id]?m*(1+a.atk):m,1)-1)");
+      const want = await S(page,
+        "(() => { const n = AVATARS.filter(a => S.avatars[a.id]).length; let m = 1;"
+        + " for(let i=1;i<=n;i++) m *= 1 + COS_OWN.atk * COS_STEP[Math.min(COS_STEP.length-1, Math.floor((i-1)/COS_STEP_EVERY))];"
+        + " return '공격력 +' + pct(m * (1 + cosLvVal('atk')) - 1); })()");
       eq('총 보유 효과', shown, want);
       await ctx.close();
     }

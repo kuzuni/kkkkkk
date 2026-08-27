@@ -1,0 +1,248 @@
+/* 작업 197 회귀 게이트 — «파워 커브 계단식»
+ *
+ *   주인 지시(2026-08-27): «등급 점프마다 전 등급 대비 존나 쎄지게, 같은 티어끼리는 적당히,
+ *   코스튬도 계단식 체감». 등재문의 세 갈래를 그대로 항목으로 옮겼다.
+ *
+ *   실행: node tools/verify197.js   → 마지막 줄이 `VERIFY197 n/n PASS` 여야 한다.
+ *
+ *   본다:
+ *     [A] 축 분리   GRADE 에 `wear` 8칸 · 점프가 전 구간 정확히 ×GRADE_JUMP · g0 = 1
+ *                   `mul` 은 197 **전 값 그대로**(85 «16·26» · 91 도감 · 89 유물 · 106 펫 곡선의 근거)
+ *     [B] 착용 파이프  equipVal · skillDmg · petDmg · power(장비) 가 전부 `wear` 를 탄다
+ *                   — 등급을 한 칸 올리면 값이 정확히 ×GRADE_JUMP (지시 ①)
+ *     [C] 동티어    lvMul(MAX_LEVEL) < 점프 · 개체차 v 폭(max/min) < 점프 (지시 ②
+ *                   «점프 대비 확실히 작게») · 만렙 하위등급 < Lv0 상위등급
+ *     [D] 보유 축   ownVal 은 `mul` 그대로 — 보유는 전 종에 곱하는 축이라 계단을 안 태운다.
+ *                   relicVal(89) · COLL 세트 단계값(91·118) 도 `mul` 기준이라 **197 전과 같은 값**
+ *     [E] 코스튬    보유 효과가 획득 순번 계단 — COS_STEP_EVERY 개마다 한 칸,
+ *                   n 번째 값 = COS_OWN × COS_STEP[t] · 총곱 = 계단의 곱 (지시 ③)
+ *     [F] 총량 보존 50종 전부 보유 시 보유 총효과가 194 의 «전 코스튬 ×COS_OWN» 과 같은 자릿수
+ *                   (곡선 모양만 바꾼 것이지 세지게 한 것이 아니다 — 실수치는 199 의 몫)
+ *     [G] 표기 일치 코스튬 시트 «총효과» 와 상세 «보유 효과» 가 bonus() 와 **같은 함수**를 본다
+ *     [H] 실동작    장비를 한 등급 위로 바꿔 끼우면 cp() 가 실제로 오른다 · 코스튬 1개 획득이 bonus 를 올린다
+ *     [I] 콘솔      에러 0건
+ *
+ *   ⚠ 되돌림 시험: `wear` 를 지우고 소비처를 `gMul` 로 되돌리면 [A][B][C][H] 가 FAIL 해야 한다.
+ */
+const path = require('path');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+
+const ROOT = path.resolve(__dirname, '..');
+const URL = 'file://' + path.resolve(ROOT, 'index.html').replace(/\\/g, '/');
+let pass = 0, fail = 0;
+const ok = (b, name, detail) => {
+  console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
+  b ? pass++ : fail++;
+};
+const near = (a, b, e) => Math.abs(a - b) <= (e == null ? 1e-9 : e);
+
+async function open(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(URL);
+  await page.waitForFunction(() => typeof GRADE !== 'undefined' && typeof S !== 'undefined');
+  await page.waitForTimeout(300);
+  return { ctx, page, errs };
+}
+
+(async () => {
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
+  const { ctx, page, errs } = await open(browser);
+  try {
+    /* ---------------- [A] 축 분리 ---------------- */
+    const A = await page.evaluate(() => ({
+      jump: GRADE_JUMP,
+      wear: GRADE.map(g => g.wear),
+      mul:  GRADE.map(g => g.mul),
+      len:  GRADE.length
+    }));
+    ok(A.len === 8 && A.wear.every(w => typeof w === 'number' && w > 0),
+       'A1 GRADE 8칸 전부 wear 를 갖는다', A.wear.join(' / '));
+    ok(A.wear[0] === 1, 'A2 일반(g0) wear = 1 — 초반 체감은 197 전과 같다', String(A.wear[0]));
+    {
+      const bad = [];
+      for (let i = 1; i < A.wear.length; i++)
+        if (!near(A.wear[i] / A.wear[i - 1], A.jump, 1e-9)) bad.push(i + ':' + (A.wear[i] / A.wear[i - 1]).toFixed(3));
+      ok(bad.length === 0, 'A3 등급 점프가 전 구간 ×' + A.jump + ' 일정 (지시 ①)', bad.join(',') || '7칸 전부');
+    }
+    ok(A.jump >= 3 && A.jump <= 5, 'A4 점프가 주인 밴드 ×3~5 안', '×' + A.jump);
+    {
+      const WANT = [1.0, 1.5, 2.3, 3.6, 6.0, 10.0, 16.0, 26.0];
+      ok(A.mul.every((m, i) => near(m, WANT[i], 1e-9)),
+         'A5 mul 은 197 전 값 그대로 (85·91·118·106 의 근거 데이터)', A.mul.join('/'));
+    }
+
+    /* ---------------- [B] 착용 파이프 ---------------- */
+    const B = await page.evaluate(() => {
+      const out = {};
+      /* 같은 부위·같은 Lv·같은 v 로 등급만 다른 장비 두 짝을 골라 equipVal 비를 잰다 */
+      const byG = {};
+      EQUIPS.filter(e => e.slot === 'weapon').forEach(e => { (byG[e.g] = byG[e.g] || []).push(e); });
+      out.eq = [];
+      for (let g = 1; g < GRADE.length; g++) {
+        if (!byG[g] || !byG[g - 1]) continue;
+        const a = byG[g][0], b = byG[g - 1][0];
+        out.eq.push(equipVal({ g: a.g, id: '__x', slot: 'weapon', v: 1 })
+                  / equipVal({ g: b.g, id: '__y', slot: 'weapon', v: 1 }));
+      }
+      /* 스킬·펫 — 계수 m 을 고정하고 등급만 올린다 */
+      S.eqSkill = []; S.eqPet = [];
+      out.sk = [], out.pt = [];
+      for (let g = 1; g <= 5; g++) {
+        out.sk.push(skillDmg({ g: g, m: 1, id: '__s' }) / skillDmg({ g: g - 1, m: 1, id: '__s' }));
+      }
+      for (let g = 1; g < GRADE.length; g++) {
+        out.pt.push(petDmg({ g: g, m: 1, cd: 1, id: '__p' }) / petDmg({ g: g - 1, m: 1, cd: 1, id: '__p' }));
+      }
+      /* power() 의 장비 분기 */
+      out.pw = [];
+      for (let g = 1; g < GRADE.length; g++)
+        out.pw.push(power({ g: g, id: '__x', slot: 'weapon', v: 1 }, 'equip')
+                  / power({ g: g - 1, id: '__y', slot: 'weapon', v: 1 }, 'equip'));
+      out.jump = GRADE_JUMP;
+      return out;
+    });
+    const allJump = (arr, n) => arr.length >= n && arr.every(r => near(r, B.jump, 1e-6));
+    ok(allJump(B.eq, 7), 'B1 장비 equipVal — 등급 +1 이 정확히 ×' + B.jump,
+       B.eq.map(v => v.toFixed(2)).join('/'));
+    ok(allJump(B.sk, 5), 'B2 스킬 피해 — 등급 +1 이 정확히 ×' + B.jump,
+       B.sk.map(v => v.toFixed(2)).join('/'));
+    ok(allJump(B.pt, 7), 'B3 펫 피해 — 등급 +1 이 정확히 ×' + B.jump,
+       B.pt.map(v => v.toFixed(2)).join('/'));
+    ok(allJump(B.pw, 7), 'B4 power() 장비 순위 — 등급 +1 이 정확히 ×' + B.jump,
+       B.pw.map(v => v.toFixed(2)).join('/'));
+
+    /* ---------------- [C] 동티어 ---------------- */
+    const C = await page.evaluate(() => {
+      const vs = EQUIPS.filter(e => e.v).map(e => e.v);
+      return {
+        jump: GRADE_JUMP, step: LV_STEP, maxLv: MAX_LEVEL,
+        lvMax: lvWear(MAX_LEVEL), lvOwn: lvMul(MAX_LEVEL),
+        vSpan: Math.max.apply(null, vs) / Math.min.apply(null, vs),
+        /* 만렙 하위등급 vs Lv0 상위등급 (같은 부위·v=1) */
+        lowMax: GRADE[0].wear * lvWear(MAX_LEVEL),
+        hiZero: GRADE[1].wear * lvWear(0)
+      };
+    });
+    ok(C.lvMax < C.jump, 'C1 착용 축 레벨 강화 총량 < 등급 점프 (지시 ②)',
+       'Lv' + C.maxLv + ' ×' + C.lvMax.toFixed(2) + ' < ×' + C.jump);
+    ok(near(C.lvOwn, 1 + C.maxLv * 0.18, 1e-9),
+       'C1b 보유 축 lvMul 기울기 0.18 은 197 전 그대로 — 낮추면 (1+x)^90 이 무너진다(sim197). 199 의 몫',
+       '×' + C.lvOwn.toFixed(1));
+    ok(C.vSpan < C.jump, 'C2 개체차 v 폭 < 등급 점프', '×' + C.vSpan.toFixed(3) + ' < ×' + C.jump);
+    ok(C.lowMax < C.hiZero, 'C3 만렙 일반 < Lv0 고급 — 계단이 실제로 보인다',
+       C.lowMax.toFixed(2) + ' < ' + C.hiZero.toFixed(2));
+
+    /* ---------------- [D] 보유 축 · 다른 시스템은 mul 그대로 ---------------- */
+    const D = await page.evaluate(() => ({
+      own: [0, 1, 2, 3, 4, 5, 6, 7].map(g => ownVal({ g: g, id: '__o' })),
+      /* 91·118 세트 단계값 = COLL_BASE × 세트 mul */
+      coll: COLL_SETS.filter(st => st.tab === 'weapon').map(st => st.eff.atk),
+      collWant: GRADE.map(g => COLL_BASE.weapon.atk * g.mul),
+      relic: RELICS.map(r => r.v * GRADE[r.g].mul * 0.25)
+    }));
+    ok(D.own.every((v, g) => near(v, 0.02 * (g === 0 ? 1.0 : [1, 1.5, 2.3, 3.6, 6, 10, 16, 26][g]), 1e-9)),
+       'D1 ownVal(보유)은 mul 축 — 전 종에 곱하는 축이라 계단을 안 태운다',
+       D.own.map(v => v.toFixed(4)).join('/'));
+    ok(D.coll.length === 8 && D.coll.every((v, i) => near(v, D.collWant[i], 1e-12)),
+       'D2 91·118 도감 세트 단계값 = COLL_BASE × mul (197 전과 동일)',
+       D.coll.map(v => (v * 100).toFixed(1) + '%').join('/'));
+    ok(D.relic.length === 10 && D.relic.every(v => v > 0),
+       'D3 89 유물 효과도 mul 축 그대로', D.relic.map(v => v.toFixed(3)).join('/'));
+
+    /* ---------------- [E] 코스튬 계단 ---------------- */
+    const E = await page.evaluate(() => {
+      const every = COS_STEP_EVERY, step = COS_STEP.slice();
+      const idx = [1, 5, 10, 11, 20, 21, 30, 31, 40, 41, 50];
+      return {
+        every: every, step: step,
+        rising: step.every((v, i) => i === 0 || v > step[i - 1]),
+        at: idx.map(n => ({ n: n, t: cosStepAt(n), a: cosOwnStep('atk', n) })),
+        base: COS_OWN.atk
+      };
+    });
+    ok(E.rising, 'E1 계단이 단조 증가 (지시 ③ «하나 얻을 때마다 계단으로 체감»)', E.step.join(' → '));
+    {
+      const bad = E.at.filter(r => !near(r.t, E.step[Math.min(E.step.length - 1, Math.floor((r.n - 1) / E.every))], 1e-12));
+      ok(bad.length === 0, 'E2 ' + E.every + '개마다 계단 한 칸',
+         E.at.map(r => r.n + ':' + r.t).join(' '));
+    }
+    {
+      const bad = E.at.filter(r => !near(r.a, E.base * r.t, 1e-12));
+      ok(bad.length === 0, 'E3 n번째 보유 효과 = COS_OWN × 계단', bad.length ? JSON.stringify(bad) : '11점 전부');
+    }
+
+    /* ---------------- [F] 총량 보존 ---------------- */
+    const F = await page.evaluate(() => {
+      AVATARS.forEach(a => S.avatars[a.id] = 1);
+      S.cosLv = {}; markDirty();
+      const n = AVATARS.length;
+      const mine = { atk: cosOwnMul('atk'), hp: cosOwnMul('hp'), gold: cosOwnMul('gold') };
+      const flat = { atk: Math.pow(1 + COS_OWN.atk, n), hp: Math.pow(1 + COS_OWN.hp, n),
+                     gold: Math.pow(1 + COS_OWN.gold, n) };
+      return { n: n, mine: mine, flat: flat };
+    });
+    ['atk', 'hp', 'gold'].forEach(k => {
+      const r = F.mine[k] / F.flat[k];
+      ok(r > 0.8 && r < 1.25,
+         'F' + (k === 'atk' ? 1 : k === 'hp' ? 2 : 3) + ' 50종 보유 총효과 ' + k + ' 가 194 대비 ±25% 안 (총량 보존)',
+         '×' + F.mine[k].toFixed(1) + ' vs 194 ×' + F.flat[k].toFixed(1));
+    });
+
+    /* ---------------- [G] 표기 일치 ---------------- */
+    const G = await page.evaluate(() => {
+      /* 코스튬 시트를 그려 «총효과» 표기를 읽고 cosOwnMul 과 맞춘다 */
+      renderCos();
+      const el = document.querySelector('#bCos .sk-tot em');
+      const want = cosOwnMul('atk') * (1 + cosLvVal('atk')) - 1;
+      return { txt: el ? el.textContent : null, want: pct(want) };
+    });
+    ok(G.txt != null && G.txt.indexOf(G.want) >= 0,
+       'G1 코스튬 시트 «총효과» 표기 = cosOwnMul × 강화 (식이 갈라지지 않는다)',
+       (G.txt || '없음') + ' / 기대 ' + G.want);
+
+    /* ---------------- [H] 실동작 ---------------- */
+    const H = await page.evaluate(() => {
+      /* 깨끗한 상태에서 무기 한 짝을 등급별로 바꿔 끼우며 cp() 를 본다 */
+      S.avatars = { av0: 1 }; S.cosLv = {}; S.own = {}; S.eqSlot = { weapon: null, shield: null, amulet: null };
+      S.eqSkill = []; S.eqPet = []; S.coll = {}; markDirty();
+      const byG = {};
+      EQUIPS.filter(e => e.slot === 'weapon').forEach(e => { if (!byG[e.g]) byG[e.g] = e; });
+      const seq = [];
+      for (let g = 0; g < GRADE.length; g++) {
+        const e = byG[g]; if (!e) continue;
+        S.own = {}; S.own[e.id] = { l: 1, n: 0 };
+        S.eqSlot.weapon = e.id; markDirty();
+        seq.push({ g: g, cp: cp() });
+      }
+      /* 코스튬 1개 더 획득 → 공격 배수가 오른다 */
+      S.own = {}; S.eqSlot.weapon = null; markDirty();
+      const a0 = bonus().atk;
+      S.avatars[AVATARS[1].id] = 1; markDirty();
+      const a1 = bonus().atk;
+      return { seq: seq, a0: a0, a1: a1, stepWant: 1 + cosOwnStep('atk', 2) };
+    });
+    {
+      const rising = H.seq.every((r, i) => i === 0 || r.cp > H.seq[i - 1].cp);
+      ok(rising, 'H1 무기를 한 등급 위로 갈아끼우면 전투력이 매번 오른다',
+         H.seq.map(r => GRADE_N(r.g) + ':' + r.cp).join(' → '));
+    }
+    ok(near(H.a1 / H.a0, H.stepWant, 1e-9),
+       'H2 코스튬 1개 획득 = 2번째 계단만큼 공격 배수 상승',
+       '×' + (H.a1 / H.a0).toFixed(4) + ' vs 기대 ×' + H.stepWant.toFixed(4));
+
+    /* ---------------- [I] 콘솔 ---------------- */
+    ok(errs.length === 0, 'I1 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '0건');
+  } finally {
+    await ctx.close(); await browser.close();
+  }
+  console.log('\nVERIFY197 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
+  process.exit(fail ? 1 : 0);
+})();
+
+/* 등급 이름은 노드 쪽에서 못 읽으므로 표기용 상수만 둔다(게이트 로그 가독성) */
+function GRADE_N(g) { return ['일반', '고급', '희귀', '영웅', '전설', '신화', '초월', '불멸'][g] || ('g' + g); }
