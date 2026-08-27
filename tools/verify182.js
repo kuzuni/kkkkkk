@@ -99,8 +99,11 @@ async function openWith(browser, save){
       cost: AVATARS.every(a => a.cost === undefined),
       req: AVATARS.every(a => a.req === undefined),
       buyBtn: document.querySelectorAll('#bCos [data-cosbuy]').length,
+      /* 194 — 시트 2번 칸은 [승급전] → **[강화]**(승급전 진입은 상세 팝업이 갖는다) */
+      upBtn: document.querySelectorAll('#bCos [data-cosup]').length,
       promoBtn: document.querySelectorAll('#bCos [data-cospromo]').length,
-      /* 카드 바닥에 숫자(가격)가 한 칸도 없어야 한다 — 전부 «보유» 또는 «🔒 …승급전 클리어» */
+      /* 카드 바닥에 «가격» 이 한 칸도 없어야 한다 — 194 이후 보유 칸은 강화 진행도(Lv/500),
+         미보유 칸은 «🔒 …승급전 클리어» 다. 182 가 지키려던 것은 «가격 표기가 없다» 이고 그건 그대로다. */
       bars: [].slice.call(document.querySelectorAll('#bCos .sk-card .sk-bar>b'))
         .map(b => b.textContent),
       dot: (renderUI(), document.querySelector('.tab[data-t="hero"]').classList.contains('alert'))
@@ -108,9 +111,10 @@ async function openWith(browser, save){
     ok(gone.fn === 'undefined', 'buyAvatar() 함수 폐기 (typeof = ' + gone.fn + ')');
     ok(gone.cost, 'AVATARS 에 cost 필드 없음');
     ok(gone.req, 'AVATARS 에 req 필드 없음');
-    ok(gone.buyBtn === 0 && gone.promoBtn === 1, '시트 두 번째 버튼 = [승급전] (구매 ' + gone.buyBtn + '개)');
-    ok(gone.bars.length >= 50 && gone.bars.every(t => t === '보유' || /^🔒.*승급전 클리어$/.test(t)),
-      '카드 바닥 ' + gone.bars.length + '칸이 전부 «보유» 또는 «🔒 …승급전 클리어»');
+    ok(gone.buyBtn === 0 && gone.upBtn === 1 && gone.promoBtn === 0,
+      '194 시트 두 번째 버튼 = [강화] · 구매 ' + gone.buyBtn + '개 · 승급전 ' + gone.promoBtn + '개(상세로 이동)');
+    ok(gone.bars.length >= 50 && gone.bars.every(t => /^\d+\/\d+$/.test(t) || /^🔒.*승급전 클리어$/.test(t)),
+      '카드 바닥 ' + gone.bars.length + '칸이 전부 «Lv/맥스» 또는 «🔒 …승급전 클리어»(가격 0칸)');
     ok(!gone.dot, '미보유 49종 + 다이아 1e9 이어도 영웅 탭 레드닷이 안 켜짐');
 
     /* ---------------- §3 지급 ---------------- */
@@ -127,9 +131,11 @@ async function openWith(browser, save){
         const got = bundle.filter(id => !!S.avatars[id]);
         const raw = JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}');
         renderCos();
+        /* 194 — «보유로 그린다» = 자물쇠(.lk) 없음 + 진행바가 잠금 문구가 아니라 강화 진행도 */
         const cardOwn = bundle.every(id => {
           const c = document.querySelector('#bCos [data-cosit="' + id + '"]');
-          return c && !c.classList.contains('lk') && /보유/.test(c.querySelector('.sk-bar b').textContent);
+          return c && !c.classList.contains('lk')
+            && /^\d+\/\d+$/.test(c.querySelector('.sk-bar b').textContent.trim());
         });
         const totTxt = (document.querySelector('#bCos .sk-tot i') || {}).textContent || '';
         closeModal();
@@ -145,7 +151,7 @@ async function openWith(browser, save){
       ok(r.saved, tag + ' — localStorage 에도 그 ' + r.size + '종이 들어갔다(저장 반영)');
       ok(r.atk1 > r.atk0, tag + ' — 보유 효과가 공격 보너스에 반영 ('
         + r.atk0.toFixed(3) + ' → ' + r.atk1.toFixed(3) + ')');
-      ok(r.cardOwn, tag + ' — 50 시트가 그 ' + r.size + '칸을 «보유» 로 그린다');
+      ok(r.cardOwn, tag + ' — 50 시트가 그 ' + r.size + '칸을 «보유»(자물쇠 없음 · 강화 진행도) 로 그린다');
       ok(/보유 \d+\/50/.test(r.totTxt), tag + ' — 시트 «보유 n/50» 갱신 («' + r.totTxt + '»)');
     }
 
@@ -246,12 +252,15 @@ async function openWith(browser, save){
     const keepR = await keep.p.evaluate(() => ({
       own: !!S.avatars.av5, worn: S.avatar, rank: S.rank, n: Object.keys(S.avatars).length,
       reqOk: cosReqOk(AV.av5), at: cosRankOf('av5'),
-      atk: AVATARS.reduce((m, a) => S.avatars[a.id] ? m * (1 + a.atk) : m, 1)
+      atk: AVATARS.reduce((m, a) => S.avatars[a.id] ? m * (1 + a.atk) : m, 1),
+      own1: COS_OWN.atk                                   /* 194 — 전 코스튬 동일 보유 효과 */
     }));
     ok(keepR.own && keepR.worn === 'av5', '옛 구매분 av5 가 보유·착용 그대로 (계급 ' + keepR.rank + ')');
     ok(keepR.n === 2, '소급이 «지난 승급» 몫만 건드린다 — 보유 ' + keepR.n + '종');
     ok(keepR.reqOk && keepR.at === 5, '보유한 코스튬은 계급이 모자라도 «조건 충족» 으로 본다(회수 금지)');
-    ok(Math.abs(keepR.atk - (1 + 2.50)) < 1e-9, '구세이브 보유 효과 배수 불변 (×' + keepR.atk.toFixed(4) + ')');
+    /* 194 — 등급별 값 폐기. 보존돼야 하는 것은 «무엇을 갖고 있는가» 이고, 효과는 보유 수 × 동일값이다 */
+    ok(Math.abs(keepR.atk - Math.pow(1 + keepR.own1, keepR.n)) < 1e-9,
+      '구세이브 보유 ' + keepR.n + '종 × 동일 효과 = ×' + keepR.atk.toFixed(4));
     ok(keep.errs.length === 0, '구세이브 콘솔 에러 0건'
       + (keep.errs.length ? ' — ' + keep.errs.slice(0, 2).join(' | ') : ''));
     await keep.ctx.close();

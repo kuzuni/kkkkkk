@@ -20,8 +20,9 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m); };
 const sec = t => console.log('\n[' + t + ']');
 
-/* 72 실측 슬롯 기하 — 던전 6장(폭, 상단 인셋). 레이드 3장은 RAIDS.ui 값. */
-const DUN_TH = [[311, 36], [296, 52], [330, 11], [330, 11], [330, 11], [330, 11]];
+/* 72 실측 슬롯 기하 — 던전 카드(폭, 상단 인셋). 레이드 3장은 RAIDS.ui 값.
+   194 — 강화석 던전이 7번째로 붙었다(기하는 relic 과 같은 330/11). 개수 단언은 이 표 길이로 돈다. */
+const DUN_TH = [[311, 36], [296, 52], [330, 11], [330, 11], [330, 11], [330, 11], [330, 11]];
 const RAID_TH = [[311, 36], [296, 52], [330, 11]];
 
 (async () => {
@@ -68,7 +69,7 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
         .map(a => Math.round(a.effect.getTiming().duration / 1000)).join('/') : ''
     };
   }));
-  ok(st.length === 6, `던전 카드 6장 (실제 ${st.length})`);
+  ok(st.length === DUN_TH.length, `던전 카드 ${DUN_TH.length}장 (실제 ${st.length})`);
   st.forEach((c, i) => {
     ok(c.hasBgm, `던전${i + 1}(${c.id}) .bgm 레이어 존재`);
     ok(c.iBgm === c.iBg + 1, `던전${i + 1} .bgm 이 .bg 바로 다음 (bg ${c.iBg} → bgm ${c.iBgm})`);
@@ -76,7 +77,8 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     ok(c.pe === 'none', `던전${i + 1} .bgm pointer-events:none (클릭 히트 불변) — ${c.pe}`);
     ok(c.ov === 'hidden', `던전${i + 1} .bgm overflow:hidden (카드 밖 유출 0) — ${c.ov}`);
     ok(c.same, `던전${i + 1} .bgm 이 .bg 와 같은 면적(inset 8/7)`);
-    ok(/^bgm-(gold|dia|rel)$/.test(c.theme), `던전${i + 1} 테마 클래스 ${c.theme}`);
+    /* 194 — 강화석 던전(`bgm-stone`)이 붙었다. 골드 블록의 기하를 그대로 물려받고 색만 다른 변종이다 */
+    ok(/^bgm-(gold|dia|rel|stone)$/.test(c.theme), `던전${i + 1} 테마 클래스 ${c.theme}`);
   });
 
   sec('§2 애니메이션 — 살아 있음 / 주기 / 위상');
@@ -218,7 +220,7 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const got = parseFloat(getComputedStyle(e).transformOrigin.split(' ')[1]);
     return { want: +want.toFixed(1), got: +got.toFixed(1) };
   }).filter(Boolean));
-  ok(org.length === 6 && org.every(o => Number.isFinite(o.want) && Math.abs(o.want - o.got) <= 0.6),
+  ok(org.length === DUN_TH.length && org.every(o => Number.isFinite(o.want) && Math.abs(o.want - o.got) <= 0.6),
     `썸네일 스쿼시 축 = «잉크 발밑»(--thpiv) (${org.map(o => o.got + '/' + o.want).join(' · ')})`);
   const hit = await p.evaluate(() => {
     const c = document.querySelector('#dunList .dnc'), r = c.getBoundingClientRect();
@@ -384,7 +386,7 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
   const fpsOn = pick(ons, 'avg'), fpsOff = pick(offs, 'avg');
   await p.evaluate(() => document.querySelectorAll('#dunList .dnc>.bgm').forEach(e => e.style.display = ''));
   const keep = +(mid(ratios) * 100).toFixed(1);   /* 쌍별 비율의 중앙값 — 부하 변동에 강하다 */
-  console.log('  fps 표 (1080×2280 · 카드 6장 · 왕복 스크롤 120프레임)');
+  console.log('  fps 표 (1080×2280 · 카드 ' + DUN_TH.length + '장 · 왕복 스크롤 120프레임)');
   console.log('  ┌────────────────┬────────┬────────────┬──────────┐');
   console.log('  │ 상태           │ 평균   │ 중앙 프레임│ 하위 5%  │');
   console.log('  ├────────────────┼────────┼────────────┼──────────┤');

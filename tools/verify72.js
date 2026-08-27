@@ -99,13 +99,16 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
      잠금 카드 3~6 은 개별 측정이 불가(딤)해 카드1·2 중간값(폭 305 · top 42)을 쓴다.
      ⚠ 2026-08-26(97): 작업 90 이 던전을 5장 → **6장**(골드·다이아·유물조각 4단)으로 재편하면서
      이 기대치가 5장에 멈춰 있어 게이트가 `EXP[5] undefined` 로 즉사하고 있었다(90 은 verify90 만 돌렸다).
-     구성 변경이 게이트를 앞지른 것이라 카드 수만 따라 올린다 — 기하 자체는 relic 3종과 같다. */
+     구성 변경이 게이트를 앞지른 것이라 카드 수만 따라 올린다 — 기하 자체는 relic 3종과 같다.
+     ⚠ 2026-08-27(194): 강화석 던전(`stone`)이 7번째로 붙어 **같은 일이 또 났다.** 기하는 relic 과 같다
+     (`thw 330 · tht 11`). 이번에는 개수 단언도 `EXP.length` 로 돌려 다음 던전에서 즉사하지 않게 한다. */
   const EXP = [
     { w: 311, h: 305, dy: 36 }, { w: 296, h: 289, dy: 52 },
     { w: 330, h: 330, dy: 11 }, { w: 330, h: 330, dy: 11 },
-    { w: 330, h: 330, dy: 11 }, { w: 330, h: 330, dy: 11 }];
+    { w: 330, h: 330, dy: 11 }, { w: 330, h: 330, dy: 11 },
+    { w: 330, h: 330, dy: 11 }];
   console.log('[1] 슬롯 기하 — 카드 안쪽 우측 정렬(우단 inset 7), 카드별 폭·상단 인셋');
-  ok(d.length === 6, `카드 6장 (실제 ${d.length})`);
+  ok(d.length === EXP.length, `카드 ${EXP.length}장 (실제 ${d.length})`);
   d.forEach((c, i) => {
     ok(!!c.th, `카드${i + 1} 썸네일 슬롯 존재`);
     if (!c.th) return;
@@ -118,7 +121,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   /* ───── 72 주인 재지시(2026-08-26) — 액자 + 실제 스프라이트 ─────
      ① 이모지 대체물 폐기 → 스프라이트 캔버스. ② 슬롯이 69 아이템 칸처럼 «액자» 로 읽힌다
      (테두리·림 두께·코너 비율은 104 공용 토큰 --if-bw 5 / --if-rim 6 / --if-rr .233).
-     ③ 그림은 늘리지 않고 담는다(contain) — 종횡비 왜곡 0. ④ 카드 6장이 서로 다른 아트다. */
+     ③ 그림은 늘리지 않고 담는다(contain) — 종횡비 왜곡 0. ④ 카드가 전부 서로 다른 아트다. */
   const IF_BW = 5, IF_RIM = 6, IF_RR = .233, PAD = 16;
   console.log('[1-1] 액자 — 104 공용 아이템 프레임 토큰(테두리 5 · 림 6 · 코너 폭×.233)');
   d.forEach((c, i) => {
@@ -351,13 +354,13 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   });
   ok(rl.some((c) => c.locked), '기본 상태에서 잠긴 레이드 카드가 있다(딤 순서를 실제로 잰다)');
 
-  console.log('[5-2] 던전 탭 회귀 — 서브탭을 되돌려도 던전 카드 6장이 그대로');
+  console.log('[5-2] 던전 탭 회귀 — 서브탭을 되돌려도 던전 카드가 그대로');
   const back = await p.evaluate(() => { setDunSub('dun');
     return [...document.querySelectorAll('#dunList .dnc')]
       .map((c) => ({ th: !!c.querySelector('.th'), rd: c.classList.contains('rd'),
                      cv: !!c.querySelector('.th>canvas.thcv'),
                      em: !!c.querySelector('.th>em') })); });
-  ok(back.length === 6 && back.every((c) => c.th && !c.rd && c.cv && !c.em),
+  ok(back.length === EXP.length && back.every((c) => c.th && !c.rd && c.cv && !c.em),
      `던전 탭 복귀 — 카드 ${back.length}장 전부 스프라이트 썸네일 유지(이모지 0)`);
 
   console.log('[4] 콘솔 에러');

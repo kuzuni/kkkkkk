@@ -61,23 +61,31 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
   /* (0) 182 — [구매] 버튼은 아예 없다(구버전 폐기 = 진입점까지) */
   ok(!(await page.$('#bCos [data-cosbuy]')), '[구매] 버튼이 시트에서 사라짐(182 — 구매 경로 폐기)');
 
-  /* (1) 도전할 계급이 남아 있다 → 초록 */
-  await page.evaluate(() => { S.rank = 0; renderCos(); });
+  /* 194 — 시트 2번 칸은 [승급전] → **[강화]** 로 바뀌었다. 171 의 규칙(«지금 눌러서 되면 초록»)은
+     그대로이고 «되는가» 의 조건만 바뀐다: 보유 + 만렙 아님 + 강화석 충분. */
+  /* (1) 강화석이 충분하다 → 초록 */
+  await page.evaluate(() => { S.stone = 1e9; S.cosLv = {}; cosSel = 'av0'; renderCos(); });
   await page.waitForTimeout(150);
-  let bg = await face('#bCos [data-cospromo]');
-  ok(bg && bg.includes(GREEN_SK), '[승급전] 도전 계급 남음(계급 0) → 초록  (' + (bg || '').slice(0, 46) + '…)');
+  let bg = await face('#bCos [data-cosup]');
+  ok(bg && bg.includes(GREEN_SK), '[강화] 강화석 충분 → 초록  (' + (bg || '').slice(0, 46) + '…)');
 
-  /* (2) 최고 계급이면 갈 곳이 없다 → 회색 */
-  const top = await page.evaluate(() => { S.rank = RANKS.length - 1; renderCos(); return S.rank; });
+  /* (2) 강화석이 모자라면 회색 */
+  await page.evaluate(() => { S.stone = 0; renderCos(); });
   await page.waitForTimeout(150);
-  bg = await face('#bCos [data-cospromo]');
-  ok(bg && bg.includes(GRAY_SK), '[승급전] 최고 계급(' + top + ') → 회색');
+  bg = await face('#bCos [data-cosup]');
+  ok(bg && bg.includes(GRAY_SK), '[강화] 강화석 0 → 회색');
 
-  /* (2b) 계급을 되돌리면 «실제로» 초록으로 돌아온다(정적 클래스가 아니라 상태를 본다) */
-  await page.evaluate(() => { S.rank = 0; renderCos(); });
+  /* (2c) 만렙이면 강화석이 넘쳐도 회색 */
+  await page.evaluate(() => { S.stone = 1e9; S.cosLv = { av0: COS_MAXLV }; renderCos(); });
   await page.waitForTimeout(150);
-  bg = await face('#bCos [data-cospromo]');
-  ok(bg && bg.includes(GREEN_SK), '[승급전] 계급 복귀 → 초록으로 전환');
+  bg = await face('#bCos [data-cosup]');
+  ok(bg && bg.includes(GRAY_SK), '[강화] 만렙(' + 500 + ') → 회색');
+
+  /* (2b) 조건을 되돌리면 «실제로» 초록으로 돌아온다(정적 클래스가 아니라 상태를 본다) */
+  await page.evaluate(() => { S.cosLv = {}; renderCos(); });
+  await page.waitForTimeout(150);
+  bg = await face('#bCos [data-cosup]');
+  ok(bg && bg.includes(GREEN_SK), '[강화] 조건 복귀 → 초록으로 전환');
 
   /* ---------------- §2 50 코스튬 시트 [착용] ---------------- */
   console.log('\n§2 50 코스튬 시트 [착용]');
@@ -147,9 +155,10 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
   await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click());
   await page.waitForTimeout(400);
 
-  /* 182 — 이 자리의 `.sk-u` 는 [구매] 가 아니라 [승급전] 이다. 상태는 두 가지뿐:
-     미보유 + 도전 계급 남음 = 초록·활성 · 이미 보유(또는 최고 계급) = 회색·비활성.
-     «부족» 이라는 세 번째 상태가 없어져 102 의 `.lack` 축은 여기서 쓰이지 않는다(08 강화는 그대로). */
+  /* 182 — 이 자리의 `.sk-u` 는 [구매] 가 아니라 [승급전] 이다(미보유 칸).
+     194 — **보유 칸에서는 [강화]** 로 갈린다. 두 갈래를 각각 잰다:
+       미보유 → 도전 계급 남음 = 초록·활성 / 최고 계급 = 회색·비활성
+       보유   → 강화석 충분 = 초록·활성 / 부족·만렙 = 회색·비활성(`.lack`) */
   const d1 = await page.evaluate(() => {
     const a = AVATARS.find(x => !S.avatars[x.id]);
     S.rank = 0; showCosDetail(a.id);
@@ -166,12 +175,22 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
   }, d1.id);
   ok(d2.dis && d2.bg.includes(GRAY_U), '[50 상세 승급전] 최고 계급 → 회색 · 비활성');
 
+  /* 194 — 이미 보유한 코스튬의 상세 2번 버튼은 [승급전] 이 아니라 **[강화]** 다.
+     171 규칙 그대로: 강화석이 모자라면 회색·비활성, 충분하면 초록·활성. */
   const d3 = await page.evaluate(id => {
-    S.rank = 0; S.avatars[id] = 1; showCosDetail(id);
+    S.rank = 0; S.avatars[id] = 1; S.stone = 0; S.cosLv = {}; showCosDetail(id);
+    const b = document.getElementById('mLv');
+    return { dis: b.disabled, txt: b.textContent, bg: getComputedStyle(b).backgroundImage };
+  }, d1.id);
+  ok(d3.dis && d3.bg.includes(GRAY_U), '[50 상세 강화] 보유 + 강화석 0 → 회색 · 비활성');
+  ok(d3.txt.indexOf('강화') >= 0, '[50 상세] 보유 칸의 두 번째 버튼 라벨이 «강화» («' + d3.txt + '»)');
+
+  const d4 = await page.evaluate(id => {
+    S.stone = 1e9; showCosDetail(id);
     const b = document.getElementById('mLv');
     return { dis: b.disabled, bg: getComputedStyle(b).backgroundImage };
   }, d1.id);
-  ok(d3.dis && d3.bg.includes(GRAY_U), '[50 상세 승급전] 이미 보유 → 회색 · 비활성');
+  ok(!d4.dis && d4.bg.includes(GREEN_U), '[50 상세 강화] 보유 + 강화석 충분 → 초록 · 활성');
 
   await page.evaluate(() => { document.getElementById('modal').classList.remove('on', 'sk8'); });
 
@@ -222,7 +241,7 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-u 회색(#A9A9A9) */
      화면 좌표로 재면 그 7px 이 얹히므로 `offsetLeft`(= 배치 기준 좌표) 로 본다. */
   const pos = await page.evaluate(() => {
     const w = document.querySelector('#bCos [data-coswear]');
-    const b = document.querySelector('#bCos [data-cospromo]');
+    const b = document.querySelector('#bCos [data-cosup]');   /* 194 — 2번 칸이 [강화] */
     return { wx: w.offsetLeft, bx: b.offsetLeft, ww: w.offsetWidth, bw: b.offsetWidth, wy: w.offsetTop };
   });
   ok(pos.wx === 240 && pos.bx === 551,

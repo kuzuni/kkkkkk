@@ -154,7 +154,9 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
              em: document.querySelectorAll('#dunList .dnc>.th>em').length,
              drawn };
   });
-  ok(dn.n === 6 && dn.rd === 0 && dn.em === 0 && dn.drawn === 6,
+  /* 194 — 강화석 던전이 붙어 6 → 7장. «몇 장인가» 가 아니라 «전부 스프라이트로 그려졌는가» 가 이 절의 뜻이므로
+     개수를 박지 않고 «카드 수 == 그려진 수» 로 잰다(다음 던전에서 또 빨개지지 않게). */
+  ok(dn.n >= 6 && dn.rd === 0 && dn.em === 0 && dn.drawn === dn.n,
      `던전 카드 ${dn.n}장 · 레이드 카드 ${dn.rd}장 · 이모지 ${dn.em} · 썸네일(.th>canvas.thcv) ${dn.drawn}장 실제로 그려짐`);
 
   console.log('[9] 콘솔 에러');

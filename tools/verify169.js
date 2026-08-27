@@ -22,7 +22,9 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html');
 const HEIGHTS = [1600, 1920, 2280, 2600];
-const DUN_IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4'];
+/* 194 — 강화석 던전(`stone`)이 7번째로 붙었다. 개수 단언은 전부 이 배열 길이로 돈다
+   (90 → 97 → 72 → 121 에 이어 «구성이 늘 때마다 개수를 박은 게이트가 빨개지는» 다섯 번째 자리다). */
+const DUN_IDS = ['gold', 'dia', 'relic1', 'relic2', 'relic3', 'relic4', 'stone'];
 
 let pass = 0, fail = 0;
 const ok = (t, d) => { pass++; console.log(`PASS ${t}${d ? ' — ' + d : ''}`); };
@@ -122,7 +124,7 @@ async function openList(p) {
       });
       return o;
     });
-    chk(Object.keys(rows).length === 6, `[${H}] A0 03 행 카드 6장`, `${Object.keys(rows).length}장`);
+    chk(Object.keys(rows).length === DUN_IDS.length, `[${H}] A0 03 행 카드 ${DUN_IDS.length}장`, `${Object.keys(rows).length}장`);
 
     let sameK = 0, drawn = 0, contained = 0, bboxOk = 0, bboxNote = '';
     let bnGeo = null, cvGeo = null;
@@ -142,11 +144,12 @@ async function openList(p) {
       if (m.cvCss === m.silCss) bboxOk++;
       else if (!bboxNote) bboxNote = `cv ${m.cvCss} vs sil ${m.silCss}`;
     }
-    chk(drawn === 6, `[${H}] A1 던전 6종 전부 배너에 스프라이트가 그려진다`, `${drawn}/6`);
-    chk(sameK === 6, `[${H}] A2 행↔세부 «같은 몬스터»(data-thk 일치)`, `${sameK}/6`);
-    chk(contained === 6, `[${H}] A3 잉크가 캔버스 밖으로 안 넘친다(contain)`, `${contained}/6`);
-    chk(bboxOk === 6, `[${H}] A4 캔버스 bbox = 종전 CSS 실루엣 bbox (300×214 · bottom 14 · 중앙)`,
-      `${bboxOk}/6${bboxNote ? ' — ' + bboxNote : ''}`);
+    const N = DUN_IDS.length;
+    chk(drawn === N, `[${H}] A1 던전 ${N}종 전부 배너에 스프라이트가 그려진다`, `${drawn}/${N}`);
+    chk(sameK === N, `[${H}] A2 행↔세부 «같은 몬스터»(data-thk 일치)`, `${sameK}/${N}`);
+    chk(contained === N, `[${H}] A3 잉크가 캔버스 밖으로 안 넘친다(contain)`, `${contained}/${N}`);
+    chk(bboxOk === N, `[${H}] A4 캔버스 bbox = 종전 CSS 실루엣 bbox (300×214 · bottom 14 · 중앙)`,
+      `${bboxOk}/${N}${bboxNote ? ' — ' + bboxNote : ''}`);
     /* 측정표 04 §2 — 배너 750×351, 본문 로컬 (6,24). 썸네일이 붙어도 안 바뀐다. */
     const geo = bnGeo && Math.abs(bnGeo.w - 750) < 1 && Math.abs(bnGeo.h - 351) < 1
       && Math.abs(bnGeo.x - 6) < 1 && Math.abs(bnGeo.y - 24) < 1;
