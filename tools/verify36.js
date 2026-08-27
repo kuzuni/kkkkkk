@@ -12,7 +12,9 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+/* 231 — 되돌림 시험(`tools/neg231.js`)이 «사본을 새로 열어» 돌릴 수 있어야 한다(LESSONS 191:
+   살아 있는 페이지에 주입하면 거짓 초록이 난다). 평소에는 저장소의 index.html 그대로다. */
+const URL = 'file://' + path.resolve(process.env.V36_SRC || path.join(__dirname, '..', 'index.html'));
 const KEY = 'idle_hunter_save_v4';
 
 let bad = 0;
@@ -153,18 +155,52 @@ const openAttTab = async (page) => {
 
     /* ---------- 4. 프리미엄 — 패스마다 따로 산다 ---------- */
     console.log('[4] 프리미엄 — 탭별 분리');
-    const lockPop = await page.evaluate(async () => {
-      document.querySelectorAll('#psTk .ps-r:not(.ps-hr)')[1].querySelector('.ps-bx.c1').click();
-      await new Promise(r => setTimeout(r, 200));
-      const m = document.getElementById('modal');
-      const shown = getComputedStyle(m).display !== 'none';
-      const t = (m.textContent || '');
-      if (shown) { const x = m.querySelector('.mx,[data-close],.mclose'); if (x) x.click(); }
-      return { shown, prem: t.indexOf('프리미엄') >= 0 };
+    /* 231(2026-08-27) — 잠금 «안내» 를 재는 자리를 모달 → `#fxl .fx-toast` 로 **이사**시켰다.
+       149(주인 지시)가 안내를 토스트로 뒤집은 뒤 `passClaim()` 의 잠금 안내(index.html 23613
+       `notify('🔒 <b>프리미엄 패스</b>를 활성화하면 받습니다')`)는 모달을 한 번도 안 만든다
+       → `#modal` 표시 여부는 원리적으로 항상 false 라 이 한 항목이 굳어 빨갰다(got 이 «둘 다 빈 값»
+       인 비대칭 — LESSONS 230-①). 물음(«막았으면 왜 막혔는지 말하는가»)은 그대로 두고
+       자리만 옮긴다(185-④ · 230·215·213·214·217·218 과 같은 계열).
+       · 기대 문구는 리터럴 금지 — 헤더의 «프리미엄» 라벨과 구매 버튼 라벨(«프리미엄 활성화»)에서
+         **런타임 계산**한다(185-①). 문안이 바뀌어도 «무엇을 활성화하라고 말하는가» 는 남는다.
+       · 대기는 없다(LESSONS 230-③) — click → passClaim → notify → fxToast 의 appendChild 까지가
+         **한 동기 흐름**이라 같은 evaluate 안에서 읽으면 퇴장(760/1060ms)과 무관하다.
+         대신 재기 «전» 에 남은 토스트를 비운다 — `fxToast` 는 4장부터 조용히 드롭한다(230-②).
+       · 코드 경로가 둘이면 단언도 둘이다(230-④) — «막혔다»(재화·수령키·칸 상태 불변)와
+         «왜 막혔는지 말한다»(토스트 문구)와 «팝업이 아니다»(149 되돌림 감시)를 따로 세운다. */
+    const lockPop = await page.evaluate(() => {
+      const fxTxt   = () => [...document.querySelectorAll('#fxl .fx-toast')].map(t => t.textContent).join(' | ');
+      const clearFx = () => document.querySelectorAll('#fxl .fx-toast').forEach(t => t.remove());
+      clearFx();
+      /* 기대 문구의 근거를 소스에서 런타임으로 (185-①) */
+      const premLbl = ((document.querySelector('#psw .ps-hdr b.p i') || {}).textContent || '').trim();
+      const buyLbl  = ((document.querySelector('#psBuy .t1 i') || {}).textContent || '').trim();
+      const act     = buyLbl.replace(premLbl, '').trim();          /* «프리미엄 활성화» − «프리미엄» */
+      const cell = document.querySelectorAll('#psTk .ps-r:not(.ps-hr)')[1].querySelector('.ps-bx.c1');
+      const d0 = S.dia, n0 = Object.keys(S.pass.got).length;
+      cell.click();
+      const txt = fxTxt();
+      const modalOn = document.getElementById('modal').classList.contains('on');
+      const blocked = S.dia === d0 && Object.keys(S.pass.got).length === n0 && !cell.classList.contains('dn');
+      clearFx(); if (typeof closeModal === 'function') closeModal();
+      return { txt, modalOn, blocked, premLbl, act, prem: !!passPrem() };
     });
-    if (lockPop.shown && lockPop.prem) ok('프리미엄 미구매 상태에서 프리미엄 칸 → 안내 팝업');
-    else no('프리미엄 칸 잠금 안내가 안 뜬다: ' + JSON.stringify(lockPop));
-    await page.evaluate(() => { const m = document.getElementById('modal'); m.style.display = 'none'; });
+    /* ⚠ ✓ 와 ✗ 의 **첫 자락을 같게** 쓴다 — `tools/neg231.js` 가 항목을 이름 조각으로 집는다
+       (neg230 관례). 문구가 갈리면 되돌림 시험이 «빨간 항목» 을 못 찾는다. */
+    const L = { pre: '프리미엄 잠금 전제 — 미구매 상태',
+                blk: '프리미엄 칸 수령 차단',
+                tos: '잠금 안내 토스트 노출',
+                pop: '잠금 안내는 팝업이 아니다' };
+    if (!lockPop.prem) ok(L.pre);
+    else no(L.pre + ' — 재기도 전에 프리미엄이 켜져 있다');
+    if (lockPop.blocked) ok(L.blk + ' — 다이아·수령키·칸 상태 불변');
+    else no(L.blk + ' 실패 — 그냥 수령됐다: ' + JSON.stringify(lockPop));
+    if (lockPop.premLbl && lockPop.act &&
+        lockPop.txt.indexOf(lockPop.premLbl) >= 0 && lockPop.txt.indexOf(lockPop.act) >= 0)
+      ok(L.tos + ` — «${lockPop.premLbl}…${lockPop.act}» (got "${lockPop.txt}")`);
+    else no(L.tos + ' 실패 — 안내가 없거나 무엇을 활성화하라는지 안 말한다: ' + JSON.stringify(lockPop));
+    if (!lockPop.modalOn) ok(L.pop + ' — 149(주인 지시) 토스트화 유지');
+    else no(L.pop + ' 실패 — 모달로 떴다(149 되돌림): ' + JSON.stringify(lockPop));
     await page.evaluate(() => window.devPassPrem());
     await page.waitForTimeout(250);
     const buyHidden = await page.evaluate(() => getComputedStyle(document.getElementById('psBuy')).display);
