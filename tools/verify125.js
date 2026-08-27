@@ -50,6 +50,18 @@ const ALLOW = [
   "{n:'마력 장벽'", "{n:'무한 결계'", "{n:'행운의 동전 목걸이'",  /* 장비 «이름» 표(재화 아님) */
   "{ n:'골드',     ic:", "{ n:'플래티넘', ic:", "{ n:'다이아',   ic:",  /* 랭킹 계급 엠블럼 */
   "n:'아티팩트 강화석'",                      /* 출석 보상 «아이템»(재화가 아니라 재료 상자) */
+  /* ── 작업 211 판정: 🎟 «쿠폰» 은 화폐가 아니다 ──────────────────────────────
+     125 가 통일한 화폐는 7종이다 — 골드·다이아·유물조각·마일리지 + **던전 입장권** 3종
+     (`cur-ticket-gold/dia/relic.svg`, H1 이 «던전 6개의 입장권» 으로 못 박는다).
+     쿠폰 코드(`CF_CODES`)는 그 어느 것도 아니라서 `curIc('tkDia')`/`curIc('tkRelic')` 로
+     옮기면 **던전 입장권 아이콘을 쿠폰 알림에 붙이는 오표기**가 된다. 실제 «지급물» 인
+     다이아는 이미 같은 줄에서 `curIc('dia')` 로 나가고 있다(= 화폐 자리는 이미 통일됨).
+     `art:'🎟'` 은 151 이용권 카드의 **아트 자리**(형제 값이 '▶'·'⏳')라 역시 화폐 표시가 아니다.
+     → 네 줄 모두 «비재화» 로 제외한다. index.html 은 고칠 것이 없다. */
+  "art:'\u{1F39F}'",                          /* 151 이용권 «전투 효율 증가» 카드 아트 자리 */
+  '사용할 수 없는 코드입니다',                /* 쿠폰 — 잘못된 코드 토스트 */
+  '이미 사용한 코드입니다',                   /* 쿠폰 — 중복 사용 토스트 */
+  'fmt(CF_CODES[code])',                      /* 쿠폰 — 획득 토스트(지급물 다이아는 curIc('dia')) */
 ];
 
 let pass = 0, fail = 0;
@@ -125,18 +137,42 @@ function stripComments(src) {
     drawHud();
   });
 
-  /* ---- [D] 기하 ---- */
+  /* ---- [D] 기하 ----
+     ⚠ 작업 211 판정 — «HUD 아이콘 둘 다 63×63» 은 **게이트가 든 낡은 값**이었다.
+     63×63 은 `.cbox i>.cic` 의 **컴포넌트 기본값**이고, A3 2차 폴리시 라운드가 화면(#top)에서만
+     재화별로 거기서 «의도적으로» 벗어났다. 근거는 index.html 의 그 두 줄 주석 + measure/A3 §아트 필요:
+       · gold — 자산 링(`stroke-width:4`)이 두꺼워 **노란 코어가 55** 로 나온다(ref 57).
+                상자를 63 × 57/55 = **65.3** 으로 키워 코어를 ref Δ0 으로 맞췄다(A3 9회차,
+                비평가 4인 U·V·W·X 동일값). 외곽도 65.3 으로 ref 실측 64~65 에 더 가까워졌다.
+       · dia  — `cur-dia.svg` 의 마름모가 viewBox 64 안에서 덜 차 **가로만** 모자란다.
+                상자는 63×63 그대로 두고 **이미지 자신에** `scaleX(1.16)`(A3 6회차) →
+                rect 는 **73.1×63**. 종횡비가 «깨진» 게 아니라 잉크 가로를 되돌린 결과다.
+     그래서 D1 은 «63×63» 이 아니라 **재화별 확정값**을 잰다. 그리고 그 두 override 가
+     «어느 축으로» 걸렸는지(gold=상자 · dia=transform)까지 봐야 다음 세션이 기전을 바꿔치기 못 한다 — D1b.
+     자산(`cur-*.svg`)이 고쳐져 override 가 필요 없어지면 **이 기대값도 같이 내려야** 한다
+     (measure/A3 §아트 필요 «자산이 고쳐지면 그 override 를 지워야 한다»).
+     화면 override 는 `#top .curs` 한정이라 13 재화 탭(55×55)은 이 선택자에 안 들어온다. */
+  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 73.1, h: 63, tf: true } };
   const D = await page.evaluate(() => {
     const out = { hud: [], tf: [] };
     document.querySelectorAll('.cbox i > img.cic').forEach(im => {
       const r = im.getBoundingClientRect();
-      out.hud.push({ k: im.dataset.curIc, w: Math.round(r.width), h: Math.round(r.height) });
+      out.hud.push({ k: im.dataset.curIc, w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10,
+                     tf: getComputedStyle(im).transform });
       out.tf.push(getComputedStyle(im.parentElement).transform);
     });
     return out;
   });
-  ok(D.hud.length === 2 && D.hud.every(x => Math.abs(x.w - 63) <= 2 && Math.abs(x.h - 63) <= 2),
-     'D1 HUD 아이콘 63×63 (measure/A3)', D.hud.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
+  const geoBad = D.hud.filter(x => !HUD_EXP[x.k]
+    || Math.abs(x.w - HUD_EXP[x.k].w) > 2 || Math.abs(x.h - HUD_EXP[x.k].h) > 2);
+  ok(D.hud.length === 2 && geoBad.length === 0,
+     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 73.1×63 — measure/A3 + A3 6·9회차)',
+     D.hud.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
+  const mBad = D.hud.filter(x => HUD_EXP[x.k]
+    && HUD_EXP[x.k].tf !== (x.tf !== 'none' && x.tf !== 'matrix(1, 0, 0, 1, 0, 0)'));
+  ok(D.hud.length === 2 && mBad.length === 0,
+     'D1b 두 override 가 기전 그대로 (gold=상자 크기 · dia=이미지 scaleX)',
+     D.hud.map(x => x.k + ' ' + (x.tf === 'none' ? '상자' : x.tf)).join(' · '));
   ok(D.tf.every(t => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'),
      'D2 HUD 아이콘에 옛 scaleX 보정이 남지 않았다', D.tf.join(' | '));
 
