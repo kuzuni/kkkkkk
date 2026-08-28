@@ -9696,7 +9696,7 @@
   :is(#bSk,#bPet,#bCos) .stab>.bdg{display:none}
   :is(#bSk,#bPet,#bCos) .stab.alert>.bdg{display:block}
 
-  /* ── 276 (2026-08-27, 저장소 주인 보고) — «일괄 강화 가능» 레드닷을 «세 자리» 전부에 ────────
+  /* ── 283 (2026-08-27, 저장소 주인 보고) — «일괄 강화 가능» 레드닷을 «세 자리» 전부에 ────────
      202 는 ① 탭(탭바 «영웅» + 서브탭) 까지만 켰다. 주인 보고는 «장비 탭 한 곳에만 뜬다» 였고
      지시는 세 자리 전부다: ① 탭 ② 그 항목의 카드·진입 버튼 ③ 그 화면의 [일괄 강화] 버튼 자체.
      ②③ 은 배지 노드 자체가 없었다(202 가 탭 계열에만 달았다) — 그래서 «켜고 끄는 조건» 이 아니라
@@ -10739,7 +10739,7 @@
   /* 작업 71 — 좌측 📬 에서 ▦ 메뉴 버튼으로 옮겨 온 «우편» 레드닷도 같은 손맛을 받게 넣는다(④ 일관성). */
   /* 작업 134 — `.tr-sub>.sg.on>.dot` 은 88 이 폐기한 훈련 서브탭의 잔재라 어디에도 걸리지 않는다(죽은 선택자). 삭제. */
   /* 작업 166 — 던전 서브탭 배지도 조건부(.stab.alert)가 됐으므로 같은 손맛 한 벌을 받는다. */
-  /* 276 — `.alert>.updot`(카드·진입 버튼·[일괄 강화] 버튼) 도 같은 등장·맥박 연출을 탄다 */
+  /* 283 — `.alert>.updot`(카드·진입 버튼·[일괄 강화] 버튼) 도 같은 등장·맥박 연출을 탄다 */
   .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot,.stab.alert>.bdg,.alert>.updot{
     animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
   @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
@@ -19817,13 +19817,13 @@ function drawFac(){
    (39) 보스전 중  : 캡슐·진행바 숨김 · 라벨 110px 하강 · ⏱ 타이머 · 보스 체력바 · [포기하기]
    (40) 재도전 대기: 캡슐·진행바 숨김 · 해골 노드를 중앙 Ø120 으로 · [스테이지 재도전]
    기본(02) 상태는 두 클래스가 모두 빠진 상태라 한 줄도 바뀌지 않는다. */
-/* 277 — «지금 어떤 보스전인가» 를 정하는 **단 하나의 자리**(저장소 주인 보고 2026-08-27).
+/* 284 — «지금 어떤 보스전인가» 를 정하는 **단 하나의 자리**(저장소 주인 보고 2026-08-27).
    이전에는 모드마다 제 HUD 를 켜고 끄는 방식이라 «전환하면 앞 모드 HUD 가 남는» 사고가 났다
    (주인 보고: 스테이지 보스 → 승급전으로 넘어가니 스테이지 보스 UI 그대로). 이제 모드는 여기서
    한 번 정하고, 아래 drawBossHud() 가 **매 프레임 다섯 요소를 전부 다시 토글**하므로
    «이전 모드 HUD 잔존» 이 구조적으로 불가능하다.
      'arena' 123 — 자기 HUD(#arnHud)      'dun'  30/257 — 자기 HUD(#dunHud, 보스 국면은 보스 HP 합)
-     'raid'  46 — 28 규격 HUD 재사용       'promo' 승급전 — 28 규격 HUD 재사용(277 신설)
+     'raid'  46 — 28 규격 HUD 재사용       'promo' 승급전 — 28 규격 HUD 재사용(284 신설)
      'stage' 28/162                        ''      보스전 아님
    우선순위는 «자기 HUD 를 가진 모드 → 28 규격을 빌려 쓰는 모드 → 스테이지» 다. 승급전은
    스테이지 보스전 도중에도 끼어들 수 있으므로(step 의 `bossT > 0 && !promo`) 'stage' 보다 위다. */
@@ -19840,7 +19840,7 @@ const BOSS_HUD28 = { raid:1, promo:1, stage:1 };
 function drawBossHud(){
   const md = bossMode(), bf = !!BOSS_HUD28[md];
   /* 162 — 파밍(재도전 대기)은 «보스전에 한 번 졌다» 뿐이므로 스테이지 번호 조건(구 isBossStage)이 없다.
-     277 — 조건이 `!bf` 가 아니라 `md === ''` 다: 옛 식은 던전·아레나·승급전 위에도 [스테이지 재도전]
+     284 — 조건이 `!bf` 가 아니라 `md === ''` 다: 옛 식은 던전·아레나·승급전 위에도 [스테이지 재도전]
      버튼(#bossRt 은 pointer-events 살아 있는 버튼이다)을 띄웠다. */
   const fm = S.bossFarm && md === '';
   const si = $('stinfo');
@@ -19861,7 +19861,7 @@ function drawBossHud(){
     $('bossHpN').textContent = fmtB(raidDmg);
     return;
   }
-  /* 277 승급전 — 대상은 승급 수호자(tk 'promo', 208 이 `ETYPE.promo` 를 갈아 끼운다) 하나뿐이다.
+  /* 284 승급전 — 대상은 승급 수호자(tk 'promo', 208 이 `ETYPE.promo` 를 갈아 끼운다) 하나뿐이다.
      시간은 승급전 시계(promo.t), 체력바는 그 수호자의 hp/max. */
   if(md === 'promo'){
     $('bossTmN').textContent = Math.max(0, promo.t).toFixed(1);
@@ -19947,7 +19947,7 @@ function drawHud(){
   let prR;                                             /* 161 — 진행바 채움 비율(0~1). 중간 노드 점등 판정에 쓴다 */
   if(promo){
     prR = clamp(promo.t/promo.max, 0, 1);
-    /* 277 — 남은 시간의 «표시» 는 이제 28 규격 ⏱`#bossTm` 이 맡는다(승급전도 보스전이므로).
+    /* 284 — 남은 시간의 «표시» 는 이제 28 규격 ⏱`#bossTm` 이 맡는다(승급전도 보스전이므로).
        이 줄은 `.bfight` 가 감춘 진행바 안의 글자라 화면에 안 나오지만, 161 의 중간 노드 판정이
        같은 `prR` 을 쓰므로 계산은 그대로 둔다(게이트 verify161 §5). */
     $('prT').textContent = '⚔ 승급전 ' + promo.t.toFixed(1) + '초';
@@ -21428,7 +21428,7 @@ function startPromo(){
      184 의 «팝업 관통 금지» 를 지킨다. 풀스크린 흰 플래시(jz-wf)는 184 가 폐지했으므로 안 쓴다.
      ⚠ 60 의 보스 훅은 `#stinfo.bfight` 토글을 관찰하지만 **관찰자에 기대지 않고 여기서 직접 부른다** —
      스테이지 보스전 도중에 승급전이 끼어들면 `.bfight` 는 이미 켜져 있어 «변화» 가 없고, 그러면
-     등장 연출이 통째로 빠진다. 277 이후 그 관찰자는 승급전일 때 스스로 물러난다(중복 방지). */
+     등장 연출이 통째로 빠진다. 284 이후 그 관찰자는 승급전일 때 스스로 물러난다(중복 방지). */
   bossInSfx(enemies[enemies.length-1]);
   if(typeof jzFx === 'function'){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, '승급전', true); }
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
@@ -24703,7 +24703,7 @@ function renderWpn(){
       const real = items[c] || null;
       const mine = real && has(real.id), eq = real && S.eqSlot[wpnPart] === real.id;
       const n = mine ? frag(real.id) : 0, nd = real ? fragNeed(mine ? oLv(real.id) : 1) : 2;
-      /* 276 — ② 카드 레드닷. 07·26 격자와 같은 부품(`.updot`)·같은 조건(`canLevel`) */
+      /* 283 — ② 카드 레드닷. 07·26 격자와 같은 부품(`.updot`)·같은 조건(`canLevel`) */
       const cUp = mine && canLevel(real);
       h += '<div class="wgc ifr' + (eq ? ' eq' : '') + (mine ? '' : ' lk') + (cUp ? ' alert' : '') + '"'
         +  (mine ? ' data-wpn="' + real.id + '"' : '')
@@ -24716,7 +24716,7 @@ function renderWpn(){
         +  (!mine && gLock ? '<u class="ulk"><i>소환 Lv.' + need + '</i></u>' : '')
         +  '<div class="pb"><s style="width:' + Math.min(100, n/nd*100) + '%"></s>'
         +  '<i>' + n + '/' + nd + '</i></div>'
-        +  (cUp ? '<s class="updot"></s>' : '')                             /* 276 */
+        +  (cUp ? '<s class="updot"></s>' : '')                             /* 283 */
         +  '</div>';
     }
   }
@@ -24729,7 +24729,7 @@ function renderWpn(){
   bEq.innerHTML = '<i>' + (eqNow ? '장착 중' : '장착') + '</i>';
   const up = l.filter(x => canLevel(x)).length;
   $('wpnBtnUp').classList.toggle('off', !up);
-  /* 276 — ③ 버튼 자체의 레드닷. 회색/초록(`off`)과 **별개 축**이라 클래스를 따로 둔다 */
+  /* 283 — ③ 버튼 자체의 레드닷. 회색/초록(`off`)과 **별개 축**이라 클래스를 따로 둔다 */
   $('wpnBtnUp').classList.toggle('alert', !!up);
   $('wpnBtnUp').innerHTML = '<i>일괄 강화' + (up ? ' (' + up + ')' : '') + '</i>'
     + (up ? '<s class="updot"></s>' : '');
@@ -25848,7 +25848,7 @@ function renderSkill(){
     const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
-    /* 276 — ② «그 항목» 카드에도 레드닷. 조건은 일괄 강화 판정과 같은 `canLevel` 한 자다
+    /* 283 — ② «그 항목» 카드에도 레드닷. 조건은 일괄 강화 판정과 같은 `canLevel` 한 자다
        (버튼·서브탭이 «어딘가 있다» 만 알려 주고 «어느 칸인지» 는 안 알려 줬다 — 주인 보고). */
     h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + (canLevel(it) ? ' alert' : '') + '" data-skit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
@@ -25857,7 +25857,7 @@ function renderSkill(){
       +  '<b class="sk-ci">' + it.ic + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
       +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-skeq="' + it.id + '"></s>' : '')
-      +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 276 */
+      +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 283 */
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
       +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
@@ -25873,7 +25873,7 @@ function renderSkill(){
   /* 8 버튼 2개 — [스킬 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §7, 작업 27) */
   /* 171 — [스킬 소환] 은 10 상점으로 보내는 «항상 되는» 버튼이라 늘 초록,
      [일괄 강화] 는 강화 가능한 스킬이 하나라도 있을 때만 초록이다(없으면 눌러도 안내만 뜬다). */
-  /* 276 — ③ [일괄 강화] 버튼 «자체» 에도 레드닷. 초록/회색(171·202)은 «지금 눌러서 되나» 를
+  /* 283 — ③ [일괄 강화] 버튼 «자체» 에도 레드닷. 초록/회색(171·202)은 «지금 눌러서 되나» 를
      말하고, 레드닷은 «누를 게 생겼다» 를 말한다 — 주인 지시는 둘을 같이 요구한다. */
   const skUp = SKILLS.some(canLevel);
   h += '<div class="sk-btn sk-b1 ok" data-sksum="1"><i class="ol3">스킬 소환</i></div>'
@@ -25950,7 +25950,7 @@ function renderPet(){
     const need = fragNeed(lv), have = own ? Math.min(frag(it.id), need) : 0;
     const f = on ? skDim(SK_FILL[it.g]) : SK_FILL[it.g];
     const r = on ? skDim(SK_RIM[it.g])  : SK_RIM[it.g];
-    /* 276 — ② 카드 레드닷(07 스킬 격자와 같은 부품·같은 조건) */
+    /* 283 — ② 카드 레드닷(07 스킬 격자와 같은 부품·같은 조건) */
     h += '<div class="sk-card ifr ifr-in' + (on ? ' dim' : own ? '' : ' lk') + (canLevel(it) ? ' alert' : '') + '" data-ptit="' + it.id + '" '
       +  'style="left:' + (36 + (i % 5)*190) + 'px;top:' + (35 + ((i/5)|0)*220) + 'px'
       +  ';--f:' + f + ';--r:' + r + '">'
@@ -25960,7 +25960,7 @@ function renderPet(){
       +  '<b class="sk-ci pt">' + petIcon(it, 'card') + '</b>' + (own ? '' : '<span class="sk-lock"></span>')
       +  '<u class="sk-clv ol2">Lv. ' + lv + '</u>'
       +  (own ? '<s class="sk-eq' + (on ? ' m' : '') + '" data-pteq="' + it.id + '"></s>' : '')
-      +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 276 */
+      +  (canLevel(it) ? '<s class="updot"></s>' : '')                      /* 283 */
       +  (on ? '<em class="sk-on ol4">장착 중</em>' : '')
       +  '<div class="sk-bar"><i style="width:' + (have/need*100) + '%"></i>'
       +  '<b class="ol1">' + have + '/' + need + '</b></div></div>';
@@ -25975,7 +25975,7 @@ function renderPet(){
 
   /* 8 버튼 2개 — [동료 소환] 은 그 자리 소환이 아니라 10 상점 소환 탭으로 이동(UI-REFERENCE §26) */
   /* 171 — 07 스킬 시트와 같은 규칙(같은 부품이다) */
-  /* 276 — ③ [일괄 강화] 버튼 자체의 레드닷(07 스킬 경로와 같다) */
+  /* 283 — ③ [일괄 강화] 버튼 자체의 레드닷(07 스킬 경로와 같다) */
   const ptUp = PETS.some(canLevel);
   h += '<div class="sk-btn sk-b1 ok" data-ptsum="1"><i class="ol3">펫 소환</i></div>'
     +  '<div class="sk-btn sk-b2 ' + (ptUp ? 'ok alert' : 'no') + '" data-ptup="1">'
@@ -26377,7 +26377,7 @@ const EQSL_G = WGRADE.map((w, g) => g === 1
 
 /* 슬롯 1칸 HTML. 뱃지는 슬롯 좌상단 모서리에 걸치므로 슬롯 **뒤에** 그린다(뒤 형제가 위)
    `col` = `EQSL_G[g]` 또는 null(빈 칸). null 이면 변수를 안 실어 CSS 폴백 = «비었음» 초록이 남는다 */
-/* 276 — `up` 은 «이 부위에 강화 가능한 장비가 있나». 06 의 부위 슬롯은 05 무기 팝업으로 가는
+/* 283 — `up` 은 «이 부위에 강화 가능한 장비가 있나». 06 의 부위 슬롯은 05 무기 팝업으로 가는
    **유일한 진입 버튼**이라(작업 57), 여기가 비면 «장비 서브탭에 빨간점은 떴는데 어느 부위인지
    모르는» 상태가 된다 — 주인 보고의 «장비 탭 한 곳에만» 이 이 자리다. */
 function eqpSlot(y, badge, ic, lv, attr, col, up){
@@ -26417,7 +26417,7 @@ function renderEqPage(){
     const id = S.eqSlot[s.k], it = id ? EQ[id] : null;
     h += eqpSlot(g.sl[j], s.ic, it ? it.ic : '', it ? oLv(it.id) : null,
                  'data-eqslot="' + s.k + '"', it ? EQSL_G[Math.min(it.g, EQSL_G.length - 1)] : null,
-                 /* 276 — 그 부위에 강화 가능한 장비가 하나라도 있으면 진입 슬롯에 레드닷 */
+                 /* 283 — 그 부위에 강화 가능한 장비가 하나라도 있으면 진입 슬롯에 레드닷 */
                  EQUIPS.some(e => e.slot === s.k && canLevel(e)));
   });
   /* 알약 → 아이콘 순서. 06 부터 «아이콘 먼저» 였는데 뒤 형제가 위로 오므로 알약이 검·하트를
@@ -26426,7 +26426,7 @@ function renderEqPage(){
     +  '<div class="eqst b" style="top:' + g.st + 'px"><i>' + fmtB(stat.maxHp) + '</i></div>'
     +  '<div class="eqic sw" style="top:' + g.sw + 'px"><i></i></div>'
     +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i></i></div>';
-  /* 276 — `setBody()` 와 같은 «내용이 같으면 갈아끼우지 않는다» 규약을 여기에도 건다.
+  /* 283 — `setBody()` 와 같은 «내용이 같으면 갈아끼우지 않는다» 규약을 여기에도 건다.
      이 함수는 renderUI() 가 0.35s 마다 부르는데 종전에는 매번 innerHTML 을 통째로 갈았다.
      노드가 새로 생기면 60 쥬시의 `jzDotIn`(.3s, scale 0→1.3→1)이 매 틱 다시 시작해
      새로 붙인 부위 슬롯 레드닷이 **초당 세 번 튀어 오른다**(실측: 27px 자리가 36px 로 잡혔다).
@@ -30048,7 +30048,7 @@ function jzInit(){
       bf = n;
       /* 184 — 등장 연출은 전투 발이므로 #fxlc(팝업 아래). 처치 흰 플래시(jz-wf)는
          «화면 전체가 팍 번쩍» 이라 주인 지시로 **전면 폐지**(레이어 이동이 아니라 제거). */
-      /* 277 — 승급전도 이제 `.bfight` 를 켠다(28 규격 보스 HUD 재사용). 등장 연출은
+      /* 284 — 승급전도 이제 `.bfight` 를 켠다(28 규격 보스 HUD 재사용). 등장 연출은
          startPromo 가 «승급전» 문구로 직접 부르므로 여기서 또 «BOSS» 를 띄우면 두 번 겹친다. */
       if(n && typeof promo !== 'undefined' && promo) return;
       if(n){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, 'BOSS', true); }

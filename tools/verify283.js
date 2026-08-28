@@ -1,7 +1,7 @@
-/* 작업 276 — «일괄 강화 가능» 레드닷을 «세 자리» 전부에 (T1 버그, 저장소 주인 보고 2026-08-27)
+/* 작업 283 (구 276ⓑ — 281 이 번호를 옮겼다) — «일괄 강화 가능» 레드닷을 «세 자리» 전부에 (T1 버그, 저장소 주인 보고 2026-08-27)
  *   (지시서 [3]-(가): 레퍼런스 대조가 아니라 «상태 → 화면» 동작 검사. 비평가 없음)
  *
- *   node tools/verify276.js
+ *   node tools/verify283.js
  *
  * 주인 보고: «일괄 강화 레드닷이 «장비 탭» 한 곳에만 뜬다 — 탭 · 해당 장비(카드/버튼) ·
  *             그 일괄 강화 버튼 **셋 다** 떠야 함».
@@ -25,7 +25,7 @@ const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC  = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const TMP  = path.join(ROOT, '.v276-neg.html');
+const TMP  = path.join(ROOT, '.v283-neg.html');
 const URL  = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
 
 let pass = 0, fail = 0;
@@ -372,6 +372,6 @@ const HELPERS = () => {
     'a=' + n3.a + ' b=' + n3.b + ' c=' + n3.c);
 
   try { fs.unlinkSync(TMP); } catch (_) {}
-  console.log('\nVERIFY276 ' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail));
+  console.log('\nVERIFY283 ' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
 })();

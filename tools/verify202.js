@@ -238,7 +238,7 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-e/.sk-u 회색(#A9A9A9) 
   /* (4) 276 — «세 자리 동시 점등». 202 는 ① 탭 계열까지만 켰고, 주인 실플레이에서
          «장비 탭 한 곳에만 뜬다» 로 돌아왔다(등재 276). 지시는 세 자리 전부다:
          ① 탭(탭바 «영웅» + 서브탭) ② 그 항목의 카드·진입 버튼 ③ [일괄 강화] 버튼 자체.
-         여기서는 202 의 조건이 그 셋에 «같이» 실려 있는지만 못 박는다(전수 일치·소등은 verify276). */
+         여기서는 202 의 조건이 그 셋에 «같이» 실려 있는지만 못 박는다(전수 일치·소등은 verify283). */
   const trio = await page.evaluate(() => ({
     tab:  document.querySelector('.tab[data-t="hero"]').classList.contains('alert'),
     stab: window.__dot('sk').painted,

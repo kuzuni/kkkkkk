@@ -1,6 +1,6 @@
-/* 작업 277 게이트 — «모든 보스전은 다 보스 UI 가 제대로 뜬다 — 해당 HP 바랑 시간 얼마 남았는지»
+/* 작업 284 (구 277ⓑ — 281 이 번호를 옮겼다) 게이트 — «모든 보스전은 다 보스 UI 가 제대로 뜬다 — 해당 HP 바랑 시간 얼마 남았는지»
  *
- *   node tools/verify277.js   → 마지막 줄이 `VERIFY277 n/n PASS` 여야 한다.
+ *   node tools/verify284.js   → 마지막 줄이 `VERIFY284 n/n PASS` 여야 한다.
  *
  * 저장소 주인 보고(2026-08-27): «스테이지 보스 하다가 승급전으로 넘어갔더니 UI가 스테이지 보스
  * 하던 UI였다. 승급전이나 던전, 쨋든 모든 보스전은 다 보스 UI 제대로 떠야 함».
@@ -17,7 +17,7 @@
  *               [스테이지 재도전](#bossRt — 포인터가 살아 있는 «버튼» 이다)이 남지 않는다.
  *   §5 던전     던전 런은 자기 HUD(⏱#dunTm · 진행바#dunBar = 보스 국면엔 보스 체력)를 쓰고,
  *               28 규격 HUD 4종은 전부 꺼져 있다. 아레나도 같다.
- *   §6 회귀     레이드(46)·스테이지 보스(28)·평상시(02) 표시가 277 이전과 같다.
+ *   §6 회귀     레이드(46)·스테이지 보스(28)·평상시(02) 표시가 284 이전과 같다.
  *   §7 음성항   옛 식으로 되돌리면 잡히는가 — «파밍 조건이 !inBossFight() 였다면» / «승급전 분기가 없었다면»
  *               을 같은 상태에서 계산해 보여 «이 게이트가 무엇을 막는지» 를 증명한다.
  *   §8 에러     콘솔·페이지 에러 0건.
@@ -212,7 +212,7 @@ const reset = p => p.evaluate(() => {
     ok(!h5b.tm && !h5b.hp && !h5b.gv && !h5b.rt, '§5 아레나에서도 28 규격 HUD 4종이 전부 꺼진다');
 
     /* ── §6 회귀 ─────────────────────────────────────────────── */
-    console.log('\n§6 회귀 — 레이드·스테이지 보스·평상시는 277 이전과 같다');
+    console.log('\n§6 회귀 — 레이드·스테이지 보스·평상시는 284 이전과 같다');
     await reset(p);
     const g6 = await p.evaluate(() => {
       startRaid(RAIDS[0]); raidT = 21.5; raidDmg = 0;
@@ -285,6 +285,6 @@ const reset = p => p.evaluate(() => {
     if (ctx) await ctx.close().catch(() => {});
     await browser.close();
   }
-  console.log(`\nVERIFY277 ${pass}/${pass + fail} ${fail === 0 ? 'PASS' : 'FAIL'}`);
+  console.log(`\nVERIFY284 ${pass}/${pass + fail} ${fail === 0 ? 'PASS' : 'FAIL'}`);
   process.exit(fail === 0 ? 0 : 1);
 })();
