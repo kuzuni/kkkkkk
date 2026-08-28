@@ -15,7 +15,8 @@
  *   §4 실화면 — 전투 캔버스에 실제로 «그 색» 픽셀이 그려지는가(폴백 원이 아니라 스프라이트인가)
  *   §5 시체   — 처치 시체가 틴트·발밑 보정을 이어받는가(«죽는 순간 색이 벗겨짐» 회귀 방지)
  *   §6 연출   — 등장이 #fxlc(팝업 아래, 184) 에 붙는가 · 처치가 흔들림/처치음 경로를 타는가
- *               · #stinfo.bfight(스테이지 보스 전용 HUD)를 켜지 않는가 = 승급전 타이머가 살아 있는가
+ *               · 277 이후 승급전도 28 규격 보스 HUD(#stinfo.bfight · ⏱#bossTm · 체력바#bossHp)를 쓴다
+ *                 — 옛 단언 «bfight 를 안 켠다» 는 277(모든 보스전 보스 UI 통일)이 뒤집었다
  *   §7 불변   — 두 번 연속 승급전을 열어도 배율이 누적되지 않는가(PROMO_BASE) · 다른 적은 안 바뀌는가
  *
  * ⚠ file:// 에서 아틀라스를 그린 캔버스는 «오염» 되어 getImageData 가 막힌다 —
@@ -192,7 +193,7 @@ async function openWith(browser, save) {
     ok(typeof s5.yo === 'number', '시체가 발밑 보정을 이어받는다 — yo ' + s5.yo);
 
     /* ---------------- §6 연출 ---------------- */
-    console.log('\n§6 연출 — 등장은 #fxlc(팝업 아래) · 처치는 흔들림 · bfight 는 안 켠다');
+    console.log('\n§6 연출 — 등장은 #fxlc(팝업 아래) · 처치는 흔들림 · 277 이후 bfight 를 켠다');
     ok(s5.shook, '처치가 cam.shake 를 올린다(보스 대접)');
     const s6 = await p.evaluate(() => {
       /* 승급전을 다시 열어 «등장 순간» 의 레이어를 센다 */
@@ -202,20 +203,25 @@ async function openWith(browser, save) {
       startPromo();
       const e = enemies.find(x => x.tk === 'promo');
       if (e) e.hp = e.max = 1e30;
+      /* 277 — HUD 판정은 «한 프레임 그린 뒤» 봐야 한다(drawBossHud 는 drawHud 안에서 돈다) */
+      drawHud();
       const si = document.getElementById('stinfo');
       return {
         lcAdd: ((document.getElementById('fxlc') || {}).childElementCount || 0) - lc0,
         lAdd: ((document.getElementById('fxl') || {}).childElementCount || 0) - l0,
         bfight: !!(si && si.classList.contains('bfight')),
-        timerOn: !!(document.getElementById('prT')),
+        tmOn: !!document.getElementById('bossTm').classList.contains('on'),
+        tmTx: document.getElementById('bossTmN').textContent,
+        want: Math.max(0, promo ? promo.t : -1).toFixed(1),
         bossOn: !!bossOn
       };
     });
     ok(s6.lcAdd >= 2, '등장 연출 2개가 #fxlc(전투 발 · 팝업 아래, 184)에 붙는다 — +' + s6.lcAdd);
     ok(s6.lAdd === 0, '#fxl(팝업 위)에는 한 개도 안 붙는다 — +' + s6.lAdd);
-    ok(!s6.bfight, '#stinfo.bfight(스테이지 보스 전용 HUD)는 안 켠다 — 승급전 타이머가 산다');
+    ok(s6.bfight, '277 — 승급전도 28 규격 보스 HUD(#stinfo.bfight)를 켠다');
     ok(!s6.bossOn, '스테이지 보스 플래그(bossOn)는 안 건드린다');
-    ok(s6.timerOn, '승급전 HUD 타이머 노드가 살아 있다');
+    ok(s6.tmOn && s6.tmTx === s6.want,
+      '277 — ⏱ 타이머가 승급전 남은 시간을 띄운다 — ' + s6.tmTx + ' (기대 ' + s6.want + ')');
 
     /* ---------------- §7 불변 ---------------- */
     console.log('\n§7 불변 — 배율 누적 없음 · 다른 적 불변');

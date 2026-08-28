@@ -19665,14 +19665,43 @@ function drawFac(){
    (39) 보스전 중  : 캡슐·진행바 숨김 · 라벨 110px 하강 · ⏱ 타이머 · 보스 체력바 · [포기하기]
    (40) 재도전 대기: 캡슐·진행바 숨김 · 해골 노드를 중앙 Ø120 으로 · [스테이지 재도전]
    기본(02) 상태는 두 클래스가 모두 빠진 상태라 한 줄도 바뀌지 않는다. */
+/* 277 — «지금 어떤 보스전인가» 를 정하는 **단 하나의 자리**(저장소 주인 보고 2026-08-27).
+   이전에는 모드마다 제 HUD 를 켜고 끄는 방식이라 «전환하면 앞 모드 HUD 가 남는» 사고가 났다
+   (주인 보고: 스테이지 보스 → 승급전으로 넘어가니 스테이지 보스 UI 그대로). 이제 모드는 여기서
+   한 번 정하고, 아래 drawBossHud() 가 **매 프레임 다섯 요소를 전부 다시 토글**하므로
+   «이전 모드 HUD 잔존» 이 구조적으로 불가능하다.
+     'arena' 123 — 자기 HUD(#arnHud)      'dun'  30/257 — 자기 HUD(#dunHud, 보스 국면은 보스 HP 합)
+     'raid'  46 — 28 규격 HUD 재사용       'promo' 승급전 — 28 규격 HUD 재사용(277 신설)
+     'stage' 28/162                        ''      보스전 아님
+   우선순위는 «자기 HUD 를 가진 모드 → 28 규격을 빌려 쓰는 모드 → 스테이지» 다. 승급전은
+   스테이지 보스전 도중에도 끼어들 수 있으므로(step 의 `bossT > 0 && !promo`) 'stage' 보다 위다. */
+function bossMode(){
+  if(arena)  return 'arena';
+  if(dunRun) return 'dun';
+  if(raidOn) return 'raid';
+  if(promo)  return 'promo';
+  if(inBossFight()) return 'stage';
+  return '';
+}
+/* 28 규격 HUD(#stinfo.bfight · ⏱#bossTm · 체력바#bossHp)를 쓰는 모드 = «해당 HP 바 + 남은 시간» */
+const BOSS_HUD28 = { raid:1, promo:1, stage:1 };
 function drawBossHud(){
-  /* 46 레이드 — 28 보스전 HUD(⏱ 타이머 · 바 · [포기하기])를 그대로 재사용한다.
-     바는 «체력» 이 아니라 «최고 기록 대비 현재 DPS», 숫자는 누적 피해량이다. */
-  if(raidOn){
-    const si0 = $('stinfo');
-    si0.classList.add('bfight'); si0.classList.remove('bfarm');
-    $('bossTm').classList.add('on'); $('bossHp').classList.add('on');
-    $('bossGv').classList.add('on'); $('bossRt').classList.remove('on');
+  const md = bossMode(), bf = !!BOSS_HUD28[md];
+  /* 162 — 파밍(재도전 대기)은 «보스전에 한 번 졌다» 뿐이므로 스테이지 번호 조건(구 isBossStage)이 없다.
+     277 — 조건이 `!bf` 가 아니라 `md === ''` 다: 옛 식은 던전·아레나·승급전 위에도 [스테이지 재도전]
+     버튼(#bossRt 은 pointer-events 살아 있는 버튼이다)을 띄웠다. */
+  const fm = S.bossFarm && md === '';
+  const si = $('stinfo');
+  si.classList.toggle('bfight', bf);
+  si.classList.toggle('bfarm', fm);
+  $('bossTm').classList.toggle('on', bf);
+  $('bossHp').classList.toggle('on', bf);
+  /* [포기하기] 는 «중간에 그만둘 수 있는» 두 모드만이다 — 승급전은 도전이 끝날 때까지 간다 */
+  $('bossGv').classList.toggle('on', md === 'stage' || md === 'raid');
+  $('bossRt').classList.toggle('on', fm);
+  if(!bf) return;
+  /* 46 레이드 — 바는 «체력» 이 아니라 «최고 기록 대비 현재 DPS», 숫자는 누적 피해량이다. */
+  if(md === 'raid'){
     $('bossTmN').textContent = Math.max(0, raidT).toFixed(1);
     const el = Math.max(0.001, raidOn.sec - raidT), dps = raidDmg / el;
     const bestDps = (S.raidBest[raidOn.id] || {}).dps || 0;
@@ -19680,16 +19709,17 @@ function drawBossHud(){
     $('bossHpN').textContent = fmtB(raidDmg);
     return;
   }
-  /* 162 — 파밍은 «보스전에 한 번 졌다» 뿐이므로 스테이지 번호 조건(구 isBossStage)이 없다 */
-  const bf = inBossFight(), fm = S.bossFarm && !bf;
-  const si = $('stinfo');
-  si.classList.toggle('bfight', bf);
-  si.classList.toggle('bfarm', fm);
-  $('bossTm').classList.toggle('on', bf);
-  $('bossHp').classList.toggle('on', bf);
-  $('bossGv').classList.toggle('on', bf);
-  $('bossRt').classList.toggle('on', fm);
-  if(!bf) return;
+  /* 277 승급전 — 대상은 승급 수호자(tk 'promo', 208 이 `ETYPE.promo` 를 갈아 끼운다) 하나뿐이다.
+     시간은 승급전 시계(promo.t), 체력바는 그 수호자의 hp/max. */
+  if(md === 'promo'){
+    $('bossTmN').textContent = Math.max(0, promo.t).toFixed(1);
+    const g = enemies.find(e => e.tk === 'promo');
+    /* 수호자가 아직 없거나(첫 프레임) 막 쓰러진 프레임에는 0 으로 그린다 — NaN 폭이 나가지 않게 */
+    const gh = g ? Math.max(0, g.hp) : 0, gm = g && g.max > 0 ? g.max : 1;
+    $('bossHpF').style.width = (clamp(gh/gm, 0, 1) * 671) + 'px';
+    $('bossHpN').textContent = fmtB(gh);
+    return;
+  }
   $('bossTmN').textContent = Math.max(0, bossT).toFixed(1);
   const b = enemies.find(e => e.tk === 'boss');
   /* 스폰 딜레이 동안(아직 보스가 없을 때)은 만피로 보여 준다 */
@@ -19765,6 +19795,9 @@ function drawHud(){
   let prR;                                             /* 161 — 진행바 채움 비율(0~1). 중간 노드 점등 판정에 쓴다 */
   if(promo){
     prR = clamp(promo.t/promo.max, 0, 1);
+    /* 277 — 남은 시간의 «표시» 는 이제 28 규격 ⏱`#bossTm` 이 맡는다(승급전도 보스전이므로).
+       이 줄은 `.bfight` 가 감춘 진행바 안의 글자라 화면에 안 나오지만, 161 의 중간 노드 판정이
+       같은 `prR` 을 쓰므로 계산은 그대로 둔다(게이트 verify161 §5). */
     $('prT').textContent = '⚔ 승급전 ' + promo.t.toFixed(1) + '초';
   }else{
     const total = stageTotal();
@@ -21241,9 +21274,9 @@ function startPromo(){
   /* 208 ③ — «보스급» 은 크기만이 아니라 대접도 같이 받는다. 등장음·보스 BGM 은 28/178 보스와
      같은 헬퍼를 그대로 쓰고, 등장 연출은 `jzFx(…, combat=true)` = **#fxlc(팝업 아래)** 라
      184 의 «팝업 관통 금지» 를 지킨다. 풀스크린 흰 플래시(jz-wf)는 184 가 폐지했으므로 안 쓴다.
-     ⚠ 60 의 보스 훅은 `#stinfo.bfight` 토글을 관찰하는데 그 클래스는 **스테이지 보스 전용**이고
-     (승급전은 자기 HUD `#prT` 를 쓴다) 켜면 승급전 타이머가 숨는다 — 그래서 관찰자에 기대지 않고
-     같은 연출을 여기서 직접 부른다. */
+     ⚠ 60 의 보스 훅은 `#stinfo.bfight` 토글을 관찰하지만 **관찰자에 기대지 않고 여기서 직접 부른다** —
+     스테이지 보스전 도중에 승급전이 끼어들면 `.bfight` 는 이미 켜져 있어 «변화» 가 없고, 그러면
+     등장 연출이 통째로 빠진다. 277 이후 그 관찰자는 승급전일 때 스스로 물러난다(중복 방지). */
   bossInSfx(enemies[enemies.length-1]);
   if(typeof jzFx === 'function'){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, '승급전', true); }
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
@@ -29752,6 +29785,9 @@ function jzInit(){
       bf = n;
       /* 184 — 등장 연출은 전투 발이므로 #fxlc(팝업 아래). 처치 흰 플래시(jz-wf)는
          «화면 전체가 팍 번쩍» 이라 주인 지시로 **전면 폐지**(레이어 이동이 아니라 제거). */
+      /* 277 — 승급전도 이제 `.bfight` 를 켠다(28 규격 보스 HUD 재사용). 등장 연출은
+         startPromo 가 «승급전» 문구로 직접 부르므로 여기서 또 «BOSS» 를 띄우면 두 번 겹친다. */
+      if(n && typeof promo !== 'undefined' && promo) return;
       if(n){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, 'BOSS', true); }
     }).observe(si, { attributes:true, attributeFilter:['class'] });
   }
