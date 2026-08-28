@@ -124,32 +124,55 @@ const HARNESS = () => {
       '[2-a] 클램프 규약과 실제가 «일관» 하다(띠 안이면 밀려 있고, 띠 밖이면 24 여도 정상)');
   }
 
-  /* ═══ ③ 띠 «안» 자리로 옮기면 클램프가 살아 있는가 ═══ */
-  console.log('\n[3] 띠 «안» 자리 — 적을 사이드 열 세로 한복판에 놓는다');
+  /* ═══ ③ 띠 «안» 자리로 옮기면 클램프가 살아 있는가 ═══
+     ⚠ 표본 행은 «띠 안에서 캔버스 세로 중심에 가장 가까운 행» 이다 — 비네트(§4) 때문이다. */
+  console.log('\n[3] 띠 «안» 자리 — 적을 사이드 열 안쪽(비네트가 가장 옅은 행)에 놓는다');
   const g3 = await ev(([rgb]) => {
     const T = window.__t368, sb = sideBox;
     if (!sb) return { err: 'sideBox null' };
     const e = T.mk('zombie');
-    /* 바는 적 머리 위에 그려진다 — 바 y 가 띠 한복판에 오도록 발밑을 아래로 내려 잡는다 */
-    const mid = (sb.y1 + sb.y2) / 2;
-    let best = null;
-    for (let dy = 0; dy <= 200; dy += 4) {
-      T.put(e, 30, mid + dy);
-      const p = T.scan(rgb);
-      if (p.n && p.y0 > sb.y1 - 8 && p.y0 < sb.y2 + 8) { best = { dy, p }; break; }
-    }
-    return { best, sb: { x2: sb.x2, y1: sb.y1, y2: sb.y2 } };
+    const top = Math.max(sb.y1 + 8, Math.min(sb.y2 - 8, VH / 2));
+    T.put(e, 30, top + e.r * 3.1 + 6);
+    const p = T.scan(rgb);
+    return { top, p, sb: { x2: sb.x2, y1: sb.y1, y2: sb.y2 } };
   }, [PINK]);
   if (g3.__err || g3.err) no('[3] 평가 실패 — ' + (g3.err || g3.__err));
-  else if (!g3.best) no('[3] 띠 «안» 에 바를 놓을 자리를 못 찾았다');
+  else if (!g3.p.n) no('[3] 띠 «안» 표본의 바가 안 그려졌다 — 표본이 무효');
   else {
-    console.log('       발밑 = 띠중심 +' + g3.best.dy + ' · 바 x ' + g3.best.p.x0.toFixed(1) + '..' + g3.best.p.x1.toFixed(1) +
-      ' · y ' + g3.best.p.y0.toFixed(1) + '..' + g3.best.p.y1.toFixed(1));
-    is(g3.best.p.x0 >= g3.sb.x2, '[3-a] 바 좌변 ' + g3.best.p.x0.toFixed(1) + ' ≥ 사이드 열 우변 ' +
+    console.log('       바 상변 ' + g3.top.toFixed(1) + ' · 바 x ' + g3.p.x0.toFixed(1) + '..' + g3.p.x1.toFixed(1) +
+      ' · y ' + g3.p.y0.toFixed(1) + '..' + g3.p.y1.toFixed(1));
+    is(g3.p.x0 >= g3.sb.x2, '[3-a] 바 좌변 ' + g3.p.x0.toFixed(1) + ' ≥ 사이드 열 우변 ' +
       g3.sb.x2.toFixed(1) + ' — 띠 안에서는 클램프가 살아 있다');
   }
 
-  is(errs.length === 0, '[4] 콘솔/페이지 오류 ' + errs.length + '건' + (errs.length ? ' — ' + errs[0].slice(0, 120) : ''));
+  /* ═══ ④ 비네트 — «찍힌 픽셀» 자가 왼쪽 위에서 눈이 머는 자리 ═══
+     draw() 맨 끝의 `createRadialGradient(VW/2, VH/2, VH*.34, …)` 가 화면 전체를 덮으므로,
+     캔버스 중심에서 VH*0.34(≈339px) 밖의 바는 색이 어두워져 «정확한 색» 표본이 0 이 된다.
+     368 §R2 가 «바가 아예 없다» 로 읽힌 뿌리이자, 앞으로도 같은 자를 쓰는 게이트가 걸릴 함정이다. */
+  console.log('\n[4] 비네트 — 같은 바를 안/밖 두 행에 놓고 «정확한 색» 표본 수를 잰다');
+  const g4 = await ev(([rgb]) => {
+    const T = window.__t368, e = T.mk('zombie');
+    const R = VH * 0.34, out = [];
+    for (const top of [232, 420]) {
+      T.put(e, 30, top + e.r * 3.1 + 6);
+      const p = T.scan(rgb);
+      /* 클램프 «전» 자리(x≈22)가 비네트 안쪽 타원 안인가 */
+      const d = Math.hypot(22 - VW / 2, top - VH / 2);
+      out.push({ top, n: p.n, d, inside: d < R });
+    }
+    return { R, out };
+  }, [PINK]);
+  if (g4.__err) no('[4] 평가 실패 — ' + g4.__err);
+  else {
+    for (const o of g4.out) {
+      console.log('       바 상변 ' + o.top + ' — 중심거리 ' + o.d.toFixed(1) + (o.inside ? ' < ' : ' > ') +
+        g4.R.toFixed(1) + ' ⇒ ' + (o.inside ? '비네트 안쪽(색 그대로)' : '비네트 바깥(색이 어두워진다)'));
+    }
+    is(g4.out.length === 2 && g4.out[0].inside === false && g4.out[1].inside === true,
+      '[4-a] 띠 세로 한복판(232)은 비네트 «바깥» · 게이트가 고른 행(420)은 «안쪽»');
+  }
+
+  is(errs.length === 0, '[5] 콘솔/페이지 오류 ' + errs.length + '건' + (errs.length ? ' — ' + errs[0].slice(0, 120) : ''));
 
   await browser.close();
   console.log('\nPROBE368 ' + pass + '/' + (pass + fail) + (fail ? ' — FAIL ' + fail : ' — PASS'));
