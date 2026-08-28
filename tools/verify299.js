@@ -145,6 +145,14 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     document.getElementById('panel').style.display = '';
     await wait(120);
 
+    /* ── 29 룰렛 (321 신설) ──
+       [룰렛 돌리기] 버튼 배지는 «돌릴 수 있을 때만» 켜지므로 상태를 잠깐 만들었다가 되돌린다.
+       노드 자체는 조건과 무관하게 렌더되므로 mk 없이 그대로 잰다. */
+    const spSnap = S.daily.spins;
+    S.daily.spins = 1; openRoulette(); await wait(250);
+    sweep('29 룰렛 [룰렛 돌리기] #rouBtn>s.updot', '#rouBtn>s.updot', '#rouBtn');
+    closeModal(); S.daily.spins = spSnap; uiDirty = true; await wait(100);
+
     /* ── 35 패스 ── */
     openPass('stage'); await wait(250);
     sweep('35 탭 #psBar .pt>.bdg', '#psBar .pt>.bdg', '.pt');

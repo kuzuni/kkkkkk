@@ -9978,6 +9978,12 @@
      7일차는 mbody padding(65) 안이라 `.at70 .mbody{overflow:hidden}` 에도 안 걸린다.
      중심 x 221.5/226 · y 4.5/268 → 299 «우상단 사분면» 충족. */
   .at-c>.updot,.at-c7>.updot{right:-9px;top:-9px}
+  /* 321 — 267 주 행동 버튼 `.pbtn` 자체의 레드닷([룰렛 돌리기]). 라벨 `<b>` 는 flex 로 **가운데
+     한 줄**이라 안쪽 우상단이 통째로 빈다 — `.sk-btn`(275x131) 이 쓰는 자리(12,12)를 그대로 쓴다
+     (`.pbtn` 은 h130 · border 7px 로 규격이 사실상 같다). 절대배치 기준은 padding box 라
+     12px 은 검정 테두리 **안쪽** 12px 이고, 외곽 링(±7.5)까지 4.5px 여유로 안 잘린다
+     (`.ifbtn` 에 overflow 는 없다). 중심 (w−25.5, 25.5) → 299 «우상단 사분면» 충족. */
+  .ifbtn.pbtn>.updot{right:12px;top:12px}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
   :is(#bSk,#bPet,#bCos) .alert>.updot{display:block}
   #wpnw .updot{display:none}
@@ -23160,7 +23166,19 @@ const ROUL_OVER = 6, ROUL_BACK_MS = 260;
 function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
 /* 267 — `.pbtn` 라벨은 `<b>` 안에 있다(`.ifbtn` 규약). 예전처럼 `btn.textContent = …` 로 쓰면
    그 `<b>` 가 통째로 날아가 버튼이 «큰 규격만 남고 글씨는 26px 맨몸» 이 된다. 여기 한 곳으로 모은다. */
-function rouBtnTx(btn, t){ if(!btn) return; const b = btn.firstElementChild; if(b) b.textContent = t; else btn.textContent = t; }
+function rouBtnTx(btn, t){ if(!btn) return; const b = btn.querySelector('b') || btn.firstElementChild;
+  if(b) b.textContent = t; else btn.textContent = t; }
+/* 321(주인 지시 2026-08-28) — «돌릴 수 있으면 [룰렛 돌리기] 버튼에도 레드닷».
+   318(출석)과 똑같은 «경로가 한 칸 짧다» 결손이었다: 판정·점등은 `sideAlert('roul', S.daily.spins>0)`
+   으로 사이드 «룰렛» 아이콘까지만 갔는데, 팝업을 여는 순간 딤(`#modal` z30)이 사이드(z3)를 덮어
+   신호가 화면에서 사라진다. 경로의 다음 칸(버튼 자체)까지 잇는다.
+   **켜고 끄는 곳은 여기 한 곳뿐이다**(166 규약 — 조건은 호스트 `.alert`, 부품은 `<s class="updot">`).
+   회전 중(`rouSpinning`)에는 끈다 — 그 동안 버튼은 `disabled` + `pointer-events:none` 라
+   «지금 누를 수 있다» 는 신호가 거짓이 되고, 60 쥬시 등장 애니가 `rou-spin` 정지 규칙에도 걸린다. */
+function rouBtnDot(){
+  const b = $('rouBtn');
+  if(b) b.classList.toggle('alert', S.daily.spins > 0 && !rouSpinning);
+}
 /* 155 — 보상이 다이아 한 종류가 되면서 «보상 종류별 팔레트» 도 필요 없어졌다.
    골드·유물조각·대박 전용 색은 죽은 코드라 지웠고, 남은 것은 칸 구분용 «다이아 2색 교대» 뿐이다. */
 const ROUL_SEGC = ['#8FDCF7', '#4FB3DE'];
@@ -23193,12 +23211,16 @@ function openRoulette(){
     + '<p id="rouRes">&nbsp;</p>'
     /* 267 — [닫기] 삭제(닫기는 딤 탭) · [룰렛 돌리기] 는 22 [모두 받기] 규격 `.pbtn` 으로.
        라벨을 `<b>` 로 감싸는 것이 `.ifbtn` 부품의 규약이다(`.qs-all`·`.cl-all` 과 같다). */
+    /* 321 — 레드닷은 `<b>` **뒤**에 붙인다: `rouBtnTx` 가 라벨을 찾는 규약(`<b>`)을 깨지 않게
+       형제로 두고, 점등은 아래 `rouBtnDot()` 이 호스트 `.alert` 로만 한다(166). */
     + '<button class="ifbtn pbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '><b>'
-    + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</b></button>';
+    + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</b>'
+    + '<s class="updot"></s></button>';
   showModal(h);
   rouSpinning = false;
   roulSpinMark(false);                           /* 65 — 표식은 #modal 에 남으므로 렌더 때마다 초기화한다 */
   $('rouBtn').onclick = spinRoulette;
+  rouBtnDot();                                   /* 321 — 열자마자 «돌릴 수 있으면» 점등 */
 }
 /* idx 칸이 북(포인터)에 오도록 감속 정지시킨다.
    세그먼트 i 의 중심각 c = i*45+22.5 이므로 최종 회전각 ≡ −c (mod 360) 이면 된다. */
@@ -23224,6 +23246,7 @@ function roulSpinTo(idx){
   roulSpinMark(true);                            /* 65 — 박스·딤·버튼 정지(원판만 돈다) */
   const btn = $('rouBtn'), res = $('rouRes'), cnt = $('rouCnt');
   if(btn){ btn.disabled = true; rouBtnTx(btn, '돌아가는 중…'); }
+  rouBtnDot();                                   /* 321 — 회전 시작 = 즉시 소등(rouSpinning 이 true 다) */
   if(res) res.innerHTML = '&nbsp;';
   if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
   document.querySelectorAll('#rouDisc .rlt-seg.hit').forEach(s => s.classList.remove('hit'));
@@ -23286,6 +23309,7 @@ function roulFinish(idx){
   if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
   if(btn){ btn.disabled = S.daily.spins <= 0;
            rouBtnTx(btn, S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다'); }
+  rouBtnDot();                                   /* 321 — 라벨이 «내일 다시» 로 바뀌는 이 경로에서도 동기화 */
 }
 /* 181 안전망 — 지급이 «멈춘 뒤» 로 옮겨 갔으므로, 회전 3.9초 안에 앱을 닫으면 보상이 증발한다
    (횟수는 돌리는 순간 이미 깎이고 저장된다). `pagehide` 는 탭 종료·백그라운드 폐기·새로고침에
