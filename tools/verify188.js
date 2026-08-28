@@ -56,8 +56,16 @@ const RAWNUM = /\d,\d/;
     ['23 훈련 — 체력', /show:l => fmtB\(U\.hp\.val/],
     ['23 훈련 — 재생', /show:l => '초당 ' \+ fmtB\(U\.regen/],
     ['23 훈련 — 증가분(+N)', /gain:'\+' \+ fmtB\(gain\)/],
-    ['04 스킬 피해', /피해 <b>' \+ fmtB\(skillDmg\(it\)\)/],
-    ['07 펫 피해', /피해 <b>' \+ fmtB\(petDmg\(it\)\)/],
+    /* 343 이관(2026-08-29) — 이 두 항은 «'피해 <b>' + fmtB(…)» 라는 **옛 문자열 조립 형태**에 굳어
+       있었다. 262 가 08 세부 팝업의 «레벨을 타는 칸» 을 함수 한 벌(`dmgNow`/`ct3Now`)로 뽑고
+       268 이 껍데기를 `.sk-ct` 2열 표(«쿨타임|피해량»)로 통일하면서 그 조립문이 사라졌다 —
+       제품은 내내 `fmtB(skillDmg(it))`·`fmtB(petDmg(it))` 를 부르고 있었고 굳은 것은 게이트뿐이다.
+       ⇒ 자리만 «지금 그 값을 만드는 함수» 로 옮기고 **묻는 것은 그대로 둔다**: 이 값이 fmtB 를
+       지나는가. 펫은 자리가 둘(표 4번째 칸 · 설명문 «장착 효과» 줄)이라 칸을 갈라 쓴다
+       (326 교훈 — 한 항이 두 자리를 겸하면 한쪽이 사라져도 초록이다). */
+    ['04 스킬 피해 — 세부 표 «피해량» 칸(dmgNow)', /const dmgNow = \(\) => own \? fmtB\(skillDmg\(it\)\) : '—';/],
+    ['07 펫 피해 — 세부 표 «피해량» 칸(ct3Now)', /ct3Now = \(\) => cat === 'pet'\s+\? \(own \? fmtB\(petDmg\(it\)\) : '—'\)/],
+    ['07 펫 피해 — 설명문 «장착 효과» 줄', /장착 효과 — 전투에 참여해 <em>' \+ fmtB\(petDmg\(it\)\) \+ '<\/em> 피해\./],
     ['06 장비 공격력 알약', /class="eqst a"[^\n]*fmtB\(stat\.dmg\)/],
     ['06 장비 체력 알약', /class="eqst b"[^\n]*fmtB\(stat\.maxHp\)/],
     ['25 정보 탭 공격력', /\['햄지 공격력', fmtB\(stat\.dmg\)\]/],
@@ -74,6 +82,12 @@ const RAWNUM = /\d,\d/;
   /* 반대 방향: 이 싱크들이 다시 `fmt(` 로 새지 않았는가 */
   eq('① 전투 수치 자리에 남은 fmt( 호출', (src.match(/fmtB?\(stat\.(dmg|maxHp|regen|dps)\)/g) || [])
     .filter(s => !s.startsWith('fmtB')).length, 0);
+  /* 343 — 스킬·펫 피해도 같은 반대 방향을 세운다. 위의 자리 단언이 «그 줄이 fmtB 를 부른다» 를
+     보는 반면 이쪽은 «어디서도 다른 표기층으로 새지 않는다» 를 본다 — 자리를 옮긴 항이
+     새 자리에서 초록인 채로 **옛 자리가 fmt 로 부활**하는 것을 막는 짝이다.
+     `fmt` `fmtG` `fmtCur` 무엇이든 걸리게 접두어를 열어 두고 `fmtB(` 만 통과시킨다. */
+  eq('① 스킬·펫 피해 표기층에 남은 비-fmtB 호출',
+    (src.match(/\bfmt[A-Za-z]*\((skillDmg|petDmg)\(/g) || []).filter(s => !s.startsWith('fmtB(')).length, 0);
 
   /* ── 페이지 ────────────────────────────────────────────────────── */
   const br = await launch(chromium);
@@ -191,6 +205,68 @@ const RAWNUM = /\d,\d/;
     yes('③ 19 스펙 시트 ' + k + ' «' + v + '»', UNIT.test(v || '')));
   /* ④ 경계 — 같은 화면에서 재화는 그대로다 */
   eq('④ HUD 다이아 2.36e9 는 숫자 그대로(150 불변)', run.dia, '2,360,000,000');
+
+  /* ── ③-b 08 세부 팝업 — 스킬·펫 «피해량» 이 실제 화면에 찍힌 글자 ────────────────
+     343 — 위 ① 의 자리를 옮겼으니 «그 자리가 정말 화면에 나오는 전투 수치인가» 를 한 번 짚는다.
+     소스만 보는 항은 함수가 아무 데서도 안 불려도 초록이다. 라벨(«피해량»)까지 같이 못 박아
+     칸이 다른 뜻으로 밀려도 걸리게 한다. */
+  const det = await p.evaluate(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const t = s => ((document.querySelector(s) || {}).textContent || '').trim();
+    const o = {};
+    S.trainStage = 12; S.lv.atk = 900; S.lv.hp = 900; S.lv.regen = 900; markDirty();
+    o.skId = SKILLS[0].id; S.own[o.skId] = { l: 40, n: 5 };
+    closeModal(); showSkillDetail(o.skId); await sleep(150);
+    o.skHead = t('#mbox .sk-ct .hd .nt b'); o.skVal = t('#mbox .sk-ct .vl .nt b');
+    o.ptId = (PETS[0] || {}).id; S.own[o.ptId] = { l: 40, n: 5 };
+    closeModal(); showItem(o.ptId); await sleep(150);
+    o.ptHead = t('#mbox .sk-ct .hd .nt b'); o.ptVal = t('#mbox .sk-ct .vl .nt b');
+    /* 설명문 «장착 효과 — 전투에 참여해 <em>N</em> 피해.» — em 은 셋(주기·피해·마리수)이다 */
+    o.ptDesc = [].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[1];
+    closeModal();
+    return o;
+  });
+  eq('③ 08 스킬 세부 표 헤더', det.skHead, '피해량');
+  yes('③ 08 스킬 세부 «피해량» «' + det.skVal + '» 알파벳 단위', UNIT.test(det.skVal || ''));
+  eq('③ 08 펫 세부 표 헤더', det.ptHead, '피해량');
+  yes('③ 08 펫 세부 «피해량» «' + det.ptVal + '» 알파벳 단위', UNIT.test(det.ptVal || ''));
+  yes('③ 08 펫 설명문 «장착 효과» 피해 «' + det.ptDesc + '» 알파벳 단위', UNIT.test(det.ptDesc || ''));
+
+  /* ── §R 되돌림 시험(343 신설) ────────────────────────────────────────────────
+     «눌러서 초록» 이 아님을 못 박는다. 두 방향으로 센다:
+       R1·R2 소스 — 그 줄을 옛 표기층(`fmt(`)으로 되돌린 사본에서 ① 항이 **거짓**이 되고
+                    비-fmtB 누수 카운터가 **≥1** 이 되는가(파일은 안 건드린다 — 문자열 사본이다).
+       R3   런타임 — 표기층(`fmtG`, `fmtB = n => fmtG(n)`)을 센티넬로 갈아 끼우면 두 팝업의
+                    «피해량» 칸과 펫 설명문이 **전부** 센티넬로 바뀌는가. 화면의 그 글자가
+                    정말 이 표기층을 지나 나온다는 뜻이고, 원복하면 실제 값으로 돌아온다.  */
+  const SK04 = SINK.find(s => s[0].startsWith('04 스킬 피해'))[1];
+  const PT07 = SINK.find(s => s[0].startsWith('07 펫 피해 — 세부'))[1];
+  const PT07D = SINK.find(s => s[0].startsWith('07 펫 피해 — 설명문'))[1];
+  const leak = s => (s.match(/\bfmt[A-Za-z]*\((skillDmg|petDmg)\(/g) || []).filter(x => !x.startsWith('fmtB(')).length;
+  const rSk = src.replace(/fmtB\(skillDmg\(it\)\)/g, 'fmt(skillDmg(it))');
+  const rPt = src.replace(/fmtB\(petDmg\(it\)\)/g, 'fmt(petDmg(it))');
+  yes('§R1 스킬 피해를 fmt( 로 되돌리면 ① 항이 빨개진다', !SK04.test(rSk) && leak(rSk) >= 1);
+  yes('§R2 펫 피해를 fmt( 로 되돌리면 ① 두 항이 빨개진다',
+    !PT07.test(rPt) && !PT07D.test(rPt) && leak(rPt) >= 2);
+  const rev = await p.evaluate(async (ids) => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const t = s => ((document.querySelector(s) || {}).textContent || '').trim();
+    const em1 = () => ([].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[1] || '');
+    const o = {}, keep = fmtG;
+    window.fmtG = () => '⟪B⟫';
+    closeModal(); showSkillDetail(ids.sk); await sleep(120); o.sk = t('#mbox .sk-ct .vl .nt b');
+    closeModal(); showItem(ids.pt);        await sleep(120); o.pt = t('#mbox .sk-ct .vl .nt b'); o.ptD = em1();
+    window.fmtG = keep;
+    closeModal(); showSkillDetail(ids.sk); await sleep(120); o.skBack = t('#mbox .sk-ct .vl .nt b');
+    closeModal(); showItem(ids.pt);        await sleep(120); o.ptBack = t('#mbox .sk-ct .vl .nt b');
+    closeModal();
+    return o;
+  }, { sk: det.skId, pt: det.ptId });
+  eq('§R3 표기층을 센티넬로 갈면 08 스킬 «피해량»', rev.sk, '⟪B⟫');
+  eq('§R3 표기층을 센티넬로 갈면 08 펫 «피해량»', rev.pt, '⟪B⟫');
+  eq('§R3 표기층을 센티넬로 갈면 08 펫 설명문 피해', rev.ptD, '⟪B⟫');
+  eq('§R3 원복하면 스킬 «피해량» 이 실제 값으로', rev.skBack, det.skVal);
+  eq('§R3 원복하면 펫 «피해량» 이 실제 값으로', rev.ptBack, det.ptVal);
 
   /* ── ⑤ 기능 체크 — 버튼을 눌러 값이 바뀐 뒤에도 표기층이 유지되는가 ── */
   const fn = await p.evaluate(async () => {
