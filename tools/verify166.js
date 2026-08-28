@@ -429,6 +429,30 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   });
   await wait(400);
 
+  /* ── 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 룬 탭·룬 하위 탭에 배지 노드도 alert 도 없다.
+     재료(룬강화석)가 넘치게 넣어도 켜지지 않아야 한다 — 재료 점등은 상시 점등이 돼 폐지됐다. ── */
+  const rune300 = await ev(() => {
+    openTrain(); setTrSub('rune');
+    S.rstone = 1e9; renderTrain();
+    const top = document.querySelector('#trSubs [data-trsub="rune"]');
+    const subs = [...document.querySelectorAll('#rnSubs [data-runesub]')];
+    const r = {
+      topBdg: top ? top.querySelectorAll('.bdg').length : -1,
+      topAlert: top ? top.classList.contains('alert') : null,
+      subBdg: subs.reduce((n, el) => n + el.querySelectorAll('.bdg').length, 0),
+      subAlert: subs.filter(el => el.classList.contains('alert')).length,
+      subs: subs.length,
+    };
+    S.rstone = 0; setTrSub('train'); closeTrain();
+    return r;
+  });
+  ok('300 — «룬» 탭에 배지 노드 0 · alert 없음(재료 1e9 에서도)',
+    rune300.topBdg === 0 && rune300.topAlert === false,
+    'bdg ' + rune300.topBdg + ' · alert ' + rune300.topAlert);
+  ok('300 — 룬 하위 탭 ' + rune300.subs + '칸 전부 배지 노드 0 · alert 없음',
+    rune300.subs === 3 && rune300.subBdg === 0 && rune300.subAlert === 0,
+    'bdg ' + rune300.subBdg + ' · alert ' + rune300.subAlert);
+
   /* ── [8] 레드닷 전수 — «조건 클래스 없이 보이는 배지» 가 한 개도 없어야 한다 ──── */
   /* 새 세이브 + 아무 상태도 안 만든 화면에서, 켜져 있는 배지는 전부 «켤 이유» 를 가져야 한다.
      여기서는 더 강하게 «기본 CSS 가 꺼져 있는가» 를 본다 — 조건 클래스를 떼면 사라져야 한다. */

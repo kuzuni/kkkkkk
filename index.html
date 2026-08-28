@@ -13107,9 +13107,10 @@
                pointerdown~click 사이에 칸이 사라져 탭이 유실된다(LESSONS 50-① · 작업 74·142).
                잠금·레드닷·활성은 classList 토글로만 바꾼다(#trSubs 와 같은 규약). -->
         <div class="stabs sp3 rn-subs" id="rnSubs">
-          <div class="stab on" data-runesub="r1"><i class="ol3">일반룬</i><s class="bdg"></s><span class="sk-lock"></span></div>
-          <div class="stab" data-runesub="r2"><i class="ol3">고급룬</i><s class="bdg"></s><span class="sk-lock"></span></div>
-          <div class="stab" data-runesub="r3"><i class="ol3">천상룬</i><s class="bdg"></s><span class="sk-lock"></span></div>
+          <!-- 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 배지 노드 자체를 뗐다(죽은 마크업 금지 — 134/166 관례) -->
+          <div class="stab on" data-runesub="r1"><i class="ol3">일반룬</i><span class="sk-lock"></span></div>
+          <div class="stab" data-runesub="r2"><i class="ol3">고급룬</i><span class="sk-lock"></span></div>
+          <div class="stab" data-runesub="r3"><i class="ol3">천상룬</i><span class="sk-lock"></span></div>
         </div>
         <!-- 203 — 룬 탭 본문. 훈련 탭이 켜져 있으면 display:none 이라 23 의 측정 좌표는 한 픽셀도 안 움직인다.
              271 — 이제 «지금 고른 룬 한 종» 만 그린다(카드 1장 + 총효과 요약). -->
@@ -13123,7 +13124,7 @@
              바 자신의 left/bottom/width 는 그대로라 훈련 탭 좌표는 여전히 한 값도 안 움직인다. -->
         <div class="stabs sp3 tr-subs" id="trSubs">
           <div class="stab on" data-trsub="train"><i class="ol3">훈련</i></div>
-          <div class="stab" data-trsub="rune"><i class="ol3">룬</i><s class="bdg"></s></div>
+          <div class="stab" data-trsub="rune"><i class="ol3">룬</i></div>
           <div class="stab" data-trsub="temper"><i class="ol3">단련</i><s class="bdg"></s></div>
         </div>
       </div>
@@ -27299,9 +27300,9 @@ function renderTrain(){
    데이터·판정은 전부 위 룬 모델(runeRate/runeVal/runeTry)을 지난다 — 여기서는 그리기만 한다.
    ========================================================================== */
 let trSub = 'train';                                    /* 'train' | 'rune' | 'temper'(210) */
-/* 룬 탭 레드닷 — «지금 재료로 시도할 수 있는 룬이 있다» 일 때만(166 «누를 게 있다» 규약).
-   다이아는 상시 가능하므로 점등 조건에서 뺀다 — 그러면 배지가 영원히 켜져 있다. */
-const runeAlert = () => RUNES.some(r => runeTryOk(r.id, 'mat'));
+/* 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 룬 탭·하위 탭 레드닷 전면 폐지.
+   재료가 쌓이는 즉시 켜져 사실상 상시 점등이 됐다(166 이 훈련(골드)을 뺀 것과 같은 이유).
+   구 `runeAlert()` 는 미사용이 되어 함께 삭제했다. 단련(210)은 재료가 능동 획득이라 유지. */
 const TRSUBS = ['train', 'rune', 'temper'];             /* 210 — 3칸 */
 function setTrSub(k){
   trSub = TRSUBS.indexOf(k) >= 0 ? k : 'train';
@@ -27354,17 +27355,16 @@ function renderRunes(){
   }
   document.querySelectorAll('#trSubs [data-trsub]').forEach(el => {
     el.classList.toggle('on', el.dataset.trsub === trSub);
-    if(el.dataset.trsub === 'rune') el.classList.toggle('alert', runeAlert());
+    /* 300 — 룬 탭은 레드닷 대상이 아니다(주인 지시). 단련만 남긴다. */
     if(el.dataset.trsub === 'temper') el.classList.toggle('alert', temperAlert());   /* 210 */
   });
-  /* 271 — 하위 탭 칸 상태. 마크업은 정적이고 여기서는 «활성 · 잠금 · 레드닷» 세 클래스만 토글한다.
-     레드닷은 상위 «룬» 칸과 같은 규약(166): 지금 **재료로** 시도할 수 있는 칸만 켠다. */
+  /* 271 — 하위 탭 칸 상태. 마크업은 정적이고 여기서는 «활성 · 잠금» 두 클래스만 토글한다.
+     (300 — 레드닷 토글은 뗐다. 룬은 배지 대상이 아니다 — 주인 지시.) */
   const curId = curRuneId();
   document.querySelectorAll('#rnSubs [data-runesub]').forEach(el => {
     const id = el.dataset.runesub;
     el.classList.toggle('on', id === curId);
     el.classList.toggle('lk', !runeOpen(id));
-    el.classList.toggle('alert', runeTryOk(id, 'mat'));
   });
   const w = $('trRunes'); if(!w) return;
   /* 297 — 꾹 누르고 있는 동안에는 통짜 재렌더를 멈추고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ —

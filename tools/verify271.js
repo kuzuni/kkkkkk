@@ -54,8 +54,8 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
       labels: cells.map(c => c.querySelector('i').textContent.trim()),
       /* 이름은 데이터(RUNES)와 한 벌이어야 한다 — 라벨을 손으로 적어 두면 조용히 갈라진다 */
       names: RUNES.map(r => r.n),
-      /* 96 규약: 각 칸에 레드닷 자리(.bdg)가 있다 */
-      bdg: cells.every(c => !!c.querySelector('.bdg')),
+      /* 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 배지 노드가 하나도 없어야 한다 */
+      bdg: cells.every(c => !c.querySelector('.bdg')),
       lock: cells.every(c => !!c.querySelector('.sk-lock')),
       /* 바는 본문(#trRunes) **밖**의 형제여야 한다 — 안에 있으면 innerHTML 교체에 같이 지워진다 */
       outside: !document.getElementById('trRunes').contains(bar),
@@ -66,7 +66,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   ok(part.n === 3 && part.keys.join(',') === 'r1,r2,r3', '하위 탭 3칸 · 키 r1/r2/r3', part.keys.join(','));
   ok(part.labels.join(',') === part.names.join(','),
     '칸 라벨이 RUNES 의 이름과 같다', part.labels.join(','));
-  ok(part.bdg, '칸마다 레드닷 자리(.bdg) 가 있다(96 규약)');
+  ok(part.bdg, '칸에 레드닷 배지 노드가 없다(300 — 룬은 배지 대상 아님)');
   ok(part.lock, '칸마다 자물쇠 자리(.sk-lock) 가 있다');
   ok(part.outside && /tr-box/.test(part.parent),
     '★ 바가 #trRunes 밖의 .tr-box 형제다 — 0.35초 재렌더에 안 지워진다', part.parent);
@@ -302,25 +302,23 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     dia.spent + ' / ' + dia.want);
   ok(dia.up >= 0, '다이아 시도도 레벨을 내리지 않는다(실패해도 그대로)', String(dia.up));
 
-  /* 칸별 레드닷 — «지금 재료로 시도할 수 있는 칸» 과 정확히 같아야 한다(166 규약) */
+  /* 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 재료가 넘쳐도 룬 탭·하위 탭 어디에도 alert 가 없다.
+     (재료 기반 점등은 «쌓이는 즉시 상시 점등» 이 돼 166 의 훈련(골드) 제외와 같은 이유로 폐지) */
   const dot = await p.evaluate(() => {
     const read = () => [...document.querySelectorAll('#rnSubs [data-runesub]')]
       .map(e => e.classList.contains('alert'));
-    const want = () => RUNES.map(r => runeTryOk(r.id, 'mat'));
+    const top = () => document.querySelector('#trSubs [data-trsub="rune"]').classList.contains('alert');
     S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e9; renderTrain();
-    const a = { got: read(), want: want() };
+    const a = { got: read(), top: top() };
     S.rstone = 0; renderTrain();
-    const b = { got: read(), want: want() };
-    S.rune = { r1: RUNE_MAXLV, r2: 0, r3: 0 }; S.rstone = 1e9; renderTrain();
-    const c = { got: read(), want: want() };
-    return { a, b, c };
+    const b = { got: read(), top: top() };
+    return { a, b };
   });
-  ok(JSON.stringify(dot.a.got) === JSON.stringify(dot.a.want)
-     && JSON.stringify(dot.b.got) === JSON.stringify(dot.b.want)
-     && JSON.stringify(dot.c.got) === JSON.stringify(dot.c.want),
-    '★ 칸별 레드닷 = «재료로 시도 가능»(166) — 재화·사다리 3상태 모두 일치',
-    JSON.stringify(dot.a.got) + ' / ' + JSON.stringify(dot.b.got) + ' / ' + JSON.stringify(dot.c.got));
-  ok(dot.b.got.every(v => v === false), '재료가 0 이면 어느 칸도 안 켜진다(상시 점등 아님)');
+  ok(dot.a.got.every(v => v === false) && dot.a.top === false,
+    '★ 재료가 넘쳐도(1e9) 룬 탭·하위 탭 어디에도 레드닷이 없다(300)',
+    JSON.stringify(dot.a.got) + ' top=' + dot.a.top);
+  ok(dot.b.got.every(v => v === false) && dot.b.top === false,
+    '재료 0 에서도 당연히 없다(300)', JSON.stringify(dot.b.got));
 
   /* ================= [7] 표기 ================= */
   console.log('[7] 표기 — «다음 1레벨»·«계단 n/5» 가 runeVal/RUNE_STEP 과 같은 식이다');
