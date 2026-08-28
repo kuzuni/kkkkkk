@@ -11,6 +11,17 @@
          스폰·소멸로 개수가 변해도 남는 아이콘만으로 센다)
      ③ 군집 **외곽상자**(BH 가 쓴 자)의 좌단·상단 이동 속도
      ④ 인접 구간 속도비 = max(v[k], v[k+1]) / max(min(v[k], v[k+1]), eps)
+     ⑤ **목표까지 남은 거리 rem** 과 그 감소 속도 = «접근량» (43회차 신설)
+
+   ⚑ 43회차 — ⑤ 를 왜 더했나. 42차 판정문 그대로다:
+     «ㄱ(퍼짐 계단)은 **두 자로 재면 답이 갈린다**. `p58av`(원점 대비 **이동량**)로는 최저 구간 속도가
+      0.078 → 0.34px/ms 로 ×4.4 좋아졌는데, 두 비평가의 자(**목표까지 남은 거리의 감소량**)로는
+      288ms 순 접근 0px 로 거의 그대로다. 둘 다 맞다 — 퍼짐은 설계상 목표에서 **멀어지는** 방향으로
+      움직이기 때문이다(3박자의 첫 박). 43회차 지시: `p58av` 에 «목표까지 남은 거리» 열을 더해
+      **두 자를 나란히** 찍어라. 그러지 않으면 이 항목은 라운드마다 «고쳤다/안 고쳤다» 로 엇갈린다.»
+     → 이제 한 표에 `v`(이동량)와 `앞으로`(접근량)가 같이 나온다. 접근량이 **음수** 인 구간은
+       «목표에서 멀어지는 중» = 퍼짐 박자이고, 그것이 **사양**임을 표가 스스로 말한다.
+     ⚠ 목표는 아이콘마다 다르다(`fxFlies` 의 `tx/ty`) — 알약 중심 하나로 퉁치지 않는다.
 
    ⚠ p58au 와 달리 **얼리지 않는다** — 재는 것이 «시간에 따른 위치» 라 시간을 세우면 잴 것이 없다.
    ⚠ 이 프로브는 게이트가 아니라 «자» 다. 통과·실패를 찍지 않고 표만 낸다.
@@ -102,6 +113,9 @@ async function run(scene) {
     while (performance.now() - t0 < ms) {
       const t = performance.now() - t0;
       const list = [];
+      /* 43회차 ⑤ — 목표(tx,ty)는 `fxFlies` 가 들고 있다. 요소 → 비행 항목으로 잇는다. */
+      const byEl = new Map();
+      try { for (const f of fxFlies) if (f && f.el) byEl.set(f.el, f); } catch (e) {}
       for (const el of document.querySelectorAll('.fx-fly')) {
         const cs = getComputedStyle(el);
         if (+cs.opacity < VIS) continue;                 /* 41회차 규약 — «보이는 것» 만 센다 */
@@ -110,7 +124,13 @@ async function run(scene) {
         /* ⚠ «가장 가까운 이전 중심» 매칭은 군집에서 무너진다(700px 날아간 아이콘이 제자리에 있는
            이웃과 이어져 속도가 0 으로 찍힌다). **요소 자신에 id 를 박아** 동일성으로 잇는다. */
         if (!el.__pid) el.__pid = 'f' + (++window.__pidN || (window.__pidN = 1));
-        list.push({ id: el.__pid, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width });
+        const f = byEl.get(el), sc2 = (typeof fxSc === 'function') ? fxSc() : null;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        let rem = null;
+        if (f && sc2) {                                  /* 프레임 px ↔ 화면 px — 목표는 프레임 좌표계다 */
+          rem = Math.hypot(f.tx - (cx - sc2.x) / sc2.s, f.ty - (cy - sc2.y) / sc2.s);
+        }
+        list.push({ id: el.__pid, x: cx, y: cy, w: r.width, rem });
       }
       frames.push({ t: Math.round(t), list });
       const wait = step - ((performance.now() - t0) % step);
@@ -138,6 +158,11 @@ function segs(frames) {
     if (!ds.length) continue;
     ds.sort((x, y) => x - y);
     const med = ds[ds.length >> 1];
+    /* 43회차 ⑤ — «목표까지 남은 거리» 의 중앙값과 그 감소 속도(접근량). 음수 = 멀어지는 중(퍼짐 박자). */
+    const remOf = (L) => { const q = L.map(o => o.rem).filter(v => v != null).sort((x, y) => x - y);
+      return q.length ? q[q.length >> 1] : null; };
+    const r0 = remOf(a.list), r1 = remOf(c.list);
+    const app = (r0 != null && r1 != null) ? (r0 - r1) / dt : null;
     /* 외곽상자(BH 가 쓴 자) */
     const bx = (L, f) => Math.min(...L.map(f)), bX = (L, f) => Math.max(...L.map(f));
     const box = { x0: bx(a.list, v => v.x), y0: bx(a.list, v => v.y) };
@@ -145,6 +170,7 @@ function segs(frames) {
     out.push({
       t0: a.t, t1: c.t, dt, n: c.list.length,
       v: med / dt,                                        /* 아이콘 중앙값 속도 px/ms */
+      rem: r1, app,                                       /* 43회차 ⑤ — 남은 거리 · 접근량 px/ms */
       vbox: Math.hypot(box2.x0 - box.x0, box2.y0 - box.y0) / dt,
     });
   }
@@ -158,7 +184,7 @@ function segs(frames) {
     const sg = segs(r.frames);
     all[sc] = { segs: sg, errs: r.errs };
     console.log('\n== 씬 ' + sc + ' (격자 ' + GRID[sc] + 'ms · 콘솔 에러 ' + r.errs.length + ') ==');
-    console.log('  구간(ms)      개수   아이콘 v(px/ms)   외곽상자 v   직전 대비 비');
+    console.log('  구간(ms)      개수   아이콘 v(px/ms)   외곽상자 v   직전 대비 비   남은거리   앞으로(px/ms)');
     let prev = null;
     let worst = 0, worstAt = '';
     for (const s of sg) {
@@ -169,12 +195,27 @@ function segs(frames) {
       console.log('  ' + String(s.t0).padStart(4) + '→' + String(s.t1).padEnd(5)
         + String(s.n).padStart(5) + '   ' + s.v.toFixed(3).padStart(10)
         + '   ' + s.vbox.toFixed(3).padStart(10)
-        + '   ' + (ratio == null ? '   —' : ('×' + ratio.toFixed(1)).padStart(8)));
+        + '   ' + (ratio == null ? '   —' : ('×' + ratio.toFixed(1)).padStart(8))
+        + '   ' + (s.rem == null ? '     —' : s.rem.toFixed(0).padStart(8))
+        + '   ' + (s.app == null ? '     —' : s.app.toFixed(3).padStart(12)));
       prev = s.v;
     }
     const vs = sg.filter(s => s.n >= 4).map(s => s.v);
     console.log('  ─ 요약: 최소 ' + Math.min(...vs).toFixed(3) + ' · 최대 ' + Math.max(...vs).toFixed(3)
       + ' px/ms · **인접 구간 최대 속도비 ×' + worst.toFixed(1) + '** (' + worstAt + 'ms) — 표본 n≥4 구간만');
+    /* 43회차 ⑤ — 두 번째 자. 비평가가 «정지» 로 읽는 구간 = 접근량이 0 근처거나 음수인 연속 구간. */
+    const ap = sg.filter(s => s.n >= 4 && s.app != null);
+    if (ap.length) {
+      let runMs = 0, best = 0, bestAt = '';
+      for (const s of ap) {
+        if (s.app <= 0.05) { runMs += s.dt; if (runMs > best) { best = runMs; bestAt = s.t1 + 'ms 까지'; } }
+        else runMs = 0;
+      }
+      console.log('  ─ 두 번째 자(접근량): 최소 ' + Math.min(...ap.map(s => s.app)).toFixed(3)
+        + ' · 최대 ' + Math.max(...ap.map(s => s.app)).toFixed(3)
+        + ' px/ms · **목표에 다가가지 않는 최장 연속 구간 ' + best + 'ms**' + (best ? ' (' + bestAt + ')' : '')
+        + '  ← 42차 2인 공통ㄱ 이 쓴 자. 음수 = 퍼짐(사양).');
+    }
   }
   if (JSONOUT) console.log('\n' + JSON.stringify(all));
 })();
