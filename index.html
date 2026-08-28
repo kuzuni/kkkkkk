@@ -11572,6 +11572,14 @@
     scrollbar-width:none;background:#2B76BA}
   .ps-list::-webkit-scrollbar{display:none}
   .ps-tk{position:relative}
+  /* 302 — [일괄 받기]: 21 도감 `.cl-all` 과 같은 부품(.ifbtn) · 같은 라벨 규격(296 흰 잉크 + 검정 아웃라인).
+     받을 칸이 있을 때만 렌더가 `#psw.upall` 을 켠다. 버튼이 뜬 동안 목록 바닥을 밀어 마지막 행이 안 가려진다. */
+  .ps-all{display:none;left:350px;bottom:205px;width:380px;height:130px;--gb-bw:7px;border-radius:43px;z-index:6}
+  #psw.upall .ps-all{display:flex}
+  .ps-all>b{position:relative;top:4.5px;font-size:46.6px;
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);
+    text-shadow:0 var(--sh-b) 0 #000, var(--shx-b) 0 0 #000}
+  #psw.upall #psList{padding-bottom:160px}
   /* 헤더 밴드 낙차 그림자 ref y796..840 */
   .ps-tk::before{content:'';position:absolute;left:0;right:0;top:0;height:45px;z-index:4;
     pointer-events:none;background:linear-gradient(180deg,rgba(17,42,62,.5),rgba(17,42,62,0))}
@@ -11670,6 +11678,11 @@
      35 가 하드코딩했던 파랑 한 쌍이 주황 등급 칸에 잘못 붙는다. 여기서는 회색화만 한다. */
   .ps-bx.dn>i{opacity:.35;filter:grayscale(1)}
   .ps-bx.dn>b{color:#808080}
+  /* 301 — 받을 수 있는 보상 칸 레드닷(우상단 — 299 규약). 프리미엄 미보유 칸은 «불가능» 이라 대상 아님(166). */
+  #psw .ps-bx>s.updot{position:absolute;right:-9px;top:-9px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;text-decoration:none;transform:none;display:none;z-index:6;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  #psw .ps-bx.alert>s.updot{display:block}
   /* 5회차: G·H 가 **독립적으로 같은 값**(ref 82×67 · 우리 73×45, h −32.8%)을 냈고 자체 스캔도 일치했다.
      36 세션도 같은 회차에 같은 결론(ref 82×66)에 도달했다 — 값이 2% 안에서 겹쳐 서로를 검산해 준다.
      4회차의 scaleY(.82) 가 세로를 눌러 «아래로 처진» 착시까지 만들었다 — 눌림을 걷고 잉크를 82×67 로 세운다. */
@@ -11685,6 +11698,12 @@
      측정표의 #3F2D29 는 셀 하단 그림자 구간을 잰 값이었다(비평가 H·J 가 독립적으로 지적, 자체 스캔으로 확인). */
   .ps-bar>div.pt{background:#49322C}
   .ps-bar>div.pt.on{background:#7D574C}
+  /* 301 — 탭 레드닷(«받을 보상 있음»). `.stab>.bdg` 규격(27Ø · #F22E52 · 광택/이중 링) 그대로.
+     ⚠ `#psw s{display:inline-block}` 태그 리셋(ID 급)이 있어 기본 꺼짐도 ID 급으로 명시한다(202 함정). */
+  #psBar .pt>.bdg{position:absolute;right:14px;top:2px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;text-decoration:none;transform:none;display:none;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  #psBar .pt.alert>.bdg{display:block}
   /* 아이콘·라벨 위치는 **바 본체 상단(=div 상단) 기준 상대값**으로 잡는다 —
      탭바는 바닥 앵커라 프레임 24px 잔차가 그대로 들어가므로 절대 y 로 맞추면 안 된다.
      5회차 자체 스캔(tools/scan35.py [1]): ref 아이콘 잉크 = **본체+23 부터 h 92 · w 145~167**,
@@ -13270,7 +13289,8 @@
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고
            `.mn-col` 높이를 800 → **690**(6칸: 6×100 + 5×10 + 40.5)으로 되돌린다.
            작업 71 이 좌측에서 «우편» 을 뺐지만 그 자리는 A2 행 그리드 유지를 위해 비워 두므로 패스는 아직 여기 있다. -->
-      <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:1.457;--sx:.651">🎫</i><i class="mn-l" style="--lx:.890" data-t="패스">패스</i></div>
+      <!-- 301 — 받을 패스 보상이 있으면 레드닷(우편 «mail» 칸과 같은 규약, sideAlert('pass', …) 가 켠다) -->
+      <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:1.457;--sx:.651">🎫</i><i class="mn-l" style="--lx:.890" data-t="패스">패스</i><s class="bdg"></s></div>
     </div>
   </div>
 
@@ -13378,12 +13398,17 @@
       <div class="ps-bdg f"><i>🎗️</i></div><div class="ps-bdg p"><i>🏅</i></div>
     </div>
     <div class="ps-list" id="psList"><div class="ps-tk" id="psTk"></div></div>
+    <!-- 302 — [일괄 받기](주인 지시 — 21 도감 [일괄 강화] 방식). 받을 칸이 있을 때만 #psw.upall 로 보인다.
+         자리: 하단 탭바(179) 위 26px 띄운 중앙 — [구매](.ps-buy)는 히어로 안(top 376)이라 안 겹친다.
+         측정표 35/36 정오표: 이 버튼은 레퍼런스에 없는 주인 지시 신설 요소다(bbox 350,~1946 380×130). -->
+    <button class="ps-all ifbtn" id="psAll"><b>일괄 받기</b></button>
     <div class="ps-bar" id="psBar">
       <div class="bk" data-pback="1"><u></u></div>
-      <div class="pt" data-ptab="stage"><i><em>💎</em></i><b><em>스테이지</em></b></div>
-      <div class="pt lk" data-ptab="box"><i><em>🎁</em></i><b><em>보물상자</em></b><s class="lk">🔒</s></div>
-      <div class="pt lk" data-ptab="tower"><i><em>🏰</em></i><b><em>시련의탑</em></b><s class="lk">🔒</s></div>
-      <div class="pt" data-ptab="att"><i><em>📅</em></i><b><em>출석</em></b></div>
+      <!-- 301 — 탭마다 «받을 보상 있음» 레드닷 자리. renderPass() 가 passReadyTab(탭)으로 토글한다 -->
+      <div class="pt" data-ptab="stage"><i><em>💎</em></i><b><em>스테이지</em></b><s class="bdg"></s></div>
+      <div class="pt lk" data-ptab="box"><i><em>🎁</em></i><b><em>보물상자</em></b><s class="lk">🔒</s><s class="bdg"></s></div>
+      <div class="pt lk" data-ptab="tower"><i><em>🏰</em></i><b><em>시련의탑</em></b><s class="lk">🔒</s><s class="bdg"></s></div>
+      <div class="pt" data-ptab="att"><i><em>📅</em></i><b><em>출석</em></b><s class="bdg"></s></div>
     </div>
   </div>
   <!-- 19 프로필 팝업 — 딤 위 중앙 다이얼로그. 측정표 docs/measure/19-프로필팝업.md -->
@@ -20300,9 +20325,15 @@ const MENUB = $('menub');
    경로의 다음 칸(▦ 메뉴 안 «우편»)까지 잇는다. 호출부는 여기서도 한 줄도 안 고친다. */
 const MENUCELL = {};
 document.querySelectorAll('#mnw .mn-b[data-mn]').forEach(c => MENUCELL[c.dataset.mn] = c);
+/* 301 — ▦ 버튼 배지는 «메뉴 안 알림(우편·패스)» 의 OR 다. mail 하나였을 때는 toggle 한 줄이었지만
+   두 키가 되면 서로의 상태를 지우므로 마지막 상태를 들고 합친다. */
+const MENUB_KEYS = { mail: false, pass: false };
 function sideAlert(k, on){
   const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on);
-  if(k === 'mail') MENUB.classList.toggle('alert', !!on);
+  if(k in MENUB_KEYS){
+    MENUB_KEYS[k] = !!on;
+    MENUB.classList.toggle('alert', Object.values(MENUB_KEYS).some(Boolean));
+  }
   const c = MENUCELL[k]; if(c) c.classList.toggle('alert', !!on);
 }
 /* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수.
@@ -20484,6 +20515,8 @@ function drawHud(){
   sideAlert('promo',  promoReady());
   /* 작업 83 — 받을 수 있는 도감 보너스가 하나라도 있을 때만 */
   sideAlert('coll',   collAnyReady());
+  /* 301 — 받을 패스 보상(해금·미수령·수령 가능 칸)이 있으면 ▦ 메뉴 버튼·메뉴 «패스» 칸에 레드닷 */
+  sideAlert('pass',   passReadyAny());
   drawFac();
 }
 function drawTuto(){
@@ -28070,6 +28103,21 @@ const passDim = h => '#' + [1, 3, 5].map(j =>
   ((parseInt(h.substr(j, 2), 16) * 0.5) | 0).toString(16).padStart(2, '0')).join('');
 /* 마지막으로 해금된 단계 — 스파인 초록 구간의 끝이다(측정표 §5-3: 초록은 그 육각 «위» 까지) */
 function passLast(){ let l = -1, n = passT().n; for(let i = 0; i < n; i++) if(passOpen(i)) l = i; return l; }
+/* 301 — «해금됐고 아직 안 받은 칸» 이 있는가(탭 단위). 프리미엄 미보유 칸은 «불가능» 이라 대상 아님(166 규약).
+   전역 passTab 에 안 기대는 파라미터판이다 — ▦ 메뉴·탭바 배지는 열려 있지 않은 탭도 봐야 한다. */
+function passReadyTab(t){
+  const T = PASS_TABS[t]; if(!T) return false;
+  const prem = !!(S.pass.prem && S.pass.prem[t]), prog = T.prog();
+  for(let i = 0; i < T.n; i++){
+    if(prog < (i + 1) * T.step) break;                    /* 단계 목표는 단조 증가 — 이후 전부 미해금 */
+    for(let c = 0; c < T.cols; c++){
+      if(c > 0 && !prem) continue;
+      if(!S.pass.got[t + ':' + i + ':' + c]) return true;
+    }
+  }
+  return false;
+}
+const passReadyAny = () => Object.keys(PASS_TABS).some(passReadyTab);
 function passClaim(i, c){
   if(!passOpen(i) || passGot(i, c)) return false;
   if(c > 0 && !passPrem()){ notify('🔒 <b>프리미엄 패스</b>를 활성화하면 받습니다'); return false; }
@@ -28078,6 +28126,43 @@ function passClaim(i, c){
   S.pass.got[passTab + ':' + i + ':' + c] = 1;
   save(); renderPass(); uiDirty = true; renderUI();
   return true;
+}
+/* 302 — 현재 탭에서 «지금 받을 수 있는 칸» 개수(버튼 라벨·표시 여부가 같이 쓴다) */
+function passReadyCnt(){
+  const T = passT(), prem = passPrem();
+  let n = 0;
+  for(let i = 0; i < T.n; i++){
+    if(!passOpen(i)) break;
+    for(let c = 0; c < T.cols; c++){
+      if(c > 0 && !prem) continue;
+      if(!passGot(i, c)) n++;
+    }
+  }
+  return n;
+}
+/* 302 — [일괄 받기](주인 지시 — 21 도감 [일괄 강화] 방식). 재화는 종류별로 묶어 «한 번에» 지급하고
+   토스트도 같은 합계를 말한다(156 «표기·지급·이펙트 삼자 일치» — 비행 연출은 fxWatch 가 증가분을
+   묶어서 쏘므로 저절로 합계 1묶음이다). */
+function passClaimAll(){
+  const T = passT(), prem = passPrem();
+  const sum = {}; let n = 0;
+  for(let i = 0; i < T.n; i++){
+    if(!passOpen(i)) break;
+    for(let c = 0; c < T.cols; c++){
+      if(c > 0 && !prem) continue;
+      if(passGot(i, c)) continue;
+      const r = passRw(i, c);
+      sum[r.k] = (sum[r.k] || 0) + r.n; n++;
+      S.pass.got[passTab + ':' + i + ':' + c] = 1;
+    }
+  }
+  if(!n) return;
+  if(sum.gold)  S.gold  += sum.gold;
+  if(sum.dia)   S.dia   += sum.dia;
+  if(sum.relic) S.relic += sum.relic;
+  notify('🎫 <b>일괄 받기</b> ' + n + '칸 — '
+    + ['gold', 'dia', 'relic'].filter(k => sum[k]).map(k => curIc(k) + ' +' + won(sum[k])).join(' · '));
+  save(); renderPass(); uiDirty = true; renderUI();
 }
 /* 결제 연동은 아직 없다 — 44 와 같이 지급을 함수 하나로 모아 두고 버튼은 «준비 중» 이다.
    결제를 붙일 때 아래 버튼 핸들러 한 줄만 이 함수를 부르게 바꾸면 된다. */
@@ -28093,8 +28178,16 @@ function renderPass(){
   $('psPrice').textContent = T.price;
   $('psArt').innerHTML    = T.art;               /* 125 — 패스 아트는 화폐 아이콘 이미지 문자열이다 */
   $('psw').classList.toggle('att', passTab === 'att');   /* 탭별 히어로 아트·칸 x 를 CSS 로 가른다 */
+  /* 302 — 받을 칸이 있을 때만 [일괄 받기] 노출 + 라벨에 개수(266 도감 [일괄 강화] 관례) */
+  const rdy302 = passReadyCnt();
+  $('psw').classList.toggle('upall', rdy302 > 0);
+  $('psAll').querySelector('b').textContent = '일괄 받기' + (rdy302 ? ' ' + rdy302 : '');
   $('psBuy').style.display = prem ? 'none' : '';
-  document.querySelectorAll('#psBar .pt').forEach(b => b.classList.toggle('on', b.dataset.ptab === passTab));
+  document.querySelectorAll('#psBar .pt').forEach(b => {
+    b.classList.toggle('on', b.dataset.ptab === passTab);
+    /* 301 — 탭마다 «받을 보상 있음» 레드닷 (준비 중 탭은 PASS_TABS 에 없어 항상 꺼짐) */
+    b.classList.toggle('alert', passReadyTab(b.dataset.ptab));
+  });
   passBarLayout();
   /* 선두 라벨 알약이 있으면(36) 행 전체가 한 칸 내려가고 R1 은 라벨 전용이 된다(측정표 36 §6·§11).
      라벨 행만 226.5 다(pitch 가 아니다). 레퍼런스의 첫 구분홈은 ref 1017 근처이고, pitch 를 그대로 쓰면
@@ -28114,10 +28207,11 @@ function renderPass(){
     let bx = '';
     for(let c = 0; c < T.cols; c++){
       const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !prem;
+      const ready = op && !got && !lock;                  /* 301 — 지금 받을 수 있는 칸 */
       const rim = PASS_GRADE[r.g][0], fill = PASS_GRADE[r.g][1];
       /* 수령완료도 «등급색 × 0.5» 라 색을 여기서 계속 인라인으로 준다 —
          .ps-bx.dn 은 색을 안 잡고 아이콘·수량 회색화만 한다(그래서 «인라인 > 클래스» 충돌이 없다) */
-      bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + '" data-pt="' + i + ':' + c + '"'
+      bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + (ready ? ' alert' : '') + '" data-pt="' + i + ':' + c + '"'
           + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
           /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00A» 로 줄여 버린다(3회차 비평 C-10,
              LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
@@ -28127,7 +28221,8 @@ function renderPass(){
              (8회차: «13,500,000» 10자가 .ln2 로도 147~154px 이라 칸을 넘어 M·N 이 같이 지적했다) */
           + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 10 ? 'ln3' : (won(r.n).length >= 8 ? 'ln2' : (won(r.n).length >= 6 ? 'ln1' : '')))
           + '"><em>' + won(r.n) + '</em></b>'
-          + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : '')) + '</div>';
+          + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : ''))
+          + (ready ? '<s class="updot"></s>' : '') + '</div>';        /* 301 — 우상단 레드닷(299 규약) */
     }
     h += '<div class="ps-r" style="top:' + (off + i * PASS_RH).toFixed(2) + 'px">'
        + '<div class="ps-cf"></div><div class="ps-cp"></div>'
@@ -28177,6 +28272,8 @@ $('psTk').addEventListener('click', e => {
 });
 /* 206 — «준비 중» 안내라 토스트다 */
 $('psBuy').onclick = () => notify('💳 프리미엄 패스 — 결제 연동 준비 중입니다');
+/* 302 — [일괄 받기]. 재화 비행 출발점을 버튼으로 지정만 하면 fxWatch 가 알아서 쏜다(22 qAll 관례) */
+$('psAll').onclick = () => { fxAt($('psAll')); passClaimAll(); };
 
 /* 작업 35 가 «▦ 메뉴 placeholder» 안에 두었던 임시 패스 진입점(`#psGo`)은 여기서 정식 메뉴 항목으로 옮겼다.
    (35 주석의 인계 지시 + LESSONS 57-① — 신규 화면이 구버전을 대체하면 구버전 경로는 그때 지운다)
