@@ -112,7 +112,7 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   console.log('§2 상수 정합');
   const K = await page.evaluate(() => ({
     MIN: LD.MIN, RUN: LD.RUN, GRACE: LD.GRACE, FADE: LD.FADE, X0: LD.X0, SC: LD.SC,
-    RUNMS: LD.RUNMS, IDMS: LD.IDMS, RTAIL: LD.RTAIL, ARC: LD.ARC,
+    RUNMS: LD.RUNMS, IDMS: LD.IDMS, RTAIL: LD.RTAIL, ARC: LD.ARC, P0: LD.P0, PH: LD.PH,
     CRZ: LD.CRZ, CRZD: LD.CRZD, FOOT: LD.FOOT, AIR: LD.AIR, STEP: LD.STEP,
     runFrames: ATLAS.knight.a.run.length,
     trans: Math.round(parseFloat(getComputedStyle(document.getElementById('loading')).transitionDuration) * 1000),
@@ -137,8 +137,19 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     '★ 달리기 프레임을 **이동 거리**로 뽑는다(시간 기준이면 감속 구간이 트레드밀이 된다)');
   /* ★ 8회차 — 단, **체공만은 시간**이다(고정 LD_AIRMS). 감속 구간에서 도약이 늘어지지 않게 하는 예외이고,
      τ 가 1 을 넘으면 다음 접지 프레임으로 넘긴다. 아치에는 아트의 들림(LD_LIFT)을 상쇄해 발 높이를 잇는다. */
-  ok(/tau = \(t - ldTimeAt\(seg\)\) \/ LD_AIRMS;/.test(SRC) && /if \(tau >= 1\)/.test(SRC),
+  /* ★ 9회차 — 두 이름이 바뀌었다: 캡은 `ldAirMs()`(압축 경로에서 같이 줄어야 한다) · 칸 시작은
+     `ldSegStart(d, i)`(시작 위상 LD_PH 를 태운 자리). 단언은 지우지 않고 **이사**시킨다. */
+  ok(/tau = \(t - ldTimeAt\(seg\)\) \/ ldAirMs\(\);/.test(SRC) && /if \(tau >= 1\)/.test(SRC)
+      && /var seg = ldSegStart\(d, fr\.i\);/.test(SRC),
     '체공은 고정 시간이고, 그 시간이 끝나면 접지 프레임으로 넘어간다');
+  /* ★ 9회차 — 스쿼시는 «도착» 이 아니라 **«실제 착지»** 에 붙는다(8회차 비평 M·N 공통 1순위, 인과 75.2ms).
+     `t - ldRun` 으로 되돌리면 여기가 빨개진다. */
+  ok(/var tLand = ldLandAt\(\);/.test(SRC) && /var k = t < tLand \? 0 : Math\.max\(0, 1 - \(t - tLand\) \/ LD_SQ\);/.test(SRC),
+    '★ 착지 스쿼시가 «도착» 이 아니라 «마지막 체공이 끝나는 시각» 에 걸린다');
+  /* ★ 9회차 — 스쿼시 배율이 정수 픽셀 격자로 스냅된다(M «가로 12.60/세로 11.40» · N «45행 중 27행이 11px»). */
+  ok(/Math\.round\(LD_SC \* \(1 \+ LD_SQA \* k\)\) \/ LD_SC/.test(SRC)
+      && /Math\.round\(LD_SC \* \(1 - LD_SQA \* k\)\) \/ LD_SC/.test(SRC),
+    '★ 스쿼시 배율이 정수 픽셀 격자에 스냅된다 = 스쿼시 중에도 소스 1px 이 한 정수 폭으로 그려진다');
   ok(/arc = LD_LIFT\[fr\.i\] \* LD_SC;/.test(SRC),
     '아치가 아트의 «이미 들린 양»(LD_LIFT)을 상쇄한다 = 도약 진입·이탈에서 발 높이 연속');
   ok(/if \(LD_AIRF\[fr\.i\] && p < 1\)/.test(SRC),
@@ -175,12 +186,45 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      167.6ms(등장의 26%) 를 평평하게 미끄러진 뒤 아무 낙하 없이 스쿼시만 터진다» 로 짚었다.
      이동 거리를 **체공 칸이 끝나는 누적 지점**에 맞추면 «마지막 발이 닿는 순간 = 도착» 이 된다.
      되돌려서 거리를 아무 값으로 바꾸면 여기서 빨개진다. */
+  /* ★ 9회차 — **시작 위상(LD_PH)을 태워서 잰다.** 케이던스가 f0 이 아니라 f2 에서 출발하므로
+     «도착이 체공 칸 끝인가» 는 이동 거리만으로는 판정할 수 없다 — 프레임 표에서의 자리는 `이동 + 위상` 이다.
+     (8회차까지는 위상이 0 이라 둘이 같았다. 같은 값을 우연히 맞히고 있던 자다.) */
   const ends = tab.airf.map((a, i) => (a ? tab.cum[i] + tab.steps[i] : -1)).filter(v => v >= 0);
-  const trav = Math.abs(K.X0) % tab.cyc;
+  const trav = (Math.abs(K.X0) + K.PH) % tab.cyc;
   const near = ends.concat([0, tab.cyc]).map(v => Math.abs(trav - v));
   ok(Math.min.apply(null, near) <= 3,
-    `등장 이동(${Math.abs(K.X0)}px)이 **체공 칸이 끝나는 지점**에서 멈춘다 = 착지가 마지막 발디딤이다 (주기 나머지 ${trav.toFixed(1)} · 체공 끝 ${ends.map(v => v.toFixed(1)).join('/')})`);
-  ok(Math.abs(K.X0) / tab.cyc >= 1.4, `등장이 최소 1.4주기를 돈다 = 다리가 세 걸음 이상 (${(Math.abs(K.X0) / tab.cyc).toFixed(2)}주기)`);
+    `등장 이동(${Math.abs(K.X0).toFixed(1)}px)이 **체공 칸이 끝나는 지점**에서 멈춘다 = 착지가 마지막 발디딤이다 (위상 ${K.PH.toFixed(1)} · 주기 나머지 ${trav.toFixed(1)} · 체공 끝 ${ends.map(v => v.toFixed(1)).join('/')})`);
+  /* ★ 9회차 — «몇 주기» 가 아니라 **«몇 걸음»** 으로 잰다. 옛 «≥1.4주기» 는 위상이 0 일 때만
+     걸음 수의 대리값이었고, 시작 위상을 옮기면 같은 걸음 수에도 주기 수가 준다(1.22주기 = 접지 7걸음).
+     지키려던 것은 «다리가 세 걸음 이상 도는가» 이므로 접지 칸을 직접 센다. */
+  let walk = 0, cur = K.PH;
+  while (cur < K.PH + Math.abs(K.X0) - 1e-6) {
+    let c = cur % tab.cyc, i = 0;
+    while (i < tab.steps.length - 1 && c >= tab.cum[i + 1]) i++;
+    if (!tab.airf[i]) walk++;
+    cur = Math.floor(cur / tab.cyc) * tab.cyc + tab.cum[i] + tab.steps[i];
+  }
+  ok(walk >= 4, `등장에 접지 걸음이 네 번 이상 있다 = 다리가 세 걸음 이상 돈다 (${walk}걸음 · ${(Math.abs(K.X0) / tab.cyc).toFixed(2)}주기)`);
+  /* ★ 9회차 신설 — **빈 무대**. 세 라운드 연속으로 두 비평가가 «등장 앞 21~22%가 완전 공백» 을 짚었다
+     (7회차 K 140.0ms · L 141ms · 8회차 M 134ms · N 138ms, 표본1·2 의 배경 차분이 정확히 0).
+     프레임 밖에서 소모하는 거리 = |X0| − «t=0 에 그려지는 프레임의 박스 우변» 이고,
+     그 거리를 가는 시간이 등장의 10% 를 넘으면 안 된다. 시작 위상을 f0 으로 되돌리면 여기가 먼저 빨개진다. */
+  /* ⚠ 이 저장소가 두 번 밟은 함정이다 — `display:none` 인 채로 `offsetLeft/offsetWidth` 를 읽으면 0 이 나와
+     박스 우변이 858 대신 264 로 잡힌다(2회차의 «잉크 우변 −18 이 통과» 와 같은 사고). 보이게 해 놓고 잰다.
+     시간도 `LD.timeAt` 을 안 쓴다 — 그건 `ldRun`(부팅 시 압축됨) 기준이라 실행마다 흔들린다. 곡선에서 직접 푼다. */
+  const emptyMs = await page.evaluate(() => {
+    const el = document.getElementById('loading'), cv = document.getElementById('ldHero');
+    const had = el.className; el.classList.remove('off', 'out');
+    const A = ATLAS.knight, i = LD.frameAt(0).i, fr = A.f[A.a.run[i]], f0 = A.f[A.a.idle[0]];
+    const c0 = f0[6] / 2 - f0[4] - f0[2] / 2;
+    const boxR = cv.offsetLeft + cv.offsetWidth / 2 + (-fr[6] / 2 + fr[4] + c0) * LD.SC + fr[2] * LD.SC;
+    el.className = had;
+    return { boxR, i, off: Math.max(0, Math.abs(LD.X0) - boxR) };
+  });
+  /* 프레임 밖 거리 → 시간(등속 구간의 해석해. 빈 무대는 언제나 등속 구간 안이다) */
+  const emptyT = K.RUN * K.CRZ * ((emptyMs.off / Math.abs(K.X0)) / K.CRZD);
+  ok(emptyT <= K.RUN * .10,
+    `등장 앞의 «빈 무대» 가 등장의 10% 이하다 (${emptyT.toFixed(0)}ms / ${K.RUN}ms = ${(emptyT / K.RUN * 100).toFixed(1)}% · t=0 프레임 f${emptyMs.i} 박스 우변 ${Math.round(emptyMs.boxR)} · 프레임 밖 ${emptyMs.off.toFixed(0)}px)`);
   /* 등속 구간에서의 케이던스(파생값)가 스프라이트 요구와 맞는지도 같이 본다 */
   const cruise = Math.abs(K.X0) * K.CRZD / (K.RUN * K.CRZ);
   const need = K.STEP / cruise;
@@ -288,11 +332,17 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   /* ★ 폭만으로는 부족하다 — 4회차 비평 H 가 «어두운 코어가 180px = 발 스팬의 45% 라 발이 딛는
      자리 100%가 밝은 테 위» 라고 실측했다. 그래디언트의 **어두운 구간 반경**을 직접 재서
      발 스팬(≈396px)을 덮는지 본다. */
+  /* ★ 9회차 — 한 정지점(«알파 .55»)을 이름으로 찾던 것을 **«충분히 어두운 마지막 정지점»** 으로 바꿨다.
+     8회차 비평 M·N 의 «밝은 테가 코어를 이긴다» 를 고치느라 사다리를 .94/.92/.72/.34 네 칸으로 다시 깔았고,
+     그러자 `.55` 라는 **철자**가 사라져 이 단언이 «코어 0px» 로 헛불렸다 — 제품이 아니라 자가 못 따라온 것이다.
+     지키려던 것은 «어두운 구간의 반경이 발 스팬을 덮는가» 이므로, 알파 ≥ .5 인 마지막 정지점을 찾는다. */
   const core = await page.evaluate(() => {
     const s = getComputedStyle(document.getElementById('ldSh')).backgroundImage;
-    const m = /rgba\(2, ?3, ?8, ?0?\.55\) (\d+)%/.exec(s);
+    const re = /rgba\(2, ?3, ?8, ?(0?\.\d+|1)\)[^,)]*? (\d+(?:\.\d+)?)%/g;
+    let m, pct = null;
+    while ((m = re.exec(s))) if (parseFloat(m[1]) >= .5) pct = parseFloat(m[2]);
     const w = parseFloat(getComputedStyle(document.getElementById('ldSh')).width);
-    return { pct: m ? +m[1] : null, w };
+    return { pct, w };
   });
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
@@ -381,7 +431,10 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     for (let i = 0; i <= N; i++) out.push(LD.at(LD.RUN * i / N));
     return { out, X0: LD.X0, RUN: LD.RUN, CRZ: LD.CRZ };
   });
-  eq('t=0 은 시작 오프셋', curve.out[0], curve.X0);
+  /* ★ 9회차 — LD_X0 이 표에서 파생되면서 정수가 아니게 됐다(−933.36 = 1.5주기 − 시작 위상).
+     `ldAt` 은 DOM 에 넣을 값이라 `Math.round` 하므로 ±0.5px 은 반올림이지 어긋남이 아니다. */
+  ok(Math.abs(curve.out[0] - curve.X0) <= .5,
+    `t=0 은 시작 오프셋 (${curve.out[0]} · 기대 ${curve.X0.toFixed(2)} — 반올림 ±0.5 허용)`);
   eq('t=RUN 은 중앙(0)', curve.out[curve.out.length - 1], 0);
   ok(curve.out.every((v, i) => i === 0 || v >= curve.out[i - 1]), '오른쪽으로만 간다(되돌아가지 않는다)');
   const dd = curve.out.slice(1).map((v, i) => v - curve.out[i]);
