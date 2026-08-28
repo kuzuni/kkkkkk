@@ -62,14 +62,27 @@ const HARNESS = () => {
     scan(rgb) {
       const g = cvs.getContext('2d');
       const d = g.getImageData(0, 0, cvs.width, cvs.height).data;
-      let n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9;
+      let n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
       for (let i = 0; i < d.length; i += 4) {
         if (d[i] === rgb[0] && d[i + 1] === rgb[1] && d[i + 2] === rgb[2] && d[i + 3] === 255) {
           const p = (i / 4) | 0, x = p % cvs.width, y = (p / cvs.width) | 0;
-          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y;
+          n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
         }
       }
-      return n ? { n, x0: x0 / 2, x1: x1 / 2, y0: y0 / 2 } : { n: 0 };
+      return n ? { n, x0: x0 / 2, x1: x1 / 2, y0: y0 / 2, y1: y1 / 2 } : { n: 0 };
+    },
+    /* 372 — 그 적의 바가 **가려지지 않았다면** 나와야 할 «정확한 색» 픽셀 수의 상·하한.
+       불투명 단색 fillRect 하나이므로 개수는 «온전히 덮인 칸»(lo) 이상, «걸친 칸 전부»(hi) 이하다.
+       무엇이 바 위에 올라오면 lo 아래로, 다른 데서 같은 색이 새면 hi 위로 나간다.
+       그리기와 **같은 식**을 쓴다(index.html HP바 블록) — 상수를 새로 만들지 않는다. */
+    band(e) {
+      const w = Math.max(22, e.r * 2.2), h = 4, by = e.y - e.r * 3.1 - 6;
+      const bx = fxClampX(e.x, w / 2, by) - w / 2;
+      const X0 = (bx + camOx) * 2, Y0 = (by + camOy) * 2;
+      const X1 = X0 + w * clamp(e.hp / e.max, 0, 1) * 2, Y1 = Y0 + h * 2;
+      const cols = Math.max(0, Math.floor(X1) - Math.ceil(X0)), rows = Math.max(0, Math.floor(Y1) - Math.ceil(Y0));
+      const colsH = Math.max(0, Math.ceil(X1) - Math.floor(X0)), rowsH = Math.max(0, Math.ceil(Y1) - Math.floor(Y0));
+      return { lo: cols * rows, hi: colsH * rowsH };
     },
   };
   return { VW, VH };
@@ -100,17 +113,28 @@ const OUT = [
   ['위', [0.5, 0, 0, -200]],
   ['아래', [0.5, 0, 1, 200]],
 ];
+/* 372 — «화면 안» 표본의 세로 자리. 화면 세로 한복판(VH/2)은 **플레이어가 서 있는 자리**다:
+   카메라가 플레이어를 화면 중앙에 붙들어 두므로 그 행의 바는 플레이어 스프라이트 **밑에 깔린다**.
+   `probe372` [8] — 다른 것을 한 톨도 안 건드리고 `player.at`(달리기 애니 위상)만 0~7 로 흔들면
+   같은 자리의 «정확한 색» 개수가 **308 · 288 · 84 · 54** 로 갈린다. 페이지를 새로 열 때마다
+   부팅 1200ms 동안 달린 위상이 달라지므로 [R-b]«사본과 현재가 픽셀까지 같다» 가 간헐적으로 빨갰다
+   (등재문이 본 227·277·301·308 이 같은 축이다).
+   ⚠ 자리를 **위로** 뗀다. 아래로 떼면 368 이 잡은 비네트(캔버스 중심에서 VH*0.34 ≈ 339px)
+   밖으로 나가 «정확한 색» 이 0개가 되고, 130(상단 HUD 클립선) 위로 올라가도 안 된다.
+   −260 은 그 사이(바 상변 게임px 180.3 · 중심에서 260 < 339)에서 플레이어 몸통을 완전히 벗어나는 자리다. */
+const IN_DY = -260;
 const IN = [
-  ['중앙', [0.5, 0, 0.5, 0]],
+  ['중앙', [0.5, 0, 0.5, IN_DY]],
   ['우끝', [1, -30, 0.5, 0]],
   ['반쯤 걸침(좌)', [0, 6, 0.5, 0]],
 ];
 
-/* «그 자리에 놓고 바 픽셀을 센다» 를 한 번의 evaluate 로 — 왕복 사이에 상태가 흔들리지 않게 */
+/* «그 자리에 놓고 바 픽셀을 센다» 를 한 번의 evaluate 로 — 왕복 사이에 상태가 흔들리지 않게.
+   372 — 같은 프레임에서 «가려지지 않았다면 나와야 할 개수»(band)도 같이 돌려준다. */
 const shotAt = (ev, spec, tk, rgb, hpR) => ev(([p, tk2, rgb2, hp2]) => {
   const T = window.__t348, e = T.mk(tk2, hp2);
   T.put(e, VW * p[0] + p[1], VH * p[2] + p[3]);
-  return T.scan(rgb2);
+  return Object.assign(T.scan(rgb2), T.band(e));
 }, [spec, tk, rgb, hpR]);
 
 /* 368 — «좌측 사이드 아이콘 열» 표본은 상수가 아니라 **제품에게 물어서** 만든다.
@@ -211,6 +235,25 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
     is(!p.__err && p.n > 0, '[3-a] ' + nm + ' — 바 픽셀 ' + (p.__err ? '평가 실패' : p.n) + (p.n ? ' (x ' + p.x0.toFixed(1) + '..' + p.x1.toFixed(1) + ')' : ''));
   }
   {
+    /* 372 — «중앙» 표본이 다시 플레이어 위로 돌아가면 이 항이 먼저 빨개진다.
+       다른 것은 한 톨도 안 건드리고 달리기 애니 위상만 흔든다 — 자리가 깨끗하면 개수가 안 변한다.
+       (수리 전 자리 VH/2 에서는 308 · 288 · 84 · 54 로 갈렸다 — `probe372` [8]) */
+    const r = await cur.ev(([rgb, dy]) => {
+      const T = window.__t348, e = T.mk('zombie'), out = [];
+      T.put(e, VW / 2, VH / 2 + dy);
+      const a0 = player.at;
+      for (const at of [0, 1, 2, 3, 4, 5, 6, 7]) { player.at = at; draw(); out.push(T.scan(rgb).n); }
+      player.at = a0; draw();
+      return out;
+    }, [PINK, IN_DY]);
+    if (r.__err) no('[3-e] 평가 실패 — ' + r.__err);
+    else {
+      const u = Array.from(new Set(r));
+      is(u.length === 1 && u[0] > 0, '[3-e] 중앙 표본은 플레이어 애니 위상 8종에서 같은 개수 — ' +
+        u.length + '가지 ' + JSON.stringify(u) + ' (2가지 이상이면 표본이 플레이어 밑에 깔린 것이다)');
+    }
+  }
+  {
     /* 13회차 규약 — 좌측 끝 적의 바는 사이드 아이콘 열 **밖(오른쪽)** 으로 밀려 있어야 한다.
        368 — 그 «자리» 는 sideBox 에서 만든다(위 shotBand 주석). */
     const p = await shotBand(cur.ev, 30, 'mid', 0, 'zombie', PINK);
@@ -238,16 +281,16 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
   /* ═══ §4 복귀·왕복 ═══════════════════════════════════════════════════════════ */
   console.log('\n[4] 복귀 — 같은 적을 밖 → 안 → 밖 으로 옮긴다');
   {
-    const r = await cur.ev(([rgb]) => {
+    const r = await cur.ev(([rgb, dy]) => {
       const T = window.__t348, e = T.mk('zombie');
       const at = (sx, sy) => { T.put(e, sx, sy); return T.scan(rgb).n; };
       return {
         out1: at(VW + 300, VH / 2),
-        in1: at(VW / 2, VH / 2),
+        in1: at(VW / 2, VH / 2 + dy),          /* 372 — 플레이어가 서 있는 행을 피한다 */
         out2: at(-300, VH / 2),
-        in2: at(VW / 2, VH / 2),
+        in2: at(VW / 2, VH / 2 + dy),
       };
-    }, [PINK]);
+    }, [PINK, IN_DY]);
     if (r.__err) no('[4] 평가 실패 — ' + r.__err);
     else {
       is(r.out1 === 0 && r.out2 === 0, '[4-a] 밖에 있는 두 프레임 = 0 · 0 (실제 ' + r.out1 + ' · ' + r.out2 + ')');
@@ -259,9 +302,9 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
   /* ═══ §5 카메라 축 ═══════════════════════════════════════════════════════════ */
   console.log('\n[5] 카메라 축 — 적은 그대로 두고 카메라만 밀어도 사라지는가');
   {
-    const r = await cur.ev(([rgb]) => {
+    const r = await cur.ev(([rgb, dy]) => {
       const T = window.__t348, e = T.mk('zombie');
-      T.put(e, VW / 2, VH / 2);
+      T.put(e, VW / 2, VH / 2 + dy);           /* 372 — 플레이어가 서 있는 행을 피한다 */
       const before = T.scan(rgb).n;
       const wx = e.x, wy = e.y, cx0 = cam.x;
       cam.x = cam.x + VW * 3;                    /* 적은 한 px 도 안 움직인다 */
@@ -269,7 +312,7 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
       const moved = T.scan(rgb).n, same = (e.x === wx && e.y === wy);
       cam.x = cx0; draw();
       return { before, moved, back: T.scan(rgb).n, same };
-    }, [PINK]);
+    }, [PINK, IN_DY]);
     if (r.__err) no('[5] 평가 실패 — ' + r.__err);
     else {
       is(r.same === true, '[5-a] 적의 월드 좌표는 한 px 도 안 움직였다');
@@ -304,8 +347,20 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
       }
       is(drawn > 0, '[R-a] 사본(수리 전) — 화면 밖 ' + seen + '자리 중 ' + drawn + '자리에서 바가 그려진다 (0이면 이 게이트는 헛초록이다)');
       const p = await shotAt(rev.ev, IN[0][1], 'zombie', PINK);
-      is(!p.__err && p.n > 0 && inCur['중앙'] && p.n === inCur['중앙'].n,
-        '[R-b] 사본과 현재 — 화면 안 중앙의 바는 픽셀까지 같다 (' + (p.n || 0) + ' = ' + ((inCur['중앙'] || {}).n || 0) + ') = 레이아웃 Δ0');
+      const c = inCur['중앙'] || {};
+      /* 372 ① — 두 페이지를 비교하기 **전에**, 그 자리가 무엇에도 안 가려졌는지부터 묻는다.
+         개수는 불투명 fillRect 하나의 면적이므로 «온전히 덮인 칸» 이상 «걸친 칸» 이하여야 한다.
+         가려지면 lo 아래, 다른 데서 같은 색이 새면 hi 위로 나간다. */
+      for (const [nm, q] of [['현재', c], ['사본', p]]) {
+        is(!q.__err && q.n >= q.lo && q.n <= q.hi,
+          '[전제 R-b] ' + nm + ' — 중앙 표본의 바 픽셀 ' + (q.n || 0) + ' 이 기하 기대 ' +
+          (q.lo || 0) + '..' + (q.hi || 0) + ' 안이다 (밖이면 무언가가 바를 덮고 있다)');
+      }
+      is(!p.__err && p.n > 0 && c.n === p.n &&
+         p.x0 === c.x0 && p.x1 === c.x1 && p.y0 === c.y0 && p.y1 === c.y1,
+        '[R-b] 사본과 현재 — 화면 안 중앙의 바는 픽셀까지 같다 (' + (p.n || 0) + ' = ' + (c.n || 0) +
+        ' · x ' + (p.x0 === undefined ? '—' : p.x0.toFixed(1) + '..' + p.x1.toFixed(1)) +
+        ' · y ' + (p.y0 === undefined ? '—' : p.y0.toFixed(1) + '..' + p.y1.toFixed(1)) + ') = 레이아웃 Δ0');
       is(rev.errs.length === 0, '[R-c] 사본 콘솔/페이지 오류 ' + rev.errs.length + '건');
     }
     await rev.page.close();
