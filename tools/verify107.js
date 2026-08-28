@@ -239,8 +239,26 @@ async function openSheet(pg, expr) {
         fail('[I]ⓐ 손 뗀 뒤 ' + last[0] + 'ms 동안 95 관성이 안 멎었다 (dsFling 종료 조건 회귀)');
       else ok('[I]ⓐ 95 관성이 ' + settleT + 'ms 에 멎었다 (감시창 ' + I_WATCH + 'ms)');
 
-      /* ⓑ 드래그가 먹혔다 — 95 회귀(0px) 방지. 관성이 멎은 시점 값으로 본다 */
-      const rest = tr.filter(r => r[0] >= settleT);
+      /* ⓑ·ⓒ 의 기준점 — «관성이 **멎은 것을 본** 첫 프레임» 이다. 관성의 마지막 프레임이 아니다.
+         ⚠ 2026-08-28 (작업 303) — 236 은 여기를 `tr.filter(r => r[0] >= settleT)` 로 잡아
+         **dsGlide 가 1 로 적힌 마지막 프레임**을 기준으로 삼았다. 그 프레임의 scrollTop 은
+         관성의 **마지막 한 걸음을 아직 안 밟은** 값이다 — 제품의 `step` 이 그 걸음을 밟으면서
+         같은 프레임에 `dsGlide = 0` 을 놓기 때문이다(기록기는 그 다음에야 0 을 본다).
+         그 한 걸음이 «멎은 뒤 움직였다» 로 잡힌다. 걸음 크기는 `sp*dt` 이고 종료 조건이
+         «감쇠 후 |sp| < DS_VMIN(0.02)» 이라 **프레임 간격에 정비례**한다:
+             dt 16.7ms → 0.02/0.95      × 16.7 = 0.35px   (문턱 0.5 아래 → 초록)
+             dt 34ms   → 0.02/0.95^2.04 × 34   = 0.76px   (문턱 0.5 위   → 빨강)
+         = 러너가 붐빌 때만 빨개지는 간헐 FAIL 이었다(게이트 45개 일괄 실행에서 드러났다).
+         236 의 전제(«관성 마지막 프레임에는 최종 값이 적혀 있다»)는 한가한 기계에서 그 걸음이
+         정수 픽셀로 0 으로 반올림되던 덕분에만 참이었다 — 옛 900ms 상수와 같은 종류의 우연이다.
+         문턱(0.5px)이나 «한 프레임 더 기다리기» 같은 상수를 만지지 않는다(LESSONS 288-①) —
+         **자를 대는 자리**를 한 프레임 옮긴다. `glideEndIdx + 1` 은 rAF 안에서 기록기와 제품 중
+         누가 먼저 돌든 «step 이 끝난 뒤» 임이 보장되는 첫 프레임이라 순서에 기대지 않는다. */
+      const rest = tr.slice(glideEndIdx + 1);
+      const watch = rest.length ? last[0] - rest[0][0] : 0;
+      if (!rest.length) fail('[I] 관성이 멎은 뒤 프레임이 0개다 — 감시창(' + I_WATCH + 'ms)이 모자라다(측정 불가)');
+      else {
+      /* ⓑ 드래그가 먹혔다 — 95 회귀(0px) 방지. 관성이 멎은 뒤 첫 값으로 본다 */
       const settled = Math.round(rest[0][1]);
       if (settled <= 0) fail('[I]ⓑ 마우스 드래그로 스크롤이 아예 안 됐다(scrollTop ' + settled + ') — 95 회귀');
       else ok('[I]ⓑ 마우스 드래그로 ' + settled + 'px 스크롤됐다');
@@ -248,12 +266,12 @@ async function openSheet(pg, expr) {
       /* ⓒ 멎은 뒤로는 **한 프레임도** 안 움직인다 — 옛 물음(«3초 뒤에도 그대로») 그대로,
              다만 끝점 한 번이 아니라 그 사이 전 프레임을 본다 */
       const moved = rest.filter(r => Math.abs(r[1] - rest[0][1]) > 0.5);
-      const watch = last[0] - settleT;
       if (settled > 0 && moved.length === 0)
         ok('[I]ⓒ 멎은 뒤 ' + watch + 'ms · ' + rest.length + '프레임 동안 ' + settled + ' 유지 (되돌아가지 않음)');
       else if (settled > 0)
         fail('[I]ⓒ 멎은 뒤 ' + moved.length + '프레임이 움직였다 — ' + settled + ' → ' +
              Math.round(moved[moved.length - 1][1]) + ' (t=' + moved[0][0] + 'ms 부터, 주인이 보고한 증상)');
+      }
 
       /* ⓓ 손 뗀 순간부터 **뒤로(위로) 간 프레임 0** — 주인이 보고한 문장 그대로다.
              ⓒ 는 «멎은 뒤» 만 보므로, 관성 중에 0 으로 튀었다가 돌아오는 튐은 여기서만 잡힌다 */
