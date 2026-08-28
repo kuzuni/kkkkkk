@@ -21,6 +21,9 @@
  *       특히 골드는 옛 🪙/💰/🥇 3종이 섞여 있던 자리다.
  *   [F] 유출 — 스윕 중 화면 텍스트에 `<img` 0건(= 이미지 태그를 textContent 로 박은 자리 없음) ·
  *       화면 텍스트에 화폐 이모지 0건 · NaN/undefined 0건.
+ *       F2 는 **글리프를 담은 노드**로 판정한다(작업 373) — A1 이 소스에서 «아트 자리» 를 구조로 면제하듯
+ *       런타임에서도 아트 자리 노드(`ART_NODE`)만 면제하고, 그 면제가 죽지 않았는지를 F2b 가 A3 처럼 본다.
+ *       §R6~§R8 이 «글리프까지 · 그 자리에만» 을 되돌림 시험으로 못박는다.
  *   [G] 58 연출 — 재화 비행 파티클이 이모지가 아니라 CUR_ICON 이미지다(fxFly 직후 `.fx-fly>img.cic`).
  *   [H] 입장권 — 던전 계열 5종(골드·다이아·유물·강화석·룬강화석)만 쓰인다. 던전 카드 권종이 계열과 일치.
  *   [I] 콘솔 에러 0건.
@@ -38,6 +41,25 @@ const CUR_EMOJI = ['\u{1FA99}', '\u{1F4B0}', '\u{1F947}', '\u{1F48E}', '\u{1F4A0
 /* 화면 텍스트에 남으면 무조건 실패인 «순수 화폐» 글리프 — 나머지(💎🔮💠🥇)는 등급·계급·탭 아이콘으로도
    쓰이므로 런타임 텍스트로는 못 가른다(그쪽은 [A] 소스 스캔이 줄 단위로 잡는다. LESSONS 111-①). */
 const PURE = ['\u{1FA99}', '\u{1F4B0}', '\u{1F39F}', '\u{1F3AB}'];
+/* ── 작업 373: F2 의 «아트 자리» 면제 — A1 과 같은 판정을 **런타임 층에서** 한다 ─────────
+   373 이전의 F2 는 «화면 텍스트 한 덩어리»(`body.innerText`)에 PURE 글리프가 있으면 무조건
+   빨갛게 봤다. 그런데 같은 파일의 A1 은 그중 🎫 한 자리(▦ 메뉴 «패스» 칸 `data-mn="pass"`)를
+   **아트 자리로 이미 면제**하고 있었다 — 한 게이트가 같은 글리프를 반대로 말하던 자리다.
+   F2 가 그동안 초록이었던 것은 판정이 일치해서가 아니라 **스윕이 ▦ 메뉴를 한 번도 안 열어서**다
+   (`probe373` [1]·[2]: 메뉴를 열면 `i.mn-i` 가 **94.8×48.35 로 보이는 채** 🎫 를 흘린다).
+   ⇒ 스윕에 ▦ 메뉴를 넣어 F2 가 그 화면을 **실제로 보게** 하고(아래 steps), 판정은
+   «글리프 목록» 이 아니라 **글리프를 담은 노드**로 옮긴다.
+   ⚠ **PURE 를 좁히지 않았다.** 등재문 처방 ⓐ(«🎟🎫 를 목록에서 뺀다»)는 `probe373` [5] 로 기각된다 —
+      「던전 입장권을 이모지로 되돌린 화면」을 좁힌 목록은 **0건**으로 놓치고 아래 판정식은 잡는다.
+   ⚠ 제품(🎫 글리프)은 **0줄**이다. ▦ 메뉴 7칸은 전부 같은 부품(`i.mn-i`)의 이모지 아트 자리이고
+      (`probe373` [3]), measure/52 §6-3 «아트 필요» 표가 그 7칸을 통째로 아트 대기로 등재해 뒀다.
+      패스 칸만 전용 아트로 바꾸면 형제 6칸과 규격이 갈린다(등재문 ⓑ 의 제품 절반을 이 근거로 기각).
+   면제는 **셋이 모두 맞을 때만** 듣는다 — ① 그 자리(선택자) ② 그 글리프 ③ 노드 텍스트가 그 글리프 하나뿐.
+   §R6·§R7 되돌림 시험이 ①②를, F2b(죽은 항목)가 «항목이 조용히 죽는 것» 을 못박는다. */
+const ART_NODE = [
+  { sel: '#mnw .mn-b[data-mn="pass"] > i.mn-i', g: '\u{1F3AB}',
+    why: '52 ▦ 메뉴 «패스» 칸 아이콘 — A1 이 data-mn="pass" 로 이미 면제한 아트 자리(measure/52 §6-3)' },
+];
 /* 화폐 아이콘 목록 — **상수 목록이 아니라 `CUR_ICON` 블록의 전수 결과다**(작업 289).
    194(7→9종)·203(9→11종)·210(11→**12종**, `tstone` 단련석) 처럼 재화가 늘 때마다 여기 손으로 적은
    목록이 뒤처져 C2 가 «11종이 디코드된다» 를 12종 앞에서 빨갛게 만들었다 — 세 번째 부패였다.
@@ -336,12 +358,53 @@ function scanEmoji(bare) {
      dec.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · ')
      + (sameSet ? '' : ' | 집합 불일치: 소스 ' + ICONS.length + ' vs 런타임 ' + decFiles.length));
 
-  /* ---- [E][F] 전 화면 스윕 ---- */
-  const sweep = await page.evaluate(async (PURE) => {
+  /* ---- [E][F] 전 화면 스윕 ----
+     F2 판정 본체를 **페이지에 한 번만 심는다**(작업 373) — 스윕과 §R6~§R8 되돌림 시험이 **같은 함수**를
+     부르게 하기 위해서다. 시험이 자기 사본을 들면 «게이트는 무른데 시험만 초록» 이 된다(334 교훈). */
+  await page.evaluate(([PURE, ART]) => {
+    window.__f2scan = () => {
+      /* 재는 대상은 373 이전과 같다 — **화면 텍스트**(`body.innerText`). 달라진 것은 «있으면 빨강» 이
+         아니라 그 글리프를 담은 **보이는 호스트 노드**를 찾아 아트 자리인지 가르는 것뿐이다. */
+      const t = document.body.innerText || '';
+      const found = PURE.filter(e => t.indexOf(e) >= 0);
+      const leaks = [], art = [], seen = [];
+      if (!found.length) return { leaks, art };
+      const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        const v = n.nodeValue || '';
+        const gs = PURE.filter(e => v.indexOf(e) >= 0);
+        if (!gs.length) continue;
+        const el = n.parentElement; if (!el) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;                 /* 닫힌 오버레이(0×0)는 «화면 텍스트» 가 아니다 */
+        const st = getComputedStyle(el);
+        if (st.visibility === 'hidden' || +st.opacity === 0) continue;
+        const desc = el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+          + (el.className ? '.' + String(el.className).trim().split(/\s+/).join('.') : '')
+          + '[' + Math.round(r.width) + '×' + Math.round(r.height) + ']';
+        for (const g of gs) {
+          seen.push(g);
+          const k = ART.findIndex(a => {
+            try { return el.matches(a.sel) && a.g === g && v.trim() === g; } catch (e) { return false; }
+          });
+          if (k >= 0) art.push({ k, g, desc }); else leaks.push({ g, desc, txt: v.trim().slice(0, 40) });
+        }
+      }
+      /* innerText 에는 있는데 «보이는 호스트» 를 못 찾은 글리프 = 분류 불가 → 유출로 센다.
+         (무르게 풀지 않는다 — 판정식이 못 읽는 자리는 면제가 아니라 실패다) */
+      for (const g of found) if (seen.indexOf(g) < 0) leaks.push({ g, desc: '(호스트 미상)', txt: '' });
+      return { leaks, art };
+    };
+  }, [PURE, ART_NODE]);
+
+  const sweep = await page.evaluate(async (ART_N) => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
+    /* ⚠ 작업 373 — `closeMenu` 가 여기 있어야 한다. ▦ 메뉴는 스윕 단계로 들어왔는데 닫는 손이 없으면
+       그 뒤 19화면이 메뉴를 얹은 채 찍히고, 🎫 가 화면마다 새어 판정이 통째로 흐려진다. */
     const shut = () => ['closeShopPage','closeDungeon','closeDunDetail','closeRelw','closeMail','closeQuest',
       'closeAttend','closePass','closeBag','closeCurInfo','closeColl21','closeRank','closeBless','closeProfile',
-      'closeTrain','closeModal'].forEach(f => { try { window[f] && window[f](); } catch (e) {} });
+      'closeTrain','closeMenu','closeModal'].forEach(f => { try { window[f] && window[f](); } catch (e) {} });
     const steps = [
       ['메인', () => shut()],
       ['영웅', () => goTab('hero')],
@@ -363,8 +426,12 @@ function scanEmoji(bare) {
       ['랭킹', () => openRank()],
       ['축복', () => openBless()],
       ['프로필', () => openProfile()],
+      /* 작업 373 — 20화면 어디도 ▦ 메뉴를 열지 않아 F2 가 «판정이 일치해서» 가 아니라
+         «그 화면을 본 적이 없어서» 초록이었다(`probe373` [1]). 이제 실제로 본다. */
+      ['▦ 메뉴', () => openMenu()],
     ];
     const srcs = {}, leaks = [], emo = [], nan = [], err = [];
+    const artUse = ART_N.map(() => 0);        /* 아트 자리 면제 항목별 적중 수 — F2b 가 읽는다 */
     for (const [name, fn] of steps) {
       shut();
       try { fn(); } catch (e) { err.push(name + ': ' + e.message); continue; }
@@ -376,13 +443,16 @@ function scanEmoji(bare) {
       });
       const t = document.body.innerText || '';
       if (/<?img\s+class="cic"|cur-[a-z-]+\.svg/.test(t)) leaks.push(name);   /* '<' 가 떨어진 이스케이프본까지 */
-      for (const e of PURE) if (t.indexOf(e) >= 0) emo.push(name + ':' + e);
+      const f2 = window.__f2scan();
+      f2.leaks.forEach(l => emo.push(name + ':' + l.g + '@' + l.desc + (l.txt ? ' «' + l.txt + '»' : '')));
+      f2.art.forEach(a => { artUse[a.k]++; });
       if (/\bNaN\b|\bundefined\b/.test(t)) nan.push(name);
     }
-    return { srcs, leaks, emo, nan, err };
-  }, PURE);
+    return { srcs, leaks, emo, nan, err, artUse, n: steps.length };
+  }, ART_NODE);
 
-  ok(sweep.err.length === 0, 'E0 스윕 20개 화면이 전부 열렸다', sweep.err.join(' | ') || '20/20');
+  ok(sweep.err.length === 0, 'E0 스윕 ' + sweep.n + '개 화면이 전부 열렸다',
+     sweep.err.join(' | ') || sweep.n + '/' + sweep.n);
   const multi = Object.entries(sweep.srcs).filter(([, v]) => Object.keys(v).length !== 1);
   ok(multi.length === 0, 'E1 재화마다 아이콘 이미지가 정확히 1종',
      multi.length ? multi.map(([k, v]) => k + '→' + Object.keys(v).join('/')).join(' | ')
@@ -395,9 +465,53 @@ function scanEmoji(bare) {
      'E4 유물조각은 cur-relic.svg 하나', Object.keys(sweep.srcs.relic || {}).join(','));
   ok(sweep.leaks.length === 0, 'F1 화면 텍스트에 아이콘 마크업 0건(textContent 유출 없음)',
      sweep.leaks.join(',') || '0건');
-  ok(sweep.emo.length === 0, 'F2 화면 텍스트에 «순수 화폐» 이모지(🪙💰🎟️🎫) 0건',
-     sweep.emo.slice(0, 6).join(',') || '0건');
+  ok(sweep.emo.length === 0, 'F2 화면 텍스트에 «순수 화폐» 이모지(🪙💰🎟️🎫) 0건 — 아트 자리 노드만 면제(373)',
+     sweep.emo.slice(0, 6).join(',') || '0건 (아트 자리 면제 '
+       + sweep.artUse.reduce((a, b) => a + b, 0) + '건)');
+  /* F2b — A3 과 같은 자다(작업 373). 면제 항목이 **아무것도 안 잡는 채 굳는 것**을 막는다:
+     제품에서 그 자리가 사라지거나 선택자가 어긋나면 여기가 먼저 빨개진다. 스윕이 ▦ 메뉴를
+     실제로 열게 됐으므로 이 항목은 «적중 0» 이면 곧 «스윕이 그 화면을 다시 안 본다» 는 뜻이다. */
+  const artDead = ART_NODE.filter((a, k) => sweep.artUse[k] === 0);
+  ok(artDead.length === 0, 'F2b 아트 자리 면제에 죽은 항목 0건(스윕이 그 화면을 실제로 본다)',
+     artDead.length ? artDead.map(a => a.sel).join(' | ')
+                    : ART_NODE.map((a, k) => a.sel + ' ×' + sweep.artUse[k]).join(' · '));
   ok(sweep.nan.length === 0, 'F3 화면 텍스트에 NaN/undefined 0건', sweep.nan.join(',') || '0건');
+
+  /* ---- §R6~§R8 — F2 면제의 되돌림 시험(작업 373) ----
+     A1 의 §R1~§R5 와 같은 뜻이다: «이 면제가 무엇을 **여전히** 잡는가» 를 짝으로 못박지 않으면
+     목록이 자라다가 어느 날 아무것도 안 잡는 초록이 된다. 소스는 안 고치고 **DOM 위 변조본**을
+     스윕이 쓴 **같은 `window.__f2scan()`** 에 먹인다(334 교훈). 시험 뒤 원복까지가 한 벌이다. */
+  const RT = await page.evaluate(() => {
+    ['closeShopPage','closeDungeon','closeDunDetail','closeRelw','closeMail','closeQuest','closeAttend',
+     'closePass','closeBag','closeCurInfo','closeColl21','closeRank','closeBless','closeProfile','closeTrain',
+     'closeModal'].forEach(f => { try { window[f] && window[f](); } catch (e) {} });
+    openMenu();
+    const i = document.querySelector('#mnw .mn-b[data-mn="pass"] > i.mn-i');
+    const l = document.querySelector('#mnw .mn-b[data-mn="pass"] > i.mn-l');
+    if (!i || !l) return { miss: true };
+    const oi = i.textContent, ol = l.textContent;
+    i.textContent = '\u{1FA99}';                     /* R6 — 자리는 그대로, 글리프만 진짜 화폐로 */
+    const r6 = window.__f2scan();
+    i.textContent = oi;
+    l.textContent = '\u{1F3AB}';                     /* R7 — 글리프는 그대로, 자리만 라벨 칸으로 */
+    const r7 = window.__f2scan();
+    l.textContent = ol;
+    const r8 = window.__f2scan();                    /* R8 — 원복하면 초록 */
+    closeMenu();
+    return { miss: false,
+             r6: r6.leaks.map(x => x.g + '@' + x.desc), r6a: r6.art.length,
+             r7: r7.leaks.map(x => x.g + '@' + x.desc), r7a: r7.art.length,
+             r8: r8.leaks.length, r8a: r8.art.length };
+  });
+  ok(!RT.miss && RT.r6.length === 1 && RT.r6a === 0,
+     '§R6 면제는 글리프까지 못 박는다(패스 칸을 🪙 로 바꾸면 F2 빨강)',
+     RT.miss ? '패스 칸 없음' : (RT.r6.join(',') || '0건 = 초록(무름)'));
+  ok(!RT.miss && RT.r7.length === 1,
+     '§R7 면제는 그 자리에만 듣는다(같은 🎫 라도 라벨 칸에 있으면 빨강)',
+     RT.miss ? '패스 칸 없음' : (RT.r7.join(',') || '0건 = 초록(무름)'));
+  ok(!RT.miss && RT.r8 === 0 && RT.r8a === 1,
+     '§R8 원복하면 초록(시험이 «항상 빨강» 이 아니다)',
+     RT.miss ? '패스 칸 없음' : '유출 ' + RT.r8 + '건 · 면제 ' + RT.r8a + '건');
 
   /* ---- [G] 58 파티클 ---- */
   const G = await page.evaluate(async () => {
