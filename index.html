@@ -9485,6 +9485,15 @@
      자리는 JS 가 실제로 무는 훅(`data-*`)에 건다 — 클래스에 걸면 마크업이 바뀔 때 조용히 새어
      나간다(64 교훈 1 의 자매 함정). */
   #trw .tr-card,#trw [data-runebuy],#trw [data-tempup],#trw [data-tpchg]{touch-action:none}
+  /* 354 — 349 가 «다른 화면이라 범위 밖» 으로 뒀던 나머지 두 홀드 호스트. 규칙·근거는 위와 같고
+     `tools/probe354.js` 로 **같은 축에서 같은 값**이 나오는 것을 먼저 재현했다(338 규칙):
+     ±0/±6/±14px → #mLv 11~13회 · #rwBasin 3~8회 인데 **±30px 에서 둘 다 1회 · pointercancel 1**,
+     같은 한 줄을 주입하면 둘 다 도로 산다. 조상 사슬에 스크롤 영역이 없는 것도 두 자리 모두
+     게이트가 직접 잰다(`verify354` [B] — 넘침이 아니라 «스크롤 가능성» 을 묻는다).
+     자리는 349 와 같은 규약으로 **JS 가 실제로 무는 훅**에 건다 — `bindUpHold` 는 `$('mLv')` 를
+     물고(08 스킬·08 아이템·50 코스튬 세부 팝업이 같은 id 를 쓴다), `rwHold` 는 `$('rwBasin')` 이다.
+     ⚠ #relw 쪽은 `pointerleave` 도 정지 사유로 걸려 있다(89) — 그 축은 그대로 둔다. */
+  #modal #mLv,#relw #rwBasin{touch-action:none}
   .tr-rn>.rbt.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
   .tr-rn>.rbt .cic{vertical-align:-4px;margin-right:6px}
