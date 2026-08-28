@@ -109,6 +109,19 @@ const consist = (tag, s) => {
           const br = b.getBoundingClientRect(), R = 7.5;
           return Math.max(0, Math.min(dr.right + R, br.right) - Math.max(dr.left - R, br.left)) > 0
               && Math.max(0, Math.min(dr.bottom + R, br.bottom) - Math.max(dr.top - R, br.top)) > 0;
+        })(),
+        /* ⚠ 정지 rect 만 재면 모자란다 — 60 쥬시가 이 닷에 `jzDotIn`(0→**1.3**→1)과
+           `jzDotPulse`(2초마다 1.14)를 영구히 건다(11032행). 283 이 `.sk-card` 자리를 고를 때
+           «등장 1.3 배율에서도» 를 따진 것과 같은 검사다.
+           닷은 **원**이므로 상자 겹침이 아니라 «중심 → 라벨 잉크 상자의 가장 가까운 점» 거리를
+           반지름(21 = 닷 13.5 + 링 7.5)의 1.3배와 견준다. */
+        clear13: (() => {
+          const b = h.querySelector('b'); if (!b) return 999;
+          const br = b.getBoundingClientRect();
+          const cx = dr.left + dr.width / 2, cy = dr.top + dr.height / 2;
+          const nx = Math.max(br.left, Math.min(cx, br.right));
+          const ny = Math.max(br.top, Math.min(cy, br.bottom));
+          return Math.hypot(cx - nx, cy - ny) - (dr.width / 2 + 7.5) * 1.3;
         })() });
     });
     /* .qs-pn 은 overflow-y:auto 라 가로도 클립된다 — 링 우단이 콘텐츠 안인지 */
@@ -125,6 +138,8 @@ const consist = (tag, s) => {
      [...new Set(geo.out.map(g => g.w + 'x' + g.h))].join(','));
   ok(geo.out.every(g => !g.hitLabel), '[C] 링이 라벨 `<b>` 상자를 안 밟는다',
      geo.out.filter(g => g.hitLabel).map(g => g.host).join(',') || '겹침 0');
+  ok(geo.out.every(g => g.clear13 > 0), '[C] jzDotIn 봉우리(scale 1.3)에서도 라벨 잉크와 안 닿는다',
+     '최소 여유 ' + Math.min(...geo.out.map(g => Math.round(g.clear13 * 100) / 100)) + 'px');
   ok(geo.clipped === 0, '[C] .qs-pn 가로 클립에 안 걸린다', geo.clipped + '개 잘림');
 
   /* ── [D] 한 행 수령 → 지연 재렌더 «전» 에 그 행만 즉시 소등 ─────────────── */
