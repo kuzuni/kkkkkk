@@ -111,10 +111,18 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : 
     slope = Math.max(slope, Math.abs(R[i].sx - R[i - 1].sx) / (R[i].t - R[i - 1].t));
   }
   console.log(`     착지 보정 ${corrLand.toFixed(1)}px → 도착 직전 ${corrBefore.toFixed(1)}px → 도착 ${corrAfter.toFixed(1)}px · 최대 기울기 ${slope.toFixed(2)}px/ms`);
-  ok(Math.abs(corrLand) > 100 && Math.abs(corrBefore) <= 3 && Math.abs(corrAfter) <= 0.6,
-    `★ 정착 구간이 경사로다 (${corrLand.toFixed(1)} → ${corrBefore.toFixed(1)} → ${corrAfter.toFixed(1)}px · 11회차는 160 → 160 → 0 계단이었다)`);
+  /* ★ 13회차 — **[B4] 를 재기준했다.** 12회차의 «경사로» 는 «도착의 −160px 계단» 을 없애려던 **수단**이고,
+     12회차 비평 U·V 가 그 수단이 만든 결함을 1·2순위로 짚었다(정착에서 그림자와 그려진 발이 150.0 / 158.8px
+     벌어지고, 그림자만 몸의 5.0배 속도로 반대 방향). 13회차는 착지에서 선 자세로 넘겨 목적을 **구조로** 달성한다 —
+     정착 내내 `fo = LD_FOOTC` 라 보정이 **정의상 0** 이다. 그러니 여기서 재야 할 것은 «경사로가 있는가» 가
+     아니라 **«정착 구간 내내 그림자가 그려진 발 위에 있는가»** 다. 경사로를 되살리면 corrLand 가 160 으로
+     돌아와 빨개진다(그때 그림자는 발에서 그만큼 떨어져 있다). */
+  let corrMax = 0;
+  for (const r of R) if (r.t >= LAND && r.t <= RUN) corrMax = Math.max(corrMax, Math.abs(r.sx - r.hx));
+  ok(corrMax <= 1.05 && Math.abs(corrAfter) <= 0.6,
+    `★ 정착 구간 내내 그림자가 그려진 발 위에 있다 (최대 이격 ${corrMax.toFixed(1)}px ≤ 1.05 · 12회차 경사로면 160 → 0 으로 흘러 최대 160px)`);
   ok(slope <= 3.0,
-    `★ 그 경사로가 «몸 등속(1.90px/ms)과 같은 급» 이다 (최대 ${slope.toFixed(2)}px/ms ≤ 3.0 · 계단이면 9.6 이상)`);
+    `★ 그림자가 정착에서 몸보다 빨리 안 움직인다 (최대 ${slope.toFixed(2)}px/ms ≤ 3.0 · 11회차 계단이면 9.6)`);
 
   /* ⓒ 스쿼시 양자화: air=0 인 구간에서 그림자 가로배율 = 스프라이트 가로배율 */
   console.log('\n[C] 스쿼시 양자화 일치 (10회차 결함 = 회복 중 4.0~4.2pp 차)');

@@ -144,7 +144,9 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     '체공은 고정 시간이고, 그 시간이 끝나면 접지 프레임으로 넘어간다');
   /* ★ 9회차 — 스쿼시는 «도착» 이 아니라 **«실제 착지»** 에 붙는다(8회차 비평 M·N 공통 1순위, 인과 75.2ms).
      `t - ldRun` 으로 되돌리면 여기가 빨개진다. */
-  ok(/var tLand = ldLandAt\(\);/.test(SRC) && /var k = t < tLand \? 0 : Math\.max\(0, 1 - \(t - tLand\) \/ LD_SQ\);/.test(SRC),
+  /* ★ 13회차 — 식이 «감쇠» 에서 **«창(window)»** 으로 바뀌었다(12회차 비평 U·V: 선언 길이의 41.7% 가
+     정의상 사문). 지키는 것은 그대로 «착지에 걸린다» 이므로 단언은 이사만 시킨다. */
+  ok(/var tLand = ldLandAt\(\);/.test(SRC) && /var k = \(t >= tLand && t - tLand < LD_SQ\) \? 1 : 0;/.test(SRC),
     '★ 착지 스쿼시가 «도착» 이 아니라 «마지막 체공이 끝나는 시각» 에 걸린다');
   /* ★ 9회차 — 스쿼시 배율이 정수 픽셀 격자로 스냅된다(M «가로 12.60/세로 11.40» · N «45행 중 27행이 11px»). */
   ok(/Math\.round\(LD_SC \* \(1 \+ LD_SQA \* k\)\) \/ LD_SC/.test(SRC)
@@ -375,11 +377,13 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      코드에는 안 걸어서, 정지 자세에서 그림자가 **+160px 항구 어긋남**이 됐다(Q «t=560 → t=1200 내내 +160.0px» ·
      R «t=600·900 에서 +157.5px · 발 스팬 396px 중 112px(28.3%)가 어두운 구간 밖»).
      ★ 그 상태가 첫 접속에서 **화면이 가장 오래 머무는 상태**였고, 표본(t ≤ 500)이 구조적으로 못 보던 자리다. */
-  ok(/var fi = fr\.i, fo = p < 1 \? LD_FEET\[fi\] : LD_FOOTC;/.test(SRC),
-    '★ 접지발 보정이 p < 1 로 갇혀 있다 = 선 자세에서 축이 540 이다 (되돌리면 +160px 좌초)');
+  /* ★ 13회차 — 경계가 «도착(p<1)» 에서 **«착지(t<tLand)»** 로 옮겨졌다. 지키는 것은 11회차와 같다:
+     선 자세를 그리는 동안 보정이 0 이라는 것. 그 «선 자세를 그리는 동안» 이 이번에 앞당겨졌을 뿐이다. */
+  ok(/var fi = fr\.i, fo = t < tLand \? LD_FEET\[fi\] : LD_FOOTC;/.test(SRC),
+    '★ 접지발 보정이 «달리는 동안» 으로 갇혀 있다 = 선 자세에서 축이 540 이다 (되돌리면 +160px 좌초)');
   /* ★ 11회차 ⓑ — 접지 중인 발의 그림자는 월드에 못 박혀 있다. 10회차는 칸 안에서 몸과 함께 끌려갔다가
      칸 경계에서 되돌아왔다(Q «7회 · 최대 −122.5px» · R «한 프레임에 −122.5px = 어두운 폭의 22.8%»). */
-  ok(/if \(p < 1 && !LD_AIRF\[fi\]\) sdx -= fr\.u \* LD_STEPS\[fi\];/.test(SRC),
+  ok(/if \(t < tLand && !LD_AIRF\[fi\]\) sdx -= fr\.u \* LD_STEPS\[fi\];/.test(SRC),
     '★ 접지 칸에서 그림자가 월드 고정이다 (되돌리면 칸 경계마다 −122.5px 역행 7회)');
   /* ★ 11회차 ⓓ — `air` 는 «위로 뜬 만큼» 이다. 절댓값을 쓰면 LD_LIFT 상쇄(+12px) 때문에
      이·착지 **바로 그 프레임**에서 그림자가 3.9% 줄고 9.6% 옅어진다(R 실측 0.968 / 0.920). */
@@ -395,18 +399,36 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      실제로 이 단언이 처음에 그렇게 빨갛게 나왔다. 재야 할 것은 **첫 접속(비압축)** 의 시계다.
      `ldTimeAt`·`ldAirMs` 가 둘 다 `ldRun` 에 **선형**이라 `landAt()` 도 선형이므로, `RUN / ldRun` 로 되돌린다. */
   const sqp = await page.evaluate(() => {
-    const k0 = 0.5 / (LD.SC * LD.SQA);                 /* 정수 격자에서 계단이 서는 k */
+    const k0 = 0.5 / (LD.SC * LD.SQA);                 /* 정수 격자에서 계단이 서는 k(옛 감쇠식의 문턱) */
     const run = LD.runMs ? LD.runMs() : LD.RUN;
     const land = LD.landAt() * (LD.RUN / run);         /* 비압축 시계로 환산한 착지 시각 */
-    return { land: land, run: LD.RUN, off: land + LD.SQ * (1 - k0), k0: k0, comp: run };
+    /* ★ 13회차 — `LD_SQ` 가 **곧 보이는 펄스 길이**다(창 방식). 12회차까지는 «감쇠 길이» 라서
+       `SQ × (1 − k0)` 로 환산해야 했고, 그 환산 계수 41.7% 가 곧 «사문 구간» 이었다. */
+    return { land: land, run: LD.RUN, off: land + LD.SQ, k0: k0, comp: run };
   });
   ok(sqp.run - sqp.off >= 33,
-    `★ 보이는 스쿼시 펄스가 도착에서 2프레임 이상 떨어진다 (펄스 끝 ${sqp.off.toFixed(1)}ms · 도착 ${sqp.run}ms · 여유 ${(sqp.run - sqp.off).toFixed(1)}ms ≥ 33 — LD_SQ=120 으로 되돌리면 −1.7ms)`);
+    `★ 보이는 스쿼시 펄스가 도착에서 2프레임 이상 떨어진다 (펄스 끝 ${sqp.off.toFixed(1)}ms · 도착 ${sqp.run}ms · 여유 ${(sqp.run - sqp.off).toFixed(1)}ms ≥ 33)`);
+  /* ★ 13회차 신설 — **선언 길이 = 보이는 길이.** 옛 감쇠식으로 되돌리면 `SQ` 의 41.7% 가 사문이 되어 빨개진다. */
+  ok(Math.abs((sqp.off - sqp.land) - 35) < .5,
+    `★ 선언한 LD_SQ 가 곧 보이는 펄스다 = 사문 구간 0% (실측 ${(sqp.off - sqp.land).toFixed(1)}ms · 선언 35ms · 옛 식이면 ${(35 * (1 - sqp.k0)).toFixed(1)}ms 만 보인다)`);
   ok(sqp.off > sqp.land + 20,
     `그래도 펄스가 볼 만큼은 길다 (${(sqp.off - sqp.land).toFixed(1)}ms · 착지 ${sqp.land.toFixed(1)}ms)`);
   /* ★ 12회차 — 정착 구간 경사로 · 체공 smoothstep · 핸드오프 직전 도착 확정(11회차 비평 S·T). */
-  ok(/fo = fo \+ \(LD_FOOTC - fo\) \* Math\.min\(1, Math\.max\(0, \(t - tLand\) \/ \(ldRun - tLand\)\)\);/.test(SRC),
-    '★ 정착 구간에서 보정이 «계단» 이 아니라 «경사로» 다 (되돌리면 도착에 −160px 한 방)');
+  /* ★ 13회차 — 이 단언을 **재기준**했다. 12회차의 «경사로» 는 «도착의 −160px 계단» 을 없애려던 수단이었는데,
+     12회차 비평 U·V 가 그 수단이 만든 새 결함을 1·2순위로 짚었다 — 경사로가 그림자를 idle 의 발로 끌고 가는
+     동안 **스프라이트는 아직 f4** 라 정착 68.3ms 에서 그림자와 그려진 접지발이 **150.0px(U) / 158.8px(V)**
+     벌어졌고, 그림자만 몸의 **5.0배 속도로 반대 방향**으로 갔다.
+     ★ 13회차는 목적(«도착에 계단이 없다»)을 **구조로** 달성한다 — 착지에서 선 자세로 넘기면 도착에는 바뀔
+     것이 없다. 그래서 규칙을 «경사로가 있는가»(수단) 에서 **«정착 구간에서 그림자와 그려진 발이 같은 점인가»**
+     (목적) 로 바꾼다. 경사로를 되살리면 그 이격이 다시 벌어져 빨개진다. 12회차가 11회차 단언에 한 것과 같다. */
+  ok(/var frame = t < tLand \? run\[fr\.i % run\.length\]/.test(SRC)
+      && /idle\[Math\.floor\(\(t - tLand\) \/ LD_IDMS\) % idle\.length\]/.test(SRC),
+    '★ 선 자세 전환이 «도착» 이 아니라 «착지» 다 (되돌리면 도착에서 접지발이 −160px 팝)');
+  ok(!/\(LD_FOOTC - fo\) \* Math\.min\(1, Math\.max\(0, \(t - tLand\)/.test(SRC),
+    '★ 정착 경사로가 없다 = 그 구간에서 그림자와 그려진 발이 어긋날 여지가 없다 (되살리면 150px 이격)');
+  ok(/var lastAir = ldSegStart\(d, fi\) \+ LD_STEPS\[fi\] >= Math\.abs\(LD_X0\) - \.5;/.test(SRC)
+      && /var tgt = lastAir \? LD_FOOTC : LD_FEET\[\(fi \+ 1\) % LD_FEET\.length\];/.test(SRC),
+    '★ 마지막 도약이 «선 자세의 발» 을 겨냥한다 (안 하면 착지에서 −160px 계단이 그대로 옮겨온다)');
   ok(/st \* st \* \(3 - 2 \* st\)/.test(SRC),
     '★ 체공 보간이 smoothstep 이다 = 그림자 속도가 사각파가 아니다 (되돌리면 0 ↔ 7.62px/ms)');
   ok(/if \(ldRunAt && now\(\) - ldRunAt >= ldRun && ldTarget\) ldPaint\(ldRun \+ LD_SQ\);/.test(SRC),
