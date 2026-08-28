@@ -275,11 +275,20 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
     claimColl('skill:0');
     const g1 = collSteps(), cat1 = collCatSteps('skill');
     closeColl21();
-    return { none, some, g0, g1, cat1,
-             /* 182 — 코스튬 해금이 «도감 누적 단계» 에서 떨어져 나가 계급 축 하나가 됐다.
-                이 게이트가 여기서 보는 것은 «도감이 코스튬을 더 이상 잠그지 않는다» 뿐이다. */
-             cosRank: cosRankOf('av45'),
-             cosTxt: cosReqText(AVATARS.find(a => a.id === 'av45')) };
+    /* 182 — 코스튬 해금이 «도감 누적 단계» 에서 떨어져 나가 계급 축 하나가 됐다.
+       이 게이트가 여기서 보는 것은 «도감이 코스튬을 더 이상 잠그지 않는다» 뿐이다.
+       317 — 표본을 `av45` 로 **박아 두고** 있었다. 282(승급 1회 = 1개)가 av45 를 지급표 밖으로
+       밀어내 미출시(`cosOff`)로 바꾸자 «계급으로 열린다» 단언이 통째로 빨개졌다 —
+       제품 회귀가 아니라 LESSONS 91-4(«자동 생성 데이터를 상수로 문 게이트는 반드시 깨진다»)의
+       재발이다. 그래서 표본을 `PROMO_COS`·`COS_OFF` 에서 **파생**시킨다. 지급표가 또 바뀌어도
+       이 파일은 안 고친다. */
+    const promoId = (PROMO_COS[1] || [])[0];               /* 승급전이 주는 칸(계급 축으로 열린다) */
+    const offId = Object.keys(COS_OFF)[0];                 /* 어느 승급전도 안 주는 칸 = 미출시 */
+    return { none, some, g0, g1, cat1, promoId, offId,
+             cosRank: cosRankOf(promoId),
+             cosTxt: cosReqText(AV[promoId]),
+             offTxt: cosReqText(AV[offId]),
+             skillSets: COLL_SETS.filter(s => s.cat === 'skill').length };
   });
   ok(!link.none.any && link.none.dot === 0, '아무것도 없으면 레드닷 0');
   ok(link.some.any && link.some.cat && link.some.tab && !link.some.other, 'collAnyReady / collCatReady / collTabReady 판정');
@@ -289,20 +298,33 @@ const settle = p => p.evaluate(() => Promise.all(document.getAnimations()
   /* 182 — 옛 «av45 = 스킬 도감 누적 3단계» 조건은 데이터째 폐기됐다(구매 폐지 → 조건 해금 폐기).
      91 이 여기서 지키는 것은 «도감 진행도가 코스튬 해금과 더 이상 얽혀 있지 않다» 는 사실이다. */
   ok(link.cosRank >= 1 && /승급전 클리어$/.test(link.cosTxt),
-    '182 — 코스튬 해금 조건이 계급 축 하나로 (av45 → 도전 계급 ' + link.cosRank + ' · "' + link.cosTxt + '")');
-  const cos = await p.evaluate(() => {
+    '182 — 코스튬 해금 조건이 계급 축 하나로 (' + link.promoId + ' → 도전 계급 ' + link.cosRank + ' · "' + link.cosTxt + '")');
+  /* 317 — 옛 표본 av45 는 282 로 **미출시** 칸이 됐다. 단언을 지우지 않고 «미출시 칸은 도감으로도
+     계급으로도 안 열린다» 로 이관한다 — 91 이 지키려는 «도감이 코스튬을 안 잠근다» 는 이쪽에서 더 세게 성립한다. */
+  ok(/추후 공개/.test(link.offTxt),
+    '282 — 미출시 칸(' + link.offId + ')은 계급 조건이 없다 ("' + link.offTxt + '")');
+  const cos = await p.evaluate(id => {
     const keep = Object.assign({}, S.avatars), kr = S.rank;
-    delete S.avatars.av45;
+    const off = Object.keys(COS_OFF)[0];
+    delete S.avatars[id]; delete S.avatars[off];
+    /* 도감 스킬 탭을 **끝까지** 채운다 — 해금 축에 도감이 남아 있으면 여기서 열려야 한다 */
     S.coll = {}; COLL_SETS.filter(s => s.cat === 'skill').forEach(s => S.coll[s.key] = 1);
     S.rank = 0;
-    const byColl = cosReqOk(AVATARS.find(a => a.id === 'av45'));   /* 도감을 채워도 안 열린다 */
-    S.rank = cosRankOf('av45');
-    const byRank = cosReqOk(AVATARS.find(a => a.id === 'av45'));   /* 계급으로만 열린다 */
+    const byColl = cosReqOk(AV[id]);            /* 도감을 채워도 안 열린다 */
+    const offByColl = cosReqOk(AV[off]);        /* 미출시 칸도 도감으로는 안 열린다 */
+    S.rank = cosRankOf(id);
+    const byRank = cosReqOk(AV[id]);            /* 계급으로만 열린다 */
+    S.rank = RANKS.length - 1;
+    const offByRank = cosReqOk(AV[off]);        /* 미출시 칸은 최고 계급에서도 안 열린다 */
     S.avatars = keep; S.rank = kr; markDirty();
-    return { steps: collCatSteps('skill'), byColl, byRank };
-  });
-  ok(cos.steps === 6, '스킬 세트 6개 × 1단계 = 누적 6단계 (실측 ' + cos.steps + ')');
-  ok(!cos.byColl && cos.byRank, '182 — 도감 6단계로는 av45 가 안 열리고, 계급으로만 열린다');
+    return { steps: collCatSteps('skill'), byColl, byRank, offByColl, offByRank };
+  }, link.promoId);
+  ok(cos.steps === link.skillSets,
+    '스킬 세트 ' + link.skillSets + '개 × 1단계 = 누적 ' + link.skillSets + '단계 (실측 ' + cos.steps + ')');
+  ok(!cos.byColl && cos.byRank,
+    '182 — 도감 ' + cos.steps + '단계로는 ' + link.promoId + ' 가 안 열리고, 계급으로만 열린다');
+  ok(!cos.offByColl && !cos.offByRank,
+    '282 — 미출시 칸(' + link.offId + ')은 도감으로도 최고 계급으로도 안 열린다');
 
   ok(errs.length === 0, '콘솔/페이지 에러 0건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
