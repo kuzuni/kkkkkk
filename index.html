@@ -9461,6 +9461,23 @@
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
   .tr-rn>.rbt.b1{right:534px}
   .tr-rn>.rbt.b2{right:44px}
+  /* ── 349 — «꾹 누르기» 버튼은 브라우저에 제스처를 뺏기면 안 된다 ────────────────────────
+     실기기 보고(«꾹 눌러도 연속이 안 된다»)의 **둘째 원인**이다. `tools/probe349.js`·§드리프트
+     실측: 손가락이 버튼 «안» 에서 ±30px 만 굴러도 크로미움이 그 터치를 스크롤 제스처로 채가
+     **`pointercancel`** 을 쏘고, 64·297 홀드는 그것을 «손 뗌» 으로 읽어 1회에서 멎는다
+     (1.5초 홀드: ±0/±6/±14px → 9~12회 · **±30px → 1회**). 1080폭 프레임에서 30px 는 실기기
+     1.9mm — 1.5초를 누르는 손가락은 반드시 그만큼 구른다.
+     ⚠ `pointercancel` 을 무시하는 처방은 틀렸다 — 진짜 취소(시스템 제스처·전화)까지 삼킨다.
+     제스처를 **애초에 안 뺏기게** 하는 것이 맞다.
+     ⚠ 스크롤을 죽이지 않는가: 이 앱은 **아무 데도 스크롤하지 않는다**(버튼 → BODY 조상 사슬이
+     전부 `overflow:hidden` · `scrollHeight == clientHeight`. #view 는 이미 `touch-action:none`).
+     그래서 이 규칙이 뺏는 것은 «갈 곳 없는 팬» 뿐이다.
+     대상은 `TR_HOLD_*` 상수를 공유하는 #trw 홀드 3형제 — 64 훈련 카드 · 297 룬 [강화] 두 칸 ·
+     297 단련 [투자]/[전환]. (#modal 의 262 `bindUpHold` · #relw 의 89 `rwHold` 는 같은 결함을
+     갖지만 다른 화면이라 별도 등재 — PROGRESS 352.)
+     자리는 JS 가 실제로 무는 훅(`data-*`)에 건다 — 클래스에 걸면 마크업이 바뀔 때 조용히 새어
+     나간다(64 교훈 1 의 자매 함정). */
+  #trw .tr-card,#trw [data-runebuy],#trw [data-tempup],#trw [data-tpchg]{touch-action:none}
   .tr-rn>.rbt.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
   .tr-rn>.rbt .cic{vertical-align:-4px;margin-right:6px}
@@ -28635,12 +28652,15 @@ addEventListener('pointermove', e => {
      `liveRunes`/`liveTemper` 로 «숫자만» 고쳐 쓰고, 손을 뗀 «뒤» 한 번만 통짜로 그린다.
    ⚠ 토스트도 반복분은 죽인다 — 60ms 로 쌓으면 화면이 잠기고 `#fxl` 이 FXMAX 로 막힌다(58).
      정산은 손을 뗀 뒤 **요약 한 줄**이 맡는다(«n회 시도 · 성공 m회»).
-   ⓓ **다이아 결제(룬 50 다이아/1회)는 홀드에서 뺀다** — 등재문이 «주인 확인» 으로 남긴 항목이고
-     주인 지시문은 «룬 강화 버튼» 이라 재료 시도 기준으로 읽었다. 프리미엄 재화가 초당 16회
-     빠지는 것은 되돌릴 수 없다. 주인이 원하면 아래 한 줄(`RUNE_HOLD_DIA`)만 true 로 바꾼다 —
-     그러면 다이아 칸도 같은 홀드를 탄다(경로는 이미 pay 를 그대로 받는다).
+   ⓓ **다이아 결제(룬 50 다이아/1회)** — 297 은 «프리미엄 재화가 초당 16회 빠지는 것은 되돌릴 수
+     없다» 를 이유로 홀드에서 빼고 `RUNE_HOLD_DIA` 한 줄을 **주인 확인 대기**로 남겼다.
+     작업 **349**(2026-08-29 주인 보고 «룬 강화버튼 꾹 누르면 연속으로 강화 되게 해야되는데
+     안되있더라»)가 그 확인이다 — `tools/probe349.js` 로 네 조합(마우스·터치·떨림·게임 루프 ON)을
+     전부 굴려 보니 **재료칸은 어느 조합에서도 10~12회 돌고 있었고, 안 도는 버튼은 다이아칸
+     하나뿐**이었다. 주인이 «안 된다» 고 본 버튼은 이것이다. ⇒ **true**(등재문 처방 «재료·다이아
+     버튼 모두»). 경로는 297 이 이미 pay 를 그대로 받게 짜 두어 스위치 한 줄로 끝난다.
    -------------------------------------------------------------------------- */
-const RUNE_HOLD_DIA = false;            /* ⓓ 주인 확인 대기 — true 로 바꾸면 다이아 칸도 홀드 */
+const RUNE_HOLD_DIA = true;             /* 349 — 주인 확인 완료(2026-08-29). 다이아 칸도 홀드 */
 let rtHold = null;                      /* {tag, sel, once, live, end, n, iv, timer} */
 function rtHoldOn(tag){ return !!(rtHold && rtHold.tag === tag); }
 const rtEl = sel => document.querySelector(sel);
@@ -28746,7 +28766,7 @@ function rtChargeHold(){
 $('trw').addEventListener('pointerdown', e => {
   const rb = e.target.closest('[data-runebuy]');
   if(rb){
-    /* ⓓ 다이아 칸은 홀드 제외 — 1회만 사고 끝낸다(경로는 기존 runeBuy 그대로) */
+    /* ⓓ 349 로 `RUNE_HOLD_DIA` 가 true 가 됐다 — 이 분기는 스위치를 되돌릴 때만 도는 자리다 */
     if(rb.dataset.pay === 'dia' && !RUNE_HOLD_DIA){ runeBuy(rb.dataset.runebuy, 'dia'); return; }
     rtRuneHold(rb.dataset.runebuy, rb.dataset.pay); return;
   }
