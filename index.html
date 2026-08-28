@@ -1039,7 +1039,19 @@
      font-size 하나로는 bbox 를 못 맞춘다(A2 가 같은 함정을 밟았다). 24종 평균 잉크가
      fs 66.5 에서 68.6×72.2 로 **폭은 맞고 높이만 −15%** 였다 → fs 를 78.3 으로 올려 높이를 85 로
      맞추고, 그때 같이 커진 폭(80.8)을 scaleX 로 68 에 되돌린다. 실측기 `node tools/inkA4.js` */
-  .slot2 .si3{display:block;font-size:78.3px;line-height:87.6px;text-align:center;width:100%;
+  /* 357 (2026-08-29, 저장소 주인 보고 «메인 스킬 아이콘이 다 오른쪽에 밀려있다») —
+     ⚑ 범인은 side bearing 도 `#slots{padding-left}` 도 아니라 **넘치는 줄에는 text-align 이 안 먹는다** 였다.
+     이모지 advance 는 Noto Color Emoji 에서 1.2478em 고정이라 fs 78.3 → **97.7px**,
+     그런데 `width:100%` 상자는 well 폭 **87.63px** 뿐이다. 줄이 상자보다 10.07px 넓으면 크로미움은
+     그 줄을 line-left 에 박는다 — `text-align` 을 left/center/right 로 흔들어도 **세 값이 완전히 같다**
+     (`tools/probe357.js` §D 대조군). 그래서 잉크가 넘침의 절반인 **+5.04px**(scaleX .842 를 지나 화면에서
+     **+4.24px**) 오른쪽으로 밀렸고, 27종 advance 가 전부 같아 **모든 칸이 똑같이** 밀렸다(주인 «다»).
+     ⇒ 상자를 글리프보다 넓게 만들어 넘침 자체를 없앤다 — 좌우 대칭 음수 마진이라 상자 중심은
+     well 중심 그대로고(transform-origin 도 따라서 그대로), 삐져나온 만큼은 `.cdw{overflow:hidden}`
+     원형 클립이 먹는다. **잉크 크기(68×85 정규화)·세로·레이아웃은 한 픽셀도 안 바뀐다.**
+     ⚠ `width:100%` 를 남긴 채 마진만 주면 상자가 «넓어지지 않고 왼쪽으로 20px 밀린다» — `width:auto` 가 짝이다. */
+  .slot2 .si3{display:block;font-size:78.3px;line-height:87.6px;text-align:center;
+    width:auto;margin:0 -20px;
     position:relative;top:-1.5px;transform:scaleX(.842)}
   /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
      활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
