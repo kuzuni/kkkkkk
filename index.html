@@ -19516,7 +19516,13 @@ function step(dt){
         const md = e.r + o.r;
         if(od >= md) continue;
         if(od <= 0.01){ const a2 = (i - j) * 1.7; ox = Math.cos(a2); oy = Math.sin(a2); od = 1; }
-        const push = (md - od) / 2;
+        /* 359 — **돌진 중인 개체는 자기가 통째로 물러난다**(절반이 아니라 전부).
+           257 의 절반씩 밀기는 «걸음»(프레임당 1.8px)을 전제로 한 값이라, 프레임당 6.9px 로
+           파고드는 돌진 앞에서는 한 프레임에 다 못 풀고 잔차가 쌓인다(verify257 [6] ④ 가
+           «97% 아래 12프레임 연속» 으로 잡았다 — 이동 중 잔차 허용치는 2프레임이다).
+           돌진하는 쪽이 전부 물러나면 그 프레임 안에 정확히 반지름 합으로 떨어진다.
+           ⚠ 밀리는 쪽(상대)의 좌표는 여전히 안 건드린다 — 257 의 «미는 것은 자기 자신뿐» 규약 그대로다. */
+        const push = (md - od) * (dashing ? 1 : 0.5);
         e.x = clamp(e.x + ox/od*push, e.r, WORLD.w-e.r);
         e.y = clamp(e.y + oy/od*push, e.r, WORLD.h-e.r);
       }
