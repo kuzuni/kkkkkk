@@ -712,7 +712,8 @@
   /* 작업 71 — 이 배지는 «우편 안 읽음»(구 좌측 📬 레드닷)을 그대로 옮겨 받은 것이라 상태로 켜고 끈다.
      기본은 꺼짐, `sideAlert('mail', …)` 이 #menub 에 `.alert` 를 토글한다.
      아래 `#menub.mnon .bdg{display:none}` 은 «메뉴 열림» 이라 특이성이 같고 뒤에 와서 이긴다(순서 유지할 것). */
-  #menub .bdg{position:absolute;left:71.5px;top:-3.5px;width:30px;height:30px;border-radius:50%;
+  /* 299 — 레드닷 규약: 부모 우상단. 좌표는 그대로(102−71.5−40=−9.5), left → right 로 의미만 맞춘다 */
+  #menub .bdg{position:absolute;right:-9.5px;top:-3.5px;width:30px;height:30px;border-radius:50%;
     background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0;display:none}
   #menub.alert .bdg{display:block}
   /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
@@ -983,7 +984,9 @@
     transform:scaleX(var(--lx,1.097));text-shadow:0 1px 2px rgba(0,0,0,.4)}
   /* 레드닷 — 아트 높이 대비 채움 Ø.378 · 외곽 Ø.512, 아트 우상단 코너에 걸침 */
   /* 측정표 §1-5: 슬롯 우변에서 안쪽 10 → 로컬 중심 x=90, 상단에서 아래 15 → 중심 y=15 */
-  .ibtn .bdg{position:absolute;left:calc(50px + var(--ih,82px)*.232);top:calc(var(--ih,82px)*-.073);
+  /* 299 — 우상단 규약. 같은 자리(50+ih·.232 + 폭 ih·.65 = 우변)를 right 로 다시 적는다:
+     right = 100 − (50 + ih·.232) − ih·.65 = 50 − ih·.882 (ih 82 → −22.3 · 101 → −39.1, 종전과 동일) */
+  .ibtn .bdg{position:absolute;right:calc(50px - var(--ih,82px)*.882);top:calc(var(--ih,82px)*-.073);
     width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
     background:#f22e52;border:calc(var(--ih,82px)*.069) solid #000;font-size:0;display:none}
   .ibtn.on .bdg{display:block}
@@ -4565,7 +4568,8 @@
   .dnc.rd .sp.tk>i{margin-left:71px;letter-spacing:.0976em}
 
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
-  .dnc .dot{left:956px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
+  /* 299 — 우상단 규약. 같은 자리(980−956−27=−3), left → right 로 의미만 맞춘다 */
+  .dnc .dot{right:-3px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
 
   /* 잠금 — 딤 .65 + 흰 자물쇠(106x123, 카드 중앙, y+60) + 조건 문구(y+223) */
@@ -8082,7 +8086,8 @@
      `.alert` 토글(`collTabReady`, ~21060)도 무의미했다. 도감 탭 6칸이 **강화 가능 여부와 무관하게
      상시 빨간점**이었다(주인 지적 «무조건 떠 있는 곳» 의 한 사례 — 훈련 배수 탭과 같은 계열).
      ID 를 붙여 특이성을 맞춘다. 기하값은 9·91회차 실측 그대로이므로 한 줄도 안 건드린다. */
-  .cltab>s.dot,#collw .cltab>s.dot{display:none;left:103px;top:2.5px;width:24px;height:24px;border-radius:50%;
+  /* 299 — 우상단 규약. 같은 자리(147−103−24=20), left → right 로 의미만 맞춘다 */
+  .cltab>s.dot,#collw .cltab>s.dot{display:none;right:20px;top:2.5px;width:24px;height:24px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
   .cltab.alert>s.dot,#collw .cltab.alert>s.dot{display:block}
   /* ==========================================================================
@@ -9927,16 +9932,18 @@
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .alert>.updot{display:block}
   /* 자리는 «이미 있는 것» 을 피해서 잡는다(실측으로 셋 다 부딪혔다):
-     · 07·26 `.sk-card` 우상단은 272 의 해제 뱃지 `.sk-eq`(카드기준 123,10~172,30)가 이미 쓴다 → **좌상단 바깥**.
-       −5 로는 `Lv.n`(`.sk-clv` 18,14~70,46)의 좌상단 모서리를 4x8px 물었다 → **−14**
-       (배지 우변 13 < 18. 맥박 1.14 에서 14.9, 등장 1.3 에서도 17.1 로 안 닿는다.
-        격자 `.sk-gp` 는 카드보다 좌 36 · 상 35 넓어 −14 는 안 잘린다)
-     · 05 `.wgc` 는 **자기 `overflow:hidden`** 이라 바깥에 두면 잘린다 → **안쪽**. 그 안에서도 우상단은
-       `.lv`(right:13 top:9) 자리라 좌상단으로.
+     299(주인 지시 2026-08-28 처리) — **레드닷은 전부 부모 우상단 사분면.** 좌상단이던 두 자리를 옮겼다:
+     · 07·26 `.sk-card`(폭 168) 우상단 코너는 272 의 해제 뱃지 `.sk-eq`(x123~172, y−4~45)가 쓴다 →
+       코너를 못 쓰니 **우상단 사분면 안에서 왼쪽으로 비켜** right:56(닷 x85~112, 외곽 링 ±7.5 → 77.5~119.5)
+       · sk-eq 좌변 123 과 3.5px 여유 · `Lv.n`(`.sk-clv` ~x70) 과는 등장 1.3 배율에서도 x71.2 로 안 닿는다.
+       중심 x98.5 > 84(카드 절반) — 우상단 사분면 충족.
+     · 05 `.wgc`(폭 148, **overflow:hidden** 이라 안쪽) 우상단 코너는 `.lv`(right:13 top:9 h28, 잉크 x≈70~135)
+       자리 → **Lv 아래로 비켜** right:8 top:45(닷 x113~140 · 링 상단 37.5 > lv 하단 37).
+       중심 x126.5 > 74 · y58.5 < 79 — 우상단 사분면 충족.
      · 06 `.eqsl` 은 좌상단 바깥이 부위 뱃지 `.eqbd`(left:704, 슬롯 left 724) 자리 → **우상단 바깥**
      · 버튼 둘은 라벨이 가운데 한 줄이라 안쪽 우상단이 빈다 */
-  .sk-card>.updot{left:-14px;top:-14px}
-  .wgc>.updot{left:5px;top:5px}
+  .sk-card>.updot{right:56px;top:-14px}
+  .wgc>.updot{right:8px;top:45px}
   .eqsl>.updot{right:-7px;top:-7px}
   .sk-btn>.updot,.wm-btn>.updot{right:12px;top:12px}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
