@@ -466,18 +466,42 @@ async function frames(p, tag, stops) {
       return out;
     };
 
+    /* ⚑ 25회차 채점 — **비평가 둘이 독립으로 같은 «판정 불가» 를 냈다**: 「글로우 «바닥 ≥ 피크의
+       55%» 규약은 이 캡처로 못 잰다 — 게이트는 `box-shadow:none` 기준선을 따로 찍어 **초과분**의
+       하한/피크를 내는데, 캡처에는 그 기준선 프레임이 한 장도 없다」(BA 판정불가 1 · BB 판정불가 3).
+       BB 는 «바깥 원경으로 기준선을 추정하는 길» 까지 막혀 있음을 실측으로 보였다 — d≥19 부터
+       가격버튼 자기 보조 링이 섞여 들어와 프로필이 끊긴다(칸1: d18 11.6 → d19 7.5).
+       → 격리 세트마다 **«링 끔» 기준선 1장**(`-base`)을 같이 남긴다. 이 한 장이 있으면 비평가가
+         밴드 평균에서 기준선을 빼 **초과분의 바닥/피크**를 게이트와 같은 방식으로 독립 계산할 수 있다.
+       ⚠ 브리핑에 «`-base` 는 링을 끈 기준선 1장이다 — 연출 없음으로 읽지 마라» 를 반드시 적어라. */
+    const ringBase = async tag => {
+      await p.evaluate(() => {
+        let s = document.getElementById('capRingOff');
+        if (!s) { s = document.createElement('style'); s.id = 'capRingOff'; document.head.appendChild(s); }
+        /* animated 속성을 직접 덮는다(30-2 곁가지 — pause 된 애니는 animation-name 으로 안 꺼진다) */
+        s.textContent = '#shopList .cbtn.b1,#shopList .cbtn.b2,#shopList .cbtn.b3{box-shadow:none!important}';
+      });
+      await p.evaluate(ms => window.__jzSeek(ms), FREE_STOPS[0]);
+      const f = path.join(OUT, '122-' + R + '-' + tag + '-base.png');
+      await p.screenshot({ path: f });
+      await p.evaluate(() => { const s = document.getElementById('capRingOff'); if (s) s.remove(); });
+      console.log('  ' + path.basename(f) + '  (링 끔 — 바닥/피크 계산용 기준선)');
+    };
+
     /* 자리 ① — 리스트 맨 위(칸1 이 여기서만 보인다) */
     await p.evaluate(() => { const lw = document.getElementById('shopList'); if (lw) lw.scrollTop = 0; });
     await p.waitForTimeout(300);
     console.log('[소환 탭 — [무료] 링 «격리» · 리스트 위 (광택 4겹 + gm 글로우 끔 — 제품 화면 아님)]');
     console.log('  70px 밖 변동(0.5 미만이어야 격리): ' + (await isoCheck()).join(' · '));
     await frames(p, 'ringiso', FREE_STOPS);
+    await ringBase('ringiso');
     /* 자리 ② — 리스트 바닥(칸5 가 여기서만 보인다. 칸3·칸4 가 두 자리에 겹쳐 기준칸이 된다) */
     await p.evaluate(() => { const lw = document.getElementById('shopList'); lw.scrollTop = lw.scrollHeight; });
     await p.waitForTimeout(400);
     console.log('[소환 탭 — [무료] 링 «격리» · 리스트 바닥]');
     console.log('  70px 밖 변동(0.5 미만이어야 격리): ' + (await isoCheck()).join(' · '));
     await frames(p, 'ringisob', FREE_STOPS);
+    await ringBase('ringisob');
     await p.evaluate(() => { const s = document.getElementById('capRingIso'); if (s) s.remove(); });
   }
 
