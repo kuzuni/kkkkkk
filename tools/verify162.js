@@ -13,7 +13,10 @@
      §4 클리어   보스를 잡아야 S.stage 가 오른다. 몹 50마리를 잡은 것만으로는 **오르지 않는다**
                  (구 규칙 «웨이브 전멸 = 클리어» 가 죽었다는 증거). 클리어 후 다음 스테이지는 다시 몹 구간.
      §5 실패     시간 초과·사망 → 스테이지 유지 + 파밍(S.bossFarm) + 몹 재충전 + [재도전] 노출.
-                 [재도전]은 50킬을 다시 요구하지 않고 보스를 곧장 세운다. 파밍 중 50킬은 자동 재도전.
+                 [재도전]은 50킬을 다시 요구하지 않고 보스를 곧장 세운다.
+                 ⚠ 273(2026-08-27, 주인 지시)으로 «파밍 중 50킬 = 자동 재도전» 은 **폐기**됐다 —
+                   대기 중에는 파도 보너스만 주고 다음 파도를 채우며, 보스는 [재도전] 으로만 선다.
+                   그 규칙의 게이트는 `tools/verify273.js` 이고, 여기서는 «자동으로 서지 않는다» 만 확인한다.
      §6 회귀     던전·레이드·아레나 진입이 보스 단계를 비운다 · 레이드 샌드백(tk 'boss') 처치가
                  스테이지를 올리지 않는다(28·46·123 구간 불변).
      §7 콘솔 에러 0. */
@@ -196,19 +199,22 @@ const hud = (p) => p.evaluate(() => {
   const death = await p.evaluate(() => {
     failBoss('패배');                                     /* 사망 경로가 부르는 그 함수 */
     const a = { bossOn, farm: S.bossFarm, stage: S.stage };
-    /* 파밍 중 50킬은 자동 재도전으로 이어진다.
+    /* 273 — 대기 중 50킬은 **자동 재도전이 아니다**. 파도 보너스 + 재충전만 돌아야 한다.
        ⚠ 위 §5 시간 초과 루프에서 보스에게 맞아 죽어 있을 수 있다 — 클리어 분기는 `player.dead <= 0`
           게이트를 타므로 여기서 되살려 놓지 않으면 «규칙이 안 돈다» 가 아니라 «사망 중» 을 재는 셈이 된다. */
     player.dead = 0; player.hp = stat.maxHp;
     enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT;
     const goldB = S.gold;
     step(0.016);
-    return { ...a, auto: bossOn, stage2: S.stage, farm2: S.bossFarm, gold: S.gold - goldB };
+    return { ...a, auto: bossOn, stage2: S.stage, farm2: S.bossFarm, gold: S.gold - goldB,
+             killed, mobs: spawnQ.length + enemies.length };
   });
   ok(!death.bossOn && death.farm, '§5 사망 경로도 같은 파밍 전환');
-  ok(death.auto, '§5 파밍 중 50킬 → 자동 재도전');
-  eq('§5 자동 재도전 — 스테이지 유지', death.stage2, 9);
-  ok(!death.farm2, '§5 자동 재도전 — 파밍 해제');
+  ok(!death.auto, '§5 대기 중 50킬 — 보스는 자동으로 서지 않는다 (273 주인 지시)');
+  eq('§5 대기 중 50킬 — 스테이지 유지', death.stage2, 9);
+  ok(death.farm2, '§5 대기 중 50킬 — 대기 상태 유지([재도전]을 눌러야 선다)');
+  eq('§5 대기 중 50킬 — killed 되감김', death.killed, 0);
+  eq('§5 대기 중 50킬 — 다음 파도 재충전', death.mobs, N.mobs);
   ok(death.gold > 0, '§5 파밍 파도 전멸 보너스 골드 유지(28 거동)');
 
   /* ── §6 회귀 — 던전·레이드·아레나 ───────────────────────────── */
