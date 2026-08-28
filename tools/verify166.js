@@ -237,6 +237,108 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   });
   ok('상점 탭 — 무료 소환을 다 쓰면 꺼진다', shop0 === false, String(shop0));
 
+  /* ── [7-b] 294 — 상점 «안» 의 두 자리: 10 소환 탭 배지 · 상자 카드 ────────────────
+     주인 보고(2026-08-27): «광고 보고 무료 소환이 가능한 상황인데 레드닷이 없다».
+     166 은 탭바 «상점» 칸까지만 켰고 상점을 열면 표시가 사라져 **어느 상자인지** 알 수 없었다.
+     판정식은 하나다 — `sumFreeReady(b) = freeLeft(b) > 0`. «광고 보고 뽑기» 와 190 «오늘 무광고
+     1회» 는 같은 재고(`S.daily.freeSum`)를 태우므로 두 경로가 한 조건으로 덮인다.
+     ⚠ 166 규약 음성 시험 — 무료가 0 이면 **다이아를 아무리 많이 줘도** 꺼져 있어야 한다
+        (유료 10·30연은 점등 대상이 아니다. 재화는 방치로 차오르므로 상시 점등이 된다). */
+  /* 프로브는 **페이지 안에** 심는다 — page.evaluate 는 클로저를 못 넘긴다(함수 소스만 직렬화된다) */
+  await ev(() => {
+    window.__p294 = () => {
+      const cards = [...document.querySelectorAll('#shopList .shp-card')];
+      const cat = document.querySelector('#shopCats .stab[data-cat="summon"]');
+      const cb = cat && cat.querySelector('.bdg');
+      return {
+        tab: document.querySelector('.tab[data-t="shop"]').classList.contains('alert'),
+        cat: !!cat && cat.classList.contains('alert'),
+        catVis: !!cb && getComputedStyle(cb).display !== 'none',
+        n: cards.length,
+        lit: cards.filter(c => c.classList.contains('alert')).length,
+        /* 배지 «노드» 가 아니라 실제로 보이는지를 잰다 — `#shopw s{display:inline-block}`(ID 급)이
+           `.updot{display:none}`(클래스 급)을 이기는 함정이 이 화면에 있다(166 ⓔ·202 §3 계열). */
+        vis: cards.filter(c => { const e = c.querySelector('.updot'); return !!e && getComputedStyle(e).display !== 'none'; }).length,
+      };
+    };
+    openShopPage();
+  });
+  await wait(600);
+  const sumOn = await ev(() => {
+    S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 2, o), {});
+    uiDirty = true; renderUI(); renderShopPage();
+    return window.__p294();
+  });
+  ok('294 상자 카드 — 무료 소환이 남으면 상자 수만큼 켜지고 배지가 보인다 (③)',
+    sumOn.n > 0 && sumOn.lit === sumOn.n && sumOn.vis === sumOn.n,
+    '카드 ' + sumOn.n + ' · alert ' + sumOn.lit + ' · 보임 ' + sumOn.vis);
+  ok('294 10 소환 탭 배지 — 무료 소환이 남으면 켜진다 (③)',
+    sumOn.cat === true && sumOn.catVis === true, 'alert ' + sumOn.cat + ' · 보임 ' + sumOn.catVis);
+  ok('294 탭바 «상점» 칸 — 상점을 연 채로도 같은 조건 (166 과 한 벌)', sumOn.tab === true, String(sumOn.tab));
+
+  const sumOff = await ev(() => {
+    S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 0, o), {});
+    S.dia = 1e12;                       /* 음성 시험 — 유료 10·30연은 얼마든지 되지만 점등 대상이 아니다 */
+    uiDirty = true; renderUI(); renderShopPage();
+    return window.__p294();
+  });
+  ok('294 음성 — 무료 0 이면 상자 카드가 전부 꺼진다 (다이아 1e12 여도) (②)',
+    sumOff.n > 0 && sumOff.lit === 0 && sumOff.vis === 0,
+    '카드 ' + sumOff.n + ' · alert ' + sumOff.lit + ' · 보임 ' + sumOff.vis);
+  ok('294 음성 — 무료 0 이면 10 소환 탭 배지도 꺼진다 (②)',
+    sumOff.cat === false && sumOff.catVis === false, 'alert ' + sumOff.cat + ' · 보임 ' + sumOff.catVis);
+  ok('294 음성 — 무료 0 이면 탭바 «상점» 칸도 꺼진다 (②)', sumOff.tab === false, String(sumOff.tab));
+
+  /* «상자별» 인가 — 한 상자만 남기면 그 칸 하나만 켜져야 한다(전부 켜지면 «어느 상자» 를 못 알린다) */
+  const sumOne = await ev(() => {
+    S.daily.freeSum = SHOP_BOXES.reduce((o, x, i) => (o[x.b] = i === 0 ? 1 : 0, o), {});
+    uiDirty = true; renderUI(); renderShopPage();
+    const p = window.__p294();
+    const first = document.querySelector('#shopList .shp-card');
+    p.firstLit = !!first && first.classList.contains('alert');
+    return p;
+  });
+  ok('294 상자별 판정 — 첫 상자만 남기면 그 카드 하나만 켜진다',
+    sumOne.lit === 1 && sumOne.firstLit === true && sumOne.cat === true && sumOne.tab === true,
+    'alert ' + sumOne.lit + ' · 첫칸 ' + sumOne.firstLit + ' · 탭 ' + sumOne.cat);
+
+  /* 호스트 전수 감사 — 조건 클래스를 떼면 꺼지고 붙이면 켜지는가([8] 과 같은 검사, 상점이 열려 있어야 한다) */
+  const audit294 = await ev(() => {
+    const SITES = [
+      { n: '.shp-card>.updot (10 상자 카드)', host: '#shopList .shp-card', bdg: '.updot' },
+      { n: '.stab>.bdg (10 소환 탭)',         host: '#shopCats .stab[data-cat="summon"]', bdg: '.bdg' },
+    ];
+    return SITES.map(s => {
+      const hosts = [...document.querySelectorAll(s.host)].filter(h => h.querySelector(s.bdg));
+      if (!hosts.length) return { n: s.n, missing: true };
+      let offBad = 0, onBad = 0, off = '', on = '';
+      hosts.forEach(h => {
+        const e = h.querySelector(s.bdg), had = h.classList.contains('alert');
+        h.classList.remove('alert');
+        off = getComputedStyle(e).display; if (off !== 'none') offBad++;
+        h.classList.add('alert');
+        on = getComputedStyle(e).display; if (on === 'none') onBad++;
+        if (!had) h.classList.remove('alert');
+      });
+      return { n: s.n, n2: hosts.length, offBad, onBad, off, on };
+    });
+  });
+  audit294.forEach(a => {
+    ok('배지 «' + a.n + '» — 조건 클래스 없으면 꺼짐 / 있으면 켜짐 (호스트 전수)',
+      !a.missing && a.offBad === 0 && a.onBad === 0,
+      a.missing ? '노드 없음'
+        : a.n2 + '개 · 꺼짐 위반 ' + a.offBad + ' · 켜짐 위반 ' + a.onBad + ' (' + a.off + ' → ' + a.on + ')');
+  });
+  /* ⚠ 반드시 닫는다 — 열린 채로 [8] 을 돌리면 탭바 «상점» 칸이 `.tab.close`(✕)로 바뀌고
+     `.tab.close .bdg{display:none}` 이라 `.tab .bdg` 절이 그 칸 하나 때문에 «켜짐 위반 1» 이 된다
+     (202 가 영웅 패널에서 겪은 것과 같은 함정). 상태도 [8] 이 기대하는 «무료 0» 으로 되돌린다. */
+  await ev(() => {
+    closeShopPage();
+    S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 0, o), {});
+    uiDirty = true; renderUI();
+  });
+  await wait(400);
+
   /* ── [8] 레드닷 전수 — «조건 클래스 없이 보이는 배지» 가 한 개도 없어야 한다 ──── */
   /* 새 세이브 + 아무 상태도 안 만든 화면에서, 켜져 있는 배지는 전부 «켤 이유» 를 가져야 한다.
      여기서는 더 강하게 «기본 CSS 가 꺼져 있는가» 를 본다 — 조건 클래스를 떼면 사라져야 한다. */
