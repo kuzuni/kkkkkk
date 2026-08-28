@@ -431,8 +431,23 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     '★ 마지막 도약이 «선 자세의 발» 을 겨냥한다 (안 하면 착지에서 −160px 계단이 그대로 옮겨온다)');
   ok(/st \* st \* \(3 - 2 \* st\)/.test(SRC),
     '★ 체공 보간이 smoothstep 이다 = 그림자 속도가 사각파가 아니다 (되돌리면 0 ↔ 7.62px/ms)');
-  ok(/if \(ldRunAt && now\(\) - ldRunAt >= ldRun && ldTarget\) ldPaint\(ldRun \+ LD_SQ\);/.test(SRC),
+  /* ★ 14회차 — 고정 오프셋(`ldRun + LD_SQ`)을 **실제 경과 시각**으로 바꿨다. 13회차 비평 W 가 그 오프셋의
+     두 결함을 실측했다 — ① `LD_SQ` 겸용이라 스쿼시 길이를 바꾸면 핸드오프 그림이 같이 바뀐다(idle f1 → f0)
+     ② idle 주기(750ms)와 무상관인 고정 시각이라 **실행의 83.3% 에서 위상이 프레임 0 으로 되감긴다**.
+     12회차 ⓓ 가 지키려던 «도착 상태로 넘긴다» 는 13회차 구조에서 조건만으로 보장되므로(t ≥ ldRun > tLand
+     → idle · t−tLand > LD_SQ → 스쿼시 해제 · x=0), 강제하지 않고 그대로 그리는 것이 더 강하다.
+     지키는 것은 그대로 «핸드오프 직전에 한 번 그린다» 이므로 단언은 이사시킨다. */
+  ok(/if \(ldRunAt && now\(\) - ldRunAt >= ldRun && ldTarget\) ldPaint\(now\(\) - ldRunAt\);/.test(SRC),
     '★ 핸드오프 직전에 «도착한 그림» 을 확정한다 (되돌리면 달리기 포즈로 게임에 넘어간다)');
+  /* ★ 14회차 신설 — `LD_SQ` 가 «도착 뒤 시각» 으로 겸용되지 않는다. 겸용으로 되돌리면 스쿼시 길이를 만질 때마다
+     핸드오프 그림이 같이 바뀐다(13회차에 실제로 그랬다 — idle f1 → f0, IoU 0.865). */
+  ok(/var LD_SETTLE = 60;/.test(SRC) && /ldRunAt = now\(\) - ldRun - LD_SETTLE;/.test(SRC)
+      && !/ldRun [-+] LD_SQ/.test(SRC),
+    '★ «스쿼시 길이» 와 «도착 뒤 시각» 이 다른 상수다 (겸용으로 되돌리면 스쿼시를 만질 때 핸드오프가 같이 바뀐다)');
+  /* ★ 14회차 신설 — 선언한 아치가 화면에 그대로 나온다. 13회차 비평 W·X 가 독립 실측: 정점이 −56 이 아니라
+     **−44px**(LD_LIFT 상쇄가 21.4% 를 먹었다) → 그림자 `air` 상한도 0.786 에 묶여 −18%/−45% 가 −14.1%/−35.4% 였다. */
+  ok(/arc -= Math\.round\(\(LD_ARC \+ LD_LIFT\[fr\.i\] \* LD_SC\) \* Math\.sin\(Math\.PI \* Math\.min\(1, tau\)\)\);/.test(SRC),
+    '★ 도약 정점이 선언한 LD_ARC 만큼 뜬다 (되돌리면 56 중 44px 만 쓰이고 air 상한이 0.786 에 묶인다)');
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
 
