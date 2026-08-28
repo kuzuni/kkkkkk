@@ -18436,7 +18436,10 @@ function hitEnemy(e, dmg, crit){
   /* 46 레이드 — 샌드백은 죽지 않는다. 모든 피해 경로가 이 함수 한 곳을 지나므로
      여기서만 누적하면 스킬·평타·장판·투사체가 전부 집계된다. */
   if(e.raid){ raidDmg += dmg; e.hp = e.max; return; }
-  /* 30 던전 런 — 같은 이유로 여기 한 줄이면 평타·스킬·장판·투사체·펫이 전부 집계된다 */
+  /* 30 던전 런 — 같은 이유로 여기 한 줄이면 평타·스킬·장판·투사체·펫이 전부 집계된다.
+     ⚠ 338 이후 이 값은 **화면에 안 나온다**(바 안 수치가 «남은 보스 체력» 이 됐다). 그래도 계속
+     세는 이유는 게이트다 — verify255 [D]·verify331 [E] 가 이 칸을 크게 밀어 놓고 «누적 피해는
+     바를 못 민다» 를 잰다(폐지된 눈금이 되살아나는 회귀를 잡는 자리라 칸이 없으면 못 잰다). */
   if(dunRun) dunRun.dmg += dmg;
   if(e.hp <= 0) killEnemy(e);
 }
@@ -22238,6 +22241,26 @@ function dunRunProg(){
   for(const b of live) left -= (b.max - clamp(b.hp, 0, b.max));
   return clamp(1 - left/tot, 0, 1);          /* 331 — 앞 국면 몫(옛 DUN_BOSS_P 0.30) 없이 0→1 전 구간 */
 }
+/* ⚑ 338 — **화면에 그리는 것은 «진행도» 가 아니라 «보스 체력» 이다.**
+   주인 보고(2026-08-29): «던전 종류에 체력바 부분 ui가 반영이 제대로 안되더라. 보스 죽었는데
+   hp바가 다 깎여있지를 않음». 재현해 보면 바는 **덜 차는 것이 아니라 반대로 가득 차 있었다**
+   (`tools/probe338.js` — 던전 8종·보스 1/2/3마리·동시/페이즈 전 조합에서 격파 프레임의 폭이
+   예외 없이 574px). 즉 결손은 «눈금이 안 따라온다» 가 아니라 **«눈금이 거꾸로다»** 다:
+     · 이 바는 레퍼런스에서 39 보스전의 **보스 체력바와 같은 부품**이다(측정표 30 §1 «보스 체력바»,
+       §4-4 «39 의 체력바 끝 두개골과 1px 이내로 같은 에셋»). 우리 게임의 그 부품(`#bossHp`)은
+       `hp/max` 로 **줄어든다** — 같은 부품이 던전에서만 반대로 차 있으면 «반영이 안 된» 것으로 읽힌다.
+     · 레퍼런스 바 안의 수치(측정표 §4-3 `9.61C`)도 **남은 체력**이다. 우리가 넣던 «누적 피해»는
+       255 이전 «누적 피해 ≥ 요구 피해 = 클리어» 시절의 눈금이 남은 것이고(LESSONS 295-② —
+       폐지된 조건의 눈금이 화면에 남으면 그건 거짓말이다), 331 이 그 판정을 지운 뒤로는
+       **차오르는 숫자 위에 차오르는 바**라 둘 다 «죽었는데 안 깎였다» 로 보인다.
+   ⚠ **판정·밸런스는 한 줄도 안 바뀐다.** 클리어 판정은 `bossDown`(killEnemy) 하나뿐이고,
+   `dunRunProg()` 는 그대로 «클리어 접근도» 로 남는다 — 264 탑 진행·284 등 그 값을 읽는 쪽은
+   전부 무영향이다. 바뀌는 것은 **그 값을 화면에 어느 방향으로 그리는가** 뿐이다.
+   등가식: `left`(남은 보스 체력 합) = `tot × (1 − prog)` 이므로 아래 두 줄이 곧 «남은 체력» 이다 —
+   축을 새로 만들지 않는다(사본이 갈라지지 않게. LESSONS 90-①). */
+const dunBossHpR = () => (dunRun ? clamp(1 - dunRunProg(), 0, 1) : 1);
+/* 절대값(바 안 수치) — 총량은 수·방식과 무관하게 `need × DUN_BOSS_HPK` 다(257 결정 ②) */
+const dunBossHpVal = () => (dunRun ? dunRun.need * DUN_BOSS_HPK * dunBossHpR() : 0);
 /* 257 — 남은 보스 표기 «●●○». 보스가 하나뿐인 던전·탑에서는 **빈 문자열**이다. */
 let dunTtlBase = '', dunTtlPip = null;
 function dunPipTxt(r){
@@ -22253,8 +22276,12 @@ function dunPipTxt(r){
 function drawDunHud(){
   if(!dunRun) return;
   $('dunTmN').textContent = Math.max(0, dunRun.t).toFixed(1);
-  $('dunBarF').style.width = (dunRunProg() * 574) + 'px';
-  $('dunBarN').textContent = fmtB(dunRun.dmg);
+  /* 338 — 폭·수치 둘 다 «남은 보스 체력» 이다(위 dunBossHpR 주석). 등장 딜레이(1.4초) 동안은
+     `dunRunProg()` 가 0 이라 **만피**로 그려진다 — `drawBossHud` 가 스테이지 보스 스폰 딜레이에
+     쓰는 «아직 보스가 없을 때는 만피» 와 같은 규약이고, 격파 뒤 332 홀드 동안은 `bossDown` 이
+     prog 1 을 굳히므로 **0px 에서 유지된다**(시퀀스 내내 «다 깎인» 채로 완료 화면까지 간다). */
+  $('dunBarF').style.width = (dunBossHpR() * 574) + 'px';
+  $('dunBarN').textContent = fmtB(dunBossHpVal());
   /* 타이틀은 «격파 수가 바뀐 때만» 다시 쓴다 — 매 프레임 textContent 를 갈면 레이아웃이 다시 돈다 */
   const pip = dunPipTxt(dunRun);
   if(pip !== dunTtlPip){ dunTtlPip = pip; $('dunTtl').textContent = dunTtlBase + pip; }
