@@ -18,8 +18,10 @@
  *       [확인] 로도 딤 탭으로도 닫힌다.
  *   [D] 상세 팝업에서 제거 — 슬롯을 눌러 나오는 `showCosDetail` 본문에 «코스튬 설명» 라벨도,
  *       옮겨 간 일반 설명 문장도 **한 조각도 안 남는다**(보유·미보유 두 갈래 모두).
- *   [E] 남긴 것 — 그 자리에는 **그 칸 하나의 수치**만 남는다: 보유 칸 «강화 효과 Lv.n»(레벨을
- *       올리면 숫자가 따라간다) · 미보유 칸 «획득 방법»(cosReqText).
+ *   [E] 남긴 것 — 그 자리에는 **그 칸 하나의 수치**만 남는다: 보유 칸 «보유 효과»(계단 + 강화
+ *       **합산** 한 줄 — 레벨을 올리면 숫자가 따라간다) · 미보유 칸 «획득 방법»(cosReqText).
+ *       ⚑ 346(주인 지시 2026-08-29)으로 «강화 효과 Lv.n …» · «Lv.500 까지 강화하면 …» 두 줄이
+ *       폐기되고 한 줄로 합쳐졌다. E1·E2·G2 는 묻는 것을 그대로 두고 **자리만** 옮긴 것이다.
  *   [F] 껍데기 1px 불변 — 08 규격 부품 8개(`.sk-ic … .sk-ow`)의 bbox 가 **스킬 세부와 픽셀 동일**.
  *       (`.sk-sl`·`.sk-db` 는 글자만 바뀌고 자리·크기는 그대로여야 한다 — 268 §2 와 같은 잣대.)
  *   [G] 홀드 회귀(262) — [강화] 를 꾹 누르는 동안 «숫자만» 갱신된 설명이 손 뗀 뒤 통짜 재렌더와
@@ -229,6 +231,14 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
     S.avatars[own] = 1; S.cosLv = S.cosLv || {}; S.cosLv[own] = 40; S.stone = 5e7; save();
     closeModal(); showCosDetail(own);
     out.own = rd();
+    /* 346 — 이 칸이 «지금 걸려 있는 값» 을 말하는지 보려면 기대값을 상수에서 따로 세워야 한다:
+       보유 계단 + 강화(lv×COS_LV). 레벨을 내려 같은 자리가 **따라 움직이는지**도 같이 본다
+       (문구만 맞고 값이 굳어 있으면 «그렸다» 로 통과해 버린다 — LESSONS 307-④). */
+    const sum = (k, lv) => pct(cosOwnStep(k, cosOwnIdx(own)) + lv * COS_LV[k]);
+    out.want40 = ['atk', 'hp', 'gold'].map(k => sum(k, 40));
+    S.cosLv[own] = 3; save(); closeModal(); showCosDetail(own);
+    out.own3 = rd(); out.want3 = ['atk', 'hp', 'gold'].map(k => sum(k, 3));
+    S.cosLv[own] = 40; save(); closeModal(); showCosDetail(own);
     /* 미보유 칸 — 계급을 0 으로 내려 확실히 못 받은 칸을 고른다 */
     const un = AVATARS.find(a => !cosOwn(a.id));
     closeModal(); showCosDetail(un.id);
@@ -243,11 +253,24 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
   }
   ok(D.own.sl !== '코스튬 설명' && D.un.sl !== '코스튬 설명',
     'D2 «코스튬 설명» 라벨이 사라졌다', '보유 «' + D.own.sl + '» · 미보유 «' + D.un.sl + '»');
-  ok(D.own.sl === '강화 효과', 'E1 보유 칸 라벨 «강화 효과»', D.own.sl);
-  ok(/강화 효과 Lv\. 40/.test(D.own.db), 'E2 보유 칸 본문이 그 칸의 레벨을 말한다', D.own.db);
+  /* 346 — 라벨·본문이 «강화 효과 두 줄» 에서 «보유 효과 합산 한 줄» 로 바뀌었다(주인 지시
+     2026-08-29). 묻는 것은 그대로다 — «이 자리가 그 칸 하나의, 지금 걸려 있는 수치를
+     말하는가». 자리만 옮겨 적는다(LESSONS 328). */
+  ok(D.own.sl === '보유 효과', 'E1 보유 칸 라벨 «보유 효과»(346)', D.own.sl);
+  ok(D.own.db && D.want40.every(v => D.own.db.includes(v)),
+    'E2 보유 칸 본문 = 보유 계단 + 강화 합산(Lv. 40)', D.own.db + ' vs ' + D.want40.join('/'));
+  ok(D.own3.db && D.want3.every(v => D.own3.db.includes(v)) && D.own3.db !== D.own.db,
+    'E2b 레벨을 내리면 그 자리가 따라 내려간다(Lv. 3)', D.own3.db + ' vs ' + D.want3.join('/'));
+  ok(!/강화 효과 Lv\./.test(D.own.all) && !/까지 강화하면/.test(D.own.all),
+    'E2c 폐기된 두 줄(«강화 효과 Lv.» · «까지 강화하면»)이 한 조각도 안 남았다');
   ok(D.un.sl === '획득 방법', 'E3 미보유 칸 라벨 «획득 방법»', D.un.sl);
   ok(D.un.db.includes(D.unReq), 'E4 미보유 칸 본문 = 그 칸의 획득 조건', D.un.db + ' vs ' + D.unReq);
-  ok(D.own.ow && D.un.ow, 'E5 «보유 n번째» 알약 행은 그대로다');
+  /* 346 — 알약 행은 그대로 있되 «수치» 를 안 든다(같은 % 를 두 번 적지 않는다).
+     행 자체가 사라지면 08 껍데기 §F 가 빨개진다. */
+  ok(D.own.ow && D.un.ow, 'E5 «보유 순번» 알약 행은 그대로다');
+  ok(!/%/.test(D.own.ow) && !/%/.test(D.un.ow),
+    'E5b 알약 행은 수치를 안 든다(346 — 수치는 본문 한 자리뿐)',
+    '보유 «' + D.own.ow + '» · 미보유 «' + D.un.ow + '»');
 
   /* ── [F] 08 껍데기 1px 불변 (268 §2 와 같은 잣대) ─────────────────────── */
   console.log('\n[F] 08 껍데기 — 코스튬 세부 부품 bbox == 스킬 세부');
@@ -317,7 +340,16 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
       diff.length ? diff.map(k => k + ': «' + live[k] + '» vs «' + full[k] + '»').join(' / ') : keys.length + '자리 일치');
     /* innerHTML 이라 «Lv.» 는 `<em>` 안에 있다 — 태그를 걷어내고 본다 */
     const plain = String(full.desc).replace(/<[^>]*>/g, '');
-    ok(/^강화 효과 Lv\. \d+/.test(plain), 'G2 갱신 뒤에도 설명 자리는 «강화 효과» 줄이다', plain.slice(0, 60));
+    /* 346 — 그 자리는 이제 «보유 효과» 합산 한 줄이다. 홀드로 오른 레벨이 그 줄에 실제로
+       반영됐는지까지 본다(문구만 보면 값이 굳어도 초록이다). */
+    const wantG = await page.evaluate(lv => {
+      const id = AVATARS[0].id;
+      return ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, cosOwnIdx(id)) + lv * COS_LV[k]));
+    }, G.lv);
+    ok(/^공격 \+/.test(plain) && /체력 \+/.test(plain) && /골드 \+/.test(plain),
+      'G2 갱신 뒤에도 설명 자리는 «보유 효과» 합산 줄이다(346)', plain.slice(0, 60));
+    ok(wantG.every(v => plain.includes(v)),
+      'G2b 홀드로 오른 레벨(Lv. ' + G.lv + ')이 그 줄에 반영됐다', plain + ' vs ' + wantG.join('/'));
   }
   await page.evaluate(() => closeModal());
 
