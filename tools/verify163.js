@@ -421,8 +421,11 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      ★ 13회차는 목적(«도착에 계단이 없다»)을 **구조로** 달성한다 — 착지에서 선 자세로 넘기면 도착에는 바뀔
      것이 없다. 그래서 규칙을 «경사로가 있는가»(수단) 에서 **«정착 구간에서 그림자와 그려진 발이 같은 점인가»**
      (목적) 로 바꾼다. 경사로를 되살리면 그 이격이 다시 벌어져 빨개진다. 12회차가 11회차 단언에 한 것과 같다. */
+  /* ★ 15회차 — 단언의 «기준점» 은 그대로 지키고 «위상 식» 만 이사시켰다. 지키는 것은 13회차와 같은
+     «선 자세 전환 = 착지(tLand)» 이고, 착지 뒤 위상이 고정 125ms 냐 정착 램프냐는 이 단언의 대상이 아니다
+     (그것은 바로 아래 §15 가 따로 잰다). `t < tLand ?` 를 `p < 1 ?` 로 되돌리면 여기서 빨개진다. */
   ok(/var frame = t < tLand \? run\[fr\.i % run\.length\]/.test(SRC)
-      && /idle\[Math\.floor\(\(t - tLand\) \/ LD_IDMS\) % idle\.length\]/.test(SRC),
+      && /idle\[ldIdleIdx\(t - tLand\) % idle\.length\]/.test(SRC),
     '★ 선 자세 전환이 «도착» 이 아니라 «착지» 다 (되돌리면 도착에서 접지발이 −160px 팝)');
   ok(!/\(LD_FOOTC - fo\) \* Math\.min\(1, Math\.max\(0, \(t - tLand\)/.test(SRC),
     '★ 정착 경사로가 없다 = 그 구간에서 그림자와 그려진 발이 어긋날 여지가 없다 (되살리면 150px 이격)');
@@ -450,6 +453,37 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     '★ 도약 정점이 선언한 LD_ARC 만큼 뜬다 (되돌리면 56 중 44px 만 쓰이고 air 상한이 0.786 에 묶인다)');
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
+
+  console.log('§15 정착 구간이 죽어 있지 않다 (15회차 — 13회차 비평 W·X 2인 일치)');
+  /* ★ 지키는 것은 «착지~도착 사이에 그림이 최소 한 번 바뀐다» 다. 고정 125ms 로 되돌리면 첫 교체가
+     착지 + 125ms = 616.7ms 라 도착(560ms)을 지나고, 그 90ms 가 통째로 정지한다(W «몸 8px» · X «0.75%»).
+     ⚠ 이 페이지는 부팅된 뒤라 `ldRun` 이 압축돼 있다 — §14 와 같은 이유로 **비압축 시계**로 환산해서 잰다
+     (`LD_IDMS0`·`LD_IDMS` 는 압축과 무관한 절대값이라 압축 시계로 재면 «정착이 램프보다 짧다» 가 나온다). */
+  const stl = await page.evaluate(() => {
+    const run = LD.runMs ? LD.runMs() : LD.RUN;
+    const land = LD.landAt() * (LD.RUN / run);   /* 비압축 시계의 착지 시각 */
+    const settle = LD.RUN - land;                /* 착지 → 도착 */
+    const swaps = [];                            /* 착지 뒤 첫 4회 교체 시각(착지 기준 ms) */
+    let prev = LD.idleIdx(0);
+    for (let dt = 0; dt <= 400; dt += 0.5) {
+      const i = LD.idleIdx(dt);
+      if (i !== prev) { swaps.push(dt); prev = i; if (swaps.length >= 4) break; }
+    }
+    /* 램프가 끝난 뒤에는 정확히 LD_IDMS 주기로 수렴해야 한다(쉬는 호흡은 전투와 같은 8fps) */
+    const tail = LD.idleIdx(5000) - LD.idleIdx(5000 - LD.IDMS);
+    /* 되감김 = 어디선가 위상이 «작아진다» 는 뜻이다. 계단 함수라 «같다» 는 정상이고 «줄어든다» 만 금지다. */
+    let mono = LD.idleIdx(0) === 0, p2 = -1;
+    for (let dt = 0; dt <= 3000; dt += 0.5) { const v = LD.idleIdx(dt); if (v < p2) mono = false; p2 = v; }
+    return { land, settle, swaps, tail, mono };
+  });
+  const inSettle = stl.swaps.filter(s => s < stl.settle).length;
+  ok(inSettle >= 1,
+    `★ 착지~도착(${stl.settle.toFixed(1)}ms) 안에 대기 프레임이 바뀐다 (교체 ${stl.swaps.map(s => s.toFixed(1)).join('/')}ms · 정착 안 ${inSettle}회 · 고정 125ms 로 되돌리면 0회)`);
+  ok(stl.swaps.filter(s => s < stl.settle + 56.7).length >= 2,
+    `★ 13회차가 «죽어 있다» 고 잰 90ms 안에 교체가 2회 이상이다 (${stl.swaps.filter(s => s < stl.settle + 56.7).length}회 · 되돌리면 0회)`);
+  ok(stl.tail === 1,
+    `쉬는 호흡은 그대로 8fps 로 수렴한다 (LD_IDMS 125ms 당 ${stl.tail}칸)`);
+  ok(stl.mono, '대기 위상이 단조 증가다 = 핸드오프에서 되감기지 않는다 (14회차 ⓑ 유지)');
 
   console.log('§5 통과성 (부팅 뒤 오버레이가 탭을 안 막는다)');
   const thru = await page.evaluate(() => {

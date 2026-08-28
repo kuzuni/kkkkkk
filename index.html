@@ -13727,6 +13727,20 @@
      아래 ldFinish 가 남은 등장을 페이드 길이에 압축해 넣고, 화면이 녹는 동안 캐릭터가 달려와 선다. */
   var LD_RTAIL = .8;    /* 압축된 등장이 페이드의 몇 배 안에 끝나야 하나(0.8 = 페이드가 끝나기 직전 착지) */
   var LD_IDMS  = 125;   /* 대기 프레임 간격(8fps) — 전투 setAnim(player,'knight','idle',8) 과 같은 속도 */
+  /* ★ 15회차 — **정착 구간의 대기 간격**. 13회차 비평 W·X 가 2인 일치로 짚은 «도착 직전이 죽어 있다» 는
+     전부 여기서 나왔다: 착지(491.7ms) 뒤 첫 idle 교체가 `착지 + LD_IDMS = 616.7ms` 라, 그 사이 **90.0ms**
+     동안 포즈가 한 번도 안 바뀌고(W «몸 8px = 등속의 4.7% · 아치 0 · 그림자 0» · X «x −7.0 → 0 = 등장의 0.75%»)
+     하필 그 구간이 **도착(560ms)과 페이드 시작**을 통째로 품는다.
+     ★ 왜 스쿼시로 못 채우는가 — 게이트 §14 가 «보이는 스쿼시 펄스가 도착에서 2프레임(33ms) 이상 떨어진다» 를
+     지킨다. 펄스 끝이 이미 526.7ms 라 **도착까지 남은 33.3ms 에는 스케일 계단을 놓을 자리가 정의상 없다**
+     (11회차 비평 T «도착 한 프레임에 불연속 4개» 를 막으려고 세운 규칙이다. 되돌리면 그 결함이 돌아온다).
+     → 그래서 **포즈 채널로 채운다.** 대기 간격을 `LD_IDMS0`(45ms)에서 시작해 `LD_IDN`(3)칸에 걸쳐 125ms 로
+     붙인다 — 착지 직후 빠르게 숨을 고르고 쉬는 호흡으로 풀리는, 착지 정착의 표준 어법이다.
+     교체 시각이 착지+45.0 / +116.7 / +215.0ms = **536.7 · 608.4 · 706.7ms** 로, 죽어 있던 90ms 안에
+     교체가 **0회 → 2회**가 된다. 위상은 여전히 **단조 증가**라 14회차 ⓑ 가 없앤 «핸드오프 되감김» 을
+     다시 만들지 않는다(고정 오프셋이 아니라 경과 시각으로 읽는 것도 그대로다). */
+  var LD_IDMS0 = 45;    /* 착지 직후 첫 대기 간격(ms) */
+  var LD_IDN   = 3;     /* 몇 칸에 걸쳐 LD_IDMS 로 붙는가 */
   var LD_GRACE = 90;    /* knight 가 늦게 와도 캐릭터를 최소 이만큼은 보여 준다(«연출 0프레임» 방지) */
   var LD_FADE  = 130;   /* 페이드아웃 — CSS #loading{transition:opacity .11s} 와 한 벌(게이트 §2 가 대조) */
   var LD_SC    = 12;    /* 79 규격 정수 배율. 1회차 5(잉크 222px = 프레임 세로의 9.7%)를 두 비평가가
@@ -13852,6 +13866,17 @@
   /* ★ 9회차 — **실제 착지 시각**(ms). 도착은 «체공 칸 끝» 이므로 마지막 도약은 [|X0|−보폭, |X0|] 이고,
      캡(LD_AIRMS)이 걸리면 그보다 일찍 끝난다. 스쿼시는 이 시각에 붙는다(도착이 아니라).
      ldRun 에 따라 달라지므로(재방문 압축 경로) 상수가 아니라 함수다. */
+  /* ★ 15회차 — 착지 뒤 경과 ms → 대기(idle) 프레임 번호. 간격이 `LD_IDMS0` → `LD_IDMS` 로 붙는다
+     (위 LD_IDMS0 절). 단조 증가이고, `dt` 가 커지면 정확히 `LD_IDMS` 주기로 수렴한다. */
+  function ldIdleIdx(dt) {
+    var i = 0, acc = 0;
+    if (!(dt > 0)) return 0;
+    for (; i < LD_IDN; i++) {
+      acc += LD_IDMS0 + (LD_IDMS - LD_IDMS0) * (i / LD_IDN);
+      if (dt < acc) return i;
+    }
+    return LD_IDN + Math.floor((dt - acc) / LD_IDMS);
+  }
   function ldLandAt() {
     var ai = LD_AIRF.indexOf(true);
     if (ai < 0 || LD_AIRMS <= 0) return ldRun;
@@ -14100,8 +14125,10 @@
          **아예 사라진다**(도착 시점에 이미 idle 이라 바뀔 것이 없다). 불연속 2개 → 1개, 최대값 286 → 126px.
          ★ 덤으로 «f4 가 68.3ms(다른 칸의 1.72배) 얼어 있다»(V ⑩)·«마지막 33.3ms 에 캐릭터가 아무것도
          안 한다»(U ⑥) 도 같이 사라진다 — 그 구간이 «착지해서 선 자세로 미끄러지며 멈춘다» 가 된다. */
+      /* ★ 15회차 — 나누기 한 번을 `ldIdleIdx` 로 갈았다. 경계(`t < tLand`)와 기준점(착지)은 그대로다 —
+         13회차가 세운 «선 자세 전환 = 착지» 는 한 픽셀도 안 건드리고, **착지 뒤 위상만** 정착 램프를 탄다. */
       var frame = t < tLand ? run[fr.i % run.length]
-                            : idle[Math.floor((t - tLand) / LD_IDMS) % idle.length];
+                            : idle[ldIdleIdx(t - tLand) % idle.length];
       /* ★ 9회차 — 스쿼시 배율을 **정수 픽셀 격자로 양자화**한다. 8회차 비평 M·N 이 소수점까지 같은 값을 냈다:
          M «표본7 최빈 런 길이 가로 13(993회)/12(668회) 평균 12.60 · 세로 11(1166회)/12(785회) 평균 11.40 —
             비교군 표본4·5·6 은 정확히 12/24/36 만 나온다», N «세로 12,11,12,11,11… 45행 중 27행이 11px·18행이 12px ·
@@ -14331,6 +14358,7 @@
   /* 게이트(verify163)가 상수·내부 상태를 재는 창구. 연출 로직은 이 객체를 안 읽는다. */
   window.LD = {
     MIN: LD_MIN, RUN: LD_RUN, RUNMS: LD_RUNMS, IDMS: LD_IDMS, GRACE: LD_GRACE,
+    IDMS0: LD_IDMS0, IDN: LD_IDN, idleIdx: ldIdleIdx,
     FADE: LD_FADE, SC: LD_SC, X0: LD_X0, ARC: LD_ARC, SQ: LD_SQ, SQA: LD_SQA,
     RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD, FOOT: LD_FOOT, AIR: LD_AIR, STEP: LD_STEP,
     FEET: LD_FEET, GAPS: LD_GAPS, STEPS: LD_STEPS, CUM: LD_CUM, CYC: LD_CYC, AIRF: LD_AIRF,
