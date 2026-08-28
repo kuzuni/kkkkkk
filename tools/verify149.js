@@ -59,7 +59,11 @@ const TOAST_SITES = [
   ['소탕 — 입장 소진',           '입장권이 없습니다 — 출석 보상마다'],   /* 204 */
   /* 182 — «코스튬 해금 조건 미달»·«코스튬 다이아 부족» 두 자리는 **경로째 폐기**됐다
      (구매 폐지 → `buyAvatar()` 삭제). 코스튬이 남긴 단순 안내는 아래 «미보유 코스튬» 하나다. */
-  ['승급 조건 미달',             '승급 조건 미달'],
+  /* 333 — 옛 «승급 조건 미달» 반려는 295(입장 제한 폐지, 2026-08-27 주인 지시)가 `startPromo()` 에서
+     **삭제**했다. `verify295` 는 그 문구가 «없어야» 통과하므로 여기 남겨 두면 두 게이트가 서로 반대를
+     단언한다(제품이 아니라 게이트가 부패한 자리 — 319 선례). 자리는 비우지 않고 **살아 있는 승급 계열
+     토스트**로 갈아 끼웠다: 코스튬 [강화]의 미보유 반려(index.html `cosUpgrade` 분기)다. */
+  ['코스튬 미보유 강화',         '승급전에서 획득해야 강화합니다'],
   ['아레나 — 다른 전투 중',      '다른 전투가 진행 중입니다'],
   ['레이드 진행 중',             '진행 중 · 남은 <b>'],
   ['던전 카드 잠김(목록)',       "필요');\n    return;\n  }\n  /* 04 던전 세부"],
@@ -159,7 +163,10 @@ const WORST = [
   { n: '유물조각 교환',   f: 'D => D.icDia + " <b>999.99Z</b> → " + D.icRel + " <b>999.99Z</b> 우편함 발송"' },
   { n: '광고 보상 수령',  f: 'D => "🎁 " + D.ad + " — " + D.icGold + " 999.99Z 획득"' },
   { n: '장비 일괄강화',   f: 'D => "강화할 수 있는 <b>" + D.wpn + "</b>가 없습니다"' },
-  { n: '승급 조건 미달',  f: 'D => "🏅 " + D.rank + " 승급 조건 미달"' },
+  /* 333 — «승급 조건 미달» 워스트케이스(계급 이름을 끼운 유일한 자리)는 295 가 그 토스트를 없애
+     잴 문구가 사라졌다. 310 의 «가방 칸» 과 같은 처리: 항목과 재료(D.rank)를 **같이** 지운다.
+     살아 있는 승급 계열 토스트 셋(미보유 착용 · 미보유 강화 · 206 승급 실패) 중 계급 이름이
+     들어가는 것은 하나도 없어 갈아 끼울 «가장 긴 이름» 표본 자체가 없다(§1·§2 는 갈아 끼웠다). */
   /* ── 206 이 토스트로 내린 «결과» 문구들. 수치는 150 표기의 최댓값(999.99Z)으로 민다 ── */
   { n: '206 레이드 결과',   f: 'D => "🏆 " + D.raid + " — DPS <b>999.99Z</b> · " + D.icStone + " 999 · " + D.icRstone + " 999 · <b>신기록!</b>"' },
   { n: '206 아레나 결과',   f: 'D => "🏅 아레나 승리 — 상대 전투력 <b>999.99Z</b> · " + D.icGold + " 999.99Z · " + D.icStone + " 999"' },
@@ -241,7 +248,18 @@ const WORST = [
       run('유물 소환 — 조각 부족',    () => summonRelic());
       /* 182 — 구매 두 경로 대신 «미보유 코스튬 착용 시도»(시트 [착용] 버튼과 같은 분기) */
       run('코스튬 — 미보유 착용',     () => { const a = AVATARS.find(x => !S.avatars[x.id]); if (!a) throw new Error('미보유 코스튬 없음'); cosSel = a.id; if (!wearAvatar(cosSel)) notify('\u{1F512} 승급전에서 획득해야 착용합니다'); });
-      run('승급 조건 미달',           () => { S.best = 0; startPromo(); });
+      /* 333 — 옛 «승급 조건 미달»(`S.best = 0; startPromo()`)은 295 가 반려 자체를 없애 이제 토스트가
+         0 이다(가드는 «최고 계급»·«이미 승급전 중» 둘뿐이고 둘 다 조용히 return). 위 §1 과 같은 자리로
+         갈아 끼운다 — 코스튬 [강화]의 미보유 반려. 243 «미보유 착용» 과 같은 꼴로 분기를 밟는다. */
+      run('코스튬 — 미보유 강화',     () => {
+        const a = AVATARS.find(x => !S.avatars[x.id]); if (!a) throw new Error('미보유 코스튬 없음');
+        cosSel = a.id; renderCos();
+        /* 243 «미보유 착용» 처럼 분기를 베껴 쓰지 않고 **실제 버튼**을 누른다(#bCos 위임 리스너).
+           베껴 쓰면 notify() 가 살아 있다는 것만 재는 표본이 된다 — 되돌림 시험에서 §2 가 안 빨개졌다. */
+        const b = document.querySelector('#bCos [data-cosup]');
+        if (!b) throw new Error('[강화] 버튼이 없다');
+        b.click();
+      });
       run('던전 잠김 — 소탕',         () => { const d = DUNGEONS.find(x => dunLocked(x)); if (d) sweepDungeon(d); else throw new Error('잠긴 던전 없음'); });
       run('던전 입장 소진 — 소탕',    () => { const d = DUNGEONS.find(x => !dunLocked(x)); S.dun[d.id] = 2; S.dunTk[d.id] = 0; sweepDungeon(d); });
       run('스킬 슬롯 부족',           () => { S.eqSkill = SKILLS.slice(0, 8).map(x => x.id); const s = SKILLS.find(x => !S.eqSkill.includes(x.id)); if (!S.own[s.id]) S.own[s.id] = { n: 1, l: 1 }; toggleEquip(s, 'skill'); });
@@ -326,7 +344,6 @@ const WORST = [
         coll:    'S' in window ? longest(Object.values(BANNERS), b => b.n).n : '',
         raid:    longest(RAIDS, r => r.n).n,
         wpn:     wpnSlotDef().n,
-        rank:    longest(RANKS, r => r.ic + ' ' + r.n).ic + ' ' + longest(RANKS, r => r.ic + ' ' + r.n).n,
         ad:      longest(COIN_ADS, a => a.n).n,
         icDia:   curIc('dia'), icRel: curIc('relic'), icGold: curIc('gold'),
         icStone: curIc('stone'), icRstone: curIc('rstone'),
