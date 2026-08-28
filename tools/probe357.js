@@ -148,16 +148,28 @@ const blk = async (name, fn) => {
      스킬이 하나 터진 칸 언저리만 두 장 사이에 달라져 칸 4·5·6 잉크가 «112·122·111» 로 부풀었다.
      ⇒ ① 전이·애니메이션을 눕히고 ② **대조군 한 장을 더 찍어** «아이콘 말고는 같다» 를 매 실행 검산한다.
         대조군이 더러우면 그 칸은 «측정 불가» 로 빨개진다 — 조용히 틀린 숫자를 내놓지 않는다. */
-  await p.addStyleTag({ content: '#app *{transition:none!important;animation:none!important}' });
-  await p.addStyleTag({ content: '#slots .cdw{overflow:visible!important}' });
-  await p.waitForTimeout(200);
-  const shotOn = await p.screenshot({ type: 'png' });
-  const shotCtl = await p.screenshot({ type: 'png' });
-  await p.addStyleTag({ content: '#slots .si3{visibility:hidden!important}' });
-  await p.waitForTimeout(150);
-  const shotOff = await p.screenshot({ type: 'png' });
+  /* ⚠ 5회차 사고 — 예약된 `setTimeout` 이 세 장 사이에서 터졌고(대조군 12~58px),
+     장마다 스타일시트를 덧붙이자 재래스터까지 섞였다. ⇒ ① 대기 타이머를 전부 지우고 예약 함수도 눕힌다
+     ② 규칙은 **한 번만** 심고 `html` 클래스 하나만 토글한다 ③ 대조군을 **ON → OFF → ON2** 로 창 전체에 두른다. */
+  await p.evaluate(() => {
+    const top = setTimeout(() => {}, 0);
+    for (let i = 1; i <= top; i++) { clearTimeout(i); clearInterval(i); }
+    window.setTimeout = () => 0; window.setInterval = () => 0;
+    document.querySelectorAll('#slots .cdv').forEach(e => e.style.height = '0%');
+  });
+  await p.addStyleTag({ content:
+    '#app *{transition:none!important;animation:none!important}'
+    + '#slots .cdw{overflow:visible!important}'
+    + 'html.p357hide #slots .si3{visibility:hidden!important}' });
+  await p.waitForTimeout(250);
+  const grab = async hide => {
+    await p.evaluate(c => { document.documentElement.classList.toggle('p357hide', c); }, hide);
+    await p.waitForTimeout(160);
+    return p.screenshot({ type: 'png' });
+  };
+  let shotOn = await grab(false), shotOff = await grab(true), shotCtl = await grab(false);
 
-  const ink = await p.evaluate(async (arg) => {
+  const readInk = () => p.evaluate(async (arg) => {
     const { on, off, ctl, rows } = arg;
     try {
       const load = async url => { const im = new Image(); await new Promise((r, j) => { im.onload = r; im.onerror = j; im.src = url; }); return im; };
@@ -206,6 +218,16 @@ const blk = async (name, fn) => {
     ctl: 'data:image/png;base64,' + shotCtl.toString('base64'),
     rows: rowMeta,
   });
+
+  /* ⚑ 대조군이 더러운 회차가 절반쯤 나온다 — 그 회차의 숫자는 못 쓰는 숫자다.
+     **깨끗한 회차가 나올 때까지 다시 찍는다**(재시도의 판정은 값이 아니라 «전제» 다).
+     끝내 못 얻으면 그대로 빨개진다 — 조용히 틀린 숫자를 내놓지 않는다. */
+  let ink = await readInk();
+  for (let t = 2; t <= 6 && !ink.err && ink.out.some(r => r.drift); t++) {
+    console.log('  · ' + (t - 1) + '회차 대조군 오염 — 다시 찍는다');
+    shotOn = await grab(false); shotOff = await grab(true); shotCtl = await grab(false);
+    ink = await readInk();
+  }
 
   await blk('ⓒ 찍힌 픽셀 — 아이콘 잉크 중심 vs 슬롯 기하 중심', async () => {
     if (ink.err) { ok(false, 'ⓒ 픽셀 판독 예외 — ' + ink.err); return; }
