@@ -807,6 +807,24 @@
   #mnw .mn-b:nth-of-type(5){top:460.5px} #mnw .mn-b:nth-of-type(6){top:570.5px}
   #mnw .mn-b:nth-of-type(7){top:680.5px}  /* ⚠ 7번째 = 레퍼런스에 없는 임시 «패스» 칸 — 위 HTML 주석 참고 */
   /* 작업 71 — 8·9번째 칸 규칙은 뺐다(칸이 7개다). 칸을 다시 늘리면 pitch 110 으로 이어 적을 것. */
+  /* ── 293 — 메뉴 칸 레드닷 (기본 꺼짐 + `.alert` 로 점등, 다른 배지와 같은 규약) ──────────
+     ⚠ **특이성 함정(166 ⓔ · 202 · LESSONS 21-①)이 여기서 특히 잘 터진다.** 바로 위
+        `#mnw i,#mnw s,#mnw b,#mnw em{display:block}` 이 **ID 급**이라 `.mn-b>.bdg{display:none}`
+        같은 클래스 급 규칙은 이겨 버린다 — 그러면 배지가 «조건 없이 상시 점등» 이 되고 166 이
+        없앤 병이 그대로 재발한다. 그래서 이 짝은 **둘 다 `#mnw` 스코프**로 적는다. 순서·스코프 유지할 것.
+     자리 — 칸(100×100 · radius 37)의 **우상단**. 반경 37 이라 시각적 코너는 칸 로컬 (89,11) 쯤이고,
+     배지 중심을 (92.5,7.5) 에 두면 그 원호 위에 걸쳐 «칸에 붙은 배지» 로 읽힌다.
+     ⚠ 오프셋은 눈대중이 아니라 **잉크 실측**으로 정했다 — ✉️ 글리프 잉크가 칸 로컬 x20..79 · y14..89 라
+        `-4px` 에서는 빨간 코어가 글리프 우상단을 2×9px 물었다. `-6px`(코어 x79..106)이면 코어가
+        글리프를 안 덮고, 검정 링(7.5px)만 한 열 스친다. 반대쪽 한계는 패널이다 —
+        링 우변 107.5 < 패널 우변 119 · 링 상변 −13.5 → 절대 135.5 > 패널 상변 128.5 로 둘 다 안 잘린다.
+        `.mn-i` 이모지를 바꾸면 이 잉크 폭이 달라지므로 다시 재고 오프셋을 맞출 것.
+     생김새는 던전 서브탭 배지(`.stab>.bdg`)와 같은 규격을 그대로 쓴다 — 화면마다 다른 배지를
+     만들지 않는다(칸이 100px 로 서브탭 칸과 비슷한 크기라 27px 이 그대로 맞는다). */
+  #mnw .mn-b>.bdg{position:absolute;right:-6px;top:-6px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;text-decoration:none;transform:none;display:none;
+    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  #mnw .mn-b.alert>.bdg{display:block}
   /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
      **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
      칸별 잉크 폭이 34~66 으로 달라서 --sf(등방)·--sx(가로만) 로 각 이모지를 ref bbox 에 맞춘다(A2 방식).
@@ -10894,7 +10912,8 @@
   /* 작업 134 — `.tr-sub>.sg.on>.dot` 은 88 이 폐기한 훈련 서브탭의 잔재라 어디에도 걸리지 않는다(죽은 선택자). 삭제. */
   /* 작업 166 — 던전 서브탭 배지도 조건부(.stab.alert)가 됐으므로 같은 손맛 한 벌을 받는다. */
   /* 283 — `.alert>.updot`(카드·진입 버튼·[일괄 강화] 버튼) 도 같은 등장·맥박 연출을 탄다 */
-  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot,.stab.alert>.bdg,.alert>.updot{
+  /* 293 — ▦ 메뉴 안 «우편» 칸 배지도 같은 손맛 한 벌을 받는다(④ 일관성). */
+  .ibtn.on .bdg,#menub.alert .bdg,.tab.fresh .nw,.cltab.alert>s.dot,.tr-card>.dot,.dnc .dot,.stab.alert>.bdg,.alert>.updot,#mnw .mn-b.alert>.bdg{
     animation:jzDotIn .3s var(--jzs) both,jzDotPulse 2s ease-in-out .3s infinite}
   @keyframes jzDotIn{0%{scale:0}62%{scale:1.3}100%{scale:1}}
   @keyframes jzDotPulse{0%,72%,100%{scale:1}84%{scale:1.14}}
@@ -13175,7 +13194,12 @@
            남는 항목은 우편 · 랭킹 · 길라잡이 · 가방 · 절전 · 설정 6개 + 35 가 맡긴 임시 «패스» = 7칸.
            칸 규격(99×100 · pitch 110 · 상하 패딩 20.5/20)은 52 측정표 그대로, 위에서부터 채운다.
            `.mn-col` 높이는 검산식대로 7칸×100 + 6갭×10 + 40.5 = 800.5 → **800**(9칸 1020 에서 −220). -->
-      <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.933" data-t="우편">우편</i></div>
+      <!-- 293(2026-08-27, 저장소 주인 보고 «우편에 받을 것이 있는데 레드닷이 안 뜬다») —
+           우편으로 가는 경로는 ▦ 버튼 하나뿐인데, 그 버튼 배지는 **누르는 순간** 사라진다
+           (`#menub.mnon .bdg{display:none}` — 레퍼런스 52 열림 상태에 붉은 화소가 0개라 맞는 규칙이다).
+           그래서 메뉴를 연 사용자에게는 «받을 우편이 있다» 는 신호가 한 개도 안 남았다.
+           칸 배지가 그 자리를 잇는다 — 켜고 끄는 곳은 `sideAlert('mail', …)` 한 곳뿐이다. -->
+      <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.933" data-t="우편">우편</i><s class="bdg"></s></div>
       <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.962" data-t="랭킹">랭킹</i></div>
       <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:22.6px;--lx:.978" data-t="길라잡이">길라잡이</i></div>
       <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.912" data-t="가방">가방</i></div>
@@ -20202,9 +20226,18 @@ document.querySelectorAll('.side .ibtn[data-pop]').forEach(b => SIDEB[b.dataset.
    그 레드닷은 우상단 ▦ 메뉴 버튼의 `.bdg` 로 옮겨 켠다: `#menub.alert .bdg{display:block}`.
    호출부(`sideAlert('mail', mailLeft() > 0)`)는 한 줄도 안 고친다 — 여기서 갈라 준다. */
 const MENUB = $('menub');
+/* 293(2026-08-27, 저장소 주인 보고) — «우편에 받을 것이 있는데 레드닷이 안 뜬다».
+   ▦ 버튼 배지는 정상이었지만, 그 배지는 **버튼을 누르는 순간** 사라진다
+   (`#menub.mnon .bdg{display:none}` — 레퍼런스 52 열림 상태의 붉은 화소가 0개라 맞는 규칙이다).
+   우편 진입은 ▦ 메뉴 한 경로뿐이라, 메뉴를 연 사용자에게는 신호가 **한 개도 남지 않았다**.
+   294 가 «소환 가능이면 경로 전체(탭 → 탭 안 카드)에 레드닷» 으로 적어 둔 것과 같은 처방이다 —
+   경로의 다음 칸(▦ 메뉴 안 «우편»)까지 잇는다. 호출부는 여기서도 한 줄도 안 고친다. */
+const MENUCELL = {};
+document.querySelectorAll('#mnw .mn-b[data-mn]').forEach(c => MENUCELL[c.dataset.mn] = c);
 function sideAlert(k, on){
   const b = SIDEB[k]; if(b) b.classList.toggle('on', !!on);
   if(k === 'mail') MENUB.classList.toggle('alert', !!on);
+  const c = MENUCELL[k]; if(c) c.classList.toggle('alert', !!on);
 }
 /* 시설 배너 — 다음 일일 초기화까지 남은 시간 + 오늘 남은 무료 횟수.
    작업 49(2026-08-25): 배너 DOM(#facb/#facTm/#facBg)을 삭제했다. 계산 로직 자체는 다른 화면이

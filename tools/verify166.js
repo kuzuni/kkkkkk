@@ -367,6 +367,9 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
       /* 202 신설 — 영웅 서브탭 «일괄 강화 가능» 배지, 두 호스트를 각각 전수로 */
       { n: '.stab>.bdg (06 #eqTabs)',       host: '#eqTabs .stab[data-upk]',  bdg: '.bdg', cls: 'alert' },
       { n: '.stab>.bdg (07·26·50 시트 안)', host: ':is(#bSk,#bPet,#bCos) .stab[data-upk]', bdg: '.bdg', cls: 'alert' },
+      /* 293 신설 — ▦ 메뉴 안 «우편» 칸 배지. `#mnw i,#mnw s,…{display:block}`(ID 급)이
+         클래스 급 숨김을 이기는 166 ⓔ·202 와 똑같은 함정 자리라 여기서 먼저 빨개져야 한다. */
+      { n: '#mnw .mn-b>.bdg',               host: '#mnw .mn-b[data-mn]',      bdg: '.bdg', cls: 'alert' },
     ];
     return SITES.map(s => {
       const hosts = [...document.querySelectorAll(s.host)].filter(h => h.querySelector(s.bdg));
@@ -480,6 +483,63 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
       && cl.rows.every(t => !t.miss && t.rdy === t.shown),
     cl.rows.map(t => t.k + (t.rdy ? '✔' : '✘') + (t.miss ? '✖dot없음' : t.shown ? '●' : '○')).join(' ')
       + ' / 기대 ' + cl.want.join(' '));
+
+  /* ── [8-2] 293 — 우편 레드닷은 «경로 전체» 에 뜬다 (저장소 주인 보고 2026-08-27) ──────
+     ▦ 버튼 배지 하나만으로는 **누르는 순간 사라져서**(`#menub.mnon`) 메뉴를 연 사용자에게
+     신호가 한 개도 안 남는다. 그래서 두 자리를 같이 단언한다 —
+       ⓐ 받을 우편 있음 → `#menub.alert` **그리고** `#mnw .mn-b[data-mn=mail].alert`
+       ⓑ 다 받음      → 둘 다 꺼짐
+       ⓒ 새 우편 도착(`sendMail`) → 둘 다 다시 켜짐
+     상태는 감사 뒤에 원래대로 되돌린다(뒤 절이 이 상태를 물려받지 않게).
+     ⚠ **여기서 부를 것은 `renderUI()` 가 아니라 `drawHud()` 다.** 레드닷 토글
+     (`sideAlert('attend'/'roul'/'mail'/…)`)은 `drawHud()` 안에 있고 `renderUI()` 는 그 줄을
+     한 번도 안 지난다 — `renderUI()` 로 재면 «다 받았는데 안 꺼진다» 로 **가짜 FAIL** 이 난다
+     (loop() 가 매 프레임 drawHud 를 돌리므로 실제 화면에서는 즉시 꺼진다. 실제로 이 게이트를
+     쓰다가 한 번 걸렸다). 절전 모드(56)만 drawHud 를 통째로 건너뛴다. */
+  const mailSnap = await ev(() => JSON.stringify({ mail: S.mail, mailx: S.mailx, seq: S.mailSeq }));
+  const mailOn = await ev(() => {
+    S.mail = {}; uiDirty = true; drawHud();
+    return { left: mailLeft(),
+      btn: document.getElementById('menub').classList.contains('alert'),
+      cell: document.querySelector('#mnw .mn-b[data-mn="mail"]').classList.contains('alert') };
+  });
+  ok('293 ⓐ 받을 우편 있음 → ▦ 버튼 레드닷 켜짐',
+    mailOn.left > 0 && mailOn.btn === true, 'left ' + mailOn.left + ' · btn ' + mailOn.btn);
+  ok('293 ⓐ 받을 우편 있음 → ▦ 메뉴 «우편» 칸 레드닷 켜짐 (버튼 배지는 메뉴를 열면 사라진다)',
+    mailOn.left > 0 && mailOn.cell === true, 'left ' + mailOn.left + ' · cell ' + mailOn.cell);
+  const mailOff = await ev(() => {
+    claimAllMail(); uiDirty = true; drawHud();
+    return { left: mailLeft(),
+      btn: document.getElementById('menub').classList.contains('alert'),
+      cell: document.querySelector('#mnw .mn-b[data-mn="mail"]').classList.contains('alert') };
+  });
+  ok('293 ⓑ 다 받으면 두 자리 모두 꺼진다',
+    mailOff.left === 0 && mailOff.btn === false && mailOff.cell === false,
+    'left ' + mailOff.left + ' · btn ' + mailOff.btn + ' · cell ' + mailOff.cell);
+  const mailNew = await ev(() => {
+    sendMail({ t: '게이트', b: '', g: 100 }); uiDirty = true; drawHud();
+    return { left: mailLeft(),
+      btn: document.getElementById('menub').classList.contains('alert'),
+      cell: document.querySelector('#mnw .mn-b[data-mn="mail"]').classList.contains('alert') };
+  });
+  ok('293 ⓒ 새 우편 1통 도착 → 두 자리 모두 다시 켜진다',
+    mailNew.left === 1 && mailNew.btn === true && mailNew.cell === true,
+    'left ' + mailNew.left + ' · btn ' + mailNew.btn + ' · cell ' + mailNew.cell);
+  /* 메뉴를 «열었을 때» 두 배지가 서로를 대신하는지 — 버튼은 꺼지고 칸은 켜져 있어야 한다 */
+  const mailOpen = await ev(() => {
+    openMenu();
+    const bd = document.querySelector('#menub .bdg');
+    const cd = document.querySelector('#mnw .mn-b[data-mn="mail"] .bdg');
+    const r = { btnDisp: getComputedStyle(bd).display, cellDisp: cd ? getComputedStyle(cd).display : '노드없음' };
+    closeMenu();
+    return r;
+  });
+  ok('293 메뉴 열림 — ▦ 버튼 배지는 숨고(레퍼런스 52) «우편» 칸 배지가 그 자리를 잇는다',
+    mailOpen.btnDisp === 'none' && mailOpen.cellDisp === 'block',
+    '버튼 ' + mailOpen.btnDisp + ' · 칸 ' + mailOpen.cellDisp);
+  /* ⚠ 이 파일의 `ev` 는 인자를 안 넘긴다(`fn => page.evaluate(fn)`) — 스냅샷 복원은 직접 부른다. */
+  await page.evaluate(snap => { const d = JSON.parse(snap); S.mail = d.mail; S.mailx = d.mailx; S.mailSeq = d.seq;
+    uiDirty = true; drawHud(); }, mailSnap);
 
   /* ── [9] 콘솔 ───────────────────────────────────────────────────────── */
   ok('콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' | '));
