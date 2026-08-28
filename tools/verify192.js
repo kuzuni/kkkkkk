@@ -27,7 +27,9 @@ let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓', m); } else { fail++; console.log('  ✗', m, d === undefined ? '' : '— ' + d); } };
 const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${got})`);
 const inRange = (m, got, lo, hi) => ok(got >= lo && got <= hi, `${m} (기대 ${lo}~${hi} · 실제 ${got})`);
-const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+/* 313·315 처방 — Windows(autocrlf) 체크아웃에서 index.html 이 CRLF 로 내려오면 `\n` 을 낀 소스
+   리터럴 검색이 통째로 0건이 된다. 브라우저는 원본을 그대로 열므로 **검색용 사본만** 정규화한다. */
+const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8').replace(/\r\n/g, '\n');
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
 /* 카드 칸을 «같은 자» 로 읽는다 — 캔버스면 픽셀, 이모지면 글자. */
@@ -57,12 +59,18 @@ const READ = () => {
   });
 };
 
-/* 펫 3종(bird/robo/dragon)을 보유시키고 재료를 채운다. 3종이 곧 PET_SP 의 전 스프라이트다. */
+/* 펫 3종(bird/robo/dragon)을 보유시키고 재료를 채운다. 3종이 곧 PET_SP 의 전 스프라이트다.
+   ⚠ 316 — 돌려주는 **기대 순서는 이 리터럴 순서가 아니라 `PETS` 등재 순서**다.
+   결과 카드의 순서를 정하는 것은 제품의 `levelUpAll(PETS)`(= PETS 를 앞에서부터 훑는다)이므로
+   기대값도 근거 데이터인 PETS 에서 다시 뜬다(212-① «기대값은 근거 데이터에서»).
+   리터럴로 굳히면 PETS 가 재편될 때마다 제품이 멀쩡한데 게이트만 빨개진다 — 실제로 106
+   (8등급×5종 확장)이 robo 를 bird 앞으로 보내면서 그렇게 됐다(기대 bird,robo,dragon · 실제 robo,bird,dragon). */
 const seedPets = (p) => p.evaluate(() => {
   const pick = ['bird', 'robo', 'dragon'].map(sp => PETS.find(x => x.sp === sp));
   pick.forEach(x => { S.own[x.id] = { n: 5000, l: 1 }; });
   save(); uiDirty = true;
-  return pick.map(x => ({ id: x.id, sp: x.sp, tint: x.tint }));
+  return pick.map(x => ({ id: x.id, sp: x.sp, tint: x.tint || null, at: PETS.indexOf(x) }))
+             .sort((a, b) => a.at - b.at);
 });
 
 (async () => {
@@ -108,7 +116,19 @@ const seedPets = (p) => p.evaluate(() => {
   eq('카드 수', cards.length, seeded.length);
   eq('❔ 로 뜬 칸', cards.filter(c => c.txt.indexOf('❔') >= 0).length, 0);
   eq('캔버스가 있는 칸', cards.filter(c => c.canvas).length, seeded.length);
-  eq('sp 순서', cards.map(c => c.sp).join(','), seeded.map(s => s.sp).join(','));
+  /* 316 — 순서를 재기 전에 «순서 규약의 근거» 를 먼저 센다(315 교훈: 근거가 부패하면
+     기대값 단언이 조용히 어긋나는 대신 여기가 먼저 빨개진다).
+       ⓐ 카드 순서를 정하는 것은 [일괄 강화] 핸들러가 넘기는 목록이다 — 제품은 정렬·필터 없이
+          `levelUpAll(PETS)`, 즉 **PETS 등재 순서**를 그대로 쓴다. 누가 여기에 정렬을 끼우면 여기서 걸린다.
+       ⓑ 씨앗 3종이 PETS 안에서 서로 다른 자리여야 «순서» 를 보는 의미가 있다(헛통과 차단). */
+  ok(/\[data-ptup\][\s\S]{0,200}?levelUpAll\(PETS\)/.test(SRC),
+     '[일괄 강화] 가 levelUpAll(PETS) 로 «PETS 등재 순서» 를 쓴다(순서 규약의 근거)');
+  ok(new Set(seeded.map(s => s.at)).size === seeded.length && seeded.every(s => s.at >= 0),
+     `씨앗 3종이 PETS 안에서 서로 다른 자리다 (${seeded.map(s => s.sp + '@' + s.at).join(' ')})`);
+  eq('sp 순서(PETS 등재 순서)', cards.map(c => c.sp).join(','), seeded.map(s => s.sp).join(','));
+  /* sp 만으로는 «같은 종의 다른 개체» 가 끼어도 통과한다 — 틴트까지 봐서 개체 동일성을 못 박는다. */
+  eq('틴트 순서(같은 개체가 같은 자리에)',
+     cards.map(c => c.tint || '-').join(','), seeded.map(s => s.tint || '-').join(','));
 
   /* ── §3 그림 ── */
   console.log('§3 그림 — 잉크가 있고, 이모지 잉크 대역이며, 칸 중앙에 앉는다');
