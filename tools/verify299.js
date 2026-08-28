@@ -127,6 +127,21 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     sweep('70 출석 «오늘 카드» .at-c>s.updot', '#mbox [data-att]>s.updot', '.at-c,.at-c7');
     closeModal(); S.att = JSON.parse(attSnap); uiDirty = true; await wait(100);
 
+    /* ── 22 퀘스트 (322 신설) ──
+       행 [보상 받기]·[모두 받기] 는 «받을 수 있을 때만» 노드를 찍으므로 5행을 전부 ready 로 만들어
+       진짜 노드를 재고 되돌린다(임시 `mk` 노드가 아니라 실물이다).
+       ⚠ 이 둘의 닷은 버튼 **바깥** 우상단 코너에 앉는다(`.qs-b` 는 안쪽 여백이 29px 뿐이라 안 들어간다) —
+       299 는 «부모 상자 기준 우상단 사분면» 규약이라 바깥 코너도 그대로 충족한다(318 `.at-c` 와 같다). */
+    const qSnap = JSON.stringify({ q: S.quest, k: S.totalKills, b: S.best, sm: S.summons, up: S.upgrades });
+    QUESTS.forEach(q => { S.quest[q.id].base = 0; });
+    S.totalKills = 1e9; S.best = 9999; S.summons = 1e9; S.upgrades = 1e9;
+    openQuest('rep'); await wait(250);
+    sweep('22 행 [보상 받기] .qs-b>.updot', '.qs-b>.updot', '.qs-b');
+    sweep('22 [모두 받기] #qAll>.updot', '#qAll>.updot', '#qAll');
+    closeModal();
+    { const s = JSON.parse(qSnap); S.quest = s.q; S.totalKills = s.k; S.best = s.b; S.summons = s.sm; S.upgrades = s.up; }
+    uiDirty = true; await wait(120);
+
     /* ── 승급전 (323 신설) ──
        배지는 «권장 충족» 일 때만 찍히므로 여기서는 `mk` 로 임시 노드를 만들어 CSS 위치만 잰다
        (조건별 점등·소등은 `tools/verify320.js` 가 본다). */
