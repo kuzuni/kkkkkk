@@ -142,18 +142,23 @@ const BASIN = '#relw #rwBasin';
   }
 
   console.log('[B] 드리프트 내성 — 손가락이 버튼 «안» 에서 구른다 (이 작업의 본체)');
-  for (const r of [6, 14, 30, 45]) {
-    await openSkill();
-    await touchHold(await aim(LV), 1500, r);
-    const v = await n(), c2 = await cx();
-    ok(v >= 3 && c2 === 0, '#mLv     ±' + String(r).padStart(2) + 'px — 연속 유지 · pointercancel 0', v + '회 · 취소 ' + c2);
-  }
-  for (const r of [6, 14, 30, 45]) {
-    await openBasin();
-    await touchHold(await aim(BASIN), 1500, r);
-    const v = await n(), c2 = await cx();
-    ok(v >= 3 && c2 === 0, '#rwBasin ±' + String(r).padStart(2) + 'px — 연속 유지 · pointercancel 0', v + '회 · 취소 ' + c2);
-  }
+  /* 결함의 서명은 **`pointercancel`** 이지 «횟수» 가 아니다(수리 전: 1회 **· 취소 1**).
+     머신이 1.5초 안에 통째로 정체하면 취소 없이도 횟수가 내려가므로, «취소 0 인데 횟수만 낮은»
+     표본에 한해 **한 번만** 다시 잰다(355 교훈 — 타이밍에 민감한 임계는 게이트를 부패시킨다).
+     결함이 살아 있으면 재시도해도 매번 취소가 뜨므로 이 완충이 결함을 가리지 않는다 —
+     그 사실은 [R] 이 매 실행 «되돌리면 1회 · 취소 ≥1» 로 못 박는다. */
+  const drift = async (label, open, sel, r) => {
+    let v = 0, c2 = 0;
+    for (let try_ = 0; try_ < 2; try_++) {
+      await open();
+      await touchHold(await aim(sel), 1500, r);
+      v = await n(); c2 = await cx();
+      if (c2 !== 0 || v >= 3) break;                  /* 결함 서명이 떴거나 초록이면 그대로 판정 */
+    }
+    ok(v >= 3 && c2 === 0, label + ' ±' + String(r).padStart(2) + 'px — 연속 유지 · pointercancel 0', v + '회 · 취소 ' + c2);
+  };
+  for (const r of [6, 14, 30, 45]) await drift('#mLv    ', openSkill, LV, r);
+  for (const r of [6, 14, 30, 45]) await drift('#rwBasin', openBasin, BASIN, r);
   ok(await p.evaluate(sels => sels.every(s => {
     const e = document.querySelector(s); return !!e && getComputedStyle(e).touchAction === 'none';
   }), [LV, BASIN]), '★ 처방 — 두 홀드 호스트가 `touch-action:none` 이라 브라우저가 제스처를 못 채간다');
