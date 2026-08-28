@@ -2145,6 +2145,88 @@ async function ampCheck(p, hosts) {
     await p.waitForTimeout(150);
   }
 
+  /* ── §29 「마일리지 +N」 뱃지가 아이콘에 안 가린다 (23회차 신설) ──────────
+     23회차 채점에서 **두 비평가가 독립으로 같은 자리를 ④ 최저의 근거로 들었다**:
+       AW ①「보이는 알약 폭 r20·r21·r22 **111/112px** → r23 **86/88px**(−22.5%/−21.4%) ·
+             가려진 왼쪽 25px 가 「마일」 두 글자라 라벨이 「리지 +1」 로 읽힌다」
+       AX ②「보이는 폭이 프레임마다 **81~90px 로 7~8px 출렁인다** · 8프레임 어느 것도 라벨 전체가 안 읽힌다」
+     원인은 22회차가 `.cn-cd>.pn>em`(아이콘 잉크)만 z5 로 올리고 **알약 «판»(`.cp`, z auto)을 안 올린 것**이다.
+     §14 의 대각 구멍 · §19 의 «자를 안 댄 곳» 과 같은 계열 — **불변식이 «잉크» 만 말하고 «판» 을
+     안 말해서** 20회차 넘게 초록불이던 자리에 22회차가 새 구멍을 냈다.
+     재는 것: 알약 rect 를 클립으로 찍어 **마젠타 면**(R−G ≥ 60 이고 B−G ≥ 40)이 있는 열의 좌·우 끝
+     = «보이는 폭». CSS 규격 폭의 **90% 이상**이어야 한다(가려짐 ≤ 10%).
+     ⚠ `--jz-amp:0` 으로 얼린다 — 둥실 ±3px·뱃지 흔들림 ±4° 가 절단선을 7~8px 움직인다(AX 실측). */
+  console.log('§29 「마일리지 +N」 뱃지가 아이콘에 가리지 않는가 (23회차 신설 — 2인 일치 ④)');
+  {
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    /* §27-1 절차 — clip 을 잡기 «전에» 애니메이션을 걷는다 */
+    await seek(p, 0);
+    await p.evaluate(() => {
+      const cp = document.querySelector('#shopList .cn-cd .cp');
+      if (cp) cp.scrollIntoView({ block: 'center' });
+      document.getElementById('shopw').style.setProperty('--jz-amp', '0');
+    });
+    await p.waitForTimeout(150);
+    await seek(p, 0);
+    const spots = await p.evaluate(() => [...document.querySelectorAll('#shopList .cn-cd>.cp')].map(e => {
+      const r = e.getBoundingClientRect();
+      return { css: Math.round(r.width),
+               x: Math.round(r.x) - 6, y: Math.round(r.y) - 6,
+               width: Math.round(r.width) + 12, height: Math.round(r.height) + 12,
+               ok: r.y > 0 && r.y + r.height < 2280 };
+    }).filter(c => c.ok));
+    const seen = async () => {
+      const out = [];
+      for (const c of spots) {
+        const b64 = (await p.screenshot({ clip: { x: c.x, y: c.y, width: c.width, height: c.height } })).toString('base64');
+        out.push(await p.evaluate(async src => {
+          const img = new Image();
+          await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+          const cv = document.createElement('canvas');
+          cv.width = img.width; cv.height = img.height;
+          const g = cv.getContext('2d'); g.drawImage(img, 0, 0);
+          const d = g.getImageData(0, 0, cv.width, cv.height).data;
+          let x0 = 1e9, x1 = -1;
+          for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+            const j = (y * cv.width + x) * 4;
+            if (d[j] - d[j + 1] >= 60 && d[j + 2] - d[j + 1] >= 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+          }
+          return x1 >= 0 ? x1 - x0 + 1 : 0;
+        }, b64));
+      }
+      return out;
+    };
+    const patch = txt => p.evaluate(x => {
+      let e = document.getElementById('v122cp');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'v122cp'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    ok(spots.length >= 2, '뱃지 알약 ' + spots.length + '개를 프레임 안에서 잡았다 (>=2)');
+    if (spots.length >= 2) {
+      const now = await seen();
+      const rate = now.map((w, i) => w / Math.max(1, spots[i].css));
+      console.log('    · ' + now.map((w, i) => '뱃지' + (i + 1) + ' ' + w + '/' + spots[i].css
+        + 'px(' + Math.round(rate[i] * 100) + '%)').join(' | '));
+      const bad = rate.filter(r => r < .9).length;
+      ok(bad === 0, '뱃지 알약이 CSS 폭의 90% 이상 보인다 (가려짐 ≤10%)'
+        + (bad ? ' — 미달 ' + bad + '개 (최저 ' + Math.round(Math.min(...rate) * 100) + '%)' : ''));
+      /* 음성항 — `.cp` 의 z 를 걷으면 22회차 상태로 돌아가 아이콘이 알약을 덮어야 한다 */
+      await patch('#shopList .cn-cd>.cp{z-index:auto!important}');
+      const neg = await seen();
+      await patch('');
+      const nrate = Math.min(...neg.map((w, i) => w / Math.max(1, spots[i].css)));
+      ok(nrate < .85, '음성항 — `.cp` 의 z 를 걷으면 ' + Math.round(nrate * 100)
+        + '% 로 다시 가려진다 (<85% 여야 자가 살아 있다)');
+    }
+    await p.evaluate(() => {
+      document.getElementById('shopw').style.removeProperty('--jz-amp');
+      const l = document.getElementById('shopList'); if (l) l.scrollTop = 0;
+    });
+    await p.waitForTimeout(150);
+  }
+
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는
