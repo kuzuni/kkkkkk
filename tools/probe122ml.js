@@ -78,11 +78,12 @@ async function measure(p, clip, key, keepMask) {
     ['보상줄 .rw', '.cn-ml>.rw'],
     ['[교환] 라벨', '.cn-ml>.ex>i'],
     /* 대조군 — 재화 카드(§19 가 지키는 자리). 여기는 «가산» 이어야 한다 */
+    ['⚑ 상품 구획 헤더', '#shopList .cn-hd>i'],
     ['대조 재화카드 제목', '#shopList .cn-cd:not(.done)>.hd>i'],
   ];
   const clips = await p.evaluate(sels => {
-    const ml = document.querySelector('.cn-ml');
-    if (ml) ml.scrollIntoView({ block: 'center' });
+    const hd = document.querySelector('#shopList .cn-hd');
+    if (hd) hd.scrollIntoView({ block: 'center' });
     return sels.map(([lab, sel]) => {
       const e = document.querySelector(sel);
       if (!e) return null;
@@ -101,7 +102,7 @@ async function measure(p, clip, key, keepMask) {
   }, txt);
 
   /* 마일리지 패널을 덮는 띠 전부 + 대조군 띠 전부 */
-  const BANDS = '.cn-ml::after,.cn-ml>.ex::after,'
+  const BANDS = '.cn-ml::after,.cn-ml::before,.cn-ml>.ex::after,.cn-hd::after,.cn-hd::before,'
     + '#shopList .cn-cd>.fr::after,#shopList .cn-cd>.fr::before,#shopList .cn-cd::before';
 
   console.log('작업 122 · 23회차 프로브 — 마일리지 패널 광택의 «부호»');

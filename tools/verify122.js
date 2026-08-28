@@ -2227,6 +2227,92 @@ async function ampCheck(p, hosts) {
     await p.waitForTimeout(150);
   }
 
+  /* ── §30 «상품» 구획 헤더 글자를 광택이 깎지 않는가 (24회차 신설) ─────────
+     §28 이 마일리지 판에서 닫은 그 결함의 **다섯 번째 «끼어 있는 자리»**. 24회차 비평가 AY 가
+     화소로 잡았다: 「헤더 글자 잉크 1827화소를 좌표로 고정해 프레임마다 재면 **Δ평균 −8.75 루마 ·
+     908개(49.7%)가 3루마 이상 어두워짐 · 최악 243.9 → 201.7(−17.3%)**」. 대조군은 전부 Δ0.00 이었다
+     (소환 탭 7블록 · 재화 탭 나머지 구획 헤더 3개 · 마일리지 판 3종 = 23회차 수정분).
+     원인은 §28 과 같다 — `.cn-hd>i` 가 z auto 인데 `::after` 가 **트리 순서상 뒤**라 글자 위를 지난다.
+     ⚠ 이 자리는 §16·§19·§24·§28 어느 절도 안 보고 있었다. «자를 안 댄 곳은 자동 무결점» 여섯 번째. */
+  console.log('§30 «상품» 구획 헤더 글자 — 광택이 획을 깎지 않는가 (24회차 신설 — AY 화소 실측)');
+  {
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    await seek(p, 0);
+    await p.evaluate(() => {
+      const hd = document.querySelector('#shopList .cn-hd');
+      if (hd) hd.scrollIntoView({ block: 'center' });
+      document.getElementById('shopw').style.setProperty('--jz-amp', '0');
+    });
+    await p.waitForTimeout(150);
+    await seek(p, 0);
+    const clip = await p.evaluate(() => {
+      const e = document.querySelector('#shopList .cn-hd>i');
+      if (!e) return null;
+      const r = e.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2 || r.y < 0 || r.y + r.height > 2280) return null;
+      return { x: Math.max(0, Math.round(r.x)), y: Math.max(0, Math.round(r.y)),
+               width: Math.round(r.width), height: Math.round(r.height) };
+    });
+    const meanOf = async keep => {
+      const b64 = (await p.screenshot({ clip })).toString('base64');
+      return await p.evaluate(async ([src, kp]) => {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        const n = c.width * c.height, L = new Float32Array(n);
+        for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
+        /* AY 와 같은 자 — 기준선에서 «밝은 잉크»(L ≥ 238) 화소를 좌표로 고정하고 그 화소만 추적한다 */
+        if (kp) { const m = []; for (let i = 0; i < n; i++) if (L[i] >= 238) m.push(i); window.__v30 = m; }
+        const m = window.__v30 || [];
+        let s = 0, lo = 999, cut = 0;
+        for (const i of m) { s += L[i]; if (L[i] < lo) lo = L[i]; }
+        return { mean: m.length ? s / m.length : 0, min: m.length ? lo : 0, mask: m.length };
+      }, [b64, !!keep]);
+    };
+    const patch = txt => p.evaluate(x => {
+      let e = document.getElementById('v122hd');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'v122hd'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    const sweep = async base => {
+      let lo = 99;
+      for (let t = 0; t < 16; t++) {
+        await seek(p, Math.round(4800 * t / 16));
+        const v = await meanOf(false);
+        if (v.mean - base.mean < lo) lo = v.mean - base.mean;
+      }
+      return lo;
+    };
+    ok(!!clip, '«상품» 구획 헤더 글자를 프레임 안에서 잡았다');
+    if (clip) {
+      await patch('#shopList .cn-hd::after,#shopList .cn-hd::before{opacity:0!important}');
+      await seek(p, 0);
+      const base = await meanOf(true);
+      await patch('');
+      const cur = await sweep(base);
+      console.log('    · 마스크 ' + base.mask + 'px · 기준 평균 ' + base.mean.toFixed(2)
+        + ' · Δ평균 최저 ' + cur.toFixed(2));
+      ok(base.mask > 500, '헤더 글자 잉크 마스크 = ' + base.mask + 'px (>500 이어야 잴 수 있다)');
+      ok(cur >= -1, '헤더 글자가 안 깎인다 (Δ평균 ' + cur.toFixed(2) + ' ≥ −1)');
+      /* 음성항 — 글자의 z 를 걷으면 24회차 이전으로 돌아가 측엽이 다시 글자 위로 온다 */
+      await patch('#shopList .cn-hd>i{z-index:auto!important}');
+      const neg = await sweep(base);
+      await patch('');
+      ok(neg < -3, '음성항 — 글자 z 를 걷으면 Δ평균 ' + neg.toFixed(2)
+        + ' 로 다시 깎인다 (<−3 이어야 자가 살아 있다)');
+    }
+    await p.evaluate(() => {
+      document.getElementById('shopw').style.removeProperty('--jz-amp');
+      const l = document.getElementById('shopList'); if (l) l.scrollTop = 0;
+    });
+    await p.waitForTimeout(150);
+  }
+
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는
