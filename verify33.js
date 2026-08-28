@@ -85,8 +85,11 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
 
   /* ---- 2. 내용이 실제 게임 데이터와 일치 ---- */
   console.log('[2] 표시 내용 = 실제 게임 데이터');
-  const want = { gold: 0, dia: 3210, relic: 450, sp: 12 };   /* 값 자체는 curVal() 로 실시간 대조한다 */
-  for (const k of Object.keys(want)) {
+  /* 292 — 종류 목록을 **리터럴에서 CURINFO 로** 옮겼다(276 «리터럴 기대값은 그때의 데이터를 감시한다»).
+     옛 목록은 `sp`(스탯 포인트)를 물었는데 88 이 그 재화를 폐기해 게이트만 1년째 빨갰다.
+     이제 재화가 늘거나(194 강화석 · 203 룬강화석 · 210 단련석 · 292 마일리지) 줄어도 전수가 따라온다. */
+  const want = await page.evaluate(() => Object.keys(CURINFO));
+  for (const k of want) {
     await closeAll();
     const r = await page.evaluate(k => {
       if (typeof openCurInfo !== 'function') return { err: 'openCurInfo 없음' };
@@ -95,7 +98,9 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
       const live = typeof curVal === 'function' ? curVal(k) : null;
       return { on: w.classList.contains('on'), t: w.innerText, live,
                shown: document.getElementById('ciHave').textContent,
-               expect: '보유: ' + fmt(live) };
+               /* 292 — `fmt` 이 아니라 **`fmtCur(k, …)`** 다. 150 이 «골드만 알파벳 단위(1.23B)» 로 바꿨는데
+                  게이트가 fmt 로 남아 골드 한 줄만 계속 빨갰다 — 제품이 아니라 잣대가 낡은 쪽이었다. */
+               expect: '보유: ' + fmtCur(k, live) };
     }, k);
     if (r.err) { fail(k + ': ' + r.err); continue; }
     if (!r.on) { fail(k + ': openCurInfo 로 안 열림'); continue; }
@@ -168,6 +173,46 @@ const fail = m => { fails.push(m); console.log('  ✗ ' + m); };
     await page.evaluate(() => { if (typeof closeAllPop === 'function') closeAllPop(); location.hash = ''; });
     await page.waitForTimeout(200);
   }
+
+  /* ---- 6. 292 — 53 가방 칸에서도 «종류별 전수» 로 열린다 ----
+     주인 보고 «메인에 골드 버튼 클릭하면 뜨던데 가방에서는 안 뜨네» 가 이 절이다.
+     33 쪽에서 보는 것은 «가방 칸이 33 의 위임 규칙(data-cur)에 편입됐는가» 다 —
+     가방 쪽 규칙(화폐만·k 전수)은 tools/verify53.js [C][F] 가 본다. */
+  console.log('[6] 292 — 53 가방 칸 전수 → 33 팝업');
+  await closeAll();
+  await page.evaluate(() => {
+    if (typeof closeAllPop === 'function') closeAllPop();
+    S.own = {}; S.gold = 1e6; S.dia = 5e4; S.relic = 500; S.stone = 40; S.rstone = 30; S.tstone = 20; S.mileage = 6;
+    openBag();
+  });
+  await page.waitForTimeout(300);
+  const bagKeys = await page.evaluate(() =>
+    [...document.querySelectorAll('#bagGrid .bg53-c:not(.em)')].map(e => e.dataset.cur || ''));
+  bagKeys.length >= 7 ? ok(`가방에 화폐 칸 ${bagKeys.length}개`) : fail(`가방 화폐 칸이 ${bagKeys.length}개뿐`);
+  bagKeys.every(k => k) ? ok('가방 칸 전부가 data-cur 를 들고 있다')
+                        : fail('data-cur 가 빈 칸이 있다 — 그 칸은 클릭이 죽는다: ' + JSON.stringify(bagKeys));
+  for (const k of bagKeys) {
+    if (!k) continue;
+    await closeAll();
+    const r = await page.evaluate(kk => {
+      const el = document.querySelector('#bagGrid .bg53-c[data-cur="' + kk + '"]');
+      if (!el) return { miss: true };
+      el.click();
+      const w = document.getElementById('ciw');
+      const b = w.querySelector('.ci') ? w.querySelector('.ci').getBoundingClientRect() : null;
+      const zc = +getComputedStyle(w).zIndex, zb = +getComputedStyle(document.getElementById('bagw')).zIndex;
+      return { on: w.classList.contains('on'), key: curInfoKey, zc, zb,
+               vis: b ? b.width > 0 && b.height > 0 : false,
+               bag: document.getElementById('bagw').classList.contains('on') };
+    }, k);
+    if (r.miss) { fail(`가방 «${k}» 칸이 사라졌다`); continue; }
+    /* «열렸다» 만으로는 부족하다 — 가방(z 41) 아래에 열리면 사용자에겐 «안 뜨는» 것과 같다 */
+    (r.on && r.key === k && r.vis && r.zc > r.zb && r.bag)
+      ? ok(`가방 «${k}» 칸 → 33 팝업이 가방 위(z ${r.zc} > ${r.zb})에 뜬다`)
+      : fail(`가방 «${k}» 칸: ${JSON.stringify(r)}`);
+  }
+  await closeAll();
+  await page.evaluate(() => { try { closeBag(); } catch (e) {} });
 
   errs.length ? errs.forEach(e => fail('콘솔 ' + e)) : ok('콘솔 에러 0');
   await browser.close();

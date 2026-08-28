@@ -451,7 +451,7 @@ function staticSyntax() {
              #pfw→.pf · #specw→.spc · #ciw→.ci · #trw→.tr-sheet · #eqw→.eqp
              · #shopw→.shp-list · #dunw→.dns-list · #relw→.rw-grid
            전수 확인은 `node tools/audit241.js`(읽기 전용) — 화면비 4종 × 상자 22개. */
-        const cands = [...document.querySelectorAll('#panel, #trw .tr-sheet, #eqw .eqp, #relw .rw-grid, #shopw .shp-list, #dunw .dns-list, #ciw .ci, #pfw .pf, #specw .spc, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #bagw .bg53-tabs, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav, #chw .ch-list, #chw .ch-bar')]
+        const cands = [...document.querySelectorAll('#panel, #trw .tr-sheet, #eqw .eqp, #relw .rw-grid, #shopw .shp-list, #dunw .dns-list, #ciw .ci, #pfw .pf, #specw .spc, #collw .cl, #collw .cl-tabs, #dunHud, #dunOut, #blsw .bls, #mnw .mn-col, #bagw .bg53, #cfw .cf55, #modal.ml69 .mbox, #modal.ml69 .ml-close, #rkw .rk-panel, #rkw .rk-me, #rkw .rk-nav, #chw .ch-list, #chw .ch-bar')]
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => { const cs = getComputedStyle(e); return cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0; });
         for (const e of cands) {

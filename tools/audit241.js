@@ -21,7 +21,7 @@ const CASES = [
   ['openSpec()',                 ['#specw .spc']],
   ['openColl21("armor")',        ['#collw .cl', '#collw .cl-tabs']],
   ['openBless()',                ['#blsw .bls']],
-  ['openBag()',                  ['#bagw .bg53', '#bagw .bg53-tabs']],
+  ['openBag()',                  ['#bagw .bg53']   /* 292 — .bg53-tabs 폐기 */],
   ['openConf()',                 ['#cfw .cf55']],
   ['openMail()',                 ['#modal.ml69 .mbox', '#modal.ml69 .ml-close']],
   ['openRank()',                 ['#rkw .rk-panel', '#rkw .rk-me', '#rkw .rk-nav']],

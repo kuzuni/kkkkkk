@@ -211,31 +211,40 @@ const probeNames = () => {
     eq('실사격(193) · ' + id + ' 생성 수', fired[id].made, CNT193[id]);
   });
 
-  /* ── ④ 53 가방 — 5종 재료 보유 상태에서 두 탭 ── */
+  /* ── ④ 53 가방 — 5종 재료 보유 상태 ──────────────────────────────────────
+     292(주인 지시 «가방에는 재화 즉 화폐들만»)로 **전제가 바뀌었다**: 가방은 이제 S.own 재료를
+     싣지 않는다. 그래서 «5종 이름이 칸에 보인다» 는 단언은 옛 제품을 서술한 것이라 이사시켰다 —
+     109 가 잡은 버그(이름이 «숫자» 로 나온다)의 감시는 남기고, 표본만 화폐로 바꾼다.
+     재료 이름이 글자로 나오는지는 아래 ⑤(08 세부 팝업 · 11 확률표)가 그대로 지킨다.
+     되돌림 시험: `bagCur()` 에 S.own 루프를 되살리면 «재료가 안 실린다» 3건이 빨개진다. */
   const bag = await p.evaluate(ids => {
     ids.forEach(id => { S.own[id] = { l: 1, n: 7 }; });
-    const r = { curErr: '', useErr: '', curCells: 0, useCells: 0, nonString: [], shown: [] };
-    try { bagTab = 'cur'; openBag(); r.curCells = document.querySelectorAll('#bagGrid .bg53-c:not(.em)').length; }
+    S.gold = 1e6; S.dia = 5e4; S.relic = 500; S.stone = 40; S.rstone = 30; S.tstone = 20; S.mileage = 6;
+    const r = { curErr: '', tabsLeft: 1, curCells: 0, nonString: [], shown: [], noKey: [] };
+    try { openBag(); r.curCells = document.querySelectorAll('#bagGrid .bg53-c:not(.em)').length; }
     catch (e) { r.curErr = String(e && e.message || e); }
     try {
-      bagCur().forEach(x => { if (typeof x.n !== 'string') r.nonString.push(String(x.n)); });
+      bagCur().forEach(x => {
+        if (typeof x.n !== 'string') r.nonString.push(String(x.n));
+        if (!x.k || !CURINFO[x.k]) r.noKey.push(String(x.n));
+      });
       r.shown = [].map.call(document.querySelectorAll('#bagGrid .bg53-c:not(.em)'), c => c.dataset.bagn);
+      r.tabsLeft = document.querySelectorAll('#bagw [data-bagtab], #bagw .bg53-tabs').length;
     } catch (e) { r.curErr = r.curErr || String(e && e.message || e); }
-    try { bagTab = 'use'; renderBag(); r.useCells = document.querySelectorAll('#bagGrid .bg53-c:not(.em)').length; }
-    catch (e) { r.useErr = String(e && e.message || e); }
-    /* 되돌리기도 try 로 감싼다 — 버그가 살아 있으면 여기서 던져 게이트가 «FAIL» 대신 죽는다 */
-    try { bagTab = 'cur'; renderBag(); closeBag(); } catch (e) { r.curErr = r.curErr || String(e && e.message || e); }
+    try { renderBag(); closeBag(); } catch (e) { r.curErr = r.curErr || String(e && e.message || e); }
     return r;
   }, Object.keys(CNT));
-  eq('53 · 재화 탭 크래시', bag.curErr || 'none', 'none');
-  eq('53 · 소모품 탭 크래시', bag.useErr || 'none', 'none');
-  yes('53 · 재화 탭 칸 ≥ 5(보유 재료가 실제로 들어감)', bag.curCells >= 5);
+  eq('53 · 렌더 크래시', bag.curErr || 'none', 'none');
+  yes('53 · 화폐 칸 ≥ 5(실제 보유량이 실제로 들어감)', bag.curCells >= 5);
   eq('53 · bagCur() 이름 중 비문자열', bag.nonString.length + (bag.nonString.length ? ' :: ' + bag.nonString.join(',') : ''), 0);
   eq('53 · 칸 이름에 숫자만인 것', bag.shown.filter(x => /^\d+$/.test(x || '')).join(',') || 'none', 'none');
-  yes('53 · 5종 이름이 칸에 보인다', ['돌팔매', '꿰뚫는 화살', '서리 연쇄', '폭풍의 칼날', '천벌의 창']
-    .every(n => bag.shown.indexOf(n) >= 0));
-  /* 증거 캡처 — 크래시가 나던 그 화면(5종 보유 + 재화 탭) */
-  await p.evaluate(() => { bagTab = 'cur'; openBag(); });
+  eq('53 · CURINFO 키가 빠진 칸(292 — 클릭이 죽는 칸)', bag.noKey.join(',') || 'none', 'none');
+  eq('53 · 292 — 소모품 탭 스트립 잔재', bag.tabsLeft, 0);
+  eq('53 · 292 — S.own 재료가 가방에 안 실린다',
+    bag.shown.filter(n => ['돌팔매', '꿰뚫는 화살', '서리 연쇄', '폭풍의 칼날', '천벌의 창'].indexOf(n) >= 0)
+      .join(',') || 'none', 'none');
+  /* 증거 캡처 — 크래시가 나던 그 화면(5종 보유 + 가방) */
+  await p.evaluate(() => { openBag(); });
   await p.waitForTimeout(400);
   await p.locator('#app').screenshot({ path: path.resolve(__dirname, '../docs/review/109-53-가방재화탭.png') });
   await p.evaluate(() => closeBag());
