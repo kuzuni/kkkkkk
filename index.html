@@ -3320,8 +3320,13 @@
      y111~275)을 **가로 92% · 세로 25% 로 관통**한다(AN #15 · AP #13). 아이콘을 피할 수 있는
      가로 자리는 카드 안에 없다 — 아이콘이 폭 180 으로 카드(326) 한가운데를 차지하므로 어떤
      중앙 정렬 글자도 중심을 덮는다. 유일한 아이콘 없는 띠가 **y275~396**(아이콘 아래 ~ 버튼 위)라
-     상승 구간을 통째로 그 띠 안으로 내린다(아래 `fxDelta` 의 top). 끝점이 `.cv` 위지만 21회차의
-     «플로터가 떠 있는 동안 `.cv` 를 죽인다» 가 이미 걸려 있어 두 수치가 같이 안 읽힌다. */
+     상승 구간을 통째로 그 띠 안으로 내린다(아래 `fxDelta` 의 top).
+     ⚑ **36회차 정정(34회차가 리뷰에만 적고 코드는 안 고쳤다)** — 여기 있던 «끝점이 `.cv` 위지만
+       21회차의 «플로터가 떠 있는 동안 `.cv` 를 죽인다» 가 이미 걸려 있어 두 수치가 같이 안
+       읽힌다» 는 **사실이 아니다**: 그 21회차 처방은 **22회차가 되돌렸다.** 낡은 근거를 믿고
+       «세로 겹침은 이미 막혀 있다» 로 읽으면 34차 2인 공통5(씬 C 플로터 ↔ 카드 라벨 세로 겹침
+       66~100%)를 «없는 문제» 로 닫게 된다. 그 항목은 34·35회차가 «세로·시간 둘 다 막혔다» 로
+       등재해 둔 미해결분이다(리뷰 «35회차가 36회차로 넘기는 것» 3번). */
   /* 29회차 — 위 `fxPlus` 와 **같은 처방·같은 이유**(구간마다 걸리는 cubic-bezier 가 톱니를 만든다).
      AX 가 «직전 대비 −80.5%» 로 잡은 골이 30%↔46% 구간의 이징 꼬리다.
      끝점(+4 → −80px)과 수명(.62s)·페이드(46%)는 **한 픽셀도 안 바꾼다** — 24회차가 아이콘 없는
@@ -27732,6 +27737,9 @@ const FX3_BSX0 = 34, FX3_BSX1 = 470;   /* 밴드 스프레이 — 출발점 기�
 const FX3_BSPITCH = 44;                /* 30회차 — 밴드 슬롯 최소 피치. 코인 잉크 지름 32.5 보다 넉넉히 커야
                                           두 재화를 깍지 껴도 겹치지 않는다(28회차는 27px 이라 겹쳤다). 40 에서는
                                           x 지터 최악값이 밀어내기로도 안 풀려 최근접 29.8px 이 나왔다 — 44 로 올린다 */
+const FX3_BSFX = 11;                   /* 36회차 — 머묾 «부유» 의 **가로** 진폭. 9회차부터 리터럴 11 로
+                                          박혀 있던 것을 이름만 세웠다(값 불변). 아래 keep-out 이
+                                          «끝점 규칙을 지켜도 부유가 라벨 쪽으로 되미는 몫» 으로 쓴다. */
 const FX3_BSFY = 8;                    /* 30회차 — 머묾 «부유» 의 세로 진폭. 아래 (b) 머묾에서 쓰는 값과
                                           **같은 상수여야 한다** — 밴드는 끝점이 아니라 «끝점 ± 이 값» 을
                                           담아야 형제 행에 안 닿는다(verify93 [2b] 가 y955 로 잡았다) */
@@ -27772,6 +27780,55 @@ const FX3_OBROW = 76;                  /* 두 행 사이 간격(지름 45 보다
    겹침은 난수에 맡기지 않고 `FX3_MIND` 최소 중심거리로 강제한다(아래 배치 루프). */
 const FX3_OBROW2 = 58;                 /* 28회차 행 간격(구 76 — 되돌리기 전에 위 주석을 읽어라) */
 const FX3_MIND = 37;                   /* 퍼짐 끝점 최소 중심거리 — 잉크 지름 32.5 의 1.14배 */
+/* 36회차 — 34차 2인 공통1 «씬 B 발원 밴드가 «모두 받기» 버튼 **글자**를 덮는다»(BE 20.3% of 라벨
+   사각 · BF 남은 글자 잉크 50~66% — 두 자가 다른 것을 재서 %는 갈렸지만 원자료는 같다.
+   `p58ap` 실측: 최대 겹침 13,411px² = 라벨 상자의 **181%**(여러 개가 포개진다) · 지속 **324ms**).
+   ⚠ 두 사람의 처방(«밴드 y 를 −96px» · «스폰 y 1596→1545»)은 **둘 다 쓸 수 없다** — `p58aq` 로 방을
+     재니 마지막 퀘스트 행 하단 1555.5 와 라벨 윗변 1604 사이가 **48.5px** 뿐이라 코인 상자(실측
+     44×44)가 안 들어간다. 위로 더 올리면 `verify93 [2b]`(형제 행 관통 0)가 먼저 깨진다 —
+     27~30회차가 네 회차 들여 닫은 자리다. 아래(라벨 밑 1650 ~ 다음 콘텐츠 1715.5 = 65.5px)도
+     같은 이유로 못 쓰고, 게다가 [2b] backs(«흡수 중 y 역행 0»)를 건드린다.
+   → **세로를 한 픽셀도 안 건드리는 가로 회피**로 간다: 밴드 x 에서 «글자 상자 ± FX3_KOM» 을
+     빼고 남은 구간에만 슬롯을 놓는다(35회차 [12] 메뉴 버튼과 같은 «실측 keep-out» 기법).
+     세로가 그대로이므로 [2b] 는 구조적으로 안 깨진다.
+   FX3_KOM = 코인 «중심» 이 글자 상자에서 떨어져야 하는 거리. 새 눈대중 상수를 만들지 않고
+   `FX3_MIND` 의 절반을 쓴다 — 밀어내기가 코인 사이에 강제하는 최소 중심거리의 절반 = 설계가
+   코인 하나에 잡아 둔 반경(18.5)이고, 잉크 반경 16.25 보다 2.25px 크다. */
+const FX3_KOM = FX3_MIND/2;
+/* 겹치는 구간을 합쳐 정렬한다(글자 상자가 여러 개일 수 있다 — 우편함 일괄 버튼은 라벨 + 개수). */
+function fx3Merge(iv){
+  iv.sort((a,b) => a[0] - b[0]);
+  const out = [];
+  for(const s of iv){
+    const last = out[out.length-1];
+    if(last && s[0] <= last[1]) last[1] = Math.max(last[1], s[1]);
+    else out.push([s[0], s[1]]);
+  }
+  return out;
+}
+/* keep-out 을 뺀 «남는 폭» · 그 안의 u(0~W) 를 실제 x 로 펴는 사상. 순서를 보존하므로
+   깍지(짝수·홀수 슬롯)와 층화가 그대로 유지된다. */
+function fx3Span(bx0, bx1, holes){
+  let w = bx1 - bx0;
+  for(const h of holes) w -= Math.max(0, Math.min(h[1], bx1) - Math.max(h[0], bx0));
+  return Math.max(1, w);
+}
+function fx3MapX(u, bx0, bx1, holes){
+  let x = bx0 + u;
+  for(const h of holes){
+    const a = Math.max(h[0], bx0), b = Math.min(h[1], bx1);
+    if(b <= a) continue;
+    if(x >= a) x += (b - a);
+  }
+  return Math.min(x, bx1);
+}
+/* 밀어내기가 후보를 구멍 안으로 밀어 넣을 수 있다 — 가까운 쪽 가장자리로 뱉는다. */
+function fx3Eject(x, holes){
+  for(const h of holes){
+    if(x > h[0] && x < h[1]) return (x - h[0] < h[1] - x) ? h[0] : h[1];
+  }
+  return x;
+}
 /* 30회차 — 두 재화가 «한 밴드» 를 깍지로 나눠 쓰므로 밀어내기 목록도 두 묶음이 공유해야 한다.
    같은 밴드(중심 y 30px 이내)에 250ms 안에 이어서 스폰되면 같은 목록을 준다. */
 let fx3Pl = { t:-1e9, ey:-1e9, list:[] };
@@ -27931,6 +27988,36 @@ function fx3RowTop(){
   }
   return top;
 }
+/* 36회차 — [y0, y1] 대역에 걸리는 «글자 advance 상자» 의 x 구간을 FX3_KOM 만큼 넓혀 합친다.
+   ⓐ 재는 것은 요소가 아니라 **텍스트 노드**다(Range). 요소 상자를 쓰면 버튼·행 배경이 통째로
+      구멍이 된다.
+   ⓑ 훑는 범위는 열려 있는 패널(FX3_PANEL) 안뿐이다 — 자유 밴드는 패널 안에서만 생긴다.
+   ⓒ 한 번의 스폰에 한 번만 돈다(`fx3Escape` 는 버스트당 1회). 프레임 루프가 아니다. */
+function fx3TextX(y0, y1){
+  const f = fxSc(); if(!f) return [];
+  const iv = [];
+  const rg = document.createRange();
+  for(const pan of document.querySelectorAll(FX3_PANEL)){
+    const pr = fxRect(pan);
+    if(!pr || pr.w < 240) continue;
+    if(pr.y > y1 || pr.y + pr.h < y0) continue;
+    for(const el of pan.querySelectorAll('*')){
+      let has = false;
+      for(const n of el.childNodes) if(n.nodeType === 3 && n.textContent.trim()){ has = true; break; }
+      if(!has) continue;
+      const cs = getComputedStyle(el);
+      if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+      rg.selectNodeContents(el);
+      const r = rg.getBoundingClientRect();
+      if(!r.width || !r.height) continue;
+      const y = (r.top - f.y)/f.s, hh = r.height/f.s;
+      if(y > y1 || y + hh < y0) continue;
+      const x = (r.left - f.x)/f.s, w = r.width/f.s;
+      iv.push([x - FX3_KOM, x + w + FX3_KOM]);
+    }
+  }
+  return fx3Merge(iv);
+}
 function fx3Escape(p){
   let row = null, rr = null;
   for(const el of document.querySelectorAll(FX3_ROW)){
@@ -27972,7 +28059,12 @@ function fx3Escape(p){
       if(r.y >= p.y)       dn = Math.min(dn, r.y - p.y);
     }
     const room = 2*Math.min(up, dn) - 2*FX3_EYPAD;
-    return { ey:p.y, cb:p.y, h:Math.max(FX3_BSY, Math.min(room, FX3_MIND + 2*FX3_BSFY)), free:true };
+    const h = Math.max(FX3_BSY, Math.min(room, FX3_MIND + 2*FX3_BSFY));
+    /* 36회차 — 이 밴드의 y 대역에 걸리는 «글자» 를 keep-out 으로 돌려준다(위 FX3_KOM 주석).
+       행 경로가 세로로 하는 일(«콘텐츠가 없는 띠를 찾는다»)을 자유 밴드에서는 가로로 한다.
+       재는 상자는 **텍스트 노드의 Range**(글자 advance 상자) 하나로 통일한다 — 요소 상자를 쓰면
+       버튼 배경(272px)까지 구멍이 돼 밴드가 남지 않는다(«자가 다르면 일치해도 틀린다»). */
+    return { ey:p.y, cb:p.y, h, free:true, keep:fx3TextX(p.y - h/2 - FX3_BSFY, p.y + h/2 + FX3_BSFY) };
   }
   let top = rr.y + rr.h, bot = rr.y;                  /* 행 안 콘텐츠의 «맨 위» · «맨 아래» */
   for(const el of row.querySelectorAll('*')){
@@ -28251,6 +28343,7 @@ function fxFly(from, cur, n){
       let ax = clamp(p0.x + Math.cos(a)*rr, 40, FRAME_W - 40);
       let ay = clamp(p0.y + Math.sin(a)*rr, 120, frameH - 120);
       let bnd = false;
+      let holes = [];                                 /* 36회차 — 밴드 안 «글자» keep-out (아래 밀어내기도 쓴다) */
       let ylo = 120, yhi = frameH - 120;              /* 28회차 — 밀어내기가 넘으면 안 되는 y 범위 */
       /* 24회차 — 행 안(패널 안 + 빈 밴드가 있는 리스트 행)이면 부채꼴 대신 **밴드 가로 스프레이**.
          밴드가 출발점보다 확실히 «위» 일 때만 쓴다(아래 밴드로 뿌리면 [2b] backs 가 깨진다). */
@@ -28281,13 +28374,26 @@ function fxFly(from, cur, n){
            좁아져(=32회차가 실측한 겹침) 밴드를 켠 의미가 없다. 왼쪽으로 열어 ⓐ 의 선언 폭
            «슬롯 수 × FX3_BSPITCH» 를 실제로 확보한다(16×44 = 704 → 피치 44 > FX3_MIND 37). */
         if(escY.free) bx0 = Math.max(fx3PanL + FX3_BSOM, Math.min(bx0, bx1 - nsl*FX3_BSPITCH));
+        /* 36회차 — 공통1(라벨 가림) 가로 회피. 구멍만큼 밴드를 **왼쪽으로 더 연다**(오른쪽은
+           복도 여유 FX3_BSOM 에 이미 걸려 있다). 왼쪽 하한(패널 안쪽 + BSOM)까지 열어도
+           «남는 폭 / 슬롯» 이 FX3_MIND 밑이면 **회피를 통째로 버린다** — 구멍을 지키자고 피치를
+           잉크 아래로 떨어뜨리면 28~32회차가 다섯 라운드 걸려 회수한 겹침이 되돌아온다.
+           그때는 종전 거동(=라벨을 덮는 그림)이지만, 밴드가 깨지는 것보다는 낫다. */
+        holes = (escY.free && escY.keep && escY.keep.length) ? escY.keep : [];
+        if(holes.length){
+          const need = nsl*FX3_BSPITCH + (fx3Span(bx0, bx1, []) - fx3Span(bx0, bx1, holes));
+          if(bx1 - bx0 < need) bx0 = Math.max(fx3PanL + FX3_BSOM, bx1 - need);
+          if(fx3Span(bx0, bx1, holes)/nsl < FX3_MIND) holes = [];
+        }
         /* ⓑ 깍지 — 종전에는 여기서 밴드를 좌우로 갈라 골드를 왼쪽 절반·다이아를 오른쪽 절반에
            몰았다(«HUD 알약 순서» 를 근거로 한 16회차 결정). 그 결과가 «x 범위가 한 픽셀도 안 겹치고
            통화 교대 0회» 이고, 두 비평가가 이것을 사양 위반으로 같이 올렸다.
            → 두 묶음을 **한 밴드의 짝수·홀수 슬롯**에 끼운다. 시간축은 이미 `u` 가 같은 방식으로
            깍지를 끼고 있으므로(16회차b) 공간도 같은 규칙을 쓰는 것이 일관된다. 교대 15회. */
         const tb = ((lane < 0 ? i : 2*i + (lane === 1 ? 0 : 1)) + rnd(0.18, 0.82))/nsl;
-        ax = clamp(bx0 + tb*(bx1 - bx0), 40, FRAME_W - 40);
+        /* 36회차 — 구멍을 뺀 «남는 폭» 위에 슬롯을 놓고 실제 x 로 편다(구멍이 없으면 종전과 동일:
+           `fx3Span` = bx1−bx0 · `fx3MapX` = bx0 + u). 사상이 단조라 깍지 순서가 안 바뀐다. */
+        ax = clamp(fx3MapX(tb*fx3Span(bx0, bx1, holes), bx0, bx1, holes), 40, FRAME_W - 40);
         /* ⓒ 세로 — 밴드 «실폭» 을 쓴다(`fx3Escape` 가 h 로 돌려준다. 없으면 종전 FX3_BSY).
            28회차의 «교대로 ±0.42×BSY» 는 y 를 두 값으로 못 박아 AZ 가 «y 는 969·995 두 값뿐,
            x 간격 σ3.4 = 기계적 2단 지그재그» 로 잡은 바로 그 패턴을 만든다. 피치가 40 으로
@@ -28301,7 +28407,9 @@ function fxFly(from, cur, n){
            → 연속 난수는 **x 피치가 이미 최소거리를 넘을 때만** 쓴다. 그 밑에서는 겹침을 막을 축이
            y 밖에 없으므로 28회차의 «교대 배치»(Δy 21.8px 보장)를 그대로 쓴다 — 그 경로에서는
            밴드 실폭보다 `FX3_BSY` 가 크면 종전처럼 BSY 를 쓴다(28회차까지의 거동과 동일). */
-        const pit = (bx1 - bx0)/nsl;
+        /* 36회차 — 피치는 «구멍을 뺀» 실효 폭으로 잰다. 구름(연속 난수)이냐 교대(28회차)냐를
+           가르는 값이라, 회피로 좁아진 것을 안 세면 좁은 밴드에서 구름을 골라 겹친다. */
+        const pit = fx3Span(bx0, bx1, holes)/nsl;
         const bh = pit >= FX3_MIND ? Math.max(FX3_EYMIN, escY.h || FX3_BSY)
                                    : Math.max(FX3_BSY, escY.h || FX3_BSY);
         /* ⚑ **끝점이 밴드 안에 있는 것으로는 부족하다 — 머묾 부유(±`FX3_BSFY`)가 그 위로 더 나간다.**
@@ -28389,7 +28497,9 @@ function fxFly(from, cur, n){
           /* 정확히 겹쳐 방향이 없으면 난수 방향으로 뗀다 */
           const ux = d < 0.5 ? Math.cos(rnd(0, 6.28)) : dx/d;
           const uy = d < 0.5 ? Math.sin(rnd(0, 6.28)) : dy/d;
-          ax = clamp(ax + ux*(FX3_MIND - nd + 1), 40, FRAME_W - 40);
+          /* 36회차 — 밀어내기가 keep-out 구멍(글자) 안으로 밀어 넣을 수 있다. 밀고 나서 가까운 쪽
+             가장자리로 뱉는다. 뱉은 뒤에도 최소거리가 모자라면 다음 회전이 y 로 마저 푼다. */
+          ax = fx3Eject(clamp(ax + ux*(FX3_MIND - nd + 1), 40, FRAME_W - 40), holes);
           ay = clamp(ay + uy*(FX3_MIND - nd + 1), Math.max(120, ylo), Math.min(frameH - 120, yhi));
         }
         placed.push({ x:ax, y:ay });
@@ -29523,7 +29633,7 @@ function fxTick(dt){
         const w = f.t*12.4 + f.ph;
         /* 9회차 — 7/5px 는 74ms 간격 캡처에서 변위 1~6px 라 «정지» 로 읽힌다(비평가 Z ⑤).
            진폭을 올리되, 반경 상한(195)은 부유분을 포함해 지키도록 FX3_R1 을 그만큼 내렸다. */
-        x = f.ax + Math.cos(w)*11;
+        x = f.ax + Math.cos(w)*FX3_BSFX;  /* 36회차 — 값은 그대로(11). 이름만 세웠다(아래 keep-out 이 쓴다) */
         y = f.ay + Math.sin(w)*FX3_BSFY;   /* 30회차 — 값은 그대로(8). 밴드 여유 계산이 이 상수를 쓴다 */
         s = FX3_FLYS + Math.sin(w*0.6)*0.03;
         rot = f.rot + Math.sin(w*0.45)*4;

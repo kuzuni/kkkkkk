@@ -19,6 +19,7 @@
     [10] 퀘스트 수령 토스트가 300ms 안에 완전히 뜬다
     [11] 세 씬 어디서도 콘솔 에러가 나지 않는다
     [12] 전투 발 경로가 우상단 ▦ 메뉴 버튼(#menub)을 관통하지 않는다 (34차 2인 공통2)
+    [13] 씬 B 머묾 구간에 코인이 «모두 받기» 라벨 keep-out 을 지킨다 (34차 2인 공통1)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -97,7 +98,12 @@ async function run(scene, span, step) {
         const t = performance.now() - t0;
         const flies = [...document.querySelectorAll('.fx-fly')].map((el) => {
           const r = el.getBoundingClientRect();
+          /* 36회차 — 가림을 재는 상자는 «그림» 인 `.cic` 다(93 17회차: 화소가 아니라 레이아웃 박스).
+             `.fx-fly` 자신은 글리프 advance 상자라 그림보다 작다(실측 44 vs 55). */
+          const ic = el.querySelector('.cic');
+          const ir = ic ? ic.getBoundingClientRect() : r;
           return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+            cx: ir.left, cy: ir.top, cw: ir.width, ch: ir.height,
             up: !!el.closest('#fxl'), lo: !!el.closest('#fxlc') };
         });
         const plus = [...document.querySelectorAll('.fx-plus')].map((el) => parseFloat(getComputedStyle(el).fontSize));
@@ -120,8 +126,26 @@ async function run(scene, span, step) {
     });
     const mb = document.getElementById('menub');
     const mbr = mb ? mb.getBoundingClientRect() : null;
+    /* 36회차 [13] — «모두 받기» 라벨의 **글자 advance 상자**(텍스트 노드 Range). 요소 상자를 쓰면
+       버튼 배경 272px 을 재게 돼 «글자를 덮는다» 는 지적과 다른 것을 재는 자가 된다. */
+    let qlab = null;
+    { const btn = document.getElementById('qAll');
+      if (btn) {
+        const rg = document.createRange(); let best = null;
+        const walk = (n) => { if (n.nodeType === 3 && n.textContent.trim()) { rg.selectNodeContents(n); const r = rg.getBoundingClientRect(); if (r.width && (!best || r.width > best.width)) best = r; } for (const c of n.childNodes) walk(c); };
+        walk(btn);
+        if (best) qlab = { x: best.left, y: best.top, w: best.width, h: best.height };
+      } }
     return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
-      menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null };
+      menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null,
+      qlab,
+      /* keep-out 규칙 상수도 페이지에서 읽는다 — 게이트가 자기 사본을 들면 부패한다(211·289) */
+      kom: (typeof FX3_KOM === 'number' && typeof FX3_BSFX === 'number')
+        ? { kom: FX3_KOM, fx: FX3_BSFX } : null,
+      /* 머묾 창은 사양 상수에서 읽는다(눈대중 임계 금지) — 퍼짐 끝 ~ 흡수 시작 */
+      hold: { a: (typeof FX3_SPREAD === 'number' ? FX3_SPREAD : 0.22) * 1000,
+              b: ((typeof FX3_SPREAD === 'number' ? FX3_SPREAD : 0.22)
+                + (typeof FX3_HOLD_F === 'number' ? FX3_HOLD_F : 0.12)) * 1000 } };
   }, { sc: scene, span, step });
 
   await b.close();
@@ -132,7 +156,7 @@ async function run(scene, span, step) {
   console.log('VERIFY58 — UI 연출 공용 모듈\n');
 
   const gain = await run('gain', 1600, 25);
-  const quest = await run('quest', 1900, 25);
+  const quest = await run('quest', 1900, 15);
   const upg = await run('upg', 900, 25);
 
   /* ⚑ 32회차 — «도착» 을 무엇으로 재는가.
@@ -217,6 +241,54 @@ async function run(scene, span, step) {
     }
     /* 되돌리면 빨개진다: 35회차 이전 빌드는 같은 발원에서 겹친 표본 18 · 최대 1,482px² 였다. */
     ok(hit === 0, `코인 상자 ↔ 버튼 사각 겹친 표본 ${hit}개 · 최대 ${Math.round(area)}px² (0 이어야 한다)`);
+  }
+
+  /* ---- [13] 씬 B 머묾 — «모두 받기» 라벨 keep-out 규칙 (34차 2인 공통1) ----
+     ⚠ 단언을 «겹침 0» 으로 쓰면 안 된다. 재는 상자가 서로 «다른 것»이기 때문이다:
+       · `.cic` 는 **화폐 아이콘의 레이아웃 상자**(55px)라 그림보다 크다(35회차 실측:
+         코인 바디가 상자의 86% · 다이아는 53%).
+       · 라벨은 **advance 상자**라 글자 잉크 바깥에 사이드베어링이 붙어 있다.
+       두 여백이 겹치는 몫까지 «가림» 으로 세면 «화소로는 0인데 게이트는 빨간» 자가 된다.
+       (36회차 `p58ar` 화소 실측: 이 규칙을 지킨 빌드의 글자 잉크 가림은 임계 170/190/210 에서
+        0.0~1.4% — 규칙을 안 지킨 빌드는 같은 자로 29.7~72.1% 다.)
+     → 단언은 **코드가 강제하는 규칙 자신**으로 쓴다: 끝점은 라벨 상자에서 `FX3_KOM` 이상
+       떨어져 있고, 머묾 부유가 되밀 수 있는 몫은 `FX3_BSFX` 다. 그러므로 머묾 구간의
+       «코인 중심 ↔ 라벨 상자» 가로 거리는 언제나 `FX3_KOM − FX3_BSFX` 이상이어야 한다.
+       keep-out 이 사라지거나 KOM 이 내려가거나 부유가 커지면 여기가 먼저 빨개진다. */
+  console.log('[13] 씬 B 머묾 구간 — «모두 받기» 라벨 keep-out (34차 BE·BF 2인 공통1)');
+  if (!quest.qlab) {
+    ok(false, '#qAll 라벨 텍스트를 못 찾았다 — 이 단언을 잴 대상이 없다');
+  } else if (!quest.kom) {
+    /* 상수가 없으면 규칙 자체가 사라진 것이다. 그래도 **관측값은 낸다** — «잴 수 없다» 로 끝내면
+       되돌림 시험이 «왜 빨간지» 를 못 보여 준다(35회차 [12] 가 남긴 교훈의 반대편). */
+    const L = quest.qlab, H = quest.hold;
+    let mind = 1e9;
+    for (const s2 of quest.samples) {
+      if (s2.t < H.a || s2.t > H.b) continue;
+      for (const f of s2.flies) {
+        const cx = f.cx + f.cw / 2, cy = f.cy + f.ch / 2;
+        if (cy < L.y || cy > L.y + L.h) continue;
+        mind = Math.min(mind, Math.max(L.x - cx, cx - (L.x + L.w)));
+      }
+    }
+    ok(false, `FX3_KOM/FX3_BSFX 가 없다 — keep-out 규칙이 사라졌다 (관측 최소 여유 ${mind === 1e9 ? 'n/a' : mind.toFixed(1)}px)`);
+  } else {
+    const L = quest.qlab, H = quest.hold, need = quest.kom.kom - quest.kom.fx;
+    let n = 0, bad = 0, mind = 1e9;
+    for (const s2 of quest.samples) {
+      if (s2.t < H.a || s2.t > H.b) continue;                 /* 머묾 창(퍼짐 끝 ~ 흡수 시작)만 */
+      n++;
+      for (const f of s2.flies) {
+        const cx = f.cx + f.cw / 2, cy = f.cy + f.ch / 2;
+        if (cy < L.y || cy > L.y + L.h) continue;             /* 라벨 y 대역 밖이면 가로 규칙 무관 */
+        const d = Math.max(L.x - cx, cx - (L.x + L.w));       /* 상자 밖이면 양수 = 여유 */
+        mind = Math.min(mind, d);
+        if (d < need) bad++;
+      }
+    }
+    /* 되돌리면 빨개진다: 36회차 이전 빌드는 같은 창에서 «위반 25개 · 최소 거리 −78.6px»
+       (중심이 라벨 «안» 에 있었다 = 두 비평가가 잰 그림). */
+    ok(n > 0 && bad === 0, `머묾 표본 ${n}개 · 규칙 위반 ${bad}개 · 최소 여유 ${mind === 1e9 ? 'n/a' : mind.toFixed(1)}px (≥ FX3_KOM ${quest.kom.kom} − FX3_BSFX ${quest.kom.fx} = ${need})`);
   }
 
   console.log('[11] 콘솔 에러 0');
