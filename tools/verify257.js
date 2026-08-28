@@ -163,7 +163,10 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         const ttl = () => document.getElementById('dunTtl').textContent;
         /* ⚑ 331 이관 — 옛 두 줄은 «소환 눈금 절반·도달» 에서 바가 574×0.3×0.5·574×0.3 이라는
            **앞 국면 눈금**을 쟀다. 몹 국면이 폐지돼 앞 국면이 없으므로 같은 두 표본을
-           «누적 피해는 바를 못 민다»(둘 다 0px)로 뒤집어 옮긴다 — 앞 국면 잔재의 회귀 잠금이다. */
+           «누적 피해는 바를 못 민다»(둘 다 0px)로 뒤집어 옮긴다 — 앞 국면 잔재의 회귀 잠금이다.
+           ⚑ 338 이관 — 바가 «남은 보스 체력» 이 됐다(39 보스 체력바와 같은 부품·같은 방향).
+           «누적 피해는 못 민다» 는 항 그대로이고 **기준선만** 0px → 574px(만피) 로 옮긴다.
+           «3마리 중 1마리 격파» 도 «찬 폭 1/3» 이 아니라 **«남은 폭 2/3»** 로 읽는다. */
         dunRun.dmg = dunRun.need * 0.15; drawDunHud(); out.half1 = w();
         dunRun.dmg = dunRun.need * 0.30; drawDunHud(); out.gate = w();
         out.ttl0 = ttl();
@@ -181,10 +184,10 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         out.W = W;
         return out;
       });
-      near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, 0, 1);
-      near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, 0, 1);
-      /* 331 — 3마리 중 1마리를 잡으면 574 × 1/3 (옛 앞 국면 몫 0.3 이 빠졌다) */
-      near('331 — 3마리 중 1마리 격파 = 574 × 1/3', r.after1, r.W / 3, 2);
+      near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, r.W, 1);
+      near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, r.W, 1);
+      /* 338 — 3마리 중 1마리를 잡으면 «남은 체력 합» 이 2/3 다(옛 «찬 폭 1/3» 의 뒤집음) */
+      near('338 — 3마리 중 1마리 격파 = 남은 574 × 2/3', r.after1, r.W * 2 / 3, 2);
       is('보스 등장 전 타이틀에 ● 3개', /●●●$/.test(r.ttlA.trim()), true);
       is('1마리 격파 후 타이틀 ●●○', /●●○$/.test(r.ttlB.trim()), true);
       await cleanup();

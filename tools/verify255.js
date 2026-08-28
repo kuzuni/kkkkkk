@@ -169,7 +169,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     await cleanup();
   }
 
-  console.log('\n[D] 진행바 — «클리어까지 얼마나 왔나» 를 그린다 (30 측정표 폭 574px)');
+  console.log('\n[D] 던전 보스 체력바 — «보스 체력이 얼마나 남았나» 를 그린다 (30 측정표 폭 574px)');
   {
     const p = await prep('gold', { fill: null });
     const r = await page.evaluate(async () => {
@@ -179,11 +179,16 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
          쟀다. 몹 국면이 폐지돼 앞 국면이 없어졌으므로 단언을 지우지 않고 **뒤집어** 옮긴다
          (LESSONS 317-②·295-②): 옛 «누적 피해가 바를 민다» 를 이제 **«누적 피해는 바를 못 민다»** 로
          잰다 — 30% 를 남겨 두면 보스가 서기도 전에 바가 30% 차 있는 거짓 눈금이 되고, 그 회귀를
-         잡는 것이 이 절의 새 일이다. 뒷 구간(보스 체력)은 0.70 배율이 빠져 0→1 전 구간이 됐다. */
+         잡는 것이 이 절의 새 일이다. 뒷 구간(보스 체력)은 0.70 배율이 빠져 0→1 전 구간이 됐다.
+         ⚑ **338 이관 — 방향이 뒤집혔다.** 이 바는 39 보스전 체력바(`#bossHp`)와 **같은 부품**이라
+         «남은 체력» 을 그린다(측정표 30 §1·§4-4). 331 이 세운 «누적 피해는 바를 못 민다» 는
+         한 항도 안 없어지고 **기준선만** 0px → 574px(만피) 로 옮겨 간다 — 옛 눈금이 되살아나면
+         여기서 그대로 걸린다. 바뀌는 것은 «어느 쪽이 가득인가» 뿐이고, 폐지된 눈금을 재는
+         항 자체는 살려 둔다(LESSONS 328 — 눌러서 초록으로 만들지 말고 뜻을 옮긴다). */
       dunRun.dmg = 0;                       out.zero = w();
       dunRun.dmg = dunRun.need * 0.15;      out.half1 = w();
       dunRun.dmg = dunRun.need * 0.30;      out.gate = w();
-      dunRun.dmg = dunRun.need * 5;                out.over = w();   /* 요구치를 5배 넘겨도 바는 0 이다 */
+      dunRun.dmg = dunRun.need * 5;                out.over = w();   /* 요구치를 5배 넘겨도 바는 만피다 */
       dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       b.hp = b.max * 0.5;                   out.bossHalf = w();
@@ -191,14 +196,14 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       dunRun.bossDown = true;               out.down = w();
       return out;
     });
-    near('빈 런 = 0px', r.zero, 0, 0.5);
-    near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, 0, 0.5);
-    near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, 0, 0.5);
-    near('331 — 요구치를 5배 넘겨도 바는 0 이다 (앞 국면 잔재 없음)', r.over, 0, 0.5);
+    near('338 — 보스가 서기 전(등장 딜레이) = 만피 574px', r.zero, 574, 0.5);
+    near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, 574, 0.5);
+    near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, 574, 0.5);
+    near('331 — 요구치를 5배 넘겨도 바는 만피다 (앞 국면 잔재 없음)', r.over, 574, 0.5);
     near('331 — 보스 체력 절반 = 574 × 0.5 (옛 0.3+0.7×0.5 가 아니다)', r.bossHalf, 574 * 0.5, 1);
-    (r.bossLow > r.bossHalf) ? ok('보스 체력이 줄수록 바가 찬다 (' + r.bossHalf.toFixed(0) + ' → ' + r.bossLow.toFixed(0) + 'px)')
-                             : no('보스 체력이 줄어도 바가 안 찬다');
-    near('격파 = 꽉 참 574px', r.down, 574, 0.5);
+    (r.bossLow < r.bossHalf) ? ok('338 — 보스 체력이 줄수록 바가 줄어든다 (' + r.bossHalf.toFixed(0) + ' → ' + r.bossLow.toFixed(0) + 'px)')
+                             : no('338 — 보스 체력이 줄어도 바가 안 깎인다 (' + r.bossHalf.toFixed(0) + ' → ' + r.bossLow.toFixed(0) + 'px)');
+    near('338 — 격파 = 다 깎임 0px (주인 보고의 그 자리)', r.down, 0, 0.5);
     await cleanup();
   }
 

@@ -49,7 +49,9 @@ const RAWNUM = /\d,\d/;
     ['레이드 누적 피해', /\$\('bossHpN'\)\.textContent = fmtB\(raidDmg\);/],
     ['HUD 전투력', /\$\('cpN'\)\.textContent = fmtB\(jzRollVal\('cp', cp\(\)\)\);/],
     ['플레이어 체력', /\$\('hpT'\)\.textContent = fmtB\(Math\.max\(0, player\.hp\)\) \+ ' \/ ' \+ fmtB\(maxHp\);/],
-    ['30 던전 런 누적 피해', /\$\('dunBarN'\)\.textContent = fmtB\(dunRun\.dmg\);/],
+    /* 338 이관 — 이 싱크가 «누적 피해» 에서 **«남은 보스 체력»** 으로 바뀌었다(바가 39 보스
+       체력바와 같은 방향이 됐다). 묻는 것은 그대로다: 이 자리의 전투 수치가 fmtB 를 지나는가. */
+    ['30 던전 런 — 남은 보스 체력', /\$\('dunBarN'\)\.textContent = fmtB\(dunBossHpVal\(\)\);/],
     ['23 훈련 — 피해', /show:l => '피해 ' \+ fmtB\(/],
     ['23 훈련 — 체력', /show:l => fmtB\(U\.hp\.val/],
     ['23 훈련 — 재생', /show:l => '초당 ' \+ fmtB\(U\.regen/],
