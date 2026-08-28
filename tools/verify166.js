@@ -64,6 +64,25 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   ok('src `.stab>.bdg` 기본 display:none', /\.stab>\.bdg\{[^}]*display:none/.test(code));
   ok('src `.stab.alert>.bdg{display:block}` 존재', /\.stab\.alert>\.bdg\{display:block\}/.test(code));
 
+  /* 298 — «판정이 틀렸다» 이전에 **부품이 없었다**. 소스에서 두 가지를 못 박는다:
+     ⓐ `#dunSub` 세 칸 전부가 배지 노드를 갖는다(칸 수는 리터럴이 아니라 마크업에서 센다)
+     ⓑ 점등 조건이 «카드가 dot 을 켜는 조건»과 **한 곳**에서 나온다 — 같은 식을 renderUI 에
+        한 번 더 적으면(옛 `dunAlert`) 갈라진다. 실제로 `!dunLocked` 가 갈려 있었다. */
+  const dunSubBar = (src.match(/<div class="dns-sub[\s\S]*?<\/div>\s*<\/div>/) || [''])[0];
+  const dsubCells = (dunSubBar.match(/data-dsub="/g) || []).length;
+  const dsubBdg = (dunSubBar.match(/data-dsub="[^"]*"[^>]*>[\s\S]*?<s class="bdg"><\/s>/g) || []).length;
+  ok('src `#dunSub` 칸마다 `<s class="bdg">` — 칸 수와 배지 수가 같다 (298: 종전 3칸 중 1칸만 있었다)',
+    dsubCells === 3 && dsubBdg === dsubCells, '칸 ' + dsubCells + ' / 배지 ' + dsubBdg);
+  ok('src 서브탭 토글이 칸 이름을 다시 판단하지 않는다 — `dunSubAlert(t.dataset.dsub)` 한 줄',
+    /toggle\('alert',\s*dunSubAlert\(t\.dataset\.dsub\)\)/.test(code)
+      && !/dataset\.dsub === 'dun' && dunAlert/.test(code));
+  ok('src 카드 dot 4자리가 전부 판정 함수를 부른다 (식을 두 곳에 적지 않는다 — LESSONS 58-①)',
+    /dunCardOk\(d\) \?/.test(code) && /raidCardOk\(r\) \?/.test(code)
+      && /arenaCardOk\(\) \?/.test(code) && /ready = towerCardOk\(t\)/.test(code));
+  ok('src 탭바 «모험» 칸 = `advAlert()` (293 «경로 전체» — 서브탭 3칸의 OR)',
+    /k === 'adv'\s*\?\s*advAlert\(\)/.test(code)
+      && /advAlert = \(\) =>[\s\S]{0,120}dunSubAlert\('tower'\)/.test(code));
+
   /* CSS 주석 짝 — 하나 어긋나면 다음 규칙 블록이 통째로 죽는데 콘솔은 조용하다(LESSONS 52-④) */
   const css = src.slice(src.indexOf('<style'), src.indexOf('</style>'));
   let depth = 0, unmatched = 0;
@@ -168,8 +187,79 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   });
   ok('던전 서브탭 배지 — 입장 가능해지면 켜짐(탭바 «던전» 칸과 같은 기준)',
     sub1.disp === 'block' && sub1.alert === true, sub1.disp + ' / .alert ' + sub1.alert);
-  ok('«컨텐츠» 칸에는 안 번진다', sub1.other === false, String(sub1.other));
   await ev(() => { window.__req0.forEach((f, i) => { DUNGEONS[i].req = f; }); uiDirty = true; renderUI(); });
+
+  /* ── [4b] 298 — 던전 서브탭 **3칸 전수** + 탭바 «모험» 칸까지 (2026-08-28, 저장소 주인 보고) ──
+     종전 [4] 는 «던전» 칸 하나만 봤다. 그 옆 두 칸은 배지 **노드 자체가 없어서**(마크업에 `<s class="bdg">`
+     가 «던전» 칸에만 있었다) 어떤 판정을 붙여도 화면에 안 나왔고, 게이트에는 그 사실을 볼 절이 없었다
+     (오히려 «컨텐츠 칸에는 안 번진다» 가 «항상 꺼짐» 을 정답으로 굳혀 두고 있었다 — 결함을 지키는 단언).
+     ⇒ 여기서는 칸마다 ⓐ 노드가 있나 ⓑ 제 조건이 참일 때 켜지나 ⓒ 거짓일 때 꺼지나
+        ⓓ **다른 칸으로 번지지 않나**(한 칸만 참으로 만들고 셋을 같이 읽는다) 를 한 표에서 본다.
+     조건 만들기는 [3]·[6b] 와 같은 요령 — `cp()` 는 const 화살표라 스텁이 안 되므로 요구치를 갈아 끼운다.
+     상태는 전부 스냅샷 후 복구한다(뒤의 [5]·[6]·[6b] 가 이 절의 잔재를 물려받으면 안 된다). */
+  const sub3 = await ev(() => {
+    const KS = ['dun', 'raid', 'tower'];
+    const cell = k => document.querySelector('#dunSub [data-dsub="' + k + '"]');
+    const nodes = KS.filter(k => cell(k) && cell(k).querySelector('.bdg')).length;
+    const snap = {
+      best: S.best, tk: JSON.stringify(S.dunTk), rb: JSON.stringify(S.raidBest),
+      arena: JSON.stringify(S.arena || { w: 0, l: 0 }),
+      dr: S.daily.raid, da: S.daily.arena,
+      dreq: DUNGEONS.map(d => d.req), treq: TOWERS.map(t => t.req),
+    };
+    /* 셋을 전부 «끈다» — 각 칸의 자기소멸 조건을 그대로 만족시킨다 */
+    const allOff = () => {
+      DUNGEONS.forEach(d => { S.dunTk[d.id] = 0; });                 /* 던전: 입장 횟수 소진 */
+      RAIDS.forEach(r => { S.raidBest[r.id] = { dmg: 1, dps: 1 }; }); /* 컨텐츠: 이미 기록을 냈다 */
+      S.arena = { w: 1, l: 0 };                                       /* 컨텐츠: 아레나 한 판 했다 */
+      TOWERS.forEach(t => { t.req = () => Infinity; });               /* 탑: 요구 전투력 미달 */
+      DUNGEONS.forEach((d, i) => { d.req = snap.dreq[i]; });
+    };
+    const read = () => {
+      uiDirty = true; renderUI();
+      return { on: KS.map(k => cell(k).classList.contains('alert')),
+               /* ⚠ 배지 노드가 없는 칸(=298 이 고친 그 결함)에서 `getComputedStyle(null)` 로
+                  **게이트가 죽어** FAIL 조차 못 찍는다 — 없으면 «없음» 이라고 적고 계속 간다. */
+               disp: KS.map(k => { const e = cell(k).querySelector('.bdg');
+                                   return e ? getComputedStyle(e).display : '노드없음'; }),
+               adv: document.querySelector('.tab[data-t="adv"]').classList.contains('alert') };
+    };
+    allOff(); const off = read();
+    /* 한 칸씩만 참으로 만든다 — 나머지 둘은 계속 꺼진 상태여야 한다(격리) */
+    allOff(); S.best = 999; DUNGEONS.forEach(d => { S.dunTk[d.id] = 3; d.req = () => 0; });
+    const onDun = read();
+    allOff(); S.best = 999; S.daily.raid = 3; RAIDS.forEach(r => { S.raidBest[r.id] = { dmg: 0, dps: 0 }; });
+    const onRaid = read();
+    allOff(); TOWERS.forEach(t => { t.req = () => 0; });
+    const onTower = read();
+    /* 복구 */
+    S.best = snap.best; S.dunTk = JSON.parse(snap.tk); S.raidBest = JSON.parse(snap.rb);
+    S.arena = JSON.parse(snap.arena); S.daily.raid = snap.dr; S.daily.arena = snap.da;
+    DUNGEONS.forEach((d, i) => { d.req = snap.dreq[i]; });
+    TOWERS.forEach((t, i) => { t.req = snap.treq[i]; });
+    uiDirty = true; renderUI(); renderDunPage();
+    return { nodes, off, onDun, onRaid, onTower };
+  });
+  ok('298 서브탭 3칸 전부에 배지 노드가 있다 (종전엔 «던전» 칸에만 있었다 — 판정 이전의 결손)',
+    sub3.nodes === 3, sub3.nodes + '/3칸');
+  ok('298 세 조건이 전부 거짓이면 3칸 다 꺼짐 (① 상시 점등 0)',
+    sub3.off.on.join() === 'false,false,false' && sub3.off.disp.join() === 'none,none,none',
+    sub3.off.on.join('/') + ' · ' + sub3.off.disp.join('/'));
+  ok('298 «던전» 조건만 참 → 던전 칸만 켜짐 (다른 칸으로 안 번진다)',
+    sub3.onDun.on.join() === 'true,false,false' && sub3.onDun.disp[0] === 'block',
+    sub3.onDun.on.join('/') + ' · ' + sub3.onDun.disp.join('/'));
+  ok('298 «컨텐츠» 조건만 참(측정장 기록 없음) → 컨텐츠 칸만 켜짐',
+    sub3.onRaid.on.join() === 'false,true,false' && sub3.onRaid.disp[1] === 'block',
+    sub3.onRaid.on.join('/') + ' · ' + sub3.onRaid.disp.join('/'));
+  ok('298 «탑» 조건만 참(요구 전투력 충족) → 탑 칸만 켜짐',
+    sub3.onTower.on.join() === 'false,false,true' && sub3.onTower.disp[2] === 'block',
+    sub3.onTower.on.join('/') + ' · ' + sub3.onTower.disp.join('/'));
+  /* 293 «경로 전체» — 서브탭 어느 칸이 켜지든 탭바 «모험» 칸이 같이 켜져야 팝업을 열기 전에 보인다 */
+  ok('298 탭바 «모험» 칸 — 세 칸 다 꺼지면 꺼지고, 어느 한 칸이라도 켜지면 켜진다 (293 «경로 전체»)',
+    sub3.off.adv === false && sub3.onDun.adv === true && sub3.onRaid.adv === true
+      && sub3.onTower.adv === true,
+    '꺼짐 ' + sub3.off.adv + ' / 던전 ' + sub3.onDun.adv + ' / 컨텐츠 ' + sub3.onRaid.adv
+      + ' / 탑 ' + sub3.onTower.adv);
 
   /* ── [5] 측정장(컨텐츠 탭) 카드 — 입장 제한이 없어 `!lock` 만으로는 영영 안 꺼졌다 ──── */
   await ev(() => { setDunSub('raid'); });

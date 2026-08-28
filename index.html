@@ -9840,7 +9840,10 @@
   /* 166 (2026-08-27) — 이 배지는 마크업(`<s class="bdg">`)에만 있고 **켜고 끄는 곳이 한 군데도 없어**
      던전 서브탭에서 상시 점등이었다(입장 횟수를 다 써도, 전투력이 모자라도 빨간점). 다른 배지들과 같은
      규약으로 통일한다: 기본 꺼짐 + `.alert` 로 점등. 조건은 탭바 «던전» 칸과 **같은 `dunAlert`**
-     (남은 입장 횟수 > 0 && 요구 전투력 충족) — renderUI() 가 매 틱 토글한다. */
+     (남은 입장 횟수 > 0 && 요구 전투력 충족) — renderUI() 가 매 틱 토글한다.
+     298 (2026-08-28) — 그때 «던전» 칸만 배지 노드가 있었다(«컨텐츠»·«탑» 은 켤 대상 자체가 없었다).
+     세 칸 다 노드를 달았고, 점등 조건은 칸마다 다르므로 `dunSubAlert(k)` 가 준다 — 그 함수는
+     **각 칸의 카드가 dot 을 켜는 조건**을 그대로 OR 한 것이라 탭과 카드가 같이 켜지고 같이 꺼진다. */
   .stab>.bdg{position:absolute;right:23px;top:-6px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
@@ -12956,9 +12959,12 @@
     <div class="dns-sub stabs sp3" id="dunSub">
       <!-- 123(2026-08-26, 저장소 주인 지시) — 라벨 «레이드» → «컨텐츠».
            `data-dsub` 키는 raid 를 유지한다(46·97·smoke 오프너·verify 가 전부 이 키를 본다). -->
-      <div class="stab dns-t off" data-dsub="raid"><i class="ol3">컨텐츠</i></div>
+      <!-- 298(2026-08-28, 저장소 주인 보고) — 배지 노드가 «던전» 칸에만 있어서 «컨텐츠»·«탑» 은
+           `.stab.alert>.bdg{display:block}` 이 켤 대상 자체가 없었다(판정 이전에 부품이 없던 것).
+           세 칸 전부 같은 부품을 단다 — 점등 조건은 `dunSubAlert()` 하나가 준다. -->
+      <div class="stab dns-t off" data-dsub="raid"><i class="ol3">컨텐츠</i><s class="bdg"></s></div>
       <div class="stab dns-t on" data-dsub="dun"><i class="ol4">던전</i><s class="bdg"></s></div>
-      <div class="stab dns-t off" data-dsub="tower"><i class="ol3">탑</i></div>
+      <div class="stab dns-t off" data-dsub="tower"><i class="ol3">탑</i><s class="bdg"></s></div>
     </div>
   </div>
   <!-- 10 상점 팝업 — 소환 탭. (다) 전체화면 페이지. 측정표 docs/measure/10-상점팝업소환탭.md -->
@@ -23439,6 +23445,33 @@ function bgmVars(i){
     +  ';--bgd1:-' + (7*i) + 's;--bgd2:-' + (11*i) + 's'
     +  ';--thb:' + thbOf(i) + 's;--thd:-' + thdOf(i) + 's';
 }
+/* ── 298(2026-08-28, 저장소 주인 보고) — 03 던전 레드닷의 «단일 출처» ───────────────────
+   주인 지시: «탑 부분은 걍 빨간점 놓치지 말기 / 던전 팝업에 컨텐츠 부분은 탭에 왜 빨간점 없냐».
+   결손은 두 겹이었다 — ⓐ «컨텐츠»·«탑» 칸에 배지 **노드가 없었고** ⓑ 노드가 있는 «던전» 칸조차
+   판정이 `renderUI()` 안에 **손으로 한 번 더 적혀** 있어(카드 dot 과 다른 식) 갈라질 수 있었다.
+   실제로 갈라져 있었다: 카드 dot 은 `!dunLocked(d)` 를 보는데 탭 쪽 `dunAlert` 는 **안 봤다**
+   — 잠긴 던전에 입장권이 남아 있으면 «탭은 켜지는데 카드는 한 장도 안 켜지는» 상태가 됐다.
+   ⇒ 카드가 dot 을 켜는 조건을 함수로 뽑고, **탭 배지·탭바가 그 함수를 본다.**
+      (LESSONS 58-① «같은 값을 두 곳에 적으면 반드시 어긋난다 — 한쪽을 다른 쪽에서 계산해라»)
+   끄는 사건(166 ③ «자기소멸 조건») 은 칸마다 한 문장으로 말할 수 있다:
+     · 던전   = 입장 횟수를 다 썼다 / 층이 올라 요구 전투력을 못 넘는다 (자정에 되돌아온다)
+     · 컨텐츠 = 측정장은 **한 번 기록을 냈다** · 아레나는 **한 판 했다** (206·205 조건 그대로)
+     · 탑     = **그 층을 깼다**(층이 오르면 요구가 1.65배로 뛴다 — 성장하면 다시 켜진다)
+   ⚠ 값을 새로 정하지 않았다. 네 줄 모두 카드 렌더에 이미 적혀 있던 식을 **그대로 옮긴 것**이고,
+     카드 쪽은 이제 이 함수를 부른다(양쪽이 같은 자를 쓴다는 뜻이지 조건이 바뀐 게 아니다). */
+const dunCardOk   = d => !dunLocked(d) && S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id]);
+const raidCardOk  = r => !raidLocked(r) && raidLeft() > 0 && !(raidBest(r.id).dps > 0);
+const arenaCardOk = () => { const rec = S.arena || { w:0, l:0 };
+                            return !arenaLocked() && arenaCanEnter() && rec.w + rec.l === 0; };
+const towerCardOk = t => cp() >= t.req(towerFloor(t));
+/* 서브탭 한 칸의 점등 = 그 칸 **안에 있는 카드 중 하나라도** dot 이 켜져 있다. */
+const dunSubAlert = k => k === 'raid'  ? (RAIDS.some(raidCardOk) || arenaCardOk())
+                       : k === 'tower' ? TOWERS.some(towerCardOk)
+                       : k === 'dun'   ? DUNGEONS.some(dunCardOk)
+                       : false;
+/* 293 이 «우편» 에서 세운 규약 그대로 — 신호는 **진입 경로의 칸마다** 이어져야 한다.
+   탭바 «모험» 칸은 서브탭 3칸 중 하나라도 켜지면 켜진다(종전엔 «던전» 칸만 올라갔다). */
+const advAlert = () => dunSubAlert('dun') || dunSubAlert('raid') || dunSubAlert('tower');
 function renderDunPage(){
   if(dunSub === 'raid'){ renderRaidPage(); return; }   /* 46 — 서브탭 «레이드» */
   if(dunSub === 'tower'){ renderTowerPage(); return; } /* 209 — 서브탭 «탑» */
@@ -23473,7 +23506,9 @@ function renderDunPage(){
          `dunAlert`(남은 횟수 > 0 && cp() >= req)와 **같은 기준**이라 이제 탭·카드가 함께 켜지고 함께 꺼진다.
          ⚠ 113 가이드 손가락(`gmHintDun`)이 이 dot 으로 «입장 가능 카드» 를 찾는다 — 조건이 좁아져도
            dot 이 하나도 없으면 첫 카드로 폴백하므로 손가락이 사라지지는 않는다. */
-      +  (!lock && left > 0 && cp() >= d.req(f) ? '<s class="dot"></s>' : '')
+      /* 298 — 같은 식을 여기와 서브탭 두 곳에 적어 두면 갈라진다(실제로 `!dunLocked` 가 갈렸다).
+         판정은 `dunCardOk` 하나가 갖고, 카드·서브탭·탭바가 전부 그것을 본다. */
+      +  (dunCardOk(d) ? '<s class="dot"></s>' : '')
       +  (lock ? '<div class="lk"><em>🔒</em><u>' + dunLockTxt(d) + '</u></div>' : '')
       +  '</div>';
   });
@@ -23493,7 +23528,8 @@ function renderTowerPage(){
      돌린다 — `data-tcard` 가 «1» 이 아니라 탑 id 를 들고 있어 클릭이 어느 탑인지 스스로 안다.
      `bgmVars(i)` 에 카드 index 를 준다(121 «카드마다 배경 속도가 다르다» — 둘이 같은 위상이면 빨개진다). */
   $('dunList').innerHTML = TOWERS.map((t, i) => {
-    const f = towerFloor(t), u = DUN_UI[t.id], ready = cp() >= t.req(f);
+    /* 298 — `ready` 판정을 `towerCardOk` 로 옮겼다(서브탭 «탑» 배지가 같은 것을 본다) */
+    const f = towerFloor(t), u = DUN_UI[t.id], ready = towerCardOk(t);
     return '<div class="dnc bgm-rel" data-tcard="' + t.id + '" style="--s:' + u.s + ';--i:' + u.i
     +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
     +  (u.scn ? ';--scn:' + u.scn : '') + (u.psx ? ';--psx:' + u.psx : '') + bgmVars(i) + '">'
@@ -23656,7 +23692,7 @@ function renderRaidPage(){
          해금 뒤 영영 꺼지지 않는 상시 점등이었다(① 조건 없는 dot). 레드닷은 «누를 게 있다» 신호이므로
          **아직 한 번도 기록을 못 낸 측정장**(최고 DPS 없음)에만 켠다 — 한 번 재고 나면 스스로 꺼진다. */
       /* 205 — 오늘 도전을 다 썼으면 «누를 게 없다» 이므로 dot 도 함께 꺼진다(166 규칙). */
-      +  (!lock && left > 0 && !(b.dps > 0) ? '<s class="dot"></s>' : '')
+      +  (raidCardOk(r) ? '<s class="dot"></s>' : '')   /* 298 — 판정은 `raidCardOk` 한 곳(서브탭이 같은 것을 본다) */
       +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + r.open + '</b> 클리어</u></div>' : '')
       +  '</div>';
   });
@@ -23732,7 +23768,7 @@ function arenaCardHTML(){
     +  '<div class="sp tk"><em>🏅</em><i>' + rec.w + '-' + rec.l + '</i></div>'
     /* 166 (2026-08-27) — 측정장 카드와 같은 처리. 아레나도 입장 제한이 없어 `!lock` 만으로는 상시 점등이었다.
        «전적 0-0»(아직 한 판도 안 해봤다)일 때만 켠다 — 한 판 하면 꺼진다. */
-    +  (!lock && canGo && rec.w + rec.l === 0 ? '<s class="dot"></s>' : '')   /* 205 — 들어갈 수 없으면 dot 도 끈다 */
+    +  (arenaCardOk() ? '<s class="dot"></s>' : '')   /* 205 — 들어갈 수 없으면 dot 도 끈다 · 298 — 판정 한 곳 */
     +  (lock ? '<div class="lk"><em>🔒</em><u>스테이지 <b>' + ARENA.open + '</b> 클리어</u></div>' : '')
     +  '</div>';
 }
@@ -28191,7 +28227,6 @@ function renderUI(){
     }
     else if(curTab === 'adv')  renderDun();
   }
-  const dunAlert = DUNGEONS.some(d => S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id]));
   document.querySelectorAll('.tab').forEach(t => {
     const k = t.dataset.t;
     /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다.
@@ -28206,7 +28241,10 @@ function renderUI(){
                                       /* 166 — «훈련 강화 가능» 은 여기에 올리지 않는다: 골드는 방치로 계속
                                          차오르므로 사실상 상시 점등이 되어 주인이 지적한 그 노이즈로 되돌아간다.
                                          카드별 `.tr-card>.dot`(c.ok) 가 이미 자리에서 알려 준다. */
-             : k === 'adv'  ? dunAlert
+             /* 298 — 탭바 «모험» 칸은 던전 서브탭 3칸 중 하나라도 켜지면 켜진다(293 «경로 전체»).
+                종전에는 «던전» 칸 조건만 올라와서, 컨텐츠·탑에 할 것이 있어도 팝업을 열기 전에는
+                알 방법이 없었다. 판정은 `advAlert()` 한 곳이고 카드 dot 과 같은 자를 쓴다. */
+             : k === 'adv'  ? advAlert()
              : k === 'box'  ? collCatReady('relic')
                                       /* 166 ③ — «받을 게 있는데 안 뜨던» 자리. 상자별 하루 무료 10연이
                                          남아 있으면 «받을 게 있다» 가 맞다(다 쓰면 꺼지고 자정에 되돌아온다). */
@@ -28216,9 +28254,11 @@ function renderUI(){
              : false;
     t.classList.toggle('alert', !!al);
   });
-  /* 166 — 던전 서브탭 배지: 탭바 «던전» 칸과 같은 기준으로 켠다(마크업에만 있고 토글이 없어 상시 점등이었다) */
+  /* 166 — 던전 서브탭 배지: 탭바 «던전» 칸과 같은 기준으로 켠다(마크업에만 있고 토글이 없어 상시 점등이었다)
+     298 — 이제 세 칸 전부다. 칸마다 조건이 다르므로 `t.dataset.dsub` 를 그대로 `dunSubAlert()` 에 넘긴다
+     («던전이면 참» 식으로 칸 이름을 여기서 다시 판단하면, 칸이 늘 때마다 이 줄을 또 고쳐야 한다). */
   document.querySelectorAll('#dunSub .stab').forEach(t => {
-    t.classList.toggle('alert', t.dataset.dsub === 'dun' && dunAlert);
+    t.classList.toggle('alert', dunSubAlert(t.dataset.dsub));
   });
   /* 202 — 영웅 서브탭 «일괄 강화 가능» 배지. `#eqTabs`(정적) 와 `subTabs()`(매 렌더 생성) 두 종류의
      바가 있는데 둘 다 `data-upk` 를 달고 있어 여기 한 줄이 전부를 덮는다. 위쪽에서 시트 재렌더가
