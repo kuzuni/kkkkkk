@@ -165,7 +165,8 @@ function staticSyntax() {
       await page.waitForTimeout(400);
       const costabs = await page.$$eval('#bCos [data-costab]', (els) => els.map((e) => e.dataset.costab)).catch(() => []);
       costabs.forEach((k) => openers.push({ label: 'costab:' + k, sel: null, cos: `#bCos [data-costab="${k}"]` }));
-      for (const b of ['data-coswear', 'data-cosup', 'data-cospromo', 'data-cosun'])
+      /* 269 — 코스튬 시트 헤더 좌상단 [?] 도움말도 팝업 오프너다(신설 팝업은 여기 등재하는 것까지가 범위) */
+      for (const b of ['data-coswear', 'data-cosup', 'data-cospromo', 'data-cosun', 'data-coshelp'])
         if (await page.$(`#bCos [${b}]`)) openers.push({ label: 'cos:' + b, sel: null, cos: `#bCos [${b}]` });
       /* 10·13 상점 카테고리 탭 — 상점 페이지(#shopw)를 연 뒤에만 보이므로 2단계 오프너다.
          재화 탭에는 44(다이아 상품 5종 + 마일리지 교환)가 붙어 있어 여기서만 렌더된다. */

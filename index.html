@@ -1864,6 +1864,14 @@
      **헤더(`.mhead h2`)는 2배 대상이 아니다** — 높이 91px 고정 바를 126 이 소유하고 있고
      45.6 → 91.2 은 그 바를 통째로 넘긴다(본문 = `.mbody` 라는 뜻으로 읽었다. review §2). */
   .mbody .pr179 p{font-size:48px;line-height:1.7}
+  /* ── 269 코스튬 [?] 도움말 본문 (2026-08-27 주인 지시로 신설된 팝업) ──
+     179·265 와 같은 처방: `.mbody p`(24px)는 A5 공용이라 못 건드리고, 이 팝업 전용 래퍼로만
+     키운다(`.mbody .cos269 p` 는 특이도 0-2-1 로 `.mbody p` 0-1-1 을 이긴다).
+     크기는 265 가 22 퀘스트 급으로 잡은 **35px** 에 맞췄다(48px 은 179 승급전 전용 배율이다).
+     5문단 × 2~3줄 ≈ 900px 로 `.mbox` 상한(1497) 안에 들어간다. */
+  .mbody .cos269 p{font-size:35px;line-height:1.55}
+  .mbody .cos269 p+p{margin-top:26px}
+  .mbody .cos269 p em{font-style:normal;font-weight:900;color:#B4571E}
   /* 본문이 2배가 되면서 «전투력 2,000,000,000 / 1,000,000,000,000» 같은 긴 조건이 두 줄로 접히는
      계급(플래티넘 이상)에서 `.mbox` 상한 1497px 을 10px 넘겼다. 글자를 도로 줄이는 대신
      **베이지 본문 패딩**(65/48 = A5 공용값)을 승급전에서만 줄여 자리를 만든다 — 41px 확보. */
@@ -9523,6 +9531,20 @@
      07 규격 그대로이고, 스크롤러만 `.sk-gp` 로 옮겨 시트 바깥 배치는 1px 도 안 바뀐다. */
   #bCos .sk-gp{overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
   #bCos .sk-gp::-webkit-scrollbar{width:0;height:0}
+  /* 269 — 시트 헤더 좌상단 [?] 도움말 버튼 (저장소 주인 확정 «? 가 나을 듯», 2026-08-27).
+     ⚠ `.sk-head` 는 07(#bSk)·26(#bPet)·50(#bCos) 이 공유하는 밴드라 **`#bCos` 로 가둔다** —
+     여기가 새는 순간 스킬·펫 시트 헤더에도 없던 버튼이 뜬다(등재문 경고).
+     헤더 밴드는 1066x114 이고 안쪽 림이 6px 이다. 버튼 76원을 좌 24 · 상 19 에 놓으면
+     림에서 18px 띄운 자리이고 세로 정확히 가운데((114−76)/2 = 19). 제목 잉크(가운데 정렬,
+     폭 87×scaleX .864 ≈ 3글자 160px)와는 좌우로 350px 넘게 떨어져 절대 안 겹친다.
+     `line-height` 는 헤더의 103px 상속을 끊는다(밴드 전체가 `line-height:103px` 이다). */
+  #bCos .cos-help{left:24px;top:19px;width:76px;height:76px;border-radius:38px;
+    background:linear-gradient(180deg,#8A7263,#6B564A);box-sizing:border-box;
+    box-shadow:inset 0 0 0 5px #000,inset 0 0 0 9px #A98F7C;z-index:4;cursor:pointer;
+    text-align:center;line-height:76px}
+  /* 글자 외곽선은 같은 밴드의 제목(`.sk-head>i.ol5`, 54px)과 **같은 계열**로 맞춘다 —
+     `-webkit-text-stroke` 를 쓰면 이 밴드에서 혼자 다른 두께로 보인다. 46px 이라 한 단 아래 `.ol4`. */
+  #bCos .cos-help>i{display:block;font-size:46px;color:#FFE9C6;transform:scaleX(.92)}
   #bCos .cos-in{position:relative;width:100%}
   #bCos .cos-pad{position:absolute;left:0;width:1px;height:30px}   /* 마지막 행 아래 여백 */
   /* 194 — 옛 «등급 섹션 헤더»(`.cos-hd`) 규칙은 등급 폐지와 함께 삭제했다.
@@ -26054,6 +26076,11 @@ function renderCos(){
   const cur = cosCur();
   if(!cosSel || !AV[cosSel]) cosSel = cur;
   let h = '<div class="sk-head"><i class="ol5">코스튬</i></div>';
+  /* 269 — 헤더 좌상단 [?] 도움말 (저장소 주인 지시 2026-08-27). «코스튬이 무엇인가» 라는
+     **개별 칸과 무관한 일반 설명**은 이제 여기 하나뿐이다 — 슬롯 상세 팝업(`showCosDetail`)
+     에서는 뺐다. `.sk-head` 의 형제로 둔다(`:is(#bSk,#bPet,#bCos)>*{position:absolute}` 를
+     그대로 받고, 헤더보다 z 가 높다). 스크롤 뷰포트 `.shsc` 바깥이라 늘 보인다. */
+  h += '<div class="cos-help" data-coshelp="1"><i class="ol4">?</i></div>';
 
   /* 작업 51 — 07·26 과 동일. 슬롯~버튼(본문)만 스크롤 뷰포트에 담는다 */
   h += '<div class="shsc"><div class="shsc-in">';
@@ -26152,7 +26179,29 @@ function renderCos(){
   }
   cosSelShown = cosSel;
 }
+/* 269 — [?] 도움말 팝업 «코스튬이란 무엇인가» (저장소 주인 지시 2026-08-27).
+   여기가 코스튬 **일반 설명**의 유일한 자리다 — 슬롯 상세(`showCosDetail`)의 «코스튬 설명»
+   블록은 이 작업으로 없어졌고, 그 자리는 그 칸 하나의 «강화 효과/획득 방법» 만 남았다.
+   ⚠ 문구의 수치는 전부 상수에서 읽는다(COS_STEP_EVERY·COS_MAXLV) — 값을 고치면 설명도 따라간다.
+   A5 공용 `popup()` 을 그대로 쓴다(딤 탭·[확인] 둘 다 살아 있다). 본문 글씨만 179·265 처럼
+   전용 래퍼 `.cos269` 로 키운다 — `.mbody p`(24px)는 A5 공용이라 못 건드린다. */
+function cosHelp(){
+  popup('코스튬',
+      '<div class="cos269">'
+    +   '<p><em>승급전</em>을 깨면 코스튬을 받습니다. 어느 승급전이 어느 코스튬을 주는지는 '
+    +     '칸을 눌러 나오는 세부 창의 <em>획득 조건</em>에 적혀 있습니다.</p>'
+    +   '<p>코스튬은 <em>가지고만 있어도</em> 보유 효과가 영구 적용됩니다 — 착용 중이 아니어도 됩니다. '
+    +     '착용은 <em>겉모습</em>만 바꿉니다.</p>'
+    +   '<p>보유 효과는 모은 코스튬이 <em>' + COS_STEP_EVERY + '개</em> 늘 때마다 한 계단씩 커집니다.</p>'
+    +   '<p>코스튬에는 <em>등급이 없습니다</em>. 모든 코스튬의 효율이 같아서, 칸끼리 다른 것은 '
+    +     '<em>외형</em>과 <em>강화 레벨</em>뿐입니다.</p>'
+    +   '<p><em>강화석</em>으로 <em>Lv. ' + COS_MAXLV + '</em>까지 강화할 수 있습니다. '
+    +     '강화 효과는 코스튬마다 곱하지 않고 <em>전체 레벨 합</em>에 한 번 곱해집니다.</p>'
+    + '</div>');
+}
 $('bCos').addEventListener('click', e => {
+  /* 269 — [?] 도움말이 가장 먼저다(헤더 위에 있어 다른 대상과 겹칠 일이 없지만, 순서로도 못박는다) */
+  if(e.target.closest('[data-coshelp]')){ cosHelp(); return; }
   const un = e.target.closest('[data-cosun]');
   if(un){ showCosDetail(un.dataset.cosun); return; }        /* 착용 슬롯 → 08 껍데기 상세 */
   const q = e.target.closest('[data-coseq]');
@@ -26197,15 +26246,19 @@ function showCosDetail(id){
   const cosPbNow  = () => ({ p: own ? (cosLvOf(id)/COS_MAXLV*100).toFixed(2) : '0',
                              t: own ? cosLvOf(id) + '/' + COS_MAXLV : '🔒' + cosReqText(a) });
   const cosCellNow = () => (own && cosMaxed(id)) ? 'MAX' : curIc('stone', 26) + ' ' + fmt(cosCost(cosLvOf(id)));
+  /* 269 — 여기 있던 «코스튬 설명»(보유 효과란 무엇인가·계단·동일 효율·강화석 안내)은
+     **개별 칸과 무관한 일반 설명**이라 50 시트 헤더의 [?] 도움말(`cosHelp()`)로 옮겼다
+     (저장소 주인 지시 2026-08-27). 이 자리에는 «이 칸 하나» 의 수치만 남는다 —
+     보유 칸은 지금 레벨의 강화 효과 + 만렙까지 갔을 때, 미보유 칸은 획득 방법.
+     ⚠ 08 껍데기 기하는 1px 도 안 건드렸다(`.sk-sl`·`.sk-db` 는 자리·크기 그대로, 글자만 바뀐다) —
+       상자를 지우면 `.sk-ct`(bottom 340)와 `.sk-ow`(top 604) 사이가 264px 짜리 구멍이 된다. */
   const cosDescNow = () => { const l2 = cosLvOf(id); return own
-      ? '보유한 코스튬은 <em>보유 효과</em>가 영구 적용되고, 착용하면 외형이 바뀝니다.<br>'
-        + '보유 효과는 <em>' + COS_STEP_EVERY + '개마다 한 계단</em>씩 커집니다.<br>'
-        + '<em>강화석</em>으로 최대 <em>Lv. ' + COS_MAXLV + '</em>까지 강화할 수 있습니다 '
-        + '(효율 곡선은 <em>모든 코스튬이 동일</em>).<br>'
-        + '강화 효과 <em>Lv. ' + l2 + '</em> — 공격 <em>+' + pct(l2*COS_LV.atk) + '</em> · 체력 <em>+'
-        + pct(l2*COS_LV.hp) + '</em> · 골드 <em>+' + pct(l2*COS_LV.gold) + '</em>'
-      : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.<br>받으면 <em>보유 효과</em>가 영구 적용되고, '
-        + '<em>강화석</em>으로 <em>Lv. ' + COS_MAXLV + '</em>까지 키울 수 있습니다.'; };
+      ? '강화 효과 <em>Lv. ' + l2 + '</em> — 공격 <em>+' + pct(l2*COS_LV.atk) + '</em> · 체력 <em>+'
+        + pct(l2*COS_LV.hp) + '</em> · 골드 <em>+' + pct(l2*COS_LV.gold) + '</em><br>'
+        + '<em>Lv. ' + COS_MAXLV + '</em> 까지 강화하면 — 공격 <em>+' + pct(COS_MAXLV*COS_LV.atk)
+        + '</em> · 체력 <em>+' + pct(COS_MAXLV*COS_LV.hp) + '</em> · 골드 <em>+'
+        + pct(COS_MAXLV*COS_LV.gold) + '</em>'
+      : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.'; };
   const liveCos = () => { const b2 = cosPbNow();
     mdLive({ lvSel:'.sk-gr b', lv:'Lv. ' + cosLvOf(id), p:b2.p, pTxt:b2.t, cell:cosCellNow(), desc:cosDescNow() }); };
   /* 87 — 코스튬은 «이름을 모르는 것» 이 아니라 «아직 못 받은 외형» 이라 미보유도 이름·그림을 보여 준다
@@ -26228,10 +26281,13 @@ function showCosDetail(id){
     +     '<div class="vl"><div><b>' + cosReqText(a) + '</b></div>'
     +       '<div class="nt"><b>' + cosCellNow() + '</b></div></div>'
     +   '</div>'
-    +   '<div class="sk-sl"><b>코스튬 설명</b></div>'
+    /* 269 — 라벨도 «코스튬 설명» 이 아니다. 이 칸 하나가 말하는 것으로 바꾼다
+       (일반 설명은 시트 헤더 [?] → `cosHelp()`). 자리·크기는 08 규격 그대로. */
+    +   '<div class="sk-sl"><b>' + (own ? '강화 효과' : '획득 방법') + '</b></div>'
     /* 194 — 08 껍데기(801×701)에는 «보유 효과» 바 아래로 34px 밖에 안 남아 두 번째 알약 행을
        놓을 자리가 없다(측정표 08 §2.8). 강화 효과는 **설명 박스 안 한 줄**로 낸다 —
-       칸 기하를 1px 도 안 건드리므로 08·50 의 기존 점수에 영향이 없다. */
+       칸 기하를 1px 도 안 건드리므로 08·50 의 기존 점수에 영향이 없다.
+       269 — 그 박스에서 «일반 설명» 부분만 빠졌다(→ [?] 도움말). 강화 효과 줄은 여기 그대로다. */
     +   '<div class="sk-db"><p>' + cosDescNow() + '</p></div>'
     /* 194 — 두 줄로 나눈다: «보유 효과»(코스튬마다 곱) · «강화 효과»(레벨 1당, 총합에 1회 곱).
        숫자는 전부 bonus() 와 같은 상수(COS_OWN·COS_LV)에서 나온다.
