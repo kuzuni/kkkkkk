@@ -25,6 +25,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const { launch: pwLaunch } = require('./pwlaunch');   /* 291 — 정착 장치 공용 부트스트랩 */
 const { chromium } = (() => {
   try { return require('playwright'); } catch (_) {}
   const os = require('os');
@@ -49,8 +50,10 @@ function launchOpts(){
 
 (async () => {
   let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await chromium.launch(o); }
+  /* 291 — 공용 부트스트랩(`pwlaunch.launch`)을 지나가게 한다. 브라우저에 입장 연출
+     «정착 장치»(settle291)가 심어져, 고정 대기 뒤 rect 가 연출 한복판을 잡지 않는다. */
+  try { browser = await pwLaunch(chromium); }
+  catch (e) { const o = launchOpts(); if (!o.executablePath) throw e; browser = await pwLaunch(chromium, o); }
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

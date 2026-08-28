@@ -74,13 +74,19 @@ function findExecutable() {
   return null;
 }
 
-/* ---- 3. launch — 번들 우선, 실패하면 폴백 ---- */
+/* ---- 3. launch — 번들 우선, 실패하면 폴백 ----
+   작업 291 — 돌려주기 전에 **입장 연출 정착 장치**를 심는다(`settle291.armBrowser`).
+   여기 한 곳이라 게이트 44개를 한 줄도 안 고치고 «고정 대기 뒤 rect» 함정이 닫힌다.
+   기본값은 entry 가 `verify*.js` 일 때만 — 연출 캡처 하네스(`cap*.js`)는 그대로 둔다.
+   되돌림 스위치: `PW_SETTLE=0`. 자세한 근거는 `tools/settle291.js` 머리말. */
+const { armBrowser } = require('./settle291');
+
 async function launch(chromium, opts) {
-  try { return await chromium.launch(opts); } catch (e) {
+  try { return armBrowser(await chromium.launch(opts)); } catch (e) {
     const exe = findExecutable();
     if (!exe) throw e;
     console.log('[i] 번들 브라우저 없음 → ' + exe + ' 사용');
-    return await chromium.launch(Object.assign({}, opts, { executablePath: exe }));
+    return armBrowser(await chromium.launch(Object.assign({}, opts, { executablePath: exe })));
   }
 }
 

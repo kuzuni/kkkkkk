@@ -27,7 +27,14 @@ const SETTLE = [
   /requestAnimationFrame[\s\S]{0,120}requestAnimationFrame/,  /* 페인트 두 번 대기 */
   /\bsettle\s*\(/,               /* 47 의 페이지 컨텍스트 헬퍼 */
   /waitForFunction/,             /* 상태 대기 */
+  /require\(['"]\.\/pwlaunch['"]\)/,  /* 291 — 공용 부트스트랩이 `settle291` 을 심어 준다(아래 주석) */
 ];
+/* 291 (2026-08-28) — 정착 장치가 «파일 안» 에만 있으란 법은 없다.
+   `tools/pwlaunch.js` 의 `launch()` 가 브라우저에 `settle291` 을 심으면서,
+   entry 가 `verify*.js` 인 게이트의 `waitForTimeout(≥250ms)` 뒤에 입장 연출 정착이
+   자동으로 붙는다 — 그래서 «pwlaunch 를 지나간다» 도 정착 장치로 센다.
+   ⚠ 이 지문은 «켜져 있다» 가 아니라 «장치가 닿는다» 를 뜻한다. 실제로 껐는지
+   (`PW_SETTLE=0`)는 정적 훑기가 알 수 없다 — 판정은 `node tools/repro291.js` 로 한다. */
 const OPENER = /\b(open[A-Z]\w*\s*\(|render[A-Z]\w*\s*\(|\.click\s*\(|setShopCatTabs\s*\()/;
 
 const rows = [];
