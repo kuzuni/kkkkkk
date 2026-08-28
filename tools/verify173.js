@@ -14,9 +14,13 @@
  *   [C] 26 시트 — 헤더 «펫» · 소환 버튼 «펫 소환» · 일괄강화 재료 부족 notify «…<b>펫</b>이 없습니다»
  *   [D] 10 상점 소환 탭 — 5번째 카드 DOM «펫 상자» · BANNERS.pet.n === '펫'
  *   [E] 21 도감 — 카테고리명 «펫» · 세트명 «전설 펫» 계열 8종 · 효과명 «펫 피해»
- *   [F] 13 재화 탭 — a6 «일반 펫 소환 열쇠». fs/sx/qx 는 **건드리지 않는다**
- *       (측정표 §5-3 의 ref 잉크 폭 246 은 레퍼런스의 «동료» 문자열 기준이라 새 문자열엔 목표폭이 없다
- *        — LESSONS 05-2. 대신 «칸을 넘치지 않는가» 만 본다)
+ *   [F] 13 재화 탭 — 카드 라벨에 «동료» 0건 + **이름만 바뀐 칸의 fs/sx/qx 불변**
+ *       (측정표 §5-3 의 ref 잉크 폭은 레퍼런스의 옛 문자열 기준이라 새 문자열엔 목표폭이 없다 — LESSONS 05-2.
+ *        대신 «칸을 넘치지 않는가» 만 본다)
+ *       ⚑ **이관(2026-08-29, 작업 365)** — 이 절의 원래 표본이던 a6 «일반 펫 소환 열쇠» 는 **상품 자체가
+ *       주인 지시로 폐기**됐다(광고 상품 4종 개편). 자리를 비우지 않고 **같은 규약이 걸린 살아 있는 표본**
+ *       으로 갈아 끼웠다 — a2 는 «공물» → «유물» 로 이름만 바뀌고 fs/sx/qx 를 그대로 뒀으므로 «재보정 금지»
+ *       라는 뜻이 그대로 산다(333 이 verify149 에서 쓴 것과 같은 처방. 지우기만 하면 규약이 게이트에서 사라진다).
  *   [G] 우편 — m4 본문 «든든한 펫을 만나보세요!»
  *   [H] 넘침 0 — 위 라벨 자리 전부 scrollWidth ≤ clientWidth (LESSONS 32 «최장 문자열에서 넘침 0»)
  *   [I] 회귀 — 이름만 갈았지 경로는 그대로: [펫 소환] → 10 상점 소환 탭 · 펫 상자까지 스크롤
@@ -129,18 +133,21 @@ function stripComments(src) {
   eq('  E4 세트명에 «동료» 0건', E.sets.filter((x) => x.includes('동료')).length, 0);
 
   /* ---------------- [F] 13 재화 탭 광고 상품 ---------------- */
-  console.log('[F] 13 재화 탭 — a6 라벨 + fs/sx/qx 불변');
+  console.log('[F] 13 재화 탭 — 카드 라벨 «동료» 0건 + 이름만 바뀐 칸의 fs/sx/qx 불변');
   const F = await page.evaluate(() => {
     closeShopPage(); openShopPage(null, 'coin');
-    const a6 = COIN_ADS.find((a) => a.id === 'a6');
-    const dom = [...document.querySelectorAll('#shopList .cn-cd > .hd > i')].map((e) => e.textContent.trim());
-    return { n: a6.n, fs: a6.fs, sx: a6.sx, qx: a6.qx, dom };
+    const a2 = COIN_ADS.find((a) => a.id === 'a2');
+    const dom = [...document.querySelectorAll('#shopList .cn-cd > .hd > i')].map((e) => e.textContent.trim())
+      .slice(0, COIN_ADS.length);
+    return { n: a2.n, fs: a2.fs, sx: a2.sx, qx: a2.qx, dom, gone: !COIN_ADS.some((a) => a.id === 'a6') };
   });
   await page.waitForTimeout(250);
-  eq('  F1 a6 라벨', F.n, '일반 펫 소환 열쇠');
-  eq('  F2 fs/sx/qx 불변(ref 폭은 옛 문자열 기준 — 재보정 금지)', [F.fs, F.sx, F.qx], [33.3, 1.007, 1.21]);
-  eq('  F3 카드 DOM 6칸 중 «동료» 0건', F.dom.filter((x) => x.includes('동료')).length, 0);
-  eq('  F4 6번째 카드 DOM', F.dom[5], '일반 펫 소환 열쇠');
+  eq('  F1 이름만 바뀐 칸(a2) 라벨', F.n, '유물');
+  eq('  F2 그 칸의 fs/sx/qx 불변(ref 폭은 옛 문자열 기준 — 재보정 금지)', [F.fs, F.sx, F.qx], [39.4, 0.894, 1.24]);
+  eq('  F3 카드 DOM 전 칸 «동료» 0건', F.dom.filter((x) => x.includes('동료')).length, 0);
+  /* 원 표본 a6 «일반 펫 소환 열쇠» 는 365(주인 지시)로 상품째 사라졌다 — «사라졌다» 를 단언해
+     둬야 나중에 되살아났을 때 [A] 소스 전수와 이 절이 어긋나지 않는다 */
+  eq('  F4 구 표본 a6(«일반 펫 소환 열쇠») 은 365 로 폐기됐다', F.gone, true);
 
   /* ---------------- [G] 우편 ---------------- */
   console.log('[G] 우편 m4 본문');
