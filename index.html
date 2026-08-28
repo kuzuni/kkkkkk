@@ -17931,6 +17931,18 @@ const SPAWN_RMIN = 300, SPAWN_RMAX = 700;
 /* 보스만 링의 «가까운 쪽» 을 쓴다 — 지시 ④ 의 300~700 밴드 안이라 밀도 규칙과 충돌하지 않고,
    팬 거리가 z1.15 가시 반폭(235px)의 2.4배가 되어 팬 대부분이 «빈 바닥» 이 되는 것을 막는다 */
 const BOSS_RMAX = 340;
+/* 344 — 「동시 등장 보스는 겹쳐 서지 않는다」(257 결정 ③)가 **서 있는 동안만** 지켜지고 있었다.
+   257 이 넣은 두 겹(조향 `BOSS_SEP` + 위치 해소)은 이동 루프 안이라 `e.born < 0.3` 의
+   «등장 창» 18프레임을 통째로 건너뛴다. 그런데 스폰 좌표는 «플레이어 둘레 링의 난수 한 점» 이라
+   이웃을 안 본다 — `probe344` 24회 중 **12회**가 반지름 합 안(최악 12% = 사실상 한 마리)에서
+   태어나 0.3초를 겹친 채 서 있었고, 풀리는 데 다시 몇 프레임이 걸렸다(이동 후 최악 79%).
+   그것이 `verify257` [6] 이 4회에 1번 빨갛던 실체다 — 게이트의 난수 운이 아니라 **제품의 결손**.
+   ⇒ 링 위에서 «이웃 단독 개체와 안 겹치는 점» 이 나올 때까지 다시 뽑는다. */
+const soloClash = (tk, r, x, y) => {
+  if(!SOLO_CHASER[tk]) return null;
+  for(const o of enemies){ if(SOLO_CHASER[o.tk] && Math.hypot(x-o.x, y-o.y) < r + o.r) return o; }
+  return null;
+};
 function makeEnemy(tk){
   const T2 = ETYPE[tk], s = S.stage;
   let x, y, tries = 0;
@@ -17938,9 +17950,22 @@ function makeEnemy(tk){
     const a = Math.random()*6.283, r = rnd(SPAWN_RMIN, isBossKind(tk) ? BOSS_RMAX : SPAWN_RMAX);
     x = player.x + Math.cos(a)*r; y = player.y + Math.sin(a)*r; tries++;
   }
-  while((x < 60 || x > WORLD.w-60 || y < 60 || y > WORLD.h-60) && tries < 40);
+  /* ⚠ 새 항은 **맨 뒤**다. 필드에 단독 개체가 하나뿐이면(스테이지 보스·승급 수호자·아레나·
+     46 레이드 샌드백·보스 1마리 던전) `soloClash` 는 언제나 null 이라 뽑는 횟수도 난수 소비도
+     한 번도 안 달라진다 = 그 다섯 경로의 좌표는 한 px 도 안 움직인다(66/172/257 [7] 불변). */
+  while((x < 60 || x > WORLD.w-60 || y < 60 || y > WORLD.h-60 || soloClash(tk, T2.r, x, y)) && tries < 40);
   /* 링이 통째로 월드 밖인 극단(맵 구석)에서도 무한 루프가 되지 않게 마지막 값을 가둔다 */
   x = clamp(x, 60, WORLD.w-60); y = clamp(y, 60, WORLD.h-60);
+  /* 40번을 다 써도 자리가 없는 극단(좁은 월드 · 반경 90 보스 여럿)에서는 마지막에 «밀어서» 보장한다.
+     미는 것은 **새로 태어나는 쪽뿐**이다 — 이미 서 있는 개체의 좌표는 여기서도 안 움직인다. */
+  for(let pass = 0; pass < 4; pass++){
+    const o = soloClash(tk, T2.r, x, y); if(!o) break;
+    let ox = x-o.x, oy = y-o.y, od = Math.hypot(ox, oy);
+    const md = T2.r + o.r;
+    if(od <= 0.01){ ox = Math.cos(enemies.length*1.7); oy = Math.sin(enemies.length*1.7); od = 1; }
+    x = clamp(x + ox/od*(md-od), 60, WORLD.w-60);
+    y = clamp(y + oy/od*(md-od), 60, WORLD.h-60);
+  }
   /* 249 ② — 관문(10의 배수) 스테이지의 **스테이지 보스**만 체력 배수를 탄다.
      던전 보스(178)·승급 수호자(208)·아레나(123)는 자기 체력식을 따로 쓰므로 여기 안 걸린다. */
   const hp = eHp(s) * T2.hp * (tk === 'boss' ? bossGateHp(s) : 1);

@@ -240,34 +240,123 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
   }
 
   /* ── [6] 동시 등장 보스가 겹쳐 서지 않는다(단독 개체끼리의 분리) ─────────────────── */
+  /* 344(2026-08-29) — 이 절은 «rstone 1회 · 프레임 12 부터» 를 재다가 4회에 1번 빨갰다.
+     원인은 게이트의 난수 운이 **아니었다**(probe344): 스폰 좌표가 이웃을 안 봐서 24회 중 12회가
+     반지름 합 안(최악 12%)에서 태어났고, `e.born < 0.3` 의 등장 창 18프레임 동안 겹친 채 서 있었다.
+     제품이 스폰에서 겹침을 막게 됐으므로(index.html `soloClash`) 이 절도 다시 적는다:
+       ① 표본을 «동시 등장 던전 전부 × 3뽑기» 로 늘린다 — 한 번의 뽑기 운으로 초록이 될 수 없다.
+       ② «k < 12 를 건너뛴다» 를 지운다 — 건너뛰던 그 창이 바로 결손이 살던 자리였다.
+       ③ 「최소 간격 ≥ 97%」 한 항을 **네 항으로 가른다**(LESSONS 326 «칸을 갈라 써라»).
+          이동 중에는 위치 해소가 반씩 미느라 **한 프레임짜리** 잔차(실측 바닥 97.4%)가 남는데,
+          그 잔차와 «겹쳐 서 있다» 를 같은 자로 재면 임계 0.4%p 위에서 또 흔들린다. 그래서
+          정지 창(스폰·등장)은 **100%** 로 조이고, 이동 창은 «깊이(≥90%)» 와 «지속(연속 ≤2프레임)»
+          으로 나눠 묻는다. 실측(probe344 72뽑기)은 깊이 97.4% · 97% 아래 프레임 **0개**다. */
   console.log('\n[6] 동시 등장 — 보스끼리 겹치지 않는다 (중심 거리 ≥ 반지름 합)');
+  const SIM = await page.evaluate(() => DUNGEONS.filter((d) => dunBossN(d) > 1 && dunBossMd(d) === 'all')
+    .map((d) => ({ id: d.id, bn: dunBossN(d) })));
+  /* 한 판을 굴리며 창을 갈라 잰다. k<17 = 제품이 `e.born < 0.3` 으로 통째로 건너뛰는 «등장 창» */
+  const runSep = (frames) => page.evaluate(([N]) => {
+    /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
+    dunBossTick();
+    spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
+    const sep = () => {
+      const bs = enemies.filter((e) => e.tk === 'dunboss');
+      if (bs.length < 2) return -1;
+      let m = 9;
+      for (let a = 0; a < bs.length; a++) for (let b = a + 1; b < bs.length; b++)
+        m = Math.min(m, Math.hypot(bs[a].x - bs[b].x, bs[a].y - bs[b].y) / (bs[a].r + bs[b].r));
+      return m;
+    };
+    let spawnSep = -1, born = 9, all = 9, up = 0, run = 0, runMax = 0, seen = 0;
+    for (let k = 0; k < N; k++) {
+      step(1 / 60);
+      if (!dunRun) break;
+      const s = sep();
+      if (s < 0) { run = 0; continue; }
+      seen = Math.max(seen, enemies.filter((e) => e.tk === 'dunboss').length);
+      if (spawnSep < 0) spawnSep = s;
+      all = Math.min(all, s);
+      if (k < 17) born = Math.min(born, s);
+      if (s < 0.97) { up++; run++; runMax = Math.max(runMax, run); } else run = 0;
+    }
+    return { spawnSep, born: born === 9 ? -1 : born, all: all === 9 ? -1 : all, up, runMax, seen };
+  }, [frames]);
   {
-    const id = (await page.evaluate(() => DUNGEONS.map((d) => d.id).find((i) => {
-      const d = DUNGEONS.find((x) => x.id === i);
-      return dunBossN(d) === 3 && dunBossMd(d) === 'all';
-    })));
-    const p = await prep(id);
-    if (p.err) no(id + ' — ' + p.err);
+    (SIM.length >= 2 ? ok : no)('전제 — 동시 등장 던전이 ' + SIM.length + '종 있다 ('
+      + SIM.map((t) => t.id + ':' + t.bn).join(' · ') + ')');
+    const DRAW = 3;
+    for (const t of SIM) {
+      const rows = [];
+      for (let n = 0; n < DRAW; n++) {
+        const p = await prep(t.id);
+        if (p.err) { no(t.id + ' — ' + p.err); break; }
+        rows.push(await runSep(600));
+        await cleanup();
+      }
+      if (rows.length < DRAW) continue;
+      const mn = (f) => rows.reduce((a, r) => Math.min(a, f(r)), 9);
+      const mx = (f) => rows.reduce((a, r) => Math.max(a, f(r)), 0);
+      const pct = (v) => (v * 100).toFixed(1) + '%';
+      /* 전제 — 셋(둘)이 «같은 프레임에» 실제로 서지 않으면 아래 세 항은 잴 것이 없다(헛초록 방지) */
+      (mn((r) => r.seen) >= t.bn ? ok : no)(t.id + ' 전제 — 보스 ' + t.bn + '마리가 실제로 필드에 섰다 (뽑기 '
+        + DRAW + '회 최소 ' + mn((r) => r.seen) + '마리)');
+      (mn((r) => r.spawnSep) >= 1 ? ok : no)(t.id + ' ① 스폰 프레임 겹침 0 — 최소 간격 '
+        + pct(mn((r) => r.spawnSep)) + ' (기대 ≥ 100%)');
+      (mn((r) => r.born) >= 1 ? ok : no)(t.id + ' ② 등장 창(k<17, 아무도 안 움직이는 18프레임) '
+        + pct(mn((r) => r.born)) + ' (기대 ≥ 100%)');
+      (mn((r) => r.all) >= 0.90 ? ok : no)(t.id + ' ③ 런 전체 최소 간격 ' + pct(mn((r) => r.all))
+        + ' (기대 ≥ 90% — «한 마리로 보이는» 겹침 0)');
+      (mx((r) => r.runMax) <= 2 ? ok : no)(t.id + ' ④ 97% 아래가 이어진 최대 프레임 '
+        + mx((r) => r.runMax) + '프레임 (기대 ≤ 2 — 이동 중 한 프레임 잔차만 허용) · 총 '
+        + rows.reduce((a, r) => a + r.up, 0) + '프레임');
+    }
+  }
+
+  /* ── [6-R] 되돌림 시험 — 위 네 항에 이빨이 있는가 ──────────────────────────────── */
+  /* 334-③ 처방: «옛 상태를 만들어 보는 것» 으로 5줄이면 된다. 여기서는 344 이전의 스폰
+     (= 이웃을 안 보고 뽑은 좌표)을 손으로 재현한다. 두 가지를 동시에 못박는다:
+       R1 겹쳐 태어나면 등장 창·런 전체 단언이 **실제로 빨개진다**(무르게 풀린 항이 아니다)
+       R2 그 상태에서 굴리면 257 의 위치 해소가 **여전히 살아 있어** 97% 위로 돌아온다 */
+  console.log('\n[6-R] 되돌림 시험 — 옛 스폰(겹쳐 태어남)을 손으로 만들어 본다');
+  {
+    const t = SIM[SIM.length - 1];
+    const p = await prep(t.id);
+    if (p.err) no(t.id + ' — ' + p.err);
     else {
       const r = await page.evaluate(() => {
-        /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
         dunBossTick();
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
-        /* 30초를 돌리며 «가장 가까웠던 순간» 을 잰다. 스폰 직후 몇 프레임은 해소 중이라 뺀다. */
-        let minSep = 9;
-        for (let k = 0; k < 1800; k++) {
-          step(1 / 60);
-          if (!dunRun) break;
-          if (k < 12) continue;
-          const bs = enemies.filter((e) => e.tk === 'dunboss');
-          for (let a = 0; a < bs.length; a++) for (let b = a + 1; b < bs.length; b++)
-            minSep = Math.min(minSep, Math.hypot(bs[a].x - bs[b].x, bs[a].y - bs[b].y) / (bs[a].r + bs[b].r));
-        }
-        return { minSep: minSep === 9 ? -1 : minSep };
+        step(1 / 60);                                   /* 보스가 서는 프레임 */
+        const bs = enemies.filter((e) => e.tk === 'dunboss');
+        if (bs.length < 2) return { err: '보스가 2마리 미만' };
+        const sep = () => {
+          const b = enemies.filter((e) => e.tk === 'dunboss');
+          let m = 9;
+          for (let a = 0; a < b.length; a++) for (let c = a + 1; c < b.length; c++)
+            m = Math.min(m, Math.hypot(b[a].x - b[c].x, b[a].y - b[c].y) / (b[a].r + b[c].r));
+          return m;
+        };
+        /* 옛 스폰 재현 — 두 번째 보스를 첫 보스 위(반지름 합의 12% = probe344 최악 표본)로 옮기고
+           등장 창을 되돌린다(born=0). 344 이전이면 이 상태가 «난수로 뽑혀» 나왔다. */
+        bs[1].x = bs[0].x + (bs[0].r + bs[1].r) * 0.12; bs[1].y = bs[0].y;
+        bs.forEach((e) => { e.born = 0; });
+        const at0 = sep();
+        let bornMin = 9;
+        for (let k = 0; k < 17; k++) { step(1 / 60); bornMin = Math.min(bornMin, sep()); }
+        let after = 9;
+        for (let k = 0; k < 40; k++) { step(1 / 60); after = sep(); }
+        return { at0, bornMin, after };
       });
-      (r.minSep >= 0.97 ? ok : no)(id + ' — 보스 3마리 최소 간격 = 반지름 합의 '
-        + (r.minSep * 100).toFixed(0) + '% (기대 ≥ 97%)');
-      await cleanup();
+      if (r.err) no(t.id + ' — ' + r.err);
+      else {
+        (r.at0 < 0.90 ? ok : no)('R1 옛 스폰을 심으면 간격이 ' + (r.at0 * 100).toFixed(1)
+          + '% — ③(≥90%) 이 실제로 빨개진다');
+        (r.bornMin < 1 ? ok : no)('R1 등장 창 18프레임 내내 ' + (r.bornMin * 100).toFixed(1)
+          + '% — ②(≥100%) 도 빨개진다 (제품은 이 창에서 아무것도 안 한다)');
+        (r.after >= 0.97 ? ok : no)('R2 그대로 40프레임 굴리면 ' + (r.after * 100).toFixed(1)
+          + '% 로 복구 — 257 의 위치 해소는 살아 있다');
+        await cleanup();
+      }
     }
   }
 
