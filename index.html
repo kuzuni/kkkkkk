@@ -9949,6 +9949,12 @@
   .wgc>.updot{right:8px;top:45px}
   .eqsl>.updot{right:-7px;top:-7px}
   .sk-btn>.updot,.wm-btn>.updot{right:12px;top:12px}
+  /* 318 — 70 출석 팝업 «오늘(받을 수 있는) 카드». 카드 우상단 **바깥** 코너가 비어 있다
+     (`.at-bd` 밴드는 카드 안쪽 top:1, `.at-ck` ✔ 는 수령 완료 칸에만, `.at-cr` 👑 는 하단).
+     `.at-in`(overflow:hidden) 의 형제라 잘리지 않고, 카드 바깥 9px 은 그리드 gap(33/44.5) ·
+     7일차는 mbody padding(65) 안이라 `.at70 .mbody{overflow:hidden}` 에도 안 걸린다.
+     중심 x 221.5/226 · y 4.5/268 → 299 «우상단 사분면» 충족. */
+  .at-c>.updot,.at-c7>.updot{right:-9px;top:-9px}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
   :is(#bSk,#bPet,#bCos) .alert>.updot{display:block}
   #wpnw .updot{display:none}
@@ -23018,14 +23024,20 @@ function openAttend(){
       + '<div class="at-if ifr' + (x.rl ? ' rl' : '') + '"><em>' + x.ic + '</em>'
       +   '<b class="ifq">' + x.v + '</b></div>'
       + '</div>').join('');
-    return '<div class="' + (sev ? 'at-c7' : 'at-c') + (got ? ' got' : '') + (now ? ' today' : '') + '"'
+    /* 318(주인 지시 2026-08-28) — «받을 수 있는 칸» 에 레드닷. 293·294·301 과 같은 처방이다:
+       진입 버튼(좌측 사이드 «출석»)의 배지는 **팝업을 여는 순간 딤(#modal z30) 아래로 들어가**
+       화면에서 사라지므로(실측 `tools/probe318.js` ⓑ — elementFromPoint 가 #modal 을 준다),
+       경로의 다음 칸까지 신호를 잇는다. 노드는 `now` 일 때만 찍고 호스트에 `.alert` 를 건다
+       (301 `.ps-bx` 꼴 — 수령하면 `openAttend()` 가 즉시 재렌더해 노드째 사라진다). */
+    return '<div class="' + (sev ? 'at-c7' : 'at-c') + (got ? ' got' : '') + (now ? ' today alert' : '') + '"'
       + (now ? ' data-att="1"' : '') + '>'
       + '<div class="at-in">'
       +   '<div class="at-bd' + (now || sev ? ' hi' : '') + '"><i>' + (idx+1) + '일 차</i></div>'
       +   '<div class="at-pl"></div>' + frames
       + '</div>'
       + (got ? '<div class="at-ck">✔</div>' : '')
-      + (now ? '<div class="at-cr"><i>👑</i></div>' : '') + '</div>';
+      + (now ? '<div class="at-cr"><i>👑</i></div>' : '')
+      + (now ? '<s class="updot"></s>' : '') + '</div>';
   };
   $('mtitle').textContent = '출석 보상';
   $('mbox').innerHTML = '<div class="at-g">'
