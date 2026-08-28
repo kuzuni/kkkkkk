@@ -3476,9 +3476,21 @@
      26px 크림 구슬과 **같은 어휘**로 뭉친다. 구슬을 .26s 로 줄여 그 창을 비운다(둘 다 «≤120ms
      로 줄이거나 재화를 앞당겨라»). 95ms 캡처 리듬에서 95·190ms 두 프레임에 남으므로 «버스트
      없음» 이 되지는 않는다(verify58 은 퀘스트 120ms · 강화 60ms 에 재므로 게이트도 안전). */
-    box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .26s ease-out forwards}
+  /* ⚑ 42회차 — 41차 **2인 공통ㅇ** «불꽃 가시 수명이 사양 하한 0.30s 미달 + 퇴장이 50~90ms»
+     (BG «250~270ms · 페이드 **50~90ms**, 세 씬 동일» · BH «quest 216ms 완전 불투명 → 296ms 전무,
+      **80ms 안에 종료**»). 두 사람이 «동시 전멸» 로 읽은 것의 정체가 이 퇴장 폭이다 —
+     .26s × (100−62)% = **99ms** 이고 95~100ms 캡처 격자에서는 페이드 프레임이 0~1장뿐이라
+     «있다 → 없다» 로 찍힌다. 공통ㅁ 의 «지름이 씬마다 24/26/**18**px» 도 크기 차가 아니라 **위상 차**다:
+     upg 는 100ms 격자라 표본이 62% 뒤(scale .62 = 29×.62 ≈ 18px)에 걸린다.
+     → 수명 .26 → **.38s**, 큰 채로 버티는 구간 62% → 52%.
+        퇴장 = 48% × 380 = **182ms**(≥180 요구 충족) · 수명 380ms(사양 380±40 안).
+     ⚠ 21회차가 .58 → .26 으로 내린 근거(«첫 199~299ms 가 크림 구슬뿐이라 무엇을 얻었는지 가린다»)는
+       그 상한 0.58s 를 넘지 않으므로 유효하다 — 380ms 는 그 절반 아래이고, 26회차가 비행 코인의
+       봉우리 팽창을 없앤 뒤로 «구슬과 코인이 같은 어휘로 뭉친다» 는 조건 자체가 다르다.
+     ⚠ 게이트는 퀘스트 120ms · 강화 60ms 에 재므로(verify58) 수명을 늘리는 방향은 안전하다. */
+    box-shadow:0 0 0 2.5px rgba(0,0,0,.55);animation:fxSpark .38s ease-out forwards}
   @keyframes fxSpark{0%{transform:translate(0,0) scale(1);opacity:1}
-    62%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
+    52%{transform:translate(calc(var(--dx)*.78),calc(var(--dy)*.78)) scale(1);opacity:1}
     100%{transform:translate(var(--dx),var(--dy)) scale(.62);opacity:0}}
 
   /* 강화 성공 — 대상 위에 흰 플래시 1회 + 살짝 커졌다 복귀.
@@ -28673,6 +28685,24 @@ const FX3_HOLD0  = 0.12, FX3_HOLD1 = 0.20;           /* (b) 머묾 — 선언 �
    지적 방향과 같고, i=0 의 흡수 길이 0.16s(종전 값 그대로)와 envelope(0.50/1.22)이 둘 다 정확히
    보존된다. 회수되는 것은 **꼬리 아이콘의 머묾 310ms → 120ms** 다. */
 const FX3_HOLD_F = 0.12;                             /* (b) 머묾 — 전 아이콘 공통(선언 하한) */
+/* ⚑ 42회차 — 41차 2인 공통ㄴ 의 셋째 손잡이. 19회차가 머묾을 전원 같게 만든 뒤로 16개가
+   **같은 프레임에 서고 같은 프레임에 출발**한다 — 그래서 «전원이 떠 있는» 창이 끝나는 순간
+   전원이 동시에 7~8px/ms 로 튄다(BG 88:1 · BH 46:1). 계단의 절반은 이 **동시 출발**이다.
+   → 출발을 **선언 범위 안에서** 벌린다. 위 `FX3_HOLD0/HOLD1`(0.12~0.20)은 19회차 이후
+     «선언만 있고 아무도 안 쓰는» 상수로 남아 있었다 — 19회차가 지운 것은 그 범위가 아니라
+     거기 **덧붙어 있던 `+ u·FX3_LAUNCH`**(머묾을 310ms 까지 늘려 선언 상한 +55%)였다.
+     그 항만 빼고 선언 범위를 되살린다:  hold_i = HOLD0 + u·(HOLD1 − HOLD0) = 0.12 ~ **0.20s**
+     (19회차가 «상한 200ms 대비 +55%» 라고 잡았던 그 상한 자체다 — 넘지 않는다).
+   ⓐ 퍼짐은 전원 0.22s 고정이다. **퍼짐 길이를 벌리는 안은 실측으로 폐기했다** —
+      `verify58` [13](«모두 받기» 라벨 keep-out)이 «최소 여유 2.6px < 7.5» 로 빨개졌다.
+      keep-out 은 퍼짐 **끝점**만 라벨 밖으로 밀어내므로, 퍼짐이 340ms 까지 이어지면
+      머묾 창(220~340ms)에 아직 라벨 위를 «지나가는 중» 인 아이콘이 남는다. 34차 2인 공통1 의
+      회귀다. 출발 쪽을 벌리면 이 문제가 없다(그때는 전원이 이미 끝점에 서 있다).
+   ⓑ 도착 봉투 불변 — ad = clamp(arr − ha) 이므로 i=0 은 0.50−0.34 = 0.16(=FX3_ABS0 그대로),
+      u=1 은 1.22−0.42 = **0.80 ≤ FX3_ABS1(0.90)** 이라 클램프에 안 걸린다(0.50 / 1.22 그대로).
+   ⓒ 결과: 흡수 개시가 340 → 420ms 에 **고르게 흩어져** 군집이 한 프레임에 통째로 튀지 않는다. */
+const FX3_SDA  = 0.35;                               /* 퍼짐 이징의 준등속 계수 — 구간 속도비 (1+a)/(1−a) = 2.08 */
+const FX3_HW   = 16.0;                               /* 머묾 부유 각속도(rad/s) — 11회차 12.4 에서 상향 */
 /* 2회차 — 스태거를 «출발» 이 아니라 «도착» 에만 남긴다. 1회차는 출발 스태거가 최대 0.50s 라
    마지막 아이콘이 퍼짐 끝(0.22s)부터 0.92s 까지 **700ms 를 제자리에 서 있었고**, 비평가 G·H 가
    독립적으로 «3박자가 아니라 퍼짐 → 0.9초 정지 → 우르르의 2박자»(①2~3점)로 잡았다.
@@ -29530,12 +29560,14 @@ function fxFly(from, cur, n){
       }
       /* 19회차 — 머묾은 **전원 같다**(FX3_HOLD_F). 스태거는 아래 `ad`(흡수 길이)가 흡수한다.
          종전 `+ u*FX3_LAUNCH` 는 머묾을 i 마다 최대 310ms 까지 늘려 «정지 구간» 으로 읽혔다. */
-      const ha = FX3_SPREAD + FX3_HOLD_F;                                              /* 흡수 시작 */
+      /* 42회차 — 퍼짐은 전원 0.22 고정, **출발만** 선언 범위(HOLD0~HOLD1) 안에서 벌린다. */
+      const sd = FX3_SPREAD;
+      const ha = sd + FX3_HOLD0 + u*(FX3_HOLD1 - FX3_HOLD0);                           /* 흡수 시작 */
       const arr = FX3_ARR0 + u*(FX3_ARR1 - FX3_ARR0);                                  /* 도착 시각 */
       const ad = clamp(arr - ha, FX3_ABS0, FX3_ABS1);
       const f = { el, ui:true, sx:sx0, sy:sy0, ax, ay, bnd, tx:to.x, ty:to.y,
         /* 34회차 — 밴드 배치는 «진행파» 위상(위 FX3_BSWK). 부채꼴은 종전 난수. */
-        sd:FX3_SPREAD, ha, ad, arr:ha + ad, rot:rnd(-20, 20), ph:bnd ? ax*FX3_BSWK : rnd(0, 6.28),
+        sd, ha, ad, arr:ha + ad, rot:rnd(-20, 20), ph:bnd ? ax*FX3_BSWK : rnd(0, 6.28),
         d0:Math.hypot(to.x - ax, to.y - ay),            /* 6회차 — «잔여 20%» 판정 기준 거리 */
         /* 14회차 교훈의 3박자 판 — dt 누적으로 돌면 dt 가 0.1s 로 클램프돼 프레임이 길어질수록
            연출이 벽시계보다 늘어진다(1.26s 설계가 1.4s 로 찍혔다). **시작 시각 기준**으로 돈다. */
@@ -29989,6 +30021,43 @@ function fxPop(el){
 /* 21회차 — 버스트 링 기하(요소 대상). 타원 반축 = bbox 반축 + FXB_M, 바깥 이동 = 반축 × FXB_K.
    FXB_K 0.20 은 «대상 세로의 약 1.4배» 가 링 세로 상한이 되는 값이다(퀘스트 버튼 119 → 약 166). */
 const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
+/* ⚑ 42회차 — 41차 **2인 공통ㄹ** «upg 불꽃이 카드 «자기» 글자를 덮는다»
+   (BG ««1»(x220–239) 폭 60%·높이 62% · «53»(x195–251) 폭 58% — upg-1~2, 130~200ms» ·
+    BH «(235,1430)·(175,1814) 22×22 가 «Lv. 1» 의 «1»·가격 «53» 을 upg-1~3 **207ms**»).
+   41회차가 스스로 예고한 부작용이다: 시작점을 «끝점에서 중심 쪽으로 FXB_K(20%)» 당기는데,
+   훈련 카드(326×510)에서 20% 는 세로 51px 이라 **위·아래 글자 대역**이다(퀘스트 버튼 119 에서는
+   12px 이라 안 걸렸다 — 그래서 41회차 검산이 통과했다).
+   → 되돌리지 않는다(되돌리면 40차 공통ㅈ «반경 확장 0%» 가 그대로 돌아온다).
+     대신 **13회차 `FX3_KOM` 선례의 버스트 판**을 단다: 대상 «자기» 글자 상자를 keep-out 으로 두고,
+     시작·끝점이 거기 걸리면 **각도만 옆으로 굴린다**(반경·가둠 상자·이동량은 한 픽셀도 안 바뀐다).
+   ⓐ 훑는 범위는 **대상 요소의 자손 텍스트 노드**뿐이다(«자기 글자» 가 지적 대상 — 형제 카드는
+      28회차의 bbox 가둠이 이미 막는다). 버스트당 1회만 훑는다.
+   ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
+   ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
+const FXB_KTRY = 9, FXB_KSTEP = 0.26;                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
+function fxbTextHoles(t){
+  const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
+  const out = [], rg = document.createRange();
+  const els = [t, ...t.querySelectorAll('*')];
+  for(const el of els){
+    let has = false;
+    for(const n of el.childNodes) if(n.nodeType === 3 && n.textContent.trim()){ has = true; break; }
+    if(!has) continue;
+    const cs = getComputedStyle(el);
+    if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
+    rg.selectNodeContents(el);
+    const b = rg.getBoundingClientRect();
+    if(!b.width || !b.height) continue;
+    out.push({ x:(b.left - f.x)/f.s - FX3_KOM, y:(b.top - f.y)/f.s - FX3_KOM,
+               w:b.width/f.s + 2*FX3_KOM, h:b.height/f.s + 2*FX3_KOM });
+    if(out.length >= 24) break;                      /* 안전판 — 글자가 많은 대상에서 루프 폭주 방지 */
+  }
+  return out;
+}
+function fxbHit(holes, x, y){
+  for(const h of holes) if(x > h.x && x < h.x + h.w && y > h.y && y < h.y + h.h) return true;
+  return false;
+}
 function fxBurst(t, col, n){
   /* 77 — 좌표 대상에 combat 태그가 있으면 팝업 아래 레이어. (현재 전투 킬은 캔버스 burst() 를
      쓰므로 실사용 경로는 없지만, 새 전투 발 호출이 생겨도 규칙이 자동 적용되게 맞춰 둔다) */
@@ -30025,6 +30094,8 @@ function fxBurst(t, col, n){
      세로도 같이 건다 — 종전 `by0/by1` 이 점 대상에 대해 ±1e9(무한)이라 위쪽에서 죽으면 입자가
      프레임 위로 나가 **그냥 안 보였다**(가로만 클램프돼 있던 비대칭).
      ⚠ 요소(bbox) 대상은 손대지 않는다 — 28회차가 «시작점과 이동 끝점을 모두 bbox 안에» 로 닫은 자리다. */
+  /* 42회차 — 공통ㄹ. 대상 «자기» 글자 keep-out(버스트당 1회 스캔). 좌표 대상은 글자가 없다. */
+  const kh = r ? fxbTextHoles(t) : [];
   const PB_M = FXB_RMIN + 80;
   if(!r && p){
     p.x = clamp(p.x, PB_M, FRAME_W - PB_M);
@@ -30089,12 +30160,22 @@ function fxBurst(t, col, n){
            산수로 검산했다(퀘스트 버튼: 잉크 안쪽 끝 61.8px vs 라벨 반폭 63px — 최대 각도에서만
            1.2px 스침. 21회차 이전의 «10개 중 7개가 글자 위» 와는 다른 크기다).
        ⚠ 좌표(점) 대상은 종전 그대로다 — 반경 22 원에서 80~150px 산포라 원래 확장이 있다. */
-    const sx0 = clamp(p.x + Math.cos(a)*rx*jt, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» */
-    const sy0 = clamp(p.y + Math.sin(a)*ry*jt, by0, by1);
-    const ex = r ? sx0 : clamp(sx0 + Math.cos(a)*d, bx0, bx1);
-    const ey = r ? sy0 : clamp(sy0 + Math.sin(a)*d, by0, by1);
-    const sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
-    const sy = r ? p.y + (ey - p.y)*(1 - FXB_K) : sy0;
+    /* 42회차 — 공통ㄹ. 시작·끝점이 대상 글자에 걸리면 **각도만** 좌우로 번갈아 굴려 피한다
+       (반경 rx·ry·jt, 가둠 상자 bx/by, 이동량 FXB_K 는 그대로 — 링 기하는 안 건드린다). */
+    let ang = a, sx0 = 0, sy0 = 0, ex = 0, ey = 0, sx = 0, sy = 0;
+    for(let k = 0; k <= (kh.length ? FXB_KTRY : 0); k++){
+      /* 0, +step, −step, +2step, −2step … 원래 각에서 가장 가까운 쪽부터 본다 */
+      ang = a + (k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k/2) * FXB_KSTEP);
+      sx0 = clamp(p.x + Math.cos(ang)*rx*jt, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» */
+      sy0 = clamp(p.y + Math.sin(ang)*ry*jt, by0, by1);
+      ex = r ? sx0 : clamp(sx0 + Math.cos(ang)*d, bx0, bx1);
+      ey = r ? sy0 : clamp(sy0 + Math.sin(ang)*d, by0, by1);
+      sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
+      sy = r ? p.y + (ey - p.y)*(1 - FXB_K) : sy0;
+      if(!kh.length) break;
+      /* 시작·중간·끝 세 점으로 본다 — 이동이 짧아 세 점이면 선분 전체를 대표한다 */
+      if(!fxbHit(kh, sx, sy) && !fxbHit(kh, (sx + ex)/2, (sy + ey)/2) && !fxbHit(kh, ex, ey)) break;
+    }
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
@@ -30727,7 +30808,20 @@ function fxTick(dt){
       /* ── 93 3박자 ── */
       let x, y, s, op = 1, rot = 0;
       if(f.t < f.sd){                                   /* (a) 퍼짐 — ease-out 으로 «튀어나감» */
-        const q = f.t/f.sd, e = 1 - Math.pow(1 - q, 3);
+        /* ⚑ 42회차 — 41차 **2인 공통ㄴ** «퍼짐이 스폰 후 178ms 사실상 정지했다가 급가속»
+           (BG «118→296ms 에 14px = 0.08px/ms → 직후 7.05·8.06px/ms = **88배 계단**» ·
+            BH «외곽상자 x27·y18px = 0.15px/ms → quest-5 에 좌단 715px = 6.9px/ms = **46:1**»).
+           원인은 이 이징의 **종단 속도가 정확히 0** 인 것이다: `1−(1−q)³` 은 e'(1) = 0 이라
+           퍼짐의 마지막 3분의 1이 이미 «머묾» 이고, 그 뒤에 진짜 머묾(0.12s)이 이어 붙어
+           **정지 구간이 두 배로 길어진다**(0.22s 의 끝 ~60ms + 머묾 120ms ≈ 178ms — 두 사람이
+           잰 창과 정확히 같다). 진폭이나 반경 문제가 아니므로 22회차가 «각속도» 로 푼 것과
+           같은 손잡이다.
+           → **종단 속도가 0 이 아닌 준등속 이징**으로 바꾼다: e = q + a·q(1−q) 는
+             e(0)=0 · e(1)=1 이 정확하고(퍼짐 끝점 ax,ay 는 한 픽셀도 안 움직인다)
+             e'(0) = 1+a · e'(1) = 1−a 라 **구간 내 속도비가 (1+a)/(1−a)** 하나로 열린다.
+             a = 0.35 → 1.35 ~ **0.65배**(비 2.08) — «튀어나갔다가 느려진다» 는 읽히되
+             정지 프레임이 없다. 종전 3차 이징은 같은 자로 재면 **3.0 ~ 0배(비 ∞)** 였다. */
+        const q = f.t/f.sd, e = q + FX3_SDA*q*(1 - q);
         /* 24회차 — 밴드 스프레이는 **세로를 가로보다 빨리** 뺀다. 같은 이징을 쓰면 밴드까지
            올라가는 동안 대각선이 제목 잉크를 지나가고(실측: 잉크 위 체류 92~180ms), 그 90ms 가
            23차 비평의 «제목 위에서 터진다» 를 절반만 회수한 채로 남겼다. 5제곱 이징이면 y 는
@@ -30754,7 +30848,11 @@ function fxTick(dt){
            비평가 AF·AG 가 둘 다 씬A 머묾을 «동결» 로 읽었다. 90~100ms 캡처 리듬에서 주기 683ms 의
            왕복은 표본이 같은 위상에 걸리면 1px 로도 찍힌다 — **진폭이 아니라 각속도**를 올려
            프레임간 이동을 5px 대로 만든다(반경 상한 195 는 진폭 증가분만큼 FX3_R1 로 되돌린다). */
-        const w = f.t*12.4 + f.ph;
+        /* 42회차 — 위 (a) 와 같은 지적(2인 공통ㄴ)의 머묾 판. 95~100ms 캡처 격자에서 왕복이
+           같은 위상에 걸리면 12px 로 찍힌다(11회차가 7.0 → 12.4 로 올린 바로 그 이유).
+           16.0 이면 95ms 에 위상이 1.52rad 진행해 현이 2·11·sin(0.76) = **15.2px**(0.16px/ms) 로
+           올라간다 — 진폭(11/8)·반경 상한(195)은 한 픽셀도 안 건드린다. */
+        const w = f.t*FX3_HW + f.ph;
         /* 9회차 — 7/5px 는 74ms 간격 캡처에서 변위 1~6px 라 «정지» 로 읽힌다(비평가 Z ⑤).
            진폭을 올리되, 반경 상한(195)은 부유분을 포함해 지키도록 FX3_R1 을 그만큼 내렸다. */
         x = f.ax + Math.cos(w)*FX3_BSFX;  /* 36회차 — 값은 그대로(11). 이름만 세웠다(아래 keep-out 이 쓴다) */

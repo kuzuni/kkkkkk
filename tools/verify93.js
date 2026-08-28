@@ -137,6 +137,16 @@ async function run(scene, span) {
         PZMAX: typeof FX3_PZ_MAX === 'number' ? FX3_PZ_MAX : 0.22,
         FLYMAX: typeof FXFLY_MAX === 'number' ? FXFLY_MAX : 32,
         FLYMAXC: typeof FXFLY_MAX_C === 'number' ? FXFLY_MAX_C : 12,
+        /* 42회차 — 이 창은 «리터럴 330» 이 아니라 **소스 상수에서 파생**시킨다.
+           41회차가 `fx-flash` 에서 잡은 «주석·값·게이트가 따로 굳는» 병을 여기서 반복하지 않는다.
+           재는 것은 «아직 아무 아이콘도 흡수를 시작하지 않은 구간» 이므로 **최소 ha**
+           (= 퍼짐 + 머묾 하한)다. 42회차가 출발을 선언 범위(0.12~0.20) 안에서 벌렸으므로
+           최대 ha 는 0.42s 지만, 그 창까지 열면 먼저 출발한 아이콘의 **복도 x(1040)** 가
+           «퍼짐 봉투» 로 잘못 잡힌다(실제로 FAIL 을 봤다 — 퍼짐 최대 x 1040 ≤ 997).
+           ⚠ 그래서 340~420ms 에 아직 머무는 꼬리 아이콘은 이 항목이 안 본다.
+              끝점(ax,ay)·반경은 42회차가 한 픽셀도 안 바꿨으므로 봉투 자체는 같다. */
+        HAMIN: ((typeof FX3_SPREAD === 'number' ? FX3_SPREAD : 0.22)
+                + (typeof FX3_HOLD0 === 'number' ? FX3_HOLD0 : 0.12)),
       },
     };
   }, { sc: scene, span });
@@ -176,9 +186,10 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
         세로 = 부채꼴 반경 상한 FX3_R1/FX3_PR1(184) + 지터 → §4-17-5 의 200 그대로 */
   console.log('[1] (a) 퍼짐 봉투 — 가로 = 밴드 상한(복도 앞) · 세로 = 부채꼴 반경 200 (93 §4-17-5)');
   const org = q.p0;
+  const HAT = Math.round((q.K.HAMIN || 0.34) * 1000) - 10;   /* 42회차 — 리터럴 330 폐기 */
   let rmax = 0, rmaxT = 0, xmax = -1e9;
   for (const f of q.frames) {
-    if (f.t > 330) break;                              /* 퍼짐 .22s + 머묾 .12s = 흡수 개시 전 */
+    if (f.t > HAT) break;                              /* 퍼짐 + 머묾 = 흡수 개시 전(소스 상수에서 파생) */
     for (const s of f.list) {
       if (!placed(s)) continue;
       const d = Math.abs(s.y - org.y); if (d > rmax) { rmax = d; rmaxT = f.t; }
@@ -188,7 +199,7 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   const XCAP = q.outX - q.K.BSOM + 27;
   ok(xmax <= XCAP, `퍼짐 최대 x ${xmax.toFixed(1)} (≤ ${XCAP.toFixed(0)} = outX ${q.outX} − FX3_BSOM ${q.K.BSOM} + 27)`);
   ok(rmax > 10 && rmax <= 200, `퍼짐 세로 반경 ${rmax.toFixed(1)}px @${rmaxT}ms (10 < r ≤ 200)`);
-  const spreadN = Math.max(...q.frames.filter(f => f.t >= 120 && f.t <= 330).map(f => f.list.filter(placed).length), 0);
+  const spreadN = Math.max(...q.frames.filter(f => f.t >= 120 && f.t <= HAT).map(f => f.list.filter(placed).length), 0);
   ok(spreadN >= 8, `퍼짐 구간에 동시 ${spreadN}개 (≥8 — «퍼짐» 이 프레임에 실재한다)`);
 
   console.log('[2] (c) 흡수 — 도착 봉투 (선언 FX3_ARR0/ARR1)');
