@@ -97,11 +97,30 @@ const READ = () => {
       Math.abs(m.cards[0].x - (m.frameW - m.cards[0].r)) <= 1,
       '카드 좌 ' + m.cards[0].x + ' / 우 ' + (m.frameW - m.cards[0].r));
 
-    /* ── §3 이음매 — 335 가 되돌린 자리 ───────────────────────────────── */
-    console.log('\n[3] 이음매 — ref 는 카드 검정 하변과 바 검정 상변이 겹친다 (335)');
-    near('리스트 하단선 ↔ 바 상변', +(m.bar.y - m.list.b).toFixed(1), R.gapListBar, 1);
+    /* ── §3 이음매 — **네 번째 유령**이었던 자리 ───────────────────────── */
+    /* 레퍼런스는 카드5 하변(2030)이 바 상변(2021)을 8px 덮어 바탕 0px 이지만, 프레임이 레퍼런스
+       콘텐츠(2256)보다 24px 길므로 이 자리의 기대치는 **−8 + 24 = 16px 안팎**이다.
+       72 의 넷이 «0 이어야 한다» 고 넘긴 것은 하단 앵커에 −84 를 쓴 결과다(①②③ 과 같은 뿌리).
+       그래서 여기서 지키는 것은 «거리 0» 이 아니라 **거리가 구조적 몫이고, 클립선이 카드 경계라
+       유령 가로줄이 안 생기는 것** 두 가지다. */
+    console.log('\n[3] 이음매 — 구조적 24px 몫 · 유령 가로줄 없음 (335 2회차)');
+    const seam = +(m.bar.y - m.list.b).toFixed(1);
+    ok('이음매 거리가 구조적 몫 12~18px (ref −8 + 24 = 16 안팎)',
+      seam >= 12 && seam <= 18, seam + 'px');
     ok('리스트가 바를 침범하지 않는다 (하단선 ≤ 바 상변)', m.list.b <= m.bar.y + 1,
       '리스트 하변 ' + m.list.b + ' / 바 상변 ' + m.bar.y);
+    /* ★ 유령 가로줄 — 클립선을 바 상변까지 늘리면(bottom:139) 6번째 카드의 검정 상변이 4px 새어
+       나오는데, 카드 980 폭 vs 바 794 폭이라 **바 밖으로 좌우 124px 씩** 삐져나온다.
+       335 1회차에 실제로 그렇게 만들었고 비평가 AL·AM 이 그 회차의 «유일한 구조적 결함» 으로 짚었다. */
+    ok('클립선이 카드 경계에서 끊긴다 (카드5 하변과 일치, Δ≤1px)',
+      Math.abs(m.list.b - m.cards[4].b) <= 1,
+      '클립선 ' + m.list.b + ' / 카드5 하변 ' + m.cards[4].b);
+    /* 클립선이 어떤 카드의 «몸통 안» 을 지나면 그 카드의 검정 상변이 잘린 채 새어 나온다.
+       카드 경계에서 끊기면(위 단언) 자동으로 참이지만, 둘을 따로 두는 이유는 실패했을 때
+       **어느 카드가 새는지**가 바로 나오게 하기 위해서다. */
+    const cut = m.cards.filter(c => m.list.b > c.y + 0.5 && m.list.b < c.b - 0.5);
+    ok('클립선이 어떤 카드의 몸통도 가르지 않는다 (유령 가로줄 0)', cut.length === 0,
+      '클립선 ' + m.list.b + ' · 잘리는 카드 ' + (cut.length ? JSON.stringify(cut) : '없음'));
 
     /* ── §4 상단 앵커 — 카드 리스트는 안 움직였다 ─────────────────────── */
     console.log('\n[4] 상단 앵커 (cap_y = ref_y − 84) — 카드는 제자리 (335 는 카드를 안 건드렸다)');
@@ -120,13 +139,16 @@ const READ = () => {
       && Math.abs(m.tabs[0].w - m.tabs[2].w) <= 1, m.tabs.map(t => t.w).join(' / '));
 
     /* ── §R 되돌림 시험 ───────────────────────────────────────────────── */
-    console.log('\n[R] 되돌림 시험 — 옛 값(bottom:153 · left:143)을 주입하면 빨개져야 한다');
-    await page.addStyleTag({ content: '#dunw .dns-list{bottom:153px!important}'
+    console.log('\n[R] 되돌림 시험 — 옛 값(bottom:139 · left:143)을 주입하면 빨개져야 한다');
+    await page.addStyleTag({ content: '#dunw .dns-list{bottom:139px!important}'
       + '#dunSub{left:143px!important}' });
     await page.waitForTimeout(250);
     const bad = await page.evaluate(READ);
-    ok('R-1 옛 여백 14px 을 주입하면 이음매 단언이 깨진다',
-      Math.abs(bad.bar.y - bad.list.b) > 1, (bad.bar.y - bad.list.b) + 'px');
+    ok('R-1 클립선을 바 상변까지 늘리면(139) 유령 가로줄 단언이 깨진다',
+      bad.cards.some(c => bad.list.b > c.y + 0.5 && bad.list.b < c.b - 0.5)
+      && Math.abs(bad.list.b - bad.cards[4].b) > 1,
+      '클립선 ' + bad.list.b + ' / 카드6 상변 ' + bad.cards[5].y + ' → 카드6 상변 '
+        + (bad.list.b - bad.cards[5].y) + 'px 노출');
     ok('R-2 옛 대칭(143/143)을 주입하면 축 단언이 깨진다',
       Math.abs((bad.bar.x - (bad.frameW - bad.bar.r)) / 2 - R.axis) > 1,
       '축 ' + ((bad.bar.x - (bad.frameW - bad.bar.r)) / 2).toFixed(1));
@@ -139,9 +161,10 @@ const READ = () => {
     await page.waitForTimeout(200);
     const back = await page.evaluate(READ);
     ok('R-3 주입을 걷어내면 다시 초록 (술어를 무르게 푼 것이 아니다)',
-      Math.abs(back.bar.y - back.list.b) <= 1
+      Math.abs(back.list.b - back.cards[4].b) <= 1
+      && back.cards.every(c => !(back.list.b > c.y + 0.5 && back.list.b < c.b - 0.5))
       && Math.abs((back.bar.x - (back.frameW - back.bar.r)) / 2 - R.axis) <= 1,
-      '이음매 ' + (back.bar.y - back.list.b) + 'px · 축 '
+      '클립선 ' + back.list.b + ' · 축 '
         + ((back.bar.x - (back.frameW - back.bar.r)) / 2).toFixed(1) + ' (' + st + ')');
 
     console.log('\n[6] 콘솔');

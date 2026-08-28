@@ -291,15 +291,24 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         const F = document.getElementById('app').getBoundingClientRect();
         const b = document.getElementById('dunSub').getBoundingClientRect();
         const li = document.querySelector('#dunw .dns-list').getBoundingClientRect();
-        res({ l: Math.round(b.x - F.x), r: Math.round(F.right - b.right), gap: Math.round(b.y - li.bottom) });
+        const c5 = document.querySelectorAll('#dunList .dnc')[4];
+        const c5b = c5 ? c5.getBoundingClientRect().bottom : li.bottom;
+        res({ l: Math.round(b.x - F.x), r: Math.round(F.right - b.right),
+              gap: Math.round(b.y - li.bottom), cardGap: Math.round(b.y - c5b),
+              listB: Math.round(li.bottom - F.y), card5B: Math.round(c5b - F.y) });
       }, 700);
     }));
     ok('03 던전 바 좌 151 (ref 측정표 §4-1, Δ≤1px)', Math.abs(sym.l - 151) <= 1, '좌 ' + sym.l);
     ok('03 던전 바 우 135 (ref 1080−944, Δ≤1px)', Math.abs(sym.r - 135) <= 1, '우 ' + sym.r);
     ok('03 던전 바 축이 화면중심 +8 (ref 비대칭, Δ≤1px)',
       Math.abs((sym.l - sym.r) / 2 - 8) <= 1, '축 ' + ((sym.l - sym.r) / 2).toFixed(1));
-    ok('03 리스트 하단선이 바 상변에 붙는다 (ref 이음매 0px, Δ≤1px)',
-      Math.abs(sym.gap) <= 1, sym.gap + 'px');
+    /* 335 2회차 — 이음매는 «0px» 이 아니라 **구조적 24px 몫**이다(ref −8 + 24 = 16 안팎).
+       거리를 좁히는 것이 아니라 **클립선이 카드 경계에 있어서 유령 가로줄이 안 생기는 것**을 지킨다. */
+    ok('03 리스트 하단선 ~ 바 상단 간격 = 구조적 몫 (12~18px)',
+      sym.gap >= 12 && sym.gap <= 18, sym.gap + 'px');
+    ok('03 리스트 클립선이 카드 경계에서 끊긴다 (유령 가로줄 방지)',
+      Math.abs(sym.gap - sym.cardGap) <= 1,
+      '클립선 ' + sym.listB + ' / 카드5 하변 ' + sym.card5B);
 
     /* ---------- ⑤ 60 쥬시 — 탭 전환 시 활성 칸 1.06 팝 ---------- */
     console.log('\n[7] 60 쥬시 — 탭 전환 팝(.jz-sb)');
