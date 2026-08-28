@@ -20,6 +20,16 @@
  *                                실측이라 다르다» 고 적고 **기하를 일부러 뺐다**
  *   그래서 47 = «공용 서브탭 부품의 기하 게이트» 로 옮겼다. 파일명·ID 는 참조가 걸려 있어 유지한다.
  *
+ * 작업 279(2026-08-28) — **7건 FAIL(132/139) 게이트 부패 수리.** 두 갈래가 한 파일에 섞여 있었다.
+ *   ⓐ §[0] «옛 대상 폐기» 2건 — 물음이 «그 **이름**이 있나» 였다(`[data-trsub]` 0개 · `/\.tr-sub/`).
+ *      203(룬)·210(단련)이 주인 지시로 23 훈련 팝업에 새 3칸 바를 세우며 `#trSubs`·`.tr-subs`·`data-trsub`
+ *      로 **같은 이름을 다시 쓰기 시작해** 그 뒤로 원리적으로 영영 빨갰다. 277 이 `verify88` 에서 고친
+ *      것과 동형이라 처방도 같다 — 지우지 말고 «이름» → «**스탯 칸**» 으로 물음을 옮기고 토큰 경계로 잰다.
+ *   ⓑ 나머지 5건 — `BARS` 의 `n: 2`(03 던전) 가 209 의 «탑» 칸을 못 따라와 칸 수·폭·경계·오른끝·재진입이
+ *      **연쇄로** 빨갰다. 리터럴을 빼고 **바가 선언한 분할(.spN)** 에서 파생시킨다(276 «리터럴 기대값은
+ *      그때의 데이터를 감시한다», 185-①). 제품(`index.html`)은 **0줄** — 게임이 옳고 게이트가 낡았다.
+ *   되돌림 시험 `tools/neg279.js`(N1~N10) 가 두 갈래를 각각 반증한다.
+ *
  * [3]-(가) 기계적 검증: 레퍼런스 대조가 아니라 DOM 실측 판정이라 비평가를 띄우지 않는다.
  *
  * 측정 주의 — **스케일 s 의 정체**(221 에서 확정): 프레임(`#app`)은 1080x2280 뷰포트에서 scale 1 이고,
@@ -69,23 +79,28 @@ const SETTLE = `() => { const A = document.getAnimations ? document.getAnimation
 const BODY_VIS = 'JSON.stringify(["bSk","bPet","bCos","eqw"].filter(id => { const e = document.getElementById(id);'
   + ' return e && e.offsetParent !== null; }))';
 
-/* 검사 대상 네 바. open/close/restore 는 페이지 컨텍스트에서 돈다 */
+/* 검사 대상 네 바. open/close/restore 는 페이지 컨텍스트에서 돈다.
+   279 — **`n:` 리터럴을 뺐다.** 칸 수는 바의 `.spN` 선언(균등분할)에서 파생하고, 선언이 없으면
+   96 의 4칸 격자(GRID4)로 본다. 종전에는 `n: 2`(03 던전) 가 209 의 «탑» 칸을 못 따라와
+   폭·경계·오른끝·재진입이 **연쇄로** 빨갰다. 파생이 헛돌지 않게 [1] 에서 «선언 = 실제 칸 수» 를
+   전제로 박고, [2] 가 «칸 폭 = 콘텐츠 ÷ 선언» 을 실측으로 되받는다 — 선언만 바꾸고 CSS 를
+   안 고치면(예: `.sp4` 규칙 부재) 폭이 안 맞아 빨개진다. */
 const BARS = [
-  { key: 'sk', name: '07 영웅 시트(스킬)', sel: '#bSk .stabs', host: '#bSk', n: 4,
+  { key: 'sk', name: '07 영웅 시트(스킬)', sel: '#bSk .stabs', host: '#bSk',
     open: 'goTab("hero",true); heroSubGo("sk");',
     click: '#bSk [data-sktab="cos"]', afterSel: '#bCos .stabs', afterLabel: '코스튬',
     body: BODY_VIS, restore: 'heroSubGo("sk");' },
-  { key: 'eq', name: '06 장비', sel: '#eqTabs', host: '.eqp', n: 4,
+  { key: 'eq', name: '06 장비', sel: '#eqTabs', host: '.eqp',
     open: 'goTab("hero",true); heroSubGo("eq");',
     click: '#eqTabs [data-eqtab="sk"]', afterSel: '#bSk .stabs', afterLabel: '스킬',
     body: BODY_VIS, restore: 'heroSubGo("eq");' },
-  { key: 'dun', name: '03 던전', sel: '#dunSub', host: '#dunw', n: 2,
+  { key: 'dun', name: '03 던전', sel: '#dunSub', host: '#dunw',
     open: 'goTab("adv");', close: 'closeDungeon();',
     /* 123 — 라벨이 «레이드» → «컨텐츠» 로 바뀌었다(data-dsub 키는 raid 유지) */
     click: '#dunSub [data-dsub="raid"]', afterSel: '#dunSub', afterLabel: '컨텐츠',
     body: 'document.getElementById("dunList").innerHTML.length', restore: 'document.querySelector(\'#dunSub [data-dsub="dun"]\').click();' },
   /* 124 — «이용권» 탭이 붙어 2칸 → 3칸(.sp3) */
-  { key: 'shop', name: '10 상점', sel: '#shopCats', host: '#shopw', n: 3,
+  { key: 'shop', name: '10 상점', sel: '#shopCats', host: '#shopw',
     open: 'goTab("shop");', close: 'closeShopPage();',
     click: '#shopCats [data-cat="coin"]', afterSel: '#shopCats', afterLabel: '재화',
     body: 'document.getElementById("shopList").innerHTML.length', restore: 'document.querySelector(\'#shopCats [data-cat="summon"]\').click();' },
@@ -113,6 +128,12 @@ const SNAP = `(sel, host) => {
   return {
     scale: s, bar: R(bar), radius: cs.borderRadius, bw: cs.borderTopWidth, bc: cs.borderTopColor,
     boxSizing: cs.boxSizing,
+    /* 279 — 바가 **스스로 선언한** 균등 분할 수(96 의 .sp2 / .sp3). 없으면 4칸 비균등 격자(.stab-cN).
+       게이트가 «2» 같은 숫자를 손으로 들고 있으면 칸이 늘 때마다 빨개진다(276·185-①) — 여기서 파생시킨다.
+       분할 «선언» 은 class 토큰이므로 classList 로 가른다 — 문자열 대조는 sp3 이 sp30 을 물 수 있다.
+       ⚠ 이 블록은 SNAP 템플릿 리터럴 안이다 — 주석·정규식에 백틱을 쓰면 리터럴이 끊기고,
+          정규식에 \\s·\\d 를 쓰면 리터럴 이스케이프로 먹혀 s·d 가 된다(둘 다 실제로 밟았다). */
+    sp: (([...bar.classList].find(c => /^sp[0-9]+$/.test(c)) || '').slice(2)) | 0,
     cells: cells.map(R), cellTop: cells.map(c => getComputedStyle(c).top),
     onN: cells.filter(c => c.classList.contains('on')).length, onIdx,
     onRadius: onCs ? onCs.borderRadius : '', onShadow: onCs ? onCs.boxShadow : '',
@@ -136,18 +157,41 @@ const SNAP = `(sel, host) => {
   /* 스냅샷 직전마다 부른다 — 입장 연출 도중에 재면 s ≠ 1 이 되고, 절대 x 가 540·(1/s−1) 만큼 밀린다(221) */
   const settle = () => page.evaluate(o => eval(o)(), SETTLE);
 
-  /* ---- 0. 47 의 «옛 대상» 은 폐기됐다 (88) ---- */
-  console.log('\n[0] 옛 대상(23 훈련 서브탭) 폐기 확인 — 되살아나면 이 게이트의 전제가 깨진다');
+  /* ---- 0. 47 의 «옛 대상» 은 폐기됐다 (88) ----
+     279 — 옛 물음은 «그 **이름**이 있나» 였다: `[data-trsub]` 0개 · 정규식 `/\.tr-sub/`.
+     203(룬)·210(단련)이 주인 지시로 23 훈련 팝업에 **새 3칸 바**(`#trSubs` · `.tr-subs` · `data-trsub`)를
+     세우면서 같은 이름을 다시 쓰기 시작했다 → 그 뒤로 **원리적으로 영영 빨간** 단언이 됐다
+     (`/\.tr-sub/` 는 `.tr-subs` 를 부분문자열로 문다). 277 이 `verify88` [A][B] 에서 고친 것과 **동형**이다.
+     단언을 지우지 않고 물음을 옮긴다 — «이름이 있나» → «**스탯 칸**이 있나»(`docs/review/277-verify88게이트.md` §2).
+     47 이 여기서 지키는 것은 «옛 47 의 대상(«훈련 | 스탯 훈련» 2칸 바)이 안 돌아온다» 하나다. */
+  console.log('\n[0] 옛 대상(23 훈련 «훈련 | 스탯 훈련» 서브탭) 폐기 확인 — 되살아나면 이 게이트의 전제가 깨진다');
   const old = await page.evaluate(() => {
     const css = [...document.styleSheets].flatMap(s => { try { return [...s.cssRules]; } catch (_) { return []; } })
       .map(r => r.selectorText || '').join(' | ');
+    const keys = [...document.querySelectorAll('[data-trsub]')];
     return { trSub: !!document.getElementById('trSub'),
-      trsub: document.querySelectorAll('[data-trsub]').length,
-      css: /\.tr-sub/.test(css) };
+      keys: keys.map(e => e.dataset.trsub),
+      /* 203/210 의 바 밖에서 그 이름을 쓰는 칸 = 되살아난 옛 바 */
+      stray: keys.filter(e => !e.closest('#trSubs')).length,
+      /* 마크업 표기(`class="tr-sub"`)도 같이 본다 — 선택자 표기만 보면 놓친다(277 함정 1건) */
+      oldCls: [...document.querySelectorAll('[class]')].some(e => e.classList.contains('tr-sub')),
+      statTxt: keys.some(e => /스탯/.test(e.textContent)),
+      statUI: document.querySelectorAll('#trw [data-sp], #trw [data-spauto], #trw [data-spreset], #trw [data-uptab]').length,
+      /* 토큰 경계 — `.tr-subs`(203) 를 부분문자열로 물지 않게 */
+      css: /\.tr-sub(?![\w-])/.test(css), cssSubs: /\.tr-subs(?![\w-])/.test(css) };
   });
-  ok('#trSub 노드 0 (88 폐기 — 상세 게이트는 verify88 [B])', old.trSub === false, String(old.trSub));
-  ok('[data-trsub] 0개', old.trsub === 0, old.trsub + '개');
-  ok('.tr-sub CSS 규칙 0건', old.css === false, String(old.css));
+  ok('#trSub 노드 0 (88 이 지운 바의 id — 203 의 #trSubs 는 다른 이름)', old.trSub === false, String(old.trSub));
+  ok('전제 — [data-trsub] 칸을 읽었고 전부 203/210 의 #trSubs 안에 있다',
+    old.keys.length > 0 && old.stray === 0,
+    (old.keys.join('/') || '없음') + (old.stray ? ' · 바 밖 ' + old.stray + '개' : ''));
+  ok('«스탯 훈련» 칸·분배 UI 0개 (47 의 옛 대상 — 상세 게이트는 verify88 [A2][B])',
+    !old.keys.includes('stat') && !old.statTxt && old.statUI === 0,
+    '칸 ' + (old.keys.join('/') || '없음') + ' · 분배 UI ' + old.statUI + '개');
+  ok('.tr-sub CSS 규칙·class 토큰 0건 (토큰 경계 — 203 의 .tr-subs 는 별개)',
+    old.css === false && old.oldCls === false, 'rule ' + old.css + ' · class ' + old.oldCls);
+  /* «0건» 은 매처가 죽어도 초록이다(185-②) — 스타일시트를 실제로 읽었고 토큰 매처가 산다는 것을 반대편으로 건다 */
+  ok('[0] 자가검사 — 같은 매처가 203 의 .tr-subs 는 «있다» 로 읽는다',
+    old.cssSubs === true, String(old.cssSubs));
 
   const snaps = {};
   for (const b of BARS) {
@@ -170,7 +214,14 @@ const SNAP = `(sel, host) => {
     ok('바 radius 50 · border 6 #000 · border-box',
       g.radius === '50px' && g.bw === BAR_BORDER + 'px' && g.bc === 'rgb(0, 0, 0)' && g.boxSizing === 'border-box',
       g.radius + ' / ' + g.bw + ' ' + g.bc + ' / ' + g.boxSizing);
-    ok('칸 ' + b.n + '개', g.cells.length === b.n, g.cells.length + '개');
+    /* 279 — 칸 수는 «게이트가 든 숫자» 가 아니라 «바가 선언한 분할» 이다.
+       전제를 결론과 갈라 둔다(185-③): 선언을 못 읽으면 결론(격자 판정)이 아니라 **이 줄**이 빨개진다. */
+    const nDecl = g.sp || 0, n = nDecl || GRID4.length;
+    ok('전제 — 바가 칸 수를 스스로 선언한다 (.spN 균등분할 · 없으면 96 의 4칸 격자)',
+      nDecl >= 2 || g.cells.length === GRID4.length,
+      nDecl ? '.sp' + nDecl : '선언 없음 → 4칸 격자');
+    ok('칸 ' + n + '개' + (nDecl ? ' (바의 .sp' + nDecl + ' 선언에서 파생)' : ' (.stab-cN 격자)'),
+      g.cells.length === n, g.cells.length + '개');
     ok('칸 높이 85 · top 0 (바 안에 앉는다)',
       g.cells.every(c => near(c.h, CELL_H, 0.6)) && g.cellTop.every(t => t === '0px'),
       g.cells.map(c => f1(c.h)).join('/') + ' · top ' + [...new Set(g.cellTop)].join(','));
@@ -178,22 +229,24 @@ const SNAP = `(sel, host) => {
     /* ---- 2. 칸 격자 ---- */
     console.log('\n[2] ' + b.name + ' — 칸 격자');
     const cx = g.bar.x + BAR_BORDER, cw = g.bar.w - BAR_BORDER * 2;   /* 바 «콘텐츠» 상자 */
-    /* 124 — 균등분할 바는 2칸(.sp2)·3칸(.sp3) 둘 다 «콘텐츠 상자 ÷ n» 규칙 하나로 본다 */
-    if (b.n === 2 || b.n === 3) {
-      const sw = cw / b.n;
-      ok(b.n + '칸 균등 (Δ ≤ 0.5)', g.cells.every(c => near(c.w, g.cells[0].w, 0.5)),
+    /* 124 — 균등분할 바(.spN)는 칸 수와 무관하게 «콘텐츠 상자 ÷ N» 규칙 하나로 본다.
+       279 — N 은 [1] 에서 바의 선언으로 파생한 값이다. 이 절이 그 선언을 **실측으로 되받는 자리**다:
+       `.sp4` 로 고쳐 놓고 CSS 규칙을 안 만들면 폭이 100/N% 가 안 나와 여기서 빨개진다. */
+    if (nDecl >= 2) {
+      const sw = cw / n;
+      ok(n + '칸 균등 (Δ ≤ 0.5)', g.cells.every(c => near(c.w, g.cells[0].w, 0.5)),
         g.cells.map(c => f1(c.w)).join(' / '));
-      ok('칸 폭 = 콘텐츠 ÷' + b.n + ' = ' + f1(sw), near(g.cells[0].w, sw, 0.6), f1(g.cells[0].w));
-      for (let i = 1; i < b.n; i++) {
+      ok('칸 폭 = 콘텐츠 ÷' + n + ' = ' + f1(sw), near(g.cells[0].w, sw, 0.6), f1(g.cells[0].w));
+      for (let i = 1; i < n; i++) {
         ok('칸 경계' + i + ' 맞닿음 (빈틈·겹침 0)',
           near(g.cells[i - 1].x + g.cells[i - 1].w, g.cells[i].x, 0.5),
           'Δ' + f1(g.cells[i].x - g.cells[i - 1].x - g.cells[i - 1].w));
-        ok('경계' + i + ' = 콘텐츠 ' + i + '/' + b.n + ' 지점', near(g.cells[i].x, cx + sw * i, 0.6),
+        ok('경계' + i + ' = 콘텐츠 ' + i + '/' + n + ' 지점', near(g.cells[i].x, cx + sw * i, 0.6),
           f1(g.cells[i].x - cx) + ' vs ' + f1(sw * i));
       }
       ok('마지막 칸 오른끝 = 콘텐츠 오른끝',
-        near(g.cells[b.n - 1].x + g.cells[b.n - 1].w, cx + cw, 0.6),
-        f1(g.cells[b.n - 1].x + g.cells[b.n - 1].w - cx) + ' vs ' + f1(cw));
+        near(g.cells[n - 1].x + g.cells[n - 1].w, cx + cw, 0.6),
+        f1(g.cells[n - 1].x + g.cells[n - 1].w - cx) + ' vs ' + f1(cw));
       ok('구분선 0개 (균등분할 바는 구분선을 두지 않는다 — 96)', g.seps.length === 0, g.seps.length + '개');
     } else {
       GRID4.forEach(([l, w], i) => {
@@ -287,8 +340,10 @@ const SNAP = `(sel, host) => {
     await settle();
     const g = await page.evaluate(([fn, sel, host]) => eval(fn)(sel, host), [SNAP, b.sel, b.host]);
     const g0 = snaps[key];
-    ok(b.name + ' 재진입 — 칸 ' + b.n + '개 · 활성 1개',
-      !g.missing && g.cells.length === b.n && g.onN === 1,
+    /* 279 — 기대 칸 수는 «게이트가 든 숫자» 가 아니라 **첫 진입 스냅샷**이다. 이 절의 주제가
+       «닫았다 다시 열어도 그대로» 이므로 기준은 처음 잰 그 바여야 한다(그 바가 몇 칸인지는 [1] 이 본다). */
+    ok(b.name + ' 재진입 — 칸 ' + g0.cells.length + '개(첫 진입과 같은 수) · 활성 1개',
+      !g.missing && g.cells.length === g0.cells.length && g.onN === 1,
       g.missing ? '바 없음' : g.cells.length + '칸 · .on ' + g.onN + '개');
     /* 221 — «위치» 는 화면 절대 x 가 아니라 **바 안에서의 위치**로 본다.
        절대 x 는 입장 연출(jzPgIn scale .985) 이 걸리면 모든 칸이 한꺼번에 540·(1/s−1)=8.2px 밀려

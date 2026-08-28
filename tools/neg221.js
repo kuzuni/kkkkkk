@@ -41,15 +41,22 @@ const hook = (fn, css) => '<style>' + css + '</style>\n<script>(function(){\n'
   + '})();</script>\n</body>';
 
 const TESTS = [
+  /* 279 — 결함 CSS 를 **칸 수에 안 매이게** 다시 짰다. 원래 N1 은 `.stabs.sp3>...{left:calc(33.3333%+9px)}`,
+     N2 는 `.stabs.sp2>.stab{width:calc(50% - 9px)}` 였는데, 209 가 03 던전에 «탑» 칸을 더해
+     `.sp2` → `.sp3` 이 되자 **N2 의 선택자가 아무 데도 안 걸려** 조용히 초록이 됐다(19/20 FAIL 로 드러났다).
+     되돌림 시험이 죽으면 게이트가 죽은 것보다 더 나쁘다 — «반증했다» 는 기록만 남는다.
+     그래서 ⓐ 바를 **id** 로 집고 ⓑ 결함을 분할 비율과 무관한 값으로 준다:
+       · 위치 — `margin-left`(절대 배치 자식은 left 위에 그대로 더해진다. % 리터럴이 안 필요하다)
+       · 폭   — `transform:scaleX()`(rect 폭이 비율만큼 줄어든다. 바 자신은 안 건드리므로 스케일 s 는 1) */
   { id: 'N1', why: '재진입한 10 상점의 2번째 칸이 «바 안에서» +9px 밀린다 — 재진입 잔존 상태 버그 그 자체',
-    from: TAIL, to: hook('openShopPage', '.neg221 .stabs.sp3>.stab:nth-of-type(2){left:calc(33.3333% + 9px)}'),
+    from: TAIL, to: hook('openShopPage', '.neg221 #shopCats>.stab:nth-of-type(2){margin-left:9px}'),
     want: ['10 상점 재진입 — 칸 폭·바 안 위치 그대로'],
     not: ['03 던전 재진입 — 칸 폭·바 안 위치 그대로', '10 상점 재진입 — 바 폭·호스트 안 위치 그대로'] },
 
-  { id: 'N2', why: '재진입한 03 던전 칸 «폭» 이 −9px 줄어든다 — 221 이 원래 «폭» 이라고 읽었던 증상',
-    from: TAIL, to: hook('openDungeon', '.neg221 .stabs.sp2>.stab{width:calc(50% - 9px)}'),
+  { id: 'N2', why: '재진입한 03 던전 칸 «폭» 이 ≈9px 줄어든다 — 221 이 원래 «폭» 이라고 읽었던 증상',
+    from: TAIL, to: hook('openDungeon', '.neg221 #dunSub>.stab{transform:scaleX(.965)}'),
     want: ['03 던전 재진입 — 칸 폭·바 안 위치 그대로'],
-    not: ['10 상점 재진입 — 칸 폭·바 안 위치 그대로'] },
+    not: ['10 상점 재진입 — 칸 폭·바 안 위치 그대로', '03 던전 재진입 — 바 폭·호스트 안 위치 그대로'] },
 
   /* 바를 «옮기되 폭은 그대로» — left 만 밀면 폭까지 9px 줄어 칸 단언도 같이 빨개진다(구분이 안 된다) */
   { id: 'N3', why: '재진입한 10 상점 «바 자체» 가 호스트 안에서 +9px 옮겨간다(폭은 그대로) — 바 기준 차분만 보면 놓치는 회귀',
@@ -88,7 +95,7 @@ const runGate = () => {
   console.log('[0] 기준선 — 갈아 끼우지 않은 사본은 초록이어야 한다');
   fs.writeFileSync(TMP, SRC);
   const base = runGate();
-  ok('사본 그대로 = FAIL 0건', base.length === 0, base.length ? base.slice(0, 3).join(' / ') : '130/130');
+  ok('사본 그대로 = FAIL 0건', base.length === 0, base.length ? base.slice(0, 3).join(' / ') : 'FAIL 0건');
 
   for (const t of TESTS) {
     console.log('\n[' + t.id + '] ' + t.why);
@@ -98,7 +105,7 @@ const runGate = () => {
     const fails = runGate();
     if (t.green) {
       ok(t.id + ' → FAIL 0건 (연출 길이에 판정이 안 흔들린다)', fails.length === 0,
-        fails.length ? '빨간 항목 ' + fails.length + '개: ' + fails.slice(0, 3).join(' / ') : '130/130');
+        fails.length ? '빨간 항목 ' + fails.length + '개: ' + fails.slice(0, 3).join(' / ') : 'FAIL 0건');
     }
     t.want.forEach(w => ok(t.id + ' → 「' + w + '」 이(가) 빨개진다',
       fails.some(f => f.startsWith(w)), fails.length ? '빨간 항목 ' + fails.length + '개' : '전부 초록 — 단언이 안 잡는다'));
