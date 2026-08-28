@@ -17200,7 +17200,13 @@ const petDmg   = p => stat.dmg * p.m * gWear(p.g) * lvWear(oLv(p.id)) * bonus().
 const cp = () => Math.round(stat.dps*1.2 + stat.maxHp*0.6 + stat.regen*80 + stat.dmg*3);
 const rankOf = () => RANKS[Math.min(S.rank, RANKS.length-1)];
 const nextRank = () => (S.rank+1 < RANKS.length ? RANKS[S.rank+1] : null);
-const canPromote = () => { const r = nextRank(); return !!r && S.best >= r.stage && cp() >= r.cp; };
+/* 295 — 승급전 «입장 제한 폐지»(저장소 주인 지시 2026-08-27). 옛 `canPromote()` 는 «최고 스테이지 +
+   전투력» 두 조건을 **입장 게이트**로 썼다. 지시대로 게이트는 «다음 계급이 있는가» 하나로 줄인다.
+   두 조건은 버리지 않고 **`promoReady()` = 권장 기준**으로 남긴다 — 레드닷(`sideAlert('promo', …)`)이
+   그것을 쓴다. 게이트를 그대로 레드닷에 물리면 «다음 계급만 있으면 상시 점등» 이 되어
+   166 규약(«레드닷은 누를 게/받을 게 있다는 신호») 에 걸린다. */
+const canPromote  = () => !!nextRank();
+const promoReady  = () => { const r = nextRank(); return !!r && S.best >= r.stage && cp() >= r.cp; };
 
 /* ==========================================================================
    전투 상태
@@ -20472,7 +20478,9 @@ function drawHud(){
   sideAlert('mail',   mailLeft() > 0);
   sideAlert('quest',  QUESTS.some(questReady) || DQUESTS.some(dqReady));
   /* 작업 48 — 던전 사이드 아이콘 제거로 'dun' 레드닷 대상이 없어졌다(탭바 뱃지로 대체). */
-  sideAlert('promo',  canPromote());
+  /* 295 — 입장 게이트가 폐지돼 `canPromote()` 는 상시 참이다. 레드닷은 «권장 기준 충족» 으로 켠다
+     (166 «상시 점등 금지»). 승급하면 다음 계급의 기준이 다시 올라가 저절로 꺼진다. */
+  sideAlert('promo',  promoReady());
   /* 작업 83 — 받을 수 있는 도감 보너스가 하나라도 있을 때만 */
   sideAlert('coll',   collAnyReady());
   drawFac();
@@ -21959,11 +21967,10 @@ function promoType(ri){
 /* 승급전 */
 function startPromo(){
   const r = nextRank();
+  /* 295 — «조건 미달» 반려는 폐지했다(입장 제한 없음). 남은 가드는 «최고 계급이라 도전할 것이
+     없다»(`!r`) 와 «이미 승급전 중»(`promo`) 둘뿐이다. 실패해도 잃는 재화·입장권은 없으므로
+     (endPromo 의 실패 경로는 알림 한 줄 + `spawnStage()` 뿐) 재도전은 자유다. */
   if(!r || promo) return;
-  if(!canPromote()){
-    notify('🏅 ' + r.ic + ' ' + r.n + ' 승급 조건 미달');
-    return;
-  }
   enemies.length = 0; spawnQ.length = 0;
   /* ⚑ 285 — 승급전만 60초였다(«보스전 계열» 인데 28·30 과 규격이 갈려 있던 자리). `BOSS_SEC` 참조로 통일한다. */
   promo = { t:BOSS_SEC, max:BOSS_SEC, rank:r };
@@ -22841,7 +22848,9 @@ function renderSt(){
     + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmtB(nr.cp) + '</b><br>'
           + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
           /* 267 — 주인이 이름을 댄 «승급전 도전» 버튼. 22 [모두 받기] 규격 `.pbtn`(라벨은 `<b>`) */
-          + '<button class="ifbtn pbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '><b>승급전 도전</b></button>'
+          /* 295 — 이 줄은 `nr`(다음 계급)이 있을 때만 그려지므로 입장 게이트가 폐지된 지금
+             `disabled` 가 붙을 자리가 없다. 회색 처리도 같이 사라진다(지시 ⓐ). */
+          + '<button class="ifbtn pbtn" id="promoBtn"><b>승급전 도전</b></button>'
         : '<p>최고 계급 달성! 🎉</p>') + '</div>'
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
     + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
@@ -26446,10 +26455,17 @@ function openPromo(){
             + (rwOwn ? ' <em>(이미 보유)</em>' : rwLeft < rwList.length ? ' <em>(' + rwLeft + '종 남음)</em>' : '')
             + '</i>' : '')
     + '<i>칭호 <em>' + r.n + '</em></i></div></div></div>'
-    + '<p class="pr-note">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
+    /* 295 — 옛 문구는 «조건을 만족하면 승급 수호자가 등장합니다» 였다. 입장 제한이 폐지된 지금
+       그 표기는 거짓이므로(ROUTINE «기능 완성 규칙» — 표기와 동작이 어긋나면 안 된다) 위 상자를
+       «권장 기준» 으로 다시 읽어 준다. 제한 시간도 상수(`BOSS_SEC`)에서 읽는다 — 285 가 60→15 로
+       내렸는데 이 문장만 «60초» 로 굳어 있었다(같은 사고를 막으려 하드코딩을 없앤다). */
+    + '<p class="pr-note">기준에 못 미쳐도 <b>언제든 도전</b>할 수 있습니다.<br>'
+    + '<b>' + BOSS_SEC + '초</b> 안에 <b>승급 수호자</b>를 처치하면 승급!<br>'
     + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p></div>'
     /* 267 — [닫기] 삭제(닫기는 딤 탭) · [승급전 시작] 은 22 [모두 받기] 규격 `.pbtn` 으로 */
-    + '<button class="ifbtn pbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '><b>승급전 시작</b></button>');
+    /* 295 — openPromo() 는 `nextRank()` 가 없으면 위에서 빠져나가므로 여기 도달했다는 것이
+       곧 «도전 가능» 이다. 입장 제한 폐지로 `disabled` 를 뗀다(지시 ⓐ). */
+    + '<button class="ifbtn pbtn" id="pgo"><b>승급전 시작</b></button>');
   cosPaint($('mbox'));                   /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
   $('pgo').onclick = startPromo;
 }
@@ -28298,7 +28314,8 @@ function renderUI(){
     const k = t.dataset.t;
     /* 작업 50 — «살 수 있는 코스튬» 레드닷은 상점이 아니라 영웅 탭(코스튬 서브탭)으로 옮겼다.
        182 — 구매 경로가 없어져 «살 수 있는 코스튬» 이라는 상태 자체가 사라졌다(지급은 승급전에서만
-       일어나고 그 알림은 사이드 `promo` 아이콘이 이미 갖고 있다 — `sideAlert('promo', canPromote())`).
+       일어나고 그 알림은 사이드 `promo` 아이콘이 이미 갖고 있다 — `sideAlert('promo', promoReady())`
+       — 295 로 «권장 기준» 판정으로 바뀌었다).
        구버전 폐기 = 진입점까지(LESSONS 68-①) 라 이 항도 같이 지운다. 도감 3종만 남는다. */
     /* 202 — «일괄 강화 가능» 을 영웅 칸에 더한다(주인 확정: 점등 위치 = 탭바 영웅 + 해당 서브탭).
        재료(조각)를 다 쓰거나 일괄 강화를 실행하면 `canLevel` 이 곧바로 거짓이 되어 같은 틱에 꺼진다. */
