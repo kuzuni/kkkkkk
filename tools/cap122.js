@@ -113,6 +113,17 @@ async function frames(p, tag, stops) {
     const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__jzFreeze();
   });
+  /* ⚑ 23회차 — **첫 프레임만 미정착이었다**(22회차 AV[7]). r22 실측: `sum-1` 의 HUD 골드 글자만
+     잉크 **521px(+12.3%)** · bbox **50×25**(나머지 9장은 전부 464px · 43×24) — 얼리기 직전까지
+     돌던 58 펀치(`.fx-punch2`, transform:scale)의 **마지막 합성 결과가 아직 화면에 안 올라온
+     상태**로 첫 장이 찍힌다. `finish()` 는 애니메이션 상태만 끝내지, 그 결과가 **그려지는 것**은
+     다음 프레임이다. 22회차 27-1 이 게이트에서 겪은 것과 **같은 병**(«재기 전에 화면이 덜 깨어
+     있었다»)이고, 그때의 처방을 캡처에도 그대로 적용한다 — 얼린 뒤 **실제 페인트 두 번**을
+     기다리고 한 번 더 얼린다(대기 중 새로 시작한 애니메이션까지 같이 못 박는다).
+     ⚠ 이 프레임에 근거한 지적은 이 수정 전 캡처(r22 이하)에서는 받지 마라. */
+  await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await p.waitForTimeout(120);
+  await p.evaluate(() => window.__jzFreeze());
   for (let i = 0; i < SET.length; i++) {
     const t = SET[i];
     /* seek 와 read 를 나누지 않는다 — 한 태스크 안에서 끝낸다(LESSONS 60-⑤ 2번째 함정) */
@@ -168,6 +179,10 @@ async function frames(p, tag, stops) {
     const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
     window.__jzFreeze();
   });
+  /* 23회차 — `frames()` 와 같은 «페인트 두 번 기다리고 다시 얼리기»(첫 장 미정착 방지) */
+  await p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await p.waitForTimeout(120);
+  await p.evaluate(() => window.__jzFreeze());
   for (const [i, t] of DIA_STOPS.entries()) {
     await p.evaluate(ms => window.__jzSeek(ms), t);
     const f = path.join(OUT, '122-' + R + '-dia-' + (i + 1) + '.png');
