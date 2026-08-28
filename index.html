@@ -28879,6 +28879,24 @@ function fxPzHit(el, beat){
   fxPunchN++;
   return true;
 }
+/* ⚑ 37회차 — 딤 위 복제판의 «숫자» 를 원본에 맞춘다. **한 프레임에 두 번** 불린다:
+   `fxPzTick`(= `drawHud()` 앞) 과 `loop()` 의 `drawHud()` **뒤**. 두 번째 호출이 이번 회차의 수정이다.
+   왜 — `loop()` 는 `fxTick(dt); drawHud();` 순서이고 `#goldN`·`#diaN` 의 **글자를 쓰는 것은
+   `drawHud()`** 다. 그래서 `fxTick` 안에서만 옮기면 복제판은 **언제나 한 프레임 전의 숫자**가 된다.
+   37차 비평가 Z[12]·AA[11] 이 서로 모르는 채 같은 것을 쟀다 — 씬 B 다이아가 «표»(원본 textContent)
+   보다 «그림»(복제판)에서 **정확히 −38**(= 610/16 = 도착 한 칸) 뒤처지고 그것이 **7~8프레임 연속**이다.
+   UI 발 계단이 `fxRollLin`(칸마다 즉시 확정)이라 «한 프레임 지연» 이 곧 «한 칸 지연» 으로 떨어진다.
+   ⚠ 이건 하네스 결함이 아니라 **플레이어가 보는 그림**이다 — 딤이 켜져 있는 동안 진짜 알약은
+     딤 아래고 복제판이 위다. 16회차가 «내 assert 가 어디를 재는지부터 확인할 것» 으로 남긴 자리의
+     정확히 반대편(그때는 게이트가 원본을 읽어 통과시켰고, 이번엔 표가 원본을 읽어 어긋났다). */
+function fxLitSync(){
+  for(const [el, t] of fxLit){
+    const b0 = el.querySelector('b'), b1 = t.c.querySelector('b');
+    /* ⚑ 19회차 — 숫자가 바뀐 «마지막 시각» 을 기록한다. 소등 유예가 지키려는 것은 «최종값을 읽을
+       시간» 인데, 종전에는 그걸 진폭 감쇠가 우연히 만들어 주고 있었다(`probe93n [3]` 간헐 FAIL). */
+    if(b0 && b1 && b1.textContent !== b0.textContent){ b1.textContent = b0.textContent; fxLitRead = performance.now(); }
+  }
+}
 function fxPzTick(dt){
   /* 16회차 — 유예 중인 복제판을 «한 프레임에 같이» 끈다(위 FX3_LIT_WAIT 주석). fxPz 가 비어도
      돌아야 하므로 아래 early return **앞**에 둔다. */
@@ -28890,16 +28908,7 @@ function fxPzTick(dt){
      ⚠ 내 `probe93l` 은 **원본**(`#goldN`, 딤 아래라 안 보인다)을 읽어 «1.30A 정착» 으로 통과시켰다.
      「내 assert 가 어디를 재는지부터 확인할 것」(43 교훈 1)이 정확히 이 자리다.
      → 숫자 동기를 `fxPz` 와 분리해 **살아 있는 모든 복제판**에 매 프레임 건다. */
-  for(const [el, t] of fxLit){
-    const b0 = el.querySelector('b'), b1 = t.c.querySelector('b');
-    /* ⚑ 19회차 — 숫자가 바뀐 «마지막 시각» 을 기록한다. 아래 소등 유예가 지키려는 것은
-       ⓑ «최종값을 읽을 시간» 인데, 종전에는 그걸 **진폭 감쇠가 우연히 만들어 주고** 있었다:
-       `probe93n [3]`(정착 → 소등 ≥55ms)이 판마다 51~132ms 로 흔들려 **간헐 FAIL** 이었다
-       (17회차가 «12판 중 11판 · 경합으로 보고 넘긴다» 로 남긴 자리 — 19회차에 51ms 판을 다시 봤다).
-       유예 조건에 «마지막 숫자 변경으로부터 FX3_LIT_READ» 를 **명시적으로** 넣으면, 지키려는
-       것을 감쇠 타이밍에 맡기지 않고 코드가 보장한다. */
-    if(b0 && b1 && b1.textContent !== b0.textContent){ b1.textContent = b0.textContent; fxLitRead = performance.now(); }
-  }
+  fxLitSync();
   if(fxLitWait.size){
     /* 16회차b — «유예가 풀렸다» 만으로는 동기가 안 된다. 먼저 잦아든 알약은 대기표에 올라가
        유예가 풀리는 순간 꺼지지만, 늦게 잦아드는 알약은 **그때 아직 대기표에 없어서** 자기
@@ -30007,6 +30016,9 @@ function loop(now){
   draw();
   fxTick(dt);              /* 58 — 재화 감시·비행 갱신·숫자 롤링. drawHud 보다 «먼저» 돌아야 이번 프레임 값이 쓰인다 */
   drawHud();
+  /* ⚑ 37회차 — 딤 위 알약 복제판의 숫자는 `drawHud()` 가 원본에 글자를 쓴 **뒤에** 맞춰야 한다.
+     `fxTick` 안에서만 맞추면 복제판이 늘 한 프레임(= 도착 한 칸) 뒤처진다 — 위 `fxLitSync` 주석. */
+  fxLitSync();
   drawTuto();
 
   uiT += dt;

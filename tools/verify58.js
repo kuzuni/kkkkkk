@@ -130,6 +130,11 @@ async function run(scene, span, step) {
           flash: document.querySelectorAll('.fx-flash').length,
           check: document.querySelectorAll('.fx-check').length,
           toastOp: toast ? parseFloat(getComputedStyle(toast).opacity) : -1,
+          /* 37회차 [16] — 딤 위 알약 «복제판»(.fx-lit, 플레이어가 실제로 보는 것)의 숫자가
+             원본(#diaN, 딤 아래)과 같은가. 두 비평가가 −38(도착 한 칸)로 독립 관측한 자리다. */
+          lit: (() => { const o = document.getElementById('diaN');
+            const c = document.querySelector('.fx-lit .cDia b');
+            return (o && c) ? [o.textContent.trim(), c.textContent.trim()] : null; })(),
           /* 37회차 [15] — 토스트 «정지» 를 재려면 불투명도만으로는 안 된다. 상자 자체를 남긴다
              (36차 X 는 잉크 bbox, Y 는 화소로 같은 창을 짚었다 — 여기서는 레이아웃 상자로 잰다). */
           toastB: toast ? (() => { const r = toast.getBoundingClientRect();
@@ -366,6 +371,18 @@ async function run(scene, span, step) {
       for (const s2 of ts) worstGap = Math.min(worstGap, quest.chap.y - (s2.toastB[1] + s2.toastB[3]));
       ok(worstGap > 0, `토스트 밑변 ↔ #chapN 윗변 최소 여유 ${worstGap.toFixed(1)}px (>0 이어야 한다)`);
     }
+  }
+
+  /* ---- [16] 딤 위 알약 복제판의 숫자가 원본과 어긋나지 않는다 (37차 Z[12]·AA[11] 2인 공통) ---- */
+  console.log('[16] 씬 B 딤 위 알약 복제판 숫자 = 원본 (37차 Z·AA 2인 공통)');
+  {
+    const ls = quest.samples.filter(s => s.lit);
+    const bad = ls.filter(s => s.lit[0] !== s.lit[1]);
+    /* 되돌리면 빨개진다: `drawHud()` 뒤의 `fxLitSync()` 를 빼면 rAF 자로 42표본 중 **16표본**이
+       어긋났고 차이는 전부 정확히 −38(= 610/16 = 도착 한 칸)이었다 — 두 비평가의 실측 그대로다. */
+    ok(ls.length > 0 && bad.length === 0,
+      `표본 ${ls.length}장 · 원본≠복제판 ${bad.length}장`
+      + (bad.length ? ` (예: 원본 ${bad[0].lit[0]} / 복제판 ${bad[0].lit[1]})` : ''));
   }
 
   console.log('[11] 콘솔 에러 0');
