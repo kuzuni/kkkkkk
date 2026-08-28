@@ -156,3 +156,11 @@ docs/review/*.png.q[0-9][0-9].jpg
 
 # 202 neg202.js 가 되돌림 시험용으로 잠깐 뽑는 사본 (시험이 끝나면 지운다)
 .v202-neg.html
+
+# 350 — verify350 이 매 실행 «찍힌 픽셀» 을 읽으려고 뽑는 작업용 캡처.
+# 전투 캔버스가 매 실행 다르게 그려져 게이트를 한 번 돌 때마다 1.2MB 가 갈린다.
+# 재현 기록으로 남기는 것은 probe350-before/after 쪽이다(그건 커밋한다).
+docs/shots/verify350-*.png
+# 350 — probe350/verify350 이 «수리 전» 대조용으로 잠깐 뽑는 사본 (끝나면 지운다)
+index.probe350-before.html
+index.verify350-revert.html
