@@ -138,6 +138,50 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     geo.pinned ? '' : JSON.stringify(geo.before));
   ok(geo.same, '룬 탭에 갔다 와도 훈련 좌표가 그대로(왕복 Δ0)');
 
+  /* ★ 최고 부하 — «천상룬 Lv499, 축 3개, 4자리 %» 가 이 카드가 만드는 제일 긴 글자다.
+     첫 구현은 세 축을 한 줄에 붙였다가 fs36 에서 910px 를 넘겨 **두 줄로 접히고 아래 줄 위로 올라탔다**.
+     그래서 여기서는 «겹침 0» 만이 아니라 «한 줄 상자가 실제로 한 줄인가»(높이 = line-height)까지 잰다. */
+  const load = await p.evaluate(() => {
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: RUNE_MAXLV - 1 };
+    S.rstone = 1e9; S.dia = 1e9;
+    openTrain(); setTrSub('rune'); setRuneSub('r3'); renderTrain();
+    const card = document.querySelector('.tr-rn');
+    const kids = [...card.children].filter(e => getComputedStyle(e).display !== 'none'
+                                                && !e.classList.contains('rlk'));
+    const R = e => e.getBoundingClientRect();
+    let overlap = [];
+    for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
+      const a = R(kids[i]), b = R(kids[j]);
+      if (a.bottom > b.top + 0.5 && b.bottom > a.top + 0.5
+          && a.right > b.left + 0.5 && b.right > a.left + 0.5)
+        overlap.push(kids[i].className + '×' + kids[j].className);
+    }
+    /* 한 줄이어야 하는 상자들 — 잉크가 상자보다 넓으면 접혀서 높이가 line-height 를 넘는다 */
+    const oneLine = ['.rd>.rw>i', '.rd>.rw>s', '.rst>i', '.rhint>i', '.rn>i', '.rl>i']
+      .map(sel => {
+        const es = [...card.querySelectorAll(sel.replace('.rd', ':scope>.rd')
+                                                .replace(/^\./, ':scope>.'))];
+        return es.map(e => ({ sel, h: +R(e).height.toFixed(1),
+                              lh: parseFloat(getComputedStyle(e.parentElement).lineHeight) }));
+      }).flat();
+    const wrapped = oneLine.filter(o => o.lh && o.h > o.lh + 1)
+                           .map(o => o.sel + ' h' + o.h + '>lh' + o.lh);
+    const rows = card.querySelectorAll('.rd>.rw').length;
+    /* 카드 밖으로 삐져나온 자식이 없는가 */
+    const c = R(card);
+    const out = kids.filter(e => R(e).bottom > c.bottom + 0.5 || R(e).top < c.top - 0.5)
+                    .map(e => e.className);
+    S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 0; S.dia = 0; setRuneSub(null); renderTrain();
+    return { overlap, wrapped, rows, out, n: kids.length };
+  });
+  ok(load.rows === 3, '최고 부하 — 천상룬은 효과 줄이 3개(공격력·체력·골드 획득)', String(load.rows));
+  ok(load.overlap.length === 0,
+    '★ 최고 부하에서 카드 자식끼리 겹침 0건', load.overlap.slice(0, 3).join(' / '));
+  ok(load.wrapped.length === 0,
+    '★ 한 줄 상자가 전부 실제로 한 줄이다(글자가 접혀 아래 줄을 덮지 않는다)',
+    load.wrapped.slice(0, 3).join(' / '));
+  ok(load.out.length === 0, '카드 밖으로 삐져나온 자식 0건', load.out.join(' / '));
+
   /* ================= [3] 전환 ================= */
   console.log('[3] 전환 — 실제 클릭으로 칸이 바뀌고 카드가 그 룬으로 바뀐다');
   await p.evaluate(() => {
@@ -286,28 +330,35 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     [0, 99, 100, 250, 499].forEach(l => {
       S.rune.r1 = l; renderTrain();
       const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
+      const rows = [...document.querySelectorAll('.tr-rn>.rd>.rw')];
       out.push({
-        l, seg,
-        nx: document.querySelector('.tr-rn>.rnx').textContent.trim(),
+        l, seg, rows: rows.length,
+        cur: rows.map(e => e.querySelector('i').textContent.trim()).join(' | '),
+        nx: rows.map(e => e.querySelector('s').textContent.trim()).join(' | '),
         st: document.querySelector('.tr-rn>.rst').textContent.trim(),
-        wantNx: '공격력 +' + pct(RN.r1.eff.atk * RUNE_STEP[seg]),
+        wantCur: '공격력 +' + pct(runeVal('r1', 'atk')),
+        wantNx: '다음 +' + pct(RN.r1.eff.atk * RUNE_STEP[seg]),
         wantSt: '계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
       });
     });
     S.rune.r1 = RUNE_MAXLV; renderTrain();
-    const maxNx = document.querySelector('.tr-rn>.rnx').textContent.trim();
+    const maxNx = [...document.querySelectorAll('.tr-rn>.rd>.rw>s')]
+      .map(e => e.textContent.trim()).join(',');
     const maxBtn = !!document.querySelector('.tr-rn>.rmax');
     const hint = document.querySelector('.tr-rn>.rhint');
     S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
     const hint0 = document.querySelector('.tr-rn>.rhint');
     return { out, maxNx, maxBtn, hintAtMax: !!hint, hint0: hint0 ? hint0.textContent.trim() : '' };
   });
-  say.out.forEach(o => ok(o.nx.indexOf(o.wantNx) >= 0,
-    'Lv ' + o.l + ' — «다음 1레벨» 이 eff × RUNE_STEP[' + o.seg + '] 과 같다', o.nx));
+  say.out.forEach(o => ok(o.rows === 2 && o.cur.indexOf(o.wantCur) === 0,
+    'Lv ' + o.l + ' — 축마다 한 줄(일반룬 2줄) · 왼쪽이 runeVal 과 같은 식',
+    o.rows + '줄 · ' + o.cur));
+  say.out.forEach(o => ok(o.nx.indexOf(o.wantNx) === 0,
+    'Lv ' + o.l + ' — 오른쪽 «다음 +n%» 이 eff × RUNE_STEP[' + o.seg + '] 과 같다', o.nx));
   say.out.forEach(o => ok(o.st.indexOf(o.wantSt) === 0,
     'Lv ' + o.l + ' — «계단 ' + (o.seg + 1) + ' / 5» 로 지금 칸을 말한다', o.st));
-  ok(say.maxNx.indexOf('더 올릴 수 없') >= 0 && say.maxBtn && !say.hintAtMax,
-    '만렙에서는 «다음 1레벨» 대신 «더 올릴 수 없음» · MAX 판 · 실패 안내 없음', say.maxNx);
+  ok(/^최대(,최대)*$/.test(say.maxNx) && say.maxBtn && !say.hintAtMax,
+    '만렙에서는 «다음 +n%» 대신 «최대» · MAX 판 · 실패 안내 없음', say.maxNx);
   ok(say.hint0.indexOf('실패해도 레벨은 그대로') >= 0,
     '시도 가능할 때는 «실패해도 레벨은 그대로» 안내가 상시 붙는다', say.hint0);
 
@@ -338,6 +389,28 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   ok(neg.b, 'ⓑ 잠금 표시는 «항상 켜짐» 이 아니다(전부 열면 전부 꺼진다)');
   ok(neg.c, 'ⓒ 룬은 여전히 3종인데 화면에 1장이다 — «탭으로 나눴다» 가 진짜다');
   ok(neg.d, 'ⓓ 계단 문구가 레벨을 따라 바뀐다', neg.d0 + ' / ' + neg.d1);
+
+  /* ⓔ [2] 의 «한 줄 상자가 실제로 한 줄인가» 가 진짜로 접힘을 잡는가 —
+     일부러 상자를 좁혀 접히게 만들고, 같은 자로 재서 잡히는지 본다(안 잡히면 그 단언은 장식이다). */
+  const negE = await p.evaluate(() => {
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: RUNE_MAXLV - 1 };
+    openTrain(); setTrSub('rune'); setRuneSub('r3'); renderTrain();
+    const probe = () => [...document.querySelectorAll('.tr-rn>.rd>.rw>i')]
+      .filter(e => e.getBoundingClientRect().height
+                   > parseFloat(getComputedStyle(e.parentElement).lineHeight) + 1).length;
+    const clean = probe();
+    const st = document.createElement('style');
+    st.textContent = '.tr-rn>.rd>.rw>i{width:120px!important}';
+    document.head.appendChild(st);
+    const broken = probe();
+    st.remove();
+    const back = probe();
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
+    return { clean, broken, back };
+  });
+  ok(negE.clean === 0 && negE.broken > 0 && negE.back === 0,
+    'ⓔ 접힘 탐지기가 진짜로 접힘을 잡는다(좁히면 ' + negE.broken + '줄 검출 → 되돌리면 0)',
+    negE.clean + '/' + negE.broken + '/' + negE.back);
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
   await b.close();
