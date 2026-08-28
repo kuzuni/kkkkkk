@@ -35,8 +35,12 @@ const near = (name, got, want, tol) =>
 
 /* 게이트 자기 상수 — 화면 식을 그대로 다시 부르는 «항등식» 을 피한다(LESSONS 212-①).
    설치본과 어긋나면 [A] 에서 먼저 빨개진다. */
+/* 285 — 보스 체력 배수와 공격력 배수가 갈렸다(BOSS_MUL 하나로 둘 다 재던 자리). 보스전 제한 시간이
+   30 → 15초로 반이 되면서 **체력만** ×22 → ×11 로 같이 내렸다 — 시간만 줄이면 «훈련만» 설계
+   플레이어가 평범한 보스조차 못 잡는다(sim249 [C] 상한이 «없음» 으로 떨어진다). 공격력은 그대로다.
+   ⚑ GATE_HP 1.44 는 **안 바뀐다**: 시간과 체력이 같은 비율로 줄어 역산 상한(1.4469)이 불변이다. */
 const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:10, GATE_N:10, GATE_HP:1.44, BOSS_MUL:22 };
+            BAND:10, GATE_N:10, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
 const wHp    = s => C.HB * smooth(eband(s));
@@ -138,17 +142,17 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     const r = byS[s];
     ok(r.bossMax !== null, '[D] s' + s + ' 스테이지 보스가 실제로 스폰됐다');
     if(r.bossMax !== null){
-      near('[D] s' + s + ' 관문 보스 체력 = eHp×' + C.BOSS_MUL + '×' + C.GATE_HP,
-           r.bossMax, wHp(s)*C.BOSS_MUL*wGate(s), 1e-9);
-      near('[D] s' + s + ' 관문 보스 **공격력은 불변** = eDmg×' + C.BOSS_MUL,
-           r.bossDmg, wDmg(s)*C.BOSS_MUL, 1e-9);
+      near('[D] s' + s + ' 관문 보스 체력 = eHp×' + C.BOSS_HP + '×' + C.GATE_HP,
+           r.bossMax, wHp(s)*C.BOSS_HP*wGate(s), 1e-9);
+      near('[D] s' + s + ' 관문 보스 **공격력은 불변** = eDmg×' + C.BOSS_DMG,
+           r.bossDmg, wDmg(s)*C.BOSS_DMG, 1e-9);
     }
   });
   IN_BAND.forEach(s => {
     const r = byS[s];
     if(r.bossMax !== null)
-      near('[D] s' + s + '(비관문) 보스 체력 = eHp×' + C.BOSS_MUL + ' (배수 없음)',
-           r.bossMax, wHp(s)*C.BOSS_MUL, 1e-9);
+      near('[D] s' + s + '(비관문) 보스 체력 = eHp×' + C.BOSS_HP + ' (배수 없음)',
+           r.bossMax, wHp(s)*C.BOSS_HP, 1e-9);
   });
 
   /* ── [E] 파급 — 다른 «보스» 들은 관문 배수를 안 탄다 ───────────── */

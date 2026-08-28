@@ -35,7 +35,11 @@ const near = (n, got, want, tol) => R.push({
 
 /* 게이트 자기 상수 — 화면이 쓴 식을 다시 계산하는 «항등식» 을 피하려고, 기대값은 여기서 만든다
    (LESSONS 212-①). 설치본과 어긋나면 ① 에서 먼저 빨개진다. */
-const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6, BAND:10, GATE_N:10, GATE_HP:1.44 };
+/* 285 — 보스 체력 배수와 공격력 배수가 **갈렸다**(둘 다 22 였다). 보스전 제한 시간이 30 → 15초로
+   반이 되면서 체력만 ×22 → ×11 로 같이 내렸고(시간만 줄이면 설계 플레이어가 못 잡는다), 공격력은
+   그대로다 — «오래 걸리는 것이지 즉사가 아니다»(249 ②). 승급 수호자 배수도 60 → BOSS_SEC(15). */
+const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6, BAND:10, GATE_N:10, GATE_HP:1.44,
+            BOSS_HP:11, BOSS_DMG:22, BOSS_SEC:15, PROMO_HP:15 };
 /* 249 — 곡선에 «구간 계단» 이 얹혔다: eScale(s) = eSmooth(eBand(s)) 이고, 10 의 배수 스테이지의
    **스테이지 보스**만 체력 배수 GATE_HP 를 탄다. 177 이 푼 다섯 상수(K·KNEE·M1·M2·A)와
    «s1 = 55/6» 은 그대로라 아래 대조는 전부 유효하다 — 기대식만 249 를 따라간다. */
@@ -44,7 +48,7 @@ const band  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
 const scale = s => smooth(band(s));
 const wantHp  = s => C.HB * scale(s);
 const wantDmg = s => C.DB * Math.pow(scale(s), C.A);
-const wantBossHp = s => wantHp(s) * 22 * (s % C.GATE_N === 0 ? C.GATE_HP : 1);
+const wantBossHp = s => wantHp(s) * C.BOSS_HP * (s % C.GATE_N === 0 ? C.GATE_HP : 1);
 const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
 
 (async () => {
@@ -122,9 +126,9 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     }
     yes('④ s' + r.s + ' 보스가 실제로 스폰됐다', r.bossMax !== null);
     if(r.bossMax !== null){
-      near('④ s' + r.s + ' 스폰된 보스 체력 = eHp×22' + (r.s % C.GATE_N === 0 ? '×' + C.GATE_HP + '(249 관문)' : ''),
+      near('④ s' + r.s + ' 스폰된 보스 체력 = eHp×' + C.BOSS_HP + (r.s % C.GATE_N === 0 ? '×' + C.GATE_HP + '(249 관문)' : ''),
            r.bossMax, wantBossHp(r.s), 1e-9);
-      near('④ s' + r.s + ' 스폰된 보스 공격 = eDmg×22', r.bossDmg, wantDmg(r.s)*22, 1e-9);
+      near('④ s' + r.s + ' 스폰된 보스 공격 = eDmg×' + C.BOSS_DMG, r.bossDmg, wantDmg(r.s)*C.BOSS_DMG, 1e-9);
     }
   });
 
@@ -169,8 +173,11 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
       fight.mobHp / fight.real <= 2);
 
   /* ── ⑥ 파급 ── */
-  const ripple = await p.evaluate(() => { S.stage = 40; return { promoHp: eHp(S.stage)*60 }; });
-  near('⑥ 승급 수호자 체력 = eHp(s)×60 (새 곡선을 그대로 탄다)', ripple.promoHp, wantHp(40)*60, 1e-9);
+  /* 285 — 페이지가 실제로 쓰는 `BOSS_SEC` 을 읽어 기대값을 만든다. 기대값 쪽 배수(C.PROMO_HP)는
+     게이트 자기 상수라, 설치본이 딴 값으로 새면 여기서 빨개진다(항등식이 되지 않는다). */
+  const ripple = await p.evaluate(() => { S.stage = 40; return { promoHp: eHp(S.stage)*BOSS_SEC, bsec: BOSS_SEC }; });
+  eq('⑥ 보스전 제한 시간 BOSS_SEC = 15 (285 — 던전·승급전이 이 하나를 참조한다)', ripple.bsec, C.BOSS_SEC);
+  near('⑥ 승급 수호자 체력 = eHp(s)×BOSS_SEC (새 곡선을 그대로 탄다)', ripple.promoHp, wantHp(40)*C.PROMO_HP, 1e-9);
   /* 275 — 이 항목이 지키려는 성질은 «승급 수호자 hp 가 eHp(s)×60 을 그대로 탄다» 하나뿐인데,
      옛 판정식은 같은 문장의 `T2 = ETYPE.promo` 표기까지 통째로 물고 있었다. 208(승급 보스 아틀라스
      교체)이 그 자리를 `ETYPE.promo = promoType(ri)` 로 갈아 끼우자 hp 식은 한 글자도 안 바뀌었는데
@@ -181,7 +188,8 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   const promoStmt = (src.match(/^[^\n]*const T2 = ETYPE\.promo[^\n]*$/m) || [''])[0];
   yes('⑥ 승급 수호자 스폰 문장이 살아 있다 (const T2 = ETYPE.promo …)', promoStmt !== '');
   yes('⑥ 승급 수호자 스테이지가 S.stage 다', /\bs = S\.stage\b/.test(promoStmt));
-  yes('⑥ 승급 수호자 hp 식이 eHp(s)*60 그대로다', /\bhp = eHp\(s\)\*60;/.test(promoStmt));
+  yes('⑥ 승급 수호자 hp 식이 eHp(s)*BOSS_SEC 다 (285 — 60초/×60 의 «초당 배수 1.0» 을 옮긴 자리)',
+      /\bhp = eHp\(s\)\*BOSS_SEC;/.test(promoStmt));
 
   /* ── ⑦ 경제 축 ── */
   const econ = await p.evaluate(() => ({ r: eGold(2)/eGold(1), g1: eGold(1), g80: eGold(80),
