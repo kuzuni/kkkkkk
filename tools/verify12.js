@@ -86,9 +86,15 @@ function chk(name, got, want, tol) {
   console.log('\n== 기하 회귀 (ref 를 그 자리에서 같이 재서 대조) ==');
   chk('카드 6열 검정 좌단 (y940)', m.cap.cardcols, m.ref.cardcols, 2);
   chk('카드 2행 상·하단 (x78)', m.cap.cardrows.flat(), m.ref.cardrows.flat(), 2);
-  chk('검은 패널 세로 (x12)', m.cap.panel, m.ref.panel, 2);
+  /* 327 — 패널 «상변» 은 (SM_TOP 를 되돌린 뒤) ref 와 같아야 하고, «높이» 는 주인 지시로
+     ref 539 의 2배다. 높이를 ref 와 대조하면 지시를 어긴 쪽이 통과하므로 상수로 못 박는다. */
+  chk('검은 패널 상변 (x12)', m.cap.panelTop, m.ref.panelTop, 2);
+  /* ±4 인 이유: PANEL 마스크는 «평평한 본문색» 만 세는데 ref 는 JPEG 라 금색 크롬의 경계가
+     물러 마스크가 캡처(PNG)보다 3px 덜 문다. 실제 상자 차이는 정확히 1080 − 539 = 541 이고,
+     배율이 흔들리면(2배 → 1.5배) 여기서 270px 이 어긋나므로 감시력은 그대로다. */
+  chk('검은 패널 h — 327 «2배» (ref + 541)', m.cap.panelH - m.ref.panelH, 541, 4);
   chk('리본 밴드 가로 (y733)', m.cap.band733, m.ref.band733, 2);
-  chk('버튼 검정 외곽 상단 x3', m.cap.btntop.flat(), m.ref.btntop.flat(), 2);
+  chk('버튼 상단 테두리 아래끝 x3', m.cap.btntop, m.ref.btntop, 2);
 
   /* 회귀 ② 감시 — «부족» 상태의 버튼은 레퍼런스와 **같은 계조**여야 한다(측정표 §11).
      `.sm-b:disabled` 의 filter 가 다시 걸리면 여기가 0.72 배로 내려앉는다. */
