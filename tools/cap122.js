@@ -227,9 +227,23 @@ async function frames(p, tag, stops) {
     return { t: best, rot: bv, T };
   });
   if (bobPeak && bobPeak.t >= 0) {
-    const BOB = [-240, -160, -80, 0, 80, 160].map(d => Math.max(0, bobPeak.t + d));
+    /* ⚑ 23회차 채점 — **비평가 2명이 독립으로 «80ms 한 칸 안에서 3.07° 가 다 끝나고 중간값이 0개»**
+       를 ① 감점으로 올렸다(AW·AX). 관찰은 정확한데 **자가 짧은 게 아니라 격자가 성긴 것**이다:
+       실제 오름 구간은 `0%,86% 0° → 88% +3°` = 주기의 **2% ≈ 72ms** 라 **80ms 격자로는 중간값을
+       구조적으로 못 밟는다.** 격자를 아무리 옮겨도 «계단» 으로만 보인다.
+       → 정점 **앞 96ms 를 24ms 격자 4장**으로 덮어 오름을 실제로 샘플링하고(72ms 안에 3점),
+         되돌림(98% = **−1.5°**, 창 3% ≈ 108ms)도 정점 뒤 36ms 격자 3장으로 잡는다.
+       ⚠ 24회차 브리핑에 «오름 72ms · 되돌림 −1.5°» 를 같이 줘라 — 값만 주고 격자를 안 주면
+         비평가는 또 «계단» 을 본다(§23-2 네 번째 재발의 나머지 반쪽). */
+    /* 되돌림 창은 정점(88%)에서 **주기의 10% 뒤**(98%)다 — 3.6s 면 +360ms. 옛 격자의 마지막 stop 이
+       +160ms 라 **유지 구간(88~95%) 안에서 끝나** 되돌림을 한 장도 못 밟았다. 주기에 비례해 잡는다. */
+    const back = Math.round(bobPeak.T * 0.10);
+    const BOB = [-240, -160, -96, -72, -48, -24, 0, 36, 72, 108, 160,
+      back - 72, back - 36, back, back + 36, back + 108]
+      .map(d => Math.max(0, bobPeak.t + d));
     console.log('[소환 탭 — 칸1 들썩 창 버스트]  정점 t=' + bobPeak.t +
-      'ms (|rot| ' + bobPeak.rot.toFixed(2) + '°, bob T=' + bobPeak.T + 'ms) · 80ms 간격 6장');
+      'ms (|rot| ' + bobPeak.rot.toFixed(2) + '°, bob T=' + bobPeak.T + 'ms) · '
+      + '오름 24ms 격자 4장 + 되돌림 36ms 격자 3장 포함 ' + BOB.length + '장');
     await frames(p, 'bob', BOB);
   } else {
     console.log('[소환 탭 — 칸1 들썩 창 버스트] .cart 를 못 찾음 · 건너뜀');
@@ -331,6 +345,28 @@ async function frames(p, tag, stops) {
     await p.waitForTimeout(300);
     console.log('[소환 탭 — [무료] 링 · 리스트 바닥] 프레임 안 ' + freeIn2 + '칸 (칸5 포함)');
     await frames(p, 'freeb', FREE_STOPS);
+
+    /* ⚑ 23회차 채점 — **링의 세기는 이 캡처들로는 «두 사람이 같은 값을 볼 수» 없다.**
+       AW 는 «바닥/피크 0.28~0.51 로 다섯 칸 전부 규약(≥55%) 미달» 로 ② 를 깎았고,
+       AX 는 **같은 자리를 «측정 불가»** 로 판정했다 — 이유가 같다: 링 반경대(버튼 밖 2~24px)를
+       **본문 전면 광택(4.8s · 반치폭 64~70px)이 그대로 지나간다.** AX 실측으로 같은 칸이
+       `free` ↔ `freeb` 두 세트에서 **2.4~5.9배** 갈렸다(칸3 19.1↔7.8 · 칸4 15.1↔2.5).
+       즉 이건 연출 문제가 아니라 **표본에 두 신호가 겹쳐 있는 것**이다.
+       → **링만 남긴 격리 세트를 따로 찍는다**(광택 3겹을 끈다). 게이트 §17 이 내부에서 쓰는 것과
+         같은 격리이고, 이걸 줘야 비평가가 바닥/피크를 **판정**할 수 있다.
+       ⚠ 브리핑에 «이건 격리 세트다 — 제품 화면이 아니다» 를 반드시 적어라. 안 그러면
+         «광택이 없다» 가 새 감점으로 돌아온다(§23-2 계열). */
+    await p.evaluate(() => {
+      let s = document.getElementById('capRingIso');
+      if (!s) { s = document.createElement('style'); s.id = 'capRingIso'; document.head.appendChild(s); }
+      s.textContent = '#shopList .cfr::after,#shopList .chd::before,#shopList .chd::after,'
+        + '#shopList .cn-cd>.fr::after,#shopList .cn-cd>.fr::before,#shopList .cn-cd::before,'
+        + '#shopw>.jzb{opacity:0!important}';
+    });
+    await p.waitForTimeout(250);
+    console.log('[소환 탭 — [무료] 링 «격리» (광택 3겹 끔 — 제품 화면 아님)]');
+    await frames(p, 'ringiso', FREE_STOPS);
+    await p.evaluate(() => { const s = document.getElementById('capRingIso'); if (s) s.remove(); });
   }
 
   console.log(errs.length ? '콘솔 에러 ' + errs.length + '건: ' + errs.slice(0, 3).join(' | ') : '콘솔 에러 0');
