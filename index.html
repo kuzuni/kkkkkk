@@ -10894,6 +10894,24 @@
   .dcl-spk{position:absolute;left:716px;top:718px;width:36px;height:48px;z-index:4;
     background:#fff;opacity:.4;
     clip-path:polygon(50% 0,58% 42%,100% 50%,58% 58%,50% 100%,42% 58%,0 50%,42% 42%)}
+  /* 339 — «연속 도전» 토글 한 줄. 밴드 하변(839+340=1179) 과 알약 상변(1331) 사이의 빈 면에 든다.
+     체크 모양·크기(40×40 · 체크 인셋)는 04 세부 팝업 `.dgd-cb` 를 **글자 그대로** 물려받는다 —
+     같은 지시의 같은 토글이 두 화면에서 다르게 보이면 «같은 것» 으로 안 읽힌다(96 이 서브탭에서 한 통일). */
+  .dcl-auto{position:absolute;left:0;right:0;top:1203px;height:44px;z-index:5;
+    display:flex;align-items:center;justify-content:center;gap:14px}
+  .dcl-cb{position:relative;width:40px;height:40px;border-radius:50%;box-sizing:border-box;flex:none;
+    border:2px solid #000;padding:0;cursor:pointer;font-family:inherit;
+    background:radial-gradient(closest-side,#7F5B45 0 62%,#75543F 62% 82%,#A07059 82% 100%)}
+  .dcl-cb::after{content:'';position:absolute;left:9px;top:11px;width:18px;height:9px;
+    border:solid #F0D9BA;border-width:0 0 5px 5px;transform:rotate(-45deg);opacity:0}
+  .dcl-cb.on::after{opacity:1}
+  .dcl-cbl{font-size:29px;line-height:40px;font-weight:900;color:#fff;white-space:nowrap;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
+  /* 카운트다운 한 줄 — 1초 단위로만 다시 쓴다(매 프레임 textContent 를 갈면 레이아웃이 다시 돈다:
+     drawDunHud 의 `dunTtlPip` 와 같은 처방). 한 줄·nowrap 이라 94 폭 클램프 대상이 아니다. */
+  .dcl-cd{position:absolute;left:0;right:0;top:1255px;height:40px;line-height:40px;text-align:center;
+    font-size:28px;font-weight:700;color:#FFE39B;white-space:nowrap;z-index:5;
+    -webkit-text-stroke:5px #000;paint-order:stroke fill}
   #defw{position:absolute;inset:0;display:none;z-index:39;cursor:pointer;background:rgba(0,0,0,.62)}
   #defw.on{display:block}
   #defw i,#defw b{display:inline-block;font-style:normal}
@@ -13773,6 +13791,13 @@
     <div class="dcl-amt"><i id="dclAmt">0</i></div>
     <div class="dcl-pill l"></div><div class="dcl-tk l"></div><div class="dcl-cn l"><i id="dclTryL">0</i></div>
     <div class="dcl-pill r"></div><div class="dcl-tk r"></div><div class="dcl-cn r"><i id="dclTryR">0</i></div>
+    <!-- 339 — «연속 도전» 토글(04 세부 팝업의 것과 같은 부품·양방향 동기) + 자동 도전 카운트다운.
+         체크돼 있으면 «n초 뒤 다음 층 자동 도전» 이 1초 단위로 줄고 0 에서 실제로 입장한다. -->
+    <div class="dcl-auto">
+      <button class="dcl-cb" id="dclAuto"></button>
+      <div class="dcl-cbl"><i id="dclCbL">연속 도전</i></div>
+    </div>
+    <div class="dcl-cd"><i id="dclCd"></i></div>
     <button class="dcl-btn dcl-re" id="dclRe"><i>재도전</i></button>
     <button class="dcl-btn dcl-ok" id="dclOk"><i>확인</i></button>
     <button class="dcl-btn dcl-nx" id="dclNx"><i>다음</i></button>
@@ -18931,6 +18956,10 @@ function castSkillRaw(s){
    시뮬레이션
    ========================================================================== */
 function step(dt){
+  /* 339 — 31 클리어 화면의 «n초 뒤 자동 도전» 시계. **맨 위**여야 한다: 0 초에 새 런을 시작하면
+     `startDunRun` 이 enemies·spawnQ 를 통째로 비우는데, 그것이 아래 순회 도중에 일어나면 안 된다.
+     여기서 갈아 끼우면 이번 프레임은 처음부터 새 런의 상태로 도는 = 버튼을 그 순간 누른 것과 같다. */
+  dclAutoTick(dt);
   sbufTick(dt);                                  /* 86 — 스킬 자기 강화 버프 만료 */
   for(let i=spawnQ.length-1;i>=0;i--){
     spawnQ[i].delay -= dt;
@@ -22144,7 +22173,10 @@ function startDunRun(d, f){
      `clrDie` 는 **런이 시작될 때 한 번** 재 둔다(수·방식과 같은 이유 — 런 도중 아틀라스가 바뀌어도 시퀀스가 안 흔들린다). */
   dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage, bossQ:false, bossIn:false, bossDown:false, bossLeft:1,
              bossN: dunBossN(d), bossMode: dunBossMd(d), bossUp:0, bossKilled:0,
-             clrT:0, clrDie: dunBossDieSec(d), clrMsg:false };
+             clrT:0, clrDie: dunBossDieSec(d), clrMsg:false,
+             /* 339 — «연속 도전» 은 **런이 시작될 때 한 번** 굳힌다(수·방식·clrDie 와 같은 이유).
+                런 도중에 04 세부 팝업이 닫히거나 다른 던전을 열어 봐도 이 런의 결과 화면은 안 흔들린다. */
+             auto: dgdAutoOn };
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -22205,7 +22237,7 @@ function finishDunRun(r, cleared){
     else S.dun[d.id]++;
     giveReward(d.rw(f));
     uiDirty = true; save();
-    openDunClear(d, f);                          /* 31 던전 클리어 화면 — 기존 경로 그대로 */
+    openDunClear(d, f, false, r.auto);           /* 31 던전 클리어 화면 — 339 로 «연속 도전» 스냅샷을 넘긴다 */
   }else{
     uiDirty = true; save();
     /* 206 — 실패 «결과» 통보. 층·요구 피해는 03 던전 페이지 카드가 그대로 보여 준다.
@@ -22296,7 +22328,12 @@ function sweepDungeon(d){
   S.dunTk[d.id]--; S.cnt.dungeon++;
   giveReward(d.rw(f));
   uiDirty = true; save();
-  openDunClear(d, f);   /* 31 — 소탕도 «클리어 보상» 결과 화면을 그대로 쓴다 */
+  /* 31 — 소탕도 «클리어 보상» 결과 화면을 그대로 쓴다.
+     339 ⑤ — 소탕에는 «다음 층» 이 없다(대상은 언제나 최고층−1 하나). 그래서 이 화면의 자동 도전은
+     «다음 층» 이 아니라 **같은 소탕의 반복**이다 — 화면을 연 그 행동을 그대로 한 번 더 한다.
+     대상 제외(자동 도전 없음)로 하지 않은 이유: 소탕은 입장권을 쓰는 «도전» 의 한 형태이고,
+     입장권이 떨어지면 아래 `dclAutoCan()` 이 정확히 같은 자리에서 멈춰 세운다. */
+  openDunClear(d, f, true, dgdAutoOn);
 }
 
 /* ---- 31 던전 클리어 화면 -------------------------------------------------
@@ -22304,7 +22341,12 @@ function sweepDungeon(d){
    실제 보상 데이터로 동작한다: 방금 클리어한 층의 대표 재화 1종을 타일에 띄우고,
    알약 2개는 그 던전의 «남은 입장 횟수» 를 보여 준다(레퍼런스의 티켓 배지 자리). */
 let dclDun = null, dclFloor = 1;
-function openDunClear(d, f){
+/* 339 — 이 화면의 «연속 도전» 상태. `dclAuto` 는 04 토글(`dgdAutoOn`)과 **같은 값**이고(양방향 동기),
+   `dclSweep` 은 이 화면이 소탕에서 왔는지(= 자동 도전이 «다음 층» 인지 «소탕 반복» 인지)다.
+   `dclCd` 는 남은 초(0 이면 안 돈다) · `dclCdShown` 은 마지막으로 그린 초(1초 단위 갱신). */
+const DCL_AUTO_SEC = 5;
+let dclAuto = false, dclSweep = false, dclCd = 0, dclCdShown = -1;
+function openDunClear(d, f, sweep, auto){
   if(!d) return;
   sfx('victory');                                       /* 78 — 던전 클리어 */
   dclDun = d; dclFloor = f;
@@ -22334,9 +22376,15 @@ function openDunClear(d, f){
     b.disabled = off || (tw && b === $('dclRe'));
     b.style.filter = b.disabled ? 'grayscale(.75) brightness(.8)' : '';
   });
+  /* 339 — 토글·카운트다운은 화면을 **열면서** 굳힌다(열린 뒤에 상태가 바뀌면 카운트다운이 흔들린다) */
+  dclSweep = !!sweep;
+  dclArm(!!auto);
   $('dclw').classList.add('on');
 }
-function closeDunClear(){ $('dclw').classList.remove('on'); dclDun = null; }
+function closeDunClear(){
+  $('dclw').classList.remove('on'); dclDun = null;
+  dclCd = 0;                    /* 339 ④ — 화면을 닫으면 자동 도전도 취소다(«터치하여 닫기» 포함) */
+}
 $('dclw').addEventListener('click', e => { if(e.target === $('dclw')) closeDunClear(); });
 $('dclOk').addEventListener('click', e => { e.stopPropagation(); closeDunClear(); });
 /* 재도전 = 방금 깬 층을 다시 · 다음 = 새로 열린 층으로. 둘 다 실제 입장 횟수를 소모한다. */
@@ -22353,6 +22401,70 @@ $('dclNx').addEventListener('click', e => {
   closeDunClear();
   if(isTower(d)){ challengeTower(d.id); return; }  /* 209 — «다음» = 새로 열린 층 */
   challengeDungeon(d);
+});
+
+/* ---- 339 «연속 도전» 실동작 ------------------------------------------------
+   저장소 주인 지시(2026-08-29): «연속도전 체크해놨으면 클리어보상 떴을때 거기에도 연속도전 토글
+   있게 하고 거기서 5초 카운트 지나면 다음꺼 자동도전된다카고 다음거 도전되게 해».
+   ⚑ 자동 도전은 «없던 입장 경로» 를 새로 만들지 않는다 — 화면의 [다음]·[재도전] 이 이미 쓰는
+     `challengeDungeon`/`sweepDungeon`/`challengeTower` 를 **그대로** 부른다(LESSONS 46-③ 의 «입장은
+     한 지점» — 잠금·입장권·중복 전투 판정이 전부 그 안에 이미 있다).
+   시계는 `step(dt)` 가 준다(setInterval·rAF 가 아니다) — 332 의 `clrT` 와 같은 시계를 타야
+   «1초 시퀀스 뒤에 5초» 가 같은 자로 이어지고, 게이트도 rAF 를 얼린 채 틱으로 잴 수 있다. */
+
+/* 지금 이 화면에서 «한 번 더 들어갈 수 있나». 못 들어가면 카운트다운을 아예 안 켠다(④). */
+function dclAutoCan(){
+  const d = dclDun; if(!d) return false;
+  if(dunRun || raidOn || arena) return false;   /* 다른 전투 중이면 입장 자체가 막힌다 */
+  if(isTower(d)) return true;                   /* 209 — 탑은 입장권이 없다(무제한) */
+  return (S.dunTk[d.id] | 0) > 0;
+}
+/* 카운트다운 한 줄의 문구. 체크가 꺼져 있으면 빈 줄이다(미체크면 카운트다운 자체가 없다). */
+function dclCdTxt(){
+  if(!dclAuto) return '';
+  if(!dclAutoCan()) return isTower(dclDun) ? '' : '입장권 없음';
+  return Math.max(1, Math.ceil(dclCd)) + '초 뒤 ' + (dclSweep ? '자동 소탕' : '다음 층 자동 도전');
+}
+function dclAutoRender(){
+  $('dclAuto').classList.toggle('on', dclAuto);
+  dclCdShown = (dclAuto && dclAutoCan()) ? Math.max(1, Math.ceil(dclCd)) : -1;
+  $('dclCd').textContent = dclCdTxt();
+}
+/* 토글을 켜고(끄고) 카운트다운을 다시 세운다 — 화면을 열 때와 토글을 누를 때가 같은 자리를 쓴다 */
+function dclArm(on){
+  dclAuto = !!on;
+  dclCd = (dclAuto && dclAutoCan()) ? DCL_AUTO_SEC : 0;
+  dclAutoRender();
+}
+/* 0 초에 실제로 들어간다. 화면을 **먼저** 닫는다 — 소탕은 곧바로 이 화면을 다시 열기 때문이다. */
+function dclAutoGo(){
+  const d = dclDun, sweep = dclSweep;
+  closeDunClear();
+  if(!d) return;
+  if(isTower(d)){ challengeTower(d.id); return; }
+  if(sweep) sweepDungeon(d); else challengeDungeon(d);
+  /* 03 던전 목록·89 유물 페이지가 뒤에 열려 있으면 남은 횟수를 갱신한다(버튼 경로와 같은 뒷정리) */
+  if($('dunw').classList.contains('on')) renderDunPage();
+  if($('relw').classList.contains('on')) renderRelw();
+}
+/* step(dt) 맨 위에서 매 프레임 한 번. 화면이 닫혀 있거나 체크가 꺼져 있으면 하는 일이 없다. */
+function dclAutoTick(dt){
+  if(dclCd <= 0 || !dclAuto || !dclDun) return;
+  if(!$('dclw').classList.contains('on')){ dclCd = 0; return; }
+  /* 도중에 입장권이 사라졌으면(다른 경로가 썼다) 카운트다운을 접고 «입장권 없음» 으로 바꾼다 */
+  if(!dclAutoCan()){ dclCd = 0; dclAutoRender(); return; }
+  dclCd -= dt;
+  if(dclCd <= 0){ dclCd = 0; dclAutoGo(); return; }
+  const s = Math.max(1, Math.ceil(dclCd));
+  if(s !== dclCdShown) dclAutoRender();     /* ⑥ — 초가 바뀔 때만 다시 쓴다 */
+}
+/* ② 31 토글 — 04 토글과 같은 값을 쓴다. 여기서 끄면 자동 도전이 즉시 취소된다. */
+$('dclAuto').addEventListener('click', e => {
+  e.stopPropagation();                      /* 딤 클릭(= 닫기)과 겹치지 않게 */
+  dgdAutoOn = !dclAuto;
+  if(dunRun) dunRun.auto = dgdAutoOn;       /* 스냅샷도 같이 — 다음 결과 화면이 이 선택을 따른다 */
+  dclArm(dgdAutoOn);
+  if($('dgdw').classList.contains('on')) $('dgdAuto').classList.toggle('on', dgdAutoOn);
 });
 /* 작업 68 — `buyPack()` 폐기. 다이아 지급 경로는 `grantDiaPack()`(작업 44) 하나뿐이다.
    덤으로 `S.cnt.paid` 의 의미가 «누적 원화»(구) / «결제 횟수»(신) 로 갈리던 것도 «횟수» 로 정리됐다. */
@@ -23139,7 +23251,10 @@ let dgdArena = null;    /* 123 — 아레나 모드(셋 중 하나만 채워진�
 let dgdTower = null;    /* 209 — 시련의 탑 모드(넷 중 하나만 채워진다) */
 let dunSub = 'dun';     /* 46 — 03 던전 페이지 서브탭 'dun' | 'raid' (renderDunPage 가 읽는다) */
 let dgdFloor = 1;       /* ◀▶ 로 고른 층 */
-let dgdAutoOn = false;  /* 연속 도전 체크 (표시 전용 — 자동 반복은 미구현) */
+/* 339 — 종전 «표시 전용». 이제 실제 상태다: 런이 시작될 때 `dunRun.auto` 로 스냅샷돼
+   (도중에 세부 팝업이 닫혀도 유지된다) 31 클리어 화면의 자동 도전 카운트다운을 켠다.
+   ⚠ 세이브에는 안 넣는다 — 저장 구조를 안 건드리므로 마이그레이션·KEY 도 없다(지시서 [6]). */
+let dgdAutoOn = false;  /* 연속 도전 체크 — 04 세부 팝업과 31 클리어 화면이 함께 쓰는 한 값 */
 
 const DUN_STATE = { gold:'황금빛 대낮 상태', dia:'어두운 밤 상태', relic1:'고대의 잔향 상태',
                     relic2:'잊힌 새벽 상태', relic3:'용의 숨결 상태', relic4:'창세의 여명 상태',
@@ -23297,6 +23412,8 @@ $('dgdNext').onclick = () => {
 };
 $('dgdAuto').onclick = () => {
   dgdAutoOn = !dgdAutoOn;
+  /* 339 ② — 31 클리어 화면이 열려 있으면 같은 값이므로 그쪽 토글·카운트다운도 따라 움직인다 */
+  if($('dclw').classList.contains('on')) dclArm(dgdAutoOn);
   if(dgdArena) renderArenaDetail();          /* 123 */
   else if(dgdRaid) renderRaidDetail();
   else if(dgdTower) renderTowerDetail();     /* 209 */
