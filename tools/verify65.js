@@ -8,7 +8,8 @@
  *   1. `.mbox` bbox (x/y/w/h)                — 모달 박스 정지
  *   2. `#modal` 딤 배경색 · 박스 transform·scale·translate·rotate·filter
  *   3. 룰렛 컨테이너 `.rlt` bbox              — 원판 자리 정지
- *   4. `#rouBtn` / `#rouClose` bbox           — 버튼 정지
+ *   4. `#rouBtn` bbox                        — 버튼 정지
+ *      (267 이 [닫기] 를 없앴다 — `#rouClose` 축은 «없는 요소» 가 되어 삭제했다. 닫기는 딤 탭이다)
  *   5. `#app` bbox                            — 배경(프레임) 정지
  * 그리고 `#rouDisc` 의 회전각은 반대로 **계속 변해야** 한다(원판만 돈다).
  * 마지막으로 8칸 전수로 «포인터 아래 칸 = 당첨 칸» 을 역산 대조한다(29 교훈 1 회귀).
@@ -60,7 +61,7 @@ async function main() {
       dim: (() => { const m = document.getElementById('modal'); if (!m) return null;
                     const cs = getComputedStyle(m);
                     return { bg: cs.backgroundColor, tf: cs.transform, sc: cs.scale, tr: cs.translate }; })(),
-      rlt: g('.rlt'), btn: g('#rouBtn'), cls: g('#rouClose'), app: g('#app'),
+      rlt: g('.rlt'), btn: g('#rouBtn'), app: g('#app'),
       disc: disc ? getComputedStyle(disc).transform : null,
       spinning: typeof rouSpinning !== 'undefined' ? rouSpinning : null,
     };
@@ -75,7 +76,8 @@ async function main() {
   for (let i = 0; i < FRAMES; i++) {
     /* 회전 중 «비활성 버튼 다시 누르기» 도 섞는다 — 60 은 여기에 jz-sh(좌우 6px 흔들림) 를 건다 */
     if (i === 6 || i === 14) await page.click('#rouBtn', { force: true }).catch(() => {});
-    if (i === 10 || i === 18) await page.click('#rouClose', { force: true }).catch(() => {});
+    /* 267 — 「닫기」 버튼은 사라졌다. 딤을 누르면 «닫기» 라 여기서 쓰면 표본이 끊긴다(181 «딤 닫기 시 즉시 결판»).
+       재터치 표본은 위 `#rouBtn` 두 번으로 유지한다. */
     shots.push(await page.evaluate(probe));
     await page.waitForTimeout(GAP);
   }
@@ -86,7 +88,7 @@ async function main() {
   /* ── 1~5. 정지해야 하는 것들 ── */
   const STATIC = [
     ['.mbox (모달 박스)', 'mbox'], ['.rlt (원판 컨테이너)', 'rlt'],
-    ['#rouBtn (돌리기 버튼)', 'btn'], ['#rouClose (닫기 버튼)', 'cls'], ['#app (배경 프레임)', 'app'],
+    ['#rouBtn (돌리기 버튼)', 'btn'], ['#app (배경 프레임)', 'app'],
   ];
   const base = spun[0] || shots[0];
   for (const [name, key] of STATIC) {

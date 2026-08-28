@@ -62,7 +62,7 @@ const probe = () => {
     out.guide = one(q('#modal .mbody .mwell p'), '안내 p');
     out.res   = one(q('#rouRes'), '#rouRes');
     out.btn   = one(q('#rouBtn'), '#rouBtn');
-    out.close = one(q('#rouClose'), '#rouClose');
+    /* 267 — [닫기] 버튼은 삭제됐다(딤 탭으로 닫는다). 선택자를 남겨 두면 «항상 missing» 인 죽은 칸이 된다. */
     /* 부채꼴 기하 — .rlt 660x660, 중심(330,330). 세그먼트는 45°(반각 22.5°). */
     const rlt = q('#modal .rlt').getBoundingClientRect();
     const R = rlt.width / 2, cx = rlt.left + R, cy = rlt.top + R;

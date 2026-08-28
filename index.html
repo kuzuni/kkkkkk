@@ -1639,6 +1639,21 @@
   .gbtn.purple{color:#160b28;background:linear-gradient(180deg,#d3a8ff,#9b5cf0);box-shadow:0 4px 0 #6a2bb0}
   .gbtn:disabled{background:#26304e;color:#68738f;box-shadow:none;cursor:default}
   .gbtn small{display:block;font-size:20px;font-weight:800;opacity:.85}
+  /* ── 267 주 행동 버튼 `.pbtn` (2026-08-28, 저장소 주인 지시) ──────────────────────
+     원문: «룰렛 돌리기 버튼이나 승급전 도전 버튼 같은 거 퀘스트 팝업에 일괄 받기 버튼처럼
+     크고 폰트도 그런 식으로 통일성 있게. 폰트도 좀 크고».
+     기준은 22 `[모두 받기]`(`.qs-all` — 높이 **130** · `--gb-bw:7px` · radius **43** ·
+     라벨 **46.6px**)이고, 부품은 104 공용 베벨 `.ifbtn` 을 그대로 쓴다(266 `[일괄 강화]` 와 같은 길).
+     ⚠ **`.gbtn`(26px) 자체는 안 키운다** — 「확인」·「전체 초기화」 같은 부수 버튼이 계속 쓰는
+        공용 클래스라 여기를 키우면 지정하지 않은 자리까지 같이 커진다(등재문 주의 · 243 함정).
+        그래서 «주 행동» 만 새 클래스로 골라 붙인다.
+     ⚠ `.ifbtn` 은 **절대배치** 부품이다(22·69·266 은 화면이 좌표를 준다). 이 자리들은 모달 본문
+        흐름 위라 폭을 100% 로 되돌린다 — 높이·폰트·베벨·라운드만 22 규격을 그대로 가져온다.
+     라벨 `b` 의 top/스트로크/scaleX/그림자는 `.qs-all b`(126 이 ref 실측으로 잡은 값)와 같은 식이다. */
+  .ifbtn.pbtn{position:relative;width:100%;height:130px;--gb-bw:7px;border-radius:43px;margin-top:16px}
+  .ifbtn.pbtn>b{position:relative;top:4.5px;font-size:46.6px;
+    -webkit-text-stroke:calc(var(--st-body) * 1em) #000;transform:scaleX(.973);
+    text-shadow:0 var(--sh-b) 0 #000, var(--shx-b) 0 0 #000}
   .row2{display:flex;gap:12px}
   .row2>*{flex:1}
   /* 96 — 구버전(파란 스킨) 수량 선택 칸. 이름이 `.subtabs/.stab` 이었지만 서브탭이 아니라
@@ -1762,7 +1777,10 @@
             «죽은 버튼 누름» 자체가 성립하지 않으니 흔들림·소리·캡션이 한꺼번에 사라진다.
             딤 클릭 닫기는 그대로다 — `#modal` 의 핸들러는 `e.target === #modal` 만 보는데
             버튼을 통과한 탭은 `.mbox` 에 맞는다(딤이 아니다). */
-  #modal.rou-spin .gbtn{pointer-events:none}
+  /* 267 — [닫기] 를 없애고 [룰렛 돌리기] 를 `.pbtn`(= `.ifbtn` 부품)으로 바꿨다. 이 차단 규칙이
+     `.gbtn` 만 보고 있으면 그 순간 «회전 중 재터치» 가 다시 뚫린다(181 ②가 그대로 재발).
+     두 클래스를 같이 적어 둔다 — `.gbtn` 은 다른 팝업 버튼이 여전히 쓰는 이름이다. */
+  #modal.rou-spin .gbtn,#modal.rou-spin .ifbtn{pointer-events:none}
 
   /* ── 공용 팝업 껍데기 — docs/measure/A5-모달.md (레퍼런스 22-퀘스트-팝업 실측) ──
      좌우 여백 91 / 세로는 «패딩 위 − 아래» 의 절반만큼 중앙에서 이동한다.
@@ -21515,9 +21533,17 @@ function showModal(html){
   body.scrollTop = 0;
   $('modal').classList.add('on');
 }
-function popup(title, html){
-  showModal('<h2>' + title + '</h2>' + html + '<button class="gbtn green" id="okBtn">확인</button>');
-  $('okBtn').onclick = closeModal;
+/* 267 (2026-08-28, 저장소 주인 지시 «룰렛 승급전 길라잡이 팝업에 닫기 버튼 없애기») —
+   `opt.noOk` 면 하단 [확인] 을 안 붙인다. **`popup()` 의 [확인] 을 통째로 지우면** 이 함수로 뜨는
+   나머지 팝업(약관·고객지원·랭커 상세·승급 성공·notify 폴백)까지 «닫는 버튼» 이 사라지므로
+   지시받은 자리만 골라 끈다. 버튼이 없어도 닫히는 근거: `#modal` 딤 탭 핸들러(파일 끝
+   `$('modal').onclick = e => { if(e.target === $('modal')) closeModal(); }`) — 70 출석 팝업이
+   이미 «하단 버튼·✕ 없이 딤 탭으로만 닫는» 같은 규격으로 돌고 있다. */
+function popup(title, html, opt){
+  const noOk = !!(opt && opt.noOk);
+  showModal('<h2>' + title + '</h2>' + html
+    + (noOk ? '' : '<button class="gbtn green" id="okBtn">확인</button>'));
+  if(!noOk) $('okBtn').onclick = closeModal;
 }
 /* --------------------------------------------------------------------------
    149 «단순 안내는 팝업이 아니라 토스트» (2026-08-27, 저장소 주인 지시)
@@ -22219,7 +22245,8 @@ function renderSt(){
     + '<p>' + S.nick + ' — 최고 스테이지 <b>' + S.best + '</b></p>'
     + (nr ? '<p>다음 계급 <b>' + nr.ic + ' ' + nr.n + '</b> — 스테이지 <b>' + nr.stage + '</b> · 전투력 <b>' + fmtB(nr.cp) + '</b><br>'
           + '계급 보너스 — 공격 · 체력 <b>×' + (1+S.rank*0.25).toFixed(2) + '</b></p>'
-          + '<button class="gbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '>승급전 도전</button>'
+          /* 267 — 주인이 이름을 댄 «승급전 도전» 버튼. 22 [모두 받기] 규격 `.pbtn`(라벨은 `<b>`) */
+          + '<button class="ifbtn pbtn" id="promoBtn"' + (canPromote() ? '' : ' disabled') + '><b>승급전 도전</b></button>'
         : '<p>최고 계급 달성! 🎉</p>') + '</div>'
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
     + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
@@ -22309,6 +22336,9 @@ const ROUL_TURNS = 6, ROUL_MS = 3600;            /* 최소 6바퀴 · 3.6초 감
 const ROUL_OVER = 6, ROUL_BACK_MS = 260;
 /* 회전 중 «원판만 움직인다» 를 CSS 로 강제하는 표식 — 붙이고 떼는 곳은 여기 두 곳뿐이다 */
 function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
+/* 267 — `.pbtn` 라벨은 `<b>` 안에 있다(`.ifbtn` 규약). 예전처럼 `btn.textContent = …` 로 쓰면
+   그 `<b>` 가 통째로 날아가 버튼이 «큰 규격만 남고 글씨는 26px 맨몸» 이 된다. 여기 한 곳으로 모은다. */
+function rouBtnTx(btn, t){ if(!btn) return; const b = btn.firstElementChild; if(b) b.textContent = t; else btn.textContent = t; }
 /* 155 — 보상이 다이아 한 종류가 되면서 «보상 종류별 팔레트» 도 필요 없어졌다.
    골드·유물조각·대박 전용 색은 죽은 코드라 지웠고, 남은 것은 칸 구분용 «다이아 2색 교대» 뿐이다. */
 const ROUL_SEGC = ['#8FDCF7', '#4FB3DE'];
@@ -22339,13 +22369,13 @@ function openRoulette(){
     +     ';transform:rotate(' + rouRot.toFixed(2) + 'deg)">' + segs + '</div>'
     +   '<div class="rlt-hub">🎰</div><div class="rlt-ptr"></div></div>'
     + '<p id="rouRes">&nbsp;</p>'
-    + '<button class="gbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '>'
-    + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</button>'
-    + '<button class="gbtn green" id="rouClose">닫기</button>';
+    /* 267 — [닫기] 삭제(닫기는 딤 탭) · [룰렛 돌리기] 는 22 [모두 받기] 규격 `.pbtn` 으로.
+       라벨을 `<b>` 로 감싸는 것이 `.ifbtn` 부품의 규약이다(`.qs-all`·`.cl-all` 과 같다). */
+    + '<button class="ifbtn pbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '><b>'
+    + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</b></button>';
   showModal(h);
   rouSpinning = false;
   roulSpinMark(false);                           /* 65 — 표식은 #modal 에 남으므로 렌더 때마다 초기화한다 */
-  $('rouClose').onclick = closeModal;
   $('rouBtn').onclick = spinRoulette;
 }
 /* idx 칸이 북(포인터)에 오도록 감속 정지시킨다.
@@ -22370,9 +22400,8 @@ function roulSpinTo(idx){
   rouPend = idx;                                 /* 181 — 미지급 당첨 칸(페이지 이탈 안전망이 읽는다) */
   rouSpinning = true;
   roulSpinMark(true);                            /* 65 — 박스·딤·버튼 정지(원판만 돈다) */
-  const btn = $('rouBtn'), cl = $('rouClose'), res = $('rouRes'), cnt = $('rouCnt');
-  if(btn){ btn.disabled = true; btn.textContent = '돌아가는 중…'; }
-  if(cl)  cl.disabled = true;
+  const btn = $('rouBtn'), res = $('rouRes'), cnt = $('rouCnt');
+  if(btn){ btn.disabled = true; rouBtnTx(btn, '돌아가는 중…'); }
   if(res) res.innerHTML = '&nbsp;';
   if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
   document.querySelectorAll('#rouDisc .rlt-seg.hit').forEach(s => s.classList.remove('hit'));
@@ -22430,12 +22459,11 @@ function roulFinish(idx){
   uiDirty = true; save();
   const segs = document.querySelectorAll('#rouDisc .rlt-seg');
   segs.forEach((s, i) => s.classList.toggle('hit', i === idx));
-  const res = $('rouRes'), btn = $('rouBtn'), cl = $('rouClose'), cnt = $('rouCnt');
+  const res = $('rouRes'), btn = $('rouBtn'), cnt = $('rouCnt');
   if(res) res.innerHTML = '획득! <b>' + (txt || ROULETTE[idx].t) + '</b>';
   if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
-  if(cl)  cl.disabled = false;
   if(btn){ btn.disabled = S.daily.spins <= 0;
-           btn.textContent = S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다'; }
+           rouBtnTx(btn, S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다'); }
 }
 /* 181 안전망 — 지급이 «멈춘 뒤» 로 옮겨 갔으므로, 회전 3.9초 안에 앱을 닫으면 보상이 증발한다
    (횟수는 돌리는 순간 이미 깎이고 저장된다). `pagehide` 는 탭 종료·백그라운드 폐기·새로고침에
@@ -25674,10 +25702,9 @@ function openPromo(){
     + '<i>칭호 <em>' + r.n + '</em></i></div></div></div>'
     + '<p class="pr-note">조건을 만족하면 <b>승급 수호자</b>가 등장합니다.<br><b>60초</b> 안에 처치하면 승급!<br>'
     + '승급 시 공격력 · 체력 <b>+25%</b> (누적)</p></div>'
-    + '<button class="gbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '>승급전 시작</button>'
-    + '<button class="gbtn green" id="pclose">닫기</button>');
+    /* 267 — [닫기] 삭제(닫기는 딤 탭) · [승급전 시작] 은 22 [모두 받기] 규격 `.pbtn` 으로 */
+    + '<button class="ifbtn pbtn" id="pgo"' + (canPromote() ? '' : ' disabled') + '><b>승급전 시작</b></button>');
   cosPaint($('mbox'));                   /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
-  $('pclose').onclick = closeModal;
   $('pgo').onclick = startPromo;
 }
 
@@ -27132,7 +27159,8 @@ $('mnw').querySelector('.mn-col').onclick = e => {
       ? '<p><b>' + m.n + '</b></p><p>진행 <b>' + gmProg(m) + ' / ' + m.goal + '</b></p>'
         + '<p>보상 ' + curIc('dia') + ' <b>' + fmt(gmDia(m)) + '</b></p>'
         + (gmReady() ? '<p style="color:#8ff0a8;margin-top:10px">완료! 화면 하단 배너에서 수령하세요.</p>' : '')
-      : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>');
+      : '<p>모든 가이드 미션을 완료했습니다! 🎉</p>',
+      { noOk: true });                             /* 267 — [확인] 제거. 닫기는 딤 탭 */
   }
   else if(k === 'rank')   openRank();                 /* 작업 54 — 전체화면 랭킹 페이지 */
   else if(k === 'bag')    openBag();                  /* 작업 53 인계 — 52 주석의 «분기 한 줄 교체» 지시대로 */

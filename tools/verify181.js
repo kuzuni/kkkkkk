@@ -55,7 +55,13 @@ async function main() {
     const g = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();
       return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
     const b = document.querySelector('#modal .mbox');
-    return { box: g('#modal .mbox'), rlt: g('#modal .rlt'),
+    /* 267 — [룰렛 돌리기] 가 22 [모두 받기] 규격(radius 43)이 되면서 **박스 모서리와 같은 종류의
+       AA 뒤집힘**이 이 버튼의 둥근 네 모서리에도 생긴다(원판 회전이 레이어를 다시 래스터할 때
+       호 위 화소가 두 값 사이를 오간다 — 실측 프레임당 ≤7화소, 다음 프레임에 되돌아온다).
+       박스 모서리와 같은 규칙으로 «따로 세되 흔들림으로는 안 센다». */
+    const rb = document.getElementById('rouBtn');
+    return { box: g('#modal .mbox'), rlt: g('#modal .rlt'), btn: g('#rouBtn'),
+             br: rb ? Math.ceil(parseFloat(getComputedStyle(rb).borderTopLeftRadius) || 0) : 0,
              rr: b ? Math.ceil(parseFloat(getComputedStyle(b).borderTopLeftRadius) || 0) : 0 };
   });
   if (!geo.box || !geo.rlt) { fail('룰렛 모달이 열리지 않았다'); }
@@ -88,13 +94,18 @@ async function main() {
   const shots = [];
   let midDia = null, midW = null;
   for (let i = 0; i < 8; i++) {
-    const spin = await page.evaluate(() => rouSpinning);
-    shots.push({ spin, buf: await page.screenshot({ clip: { x: geo.box.x, y: geo.box.y, width: geo.box.w, height: geo.box.h } }) });
+    const spin0 = await page.evaluate(() => rouSpinning);
+    const buf = await page.screenshot({ clip: { x: geo.box.x, y: geo.box.y, width: geo.box.w, height: geo.box.h } });
+    /* 267 — 캡처 «앞» 만 보던 판정을 **앞뒤 둘 다**로 바꿨다. 캡처 1장이 200~400ms 라
+       그 사이에 회전이 끝나면 결과줄·버튼 라벨이 바뀐 프레임이 «회전 중» 으로 섞여 들어와
+       흔들림 89,000화소로 오검출된다(이 절의 원 주석이 경고한 그 경계 — 판정이 반쪽이었다). */
+    const spin = spin0 && await page.evaluate(() => rouSpinning);
+    shots.push({ spin, buf });
     if (spin && midDia === null) midDia = await page.evaluate(() => S.dia);
     /* [C] 조바심 재터치 — 회전 중 비활성 버튼을 강제로 누른다(65 가 흔들림의 «주범» 으로 지목한 조작) */
     if (spin && (i === 1 || i === 3)) {
       await page.click('#rouBtn', { force: true }).catch(() => {});
-      await page.click('#rouClose', { force: true }).catch(() => {});
+      /* 267 — [닫기] 삭제. 딤 클릭은 «닫기» 라 재터치 표본으로 못 쓴다(아래 [D] 표본이 끊긴다). */
     }
     if (spin) midW = await page.evaluate(() => JSON.parse(JSON.stringify(window.__w)));
     await page.waitForTimeout(60);
@@ -273,6 +284,14 @@ function inCorner(x, y, w, h, r) {
   const R = r + 6;
   return (x < R || x >= w - R) && (y < R || y >= h - R);
 }
+/* 267 — 박스 좌표계에서 «[룰렛 돌리기] 버튼의 둥근 네 모서리» 안인가. 근거는 위 주석과 같다. */
+function inBtnCorner(x, y, geo) {
+  if (!geo.btn) return false;
+  const bx = geo.btn.x - geo.box.x, by = geo.btn.y - geo.box.y;
+  const lx = x - bx, ly = y - by;
+  if (lx < 0 || ly < 0 || lx >= geo.btn.w || ly >= geo.btn.h) return false;
+  return inCorner(lx, ly, geo.btn.w, geo.btn.h, geo.br || 0);
+}
 function diffPixels(bufA, bufB, geo, read, cornerOut) {
   const A = read(bufA), B = read(bufB);
   if (A.w !== B.w || A.h !== B.h) return A.w * A.h;
@@ -284,7 +303,7 @@ function diffPixels(bufA, bufB, geo, read, cornerOut) {
     const inR = y >= ry0 && y <= ry1;
     for (let x = 0; x < A.w; x++) {
       if (inR && x >= rx0 && x <= rx1) continue;
-      if (inCorner(x, y, A.w, A.h, geo.rr)) {
+      if (inCorner(x, y, A.w, A.h, geo.rr) || inBtnCorner(x, y, geo)) {
         const j = (y * A.w + x) * bpp;
         if (cornerOut && (Math.abs(A.data[j] - B.data[j]) > 8 || Math.abs(A.data[j + 1] - B.data[j + 1]) > 8 ||
             Math.abs(A.data[j + 2] - B.data[j + 2]) > 8)) cornerOut.n++;
@@ -308,6 +327,7 @@ function diffBox(bufA, bufB, geo, read) {
     const inR = y >= ry0 && y <= ry1;
     for (let x = 0; x < A.w; x++) {
       if (inR && x >= rx0 && x <= rx1) continue;
+      if (inCorner(x, y, A.w, A.h, geo.rr) || inBtnCorner(x, y, geo)) continue;
       const i = (y * A.w + x) * bpp;
       if (Math.abs(A.data[i] - B.data[i]) > 8 || Math.abs(A.data[i + 1] - B.data[i + 1]) > 8 ||
           Math.abs(A.data[i + 2] - B.data[i + 2]) > 8) {
