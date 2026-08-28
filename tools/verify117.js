@@ -116,9 +116,11 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   });
   ok(near(C.c1.atk / C.base.atk, 1.20, 1e-9), 'C1 Lv1 활성 = ×1.20 (34 회귀)', (C.c1.atk / C.base.atk).toFixed(4));
   ok(near(C.c1.dmg / C.base.dmg, 1.20, 1e-9), 'C2 stat.dmg 도 ×1.20', (C.c1.dmg / C.base.dmg).toFixed(4));
-  ok(C.c1.prog === 1 && C.c1.ck === '\u23F1' && /^\d\d:\d\d:\d\d$/.test(C.c1.txt),
-     'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시(시계 .ck + 숫자 .tm>i 두 부품)',
-     C.c1.prog + ' ' + C.c1.ck + '|' + C.c1.txt);
+  /* 334 — C3 의 술어를 **함수 하나로** 꺼내 둔다. 아래 되돌림 시험(C3n)이 이것을 **그대로** 쓴다 —
+     시험 안에서 사본을 만들면 «사본이 뒤집히는 것» 만 확인하고 정작 본 단언은 안 재는, 시험 자신의 헛초록이 된다. */
+  const c3pred = o => o.prog === 1 && o.ck === '\u23F1' && /^\d\d:\d\d:\d\d$/.test(o.txt);
+  const c3say  = o => o.prog + ' ' + o.ck + '|' + o.txt;
+  ok(c3pred(C.c1), 'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시(시계 .ck + 숫자 .tm>i 두 부품)', c3say(C.c1));
   ok(C.c4.lv === 2 && C.c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', C.c4.lv + '/' + C.c4.prog);
   ok(near(C.c4.atk / C.base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (C.c4.atk / C.base.atk).toFixed(4));
   ok(near(C.c4.hp / C.base.hp, 1.22, 1e-9) && near(C.c4.rate / C.base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
@@ -136,29 +138,33 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
        ⓐ 시계 `<b class="ck">` 를 지운다        → C3 는 빨개져야 한다(시계를 안 보는 단언이면 초록으로 남는다)
        ⓑ 숫자 `<i>` 에 옛 합본 «⏱ HH:MM:SS» 를 넣는다 → 역시 빨개져야 한다(형식을 안 보는 단언이면 초록)
      ⓑ 가 초록이면 «두 노드 시절» 과 «한 노드 시절» 을 구별 못 하는 것이라 부패가 그대로 재발한다.
-     DOM 은 손대는 즉시 원복하고 마지막에 `renderBless()` 로 다시 그린다(뒤 절에 흔적을 안 남긴다). */
+     DOM 은 손대는 즉시 원복하고 마지막에 `renderBless()` 로 다시 그린다(뒤 절에 흔적을 안 남긴다).
+     ⚠ 페이지 쪽은 **읽기만** 한다 — 네 모양에서 C3 와 똑같은 세 값(`prog`·`ck`·`txt`)을 걷어 오고,
+     판정은 위의 `c3pred` 가 한다. 시험이 자기 술어를 따로 들고 있으면 «사본이 뒤집히는 것» 만 보게 된다. */
   const N3 = await page.evaluate(() => {
-    /* C3 와 **같은 술어**를 그대로 쓴다 — 여기서만 무른 사본을 쓰면 시험이 거짓말을 한다 */
-    const pred = () => {
-      const tm = document.querySelector('#blsC_atk .tm');
-      const ck = tm.querySelector('b.ck'), i = tm.querySelector('i');
-      return !!ck && ck.textContent.trim() === '\u23F1' && /^\d\d:\d\d:\d\d$/.test(i.textContent);
+    /* C3 가 집는 것과 같은 세 값 — 여기서 판정하지 않는다(판정은 노드 쪽 c3pred) */
+    const snap = () => {
+      const tm = document.querySelector('#blsC_atk .tm'), ck = tm.querySelector('b.ck');
+      return { prog: S.bless.prog, ck: ck ? ck.textContent.trim() : null,
+               txt: tm.querySelector('i').textContent };
     };
     S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); renderBless();
     document.getElementById('blsC_atk').click();
-    const live = pred();
+    const live = snap();
     const tm = document.querySelector('#blsC_atk .tm');
     const ck = tm.querySelector('b.ck'), i = tm.querySelector('i'), keep = i.textContent;
-    ck.remove();                                const noClock = pred();
+    ck.remove();                                const noClock = snap();
     tm.insertBefore(ck, i);                     /* 원복 */
-    i.textContent = '\u23F1 ' + keep;           const merged = pred();   /* 한 노드이던 시절의 합본 */
-    i.textContent = keep;                       const back = pred();
+    i.textContent = '⏱ ' + keep;           const merged = snap();   /* 한 노드이던 시절의 합본 */
+    i.textContent = keep;                       const back = snap();
     renderBless();
-    return { live, noClock, merged, back, keep };
+    return { live, noClock, merged, back };
   });
-  ok(N3.live && !N3.noClock && !N3.merged && N3.back,
+  ok(c3pred(N3.live) && !c3pred(N3.noClock) && !c3pred(N3.merged) && c3pred(N3.back),
      'C3n 되돌림 시험 — 시계 삭제·옛 합본 표기 둘 다 C3 를 빨갛게 만든다',
-     '산 DOM ' + N3.live + ' · 시계없음 ' + N3.noClock + ' · 합본 ' + N3.merged + ' · 원복 ' + N3.back);
+     ['산 DOM', '시계없음', '합본', '원복'].map((n, x) =>
+       n + ' ' + c3pred([N3.live, N3.noClock, N3.merged, N3.back][x])).join(' · ')
+     + '  [합본 실측 «' + N3.merged.txt + '»]');
 
   /* ---- [D] 지속시간 곡선은 그대로 (레벨업은 그 활성화부터 즉시) ---- */
   const D = await page.evaluate(() => {
