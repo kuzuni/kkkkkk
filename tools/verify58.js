@@ -21,6 +21,10 @@
     [12] 전투 발 경로가 우상단 ▦ 메뉴 버튼(#menub)을 관통하지 않는다 (34차 2인 공통2)
     [13] 씬 B 머묾 구간에 코인이 «모두 받기» 라벨 keep-out 을 지킨다 (34차 2인 공통1)
     [14] 씬 A 전투 발이 프레임 오른쪽으로 잘려 나가지 않는다 (36차 2인 공통)
+    [15] 퀘스트 토스트가 «완전히 정지한 채» 오래 머물지 않는다 (36차 2인 공통F)
+    [16] 딤 위 알약 복제판의 숫자가 원본과 어긋나지 않는다 (37차 2인 공통ㄱ)
+    [17] 씬 A 전투 발이 우측 «상한» 에서 세로 기둥으로 뭉치지 않는다 (37차 2인 공통ㄴ)
+    [18] 퀘스트 체크 도장이 «정지 뒤 하드컷» 이 아니다 (37차 2인 공통ㄹ)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -92,6 +96,7 @@ async function run(scene, span, step) {
     };
     const goldPill = pill('gold'), diaPill = pill('dia');
     const samples = [];
+    let vk = 0;                              /* 38회차 [18] — 체크 도장에 «처음 본 순서» 표를 붙인다 */
     const t0 = performance.now();
     if (sc === 'gain') {
       /* 35회차 — 발원을 `enemies[0]` 에 맡기면 **실행마다 달라** [12] 가 재현되지 않는다(32회차가
@@ -140,6 +145,20 @@ async function run(scene, span, step) {
           toastB: toast ? (() => { const r = toast.getBoundingClientRect();
             return [Math.round(r.x * 10) / 10, Math.round(r.y * 10) / 10,
               Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; })() : null,
+          /* 38회차 [18] — 체크 도장도 토스트와 **같은 자**(레이아웃 상자)로 잰다. 두 비평가가
+             «84×84 ±1px 로 285ms 정지 → 한 표본도 없이 소멸» 로 잡은 자리다. 불투명도만 재면
+             퇴장이 «보이는» 것으로 잘못 통과한다(bbox 가 그대로면 플레이어에겐 하드컷이다).
+             ⚠ 반드시 **한 도장**을 끝까지 따라가야 한다. 씬 B 는 퀘스트 5행이 각자 도장을 찍는데
+               `querySelector('.fx-check')` 로 «첫 번째» 를 읽으면 앞 도장이 사라질 때마다 대상이
+               **다른 버튼의 다른 크기 도장**으로 갈아타, 종전 빌드(크기 무변화)에서도 «상자가
+               줄었다» 가 관측된다(첫 시도가 실제로 그렇게 통과했다). 처음 본 순서로 표를 붙인다. */
+          checkB: (() => {
+            for (const c of document.querySelectorAll('.fx-check')) if (!c.dataset.vk) c.dataset.vk = String(vk++);
+            const c = document.querySelector('.fx-check[data-vk="0"]');
+            if (!c) return null; const r = c.getBoundingClientRect();
+            return [Math.round(r.x * 10) / 10, Math.round(r.y * 10) / 10,
+              Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10,
+              Math.round(parseFloat(getComputedStyle(c).opacity) * 1000) / 1000]; })(),
           fxl: (document.getElementById('fxl') || { childElementCount: 0 }).childElementCount,
           gold: (document.getElementById('goldN') || {}).textContent,
           dia: (document.getElementById('diaN') || {}).textContent,
@@ -171,6 +190,9 @@ async function run(scene, span, step) {
       /* keep-out 규칙 상수도 페이지에서 읽는다 — 게이트가 자기 사본을 들면 부패한다(211·289) */
       kom: (typeof FX3_KOM === 'number' && typeof FX3_BSFX === 'number')
         ? { kom: FX3_KOM, fx: FX3_BSFX } : null,
+      /* 38회차 [17] — 차선 규칙 상수도 같은 이유로 페이지에서 읽는다 */
+      lane: (typeof FX3_MIND === 'number' && typeof FX3_MBM === 'number')
+        ? { mind: FX3_MIND, mbm: FX3_MBM } : null,
       /* [14] — 프레임 사각(페이지 좌표). 잘림은 «프레임 밖» 이지 «뷰포트 밖» 이 아니다. */
       frame: (() => { const a = document.getElementById('app'); if (!a) return null;
         const r = a.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })(),
@@ -383,6 +405,80 @@ async function run(scene, span, step) {
     ok(ls.length > 0 && bad.length === 0,
       `표본 ${ls.length}장 · 원본≠복제판 ${bad.length}장`
       + (bad.length ? ` (예: 원본 ${bad[0].lit[0]} / 복제판 ${bad[0].lit[1]})` : ''));
+  }
+
+  /* ---- [17] 씬 A 전투 발이 «상한» 에서 세로 기둥으로 뭉치지 않는다 (37차 Z[5]·AA[1] 2인 공통ㄴ) ----
+     두 사람이 같은 x 구간(1029~1062)을 독립으로 냈다: Z «기둥 폭 34px = 코인 1개분(가로 퍼짐 0)» ·
+     AA «f2~f6 5장 연속 x[1029,1062] 동일 · 간격 28px 로 6px 상호 침범».
+     ⚠ 재는 대상은 «상한 대역에 든 코인» 이다 — 상한과 무관한 자리에서 서로 가까운 것은 이 규칙이
+       아니다(퍼짐 끝점은 이미 배치 루프의 밀어내기가 본다). 대역은 눈대중이 아니라 차선 폭
+       `FX3_MIND` 하나로 잡는다: [상한 − FX3_MIND, 상한]. */
+  console.log('[17] 씬 A 전투 발 — 우측 상한 대역의 가로 퍼짐 (37차 Z·AA 2인 공통ㄴ)');
+  if (!gain.frame || !gain.lane) {
+    ok(false, '#app 사각 또는 FX3_MIND/FX3_MBM 을 못 읽었다 — 이 단언을 잴 대상이 없다');
+  } else {
+    /* ⚠ «대역 안 두 코인의 최소 간격 ≥ FX3_MIND» 로 세우면 안 된다 — 고친 빌드가 실행마다
+       빨개졌다(관측 12.6px). 상한에 **안 닿은** 코인이 우연히 대역을 지나가는 것까지 세기 때문인데,
+       그건 이 결함이 아니다(퍼짐 끝점 사이의 거리는 배치 루프의 밀어내기가 따로 본다).
+       두 비평가가 실제로 잰 것은 **«같은 x 에 여러 개»**(Z «기둥 폭 34px = 코인 1개분 · 가로 퍼짐 0» ·
+       AA «f2~f6 5장 연속 같은 x 구간»). 그대로 잰다 — 한 프레임에서 중심 x 가 겹치는 코인 쌍의 수. */
+    const bound = gain.frame.x + gain.frame.w - gain.lane.mbm;   /* 코인 «중심» 상한 = 1046 */
+    let col = 0, worstFrame = null, pinMax = 0;
+    for (const s2 of gain.samples) {
+      const xs = s2.flies.map((f) => f.cx + f.cw / 2).filter((cx) => cx >= bound - 200);
+      const bucket = new Map();
+      for (const cx of xs) { const k = Math.round(cx * 2); bucket.set(k, (bucket.get(k) || 0) + 1); }
+      let worst = 0;
+      for (const v of bucket.values()) worst = Math.max(worst, v);
+      if (worst >= 2) { col++; if (worst > pinMax) { pinMax = worst; worstFrame = s2.t; } }
+    }
+    /* 되돌리면 빨개진다: 38회차 이전 빌드(`x = Math.min(x, FRAME_W − FX3_MBM)` 단일 상한)는 같은
+       발원(1040,400)에서 상한에 닿은 코인이 **전부 x=1046** 에 모여 «한 x 에 2~3개» 인 프레임이 남는다. */
+    ok(col === 0, `우측 200px 안에서 «중심 x 가 같은» 코인이 2개 이상인 프레임 ${col}개`
+      + (worstFrame != null ? ` (최악 t=${worstFrame}ms · 한 x 에 ${pinMax}개)` : '') + ' — 0 이어야 한다');
+  }
+
+  /* ---- [18] 퀘스트 체크 도장이 «정지 뒤 하드컷» 이 아니다 (37차 Z[7]·AA[10] 2인 공통ㄹ) ----
+     [15](토스트)와 **같은 자·같은 두 단언**이다 — 같은 병이므로 같은 게이트를 세운다.
+     ⓐ 완전 정지 구간 ≤250ms  ⓑ 퇴장(소멸 직전)이 표본에 남는다. */
+  /* ⚠ «최장 정지 ≤ Nms» 로는 못 세운다 — [15](토스트)를 그대로 본떠 250ms 로 세웠더니
+       **되돌린 빌드가 통과했다**(213ms). 설계상 정지는 34%~80% of .6s = 276ms 인데, 이 컨테이너의
+       실제 표본 간격이 15ms 요청에도 **~40ms** 라 구간 경계가 한 걸음(±40ms)씩 흔들리고
+       중간에 표본 하나만 튀어도 «연속» 이 끊긴다(`tools/p58at.js` 시계열: 356·411·427·508·577
+       완전 동일 = 221~256ms 가 실행마다 왔다 갔다). 임계를 노이즈 폭 안에서 조정하는 것은
+       게이트가 아니라 눈대중이다 → **임계 없는 자**로 바꾼다.
+     프로브가 준 자: 도장은 `translate(-50%,-50%) scale(…)` 이라 등장·퇴장의 크기 변화가 전부
+     **중심 고정**으로 일어난다. 그래서 종전 빌드는 «중심 이동 총거리 = 0.0px» 이 수명 내내 성립하고,
+     퇴장도 opacity 만 1→0 이라 상자가 92×97 로 **한 픽셀도 안 움직인 채** 사라진다.
+     두 비평가가 «정지» 와 «하드컷» 으로 따로 적은 것이 실은 같은 하나다. */
+  console.log('[18] 퀘스트 체크 도장 — 중심 이동 + 움직이는 퇴장 (37차 Z·AA 2인 공통ㄹ)');
+  {
+    const cs = quest.samples.filter((s) => s.checkB);
+    const vis = cs.filter((s) => s.checkB[4] >= 0.02);
+    const ctr = (b) => [b[0] + b[2] / 2, b[1] + b[3] / 2];
+    let path = 0;
+    for (let i = 1; i < vis.length; i++) {
+      const a = ctr(vis[i - 1].checkB), c = ctr(vis[i].checkB);
+      path += Math.hypot(c[0] - a[0], c[1] - a[1]);
+    }
+    /* 되돌리면 빨개진다: 38회차 이전 빌드는 같은 자로 **0.0px**(중심 완전 고정, p58at 20표본 전부).
+       임계 4px 은 눈대중이 아니라 **선언한 부유 진폭 5px 의 80%** 다(표본 격자 손실 몫). */
+    ok(vis.length > 0 && path >= 4,
+      `가시 표본 ${vis.length}장 · 중심 이동 총거리 ${path.toFixed(1)}px (≥4 — 선언 부유 5px)`);
+    /* ⓑ 퇴장 — 소멸이 «움직임» 으로 보여야 한다. 종전 빌드는 퇴장 구간(op 1→0) 내내 상자가
+       92×97 그대로라 «움직인 퇴장» 표본이 **0장**이었다(= 두 사람이 «하드컷» 으로 읽은 그림). */
+    /* ⚠ «퇴장 표본이 매 쌍 움직인다» 로 세우면 안 된다 — 고친 빌드가 1/2 로 빨개졌다. 퇴장은
+       ease-in 이라 앞머리 40ms 의 이동이 0.2px 이고, 이 컨테이너의 표본 간격이 ~40ms 라 앞쪽 한
+       쌍이 격자에 안 걸린다. 쌍이 아니라 **끝점**을 본다: 소멸 직전 중심이 머물던 자리보다
+       «위» 에 있어야 한다(선언 22px 상승). 종전 빌드는 정확히 0.0px 다. */
+    const fade = cs.filter((s) => s.t > 250 && s.checkB[4] > 0.005 && s.checkB[4] < 0.98);
+    const opaque = cs.filter((s) => s.t > 250 && s.checkB[4] >= 0.98);
+    const ref = opaque.length ? ctr(opaque[opaque.length - 1].checkB)[1] : null;
+    const rise = fade.length && ref != null
+      ? ref - Math.min(...fade.map((s) => ctr(s.checkB)[1])) : 0;
+    ok(fade.length >= 1 && ref != null && rise >= 4,
+      `퇴장 표본 ${fade.length}장 · 마지막 불투명 표본 대비 중심 상승 ${rise.toFixed(1)}px `
+      + '(≥4 — 선언 22px, 표본 격자 손실 몫)');
   }
 
   console.log('[11] 콘솔 에러 0');

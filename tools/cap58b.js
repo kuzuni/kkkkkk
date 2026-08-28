@@ -157,6 +157,31 @@ async function shot(scene, T, idx, seed) {
   await p.waitForTimeout(1100);
   await setupScene(p, scene);
 
+  /* ⚑ 38회차 — 37차 «반증 2» 의 처방(넘긴 것 3번). 이 하네스는 **프레임마다 페이지를 새로 연다**
+     (31회차가 «낡은 합성» 을 없애려고 고른 방식). 그래서 «첫 도착» 처럼 실행마다 몇 ms 씩 흔들리는
+     사건은 프레임 열에서 **깜빡임**으로 찍힌다 — f8 은 태어난 지 오래인 판, f9 는 막 태어난 판
+     (opacity 0), f10 은 40ms 된 판이 되는 식이다. 37차 두 비평가(Z[4]·AA[4])가 그 그림을
+     «+n 플로터가 1프레임 깜빡이고 26px 순간이동한다» 로 **독립적으로 같이** 잡았는데, 게임에는
+     없는 결함이었다(MutationObserver 로 훑으니 `.fx-plus` 는 1개가 314ms 에 나서 1192ms 에 진다).
+     얼리기 세 겹은 «한 판 안의 시간» 만 고정했고 «판과 판 사이» 는 여전히 안 맞는다.
+     → 판 사이를 맞출 수는 없지만(페이지가 다르다) **비평가가 알 수는 있게** 한다: 연출 노드마다
+       태어난 시각을 찍어 두고 정답표에 «나이(ms)» 열을 남긴다. 같은 종류의 노드가 프레임 열에서
+       나이가 **거꾸로 가거나 리셋되면** 그 프레임은 판이 다른 것이지 게임이 깜빡인 것이 아니다.
+     ⚠ 전역 MutationObserver 는 쓰지 않는다 — 게임의 재렌더마다 콜백이 돌아 우리가 재려는 타이밍을
+       흔든다. 연출 레이어 두 개의 `appendChild` 만 감싼다(연출 노드는 전부 이 둘로 들어간다). */
+  await p.evaluate(() => {
+    for (const id of ['fxl', 'fxlc']) {
+      const L = document.getElementById(id);
+      if (!L || L.__capBorn) continue;
+      L.__capBorn = true;
+      const _ac = L.appendChild.bind(L);
+      L.appendChild = (n) => {
+        try { if (n && n.nodeType === 1) n.dataset.born = String(Math.round(performance.now())); } catch (e) {}
+        return _ac(n);
+      };
+    }
+  });
+
   const info = await p.evaluate(async ({ T, trg }) => {
     // eslint-disable-next-line no-new-func
     const fire = new Function('return (' + trg + ')')();
@@ -190,6 +215,8 @@ async function shot(scene, T, idx, seed) {
     } catch (e) {}
     window.setTimeout = () => 0;
     window.setInterval = () => 0;
+    /* 38회차 — 얼린 «그 순간» 의 시각을 남긴다. 나이 = 얼린 시각 − 태어난 시각(위 appendChild). */
+    window.__frz = performance.now();
     return { at: Math.round(at), killed };
   }, { T, trg: TRIGGERS[scene].toString() });
 
@@ -213,6 +240,16 @@ async function shot(scene, T, idx, seed) {
       flash: document.querySelectorAll('.fx-flash').length,
       check: document.querySelectorAll('.fx-check').length,
       toast: document.querySelectorAll('.fx-toast').length,
+      /* 38회차 — «나이(ms)» = 얼린 시각 − 태어난 시각. 판(페이지)마다 사건 시각이 몇 ms 흔들리는데,
+         나이를 같이 주면 비평가가 «이 프레임은 판이 달라서 어린 것» 과 «게임이 깜빡인 것» 을 가른다. */
+      age: (() => {
+        const f = window.__frz || performance.now();
+        const g = (sel) => [...document.querySelectorAll(sel)]
+          .map((n) => (n.dataset && n.dataset.born ? Math.round(f - +n.dataset.born) : null))
+          .filter((v) => v != null).sort((a, b) => b - a);
+        return { fly: g('.fx-fly'), plus: g('.fx-plus'), spark: g('.fx-spark'),
+          check: g('.fx-check'), toast: g('.fx-toast'), flash: g('.fx-flash') };
+      })(),
     };
   });
   await p.waitForTimeout(40);
@@ -250,8 +287,14 @@ async function shot(scene, T, idx, seed) {
   for (const scene of WANT) {
     const rs = rows.filter(r => r.scene === scene);
     if (!rs.length) continue;
-    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
-    rs.forEach(r => { md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} |\n`; });
+    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    rs.forEach(r => {
+      /* 38회차 — «나이» 열. 종류마다 «가장 늙은 노드» 하나만 적는다(전부 적으면 표가 안 읽힌다). */
+      const a = r.age || {};
+      const ag = ['fly', 'plus', 'spark', 'check', 'toast'].map((k) => (a[k] && a[k].length ? k + ' ' + a[k][0] : null))
+        .filter(Boolean).join(' · ') || '—';
+      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${ag} |\n`;
+    });
     md += '\n';
   }
   fs.writeFileSync(path.join(OUT, `58-${ROUND}-정답표.md`), md);
