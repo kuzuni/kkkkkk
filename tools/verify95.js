@@ -39,8 +39,14 @@ const { chromium } = (() => {
 })();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+/* 305 — 실패 항목을 «절 이름» 과 함께 들고 있다가 **표 뒤에** 다시 찍는다.
+   왜: 실패는 원래도 `  ✗ …` 로 찍혔지만, [A] 20줄 + 표 20줄에 밀려 `tail` 로 보면
+   마지막 줄(`VERIFY95 FAIL — n건`)만 남는다 — 292 가 «무엇이 실패했는지 알 수가 없다»
+   고 적은 것이 이 자리다(226·236 의 «게이트가 자기 실패를 말하게 하라»). */
+let sec = '?';
+const section = (s) => { sec = s; console.log(s); };
 const fails = [];
-const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
+const fail = (m) => { fails.push({ sec, m }); console.log('  ✗ ' + m); };
 const ok = (m) => console.log('  ✓ ' + m);
 
 function launchOpts() {
@@ -152,7 +158,7 @@ const SEED = (light) => {
   };
 
   /* ---------- [A] 화면별 마우스 드래그 스크롤 ---------- */
-  console.log('[A] 마우스 드래그 스크롤 — 화면별 실측 (화면마다 새 페이지)');
+  section('[A] 마우스 드래그 스크롤 — 화면별 실측 (화면마다 새 페이지)');
   const table = [];
   for (const [name, expr, sel, vh, light] of SCREENS) {
     const { ctx, page } = await fresh(vh, false, light === 'light');
@@ -182,7 +188,7 @@ const SEED = (light) => {
   {
     const { ctx, page } = await fresh();
     const info = await open(page, `openShopPage()`, '.shp-list');
-    console.log('[B] 드래그 = 탭 아님 (click 억제)');
+    section('[B] 드래그 = 탭 아님 (click 억제)');
     await page.evaluate(() => { window.__clk = 0; });
     await drag(page, info.x, info.y, -260);
     await page.waitForTimeout(400);
@@ -190,7 +196,7 @@ const SEED = (light) => {
     if (c === 0) ok('260px 드래그 → click 0건');
     else fail(`260px 드래그인데 click ${c}건 발화 (74 합성기 억제 실패)`);
 
-    console.log('[C] 탭 회귀 — 5px 이동은 click 정상');
+    section('[C] 탭 회귀 — 5px 이동은 click 정상');
     await page.waitForTimeout(400);                      /* 74 ③ 딤 가드(250ms) 를 지나서 누른다 */
     await page.evaluate(() => { window.__clk = 0; });
     await drag(page, info.x, info.y, -5, 2, 30);
@@ -205,7 +211,7 @@ const SEED = (light) => {
   {
     const { ctx, page } = await fresh();
     const info = await open(page, `openRank()`, '.rk-list');
-    console.log('[D] 휠');
+    section('[D] 휠');
     await page.mouse.move(info.x, info.y);
     await page.mouse.wheel(0, 600);
     await page.waitForTimeout(300);
@@ -219,7 +225,7 @@ const SEED = (light) => {
   {
     const { ctx, page } = await fresh(2280, true);
     const info = await open(page, `openRank()`, '.rk-list');
-    console.log('[F] 터치 회귀 — 네이티브 스크롤만');
+    section('[F] 터치 회귀 — 네이티브 스크롤만');
     const cdp = await ctx.newCDPSession(page);
     const pt = (type, y, on) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: on ? [{ x: info.x, y }] : [] });
     await pt('touchStart', info.y, 1);
@@ -239,16 +245,37 @@ const SEED = (light) => {
   {
     const { ctx, page } = await fresh();
     const info = await open(page, `openPass()`, '.ps-list');
-    console.log('[E] 관성(fling)');
-    await page.mouse.move(info.x, info.y);
-    await page.mouse.down();
-    for (let i = 1; i <= 6; i++) { await page.mouse.move(info.x, info.y - i * 60); await page.waitForTimeout(8); }
-    await page.mouse.up();
+    section('[E] 관성(fling)');
+    /* 305 — 이 절이 «4회 중 1회» FAIL 하던 자리다. 제품은 멀쩡했고 **게이트가 창의 앞턱에 서 있었다**
+       (226 «게이트가 잰 시점이 흔들렸다» 와 같은 형태).
+       index.html «95» 의 end 는 `performance.now() - r.t < 90` 일 때만 fling 을 건다
+       (= «멈춘 채로 뗐으면 관성 없음»). 그런데 playwright 의 page.mouse 는 호출마다 왕복을
+       기다려서 «마지막 move → up» 사이에 클라우드 컨테이너 기준 84~134ms 가 끼었다.
+       10회 프로브(`node tools/probe305.js`) 실측 — gap<90 인 3회는 전부 fling ○ PASS,
+       gap≥90 인 7회는 전부 fling ✗ FAIL 로 **부호가 gap 하나에 완전히 갈렸다**.
+       → 같은 CDP 세션에 마지막 move 와 up 을 «연달아»(왕복을 안 기다리고) 보내면 순서는 보장되면서
+         간격이 0.7~0.9ms 로 떨어진다(실측 6/6 PASS). 입력 경로 자체는 page.mouse 와 같다. */
+    await page.evaluate(() => {
+      window.__lm = 0; window.__gap = null;
+      addEventListener('pointermove', () => { window.__lm = performance.now(); }, true);
+      addEventListener('pointerup', () => { window.__gap = window.__lm ? performance.now() - window.__lm : -1; }, true);
+    });
+    const cdp = await ctx.newCDPSession(page);
+    const mev = (type, y, buttons) => cdp.send('Input.dispatchMouseEvent',
+      { type, x: info.x, y, button: 'left', buttons, clickCount: 1, pointerType: 'mouse' });
+    await mev('mousePressed', info.y, 1);
+    for (let i = 1; i <= 5; i++) { await mev('mouseMoved', info.y - i * 60, 1); await page.waitForTimeout(8); }
+    await Promise.all([mev('mouseMoved', info.y - 360, 1), mev('mouseReleased', info.y - 360, 0)]);
     const t0 = await page.evaluate(() => window.__top());
+    const gap = await page.evaluate(() => window.__gap);
     await page.waitForTimeout(450);
     const t1 = await page.evaluate(() => window.__top());
-    if (t1 - t0 > 20) ok(`뗀 뒤 ${Math.round(t1 - t0)}px 더 흐름 (${Math.round(t0)} → ${Math.round(t1)})`);
-    else fail(`관성 없음 — 뗀 직후 ${Math.round(t0)} → ${Math.round(t1)}`);
+    const gs = typeof gap === 'number' && gap >= 0 ? `${Math.round(gap)}ms` : '측정불가';
+    /* 표본이 창 밖에 섰으면 «제품이 틀렸다» 고 말하지 않는다 — 게이트 자신을 지목한다. */
+    if (typeof gap === 'number' && gap >= 90)
+      fail(`게이트 계측 — 마지막 move → up 간격 ${gs} 가 제품의 관성 창(90ms) 밖이라 관성을 판정할 수 없다 (제품 결함 아님 · 305)`);
+    else if (t1 - t0 > 20) ok(`뗀 뒤 ${Math.round(t1 - t0)}px 더 흐름 (${Math.round(t0)} → ${Math.round(t1)} · move→up ${gs})`);
+    else fail(`관성 없음 — 뗀 직후 ${Math.round(t0)} → ${Math.round(t1)} (move→up ${gs} — 창 안인데 안 흘렀다)`);
     await ctx.close();
   }
 
@@ -258,7 +285,7 @@ const SEED = (light) => {
     const info = await open(page, `openRank()`, '.rk-list');
     await drag(page, info.x, info.y, -200);              /* #dsbar 는 첫 드래그 때 만들어진다 */
     await page.waitForTimeout(200);
-    console.log('[G] 레이아웃 중립 — 스크롤바 거터');
+    section('[G] 레이아웃 중립 — 스크롤바 거터');
     const g = await page.evaluate((sels) => {
       const out = [];
       for (const s of sels) document.querySelectorAll(s).forEach((el) => {
@@ -278,7 +305,7 @@ const SEED = (light) => {
     else if (g.bar.pe === 'none' && g.bar.pos === 'absolute') ok(`#dsbar 오버레이 (absolute · pointer-events:none · 폭 ${g.bar.w})`);
     else fail(`#dsbar 가 오버레이가 아니다: ${JSON.stringify(g.bar)}`);
 
-    console.log('[H] overscroll-behavior:contain');
+    section('[H] overscroll-behavior:contain');
     const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
     const rule = (src.match(/[^{}]*\{[^{}]*overscroll-behavior:\s*contain[^{}]*\}/g) || []).join(' ');
     const missSrc = CONTAINERS.filter((c) => !rule.includes(c));
@@ -295,7 +322,7 @@ const SEED = (light) => {
     await ctx.close();
   }
 
-  console.log('[I] 콘솔');
+  section('[I] 콘솔');
   if (!errs.length) ok('에러 0건'); else errs.slice(0, 8).forEach((e) => fail(e));
 
   console.log('\n| 화면 | 컨테이너 | 최대 스크롤 | 드래그 −400 직후 | 0.6초 뒤 | 판정 |');
@@ -303,6 +330,11 @@ const SEED = (light) => {
   for (const t of table) console.log(`| ${t[0]} | \`${t[1]}\` | ${t[2]} | ${t[3]} | ${t[4]} | ${t[5]} |`);
 
   await browser.close();
+  /* 305 — 실패 목록을 표 «뒤» 에 다시 찍는다. `tail` 로 잘라 봐도 무엇이 실패했는지 남는다. */
+  if (fails.length) {
+    console.log('\n실패 항목 (절 · 내용)');
+    fails.forEach((f, i) => console.log(`  ${i + 1}. ${f.sec}\n     ✗ ${f.m}`));
+  }
   console.log(fails.length ? `\nVERIFY95 FAIL — ${fails.length}건` : '\nVERIFY95 PASS');
   process.exit(fails.length ? 1 : 0);
 })().catch((e) => { console.error(e); process.exit(2); });
