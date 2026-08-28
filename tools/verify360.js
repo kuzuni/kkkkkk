@@ -188,8 +188,11 @@ async function survey(p) {
   console.log(`    기준(출석·축복 뺀 ${ref.length}칸) 평균 잉크 = ${aw.toFixed(1)} × ${ah.toFixed(1)}`);
   got.forEach(r => {
     const dw = (r.ink.w / aw - 1) * 100, dh = (r.ink.h / ah - 1) * 100;
-    ok(Math.abs(dw) <= BAND && Math.abs(dh) <= BAND,
-       `${r.pop} ${r.glyph} 잉크 ${r.ink.w}×${r.ink.h} — 형제 평균 대비 폭 ${dw.toFixed(1)}% · 높이 ${dh.toFixed(1)}%`);
+    /* 356 이관 — 축복의 «폭» 만 전용 항(아래 ★)이 맡는다. 여기 루프에 남겨 두면 같은 사실을
+       두 항이 서로 다른 기대값으로 물어 영원히 한쪽이 빨간 게이트가 된다. 높이는 그대로 본다. */
+    const skipW = (r.pop === 'bless');
+    ok((skipW || Math.abs(dw) <= BAND) && Math.abs(dh) <= BAND,
+       `${r.pop} ${r.glyph} 잉크 ${r.ink.w}×${r.ink.h} — 형제 평균 대비 폭 ${dw.toFixed(1)}%${skipW ? '(폭은 ★ 항이 맡는다)' : ''} · 높이 ${dh.toFixed(1)}%`);
   });
   /* 주인이 이름을 댄 두 자리를 **따로** 한 번 더 못 박는다 — 위 루프에 섞여 있으면
      «어느 행이 왜 잡혔는지» 가 안 보이고, 지시가 그 둘을 지목했다는 사실이 게이트에서 사라진다. */
@@ -197,16 +200,27 @@ async function survey(p) {
   ok(at && Math.abs((at.ink.h / ah - 1) * 100) <= BAND,
      '★ 출석 — 잉크 «높이» 가 형제와 같은 급 (수리 전 +20~23%: 아트 101 단독 규격)',
      at ? ((at.ink.h / ah - 1) * 100).toFixed(1) + '%' : 'X');
-  ok(bl && Math.abs((bl.ink.w / aw - 1) * 100) <= BAND,
-     '★ 축복 — 잉크 «폭» 이 형제와 같은 급 (수리 전 +18~21%: --sx 1.414)',
+  /* ★ 356 이관(주인 지시 2026-08-29 «아이콘은 원본 비율») — 이 항이 **뒤집혔다.**
+     360 은 🙏 의 좁은 자연 폭을 `--sx 1.235` 로 늘려 형제 급에 맞췄다. 356 이 그 배율을 폐기하니
+     축복만 **폭 −11.5%** 로 내려앉는다. 이건 356 의 부작용이 아니라 **글리프 자체의 성질**이고,
+     360 이 이미 답을 적어 뒀다: «답은 배율이 아니라 선례다»(🏅 → 🏆 처럼 **글리프를 갈아 끼운다**).
+     ⇒ 폭 항은 «형제와 같다» 가 아니라 **«356 이 남긴 값 그대로인가»** 를 묻는다.
+        · 누가 `--sx` 를 되살리면 −11.5% 가 0% 근처로 올라가 **빨개진다**(356 회귀 감지)
+        · 누가 --sf 를 흔들면 값이 벗어나 **빨개진다**
+        · 글리프를 형제 급 폭으로 갈아 끼우는 후속(368-b 등재)이 오면 이 기대값을 0%±5 로 되돌린다
+     높이는 그대로 형제 급이어야 한다(--sf 는 356 이 안 건드렸다) — 아래 두 항이 짝이다. */
+  const BLW = -11.5, BLTOL = 2.5;
+  ok(bl && Math.abs((bl.ink.w / aw - 1) * 100 - BLW) <= BLTOL,
+     `★ 축복 폭 = 356 이 남긴 ${BLW}%±${BLTOL} (--sx 를 되살리면 0% 로 올라가 빨개진다)`,
      bl ? ((bl.ink.w / aw - 1) * 100).toFixed(1) + '%' : 'X');
-  /* 356(아이콘 원본 비율 전수 — 비균등 scaleX 금지)에 남겨 두는 자리.
-     360 은 sx 를 «형제 범위» 안으로 좁혔을 뿐 1 로 만들지는 않았다. 그 범위가 다시 벌어지면
-     356 이 손댈 거리가 늘어나므로 여기서 상한을 둔다(값이 아니라 **퍼짐**을 묻는다). */
+  ok(bl && Math.abs((bl.ink.h / ah - 1) * 100) <= BAND,
+     '★ 축복 «높이» 는 형제와 같은 급 (356 은 --sf 를 안 건드렸다)',
+     bl ? ((bl.ink.h / ah - 1) * 100).toFixed(1) + '%' : 'X');
+  /* ★ 356 이관 — «--sx 퍼짐 ≤ 0.25» 는 «1 로 몰 때까지의 거리» 를 재던 항이다. 다 몰았으므로
+     이제 물을 것은 퍼짐이 아니라 **선언이 하나도 없는가** 다(--sx:1 로 적어 두는 것도 막는다). */
   const sxs = s.list.map(r => r.sx).filter(v => v);
-  ok(sxs.length === 6 && Math.max(...sxs) - Math.min(...sxs) <= 0.25,
-     '아이콘 --sx 퍼짐 ≤ 0.25 (수리 전 0.919~1.414 = 0.495 — 356 이 1 로 몰 때의 거리)',
-     sxs.length === 6 ? `${Math.min(...sxs)}~${Math.max(...sxs)} (폭 ${(Math.max(...sxs) - Math.min(...sxs)).toFixed(3)})` : sxs.join(','));
+  ok(sxs.length === 0, '아이콘 --sx 선언 0건 (356 — 아이콘은 원본 비율)',
+     sxs.length ? sxs.join(',') : '없음');
 
   /* ── 4. 승계 — 318 레드닷 경로가 살아 있는가 ──────────────────────────────── */
   console.log('\n[4] 승계 — 318 출석 레드닷(`sideAlert`)이 새 규격에서도 켜진다');
@@ -253,7 +267,8 @@ async function survey(p) {
      이 게이트를 통째로 다시 돌린다(V360_SRC). 빨개져야 정상이다. */
   if (!process.env.V360_SRC) {
     console.log('\n[R] 되돌림 시험 — 축복 --sx 를 옛 1.414 로 되돌린 사본이 빨개지는가');
-    const OLD_BLESS = '--sf:.862;--sx:1.235;--dx:2px;--dy:1.5px';
+    /* 356 이관 — 갈아 끼울 문자열에서 `--sx` 가 빠졌다. 되돌림은 «옛 배율을 도로 심는다» 로 같다. */
+    const OLD_BLESS = '--sf:.862;--dx:2px;--dy:1.5px';
     const hits = src.split(OLD_BLESS).length - 1;
     ok(hits === 1, '[R] 갈아 끼울 자리가 정확히 1곳', hits);
     if (hits === 1) {
@@ -261,7 +276,11 @@ async function survey(p) {
          상대 경로로 물고 있어 /tmp 에 두면 리소스가 통째로 404 가 되고, 배경이 달라지면
          차분으로 뜬 «찍힌 픽셀» 도 같이 달라진다. */
       const f = path.join(ROOT, '.v360-neg.html');
-      fs.writeFileSync(f, src.replace(OLD_BLESS, '--sf:.916;--sx:1.414;--dx:2px;--dy:1.5px'));
+      fs.writeFileSync(f, src.replace(OLD_BLESS, '--sf:.916;--sx:1.414;--dx:2px;--dy:1.5px')
+        /* `.ibtn .si` 의 scaleX 자체를 356 이 뗐으므로 사본에는 그 손잡이도 도로 심어야
+           «옛 배율» 이 실제로 걸린다 — 안 심으면 사본이 그대로 초록이 나와 시험이 헛돈다 */
+        .replace('transform:translate(var(--dx,0),var(--dy,0));',
+                 'transform:translate(var(--dx,0),var(--dy,0)) scaleX(var(--sx,1));'));
       const { p: p2, errs: e2 } = await boot(ctx, 'file://' + f);
       const s2 = await survey(p2);
       const g2 = s2.list.filter(r => r.ink);
@@ -269,10 +288,12 @@ async function survey(p) {
       const aw2 = r2.reduce((a, r) => a + r.ink.w, 0) / r2.length;
       const bl2 = g2.find(r => r.pop === 'bless');
       const d2 = bl2 ? (bl2.ink.w / aw2 - 1) * 100 : 0;
-      ok(bl2 && Math.abs(d2) > BAND,
-         '[R] 옛 배율(1.414)로 되돌리면 축복 폭이 ±5% 밖으로 나간다 — 단언이 헐겁지 않다',
+      ok(bl2 && Math.abs(d2 - BLW) > BLTOL,
+         `[R] 옛 배율(1.414)로 되돌리면 축복 폭이 «356 이 남긴 ${BLW}%» 에서 벗어난다 — 단언이 헐겁지 않다`,
          d2.toFixed(1) + '%');
       /* 되돌린 것 «말고» 는 그대로 초록이어야 한다 — 아니면 «아무거나 흔들면 다 빨개지는» 항등식이다 */
+      /* ⚠ 사본은 `.ibtn .si` 의 scaleX 손잡이를 도로 심으므로 **--sx 가 없는 5행도 기본값 1** 로
+         돌아간다 = 폭이 안 바뀐다. 그래서 이 항은 여전히 «나머지는 그대로» 를 묻는다. */
       ok(g2.filter(r => r.pop !== 'bless').every(r => Math.abs((r.ink.w / aw2 - 1) * 100) <= BAND),
          '[R] 나머지 5행은 그대로 초록 — «아무거나 흔들면 빨개지는» 항등식이 아니다');
       ok(e2.length === 0, '[R] 사본 콘솔 에러 0건', e2.length ? e2.join(' | ') : '없음');

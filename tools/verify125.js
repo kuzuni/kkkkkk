@@ -191,14 +191,17 @@ function stripComments(src) {
                 상자를 63 × 57/55 = **65.3** 으로 키워 코어를 ref Δ0 으로 맞췄다(A3 9회차,
                 비평가 4인 U·V·W·X 동일값). 외곽도 65.3 으로 ref 실측 64~65 에 더 가까워졌다.
        · dia  — `cur-dia.svg` 의 마름모가 viewBox 64 안에서 덜 차 **가로만** 모자란다.
-                상자는 63×63 그대로 두고 **이미지 자신에** `scaleX(1.16)`(A3 6회차) →
-                rect 는 **73.1×63**. 종횡비가 «깨진» 게 아니라 잉크 가로를 되돌린 결과다.
+                A3 6회차는 **이미지 자신에** `scaleX(1.16)` 을 걸어 rect 를 73.1×63 으로 만들었다.
+                ★ 356 이관(주인 지시 2026-08-29 «아이콘은 원본 비율») — 그 한 줄이 **폐기**됐다.
+                «잉크 가로를 되돌린 것» 이 아니라 **아이콘을 16% 늘린 것**이고, 주인이 지운 것이
+                정확히 그런 자리다. ⇒ dia 도 상자 그대로 **63×63 · transform 없음**.
+                남는 폭 부족(−12~15%)은 자산 몫이다(`cur-dia.svg` 재작도 — 아래 «자산이 고쳐지면» 절). 
      그래서 D1 은 «63×63» 이 아니라 **재화별 확정값**을 잰다. 그리고 그 두 override 가
      «어느 축으로» 걸렸는지(gold=상자 · dia=transform)까지 봐야 다음 세션이 기전을 바꿔치기 못 한다 — D1b.
      자산(`cur-*.svg`)이 고쳐져 override 가 필요 없어지면 **이 기대값도 같이 내려야** 한다
      (measure/A3 §아트 필요 «자산이 고쳐지면 그 override 를 지워야 한다»).
      화면 override 는 `#top .curs` 한정이라 13 재화 탭(55×55)은 이 선택자에 안 들어온다. */
-  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 73.1, h: 63, tf: true } };
+  const HUD_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 63, h: 63, tf: false } };
   const D = await page.evaluate(() => {
     const out = { hud: [], tf: [] };
     document.querySelectorAll('.cbox i > img.cic').forEach(im => {
@@ -212,12 +215,12 @@ function stripComments(src) {
   const geoBad = D.hud.filter(x => !HUD_EXP[x.k]
     || Math.abs(x.w - HUD_EXP[x.k].w) > 2 || Math.abs(x.h - HUD_EXP[x.k].h) > 2);
   ok(D.hud.length === 2 && geoBad.length === 0,
-     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 73.1×63 — measure/A3 + A3 6·9회차)',
+     'D1 HUD 아이콘 재화별 확정 크기 (gold 65.3×65.3 · dia 63×63 — 356 이관: dia scaleX 폐기)',
      D.hud.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const mBad = D.hud.filter(x => HUD_EXP[x.k]
     && HUD_EXP[x.k].tf !== (x.tf !== 'none' && x.tf !== 'matrix(1, 0, 0, 1, 0, 0)'));
   ok(D.hud.length === 2 && mBad.length === 0,
-     'D1b 두 override 가 기전 그대로 (gold=상자 크기 · dia=이미지 scaleX)',
+     'D1b override 기전 (gold=상자 크기 · dia=override 없음 — 356 이 scaleX 를 폐기했다)',
      D.hud.map(x => x.k + ' ' + (x.tf === 'none' ? '상자' : x.tf)).join(' · '));
   ok(D.tf.every(t => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'),
      'D2 HUD 아이콘에 옛 scaleX 보정이 남지 않았다', D.tf.join(' | '));
@@ -231,7 +234,7 @@ function stripComments(src) {
      ⇒ 기대값을 HUD(D1)와 **같은 재화별 확정값**으로 옮긴다. 상자(`<i>` 57×57)는 그대로이고
      움직인 것은 **이미지**뿐이라, 여기서 재는 것도 이미지 rect 다. 자산이 고쳐지면 D1 과
      함께 내린다. 잉크가 실제로 ref 에 붙었는지는 `tools/verify340.js` 가 픽셀로 못박는다. */
-  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 73.1, h: 63, tf: true } };
+  const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 63, h: 63, tf: false } };  /* 356 이관 */
   const P = await page.evaluate(() => {
     openDungeon();
     const out = [];
@@ -245,12 +248,12 @@ function stripComments(src) {
   });
   const pBad = P.filter(x => PCB_EXP[x.k] && (Math.abs(x.w - PCB_EXP[x.k].w) > 2 || Math.abs(x.h - PCB_EXP[x.k].h) > 2));
   ok(P.length >= 2 && pBad.length === 0,
-     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 73.1×63 — 340)',
+     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 63×63 — 340·356)',
      P.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const pmBad = P.filter(x => PCB_EXP[x.k]
     && PCB_EXP[x.k].tf !== (x.itf !== 'none' && x.itf !== 'matrix(1, 0, 0, 1, 0, 0)'));
   ok(P.length >= 2 && pmBad.length === 0,
-     'D3b 재화 바도 HUD 와 같은 기전 (gold=상자 크기 · dia=이미지 scaleX — 340)',
+     'D3b 재화 바도 HUD 와 같은 기전 (gold=상자 크기 · dia=override 없음 — 340·356)',
      P.map(x => x.k + ' ' + (x.itf === 'none' ? '상자' : x.itf)).join(' · '));
   ok(P.every(x => x.tf === 'none' || x.tf === 'matrix(1, 0, 0, 1, 0, 0)'),
      'D4 재화 바 아이콘에 옛 scaleX 보정이 남지 않았다', P.map(x => x.tf).join(' | '));

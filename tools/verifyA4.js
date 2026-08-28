@@ -116,16 +116,27 @@ function is(name, got, want) {
   tot++; if (/7\.45px/.test(d.cdwRing)) ok++; else fails.push('활성 안쪽 노란 링 7.45px: ' + d.cdwRing);
 
   /* ---- [3] 아이콘 잉크 (측정표 §3 — 68×85, 아트 자리 규칙) ---- */
+  /* ★ 356 이관(주인 지시 2026-08-29) — 폭 68 은 그대로, **높이 85 → 71.6**.
+     옛 처방은 «fs 78.3 으로 높이 85 를 만들고 그때 커진 폭을 scaleX(.842) 로 68 에 되돌린다» 였다
+     = 글리프를 15.8% 납작하게 누르는 것. 356 규칙(작은 쪽으로)이 .842 를 font-size 로 흡수하면
+     폭은 68 그대로(Δ0)이고 높이만 85 × .842 = **71.6** 이 된다. ref bbox 85 와의 차는 «아트 대기» —
+     이모지 실루엣과 ref 일러스트의 종횡비가 다른 것이라 CSS 로는 못 메운다. */
   eq('아이콘 평균 잉크 w', +d.inkW.toFixed(1), 68, 4);
-  eq('아이콘 평균 잉크 h', +d.inkH.toFixed(1), 85, 4);
+  eq('아이콘 평균 잉크 h', +d.inkH.toFixed(1), 71.6, 4);
+  /* ⚑ 356 의 본체는 «높이 값» 이 아니라 **비율**이다 — 위 두 항만 두면 누가 fs 를 올리고 scaleX 로
+     다시 눌러도 둘 다 초록이 된다. 종횡비를 직접 묻는 항을 짝으로 세운다(이 화면 글리프의 자연비 .95). */
+  eq('아이콘 잉크 종횡비 = 자연비 (356 · 찌그러짐 0)', +(d.inkW / d.inkH).toFixed(3), 0.95, 0.03);
   is('아이콘은 well 안쪽 자식 (링 뚫림 방지)', d.si3Parent, 'cdw');
   is('well 클립', d.cdwOverflow, 'hidden');
 
   /* ---- [4] 상태 3종 ---- */
   is('잠금 자물쇠 5칸', d.lockCount, 5);
   is('활성 1칸', d.readyCount, 1);
-  eq('자물쇠 font-size', d.lkFs, 64, 0.5);
-  tot++; if (/0\.8[,)]/.test(d.lkTr)) ok++; else fails.push('자물쇠 scaleY .8: ' + d.lkTr);
+  /* ★ 356 이관 — 자물쇠도 `scaleY(.8)` 로 **세로만** 눌려 있었다(측정표 «이모지는 세로로 길어»).
+     .8 을 font-size 로 흡수: 64 → **51.2**. 잉크 46×54 → 36.8×43.2 로 ref bbox 를 넘지 않는다. */
+  eq('자물쇠 font-size', d.lkFs, 51.2, 0.5);
+  tot++; if (!/scale/i.test(d.lkTr) && !/,\s*0\.\d/.test(d.lkTr)) ok++;
+  else fails.push('자물쇠에 스케일이 남아 있다 (356 — 아이콘은 원본 비율): ' + d.lkTr);
   eq('자물쇠 세로 오프셋', d.lkDy, -1.5, 0.2);
   tot++; if (/1\.15px/.test(d.eqShadow)) ok++; else fails.push('장착칸 지름 단차(외곽 확장 1.15px) 아님: ' + d.eqShadow);
   eq('장착칸 세로 오프셋 (REF 는 장착칸을 조금 낮게 앉힌다)', d.eqTop, 0.45, 0.1);

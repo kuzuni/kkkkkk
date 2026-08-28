@@ -325,7 +325,7 @@
   /* 🔥 글리프는 세로로 길쭉해 잉크 폭이 레퍼런스보다 좁다 — 높이는 font-size, 폭은 scaleX 로 */
   .pcp i{flex:none;width:38px;height:37px;display:flex;align-items:center;justify-content:center;
     font-style:normal;font-size:29.6px;line-height:1;color:#F16B09;
-    transform:scaleX(1.12) translate(1px,2px)}
+    transform:translate(1px,2px)}  /* 356 — scaleX(1.12) 폐기(아이콘은 원본 비율) */
   /* 6회차 — 잉크 h 가 ref 23 인데 29(+26%)였다. 폭은 82 로 이미 일치해서 폰트가 바뀐 것을 못 보고
      지나갔다(닉네임과 같은 사고). fs 로 높이를 내리고 잃은 폭을 scaleX 로 되받는다 —
      13 이 재화 탭에서 쓴 `fs↓ + scaleX` 와 같은 처방이다.
@@ -359,7 +359,7 @@
   .cbox i{text-shadow:2.5px 0 0 #000,-2.5px 0 0 #000,0 2.5px 0 #000,0 -2.5px 0 #000,
     1.8px 1.8px 0 #000,-1.8px 1.8px 0 #000,1.8px -1.8px 0 #000,-1.8px -1.8px 0 #000}
   .cGold i{font-size:52px}
-  .cDia i{font-size:59px;transform:scaleX(.86)}
+  .cDia i{font-size:59px;transform:scale(.86)}  /* 356 — scaleX → 등방 scale(작은 쪽) */
   /* 6회차 — 보석 아이콘만 «폭» 이 모자란다. S(채도 마스크) ref w58 / cap w51, T(시안 마스크) ref w58 /
      cap w49 로 **둘 다 독립적으로 «높이·중심 x 는 일치, 폭만 −12~15%»** 를 냈다. 원인은 A3 의 CSS 가
      아니라 `assets/ui/cur-dia.svg` 의 도형이 viewBox 64 안에서 56×56(마름모)이라 가로가 덜 차는 것인데,
@@ -370,7 +370,10 @@
      **13 재화 탭은 제외한다** — 그쪽은 `.curs .cbox i>.cic` 를 55×55 로 줄여 놓았고(4515행),
      거기에 이 scaleX 까지 얹히면 가로만 63.8 이 되어 13 이 맞춰 둔 값이 깨진다.
      13 의 규칙은 transform 을 안 건드리므로 «안 겹치겠지» 로 두면 안 되고 여기서 빼 줘야 한다. */
-  #app:not(:has(#shopw.on .shp-list.coin)) #top .curs .cDia i>.cic{transform:scaleX(1.16)}
+  /* ★ 356 — 보석 이미지를 가로로 펴던 `scaleX(1.16)` 3자리(HUD·비행·착지)를 폐기했다.
+     위 6회차 주석대로 원인은 `assets/ui/cur-dia.svg` 의 마름모가 viewBox 64 안에서 56 뿐인 것이고,
+     그건 **아트 몫**이다 — CSS 로 펴면 정확히 «찌그러진 아이콘» 이 된다(주인 지시 2026-08-29).
+     ⇒ 폭 −12~15% 는 이제 «아트 대기»(cur-dia.svg 재작도, 125 단일 출처). */
   /* 9회차 — 코인 금색 원판이 −2px. **비평가 4명(U·V·W·X)이 임계 스윕까지 붙여 전부 같은 값**을 냈다:
      ref 57×57 / cap 55×55, 중심 x583 일치. cap 값은 임계를 안 타고 고정이라 JPEG 번짐이 아니다.
      55.1 은 `cur-gold.svg` 의 `stroke-width:4` 에서 산술로 나오는 값이다(반지름 30−2=28 → 56 → ×63/64).
@@ -481,7 +484,7 @@
      4회차 — 잉크 종횡비가 뒤집혀 있었다(ref 51x47.5 vs 우리 48x51. 비평가 A·B 가 독립으로 같은 수치).
      중심 (739.5,370) 은 이미 맞으므로 중심 기준으로 가로 +6% · 세로 −7% 만 다시 준다. */
   #stinfo .kboss>i{position:relative;z-index:2;font-style:normal;display:block;
-    transform:translateY(-3px) scale(1.06,.82);
+    transform:translateY(-3px) scale(.82);  /* 356 — 비균등 scale(1.06,.82) → 작은 쪽 등방 */
     filter:grayscale(1) brightness(3) drop-shadow(0 0 1px #000)}
 
   /* ============ 28 보스전 헤더 — 측정표 docs/measure/28-보스전.md (레퍼런스 39·40 실측) ============
@@ -505,7 +508,7 @@
   #stinfo.bfarm .kboss::before{inset:9px}
   #stinfo.bfarm .kboss::after{inset:16px}
   /* 흰 두개골 잉크 ref 40 (507,397,66,60) — 02 의 scaleY(.88) 위에 폭·높이를 따로 맞춘다 */
-  #stinfo.bfarm .kboss>i{transform:translateY(5px) scale(1.082,.812)}
+  #stinfo.bfarm .kboss>i{transform:translateY(5px) scale(.812)}  /* 356 — 작은 쪽 등방 */
 
   /* ⏱ 남은 시간 — 클러스터 ref (397,231,242,79). 배경 플레이트 없이 스톱워치 + 흰 숫자만 */
   #bossTm{position:absolute;left:397px;top:43px;width:242px;height:79px;display:none;z-index:3;pointer-events:none}
@@ -941,7 +944,10 @@
   .ibtn .si{width:calc(var(--ih,82px)*1.6);height:var(--ih,82px);
     font-size:calc(var(--ih,82px)*var(--sf,.96));
     line-height:var(--ih,82px);display:flex;align-items:center;justify-content:center;
-    transform:translate(var(--dx,0),var(--dy,0)) scaleX(var(--sx,1.15));
+    /* ★ 356 — `scaleX(var(--sx,1.15))` 폐기. 칸별 --sx 를 지워도 **기본값 1.15 가 남으면**
+       여섯 칸이 전부 +15% 로 늘어난 채다(이 자리가 356 의 첫 함정이었다 — 인라인만 지우고
+       재스캔하니 📅·📜 가 1.150 으로 그대로 남았다). 세로(--sf)는 안 건드린다. */
+    transform:translate(var(--dx,0),var(--dy,0));
     /* 레퍼런스 아트는 전부 검정 외곽선 4~6px 을 두른다(측정표 §1-4). 실측 근흑 픽셀 비율이
        패스 29.3% · 퀘스트 16.5% · 이벤트 24.1% 인데 이모지 소재만으로는 4% 안팎에 그친다.
        drop-shadow 를 축방향으로 4번 «체이닝» 하면(각 단계가 앞 결과에 다시 걸린다) 글리프 실루엣이
@@ -1041,9 +1047,15 @@
      well 중심 그대로고(transform-origin 도 따라서 그대로), 삐져나온 만큼은 `.cdw{overflow:hidden}`
      원형 클립이 먹는다. **잉크 크기(68×85 정규화)·세로·레이아웃은 한 픽셀도 안 바뀐다.**
      ⚠ `width:100%` 를 남긴 채 마진만 주면 상자가 «넓어지지 않고 왼쪽으로 20px 밀린다» — `width:auto` 가 짝이다. */
-  .slot2 .si3{display:block;font-size:78.3px;line-height:87.6px;text-align:center;
+  /* ★ 356(주인 지시 2026-08-29) — `scaleX(.842)` 폐기. 규칙은 «작은 쪽으로»(s = min(sx,sy)) 이므로
+     등방 .842 를 font-size 로 흡수한다: 78.3 × .842 = **65.9px**. 잉크 68×85 → **68×71.6**
+     (폭 Δ0 · 높이 −15.8%). ⚠ 반대로 «높이를 지키고 폭을 늘리는» 선택은 안 된다 —
+     80.8px 잉크가 well 87.6 의 원형 클립(`.cdw{overflow:hidden}`)에 모서리부터 잘린다.
+     357 의 `width:auto;margin:0 -20px`(넘치는 줄 방지)는 그대로 둔다 — advance 가 82.2px 로 줄어
+     이제 well 안에 들어오지만, 그 짝은 «넘치면 line-left» 함정을 막는 안전핀이라 떼지 않는다. */
+  .slot2 .si3{display:block;font-size:65.9px;line-height:87.6px;text-align:center;
     width:auto;margin:0 -20px;
-    position:relative;top:-1.5px;transform:scaleX(.842)}
+    position:relative;top:-1.5px}
   /* 쿨타임 끝 = 활성(골드) / 쿨타임 중 = 대기(시안, 기본값) / 미해금 = 잠금(회색)
      활성은 well 을 노랗게 칠하지 않는다 — 레퍼런스는 well 이 그대로 파랑(#367cc0)이고
      골드 링(r48~55) + well 가장자리 노란 안쪽 링(r36~43) + 바깥 노란 링(r60~66) 이 붙는 구조다 */
@@ -1102,8 +1114,11 @@
     background:linear-gradient(#dfe4f5,#dfe4f5) center/38px 10px no-repeat,
                linear-gradient(#dfe4f5,#dfe4f5) center/10px 38px no-repeat;opacity:.5}
   /* 자물쇠는 레퍼런스에서 흰색(#f5f5f6), 잉크 46x54 — 이모지는 세로로 길어 scaleY 로 종횡비를 맞춘다 */
-  .slot2 .lk{position:relative;z-index:2;display:block;font-size:64px;line-height:1;
-    transform:translateY(-1.5px) scaleY(.8);
+  /* ★ 356 — `scaleY(.8)` 폐기(주인 지시: 아이콘은 원본 비율). 위 «세로로 길어» 처방은 종횡비를
+     맞추려고 **높이만** 눌러 자물쇠를 찌그러뜨리고 있었다. s = min(1,.8) = .8 을 등방으로
+     흡수한다(fs 64 → 51.2) — 잉크 46×54 → **36.8×43.2**, ref bbox 를 넘지 않는다(잘림 0). */
+  .slot2 .lk{position:relative;z-index:2;display:block;font-size:51.2px;line-height:1;
+    transform:translateY(-1.5px);
     filter:grayscale(1) contrast(2.2) brightness(1.7) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 2px #000)
       drop-shadow(0 2.5px 0 #000) drop-shadow(0 -2.5px 0 #000)}
   /* 레벨 뱃지 — 레퍼런스는 장착 슬롯 하단에 Ø40 원형 뱃지가 14px 돌출한다(원본은 동료 머리 아트).
@@ -1458,12 +1473,20 @@
   .tab .ti{display:block;width:172px;height:112px;font-size:var(--sf,104px);line-height:112px;
     text-align:center;transform-origin:50% 50%;
     transform:translate(var(--dx,-1.5px),var(--dy,0px)) scaleX(var(--sx,1))}
-  .tab[data-t="grow"]{--sf:91.3px;--sx:1.488;--dy:13.5px}  /* ⚒️ ref 150x100 · top 2147 */
-  .tab[data-t="adv"] {--sf:107.1px;--sx:.908;--dy:9.3px}   /* ⚔️ ref 109x120 · top 2131 */
+  /* ★ 356(주인 지시 2026-08-29) — **`--sx` 는 아이콘에 안 쓴다.**
+     «모든 아이콘이 안 찌그러지게 · 원본 비율로» 가 위 6회차 역산(«폭은 --sx 로 가른다»)보다 우선한다.
+     ⇒ 다섯 칸 전부 `--sx` 를 뗐다. **`--sf`·`--dy` 는 한 값도 안 건드린다** — 세로가 이 표의
+     심판(«칸별 잉크 top» 2131/2147/2130)이고 transform 은 레이아웃을 안 바꾸므로 폭만 자연 비율로 돌아간다.
+     폐기한 값(되살리지 마라 · 측정표 A1 §4 정오표에 같은 표가 있다):
+        grow 1.488 · adv .908 · box 1.2366 · shop 1.476
+     이제 ref 폭과의 차(150 대비 −33% 등)는 «아트 대기» 다 — 이모지 실루엣이 ref 일러스트와
+     종횡비가 다른 것이라 CSS 로는 못 메운다. 게이트 `tools/verify356.js` 가 재발을 막는다. */
+  .tab[data-t="grow"]{--sf:91.3px;--dy:13.5px}  /* ⚒️ ref 150x100 · top 2147 */
+  .tab[data-t="adv"] {--sf:97.2px;--dy:9.3px}   /* ⚔️ ref 109x120 · top 2131 */
   /* 11회차 — 유물 칸 «폭만» 2.5% 좁힌다. O «ref 122 vs 우리 125 (+2.5%)» · P «ref 122 vs 우리 125
      (+2.5%)» 로 **두 비평가의 수치가 완전히 같다.** 높이 121 은 둘 다 ref 와 0% 라고 확인했으므로
      `--sf`(등방)를 건드리면 안 되고 `--sx`(가로) 만 줄인다 — 1.267 × 122/125 = 1.2366. */
-  .tab[data-t="box"] {--sf:109.2px;--sx:1.2366;--dy:9.2px} /* 🔮 ref 122x121 · top 2131 (§4 정오 · 11회차 폭 정정) */
+  .tab[data-t="box"] {--sf:109.2px;--dy:9.2px} /* 🔮 ref 122x121 · top 2131 (§4 정오 · 11회차 폭 정정) */
   /* 10회차 — 상점만 1~1.3px 낮다(높이 113 은 정확히 맞다). 비평가 2인 부호 일치:
      M «ref rel 34 vs 우리 35», N «ref local 33 vs 우리 35». 자체 스캔도 2135 vs ref 2134.
      세 값의 중앙을 잡아 1.3px 올린다. 다른 4칸은 2인 모두 ≤1px 이라 손대지 않는다. */
@@ -1473,7 +1496,7 @@
   /* 12회차 재정정 — 11회차의 166→162 는 **2px 과교정**이었다. Q «ref 164 vs 우리 161» ·
      R «ref 164 vs 우리 162 — 좌변만 2px 넓혀라» 로 **둘 다 ref 를 164 로** 읽었다.
      1.458 × 164/162 = 1.476. 세로 113 은 Q·R 둘 다 «확정값과 일치» 로 재확인했다. */
-  .tab[data-t="shop"]{--sf:102px;--sx:1.476;--dy:6.5px}    /* 🏪 ref 164x113 · top 2134 (12회차 폭 재정정) */
+  .tab[data-t="shop"]{--sf:102px;--dy:6.5px}    /* 🏪 ref 164x113 · top 2134 (12회차 폭 재정정) */
   .tab[data-t="hero"]{--sf:64px;--dy:4px}                  /* 🐾 + 금색 링 ref 121x121 · top 2131 */
   /* 영웅 칸의 금색 링은 선택 표시가 아니라 아이콘 아트다 (레퍼런스 23·10 에서 비활성일 때도 유지).
      잉크 bbox 를 지배하는 것은 글리프가 아니라 이 링이다 — ref 121x121 은 링 외곽(그림자 포함) 값이다.
@@ -3223,9 +3246,7 @@
         그래서 골드도 width 가 아니라 **scale**(65.3/63 = 1.0365)로 준다 — HUD 의 63→65.3 과 같은
         등방 확대라 결과가 같고, 인라인과 싸우지 않는다. */
   #app:not(:has(#shopw.on .shp-list.coin)) .fx-fly>.cic[data-cur-ic="gold"]{transform:scale(1.0365)}
-  #app:not(:has(#shopw.on .shp-list.coin)) .fx-fly>.cic[data-cur-ic="dia"]{transform:scaleX(1.16)}
   #app:not(:has(#shopw.on .shp-list.coin)) .fx-lit .cGold i>.cic{width:65.3px;height:65.3px}
-  #app:not(:has(#shopw.on .shp-list.coin)) .fx-lit .cDia i>.cic{transform:scaleX(1.16)}
   /* 꽂힌 뒤 «흡수되듯» 사라진다. transform 은 JS 가 알약 중심 + 축소값으로 세워 두므로
      여기서는 opacity 만 건드린다. 크기를 그대로 두고 천천히 빼면 알약의 코인 아이콘과 겹쳐
      **«이중 원» 버그처럼 읽힌다**(7회차 지적) — 짧게(100ms) 빼고, 축소는 JS 가 준다. */
@@ -4144,7 +4165,7 @@
         고르게 넘치고, 잉크 중심은 상자 중심에 그대로 남는다. 그 중심을 ref 중심
         (코인 528,139 · 젬 828.5,139 = 프레임 55)에 맞추느라 위 두 줄의 left/top 을 1.5~2px 옮겼다. */
   .pcb-g>i>.cic{width:65.3px;height:65.3px}
-  .pcb-d>i>.cic{width:63px;height:63px;transform:scaleX(1.16)}
+  .pcb-d>i>.cic{width:63px;height:63px}  /* 356 — scaleX(1.16) 폐기(위 HUD 와 같은 이유) */
   /* 숫자 — 잉크 h23, 28 교훈 1(숫자 잉크비 0.69) → fs 33.3. 폭은 scaleX 로 회수.
      translate3d + antialiased 는 2D 변환 레이어의 LCD 서브픽셀 색번짐 방지(16 교훈 3) */
   .pcb-p>b{position:relative;top:1px;font-size:34.5px;font-weight:900;color:#fff;
@@ -13339,14 +13360,14 @@
            --sf/--sx 는 각 이모지의 실측 잉크(차분법 `tools/probe360.js`)로 역산한 배율이다.
            360 이후 기준은 «그 칸의 레퍼런스 스프라이트» 가 아니라 **형제 6행 공통 잉크 108×97**
            이다(±3%). 이모지를 바꾸면 두 값을 다시 재야 한다. -->
-      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.896;--sx:1.130;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
-      <div class="ibtn" data-pop="roul"  style="--sf:.866;--sx:1.057;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.896;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="roul"  style="--sf:.866;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <!-- 작업 71(2026-08-25, 저장소 주인 지시): 3행 «우편»(📬) 삭제 — 52 ▦ 메뉴의 «우편» 칸과 중복이다.
            우편 진입은 ▦ 메뉴 하나뿐(openMail). 레드닷은 `sideAlert('mail')` 이 #menub 의 `.bdg` 로 옮겨 켠다.
            `.side` 가 flex 컬럼이라 아래 행이 그대로 한 칸씩 당겨지고(퀘스트 471 · 승급전 605 · 축복 739),
            행 그리드 규격(--ih/--igap/--itop)은 48·34 주석대로 A2 측정표 그대로 둔다 = 남는 행 좌표 Δ0.
            ⚠ SIDE.N 은 360(2026-08-29 주인 지시)이 «라벨행 수 5» → «전 행 수 6» 으로 뜻을 바꿨다. -->
-      <div class="ibtn" data-pop="quest" style="--sf:.862;--sx:1.075;--dx:-.5px;--dy:-1px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="quest" style="--sf:.862;--dx:-.5px;--dy:-1px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
       <!-- 작업 48(2026-08-25, 저장소 주인 지시): 5행 «던전»(🏰) 삭제 — 하단 «던전» 탭(작업 24)과 중복이다.
            openDungeon() 진입은 탭으로만. 승급전이 5행으로 올라오고 6행은 빈다.
            행 그리드(pitch·gap·--itop)는 A2 측정 규격 그대로 두려고 SIDE.N 은 5 로 유지했다(아래 SIDE 주석).
@@ -13356,14 +13377,14 @@
            ⚑ **이 «글리프를 갈아 끼운다» 가 이 부품의 선례다** — 360 이 축복(🙏, 자연 폭이 좁아 sx 1.235)을
               그대로 둔 것은 필요 배율이 형제 범위(1.06~1.14) 바로 위라서다. 356(아이콘 원본 비율 전수)이
               sx 를 1 로 몰 때 가장 먼저 볼 자리가 축복이고, 그때 답은 배율이 아니라 이 선례다. -->
-      <div class="ibtn" data-pop="promo" style="--sf:.831;--sx:1.096;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="promo" style="--sf:.831;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
       <!-- 작업 83(2026-08-26, 저장소 주인 보고): 레퍼런스 ③ 좌측 5행 «도감» — 21 도감 보너스 팝업의
            메인 진입점이다. 48·71 이 비워 둔 마지막 라벨 행을 채우므로 행 그리드는 그대로
            (기존 4칸 좌표 Δ0), 축복만 레퍼런스 6행(길드 y958 자리)으로 한 칸 내려간다.
            ⚠ --sx 의 역산 기준이 360 에서 바뀌었다 — ref 5행 스프라이트 77×82 에 맞추던 .919 는
               형제 대비 폭 −13.5% 라 «도감만 작아 보이는» 자리였다(probe360 [3]). 지금 값은
               형제 공통 잉크 108×97 역산치다(`tools/cal360.js`). -->
-      <div class="ibtn" data-pop="coll" style="--sf:.864;--sx:1.067;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="coll" style="--sf:.864;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>
       <!-- 작업 34(2026-08-25): 48 이 «던전» 을 지우면서 비워 둔 **예약된 5번째 라벨 행**에 «축복» 을 넣는다.
            83 이후: 도감이 ref 5행을 가져가고 축복은 ref 6행(길드 43–149 w107 · y958 h~86) 규격이었다 —
            «칸이 바뀌면 --sf/--sx 를 다시 재라»(A2 5회차 교훈) 대로 🙏 를 6행 bbox 로 재역산했었다.
@@ -13371,7 +13392,7 @@
               ref 6행 폭을 맞추려던 --sx 1.414 가 **형제 대비 폭 +20.9%** 로 튀어 있었다 —
               주인이 «축복버튼도 그렇네» 라고 한 자리가 정확히 그것이다. 지금 값은 형제 공통
               잉크 108×97 역산치(1.235)로, 형제 최대(승급전 1.096) 바로 위다. -->
-      <div class="ibtn" data-pop="bless" style="--sf:.862;--sx:1.235;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="bless" style="--sf:.862;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
     </div>
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
@@ -13722,19 +13743,19 @@
            (`#menub.mnon .bdg{display:none}` — 레퍼런스 52 열림 상태에 붉은 화소가 0개라 맞는 규칙이다).
            그래서 메뉴를 연 사용자에게는 «받을 우편이 있다» 는 신호가 한 개도 안 남았다.
            칸 배지가 그 자리를 잇는다 — 켜고 끄는 곳은 `sideAlert('mail', …)` 한 곳뿐이다. -->
-      <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.333;--sx:.803">✉️</i><i class="mn-l" style="--lx:.933" data-t="우편">우편</i><s class="bdg"></s></div>
-      <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--sx:1.138;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.962" data-t="랭킹">랭킹</i></div>
-      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.133;--sx:.898">🗺️</i><i class="mn-l" style="--lf:22.6px;--lx:.978" data-t="길라잡이">길라잡이</i></div>
-      <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--sx:1.116;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.912" data-t="가방">가방</i></div>
-      <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--sx:1.266;--dy:2px">🔋</i><i class="mn-l" style="--lx:.931" data-t="절전">절전</i></div>
-      <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.981;--sx:.966;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.974" data-t="설정">설정</i></div>
+      <div class="mn-b" data-mn="mail"><i class="mn-i" style="--sf:1.070">✉️</i><i class="mn-l" style="--lx:.933" data-t="우편">우편</i><s class="bdg"></s></div>
+      <div class="mn-b" data-mn="rank"><i class="mn-i" style="--sf:1;--dy:1.7px">🏆</i><i class="mn-l" style="--lx:.962" data-t="랭킹">랭킹</i></div>
+      <div class="mn-b" data-mn="guide"><i class="mn-i" style="--sf:1.017">🗺️</i><i class="mn-l" style="--lf:22.6px;--lx:.978" data-t="길라잡이">길라잡이</i></div>
+      <div class="mn-b" data-mn="bag"><i class="mn-i" style="--sf:.943;--dy:1.6px">🎒</i><i class="mn-l" style="--lx:.912" data-t="가방">가방</i></div>
+      <div class="mn-b" data-mn="saver"><i class="mn-i" style="--sf:.926;--dy:2px">🔋</i><i class="mn-l" style="--lx:.931" data-t="절전">절전</i></div>
+      <div class="mn-b" data-mn="conf"><i class="mn-i" style="--sf:.948;--dy:2.1px">⚙️</i><i class="mn-l" style="--lx:.974" data-t="설정">설정</i></div>
       <!-- ⚠ 마지막(7번째) 칸 «패스» 는 **레퍼런스에 없다**. 작업 35 가 «좌측 사이드에 자리가 없다» 며 ▦ 메뉴에 맡긴
            임시 진입점이다(id="psGo" 는 35 의 smoke 오프너가 잡는 계약이라 이름을 바꾸면 안 된다).
            레퍼런스에서 패스는 좌측 사이드 아이콘(ref y567~667)이다 — 좌측에 자리가 나면 옮기고
            `.mn-col` 높이를 800 → **690**(6칸: 6×100 + 5×10 + 40.5)으로 되돌린다.
            작업 71 이 좌측에서 «우편» 을 뺐지만 그 자리는 A2 행 그리드 유지를 위해 비워 두므로 패스는 아직 여기 있다. -->
       <!-- 301 — 받을 패스 보상이 있으면 레드닷(우편 «mail» 칸과 같은 규약, sideAlert('pass', …) 가 켠다) -->
-      <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:1.457;--sx:.651">🎫</i><i class="mn-l" style="--lx:.890" data-t="패스">패스</i><s class="bdg"></s></div>
+      <div class="mn-b" data-mn="pass" id="psGo"><i class="mn-i" style="--sf:.948">🎫</i><i class="mn-l" style="--lx:.890" data-t="패스">패스</i><s class="bdg"></s></div>
     </div>
   </div>
 
