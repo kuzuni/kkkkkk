@@ -18,6 +18,7 @@
      [9] 동시 DOM 상한 FXMAX(120)을 넘지 않는다
     [10] 퀘스트 수령 토스트가 300ms 안에 완전히 뜬다
     [11] 세 씬 어디서도 콘솔 에러가 나지 않는다
+    [12] 전투 발 경로가 우상단 ▦ 메뉴 버튼(#menub)을 관통하지 않는다 (34차 2인 공통2)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -77,8 +78,10 @@ async function run(scene, span, step) {
     const samples = [];
     const t0 = performance.now();
     if (sc === 'gain') {
-      const e = (typeof enemies !== 'undefined' && enemies[0]) || null;
-      fxAt(e ? fxWorld(e.x, e.y - e.r) : fxWorld(cam.x, cam.y), 'combat');
+      /* 35회차 — 발원을 `enemies[0]` 에 맡기면 **실행마다 달라** [12] 가 재현되지 않는다(32회차가
+         «하네스가 적을 우단에서 집었다» 로 데인 자리의 반대판). ▦ 버튼보다 오른쪽·아래인 한 점으로
+         고정한다 — 이 조합이 34차 두 비평가가 캡처에서 본 관통 기하다. */
+      fxAt({ x: 1040, y: 400 }, 'combat');
       S.gold += 128000;
     } else if (sc === 'quest') {
       const b = document.getElementById('qAll'); if (b) b.click();
@@ -94,7 +97,8 @@ async function run(scene, span, step) {
         const t = performance.now() - t0;
         const flies = [...document.querySelectorAll('.fx-fly')].map((el) => {
           const r = el.getBoundingClientRect();
-          return { x: r.left + r.width / 2, y: r.top + r.height / 2, up: !!el.closest('#fxl'), lo: !!el.closest('#fxlc') };
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height,
+            up: !!el.closest('#fxl'), lo: !!el.closest('#fxlc') };
         });
         const plus = [...document.querySelectorAll('.fx-plus')].map((el) => parseFloat(getComputedStyle(el).fontSize));
         const toast = document.querySelector('.fx-toast');
@@ -114,7 +118,10 @@ async function run(scene, span, step) {
       };
       tick();
     });
-    return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120 };
+    const mb = document.getElementById('menub');
+    const mbr = mb ? mb.getBoundingClientRect() : null;
+    return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
+      menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null };
   }, { sc: scene, span, step });
 
   await b.close();
@@ -195,6 +202,22 @@ async function run(scene, span, step) {
   console.log('[10] 퀘스트 수령 토스트가 300ms 안에 완전히 뜬다');
   const tf = quest.samples.find(s => s.toastOp >= 0.99);
   ok(!!tf && tf.t <= 300, `완전 가시 ${tf ? tf.t : 'n/a'}ms (≤300)`);
+
+  /* ---- [12] 전투 발이 우상단 ▦ 메뉴 버튼을 관통하지 않는다 (34차 2인 공통2) ---- */
+  console.log('[12] 전투 발 경로 — 우상단 ▦ 메뉴 버튼(#menub) 관통 0 (34차 BE·BF 2인 공통)');
+  if (!gain.menub) {
+    ok(false, '#menub 을 못 찾았다 — 이 단언을 잴 대상이 없다');
+  } else {
+    const M = gain.menub;
+    let hit = 0, area = 0;
+    for (const s2 of gain.samples) for (const f of s2.flies) {
+      const ox = Math.min(f.x + f.w / 2, M.x + M.w) - Math.max(f.x - f.w / 2, M.x);
+      const oy = Math.min(f.y + f.h / 2, M.y + M.h) - Math.max(f.y - f.h / 2, M.y);
+      if (ox > 0 && oy > 0) { hit++; area = Math.max(area, ox * oy); }
+    }
+    /* 되돌리면 빨개진다: 35회차 이전 빌드는 같은 발원에서 겹친 표본 18 · 최대 1,482px² 였다. */
+    ok(hit === 0, `코인 상자 ↔ 버튼 사각 겹친 표본 ${hit}개 · 최대 ${Math.round(area)}px² (0 이어야 한다)`);
+  }
 
   console.log('[11] 콘솔 에러 0');
   const e = gain.errs.length + quest.errs.length + upg.errs.length;

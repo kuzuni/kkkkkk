@@ -19,6 +19,8 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
 const WANT = process.argv[2] ? [process.argv[2]] : ['upg', 'gain', 'quest'];
 const STEP = 10;                                     /* ms — 캡처 간격 함정(32회차)을 피하는 해상도 */
 const SPAN = { upg: 760, gain: 700, quest: 1600 };
+/* 씬 A 발원 고정 — `node tools/p58ao.js gain 980,573` (34차 비평가 두 사람이 잰 캡처의 발원) */
+const ORIGIN = process.argv[3] ? '{x:' + process.argv[3].split(',')[0] + ',y:' + process.argv[3].split(',')[1] + '}' : 'null';
 
 async function open(seed) {
   const b = await launch(chromium);
@@ -68,8 +70,12 @@ async function setup(p, scene) {
 }
 
 const TRG = {
-  gain: `() => { const e = (typeof enemies !== 'undefined' && enemies[0]) || null;
-    const p = e ? fxWorld(e.x, e.y - e.r) : fxWorld(cam.x, cam.y); fxAt(p, 'combat'); S.gold += 128000; }`,
+  /* ⚑ 35회차 — 씬 A 의 발원은 `enemies[0]` 라 **실행마다 다르다**. 32회차가 «하네스가 적을 우단에서
+     집었다» 로 데인 바로 그 자리다. 34차 비평가 두 사람이 잰 캡처의 발원은 둘 다 **(980, 573)** 이므로,
+     되돌림 시험을 하려면 그 좌표를 강제해야 한다. `ORIGIN` 인자로 고정한다(없으면 종전대로 적 위치). */
+  gain: `() => { const O = __FXORIGIN__;
+    const e = (typeof enemies !== 'undefined' && enemies[0]) || null;
+    const p = O || (e ? fxWorld(e.x, e.y - e.r) : fxWorld(cam.x, cam.y)); fxAt(p, 'combat'); S.gold += 128000; }`,
   quest: `() => { const b = document.getElementById('qAll'); if (b) b.click(); }`,
   upg: `() => { const c = document.querySelector('#trCards [data-tr="atk"]') || document.querySelector('#trCards .tr-card');
     if (!c) return; c.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
@@ -87,6 +93,7 @@ async function trace(p, scene, span) {
     /* 카드 안에서 «글자가 실제로 차 있는» 상자 — 델타와 헷갈릴 수 있는 것만 고른다 */
     const labels = card ? [...card.querySelectorAll('.cv,.cn,.cb')].map(e => ({ cls: e.className, ...box(e), txt: (e.textContent || '').trim().slice(0, 14) })) : [];
     const pill = document.querySelector('#goldN') ? box(document.querySelector('#goldN')) : null;
+    const menub = document.getElementById('menub') ? box(document.getElementById('menub')) : null;
     const frames = [];
     const t0 = performance.now();
     fire();
@@ -100,7 +107,12 @@ async function trace(p, scene, span) {
             t: Math.round(t),
             fly: [...document.querySelectorAll('.fx-fly')].map(e => {
               const r = e.getBoundingClientRect();
-              return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height, lo: !!e.closest('#fxlc') };
+              /* 35회차 — 재화별로 나눠 담는다. 32~34회차의 «씬 A 가 씬 B 보다 크다» 는 **씬**이 아니라
+                 **재화**(골드 코인 vs 다이아 보석)를 비교한 것일 수 있다 — 씬 A 는 골드만, 씬 B 는 둘 다 난다. */
+              const ic = e.querySelector('.cic');
+              const ir = ic ? ic.getBoundingClientRect() : null;
+              return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height, lo: !!e.closest('#fxlc'),
+                cur: ic ? (ic.dataset.curIc || '?') : '?', iw: ir ? ir.width : 0, ih: ir ? ir.height : 0 };
             }),
             delta: [...document.querySelectorAll('.fx-delta')].map(e => ({ ...box(e), op: +getComputedStyle(e).opacity })),
             /* 카드 수치 행이 «비어 있는» 동안은 겹칠 상대가 없다(21회차 fx-cvswap) */
@@ -113,8 +125,8 @@ async function trace(p, scene, span) {
       };
       requestAnimationFrame(f);
     });
-    return { frames, cardR, labels, pill };
-  }, { trg: TRG[scene], span, step: STEP });
+    return { frames, cardR, labels, pill, menub };
+  }, { trg: TRG[scene].replace('__FXORIGIN__', ORIGIN), span, step: STEP });
 }
 
 const num = (v, d = 1) => (v == null ? '—' : v.toFixed(d));
@@ -172,11 +184,33 @@ const num = (v, d = 1) => (v == null ? '—' : v.toFixed(d));
           path.push({ t: f.t, x: g.x, y: g.y, d: P ? Math.hypot(P.x + P.w / 2 - g.x, P.y + P.h / 2 - g.y) : 0 });
         }
       }
+      /* 34차 2인 공통2 — ▦ 메뉴 버튼(#menub) 사각과 비행 코인 rect 의 교차 */
+      if (r.menub) {
+        const M = r.menub;
+        let hitF = 0, hitA = 0;
+        for (const f of r.frames) for (const g of f.fly) {
+          const ox = Math.min(g.x + g.w / 2, M.x + M.w) - Math.max(g.x - g.w / 2, M.x);
+          const oy = Math.min(g.y + g.h / 2, M.y + M.h) - Math.max(g.y - g.h / 2, M.y);
+          if (ox > 0 && oy > 0) { hitF++; hitA = Math.max(hitA, ox * oy); }
+        }
+        console.log(`  ⚑ #menub (${num(M.x,0)},${num(M.y,0)}) ${num(M.w,0)}x${num(M.h,0)} — 코인 rect 와 겹친 표본 ${hitF}개 · 최대 겹침 면적 ${num(hitA,0)}px²`);
+      }
       if (!ws.length) { console.log('  ⚠ 비행 표본 0'); }
       else {
         const mx = Math.max(...ws), mn = Math.min(...ws);
         const med = ws.slice().sort((a, x) => a - x)[Math.floor(ws.length / 2)];
         console.log(`  비행 아이콘 실폭(rect) 최소 ${num(mn)} · 중앙 ${num(med)} · 최대 ${num(mx)}px  [n=${ws.length}]`);
+        /* ⚑ 재화별로 갈라 본다 — «씬 차이» 인지 «재화 차이» 인지가 여기서 갈린다 */
+        const byCur = {};
+        for (const f of r.frames) for (const g of f.fly) {
+          (byCur[g.cur] = byCur[g.cur] || { w: [], iw: [] }).w.push(g.w);
+          if (g.iw) byCur[g.cur].iw.push(g.iw);
+        }
+        for (const k of Object.keys(byCur)) {
+          const a = byCur[k].w.slice().sort((x, y) => x - y), b = byCur[k].iw.slice().sort((x, y) => x - y);
+          console.log(`    · ${k}: rect 폭 중앙 ${num(a[Math.floor(a.length / 2)])}px [n=${a.length}]`
+            + (b.length ? ` · 스프라이트(.cic) 폭 중앙 ${num(b[Math.floor(b.length / 2)])}px` : ''));
+        }
       }
       /* 종단 — «선두» 를 DOM 순서로 잡으면 아이콘이 지워질 때마다 대상이 바뀐다(32회차 함정의 판박이).
          프레임마다 «알약까지 최소 잔여거리» 하나만 쓴다 — 이 값은 대상이 바뀌어도 단조에 가깝다. */
