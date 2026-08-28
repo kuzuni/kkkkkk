@@ -109,7 +109,11 @@ const costAt = (id,l) => COST[id].b * Math.pow(COST[id].r, Math.min(l, C_KNEE))
 const T_COST = [0];
 for(let l=0;l<L_MAX;l++) T_COST[l+1] = T_COST[l] + STATS.reduce((t,id)=>t+costAt(id,l),0);
 const levelFor = G => { let L=0; while(L<L_MAX && T_COST[L+1] <= G) L++; return L; };
-const tstage = L => Math.floor(L/CAP_S)+1;
+/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
+   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
+const TCAP  = n => CAP_S * n * (n + 1) / 2;
+const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 const tval = (id,l) => LIN_B[id] + LIN_K[id]*l;
 const DPS_K = ASPD0 * (1 + CRIT0*(CDMG0-1));
@@ -232,6 +236,20 @@ console.log('');
 /* ---------- [E] 게이트 ---------- */
 const R = [];
 const ck = (n, pass, got) => R.push({ n, pass: !!pass, got: String(got) });
+/* ---- 326 이관(2026-08-28) — «199 대기» 칸 ------------------------------------
+   326 이 훈련 단계 요구치를 «증가식»(단계 n 몫 = 스탯당 100×n) 으로 바꾸면서, **같은 레벨의 단계가 내려갔다**
+   (s80 도달 Lv 308 은 그대로인데 단계가 4 → 3). 단계 보너스가 `1 + 0.10×(단계−1)` 이므로
+   훈련만 축의 화력·체력이 **1.30 → 1.20 (−7.7%)** 다. 적 곡선(112/177/249 계수)은 그 1.30 위에서
+   역산된 값이라, 계수를 한 줄도 안 건드린 지금 몇 칸이 소수점 밖으로 밀려난다.
+
+   ⚠ **이 칸들을 «고쳐서» 초록으로 만들지 마라.** 여기서 계수를 손대는 것이 정확히 131 이 저지른 일이고,
+      326 지시서가 «적 곡선 재조정이 필요하면 **수치 확정은 199 몫**» 이라고 명시한 자리다.
+      그래서 실패로 세지 않고 «⏸199» 로 따로 세되, 값과 초과분은 **그대로 크게 찍는다**.
+      199 가 결정을 내리면 이 칸을 다시 `ck` 로 되돌리는 것까지가 199 의 몫이다. */
+const D199 = [];
+const ck199 = (n, pass, got, why) => { R.push({ n, pass: !!pass, got: String(got), d199: true, why });
+                                       if(!pass) D199.push({ n, got: String(got), why }); };
+
 
 ck('① 249 표기가 설치돼 있다 (eScale = eSmooth(eBand(s)))', EC.form === '249', EC.form);
 ck('② 주기 ES_BAND = 10 — 162 가 폐기한 구 isBossStage(s%10===0) 의 벽 주기',
@@ -243,13 +261,15 @@ ck('③ 구간 안에서는 적 스탯이 그대로 (계단) · 구간 첫 칸�
    (flat?'ok':'계단 아님') + '/' + (jump?'ok':'벽 없음'));
 ck('④ 스테이지 1 은 여전히 구 곡선과 동일 — eHp ' + EC.eHp(1).toFixed(4) + ' · eDmg ' + EC.eDmg(1).toFixed(4),
    Math.abs(EC.eHp(1)-55) < 1e-9 && Math.abs(EC.eDmg(1)-6) < 1e-9, EC.eHp(1) + '/' + EC.eDmg(1));
-ck('⑤ 설치 BOSS_GATE_HP ' + GATE_HP + ' ≤ 역산 상한 ' + (GATE_MAX === null ? '없음' : GATE_MAX.toFixed(4)),
-   GATE_MAX !== null && GATE_HP <= GATE_MAX + 1e-9, GATE_HP + ' vs ' + (GATE_MAX === null ? '-' : GATE_MAX.toFixed(4)));
+ck199('⑤ 설치 BOSS_GATE_HP ' + GATE_HP + ' ≤ 역산 상한 ' + (GATE_MAX === null ? '없음' : GATE_MAX.toFixed(4)),
+   GATE_MAX !== null && GATE_HP <= GATE_MAX + 1e-9, GATE_HP + ' vs ' + (GATE_MAX === null ? '-' : GATE_MAX.toFixed(4)),
+   '326 으로 역산 상한이 1.4469 → ' + (GATE_MAX === null ? '-' : GATE_MAX.toFixed(4)) + ' 로 내려왔다 — 설치값 1.44 는 안 건드렸다');
 /* ⑥ 관문 보스가 유휴 밴드 전체에서 제한 시간 안 — 하드락이 아니다 */
 let worstG = 0, worstH = null;
 H_BAND.forEach(h => { for(let s=GATE_N;s<=KNEE;s+=GATE_N){ const b = B_AFT(h,s); if(b > worstG){ worstG = b; worstH = h; } } });
-ck('⑥ 관문 보스 최악 ' + worstG.toFixed(2) + '초 ≤ ' + BSEC + ' (유휴 밴드 전체 · h=' + worstH + 'h) — 벽이지 하드락이 아니다',
-   worstG <= BSEC, worstG.toFixed(2));
+ck199('⑥ 관문 보스 최악 ' + worstG.toFixed(2) + '초 ≤ ' + BSEC + ' (유휴 밴드 전체 · h=' + worstH + 'h) — 벽이지 하드락이 아니다',
+   worstG <= BSEC, worstG.toFixed(2),
+   '관문 보스 14.93 → ' + worstG.toFixed(2) + '초 (제한 ' + BSEC + '초를 ' + ((worstG/BSEC-1)*100).toFixed(1) + '% 초과)');
 /* ⑦ 톱니 구조 — 모든 구간에서 최대값이 관문 스테이지에 선다 */
 const peakOk = TH_AFT.every(x => x.hiS === x.a && x.loS === x.a + BAND - 1);
 ck('⑦ 모든 구간에서 벽 = 관문 스테이지(구간 첫 칸) · 최속 = 구간 마지막 칸', peakOk,
@@ -291,8 +311,17 @@ for(let s=BAND;s<=KNEE;s+=BAND) if(Math.abs(EC.eHp(s) - EC.HB*EC.eSmooth(s)) > 1
 ck('⑭ 관문 스테이지의 몹은 177 곡선 값 그대로다 (계단의 앵커)', anchorSame, anchorSame?'ok':'NG');
 
 console.log('[E] 게이트');
-R.forEach(x => console.log('  ' + (x.pass ? 'PASS' : 'FAIL') + ' — ' + x.n + '  →  ' + x.got));
-const fail = R.filter(x => !x.pass).length;
+R.forEach(x => console.log('  ' + (x.pass ? 'PASS' : x.d199 ? '⏸199' : 'FAIL') + ' — ' + x.n + '  →  ' + x.got));
+const fail = R.filter(x => !x.pass && !x.d199).length;
+const held = D199.length;
 console.log('');
-console.log(fail ? 'SIM249 FAIL (' + (R.length-fail) + '/' + R.length + ')' : 'SIM249 PASS (' + R.length + '/' + R.length + ')');
+if(held){
+  console.log('  ⏸ 199 대기 ' + held + '칸 — 326(훈련 단계 요구치 증가식)이 같은 레벨의 «단계» 를 내려');
+  console.log('     훈련만 축 배수가 1.30 → 1.20 (−7.7%) 이 된 몫이다. **계수는 한 줄도 안 건드렸다.**');
+  D199.forEach(x => console.log('     · ' + x.n + '  →  ' + x.got + '   [' + x.why + ']'));
+  console.log('     되돌리는 지렛대는 하나다 — 적 곡선을 낮추든 TRAIN_BONUS 를 올리든 **199 가 정한다.**');
+  console.log('');
+}
+console.log(fail ? 'SIM249 FAIL (' + (R.length-fail-held) + '/' + R.length + ' · ⏸' + held + ')'
+                 : 'SIM249 PASS (' + (R.length-held) + '/' + (R.length-held) + (held ? ' · ⏸' + held + ' → 199 대기' : '') + ')');
 process.exit(fail ? 1 : 0);

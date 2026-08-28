@@ -155,7 +155,11 @@ function cumTable(curve){                      /* T[L] = 3스탯을 Lv L 까지 
 }
 /* 누적 골드 G 로 3스탯을 «같은 레벨까지» 올릴 때 도달 레벨 */
 function levelFor(T, G){ let L = 0; while(L < L_MAX && T[L+1] <= G) L++; return L; }
-const stageOf = L => Math.floor(L / CAP_S) + 1;      /* 훈련 단계(Lv 300 → 4단계 진입) */
+/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
+   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
+const TCAP  = n => CAP_S * n * (n + 1) / 2;
+const stageOf = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };   /* 326 이후 Lv 300 → 3단계 */
 
 /* ---------- 곡선 두 벌 ----------
    OLD = «무릎 없음» 기준선(112 이전 곡선. 왜 불가능했는지를 보여 준다)

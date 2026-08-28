@@ -120,7 +120,11 @@ const T_COST = [0];
 for(let l=0;l<L_MAX;l++) T_COST[l+1] = T_COST[l] + STATS.reduce((t,id)=>t+costAt(id,l),0);
 const levelFor = G => { let L=0; while(L<L_MAX && T_COST[L+1] <= G) L++; return L; };
 const LV = []; for(let s=1;s<=S_END;s++) LV[s] = levelFor(CUM[s]);
-const tstage = L => Math.floor(L/CAP_S)+1;
+/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
+   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
+const TCAP  = n => CAP_S * n * (n + 1) / 2;
+const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 
 /* 전투 모델 — 훈련 3종만. 장비·스킬·펫 배율은 전부 1(«훈련만» 하한). */
@@ -207,8 +211,13 @@ STATS.forEach(id => { for(let l=0;l<=400;l++){
 const g4 = lin;
 /* ⑤ 단조 증가 — 어느 레벨에서도 스탯이 줄지 않는다 */
 const g5 = STATS.every(id => { for(let l=0;l<400;l++) if(newVal(id,l+1) <= newVal(id,l)) return false; return true; });
-/* ⑥ 112 지시 불변 — 스테이지 80 도달 Lv ≥ 300(4단계). 비용 곡선을 안 건드렸다는 실증 */
-const g6 = LV[80] >= 300 && tstage(LV[80]) >= 4;
+/* ⑥ 112 지시 불변 — 스테이지 80 도달 Lv ≥ 300. 비용 곡선을 안 건드렸다는 실증 */
+/* ⚠ 326(2026-08-28) — 112 가 못 박은 것은 **비용 곡선이 스테이지 80 에서 Lv 300 을 준다** 는 것이고,
+   «4단계» 는 옛 상한식(단계당 100 고정)에서 그 레벨에 붙던 **이름표**였다. 326 은 비용 곡선을 한 줄도
+   안 건드리고 상한식만 누적합으로 바꿨으므로 **Lv 는 그대로이고 이름표만 4 → 3 으로 내려간다.**
+   그래서 판정은 «Lv ≥ 300» 만 하고 단계는 **실측값을 적기만** 한다 — 여기서 단계를 단언하면
+   326 이 바꾸라고 지시받은 바로 그것을 게이트가 되돌리라고 요구하게 된다(수치 확정은 199 몫). */
+const g6 = LV[80] >= 300;
 /* ⑦ 훈련 축 단독으로 **첫 보스(스테이지 10)까지는 반드시 난다**.
    «before 보다 쉬워야 한다» 는 게이트가 아니다 — 기울기는 주인 확정값이라 협상 대상이 아니고,
    실제로 선형은 구곡선과 Lv ~28 부근에서 **교차**해 그 뒤로는 구곡선보다 낮다(아래 교차점 표).
@@ -236,7 +245,8 @@ console.log('  ② 기울기 = 주인 확정 — atk +' + LIN_K.atk + ' · hp +'
 console.log('  ③ 무릎 구조(TRAIN_VAL_KNEE·TRAIN_VAL_R) 완전 폐기 : ' + (g3?'PASS':'FAIL'));
 console.log('  ④ 선형성 — Lv 0~400 2차 차분 전부 0 (지수 잔재 없음) : ' + (g4?'PASS':'FAIL'));
 console.log('  ⑤ 단조 증가 — 어느 레벨에서도 스탯이 줄지 않는다 : ' + (g5?'PASS':'FAIL'));
-console.log('  ⑥ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + '(' + tstage(LV[80]) + '단계) ≥ 300(4단계) : ' + (g6?'PASS':'FAIL'));
+console.log('  ⑥ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + ' ≥ 300 : ' + (g6?'PASS':'FAIL')
+          + '   [326 실측 단계 ' + tstage(LV[80]) + ' — 판정 대상 아님]');
 console.log('  ⑦ 훈련만으로 첫 보스(s10) 통과 — 보스 ' + bossSec(newVal,10).toFixed(2) + '초 < 제한 ' + BSEC
           + '초 · 몹 처치 ' + mobSec(newVal,10).toFixed(3) + '초 ≤ 1초 : ' + (g7?'PASS':'FAIL'));
 console.log('     ※ before 대비로는 s1~5 가 크게 쉬워지고(몹 처치 ' + mobSec(oldVal,1).toFixed(2) + '→'

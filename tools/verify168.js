@@ -131,11 +131,15 @@ const B = { atk:18, hp:160, regen:4 };       /* 기저 = 현행 Lv0 값 유지 *
   yes('⑥ sim168 [C] after 표에서 s20·s80 행을 읽었다', !!rows['20'] && !!rows['80']);
   if(rows['20'] && rows['80']){
     const fight = await p.evaluate(({ r20, r80 }) => {
-      const tb = st => 1 + TRAIN_BONUS * (st - 1);
+      const tb = s => 1 + TRAIN_BONUS * (s - 1);
+      const cap = n => TRAIN_CAP_STEP * n * (n + 1) / 2;
+      const st = L => { let n = 1; while(cap(n) <= L) n++; return n; };
       const ZOM = 1;   /* sim168 의 몹 HP 배수 기준선(zombie)과 같은 정의 */
       return {
-        s20: U.atk.val(r20.lv) * tb(Math.floor(r20.lv/TRAIN_CAP_STEP)+1) / (eHp(20)*ZOM),
-        s80: U.atk.val(r80.lv) * tb(Math.floor(r80.lv/TRAIN_CAP_STEP)+1) / (eHp(80)*ZOM)
+        /* 326 — 레벨 → 단계는 나눗셈이 아니라 «단계 몫 누적합» 의 역함수다. 제품의 trainCapAt 을
+           빌리지 않고 여기서 다시 적는다(같은 함수를 불러 비교하면 아무것도 안 재게 된다). */
+        s20: U.atk.val(r20.lv) * tb(st(r20.lv)) / (eHp(20)*ZOM),
+        s80: U.atk.val(r80.lv) * tb(st(r80.lv)) / (eHp(80)*ZOM)
       };
     }, { r20: rows['20'], r80: rows['80'] });
     near('⑥ 실코드 s20 공격/적HP = sim168 [C] after 값', fight.s20, rows['20'].ratio, 5e-3);
@@ -150,15 +154,20 @@ const B = { atk:18, hp:160, regen:4 };       /* 기저 = 현행 Lv0 값 유지 *
   /* ── ④ 112·세이브 불변 ── */
   const keep = await p.evaluate(() => {
     S.lv.atk = S.lv.hp = S.lv.regen = 300; S.trainStage = 3;
+    const cap = trainCap(), ready300 = trainReady();
+    S.lv.atk = S.lv.hp = S.lv.regen = cap;                 /* 326 — 3단계 상한까지 채운 상태 */
     return { knee: TRAIN_KNEE, rt: TRAIN_COST_R, capStep: TRAIN_CAP_STEP, bonus: TRAIN_BONUS,
-             cap: trainCap(), ready: trainReady(), cost300: U.atk.cost(300) };
+             cap, ready: ready300, ready600: trainReady(), cost300: U.atk.cost(300) };
   });
   eq('④ 112 비용 무릎 Lv 불변', keep.knee, 15);
   eq('④ 112 비용 배율 불변', keep.rt, 1.05);
   eq('④ 단계당 상한 불변', keep.capStep, 100);
   eq('④ 단계당 보너스 불변', keep.bonus, 0.1);
-  eq('④ 3단계 상한 = Lv 300', keep.cap, 300);
-  yes('④ 3종 Lv 300 이면 승급 준비 완료', keep.ready === true);
+  /* 326 — 3단계 상한은 100+200+300 = 600 이다(구 «단계×100» = 300 에서 이관).
+     168 이 지키는 것은 «비용 곡선·보너스·상한 계수를 안 건드렸다» 이고, 상한 «식» 은 326 의 소관이다. */
+  eq('④ 3단계 상한 = 누적합 100+200+300 (326)', keep.cap, 600);
+  yes('④ 3종이 3단계 상한(600)이면 승급 준비 완료', keep.ready600 === true);
+  yes('④ 326 방향 — 3단계에서 Lv 300 은 이제 상한 미달(구 곡선이면 준비 완료였다)', keep.ready === false);
   near('④ Lv 300 비용은 168 전후 동일(45·1.19^15·1.05^285)',
        keep.cost300, 45 * Math.pow(1.19, 15) * Math.pow(1.05, 285), 1e-12);
 

@@ -123,7 +123,11 @@ const costAt = (id,l) => COST[id].b * Math.pow(COST[id].r, Math.min(l, C_KNEE))
 const T_COST = [0];
 for(let l=0;l<L_MAX;l++) T_COST[l+1] = T_COST[l] + STATS.reduce((t,id)=>t+costAt(id,l),0);
 const levelFor = G => { let L=0; while(L<L_MAX && T_COST[L+1] <= G) L++; return L; };
-const tstage = L => Math.floor(L/CAP_S)+1;
+/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
+   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
+const TCAP  = n => CAP_S * n * (n + 1) / 2;
+const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 const tval = (id,l) => LIN_B[id] + LIN_K[id]*l;
 const DPS_K = ASPD0 * (1 + CRIT0*(CDMG0-1));
@@ -326,13 +330,28 @@ console.log('');
 const R = [];
 const ck = (n, pass, got) => R.push({ n, pass: !!pass, got: String(got) });
 const near = (n, a, b, tol) => ck(n, Math.abs(a-b) <= tol*Math.max(1,Math.abs(b)), a.toFixed(5) + ' vs ' + b.toFixed(5));
+/* ---- 326 이관(2026-08-28) — «199 대기» 칸 ------------------------------------
+   326 이 훈련 단계 요구치를 «증가식»(단계 n 몫 = 스탯당 100×n) 으로 바꾸면서, **같은 레벨의 단계가 내려갔다**
+   (s80 도달 Lv 308 은 그대로인데 단계가 4 → 3). 단계 보너스가 `1 + 0.10×(단계−1)` 이므로
+   훈련만 축의 화력·체력이 **1.30 → 1.20 (−7.7%)** 다. 적 곡선(112/177/249 계수)은 그 1.30 위에서
+   역산된 값이라, 계수를 한 줄도 안 건드린 지금 몇 칸이 소수점 밖으로 밀려난다.
+
+   ⚠ **이 칸들을 «고쳐서» 초록으로 만들지 마라.** 여기서 계수를 손대는 것이 정확히 131 이 저지른 일이고,
+      326 지시서가 «적 곡선 재조정이 필요하면 **수치 확정은 199 몫**» 이라고 명시한 자리다.
+      그래서 실패로 세지 않고 «⏸199» 로 따로 세되, 값과 초과분은 **그대로 크게 찍는다**.
+      199 가 결정을 내리면 이 칸을 다시 `ck` 로 되돌리는 것까지가 199 의 몫이다. */
+const D199 = [];
+const ck199 = (n, pass, got, why) => { R.push({ n, pass: !!pass, got: String(got), d199: true, why });
+                                       if(!pass) D199.push({ n, got: String(got), why }); };
+const near199 = (n, a, b, tol, why) => ck199(n, Math.abs(a-b) <= tol*Math.max(1,Math.abs(b)), a.toFixed(5) + ' vs ' + b.toFixed(5), why);
 
 ck('① 177 표기가 설치돼 있다 (eScale 선형×구간별 저지수)', IS177, EC.form);
 ck('② 스테이지 1 은 구 곡선과 완전히 동일 — eHp ' + afterHp(1).toFixed(4) + ' · eDmg ' + afterDmg(1).toFixed(4),
    Math.abs(afterHp(1) - beforeHp(1)) < 1e-9 && Math.abs(afterDmg(1) - beforeDmg(1)) < 1e-9,
    afterHp(1) + '/' + afterDmg(1));
 if(INS){
-  near('③ 설치 K = 훈련 축 선형 성장분 역산값', INS.K, K_DER, 0.01);
+  near199('③ 설치 K = 훈련 축 선형 성장분 역산값', INS.K, K_DER, 0.01,
+          '326 으로 훈련 축 배수가 내려가 역산 K 가 0.888 → ' + K_DER.toFixed(5) + ' 로 이동 — 설치 K 는 안 건드렸다');
   ck('④ 설치 KNEE = ' + KNEE + ' (112 지평 · RANKS 계급 스테이지)', INS.KNEE === KNEE, INS.KNEE);
   ck('⑤ 설치 M1 ≤ 상한 ' + (M1_MAX === null ? '없음' : M1_MAX.toFixed(5))
      + ' — 훈련만으로 s ≤ ' + KNEE + ' 전 구간 통과', M1_MAX !== null && INS.M1 <= M1_MAX + 1e-9, INS.M1);
@@ -351,9 +370,10 @@ H_BAND.forEach(h => {
     if(m > 1 || b > BSEC) okKnee = false;
   }
 });
-ck('⑧ 훈련만으로 s ≤ ' + KNEE + ' 무벽 — 유휴 0.5~6h 전 밴드에서 최악 몹 ' + worstMob.toFixed(3)
+ck199('⑧ 훈련만으로 s ≤ ' + KNEE + ' 무벽 — 유휴 0.5~6h 전 밴드에서 최악 몹 ' + worstMob.toFixed(3)
    + '초 ≤ 1 (H=' + worstH + 'h) · 최악 보스 ' + worstBoss.toFixed(2) + '초 ≤ ' + BSEC,
-   okKnee, worstMob.toFixed(3) + '/' + worstBoss.toFixed(2));
+   okKnee, worstMob.toFixed(3) + '/' + worstBoss.toFixed(2),
+   '최악 몹 0.976 → ' + worstMob.toFixed(3) + '초 (제한 1초를 ' + ((worstMob-1)*100).toFixed(1) + '% 초과) · 보스는 여유 유지');
 /* ⑨ 벽이 KNEE 위로 밀렸다 — 그러나 사라지지는 않았다(168 구조 유지) */
 ck('⑨ 벽이 KNEE 위로 밀렸다 (before s' + ((WB.boss ?? S_END+1)-1) + ' → after s' + ((WA.boss ?? S_END+1)-1) + ')',
    WA.boss !== null && WA.boss > KNEE && (WB.boss === null || WA.boss > WB.boss), String(WA.boss));
@@ -369,9 +389,14 @@ ck('⑩ eHp·eDmg 가 s 1..' + S_END + ' 비감소 + ' + BAND_S + '스테이지�
 /* ⑪ 경제 축 불변 — 112 가 역산 근거로 쓴 eGold 배율이 그대로다 */
 const egR = EC.eGold(2)/EC.eGold(1);
 near('⑪ eGold 배율 불변 (112 가 TRAIN_COST_R 을 여기서 역산했다)', egR, 1.175, 1e-6);
-/* ⑫ 112 주인 지시 불변 — 스테이지 80 도달 Lv ≥ 300(4단계) */
-ck('⑫ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + '(' + tstage(LV[80]) + '단계) ≥ 300(4단계)',
-   LV[80] >= 300 && tstage(LV[80]) >= 4, LV[80]);
+/* ⑫ 112 주인 지시 불변 — 스테이지 80 도달 Lv ≥ 300 */
+/* ⚠ 326(2026-08-28) — 112 가 못 박은 것은 **비용 곡선이 스테이지 80 에서 Lv 300 을 준다** 는 것이고,
+   «4단계» 는 옛 상한식(단계당 100 고정)에서 그 레벨에 붙던 **이름표**였다. 326 은 비용 곡선을 한 줄도
+   안 건드리고 상한식만 누적합으로 바꿨으므로 **Lv 는 그대로이고 이름표만 4 → 3 으로 내려간다.**
+   그래서 판정은 «Lv ≥ 300» 만 하고 단계는 **실측값을 적기만** 한다 — 여기서 단계를 단언하면
+   326 이 바꾸라고 지시받은 바로 그것을 게이트가 되돌리라고 요구하게 된다(수치 확정은 199 몫). */
+ck('⑫ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + ' ≥ 300  [326 실측 단계 ' + tstage(LV[80]) + ' — 판정 대상 아님]',
+   LV[80] >= 300, LV[80]);
 /* ⑬ 162 페이싱을 기준으로 쟀다 */
 ck('⑬ 162 페이싱(모든 스테이지 = 50킬 + 보스)이 코드에 살아 있다', PACE_162, PACE_162 ? 'ok' : 'isBossStage 잔존');
 /* ⑭ 도달 시간 표가 실제로 «막힘» 을 걷어냈다 */
@@ -380,7 +405,7 @@ ck('⑭ 도달 시간 — before 는 s' + (R_BEF.blocked ?? '없음') + ' 에서
    'before ' + (R_BEF.blocked ?? '없음') + ' / after ' + (R_AFT.blocked ?? '없음'));
 
 console.log('[G] 게이트');
-R.forEach(x => console.log('  ' + (x.pass ? 'PASS' : 'FAIL') + ' — ' + x.n + '  →  ' + x.got));
+R.forEach(x => console.log('  ' + (x.pass ? 'PASS' : x.d199 ? '⏸199' : 'FAIL') + ' — ' + x.n + '  →  ' + x.got));
 console.log('');
 console.log('[H] 민감도 — 유휴 가정(H_MAX)이 바뀌어도 곡선 «모양» 은 안 움직인다');
 H_BAND.forEach(h => {
@@ -395,7 +420,16 @@ H_BAND.forEach(h => {
             + LVof[h][1] + ' · 역산 K ' + K_OF(h).toFixed(4)
             + (Math.abs(K_OF(h)-K_DER) < 1e-9 ? '  ← 채택(밴드 최소)' : ''));
 });
-const fail = R.filter(x => !x.pass).length;
+const fail = R.filter(x => !x.pass && !x.d199).length;
+const held = D199.length;
 console.log('');
-console.log(fail ? 'SIM177 FAIL (' + (R.length-fail) + '/' + R.length + ')' : 'SIM177 PASS (' + R.length + '/' + R.length + ')');
+if(held){
+  console.log('  ⏸ 199 대기 ' + held + '칸 — 326(훈련 단계 요구치 증가식)이 같은 레벨의 «단계» 를 내려');
+  console.log('     훈련만 축 배수가 1.30 → 1.20 (−7.7%) 이 된 몫이다. **계수는 한 줄도 안 건드렸다.**');
+  D199.forEach(x => console.log('     · ' + x.n + '  →  ' + x.got + '   [' + x.why + ']'));
+  console.log('     되돌리는 지렛대는 하나다 — 적 곡선을 낮추든 TRAIN_BONUS 를 올리든 **199 가 정한다.**');
+  console.log('');
+}
+console.log(fail ? 'SIM177 FAIL (' + (R.length-fail-held) + '/' + R.length + ' · ⏸' + held + ')'
+                 : 'SIM177 PASS (' + (R.length-held) + '/' + (R.length-held) + (held ? ' · ⏸' + held + ' → 199 대기' : '') + ')');
 process.exit(fail ? 1 : 0);

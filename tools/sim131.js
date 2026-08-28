@@ -132,7 +132,11 @@ const T_COST = [0];
 for(let l=0;l<L_MAX;l++) T_COST[l+1] = T_COST[l] + STATS.reduce((t,id)=>t+costAt(id,l),0);
 const levelFor = G => { let L=0; while(L<L_MAX && T_COST[L+1] <= G) L++; return L; };
 const LV = []; for(let s=1;s<=S_END;s++) LV[s] = levelFor(CUM[s]);
-const tstage = L => Math.floor(L/CAP_S)+1;
+/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
+   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
+const TCAP  = n => CAP_S * n * (n + 1) / 2;
+const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 
 /* ---------- val 곡선 (무릎 K 부터 배율 rv 로 갈아탐) ---------- */
@@ -244,7 +248,12 @@ const g2 = LV[10] <= instK;                               /* 첫 보스(스테�
 const g3 = Math.abs(Math.log(inst.atk)/Math.log(R_ATK) - 1) < 2e-3
         && Math.abs(Math.log(inst.hp )/Math.log(R_HP ) - 1) < 2e-3
         && Math.abs(Math.log(inst.regen)/Math.log(R_HP) - 1) < 2e-3;   /* 배율 = 역산값 */
-const g4 = LV[80] >= 300 && tstage(LV[80]) >= 4;          /* 112 주인 지시 «스테이지 80 = 4단계» 불변 */
+/* ⚠ 326(2026-08-28) — 112 가 못 박은 것은 **비용 곡선이 스테이지 80 에서 Lv 300 을 준다** 는 것이고,
+   «4단계» 는 옛 상한식(단계당 100 고정)에서 그 레벨에 붙던 **이름표**였다. 326 은 비용 곡선을 한 줄도
+   안 건드리고 상한식만 누적합으로 바꿨으므로 **Lv 는 그대로이고 이름표만 4 → 3 으로 내려간다.**
+   그래서 판정은 «Lv ≥ 300» 만 하고 단계는 **실측값을 적기만** 한다 — 여기서 단계를 단언하면
+   326 이 바꾸라고 지시받은 바로 그것을 게이트가 되돌리라고 요구하게 된다(수치 확정은 199 몫). */
+const g4 = LV[80] >= 300;                                 /* 112 주인 지시 «스테이지 80 → Lv 300» 불변 */
 const g5 = floor >= 0.5;                                  /* 훈련만으로도 전 스테이지 처치 가능 */
 const g6 = same;
 console.log('[E] 게이트 — 설치된 곡선으로 판정');
@@ -254,7 +263,8 @@ console.log('  ① 난이도 표류 — 첫 보스(s10) 비 ' + R10.toExponentia
 console.log('  ② 첫 보스(스테이지 10, Lv ' + LV[10] + ')까지 val 불변 — 설치 무릎 Lv ' + instK + ' : ' + (g2?'PASS':'FAIL'));
 console.log('  ③ 배율이 역산값과 일치 — atk ' + inst.atk + '≈' + R_ATK.toFixed(4)
           + ' · hp ' + inst.hp + '≈' + R_HP.toFixed(4) + ' · regen ' + inst.regen + ' : ' + (g3?'PASS':'FAIL'));
-console.log('  ④ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + '(' + tstage(LV[80]) + '단계) ≥ 300(4단계) : ' + (g4?'PASS':'FAIL'));
+console.log('  ④ 112 지시 불변 — 스테이지 80 도달 Lv ' + LV[80] + ' ≥ 300 : ' + (g4?'PASS':'FAIL')
+          + '   [326 실측 단계 ' + tstage(LV[80]) + ' — 판정 대상 아님]');
 console.log('  ⑤ 전 스테이지에서 훈련만으로 처치 가능 (공격/적HP 최저 ' + floor.toFixed(2) + ' ≥ 0.5) : ' + (g5?'PASS':'FAIL'));
 console.log('  ⑥ Lv 0~' + instK + ' 가 131 이전 곡선과 완전히 동일 : ' + (g6?'PASS':'FAIL'));
 console.log('  ⑦ 유휴 가정 민감도 — 무릎은 «스테이지 10 도달 Lv» 이라 H_MAX 에 따라 움직인다');
