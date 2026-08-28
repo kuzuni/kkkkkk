@@ -10657,6 +10657,35 @@
   #sumw .sm-c{--ifq-k:.218}
   #sumw .sm-c>u.ifq{bottom:calc(var(--if-w) * -.150)}
 
+  /* ── 363 «연출 스킵» 토글 — 패널 아래 여백 안, 그리드 우단(36+1008 = 1044) 정렬 ──
+     ⚠ 좌표 기준은 `.sm-panel` 의 **패딩 박스**다(테두리가 없어 border box 와 같다). 즉 bottom:0 = 패널 하변.
+       하단 크롬(`.sm-panel::after`)이 15px 을 먹고 그리드는 하변에서 98px 위에서 끝나므로
+       쓸 수 있는 띠는 [15, 98] = 83px 이다. 높이 56 을 그 한가운데에 두면 bottom = 15 + (83−56)/2 = 28.5 → **28**
+       (크롬과 13px · 그리드와 14px 여유. 카드 개수 배지가 아래로 8px 튀어나오는 몫은 그리드 안 padding-bottom 이
+        이미 먹었으므로 이 띠까지 내려오지 않는다).
+     ⚠ 기존 요소의 좌표는 한 칸도 안 건드린다 — 절대배치라 패널·그리드·버튼·닫기 전부 Δ0px 다. */
+  .sm-sk{position:absolute;right:36px;bottom:28px;height:56px;z-index:3;
+    display:flex;align-items:center;gap:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  /* 라벨 — 패널 면(#2A2835) 위라 흰색은 세다. 320 이 남긴 «남색 상자 위 밝은 크림» 토큰과 같은 색을 쓴다. */
+  .sm-sk>i{font-size:30px;line-height:56px;color:#EADCC6;--fat:#EADCC6;--fatw:.5px;transform:scaleX(.96)}
+  .sm-sk.on>i{color:#CFF3B4;--fat:#CFF3B4}
+  /* 트랙·노브는 55 설정 토글(.cf55-sw/.cf55-kn)과 **같은 어휘**를 축소한 것이다 —
+     트랙 169×58 · 노브 99×69(위아래 5.5 넘침) → 트랙 120×46 · 노브 70×54(위아래 4 넘침).
+     켬 위치 47 = 트랙 120 − 노브 70 − 3(끔 위치 −3 의 거울). 색은 55 것을 그대로 쓴다. */
+  .sm-skt{position:relative;width:120px;height:46px;box-sizing:border-box;
+    border:3px solid #000;border-radius:23px;
+    background:linear-gradient(#BECADA 0 8%,#8B96B4 8% 84%,#C0CAD3 84% 100%)}
+  .sm-sk.on>.sm-skt{background:linear-gradient(#91E93F 0 8%,#6AC520 8% 84%,#8EE934 84% 100%)}
+  .sm-skk{position:absolute;left:-3px;top:-7px;width:70px;height:54px;box-sizing:border-box;
+    border:4px solid #000;border-radius:27px;background:linear-gradient(#D3D3D3,#8F8F8F);
+    text-align:center;line-height:46px;transition:left .12s ease-out,background .12s linear}
+  .sm-sk.on>.sm-skt>.sm-skk{left:47px;background:linear-gradient(#ABFF7E,#5FC61E)}
+  .sm-skk>em{font-size:19px;color:#FFF;-webkit-text-stroke:4px #000;paint-order:stroke fill;transform:scaleX(.93)}
+  /* 「ON」 은 2글자라 사이드베어링 비중이 커서 같은 scaleX 로는 좁다(.cf55 와 같은 보정) */
+  .sm-sk.on .sm-skk>em{transform:scaleX(1.06)}
+  /* 60 쥬시 — 눌림 피드백은 노브가 아니라 묶음 전체에 준다(트랙만 줄면 노브가 떠 보인다) */
+  .sm-sk:active{transform:scale(.96)}
+
   /* ── 리본 «소환 결과» — 면 bbox ref x249~831(583) y725~829(105) ──
      중앙 밴드 513x87 + 좌우 «모래시계형» 꼬리 77x81. 09 의 제비꼬리와 형상이 다르다
      (09 는 위가 넓고 아래로 처지는 드룹, 12 는 위·아래가 뾰족하고 가운데가 잘록하다). */
@@ -13869,7 +13898,12 @@
   <!-- 12 소환 결과 팝업. 딤 위에 ① 리본 ② **전폭 불투명 패널**(그리드) ③ 재소환 버튼 3개
        ④ 터치하여 닫기 가 따로 떠 있는 결과 연출이다. 측정표 docs/measure/12-소환결과팝업.md §0 -->
   <div id="sumw">
-    <div class="sm-panel"><div class="sm-grid" id="sumGrid"><div class="sm-grid-in" id="sumGridIn"></div></div></div>
+    <!-- 363 «연출 스킵» 토글. 자리는 **패널 아래 여백**(하단 크롬 15 ↔ 그리드 시작 98 사이 83px)이다 —
+         84 앵커(버튼 bottom:426 · 닫기 bottom:170)와 327 확대 패널 어디도 안 건드리는 유일한 상시 빈 띠다.
+         ⚠ 버튼 하변(1854)↔닫기 잉크 상변(2063) 사이 209px 은 **긴 프레임에만** 있다 —
+           1600 프레임에서는 짧은 프레임 보호항이 둘을 1416↔1431 로 붙여 12px 밖에 안 남는다. -->
+    <div class="sm-panel"><div class="sm-grid" id="sumGrid"><div class="sm-grid-in" id="sumGridIn"></div></div>
+      <div class="sm-sk" id="sumSkip" role="switch" aria-checked="false"><i class="sm-fat" data-t="연출 스킵">연출 스킵</i><s class="sm-skt"><b class="sm-skk"><em>OFF</em></b></s></div></div>
     <div class="sm-rb">
       <div class="sm-tl l"><s></s></div>
       <div class="sm-tl r"><s></s></div>
@@ -17262,7 +17296,9 @@ const DEF = () => ({
   /* 159 — `heroTab` 세이브 키는 폐기했다(영웅 팝업은 열 때마다 장비 탭에서 시작한다).
      `eqTab`(06 시트 안 무기/방어구 탭)은 그대로 — 그건 시트 내부 상태라 별개다. */
   buyQty:1, autoBuy:false, a105:1, eqTab:'weapon',
-  opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false },  /* 55 설정 */
+  /* 363 — `sumSkip` 은 55 설정 화면이 아니라 **12 소환 결과 팝업 안**의 토글이다(주인 지시 2026-08-29).
+     저장 자리를 `S.opt` 로 둔 것은 «게임 진행이 아니라 취향» 이라는 뜻이 sndOn/shakeOn 과 같기 때문이다. */
+  opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false, sumSkip:false },  /* 55 설정 + 363 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
 });
@@ -17470,7 +17506,10 @@ function load(){
     {
       const o = (d.opt && typeof d.opt === 'object') ? d.opt : {}, D = DEF().opt;
       b.opt = { vol: Number.isFinite(o.vol) ? Math.max(0, Math.min(100, Math.round(o.vol))) : D.vol };
-      ['bgm','sfx','shake','push','night'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
+      /* 363 — `sumSkip` 을 이 목록에 **반드시** 넣는다. 이 블록은 opt 를 «항목별로 다시 짓기» 때문에
+         빠진 키는 새로고침 한 번에 통째로 사라진다(바로 아래 `cp` 주석이 같은 함정을 적어 뒀다).
+         KEY 는 안 올린다 — 44 교훈 2 «없으면 기본값(false)» 으로 구 세이브가 그대로 흡수된다. */
+      ['bgm','sfx','shake','push','night','sumSkip'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
       /* 쿠폰 사용 이력 — 위에서 opt 를 «항목별로 다시 짓기» 때문에 명시적으로 살리지 않으면
          새로고침 한 번에 통째로 날아가고 같은 코드를 무한히 재사용할 수 있게 된다. */
       b.opt.cp = {};
@@ -21646,6 +21685,40 @@ let sumCtx = null;   /* 재소환 버튼이 어느 배너를 다시 굴릴지 */
 /* 작업 252 — 결과 카드 «순차 팝» 의 칸당 간격(초). 58 이 박아 둔 0.055 를 상수로만 올렸다(값 불변):
    10칸이면 마지막 카드가 0.495s 에 시작해 총 길이가 예전과 정확히 같다(verify12·verify84 픽셀 회귀 보존). */
 const SUM_POP_STEP = 0.055;
+/* ── 작업 363 «연출 스킵» (저장소 주인 지시 2026-08-29) ──
+   재현(`tools/probe363.js`, 수리 전): 30연은 전 칸이 최종 상태에 닿기까지 **2047ms**(63프레임 중 58이 미완성),
+   10연도 **940ms** 다. 등재문의 «30연이면 이 순차 연출이 길다» 가 그대로 확인됐다.
+   끄는 것은 «시간축에 얹힌 것» 전부다 — 칸당 지연(SUM_POP_STEP)·fxPop 곡선·flip 사운드 5장·희귀 광선 버스트.
+   ⚠ 버스트를 «지연 0 으로 한꺼번에» 로 두지 않았다: 30칸이면 파티클 420개가 한 프레임에 터져
+     «스킵» 이 아니라 **더 센 연출**이 된다. 등급은 카드 면색(SUM_CARD)이 이미 상시로 말하므로
+     스킵 상태에서 버스트는 접고, «희귀가 있다» 는 신호만 `sfx('rare')` 한 번으로 남긴다(98 볼륨 규약). */
+const sumSkipOn = () => !!(S.opt && S.opt.sumSkip);
+/* 지연 부품(사운드·버스트)의 타이머 손잡이. 예전에는 손잡이 없이 던져 두고 발화 시점에
+   `$('sumw').classList.contains('on')` 로만 걸렀는데, 그 가드는 «팝업이 계속 열린 채
+   다음 소환이 시작된» 경우(팝업 안 [10회 소환])를 못 거른다 — 앞 묶음의 소리가 새 묶음 위로 샌다.
+   363 은 «켜는 즉시 적용» 을 위해 **끊을 수 있어야** 해서 손잡이를 들었고, 그 김에 그 누수도 닫혔다. */
+let sumFxT = [];
+const sumFxClear = () => { sumFxT.forEach(clearTimeout); sumFxT = []; };
+const sumFxAt = (ms, fn) => sumFxT.push(setTimeout(() => { if($('sumw').classList.contains('on')) fn(); }, ms));
+/* 토글 겉모습을 상태에 맞춘다(팝업을 열 때·누를 때 둘 다 여기로 온다) */
+function sumSyncSkip(){
+  const el = $('sumSkip'); if(!el) return;
+  const on = sumSkipOn();
+  el.classList.toggle('on', on);
+  el.setAttribute('aria-checked', on ? 'true' : 'false');
+  const kn = el.querySelector('.sm-skk>em');
+  if(kn) kn.textContent = on ? 'ON' : 'OFF';
+}
+/* «다음 소환부터» 가 아니라 **켜는 즉시** — 지금 굴러가는 등장 연출을 그 자리에서 끝낸다.
+   `fx-pop` 을 떼면 animation 이 사라져 카드는 정적 상태(transform 없음·opacity 1) = 최종 상태가 된다
+   (`.sm-c` 자체에는 transform·opacity 가 없다 — fill-mode:both 가 잡고 있던 것을 놓는 것뿐이다). */
+function sumSkipNow(){
+  sumFxClear();
+  const g = $('sumGridIn'); if(!g) return;
+  /* `jz-x` 를 같이 달아야 한다 — fx-pop 만 떼면 그 그리드는 jzStagger 가 «등장을 안 건 그리드» 로 보고
+     자기 스태거를 얹을 수 있는 상태가 된다(같은 함정을 두 자리에서 밟지 않게 짝으로 둔다). */
+  [...g.children].forEach(el => { el.classList.remove('fx-pop', 'jz-st'); el.classList.add('jz-x'); });
+}
 
 function showSummonResult(b, times, res, lvUp){
   sumCtx = b;
@@ -21664,10 +21737,14 @@ function showSummonResult(b, times, res, lvUp){
      → 지연을 **DOM 순서 = 뽑은 순서**로 되돌린다. 곡선 자체(`fxPop` 0 → 1.2 → 1 «작았다가 커진다»)와
      칸당 간격(0.055s)은 58 것을 그대로 쓴다. 등재문이 의심한 `jzStagger`(--jzd·jz-st)는 이 그리드에
      **애초에 안 걸린다**(probe252 [A]: `--jzd` 전 칸 공백 · 이긴 animation-name 은 `fxPop`). */
-  const dly = agg.map((_, i) => i * SUM_POP_STEP);
+  /* 363 — 스킵이 켜져 있으면 지연도 `fx-pop` 도 안 붙는다(선언 자체가 없으니 «생략» 이 곧 최종 상태다) */
+  const skip = sumSkipOn();
+  sumFxClear();                       /* 앞 묶음이 남긴 지연 부품을 먼저 끊는다 */
+  const dly = agg.map((_, i) => skip ? 0 : i * SUM_POP_STEP);
   $('sumGridIn').innerHTML = agg.map((a, i) => {
     const C = SUM_CARD[a.it.g] || SUM_CARD[0];
-    return '<div class="sm-c ifr fx-pop" style="--face:' + C.face + ';--rim:' + C.rim
+    /* `jz-x` = 60 쥬시 스태거 «손대지 마라» 표시. fx-pop 을 뺀 자리를 jzStagger 가 채우는 것을 막는다 */
+    return '<div class="sm-c ifr' + (skip ? ' jz-x' : ' fx-pop') + '" style="--face:' + C.face + ';--rim:' + C.rim
       + ';animation-delay:' + dly[i].toFixed(3) + 's">'
       /* 174 — 펫만 스프라이트 캔버스로. 장비·스킬은 `ic` 가 있어 이모지 그대로다(표시 불변) */
       + '<b>' + petIcon(a.it, 'sum') + '</b><u class="ifq"><i class="sm-fat" data-t="' + a.n + '">' + a.n + '</i></u></div>';
@@ -21680,17 +21757,22 @@ function showSummonResult(b, times, res, lvUp){
        빈 면은 `.sm-grid-in` 의 세로 중앙정렬이 받는다. 상세는 .sm-panel 위 주석. */
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
+  sumSyncSkip();                      /* 363 — 팝업을 열 때마다 토글 겉모습을 저장값에 맞춘다 */
   $('sumw').classList.add('on');
+  if(skip){
+    /* 363 — 시간축을 안 쓴다. 소리는 «등장 1회 + 희귀 있으면 1회» 로만 축약한다(98). */
+    sfx('flip');
+    if(agg.some(a => a.it.g >= 3)) sfx('rare');
+    return;
+  }
   /* 78 — 카드 팝에 맞춰 뒤집힘 소리(최대 5장 — 30연은 소리 잔치가 된다) */
-  dly.slice().sort((a, b) => a - b).slice(0, 5).forEach(d =>
-    setTimeout(() => { if($('sumw').classList.contains('on')) sfx('flip'); }, d * 1000));
+  dly.slice().sort((a, b) => a - b).slice(0, 5).forEach(d => sumFxAt(d * 1000, () => sfx('flip')));
   /* 영웅(g≥3) 이상은 팝 순간 광선 버스트를 얹는다 */
   const cards = $('sumGridIn').children;
   agg.forEach((a, i) => {
     if(a.it.g < 3 || !cards[i]) return;
     const el = cards[i], col = GRADE[a.it.g].c;
-    setTimeout(() => { if(el.isConnected && $('sumw').classList.contains('on')){ fxBurst(el, col, 14); sfx('rare'); } },
-      dly[i]*1000 + 170);
+    sumFxAt(dly[i]*1000 + 170, () => { if(el.isConnected){ fxBurst(el, col, 14); sfx('rare'); } });
   });
 }
 /* 버튼 3개는 10 상점 소환 탭(#shopw)과 **같은 상태·같은 함수**를 쓴다 — freeLeft/summonCost/doSummonFree */
@@ -21713,7 +21795,7 @@ function syncSummonBtns(){
   $('sumB10').disabled = lack10;
   $('sumB30').disabled = lack30;
 }
-function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
+function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; sumFxClear(); }   /* 363 — 지연 부품도 같이 끊는다 */
 /* 배경(딤·패널) 아무 데나 탭하면 닫힌다 — «터치하여 닫기». 버튼 3개는 stopPropagation 대신
    closest 로 걸러 낸다(버튼이 disabled 여도 닫히지 않게). */
 /* 작업 84(2026-08-26) — 74 «탭 유실» 계열 버그. 버튼 중앙(클릭 지점)은 `.cost` 안의 `i.sm-fat` 인데
@@ -21721,10 +21803,21 @@ function closeSummonResult(){ $('sumw').classList.remove('on'); sumCtx = null; }
    버블링해 올 때쯤이면 e.target 은 **DOM 에서 떨어져 나간 노드**라 closest('.sm-b') 가 null 이 되고,
    «배경 탭» 으로 오인돼 방금 띄운 결과 팝업이 그대로 닫혔다(소환은 되는데 결과를 못 본다).
    composedPath() 는 **디스패치 시점의 경로**를 그대로 돌려주므로 중간 재렌더에 영향받지 않는다. */
+/* 363 — «연출 스킵» 토글도 «배경» 이 아니다. `stopPropagation` 하나로 막지 않고 여기 필터에도 넣는다:
+   토글을 누르면 노브 안 글자(`em`)가 갈아 끼워지므로 84 가 잡은 «떨어져 나간 노드» 함정이 그대로 있다
+   — composedPath 는 디스패치 시점의 경로라 재렌더에 영향받지 않는다. */
 $('sumw').addEventListener('click', e => {
   const pth = typeof e.composedPath === 'function' ? e.composedPath() : [e.target];
-  const inBtn = pth.some(n => n && n.classList && n.classList.contains('sm-b'));
+  const inBtn = pth.some(n => n && n.classList && (n.classList.contains('sm-b') || n.classList.contains('sm-sk')));
   if(!inBtn) closeSummonResult();
+});
+$('sumSkip').addEventListener('click', e => {
+  e.stopPropagation();
+  S.opt.sumSkip = !S.opt.sumSkip;
+  sumSyncSkip();
+  if(S.opt.sumSkip) sumSkipNow();     /* 켜는 즉시 — 지금 굴러가는 연출을 그 자리에서 끝낸다 */
+  sfx('toggle');
+  save();
 });
 $('sumBF').onclick = () => {
   const b = sumCtx; if(!b) return;
@@ -32596,8 +32689,14 @@ function jzStagger(root){
            12 소환 결과에서 실측된 모습(probe252): t0 `fxPop` scale 0 → t133 `.jz-st` 가 붙어
            `jzSt`(scale .94→1.02) 로 바뀌고 transform 은 `none` → t551 클래스가 떨어지며 다시
            `fxPop` scale 0 → **같은 카드가 두 번 등장한다.** 주인이 본 «랜덤처럼» 의 나머지 절반이다.
-           `fx-pop` 은 이 저장소에서 «내 등장은 내가 건다» 는 표시다(fxPop 0→1.2→1). */
-        if(!kids[0].classList.contains('fx-pop')) jzStagGo(kids, Math.min(kids.length, 20));
+           `fx-pop` 은 이 저장소에서 «내 등장은 내가 건다» 는 표시다(fxPop 0→1.2→1).
+           작업 363 — 표시가 **하나로는 모자랐다.** 12 «연출 스킵» 이 켜지면 카드에서 `fx-pop` 을 빼는데,
+           252 의 이 가드는 그것을 «등장 연출이 없는 그리드» 로 읽고 **자기 스태거를 대신 얹었다**
+           (probe363 실측, 수리 전: 스킵 켬인데도 `.jz-st` 가 붙어 60+25i ms 로 최대 535ms 를 더 끌었다).
+           «내가 건다» 와 «아무것도 안 건다» 는 다른 말이라 표시도 둘이어야 한다 → `jz-x` = «손대지 마라».
+           앞으로 «등장을 일부러 안 하는» 그리드는 fx-pop 이 아니라 이 표시를 단다. */
+        if(!kids[0].classList.contains('fx-pop') && !kids[0].classList.contains('jz-x'))
+          jzStagGo(kids, Math.min(kids.length, 20));
         continue;                                       /* 그리드를 찾았으면 그 아래로는 안 내려간다 */
       }
       for(let i = 0; i < kids.length && next.length < 40; i++) next.push(kids[i]);
