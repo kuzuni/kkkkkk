@@ -110,12 +110,27 @@ const lvOf = (page, kind, id) => page.evaluate(o =>
   o.kind === 'cos' ? cosLvOf(o.id) : oLv(o.id), { kind, id });
 const fragOf = (page, kind, id) => page.evaluate(o =>
   o.kind === 'cos' ? S.stone : frag(o.id), { kind, id });
-/* 08 껍데기에서 «레벨을 타는» 자리를 통째로 읽는다(§8 표기 대조용) */
-const face = page => page.evaluate(() => {
-  const b = $('mbox'), g = s => { const n = b.querySelector(s); return n ? n.innerHTML : null; };
-  const bar = b.querySelector('.sk-pb i');
-  return { gr: g('.sk-gr b'), lv: g('.sk-lv b'), w: bar ? bar.style.width : null,
-           pb: g('.sk-pb b'), cell: g('.sk-ct .vl .nt b'), desc: g('.sk-db p'), own: g('.sk-ow .v b') };
+/* 08 껍데기에서 «레벨을 타는» 자리를 통째로 읽고, 그 자리에서 통짜 재렌더까지 시켜 **둘 다** 돌려준다(§8 표기 대조용).
+   ⚠ 311(2026-08-28) — 예전에는 `live=읽기` → `mouse.up()` → 200ms → `full=읽기` 로 **왕복 세 번**이었다.
+     홀드 반복은 60ms 까지 빨라지는데 왕복 사이가 그보다 길 수 있어, 두 읽기 «사이에» 강화가 한 번 더 들어가
+     «딱 1레벨 어긋남» 으로 간헐 FAIL 했다 — 표기가 틀린 게 아니라 **두 읽기가 같은 상태를 안 본** 계측 부패다.
+     이제 «live 읽기 → 정지(=통짜 재렌더) → full 읽기» 를 **한 번의 evaluate 안에서 동기로** 묶는다.
+     사이에 `setTimeout` 틱이 낄 수 없다(297 이 verify203 [10]·verify210 [I] 에서 쓴 방식).
+     정지는 제품의 «뗌» 과 **같은 경로**(`upHoldStop(false)` → `h.end(h.n,false)` → `o.full(n)`)를 탄다 —
+     게이트용 샛길을 새로 파는 게 아니다. `held` 는 그 읽기가 «정말 홀드 중» 이었음을 같이 돌려준다
+     (홀드가 이미 멎은 뒤에 재서 대조가 헛도는 «조용한 통과» 를 막는다). */
+const faceBoth = page => page.evaluate(() => {
+  const read = () => {
+    const b = $('mbox'), g = s => { const n = b.querySelector(s); return n ? n.innerHTML : null; };
+    const bar = b.querySelector('.sk-pb i');
+    return { gr: g('.sk-gr b'), lv: g('.sk-lv b'), w: bar ? bar.style.width : null,
+             pb: g('.sk-pb b'), cell: g('.sk-ct .vl .nt b'), desc: g('.sk-db p'), own: g('.sk-ow .v b') };
+  };
+  const held = typeof upHold !== 'undefined' && upHold !== null;
+  const live = read();
+  upHoldStop(false);
+  const full = read();
+  return { held, live, full };
 });
 
 (async () => {
@@ -272,12 +287,12 @@ const face = page => page.evaluate(() => {
     c = await center(page, BTN);
     await page.mouse.move(c.x, c.y); await page.mouse.down();
     await page.waitForTimeout(800);
-    const live = await face(page);
-    await page.mouse.up();
-    await page.waitForTimeout(200);
-    const full = await face(page);
+    const { held, live, full } = await faceBoth(page);   /* 311 — 한 번의 evaluate 안에서 읽기·정지·읽기 */
+    await page.mouse.up();                               /* 이미 멎었으므로 pointerup 은 no-op */
+    await page.waitForTimeout(120);
     const keys = ['gr', 'lv', 'w', 'pb', 'cell', 'desc', 'own'];
     const diff = keys.filter(x => live[x] !== full[x]);
+    ok(k + ' — 읽는 순간 홀드가 돌고 있었다(대조가 헛돌지 않았다)', held);
     ok(k + ' — 홀드 중 표기 == 재렌더 표기', diff.length === 0,
        diff.length ? diff.map(x => x + ': «' + live[x] + '» vs «' + full[x] + '»').join(' / ') : keys.length + '자리 일치');
   }
