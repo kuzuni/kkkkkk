@@ -157,10 +157,13 @@ const blk = async (name, fn) => {
     window.setTimeout = () => 0; window.setInterval = () => 0;
     document.querySelectorAll('#slots .cdv').forEach(e => e.style.height = '0%');
   });
+  /* 362 — §R 되돌림 시험이 쓸 «일부러 민다» 규칙도 **여기서 한 번만** 심고 클래스로 토글한다
+     (5회차 사고: 장마다 스타일시트를 덧붙이면 재래스터가 섞인다). */
   await p.addStyleTag({ content:
     '#app *{transition:none!important;animation:none!important}'
     + '#slots .cdw{overflow:visible!important}'
-    + 'html.p357hide #slots .si3{visibility:hidden!important}' });
+    + 'html.p357hide #slots .si3{visibility:hidden!important}'
+    + 'html.p357shift #slots .si3{left:3px!important}' });
   await p.waitForTimeout(250);
   const grab = async hide => {
     await p.evaluate(c => { document.documentElement.classList.toggle('p357hide', c); }, hide);
@@ -249,8 +252,9 @@ const blk = async (name, fn) => {
     console.log('  ── 8칸 평균 bbox 중심 Δ = ' + (avg >= 0 ? '+' : '') + avg + 'px · 최악 ' + worst.toFixed(2) + 'px (' + worstCh + ')');
     ok(dirty === 0, 'ⓒ 대조군 — 같은 상태 두 장이 8칸 전부 동일(오염 칸 ' + dirty + ')');
     ok(Math.abs(avg) <= 1, 'ⓒ 잉크 중심 평균이 슬롯 중심 ±1px 이내 (평균 ' + avg + ')');
-    /* 칸별 상한이 ±2 인 이유는 ⓓ 가 못 박는다 — 남는 것은 **글리프 자신의 side bearing**(🪨 −1.68px)이고
-       폰트를 뺀 «배치» 잔차는 ≤0.5px 다. 칸마다 손으로 밀어 되돌리는 것은 357 지시가 금지한 «비균등 보정». */
+    /* 칸별 상한이 ±2 인 이유는 ⓓ 가 못 박는다 — 남는 것은 **글리프 자신의 side bearing**(🪨 −1.26px,
+       362 의 8× 자로 다시 잰 값. 1× 자로는 −1.68 로 읽혔다)이고 폰트를 뺀 «배치» 잔차는 ≤0.6px 다.
+       칸마다 손으로 밀어 되돌리는 것은 357 지시가 금지한 «비균등 보정». */
     ok(worst <= 2, 'ⓒ 잉크 중심 최악값이 슬롯 중심 ±2px 이내 (최악 ' + worst.toFixed(2) + ' — 폰트 bearing 포함)');
   });
 
@@ -259,8 +263,23 @@ const blk = async (name, fn) => {
      글리프 자신의 side bearing 비대칭이라면 **CSS 로 회수할 자리가 아니다**(칸마다 다른 값을
      손으로 밀어 넣는 것은 357 지시가 금지한 «비균등 보정» 이다).
      ⇒ 같은 규격으로 오프스크린에 그려 **펜 중심 대비 잉크 중심**을 잰다(inkA4 와 같은 자).
-        캔버스 `textAlign:'center'` 는 advance 를 펜에 정확히 맞추므로, 남는 dx = 순수 bearing 비대칭이다. */
-  const bearing = await p.evaluate((chars) => {
+        캔버스 `textAlign:'center'` 는 advance 를 펜에 정확히 맞추므로, 남는 dx = 순수 bearing 비대칭이다.
+
+     ⚑ **작업 362 — 이 자리를 1× 로 재면 «측정하는 자» 가 재는 값보다 굵다.**
+     1× 래스터의 잉크 bbox 는 정수 열이라 중심이 **0.5 격자**에만 앉는다(오차 ±0.5px).
+     ⓓ 는 그렇게 양자화된 두 값을 빼므로 **잔차에 ±(0.5 + 0.5·sx) ≈ ±0.92px 의 순수 잡음**이 실린다 —
+     판정선 ±1px 이 잡음 바닥과 거의 같아, 래스터가 반 픽셀만 달라져도 뒤집힌다.
+     실제로 그랬다: **같은 트리·같은 크로미움 바이너리(1194)** 로 playwright 드라이버만
+     1.62.1 → 1.56.0 으로 바꾸면 최악 잔차가 **0.50 → 1.34px** 로 뛰어 5/6 이 된다.
+     ⓐⓑ 의 DOM 기하(칸 중심 86.5 · advance Δ+0)는 두 경우가 **한 자리도 안 다르다** ⇒ 배치가 아니다.
+     ⇒ 판정선을 넓히는 대신 **자를 가늘게 간다**: 같은 글리프를 `K` 배 크기로 그려 K 로 나눈다
+        (K=8 이면 분해능 0.06px). 이러면 `expect` 는 래스터가 아니라 **글리프 아웃라인의 기하**가 되고
+        드라이버·빌드에 흔들리지 않는다. K1→K8 수렴 실측: 🪨 −2 → −1.5 · 나머지 −1/−0.5 → −0.06.
+        남는 잡음은 **화면 쪽 ±0.5px 한 겹뿐**이라 ±1px 이 비로소 «배치» 를 재는 선이 된다.
+        무르게 푼 것이 아님은 아래 §R(일부러 3px 밀면 빨개진다)이 못박는다. */
+  const BEAR_K = 8;
+  const bearing = await p.evaluate((arg) => {
+    const { chars, K } = arg;
     try {
       const probe = document.createElement('span'); probe.className = 'si3';
       const host = document.createElement('div'); host.className = 'slot2';
@@ -271,40 +290,84 @@ const blk = async (name, fn) => {
       const fs = parseFloat(cs.fontSize), fam = cs.fontFamily;
       let sx = 1; const m = (cs.transform || '').match(/matrix\(([^,]+)/); if (m) sx = parseFloat(m[1]);
       document.body.removeChild(host);
-      const SZ = 300, cv = document.createElement('canvas'); cv.width = SZ; cv.height = SZ;
+      const SZ = 300 * K, cv = document.createElement('canvas'); cv.width = SZ; cv.height = SZ;
       const g = cv.getContext('2d');
       const out = [];
       for (const ch of chars) {
         g.clearRect(0, 0, SZ, SZ);
-        g.font = fs + 'px ' + fam; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.font = (fs * K) + 'px ' + fam; g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(ch, SZ / 2, SZ / 2);
         const d = g.getImageData(0, 0, SZ, SZ).data;
         let x0 = 1e9, x1 = -1;
         for (let y = 0; y < SZ; y++) for (let x = 0; x < SZ; x++) {
           if (d[(y * SZ + x) * 4 + 3] > 16) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
         }
-        out.push({ ch, dxRaw: x1 < 0 ? null : +(((x0 + x1) / 2) - SZ / 2).toFixed(2), sx });
+        /* K 로 나눠 **1 CSS px 단위**로 되돌린다 — 값의 뜻은 1× 때와 같고 분해능만 K 배다 */
+        out.push({ ch, dxRaw: x1 < 0 ? null : +((((x0 + x1) / 2) - SZ / 2) / K).toFixed(3), sx });
       }
-      return { out, sx };
+      return { out, sx, K };
     } catch (e) { return { err: String(e) }; }
-  }, rowMeta.map(r => r.ch));
+  }, { chars: rowMeta.map(r => r.ch), K: BEAR_K });
 
-  await blk('ⓓ 남은 잔차의 정체 — 글리프 side bearing (오프스크린 독립 측정)', async () => {
-    if (bearing.err) { ok(false, 'ⓓ 예외 — ' + bearing.err); return; }
+  /* ⓓ·§R 이 같은 셈을 두 번 한다 — 한 벌로 뽑는다 */
+  const residOf = inkNow => {
+    const rows = [];
     let worst = 0;
     for (let i = 0; i < bearing.out.length; i++) {
-      const bp = bearing.out[i], pg = ink.out[i];
+      const bp = bearing.out[i], pg = inkNow.out && inkNow.out[i];
       if (!bp || bp.dxRaw === null || !pg || !pg.n) continue;
       const expect = +(bp.dxRaw * bearing.sx).toFixed(2);       // 화면 px 로 환산
       const actual = +(pg.bboxCx - pg.slotCx).toFixed(2);
       const resid = +(actual - expect).toFixed(2);
       if (Math.abs(resid) > worst) worst = Math.abs(resid);
-      console.log('  칸 ' + i + ' ' + bp.ch + '  폰트 bearing 예상 Δ' + (expect >= 0 ? '+' : '') + expect
-        + ' · 화면 실측 Δ' + (actual >= 0 ? '+' : '') + actual
-        + ' → 설명 안 되는 잔차 ' + (resid >= 0 ? '+' : '') + resid + 'px');
+      rows.push({ i, ch: bp.ch, expect, actual, resid });
     }
-    console.log('  ── 배치가 만든 잔차(폰트를 뺀 뒤) 최악 = ' + worst.toFixed(2) + 'px');
-    ok(worst <= 1, 'ⓓ 폰트 bearing 을 뺀 «배치» 잔차가 ±1px 이내 (최악 ' + worst.toFixed(2) + ')');
+    return { rows, worst };
+  };
+
+  let base = null;
+  await blk('ⓓ 남은 잔차의 정체 — 글리프 side bearing (오프스크린 독립 측정)', async () => {
+    if (bearing.err) { ok(false, 'ⓓ 예상 예외 — ' + bearing.err); return; }
+    console.log('  · 오프스크린 자 = ' + bearing.K + '× 수퍼샘플 (분해능 ' + (1 / bearing.K).toFixed(3) + 'px) · scaleX ' + bearing.sx);
+    base = residOf(ink);
+    for (const r of base.rows) {
+      console.log('  칸 ' + r.i + ' ' + r.ch + '  폰트 bearing 예상 Δ' + (r.expect >= 0 ? '+' : '') + r.expect
+        + ' · 화면 실측 Δ' + (r.actual >= 0 ? '+' : '') + r.actual
+        + ' → 설명 안 되는 잔차 ' + (r.resid >= 0 ? '+' : '') + r.resid + 'px');
+    }
+    console.log('  ── 배치가 만든 잔차(폰트를 뺀 뒤) 최악 = ' + base.worst.toFixed(2) + 'px');
+    ok(base.worst <= 1, 'ⓓ 폰트 bearing 을 뺀 «배치» 잔차가 ±1px 이내 (최악 ' + base.worst.toFixed(2) + ')');
+  });
+
+  /* ── §R 되돌림 시험 (작업 362) ─────────────────────────────────────────
+     ⓓ 의 자를 가늘게 갈았으니 «무르게 풀어 초록으로 만든 것 아니냐» 에 답해야 한다.
+     같은 화면을 **일부러 3px 밀어** 다시 찍는다 — 그때도 초록이면 그 항은 아무것도 안 재는 항이다.
+     밀린 뒤 빨강 · 원복하면 다시 초록, 둘 다 봐야 «배치를 재는 자» 가 증명된다. */
+  await blk('§R 되돌림 시험 — .si3 를 3px 밀면 ⓓ 가 빨개지는가', async () => {
+    if (!base) { ok(false, '§R 전제 없음 — ⓓ 가 못 돌았다'); return; }
+    const remeasure = async () => {
+      shotOn = await grab(false); shotOff = await grab(true); shotCtl = await grab(false);
+      let k = await readInk();
+      for (let t = 2; t <= 6 && !k.err && k.out.some(r => r.drift); t++) {
+        shotOn = await grab(false); shotOff = await grab(true); shotCtl = await grab(false);
+        k = await readInk();
+      }
+      return k;
+    };
+    await p.evaluate(() => document.documentElement.classList.add('p357shift'));
+    const shifted = residOf(await remeasure());
+    console.log('  밀어 놓고 잰 최악 잔차 = ' + shifted.worst.toFixed(2) + 'px (기대: >1)');
+    ok(shifted.worst > 1, '§R 3px 밀면 ⓓ 가 빨개진다 (최악 ' + shifted.worst.toFixed(2) + ')');
+    /* 밀린 양이 그대로 잔차로 나와야 한다 — 8칸 전부 +3px 어치가 얹힌다 */
+    const lifted = shifted.rows.every(r => {
+      const b0 = base.rows.find(q => q.i === r.i);
+      return b0 && Math.abs((r.resid - b0.resid) - 3) <= 0.6;
+    });
+    ok(lifted, '§R 밀린 3px 이 8칸 전부 잔차로 그대로 올라온다 (±0.6px)');
+    await p.evaluate(() => document.documentElement.classList.remove('p357shift'));
+    const backW = (await remeasure().then(residOf)).worst;
+    console.log('  원복 뒤 최악 잔차 = ' + backW.toFixed(2) + 'px (기대: ≤1)');
+    ok(backW <= 1, '§R 원복하면 다시 초록 (최악 ' + backW.toFixed(2) + ')');
   });
 
   await b.close();
