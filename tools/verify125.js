@@ -7,11 +7,14 @@
  * **두 층**으로 나눠 본다 — ⓐ 옛것이 사라졌는가(소스 스캔) · ⓑ 새것이 맞는가(런타임 표시 결과).
  *
  *   [A] 소스 — 주석을 걷어낸 index.html 에 화폐 이모지(🪙💰🥇💎💠🔮🎟️🎫) 0건.
- *       비재화(등급·계급·메달·장비 이름·탭/메뉴 아이콘)는 **줄 단위 허용 목록**으로 명시하고,
- *       목록에 없는 잔여 이모지는 실패다. 허용 목록 자체가 «남겨 둔 것» 의 기록이 된다.
+ *       비재화는 **두 층**으로 뺀다 — ① «아트 자리» 규칙(`ic:`/`art:` 의 한 글리프 값 = 그 항목의 그림)과
+ *       ② 규칙으로 안 걸리는 나머지의 **줄 단위 허용 목록**. 목록은 «한 항목 = 한 줄»(A2)이고
+ *       **죽은 항목이 있으면 실패**다(A3) — 목록이 소스를 못 따라가 조용히 새는 것이 125 의 고질병이다(289).
  *   [B] 단일 출처 — `assets/ui/cur-*.svg` 리터럴은 `CUR_ICON` 블록 안에만 있다(문자열에 경로 복제 금지).
  *       [A] 와 **같은 주석 제거 소스**에서 센다 — 주석에 적힌 경로는 설명이지 복제가 아니다(작업 145).
- *   [C] 자산 — 화폐 7종 SVG 가 실제로 있고 유효하다(파일 · <svg> · viewBox).
+ *   [C] 자산 — 화폐 SVG 가 실제로 있고 유효하다(파일 · <svg> · viewBox).
+ *       **종 수를 손으로 적지 않는다** — `CUR_ICON` 블록에서 전수로 뽑는다(C0). 194·203·210 이 재화를
+ *       늘릴 때마다 «7종»·«9종»·«11종» 이 뒤처져 세 번 부패했다(작업 289).
  *   [D] 기하 — HUD `.cbox i` 아이콘 **63×63**(measure/A3) · 41 팝업 재화 바 `.pcb-p>i` **57×57**(measure/41),
  *       옛 이모지 보정(`scaleX`)이 이미지에 남아 있지 않다.
  *   [E] «한 종류» — 전 화면 스윕에서 모인 모든 화폐 아이콘의 src 가 재화별로 **유일**하고 CUR_ICON 과 같다.
@@ -35,35 +38,53 @@ const CUR_EMOJI = ['\u{1FA99}', '\u{1F4B0}', '\u{1F947}', '\u{1F48E}', '\u{1F4A0
 /* 화면 텍스트에 남으면 무조건 실패인 «순수 화폐» 글리프 — 나머지(💎🔮💠🥇)는 등급·계급·탭 아이콘으로도
    쓰이므로 런타임 텍스트로는 못 가른다(그쪽은 [A] 소스 스캔이 줄 단위로 잡는다. LESSONS 111-①). */
 const PURE = ['\u{1FA99}', '\u{1F4B0}', '\u{1F39F}', '\u{1F3AB}'];
-/* 194 — 강화석(재화)·강화석 던전권이 붙어 7종 → 9종. 203 — 룬강화석(재화)·룬 던전권이 붙어 **11종**.
-   «7»·«9» 는 못박은 상한이 아니라 그때 통일돼 있던 화폐의 수였다
-   (125 의 규칙은 «재화 하나에 이미지 하나» — 재화가 늘면 이 목록도 같이 는다). */
-const ICONS = ['cur-gold.svg', 'cur-dia.svg', 'cur-relic.svg', 'cur-stone.svg', 'cur-rstone.svg',
-               'cur-mile.svg',
-               'cur-ticket-gold.svg', 'cur-ticket-dia.svg', 'cur-ticket-relic.svg',
-               'cur-ticket-stone.svg', 'cur-ticket-rstone.svg'];
+/* 화폐 아이콘 목록 — **상수 목록이 아니라 `CUR_ICON` 블록의 전수 결과다**(작업 289).
+   194(7→9종)·203(9→11종)·210(11→**12종**, `tstone` 단련석) 처럼 재화가 늘 때마다 여기 손으로 적은
+   목록이 뒤처져 C2 가 «11종이 디코드된다» 를 12종 앞에서 빨갛게 만들었다 — 세 번째 부패였다.
+   125 의 규칙은 «재화 하나에 이미지 하나» 이므로, 세는 자는 **선언 그 자체**여야 한다.
+   B1 이 «경로 리터럴은 CUR_ICON 블록 안에만» 을 못 박으므로 이 블록이 곧 전수 목록이다. */
+function curIconFiles(bare) {
+  const decl = bare.indexOf('const CUR_ICON = {');
+  if (decl < 0) return [];
+  const end = bare.indexOf('};', decl);
+  /* 파일명을 «cur-…\.svg» 로 좁히지 않는다 — 좁히면 오타(`cur-NOPE.svg`)가 **추출에서 조용히 빠져**
+     C1 이 «남은 11종은 멀쩡하다» 로 초록이 된다(289 음성 대조 N4 가 실제로 그렇게 새어 나갔다).
+     블록 안의 `assets/ui/…` 리터럴은 전부 화폐 아이콘이므로 있는 그대로 받아 C1 에 넘긴다. */
+  const seen = [];
+  for (const m of bare.slice(decl, end).matchAll(/'assets\/ui\/([^']+)'/g)) {
+    if (!seen.includes(m[1])) seen.push(m[1]);
+  }
+  return seen;
+}
 
-/* 화폐가 «아닌» 자리 — 남겨 두기로 한 것들. 줄에 이 조각이 있으면 그 줄의 이모지는 통과시킨다.
-   (등급·계급·메달·장비 이름·화면 아이콘은 재화 표시가 아니다 — 지시 ③ «비재화 제외 목록») */
+/* ── 비재화 제외 ① «아트 자리» — 이름이 아니라 **구조**로 뺀다(작업 289) ────────────────
+   `ic:'🔮'` · `art:'🎟'` 처럼 **한 글리프짜리 리터럴이 `ic`/`art` 키의 값**인 자리는 «그 항목의 그림»
+   이지 재화 표시가 아니다(장비·펫 이름 표, 등급·계급 엠블럼, 출석 보상 아이템, 151 이용권 카드 아트).
+   125 의 화폐 표시는 전부 `curIc()`/`<img class="cic">` 를 지나가므로(B2·E1~E4·G1 이 못 박는다)
+   `ic:`/`art:` 값과는 애초에 겹치지 않는다.
+   **왜 규칙으로 바꿨나**: 예전엔 이 자리를 «{n:'마력 장벽'» 처럼 **항목 이름 한 줄씩** 적어 뒀는데,
+   85·186 이 장비 표에 `id:` 를 넣고 등급별 항목을 늘리자 그 세 줄이 **한 글자도 안 맞는 죽은 항목**이
+   되어 A1 이 빨개졌다(289 진단 ⓐ). 이름 목록은 장비가 늘 때마다 또 부패한다 — 구조는 안 그런다.
+   값 길이를 8자로 묶어 «짧은 글리프» 만 면제한다(문장·경로를 `ic:` 로 숨기지 못하게). */
+const ART_SLOT = /\b(?:ic|art)\s*:\s*'[^'\s]{1,8}'/g;
+
+/* ── 비재화 제외 ② 아트 자리로 안 걸리는 나머지 — 줄 단위 허용 목록 ──────────────────
+   («한 항목 = 한 줄» 이 원칙이다. A2 가 부풀기를, A3 이 죽은 항목을 막는다) */
 const ALLOW = [
   '<span class="ti">',                        /* 탭바 «유물» 탭 아이콘 */
   'data-mn="pass"',                           /* ▦ 메뉴 «패스» 버튼 아이콘 */
   'data-ptab="stage"',                        /* 35 패스 «스테이지» 탭 아이콘 */
   'class="rk-sh s1"',                         /* 54 랭킹 단상 1위 방패 */
   "['\u{1F947}', '\u{1F948}', '\u{1F949}']",  /* 54 랭킹 메달 3종 */
-  "{ n:'희귀',", "{ n:'영웅',",               /* 장비 등급 아이콘 */
-  "{n:'마력 장벽'", "{n:'무한 결계'", "{n:'행운의 동전 목걸이'",  /* 장비 «이름» 표(재화 아님) */
-  "{ n:'골드',     ic:", "{ n:'플래티넘', ic:", "{ n:'다이아',   ic:",  /* 랭킹 계급 엠블럼 */
-  "n:'아티팩트 강화석'",                      /* 출석 보상 «아이템»(재화가 아니라 재료 상자) */
+  /* ── 작업 289 판정: 🎫 «이용권» 은 화폐가 아니다 ──────────────────────────────
+     125 가 통일한 화폐는 12종이다(210 이후) — 골드·다이아·유물조각·강화석·룬강화석·단련석·마일리지 +
+     **던전 입장권** 5종(`cur-ticket-*.svg`, H1 이 던전 카드 권종으로 못 박는다).
+     124·151 의 «이용권» 은 상점 **상품**(오프라인 보상 +4시간 등)이라 그 어느 것도 아니다 —
+     `curIc('tkDia')` 로 옮기면 **던전 입장권 아이콘을 상점 상품 토스트에 붙이는 오표기**가 된다. */
+  "' 이용권 — '",                             /* 151·124 이용권 적용 토스트(재화 아님) */
   /* ── 작업 211 판정: 🎟 «쿠폰» 은 화폐가 아니다 ──────────────────────────────
-     125 가 통일한 화폐는 11종이다(203 이후) — 골드·다이아·유물조각·강화석·룬강화석·마일리지 +
-     **던전 입장권** 5종(`cur-ticket-*.svg` 5장, H1 이 던전 카드 권종으로 못 박는다).
-     쿠폰 코드(`CF_CODES`)는 그 어느 것도 아니라서 `curIc('tkDia')`/`curIc('tkRelic')` 로
-     옮기면 **던전 입장권 아이콘을 쿠폰 알림에 붙이는 오표기**가 된다. 실제 «지급물» 인
-     다이아는 이미 같은 줄에서 `curIc('dia')` 로 나가고 있다(= 화폐 자리는 이미 통일됨).
-     `art:'🎟'` 은 151 이용권 카드의 **아트 자리**(형제 값이 '▶'·'⏳')라 역시 화폐 표시가 아니다.
-     → 네 줄 모두 «비재화» 로 제외한다. index.html 은 고칠 것이 없다. */
-  "art:'\u{1F39F}'",                          /* 151 이용권 «전투 효율 증가» 카드 아트 자리 */
+     쿠폰 코드(`CF_CODES`)도 화폐가 아니라서 `curIc('tkDia')`/`curIc('tkRelic')` 로 옮기면 같은
+     오표기가 된다. 실제 «지급물» 인 다이아는 이미 같은 줄에서 `curIc('dia')` 로 나가고 있다. */
   '사용할 수 없는 코드입니다',                /* 쿠폰 — 잘못된 코드 토스트 */
   '이미 사용한 코드입니다',                   /* 쿠폰 — 중복 사용 토스트 */
   'fmt(CF_CODES[code])',                      /* 쿠폰 — 획득 토스트(지급물 다이아는 curIc('dia')) */
@@ -88,15 +109,31 @@ function stripComments(src) {
   const BARE = stripComments(SRC);
   const lines = BARE.split('\n');
   const leftovers = [];
+  let artHits = 0;                      /* 규칙(ART_SLOT)으로 빠진 줄 */
+  const allowUse = ALLOW.map(() => 0);  /* 허용 목록 항목별 적중 수 — A2·A3 이 같이 읽는다 */
   lines.forEach((ln, i) => {
     if (!CUR_EMOJI.some(e => ln.indexOf(e) >= 0)) return;
-    if (ALLOW.some(a => ln.indexOf(a) >= 0)) return;
+    /* ① 아트 자리(ic:/art: 한 글리프)를 지운 뒤에도 이모지가 남는지로 본다 */
+    if (!CUR_EMOJI.some(e => ln.replace(ART_SLOT, '').indexOf(e) >= 0)) { artHits++; return; }
+    /* ② 나머지는 줄 단위 허용 목록 */
+    const k = ALLOW.findIndex(a => ln.indexOf(a) >= 0);
+    if (k >= 0) { allowUse[k]++; return; }
     leftovers.push((i + 1) + ': ' + ln.trim().slice(0, 80));
   });
   ok(leftovers.length === 0, 'A1 소스에 남은 화폐 이모지 0건(주석·비재화 제외)',
-     leftovers.length ? leftovers.slice(0, 6).join(' | ') : '0건');
-  const allowHits = lines.filter(ln => CUR_EMOJI.some(e => ln.indexOf(e) >= 0)).length;
-  ok(allowHits <= ALLOW.length + 4, 'A2 허용 목록이 부풀지 않았다(비재화 줄 ' + allowHits + '개)', String(allowHits));
+     leftovers.length ? leftovers.slice(0, 6).join(' | ') : '0건 (아트 자리 ' + artHits + '줄 · 허용 목록 '
+       + allowUse.reduce((a, b) => a + b, 0) + '줄)');
+  /* A2 — 허용 «목록» 이 부풀지 않았다. 세는 대상은 **목록이 면제한 줄** 뿐이다(규칙이 뺀 아트 자리는
+     항목이 아니라 정의라 세지 않는다). «한 항목 = 한 줄» 이 원칙이므로 상한은 목록 길이 그대로다. */
+  const allowHits = allowUse.reduce((a, b) => a + b, 0);
+  ok(allowHits <= ALLOW.length, 'A2 허용 목록이 부풀지 않았다(면제한 줄 ' + allowHits + '개 ≤ 항목 '
+     + ALLOW.length + '개)', allowHits + '/' + ALLOW.length);
+  /* A3 — **죽은 허용 항목 0건**(작업 289 가 신설). 이번 부패의 정체가 이것이다: 85·186 이 장비 표를
+     고치자 «{n:'마력 장벽'» 등 3항목이 아무 줄과도 안 맞게 됐는데, 목록은 «있기만 하면» 통과라
+     아무도 몰랐고 그 줄들만 조용히 A1 로 새어 나왔다. 이제는 항목이 죽는 순간 여기가 먼저 빨개진다. */
+  const dead = ALLOW.filter((a, k) => allowUse[k] === 0);
+  ok(dead.length === 0, 'A3 허용 목록에 죽은 항목 0건(어긋난 채 굳지 않았다)',
+     dead.length ? dead.map(a => JSON.stringify(a)).join(' | ') : ALLOW.length + '항목 전부 적중');
 
   /* ---- [B] 단일 출처 ----
      A1 과 **같은 `BARE`(주석 제거) 위에서** 센다. 원본을 훑으면 «주석에 경로를 적었다» 를
@@ -115,7 +152,11 @@ function stripComments(src) {
   ok(/function curIc\(/.test(SRC) && /function curIcEl\(/.test(SRC),
      'B2 헬퍼 curIc()/curIcEl() 존재');
 
-  /* ---- [C] 자산 ---- */
+  /* ---- [C] 자산 ----
+     목록은 손으로 적지 않고 위에서 만든 `BARE` 의 CUR_ICON 블록에서 **전수로 뽑는다**(작업 289). */
+  const ICONS = curIconFiles(BARE);
+  ok(ICONS.length >= 11, 'C0 CUR_ICON 블록에서 화폐 아이콘 전수 추출 (상수 목록 아님)',
+     ICONS.length + '종 · ' + ICONS.map(f => f.replace(/^cur-|\.svg$/g, '')).join(','));
   const bad = ICONS.filter(f => {
     const p = path.join(ROOT, 'assets', 'ui', f);
     if (!fs.existsSync(p)) return true;
@@ -203,17 +244,22 @@ function stripComments(src) {
     for (const k of Object.keys(CUR_ICON)) {
       wait.push(new Promise(res => {
         const im = new Image();
-        im.onload = () => { out.push({ k, w: im.naturalWidth, h: im.naturalHeight }); res(); };
-        im.onerror = () => { out.push({ k, w: 0, h: 0 }); res(); };
+        im.onload = () => { out.push({ k, src: CUR_ICON[k], w: im.naturalWidth, h: im.naturalHeight }); res(); };
+        im.onerror = () => { out.push({ k, src: CUR_ICON[k], w: 0, h: 0 }); res(); };
         im.src = CUR_ICON[k];
       }));
     }
     await Promise.all(wait);
     return out;
   });
-  ok(dec.length === ICONS.length && dec.every(x => x.w > 0 && x.h > 0),
-     'C2 ' + ICONS.length + '종이 실제로 디코드된다(경로·SVG 문법)',
-     dec.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
+  /* 소스에서 뽑은 파일 집합 == 런타임 CUR_ICON 이 실제로 부른 파일 집합 (둘 다 «전수» 라 개수를
+     못 박지 않는다 — 재화가 늘어도 같이 는다). 그 위에서 12종 전부 디코드되는지를 본다. */
+  const decFiles = dec.map(x => x.src.split('/').pop()).sort();
+  const sameSet = decFiles.length === ICONS.length && decFiles.join() === ICONS.slice().sort().join();
+  ok(sameSet && dec.every(x => x.w > 0 && x.h > 0),
+     'C2 ' + ICONS.length + '종이 실제로 디코드된다(경로·SVG 문법 · 소스↔런타임 같은 집합)',
+     dec.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · ')
+     + (sameSet ? '' : ' | 집합 불일치: 소스 ' + ICONS.length + ' vs 런타임 ' + decFiles.length));
 
   /* ---- [E][F] 전 화면 스윕 ---- */
   const sweep = await page.evaluate(async (PURE) => {
