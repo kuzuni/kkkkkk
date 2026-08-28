@@ -120,6 +120,13 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     sweep('10 탭 #shopCats .stab>.bdg', '#shopCats .stab>.bdg', '.stab');
     closeShopPage();
 
+    /* ── 70 출석 (318 신설) ──
+       «오늘 카드» 는 미출석일 때만 찍히므로 상태를 잠깐 만들었다가 되돌린다. */
+    const attSnap = JSON.stringify(S.att);
+    S.att = { n: 3, date: '' }; openAttend(); await wait(250);
+    sweep('70 출석 «오늘 카드» .at-c>s.updot', '#mbox [data-att]>s.updot', '.at-c,.at-c7');
+    closeModal(); S.att = JSON.parse(attSnap); uiDirty = true; await wait(100);
+
     /* ── 35 패스 ── */
     openPass('stage'); await wait(250);
     sweep('35 탭 #psBar .pt>.bdg', '#psBar .pt>.bdg', '.pt');

@@ -655,6 +655,62 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   await page.evaluate(snap => { const d = JSON.parse(snap); S.mail = d.mail; S.mailx = d.mailx; S.mailSeq = d.seq;
     uiDirty = true; drawHud(); }, mailSnap);
 
+  /* ── [8-3] 318 — 출석 보상 레드닷도 «경로 전체» 다 (저장소 주인 지시 2026-08-28) ──────
+     293(우편)과 **같은 형태**다: 진입 버튼(좌측 사이드 «출석»)의 배지는 정상이지만,
+     70 팝업을 여는 순간 딤(`#modal` z30 > `.side` z3) 아래로 들어가 화면에서 사라진다.
+     그래서 경로의 다음 칸(팝업 «오늘 카드» `[data-att]`)까지 같이 단언한다 —
+       ⓐ 미출석 → 사이드 버튼 `.on` **그리고** 팝업 «오늘 카드» `.alert` + `s.updot` 1개
+       ⓑ 166 규약 → 받을 수 없는 칸(수령 완료 `got` · 미래)에는 배지 0개
+       ⓒ 호스트 감사 → `.alert` 떼면 꺼지고 붙이면 켜진다
+       ⓓ 음성 → 수령하면 두 자리 모두 꺼진다
+     ⚠ 여기도 `renderUI()` 가 아니라 **`drawHud()`** 다(위 293 절의 경고와 같은 이유).
+     상태는 감사 뒤에 되돌린다. 전수 위치·화소 판정은 `tools/verify318.js` 가 따로 본다. */
+  const attSnap = await ev(() => JSON.stringify(S.att));
+  const attOn = await ev(() => {
+    S.att = { n: 3, date: '' }; uiDirty = true; drawHud();
+    openAttend();
+    const t = document.querySelector('#mbox [data-att]');
+    const all = [...document.querySelectorAll('#mbox .at-c, #mbox .at-c7')];
+    return {
+      side: document.querySelector('.side .ibtn[data-pop="attend"]').classList.contains('on'),
+      alert: !!t && t.classList.contains('alert'),
+      dots: t ? t.querySelectorAll('.updot').length : 0,
+      others: all.filter(c => c !== t).reduce((s, c) => s + c.querySelectorAll('.updot').length, 0),
+      cards: all.length,
+    };
+  });
+  ok('318 ⓐ 미출석 → 사이드 «출석» 버튼 레드닷 켜짐',
+    attOn.side === true, String(attOn.side));
+  ok('318 ⓐ 미출석 → 70 팝업 «오늘 카드» 레드닷 켜짐 (사이드 배지는 팝업 딤 아래로 사라진다)',
+    attOn.alert === true && attOn.dots === 1, 'alert ' + attOn.alert + ' · 닷 ' + attOn.dots);
+  ok('318 ⓑ 166 규약 — 받을 수 없는 칸(수령 완료·미래)에는 레드닷 0개',
+    attOn.others === 0 && attOn.cards === 7, '카드 ' + attOn.cards + '칸 · 나머지 닷 ' + attOn.others);
+  const attAudit = await ev(() => {
+    const h = document.querySelector('#mbox [data-att]'), e = h && h.querySelector('.updot');
+    if (!e) return { miss: true };
+    h.classList.remove('alert'); const off = getComputedStyle(e).display;
+    h.classList.add('alert');    const on = getComputedStyle(e).display;
+    return { off, on };
+  });
+  ok('318 ⓒ 배지 «.at-c>.updot» — `.alert` 없으면 꺼짐 / 있으면 켜짐',
+    !attAudit.miss && attAudit.off === 'none' && attAudit.on === 'block',
+    attAudit.miss ? '노드 없음' : attAudit.off + ' → ' + attAudit.on);
+  const attOff = await ev(() => {
+    const t = document.querySelector('#mbox [data-att]');
+    if (t) t.click();                       /* 수령 → claimAttend + openAttend 재렌더 */
+    uiDirty = true; drawHud();
+    return {
+      side: document.querySelector('.side .ibtn[data-pop="attend"]').classList.contains('on'),
+      dots: document.querySelectorAll('#mbox .updot').length,
+      today: !!document.querySelector('#mbox [data-att]'),
+    };
+  });
+  ok('318 ⓓ 음성 — 수령하면 두 자리 모두 꺼진다',
+    attOff.side === false && attOff.dots === 0 && attOff.today === false,
+    '사이드 ' + attOff.side + ' · 팝업 닷 ' + attOff.dots + ' · 오늘칸 ' + attOff.today);
+  await page.evaluate(snap => { S.att = JSON.parse(snap); closeModal(); uiDirty = true; drawHud(); }, attSnap);
+  await wait(300);
+
   /* ── [9] 콘솔 ───────────────────────────────────────────────────────── */
   ok('콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' | '));
 
