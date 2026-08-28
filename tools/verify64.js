@@ -64,6 +64,51 @@ async function hold(page, sel, ms){
   await page.waitForTimeout(ms);
   await page.mouse.up();
 }
+/* 355(2026-08-28) — «눌러 둔 시간» 을 벽시계(waitForTimeout)로 믿지 않는다.
+   hold(sel, 300) 의 실제 접촉은 한가한 컨테이너에서도 311~340ms 이고 부하가 걸리면 442ms 까지 밀린다
+   (`node tools/probe355.js [--load]` 실측). 임계 TR_HOLD_DELAY(350ms)를 넘긴 실행에서 반복이 한 번 더
+   도는 것은 **제품이 규약대로 동작한 것**인데, 요청값을 그대로 믿는 단언은 그때 빨개졌다(5회 중 1회).
+   ⇒ 페이지가 스스로 찍은 pointerdown/pointerup 시각과 trainBuy 성공 시각을 돌려받아
+      «실제 접촉 구간 안에서 몇 번, 언제 돌았는가» 로 판정한다(§4 가 이미 쓰던 방식의 공용화).
+   반환 { hold: 실측 접촉 ms, t: [접촉 시작 기준 구매 시각…] } */
+async function holdM(page, sel, ms, after){
+  const p = await center(page, sel);
+  if (!p) throw new Error('요소 없음: ' + sel);
+  await page.evaluate(() => {
+    window.__mD = 0; window.__mU = 0; window.__mB = [];
+    window.__mOrig = trainBuy;
+    trainBuy = function(id){ const r = window.__mOrig(id); if (r) window.__mB.push(performance.now()); return r; };
+    window.__mFd = () => { window.__mD = performance.now(); };
+    window.__mFu = () => { window.__mU = performance.now(); };
+    addEventListener('pointerdown', window.__mFd, true);
+    addEventListener('pointerup', window.__mFu, true);
+  });
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  await page.waitForTimeout(ms);
+  await page.mouse.up();
+  await page.waitForTimeout(after == null ? 400 : after);
+  return page.evaluate(() => {
+    removeEventListener('pointerdown', window.__mFd, true);
+    removeEventListener('pointerup', window.__mFu, true);
+    trainBuy = window.__mOrig;
+    return { hold: window.__mU - window.__mD, t: window.__mB.map(v => v - window.__mD) };
+  });
+}
+/* 접촉이 원하는 구간에 들지 못한 실행은 «측정 무효» 로 다시 던진다(305·303·344 계열).
+   valid 가 끝내 거짓이면 마지막 측정을 그대로 돌려준다 — 그 경우는 단언이 판단한다. */
+async function holdValid(page, sel, ms, valid, resetFn, tries){
+  let m = null;
+  for (let i = 0; i < (tries || 4); i++) {
+    if (resetFn) await resetFn();
+    m = await holdM(page, sel, ms);
+    if (valid(m)) return m;
+  }
+  return m;
+}
+const beforeThr = (m, thr) => m.t.filter(v => v < thr - 5).length;   /* 임계 «전» 에 성립한 구매 수 */
+const fmtM = m => '접촉 ' + Math.round(m.hold) + 'ms · t=[' + m.t.map(v => Math.round(v)).join(',') + ']';
+
 /* 132 — 88 이 폐기한 sp/spAtk 대신 훈련 3종(TRAIN_STATS) 레벨을 다 본다 */
 const snap = page => page.evaluate(() => ({
   atk: S.lv.atk | 0, hp: S.lv.hp | 0, regen: S.lv.regen | 0,
@@ -108,27 +153,38 @@ async function reset(page, o){
   ok('훈련 탭 클릭 → #trw 열림', await page.evaluate(() => $('trw').classList.contains('on')));
   ok('카드 3장 렌더', await page.evaluate(() => $('trCards').children.length) === 3);
 
+  const THR = await page.evaluate(() => TR_HOLD_DELAY);
+  const rst = o => () => reset(page, o);
+
   /* ── §2 단발 탭 ── */
   console.log('[2] 단발 탭(80ms) — 1회만 강화되고 반복이 시작되지 않는다');
   await reset(page);
   let a = await snap(page);
-  await hold(page, CARD, 80);
-  await page.waitForTimeout(500);                       /* 뗀 뒤 여유 — 반복이 남아 있으면 여기서 는다 */
+  /* 355 — «80ms 눌렀다» 가 아니라 «실제 접촉이 임계 밑이었다» 를 보고 판정한다 */
+  let m = await holdValid(page, CARD, 80, x => x.hold < THR - 60, rst());
   let b = await snap(page);
-  ok('탭 1회 = Lv +1', b.atk - a.atk === 1, 'Δ' + (b.atk - a.atk));
+  ok('탭 1회 = Lv +1', m.hold < THR && b.atk - a.atk === 1, 'Δ' + (b.atk - a.atk) + ' · ' + fmtM(m));
   ok('탭은 골드를 소모한다', b.gold < a.gold, 'Δgold ' + (b.gold - a.gold));
-  ok('뗀 뒤 500ms 동안 추가 강화 0', true, 'Lv ' + b.atk);
+  ok('뗀 뒤 추가 강화 0 (접촉 구간 밖 구매 없음)', m.t.every(v => v <= m.hold + 40), 'Lv ' + b.atk);
 
   /* ── §3 350ms 임계 ── */
-  console.log('[3] 반복 시작 임계 — 300ms 는 1회, 420ms 는 2회');
+  console.log('[3] 반복 시작 임계 — 임계 전에는 반복이 없고, 넘기면 임계 직후 첫 반복');
+  /* 355(2026-08-28): 옛 판정 두 줄은 «waitForTimeout(300/420) = 눌러 둔 시간» 이라는 전제 위에
+     Δ==1 / Δ==2 를 단언했다. 그 전제가 틀렸다(위 holdM 주석 · probe355 실측: 300 요청 → 접촉 311~442ms).
+     임계를 넘긴 실행의 Δ2 는 제품이 옳게 동작한 것이라 «간헐 FAIL» 은 자가 타이밍 경합이었다.
+     지금은 실측 접촉 구간에서 «임계 전에 반복이 돌았는가 / 넘겼으면 임계 직후에 돌았는가» 를 본다 —
+     이것이 §3 이 원래 재려던 뜻이고, 임계가 무너지면(제품 회귀) 즉시 빨개진다.
+     헛초록이 아님은 `node tools/probe355.js` 의 되돌림 시험(임계 100ms 주입 → 빨강)이 못 박는다. */
+  ok('임계 상수 TR_HOLD_DELAY = 350ms', THR === 350, THR + 'ms');
   await reset(page);
-  a = await snap(page); await hold(page, CARD, 300); await page.waitForTimeout(400);
-  b = await snap(page);
-  ok('300ms 유지 → 1회 (350ms 전에는 반복 없음)', b.atk - a.atk === 1, 'Δ' + (b.atk - a.atk));
-  await reset(page);
-  a = await snap(page); await hold(page, CARD, 420); await page.waitForTimeout(400);
-  b = await snap(page);
-  ok('420ms 유지 → 2회 (350ms 에 첫 반복)', b.atk - a.atk === 2, 'Δ' + (b.atk - a.atk));
+  m = await holdM(page, CARD, 300);
+  ok('임계(350ms) 전에는 반복이 없다 — 접촉 시작~임계 구매 1회뿐', beforeThr(m, THR) === 1, fmtM(m));
+  ok('뗀 뒤 구매 0 (pointerup 즉시 정지)', m.t.every(v => v <= m.hold + 40), fmtM(m));
+  /* 임계를 확실히 넘긴 접촉이어야 «첫 반복» 을 물을 수 있다 — 아니면 측정 무효로 다시 던진다 */
+  m = await holdValid(page, CARD, 420, x => x.hold >= THR + 60, rst());
+  ok('임계를 넘긴 접촉 → 반복이 시작된다', m.hold >= THR + 60 && m.t.length >= 2, fmtM(m));
+  ok('첫 반복은 임계 직후다(≥350ms · 임계+200ms 이내)',
+     m.t.length >= 2 && m.t[1] >= THR - 5 && m.t[1] <= THR + 200, fmtM(m));
 
   /* ── §4 반복·가속 ── */
   console.log('[4] 연속 강화 · 가속 (160ms → ×0.86 → 최소 60ms)');
@@ -237,15 +293,20 @@ async function reset(page, o){
 
   /* ── §7 배수 탭 ── */
   console.log('[7] 배수 탭 — 반복 1회당 그 배수가 적용된다');
+  /* 355 — «420ms 눌렀으니 정확히 2회» 가 아니라 «실측 구매 수 × 배수» 로 본다.
+     배수 규약(«반복 1회당 그 배수»)은 그대로 지켜지고, 접촉이 밀려 3회가 돌아도 빨개지지 않는다. */
   for (const q of [10, 30]) {
     await reset(page, { qty: q });
-    a = await snap(page); await hold(page, CARD, 80); await page.waitForTimeout(300);
+    a = await snap(page);
+    m = await holdValid(page, CARD, 80, x => x.hold < THR - 60, rst({ qty: q }));
     b = await snap(page);
-    ok('x' + q + ' 탭 1회 = Lv +' + q, b.atk - a.atk === q, 'Δ' + (b.atk - a.atk));
+    ok('x' + q + ' 탭 1회 = Lv +' + q, m.t.length === 1 && b.atk - a.atk === q, 'Δ' + (b.atk - a.atk) + ' · ' + fmtM(m));
     await reset(page, { qty: q });
-    a = await snap(page); await hold(page, CARD, 420); await page.waitForTimeout(300);
+    a = await snap(page);
+    m = await holdValid(page, CARD, 420, x => x.hold >= THR + 60 && x.t.length >= 2, rst({ qty: q }));
     b = await snap(page);
-    ok('x' + q + ' 반복 1회 = 총 +' + (q * 2), b.atk - a.atk === q * 2, 'Δ' + (b.atk - a.atk));
+    ok('x' + q + ' 반복 포함 = 구매 n회 × ' + q, m.t.length >= 2 && b.atk - a.atk === q * m.t.length,
+       'Δ' + (b.atk - a.atk) + ' · ' + fmtM(m));
   }
   /* 배수 탭 자체가 눌리는지 (반복 핸들러가 탭 클릭을 삼키지 않는다) */
   await reset(page);
@@ -256,9 +317,13 @@ async function reset(page, o){
   /* ── §8 3종 카드 공통 (132 — 옛 «스탯 훈련 서브탭» 대체) ── */
   console.log('[8] 3종 카드 공통 — 체력 · 체력 회복 카드도 같은 꾹 누르기 (반복이 atk 전용이 아니다)');
   await reset(page);
-  a = await snap(page); await hold(page, CARD_HP, 420); await page.waitForTimeout(400);
+  a = await snap(page);
+  /* 355 — «420ms → 정확히 2» 가 아니라 «임계 전 1회 + 임계 넘긴 뒤 반복» 으로 본다 */
+  m = await holdValid(page, CARD_HP, 420, x => x.hold >= THR + 60 && x.t.length >= 2, rst());
   b = await snap(page);
-  ok('체력 카드 420ms → Lv +2 (단발 1 + 반복 1)', b.hp - a.hp === 2, 'Δhp ' + (b.hp - a.hp));
+  ok('체력 카드도 단발 1 + 반복 (임계 전 1회 · 실측 구매 수와 일치)',
+     beforeThr(m, THR) === 1 && m.t.length >= 2 && b.hp - a.hp === m.t.length,
+     'Δhp ' + (b.hp - a.hp) + ' · ' + fmtM(m));
   ok('체력 카드를 눌러도 공격력·체력 회복은 안 오른다', b.atk === a.atk && b.regen === a.regen,
      'Δatk ' + (b.atk - a.atk) + ' / Δregen ' + (b.regen - a.regen));
 
