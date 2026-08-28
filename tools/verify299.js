@@ -125,7 +125,10 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     /* ── 13 재화 탭 광고 상품 버튼 (329 신설) ── */
     S.daily.adBuy = {};                        /* 없는 키는 cap 폴백 = 6칸 전부 살아 있다 */
     openShopPage(null, 'coin'); await wait(300);
-    sweep('13 광고 버튼 .cn-cd>.bt>.updot', '#shopList .cn-cd>.bt[data-cnad]>.updot', '.bt');
+    /* ⚑ 364(2026-08-29, 주인 보고) — 자리가 «버튼 안» 에서 **카드 우상단**으로 옮겨졌다.
+       329 때 이 자리는 버튼 기준으로만 사분면을 통과했고 **카드 기준으로는 우하단(226,229)**
+       이었다 — 즉 299 규약을 통과한 적이 없다. 호스트를 카드로 바꿔 그 구멍을 막는다. */
+    sweep('13 광고 카드 .cn-cd>.updot (364)', '#shopList .cn-cd>.updot', '.cn-cd');
     openShopPage(null, 'summon'); await wait(150);
     closeShopPage();
 
