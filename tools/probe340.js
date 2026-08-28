@@ -1,7 +1,7 @@
-/* 작업 339 — 41 팝업 내장 재화 바(.pcb)의 재화 아이콘 «잉크» 를 레퍼런스와 같은 자로 잰다.
+/* 작업 340 — 41 팝업 내장 재화 바(.pcb)의 재화 아이콘 «잉크» 를 레퍼런스와 같은 자로 잰다.
  *
- *   node tools/probe339.js            ref · cap 양쪽 실측 + 차이표
- *   node tools/probe339.js --json     기계 판독용
+ *   node tools/probe340.js            ref · cap 양쪽 실측 + 차이표
+ *   node tools/probe340.js --json     기계 판독용
  *
  * 왜 필요한가 — 72 의 비평가 6명(13·15·16·17회차)이 «헤더 재화 아이콘 −14~21%» 를 네 번 반복해
  * 지적했는데, `.pcb-p>i` 의 **레이아웃 박스**는 측정표(41 §3) 그대로 57×57 이다. 박스를 재는 자로는
@@ -148,7 +148,7 @@ const SCAN = `(data, W, H, kind) => {
       ` Δw ${String(c.w - r.w).padStart(4)} (${pct(c.w, r.w)})  Δh ${String(c.h - r.h).padStart(4)} (${pct(c.h, r.h)})`,
       ` Δcx ${(c.cx - r.cx).toFixed(1).padStart(5)} Δcy ${(c.cy - r.cy).toFixed(1).padStart(5)}`);
   };
-  console.log('# 339 — .pcb 재화 아이콘 잉크 (ref 절대좌표 · cap 은 프레임 y + 84 로 환산)');
+  console.log('# 340 — .pcb 재화 아이콘 잉크 (ref 절대좌표 · cap 은 프레임 y + 84 로 환산)');
   console.log('레이아웃 박스:', JSON.stringify(box));
   row('코인 실루엣', cap.gold.sil, ref.gold.sil);
   row('코인 노란 원판', cap.gold.col, ref.gold.col);

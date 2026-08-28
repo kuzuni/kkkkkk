@@ -1,6 +1,6 @@
-/* 작업 339 — 41 팝업 내장 재화 바(.pcb) 재화 아이콘 «잉크» 게이트.
+/* 작업 340 — 41 팝업 내장 재화 바(.pcb) 재화 아이콘 «잉크» 게이트.
  *
- *   node tools/verify339.js
+ *   node tools/verify340.js
  *
  * 왜 이 자가 필요한가 ─────────────────────────────────────────────────────
  * 72 의 비평가 6명이 13·15·16·17 네 회차에 걸쳐 «헤더 재화 아이콘 −14~21%» 를 지적했는데
@@ -85,8 +85,8 @@ async function capInk(page, kind, sel) {
      번지고(58 알약 펄스까지 얹히면 잉크가 20px 넘게 부푼다) «아이콘 잉크» 가 아닌 것을 센다.
      그래서 재는 동안만 숫자와 펄스를 죽인다(캡처 상태 위생 — LESSONS 30-②). */
   await page.evaluate(() => {
-    if (document.getElementById('v339-freeze')) return;
-    const s = document.createElement('style'); s.id = 'v339-freeze';
+    if (document.getElementById('v340-freeze')) return;
+    const s = document.createElement('style'); s.id = 'v340-freeze';
     s.textContent = '.pcb-p>b{visibility:hidden!important}.pcb-p,.pcb-p>i,.pcb-p>i>.cic{animation:none!important;transition:none!important}';
     document.head.appendChild(s);
   });
@@ -176,7 +176,7 @@ async function capInk(page, kind, sel) {
        받아들인 것과 같은 대가). 몸통(위 단언)이 목적이고 이 줄은 «보정이 달아나지 않는지» 를 본다 —
        누가 scaleX 를 1.3 쯤으로 올리면 여기서 빨개진다. 자산이 고쳐지면 둘 다 ref 로 붙는다. */
     near('[2] 젬 실루엣 w — 몸통을 맞춘 대가(+5px)까지만 허용', cap.dia.sil.w, REF.dia.sil[0], 6);
-    ok('[2] 젬 실루엣 세로는 자산 몫이라 ref −5px 다 (기록만 — 아트 필요표 339)',
+    ok('[2] 젬 실루엣 세로는 자산 몫이라 ref −5px 다 (기록만 — 아트 필요표 340)',
       cap.dia.sil.h > 0, cap.dia.sil.h + ' vs ref ' + REF.dia.sil[1]);
 
     /* ── [3] 기전 — 상자는 그대로, 움직인 것은 이미지뿐 ── */
@@ -258,6 +258,6 @@ async function capInk(page, kind, sel) {
     ok('콘솔 에러 0건', errs.length === 0, errs.length + '건' + (errs[0] ? ' — ' + errs[0] : ''));
   } finally { await browser.close(); }
 
-  console.log('\nVERIFY339 ' + (fail === 0 ? 'PASS' : 'FAIL') + ' — ' + pass + '/' + (pass + fail));
+  console.log('\nVERIFY340 ' + (fail === 0 ? 'PASS' : 'FAIL') + ' — ' + pass + '/' + (pass + fail));
   process.exit(fail === 0 ? 0 : 1);
 })();

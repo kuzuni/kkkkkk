@@ -222,15 +222,15 @@ function stripComments(src) {
   ok(D.tf.every(t => t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)'),
      'D2 HUD 아이콘에 옛 scaleX 보정이 남지 않았다', D.tf.join(' | '));
 
-  /* ⚑ 337 이관 — D3 은 «41 재화 바 아이콘 57×57» 이었다. 그 57 은 측정표 41 §3 의
+  /* ⚑ 340 이관 — D3 은 «41 재화 바 아이콘 57×57» 이었다. 그 57 은 측정표 41 §3 의
      «bbox(검정 아웃라인 포함) 57×57» 에서 온 값인데, ref 를 다시 재면 그 57 은 아웃라인
      포함 실루엣이 아니라 **노란 원판/시안 몸통**이고 실루엣은 **64×65** 다
-     (`node tools/probe337.js` · measure/41 §3 정오표). A3 가 HUD 에서 9회차에 뒤집은 것과
+     (`node tools/probe340.js` · measure/41 §3 정오표). A3 가 HUD 에서 9회차에 뒤집은 것과
      같은 값·같은 이유다. 상자를 57 로 붙들고 있는 동안 실제 잉크는 코인 −14.0% · 젬 −19.6%
      였고 72 비평가 6명이 그것을 네 회차 연속 지적했다.
      ⇒ 기대값을 HUD(D1)와 **같은 재화별 확정값**으로 옮긴다. 상자(`<i>` 57×57)는 그대로이고
      움직인 것은 **이미지**뿐이라, 여기서 재는 것도 이미지 rect 다. 자산이 고쳐지면 D1 과
-     함께 내린다. 잉크가 실제로 ref 에 붙었는지는 `tools/verify337.js` 가 픽셀로 못박는다. */
+     함께 내린다. 잉크가 실제로 ref 에 붙었는지는 `tools/verify340.js` 가 픽셀로 못박는다. */
   const PCB_EXP = { gold: { w: 65.3, h: 65.3, tf: false }, dia: { w: 73.1, h: 63, tf: true } };
   const P = await page.evaluate(() => {
     openDungeon();
@@ -245,12 +245,12 @@ function stripComments(src) {
   });
   const pBad = P.filter(x => PCB_EXP[x.k] && (Math.abs(x.w - PCB_EXP[x.k].w) > 2 || Math.abs(x.h - PCB_EXP[x.k].h) > 2));
   ok(P.length >= 2 && pBad.length === 0,
-     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 73.1×63 — 337)',
+     'D3 41 재화 바 아이콘 = HUD 와 같은 재화별 확정값 (gold 65.3×65.3 · dia 73.1×63 — 340)',
      P.map(x => x.k + ' ' + x.w + '×' + x.h).join(' · '));
   const pmBad = P.filter(x => PCB_EXP[x.k]
     && PCB_EXP[x.k].tf !== (x.itf !== 'none' && x.itf !== 'matrix(1, 0, 0, 1, 0, 0)'));
   ok(P.length >= 2 && pmBad.length === 0,
-     'D3b 재화 바도 HUD 와 같은 기전 (gold=상자 크기 · dia=이미지 scaleX — 337)',
+     'D3b 재화 바도 HUD 와 같은 기전 (gold=상자 크기 · dia=이미지 scaleX — 340)',
      P.map(x => x.k + ' ' + (x.itf === 'none' ? '상자' : x.itf)).join(' · '));
   ok(P.every(x => x.tf === 'none' || x.tf === 'matrix(1, 0, 0, 1, 0, 0)'),
      'D4 재화 바 아이콘에 옛 scaleX 보정이 남지 않았다', P.map(x => x.tf).join(' | '));
