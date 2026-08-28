@@ -43,7 +43,9 @@ const ISO_NEW = ISO_CUR
   + '#shopList .shp-card>.cbg>.jzs::after{opacity:0!important}'
   /* 강제 상자(gm) 글로우는 **카드 밖으로 새는 유일한 층**이다(§0-1 «카드 밖 누출 0 — gm 만 예외»).
      소환 4번째 칸이 gm 이라 칸3·칸4 의 70px 띠가 이 글로우 안에 든다. */
-  + '#shopList .shp-card.gm>.cfr{animation-name:none!important}';
+  /* ⚠ `animation-name:none` 이 아니라 **animated 속성을 `!important` 로 덮는다** —
+     이미 pause() 가 걸린 CSS 애니메이션은 이름을 걷어도 `getAnimations()` 에 남는다(25회차 캡처). */
+  + '#shopList .shp-card.gm>.cfr{box-shadow:none!important}';
 
 const seek = (p, ms) => p.evaluate(t => {
   document.getAnimations().forEach(a => {

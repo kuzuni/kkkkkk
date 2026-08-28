@@ -2375,7 +2375,11 @@ async function ampCheck(p, hosts) {
       if (!e) { e = document.createElement('style'); e.id = 'v122lk'; document.head.appendChild(e); }
       e.textContent = x;
     }, txt);
-    const leakOf = async (sel, per, off) => {
+    /* `force` — 재는 내내 걸어 두는 패치(음성항용). 기준선 패치를 걷을 때 **빈 문자열이 아니라
+       이 값으로** 되돌려야 한다. 안 그러면 음성항이 자기 패치를 스스로 지우고 정상 상태를 다시 잰다
+       (25회차 첫 실행이 그래서 «음성항 28px» 로 FAIL 했다 — 자가 아니라 자를 부르는 쪽의 버그였다). */
+    const leakOf = async (sel, per, off, force) => {
+      await pat31(force || '');
       await seek(p, 0);                       /* §17 과 같은 함정 — clip 전에 등장 연출을 걷는다 */
       const clip = await p.evaluate(([s, pad]) => {
         const e = document.querySelector(s); if (!e) return null;
@@ -2402,7 +2406,7 @@ async function ampCheck(p, hosts) {
       await pat31(off);                        /* 기준선 — 이 글로우만 끈다 */
       await seek(p, best);
       const base = await ringsOf(box, iw, ih);
-      await pat31('');
+      await pat31(force || '');
       await seek(p, best);
       const pk = await ringsOf(box, iw, ih);
       let leak = 0;
@@ -2433,8 +2437,7 @@ async function ampCheck(p, hosts) {
       + ' — 24회차 AY⑤ 의 28px 이 맞았고 표가 낡았던 자리다');
     /* 음성항 — 바깥 글로우를 지우면 누출이 사라져야 한다. 안 사라지면 이 자가 이웃을 재고 있는 것이다. */
     if (mlLeak != null) {
-      await pat31(mlOff);
-      const neg = await leakOf(mlSel, 2600, mlOff);
+      const neg = await leakOf(mlSel, 2600, mlOff, mlOff);
       await pat31('');
       ok(neg === 0, '음성항 — 바깥 글로우를 지우면 누출 ' + neg + 'px (0 이어야 이웃을 안 재고 있다)');
     }

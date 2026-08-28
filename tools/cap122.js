@@ -384,7 +384,14 @@ async function frames(p, tag, stops) {
       s.textContent = '#shopList .cfr::after,#shopList .chd::before,#shopList .chd::after,'
         + '#shopList .cn-cd>.fr::after,#shopList .cn-cd>.fr::before,#shopList .cn-cd::before,'
         + '#shopw>.jzb,#shopList .shp-card>.cbg>.jzs::after{opacity:0!important}'
-        + '#shopList .shp-card.gm>.cfr{animation-name:none!important}';
+        /* ⚠ `animation-name:none` 으로 끄면 안 된다 — 이 블록은 앞 절들이 `__jzFreeze()` 로
+           **이미 pause() 를 걸어 둔 뒤**에 돌고, Web Animations API 로 재생을 넘겨받은
+           CSS 애니메이션은 이름을 걷어도 `getAnimations()` 에 남아 `__jzSeek` 가 계속 위상을
+           세운다(25회차 첫 캡처에서 칸4 만 2.17 로 남았던 정체가 이것이다 — 같은 목록을
+           «seek 전» 에 적용하는 `probe122r25.js` 에서는 0.44 로 꺼져서 더 헷갈렸다).
+           **animated 속성을 `!important` 로 직접 덮는다** — 중요 선언은 캐스케이드에서
+           애니메이션보다 위라 재생 상태와 무관하게 이긴다. */
+        + '#shopList .shp-card.gm>.cfr{box-shadow:none!important}';
     });
     await p.waitForTimeout(250);
 
@@ -424,7 +431,37 @@ async function frames(p, tag, stops) {
             return s / n;
           }, [b64, b.box.width, b.box.height]));
         }
-        out.push('칸' + b.idx + ' ' + (Math.max(...vals) - Math.min(...vals)).toFixed(2));
+        const d = Math.max(...vals) - Math.min(...vals);
+        /* 0.5 를 넘으면 «격리 실패» 다 — 값만 찍고 끝내면 다음 회차가 또 원인을 찾아야 하므로
+           그 띠와 겹치는 **아직 살아 있는 jz122 층을 이름으로** 같이 찍는다. */
+        let who = '';
+        if (d >= .5) {
+          const names = await p.evaluate(bx => {
+            const hit = new Set();
+            for (const a of document.getAnimations()) {
+              const nm = a.animationName || '';
+              if (!/^jz122/.test(nm)) continue;
+              const t = a.effect && a.effect.target;
+              if (!t || !t.getBoundingClientRect) continue;
+              const ps = a.effect.pseudoElement || '';
+              if (parseFloat(getComputedStyle(t, ps || undefined).opacity) === 0) continue;
+              if (ps && parseFloat(getComputedStyle(t).opacity) === 0) continue;
+              const r = t.getBoundingClientRect();
+              const outer = !(r.right < bx.x || r.left > bx.x + bx.width
+                || r.bottom < bx.y || r.top > bx.y + bx.height);
+              const inside = r.left >= bx.x + 8 && r.right <= bx.x + bx.width - 8
+                && r.top >= bx.y + 8 && r.bottom <= bx.y + bx.height - 8;
+              if (outer && !inside) {
+                let s = t.tagName.toLowerCase();
+                if (t.className && typeof t.className === 'string') s += '.' + t.className.trim().split(/\s+/).join('.');
+                hit.add(s + ps + '←' + nm);
+              }
+            }
+            return [...hit].sort();
+          }, b.box);
+          who = ' ⚠[' + names.join(' , ') + ']';
+        }
+        out.push('칸' + b.idx + ' ' + d.toFixed(2) + who);
       }
       return out;
     };
