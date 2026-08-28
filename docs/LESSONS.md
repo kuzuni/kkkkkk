@@ -13530,6 +13530,7 @@ LESSONS 295-② 의 교과서적 재발이다.
 번들 크로미움은 **1194**(playwright **1.56** 짝)인데 `npm i --no-save playwright` 는 최신(1.62 · 크로미움 1234)을
 끌어와 `npx playwright install chromium` 이 **다운로드 실패로 죽는다**. `npm i --no-save playwright@1.56.0` 이면
 `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` 의 브라우저를 그대로 쓴다 — 받을 것이 없다.
+
 ---
 
 ## 345 — 닫힘 연출: «가시성 스위치» 와 «치수 override» 는 같은 순간에 떼면 안 된다 (2026-08-29, sess-1800-30074 워커 D · T1 버그 · 제품 4줄)
