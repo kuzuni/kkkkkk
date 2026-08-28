@@ -198,13 +198,27 @@ async function blk(name, fn) {
        오버레이에 막혀 30초 타임아웃이 난다(초회 실행 [6] 이 그렇게 죽었다). 먼저 치운다. */
     await page.evaluate(() => {
       closeModal(); closeWeapon(); document.getElementById('statw').classList.remove('on');
-      S.autoBuy = false; S.buyQty = 10; S.gold = 1e30; goTab('grow', 1); uiDirty = true; renderUI();
+      S.autoBuy = false; S.buyQty = 10;
+      /* 336 — 지갑은 **제품에게 물어서** 채운다. 여기 `1e30` 같은 상수를 다시 적으면 상한식·비용 곡선이
+         바뀌는 순간 또 «살 수 없는 자리» 에서 클릭하게 된다 — 실제로 326(훈련 상한 `100·n(n+1)/2`)이
+         [5] 의 마지막 prep 이 심는 레벨을 900 → 4500 으로 밀어 올리자 한 칸 값이 6.6e97 이 됐고,
+         지갑 1e30 안에서 `buyInfo().ok` 가 거짓이 되어 클릭이 `if(!bi.ok) return;` 로 조용히 되돌아갔다
+         (Δ=0 · 0장). 제품은 한 줄도 안 상했다 — `node tools/probe336.js` 가 그 산수를 찍는다. */
+      S.gold = costOf(U.atk, lv('atk'), 10) * 1e3;
+      goTab('grow', 1); uiDirty = true; renderUI();
     });
     await page.waitForTimeout(600);
     await clear(page);
     const before = await page.evaluate(() => cp());
     const sel = '#bUp .up[data-u="atk"]';
     ok(await page.$(sel) !== null, '[6] 강화 탭에 «공격력» 행이 있다 (클릭 대상)');
+    /* 336 자가 진단 — «클릭했는데 안 올랐다» 와 «애초에 살 수 없는 자리였다» 를 갈라 적는다.
+       이 항이 빨가면 고칠 곳은 제품이 아니라 위의 재료 준비다. */
+    const pre6 = await page.evaluate(() => {
+      const b = buyInfo(U.atk); return { ok: b.ok, n: b.n, cost: b.cost, gold: S.gold, lv: lv('atk') };
+    });
+    ok(pre6.ok, '[6] 클릭 전 — 하네스가 «살 수 있는 자리» 를 만들었다 (아니면 아래 Δ=0 은 제품 탓이 아니다)',
+      'lv' + pre6.lv + ' · x' + pre6.n + ' ' + pre6.cost.toExponential(2) + ' ≤ 지갑 ' + pre6.gold.toExponential(2));
     await page.click(sel);
     const exp = await page.evaluate(b => ({ txt: '⚔️ 전투력 +' + fmtB(cp() - b), up: cp() - b }), before);
     await page.waitForTimeout(WAIT);
@@ -217,7 +231,17 @@ async function blk(name, fn) {
 
   /* ══ [7] 자동 구매 침묵 ═════════════════════════════════════════════════ */
   await blk('[7]', async () => {
-    await page.evaluate(() => { S.gold = 1e30; S.autoBuy = true; });
+    /* 336 — 자동 구매는 «상한 아래 + 지갑 안» 이 **둘 다** 참인 훈련 스탯만 산다(`autoBuyTick`).
+       [5] 가 훈련 3종을 상한 자리에 심어 두므로 상수 지갑으로는 후보가 0 종이 된다 → 여기서도 제품에게 묻는다
+       (8회 미는 동안 계속 살 수 있게 12칸치). */
+    await page.evaluate(() => {
+      S.gold = Math.max(...TRAIN_STATS.map(id => costOf(U[id], lv(id), 12))) * 1e3;
+      S.autoBuy = true;
+    });
+    const cand = await page.evaluate(() =>
+      TRAIN_STATS.filter(id => lv(id) < trainCap() && U[id].cost(lv(id)) <= S.gold));
+    ok(cand.length > 0, '[7] 미는 것 전에 — 자동 구매 후보가 하나 이상 (상한 아래 + 지갑 안, 336 자가 진단)',
+      cand.length + '종 ' + (cand.join('·') || '없음'));
     await clear(page);
     const before = await page.evaluate(() => cp());
     /* ⚠ 이 게이트는 판정을 흔들지 않으려고 `step` 을 비워 뒀는데 `autoBuyTick` 은 그 안에서 불린다.
@@ -253,6 +277,51 @@ async function blk(name, fn) {
     const back = await act(page, "levelUp(SK['slash']);");
     ok(back.list.length === 1 && back.list[0].t === back.txt, '[9] 되돌리면 다시 1장',
       back.list.length + '장 «' + (back.list[0] && back.list[0].t) + '»');
+  });
+
+  /* ══ [R] 336 되돌림 시험 — 이번 수리가 «무르게 푼 것» 이 아님을 못 박는다 ═══
+     336 은 [6]·[7] 의 지갑을 상수(1e30)에서 «제품에게 묻기» 로 바꾸고 전제 2항을 넣었다.
+     그 둘이 각각 무엇을 잡는지 여기서 직접 재 본다 — 전제만 초록으로 만들어 놓고 본 단언이
+     헐거워졌다면 R2 가 빨개진다. */
+  await blk('[R]', async () => {
+    const keepGold = await page.evaluate(() => S.gold);
+
+    /* R1 — 지갑을 336 이전 상수로 되돌리면 전제 2항이 **거짓**이 된다 = 새 전제가 이번 부패를 잡는다 */
+    const r1 = await page.evaluate(() => {
+      S.gold = 1e30;
+      return { buy: buyInfo(U.atk).ok,
+               cand: TRAIN_STATS.filter(id => lv(id) < trainCap() && U[id].cost(lv(id)) <= S.gold).length };
+    });
+    ok(r1.buy === false && r1.cand === 0,
+      '[R] 지갑을 336 이전 상수(1e30)로 되돌리면 전제 2항이 빨개진다 (부패를 실제로 잡는다)',
+      'buyInfo.ok=' + r1.buy + ' · 자동 구매 후보 ' + r1.cand + '종');
+
+    /* R2 — 제품 쪽 구매(`applyBuy`)를 무력화하면 진짜 클릭이 Δ=0 · 0장 = 본 단언은 여전히 제품을 본다 */
+    await page.evaluate(() => {
+      S.gold = costOf(U.atk, lv('atk'), 10) * 1e3;
+      window.__ab = applyBuy; window.applyBuy = () => {};
+      uiDirty = true; renderUI();
+    });
+    await page.waitForTimeout(300);
+    await clear(page);
+    const b2 = await page.evaluate(() => cp());
+    await page.click('#bUp .up[data-u="atk"]');
+    await page.waitForTimeout(WAIT);
+    const d2 = await page.evaluate(b => cp() - b, b2), l2 = cpToasts(await got(page));
+    ok(d2 === 0 && l2.length === 0,
+      '[R] `applyBuy` 를 무력화하면 클릭이 Δ=0 · 0장 — 본 단언은 «전제» 가 아니라 제품을 본다',
+      'Δ=' + d2 + ' · ' + l2.length + '장');
+
+    /* 원복 — 시험이 뒤 항목을 오염시키지 않았는가 */
+    await page.evaluate(() => { window.applyBuy = window.__ab; uiDirty = true; renderUI(); });
+    await page.waitForTimeout(300);
+    await clear(page);
+    const b3 = await page.evaluate(() => cp());
+    await page.click('#bUp .up[data-u="atk"]');
+    await page.waitForTimeout(WAIT);
+    const d3 = await page.evaluate(b => cp() - b, b3), l3 = cpToasts(await got(page));
+    ok(d3 > 0 && l3.length === 1, '[R] 되돌리면 다시 오르고 1장', 'Δ=' + d3 + ' · ' + l3.length + '장');
+    await page.evaluate(g => { S.gold = g; }, keepGold);
   });
 
   /* ══ [10] 콘솔 ══════════════════════════════════════════════════════════ */
