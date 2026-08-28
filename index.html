@@ -9998,6 +9998,25 @@
      세로가 안 겹친다. 중심은 `.qs-b` (184.5, 10.5)/195×118 · `.qs-all` (260.5, 11.5)/272×130 —
      둘 다 299 «우상단 사분면» 충족. */
   .qs-b>.updot,.qs-all>.updot{right:-9px;top:-9px}
+  /* 325 — 34 축복 카드의 «받기» 알약 `.tm`(219×98). 322 의 교훈대로 «안쪽 우상단이 빈다» 를
+     그대로 베끼지 않고 이 알약에서 **다시 쟀다**(`probe325`):
+       받기 상태  글자 잉크 `<i>`("받기") 우단이 알약 좌단+153.17 ⇒ 오른쪽에 남는 폭 **65.83px**
+       활성 상태  같은 자리에 "00:00:00" 이 들어와 남는 폭이 25.62px 로 줄지만,
+                 그 국면은 «받을 수 없음» 이라 닷이 애초에 안 켜진다(`.alert` 는 `!blessOn(k)`).
+     닷은 27 + 바깥 링 7.5×2 = 42px 를 먹으므로 65.83px 안에 들어간다 → `.qs-b` 처럼 바깥으로
+     내보낼 이유가 없고, 오히려 `.bls-c{overflow:hidden}` 때문에 바깥 코너는 **잘린다**.
+     그래서 안쪽 (12,12) — `.sk-btn`·`.ifbtn.pbtn`(321) 이 쓰는 값 그대로다.
+     `.tm` 은 `.bls-c>.b>*{position:absolute}` 로 절대배치라 기준 상자가 되고, 테두리가 아니라
+     `inset` box-shadow 라 오프셋 12 는 알약 변에서 12px 이다(링 좌 172.5 · 상 4.5 — 219×98 안).
+     중심 (193.5, 25.5) → 299 «우상단 사분면» 충족. 등장 배율 1.3(`jzDotIn`)에서도 링 반지름 27.3 <
+     글자 상자까지의 거리 40.33 로 **13.03px 여유**(322 가 남긴 «봉우리 배율에서 재라» 검사).
+     ⚠ 특이성 함정(166 ⓔ · 202 §3 · 283 · 294 와 **같은 모양**) — `#blsw` 는
+     `#blsw i,#blsw em,#blsw b,#blsw s{display:inline-block}`(ID 급 1,0,1)로 `<s>` 를 통째로 켜 두는
+     화면이라 클래스 급인 `.updot{display:none}`(0,1,0) 이 **진다**(실측: 조건과 무관하게 상시 점등).
+     같은 급의 스코프 짝을 반드시 같이 적는다 — 이 두 줄을 지우면 상시 점등으로 되돌아간다. */
+  .bls-c .tm>.updot{right:12px;top:12px}
+  #blsw .updot{display:none}
+  #blsw .alert>.updot{display:block}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
   :is(#bSk,#bPet,#bCos) .alert>.updot{display:block}
   #wpnw .updot{display:none}
@@ -11262,7 +11281,15 @@
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
   .bls-c.off>.b{background:repeating-linear-gradient(-45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
   .bls-c.off .vl{color:#D8D2C8}
-  .bls-c.off .tm{background:#5C5044;box-shadow:inset 0 0 0 3px #4B4136}
+  /* 325 (주인 지시 2026-08-28) — «받기 버튼 초록색으로».
+     ⚠ 이 클래스 이름은 «꺼진 카드» 가 아니라 **«축복이 안 걸린 카드»** 다(`toggle('off', !blessOn(k))`).
+     즉 `.off` 국면이 바로 «지금 받을 수 있다» 이고, 알약 글자도 그때만 "받기" 다 —
+     그래서 초록은 이 한 줄에서 갈리면 되고 활성(시간 표시) 알약 `#926A24` 는 그대로 둔다.
+     색은 새로 만들지 않고 202 «가능=초록» 규약의 `.ifbtn` 팔레트에서 가져온다
+     (`--gb-mid:#4CBA2E` 본체 · `--gb-dk:#2F8F1E` 테두리). **구조는 한 픽셀도 안 바꾼다** —
+     기존과 같은 «플랫 채움 + inset 3px 어두운 링» 이라 알약 bbox·글자 자리가 유지된다
+     (34 는 통과한 화면이다 · 측정표 §15 정오표에 «주인 지시 의도적 이탈» 로 남긴다). */
+  .bls-c.off .tm{background:#4CBA2E;box-shadow:inset 0 0 0 3px #2F8F1E}
   .bls-c.off .glo{background:#D8D2C8}
 
   /* §7 «보너스 축복» 탭 + 보너스 바 */
@@ -26125,6 +26152,13 @@ function renderBless(){
     c.querySelector('.vl').textContent = '+' + Math.round(blessPct(x.k)) + '%';
     /* 13회차 — 시계는 `.ck`(고정), 숫자만 갈아 끼운다. 둘을 한 노드에 담으면 크기를 따로 못 고친다 */
     c.querySelector('.tm>i').textContent = on ? hms(blessLeft(x.k)) : '받기';
+    /* 325 (주인 지시 2026-08-28) — «받기» 알약 자체의 레드닷. 판정식은 새로 만들지 않는다:
+       사이드 아이콘을 켜는 `blessAny()`(= `BLESS.some(x => !blessOn(x.k))`)의 **칸별 항**이 곧 `!on` 이다.
+       318·321·322 와 같은 «경로가 한 칸 짧다» — 사이드는 켜지는데 팝업(`#blsw` z41)이 그 아이콘을
+       덮어 버려서 정작 어느 카드를 눌러야 하는지가 화면에서 사라져 있었다.
+       소등·재점등은 이 한 줄이 전부다: `activateBless()` 가 즉시 `renderBless()` 를 부르고(동기 소등),
+       만료는 1초 `blessTick()` 이 열려 있는 팝업을 다시 그린다(재점등). 지연 재렌더가 없다(22 와 다름). */
+    c.querySelector('.tm').classList.toggle('alert', !on);
   });
   $('blsBnV').textContent = '+' + Math.round(blessGoldPct()) + '%';
   $('blsBonus').classList.toggle('off', !blessAll());
@@ -26142,7 +26176,9 @@ function buildBlessCards(){
       '<div class="h"><i>' + x.n + '</i></div>' +
       '<div class="b"><s class="ic">' + x.ic + '</s>' +
         '<s class="vl">+' + Math.round(blessPct(x.k)) + '%</s>' +
-        '<s class="tm"><b class="ck">⏱</b><i>받기</i></s><s class="glo"></s></div>' +
+        /* 325 — 배지 «부품» 은 조건과 무관하게 항상 찍고, 켜고 끄는 것은 호스트(`.tm`)의
+           `.alert` 하나뿐이다(166 규약 · 321 과 같은 방식). 절대배치라 알약 안 글자 자리를 안 민다. */
+        '<s class="tm"><b class="ck">⏱</b><i>받기</i><s class="updot"></s></s><s class="glo"></s></div>' +
     '</div>').join('');
   blsBuilt = true;
 }
