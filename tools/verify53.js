@@ -4,9 +4,15 @@
  * 보는 것:
  *   A. 진입 — 52 ▦ 메뉴 → «가방» 칸이 실제로 #bagw 를 연다
  *   B. 기하 — 측정표(docs/measure/53-가방팝업.md)의 프레임 좌표와 Δ≤1.5px
- *   C. 기능 — 두 탭이 «실제 게임 데이터» 를 읽는다(값을 바꾸면 칸 수·수량이 따라 바뀐다)
+ *   C. 기능 — 칸이 «실제 게임 데이터» 를 읽는다(값을 바꾸면 칸 수·수량이 따라 바뀐다)
  *   D. 격자 — 항상 20칸, 등급 내림차순, 빈 칸은 플레이스홀더 없음
  *   E. 닫기 — 딤 클릭으로 닫힌다
+ *   F. 292 — 칸 클릭 → 33 재화 정보 팝업(#ciw) 이 **화폐 전수**로 열린다
+ *
+ * 292(주인 지시 «가방에는 재화 즉 화폐들만»)로 바뀐 전제 — 이 게이트가 지킨다:
+ *   · 소모품 탭(bagUse)·하단 탭 스트립(.bg53-tabs)은 **폐기**됐다. 되살아나면 [B]·[C] 가 빨개진다.
+ *   · S.own 보유 재료(스킬·장비·펫·유물)는 가방에 **안 나온다** — 화폐가 아니다.
+ *   · 모든 칸은 CURINFO 키를 들고 있어야 한다(k 없는 칸 = 클릭이 죽는 칸).
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -60,7 +66,8 @@ function launchOpts() {
       const r = e.getBoundingClientRect();
       return { x: r.left - app.left, y: r.top - app.top, w: r.width, h: r.height }; };
     return { box: q('.bg53'), head: q('.bg53-head'), body: q('.bg53-body'), banner: q('.bg53-tip'),
-             panel: q('.bg53-panel'), grid: q('.bg53-grid'), tabs: q('.bg53-tabs'), pill: q('.bg53-tabs>s.on'),
+             panel: q('.bg53-panel'), grid: q('.bg53-grid'),
+             tabs: q('.bg53-tabs'), pill: q('.bg53-tabs>s.on'),
              c1: q('.bg53-grid>.bg53-c:nth-child(1)'), c2: q('.bg53-grid>.bg53-c:nth-child(2)'),
              c6: q('.bg53-grid>.bg53-c:nth-child(6)') };
   });
@@ -72,12 +79,8 @@ function launchOpts() {
     ['배너 882×100 @(99,779)', g.banner, 99, 779, 882, 100],
     ['패널 882×700 @(99,899)', g.panel, 99, 899, 882, 700],
     ['격자 828×657 @(126,915)', g.grid, 126, 915, 828, 657],
-    ['탭 트랙 792×93 @(151,1638)', g.tabs, 151, 1638, 792, 93],
-    /* 5회차 정정 — 알약은 트랙(93)과 같은 높이가 아니라 **100** 이고 트랙 위·아래로 3.5px 씩 돌출한다.
-       측정표 §5 가 «420×93» 으로 잘못 적어 뒀고, 비평가 B(3회차)·D(4회차)가 독립적으로 «알약이 작다» 고
-       짚었다(둘 다 겹을 잘못 짝지어 수치는 틀렸지만 «여기가 이상하다» 는 맞았다 — LESSONS 70-③).
-       ref 실측(x880 세로): 외곽테 1719 · 카키 1723~1731 · 코어 1734~1807 · 카키 1808~1815 · 외곽테 ~1818. */
-    ['활성 알약 420×100 @(523,1634.5)', g.pill, 523, 1634.5, 420, 100],
+    /* 292 — «탭 트랙 792×93 @(151,1638)» · «활성 알약 420×100 @(523,1634.5)» 두 줄은 폐기했다.
+       그 실측(5회차 정정분 포함)은 측정표 §5 에 남아 있다 — 되살릴 일이 생기면 거기서 꺼낸다. */
     ['칸 148×147 @(126,915)', g.c1, 126, 915, 148, 147]
   ];
   W.forEach(([n, r, x, y, w, h]) =>
@@ -85,47 +88,73 @@ function launchOpts() {
       r ? `실측 ${r.w.toFixed(1)}×${r.h.toFixed(1)} @(${r.x.toFixed(1)},${r.y.toFixed(1)})` : '요소 없음'));
   chk('가로 pitch 170', g.c2 && near(g.c2.x - g.c1.x, 170), g.c2 ? String(g.c2.x - g.c1.x) : '-');
   chk('세로 pitch 170', g.c6 && near(g.c6.y - g.c1.y, 170), g.c6 ? String(g.c6.y - g.c1.y) : '-');
+  /* 292 — 폐기 확인은 «이름» 이 아니라 «칸» 으로 묻는다(277·279 의 부패 처방): 클래스 문자열이 아니라
+     실제 DOM 노드가 0개인지 본다. 스트립을 되살리면 여기가 먼저 빨개진다. */
+  chk('292 · 하단 탭 스트립이 없다', g.tabs === null, g.tabs ? JSON.stringify(g.tabs) : '-');
+  chk('292 · 활성 알약이 없다', g.pill === null, g.pill ? JSON.stringify(g.pill) : '-');
+  chk('292 · 탭 라벨 노드 0개',
+    await page.evaluate(() => document.querySelectorAll('#bagw [data-bagtab]').length) === 0);
 
-  /* ---- C. 기능: 두 탭이 실제 데이터를 읽는가 ---- */
-  console.log('[C] 기능 — 탭이 실제 게임 데이터를 읽는다');
+  /* ---- C. 기능: 칸이 실제 데이터를 읽는가 (292 — 화폐 전용) ---- */
+  console.log('[C] 기능 — 칸이 실제 게임 데이터를 읽는다 (292 화폐 전용)');
   const cur0 = await page.evaluate(() => {
-    S.own = {}; S.gold = 1234; S.dia = 77; S.relic = 0; S.mileage = 0; S.sp = 0;
+    S.own = {}; S.gold = 1234; S.dia = 77;
+    S.relic = 0; S.stone = 0; S.rstone = 0; S.tstone = 0; S.mileage = 0;
     renderBag();
     return [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) => [e.dataset.bagn, e.dataset.bagq]);
   });
-  chk('재화 탭 — 보유 0 인 재화는 빠지고 골드·다이아만 남는다', cur0.length === 2, JSON.stringify(cur0));
-  chk('재화 탭 — 골드 수량이 S.gold 를 그대로 읽는다',
+  chk('보유 0 인 재화는 빠지고 골드·다이아만 남는다', cur0.length === 2, JSON.stringify(cur0));
+  chk('골드 수량이 S.gold 를 그대로 읽는다',
     cur0.some((r) => r[0] === '골드' && r[1] === '1234'), JSON.stringify(cur0));
 
   const cur1 = await page.evaluate(() => {
-    S.relic = 500; S.own[SKILLS[0].id] = { n: 9, l: 1 };
+    S.relic = 500;
     renderBag();
     return [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) => [e.dataset.bagn, e.dataset.bagq]);
   });
-  chk('재화 탭 — 유물석을 넣으면 칸이 늘어난다', cur1.length === cur0.length + 2, JSON.stringify(cur1));
-  chk('재화 탭 — S.own 보유 재료가 이름·수량으로 나온다',
-    cur1.some((r) => r[1] === '9'), JSON.stringify(cur1));
+  chk('유물조각을 넣으면 칸이 하나 는다', cur1.length === cur0.length + 1, JSON.stringify(cur1));
+  chk('유물조각 수량이 S.relic 을 읽는다',
+    cur1.some((r) => r[0] === '유물조각' && r[1] === '500'), JSON.stringify(cur1));
 
-  const useTab = await page.evaluate(() => {
+  /* 292 ① — S.own 보유 재료는 «화폐가 아니다». 넣어도 가방에 나오면 안 된다. */
+  const noItem = await page.evaluate(() => {
+    S.own[SKILLS[0].id] = { n: 9, l: 1 };
+    S.own[EQUIPS[0].id] = { n: 4, l: 1 };
+    renderBag();
+    return { names: [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) => e.dataset.bagn),
+             skill: SKILLS[0].n, equip: EQUIPS[0].n };
+  });
+  chk('292 · S.own 스킬 재료가 가방에 안 나온다', noItem.names.indexOf(noItem.skill) < 0, JSON.stringify(noItem.names));
+  chk('292 · S.own 장비 재료가 가방에 안 나온다', noItem.names.indexOf(noItem.equip) < 0, JSON.stringify(noItem.names));
+
+  /* 292 ② — 소모품(던전 입장권·무료 소환권·룰렛 횟수)이 가방에 남아 있으면 안 된다. */
+  const noUse = await page.evaluate(() => {
     S.daily.spins = 3;
-    document.querySelector('#bagTabs [data-bagtab="use"]').click();
-    return { rows: [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) => [e.dataset.bagn, e.dataset.bagq]),
-             pill: document.getElementById('bagPill').style.marginLeft,
-             act: document.querySelector('#bagTabs .act').dataset.bagtab };
+    if (S.dunTk) DUNGEONS.forEach((d) => { S.dunTk[d.id] = 5; });
+    renderBag();
+    return { names: [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) => e.dataset.bagn),
+             hasFn: typeof window.bagUse === 'function' || typeof window.bagTab !== 'undefined' };
   });
-  chk('소모품 탭으로 전환된다', useTab.act === 'use');
-  chk('소모품 탭 — 활성 알약이 왼쪽 칸으로 이동한다', useTab.pill === '0px', useTab.pill);
-  chk('소모품 탭 — 던전 입장권·룰렛 등 실제 소모품이 나온다', useTab.rows.length > 0, JSON.stringify(useTab.rows));
-  chk('소모품 탭 — 룰렛 남은 횟수가 S.daily.spins 를 읽는다',
-    useTab.rows.some((r) => r[0] === '룰렛 횟수' && r[1] === '3'), JSON.stringify(useTab.rows));
+  chk('292 · 룰렛 횟수가 가방에 없다', noUse.names.indexOf('룰렛 횟수') < 0, JSON.stringify(noUse.names));
+  chk('292 · 던전 입장권이 가방에 없다',
+    !noUse.names.some((n) => /입장권$/.test(n || '')), JSON.stringify(noUse.names));
+  chk('292 · 무료 소환권이 가방에 없다',
+    !noUse.names.some((n) => /무료 소환$/.test(n || '')), JSON.stringify(noUse.names));
 
-  const back = await page.evaluate(() => {
-    document.querySelector('#bagTabs [data-bagtab="cur"]').click();
-    return { act: document.querySelector('#bagTabs .act').dataset.bagtab,
-             pill: document.getElementById('bagPill').style.marginLeft };
+  /* 292 ③ — 모든 칸이 CURINFO 키를 든다(k 가 빈 칸 = 클릭이 죽는 칸). */
+  const keyed = await page.evaluate(() => {
+    S.gold = 1e6; S.dia = 5e4; S.relic = 500; S.stone = 40; S.rstone = 30; S.tstone = 20; S.mileage = 6;
+    renderBag();
+    return [...document.querySelectorAll('#bagGrid .bg53-c:not(.em)')].map((e) =>
+      [e.dataset.bagn, e.dataset.bagk, e.dataset.cur]);
   });
-  chk('재화 탭으로 되돌아온다', back.act === 'cur');
-  chk('재화 탭 — 활성 알약이 오른쪽(372px)으로 돌아온다', back.pill === '372px', back.pill);
+  chk('292 · 화폐 7종이 모두 칸으로 나온다', keyed.length === 7, JSON.stringify(keyed));
+  chk('292 · 모든 칸에 data-bagk 가 있다', keyed.every((r) => !!r[1]), JSON.stringify(keyed));
+  chk('292 · 모든 칸에 data-cur 가 있고 bagk 와 같다',
+    keyed.every((r) => r[2] && r[2] === r[1]), JSON.stringify(keyed));
+  const inCurinfo = await page.evaluate((ks) => ks.every((k) => !!CURINFO[k]), keyed.map((r) => r[1]));
+  chk('292 · 모든 칸의 키가 CURINFO 에 있다(가방 목록 = CURINFO 종류)', inCurinfo,
+    JSON.stringify(keyed.map((r) => r[1])));
 
   /* ---- D. 격자 ---- */
   console.log('[D] 격자');
@@ -143,12 +172,11 @@ function launchOpts() {
   chk('빈 칸은 배경도 없다(패널이 그대로 비친다)', grid.emBg === 'none', grid.emBg);
   chk('5열 격자', (grid.cols.match(/px/g) || []).length === 5, grid.cols);
 
+  /* 292 — 정렬 표본을 «S.own 재료» 에서 «화폐» 로 갈았다. 화폐만으로도 등급이 4단(1·2·3·4) 걸린다:
+     골드 g1(고급) · 유물조각 g2(희귀) · 다이아·강화석·룬강화석·단련석 g3(영웅) · 마일리지 g4(전설). */
   const sorted = await page.evaluate(() => {
-    S.own = {}; S.gold = 100; S.dia = 100;
-    [4, 2, 3, 1].forEach((gr) => {
-      const it = [].concat(SKILLS, EQUIPS, PETS, RELICS).find((x) => x.g === gr);
-      if (it) S.own[it.id] = { n: 1, l: 1 };
-    });
+    S.own = {}; S.gold = 100; S.dia = 100; S.relic = 100;
+    S.stone = 100; S.rstone = 100; S.tstone = 100; S.mileage = 100;
     renderBag();
     return [...document.querySelectorAll('#bagGrid [data-bagn]')].map((e) =>
       getComputedStyle(e).getPropertyValue('--g').trim());
@@ -157,8 +185,62 @@ function launchOpts() {
   const idx = sorted.map((c) => ORDER.indexOf(c));
   chk('등급 내림차순으로 정렬된다', idx.every((v, i) => i === 0 || idx[i - 1] <= v), JSON.stringify(sorted));
 
+  /* ---- F. 292 — 칸 클릭 → 33 재화 정보 팝업(#ciw). 전수 + «진짜 포인터 클릭» ---- */
+  console.log('[F] 292 — 칸 클릭 → 33 재화 정보 팝업 (화폐 전수)');
+  const KEYS = ['gold', 'dia', 'relic', 'stone', 'rstone', 'tstone', 'mile'];
+  await page.evaluate(() => {
+    S.own = {}; S.gold = 1e6; S.dia = 5e4; S.relic = 500; S.stone = 40; S.rstone = 30; S.tstone = 20; S.mileage = 6;
+    renderBag();
+  });
+  await page.waitForTimeout(120);
+  for (const k of KEYS) {
+    const sel = '#bagGrid .bg53-c[data-cur="' + k + '"]';
+    const has = await page.evaluate((s) => !!document.querySelector(s), sel);
+    if (!has) { chk('칸 «' + k + '» 이 있다', false); continue; }
+    /* 헤드리스 «진짜 클릭» — dispatchEvent 가 아니라 포인터로 누른다(LESSONS 65-②) */
+    await page.locator(sel).click();
+    await page.waitForTimeout(160);
+    const st = await page.evaluate(() => ({
+      open: document.getElementById('ciw').classList.contains('on'),
+      key: typeof curInfoKey === 'undefined' ? null : curInfoKey,
+      title: (document.getElementById('ciTitle') || {}).textContent,
+      have: (document.getElementById('ciHave') || {}).textContent,
+      ways: document.querySelectorAll('#ciWays>div').length,
+      /* 33 이 가방 «위» 에 서는지 — z 가 낮으면 열려도 안 보인다(292 의 두 번째 함정) */
+      zCi: +getComputedStyle(document.getElementById('ciw')).zIndex,
+      zBag: +getComputedStyle(document.getElementById('bagw')).zIndex,
+      bagStillOpen: document.getElementById('bagw').classList.contains('on')
+    }));
+    chk('«' + k + '» 칸 클릭 → #ciw 가 열린다', st.open, JSON.stringify(st));
+    chk('«' + k + '» — 팝업이 그 재화로 열린다', st.key === k, String(st.key));
+    chk('«' + k + '» — 제목·보유·획득처가 채워진다',
+      !!st.title && /^보유: /.test(st.have || '') && st.ways > 0, JSON.stringify(st));
+    chk('«' + k + '» — 33 이 가방 위에 선다(z)', st.zCi > st.zBag, st.zCi + ' vs ' + st.zBag);
+    chk('«' + k + '» — 가방은 뒤에 열린 채 남는다', st.bagStillOpen);
+    /* 딤을 눌러 33 만 닫고 가방으로 돌아온다 */
+    await page.evaluate(() => {
+      const w = document.getElementById('ciw'), r = w.getBoundingClientRect();
+      w.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + 10, clientY: r.top + 10 }));
+    });
+    await page.waitForTimeout(120);
+    const back2 = await page.evaluate(() => ({
+      ci: document.getElementById('ciw').classList.contains('on'),
+      bag: document.getElementById('bagw').classList.contains('on') }));
+    chk('«' + k + '» — 33 을 닫으면 가방으로 돌아온다', !back2.ci && back2.bag, JSON.stringify(back2));
+  }
+  /* 빈 칸은 아무 일도 없어야 한다 */
+  const emClick = await page.evaluate(() => {
+    const em = document.querySelector('#bagGrid .bg53-c.em');
+    if (!em) return 'no-em';
+    em.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    return document.getElementById('ciw').classList.contains('on') ? 'opened' : 'quiet';
+  });
+  chk('빈 칸을 눌러도 팝업이 안 열린다', emClick === 'quiet', emClick);
+
   /* ---- E. 닫기 ---- */
   console.log('[E] 닫기');
+  await page.evaluate(() => { if (!document.getElementById('bagw').classList.contains('on')) openBag(); });
+  await page.waitForTimeout(120);
   await page.evaluate(() => {
     const w = document.getElementById('bagw'), r = w.getBoundingClientRect();
     w.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + 10, clientY: r.top + 10 }));
