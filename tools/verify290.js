@@ -42,59 +42,29 @@ ok(/--grep', 'wip\('/.test(SRC),
    'A6 죽음 판정이 lock 시각뿐 아니라 마지막 wip(<ID>) 커밋도 본다');
 
 /* ─────────────────────────── [B] 이력 ───────────────────────────
-   «덮어쓰기» 의 지문: 한 커밋이 같은 lock 파일에서 -<시각A> <SID_A> / +<시각B> <SID_B> 를
-   동시에 내고 (SID_A != SID_B) 두 시각 차가 90분 이내인 것. 90분 넘으면 정당한 회수다. */
-const KNOWN = {
-  /* 290 이 등재된 사건 그 자체 — 고칠 수 없는 과거다. 사유를 남겨 두고 새 위반만 잡는다. */
-  '8fcacb68824d932b6132a21652f34940d890f209':
-    '2026-08-28 02:41 · 289 선점 경쟁에서 92초 된 남의 lock 을 덮었다(= 290 등재 사유). '
-    + '덮은 쪽도 덮인 쪽도 289 를 통째로 완주했다 — 한 세션이 통으로 낭비됐다.',
-  '6e8a94993687724dfbdd61ad7abee4b827a5208a':
-    '2026-08-28 02:03 · 122 선점에서 3분 된 남의 lock 을 덮었다. 덮은 쪽이 14초 뒤 스스로 '
-    + 'revert(d6c6da4) 해 복구했다 — 같은 결함이 40분 안에 두 번 났다는 증거라 예외로 남긴다.',
-};
-function historyViolations() {
-  const log = execFileSync('git',
-    ['log', '--format=%H', '-n', '400', 'origin/main', '--', 'docs/claims/'],
-    { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
-  const bad = [];
-  for (const h of log) {
-    let d = '';
-    try { d = execFileSync('git', ['show', '--format=', '--unified=0', h, '--', 'docs/claims/'],
-                           { cwd: ROOT, encoding: 'utf8' }); } catch (e) { continue; }
-    /* 파일별로 -줄/+줄 을 짝지어 본다 */
-    let cur = null;
-    const files = {};
-    for (const ln of d.split('\n')) {
-      const f = ln.match(/^\+\+\+ b\/(docs\/claims\/\S+)/);
-      if (f) { cur = f[1]; files[cur] = files[cur] || { minus: [], plus: [] }; continue; }
-      if (!cur) continue;
-      const m = ln.match(/^-(\S+)\s+(\S+)/); if (m) files[cur].minus.push(m);
-      const p = ln.match(/^\+(\S+)\s+(\S+)/); if (p) files[cur].plus.push(p);
-    }
-    for (const [f, v] of Object.entries(files)) {
-      if (!v.minus.length || !v.plus.length) continue;          /* 생성·삭제는 덮어쓰기가 아니다 */
-      const [, aAt, aSid] = v.minus[0], [, bAt, bSid] = v.plus[0];
-      if (aSid === bSid) continue;                              /* 자기 heartbeat */
-      const gap = (Date.parse(bAt) - Date.parse(aAt)) / 60000;
-      if (!Number.isFinite(gap) || gap > 90) continue;          /* 90분 넘으면 정당한 회수 */
-      /* 새 시각이 «더 이르면» 선점이 아니라 되돌리기다 — 아무도 과거 시각으로 lock 을 잡지 않는다.
-         (남의 lock 을 덮은 워커가 스스로 revert 해 복구한 커밋이 여기 걸린다. d6c6da4) */
-      if (gap < 0) continue;
-      bad.push({ h, f, why: aSid + '(' + Math.round(gap) + '분) → ' + bSid });
-    }
-  }
-  return bad;
-}
-const viol = historyViolations();
-const fresh = viol.filter(v => !KNOWN[v.h]);
+   판독기는 `tools/lockviol.js` 에 있다 — 음성 검사(`tools/probe312.js`)가 **같은 코드**를 쓴다.
+   예외는 커밋 해시가 아니라 «사건 내용»(lock 파일 + 덮인 SID + 덮은 SID)으로 등재한다:
+   해시로 잠그면 squash·force-push 한 번에 예외가 통째로 죽는다(작업 312 — 실제로 그렇게 죽었다). */
+const { KNOWN, fp, scan, classify } = require('./lockviol.js');
+const B = scan(ROOT, { ref: 'origin/main', limit: 400 });
+const excused = new Set(KNOWN.map(fp));
+const fresh = B.violations.filter(v => !excused.has(fp(v)));
 ok(fresh.length === 0, 'B1 살아 있는 남의 lock 을 덮은 커밋 0건(등재 예외 제외)',
-   fresh.length ? fresh.map(v => v.h.slice(0, 7) + ' ' + v.f + ' ' + v.why).join(' | ')
-                : '새 위반 0 · 등재 예외 ' + Object.keys(KNOWN).length + '건');
-const seen = viol.filter(v => KNOWN[v.h]).map(v => v.h);
-ok(Object.keys(KNOWN).every(h => seen.includes(h)),
-   'B2 등재 예외가 실제 이력에 있다(죽은 예외 0건)',
-   Object.keys(KNOWN).map(h => h.slice(0, 7) + (seen.includes(h) ? '✓' : '✗ 이력에 없음')).join(' · '));
+   fresh.length ? fresh.map(v => v.h.slice(0, 7) + ' ' + v.lock + ' ' + v.from + '(' + v.gap + '분) → ' + v.to).join(' | ')
+                : '새 위반 0 · 등재 예외 ' + KNOWN.length + '건 · lock 커밋 ' + B.scanned + '개 훑음');
+/* B2 는 «예외 목록이 썩어 새 위반을 가리는 것» 을 막는 항목이다. 다만 «이력 재작성으로 사건이
+   지워진» 예외는 부패가 아니다 — 아무것도 안 맞는 예외는 아무것도 안 봐주기 때문이다.
+   빨간불은 «등재 커밋은 아직 닿는데 스캔이 그 사건을 못 봤다»(= 파서·창이 썩었다) 뿐이다. */
+const cls = classify(ROOT, KNOWN, B.violations, { ref: 'origin/main' });
+const rotten = cls.filter(c => c.state === 'rotten');
+const erased = cls.filter(c => c.state === 'erased');
+ok(rotten.length === 0, 'B2 등재 예외가 썩지 않았다(살아 있는 커밋을 스캔이 놓친 건 0건)',
+   (rotten.length
+     ? rotten.map(c => c.k.commit.slice(0, 7) + ' ' + c.k.lock + ' — 커밋은 닿는데 스캔이 못 봤다'
+                                              + (B.saturated ? '(창 -n 400 포화)' : '')).join(' | ')
+     : cls.map(c => c.k.commit.slice(0, 7) + (c.state === 'matched' ? '✓' : '⚠소멸')).join(' · '))
+   + (erased.length ? ' — 소멸 ' + erased.length + '건은 이력 재작성으로 지워진 사건이다(사유는 '
+                    + 'tools/lockviol.js · 기록은 docs/review/290-*.md)' : ''));
 
 /* ─────────────────────── [C] 실전 경쟁 재현 ───────────────────────
    가짜가 아니라 **진짜 git** 으로 잰다 — bare 원격 1개 + 워커 클론 2개.
