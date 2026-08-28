@@ -168,6 +168,17 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     sweep('29 룰렛 [룰렛 돌리기] #rouBtn>s.updot', '#rouBtn>s.updot', '#rouBtn');
     closeModal(); S.daily.spins = spSnap; uiDirty = true; await wait(100);
 
+    /* ── 34 축복 (325 신설) ──
+       «받기» 알약(`.tm`)의 닷은 그 칸을 **지금 켤 수 있을 때만** 켜진다(노드 자체는 항상 있다).
+       세 칸을 전부 만료로 만들어 실물을 재고 되돌린다.
+       ⚠ 여기만 «알약 **안쪽** 우상단» 이다(322 처럼 바깥 코너로 내보내면 `.bls-c{overflow:hidden}` 에
+       잘린다) — 299 는 «부모 상자 기준 우상단 사분면» 규약이라 안쪽도 그대로 충족한다. */
+    const blSnap = JSON.stringify(S.bless.exp);
+    S.bless.exp = { atk: 0, hp: 0, rate: 0 };
+    openBless(); await wait(250);
+    sweep('34 축복 «받기» 알약 .bls-c .tm>.updot', '.bls-c .tm>.updot', '.tm');
+    closeBless(); S.bless.exp = JSON.parse(blSnap); uiDirty = true; await wait(120);
+
     /* ── 35 패스 ── */
     openPass('stage'); await wait(250);
     sweep('35 탭 #psBar .pt>.bdg', '#psBar .pt>.bdg', '.pt');
