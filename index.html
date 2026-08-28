@@ -906,39 +906,30 @@
      가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 31 · 배너 234)는 1:1 고정,
      세로(아트 높이 --ih · gap · top)는 layoutSide() 가 캔버스 높이에 비례시켜 덮어쓴다.
 
-     [행 그리드] 측정표 §0 의 행 y 를 그대로 구현한다.
+     [행 그리드] **작업 360(2026-08-29, 저장소 주인 지시)로 «전 행 등간격» 이 됐다.**
      캔버스 top 은 레퍼런스 y=188(전폭 HUD 바 하단, 02 비고 1의 정정 좌표계)에 대응한다.
-       1행  ref 260..360 → 로컬 72..172   라벨 없는 단독 아이콘(아트 101). 우측은 #menub(top:72) 만 남는다
-       (1→2 사이 gap 60 — 측정표 §1-2. 라벨 그룹과 분리된 단독 버튼이라 여기만 gap 이 3배다)
-       2행  ref 421      → 로컬 233       패스칸
-       3행  ref 556      → 로컬 368       퀘스트칸
-       4행  ref 687      → 로컬 499       휴식보너스칸
-       5행  ref 820      → 로컬 632       6행 ref 958 → 로컬 770 */
+       6행 전부 같은 셀(아트 82 + 라벨 32 = 114) · 같은 gap 20 ⇒ **pitch 134 등간격**
+       로컬 y 72 / 206 / 340 / 474 / 608 / 742  (프레임 y = +104 → 176/310/444/578/712/846)
+     ⚑ 이것은 레퍼런스와 다르다 — 측정표 §0 이 적어 둔 ref 행 y(260/421/556/686/820/958,
+       pitch 161/135/131/133/138)는 «1행이 라벨 없는 단독 버튼(아트 101 · 아래 gap 60)» 인
+       원본 그림의 값이고, 제품은 360 전까지 그것을 Δ0 으로 따르고 있었다(probe360 [6]).
+       주인 지시가 레퍼런스보다 우선이라 **의도적으로 이탈**한 자리다(측정표 §0 정오표 360).
+       되돌리려면 `.ibtn.solo`(아트 101·gap 60) + nth-child 보정 −3~+4px + SIDE.N 5 를
+       한 벌로 되살려야 한다 — 셋 중 하나만 되살리면 그리드가 어긋난다. */
   .side{position:absolute;top:var(--itop,72px);display:flex;flex-direction:column;
     gap:var(--igap,20px);z-index:3}
   #sideL{left:45px;align-items:flex-start}
   .ibtn{width:100px;height:calc(var(--ih,82px) + var(--ilh,32px));position:relative;cursor:pointer;
     background:none;border:0;display:flex;flex-direction:column;align-items:center}
-  /* 1행 단독 버튼 — 라벨이 없고(측정표 §1 «(라벨 없음)») 아트가 101 로 더 크며 아래 gap 이 60 이다.
-     아트 bbox 107x101 → 종횡비 1.06 (라벨 그룹의 1.15 와 다르다) */
-  .ibtn.solo{height:var(--isolo,101px);
-    margin-bottom:calc(var(--isgap,60px) - var(--igap,20px))}
-  /* 4회차 — 레퍼런스 pitch 는 균등 134 가 아니다(측정표 §1-2: 2→3 135 · 3→4 131 · 4→5 133).
-     균등 pitch 로 깔면 3행 −1 · 4행 +2 · 5행 +3 px 어긋난다. 칸이 아니라 «행 슬롯» 에 붙는
-     보정이라 nth-child 로 건다(48·71 이 칸 내용을 바꿔도 슬롯 좌표는 그대로여야 한다).
-     보정폭이 pitch 의 2% 밑이라 짧은 기기 비례 축소에는 절대값 그대로 둔다. */
-  /* 3행 라벨만 −2px — 아트를 줄이고 나니 «라벨 하단 → 다음 행 아트 상단» 이 19px 로 남았다.
-     비평가 E(25) · F(21) 가 값은 갈렸어도 «21 밑으로 내려가면 안 된다» 는 데는 같아서 21 로 올린다.
-     같이 얻는 것: 아트 하단 → 라벨 잉크 간격이 6 → 4 로 레퍼런스(4)와 같아진다. */
-  #sideL .ibtn:nth-child(3) .sl{margin-top:-2px}
-  #sideL .ibtn:nth-child(3){margin-top:1px}
-  #sideL .ibtn:nth-child(4){margin-top:-3px}
-  #sideL .ibtn:nth-child(5){margin-top:-1px}
-  /* 83 — 6번째 슬롯(축복이 내려간 ref 6행): 측정표 §1-2 pitch 5→6 = 138 (기본 134 + 4) */
-  #sideL .ibtn:nth-child(6){margin-top:4px}
-  .ibtn.solo .si{width:calc(var(--isolo,101px)*1.6);height:var(--isolo,101px);
-    line-height:var(--isolo,101px);font-size:calc(var(--isolo,101px)*var(--sf,.96))}
-  .ibtn.solo.lock::after{height:var(--isolo,101px);font-size:calc(var(--isolo,101px)*.66)}
+  /* 작업 360(2026-08-29, 저장소 주인 지시) — «출석» 단독 규격(`.ibtn.solo`: 아트 101 · 아래 gap 60)과
+     행별 `nth-child` 마진 보정(레퍼런스의 비균등 pitch 135/131/133/138 을 따라가던 −3~+4px)을
+     **통째로 걷어냈다.** 주인이 본 «출석만 간격·크기가 다르다» 의 본체가 그 둘이다.
+       · `.solo` 는 사용처가 여기 한 곳뿐이라 규칙째 삭제한다(죽은 규칙 금지 — probe360 [5]).
+       · nth-child 보정이 남으면 6행이 다시 «제각각» 이 된다 → 전 행 등간격 pitch 134
+         (= 셀 114 + gap 20)로 통일. 레퍼런스의 비균등 pitch 는 여기서 **의도적으로 이탈**한다.
+       · 라벨 −2px 보정(구 3행)도 같은 이유로 뺐다 — 한 행만 내부 리듬이 달라진다.
+     ⚠ 이 이탈은 A2 통과 화면을 되돌리는 것이 아니라 주인 지시로 덮는 것이다. 근거·되돌릴 값은
+        측정표 §0 정오표 360 과 `docs/review/360-사이드버튼통일.md`. */
   /* 아트 잉크를 레퍼런스 스프라이트 bbox(측정표 §1-1)에 맞춘다.
      이모지는 글리프마다 잉크 크기가 제각각(높이 103~113, 폭 69~113 / font-size 100 기준)이라
      한 벌의 font-size·scaleX 로는 못 맞춘다 → 버튼마다 `--sf`(font-size 배율)·`--sx`(가로 배율)를
@@ -13294,33 +13285,48 @@
     <!-- 우상단 4분할 메뉴 버튼 -->
     <div id="menub"><s></s><s></s><s></s><s></s><i class="bdg"></i><b class="mx"><u></u></b></div>
     <div class="side" id="sideL">
-      <!-- 1행은 레퍼런스에서 라벨 없는 단독 버튼이다(측정표 §1). 라벨을 달면 아래 5칸이 전부 27px 씩 밀린다.
-           --sf/--sx 는 각 이모지의 실측 잉크(canvas getImageData)로 역산한 «그 칸의 레퍼런스 스프라이트
-           bbox(측정표 §1-1)에 맞추는» 배율이다. 이모지를 바꾸면 두 값을 다시 재야 한다. -->
-      <div class="ibtn solo" data-pop="attend" title="출석" style="--sf:.925;--sx:1.084;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="bdg"></span></div>
-      <div class="ibtn" data-pop="roul"  style="--sf:.839;--sx:1.111;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
+      <!-- 작업 360(2026-08-29, 저장소 주인 지시): 1행 «출석» 을 **표준 행 규격**으로 내린다.
+           주인 원문 «왼쪽에 출석보상만 왼쪽 버튼들이랑 간격이랑 크기가 달라보이더라. 다른거랑 같게 해줘».
+           A2 는 레퍼런스의 «1행 = 라벨 없는 단독 버튼»(아트 101 · 아래 gap 60)을 그대로 옮겼고
+           그것이 실측으로도 ref 와 맞았지만(probe360 [6] Δ0), **주인 지시가 레퍼런스보다 우선**이다
+           = 의도적 이탈(측정표 `docs/measure/A2-사이드아이콘.md` §0 정오표 360).
+           ⇒ `.solo` 제거 · 라벨 «출석» 신설 · 아트 82 급 → 6행이 전부 같은 셀(114)·같은 pitch(134).
+           --sf/--sx 는 각 이모지의 실측 잉크(차분법 `tools/probe360.js`)로 역산한 배율이다.
+           360 이후 기준은 «그 칸의 레퍼런스 스프라이트» 가 아니라 **형제 6행 공통 잉크 108×97**
+           이다(±3%). 이모지를 바꾸면 두 값을 다시 재야 한다. -->
+      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.896;--sx:1.130;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
+      <div class="ibtn" data-pop="roul"  style="--sf:.866;--sx:1.057;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <!-- 작업 71(2026-08-25, 저장소 주인 지시): 3행 «우편»(📬) 삭제 — 52 ▦ 메뉴의 «우편» 칸과 중복이다.
            우편 진입은 ▦ 메뉴 하나뿐(openMail). 레드닷은 `sideAlert('mail')` 이 #menub 의 `.bdg` 로 옮겨 켠다.
            `.side` 가 flex 컬럼이라 아래 행이 그대로 한 칸씩 당겨지고(퀘스트 471 · 승급전 605 · 축복 739),
-           행 그리드 규격(SIDE.N=5 · --ih/--igap/--itop)은 48·34 주석대로 A2 측정표 그대로 둔다 = 남는 행 좌표 Δ0. -->
-      <div class="ibtn" data-pop="quest" style="--sf:.862;--sx:1.125;--dx:-.5px;--dy:-1px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
+           행 그리드 규격(--ih/--igap/--itop)은 48·34 주석대로 A2 측정표 그대로 둔다 = 남는 행 좌표 Δ0.
+           ⚠ SIDE.N 은 360(2026-08-29 주인 지시)이 «라벨행 수 5» → «전 행 수 6» 으로 뜻을 바꿨다. -->
+      <div class="ibtn" data-pop="quest" style="--sf:.862;--sx:1.075;--dx:-.5px;--dy:-1px"><span class="si">📜</span><span class="sl">퀘스트</span><span class="bdg"></span></div>
       <!-- 작업 48(2026-08-25, 저장소 주인 지시): 5행 «던전»(🏰) 삭제 — 하단 «던전» 탭(작업 24)과 중복이다.
            openDungeon() 진입은 탭으로만. 승급전이 5행으로 올라오고 6행은 빈다.
-           행 그리드(pitch·gap·--itop)는 A2 측정 규격 그대로 두려고 SIDE.N 은 5 로 유지한다(아래 SIDE 주석). -->
-      <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 레퍼런스 6행 폭 107 을 맞추려면 scaleX 2.04 가
-           필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다). -->
-      <div class="ibtn" data-pop="promo" style="--sf:.848;--sx:1.143;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
+           행 그리드(pitch·gap·--itop)는 A2 측정 규격 그대로 두려고 SIDE.N 은 5 로 유지했다(아래 SIDE 주석).
+           ⚠ 360 이 «출석» 을 표준 행으로 내리면서 단독행이 사라져 SIDE.N 은 이제 **6**(= 전 행 수)이다. -->
+      <!-- 🏅 는 잉크 폭이 69 뿐이라(다른 이모지는 112 안팎) 목표 폭 107~108 을 맞추려면 scaleX 2.04 가
+           필요해 형태가 뭉개진다. 잉크 폭 112 인 🏆 로 교체했다(의미도 승급전에 맞는다).
+           ⚑ **이 «글리프를 갈아 끼운다» 가 이 부품의 선례다** — 360 이 축복(🙏, 자연 폭이 좁아 sx 1.235)을
+              그대로 둔 것은 필요 배율이 형제 범위(1.06~1.14) 바로 위라서다. 356(아이콘 원본 비율 전수)이
+              sx 를 1 로 몰 때 가장 먼저 볼 자리가 축복이고, 그때 답은 배율이 아니라 이 선례다. -->
+      <div class="ibtn" data-pop="promo" style="--sf:.831;--sx:1.096;--dx:6.5px;--dy:1px"><span class="si">🏆</span><span class="sl">승급전</span><span class="bdg"></span></div>
       <!-- 작업 83(2026-08-26, 저장소 주인 보고): 레퍼런스 ③ 좌측 5행 «도감» — 21 도감 보너스 팝업의
-           메인 진입점이다. 48·71 이 비워 둔 마지막 라벨 행을 채우므로 SIDE.N=5·행 그리드는 그대로
+           메인 진입점이다. 48·71 이 비워 둔 마지막 라벨 행을 채우므로 행 그리드는 그대로
            (기존 4칸 좌표 Δ0), 축복만 레퍼런스 6행(길드 y958 자리)으로 한 칸 내려간다.
-           --sf/--sx 는 📚 잉크(112×110 @font100)를 ref 5행 스프라이트 77×82(x58–134) 에 맞춘 역산값. -->
-      <div class="ibtn" data-pop="coll" style="--sf:.864;--sx:.919;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>
+           ⚠ --sx 의 역산 기준이 360 에서 바뀌었다 — ref 5행 스프라이트 77×82 에 맞추던 .919 는
+              형제 대비 폭 −13.5% 라 «도감만 작아 보이는» 자리였다(probe360 [3]). 지금 값은
+              형제 공통 잉크 108×97 역산치다(`tools/cal360.js`). -->
+      <div class="ibtn" data-pop="coll" style="--sf:.864;--sx:1.067;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>
       <!-- 작업 34(2026-08-25): 48 이 «던전» 을 지우면서 비워 둔 **예약된 5번째 라벨 행**에 «축복» 을 넣는다.
-           layoutSide() 는 SIDE.N=5 로 이미 5칸을 잡아 두고 있어(위 48 주석) 행 그리드·--ih/--igap/--itop 이
-           바뀌지 않는다 = 기존 4칸 아이콘 좌표 이동 0. A2 측정 규격은 그대로다.
-           83 이후: 도감이 ref 5행을 가져가고 축복은 ref 6행(길드 43–149 w107 · y958 h~86) 규격이다 —
-           «칸이 바뀌면 --sf/--sx 를 다시 재라»(A2 5회차 교훈) 대로 🙏 를 6행 bbox 로 재역산했다. -->
-      <div class="ibtn" data-pop="bless" style="--sf:.916;--sx:1.414;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
+           83 이후: 도감이 ref 5행을 가져가고 축복은 ref 6행(길드 43–149 w107 · y958 h~86) 규격이었다 —
+           «칸이 바뀌면 --sf/--sx 를 다시 재라»(A2 5회차 교훈) 대로 🙏 를 6행 bbox 로 재역산했었다.
+           ⚠ 360(2026-08-29 주인 지시)이 그 기준을 걷어냈다. 🙏 는 자연 잉크가 좁아(형제의 0.87배)
+              ref 6행 폭을 맞추려던 --sx 1.414 가 **형제 대비 폭 +20.9%** 로 튀어 있었다 —
+              주인이 «축복버튼도 그렇네» 라고 한 자리가 정확히 그것이다. 지금 값은 형제 공통
+              잉크 108×97 역산치(1.235)로, 형제 최대(승급전 1.096) 바로 위다. -->
+      <div class="ibtn" data-pop="bless" style="--sf:.862;--sx:1.235;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>
     </div>
     <!-- 작업 49(2026-08-25, 저장소 주인 지시): 우측 사이드 컬럼(#sideR) 전부 삭제.
          이벤트·특권 잠금 아이콘과 시설 배너(🏠 · 카운터 뱃지 · 남은시간 pill)를 없앴다.
@@ -15034,11 +15040,12 @@ function resizeCanvas(){
    ROUTINE [2] 대로 **가로(여백 45 · 슬롯 폭 100 · 라벨 32 · 레드닷 · 배너 폭 234)는 1:1 고정**하고
    **세로(아트 높이 a · gap · 상단 오프셋)만 캔버스 높이에 비례**시킨다.
      레퍼런스 셀 114 = 아트 82 + 라벨 32 / gap 20 / 캔버스 상단 오프셋 31 */
-/* N 은 «라벨 달린 행 칸» 수다. 작업 48 로 던전 아이콘을 빼서 실제 아이콘은 4개지만,
-   행 그리드(pitch·gap·--itop)를 A2 측정 규격 그대로 두어야 하므로 N 은 5 로 유지한다.
-   (N 을 4 로 줄이면 짧은 화면비에서 아이콘이 커지며 남은 행이 전부 위로 밀린다 — 6행은 «빈 칸»이다) */
-const SIDE = { ART:82, LABEL:32, GAP:20, TOP:72, N:5, PAD:8, LMIN:22, CLEAR:34,
-               SOLO:101, SGAP:60 };
+/* N 은 «행 칸» 수다. 작업 360(2026-08-29, 저장소 주인 지시)으로 «출석» 이 단독 규격(SOLO/SGAP)을
+   버리고 표준 행이 되면서 **6행이 전부 같은 규격**이 됐다 → N 은 5(라벨행) → **6**(전 행)이다.
+   SOLO·SGAP 는 쓰는 곳이 사라져 함께 지웠다(죽은 상수 금지 — `.ibtn.solo` CSS 도 같이 삭제).
+   ⚠ N 은 이제 «#sideL 의 행 수» 와 같은 뜻이다. 칸을 늘리거나 줄이면 여기도 같이 고쳐야
+      짧은 화면비에서 스택이 battlefoot 을 침범하지 않는다(`verify71` 이 그 관계를 못 박는다). */
+const SIDE = { ART:82, LABEL:32, GAP:20, TOP:72, N:6, PAD:8, LMIN:22, CLEAR:34 };
 /* 상단 HUD 가 캔버스 위로 내려와 걸치는 깊이 (프로필 카드 테두리 등). 스택은 그 아래로 피해야 한다. */
 function hudOverhang(){
   const ar = app.getBoundingClientRect(), sc = ar.width/FRAME_W || 1;
@@ -15053,10 +15060,9 @@ function hudOverhang(){
 function layoutSide(hpx){
   const foot = $('battlefoot').offsetHeight || 122;
   const gr = SIDE.GAP/SIDE.ART, lr = SIDE.LABEL/SIDE.ART;
-  const sr = (SIDE.SOLO + SIDE.SGAP)/SIDE.ART;   /* 1행(단독 아이콘 + gap 60) 이 아트 높이의 몇 배인가 */
   const over = hudOverhang();
-  /* 스택 총높이 = top + 단독행 + gap60 + 라벨칸 N개 + 그 사이 gap (N-1)개 */
-  const D = sr + SIDE.N*(1 + lr) + (SIDE.N-1)*gr, D2 = sr + SIDE.N + (SIDE.N-1)*gr;
+  /* 360 — 단독행이 사라져 스택 총높이 = top + 칸 N개(아트+라벨) + 그 사이 gap (N-1)개 뿐이다 */
+  const D = SIDE.N*(1 + lr) + (SIDE.N-1)*gr, D2 = SIDE.N + (SIDE.N-1)*gr;
   let a = SIDE.ART, L = SIDE.LABEL, top = SIDE.TOP;
   for(let i = 0; i < 3; i++){        /* top 이 a 에 의존하므로 몇 번 돌려 수렴시킨다 */
     const k = a / SIDE.ART;
@@ -15072,7 +15078,7 @@ function layoutSide(hpx){
   }
   /* 안전판 — 태블릿 clamp 처럼 캔버스가 극단적으로 짧으면 하한을 무시하고 통째로 줄인다 */
   const k0 = a/SIDE.ART;
-  const need = top + (SIDE.SOLO + SIDE.SGAP)*k0 + SIDE.N*(a + L) + (SIDE.N-1)*(SIDE.GAP*k0);
+  const need = top + SIDE.N*(a + L) + (SIDE.N-1)*(SIDE.GAP*k0);
   const avail = hpx - foot - SIDE.PAD;
   if(need > avail && need > 0){ const s = avail/need; a *= s; L *= s; top *= s; }
   const k = a/SIDE.ART;
@@ -15081,8 +15087,6 @@ function layoutSide(hpx){
   app.style.setProperty('--itop', top.toFixed(2) + 'px');
   app.style.setProperty('--ilf',  L.toFixed(2) + 'px');
   app.style.setProperty('--ilh',  L.toFixed(2) + 'px');
-  app.style.setProperty('--isolo',(SIDE.SOLO*k).toFixed(2) + 'px');
-  app.style.setProperty('--isgap',(SIDE.SGAP*k).toFixed(2) + 'px');
   measureSideBox();
 }
 /* 13회차 AQ①·AR#10 — 좌측 사이드 아이콘 열이 «캔버스 좌표(게임px)로 어디까지인가».
