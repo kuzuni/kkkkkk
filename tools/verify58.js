@@ -25,6 +25,7 @@
     [16] 딤 위 알약 복제판의 숫자가 원본과 어긋나지 않는다 (37차 2인 공통ㄱ)
     [17] 씬 A 전투 발이 우측 «상한» 에서 세로 기둥으로 뭉치지 않는다 (37차 2인 공통ㄴ)
     [18] 퀘스트 체크 도장이 «정지 뒤 하드컷» 이 아니다 (37차 2인 공통ㄹ)
+    [19] 씬 A HUD 알약 «팝» 의 복귀가 한 프레임에 급락하지 않는다 (37차 2인 공통ㅁ)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -159,6 +160,11 @@ async function run(scene, span, step) {
             return [Math.round(r.x * 10) / 10, Math.round(r.y * 10) / 10,
               Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10,
               Math.round(parseFloat(getComputedStyle(c).opacity) * 1000) / 1000]; })(),
+          /* 39회차 [19] — HUD 골드 알약의 «팝» 상자. 37차 Z[8]·AA[3] 이 «208ms 고원 뒤 복귀 11px 중
+             9px 을 18ms 에» 로 잡은 자리다. 스케일은 상자 폭으로 읽는다(transform 이 반영된 rect). */
+          pillB: (() => { const el = document.querySelector('.cbox.cGold');
+            if (!el) return null; const r = el.getBoundingClientRect();
+            return [Math.round(r.width * 100) / 100, Math.round(r.height * 100) / 100]; })(),
           fxl: (document.getElementById('fxl') || { childElementCount: 0 }).childElementCount,
           gold: (document.getElementById('goldN') || {}).textContent,
           dia: (document.getElementById('diaN') || {}).textContent,
@@ -479,6 +485,35 @@ async function run(scene, span, step) {
     ok(fade.length >= 1 && ref != null && rise >= 4,
       `퇴장 표본 ${fade.length}장 · 마지막 불투명 표본 대비 중심 상승 ${rise.toFixed(1)}px `
       + '(≥4 — 선언 22px, 표본 격자 손실 몫)');
+  }
+
+  /* ---- [19] 씬 A HUD 알약 «팝» 의 복귀가 한 프레임에 급락하지 않는다 (37차 Z[8]·AA[3] 2인 공통ㅁ) ----
+     Z «f12~f16 208ms ±2px 고원 → 복귀 11px 중 9px 을 18ms(전체의 2.8%)에» · AA «f13~f16 140ms
+     ±0px → f17 −9px 스냅».
+     ⚠ «한 표본이 먹은 비율» 로 재면 안 된다 — 표본 간격이 32~65ms 로 들쭉날쭉해서, 같은 속도라도
+       간격이 두 배인 표본이 두 배를 먹는다(첫 시도가 그 값으로 «51%» 를 읽고 고친 줄 알 뻔했다).
+       [18] 에서 배운 것과 같다: **표본 격자에 안 흔들리는 자**로 잰다.
+     → «복귀 실효 구간» — 봉우리에서 25% 내려온 첫 표본 ~ 바닥 10% 안에 든 첫 표본 사이의 시간.
+       속도가 아니라 «얼마 동안 복귀가 보이는가» 라서 간격이 흔들려도 값이 안 바뀐다. */
+  console.log('[19] 씬 A 알약 팝 — 복귀 실효 구간 (37차 Z·AA 2인 공통ㅁ)');
+  {
+    const ps = gain.samples.filter((s) => s.pillB);
+    if (ps.length < 4) {
+      ok(false, `알약 상자 표본 ${ps.length}장 — 잴 대상이 없다(.cbox.cGold 선택자 확인)`);
+    } else {
+      const ws = ps.map((s) => s.pillB[0]);
+      const base = Math.min(...ws), peak = Math.max(...ws), total = peak - base;
+      const pk = ws.indexOf(peak);
+      const rec = ps.slice(pk);
+      const a = rec.find((s) => s.pillB[0] <= peak - 0.25 * total);
+      const c = rec.find((s) => s.pillB[0] <= base + 0.10 * total);
+      const span = (a && c) ? c.t - a.t : 0;
+      /* 되돌리면 빨개진다: 39회차 이전 빌드(고원 60% + 전 구간 ease-out)는 같은 자로 **34ms**
+         (두 번 연속 실행 34 · 34). 반영 후 **122ms**. 임계 90ms 은 눈대중이 아니라 37회차가
+         넘긴 처방 «복귀 구간을 180ms 로 펼 것» 의 **절반**이다(표본 격자 손실 몫). */
+      ok(span >= 90, `봉우리 ${peak.toFixed(1)}px → 바닥 ${base.toFixed(1)}px · `
+        + `복귀 실효 구간 ${span}ms (≥90 — 선언 202ms) · 표본 ${ps.length}장`);
+    }
   }
 
   console.log('[11] 콘솔 에러 0');
