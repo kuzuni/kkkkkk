@@ -489,7 +489,14 @@
      레퍼런스 39(보스전 중)·40(재도전 대기) 둘 다 헤더의 «반투명 캡슐 + 스테이지 진행바» 가 없다.
      그래서 02 의 기본 헤더는 그대로 두고, 보스 상태에서만 클래스로 덮는다(02 구간을 건드리지 않는다). */
   #stinfo.bfight,#stinfo.bfarm{background:none}
-  #stinfo.bfight .kbar,#stinfo.bfight .knode,#stinfo.bfarm .kbar,#stinfo.bfarm .n1,#stinfo.bfarm .n2{display:none}
+  /* 350 — `.kboss` 가 이 목록에 없었다. 측정표 28 §표 «해골 노드» 행은 39 를 **«없음**(체력바 끝
+     소형 두개골 46×42 로 대체)» 이라고 이미 적어 뒀는데 규칙만 안 따라왔다 — 02 의 진행바 노드
+     (`#stinfo` 기준 379,5 Ø82 = 프레임 699..781 / 245..327)가 보스 체력바(190,127 700×67 =
+     프레임 190..890 / 231..298) 뒤에 남아 **하변 아래로 정확히 29px** 삐져나왔다
+     (`tools/probe350.js` §2 픽셀: 바 밑 y310·313 = 원판 #2A3E81 · y316·319 = 링 #4CBAED · y322·325 = 테 #141414).
+     ⚠ `.bfarm` 은 같은 노드를 중앙 Ø120 으로 **쓰는** 설계(40)이므로 `.bfight` 쪽만 끈다. */
+  #stinfo.bfight .kbar,#stinfo.bfight .knode,#stinfo.bfight .kboss,
+  #stinfo.bfarm .kbar,#stinfo.bfarm .n1,#stinfo.bfarm .n2{display:none}
   /* 39 — 라벨이 ref y311 → y421 로 110px 내려간다(타이머·보스 HP바가 그 자리를 쓴다) */
   #stinfo.bfight .chap{top:97px}
   /* 40 — 해골 노드가 진행바 우측 끝(740,370 Ø84)이 아니라 화면 중앙 (540,424) Ø120 으로 커진다.
