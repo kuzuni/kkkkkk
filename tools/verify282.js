@@ -1,6 +1,9 @@
-/* 작업 275 게이트 — «승급전은 한 번 깰 때마다 코스튬 1개» (2026-08-27 저장소 주인 지시)
+/* 작업 282 게이트 — «승급전은 한 번 깰 때마다 코스튬 1개» (2026-08-27 저장소 주인 지시)
  *
- *   node tools/verify275.js
+ *   node tools/verify282.js
+ *
+ * ⚠ 번호 이동 — 이 작업은 «275ⓑ» 로 등재됐다가 작업 281(ID 이중 등재 정리, 2026-08-28)이
+ *   **282** 로 옮겼다. `index.html` 주석과 다른 게이트의 주석에 남은 «275» 는 같은 작업이다.
  *
  * 182/194 는 승급 1회에 **묶음째**(21·10·8·6·2·1·1 = 49종) 줬다. 주인 지시는 «1개씩» 이다.
  * 275 는 묶음을 «대표를 뽑는 구간» 으로만 남기고, 각 구간의 **마지막 칸**(= 179 미리보기가 이미
@@ -270,6 +273,6 @@ async function openWith(browser, save){
   } finally {
     await browser.close();
   }
-  console.log('\nVERIFY275 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+  console.log('\nVERIFY282 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   process.exit(fail ? 1 : 0);
-})().catch(e => { console.error('VERIFY275 CRASH', e); process.exit(2); });
+})().catch(e => { console.error('VERIFY282 CRASH', e); process.exit(2); });
