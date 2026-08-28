@@ -313,19 +313,33 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   await ev(() => { closeDungeon(); });
   await wait(400);
 
-  /* ── [7] 탭바 «상점» 칸 — 하루 무료 10연이 남았을 때 (③ 안 뜨던 자리) ──────── */
+  /* ── [7] 탭바 «상점» 칸 — 하루 무료 10연이 남았을 때 (③ 안 뜨던 자리) ────────
+     ⚑ 329(2026-08-28 주인 지시) 이관 — 이 칸의 조건이 `sumAnyReady()` 단독에서
+        **`sumAnyReady() || coinAdAnyReady()`** 로 넓어졌다(13 재화 탭 «광고 보고 받기»).
+        그래서 «무료 소환을 다 쓰면 꺼진다» 를 재려면 **다른 항도 같이 0 으로 눌러야** 한다 —
+        안 그러면 이 게이트는 «329 가 안 붙었다» 를 초록으로 통과시킨다(310 «묻는 것을 옮긴다»).
+        아래는 두 항을 **따로** 묻는다: ⓐ 소환만 남음 ⓑ 광고만 남음 ⓒ 둘 다 0. */
   const shop1 = await ev(() => {
     S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 2, o), {});
+    S.daily.adBuy = COIN_ADS.reduce((o, a) => (o[a.id] = 0, o), {});
     uiDirty = true; renderUI();
     return document.querySelector('.tab[data-t="shop"]').classList.contains('alert');
   });
-  ok('상점 탭 — 무료 소환이 남아 있으면 켜짐', shop1 === true, String(shop1));
+  ok('상점 탭 — 무료 소환이 남아 있으면 켜짐 (광고 상품 0 인데도)', shop1 === true, String(shop1));
+  const shopAd = await ev(() => {
+    S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 0, o), {});
+    S.daily.adBuy = {};                     /* 없는 키는 cap 폴백 = 전부 남음 */
+    uiDirty = true; renderUI();
+    return document.querySelector('.tab[data-t="shop"]').classList.contains('alert');
+  });
+  ok('상점 탭 — 329: 무료 소환이 0 이어도 «광고 보고 받기» 가 남으면 켜진다', shopAd === true, String(shopAd));
   const shop0 = await ev(() => {
     S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 0, o), {});
+    S.daily.adBuy = COIN_ADS.reduce((o, a) => (o[a.id] = 0, o), {});
     uiDirty = true; renderUI();
     return document.querySelector('.tab[data-t="shop"]').classList.contains('alert');
   });
-  ok('상점 탭 — 무료 소환을 다 쓰면 꺼진다', shop0 === false, String(shop0));
+  ok('상점 탭 — 무료 소환·광고 상품을 다 쓰면 꺼진다', shop0 === false, String(shop0));
 
   /* ── [7-b] 294 — 상점 «안» 의 두 자리: 10 소환 탭 배지 · 상자 카드 ────────────────
      주인 보고(2026-08-27): «광고 보고 무료 소환이 가능한 상황인데 레드닷이 없다».
@@ -368,6 +382,10 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
 
   const sumOff = await ev(() => {
     S.daily.freeSum = SHOP_BOXES.reduce((o, x) => (o[x.b] = 0, o), {});
+    /* 329 이관 — 탭바 «상점» 칸은 이제 `sumAnyReady() || coinAdAnyReady()` 다.
+       «무료 0 이면 탭바도 꺼진다» 는 294 의 성질을 재려면 광고 상품 항도 같이 0 이어야 한다
+       (329 자체는 tools/verify329.js 가 «OR 로 이었다» 를 따로 단언한다). */
+    S.daily.adBuy = COIN_ADS.reduce((o, a) => (o[a.id] = 0, o), {});
     S.dia = 1e12;                       /* 음성 시험 — 유료 10·30연은 얼마든지 되지만 점등 대상이 아니다 */
     uiDirty = true; renderUI(); renderShopPage();
     return window.__p294();

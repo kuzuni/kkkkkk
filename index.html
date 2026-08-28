@@ -4885,8 +4885,11 @@
   .shp-card .cbtn.lack>.sub{color:#EB6D68}   /* 외곽선 두께는 .b1>.sub 의 6px 를 그대로 둔다 */
 
   /* 잠금 상자(도감 완성) — 딤 + 안내 */
+  /* 328 — z 5 → 7. 레드닷이 카드 코너(바깥)에서 **버튼 코너(카드 안)** 로 들어오면서 이 딤 위에
+     떠 버렸다. «도감 완성» 칸의 무료 버튼은 유료 소환으로 떨어지므로(25121) 닷이 딤 위에 남으면
+     321 이 남긴 «레드닷 = 지금 누를 수 있다» 약속이 깨진다 — 딤을 닷(z6) 위로 올려 같이 덮는다. */
   .shp-card .clk{inset:7px;border-radius:20px;background:rgba(0,0,0,.6);text-align:center;
-    line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:5}
+    line-height:436px;font-size:40px;color:#e9c98a;-webkit-text-stroke:0;pointer-events:none;z-index:7}
 
   /* 96 (2026-08-26 주인 지시 ⓑ «소환/재화 탭 선택 상태도 나쁘다») — 10 전용 탭 부품
      (검정 7 + 림 6 짜리 별도 바 껍데기 · 활성 칸으로 **노드째 옮겨 다니던** 노랑 화살촉 알약
@@ -10089,12 +10092,44 @@
      같은 처방: 같은 급의 스코프 짝을 반드시 같이 적는다. 이 네 줄을 지우면 상시 점등으로 되돌아간다.
      자리 — 카드는 우상단 **바깥**(`.eqsl` 와 같은 −7,−7). 카드 안 우상단은 헤더 밴드 `.chd` 의
      둥근 모서리이고 바깥 29px 은 카드 사이 여백이라 위 카드와 겹치지 않는다.
-     소환 탭 배지는 공용 `.stab>.bdg`(우상단 right:23/top:−6) 를 그대로 쓴다 — 좌표를 새로 적지 않는다. */
+     소환 탭 배지는 공용 `.stab>.bdg`(우상단 right:23/top:−6) 를 그대로 쓴다 — 좌표를 새로 적지 않는다.
+
+     ⚑ **328(2026-08-28, 주인 정정) — 그 «카드 우상단» 을 «10회 소환 n/n» 버튼 우상단으로 옮긴다.**
+     주인 원문: «그 행에 뜨라는게 아니라 10회 소환 2/2 이 버튼에 빨간점 하라는거임».
+     닷 **노드는 카드 자식 그대로** 두고 좌표만 옮긴다 — `.cbtn{overflow:hidden}`(4749) 이라
+     버튼 안에 넣으면 링이 잘리고, 안쪽 우상단은 `tools/probe328.js` 실측으로
+     «라벨 잉크 오른쪽 남는 폭 **37.79px** < 닷 27 + 링 7.5×2 = 42» 라 **물리적으로 안 들어간다**
+     (322 가 `.qs-b`(29.05px)에서 내린 결론과 같다). 같은 카드의 ▶AD 뱃지(`.adbadge`)가 이미
+     «시안 버튼 코너를 무는 장식은 카드 직속 자식이라 버튼 overflow 에 안 잘린다» 로 같은 선례다.
+     좌표는 버튼 우상단 코너 (카드기준 720+200, 146) 에 닷 중심을 맞춘 값이다:
+       right = 980 − 920 − 13.5 = **46.5** · top = 146 − 13.5 = **132.5**
+     (카드는 `overflow:visible` 이라 안 잘린다 — 실측 [328-3]. 헤더 밴드 `.chd` 하단 105 보다
+      링 상단 118.5 가 아래이고, `.cart`(x101~375) · `.cmag`(x381~440) 와도 안 닿는다.) */
   #shopw .updot{display:none}
   #shopw .alert>.updot{display:block}
   #shopw .stab>.bdg{display:none}
   #shopw .stab.alert>.bdg{display:block}
-  .shp-card>.updot{right:-7px;top:-7px}
+  .shp-card>.updot{right:46.5px;top:132.5px}
+  /* ── 329(2026-08-28, 주인 지시) — 13 재화 탭 «광고 보고 받기» 버튼 레드닷 ──────────────
+     여기는 `.cn-cd{overflow:hidden}`(6926) 이라 **바깥 코너가 카드에 잘린다**(실측 +5.24px 초과).
+     대신 안쪽 우상단이 실제로 비어 있다 — 라벨 잉크 오른쪽 **55.08px**(≥42) 라
+     328 과 정반대 결론이 나온다. 그래서 여기만 «안쪽», 호스트는 **버튼 자신**이다.
+     ⚠ `right` 을 규약값 12 로 두면 안 된다 — 등장 배율 1.3(`jzDotIn`)에서 링이
+     `.cnt`(«(n/n)») 잉크를 3.99px 밟는다. 4 로 당겨 4.01px 여유를 만든 값이다(probe328 [329-4]). */
+  .cn-cd>.bt>.updot{right:4px;top:10px}
+  /* ── 330(2026-08-28, 주인 지시) — 89 유물 «소환» 수반 버튼 레드닷 ────────────────────
+     주인 원문: «유물 소환버튼에도 빨간 점 알림있어야함 소환가능한상태면».
+     ⚠ 특이성 함정(166 ⓔ · 202 §3 · 283 · 294 · 325 와 **같은 모양**) — `#relw` 는
+     `#relw i,#relw em,#relw b,#relw u,#relw s{display:inline-block}`(ID 급 1,0,1, 4849행) 로
+     `<s>` 를 통째로 켜 두는 화면이다. 클래스 급인 `.updot{display:none}`(0,1,0) 이 **져서**
+     조건과 무관하게 상시 점등이 된다 → 같은 급의 스코프 짝을 반드시 같이 적는다.
+     자리 — `#rwBasin` 400×216 은 안 자르지만(실측 [330-2]) **우상단 코너 (400,0) 는 투명**이다
+     (수반 SVG 의 그릇 림은 x32..368 / y4..64). 코너에 앉히면 허공에 뜨므로 림 오른쪽 끝에 맞춘다:
+       right 18 · top 12 → 중심 (368.5, 25.5) — 400×216 의 우상단 사분면(299) 충족.
+     라벨 «유물 소환» 잉크(y102~142) · `#rwCost`(y149~202) 와 세로로 안 겹친다. */
+  #relw .updot{display:none}
+  #relw .alert>.updot{display:block}
+  #rwBasin>.updot{right:18px;top:12px}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
@@ -13227,10 +13262,11 @@
     <div class="shp-cats stabs sp3" id="shopCats">
       <!-- 96 — 공용 서브탭 부품(.stabs.sp3 > .stab). `.shp-ct` 는 게이트(tools/verify45.js) 별칭. -->
       <!-- 294 — «소환 가능(무료·광고)» 레드닷. 배지 노드는 늘 두고 CSS 가 껐다 켠다(166 규약:
-           기본 꺼짐 + `.alert` 로 점등). 토글은 syncShopSumBtns() 가 매 틱 한다. 재화·이용권 칸은
-           «누를 게 있다» 판정이 따로 없으므로 배지를 달지 않는다(달면 상시 점등이 된다). -->
+           기본 꺼짐 + `.alert` 로 점등). 토글은 syncShopSumBtns() 가 매 틱 한다.
+           329(2026-08-28 주인 지시) — «재화» 칸에도 판정이 생겼다: 오늘 받을 수 있는 광고 상품이
+           남아 있으면 켠다(`coinAdAnyReady()`). 이용권 칸은 여전히 판정이 없어 배지를 안 단다. -->
       <div class="shp-ct stab on" data-cat="summon"><i class="ol4">소환</i><s class="bdg"></s></div>
-      <div class="shp-ct stab" data-cat="coin"><i class="ol3">재화</i></div>
+      <div class="shp-ct stab" data-cat="coin"><i class="ol3">재화</i><s class="bdg"></s></div>
       <div class="shp-ct stab" data-cat="pass"><i class="ol3">이용권</i></div>
     </div>
   </div>
@@ -13261,8 +13297,11 @@
       <div class="rw-grid" id="rwGrid"></div>
       <!-- 120 — 중단 구획: 수반과 코스트 알약은 상대 위치가 고정이라 한 덩어리로 묶는다 -->
       <div class="rw-mid">
+        <!-- 330(2026-08-28 주인 지시) — «소환 가능한 상태면» 이 버튼에 레드닷.
+             부품은 166 규약 그대로 `<s class="updot">` 하나, 켜고 끄는 것은 호스트의 `.alert`
+             (`renderRelw()` 한 곳에서 `relicSummonReady()` 로 토글한다). -->
         <div class="rw-basin" id="rwBasin">
-          <span class="rw-stone"></span><b>유물 소환</b>
+          <span class="rw-stone"></span><b>유물 소환</b><s class="updot"></s>
         </div>
         <div class="rw-cost" id="rwCost"><i data-cur-slot="relic"></i><b>100</b></div>
       </div>
@@ -25049,7 +25088,10 @@ function renderShopPage(){
          `pointer-events:none` + `data-shsum` 없음 → 히트영역·102 동기화는 안 건드린다. */
       +  '<i class="stk stk1"></i><i class="stk stk2"></i><i class="stk stk3"></i>'
       +  '<div class="cfr"></div>'
-      /* 294 — ③ «그 상자 카드» 레드닷. 부품은 283 이 쓴 `<s class="updot">` 그대로다.
+      /* 294 — ③ «그 상자» 레드닷. 부품은 283 이 쓴 `<s class="updot">` 그대로다.
+         328(주인 정정 2026-08-28) — 자리는 카드 우상단이 아니라 **«10회 소환 n/n» 버튼 우상단**이다.
+         노드가 여전히 카드 자식인 이유는 `.cbtn{overflow:hidden}` 이고 버튼 안쪽 우상단이
+         37.79px 밖에 안 비기 때문이다(probe328 · 같은 카드의 `.adbadge` 와 같은 선례). 좌표는 CSS 한 줄.
          283 의 카드들과 달리 **노드를 조건부로 찍지 않고 늘 둔다** — 이 화면은 자정 충전·
          12 결과 팝업의 [무료] 등 렌더 밖에서도 재고가 변해서, 껐다 켜는 주체를 매 틱 도는
          syncShopSumBtns() 한 곳으로 모으는 편이 «켜진 채 굳는» 사고가 없다(도감 탭 `.cltab` 과 같은 꼴). */
@@ -25086,6 +25128,16 @@ function syncShopSumBtns(){
   });
   const ct = document.querySelector('#shopCats .stab[data-cat="summon"]');
   if(ct) ct.classList.toggle('alert', sumAnyReady());
+  /* 329 — 재화 탭도 같은 규약으로 잇는다(294 가 소환 탭에 한 것과 대칭). 이 함수는 상점이 열려
+     있는 한 **카테고리와 무관하게** 매 틱 도므로(renderUI 28881), 자정 충전·수령 직후처럼
+     렌더 밖에서 재고가 변해도 «켜진 채 굳는» 사고가 없다. 소환 탭 카드와 같은 이유다. */
+  const cc = document.querySelector('#shopCats .stab[data-cat="coin"]');
+  if(cc) cc.classList.toggle('alert', coinAdAnyReady());
+  /* 329 — 광고 상품 버튼 자체. `done` 칸에는 버튼이 없으므로 전수 토글이 그대로 «남은 칸만» 이다. */
+  document.querySelectorAll('#shopList .cn-cd>.bt[data-cnad]').forEach(bt => {
+    const a = COIN_ADS.find(x => x.id === bt.dataset.cnad);
+    bt.classList.toggle('alert', !!a && coinAdReady(a));
+  });
 }
 /* 164 — 상점 카테고리 키. `#shopCats` 의 `data-cat` 3종과 «한 벌» 이다(45·124).
    칸이 늘거나 줄면 마크업과 여기를 같이 고친다 — 여기만 고치면 착지 탭이 조용히 무시된다. */
@@ -25187,6 +25239,9 @@ const RW_GLOW = [['#351709','#9B2316'],['#152719','#1A4A38'],['#241A1B','#AB312E
    (횟수가 쌓여도 안 나빠진다 — 199 밸런스 라운드 대상). */
 const RELIC_COST = 100;
 const relicCost = () => RELIC_COST;
+/* 330(2026-08-28 주인 지시) — «유물 소환» 을 지금 누를 수 있는가. `summonRelic()` 의 첫 줄
+   (`S.relic < cost` 면 반려)과 **같은 자**를 쓴다 — 판정을 새로 만들면 둘이 갈라진다. */
+const relicSummonReady = () => S.relic >= relicCost();
 function renderRelw(){
   const g = $('rwGrid');
   if(!g.childElementCount)
@@ -25200,6 +25255,9 @@ function renderRelw(){
   });
   $('rwCost').querySelector('b').textContent = fmt(relicCost());
   $('rwCost').classList.toggle('lack', S.relic < relicCost());
+  /* 330 — 레드닷은 코스트 알약의 `.lack` 과 **정확히 반대**다(같은 자를 두 번 쓴다).
+     소환해서 조각이 100 아래로 떨어지면 `summonRelic()` 이 부르는 `renderRelw()` 가 곧바로 끈다. */
+  $('rwBasin').classList.toggle('alert', relicSummonReady());
 }
 function summonRelic(quiet){
   const cost = relicCost();
@@ -25276,6 +25334,12 @@ const COIN_ADS = [
   { id:'a6', n:'일반 펫 소환 열쇠',   q:'×1',   ic:'🔑', cap:1, r:{ freePet:1 },   fs:33.3, sx:1.007, qx:1.21 }
 ];
 const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
+/* 329(2026-08-28 주인 지시) — «광고 보고 받기» 를 지금 누를 수 있는가. 판정은 이 한 곳이다.
+   광고 상품은 재화를 쓰지 않으므로 «오늘 남은 횟수» 하나가 전부이고, 다 받으면 칸이 `done` 으로
+   잠기며 자정에 되돌아온다(출석·룰렛과 같은 급의 일일 재고 — 166 이 금지한 «상시 점등» 이 아니다).
+   ⚠ 다이아 판매 칸(`.bt.buy`)은 대상이 아니다 — 돈을 내는 상품이라 «받을 수 있다» 가 성립 안 한다. */
+const coinAdReady = a => adLeft(a) > 0;
+const coinAdAnyReady = () => COIN_ADS.some(coinAdReady);
 /* 일일 초기화까지 남은 시간 — 레퍼런스의 «⏱ 초기화: 5H 12M» 자리 */
 function coinResetTxt(){
   const d = new Date(), e = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
@@ -25420,9 +25484,15 @@ function renderCoinPage(list){
           ? '<div class="blk"></div><div class="dim"></div><div class="dn"><i>구매 완료</i></div>'
           /* 124 — 광고 제거 이용권 보유 중에는 ▶AD 뱃지를 감추고(CSS) 라벨을 «무료 수령» 으로 바꾼다.
              수령 경로·일일 횟수(adLeft)는 한 줄도 바뀌지 않는다. */
-          : '<div class="bt" data-cnad="' + a.id + '"><div class="ad"><s></s><b>AD</b></div>'
+          /* 329(2026-08-28 주인 지시) — «받을 수 있는 상태면» 이 버튼에 레드닷.
+             `done` 갈래에는 버튼 자체가 없으므로 여기 오면 이미 `left > 0` 이지만, 조건을
+             마크업 갈래에서 «파생» 시키지 않고 `coinAdReady(a)` 로 **명시**한다 — 나중에 갈래가
+             바뀌어도 «받을 수 있으면 켠다» 라는 계약이 그대로 남는다(LESSONS 111-1 계열). */
+          : '<div class="bt' + (coinAdReady(a) ? ' alert' : '') + '" data-cnad="' + a.id + '">'
+            + '<div class="ad"><s></s><b>AD</b></div>'
             + '<u class="lab">' + (noAdsOn() ? '무료 수령' : '받기') + '</u>'
-            + '<u class="cnt">(' + left + '/' + a.cap + ')</u></div>'
+            + '<u class="cnt">(' + left + '/' + a.cap + ')</u>'
+            + '<s class="updot"></s></div>'
             + '<i class="stk btstk"></i>')
       +  '<div class="fr"></div></div>';
   });
@@ -28918,12 +28988,17 @@ function renderUI(){
                 종전에는 «던전» 칸 조건만 올라와서, 컨텐츠·탑에 할 것이 있어도 팝업을 열기 전에는
                 알 방법이 없었다. 판정은 `advAlert()` 한 곳이고 카드 dot 과 같은 자를 쓴다. */
              : k === 'adv'  ? advAlert()
-             : k === 'box'  ? collCatReady('relic')
+                                      /* 330 — «유물을 지금 소환할 수 있다»(조각 ≥ 100)도 이 칸에 올린다.
+                                         유물조각은 던전에서 능동으로 버는 재화라 방치로 차오르지 않는다
+                                         (166 이 훈련 골드를 뺀 그 기준 — 300 단련과 같은 논리, 주인 명시 지시). */
+             : k === 'box'  ? (collCatReady('relic') || relicSummonReady())
                                       /* 166 ③ — «받을 게 있는데 안 뜨던» 자리. 상자별 하루 무료 10연이
                                          남아 있으면 «받을 게 있다» 가 맞다(다 쓰면 꺼지고 자정에 되돌아온다). */
                                       /* 294 — 같은 조건을 상점 안 두 자리(소환 탭 · 상자 카드)와 나눠 쓰려고
                                          `sumAnyReady()` 로 이름만 뽑았다. 판정은 166 때와 한 글자도 다르지 않다. */
-             : k === 'shop' ? sumAnyReady()
+                                      /* 329 — 재화 탭의 «광고 보고 받기» 도 같은 칸에 올린다(293 «경로 전체»).
+                                         이것이 없으면 상점을 열어 재화 탭으로 들어가기 전에는 알 방법이 없다. */
+             : k === 'shop' ? (sumAnyReady() || coinAdAnyReady())
              : false;
     t.classList.toggle('alert', !!al);
   });

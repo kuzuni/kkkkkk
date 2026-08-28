@@ -116,9 +116,23 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
 
     /* ── 10 상점 ── */
     openShopPage(); await wait(250);
-    sweep('10 카드 .shp-card>.updot', '.shp-card>.updot', '.shp-card');
+    /* 328(2026-08-28 주인 정정) — 이 닷의 «자리» 는 이제 카드 코너가 아니라 «10회 소환 n/n» 버튼
+       코너다(노드는 `.cbtn{overflow:hidden}` 때문에 카드 자식으로 남는다). 299 는 «호스트 상자
+       기준 우상단 사분면» 규약이라 카드 기준으로도 그대로 충족하고, **버튼 기준 사분면**이라는
+       더 강한 조건은 tools/verify328.js [B] 가 따로 못 박는다. */
+    sweep('10 카드 .shp-card>.updot (328 — 자리는 .cbtn.b1 코너)', '.shp-card>.updot', '.shp-card');
     sweep('10 탭 #shopCats .stab>.bdg', '#shopCats .stab>.bdg', '.stab');
+    /* ── 13 재화 탭 광고 상품 버튼 (329 신설) ── */
+    S.daily.adBuy = {};                        /* 없는 키는 cap 폴백 = 6칸 전부 살아 있다 */
+    openShopPage(null, 'coin'); await wait(300);
+    sweep('13 광고 버튼 .cn-cd>.bt>.updot', '#shopList .cn-cd>.bt[data-cnad]>.updot', '.bt');
+    openShopPage(null, 'summon'); await wait(150);
     closeShopPage();
+
+    /* ── 89 유물 수반 (330 신설) ── */
+    S.relic = 1e6; openRelw(); await wait(250);
+    sweep('89 수반 #rwBasin>.updot', '#rwBasin>.updot', '#rwBasin');
+    closeRelw();
 
     /* ── 70 출석 (318 신설) ──
        «오늘 카드» 는 미출석일 때만 찍히므로 상태를 잠깐 만들었다가 되돌린다. */
