@@ -137,6 +137,14 @@ async function shot(scene, T, idx, seed) {
      세이브도 같이 비운다(31회차 교훈 2 — 표본마다 새로 여는 방식에만 있는 함정). */
   await p.addInitScript((sd) => {
     try { localStorage.clear(); } catch (e) {}
+    /* ⚑ 36회차 — 얼리기 ③(타이머)의 전제. `window.setTimeout` 을 **얼릴 때** 덮어써 봐야
+       그때 이미 예약돼 있는 타이머는 그대로 터진다(연출 노드 제거는 전부 스폰 시점에 예약된다).
+       → 처음부터 감싸서 id 를 모아 두고, 얼릴 때 **전부 취소**한다. 거동은 안 바뀐다(원본 호출). */
+    const _st = window.setTimeout, _si = window.setInterval;
+    const ids = { t: new Set(), i: new Set() };
+    window.__capIds = ids;
+    window.setTimeout = function (...a) { const id = _st.apply(window, a); ids.t.add(id); return id; };
+    window.setInterval = function (...a) { const id = _si.apply(window, a); ids.i.add(id); return id; };
     let s = sd >>> 0;
     Math.random = function () {
       s |= 0; s = (s + 0x6D2B79F5) | 0;
@@ -160,12 +168,41 @@ async function shot(scene, T, idx, seed) {
       requestAnimationFrame(f);
     });
     const at = performance.now() - t0;
-    /* ★ 두 겹 얼리기 — rAF 를 죽이고, 컴포지터가 돌리는 CSS 애니메이션도 같이 세운다. */
+    /* ★ 얼리기는 **세 겹**이다 (36회차에 한 겹을 더 찾았다).
+       ① rAF — 게임 루프·`fxTick` 이 좌표를 옮긴다.
+       ② CSS 애니메이션 — 컴포지터가 돌리므로 rAF 를 죽여도 흐른다(31회차).
+       ③ **타이머** — 연출 노드는 `setTimeout(() => el.remove(), …)` 로 사라진다(index.html
+          ~28887·28990·29002·29129·29167·29342·29577). ①②만 세우면 노드가 **계속 지워진다**:
+          스크린샷은 얼린 뒤 300~600ms 뒤에 찍히므로 그림에는 «그 시각에 있던 불꽃·코인» 이
+          없다. 32~35회차 정답표가 «불꽃 6» 이라고 적은 프레임의 그림에 불꽃이 0개인 것이
+          이것이다(36회차 실측: 얼린 뒤 160ms 만에 불꽃 6→0 · 비행 6→5). 34차 BE 가 «표가
+          픽셀보다 한 프레임 지연» 으로 남긴 자리의 정체이기도 하다 — 어긋난 쪽은 표가 아니라
+          **그림**이었다. */
     window.requestAnimationFrame = () => 0;
     try { document.getAnimations().forEach((a) => a.pause()); } catch (e) {}
+    let killed = 0;
+    try {
+      const ids = window.__capIds;
+      if (ids) {
+        ids.t.forEach((id) => { clearTimeout(id); killed++; });
+        ids.i.forEach((id) => { clearInterval(id); killed++; });
+      }
+    } catch (e) {}
+    window.setTimeout = () => 0;
+    window.setInterval = () => 0;
+    return { at: Math.round(at), killed };
+  }, { T, trg: TRIGGERS[scene].toString() });
+
+  /* ⚑ 36회차 — **정답표는 얼린 «직후» 가 아니라 «가라앉은 뒤» 에 읽는다.**
+     34차 비평가 BE 가 «씬 gain 골드 열이 픽셀 판독보다 한 프레임 지연돼 보인다(f8 표 128 vs
+     픽셀 157)» 로 남긴 것의 정체다: `requestAnimationFrame` 을 덮어써도 **이미 예약된 콜백
+     한 번**은 그대로 돈다. 그 프레임이 `drawHud()` 를 한 번 더 불러 DOM 카운터를 굴리는데,
+     census 는 그 앞에서 읽고 스크린샷은 그 뒤에 찍히므로 «표 < 그림» 이 된다.
+     → 얼린 뒤 잠깐 두었다가 census 를 하고, **두 번 읽어 같은지 확인**한다(다르면 표에 ⚠ 를
+       남긴다 — 조용히 틀린 표를 비평가에게 주는 것이 이 하네스의 가장 나쁜 실패다). */
+  const census = () => p.evaluate(() => {
     const g = document.getElementById('goldN'), d = document.getElementById('diaN');
     return {
-      at: Math.round(at),
       gold: g ? g.textContent.trim() : '',
       dia: d ? d.textContent.trim() : '',
       fly: document.querySelectorAll('.fx-fly').length,
@@ -177,12 +214,17 @@ async function shot(scene, T, idx, seed) {
       check: document.querySelectorAll('.fx-check').length,
       toast: document.querySelectorAll('.fx-toast').length,
     };
-  }, { T, trg: TRIGGERS[scene].toString() });
+  });
+  await p.waitForTimeout(40);
+  const c1 = await census();
+  await p.waitForTimeout(120);
+  const c2 = await census();
+  const drift = JSON.stringify(c1) !== JSON.stringify(c2);
 
   const file = path.join(OUT, `58-${ROUND}-${scene}-${idx}.jpg`);
   await p.screenshot({ path: file, type: 'jpeg', quality: 82 });
   await b.close();
-  return { ...info, T, idx, errs: errs.length, file: path.basename(file) };
+  return { ...info, ...c2, drift, T, idx, errs: errs.length, file: path.basename(file) };
 }
 
 (async () => {
@@ -201,12 +243,15 @@ async function shot(scene, T, idx, seed) {
   /* 정답표 — 비평가가 «화면의 값» 과 대조할 수 있게 프레임별 상태를 남긴다. */
   let md = `# 58 ${ROUND} 캡처 정답표 (cap58b.js — 강제 합성)\n\n`
     + `표본마다 페이지를 새로 열고 목표 시각까지 rAF 로 진행시킨 뒤 **rAF + CSS 애니메이션을 둘 다 얼리고** 찍었다.\n`
-    + `«실제» 는 얼린 시각이며 목표와의 차이가 그 프레임 라벨의 오차다.\n\n`;
+    + `«실제» 는 얼린 시각이며 목표와의 차이가 그 프레임 라벨의 오차다.\n\n`
+    + `36회차 — 얼리기가 **세 겹**(rAF · CSS 애니메이션 · **타이머**)이 됐다. 종전 두 겹은 \`setTimeout\` 으로 도는\n`
+    + `연출 노드 제거를 못 막아, 얼린 뒤 스크린샷까지의 300~600ms 동안 불꽃·코인이 계속 사라졌다(그림 < 표).\n`
+    + `«얼림» 열은 얼린 뒤 40ms·160ms 두 번 읽은 census 가 같았는지다 — «고정» 이어야 표와 그림이 같은 순간이다.\n\n`;
   for (const scene of WANT) {
     const rs = rows.filter(r => r.scene === scene);
     if (!rs.length) continue;
-    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 |\n|---|---|---|---|---|---|---|---|---|---|---|\n`;
-    rs.forEach(r => { md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} |\n`; });
+    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    rs.forEach(r => { md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} |\n`; });
     md += '\n';
   }
   fs.writeFileSync(path.join(OUT, `58-${ROUND}-정답표.md`), md);
