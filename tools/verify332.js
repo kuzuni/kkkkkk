@@ -164,6 +164,18 @@ const blk = (name, r) => (r && r.__err ? (no(name + ' — 평가 실패: ' + r._
     is('전부 시체 수명(1.6s) 이하', r.out.every((e) => e.got <= r.life + 1e-9), true);
     is('전부 하한 0.3s 이상 (die 애니가 없는 아틀라스도 터지는 틈이 있다)',
        r.out.every((e) => e.got >= 0.3 - 1e-9), true); }
+    /* 94 규약 — 중앙 대형 문구는 프레임을 넘으면 안 된다. showMsg 가 폭에 맞춰 «…» 로 자르거나
+       폰트를 줄이는데, «클리어» 가 그 손질을 **안 받는** 짧은 문구인지 여기서 못박는다:
+       잘렸다면 화면에 «클…» 이 뜨고, 폰트가 줄었다면 다른 문구와 크기가 어긋난다. */
+    const m = await ev(() => {
+      msgTxt = ''; msgT = 0; msgLast = ''; msgLastT = -1e9;
+      showMsg(DUN_CLR_TXT);
+      return { txt: msgTxt, fs: msgFs, base: MSG_FS, want: DUN_CLR_TXT };
+    });
+    if (!blk('§C 94 규약', m)) {
+      is('94 — «클리어» 가 잘리지 않는다 (폭 클램프를 안 탄다)', m.txt, m.want);
+      is('94 — 폰트가 안 줄었다 (MSG_FS 그대로)', m.fs, m.base);
+    }
   }
 
   /* ═══ §D 포기 — 시퀀스 도중 나가면 잔존 0 ═════════════════════════════════ */
