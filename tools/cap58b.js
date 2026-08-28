@@ -269,7 +269,40 @@ async function shot(scene, T, idx, seed) {
         return !(r.right <= 0 || r.bottom <= 0 || r.left >= 1080 || r.top >= 2280);
       } catch (e) { return false; }
     };
-    const vis = (n) => vis0(n) && big(n);
+    /* ⚑ 44회차 — «거른 것을 보이게 적는다» 의 **세 번째 종류: 도킹**.
+       43차 두 비평가가 **독립적으로 같은 반증**을 냈다: gain 표 f14/f15/f16 = 2/2/1 인데 그림에는
+       코인이 **0개**이고(BK: 임계 완화·2.6배 확대 육안 · BL: R−B>22 까지 완화해도 잉크 0),
+       그 행의 «유령»·«축소» 열은 **둘 다 0** 이라 41·42회차의 두 필터로는 설명이 안 된다.
+       실체는 셋째 경우다 — **코인이 목적지 아이콘에 도착해 그 위에 겹쳐 있다.** 비행 코인과 알약
+       아이콘은 **같은 그림**(`curIc()` 의 같은 SVG)이라, 도킹한 코인은 불투명도 1 · 렌더 23px 로
+       두 필터를 통과하면서도 화면에서는 **정지 아이콘과 구별되지 않는다**(비평가는 정적 마스크를
+       빼고 재므로 정확히 이 화소가 지워진다).
+       → 중심이 **목적지 알약 아이콘 bbox 안**에 들어온 `.fx-fly` 는 «보이는» 것으로 세지 않고
+         **«도킹» 열**에 따로 남긴다. 41회차 «유령» · 42회차 «축소» 와 같은 원칙이다.
+       ⚠ 이것은 «연출을 고친 것» 이 아니라 **표를 그림에 맞춘 것**이다. 실제 도착 시각은 안 바뀐다
+         (`p58az` ⒜꽂힘완료 624ms) — 다만 표가 «화면에 코인이 있다» 고 말하는 구간이
+         비평가가 보는 것과 같아진다. r43 정답표는 이 열이 들어가기 전에 찍혔다. */
+    const dockRects = (() => {
+      const out = [];
+      try {
+        for (const k in FXCUR) {
+          const pill = fxPill(FXCUR[k]); if (!pill) continue;
+          const ic = pill.querySelector('i') || pill;
+          const r = ic.getBoundingClientRect();
+          if (r.width && r.height) out.push(r);
+        }
+      } catch (e) {}
+      return out;
+    })();
+    const docked = (n) => {
+      if (!n.classList || !n.classList.contains('fx-fly')) return false;
+      try {
+        const r = n.getBoundingClientRect();
+        const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
+        return dockRects.some((d) => cx >= d.left && cx <= d.right && cy >= d.top && cy <= d.bottom);
+      } catch (e) { return false; }
+    };
+    const vis = (n) => vis0(n) && big(n) && !docked(n);
     const q = (sel) => [...document.querySelectorAll(sel)].filter(vis);
     return {
       gold: g ? g.textContent.trim() : '',
@@ -288,6 +321,9 @@ async function shot(scene, T, idx, seed) {
       /* 42회차 — «불투명하지만 렌더가 12px 미만이라 화면에 자국이 없는» 노드 수(BG 단독) */
       tiny: ['.fx-fly', '.fx-plus', '.fx-spark', '.fx-flash', '.fx-check', '.fx-toast']
         .reduce((k, sel) => k + ([...document.querySelectorAll(sel)].filter((n) => vis0(n) && !big(n)).length), 0),
+      /* 44회차 — «목적지 아이콘 위에 도킹해 정지 아이콘과 구별되지 않는» 코인 수(43차 2인 공통 반증) */
+      dock: [...document.querySelectorAll('.fx-fly')]
+        .filter((n) => vis0(n) && big(n) && docked(n)).length,
       /* 38회차 — «나이(ms)» = 얼린 시각 − 태어난 시각. 판(페이지)마다 사건 시각이 몇 ms 흔들리는데,
          나이를 같이 주면 비평가가 «이 프레임은 판이 달라서 어린 것» 과 «게임이 깜빡인 것» 을 가른다. */
       age: (() => {
@@ -338,17 +374,23 @@ async function shot(scene, T, idx, seed) {
     + `있는 노드 수)이며, 0 이 아니어도 **그림이 맞다** — 표를 그림에 맞춘 것이지 결함을 감춘 것이 아니다.\n\n`
     + `**42회차 — 여기에 «렌더 크기 하한»(bbox 최소변 ≥ 12px)이 더해졌다.** 41차 BG 가 잡은 자리다:\n`
     + `착지 직후 \`scale(.18)\` 로 오므린 코인은 **불투명도가 1 인데 화면에 자국이 없다**(≈8px 이 목적지\n`
-    + `알약 아이콘 밑에 깔린다). 그렇게 걸러진 개수는 «축소» 열에 남는다 — 유령 열과 같은 원칙이다.\n\n`;
+    + `알약 아이콘 밑에 깔린다). 그렇게 걸러진 개수는 «축소» 열에 남는다 — 유령 열과 같은 원칙이다.\n\n`
+    + `**44회차 — 세 번째 종류 «도킹» 이 더해졌다.** 43차 두 비평가가 독립적으로 같은 반증을 냈다:\n`
+    + `gain 표 f14~f16 은 코인 2/2/1 인데 그림에는 **0개**이고, 그 행의 «유령»·«축소» 는 **둘 다 0** 이었다.\n`
+    + `실체는 **도착해서 목적지 아이콘 위에 겹친 코인**이다 — 비행 코인과 알약 아이콘이 **같은 그림**이라\n`
+    + `불투명도 1 · 렌더 23px 로 두 필터를 통과하면서도 화면에서는 정지 아이콘과 구별되지 않는다.\n`
+    + `중심이 목적지 알약 아이콘 bbox 안에 들어온 코인은 이제 «보이는» 것으로 세지 않고 «도킹» 열에 남는다.\n`
+    + `⚠ 이것은 연출을 고친 것이 아니라 **표를 그림에 맞춘 것**이다 — 실제 도착 시각은 안 바뀐다.\n\n`;
   for (const scene of WANT) {
     const rs = rows.filter(r => r.scene === scene);
     if (!rs.length) continue;
-    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 유령 | 축소 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 유령 | 축소 | 도킹 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
     rs.forEach(r => {
       /* 38회차 — «나이» 열. 종류마다 «가장 늙은 노드» 하나만 적는다(전부 적으면 표가 안 읽힌다). */
       const a = r.age || {};
       const ag = ['fly', 'plus', 'spark', 'check', 'toast'].map((k) => (a[k] && a[k].length ? k + ' ' + a[k][0] : null))
         .filter(Boolean).join(' · ') || '—';
-      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${r.ghost || 0} | ${r.tiny || 0} | ${ag} |\n`;
+      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${r.ghost || 0} | ${r.tiny || 0} | ${r.dock || 0} | ${ag} |\n`;
     });
     md += '\n';
   }
