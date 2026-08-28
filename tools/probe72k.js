@@ -42,30 +42,43 @@ const UNLOCK = process.argv.includes('--unlock');
       const list = win || (anim && A.a[anim]) || [cv.dataset.thf];
       const W = cv.width, H = cv.height, sp = TH_PAD;
       const rows = [];
+      const keep = cv._fr;
       for (const fn of list) {
         const fr = A.f[fn]; if (!fr) continue;
-        /* 화면과 같은 식 — drawSpriteTo 의 k 계산을 그대로 재현한다 */
-        const box = (typeof thFitBox === 'function') ? thFitBox(cv.dataset.thk, fn, anim) : null;
-        const bw = (box && box[0]) || fr[2], bh = (box && box[1]) || fr[3];
-        const k = Math.min((W - sp * 2) / bw, (H - sp * 2) / bh);
+        /* ⚠ 배율은 **제품이 그린 결과에서 역산**한다 — 게이트가 다시 계산하면 동어반복이다(279).
+           `raidDraw(cv, pin)` 이 `drawSpriteTo` 의 {dx,dy,dw,dh} 를 그대로 돌려준다. */
+        const r = raidDraw(cv, fn);
+        const k = (r && r.dw) ? r.dw / fr[2] : -1;
+        /* 121 축 — 잉크 top(슬롯 로컬). 프레임 사이로 이게 튀면 스프라이트가 CSS 들썩을 덮는다. */
+        const d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+        let y0 = -1;
+        for (let y = 0; y < H && y0 < 0; y++) for (let x = 0; x < W; x++) {
+          if (d[(y * W + x) * 4 + 3] > 8) { y0 = y; break; }
+        }
         rows.push({ fn, src: [fr[2], fr[3]], k: +k.toFixed(4),
-                    draw: [Math.round(fr[2] * k), Math.round(fr[3] * k)] });
+                    draw: r ? [r.dw, r.dh] : null, top: y0 });
       }
+      if (keep) raidDraw(cv, keep);
       res.push({ card: ci + 1, k: cv.dataset.thk, anim, win: !!win, cv: [W, H], rows });
     });
     return res;
   });
 
-  let worst = 0, worstCard = '';
+  let worst = 0, worstCard = '', jit = 0, jitCard = '';
   out.forEach((c) => {
     const ks = c.rows.map((r) => r.k);
+    const tops = c.rows.map((r) => r.top).filter((t) => t >= 0);
     const sw = ks.length ? (Math.max(...ks) / Math.min(...ks) - 1) * 100 : 0;
+    /* 121 축 — 잉크 top 의 peak-to-peak(프레임 사이 흔들림). thBob 진폭 18 의 절반(9)이 121 의 기준선. */
+    const tp = tops.length ? Math.max(...tops) - Math.min(...tops) : 0;
     if (sw > worst) { worst = sw; worstCard = `카드${c.card} ${c.k}/${c.anim}`; }
-    console.log(`카드${c.card} ${c.k}/${c.anim}${c.win ? ' (아이들 창)' : ''} — ${c.rows.length}프레임 · 배율 스윙 ${sw.toFixed(1)}%`);
-    c.rows.forEach((r) => console.log(`    ${r.fn} rect ${r.src.join('x')} → k ${r.k} · 그려진 ${r.draw.join('x')}`));
+    if (tp > jit) { jit = tp; jitCard = `카드${c.card} ${c.k}/${c.anim}`; }
+    console.log(`카드${c.card} ${c.k}/${c.anim}${c.win ? ' (아이들 창)' : ''} — ${c.rows.length}프레임 · 배율 스윙 ${sw.toFixed(1)}% · 잉크 top p2p ${tp}px`);
+    c.rows.forEach((r) => console.log(`    ${r.fn} rect ${r.src.join('x')} → k ${r.k} · 그려진 ${(r.draw || []).join('x')} · top ${r.top}`));
   });
   console.log(`\n콘솔 에러 ${errs.length}건`);
   console.log(`SWING max=${worst.toFixed(1)}% (${worstCard})`);
+  console.log(`INKTOP p2p max=${jit}px (${jitCard})  — 121 기준선 9px(thBob 18 의 절반)`);
   await b.close();
   process.exit(worst > 0.5 ? 1 : 0);
 })();

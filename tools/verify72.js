@@ -74,12 +74,6 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
               if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; }
           }
           src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1 };
-          /* 72 12회차 — 액자 배율의 기준이 «이 프레임의 rect» 에서 «사이클 성분별 최대 rect» 로 옮겼다.
-             게이트도 같은 박스를 봐야 «담았다» 를 잴 수 있다(자를 제품과 같은 함수에서 받는다). */
-          const fb = (typeof thFitBox === 'function')
-            ? thFitBox(cv.dataset.thk, cv._fr || cv.dataset.thf, cv.dataset.thi) : null;
-          src.bw = (fb && fb[0]) || fr[2];
-          src.bh = (fb && fb[1]) || fr[3];
         }
         art = { px: [cv.width, cv.height], css: [cv.offsetWidth, cv.offsetHeight],
                 k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi,
@@ -181,19 +175,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
        잉크는 그 안에 있으므로 기대 잉크 크기 = 원본 잉크 × k. 늘리면(=97 의 꽉 채우기) 여기서 걸린다.
        ⚠ 아틀라스 프레임은 사방에 투명 1~2px 을 갖고 있어 «잉크 = 프레임» 이 아니다 —
           그래서 여백 상한이 아니라 이 대조가 종횡 왜곡 0 의 진짜 게이트다. */
-    /* ⚠ 72 12회차 — 배율 k 의 기준이 «이 프레임의 rect» → «사이클 성분별 최대 rect»(`thFitBox`) 로 옮겼다.
-       단언을 지우지 않고 **자만 옮긴다**(LESSONS 185-④) — «늘리면 걸린다» 는 성질은 그대로다. */
-    const k = Math.min((a.px[0] - PAD * 2) / a.src.bw, (a.px[1] - PAD * 2) / a.src.bh);
+    const k = Math.min((a.px[0] - PAD * 2) / a.src.fw, (a.px[1] - PAD * 2) / a.src.fh);
     const ew = a.src.w * k, eh = a.src.h * k;
     ok(Math.abs(a.ink.w - ew) <= 2 && Math.abs(a.ink.h - eh) <= 2,
        `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
-    /* 짧은 축은 **사이클 최대 박스**가 액자 여백에 딱 맞는다 — 즉 «가장 큰 포즈가 액자를 채운다».
-       지금 그려진 프레임은 그보다 작을 수 있고(그게 애니가 의도한 크기 변화다), 그 여유는
-       바로 위 «사방 여백 ≥ PAD−1» 이 따로 지킨다. 12회차 전에는 이 자리가 «이 프레임의 rect» 였고,
-       그래서 프레임마다 배율이 다시 풀리는 것을 **게이트가 오히려 요구하고 있었다**. */
-    const slack = Math.min(a.px[0] - a.src.bw * k, a.px[1] - a.src.bh * k) / 2;
+    /* 짧은 축은 «프레임 rect» 가 액자 여백에 딱 맞는다(잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다) */
+    const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
     ok(Math.abs(slack - PAD) <= 1,
-       `카드${i + 1} 짧은 축이 액자를 채운다 — 사이클 최대 박스 ${a.src.bw}×${a.src.bh} 여백 ${slack.toFixed(1)} = ${PAD}`);
+       `카드${i + 1} 짧은 축이 액자를 채운다 — 프레임 여백 ${slack.toFixed(1)} = ${PAD}`);
     /* 97 [2] 는 «잉크 휘도 > 면 휘도 − 20» 이었는데, **면보다 어둡기만 안 하면 통과**라 카드1·5 가
        비율 1.00·1.11 로 «있으나 안 보이는» 상태를 통과시켰다(126 «있는데 안 보이던 줄눈» 과 같은 종류).
        비율로 바꾼다. 여기 `face` 는 `--i` 원색이고 실제 면은 그 위에 검정 22~52% 가 덮여 더 어두우므로,
@@ -254,7 +243,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
       const anim = cv.dataset.thi;
       const win = (typeof TH_IDLE !== 'undefined' && TH_IDLE[cv.dataset.thk + '/' + anim]) || null;
       const list = win || (A && A.a[anim]) || [cv.dataset.thf];
-      let worst = 1e9, worstFn = '', kMin = 1e9, kMax = -1;
+      let worst = 1e9, worstFn = '', kMin = 1e9, kMax = -1, tMin = 1e9, tMax = -1;
       const keep = cv._fr;
       /* ⚠ 배율을 게이트가 **다시 계산하면 안 된다** — 그러면 «제품이 무엇으로 그렸나» 가 아니라
          «게이트가 무엇으로 그렸을까» 를 재게 되어 되돌림 시험에서도 초록으로 남는다(실제로 12회차에
@@ -277,24 +266,111 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
         if (x1 < 0) { worst = -1; worstFn = fn + '(빈 프레임)'; break; }
         const m = Math.min(x0, y0, cv.width - 1 - x1, cv.height - 1 - y1);
         if (m < worst) { worst = m; worstFn = fn; }
+        if (y0 < tMin) tMin = y0; if (y0 > tMax) tMax = y0;   /* 121 축 — 잉크 top 의 p2p */
       }
       if (keep) paint(keep);
       out.push({ card: ci + 1, n: list.length, worst, worstFn, win: !!win,
-                 swing: kMax > 0 ? (kMax / kMin - 1) * 100 : 0 });
+                 swing: kMax > 0 ? (kMax / kMin - 1) * 100 : 0,
+                 top: tMax >= 0 ? tMax - tMin : 0 });
     });
     return out;
   }, PAD);
   perFrame.forEach((f) => {
     ok(f.worst >= PAD - 1,
        `카드${f.card} 아이들 ${f.n}프레임 전부 액자 안 — 최소 여백 ${f.worst} (최악 ${f.worstFn}) ≥ ${PAD - 1}`);
-    /* 12회차 신설 — «같은 캐릭터가 프레임마다 다시 정규화되지 않는다».
-       고치기 전 실측(`tools/probe72k.js`): 카드8 elves/blue_attack **77.3%** · 카드4 zombie/walk 8.8% ·
-       카드2 bird 3.2%. 되돌리면 카드8 이 그 값으로 돌아가 즉시 빨개진다(A/B 확인).
-       ⚠ 1.0% 는 **정수 반올림 여유**다 — 배율을 `dw/rect.w` 로 역산하는데 `dw = round(rect.w × k)` 라
-          오차가 최대 `0.5/rect.w` 다. 여기서 가장 좁은 rect 는 bird 82px 이라 0.61% 까지 나온다.
-          0.5% 로 조이면 살아 있는 빌드가 간헐적으로 빨개진다(245 «간헐 FAIL» 계열). */
-    ok(f.swing <= 1.0,
-       `카드${f.card} 배율이 사이클 내내 하나다 — ${f.n}프레임 스윙 ${f.swing.toFixed(1)}% ≤ 1.0%${f.win ? ' (아이들 창)' : ''}`);
+    /* 14회차 신설 — **«공격 사이클을 썸네일 아이들로 쓰지 않는다»**.
+       그런 칸은 rect 가 2배 넘게 벌어져 ⓐ 크기가 맥동하고(카드8 실측 **77.3%**) ⓑ 잉크 top 이
+       58~67px 튀어 121 의 들썩을 통째로 덮는다. 고치는 자리는 배율식이 아니라 **아이들 창**이다
+       (12회차에 배율식을 상수로 만들어 봤다가 잉크 top 이 2 → 12px 로 나빠져 되돌렸다 — index.html
+        `TH_INKC` 위 주석의 A/B 표).
+       ⚠ 임계 15% 는 «지금 받아들이기로 한 잔여» 위에 둔 것이다 — `zombie/walk` 창이 8.9%(121 이 창을
+          고를 때 잉크 top 2px 을 얻는 대가로 받아들인 값) · bird 3.0% · 나머지 ≤1.9%.
+          잡으려는 것은 그 잔여가 아니라 **58~77% 짜리 «공격 사이클» 계열**이다. */
+    ok(f.swing <= 15,
+       `카드${f.card} 배율 맥동 — ${f.n}프레임 스윙 ${f.swing.toFixed(1)}% ≤ 15%${f.win ? ' (아이들 창)' : ''}`);
+    /* 그리고 **121 축**을 같이 잰다 — 이쪽이 12회차의 오답을 잡아낸 자다.
+       기준선 9px = `thBob` 진폭 18px 의 절반(`tools/inkjit121.js` 와 같은 선).
+       썸네일이 자기 애니로 그보다 크게 오르내리면 CSS 들썩이 안 보인다. */
+    ok(f.top <= 9,
+       `카드${f.card} 잉크 top 흔들림 ${f.top}px ≤ 9 (thBob 18 의 절반 — 121 기준선)`);
+  });
+
+  /* [1-4] 잉크 중심 보정표(`TH_INKC`)가 아틀라스와 맞는지 — 14회차 신설.
+     제품은 픽셀을 읽지 않는다(`getImageData` 는 file:// 에서 캔버스 오염으로 막힌다) — 대신 상수표를 쓴다.
+     그러면 아틀라스나 아이들 창이 바뀌었을 때 **표만 늦게 따라오는** 병이 생긴다(245·259 계열).
+     그래서 게이트가 매번 아틀라스 픽셀에서 다시 재서 표와 대조한다 — `tools/scan72c.js` 와 같은 식이다. */
+  console.log('[1-4] 잉크 중심 보정표 TH_INKC — 아틀라스 실측과 대조');
+  const inkc = await p.evaluate(() => {
+    const seen = {}, res = [];
+    const inkOf = (A, fn) => {
+      const fr = A.f[fn]; if (!fr) return null;
+      const t = document.createElement('canvas');
+      t.width = fr[2]; t.height = fr[3];
+      const g = t.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, fr[2], fr[3]);
+      const d = g.getImageData(0, 0, fr[2], fr[3]).data;
+      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+      for (let y = 0; y < fr[3]; y++) for (let x = 0; x < fr[2]; x++) {
+        if (d[(y * fr[2] + x) * 4 + 3] > 8) {
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      return x1 < 0 ? null : { fw: fr[2], fh: fr[3], x0, y0, x1, y1 };
+    };
+    [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv) => {
+      const key = cv.dataset.thk, anim = cv.dataset.thi, id = key + '/' + anim;
+      if (seen[id]) return;
+      seen[id] = 1;
+      const A = ATLAS[key]; if (!A || !A.image) return;
+      const list = TH_IDLE[id] || (anim && A.a[anim]) || [cv.dataset.thf];
+      let L = 1e9, T = 1e9, R = -1e9, B = -1e9, n = 0;
+      for (const fn of list) {
+        const k = inkOf(A, fn); if (!k) continue;
+        n++;
+        L = Math.min(L, k.x0 - k.fw / 2); R = Math.max(R, k.x1 + 1 - k.fw / 2);
+        T = Math.min(T, k.y0 - k.fh / 2); B = Math.max(B, k.y1 + 1 - k.fh / 2);
+      }
+      if (!n) return;
+      res.push({ id, want: [+(-(L + R) / 2).toFixed(2), +(-(T + B) / 2).toFixed(2)],
+                 got: TH_INKC[id] || null });
+    });
+    return res;
+  });
+  ok(inkc.length > 0, `보정표 대조 대상 ${inkc.length}종 (던전 카드가 쓰는 아틀라스/애니)`);
+  inkc.forEach((r) => {
+    ok(!!r.got, `TH_INKC['${r.id}'] 항목이 있다`);
+    if (!r.got) return;
+    ok(Math.abs(r.got[0] - r.want[0]) <= 1 && Math.abs(r.got[1] - r.want[1]) <= 1,
+       `TH_INKC['${r.id}'] = [${r.got}] = 실측 [${r.want}] (±1 원본px)`);
+  });
+  /* 표가 맞기만 하면 되는 게 아니라 **그려진 결과**가 가운데여야 한다 — 도는 프레임 합집합 기준.
+     개별 프레임은 애니가 움직이는 만큼 벗어난다(그건 애니의 몫이다). */
+  console.log('[1-5] 그려진 잉크 합집합이 액자 중심에 온다');
+  const inkMid = await p.evaluate(() => {
+    const out = [];
+    [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv, ci) => {
+      const A = ATLAS[cv.dataset.thk], anim = cv.dataset.thi;
+      const list = TH_IDLE[cv.dataset.thk + '/' + anim] || (A && A.a[anim]) || [cv.dataset.thf];
+      const keep = cv._fr;
+      let L = 1e9, T = 1e9, R = -1, B = -1;
+      for (const fn of list) {
+        if (!A || !A.f[fn]) continue;
+        raidDraw(cv, fn);                       /* 제품 경로로 그린다 */
+        const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+        for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+          if (d[(y * cv.width + x) * 4 + 3] > 8) {
+            if (x < L) L = x; if (x > R) R = x; if (y < T) T = y; if (y > B) B = y; }
+        }
+      }
+      if (keep) raidDraw(cv, keep);
+      out.push({ card: ci + 1, dx: +(((L + R + 1) / 2) - cv.width / 2).toFixed(1),
+                 dy: +(((T + B + 1) / 2) - cv.height / 2).toFixed(1) });
+    });
+    return out;
+  });
+  inkMid.forEach((m) => {
+    ok(Math.abs(m.dx) <= 3 && Math.abs(m.dy) <= 3,
+       `카드${m.card} 잉크 합집합 중심이 액자 중심에서 (${m.dx}, ${m.dy}) — |≤3px|`);
   });
 
   console.log('[2] 클릭 통과 · z 순서');

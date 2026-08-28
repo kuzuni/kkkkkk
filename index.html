@@ -14818,15 +14818,20 @@ function drawSpriteTo(canvas, o){
      절단이 그대로 **바닥으로 옮겨 갔다**(6회차 비평가 I·J 독립 확인 + `probe121 cut` 확장판
      실측 «레이드1 바닥 접촉 최대 101px · 14/14 위상»). 가로는 그대로 꽉 채우고(97 의 종횡 규칙 유지)
      **세로로만** 위아래 `padY` 를 비워 들썩이 잘리지 않고 들어갈 자리를 만든다. */
-  /* 72 12회차 — `o.fitBox`([w,h])가 오면 **그 박스**를 contain 한다(프레임 자기 rect 가 아니라).
-     한 사이클의 성분별 최대 rect 를 넣으면 배율이 프레임마다 다시 풀리지 않는다 — `thFitBox` 주석 참고.
-     안 오면 예전 그대로 자기 rect 를 담으므로 다른 호출부(펫·도감·아레나)는 한 픽셀도 안 바뀐다. */
+  /* ⚠ 72 12→14회차 — 여기서 «사이클 최대 박스» 를 담아 배율을 상수로 만드는 안을 넣었다가 **되돌렸다.**
+     크기 맥동(zombie 8.9%)은 사라지지만 잉크 top 흔들림이 2 → **12px** 로 늘어 121 의 기준선(9px =
+     thBob 진폭 18 의 절반)을 넘는다 — 121 6회차가 같은 처방을 이미 실측해 기각한 자리다(`TH_IDLE` 주석).
+     맥동의 진짜 원인은 배율식이 아니라 «공격 사이클을 아이들로 쓰는 것» 이고, 그건 창으로 고친다. */
   const sp = o.fit | 0, py = o.padY | 0;
-  const bw = (o.fitBox && o.fitBox[0]) || fr[2], bh = (o.fitBox && o.fitBox[1]) || fr[3];
-  const k  = sp ? Math.min((W - sp*2) / bw, (H - sp*2) / bh) : 0;
+  const k  = sp ? Math.min((W - sp*2) / fr[2], (H - sp*2) / fr[3]) : 0;
   const dw = sp ? Math.max(1, Math.round(fr[2] * k)) : W;
   const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : Math.max(1, H - py*2);
-  const dx = Math.round((W - dw) / 2), dy = Math.round((H - dh) / 2);
+  /* 72 14회차 — `o.inkC`(원본 단위 잉크 중심 보정)가 오면 그만큼 옮겨 앉힌다.
+     rect 가 잉크에 타이트하지 않은 아틀라스(dragon 96×64 격자)에서 그림이 액자 중심에서 내려앉던 것을
+     회수한다. 단위가 원본 픽셀이므로 화면에서는 `× k` 다 — `TH_INKC` 주석 참고. */
+  const cx = (o.inkC && sp) ? Math.round(o.inkC[0] * k) : 0;
+  const cy = (o.inkC && sp) ? Math.round(o.inkC[1] * k) : 0;
+  const dx = Math.round((W - dw) / 2) + cx, dy = Math.round((H - dh) / 2) + cy;
   g.imageSmoothingEnabled = false;
   g.save();
   if(o.flip){ g.translate(W, 0); g.scale(-1, 1); }
@@ -23732,6 +23737,31 @@ const TH_IDLE = {
      121 6회차가 elves 두 벌에 쓴 `_0 _1 _2 _1` 왕복 형태를 그대로 따른다. */
   'elves/blue_attack':['blue_attack_0', 'blue_attack_1', 'blue_attack_2', 'blue_attack_1'],
 };
+/* 72 14회차 — **액자에 앉히는 기준은 «rect 중심» 이 아니라 «잉크 중심» 이다.**
+   12회차가 배율을 사이클 상수로 고정했지만 그림은 여전히 아틀라스 rect 중심에 앉아 있었다.
+   rect 는 스프라이트 시트의 «칸» 이라 잉크가 그 안에서 가운데 있으리라는 보장이 없다 —
+   대부분의 아틀라스는 rect 가 잉크에 딱 붙은 타이트 크롭이라 보정이 0 이지만(아래 표),
+   `dragon`(골드·유물조각4)만 **96×64 고정 격자**라 용이 칸 아래쪽에 몰려 있다.
+   그래서 카드1·7 의 그림이 액자 중심에서 **31.6px 내려앉아** 있었다 —
+   비평가 3명이 독립적으로 같은 수를 찍었다(11회차 AB +25.5 · 13회차 AD +24 · AE +25.5).
+
+   보정은 **사이클 전체의 잉크 합집합**을 액자 중심에 맞추는 상수 하나다. 프레임마다 맞추면
+   애니가 제자리걸음이 된다 — 움직이는 것은 애니의 몫이고, 액자에 앉히는 것만 우리 몫이다.
+   단위는 **원본(아틀라스) 픽셀**이라 배율 k 가 바뀌어도 그대로 쓴다(그릴 때 × k).
+
+   ⚠ 이 표는 **측정값**이다. 아틀라스·아이들 창이 바뀌면 같이 바뀐다 —
+   `node tools/scan72c.js` 가 출력하는 그대로 옮겨 적고, `verify72 [1-4]` 가 매번 재서 대조한다
+   (제품은 픽셀을 안 읽는다 — `getImageData` 는 file:// 에서 캔버스 오염으로 막히므로
+    «게이트만 재고 제품은 상수를 쓴다». 245·259 계열의 «표가 늦게 따라오는» 병은 그 게이트가 막는다). */
+const TH_INKC = {
+  'dragon/fly':       [-1, -11],   /* 3프레임 · 잉크 합집합 94×42 — 96×64 격자 안에서 아래로 몰려 있다 */
+  'bird/anim':        [0, 0],      /* 아래는 전부 타이트 크롭 rect 라 보정 0 (측정값) */
+  'elves/green_idle': [0, 0],
+  'zombie/walk':      [0, 0],
+  'robo/Running':     [0, 0],
+  'elves/blue_idle':  [0, 0],
+  'elves/blue_attack':[0, 0],
+};
 /* `stepAnim` 은 `aloop` 일 때 `at` 을 그냥 누적하므로(자르지 않는다) 창 길이로 나머지만 취하면 된다.
    창이 없으면 80 의 `curFrame` 이 그대로 전 사이클을 돈다. */
 function thCurFrame(e){
@@ -23739,36 +23769,26 @@ function thCurFrame(e){
   if(!w) return curFrame(e);
   return w[Math.floor(e.at) % w.length];
 }
-/* 72 12회차 — **액자 배율은 한 사이클 내내 하나여야 한다.**
-   `drawSpriteTo(fit)` 는 «그 프레임의 아틀라스 rect» 를 contain 하므로, rect 크기가 프레임마다 다른
-   애니는 같은 캐릭터가 프레임마다 다시 정규화된다 — 화면에서는 «부풀었다 쪼그라든다» 로 읽힌다.
-   258 이 04 세부 팝업 배너에서 같은 것을 12.9~45.9% 로 실측했지만 03 행 카드는 그때 손대지 않았고,
-   `tools/probe72k.js` 로 재니 **카드8 elves/blue_attack 77.3%**(k 2.06 → 1.18) · 카드4 zombie/walk 8.8% ·
-   카드2 bird 3.2% 로 남아 있었다. 11회차 비평가 AB·AC 가 둘 다 ② 를 6 으로 찍은 자리다.
+/* ⚠ 72 12→14회차 — «액자 배율을 사이클 상수로» 는 **재어 보고 되돌린 안**이다. 여기 있던
+   `thFitBox()`(도는 프레임 집합의 성분별 최대 rect 를 담아 k 를 상수로 만드는 함수)를 지웠다.
 
-   고치는 방법은 «어느 rect 를 contain 하는가» 한 곳뿐이다 — 프레임 자기 rect 가 아니라
-   **실제로 도는 프레임 집합의 성분별 최대 rect**(아래 박스)를 contain 한다. 그러면
-     ① 배율 k 가 사이클 내내 상수 = 크기 맥동 0
-     ② 가장 큰 포즈가 액자를 정확히 채운다(짧은 축 여백 = TH_PAD) — «담긴 그림» 규칙은 그대로
-     ③ 작은 포즈는 그만큼 작게 그려진다 = 원래 애니가 의도한 크기 변화만 남는다
-   «도는 집합» 은 121 6회차의 아이들 창(`TH_IDLE`)이 있으면 창, 없으면 전 사이클이다 —
-   화면에 안 나오는 프레임까지 세면 액자가 쓸데없이 작아진다.
-   ⚠ 성분별 최대(가로 최대 · 세로 최대)를 쓰므로 두 축이 서로 다른 프레임에서 와도
-      k = min(...) 이라 **어느 프레임도 액자를 넘지 않는다**(verify72 [1-2]·[1-3] 이 지킨다).
-   레이드·아레나(`.dnc.rd`)는 `fit:0` «꽉 채우기» 라 이 경로를 안 탄다(97 규칙 불변). */
-const TH_FITBOX = {};
-function thFitBox(key, frame, anim){
-  const A = ATLAS[key];
-  if(!A || !A.f) return null;
-  const id = key + '/' + (anim || '#' + frame);
-  if(TH_FITBOX[id]) return TH_FITBOX[id];
-  const list = TH_IDLE[key + '/' + anim] || (anim && A.a && A.a[anim]) || (frame ? [frame] : null);
-  if(!list || !list.length) return null;
-  let w = 0, h = 0;
-  for(const fn of list){ const fr = A.f[fn]; if(!fr) continue; if(fr[2] > w) w = fr[2]; if(fr[3] > h) h = fr[3]; }
-  if(!w || !h) return null;              /* 아틀라스가 아직 안 왔다 — 캐시하지 않고 프레임 rect 로 떨어진다 */
-  return (TH_FITBOX[id] = [w, h]);
-}
+   왜 넣었나: `drawSpriteTo(fit)` 가 «그 프레임의 rect» 를 담으므로 rect 가 프레임마다 다른 애니는
+   같은 캐릭터가 다시 정규화된다. `tools/probe72k.js` 실측 — 카드8 `elves/blue_attack` **77.3%** ·
+   카드4 `zombie/walk` 8.8% · 카드2 bird 3.2%. 11회차 비평가 AB·AC 가 둘 다 ② 를 6 으로 찍은 자리다.
+
+   왜 되돌렸나: **121 이 같은 처방을 이미 실측해 기각해 뒀다**(아래 `TH_IDLE` 주석 · `tools/inkjit121.js`
+   의 `uni` 열). 액자 배율을 상수로 만들면 작은 포즈가 작게 그려지므로 **잉크 top 이 프레임마다 내려앉는다** —
+   그건 121 축(«스프라이트 아이들이 CSS 들썩을 덮는다»)에서는 악화다. 14회차 A/B 실측:
+
+     | | 창 + fitBox | 창만(현행) |
+     |---|---|---|
+     | 배율 스윙 max | 0.5% | 8.9% (zombie) |
+     | 잉크 top p2p max | **12px** (zombie) | **2px** |
+
+   121 의 기준선은 **9px**(thBob 진폭 18 의 절반)이라 fitBox 안은 그 선을 넘는다. 두 축을 같이 보면
+   **창만 쓰는 쪽이 이긴다** — 그리고 맥동의 진짜 원인은 배율식이 아니라 «공격 사이클을 아이들로
+   쓴 것» 이었다(카드8 77.3% → 창을 주니 1.9%). 원인을 고치면 증상 쪽 장치가 필요 없다.
+   → **배율식은 건드리지 않는다.** 남은 것은 아래 `TH_IDLE` 의 창 하나와 `TH_INKC` 의 중심 보정뿐이다. */
 function raidEnt(cv){
   /* 아레나 두 칸은 몬스터가 아니라 기사다 — 아틀라스·애니 이름이 다르고, 위상은 «내 칸/상대 칸» 으로 가른다 */
   const arn = !!cv.dataset.arnav;
@@ -23829,8 +23849,8 @@ function raidDraw(cv, pin){
   const rd = !!cv.closest('.dnc.rd');
   return thPlace(cv, drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
                             fit: rd ? 0 : TH_PAD, padY: rd ? TH_BOBPAD : 0,
-                            /* 72 12회차 — 액자(던전 카드)만 «사이클 최대 rect» 를 담는다. 레이드는 꽉 채우기라 없음 */
-                            fitBox: rd ? null : thFitBox(cv.dataset.thk, cv._fr, cv.dataset.thi),
+                            /* 72 14회차 — 액자(던전 카드)는 «잉크 중심» 에 앉힌다(rect 중심이 아니라) */
+                            inkC: rd ? null : TH_INKC[cv.dataset.thk + '/' + cv.dataset.thi],
                             bright: +cv.dataset.thbr || 1 }));
 }
 let raidIdleT0 = 0;
