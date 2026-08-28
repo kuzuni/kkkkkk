@@ -31,7 +31,10 @@ const git = (...a) => execFileSync('git', a, { cwd: ROOT, encoding: 'utf8' }).tr
 const gitQ = (...a) => { try { return git(...a); } catch (e) { return null; } };
 
 const say = m => console.log(m);
-const die = (code, m) => { console.log(m); process.exit(code); };
+/* 실패는 **stderr** 로 낸다(작업 307) — 워커들이 `--beat ... >/dev/null` 로 묶어 쓰기 때문에
+   stdout 으로 내면 «조용히 아무 일도 안 일어난» 것처럼 보인다. */
+const die = (code, m) => { console.error(m); process.exit(code); };
+const warn = m => console.error(m);
 
 /* ── 인자 ── */
 const argv = process.argv.slice(2);
@@ -45,8 +48,10 @@ const REL = 'docs/claims/' + ID + '.lock';
 const LOCK = path.join(ROOT, REL);
 const now = () => new Date().toISOString().replace(/\.\d+Z$/, 'Z');
 const write = () => {
+  const at = now();
   fs.mkdirSync(path.dirname(LOCK), { recursive: true });
-  fs.writeFileSync(LOCK, now() + ' ' + SID + '\n');
+  fs.writeFileSync(LOCK, at + ' ' + SID + '\n');
+  return at;
 };
 
 /* ── lock 읽기 ── */
@@ -59,6 +64,15 @@ const minsSince = iso => {
   const t = Date.parse(iso);
   return Number.isFinite(t) ? (Date.now() - t) / 60000 : Infinity;
 };
+
+/* origin/main 쪽 lock — **작업 트리를 건드리지 않고** 원격 상태를 본다(작업 307).
+   `git pull --rebase` 와 달리 더러운 트리에서도 항상 읽힌다. */
+function remoteLock() {
+  const s = gitQ('show', 'origin/main:' + REL);
+  if (s === null) return null;                    /* 원격에 그 lock 이 없다(또는 못 읽었다) */
+  const m = s.trim().match(/^(\S+)\s+(\S+)/);
+  return m ? { at: m[1], sid: m[2] } : null;
+}
 
 /* ── 죽음 판정 — lock 시각 **과** 마지막 wip(<ID>) 커밋이 **둘 다** 90분 넘어야 죽은 것이다.
       (lock 갱신을 빼먹었지만 커밋은 계속 올리는 세션은 살아 있다 — ROUTINE [-1] 2) */
@@ -89,11 +103,22 @@ function surrender(why) {
   die(2, '포기 ' + ID + ' — ' + why + '\n→ 다음 미선점 작업으로 간다(ROUTINE [-1] 4).');
 }
 
-/* ── 본체 ── */
+/* ── 본체 ──
+   `fetch` 는 작업 트리를 건드리지 않으므로 어떤 모드·어떤 트리 상태에서도 안전하다.
+   `pull --rebase` 는 **커밋·push 가 필요한 모드에서만** 돈다(작업 307):
+     - `--beat` 는 로컬 lock 파일 한 줄만 고치고 커밋은 호출자가 한다 → pull 이 애초에 필요 없다.
+       그런데 예전에는 여기서 무조건 pull 을 돌아, heartbeat 를 치는 바로 그 순간
+       (= 회차 기록을 막 쓴 직후 = 트리가 **반드시** 더러운 때) `cannot pull with rebase:
+       You have unstaged changes` 로 die(1) 나 write() 에 도달하지 못했다. 조용한 no-op 이었다.
+     - claim/release 는 커밋·push 를 하므로 pull 이 필요하다. 다만 더러운 트리에서도 죽지 않게
+       `rebase.autoStash` 로 돌린다 — 여기서 실패하면 lock 을 못 잡거나(claim)
+       못 푸는데(release), 못 푸는 쪽은 그 작업을 90분간 통째로 막는다. */
 gitQ('fetch', 'origin', 'main');
-if (mode !== 'check' && gitQ('pull', '--rebase', 'origin', 'main') === null) {
-  gitQ('rebase', '--abort');
-  die(1, '오류 — git pull --rebase 실패. 손으로 정리한 뒤 다시 실행할 것.');
+if (mode === 'claim' || mode === 'release') {
+  if (gitQ('-c', 'rebase.autoStash=true', 'pull', '--rebase', 'origin', 'main') === null) {
+    gitQ('rebase', '--abort');
+    die(1, '오류 — git pull --rebase 실패. `git status` · `git stash list` 를 보고 손으로 정리한 뒤 다시 실행할 것.');
+  }
 }
 
 if (mode === 'check') {
@@ -106,8 +131,13 @@ if (mode === 'beat') {
   const L = readLock();
   if (!L) die(1, '오류 — ' + REL + ' 이 없다. 선점부터 할 것.');
   if (L.sid !== SID) die(2, '포기 ' + ID + ' — lock 이 ' + L.sid + ' 의 것이다(내 SID 아님).');
-  write();
-  say('heartbeat ' + ID + ' → ' + now() + ' (커밋은 회차 커밋에 같이 담을 것)');
+  /* 원격에서 이미 뺏겼는지는 fetch 해 둔 origin/main 으로 본다 — pull 없이도 알 수 있다 */
+  const R = remoteLock();
+  if (R && R.sid !== SID)
+    die(2, '포기 ' + ID + ' — origin/main 의 lock 이 ' + R.sid + ' 의 것이다(' + R.at + '). 이미 뺏겼다.');
+  if (!R) warn('경고 — origin/main 에 ' + REL + ' 이 없다(남이 지웠거나 아직 push 전). 로컬 lock 만 갱신한다.');
+  const at = write();
+  say('heartbeat ' + ID + ' → ' + at + ' (커밋은 회차 커밋에 같이 담을 것)');
   process.exit(0);
 }
 
