@@ -80,8 +80,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const r = await page.evaluate(([id]) => {
       challengeTower(id);
       if (!dunRun) return { err: 'challengeTower 실패' };
-      /* 보스는 «누적 피해가 요구치의 DUN_BOSS_P» 에 닿아야 불려 나온다(255) — 그 눈금만 채운다 */
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 입장이 곧 보스 예약이다(dmg 를 안 건드린다) */
       dunBossTick();
       spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
       step(1 / 60);
@@ -129,18 +128,25 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       if (!b) return { err: '보스가 안 선다', f0, mid };
       killEnemy(b);
       const progAtKill = dunRunProg();
+      /* 332 이관 — 격파와 완료 화면 사이에 «터짐 → 클리어 → 1초» 시퀀스가 들어갔다.
+         한 틱으로는 아직 안 끝나고(run1), 시퀀스를 다 돌려야 층·보상·클리어 화면이 온다. */
       step(1 / 60);
+      const run1 = !!dunRun;
+      for (let g = 0; g < 600 && dunRun; g++) step(1 / 60);
       let saved = 'ERR';
       try { saved = JSON.parse(localStorage.getItem(KEY))[key]; } catch (e) { /* noop */ }
-      return { f0, mid, progAtKill, run: !!dunRun, f1: towerFloor(t), rwKey: rwKey + '→S.' + sKey, want,
+      return { f0, mid, progAtKill, run1, run: !!dunRun, f1: towerFloor(t), rwKey: rwKey + '→S.' + sKey, want,
                got: S[sKey], saved, clw: document.getElementById('dclw').classList.contains('on') };
     }, [tid]);
     if (r.err) { no(tid + ' — ' + r.err); continue; }
     is('② ' + tid + ' — 요구 피해 100% 를 채워도 런이 계속된다', r.mid.run, true);
     is('② ' + tid + ' — 그때 층은 그대로 ' + r.f0, r.mid.f, r.f0);
-    near('② ' + tid + ' — 그때 진행바는 «보스 소환분»(DUN_BOSS_P)에서 멈춘다', r.mid.prog, 0.3, 0.001);
+    /* ⚑ 331 이관 — 옛 단언은 «앞 국면이 DUN_BOSS_P(0.3)에서 멈춘다» 였다. 몹 국면이 폐지돼
+       앞 국면 몫이 사라졌으므로 같은 표본을 «누적 피해는 바를 못 민다»(0) 로 뒤집어 옮긴다. */
+    near('② ' + tid + ' — 331: 요구 피해 100% 를 채워도 진행바는 0 이다(앞 국면 잔재 없음)', r.mid.prog, 0, 0.001);
     near('③ ' + tid + ' — 격파 순간 진행바 = 1 (바가 끝에 닿는 순간이 곧 클리어)', r.progAtKill, 1, 0.001);
-    is('③ ' + tid + ' — 보스 격파 → 런 종료', r.run, false);
+    is('③ ' + tid + ' — 332: 격파 다음 틱에는 아직 시퀀스 중', r.run1, true);
+    is('③ ' + tid + ' — 시퀀스가 끝나면 런 종료', r.run, false);
     is('③ ' + tid + ' — 층 ' + r.f0 + ' → ' + r.f1, r.f1, r.f0 + 1);
     is('③ ' + tid + ' — 보상(' + r.rwKey + ')이 실제로 들어온다', r.got, r.want);
     is('③ ' + tid + ' — 진행이 세이브에 남는다', r.saved, r.f0 + 1);
@@ -157,7 +163,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       challengeTower(id);
       if (!dunRun) return { err: 'challengeTower 실패' };
       if (doTick) {
-        dunRun.dmg = dunRun.need * DUN_BOSS_P;
+        /* 331 — 소환 눈금 폐지: 보스는 startDunRun/challengeTower 가 이미 예약했다 */
         dunBossTick();
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
         step(1 / 60);
@@ -280,15 +286,16 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     out.run = !!dunRun;
     out.dunMode = document.getElementById('app').classList.contains('dunrun');
     /* 보스가 실제로 서고, 잡으면 클리어 화면이 뜬다.
-       ⚑ 보스는 «누적 피해가 요구치의 DUN_BOSS_P» 에 닿아야 불려 나온다(255) — 실시간 전투를
-         돌리는 대신 그 눈금만 채워 국면을 태운다(밸런스는 probe255·199 의 몫). */
-    dunRun.dmg = dunRun.need * DUN_BOSS_P;
+       ⚑ 331 — 보스는 입장과 동시에 예약된다(옛 «누적 피해 눈금» 폐지). 스폰 딜레이만 걷어낸다. */
+    /* 331 — 소환 눈금 폐지: 보스는 startDunRun/challengeTower 가 이미 예약했다 */
     dunBossTick();
     spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
     step(1 / 60);
     out.bossUp = enemies.filter((e) => e.tk === 'dunboss').length;
     const b = enemies.find((e) => e.tk === 'dunboss');
-    if (b) { killEnemy(b); step(1 / 60); }
+    if (b) { killEnemy(b); step(1 / 60);
+             /* 332 — 시퀀스(터짐 → 클리어 → 1초)를 끝까지 돌려야 클리어 화면이 뜬다 */
+             for (let g = 0; g < 600 && dunRun; g++) step(1 / 60); }
     out.cleared = !dunRun;
     out.clearScreen = document.getElementById('dclw').classList.contains('on');
     out.floor = S.tower;

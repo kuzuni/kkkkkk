@@ -14,7 +14,7 @@
  *   §3 예외 2곳   DPS 측정장(46)은 30초 · 아레나(123)는 30초 그대로다 — 264 주인 지시와 «PvP 는 보스전이 아님».
  *   §4 밸런스     시간만 줄이면 하드락이다. 보스 체력 배수가 시간과 **같은 비율로** 내려갔는지(×22 → ×11 ·
  *                 승급 ×60 → ×BOSS_SEC), 그리고 던전 계수가 15초 창으로 다시 잡혔는지(DUN_DMG_K).
- *   §5 파생       DUN_BOSS_AT 가 절대 초가 아니라 «예산의 1/3» 이다(15 예산에서 5초).
+ *   §5 파생       331 이 시간 폴백 DUN_BOSS_AT 을 폐지했다 — 되살아나지 않았는지 본다.
  *   §6 음성항     되돌리면 잡히는가 — 옛 값으로 계산해 «이 게이트가 무엇을 막는지» 를 보인다.
  *   §7 에러       콘솔·페이지 에러 0건.
  */
@@ -37,7 +37,7 @@ const near = (m, got, want, tol) => ok(Math.abs(got - want) <= Math.abs(want) * 
                                        m, `기대 ≈${want} · 실제 ${got}`);
 
 /* 게이트 자기 상수 — 설치본을 다시 부르는 «항등식» 을 피한다(LESSONS 212-①). */
-const C = { SEC: 15, BOSS_HP: 11, BOSS_DMG: 22, RAID_SEC: 30, ARENA_SEC: 30, DMG_K: 0.4, BOSS_AT: 5 };
+const C = { SEC: 15, BOSS_HP: 11, BOSS_DMG: 22, RAID_SEC: 30, ARENA_SEC: 30, DMG_K: 0.4, BOSS_AT: null };   /* 331 — 시간 폴백 폐지 */
 /* 285 이전 값 — §6 음성항이 «되돌리면 빨개진다» 를 보이는 데 쓴다 */
 const OLD = { SEC: 30, PROMO_SEC: 60, BOSS_HP: 22, PROMO_HP: 60, DMG_K: 1.2, BOSS_AT: 10 };
 
@@ -136,13 +136,16 @@ const freeze = p => p.evaluate(() => { window.requestAnimationFrame = () => 0; }
 
   /* ───────────────────────── §5 파생 상수 ───────────────────────── */
   console.log('\n[5] 파생 — 절대 초로 남은 값이 없는가');
-  const at = await page.evaluate(() => DUN_BOSS_AT);
-  eq('⑤ DUN_BOSS_AT = 5 — «예산의 1/3»(옛 10/30 과 같은 몫)', at, C.BOSS_AT);
-  ok(/const DUN_BOSS_AT\s*=\s*DUN_SEC\s*\/\s*3\s*;/.test(CODE),
-     '⑤ DUN_BOSS_AT 은 절대 초가 아니라 `DUN_SEC / 3` 이다');
-  /* 폴백이 예산 안에서 «보스가 설 틈» 을 남기는가 — 등장 시각 + 스폰 딜레이 < 제한 시간 */
+  /* ⚑ 331 이관 — 옛 §5 는 «시간 폴백 DUN_BOSS_AT 이 절대 초가 아니라 예산의 1/3 인가» 를 쟀다.
+     331 이 몹 국면과 함께 **그 폴백을 통째로 폐지**했으므로(보스는 입장과 동시에 선다) 잴 값이 없다.
+     단언은 지우지 않고 그 부류로 옮긴다(LESSONS 317-②): 285 가 지키려던 것은 «절대 초로 남은 값이
+     예산 밖에 서지 않는가» 였고, 이제 그 자리는 **폴백이 되살아나지 않았는가** 로 지킨다. */
+  const at = await page.evaluate(() => (typeof DUN_BOSS_AT === 'undefined' ? null : DUN_BOSS_AT));
+  eq('⑤ 331 — DUN_BOSS_AT(시간 폴백)이 폐지돼 없다', at, null);
+  ok(!/const DUN_BOSS_AT\s*=/.test(CODE), '⑤ 331 — 선언도 남아 있지 않다(되살아난 눈금 회귀 잠금)');
+  /* 남은 유일한 지연은 «등장음이 울릴 틈» 이다 — 그것만은 예산 안에 있어야 한다 */
   const dly = await page.evaluate(() => DUN_BOSS_DLY);
-  ok(at + dly < src.dun, `⑤ 폴백 등장(${at}s) + 스폰 딜레이(${dly}s) < 제한 시간(${src.dun}s) — 보스가 설 틈이 남는다`);
+  ok(dly < src.dun, `⑤ 스폰 딜레이(${dly}s) < 제한 시간(${src.dun}s) — 입장 즉시 보스가 설 틈이 남는다`);
 
   /* ───────────────────────── §6 음성항 ───────────────────────── */
   console.log('\n[6] 음성항 — 옛 값으로 되돌리면 이 게이트가 잡는가');
@@ -153,7 +156,7 @@ const freeze = p => p.evaluate(() => { window.requestAnimationFrame = () => 0; }
   ok(Math.abs(bal.k - OLD.DMG_K) > 1e-9,
      `⑥ N4 — DUN_DMG_K 가 옛 1.2 로 남았다면 던전 요구치가 시간 대비 3배가 된다 (지금 ${bal.k})`);
   ok(at !== OLD.BOSS_AT,
-     `⑥ N5 — DUN_BOSS_AT 이 옛 10초로 남았다면 15초 예산에서 남은 5초에 보스가 선다 (지금 ${at}s)`);
+     `⑥ N5 — 331 이후 DUN_BOSS_AT 은 폐지값(null)이다 — 옛 10초로 되살아나면 이 항이 빨개진다 (지금 ${at})`);
   /* N6 — «값은 15 인데 리터럴로 각각 적어 둔» 상태는 §1 참조 항목만이 잡는다는 증명 */
   ok(!/const DUN_SEC\s*=\s*15\s*;/.test(CODE),
      '⑥ N6 — DUN_SEC 을 «15» 리터럴로 다시 적으면 §1 이 잡는다 (값 대조만으로는 못 잡는 자리)');

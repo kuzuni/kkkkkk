@@ -43,13 +43,12 @@ const near = (m, got, want, tol) => {
     if (dunRun) endDunRun(false, true);
     startDunRun(d, f);
     const need = dunRun.need;
-    /* 진행률 트리거(30%)를 직접 넘겨 보스를 부른다 — 실제 경로(dunBossTick)를 그대로 탄다 */
-    dunRun.dmg = need * DUN_BOSS_P;
+    /* 331 — 소환 눈금(옛 DUN_BOSS_P)이 폐지됐다. startDunRun 이 입장과 동시에 보스를 예약하므로
+       여기서는 아무것도 안 넘긴다 — 아래 루프가 실제 경로(dunBossTick)로 서는 것을 그대로 본다. */
     let spawnedAt = -1;
     for (let k = 0; k < 600 && dunRun; k++) {
       step(1 / 60);
       if (!dunRun) break;
-      dunRun.dmg = need * DUN_BOSS_P;            /* 클리어로 끝나 버리지 않게 진행률을 고정 */
       if (spawnedAt < 0 && enemies.some(e => e.tk === 'dunboss')) spawnedAt = k;
       if (spawnedAt >= 0 && k > spawnedAt + 30) break;
     }
@@ -120,8 +119,12 @@ const near = (m, got, want, tol) => {
       '⑥ 판정 반경 ' + r.r + ' 이 그려진 폭 ' + r.drawnW.toFixed(0) + ' 의 22~70% 안');
     /* ⑥-b 발밑이 땅에 닿는다 — 배율을 키우면 논리 프레임의 아래 빈 칸만큼 공중에 뜬다 */
     near('⑥-b 발밑 여백(보정 후) = 28 보스와 같음', r.foot, base.foot, 1.0);
-    /* ⑦ 보스가 살아 있어도 몹 파도가 흐른다 — 옛 리필 판정이면 여기서 0 이 된다 */
-    (r.mobs > 0 ? ok : no)('⑦ 보스와 함께 몹이 남아 있다(리필이 안 멈춤) — ' + r.mobs + '마리');
+    /* ⚑ 331 이관 — 옛 ⑦ 은 «보스가 살아 있어도 몹 파도가 흐른다(리필이 안 멈춤)» 를 **요구**했다.
+       178 이 «때릴 대상이 끊기지 않게» 세운 단언인데, 331 이 몹 국면 자체를 폐지했으므로
+       그 요구는 이제 정확히 **버그의 정의**다(주인 보고: «던전에 왜 잡몹들이 존나 나오지»).
+       단언을 지우지 않고 **부호를 뒤집어** 같은 자리에서 계속 잰다(LESSONS 317-②):
+       던전 런에 일반 몹은 **0마리**여야 한다. «때릴 대상» 은 dunBossTick 이 보스로 보장한다. */
+    (r.mobs === 0 ? ok : no)('⑦ 331 — 던전 중 일반 몹 0마리(몹 국면 폐지) — ' + r.mobs + '마리');
   }
 
   /* ---------- 회귀: 28 스테이지 보스는 한 줄도 안 바뀌었다 ---------- */

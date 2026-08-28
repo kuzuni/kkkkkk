@@ -196,17 +196,19 @@ const near = (label, got, want, tol) => {
     const d = DUNGEONS[0]; S.dunTk[d.id] = 3;
     const f0 = S.dun[d.id];
     challengeDungeon(d);
-    dunRun.dmg = dunRun.need * DUN_BOSS_P;    /* 보스 소환 눈금을 채우고 */
+    /* 331 — 소환 눈금 폐지: 입장이 곧 보스 예약이다(dmg 를 안 건드린다) */
     dunBossTick();
     spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
     await new Promise((r) => setTimeout(r, 300));
     const boss = enemies.find((e) => e.tk === 'dunboss');
     const seen = !!boss;
     if (boss) killEnemy(boss);                          /* 보스를 잡는다 */
-    await new Promise((r) => setTimeout(r, 500));
+    /* 332 — 격파 → 완료 화면 사이에 «터짐 → 클리어 → 1초» 시퀀스가 들어갔다.
+       옛 500ms 로는 시퀀스가 끝나기 전에 재서 «클리어 경로 이상» 이 된다. 넉넉히 기다린다. */
+    await new Promise((r) => setTimeout(r, 3000));
     return { seen, run: !!dunRun, f0, f1: S.dun[d.id], cls: document.getElementById('app').classList.contains('dunrun') };
   });
-  clear.seen ? ok('255 — 소환 눈금(요구 피해 × ' + '30%' + ')을 채우면 보스가 선다')
+  clear.seen ? ok('331 — 던전에 입장하면 눈금 없이 보스가 선다')
              : no('보스가 안 선다 ' + JSON.stringify(clear));
   (!clear.run && clear.f1 === clear.f0 + 1) ? ok('보스 격파 → 클리어 + 층 해금 ' + clear.f0 + '→' + clear.f1)
                                             : no('클리어 경로 이상 ' + JSON.stringify(clear));

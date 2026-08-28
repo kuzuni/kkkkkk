@@ -85,7 +85,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const p = await prep(id);
     if (p.err) { no(id + ' — ' + p.err); continue; }
     const r = await page.evaluate(() => {
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick();
       spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
       step(1 / 60);
@@ -112,7 +112,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const p = await prep(id);
     if (p.err) { no(id + ' — ' + p.err); continue; }
     const r = await page.evaluate(() => {
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick();
       spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
       step(1 / 60);
@@ -132,12 +132,17 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       const maxAtOnce = Math.max.apply(null, seen.concat([0]));
       /* 마지막 격파에서만 깃발이 서야 한다 = downs 의 앞 n-1 개는 전부 false */
       const early = downs.slice(0, -1).some(Boolean);
+      /* 332 이관 — «전부 잡으면 끝난다» 앞에 «터짐 → 클리어 → 1초» 시퀀스가 들어갔다.
+         한 틱으로는 아직 안 끝나고(seq), 시퀀스를 다 돌리면 끝난다(ended). */
       step(1 / 60);
-      return { bn, killed, down, maxAtOnce, early, ended: !dunRun };
+      const seq = !!dunRun;
+      for (let g = 0; g < 600 && dunRun; g++) step(1 / 60);
+      return { bn, killed, down, maxAtOnce, early, seq, ended: !dunRun };
     });
     is(id + ' — 격파 수 = 보스 수', r.killed, r.bn);
     is(id + ' — 마지막 한 마리에서만 클리어 깃발', r.early, false);
-    is(id + ' — 전부 잡으면 런이 끝난다', r.ended, true);
+    is(id + ' — 332 — 전부 잡은 다음 틱에는 아직 시퀀스 중', r.seq, true);
+    is(id + ' — 전부 잡고 시퀀스가 끝나면 런이 끝난다', r.ended, true);
     is(id + ' — 동시에 선 최대 수', r.maxAtOnce, (await page.evaluate(([i]) =>
       dunBossMd(DUNGEONS.find((x) => x.id === i)) === 'all'
         ? dunBossN(DUNGEONS.find((x) => x.id === i)) : 1, [id])));
@@ -156,8 +161,11 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         const out = { bn: dunRun.bossN };
         const W = 574, w = () => parseFloat(getComputedStyle(document.getElementById('dunBarF')).width);
         const ttl = () => document.getElementById('dunTtl').textContent;
-        dunRun.dmg = dunRun.need * DUN_BOSS_P * 0.5; drawDunHud(); out.half1 = w();
-        dunRun.dmg = dunRun.need * DUN_BOSS_P;      drawDunHud(); out.gate = w();
+        /* ⚑ 331 이관 — 옛 두 줄은 «소환 눈금 절반·도달» 에서 바가 574×0.3×0.5·574×0.3 이라는
+           **앞 국면 눈금**을 쟀다. 몹 국면이 폐지돼 앞 국면이 없으므로 같은 두 표본을
+           «누적 피해는 바를 못 민다»(둘 다 0px)로 뒤집어 옮긴다 — 앞 국면 잔재의 회귀 잠금이다. */
+        dunRun.dmg = dunRun.need * 0.15; drawDunHud(); out.half1 = w();
+        dunRun.dmg = dunRun.need * 0.30; drawDunHud(); out.gate = w();
         out.ttl0 = ttl();
         dunBossTick();
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
@@ -170,13 +178,13 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
         step(1 / 60); drawDunHud();
         out.after1 = w(); out.ttlB = ttl();
-        out.W = W; out.P = DUN_BOSS_P;
+        out.W = W;
         return out;
       });
-      near('소환 눈금 절반 = 574 × 0.3 × 0.5', r.half1, r.W * r.P * 0.5, 1);
-      near('소환 눈금 도달 = 574 × 0.3', r.gate, r.W * r.P, 1);
-      /* 3마리 중 1마리를 잡으면 574 × (0.3 + 0.7 × 1/3) */
-      near('3마리 중 1마리 격파 = 574 × (0.3 + 0.7 × 1/3)', r.after1, r.W * (r.P + (1 - r.P) / 3), 2);
+      near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, 0, 1);
+      near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, 0, 1);
+      /* 331 — 3마리 중 1마리를 잡으면 574 × 1/3 (옛 앞 국면 몫 0.3 이 빠졌다) */
+      near('331 — 3마리 중 1마리 격파 = 574 × 1/3', r.after1, r.W / 3, 2);
       is('보스 등장 전 타이틀에 ● 3개', /●●●$/.test(r.ttlA.trim()), true);
       is('1마리 격파 후 타이틀 ●●○', /●●○$/.test(r.ttlB.trim()), true);
       await cleanup();
@@ -239,7 +247,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     if (p.err) no(id + ' — ' + p.err);
     else {
       const r = await page.evaluate(() => {
-        dunRun.dmg = dunRun.need * DUN_BOSS_P;
+        /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
         dunBossTick();
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
         /* 30초를 돌리며 «가장 가까웠던 순간» 을 잰다. 스폰 직후 몇 프레임은 해소 중이라 뺀다. */

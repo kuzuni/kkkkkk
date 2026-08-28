@@ -76,12 +76,15 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     await cleanup();
   }
 
-  console.log('\n[B] 소환 눈금(요구 피해 × DUN_BOSS_P)을 채우면 그 카드의 몬스터가 보스로 선다');
+  /* ⚑ 331 이관 — 옛 제목은 «소환 눈금(요구 피해 × DUN_BOSS_P)을 채우면 … 보스로 선다» 였다.
+     몹 국면이 폐지돼 «채운다» 는 행위 자체가 없어졌으므로 단언을 **지우지 않고** 그 부류로 옮긴다
+     (LESSONS 317-②): 재는 것은 그대로 «그 카드의 몬스터가 보스로 서는가» 이고, 세우는 계기만
+     «눈금을 채웠다» → «입장했다» 로 바뀌었다. 아래에서 dmg 를 건드리지 않는 것이 곧 그 증명이다. */
+  console.log('\n[B] 던전에 입장하면 그 카드의 몬스터가 보스로 선다 (331 — 눈금 없이)');
   for (const id of DUNS) {
     const p = await prep(id, { fill: null });
     if (p.err) { no(id + ' — ' + p.err); continue; }
     const r = await page.evaluate(async ([did]) => {
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
       dunBossTick();
       spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
       step(1 / 60);
@@ -119,7 +122,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       let paid = null;
       const origGive = giveReward;
       giveReward = function (rw) { if (paid === null) paid = rw; return origGive.apply(this, arguments); };
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick();
       spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
       step(1 / 60);
@@ -138,10 +141,17 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         step(1 / 60);
       }
       const down = !!(dunRun && dunRun.bossDown);
-      step(1 / 60);                                   /* 판정은 step() 던전 분기가 한다 */
+      /* ⚑ 332 이관 — 옛 단언은 «격파 **다음 틱에** 런이 끝난다» 였다. 332 가 그 사이에
+         «터짐 → 클리어 → 1초» 시퀀스를 넣었으므로 단언을 지우지 않고 **두 개로 가른다**
+         (LESSONS 317-②): ⓐ 다음 틱에는 **아직** 안 끝난다(시퀀스가 실재한다) ⓑ 시퀀스를
+         끝까지 돌리면 그때 끝난다(옛 단언이 재던 «격파 → 클리어» 는 그대로 살아 있다). */
+      const seqSec = dunRun ? dunRun.clrDie + DUN_CLR_HOLD : 0;
+      step(1 / 60);
+      const run1 = !!dunRun;                          /* ⓐ 격파 다음 틱 — 시퀀스 중이라 살아 있어야 한다 */
+      for (let g = 0; g < 600 && dunRun; g++) step(1 / 60);   /* ⓑ 시퀀스를 끝까지 */
       giveReward = origGive;
       const rw = d.rw(f0), key = Object.keys(rw)[0];
-      return { down, mid, bn, run: !!dunRun, f1: S.dun[did],
+      return { down, mid, bn, run1, seqSec, run: !!dunRun, f1: S.dun[did],
                rwKey: key, paid: paid ? paid[key] : null, want: rw[key],
                cls: document.getElementById('app').classList.contains('dunrun') };
     }, [id, p.f]);
@@ -149,7 +159,8 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     /* 257 — 보스가 여럿인 던전은 1마리째 격파로 클리어되면 안 된다(«전부 잡아야 클리어») */
     is(id + ' — 1마리째 격파로는 안 끝난다 (보스 ' + r.bn + '마리)', r.mid, r.bn <= 1);
     is(id + ' — 격파가 bossDown 깃발을 세운다', r.down, true);
-    is(id + ' — 격파 다음 틱에 런이 끝난다', r.run, false);
+    is(id + ' — 격파 다음 틱에는 아직 안 끝난다 (332 시퀀스 ' + (+r.seqSec).toFixed(2) + '초)', r.run1, true);
+    is(id + ' — 시퀀스가 끝나면 런이 끝난다', r.run, false);
     is(id + ' — .dunrun 해제', r.cls, false);
     is(id + ' — 층 해금 ' + p.f + '→' + r.f1, r.f1, p.f + 1);
     (r.paid != null && Math.abs(r.paid - r.want) < 1e-6)
@@ -164,10 +175,15 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const r = await page.evaluate(async () => {
       const w = () => { drawDunHud(); return parseFloat(document.getElementById('dunBarF').style.width); };
       const out = {};
+      /* ⚑ 331 이관 — 옛 [D] 는 «앞 0.30 = 소환 눈금(누적 피해) · 뒤 0.70 = 보스 체력» 두 국면 눈금을
+         쟀다. 몹 국면이 폐지돼 앞 국면이 없어졌으므로 단언을 지우지 않고 **뒤집어** 옮긴다
+         (LESSONS 317-②·295-②): 옛 «누적 피해가 바를 민다» 를 이제 **«누적 피해는 바를 못 민다»** 로
+         잰다 — 30% 를 남겨 두면 보스가 서기도 전에 바가 30% 차 있는 거짓 눈금이 되고, 그 회귀를
+         잡는 것이 이 절의 새 일이다. 뒷 구간(보스 체력)은 0.70 배율이 빠져 0→1 전 구간이 됐다. */
       dunRun.dmg = 0;                       out.zero = w();
-      dunRun.dmg = dunRun.need * DUN_BOSS_P * 0.5; out.half1 = w();
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;       out.gate = w();
-      dunRun.dmg = dunRun.need * 5;                out.over = w();   /* 눈금을 넘겨도 앞 국면에서 멈춘다 */
+      dunRun.dmg = dunRun.need * 0.15;      out.half1 = w();
+      dunRun.dmg = dunRun.need * 0.30;      out.gate = w();
+      dunRun.dmg = dunRun.need * 5;                out.over = w();   /* 요구치를 5배 넘겨도 바는 0 이다 */
       dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       b.hp = b.max * 0.5;                   out.bossHalf = w();
@@ -176,10 +192,10 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       return out;
     });
     near('빈 런 = 0px', r.zero, 0, 0.5);
-    near('소환 눈금 절반 = 574 × 0.3 × 0.5', r.half1, 574 * 0.3 * 0.5, 1);
-    near('소환 눈금 도달 = 574 × 0.3', r.gate, 574 * 0.3, 1);
-    near('눈금을 5배 넘겨도 앞 국면에서 멈춘다', r.over, 574 * 0.3, 1);
-    near('보스 체력 절반 = 574 × (0.3 + 0.7×0.5)', r.bossHalf, 574 * 0.65, 1);
+    near('331 — 누적 피해 15% 로는 바가 안 움직인다', r.half1, 0, 0.5);
+    near('331 — 옛 소환 눈금(30%) 에 닿아도 바가 안 움직인다', r.gate, 0, 0.5);
+    near('331 — 요구치를 5배 넘겨도 바는 0 이다 (앞 국면 잔재 없음)', r.over, 0, 0.5);
+    near('331 — 보스 체력 절반 = 574 × 0.5 (옛 0.3+0.7×0.5 가 아니다)', r.bossHalf, 574 * 0.5, 1);
     (r.bossLow > r.bossHalf) ? ok('보스 체력이 줄수록 바가 찬다 (' + r.bossHalf.toFixed(0) + ' → ' + r.bossLow.toFixed(0) + 'px)')
                              : no('보스 체력이 줄어도 바가 안 찬다');
     near('격파 = 꽉 참 574px', r.down, 574, 0.5);
@@ -206,7 +222,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const p = await prep('gold', { fill: null });
     const r = await page.evaluate(async () => {
       let msg = '';
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       b.hp = b.max * 0.4;
@@ -245,14 +261,19 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       const b = enemies.find((e) => e.tk === 'dunboss');
       if (!b) return { err: '탑에 보스가 안 선다', f0, mid };
       const bn = dunRun.bossN;
+      /* 332 — 탑도 같은 시퀀스를 탄다(던전 계열). 격파 다음 틱에는 아직 «연출 중» 이고,
+         시퀀스를 끝까지 돌려야 완료 화면·층 해금이 온다 — [C] 와 같은 이관이다. */
       killEnemy(b); step(1 / 60);
-      return { f0, mid, bn, run: !!dunRun, f1: towerFloor(t) };
+      const run1 = !!dunRun;
+      for (let g = 0; g < 600 && dunRun; g++) step(1 / 60);
+      return { f0, mid, bn, run1, run: !!dunRun, f1: towerFloor(t) };
     }, [tid]);
     if (r.err) { no(tid + ' — ' + r.err); continue; }
     is(tid + ' — 보스가 1마리다 (층 하나 = 보스 하나)', r.bn, 1);
     is(tid + ' — ① 요구 피해를 채워도 런이 계속된다', r.mid.run, true);
     is(tid + ' — ① 그때 층은 그대로 ' + r.f0, r.mid.f, r.f0);
-    is(tid + ' — ② 보스 격파 → 런 종료', r.run, false);
+    is(tid + ' — ② 격파 다음 틱에는 아직 안 끝난다 (332 시퀀스)', r.run1, true);
+    is(tid + ' — ② 시퀀스가 끝나면 런 종료', r.run, false);
     is(tid + ' — ② 층 ' + r.f0 + '→' + r.f1, r.f1, r.f0 + 1);
     await cleanup();
   }
@@ -262,7 +283,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     await prep('gold', { fill: null });
     const r = await page.evaluate(async () => {
       const st = S.stage;
-      dunRun.dmg = dunRun.need * DUN_BOSS_P;
+      /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       killEnemy(b);
