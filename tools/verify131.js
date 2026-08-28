@@ -52,8 +52,12 @@ const near = (n, got, want, tol) => R.push({
   ['atk','hp','regen'].forEach(id =>
     yes('① ' + id + ' 가 trainVal 을 쓴다',
         new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:trainVal\\('" + id + "'").test(src)));
-  /* 훈련 밖 7종은 한 글자도 안 건드렸다 — 남의 스탯을 건드리지 않았다는 단언 */
-  ['aspd','crit','cdmg','pierce','def','spd','gold'].forEach(id =>
+  /* 훈련 밖 6종은 한 글자도 안 건드렸다 — 남의 스탯을 건드리지 않았다는 단언 */
+  /* 358 이관(2026-08-29) — «훈련 밖 7종» 이 **6종**이 됐다. `spd`(이동 속도)는 주인 지시로 축째 삭제.
+     끄기(음성)와 켜기(양성)는 짝으로 넣는다(347 교훈 ②) — 목록에서 빼기만 하면
+     «358 이 통째로 되돌아와도 초록인 게이트» 가 된다. */
+  eq("① UPG 에 이동 속도(spd) 행 0곳 — 358 이 지운 축", (src.match(/\{ id:'spd',/g) || []).length, 0);
+  ['aspd','crit','cdmg','pierce','def','gold'].forEach(id =>
     yes('① ' + id + ' 는 종전 val 식 유지',
         new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?val:l =>").test(src)));
 

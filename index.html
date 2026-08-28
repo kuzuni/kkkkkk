@@ -16649,8 +16649,14 @@ const UPG = [
     val:trainVal('regen',4), show:l => '초당 ' + fmtB(U.regen.val(l)*mulRegen()) },
   { id:'def',   name:'방어력',      icon:'🛡️', cost:l => 70*Math.pow(1.20,l),
     val:l => 1 - Math.min(0.75, l*0.022), show:l => '받는 피해 -' + pct(1-U.def.val(l)) },
-  { id:'spd',   name:'이동 속도',   icon:'👟', cost:l => 60*Math.pow(1.18,l),
-    val:l => 115 + 4.5*l, show:l => Math.round(U.spd.val(l)) + ' 속도' },
+  /* 358(2026-08-29, 저장소 주인 지시 «플레이어 이동속도 빨라지는거 넣지 말기. 유물 효과나 뭐나 쨌든 다 빼기») —
+     구 «spd — 이동 속도 · val = 115 + 4.5×Lv» 행을 **여기서 지웠다**
+     (⚠ 이 주석에 그 행의 리터럴을 그대로 적지 마라 — verify112·168 이 «UPG 에 spd 행 0곳» 을
+      주석까지 든 소스에서 세므로 주석 한 줄이 게이트를 빨갛게 만든다).
+     `probe358` 실측: 이것이 플레이어를 빠르게 만드는 **유일한 축**이었다(유물 RELIC_EFF.rate ·
+     도감 COLL_EFFN.rate · 축복 BLESS[2] 의 «속도» 는 전부 **공격 속도**이고, `bonus()` 에는 이동 축이
+     아예 없다). 지우기 전 Lv20 에서 115 → 205(+78.3%) 였다. 구 세이브의 `S.lv.spd` 는 남아도
+     읽는 곳이 없어 **보상 없이 소멸**한다(88 선례) — 세이브 KEY 는 안 올린다(넘침이 없다). */
   { id:'gold',  name:'골드 획득',   icon:curIc('gold'), cost:l => 150*Math.pow(1.24,l),
     val:l => 1 + 0.10*l, show:l => '×' + (U.gold.val(l)*mulGold()).toFixed(2) }
 ];
@@ -17700,6 +17706,11 @@ const mulGold  = () => bonus().gold;
 const mulRate  = () => bonus().rate;
 
 const lv = id => S.lv[id] | 0;
+/* 358 — 플레이어 이동 속도는 **상수**다. 성장·장비·유물·룬·축복·도감·계급 어느 것도 이 값을 못 올린다
+   (저장소 주인 지시 2026-08-29). 값은 구 `U.spd.val(0)` = Lv0 그대로라 «안 키운 플레이어» 의 체감이 불변이다.
+   ⚠ 여기에 배수를 곱하는 축을 다시 만들지 마라 — `verify358` 이 «어떤 상태에서도 불변» 을 단언한다.
+   66 `BOSS_CHASE` 는 이 값에 **비**로 걸리므로(× 1.08) 보스 추격은 상수 기준으로 그대로 성립한다. */
+const PLAYER_SPEED = 115;
 const stat = {
   get dmg(){ return U.atk.val(lv('atk')) * mulAtk(); },
   get rate(){ return U.aspd.val(lv('aspd')) * mulRate(); },
@@ -17709,7 +17720,7 @@ const stat = {
   get maxHp(){ return U.hp.val(lv('hp')) * mulHp(); },
   get regen(){ return U.regen.val(lv('regen')) * mulRegen(); },
   get defMul(){ return U.def.val(lv('def')); },
-  get speed(){ return U.spd.val(lv('spd')); },
+  get speed(){ return PLAYER_SPEED; },          /* 358 — 성장·유물 무관 상수 */
   get goldMul(){ return U.gold.val(lv('gold')) * mulGold(); },
   get critMul(){ return 1 + this.crit*(this.cdmg-1); },
   get dps(){
@@ -26876,6 +26887,9 @@ function renderSpec(){
     ['햄지 공격 속도', fmtPct((stat.rate / 1.4 - 1) * 100, 2) + '%'],
     ['햄지 체력 재생', fmtB(stat.regen) + '/s'],
     ['햄지 골드 획득량', pc(b.gold)],
+    /* 358 — 이 행은 «이동 속도 증가율» 이고 레퍼런스(측정표 20 §12 «매옹이 이동 속도 0.2%»)에 있는 줄이라
+       지우지 않는다. 다만 값은 **영구히 0%** 다 — 이동 속도를 올리는 축을 전부 없앴으므로(주인 지시)
+       여기에 축을 다시 이어붙이지 마라. `verify358` [3] 이 이 자리를 못박는다. */
     ['햄지 이동 속도', '0%']
   ];
   $('spcList').innerHTML = rows.map(r =>

@@ -38,12 +38,16 @@ const near = (n, got, want, tol) => R.push({
   eq('① trainCost 정의 1곳', (src.match(/const trainCost = /g) || []).length, 1);
   eq('① TRAIN_KNEE 정의 1곳',   (src.match(/const TRAIN_KNEE\s*=/g) || []).length, 1);
   eq('① TRAIN_COST_R 정의 1곳', (src.match(/const TRAIN_COST_R\s*=/g) || []).length, 1);
-  /* 훈련 3종만 갈아탄다 — 나머지 7종은 단일 지수 그대로(남의 스탯을 건드리지 않았다) */
+  /* 훈련 3종만 갈아탄다 — 나머지 6종은 단일 지수 그대로(남의 스탯을 건드리지 않았다. 358 이 spd 를 지워 7 → 6) */
   eq('① cost:trainCost( 를 쓰는 UPG 행 = 훈련 3종', (src.match(/cost:trainCost\(/g) || []).length, 3);
   ['atk','hp','regen'].forEach(id =>
     yes('① ' + id + ' 가 trainCost 를 쓴다',
         new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?cost:trainCost\\(").test(src)));
-  ['aspd','crit','cdmg','pierce','def','spd','gold'].forEach(id =>
+  /* 358 이관(2026-08-29) — «훈련 밖 7종» 이 **6종**이 됐다. `spd`(이동 속도)는 주인 지시로 축째 삭제.
+     끄기(음성)와 켜기(양성)는 짝으로 넣는다(347 교훈 ②) — 목록에서 빼기만 하면
+     «358 이 통째로 되돌아와도 초록인 게이트» 가 된다. */
+  eq("① UPG 에 이동 속도(spd) 행 0곳 — 358 이 지운 축", (src.match(/\{ id:'spd',/g) || []).length, 0);
+  ['aspd','crit','cdmg','pierce','def','gold'].forEach(id =>
     yes('① ' + id + ' 는 단일 지수 유지',
         new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?cost:l => [\\d.]+\\*Math\\.pow\\(").test(src)));
 

@@ -1,0 +1,283 @@
+/* 작업 358 게이트 — «플레이어 실효 이동 속도 = 기본 상수 (어떤 성장·장비·유물 상태에서도 불변)»
+ *
+ *   node tools/verify358.js   → 마지막 줄이 `VERIFY358 n/n PASS` 여야 한다.
+ *
+ * 저장소 주인 지시(2026-08-29):
+ *   «플레이어 이동속도 빨라지는거 넣지 말기. 유물 효과나 뭐나 쨌든 다 빼기»
+ *
+ * 재현은 `tools/probe358.js` 가 했다 — 이름이 «속도» 인 것이 넷인데(UPG spd · RELIC_EFF.rate ·
+ * COLL_EFFN.rate · BLESS[2]) **이동을 올리는 것은 UPG `spd` 하나뿐**이었다(나머지 셋은 공격 속도).
+ * 지우기 전 Lv20 에서 `stat.speed` 115 → 205(+78.3%), 화면 실측도 204.7 px/s 로 게터를 그대로 따라갔다.
+ *
+ * 이 게이트가 «무엇을» 묻는지 (칸을 갈라 쓴다 — 326 교훈 «한 항이 두 자리를 겸하면 한쪽이 사라져도 초록이다»):
+ *   §1 소스   ⓐ UPG 에 `spd` 행이 0곳 (음성항) · ⓑ 남은 9종은 한 글자도 안 건드렸다 (양성항 —
+ *             «UPG 를 통째로 비워서 초록» 을 막는다) · ⓒ `stat.speed` 가 상수 하나만 돌려준다.
+ *   §2 불변   성장 상태 8종(신규 · 구 세이브 spd Lv999 · 훈련 만단계 · 계급 4 · 유물 전량 Lv9 ·
+ *             축복 3종 · 도감 만단계 · 그 전부 동시)에서 `stat.speed` 가 **한 값**이다.
+ *             같은 칸에서 `cp()` 는 실제로 4e7 배 벌어진다 — «아무 상태도 안 만들어져서 초록» 을 막는다.
+ *   §3 표시   ⓐ «강화» 탭에 이동 속도 행이 없다(그리고 남은 9행은 그대로 산다) ·
+ *             ⓑ 20 프로필 스펙 «햄지 이동 속도» 행은 **레퍼런스 줄이라 살아 있고** 값이 0% 다.
+ *   §4 실동작 화면 위 플레이어의 실측 속도가 상수를 **넘지 않고**, 성장 상태를 양 끝으로 흔들어도
+ *             같은 천장에 붙는다(게터만 고치고 이동식에 배수가 남는 경우를 잡는다).
+ *   §5 66     보스 추격 바닥 `BOSS_CHASE` 는 상수에 **비**로 걸린다 — 실측 보스 속도 ≈ 115 × 1.08.
+ *   §6 세이브 `S.lv.spd` 를 든 구 세이브를 **실제로 로드**해도 에러 0 · 속도 불변(88 «보상 없이 소멸»).
+ *   §R 되돌림 `get speed()` 만 옛 식(`U.spd.val(lv('spd'))` + UPG 행)으로 되돌린 **소스 사본**에서
+ *             §2·§4 가 실제로 빨개진다 — 이게 없으면 «축이 애초에 안 걸려서 초록» 과 구별할 수 없다.
+ *   §7 에러   콘솔·페이지 에러 0건.
+ *
+ * 127 — 브라우저 해석은 tools/pwlaunch.js 공용.
+ * LESSONS 319 — evaluate 예외는 즉사시키지 말고 그 블록만 빨갛게.
+ */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+
+const ROOT = path.resolve(__dirname, '..');
+const SRC = path.join(ROOT, 'index.html');
+const RAW = fs.readFileSync(SRC, 'utf8');
+const CODE = RAW.replace(/\/\*[\s\S]*?\*\//g, ' ');   /* 주석을 뺀 사본 — 주석 속 옛 식에 걸리지 않게 */
+
+let pass = 0, fail = 0;
+const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d === undefined ? '' : ' — ' + d)); };
+const eq = (m, got, want) => ok(got === want, m, `기대 ${want} · 실제 ${got}`);
+const blk = async (nm, fn) => { try { await fn(); } catch (e) { ok(false, nm + ' — 블록이 던졌다', String(e && e.message || e)); } };
+
+/* 제품이 못박은 상수. 여기 숫자를 바꾸려면 제품과 이 줄을 **같이** 바꿔야 한다(하네스 상수 부패 방지 — 336 교훈 ②) */
+const SPEED_SRC = (CODE.match(/const PLAYER_SPEED\s*=\s*([\d.]+)\s*;/) || [])[1];
+const SPEED = Number(SPEED_SRC);
+
+/* 성장 상태 8종. 전부 «세이브에 들어갈 수 있는 값» 으로만 만든다(플래그 직접 대입 금지 — T2 실동작 규칙). */
+const KINDS = ['fresh', 'oldspd', 'train', 'rank', 'relic', 'bless', 'coll', 'all'];
+const STATE = kind => `((kind) => {
+  const A = kind === 'all';
+  localStorage.clear();
+  Object.assign(S, DEF());
+  S.stage = 50; S.best = 50; S.gold = 1e30; S.dia = 1e12;
+  /* 구 세이브가 들고 있던 이속 레벨 — 읽는 곳이 없어야 한다(88 «보상 없이 소멸») */
+  if (A || kind === 'oldspd') S.lv.spd = 999;
+  if (A || kind === 'train') { S.trainStage = 6; S.lv.atk = 900; S.lv.hp = 900; S.lv.regen = 400; }
+  if (A || kind === 'rank') S.rank = 4;
+  if (A || kind === 'relic') RELICS.forEach(r => { S.own[r.id] = { n: 0, l: 9 }; });
+  if (A || kind === 'bless') { S.bless.lv = 20; BLESS.forEach(b => { S.bless.exp[b.k] = Date.now() + 36e5; }); }
+  if (A || kind === 'coll') COLL_SETS.forEach(st => { (st.ids || []).forEach(id => { S.own[id] = S.own[id] || { n: 0, l: 1 }; }); S.coll = S.coll || {}; S.coll[st.key] = 99; });
+  markDirty();
+  return { speed: +stat.speed.toFixed(4), cp: cp(), spdLv: S.lv.spd | 0 };
+})(${JSON.stringify(kind)})`;
+
+/* 실측 이동 속도 — 넉백 프레임(`player.inv > 0`, 19384 의 +140)은 «이동» 이 아니라 뺀다 */
+const MEASURE = `(() => new Promise(res => {
+  let mx = 0, t = 0, kept = 0;
+  const tick = () => {
+    if (player.inv > 0) { /* 피격 넉백 — 제외 */ } else { mx = Math.max(mx, Math.hypot(player.vx, player.vy)); kept++; }
+    if (++t < 200) requestAnimationFrame(tick); else res({ v: +mx.toFixed(1), kept });
+  };
+  requestAnimationFrame(tick);
+}))()`;
+
+async function open(browser, file) {
+  const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e && e.message || e)));
+  page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+  await page.goto('file://' + file.replace(/\\/g, '/'));
+  await page.waitForTimeout(1200);
+  return { page, errs };
+}
+
+/* 한 상태에서 «게터 · 실측» 을 같이 잡는다 */
+async function run(page, kind) {
+  const g = await page.evaluate(STATE(kind));
+  await page.evaluate(() => { spawnStage(); });
+  await page.waitForTimeout(2600);
+  const m = await page.evaluate(MEASURE);
+  return { kind, speed: g.speed, cp: g.cp, spdLv: g.spdLv, v: m.v, kept: m.kept };
+}
+
+(async () => {
+  console.log('=== §1 소스 ===');
+  ok(SPEED_SRC !== undefined, '1-ⓒ `const PLAYER_SPEED` 정의가 1곳 있다', SPEED_SRC);
+  eq('1-ⓒ 정의는 정확히 1곳', (CODE.match(/const PLAYER_SPEED\s*=/g) || []).length, 1);
+  eq("1-ⓐ UPG 에 `id:'spd'` 행 0곳 (358 이 지운 그 축)", (CODE.match(/\{ id:'spd',/g) || []).length, 0);
+  eq("1-ⓐ `U.spd` 참조 0곳", (CODE.match(/U\.spd\b/g) || []).length, 0);
+  eq("1-ⓐ `lv\\('spd'\\)` 참조 0곳", (CODE.match(/lv\('spd'\)/g) || []).length, 0);
+  ok(/get speed\(\)\{\s*return PLAYER_SPEED;\s*\}/.test(CODE),
+    '1-ⓒ `stat.speed` 는 상수만 돌려준다(배수·보너스가 안 붙는다)',
+    (CODE.match(/get speed\(\)\{[^}]*\}/) || ['(못 찾음)'])[0].trim());
+  /* 양성항 — «UPG 를 통째로 비워서 초록» 을 막는다(347 교훈 ②: 끄기와 켜기는 짝으로) */
+  const KEEP = ['atk', 'aspd', 'crit', 'cdmg', 'pierce', 'hp', 'regen', 'def', 'gold'];
+  const upgIds = (CODE.match(/\{ id:'([a-z]+)',\s*name:/g) || []).map(s => s.match(/id:'([a-z]+)'/)[1]);
+  eq('1-ⓑ 남은 UPG 는 9종', upgIds.length, 9);
+  KEEP.forEach(id => ok(upgIds.includes(id), '1-ⓑ ' + id + ' 축은 그대로 산다'));
+  /* 358 이 «이동» 과 «공격» 을 안 헷갈렸다는 양성항 — 공격 속도 축 셋은 살아 있어야 한다 */
+  ok(/rate:'공격 속도'/.test(CODE), "1-ⓑ RELIC_EFF.rate = «공격 속도» 는 살아 있다(이동이 아니다)");
+  ok(/\{ k:'rate', n:'공격 속도'/.test(CODE), "1-ⓑ BLESS 3번째 축 = «공격 속도» 는 살아 있다");
+  ok(/const BOSS_CHASE\s*=\s*1\.08/.test(CODE), '1-ⓑ 66 `BOSS_CHASE` 1.08 은 안 건드렸다');
+
+  const browser = await launch(chromium);
+  const h = await open(browser, SRC);
+
+  /* ── §2 불변 ─────────────────────────────────────────────────────── */
+  console.log('\n=== §2 불변 — 성장 상태 8종에서 stat.speed 가 한 값 ===');
+  const got = {};
+  for (const k of KINDS) {
+    await blk('§2 ' + k, async () => {
+      const r = await h.page.evaluate(STATE(k));
+      got[k] = r;
+      ok(Math.abs(r.speed - SPEED) < 1e-6, `2 ${k} — stat.speed = ${SPEED}`, `${r.speed} (cp ${r.cp})`);
+    });
+  }
+  await blk('§2 대조', async () => {
+    const cps = KINDS.map(k => (got[k] || {}).cp).filter(Boolean);
+    const spread = Math.max(...cps) / Math.min(...cps);
+    ok(spread > 1000, '2 같은 칸에서 cp() 는 실제로 벌어졌다(상태가 만들어졌다는 증거)',
+      `최소 ${Math.min(...cps)} · 최대 ${Math.max(...cps)} = ×${Math.round(spread)}`);
+    eq('2 구 세이브의 S.lv.spd 는 그대로 들려 있다(그런데 속도는 불변)', (got.oldspd || {}).spdLv, 999);
+  });
+
+  /* ── §3 표시 ─────────────────────────────────────────────────────── */
+  console.log('\n=== §3 표시 ===');
+  await blk('§3', async () => {
+    const r = await h.page.evaluate(`(() => {
+      localStorage.clear(); Object.assign(S, DEF()); S.gold = 1e12; markDirty();
+      renderUp();
+      const rows = [...document.querySelectorAll('#bUp .up')].map(el => el.dataset.u);
+      renderSpec();
+      const spc = [...document.querySelectorAll('#spcList .spc-row')]
+        .map(el => [el.querySelector('.nm').textContent.trim(), el.querySelector('.vl').textContent.trim()]);
+      return { rows, spc };
+    })()`);
+    eq('3-ⓐ «강화» 탭 행 수 = 9', r.rows.length, 9);
+    ok(!r.rows.includes('spd'), '3-ⓐ 그 중 이동 속도 행은 없다', r.rows.join(' · '));
+    KEEP.forEach(id => ok(r.rows.includes(id), '3-ⓐ ' + id + ' 행은 화면에 그대로 선다'));
+    const mv = r.spc.find(x => /이동 속도/.test(x[0]));
+    ok(!!mv, '3-ⓑ 20 프로필 스펙 «이동 속도» 행은 레퍼런스 줄이라 **살아 있다**', mv && mv.join(' = '));
+    ok(mv && mv[1] === '0%', '3-ⓑ 그리고 값은 0% 로 고정이다', mv && mv[1]);
+  });
+
+  /* ── §4 실동작 · §5 66 ───────────────────────────────────────────── */
+  console.log('\n=== §4 실동작 — 화면 위 플레이어 ===');
+  const meas = {};
+  for (const k of ['fresh', 'all']) {
+    await blk('§4 ' + k, async () => {
+      const r = await run(h.page, k);
+      meas[k] = r;
+      ok(r.v <= SPEED + 1.5, `4 ${k} — 실측 속도가 상수를 안 넘는다`, `${r.v} px/s ≤ ${SPEED} (표본 ${r.kept}프레임)`);
+    });
+  }
+  await blk('§4 대조', async () => {
+    /* «천장이 같다» 를 «두 값이 같다» 로 재면 안 된다 — 피격이 잦은 판은 표본이 짧아 천장에 덜 붙는다.
+       물어야 하는 것은 **방향**이다: 성장이 천장을 못 올린다 + 두 판 다 천장 근처까지 올라간다. */
+    ok(meas.fresh && meas.all && meas.all.v <= meas.fresh.v + 1.5,
+      '4 성장을 만렙으로 흔들어도 천장이 안 올라간다(게터 밖 배수가 없다)',
+      meas.fresh && meas.all ? `Lv0 ${meas.fresh.v} → 만렙 ${meas.all.v}` : '?');
+    ['fresh', 'all'].forEach(k => ok(meas[k] && meas[k].v > SPEED * 0.85,
+      `4 ${k} — 그 천장까지 실제로 올라간다(«안 움직여서 초록» 이 아니다)`,
+      meas[k] && `${meas[k].v} ≥ ${(SPEED * 0.85).toFixed(1)}`));
+  });
+
+  console.log('\n=== §5 66 보스 추격 바닥은 상수에 «비» 로 걸린다 ===');
+  await blk('§5', async () => {
+    /* ⚠ 적에게는 `vx/vy` 가 없다(288 이 kx/ky 를 폐지하고 좌표를 직접 옮긴다) — 변위로 잰다.
+       공격 모션 중에는 `spd = 0` 으로 서므로(66) 평균이 아니라 **최댓값**이 추격 바닥이다. */
+    /* ⚠ 두 함정.
+       ① 적에게는 `vx/vy` 가 없다(288 이 kx/ky 를 폐지하고 좌표를 직접 옮긴다) — **변위**로 잰다.
+       ② rAF 벽시계로 나눈 «프레임당 속도» 의 최댓값은 게임 내부 dt 와 어긋나 1.8배까지 튄다
+          (실측). 그래서 절대값을 상수와 맞대지 않고 **같은 자로 잰 두 판의 비**를 본다 —
+          이 절이 물어야 하는 것도 «구 세이브의 spd 가 추격 바닥을 못 올린다» 이지 눈금이 아니다. */
+    const runBoss = lvSpd => `(async () => {
+      localStorage.clear(); Object.assign(S, DEF());
+      S.stage = 50; S.best = 50; S.lv.spd = ${lvSpd}; markDirty();
+      /* ⚠ startBoss() 는 «if(bossOn) return» 으로 시작한다 — 앞 절이 남긴 전장을 먼저 치운다.
+         (이 블록은 템플릿 리터럴 안이다 — 여기 백틱을 쓰면 문자열이 끊긴다) */
+      if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
+      promo = null; raidOn = null; bossOn = false; S.bossFarm = false;
+      enemies.length = 0; spawnQ.length = 0;
+      startBoss();
+      await new Promise(r2 => setTimeout(r2, 2200));
+      const B = () => enemies.find(e => e.tk === 'boss');
+      if (!B()) return { err: '보스가 안 섰다 — 필드 [' + enemies.map(e => e.tk).join(',') + ']' };
+      let path = 0, px = B().x, py = B().y, t0 = performance.now(), fr = 0;
+      for (let i = 0; i < 160; i++) {
+        await new Promise(r2 => requestAnimationFrame(r2));
+        const e2 = B(); if (!e2) break;
+        path += Math.hypot(e2.x - px, e2.y - py); px = e2.x; py = e2.y; fr++;
+      }
+      const sec = (performance.now() - t0) / 1000;
+      return { avg: +(path / Math.max(0.1, sec)).toFixed(1), fr,
+               floor: +(stat.speed * BOSS_CHASE).toFixed(1), baseSp: +B().sp.toFixed(1),
+               pSpeed: stat.speed, chase: BOSS_CHASE };
+    })()`;
+    const a = await h.page.evaluate(runBoss(0));
+    const b = await h.page.evaluate(runBoss(999));
+    if (a.err || b.err) ok(false, '5 보스 상태를 못 만들었다', a.err || b.err);
+    else {
+      eq('5 플레이어 속도는 보스전에서도 상수', b.pSpeed, SPEED);
+      ok(Math.abs(b.floor - SPEED * 1.08) < 0.2, '5 추격 바닥 = 상수 × 1.08', b.floor + ' px/s');
+      ok(b.baseSp < b.floor, '5 이 스테이지의 보스 기본 속도는 바닥보다 느리다 = 바닥이 실제로 걸린다',
+        `기본 ${b.baseSp} < 바닥 ${b.floor}`);
+      const ratio = b.avg / Math.max(1, a.avg);
+      ok(ratio > 0.75 && ratio < 1.33,
+        '5 구 세이브의 spd Lv999 가 실측 보스 추격 속도를 못 올린다',
+        `Lv0 ${a.avg} → Lv999 ${b.avg} px/s (×${ratio.toFixed(2)})`);
+      ok(a.avg > b.baseSp * 0.5, '5 그리고 보스가 실제로 움직였다(표본이 0 이 아니다)',
+        `${a.avg} px/s · ${a.fr}프레임`);
+    }
+  });
+
+  /* ── §6 구 세이브 실제 로드 ───────────────────────────────────────── */
+  console.log('\n=== §6 구 세이브 이관 ===');
+  await blk('§6', async () => {
+    const key = (CODE.match(/const KEY\s*=\s*'([^']+)'/) || [])[1] || 'idle_hunter_save_v4';
+    /* ⚠ 같은 탭을 리로드하면 안 된다 — 살아 있는 페이지가 언로드·타이머로 `save()` 를 한 번 더 구워
+       방금 박은 세이브를 «직전 절의 상태» 로 덮는다(실측: spd Lv999 가 그대로 돌아왔다).
+       **새 탭 + `addInitScript`** 로 앱이 뜨기 전에 심으면 그 경합 자체가 없다. */
+    await h.page.evaluate(() => { window.requestAnimationFrame = () => 0; save = () => {}; });
+    const SAVE = {
+      stage: 50, best: 50, gold: 1e12,
+      lv: { atk: 900, hp: 900, regen: 400, aspd: 60, crit: 60, cdmg: 60, def: 40, spd: 20, pierce: 6 }
+    };
+    const p2 = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
+    const e2 = [];
+    p2.on('pageerror', e => e2.push(String(e && e.message || e)));
+    await p2.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (_) {} },
+      [key, JSON.stringify(SAVE)]);
+    await p2.goto('file://' + SRC.replace(/\\/g, '/'));
+    await p2.waitForTimeout(1500);
+    const r = await p2.evaluate(`({ speed: +stat.speed.toFixed(4), spdLv: S.lv.spd | 0, atkLv: S.lv.atk | 0 })`);
+    eq('6 구 세이브를 로드하는 동안 페이지 에러 0건', e2.length, 0);
+    await p2.close();
+    eq('6 구 세이브를 실제로 로드해도 속도 = 상수', r.speed, SPEED);
+    eq('6 그 세이브의 다른 축은 정상 승계된다(로드가 통째로 실패한 게 아니다)', r.atkLv, 900);
+    eq('6 남은 `lv.spd` 는 들려 있지만 아무 곳도 안 읽는다(88 «보상 없이 소멸»)', r.spdLv, 20);
+  });
+
+  /* ── §R 되돌림 ───────────────────────────────────────────────────── */
+  console.log('\n=== §R 되돌림 시험 — 옛 식으로 되돌리면 §2·§4 가 빨개진다 ===');
+  const tmp = path.join(ROOT, 'index.verify358-revert.html');
+  await blk('§R', async () => {
+    const old = RAW
+      .replace('get speed(){ return PLAYER_SPEED; },', "get speed(){ return 115 + 4.5*lv('spd'); },");
+    ok(old !== RAW, 'R0 되돌림 사본이 실제로 만들어졌다');
+    fs.writeFileSync(tmp, old);
+    const r = await open(browser, tmp);
+    const a = await r.page.evaluate(STATE('fresh'));
+    const b = await r.page.evaluate(STATE('oldspd'));
+    ok(Math.abs(b.speed - a.speed) > 100,
+      'R1 되돌린 사본에서는 구 세이브의 spd 레벨이 다시 속도를 올린다(§2 가 빨개진다)',
+      `${a.speed} → ${b.speed}`);
+    const m = await run(r.page, 'oldspd');
+    ok(m.v > SPEED + 1.5, 'R2 그리고 화면 위 실측도 상수를 넘긴다(§4 가 빨개진다)', m.v + ' px/s');
+    await r.page.close();
+  });
+  try { fs.unlinkSync(tmp); } catch (_) {}
+
+  console.log('\n=== §7 에러 ===');
+  eq('콘솔·페이지 에러 0건', h.errs.length, 0);
+  if (h.errs.length) h.errs.slice(0, 5).forEach(e => console.log('     ' + e));
+
+  await browser.close();
+  console.log('\nVERIFY358 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+  process.exit(fail ? 1 : 0);
+})();
