@@ -5856,7 +5856,8 @@
     transform-origin:0 50%}
   .cn-ml>.ct{left:176px;top:36px;width:420px;text-align:right;font-size:44px;line-height:48px;
     color:#FFF8AA;-webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap}
-  .cn-ml>.bar{left:176px;top:110px;width:420px;height:46px;border-radius:23px;border:5px solid #000;
+  /* 23회차 — `.mlstk` 는 이 테두리의 **사본**이다(기하 단일 출처: 좌표를 새로 안 적는다) */
+  .cn-ml>.bar,.cn-ml>.mlstk{left:176px;top:110px;width:420px;height:46px;border-radius:23px;border:5px solid #000;
     background:#3A1B4C;overflow:hidden}
   .cn-ml>.bar>s{position:absolute;left:0;top:0;bottom:0;border-radius:18px;
     background:linear-gradient(180deg,#F7C9FF 0,#E7A6FF 8px,#C24DEF 100%)}
@@ -7140,18 +7141,49 @@
      6/6 프레임 픽셀 동일**이었다. 의사요소는 «배경 위 · 위치 지정 자식 아래» 라 버튼을 못 지난다.
      → `z-index:5` 로 버튼 위로 올리고, 라임 버튼면(휘도 219)에서도 Δ 가 나게 **유리 광택**
      (어두운 양옆 32/219 = .146 + 흰 심 .125)으로 바꾼다 — 흰 띠만으로는 밝은 면에서 Δ 가 안 난다. */
-  .cn-ml::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
-    --jz-run:938px;    /* 창 폭 그대로 — 10회차 기하 */z-index:5;
+  /* ⚑ 23회차 — **여기만 광택이 흰 글자를 «깎고» 있었다**(22회차 채점 AU❹ «−39»).
+     프로브 `tools/probe122ml.js` 실측(--jz-amp:0 으로 얼림): 제목 Δ평균 **−19.26** · 수량 −13.81 ·
+     보상줄 −12.72 · 화소 최저 **−37.0** · 흰 화소가 45~64% 로 준다. [교환] 라벨만 0.00 이었는데
+     그 버튼은 14회차에 이미 z6 으로 띠 위에 올라가 있었다 — **끼어 있던 자리가 셋 남아 있던 것**이다.
+     §15 는 «심/측엽 **비**»(r≤2.4)만 보고 **부호**를 안 봐서 초록불로 통과했다(§27-9 미판정 항목).
+     처방은 재화 카드(18회차 §19)와 **같은 층 나누기**다 — 한 겹짜리 유리 광택을 둘로 쪼갠다:
+         z1 `.cn-ml::before` = **어두운 측엽만** — 판 배경·아이콘·게이지 «위», 흰 글자 «아래»
+         z5 `.cn-ml::after`  = **흰 심만** (기존 z 그대로)
+         z6 흰 글자 3종(`.tt`·`.ct`·`.rw`) — 심보다 위라 **깎이지도 들리지도 않는다**
+     두 겹은 폭·skew·주기·`--jz-run` 이 같은 한 벌이라 눈에는 **띠 하나**다. 아이콘(`em`)·게이지
+     (`.bar`)는 z auto 그대로라 **오늘과 똑같은 유리 광택**을 받는다(§13·§15 표본이 안 움직인다). */
+  .cn-ml::before{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
+    --jz-run:938px;    /* 창 폭 그대로 — 10회차 기하 */z-index:1;
     background:linear-gradient(90deg,rgba(0,0,0,0) 2%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 22%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 32%,
-      rgba(255,255,255,calc(.145 * var(--jz-glow))) 42%,
-      rgba(255,255,255,calc(.145 * var(--jz-glow))) 58%,
+      rgba(0,0,0,0) 42%,
+      rgba(0,0,0,0) 58%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 68%,
       rgba(0,0,0,calc(.154 * var(--jz-glow))) 78%,
       rgba(0,0,0,0) 98%);
     transform:skewX(-16deg);translate:-100% 0;
     animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+  .cn-ml::after{content:'';position:absolute;left:0;top:-24px;bottom:-24px;width:22%;pointer-events:none;
+    --jz-run:938px;    /* 창 폭 그대로 — 10회차 기하 */z-index:5;
+    background:linear-gradient(90deg,rgba(255,255,255,0) 32%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 42%,
+      rgba(255,255,255,calc(.145 * var(--jz-glow))) 58%,
+      rgba(255,255,255,0) 68%);
+    transform:skewX(-16deg);translate:-100% 0;
+    animation:jz122Sweep calc(var(--jz-sw) * var(--jz-per)) linear infinite}
+  /* 흰 글자 3종을 심 위로 — 재화 카드 `.cn-cd>.hd>i` 계열과 같은 처방(18회차).
+     기하는 위 §8 규칙 한 곳에서만 온다(여기서 좌표를 새로 안 적는다 = 22회차 «기하 단일 출처»). */
+  .cn-ml>.tt,.cn-ml>.ct,.cn-ml>.rw{z-index:6}
+  /* ⚑ 23회차 — 같은 판을 «획» 자(`tools/probe122stk2.js`)로 마저 훑으니 **두 자리가 더 비어 있었다**:
+     아이콘 잉크 **+13.63**(화소 +31.9) · 게이지 검은 테 **+4.54**(화소 +32.2).
+     22회차가 재화 카드에서 고친 두 자리(`.cn-cd>.pn>em` · `.btstk`)의 **마일리지 판**이다 —
+     «장치가 둘이면 사이에 낀 자리가 빈다»(§27-1)가 이 판에서 다시 확인된 것이다.
+     ⓐ 아이콘은 **잉크만** 올린다(판을 통째로 올리면 §13 duty 가 죽는다 — 22회차 되돌림 선례).
+     ⓑ 게이지는 22회차 `.stkbar` 와 **같은 처방**: 검은 테 사본만 심 위로 올리고
+        면·트랙(`.bar` 자신)은 광택 아래에 남겨 ②-8 «정지 섬 제거» 를 안 깬다. */
+  .cn-ml>em{z-index:6}
+  .cn-ml>.mlstk{z-index:6;background:none;pointer-events:none}
   .cn-hd{overflow:hidden}
   .cn-hd::after{content:'';position:absolute;left:0;top:-20px;bottom:-20px;width:22%;pointer-events:none;
     --jz-run:1080px;   /* 밴드 폭 그대로 — 10회차 기하 */
@@ -24574,6 +24606,7 @@ function renderCoinPage(list){
     +   '<div class="tt">마일리지 쿠폰</div>'
     +   '<div class="ct">' + mil + ' / ' + MILE_NEED + '</div>'
     +   '<div class="bar"><s style="width:' + (Math.min(mil, MILE_NEED) / MILE_NEED * 100) + '%"></s></div>'
+    +   '<i class="mlstk"></i>'   /* 23회차 — 게이지 검은 테 사본(광택 위). 기하는 `.bar` 규칙에서 온다 */
     +   '<div class="rw">마일리지 ' + MILE_NEED + '개 → ' + curIc('dia') + ' ' + fmt(MILE_DIA) + '</div>'
     +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
   /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.

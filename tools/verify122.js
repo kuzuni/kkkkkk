@@ -2023,6 +2023,128 @@ async function ampCheck(p, hosts) {
       + (lowf.length ? ' — 미달 ' + lowf.map(([l, a]) => l + ' ' + Math.round(a.floor * 100) + '%').join(' , ') : ''));
   }
 
+  /* ── §28 마일리지 판 — 광택의 «부호» (23회차 신설) ──────────────────
+     22회차 채점 AU❹ 가 짚고 «자를 하나 더 대야 판정할 수 있어» 넘긴 항목(§27-9 미판정).
+     §15 는 심/측엽의 **비**(r ≤ 2.4)만 보고 **부호**를 안 본다 — 그래서 이 판은
+     «측엽이 흰 글자를 깎는다» 를 20회 넘게 초록불로 통과시켰다. 실측(`tools/probe122ml.js`):
+       제목 Δ평균 −19.26 · 수량 −13.81 · 보상줄 −12.72 · 화소 최저 −37.0 (AU 의 «−39»)
+     §19 가 재화 카드에 댄 자를 **그대로** 이 판에 댄다. 두 축을 같이 본다:
+       ⓐ 흰 잉크(L≥240 마스크)가 **깎이지 않는가** — Δ평균 ≥ −1
+       ⓑ 검은 획(L≤30 마스크)이 **들리지 않는가** — Δ평균 ≤ +1 («획은 광택 위» 불변식)
+     ★ 두 축 모두 음성항을 같이 돌린다 — z 를 걷으면 값이 실제로 되돌아와야 한다.
+       (18·22회차가 «고쳤는데 자가 안 움직인다» 로 두 번 속았다.)
+     ⚠ 마스크는 **기준선에서 한 번만** 잡는다. 위상마다 다시 잡으면 «어두워져 마스크에서 빠진
+       화소» 가 평균에서도 빠져 Δ 가 0 으로 읽힌다(§24-8 함정의 사촌).
+     ⚠ `--jz-amp:0` 으로 얼리고 잰다 — 22회차가 «둥실이 섞이면 절반이 허깨비» 를 두 번 겪었다. */
+  console.log('§28 마일리지 판 광택의 부호 — 흰 글자를 깎지 않고 · 검은 획을 들지 않는가 (23회차 신설)');
+  {
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    await p.evaluate(() => {
+      const ml = document.querySelector('#shopList .cn-ml');
+      if (ml) ml.scrollIntoView({ block: 'center' });
+      document.getElementById('shopw').style.setProperty('--jz-amp', '0');
+    });
+    await p.waitForTimeout(120);
+    const SPOT = [
+      ['제목', '#shopList .cn-ml>.tt', 'w'], ['수량', '#shopList .cn-ml>.ct', 'w'],
+      ['보상줄', '#shopList .cn-ml>.rw', 'w'],
+      ['아이콘 잉크', '#shopList .cn-ml>em', 'k'], ['게이지 검은 테', '#shopList .cn-ml>.bar', 'k'],
+    ];
+    const clips = await p.evaluate(sels => sels.map(([, sel]) => {
+      const e = document.querySelector(sel);
+      if (!e) return null;
+      const r = e.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2 || r.y < 0 || r.y + r.height > 2280) return null;
+      return { x: Math.max(0, Math.round(r.x)), y: Math.max(0, Math.round(r.y)),
+               width: Math.round(r.width), height: Math.round(r.height) };
+    }), SPOT);
+    /* 한 장을 페이지 안에서 디코딩해 «고정 마스크의 평균 루마» 를 돌려준다 */
+    const meanOf = async (clip, key, kind, keep) => {
+      const b64 = (await p.screenshot({ clip })).toString('base64');
+      return await p.evaluate(async ([src, k, kd, kp]) => {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        const n = c.width * c.height, L = new Float32Array(n);
+        for (let i = 0, j = 0; i < n; i++, j += 4) L[i] = .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2];
+        window.__v28 = window.__v28 || {};
+        if (kp) {
+          const m = [];
+          for (let i = 0; i < n; i++) if (kd === 'w' ? L[i] >= 240 : L[i] <= 30) m.push(i);
+          window.__v28[k] = m;
+        }
+        const m = window.__v28[k] || [];
+        let s = 0; for (const i of m) s += L[i];
+        return { mean: m.length ? s / m.length : 0, mask: m.length };
+      }, [b64, key, kind, !!keep]);
+    };
+    const patch = txt => p.evaluate(x => {
+      let e = document.getElementById('v122ml');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'v122ml'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    const BANDS = '#shopList .cn-ml::after,#shopList .cn-ml::before,#shopList .cn-ml>.ex::after';
+    /* 위상 16개를 훑어 자리별 Δ평균의 최소·최대를 돌려준다 */
+    const sweep = async (base) => {
+      const lo = SPOT.map(() => 99), hi = SPOT.map(() => -99);
+      for (let t = 0; t < 16; t++) {
+        await seek(p, Math.round(4800 * t / 16));
+        for (let i = 0; i < SPOT.length; i++) {
+          if (!clips[i] || !base[i]) continue;
+          const v = await meanOf(clips[i], 'm' + i, SPOT[i][2], false);
+          const d = v.mean - base[i].mean;
+          if (d < lo[i]) lo[i] = d;
+          if (d > hi[i]) hi[i] = d;
+        }
+      }
+      return { lo, hi };
+    };
+    const miss = clips.filter(c => !c).length;
+    ok(miss === 0, '마일리지 판 측정점 ' + (SPOT.length - miss) + '/' + SPOT.length + '자리를 잡았다');
+    if (miss === 0) {
+      await patch(BANDS + '{opacity:0!important}');
+      await seek(p, 0);
+      const base = [];
+      for (let i = 0; i < SPOT.length; i++) base.push(await meanOf(clips[i], 'm' + i, SPOT[i][2], true));
+      await patch('');
+      const cur = await sweep(base);
+      console.log('    · ' + SPOT.map(([l], i) => l + ' Δ' + cur.lo[i].toFixed(2) + '~' + cur.hi[i].toFixed(2)
+        + '(마스크 ' + base[i].mask + ')').join(' | '));
+      const cut = SPOT.map(([l], i) => [l, cur.lo[i]]).filter(([, v], i) => SPOT[i][2] === 'w' && v < -1);
+      ok(cut.length === 0, '흰 글자 3자리가 안 깎인다 (Δ평균 ≥ −1)'
+        + (cut.length ? ' — 깎인 ' + cut.map(([l, v]) => l + ' ' + v.toFixed(2)).join(' , ') : ''));
+      const lift = SPOT.map(([l], i) => [l, cur.hi[i], SPOT[i][2]]).filter(([, v, k]) => k === 'k' && v > 1);
+      ok(lift.length === 0, '검은 획 2자리가 안 들린다 (Δ평균 ≤ +1)'
+        + (lift.length ? ' — 들린 ' + lift.map(([l, v]) => l + ' +' + v.toFixed(2)).join(' , ') : ''));
+      /* 음성항 ⓐ — 흰 글자의 z 를 걷으면 측엽(z1)이 다시 글자 위로 온다 */
+      await patch('#shopList .cn-ml>.tt,#shopList .cn-ml>.ct,#shopList .cn-ml>.rw{z-index:auto!important}');
+      const negW = await sweep(base);
+      await patch('');
+      const wIdx = SPOT.map((s, i) => [s, i]).filter(([s]) => s[2] === 'w').map(([, i]) => i);
+      const worstW = Math.min(...wIdx.map(i => negW.lo[i]));
+      ok(worstW < -3, '음성항ⓐ — 흰 글자 z 를 걷으면 Δ평균 ' + worstW.toFixed(2)
+        + ' 로 다시 깎인다 (<−3 이어야 자가 살아 있다)');
+      /* 음성항 ⓑ — 아이콘·게이지 사본의 z 를 걷으면 심(z5)이 다시 획 위로 온다 */
+      await patch('#shopList .cn-ml>em,#shopList .cn-ml>.mlstk{z-index:auto!important}');
+      const negK = await sweep(base);
+      await patch('');
+      const kIdx = SPOT.map((s, i) => [s, i]).filter(([s]) => s[2] === 'k').map(([, i]) => i);
+      const bestK = Math.max(...kIdx.map(i => negK.hi[i]));
+      ok(bestK > 3, '음성항ⓑ — 아이콘·게이지 z 를 걷으면 Δ평균 +' + bestK.toFixed(2)
+        + ' 로 다시 들린다 (>+3 이어야 자가 살아 있다)');
+    }
+    await p.evaluate(() => {
+      document.getElementById('shopw').style.removeProperty('--jz-amp');
+      const l = document.getElementById('shopList'); if (l) l.scrollTop = 0;
+    });
+    await p.waitForTimeout(150);
+  }
+
   /* ── §8 스크롤 fps ────────────────────────────────────────────
      지시 ③ 은 «≥55fps» 지만 **이 러너에서는 절대값이 게이트가 될 수 없다** — 1회차 실측:
      애니메이션을 전부 끈 같은 페이지가 소환 12.6 / 재화 25.4fps 이고, 카드가 하나도 없는
