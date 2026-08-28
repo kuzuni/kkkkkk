@@ -52,8 +52,8 @@ const TESTS = [
     not: ['활성 외곽선 — 영웅 vs 06 장비 Δ0', '활성 외곽선 — 영웅 vs 03 던전 Δ0'] },
 
   { id: 'N5', why: '06 장비 한 자리만 외곽선을 갈라 놓는다 — 이사 전 원래 단언이 지키던 «부품 공용성»',
-    from: '  .stab>i{display:inline-block;transform:scaleX(.914)}',
-    to: '  .stab>i{display:inline-block;transform:scaleX(.914)}\n' +
+    from: '  .stab>i{display:inline-block;position:relative;top:4px;transform:scaleX(.97)}',
+    to: '  .stab>i{display:inline-block;position:relative;top:4px;transform:scaleX(.97)}\n' +
         '  #eqTabs .stab>i.ol3{text-shadow:3px 0 0 #000,-3px 0 0 #000,0 3px 0 #000,0 -3px 0 #000,' +
         '1px 1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,-1px -1px 0 #000}',
     want: ['비활성 외곽선 — 영웅 vs 06 장비 Δ0', '비활성 외곽선 — 공용 3자리는 등방 링 3/2 8항뿐(덧칠 0)'],
