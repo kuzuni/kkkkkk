@@ -82,7 +82,8 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
                ink: lb ? lb.getBoundingClientRect().width : -1,
                inner: r.width - 2 * parseFloat(cs.borderLeftWidth),
                col: lb ? lcs.color : '', stCol: lb ? lcs.webkitTextStrokeColor : '',
-               stW: lb ? parseFloat(lcs.webkitTextStrokeWidth) : 0 };
+               stW: lb ? parseFloat(lcs.webkitTextStrokeWidth) : 0,
+               po: lb ? lcs.paintOrder : '' };
     }, sel);
     if (!g) { ok(false, label + ' 버튼이 있다', sel + ' 없음'); return null; }
     ok(/\bifbtn\b/.test(g.cls) && /\bpbtn\b/.test(g.cls), label + ' 이 `.ifbtn.pbtn` 부품이다', g.cls);
@@ -91,6 +92,9 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
     ok(g.col === 'rgb(255, 255, 255)', label + ' 라벨 잉크 = 흰색(296)', g.col);
     ok(g.stCol === 'rgb(0, 0, 0)' && g.stW > 0, label + ' 라벨 아웃라인 = 검정 스트로크(296)',
        g.stCol + ' ' + g.stW + 'px');
+    /* 296 정정 — paint-order 가 없으면 중앙 스트로크가 흰 채움을 통째로 먹는다(실측 흰 픽셀 0%).
+       computed color 만 보면 이 결함이 안 잡힌다 — 반드시 «stroke 가 fill 아래» 를 단언한다. */
+    ok(/^stroke\b/.test(g.po), label + ' paint-order:stroke fill — 흰 잉크가 실제로 찍힌다(296 정정)', g.po);
     ok(near(g.h, REF.h), label + ' 높이 = 22 기준', g.h + ' vs ' + REF.h);
     ok(near(g.r, REF.r), label + ' radius = 22 기준', g.r + ' vs ' + REF.r);
     ok(near(g.bw, REF.bw), label + ' 검정 테두리 = 22 기준', g.bw + ' vs ' + REF.bw);
