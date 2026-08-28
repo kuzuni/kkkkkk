@@ -75,8 +75,13 @@ const TOAST_SITES = [
   ['광고 보상 수령',             'a.r.freePet) notify('],
   ['이용권 — 다이아 부족',       'if(S.dia < p.dia){ notify('],
   ['장비 일괄강화 재료 부족',    '강화할 수 있는 <b>'],
-  /* 150 — 가방 수량은 재화별 표기(`fmtCur`)로 갈렸다. 토스트라는 사실은 그대로다. */
-  ['가방 칸 상세',               '보유 <b>\' + fmtCur(c.dataset.bagk'],
+  /* 150 — 가방 수량은 재화별 표기(`fmtCur`)로 갈렸다. 토스트라는 사실은 그대로다.
+     310 — 그 «가방 칸 상세» 토스트는 **경로째 사라졌다**: 292(53 가방 «화폐 전용» + 칸 클릭 →
+     33 재화 정보 팝업, 주인 지시 «클릭 시 세부정보 팝업 떠야 함»)가 `notify()` 한 줄을 걷어냈다.
+     여기서 조각을 계속 찾으면 «옮겼는가» 가 아니라 «없어진 것을 못 찾았다» 로 FAIL 한다 —
+     182·189 가 같은 절에서 한 대로 **행을 지우고 주석으로 남긴다.** 대신 «토스트로 되살아나지
+     않는가» 는 아래 [292] 절의 음성 시험이 지킨다(177-③ — 자리만 비우면 되살아나도 아무도 모른다).
+     «칸 클릭 → 33 팝업» 이라는 **양성** 실동작은 292 의 제 게이트(`tools/func292.js` ②)가 소유한다. */
   ['설정 — 언어',                '현재 <b>한국어</b>만 지원합니다'],
   ['쿠폰 — 잘못된 코드',         '사용할 수 없는 코드입니다'],
   ['쿠폰 — 이미 사용',           '이미 사용한 코드입니다'],
@@ -96,7 +101,11 @@ const TOAST_SITES = [
   ['206 재료 환불 결과',   "도감 완성 — ' + curIc("],
   ['206 도감 강화 결과',   "도감 <b>' + n + '단계</b>"],
   ['206 가이드 전 미션 완료','📌 모든 가이드 미션 완료! 🎉'],
-  ['206 던전 층 실패',     "층 실패 — 피해 <b>"],
+  /* 310 — 문구가 바뀌었다: 255(던전 실패 사유가 «피해 부족» → «보스를 못 잡음»)·264(탑도 같은
+     판정)가 «층 실패 — 피해 <b>x</b> / y» 를 «층 실패 — 보스 체력 <b>n%</b> 남음 / 보스 <b>미등장</b>»
+     으로 갈아 끼웠다. 토스트라는 사실은 그대로이므로 **조각만** 새 문구로 옮긴다.
+     («어느 문구가 맞는가» 는 아래 [255·264] 절이 따로 못 박는다 — 조각이 또 낡으면 그쪽이 먼저 운다.) */
+  ['206 던전 층 실패',     "층 실패 — '"],
   ['206 승급 실패',        '💀 승급 실패 — 시간 안에'],
   ['206 합성 성공',        '⚗️ 합성 성공 — '],
   ['206 레이드 결과',      "' — DPS <b>' + fmtB(dps)"],
@@ -144,7 +153,7 @@ const WORST = [
   { n: '도감 완성',       f: 'D => "🏆 " + D.coll + " 도감 완성 — 재료를 환불하세요"' },
   { n: '레이드 잠김',     f: 'D => "🔒 " + D.raid + " — 스테이지 <b>9999</b> 필요 (현재 9999)"' },
   { n: '레이드 진행 중',  f: 'D => "⚔ " + D.raid + " 진행 중 · 남은 <b>120.0초</b>"' },
-  { n: '가방 칸',         f: 'D => "🎒 " + D.bag + " — 보유 <b>999.99Z</b>"' },
+  /* 310 — «가방 칸» 워스트케이스는 그 토스트가 292 로 사라져 잴 문구가 없다(위 §1 주석 참조). */
   { n: '이용권 다이아 부족', f: 'D => D.icDia + " <b>999.99Z</b> 더 필요합니다"' },
   { n: '마일리지 교환',   f: 'D => D.icDia + " <b>999.99Z</b> 우편함으로 발송 · 남은 마일리지 999개"' },
   { n: '유물조각 교환',   f: 'D => D.icDia + " <b>999.99Z</b> → " + D.icRel + " <b>999.99Z</b> 우편함 발송"' },
@@ -154,7 +163,9 @@ const WORST = [
   /* ── 206 이 토스트로 내린 «결과» 문구들. 수치는 150 표기의 최댓값(999.99Z)으로 민다 ── */
   { n: '206 레이드 결과',   f: 'D => "🏆 " + D.raid + " — DPS <b>999.99Z</b> · " + D.icStone + " 999 · " + D.icRstone + " 999 · <b>신기록!</b>"' },
   { n: '206 아레나 결과',   f: 'D => "🏅 아레나 승리 — 상대 전투력 <b>999.99Z</b> · " + D.icGold + " 999.99Z · " + D.icStone + " 999"' },
-  { n: '206 던전 층 실패',  f: 'D => "💀 " + D.dun + " 99층 실패 — 피해 <b>999.99Z</b> / 999.99Z"' },
+  /* 310 — 255·264 의 새 문구로 바꿨다. 두 분기 중 잉크가 긴 쪽은 «보스 체력 <b>100%</b> 남음»
+     이다(«보스 <b>미등장</b>» 보다 길다). 층수는 탑(209·210)이 세 자리까지 가므로 999 로 민다. */
+  { n: '206 던전 층 실패',  f: 'D => "💀 " + D.dun + " 999층 실패 — 보스 체력 <b>100%</b> 남음"' },
   /* ⚠ 효과 문구(`collEffText`)를 붙인 판은 최대 단계에서 **폭 1077/1080** 으로 프레임 양끝에
      닿았다(1회차 실측). 제품 문구에서 뺐고, 여기 워스트케이스도 뺀 판으로 잰다. */
   { n: '206 도감 강화',     f: 'D => "🏆 " + D.collSet + " 도감 <b>10단계</b> 강화!"' },
@@ -253,8 +264,10 @@ const WORST = [
          (문구를 게이트에서 손으로 조립해 notify 에 넣으면 아무것도 검증하지 않는다).
          †  = 그 경로가 자기 모달을 이미 열어 둔 채 알리는 자리 → 모달 ON 을 허용하고
               «토스트가 떴는가» 만 본다(합성은 아이템 상세 팝업 안의 버튼이다). */
+      /* 310 — `finishDunRun` 이 읽는 것은 255·264 이후 `bossIn`·`bossLeft` 다. 옛 `dmg`/`need` 를
+         계속 넘기면 두 분기 중 «보스 미등장» 만 늘 밟혀 긴 쪽(«보스 체력 n% 남음»)이 안 돌았다. */
       run('206 던전 층 실패',   () => { const d = DUNGEONS[0];
-        finishDunRun({ d, f: 3, dmg: 1.2e9, need: 5e9, stage: S.stage }, false); });
+        finishDunRun({ d, f: 3, bossIn: true, bossLeft: .42, stage: S.stage }, false); });
       run('206 승급 실패',      () => { promo = { rank: RANKS[Math.min(1, RANKS.length - 1)] }; endPromo(false); });
       run('206 아레나 결과',    () => { S.arena = { w: 3, l: 1 };
         openArenaResult(true, { op: { n: '도전자', cp: 1.5e9 } }, curIc('gold') + ' 999.9M'); });
@@ -312,7 +325,6 @@ const WORST = [
         avaReq:  AVATARS.map(a => cosReqText(a)).reduce((a, b) => (String(b).length > String(a).length ? b : a), ''),
         coll:    'S' in window ? longest(Object.values(BANNERS), b => b.n).n : '',
         raid:    longest(RAIDS, r => r.n).n,
-        bag:     'ZZZZZZZZZZ',
         wpn:     wpnSlotDef().n,
         rank:    longest(RANKS, r => r.ic + ' ' + r.n).ic + ' ' + longest(RANKS, r => r.ic + ' ' + r.n).n,
         ad:      longest(COIN_ADS, a => a.n).n,
@@ -326,11 +338,8 @@ const WORST = [
         diaPack: (() => { const p = longest(DIA_PACKS, x => diaPackName(x) + wonTxt(x.won));
                           return diaPackName(p) + ' <b>' + wonTxt(p.won) + '</b>'; })(),
       };
-      /* 가방 이름은 아이템 전체에서 가장 긴 것으로 */
-      try {
-        const names = [].concat(SKILLS, PETS, RELICS).map(x => x.n).filter(Boolean);
-        if (names.length) D.bag = names.reduce((a, b) => (b.length > a.length ? b : a));
-      } catch (e) {}
+      /* 310 — «가방 이름» 재료(D.bag)는 그 토스트가 292 로 사라져 쓰는 워스트케이스가 없다.
+         죽은 재료를 남겨 두면 다음 세션이 «가방 토스트가 아직 있다» 고 읽는다 → 같이 지웠다. */
       const wrap = document.getElementById('app');
       const wr = wrap.getBoundingClientRect(), sc = wr.width / 1080;
       const res = [];
@@ -435,6 +444,31 @@ const WORST = [
     ck('§189 💬 채팅 칸은 남아 있다',   GONE.chat, GONE.chat ? '있음' : '채팅까지 사라졌다');
     ck('§189 «마을 준비 중» 문구 0건',  !SRC.includes('마을은 아직 준비 중입니다'), '소스 grep');
     ck('§189 «배속 미해금» 문구 0건',   !SRC.includes('전투 배속은 아직 해금되지 않았습니다'), '소스 grep');
+
+    /* ── §292 사라진 «가방 칸 상세» 토스트의 부재 (310) ──────────────────────────
+       292 가 가방 칸의 `notify()` 를 걷어내고 33 재화 정보 팝업으로 갈아 끼웠다(주인 지시).
+       §1 목록에서 줄만 뺐으면 토스트가 되살아나도 초록이다(177-③ · §189 와 같은 이유) →
+       ⓐ 옛 문구가 소스에 0건이고 ⓑ 칸이 `data-cur` 로 33 에 물려 있는지를 자로 세운다.
+       («칸 클릭 → 33 팝업» 의 실동작 전수 확인은 292 의 제 게이트 `tools/func292.js` ② 가 소유한다.) */
+    const BAG = await page.evaluate(() => {
+      openBag();                                   /* 칸은 열어야 그려진다(150 — 숨은 채 그리면 폭 0) */
+      const c = [...document.querySelectorAll('#bagGrid .bg53-c:not(.em)')];
+      const out = { n: c.length, cur: c.filter(e => e.dataset.cur).length };
+      closeBag();
+      return out;
+    });
+    ck('§292 옛 «가방 칸 보유량» 토스트 문구 0건',
+       !/보유 <b>'\s*\+\s*fmtCur\(c\.dataset\.bagk/.test(SRC), '소스 grep');
+    ck('§292 가방 칸이 33 에 물려 있다', BAG.n > 0 && BAG.cur === BAG.n,
+       BAG.n ? BAG.cur + '/' + BAG.n + ' 칸에 data-cur' : '칸이 0개 — 가방을 못 그렸다');
+
+    /* ── §255·264 던전·탑 «층 실패» 문구가 보스 판정을 말하는가 (310) ─────────────
+       255 가 실패 사유를 «피해 부족» → «보스를 못 잡음» 으로 바꾸고 264 가 탑까지 같은 문구로
+       모았다. §1 조각은 «층 실패 — » 까지만 찍으므로 문구 자체는 여기서 못 박는다 —
+       옛 «피해 x / y» 가 돌아오면 눈금(dunRunProg)과 통보가 다시 어긋난다. */
+    ck('§255 «층 실패» 는 보스 체력·미등장으로 말한다',
+       /층 실패 — '[\s\S]{0,120}보스 체력 <b>[\s\S]{0,80}보스 <b>미등장<\/b>/.test(SRC), '소스 grep');
+    ck('§264 옛 «층 실패 — 피해» 문구 0건', !SRC.includes('층 실패 — 피해 <b>'), '소스 grep');
 
     ck('§5 콘솔 에러 0', errs.length === 0, errs.length ? errs.slice(0, 3).join(' / ') : '0건');
     await ctx.close();
