@@ -16336,27 +16336,47 @@ const U = byId(UPG);
 
 /* ---- 23 훈련 (골드 강화 재설계) ----
    UI-REFERENCE 23 «우리 게임 설계»: 강화 대상을 공격력·체력·체력회복 3종으로 단순화하고
-   각 스탯 상한 = 훈련 단계 × 100. 3종 모두 상한을 찍으면 ↑ 버튼이 열리고, 누르면 17 연출 →
+   각 스탯 상한 = 훈련 단계까지의 «단계 몫» 누적합(326 — 단계 n 몫이 스탯당 100×n). 3종 모두 상한을 찍으면 ↑ 버튼이 열리고, 누르면 17 연출 →
    단계 +1 → 상한 재확장(무한). 단계당 전 스탯 +10% 누적.
    UPG 의 나머지 7종은 데이터·기존 세이브 값을 그대로 두되(계산에는 계속 반영) 구매 경로에서 제외한다. */
 const TRAIN_STATS = ['atk', 'hp', 'regen'];
-const TRAIN_CAP_STEP = 100;                  /* 단계당 상한 증가폭 */
+const TRAIN_CAP_STEP = 100;                  /* 단계 n 을 돌파하는 데 필요한 «그 단계 몫» 의 계수(스탯당 100×n) */
 const TRAIN_BONUS = 0.10;                    /* 단계당 전 스탯 +10% */
 const TRAIN_QTYS = [1, 10, 30];              /* 구매 단위 x1 / x10 / x30 */
 const TRAIN_LABEL = { atk:'공격력', hp:'체력', regen:'체력 회복' };
 const trainStage = () => Math.max(1, S.trainStage | 0);
-const trainCap   = () => trainStage() * TRAIN_CAP_STEP;
+/* ---- 326 요구치 «증가식» (저장소 주인 지시 2026-08-28) ------------------------
+   «훈련단계 계속 300 채워지면 올라가게 되있는데 600, 900 이런식으로 점점 늘어나는식으로.
+    각각의 스탯들 업글을 200 300 이런식으로 업글해야 훈련단계 업글되는 그런식»
+
+   단계 n 을 돌파하는 데 드는 «그 단계 몫» 은 **스탯당 100×n**(3종 합 300×n) 이다.
+   1단계 300 → 2단계 600 → 3단계 900 … (전 단계 고정 300 에서 바뀐 것은 여기 하나뿐이다.)
+   따라서 상한은 그 몫의 **누적합**이다:  cap(n) = 100 · n(n+1)/2  (스탯당 절대값)
+     n:  1    2    3    4     5     …
+     몫: 100  200  300  400   500
+     cap:100  300  600  1000  1500
+   `trainCapAt(n) − trainCapAt(n−1) = 100n` 이 항등식이라 «이번 단계 몫» 은 언제나 100n 이다
+   (183 의 «단계 업 직후 정확히 0» 규약이 이 항등식 위에서 그대로 성립한다 — 아래 trainBase 주석).
+
+   ⚠ **세이브 이관은 «없음» 이 정답이다.** n≥1 에서 구 상한 100n ≤ 신 상한 100·n(n+1)/2 이므로
+     기존 `S.lv.*` 절대값이 새 상한을 넘는 일이 없다 — 단계(`S.trainStage`)는 그대로 유지되고
+     진행도만 «이번 단계 몫이 커진» 쪽으로 재해석된다(레벨 손실·강제 강등 0). KEY 를 올리지 않는 이유다.
+   ⚠ 밸런스 파급(112/177 전제 «스테이지 80 ≈ 훈련 4단계»)은 `node tools/sim112.js` 로 재실측만 하고
+     계수는 한 줄도 안 건드린다 — **수치 확정은 199 몫**(131 재발 주의). 실측표는 review 파일 §4. */
+const trainCapAt = n => TRAIN_CAP_STEP * n * (n + 1) / 2;       /* 누적합 — 단계 n 까지의 스탯당 상한 */
+const trainCap   = () => trainCapAt(trainStage());
 const trainLv    = id => Math.min(lv(id), trainCap());
 /* 183 (주인 재지시 2026-08-27) — 진행도는 «이번 단계 몫» 만 센다.
    예전에는 `Σ trainLv / 3×cap` 이라 단계가 올라도 이전 단계 몫이 그대로 남아
    단계 업 직후가 «1500/1800» 처럼 보였다(누적 표기 = 지시 위반).
-   이제 이전 단계까지의 몫(`trainBase`)을 빼서 **단계 업 직후 정확히 0/300** 에서 시작하고,
-   분모는 단계와 무관하게 `3 × TRAIN_CAP_STEP = 300` 고정이다.
+   이제 이전 단계까지의 몫(`trainBase`)을 빼서 **단계 업 직후 정확히 0/분모** 에서 시작한다.
+   326 이후 분모는 고정 300 이 아니라 **단계별 300×n** 이다(이번 단계 몫이 그만큼 커졌으니
+   «0 에서 시작해 꽉 차면 돌파» 라는 규약 자체는 한 글자도 안 바뀐다 — 눈금의 길이만 늘어난다).
    ⚠ 표시만 상대화한 것이다 — `lv()` 저장값·`trainCap()`·`trainReady()` 판정은 그대로(절대값). */
-const trainBase  = () => (trainStage() - 1) * TRAIN_CAP_STEP;   /* 이전 단계까지의 스탯당 몫 */
+const trainBase  = () => trainCapAt(trainStage() - 1);          /* 이전 단계까지의 스탯당 몫(누적합) */
 const trainLvRel = id => Math.max(0, Math.min(lv(id), trainCap()) - trainBase());
 const trainProg  = () => TRAIN_STATS.reduce((s, id) => s + trainLvRel(id), 0);
-const trainMax   = () => TRAIN_STATS.length * TRAIN_CAP_STEP;   /* 300 고정 */
+const trainMax   = () => TRAIN_STATS.length * TRAIN_CAP_STEP * trainStage();   /* 300×단계 */
 const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
 /* 88 — «스탯 훈련»(포인트 재화 훈련)은 캐릭터 레벨·스탯 포인트 시스템과 함께 폐기됐다(저장소 주인 지시). */
 
@@ -16858,7 +16878,7 @@ const DEF = () => ({
   raidBest:{},                                /* 46 레이드 최고 기록 — id → {dmg, dps} */
   arena:{ w:0, l:0 },                         /* 123 아레나 전적 — 승/패(더미 대전). 진짜 매칭·랭킹은 후속 작업 */
   cnt:{ sumSkill:0, sumEquip:0, sumPet:0, sumRelic:0, levelUps:0, spins:0, dungeon:0, paid:0 },
-  trainStage:1,                               /* 23 훈련 단계 — 상한 = 단계×100, 단계당 전 스탯 +10% */
+  trainStage:1,                               /* 23 훈련 단계 — 상한 = trainCapAt(단계)=100·n(n+1)/2 (326), 단계당 전 스탯 +10% */
   /* 105 — «알아서 되는 것» 은 전부 기본 OFF(저장소 주인 지시). autoEquip 키는 폐기(아무도 읽지 않는다),
      autoBuy(23 훈련 자동 구매)는 강화 탭의 «자동 ON/OFF» 토글이 남아 있으므로 기본값만 false 로 내린다.
      a105 = 구 세이브 1회 정리 표식(켜 둔 플레이어의 선택을 두 번 끄지 않는다). */
@@ -22525,7 +22545,7 @@ function autoBuyTick(dt){
 }
 
 /* ---- 23 훈련 — 구매 · 단계 상승 ----
-   상한(단계×100)을 넘겨 사지 않는다. x10 · x30 은 상한까지만 채우고 남는 수량은 버린다. */
+   상한(`trainCap()` — 326 누적합)을 넘겨 사지 않는다. x10 · x30 은 상한까지만 채우고 남는 수량은 버린다. */
 function trainQty(){ return TRAIN_QTYS.includes(S.buyQty) ? S.buyQty : 1; }
 function trainBuyInfo(id){
   const u = U[id], l = lv(id), room = Math.max(0, trainCap() - l);
