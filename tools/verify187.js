@@ -13,7 +13,18 @@
    2280 프레임에서는 977 이 나오지만 «2배» 상한 880 이 먼저 걸린다.
 
    ⚠ 여기서 재는 것은 «커졌다» 가 아니라 **커진 만큼 84·12 의 자리가 그대로인가** 다.
-      그래서 A 절(10연 회귀)이 이 파일의 절반이다. */
+      그래서 A 절(10연 회귀)이 이 파일의 절반이다.
+
+   ══ 작업 327(2026-08-28) 이 위 처방을 **대체했다** — 값은 전부 327 것으로 갈아 끼웠다 ══
+   주인 재지시: «소환결과가 창이 너무 작음. 걍 세로로 2배 정도 늘리던지 해라».
+   187 의 «행수 가변» 은 두 가지를 놓쳤다 —
+     ① 중복이 개수로 합쳐지는 흔한 결과는 계속 ref 크기(539)였고(주인이 «또» 작다고 한 쪽),
+     ② 상한 676(4행)이라 고유 30종 최악 케이스는 **여전히 6칸이 가려졌다**(C8 이 24/30 이었다).
+   327 은 «가변» 을 버리고 **고정** 으로 간다: 그리드 876 · 패널 1080(= ref 539 × 2.00) ·
+   패널·리본이 통째로 103 위로(709→606 · 641→538) · 빈 면은 세로 중앙정렬.
+   그리드 876 ≥ 30연 최악 5행(846) 이라 **가려짐이 구조적으로 0** 이고 스크롤도 안 쓴다.
+   이 파일은 지워지지 않고 «187 이 세운 자(84·12 무회귀 + 가려짐 0)» 로 계속 산다 —
+   재는 대상만 327 의 값으로 옮겼다(작업 310·333 의 게이트 이관 선례). */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
@@ -106,12 +117,12 @@ const openAt = async (b, vp, n) => {
   ok('A1 프레임 높이', a.g.frameH, 2280, 0);
   ok('A2 결과 칸 수(고유 10)', a.g.cards, 10, 0);
   ok('A3 행수', a.g.rowsTotal, 2, 0);
-  ok('A4 --sm-gh', a.g.gh, '335px', 0);
-  ok('A5 그리드 h (ref Δ0)', a.g.grid.h, 335, 0);
-  ok('A6 패널 h (ref Δ0)', a.g.panel.h, 539, 0);
-  ok('A7 패널 top (ref Δ0)', a.g.panel.y, 709, 0);
-  ok('A8 패널 하변 (ref Δ0)', a.g.panel.bot, 1248, 0);
-  ok('A9 리본 top (ref Δ0)', a.g.rb.y, 641, 0);
+  ok('A4 --sm-gh (327 고정)', a.g.gh, '876px', 0);
+  ok('A5 그리드 h (327)', a.g.grid.h, 876, 0);
+  ok('A6 패널 h (327 = ref × 2)', a.g.panel.h, 1080, 0);
+  ok('A7 패널 top (327)', a.g.panel.y, 606, 0);
+  ok('A8 패널 하변 (327 = 버튼 상변 − 20)', a.g.panel.bot, 1686, 0);
+  ok('A9 리본 top (327 = 패널 top − 68)', a.g.rb.y, 538, 0);
   ok('A10 버튼 상변 (84 앵커 Δ0)', a.g.btns.y, 1706, 0);
   ok('A11 10칸 전부 보임', a.g.fullCards, 10, 0);
   /* 2행 케이스는 «스크롤이 필요 없다» — 다만 scrollHeight 는 개수 배지 **상자**(카드 바닥
@@ -124,9 +135,9 @@ const openAt = async (b, vp, n) => {
   const b3 = await openAt(b, { width: 1080, height: 2280 }, 18);
   ok('B1 결과 칸 수(고유 18)', b3.g.cards, 18, 0);
   ok('B2 행수', b3.g.rowsTotal, 3, 0);
-  ok('B3 --sm-gh', b3.g.gh, '506px', 0);
-  ok('B4 그리드 h (170×3 − 4)', b3.g.grid.h, 506, 0);
-  ok('B5 패널 h', b3.g.panel.h, 710, 0);
+  ok('B3 --sm-gh (327 고정)', b3.g.gh, '876px', 0);
+  ok('B4 그리드 h (327 고정)', b3.g.grid.h, 876, 0);
+  ok('B5 패널 h (327 고정)', b3.g.panel.h, 1080, 0);
   ok('B6 3행 전부 보임', b3.g.rowsFull, 3, 0);
   ok('B7 버튼 상변 무회귀', b3.g.btns.y, 1706, 0);
   ok('B8 패널↔버튼 여유 ≥ 20', b3.g.btns.y - b3.g.panel.bot >= 20, true, 0);
@@ -136,14 +147,15 @@ const openAt = async (b, vp, n) => {
   const c = await openAt(b, { width: 1080, height: 2280 }, 30);
   ok('C1 결과 칸 수(고유 30)', c.g.cards, 30, 0);
   ok('C2 행수', c.g.rowsTotal, 5, 0);
-  ok('C3 --sm-gh (상한)', c.g.gh, '676px', 0);
-  ok('C4 그리드 h (170×4 − 4)', c.g.grid.h, 676, 0);
-  ok('C5 패널 h', c.g.panel.h, 880, 0);
-  ok('C6 패널 하변', c.g.panel.bot, 1589, 0);
-  /* ★ 이 게이트의 본문 — 보이는 행이 2 → 4 로 «2배» 인가 */
-  ok('C7 완전히 보이는 행 = 4 (2배)', c.g.rowsFull, 4, 0);
-  ok('C8 완전히 보이는 칸 = 24', c.g.fullCards, 24, 0);
-  ok('C9 넘치는 분량은 스크롤', c.g.grid.sh > c.g.grid.h, true, 0);
+  ok('C3 --sm-gh (327 고정)', c.g.gh, '876px', 0);
+  ok('C4 그리드 h (327 = 876 ≥ 5행 846)', c.g.grid.h, 876, 0);
+  ok('C5 패널 h (327)', c.g.panel.h, 1080, 0);
+  ok('C6 패널 하변', c.g.panel.bot, 1686, 0);
+  /* ★ 이 게이트의 본문 — 327 이후로는 «2배» 가 아니라 **가려짐 0** 이 판정이다.
+     30연이 낼 수 있는 최악(고유 30칸 = 5행 = 846)이 그리드 876 안에 통째로 들어간다. */
+  ok('C7 완전히 보이는 행 = 5 (전부)', c.g.rowsFull, 5, 0);
+  ok('C8 완전히 보이는 칸 = 30 (가려짐 0)', c.g.fullCards, 30, 0);
+  ok('C9 스크롤이 아예 필요 없다', c.g.grid.sh <= c.g.grid.h, true, 0);
   ok('C10 열릴 때 scrollTop 0', c.g.grid.st, 0, 0);
   ok('C11 버튼 상변 무회귀', c.g.btns.y, 1706, 0);
   ok('C12 패널↔버튼 여유 ≥ 20', c.g.btns.y - c.g.panel.bot >= 20, true, 0);
@@ -208,7 +220,9 @@ const openAt = async (b, vp, n) => {
   await ep.evaluate(SETUP(10));
   await ep.waitForTimeout(400);
   const shrink = await ep.evaluate(GEO);
-  ok('E3 결과가 줄면 패널도 줄어든다', shrink.panel.h, 539, 0);
+  /* 327 — 187 과 **정반대** 단언이다. 창 크기가 소환마다 튀는 것이 187 의 부작용이었고
+     주인 지시가 «걍 2배» 라, 결과가 줄어도 패널은 1080 을 지켜야 한다(빈 면은 중앙정렬이 받는다). */
+  ok('E3 결과가 줄어도 패널은 1080 그대로', shrink.panel.h, 1080, 0);
   /* 딤 탭 → 닫힘 (버튼 위가 아닌 좌표) */
   await ep.mouse.click(540, 300);
   await ep.waitForTimeout(300);
@@ -232,7 +246,7 @@ const openAt = async (b, vp, n) => {
   const rev = await gp.evaluate(GEO);
   ok('G1 되돌리면 그리드 335 로 돌아간다', rev.grid.h, 335, 0);
   ok('G2 되돌리면 보이는 행 2 (= 옛 증상)', rev.rowsFull, 2, 0);
-  ok('G3 되돌리면 C4 가 FAIL 한다', rev.grid.h !== 676, true, 0);
+  ok('G3 되돌리면 C4 가 FAIL 한다', rev.grid.h !== 876, true, 0);
   await gp.close();
 
   await b.close();

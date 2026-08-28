@@ -1,0 +1,261 @@
+/* 작업 327 게이트 — 12 소환 결과 팝업의 창을 «세로 2배» 로 고정.
+   실행: node tools/verify327.js
+
+   주인 지시(2026-08-28): «소환결과가 창이 너무 작음. 걍 세로로 2배 정도 늘리던지 해라» (187 후속).
+
+   187 은 «결과 행수를 따라가는 가변 패널»(2행 335 = ref Δ0 · 상한 4행 676)이었다. 그런데
+     ① 저레벨 배너처럼 중복이 개수 배지로 합쳐지는 **흔한 결과**는 계속 ref 크기(539)에 머물렀고
+        — 주인이 «또» 작다고 한 것이 이 흔한 쪽이다 —
+     ② 상한 676(4행) 때문에 고유 30종이 나오는 최악 케이스는 **여전히 6칸이 가려졌다**.
+   327 은 «가변» 을 버리고 **고정 2배**로 간다:
+
+     · `--sm-gh` = **876px** (CSS 상수. showSummonResult 가 더는 계산하지 않는다)
+     · 패널 = 204 + 876 = **1080 = ref 539 × 2.00**            ← 주인이 말한 «세로 2배»
+     · 그리드 876 ≥ 30연 최악 5행(170×5 − 4 = 846)             ← **가려짐이 구조적으로 0**
+       (버튼이 10·10·30 뿐이라 결과는 30칸 = 5행이 상한이다)
+     · 패널·리본이 통째로 **103 위로**(709→606 · 641→538)      ← 84 하단 앵커를 안 밀치려고
+     · 결과가 적을 때의 빈 면은 `.sm-grid-in` 의 **세로 중앙정렬**이 받는다
+
+   ⚠ 이 게이트가 재는 것은 «커졌다» 하나가 아니라 네 가지다.
+     ① **2배가 맞나** (§B — ref 539 대비 배율)
+     ② **가려짐이 0 인가** (§E — 187 이 24/30 에서 멈췄던 자리)
+     ③ **창이 소환마다 튀지 않나** (§A — 187 의 실제 부작용. 고정이 되면서 사라져야 한다)
+     ④ **커진 만큼 84 를 밀치지 않나** (§B·§D — 패널 하변 ↔ 버튼 상변 20px)
+   §G 되돌림 시험이 ①②③ 각각에 «되돌리면 실제로 빨개지는가» 를 붙인다. */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+const path = require('path');
+
+const HTML = 'file://' + path.resolve(__dirname, '../index.html');
+const R = [];
+const ok = (n, got, want, tol) => {
+  const num = typeof got === 'number' && typeof want === 'number';
+  const d = num ? +(got - want).toFixed(1) : 0;
+  R.push({ n, got, want, d, pass: num ? Math.abs(d) <= tol : got === want });
+};
+
+/* ── 327 의 상수 ── (index.html `.sm-panel` 위 주석과 한 벌) */
+const GH = 876;            // 그리드 높이 (CSS 상수 --sm-gh)
+const PAD = 204;           // 패널 border-box 패딩분 (상 106 + 하 98)
+const PH = PAD + GH;       // 패널 1080
+const REF_PH = 539;        // ref 패널 높이 (793~1331) — «2배» 의 분모
+const REF_TOP = 709;       // ref 패널 top
+const REF_RB = 641;        // ref 리본 top
+const BTN_Y = 1706;        // 2280 프레임의 버튼 상변 (84 하단 앵커) — 안 움직여야 한다
+const GAP = 20;            // 패널 하변 ↔ 버튼 상변
+const PITCH = 170;         // 카드 158 + gap 12
+const BADGE_PAD = 8;       // .sm-grid-in padding-bottom (배지 돌출분)
+
+/* n행일 때 카드 블록 높이 = 170n − 12 (마지막 gap 없음) · 세로 중앙정렬 오프셋은 그 나머지의 절반 */
+const cardsH = (n) => PITCH * n - 12;
+const centerY = (gridY, gridH, n) => gridY + (gridH - BADGE_PAD - cardsH(n)) / 2;
+
+/* 결과 n칸을 «전부 다른 아이템» 으로 만든다(187 게이트와 같은 방식 — 중복이 섞이면 행수가 흔들린다) */
+const SETUP = (n) => `(() => {
+  S.dia = 1e12;
+  const res = [], seen = new Set();
+  for (const bk of BKEYS) {
+    for (let i = 0; i < 4000 && res.length < ${n}; i++) {
+      const r = summonOne(bk);
+      if (!r || !r.it || seen.has(r.it.id)) continue;
+      seen.add(r.it.id); res.push(r);
+    }
+    if (res.length >= ${n}) break;
+  }
+  showSummonResult('weapon', res.length, res, false);
+  return res.length;
+})()`;
+
+const FREEZE = `(() => {
+  const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
+  document.querySelectorAll('.fx-pop').forEach((e) => { e.style.animation = 'none'; });
+})()`;
+
+/* ⚠ fit() 이 #app 을 scale() 로 줄이는 화면비에서는 rect 가 **화면 px** 다 — 배율로 나눠
+   프레임 px 로 되돌린다(187 D 절이 이것 때문에 헛FAIL 했다). scrollHeight 는 레이아웃 값이라
+   나누면 안 된다. */
+const GEO = `(() => {
+  const app = document.getElementById('app');
+  const A = app.getBoundingClientRect();
+  const k = A.height / app.offsetHeight;
+  const r = (s) => { const e = document.querySelector(s); if (!e) return null;
+    const b = e.getBoundingClientRect();
+    return { y: +((b.top - A.top) / k).toFixed(1), bot: +((b.bottom - A.top) / k).toFixed(1),
+             h: +(b.height / k).toFixed(1) }; };
+  const grid = document.getElementById('sumGrid');
+  const gb = grid.getBoundingClientRect();
+  const cards = [...document.getElementById('sumGridIn').children];
+  const full = cards.filter((c) => { const b = c.getBoundingClientRect();
+    return b.top >= gb.top - 0.5 && b.bottom <= gb.bottom + 0.5; });
+  const rowsOf = (l) => new Set(l.map((c) =>
+    Math.round(c.getBoundingClientRect().top - gb.top + grid.scrollTop))).size;
+  const first = cards[0] && cards[0].getBoundingClientRect();
+  const last = cards.length && cards[cards.length - 1].getBoundingClientRect();
+  return {
+    frameH: +app.offsetHeight.toFixed(1),
+    panel: r('.sm-panel'), rb: r('.sm-rb'), btns: r('.sm-btns'), close: r('.sm-close'),
+    grid: { y: +((gb.top - A.top) / k).toFixed(1), h: +(gb.height / k).toFixed(1),
+            bot: +((gb.bottom - A.top) / k).toFixed(1), sh: grid.scrollHeight, st: grid.scrollTop },
+    cards: cards.length, fullCards: full.length,
+    rowsTotal: rowsOf(cards), rowsFull: rowsOf(full),
+    firstY: first ? +((first.top - A.top) / k).toFixed(1) : null,
+    lastBot: last ? +((last.bottom - A.top) / k).toFixed(1) : null,
+    gh: getComputedStyle(document.querySelector('.sm-panel')).getPropertyValue('--sm-gh').trim()
+  };
+})()`;
+
+const errs = [];
+const openAt = async (b, vp, n, css) => {
+  const c = await b.newContext({ viewport: vp, deviceScaleFactor: 1 });
+  const p = await c.newPage();
+  p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  p.on('pageerror', (e) => errs.push(String(e)));
+  await p.goto(HTML);
+  await p.waitForTimeout(900);
+  if (css) await p.addStyleTag({ content: css });
+  await p.evaluate(SETUP(n));
+  await p.waitForTimeout(1200);
+  await p.evaluate(FREEZE);
+  await p.waitForTimeout(80);
+  return { p, c, g: await p.evaluate(GEO) };
+};
+
+(async () => {
+  const b = await launch(chromium);
+
+  /* ══ A. 고정성 — 결과 개수가 뭐든 창은 한 치도 안 움직인다 ══
+     187 의 실제 부작용이 «소환할 때마다 창이 커졌다 작아졌다» 였다. 327 의 첫 약속이 이것이다. */
+  const seen = [];
+  for (const n of [1, 10, 18, 30]) {
+    const a = await openAt(b, { width: 1080, height: 2280 }, n, null);
+    seen.push(a.g);
+    ok(`A${n} --sm-gh`, a.g.gh, GH + 'px', 0);
+    ok(`A${n} 그리드 h`, a.g.grid.h, GH, 0);
+    ok(`A${n} 패널 h`, a.g.panel.h, PH, 0);
+    ok(`A${n} 패널 top`, a.g.panel.y, 606, 0);
+    ok(`A${n} 리본 top`, a.g.rb.y, 538, 0);
+    await a.c.close();
+  }
+  ok('A★ 네 경우의 패널 높이가 전부 같다',
+    new Set(seen.map((g) => g.panel.h)).size, 1, 0);
+  ok('A★ 네 경우의 패널 top 이 전부 같다',
+    new Set(seen.map((g) => g.panel.y)).size, 1, 0);
+
+  const [g1, g10, g18, g30] = seen;
+
+  /* ══ B. «2배» 검산 + 84 앵커 무회귀 ══ */
+  ok('B1 패널 배율 (ref 539 대비)', +(g10.panel.h / REF_PH).toFixed(3), 2.0, 0.01);
+  ok('B2 패널 = 204 + 876', g10.panel.h, PH, 0);
+  ok('B3 패널·리본이 같은 만큼 떴다 (103)',
+    +(REF_TOP - g10.panel.y).toFixed(1), +(REF_RB - g10.rb.y).toFixed(1), 0);
+  ok('B4 리본 = 패널 top − 68', +(g10.panel.y - g10.rb.y).toFixed(1), 68, 0);
+  ok('B5 버튼 상변 무회귀 (84 앵커)', g10.btns.y, BTN_Y, 0);
+  ok('B6 패널 하변 ↔ 버튼 상변 = 20', +(g10.btns.y - g10.panel.bot).toFixed(1), GAP, 0);
+  ok('B7 닫기 잉크 프레임 안', g10.close.bot <= 2280.5, true, 0);
+  ok('B8 리본이 프레임 위로 안 넘친다', g10.rb.y >= 0, true, 0);
+
+  /* ══ C. 세로 중앙정렬 — 빈 면이 «아래로 몰리지» 않고 위아래로 갈린다 ══
+     327 이 «고정 확대» 를 쓸 수 있는 유일한 근거다(187 이 고정을 물린 이유가 340px 빈 검은 면). */
+  for (const [n, g] of [[1, g1], [2, g10], [3, g18], [5, g30]]) {
+    const want = centerY(g.grid.y, g.grid.h, n);
+    ok(`C${n}행 첫 카드 y = 중앙정렬 계산값`, g.firstY, want, 1);
+  }
+  ok('C★ 결과가 적을수록 카드가 더 내려간다 (1행 > 5행)', g1.firstY > g30.firstY, true, 0);
+  ok('C★ 위아래 여백이 같다 (5행)',
+    +((g30.firstY - g30.grid.y) - (g30.grid.bot - BADGE_PAD - g30.lastBot)).toFixed(1), 0, 1.5);
+
+  /* ══ D. 화면비 4종 × 30연 — 겹침 0 · 프레임 이탈 0 ══
+     #app 높이 = 1080 × 안전영역높이/폭, clamp 1600~2600.
+     패널 top 은 «필요한 만큼만» 오르므로 프레임이 짧을수록 더 뜬다 — 리본이 위로 새는지 본다. */
+  for (const vp of [{ width: 1080, height: 2280 }, { width: 1080, height: 1920 },
+                    { width: 1920, height: 1080 }, { width: 1080, height: 2800 }]) {
+    const d = await openAt(b, vp, 30, null);
+    const g = d.g, tag = 'D ' + vp.width + 'x' + vp.height;
+    ok(tag + ' 패널↔버튼 안 겹침', g.btns.y >= g.panel.bot, true, 0);
+    ok(tag + ' 패널↔버튼 여유 ≥ 20', g.btns.y - g.panel.bot >= GAP - 0.5, true, 0);
+    ok(tag + ' 버튼↔닫기 안 겹침', g.close.y >= g.btns.bot, true, 0);
+    ok(tag + ' 닫기 프레임 안', g.close.bot <= g.frameH + 0.5, true, 0);
+    ok(tag + ' 리본 프레임 안 (top ≥ 0)', g.rb.y >= 0, true, 0);
+    ok(tag + ' 패널 h = 1080 (짧은 프레임에서도)', g.panel.h, PH, 0);
+    ok(tag + ' 30칸 전부 보임', g.fullCards, 30, 0);
+    await d.c.close();
+  }
+
+  /* ══ E. 가려짐 0 — 187 이 24/30 에서 멈췄던 자리 ══ */
+  ok('E1 30연 결과 칸 수(고유 30)', g30.cards, 30, 0);
+  ok('E2 행수 5', g30.rowsTotal, 5, 0);
+  ok('E3 완전히 보이는 행 = 5', g30.rowsFull, 5, 0);
+  ok('E4 완전히 보이는 칸 = 30 (가려짐 0)', g30.fullCards, 30, 0);
+  ok('E5 스크롤이 아예 필요 없다', g30.grid.sh <= g30.grid.h + 0.5, true, 0);
+  ok('E6 그리드 876 ≥ 최악 5행 846', GH >= PITCH * 5 - 4, true, 0);
+  ok('E7 열릴 때 scrollTop 0', g30.grid.st, 0, 0);
+  ok('E8 마지막 카드 하단이 그리드 안', g30.lastBot <= g30.grid.bot + 0.5, true, 0);
+
+  /* ══ F. 기능 체크 — 커진 뒤에도 실제로 눌리고, 다시 소환해도 창이 안 튄다 ══ */
+  const fc = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const fp = await fc.newPage();
+  const ferr = [];
+  fp.on('pageerror', (e) => ferr.push(String(e)));
+  fp.on('console', (m) => { if (m.type() === 'error') ferr.push(m.text()); });
+  await fp.goto(HTML);
+  await fp.waitForTimeout(900);
+  /* 73 가이드 소환 미션이 «지정된 상자» 외 소환을 막는다 — 84·187 게이트와 같은 처리 */
+  await fp.evaluate(`(() => {
+    S.dia = 1e12;
+    const bk = (typeof gmBan === 'function' && gmBan()) || 'weapon';
+    const res = []; for (let i = 0; i < 30; i++) res.push(summonOne(bk));
+    showSummonResult(bk, 30, res, false);
+  })()`);
+  await fp.waitForTimeout(900);
+  for (const [k, id] of [['F1 10연(💎) 버튼', '#sumB10'], ['F2 30연(💎) 버튼', '#sumB30']]) {
+    const before = await fp.evaluate('({ dia: S.dia, sum: S.summons })');
+    await fp.click(id, { timeout: 8000 });
+    await fp.waitForTimeout(700);
+    const after = await fp.evaluate(
+      "({ dia: S.dia, sum: S.summons, on: document.getElementById('sumw').classList.contains('on'),"
+      + " h: document.querySelector('.sm-panel').getBoundingClientRect().height })");
+    R.push({ n: k, got: '💎−' + (before.dia - after.dia) + ' / +' + (after.sum - before.sum)
+      + '회 / 패널 ' + Math.round(after.h), want: '차감 + 소환 + 패널 1080 고정', d: 0,
+      pass: after.dia < before.dia && after.sum > before.sum && after.on
+            && Math.abs(after.h - PH) <= 0.5 });
+  }
+  /* ★ 187 이 잡던 «결과가 줄면 패널도 줄어든다» 의 정반대 — 327 은 안 줄어야 한다 */
+  await fp.evaluate(SETUP(10));
+  await fp.waitForTimeout(400);
+  const shrink = await fp.evaluate(GEO);
+  ok('F3 결과가 10칸으로 줄어도 패널 1080', shrink.panel.h, PH, 0);
+  ok('F4 결과가 줄어도 패널 top 606', shrink.panel.y, 606, 0);
+  await fp.mouse.click(540, 300);          /* 딤 탭 — 버튼·패널이 아닌 좌표 */
+  await fp.waitForTimeout(300);
+  ok('F5 «터치하여 닫기» 동작',
+    await fp.evaluate("!document.getElementById('sumw').classList.contains('on')"), true, 0);
+  ok('F6 기능 체크 런타임 에러', ferr.length, 0, 0);
+  await fc.close();
+
+  ok('G0 콘솔·런타임 에러', errs.length, 0, 0);
+
+  /* ══ G. 되돌림 시험 — 187 의 값으로 되돌리면 §A·§C·§E 가 **실제로** 빨개지는가 ══
+     («있으나 마나 한 단언» 방지: 186 이 남긴 교훈, 187 G 절이 쓴 방식 그대로) */
+  const rv = await openAt(b, { width: 1080, height: 2280 }, 30,
+    '#sumw{--sm-gh:676px !important}');
+  ok('G1 되돌리면 그리드 676', rv.g.grid.h, 676, 0);
+  ok('G2 되돌리면 패널 880 (2배가 깨진다 → §A 가 FAIL)', rv.g.panel.h, 880, 0);
+  ok('G3 되돌리면 다시 가려진다 (§E 가 FAIL)', rv.g.fullCards < 30, true, 0);
+  ok('G4 되돌리면 보이는 행 4 (= 187 의 상한)', rv.g.rowsFull, 4, 0);
+  /* ★ `safe center` 의 존재 이유 — 내용이 상자보다 커지면 중앙이 아니라 **위** 정렬이라
+     첫 행이 위로 잘려 못 닿는 일이 없다. 676 < 846 인 이 상태가 바로 그 경우다. */
+  ok('G5 넘칠 때는 첫 행이 그리드 맨 위에 붙는다(safe)',
+    +(rv.g.firstY - rv.g.grid.y).toFixed(1), 0, 1);
+  ok('G6 넘칠 때는 스크롤이 생긴다', rv.g.grid.sh > rv.g.grid.h, true, 0);
+  await rv.c.close();
+
+  await b.close();
+
+  const bad = R.filter((r) => !r.pass);
+  R.forEach((r) => console.log((r.pass ? '  ok ' : '  XX ') + String(r.n).padEnd(38)
+    + ' got=' + String(r.got).padEnd(14) + ' want=' + String(r.want).padEnd(14)
+    + (r.d ? ' Δ=' + r.d : '')));
+  if (errs.length) console.log('errors: ' + errs.slice(0, 5).join(' | '));
+  console.log('VERIFY327 ' + (R.length - bad.length) + '/' + R.length + ' ' + (bad.length ? 'FAIL' : 'PASS'));
+  process.exit(bad.length ? 1 : 0);
+})();
