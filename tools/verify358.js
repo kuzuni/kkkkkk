@@ -19,7 +19,8 @@
  *             ⓑ 20 프로필 스펙 «햄지 이동 속도» 행은 **레퍼런스 줄이라 살아 있고** 값이 0% 다.
  *   §4 실동작 화면 위 플레이어의 실측 속도가 상수를 **넘지 않고**, 성장 상태를 양 끝으로 흔들어도
  *             같은 천장에 붙는다(게터만 고치고 이동식에 배수가 남는 경우를 잡는다).
- *   §5 66     보스 추격 바닥 `BOSS_CHASE` 는 상수에 **비**로 걸린다 — 실측 보스 속도 ≈ 115 × 1.08.
+ *   §5 66     보스 추격 바닥 `BOSS_CHASE` 는 상수에 **비**로 걸린다 — 실측 보스 속도 ≈ 115 × 그 계수
+ *              (359 이관: 계수는 1.08 → 0.94 로 바뀌었고, 이 절이 재는 것은 «비로 걸리는가» 다).
  *   §6 세이브 `S.lv.spd` 를 든 구 세이브를 **실제로 로드**해도 에러 0 · 속도 불변(88 «보상 없이 소멸»).
  *   §R 되돌림 `get speed()` 만 옛 식(`U.spd.val(lv('spd'))` + UPG 행)으로 되돌린 **소스 사본**에서
  *             §2·§4 가 실제로 빨개진다 — 이게 없으면 «축이 애초에 안 걸려서 초록» 과 구별할 수 없다.
@@ -135,7 +136,15 @@ async function run(page, kind) {
   /* 358 이 «이동» 과 «공격» 을 안 헷갈렸다는 양성항 — 공격 속도 축 셋은 살아 있어야 한다 */
   ok(/rate:'공격 속도'/.test(CODE), "1-ⓑ RELIC_EFF.rate = «공격 속도» 는 살아 있다(이동이 아니다)");
   ok(/\{ k:'rate', n:'공격 속도'/.test(CODE), "1-ⓑ BLESS 3번째 축 = «공격 속도» 는 살아 있다");
-  ok(/const BOSS_CHASE\s*=\s*1\.08/.test(CODE), '1-ⓑ 66 `BOSS_CHASE` 1.08 은 안 건드렸다');
+  /* 359 이관(2026-08-29) — 이 항은 원래 리터럴 `1.08` 을 물었다. 359 가 주인 지시
+     («보스는 플레이어보다 살짝 느리지만 대시 공격») 로 그 값을 **0.94** 로 내리면서 리터럴이 죽었다.
+     358 이 지킨 것은 «값» 이 아니라 **«보스 추격이 플레이어 이속 상수에 «비» 로 걸려 있다» 는 형태**다
+     (§5 가 `stat.speed * BOSS_CHASE` 로 바닥을 역산하는 것도 그 형태를 쓴다). 그래서 형태를 묻는다 —
+     값 자체(1 아래 · 대시가 메운다)는 359 의 게이트 `verify359` §1 이 소유한다.
+     ⚠ 이 항이 사라지면 «358 이 이동 축을 지우면서 보스 추격을 상수에서 떼어 놨다» 를 아무도 안 본다. */
+  ok(/const BOSS_CHASE\s*=\s*[0-9.]+\s*;/.test(CODE) && /Math\.max\(e\.sp,\s*stat\.speed\*BOSS_CHASE\)/.test(CODE),
+    '1-ⓑ 66 보스 추격 바닥은 «플레이어 이속 상수 × BOSS_CHASE» 형태 그대로다(값은 359 몫)',
+    (CODE.match(/const BOSS_CHASE\s*=\s*[0-9.]+/) || ['(못 찾음)'])[0]);
 
   const browser = await launch(chromium);
   const h = await open(browser, SRC);
@@ -254,7 +263,9 @@ async function run(page, kind) {
     if (a.err || b.err) ok(false, '5 보스 상태를 못 만들었다', a.err || b.err);
     else {
       eq('5 플레이어 속도는 보스전에서도 상수', b.pSpeed, SPEED);
-      ok(Math.abs(b.floor - SPEED * 1.08) < 0.2, '5 추격 바닥 = 상수 × 1.08', b.floor + ' px/s');
+      /* 359 이관 — 계수를 소스에서 읽어 «상수 × 계수» 를 검산한다(옛 코드는 1.08 을 박아 뒀다) */
+      const CH = Number((CODE.match(/const BOSS_CHASE\s*=\s*([0-9.]+)/) || [])[1]);
+      ok(CH > 0 && Math.abs(b.floor - SPEED * CH) < 0.2, `5 추격 바닥 = 상수 × ${CH}`, b.floor + ' px/s');
       ok(b.baseSp < b.floor, '5 이 스테이지의 보스 기본 속도는 바닥보다 느리다 = 바닥이 실제로 걸린다',
         `기본 ${b.baseSp} < 바닥 ${b.floor}`);
       const ratio = b.avg / Math.max(1, a.avg);
