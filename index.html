@@ -28587,7 +28587,13 @@ function fxFly(from, cur, n){
     el.innerHTML = curIc(C.cur, C.ics);          /* 125 — 이모지 대신 CUR_ICON 이미지 1장 */
     el.style.fontSize = C.fs + 'px';
     el.style.opacity = '0';
-    L.appendChild(el);
+    /* 41회차 — 전투 발은 아래에서 `t:-i*0.020` 으로 **최대 100ms 늦게** 출발한다. 그동안 노드를
+       DOM 에 넣어 두면 `opacity:0` 인 채로 세어진다 — `fxTick` 이 `if(f.t < 0) continue` 로 건너뛰어
+       인라인 0 이 그대로 남기 때문이다(p58au 실측 앞꼬리 중앙 41 / **최대 92ms**. 40차 2인 공통
+       «gain-8~12 비행 6 → 3» 의 절반이 이것이다 — 표는 6, 그림은 3).
+       → 출발이 늦는 노드는 **출발 시각에** fxTick 이 넣는다(아래 `f.pend`). */
+    const lag = combat ? i*0.020 : 0;
+    if(!lag) L.appendChild(el);
     if(!combat){
       /* ── 93 UI 발 3박자 ───────────────────────────────────────────────
          (a) 퍼짐 0.22s — 출발점에서 부채꼴로 70~135px 튀어나간다(ease-out, scale .6→1.1, 회전 ±20°).
@@ -28914,7 +28920,8 @@ function fxFly(from, cur, n){
            x≈583)보다 왼쪽으로는 절대 안 내려가게 물린다(그 아래로는 클램프가 종단 구간에서
            binding 이 돼 [6] 도착 봉투를 건드린다). */
       cxo:Math.min(i*FX3_MIND, Math.max(0, (FRAME_W - FX3_MBM) - (to.x + 60))),
-      t:-i*0.020, dur:0.24 + Math.random()*0.06, pill, batch, cur, n });
+      t:-lag, dur:0.24 + Math.random()*0.06, pill, batch, cur, n,
+      L, pend:!!lag });                              /* 41회차 — 위 «출발 시각에 넣는다» */
   }
 }
 let fxPunchN = 0;                                      /* 93 — 알약이 튄 횟수(누적) */
@@ -29153,6 +29160,42 @@ function fxPunch(el, soft, beat){
   el.__fxPunchTo = setTimeout(() => { el.__fxPunchTo = 0; el.classList.remove(cls); }, soft ? 190 : 450);
   return true;
 }
+/* ── 41회차(5차 폴리시 라운드 1회차) — `fx*` **공용 퇴장 규약** ───────────────────────────
+   40회차 두 비평가(AB·AC)가 **독립적으로 같은 표**를 만들었다: «정답표에는 있는데 화면에 없는»
+   프레임(gain-8~12 불꽃·+n · quest-4 불꽃 · quest-9/10 체크 · upg-5 플래시). 40차는 원인을
+   «퇴장이 페이드가 아니라 투명한 채 기다리기» 로 **추정**만 하고 라운드를 마감했다.
+   41회차가 `tools/p58au.js`(노드마다 DOM 수명 ↔ 가시 수명을 rAF 로 재는 프로브)로 수치를 냈다 —
+   추정이 맞았고, 원인은 하나다: **제거 시각이 애니메이션 길이와 따로 손으로 적힌 상수**다.
+     수정 전 뒷꼬리(마지막으로 보인 뒤 제거까지, 중앙값)
+       `fx-plus`  291ms(gain) · **486ms**(quest) · 60(upg)   ← 애니 1.08s 인데 제거 1.5s
+       `fx-check` 154ms                                       ← 애니 .70s 인데 제거 .90s
+       `fx-flash` 138ms                                       ← 애니 .34s 인데 제거 .50s
+       `fx-spark` 31~55ms · `fx-fly` 27~34ms
+     = DOM 수명의 **7~40%** 가 «안 보이는데 세어지는» 구간이다. 비평가는 그림을 보고 «없다» 고
+       적고 표는 «있다» 고 적으니, 라운드마다 «하드컷·절벽» 으로 이름만 바꿔 재발했다.
+   → 상수를 **없앤다.** 제거는 그 요소에 실제로 걸린 애니메이션의 끝에서 잰다. 애니 길이를 고치면
+     제거 시각이 따라오므로 둘이 다시 어긋날 수 없다.
+   ⚠ 새 연출 노드에 `setTimeout(() => el.remove(), <상수>)` 를 쓰지 마라 — `fxBye(el)` 를 쓴다.
+     (트랜지션으로 퇴장하는 `fx-lit`·`fx-fly` 는 애니메이션이 아니라 이미 «끝 + 40ms» 로 잰다) */
+const FXBYE_PAD = 40;      /* 애니 끝 뒤 여유(ms) — 마지막 프레임을 그릴 시간. 이 값이 뒷꼬리 상한이다 */
+function fxAnimEnd(el){
+  let ms = 0;
+  try{
+    /* 자손까지 본다 — `fx-check` 는 SVG path 의 `fxDraw` 가 음수 delay 로 따로 돈다. */
+    for(const a of el.getAnimations({ subtree:true })){
+      const ti = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming() : null;
+      if(!ti) continue;
+      const d = (ti.delay || 0) + (ti.activeDuration || 0);
+      if(Number.isFinite(d)) ms = Math.max(ms, d);
+    }
+  }catch(_){}
+  return ms;
+}
+function fxBye(el, life){
+  if(!el) return;
+  const t = (life != null && Number.isFinite(life)) ? life : fxAnimEnd(el);
+  setTimeout(() => { if(el.parentNode) el.remove(); }, Math.max(0, t) + FXBYE_PAD);
+}
 function fxPlus(cur, n, combat){
   /* 77 — 전투 발 묶음의 +n 은 #fxlc 에(팝업 아래). UI 발은 종전대로 #fxl. */
   const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
@@ -29194,7 +29237,9 @@ function fxPlus(cur, n, combat){
     const half = el.offsetWidth / 2, lo = half + 20, hi = FRAME_W - half - 20;
     if(hi > lo) el.style.left = Math.max(lo, Math.min(hi, parseFloat(el.style.left))) + 'px';
   }
-  setTimeout(() => el.remove(), combat ? 840 : 1500);
+  /* 41회차 — 종전 `combat ? 840 : 1500`. 애니는 .6s / 1.08s 라 **240ms · 420ms** 를 투명한 채
+     남아 있었다(p58au 실측 뒷꼬리 291 · 486ms — 40차 «quest-15/16/17 +n 1 → 0» 의 정체). */
+  fxBye(el);
 }
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
@@ -29288,16 +29333,37 @@ function fxBurst(t, col, n){
     /* 32회차 — 점 대상의 세로도 프레임 안으로(위 PB_M 주석의 비대칭 해소). 원점을 이미 들여
        놓았으므로 이 클램프는 통상 binding 이 아니다 — 프레임보다 큰 화면비에서만 걸린다. */
     const by0 = r ? r.y : 20, by1 = r ? r.y + r.h : frameH - 20;
-    const sx = clamp(p.x + Math.cos(a)*rx*jt, bx0, bx1);
-    const sy = clamp(p.y + Math.sin(a)*ry*jt, by0, by1);
-    const ex = clamp(sx + (r ? Math.cos(a)*rx*FXB_K : Math.cos(a)*d), bx0, bx1);
-    const ey = clamp(sy + (r ? Math.sin(a)*ry*FXB_K : Math.sin(a)*d), by0, by1);
+    /* ⚑ 41회차 — 40차 **2인 공통ㅈ** «버스트가 quest·upg 에서 반경 확장 0% + 동시 전멸»
+       (AB «링 bbox 405–676×1561–1691(2ms) → 407–679×1561–1689(192ms) = **±0%**» ·
+        AC «271×132 → 250×130 = **±2%**»). 두 사람이 «퍼지지 않는다» 를 각각 다른 자로 재서 같은
+       0 을 냈고, 라운드마다 «링이 아니라 판때기» 로 이름을 바꿔 되돌아오던 지적의 뿌리다.
+       원인은 이징도 수명도 아니라 **28회차의 가둠이 시작점과 끝점을 같은 상자에 물린 것**이다:
+       탄생 타원 반축이 `반폭 + FXB_M` 이라 이미 bbox 밖이고, 그것을 bbox 로 clamp 하면 시작점이
+       **테두리 위**에 앉는다. 끝점도 같은 상자로 clamp 하니 그 축의 이동이 **정확히 0** 이 된다
+       (퀘스트 버튼 197×119 검산: 시작 x = min(98.5+6, 98.5) = 98.5, 끝 x = min(98.5+20.9, 98.5)
+        = 98.5 → Δ0. 세로도 같다). 28회차는 «밖으로 새는 것» 을 닫으려던 것이고 실제로 닫혔지만,
+       같이 닫힌 것이 «퍼짐» 이었다.
+       → **끝점을 먼저 가두고, 시작점을 그 끝점에서 중심 쪽으로 FXB_K 만큼 당긴다.**
+         · 가둠 상자(bx0..bx1 / by0..by1)는 **한 픽셀도 안 바뀐다** — 28회차의 «스필 ≤ sz/2» 도,
+           21회차의 «대상 종횡비를 유지하는 타원» 도 끝점이 그대로라 그대로 지켜진다.
+         · 이동은 «중심에서 끝점까지 거리 × FXB_K» 라 **어느 축에서도 0 이 아니다**
+           (링 반경 0.80 → 1.00 = **+25%**). FXB_K 가 처음 의도한 «반축 × 0.20» 과 같은 양이다.
+         · 시작점이 테두리보다 20% 안쪽으로 들어오지만, 잉크가 라벨에 닿는지는 21회차와 같은
+           산수로 검산했다(퀘스트 버튼: 잉크 안쪽 끝 61.8px vs 라벨 반폭 63px — 최대 각도에서만
+           1.2px 스침. 21회차 이전의 «10개 중 7개가 글자 위» 와는 다른 크기다).
+       ⚠ 좌표(점) 대상은 종전 그대로다 — 반경 22 원에서 80~150px 산포라 원래 확장이 있다. */
+    const sx0 = clamp(p.x + Math.cos(a)*rx*jt, bx0, bx1);   /* 종전 «시작점» = 이제 요소 대상의 «끝점» */
+    const sy0 = clamp(p.y + Math.sin(a)*ry*jt, by0, by1);
+    const ex = r ? sx0 : clamp(sx0 + Math.cos(a)*d, bx0, bx1);
+    const ey = r ? sy0 : clamp(sy0 + Math.sin(a)*d, by0, by1);
+    const sx = r ? p.x + (ex - p.x)*(1 - FXB_K) : sx0;
+    const sy = r ? p.y + (ey - p.y)*(1 - FXB_K) : sy0;
     el.style.left = sx + 'px';
     el.style.top  = sy + 'px';
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
     el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
     L.appendChild(el);
-    setTimeout(() => el.remove(), 300);              /* 21회차 — 수명 .26s + 여유(종전 620) */
+    fxBye(el);                                       /* 21회차 수명 .26s → 41회차 공용 퇴장 규약(=300ms, 값 불변) */
   }
 }
 function fxFlash(el){
@@ -29309,7 +29375,9 @@ function fxFlash(el){
   d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
   L.appendChild(d);
-  setTimeout(() => d.remove(), 500);                  /* 애니메이션(.44s)이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
+  /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
+     500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
+  fxBye(d);                                           /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
 }
 /* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
    fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */
@@ -29436,7 +29504,9 @@ function fxDelta(el, txt){
   d.style.top  = (r.y + r.h + (trCv ? 4 : 20) - 80) + 'px';
   d.textContent = txt;
   L.appendChild(d);
-  setTimeout(() => d.remove(), 660);
+  /* 41회차 — 애니 `.fx-delta` 는 .62s 다. 660 고정은 40ms 여유라 이미 규약과 같은 값이지만,
+     상수로 남겨 두면 다음에 길이를 고칠 때 또 어긋난다 — 공용 규약으로 묶는다. */
+  fxBye(d);
   /* 26회차 — 24회차의 `.fx-hush`(그 아래 두 줄을 흐리게) 를 **뗐다**. 겹침이 사라졌으므로
      필요가 없고, 두 사람이 이 장치 자체를 «라벨을 지웠다» 로 감점했다(위 CSS 주석). */
   /* 21회차 — 20회차 AG #6 · AH #4 (19회차부터 3라운드 연속, 2인 공통):
@@ -29651,7 +29721,9 @@ function fxCheck(el){
     + ' stroke-linecap="round" stroke-linejoin="round" pathLength="100"'
     + ' style="stroke-dasharray:100;stroke-dashoffset:100;animation:fxDraw .18s ease-out -0.08s forwards"/></svg>';
   L.appendChild(d);
-  setTimeout(() => d.remove(), 900);
+  /* 41회차 — 애니 `fxCheckIn` 은 .7s 인데 제거가 900 이라 **200ms** 를 투명한 채 남겼다
+     (p58au 실측 뒷꼬리 154ms — 40차 «quest-9/10 체크 1 → 0» 의 정체). */
+  fxBye(d);
 }
 
 /* ── 「수령한 행만 남긴다」 (11회차 — 10회차 보류 사유 1·2의 처방) ──
@@ -29835,6 +29907,9 @@ function fxTick(dt){
     const f = fxFlies[i];
     if(f.ui) f.t = (now - f.st)/1000; else f.t += dt;
     if(f.t < 0) continue;
+    /* 41회차 — 출발이 늦는 노드는 «여기서» 처음 DOM 에 들어간다(fxFly 의 `lag` 주석).
+       투명한 채 세어지던 구간이 사라진다. */
+    if(f.pend){ f.pend = false; if(f.L) f.L.appendChild(f.el); }
     const p = f.ui ? f.t / f.arr : f.t / f.dur;
     if(p >= 1 || !f.el.isConnected){
       fxFlies.splice(i, 1);
