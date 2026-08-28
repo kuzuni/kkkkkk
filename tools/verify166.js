@@ -30,9 +30,33 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   const src = fs.readFileSync(path.resolve(__dirname, '..', 'index.html'), 'utf8');
   const code = src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
-  ok('src `class="dot"` 렌더 10곳 (166 이전 11곳 — 배수 탭 1곳 제거)',
-    (code.match(/class="dot"/g) || []).length === 10,
-    (code.match(/class="dot"/g) || []).length + '곳');
+  /* 280 — 옛 「렌더 10곳」 리터럴이 굳어 빨간 채 방치됐다(실측 11곳). 늘어난 1곳은 **탑 카드**
+     (`renderTowerPage()` — 209 가 신설하고 210 이 둘로 늘렸다)이고 조건부 렌더라 성질은 안 깨졌다.
+     (280 등재문의 «던전 서브탭 1곳» 은 오기다 — 던전 서브탭 배지는 `class="bdg"` 라 이 정규식에 안 걸린다.)
+     185-① 처방: **숫자를 «자리 목록» 에서 파생**시키고, 지키려는 **성질**을 직접 단언한다.
+     자리는 두 갈래뿐이다 —
+       ⓐ 정적 마크업: 도감 탭 `#collTabs .cltab` 칸마다 1개. 노드는 늘 있고 **CSS 가 껐다 켠다**
+          (`.cltab.alert>s.dot`) → [8] 감사가 호스트 전수로 «조건 클래스 없으면 꺼짐» 을 본다.
+       ⓑ 조건부 렌더: `(<조건> ? '…class="dot"…' : '')` 꼴. 조건이 거짓이면 **노드 자체가 없다.**
+     둘 중 어디에도 안 들어가는 자리 = «조건 없이 늘 찍히는 배지» = 166 이 없앤 바로 그 병이다.
+     그래서 숫자가 다시 늘어도 자리가 ⓐ·ⓑ 중 하나면 통과하고, 상시 렌더가 하나라도 생기면 빨개진다.
+     ⚠ ⓑ 판정은 «한 줄 안에 `? '` … `: ''`» 로 본다(현재 4곳 전부 한 줄이다). 여러 줄로 쪼갠 삼항을
+        새로 쓰면 여기서 «분류 불가» 로 빨개진다 — 그때는 한 줄로 모으거나 이 판정을 넓혀라. */
+  const line = i => code.slice(code.lastIndexOf('\n', i) + 1, code.indexOf('\n', i) < 0 ? code.length : code.indexOf('\n', i));
+  const dotAt = []; { const re = /class="dot"/g; let m; while ((m = re.exec(code))) dotAt.push(m.index); }
+  const clTabN = (code.match(/<div class="cltab" data-ct="/g) || []).length;
+  const dotStatic = dotAt.filter(i => /<div class="cltab" data-ct="/.test(line(i)));
+  const dotCond = dotAt.filter(i => !/<div class="cltab" data-ct="/.test(line(i))
+    && /\?\s*'[^']*class="dot"/.test(line(i)) && /class="dot"[\s\S]*?:\s*''/.test(line(i)));
+  const dotLoose = dotAt.filter(i => !dotStatic.includes(i) && !dotCond.includes(i));
+  ok('src `class="dot"` 정적 자리 = 도감 탭 칸 수 (리터럴이 아니라 `#collTabs .cltab` 에서 파생)',
+    dotStatic.length === clTabN && clTabN > 0,
+    '정적 ' + dotStatic.length + '곳 / `.cltab` ' + clTabN + '칸');
+  ok('src `class="dot"` 나머지는 전부 조건부 렌더 — «조건 없이 상시 점등» 0건 (166 이 지키는 성질)',
+    dotLoose.length === 0,
+    '전체 ' + dotAt.length + '곳 = 정적(도감 탭) ' + dotStatic.length + ' + 조건부 ' + dotCond.length
+      + ' + 분류불가 ' + dotLoose.length
+      + (dotLoose.length ? ' → ' + dotLoose.map(i => line(i).trim().slice(0, 60)).join(' ⁄ ') : ''));
   ok('src 배수 탭 렌더에 dot 0건 (`data-trq=` 와 같은 문자열 안)',
     !/data-trq=[\s\S]{0,80}?class="dot"/.test(code));
   ok('src `.tr-qty .dot` CSS 규칙 0건 (죽은 선택자 금지 — 134 처리와 같음)',
@@ -121,6 +145,14 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   ok('던전 카드 — 입장 횟수 0 이면 꺼진다', dunUsed === 0, 'dot ' + dunUsed);
 
   /* ── [4] 03 던전 «서브탭» 배지 — 마크업만 있고 토글이 없어 상시 점등이던 자리 ──── */
+  /* ⚠ 280 — 여기가 «뜨고 지는 FAIL» 이었다(4회 중 1회 `block / .alert true`). 서브탭 `.alert` 는
+     `renderDunPage()` 가 아니라 **`renderUI()`(0.35초 주기)** 가 건다. (c) 가 입장 횟수를 0 으로
+     만든 직후 «켜짐» 은 (b) 의 «요구치 0 = 입장 가능» 상태에서 굳은 옛 값이고, 다음 틱이 오기
+     전에 읽으면 그대로 잡힌다. 아래 sub1 은 이미 `uiDirty=true; renderUI()` + 대기를 쓰는데
+     sub0 만 아무 대기 없이 읽고 있었다 — 짝을 맞춰 **읽기 전에 강제 갱신**한다.
+     (LESSONS 21-(2) «브라우저 게이트의 가짜 회귀» 와 같은 계열 — 주기 렌더에 기대지 마라) */
+  await ev(() => { uiDirty = true; renderUI(); });
+  await wait(500);
   const sub0 = await ev(() => {
     const t = document.querySelector('#dunSub [data-dsub="dun"]');
     return { disp: getComputedStyle(t.querySelector('.bdg')).display, alert: t.classList.contains('alert') };
@@ -168,6 +200,26 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   ok('아레나 — 잠겨 있으면 dot 0', arn.lock === 0, 'dot ' + arn.lock);
   ok('아레나 — 해금 + 전적 0-0 이면 켜짐', arn.fresh === 1, 'dot ' + arn.fresh);
   ok('아레나 — 한 판 하고 나면 꺼진다', arn.played === 0, 'dot ' + arn.played);
+
+  /* ── [6b] 탑 카드(209 신설 · 210 이 «시련·절망» 둘로) — 280 에서 드러난 «감사 밖 자리» ──────
+     [0] 의 옛 리터럴이 10 에서 굳은 이유가 이 자리다: 배지가 하나 늘었는데 **거동을 보는 절이 없어**
+     숫자만 빨개졌다. 166 의 규약(«새 배지를 만들면 감사에 그 호스트를 추가한다») 대로 여기 넣는다.
+     조건은 `cp() >= t.req(towerFloor(t))` 하나뿐 — cp() 는 const 화살표라 스텁이 안 되므로
+     [3] 과 같은 요령으로 **요구치 쪽**을 갈아 끼워 두 상태를 만들고 원래 함수를 복구한다. */
+  await ev(() => { setDunSub('tower'); });
+  await wait(500);
+  const tw = await ev(() => {
+    const q = () => document.querySelectorAll('#dunList .dnc[data-tcard] > .dot').length;
+    const back = TOWERS.map(t => t.req);
+    TOWERS.forEach(t => { t.req = () => Infinity; }); renderDunPage(); const poor = q();
+    TOWERS.forEach(t => { t.req = () => 0; });        renderDunPage(); const rich = q();
+    back.forEach((f, i) => { TOWERS[i].req = f; });   renderDunPage();
+    return { poor, rich, n: TOWERS.length };
+  });
+  ok('탑 카드 — 요구 전투력 미달이면 dot 0 (② 불가능한데 뜨면 안 된다)', tw.poor === 0, 'dot ' + tw.poor);
+  ok('탑 카드 — 요구 충족이면 탑 수만큼 켜진다 (③)', tw.rich === tw.n && tw.n > 0,
+    'dot ' + tw.rich + ' / 탑 ' + tw.n);
+
   await ev(() => { closeDungeon(); });
   await wait(400);
 
@@ -307,14 +359,25 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
   /* 도감 탭 — 특이성을 고친 뒤 «조건»(collTabReady)이 실제로 화면에 반영되는지까지 본다 */
   await ev(() => { if (typeof openColl21 === 'function') openColl21(); });
   await wait(600);
+  /* 280 — 여기도 [0] 과 같은 병이 있었다: 「6칸」이 리터럴이고, `s.dot` 이 없는 칸이 생기면
+     `getComputedStyle(null)` 로 **게이트가 즉사**해 한 줄도 안 찍힌다(228·278 과 같은 계열).
+     ⓐ 칸 수는 **`COLL_TABS` 에서 파생**(마크업과 데이터가 어긋나면 그 자체가 빨개진다) —
+        [0] 의 «정적 dot = `.cltab` 칸 수» 와 물려서 «COLL_TABS → .cltab → s.dot» 사슬이 닫힌다.
+     ⓑ `s.dot` 이 없으면 죽지 말고 `miss` 로 표시해 그 칸만 불일치로 잡는다. */
   const cl = await ev(() => {
     const tabs = [...document.querySelectorAll('#collTabs .cltab')];
-    return tabs.map(t => ({ k: t.dataset.ct, rdy: collTabReady(t.dataset.ct),
-      shown: getComputedStyle(t.querySelector('s.dot')).display !== 'none' }));
+    return { want: COLL_TABS.map(t => t.k), rows: tabs.map(t => {
+      const e = t.querySelector('s.dot');
+      return { k: t.dataset.ct, rdy: collTabReady(t.dataset.ct),
+        miss: !e, shown: !!e && getComputedStyle(e).display !== 'none' };
+    }) };
   });
-  ok('도감 탭 6칸 — 레드닷 = «강화 가능한 세트가 있다» 와 정확히 일치',
-    cl.length === 6 && cl.every(t => t.rdy === t.shown),
-    cl.map(t => t.k + (t.rdy ? '✔' : '✘') + (t.shown ? '●' : '○')).join(' '));
+  ok('도감 탭 ' + cl.want.length + '칸(= `COLL_TABS`) — 레드닷 = «강화 가능한 세트가 있다» 와 정확히 일치',
+    cl.rows.length === cl.want.length
+      && cl.rows.every((t, i) => t.k === cl.want[i])
+      && cl.rows.every(t => !t.miss && t.rdy === t.shown),
+    cl.rows.map(t => t.k + (t.rdy ? '✔' : '✘') + (t.miss ? '✖dot없음' : t.shown ? '●' : '○')).join(' ')
+      + ' / 기대 ' + cl.want.join(' '));
 
   /* ── [9] 콘솔 ───────────────────────────────────────────────────────── */
   ok('콘솔 에러 0건', errs.length === 0, errs.slice(0, 3).join(' | '));
