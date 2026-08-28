@@ -17,6 +17,13 @@
  *   [I] 연출 — 레벨업 순간 토스트(58 fxToast) 1장
  *   [J] 콘솔 에러 0건
  *
+ * ⚠ 334(2026-08-28) — [C] 의 «타이머 표시» 단언은 **34 의 13회차가 알약을 두 노드로 쪼갠 뒤 굳어 있었다**.
+ *    옛 DOM 은 `<s class="tm"><i>⏱ 00:30:00</i></s>` 한 노드, 지금은 `<b class="ck">⏱</b>` + `<i>00:30:00</i>` 다
+ *    (한 노드에 담으면 시계와 숫자의 크기를 따로 못 고친다 — index.html ~11239 주석).
+ *    값은 내내 정상이었고 **표기 «형식» 단언만** 옛 DOM 을 보고 있었다 → 고친 것은 게이트, 제품은 0줄이다
+ *    (319·333 선례: 게이트 부패에 제품을 맞추지 마라). 두 부품을 **각각** 물으므로 어느 쪽이 사라져도 빨개지고,
+ *    무르게 푼 수리가 아님은 같은 자리의 되돌림 시험(C3n)이 못박는다(LESSONS 232-① · 289 계열 경고).
+ *
  * ⚠ addInitScript 는 reload 마다 다시 돈다(34 교훈 5) — 세이브는 «처음 한 번만» 깐다.
  *    autoBuy·spAuto 는 끈다: 유휴 루프가 사이에 레벨을 올려 «배수 비교» 를 오염시킨다(51 교훈 ③).
  * ⚠ 그것만으로는 부족했다 — «켜기 전 / 켠 뒤» 를 **다른 evaluate 로 나눠 재면** 그 사이에 tick 이 돌아
@@ -89,8 +96,12 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
 
     /* 1회차 — Lv1 이므로 종전과 같은 ×1.20 이어야 한다(회귀 방지: 34 게이트 C2/C3 와 같은 값) */
     document.getElementById('blsC_atk').click();
+    /* 334 — 알약은 «시계 `<b class="ck">` + 숫자 `<i>`» 두 부품이다. 한 노드 시절의 합본 형식을
+       묻던 자리라 둘을 **따로** 집는다(`.ck` 가 없으면 `ck: null` 로 나가 그대로 빨개진다). */
+    const tm1 = document.querySelector('#blsC_atk .tm'), ck1 = tm1.querySelector('b.ck');
     const c1 = { atk: mulAtk(), dmg: stat.dmg, lv: S.bless.lv, prog: S.bless.prog,
-                 txt: document.querySelector('#blsC_atk .tm>i').textContent };
+                 ck: ck1 ? ck1.textContent.trim() : null,
+                 txt: tm1.querySelector('i').textContent };
 
     /* 4회 켜면 Lv2 — 그 순간부터 효과가 22% 다 */
     ['hp', 'rate'].forEach(k => document.getElementById('blsC_' + k).click());     /* 경험치 3 */
@@ -105,8 +116,9 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   });
   ok(near(C.c1.atk / C.base.atk, 1.20, 1e-9), 'C1 Lv1 활성 = ×1.20 (34 회귀)', (C.c1.atk / C.base.atk).toFixed(4));
   ok(near(C.c1.dmg / C.base.dmg, 1.20, 1e-9), 'C2 stat.dmg 도 ×1.20', (C.c1.dmg / C.base.dmg).toFixed(4));
-  ok(C.c1.prog === 1 && /^\u23F1 \d\d:\d\d:\d\d$/.test(C.c1.txt), 'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시',
-     C.c1.prog + ' ' + C.c1.txt);
+  ok(C.c1.prog === 1 && C.c1.ck === '\u23F1' && /^\d\d:\d\d:\d\d$/.test(C.c1.txt),
+     'C3 카드 클릭 → 축복 경험치 +1 · 타이머 표시(시계 .ck + 숫자 .tm>i 두 부품)',
+     C.c1.prog + ' ' + C.c1.ck + '|' + C.c1.txt);
   ok(C.c4.lv === 2 && C.c4.prog === 0, 'C4 4회 활성 → Lv2 · 경험치 되감기 0', C.c4.lv + '/' + C.c4.prog);
   ok(near(C.c4.atk / C.base.atk, 1.22, 1e-9), 'C5 Lv2 공격력 = ×1.22', (C.c4.atk / C.base.atk).toFixed(4));
   ok(near(C.c4.hp / C.base.hp, 1.22, 1e-9) && near(C.c4.rate / C.base.rate, 1.22, 1e-9), 'C6 체력·공속도 ×1.22',
@@ -117,6 +129,36 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
      (C.c4.dmg / C.base.dmg).toFixed(4));
   ok(near(C.c6.atk / C.base.atk, 1.30, 1e-9), 'C9 Lv6 공격력 = ×1.30', (C.c6.atk / C.base.atk).toFixed(4));
   ok(near(C.c6.gold / C.base.gold, 1.0), 'C10 1종만 켜면 골드 보너스 없음', (C.c6.gold / C.base.gold).toFixed(4));
+
+  /* ---- [C3n] 되돌림 시험 — 고친 C3 가 «실제로 무언가를 재는가» (334) ----
+     게이트 부패의 가장 쉬운 «고침» 은 빨간 단언을 **무르게** 만드는 것이다(LESSONS 289 계열 경고).
+     그래서 옛 DOM 두 모양을 **일부러 만들어** C3 의 술어가 뒤집히는지 본다 —
+       ⓐ 시계 `<b class="ck">` 를 지운다        → C3 는 빨개져야 한다(시계를 안 보는 단언이면 초록으로 남는다)
+       ⓑ 숫자 `<i>` 에 옛 합본 «⏱ HH:MM:SS» 를 넣는다 → 역시 빨개져야 한다(형식을 안 보는 단언이면 초록)
+     ⓑ 가 초록이면 «두 노드 시절» 과 «한 노드 시절» 을 구별 못 하는 것이라 부패가 그대로 재발한다.
+     DOM 은 손대는 즉시 원복하고 마지막에 `renderBless()` 로 다시 그린다(뒤 절에 흔적을 안 남긴다). */
+  const N3 = await page.evaluate(() => {
+    /* C3 와 **같은 술어**를 그대로 쓴다 — 여기서만 무른 사본을 쓰면 시험이 거짓말을 한다 */
+    const pred = () => {
+      const tm = document.querySelector('#blsC_atk .tm');
+      const ck = tm.querySelector('b.ck'), i = tm.querySelector('i');
+      return !!ck && ck.textContent.trim() === '\u23F1' && /^\d\d:\d\d:\d\d$/.test(i.textContent);
+    };
+    S.bless = { lv: 1, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); renderBless();
+    document.getElementById('blsC_atk').click();
+    const live = pred();
+    const tm = document.querySelector('#blsC_atk .tm');
+    const ck = tm.querySelector('b.ck'), i = tm.querySelector('i'), keep = i.textContent;
+    ck.remove();                                const noClock = pred();
+    tm.insertBefore(ck, i);                     /* 원복 */
+    i.textContent = '\u23F1 ' + keep;           const merged = pred();   /* 한 노드이던 시절의 합본 */
+    i.textContent = keep;                       const back = pred();
+    renderBless();
+    return { live, noClock, merged, back, keep };
+  });
+  ok(N3.live && !N3.noClock && !N3.merged && N3.back,
+     'C3n 되돌림 시험 — 시계 삭제·옛 합본 표기 둘 다 C3 를 빨갛게 만든다',
+     '산 DOM ' + N3.live + ' · 시계없음 ' + N3.noClock + ' · 합본 ' + N3.merged + ' · 원복 ' + N3.back);
 
   /* ---- [D] 지속시간 곡선은 그대로 (레벨업은 그 활성화부터 즉시) ---- */
   const D = await page.evaluate(() => {
