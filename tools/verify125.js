@@ -88,6 +88,21 @@ const ALLOW = [
   '사용할 수 없는 코드입니다',                /* 쿠폰 — 잘못된 코드 토스트 */
   '이미 사용한 코드입니다',                   /* 쿠폰 — 중복 사용 토스트 */
   'fmt(CF_CODES[code])',                      /* 쿠폰 — 획득 토스트(지급물 다이아는 curIc('dia')) */
+  /* ── 작업 370 판정: 🎫 «패스» 는 화폐가 아니다 (289 판정의 같은 줄기) ──────────────
+     302 가 35 패스에 [일괄 받기] 를 붙이면서 그 토스트가 새로 생겼고, 목록이 안 따라와 A1 이 빨개졌다.
+     **A1 이 새 줄에 빨개진 것 자체는 부패가 아니라 게이트가 제 일을 한 것**이다 — 판정만 하면 된다.
+     `tools/probe370.js` 로 찍힌 값이 판정의 근거다:
+       ⓐ 그 토스트의 **재화는 이미 전부 `curIc()` 이미지**로 나간다
+          (`gold:cur-gold.svg · dia:cur-dia.svg · relic:cur-relic.svg` — 125 규약 준수) ·
+          남은 이모지는 머리글자 **🎫 ×1** 뿐이라 이 글리프는 «화폐 표시» 자리가 아니다.
+       ⓑ 🎫 는 이 게임에서 **«패스» 기능의 글리프**다 — ▦ 메뉴 «패스» 칸(`data-mn="pass"`, 실측 아이콘 "🎫" ·
+          라벨 "패스")을 A1 이 **이미 위에서 면제**하고 있다. 같은 기능의 토스트 머리에 같은 글리프가 온 것이다.
+       ⓒ 등재문 처방 ⓐ(«문구를 `curIc('ticket…')` 계열로 갈아 끼운다»)는 **오표기가 된다** — 그 5종은
+          전부 `cur-ticket-*.svg` = **던전 입장권** 자산이고(H1·H2 가 던전 권종으로 못 박는다),
+          패스 토스트에 붙이면 124·151 «이용권» 에서 289 가, 쿠폰에서 211 이 이미 기각한 그 오표기다.
+     ⚠ 항목에 **글리프까지 적어 둔다** — «일괄 받기» 만 적으면 머리글자가 🪙 로 바뀌어도 초록이 된다.
+        §R2 가 그 무름을 되돌림 시험으로 못박는다. */
+  "'\u{1F3AB} <b>일괄 받기</b> '",             /* 302 패스 [일괄 받기] 토스트 머리글자(재화 아님) */
 ];
 
 let pass = 0, fail = 0;
@@ -102,16 +117,13 @@ function stripComments(src) {
             .replace(/<!--[\s\S]*?-->/g, m => m.replace(/[^\n]/g, ' '));
 }
 
-(async () => {
-  /* ---- [A] 소스 스캔 ----
-     `BARE` = 주석을 «같은 길이의 공백» 으로 지운 소스. 길이가 원본과 1:1 이라 문자 오프셋·줄 번호가
-     그대로 통한다 — [A] 와 [B] 가 같은 전처리를 공유하게 하려고 한 번만 만들어 둔다(작업 145). */
-  const BARE = stripComments(SRC);
-  const lines = BARE.split('\n');
+/* A1·A2·A3 의 스캐너 본체(작업 370 이 함수로 뺐다). **§R 되돌림 시험이 이것을 그대로 다시 부른다** —
+   시험이 자기만의 사본을 들고 있으면 «게이트는 무른데 시험만 초록» 이 되기 때문이다(334 교훈). */
+function scanEmoji(bare) {
   const leftovers = [];
   let artHits = 0;                      /* 규칙(ART_SLOT)으로 빠진 줄 */
   const allowUse = ALLOW.map(() => 0);  /* 허용 목록 항목별 적중 수 — A2·A3 이 같이 읽는다 */
-  lines.forEach((ln, i) => {
+  bare.split('\n').forEach((ln, i) => {
     if (!CUR_EMOJI.some(e => ln.indexOf(e) >= 0)) return;
     /* ① 아트 자리(ic:/art: 한 글리프)를 지운 뒤에도 이모지가 남는지로 본다 */
     if (!CUR_EMOJI.some(e => ln.replace(ART_SLOT, '').indexOf(e) >= 0)) { artHits++; return; }
@@ -120,6 +132,15 @@ function stripComments(src) {
     if (k >= 0) { allowUse[k]++; return; }
     leftovers.push((i + 1) + ': ' + ln.trim().slice(0, 80));
   });
+  return { leftovers, artHits, allowUse, dead: ALLOW.filter((a, k) => allowUse[k] === 0) };
+}
+
+(async () => {
+  /* ---- [A] 소스 스캔 ----
+     `BARE` = 주석을 «같은 길이의 공백» 으로 지운 소스. 길이가 원본과 1:1 이라 문자 오프셋·줄 번호가
+     그대로 통한다 — [A] 와 [B] 가 같은 전처리를 공유하게 하려고 한 번만 만들어 둔다(작업 145). */
+  const BARE = stripComments(SRC);
+  const { leftovers, artHits, allowUse } = scanEmoji(BARE);
   ok(leftovers.length === 0, 'A1 소스에 남은 화폐 이모지 0건(주석·비재화 제외)',
      leftovers.length ? leftovers.slice(0, 6).join(' | ') : '0건 (아트 자리 ' + artHits + '줄 · 허용 목록 '
        + allowUse.reduce((a, b) => a + b, 0) + '줄)');
@@ -134,6 +155,39 @@ function stripComments(src) {
   const dead = ALLOW.filter((a, k) => allowUse[k] === 0);
   ok(dead.length === 0, 'A3 허용 목록에 죽은 항목 0건(어긋난 채 굳지 않았다)',
      dead.length ? dead.map(a => JSON.stringify(a)).join(' | ') : ALLOW.length + '항목 전부 적중');
+
+  /* ---- §R 되돌림 시험(작업 370 신설) ----
+     A1 은 «전 화면에서 화폐 이모지를 걷어냈다»(125 본체)를 지키는 **유일한 자**다. 그래서 허용 목록에
+     한 줄을 더할 때마다 «이 항목이 무엇을 여전히 잡는가» 를 같이 못박아야 한다 — 안 그러면 목록이
+     한 줄씩 자라다가 어느 날 아무것도 안 잡는 초록이 된다(334 «무르게 푼 수리» 와 같은 함정).
+     시험은 **소스를 고치지 않는다** — 메모리 위에서 변조본을 만들어 A1 과 **같은 `scanEmoji()`** 에 먹인다. */
+  const R = (name, mutate, want) => {
+    const r = scanEmoji(mutate(BARE));
+    const got = r.leftovers.filter(l => /RSEED|일괄 받기|이용권|코드입니다/.test(l));
+    ok(want(r, got), name, (r.leftovers.length ? r.leftovers.length + '건 빨강' : '0건 = 초록')
+       + (got.length ? ' · ' + got[0].slice(0, 72) : '')
+       + (r.dead.length ? ' · 죽은 항목 ' + r.dead.map(a => JSON.stringify(a)).join(',') : ''));
+  };
+  /* R1 — 화폐 이모지를 «한 개 도로 심으면» 빨개지는가(등재문이 요구한 짝). 머리글자 자리라도 예외 없다:
+         🪙 는 `cur-gold.svg` 가 있는 진짜 화폐라 토스트 머리에 와도 125 위반이다. */
+  R('§R1 화폐 이모지(🪙)를 토스트에 도로 심으면 A1 이 빨개진다',
+    b => b + "\n  notify('\u{1FA99} <b>골드</b> +' + n);   /*RSEED*/\n",
+    (r, got) => got.length === 1);
+  /* R2 — **370 항목이 «일괄 받기» 라는 말이 아니라 «🎫» 라는 글리프에 걸려 있는가.**
+         머리글자만 🪙 로 바꾼 줄은 여전히 빨개져야 한다. 여기가 초록이면 그 항목은 무르게 푼 것이다. */
+  R('§R2 370 항목은 글리프까지 못 박는다(머리글자를 🪙 로 바꾸면 빨강)',
+    b => b.replace("'\u{1F3AB} <b>일괄 받기</b> '", "'\u{1FA99} <b>일괄 받기</b> '"),
+    (r, got) => got.length === 1);
+  /* R3 — 항목은 **그 줄에만** 듣는다. 같은 문구를 쓰더라도 다른 화폐 이모지가 함께 있는 별개의 줄은 잡힌다. */
+  R('§R3 허용은 그 줄에만 듣는다(같은 문구 + 💎 인 새 줄은 빨강)',
+    b => b + "\n  notify('\u{1F48E} <b>일괄 받기</b> ' + n);   /*RSEED*/\n",
+    (r, got) => got.length === 1);
+  /* R4 — 제품에서 그 줄이 사라지면 **A3 이 먼저** 잡는다(항목이 조용히 죽은 채 굳지 않는다). */
+  R('§R4 그 줄이 사라지면 A3 이 죽은 항목으로 잡는다',
+    b => b.replace("notify('\u{1F3AB} <b>일괄 받기</b> '", "notify('<b>일괄 받기</b> '"),
+    r => r.dead.length === 1 && r.dead[0].indexOf('일괄 받기') >= 0);
+  /* R5 — 음성 대조: 아무것도 안 건드리면 초록이어야 한다(시험 자체가 항상 빨간 게 아님을 못박는다). */
+  R('§R5 변조가 없으면 초록(시험이 «항상 빨강» 이 아니다)', b => b, r => r.leftovers.length === 0);
 
   /* ---- [B] 단일 출처 ----
      A1 과 **같은 `BARE`(주석 제거) 위에서** 센다. 원본을 훑으면 «주석에 경로를 적었다» 를
