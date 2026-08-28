@@ -329,8 +329,35 @@ const tap = (page, sel) => page.evaluate((s) => {
         'AVATARS.filter(a => !S.avatars[a.id]).length > 0 && S.dia > 1e5'), true);
       eq('영웅 탭 레드닷 안 켜짐(코스튬 항 폐기)',
         await page.$eval('.tab[data-t="hero"]', (e) => e.classList.contains('alert')), false);
+      /* 347(2026-08-28) — 여기가 «83/84» 로 빨갛던 자리다. **제품 0줄** — 게이트가 낡은 것이었다.
+         329 가 «재화 탭 광고 보고 받기» 를 같은 칸에 OR 로 더해(`sumAnyReady() || coinAdAnyReady()`)
+         166 축만 끄는 위 준비로는 칸이 안 꺼진다. `tools/probe347.js` 가 두 갈래를 재현으로 갈랐다:
+         코스튬을 «전부 미보유 ↔ 전부 보유 ↔ 다이아 0» 으로 흔들어도 이 닷은 **한 칸도 안 움직인다**
+         (⇒ 제품이 샌 것이 아니다). 켜는 주인은 329 축이고, 그것을 끄면 닷도 같이 꺼진다.
+         ⚠ 328~330 의 이관 교훈 — 축을 하나 더 꺼서 **초록으로 되돌리는 것만으로 끝내면 안 된다**:
+         그러면 «329 가 통째로 사라져도 초록인 게이트» 가 된다. 그래서 순서를 셋으로 나눈다.
+         ① 지금 켜져 있고 그 주인이 329 다(양성항 — 329 가 사라지면 여기가 빨개진다) */
+      eq('329 축이 이 칸을 켜고 있다 — coinAdAnyReady()', await S(page, 'coinAdAnyReady()'), true);
+      eq('상점 탭 레드닷 켜짐(광고 잔여가 남아 있는 동안)',
+        await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), true);
+      /* ② 329 축까지 꺼서 **코스튬 축만** 남긴다 — 이 게이트가 원래 묻던 물음 그대로 */
+      await page.evaluate((ids) => {
+        S.daily.adBuy = S.daily.adBuy || {};
+        ids.forEach((id) => { S.daily.adBuy[id] = 0; });
+        uiDirty = true; renderUI();
+      }, await S(page, 'COIN_ADS.map(a => a.id)'));
+      await page.waitForTimeout(300);
+      eq('광고 잔여 0(329 축 끔)', await S(page, 'coinAdAnyReady()'), false);
       eq('상점 탭 레드닷 없음(코스튬으로는 안 켜진다)',
         await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), false);
+      /* ③ 되돌림 시험 — 코스튬을 49종 전부 쥐여 줘도 여전히 안 켜진다(321 «레드닷 = 지금 누를 수 있다»).
+         ②만 있으면 «두 축을 껐으니 꺼진 것» 과 «코스튬이 안 켠다» 를 구별 못 한다. */
+      await page.evaluate(() => { AVATARS.forEach((a) => { S.avatars[a.id] = 1; }); uiDirty = true; renderUI(); });
+      await page.waitForTimeout(300);
+      eq('코스튬 49종 전부 보유로 뒤집어도 안 켜짐',
+        await page.$eval('.tab[data-t="shop"]', (e) => e.classList.contains('alert')), false);
+      await page.evaluate(() => { S.avatars = { av0: 1 }; uiDirty = true; renderUI(); });
+      await page.waitForTimeout(300);
       /* 승급 조건을 채우면 사이드 «승급» 아이콘이 그 자리를 대신 알린다 */
       await page.evaluate(() => {
         const nx = nextRank(); S.best = Math.max(S.best, nx.stage); S.stage = S.best;
