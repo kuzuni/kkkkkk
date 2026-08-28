@@ -235,6 +235,22 @@ const GRAY_U   = 'rgb(169, 169, 169)';   /* .sk-act .sk-e/.sk-u 회색(#A9A9A9) 
   ok(!(await page.$('#bSk .stab[data-upk="cos"]')),
     '[서브탭 코스튬] 배지 대상이 아니다 — 일괄 강화가 없는 칸엔 `data-upk` 자체가 없다');
 
+  /* (4) 276 — «세 자리 동시 점등». 202 는 ① 탭 계열까지만 켰고, 주인 실플레이에서
+         «장비 탭 한 곳에만 뜬다» 로 돌아왔다(등재 276). 지시는 세 자리 전부다:
+         ① 탭(탭바 «영웅» + 서브탭) ② 그 항목의 카드·진입 버튼 ③ [일괄 강화] 버튼 자체.
+         여기서는 202 의 조건이 그 셋에 «같이» 실려 있는지만 못 박는다(전수 일치·소등은 verify276). */
+  const trio = await page.evaluate(() => ({
+    tab:  document.querySelector('.tab[data-t="hero"]').classList.contains('alert'),
+    stab: window.__dot('sk').painted,
+    card: [...document.querySelectorAll('#bSk .sk-card.alert>.updot')]
+            .filter(e => e.getBoundingClientRect().width > 0).length,
+    btn:  (() => { const e = document.querySelector('#bSk [data-skup]>.updot');
+                   return !!e && e.getBoundingClientRect().width > 0; })(),
+  }));
+  ok(trio.tab && trio.stab >= 1 && trio.card >= 1 && trio.btn,
+    '[276 세 자리 동시] ① 탭바 영웅+서브탭 · ② 카드 · ③ [일괄 강화] 버튼이 한 상태에서 같이 켜진다 ('
+    + 'tab=' + trio.tab + ' stab=' + trio.stab + ' card=' + trio.card + ' btn=' + trio.btn + ')');
+
   /* ================= §4 즉시 소등 ================= */
   console.log('\n§4 즉시 소등 — 일괄 강화를 누르면 0.35s 틱을 기다리지 않는다');
   /* 스킬만 가능하게 만들고, 누른 «직후»(rAF 한 틱) 를 잰다 */

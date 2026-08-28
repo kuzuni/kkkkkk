@@ -236,6 +236,74 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
         : a.n2 + '개 · 꺼짐 위반 ' + a.offBad + ' · 켜짐 위반 ' + a.onBad + ' (' + a.off + ' → ' + a.on + ')');
   });
 
+  /* ── 276 — «일괄 강화 가능» 레드닷의 나머지 두 자리(카드·진입 버튼 · [일괄 강화] 버튼 자체) ──
+     202 §7 이 남긴 규약 그대로다: **배지를 새로 달았으면 이 감사에 그 호스트를 추가한다.**
+     새 부품은 `<s class="updot">` 이고 호스트에 `.alert` 를 건다. 이 부품은 «조건이 참일 때만»
+     노드로 찍히므로(카드마다 달아 두고 숨기는 방식이 아니다) 감사 전에 재료를 채워 넣어야
+     노드가 생긴다 — 재고는 감사 직후 원상 복구한다(뒤 도감 절이 이 상태를 안 물려받게).
+     05 `#wpnw` 와 07·26 시트는 ID 급으로 `<s>` 를 켜 두는 화면이라 **바로 이 감사의 재발 후보**다. */
+  const ownSnap = await ev(() => JSON.stringify(S.own));
+  await ev(() => {
+    [EQUIPS, SKILLS, PETS].forEach(L => L.forEach(it => { S.own[it.id] = { l: 1, n: 1e12 }; }));
+    markDirty(); uiDirty = true; renderUI();
+    goTab('hero'); heroSubGo('eq'); renderUI(); openWeapon(null, 'weapon');
+  });
+  await wait(700);
+  await ev(() => { closeWeapon(); heroSubGo('sk'); renderUI(); });
+  await wait(700);
+  await ev(() => { heroSubGo('pet'); renderUI(); });
+  await wait(700);
+  const audit276 = await ev(() => {
+    const SITES = [
+      { n: '.eqsl>.updot (06 부위 슬롯 = 05 진입 버튼)', host: '#eqCards .eqsl' },
+      { n: '.wgc>.updot (05 무기 격자 카드)',            host: '#wpnGrid .wgc' },
+      { n: '.sk-card>.updot (07·26 카드)',               host: ':is(#bSk,#bPet) .sk-card' },
+      { n: '.sk-btn>.updot (07·26 [일괄 강화])',         host: ':is(#bSk,#bPet) .sk-btn' },
+      { n: '#wpnBtnUp>.updot (05 [일괄 강화])',          host: '#wpnBtnUp' },
+    ];
+    return SITES.map(s => {
+      const hosts = [...document.querySelectorAll(s.host)].filter(h => h.querySelector('.updot'));
+      if (!hosts.length) return { n: s.n, missing: true };
+      let offBad = 0, onBad = 0, off = '', on = '';
+      hosts.forEach(h => {
+        const e = h.querySelector('.updot'), had = h.classList.contains('alert');
+        h.classList.remove('alert');
+        off = getComputedStyle(e).display; if (off !== 'none') offBad++;
+        h.classList.add('alert');
+        on = getComputedStyle(e).display; if (on === 'none') onBad++;
+        if (!had) h.classList.remove('alert');
+      });
+      return { n: s.n, n2: hosts.length, offBad, onBad, off, on };
+    });
+  });
+  audit276.forEach(a => {
+    ok('배지 «' + a.n + '» — 조건 클래스 없으면 꺼짐 / 있으면 켜짐 (호스트 전수)',
+      !a.missing && a.offBad === 0 && a.onBad === 0,
+      a.missing ? '노드 없음'
+        : a.n2 + '개 · 꺼짐 위반 ' + a.offBad + ' · 켜짐 위반 ' + a.onBad + ' (' + a.off + ' → ' + a.on + ')');
+  });
+  /* 276 «세 자리 동시 점등» — 한 상태에서 ① 탭 ② 카드 ③ 버튼이 같이 켜져 있는가.
+     ⚠ 바로 위 감사가 호스트마다 `.alert` 를 뗐다 붙였다 한다 = 60 쥬시 `jzDotIn`(.3s, scale 0→1)이
+     **다시 시작한다.** 기다리지 않고 재면 폭이 0 으로 잡혀 «안 켜졌다» 로 오독한다(202 §3 과 같은 함정). */
+  await wait(700);
+  const trio276 = await ev(() => {
+    const vis = sel => [...document.querySelectorAll(sel)]
+      .filter(e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0).length;
+    return {
+      tab:  document.querySelector('.tab[data-t="hero"]').classList.contains('alert'),
+      stab: vis(':is(#bSk,#bPet,#bCos) .stab[data-upk="pet"] .bdg'),
+      card: vis('#bPet .sk-card.alert>.updot'),
+      btn:  vis('#bPet [data-ptup]>.updot'),
+    };
+  });
+  ok('276 «세 자리 동시 점등» — ① 탭바 영웅+서브탭 · ② 카드 · ③ [일괄 강화] 버튼이 같이 켜진다',
+    trio276.tab && trio276.stab >= 1 && trio276.card >= 1 && trio276.btn >= 1,
+    'tab=' + trio276.tab + ' stab=' + trio276.stab + ' card=' + trio276.card + ' btn=' + trio276.btn);
+  /* 재고 원상 복구 — 뒤 절(도감)이 이 감사용 상태를 물려받지 않게 한다 */
+  /* ⚠ 이 파일의 `ev()` 는 인자를 안 넘긴다(fn 하나만) — 스냅샷은 page.evaluate 로 직접 넘긴다 */
+  await page.evaluate(snap => { S.own = JSON.parse(snap); markDirty(); uiDirty = true; renderUI(); }, ownSnap);
+  await wait(400);
+
   /* 도감 탭 — 특이성을 고친 뒤 «조건»(collTabReady)이 실제로 화면에 반영되는지까지 본다 */
   await ev(() => { if (typeof openColl21 === 'function') openColl21(); });
   await wait(600);

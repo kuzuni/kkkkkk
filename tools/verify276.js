@@ -93,6 +93,63 @@ const HELPERS = () => {
   ok(await seen('#bPet .sk-card.alert>.updot'), '[26 펫 카드] 강화 가능한 카드에 레드닷 — 보인다');
   ok(await seen('#bPet [data-ptup]>.updot'),    '[26 [일괄 강화] 버튼] 버튼 자체에 레드닷 — 보인다');
 
+  /* ── §1b 잘림·겹침 — 배지가 «잘리는 상자» 안에 온전히 들어가고, 이미 있는 것과 안 겹친다 ──
+     실측으로 셋 다 부딪혔다: `.sk-card` 우상단은 272 해제 뱃지(`.sk-eq`) 자리 · `.wgc` 는 자기
+     `overflow:hidden` 이라 바깥에 두면 잘린다 · `.eqsl` 좌상단 바깥은 부위 뱃지(`.eqbd`) 자리. */
+  console.log('\n§1b 잘림·겹침 — 잘리는 상자 안에 온전히 · 기존 요소와 0 겹침');
+  await page.evaluate(() => {
+    window.__clip = sel => {
+      const e = document.querySelector(sel);
+      if (!e) return 'NONODE';
+      const r = e.getBoundingClientRect();
+      let n = e.parentElement;
+      while (n && n !== document.body) {
+        const s = getComputedStyle(n);
+        if (s.overflow !== 'visible' && s.overflowX !== 'visible') {
+          const c = n.getBoundingClientRect();
+          /* 잘리는 첫 조상 안에 배지 상자가 온전히 들어가는가(반올림 1px 여유) */
+          return (r.left >= c.left - 1 && r.right <= c.right + 1
+               && r.top >= c.top - 1 && r.bottom <= c.bottom + 1)
+            ? 'ok' : 'CLIPPED by ' + (n.id ? '#' + n.id : '.' + String(n.className).split(' ')[0]);
+        }
+        n = n.parentElement;
+      }
+      return 'ok';
+    };
+    window.__hit = (a, b) => {
+      const x = document.querySelector(a), y = document.querySelector(b);
+      if (!x || !y) return 'NONODE';
+      const p = x.getBoundingClientRect(), q = y.getBoundingClientRect();
+      return (p.right <= q.left || q.right <= p.left || p.bottom <= q.top || q.bottom <= p.top) ? 'ok' : 'OVERLAP';
+    };
+  });
+  for (const [n, sel] of [
+    ['06 부위 슬롯', '#eqCards .eqsl.alert>.updot'],
+    ['07 스킬 카드', '#bSk .sk-card.alert>.updot'],
+    ['07 [일괄 강화]', '#bSk [data-skup]>.updot'],
+    ['26 펫 카드', '#bPet .sk-card.alert>.updot'],
+  ]) ok((await page.evaluate(s => window.__clip(s), sel)) === 'ok',
+        '[' + n + '] 잘리는 조상 안에 온전히 들어간다', await page.evaluate(s => window.__clip(s), sel));
+
+  await page.evaluate(() => { heroSubGo('eq'); openWeapon(null, 'weapon'); });
+  await page.waitForTimeout(600);
+  for (const [n, sel] of [
+    ['05 무기 카드', '#wpnGrid .wgc.alert>.updot'],
+    ['05 [일괄 강화]', '#wpnBtnUp>.updot'],
+  ]) ok((await page.evaluate(s => window.__clip(s), sel)) === 'ok',
+        '[' + n + '] 잘리는 조상 안에 온전히 들어간다', await page.evaluate(s => window.__clip(s), sel));
+  ok((await page.evaluate(() => window.__hit('#wpnGrid .wgc.alert>.updot', '#wpnGrid .wgc.alert>.lv'))) === 'ok',
+    '[05 무기 카드] 배지가 `Lv.n`(우상단) 과 안 겹친다');
+  ok((await page.evaluate(() => window.__hit('#eqCards .eqsl.alert>.updot', '#eqCards .eqbd'))) === 'ok',
+    '[06 부위 슬롯] 배지가 부위 뱃지 `.eqbd`(좌상단) 와 안 겹친다');
+
+  await page.evaluate(() => { closeWeapon(); heroSubGo('sk'); uiDirty = true; renderUI(); });
+  await page.waitForTimeout(700);
+  ok((await page.evaluate(() => window.__hit('#bSk .sk-card.alert>.updot', '#bSk .sk-card.alert>.sk-eq'))) === 'ok',
+    '[07 스킬 카드] 배지가 272 해제 뱃지 `.sk-eq`(우상단) 와 안 겹친다');
+  ok((await page.evaluate(() => window.__hit('#bSk .sk-card.alert>.updot', '#bSk .sk-card.alert>.sk-clv'))) === 'ok',
+    '[07 스킬 카드] 배지가 `Lv.n`(`.sk-clv`) 과 안 겹친다');
+
   /* ================= §2 «세 자리 동시 점등» ================= */
   console.log('\n§2 «세 자리 동시 점등» — ① 탭 · ② 카드/진입 버튼 · ③ [일괄 강화] 버튼이 한 상태에서 같이');
 

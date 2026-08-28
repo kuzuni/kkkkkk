@@ -9633,8 +9633,17 @@
     text-decoration:none;transform:none;display:none;pointer-events:none;z-index:6;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .alert>.updot{display:block}
-  /* 카드는 우상단 모서리 바깥으로 살짝(테두리 위에 걸치게) · 버튼은 안쪽 우상단 */
-  .sk-card>.updot,.wgc>.updot{right:-5px;top:-5px}
+  /* 자리는 «이미 있는 것» 을 피해서 잡는다(실측으로 셋 다 부딪혔다):
+     · 07·26 `.sk-card` 우상단은 272 의 해제 뱃지 `.sk-eq`(카드기준 123,10~172,30)가 이미 쓴다 → **좌상단 바깥**.
+       −5 로는 `Lv.n`(`.sk-clv` 18,14~70,46)의 좌상단 모서리를 4x8px 물었다 → **−14**
+       (배지 우변 13 < 18. 맥박 1.14 에서 14.9, 등장 1.3 에서도 17.1 로 안 닿는다.
+        격자 `.sk-gp` 는 카드보다 좌 36 · 상 35 넓어 −14 는 안 잘린다)
+     · 05 `.wgc` 는 **자기 `overflow:hidden`** 이라 바깥에 두면 잘린다 → **안쪽**. 그 안에서도 우상단은
+       `.lv`(right:13 top:9) 자리라 좌상단으로.
+     · 06 `.eqsl` 은 좌상단 바깥이 부위 뱃지 `.eqbd`(left:704, 슬롯 left 724) 자리 → **우상단 바깥**
+     · 버튼 둘은 라벨이 가운데 한 줄이라 안쪽 우상단이 빈다 */
+  .sk-card>.updot{left:-14px;top:-14px}
+  .wgc>.updot{left:5px;top:5px}
   .eqsl>.updot{right:-7px;top:-7px}
   .sk-btn>.updot,.wm-btn>.updot{right:12px;top:12px}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
