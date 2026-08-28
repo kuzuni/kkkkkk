@@ -16,6 +16,10 @@
  *                 168 훈련·203 룬과 **겹치지 않는 별도 축**
  *   [G] 저장     — 저장·재로드 보존 · 구 세이브(키 없음) 마이그레이션 · 손댄 값 방어
  *   [H] 되돌림 시험 — 일부러 깨 보고 이 게이트가 정말 잡는지(LESSONS 43-①)
+ *   [I] 홀드     — **297**(2026-08-28 주인 재지시): 단련 투자·충전 «꾹 누르면 연속».
+ *                 진짜 마우스 포인터로 누르고 뗀다 · 단발 1회 · 1초 홀드 3회 이상 · 가속 ·
+ *                 뗌 정지 · 포인트 3회분이면 정확히 3회 · **회수는 홀드 제외** ·
+ *                 «홀드 중 숫자» == «통짜 재렌더 숫자»(262 교훈 2ⓑ)
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -500,6 +504,142 @@ const table = [];
   ok(loop.pts === loop.got, '★ 전환 → 단련 포인트', String(loop.pts));
   ok(loop.up && loop.lv === 1, '★ 투자 → 공격력 단련 Lv1');
   ok(loop.atkUp, '★ 그 결과가 bonus() 전투력에 실제로 반영된다(목업 아님 — 기능 완성 규칙)');
+
+  /* ================= [I] 297 «꾹 누르면 연속» =================
+     2026-08-28 주인 재지시 — 210 이 «전부 확정 처리라 룬과 달리 꾹 누르기도 확률도 없다» 로
+     못 박아 뒀던 자리가 뒤집혔다(«단련 부분도 토글하는 거 연속으로 강화되게 돼야 하는데»).
+     **진짜 마우스 포인터**로 누르고 뗀다 — LESSONS 262-1(게이트는 «어떤 리스너에 걸렸나» 가
+     아니라 «사용자가 무엇을 하나» 를 흉내 내야 구현 방식이 바뀌어도 산다). */
+  console.log('[I] 297 — 단련 투자·충전 «꾹 누르면 연속»(주인 재지시)');
+  const TB = '.tr-tp[data-temper="atk"] [data-tempup]';
+  const CG = '#trTemper [data-tpchg]';
+  const RS = '#trTemper [data-tpreset]';
+  const setT = async o => {
+    const r = await p.evaluate(x => {
+      /* 결정성 — 자동 전투가 도는 채로 30초를 지나면 레벨업·보상 팝업이 버튼을 덮는다 */
+      if (typeof step === 'function') step = () => {};
+      /* 앞 절(절망의 탑 런)이 남긴 던전 클리어 팝업 `#dclw` 가 버튼 위를 덮는다 —
+         전부 닫고 시작한다(LESSONS 263-②: 하네스가 «눌렀다» 고 믿는 자리에서 게임은 다른 답을 한다) */
+      ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
+        .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+      S.temper = { pts: x.pts, alloc: { atk: 0, hp: 0, regen: 0 } };
+      S.tstone = x.st || 0; S.dia = x.dia == null ? 100000 : x.dia;
+      openTrain(); setTrSub('temper'); renderTrain();
+      return { pts: temperPts(), cost: temperCost('atk') };
+    }, o);
+    /* ⚠ 23 팝업은 슬라이드 애니메이션이 있다 — 곧바로 재면 아직 움직이는 중의 좌표를 집는다(164) */
+    await p.waitForTimeout(420);
+    return r;
+  };
+  let hitOk210 = true;
+  const center210 = async sel => {
+    const bb = await p.locator(sel).boundingBox();
+    const c = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
+    const on = await p.evaluate(o => {
+      const el = document.elementFromPoint(o.x, o.y);
+      return !!(el && el.closest && el.closest(o.sel));
+    }, { sel, x: c.x, y: c.y });
+    if (!on) hitOk210 = false;
+    return c;
+  };
+  /* 액셔너빌리티 — `hover()` 는 «보이고 · 안정되고 · 그 좌표에서 이벤트를 실제로 받는» 상태가
+     될 때까지 기다렸다가 마우스를 그 중심으로 옮긴다. 앞 절이 남긴 팝업·슬라이드 애니메이션이
+     버튼을 덮고 있으면 여기서 걸린다(고정 대기는 «가끔 통과» 로 굳는다 — LESSONS 138-2). */
+  const aim = async sel => {
+    await p.locator(sel).scrollIntoViewIfNeeded();
+    await p.locator(sel).hover();
+    await center210(sel);                       /* 양성항 기록 — 최상단 노드가 정말 그 버튼인가 */
+  };
+  const press210 = async (sel, ms) => {
+    await aim(sel);
+    await p.mouse.down();
+    if (ms) await p.waitForTimeout(ms);
+    await p.mouse.up();
+    await p.waitForTimeout(80);
+  };
+  const lvAtk = () => p.evaluate(() => temperLv('atk'));
+
+  await setT({ pts: 100000 });
+  await press210(TB, 0);
+  const t1 = await lvAtk();
+  ok(t1 === 1, '단발 탭 = 정확히 1회 투자(누를 때 1 + 뗄 때 1 이 아니다 — 64 ⓐ)', 'Lv ' + t1);
+
+  await setT({ pts: 100000 });
+  await press210(TB, 1000);
+  const tHold = await lvAtk();
+  ok(tHold >= 3, '★ 꾹 누르면 연속 투자된다 — 1초 홀드에 3회 이상', tHold + '회');
+  table.push('홀드 1초 = ' + tHold + '회 투자');
+
+  const tStop = await lvAtk();
+  await p.waitForTimeout(500);
+  ok(await lvAtk() === tStop, '손을 떼면 즉시 멈춘다(뗀 뒤 500ms 동안 0회)');
+
+  await setT({ pts: 100000 });
+  {
+    await aim(TB);
+    await p.mouse.down();
+    await p.waitForTimeout(900);
+    const mid = await lvAtk();
+    await p.waitForTimeout(900);
+    const end = await lvAtk();
+    await p.mouse.up(); await p.waitForTimeout(80);
+    ok(end - mid > mid, '반복이 가속된다(TR_HOLD_ACCEL 0.86) — 뒤 900ms 가 앞 900ms 보다 많다',
+      mid + ' → ' + (end - mid));
+  }
+
+  /* 포인트가 딱 3회분이면 «정확히 3회» 에서 조용히 멈춘다(119 G4 — 반복분은 무알림) */
+  await setT({ pts: 3 });
+  await press210(TB, 2000);
+  const t3 = await p.evaluate(() => ({ lv: temperLv('atk'), pts: temperPts() }));
+  ok(t3.lv === 3 && t3.pts === 0, '포인트가 3회분이면 정확히 3회에서 조용히 멈춘다',
+    'Lv ' + t3.lv + ' · 남은 ' + t3.pts + 'pt');
+
+  /* 충전도 같은 경로(pointerdown)를 탄다 — 다만 «보유분 전부» 를 바꾸므로 1회에 끝난다 */
+  await setT({ pts: 0, st: 250 });
+  await press210(CG, 1200);
+  const tc = await p.evaluate(() => ({ st: S.tstone, pts: temperPts() }));
+  ok(tc.st === 0 && tc.pts === 250, '[전환] 도 pointerdown 경로 — 꾹 눌러도 보유분 전부 1회에 끝',
+    '단련석 ' + tc.st + ' · 포인트 ' + tc.pts);
+
+  /* 회수는 홀드 대상이 아니다(1000 다이아 1회성) — 꾹 눌러도 1회분만 나간다 */
+  await setT({ pts: 0, dia: 100000 });
+  await p.evaluate(() => { S.temper = { pts: 0, alloc: { atk: 50, hp: 0, regen: 0 } }; renderTrain(); });
+  await p.waitForTimeout(120);
+  const rd0 = await p.evaluate(() => S.dia);
+  await press210(RS, 1200);
+  const rdSpent = rd0 - (await p.evaluate(() => S.dia));
+  const resetCost = await p.evaluate(() => TEMPER_RESET_DIA);
+  ok(rdSpent === resetCost, '[회수] 는 홀드 대상이 아니다 — 1.2초를 눌러도 ' + resetCost + ' 다이아 1회분만',
+    rdSpent + ' 다이아');
+
+  /* ★ 262 교훈 2ⓑ — 표기층이 두 벌이 됐으므로 «홀드 중 숫자» == «통짜 재렌더 숫자» 를 잠근다 */
+  const tSame = await p.evaluate(() => {
+    const read = () => {
+      const w = document.getElementById('trTemper');
+      const row = w.querySelector('.tr-tp[data-temper="atk"]');
+      return [w.querySelector('.tp-hd .pv i').innerHTML, w.querySelector('.tp-hd .cg i').innerHTML,
+              row.querySelector('.tl i').textContent, row.querySelector('.td i').textContent,
+              row.querySelector('.tc i').textContent, row.querySelector('.tc s').textContent,
+              row.querySelector('.tb i').textContent,
+              row.querySelector('.tb').classList.contains('no') ? 'no' : 'ok',
+              w.querySelector('.tp-ft .rs i').innerHTML].join(' | ');
+    };
+    S.temper = { pts: 500, alloc: { atk: 0, hp: 0, regen: 0 } }; S.tstone = 40;
+    openTrain(); setTrSub('temper'); renderTrain();
+    rtHold = { tag: 'temper' };                    /* 홀드 중인 척 — liveTemper 경로로 그린다 */
+    S.temper.alloc.atk = 137; S.temper.pts = 42; S.tstone = 7; markDirty();
+    renderTemper();
+    const live = read();
+    rtHold = null;
+    renderTemper();                                /* → 통짜 경로(sig 가 갱신되지 않아 실제로 그린다) */
+    const full = read();
+    return { live, full, moved: /137/.test(full) };
+  });
+  ok(tSame.moved, '대조군 — 통짜 렌더가 실제로 새 레벨(137)을 말한다(단언이 공허하지 않다)');
+  ok(tSame.live === tSame.full,
+    '★ «홀드 중 숫자» 와 «손 뗀 뒤 통짜 재렌더» 가 한 글자도 다르지 않다(262 교훈 2ⓑ)',
+    tSame.live === tSame.full ? '' : '\n      live: ' + tSame.live + '\n      full: ' + tSame.full);
+  ok(hitOk210, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(팝업이 덮지 않았다 — 양성항)');
 
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 

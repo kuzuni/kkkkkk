@@ -22247,8 +22247,10 @@ const itemById = id => SK[id] || EQ[id] || PT[id] || RL[id];
         홀드 중에는 통짜 재렌더 대신 **숫자만**(`mdLive`) 고쳐 쓰고 손을 뗀 «뒤» 에 한 번만 통짜 재렌더한다.
         (같은 이유로 `$('mbox').scrollTop = 0` 이 반복마다 스크롤을 걷어차던 것도 사라진다)
      ⓒ 재료·비용이 모자라면 **조용히** 멈춘다(119 G4 — 반복분은 무알림). 첫 누름부터 실패면 60 shake 1회.
-   ⚠ 대상은 «확정 강화» 뿐이다. 203 룬 [강화]는 **확률 시도**라 203 이 «한 번 누르면 한 번» 으로
-     의도해 둔 자리이므로 건드리지 않는다(그 판단은 review §5 에 적어 뒀다).
+   ⚠ 262 당시 대상은 «확정 강화» 뿐이었다 — 203 룬 [강화]는 확률 시도라 «한 번 누르면 한 번» 으로
+     남겨 뒀다(그 판단은 review §5). **297(2026-08-28)에서 저장소 주인이 그 판단을 뒤집었다**:
+     룬 강화 시도·단련 투자도 홀드 대상이다. 그쪽 구현은 이 부품이 아니라 `rtHoldStart`(23 훈련
+     팝업 전용 — 껍데기가 #modal 이 아니라 #trw 다)가 맡고, **상수(`TR_HOLD_*`)만 공유**한다.
    -------------------------------------------------------------------------- */
 let upHold = null;              /* {btn, once, live, end, n, iv, timer} — 누르고 있는 동안에만 존재 */
 function upHoldStop(bad){
@@ -27200,6 +27202,31 @@ function setRuneSub(id){
   runeSub = RN[id] ? id : null;
   renderTrain();
 }
+/* 297 — 레벨·재화를 타는 자리를 **함수 한 벌**로 뽑는다(262 교훈 2ⓐ). 통짜 렌더와
+   홀드 중 «숫자만» 갱신(`liveRunes`)이 반드시 **같은 식**을 보게 하기 위한 것이다 —
+   표기층이 두 벌이 되면 조용히 갈라진다(LESSONS 194). 게이트가 그 동일성을 잠근다. */
+function runeCardTxt(r){
+  const l = runeLvOf(r.id), max = runeMaxed(r.id), rate = runeRate(l);
+  const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
+  return {
+    l, max, seg,
+    lv:   'Lv. ' + l + ' / ' + RUNE_MAXLV,
+    bar:  (l / RUNE_MAXLV * 100).toFixed(2) + '%',
+    rate: max ? 'MAX' : (rate * 100).toFixed(rate < 0.01 ? 2 : 1) + '%',
+    rateS: max ? '더 올릴 수 없음' : '성공 확률',
+    eff: Object.keys(r.eff).map((k, j) =>
+      '<span class="rw e' + j + '"><i>' + RUNE_AXIS[k] + ' +' + pct(runeVal(r.id, k)) + '</i>'
+      + '<s>' + (max ? '최대' : '다음 +' + pct(r.eff[k] * RUNE_STEP[seg])) + '</s></span>').join(''),
+    step: '계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
+        + ' — Lv ' + (seg * RUNE_STEP_EVERY) + '~' + (seg * RUNE_STEP_EVERY + RUNE_STEP_EVERY - 1)
+        + ' 구간은 1레벨당 ×' + RUNE_STEP[seg].toFixed(1),
+    mat: curIc('rstone', 34) + fmt(runeCost(r, l)),
+    dia: curIc('dia', 34) + fmt(RUNE_DIA),
+    okM: runeTryOk(r.id, 'mat'), okD: runeTryOk(r.id, 'dia')
+  };
+}
+const runeSumTxt = () => '룬 총효과 — '
+  + Object.keys(RUNE_AXIS).map(k => RUNE_AXIS[k] + ' +' + pct(runeSum(k))).join(' · ');
 function renderRunes(){
   const box = document.querySelector('#trw .tr-box');
   if(box){
@@ -27221,6 +27248,10 @@ function renderRunes(){
     el.classList.toggle('alert', runeTryOk(id, 'mat'));
   });
   const w = $('trRunes'); if(!w) return;
+  /* 297 — 꾹 누르고 있는 동안에는 통짜 재렌더를 멈추고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ —
+     누른 노드를 innerHTML 로 날리면 터치의 암묵적 포인터 캡처가 끊긴다).
+     `dataset.sig` 를 갱신하지 않으므로 손을 뗀 «뒤» 첫 렌더가 저절로 통짜로 돈다. */
+  if(rtHoldOn('rune')){ liveRunes(curId); return; }
   /* ⚠ 이 함수는 `renderTrainLive()` 를 타고 **0.35초마다** 불린다. 무조건 innerHTML 을 갈아 끼우면
      pointerdown 과 click 사이에 버튼 노드가 사라져 탭이 통째로 유실된다
      (LESSONS 50-① «재렌더에 진 클릭» · 작업 74·142 가 같은 병으로 등재됐다).
@@ -27235,56 +27266,83 @@ function renderRunes(){
   /* 271 — 한 화면에 한 종만. 고른 룬 한 장을 크게 그린다. */
   {
     const r = RN[curId];
-    const open = runeOpen(r.id), l = runeLvOf(r.id), max = runeMaxed(r.id);
-    const rate = runeRate(l), cost = runeCost(r, l);
-    const okM = runeTryOk(r.id, 'mat'), okD = runeTryOk(r.id, 'dia');
+    const open = runeOpen(r.id);
     /* 효과 표기는 bonus() 와 **같은 식**(runeVal)을 지난다 — 두 벌이 되면 표기가 거짓이 된다.
        ⚠ 축 하나가 한 줄이다 — 세 축을 한 줄에 붙이면 만렙에서 910px 를 넘겨 접힌다(CSS 절 참고).
-       오른쪽 «다음 +n%» 은 계단 배수를 그대로 탄 값이라 `runeVal` 의 정의와 한 식이다(Σ 의 다음 항). */
-    const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
-    const eff = Object.keys(r.eff).map((k, j) =>
-      '<span class="rw e' + j + '"><i>' + RUNE_AXIS[k] + ' +' + pct(runeVal(r.id, k)) + '</i>'
-      + '<s>' + (max ? '최대' : '다음 +' + pct(r.eff[k] * RUNE_STEP[seg])) + '</s></span>').join('');
+       오른쪽 «다음 +n%» 은 계단 배수를 그대로 탄 값이라 `runeVal` 의 정의와 한 식이다(Σ 의 다음 항).
+       297 — 레벨을 타는 문자열은 전부 `runeCardTxt()` 한 벌에서 온다(홀드 중 갱신과 같은 식). */
+    const t = runeCardTxt(r);
     h += '<div class="tr-rn' + (open ? '' : ' lk') + '" data-rune="' + r.id + '"'
       +  ' style="--rt:' + r.tone + '">'
       +  '<span class="ri">' + r.ic + '</span>'
       +  '<span class="rn"><i>' + r.n + '</i></span>'
-      +  '<span class="rl"><i>Lv. ' + l + ' / ' + RUNE_MAXLV + '</i></span>'
-      +  '<span class="rb"><i style="width:' + (l / RUNE_MAXLV * 100).toFixed(2) + '%"></i></span>'
-      +  '<span class="rp"><i>' + (max ? 'MAX' : (rate*100).toFixed(rate < 0.01 ? 2 : 1) + '%')
-      +    '</i><br><s>' + (max ? '더 올릴 수 없음' : '성공 확률') + '</s></span>'
-      +  '<span class="rd">' + eff + '</span>'
-      +  '<span class="rst"><i>계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
-      +    ' — Lv ' + (seg * RUNE_STEP_EVERY) + '~' + (seg * RUNE_STEP_EVERY + RUNE_STEP_EVERY - 1)
-      +    ' 구간은 1레벨당 ×' + RUNE_STEP[seg].toFixed(1) + '</i></span>'
-      +  (max
+      +  '<span class="rl"><i>' + t.lv + '</i></span>'
+      +  '<span class="rb"><i style="width:' + t.bar + '"></i></span>'
+      +  '<span class="rp"><i>' + t.rate + '</i><br><s>' + t.rateS + '</s></span>'
+      +  '<span class="rd">' + t.eff + '</span>'
+      +  '<span class="rst"><i>' + t.step + '</i></span>'
+      +  (t.max
           ? '<span class="rmax"><i>최대 레벨</i></span>'
-          : '<span class="rbt b1' + (okM ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="mat">'
-            + '<i>' + curIc('rstone', 34) + fmt(cost) + '</i></span>'
-            + '<span class="rbt b2' + (okD ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="dia">'
-            + '<i>' + curIc('dia', 34) + fmt(RUNE_DIA) + '</i></span>')
-      +  (max ? '' : '<span class="rhint"><i>실패해도 레벨은 그대로입니다</i></span>')
+          : '<span class="rbt b1' + (t.okM ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="mat">'
+            + '<i>' + t.mat + '</i></span>'
+            + '<span class="rbt b2' + (t.okD ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="dia">'
+            + '<i>' + t.dia + '</i></span>')
+      +  (t.max ? '' : '<span class="rhint"><i>실패해도 레벨은 그대로입니다</i></span>')
       +  '<span class="rlk"><i>🔒 ' + runeReqText(r.id) + '</i></span>'
       +  '</div>';
   }
-  h += '<div class="rsum"><i>룬 총효과 — '
-    +  Object.keys(RUNE_AXIS).map(k => RUNE_AXIS[k] + ' +' + pct(runeSum(k))).join(' · ')
-    +  '</i></div>';
+  h += '<div class="rsum"><i>' + runeSumTxt() + '</i></div>';
   w.innerHTML = h;
 }
+/* 297 — 홀드 중 «숫자만» 갱신. 노드를 만들지도 지우지도 않는다(포인터 캡처 유지).
+   만렙에 닿으면 구조가 바뀌므로(버튼 2개 → `.rmax`) 통짜 렌더에 넘긴다 — 그 시점엔
+   `runeTryOk` 가 false 라 홀드도 다음 틱에 스스로 멈춘다. */
+function liveRunes(curId){
+  const w = $('trRunes'); if(!w) return;
+  const r = RN[curId || curRuneId()]; if(!r) return;
+  const card = w.querySelector('.tr-rn[data-rune="' + CSS.escape(r.id) + '"]');
+  if(!card) return;
+  const t = runeCardTxt(r);
+  if(t.max){ w.dataset.sig = ''; return; }        /* 구조가 바뀐다 → 다음 렌더가 통째로 그린다 */
+  const put = (sel, txt, html) => {
+    const n = card.querySelector(sel); if(!n || txt == null) return;
+    if(html){ if(n.innerHTML !== txt) n.innerHTML = txt; }
+    else if(n.textContent !== txt) n.textContent = txt;
+  };
+  put('.rl i', t.lv);
+  const bar = card.querySelector('.rb i'); if(bar && bar.style.width !== t.bar) bar.style.width = t.bar;
+  put('.rp i', t.rate);
+  put('.rp s', t.rateS);
+  put('.rd', t.eff, true);
+  put('.rst i', t.step);
+  put('.rbt.b1 i', t.mat, true);
+  put('.rbt.b2 i', t.dia, true);
+  const b1 = card.querySelector('.rbt.b1'), b2 = card.querySelector('.rbt.b2');
+  if(b1) b1.classList.toggle('no', !t.okM);
+  if(b2) b2.classList.toggle('no', !t.okD);
+  const sum = w.querySelector('.rsum i');
+  if(sum){ const s = runeSumTxt(); if(sum.innerHTML !== s) sum.innerHTML = s; }
+}
 /* 시도 1회 — 성공·실패 모두 토스트로 알린다(206 방향: 확인 팝업 없이 자동으로 사라지는 알림).
-   실패해도 레벨은 그대로다(주인 지시 ④) — 문구가 그 사실을 분명히 말한다. */
-function runeBuy(id, pay){
+   실패해도 레벨은 그대로다(주인 지시 ④) — 문구가 그 사실을 분명히 말한다.
+   297 — `quiet` 는 «꾹 누르기» 반복분이다: 토스트·실패음·보상 연출·통짜 재렌더를 전부 건너뛴다
+   (60ms 로 반복되므로 토스트가 쌓이면 화면이 잠기고 #fxl 이 FXMAX 로 막힌다 — 58·119 G4 규약).
+   반복분의 정산은 손을 뗀 «뒤» `rtRuneHold` 의 요약 토스트 한 번이 맡는다. */
+function runeBuy(id, pay, quiet){
   const r = RN[id]; if(!r) return false;
-  if(!runeOpen(id)){ notify('🔒 ' + r.n + ' — ' + runeReqText(id)); return false; }
-  if(runeMaxed(id)){ notify(r.n + ' 은(는) 이미 최대 레벨입니다'); return false; }
+  if(!runeOpen(id)){ if(!quiet) notify('🔒 ' + r.n + ' — ' + runeReqText(id)); return false; }
+  if(runeMaxed(id)){ if(!quiet) notify(r.n + ' 은(는) 이미 최대 레벨입니다'); return false; }
   if(!runeTryOk(id, pay)){
-    notify(pay === 'dia' ? curIc('dia') + ' <b>다이아</b>가 부족합니다'
-                         : curIc('rstone') + ' <b>룬강화석</b>이 부족합니다');
-    sfx('err'); return false;
+    if(!quiet){
+      notify(pay === 'dia' ? curIc('dia') + ' <b>다이아</b>가 부족합니다'
+                           : curIc('rstone') + ' <b>룬강화석</b>이 부족합니다');
+      sfx('err');
+    }
+    return false;
   }
   const res = runeTry(id, pay);
   if(!res.ok) return false;
+  if(quiet){ if(res.up) sfx('up'); return res.up; }   /* 반복분 — 성공음만. 렌더는 홀드가 맡는다 */
   if(res.up){ sfx('up'); fxReward(); notify(r.n + ' 강화 성공! <b>Lv. ' + res.lv + '</b>'); }
   else      { sfx('err'); notify(r.n + ' 강화 실패 — 레벨은 그대로입니다 (Lv. ' + res.lv + ')'); }
   renderTrain();
@@ -27300,8 +27358,30 @@ function runeBuy(id, pay){
    가진 포인트로 실제로 올릴 수 있는 축이 있을 때. 다이아 회수는 상시 가능하므로 뺀다. */
 const temperAlert = () => (Math.floor(S.tstone) || 0) >= TEMPER_PT_COST
                        || TEMPERS.some(t => temperUpOk(t.k));
+/* 297 — 룬과 같은 규칙: 레벨·포인트를 타는 문자열을 **함수 한 벌**로 뽑아
+   통짜 렌더와 `liveTemper()` 가 같은 식을 보게 한다(262 교훈 2ⓐ). */
+function temperRowTxt(t){
+  const l = temperLv(t.k), c = temperCost(t.k), seg = Math.floor(l / TEMPER_SEG);
+  return {
+    lv:  'Lv. ' + fmt(l),
+    eff: t.n + ' +' + pct(temperVal(t.k)) + ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
+    cost: fmt(c) + ' pt',
+    seg: (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당',
+    btn: '투자 ' + fmt(c) + ' pt',
+    ok:  temperUpOk(t.k)
+  };
+}
+function temperHeadTxt(){
+  const have = Math.floor(S.tstone) || 0;
+  return { pts: '단련 포인트 <b>' + fmt(temperPts()) + '</b>',
+           chg: curIc('tstone', 34) + fmt(have) + ' → 포인트 ' + fmt(Math.floor(have / TEMPER_PT_COST)),
+           canCharge: have >= TEMPER_PT_COST };
+}
+const temperFootTxt = () => '회수하면 투자한 <b>' + fmt(temperSpentAll()) + ' pt</b> 를 전액 돌려받습니다';
 function renderTemper(){
   const w = $('trTemper'); if(!w) return;
+  /* 297 — 룬과 같다: 꾹 누르는 동안에는 노드를 갈지 않고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ) */
+  if(rtHoldOn('temper')){ liveTemper(); return; }
   /* ⚠ renderRunes 와 같은 이유로 «보이는 값이 달라졌을 때만» 다시 그린다 —
      0.35초 주기 재렌더가 pointerdown 과 click 사이에 버튼을 지우면 탭이 통째로 유실된다
      (LESSONS 50-① · 작업 74·142). 서명에 그리기 입력이 전부 들어간다. */
@@ -27309,55 +27389,84 @@ function renderTemper(){
             + '|' + temperPts() + '|' + (Math.floor(S.tstone) || 0) + '|' + Math.floor(S.dia);
   if(w.dataset.sig === sig) return;
   w.dataset.sig = sig;
-  const have = Math.floor(S.tstone) || 0, canCharge = have >= TEMPER_PT_COST;
-  const back = temperSpentAll(), canReset = temperResetOk();
+  const hd = temperHeadTxt(), canReset = temperResetOk();
   let h = '<div class="tp-hd">'
-    + '<span class="pv"><i>단련 포인트 <b>' + fmt(temperPts()) + '</b></i></span>'
-    + '<span class="cg' + (canCharge ? '' : ' no') + '" data-tpchg="1"><i>'
-    + curIc('tstone', 34) + fmt(have) + ' → 포인트 ' + fmt(Math.floor(have / TEMPER_PT_COST))
-    + '</i></span></div>';
+    + '<span class="pv"><i>' + hd.pts + '</i></span>'
+    + '<span class="cg' + (hd.canCharge ? '' : ' no') + '" data-tpchg="1"><i>'
+    + hd.chg + '</i></span></div>';
   TEMPERS.forEach((t, i) => {
-    const l = temperLv(t.k), c = temperCost(t.k), ok = temperUpOk(t.k);
-    const seg = Math.floor(l / TEMPER_SEG);
+    const x = temperRowTxt(t);
     h += '<div class="tr-tp k' + i + '" data-temper="' + t.k + '" style="--tt:' + t.tone + '">'
       +  '<span class="ti">' + t.ic + '</span>'
       +  '<span class="tn"><i>' + t.n + ' 단련</i></span>'
-      +  '<span class="tl"><i>Lv. ' + fmt(l) + '</i></span>'
-      +  '<span class="td"><i>' + t.n + ' +' + pct(temperVal(t.k))
-      +    ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]) + '</i></span>'
-      +  '<span class="tc"><i>' + fmt(c) + ' pt</i><br><s>'
-      +    (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당</s></span>'
-      +  '<span class="tb' + (ok ? '' : ' no') + '" data-tempup="' + t.k + '"><i>투자 '
-      +    fmt(c) + ' pt</i></span>'
+      +  '<span class="tl"><i>' + x.lv + '</i></span>'
+      +  '<span class="td"><i>' + x.eff + '</i></span>'
+      +  '<span class="tc"><i>' + x.cost + '</i><br><s>' + x.seg + '</s></span>'
+      +  '<span class="tb' + (x.ok ? '' : ' no') + '" data-tempup="' + t.k + '"><i>'
+      +    x.btn + '</i></span>'
       +  '</div>';
   });
   h += '<div class="tp-ft">'
-    +  '<span class="rs"><i>회수하면 투자한 <b>' + fmt(back) + ' pt</b> 를 전액 돌려받습니다</i></span>'
+    +  '<span class="rs"><i>' + temperFootTxt() + '</i></span>'
     +  '<span class="rb' + (canReset ? '' : ' no') + '" data-tpreset="1"><i>'
     +  curIc('dia', 32) + fmt(TEMPER_RESET_DIA) + ' 회수</i></span></div>';
   w.innerHTML = h;
 }
+/* 297 — 홀드 중 «숫자만» 갱신. 단련은 만렙이 없어(주인 지시 ⓑ) 구조가 바뀌지 않는다. */
+function liveTemper(){
+  const w = $('trTemper'); if(!w) return;
+  const put = (root, sel, txt, html) => {
+    const n = root && root.querySelector(sel); if(!n || txt == null) return;
+    if(html){ if(n.innerHTML !== txt) n.innerHTML = txt; }
+    else if(n.textContent !== txt) n.textContent = txt;
+  };
+  const hd = temperHeadTxt();
+  put(w, '.tp-hd .pv i', hd.pts, true);
+  put(w, '.tp-hd .cg i', hd.chg, true);
+  const cg = w.querySelector('.tp-hd .cg'); if(cg) cg.classList.toggle('no', !hd.canCharge);
+  TEMPERS.forEach(t => {
+    const row = w.querySelector('.tr-tp[data-temper="' + CSS.escape(t.k) + '"]'); if(!row) return;
+    const x = temperRowTxt(t);
+    put(row, '.tl i', x.lv);
+    put(row, '.td i', x.eff);
+    put(row, '.tc i', x.cost);
+    put(row, '.tc s', x.seg);
+    put(row, '.tb i', x.btn);
+    const b = row.querySelector('.tb'); if(b) b.classList.toggle('no', !x.ok);
+  });
+  put(w, '.tp-ft .rs i', temperFootTxt(), true);
+  const rb = w.querySelector('.tp-ft .rb'); if(rb) rb.classList.toggle('no', !temperResetOk());
+}
 /* 단련석 → 포인트 전환(보유분 전부) */
-function temperChargeBtn(){
+function temperChargeBtn(quiet){
   if((Math.floor(S.tstone) || 0) < TEMPER_PT_COST){
-    notify(curIc('tstone') + ' <b>단련석</b>이 부족합니다 — ' + TOWER_DESPAIR_N + '에서 얻습니다');
-    sfx('err'); return false;
+    if(!quiet){
+      notify(curIc('tstone') + ' <b>단련석</b>이 부족합니다 — ' + TOWER_DESPAIR_N + '에서 얻습니다');
+      sfx('err');
+    }
+    return false;
   }
   const got = temperCharge();
-  sfx('up'); fxReward();
+  sfx('up');
+  if(quiet) return true;                       /* 297 — 반복분(보유분 전부를 바꾸므로 사실상 1회에 끝난다) */
+  fxReward();
   notify('단련 포인트 <b>+' + fmt(got) + '</b>');
   renderTrain();
   return true;
 }
 /* 투자 1회 — 확정 구매다(룬과 달리 확률이 없다). 그래서 실패 문구도 «부족» 하나뿐이다. */
-function temperUpBtn(k){
+function temperUpBtn(k, quiet){
   const t = TEMPERS.find(x => x.k === k); if(!t) return false;
   if(!temperUpOk(k)){
-    notify('단련 포인트가 부족합니다 — ' + t.n + ' 다음 1레벨 <b>' + fmt(temperCost(k)) + ' pt</b>');
-    sfx('err'); return false;
+    if(!quiet){
+      notify('단련 포인트가 부족합니다 — ' + t.n + ' 다음 1레벨 <b>' + fmt(temperCost(k)) + ' pt</b>');
+      sfx('err');
+    }
+    return false;
   }
   if(!temperUp(k)) return false;
   sfx('up');
+  if(quiet) return true;                       /* 297 — 반복분: 토스트·통짜 재렌더 없이 홀드가 정산한다 */
   notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>');
   renderTrain();
   return true;
@@ -27409,14 +27518,11 @@ $('trw').addEventListener('click', e => {
      카드 덮개(.rlk)가 개방 조건을 말한다(186 관례 — 토스트를 겹쳐 띄우지 않는다). */
   const rs = e.target.closest('[data-runesub]');
   if(rs){ setRuneSub(rs.dataset.runesub); return; }
-  /* 203 — 룬 강화 시도(재료 / 다이아). 훈련 카드와 달리 «꾹 누르기» 가 없다 —
-     확률 시도라 연타로 자원이 훅 빠지는 것을 막는다(한 번 누르면 한 번). */
-  const rb = e.target.closest('[data-runebuy]');
-  if(rb){ runeBuy(rb.dataset.runebuy, rb.dataset.pay); return; }
-  /* 210 — 단련 탭 세 버튼. 전부 확정 처리라 룬과 달리 «꾹 누르기» 도 확률도 없다. */
-  if(e.target.closest('[data-tpchg]')){ temperChargeBtn(); return; }
-  const tu = e.target.closest('[data-tempup]');
-  if(tu){ temperUpBtn(tu.dataset.tempup); return; }
+  /* 297(2026-08-28, 저장소 주인 재지시) — 룬 강화 시도 · 단련 투자 · 단련석 충전은
+     **pointerdown 에서 처리**한다(아래 rtHoldStart). 203 이 «확률 시도라 한 번 누르면 한 번»
+     으로, 210 이 «확정 처리라 꾹 누르기 없음» 으로 의도해 뒀던 판단을 주인 지시가 뒤집었다.
+     여기서 click 까지 사면 «누를 때 1 + 뗄 때 1» 로 두 번 사진다 — 아무것도 하지 않는다(64 ⓐ).
+     회수([data-tpreset])는 1000 다이아 1회성이라 홀드 대상이 아니다 → click 그대로. */
   if(e.target.closest('[data-tpreset]')){ temperResetBtn(); return; }
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
@@ -27509,6 +27615,150 @@ addEventListener('pointermove', e => {
   const t = document.elementFromPoint(e.clientX, e.clientY);
   const c = t && t.closest ? t.closest('[data-tr]') : null;
   if(!c || c.dataset.tr !== trHold.key) trHoldStop(false);
+});
+
+/* --------------------------------------------------------------------------
+   작업 297 — 룬 강화 · 단련 투자도 «꾹 누르면 연속» (2026-08-28, 저장소 주인 재지시)
+   주인: «룬 강화 버튼 꾹 누르면 연속 강화 시도되게 하라니까 아직 안 됐네 /
+          단련 부분도 토글하는 거 연속으로 강화되게 돼야 하는데 안 됐네».
+   → 203 의 «확률 시도라 한 번 누르면 한 번» · 210 의 «확정 처리라 꾹 누르기 없음» ·
+     262 의 «룬은 홀드 대상이 아니다» 세 판단을 **주인 지시가 뒤집는다.** 그 주석들도 같이 고쳤다
+     (안 고치면 다음 세션이 «의도된 것» 으로 읽고 되돌린다 — LESSONS 262-3 의 반대 방향).
+   손맛은 64 와 **같은 상수**를 쓴다(`TR_HOLD_*`) — 세 자리가 상수를 공유해야 같은 감각이 된다.
+     pointerdown 즉시 1회 → 350ms 뒤 반복 시작 → 160ms 에서 ×0.86 가속, 최소 60ms.
+     뗌·취소·버튼 밖 이탈·팝업 닫힘 → 즉시 정지. 부족·만렙 → 조용히 정지 + shake 1회(119 G4).
+   ⚠ 64 교훈 1 / 262 ⓑ 그대로: 반복 중에는 **노드를 갈지 않는다**(누른 노드를 innerHTML 로
+     날리면 터치의 암묵적 포인터 캡처가 끊긴다). `renderRunes`·`renderTemper` 가 홀드 중에는
+     `liveRunes`/`liveTemper` 로 «숫자만» 고쳐 쓰고, 손을 뗀 «뒤» 한 번만 통짜로 그린다.
+   ⚠ 토스트도 반복분은 죽인다 — 60ms 로 쌓으면 화면이 잠기고 `#fxl` 이 FXMAX 로 막힌다(58).
+     정산은 손을 뗀 뒤 **요약 한 줄**이 맡는다(«n회 시도 · 성공 m회»).
+   ⓓ **다이아 결제(룬 50 다이아/1회)는 홀드에서 뺀다** — 등재문이 «주인 확인» 으로 남긴 항목이고
+     주인 지시문은 «룬 강화 버튼» 이라 재료 시도 기준으로 읽었다. 프리미엄 재화가 초당 16회
+     빠지는 것은 되돌릴 수 없다. 주인이 원하면 아래 한 줄(`RUNE_HOLD_DIA`)만 true 로 바꾼다 —
+     그러면 다이아 칸도 같은 홀드를 탄다(경로는 이미 pay 를 그대로 받는다).
+   -------------------------------------------------------------------------- */
+const RUNE_HOLD_DIA = false;            /* ⓓ 주인 확인 대기 — true 로 바꾸면 다이아 칸도 홀드 */
+let rtHold = null;                      /* {tag, sel, once, live, end, n, iv, timer} */
+function rtHoldOn(tag){ return !!(rtHold && rtHold.tag === tag); }
+const rtEl = sel => document.querySelector(sel);
+function rtShake(sel){
+  const el = rtEl(sel);
+  if(el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);      /* 60 — 부족·상한 흔들림 */
+}
+function rtHoldStop(bad){
+  const h = rtHold; if(!h) return;
+  rtHold = null; clearTimeout(h.timer);
+  h.end(h.n, bad);                      /* end 안에서 통짜 렌더가 돈다 — 그 뒤에 새 노드를 흔든다 */
+  if(bad) rtShake(h.sel);
+}
+function rtHoldTick(){
+  const h = rtHold; if(!h) return;
+  if(!$('trw').classList.contains('on')){ rtHoldStop(false); return; }   /* 팝업이 닫히면 같이 멈춘다 */
+  if(!h.once()){ rtHoldStop(true); return; }                             /* 부족·만렙 → 조용히 정지 */
+  h.n++; h.live();
+  h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
+  h.timer = setTimeout(rtHoldTick, h.iv);
+}
+function rtHoldStart(o){
+  rtHoldStop(false);
+  if(!o.once()){ o.end(0, false); rtShake(o.sel); return; }   /* 첫 누름부터 실패 → 반복 없음 */
+  o.live();
+  rtHold = { tag:o.tag, sel:o.sel, once:o.once, live:o.live, end:o.end, n:1, iv:TR_HOLD_IV0, timer:0 };
+  rtHold.timer = setTimeout(rtHoldTick, TR_HOLD_DELAY);
+}
+/* 룬 강화 시도 — 확률이라 «시도 횟수» 와 «성공 횟수» 를 따로 센다(요약 토스트가 둘 다 말한다) */
+function rtRuneHold(id, pay){
+  const r = RN[id]; if(!r) return;
+  const sel = '#trRunes .tr-rn[data-rune="' + CSS.escape(id) + '"] .rbt[data-pay="' + CSS.escape(pay) + '"]';
+  let tries = 0, succ = 0;
+  const lv0 = runeLvOf(id);
+  rtHoldStart({
+    tag:'rune', sel,
+    once: () => {
+      if(!runeOpen(id) || runeMaxed(id) || !runeTryOk(id, pay)){
+        if(!tries) runeBuy(id, pay);          /* 첫 누름의 잠금·만렙·부족 안내는 기존 문구 그대로 */
+        return false;
+      }
+      tries++;
+      if(runeBuy(id, pay, true)) succ++;      /* quiet — 토스트·연출·통짜 렌더 없음 */
+      return true;
+    },
+    live: () => renderTrainLive(),
+    end: () => {
+      renderTrain();                          /* 손 뗀 «뒤» 한 번만 통짜로 정합을 맞춘다 */
+      if(!tries) return;                      /* 첫 누름부터 막혔다 — 안내는 위에서 이미 했다 */
+      const lv = runeLvOf(id);
+      if(tries === 1){
+        if(succ){ fxReward(); notify(r.n + ' 강화 성공! <b>Lv. ' + lv + '</b>'); }
+        else { sfx('err'); notify(r.n + ' 강화 실패 — 레벨은 그대로입니다 (Lv. ' + lv + ')'); }
+        return;
+      }
+      if(succ) fxReward();
+      notify(r.n + ' — ' + fmt(tries) + '회 시도 · 성공 <b>' + fmt(succ) + '</b>회 (Lv. '
+        + lv0 + ' → <b>' + lv + '</b>)');
+    }
+  });
+}
+/* 단련 투자 — 확정 처리라 «투자 횟수» 하나면 된다 */
+function rtTemperHold(k){
+  const t = TEMPERS.find(x => x.k === k); if(!t) return;
+  const sel = '#trTemper .tr-tp[data-temper="' + CSS.escape(k) + '"] .tb';
+  let n = 0;
+  rtHoldStart({
+    tag:'temper', sel,
+    once: () => {
+      if(!temperUpOk(k)){ if(!n) temperUpBtn(k); return false; }
+      if(!temperUpBtn(k, true)) return false;
+      n++; return true;
+    },
+    live: () => renderTrainLive(),
+    end: () => {
+      renderTrain();
+      if(!n) return;
+      notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>'
+        + (n > 1 ? ' (투자 ' + fmt(n) + '회)' : ''));
+    }
+  });
+}
+/* 단련석 → 포인트 충전. `temperCharge()` 가 «보유분 전부» 를 바꾸므로 사실상 1회에 끝나지만,
+   손맛을 세 버튼에서 같게 하려고 같은 경로에 태운다(2회째는 재고가 없어 조용히 멈춘다). */
+function rtChargeHold(){
+  const sel = '#trTemper .tp-hd .cg';
+  let got = 0;
+  rtHoldStart({
+    tag:'temper', sel,
+    once: () => {
+      const before = temperPts();
+      if(!temperChargeBtn(true)){ if(!got) temperChargeBtn(); return false; }
+      got += temperPts() - before; return true;
+    },
+    live: () => renderTrainLive(),
+    end: () => {
+      renderTrain();
+      if(!got) return;
+      fxReward(); notify('단련 포인트 <b>+' + fmt(got) + '</b>');
+    }
+  });
+}
+$('trw').addEventListener('pointerdown', e => {
+  const rb = e.target.closest('[data-runebuy]');
+  if(rb){
+    /* ⓓ 다이아 칸은 홀드 제외 — 1회만 사고 끝낸다(경로는 기존 runeBuy 그대로) */
+    if(rb.dataset.pay === 'dia' && !RUNE_HOLD_DIA){ runeBuy(rb.dataset.runebuy, 'dia'); return; }
+    rtRuneHold(rb.dataset.runebuy, rb.dataset.pay); return;
+  }
+  if(e.target.closest('[data-tpchg]')){ rtChargeHold(); return; }
+  const tu = e.target.closest('[data-tempup]');
+  if(tu){ rtTemperHold(tu.dataset.tempup); return; }
+});
+/* 뗌·취소는 버튼 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다(64 와 같은 규칙) */
+addEventListener('pointerup', () => rtHoldStop(false));
+addEventListener('pointercancel', () => rtHoldStop(false));
+/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 노드가 바뀔 수 있으므로 좌표로 판정한다 */
+addEventListener('pointermove', e => {
+  if(!rtHold) return;
+  const t = document.elementFromPoint(e.clientX, e.clientY);
+  if(!t || !t.closest || !t.closest(rtHold.sel)) rtHoldStop(false);
 });
 
 /* ---- 탭 전환 ----

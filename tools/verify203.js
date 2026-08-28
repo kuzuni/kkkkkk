@@ -14,6 +14,10 @@
  *   [7] 획득처   — 룬강화석 던전 1클리어 · DPS 측정장이 각각 rstone 을 실제로 지급
  *   [8] 저장     — 저장·재로드 보존 · 구 세이브(키 없음) 마이그레이션 · 손댄 값 클램프
  *   [9] 되돌림 시험 — 일부러 깨 보고 이 게이트가 정말 잡는지(LESSONS 43-①)
+ *  [10] 홀드     — **297**(2026-08-28 주인 재지시): 룬 강화 시도 «꾹 누르면 연속».
+ *                 진짜 마우스 포인터로 누르고 뗀다 · 단발 1회 · 1초 홀드 3회 이상 · 가속 ·
+ *                 뗌·팝업 닫힘 정지 · 재료 3회분이면 정확히 3회 · **다이아 칸은 홀드 제외(ⓓ)** ·
+ *                 «홀드 중 숫자» == «통짜 재렌더 숫자»(262 교훈 2ⓑ)
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -429,6 +433,160 @@ const table = [];
   ok(neg.b, 'ⓑ 0.5% 바닥이 진짜 바닥이다(그 아래로 안 내려간다)');
   ok(neg.c, 'ⓒ 「합산 후 1회 곱」과 「룬마다 곱」이 실제로 다른 값이다(단언이 유효)');
   ok(neg.d, 'ⓓ 룬 Lv0 이면 효과 0 — 캐시에 남지 않는다');
+
+  /* ================= [10] 297 «꾹 누르면 연속» =================
+     2026-08-28 주인 재지시 — 203 이 «확률 시도라 한 번 누르면 한 번» 으로 못 박아 뒀던 자리가
+     뒤집혔다. 여기서는 **진짜 마우스 포인터**로 누르고 뗀다(LESSONS 262-1: `el.click()` 직접
+     호출은 구현이 click → pointerdown 으로 옮겨가면 그대로 죽는 부채다).
+     확률을 `runeRate` 스텁으로 고정해 «시도 횟수» 를 재화 차감으로 정확히 센다. */
+  console.log('[10] 297 — 룬 강화 시도 «꾹 누르면 연속»(주인 재지시)');
+  const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]';
+  const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
+  /* 항상 실패하게 고정하면 레벨이 안 움직여 **비용이 상수**가 된다 → 차감액 ÷ 비용 = 시도 횟수 */
+  /* ⚠ 23 팝업은 열릴 때 슬라이드 애니메이션이 있다 — 곧바로 boundingBox 를 재면 **아직 움직이는
+     중의 좌표**(여기서는 y 2345, 뷰포트 2280 바깥)를 집어 마우스가 허공을 누른다.
+     164 가 «애니메이션 종료 대기 후 마우스 클릭» 으로 같은 함정을 지났다. */
+  const setHold = async (lv, stone) => {
+    const r = await setHold0(lv, stone);
+    await p.waitForTimeout(420);
+    return r;
+  };
+  const setHold0 = (lv, stone) => p.evaluate(o => {
+    if(!window.__rate0) window.__rate0 = runeRate;
+    runeRate = () => 0;                                  /* 전부 실패 — 레벨·비용 고정 */
+    /* 결정성 — 자동 전투가 30초 넘게 돌면 레벨업·보상 팝업이 버튼 위를 덮어 포인터가 그리로 간다
+       (verify64·262 와 같은 규약: 게이트가 손가락을 흉내 내는 동안 게임 루프는 세운다) */
+    if(typeof step === 'function') step = () => {};
+    ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
+      .forEach(fn => { try { if(typeof window[fn] === 'function') window[fn](); } catch(_){} });
+    S.rune = { r1: o.lv, r2: 0, r3: 0 }; S.rstone = o.stone; S.dia = 100000;
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+    return { cost: runeCost(RN.r1, runeLvOf('r1')), st: S.rstone, dia: S.dia };
+  }, { lv, stone });
+  /* 누르기 전에 «그 좌표의 최상단 노드가 정말 그 버튼인가» 를 확인한다 —
+     아니면 0회로 조용히 통과·실패해 원인을 못 찾는다(LESSONS 263-① 양성항) */
+  const hitAt = (sel, x, y) => p.evaluate(o => {
+    const el = document.elementFromPoint(o.x, o.y);
+    return !!(el && el.closest && el.closest(o.sel));
+  }, { sel, x, y });
+  let hitOk = true;
+  const center = async sel => {
+    const bb = await p.locator(sel).boundingBox();
+    const c = { x: bb.x + bb.width / 2, y: bb.y + bb.height / 2 };
+    if (!(await hitAt(sel, c.x, c.y))) hitOk = false;
+    return c;
+  };
+  /* 액셔너빌리티 — `hover()` 는 «보이고 · 안정되고 · 그 좌표에서 이벤트를 실제로 받는» 상태가
+     될 때까지 기다렸다가 마우스를 중심으로 옮긴다. 고정 대기만 두면 «가끔 통과» 로 굳는다. */
+  const aim = async sel => {
+    await p.locator(sel).scrollIntoViewIfNeeded();
+    await p.locator(sel).hover();
+    await center(sel);                          /* 양성항 기록 — 최상단 노드가 정말 그 버튼인가 */
+  };
+  const press = async (sel, ms) => {
+    await aim(sel);
+    await p.mouse.down();
+    if (ms) await p.waitForTimeout(ms);
+    await p.mouse.up();
+    await p.waitForTimeout(80);
+  };
+  const tries = async (base, cost) => Math.round((base - (await p.evaluate(() => S.rstone))) / cost);
+
+  let s0 = await setHold(30, 1e7);
+  await press(MAT, 0);
+  const nTap = await tries(s0.st, s0.cost);
+  ok(nTap === 1, '단발 탭 = 정확히 1회 시도(누를 때 1 + 뗄 때 1 이 아니다 — 64 ⓐ)', nTap + '회');
+
+  s0 = await setHold(30, 1e7);
+  await press(MAT, 1000);
+  const nHold = await tries(s0.st, s0.cost);
+  ok(nHold >= 3, '★ 꾹 누르면 연속 시도된다 — 1초 홀드에 3회 이상', nHold + '회');
+  table.push({ k: '홀드 1초', v: nHold + '회 시도' });
+
+  const stopped = await p.evaluate(() => S.rstone);
+  await p.waitForTimeout(500);
+  ok(await p.evaluate(() => S.rstone) === stopped, '손을 떼면 즉시 멈춘다(뗀 뒤 500ms 동안 0회)');
+
+  /* 가속(×0.86) — 뒤 구간이 앞 구간보다 많이 돈다 */
+  s0 = await setHold(30, 1e7);
+  {
+    await aim(MAT);
+    await p.mouse.down();
+    await p.waitForTimeout(900);
+    const mid = await p.evaluate(() => S.rstone);
+    await p.waitForTimeout(900);
+    const end = await p.evaluate(() => S.rstone);
+    await p.mouse.up(); await p.waitForTimeout(80);
+    const a = Math.round((s0.st - mid) / s0.cost), b2 = Math.round((mid - end) / s0.cost);
+    ok(b2 > a, '반복이 가속된다(TR_HOLD_ACCEL 0.86) — 뒤 900ms 가 앞 900ms 보다 많다', a + ' → ' + b2);
+    table.push({ k: '홀드 가속', v: a + ' → ' + b2 + '회 / 900ms' });
+  }
+
+  /* 재료가 딱 3회분이면 «정확히 3회» 에서 조용히 멈춘다(119 G4 — 반복분은 무알림) */
+  s0 = await setHold(30, 0);
+  const exact = await p.evaluate(o => { S.rstone = o.c * 3; renderTrain(); return S.rstone; },
+    { c: s0.cost });
+  await press(MAT, 2000);
+  const left = await p.evaluate(() => S.rstone);
+  ok(Math.round((exact - left) / s0.cost) === 3 && left < s0.cost,
+    '재료가 3회분이면 정확히 3회에서 조용히 멈춘다', '남은 룬강화석 ' + left);
+
+  /* ⓓ 다이아 칸은 홀드 제외(RUNE_HOLD_DIA=false) — 꾹 눌러도 1회만 나간다 */
+  s0 = await setHold(30, 1e7);
+  const dia0 = await p.evaluate(() => S.dia);
+  await press(DIA, 1200);
+  const diaSpent = dia0 - (await p.evaluate(() => S.dia));
+  const diaCost = await p.evaluate(() => RUNE_DIA);
+  ok(diaSpent === diaCost, 'ⓓ 다이아 칸은 홀드에서 뺐다 — 1.2초를 눌러도 1회분(' + diaCost + ')만',
+    diaSpent + ' 다이아');
+  /* ⚠ `typeof` 로 감싼다 — 없는 이름을 그냥 읽으면 evaluate 가 던져 **게이트가 즉사**한다
+     (FAIL 이 아니라 예외라 그 아래 절이 통째로 안 돈다 — verify61 §10 · LESSONS 262-1) */
+  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA !== 'undefined' && RUNE_HOLD_DIA === false),
+    'ⓓ 스위치가 한 줄로 남아 있다(주인이 원하면 RUNE_HOLD_DIA=true 로 켠다)');
+
+  /* 팝업을 닫으면 홀드도 같이 멈춘다 */
+  s0 = await setHold(30, 1e7);
+  {
+    await aim(MAT);
+    await p.mouse.down();
+    await p.waitForTimeout(600);
+    await p.evaluate(() => closeTrain());
+    await p.waitForTimeout(400);
+    const a = await p.evaluate(() => S.rstone);
+    await p.waitForTimeout(400);
+    const b2 = await p.evaluate(() => S.rstone);
+    await p.mouse.up();
+    ok(a === b2, '팝업을 닫으면 홀드도 같이 멈춘다');
+  }
+
+  /* ★ 262 교훈 2ⓑ — 표기층이 두 벌이 됐으므로 «홀드 중 숫자» == «통짜 재렌더 숫자» 를 잠근다 */
+  const same = await p.evaluate(() => {
+    runeRate = window.__rate0;                      /* 원래 확률로 되돌린다 */
+    const read = () => {
+      const c = document.querySelector('#trRunes .tr-rn[data-rune="r1"]');
+      return c ? [c.querySelector('.rl i').textContent, c.querySelector('.rp i').textContent,
+                  c.querySelector('.rp s').textContent, c.querySelector('.rd').innerHTML,
+                  c.querySelector('.rst i').textContent, c.querySelector('.rbt.b1 i').innerHTML,
+                  c.querySelector('.rb i').style.width,
+                  document.querySelector('#trRunes .rsum i').innerHTML].join(' | ') : null;
+    };
+    S.rune = { r1: 30, r2: 0, r3: 0 }; S.rstone = 1e7;
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+    /* 홀드 중인 척하고 상태만 바꾼다 → `liveRunes` 경로가 그린다 */
+    rtHold = { tag: 'rune' };
+    S.rune.r1 = 137; S.rstone = 4321; markDirty();
+    renderRunes();
+    const live = read();
+    rtHold = null;
+    renderRunes();                                   /* → 통짜 경로(sig 가 갱신되지 않았으므로 실제로 그린다) */
+    const full = read();
+    return { live, full, moved: /137/.test(full) };
+  });
+  ok(same.moved, '대조군 — 통짜 렌더가 실제로 새 레벨(137)을 말한다(단언이 공허하지 않다)');
+  ok(same.live === same.full,
+    '★ «홀드 중 숫자» 와 «손 뗀 뒤 통짜 재렌더» 가 한 글자도 다르지 않다(262 교훈 2ⓑ)',
+    same.live === same.full ? '' : '\n      live: ' + same.live + '\n      full: ' + same.full);
+  ok(hitOk, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(팝업이 덮지 않았다 — 양성항)');
 
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 

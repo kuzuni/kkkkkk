@@ -9,7 +9,7 @@
  *   §1 진입·바인딩 · §2 단발 탭 · §3 350ms 임계 · §4 반복·가속 · §5 정지 4종
  *   §6 재료 부족 → «정확히 N회» 에서 조용히 정지 · §7 강화 계열 전수(스킬·장비·펫·코스튬)
  *   §8 «홀드 중 숫자» == «뗀 뒤 통짜 재렌더» (표기층이 두 벌로 갈라지는 것을 막는 게이트)
- *   §9 저장·다른 화면 반영 · §10 룬은 홀드 대상이 아니다(203 유지) · §11 콘솔 에러 0
+ *   §9 저장·다른 화면 반영 · §10 297 이후 «부품 경계»(룬·단련은 #trw 전용 홀드) · §11 콘솔 에러 0
  *
  * ⚠ 타이밍은 벽시계가 아니라 **상태 전이**(`upHold === null`)로 기다린다 — LESSONS 138-2.
  * ⚠ 결정성: 게임 루프의 `step()` 을 비워 전투·수입을 멈춘 뒤 잰다(verify64 와 같은 규약).
@@ -311,10 +311,24 @@ const face = page => page.evaluate(() => {
   }, { id: t.id });
   ok('07 스킬 시트 카드가 같은 레벨을 말한다', cardLv === String(lvNow), '카드 «' + cardLv + '» / S ' + lvNow);
 
-  /* ── §10 룬은 홀드 대상이 아니다 ── */
-  console.log('[10] 203 룬 [강화] 는 «확률 시도» 라 홀드를 붙이지 않는다(203 의 결정 유지)');
-  ok('룬 버튼은 여전히 click 경로(#trw 위임)에 있다', /data-runebuy/.test(SRC) && /rb\s*\)\s*\{\s*runeBuy\(/.test(SRC));
-  ok('룬 버튼에 bindUpHold 를 붙이지 않았다', !/runebuy[\s\S]{0,200}bindUpHold/.test(SRC));
+  /* ── §10 룬·단련은 262 의 부품이 아니라 297 의 부품을 탄다 ──
+     2026-08-28: 저장소 주인이 «룬 강화·단련 투자도 꾹 누르면 연속» 으로 재지시해 262 의
+     «룬은 홀드 대상이 아니다» 가 뒤집혔다(작업 297). 이 절은 그 사실을 반영해 **경계**를
+     잰다 — 홀드가 붙었는지는 verify203 [10]·verify210 [10] 이 실제 포인터로 재고,
+     여기서는 «262 의 08 팝업 부품(bindUpHold/upHold/mdLive)이 #trw 로 새지 않았는가» 만 본다.
+     두 부품은 껍데기가 다르다(#modal vs #trw) — 섞이면 팝업 닫힘 판정이 서로를 죽인다. */
+  console.log('[10] 297 이후 경계 — 룬·단련은 #trw 전용 홀드(rtHoldStart)를 타고 262 부품과 섞이지 않는다');
+  ok('룬 버튼이 262 의 bindUpHold 를 쓰지 않는다', !/runebuy[\s\S]{0,200}bindUpHold/.test(SRC));
+  ok('단련 버튼이 262 의 bindUpHold 를 쓰지 않는다', !/tempup[\s\S]{0,200}bindUpHold/.test(SRC));
+  ok('룬·단련 홀드는 #trw 전용 부품(rtHoldStart)에 있다',
+    /function rtHoldStart\(/.test(SRC) && /rtRuneHold\(/.test(SRC) && /rtTemperHold\(/.test(SRC));
+  ok('두 부품이 같은 손맛 상수(TR_HOLD_*)를 공유한다',
+    /rtHoldTick[\s\S]{0,400}TR_HOLD_IVMIN[\s\S]{0,120}TR_HOLD_ACCEL/.test(SRC)
+    && /rtHold\.timer\s*=\s*setTimeout\(rtHoldTick,\s*TR_HOLD_DELAY\)/.test(SRC));
+  ok('08 팝업 홀드(upHold)는 여전히 #modal 로 멈춘다(경계 유지)',
+    /function upHoldTick[\s\S]{0,200}\$\('modal'\)/.test(SRC));
+  ok('#trw 홀드(rtHold)는 #trw 로 멈춘다(경계 유지)',
+    /function rtHoldTick[\s\S]{0,200}\$\('trw'\)/.test(SRC));
 
   /* ── §11 콘솔 ── */
   console.log('[11] 콘솔 에러');
