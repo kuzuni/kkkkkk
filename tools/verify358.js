@@ -66,12 +66,34 @@ const STATE = kind => `((kind) => {
   return { speed: +stat.speed.toFixed(4), cp: cp(), spdLv: S.lv.spd | 0 };
 })(${JSON.stringify(kind)})`;
 
-/* 실측 이동 속도 — 넉백 프레임(`player.inv > 0`, 19384 의 +140)은 «이동» 이 아니라 뺀다 */
+/* 실측 이동 속도 — **결정적으로** 재야 한다(344 «플레이키한 게이트»).
+   두 오염원을 원천에서 막는다:
+     ① 피격 넉백(`player.vx += cos(a)*140`, ~19384)이 섞이면 «이동» 아닌 값이 천장을 넘긴다
+        → verify66 하네스와 같이 매 프레임 무적을 다시 세우면 그 분기가 `if(player.inv>0) continue` 로 빠진다.
+     ② 자동 AI(59)는 중앙 인력·벽 반발·카이팅으로 방향을 계속 꺾어, 속도가 목표에 **닿기 전에**
+        다음 방향으로 간다 — 그래서 피크가 판마다 97~115 로 흔들렸다(실측).
+        → 42 조이스틱 분기(`if(joy.on)`)로 한 방향을 고정한다. 이동식(`sp = stat.speed*mmag`)은 원본 그대로이고
+          바뀌는 것은 «어느 쪽으로 가느냐» 뿐이라, 배수가 어디 숨어 있어도 그대로 드러난다.
+   벽 clamp 로 좌표가 멈춰도 속도는 목표에 붙으므로 **속도**를 눈금으로 삼고, 변위는 참고로 같이 찍는다. */
 const MEASURE = `(() => new Promise(res => {
-  let mx = 0, t = 0, kept = 0;
+  player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+  player.inv = 9; player.hp = stat.maxHp; player.dead = 0;
+  joy.on = true; joy.dx = 1; joy.dy = 0; joy.mag = 1;
+  /* ⚠ 예열 15프레임을 버린다 — 게임 루프의 rAF 가 이 콜백보다 **먼저** 등록돼 있어,
+     무적을 세우기 직전의 프레임 하나가 넉백(+140)을 얹은 채 첫 표본이 될 수 있다(실측 126 px/s). */
+  const WARM = 15;
+  let x0 = 0, y0 = 0, t0 = 0, mx = 0, t = 0;
   const tick = () => {
-    if (player.inv > 0) { /* 피격 넉백 — 제외 */ } else { mx = Math.max(mx, Math.hypot(player.vx, player.vy)); kept++; }
-    if (++t < 200) requestAnimationFrame(tick); else res({ v: +mx.toFixed(1), kept });
+    player.inv = 9; player.hp = stat.maxHp; player.dead = 0;
+    joy.on = true; joy.dx = 1; joy.dy = 0; joy.mag = 1;    /* 42 수동 이동 — 한 방향 고정 */
+    if (t === WARM) { x0 = player.x; y0 = player.y; t0 = performance.now(); }
+    if (t >= WARM) mx = Math.max(mx, Math.hypot(player.vx, player.vy));
+    if (++t < 120 + WARM) requestAnimationFrame(tick);
+    else {
+      const sec = (performance.now() - t0) / 1000;
+      joy.on = false; joy.dx = 0; joy.dy = 0; joy.mag = 0;
+      res({ v: +mx.toFixed(1), kept: t - WARM, disp: +(Math.hypot(player.x - x0, player.y - y0) / sec).toFixed(1) });
+    }
   };
   requestAnimationFrame(tick);
 }))()`;
@@ -92,7 +114,7 @@ async function run(page, kind) {
   await page.evaluate(() => { spawnStage(); });
   await page.waitForTimeout(2600);
   const m = await page.evaluate(MEASURE);
-  return { kind, speed: g.speed, cp: g.cp, spdLv: g.spdLv, v: m.v, kept: m.kept };
+  return { kind, speed: g.speed, cp: g.cp, spdLv: g.spdLv, v: m.v, kept: m.kept, disp: m.disp };
 }
 
 (async () => {
@@ -151,6 +173,21 @@ async function run(page, kind) {
     eq('3-ⓐ «강화» 탭 행 수 = 9', r.rows.length, 9);
     ok(!r.rows.includes('spd'), '3-ⓐ 그 중 이동 속도 행은 없다', r.rows.join(' · '));
     KEEP.forEach(id => ok(r.rows.includes(id), '3-ⓐ ' + id + ' 행은 화면에 그대로 선다'));
+    /* 양성항 — «강화 탭이 통째로 죽어서 spd 가 안 보이는 것» 을 막는다(T2 실동작 규칙: 실제로 눌러 본다) */
+    const buy = await h.page.evaluate(`(() => {
+      S.gold = 1e12; S.buyQty = 1; S.autoBuy = false; markDirty(); renderUp();
+      const el = document.querySelector('#bUp .up[data-u="def"]');
+      if (!el) return { err: 'def 행이 없다' };
+      const g0 = S.gold, l0 = S.lv.def | 0;
+      el.click();
+      return { dl: (S.lv.def | 0) - l0, spent: g0 - S.gold, speed: +stat.speed.toFixed(4) };
+    })()`);
+    if (buy.err) ok(false, '3-ⓐ 남은 행을 눌러 본다', buy.err);
+    else {
+      eq('3-ⓐ 남은 행(def)을 누르면 여전히 Lv +1 = 강화 탭은 살아 있다', buy.dl, 1);
+      ok(buy.spent > 0, '3-ⓐ 그리고 골드가 실제로 나갔다', buy.spent.toFixed(0));
+      eq('3-ⓐ 그 강화로도 이동 속도는 안 변한다', buy.speed, SPEED);
+    }
     const mv = r.spc.find(x => /이동 속도/.test(x[0]));
     ok(!!mv, '3-ⓑ 20 프로필 스펙 «이동 속도» 행은 레퍼런스 줄이라 **살아 있다**', mv && mv.join(' = '));
     ok(mv && mv[1] === '0%', '3-ⓑ 그리고 값은 0% 로 고정이다', mv && mv[1]);
@@ -163,7 +200,8 @@ async function run(page, kind) {
     await blk('§4 ' + k, async () => {
       const r = await run(h.page, k);
       meas[k] = r;
-      ok(r.v <= SPEED + 1.5, `4 ${k} — 실측 속도가 상수를 안 넘는다`, `${r.v} px/s ≤ ${SPEED} (표본 ${r.kept}프레임)`);
+      ok(r.v <= SPEED + 1.5, `4 ${k} — 실측 속도가 상수를 안 넘는다`,
+        `${r.v} px/s ≤ ${SPEED} (표본 ${r.kept}프레임 · 변위 ${r.disp} px/s)`);
     });
   }
   await blk('§4 대조', async () => {
@@ -172,9 +210,9 @@ async function run(page, kind) {
     ok(meas.fresh && meas.all && meas.all.v <= meas.fresh.v + 1.5,
       '4 성장을 만렙으로 흔들어도 천장이 안 올라간다(게터 밖 배수가 없다)',
       meas.fresh && meas.all ? `Lv0 ${meas.fresh.v} → 만렙 ${meas.all.v}` : '?');
-    ['fresh', 'all'].forEach(k => ok(meas[k] && meas[k].v > SPEED * 0.85,
-      `4 ${k} — 그 천장까지 실제로 올라간다(«안 움직여서 초록» 이 아니다)`,
-      meas[k] && `${meas[k].v} ≥ ${(SPEED * 0.85).toFixed(1)}`));
+    ['fresh', 'all'].forEach(k => ok(meas[k] && meas[k].v > SPEED * 0.97,
+      `4 ${k} — 그 천장에 실제로 붙는다(«안 움직여서 초록» 이 아니다)`,
+      meas[k] && `${meas[k].v} ≥ ${(SPEED * 0.97).toFixed(1)}`));
   });
 
   console.log('\n=== §5 66 보스 추격 바닥은 상수에 «비» 로 걸린다 ===');
@@ -198,6 +236,7 @@ async function run(page, kind) {
       await new Promise(r2 => setTimeout(r2, 2200));
       const B = () => enemies.find(e => e.tk === 'boss');
       if (!B()) return { err: '보스가 안 섰다 — 필드 [' + enemies.map(e => e.tk).join(',') + ']' };
+      const sp0 = +B().sp.toFixed(1);
       let path = 0, px = B().x, py = B().y, t0 = performance.now(), fr = 0;
       for (let i = 0; i < 160; i++) {
         await new Promise(r2 => requestAnimationFrame(r2));
@@ -205,8 +244,9 @@ async function run(page, kind) {
         path += Math.hypot(e2.x - px, e2.y - py); px = e2.x; py = e2.y; fr++;
       }
       const sec = (performance.now() - t0) / 1000;
+      /* ⚠ 표본 끝에 보스가 사라져 있을 수 있다(제한 시간·격파) — 기본 속도는 **처음에** 잡아 둔 값을 쓴다 */
       return { avg: +(path / Math.max(0.1, sec)).toFixed(1), fr,
-               floor: +(stat.speed * BOSS_CHASE).toFixed(1), baseSp: +B().sp.toFixed(1),
+               floor: +(stat.speed * BOSS_CHASE).toFixed(1), baseSp: sp0,
                pSpeed: stat.speed, chase: BOSS_CHASE };
     })()`;
     const a = await h.page.evaluate(runBoss(0));
