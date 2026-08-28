@@ -20,6 +20,7 @@
     [11] 세 씬 어디서도 콘솔 에러가 나지 않는다
     [12] 전투 발 경로가 우상단 ▦ 메뉴 버튼(#menub)을 관통하지 않는다 (34차 2인 공통2)
     [13] 씬 B 머묾 구간에 코인이 «모두 받기» 라벨 keep-out 을 지킨다 (34차 2인 공통1)
+    [14] 씬 A 전투 발이 프레임 오른쪽으로 잘려 나가지 않는다 (36차 2인 공통)
 
    실행: node tools/verify58.js            (실패 항목은 ✗ 로 찍힌다) */
 const { pw, launch } = require('./pwlaunch');
@@ -38,7 +39,21 @@ async function run(scene, span, step) {
   const errs = [];
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   p.on('pageerror', (e) => errs.push(String(e)));
-  await p.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  /* ⚑ 36회차 — **씨앗을 고정한다.** 35회차가 [12] 에서 «발원을 `enemies[0]` 에 맡기면 실행마다
+     달라 재현이 안 된다» 를 고쳤는데, 퍼짐 끝점은 여전히 `Math.random` 이라 같은 병이 남아 있었다:
+     36회차 [14](프레임 잘림)를 처음 넣었을 때 **되돌림 시험이 «PASS» 로 나왔다** — 그 실행에서
+     우연히 안 넘친 것이지 결함이 없어서가 아니다. 재현되지 않는 게이트는 게이트가 아니다.
+     (`cap58b.js` 가 같은 이유로 표본마다 씨앗을 고정한다.) */
+  await p.addInitScript((sd) => {
+    try { localStorage.clear(); } catch (e) {}
+    let s = sd >>> 0;
+    Math.random = function () {
+      s |= 0; s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }, 20260828);
   await p.goto(URL);
   await p.waitForTimeout(1100);
 
@@ -142,6 +157,9 @@ async function run(scene, span, step) {
       /* keep-out 규칙 상수도 페이지에서 읽는다 — 게이트가 자기 사본을 들면 부패한다(211·289) */
       kom: (typeof FX3_KOM === 'number' && typeof FX3_BSFX === 'number')
         ? { kom: FX3_KOM, fx: FX3_BSFX } : null,
+      /* [14] — 프레임 사각(페이지 좌표). 잘림은 «프레임 밖» 이지 «뷰포트 밖» 이 아니다. */
+      frame: (() => { const a = document.getElementById('app'); if (!a) return null;
+        const r = a.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })(),
       /* 머묾 창은 사양 상수에서 읽는다(눈대중 임계 금지) — 퍼짐 끝 ~ 흡수 시작 */
       hold: { a: (typeof FX3_SPREAD === 'number' ? FX3_SPREAD : 0.22) * 1000,
               b: ((typeof FX3_SPREAD === 'number' ? FX3_SPREAD : 0.22)
@@ -155,7 +173,10 @@ async function run(scene, span, step) {
 (async () => {
   console.log('VERIFY58 — UI 연출 공용 모듈\n');
 
-  const gain = await run('gain', 1600, 25);
+  /* ⚑ 36회차 — 씬 A 는 **8ms** 로 훑는다. [14](프레임 잘림)는 «한 프레임짜리» 사건이라
+     25ms 간격에서는 표본 사이로 빠진다 — 씨앗을 고정한 뒤에도 되돌림 시험이 «PASS» 로 나온
+     두 번째 이유가 이것이었다(첫 번째는 씨앗). 봉투 길이에 표본을 맞춘다(32회차와 같은 원칙). */
+  const gain = await run('gain', 1600, 8);
   const quest = await run('quest', 1900, 15);
   const upg = await run('upg', 900, 25);
 
@@ -289,6 +310,22 @@ async function run(scene, span, step) {
     /* 되돌리면 빨개진다: 36회차 이전 빌드는 같은 창에서 «위반 25개 · 최소 거리 −78.6px»
        (중심이 라벨 «안» 에 있었다 = 두 비평가가 잰 그림). */
     ok(n > 0 && bad === 0, `머묾 표본 ${n}개 · 규칙 위반 ${bad}개 · 최소 여유 ${mind === 1e9 ? 'n/a' : mind.toFixed(1)}px (≥ FX3_KOM ${quest.kom.kom} − FX3_BSFX ${quest.kom.fx} = ${need})`);
+  }
+
+  /* ---- [14] 씬 A 전투 발이 프레임 밖으로 안 잘린다 (36차 X[2]·Y[1] 2인 공통) ---- */
+  console.log('[14] 씬 A 전투 발 — 프레임 오른쪽 잘림 0 (36차 X·Y 2인 공통)');
+  if (!gain.frame) {
+    ok(false, '#app 사각을 못 읽었다 — 이 단언을 잴 대상이 없다');
+  } else {
+    const R = gain.frame.x + gain.frame.w;
+    let out = 0, worst = 0;
+    for (const s2 of gain.samples) for (const f of s2.flies) {
+      const right = f.cx + f.cw;                              /* «그림»(.cic) 상자의 우변 */
+      if (right > R + 0.5) { out++; worst = Math.max(worst, right - R); }
+    }
+    /* 되돌리면 빨개진다: 36회차 이전 빌드는 같은 발원(1040,400)에서 최대 **+14.7px** 이 프레임
+       밖으로 나갔다(캡처 r36b gain-4 의 골드 화소도 x=1079 까지 붙어 있었다). */
+    ok(out === 0, `프레임 우변을 넘은 표본 ${out}개 · 최대 +${worst.toFixed(1)}px (0 이어야 한다)`);
   }
 
   console.log('[11] 콘솔 에러 0');
