@@ -39,7 +39,9 @@ const near = (name, got, want, tol) =>
 
 /* 측정표 docs/measure/03-던전팝업.md §4 · 부록A */
 const R = {
-  barTop: 2021 - 60, barBottom: 2118 - 60, barH: 98,
+  /* 337 이관 — 바 높이는 «98 ± 2» 로 뭉개 두던 자리다. ref 검정 테두리 행이 2021~2026 / 2112~2117
+     이므로 외곽은 2021..2117 = **97** 이고 하변도 2118 이 아니라 2117 이다(AA 1px). */
+  barTop: 2021 - 60, barBottom: 2117 - 60, barH: 97,
   barLeft: 151, barRight: 944, barW: 794, axis: 8,
   pillH: 85,                       /* 바 검정 테두리 «안쪽» — ref 2027~2111 */
   tabbarTop: 2160 - 60,

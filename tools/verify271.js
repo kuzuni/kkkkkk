@@ -128,8 +128,10 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   ok(geo.up[0] === geo.dn[0] && geo.up[2] === geo.dn[2],
     '★ 두 겹 탭 — 상·하위 바의 left·width 가 같은 값(같은 세로선 위)',
     'left ' + geo.up[0] + '/' + geo.dn[0] + ' · w ' + geo.up[2] + '/' + geo.dn[2]);
-  ok(geo.dn[1] === 34 && geo.dn[3] === 99,
-    '하위 바가 본문 머리(박스 local top 34) · 부품 높이 99', geo.dn[1] + ' / ' + geo.dn[3]);
+  /* 337 (2026-08-28) 이관 — 부품 높이 99 → 97. `.rn-subs` 는 **상단 앵커**(top:34)라 상변은 Δ0 이고
+     하변만 2px 올라온다(세로 예산 §9411 주석의 «하위 바 34~133» → 34~131, 여유 19 → 21). */
+  ok(geo.dn[1] === 34 && geo.dn[3] === 97,
+    '하위 바가 본문 머리(박스 local top 34) · 부품 높이 97', geo.dn[1] + ' / ' + geo.dn[3]);
   ok(geo.card === 1, '★ 한 화면에 룬 카드 1장(행 나열 폐기)', String(geo.card));
   ok(geo.overlap === 0, '하위 바 · 카드 · 총효과 요약 · 상위 바 서로 겹침 0건', String(geo.overlap));
   ok(geo.order, '세로 순서 — 하위 바 → 카드 → 총효과 요약 → 상위 바');

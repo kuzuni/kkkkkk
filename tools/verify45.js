@@ -80,8 +80,9 @@ const settled = async page => {
     };
   });
   ok('바 폭 990', near(g.bar.w, 990), g.bar.w.toFixed(1));
-  /* 96 — 바 껍데기가 공용 부품 규격(h99 · 검정 6)으로 통일됐다 */
-  ok('바 높이 99 (96 공용 부품)', near(g.bar.h, 99), g.bar.h.toFixed(1));
+  /* 96 — 바 껍데기가 공용 부품 규격(h97 · 검정 6)으로 통일됐다.
+     337 (2026-08-28) 이관 — 99 → 97. ref 둘(03 §4-1 · 07 §9)이 검정 테두리 행으로 97 을 같이 말한다. */
+  ok('바 높이 97 (96 공용 부품 · 337 재측정)', near(g.bar.h, 97), g.bar.h.toFixed(1));
   ok('바 좌 45', near(g.bar.x, 45), g.bar.x.toFixed(1));
   const inner = g.bar.w - g.bw * 2, sw = inner / 3;
   ok('칸 3개가 패딩박스를 정확히 3등분', g.cells.length === 3 && g.cells.every(c => near(c.w, sw)),
@@ -125,7 +126,7 @@ const settled = async page => {
   ok('활성 탭 = 재화', c.onTab.join(',') === 'coin', c.onTab.join(','));
   ok('활성 칸이 재화 칸으로 이동', near(c.on.x, c.cells[1].x) && near(c.on.w, c.cells[1].w),
     c.on.x.toFixed(1) + '+' + c.on.w.toFixed(1) + ' vs ' + c.cells[1].x.toFixed(1) + '+' + c.cells[1].w.toFixed(1));
-  ok('재화 탭에서도 바 규격이 같다(96 — 13 전용 덮어쓰기 폐기)', near(c.bar.h, 99) && near(c.bw, 6),
+  ok('재화 탭에서도 바 규격이 같다(96 — 13 전용 덮어쓰기 폐기)', near(c.bar.h, 97) && near(c.bw, 6),
     'h' + c.bar.h.toFixed(1) + ' · 테두리 ' + c.bw.toFixed(1));
   ok('활성 칸이 바 안쪽에 들어감(우측 돌출 0)', c.on.x + c.on.w <= c.bar.x + c.bar.w - c.bw + 0.5,
     '칸우 ' + (c.on.x + c.on.w).toFixed(1) + ' vs 바안쪽 ' + (c.bar.x + c.bar.w - c.bw).toFixed(1));
