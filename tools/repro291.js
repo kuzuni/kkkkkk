@@ -20,6 +20,11 @@
  *   node tools/repro291.js --load 6 --runs 5
  *   node tools/repro291.js --load 6 --runs 5 --wait 900   # 게이트들이 실제로 쓰는 고정 대기
  *   node tools/repro291.js --parallel 3    # 브라우저를 3개 동시에 (서브에이전트 동시 실행 재현)
+ *
+ * ⚠ 이 도구 자신은 entry 가 `verify*.js` 가 아니라 **정착이 기본으로 꺼져 있다** — 그래서 그냥 돌리면
+ *   «병» 이 보인다. 게이트(`verify*.js`)가 실제로 받는 상태를 보려면 `PW_SETTLE=1` 을 붙인다:
+ *     node tools/repro291.js --runs 3 --parallel 3 --load 6                # 병: 24/36
+ *     PW_SETTLE=1 node tools/repro291.js --runs 3 --parallel 3 --load 6    # 약: 0/36
  */
 const path = require('path');
 const { spawn } = require('child_process');

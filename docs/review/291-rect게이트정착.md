@@ -106,7 +106,9 @@ orig run2: ✗ [I]ⓒ 멎은 뒤 86프레임이 움직였다 — 437 → 438 (t=
 - `node tools/audit122rect.js` — ⓐ **54 → 0개** · ⓑ **44 → 0개**
   (정적 훑기가 «공용 부트스트랩을 지나간다» 도 정착 장치로 세도록 지문 1줄 추가.
   ⚠ 이 지문은 «장치가 닿는다» 이지 «켜져 있다» 가 아니다 — 실제 판정은 `repro291` 이 한다고 주석에 못 박았다.)
-- `node tools/repro291.js --runs 3 --parallel 3 --load 6` — **24/36 → 0/36**(같은 부하, 같은 명령)
+- `node tools/repro291.js --runs 3 --parallel 3 --load 6` — **24/36**(정착 없음) → `PW_SETTLE=1` 을 붙이면 **0/36**(같은 부하·같은 명령).
+  ⚠ **`repro291` 자신은 entry 가 `verify*.js` 가 아니라 정착이 기본 꺼짐이다** — 그래서 그냥 돌리면 «병» 이 보이고,
+  `PW_SETTLE=1` 을 붙이면 «약» 이 보인다. 재조정(rebase) 뒤 재확인: 16/24 → **0/24**.
 - 게이트 45개 일괄 재실행 결과는 아래 §6.
 
 ### 6. 게이트 45개 일괄 재실행 (44 후보 + `verify158`)
@@ -130,7 +132,7 @@ orig run2: ✗ [I]ⓒ 멎은 뒤 86프레임이 움직였다 — 437 → 438 (t=
 
 ```
 node tools/audit122rect.js                              # ⓐ 0개 · ⓑ 0개  (착수 전 54 / 44)
-node tools/repro291.js --runs 3 --parallel 3 --load 6   # REPRO291 0/36  (착수 전 24/36)
-PW_SETTLE=0 node tools/repro291.js --runs 3 --parallel 3 --load 6   # 되돌림 시험 — 다시 24/36 근처가 나와야 한다
+node tools/repro291.js --runs 3 --parallel 3 --load 6                # 병:  24/36 (repro 는 정착 기본 꺼짐)
+PW_SETTLE=1 node tools/repro291.js --runs 3 --parallel 3 --load 6    # 약:  0/36   ← 게이트(verify*.js)가 받는 것과 같은 상태
 node tools/smoke.js                                     # SMOKE PASS
 ```
