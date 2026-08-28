@@ -227,24 +227,55 @@ async function shot(scene, T, idx, seed) {
      census 는 그 앞에서 읽고 스크린샷은 그 뒤에 찍히므로 «표 < 그림» 이 된다.
      → 얼린 뒤 잠깐 두었다가 census 를 하고, **두 번 읽어 같은지 확인**한다(다르면 표에 ⚠ 를
        남긴다 — 조용히 틀린 표를 비평가에게 주는 것이 이 하네스의 가장 나쁜 실패다). */
+  /* ⚑ 41회차 — **표는 «있는 노드» 가 아니라 «보이는 노드» 를 세야 한다.**
+     40차 두 비평가(AB·AC)가 독립적으로 «표에는 있는데 그림에 없는» 프레임 표를 만들었다. 41회차가
+     `tools/p58au.js` 로 재니 원인의 절반은 게임(제거 시각이 애니 길이와 따로 적힌 상수 — index.html
+     `fxBye` 로 닫았다)이고, **나머지 절반은 이 하네스**다: `querySelectorAll` 은 `opacity:0` 인 노드도
+     세므로, 퇴장 페이드의 마지막 한 뼘과 타이머 지연(이 컨테이너는 setTimeout 이 20~40ms 늦게 터진다)이
+     전부 «표에만 있는 것» 으로 찍힌다. 얼리기가 타이머를 **취소**하므로 그 지연분은 영영 안 지워진다.
+     → census 를 불투명도로 거른다. `p58au` 와 같은 임계(0.06 — 8비트로 1~2 계조)를 쓴다.
+     ⚠ 이것은 «표를 그림에 맞추는» 것이지 결함을 감추는 것이 아니다. 게임 쪽 수명은 41회차가 따로
+       줄였고(뒷꼬리 `fx-plus` 486 → 23~119ms · `fx-check` 154 → 34 · `fx-flash` 138 → 30),
+       그래도 남는 «보이지 않는 꼬리» 를 표가 «있다» 고 적으면 비평가가 없는 결함을 보고한다. */
   const census = () => p.evaluate(() => {
+    /* ⚑ 41회차 — **얼리기 네 겹째.** 얼릴 때 `getAnimations().pause()` 는 «그 순간 존재하던» 것만
+       세운다. rAF 를 덮어써도 **이미 예약된 콜백 한 번**은 그대로 도는데(36회차 주석), 그 한 프레임이
+       `fxTick` 의 착지 경로를 태워 `.fx-land2` 를 붙이면 **얼린 뒤에 태어난 애니메이션**이 생긴다 —
+       세워지지 않았으므로 census 두 번 사이에 불투명도가 변하고(«⚠ 흔들림»), 스크린샷은 그보다 더
+       진행한 그림을 찍는다. 41회차가 census 를 불투명도로 거르자마자 이것이 gain 3개 프레임에서
+       드러났다(종전에는 개수만 세어 안 보였다). → census 할 때마다 한 번 더 세운다. */
+    try { document.getAnimations().forEach((a) => a.pause()); } catch (e) {}
     const g = document.getElementById('goldN'), d = document.getElementById('diaN');
+    const VIS = 0.06;
+    const vis = (n) => {
+      try {
+        const cs = getComputedStyle(n);
+        if (cs.visibility === 'hidden' || cs.display === 'none') return false;
+        if (parseFloat(cs.opacity) < VIS) return false;
+        const r = n.getBoundingClientRect();
+        return !(r.right <= 0 || r.bottom <= 0 || r.left >= 1080 || r.top >= 2280);
+      } catch (e) { return false; }
+    };
+    const q = (sel) => [...document.querySelectorAll(sel)].filter(vis);
     return {
       gold: g ? g.textContent.trim() : '',
       dia: d ? d.textContent.trim() : '',
-      fly: document.querySelectorAll('.fx-fly').length,
-      flyUp: document.querySelectorAll('#fxl .fx-fly').length,
-      flyLo: document.querySelectorAll('#fxlc .fx-fly').length,
-      plus: document.querySelectorAll('.fx-plus').length,
-      burst: document.querySelectorAll('.fx-spark').length,
-      flash: document.querySelectorAll('.fx-flash').length,
-      check: document.querySelectorAll('.fx-check').length,
-      toast: document.querySelectorAll('.fx-toast').length,
+      fly: q('.fx-fly').length,
+      flyUp: q('#fxl .fx-fly').length,
+      flyLo: q('#fxlc .fx-fly').length,
+      plus: q('.fx-plus').length,
+      burst: q('.fx-spark').length,
+      flash: q('.fx-flash').length,
+      check: q('.fx-check').length,
+      toast: q('.fx-toast').length,
+      /* 41회차 — «표에만 있는» 노드가 몇 개였는지도 남긴다. 0 이 아니면 그만큼이 안 보이는 꼬리다. */
+      ghost: ['.fx-fly', '.fx-plus', '.fx-spark', '.fx-flash', '.fx-check', '.fx-toast']
+        .reduce((k, sel) => k + (document.querySelectorAll(sel).length - q(sel).length), 0),
       /* 38회차 — «나이(ms)» = 얼린 시각 − 태어난 시각. 판(페이지)마다 사건 시각이 몇 ms 흔들리는데,
          나이를 같이 주면 비평가가 «이 프레임은 판이 달라서 어린 것» 과 «게임이 깜빡인 것» 을 가른다. */
       age: (() => {
         const f = window.__frz || performance.now();
-        const g = (sel) => [...document.querySelectorAll(sel)]
+        const g = (sel) => q(sel)                       /* 41회차 — 나이도 «보이는» 노드만 */
           .map((n) => (n.dataset && n.dataset.born ? Math.round(f - +n.dataset.born) : null))
           .filter((v) => v != null).sort((a, b) => b - a);
         return { fly: g('.fx-fly'), plus: g('.fx-plus'), spark: g('.fx-spark'),
@@ -283,17 +314,21 @@ async function shot(scene, T, idx, seed) {
     + `«실제» 는 얼린 시각이며 목표와의 차이가 그 프레임 라벨의 오차다.\n\n`
     + `36회차 — 얼리기가 **세 겹**(rAF · CSS 애니메이션 · **타이머**)이 됐다. 종전 두 겹은 \`setTimeout\` 으로 도는\n`
     + `연출 노드 제거를 못 막아, 얼린 뒤 스크린샷까지의 300~600ms 동안 불꽃·코인이 계속 사라졌다(그림 < 표).\n`
-    + `«얼림» 열은 얼린 뒤 40ms·160ms 두 번 읽은 census 가 같았는지다 — «고정» 이어야 표와 그림이 같은 순간이다.\n\n`;
+    + `«얼림» 열은 얼린 뒤 40ms·160ms 두 번 읽은 census 가 같았는지다 — «고정» 이어야 표와 그림이 같은 순간이다.\n\n`
+    + `**41회차 — 이 표의 개수는 «DOM 에 있는 노드» 가 아니라 «보이는 노드»(불투명도 ≥ 0.06 · 화면 안) 다.**\n`
+    + `40차 두 비평가가 «표에는 있는데 그림에 없다» 를 2인 공통으로 낸 자리를 닫은 것이다 — 퇴장 페이드의\n`
+    + `마지막 한 뼘과 타이머 지연이 종전 표에서는 «있다» 로 찍혔다. «유령» 열이 그 차이(= 안 보이는데 DOM 에\n`
+    + `있는 노드 수)이며, 0 이 아니어도 **그림이 맞다** — 표를 그림에 맞춘 것이지 결함을 감춘 것이 아니다.\n\n`;
   for (const scene of WANT) {
     const rs = rows.filter(r => r.scene === scene);
     if (!rs.length) continue;
-    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 유령 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
     rs.forEach(r => {
       /* 38회차 — «나이» 열. 종류마다 «가장 늙은 노드» 하나만 적는다(전부 적으면 표가 안 읽힌다). */
       const a = r.age || {};
       const ag = ['fly', 'plus', 'spark', 'check', 'toast'].map((k) => (a[k] && a[k].length ? k + ' ' + a[k][0] : null))
         .filter(Boolean).join(' · ') || '—';
-      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${ag} |\n`;
+      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${r.ghost || 0} | ${ag} |\n`;
     });
     md += '\n';
   }

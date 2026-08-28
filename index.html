@@ -29290,9 +29290,14 @@ function fxPunch(el, soft, beat){
        적고 표는 «있다» 고 적으니, 라운드마다 «하드컷·절벽» 으로 이름만 바꿔 재발했다.
    → 상수를 **없앤다.** 제거는 그 요소에 실제로 걸린 애니메이션의 끝에서 잰다. 애니 길이를 고치면
      제거 시각이 따라오므로 둘이 다시 어긋날 수 없다.
-   ⚠ 새 연출 노드에 `setTimeout(() => el.remove(), <상수>)` 를 쓰지 마라 — `fxBye(el)` 를 쓴다.
+   ⚠ 새 연출 노드에 `setTimeout(() => el.remove(), <상수>)` 를 쓰지 마라 — `fxBye(el, <대체값>)` 을 쓴다.
      (트랜지션으로 퇴장하는 `fx-lit`·`fx-fly` 는 애니메이션이 아니라 이미 «끝 + 40ms» 로 잰다) */
-const FXBYE_PAD = 40;      /* 애니 끝 뒤 여유(ms) — 마지막 프레임을 그릴 시간. 이 값이 뒷꼬리 상한이다 */
+/* 41회차 — 여유는 «한 프레임 반»(24ms)이다. 더 줄일 이유도 늘릴 이유도 없다:
+   퇴장 키프레임의 끝은 전부 `opacity:0` 이라 «마지막 프레임을 놓칠» 위험이 없고, `setTimeout` 은
+   부하가 걸리면 **늦게** 터지지 늦게 예약된 것보다 일찍 터지지 않는다. 반대로 40ms 로 두면
+   95ms 격자 캡처에서 «표에는 있고 그림에는 없는» 프레임이 그 창에 걸린다(r41 시험 캡처의
+   quest-4 가 정확히 그랬다 — 불꽃 나이 301ms, 수명 300ms). */
+const FXBYE_PAD = 24;      /* 애니 끝 뒤 여유(ms) — 이 값이 «안 보이는데 세어지는» 뒷꼬리의 상한이다 */
 function fxAnimEnd(el){
   let ms = 0;
   try{
@@ -29306,9 +29311,12 @@ function fxAnimEnd(el){
   }catch(_){}
   return ms;
 }
+/* `life` 는 **대체값**이다(«상한» 이 아니다) — 애니메이션을 못 찾았을 때만 쓴다. 못 찾는 경우가
+   생기면(레이어가 `display:none` 인 채 append 되는 등) 상수 시절 거동으로 안전하게 내려앉는다. */
 function fxBye(el, life){
   if(!el) return;
-  const t = (life != null && Number.isFinite(life)) ? life : fxAnimEnd(el);
+  const a = fxAnimEnd(el);
+  const t = a > 0 ? a : (Number.isFinite(life) ? life : 600);
   setTimeout(() => { if(el.parentNode) el.remove(); }, Math.max(0, t) + FXBYE_PAD);
 }
 function fxPlus(cur, n, combat){
@@ -29354,7 +29362,7 @@ function fxPlus(cur, n, combat){
   }
   /* 41회차 — 종전 `combat ? 840 : 1500`. 애니는 .6s / 1.08s 라 **240ms · 420ms** 를 투명한 채
      남아 있었다(p58au 실측 뒷꼬리 291 · 486ms — 40차 «quest-15/16/17 +n 1 → 0» 의 정체). */
-  fxBye(el);
+  fxBye(el, combat ? 840 : 1500);
 }
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
@@ -29478,7 +29486,7 @@ function fxBurst(t, col, n){
     el.style.setProperty('--dx', (ex - sx).toFixed(1) + 'px');
     el.style.setProperty('--dy', (ey - sy).toFixed(1) + 'px');
     L.appendChild(el);
-    fxBye(el);                                       /* 21회차 수명 .26s → 41회차 공용 퇴장 규약(=300ms, 값 불변) */
+    fxBye(el, 300);                                  /* 21회차 수명 .26s → 41회차 공용 퇴장 규약 */
   }
 }
 function fxFlash(el){
@@ -29492,7 +29500,7 @@ function fxFlash(el){
   L.appendChild(d);
   /* 41회차 — 주석은 «.44s» 라고 적혀 있지만 실제 `animation` 은 **.34s** 다(둘이 어긋난 채 굳어 있었다).
      500 고정은 그래서 138ms 를 투명한 채 남긴다(p58au 실측 — 40차 «upg-5 플래시 1 → 0»). */
-  fxBye(d);                                           /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
+  fxBye(d, 500);                                      /* 애니메이션이 «끝난 뒤» 지운다 — 먼저 지우면 흰 링이 툭 끊긴다 */
 }
 /* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
    fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */
@@ -29621,7 +29629,7 @@ function fxDelta(el, txt){
   L.appendChild(d);
   /* 41회차 — 애니 `.fx-delta` 는 .62s 다. 660 고정은 40ms 여유라 이미 규약과 같은 값이지만,
      상수로 남겨 두면 다음에 길이를 고칠 때 또 어긋난다 — 공용 규약으로 묶는다. */
-  fxBye(d);
+  fxBye(d, 660);
   /* 26회차 — 24회차의 `.fx-hush`(그 아래 두 줄을 흐리게) 를 **뗐다**. 겹침이 사라졌으므로
      필요가 없고, 두 사람이 이 장치 자체를 «라벨을 지웠다» 로 감점했다(위 CSS 주석). */
   /* 21회차 — 20회차 AG #6 · AH #4 (19회차부터 3라운드 연속, 2인 공통):
@@ -29838,7 +29846,7 @@ function fxCheck(el){
   L.appendChild(d);
   /* 41회차 — 애니 `fxCheckIn` 은 .7s 인데 제거가 900 이라 **200ms** 를 투명한 채 남겼다
      (p58au 실측 뒷꼬리 154ms — 40차 «quest-9/10 체크 1 → 0» 의 정체). */
-  fxBye(d);
+  fxBye(d, 900);
 }
 
 /* ── 「수령한 행만 남긴다」 (11회차 — 10회차 보류 사유 1·2의 처방) ──
