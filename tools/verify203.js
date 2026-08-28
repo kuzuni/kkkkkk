@@ -531,18 +531,29 @@ const table = [];
   ok(Math.round((exact - left) / s0.cost) === 3 && left < s0.cost,
     '재료가 3회분이면 정확히 3회에서 조용히 멈춘다', '남은 룬강화석 ' + left);
 
-  /* ⓓ 다이아 칸은 홀드 제외(RUNE_HOLD_DIA=false) — 꾹 눌러도 1회만 나간다 */
+  /* ⓓ **349 로 뒤집혔다(2026-08-29 주인 확인).** 297 은 «다이아는 홀드 제외 · 1.2초를 눌러도
+     1회분» 을 단언했는데, 주인이 «룬 강화버튼 꾹 눌러도 연속이 안 된다» 고 보고한 버튼이
+     **바로 이 칸**이었다(`tools/probe349.js` — 재료칸은 네 조합 전부 10~12회 돌고 있었고 안 도는
+     것은 다이아칸 하나뿐). ⇒ 이제 다이아 칸도 같은 홀드를 탄다.
+     ⚑ 값만 «1회 → n회» 로 고치지 않는다 — 그러면 «349 가 통째로 사라져도 초록인 게이트» 가
+     된다(LESSONS 328-330 의 이관 교훈). 스위치가 실제로 켜져 있는가(true)와, 그 스위치가
+     여전히 **한 줄로 되돌릴 수 있는 이름**으로 남아 있는가를 각각 따로 묻는다. */
   s0 = await setHold(30, 1e7);
   const dia0 = await p.evaluate(() => S.dia);
   await press(DIA, 1200);
   const diaSpent = dia0 - (await p.evaluate(() => S.dia));
   const diaCost = await p.evaluate(() => RUNE_DIA);
-  ok(diaSpent === diaCost, 'ⓓ 다이아 칸은 홀드에서 뺐다 — 1.2초를 눌러도 1회분(' + diaCost + ')만',
-    diaSpent + ' 다이아');
+  ok(diaSpent >= diaCost * 3, 'ⓓ 349 — 다이아 칸도 «꾹 = 연속» 이다(1.2초에 3회분 이상, 1회분 '
+    + diaCost + ')', diaSpent + ' 다이아 = ' + Math.round(diaSpent / diaCost) + '회');
   /* ⚠ `typeof` 로 감싼다 — 없는 이름을 그냥 읽으면 evaluate 가 던져 **게이트가 즉사**한다
      (FAIL 이 아니라 예외라 그 아래 절이 통째로 안 돈다 — verify61 §10 · LESSONS 262-1) */
-  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA !== 'undefined' && RUNE_HOLD_DIA === false),
-    'ⓓ 스위치가 한 줄로 남아 있다(주인이 원하면 RUNE_HOLD_DIA=true 로 켠다)');
+  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA !== 'undefined' && RUNE_HOLD_DIA === true),
+    'ⓓ 349 — 스위치가 켜져 있다(RUNE_HOLD_DIA === true)');
+  /* 되돌릴 수 있는 스위치인가 — 소스에 «false 면 1회» 분기가 살아 있어야 한 줄로 되돌아간다.
+     (분기를 지우고 상수만 true 로 두면 스위치가 아니라 «흔적» 이다) */
+  ok(/dataset\.pay\s*===\s*'dia'\s*&&\s*!RUNE_HOLD_DIA/.test(
+       require('fs').readFileSync(path.resolve(__dirname, '../index.html'), 'utf8')),
+    'ⓓ 되돌림 분기가 살아 있다 — RUNE_HOLD_DIA=false 한 글자로 297 사양으로 돌아간다');
 
   /* 팝업을 닫으면 홀드도 같이 멈춘다 */
   s0 = await setHold(30, 1e7);
