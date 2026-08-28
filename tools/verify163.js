@@ -344,6 +344,24 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
     const w = parseFloat(getComputedStyle(document.getElementById('ldSh')).width);
     return { pct, w };
   });
+  /* ★ 10회차 신설 — 그림자가 **«그려진 접지발»** 을 따라간다. 9회차 비평 O(184px)·P(162px)·8회차 M(147px)이
+     세 사람 두 라운드에 걸쳐 짚은 자리다. 앵커에 못 박아 두면(옛 `translateX(x)`) 여기가 빨개진다.
+     ⚠ idle(선 자세)에서는 보정이 **정확히 0** 이어야 한다 — 6회차가 세운 «축은 하나(540)» 가 도착 시각에 그대로 성립해야 한다. */
+  ok(/var sdx = \(fo - LD_FOOTC\) \* LD_SC;/.test(SRC)
+      && /translateX\('\s*\+\s*\(x \+ sdx\)/.test(SRC),
+    '★ 그림자 x 가 «그려진 접지발»(LD_FEET) 을 따라간다 = 달리는 동안 발이 그림자 중심에 선다');
+  const sdx = await page.evaluate(() => {
+    const F = LD.FEET, C = LD.FOOTC, SC = LD.SC;
+    return { rest: 0, max: Math.max.apply(null, F.map(v => Math.abs((v - C) * SC))), C,
+             lo: Math.min.apply(null, F), hi: Math.max.apply(null, F) };
+  });
+  ok(sdx.C >= sdx.lo - 12 && sdx.C <= sdx.hi + 12,
+    `idle 발 중심(LD_FOOTC ${sdx.C})이 run 접지열 범위(${sdx.lo}~${sdx.hi}) 근처다 = 같은 자로 잰 값이다`);
+  ok(sdx.max >= 100,
+    `보정이 실제로 의미 있는 크기다 (최대 ${Math.round(sdx.max)}px — 이만큼이 8회차까지 어긋나 있었다)`);
+  /* ★ 10회차 — 착지 팽창이 스프라이트 스쿼시와 같은 폭이다(O «+21.4% vs 스프라이트 +8.3%» · P «설명 안 되는 50px»). */
+  ok(/\(1 \+ \.10 \* k - \.18 \* air\)/.test(SRC),
+    '★ 그림자의 착지 팽창(.10)이 스프라이트 가로 스쿼시(+8.3%)와 같은 폭이다');
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
 

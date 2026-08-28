@@ -3588,8 +3588,8 @@
      프레임을 가로지르는 바닥선을 만든 이유(발밑 기준)가 정작 발밑에서만 없어지고 있었다.
      선이 그림자를 **가로지르는** 편이 접지 신호가 강하다. */
   #ldGr{position:absolute;left:120px;right:120px;bottom:70px;height:8px;z-index:2;
-    background:linear-gradient(90deg,rgba(108,138,214,0) 0%,rgba(124,156,232,.86) 22%,
-      rgba(124,156,232,.86) 78%,rgba(108,138,214,0) 100%)}
+    background:linear-gradient(90deg,rgba(108,138,214,0) 0%,rgba(134,166,242,.96) 22%,
+      rgba(134,166,242,.96) 78%,rgba(108,138,214,0) 100%)}
   /* 그림자 — 세 번 고쳤다.
      ① 검정만 쓰면 안 된다: 배경이 #0b0d18 이라 1회차 rgba(0,0,0,.62) 는 명도비 **1.045:1** 로 안 보였다.
      ② 빛만 쓰면 «발광» 이 된다: 2회차는 바닥보다 **+37% 밝아** 무게가 없었다.
@@ -3626,8 +3626,8 @@
      어두운 구간을 40% → **58%** 까지 넓혀 발 스팬(396px)을 코어가 덮게 한다. */
   #ldSh{position:absolute;left:50%;bottom:39px;width:760px;height:85px;margin-left:-380px;z-index:1;
     border-radius:50%;background:radial-gradient(50% 50% at 50% 50%,
-      rgba(2,3,8,.94) 0%,rgba(2,3,8,.92) 46%,rgba(2,3,8,.72) 58%,rgba(2,3,8,.34) 66%,
-      rgba(132,166,236,.22) 74%,rgba(132,166,236,0) 86%);
+      rgba(2,3,8,.94) 0%,rgba(2,3,8,.92) 48%,rgba(2,3,8,.74) 60%,rgba(2,3,8,.30) 68%,
+      rgba(132,166,236,.10) 74%,rgba(132,166,236,0) 80%);
     opacity:0}
   #ldSh.on{opacity:1}
   /* 캐릭터 — 79×63 논리 프레임 × 8 = 632×504. 캔버스는 그보다 크게(720×512) 잡아
@@ -13569,6 +13569,9 @@
      실측 예측: 빈 무대 **138 → 37ms(21.6% → 7.1%)** · 꼬리 칸 75.6 → 짧아짐 · 칸 편차 2.04 → 1.72.
      M 의 처방 3(«잉크를 프레임 안에서 시작해라»)과 목적은 같지만, 2회차에 세운 게이트 §4 불변식
      («t=0 에 잉크가 완전히 프레임 밖» — 1회차 비평 A 가 «몸의 39%가 화면 안에서 켜졌다» 로 만든 자리)을 **깨지 않는다.** */
+  /* idle 의 발 스팬 중심(소스열) — 앵커가 놓이는 자리다. `#ldHero` 의 margin-left 가 이 열을 프레임 중앙(540)에
+     세우므로, run 프레임의 접지발 보정은 «그 프레임의 접지열 − 이 값» 이다. probe163b 실측(잉크 6..38 중심 22.0). */
+  var LD_FOOTC = 22.0;
   var LD_P0    = 2;                          /* 케이던스 시작 위상(run 프레임 번호) */
   var LD_PH    = LD_CUM[LD_P0];              /* 그 위상의 누적 거리 — ldFrameAt 이 이만큼 앞선 자리에서 출발한다 */
   /* 도착 = 1.5주기 지점(체공 칸 f3 의 끝)에서 시작 위상을 뺀 값. 손으로 적지 않는다. */
@@ -13809,8 +13812,24 @@
     if (sh) {
       /* 그림자는 캐릭터를 따라가고, 공중(arc)에서는 작고 옅어진다 */
       var air = Math.abs(arc) / LD_ARC;
-      sh.style.transform = 'translateX(' + x + 'px) scale(' +
-        (1 + .30 * k - .18 * air).toFixed(3) + ',' + (1 - .30 * k - .18 * air).toFixed(3) + ')';
+      /* ★ 10회차 — 그림자를 **«그려진 접지발»** 에 붙인다. 9회차 비평 O·P 의 **공통 1순위**이고,
+         8회차 비평 M 도 «달리는 동안 그림자 중심이 접지발에서 최대 147px 어긋난다» 로 같은 자리를 짚었다
+         (세 사람 · 두 라운드). 실측 — O «표본7 발 중심 690.5 vs 그림자 506.6 = **184px**, 발이 그림자
+         테두리의 85% 지점을 밟는다», P «**+162.0px** = 그림자 반폭의 49% · 그림자가 잉크 왼끝보다 51px 더 왼쪽».
+         ★ 원인: 그림자는 **앵커**(= idle 발 스팬 중심 22.0 소스열)에 고정돼 있는데, run 8프레임의 접지발은
+         소스 11.5~35.3 열을 오간다(= 배율 12 에서 **−126 ~ +160px**). 6회차가 세운 «축은 하나» 는
+         **선 자세(idle)의 축** 이야기이고, 달리는 동안 발이 프레임 안에서 움직이는 것은 다른 문제다 —
+         idle 에서는 이 보정이 정확히 0 이라 도착 시 축(540)은 그대로다. 되돌리는 게 아니라 못 보던 축을 더한 것이다.
+         표는 이미 제품에 있다(LD_FEET — probe163b 가 아틀라스에서 잰 값). 체공 칸에서는 발이 안 닿으므로
+         이륙발 → 착지발로 **선형 보간**한다(중간에 offset 0 을 지나 몸 아래를 통과한다). */
+      var fi = fr.i, fo = LD_FEET[fi];
+      if (LD_AIRF[fi]) fo = fo + (LD_FEET[(fi + 1) % LD_FEET.length] - fo) * Math.min(1, Math.max(0, tau));
+      var sdx = (fo - LD_FOOTC) * LD_SC;
+      /* ★ 10회차 — 착지 팽창을 **스프라이트와 같은 폭**으로. O «그림자 폭 415 → 504px = **+21.4%** 인데
+         같은 구간 스프라이트 가로 스쿼시는 +8.3% — 2.6배 과하다», P «반폭 258.5 → **330px(+27.7%)** ·
+         스쿼시로 설명되는 값은 280px 이라 **50px 이 설명되지 않는다**». .30 → **.10**(스프라이트 +8.33% 옆). */
+      sh.style.transform = 'translateX(' + (x + sdx).toFixed(1) + 'px) scale(' +
+        (1 + .10 * k - .18 * air).toFixed(3) + ',' + (1 - .10 * k - .18 * air).toFixed(3) + ')';
       sh.style.opacity = (1 - .45 * air).toFixed(3);
     }
   }
@@ -13918,7 +13937,7 @@
     RTAIL: LD_RTAIL, CRZ: LD_CRZ, CRZD: LD_CRZD, FOOT: LD_FOOT, AIR: LD_AIR, STEP: LD_STEP,
     FEET: LD_FEET, GAPS: LD_GAPS, STEPS: LD_STEPS, CUM: LD_CUM, CYC: LD_CYC, AIRF: LD_AIRF,
     FDX: LD_FDX, frameAt: ldFrameAt, timeAt: ldTimeAt, AIRMS: LD_AIRMS, LIFT: LD_LIFT,
-    P0: LD_P0, PH: LD_PH, landAt: ldLandAt, segStart: ldSegStart, SQ: LD_SQ,
+    P0: LD_P0, PH: LD_PH, landAt: ldLandAt, segStart: ldSegStart, SQ: LD_SQ, FOOTC: LD_FOOTC,
     /* 캡처 하네스 전용 — 시계를 멈추고(hold) 원하는 위상을 **제품 코드로** 그린다(paint).
        hold 는 rAF 재예약만 끊는다: 이 뒤로 화면은 paint(t) 가 부르는 자리에만 움직인다. */
     hold: function () { ldHeld = true; if (ldRaf) { cancelAnimationFrame(ldRaf); ldRaf = 0; } },
