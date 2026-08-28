@@ -247,7 +247,20 @@ async function shot(scene, T, idx, seed) {
     try { document.getAnimations().forEach((a) => a.pause()); } catch (e) {}
     const g = document.getElementById('goldN'), d = document.getElementById('diaN');
     const VIS = 0.06;
-    const vis = (n) => {
+    /* ⚑ 42회차 — 41차 **BG 단독**: 41회차가 넣은 불투명도 임계는 «투명» 만 걸렀지 **«자국 없음»** 은
+       못 거른다. BG 가 `gain-10`(374ms)에서 잡았다 — 표 «비행 5» 인데 그림에는 이동 코인이 0개.
+       원인은 **착지 축소**다: `fxTick` 이 도착 직후 `scale(.18)` 로 오므리므로 46px 아이콘이 ≈8px 이
+       되고, 그 자리는 이미 목적지 알약 아이콘이 덮고 있어 **불투명도는 1 인데 화면에 자국이 없다**.
+       → 임계에 **렌더 크기 하한**을 더한다(bbox 최소변 ≥ MINPX). 41회차 «유령» 열과 같은 원칙으로,
+         이 사유로 걸러진 개수는 «축소» 열에 따로 남긴다 — **거른 것은 반드시 보이게 적는다.**
+       ⚠ 값의 근거: 착지 스케일 0.18 × fs46 ≈ 8px 은 걸러야 하고, 도착 크기 `FX3_LAND` 0.50 ×
+         46 ≈ 23px 은 남아야 한다. 그 사이에서 «알약 아이콘(≈55px) 위에 얹혀 안 읽히는» 쪽에
+         가깝게 12px 로 잡는다(BG 처방문의 값 그대로).
+       ⚠ r42 정답표는 이 하한이 들어가기 **전에** 찍힌 것이라 «축소» 열이 없다. r43 부터 붙는다. */
+    const MINPX = 12;
+    const big = (n) => { try { const r = n.getBoundingClientRect();
+      return Math.min(r.width, r.height) >= MINPX; } catch (e) { return false; } };
+    const vis0 = (n) => {
       try {
         const cs = getComputedStyle(n);
         if (cs.visibility === 'hidden' || cs.display === 'none') return false;
@@ -256,6 +269,7 @@ async function shot(scene, T, idx, seed) {
         return !(r.right <= 0 || r.bottom <= 0 || r.left >= 1080 || r.top >= 2280);
       } catch (e) { return false; }
     };
+    const vis = (n) => vis0(n) && big(n);
     const q = (sel) => [...document.querySelectorAll(sel)].filter(vis);
     return {
       gold: g ? g.textContent.trim() : '',
@@ -270,7 +284,10 @@ async function shot(scene, T, idx, seed) {
       toast: q('.fx-toast').length,
       /* 41회차 — «표에만 있는» 노드가 몇 개였는지도 남긴다. 0 이 아니면 그만큼이 안 보이는 꼬리다. */
       ghost: ['.fx-fly', '.fx-plus', '.fx-spark', '.fx-flash', '.fx-check', '.fx-toast']
-        .reduce((k, sel) => k + (document.querySelectorAll(sel).length - q(sel).length), 0),
+        .reduce((k, sel) => k + ([...document.querySelectorAll(sel)].filter((n) => !vis0(n)).length), 0),
+      /* 42회차 — «불투명하지만 렌더가 12px 미만이라 화면에 자국이 없는» 노드 수(BG 단독) */
+      tiny: ['.fx-fly', '.fx-plus', '.fx-spark', '.fx-flash', '.fx-check', '.fx-toast']
+        .reduce((k, sel) => k + ([...document.querySelectorAll(sel)].filter((n) => vis0(n) && !big(n)).length), 0),
       /* 38회차 — «나이(ms)» = 얼린 시각 − 태어난 시각. 판(페이지)마다 사건 시각이 몇 ms 흔들리는데,
          나이를 같이 주면 비평가가 «이 프레임은 판이 달라서 어린 것» 과 «게임이 깜빡인 것» 을 가른다. */
       age: (() => {
@@ -318,17 +335,20 @@ async function shot(scene, T, idx, seed) {
     + `**41회차 — 이 표의 개수는 «DOM 에 있는 노드» 가 아니라 «보이는 노드»(불투명도 ≥ 0.06 · 화면 안) 다.**\n`
     + `40차 두 비평가가 «표에는 있는데 그림에 없다» 를 2인 공통으로 낸 자리를 닫은 것이다 — 퇴장 페이드의\n`
     + `마지막 한 뼘과 타이머 지연이 종전 표에서는 «있다» 로 찍혔다. «유령» 열이 그 차이(= 안 보이는데 DOM 에\n`
-    + `있는 노드 수)이며, 0 이 아니어도 **그림이 맞다** — 표를 그림에 맞춘 것이지 결함을 감춘 것이 아니다.\n\n`;
+    + `있는 노드 수)이며, 0 이 아니어도 **그림이 맞다** — 표를 그림에 맞춘 것이지 결함을 감춘 것이 아니다.\n\n`
+    + `**42회차 — 여기에 «렌더 크기 하한»(bbox 최소변 ≥ 12px)이 더해졌다.** 41차 BG 가 잡은 자리다:\n`
+    + `착지 직후 \`scale(.18)\` 로 오므린 코인은 **불투명도가 1 인데 화면에 자국이 없다**(≈8px 이 목적지\n`
+    + `알약 아이콘 밑에 깔린다). 그렇게 걸러진 개수는 «축소» 열에 남는다 — 유령 열과 같은 원칙이다.\n\n`;
   for (const scene of WANT) {
     const rs = rows.filter(r => r.scene === scene);
     if (!rs.length) continue;
-    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 유령 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+    md += `## 씬 ${scene}\n\n| 프레임 | 목표 | 실제 | 비행(위/아래) | +n | 불꽃 | 플래시 | 체크 | 토스트 | 골드 | 다이아 | 얼림 | 유령 | 축소 | 나이(ms) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
     rs.forEach(r => {
       /* 38회차 — «나이» 열. 종류마다 «가장 늙은 노드» 하나만 적는다(전부 적으면 표가 안 읽힌다). */
       const a = r.age || {};
       const ag = ['fly', 'plus', 'spark', 'check', 'toast'].map((k) => (a[k] && a[k].length ? k + ' ' + a[k][0] : null))
         .filter(Boolean).join(' · ') || '—';
-      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${r.ghost || 0} | ${ag} |\n`;
+      md += `| ${r.idx} | ${r.T} | ${r.at} | ${r.fly} (${r.flyUp}/${r.flyLo}) | ${r.plus} | ${r.burst} | ${r.flash} | ${r.check} | ${r.toast} | ${r.gold} | ${r.dia} | ${r.drift ? '⚠ 흔들림' : '고정'} | ${r.ghost || 0} | ${r.tiny || 0} | ${ag} |\n`;
     });
     md += '\n';
   }
