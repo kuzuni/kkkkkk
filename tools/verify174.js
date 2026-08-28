@@ -17,7 +17,13 @@
                스킬 탭은 이모지 그대로.
      §8 09     192 회귀 — 일괄 강화 결과가 여전히 캔버스 90x90.
      §9 살아있음 재렌더(`renderUI`)가 여러 번 돌아도 캔버스가 «빈 칸» 으로 남지 않는다.
-     §10 기능  장착 해제 → 슬롯이 잠금으로, 다시 장착 → 그 펫 스프라이트로 (실제 클릭).
+     §10 기능  [─] 뱃지로 장착 해제 → 그 칸이 [+] 빈 칸으로, 다시 장착 → 그 펫 스프라이트로 (실제 클릭).
+   278(2026-08-27) — 슬롯 선택자 부패 수리. 272 가 «해제는 [─] 뱃지에만» 으로 바꾸면서
+     `data-ptun` 이 슬롯 → 뱃지로 내려갔는데 게이트는 `#bPet .sk-slot[data-ptun]` 그대로였다.
+     §10 은 30초 타임아웃으로 **즉사**(그 아래 §11 이 통째로 안 돎), §2 는 3→0칸이라 슬롯별 단언
+     12개가 증발, §5(«썸네일 = 전투 아틀라스 지문 일치» — 174 의 핵심)는 **단언 0건**으로 조용히 사라져 있었다.
+     선택자는 파일 상단 `PT_SLOT`/`PT_UNEQ`/`PT_FREE` 한곳으로 모았고, 절마다 «몇 개를 잡았나» 를
+     먼저 단언한다 — 다음에 마크업이 또 움직이면 조용히 사라지는 대신 빨개진다.
      §11 콘솔·페이지 에러 0. */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -61,6 +67,14 @@ const CELL = `((host) => {
   o.ink = ${INK}(cv);
   return o;
 })`;
+
+/* 26 펫 시트 장착 슬롯의 선택자 — 278 로 한곳에 모았다.
+   슬롯 자체는 `data-ptslot="<펫 id>"`, 해제 [─] 뱃지는 그 안의 `s.sk-eq.m[data-ptun]`(272).
+   빈 칸은 `.sk-slot.free > .sk-plus` 다 — **자물쇠가 아니다**(272: 펫 3칸은 스테이지 해금이 없다).
+   여기 셋이 또 바뀌면 §0 이 먼저 빨개진다. 30초 타임아웃으로 죽지 않게 하는 것이 278 의 요지. */
+const PT_SLOT = '#bPet .sk-slot[data-ptslot]';
+const PT_UNEQ = '#bPet .sk-slot[data-ptslot] .sk-eq[data-ptun]';
+const PT_FREE = '#bPet .sk-eqp .sk-slot.free';
 
 const seedPets = p => p.evaluate(() => {
   const pick = ['bird', 'robo', 'dragon'].map(sp => PETS.find(x => x.sp === sp));
@@ -108,8 +122,11 @@ const seedPets = p => p.evaluate(() => {
 
   /* ── §2 장착 슬롯 ── */
   console.log('§2 슬롯 — 장착 3칸이 스프라이트 캔버스');
-  const s2 = await p.evaluate(C => [...document.querySelectorAll('#bPet .sk-slot[data-ptun] .sk-si')]
-    .map(eval(C)), CELL);
+  /* ⚠ 278 — 장착 슬롯의 식별자는 `data-ptslot` 이다. `data-ptun` 은 272 가 신설한
+     **해제 [─] 뱃지**(`s.sk-eq.m`)의 속성으로, 슬롯이 아니라 슬롯 «안» 에 있다.
+     예전 `#bPet .sk-slot[data-ptun]` 는 0개를 잡고도 조용해서 §5 가 통째로 증발했다. */
+  const s2 = await p.evaluate(({ C, Q }) => [...document.querySelectorAll(Q + ' .sk-si')]
+    .map(eval(C)), { C: CELL, Q: PT_SLOT });
   eq('장착 슬롯 칸 수', s2.length, 3);
   eq('이모지로 남은 슬롯', s2.filter(c => !c.canvas).length, 0);
   eq('슬롯 sp 순서', s2.map(c => c.sp).join(','), seeded.map(s => s.sp).join(','));
@@ -156,9 +173,9 @@ const seedPets = p => p.evaluate(() => {
 
   /* ── §5 전투 씬과 같은 픽셀 ── */
   console.log('§5 동일 — 전투 씬이 쓰는 아틀라스·프레임과 같은 그림');
-  const s5 = await p.evaluate(({ C, I }) => {
+  const s5 = await p.evaluate(({ C, I, Q }) => {
     const read = eval(C), ink = eval(I);
-    return [...document.querySelectorAll('#bPet .sk-slot[data-ptun] .sk-si')].map(host => {
+    return [...document.querySelectorAll(Q + ' .sk-si')].map(host => {
       const got = read(host), cv = host.querySelector('canvas');
       /* 전투 씬이 그 펫에 쓰는 바로 그 키·애니메이션의 0번 프레임으로 다시 그린다 */
       const sp = PET_SP[got.sp], list = ATLAS[got.sp].a[sp.anim];
@@ -177,7 +194,10 @@ const seedPets = p => p.evaluate(() => {
                refSig: same && same.sig, bareSig: bare && bare.sig, frames: list.length,
                liftSig: lifted && lifted.sig };
     });
-  }, { C: CELL, I: INK });
+  }, { C: CELL, I: INK, Q: PT_SLOT });
+  /* 278 — §5 는 «지문 일치» 라는 174 의 핵심 단언이다. 선택자가 0개를 잡으면
+     forEach 가 한 번도 안 돌아 절 전체가 «단언 0건» 으로 조용히 사라진다(실제로 그랬다). */
+  eq('§5 가 실제로 잰 슬롯 수', s5.length, 3);
   s5.forEach(r => {
     ok(r.sig === r.refSig,
        `${r.sp}: 썸네일 = 전투 아틀라스 ${r.frames}프레임 중 0번 + 그 틴트(지문 일치)`,
@@ -308,30 +328,40 @@ const seedPets = p => p.evaluate(() => {
   /* ── §10 기능 — 장착 해제 / 재장착이 슬롯 그림에 반영된다 ── */
   console.log('§10 기능 — 장착 토글이 슬롯 썸네일에 반영된다');
   const before = await p.evaluate(() => S.eqPet.slice());
-  await p.click('#bPet .sk-slot[data-ptun]');            /* 첫 칸 해제 */
+  /* 278 — 해제는 «슬롯 아무 데나» 가 아니라 [─] 뱃지에만 걸린다(272). 클릭 전에 뱃지가
+     실제로 있는지 먼저 세고 단언한다 — 없으면 30초 타임아웃으로 죽는 대신 여기서 빨개진다. */
+  const nUn = await p.evaluate(Q => document.querySelectorAll(Q).length, PT_UNEQ);
+  ok(nUn === before.filter(Boolean).length,
+     `해제 [─] 뱃지 ${nUn}개 = 장착 수 ${before.filter(Boolean).length} (선택자 ${PT_UNEQ})`);
+  if (!nUn) { console.log(`\nVERIFY174 ${pass}/${pass + fail} FAIL — 해제 뱃지 선택자가 죽었다`); await browser.close(); process.exit(1); }
+  await p.click(PT_UNEQ, { timeout: 5000 });             /* 첫 칸 해제 */
   await p.waitForTimeout(450);
-  const off = await p.evaluate(() => ({
+  const off = await p.evaluate(({ QS, QF }) => ({
     eq: S.eqPet.slice(),
-    lockFirst: !!document.querySelector('#bPet .sk-eqp .sk-slot.lock'),
-    canvases: document.querySelectorAll('#bPet .sk-slot[data-ptun] canvas.pt-cv').length
-  }));
+    freeSlot: document.querySelectorAll(QF + ' > .sk-plus').length,
+    lockSlot: document.querySelectorAll('#bPet .sk-eqp .sk-slot.lock').length,
+    canvases: document.querySelectorAll(QS + ' canvas.pt-cv').length
+  }), { QS: PT_SLOT, QF: PT_FREE });
   ok(off.eq.filter(Boolean).length === before.filter(Boolean).length - 1, '해제로 장착 수 −1',
      JSON.stringify(off.eq));
-  ok(off.lockFirst, '빈 칸이 잠금 슬롯으로 바뀐다');
+  /* 272 가 «펫 3칸은 스테이지 해금이 없다 → 빈 칸은 자물쇠가 아니라 [+]» 로 바꿨다.
+     예전 게이트는 여기서 `.sk-slot.lock` 을 기다렸다 — 지금 마크업에서는 영영 안 온다. */
+  eq('빈 칸이 [+] 슬롯([─] 해제 자리)으로 바뀐다', off.freeSlot, 1);
+  eq('펫 빈 칸에 자물쇠가 서지 않는다(272)', off.lockSlot, 0);
   eq('남은 슬롯 캔버스', off.canvases, before.filter(Boolean).length - 1);
 
   const reId = before.find(x => x && off.eq.indexOf(x) < 0);
   await p.evaluate(id => { toggleEquip(PT[id], 'pet'); save(); uiDirty = true; renderUI(); }, reId);
   await p.waitForTimeout(450);
-  const on = await p.evaluate(({ C, id }) => {
+  const on = await p.evaluate(({ C, id, Q }) => {
     const read = eval(C);
     const want = PT[id];
-    const cells = [...document.querySelectorAll('#bPet .sk-slot[data-ptun]')].map(s => ({
-      id: s.dataset.ptun, c: read(s.querySelector('.sk-si')) }));
+    const cells = [...document.querySelectorAll(Q)].map(s => ({
+      id: s.dataset.ptslot, c: read(s.querySelector('.sk-si')) }));
     const mine = cells.find(c => c.id === id);
     return { n: cells.length, sp: mine && mine.c.sp, wantSp: want.sp,
              ink: !!(mine && mine.c.ink && mine.c.ink.px > 200) };
-  }, { C: CELL, id: reId });
+  }, { C: CELL, id: reId, Q: PT_SLOT });
   eq('재장착 후 장착 슬롯 수', on.n, before.filter(Boolean).length);
   eq('재장착한 칸의 스프라이트', on.sp, on.wantSp);
   ok(on.ink, '재장착한 칸이 실제로 그려져 있다(빈 캔버스 아님)');
