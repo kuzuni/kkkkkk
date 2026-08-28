@@ -35,6 +35,31 @@ const NOCLIP = args.includes('--noclip');   /* 잉크 원본 bbox 측정용 — 
     Object.keys(DUN_UI).forEach(id => { if (DUN_UI[id].pre) S.dun[id] = 1; });
     Object.values(DUN_UI).forEach(u => { if (u.pre) S.dun[u.pre.id] = (u.pre.f | 0) + 1; });
   });
+  /* ⚑ 341(2026-08-28) — **캡처 상태에 «전투력» 축이 빠져 있었다.** LESSONS 04-① 이 이 파일 머리에
+     적어 둔 규칙(«캡처 상태가 레퍼런스와 같아야 그 회차 비평이 유효하다»)을 해금 축에만 적용하고
+     있었던 것이다. 레퍼런스는 입장 가능한 카드(1·2) 우상단에 레드닷이 있는데, 부팅 직후 세이브는
+     `cp() = 505` 라 **8장 전부 166 조건(`cp() >= d.req(층)`)이 거짓**이다 → 닷이 하나도 안 뜬다.
+     그래서 72 18회차 비평가 AP·AQ 가 **2인 일치로 «카드 레드닷 전량 누락»** 을 적었고 341 로
+     등재됐는데, `tools/probe341.js` 로 재현해 보니 **부품·CSS·토글이 전부 살아 있었다** —
+     비평가는 «켤 수 없는 상태의 화면» 을 본 것이다(338 이 남긴 «등재문의 가설부터 재현으로 친다»).
+     ⇒ 제품이 아니라 **여기**를 고친다. 값을 상수로 박지 않고 **제품에게 묻는다**(336 처방):
+     «지금 해금돼 있는 던전이 요구하는 전투력» 을 역산해 그 자리까지만 훈련 레벨을 올린다.
+     훈련 상한(`trainCap()`) 을 넘기지 않아 세이브로서도 합법인 상태다.
+     실측(`probe341` ③·DOM 기하 전수 대조): 이 블록이 더하는 것은 **카드 1·2 의 닷 2개**
+     (x1006..1033 · 27×27 · 카드상변 +0 = ref x1005..1032 와 1px)와 그 경로 체인인 서브탭 배지뿐이고,
+     나머지 242 개 요소의 bbox·문구는 **한 글자도 안 바뀐다**(레이아웃 Δ0px). */
+  const lit = await p.evaluate(() => {
+    const need = DUNGEONS.filter(d => !dunLocked(d))
+      .reduce((m, d) => Math.max(m, d.req(S.dun[d.id])), 0);
+    const cap = trainCap();
+    while (cp() < need && S.lv.atk < cap) { S.lv.atk = Math.min(cap, S.lv.atk + 10); markDirty(); }
+    return { cp: cp(), need: Math.round(need), lv: S.lv.atk, cap,
+      dots: DUNGEONS.filter(dunCardOk).map(d => d.n) };
+  });
+  console.log('[i] 341 — 전투력 ' + lit.cp + ' (해금 던전 요구 ' + lit.need
+    + ' · 훈련 atk ' + lit.lv + '/' + lit.cap + ') → 레드닷 '
+    + (lit.dots.length ? lit.dots.join(', ') : '없음'));
+
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
   await p.waitForTimeout(450);
   await p.evaluate(() => { try { msgT = 0; } catch (e) {} const m = document.getElementById('msg'); if (m) m.style.display = 'none'; });
