@@ -15113,6 +15113,14 @@ function fxClampX(wx, hw, wy){
   const lLim = (sb && sy > sb.y1 - 8 && sy < sb.y2 + 8) ? sb.x2 + 6 : 24;
   return clamp(wx + camOx, lLim + hw, VW - 24 - hw) - camOx;
 }
+/* 348 — «몸통이 뷰포트 밖인 적» 인가. 오버헤드 HP바는 위 클램프로 **끌어오지 않고 아예 안 그린다**
+   (클램프 자체는 여진 바닥 타원 등 다른 연출이 그대로 쓰므로 `fxClampX` 는 한 줄도 안 바꾼다).
+   판정은 «몸통 bbox 가 뷰포트와 겹치는가» — 반쯤 걸친 적은 **보이는 것으로 친다**(등재문 ④).
+   몸통 띠는 그리기와 같은 자를 쓴다: 가로 ±e.r · 세로 발밑(e.y) ~ 머리(e.y − 2·e.r). */
+function eOnScreen(e){
+  const sx = e.x + camOx, sy = e.y + camOy;
+  return sx + e.r > 0 && sx - e.r < VW && sy > 0 && sy - e.r*2 < VH;
+}
 addEventListener('resize', fit);
 /* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
 if(window.ResizeObserver) new ResizeObserver(resizeCanvas).observe($('stagearea'));
@@ -20277,7 +20285,9 @@ function draw(){
       ctx.globalAlpha = 0.35; ctx.fillStyle = '#9fe8ff';
       ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*1.1, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }
-    if(e.hp < e.max && grow >= 1){
+    /* 348(주인 지시 «몬스터들 화면 벗어났는데 hp바 보여주는거 괜히 거슬림») — 화면 밖 적은 바를 안 그린다.
+       종전에는 아래 `fxClampX` 가 바를 뷰포트 안으로 밀어 넣어, 몸통이 없는 가장자리에 바만 남았다. */
+    if(e.hp < e.max && grow >= 1 && eOnScreen(e)){
       const w = Math.max(22, e.r*2.2), h = 4, by = e.y - e.r*3.1 - 6;
       /* 13회차 AQ①·AR#10 공통 — 좌측 끝 적의 HP바가 사이드 아이콘 열 위에 그려진다
          (AQ 실측 게임px x 31.5..71 · AR 32.5..69.5, 둘 다 «축복» 아이콘 열 21.5..77.5 안).
