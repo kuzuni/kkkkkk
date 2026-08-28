@@ -454,33 +454,53 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
 
-  console.log('§15 정착 구간이 죽어 있지 않다 (15회차 — 13회차 비평 W·X 2인 일치)');
-  /* ★ 지키는 것은 «착지~도착 사이에 그림이 최소 한 번 바뀐다» 다. 고정 125ms 로 되돌리면 첫 교체가
-     착지 + 125ms = 616.7ms 라 도착(560ms)을 지나고, 그 90ms 가 통째로 정지한다(W «몸 8px» · X «0.75%»).
+  console.log('§15 끝이 죽어 있지 않다 · 계단이 안 포개진다 (15회차 — 13회차 W·X + 15회차 Y·Z 2인 일치)');
+  /* ★ 이 절은 회차 안에서 **한 번 재기준됐다.** 처음 쓴 단언은 «착지~도착 사이에 교체가 있다» 였는데,
+     그것은 목적이 아니라 **수단**이었다 — 두 비평가(Y·Z)가 독립으로, 그 수단이 스쿼시 해제에서 10.0ms
+     떨어진 계단을 강제해 **자체 규칙(계단 간 ≥33.3ms = 2프레임)을 어긴다**고 1순위로 짚었다.
+     ★ 그래서 «어디에 교체가 있는가»(수단) 를 버리고 **① 완전 정지가 얼마나 짧은가 ② 계단이 안 포개지는가**
+     (목적) 로 갈았다. 12회차 §[B4]·13회차 §12 가 한 것과 같은 재기준이다.
      ⚠ 이 페이지는 부팅된 뒤라 `ldRun` 이 압축돼 있다 — §14 와 같은 이유로 **비압축 시계**로 환산해서 잰다
-     (`LD_IDMS0`·`LD_IDMS` 는 압축과 무관한 절대값이라 압축 시계로 재면 «정착이 램프보다 짧다» 가 나온다). */
+     (`LD_IDMS0`·`LD_SQ` 는 압축과 무관한 절대값이라 압축 시계로 재면 엉뚱한 답이 나온다). */
   const stl = await page.evaluate(() => {
     const run = LD.runMs ? LD.runMs() : LD.RUN;
-    const land = LD.landAt() * (LD.RUN / run);   /* 비압축 시계의 착지 시각 */
-    const settle = LD.RUN - land;                /* 착지 → 도착 */
-    const swaps = [];                            /* 착지 뒤 첫 4회 교체 시각(착지 기준 ms) */
+    const k = LD.RUN / run;                      /* 압축 → 비압축 환산 */
+    const land = LD.landAt() * k;                /* 비압축 시계의 착지 시각 */
+    const sqOff = land + LD.SQ;                  /* 스쿼시 해제 계단 */
+    const swaps = [];                            /* 착지 뒤 첫 4회 대기 교체(착지 기준 ms) */
     let prev = LD.idleIdx(0);
-    for (let dt = 0; dt <= 400; dt += 0.5) {
+    for (let dt = 0; dt <= 600; dt += 0.5) {
       const i = LD.idleIdx(dt);
       if (i !== prev) { swaps.push(dt); prev = i; if (swaps.length >= 4) break; }
     }
+    /* 몸이 마지막으로 1px 움직이는 시각 — 이 뒤로는 포즈가 바뀌기 전까지 화면이 통째로 정지다.
+       `LD.at` 은 **순수 함수**라 시계를 안 건드리고 훑을 수 있다(§4 가 쓰는 그 자다 —
+       2회차 «rAF 가 굶으면 표본 시각이 실행 시각보다 뒤처져 오독» 의 짝. 화면 상태를 안 바꾼다). */
+    /* ⚠ `LD.at` 은 **현재(압축된) 시계**를 받는다 — `x` 는 `p = t/ldRun` 의 함수라 계단 시각이 p 에
+       고정이므로, 비압축 시계로는 그냥 `× k` 다(§4 가 같은 환산을 쓴다). 안 곱하면 468ms 가 나온다. */
+    let lastX = 0, px = null;
+    for (let t = 0; t <= run; t += run / 5600) {
+      const v = LD.at(t);
+      if (px !== null && v !== px) lastX = t;
+      px = v;
+    }
+    lastX *= k;
     /* 램프가 끝난 뒤에는 정확히 LD_IDMS 주기로 수렴해야 한다(쉬는 호흡은 전투와 같은 8fps) */
     const tail = LD.idleIdx(5000) - LD.idleIdx(5000 - LD.IDMS);
     /* 되감김 = 어디선가 위상이 «작아진다» 는 뜻이다. 계단 함수라 «같다» 는 정상이고 «줄어든다» 만 금지다. */
     let mono = LD.idleIdx(0) === 0, p2 = -1;
     for (let dt = 0; dt <= 3000; dt += 0.5) { const v = LD.idleIdx(dt); if (v < p2) mono = false; p2 = v; }
-    return { land, settle, swaps, tail, mono };
+    return { land, sqOff, swaps, tail, mono, lastX };
   });
-  const inSettle = stl.swaps.filter(s => s < stl.settle).length;
-  ok(inSettle >= 1,
-    `★ 착지~도착(${stl.settle.toFixed(1)}ms) 안에 대기 프레임이 바뀐다 (교체 ${stl.swaps.map(s => s.toFixed(1)).join('/')}ms · 정착 안 ${inSettle}회 · 고정 125ms 로 되돌리면 0회)`);
-  ok(stl.swaps.filter(s => s < stl.settle + 56.7).length >= 2,
-    `★ 13회차가 «죽어 있다» 고 잰 90ms 안에 교체가 2회 이상이다 (${stl.swaps.filter(s => s < stl.settle + 56.7).length}회 · 되돌리면 0회)`);
+  /* ① 완전 정지 = «몸이 마지막으로 움직인 뒤 다음 그림 변화까지». 고정 125ms 로 되돌리면
+     첫 교체가 착지+125 = 616.7ms 라 65.2ms 가 된다(15회차 Y·Z 가 같은 값으로 실측). */
+  const deadMs = (stl.land + stl.swaps[0]) - stl.lastX;
+  ok(deadMs <= 33.4,
+    `★ 도착 뒤 «완전 정지» 가 2프레임 이하다 (마지막 몸 움직임 ${stl.lastX.toFixed(1)}ms → 첫 대기 교체 ${(stl.land + stl.swaps[0]).toFixed(1)}ms = ${deadMs.toFixed(1)}ms ≤ 33.4 · 고정 125ms 로 되돌리면 65.2ms)`);
+  /* ② 계단이 안 포개진다 — 15회차 Y·Z 2인 일치. 램프 기준점을 착지로 되돌리면 10.0ms 가 되어 빨개진다. */
+  const gapMs = (stl.land + stl.swaps[0]) - stl.sqOff;
+  ok(gapMs >= 33.3,
+    `★ 스쿼시 해제와 첫 대기 교체가 2프레임 이상 떨어진다 (해제 ${stl.sqOff.toFixed(1)}ms · 교체 ${(stl.land + stl.swaps[0]).toFixed(1)}ms · 간격 ${gapMs.toFixed(1)}ms ≥ 33.3 · 착지 기준으로 되돌리면 10.0ms)`);
   ok(stl.tail === 1,
     `쉬는 호흡은 그대로 8fps 로 수렴한다 (LD_IDMS 125ms 당 ${stl.tail}칸)`);
   ok(stl.mono, '대기 위상이 단조 증가다 = 핸드오프에서 되감기지 않는다 (14회차 ⓑ 유지)');
