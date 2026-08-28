@@ -130,6 +130,11 @@ async function run(scene, span, step) {
           flash: document.querySelectorAll('.fx-flash').length,
           check: document.querySelectorAll('.fx-check').length,
           toastOp: toast ? parseFloat(getComputedStyle(toast).opacity) : -1,
+          /* 37회차 [15] — 토스트 «정지» 를 재려면 불투명도만으로는 안 된다. 상자 자체를 남긴다
+             (36차 X 는 잉크 bbox, Y 는 화소로 같은 창을 짚었다 — 여기서는 레이아웃 상자로 잰다). */
+          toastB: toast ? (() => { const r = toast.getBoundingClientRect();
+            return [Math.round(r.x * 10) / 10, Math.round(r.y * 10) / 10,
+              Math.round(r.width * 10) / 10, Math.round(r.height * 10) / 10]; })() : null,
           fxl: (document.getElementById('fxl') || { childElementCount: 0 }).childElementCount,
           gold: (document.getElementById('goldN') || {}).textContent,
           dia: (document.getElementById('diaN') || {}).textContent,
@@ -154,6 +159,10 @@ async function run(scene, span, step) {
     return { samples, goldPill, diaPill, FXMAX: typeof FXMAX === 'number' ? FXMAX : 120,
       menub: mbr ? { x: mbr.left, y: mbr.top, w: mbr.width, h: mbr.height } : null,
       qlab,
+      /* 37회차 [15] — 토스트 밑변이 물면 안 되는 것(«STAGE n» 헤더). 22회차가 토스트 자리를
+         이 두 이웃 사이 82px 띠 안에 가둔 뒤로 여유가 8.5px 뿐이라, 부유를 넣으면 반드시 같이 잰다. */
+      chap: (() => { const c = document.getElementById('chapN'); if (!c) return null;
+        const r = c.getBoundingClientRect(); return { y: r.top }; })(),
       /* keep-out 규칙 상수도 페이지에서 읽는다 — 게이트가 자기 사본을 들면 부패한다(211·289) */
       kom: (typeof FX3_KOM === 'number' && typeof FX3_BSFX === 'number')
         ? { kom: FX3_KOM, fx: FX3_BSFX } : null,
@@ -326,6 +335,37 @@ async function run(scene, span, step) {
     /* 되돌리면 빨개진다: 36회차 이전 빌드는 같은 발원(1040,400)에서 최대 **+14.7px** 이 프레임
        밖으로 나갔다(캡처 r36b gain-4 의 골드 화소도 x=1079 까지 붙어 있었다). */
     ok(out === 0, `프레임 우변을 넘은 표본 ${out}개 · 최대 +${worst.toFixed(1)}px (0 이어야 한다)`);
+  }
+
+  /* ---- [15] 토스트가 «완전히 정지한 채» 오래 머물지 않는다 (36차 X[4]·Y[8] 2인 공통F) ----
+     두 사람이 서로 다른 자(X 잉크 bbox · Y 화소수)로 같은 창을 짚었다: 474ms 동안 변화 ±1px / 0.15%.
+     여기서는 세 번째 자(**레이아웃 상자**)로 잰다 — 자가 셋이면 «자가 만든 값» 이 아니다.
+     ⚠ 단언을 «항상 움직인다» 로 쓰면 안 된다. 토스트는 **읽히려고** 뜨는 것이라 정지 자체가
+       결함이 아니고, 읽는 시간(≈34px 본문 한 줄)은 있어야 한다. 재는 것은 «연속 정지의 길이» 다. */
+  console.log('[15] 퀘스트 토스트 — 완전 정지 구간 ≤250ms (36차 X·Y 2인 공통F)');
+  {
+    const ts = quest.samples.filter(s => s.toastB);
+    let best = 0, run = null, from = 0, to = 0;
+    for (let i = 1; i < ts.length; i++) {
+      const a = ts[i - 1].toastB, c = ts[i].toastB;
+      const same = Math.abs(a[0] - c[0]) < 0.5 && Math.abs(a[1] - c[1]) < 0.5
+        && Math.abs(a[2] - c[2]) < 0.5 && Math.abs(a[3] - c[3]) < 0.5;
+      if (same) {
+        if (run == null) run = ts[i - 1].t;
+        if (ts[i].t - run > best) { best = ts[i].t - run; from = run; to = ts[i].t; }
+      } else run = null;
+    }
+    /* 되돌리면 빨개진다: 37회차 이전 빌드(.19s 등장 + 부유 없음)는 같은 자로 **582ms**(507~1089)였다. */
+    ok(ts.length > 0 && best <= 250,
+      `표본 ${ts.length}장 · 최장 정지 ${best}ms (${from}~${to}) — 250 이하여야 한다`);
+    /* 부유는 **아래로만** 5px 이다(위 여유 1px). 그 밑변이 «STAGE n» 헤더를 물면 회수가 아니라 이동이다. */
+    if (quest.chap == null) {
+      ok(false, '#chapN 을 못 찾았다 — 밑변 여유를 잴 대상이 없다');
+    } else {
+      let worstGap = Infinity;
+      for (const s2 of ts) worstGap = Math.min(worstGap, quest.chap.y - (s2.toastB[1] + s2.toastB[3]));
+      ok(worstGap > 0, `토스트 밑변 ↔ #chapN 윗변 최소 여유 ${worstGap.toFixed(1)}px (>0 이어야 한다)`);
+    }
   }
 
   console.log('[11] 콘솔 에러 0');

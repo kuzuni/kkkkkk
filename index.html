@@ -3494,7 +3494,7 @@
   .fx-toast{position:absolute;left:50%;z-index:2;font-style:normal;font-weight:900;font-size:34px;color:#FFF3C4;
     background:rgba(24,17,10,.92);border:4px solid #6B5233;border-radius:26px;padding:14px 34px;
     white-space:nowrap;box-shadow:0 8px 0 rgba(0,0,0,.35);
-    animation:fxToastIn .19s cubic-bezier(.34,1.56,.64,1) both}
+    animation:fxToastIn .76s cubic-bezier(.34,1.56,.64,1) both}
   /* 0.28초짜리 페이드인은 «퀘스트 행이 먼저 바뀌고 토스트가 100ms 뒤에 따라붙는» 것으로 읽힌다.
      불투명도는 앞 35% 안에 다 올리고 나머지는 위치만 정돈한다(6회차 지적). */
   /* ⚠ 0% 를 `opacity:0` 으로 두면 **애니메이션이 실제로 돌기 전까지** `fill-mode:both` 가 그 상태를
@@ -3502,9 +3502,25 @@
      비평가 3인이 연속으로 «토스트가 뒤늦게 뜬다» 로 잡았다(실측 139~185ms).
      0% 부터 **이미 보이게** 하고 «위에서 내려오는» 것만 애니메이션으로 준다 — 첫 페인트에 바로 보인다. */
   /* 11회차: 0% 를 «0 이 아닌 .3» 으로. 위 fxCheckIn 과 같은 이유 — 막혀도 보이고, 돌면 램프가 생긴다. */
+  /* 37회차 — 36차 2인 공통F «토스트가 오래 정지한다»(X: 잉크 bbox 474ms 완전 동일 = 전체의 31% ·
+     Y: 같은 구간 화소 15,781~15,802 = 0.15%). `p58as` 로 재니 두 사람보다 크다 — **노출 47~1036ms
+     중 최장 정지 582ms(59%)**. 22회차가 이미 «체류 1200 → 760ms» 로 한 번 잘랐고 더 자르면
+     34px 본문을 읽을 시간이 없어진다(206 주인 정의 «≈1초 뒤 자동 소멸» 의 하한).
+     22회차가 «머묾» 에서 쓴 처방(진폭이 아니라 **각속도**)을 그대로 옮긴다 — 수명·자리·가독을
+     한 픽셀도 안 건드리고 **정지 구간에 아주 느린 부유**를 넣는다.
+     ⚠ 세로 여유가 거의 없다(`band` 실측: 위 프로필 판 하단 **142** ↔ 토스트 윗변 143 = **1px**,
+       아래 `#chapN` 윗변 **230.5** ↔ 토스트 밑변 222 = **8.5px**). 그래서 부유는 **아래로만** 5px 다
+       (밑변 227 → `#chapN` 까지 3.5px 남는다). 위로 띄우는 처방은 애초에 못 쓴다.
+     ⚠ 등장 구간은 **한 프레임도 안 바꾼다** — 길이를 .19s → .76s 로 늘리면서 옛 키프레임의
+       **절대 시각을 그대로** 다시 적었다(45%·75%·100% of .19s = 85.5·142.5·190ms
+       = 11.25%·18.75%·25% of .76s). 구간별 이징도 같은 bezier 라 등장 그림은 동일하다.
+       25% 부터가 신설(부유)이고, .76s 는 `fxToast` 의 `.out` 시각(760ms)과 정확히 같아
+       부유가 끝나는 프레임에 퇴장이 시작된다 — 이음매가 안 생긴다. */
   @keyframes fxToastIn{0%{opacity:.3;transform:translate(-50%,-40px) scale(.92)}
-    45%{opacity:1;transform:translate(-50%,-8px) scale(.99)}
-    75%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
+    11.25%{opacity:1;transform:translate(-50%,-8px) scale(.99)}
+    18.75%{opacity:1;transform:translate(-50%,4px) scale(1.02)}
+    25%{opacity:1;transform:translate(-50%,0) scale(1);animation-timing-function:ease-in-out}
+    62%{opacity:1;transform:translate(-50%,5px) scale(1.006);animation-timing-function:ease-in-out}
     100%{opacity:1;transform:translate(-50%,0) scale(1)}}
   .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
   /* 20회차 버그 — 이건 «연출 취향» 이 아니라 **CSS 함정**이다. `to{}` 만 쓴 키프레임의 암묵적
