@@ -141,6 +141,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
      (테두리·림 두께·코너 비율은 104 공용 토큰 --if-bw 5 / --if-rim 6 / --if-rr .233).
      ③ 그림은 늘리지 않고 담는다(contain) — 종횡비 왜곡 0. ④ 카드가 전부 서로 다른 아트다. */
   const IF_BW = 5, IF_RIM = 6, IF_RR = .233, PAD = 16;
+  /* 72 16회차 — 액자 여백이 «사방 균일 PAD 16» 에서 **비대칭 INS** 로 바뀌었다(index.html `TH_INS`).
+     들썩(`thBob`)이 실제로 쓰는 것은 **상단뿐**이라는 것을 `tools/p72fill.js` 가 카드 8장 × 14위상으로
+     재서 확인했다 — 아래 단언들은 그래서 «사방 최소» 가 아니라 **변마다** 본다.
+     PAD 는 지우지 않는다: [1-2] 의 옛 자(«균일 16») 가 무엇이었는지 기록으로 남기고,
+     16회차 이전 값과의 대조에 그대로 쓴다. */
+  const INS = { t: 10, r: 3, b: 3, l: 3 };
   console.log('[1-1] 액자 — 104 공용 아이템 프레임 토큰(테두리 5 · 림 6 · 코너 폭×.233)');
   d.forEach((c, i) => {
     if (!c.th) return;
@@ -167,22 +173,29 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
        `카드${i + 1} 캔버스 CSS ${a.css} = 픽셀 크기 (1:1 — 확대 보간 없음)`);
     ok(a.on > 0, `카드${i + 1} 스프라이트가 실제로 그려졌다 (${a.k}/${a.f}, 잉크 ${a.on}px)`);
     if (!a.ink || !a.src) return;
-    /* contain — 사방 여백 ≥ PAD−1 (액자 안이고, 121 들썩이 아래로 15px 내려가도 안 잘린다) */
+    /* contain — 변마다 여백 ≥ INS−1 (액자 안. 상단만 들썩 여유를 더 갖는다 — `TH_INS` 주석) */
     const mL = a.ink.x0, mT = a.ink.y0, mR = a.px[0] - 1 - a.ink.x1, mB = a.px[1] - 1 - a.ink.y1;
-    ok(Math.min(mL, mT, mR, mB) >= PAD - 1,
-       `카드${i + 1} 사방 여백 ${[mL, mT, mR, mB]} ≥ ${PAD - 1} (액자 안, 들썩 15px 여유)`);
+    ok(mL >= INS.l - 1 && mT >= INS.t - 1 && mR >= INS.r - 1 && mB >= INS.b - 1,
+       `카드${i + 1} 변별 여백 L${mL} T${mT} R${mR} B${mB} ≥ ${INS.l - 1}/${INS.t - 1}/${INS.r - 1}/${INS.b - 1} (액자 안)`);
     /* «담았다(contain)» 를 원본과 대조해 정확히 잰다 — 배율 k 는 프레임 rect 기준이고,
        잉크는 그 안에 있으므로 기대 잉크 크기 = 원본 잉크 × k. 늘리면(=97 의 꽉 채우기) 여기서 걸린다.
        ⚠ 아틀라스 프레임은 사방에 투명 1~2px 을 갖고 있어 «잉크 = 프레임» 이 아니다 —
           그래서 여백 상한이 아니라 이 대조가 종횡 왜곡 0 의 진짜 게이트다. */
-    const k = Math.min((a.px[0] - PAD * 2) / a.src.fw, (a.px[1] - PAD * 2) / a.src.fh);
+    const k = Math.min((a.px[0] - INS.l - INS.r) / a.src.fw, (a.px[1] - INS.t - INS.b) / a.src.fh);
     const ew = a.src.w * k, eh = a.src.h * k;
     ok(Math.abs(a.ink.w - ew) <= 2 && Math.abs(a.ink.h - eh) <= 2,
        `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
-    /* 짧은 축은 «프레임 rect» 가 액자 여백에 딱 맞는다(잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다) */
-    const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
-    ok(Math.abs(slack - PAD) <= 1,
-       `카드${i + 1} 짧은 축이 액자를 채운다 — 프레임 여백 ${slack.toFixed(1)} = ${PAD}`);
+    /* 긴 축(= contain 을 물린 축)은 «프레임 rect» 가 그 축의 인셋에 딱 맞는다
+       (잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다).
+       ⚠ **16회차에 자를 고쳤다.** 옛 자는 위에서 `PAD` 로 되짚은 `k` 를 그대로 다시 써서
+       `slack == PAD` 가 **항상 참**인 항등식이었다(제품을 안 봤다 — 실제로 비대칭 인셋을 넣은 뒤에도
+       «16.0 = 16» 으로 초록이었다. 279 «죽은 되돌림 시험» 과 같은 종류).
+       이제 **화면에 그려진 잉크**에서 배율을 역산해(`a.ink.w / a.src.w`) 두 축의 여유를 따로 잰다. */
+    const kM = a.src.w ? a.ink.w / a.src.w : 0;                    /* 제품이 실제로 쓴 배율 */
+    const slackX = a.px[0] - a.src.fw * kM, slackY = a.px[1] - a.src.fh * kM;
+    const tight = slackX <= slackY ? 'X' : 'Y';                    /* contain 을 물린 축 */
+    ok(Math.abs(Math.min(slackX, slackY) - (tight === 'X' ? INS.l + INS.r : INS.t + INS.b)) <= 1.5,
+       `카드${i + 1} 긴 축(${tight})이 액자를 채운다 — 프레임 여유 ${Math.min(slackX, slackY).toFixed(1)} = 인셋 합 ${tight === 'X' ? INS.l + INS.r : INS.t + INS.b} (옛 균일 ${PAD * 2})`);
     /* 97 [2] 는 «잉크 휘도 > 면 휘도 − 20» 이었는데, **면보다 어둡기만 안 하면 통과**라 카드1·5 가
        비율 1.00·1.11 로 «있으나 안 보이는» 상태를 통과시켰다(126 «있는데 안 보이던 줄눈» 과 같은 종류).
        비율로 바꾼다. 여기 `face` 는 `--i` 원색이고 실제 면은 그 위에 검정 22~52% 가 덮여 더 어두우므로,
@@ -236,7 +249,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
      ⚠ 도는 집합은 121 의 아이들 창(`TH_IDLE`)이 있으면 창이다 — 화면에 안 나오는 프레임을 세면
         «액자를 넘는다» 가 거짓으로 뜬다. probe72k 와 같은 집합을 본다. */
   console.log('[1-3] 아이들 애니 전 프레임 — 액자 안 · 배율 불변');
-  const perFrame = await p.evaluate((PAD) => {
+  const perFrame = await p.evaluate((PADS) => {
     const out = [];
     [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv, ci) => {
       const A = ATLAS[cv.dataset.thk];
@@ -264,7 +277,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
             if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
         }
         if (x1 < 0) { worst = -1; worstFn = fn + '(빈 프레임)'; break; }
-        const m = Math.min(x0, y0, cv.width - 1 - x1, cv.height - 1 - y1);
+        /* 16회차 — 인셋이 변마다 다르므로 «사방 최소» 가 아니라 **인셋 대비 여유의 최소**를 본다
+           (상단 10 · 나머지 3). 그래야 «상단만 넉넉한» 설계가 좌우 3px 을 감시하는 자를 안 무디게 한다. */
+        const m = Math.min(x0 - PADS.l, y0 - PADS.t,
+                           cv.width - 1 - x1 - PADS.r, cv.height - 1 - y1 - PADS.b);
         if (m < worst) { worst = m; worstFn = fn; }
         if (y0 < tMin) tMin = y0; if (y0 > tMax) tMax = y0;   /* 121 축 — 잉크 top 의 p2p */
       }
@@ -274,10 +290,10 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
                  top: tMax >= 0 ? tMax - tMin : 0 });
     });
     return out;
-  }, PAD);
+  }, INS);
   perFrame.forEach((f) => {
-    ok(f.worst >= PAD - 1,
-       `카드${f.card} 아이들 ${f.n}프레임 전부 액자 안 — 최소 여백 ${f.worst} (최악 ${f.worstFn}) ≥ ${PAD - 1}`);
+    ok(f.worst >= -1,
+       `카드${f.card} 아이들 ${f.n}프레임 전부 액자 안 — 인셋 대비 최소 여유 ${f.worst} (최악 ${f.worstFn}) ≥ -1`);
     /* 14회차 신설 — **«공격 사이클을 썸네일 아이들로 쓰지 않는다»**.
        그런 칸은 rect 가 2배 넘게 벌어져 ⓐ 크기가 맥동하고(카드8 실측 **77.3%**) ⓑ 잉크 top 이
        58~67px 튀어 121 의 들썩을 통째로 덮는다. 고치는 자리는 배율식이 아니라 **아이들 창**이다
@@ -346,7 +362,17 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
   /* 표가 맞기만 하면 되는 게 아니라 **그려진 결과**가 가운데여야 한다 — 도는 프레임 합집합 기준.
      개별 프레임은 애니가 움직이는 만큼 벗어난다(그건 애니의 몫이다). */
   console.log('[1-5] 그려진 잉크 합집합이 액자 중심에 온다');
-  const inkMid = await p.evaluate(() => {
+  /* ⚠⚠ **16회차 — 자를 옮겼다(단언은 지우지 않고 둘로 늘렸다).**
+     옛 자는 «캔버스에 **그려 놓은** 잉크 중심 = 캔버스 중심» 이었다. 그런데 화면에서 보이는 것은
+     그 위에 `thBob` 이 얹힌 결과이고, 들썩은 **위로만** 간다 — 그래서 «그린 자리가 정확히 가운데» 면
+     **보이는 평균은 항상 위로 치우친다**(실측 −2.7~−3.4px. 15회차 비평가 AG #3 «세로 중심이 계통적으로
+     6.5~9.5px 위» 가 이것이다. 그때는 «한 프레임을 찍어서 그렇다» 고만 답했는데, 위상 평균으로 재 보니
+     **계통 성분이 실제로 있었다** — AG 가 옳았다).
+     그래서 진짜 자는 두 개다:
+       [1-5]  보이는 것 — 사이클 **위상 평균** 잉크 중심 = 액자 중심 (±3px)  ← 새 자, 사람이 보는 값
+       [1-5a] 그린 것   — 잉크 합집합 중심 = **인셋 박스** 중심 (±3px)       ← 옛 자를 인셋에 맞춰 유지
+     [1-5a] 가 남아 있으므로 «인셋을 아무렇게나 줘서 [1-5] 만 맞추는» 길은 막혀 있다. */
+  const inkMid = await p.evaluate((INS) => {
     const out = [];
     [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv, ci) => {
       const A = ATLAS[cv.dataset.thk], anim = cv.dataset.thi;
@@ -363,14 +389,40 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
         }
       }
       if (keep) raidDraw(cv, keep);
-      out.push({ card: ci + 1, dx: +(((L + R + 1) / 2) - cv.width / 2).toFixed(1),
-                 dy: +(((T + B + 1) / 2) - cv.height / 2).toFixed(1) });
+      /* 위상 평균 — `thBob` 을 «제품 애니 그대로» 14위상 샘플한다(`animation-play-state` 를 건드리면
+         제품과 다른 상태를 재게 된다. `getAnimations().currentTime` 으로만 만진다 — 58 «얼리기 두 겹»). */
+      const H = cv.height, piv = parseFloat(getComputedStyle(cv).getPropertyValue('--thpiv')) || H;
+      const an = cv.getAnimations().find((a) => (a.animationName || '') === 'thBob');
+      const dur = an ? (an.effect.getTiming().duration || 4300) : 4300;
+      const kt = an ? an.currentTime : 0, ps = an ? an.playState : null;
+      let sum = 0, n = 0;
+      if (an) an.pause();
+      for (let i = 0; i < 14; i++) {
+        if (an) an.currentTime = dur * i / 14;
+        const cs = getComputedStyle(cv);
+        const ty = parseFloat((cs.translate || '0px').split(/\s+/)[1] || '0') || 0;
+        const sp2 = (cs.scale || '1').split(/\s+/);
+        const sy = parseFloat(sp2[1] !== undefined ? sp2[1] : sp2[0]) || 1;
+        sum += ((piv + (T - piv) * sy + ty) + (piv + (B + 1 - piv) * sy + ty)) / 2; n++;
+      }
+      if (an) { an.currentTime = kt; if (ps === 'running') an.play(); }
+      out.push({ card: ci + 1,
+                 dx: +(((L + R + 1) / 2) - cv.width / 2).toFixed(1),
+                 dy: +(((T + B + 1) / 2) - cv.height / 2).toFixed(1),
+                 /* 인셋 박스 중심 — 그린 자리는 여기에 와야 한다 */
+                 bx: +((INS.l - INS.r) / 2).toFixed(1), by: +((INS.t - INS.b) / 2).toFixed(1),
+                 avg: +((sum / n) - cv.height / 2).toFixed(1) });
     });
     return out;
-  });
+  }, INS);
   inkMid.forEach((m) => {
-    ok(Math.abs(m.dx) <= 3 && Math.abs(m.dy) <= 3,
-       `카드${m.card} 잉크 합집합 중심이 액자 중심에서 (${m.dx}, ${m.dy}) — |≤3px|`);
+    ok(Math.abs(m.dx) <= 3 && Math.abs(m.avg) <= 3,
+       `카드${m.card} 사이클 평균 잉크 중심이 액자 중심에서 (${m.dx}, ${m.avg}) — |≤3px| (들썩 얹힌 «보이는» 값)`);
+  });
+  console.log('[1-5a] 그려 놓은 잉크 합집합이 «인셋 박스» 중심에 온다 (옛 [1-5] 의 자 — 인셋에 맞춰 유지)');
+  inkMid.forEach((m) => {
+    ok(Math.abs(m.dx - m.bx) <= 3 && Math.abs(m.dy - m.by) <= 3,
+       `카드${m.card} 그린 중심 (${m.dx}, ${m.dy}) = 인셋 박스 중심 (${m.bx}, ${m.by}) — |≤3px|`);
   });
 
   console.log('[2] 클릭 통과 · z 순서');
