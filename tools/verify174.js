@@ -179,16 +179,19 @@ const seedPets = p => p.evaluate(() => {
       const got = read(host), cv = host.querySelector('canvas');
       /* 전투 씬이 그 펫에 쓰는 바로 그 키·애니메이션의 0번 프레임으로 다시 그린다 */
       const sp = PET_SP[got.sp], list = ATLAS[got.sp].a[sp.anim];
+      /* 224 ⓐ — 썸네일에는 공용 림(outline, destination-over 로 둘레에만)이 얹힌다.
+         스프라이트 픽셀은 그대로이므로 재현 그리기에도 같은 옵션을 줘야 지문이 맞는다. */
+      const OL = cv.dataset.uol || null;
       const t = document.createElement('canvas'); t.width = cv.width; t.height = cv.height;
-      drawSpriteTo(t, { k: got.sp, frame: list[0], tint: cv.dataset.utc || null, fit: +cv.dataset.ufit });
+      drawSpriteTo(t, { k: got.sp, frame: list[0], tint: cv.dataset.utc || null, fit: +cv.dataset.ufit, outline: OL });
       const same = ink(t);
       /* 틴트를 뺀 것과는 달라야 한다(= multiply 가 실제로 먹었다) */
       const t2 = document.createElement('canvas'); t2.width = cv.width; t2.height = cv.height;
-      drawSpriteTo(t2, { k: got.sp, frame: list[0], tint: null, fit: +cv.dataset.ufit });
+      drawSpriteTo(t2, { k: got.sp, frame: list[0], tint: null, fit: +cv.dataset.ufit, outline: OL });
       const bare = ink(t2);
       /* «똑같은 이미지» 의 근거 — 밝기 보정(72 `bright`)을 **안 걸었다**. 걸었다면 여기서 갈린다. */
       const t3 = document.createElement('canvas'); t3.width = cv.width; t3.height = cv.height;
-      drawSpriteTo(t3, { k: got.sp, frame: list[0], tint: cv.dataset.utc || null, fit: +cv.dataset.ufit, bright: 1.6 });
+      drawSpriteTo(t3, { k: got.sp, frame: list[0], tint: cv.dataset.utc || null, fit: +cv.dataset.ufit, outline: OL, bright: 1.6 });
       const lifted = ink(t3);
       return { sp: got.sp, tint: cv.dataset.utc || null, sig: got.ink && got.ink.sig,
                refSig: same && same.sig, bareSig: bare && bare.sig, frames: list.length,

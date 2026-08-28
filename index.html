@@ -14934,6 +14934,25 @@ function drawHeroTo(canvas, o){
    프레임 1장을 한 번만 밝혀 두고 그 뒤로는 평범한 drawImage 를 한다(87 `tintCache` 와 같은 규칙).
    키가 아틀라스+프레임+배율이라 아틀라스 프레임 수만큼만 늘고 멈춘다. */
 const brightCache = {};
+/* 224 ⓐ — 썸네일 외곽 림. 어두운 등급 면 위의 어두운 스프라이트(174 §5b 실측 9장, 최악 robo2 69.4%)를
+   «스프라이트 픽셀은 그대로 두고»(주인 지시 «전투씬과 똑같은 이미지») 실루엣 둘레에만 밝은 림을 얹어
+   면에서 떼어 낸다. CSS filter 가 아니라 **캔버스 픽셀에** 넣는다 — 72 경고(«CSS 필터는 게이트가
+   화면과 다른 그림을 본다»)를 피한다. brightFrame 과 같은 프레임 단위 캐시라 비용은 최초 1회다. */
+const outlCache = {};
+function outlFrame(A, name, fr, col){
+  const k = (A.img || '') + '|' + name + '|' + col;
+  let c = outlCache[k];
+  if(c) return c;
+  c = document.createElement('canvas');
+  c.width = fr[2]; c.height = fr[3];
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = false;
+  g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], 0, 0, fr[2], fr[3]);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = col; g.fillRect(0, 0, fr[2], fr[3]);
+  outlCache[k] = c;
+  return c;
+}
 function brightFrame(A, name, fr, br){
   const k = (A.img || '') + '|' + name + '|' + br;
   let c = brightCache[k];
@@ -14969,7 +14988,9 @@ function drawSpriteTo(canvas, o){
      크기 맥동(zombie 8.9%)은 사라지지만 잉크 top 흔들림이 2 → **12px** 로 늘어 121 의 기준선(9px =
      thBob 진폭 18 의 절반)을 넘는다 — 121 6회차가 같은 처방을 이미 실측해 기각한 자리다(`TH_IDLE` 주석).
      맥동의 진짜 원인은 배율식이 아니라 «공격 사이클을 아이들로 쓰는 것» 이고, 그건 창으로 고친다. */
-  const sp = o.fit | 0, py = o.padY | 0;
+  /* 224 ⓐ — 림(2px)이 켜진 contain 썸네일은 여백을 그만큼 더 줘서 «스프라이트+림» 이
+     원래 잉크 예산(이모지 박스)을 안 넘게 한다(174 아트 자리 규칙 유지). */
+  const sp = (o.fit | 0) + (o.outline && (o.fit | 0) ? 2 : 0), py = o.padY | 0;
   const k  = sp ? Math.min((W - sp*2) / fr[2], (H - sp*2) / fr[3]) : 0;
   const dw = sp ? Math.max(1, Math.round(fr[2] * k)) : W;
   const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : Math.max(1, H - py*2);
@@ -14996,6 +15017,18 @@ function drawSpriteTo(canvas, o){
     g.fillStyle = o.tint; g.fillRect(dx, dy, dw, dh);
     g.globalCompositeOperation = 'destination-in';
     g.drawImage(A.image, fr[0], fr[1], fr[2], fr[3], dx, dy, dw, dh);
+    g.globalCompositeOperation = 'source-over';
+  }
+  /* 224 ⓐ — 실루엣 둘레 밝은 림(o.outline = 색). `destination-over` 라 스프라이트·틴트 픽셀은
+     한 톨도 안 바뀌고 **투명한 둘레에만** 깔린다 — «전투씬과 똑같은 이미지» 전제 유지.
+     틴트의 destination-in 뒤에 와야 한다(앞에 그리면 실루엣 클립에 같이 잘려 나간다). */
+  if(o.outline){
+    const s = outlFrame(A, o.frame, fr, o.outline), t2 = 2;
+    g.globalCompositeOperation = 'destination-over';
+    for(let a8 = 0; a8 < 8; a8++){
+      const ox = Math.round(Math.cos(a8 * Math.PI / 4) * t2), oy = Math.round(Math.sin(a8 * Math.PI / 4) * t2);
+      g.drawImage(s, 0, 0, fr[2], fr[3], dx + ox, dy + oy, dw, dh);
+    }
     g.globalCompositeOperation = 'source-over';
   }
   g.restore();
@@ -20650,11 +20683,14 @@ const PET_TH = {
    장비·스킬이 섞인 목록(09 결과·12 소환 결과)에서 «펫만» 바뀌게 하는 것이 이 함수의 일이다.
    ⚠ 대비(«어두운 면 위의 어두운 스프라이트») 는 **여기서 손대지 않는다** — 주인 지시가 «전투씬과
    똑같은 이미지» 라 픽셀을 밝히면 전제가 깨진다. 실측·후속은 docs/review/174-*.md 와 PROGRESS 224. */
+/* 224 ⓐ — 펫 썸네일 공용 림 색. 어두운 면(g3 휘도 48)에서 대비를 만들고 밝은 면에서는 묻힌다.
+   drawSpriteTo(outline) 가 캔버스 픽셀에 넣으므로 게이트가 화면과 같은 그림을 본다(72 경고 회피). */
+const PET_OUTL = 'rgba(255,246,220,.85)';
 function petIcon(it, kind){
   if(!(it && it.sp && PET_SP[it.sp])) return it && it.ic || '❔';
   const T = PET_TH[kind] || PET_TH.up;
   return '<canvas class="pt-cv" width="' + T.w + '" height="' + T.h + '"'
-       + ' data-usp="' + it.sp + '" data-ufit="' + T.fit + '"'
+       + ' data-usp="' + it.sp + '" data-ufit="' + T.fit + '" data-uol="' + PET_OUTL + '"'
        + (it.tint ? ' data-utc="' + it.tint + '"' : '') + '></canvas>';
 }
 /* 그리기는 삽입 «후» 다. 실패(아틀라스 미로딩·프레임 없음)하면 캔버스를 이모지로 되돌린다 —
@@ -20666,7 +20702,7 @@ function petPaint(root){
     const list = A && A.a && sp && A.a[sp.anim];
     const tint = cv.dataset.utc || null;
     const okd = A && A.image && list && list.length
-      && drawSpriteTo(cv, { k, frame:list[0], tint,
+      && drawSpriteTo(cv, { k, frame:list[0], tint, outline: cv.dataset.uol || null,
                             fit: cv.dataset.ufit != null ? +cv.dataset.ufit : UPR_ART });
     if(!okd && cv.parentNode) cv.parentNode.textContent = UPR_FB[k] || '❔';
   });
@@ -25869,9 +25905,12 @@ function renderColl21(){
            return '<div class="cd" style="background:' + c[0] + ';box-shadow:inset 0 0 0 2px rgba(0,0,0,.42),inset 0 0 0 7px ' + c[1] + '">'
              /* 174 — 펫 칸은 이모지(COLL21_PETIC) 대신 전투 스프라이트. 미달성 칸의 흐림은
                 부모 `.cdic` 인라인 filter 라 캔버스에도 그대로 먹는다. `.pt` 는 이모지 폭 보정
-                `scaleX(1.15)` 를 끈다 — 캔버스에 걸면 그림이 가로로 늘어난다. */
+                `scaleX(1.15)` 를 끈다 — 캔버스에 걸면 그림이 가로로 늘어난다.
+                224 ⓒ — 미달성 표시를 «어둡게(brightness .55)» 에서 «반투명(opacity .45)» 으로.
+                원래 어두운 스프라이트(dragon)는 어둡게 하면 내부 디테일까지 통짜 검은 실루엣이 됐다 —
+                알파는 면 색이 비쳐 형태·디테일이 남는다(224 등재문 «밝기 대신 채도/알파» 선택지). */
              + '<i class="cdic' + (it.ic ? '' : ' pt') + '"'
-             + (l ? '' : ' style="filter:grayscale(1) brightness(.55)"') + '>'
+             + (l ? '' : ' style="filter:grayscale(1) opacity(.45)"') + '>'
              + (it.ic || petIcon(it, 'coll')) + '</i>'
              + '<s class="cb" style="background:linear-gradient(180deg,' + c[2] + ',' + c[3] + ')"></s>'
              + '<i class="cl2" style="color:' + ((max || l >= req) ? '#FFFFFF' : '#F5746E') + '">Lv. ' + l
