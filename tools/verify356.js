@@ -35,9 +35,20 @@ const SCOPE = [
   { k: 'div.pcp', why: 'A3 칭호 🔥' },
   { k: '.cDia', why: 'A3 HUD 보석(알약·비행·착지)' },
   { k: '.cGold', why: 'A3 HUD 코인' },
+  /* ── 2회차(같은 세션) — 비율이 가장 크게 어긋나 있던 화면 묶음 «54 랭킹 + 35 패스» ── */
+  { k: '.rk-bd', why: '54 랭킹 행 메달 (수리 전 2.07 — 전체 최악)' },
+  { k: '.rk-sh', why: '54 랭킹 시상대 메달 3칸 (1.86)' },
+  { k: '.rk-tab', why: '54 랭킹 탭 아이콘 3칸 (1.19~1.36)' },
+  { k: '.ps-bdg', why: '35 패스 헤더 뱃지 (1.82·1.94)' },
+  /* ⚠ 스캐너 경로는 id 를 만나면 거기서 멈춘다 — `.ps-bar` 가 아니라 **`#psBar`** 로 잡아야 한다
+     (`.ps-bar` 로 뒀더니 «노드 0개» 로 빨개졌다 = 헛초록 방지 항이 제 일을 했다) */
+  { k: '#psBar', why: '35 패스 하단 탭 아이콘 4칸 (.87~1.6)' },
+  { k: '.ps-bx', why: '35 패스 칸 자물쇠 (1.10·1.21)' },
+  { k: '.at-cr', why: '70 출석 👑 (1.4)' },
+  { k: 'i.cdic', why: '21 도감 칸 아이콘 (1.15 — `.pt` 는 이미 transform:none 이었다)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
-const REMAIN = 96;
+const REMAIN = 63;   /* 2회차 실측(셀렉터 기준). 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 직접 비교 불가 — 같은 자로 다시 잰 값이 63 이다. */
 
 const fails = [];
 const oks = [];
@@ -88,7 +99,10 @@ async function sweep(browser, inject) {
   }
 
   console.log('[B] 잔여 래칫 — 스코프 밖 비균등 «자리» 수');
-  const outSel = new Set(badRows.filter((r) => !inScope(r.sel)).map((r) => r.sel + '|' + r.ratio));
+  /* ⚠ 키를 «셀렉터 + 비율» 로 잡으면 **매 실행 값이 달라진다** — 60 쥬시의 `.jz-st` 가 등장 프레임마다
+     다른 `scale:1.0xx` 를 걸어서, 같은 자리가 실행마다 다른 비율로 잡힌다(1회차에 78↔79 로 흔들렸다).
+     래칫은 «자리» 를 세는 자이므로 **셀렉터만** 으로 접는다. */
+  const outSel = new Set(badRows.filter((r) => !inScope(r.sel)).map((r) => r.sel));
   if (outSel.size > REMAIN) bad(`잔여 자리 ${outSel.size} > 등재값 ${REMAIN} — 새 비균등 아이콘이 생겼다`);
   else ok(`잔여 자리 ${outSel.size} ≤ 등재값 ${REMAIN}` + (outSel.size < REMAIN ? ' (줄었다 — REMAIN 을 내려 적어라)' : ''));
 

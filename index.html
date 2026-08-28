@@ -3170,7 +3170,7 @@
   .at-c.today{z-index:3;cursor:pointer}
   .at-cr{position:absolute;left:0;right:0;top:256px;height:58px;display:flex;align-items:center;
     justify-content:center;font-size:43px;line-height:43px;pointer-events:none}
-  .at-cr>i{font-style:normal;transform:scaleX(1.4)}
+  .at-cr>i{font-style:normal}  /* 356 — scaleX(1.4) 폐기(아이콘은 원본 비율) */
 
   .sumhead{border-radius:22px;padding:16px;margin-bottom:16px;font-size:25px;font-weight:900}
   .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
@@ -8157,8 +8157,10 @@
      아트 자리 규칙대로 **박스를 ref bbox 로 못박고** 폴백 글리프를 그 안에 채운다 —
      나중에 이미지로 갈아 끼우면 위치·크기가 그대로 맞는다. */
   #collw .clb .cd>i.cdic{position:absolute;left:23px;top:15px;width:66px;height:70px;margin:0;
-    display:flex;align-items:center;justify-content:center;font-size:65px;line-height:1;
-    transform:scaleX(1.15)}
+    display:flex;align-items:center;justify-content:center;font-size:65px;line-height:1}
+  /* ★ 356 — `scaleX(1.15)` 폐기. 아래 `.cdic.pt{transform:none}` 이 **스프라이트 칸에서만**
+     이미 같은 판단을 하고 있었다(«가로로 늘리면 그림이 찌그러진다») — 356 은 그 판단을
+     이모지 칸에도 그대로 적용한 것뿐이다. 박스(66×70 = ref 아트 bbox)는 안 건드린다. */
   .clb .cd>s.cb{position:absolute;left:0;right:0;bottom:0;height:29px}
   /* 8회차 — K #16·L #9 가 «캡션 잉크 3~4px 위» 로 일치. 자체 행 프로파일(light>=150, x168~268):
      ref 잉크 y708~724 / 우리 703~721 → 5px 내린다. */
@@ -12009,9 +12011,9 @@
      r4 실측은 무료 97×97 · 프리미엄 78×117 로 **둘 다 폭이 −22~38%** 였다(G·H 가 함께 1순위로 지적).
      이모지는 가로세로가 같이 커져 font-size 로는 못 맞춘다 — 높이는 font-size, 폭은 scaleX 로 따로 민다(LESSONS 30-③). */
   .ps-bdg.f{left:20px;top:21px;height:89px;line-height:89px;font-size:79px}
-  .ps-bdg.f>i{transform:scaleX(1.82)}
+  .ps-bdg.f>i{}  /* 356 — scaleX(1.82) 폐기 */
   .ps-bdg.p{left:561px;top:13px;height:108px;line-height:108px;font-size:96px}
-  .ps-bdg.p>i{transform:scaleX(1.94)}
+  .ps-bdg.p>i{}  /* 356 — scaleX(1.94) 폐기 */
 
   /* ---- 보상 트랙 리스트 ref y796..2160 → frame 712.. (하단바까지). 24px 잔차를 여기서 흡수 ---- */
   .ps-list{left:0;right:0;top:712px;bottom:179px;overflow-y:auto;overflow-x:hidden;
@@ -12108,7 +12110,7 @@
      아래 값은 수정 → 재캡처 → 재측정으로 닫았다(r6 = 45×62 @722 cx992). 되돌리기 전에 tools/scan35.py 를 돌릴 것. */
   .ps-bx>s.lk{position:absolute;left:85px;top:-26px;width:110px;height:60px;line-height:60px;
     text-align:center;font-size:60px}
-  .ps-bx>s.lk>em{transform:scaleX(1.21)}
+  .ps-bx>s.lk>em{}  /* 356 — scaleX(1.21) 폐기 */
   /* 10회차 — 비평가 S 가 «타일 밖 돌출» 로 재서 «세로 −10%» 를 지적했고, 같은 방법으로 임계 스윕
      (Δ>35/45/60/80)하니 **전 구간에서 −4~−6px 로 안정**이었다: ref y..1706~1707 ↔ 우리 y..1700,
      **상단(1646)과 우단은 이미 일치**하고 아래만 짧다. 6회차가 확립한 «돌출 프로파일» 이 이 요소의
@@ -12117,7 +12119,7 @@
      **상단은 유지한 채 아래로만** 자란다. 넓어지는 폭은 scaleX 1.21→1.10 으로 되민다.
      ⚠ `#psw:not(.att)` — 36 도 프리미엄 칸에 같은 자물쇠를 쓴다. */
   #psw:not(.att) .ps-bx>s.lk{top:-23px;font-size:66px}
-  #psw:not(.att) .ps-bx>s.lk>em{transform:scaleX(1.10)}
+  #psw:not(.att) .ps-bx>s.lk>em{}  /* 356 — scaleX(1.10) 폐기 */
   /* 수령완료 — 체크 코어 82x66 @ x+38..+119 / y+44..+109 (padding box 기준 −5) */
   /* 수령완료 «색» 은 등급마다 다르다(등급색 × 0.5 — 36 측정표 §8-4) → renderPass() 가 인라인
      --rim/--fill 로 어둡게 준다. 여기서 색을 잡으면 «인라인 > 클래스» 라 어차피 지고,
@@ -12157,18 +12159,18 @@
      라벨 코어 h 35(+40%) 였다 — G·H 가 «아이콘 위로 붙고 좁다 / 라벨 글자 크다» 로 함께 지적한 자리다. */
   .ps-bar>div>i{position:absolute;left:0;right:0;top:23px;height:96px;line-height:96px;
     text-align:center;font-size:92px}
-  .ps-bar>div>i>em{transform:scaleX(1.6)}
+  .ps-bar>div>i>em{}  /* 356 — scaleX(1.6) 폐기 */
   /* ref 아이콘 폭은 칸마다 다르다(전용 아트라 그렇다) — 스테이지 180~248 · 보물상자 167~179 ·
      시련의탑 107~132 · 출석 145~153. 하나의 scaleX 로는 못 맞춰서 칸별로 나눈다(6회차 I-5·I-8). */
   /* ⚠ 폭 목표는 ref 의 **조밀부(불투명 본체)** 다. ref 아이콘은 본체 둘레에 «코인 흩뿌림» 이 옅게 깔려 있어서
      임계값에 따라 폭이 111~190 으로 흔들린다(비평가들이 «−38%» 와 «+50%» 로 정반대로 읽은 원인이 이것이다).
      우리 이모지는 전부 불투명이라 흩뿌림까지 채우면 실제보다 훨씬 무거워 보인다 →
      ref 조밀부(열당 8px 이상): 스테이지 169 · 보물상자 123 · 시련의탑 105 · 출석 137 에 맞춘다. */
-  .ps-bar>div[data-ptab="box"]>i>em{transform:scaleX(1.3)}
+  .ps-bar>div[data-ptab="box"]>i>em{}  /* 356 — scaleX(1.3) 폐기 */
   /* 🏰 는 글리프 잉크가 라인박스 안에서 낮게 앉아(우리 @+38, ref @+25) 높이도 −16% 였다 —
      font-size 로 높이를 올리고 넘치는 폭은 scaleX 로 되민다(7회차 L-7) */
   .ps-bar>div[data-ptab="tower"]>i{top:11px;height:109px;line-height:109px;font-size:109px}
-  .ps-bar>div[data-ptab="tower"]>i>em{transform:scaleX(.87)}
+  .ps-bar>div[data-ptab="tower"]>i>em{transform:scale(.87)}  /* 356 — k<1 은 등방으로 흡수 */
   /* 📅 는 글리프가 박스 안에서 우측·위로 치우쳐 있어 중심만 되민다. 남은 폭 +9% · 상단 −8px 은
      이모지 종횡비 한계라 아트 교체분이다(비평가 3명이 모두 «탭 아이콘은 전용 아트 필요» 로 분류). */
   .ps-bar>div[data-ptab="att"]>i{right:40px}
@@ -12179,11 +12181,11 @@
      ⚠ **`:not(.on)` 으로 좁힌다** — 36 출석 패스에서는 이 칸이 «활성» 이고 36 담당 세션이 8회차에
      활성 아이콘 잉크를 Δ−2 까지 맞춰 뒀다. 그 구간을 건드리면 안 된다. */
   .ps-bar>div[data-ptab="att"]:not(.on)>i{right:0}
-  .ps-bar>div[data-ptab="att"]>i>em{transform:scaleX(.96)}
+  .ps-bar>div[data-ptab="att"]>i>em{transform:scale(.96)}  /* 356 — k<1 은 등방으로 흡수 */
   /* **활성 칸**은 아이콘도 크다 — ref 활성(스테이지) 잉크는 h104 @본체+4 · 폭 241 로 비활성(h85·폭 105~167)과 다르다.
      칸 폭이 190→289 로 넓어지는 규칙(측정표 §3-1)의 아이콘 판이다. `.on` 에 걸어야 36(출석 활성)에서도 같이 맞는다. */
   .ps-bar>div.pt.on>i{top:4px;height:117px;line-height:117px;font-size:117px}
-  .ps-bar>div.pt.on>i>em{transform:scaleX(1.37)}
+  .ps-bar>div.pt.on>i>em{}  /* 356 — scaleX(1.37) 폐기 */
   .ps-bar>div>b{position:absolute;left:0;right:0;top:107px;height:42px;line-height:42px;
     text-align:center;font-size:27px;color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;
     white-space:nowrap}
@@ -12917,8 +12919,11 @@
      fs 85 → **74**(잉크 h 96×74/85 ≈ 83), 줄어든 폭은 scaleX 1.78 → **2.07** 로 되돌린다.
      ref 잉크 중심 901 · 우리 897.5 → `translateY(3px)`. */
   .rk-bd.m{left:29px;top:34px;width:102px;height:80px;font-size:74px}
-  #rkw .rk-bd.m>em{display:block;position:relative;left:2.5px;transform:scaleX(2.07) translateY(3px)}
-  #rkw .rk-sh>em{display:block;transform:scaleX(1.86)}
+  /* ★ 356(주인 지시 2026-08-29 «아이콘은 원본 비율») — 아래 아이콘의 비균등 scaleX 를 폐기했다.
+     규칙은 «작은 쪽으로»(s = min(sx,sy)): k>1 이면 선언을 떼고, k<1 이면 등방 scale(k) 로 흡수한다.
+     ref 폭과의 차는 이제 «아트 대기» 다 — 이모지 실루엣과 ref 일러스트는 종횡비가 다르다. */
+  #rkw .rk-bd.m>em{display:block;position:relative;left:2.5px;transform:translateY(3px)}  /* 356 — scaleX(2.07) 폐기 */
+  #rkw .rk-sh>em{display:block}  /* 356 — scaleX(1.86) 폐기 */
   /* clip 을 0% 에서 시작해야 도형 bbox 가 ref 96×96 이 된다 — 12% 에서 시작하면 실측 84 로 잘린다 */
   .rk-bd.f{left:32px;top:26px;width:96px;height:96px;background:#CDA37B;
     clip-path:polygon(0 0,50% 15%,100% 0,100% 55%,50% 100%,0 55%)}
@@ -13067,9 +13072,9 @@
   /* 아이콘 자리 — 탭1 160×99@top10 · 탭2 123×104@top5 · 탭3 151×107@top2 (아트 교체용 bbox) */
   #rkw .rk-tab>u{position:absolute;left:50%;display:flex;align-items:center;justify-content:center;
     line-height:1}
-  .rk-tab.t1>u{top:10px;width:160px;height:99px;margin-left:-80px;font-size:110px;transform:scaleX(1.30)}
-  .rk-tab.t2>u{top:5px;width:123px;height:104px;margin-left:-61.5px;font-size:97px;transform:scaleX(1.19)}
-  .rk-tab.t3>u{top:2px;width:151px;height:107px;margin-left:-75.5px;font-size:115px;transform:scaleX(1.36)}
+  .rk-tab.t1>u{top:10px;width:160px;height:99px;margin-left:-80px;font-size:110px}  /* 356 — scaleX(1.30) 폐기 */
+  .rk-tab.t2>u{top:5px;width:123px;height:104px;margin-left:-61.5px;font-size:97px}  /* 356 — scaleX(1.19) 폐기 */
+  .rk-tab.t3>u{top:2px;width:151px;height:107px;margin-left:-75.5px;font-size:115px}  /* 356 — scaleX(1.36) 폐기 */
   /* 라벨 잉크 h32 → fs 34, 편측 4 → 8. 탭1 top 117 / 탭2·3 top 115 */
   #rkw .rk-tab>b{position:absolute;left:0;right:0;top:110px;height:40px;line-height:40px;
     display:block;text-align:center;font-size:31px;color:#fff;
