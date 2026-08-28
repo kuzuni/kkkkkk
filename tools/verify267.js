@@ -74,16 +74,23 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
       const lb = b.querySelector('b');
       const cs = getComputedStyle(b);
       const r = b.getBoundingClientRect();
+      const lcs = lb ? getComputedStyle(lb) : null;
       return { h: r.height, w: r.width,
                r: parseFloat(cs.borderTopLeftRadius), bw: parseFloat(cs.borderTopWidth),
                cls: b.className, hasB: !!lb,
-               fs: lb ? parseFloat(getComputedStyle(lb).fontSize) : -1,
+               fs: lb ? parseFloat(lcs.fontSize) : -1,
                ink: lb ? lb.getBoundingClientRect().width : -1,
-               inner: r.width - 2 * parseFloat(cs.borderLeftWidth) };
+               inner: r.width - 2 * parseFloat(cs.borderLeftWidth),
+               col: lb ? lcs.color : '', stCol: lb ? lcs.webkitTextStrokeColor : '',
+               stW: lb ? parseFloat(lcs.webkitTextStrokeWidth) : 0 };
     }, sel);
     if (!g) { ok(false, label + ' 버튼이 있다', sel + ' 없음'); return null; }
     ok(/\bifbtn\b/.test(g.cls) && /\bpbtn\b/.test(g.cls), label + ' 이 `.ifbtn.pbtn` 부품이다', g.cls);
     ok(g.hasB, label + ' 라벨이 `<b>` 안에 있다(`.ifbtn` 규약)');
+    /* 296 — 주인 지시 «검정 아웃라인 + 흰 잉크». 출처는 공용 `.ifbtn>b`(상속 우연 금지) */
+    ok(g.col === 'rgb(255, 255, 255)', label + ' 라벨 잉크 = 흰색(296)', g.col);
+    ok(g.stCol === 'rgb(0, 0, 0)' && g.stW > 0, label + ' 라벨 아웃라인 = 검정 스트로크(296)',
+       g.stCol + ' ' + g.stW + 'px');
     ok(near(g.h, REF.h), label + ' 높이 = 22 기준', g.h + ' vs ' + REF.h);
     ok(near(g.r, REF.r), label + ' radius = 22 기준', g.r + ' vs ' + REF.r);
     ok(near(g.bw, REF.bw), label + ' 검정 테두리 = 22 기준', g.bw + ' vs ' + REF.bw);
