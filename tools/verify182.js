@@ -55,11 +55,16 @@ async function openWith(browser, save){
     p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
     await p.evaluate(() => { window.requestAnimationFrame = () => 0; });   /* 루프가 상태를 되돌리지 못하게 */
 
-    /* ---------------- §1 배분 ---------------- */
-    console.log('\n§1 배분 — PROMO_COS 7칸이 50종을 빠짐없이·겹침없이 나눠 갖는다');
+    /* ---------------- §1 배분 ----------------
+       275(2026-08-28, 주인 지시 «승급전 한 번 깰 때마다 코스튬 1개») 이후 이 절의 기대가 바뀌었다.
+       옛 기대: «7칸이 49종을 빠짐없이 나눠 갖는다». 새 기대: **칸마다 딱 1종**이고,
+       나머지 42종은 어느 승급전도 주지 않는 «미출시»(`COS_OFF`)다. 두 앵커(av41→r3 · av48→r6)와
+       «대표는 묶음에서 파생»(179 규약)은 그대로 살아 있어야 한다 — 275 는 그 대표를 지급표로 승격시킨 것이다. */
+    console.log('\n§1 배분 — PROMO_COS 7칸이 «승급 1회 = 1종» 을 지키고, 나머지는 미출시로 갈린다(275)');
     const map = await p.evaluate(() => {
       const keys = Object.keys(PROMO_COS).map(Number).sort((a, b) => a - b);
       const flat = [].concat.apply([], keys.map(k => PROMO_COS[k]));
+      const off = Object.keys(COS_OFF);
       return {
         keys, sizes: keys.map(k => PROMO_COS[k].length),
         flat: flat.length, uniq: new Set(flat).size, total: AVATARS.length,
@@ -69,8 +74,15 @@ async function openWith(browser, save){
         reps: keys.map(k => ({ k, rep: (promoCos(k) || {}).id, last: PROMO_COS[k][PROMO_COS[k].length - 1] })),
         /* 179 가 근거로 삼은 두 점(폐기 전 COS_LIST 의 계급 조건) */
         pin41: cosRankOf('av41'), pin48: cosRankOf('av48'),
-        /* 묶음에 없는 칸은 기본 지급(av0) 하나뿐이어야 한다 */
+        /* 묶음에 없는 칸 = 기본 지급(av0) + 275 미출시 42종 */
         orphan: AVATARS.filter(a => cosRankOf(a.id) < 1).map(a => a.id),
+        off: off.length,
+        /* 275 — 미출시는 «PROMO_COS 에 없는 칸» 에서 파생된다(표 한 벌). 교집합이 있으면 두 벌이다 */
+        offXbundle: off.filter(id => flat.indexOf(id) >= 0).length,
+        offHasBase: off.indexOf('av0') >= 0,
+        /* 275 — 미출시 칸은 «잠긴 채로» 있어야 한다. cosRankOf 가 0 이라 그냥 두면 계급 0 에서도 열린다 */
+        offLocked: off.every(id => !cosReqOk(AV[id])),
+        offTxt: cosReqText(AV[off[0]]),
         baseTxt: cosReqText(AV.av0), baseOwn: !!DEF().avatars.av0
       };
     });
@@ -78,9 +90,18 @@ async function openWith(browser, save){
       '승급 ' + (map.ranks - 1) + '회 전부에 묶음이 있다 (' + map.keys.join(',') + ')');
     ok(map.real, '묶음의 모든 id 가 실재 코스튬');
     ok(map.flat === map.uniq, '한 코스튬이 두 묶음에 들어가지 않음 (' + map.flat + '칸 / 고유 ' + map.uniq + '종)');
-    ok(map.uniq === map.total - 1, '기본 지급 av0 을 뺀 49종 전부가 배정됨 (' + map.uniq + '/'
-      + (map.total - 1) + ') — 배분 ' + map.sizes.join('·'));
-    ok(map.orphan.join(',') === 'av0', '묶음 밖은 기본 외형 av0 하나뿐 («' + map.orphan.join(',') + '»)');
+    /* 275 — 이 한 줄이 주인 지시 «한 번 깰 때마다 1개» 의 기계 검사다 */
+    ok(map.sizes.every(s => s === 1) && map.uniq === map.keys.length,
+      '275 — 승급 1회 = 코스튬 1종 (배분 ' + map.sizes.join('·') + ' · 고유 ' + map.uniq + '종)');
+    ok(map.off === map.total - 1 - map.keys.length,
+      '275 — 남는 ' + map.off + '종은 미출시 COS_OFF (' + map.off + ' = ' + map.total + ' − av0 − '
+      + map.keys.length + ')');
+    ok(map.offXbundle === 0 && !map.offHasBase,
+      '미출시는 묶음에서 파생된다 — 겹침 ' + map.offXbundle + '칸 · av0 포함 ' + (map.offHasBase ? '예' : '아니오'));
+    ok(map.offLocked && map.offTxt === '추후 공개',
+      '미출시 칸은 잠긴 채 «' + map.offTxt + '» 라고 말한다 (계급 0 에서 열리지 않음)');
+    ok(map.orphan.length === map.off + 1 && map.orphan.indexOf('av0') >= 0,
+      '묶음 밖 = av0 + 미출시 ' + map.off + '종 (' + map.orphan.length + '칸)');
     ok(map.baseOwn && map.baseTxt === '기본 지급',
       'av0 은 처음부터 보유 = «' + map.baseTxt + '» (보상으로 세지 않는다)');
     ok(map.reps.every(r => r.rep === r.last), '미리보기 대표가 묶음에서 파생됨(표 한 벌 — 179 규약)');
@@ -113,8 +134,11 @@ async function openWith(browser, save){
     ok(gone.req, 'AVATARS 에 req 필드 없음');
     ok(gone.buyBtn === 0 && gone.upBtn === 1 && gone.promoBtn === 0,
       '194 시트 두 번째 버튼 = [강화] · 구매 ' + gone.buyBtn + '개 · 승급전 ' + gone.promoBtn + '개(상세로 이동)');
-    ok(gone.bars.length >= 50 && gone.bars.every(t => /^\d+\/\d+$/.test(t) || /^🔒.*승급전 클리어$/.test(t)),
-      '카드 바닥 ' + gone.bars.length + '칸이 전부 «Lv/맥스» 또는 «🔒 …승급전 클리어»(가격 0칸)');
+    /* 275 — 미출시 칸이 생기면서 세 번째 문구 «🔒추후 공개» 가 정상이 됐다.
+       이 단언이 지키려는 것은 «가격 표기가 한 칸도 없다» 이고 그건 그대로다. */
+    ok(gone.bars.length >= 50 && gone.bars.every(t => /^\d+\/\d+$/.test(t)
+        || /^🔒.*승급전 클리어$/.test(t) || /^🔒추후 공개$/.test(t)),
+      '카드 바닥 ' + gone.bars.length + '칸이 전부 «Lv/맥스» 또는 «🔒 …승급전 클리어 / 추후 공개»(가격 0칸)');
     ok(!gone.dot, '미보유 49종 + 다이아 1e9 이어도 영웅 탭 레드닷이 안 켜짐');
 
     /* ---------------- §3 지급 ---------------- */
@@ -180,7 +204,8 @@ async function openWith(browser, save){
     console.log('\n§6 연출 — 승급 성공 팝업의 «획득한 코스튬»(182 ③)');
     const fx = await p.evaluate(async () => {
       closeModal();
-      S.avatars = { av0: 1 }; S.rank = 2; markDirty();           /* 계급 3 = 영웅 8종 */
+      S.avatars = { av0: 1 }; S.rank = 2; markDirty();           /* 계급 3 = 275 이후 대표 1종(av41) */
+      const want = PROMO_COS[3].length;
       promo = { t: 60, max: 60, rank: nextRank() };
       endPromo(true);
       const cards = [].slice.call(document.querySelectorAll('#mbox .pr182 .pg-c'));
@@ -190,10 +215,16 @@ async function openWith(browser, save){
           for (let i = 3; i < d.length; i += 4) if (d[i] > 8) return true; } catch (e) {}
         return false;
       }).length;
-      /* 스태거 70ms × 8칸 — 다 돌 때까지 기다렸다가 «실제로 붙었나» 를 본다 */
-      await new Promise(r => setTimeout(r, 700));
-      const hit = cards.filter(c => c.classList.contains('fx-hit') || c.classList.contains('fx-flash')).length;
-      const parts = document.querySelectorAll('#fxl > *').length;
+      /* 스태거 70ms/칸. 275 로 칸이 1개가 되면서 «700ms 뒤 한 번» 은 **연출이 이미 끝난 뒤**를
+         재게 됐다(칸 8개일 때는 마지막 칸이 490ms 라 우연히 살아 있었다). 시간을 고정하지 말고
+         스태거가 도는 동안 **표본을 계속 떠서 최대값**을 쓴다 — 칸 수가 몇이든 같은 것을 잰다. */
+      let hit = 0, parts = 0;
+      for (let t = 0; t < 24; t++) {
+        await new Promise(r => setTimeout(r, 40));
+        hit = Math.max(hit, cards.filter(c => c.classList.contains('fx-hit')
+                                           || c.classList.contains('fx-flash')).length);
+        parts = Math.max(parts, document.querySelectorAll('#fxl > *').length);
+      }
       /* 격자가 팝업 밖으로 넘치지 않는가.
          ⚠ 격자 자체가 없으면 `getBoundingClientRect` 로 즉사한다 — 게이트는 죽지 말고 **FAIL** 해야
          한다(LESSONS 127 «죽은 게이트»). 되돌림 시험 N3(격자 제거)이 실제로 이 자리를 때린다. */
@@ -205,26 +236,34 @@ async function openWith(browser, save){
       }
       const txt = document.querySelector('#modal .mbody').textContent.replace(/\s+/g, ' ');
       closeModal();
-      return { n: cards.length, painted, hit, parts, inside, cnt: /코스튬 (\d+)종 획득/.exec(txt) };
+      return { n: cards.length, want, painted, hit, parts, inside, cnt: /코스튬 (\d+)종 획득/.exec(txt) };
     });
-    ok(fx.n === 8, '계급 3 승급 → 격자 8칸 (실측 ' + fx.n + ')');
+    /* 275 — 계급 3 승급이 주는 것은 «영웅 8종» 이 아니라 대표 1종(av41)이다.
+       칸 수를 상수로 박지 않고 `PROMO_COS[3].length` 에서 파생시킨다(같은 부패를 두 번 겪지 않게). */
+    ok(fx.n === fx.want, '계급 3 승급 → 격자 ' + fx.want + '칸 (실측 ' + fx.n + ')');
     ok(fx.painted === fx.n, '격자 스프라이트가 전부 칠해짐 (' + fx.painted + '/' + fx.n + ')');
     ok(fx.hit > 0, '연출이 실제로 카드에 붙는다 (fx 클래스가 걸린 칸 ' + fx.hit + ')');
     ok(fx.parts > 0, '파티클 레이어(#fxl)에 연출 노드가 생김 (' + fx.parts + ')');
     ok(fx.inside, '격자가 팝업 상자 안에 든다(넘침 없음)');
-    ok(fx.cnt && +fx.cnt[1] === 8, '팝업 문구가 «코스튬 8종 획득!» (' + (fx.cnt ? fx.cnt[1] : '없음') + ')');
+    ok(fx.cnt && +fx.cnt[1] === fx.want,
+      '팝업 문구가 «코스튬 ' + fx.want + '종 획득!» (' + (fx.cnt ? fx.cnt[1] : '없음') + ')');
     await ctx.close();
 
     /* ---------------- §4 소급 · §5 회수 금지 ---------------- */
     console.log('\n§4 소급 지급 — 이미 지난 승급의 몫이 로드 때 채워진다');
-    /* ① 최고 계급인데 코스튬이 없는 세이브 — 소급이 없으면 50종을 영원히 못 받는다 */
+    /* ① 최고 계급인데 코스튬이 없는 세이브 — 소급이 없으면 승급 몫을 영원히 못 받는다.
+       275 이후 «전부» 는 50종이 아니라 **av0 + 승급 7종 = 8종**이고, 미출시 42종은 소급에도 안 온다. */
     const top = await openWith(browser, { rank: 7, avatar: 'av0', avatars: { av0: 1 }, best: 300, stage: 300 });
     const topR = await top.p.evaluate(() => ({
       n: Object.keys(S.avatars).filter(k => S.avatars[k]).length,
-      all: AVATARS.every(a => !!S.avatars[a.id]), rank: S.rank
+      /* 275 — 기대는 «묶음 전부 + av0». 상수 8 을 박지 않고 표에서 파생시킨다 */
+      want: 1 + [].concat.apply([], Object.keys(PROMO_COS).map(k => PROMO_COS[k])).length,
+      all: [].concat.apply([], Object.keys(PROMO_COS).map(k => PROMO_COS[k])).every(id => !!S.avatars[id]),
+      offNone: Object.keys(COS_OFF).every(id => !S.avatars[id]), rank: S.rank
     }));
-    ok(topR.rank === 7 && topR.all && topR.n === map.total,
-      '최고 계급 구세이브 → 50종 전부 소급 지급 (' + topR.n + '/' + map.total + ')');
+    ok(topR.rank === 7 && topR.all && topR.n === topR.want,
+      '최고 계급 구세이브 → 승급 몫 전부 소급 지급 (' + topR.n + '/' + topR.want + ' · av0 포함)');
+    ok(topR.offNone, '275 — 미출시 42종은 소급으로도 들어오지 않는다');
     /* 멱등 — 한 번 더 로드해도 늘지도 줄지도 않는다 */
     await top.p.reload(); await top.p.waitForTimeout(900);
     const topR2 = await top.p.evaluate(() => Object.keys(S.avatars).filter(k => S.avatars[k]).length);
@@ -251,13 +290,16 @@ async function openWith(browser, save){
     const keep = await openWith(browser, { rank: 0, avatar: 'av5', avatars: { av0: 1, av5: 1 }, best: 1, stage: 1 });
     const keepR = await keep.p.evaluate(() => ({
       own: !!S.avatars.av5, worn: S.avatar, rank: S.rank, n: Object.keys(S.avatars).length,
-      reqOk: cosReqOk(AV.av5), at: cosRankOf('av5'),
+      reqOk: cosReqOk(AV.av5), at: cosRankOf('av5'), off: cosOff('av5'),
       atk: AVATARS.reduce((m, a) => S.avatars[a.id] ? m * (1 + a.atk) : m, 1),
       own1: COS_OWN.atk                                   /* 194 — 전 코스튬 동일 보유 효과 */
     }));
     ok(keepR.own && keepR.worn === 'av5', '옛 구매분 av5 가 보유·착용 그대로 (계급 ' + keepR.rank + ')');
     ok(keepR.n === 2, '소급이 «지난 승급» 몫만 건드린다 — 보유 ' + keepR.n + '종');
-    ok(keepR.reqOk && keepR.at === 5, '보유한 코스튬은 계급이 모자라도 «조건 충족» 으로 본다(회수 금지)');
+    /* 275 — av5 는 이제 어느 승급전도 주지 않는 미출시 칸이다(옛 rank 5). 그래도 **이미 가진 것은
+       그대로 «충족»** 이어야 한다 — 회수 금지(182 ④)는 미출시 경로에서도 지켜져야 한다. */
+    ok(keepR.reqOk && keepR.off && keepR.at === 0,
+      '보유한 코스튬은 (275 미출시 칸이어도) «조건 충족» 으로 본다(회수 금지)');
     /* 194 — 등급별 값 폐기. 보존돼야 하는 것은 «무엇을 갖고 있는가» 이고, 효과는 보유 수 × 동일값이다 */
     ok(Math.abs(keepR.atk - Math.pow(1 + keepR.own1, keepR.n)) < 1e-9,
       '구세이브 보유 ' + keepR.n + '종 × 동일 효과 = ×' + keepR.atk.toFixed(4));

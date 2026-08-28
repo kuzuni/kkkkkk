@@ -268,12 +268,22 @@ const table = [];
     return { sizes: ks.map(k => PROMO_COS[k].length), n: flat.length,
              uniq: new Set(flat).size, hasAv0: flat.indexOf('av0') >= 0,
              av41: cosRankOf('av41'), av48: cosRankOf('av48'),
+             off: Object.keys(COS_OFF).length, total: AVATARS.length,   /* 275 */
              cut: PROMO_CUT.slice() };
   });
-  ok(JSON.stringify(map.sizes) === JSON.stringify(map.cut),
-    '컷 ' + map.cut.join('·') + ' 그대로', map.sizes.join('·'));
-  ok(map.n === 49 && map.uniq === 49 && !map.hasAv0,
-    '49종을 빠짐없이·겹침없이 덮고 av0(기본 지급)만 빠진다', map.n + '칸 / 고유 ' + map.uniq);
+  /* 275(2026-08-28, 주인 지시 «승급전 한 번 깰 때마다 코스튬 1개») — `PROMO_CUT` 은 남았지만
+     이제 «지급 개수» 가 아니라 **«대표를 뽑는 구간»** 이다. 194 가 여기서 지키려던 것은
+     «컷이 흔들려 지급표가 몰래 바뀌지 않는다» 이므로, 컷 자체가 그대로인지와
+     그 컷에서 뽑힌 대표 7종이 그대로인지를 잰다(칸 수 기대만 1 로 내린다). */
+  ok(JSON.stringify(map.cut) === '[21,10,8,6,2,1,1]',
+    '컷 21·10·8·6·2·1·1 상수 그대로(275 이후엔 «대표를 뽑는 구간»)', map.cut.join('·'));
+  ok(map.sizes.every(s => s === 1),
+    '275 — 승급 1회 = 1종', map.sizes.join('·'));
+  ok(map.n === 7 && map.uniq === 7 && !map.hasAv0,
+    '승급 7회가 겹침 없이 7종을 덮고 av0(기본 지급)은 빠진다', map.n + '칸 / 고유 ' + map.uniq);
+  ok(map.off === 42 && map.n + map.off + 1 === map.total,
+    '275 — 남는 42종은 미출시(COS_OFF) · 7 + 42 + av0 = 50',
+    map.n + ' + ' + map.off + ' + 1 = ' + (map.n + map.off + 1));
   ok(map.av41 === 3 && map.av48 === 6,
     '구 계급 조건 앵커 2점 보존 (av41→3 · av48→6)', 'av41=' + map.av41 + ' av48=' + map.av48);
 

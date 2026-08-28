@@ -68,7 +68,8 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   const data = await page.evaluate(() => AVATARS.map(a =>
     ({ id: a.id, n: a.n, g: a.g === undefined ? null : a.g, pal: a.pal, tint: a.tint,
        atk: a.atk, hp: a.hp, gold: a.gold,
-       cost: a.cost === undefined ? null : a.cost, req: a.req || null, rank: cosRankOf(a.id) })));
+       cost: a.cost === undefined ? null : a.cost, req: a.req || null, rank: cosRankOf(a.id),
+       off: cosOff(a.id) })));                                        /* 275 — 미출시 갈림 */
   const OWN = await page.evaluate(() => ({ atk: COS_OWN.atk, hp: COS_OWN.hp, gold: COS_OWN.gold }));
   ok(data.length >= 50, '코스튬 ' + data.length + '종 (>= 50)');
   ok(new Set(data.map(a => a.id)).size === data.length, 'id 유일 ' + new Set(data.map(a => a.id)).size + '/' + data.length);
@@ -92,10 +93,14 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     + data.filter(a => a.cost !== null).length + '개');
   ok(data.every(a => a.req === null), '조건 해금(req) 데이터 폐기 확인 — 남은 칸 '
     + data.filter(a => a.req !== null).length + '개');
-  /* av0 «견습 기사» 는 기본 외형이라 묶음 밖(rank 0 = 기본 지급)이다 — 그 한 칸만 예외다 */
-  ok(data.filter(a => a.rank < 1).map(a => a.id).join(',') === 'av0',
-    '49종이 «어느 승급전이 주는지» 를 갖고, 기본 지급은 av0 하나뿐 (rank 0 인 칸 '
-    + data.filter(a => a.rank < 1).map(a => a.id).join(',') + ')');
+  /* 275(2026-08-28, 주인 지시 «승급전 한 번 깰 때마다 코스튬 1개») — rank 0 인 칸이 av0 하나뿐이던
+     시절의 단언이다. 이제 rank 0 은 «기본 지급 av0» + «미출시 42종» 두 갈래이고, 그 갈림을
+     `cosOff` 가 갖는다. 87 이 여기서 지키려던 것은 «분류가 없는 칸(= 조용히 못 얻는 칸)이 없다»
+     이므로, rank 0 인 칸은 반드시 av0 이거나 미출시여야 한다로 잰다. */
+  ok(data.filter(a => a.rank < 1).every(a => a.id === 'av0' || a.off),
+    '조건 없는 칸이 없다 — rank 0 은 기본 지급 av0 또는 275 미출시뿐 (rank 0 '
+    + data.filter(a => a.rank < 1).length + '칸 · 미출시 '
+    + data.filter(a => a.off).length + '칸)');
 
   /* ---------------- §2 틴트 색차 ---------------- */
   console.log('\n§2 틴트 (CIE76 ΔE)');

@@ -45,7 +45,8 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
       ({ id: q.id, v: q.v, at: cosRankOf(q.id), inBundle: (PROMO_COS[q.v] || []).indexOf(q.id) >= 0 }));
     const covered = Object.keys(PROMO_COS).reduce((n, k) => n + PROMO_COS[k].length, 0);
     const uniq = new Set([].concat.apply([], Object.keys(PROMO_COS).map(k => PROMO_COS[k]))).size;
-    return { rows, pinned, ranks: RANKS.length, covered, uniq, total: AVATARS.length };
+    return { rows, pinned, ranks: RANKS.length, covered, uniq, total: AVATARS.length,
+             off: Object.keys(COS_OFF).length };                  /* 275 — 미출시 칸 */
   });
   ok(map.rows.length === map.ranks - 1, `승급 ${map.ranks - 1}회 전부에 보상이 있다 (표 ${map.rows.length}칸)`);
   map.rows.forEach(r => ok(r.ok, `PROMO_COS[${r.ri}] 대표 = ${r.id} 는 실재 코스튬 (${r.n} · 묶음 ${r.size}종)`));
@@ -60,8 +61,14 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail
     `구 계급 조건 ${q.id}→rank ${q.v} 를 매핑이 그대로 따른다 (실제 ${q.at})`));
   /* 182 — 구매 경로가 없으므로 «어느 묶음에도 안 든 코스튬» 은 영원히 못 얻는 코스튬이다 */
   ok(map.uniq === map.covered, `묶음에 중복 배정된 코스튬 없음 (${map.covered}칸 / 고유 ${map.uniq}종)`);
-  /* av0 «견습 기사» 는 처음부터 입고 있는 기본 외형(DEF().avatars={av0:1})이라 묶음 밖이다 */
-  ok(map.uniq === map.total - 1, `기본 외형 av0 을 뺀 49종 전부가 어느 승급전엔가 배정됨 (${map.uniq}/${map.total - 1})`);
+  /* 275(2026-08-28, 주인 지시 «승급전 한 번 깰 때마다 코스튬 1개») — 옛 기대 «49종 전부 배정» 은
+     묶음째 주던 시절의 것이다. 이제 승급 1회 = 1종이고, 남는 42종은 미출시(`COS_OFF`)다.
+     179 가 여기서 지키려던 것은 «못 얻는 코스튬이 조용히 생기지 않는다» 이므로, 기대를 바꾸는 대신
+     **묶음 + 미출시 + av0 = 50 이 정확히 맞는지**(어느 칸도 분류 밖으로 새지 않았는지)를 잰다. */
+  ok(map.uniq === map.ranks - 1,
+    `275 — 승급 1회 = 1종 (배정 ${map.uniq}종 / 승급 ${map.ranks - 1}회)`);
+  ok(map.uniq + map.off + 1 === map.total,
+    `묶음 ${map.uniq} + 미출시 ${map.off} + av0 = ${map.total}종 (분류 밖으로 새는 칸 없음)`);
 
   /* ---- [1][2][3] 계급 7단 팝업 ---- */
   console.log('[1][2][3] 팝업 — 본문 배율 · 넘침 · 보상 표시');

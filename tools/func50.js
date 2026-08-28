@@ -115,9 +115,12 @@ const tap = (page, sel) => page.evaluate((s) => {
         return o;
       });
       const ids = Object.keys(bar);
-      eq('미보유 카드 바닥이 전부 «🔒 …승급전 클리어»',
+      /* 275(2026-08-28, 주인 지시 «승급전 한 번 깰 때마다 코스튬 1개») — 승급이 주지 않는 42종이
+         생기면서 미보유 카드 바닥에 «🔒추후 공개» 가 정상 문구로 추가됐다. 이 단언이 지키려는 것은
+         «미보유 칸 바닥은 잠금 문구뿐(가격 없음)» 이므로 두 문구를 다 받는다. */
+      eq('미보유 카드 바닥이 전부 «🔒 …승급전 클리어 / 추후 공개»',
         ids.every((id) => bar[id].t && bar[id].t.indexOf('🔒') === 0
-                       && /승급전 클리어$/.test(bar[id].t)), true);
+                       && (/승급전 클리어$/.test(bar[id].t) || /^🔒추후 공개$/.test(bar[id].t))), true);
       eq('가격(💎 숫자) 표기가 한 칸도 없다',
         ids.some((id) => /\d/.test(bar[id].t || '')), false);
       const reqId = ids[0];
@@ -145,30 +148,33 @@ const tap = (page, sel) => page.evaluate((s) => {
     {
       const { ctx, page, errs } = await open(browser, { avatar: 'av0', avatars: { av0: 1 }, dia: 999999, rank: 0 });
       await toCos(page);
-      const before = await S(page, '({own:!!S.avatars.av2, n:Object.keys(S.avatars).length, cp:cp()})');
-      /* 계급 2(골드) 승급전을 실제로 통과시킨다 — av2 백은의 용사는 희귀 = 그 묶음이다 */
+      /* 275 — «계급 2 가 주는 코스튬» 을 상수(av2)로 박으면 지급표가 바뀔 때마다 같이 죽는다.
+         표에서 파생시킨다(275 이후 계급 2 = av34 «청람 도끼병»). */
+      const R2 = await S(page, 'PROMO_COS[2][0]');
+      const before = await S(page, `({own:!!S.avatars[${JSON.stringify(R2)}], n:Object.keys(S.avatars).length, cp:cp()})`);
+      /* 계급 2(골드) 승급전을 실제로 통과시킨다 — 그 묶음의 대표가 들어와야 한다 */
       await page.evaluate(() => {
         S.rank = 1; promo = { t: 60, max: 60, rank: nextRank() };
         endPromo(true);
       });
       await page.waitForTimeout(700);
-      const after = await S(page, '({own:!!S.avatars.av2, n:Object.keys(S.avatars).length, cp:cp(), cur:S.avatar})');
+      const after = await S(page, `({own:!!S.avatars[${JSON.stringify(R2)}], n:Object.keys(S.avatars).length, cp:cp(), cur:S.avatar})`);
       const want  = await S(page, 'PROMO_COS[2].length');
       eq('묶음이 통째로 지급됨', after.n - before.n, want);
-      eq('av2 보유 처리', after.own, true);
+      eq(R2 + ' 보유 처리', after.own, true);
       eq('착용은 안 바뀐다(구매 시절의 «즉시 착용» 은 없다)', after.cur, 'av0');
       ok(`전투력 ${before.cp} → ${after.cp} (보유 효과 반영: ${after.cp > before.cp ? '증가' : '변화 없음'})`);
       if (!(after.cp > before.cp)) no('지급해도 전투력이 안 오른다 — bonus() 합산 미반영');
       /* 저장(S) 반영 — localStorage 까지 */
       const raw = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
-      eq('localStorage.avatars.av2', !!raw.avatars.av2, true);
+      eq('localStorage.avatars.' + R2, !!raw.avatars[R2], true);
       eq('localStorage.rank', raw.rank, 2);
       /* 화면 반영 — 카드가 «보유» 로 다시 그려졌는가 */
       await page.evaluate(() => { renderCos(); });
       await page.waitForTimeout(250);
-      eq('카드 잠금 해제', await page.$eval('#bCos [data-cosit="av2"]', (e) => e.classList.contains('lk')), false);
+      eq('카드 잠금 해제', await page.$eval(`#bCos [data-cosit="${R2}"]`, (e) => e.classList.contains('lk')), false);
       /* 194 — 보유 카드의 진행바는 «보유» 가 아니라 **강화 진행도(Lv/500)** 다 */
-      eq('카드 바닥 강화 진행도', await page.$eval('#bCos [data-cosit="av2"] .sk-bar>b', (e) => e.textContent),
+      eq('카드 바닥 강화 진행도', await page.$eval(`#bCos [data-cosit="${R2}"] .sk-bar>b`, (e) => e.textContent),
         await S(page, "'0/' + COS_MAXLV"));
       /* 182 ③ — 승급 성공 팝업이 획득 코스튬을 **그림으로** 보여 준다 */
       await page.evaluate(() => { S.rank = 2; promo = { t: 60, max: 60, rank: nextRank() }; endPromo(true); });
@@ -344,19 +350,21 @@ const tap = (page, sel) => page.evaluate((s) => {
          구매 결과를 덮어쓰고 «저장이 안 됐다» 로 오진한다(LESSONS 43-① «내가 쓴 assert 를 먼저 의심하라»).
          다이아는 페이지 안에서 올린다. */
       const { ctx, page } = await open(browser);
-      /* 182 — 획득은 승급전이다. 계급 4(다이아) 승급전을 통과시켜 전설 묶음(av4 포함)을 받고 착용한다 */
-      await page.evaluate(() => {
+      /* 182 — 획득은 승급전이다. 계급 4(다이아) 승급전을 통과시켜 그 몫을 받고 착용한다.
+         275 — 무엇을 받는지는 상수(av4)가 아니라 `PROMO_COS[4]` 에서 파생시킨다. */
+      const R4 = await S(page, 'PROMO_COS[4][0]');
+      await page.evaluate((id) => {
         S.rank = 3; promo = { t: 60, max: 60, rank: nextRank() };
         endPromo(true); closeModal();
-        S.avatar = 'av4'; save();
-      });
+        S.avatar = id; save();
+      }, R4);
       await page.waitForTimeout(500);
       await page.reload(); await page.waitForTimeout(900);
-      eq('reload 후 보유', await S(page, '!!S.avatars.av4'), true);
-      eq('reload 후 착용', await S(page, 'S.avatar'), 'av4');
+      eq('reload 후 보유', await S(page, `!!S.avatars[${JSON.stringify(R4)}]`), true);
+      eq('reload 후 착용', await S(page, 'S.avatar'), R4);
       eq('reload 후 계급', await S(page, 'S.rank'), 4);
       await toCos(page);
-      eq('reload 후 화면 반영', await page.$eval('#bCos .sk-card.dim', (e) => e.dataset.cosit), 'av4');
+      eq('reload 후 화면 반영', await page.$eval('#bCos .sk-card.dim', (e) => e.dataset.cosit), R4);
       /* 옛 세이브(코스튬 필드 없음)도 죽지 않는가 — LESSONS 44-② */
       await ctx.close();
       const legacy = await open(browser, { dia: 100 });

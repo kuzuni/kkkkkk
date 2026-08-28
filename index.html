@@ -21316,6 +21316,22 @@ $('dclNx').addEventListener('click', e => {
    컷 21·10·8·6·2·1·1 은 182 가 고른 그 배분 그대로이고, `COS_LIST` 의 순서도 그대로라
    **지급표는 한 칸도 바뀌지 않는다**(av41 → r3 · av48 → r6 두 앵커 포함. verify182 §1 이 검산).
    av0 «견습 기사» 만 뺀다 — 처음부터 입고 있는 기본 외형이라 보상으로 적으면 «이미 보유» 를 매번 센다. */
+/* 275 ⚠ (2026-08-28, 저장소 주인 지시) — «승급전은 한 번 깰 때마다 코스튬 1개».
+   182/194 의 묶음은 «1계급 승급에 21종» 을 한꺼번에 줬다. 주인 지시가 «1개씩» 이므로
+   **묶음은 선정 기준으로만 남기고, 실제 지급은 묶음마다 대표 1종**이다.
+   대표를 새로 고르지 않았다 — 179 미리보기가 이미 쓰던 그 칸(`promoCos` = 묶음의 마지막)을
+   그대로 지급표로 승격시킨 것이라 ① «팝업이 보여 준 그 코스튬을 그대로 받는다» 가 되고
+   ② 구 계급 조건 두 앵커(av41 → r3 · av48 → r6)도 한 칸도 안 움직인다(verify182 §1 이 검산).
+   ③ 208 승급 수호자의 틴트(`promoType` → `promoCos`)도 같은 칸이라 «그 코스튬을 입은 수호자»
+   ↔ 미리보기 ↔ 보상이 여전히 한 줄로 이어진다.
+   지급표: r1 av25 · r2 av34 · r3 av41 · r4 av46 · r5 av47 · r6 av48 · r7 av49 (밴드 1→5 상승).
+   ⚠ **남는 42종은 어느 승급전도 주지 않는다 = 미출시(`COS_OFF`)** — 등재문 ⓐ «남는 코스튬을
+   ①다른 경로 ②승급 계급 증설 ③미출시 중 무엇으로 둘지» 가 주인 결정 대기라, 지금은 ③으로 두고
+   시트·상세가 «추후 공개» 라고 **정직하게** 말하게 했다(`cosReqText`). 다른 경로가 정해지면
+   이 파일에서 고칠 곳은 «`PROMO_COS` 밖의 id 를 그 경로에 붙이는 것» 하나뿐이다 —
+   `COS_OFF` 는 «PROMO_COS 에 없는 칸» 에서 **파생**되므로 표를 두 벌로 늘리지 않는다(179 규약).
+   ⚠ 세이브 구조는 안 바뀐다(`S.avatars` 그대로). 구세이브가 이미 가진 코스튬은 회수하지 않는다
+   (182 ④) — `cosReqOk`/`cosReqText` 가 «보유» 를 언제나 먼저 본다. */
 const PROMO_CUT = [21, 10, 8, 6, 2, 1, 1];
 const PROMO_COS = (() => {
   const pool = COS_LIST.map(r => r[0]).filter(id => id !== 'av0');
@@ -21323,7 +21339,9 @@ const PROMO_COS = (() => {
   let at = 0;
   PROMO_CUT.forEach((c, i) => {
     /* 마지막 칸은 «남는 것 전부» — 코스튬이 늘어도 이 표를 안 고치게(LESSONS 91-4) */
-    out[i+1] = (i === PROMO_CUT.length - 1) ? pool.slice(at) : pool.slice(at, at + c);
+    const seg = (i === PROMO_CUT.length - 1) ? pool.slice(at) : pool.slice(at, at + c);
+    /* 275 — 묶음째 주지 않고 **대표 1종**(묶음의 마지막 칸)만 준다 */
+    out[i+1] = seg.length ? [seg[seg.length - 1]] : [];
     at += c;
   });
   return out;
@@ -21335,7 +21353,16 @@ const COS_RANK = (() => {
   Object.keys(PROMO_COS).forEach(r => PROMO_COS[r].forEach(id => { m[id] = +r; }));
   return m;
 })();
-/* 0 = 어느 승급전도 주지 않는다 = 기본 지급(av0 하나뿐) */
+/* 275 — 어느 승급전도 주지 않는 칸 = **미출시**. `PROMO_COS` 에서 파생한다(표 한 벌).
+   기본 외형 av0 은 «처음부터 보유» 라 미출시가 아니다 — 여기서 뺀다. */
+const COS_OFF = (() => {
+  const s = {};
+  COS_LIST.forEach(r => { if(r[0] !== 'av0') s[r[0]] = 1; });
+  Object.keys(PROMO_COS).forEach(k => PROMO_COS[k].forEach(id => { delete s[id]; }));
+  return s;
+})();
+const cosOff = id => !!COS_OFF[id];
+/* 0 = 어느 승급전도 주지 않는다 = 기본 지급(av0) 또는 275 미출시(`cosOff` 로 갈린다) */
 const cosRankOf = id => COS_RANK[id] || 0;
 /* 도전 계급 index → 그 승급전을 깨면 받는 코스튬 묶음(없으면 빈 배열) */
 const promoCosList = ri => (PROMO_COS[ri] || []).map(id => AV[id]).filter(Boolean);
@@ -26037,10 +26064,16 @@ const cosOwn = id => !!S.avatars[id];
    한 표가 갖고 있다. 이미 가진 것(구세이브로 산 것 포함)은 조건과 무관하게 «충족» 이다 — 회수 금지(④). */
 function cosReqOk(a){
   if(!a) return true;
+  /* 275 — 미출시 칸은 «계급 조건» 이 아예 없다. `cosRankOf` 가 0 이라 그냥 두면
+     `S.rank >= 0` 이 항상 참이라 **잠기지 않은 채 영영 못 얻는** 칸이 된다. */
+  if(cosOff(a.id)) return cosOwn(a.id);
   return cosOwn(a.id) || (S.rank|0) >= cosRankOf(a.id);
 }
 function cosReqText(a){
   const ri = cosRankOf(a && a.id), r = RANKS[ri];
+  /* 275 — 승급전 지급이 «1회 = 1개» 로 줄면서 어느 승급전도 주지 않는 칸이 생겼다.
+     그 칸에 «기본 지급» 이라고 적으면 av0 과 같은 거짓말이 된다. */
+  if(cosOff(a && a.id)) return '추후 공개';
   /* ri 0 = 어느 묶음에도 없는 칸 = 기본 외형(av0). RANKS[0] 도 실재하는 계급이므로
      «r 가 있느냐» 로 갈리면 av0 이 «🥉 브론즈 승급전 클리어» 라는 거짓말을 한다. */
   return (ri >= 1 && r) ? r.ic + ' ' + r.n + ' 승급전 클리어' : '기본 지급';
@@ -26272,6 +26305,8 @@ function showCosDetail(id){
         + '<em>Lv. ' + COS_MAXLV + '</em> 까지 강화하면 — 공격 <em>+' + pct(COS_MAXLV*COS_LV.atk)
         + '</em> · 체력 <em>+' + pct(COS_MAXLV*COS_LV.hp) + '</em> · 골드 <em>+'
         + pct(COS_MAXLV*COS_LV.gold) + '</em>'
+      /* 275 — 미출시 칸은 «…시 지급됩니다» 가 성립하지 않는다(조건이 아니라 «경로 없음») */
+      : cosOff(id) ? '<em>추후 공개</em> — 아직 지급되는 곳이 없는 외형입니다.'
       : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.'; };
   const liveCos = () => { const b2 = cosPbNow();
     mdLive({ lvSel:'.sk-gr b', lv:'Lv. ' + cosLvOf(id), p:b2.p, pTxt:b2.t, cell:cosCellNow(), desc:cosDescNow() }); };
