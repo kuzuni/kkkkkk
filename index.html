@@ -17235,7 +17235,10 @@ const relicVal = it => it.v * gMul(it.g) * oLv(it.id) * 0.25;
 const relicLvSum = () => RELICS.reduce((n,r) => n + oLv(r.id), 0);   /* 89 — 유물 Lv 총합(도감·비용·미션 공용) */
 
 let bonusCache = null, bonusDirty = true;
-const markDirty = () => { bonusDirty = true; };
+/* 324 — 전투력 상승 토스트의 «묶음 열림» 신호를 여기서 겸한다. cp() 를 올리는 액션 15곳이
+   전부 이 한 줄을 지나가므로(파생 캐시를 깨야 하니까) 호출부를 하나도 안 고치고 전 경로가 걸린다.
+   상세·침묵 규칙은 아래 `cpTick` 절. */
+const markDirty = () => { bonusDirty = true; cpFxArm(); };
 function bonus(){
   if(!bonusDirty && bonusCache) return bonusCache;
   const b = { atk:1, hp:1, regen:1, gold:1, rate:1, pet:1, cdmg:0, crit:0 };
@@ -17364,6 +17367,50 @@ const petDmg   = p => stat.dmg * p.m * gWear(p.g) * lvWear(oLv(p.id)) * bonus().
 
 /* 전투력 */
 const cp = () => Math.round(stat.dps*1.2 + stat.maxHp*0.6 + stat.regen*80 + stat.dmg*3);
+
+/* ── 324 — «⚔️ 전투력 +X» 토스트 (저장소 주인 지시 2026-08-28) ─────────────────────
+   주인 원문: «도감 강화나 뭐나 쨌든 강화했을때 또는 뭐 장착했을때 전투력 얼마나 올랐는지
+   같은거 notify로 떠야함».
+   ── 왜 호출부 계측이 아니라 «감시자» 인가 ────────────────────────────────────
+   `cp()` 를 올리는 경로가 15곳이다 — `levelUp`·`levelUpMax`(강화) · `power`(장착·해제) ·
+   `wpnEquip`(무기 장착) · `claimColl`(도감 단계) · `trainBuy`·`trainUp`(훈련) ·
+   `temperUp`·`temperReset`(단련) · `runeTry`(룬) · `cosUpgrade`(코스튬) · `craft`(합성) ·
+   `doSummon`·`doSummonFree`·`summonRelic`(소환) · `activateBless`(축복) · 승급 성공.
+   자리마다 스냅샷을 심으면 «새 경로가 생기면 조용히 빠지는» 계측이 된다 — 58 이 재화 획득
+   연출을 호출부가 아니라 `fxWatch` 하나로 모은 것과 같은 이유다. 저 15곳은 **예외 없이 이미
+   `markDirty()` 를 부른다**(파생 스탯 캐시를 깨야 하니까). 그래서 markDirty 를 «묶음 열림»
+   신호로 쓰고, 기준값은 감시자가 프레임마다 들고 있는 직전 `cp()` 로 잡는다.
+   ── ⚠ 기준값이 «직전 프레임» 인 이유 ────────────────────────────────────────
+   호출부는 예외 없이 «변이 → markDirty()» 순서다(`o.l++; markDirty();`). 그래서 markDirty
+   시점의 `cp()` 는 **이미 오른 값**이고, 액션 직전 값은 «묶음이 열리기 전 마지막 프레임» 에만
+   남아 있다. `cpTick` 은 묶음이 닫혀 있는 동안만 기준선을 따라 올린다.
+   ── 묶음 창(CP_FX_MS) ──────────────────────────────────────────────────────
+   64/262/297 «꾹 누르면 연속 강화» 는 `TR_HOLD_IV0`(160ms)에서 `TR_HOLD_IVMIN`(60ms)까지
+   가속하며 반복하므로 420ms 창은 홀드가 **멎은 뒤에만** 닫힌다 = 틱마다 1장이 아니라
+   **합계 1장**(fxWatch 묶음 선례). 첫 발과 반복 사이의 최대 공백인 `TR_HOLD_DELAY`(350ms)도
+   창 안이라 한 번의 홀드가 두 장으로 갈라지지 않는다.
+   ── 침묵 규칙 ──────────────────────────────────────────────────────────────
+   · Δ ≤ 0 은 안 띄우고 기준선만 새로 잡는다 — 주인 지시는 «올랐는지» 다. 해제·축복 만료로
+     내려간 값을 «+» 로 쓰지 않고, 해제→재장착이 «+0» 노이즈를 내지도 않는다.
+   · 자동 구매(`autoBuyTick`)는 `applyBuy` 를 직접 불러 **markDirty 를 안 부른다** — 묶음이
+     아예 안 열리므로 기준선이 프레임마다 따라 올라가고 토스트도 안 난다(0.4초마다 토스트 폭탄 방지).
+   · 부팅(`load()`·`dailyCheck()` 직후의 `markDirty()`)이 만드는 cp 점프는 `cpReady` 가 막는다 —
+     감시는 `cpFxInit()` 이 첫 기준선을 잡은 뒤부터 시작한다.
+   · 156 «표기·지급·이펙트 삼자 일치»: 토스트의 Δ 는 **실측 `cp()` 차** 그 자체다(게이트가 대조). */
+const CP_FX_MS = 420;
+let cpPrev = 0, cpOpen = false, cpAt = 0, cpReady = false;
+function cpFxInit(){ cpPrev = cp(); cpOpen = false; cpReady = true; }
+function cpFxArm(){ if(!cpReady) return; cpOpen = true; cpAt = performance.now(); }
+function cpTick(now){
+  if(!cpReady) return;
+  if(!cpOpen){ cpPrev = cp(); return; }          /* 묶음이 닫혀 있는 동안만 기준선이 따라 오른다 */
+  if(now - cpAt < CP_FX_MS) return;              /* 홀드가 멎기 전에는 닫지 않는다 */
+  cpOpen = false;
+  const v = cp(), d = v - cpPrev;
+  cpPrev = v;
+  if(d > 0) notify('⚔️ 전투력 <b>+' + fmtB(d) + '</b>');
+}
+
 const rankOf = () => RANKS[Math.min(S.rank, RANKS.length-1)];
 const nextRank = () => (S.rank+1 < RANKS.length ? RANKS[S.rank+1] : null);
 /* 295 — 승급전 «입장 제한 폐지»(저장소 주인 지시 2026-08-27). 옛 `canPromote()` 는 «최고 스테이지 +
@@ -22501,7 +22548,12 @@ $('bUp').addEventListener('click', e => {
   if(!el) return;
   const u = U[el.dataset.u], bi = buyInfo(u);
   if(!bi.ok) return;
-  applyBuy(u, bi.n, bi.cost); uiDirty = true; save();
+  /* 324 — 여기만 «markDirty 를 안 부르는 강화» 다. `S.lv` 는 `bonus()` 캐시 밖이라(stat 게터가 매번
+     `lv()` 를 읽는다) 캐시를 깰 이유가 없기 때문인데, 그래서 감시자의 묶음도 안 열린다.
+     주인 지시의 한복판인 «강화했을때» 가 통째로 빠지므로 이 한 줄로 직접 연다.
+     ⚠ `applyBuy` 안이 아니라 **여기**여야 한다 — 자동 구매(`autoBuyTick`)도 같은 함수를 부르는데,
+     거기서 열면 0.4초마다 토스트가 난다(자동 구매는 침묵이 규칙). */
+  applyBuy(u, bi.n, bi.cost); cpFxArm(); uiDirty = true; save();
 });
 
 /* ---- 도감(소환) 탭 ---- */
@@ -31249,6 +31301,10 @@ function loop(now){
      힌트가 영원히 «신선» 해지고, 절전이 풀리는 순간 그동안 쌓인 골드가 절전 직전에 누른 버튼에서
      튀어나온다(158 이 없앤 그 그림이 그대로 돌아온다). 루프가 도는 한 시계도 돈다. */
   fxClockTick(performance.now());
+  /* 324 — 전투력 상승 토스트도 **절전 모드에서도** 돈다(227 이 fxClockTick 을 여기 둔 것과 같은 이유).
+     아래 `fxTick` 자리에 두면 절전 중에 열린 묶음이 얼어붙어, 절전이 풀리는 순간 그때의 강화가
+     한참 전 기준선과 비교돼 터무니없는 Δ 로 뜬다. */
+  cpTick(performance.now());
   /* 56 절전 모드 — «전투는 계속, 렌더는 정지». step(dt) 은 위에서 이미 돌았고 여기서는
      캔버스·HUD·연출·UI 재렌더를 통째로 건너뛴다(측정표 §6-2 — 화면이 완전 불투명 검정이라 그릴 이유가 없다).
      세이브(saveT)·일일 갱신(dayT)은 아래에서 그대로 돈다 — 멈추면 방치 진행이 유실된다. */
@@ -31339,6 +31395,9 @@ loadAtlases(() => {
   if(collLegacy) setTimeout(() => notify('📖 도감이 <b>«부위 · 등급 세트»</b> 단위로 바뀌었습니다'), 900);
   addEventListener('visibilitychange', () => { if(document.hidden) save(); });
   addEventListener('beforeunload', save);
+  /* 324 — 여기까지의 부팅 cp 점프(load·dailyCheck·시작 지급·markDirty)를 기준선으로 삼고 감시 시작.
+     이 줄보다 앞에서 markDirty 가 몇 번을 불려도 cpReady 가 false 라 묶음이 열리지 않는다. */
+  cpFxInit();
   requestAnimationFrame(loop);
 });
 
