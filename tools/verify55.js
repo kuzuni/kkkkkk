@@ -82,15 +82,42 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
     out.volSaved = Math.abs(JSON.parse(localStorage.getItem(KEY)).opt.vol - S.opt.vol) < 1;
     /* 4. 볼륨 0 이면 sndOn 이 꺼진다(오디오 게이트) */
     S.opt.vol = 0; out.gateOff = sndOn('bgm') === false; S.opt.vol = 100; out.gateOn = sndOn('bgm') === true;
-    /* 5. 쿠폰 — 코드 1회 지급 + 재사용 차단 */
-    const dia0 = S.dia; const op = window.prompt; const pp = window.popup; let msgs = [];
-    window.prompt = () => 'HELLO2026'; window.popup = (t, b) => msgs.push(b);
+    /* 5. 쿠폰 — 코드 1회 지급 + 재사용·오코드 차단
+       ── 304 개정(2026-08-28) ────────────────────────────────────────────────
+       옛 판정은 `window.popup = (t,b)=>msgs.push(b)` 로 **통보 함수 하나**를 훔쳐봤다.
+       206(알림 전면 토스트화)이 안내를 `notify()` → `#fxl` 의 `.fx-toast` 로 옮기면서
+       `msgs` 가 늘 비어 «차단» 2건이 빨개졌다 — 제품은 멀쩡한데 게이트의 **전제**가 죽은 것이다
+       (236·242 «경로가 바뀌어도 전제는 죽는다» 와 동형).
+       그래서 둘로 갈라 묻는다:
+         · **계약** — 다이아가 안 늘고 이력(`S.opt.cp`)이 안 더러워졌는가. 통보 경로에 안 묶인다.
+         · **표현** — 안내가 실제로 화면에 떴는가. 토스트는 1060ms 만에 사라지므로 고정 대기가 아니라
+           `MutationObserver` 로 등장을 받아 적는다(242 §9 와 같은 형태). `takeRecords()` 로 훑는 이유는
+           옵저버 콜백이 **마이크로태스크**라 `click()` 직후 동기 읽기에는 아직 안 도착하기 때문이다. */
+    const dia0 = S.dia; const op = window.prompt;
+    const fxLay = document.getElementById('fxl'); const toasts = [];
+    const collect = recs => recs.forEach(m => m.addedNodes.forEach(n => {
+      if(n.nodeType === 1 && n.classList && n.classList.contains('fx-toast')) toasts.push(n.textContent);
+    }));
+    const mo = fxLay ? new MutationObserver(collect) : null;
+    const drain = () => { if(mo) collect(mo.takeRecords()); };
+    if(mo) mo.observe(fxLay, { childList:true });
+    out.fxLayer = !!fxLay;                         /* 레이어가 없으면 아래 «안내» 2건은 무의미하다 */
+    if(fxLay) fxLay.querySelectorAll('.fx-toast').forEach(n => n.remove());   /* 스택 4장 드롭 방지 */
     if(!S.opt.cp) S.opt.cp = {};
-    click('[data-cf="coupon"]'); out.coupon1 = S.dia === dia0 + 500;
-    click('[data-cf="coupon"]'); out.coupon2 = S.dia === dia0 + 500 && /이미 사용/.test(msgs.join(''));
-    window.prompt = () => 'NOPE'; msgs = [];
-    click('[data-cf="coupon"]'); out.couponBad = /사용할 수 없는/.test(msgs.join(''));
-    window.prompt = op; window.popup = pp;
+    window.prompt = () => 'HELLO2026';
+    click('[data-cf="coupon"]'); drain();
+    out.coupon1 = S.dia === dia0 + 500 && S.opt.cp.HELLO2026 === 1;
+    let seen = toasts.length;
+    click('[data-cf="coupon"]'); drain();          /* 재사용 — 계약: 두 번째 지급이 없다 */
+    out.coupon2 = S.dia === dia0 + 500 && S.opt.cp.HELLO2026 === 1;
+    out.coupon2Msg = /이미 사용/.test(toasts.slice(seen).join(''));
+    seen = toasts.length;
+    window.prompt = () => 'NOPE';
+    click('[data-cf="coupon"]'); drain();          /* 없는 코드 — 계약: 지급도 이력도 없다 */
+    out.couponBad = S.dia === dia0 + 500 && !('NOPE' in S.opt.cp);
+    out.couponBadMsg = /사용할 수 없는/.test(toasts.slice(seen).join(''));
+    if(mo) mo.disconnect();
+    window.prompt = op;
     out.cpSaved = JSON.parse(localStorage.getItem(KEY)).opt.cp && JSON.parse(localStorage.getItem(KEY)).opt.cp.HELLO2026 === 1;
     /* 새로고침을 흉내낸다 — load() 가 opt 를 항목별로 다시 짓기 때문에 cp 가 살아남는지 본다 */
     out.cpSurvives = (() => { const raw = localStorage.getItem(KEY); load(); return !!(S.opt.cp && S.opt.cp.HELLO2026); })();
@@ -112,6 +139,8 @@ const is = (n, got, want) => { const ok = got === want; ok ? pass++ : (fail++, b
     '볼륨 25% 반영':F.vol25, '노브 추종':F.knobMoved, '볼륨 저장':F.volSaved,
     '볼륨0 → 오디오게이트 off':F.gateOff, '볼륨100 → on':F.gateOn,
     '쿠폰 지급':F.coupon1, '쿠폰 재사용 차단':F.coupon2, '잘못된 코드 차단':F.couponBad,
+    '토스트 레이어 존재':F.fxLayer,               /* 304 — 아래 «안내» 2건이 무엇을 재는지의 전제 */
+    '쿠폰 재사용 안내':F.coupon2Msg, '잘못된 코드 안내':F.couponBadMsg,
     '쿠폰 이력 저장':F.cpSaved, '쿠폰 이력이 새로고침을 견딤':F.cpSurvives,
     '언어 버튼은 무변경':F.langNoop, '딤 탭 닫힘':F.closed, '재오픈':F.reopened,
     'UID 형식':F.uid, 'Gamer Id 형식':F.gid
