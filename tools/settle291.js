@@ -20,6 +20,18 @@
  * 붙는 자리는 `page.waitForTimeout()` **직후** 하나뿐이다 — 게이트 44개의 «고정 대기» 가
  * 전부 그 함수를 지나가므로, 게이트 파일을 한 줄도 안 고치고 44개가 동시에 낫는다.
  *
+ * ⚠ 작업 353 — **그 훅이 못 보는 자리가 있다.** 게이트가 대기를 페이지 **안에서** 할 때다:
+ *     page.evaluate(() => new Promise(res => { openDungeon(); setTimeout(() => res(잰다()), 700); }))
+ *   이 모양은 `page.waitForTimeout` 을 한 번도 안 지나므로 정착이 **0회** 돈다(`tools/probe353.js` ①).
+ *   `verify96` [6] 이 그 자리였고, 부하에서 8회 중 1회 «좌 157 · 우 141»(= `jzPgIn` 0% 프레임,
+ *   폭 794 → 782.09 = ×.985)로 빨개졌다. 재현은 부하가 없어도 결정적이다 — 같은 evaluate 안에서
+ *   40~60ms 뒤에 재면 **항상** 157/141 이 나온다(`probe353` ③ 위상 스윕).
+ *   ⇒ 훅과 **같은 본체**를 페이지 안에도 심어 둔다(§in-page). 게이트는 재기 직전에 한 줄:
+ *       setTimeout(() => settle291().then(() => res(잰다())), 700)
+ *   전수 조사 결과 이 모양을 쓰는 게이트는 5개다(96·22·46·125·299) — 그 중 «페이지 입장 연출을
+ *   같은 블록에서 여는» 것은 96 과 77 뿐이고, 77 은 rect 가 아니라 노드 개수·스태킹을 세므로
+ *   이 흔들림에 안 걸린다. 나머지는 필요할 때 같은 한 줄을 쓰면 된다.
+ *
  * 왜 «전부» 가 아니라 조건을 다나:
  *   ⓐ **entry 가 `verify*.js` 일 때만.** `cap*.js` 계열은 연출을 **일부러 한복판에서** 80~100ms
  *      간격으로 연속 캡처하는 하네스다(지시서 [3]-(다)). 거기서 정착을 걸면 찍으려던 프레임이 사라진다.
@@ -46,6 +58,25 @@ const PENDING_SRC = `() => { const A = document.getAnimations ? document.getAnim
 const CAP_MS = 1500;    /* 정착 대기 상한 — 넘으면 포기하고 진행 */
 const MIN_WAIT = 250;   /* 이 값 이상 기다린 «고정 대기» 뒤에만 정착한다 */
 
+/* ---- §in-page (작업 353) — 페이지 안에서 부를 수 있는 같은 본체 ----
+   `addInitScript` 로 심으므로 **부르지 않으면 아무 일도 안 한다**(정의만 올라간다).
+   위 훅과 다른 점은 하나 — 2 rAF 를 준 뒤 **다시 본다**. 고정 대기가 «연출이 시작되기 직전» 에
+   끝나면 그 순간엔 pending 이 0 이라 그냥 지나가는데, 바로 다음 프레임에 연출이 붙으면 잰 값이
+   0% 프레임이 된다(353 이 잡은 바로 그 모양). 다시 보면 그 창이 닫힌다.
+   상한은 훅과 같은 1500ms — 어떤 이유로든 `finished` 가 안 오면 게이트를 멈추지 않고 지나간다.
+   되돌림 스위치 `PW_SETTLE=0` 은 여기에도 걸린다(`window.__settle291off`). */
+const IN_PAGE_SRC = `(cap) => { const t0 = performance.now(); const lim = (cap | 0) || ${CAP_MS};
+  const pend = () => (document.getAnimations ? document.getAnimations() : [])
+    .filter(a => /^jz(Pg|Sheet)/.test(a.animationName || '') && a.playState !== 'finished');
+  const step = (n) => {
+    if (window.__settle291off) return Promise.resolve(n);
+    const P = pend();
+    if (!P.length || performance.now() - t0 > lim) return Promise.resolve(n);
+    return Promise.all(P.map(a => a.finished.catch(() => 0)))
+      .then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(0)))))
+      .then(() => step(n + P.length)); };
+  return step(0); }`;
+
 function enabled() {
   const v = process.env.PW_SETTLE;
   if (v === '0' || v === 'off') return false;
@@ -55,10 +86,21 @@ function enabled() {
   return /^verify.*\.js$/.test(entry);
 }
 
-/* 페이지 하나에 정착을 심는다. 두 번 불러도 한 번만 감싼다. */
-function arm(page) {
+/* 페이지 하나에 정착을 심는다. 두 번 불러도 한 번만 감싼다.
+   353 — `addInitScript` 때문에 async 가 됐다(심는 것은 첫 goto **전에** 끝나야 한다).
+   `armBrowser` 가 유일한 호출자이고 거기서 await 한다. */
+async function arm(page) {
   if (!page || page.__settle291) return page;
   page.__settle291 = true;
+  /* 353 — 페이지 안에서 부를 수 있는 본체를 심는다. 정의만 올리므로 안 부르면 무해하다. */
+  try {
+    await page.addInitScript(
+      ({ src, off }) => { window.__settle291off = off; window.settle291 = (cap) => eval(src)(cap); },
+      /* ⚠ 여기는 `enabled()`(= entry 가 verify 인가) 를 안 본다 — 이 본체는 **부르는 게이트만**
+         지나가므로 연출 캡처 하네스(`cap*.js`)에는 애초에 영향이 없다. 끄는 것은 되돌림 스위치뿐이다. */
+      { src: IN_PAGE_SRC, off: process.env.PW_SETTLE === '0' || process.env.PW_SETTLE === 'off' },
+    );
+  } catch (_) { /* 이미 네비게이션이 시작됐으면 심을 자리가 없다 — 훅만으로 간다 */ }
   page.settle291 = async () => {
     try {
       if (!(await page.evaluate(src => eval(src)(), PENDING_SRC))) return 0;
@@ -83,7 +125,7 @@ function armBrowser(browser) {
   browser.__settle291 = true;
   const wrapNewPage = obj => {
     const orig = obj.newPage.bind(obj);
-    obj.newPage = async (...a) => arm(await orig(...a));
+    obj.newPage = async (...a) => await arm(await orig(...a));
   };
   wrapNewPage(browser);
   const origNewCtx = browser.newContext.bind(browser);
@@ -95,4 +137,4 @@ function armBrowser(browser) {
   return browser;
 }
 
-module.exports = { SETTLE_SRC, arm, armBrowser, enabled, CAP_MS, MIN_WAIT };
+module.exports = { SETTLE_SRC, IN_PAGE_SRC, arm, armBrowser, enabled, CAP_MS, MIN_WAIT };

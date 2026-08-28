@@ -285,9 +285,14 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
        자를 **레퍼런스 실측 자리로 옮긴다**(333·334 의 게이트 이관과 같은 처방 — 자리를 비우지 않는다).
        상세: `docs/review/335-던전서브탭블록.md`. */
     console.log('\n[6] 03 바 축(ref 비대칭 +8) · 리스트 이음매 0px — 335');
+    /* 353 — 이 블록은 대기를 **페이지 안에서** 하므로 291 정착 훅(`page.waitForTimeout` 을 감싼다)이
+       한 번도 안 지난다(`probe353` ①: 정착 0회). 그래서 부하가 걸리면 700ms 가 `jzPgIn`(.12s)
+       한복판에 떨어져 좌/우가 «157/141»(0% 프레임 scale .985 · 폭 794 → 782.09) 로 읽혔다 — 8회 중 1회.
+       ⚠ 허용 오차를 넓히지 않는다(그러면 축이 8px 밀려도 초록이다 — 335 가 되돌린 자리).
+       291 의 같은 본체를 페이지 안에서 부른다(`settle291()`) — 연출이 끝난 프레임에서만 잰다. */
     const sym = await page.evaluate(() => new Promise(res => {
       goTab('hero'); openDungeon();
-      setTimeout(() => {
+      setTimeout(() => Promise.resolve(window.settle291 ? window.settle291() : 0).then(() => {
         const F = document.getElementById('app').getBoundingClientRect();
         const b = document.getElementById('dunSub').getBoundingClientRect();
         const li = document.querySelector('#dunw .dns-list').getBoundingClientRect();
@@ -296,7 +301,7 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         res({ l: Math.round(b.x - F.x), r: Math.round(F.right - b.right),
               gap: Math.round(b.y - li.bottom), cardGap: Math.round(b.y - c5b),
               listB: Math.round(li.bottom - F.y), card5B: Math.round(c5b - F.y) });
-      }, 700);
+      }), 700);
     }));
     ok('03 던전 바 좌 151 (ref 측정표 §4-1, Δ≤1px)', Math.abs(sym.l - 151) <= 1, '좌 ' + sym.l);
     ok('03 던전 바 우 135 (ref 1080−944, Δ≤1px)', Math.abs(sym.r - 135) <= 1, '우 ' + sym.r);
