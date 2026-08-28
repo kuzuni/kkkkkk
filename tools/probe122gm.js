@@ -31,6 +31,10 @@ const seek = (p, ms) => p.evaluate(t => {
 const PAD = 30;
 
 async function amp(p, sel, per, n, wins) {
+  /* ⚑ 22회차 정정 — 이 프로브가 21회차에 낸 «3.8~6.2»(§26-6 «자체 probe122gm») 는 **자가 아니라
+     순서 탓**이었다: clip 을 등장 애니메이션 한복판(915.5×420.4)의 rect 로 잡아 띠가 카드 면 위에
+     얹혔다. seek() 한 번이면 비-jz122 애니메이션이 전부 걷힌다 — **clip 을 재기 전에** 부른다. */
+  await seek(p, 0);
   const clip = await p.evaluate(([s, pad]) => {
     const e = document.querySelector(s); if (!e) return null;
     e.scrollIntoView({ block: 'center' });

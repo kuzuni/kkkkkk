@@ -1274,6 +1274,151 @@ async function ampCheck(p, hosts) {
         + (neg26 ? neg26.dE : '?') + ' 로 무너진다 (< 2)');
     }
 
+    /* ── §27 광택이 «버튼 검은 획» 을 씻지 않는가 (22회차 신설) ────────────
+       21회차 AS 5: 칸1 [무료] 버튼 아래 테두리가 (0,0,0) → (63,63,63). AT 는 이 자리를 안 쟀다.
+       §24·§25 는 **글자 잉크**만 봤고 카드 바깥 테두리는 `.cfr{overflow:hidden}` 이 구조적으로
+       지켜 줬다 — 그 사이에 낀 **버튼 테두리**에만 자가 없었다(«자를 안 댄 곳은 자동으로
+       무결점» 의 여섯 번째 재발). 22회차 실측(고치기 전): 소환 버튼 평균 **+12.5~15.9** ·
+       화소 최대 **+63.9**(AS 의 63 과 같은 값) · 재화 [받기] 버튼 **+5.27**.
+
+       ⚠ 마스크는 §24-8 의 교훈대로 **«상자» 가 아니라 «획»** 이다 — 버튼 상자 전체의 luma<40 을
+       세면 가격 알약·젬의 어두운 화소가 섞여 «획이 씻긴다» 가 아닌 것을 그렇게 읽는다.
+         마스크 = border-box 변에서 bw px 이내(테두리 링) ∩ 광택을 끈 기준 프레임에서 luma < 40
+       대조군을 같이 둔다: 카드 바깥 테두리(구조적 보호)와 라벨 잉크(z-index 로 보호)는 ≈0 이어야 한다. */
+    console.log('§27 광택이 버튼 «검은 획» 을 씻지 않는가 (22회차 신설 — 21회차 AS 5)');
+    {
+      const STK_HI = 3.0, STK_NEG_LO = 8.0;
+      const spat = txt => p.evaluate(x => {
+        let e = document.getElementById('v122stk');
+        if (!x) { if (e) e.remove(); return; }
+        if (!e) { e = document.createElement('style'); e.id = 'v122stk'; document.head.appendChild(e); }
+        e.textContent = x;
+      }, txt);
+      /* 링 밴드(테두리 안쪽 bw px)의 픽셀 열 — 마스크는 호출자가 고른다 */
+      const ring = async (box, iw, ih, pad, bw) => {
+        const b64 = (await p.screenshot({ clip: box })).toString('base64');
+        return await p.evaluate(async ([src, w, h, pd, b]) => {
+          const img = new Image();
+          await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + src; });
+          const c = document.createElement('canvas');
+          c.width = img.width; c.height = img.height;
+          const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+          const d = g.getImageData(0, 0, c.width, c.height).data;
+          const out = [];
+          for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+            const ix = x - pd, iy = y - pd;
+            if (ix < 0 || iy < 0 || ix >= w || iy >= h) continue;
+            if (Math.min(ix, iy, w - 1 - ix, h - 1 - iy) >= b) continue;
+            const j = (y * c.width + x) * 4;
+            out.push(.2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]);
+          }
+          return out;
+        }, [b64, iw, ih, pad, bw]);
+      };
+      const strokeRise = async (sel, bw, per, offCss) => {
+        const PAD = 2;
+        await seek(p, 0);                        /* ⚑ clip 전에 등장 애니메이션을 걷는다(§17 과 같은 함정) */
+        const clip = await p.evaluate(([s, pd]) => {
+          const e = document.querySelector(s); if (!e) return null;
+          e.scrollIntoView({ block: 'center' });
+          const r = e.getBoundingClientRect();
+          const x = Math.round(r.x) - pd, y = Math.round(r.y) - pd;
+          const w = Math.round(r.width) + pd * 2, h = Math.round(r.height) + pd * 2;
+          if (x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight) return null;
+          return { x, y, width: w, height: h, iw: Math.round(r.width), ih: Math.round(r.height) };
+        }, [sel, PAD]);
+        if (!clip) return null;
+        const { iw, ih, ...box } = clip;
+        const keep = await p.evaluate(() => {
+          const e = document.getElementById('v122stk'); return e ? e.textContent : '';
+        });
+        await spat(keep + offCss);               /* 광택만 끈 기준 프레임에서 «획» 을 고른다 */
+        await seek(p, 0);
+        const base = await ring(box, iw, ih, PAD, bw);
+        await spat(keep);
+        const mask = base.map((v, i) => (v < 40 ? i : -1)).filter(i => i >= 0);
+        if (mask.length < 120) return { few: mask.length };
+        const b0 = mask.reduce((s, i) => s + base[i], 0) / mask.length;
+        let hi = -1e9;
+        for (let i = 0; i < 16; i++) {
+          await seek(p, Math.round(per * i / 16));
+          const v = await ring(box, iw, ih, PAD, bw);
+          const m = mask.reduce((s, k) => s + v[k], 0) / mask.length;
+          if (m > hi) hi = m;
+        }
+        return { n: mask.length, rise: +(hi - b0).toFixed(2) };
+      };
+      const OFF_SUM = '.shp-card>.cfr::after{display:none!important}';
+      const OFF_CN = '.cn-cd>.fr::after,.cn-cd>.fr::before{display:none!important}';
+      const check = async (label, sel, bw, per, off) => {
+        const r = await strokeRise(sel, bw, per, off);
+        if (!r || !r.n) { ok(false, label + ' 획 마스크를 못 떴다' + (r ? ' (' + r.few + 'px)' : '')); return null; }
+        console.log('    · ' + label + ' 획 ' + r.n + 'px · 한 주기 평균 상승 +' + r.rise.toFixed(2));
+        ok(r.rise < STK_HI, label + ' 획 상승 +' + r.rise.toFixed(2) + ' < ' + STK_HI
+          + ' (광택이 검은 획을 못 씻는다)');
+        return r;
+      };
+      /* ⓐ 대조군 — 구조적/z-index 로 이미 보호된 두 자리 */
+      await check('대조 카드 바깥 테두리', '#shopList .shp-card:nth-child(1)>.cfr', 7, 5400, OFF_SUM);
+      await check('대조 칸1 b3 라벨 잉크', '#shopList .shp-card:nth-child(1) .cbtn.b3>.lab', 99, 5400, OFF_SUM);
+      /* ⓑ 소환 버튼 3종 + 다른 칸 하나 */
+      for (const [lab, sel] of [['칸1 b1', '#shopList .shp-card:nth-child(1) .cbtn.b1'],
+                                ['칸1 b2', '#shopList .shp-card:nth-child(1) .cbtn.b2'],
+                                ['칸1 b3', '#shopList .shp-card:nth-child(1) .cbtn.b3'],
+                                ['칸4 b3', '#shopList .shp-card:nth-child(4) .cbtn.b3']]) {
+        await check(lab + ' 버튼', sel, 6, 5400, OFF_SUM);
+      }
+      /* ⓒ 사본이 «좌표를 새로 안 적는다» 는 것을 자로 못 박는다 — 링과 버튼의 rect 가 같아야 한다 */
+      const same = await p.evaluate(() => {
+        const bad = [];
+        document.querySelectorAll('#shopList .shp-card').forEach(c => {
+          ['b1', 'b2', 'b3'].forEach(k => {
+            const a = c.querySelector('.cbtn.' + k), b = c.querySelector('.stk' + k.slice(1));
+            if (!a || !b) { bad.push(k + ' 짝 없음'); return; }
+            const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+            ['x', 'y', 'width', 'height'].forEach(p2 => {
+              if (Math.abs(ra[p2] - rb[p2]) > 0.01) bad.push(k + '.' + p2 + ' Δ' + (rb[p2] - ra[p2]).toFixed(2));
+            });
+          });
+        });
+        return bad;
+      });
+      ok(same.length === 0, '획 사본 rect = 버튼 rect (기하 단일 출처)' + (same.length ? ' — ' + same.slice(0, 3).join(' ;; ') : ''));
+      /* ⓓ 사본은 히트영역을 안 건드린다 */
+      const pe = await p.evaluate(() => [...document.querySelectorAll('#shopList .stk')]
+        .filter(e => getComputedStyle(e).pointerEvents !== 'none').length);
+      ok(pe === 0, '획 사본 전부 pointer-events:none (' + pe + '개 위반)');
+      const ds = await p.evaluate(() => [...document.querySelectorAll('#shopList .stk[data-shsum],#shopList .stk[data-cnad],#shopList .stk[data-diabuy],#shopList .stk[data-ex],#shopList .stk[data-dunex]')].length);
+      ok(ds === 0, '획 사본에 동작 data-* 없음 (' + ds + '개 위반)');
+      /* ⓝ 음성항 — 사본을 걷으면 자가 다시 빨개져야 한다(자가 «딴것» 을 보고 있으면 여기서 안 오른다) */
+      await spat('.shp-card .stk{display:none!important}');
+      const neg = await strokeRise('#shopList .shp-card:nth-child(1) .cbtn.b3', 6, 5400, OFF_SUM);
+      await spat('');
+      ok(neg && neg.rise > STK_NEG_LO, 'ⓝ 음성항 — 획 사본을 걷으면 상승 +'
+        + (neg ? neg.rise.toFixed(2) : '?') + ' > ' + STK_NEG_LO + ' (22회차 이전 실측 +15.87)');
+
+      /* ⓔ 재화 탭 — 같은 결함의 다른 판(20회차가 글자만 z5 로 올리고 `.bt` 자신은 두고 갔다) */
+      await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+      await p.waitForTimeout(200);
+      await check('재화 [받기] 버튼', '#shopList .cn-cd>.bt', 5, 4800, OFF_CN);
+      const csame = await p.evaluate(() => {
+        const bad = [];
+        document.querySelectorAll('#shopList .cn-cd').forEach((c, i) => {
+          const a = c.querySelector(':scope>.bt'), b = c.querySelector(':scope>.btstk');
+          if (!a && !b) return;                          /* 구매 완료 칸은 버튼이 아예 없다 */
+          if (!a || !b) { bad.push('칸' + i + ' 짝 없음'); return; }
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          ['x', 'y', 'width', 'height'].forEach(p2 => {
+            if (Math.abs(ra[p2] - rb[p2]) > 0.01) bad.push('칸' + i + '.' + p2 + ' Δ' + (rb[p2] - ra[p2]).toFixed(2));
+          });
+        });
+        return bad;
+      });
+      ok(csame.length === 0, '재화 획 사본 rect = 버튼 rect' + (csame.length ? ' — ' + csame.slice(0, 3).join(' ;; ') : ''));
+      await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+      await p.waitForTimeout(200);
+    }
+
     await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
     await p.waitForTimeout(200);
   }
@@ -1712,6 +1857,16 @@ async function ampCheck(p, hosts) {
     });
     await p.waitForTimeout(150);
     const glowAmp = async (sel, per) => {
+      /* ⚑ 22회차 — **자를 대기 전에 «등장 애니메이션»부터 걷는다.**
+         21회차의 «gm 진폭 판정 불가»(자 넷이 24.3 / 14.4 / 27.9~34.7 / 3.8~6.2 로 갈림)의 원인이
+         여기였다. `renderShopPage()` 직후의 카드는 아직 `jz` 등장 애니메이션 **한복판**이라
+         실측 **915.5×420.4 @ x82.2**(정상 980×450 @ x50 — 6.6% 작고 32px 밀림)이다.
+         이 rect 로 clip 을 잡으면 «바깥 2~14px 띠» 가 후광이 아니라 **카드 자기 면 위**에 얹혀
+         글로우가 희석된다(Δ22.46 → 3.8~6.2). 그리고 이 절이 게이트 뒤쪽에 있어 앞 절들이
+         이미 애니메이션을 걷어 준 실행에서는 정상값이 나오므로 — **값이 «절의 순서» 에 좌우됐다.**
+         `seek()` 한 번이 비-jz122 애니메이션을 전부 cancel 하므로, **clip 을 재기 전에** 부른다.
+         (재현·판정 근거: `node tools/probe122gm2.js`) */
+      await seek(p, 0);
       const clip = await p.evaluate(s => {
         const e = document.querySelector(s);
         if (!e) return null;
