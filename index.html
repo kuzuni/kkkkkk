@@ -3307,7 +3307,45 @@
   /* 알약(.cbox)은 아이콘 `i` 가 left:-31·width:63 이라 **박스 왼쪽 밖**에 걸쳐 있다. 박스 중심을
      기준으로 확대하면 코인이 꽂히는 그 아이콘이 8~13px 왼쪽으로 튄다(비평가 G·H 공통 ⑤).
      아이콘 중심(박스 좌변 +0.5px)을 pivot 으로 삼아 **도착점이 움직이지 않게** 한다. */
-  .cbox.fx-punch2{transform-origin:1px 50%}
+  /* ⚑ 43회차 — 42차 **2인 공통ㅁ** «gain HUD 알약 팝이 «우측 앵커» 라 아이콘이 좌로 17px 밀린다»
+     (BI «아이콘 cx 583.0 → **566.0** → 581.0, 복귀 272ms · 폭 55 → 65» ·
+      BJ «아이콘 중심 **−17.5px** · 흰 테두리 좌단을 13px 돌출»).
+     `p58aw` 로 재니 **앵커는 우측이 아니라 «박스 중심»** 이었다(computed transform-origin
+     `105.5px 24px` = .cbox 211×48 의 정중앙 · 좌우변이 대칭으로 ∓17.5px 벌어진다).
+     두 사람이 본 «좌로 밀리는 아이콘» 은 진짜다 — 아이콘 `i` 가 `left:-31` 로 **박스 왼쪽 밖**에
+     걸쳐 있어서, 박스 중심을 pivot 으로 ×1.166 하면 그 중심이 (105.5−0.5)×0.166 = **17.4px** 왼쪽으로
+     간다(`p58aw` 실측 산포 **18.7px** — 583.5 → 566.1).
+     ⇒ 바로 아래 줄이 3회차에 이미 고쳐 둔 결함과 **같은 것**이다. 그때 UI 발 펄스(`fx-punch2`)에만
+       달아서 **전투 발 펄스(`fx-punch`)가 3회차 이후 40회차를 그대로 통과했다** — 씬 A(gain)가
+       전투 발이라 지적이 이 자리에서만 나왔다. 두 클래스를 한 선언으로 묶어 다시 갈라지지 않게 한다.
+     ⚠ 봉우리·길이·되튐은 한 프레임도 안 바꾼다(verify93 [4] «피크 ≥1.15» 는 93 의 값이다).
+       바뀌는 것은 **pivot 뿐**이고, 그 결과 코인이 꽂히는 아이콘 중심이 고정된다(사양 «도착점이
+       움직이지 않는다»). 박스 우변은 (211−1)×0.166 = 34.8px 오른쪽으로 더 자라지만 828.8 < 1080 이라
+       프레임 안이고, 오른쪽에는 형제 알약이 없다(골드가 `.curs` 의 마지막 칸이다). */
+  .cbox.fx-punch,.cbox.fx-punch2,.cbox.fx-pay{transform-origin:1px 50%}
+  /* ⚑ 43회차 — 42차 **2인 공통ㅅ** «upg 는 재화를 «쓰는데» HUD 반응이 0 이다»(④ 어휘 불일치)
+     (BI «골드 아이콘 bbox 8프레임 전부 동일 · 알약 영역 평균 40.5 → 39.8 = JPEG 노이즈» ·
+      BJ «128A → 127A 인데 아이콘 bbox 불변 · 비행체 0 — gain/quest 는 +16~26% 튄다»).
+     `fxWatch` 가 **«소모(감소)에는 연출을 걸지 않는다»** 로 만들어져 있어서(그 자리 주석) 세 씬 중
+     upg 만 HUD 가 죽어 있었다. 획득의 어휘(«튄다 + `+n` 이 뜬다»)를 **거울로 뒤집어** 붙인다:
+       획득 = 커진다(1.17) + 위로 뜨는 `+n`      결제 = **움푹 들어간다(.945)** + 아래로 지는 `−n`
+     ⓐ 공용 모듈이므로 특정 화면이 아니라 `fxWatch` 의 감소 분기에 단다 — 강화·소환·상점·입장권이
+        같은 신호를 얻는다(58 의 «공용 1회 제작 + 전역 부착» 범위).
+     ⓑ 봉우리를 gain 의 절반 아래(−5.5% vs +17%)로 둔 이유: 결제는 **보상이 아니다**. 같은 크기로
+        튀면 «썼는데 얻은 것처럼» 읽혀 ④ 가 도로 깎인다.
+     ⓒ pivot 은 위 한 줄에 같이 묶었다 — 아이콘이 좌우로 흔들리면 공통ㅁ 을 결제 쪽에 새로 만드는 꼴이다. */
+  @keyframes fxPay{0%{transform:scale(1)}
+    20%{transform:scale(.945)}
+    56%{transform:scale(.972);animation-timing-function:ease-out}
+    100%{transform:scale(1)}}
+  .fx-pay{animation:fxPay .3s ease-out both}
+  /* `−n` — `.fx-plus` 의 기하·서체·외곽선을 그대로 쓰고 **방향과 색만** 뒤집는다(어휘 일관성).
+     아래로 지므로 알약을 가리지 않고, 알파를 균등하게 빼 41·43회차의 «퇴장 계조» 규약을 따른다. */
+  @keyframes fxMinus{0%{opacity:0;transform:translate(-50%,-10px) scale(.92)}
+    16%{opacity:1;transform:translate(-50%,2px) scale(1)}
+    58%{opacity:.72;transform:translate(-50%,22px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,40px) scale(.96)}}
+  .fx-plus.pay{animation:fxMinus .5s linear both;opacity:.9}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
@@ -3588,12 +3626,25 @@
        **절대 시각을 그대로** 다시 적었다(12%·18%·34% of .6s = 72·108·204ms
        = 10.286%·15.429%·29.143% of .7s). 노드 제거(900ms)는 그대로라 퇴장(700ms)이 잘리지 않는다.
      ⚠ 58 공통 규칙 «연출 0.3~0.8초» — .7s 는 그 안이다. */
+  /* ⚑ 43회차 — 42차 **2인 공통ㅂ** «퇴장이 절벽인 것이 아직 둘 남았다 — 체크 배지·토스트»
+     (BI «체크 초록 픽셀 2018~2081(677ms) → 780ms **0** · 퇴장 ≤103ms · **중간 알파 0장**» ·
+      BJ «체크 ≤**103ms** 0장»). 38회차가 «퇴장에 움직임을 준다» 로 절반만 고쳤다 — 상승·축소는
+     붙였지만 **불투명도 곡선은 그대로 `ease-in`** 이라, 알파가 앞 절반을 1.0 근처에 붙어 있다가
+     뒤에서 떨어진다(cubic ease-in: 진행 50% 에 알파 0.69 · 75% 에 0.39). 퇴장 폭 150ms 에
+     그 곡선이면 95~100ms 격자에 «중간 알파» 가 한 장도 안 걸린다.
+     → 42회차가 `.fx-spark` 에서 쓴 것과 **같은 산수**다: 버티는 구간을 당기고 수명을 늘려
+       **퇴장 190ms 를 균등(linear) 알파 램프**로 만든다(요구 ≥182ms · 95ms 격자에 기대 2장).
+     ⚠ 등장·부유 구간은 **절대 시각을 한 프레임도 안 바꾼다** — 길이를 .7s → **.74s** 로 늘리면서
+       옛 절대 시각(72 · 108 · 204 · 441 · 550ms)을 새 길이로 다시 적었다
+       (9.73% · 14.595% · 27.568% · 59.595% · 74.324% of .74s). 늘어난 40ms 는 전부 퇴장이다.
+     ⚠ 제거는 `fxBye` 가 `fxAnimEnd` 로 실제 애니 끝을 읽으므로(900 은 폴백) 뒷꼬리가 안 생긴다
+       — 41회차가 잡은 «200ms 투명한 채 남는다» 는 그 경로로 이미 닫혀 있다. */
   @keyframes fxCheckIn{0%{opacity:.55;transform:translate(-50%,-50%) scale(.72)}
-    10.286%{opacity:1;transform:translate(-50%,-50%) scale(.94)}
-    15.429%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
-    29.143%{opacity:1;transform:translate(-50%,-50%) scale(1);animation-timing-function:ease-in-out}
-    63%{opacity:1;transform:translate(-50%,-50%) translateY(5px) scale(1.006);animation-timing-function:ease-in-out}
-    78.571%{opacity:1;transform:translate(-50%,-50%) scale(1);animation-timing-function:ease-in}
+    9.73%{opacity:1;transform:translate(-50%,-50%) scale(.94)}
+    14.595%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+    27.568%{opacity:1;transform:translate(-50%,-50%) scale(1);animation-timing-function:ease-in-out}
+    59.595%{opacity:1;transform:translate(-50%,-50%) translateY(5px) scale(1.006);animation-timing-function:ease-in-out}
+    74.324%{opacity:1;transform:translate(-50%,-50%) scale(1);animation-timing-function:linear}
     100%{opacity:0;transform:translate(-50%,-50%) translateY(-22px) scale(.9)}}
 
   /* 상단 토스트 — 슬라이드다운 + 스프링, 1.2초 뒤 페이드아웃 */
@@ -3629,7 +3680,15 @@
     25%{opacity:1;transform:translate(-50%,0) scale(1);animation-timing-function:ease-in-out}
     62%{opacity:1;transform:translate(-50%,5px) scale(1.006);animation-timing-function:ease-in-out}
     100%{opacity:1;transform:translate(-50%,0) scale(1)}}
-  .fx-toast.out{animation:fxToastOut .3s ease-in forwards}
+  /* ⚑ 43회차 — 42차 **2인 공통ㅂ** 의 나머지 절반(토스트). BI «토스트 age 0 프레임 알파가 이미 0.35» ·
+     BJ «토스트 잉크 1433(876ms) → 950ms **0** = ≤**74ms** 0장».
+     퇴장 창 자체는 300ms 로 넉넉한데 **`ease-in` 이 알파를 앞 절반 내내 1.0 근처에 붙잡는다** —
+     체크 배지와 **같은 병**이고 같은 처방을 쓴다: 알파를 **균등(linear)** 으로 편다.
+     «위로 빠지며 사라진다» 는 그림은 유지해야 하므로 **transform 만** 중간 키프레임(50%)으로
+     가속 곡선을 남기고, 불투명도는 1 → .55 → 0 의 직선으로 간다(95ms 격자에 기대 3장).
+     ⚠ `.out` 부착 760ms · 제거 1060ms 는 안 건드린다 — verify58 의 «1.3초 뒤 사라져 있다» 가
+       그 값을 재고 있고, 이 수정은 **같은 창 안의 곡선만** 바꾼다. */
+  .fx-toast.out{animation:fxToastOut .3s linear forwards}
   /* 20회차 버그 — 이건 «연출 취향» 이 아니라 **CSS 함정**이다. `to{}` 만 쓴 키프레임의 암묵적
      0% 는 «그 애니메이션을 뺀 계산값», 즉 규칙에 transform 선언이 없으므로 **`transform:none`** 이다
      (앞의 `fxToastIn ... both` 가 들고 있던 `translate(-50%,0)` 이 아니다 — `.out` 이 붙는 순간
@@ -3640,8 +3699,9 @@
      실제 박스 폭은 텍스트 144 + 좌우 패딩 68 + 테두리 8 = 220 → 절반 **110px** 로 두 실측과 맞는다.
      → 0% 를 명시해 −50% 를 유지시킨다. LESSONS 의 «fill-mode 가 애니 시작 전 상태를 붙든다» 와
      같은 뿌리(둘 다 «암묵적 키프레임이 어디서 오는가» 를 잘못 가정한 것)다. */
-  @keyframes fxToastOut{from{opacity:1;transform:translate(-50%,0) scale(1)}
-    to{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
+  @keyframes fxToastOut{0%{opacity:1;transform:translate(-50%,0) scale(1)}
+    50%{opacity:.55;transform:translate(-50%,-7px) scale(.985)}
+    100%{opacity:0;transform:translate(-50%,-30px) scale(.94)}}
 
   /* ── 113 «손가락» 가이드 포인터 (2026-08-26, 저장소 주인 지시) ─────────────
      가이드 미션 배너를 눌러 목적지로 이동한 뒤, «여기를 누르라» 고 가리킨다.
@@ -30285,6 +30345,41 @@ function fxPlus(cur, n, combat){
      남아 있었다(p58au 실측 뒷꼬리 291 · 486ms — 40차 «quest-15/16/17 +n 1 → 0» 의 정체). */
   fxBye(el, combat ? 840 : 1500);
 }
+/* ⚑ 43회차 — «지불» 반응 (42차 2인 공통ㅅ · CSS 는 `@keyframes fxPay`/`fxMinus` 주석 참고).
+   ⓐ 재시작 간격 320ms — `fxPunch` 의 «한 번 튀는 동안 재시작하지 않는다» 와 같은 규약이다.
+      강화 꾹 누르기(64)는 반복 간격이 이보다 짧아 연속 결제가 **떨림**으로 읽히기 딱 좋다.
+   ⓑ 되돌림(환불·마이그레이션)에서 터지지 않게 «양수 금액» 만 받는다. 부팅 첫 표본은 `fxWatch` 의
+      `fxSeen === null` 가드가 이미 막는다. */
+const FX_PAY_GAP = 320;
+const fxPayT = { gold:0, dia:0 };
+function fxPay(cur, n){
+  const C = FXCUR[cur]; if(!C || !(n > 0)) return false;
+  const now = performance.now();
+  if(now - (fxPayT[cur] || 0) < FX_PAY_GAP) return false;
+  fxPayT[cur] = now;
+  const pill = fxPill(C), L = fxL(); if(!pill || !L) return false;
+  if(pill.__fxPayTo) clearTimeout(pill.__fxPayTo);
+  pill.classList.remove('fx-pay');
+  void pill.offsetWidth;                              /* 연속 결제에서도 다시 걸리게 리플로우 */
+  pill.classList.add('fx-pay');
+  pill.__fxPayTo = setTimeout(() => { pill.__fxPayTo = 0; pill.classList.remove('fx-pay'); }, 330);
+  const r = fxRect(pill);
+  if(!r || L.childElementCount >= FXMAX) return true;  /* 알약 펄스만으로도 «반응» 은 섰다 */
+  const el = document.createElement('b');
+  el.className = 'fx-plus pay';
+  el.style.color = C.col;
+  /* `+n` 과 같은 자리를 쓴다(19회차 «코인 열을 피해 중심 +52» · 10회차b «알약 아래 34»).
+     결제에는 도착 코인이 없으므로 겹칠 것이 없고, 두 부호가 같은 자리에서 나야 «같은 알약의
+     같은 사건» 으로 읽힌다. */
+  el.style.left = (r.x + r.w/2 + 52) + 'px';
+  el.style.top  = (r.y + r.h + 34) + 'px';
+  el.textContent = '−' + fmtCur(cur, n);              /* U+2212 — 하이픈보다 굵어 34px 에서 읽힌다 */
+  L.appendChild(el);
+  const half = el.offsetWidth / 2, lo = half + 20, hi = FRAME_W - half - 20;
+  if(hi > lo) el.style.left = Math.max(lo, Math.min(hi, parseFloat(el.style.left))) + 'px';
+  fxBye(el, 520);
+  return true;
+}
 /* ── 팝 · 버스트 · 플래시 · 토스트 · 체크 ── */
 function fxPop(el){
   if(!el || !el.classList) return;
@@ -30310,18 +30405,37 @@ const FXB_M = 6, FXB_K = 0.20, FXB_RMIN = 22, FXB_RMAX = 260;
    ⓑ 반경 방향으로는 못 뺀다 — 끝점이 이미 bbox 테두리라 밖으로 밀 여유가 없다. 그래서 **접선 방향**이다.
    ⓒ 못 피하면 마지막 후보를 그대로 쓴다(FX3_MTRY 와 같은 규약) — 링이 무너지는 것보다 낫다. */
 const FXB_KTRY = 9, FXB_KSTEP = 0.26;                /* 각도 굴림 시도 횟수 · 한 번에 굴리는 각(rad) */
+/* ⚑ 43회차 — 42차 **2인 공통ㄷ** «upg 불꽃이 가격 «코인 아이콘» 을 덮는다»
+   (BI «코인 43×44 를 4프레임 전부 **20~35%**» · BJ «f1 **18.5%** · f2 10% · 총 ≈200ms»).
+   42회차의 keep-out 은 **텍스트 노드**만 훑는다 — 그래서 «Lv. 1»·«53» 은 비웠는데 바로 옆
+   가격 알약의 `<img class="cic">`(43×44)는 구멍 목록에 아예 안 들어갔다. 42차 판정문 그대로
+   «구멍 목록만 늘리면 되는 일» 이라, 각도 굴림(`FXB_KTRY`·`FXB_KSTEP`)·링 기하·이동량은
+   한 줄도 안 바꾼다.
+   ⓐ 무엇을 «잉크» 로 보는가 — 텍스트 노드에 더해 **자기 자신이 그림인 요소**:
+      `img` · `svg` · `canvas` · `video`, 그리고 **배경 이미지를 가진 요소**(CSS 스프라이트).
+      배경 «색» 만 있는 것은 제외한다 — 카드·버튼 판때기가 통째로 구멍이 되면 링이 설 자리가 없다.
+   ⓑ 자를 텍스트와 같게 맞춘다: 글자는 `Range` 의 **잉크 bbox**, 그림은 요소 **경계 bbox**.
+      둘 다 사방 `FX3_KOM` 만큼 넓힌다(13회차 상수 그대로).
+   ⓒ 안전판 24 는 유지하되, 그림이 글자를 밀어내지 않도록 **한 번의 순회에서 둘을 같이** 담는다
+      (요소 순서 = DOM 순서라 «가격 행» 처럼 뒤에 오는 것이 잘려 나가는 일은 지금 대상들에서 없다.
+       실측: 훈련 카드 8개 · 퀘스트 «모두 받기» 4개 · 행 버튼 3개). */
 function fxbTextHoles(t){
   const f = fxSc(); if(!f || !t || t.nodeType !== 1) return [];
   const out = [], rg = document.createRange();
   const els = [t, ...t.querySelectorAll('*')];
+  const INK = { IMG:1, SVG:1, CANVAS:1, VIDEO:1 };
   for(const el of els){
     let has = false;
     for(const n of el.childNodes) if(n.nodeType === 3 && n.textContent.trim()){ has = true; break; }
-    if(!has) continue;
     const cs = getComputedStyle(el);
     if(cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
-    rg.selectNodeContents(el);
-    const b = rg.getBoundingClientRect();
+    /* 43회차 ⓐ — 그림 잉크. `tagName` 은 HTML 에서 대문자, SVG 요소에서는 소문자라 둘 다 본다. */
+    const tag = (el.tagName || '').toUpperCase();
+    const pic = INK[tag] === 1 || (cs.backgroundImage && cs.backgroundImage !== 'none');
+    if(!has && !pic) continue;
+    let b;
+    if(has){ rg.selectNodeContents(el); b = rg.getBoundingClientRect(); }
+    else b = el.getBoundingClientRect();
     if(!b.width || !b.height) continue;
     out.push({ x:(b.left - f.x)/f.s - FX3_KOM, y:(b.top - f.y)/f.s - FX3_KOM,
                w:b.width/f.s + 2*FX3_KOM, h:b.height/f.s + 2*FX3_KOM });
@@ -30803,7 +30917,9 @@ function fxCheck(el){
   d.style.left = cx + 'px'; d.style.top = cy + 'px';
   /* 38회차 — .6s → .7s (등장 절대 시각은 그대로, 늘어난 100ms 는 전부 «퇴장 부유+페이드» 다.
      위 `fxCheckIn` 주석 참고 — 37차 2인 공통ㄹ «정지 뒤 하드컷» 회수) */
-  d.style.animation = 'fxCheckIn .7s ease-out both';   /* 보상 숫자를 오래 덮지 않게 */
+  /* 43회차 — .7s → **.74s**. 늘어난 40ms 는 전부 퇴장이다(42차 2인 공통ㅂ — 위 `fxCheckIn` 주석).
+     등장·부유의 절대 시각은 키프레임 % 를 다시 적어 그대로 유지했다. */
+  d.style.animation = 'fxCheckIn .74s ease-out both';  /* 보상 숫자를 오래 덮지 않게 */
   /* 18회차(17회차 비평 AC·AD 공통) — ① 스트로크를 흰색으로: 밝은초록-온-진초록은 205~250ms
      저대비 구간이 생긴다. ② 드로잉 delay 를 **음수(−0.08s)** 로: CSS 애니는 첫 페인트에서야 돌기
      시작하는데 이 컨테이너는 첫 페인트가 ~120ms 늦다 — 음수 delay 면 첫 페인트에 이미 44% 그려져
@@ -30951,7 +31067,12 @@ function fxWatch(now){
     if(fxSeen[k] === null){ fxSeen[k] = v; continue; }
     const d = v - fxSeen[k];
     fxSeen[k] = v;
-    if(d > 0){                                        /* 소모(감소)에는 연출을 걸지 않는다 */
+    /* ⚑ 43회차 — 종전 주석은 «소모(감소)에는 연출을 걸지 않는다» 였다. 그것이 42차 2인 공통ㅅ
+       «세 씬 중 upg 만 HUD 반응 0» 의 뿌리다 — 이제 감소에는 **비행 없이** 알약 «움푹» + `−n` 만
+       건다(`fxPay`). 아래 묶음·홀드·롤링 기계는 **증가 전용 그대로**다: 결제는 «묶어서 쏠» 비행이
+       없으므로 `fxAcc`/`fxHold`/`fxRoll` 어디에도 들어가지 않는다. */
+    if(d < 0) fxPay(k, -d);
+    if(d > 0){                                        /* 획득(증가)만 비행·롤링 경로를 탄다 */
       /* 묶음 디바운스(110ms) 동안 숫자가 먼저 오르면 «값이 먼저 갱신되고 코인이 나중에 난다» 가 된다.
          홀드는 «비행이 뜰 때» 가 아니라 «새 묶음이 시작되는 순간» 에 건다.
          이미 롤링 중이면 새로 걸지 않는다 — 전투처럼 계속 들어오는 획득에서 숫자가 끊긴다. */
