@@ -92,6 +92,8 @@ const shot = (ev, n) => ev((cnt) => {
 }, n);
 
 const uniq = (a) => Array.from(new Set(a)).sort((x, y) => x - y);
+/* verify348 이 372 로 옮긴 «화면 안» 표본의 세로 자리 — 이 프로브는 옛 자리(0)와 새 자리를 나란히 잰다 */
+const IN_DY_PROBE = -260;
 
 (async () => {
   console.log('=== PROBE 372 — verify348 [R-b] 플레이키 재현 ===\n');
@@ -115,8 +117,8 @@ const uniq = (a) => Array.from(new Set(a)).sort((x, y) => x - y);
                 ' · camOy ' + JSON.stringify(uniq(r1.map((v) => +v.oy.toFixed(3)))) +
                 ' · cam.shake ' + JSON.stringify(uniq(r1.map((v) => +v.sh.toFixed(3)))));
     console.log('       e.r ' + JSON.stringify(uniq(r1.map((v) => v.er))));
-    is(ns.length > 1, '[1-a] 한 페이지 안에서도 개수가 흔들린다 — 값 ' + ns.length + '가지 ' + JSON.stringify(ns) +
-      ' (흔들리면 «두 페이지 차이» 가설은 죽는다)');
+    is(ns.length === 1, '[1-a] 한 페이지 안에서는 20회가 **한 값** ' + JSON.stringify(ns) +
+      ' — «호출마다 흔들린다»(mk 난수·cam.shake) 가설 기각. 뿌리는 페이지 «사이» 다');
   }
 
   /* ② 흔들림의 축 — bbox 어디가 움직이나 */
@@ -213,8 +215,12 @@ const uniq = (a) => Array.from(new Set(a)).sort((x, y) => x - y);
   {
     const un = uniq(rows.filter((r) => r.v).map((r) => r.v.n));
     const uh = uniq(rows.map((r) => +r.VH.toFixed(3)));
-    is(un.length > 1 || uh.length > 1,
-      '[6-a] 페이지마다 갈린다 — 개수 ' + JSON.stringify(un) + ' · VH ' + JSON.stringify(uh));
+    console.log('       개수 ' + JSON.stringify(un) + ' · VH ' + JSON.stringify(uh) +
+      ' — VH 가 한 값인데 개수가 갈리면 «해상도 정착» 가설도 죽는다');
+    /* ⚠ 이 관측 자체는 확률적이다(6번이 다 «깨끗한» 부팅일 수 있다) — 그래서 아래 [8]·[11] 의
+       스윕이 판정을 맡는다. 여기서는 «갈린다면 VH 때문이 아니다» 만 못박는다. */
+    is(un.length === 1 || uh.length === 1,
+      '[6-a] 개수가 갈려도 VH 는 한 값 ' + JSON.stringify(uh) + ' (해상도·레이아웃 정착이 뿌리가 아니다)');
   }
 
   /* ⑦ 같은 bbox 안에서 «무엇이» 분홍을 먹는가 — 안 맞는 픽셀의 색을 그대로 센다 */
@@ -249,25 +255,118 @@ const uniq = (a) => Array.from(new Set(a)).sort((x, y) => x - y);
   }
   ok('[7-a] 히스토그램 출력 완료');
 
-  /* ⑧ 가설 — «중앙» 표본이 플레이어 스프라이트 **밑에 깔린다**. 한 페이지에서 애니 위상만 흔든다 */
-  console.log('\n[8] 같은 페이지에서 player.at(애니 위상)만 흔든다');
-  const r8 = await cur.ev(() => {
-    const T = window.__t372, out = [];
-    for (const at of [0, 1, 2, 3, 4, 5, 6, 7]) {
+  /* ⑧ 뿌리 — «중앙» 표본 **위에 무엇이 굳는가**.
+     ⚠ 여기까지의 소거법으로 죽은 가설: 플레이어(월드에서 4000 치워도 그대로) · 펫(0마리) ·
+     parts·rings·bolts·shots·drones·ghosts·zones·corpses(전부 비워도 그대로) · 적 스프라이트
+     (아틀라스를 꺼도 그대로) · 회전검(skillEquipped 를 막아도 그대로) · 자리(같은 rect 에
+     **바만** 다시 그리면 308 = 기대값).
+     ⇒ ctx 메서드를 감싸 «바가 그려진 **뒤** 그 자리를 건드리는 호출» 을 잡으니 하나가 나왔다 —
+     `draw()` 의 `fillText(msgTxt, VW/2, VH/2 − 40)` = **94 중앙 문구**(`showMsg`).
+     이 하네스는 `rAF` 를 죽여 시계를 세우므로 `msgT` 를 깎는 `step()` 이 안 돌고, 부팅 1200ms 안에
+     토스트가 떴던 페이지는 그 글자가 **영원히** 화면 한복판에 굳는다 = 페이지마다 갈리는 개수.
+     아래는 그 토스트를 **일부러 띄워** 결정적으로 재현한 것이다. */
+  console.log('\n[8] 뿌리 — 94 중앙 문구(showMsg)를 일부러 띄운다');
+  const r8m = await cur.ev(([dyOld, dyNew]) => {
+    const T = window.__t372;
+    const meas = (dy) => {
       const e = T.mk('zombie');
-      T.put(e, VW / 2, VH / 2);
-      player.at = at; draw();
-      out.push(at + ':' + T.scan([255, 107, 138]).n);
-    }
-    return out;
-  });
-  if (r8.__err) no('[8] 평가 실패 — ' + r8.__err);
+      T.put(e, VW / 2, VH / 2 + dy);
+      const w = Math.max(22, e.r * 2.2), by = e.y - e.r * 3.1 - 6;
+      const bx = fxClampX(e.x, w / 2, by) - w / 2;
+      const X0 = (bx + camOx) * 2, Y0 = (by + camOy) * 2;
+      const X1 = X0 + w * clamp(e.hp / e.max, 0, 1) * 2, Y1 = Y0 + 8;
+      const lo = Math.max(0, Math.floor(X1) - Math.ceil(X0)) * Math.max(0, Math.floor(Y1) - Math.ceil(Y0));
+      const hi = Math.max(0, Math.ceil(X1) - Math.floor(X0)) * Math.max(0, Math.ceil(Y1) - Math.floor(Y0));
+      return { n: T.scan([255, 107, 138]).n, lo, hi };
+    };
+    msgTxt = ''; msgT = 0; draw();
+    const cleanOld = meas(dyOld), cleanNew = meas(dyNew);
+    /* 토스트를 «다 뜬» 상태로 굳힌다 — 부른 직후는 페이드 인 첫 프레임(globalAlpha 0)이라 안 보인다.
+       `draw()` 의 분기: el = MSG_DUR − msgT 가 MSG_IN 이상이고 msgT > MSG_OUT 이면 알파 1 · dy 0. */
+    showMsg('스테이지 20');
+    msgT = Math.max(MSG_OUT + 0.01, MSG_DUR - MSG_IN - 0.01);
+    const msgOld = meas(dyOld), msgNew = meas(dyNew);
+    msgTxt = ''; msgT = 0; draw();
+    const backOld = meas(dyOld);
+    return { cleanOld, cleanNew, msgOld, msgNew, backOld };
+  }, [0, IN_DY_PROBE]);
+  if (r8m.__err) no('[8] 평가 실패 — ' + r8m.__err);
   else {
-    console.log('       at:개수 ' + r8.join(' '));
-    const ns = uniq(r8.map((s) => +s.split(':')[1]));
-    is(ns.length > 1, '[8-a] 애니 위상만 흔들어도 개수가 갈린다 — ' + JSON.stringify(ns) +
-      ' (= 바가 플레이어 스프라이트에 먹힌다)');
+    const f = (v) => v.n + '/기대 ' + v.lo + '..' + v.hi;
+    console.log('       토스트 없음 — 옛 자리 ' + f(r8m.cleanOld) + ' · 새 자리 ' + f(r8m.cleanNew));
+    console.log('       토스트 있음 — 옛 자리 ' + f(r8m.msgOld) + ' · 새 자리 ' + f(r8m.msgNew));
+    console.log('       토스트 지움 — 옛 자리 ' + f(r8m.backOld));
+    is(r8m.msgOld.n < r8m.msgOld.lo, '[8-a] 토스트를 띄우면 **옛 자리**(VH/2)가 기대 밴드 아래로 — ' +
+      r8m.msgOld.n + ' < ' + r8m.msgOld.lo + ' (글자가 바를 덮는다)');
+    is(r8m.msgNew.n === r8m.msgNew.lo, '[8-b] 같은 토스트에서 **새 자리**(VH/2' + IN_DY_PROBE + ')는 기대값 그대로 — ' +
+      r8m.msgNew.n + ' = ' + r8m.msgNew.lo);
+    is(r8m.backOld.n === r8m.backOld.lo, '[8-c] 토스트를 지우면 옛 자리도 복귀 — ' +
+      r8m.backOld.n + ' = ' + r8m.backOld.lo + ' (뿌리가 이것 하나임을 못박는다)');
   }
+
+  /* ⑧-2 두 번째 오염원 — 플레이어 스프라이트. 토스트가 없는 프레임에서도 위상에 따라 갈릴 수 있다.
+     위상 4 × 플레이어 x 5 × y 3 = 60칸(부팅 때 실제로 흔들리는 폭)을 훑는다. */
+  const SWEEP = (dy) => ({ dy });
+  const sweep = (ev, dy) => ev((dy2) => {
+    const T = window.__t372, e = T.mk('zombie');
+    T.put(e, VW / 2, VH / 2 + dy2);
+    const w = Math.max(22, e.r * 2.2), by = e.y - e.r * 3.1 - 6;
+    const bx = fxClampX(e.x, w / 2, by) - w / 2;
+    const X0 = (bx + camOx) * 2, Y0 = (by + camOy) * 2;
+    const X1 = X0 + w * clamp(e.hp / e.max, 0, 1) * 2, Y1 = Y0 + 8;
+    const lo = Math.max(0, Math.floor(X1) - Math.ceil(X0)) * Math.max(0, Math.floor(Y1) - Math.ceil(Y0));
+    const hi = Math.max(0, Math.ceil(X1) - Math.floor(X0)) * Math.max(0, Math.ceil(Y1) - Math.floor(Y0));
+    const a0 = player.at, y0 = player.y, x0 = player.x, ns = [];
+    for (const px of [-6, -3, 0, 3, 6]) {
+      for (const py of [-2, 0, 2]) {
+        player.x = x0 + px; player.y = y0 + py;
+        for (const at of [0, 2, 4, 6]) { player.at = at; draw(); ns.push(T.scan([255, 107, 138]).n); }
+      }
+    }
+    player.at = a0; player.y = y0; player.x = x0; draw();
+    return { lo, hi, ns, out: ns.filter((n) => n < lo || n > hi).length, uniq: Array.from(new Set(ns)).length };
+  }, dy);
+
+  console.log('\n[8-2] 옛 자리(VH/2) — 플레이어 위상 4 × x 5 × y 3 = 60칸');
+  const r8 = await sweep(cur.ev, 0);
+  if (r8.__err) no('[8-2] 평가 실패 — ' + r8.__err);
+  else {
+    console.log('       기대 밴드 ' + r8.lo + '..' + r8.hi + ' · 값 ' + r8.uniq + '가지 · 밴드 밖 ' + r8.out + '/60');
+    console.log('       개수 ' + JSON.stringify(Array.from(new Set(r8.ns)).sort((a, b) => a - b)));
+    /* 이 축은 페이지마다 잡히기도, 안 잡히기도 한다(그래서 판정은 [8]·[11] 이 맡는다) —
+       잡힌 페이지에서는 위상만으로 308 · 288 · 84 · 54 까지 벌어졌다. */
+    ok('[8-2a] 옛 자리 — 60칸 중 ' + r8.out + '칸이 기대 밴드 밖 · 값 ' + r8.uniq + '가지 (관측만)');
+  }
+
+  /* ⑧-3 소거법 — 옛 자리의 바를 «무엇이» 먹는가. 한 프레임에서 하나씩 치워 본다.
+     ⚠ `step()` 을 안 부르므로 카메라는 안 따라온다 — 월드에서 치우면 화면에서도 치워진다. */
+  console.log('\n[8-3] 소거법 — 옛 자리(VH/2)에서 하나씩 치운다 · 페이지 4번 (죽은 가설의 기록)');
+  for (let i = 0; i < 4; i++) {
+    const p = await open(ctx, 'file://' + SRC);
+    if (p.dim && p.dim.__err) { no('[8-2] ' + i + '회 하네스 실패'); await p.page.close(); continue; }
+    const v = await p.ev(() => {
+      const T = window.__t372, e = T.mk('zombie');
+      T.put(e, VW / 2, VH / 2);
+      const w = Math.max(22, e.r * 2.2), by = e.y - e.r * 3.1 - 6;
+      const bx = fxClampX(e.x, w / 2, by) - w / 2;
+      const X0 = (bx + camOx) * 2, Y0 = (by + camOy) * 2;
+      const X1 = X0 + w * clamp(e.hp / e.max, 0, 1) * 2, Y1 = Y0 + 8;
+      const lo = Math.max(0, Math.floor(X1) - Math.ceil(X0)) * Math.max(0, Math.floor(Y1) - Math.ceil(Y0));
+      const sc = () => T.scan([255, 107, 138]).n;
+      const base = sc();
+      const py = player.y, np = pets.length;
+      player.y = py + 4000; draw(); const noPl = sc();          /* 플레이어만 치운다 */
+      player.y = py; pets.length = 0; draw(); const noPet = sc(); /* 펫만 치운다 */
+      player.y = py + 4000; draw(); const noBoth = sc();
+      player.y = py; draw();
+      return { lo, base, noPl, noPet, noBoth, np,
+               pet: np ? { x: pets[0] ? 0 : 0 } : null };
+    });
+    console.log('       #' + i + (v.__err ? ' 평가실패' : ' 기대 ' + v.lo + ' · 있는대로 ' + v.base +
+      ' · 플레이어 뺌 ' + v.noPl + ' · 펫 뺌 ' + v.noPet + ' · 둘 다 뺌 ' + v.noBoth + ' · 펫 ' + v.np + '마리'));
+    await p.page.close();
+  }
+  ok('[8-3a] 소거법 출력 완료 — 플레이어·펫을 치워도 개수가 안 돌아온다(둘 다 뿌리가 아니다)');
 
   /* ⑨ 처방 후보 — 표본을 플레이어에서 떼면 결정적인가 (여러 페이지) */
   console.log('\n[9] 처방 후보 — 표본을 플레이어 위쪽으로 뗀 자리에서 6번 새로 연다');
@@ -288,7 +387,37 @@ const uniq = (a) => Array.from(new Set(a)).sort((x, y) => x - y);
   }
   is(uniq(r9).length === 1 && r9[0] > 0, '[9-a] 플레이어에서 뗀 자리 — 값 ' + uniq(r9).length + '가지 ' + JSON.stringify(uniq(r9)));
 
-  is(cur.errs.length === 0, '[10] 콘솔/페이지 오류 ' + cur.errs.length + '건' + (cur.errs.length ? ' — ' + cur.errs[0].slice(0, 140) : ''));
+  /* ⑩ 되돌림 시험 — 새 자가 «진짜 밀림» 을 여전히 잡는가 (무르게 푼 수리가 아님) */
+  console.log('\n[10] 되돌림 시험 — 바를 실제로 밀면 새 자가 빨개지는가');
+  const r10 = await cur.ev(() => {
+    const T = window.__t372, out = [];
+    for (const dx of [0, 0.5, 1, -0.5]) {
+      const e = T.mk('zombie');
+      T.put(e, VW / 2 + dx, VH / 2 - 260);
+      const p = T.scan([255, 107, 138]);
+      out.push({ dx, n: p.n, x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1 });
+    }
+    return out;
+  });
+  if (r10.__err) no('[10] 평가 실패 — ' + r10.__err);
+  else {
+    for (const v of r10) console.log('       dx ' + v.dx + ' → n ' + v.n + ' · x ' + v.x0.toFixed(1) + '..' + v.x1.toFixed(1));
+    const base = r10[0];
+    const caught = r10.slice(1).every((v) => v.n !== base.n || v.x0 !== base.x0 || v.x1 !== base.x1);
+    is(caught, '[10-a] 0.5px·1px 밀림 3종 전부 — 개수 또는 bbox 가 기준과 다르다 (자를 안 넓혔다)');
+  }
+
+  /* ⑪ 대조 — 같은 60칸 스윕을 **새 자리**에서. 여기가 깨끗하면 «자리» 가 뿌리라는 것이 못박힌다 */
+  console.log('\n[11] 새 자리(VH/2−260) — 같은 60칸 스윕');
+  const r11 = await sweep(cur.ev, -260);
+  if (r11.__err) no('[11] 평가 실패 — ' + r11.__err);
+  else {
+    console.log('       기대 밴드 ' + r11.lo + '..' + r11.hi + ' · 값 ' + r11.uniq + '가지 · 밴드 밖 ' + r11.out + '/60');
+    is(r11.out === 0 && r11.uniq === 1, '[11-a] 새 자리 — 60칸 전부 같은 값이고 전부 기대 밴드 안 (밴드 밖 ' +
+      r11.out + '칸 · 값 ' + r11.uniq + '가지)');
+  }
+
+  is(cur.errs.length === 0, '[12] 콘솔/페이지 오류 ' + cur.errs.length + '건' + (cur.errs.length ? ' — ' + cur.errs[0].slice(0, 140) : ''));
 
   await browser.close();
   console.log('\nPROBE372 ' + pass + '/' + (pass + fail) + (fail ? ' — FAIL ' + fail : ' PASS'));

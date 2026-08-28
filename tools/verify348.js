@@ -47,6 +47,13 @@ const HARNESS = () => {
   S.stage = 20; S.best = 20; S.guide.idx = 99;
   if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
   spawnStage(); step(1 / 60);
+  /* 372 — 부팅 토스트(94 중앙 문구)를 지운다. `msgT` 는 step() 이 깎는데 이 하네스는 시계를
+     `rAF` 째로 세우므로, 부팅 1200ms 안에 토스트가 떴던 페이지는 그 글자가 **영원히** 화면
+     한복판(VH/2 − 40)에 굳는다 — 화면 중앙 표본의 바 위에 그대로 얹힌다.
+     `probe372` [8] 이 ctx 추적으로 찍은 자리가 이것이다(index.html `draw()` 의 fillText).
+     제품 코드는 이미 같은 함정을 알고 있다 — 캡처 하네스 3곳이 `msgTxt=''; msgT=0` 으로
+     연다(LESSONS 30-②). 게이트도 같은 자를 쓴다. */
+  try { if (typeof msgT !== 'undefined') { msgTxt = ''; msgT = 0; } } catch (e) {}
   window.__t348 = {
     /* 적 한 마리만 남기고 «바가 그려질 조건» 으로 세운다 */
     mk(tk, hpR) {
