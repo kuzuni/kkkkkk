@@ -257,6 +257,9 @@ const near = (a, b, tol) => Math.abs(a - b) <= tol;
       const st = COLL_SETS.find(s => s.tab === 'weapon');
       return { key: st.key, step: collStep(st.key), cap: collCap(st) };
     });
+    /* 314 — 직전 절(D3 펫 일괄 강화)의 토스트가 빠른 러너에서는 아직 살아 있어 n===1 이 깨졌다
+       (클라우드보다 빠른 로컬에서만 재현). 이 클릭의 토스트만 세도록 먼저 비운다. */
+    await page.evaluate(() => document.querySelectorAll('.fx-toast').forEach(e => e.remove()));
     await page.click('#collList .clb-btn.rdy');
     await page.waitForTimeout(250);
     const r1 = await page.evaluate(k => {
