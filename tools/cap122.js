@@ -356,16 +356,91 @@ async function frames(p, tag, stops) {
          같은 격리이고, 이걸 줘야 비평가가 바닥/피크를 **판정**할 수 있다.
        ⚠ 브리핑에 «이건 격리 세트다 — 제품 화면이 아니다» 를 반드시 적어라. 안 그러면
          «광택이 없다» 가 새 감점으로 돌아온다(§23-2 계열). */
+    /* ⚑ 25회차 — **24회차 격리 세트는 격리가 안 돼 있었고, 그 사실이 채점을 갈랐다.**
+       AY 가 실측했다: 버튼에서 **70px 떨어진 자리**(링이 절대 못 닿는 곳)의 8위상 루마 변동이
+       칸2 **0.0** · 칸5 **0.0** 인데 **칸4 15.3 · 칸3 42.3**. 그 두 칸에는 링 말고 움직이는 것이
+       남아 있었다는 뜻이고, **AZ 의 링 감점 3건이 정확히 그 오염된 두 칸에서 나왔다**(§29-10).
+       25회차에 `probe122r25.js` 로 범인을 이름까지 짚었다 — 빠진 것은 두 층이다:
+
+         ⓐ **카드 본문 전면 광택**. 24회차 목록은 이것을 `.cfr::after` 로 끄고 있었지만, 그 띠는
+            LESSONS 122-1(«가두는 규칙은 부모의 몫») 때 **마스크 밖 형제 `.cbg>.jzs::after` 로
+            옮겨졌다.** 끄기 목록만 옛 이름으로 남아 실제로는 한 겹도 안 꺼져 있었다 —
+            §23-2 가 «반치폭 64~70px 로 링 반경대를 그대로 지나간다» 고 지목한 바로 그 층이다.
+         ⓑ **강제 상자(gm) 글로우**(`.shp-card.gm>.cfr` · `jz122Gm`). §0-1 이 «카드 밖 누출 0 —
+            gm 만 예외» 라고 적어 둔, 카드 밖으로 새는 **유일한** 층이다. 소환 4번째 칸이 gm 이라
+            칸3·칸4 의 70px 띠가 통째로 이 글로우 안에 든다(칸3 4.06 · 칸4 3.74 의 정체).
+
+       실측(`probe122r25.js`, 8위상 · 70px 밖 8px 액자 평균루마 max−min):
+         끄기 목록 24회차 → 칸1 0.45 · 칸2 0.37 · **칸3 4.06** · **칸4 3.74** · 칸5 1.50
+         끄기 목록 25회차 → 칸1 0.45 · 칸2 0.37 · **칸3 0.40** · **칸4 0.44** · 칸5 0.43
+       남는 ~0.4 는 **같은 칸 안 보조 링(b2/b3 · `jz122RingP`)** 이고 다섯 칸이 같은 값이라
+       칸끼리 비교를 왜곡하지 않는다(끄면 §0-1 «보조 링 세기비» 를 잴 표본이 사라지므로 남긴다).
+
+       그리고 ⓒ **세트에 칸1 이 아예 없었다**(AZ 지적) — 이 블록이 `freeb` 의 «바닥» 스크롤을
+       그대로 물려받아 칸2~5 만 찍혔다. `free`/`freeb` 처럼 **두 자리로 나눠 찍는다.** */
     await p.evaluate(() => {
       let s = document.getElementById('capRingIso');
       if (!s) { s = document.createElement('style'); s.id = 'capRingIso'; document.head.appendChild(s); }
       s.textContent = '#shopList .cfr::after,#shopList .chd::before,#shopList .chd::after,'
         + '#shopList .cn-cd>.fr::after,#shopList .cn-cd>.fr::before,#shopList .cn-cd::before,'
-        + '#shopw>.jzb{opacity:0!important}';
+        + '#shopw>.jzb,#shopList .shp-card>.cbg>.jzs::after{opacity:0!important}'
+        + '#shopList .shp-card.gm>.cfr{animation-name:none!important}';
     });
     await p.waitForTimeout(250);
-    console.log('[소환 탭 — [무료] 링 «격리» (광택 3겹 끔 — 제품 화면 아님)]');
+
+    /* ⚑ «자가 격리됐는지를 자로 재고 시작한다» — 찍기 전에 확인하는 것이 25회차의 요점이다.
+       링이 절대 못 닿는 70px 밖 8px 액자의 평균 루마를 8위상에서 재서 변동을 찍는다.
+       0.5 를 넘는 칸이 있으면 **그 칸의 격리는 깨진 것**이고, 그 칸으로 잰 링 값은 쓰면 안 된다. */
+    const isoCheck = async () => {
+      const boxes = await p.evaluate(() => {
+        const lw = document.getElementById('shopList'), lr = lw.getBoundingClientRect();
+        return [...document.querySelectorAll('#shopList .cbtn.b1')].map(e => {
+          const r = e.getBoundingClientRect(), card = e.closest('.shp-card');
+          const x = Math.round(r.x) - 74, y = Math.round(r.y) - 74;
+          const w = Math.round(r.width) + 148, h = Math.round(r.height) + 148;
+          return { idx: card ? [...card.parentNode.children].indexOf(card) + 1 : 0,
+            ok: r.top >= lr.top && r.bottom <= lr.bottom
+              && x >= 0 && y >= 0 && x + w <= innerWidth && y + h <= innerHeight,
+            box: { x, y, width: w, height: h } };
+        }).filter(b => b.ok);
+      });
+      const out = [];
+      for (const b of boxes) {
+        const vals = [];
+        for (const t of FREE_STOPS) {
+          await p.evaluate(ms => window.__jzSeek(ms), t);
+          const b64 = (await p.screenshot({ clip: b.box })).toString('base64');
+          vals.push(await p.evaluate(async ([src, w, h]) => {
+            const img = await createImageBitmap(await (await fetch('data:image/png;base64,' + src)).blob());
+            const c = new OffscreenCanvas(w, h), g = c.getContext('2d');
+            g.drawImage(img, 0, 0);
+            const d = g.getImageData(0, 0, w, h).data;
+            let s = 0, n = 0;
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+              if (x >= 8 && x < w - 8 && y >= 8 && y < h - 8) continue;   /* 안쪽 구멍 */
+              const i = (y * w + x) * 4;
+              s += .2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2]; n++;
+            }
+            return s / n;
+          }, [b64, b.box.width, b.box.height]));
+        }
+        out.push('칸' + b.idx + ' ' + (Math.max(...vals) - Math.min(...vals)).toFixed(2));
+      }
+      return out;
+    };
+
+    /* 자리 ① — 리스트 맨 위(칸1 이 여기서만 보인다) */
+    await p.evaluate(() => { const lw = document.getElementById('shopList'); if (lw) lw.scrollTop = 0; });
+    await p.waitForTimeout(300);
+    console.log('[소환 탭 — [무료] 링 «격리» · 리스트 위 (광택 4겹 + gm 글로우 끔 — 제품 화면 아님)]');
+    console.log('  70px 밖 변동(0.5 미만이어야 격리): ' + (await isoCheck()).join(' · '));
     await frames(p, 'ringiso', FREE_STOPS);
+    /* 자리 ② — 리스트 바닥(칸5 가 여기서만 보인다. 칸3·칸4 가 두 자리에 겹쳐 기준칸이 된다) */
+    await p.evaluate(() => { const lw = document.getElementById('shopList'); lw.scrollTop = lw.scrollHeight; });
+    await p.waitForTimeout(400);
+    console.log('[소환 탭 — [무료] 링 «격리» · 리스트 바닥]');
+    console.log('  70px 밖 변동(0.5 미만이어야 격리): ' + (await isoCheck()).join(' · '));
+    await frames(p, 'ringisob', FREE_STOPS);
     await p.evaluate(() => { const s = document.getElementById('capRingIso'); if (s) s.remove(); });
   }
 

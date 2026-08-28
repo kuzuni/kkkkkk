@@ -1886,9 +1886,22 @@ async function ampCheck(p, hosts) {
      체크리스트가 13회차부터 열어 둔 항목이다 — «호흡 글로우 진폭 단일 기준 Δ22±3 ·
      마일리지 Δ13.7 ↔ 재화 받기 버튼 Δ65 (4.7배 산포)». §13 은 «면 위를 지나는 띠» 를 재므로
      **상자 밖으로 번지는 box-shadow** 는 한 번도 잰 적이 없다.
-     재는 법: 요소 테두리 **바깥 2~14px 띠**의 평균 루마를 한 주기 16위상에서 재고 최대−최소.
-     (안쪽을 넣으면 면·글자가 섞이고, 너무 멀리 나가면 이웃 요소가 섞인다.) */
-  console.log('§17 호흡 글로우·링 후광 진폭 — 상자 밖 2~14px 띠의 Δ루마');
+     재는 법: 요소 테두리 **바깥 1~12px 띠**의 평균 루마를 한 주기 16위상에서 재고 최대−최소.
+     (안쪽을 넣으면 면·글자가 섞이고, 너무 멀리 나가면 이웃 요소가 섞인다.)
+
+     ⚑ 25회차 — **이 주석은 14회차부터 «바깥 2~14px» 이라고 적혀 있었지만 코드는 그렇게 세지 않는다.**
+     아래 루프는 pad 14 로 클립을 잡고 «요소 면» 과 «가장 바깥 2px» 을 빼므로, 실제로 남는 것은
+     테두리로부터 거리 **1~12px** 이다. 사양 Δ22±3 을 세운 것은 이 코드지 저 주석이 아니다.
+     실측으로 못 박았다(`tools/probe122r25b.js`, 같은 상태·같은 16위상):
+       밴드 1~12 → gm 23.87 · 마일리지 **24.34** · [교환] **24.8** · [이동] **19.7**
+         = 이 절이 회차마다 찍어 온 24.3 / 24.3 / 24.8 / 19.7 과 **소수점까지 재현**
+       밴드 2~14 → 21.26 / 23.01 / 22.22 / 21.3 (최대 −12%)
+       밴드 1~3  → 32.03 / 27.13 / 37.14 / 22.9 (밴드 1~12 의 **1.11~1.50배**)
+     ⚠ 그래서 **밴드는 서로 바꿔 쓸 수 없다.** 24회차 AY 가 «바깥 1~3px» 로 잰 값을 Δ22±3 에
+       대고 ②③⑤ 를 깎았는데, 그 밴드에서는 다섯 자리 전부가 위로 뜬다 — 밴드를 안 맞추고 값을
+       고쳤으면 §27-9·§28-10·§29-10 과 같은 «자 갈림» 을 하나 더 만들었을 것이다.
+       비평 브리핑에 **«사양이 정의된 밴드는 요소 테두리 바깥 1~12px»** 를 반드시 넣어라. */
+  console.log('§17 호흡 글로우·링 후광 진폭 — 상자 밖 1~12px 띠의 Δ루마 (사양이 정의된 밴드)');
   {
     /* 190 — ▶AD 뱃지는 «오늘 무광고 1회» 가 남아 있는 동안 감춰진다(`.shp-card.nofad`). 그 뱃지는
        [무료] 버튼 좌하단을 물고 있어 **링 후광 띠(바깥 2~14px) 안**에 들어오므로, 있고 없고에 따라
@@ -1936,7 +1949,8 @@ async function ampCheck(p, hosts) {
           const d = g.getImageData(0, 0, c.width, c.height).data;
           let s = 0, n = 0;
           for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
-            /* 테두리 바깥 2~14px 띠만 — 안쪽(요소 면)과 가장 바깥 2px(이웃 경계)은 뺀다 */
+            /* 테두리 **바깥 1~12px** 띠만 — 안쪽(요소 면)과 가장 바깥 2px(이웃 경계)은 뺀다.
+               (pad 14 에서 바깥 2px 을 빼면 남는 거리는 1~12 이다 — 25회차에 실측으로 못 박았다) */
             const inx = x >= 14 && x < 14 + w, iny = y >= 14 && y < 14 + h;
             if (inx && iny) continue;
             if (x < 2 || y < 2 || x >= c.width - 2 || y >= c.height - 2) continue;
@@ -2310,6 +2324,121 @@ async function ampCheck(p, hosts) {
       document.getElementById('shopw').style.removeProperty('--jz-amp');
       const l = document.getElementById('shopList'); if (l) l.scrollTop = 0;
     });
+    await p.waitForTimeout(150);
+  }
+
+  /* ── §31 «설계된 누출» 세 자리의 실제 거리 (25회차 신설) ──────────────────
+     §0-1 불변식은 «카드 밖 누출 0 — 단 gm 20~23px · 마일리지 ~22px · 평생배너 ~40px 은 설계된
+     예외» 라고 적어 두었는데, 그 세 값 중 **어느 것도 게이트가 재고 있지 않았다.**
+     («자를 안 댄 곳은 자동 무결점» 일곱 번째 — §30 머리말과 같은 계열이다.)
+     24회차 AY 가 그 구멍으로 들어왔다: ⑤ 「마일리지 봉우리 위상 누출 **28px**(표 ~22px, +27%)」.
+     25회차에 자를 만들어 재 보니 **AY 의 28px 이 맞고 표가 낡은 것**이었다(`tools/probe122r25b.js`):
+
+       자: 진폭이 최대인 위상에서, **글로우를 통째로 끈 기준선**보다 링 d 의 평균 루마가
+           1루마 이상 밝은 마지막 d. (진폭 프로파일로는 «새는 거리» 를 못 잰다 —
+           그건 «얼마나 흔들리나» 지 «얼마나 멀리 가나» 가 아니다.)
+       실측: **gm 22px**(표 20~23 ✓ — 이 일치가 자의 검증이다) · **마일리지 28px**.
+       CSS 도 28 쪽이다 — `jz122Mile` 50% 키프레임이 `blur 22px + spread 5px` = 27px 다.
+       표의 «~22px» 은 **4회차**가 «번짐 16~18 + 확산 2~3» 으로 남긴 값이고, 그 뒤
+       **15회차가 마일리지 진폭을 17.8 → 24.3 으로 올릴 때 쓴 손잡이가 바로 그 spread** 였다
+       (§20-5: 「알파가 포화된 자리는 --jz-ring 으로 못 올린다. 답은 spread 였다」).
+       즉 28px 은 사양을 어긴 것이 아니라 **사양(Δ22±3)을 맞춘 대가로 표에 반영이 안 된 값**이다.
+       → 값이 아니라 **표**를 고쳤고(§0-1 «마일리지 ~28px»), 다시 낡지 않게 여기서 잰다. */
+  console.log('§31 «설계된 누출» 거리 — gm 20~23px · 마일리지 26~30px (25회차 신설 — AY⑤ 실측 확인)');
+  {
+    const PAD31 = 36;
+    const ringsOf = async (box, iw, ih) => {
+      const b64 = (await p.screenshot({ clip: box })).toString('base64');
+      return p.evaluate(async ([src, w, h, pad]) => {
+        const img = new Image();
+        await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/png;base64,' + src; });
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+        const d = g.getImageData(0, 0, c.width, c.height).data;
+        const sum = new Float64Array(pad + 1), cnt = new Float64Array(pad + 1);
+        for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+          if (x >= pad && x < pad + w && y >= pad && y < pad + h) continue;   /* 요소 면 */
+          const dx = x < pad ? pad - x : (x >= pad + w ? x - (pad + w) + 1 : 0);
+          const dy = y < pad ? pad - y : (y >= pad + h ? y - (pad + h) + 1 : 0);
+          const k = Math.max(dx, dy);
+          if (k < 1 || k > pad) continue;
+          const j = (y * c.width + x) * 4;
+          sum[k] += .2126 * d[j] + .7152 * d[j + 1] + .0722 * d[j + 2]; cnt[k]++;
+        }
+        return { sum: [...sum], cnt: [...cnt] };
+      }, [b64, iw, ih, PAD31]);
+    };
+    const pat31 = txt => p.evaluate(x => {
+      let e = document.getElementById('v122lk');
+      if (!x) { if (e) e.remove(); return; }
+      if (!e) { e = document.createElement('style'); e.id = 'v122lk'; document.head.appendChild(e); }
+      e.textContent = x;
+    }, txt);
+    const leakOf = async (sel, per, off) => {
+      await seek(p, 0);                       /* §17 과 같은 함정 — clip 전에 등장 연출을 걷는다 */
+      const clip = await p.evaluate(([s, pad]) => {
+        const e = document.querySelector(s); if (!e) return null;
+        e.scrollIntoView({ block: 'center' });
+        const r = e.getBoundingClientRect();
+        const x = Math.round(r.x) - pad, y = Math.round(r.y) - pad;
+        const w = Math.round(r.width) + pad * 2, h = Math.round(r.height) + pad * 2;
+        if (x < 0 || y < 0 || x + w > innerWidth || y + h > innerHeight) return null;
+        return { x, y, width: w, height: h, iw: Math.round(r.width), ih: Math.round(r.height) };
+      }, [sel, PAD31]);
+      if (!clip) return null;
+      const { iw, ih, ...box } = clip;
+      /* 진폭이 최대인 위상을 §17 과 같은 밴드(바깥 1~12px)로 찾는다 */
+      let best = 0, bv = -1;
+      for (let i = 0; i < 16; i++) {
+        const t = Math.round(per * i / 16);
+        await seek(p, t);
+        const r = await ringsOf(box, iw, ih);
+        let s = 0, n = 0;
+        for (let d = 1; d <= 12; d++) { s += r.sum[d]; n += r.cnt[d]; }
+        const m = n ? s / n : 0;
+        if (m > bv) { bv = m; best = t; }
+      }
+      await pat31(off);                        /* 기준선 — 이 글로우만 끈다 */
+      await seek(p, best);
+      const base = await ringsOf(box, iw, ih);
+      await pat31('');
+      await seek(p, best);
+      const pk = await ringsOf(box, iw, ih);
+      let leak = 0;
+      for (let d = 1; d <= PAD31; d++) {
+        if (!pk.cnt[d] || !base.cnt[d]) continue;
+        if (pk.sum[d] / pk.cnt[d] - base.sum[d] / base.cnt[d] >= 1) leak = d;
+      }
+      return leak;
+    };
+    await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const gmSel = '#shopList .shp-card.gm>.cfr';
+    const gmLeak = await leakOf(gmSel, 2800, gmSel + '{box-shadow:none!important}');
+    await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
+    await p.waitForTimeout(150);
+    const mlSel = '#shopList .cn-ml';
+    /* ⚠ 마일리지 판은 `inset` 립과 바깥 글로우가 **한 box-shadow 선언**이다.
+       통째로 끄면 립까지 사라져 «기준선» 이 요소 자체를 바꿔 버린다 — 바깥 몫만 지운다. */
+    const mlOff = mlSel + '{box-shadow:inset 0 0 0 7px #E2A6FF!important}';
+    const mlLeak = await leakOf(mlSel, 2600, mlOff);
+    console.log('    · gm ' + (gmLeak == null ? '측정 불가' : gmLeak + 'px')
+      + ' | 마일리지 ' + (mlLeak == null ? '측정 불가' : mlLeak + 'px'));
+    ok(gmLeak != null && mlLeak != null, '두 자리를 프레임 안에서 잡았다');
+    if (gmLeak != null) ok(gmLeak >= 20 && gmLeak <= 23,
+      'gm 외곽 글로우 누출 ' + gmLeak + 'px 이 §0-1 «20~23px» 안');
+    if (mlLeak != null) ok(mlLeak >= 26 && mlLeak <= 30,
+      '마일리지 판 글로우 누출 ' + mlLeak + 'px 이 §0-1 «~28px»(26~30) 안'
+      + ' — 24회차 AY⑤ 의 28px 이 맞았고 표가 낡았던 자리다');
+    /* 음성항 — 바깥 글로우를 지우면 누출이 사라져야 한다. 안 사라지면 이 자가 이웃을 재고 있는 것이다. */
+    if (mlLeak != null) {
+      await pat31(mlOff);
+      const neg = await leakOf(mlSel, 2600, mlOff);
+      await pat31('');
+      ok(neg === 0, '음성항 — 바깥 글로우를 지우면 누출 ' + neg + 'px (0 이어야 이웃을 안 재고 있다)');
+    }
+    await p.evaluate(() => { const l = document.getElementById('shopList'); if (l) l.scrollTop = 0; });
     await p.waitForTimeout(150);
   }
 
