@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-/* 작업 185 보조 실측 — `verify172` ③ «수렴 구간 멀어짐%» 가 185 이후 왜 올라가는가
+/* 작업 288 보조 실측 — `verify172` ③ «수렴 구간 멀어짐%» 가 288 이후 왜 올라가는가
+ *   ⚠ 번호 이동(작업 286, 2026-08-28): 옛 `tools/probe185away.js`.
  *
- *   node tools/probe185away.js                 # after(작업트리)만
- *   P185_REF=<sha> node tools/probe185away.js  # before/after 비교
+ *   node tools/probe288away.js                 # after(작업트리)만
+ *   P288_REF=<sha> node tools/probe288away.js  # before/after 비교
  *
- * verify172 ③ 은 «첫 접촉 이후 표본 중 직전보다 +2px 멀어진 표본의 비율» 이다. 185 로 넉백이
+ * verify172 ③ 은 «첫 접촉 이후 표본 중 직전보다 +2px 멀어진 표본의 비율» 이다. 288 로 넉백이
  * 사라지자 이 숫자가 3.0% → 11.8% 로 올라 게이트가 빨개졌다 — 그런데 **같은 표의 다른 열은 전부
  * 좋아졌다**(접촉까지 6.7s → 1.2s · 붙어있음 75.7% → 96.0% · 공격 20 → 30회 · 정렬 0.999 → 1.000).
  *
  * 가설: ③ 은 «멀어지는가» 가 아니라 **«어떤 표본이 창에 들어왔는가»** 에 지배된다.
  *   · 접근 구간(멀리서 다가오는 동안)은 거리가 단조 감소라 away 가 거의 0 이다.
  *   · 밀착 구간(사거리 안에서 플레이어의 카이팅과 함께 도는 동안)은 거리가 ±로 진동해 away 가 높다.
- *   185 는 접촉을 5.5초 앞당겨 **창의 대부분을 밀착 구간으로 바꿨다.** 분자가 아니라 분모가 바뀐 것이다.
+ *   288 은 접촉을 5.5초 앞당겨 **창의 대부분을 밀착 구간으로 바꿨다.** 분자가 아니라 분모가 바뀐 것이다.
  *
  * 이 자는 그래서 away% 를 **구간별로 쪼개서** 잰다. 가설이 맞으면
  *   · 밀착 구간 away% 는 before ≈ after (거동은 안 변했다)
@@ -24,9 +25,9 @@ const { execFileSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
-const SEC = Number(process.env.P185_SEC || 30);
-const REF = process.env.P185_REF || '';
-const STAGE = Number(process.env.P185_STAGE || 30);
+const SEC = Number(process.env.P288_SEC || 30);
+const REF = process.env.P288_REF || '';
+const STAGE = Number(process.env.P288_STAGE || 30);
 const ROOT = path.resolve(__dirname, '..');
 
 const RUN = async ({ frames, sampleEvery, stage }) => {
@@ -52,7 +53,7 @@ const RUN = async ({ frames, sampleEvery, stage }) => {
     bossT = 9999;
     if (typeof promo !== 'undefined' && promo) promo.t = 9999;
     const c0 = b0 ? b0.cd : null;
-    window.__p185tick();
+    window.__p288tick();
     const bf = find();
     if (bf) {
       if (bf.atkT > 0) { sawAtk = true; atkFrames++; }
@@ -94,12 +95,12 @@ async function runOne(browser, url) {
     let vt = 0; const q = [];
     window.requestAnimationFrame = cb => { q.push(cb); return q.length; };
     window.cancelAnimationFrame = () => {};
-    window.__p185tick = () => { vt += 1000 / 60; const l = q.splice(0, q.length); for (const cb of l) { try { cb(vt); } catch (e) {} } };
+    window.__p288tick = () => { vt += 1000 / 60; const l = q.splice(0, q.length); for (const cb of l) { try { cb(vt); } catch (e) {} } };
     try { localStorage.clear(); } catch (e) {}
   });
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForFunction(() => typeof player !== 'undefined' && typeof enemies !== 'undefined', null, { timeout: 20000 });
-  await page.evaluate(() => { for (let i = 0; i < 600; i++) window.__p185tick(); });
+  await page.evaluate(() => { for (let i = 0; i < 600; i++) window.__p288tick(); });
   const r = await page.evaluate(RUN, { frames: Math.round(SEC * 60), sampleEvery: 6, stage: STAGE });
   await ctx.close();
   return r;
@@ -112,7 +113,7 @@ async function runOne(browser, url) {
   try {
     if (REF) {
       const out = execFileSync('git', ['show', `${REF}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
-      refFile = path.join(ROOT, `.p185-before-${REF.slice(0, 7)}.html`);
+      refFile = path.join(ROOT, `.p288-before-${REF.slice(0, 7)}.html`);
       fs.writeFileSync(refFile, out);
     }
     const targets = [{ tag: 'after', file: path.join(ROOT, 'index.html') }];

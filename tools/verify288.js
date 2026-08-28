@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-/* 작업 185 게이트 — «스킬 맞고 적이 밀려나지 않는다» (주인 지시 2026-08-27)
+/* 작업 288 게이트 — «스킬 맞고 적이 밀려나지 않는다» (주인 지시 2026-08-27)
+ *   ⚠ 번호 이동(작업 286, 2026-08-28): 옛 `tools/verify185.js`(출력 V185). 185 가 두 벌 등재라 넉백 쪽을 288 로 옮겼다.
  *
- *   node tools/verify185.js
- *   V185_REF=<sha> node tools/verify185.js     # 그 커밋의 index.html 도 같이 돌려 before/after 비교
- *   V185_SEC=20 node tools/verify185.js
+ *   node tools/verify288.js
+ *   V288_REF=<sha> node tools/verify288.js     # 그 커밋의 index.html 도 같이 돌려 before/after 비교
+ *   V288_SEC=20 node tools/verify288.js
  *
  * ── 무엇을 어떻게 재는가 ──────────────────────────────────────────────
  * 적의 위치를 쓰는 코드는 **한 줄뿐**이다(index.html ~16353):
- *     e.x += (ax/al)*spd * dt;      (185 이전엔 여기에 `+ e.kx` 가 붙어 있었다)
+ *     e.x += (ax/al)*spd * dt;      (288 이전엔 여기에 `+ e.kx` 가 붙어 있었다)
  * 즉 이동 = «추격» + «넉백» 두 항의 합이고, 넉백만 따로 재려면 **추격 항을 0 으로 만들면 된다**.
  * 하니스는 매 틱 `e.sp = 0` 을 박는다(일반 몹은 `spd = e.sp * (slow?0.55:1)` 이라 그대로 0).
  * 그러면 남는 이동은 넉백뿐이므로 — **변위 0.00px = 넉백 없음** 이 산술적으로 동치가 된다.
@@ -33,8 +34,8 @@ const { execFileSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
-const SEC = Number(process.env.V185_SEC || 12);
-const REF = process.env.V185_REF || '';
+const SEC = Number(process.env.V288_SEC || 12);
+const REF = process.env.V288_REF || '';
 const ROOT = path.resolve(__dirname, '..');
 const LIM_MOVE = 0.01;      /* [2] 넉백 변위 상한 (px) — 산술적으로 0 이어야 한다 */
 const MIN_HIT = 5;          /* [2] 표본 하한 — 적중이 없으면 «안 밀렸다» 는 공백일 뿐이다 */
@@ -111,7 +112,7 @@ async function runOne(browser, url, id, chase) {
 
 function checkoutRef(sha) {
   const out = execFileSync('git', ['show', `${sha}:index.html`], { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 });
-  const p = path.join(ROOT, `.v185-before-${sha.slice(0, 7)}.html`);
+  const p = path.join(ROOT, `.v288-before-${sha.slice(0, 7)}.html`);
   fs.writeFileSync(p, out);
   return p;
 }
@@ -122,7 +123,7 @@ function checkoutRef(sha) {
   let refFile = null;
   try {
     if (REF) refFile = checkoutRef(REF);
-    const targets = [{ tag: 'after', file: process.env.V185_FILE ? path.resolve(process.env.V185_FILE) : path.join(ROOT, 'index.html') }];
+    const targets = [{ tag: 'after', file: process.env.V288_FILE ? path.resolve(process.env.V288_FILE) : path.join(ROOT, 'index.html') }];
     if (refFile) targets.unshift({ tag: 'before(' + REF.slice(0, 7) + ')', file: refFile });
 
     for (const t of targets) {
@@ -174,6 +175,6 @@ function checkoutRef(sha) {
   okc(ctl && ctl.maxMove >= MIN_CHASE,
       `추격 ON 최대 변위 ${ctl ? ctl.maxMove.toFixed(1) : '?'}px ≥ ${MIN_CHASE} — 자가 살아 있다(0.00 이 «측정 죽음» 이 아니다)`);
 
-  if (fails.length) { console.log('\nV185 FAIL'); process.exit(1); }
-  console.log(`\nV185 PASS (${SEC}초 × 경로 3종 + 양성 대조)`);
+  if (fails.length) { console.log('\nV288 FAIL'); process.exit(1); }
+  console.log(`\nV288 PASS (${SEC}초 × 경로 3종 + 양성 대조)`);
 })().catch(e => { console.error(e); process.exit(2); });

@@ -14618,7 +14618,7 @@ const GRADE_JUMP = 3;   /* 197 — wear 의 등급 점프 배율(전 구간 일�
      t:'beam'   적을 지지는 지속 빔(`zones` 에 `k:'laser'` 로 얹는다 — 수명·틱·정리 경로 재사용)
    · 등급 분포는 [4,4,5,5,5,4] = 27. 24 를 5 빼고 8 더하면 27 이라 «등급당 4종» 이 산술로 불가능해
      4~5 로 고르게 폈다(근거 `docs/review/193-신규공격스킬8종.md` §2).
-   · 185(넉백 폐지) 준수 — 신규 8종 어디에도 `e.kx/e.ky` 를 건드리는 코드가 없다.
+   · 288(넉백 폐지) 준수 — 신규 8종 어디에도 `e.kx/e.ky` 를 건드리는 코드가 없다.
      184(풀스크린 플래시 금지) 준수 — `magicFlash`(바닥 마법진)·`fxRing` 만 쓴다.
 
    작업 260(2026-08-27, 저장소 주인 지시) — «같은 등급 안 1→n 오름차순» 은 **장비·펫에만** 적용하고
@@ -16937,7 +16937,7 @@ function makeEnemy(tk){
     tk, T:T2, x, y, r:T2.r, hp, max:hp,
     dmg: eDmg(s)*T2.dmg, gold: eGold(s)*T2.gold,
     sp: (110 + 3*s*0.2) * T2.sp * rnd(0.9, 1.1),
-    cd: rnd(0, 0.6), born:0, fx:0, ph:Math.random()*6.28, flip:false, slow:0,   /* 185 — kx/ky 폐지 */
+    cd: rnd(0, 0.6), born:0, fx:0, ph:Math.random()*6.28, flip:false, slow:0,   /* 288 — kx/ky 폐지 */
     akey:T2.atlas, anim:T2.walk, at:Math.random()*4, afps:T2.fps, aloop:true, adone:false, atkT:0
   });
 }
@@ -17483,7 +17483,7 @@ function dmgNum(x, y, v, crit, src){
   }
   nums.push({ x, y: ny, v:fmtB(v), raw:v, src, t:0, crit, ox:nox });
 }
-/* 185 (주인 지시 2026-08-27) — «스킬 맞고 적이 밀려나지 않게». 넉백 인자(kx/ky)를 함수에서
+/* 288 (주인 지시 2026-08-27) — «스킬 맞고 적이 밀려나지 않게». 넉백 인자(kx/ky)를 함수에서
    아예 걷어냈다. 값만 0 으로 넘기면 «다음에 누군가 다시 채워 넣을 수 있는 문» 이 남는다.
    피격 반응은 `e.fx`(피격 플래시) + `hitRing`(피격 링) 이 그대로 맡는다 — 지운 것은 «이동» 뿐이다. */
 function hitEnemy(e, dmg, crit){
@@ -17611,7 +17611,7 @@ function areaDamage(x, y, r, dmg, col){
     if(!e) break;                       /* 110 — 순회 중 배열이 비워지는 경우(같은 방어) */
     if(e.born < 0.3) continue;
     const ex = e.x-x, ey = (e.y - e.r) - y;
-    if(ex*ex + ey*ey < (r+e.r)*(r+e.r)) hitEnemy(e, d, crit);   /* 185 — 반경 밀치기(ex*0.4) 폐지 */
+    if(ex*ex + ey*ey < (r+e.r)*(r+e.r)) hitEnemy(e, d, crit);   /* 288 — 반경 밀치기(ex*0.4) 폐지 */
   }
   burst(x, y, col || '#ffd08a', 12, 220);
   /* 114 — 모든 폭발형(화염구·운석·심판의 빛·창세의 폭발·86 area 계열)이 이 한 곳을 지난다.
@@ -18146,7 +18146,7 @@ function step(dt){
         if(dx*dx + dy*dy < (e.r+16)*(e.r+16)){
           e.orbCd = 0.3;
           const crit = Math.random() < stat.crit;
-          hitEnemy(e, od*(crit?stat.cdmg:1), crit);   /* 185 — 접선 밀치기(cos(a)*70) 폐지 */
+          hitEnemy(e, od*(crit?stat.cdmg:1), crit);   /* 288 — 접선 밀치기(cos(a)*70) 폐지 */
           burst(bx, by, '#ffd9a0', 4, 120);
           /* 114 ② — 지속형(회전검)도 «맞는 순간» 은 투사체와 같은 문법으로 읽혀야 한다.
              칼날은 접선 방향으로 도는 중이므로 스파크는 접선 반대로 튄다 */
@@ -18262,7 +18262,7 @@ function step(dt){
       /* 사거리 안에 들어오면 공격 «모션 중에만» 멈춘다 — 쿨다운 중에는 계속 붙어 따라간다 */
       if(e.atkT > 0 && d < e.r + player.r + 6) spd = 0;
     }
-    /* 185 — 이동은 «추격» 하나뿐이다. 넉백 속도항(e.kx/e.ky)과 그 감쇠를 걷어냈다.
+    /* 288 — 이동은 «추격» 하나뿐이다. 넉백 속도항(e.kx/e.ky)과 그 감쇠를 걷어냈다.
        172 가 실측한 넉백 평균 |k| 9.5px/s(추격의 8%)만큼 진행 방향 정렬이 1.000 에 붙는다. */
     e.x += (ax/al)*spd * dt;
     e.y += (ay/al)*spd * dt;
@@ -18483,7 +18483,7 @@ function step(dt){
                       x:ex + (b.x-ex)*0.25, y:ey + (b.y-ey)*0.25,
                       tg:e, toy:e.r - (b.y-ey)*0.25, t:0, life:0.16 });
         if(b.slow) e.slow = b.slow;
-        hitEnemy(e, dmg, crit);   /* 185 — 투사체 관통 밀치기(b.vx*0.05) 폐지 */
+        hitEnemy(e, dmg, crit);   /* 288 — 투사체 관통 밀치기(b.vx*0.05) 폐지 */
         /* 12회차 AO⑩·AP② 공통 — 관통 투사체(얼음창)가 **명중한 뒤에도** 계속 날아 좌측 UI 를 덮는다.
            AO 실측: trail-2 (231.5,438) → trail-7 (81.5,168) = 772 게임px/s 로 명중 후 **219 게임px**
            (화면 폭의 41%)를 더 간다. AP 실측: trail-7 에 창 bbox 게임 x66~94/y142~185 로
@@ -21488,7 +21488,7 @@ function startPromo(){
   const T2 = ETYPE.promo = promoType(ri), s = S.stage, hp = eHp(s)*BOSS_SEC;
   const cos = promoCos(ri);
   enemies.push({ tk:'promo', T:T2, x:player.x + 200, y:player.y, r:T2.r, hp, max:hp,
-    dmg:eDmg(s)*T2.dmg, gold:0, sp:(110+3*s*0.2)*T2.sp, cd:0.5, born:0, fx:0,   /* 185 — kx/ky 폐지 */
+    dmg:eDmg(s)*T2.dmg, gold:0, sp:(110+3*s*0.2)*T2.sp, cd:0.5, born:0, fx:0,   /* 288 — kx/ky 폐지 */
     ph:Math.random()*6.28, flip:false, slow:0,
     /* 208 ① — 123 아레나와 같은 `e.tint` 경로(전투 렌더가 `tinted(T.atlas, e.tint)` 로 그린다).
        틴트가 없으면(코스튬 데이터가 빈 칸) img 가 null 이라 무틴트 기사로 그려진다. */

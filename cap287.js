@@ -1,5 +1,6 @@
-/* 63 탭바 상단 검정 테두리 — 상태 5종 캡처 + 탭바 상단 기하 실측
- *   node cap63.js <접두사> [세로]   → docs/review/<접두사>-{main,train,shop,equip,skill}.png
+/* 287 탭바 상단 검정 테두리 — 상태 5종 캡처 + 탭바 상단 기하 실측
+ *   ⚠ 번호 이동(작업 286, 2026-08-28): 옛 `cap63.js`. 63 이 두 벌 등재라 탭바 쪽을 287 로 옮겼다.
+ *   node cap287.js <접두사> [세로]   → docs/review/<접두사>-{main,train,shop,equip,skill}.png
  *   세로 기본 2280 (2026-08-25 기준 화면비 9:19). 1920(구 9:16)도 그대로 돈다 —
  *   탭바 상단 y 는 하드코딩하지 않고 DOM 에서 떠서 -geo.json 에 남긴다.
  * 각 상태에서 #tabbar 의 border-box / 화면 y 와 캡처 위 탭바 상단 y 를 함께 덤프한다.
@@ -17,7 +18,7 @@ const STATES = [
 ];
 
 (async () => {
-  const pre = process.argv[2] || '63-r1';
+  const pre = process.argv[2] || '287-r1';
   const VH = Number(process.argv[3] || 2280);
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const errs = [];

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""63 탭바 상단 검정 테두리 — 검증기 (지시서 [3]-(가) 기계적 작업)
+"""287 탭바 상단 검정 테두리 — 검증기 (지시서 [3]-(가) 기계적 작업)
 
-  node cap63.js 63-before [세로]   # 수정 전 캡처
+  ⚠ 번호 이동(작업 286, 2026-08-28): 예전 `verify63.py`(출력 VERIFY63). 63 이 두 벌 등재라 탭바 쪽을 287 로 옮겼다.
+
+  node cap287.js 287-before [세로]   # 수정 전 캡처
   ...수정...
-  node cap63.js 63-after  [세로]   # 수정 후 캡처
-  python3 verify63.py [접두사-before] [접두사-after]
+  node cap287.js 287-after  [세로]   # 수정 후 캡처
+  python3 verify287.py [접두사-before] [접두사-after]
 
 판정 3종:
   A. 레퍼런스 프로파일 일치 — 5개 상태 × 깨끗한 열에서 탭바 상단 0..9행이 ref 실측과 Δ≤2
@@ -15,10 +17,10 @@ import json
 import sys
 from PIL import Image
 
-PRE_A = sys.argv[1] if len(sys.argv) > 1 else '63-before'
-PRE_B = sys.argv[2] if len(sys.argv) > 2 else '63-after'
+PRE_A = sys.argv[1] if len(sys.argv) > 1 else '287-before'
+PRE_B = sys.argv[2] if len(sys.argv) > 2 else '287-after'
 
-# 캡처에서 #tabbar 상단 y 는 하드코딩하지 않는다 — cap63.js 가 DOM 에서 떠 준 값을 상태별로 읽는다.
+# 캡처에서 #tabbar 상단 y 는 하드코딩하지 않는다 — cap287.js 가 DOM 에서 떠 준 값을 상태별로 읽는다.
 # (2026-08-25 기준 화면비가 9:16→9:19 로 바뀌어 탭바 y 가 1740→2100 이 됐다. 이 검증은 그와 무관하게 돈다)
 REF_TOP = 2161          # 레퍼런스(1080x2340)에서 #tabbar 상단 y — 5장 실측 앵커
 
@@ -51,7 +53,7 @@ def ok(m):
     print('  o ' + m)
 
 
-# cap63.js 가 DOM 에서 떠 준 기하 — 탭바 상단 y 와 «유휴값» 마스크 사각형이 들어 있다.
+# cap287.js 가 DOM 에서 떠 준 기하 — 탭바 상단 y 와 «유휴값» 마스크 사각형이 들어 있다.
 GEO = json.load(open(f'docs/review/{PRE_B}-geo.json'))
 
 
@@ -82,7 +84,7 @@ for st in STATES:
 
 # ---- B/C. 회귀 — before 대비 달라진 행이 탭바 상단 9행뿐 --------------------------
 # 유휴 루프가 굴리는 값(닉네임·시설 타이머·스킬 슬롯 쿨다운·스테이지 진행)은 제외한다 — LESSONS 51-③.
-# 사각형은 하드코딩이 아니라 cap63.js 가 DOM 에서 떠 준 것을 읽는다.
+# 사각형은 하드코딩이 아니라 cap287.js 가 DOM 에서 떠 준 것을 읽는다.
 print('B. 밴드 시프트 0 · C. 변경 구간 국한 (before vs after, 유휴값 제외)')
 for st in STATES:
     TAB_TOP = tab_top(st)
@@ -113,5 +115,5 @@ for st in STATES:
 
 print()
 print(f'통과 {oks} / 실패 {len(fails)}')
-print('VERIFY63 PASS' if not fails else 'VERIFY63 FAIL')
+print('VERIFY287 PASS' if not fails else 'VERIFY287 FAIL')
 sys.exit(1 if fails else 0)
