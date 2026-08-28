@@ -30,7 +30,6 @@
  */
 'use strict';
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
@@ -174,8 +173,10 @@ function report(tag, s) {
   let beforeFile = null;
   try {
     const buf = execFileSync('git', ['show', `${BEFORE_REF}:index.html`], { cwd: ROOT, maxBuffer: 1 << 28 });
-    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'p360-'));
-    beforeFile = path.join(d, 'index.html');
+    /* ⚠ **저장소 루트**에 둔다(229 선례). index.html 이 btn.png·hdr.png 를 상대 경로로 물고 있어
+       /tmp 에 두면 리소스가 404 가 되고, 배경이 달라지면 차분으로 뜬 «찍힌 픽셀» 도 달라진다
+       (1회차에 수리 전 편차가 +20.6/+20.9/−13.5% → +23.4/+18.3/−12.5% 로 흔들린 원인이다). */
+    beforeFile = path.join(ROOT, '.v360-before.html');
     fs.writeFileSync(beforeFile, buf);
   } catch (e) {
     console.log(`  [!] 수리 전 사본(${BEFORE_REF})을 못 꺼냈다 — «전» 블록은 건너뛴다: ${e.message}`);
@@ -242,6 +243,7 @@ function report(tag, s) {
   ok(errB.length === 0, `[후] 콘솔 에러 0건${errB.length ? ': ' + errB.join(' | ') : ''}`);
 
   await b.close();
+  if (beforeFile) { try { fs.unlinkSync(beforeFile); } catch (_) {} }
   console.log(`\nPROBE360 ${pass}/${pass + fail}` + (fail ? '  ← FAIL ' + fail + '건' : ''));
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('probe360 즉사:', e); process.exit(2); });

@@ -66,8 +66,8 @@ const setup = () => {
     const cs = getComputedStyle(document.getElementById('app'));
     return { appH: +app.height.toFixed(1),
       vars: { ih: cs.getPropertyValue('--ih').trim(), igap: cs.getPropertyValue('--igap').trim(),
-              itop: cs.getPropertyValue('--itop').trim(), isolo: cs.getPropertyValue('--isolo').trim(),
-              isgap: cs.getPropertyValue('--isgap').trim(), ilh: cs.getPropertyValue('--ilh').trim() },
+              itop: cs.getPropertyValue('--itop').trim(), ilh: cs.getPropertyValue('--ilh').trim() },
+              /* 360(2026-08-29) — --isolo/--isgap 은 «출석» 단독 규격과 함께 삭제됐다(빈 문자열이 찍히던 자리) */
       sideL: g(document.getElementById('sideL')),
       menub: g(document.getElementById('menub')),
       stage: g(document.getElementById('stagearea')),

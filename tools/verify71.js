@@ -89,45 +89,52 @@ const near = (a, b, t) => Math.abs(a - b) <= t;
         **우연히 걸려 초록**이었다(부패가 부패인 줄 모르는 상태 — 212-②).
      ⇒ 기대값의 출처를 «옛 실측 스냅샷» 에서 **«측정표의 ref 좌표»** 로 바꾼다(212-①: 화면이 쓴 식이 아니라
         화면이 **따라야 할 근거 데이터**에서 만든다). 변환은 지시서 [2] 의 단 하나 — **프레임 y = ref y − 84**. */
-  const SB = 84;                                    /* 레퍼런스 최상단 상태바(안전영역) */
-  /* A2 측정표 §1-1·§1-2 «셀 top»(ref 1080×2340 좌표) + §7 칸 배정 */
-  const REF_TOP = { attend: 260, roul: 421, quest: 556, promo: 686, coll: 820, bless: 958 };
+  /* ⚑ 360 이관(2026-08-29, 저장소 주인 지시 — sess-2100-32546 워커 D).
+     229 가 «옛 실측 스냅샷» 을 버리고 **측정표의 ref 좌표**를 정본으로 삼은 것이 옳았고, 제품은
+     그 뒤로 ref 를 Δ0 으로 따르고 있었다(`tools/probe360.js` [전·전제] 가 수리 전 커밋에서 직접 확인).
+     360 은 그 정본을 **주인 지시로 덮는다** — 원문 «왼쪽에 출석보상만 왼쪽 버튼들이랑 간격이랑
+     크기가 달라보이더라. 다른거랑 같게 해줘. 축복버튼도 그렇네». 레퍼런스의 1행은 «라벨 없는 단독
+     버튼(아트 101 · 아래 gap 60)» 이고 그것이 정확히 주인이 «다르다» 고 본 것이라, 여기서는
+     **레퍼런스가 아니라 지시가 정본**이다(의도적 이탈 — 측정표 §0 정오표 360).
+     ⇒ 기대값의 출처를 «측정표 ref 좌표» 에서 **«360 이 정한 통일 규격»** 으로 옮긴다.
+        여전히 «화면이 쓴 식» 이 아니라 **따라야 할 규격**에서 만든다(212-①) — 아래 세 상수가 전부다. */
+  const TOP0 = 176;      /* 1행 셀 top(프레임) — 360 이 안 건드린 값. ref 260 − 84 와 같다 */
+  const PITCH = 134;     /* 셀 114(아트 82 + 라벨 32) + gap 20 — 전 행 등간격 */
   /* 측정표 §7 이 배정한 좌1~좌6. 게이트 자기 상수다 — 페이지에서 읽어 오면 항등식이 된다(212-①). */
   const ROSTER = ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'];
-  ok(`#sideL 행 ${ROSTER.length}개(1 단독 + 라벨 ${ROSTER.length - 1})`,
+  ok(`#sideL 행 ${ROSTER.length}개(360 이후 전부 같은 규격 — 단독행 없음)`,
      side.rows.length === ROSTER.length, keys.join(','));
   ok('#sideL 에 mail 없음', !keys.includes('mail'), keys.join(','));
   ok(`#sideL 순서 = ${ROSTER.join(',')}`, keys.join(',') === ROSTER.join(','), keys.join(','));
-  /* 48·71·83 주석이 되풀이 약속하는 «행 그리드가 안 흔들리는 이유» = 라벨행 수가 SIDE.N 과 같다는 것.
-     상수(`SIDE.N = 5`)와 관계(«라벨행 수 = SIDE.N»)를 **따로** 못 박는다 — 한 줄에 묶으면
+  /* 48·71·83 주석이 되풀이 약속하는 «행 그리드가 안 흔들리는 이유» = 행 수가 SIDE.N 과 같다는 것.
+     상수(`SIDE.N`)와 관계(«행 수 = SIDE.N»)를 **따로** 못 박는다 — 한 줄에 묶으면
      «칸을 늘리며 SIDE.N 도 같이 올리는» 회귀에서 어느 쪽이 깨졌는지 안 보이고, 관계 쪽은 그때
-     **초록으로 샌다**(되돌림 N5·N6 이 두 경우를 갈라 때린다). */
+     **초록으로 샌다**(되돌림 N5·N6 이 두 경우를 갈라 때린다).
+     360 전에는 N 이 «라벨행 수»(=5, 단독행은 별도)였고 지금은 «전 행 수»(=6)다. */
   const nLab = side.rows.filter(r => !r.solo).length, nSolo = side.rows.filter(r => r.solo).length;
-  ok('SIDE.N = 5(A2 행 그리드 규격 — 48·71·83 이 되풀이 약속한 값)', side.N === 5, side.N);
-  ok('라벨행 수 = SIDE.N · 단독행 1개', nLab === side.N && nSolo === 1,
+  ok('SIDE.N = 6(360 통일 규격 — 이제 «전 행 수» 다)', side.N === 6, side.N);
+  ok('행 수 = SIDE.N · 단독행 0개(360 — `.solo` 규격 폐지)', nLab === side.N && nSolo === 0,
      `SIDE.N=${side.N} / 라벨 ${nLab} / 단독 ${nSolo}`);
-  side.rows.forEach(r => {
-    const exp = REF_TOP[r.k] != null ? REF_TOP[r.k] - SB : null;
-    ok(`행 ${r.k} y=${exp == null ? '?' : exp}(=ref ${REF_TOP[r.k]} − ${SB})`,
-       exp != null && near(r.box.y, exp, 1.5), r.box.y);
+  side.rows.forEach((r, i) => {
+    const exp = TOP0 + PITCH * i;
+    ok(`행 ${r.k} y=${exp}(=${TOP0} + ${PITCH}×${i})`, near(r.box.y, exp, 1.5), r.box.y);
   });
-  /* pitch — 측정표 §1-2·§0 정오표의 «균등이 아니다» 를 그대로 못 박는다.
-     셀 top 차분(161/135/130/134/138)과 §1-2 pitch 행(161/135/131/133/138)이 **3·4행에서 1px 엇갈리는데**
-     제품은 pitch 행을 따른다(promo 603 = 472+131, ref−84 는 602 — 둘 다 허용오차 안이고 coll 에서 다시 합류한다).
-     여기서는 **제품이 따르는 pitch 행**을 정본으로 재고, 위 y 단언이 ref 절대좌표를 따로 잡는다. */
-  const REF_PITCH = [161, 135, 131, 133, 138];
   const gotPitch = side.rows.slice(1).map((r, i) => +(r.box.y - side.rows[i].box.y).toFixed(2));
   /* 허용오차 0.5 — 실측이 화면비 4종(1600·1920·2280·2600)에서 **Δ0.00** 이다(`tools/probe229.js`).
-     y 쪽 1.5 와 달리 여기를 조일 수 있는 이유: pitch 는 차분이라 --itop·HUD 오프셋이 소거되고,
-     측정표의 1px 내부 불일치(위 주석)도 절대좌표에만 걸린다. */
-  REF_PITCH.forEach((p, i) => ok(`pitch ${i + 1}→${i + 2} = ${p}(§1-2)`,
-     gotPitch[i] != null && near(gotPitch[i], p, 0.5), gotPitch[i]));
-  /* 「균등 134」로 되돌아가는 회귀를 그 자리에서 잡는다 — 위 pitch 단언과 축이 겹치지만,
-     이 한 줄이 없으면 «옛 가정이 부활했다» 가 개별 px 오차로만 보이고 원인이 안 보인다(214-④ «세 벌»). */
-  const lab = gotPitch.slice(1);
-  ok('라벨행 pitch 균등 아님(§0 정오표 — 균등 134 가정 폐기)',
-     lab.length === 4 && Math.max(...lab) - Math.min(...lab) >= 4,
-     `${lab.join('/')} (편차 ${(Math.max(...lab) - Math.min(...lab)).toFixed(2)})`);
+     y 쪽 1.5 와 달리 여기를 조일 수 있는 이유: pitch 는 차분이라 --itop·HUD 오프셋이 소거된다. */
+  gotPitch.forEach((_, i) => ok(`pitch ${i + 1}→${i + 2} = ${PITCH}(360 등간격)`,
+     gotPitch[i] != null && near(gotPitch[i], PITCH, 0.5), gotPitch[i]));
+  /* 「ref 의 비균등 pitch(161/135/131/133/138)」로 되돌아가는 회귀를 그 자리에서 잡는다 —
+     위 pitch 단언과 축이 겹치지만, 이 한 줄이 없으면 «옛 규격이 부활했다» 가 개별 px 오차로만
+     보이고 원인이 안 보인다(214-④ «세 벌»). 특히 1행은 옛 gap 60 탓에 혼자 27px 튀던 자리다. */
+  ok('6행 pitch 등간격(360 — ref 의 비균등 161/135/131/133/138 이 부활하지 않았다)',
+     gotPitch.length === 5 && Math.max(...gotPitch) - Math.min(...gotPitch) <= 0.5,
+     `${gotPitch.join('/')} (편차 ${(Math.max(...gotPitch) - Math.min(...gotPitch)).toFixed(2)})`);
+  /* 360 의 «크기» 축 — 구조만 본다(잉크 bbox 는 `verify360` 이 차분법으로 잰다).
+     여기 한 줄을 두는 이유: 셀 높이가 한 행만 달라지는 회귀(=`.solo` 부활)는 좌표보다 이쪽이 먼저 깨진다. */
+  ok('6행 셀 높이가 전부 114(아트 82 + 라벨 32) — 한 행만 다른 규격이 아니다',
+     side.rows.every(r => near(r.box.h, 114, 0.5)),
+     side.rows.map(r => r.box.h).join('/'));
   ok('행 그리드 변수 불변(--ih 82 · --igap 20 · --itop 72)',
      side.vars.ih === '82.00px' && side.vars.igap === '20.00px' && side.vars.itop === '72.00px',
      JSON.stringify(side.vars));
