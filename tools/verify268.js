@@ -193,7 +193,7 @@ const READ = (partList) => {
   eq('[유물] 표 헤더', D.relic.ctHd.join('/'), '효과/소환 Lv');
   eq('[유물] 표 값 좌 = 효과', D.relic.ctVl[0], seed.rlEff);
   eq('[유물] 표 값 우 = Lv', D.relic.ctVl[1], '4');
-  eq('[펫] 설명 헤더', D.pet.sl, '동료 설명');
+  eq('[펫] 설명 헤더', D.pet.sl, '펫 설명');   /* 369 이관 — 173 «펫 전수 통일» 이 놓쳤던 파생 문자열(`kindN`). 자리·뜻은 그대로: 알약은 계열 이름을 그대로 적는다 */
   eq('[장비] 설명 헤더', D.equip.sl, '장비 설명');
   eq('[유물] 설명 헤더', D.relic.sl, '유물 설명');
   eq('[펫] Lv 칸', D.pet.lv, 'Lv. 3');
