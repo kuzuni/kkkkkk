@@ -14812,8 +14812,12 @@ function drawSpriteTo(canvas, o){
      절단이 그대로 **바닥으로 옮겨 갔다**(6회차 비평가 I·J 독립 확인 + `probe121 cut` 확장판
      실측 «레이드1 바닥 접촉 최대 101px · 14/14 위상»). 가로는 그대로 꽉 채우고(97 의 종횡 규칙 유지)
      **세로로만** 위아래 `padY` 를 비워 들썩이 잘리지 않고 들어갈 자리를 만든다. */
+  /* 72 12회차 — `o.fitBox`([w,h])가 오면 **그 박스**를 contain 한다(프레임 자기 rect 가 아니라).
+     한 사이클의 성분별 최대 rect 를 넣으면 배율이 프레임마다 다시 풀리지 않는다 — `thFitBox` 주석 참고.
+     안 오면 예전 그대로 자기 rect 를 담으므로 다른 호출부(펫·도감·아레나)는 한 픽셀도 안 바뀐다. */
   const sp = o.fit | 0, py = o.padY | 0;
-  const k  = sp ? Math.min((W - sp*2) / fr[2], (H - sp*2) / fr[3]) : 0;
+  const bw = (o.fitBox && o.fitBox[0]) || fr[2], bh = (o.fitBox && o.fitBox[1]) || fr[3];
+  const k  = sp ? Math.min((W - sp*2) / bw, (H - sp*2) / bh) : 0;
   const dw = sp ? Math.max(1, Math.round(fr[2] * k)) : W;
   const dh = sp ? Math.max(1, Math.round(fr[3] * k)) : Math.max(1, H - py*2);
   const dx = Math.round((W - dw) / 2), dy = Math.round((H - dh) / 2);
@@ -23711,6 +23715,16 @@ const TH_IDLE = {
   'zombie/walk':     ['walk_006', 'walk_007', 'walk_008'],
   'elves/blue_idle': ['blue_idle_0', 'blue_idle_1', 'blue_idle_2', 'blue_idle_1'],
   'elves/green_idle':['green_idle_0', 'green_idle_1', 'green_idle_2', 'green_idle_1'],
+  /* 72 12회차 — `rstone`(룬강화석) 카드는 아이들 창이 없어 **공격 사이클을 통째로** 돌고 있었다.
+     그 사이클은 rect 가 107×134 → **234**×134 로 벌어져(칼을 뻗은 포즈가 기준 포즈의 2.2배 폭)
+     ① 창 없이 두면 프레임마다 배율이 다시 풀려 크기가 맥동하고(스윙 77.3%)
+     ② 배율을 사이클 최대 박스로 고정하면 서 있는 포즈가 액자의 21% 밖에 안 차게 된다.
+     둘 다 «공격 사이클을 아이들로 쓴 것» 이 원인이다 — 258 이 04 배너에서 같은 것을 만나
+     «기준 포즈로 고정하는 것이 정지 상태의 정답» 으로 닫았다(`blue_attack_3` 은 기준 포즈의 1.8배 폭).
+     행 카드는 정지가 아니라 들썩이므로 «기준 포즈 한 장» 대신 **뻗기 전 3포즈**로 창을 좁힌다:
+     rect 107·106·123 (최대 박스 123×134) 이라 배율 k=2.06 이 유지되면서 실루엣은 계속 움직인다.
+     121 6회차가 elves 두 벌에 쓴 `_0 _1 _2 _1` 왕복 형태를 그대로 따른다. */
+  'elves/blue_attack':['blue_attack_0', 'blue_attack_1', 'blue_attack_2', 'blue_attack_1'],
 };
 /* `stepAnim` 은 `aloop` 일 때 `at` 을 그냥 누적하므로(자르지 않는다) 창 길이로 나머지만 취하면 된다.
    창이 없으면 80 의 `curFrame` 이 그대로 전 사이클을 돈다. */
@@ -23718,6 +23732,36 @@ function thCurFrame(e){
   const w = TH_IDLE[e.akey + '/' + e.anim];
   if(!w) return curFrame(e);
   return w[Math.floor(e.at) % w.length];
+}
+/* 72 12회차 — **액자 배율은 한 사이클 내내 하나여야 한다.**
+   `drawSpriteTo(fit)` 는 «그 프레임의 아틀라스 rect» 를 contain 하므로, rect 크기가 프레임마다 다른
+   애니는 같은 캐릭터가 프레임마다 다시 정규화된다 — 화면에서는 «부풀었다 쪼그라든다» 로 읽힌다.
+   258 이 04 세부 팝업 배너에서 같은 것을 12.9~45.9% 로 실측했지만 03 행 카드는 그때 손대지 않았고,
+   `tools/probe72k.js` 로 재니 **카드8 elves/blue_attack 77.3%**(k 2.06 → 1.18) · 카드4 zombie/walk 8.8% ·
+   카드2 bird 3.2% 로 남아 있었다. 11회차 비평가 AB·AC 가 둘 다 ② 를 6 으로 찍은 자리다.
+
+   고치는 방법은 «어느 rect 를 contain 하는가» 한 곳뿐이다 — 프레임 자기 rect 가 아니라
+   **실제로 도는 프레임 집합의 성분별 최대 rect**(아래 박스)를 contain 한다. 그러면
+     ① 배율 k 가 사이클 내내 상수 = 크기 맥동 0
+     ② 가장 큰 포즈가 액자를 정확히 채운다(짧은 축 여백 = TH_PAD) — «담긴 그림» 규칙은 그대로
+     ③ 작은 포즈는 그만큼 작게 그려진다 = 원래 애니가 의도한 크기 변화만 남는다
+   «도는 집합» 은 121 6회차의 아이들 창(`TH_IDLE`)이 있으면 창, 없으면 전 사이클이다 —
+   화면에 안 나오는 프레임까지 세면 액자가 쓸데없이 작아진다.
+   ⚠ 성분별 최대(가로 최대 · 세로 최대)를 쓰므로 두 축이 서로 다른 프레임에서 와도
+      k = min(...) 이라 **어느 프레임도 액자를 넘지 않는다**(verify72 [1-2]·[1-3] 이 지킨다).
+   레이드·아레나(`.dnc.rd`)는 `fit:0` «꽉 채우기» 라 이 경로를 안 탄다(97 규칙 불변). */
+const TH_FITBOX = {};
+function thFitBox(key, frame, anim){
+  const A = ATLAS[key];
+  if(!A || !A.f) return null;
+  const id = key + '/' + (anim || '#' + frame);
+  if(TH_FITBOX[id]) return TH_FITBOX[id];
+  const list = TH_IDLE[key + '/' + anim] || (anim && A.a && A.a[anim]) || (frame ? [frame] : null);
+  if(!list || !list.length) return null;
+  let w = 0, h = 0;
+  for(const fn of list){ const fr = A.f[fn]; if(!fr) continue; if(fr[2] > w) w = fr[2]; if(fr[3] > h) h = fr[3]; }
+  if(!w || !h) return null;              /* 아틀라스가 아직 안 왔다 — 캐시하지 않고 프레임 rect 로 떨어진다 */
+  return (TH_FITBOX[id] = [w, h]);
 }
 function raidEnt(cv){
   /* 아레나 두 칸은 몬스터가 아니라 기사다 — 아틀라스·애니 이름이 다르고, 위상은 «내 칸/상대 칸» 으로 가른다 */
@@ -23779,6 +23823,8 @@ function raidDraw(cv, pin){
   const rd = !!cv.closest('.dnc.rd');
   return thPlace(cv, drawSpriteTo(cv, { k: cv.dataset.thk, frame: cv._fr, tint: cv.dataset.thc,
                             fit: rd ? 0 : TH_PAD, padY: rd ? TH_BOBPAD : 0,
+                            /* 72 12회차 — 액자(던전 카드)만 «사이클 최대 rect» 를 담는다. 레이드는 꽉 채우기라 없음 */
+                            fitBox: rd ? null : thFitBox(cv.dataset.thk, cv._fr, cv.dataset.thi),
                             bright: +cv.dataset.thbr || 1 }));
 }
 let raidIdleT0 = 0;

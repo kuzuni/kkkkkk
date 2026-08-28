@@ -74,6 +74,12 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
               if (x < a0) a0 = x; if (x > a1) a1 = x; if (y < b0) b0 = y; if (y > b1) b1 = y; }
           }
           src = { fw: fr[2], fh: fr[3], w: a1 - a0 + 1, h: b1 - b0 + 1 };
+          /* 72 12회차 — 액자 배율의 기준이 «이 프레임의 rect» 에서 «사이클 성분별 최대 rect» 로 옮겼다.
+             게이트도 같은 박스를 봐야 «담았다» 를 잴 수 있다(자를 제품과 같은 함수에서 받는다). */
+          const fb = (typeof thFitBox === 'function')
+            ? thFitBox(cv.dataset.thk, cv._fr || cv.dataset.thf, cv.dataset.thi) : null;
+          src.bw = (fb && fb[0]) || fr[2];
+          src.bh = (fb && fb[1]) || fr[3];
         }
         art = { px: [cv.width, cv.height], css: [cv.offsetWidth, cv.offsetHeight],
                 k: cv.dataset.thk, f: cv._fr || cv.dataset.thf, i: cv.dataset.thi,
@@ -175,14 +181,19 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
        잉크는 그 안에 있으므로 기대 잉크 크기 = 원본 잉크 × k. 늘리면(=97 의 꽉 채우기) 여기서 걸린다.
        ⚠ 아틀라스 프레임은 사방에 투명 1~2px 을 갖고 있어 «잉크 = 프레임» 이 아니다 —
           그래서 여백 상한이 아니라 이 대조가 종횡 왜곡 0 의 진짜 게이트다. */
-    const k = Math.min((a.px[0] - PAD * 2) / a.src.fw, (a.px[1] - PAD * 2) / a.src.fh);
+    /* ⚠ 72 12회차 — 배율 k 의 기준이 «이 프레임의 rect» → «사이클 성분별 최대 rect»(`thFitBox`) 로 옮겼다.
+       단언을 지우지 않고 **자만 옮긴다**(LESSONS 185-④) — «늘리면 걸린다» 는 성질은 그대로다. */
+    const k = Math.min((a.px[0] - PAD * 2) / a.src.bw, (a.px[1] - PAD * 2) / a.src.bh);
     const ew = a.src.w * k, eh = a.src.h * k;
     ok(Math.abs(a.ink.w - ew) <= 2 && Math.abs(a.ink.h - eh) <= 2,
        `카드${i + 1} 종횡 왜곡 0 — 잉크 ${a.ink.w}×${a.ink.h} = 원본 ${a.src.w}×${a.src.h} × ${k.toFixed(3)} (${ew.toFixed(1)}×${eh.toFixed(1)})`);
-    /* 짧은 축은 «프레임 rect» 가 액자 여백에 딱 맞는다(잉크가 아니라 — 프레임의 투명 여백만큼은 더 들어간다) */
-    const slack = Math.min(a.px[0] - a.src.fw * k, a.px[1] - a.src.fh * k) / 2;
+    /* 짧은 축은 **사이클 최대 박스**가 액자 여백에 딱 맞는다 — 즉 «가장 큰 포즈가 액자를 채운다».
+       지금 그려진 프레임은 그보다 작을 수 있고(그게 애니가 의도한 크기 변화다), 그 여유는
+       바로 위 «사방 여백 ≥ PAD−1» 이 따로 지킨다. 12회차 전에는 이 자리가 «이 프레임의 rect» 였고,
+       그래서 프레임마다 배율이 다시 풀리는 것을 **게이트가 오히려 요구하고 있었다**. */
+    const slack = Math.min(a.px[0] - a.src.bw * k, a.px[1] - a.src.bh * k) / 2;
     ok(Math.abs(slack - PAD) <= 1,
-       `카드${i + 1} 짧은 축이 액자를 채운다 — 프레임 여백 ${slack.toFixed(1)} = ${PAD}`);
+       `카드${i + 1} 짧은 축이 액자를 채운다 — 사이클 최대 박스 ${a.src.bw}×${a.src.bh} 여백 ${slack.toFixed(1)} = ${PAD}`);
     /* 97 [2] 는 «잉크 휘도 > 면 휘도 − 20» 이었는데, **면보다 어둡기만 안 하면 통과**라 카드1·5 가
        비율 1.00·1.11 로 «있으나 안 보이는» 상태를 통과시켰다(126 «있는데 안 보이던 줄눈» 과 같은 종류).
        비율로 바꾼다. 여기 `face` 는 `--i` 원색이고 실제 면은 그 위에 검정 22~52% 가 덮여 더 어두우므로,
@@ -227,22 +238,36 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
     ok(fs.size === v.length, `재사용 «${k}» 는 시작 프레임이 서로 다르다 (${v.join(' vs ')})`);
   });
 
-  /* [1-3] 아이들 애니 **전 프레임**에서 안 잘린다.
+  /* [1-3] 아이들 애니 **전 프레임**에서 안 잘린다 + **배율이 사이클 내내 하나다**(12회차 신설).
      위 [1-2] 는 «한 순간» 만 잰다. 아틀라스 애니는 프레임마다 rect 크기가 다르고
-     (zombie walk 는 201×178 ~ 174×235 로 흔들린다) contain 배율이 프레임마다 다시 풀리므로
-     한 장이 통과했다고 전부 통과가 아니다 — 121-⑥ 이 이걸 8fps 로 돌린다. */
-  console.log('[1-3] 아이들 애니 전 프레임 — 액자 안에서 안 잘린다');
+     (zombie walk 는 201×178 ~ 174×235 로 흔들린다) 한 장이 통과했다고 전부 통과가 아니다 —
+     121-⑥ 이 이걸 8fps 로 돌린다.
+     ⚠ 12회차 전에는 이 절이 `fitBox` 없이 다시 그려 **화면과 다른 그림을 재고 있었다**(72 8회차 경고
+        «게이트가 화면과 다른 그림을 본다» 의 재발). 이제 제품과 같은 옵션으로 그린다.
+     ⚠ 도는 집합은 121 의 아이들 창(`TH_IDLE`)이 있으면 창이다 — 화면에 안 나오는 프레임을 세면
+        «액자를 넘는다» 가 거짓으로 뜬다. probe72k 와 같은 집합을 본다. */
+  console.log('[1-3] 아이들 애니 전 프레임 — 액자 안 · 배율 불변');
   const perFrame = await p.evaluate((PAD) => {
     const out = [];
     [...document.querySelectorAll('#dunList .dnc:not(.rd)>.th>canvas.thcv')].forEach((cv, ci) => {
       const A = ATLAS[cv.dataset.thk];
-      const list = (A && A.a[cv.dataset.thi]) || [cv.dataset.thf];
-      let worst = 1e9, worstFn = '';
+      const anim = cv.dataset.thi;
+      const win = (typeof TH_IDLE !== 'undefined' && TH_IDLE[cv.dataset.thk + '/' + anim]) || null;
+      const list = win || (A && A.a[anim]) || [cv.dataset.thf];
+      let worst = 1e9, worstFn = '', kMin = 1e9, kMax = -1;
       const keep = cv._fr;
+      /* ⚠ 배율을 게이트가 **다시 계산하면 안 된다** — 그러면 «제품이 무엇으로 그렸나» 가 아니라
+         «게이트가 무엇으로 그렸을까» 를 재게 되어 되돌림 시험에서도 초록으로 남는다(실제로 12회차에
+         한 번 그렇게 짰다가 A/B 로 걸렸다. 279 «죽은 되돌림 시험» 과 같은 종류).
+         `raidDraw(cv, pin)` 은 제품 경로 그대로이고 `thPlace` 가 `drawSpriteTo` 의 `{dx,dy,dw,dh}` 를
+         돌려주므로, **화면에 실제로 그려진 크기**에서 배율을 역산한다. */
+      const paint = (fn) => raidDraw(cv, fn);
       for (const fn of list) {
-        if (!A.f[fn]) continue;
-        drawSpriteTo(cv, { k: cv.dataset.thk, frame: fn, tint: '', fit: PAD,
-                           bright: +cv.dataset.thbr || 1 });
+        const fr = A && A.f[fn];
+        if (!fr) continue;
+        const r = paint(fn);
+        const k = (r && r.dw) ? r.dw / fr[2] : -1;
+        if (k < kMin) kMin = k; if (k > kMax) kMax = k;
         const im = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
         let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
         for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
@@ -253,15 +278,23 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ✓', m); } else { fail++
         const m = Math.min(x0, y0, cv.width - 1 - x1, cv.height - 1 - y1);
         if (m < worst) { worst = m; worstFn = fn; }
       }
-      if (keep) drawSpriteTo(cv, { k: cv.dataset.thk, frame: keep, tint: '', fit: PAD,
-                                   bright: +cv.dataset.thbr || 1 });
-      out.push({ card: ci + 1, n: list.length, worst, worstFn });
+      if (keep) paint(keep);
+      out.push({ card: ci + 1, n: list.length, worst, worstFn, win: !!win,
+                 swing: kMax > 0 ? (kMax / kMin - 1) * 100 : 0 });
     });
     return out;
   }, PAD);
   perFrame.forEach((f) => {
     ok(f.worst >= PAD - 1,
        `카드${f.card} 아이들 ${f.n}프레임 전부 액자 안 — 최소 여백 ${f.worst} (최악 ${f.worstFn}) ≥ ${PAD - 1}`);
+    /* 12회차 신설 — «같은 캐릭터가 프레임마다 다시 정규화되지 않는다».
+       고치기 전 실측(`tools/probe72k.js`): 카드8 elves/blue_attack **77.3%** · 카드4 zombie/walk 8.8% ·
+       카드2 bird 3.2%. 되돌리면 카드8 이 그 값으로 돌아가 즉시 빨개진다(A/B 확인).
+       ⚠ 1.0% 는 **정수 반올림 여유**다 — 배율을 `dw/rect.w` 로 역산하는데 `dw = round(rect.w × k)` 라
+          오차가 최대 `0.5/rect.w` 다. 여기서 가장 좁은 rect 는 bird 82px 이라 0.61% 까지 나온다.
+          0.5% 로 조이면 살아 있는 빌드가 간헐적으로 빨개진다(245 «간헐 FAIL» 계열). */
+    ok(f.swing <= 1.0,
+       `카드${f.card} 배율이 사이클 내내 하나다 — ${f.n}프레임 스윙 ${f.swing.toFixed(1)}% ≤ 1.0%${f.win ? ' (아이들 창)' : ''}`);
   });
 
   console.log('[2] 클릭 통과 · z 순서');
