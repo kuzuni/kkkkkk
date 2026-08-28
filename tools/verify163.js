@@ -385,6 +385,32 @@ const WATCH_T = () => {                          /* 시간축 전용 — 가볍�
      이·착지 **바로 그 프레임**에서 그림자가 3.9% 줄고 9.6% 옅어진다(R 실측 0.968 / 0.920). */
   ok(/var air = Math\.max\(0, -arc\) \/ LD_ARC;/.test(SRC),
     '★ air 가 «위로 뜬 양» 이다 = 접지 순간 그림자가 안 죽는다 (되돌리면 0.968 / 0.920)');
+  /* ★ 12회차 §14 — **스쿼시 상수가 사실을 말한다.** 9회차의 정수 격자 양자화 때문에 `ldSqQ` 가 낼 수 있는
+     값은 둘뿐이라(`k < 0.5/(SC·SQA)` → 0, 이상 → 1/SC) 스쿼시는 «감쇠» 가 아니라 **사각 펄스**다.
+     11회차 비평 S·T 가 같은 수치로 짚었다 — 선언 120ms 중 **50.0ms(41.7%)가 죽어 있었고**, 남은 계단이
+     도착에서 **1.67ms** 뒤라 60fps 한 프레임 안에서 정착 팝과 겹쳤다(T «도착 한 프레임에 불연속 4개»).
+     여기서 지키는 것은 «펄스가 도착에서 2프레임 이상 떨어져 있다» 다 — 되돌려 LD_SQ = 120 으로 적으면 빨개진다. */
+  /* ⚠ 이 페이지는 **부팅된 뒤**라 `ldRun` 이 예산에 맞춰 압축돼 있다(실측 ~106ms). 스쿼시 길이 `LD_SQ` 는
+     압축과 무관한 절대값이므로 압축된 시계로 재면 «펄스가 도착보다 길다» 는 엉뚱한 답이 나온다 —
+     실제로 이 단언이 처음에 그렇게 빨갛게 나왔다. 재야 할 것은 **첫 접속(비압축)** 의 시계다.
+     `ldTimeAt`·`ldAirMs` 가 둘 다 `ldRun` 에 **선형**이라 `landAt()` 도 선형이므로, `RUN / ldRun` 로 되돌린다. */
+  const sqp = await page.evaluate(() => {
+    const k0 = 0.5 / (LD.SC * LD.SQA);                 /* 정수 격자에서 계단이 서는 k */
+    const run = LD.runMs ? LD.runMs() : LD.RUN;
+    const land = LD.landAt() * (LD.RUN / run);         /* 비압축 시계로 환산한 착지 시각 */
+    return { land: land, run: LD.RUN, off: land + LD.SQ * (1 - k0), k0: k0, comp: run };
+  });
+  ok(sqp.run - sqp.off >= 33,
+    `★ 보이는 스쿼시 펄스가 도착에서 2프레임 이상 떨어진다 (펄스 끝 ${sqp.off.toFixed(1)}ms · 도착 ${sqp.run}ms · 여유 ${(sqp.run - sqp.off).toFixed(1)}ms ≥ 33 — LD_SQ=120 으로 되돌리면 −1.7ms)`);
+  ok(sqp.off > sqp.land + 20,
+    `그래도 펄스가 볼 만큼은 길다 (${(sqp.off - sqp.land).toFixed(1)}ms · 착지 ${sqp.land.toFixed(1)}ms)`);
+  /* ★ 12회차 — 정착 구간 경사로 · 체공 smoothstep · 핸드오프 직전 도착 확정(11회차 비평 S·T). */
+  ok(/fo = fo \+ \(LD_FOOTC - fo\) \* Math\.min\(1, Math\.max\(0, \(t - tLand\) \/ \(ldRun - tLand\)\)\);/.test(SRC),
+    '★ 정착 구간에서 보정이 «계단» 이 아니라 «경사로» 다 (되돌리면 도착에 −160px 한 방)');
+  ok(/st \* st \* \(3 - 2 \* st\)/.test(SRC),
+    '★ 체공 보간이 smoothstep 이다 = 그림자 속도가 사각파가 아니다 (되돌리면 0 ↔ 7.62px/ms)');
+  ok(/if \(ldRunAt && now\(\) - ldRunAt >= ldRun && ldTarget\) ldPaint\(ldRun \+ LD_SQ\);/.test(SRC),
+    '★ 핸드오프 직전에 «도착한 그림» 을 확정한다 (되돌리면 달리기 포즈로 게임에 넘어간다)');
   ok(core.pct !== null && core.w * core.pct / 100 >= 396,
     `어두운 코어가 발 스팬(396px)을 덮는다 (${core.pct}% × ${Math.round(core.w)} = ${Math.round(core.w * (core.pct || 0) / 100)}px)`);
 

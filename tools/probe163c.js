@@ -52,7 +52,7 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : 
     };
     const rows = [];
     for (let t = 0; t <= 760; t += 0.5) rows.push(rd(t));
-    return { rows: rows, run: LD.runMs() };
+    return { rows: rows, run: LD.runMs(), land: LD.landAt() };
   });
   const R = d.rows, at = (t) => R.find(r => Math.abs(r.t - t) < 0.26);
   /* ★ 등장 길이는 **제품에게 묻는다**(LD.runMs). `x === 0` 으로 역산하면 반올림 때문에 ldRun 보다
@@ -74,18 +74,23 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : 
      스프라이트가 run f4 → idle 로 바뀌면서 **그려진 접지발 자체가 −160px 움직이므로**(10회차 비평
      Q §D «한 프레임에 발 702 → 540 = −162px» · R §B) 그림자가 같이 −160px 가는 것이 **옳다**.
      10회차의 결함은 그 반대였다 — 발은 갔는데 그림자만 그 자리에 좌초했다. 아래 [B3] 이 그것을 가른다. */
+  /* ★ 12회차 — 창을 «달리는 구간»(t < 착지)으로 좁혔다. 정착 구간(착지 ~ 도착)은 11회차까지
+     보정이 `p < 1` 계단이라 **도착에서 −160px 한 방**이었는데, 12회차가 그것을 68.3ms 짜리
+     **경사로**로 바꿨다(11회차 비평 S·T 의 공통 처방). 경사로는 «역행» 이 아니라 설계이므로
+     여기서 세면 안 되고, 아래 [B4] 가 «계단이 아니라 경사로인가» 를 따로 잰다. */
+  const LAND = d.land;
   let back = 0, worstB = 0, worstT = 0;
   for (let i = 1; i < R.length; i++) {
-    if (R[i].t >= RUN) break;
+    if (R[i].t >= LAND) break;
     const dd = R[i].sx - R[i - 1].sx;
     if (dd < -1) { back++; if (dd < worstB) { worstB = dd; worstT = R[i].t; } }
   }
   console.log(`     역행(1px 초과) ${back}회 · 최대 ${worstB.toFixed(1)}px @t=${worstT}`);
-  ok(back === 0, `★ 등장 중(t < ldRun) 그림자가 뒤로 튀지 않는다 (${back}회 · 되돌리면 7회 / −122.5px)`);
+  ok(back === 0, `★ 등장 중(t < ldRun) 그림자가 뒤로 «튀지» 않는다 (계단 ${back}회 · 되돌리면 7회 / −122.5px)`);
   /* 접지 구간의 월드 드리프트 — 발이 닿아 있는 동안 그림자는 월드에 못 박혀 있어야 한다 */
   let drift = 0;
   for (let i = 1; i < R.length; i++) {
-    if (R[i].t >= RUN) break;
+    if (R[i].t >= LAND) break;
     if (R[i].arc === 0 && R[i - 1].arc === 0) drift = Math.max(drift, Math.abs(R[i].sx - R[i - 1].sx));
   }
   /* transform 은 `toFixed(1)`, 몸 x 는 정수로 반올림돼 있어 합이 1px 안에서 떨린다 — 그것이 하한이다 */
@@ -93,11 +98,23 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); c ? pass++ : 
 
   /* [B3] 도착 프레임 — 그림자는 **포즈를 따라** 움직여야 한다(좌초하면 안 된다).
      보정값 `sx − hx` 가 도착 직전 (FEET[4] − FOOTC)·SC 였다가 도착에서 0 이 되는 것이 그 증거다. */
-  const beforeArr = R.filter(r => r.t < RUN).pop(), afterArr = R.find(r => r.t >= RUN);
-  const corrBefore = beforeArr.sx - beforeArr.hx, corrAfter = afterArr.sx - afterArr.hx;
-  console.log(`     도착 직전 보정 ${corrBefore.toFixed(1)}px → 도착 ${corrAfter.toFixed(1)}px (포즈 발도 같은 양을 움직인다)`);
-  ok(Math.abs(corrAfter) <= 0.6 && Math.abs(corrBefore) > 100,
-    `★ 도착에서 그림자가 포즈를 따라간다 (${corrBefore.toFixed(1)} → ${corrAfter.toFixed(1)}px · 10회차는 ${corrBefore.toFixed(1)} → ${corrBefore.toFixed(1)} 로 좌초했다)`);
+  /* [B4] ★ 12회차 — 정착 구간은 **계단이 아니라 경사로**여야 한다.
+     착지에서 보정이 (FEET[f4] − FOOTC)·SC = 160px 이었다가 도착에서 0 이 되는데,
+     11회차까지는 그 160px 이 **도착 한 프레임에** 사라졌다(S «겉보기 9.6px/ms = 등속의 5.0배인데
+     몸은 이미 멈춰 있다» · T «−160.0px = 그림자 폭의 21.1%»). 이제 68.3ms 에 걸쳐 흐른다. */
+  const atLand = R.find(r => r.t >= LAND), beforeArr = R.filter(r => r.t < RUN).pop(), afterArr = R.find(r => r.t >= RUN);
+  const corrLand = atLand.sx - atLand.hx, corrBefore = beforeArr.sx - beforeArr.hx, corrAfter = afterArr.sx - afterArr.hx;
+  /* 경사로의 최대 기울기(px/ms) — 두 사람이 처방한 값은 160px / 68.3ms ≈ 2.34px/ms(등속 1.90 과 같은 급) */
+  let slope = 0;
+  for (let i = 1; i < R.length; i++) {
+    if (R[i].t < LAND || R[i].t > RUN) continue;
+    slope = Math.max(slope, Math.abs(R[i].sx - R[i - 1].sx) / (R[i].t - R[i - 1].t));
+  }
+  console.log(`     착지 보정 ${corrLand.toFixed(1)}px → 도착 직전 ${corrBefore.toFixed(1)}px → 도착 ${corrAfter.toFixed(1)}px · 최대 기울기 ${slope.toFixed(2)}px/ms`);
+  ok(Math.abs(corrLand) > 100 && Math.abs(corrBefore) <= 3 && Math.abs(corrAfter) <= 0.6,
+    `★ 정착 구간이 경사로다 (${corrLand.toFixed(1)} → ${corrBefore.toFixed(1)} → ${corrAfter.toFixed(1)}px · 11회차는 160 → 160 → 0 계단이었다)`);
+  ok(slope <= 3.0,
+    `★ 그 경사로가 «몸 등속(1.90px/ms)과 같은 급» 이다 (최대 ${slope.toFixed(2)}px/ms ≤ 3.0 · 계단이면 9.6 이상)`);
 
   /* ⓒ 스쿼시 양자화: air=0 인 구간에서 그림자 가로배율 = 스프라이트 가로배율 */
   console.log('\n[C] 스쿼시 양자화 일치 (10회차 결함 = 회복 중 4.0~4.2pp 차)');
