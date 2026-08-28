@@ -31,6 +31,9 @@ const { chromium } = pw();
 const SRC = path.resolve(__dirname, '../index.html');
 const GUARD = 'if(e.hp < e.max && grow >= 1 && eOnScreen(e)){';
 const GUARD_OLD = 'if(e.hp < e.max && grow >= 1){';
+/* 368 §R2 — «클램프를 뺀» 사본을 만드는 자리. [3-b] 가 무르게 풀린 항이 아님을 이것이 못박는다 */
+const CLAMP = 'const bx = fxClampX(e.x, w/2, by) - w/2;';
+const CLAMP_OFF = 'const bx = e.x - w/2;';
 
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log('  ok   ' + m); };
@@ -99,7 +102,6 @@ const OUT = [
 ];
 const IN = [
   ['중앙', [0.5, 0, 0.5, 0]],
-  ['좌끝(사이드 아이콘 열 위)', [0, 30, 0.5, 0]],
   ['우끝', [1, -30, 0.5, 0]],
   ['반쯤 걸침(좌)', [0, 6, 0.5, 0]],
 ];
@@ -110,6 +112,30 @@ const shotAt = (ev, spec, tk, rgb, hpR) => ev(([p, tk2, rgb2, hp2]) => {
   T.put(e, VW * p[0] + p[1], VH * p[2] + p[3]);
   return T.scan(rgb2);
 }, [spec, tk, rgb, hpR]);
+
+/* 368 — «좌측 사이드 아이콘 열» 표본은 상수가 아니라 **제품에게 물어서** 만든다.
+   종전에는 화면 세로 한복판(VH/2)에 박아 뒀는데, 그 자리는 348 이 실린 그때의 열 높이
+   (게임px y 36..442)에서만 띠 «안» 이었다 — **360**(주인 지시 «출석·축복 크기·간격 통일»)이
+   열을 14px 줄여 y2 442 → **428** 이 되자 바 상변 440.5 가 띠 밖(여유 +8 = 436)으로 빠졌고,
+   `fxClampX` 는 **설계대로** 여백 24 만 먹였다(제품 결함이 아니라 표본이 자리를 잃은 것).
+   ⇒ 자리를 `sideBox` 에서 만든다. 바 상변은 발밑에서 `e.r*3.1 + 6` 위 — 그리기와 **같은 식**이다.
+
+   ⚠ 368 이 걸린 두 번째 함정 — **비네트**(index.html ~21012 `createRadialGradient(VW/2, VH/2, VH*.34, …)`).
+   draw() 맨 끝에 화면 전체를 덮으므로, 캔버스 중심에서 `VH*0.34`(≈339px) 밖에 있는 바는 색이
+   **살짝 어두워져**(#ff6b8a → 249,104,135) «정확한 색» 표본이 **0개**가 된다 — 350 의 «찍힌 픽셀» 자를
+   쓰는 한 이건 상시 함정이다. 띠 세로 한복판(232)은 클램프 **뒤** 자리(x 78.5)는 안쪽이지만
+   클램프 **전** 자리(x 22)는 바깥이라, §R2 가 «바가 아예 없다» 로 읽혔다.
+   ⇒ 표본 행은 **띠 안에서 캔버스 세로 중심에 가장 가까운 행**으로 잡는다(비네트가 가장 옅은 자리).
+   mode 'mid' = 그 행(양성항) · 'below' = 띠 아래 pad px(음성항). */
+const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) => {
+  const T = window.__t348, sb = sideBox;
+  if (!sb) return { __err: 'sideBox 가 null — 띠를 못 쟀다' };
+  const e = T.mk(tk2);
+  const top = md === 'mid' ? Math.max(sb.y1 + 8, Math.min(sb.y2 - 8, VH / 2)) : sb.y2 + pd;
+  T.put(e, sx2, top + e.r * 3.1 + 6);              /* 바 상변이 top 에 오도록 발밑을 잡는다 */
+  const p = T.scan(rgb2);
+  return Object.assign(p, { barY: e.y + camOy - e.r * 3.1 - 6, y1: sb.y1, y2: sb.y2, x2: sb.x2 });
+}, [sx, mode, pad, tk, rgb]);
 
 (async () => {
   console.log('=== VERIFY 348 — 화면 밖 몬스터 HP바 제거 ===\n');
@@ -122,7 +148,13 @@ const shotAt = (ev, spec, tk, rgb, hpR) => ev(([p, tk2, rgb2, hp2]) => {
   /* §R 용 «수리 전» 사본. 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
   const revPath = path.join(path.dirname(SRC), '.verify348-rev.html');
   fs.writeFileSync(revPath, src.replace(GUARD, GUARD_OLD));
-  process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
+  /* 368 §R2 용 «클램프를 뺀» 사본 */
+  const clpPath = path.join(path.dirname(SRC), '.verify348-noclamp.html');
+  if (src.includes(CLAMP)) fs.writeFileSync(clpPath, src.replace(CLAMP, CLAMP_OFF));
+  process.on('exit', () => {
+    try { fs.unlinkSync(revPath); } catch (e) {}
+    try { fs.unlinkSync(clpPath); } catch (e) {}
+  });
 
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -179,14 +211,28 @@ const shotAt = (ev, spec, tk, rgb, hpR) => ev(([p, tk2, rgb2, hp2]) => {
     is(!p.__err && p.n > 0, '[3-a] ' + nm + ' — 바 픽셀 ' + (p.__err ? '평가 실패' : p.n) + (p.n ? ' (x ' + p.x0.toFixed(1) + '..' + p.x1.toFixed(1) + ')' : ''));
   }
   {
-    /* 13회차 규약 — 좌측 끝 적의 바는 사이드 아이콘 열 **밖(오른쪽)** 으로 밀려 있어야 한다 */
-    const sb = await cur.ev(() => (sideBox ? { x2: sideBox.x2 } : { x2: null }));
-    const p = inCur['좌끝(사이드 아이콘 열 위)'];
-    if (!sb || sb.__err || sb.x2 == null) no('[3-b] sideBox 를 못 읽었다 — 클램프 규약을 잴 수 없다');
-    else is(p && p.n > 0 && p.x0 >= sb.x2, '[3-b] 좌끝 적의 바 좌변 ' + (p && p.n ? p.x0.toFixed(1) : '—') +
-      ' ≥ 사이드 열 우변 ' + sb.x2.toFixed(1) + ' (클램프가 살아 있다)');
+    /* 13회차 규약 — 좌측 끝 적의 바는 사이드 아이콘 열 **밖(오른쪽)** 으로 밀려 있어야 한다.
+       368 — 그 «자리» 는 sideBox 에서 만든다(위 shotBand 주석). */
+    const p = await shotBand(cur.ev, 30, 'mid', 0, 'zombie', PINK);
+    if (p.__err) no('[3-b] 좌끝 표본을 못 만들었다 — ' + p.__err);
+    else {
+      ok('[3-a] 좌끝(사이드 아이콘 열 위) — 바 픽셀 ' + p.n + (p.n ? ' (x ' + p.x0.toFixed(1) + '..' + p.x1.toFixed(1) + ')' : ''));
+      /* 전제 — 표본이 실제로 띠 «안» 이어야 [3-b] 가 무언가를 묻는다(밖이면 헛초록이다) */
+      is(p.barY > p.y1 - 8 && p.barY < p.y2 + 8,
+        '[전제 3-b] 표본의 바 상변 ' + p.barY.toFixed(1) + ' 이 사이드 열 띠 ' +
+        p.y1.toFixed(1) + '..' + p.y2.toFixed(1) + ' «안» 이다');
+      is(p.n > 0 && p.x0 >= p.x2, '[3-b] 좌끝 적의 바 좌변 ' + (p.n ? p.x0.toFixed(1) : '—') +
+        ' ≥ 사이드 열 우변 ' + p.x2.toFixed(1) + ' (클램프가 살아 있다)');
+    }
     const q = inCur['우끝'];
     is(q && q.n > 0 && q.x1 <= 540 - 24 + 0.5, '[3-c] 우끝 적의 바 우변 ' + (q && q.n ? q.x1.toFixed(1) : '—') + ' ≤ VW−24');
+    /* 368 음성항 — 클램프가 «상수» 가 아니라 «띠» 를 재는지. 띠 아래 자리에서는 여백 24 까지만 민다.
+       (이 자리가 바로 360 이후 옛 표본이 흘러 들어간 곳이다 — 그때 24 는 결함이 아니라 설계다) */
+    const r = await shotBand(cur.ev, 30, 'below', 60, 'zombie', PINK);
+    if (r.__err) no('[3-d] 띠 아래 표본을 못 만들었다 — ' + r.__err);
+    else is(r.n > 0 && r.barY > r.y2 + 8 && Math.abs(r.x0 - 24) <= 0.5,
+      '[3-d] 띠 «아래»(바 상변 ' + r.barY.toFixed(1) + ' > ' + (r.y2 + 8).toFixed(1) + ') 적의 바 좌변 ' +
+      (r.n ? r.x0.toFixed(1) : '—') + ' = 여백 24 — 클램프는 상수가 아니라 띠를 잰다');
   }
 
   /* ═══ §4 복귀·왕복 ═══════════════════════════════════════════════════════════ */
@@ -263,6 +309,31 @@ const shotAt = (ev, spec, tk, rgb, hpR) => ev(([p, tk2, rgb2, hp2]) => {
       is(rev.errs.length === 0, '[R-c] 사본 콘솔/페이지 오류 ' + rev.errs.length + '건');
     }
     await rev.page.close();
+  }
+
+  /* ═══ §R2 되돌림 시험 — 368 ══════════════════════════════════════════════════
+     [3-b] 를 «자리만 옮겨» 초록으로 되돌린 것이 무른 수리가 아님의 증명.
+     클램프를 뺀 사본에서는 같은 표본·같은 술어가 **빨개져야** 한다. */
+  console.log('\n[R2] 되돌림 시험(368) — 클램프를 뺀 사본에서는 [3-b] 가 빨개져야 한다');
+  {
+    if (!fs.existsSync(clpPath)) no('[R2] 클램프 사본을 못 만들었다 — 그리기 식이 바뀌었다(' + CLAMP + ' 없음)');
+    else {
+      const nc = await open(ctx, 'file://' + clpPath);
+      if (nc.dim && nc.dim.__err) no('[R2] 사본 하네스 실패 — ' + nc.dim.__err);
+      else {
+        const p = await shotBand(nc.ev, 30, 'mid', 0, 'zombie', PINK);
+        if (p.__err) no('[R2] 사본 표본 실패 — ' + p.__err);
+        else {
+          is(p.n > 0 && p.x0 < p.x2, '[R2-a] 사본(클램프 없음) — 좌끝 적의 바 좌변 ' +
+            (p.n ? p.x0.toFixed(1) : '—') + ' < 사이드 열 우변 ' + p.x2.toFixed(1) +
+            ' = 열 위를 덮는다 (0이면 [3-b] 는 헛초록이다)');
+          /* 음성항 [3-d] 는 클램프를 빼도 24 근처일 수 있으므로 여기서 묻지 않는다 —
+             §R2 가 재는 것은 «[3-b] 가 클램프에 매여 있는가» 하나다. */
+        }
+        is(nc.errs.length === 0, '[R2-b] 사본 콘솔/페이지 오류 ' + nc.errs.length + '건');
+      }
+      await nc.page.close();
+    }
   }
 
   is(cur.errs.length === 0, '[7] 콘솔/페이지 오류 ' + cur.errs.length + '건' + (cur.errs.length ? ' — ' + cur.errs[0].slice(0, 140) : ''));
