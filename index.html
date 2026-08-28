@@ -32222,9 +32222,38 @@ function jzOpen(el){
   if(k !== 'jz-sh2') jzStagger(el);
   if(el.id === 'modal') jzModalMood();
 }
-function jzClose(el, disp){
+/* ── 345 «찌그러지며 닫힘» (2026-08-29, 저장소 주인 보고) ────────────────────────────────
+   `closeModal()` 은 `remove('on','sk8','rl16','q22','ml69','at70')` 로 **가시성 스위치와 껍데기
+   치수를 한 번에** 뗀다. 닫힘 연출(.12s 역재생)은 그 «뒤» 에 display 를 되살려 도는데, 그 동안
+   껍데기 override 가 이미 없어서 상자가 **A5 기본 규격으로 리플로우된 채** 축소된다 = «찌그러짐».
+   실측(`tools/probe345.js`, 수리 전): 우편 `.mbox` 1303 → **230**(본문 `.ml69 .mbody{height:1189}`
+   가 통째로 사라져 헤더+버튼만 남는다) · 퀘스트 1497 → 230 · 출석 940×1077 → 898×1098(딤 패딩도
+   159/70 → 126/91) · 08 세부 1002 → 1076. 즉 «균등 축소» 여야 할 프레임이 전부 다른 상자다.
+   ⇒ 닫는 순간의 클래스를 스냅샷해 **연출 동안만 껍데기를 되살리고** offC(연출 끝)에서 뗀다.
+   가리는 기준을 하드코딩 목록(5종)으로 두지 않는 이유: 그 목록은 이미 다섯 곳에 흩어져 낡는다
+   (LESSONS 265). 대신 **«그 클래스 하나만 도로 붙였을 때 화면에 뜨는가»** 를 묻는다 —
+   뜨면 가시성 스위치(`#modal.on{display:flex}`)라 되살리면 안 되고, 안 뜨면 껍데기다. */
+function jzShellBack(el, prevCls){
+  if(!prevCls) return null;
+  const back = [];
+  for(const c of String(prevCls).split(/\s+/)){
+    if(!c || c.startsWith('jz-') || el.classList.contains(c)) continue;   /* 안 떨어진 것·연출 표식은 대상 아님 */
+    el.classList.add(c);
+    let d = 'none'; try { d = getComputedStyle(el).display; } catch(_){}
+    el.classList.remove(c);
+    if(d === 'none') back.push(c);                      /* 껍데기(치수 override) — 되살린다 */
+  }
+  if(!back.length) return null;
+  for(const c of back) el.classList.add(c);
+  return back;
+}
+function jzClose(el, disp, prevCls){
   sfx('close');                                         /* 78 — 팝업 닫힘 */
-  const k = jzKind(el), inl = el.style.display;         /* 닫은 쪽이 남긴 inline 값(''(=클래스로 숨김) 또는 'none') */
+  const inl = el.style.display;                         /* 닫은 쪽이 남긴 inline 값(''(=클래스로 숨김) 또는 'none') */
+  /* 345 — display 를 되살리기 **전에** 판별해야 한다(되살린 뒤엔 무엇을 붙여도 «뜬다» 로 읽힌다).
+     껍데기를 먼저 되돌려야 아래 jzKind·jzDimBg·jzDimKids 도 «열려 있던 그대로» 를 읽는다. */
+  const shell = jzShellBack(el, prevCls);
+  const k = jzKind(el);
   el.__jzBusy = 1;
   el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
   el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
@@ -32237,6 +32266,12 @@ function jzClose(el, disp){
     if(el.__jzGen !== gen) return;
     el.classList.remove('jz-c', k);
     el.style.display = inl;                             /* 원래대로 — #panel 처럼 inline 'none' 을 쓰는 것도 보존 */
+    /* 345 — 되살린 껍데기는 연출이 끝난 여기서 뗀다. 단 연출 도중에 누가 **다시 열었으면**
+       (inline display 를 되돌린 지금도 클래스로 떠 있으면) 그 클래스는 «연 쪽» 의 것이므로 안 건드린다. */
+    if(shell){
+      let d = 'none'; try { d = getComputedStyle(el).display; } catch(_){}
+      if(d === 'none') for(const c of shell) el.classList.remove(c);
+    }
     el.__jzBusy = 0;
   };
   void el.offsetWidth;
@@ -32447,6 +32482,11 @@ function jzInit(){
 
   /* ② 오버레이 22개 + 바닥 시트 — «보이게 됐다/안 보이게 됐다» 만 본다 */
   const mo = new MutationObserver(ms => {
+    /* 345 — 이 배치의 «첫 oldValue» = 닫기 직전 클래스 목록. 한 번의 `classList.remove(a,b,c)` 는
+       레코드 하나지만, 여는 쪽처럼 remove→add 두 번 만지는 경로도 있어 **가장 앞선 것**을 잡는다. */
+    const was0 = new Map();
+    for(const m of ms)
+      if(m.attributeName === 'class' && !was0.has(m.target)) was0.set(m.target, m.oldValue || '');
     for(const m of ms){
       const el = m.target;
       if(el.__jzBusy) continue;
@@ -32458,7 +32498,7 @@ function jzInit(){
       if(vis) el.__jzOpT = performance.now();      /* 74 ③ — 딤 가드용 «열린 시각» (탭 합성기가 읽는다) */
       /* 96 ② — 서브탭 전환 중이면 연출을 건너뛴다(상태만 최신으로 유지) */
       if(jzQuiet){ if(vis) el.__jzLast = disp; continue; }
-      if(vis) jzOpen(el); else jzClose(el, el.__jzLast || 'flex');
+      if(vis) jzOpen(el); else jzClose(el, el.__jzLast || 'flex', was0.get(el));
       if(vis) el.__jzLast = disp;
     }
   });
@@ -32466,7 +32506,7 @@ function jzInit(){
     const el = $(id);
     if(!el) continue;
     try { el.__jzVis = getComputedStyle(el).display !== 'none'; } catch(_){ el.__jzVis = false; }
-    mo.observe(el, { attributes:true, attributeFilter:['class','style'] });
+    mo.observe(el, { attributes:true, attributeFilter:['class','style'], attributeOldValue:true });
   }
 
   /* ③ 하단 탭 전환 — 활성 탭 아이콘이 1.12 로 튄다 */
