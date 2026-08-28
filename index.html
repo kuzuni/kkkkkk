@@ -4619,7 +4619,7 @@
   /* 5회차 — I·J 공통 «Lv 글자 잉크 37×21 vs ref 46×18~19»(폭 −20% · 높이 +11%) */
   .shp-card .clv>i{font-size:23px;color:#7DE5ED;transform:translateY(2px) scaleX(1.216);letter-spacing:-1px}
   /* 경험치 바 — 알약 아래로 물림 */
-  .shp-card .cbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
+  .shp-card .cbar,.shp-card .stkbar{left:113px;top:369px;width:306px;height:33px;border-radius:8px;background:#000;
     box-sizing:border-box}
   .shp-card .cbar>.trk{position:absolute;left:3px;top:3px;right:3px;bottom:3px;border-radius:5px;
     background:#373C4D;overflow:hidden}
@@ -5759,6 +5759,12 @@
   .cn-a2>.gm>.cic:nth-child(3){left:120px;top:70px;width:106px;height:106px}
   .cn-a2>.no{position:absolute;left:66px;top:38px;font-size:158px;line-height:170px;color:#E0353A;
     opacity:.92}
+  /* ⚑ 22회차 — 배너 광택(`.cn-a2::after`)은 의사요소라 자식 «뒤» 에 그려진다 → 아트 잉크가 씻긴다.
+     ⚠ 비평가 AV 는 이 자리를 «평균 +20.24» 로 쟀지만 그 값의 2/3 는 **둥실(`jz122Float`)이 아트를
+     움직인 것**이다(고정 마스크에 움직이는 요소를 대면 «잉크가 사라진다» 로 읽힌다 — §24-8 함정의 사촌).
+     `--jz-amp:0` 으로 얼려서 다시 재면 **+6.94** 가 남고, 그 남은 몫이 진짜 광택 세척이다.
+     z 를 올리면 얼린 값이 **+0.00** 이 된다(대조 «재화 카드 제목» 의 자 바닥 +5.81 미만). */
+  .cn-a2>em,.cn-a2>.no,.cn-a2>.gm{z-index:2}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
   /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
      리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
@@ -6538,6 +6544,10 @@
      그대로 지나가므로 ①-7 의 «정지 섬 제거» 는 손대지 않는다. */
   .shp-card .stk{position:absolute;box-sizing:border-box;border:6px solid #000;
     z-index:2;pointer-events:none;background:none}
+  /* Lv 게이지도 같은 자리다 — 검은 «프레임»(`.cbar` 의 배경이 트랙 바깥 3px 로 보이는 것)만 올린다.
+     트랙(`.trk`)은 그대로 광택 아래에 두어 ①-7 «정지 섬 제거» 를 안 깬다. */
+  .shp-card .stkbar{position:absolute;border:3px solid #000;background:none;
+    z-index:2;pointer-events:none}
   .shp-card:nth-child(2)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -0.9 * var(--jz-per))}
   .shp-card:nth-child(3)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.3 * var(--jz-per))}
   .shp-card:nth-child(4)>.cfr::after{animation-delay:calc(var(--jz-sw2) * -1.7 * var(--jz-per))}
@@ -6864,7 +6874,7 @@
      → 글자를 광택 **위**(5)로 올리고, 잠금·딤 오버레이는 글자보다 더 위(6)로 같이 올려
        «딤이 글자를 덮는다» 순서를 그대로 지킨다. 프레임(`.fr`, 4)은 글자와 겹치는 자리가
        테두리 7px 뿐이고 글자는 그 안쪽이라 보이는 결과는 안 바뀐다(불변식 bbox Δ0 유지). */
-  .cn-cd>.hd>i,.cn-cd>.qt,.cn-cd>.bt>u,.cn-cd>.cp>i{z-index:5}
+  .cn-cd>.hd>i,.cn-cd>.qt,.cn-cd>.bt>u,.cn-cd>.cp>i,.cn-cd>.bt>.ad,.cn-cd>.pn>em{z-index:5}
   .cn-cd>.blk,.cn-cd>.dim,.cn-cd>.dn{z-index:6}
   /* ⚑ 22회차 — 20회차가 «글자(z5) > 광택(z4)» 로 세운 그 순서에서 **버튼 검은 획만 빠져 있었다.**
      `.cn-cd>.bt>u` 만 5 로 올라갔고 `.bt` 자신(5px 검정 테두리)은 z auto 라 광택 아래였다 —
@@ -24100,6 +24110,7 @@ function renderShopPage(){
       +  '<div class="clv"><i>Lv.' + s.lv + '</i></div>'
       +  '<div class="cbar"><div class="trk"><i style="width:' + pctFill + '%"></i></div>'
       +    '<b>' + (s.lv >= SUM_MAXLV ? 'MAX' : s.exp + '/' + need) + '</b></div>'
+      +  '<i class="stkbar"></i>'
       +  '<div class="cbtn b1" data-shsum="' + x.b + '" data-shn="10" data-shfree="1">'
       +    '<u class="lab">10회 소환</u><u class="sub">' + fl + '/' + SHOP_FREE + '</u></div>'
       +  '<div class="adbadge"><i>▶</i><b>AD</b></div>'

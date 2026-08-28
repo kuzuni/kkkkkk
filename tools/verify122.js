@@ -1397,6 +1397,26 @@ async function ampCheck(p, hosts) {
       ok(neg && neg.rise > STK_NEG_LO, 'ⓝ 음성항 — 획 사본을 걷으면 상승 +'
         + (neg ? neg.rise.toFixed(2) : '?') + ' > ' + STK_NEG_LO + ' (22회차 이전 실측 +15.87)');
 
+      /* ⓕ 22회차 채점(AU❷·AV[1] 2인 일치)이 찾은 **네 번째 자리** — Lv 게이지 검은 프레임.
+         `.clv`(Lv 알약)는 5회차부터 `z-index:2` 라 이미 광택 위였는데 바로 옆 `.cbar` 만 빠져 있었다
+         (실측 칸2 +7.43 · 칸3 +10.52 · 화소 최대 +83). 트랙은 광택 아래로 남겨 ①-7 을 안 깬다. */
+      for (const [lab, nth] of [['칸2 Lv 게이지', 2], ['칸3 Lv 게이지', 3]]) {
+        await check(lab, '#shopList .shp-card:nth-child(' + nth + ') .cbar', 3, 5400, OFF_SUM);
+      }
+      const barSame = await p.evaluate(() => {
+        const bad = [];
+        document.querySelectorAll('#shopList .shp-card').forEach((c, i) => {
+          const a = c.querySelector('.cbar'), b = c.querySelector('.stkbar');
+          if (!a || !b) { bad.push('칸' + i + ' 짝 없음'); return; }
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          ['x', 'y', 'width', 'height'].forEach(k => {
+            if (Math.abs(ra[k] - rb[k]) > 0.01) bad.push('칸' + i + '.' + k + ' Δ' + (rb[k] - ra[k]).toFixed(2));
+          });
+        });
+        return bad;
+      });
+      ok(barSame.length === 0, 'Lv 게이지 획 사본 rect = 게이지 rect' + (barSame.length ? ' — ' + barSame.slice(0, 3).join(' ;; ') : ''));
+
       /* ⓔ 재화 탭 — 같은 결함의 다른 판(20회차가 글자만 z5 로 올리고 `.bt` 자신은 두고 갔다) */
       await p.evaluate(() => { shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage(); });
       await p.waitForTimeout(200);
@@ -1415,6 +1435,30 @@ async function ampCheck(p, hosts) {
         return bad;
       });
       ok(csame.length === 0, '재화 획 사본 rect = 버튼 rect' + (csame.length ? ' — ' + csame.slice(0, 3).join(' ;; ') : ''));
+      /* ⓖ 22회차 채점이 찾은 나머지 두 자리 — [받기] «안» ▶AD 아이콘(AU❸·AV[2] 2인 일치, 실측 +23.62) ·
+         재화 상품 아이콘 잉크(AU❶, 얼려서 +17.15) · 평생 배너 아트 잉크(AV[4], 얼려서 +6.94).
+         ⚠ 이 셋은 **움직이는 요소**라 얼리지 않고 재면 «둥실» 이 통째로 섞인다 —
+         AV[4] 의 +20.24 중 2/3, AU❶ 의 +34.33 중 절반이 그것이었다(§24-8 함정의 사촌).
+         그래서 이 절만 `--jz-amp:0` 으로 **얼려서** 잰다. 자 바닥은 대조군(재화 카드 제목)이 준다. */
+      await p.evaluate(() => document.getElementById('shopw').style.setProperty('--jz-amp', '0'));
+      /* 자 «바닥» 을 대조군이 준다 — 요소 전체 마스크(luma<40)는 글리프 가장자리의 반투명 화소를
+         같이 세므로 **아래 층의 배경 스윕**이 통과해 0 이 안 된다. 절대 0 을 요구하면 자가 거짓말을
+         하게 되므로, 이 절은 «대조군보다 더 들리지 않는가» 로 판정한다. */
+      const floor = await strokeRise('#shopList .cn-cd>.hd>i', 99, 4800, OFF_CN);
+      const fv = (floor && floor.n) ? floor.rise : null;
+      console.log('    · 자 바닥 = 대조 재화 카드 제목 +' + (fv == null ? '?' : fv.toFixed(2))
+        + ' (아래 층 배경 스윕이 글리프 반투명 가장자리로 비친 몫)');
+      ok(fv != null, '자 바닥(대조 재화 카드 제목)을 쟀다');
+      for (const [lab, sel, per] of [['[받기] 안 ▶AD 아이콘', '#shopList .cn-cd>.bt>.ad', 4800],
+                                     ['재화 상품 아이콘 잉크', '#shopList .cn-cd>.pn', 4800],
+                                     ['평생 배너 아트 잉크', '#shopList .cn-a2>em', 6400]]) {
+        const r = await strokeRise(sel, 99, per, OFF_CN);
+        if (!r || !r.n) { ok(false, lab + ' 잉크 마스크를 못 떴다'); continue; }
+        console.log('    · ' + lab + '(얼림) 잉크 ' + r.n + 'px · 상승 +' + r.rise.toFixed(2));
+        ok(fv != null && r.rise <= fv + STK_HI, lab + '(얼림) 상승 +' + r.rise.toFixed(2)
+          + ' ≤ 바닥+' + STK_HI + ' (= ' + (fv == null ? '?' : (fv + STK_HI).toFixed(2)) + ')');
+      }
+      await p.evaluate(() => document.getElementById('shopw').style.removeProperty('--jz-amp'));
       await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
       await p.waitForTimeout(200);
     }
