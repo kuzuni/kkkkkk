@@ -99,7 +99,7 @@ orig run2: ✗ [I]ⓒ 멎은 뒤 86프레임이 움직였다 — 437 → 438 (t=
 ```
 
 `PW_SETTLE=0` 첫 회가 우연히 PASS 로 나와 하마터면 «정착 때문» 으로 오귀속할 뻔했다 —
-**간헐 게이트는 1회로 판정하면 안 된다.** 내 구간이 아니므로 고치지 않고 **새 행 292** 로 등재했다.
+**간헐 게이트는 1회로 판정하면 안 된다.** 내 구간이 아니므로 고치지 않고 **새 행 303** 으로 등재했다.
 
 ### 5. 회귀
 
@@ -108,3 +108,29 @@ orig run2: ✗ [I]ⓒ 멎은 뒤 86프레임이 움직였다 — 437 → 438 (t=
   ⚠ 이 지문은 «장치가 닿는다» 이지 «켜져 있다» 가 아니다 — 실제 판정은 `repro291` 이 한다고 주석에 못 박았다.)
 - `node tools/repro291.js --runs 3 --parallel 3 --load 6` — **24/36 → 0/36**(같은 부하, 같은 명령)
 - 게이트 45개 일괄 재실행 결과는 아래 §6.
+
+### 6. 게이트 45개 일괄 재실행 (44 후보 + `verify158`)
+
+정착을 켠 채 **45개를 전부 돌렸다**. 결과: **42개 PASS · 3개 빨강 — 그리고 그 3개는 전부 내 변경 이전부터 빨갰다.**
+
+| 게이트 | 결과 |
+|---|---|
+| `verify22` 65/65 · `verify20` 32/32 · `verify202` 42/42 · `verify271` 62/62 · `verify283` 41/41 · `verify123` 62/62 · `verify187` 63/63 · `verify191` 50/50 · `verify241` 84/84 · `verify100` 44/44 · `verify147` 37/37 · `verify203` 73/73 · `verify210` 83/83 · `verify30` 49/0 · `verify35` PASS · `verify52` 79/79 · `verify10` 61/61 · `verify104` 73/73 · `verify137` 152/152 · `verify265` 33/33 · `verify120` 157/157 · `verify61` 109/109 · `verify73` 71/71 · `verify82` 14/14 · `verify84` 30/30 · `verify150` 43/43 · `verify180` 43/43 · `verify36` PASS · `verify53` 31/31 · `verify54` 94/94 · `verify90` 107/107 · `verify182` 92/92 · `verify257` 84/0 · `verify64` 41/41 · `verify76` 24/24 · `verify81` 11/11 · `verifyA1` 62/62 · `verify126sh` 19/19 · `verify148` 16/16 · `verify166` 41/41 · `verify87` 48/48 · `verify158` PASS | **PASS** |
+| `verify107` [I]ⓒ | **빨강 — 내 변경 이전부터.** 원본(`git show HEAD:`) 2회도 같은 항목에서 빨갛다 → **303** 으로 등재 |
+| `verify55` 61/63 | **빨강 — 내 변경 이전부터.** `PW_SETTLE=0` 으로 꺼도 **글자 그대로 같은 2건** → **304** 로 등재 |
+| `verify262` 37~38/38 | **간헐 — 정착을 꺼도 3회 중 1회 빨갛다.** LESSONS 269 가 이미 «자기가 만든 레이스» 로 적어 둔 그 항목이다 |
+
+> **곁가지 — 러너 준비물 3개가 빠져 있었다.** `verify81`·`verify148` 은 `pngjs` 가 없어 **즉사**했고
+> `verify84` 는 `tools/scan12.py` 의 `PIL` 이 없어 죽었다. 게이트 결함이 아니라 러너 준비물이다:
+> `npm i --no-save playwright pngjs` · `pip3 install pillow numpy`.
+> ⚠ **`npm i --no-save pngjs` 를 단독으로 치면 playwright 가 지워진다**(`--no-save` 가 package.json 에 없는
+> 기존 설치를 prune 한다 — 실제로 그렇게 날아갔다). **한 줄에 같이** 적어라.
+
+### 7. 게이트·명령 (다음 세션이 이어받을 근거)
+
+```
+node tools/audit122rect.js                              # ⓐ 0개 · ⓑ 0개  (착수 전 54 / 44)
+node tools/repro291.js --runs 3 --parallel 3 --load 6   # REPRO291 0/36  (착수 전 24/36)
+PW_SETTLE=0 node tools/repro291.js --runs 3 --parallel 3 --load 6   # 되돌림 시험 — 다시 24/36 근처가 나와야 한다
+node tools/smoke.js                                     # SMOKE PASS
+```
