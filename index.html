@@ -23495,7 +23495,10 @@ function showItem(id){
   const rel = cat === 'relic';
   const eq = cat === 'pet' ? petEquipped(id) : rel ? false : eqEquipped(it);
   const slot = cat === 'equip' ? SLOTS.find(x => x.k === it.slot) : null;
-  const kindN = cat === 'pet' ? '동료' : cat === 'equip' ? '장비' : '유물';
+  /* 173 — 종류 이름 «동료» → «펫». 이 한 자리가 화면 두 곳을 먹인다(알약 «펫 설명» · 미보유 안내
+     «펫 소환으로 획득하세요»). 173 은 «화면 목록» 을 돌았는데 여기는 화면이 아니라 여러 화면이
+     공유하는 **파생 문자열**이라 목록에 안 걸렸다(369). 변수명·주석·id 는 그대로 둔다(173 원칙). */
+  const kindN = cat === 'pet' ? '펫' : cat === 'equip' ? '장비' : '유물';
   /* 진행바 — 펫·장비는 «강화 재료 have/need», 유물은 강화 재료가 없다(89: 소환이 곧 Lv+1) */
   /* 262 — 레벨에 따라 바뀌는 자리(진행바·표 2열 값·설명문·보유 효과)는 **함수 한 벌**로 뽑았다:
      통짜 재렌더와 홀드 중 «숫자만» 갱신(mdLive)이 반드시 같은 식을 보게 하기 위한 것이다. */
@@ -23519,7 +23522,7 @@ function showItem(id){
     : cat === 'pet'
       ? '플레이어를 따라다니며 <em>' + it.cd.toFixed(2) + '초</em>마다 자동 공격합니다.<br>'
         + '장착 효과 — 전투에 참여해 <em>' + fmtB(petDmg(it)) + '</em> 피해.<br>'
-        + '동료는 최대 <em>3마리</em>까지 장착합니다.'
+        + '펫은 최대 <em>3마리</em>까지 장착합니다.'   /* 173 — «동료는» → «펫은»(조사가 같이 바뀐다, 369) */
     : cat === 'equip'
       ? '<em>' + slot.n + '</em> 부위에 장착하는 장비입니다.<br>'
         + '장착 효과 — ' + slot.stat + ' <em>+' + pct(equipVal(it)) + '</em><br>'
