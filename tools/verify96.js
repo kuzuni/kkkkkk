@@ -275,8 +275,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     ok('상점 탭 라벨 외곽선이 활성 ol4 / 비활성 ol3', act.coinInk === true, String(act.coinInk));
     ok('상점 → 소환 탭 복귀', act.summon === true, String(act.summon));
 
-    /* ---------- ⑥ 2회차 비평 반영 — 바 좌우 대칭 · 리스트와의 간격 ---------- */
-    console.log('\n[6] 2회차 비평 반영 (바 대칭 · 리스트 간격)');
+    /* ---------- ⑥ 03 바의 축·리스트 이음매 ---------- */
+    /* 335 (2026-08-28) — **이 두 줄은 «레퍼런스와 반대» 를 지키고 있었다.**
+       96 2회차 비평가가 «다른 바는 전부 대칭» · «상점과 같은 14px 여백» 을 요구해 그대로 박혔는데,
+       둘 다 레퍼런스 대조가 아니라 다른 화면과의 통일감 논거였다. 그 뒤 72 의 15~17회차 비평가 넷이
+       전원 반대로 지적했고(축 −8.5px 좌 · 이음매 0→14px) 픽셀도 레퍼런스 쪽이다:
+         `python3 tools/scan335x.py` — ref 바 면 x160~937(중심 548.5) = 화면중심 +8 비대칭
+         `python3 tools/scan335.py`  — ref x=200 열에 카드 검정 하변과 바 검정 상변이 겹쳐 바탕 0px
+       자를 **레퍼런스 실측 자리로 옮긴다**(333·334 의 게이트 이관과 같은 처방 — 자리를 비우지 않는다).
+       상세: `docs/review/335-던전서브탭블록.md`. */
+    console.log('\n[6] 03 바 축(ref 비대칭 +8) · 리스트 이음매 0px — 335');
     const sym = await page.evaluate(() => new Promise(res => {
       goTab('hero'); openDungeon();
       setTimeout(() => {
@@ -286,8 +294,12 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         res({ l: Math.round(b.x - F.x), r: Math.round(F.right - b.right), gap: Math.round(b.y - li.bottom) });
       }, 700);
     }));
-    ok('03 던전 바 좌우 대칭 (Δ≤1px)', Math.abs(sym.l - sym.r) <= 1, '좌 ' + sym.l + ' / 우 ' + sym.r);
-    ok('03 리스트 하단 ~ 바 상단 간격 ≥ 12px', sym.gap >= 12, sym.gap + 'px');
+    ok('03 던전 바 좌 151 (ref 측정표 §4-1, Δ≤1px)', Math.abs(sym.l - 151) <= 1, '좌 ' + sym.l);
+    ok('03 던전 바 우 135 (ref 1080−944, Δ≤1px)', Math.abs(sym.r - 135) <= 1, '우 ' + sym.r);
+    ok('03 던전 바 축이 화면중심 +8 (ref 비대칭, Δ≤1px)',
+      Math.abs((sym.l - sym.r) / 2 - 8) <= 1, '축 ' + ((sym.l - sym.r) / 2).toFixed(1));
+    ok('03 리스트 하단선이 바 상변에 붙는다 (ref 이음매 0px, Δ≤1px)',
+      Math.abs(sym.gap) <= 1, sym.gap + 'px');
 
     /* ---------- ⑤ 60 쥬시 — 탭 전환 시 활성 칸 1.06 팝 ---------- */
     console.log('\n[7] 60 쥬시 — 탭 전환 팝(.jz-sb)');
