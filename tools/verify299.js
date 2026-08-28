@@ -127,6 +127,24 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     sweep('70 출석 «오늘 카드» .at-c>s.updot', '#mbox [data-att]>s.updot', '.at-c,.at-c7');
     closeModal(); S.att = JSON.parse(attSnap); uiDirty = true; await wait(100);
 
+    /* ── 승급전 (323 신설) ──
+       배지는 «권장 충족» 일 때만 찍히므로 여기서는 `mk` 로 임시 노드를 만들어 CSS 위치만 잰다
+       (조건별 점등·소등은 `tools/verify320.js` 가 본다). */
+    openPromo(); await wait(250);
+    sweep('승급전 [승급전 시작] #pgo>.updot', '#pgo>.updot', '.ifbtn.pbtn', { host: '#pgo', cls: 'updot' });
+    closeModal(); await wait(120);
+
+    /* ── 내 정보 [승급전 도전] (323 신설) ──
+       이 패널은 탭 매핑이 가리키지 않는 자리라 저절로 안 열린다 — verify267 [D] 와 같이 펴 준다. */
+    renderSt();
+    document.getElementById('panel').style.display = 'flex';
+    document.getElementById('bSt').classList.add('on');
+    await wait(150);
+    sweep('내 정보 [승급전 도전] #promoBtn>.updot', '#promoBtn>.updot', '.ifbtn.pbtn', { host: '#promoBtn', cls: 'updot' });
+    document.getElementById('bSt').classList.remove('on');
+    document.getElementById('panel').style.display = '';
+    await wait(120);
+
     /* ── 35 패스 ── */
     openPass('stage'); await wait(250);
     sweep('35 탭 #psBar .pt>.bdg', '#psBar .pt>.bdg', '.pt');

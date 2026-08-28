@@ -1938,6 +1938,10 @@
   /* 상자만 남색이라 베이지 본문의 갈색 글자(`.mbody p{color:#5A4634}`)가 그대로 깔리면
      남색 위 짙은 갈색이 된다 — 179 가 «안 보인다» 를 고치는 작업이므로 여기서 같이 뒤집는다 */
   .mbody .pr179 .pr-cond p{color:#EADCC6}
+  /* 320 — 남색 상자 안에서는 `.mbody p b{color:#B4571E}`(갈색)가 거의 안 보인다. 옛 두 줄은
+     인라인 색(초록·빨강)으로 그 문제를 피해 갔는데, 색분기를 걷어낸 «권장 스테이지» 한 줄에는
+     인라인이 남지 않으므로 같은 규칙을 클래스로 적어 준다(특이도 0-4-1 > `.mbody p b` 0-1-2). */
+  .mbody .pr179 .pr-cond p b{color:#EADCC6}
   .mbody .pr179 .pr-note{margin-top:32px}
   /* 클리어 보상 — 코스튬 스프라이트(50 `cos-cv`) + 칭호. 라벨은 본문과 같은 48px 계열이되
      «표제» 라 한 단 작게(40) 두고, 부제(등급·보유 효과)는 36 이다. */
@@ -9961,6 +9965,13 @@
   .wgc>.updot{right:8px;top:45px}
   .eqsl>.updot{right:-7px;top:-7px}
   .sk-btn>.updot,.wm-btn>.updot{right:12px;top:12px}
+  /* 323 — 267 주 행동 버튼 `.ifbtn.pbtn`(승급전 시작 · 승급전 도전). 라벨 `<b>` 가 가운데
+     한 줄이라 안쪽 우상단이 비어 있고, `.pbtn` 은 `position:relative`(1708행) 라 기준상자가 된다.
+     `.ifbtn` 에 overflow 는 없지만 검정 테두리 안쪽으로 넣어 베벨 림을 안 밟는다 —
+     절대배치 오프셋은 padding box 기준이라 right/top:24 는 «테두리 7 + 24» 다.
+     닷 27 + 바깥 링 7.5 → 안쪽 여백 16.5px · 중심은 (우 44.5, 상 44.5) 로 높이 130 의 절반(65)
+     위·폭의 절반 오른쪽 = 299 «우상단 사분면» 충족. */
+  .ifbtn.pbtn>.updot{right:24px;top:24px}
   /* 318 — 70 출석 팝업 «오늘(받을 수 있는) 카드». 카드 우상단 **바깥** 코너가 비어 있다
      (`.at-bd` 밴드는 카드 안쪽 top:1, `.at-ck` ✔ 는 수령 완료 칸에만, `.at-cr` 👑 는 하단).
      `.at-in`(overflow:hidden) 의 형제라 잘리지 않고, 카드 바깥 9px 은 그리드 gap(33/44.5) ·
@@ -23047,7 +23058,11 @@ function renderSt(){
           /* 267 — 주인이 이름을 댄 «승급전 도전» 버튼. 22 [모두 받기] 규격 `.pbtn`(라벨은 `<b>`) */
           /* 295 — 이 줄은 `nr`(다음 계급)이 있을 때만 그려지므로 입장 게이트가 폐지된 지금
              `disabled` 가 붙을 자리가 없다. 회색 처리도 같이 사라진다(지시 ⓐ). */
-          + '<button class="ifbtn pbtn" id="promoBtn"><b>승급전 도전</b></button>'
+          /* 323 — 같은 «권장 충족» 축의 레드닷. 이 자리는 팝업이 아니라 «내 정보» 탭 본문이라
+             딤에 가릴 일은 없지만, 주인 지시가 [승급전 시작]·[승급전 도전] 두 버튼 다였다.
+             renderSt() 는 탭을 열 때·`uiDirty` 재렌더마다 다시 그리므로 조건이 바뀌면 따라온다. */
+          + '<button class="ifbtn pbtn' + (promoReady() ? ' alert' : '') + '" id="promoBtn"><b>승급전 도전</b>'
+          + (promoReady() ? '<s class="updot"></s>' : '') + '</button>'
         : '<p>최고 계급 달성! 🎉</p>') + '</div>'
     + '<div class="sect"><h3>⚔️ 전투력 상세</h3><p>'
     + 'DPS <b>' + fmtB(stat.dps) + '</b> · 공격력 <b>' + fmtB(stat.dmg) + '</b><br>'
@@ -26667,7 +26682,13 @@ window.openRank = openRank;
 function openPromo(){
   const r = nextRank();
   if(!r){ notify('🏅 이미 최고 계급입니다! 🎉'); return; }
-  const okS = S.best >= r.stage, okC = cp() >= r.cp;
+  /* 320(주인 지시 2026-08-28) — «최고 스테이지 n/n · 전투력 n/n» 두 줄 폐지. 진행도 대비
+     표기(246/45 처럼 한참 넘긴 값이 나란히 서는 것)를 없애고 **권장값 한 줄**만 남긴다.
+     판정(`promoReady()`)은 건드리지 않는다 — 옛 `okS`/`okC` 는 이 표기만 쓰던 지역값이라 지운다. */
+  /* 323(주인 지시 2026-08-28) — 권장 기준 도달이면 [승급전 시작] **버튼 자체**에 레드닷.
+     318·321·322 와 같은 «경로가 한 칸 짧다» 결손이다: 판정은 이미 `promoReady()` 가 갖고 있는데
+     신호가 사이드 `promo` 아이콘까지만 가고, 팝업 딤(#modal z30)이 그 아이콘을 덮는 순간 사라진다. */
+  const pready = promoReady();
   const ri = S.rank + 1;                 /* 도전 계급 index — nextRank() 가 가리키는 그 칸 */
   /* 179 — 클리어 보상. 코스튬(스프라이트 미리보기) + 칭호. 칭호는 별도 데이터가 아니라
      «도달한 계급 = 보유 칭호» 라서(renderProfile 의 `own = i <= S.rank`) 승급 자체가 지급이다. */
@@ -26679,10 +26700,10 @@ function openPromo(){
   const rwOwn = rwLeft === 0;
   showModal('<h2>🏅 승급전</h2><div class="pr179">'
     + '<p>현재 <b>' + rankOf().ic + ' ' + rankOf().n + '</b> → 도전 <b style="color:#B4571E">' + r.ic + ' ' + r.n + '</b></p>'
-    + '<div class="pr-cond">'
-    /* 상자 배경이 남색(#0e1428)이라 여기만 «밝은» 초록·빨강을 그대로 쓴다(베이지 본문 톤이 아니다) */
-    + '<p>최고 스테이지 <b style="color:' + (okS ? '#8ff0a8' : '#ff6b7f') + '">' + S.best + ' / ' + r.stage + '</b></p>'
-    + '<p>전투력 <b style="color:' + (okC ? '#8ff0a8' : '#ff6b7f') + '">' + fmtB(cp()) + ' / ' + fmtB(r.cp) + '</b></p></div>'
+    /* 320 — 한 줄. 색분기(초록·빨강)도 같이 뺀다: 295 «언제든 도전» 이라 «미달=빨강» 은 거짓 신호이고,
+       «충족» 신호는 323 이 버튼 레드닷으로 준다(신호가 두 곳에 갈리지 않게 한 곳으로 모은다).
+       잉크 색은 인라인 대신 `.pr-cond p b`(남색 상자용 밝은 베이지) 규칙이 준다. */
+    + '<div class="pr-cond"><p>권장 스테이지 <b>' + r.stage + '</b></p></div>'
     + '<div class="pr-rw"><h3>클리어 보상</h3><div class="pr-rw-b">'
     + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
             + rw.id + '" data-cossc="3"></canvas></div>' : '')
@@ -26705,7 +26726,12 @@ function openPromo(){
     /* 267 — [닫기] 삭제(닫기는 딤 탭) · [승급전 시작] 은 22 [모두 받기] 규격 `.pbtn` 으로 */
     /* 295 — openPromo() 는 `nextRank()` 가 없으면 위에서 빠져나가므로 여기 도달했다는 것이
        곧 «도전 가능» 이다. 입장 제한 폐지로 `disabled` 를 뗀다(지시 ⓐ). */
-    + '<button class="ifbtn pbtn" id="pgo"><b>승급전 시작</b></button>');
+    /* 323 — 점등축은 «권장 충족»(`promoReady()`) 하나뿐이다. 295 로 입장 제한이 없어져
+       `disabled` 축이 아예 없으므로 283 의 «disabled 와 별개 축» 주의는 여기선 해당 없음.
+       노드는 켜질 때만 찍고 호스트에 `.alert` 를 건다(301·318 꼴) — 승급에 성공하면 다음 계급
+       기준으로 `promoReady()` 가 저절로 false 가 되고, 팝업은 매번 새로 그리므로 표시가 따라간다. */
+    + '<button class="ifbtn pbtn' + (pready ? ' alert' : '') + '" id="pgo"><b>승급전 시작</b>'
+    + (pready ? '<s class="updot"></s>' : '') + '</button>');
   cosPaint($('mbox'));                   /* 87 규약 — `data-cosav` 캔버스는 렌더 뒤에 한 번 칠한다 */
   $('pgo').onclick = startPromo;
 }
