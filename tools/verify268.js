@@ -29,7 +29,10 @@ let pass = 0, fail = 0;
 const ok = (c, m, d) => { if (c) { pass++; console.log('  ✓', m); } else { fail++; console.log('  ✗', m, d === undefined ? '' : '— ' + d); } };
 const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${got})`);
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
-const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
+/* 315 — 313 과 같은 병. CRLF 체크아웃(Windows autocrlf)에서는 §3 의 `fn.indexOf('\n}\n')` 가 -1 이 돼
+   showItem 본문이 2글자로 잘리고(«본문을 찾았다» · «.skd 를 쓴다» 2건 FAIL) 나머지 부정 단언은 헛통과한다.
+   앵커 리터럴이 전부 LF 기준이므로 읽을 때 줄끝을 정규화한다(브라우저는 원본 파일을 그대로 연다). */
+const SRC = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8').replace(/\r\n/g, '\n');
 
 const PARTS = ['.sk-ic', '.sk-gr', '.sk-lv', '.sk-pb', '.sk-ct', '.sk-sl', '.sk-db', '.sk-ow'];
 
@@ -163,9 +166,15 @@ const READ = (partList) => {
        `[${k}] 잔재 0`, JSON.stringify(L));
   });
   /* 소스에서도 «구 팝업 문자열» 이 showItem 에서 사라졌는지 본다(다시 기어들면 여기서 걸린다) */
-  const fn = SRC.slice(SRC.indexOf('function showItem(id){'));
-  const body = fn.slice(0, fn.indexOf('\n}\n') + 3);
-  ok(body.length > 200, 'showItem 본문을 소스에서 찾았다');
+  /* 315 — 앵커가 빗나가면 body 가 빈 문자열이 돼 아래 «없음» 4건이 헛통과한다(212-①).
+     시작·끝 앵커를 각각 소리 나게 잡는다. */
+  const fnAt = SRC.indexOf('function showItem(id){');
+  ok(fnAt >= 0, 'showItem 시작 앵커를 소스에서 찾았다', fnAt);
+  const fn = SRC.slice(fnAt);
+  const endAt = fn.indexOf('\n}\n');
+  ok(endAt > 0, 'showItem 끝 앵커(`\\n}\\n`)를 찾았다 — 줄끝 정규화 확인', endAt);
+  const body = fn.slice(0, endAt + 3);
+  ok(body.length > 200, 'showItem 본문을 소스에서 찾았다', body.length);
   ok(!/#0e1428/.test(body), 'showItem 에 하드코딩 색 #0e1428 없음');
   ok(!/gbtn/.test(body), 'showItem 에 .gbtn 없음');
   ok(!/mClose/.test(body), 'showItem 에 #mClose 없음');
