@@ -1,0 +1,346 @@
+/* 작업 271 — 룬 3종을 «행 나열» 이 아니라 «하위 탭» 으로 (일반룬 · 고급룬 · 천상룬).
+ * 실행: node tools/verify271.js
+ *
+ * 주인 정정(2026-08-27): 203 이 «룬 탭 안에 3종이 나란히» 로 지었는데
+ *   «룬은 행으로 나눠졌다기보다 일반룬·고급룬·천상룬이 **탭으로** 나눠져 있게».
+ * → 23 훈련 팝업 상위 탭 «훈련 · 룬 · 단련» 안에 **하위 탭 3칸**(한 화면에 한 종만).
+ *
+ * ROUTINE «기능 완성 규칙»(T2 는 «만들어 놓음» 이 아니라 «실제 게임 데이터로 동작하고
+ * 결과가 저장(S)·HUD·다른 화면에 반영됨» 이어야 완료) 에 맞춘 게이트다. 절 구성:
+ *
+ *   [1] 부품   — 하위 바가 96 공용 부품(.stabs.sp3 > .stab) 이고 칸 3개 · 키 r1/r2/r3
+ *                · 바가 **정적 노드**라 0.35초 재렌더에 안 사라진다(74·142 «탭 유실» 계열)
+ *   [2] 기하   — 두 겹 탭: 상위 바와 left·width 가 **같은 값** · 하위 바·카드·요약 겹침 0
+ *                · 카드는 화면에 **1장** · 시트 안 · 그리고 **23 훈련 5요소 좌표 Δ0**
+ *   [3] 전환   — 실제 클릭으로 칸이 바뀌고 카드가 그 룬으로 바뀐다(왕복 포함)
+ *   [4] 잠금   — 잠긴 칸에 잠금 표시 + 자물쇠가 보이고, 들어가면 덮개가 개방 조건을 말한다(186)
+ *                · 개방되면 잠금 표시·자물쇠가 사라진다
+ *   [5] 기본   — 고른 적 없으면 «열려 있는 마지막 룬» · 한 번 고르면 그 선택이 고정된다
+ *   [6] 동작   — 고른 룬의 [재료]·[다이아] 버튼이 **그 룬을** 실제로 올리고 S·전투력에 반영된다
+ *                · 칸별 레드닷이 «재료로 시도 가능» 과 일치한다
+ *   [7] 표기   — «다음 1레벨» · «계단 n/5» 가 runeVal/RUNE_STEP 과 같은 식이다
+ *   [8] 되돌림 시험 — 일부러 깨 보고 이 게이트가 정말 잡는지(LESSONS 43-①)
+ */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+const path = require('path');
+
+let pass = 0, fail = 0;
+const ok = (c, m, d) => { c ? (pass++, console.log('  ✓ ' + m + (d ? ' — ' + d : '')))
+                            : (fail++, console.log('  ✗ ' + m + (d ? ' — ' + d : ''))); };
+
+const URL = 'file://' + path.resolve(__dirname, '../index.html');
+
+(async () => {
+  const b = await launch(chromium, { args: ['--allow-file-access-from-files'] });
+  const errs = [];
+  const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const p = await ctx.newPage();
+  p.on('pageerror', e => errs.push('pageerror: ' + String(e)));
+  p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+  await p.goto(URL);
+  await p.waitForTimeout(1200);
+
+  /* ================= [1] 부품 ================= */
+  console.log('[1] 부품 — 하위 바가 96 공용 서브탭이고 3칸이며 재렌더에 안 사라진다');
+  const part = await p.evaluate(() => {
+    openTrain(); setTrSub('rune');
+    const bar = document.getElementById('rnSubs');
+    const cells = [...bar.querySelectorAll(':scope > [data-runesub]')];
+    return {
+      shared: bar.classList.contains('stabs') && bar.classList.contains('sp3')
+              && cells.every(c => c.classList.contains('stab')),
+      n: cells.length, keys: cells.map(c => c.dataset.runesub),
+      labels: cells.map(c => c.querySelector('i').textContent.trim()),
+      /* 이름은 데이터(RUNES)와 한 벌이어야 한다 — 라벨을 손으로 적어 두면 조용히 갈라진다 */
+      names: RUNES.map(r => r.n),
+      /* 96 규약: 각 칸에 레드닷 자리(.bdg)가 있다 */
+      bdg: cells.every(c => !!c.querySelector('.bdg')),
+      lock: cells.every(c => !!c.querySelector('.sk-lock')),
+      /* 바는 본문(#trRunes) **밖**의 형제여야 한다 — 안에 있으면 innerHTML 교체에 같이 지워진다 */
+      outside: !document.getElementById('trRunes').contains(bar),
+      parent: bar.parentElement.className
+    };
+  });
+  ok(part.shared, '96 공용 서브탭 부품(.stabs.sp3 > .stab) 을 그대로 쓴다');
+  ok(part.n === 3 && part.keys.join(',') === 'r1,r2,r3', '하위 탭 3칸 · 키 r1/r2/r3', part.keys.join(','));
+  ok(part.labels.join(',') === part.names.join(','),
+    '칸 라벨이 RUNES 의 이름과 같다', part.labels.join(','));
+  ok(part.bdg, '칸마다 레드닷 자리(.bdg) 가 있다(96 규약)');
+  ok(part.lock, '칸마다 자물쇠 자리(.sk-lock) 가 있다');
+  ok(part.outside && /tr-box/.test(part.parent),
+    '★ 바가 #trRunes 밖의 .tr-box 형제다 — 0.35초 재렌더에 안 지워진다', part.parent);
+
+  /* 실제로 «재렌더가 여러 번 돈 뒤에도» 같은 노드인가 — 74·142 «탭 유실» 계열의 근본 검사 */
+  await p.evaluate(() => { document.getElementById('rnSubs').dataset.mark = 'v271'; });
+  await p.evaluate(() => { for (let i = 0; i < 6; i++) renderTrain(); });
+  await p.waitForTimeout(900);
+  const alive = await p.evaluate(() => {
+    const bar = document.getElementById('rnSubs');
+    return { mark: bar && bar.dataset.mark, n: bar ? bar.querySelectorAll('[data-runesub]').length : 0 };
+  });
+  ok(alive.mark === 'v271' && alive.n === 3,
+    '★ 재렌더 6회 + 0.9초 라이브 틱을 지나도 같은 바 노드가 살아 있다', alive.mark + '/' + alive.n);
+
+  /* ================= [2] 기하 ================= */
+  console.log('[2] 기하 — 두 겹 탭이 같은 세로선 위에 서고, 23 훈련 좌표는 Δ0 이다');
+  /* 203 이 못 박은 «훈련 탭 5요소의 .tr-box local 좌표». 271 이 하위 바를 세워도
+     한 칸이라도 움직이면 23 의 26회차 폴리시가 깨진다(verify203 [2] 와 같은 표). */
+  const PIN23 = {
+    '.tr-rib':   [247, 34, 551, 108],
+    '.tr-prog':  [177, 165, 668, 55],
+    '.tr-up':    [838, 139, 108, 107],
+    '.tr-qty':   [142, 265, 761, 75],
+    '.tr-cards': [0, 373, 1046, 510]
+  };
+  const geo = await p.evaluate((PIN) => {
+    const box = () => document.querySelector('.tr-box').getBoundingClientRect();
+    const loc = s => { const e = document.querySelector(s); if (!e) return null;
+                       const r = e.getBoundingClientRect(), b = box();
+                       return [+(r.x - b.x).toFixed(2), +(r.y - b.y).toFixed(2),
+                               +r.width.toFixed(2), +r.height.toFixed(2)]; };
+    const KEYS = Object.keys(PIN);
+    openTrain(); setTrSub('train'); setRuneSub(null);
+    const before = KEYS.map(loc);
+    setTrSub('rune');
+    const up = loc('#trSubs'), dn = loc('#rnSubs');
+    const card = [...document.querySelectorAll('.tr-rn')].map(e => e.getBoundingClientRect());
+    const sum = document.querySelector('.tr-runes .rsum').getBoundingClientRect();
+    const barU = document.getElementById('trSubs').getBoundingClientRect();
+    const barD = document.getElementById('rnSubs').getBoundingClientRect();
+    const sheet = document.querySelector('.tr-sheet').getBoundingClientRect();
+    /* 세로로 겹치는 쌍이 하나라도 있으면 안 된다(하위 바 · 카드 · 요약 · 상위 바) */
+    const all = [barD].concat(card, [sum], [barU]);
+    let overlap = 0;
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++)
+      if (all[i].bottom > all[j].top + 0.5 && all[j].bottom > all[i].top + 0.5) overlap++;
+    setTrSub('train');
+    const after = KEYS.map(loc);
+    return {
+      up, dn, card: card.length, overlap,
+      order: barD.bottom <= card[0].top + 0.5 && card[0].bottom <= sum.top + 0.5
+             && sum.bottom <= barU.top + 0.5,
+      inSheet: barD.top >= sheet.top - 0.5 && barU.bottom <= sheet.bottom + 0.5,
+      pinned: KEYS.every((k, i) => JSON.stringify(before[i]) === JSON.stringify(PIN[k])),
+      same: JSON.stringify(before) === JSON.stringify(after), before
+    };
+  }, PIN23);
+  ok(geo.up[0] === geo.dn[0] && geo.up[2] === geo.dn[2],
+    '★ 두 겹 탭 — 상·하위 바의 left·width 가 같은 값(같은 세로선 위)',
+    'left ' + geo.up[0] + '/' + geo.dn[0] + ' · w ' + geo.up[2] + '/' + geo.dn[2]);
+  ok(geo.dn[1] === 34 && geo.dn[3] === 99,
+    '하위 바가 본문 머리(박스 local top 34) · 부품 높이 99', geo.dn[1] + ' / ' + geo.dn[3]);
+  ok(geo.card === 1, '★ 한 화면에 룬 카드 1장(행 나열 폐기)', String(geo.card));
+  ok(geo.overlap === 0, '하위 바 · 카드 · 총효과 요약 · 상위 바 서로 겹침 0건', String(geo.overlap));
+  ok(geo.order, '세로 순서 — 하위 바 → 카드 → 총효과 요약 → 상위 바');
+  ok(geo.inSheet, '두 바 모두 시트 안에 들어간다(잘림 0)');
+  ok(geo.pinned, '★ 훈련 5요소의 박스 local 좌표가 203 이전 값과 Δ0 — 하위 바를 세워도 23 이 안 밀렸다',
+    geo.pinned ? '' : JSON.stringify(geo.before));
+  ok(geo.same, '룬 탭에 갔다 와도 훈련 좌표가 그대로(왕복 Δ0)');
+
+  /* ================= [3] 전환 ================= */
+  console.log('[3] 전환 — 실제 클릭으로 칸이 바뀌고 카드가 그 룬으로 바뀐다');
+  await p.evaluate(() => {
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: 0 };   /* 셋 다 열어 둔다 */
+    setRuneSub('r1'); openTrain(); setTrSub('rune');
+  });
+  await p.waitForTimeout(350);
+  const seen = [];
+  for (const id of ['r2', 'r3', 'r1']) {
+    await p.click('#rnSubs [data-runesub="' + id + '"]', { force: true });
+    await p.waitForTimeout(300);
+    seen.push(await p.evaluate(() => ({
+      sub: runeSub,
+      card: document.querySelector('.tr-rn').dataset.rune,
+      name: document.querySelector('.tr-rn>.rn').textContent.trim(),
+      on: [...document.querySelectorAll('#rnSubs [data-runesub]')]
+            .filter(e => e.classList.contains('on')).map(e => e.dataset.runesub).join(',')
+    })));
+  }
+  ok(seen.every((s, i) => s.sub === ['r2', 'r3', 'r1'][i]),
+    '칸을 누르면 하위 탭이 실제로 바뀐다', seen.map(s => s.sub).join(' → '));
+  ok(seen.every((s, i) => s.card === ['r2', 'r3', 'r1'][i]),
+    '★ 카드가 그 룬으로 바뀐다', seen.map(s => s.card + ':' + s.name).join(' → '));
+  ok(seen.every(s => s.on === s.sub), '활성 칸(.on) 이 정확히 한 칸이고 고른 칸이다',
+    seen.map(s => s.on).join(' → '));
+
+  /* 상위 탭을 왕복해도 하위 선택이 유지되는가 */
+  await p.evaluate(() => { setRuneSub('r3'); setTrSub('train'); setTrSub('rune'); });
+  await p.waitForTimeout(250);
+  const keep = await p.evaluate(() => document.querySelector('.tr-rn').dataset.rune);
+  ok(keep === 'r3', '상위 탭(훈련 ↔ 룬) 왕복 후에도 고른 하위 탭이 유지된다', keep);
+
+  /* ================= [4] 잠금 ================= */
+  console.log('[4] 잠금 — 잠긴 칸에 잠금 표시 + 자물쇠, 들어가면 개방 조건(186)');
+  const lock = await p.evaluate(() => {
+    const cell = id => document.querySelector('#rnSubs [data-runesub="' + id + '"]');
+    const lockVis = id => getComputedStyle(cell(id).querySelector('.sk-lock')).display;
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
+    const lk0 = ['r1', 'r2', 'r3'].map(id => cell(id).classList.contains('lk'));
+    const vis0 = ['r1', 'r2', 'r3'].map(lockVis);
+    /* 잠긴 칸을 골라도 들어갈 수 있고, 덮개가 개방 조건을 말한다 */
+    setRuneSub('r2');
+    const cardLk = document.querySelector('.tr-rn').classList.contains('lk');
+    const cover = getComputedStyle(document.querySelector('.tr-rn>.rlk')).display;
+    const txt = document.querySelector('.tr-rn>.rlk').textContent.trim();
+    /* 개방되면 표시가 사라진다 */
+    S.rune = { r1: RUNE_MAXLV, r2: 0, r3: 0 }; renderTrain();
+    const lk1 = ['r1', 'r2', 'r3'].map(id => cell(id).classList.contains('lk'));
+    const vis1 = lockVis('r2');
+    const cardLk1 = document.querySelector('.tr-rn').classList.contains('lk');
+    const cover1 = getComputedStyle(document.querySelector('.tr-rn>.rlk')).display;
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
+    return { lk0, vis0, cardLk, cover, txt, lk1, vis1, cardLk1, cover1,
+             req: runeReqText('r2') };
+  });
+  ok(JSON.stringify(lock.lk0) === '[false,true,true]',
+    '시작 — 일반룬만 열리고 고급·천상 칸에 잠금 표시', JSON.stringify(lock.lk0));
+  ok(lock.vis0[0] === 'none' && lock.vis0[1] === 'block' && lock.vis0[2] === 'block',
+    '잠긴 칸에서만 자물쇠가 보인다', lock.vis0.join(','));
+  ok(lock.cardLk && lock.cover === 'block',
+    '★ 잠긴 칸도 들어갈 수 있고 카드 덮개가 뜬다(막지 않는다)');
+  ok(lock.txt.indexOf(lock.req) >= 0 && lock.req === '일반룬 Lv.500 달성 시 개방',
+    '덮개가 개방 조건 문구를 말한다(186 관례)', lock.txt);
+  ok(JSON.stringify(lock.lk1) === '[false,false,true]' && lock.vis1 === 'none'
+     && !lock.cardLk1 && lock.cover1 === 'none',
+    '★ 일반룬 500 → 고급 칸의 잠금 표시·자물쇠·덮개가 한꺼번에 사라진다',
+    JSON.stringify(lock.lk1) + ' / ' + lock.vis1);
+
+  /* ================= [5] 기본 선택 ================= */
+  console.log('[5] 기본 — 고른 적 없으면 «열려 있는 마지막 룬»');
+  const def = await p.evaluate(() => {
+    const shown = () => { renderTrain(); return document.querySelector('.tr-rn').dataset.rune; };
+    setRuneSub(null);
+    S.rune = { r1: 0, r2: 0, r3: 0 };                        const a = shown();
+    S.rune = { r1: RUNE_MAXLV, r2: 0, r3: 0 };               const b = shown();
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: 0 };      const c = shown();
+    /* 한 번 고르면 고정 — 사다리가 더 열려도 안 따라간다 */
+    setRuneSub('r1');                                        const d = shown();
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
+    return { a, b, c, d };
+  });
+  ok(def.a === 'r1' && def.b === 'r2' && def.c === 'r3',
+    '★ 안 골랐으면 «지금 올리고 있는 룬»(열린 마지막 칸) 을 연다', [def.a, def.b, def.c].join(' → '));
+  ok(def.d === 'r1', '한 번 고르면 그 선택이 고정된다(사다리가 더 열려도 안 끌려간다)', def.d);
+
+  /* ================= [6] 동작 ================= */
+  console.log('[6] 동작 — 고른 룬의 버튼이 그 룬을 실제로 올리고 S·전투력에 반영된다');
+  await p.evaluate(() => {
+    S.rune = { r1: RUNE_MAXLV, r2: 0, r3: 0 };
+    S.rstone = 1e9; S.dia = 1e9;
+    setRuneSub('r2'); openTrain(); setTrSub('rune');
+  });
+  await p.waitForTimeout(350);
+  const before6 = await p.evaluate(() => ({ r1: S.rune.r1, r2: S.rune.r2, st: S.rstone, cp: cp() }));
+  /* 성공률이 낮으므로 «레벨이 오를 때까지» 가 아니라 «재화가 실제로 빠지고, 오른 룬은 r2 뿐» 을 본다 */
+  for (let i = 0; i < 40; i++) {
+    await p.click('.tr-rn [data-runebuy][data-pay="mat"]', { force: true });
+    await p.waitForTimeout(40);
+  }
+  const after6 = await p.evaluate(() => ({ r1: S.rune.r1, r2: S.rune.r2, st: S.rstone,
+                                           saved: JSON.parse(localStorage.getItem(KEY) || '{}').rune,
+                                           cp: cp() }));
+  ok(after6.st < before6.st, '[재료] 버튼이 실제로 룬강화석을 깎는다',
+    before6.st + ' → ' + after6.st);
+  ok(after6.r2 > before6.r2, '★ 고른 룬(r2)의 레벨이 실제로 오른다', before6.r2 + ' → ' + after6.r2);
+  ok(after6.r1 === before6.r1, '고르지 않은 룬(r1)은 안 움직인다', String(after6.r1));
+  ok(after6.saved && after6.saved.r2 === after6.r2, '결과가 세이브(S)에 그대로 기록된다',
+    JSON.stringify(after6.saved));
+  ok(after6.cp > before6.cp, '★ 전투력(cp)에 반영된다 — «다른 화면에 반영»',
+    before6.cp + ' → ' + after6.cp);
+
+  const dia = await p.evaluate(async () => {
+    const d0 = S.dia, l0 = S.rune.r2;
+    for (let i = 0; i < 20; i++) runeBuy('r2', 'dia');
+    return { spent: d0 - S.dia, up: S.rune.r2 - l0, want: 20 * RUNE_DIA };
+  });
+  ok(dia.spent === dia.want, '[다이아] 버튼도 같은 룬에 20회분 다이아를 쓴다',
+    dia.spent + ' / ' + dia.want);
+  ok(dia.up >= 0, '다이아 시도도 레벨을 내리지 않는다(실패해도 그대로)', String(dia.up));
+
+  /* 칸별 레드닷 — «지금 재료로 시도할 수 있는 칸» 과 정확히 같아야 한다(166 규약) */
+  const dot = await p.evaluate(() => {
+    const read = () => [...document.querySelectorAll('#rnSubs [data-runesub]')]
+      .map(e => e.classList.contains('alert'));
+    const want = () => RUNES.map(r => runeTryOk(r.id, 'mat'));
+    S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e9; renderTrain();
+    const a = { got: read(), want: want() };
+    S.rstone = 0; renderTrain();
+    const b = { got: read(), want: want() };
+    S.rune = { r1: RUNE_MAXLV, r2: 0, r3: 0 }; S.rstone = 1e9; renderTrain();
+    const c = { got: read(), want: want() };
+    return { a, b, c };
+  });
+  ok(JSON.stringify(dot.a.got) === JSON.stringify(dot.a.want)
+     && JSON.stringify(dot.b.got) === JSON.stringify(dot.b.want)
+     && JSON.stringify(dot.c.got) === JSON.stringify(dot.c.want),
+    '★ 칸별 레드닷 = «재료로 시도 가능»(166) — 재화·사다리 3상태 모두 일치',
+    JSON.stringify(dot.a.got) + ' / ' + JSON.stringify(dot.b.got) + ' / ' + JSON.stringify(dot.c.got));
+  ok(dot.b.got.every(v => v === false), '재료가 0 이면 어느 칸도 안 켜진다(상시 점등 아님)');
+
+  /* ================= [7] 표기 ================= */
+  console.log('[7] 표기 — «다음 1레벨»·«계단 n/5» 가 runeVal/RUNE_STEP 과 같은 식이다');
+  const say = await p.evaluate(() => {
+    const out = [];
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub('r1');
+    [0, 99, 100, 250, 499].forEach(l => {
+      S.rune.r1 = l; renderTrain();
+      const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
+      out.push({
+        l, seg,
+        nx: document.querySelector('.tr-rn>.rnx').textContent.trim(),
+        st: document.querySelector('.tr-rn>.rst').textContent.trim(),
+        wantNx: '공격력 +' + pct(RN.r1.eff.atk * RUNE_STEP[seg]),
+        wantSt: '계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
+      });
+    });
+    S.rune.r1 = RUNE_MAXLV; renderTrain();
+    const maxNx = document.querySelector('.tr-rn>.rnx').textContent.trim();
+    const maxBtn = !!document.querySelector('.tr-rn>.rmax');
+    const hint = document.querySelector('.tr-rn>.rhint');
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); renderTrain();
+    const hint0 = document.querySelector('.tr-rn>.rhint');
+    return { out, maxNx, maxBtn, hintAtMax: !!hint, hint0: hint0 ? hint0.textContent.trim() : '' };
+  });
+  say.out.forEach(o => ok(o.nx.indexOf(o.wantNx) >= 0,
+    'Lv ' + o.l + ' — «다음 1레벨» 이 eff × RUNE_STEP[' + o.seg + '] 과 같다', o.nx));
+  say.out.forEach(o => ok(o.st.indexOf(o.wantSt) === 0,
+    'Lv ' + o.l + ' — «계단 ' + (o.seg + 1) + ' / 5» 로 지금 칸을 말한다', o.st));
+  ok(say.maxNx.indexOf('더 올릴 수 없') >= 0 && say.maxBtn && !say.hintAtMax,
+    '만렙에서는 «다음 1레벨» 대신 «더 올릴 수 없음» · MAX 판 · 실패 안내 없음', say.maxNx);
+  ok(say.hint0.indexOf('실패해도 레벨은 그대로') >= 0,
+    '시도 가능할 때는 «실패해도 레벨은 그대로» 안내가 상시 붙는다', say.hint0);
+
+  /* ================= [8] 되돌림 시험 ================= */
+  console.log('[8] 되돌림 시험 — 일부러 깨 보고 이 게이트가 잡는지(LESSONS 43-①)');
+  const neg = await p.evaluate(() => {
+    /* ⓐ 하위 탭을 안 바꾸면 카드도 안 바뀐다 — [3] 이 공허하지 않다 */
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: 0 };
+    setRuneSub('r1'); renderTrain();
+    const a1 = document.querySelector('.tr-rn').dataset.rune;
+    setRuneSub('r3'); renderTrain();
+    const a2 = document.querySelector('.tr-rn').dataset.rune;
+    /* ⓑ 잠금 표시가 «항상 켜짐» 이 아니다 */
+    S.rune = { r1: RUNE_MAXLV, r2: RUNE_MAXLV, r3: 0 }; renderTrain();
+    const b = [...document.querySelectorAll('#rnSubs [data-runesub]')]
+      .every(e => !e.classList.contains('lk'));
+    /* ⓒ 카드가 «1장» 인 것이 우연이 아니다 — RUNES 는 여전히 3종이다 */
+    const c = RUNES.length === 3 && document.querySelectorAll('.tr-rn').length === 1;
+    /* ⓓ 계단 표기가 레벨을 실제로 따라간다(고정 문자열이 아니다) */
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub('r1'); renderTrain();
+    const d0 = document.querySelector('.tr-rn>.rst').textContent.trim();
+    S.rune.r1 = 300; renderTrain();
+    const d1 = document.querySelector('.tr-rn>.rst').textContent.trim();
+    S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); S.rstone = 0; S.dia = 0; renderTrain();
+    return { a: a1 === 'r1' && a2 === 'r3', b, c, d: d0 !== d1, d0, d1 };
+  });
+  ok(neg.a, 'ⓐ 카드는 고른 칸을 실제로 따라간다(고정 노드가 아니다)');
+  ok(neg.b, 'ⓑ 잠금 표시는 «항상 켜짐» 이 아니다(전부 열면 전부 꺼진다)');
+  ok(neg.c, 'ⓒ 룬은 여전히 3종인데 화면에 1장이다 — «탭으로 나눴다» 가 진짜다');
+  ok(neg.d, 'ⓓ 계단 문구가 레벨을 따라 바뀐다', neg.d0 + ' / ' + neg.d1);
+  ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
+
+  await b.close();
+  console.log('\nVERIFY271 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+  process.exit(fail ? 1 : 0);
+})();

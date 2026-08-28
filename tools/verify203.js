@@ -131,7 +131,11 @@ const table = [];
   ok(tab.same, '룬 탭에 갔다 와도 훈련 좌표가 그대로(왕복 Δ0)',
     tab.same ? '' : JSON.stringify(tab.before) + ' vs ' + JSON.stringify(tab.after));
   ok(tab.hidden, '룬 탭에서는 훈련 5요소가 display:none — 같은 자리를 번갈아 쓴다');
-  ok(tab.overlap === 0, '룬 카드 3장 + 총효과 요약줄 서로 겹침 0건', String(tab.overlap));
+  /* 271 — 룬 3종이 «행 나열» 에서 «하위 탭» 으로 바뀌어 한 화면에 카드가 **1장**이다(주인 정정).
+     203 이 여기서 재는 것은 «본문 요소끼리 겹치지 않는가» 이지 «카드가 몇 장인가» 가 아니므로
+     장수를 못 박지 않는다 — 위 `shared` 가 칸 수를 안 박은 것과 같은 이유다. 장수·하위 탭 기하는
+     verify271 [1][2] 소관. */
+  ok(tab.overlap === 0, '룬 본문(카드 + 총효과 요약줄) 서로 겹침 0건', String(tab.overlap));
   ok(tab.belowBar, '룬 본문이 서브탭 바 위에서 끝난다(바를 안 침범)');
   ok(tab.inSheet, '서브탭 바·룬 본문이 시트 안에 들어간다(잘림 0)');
   ok(tab.onTrain && tab.showTrain === 'block', '기본 탭은 «훈련» 이고 훈련 카드가 보인다', tab.showTrain);
@@ -165,8 +169,16 @@ const table = [];
     const c = RUNES.map(r => runeOpen(r.id));
     S.rune = { r1: 0, r2: 0, r3: 0 };
     renderTrain();
-    const lk = [...document.querySelectorAll('.tr-rn')].map(e => e.classList.contains('lk'));
-    const txt = [...document.querySelectorAll('.tr-rn>.rlk')].map(e => e.textContent.trim());
+    /* 271 — 잠금 표시가 «카드 3장 나란히» 에서 «하위 탭 3칸» 으로 옮겨졌다(주인 정정).
+       그래서 잠금 상태는 탭 칸에서 읽고, 개방 조건 문구는 그 칸을 골랐을 때 카드 덮개에서 읽는다. */
+    const lk = [...document.querySelectorAll('#rnSubs [data-runesub]')]
+      .map(e => e.classList.contains('lk'));
+    const txt = RUNES.map(r => {
+      setRuneSub(r.id);
+      const c = document.querySelector('.tr-rn>.rlk');
+      return c ? c.textContent.trim() : '';
+    });
+    setRuneSub(null);
     return { a, b, c, max: RUNE_MAXLV, names: RUNES.map(r => r.n), lk, txt,
              req: RUNES.map(r => runeReqText(r.id)) };
   });
@@ -175,7 +187,8 @@ const table = [];
   ok(JSON.stringify(lad.a) === '[true,false,false]', '시작은 일반룬만 열려 있다', JSON.stringify(lad.a));
   ok(JSON.stringify(lad.b) === '[true,true,false]', '일반룬 500 → 고급룬 개방', JSON.stringify(lad.b));
   ok(JSON.stringify(lad.c) === '[true,true,true]', '고급룬 500 → 천상룬 개방', JSON.stringify(lad.c));
-  ok(JSON.stringify(lad.lk) === '[false,true,true]', '잠긴 룬도 탭 안에 나란히 보인다(3장 전부 렌더)');
+  ok(JSON.stringify(lad.lk) === '[false,true,true]',
+    '잠긴 룬도 하위 탭 3칸에 전부 보이고 잠금 표시가 붙는다(271)', JSON.stringify(lad.lk));
   ok(lad.req[1] === '일반룬 Lv.500 달성 시 개방' && lad.req[2] === '고급룬 Lv.500 달성 시 개방',
     '개방 조건 문구(186 관례)', lad.req[1]);
   ok(lad.txt[1].indexOf('일반룬 Lv.500') >= 0, '잠금 덮개에 그 문구가 실제로 찍힌다', lad.txt[1]);
@@ -301,7 +314,9 @@ const table = [];
   ok(eff.stepTab === '1,1.8,3,4.6,6.6' && eff.stepEvery === 100, '계단 표 5칸(197 문법)', eff.stepTab);
   ok(eff.once, '★ bonus() 가 «축별 합산 후 1회 곱» 으로 반영한다(194·LESSONS 91-1 규칙)');
   ok(eff.notPerRune, '룬마다 곱하지 **않는다**(그랬다면 만렙 셋에서 배율이 터진다)');
-  ok(eff.shown.indexOf(eff.want) === 0, '카드 효과 표기가 runeVal 과 같은 식', eff.shown + ' / ' + eff.want);
+  /* 271 — `.rd` 앞에 «지금 효과 — » 라벨이 붙었다(카드가 커져 ①지금/②다음 1레벨/③계단 3줄이 됐다).
+     재는 것은 «표기가 runeVal 과 같은 식인가» 이므로 위치가 아니라 포함으로 본다. */
+  ok(eff.shown.indexOf(eff.want) >= 0, '카드 효과 표기가 runeVal 과 같은 식', eff.shown + ' / ' + eff.want);
   ok(eff.cp1 > eff.cp0, '룬 레벨이 전투력(cp)에 실제로 반영된다',
     Math.round(eff.cp0) + ' → ' + Math.round(eff.cp1));
   table.push({ k: '효과(만렙 1종)', v: '일반룬 500 = 공격력 +' + (1700).toFixed(0) + '% 상당(계단 합 ×17)' });
