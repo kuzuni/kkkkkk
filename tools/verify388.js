@@ -43,6 +43,9 @@ const text = fs.readFileSync(SRC, 'utf8');
 const lines = text.split('\n');
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
 const idxOf = id => lines.findIndex(l => { const g = ROW.exec(l); return g && g[1] === id; });
+/* 자와 같은 두 모양 — §N 의 «진짜 미착수» 표본을 표에게 물어서 고르는 데 쓴다(리터럴 금지) */
+const NOT_YET_SHAPE = /\|\s*(?:–|—|-|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(미착수|등재만|착수 전)/;
+const DONE_DATED_MARK = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
 
 /* 마감 표시를 등재 모양으로 되짚는다 — 구현·점수·횟수 세 칸에는 `|` 가 없으므로
    «(등재문 …)» 표지에서 파이프를 넷 되짚으면 정확히 그 세 칸의 앞에 선다. */
@@ -100,24 +103,31 @@ for (const id of CLOSED) {
 console.log('');
 console.log('[N] 음성항 — 정상 행을 빨갛게 만들지 않는다');
 const QUIET = { '199': '⏸ 보류(주인 지시)', '67': '⏸ 보류', '72': '🔧 진행 중', '351': '진행 중', '14': '✖ 폐기' };
-const NOTYET = ['379', '384', '385', '386'];
+/* ⚠ 진짜 미착수 표본을 **리터럴로 박지 마라** — 그 행들은 끝나면 사라진다(379 가 이 자를 한 번 빨갛게 했다:
+   done(379) 가 상류에서 올라오자 «미착수 표본» 이 아니게 됐다). 표에게 물어서 고른다(368 처방). */
+const NOTYET = lines
+  .filter(l => ROW.test(l) && NOT_YET_SHAPE.test(l) && !DONE_DATED_MARK.test(l))
+  .map(l => ROW.exec(l)[1]);
 for (const [id, why] of Object.entries(QUIET)) {
   const i = idxOf(id);
   if (i < 0) { no('행 ' + id + ' 을 찾지 못했다'); continue; }
   chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out), '[N] ' + id + ' (' + why + ') 는 안 잡힌다');
 }
+chk(NOTYET.length >= 3, '[N] 진짜 미착수 표본이 실제로 있다(빈 배열로 초록이 아니다)', NOTYET.length + '건: ' + NOTYET.join(' '));
 for (const id of NOTYET) {
-  const i = idxOf(id);
-  if (i < 0) { no('행 ' + id + ' 을 찾지 못했다'); continue; }
-  chk(/\|\s*–\s*\|/.test(lines[i]) && !new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
+  chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
       '[N] ' + id + ' (진짜 미착수 — 완료 표지 없음) 는 안 잡힌다');
 }
 /* 가장 짧은 음성항: «미착수» 라는 낱말만으로는 절대 안 빨개진다 */
 {
-  const i = idxOf('388');
-  const has = i >= 0 && /미착수/.test(lines[i]);
-  chk(has && !/✗ 388 — 자기모순/.test(live.out),
-      '[N] 388 자신의 등재문은 «미착수» 와 완료 낱말을 **인용**하는데 안 잡힌다 — 날짜 없는 인용은 표지가 아니다');
+  /* 마감된 행은 «미착수» 를 산문으로 **인용**한다(등재문 본문을 안 지우므로). 그 인용만으로 빨개지면 안 된다.
+     ⚠ 여기서도 ID 를 박지 않는다 — 표에게 묻고 하한을 건다(379 가 리터럴 표본으로 한 번 물렸다). */
+  const quoting = lines.filter(l => ROW.test(l) && /미착수/.test(l) && DONE_DATED_MARK.test(l)).map(l => ROW.exec(l)[1]);
+  chk(quoting.length >= 1, '[N] «미착수» 를 인용하면서 완료 표지도 가진 행이 실제로 있다', quoting.length + '건: ' + quoting.join(' '));
+  for (const id of quoting) {
+    chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
+        '[N] ' + id + ' 는 «미착수» 를 **인용**할 뿐인데 안 잡힌다 — 산문 인용은 머리말이 아니다');
+  }
 }
 
 /* ── §S 창 정직성 ── */
