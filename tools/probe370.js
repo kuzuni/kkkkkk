@@ -91,17 +91,19 @@ const ok = (b, name, detail) => { console.log((b ? 'PASS' : 'FAIL') + ' ' + name
   ok(mn.ic === '\u{1F3AB}' && mn.label === '패스',
      '[3] 🎫 = 패스 기능 글리프(A1 이 data-mn="pass" 로 이미 면제한 아트 자리)', mn.ic + ' / ' + mn.label);
 
-  /* ── [4] ⓐ 를 따르면 붙는 것 — 입장권 아이콘 5종의 실제 용처 ───────── */
+  /* ── [4] ⓐ 를 따르면 붙는 것 — 입장권 아이콘의 실제 용처 ───────────
+     ⚠ 402 이후 권종은 «계열 5종» 이 아니라 **던전마다 한 장**이다. 목록을 손으로 적으면
+       던전이 늘 때마다 뒤처지므로 `DUNGEONS` 에서 뽑는다(`tkRelic` 은 그때 사라진 이름이다). */
   const tk = await p.evaluate(() => {
     const out = {};
-    for (const k of ['tkGold', 'tkDia', 'tkRelic', 'tkStone', 'tkRstone']) {
+    for (const k of DUNGEONS.map(d => dunTk(d.id))) {
       const d = document.createElement('div'); d.innerHTML = curIc(k);
       const im = d.querySelector('img'); out[k] = im ? im.getAttribute('src') : null;
     }
     const dun = (typeof DUNGEONS !== 'undefined' ? DUNGEONS : []).map(d => d.id + ':' + (d.cur || d.k || '?'));
     return { out, dun };
   });
-  console.log('[4] curIc 입장권 5종: ' + Object.entries(tk.out).map(([k, v]) => k + '→' + v).join(' · '));
+  console.log('[4] curIc 입장권 ' + Object.keys(tk.out).length + '종: ' + Object.entries(tk.out).map(([k, v]) => k + '→' + v).join(' · '));
   console.log('    던전 권종: ' + tk.dun.join(' · '));
   ok(Object.values(tk.out).every(v => v && /cur-ticket-/.test(v)),
      '[4] ⓐ 가 붙일 아이콘은 전부 «던전 입장권» 자산이다(패스 토스트에 쓰면 오표기 — 289·211 판정 계열)',

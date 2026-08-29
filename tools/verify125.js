@@ -25,7 +25,8 @@
  *       런타임에서도 아트 자리 노드(`ART_NODE`)만 면제하고, 그 면제가 죽지 않았는지를 F2b 가 A3 처럼 본다.
  *       §R6~§R8 이 «글리프까지 · 그 자리에만» 을 되돌림 시험으로 못박는다.
  *   [G] 58 연출 — 재화 비행 파티클이 이모지가 아니라 CUR_ICON 이미지다(fxFly 직후 `.fx-fly>img.cic`).
- *   [H] 입장권 — 던전 계열 5종(골드·다이아·유물·강화석·룬강화석)만 쓰인다. 던전 카드 권종이 계열과 일치.
+ *   [H] 입장권 — **던전마다 한 장**(402 로 «계열 5종» 규약 폐기). 권종 키가 CUR_ICON 에 다 있고(H1),
+ *       그림이 던전마다 다르며(H2), 03 카드가 그린 것이 선언과 같다(H3 — 손으로 적은 사본 금지).
  *   [I] 콘솔 에러 0건.
  */
 const path = require('path');
@@ -99,13 +100,14 @@ const ALLOW = [
   'class="rk-sh s1"',                         /* 54 랭킹 단상 1위 방패 */
   "['\u{1F947}', '\u{1F948}', '\u{1F949}']",  /* 54 랭킹 메달 3종 */
   /* ── 작업 289 판정: 🎫 «이용권» 은 화폐가 아니다 ──────────────────────────────
-     125 가 통일한 화폐는 12종이다(210 이후) — 골드·다이아·유물조각·강화석·룬강화석·단련석·마일리지 +
-     **던전 입장권** 5종(`cur-ticket-*.svg`, H1 이 던전 카드 권종으로 못 박는다).
+     125 가 통일한 화폐는 재화 7종(골드·다이아·유물조각·강화석·룬강화석·단련석·마일리지) +
+     **던전 입장권**(`cur-ticket-*.svg` — 402 이후 **던전마다 한 장**이라 던전이 늘면 같이 는다.
+     종수를 여기 적어 두지 않는 이유가 그것이다. H1~H3 이 던전 수와의 일치로 못 박는다)이다.
      124·151 의 «이용권» 은 상점 **상품**(오프라인 보상 +4시간 등)이라 그 어느 것도 아니다 —
      `curIc('tkDia')` 로 옮기면 **던전 입장권 아이콘을 상점 상품 토스트에 붙이는 오표기**가 된다. */
   "' 이용권 — '",                             /* 151·124 이용권 적용 토스트(재화 아님) */
   /* ── 작업 211 판정: 🎟 «쿠폰» 은 화폐가 아니다 ──────────────────────────────
-     쿠폰 코드(`CF_CODES`)도 화폐가 아니라서 `curIc('tkDia')`/`curIc('tkRelic')` 로 옮기면 같은
+     쿠폰 코드(`CF_CODES`)도 화폐가 아니라서 `curIc('tkDia')`/`curIc('tkRelic1')` 로 옮기면 같은
      오표기가 된다. 실제 «지급물» 인 다이아는 이미 같은 줄에서 `curIc('dia')` 로 나가고 있다. */
   '사용할 수 없는 코드입니다',                /* 쿠폰 — 잘못된 코드 토스트 */
   '이미 사용한 코드입니다',                   /* 쿠폰 — 중복 사용 토스트 */
@@ -119,8 +121,8 @@ const ALLOW = [
           남은 이모지는 머리글자 **🎫 ×1** 뿐이라 이 글리프는 «화폐 표시» 자리가 아니다.
        ⓑ 🎫 는 이 게임에서 **«패스» 기능의 글리프**다 — ▦ 메뉴 «패스» 칸(`data-mn="pass"`, 실측 아이콘 "🎫" ·
           라벨 "패스")을 A1 이 **이미 위에서 면제**하고 있다. 같은 기능의 토스트 머리에 같은 글리프가 온 것이다.
-       ⓒ 등재문 처방 ⓐ(«문구를 `curIc('ticket…')` 계열로 갈아 끼운다»)는 **오표기가 된다** — 그 5종은
-          전부 `cur-ticket-*.svg` = **던전 입장권** 자산이고(H1·H2 가 던전 권종으로 못 박는다),
+       ⓒ 등재문 처방 ⓐ(«문구를 `curIc('ticket…')` 계열로 갈아 끼운다»)는 **오표기가 된다** — 그것들은
+          전부 `cur-ticket-*.svg` = **던전 입장권** 자산이고(H1~H3 이 던전 권종으로 못 박는다),
           패스 토스트에 붙이면 124·151 «이용권» 에서 289 가, 쿠폰에서 211 이 이미 기각한 그 오표기다.
      ⚠ 항목에 **글리프까지 적어 둔다** — «일괄 받기» 만 적으면 머리글자가 🪙 로 바뀌어도 초록이 된다.
         §R2 가 그 무름을 되돌림 시험으로 못박는다. */
@@ -531,24 +533,39 @@ function scanEmoji(bare) {
   ok(G.src === 'assets/ui/cur-gold.svg', 'G1 재화 비행 파티클이 CUR_ICON 이미지', String(G.src) + ' ×' + G.n);
   ok(G.txt === '', 'G2 파티클에 이모지 글자가 남지 않았다', JSON.stringify(G.txt));
 
-  /* ---- [H] 입장권 5종(194 — 강화석 계열 · 203 — 룬강화석 계열 신설) ---- */
+  /* ---- [H] 입장권은 **던전마다 한 장**(402 — 주인 지시 2026-08-29) ----
+     ⚠ 이 절은 402 에서 **뜻이 뒤집혔다.** 종전 H1·H2 는 «입장권은 던전 계열로만 갈린다 · 종류는
+       5종뿐» 을 단언했다(125 가 세우고 194·203 이 이어 온 규약). 주인이 «던전 입장권 색이 다
+       달라야 하는데 안그러고 있네» 라고 그 규약 자체를 뒤집었으므로 자도 같이 뒤집는다
+       (356 이 «비균등 스케일 금지» 로 관행을 뒤집은 것과 같은 꼴).
+     ⚠ 스코프는 **`DUNGEONS` 8개**다 — 탑 2장(tower·despair)은 `DUNGEONS` 에 없고 카드가
+       `.sp.tk` 에 «♾️ 없음» 을 그린다(209). 402 가 그 두 칸의 죽은 `tk:` 필드를 걷어냈다.
+     ⚠ 숫자(«5종»)를 손으로 적지 않는다 — 그 상수가 194·203 에서 두 번 뒤처졌고, 이번에도
+       뒤처졌을 자리다. 세는 것은 **던전 수와의 일치**이지 어떤 상수가 아니다. */
   const H = await page.evaluate(() => {
     openDungeon();
-    const want = { gold: 'cur-ticket-gold.svg', dia: 'cur-ticket-dia.svg',
-                   stone: 'cur-ticket-stone.svg',     /* 194 — 4번째 던전 계열 */
-                   rstone: 'cur-ticket-rstone.svg' }; /* 203 — 5번째 던전 계열 */
-    const got = DUNGEONS.map(d => {
-      const m = String(DUN_UI[d.id].tk).match(/cur-ticket-[a-z]+\.svg/);
-      return { id: d.id, tk: m ? m[0] : null,
-               want: want[d.id] || 'cur-ticket-relic.svg' };
+    const got = DUNGEONS.map((d) => {
+      const k = dunTk(d.id);
+      const src = CUR_ICON[k] || null;
+      /* 03 던전 카드가 **실제로 그린** 그림 — 선언만 보면 «카드는 옛 사본을 그린다» 를 놓친다 */
+      const card = document.querySelector('#dunList [data-dcard="' + d.id + '"] .sp.tk img.cic');
+      return { id: d.id, k, src: src ? src.split('/').pop() : null,
+               drawn: card ? card.getAttribute('src').split('/').pop() : null };
     });
     return got;
   });
-  const tkBad = H.filter(x => x.tk !== x.want);
-  ok(tkBad.length === 0, 'H1 던전 ' + H.length + '개의 입장권이 계열 5종과 일치',
-     tkBad.length ? tkBad.map(x => x.id + '→' + x.tk).join(',') : H.map(x => x.id + ':' + x.tk.replace('cur-ticket-', '').replace('.svg', '')).join(' · '));
-  ok(new Set(H.map(x => x.tk)).size === 5,
-     'H2 입장권 종류는 5종뿐(골드·다이아·유물·강화석·룬강화석)', [...new Set(H.map(x => x.tk))].join(','));
+  const hMiss = H.filter((x) => !x.src);
+  ok(hMiss.length === 0, 'H1 던전 ' + H.length + '개의 권종 키가 CUR_ICON 에 전부 있다',
+     hMiss.length ? hMiss.map((x) => x.id + '→' + x.k).join(',')
+                  : H.map((x) => x.id + ':' + x.k).join(' · '));
+  const hDup = new Set(H.map((x) => x.src));
+  ok(hDup.size === H.length,
+     'H2 입장권 그림이 던전마다 다르다(중복 0건 · 402 로 «계열 5종» 규약 폐기)',
+     H.length + '던전 → ' + hDup.size + '종');
+  const hDrawn = H.filter((x) => x.drawn !== x.src);
+  ok(hDrawn.length === 0, 'H3 03 카드가 그린 그림 = 선언(손으로 적은 사본이 없다)',
+     hDrawn.length ? hDrawn.map((x) => x.id + ' 선언 ' + x.src + ' ≠ 그림 ' + x.drawn).join(' | ')
+                   : H.length + '장 일치');
 
   /* ---- [J] 제목 자리 금지 규칙 ----
      showModal 은 `<h2>` 를 **textContent** 로 넣고 앞머리 기호를 떼기까지 한다(«레퍼런스 헤더에는 이모지가 없다»).

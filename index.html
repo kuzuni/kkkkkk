@@ -14098,7 +14098,10 @@
       <div class="dgd-fr"><em id="dgdIcon" data-cur-slot="dia"></em></div>
       <div class="dgd-amt dgd-t"><i id="dgdAmt">800</i></div>
       <div class="dgd-tk"><i id="dgdTry">2/2</i></div>
-      <div class="dgd-tki" id="dgdTki" data-cur-slot="tkRelic"></div>
+      <!-- 402 — `data-cur-slot="tkRelic"` 을 뺐다. 이 자리는 던전마다 그림이 다르므로 «정적 기본값»
+           이라는 것이 없다(있으면 덮는 경로가 안 도는 순간에 그 던전만 남의 권종을 그린다).
+           `openDunDetail()` 이 `curIcEl($('dgdTki'), dunTk(d.id))` 로 매번 채운다. -->
+      <div class="dgd-tki" id="dgdTki"></div>
       <button class="dgd-cb" id="dgdAuto"></button>
       <div class="dgd-cbl dgd-t"><i id="dgdCbL">연속 도전</i></div>
       <!-- 169 — 자물쇠는 «소탕이 없는 모드»(레이드·아레나)에서만 남는다. 던전 모드에서는
@@ -15430,10 +15433,13 @@ const $ = id => document.getElementById(id);
    골드 이미지 여러 종류 ㄴㄴ, 한 종류로.»
    ⇒ 화폐 아이콘은 **여기서만** 정한다. 문자열·데이터 배열에 이모지를 직접 박지 마라
      (게이트 `tools/verify125.js` 가 소스에서 화폐 이모지 0건을 검사한다).
-   입장권은 «던전 계열» 로만 갈린다 — 골드 · 다이아 · 유물 · **강화석** · **룬강화석** 5종만 허용
-     (194 — 강화석 던전 신설로 계열이 하나 늘었다. 203 — 룬강화석 던전으로 또 하나.
-      「3종」은 못박은 상한이 아니라 그때 있던 던전 계열의 수였다.
-      125 의 규칙은 «재화 하나에 이미지 하나» 다)(🎟️/🎫 혼용 폐기).
+   입장권은 **던전마다 한 장**이다 — 402(저장소 주인 지시 2026-08-29 «던전 입장권 색이 다 달라야
+     하는데 안그러고 있네 수정해»)가 종전의 «계열» 단위를 **«던전» 단위로 뒤집었다.**
+     (125 가 세우고 194·203 이 이어 온 «계열 5종» 규약은 이 지시로 폐기다 — 356 이 «비균등 스케일
+      금지» 로 관행을 뒤집은 것과 같은 꼴이고, 주인 지시가 이전 규약보다 우선이다.
+      그 5종은 못박은 상한이 아니라 그때 있던 던전 «계열» 의 수였다.
+      125 의 규칙 자체 — «재화 하나에 이미지 하나» — 는 그대로다. 오히려 유물 4단이 그림 하나를
+      나눠 쓰던 것이 그 규칙에서 벗어나 있었다)(🎟️/🎫 혼용 폐기).
    ⚠ 주석 안에서 «별표 두 개로 강조를 닫은 바로 뒤에 슬래시» 를 쓰지 마라 — 그 이음매에
      주석 종료 기호가 생겨 **블록 주석이 그 자리에서 닫힌다**(203 이 실제로 그렇게 스크립트를
      통째로 깼다: 이 줄의 재화 목록을 슬래시로 이어 쓰다가). 구분자는 가운뎃점(·)을 쓴다. */
@@ -15447,13 +15453,20 @@ const CUR_ICON = {
   mile:    'assets/ui/cur-mile.svg',
   tkGold:  'assets/ui/cur-ticket-gold.svg',
   tkDia:   'assets/ui/cur-ticket-dia.svg',
-  tkRelic: 'assets/ui/cur-ticket-relic.svg',
+  /* 402 — 「유물 던전권」 한 장이 relic1~4 를 접고 있었다(주인 보고). 던전마다 한 장이다. */
+  tkRelic1:'assets/ui/cur-ticket-relic1.svg',
+  tkRelic2:'assets/ui/cur-ticket-relic2.svg',
+  tkRelic3:'assets/ui/cur-ticket-relic3.svg',
+  tkRelic4:'assets/ui/cur-ticket-relic4.svg',
   tkStone: 'assets/ui/cur-ticket-stone.svg',
   tkRstone:'assets/ui/cur-ticket-rstone.svg'      /* 203 */
 };
-/* 코드 곳곳의 짧은 키(보상 객체 `r.rel` · 우편 행 `k:'g'` · 가방 `relic` 등)를 한곳에서 흡수한다 */
+/* 코드 곳곳의 짧은 키(보상 객체 `r.rel` · 우편 행 `k:'g'` · 가방 `relic` 등)를 한곳에서 흡수한다.
+   ⚠ 402 — `ticket:'tkRelic'`·`tk:'tkRelic'` 두 항을 지웠다. 쓰는 곳이 **0곳**이었고(소스 전수),
+     «던전과 무관한 일반 입장권» 이라는 것이 이제 없어서 그 두 이름은 보라 하나로 굳은 함정일 뿐이다.
+     입장권을 가리킬 때는 예외 없이 `dunTk(<던전 id>)` 를 쓴다. */
 const CUR_ALIAS = { g:'gold', c:'dia', d:'dia', rel:'relic', r:'relic', frag:'relic',
-                    mileage:'mile', ticket:'tkRelic', tk:'tkRelic' };
+                    mileage:'mile' };
 const curKey = k => CUR_ICON[k] ? k : (CUR_ALIAS[k] || 'gold');
 /* HTML 문자열 경로 — size 를 주면 px 고정 bbox, 안 주면 글자 크기 상대(1.1em) */
 function curIc(k, size){
@@ -15476,10 +15489,14 @@ function curIcEl(el, k, size){
   el.appendChild(im);
   return im;
 }
-/* 던전 id → 입장권 종류. 유물조각 던전 4단(relic1~4)은 같은 «유물 던전권» 을 쓴다.
-   194 — 강화석 던전(`stone`)이 4번째 계열이다. 203 — 룬강화석 던전(`rstone`)이 5번째다. */
-const dunTk = id => id === 'gold' ? 'tkGold' : id === 'dia' ? 'tkDia'
-                  : id === 'stone' ? 'tkStone' : id === 'rstone' ? 'tkRstone' : 'tkRelic';
+/* 던전 id → 입장권 종류. **402(주인 지시 2026-08-29) — 단위가 «계열» 이 아니라 «던전» 이다.**
+   종전 식은 `… : 'tkRelic'` 이라는 **폴백 문자열 하나**로 끝나서 그 자리에 안 걸린 던전을 전부
+   같은 보라로 접었다 — relic1~4 네 던전이 그렇게 접혔고 그것이 이 작업의 뿌리다.
+   ⇒ 이름을 **id 에서 기계적으로 만든다**. 표도 폴백도 없으므로 던전이 늘어도 다시 접히지 않는다
+     (gold→tkGold · dia→tkDia · relic1→tkRelic1 · … · rstone→tkRstone — 기존 5개 이름 그대로다).
+   ⚠ 그림이 빠진 새 던전은 `curKey()` 가 **조용히 골드로** 떨어뜨린다. 그 조용함에 기대지 않는다 —
+     `verify402` [A] 가 «8던전의 권종 키가 CUR_ICON 에 전부 있다» 를 못 박는다. */
+const dunTk = id => 'tk' + String(id).charAt(0).toUpperCase() + String(id).slice(1);
 
 /* ---------------- 화면 맞춤 ---------------- */
 /* 기준 프레임 1080x1920(9:16). 폭은 항상 1080 고정, 높이는 기기 비율대로 가변.
@@ -24958,31 +24975,37 @@ function openQuest(tab){
    (`bn === 1` 이면 한 글자도 안 붙어 기존 8던전·탑의 타이틀이 바이트 단위로 같다).
    **결정 ④ 제한 시간 `DUN_SEC` 그대로**(당시 30 초 — 285 가 15 로 내렸다) — 총 체력이 같으므로 때리는 시간은 같고,
    페이즈 사이의 빈 시간만 늘어난다. 그래서 2번째 이후 등장 딜레이만 `DUN_PHASE_DLY` 로 줄였다.
-   실측은 `node tools/probe257.js` · 게이트 `node tools/verify257.js`. */
+   실측은 `node tools/probe257.js` · 게이트 `node tools/verify257.js`.
+   ⚠ **402 — `tk:` 필드 10칸을 통째로 걷어냈다.** 입장권 그림을 여기 손으로 한 번 더 적어 두던 자리라
+     `dunTk()` 와 갈라질 수 있었고, 실제로 유물 4단에 `curIc('tkRelic')` 이 **네 번 똑같이** 적혀
+     있었다(주인이 본 보라 넷). 이제 카드는 `curIc(dunTk(d.id))` 로 **한 곳에서만** 읽는다.
+     같이 죽은 두 칸도 그때 사라졌다 — `tower.tk`(유물권) · `despair.tk`(입장권이 아니라 **단련석**
+     재화 아이콘이 들어가 있었다)는 탑 카드가 `.sp.tk` 에 «♾️ 없음» 을 그리므로(209 «탑은 입장권
+     없음») 처음부터 화면에 안 나오던 값이다. */
 const DUN_UI = {
-  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'), tk:curIc('tkGold'),
+  gold:   { s:'#592F45', i:'#834B64', r:'#8F576F', pt:'#BB89A4', ic:curIc('gold'),
             thk:'dragon', thf:'f3', thi:'fly',        thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
             rw:['골드 획득 가능'], gm:0, bn:1  },
-  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'), tk:curIc('tkDia'),
+  dia:    { s:'#154B3D', i:'#227C58', r:'#2C8A65', pt:'#A5CBB2', ic:curIc('dia'),
             thk:'bird',   thf:'frame0', thi:'anim',   thbr:1.00, thw:'330px', tht:'11px', scn:'7px',
             rw:['다이아 획득 가능'], gm:0, bn:1  },
   /* 90 — 유물조각 던전 4단. 기하(썸네일 bbox·씬 인셋)는 구 relic 카드 규격 그대로 두고
      색과 대체 아트만 단계별로 바꾼다. 보상 알약은 1개다 — «유물 재료 획득 가능»(237px)은
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
-  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
+  relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'),
             thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
             rw:['유물조각 획득 가능'], gm:14, bn:1 },   /* 154 — 15→14. 게이트 미션은 그대로
             «스테이지 15 도달하기» 다(idx 14→13). 출석 미션이 빠져 번호만 한 칸 당겨졌다. */
-  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
+  relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'),
             thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «페이즈»: 유물 2단이 «보스가 둘» 을 처음 만나는 자리다.
                한 마리씩 순차라 난도 체감이 완만하다(총 체력·공격력은 1마리 때와 같다). */
             rw:['유물조각 획득 가능'], pre:{ id:'relic1', f:5 }, bn:2, bm:'phase' },
-  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
+  relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'),
             thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «동시»: 같은 2마리라도 한꺼번에 서면 카이팅 경로가 갈린다 */
             rw:['유물조각 획득 가능'], pre:{ id:'relic2', f:5 }, bn:2, bm:'all' },
-  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
+  relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'),
             thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 3마리 «페이즈»: 유물 최종 4단은 3연전이다 */
             rw:['유물조각 획득 가능'], pre:{ id:'relic3', f:5 }, bn:3, bm:'phase' },
@@ -24991,7 +25014,7 @@ const DUN_UI = {
      기존 아틀라스 중 «불꽃/주황» 계열인 dragon 의 다른 포즈(f1)를 쓴다.
      해금은 유물 2단과 같은 자리 = 「가이드미션 14 클리어」 — 강화석은 코스튬 강화에만 쓰여
      초반 성장 경로를 막지 않으므로 유물 1단과 같은 문턱에 둔다. */
-  stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'), tk:curIc('tkStone'),
+  stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'),
             thk:'dragon', thf:'f1', thi:'fly', thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «동시» */
             rw:['강화석 획득 가능'], gm:14, bn:2, bm:'all' },
@@ -25001,7 +25024,7 @@ const DUN_UI = {
      쓴다(relic4 는 같은 아틀라스의 blue_idle 이라 자세가 갈린다).
      해금은 강화석 던전과 같은 자리 = 「가이드미션 14 클리어」 — 룬강화석도 룬에만 쓰여
      초반 성장 경로를 막지 않는다. */
-  rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'), tk:curIc('tkRstone'),
+  rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'),
             thk:'elves',  thf:'blue_attack_0', thi:'blue_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 3마리 «동시»: 여덟 던전 중 가장 붐비는 판 */
             rw:['룬강화석 획득 가능'], gm:14, bn:3, bm:'all' },
@@ -25011,7 +25034,7 @@ const DUN_UI = {
      포즈 `green_attack` 을 쓴다(relic1 = green_idle · relic4 = blue_idle · rstone = blue_attack).
      색은 «시련» 의 잿빛 자수정 — 던전 8장 어느 것과도 겹치지 않는다.
      `gm`/`pre` 가 없으므로 `dunLocked()` 는 항상 false 다 = 탑은 처음부터 열려 있다. */
-  tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'), tk:curIc('tkRelic'),
+  tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'),
             thk:'elves',  thf:'green_attack_0', thi:'green_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 탑은 «층 하나 = 보스 하나» 다(264 의 몫이라 수·방식을 늘리지 않는다) */
             rw:['유물조각 획득 가능'], bn:1 },
@@ -25022,7 +25045,7 @@ const DUN_UI = {
      relic1·relic4·rstone·tower 에 나가 있다(남은 것은 `*_die` = 쓰러진 포즈뿐이라 카드에 못 쓴다).
      그래서 relic2 와 **같은 좀비 걸음**을 쓰고 카드 색으로만 가른다 — 전용 씬이 들어오면
      이 두 줄(thk/thf/thi)만 갈아 끼운다(측정표 «아트 필요» 표에 등재). */
-  despair:{ s:'#3E2430', i:'#5F3242', r:'#7C4055', pt:'#E0A8B8', ic:curIc('tstone'), tk:curIc('tstone'),
+  despair:{ s:'#3E2430', i:'#5F3242', r:'#7C4055', pt:'#E0A8B8', ic:curIc('tstone'),
             thk:'zombie', thf:'walk_004', thi:'walk', thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
             rw:['단련석 획득 가능'], bn:1 }
 };
@@ -25180,7 +25203,8 @@ function renderDunPage(){
            + '</em><i>' + t + '</i></div>').join('')
       +  '<div class="lb a"><i>레벨</i></div><div class="lb b"><i>남은 횟수</i></div>'
       +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
-      +  '<div class="sp tk"><em>' + u.tk + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
+      /* 402 — 권종 그림은 `dunTk()` 한 곳에서만 읽는다(옛 `u.tk` 는 DUN_UI 에 손으로 적어 둔 사본이었다) */
+      +  '<div class="sp tk"><em>' + curIc(dunTk(d.id)) + '</em><i>' + left + '/' + DUN_TRY + '</i></div>'
       /* 166 (2026-08-27) — 레드닷 조건에 «요구 전투력 충족» 을 더한다. 종전 `!lock && left > 0` 은
          전투력이 모자라 들어가 봐야 지는 던전에도 빨간점을 켰다(② «불가능한데 뜨는 dot»). 탭바 «던전» 칸의
          `dunAlert`(남은 횟수 > 0 && cp() >= req)와 **같은 기준**이라 이제 탭·카드가 함께 켜지고 함께 꺼진다.

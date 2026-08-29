@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
+  <!-- 화폐 아이콘 · 유물 던전 4단 입장권 — 작업 402(주인 지시 2026-08-29 «입장권 색이 던전마다 달라야 한다»)
+       125 단일 출처. 껍데기 기하(path 3줄)는 기존 5장과 **픽셀 동일**하고 색만 다르다.
+       색은 그 던전 카드의 두 톤 그대로다 — 껍데기 = DUN_UI.relic4.s(#3A1E52) · 속띠 = DUN_UI.relic4.r(#6E3897).
+       카드와 권종이 같은 색으로 묶여 «어느 던전 권인가» 를 색 하나로 읽는다. -->
+  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#3A1E52" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#6E3897"/>
+  <path d="M32 26.5l3.4 7.2 7.8 1.1-5.7 5.4 1.4 7.8L32 44.2l-6.9 3.8 1.4-7.8-5.7-5.4 7.8-1.1z" fill="#FFFFFF" opacity=".92" stroke="#3A1E52" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

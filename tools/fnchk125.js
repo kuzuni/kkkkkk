@@ -125,7 +125,7 @@ const ok = (b, act, effect, detail) => {
   ok(/gold/.test(tr.ic || ''), '훈련 화면', '비용행 골드 아이콘이 이미지', String(tr.ic).slice(0, 40));
   ok(tr.raw === false, '훈련 화면', '아이콘 태그가 글자로 새지 않는다', String(tr.raw));
 
-  /* 6. 던전 — 입장권이 계열별로 다르고, 세부 팝업이 그 권종을 따라간다 */
+  /* 6. 던전 — 입장권이 **던전마다** 다르고, 세부 팝업이 그 권종을 따라간다(402) */
   const dun = await run(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     closeTrain && closeTrain();
@@ -133,10 +133,12 @@ const ok = (b, act, effect, detail) => {
     const cards = [...document.querySelectorAll('#dunw .sp.tk img.cic')].map(i => i.dataset.curIc);
     openDunDetail(DUNGEONS[1]); await sleep(100);
     const det = document.querySelector('#dgdTki img.cic');
-    return { cards: cards.join(','), det: det ? det.dataset.curIc : null };
+    return { cards: cards.join(','), det: det ? det.dataset.curIc : null, n: DUNGEONS.length };
   });
-  ok(/tkGold/.test(dun.cards) && /tkDia/.test(dun.cards) && /tkRelic/.test(dun.cards),
-     '던전 목록', '카드 권종 3계열이 각각 다른 이미지', dun.cards);
+  /* 402 — «계열» 이 아니라 **던전마다 한 장**이다(주인 지시 2026-08-29). 종수를 손으로 적지 않는다 */
+  ok(dun.cards.split(',').filter(Boolean).length === dun.n
+     && new Set(dun.cards.split(',').filter(Boolean)).size === dun.n,
+     '던전 목록', '카드 권종이 던전마다 다른 이미지(중복 0건)', dun.cards);
   ok(dun.det === 'tkDia', '다이아 던전 [세부]', '세부 팝업 권종이 그 던전 계열', String(dun.det));
 
   /* 7. 저장 — 새로 고침해도 값이 남는다(아이콘 교체가 세이브 구조를 안 건드렸다) */
