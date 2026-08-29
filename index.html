@@ -4667,8 +4667,10 @@
     /* 342 2회차 — 어절 공백 3 → 15 (비평가 AS ③-2). 실측: ref «골드 던전» 26 · «보석 던전» 28
        ↔ 우리 «황금 동굴» 14 · «수정 광산» 16 = **−45%**. 양쪽 다 «2글자+2글자» 라 글자 수 탓이 아니다.
        `letter-spacing` 이 아니라 `word-spacing` 으로 벌린다 — 자간을 건드리면 글자 사이가 같이
-       벌어져 advance 가 ref 를 넘는다(잠금 문구 §4 와 같은 처방). */
-    letter-spacing:-5px;word-spacing:15px;color:#FDFF84;
+       벌어져 advance 가 ref 를 넘는다(잠금 문구 §4 와 같은 처방).
+       4회차: 15 → 13. 비평가 넷 중 셋(AS·AV·AW)이 «+2~3 넓다» 로 일치해 한 칸 되돌렸다
+       (26/28 → 24/26 = ref 24/26). 2회차에 15 로 한 번 넘겼던 것을 여기서 맞춘다. */
+    letter-spacing:-5px;word-spacing:13px;color:#FDFF84;
     /* 126 10회차 — 측정표 03 던전 이름: ref 외곽선 바깥 4~5px(x86~90 검정 -> 91부터 노랑).
        fs 56 에서 필요한 스트로크는 8~10px = r .143~.179 → 본문 토큰(.16 = 8.96 · 바깥 4.48)이
        그 한가운데다. 작은라벨(.13 = 7.28 · 바깥 3.64)은 ref 하한보다 얇다. */
@@ -4828,8 +4830,12 @@
      (`.lk` 는 inset 8 이라 top 214 = 카드+222 → 잉크 상변 +223.1).
      어절 간격(등재문 ⓒ-②, ref 숫자 앞뒤 12~19px ↔ 우리 6~7)은 `word-spacing` 으로 벌린다 —
      `letter-spacing` 을 건드리면 글자 사이가 같이 벌어져 advance 가 ref(40)를 넘는다. */
+  /* 4회차 — 비평가 AV·AW 가 각자 재서 같은 값: 문구 가로 중심이 카드+490.5, ref 는 **카드+489**
+     (측정표 §3-7-3 «가로 중심 539» = 카드+489, 3장 전부). 내 실측도 ref 539.0 / 우리 540.5 였다.
+     `.lk` 는 inset 8/7 이라 그 중심이 카드+490 이고 카드 중심(490)과 같다 — ref 가 **1px 왼쪽**이다.
+     `padding-right` 를 1 → 4 로 (중심이 padding/2 만큼 왼쪽으로 = −1.5px). 상자·정렬 방식은 그대로. */
   .dnc .lk>u{position:absolute;left:0;right:0;top:214px;height:50px;line-height:50px;
-    padding-right:1px;box-sizing:border-box;
+    padding-right:4px;box-sizing:border-box;
     text-align:center;font-size:50px;font-weight:900;letter-spacing:-5px;word-spacing:9px;color:#C8C8C8;
     text-decoration:none;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;white-space:nowrap}
   .dnc .lk>u b{color:#FF8252;font-weight:900;font-size:106%;-webkit-text-stroke-width:calc(var(--st-hud) * 1em)}

@@ -42,7 +42,8 @@ const OLD = `
   .dnc .lb{height:33px!important;line-height:33px!important;font-size:26px!important}
   .dnc .nm{word-spacing:3px!important}
   .dnc .sp>i{top:6px!important;height:34px!important;line-height:34px!important;font-size:41px!important}
-  .dnc .sp.lv>i{left:64px!important}`;
+  .dnc .sp.lv>i{left:64px!important}
+  .dnc .lk>u{padding-right:1px!important}`;
 
 async function measure(p, injectOld) {
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
@@ -148,7 +149,8 @@ async function measure(p, injectOld) {
     /* 좌변은 «박스» 가 아니라 **잉크**로 묻는다 — 342 가 fs 를 올리자 잉크 오프셋이 커져
        박스를 39 → 40 으로 1px 밀어야 잉크가 ref 자리(카드+42, §3-3)에 앉았다. */
     near(`카드${c.n} 던전명 잉크 좌변`, c.nmInk && +c.nmInk.x, 42, 2);
-    near(`카드${c.n} 던전명 어절 공백`, c.nmGap, 25, 5);   /* ref 24 / 26 */
+    /* ref 24 / 26. ±5 면 2회차의 과교정(26/28)도 통과해 4회차가 사라져도 초록이다 → ±1.5. */
+    near(`카드${c.n} 던전명 어절 공백`, c.nmGap, 25, 1.5);
   }
 
   console.log('\n[§2 ⓐ-2 타이틀 하변 ↔ 알약 상변] (ref 26~27 · 수리 전 34)');
@@ -173,7 +175,8 @@ async function measure(p, injectOld) {
   for (const c of lk) {
     near(`카드${c.n} 문구 잉크 상변`, +c.lkuInk.y, R.lkTop, 2);
     near(`카드${c.n} 문구 잉크 높이`, c.lkuInk.h, R.lkH, 2.5);
-    near(`카드${c.n} 문구 가로 중심`, +(+c.lkuInk.x + c.lkuInk.w / 2).toFixed(1), R.lkCx, 5);
+    /* ±5 면 4회차 이전 값(490.5)도 통과한다 → ±1. ref 는 3장 전부 정확히 489.0 이다. */
+    near(`카드${c.n} 문구 가로 중심`, +(+c.lkuInk.x + c.lkuInk.w / 2).toFixed(1), R.lkCx, 1);
   }
 
   /* 2회차 — 비평가 AR 이 찾은 «같은 병의 세 번째 자리». 측정표 03 §3-5-1:
@@ -246,6 +249,9 @@ async function measure(p, injectOld) {
     const t = +c.pillInk.y - c.pill.y, b2 = (c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h);
     return Math.abs(t - b2) > 3;
   }), `R-j 옛 CSS 에서 §7 이 빨갛다 — 캡슐 상/하 ${ou.map((c) => (+c.pillInk.y - c.pill.y).toFixed(1) + '/' + ((c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h)).toFixed(1)).join(' · ')} 비대칭 아님`);
+
+  ok(olk.some((c) => Math.abs((+c.lkuInk.x + c.lkuInk.w / 2) - R.lkCx) > 1),
+    `R-k 옛 CSS 에서 잠금 문구 중심이 빨갛다 — ${olk.map((c) => (+c.lkuInk.x + c.lkuInk.w / 2).toFixed(1)).join('/')} ≠ 489`);
 
   console.log('\nVERIFY342 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   await b.close();
