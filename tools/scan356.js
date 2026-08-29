@@ -170,7 +170,10 @@ const COLLECT = function (opt) {
       }
     }
     out.push({
-      kind, sel: pathOf(el), txt: (ownText(el).trim() || el.className || '').slice(0, 12),
+      /* ⚠ SVG 노드의 `className` 은 문자열이 아니라 `SVGAnimatedString` 이라 `.slice` 가 없다.
+         23 훈련의 ↑ 돌파 버튼(`#trUp`)이 SVG 라 이 한 줄이 그 화면 진입을 통째로 죽이고 있었다
+         (5회차에 잡음 — 스캐너가 못 도는 화면은 래칫 [B] 의 감시 밖이다 = 헛초록). */
+      kind, sel: pathOf(el), txt: (ownText(el).trim() || el.getAttribute('class') || '').slice(0, 12),
       sx: +sx.toFixed(4), sy: +sy.toFixed(4), ratio: +ratio.toFixed(4),
       own: own + (imgNote ? (own ? ' + ' : '') + imgNote : ''), chain,
       w: +r.width.toFixed(1), h: +r.height.toFixed(1),
