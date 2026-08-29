@@ -6075,9 +6075,20 @@
      **x279~376 · y1049~1080** 이다 — ②~⑥ 과 **완전히 같은 dx171·dy168** 자리이고 어두운 띠(1000~1069)
      하단을 11px 만 걸친다. 6회차 비평가 AA 의 독립 실측(ref 98×31 @ x279 y1049)이 4회차 D 의
      «ref (283,1070) w89 h9 비침» 과 같은 자리를 가리켜 둘이 맞물렸다. 따로 두던 규칙을 없앤다. */
-  .cn-cd>.qt{left:167px;top:174px;height:30px;color:#fff;font-size:39.3px;line-height:30px;
+  /* ⚑ 380(2026-08-29) — 세로 축. 377 이 `--qx` 로 가로를 ref 잉크폭에 맞춘 뒤 **높이만 +20% 로 남아**
+     있었다(`×100` 잉크 37 ↔ ref 31 · `×50` 36 ↔ ref 30 — `tools/probe380.js` 실측).
+     높이를 정하는 것은 이 `font-size` 하나이고, 값은 이 파일이 이미 쓰는 규약대로 **ref 잉크에서 역산**했다
+     («ref_h/cap_h 만큼 fs 를 줄이고 폭 보존은 가로 배율에 역수»):
+       ×100 : 39.3 × (31−8)/(37−8) = 31.17      ×50 : 39.3 × (30−8)/(36−8) = 30.88   ⇒ **31px**
+     (−8 은 외곽선 `-webkit-text-stroke:8px` 이 잉크 위·아래로 4px 씩 더한 몫. 스윕 실측으로도
+      fs 31 에서 잉크가 정확히 31·30 = ref 다.)
+     ⚠ 이 값은 §7 다이아 판매(116)·§9 유물조각·§10 입장권과 **공용**이라 광고 칸만 줄일 수 없다(380 등재문).
+     그래서 세로는 여기서 한 번에 내리고, **폭은 계열마다 `--qk` 로 되돌린다** — 남의 칸은 폭이 그대로여야
+     이 작업이 «세로 한 축» 으로 닫힌다. `--qk` 값은 지어낸 것이 아니라 **문자열마다 실측한 보존 배수**다
+     (fs 역수 1.268 이 아니다 — 외곽선 8px 은 fs 를 안 따라가서 짧은 문자열일수록 폭이 덜 준다). */
+  .cn-cd>.qt{left:167px;top:174px;height:30px;color:#fff;font-size:31px;line-height:30px;
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
-    transform:scaleX(var(--qx,1.3));transform-origin:0 50%}
+    transform:scaleX(calc(var(--qx,1.3) * var(--qk,1)));transform-origin:0 50%}
   /* [받기] 버튼 — dx17 dy214 245x80 r28, 밴드 검정5 → 림4 → face55 → 림5 → 립5 */
   .cn-cd>.bt,.cn-cd>.btstk{left:17px;top:214px;width:245px;height:80px;border-radius:28px;border:5px solid #000;
     cursor:pointer;background:linear-gradient(180deg,#6BDCEA 0,#51E7F8 4px,#3AD0E8 4px,
@@ -6161,7 +6172,9 @@
     #4E42AC 219px,#3C3290 295px)}
   .cn-cd.dia>.pn>em{font-size:104px}
   /* 수량은 «×200만» 까지 길어지므로 완료 카드와 같은 우측 앵커 — 5칸이 같은 잉크 우단을 쓴다 */
-  .cn-cd.dia>.qt{left:auto;right:14px;transform-origin:100% 50%}
+  /* `--qk` = 380 의 폭 보존 배수. 이 계열은 ref 가 없는 «우리 게임 설계»(측정표 §11)라 목표가 «지금 그대로» 이고,
+     값은 다섯 문자열의 실측 배수(1.24·1.24·1.25·1.27·1.25)를 함께 담는 하나다 — 최대 편차 1.6px. */
+  .cn-cd.dia>.qt{left:auto;right:14px;transform-origin:100% 50%;--qk:1.255}
   /* 구매 버튼 — [받기]와 같은 상자(dx17 dy214 245×80 r28)에 ▶AD·(n/n) 없이 가격 한 줄 */
   .cn-cd>.bt.buy{background:linear-gradient(180deg,#FFE9A0 0,#FFDD72 4px,#FDC63A 4px,
     #F0A415 59px,#FFE07A 59px,#FFE07A 64px,#E29A10 64px,#9A6403 69px)}
@@ -6184,7 +6197,8 @@
     #17758F 219px,#0F5A70 295px)}
   .cn-cd.rel>.pn>em{font-size:104px}
   /* 수량이 «×10,000» 까지 길어지므로 다이아 카드와 같은 우측 앵커 */
-  .cn-cd.rel>.qt{left:auto;right:14px;transform-origin:100% 50%}
+  /* `--qk` — 380 폭 보존(실측 1.22·1.24·1.25). ref 없는 계열이라 목표는 «수리 전 폭 그대로» 다. */
+  .cn-cd.rel>.qt{left:auto;right:14px;transform-origin:100% 50%;--qk:1.235}
 
   /* 204 — §10 던전 입장권 교환 카드. §5·§7·§9 와 **같은 격자(x111/401/691 · 278×309)** 를 쓰고
      색만 «입장권» 계열(황동)로 구분한다. 아이콘은 그 던전의 권종(`dunTk`)이라 03 카드·04 세부·
@@ -6192,7 +6206,8 @@
   .cn-cd.dtk>.bg{background:linear-gradient(180deg,#E8B45E 0,#E8B45E 62px,#B0762A 219px,
     #8E5C1C 219px,#6B4212 295px)}
   .cn-cd.dtk>.pn>em{font-size:104px}
-  .cn-cd.dtk>.qt{left:auto;right:14px;transform-origin:100% 50%}
+  /* `--qk` — 380 폭 보존. «×1» 은 문자열이 짧아 외곽선 몫이 커서 배수가 계열 중 가장 작다(1.19). */
+  .cn-cd.dtk>.qt{left:auto;right:14px;transform-origin:100% 50%;--qk:1.19}
 
   /* ② 마일리지 패널 — §6 배너와 같은 규격(x66 948×h, r20, 검정5 + 림7)의 보라 판 */
   .cn-ml{left:66px;top:2773px;width:948px;height:236px;border-radius:20px;border:5px solid #000;
@@ -26211,6 +26226,15 @@ const COIN_ADS = [
        · `qx` 만은 **같은 문자열 «×50» 의 이미 측정된 값**(a2 의 1.24)을 그대로 쓴다 — 지어낸 값이
          아니라 같은 글자열의 같은 보정이고, 안 주면 폴백 1.3 이라 나란히 놓인 두 칸의 ×50 이
          서로 다른 폭으로 렌더된다. **⚑ 그 1.24 는 377 이 네 칸 모두 1.08 로 내렸다 — 바로 아래.** */
+  /* ⚑ 380(2026-08-29) — `qx` 를 네 칸 모두 **1.08 → 1.33**. 값이 커진 것은 축이 바뀌어서가 아니라
+     **글자가 작아졌기 때문**이다(위 CSS `font-size` 39.3 → 31 — 잉크 높이를 ref 로 내렸다).
+     377 과 **같은 방법으로 다시 역산**했다(등재문 «크기를 먼저 확정하고 폭 보정을 다시 재라»).
+     fs 31 · qx 1.08 에서 실측 잉크는 ×100 81 · ×50 66 이므로
+       ×50  : 1.08 × 81   / 66 = 1.3255      ×100 : 1.08 × 97.5 / 81 = 1.300
+     377 이 고른 쪽과 같은 쪽 — **×50(칸 3개)을 ref Δ0 으로 두는 값**으로 **1.33** 을 쓴다.
+     ×100 은 99~100 으로 ref +2%(수리 전 101 보다 오히려 ref 에 가깝고 잉크 우변은 1px 더 안쪽이라
+     377 이 세운 «검정 테까지 여유 ≥6px» 은 더 넉넉해진다). ⚠ 폭 배수를 «fs 역수 1.268» 로 지어내면
+     안 된다 — 외곽선 8px 은 fs 를 안 따라가서 문자열마다 배수가 다르다(probe380 ⓓ). */
   /* ⚑ 377(2026-08-29) — `qx` 를 네 칸 모두 **1.24 → 1.08**. «보석 ×100» 라벨의 잉크(외곽선 포함)가
      카드 우변을 +1px 넘어 `.cn-cd{overflow:hidden}` 에 잘리고 흰 채움이 검정 테 위로 올라타던 것을 받는다.
      ⚠ **등재문의 뿌리(«365 의 4종 2열 재배치»)는 재현으로 기각됐다** — 라벨은 카드 기준 `left:167`
@@ -26228,10 +26252,10 @@ const COIN_ADS = [
      둘 다 담는 하나의 값으로 **1.08**(×50 은 ref Δ0 · ×100 은 100.2 로 ref +2.7%, 잉크 우변이
      카드 안쪽 13.8px = 검정 테 안쪽 6.8px). 세로(잉크 높이 +20%)는 `font-size` 축이라 안 건드렸다 —
      그 값은 §7 다이아 판매 칸(116)·§9·§10 과 공용이라 여기서 만지면 남의 구간이 밀린다(380 로 등재). */
-  { id:'a1', n:'보석',        q:'×100', ic:curIc('dia'),    cap:5, r:{ dia:100 },  fs:37.0, sx:1.047, qx:1.08 },
-  { id:'a2', n:'유물',        q:'×50',  ic:curIc('relic'),  cap:5, r:{ rel:50 },   fs:39.4, sx:0.894, qx:1.08 },
-  { id:'a7', n:'스킨 강화석', q:'×50',  ic:curIc('stone'),  cap:5, r:{ stone:50 },                    qx:1.08 },
-  { id:'a8', n:'단련석',      q:'×50',  ic:curIc('tstone'), cap:5, r:{ tstone:50 },                   qx:1.08 }
+  { id:'a1', n:'보석',        q:'×100', ic:curIc('dia'),    cap:5, r:{ dia:100 },  fs:37.0, sx:1.047, qx:1.33 },
+  { id:'a2', n:'유물',        q:'×50',  ic:curIc('relic'),  cap:5, r:{ rel:50 },   fs:39.4, sx:0.894, qx:1.33 },
+  { id:'a7', n:'스킨 강화석', q:'×50',  ic:curIc('stone'),  cap:5, r:{ stone:50 },                    qx:1.33 },
+  { id:'a8', n:'단련석',      q:'×50',  ic:curIc('tstone'), cap:5, r:{ tstone:50 },                   qx:1.33 }
 ];
 const adLeft = a => { const v = S.daily.adBuy && S.daily.adBuy[a.id]; return v == null ? a.cap : v; };
 /* 329(2026-08-28 주인 지시) — «광고 보고 받기» 를 지금 누를 수 있는가. 판정은 이 한 곳이다.
