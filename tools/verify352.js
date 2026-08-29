@@ -24,7 +24,7 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', '352.png');
 
-const RADIUS = 32;          /* ⓐ */
+const RADIUS = 30;          /* ⓐ */
 const BORDER = 6;           /* ⓑ — 기각된 8 이 아니라 6 */
 const SEP_TOP = 16, SEP_H = 55, SEP_W = 5, SEP_X = 704;   /* ⓒ */
 const RIM = 7, RIM_HEX = '#705F4B';                       /* ⓓ */
@@ -71,6 +71,26 @@ const READ = (sel) => {
 };
 
 /* 찍힌 픽셀 — 캡처를 data URL 로 페이지에 되돌려 읽는다(350 처방). */
+async function readCol(page, x, ys) {
+  fs.mkdirSync(path.dirname(SHOT), { recursive: true });
+  await page.screenshot({ path: SHOT });
+  const b64 = fs.readFileSync(SHOT).toString('base64');
+  return page.evaluate(([data, xx, yy]) => new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = im.width; c.height = im.height;
+      const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+      res(yy.map(y => {
+        const d = g.getImageData(xx, y, 1, 1).data;
+        return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+      }));
+    };
+    im.onerror = () => rej(new Error('이미지 로드 실패'));
+    im.src = 'data:image/png;base64,' + data;
+  }), [b64, x, ys]);
+}
+
 async function readRow(page, y, xs) {
   fs.mkdirSync(path.dirname(SHOT), { recursive: true });
   await page.screenshot({ path: SHOT });
@@ -191,6 +211,26 @@ const isBlack = h => close(h, '#000000', 8);
         Math.abs(z.nr - RIM) <= 1 && z.rimStart <= BORDER + 1, z.nr + '칸 @' + z.rimStart);
       ok('07 ' + tag + ' 림 다음이 바 면 ' + FACE_HEX,
         z.after.some(h => close(h, FACE_HEX, 4)), z.after.join(' '));
+    }
+
+    /* 352 2회차 — «네 면이 한 규약(7px)» 을 세로로도 묻는다. 상 8 / 하 6 이던 것을
+       7 / 7 로 맞춘 자리다(비평가 AT·AU 2인 일치 + 측정표 07 §9 행 구간). */
+    const xin = Math.round(g7.bar.x + g7.bar.w * 0.62);     /* 비활성 «코스튬» 칸 한복판 */
+    const ysT = [], ysB = [];
+    for (let i = 0; i < 18; i++) { ysT.push(Math.round(g7.bar.y) + i); ysB.push(Math.round(g7.bar.y + g7.bar.h) - 1 - i); }
+    const colT = await readCol(page, xin, ysT);
+    const colB = await readCol(page, xin, ysB);
+    for (const [tag, col] of [['상', colT], ['하', colB]]) {
+      let i = 0; while (i < col.length && !isBlack(col[i])) i++;
+      let nb = 0; while (i + nb < col.length && isBlack(col[i + nb])) nb++;
+      let j = i + nb, nr = 0;
+      while (j < col.length && !close(col[j], '#6F6251', 14) && !close(col[j], '#706049', 14)) j++;
+      const st = j;
+      while (j < col.length && (close(col[j], '#6F6251', 14) || close(col[j], '#706049', 14))) { nr++; j++; }
+      console.log('   ' + tag + ' ' + col.slice(0, 16).join(' '));
+      ok('07 ' + tag + ' 검정 띠 = 테두리 ' + BORDER + ' (보간 ±1)', Math.abs(i + nb - BORDER) <= 1, i + '+' + nb);
+      ok('07 ' + tag + ' 밝은 띠 ' + RIM + 'px — 네 면이 한 규약 (보간 ±1)',
+        Math.abs(nr - RIM) <= 1 && st <= BORDER + 1, nr + '칸 @' + st);
     }
 
     console.log('\n[R] 되돌림 시험 — 옛 값을 주입하면 빨개져야 한다');

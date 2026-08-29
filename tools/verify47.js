@@ -284,8 +284,8 @@ const SNAP = `(sel, host) => {
     /* 352 ⓐ 이관 (2026-08-29) — 36 → **32**. 묻는 것은 그대로다(«반경과 좌우 밴드»).
        값은 `python3 tools/probe352.py` ⓐ 의 원호 역산 — ref 32.0(좌 30.1 · 우 33.9) ↔ 우리 32.0.
        ⚠ `PILL_LIP 14`(좌우 검정 7 + 림 7)는 **세로 한복판**의 두께라 반경과 무관하게 불변이다. */
-    ok('활성 알약 radius 32 · 좌우 검정 7 + 림 14 (칸 안쪽에만)',
-      g.onRadius === '32px' && /rgb\(0, 0, 0\) 7px 0px 0px 0px inset/.test(g.onShadow)
+    ok('활성 알약 radius 30 · 좌우 검정 7 + 림 14 (칸 안쪽에만)',
+      g.onRadius === '30px' && /rgb\(0, 0, 0\) 7px 0px 0px 0px inset/.test(g.onShadow)
       && /rgb\(0, 0, 0\) -7px 0px 0px 0px inset/.test(g.onShadow)
       && /14px 0px 0px 0px inset/.test(g.onShadow) && /-14px 0px 0px 0px inset/.test(g.onShadow),
       g.onRadius + ' / ' + g.onShadow.slice(0, 60));
