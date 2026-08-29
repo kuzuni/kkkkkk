@@ -33,6 +33,23 @@ async function settle(page) {
         && a.effect && a.effect.getTiming().iterations !== Infinity);
   }, null, { timeout: 3000 }).catch(() => {});
   await page.waitForTimeout(150);
+  /* ⚑ 10회차(2026-08-29) — **끝나지 않는 연출은 «기다릴» 수가 없으니 «세운다».**
+     위 대기는 `iterations !== Infinity` 라 상시 반복 연출(카드 광택 `.cfr::after` · `.jzs` 스윕)을
+     일부러 뺀다 — 그것들은 영원히 도니까 기다리면 timeout 이다. 그런데 이 자의 판정은
+     «2280 판 결함 집합 ↔ 1600 판 결함 집합» 의 **차분**이고 두 판은 서로 다른 page load 라,
+     같은 장식이 한쪽에서만 위상에 걸리면 **«1600 전용 결함» 이라는 유령**이 된다.
+     실측(10회차 재현): `.cfr` 의 `scrollW-clientW` 는 주기의 약 40% 구간에서 0 → 265 로 오르고
+     **2280 43% · 1600 40% 로 두 프레임이 같다**(= 프레임 탓이 아니다). 유령 확률은 한 자리당 ~24%.
+     ⇒ 재기 직전에 무한 반복 연출만 **위상 0 으로 세운다**. 위상이 두 판에서 같아지므로 차분이
+     장식을 자동으로 소거한다. 실재하는 넘침은 위상과 무관하므로 그대로 잡힌다(§되돌림 시험). */
+  await page.evaluate(() => {
+    const app = document.getElementById('app'); if (!app) return;
+    for (const a of app.getAnimations({ subtree: true })) {
+      const t = a.effect && a.effect.getTiming();
+      if (!t || t.iterations !== Infinity) continue;
+      try { a.currentTime = 0; a.pause(); } catch (_) {}
+    }
+  }).catch(() => {});
 }
 
 /* ---------------- 화면 목록 (smoke.js [2] 오프너와 같은 경로) ---------------- */

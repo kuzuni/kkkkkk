@@ -1,0 +1,322 @@
+[
+ {
+  "label": "tab:hero",
+  "tall": 15,
+  "short": 15,
+  "regress": []
+ },
+ {
+  "label": "tab:grow",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "tab:adv",
+  "tall": 47,
+  "short": 47,
+  "regress": []
+ },
+ {
+  "label": "tab:box",
+  "tall": 17,
+  "short": 18,
+  "regress": [
+   {
+    "kind": "D2",
+    "path": "#relw>div.rw-panel",
+    "key": "D2|#relw>div.rw-panel|ovfY",
+    "k": "ovfY",
+    "by": 60
+   }
+  ]
+ },
+ {
+  "label": "tab:shop",
+  "tall": 34,
+  "short": 34,
+  "regress": []
+ },
+ {
+  "label": "side:attend",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "side:roul",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "side:quest",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "side:promo",
+  "tall": 16,
+  "short": 16,
+  "regress": []
+ },
+ {
+  "label": "side:coll",
+  "tall": 20,
+  "short": 20,
+  "regress": []
+ },
+ {
+  "label": "side:bless",
+  "tall": 21,
+  "short": 22,
+  "regress": [
+   {
+    "kind": "D7",
+    "path": "#blsw>div.bls-promo",
+    "key": "D7|#blsw>div.bls-promo|covers:tabbar",
+    "k": "covers:tabbar",
+    "by": 164,
+    "wide": 952
+   }
+  ]
+ },
+ {
+  "label": "menu",
+  "tall": 16,
+  "short": 16,
+  "regress": []
+ },
+ {
+  "label": "util:chat",
+  "tall": 22,
+  "short": 22,
+  "regress": []
+ },
+ {
+  "label": "menu:mail",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "menu:rank",
+  "tall": 23,
+  "short": 23,
+  "regress": []
+ },
+ {
+  "label": "menu:guide",
+  "tall": 16,
+  "short": 16,
+  "regress": []
+ },
+ {
+  "label": "menu:bag",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "menu:saver",
+  "tall": 6,
+  "short": 6,
+  "regress": []
+ },
+ {
+  "label": "menu:conf",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "menu:pass",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "cur:gold",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "cur:dia",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "cur:relic",
+  "tall": 9,
+  "short": 9,
+  "regress": []
+ },
+ {
+  "label": "dunsub:raid",
+  "tall": 26,
+  "short": 26,
+  "regress": []
+ },
+ {
+  "label": "dunsub:dun",
+  "tall": 47,
+  "short": 47,
+  "regress": []
+ },
+ {
+  "label": "dunsub:tower",
+  "tall": 23,
+  "short": 23,
+  "regress": []
+ },
+ {
+  "label": "trsub:train",
+  "tall": 17,
+  "short": 17,
+  "regress": []
+ },
+ {
+  "label": "trsub:rune",
+  "tall": 15,
+  "short": 15,
+  "regress": []
+ },
+ {
+  "label": "trsub:temper",
+  "tall": 15,
+  "short": 15,
+  "regress": []
+ },
+ {
+  "label": "shopcat:summon",
+  "tall": 34,
+  "short": 34,
+  "regress": []
+ },
+ {
+  "label": "shopcat:coin",
+  "tall": 46,
+  "short": 47,
+  "regress": [
+   {
+    "kind": "D2",
+    "path": "#shopList>div.cn-wrap>div.cn-cd.dia>div.pn",
+    "key": "D2|#shopList>div.cn-wrap>div.cn-cd.dia>div.pn|ovfX",
+    "k": "ovfX",
+    "by": 4
+   }
+  ]
+ },
+ {
+  "label": "shopcat:pass",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "eqtab:sk",
+  "tall": 14,
+  "short": 14,
+  "regress": []
+ },
+ {
+  "label": "eqtab:cos",
+  "tall": 16,
+  "short": 16,
+  "regress": []
+ },
+ {
+  "label": "eqtab:pet",
+  "tall": 14,
+  "short": 14,
+  "regress": []
+ },
+ {
+  "label": "prof:19",
+  "tall": 17,
+  "short": 20,
+  "regress": [
+   {
+    "kind": "D7",
+    "path": "#pfw>div.pf",
+    "key": "D7|#pfw>div.pf|covers:tabbar",
+    "k": "covers:tabbar",
+    "by": 149,
+    "wide": 896
+   },
+   {
+    "kind": "D7",
+    "path": "#pfw>div.pf>div.pf-ring",
+    "key": "D7|#pfw>div.pf>div.pf-ring|covers:tabbar",
+    "k": "covers:tabbar",
+    "by": 142,
+    "wide": 882
+   },
+   {
+    "kind": "D7",
+    "path": "#pfw>div.pf>div.pf-fill",
+    "key": "D7|#pfw>div.pf>div.pf-fill|covers:tabbar",
+    "k": "covers:tabbar",
+    "by": 131,
+    "wide": 860
+   }
+  ]
+ },
+ {
+  "label": "prof:20-스펙",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "qtab:daily",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "qtab:rep",
+  "tall": 18,
+  "short": 18,
+  "regress": []
+ },
+ {
+  "label": "pass:35",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "ptab:stage",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "ptab:box",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "ptab:tower",
+  "tall": 25,
+  "short": 25,
+  "regress": []
+ },
+ {
+  "label": "ptab:att",
+  "tall": 23,
+  "short": 23,
+  "regress": []
+ },
+ {
+  "label": "saver:56",
+  "tall": 6,
+  "short": 6,
+  "regress": []
+ }
+]

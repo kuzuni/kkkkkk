@@ -29,6 +29,11 @@ const fs = require('fs');
 const FILE = 'file://' + path.resolve(__dirname, '../index.html');
 const ONLY = (() => { const i = process.argv.indexOf('--only'); return i > 0 ? process.argv[i + 1] : null; })();
 const JSONOUT = (() => { const i = process.argv.indexOf('--json'); return i > 0 ? process.argv[i + 1] : null; })();
+/* --selftest — **되돌림 시험**(334·348 처방). 10회차가 `settle()` 에 «무한 반복 연출 세우기» 를
+   넣어 D2 유령을 지웠으므로, **그 대가로 실재하는 넘침까지 못 보게 된 것은 아닌지**를 못박는다:
+   1600 판에서만 `overflow:hidden` 그릇 하나에 그릇보다 확실히 큰 자식을 심고 D2 가 그것을 내는지 본다.
+   0 건이면 축이 죽은 것이다(«영원히 초록인 자»). */
+const SELFTEST = process.argv.includes('--selftest');
 
 const TALL = [1080, 2280];   /* 9:19 기준 */
 const SHORT = [1080, 1600];  /* 9:13.3 — 지원 최저 세로 */
@@ -258,16 +263,35 @@ const SCAN = function () {
     console.log(`[351] 화면 ${openers.length}개 × 2해상도 스캔`);
 
     for (const o of openers) {
-      const scan = async ([w, h]) => {
+      const scan = async ([w, h], inject) => {
         const { ctx, page } = await fresh(browser, w, h);
         await drive(page, o);
         await settle(page);
+        if (inject) {
+          const hit = await page.evaluate(() => {
+            const app = document.getElementById('app'); if (!app) return 0;
+            let n = 0;
+            for (const el of app.querySelectorAll('*')) {
+              const cs = getComputedStyle(el);
+              if (cs.overflowX !== 'hidden' || cs.display === 'none') continue;
+              if (el.clientWidth < 40 || el.clientHeight < 40) continue;
+              const s = document.createElement('s');
+              s.style.cssText = 'display:block;width:' + (el.clientWidth + 400) + 'px;height:4px';
+              el.appendChild(s);
+              n++;
+              if (n >= 2) break;
+            }
+            return n;
+          });
+          console.log(`        [selftest] overflow:hidden 그릇 ${hit}개에 «그릇 폭 +400px» 자식을 심었다`);
+          if (!hit) console.log('        [selftest] ⚠ 주입 0개 — 시험이 성립하지 않는다');
+        }
         const r = await page.evaluate(SCAN).catch((e) => ({ defects: [], err: String(e.message || e) }));
         await ctx.close();
         return r;
       };
       const tall = await scan(TALL);
-      const short = await scan(SHORT);
+      const short = await scan(SHORT, SELFTEST);
       const tallKeys = new Set(tall.defects.map((d) => d.key));
       const regress = short.defects.filter((d) => !tallKeys.has(d.key));
       results.push({ label: o.label, tall: tall.defects.length, short: short.defects.length, regress });
