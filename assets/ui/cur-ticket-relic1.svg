@@ -1,9 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
-  <!-- 화폐 아이콘 · 유물 던전 1단 입장권 — 작업 402(주인 지시 2026-08-29 «입장권 색이 던전마다 달라야 한다»)
-       125 단일 출처. 껍데기 기하(path 3줄)는 기존 5장과 **픽셀 동일**하고 색만 다르다.
-       색은 그 던전 카드의 두 톤 그대로다 — 껍데기 = DUN_UI.relic1.s(#394256) · 속띠 = DUN_UI.relic1.r(#5A678A).
-       카드와 권종이 같은 색으로 묶여 «어느 던전 권인가» 를 색 하나로 읽는다. -->
-  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#394256" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#5A678A"/>
-  <path d="M32 26.5l3.4 7.2 7.8 1.1-5.7 5.4 1.4 7.8L32 44.2l-6.9 3.8 1.4-7.8-5.7-5.4 7.8-1.1z" fill="#FFFFFF" opacity=".92" stroke="#394256" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- 화폐 아이콘 · 유물 던전 1단 입장권 — 작업 412(주인 재지시 2026-08-29 «던전 티켓 좀 더 확실하게 색 구분되게좀» + «통일감 있게»)
+       125 단일 출처 · 껍데기 기하(path 2줄)는 8장 **픽셀 동일**하다 — 세트로 읽히게 하는 것이 그 두 줄이라 건드리지 않는다.
+       색은 402 처럼 카드에서 물려받지 않고 **색상환에서 배분**한다(L*=64 · C*≤55 한 밴드 · 색상만 돈다).
+         이 장: h 124° · 채움 #7DA845(L*64) · 테 #3B6400(같은 색상 · L*38 = 채움 −26).
+       속 문양은 «유물 파편(삼각)» — 8장이 전부 다른 실루엣이고(402 까지는 6장이 같은 별이었다)
+       획 규격은 공용이다(흰색 opacity .92 · stroke-width 1.6 · 잉크 bbox 21×21 · 중심 32,35.5).
+       게이트 tools/verify402.js [B] 가 ΔE·색상각·밴드·문양 중복·잉크 bbox 를 전부 잰다. -->
+  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#3B6400" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#7DA845"/>
+  <path d="M32 25l10.5 21h-21z" fill="#FFFFFF" opacity=".92" stroke="#3B6400" stroke-width="1.6" stroke-linejoin="round"/>
 </svg>

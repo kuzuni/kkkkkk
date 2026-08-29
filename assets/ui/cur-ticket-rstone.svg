@@ -1,8 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
-  <!-- 화폐 아이콘 · 룬강화석 던전 입장권 — 작업 203(던전 계열 5번째) · 125 단일 출처
-       입장권 껍데기 기하는 4종(gold·dia·relic·stone)과 픽셀 동일하고 색·속 문양만 다르다. -->
-  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#0B4A4C" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#2FD4C4"/>
-  <path d="M32 25l9 7v11l-9 6-9-6V32z" fill="#FFFFFF" opacity=".92" stroke="#0B4A4C" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M32 28v14M32 33.5l-4.5-4.5M32 33.5l4.5-4.5" stroke="#0B4A4C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- 화폐 아이콘 · 룬강화석 던전 입장권 — 작업 412(주인 재지시 2026-08-29 «던전 티켓 좀 더 확실하게 색 구분되게좀» + «통일감 있게»)
+       125 단일 출처 · 껍데기 기하(path 2줄)는 8장 **픽셀 동일**하다 — 세트로 읽히게 하는 것이 그 두 줄이라 건드리지 않는다.
+       색은 402 처럼 카드에서 물려받지 않고 **색상환에서 배분**한다(L*=64 · C*≤55 한 밴드 · 색상만 돈다).
+         이 장: h 223° · 채움 #00AAC6(L*64) · 테 #006374(같은 색상 · L*38 = 채움 −26).
+       속 문양은 «룬 방패» — 8장이 전부 다른 실루엣이고(402 까지는 6장이 같은 별이었다)
+       획 규격은 공용이다(흰색 opacity .92 · stroke-width 1.6 · 잉크 bbox 21×21 · 중심 32,35.5).
+       게이트 tools/verify402.js [B] 가 ΔE·색상각·밴드·문양 중복·잉크 bbox 를 전부 잰다. -->
+  <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#006374" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#00AAC6"/>
+  <path d="M32 25l10.5 7v8l-10.5 6-10.5-6v-8z" fill="#FFFFFF" opacity=".92" stroke="#006374" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M32 29v13M32 34l-4.5-4.5M32 34l4.5-4.5" stroke="#006374" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

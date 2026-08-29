@@ -89,12 +89,13 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
   }
 
   /* ══════════ [B] 자산 ══════════════════════════════════════════════ */
-  blk('[B] 자산 — 새 4장이 «기하 동일 · 색만 다름» 인가');
+  blk('[B] 자산 — 8장이 «갈리면서 한 세트» 인가 (412 로 갈아 끼운 절)');
   const NEW = ['relic1', 'relic2', 'relic3', 'relic4'];
-  const OLDS = ['gold', 'dia'];   /* 별 문양을 공유하는 기존 장 = 기하 기준선 */
+  const OLDS = ['gold', 'dia'];
+  const ALL8 = NEW.concat(OLDS, ['stone', 'rstone']);
   const files = {};
   let readBad = [];
-  for (const n of NEW.concat(OLDS, ['stone', 'rstone'])) {
+  for (const n of ALL8) {
     const p = path.join(ROOT, 'assets/ui/cur-ticket-' + n + '.svg');
     if (!fs.existsSync(p)) { readBad.push(n); continue; }
     files[n] = fs.readFileSync(p, 'utf8');
@@ -106,17 +107,115 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
   ok(shells.length > 0 && shellBad.length === 0,
      'B2 껍데기 기하(첫 path d)가 8장 픽셀 동일 — 색만 다르다',
      shellBad.length ? shellBad.map(([n]) => n).join(',') : shells[0][1]);
-  const B3 = await ev((ns) => ns.map((n) => ({ n, s: DUN_UI[n].s.toUpperCase(), r: DUN_UI[n].r.toUpperCase() })), NEW);
-  if (!guard(B3, 'B3')) {
-    const colBad = [];
-    for (const c of B3) {
-      const f = fills(files[c.n] || '');
-      /* 껍데기 = DUN_UI.s · 속띠 = DUN_UI.r (그 던전 카드의 두 톤 그대로) */
-      if (f[0] !== c.s || f[1] !== c.r) colBad.push(c.n + ' [' + f.slice(0, 2).join(',') + '] ≠ [' + c.s + ',' + c.r + ']');
+  const bandD = (txt) => (txt.match(/<path d="(M10 23h44[^"]*)"/) || [])[1] || null;
+  const bands = Object.entries(files).map(([n, t]) => [n, bandD(t)]);
+  ok(bands.every(([, d]) => d && d === bands[0][1]),
+     'B3 속띠 기하(둘째 path d)도 8장 픽셀 동일 — «한 세트» 를 지탱하는 두 줄이다',
+     bands.filter(([, d]) => d !== bands[0][1]).map(([n]) => n).join(',') || '8/8');
+
+  /* ── 412 —— «확실하게 갈리는가» 와 «한 세트로 읽히는가» 를 같은 절에서 잰다.
+     402 의 옛 B4 «색 = DUN_UI.s/.r» 은 여기서 폐기됐다 — 그 규칙이 곧 결손이었기 때문이다
+     (유물 카드 3장이 색상각 6° 안이라 권종도 6° 안으로 굳었다 · probe412 로 12.4 재현).
+     자리를 비우지 않고 **주인 지시가 새로 세운 규칙**으로 갈아 끼운다(333·402 처방):
+       ① 쌍별 최소 ΔE ≥ 35   ② «Δh ≥ 30° 또는 ΔL ≥ 18»(둘을 AND 가 아니라 각각)
+       ③ 한 밴드(L* 폭 ≤ 4 · 최소 C* ≥ 30)  ④ 테는 같은 색상의 어두운 짝
+     ⚠ 이 자는 카드색을 **안 본다** — 402 의 «카드↔권종 색 연상» 은 주인 지시로 끊겼고,
+        대신 «껍데기·속띠 기하 픽셀 동일»(B2·B3)과 «문양 규격 공용»(B8)이 세트를 지탱한다. */
+  const DE_MIN = 35, DH_MIN = 30, DL_MIN = 18;
+  const finv = (t) => (t > 0.04045 ? Math.pow((t + 0.055) / 1.055, 2.4) : t / 12.92);
+  const lab = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    const r = finv(((n >> 16) & 255) / 255), g = finv(((n >> 8) & 255) / 255), b = finv((n & 255) / 255);
+    const X = (0.4124564 * r + 0.3575761 * g + 0.1804375 * b) / 0.95047;
+    const Y = (0.2126729 * r + 0.7151522 * g + 0.0721750 * b);
+    const Z = (0.0193339 * r + 0.1191920 * g + 0.9503041 * b) / 1.08883;
+    const k = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const fx = k(X), fy = k(Y), fz = k(Z);
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  };
+  const dE = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  const hueOf = (l) => (Math.atan2(l[2], l[1]) * 180 / Math.PI + 360) % 360;
+  const chOf = (l) => Math.hypot(l[1], l[2]);
+  const dHue = (a, b) => { const d = Math.abs(hueOf(a) - hueOf(b)); return d > 180 ? 360 - d : d; };
+  /* fills(txt)[0] = 껍데기 · [1] = 속띠 (B2·B3 이 그 순서를 못 박는다) */
+  const tone = {};
+  for (const n of ALL8) { const f = fills(files[n] || ''); tone[n] = { s: f[0], r: f[1] }; }
+  const pairs = [];
+  for (let i = 0; i < ALL8.length; i++) for (let j = i + 1; j < ALL8.length; j++) {
+    const a = ALL8[i], b = ALL8[j], la = lab(tone[a].r), lb = lab(tone[b].r);
+    pairs.push({ p: a + '↔' + b, e: dE(la, lb), h: dHue(la, lb), l: Math.abs(la[0] - lb[0]) });
+  }
+  pairs.sort((x, y) => x.e - y.e);
+  ok(pairs.length === 28 && pairs[0].e >= DE_MIN,
+     'B4 속띠 28쌍의 최소 ΔE ≥ ' + DE_MIN + ' (412 전 실측 12.4 — dia↔rstone)',
+     '최소 ' + pairs[0].e.toFixed(1) + ' (' + pairs[0].p + ') · 중앙값 ' + pairs[14].e.toFixed(1));
+  const weak = pairs.filter((r) => r.h < DH_MIN && r.l < DL_MIN);
+  ok(weak.length === 0,
+     'B5 «색상각 ≥ ' + DH_MIN + '° 또는 L* 차 ≥ ' + DL_MIN + '» 을 못 넘는 쌍 0건(명도만으로 갈린 쌍 금지)',
+     weak.length ? weak.map((r) => r.p + ' Δh' + r.h.toFixed(0) + '/ΔL' + r.l.toFixed(0)).join(', ')
+                 : '0건 (최소 Δh ' + Math.min(...pairs.map((r) => r.h)).toFixed(0) + '°)');
+  const Ls = ALL8.map((n) => lab(tone[n].r)[0]), Cs = ALL8.map((n) => chOf(lab(tone[n].r)));
+  ok(Math.max(...Ls) - Math.min(...Ls) <= 4 && Math.min(...Cs) >= 30,
+     'B6 «통일감» — 채도·명도가 한 밴드다(L* 폭 ≤ 4 · 최소 C* ≥ 30. 412 전 L* 폭 44.8)',
+     'L* ' + Math.min(...Ls).toFixed(1) + '~' + Math.max(...Ls).toFixed(1)
+     + ' · C* ' + Math.min(...Cs).toFixed(1) + '~' + Math.max(...Cs).toFixed(1));
+  const twoTone = ALL8.map((n) => {
+    const ls = lab(tone[n].s), lr = lab(tone[n].r);
+    return { n, dh: dHue(ls, lr), dl: lr[0] - ls[0] };
+  });
+  const ttBad = twoTone.filter((t) => t.dh > 6 || t.dl < 23 || t.dl > 29);
+  ok(ttBad.length === 0, 'B7 테는 «같은 색상의 어두운 짝» 이다(Δh ≤ 6° · ΔL 26±3 — 8장이 같은 손잡이)',
+     ttBad.length ? ttBad.map((t) => t.n + ' Δh' + t.dh.toFixed(0) + '/ΔL' + t.dl.toFixed(1)).join(', ')
+                  : 'ΔL ' + twoTone.map((t) => t.dl.toFixed(0)).join('/'));
+
+  /* ── 문양 — 색이 죽어도 남는 축(색각 이상·회색조·저해상도) */
+  const motif = {};
+  for (const n of ALL8) motif[n] = [...(files[n] || '').matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]).slice(2);
+  const sig = {}; ALL8.forEach((n) => sig[n] = motif[n].join('|'));
+  const dup = [];
+  for (let i = 0; i < ALL8.length; i++) for (let j = i + 1; j < ALL8.length; j++)
+    if (sig[ALL8[i]] === sig[ALL8[j]]) dup.push(ALL8[i] + '↔' + ALL8[j]);
+  ok(dup.length === 0, 'B8 속 문양 path 중복 0건 — 8장이 서로 다른 실루엣이다(412 전 6장이 같은 별 = 15쌍)',
+     dup.length ? dup.join(', ') : '8장 → ' + new Set(Object.values(sig)).size + '종');
+  const specBad = ALL8.filter((n) => {
+    const m = (files[n] || '').match(/<path d="[^"]+" fill="#FFFFFF" opacity="\.92" stroke="(#[0-9A-Fa-f]{6})" stroke-width="1\.6"/);
+    return !m || m[1].toUpperCase() !== tone[n].s;
+  });
+  ok(specBad.length === 0,
+     'B9 문양 획 규격이 8장 공용이다(흰색 · opacity .92 · stroke = 그 장의 테색 · stroke-width 1.6)',
+     specBad.length ? specBad.join(',') : '8/8');
+  /* 잉크 bbox — «실루엣만 바꾸고 덩치는 같게» 를 브라우저 getBBox 로 잰다(선언이 아니라 그려진 것) */
+  const BOX = await ev((mo) => {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 64 64'); svg.style.position = 'absolute'; svg.style.left = '-999px';
+    document.body.appendChild(svg);
+    const out = {};
+    for (const k in mo) {
+      let x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9;
+      for (const d of mo[k]) {
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', d); svg.appendChild(p);
+        const b = p.getBBox();
+        x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y);
+        x2 = Math.max(x2, b.x + b.width); y2 = Math.max(y2, b.y + b.height);
+        svg.removeChild(p);
+      }
+      out[k] = { w: x2 - x1, h: y2 - y1, cx: (x1 + x2) / 2, cy: (y1 + y2) / 2 };
     }
-    ok(colBad.length === 0, 'B4 새 4장의 색이 그 던전 카드의 두 톤(DUN_UI.s / .r)과 같다',
-       colBad.length ? colBad.join(' | ') : B3.map((c) => c.n + ':' + c.s + '/' + c.r).join(' · '));
-    ok(new Set(B3.map((c) => c.r)).size === 4, 'B5 속띠 4색이 서로 다르다', B3.map((c) => c.r).join(','));
+    svg.remove();
+    return out;
+  }, motif);
+  if (!guard(BOX, 'B10')) {
+    const ws = ALL8.map((n) => BOX[n].w), hs = ALL8.map((n) => BOX[n].h);
+    const rw = Math.max(...ws) / Math.min(...ws), rh = Math.max(...hs) / Math.min(...hs);
+    ok(rw <= 1.05 && rh <= 1.05,
+       'B10 문양 잉크 덩치가 한 세트다(최대÷최소 ≤ 1.05 — 411 이 세운 눈금)',
+       'w ' + rw.toFixed(3) + ' · h ' + rh.toFixed(3) + ' · ' + ws[0].toFixed(1) + '×' + hs[0].toFixed(1));
+    const offBad = ALL8.filter((n) => Math.abs(BOX[n].cx - 32) > 1 || Math.abs(BOX[n].cy - 35.5) > 1);
+    ok(offBad.length === 0, 'B11 문양 중심이 8장 같은 자리다 (32, 35.5) ±1',
+       offBad.length ? offBad.map((n) => n + ' (' + BOX[n].cx.toFixed(1) + ',' + BOX[n].cy.toFixed(1) + ')').join(', ')
+                     : '8/8');
   }
 
   /* ══════════ [C] 화면 세 자리 ══════════════════════════════════════ */
@@ -250,6 +349,41 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
                 && new Set(ids.map((id) => faked[id])).size !== ids.length;
     ok(caught, '§R4 카드 한 장이 남의 권종을 그리면 C1 의 판정식이 잡는다(중복·불일치 두 축 모두)',
        caught ? 'relic2 → ' + C.want.relic1 + ' 을 두 축이 다 잡았다' : '못 잡았다');
+  }
+
+  /* ⓓ 412 색 층 — 한 장을 «412 이전 이웃 색» 으로 되돌리면 B4·B5 판정식이 갈라지는가.
+     제품 파일은 안 건드리고 **같은 판정식에 두 팔레트를 통과**시킨다(§R1 과 같은 꼴 —
+     1회차에 `dunTk` 를 덮으려다 헛초록이 났던 그 함정을 피한다). */
+  {
+    const worst = (map) => {
+      let mn = 1e9, mp = '', weakN = 0;
+      const ks = Object.keys(map);
+      for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) {
+        const a = lab(map[ks[i]]), b = lab(map[ks[j]]);
+        const e = dE(a, b), h = dHue(a, b), l = Math.abs(a[0] - b[0]);
+        if (e < mn) { mn = e; mp = ks[i] + '↔' + ks[j]; }
+        if (h < DH_MIN && l < DL_MIN) weakN++;
+      }
+      return { mn, mp, weakN };
+    };
+    const now = {}; ALL8.forEach((n) => now[n] = tone[n].r);
+    const old = Object.assign({}, now, { rstone: '#2FD4C4' });   /* ← 412 이전 룬강화석 청록 */
+    const N = worst(now), O = worst(old);
+    ok(N.mn >= DE_MIN && O.mn < DE_MIN,
+       '§R5 한 장을 412 이전 색으로 되돌리면 B4 가 빨개진다(자가 무르지 않다)',
+       '지금 ' + N.mn.toFixed(1) + ' (' + N.mp + ') vs 되돌림 ' + O.mn.toFixed(1) + ' (' + O.mp + ')');
+    ok(N.weakN === 0 && O.weakN > 0,
+       '§R6 그 되돌림은 B5(«색상각 또는 명도») 도 같이 빨갛게 한다',
+       '지금 0건 vs 되돌림 ' + O.weakN + '건');
+  }
+  /* ⓔ 412 문양 층 — 한 장이 남의 실루엣을 베끼면 B8 판정식이 잡는가 */
+  {
+    const faked = Object.assign({}, sig, { relic3: sig.relic1 });
+    const ks = Object.keys(faked);
+    let n = 0;
+    for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) if (faked[ks[i]] === faked[ks[j]]) n++;
+    ok(n === 1, '§R7 한 장이 남의 문양을 베끼면 B8 의 중복 세기가 잡는다(색이 죽는 경우의 안전망)',
+       '베낀 사본 중복 ' + n + '쌍 vs 지금 ' + dup.length + '쌍');
   }
 
   blk('콘솔');
