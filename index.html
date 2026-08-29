@@ -9702,7 +9702,14 @@
      (border 를 주면 절대배치 자식이 6px 밀린다 — 03 에서 잡은 함정) */
   /* 작업 51 — #eqw 는 top:0/bottom:180 이라 100% = frameH − 180.
      거기서 HUD 104 를 더 빼면 시트 상한이 된다(9:16 상한 1636 > 1584 → 회귀 0). */
-  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;max-height:calc(100% - 104px);
+  /* 작업 351(9:13.3 루프) — 가드가 **HUD 상자(104)** 였는데 사람이 보는 것은 **HUD 잉크**다.
+     A3 꼬리판 `.pcp`(🔥 연속출석)는 상자 아래로 25px 더 내려와 **92..129** 를 차지한다.
+     frameH 1600 에서 이 상한이 처음으로 «걸리면서»(1584 > 1600−180−104 = 1316) 시트 상변이
+     정확히 104 에 붙고, `.pcp` 의 아래 25px = 잉크 높이의 68% 를 헤더가 덮어 숫자가 안 읽혔다
+     (`elementFromPoint(202,111)` → `.eqp-hd`. 2280 에서는 `.dim` 이라 = 안 덮는다).
+     ⇒ 가드를 잉크 끝 **129** 로 올린다. 2280 은 상한이 애초에 안 걸려(1584 < 2176) **Δ0px** 이고,
+     짧은 프레임에서만 시트가 25px 내려온다. `.tr-sheet`(1245)는 상한 자체에 안 닿아 그대로 둔다. */
+  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;max-height:calc(100% - 129px);
     background:#000;border-radius:38px 38px 0 0;overflow:hidden}
   .eqp>*,.eqp .shsc-in>*{position:absolute}
   /* 헤더는 본문 뷰포트 «위»에 얹힌다 — 스크롤된 카드가 헤더를 덮지 않게 (DOM 순서상 뒤라 z 필요) */
@@ -11561,6 +11568,18 @@
      **위쪽 가드(126)를 지키고 아래로만** 넘치고, `overflow-y:auto` 로 닿을 수 있다. */
   #blsw{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;z-index:41;overflow-y:auto;
     box-sizing:border-box;padding:126px 0 146px;flex-direction:column;align-items:center;justify-content:flex-start}
+  /* 작업 351(9:13.3 루프) — 이 블록은 **1842px** 이라 frameH 1600 에 242px 넘친다.
+     넘친 몫이 하필 **닫기 ✕**(레이아웃 1558..1696 · 화면 1574..1712)이라 1600 에서는
+     프레임 밖 112px = 링 26px 만 걸쳐 보였다. 딤을 눌러도 닫히긴 하지만(27101) 그건
+     «보이지 않는 길» 이고, 비평가 BM·BN 이 독립으로 이 자리를 1순위로 짚었다(ⓐ 1·2 / ⓓ 2·3).
+     ⚠ 위쪽 `padding-top:126` 은 손대지 않는다 — 중앙 정렬 값이 아니라 **짧은 기기에서 HUD 를
+       파고들지 않게 막는 가드**다(LESSONS «6. 세로 이동은 pt 를 건드리지 말고 pb 로»).
+     그래서 회수는 아래 두 곳에서만 한다:
+       ① 아래 가드를 프레임에 맞춰 **연속**으로 줄인다 — 2280 에서 146 그대로(Δ0), 1600 에서 16.
+          1696 = 블록 높이 1842 − 아래 가드 146.
+       ② 짧은 프레임에서만 ✕ 를 흐름에서 빼 **팝업 우상단 코너**로 올린다(148px 회수).
+          ⇒ 1600 실측 블록 = 126 + 1157 + 21 + 249 + 16 = **1569 ≤ 1600** (여유 31px). */
+  #blsw{padding-bottom:clamp(16px, calc(var(--frameh) - 1696px), 146px)}
   #blsw.on{display:flex}
   #blsw i,#blsw em,#blsw b,#blsw s{display:inline-block;font-style:normal;text-decoration:none;font-weight:900}
 
@@ -11930,10 +11949,19 @@
        ⇒ 10 → 9. 바깥 138(T 실측 ref 138.4 · U 140)과 코어는 그대로. */
     border-radius:50%;background:#E04D57;box-shadow:inset 0 0 0 7px #9F2A30;
     cursor:pointer;line-height:120px;text-align:center;
-    font-size:72px;font-weight:900;color:#FAF0F1;
+    font-size:72px;font-weight:900;color:#FAF0F1;z-index:2;
     /* 13회차 3차분 — M·N 일치: ref 글리프 중심 x541.5(원 중심 +2) / 우리 537(−2.5). 크기 50x51 vs 51x51 은 일치.
        세로도 ref 1858 / 우리 1855 ⇒ 4.5px 오른쪽 · 3px 아래. `text-indent` 는 좌우 중앙정렬을 밀어낸다. */
     text-indent:9px;padding-top:3px;box-sizing:border-box}
+  /* 작업 351 — 짧은 프레임(frameH < 1842)에서만: ✕ 를 흐름에서 빼 팝업 **우상단 코너**로 올린다.
+     흐름에서 빠지면 블록이 148px(높이 138 + margin 5 + 위 §13-2 의 top 16 중 흐름 몫 5) 줄어
+     위 `padding-bottom` 회수(130)와 합쳐 242px 를 다 메운다.
+     자리: `#blsw` 는 `inset:0` 이라 프레임 좌표계다. 팝업 `.bls` 는 짧은 프레임에서 top **126**(위 가드)
+     · left 41 · 폭 998 이므로 우변이 1039 다. ⇒ right 45 / top 134 로 **코어가 헤더 띠 오른쪽 끝 안쪽**에
+     앉는다(코너 밖으로 내보내면 위 가드 126 을 넘어 HUD 를 파고든다 — `.bls` 상변보다 위로 못 간다).
+     `z-index:2` 는 헤더 띠(`.bls-head`) 위로 올리기 위한 것이고 2280 에서는 겹치는 형제가 없어 무해하다.
+     ⚠ 2280·1920 은 이 규칙이 아예 안 붙어 **Δ0px** 다(9:16 은 1920 ≥ 1842). */
+  #app.shortf .bls-x{position:absolute;top:134px;right:45px;margin:0}
   /* ==========================================================================
      35 패스 — 스테이지 패스 (측정표 docs/measure/35-패스.md)
      껍데기는 «딤 없는 전체화면 페이지»다(측정표 §0 — 순백 42,381px · 순흑 129,410px 로
@@ -15171,6 +15199,16 @@ function fit(){
   if(!AW || !AH) return;
   frameH = clamp(Math.round(FRAME_W * AH / AW), FRAME_H_MIN, FRAME_H_MAX);
   app.style.height = frameH + 'px';
+  /* 작업 351(9:13.3 루프) — 프레임 높이를 CSS 에 넘긴다.
+     CSS 는 «내가 지금 몇 px 짜리 프레임에 있는지» 를 물을 방법이 없다(미디어 쿼리는 #app 이
+     아니라 뷰포트를 본다 — 게다가 #app 은 scale() 로 눌린 상태라 둘이 다른 수다).
+     ⓐ `--frameh` — 짧은 프레임에서만 갈리는 값을 `clamp(…, calc(var(--frameh) − k), …)` 로
+        **연속**하게 쓴다(가드 하나 때문에 화면을 두 벌로 만들지 않는다).
+     ⓑ `.shortf` — 연속으로는 못 쓰는 «배치 자체가 바뀌는» 자리만. 기준 1842 는 세로로 쌓인
+        오버레이 중 가장 키가 큰 블록(34 축복: pad 126 + 팝업 1157 + 21 + 스트립 249 + 5 + ✕ 138
+        + pad 146)의 높이다 = «그 아래로는 기준 배치가 안 들어간다». 9:16(1920)은 안 걸린다. */
+  app.style.setProperty('--frameh', frameH + 'px');
+  app.classList.toggle('shortf', frameH < 1842);
   /* 스케일은 폭·높이 중 «작은 쪽». 폭 기준(AW/1080)만 쓰면 frameH 가 clamp 에 걸리는
      비율(9:16 보다 넓은 화면 — 가로 모드·데스크톱 창·태블릿)에서 프레임이 세로로 넘쳐
      게임 화면이 잘린다. 세로 폰은 clamp 미적용 구간이라 두 값이 같아 동작 불변. */
