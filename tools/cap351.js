@@ -170,13 +170,27 @@ const SIG = function () {
   });
   box.sort((a, b) => b.z - a.z);
   /* 껍데기(#modal 등)만으로는 팝업끼리 안 갈리므로 그 안의 제목 글자를 같이 쓴다. */
-  const head = [...document.querySelectorAll('.mhead,.mtitle,.mbox h3,.mbox b,.pop h3,.sh-hd,.eqp-hd')]
+  /* `.ci-head` — 33 재화 팝업(#ciw)은 **탭이 없고 내용만 갈린다**(골드/다이아/유물조각).
+     그래서 서브탭 축으로는 안 갈리고 제목으로 갈라야 한다(5회차에 13-gold ↔ 13-dia 가 같은 서명이었다). */
+  const head = [...document.querySelectorAll('.mhead,.mtitle,.mbox h3,.mbox b,.pop h3,.sh-hd,.eqp-hd,.ci-head')]
     .map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 2).join('/');
   const sheet = ['#bSk', '#bCos', '#bPet', '#bEq', '#blsw']
     .filter((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return r.height > 50 && getComputedStyle(e).display !== 'none'; }).join(',');
-  const sub = document.querySelector('#dunSub [data-dsub].on,#eqTabs [data-eqtab].on,#trSubs [data-trsub].on');
-  return [box.slice(0, 2).map((b) => b.id + '@' + b.z).join(','), head.slice(0, 24), sheet,
-    sub ? sub.textContent.trim().slice(0, 10) : ''].join('|');
+  /* ⚠ 5회차 — 이 줄이 **서명을 통째로 헛초록으로 만들고 있었다.**
+     `querySelector('a,b,c')` 는 «관련된 것» 이 아니라 **문서 순서상 첫 매치**를 준다.
+     `#dunSub` 가 `#trSubs`·`#shopCats` 보다 앞이라 어느 화면을 찍든 sub 칸이 늘 «던전» 이었고,
+     그 결과 **같은 오버레이의 서브탭들이 전부 같은 서명**을 받아(23 훈련/룬/단련 · 10 소환/재화/이용권 ·
+     35 패스 4탭 · 13 재화 2탭) «진입 실패 의심» 9건이 찍혔다 — 실제로는 9장 다 md5 가 다른 **정상 캡처**였다.
+     ⇒ 바를 **전부** 훑어 켜진 칸을 다 잇는다. 그리고 4회차에 빠져 있던 바(패스·상점·도감·퀘스트·재화)를 채웠다.
+     **후보 목록이 곧 사각지대다**(3회차 교훈) — 새 서브탭 바를 만들면 여기에도 같이 적을 것. */
+  const SUBBARS = ['#dunSub [data-dsub].on', '#eqTabs [data-eqtab].on', '#trSubs [data-trsub].on',
+    '#psBar [data-ptab].on', '#shopCats .shp-ct.on', '#collTabs .cltab.on',
+    '.qs-tg b[data-t].on'];
+  const subs = SUBBARS.map((s) => {
+    const e = document.querySelector(s);
+    return e ? (e.textContent || '').trim().slice(0, 8) : '';
+  }).filter(Boolean).join('+');
+  return [box.slice(0, 2).map((b) => b.id + '@' + b.z).join(','), head.slice(0, 24), sheet, subs].join('|');
 };
 
 (async () => {
