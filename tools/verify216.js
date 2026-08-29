@@ -17,8 +17,21 @@
                   표본을 찾는다 — 등재문의 «21자 −8.1» 은 342 3회차가 `.dnc .sp>i` 를 41 → 38 로
                   내려 클램프 바닥이 22.55 → 20.90 이 되면서 **여백 +13.8 로 안전해진** 죽은 표본이다.
                   [4-c] 가 그 인과(base 를 41 로 되돌리면 21자가 다시 −8.1)를 못박는다.
+                  396(2026-08-29): [4-c] 한 항만으로는 **클램프가 통째로 사라져도 초록**이다
+                  (클램프 없는 판도 −252px 라 «침범한다» 는 그대로 참) ⇒ [4-c2] 가 그 판이
+                  «바닥까지 눌러도 넘친다» 인지 «아예 안 눌렀다» 인지를 가른다.
+     [R] 되돌림 시험 — 폭 클램프(`fitNum`)를 실제로 떼면 서명이 바뀐다(396 신설):
+                  인라인이 사라지고 fs 가 base 로 돌아가며 여백이 무너진다. 이 자에서 «클램프가
+                  일한다» 를 **직접** 묻는 유일한 절이다 — §1·§2·§3 은 제품 표기가 `fmtB` 라
+                  클램프가 애초에 안 걸리고, §5 는 개입한 적이 없다(`probe396` [ⓒ]).
      [5] 아레나 — 같은 부품(`.dnc.rd`)을 쓰는 이웃 카드도 침범 0 (216 이 이 자리를 안 흔들었다)
-     [6] 04 세부 — 같은 기록을 쓰는 세부 팝업 표기도 알파벳 단위다(표기층이 한 벌이다) */
+                  ⚠ «기하» 항이지 «클램프» 항이 아니다(396 — 클램프는 여기 개입한 적이 없다)
+     [6] 04 세부 — 같은 기록을 쓰는 세부 팝업 표기도 알파벳 단위다(표기층이 한 벌이다)
+
+   396(2026-08-29) 등재문 정정 — «`raidFitNums` 를 통째로 지워도 216 은 35/35» 는 **사실이 아니다**.
+   제품을 실제로 no-op 으로 변이시켜 재니 **34/35**(§4 둘째 항 하나가 잡는다)였다. 다만 그 한 항의
+   문구가 «표본이 바닥에 서 있다» 라 원인을 안 말하고, 나머지 절(§1~§3·§4-c·§5)은 전부 둔감했다.
+   ⇒ 고친 것은 [4-c2] 와 [R] 이고 제품 `index.html` 은 0줄이다. 재현기 `tools/probe396.js`. */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -147,6 +160,13 @@ const ALPHA = /^\d{1,3}(\.\d{1,2})?[A-Z]{0,2}$/;
   ok(old41.gap < 0 && old41.txt.length === 21,
      `[4-c] base 를 342 이전 41 로 되돌리면 등재문의 21자가 다시 침범한다 — 여백 ${old41.gap}px`
      + ` (등재문 실측 −8.1 · 바닥 ${old41.fs}px) ⇒ 표본이 옮겨진 뿌리는 342 의 41 → 38`);
+  /* 396 — 위 한 항만 두면 **클램프가 통째로 사라져도 초록**이다(`probe396` [ⓑ]: 클램프 없는 판도
+     같은 자리가 −252px 라 «침범한다» 는 그대로 참이다). 이 판이 «클램프가 바닥까지 눌렀는데도
+     넘친다» 인지 «클램프가 아예 일을 안 했다» 인지를 갈라야 항이 공허해지지 않는다. */
+  ok(old41.floor === 1 && !!old41.inline,
+     `[4-c2] 그 −8.1 은 «클램프가 바닥까지 눌러도 넘친다» 다 — 인라인 ${old41.inline || '없음'} ·`
+     + ` fs ${old41.fs} = base ${old41.base} × ${old41.base ? +(old41.fs / old41.base).toFixed(2) : '?'}`
+     + ` (클램프를 떼면 이 항이 빨개진다 — fs 가 base 41 그대로다)`);
   await p.evaluate(() => {
     const e = document.getElementById('v216b'); if (e) e.remove();
     document.querySelectorAll('#dunList .dnc.rd .sp.tk>i').forEach((i) => {
@@ -159,7 +179,76 @@ const ALPHA = /^\d{1,3}(\.\d{1,2})?[A-Z]{0,2}$/;
   ok(back.gap >= back.minGap && ALPHA.test(back.txt),
      `되돌림 해제 후 원복 «${back.txt}» 여백 ${back.gap}px`);
 
+  /* ------------------------------------------------------------------ */
+  console.log('[R] 되돌림 시험 — 폭 클램프(`fitNum`)를 떼면 이 자가 잡는가 (396)');
+  /* 396 (2026-08-29): 이 자의 어느 절도 «클램프가 실제로 일한다» 를 직접 묻지 않았다 —
+     §1·§2·§3 은 제품 표기가 `fmtB`(최대 6자)라 클램프가 애초에 안 걸리는 자리고(그래서 클램프가
+     없어도 같은 값), §4-c 는 클램프가 없으면 **더 크게** 침범하므로 오히려 초록이며, §5 는
+     `probe393` [ⓕ]·`probe396` [ⓒ] 가 «인라인이 붙은 적이 없다»(여백 22.4 → 22.4 Δ0)로 못박았다.
+     ⇒ 클램프 제거를 잡던 것은 §4 둘째 항 하나뿐이었고(실측 34/35), 그 항의 문구는
+     «표본이 바닥에 서 있다» 라 빨개져도 «클램프가 사라졌다» 로 안 읽힌다.
+     여기서는 클램프를 실제로 떼고 **서명**(인라인이 붙나 · 바닥에 서나 · 여백이 무너지나)을 묻는다.
+     ⚠ 제품 파일은 안 건드린다 — 전역 `fitNum` 을 잠깐 갈아 끼우고 캐시(dataset.fitT/fitB)와
+     이미 눌러 둔 인라인을 같이 비워야 «클램프가 없는 판» 이 된다(probe393 [ⓕ] 방식).
+     ⚠ 표본은 §4 가 제품에게 물어 찾은 «살아 있는 침범 표본»(22자·9.9e16)이다 — 상수로 안 박는다. */
+  const revert216 = () => p.evaluate(() => {
+    const src = window.__rrp216.toString().replace('fmtB(b.dps)', 'fmt(b.dps)');
+    window.renderRaidPage = new Function('return (' + src + ')')();
+  });
+  const clampSet = (off) => p.evaluate((x) => {
+    if (!window.__fit216) window.__fit216 = window.fitNum;
+    window.fitNum = x ? function () {} : window.__fit216;
+    document.querySelectorAll('#dunList .dnc .sp>i').forEach((i) => {
+      i.style.fontSize = ''; delete i.dataset.fitT; delete i.dataset.fitB;
+    });
+  }, off);
+  await revert216();
+  await setDps(9.9e16);
+  const rOn = await geo('#dunList .dnc.rd');
+  ok(!!rOn.inline && rOn.floor === 1,
+     `[R-a] 전제 — 이 표본에서 클램프가 실제로 일한다: 인라인 ${rOn.inline || '없음'} ·`
+     + ` fs ${rOn.fs} = 바닥(base ${rOn.base} × FITMIN) · 여백 ${rOn.gap}px`
+     + ` (이 항이 빨개지면 `+ '`raidFitNums()`' + ` 호출이 사라진 것이다)`);
+  await clampSet(true);
+  await setDps(9.9e16);
+  const rOff = await geo('#dunList .dnc.rd');
+  ok(!rOff.inline && Math.abs(rOff.fs - rOff.base) < 0.01,
+     `[R-b] 클램프를 떼면 인라인이 사라지고 fs 가 base 그대로다 (${rOff.fs} = ${rOff.base})`);
+  ok(rOff.gap <= rOn.gap - 100,
+     `[R-c] 그때 여백이 ${rOn.gap}px → ${rOff.gap}px 로 ${(rOn.gap - rOff.gap).toFixed(1)}px 무너진다`
+     + ` = 클램프가 이 자리를 실제로 지키고 있었다`);
+  await clampSet(false);
+  await setDps(9.9e16);
+  const rBack = await geo('#dunList .dnc.rd');
+  ok(!!rBack.inline && rBack.gap === rOn.gap,
+     `[R-d] 클램프를 되돌리면 같은 값으로 원복한다 — 여백 ${rBack.gap}px · 인라인 ${rBack.inline || '없음'}`);
+
+  /* [R-e] 클램프가 «이기는» 띠 — 되돌림 표기에는 바닥에 닿기 **전에** 클램프가 글자를 그릇 안에
+     넣어 버리는 자릿수 구간이 있다. 그 띠에서 여백은 우연한 값이 아니라 `RD_SPGAP` 에 정확히
+     착지해야 한다(클램프가 겨냥한 값이 그것이니까). 여기가 room 계산(`RD_SPGAP` + padding-right +
+     fit() 배율)을 재는 유일한 자리다 — §2 는 제품 표기가 `fmtB` 라 클램프가 아예 안 걸려서 못 본다.
+     ⚠ 띠의 자릿수는 상수로 안 박는다(368 처방) — 제품에게 물어서 «인라인이 붙고 바닥은 아닌»
+     표본만 골라 낸다. 허용 오차 ±0.6px 는 `fitNum` 이 `w <= box + 0.5` 에서 멈추기 때문이다. */
+  const band = [];
+  for (let e = 8; e <= 16; e++) {
+    await setDps(9.9 * Math.pow(10, e));
+    const g = await geo('#dunList .dnc.rd');
+    if (g.inline && !g.floor) band.push(g);
+  }
+  ok(band.length >= 3,
+     `[R-e1] 되돌림에서 «클램프가 이기는» 표본이 ${band.length}종 (바닥 전에 그릇 안으로 들어온다)`);
+  const offBand = band.filter((g) => Math.abs(g.gap - g.minGap) > 0.6);
+  ok(band.length >= 3 && offBand.length === 0,
+     `[R-e2] 그 띠의 여백이 전부 RD_SPGAP ${band[0] ? band[0].minGap : '?'}px 에 ±0.6 안으로 착지한다`
+     + ` (${band.map((g) => `${g.txt.length}자 ${g.gap}`).join(' · ')})`
+     + (offBand.length ? ` — 벗어난 표본 ${offBand.map((g) => `${g.txt.length}자 ${g.gap}`).join(',')}` : ''));
+
+  await p.evaluate(() => { window.renderRaidPage = window.__rrp216; });
+  await setDps(9.9e15);
+
   console.log('[5] 아레나 카드 — 같은 `.dnc.rd` 부품의 전적 알약도 침범 0');
+  /* ⚠ 396 — 이 절은 «기하» 항이지 «클램프» 항이 아니다. 아레나 전적은 클램프가 개입한 적이
+     없으므로(`probe396` [ⓒ]) 여기를 클램프의 증거로 읽지 마라 — 그 증거는 위 §R 이다. */
   await p.evaluate(() => { S.arena = { w: 99999, l: 99999 }; setDunSub('raid'); });
   await p.waitForTimeout(200);
   const arn = await geo('#dunList .dnc.rd.arn2');
