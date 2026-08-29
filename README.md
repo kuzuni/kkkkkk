@@ -269,9 +269,16 @@ assets/
 | 마일리지 쿠폰 | `mile` | `assets/ui/cur-mile.svg` |
 | 골드 던전 입장권 | `tkGold` | `assets/ui/cur-ticket-gold.svg` |
 | 다이아 던전 입장권 | `tkDia` | `assets/ui/cur-ticket-dia.svg` |
-| 유물 던전 입장권 | `tkRelic` | `assets/ui/cur-ticket-relic.svg` |
+| 유물 1단 던전 입장권 | `tkRelic1` | `assets/ui/cur-ticket-relic1.svg` |
+| 유물 2단 던전 입장권 | `tkRelic2` | `assets/ui/cur-ticket-relic2.svg` |
+| 유물 3단 던전 입장권 | `tkRelic3` | `assets/ui/cur-ticket-relic3.svg` |
+| 유물 4단 던전 입장권 | `tkRelic4` | `assets/ui/cur-ticket-relic4.svg` |
+| 강화석 던전 입장권 | `tkStone` | `assets/ui/cur-ticket-stone.svg` |
+| 룬강화석 던전 입장권 | `tkRstone` | `assets/ui/cur-ticket-rstone.svg` |
 
-- 입장권은 **던전 계열 3종까지만** 씁니다(유물조각 던전 1~4단은 같은 권종).
+- 입장권은 **던전마다 한 장**입니다(402, 2026-08-29 — 종전의 «계열 3종/5종» 규약은 폐기).
+  권종 이름은 던전 id 에서 기계적으로 나오고(`dunTk(id)`), 색은 그 던전 카드의 두 톤을 그대로 씁니다.
+  검증은 `node tools/verify402.js`.
 - 크기는 기본이 글자 크기 상대(`1.08em`)이고, 자리가 측정표에 박혀 있는 곳만 px 로 고정합니다
   (상단 HUD 63×63 · 팝업 재화 바 57×57). 자세한 값과 «아트 필요» 표는 `docs/measure/125-화폐아이콘.md`.
 - 등급·계급·메달·장비 이름의 아이콘(🥇💠🔮 등)은 **재화 표시가 아니므로** 그대로 둡니다.

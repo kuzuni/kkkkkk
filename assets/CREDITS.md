@@ -44,7 +44,10 @@
 | `cur-mile.svg` | 마일리지 쿠폰 | 〃 | CC0 |
 | `cur-ticket-gold.svg` | 골드 던전 입장권 | 〃 | CC0 |
 | `cur-ticket-dia.svg` | 다이아 던전 입장권 | 〃 | CC0 |
-| `cur-ticket-relic.svg` | 유물 던전 입장권 | 〃 | CC0 |
+| `cur-ticket-relic1.svg` | 유물 1단 던전 입장권 (402 — 색은 그 던전 카드의 두 톤) | 〃 | CC0 |
+| `cur-ticket-relic2.svg` | 유물 2단 던전 입장권 (〃) | 〃 | CC0 |
+| `cur-ticket-relic3.svg` | 유물 3단 던전 입장권 (〃) | 〃 | CC0 |
+| `cur-ticket-relic4.svg` | 유물 4단 던전 입장권 (〃) | 〃 | CC0 |
 
 **왜 직접 그렸나** — 지시(125 ②)는 Kenney 의 CC0 팩(«Generic Items»/«Puzzle Pack»)을 1순위로,
 «못 받으면 인라인 SVG» 를 대안으로 뒀다. 이 세션의 실행 환경은 외부 다운로드가 막혀 있어
