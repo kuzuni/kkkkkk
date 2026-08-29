@@ -187,8 +187,15 @@ const DIFF = async ([a, b, tol]) => {
     console.log('');
   }
 
-  console.log('── 붙여 쓸 값 (카드 3장, font-size 140 통일) ──');
+  console.log('── contain(폭 눈금) 역산값 (카드 3장, font-size 140 통일) ──');
   for (const o of out) console.log(`   ${o.rule}{transform:scale(${o.s140.toFixed(4)})}`);
+  console.log('');
+  console.log('   ⛔ **394(2026-08-29) 이후 이 세 줄을 제품에 그대로 붙이지 마라.**');
+  console.log('      카드 3장의 눈금은 «폭(contain)» 에서 «높이(refH/natH)» 로 바뀌었다 —');
+  console.log('      contain 은 넘치지 않는 축(=폭)을 물어 세로 덩치를 1.128 로 갈라 놓았고,');
+  console.log('      ref 가 고정한 축은 높이다(폭 13.6% 갈림 ↔ 높이 2.0% 안).');
+  console.log('      제품에 적을 값은 `node tools/probe394.js` [B] 가 낸다 · 눈금은 `verify394` 가 지킨다.');
+  console.log('      ⏱·보너스 바는 형제 집합이 아니라 여기 값이 그대로 옳다.');
 
   await b.close();
 })();

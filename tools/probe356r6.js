@@ -44,12 +44,17 @@ const REF = {
    ⚠ 재현기는 «지금 상태를 읽어» 부호를 물으면 안 된다 — 수리하는 순간 그 물음이 사라져
    다음 세션에게 아무것도 안 남긴다(5회차 [R4] 가 음성항을 따로 세운 것과 같은 이유).
    그래서 이 자는 수리 전 값을 **주입해서** 재현하고, 지금 값은 따로 [D] 에서 잰다. */
+/* ⚑ **394 이관(2026-08-29) — `axis`** : 카드 3장만 눈금이 «폭(contain)» 에서 «높이» 로 바뀌었다.
+   ref 잉크가 폭 150/145/132(13.6% 갈림) · 높이 153/154/156(2.0% 안)이라 이 화면이 고정해 둔 축은
+   높이인데 contain 이 그 반대를 물고 있었다(세로 덩치 최대÷최소 1.128 → 1.013). 등방은 그대로다.
+   ⚠ 이 자를 «contain 하나» 로 되돌리면 [E]·[F] 가 394 를 결함으로 읽는다 — 눈금은 자리마다 다르다.
+   ⏱·보너스 바는 형제 집합이 아니라 **contain 그대로**다. 근거·재현은 `probe394`·`verify394`. */
 const SITES = [
-  { key: 'atk',  css: '#blsC_atk  .ic',  sel: '#blsC_atk > .b > s.ic',
+  { key: 'atk',  css: '#blsC_atk  .ic',  sel: '#blsC_atk > .b > s.ic',  axis: 'h',
     old: 'transform:scaleX(.974) !important;font-size:140px !important' },
-  { key: 'hp',   css: '#blsC_hp   .ic',  sel: '#blsC_hp > .b > s.ic',
+  { key: 'hp',   css: '#blsC_hp   .ic',  sel: '#blsC_hp > .b > s.ic',   axis: 'h',
     old: 'transform:scaleX(.858) !important;font-size:153px !important' },
-  { key: 'rate', css: '#blsC_rate .ic',  sel: '#blsC_rate > .b > s.ic',
+  { key: 'rate', css: '#blsC_rate .ic',  sel: '#blsC_rate > .b > s.ic', axis: 'h',
     old: 'transform:scaleX(.875) !important;font-size:140px !important' },
   { key: 'ck',   css: '.bls-c .tm>b.ck', sel: '#blsC_atk > .b > s.tm > b.ck',
     old: 'transform:scaleX(.97) !important' },
@@ -217,15 +222,18 @@ const DIFF = async ([a, b, tol]) => {
     await RESTORE(s.sel, snap);
 
     const ref = REF[s.key];
-    const sFit = Math.min(ref.w / nat.w, ref.h / nat.h);
-    plan[s.key] = { now, nat, cur, ref, sFit: +sFit.toFixed(4), tf, tfCur };
+    /* 394 — `axis:'h'` 자리는 높이 눈금(refH/natH), 나머지는 contain(min) */
+    const sFit = s.axis === 'h' ? ref.h / nat.h : Math.min(ref.w / nat.w, ref.h / nat.h);
+    plan[s.key] = { now, nat, cur, ref, sFit: +sFit.toFixed(4), tf, tfCur, axis: s.axis || 'contain' };
 
     console.log(`── ${s.css}   (노드 ${now.nodes}개)`);
     console.log(`   지금(수리 후) ${cur.w}×${cur.h}   종횡 ${(cur.w / cur.h).toFixed(3)}   @(${cur.x0},${cur.y0})   ${tfCur}`);
     console.log(`   수리 전(주입) ${now.w}×${now.h}   종횡 ${(now.w / now.h).toFixed(3)}   @(${now.x0},${now.y0})  재실행 일치 ${now.stable}   ${tf}`);
     console.log(`   자연(tf 뗌)  ${nat.w}×${nat.h}   종횡 ${(nat.w / nat.h).toFixed(3)}   @(${nat.x0},${nat.y0})  재실행 일치 ${nat.stable}`);
     console.log(`   ref          ${ref.w}×${ref.h}   종횡 ${(ref.w / ref.h).toFixed(3)}   ${ref.why}`);
-    console.log(`   ⇒ contain 등방 s = min(${(ref.w / nat.w).toFixed(4)}, ${(ref.h / nat.h).toFixed(4)}) = ${sFit.toFixed(4)}`);
+    console.log(`   ⇒ 눈금 ${s.axis === 'h' ? '높이(394)' : 'contain'} 등방 s = ` +
+      (s.axis === 'h' ? `refH/natH = ${(ref.h / nat.h).toFixed(4)}`
+        : `min(${(ref.w / nat.w).toFixed(4)}, ${(ref.h / nat.h).toFixed(4)})`) + ` = ${sFit.toFixed(4)}`);
     console.log(`     그 배율의 잉크 = ${(nat.w * sFit).toFixed(1)}×${(nat.h * sFit).toFixed(1)}`);
     console.log(`     지금 잉크의 ref 대비 = 폭 ${((now.w / ref.w - 1) * 100).toFixed(1)}% · 높이 ${((now.h / ref.h - 1) * 100).toFixed(1)}%\n`);
   }
@@ -242,11 +250,18 @@ const DIFF = async ([a, b, tol]) => {
     ck(`${k} 누적 transform 이 비균등 (|sx/sy−1| = ${r.toFixed(3)})`, r > 0.02, true);
   }
 
-  console.log('\n[B] contain 배율은 «키우지 않는다» — ref 상자를 안 넘는다(넘치면 잘린다)');
+  console.log('\n[B] 눈금이 «넘치지 않는가» — contain 자리는 두 축, 높이 눈금(394) 자리는 높이 축');
+  console.log('    ⚑ 394 이후 카드 3장은 **폭을 일부러 넘긴다**(+2.7 / +15.2 / +15.2%). 그 넘침이');
+  console.log('       카드(overflow:hidden) 안이고 아래 알약과 안 겹친다는 것은 `verify394` [5] 가 묻는다.');
   for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
-    ck(`${k} 잉크가 ref 상자 안`,
-      plan[k].nat.w * plan[k].sFit <= plan[k].ref.w + 0.5 &&
-      plan[k].nat.h * plan[k].sFit <= plan[k].ref.h + 0.5, true);
+    const q = plan[k];
+    const inH = q.nat.h * q.sFit <= q.ref.h + 0.5;
+    const inW = q.nat.w * q.sFit <= q.ref.w + 0.5;
+    ck(`${k} 잉크가 ref 상자 안 (눈금 ${q.axis})`, q.axis === 'h' ? inH : (inH && inW), true);
+    if (q.axis === 'h') {
+      console.log(`       ↳ 폭은 ref ${q.ref.w} → ${(q.nat.w * q.sFit).toFixed(1)} ` +
+        `(+${((q.nat.w * q.sFit / q.ref.w - 1) * 100).toFixed(1)}%) — 394 가 치르기로 한 대가다`);
+    }
   }
 
   console.log('\n[C] 부호 — 수리 전 손잡이는 ref 에 «가까워지는» 쪽이었나 «멀어지는» 쪽이었나');
@@ -275,7 +290,7 @@ const DIFF = async ([a, b, tol]) => {
       Math.abs(q.cur.w - wantW) <= 1.5, true);
   }
 
-  console.log('\n[E] 수리 후 잉크 = contain 이 예측한 값 (역산이 제품에 실제로 실렸는가)');
+  console.log('\n[E] 수리 후 잉크 = 그 자리의 눈금이 예측한 값 (역산이 제품에 실제로 실렸는가)');
   for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
     const q = plan[k];
     const pw2 = q.nat.w * q.sFit, ph = q.nat.h * q.sFit;
@@ -284,8 +299,11 @@ const DIFF = async ([a, b, tol]) => {
   }
 
   console.log('\n[F] 수리 후 ref 상자를 안 넘는다 — 잘림·이웃 침범이 구조적으로 없다');
+  console.log('    (394 이후 카드 3장은 «높이만» 묻는다 — 폭 넘침은 의도이고 `verify394` [5] 가 잘림을 본다)');
   for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
-    ck(`${k} 잉크 ≤ ref 상자`, plan[k].cur.w <= plan[k].ref.w + 1 && plan[k].cur.h <= plan[k].ref.h + 1, true);
+    const q = plan[k];
+    ck(`${k} 잉크 ≤ ref 상자 (눈금 ${q.axis})`,
+      q.axis === 'h' ? q.cur.h <= q.ref.h + 1 : (q.cur.w <= q.ref.w + 1 && q.cur.h <= q.ref.h + 1), true);
   }
 
   console.log('\n[G] 보너스 바 — 역산이 중심을 미지수로 놓았으니 중심은 ref 와 Δ0 이어야 한다');
