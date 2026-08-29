@@ -67,15 +67,29 @@ const SCOPE = [
      **부분 일치가 안 된다**(클래스가 사이에 끼어든다). 한 키로 뒀으면 그 자리는 감시 밖이었다. */
   { k: 'div.pill>em', why: '03 던전/레이드 재화 알약 아이콘 (scaleY 1.08)' },
   { k: 'div.pill.p2>em', why: '03 레이드 둘째 재화 알약 아이콘 (같은 규칙)' },
+  /* ── 6회차 — 34 축복 팝업. 잔여 14자리 중 **8자리가 이 한 화면**이었다(5회차가 넘긴 최대 묶음).
+     ⚑ 앞 회차들과 부호가 반대인 자리다 — 여기의 scaleX 는 «ref 잉크 폭에 맞추려고» 일부러 건
+     보정이라 수리 «전» 이 ref 에 더 가까웠다(probe356r6 [C]). 그래도 걷어낸 근거는 주인 지시가
+     레퍼런스보다 우선이라는 것(354 선례)이고, 남는 거리는 아트 종횡이 만든 것이라 CSS 로는 못 닫는다. */
+  { k: 'div#blsC_atk>div.b>s.ic', why: '34 축복 카드1 ⚔️ (수리 전 scaleX .974)' },
+  { k: 'div#blsC_hp>div.b>s.ic', why: '34 축복 카드2 ❤️ (scaleX .858 + fs 153 — 둘이 한 벌이었다)' },
+  { k: 'div#blsC_rate>div.b>s.ic', why: '34 축복 카드3 🌀 (scaleX .875)' },
+  /* ⚠ 세 카드를 **각각** 적는다 — 스캐너 경로가 `div#blsC_<k>` 로 id 를 물고 시작하므로
+     `s.tm.alert>b.ck` 한 키로는 세 자리 중 아무것도 부분 일치가 안 된다(5회차 `div.pill.p2` 선례). */
+  { k: 'div#blsC_atk>div.b>s.tm.alert>b.ck', why: '34 축복 카드1 ⏱ 시계 (scaleX .97)' },
+  { k: 'div#blsC_hp>div.b>s.tm.alert>b.ck', why: '34 축복 카드2 ⏱ 시계 (같은 규칙 `.bls-c .tm>b.ck`)' },
+  { k: 'div#blsC_rate>div.b>s.tm.alert>b.ck', why: '34 축복 카드3 ⏱ 시계 (같은 규칙)' },
+  { k: 'div#blsBonus>s.ic', why: '34 보너스 바 💰 (그룹 scale(.706,.748) — 형제 .ch 와 한 그림)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
-const REMAIN = 14;   /* 5회차 실측(셀렉터 기준) — 4회차 44 → **14**.
-                        ⚠ 이 값은 **두 번 움직였다**: 5회차가 먼저 스캐너의 «23 훈련» 즉사를 고치자
-                        그 화면이 처음 스캔에 들어와 44 → **47** 로 «늘었다»(고친 것이 아니라 처음 본 것이다.
+const REMAIN = 6;    /* 6회차 실측(셀렉터 기준) — 5회차 14 → **6**. 노드 수로는 20 → **12**.
+                        닫은 것은 34 축복 한 화면(8자리 / 8노드)이다.
+                        ⚠ 5회차에 이 값은 **두 번 움직였다**: 먼저 스캐너의 «23 훈련» 즉사를 고치자
+                        그 화면이 처음 스캔에 들어와 44 → **47** 로 «늘었고»(고친 것이 아니라 처음 본 것이다.
                         SVG 노드의 className 은 SVGAnimatedString 이라 `.slice` 가 없었다 — 그 화면은
-                        내내 래칫의 감시 밖 = 헛초록). 그 뒤 03 세 자리를 닫아 47 → 14.
-                        노드 수로는 59 → (23 훈련 편입) 68 → **20**.
-                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44·14 와 직접 비교 불가. */
+                        내내 래칫의 감시 밖 = 헛초록), 그 뒤 03 세 자리를 닫아 47 → 14.
+                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44·14·6 과 직접 비교 불가.
+                        남은 6자리: 23 훈련 3 · 33 재화 정보 2 · 50 코스튬 1 (docs/review/356 §13 표). */
 
 const fails = [];
 const oks = [];
@@ -361,6 +375,92 @@ async function sweep(browser, inject) {
         && /sp\.tk>em|sp\.lv>em|pill(\.p2)?>em/.test(r.sel));
     if (hit.length >= 3) ok(`[R4] ${lab} — 옛 scaleY 를 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
     else bad(`[R4] ${lab} — 심어도 ${hit.length}건뿐(≥3 이어야 한다): 이 자리는 감시 밖이다`);
+    await ctx.close();
+  }
+
+  /* [S] 6회차 배율 고정 — «등방이기만 하면 통과» 의 구멍을 막는다.
+     [A] 는 sx=sy 만 보므로 `transform:none` 도 초록이다. 그런데 6회차의 다섯 수는
+     **ref 상자에 담는 contain 배율**이라 지워지면 아이콘이 ref 를 넘거나(카드) 어긋난다(보너스 바).
+     ⚑ 이 항이 필요해진 경위 자체가 교훈이다 — `verify325` [H] 가 시계의 **그려진** 폭(38.8)을
+     박고 있어서 그 자가 우연히 이 질문을 대신 하고 있었다. 6회차가 [H] 를 레이아웃 상자로
+     이관하면서 그 질문이 **아무 자에게도 안 남을 뻔했다**(328~330 이 겪은 «통째로 사라져도 초록»).
+     그래서 질문을 주인에게 옮겨 적는다. 값을 바꾸려면 `cal356r6` 으로 다시 역산할 것. */
+  console.log('[S] 6회차 배율 고정 — contain 으로 역산한 등방 배율이 제품에 그대로 있는가');
+  {
+    const WANT = [
+      ['#blsC_atk .ic', 0.9494], ['#blsC_hp .ic', 0.9236], ['#blsC_rate .ic', 0.8684],
+      ['#blsC_atk .tm>b.ck', 0.9167], ['#blsBonus>s.ic', 0.6765], ['#blsBonus>s.ch', 0.6765],
+    ];
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+      const el = document.querySelector('.side .ibtn[data-pop="bless"]');
+      if (el) el.click();
+    });
+    await page.waitForTimeout(700);
+    const got = await page.evaluate((list) => list.map(([q]) => {
+      const e = document.querySelector(q);
+      if (!e) return null;
+      const m = /matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/.exec(getComputedStyle(e).transform);
+      return m ? [+m[1], +m[4]] : null;
+    }), WANT);
+    WANT.forEach(([q, want], i) => {
+      const g = got[i];
+      if (!g) { bad(`[S] ${q} — 노드가 없다(선택자가 죽었다)`); return; }
+      const [sx, sy] = g;
+      if (Math.abs(sx - want) > 0.004 || Math.abs(sy - want) > 0.004)
+        bad(`[S] ${q} — 배율 ${sx}/${sy}, 기대 ${want} (contain 역산값이 사라졌다)`);
+      else ok(`[S] ${q} — 등방 ${want} 고정`);
+    });
+    await ctx.close();
+  }
+
+  /* [R5] 6회차 스코프 — 34 축복은 사이드 버튼으로 여는 팝업이라 앞 자들 어느 것에도 안 걸린다.
+     되돌림은 세 갈래를 **한꺼번에** 심는다: 카드 아이콘 scaleX 3개 + ❤️ 의 fs 153 + ⏱ scaleX
+     + 보너스 바의 비균등 «그룹» scale. ⚠ ❤️ 는 «scaleX 와 fs 가 한 벌» 이라 둘 다 심어야
+     수리 전 상태다(356-⑥ «되돌림 시험은 옛 값이 어디에 살았는가로 갈래를 나눠야 한다»).
+     ⚠ 음성항(주입 «전» 0건)과 진입 확인(카드 3장)을 같이 세운다 — [R4] 와 같은 이유다. */
+  console.log('[R5] 되돌림 시험(6회차 스코프) — 34 축복에 옛 scaleX·그룹 비균등을 도로 심으면 빨개지는가');
+  {
+    const RE = /blsC_(atk|hp|rate)>div\.b>s\.(ic|tm)|blsBonus>s\.ic/;
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+      const el = document.querySelector('.side .ibtn[data-pop="bless"]');
+      if (el) el.click();
+    });
+    await page.waitForTimeout(700);
+    /* 진입을 «화면» 으로 확인한다 — 클릭이 조용히 실패해도 스코프 키가 없으면 0건 = 헛초록이다
+       (LESSONS 356-⑬: 조용히 실패한 클릭은 다른 화면을 재고 초록을 준다) */
+    const cards = await page.evaluate(() => document.querySelectorAll('.bls-c').length);
+    if (cards !== 3) bad(`[R5] 34 축복 — 팝업 진입 실패: .bls-c 가 ${cards}장(3 이어야 한다)`);
+    else ok(`[R5] 34 축복 — 축복 카드 ${cards}장 진입 확인 (헛초록 방지)`);
+
+    /* 음성항 — 주입 전에는 이 스코프가 깨끗해야 한다 */
+    const pre = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
+    if (pre.length) bad(`[R5] 34 축복 — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+    else ok('[R5] 34 축복 — 주입 전 0건 (음성항)');
+
+    await page.evaluate(() => {
+      const st = document.createElement('style');
+      st.textContent = '#blsC_atk .ic{transform:scaleX(.974) !important}'
+        + '#blsC_hp .ic{font-size:153px !important;transform:scaleX(.858) !important}'
+        + '#blsC_rate .ic{transform:scaleX(.875) !important}'
+        + '.bls-c .tm>b.ck{transform:scaleX(.97) !important}'
+        + '.bls-bn .ic{transform:translate(57.71px,7.62px) scale(.706,.748) !important}'
+        + '.bls-bn .ch{transform:translate(21.55px,-12.54px) scale(.706,.748) !important}';
+      document.head.appendChild(st);
+    });
+    await page.waitForTimeout(250);
+    const hit = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
+    if (hit.length >= 7) ok(`[R5] 34 축복 — 옛 값을 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+    else bad(`[R5] 34 축복 — 심어도 ${hit.length}건뿐(≥7 이어야 한다): 이 자리는 감시 밖이다`);
     await ctx.close();
   }
 

@@ -35,6 +35,8 @@ const W = 1080, H = 2280;
 const TM_W = 219, TM_H = 98;
 const BASE = {                          /* 카드1 기준. 카드2·3 은 +315 / +630 */
   tm: [116, 1045], ck: [165.79, 1049, 38.8, 97], i_claim: [212.62, 1047, 56.55, 97],
+  /* 356 6회차 이관 — 시계의 **레이아웃 상자**(transform 무관). 알약 로컬 좌표라 카드마다 같다. */
+  ckLay: [49, 4, 40, 97],
 };
 const GREEN = [76, 186, 46];            /* #4CBA2E — 202 «가능=초록» (.ifbtn --gb-mid) */
 const BROWN = [146, 106, 36];           /* #926A24 — 활성(시간 표시) 알약, 34 원본 */
@@ -96,6 +98,10 @@ async function state(page) {
         alert: tm.classList.contains('alert'), txt: i.textContent,
         tmBg: getComputedStyle(tm).backgroundColor, tmSh: getComputedStyle(tm).boxShadow,
         tm: R(tm), i: R(i), ck: R(ck),
+        /* 356 6회차 이관 — [H] «배지가 무엇도 밀지 않았다» 는 **레이아웃** 물음이라
+           레이아웃 상자로 잰다. `getBoundingClientRect` 는 transform 이 실린 값이라
+           356 이 아이콘 배율을 손볼 때마다 이 자가 같이 빨개졌다(=두 작업이 한 수를 공유). */
+        ckLay: [ck.offsetLeft, ck.offsetTop, ck.offsetWidth, ck.offsetHeight],
         nDot: dots.length, dotDisp: d ? getComputedStyle(d).display : 'none',
         dotRect: d ? R(d) : null, card: R(c),
       });
@@ -168,8 +174,19 @@ const NOW = () => Date.now();
         `[H] ${o.id} 알약 좌상단 불변`, o.tm[0] + ',' + o.tm[1]);
       ok(near(o.i[0], BASE.i_claim[0] + 315 * n, 0.5) && near(o.i[2], BASE.i_claim[2], 0.5),
         `[H] ${o.id} «받기» 글자 잉크 자리·폭 불변`, o.i.join(','));
-      ok(near(o.ck[0], BASE.ck[0] + 315 * n, 0.5) && near(o.ck[2], BASE.ck[2], 0.5),
-        `[H] ${o.id} 시계 ⏱ 자리·폭 불변`, o.ck.join(','));
+      /* 356 6회차 이관 — 옛 항은 `getBoundingClientRect` 로 **그려진** 폭(38.8 = 40 × scaleX .97)을
+         박고 있었다. 그런데 [H] 가 묻는 것은 «배지를 넣어도 아무것도 안 밀렸는가» 라는 **레이아웃**
+         물음이고, 그려진 폭은 356(«아이콘은 원본 비율»)이 6회차에 등방 `scale(.9167)` 로 바꾼
+         **356 의 수**다. 옛 항을 그대로 두면 356 이 배율을 손볼 때마다 325 가 남의 이유로 빨개진다.
+         ⇒ [H] 는 레이아웃 상자를 묻고(아래), 그려진 배율은 주인인 356 이 지킨다
+            (`verify356` [A] 등방 · [R5] 되돌림 · `probe356r6` [E] 잉크 예측).
+         ⚠ 무르게 푼 것이 아니다 — 레이아웃 상자 40×97 은 **배지가 알약을 밀면 즉시 어긋나고**,
+            transform 을 통째로 지워도 `verify356` [S] 가 배율 상수를 물고 있어 그쪽이 빨개진다.
+            («옮겼으면 옮긴 자리에서 물어야 한다» — 328~330 이 남긴 이관 교훈. 값 49,4,40,97 이
+            수리 전·수리 후·transform 없음 **세 상태에서 모두 같다**는 것은 직접 재서 확인했다:
+            즉 이 항은 무엇도 무르게 풀지 않았고, 애초에 356 의 축을 안 보던 항이다.) */
+      ok(o.ckLay.every((v, j) => near(v, BASE.ckLay[j], 0.5)),
+        `[H] ${o.id} 시계 ⏱ 레이아웃 상자 불변(배지가 안 민다)`, o.ckLay.join(','));
     });
     /* [G] 299 + overflow 클립
        ⚠ 319 처방(278) — 배지 노드가 아예 없는 트리(되돌림 시험)에서 `o.dotRect` 가 null 이면
