@@ -76,6 +76,19 @@ async function measure(browser, file, H, opt) {
     const shortf = app.classList.contains('shortf');
     const kids = [...w.children].map((e) => ({ c: (e.className || e.id || '?').toString().split(' ')[0], ...box(e) }));
     const flow = kids.filter((k) => !(shortf && k.c === 'bls-x'));
+    /* 2회차 비평 CN 의 반론 둘을 자로 — ① 상단 HUD 가 «살아 있는 터치 영역» 인가
+       ② 2280 ✕ 가 있던 가로 대역(x471..609)의 하단이 1600 에서 조작 요소가 되는가 */
+    const topHits = [...document.getElementById('top').querySelectorAll('*')]
+      .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 20 && r.height > 20; })
+      .map((e) => { const r = e.getBoundingClientRect();
+        const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return !!(h && h.closest && h.closest('#top')); });
+    const xBand = [0.25, 0.5, 0.75, 0.95].map((f) => {
+      const y = A.top + A.height * f, x = A.left + 540;
+      const h = document.elementFromPoint(x, y);
+      return { f, el: h ? (h.id || String(h.className).split(' ')[0] || h.tagName) : null,
+        act: !!(h && h.closest && h.closest('button,[onclick],.gb,.tab,.ibtn')) };
+    });
     const hits = [...document.querySelectorAll('.tab[data-t]')].map((t) => {
       const r = t.getBoundingClientRect();
       const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -93,7 +106,7 @@ async function measure(browser, file, H, opt) {
       coverAny: Math.max(...kids.map((k) => Math.max(0, k.b - tb.t))),
       scrollH: w.scrollHeight, clientH: w.clientHeight,
       out: kids.filter((k) => k.b > A.height + 0.5 || k.t < -0.5).map((k) => k.c),
-      hits, errs: 0,
+      hits, topHits, xBand, errs: 0,
     };
   });
   m.errs = errs.length;
@@ -185,6 +198,16 @@ async function measure(browser, file, H, opt) {
     ok(M[H].hits.length === 5 && M[H].hits.every((h) => !h.isTab),
       `[2-c ${H}] 탭 5칸 전부 포인터가 안 닿는다 (${M[H].hits.map((h) => h.t + ':' + h.hit).join(' · ')})`);
   }
+  /* [2-e]·[2-f] — 2회차 비평(CN)의 반론 둘을 «닿나» 로 되물은 자리(406-① 의 방법 그대로) */
+  for (const H of [2280, 1600]) {
+    ok(M[H].topHits.length > 0 && M[H].topHits.every((t) => !t),
+      `[2-e ${H}] 상단 HUD(#top · z6 < #blsw z41) 안 ${M[H].topHits.length}개 요소 전부 포인터가 안 닿는다 `
+      + `⇒ ✕ 를 위로 빗맞혀도 재화 바를 못 친다 (두 해상도 같다)`);
+  }
+  ok(M[1600].xBand.every((b) => !b.act),
+    `[2-f 1600] 2280 ✕ 가 있던 가로 대역(x540)의 세로 전 구간에 조작 요소가 없다 — `
+    + `${M[1600].xBand.map((b) => Math.round(b.f * 100) + '%:' + b.el).join(' · ')} (마지막은 딤 = 닫힘)`);
+
   const band = M[1600].tabTop - INK, block = M[1600].flowBot - M[1600].flowTop;
   ok(Math.round(band) === 1278 && Math.round(block) === 1427,
     `[2-d] 기하가 없다 — 탭바 위 띠 ${r1(band)} < 블록 ${r1(block)} (${r1(block - band)}px 부족 = 레퍼런스의 ${r1((block - band) / BLS * 100)}%)`);
