@@ -4648,7 +4648,15 @@
   .dnc>*{position:absolute}
 
   /* 던전명 — rel +42/+44, 잉크높이 52, #FDFF84, 검정 외곽선 4px */
-  .dnc .nm{left:39px;top:40px;height:56px;line-height:56px;font-size:56px;font-weight:900;
+  /* 342(2026-08-29) — «타이틀 블록이 −5~6px 위» 의 실체는 **자리 하나가 아니라 둘**이었다.
+     찍힌 픽셀(`probe342`·`scan342.py`, 두 자가 같은 값): 잉크 상변 카드+39~41(ref **+44**)이고
+     동시에 잉크 높이가 46~48(ref **50~51**) 로 −7% 였다. ⇒ 등재문 처방대로 `top` 만 +5~6
+     내리면 **간격(34 → ref 26~27)은 닫히지만 상변이 +45~47 로 반대편으로 넘어간다** —
+     한 축으로 두 축을 못 맞춘다. 높이를 먼저 세우고(fs 56 → 60 · 잉크 47 → 50.4 = ref)
+     그 다음 자리를 잡는다(top 40 → 44 · 잉크 상변 평균 44 = ref). 그러면 잉크 하변이
+     94.3 으로 내려와 알약 상변(121)과의 간격이 **26.7 = ref 26~27** 로 같이 닫힌다.
+     ⚠ 스트로크는 `1em` 비례라 fs 를 올리면 바깥 4.48 → 4.8 로 따라온다(ref 실측 4~5). */
+  .dnc .nm{left:39px;top:44px;height:60px;line-height:60px;font-size:60px;font-weight:900;
     letter-spacing:-5px;word-spacing:3px;color:#FDFF84;
     /* 126 10회차 — 측정표 03 던전 이름: ref 외곽선 바깥 4~5px(x86~90 검정 -> 91부터 노랑).
        fs 56 에서 필요한 스트로크는 8~10px = r .143~.179 → 본문 토큰(.16 = 8.96 · 바깥 4.48)이
@@ -4658,20 +4666,26 @@
   .dnc .nm i{transform:scaleX(1)}
 
   /* 재화 알약 — rel x+92 y+121, w288 h46, radius23, rgba(0,0,0,.58) */
+  /* 342(2026-08-29) — **«288» 은 레퍼런스의 상수가 아니라 «결과» 였다.**
+     등재문 ⓑ(«칩 내부 우측 여백 +36~67%»)를 재현해 보니 알약 «면» 은 ref 와 Δ0(92..380)인데
+     라벨 잉크만 −20% 라 오른쪽이 87px 비었다(ref 52). 그래서 «면이 옳고 글자가 틀렸다» 로
+     읽히지만, 측정표를 다시 보면 **ref 의 잠금 카드 알약은 288 이 아니다** — §3-4 는 카드3·4·5
+     우단을 «미확정» 으로 남겼고 §3-4-2 는 그 라벨 잉크가 x473·474·562·**615** 까지 간다고 적어
+     뒀다. 즉 ref 캡슐은 **글자를 감싸고 자란다**. 카드1 의 288 은 58(아이콘 자리) + 잉크 177 +
+     여백 52 = **287** 의 결과값이고, 우리는 그 결과값만 상수로 박아 둔 것이다.
+     ⇒ 캡슐을 텍스트 shrink-wrap + **좌우 패딩 고정**으로 바꾼다(등재문 AP 처방). 그러면
+     ① 짧은 라벨의 «빈 오른쪽» 이 사라지고 ② 긴 라벨을 90 이 scaleX 로 눌러야 했던 이유도
+     같이 사라진다 — `--psx` 를 **선언째 걷어냈다**(DUN_UI 8자리도 함께). */
   .dnc .pill{left:92px;top:121px;height:46px;border-radius:23px;background:rgba(0,0,0,.58);
-    min-width:288px}
+    box-sizing:border-box;padding:0 51px 0 58px;white-space:nowrap}
   .dnc .pill.p2{top:182px}
   .dnc .pill>em{position:absolute;left:-35px;top:-2px;width:52px;height:52px;
     font-size:44px;line-height:52px;text-align:center;transform:scaleY(1.08)}
-  /* 90 — 알약은 고정 288px 캡슐이고 글자는 left:58 절대배치라 «긴 라벨이 캡슐 밖으로 샌다»
-     (LESSONS 46-①). 캡슐을 늘리면 형제 알약과 폭이 어긋나므로 라벨만 scaleX 로 눌러 맞춘다
-     (LESSONS 01 — 폭은 letter-spacing 이 아니라 scaleX 로). 기본 1 이라 골드·다이아는 불변. */
-  .dnc .pill>i{position:absolute;left:58px;top:8px;height:30px;line-height:30px;font-size:30px;
-    font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt);
-    transform:scaleX(var(--psx,1))}
-  /* ⚠ LESSONS 21-①: 위 `#dunw i` 리셋(1-0-1)이 `.dnc .pill>i`(0-2-1)의 transform-origin 을 이긴다.
-     origin 이 가운데면 글자가 오른쪽으로 3.9px 밀려 왼쪽 시작점(left:58)이 어긋난다 — id 로 되받는다. */
-  #dunw .dnc .pill>i{transform-origin:left center}
+  /* 라벨은 **흐름 안**에 둔다 — 절대배치면 캡슐이 글자를 못 잰다(그것이 90 의 scaleX 를 부른 원인).
+     fs 30 → 34 는 잉크 «높이» 를 ref 에 맞춘 것이다(25 → 28.3 · ref 28~29). 폭은 서체 몫이라
+     여기서 끝까지 안 밀었다 — 늘어난 잉크폭이 여백을 87 → 57(ref 52)로 데려온다. */
+  .dnc .pill>i{display:inline-block;vertical-align:top;height:46px;line-height:46px;font-size:34px;
+    font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
 
   /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
   .dnc .lb{top:243px;height:33px;line-height:33px;font-size:26px;font-weight:800;
@@ -4774,9 +4788,14 @@
       linear-gradient(#000,#000);
     background-size:100% 100%,10px 20px;background-position:0 0,48px 34px;
     background-repeat:no-repeat,no-repeat}
-  .dnc .lk>u{position:absolute;left:0;right:0;top:211px;height:45px;line-height:45px;
+  /* 342(2026-08-29) ⓒ — 같은 병이 여기도 있었다: 잉크 상변 카드+220(ref **+223**) · 잉크 높이
+     37(ref **41**). 높이를 먼저 세우고(fs 45 → 50 · 잉크 37 → 41.1) 자리를 잡는다
+     (`.lk` 는 inset 8 이라 top 214 = 카드+222 → 잉크 상변 +223.1).
+     어절 간격(등재문 ⓒ-②, ref 숫자 앞뒤 12~19px ↔ 우리 6~7)은 `word-spacing` 으로 벌린다 —
+     `letter-spacing` 을 건드리면 글자 사이가 같이 벌어져 advance 가 ref(40)를 넘는다. */
+  .dnc .lk>u{position:absolute;left:0;right:0;top:214px;height:50px;line-height:50px;
     padding-right:1px;box-sizing:border-box;
-    text-align:center;font-size:45px;font-weight:900;letter-spacing:-5px;color:#C8C8C8;
+    text-align:center;font-size:50px;font-weight:900;letter-spacing:-5px;word-spacing:9px;color:#C8C8C8;
     text-decoration:none;-webkit-text-stroke:calc(var(--st-hud) * 1em) #000;paint-order:stroke fill;white-space:nowrap}
   .dnc .lk>u b{color:#FF8252;font-weight:900;font-size:106%;-webkit-text-stroke-width:calc(var(--st-hud) * 1em)}
 
@@ -24578,21 +24597,21 @@ const DUN_UI = {
      알약 안쪽 폭 230px 을 7.5px 넘겨 새고 있었다(LESSONS 46-①). 폐기한다. */
   relic1: { s:'#394256', i:'#4A5570', r:'#5A678A', pt:'#A9B0C4', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'green_idle_0', thi:'green_idle', thbr:1.25, thw:'330px', tht:'11px', scn:'7px',
-            rw:['유물조각 획득 가능'], psx:0.966, gm:14, bn:1 },   /* 154 — 15→14. 게이트 미션은 그대로
+            rw:['유물조각 획득 가능'], gm:14, bn:1 },   /* 154 — 15→14. 게이트 미션은 그대로
             «스테이지 15 도달하기» 다(idx 14→13). 출석 미션이 빠져 번호만 한 칸 당겨졌다. */
   relic2: { s:'#092A5C', i:'#0E3B7E', r:'#1750A6', pt:'#93A9CE', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'zombie', thf:'walk_004', thi:'walk',   thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «페이즈»: 유물 2단이 «보스가 둘» 을 처음 만나는 자리다.
                한 마리씩 순차라 난도 체감이 완만하다(총 체력·공격력은 1마리 때와 같다). */
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic1', f:5 }, bn:2, bm:'phase' },
+            rw:['유물조각 획득 가능'], pre:{ id:'relic1', f:5 }, bn:2, bm:'phase' },
   relic3: { s:'#1D53CE', i:'#2A6BE8', r:'#4A85F5', pt:'#B7C9F2', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'robo',   thf:'Running_007', thi:'Running', thbr:1.55, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «동시»: 같은 2마리라도 한꺼번에 서면 카이팅 경로가 갈린다 */
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic2', f:5 }, bn:2, bm:'all' },
+            rw:['유물조각 획득 가능'], pre:{ id:'relic2', f:5 }, bn:2, bm:'all' },
   relic4: { s:'#3A1E52', i:'#5C2F80', r:'#6E3897', pt:'#C6A9DF', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'blue_idle_0', thi:'blue_idle', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 3마리 «페이즈»: 유물 최종 4단은 3연전이다 */
-            rw:['유물조각 획득 가능'], psx:0.966, pre:{ id:'relic3', f:5 }, bn:3, bm:'phase' },
+            rw:['유물조각 획득 가능'], pre:{ id:'relic3', f:5 }, bn:3, bm:'phase' },
   /* 194 — 강화석 던전. 색은 강화석 아이콘(주황·호박)에서 뽑았고, 카드 기하는 relic 4단과 같은
      규격(썸네일 330×· 상단 인셋 11 · 씬 7)이다. 썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) —
      기존 아틀라스 중 «불꽃/주황» 계열인 dragon 의 다른 포즈(f1)를 쓴다.
@@ -24601,7 +24620,7 @@ const DUN_UI = {
   stone:  { s:'#5A2E12', i:'#8A4A18', r:'#B4661F', pt:'#E7B073', ic:curIc('stone'), tk:curIc('tkStone'),
             thk:'dragon', thf:'f1', thi:'fly', thbr:2.70, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 2마리 «동시» */
-            rw:['강화석 획득 가능'], psx:0.966, gm:14, bn:2, bm:'all' },
+            rw:['강화석 획득 가능'], gm:14, bn:2, bm:'all' },
   /* 203 — 룬강화석 던전. 색은 룬강화석 아이콘(청록)에서 뽑았다 — 던전 6장 중 유일한 청록 계열이라
      강화석(주황)·다이아(초록)와 카드가 갈린다. 카드 기하는 relic 4단·강화석과 같은 규격이다.
      썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — 기존 elves 아틀라스의 «blue_attack» 포즈를
@@ -24611,7 +24630,7 @@ const DUN_UI = {
   rstone: { s:'#0C3A44', i:'#12606B', r:'#1A7C8A', pt:'#93DCE7', ic:curIc('rstone'), tk:curIc('tkRstone'),
             thk:'elves',  thf:'blue_attack_0', thi:'blue_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 3마리 «동시»: 여덟 던전 중 가장 붐비는 판 */
-            rw:['룬강화석 획득 가능'], psx:0.966, gm:14, bn:3, bm:'all' },
+            rw:['룬강화석 획득 가능'], gm:14, bn:3, bm:'all' },
   /* 209 — 시련의 탑. **DUNGEONS 에는 없는 항목**이다(위 209 주석 참고) — 여기 있는 이유는
      ① 카드 기하·색 ② 178 던전 보스가 스프라이트를 `DUN_UI[d.id]` 한 곳에서만 읽기 때문이다.
      썸네일은 **없는 몬스터를 그리지 않는다**(97 규칙) — elves 아틀라스에서 아직 아무도 안 쓰는
@@ -24621,8 +24640,8 @@ const DUN_UI = {
   tower:  { s:'#3B3550', i:'#554C74', r:'#6A5F90', pt:'#C3B9DE', ic:curIc('relic'), tk:curIc('tkRelic'),
             thk:'elves',  thf:'green_attack_0', thi:'green_attack', thbr:1.30, thw:'330px', tht:'11px', scn:'7px',
             /* 257 — 탑은 «층 하나 = 보스 하나» 다(264 의 몫이라 수·방식을 늘리지 않는다) */
-            rw:['유물조각 획득 가능'], psx:0.966, bn:1 },
-  /* 210 ② — 절망의 탑. 209 시련의 탑 칸과 **같은 기하**(thw/tht/scn/psx/thbr 동일)이고
+            rw:['유물조각 획득 가능'], bn:1 },
+  /* 210 ② — 절망의 탑. 209 시련의 탑 칸과 **같은 기하**(thw/tht/scn/thbr 동일)이고
      색과 몬스터·보상 재화만 갈린다 — 카드 두 장이 같은 격자 위에 나란히 선다.
      ⚠ **아트 대기 · 썸네일은 재사용이다.** 97 «없는 몬스터를 그리지 않는다» 를 지키려면 실재하는
      아틀라스 포즈만 쓸 수 있는데, `elves` 는 green/blue 두 색뿐이고 idle·attack 4칸이 이미
@@ -24631,7 +24650,7 @@ const DUN_UI = {
      이 두 줄(thk/thf/thi)만 갈아 끼운다(측정표 «아트 필요» 표에 등재). */
   despair:{ s:'#3E2430', i:'#5F3242', r:'#7C4055', pt:'#E0A8B8', ic:curIc('tstone'), tk:curIc('tstone'),
             thk:'zombie', thf:'walk_004', thi:'walk', thbr:1.60, thw:'330px', tht:'11px', scn:'7px',
-            rw:['단련석 획득 가능'], psx:0.966, bn:1 }
+            rw:['단련석 획득 가능'], bn:1 }
 };
 /* 액자 두께 — 104 공용 아이템 프레임 토큰(--if-bw 5 · --if-rim 6)의 JS 쪽 사본.
    캔버스 «픽셀 크기 = CSS 크기»(1:1) 를 만들려면 슬롯에서 이만큼을 빼야 한다. CSS 와 갈라지면
@@ -24771,7 +24790,7 @@ function renderDunPage(){
       +  '" data-dcard="' + d.id + '" style="--s:' + u.s + ';--i:' + u.i
       +  ';--r:' + u.r + ';--pt:' + u.pt
       +  ';--thw:' + u.thw + ';--tht:' + u.tht + (u.scn ? ';--scn:' + u.scn : '')
-      +  (u.psx ? ';--psx:' + u.psx : '') + bgmVars(ci) + '">'  /* 90 — 긴 보상 라벨만 폭을 눌러 캡슐 안에 넣는다 */
+      +  bgmVars(ci) + '">'   /* 342 — 90 의 `--psx`(긴 라벨 눌러 넣기)는 캡슐이 글자를 감싸며 필요 없어졌다 */
       +  '<div class="bg"></div>'
       +  '<div class="bgm"></div>'                          /* 121 — 움직이는 배경 레이어(아트 대기) */
       +  (lock && u.scn ? '<div class="scn"></div>' : '')   /* 72 — 잠금 카드 씬 아트 자리 */
@@ -24819,7 +24838,7 @@ function renderTowerPage(){
     const f = towerFloor(t), u = DUN_UI[t.id], ready = towerCardOk(t);
     return '<div class="dnc bgm-rel" data-tcard="' + t.id + '" style="--s:' + u.s + ';--i:' + u.i
     +  ';--r:' + u.r + ';--pt:' + u.pt + ';--thw:' + u.thw + ';--tht:' + u.tht
-    +  (u.scn ? ';--scn:' + u.scn : '') + (u.psx ? ';--psx:' + u.psx : '') + bgmVars(i) + '">'
+    +  (u.scn ? ';--scn:' + u.scn : '') + bgmVars(i) + '">'
     +  '<div class="bg"></div>'
     +  '<div class="bgm"></div>'
     /* 72 와 같은 규격 — 캔버스 픽셀 = 액자 «안쪽» 크기(슬롯 − 테두리 5 − 림 6, 양변) */

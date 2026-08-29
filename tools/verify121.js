@@ -205,9 +205,16 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const c = document.querySelector('#dunList .dnc'), cr = c.getBoundingClientRect();
     const rel = s => { const e = c.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();
       return [+(r.left - cr.left).toFixed(1), +(r.top - cr.top).toFixed(1)]; };
-    return { nm: rel('.nm'), pill: rel('.pill'), lb: rel('.lb.a'), sp: rel('.sp.lv'), dot: rel('.dot') };
+    const nmEl = c.querySelector('.nm');
+    return { nm: rel('.nm'), nmH: nmEl ? Math.round(nmEl.getBoundingClientRect().height) : null,
+      pill: rel('.pill'), lb: rel('.lb.a'), sp: rel('.sp.lv'), dot: rel('.dot') };
   });
-  ok(txt.nm && Math.abs(txt.nm[0] - 39) <= 1 && Math.abs(txt.nm[1] - 40) <= 1, `던전명 rel ${txt.nm} = 39,40`);
+  /* 342 이관(2026-08-29) — 던전명 박스 top 40 → **44**. 이 항이 묻는 것은 «121 배경 레이어가
+     텍스트 레이어를 밀지 않는가» 이므로 물음은 그대로 두고 **기대값만** 342 의 자리로 옮긴다
+     (LESSONS 328 — 자리만 이사, 물음은 유지). 342 는 잉크 «높이» 도 같이 세웠으므로(fs 56 → 60)
+     박스 높이 60 을 **한 항 더** 묻는다 — 그러지 않으면 342 가 통째로 되돌아가도 이 절이 초록이다. */
+  ok(txt.nm && Math.abs(txt.nm[0] - 39) <= 1 && Math.abs(txt.nm[1] - 44) <= 1, `던전명 rel ${txt.nm} = 39,44`);
+  ok(txt.nmH === 60, `던전명 박스 높이 ${txt.nmH} = 60 (342)`);
   ok(txt.pill && Math.abs(txt.pill[0] - 92) <= 1 && Math.abs(txt.pill[1] - 121) <= 1, `보상 알약 rel ${txt.pill} = 92,121`);
   ok(txt.lb && Math.abs(txt.lb[0] - 134) <= 1 && Math.abs(txt.lb[1] - 243) <= 1, `라벨 rel ${txt.lb} = 134,243`);
   ok(txt.sp && Math.abs(txt.sp[0] - 84) <= 1 && Math.abs(txt.sp[1] - 277) <= 1, `값 알약 rel ${txt.sp} = 84,277`);
