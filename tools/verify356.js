@@ -325,11 +325,21 @@ async function sweep(browser, inject) {
     await page.evaluate(() => { document.querySelector('.tab[data-t="adv"]').click(); });
     await page.waitForTimeout(600);
     if (sub) {
-      await page.evaluate(() => {
-        const el = [...document.querySelectorAll('#dunSub .stab')].find((b) => /레이드/.test(b.textContent));
-        if (el) el.click();
+      /* ⚠ 라벨 글자로 찾지 마라 — 123(2026-08-26 주인 지시)이 «레이드» 를 **«컨텐츠»** 로 개칭했다.
+         `/레이드/` 로 찾던 첫 판은 **아무것도 못 눌러 던전 화면을 두 번 잰 헛초록**이었다
+         (5회차 비평가 AY 가 제출 캡처에서 잡아 줬다). 스캐너와 같은 `data-dsub` 축으로 잡는다. */
+      const moved = await page.evaluate(() => {
+        const el = document.querySelector('#dunSub [data-dsub="raid"]');
+        if (!el) return false;
+        el.click();
+        return true;
       });
+      if (!moved) bad(`[R4] ${lab} — 서브탭 진입 실패: '#dunSub [data-dsub="raid"]' 가 없다`);
       await page.waitForTimeout(500);
+      /* 진입했는지 «화면» 으로 확인한다 — 레이드 카드는 `.dnc.rd` 다 */
+      const rd = await page.evaluate(() => document.querySelectorAll('#dunList .dnc.rd').length);
+      if (!rd) bad(`[R4] ${lab} — 눌렀는데 레이드 카드(.dnc.rd)가 0장이다 (화면이 안 바뀌었다)`);
+      else ok(`[R4] ${lab} — 레이드 카드 ${rd}장 진입 확인 (헛초록 방지)`);
     }
     /* 음성항 — 주입 전에는 이 스코프가 깨끗해야 한다 */
     const pre = (await page.evaluate(COLLECT, { all: false }))
