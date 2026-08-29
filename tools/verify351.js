@@ -35,11 +35,13 @@ const ok = (m, d) => { pass++; console.log(`  ok  ${m}${d ? ' — ' + d : ''}`);
 const no = (m, d) => { fail++; console.log(`  NG  ${m}${d ? ' — ' + d : ''}`); };
 const eq = (m, got, want, tol = 0) => (Math.abs(got - want) <= tol ? ok(m, `${got}`) : no(m, `${got} (기대 ${want}±${tol})`));
 
-/* §R-i(406) 전용 사본 — 시트 위 딤이 포인터를 «막게» 만든다.
-   지금 제품은 이 딤만 `pointer-events:none` 이라, 2280 에서 레일이 **딤을 뚫고** 눌린다.
-   이것을 auto 로 바꾸면 2280 이 1600 과 같아진다 = 그 세 시트의 12건이 «시트가 자라서» 가
-   아니라 **이 한 속성 때문**임의 증명이다(338 교훈 — 뿌리를 안 짚은 게이트는 헛초록이 된다). */
-const DIMPE = `#panel:has(:is(#bSk,#bPet,#bCos).on)::before{pointer-events:auto !important}`;
+/* §7·§R-i 전용 사본 — 시트 위 딤을 **413 이전 값**(`pointer-events:none`)으로 되돌린다.
+   ⚑ **413(2026-08-29)이 이 상수의 방향을 뒤집었다.** 406 당시 제품은 `none` 이었고 이 사본이
+   `auto` 를 주입해 «통로는 그 한 속성» 임을 증명하는 자였다. 413 이 그 진단을 받아 제품을
+   `auto` 로 고쳤으므로, 이제 같은 일을 하는 사본은 **반대 방향**이다 — `none` 으로 되돌리면
+   2280 레일 3칸 + 두 프레임의 HUD 알약 2칸이 다시 누출돼야 한다.
+   방향만 뒤집고 «무엇을 증명하는가» 는 그대로다(338 교훈 — 뿌리를 안 짚은 게이트는 헛초록이 된다). */
+const DIMPE = `#panel:has(:is(#bSk,#bPet,#bCos).on)::before{pointer-events:none !important}`;
 
 /* 처방을 걷어낸 사본 — §R 에서만 주입한다 */
 const REVERT = `
@@ -128,9 +130,22 @@ async function shot(browser, h, opener, revert) {
     if (pe) {
       const r = pe.getBoundingClientRect();
       pedge = { top: Math.round(r.top - A.top), bot: Math.round(r.bottom - A.top) };
-      const el = document.elementFromPoint(202, r.bottom - 4);
+      const py = r.bottom - 4;
+      const el = document.elementFromPoint(202, py);
       deepHit = el ? (el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + String(el.className).trim().split(/\s+/).slice(0, 2).join('.')) : null;
-      deepInSheet = !!(el && el.closest && (el.closest('.eqp') || el.closest('#panel')));
+      /* ⚠ 413(2026-08-29) — `closest('#panel')` 만으로는 «시트가 덮었나» 를 못 묻는다.
+         `#panel` 의 딤은 **자기 ::before** 라 `elementFromPoint` 가 `#panel` 자신을 돌려주고,
+         413 이 그 딤을 `pointer-events:auto` 로 돌린 뒤로는 꼬리판 위 어느 점이든 `#panel` 이 나온다.
+         이것은 열두 줄 위 `#eqw>.dim` 주석이 이미 적어 둔 함정과 **같은 것**이다 — «딤이 덮는 것은
+         모달의 정의지 결함이 아니다». 묻는 것은 언제나 **시트 상자가 내려왔는가** 하나다.
+         ⇒ `#panel` 에 닿았을 때는 그 점이 **시트 상자 안**일 때만 «덮음» 으로 센다
+            (딤은 `bottom:calc(100% + 7px)` 라 상자보다 **위**에만 있다).
+         무르게 푼 것이 아님은 §R [R-d] 가 못박는다 — 되돌린 사본에서 시트가 104 로 내려오면
+         그 점(y 138)이 상자 «안» 이라 이 항은 그대로 빨개진다. */
+      const pnl = document.getElementById('panel');
+      const pr = pnl ? pnl.getBoundingClientRect() : null;
+      const inPanelBox = !!(el && el.closest && el.closest('#panel') && pr && py >= pr.top - 0.5);
+      deepInSheet = !!(el && el.closest && (el.closest('.eqp') || inPanelBox));
     }
     const bd = document.querySelector('.ml69 .mbody');
     const tabs = document.getElementById('tabbar');
@@ -204,6 +219,14 @@ async function shot(browser, h, opener, revert) {
         }
         const mb = document.getElementById('menub');
         if (mb) o.menub = hitOf(mb);
+        /* 413 — HUD 재화 알약. **등재문이 못 본 자리**라 자에도 없었다:
+           406 은 레일·▦ 만 세서 «2280 100% → 1600 0%» 로 읽었지만, 화면 맨 위 알약은
+           **두 프레임 다** 딤 구역에 있어 딤 말고는 막을 것이 없다 = 두 프레임 다 누출이었다
+           (`probe413` [N2b]). 자에 없는 자리는 고쳐도 초록이 안 움직인다. */
+        for (const c of ['gold', 'dia']) {
+          const el = document.querySelector('.curs [data-cur="' + c + '"]');
+          if (el) o['cur_' + c] = hitOf(el);
+        }
         /* 나갈 길 — `#panel` 계열은 열린 탭이 탭바에서 ✕ 칸으로 치환된다(마크업 13970) */
         const cl = document.querySelector('#tabbar .tab.close');
         o.escClose = cl ? hitOf(cl) : { on: false, by: '(.tab.close 없음)' };
@@ -350,27 +373,47 @@ async function shot(browser, h, opener, revert) {
                 감점은 «2280 에서는 닿는데 1600 에서 안 닿는» 자리 뿐이고, 그런 자리는
                 `#panel` 계열 세 시트(07 스킬·26 펫·50 코스튬)에만 있다.
        그 셋의 뿌리는 «시트가 자란다» 가 아니라 **딤만 `pointer-events:none` 이라는 것**이다
-       (`#panel:has(…)::before` — index.html 10080). 2280 에서 레일이 눌리는 것은 딤을 «뚫고»
-       눌리는 것이고, 1600 에서는 딤이 아니라 시트 **본문**이 덮으므로 그 통로가 사라진다.
-       ⚠ 그래서 이 절은 **지금 값을 그대로 못박는다** — 여기를 바꾸는 것은 42 터치 조이스틱
-         (시트 위 게임 화면을 뚫고 조작하는 것)의 동작을 같이 바꾸므로 별도 작업으로 등재했다. */
-    console.log('[§7] 406 규약 — 배경 조작 요소는 «덮였나» 가 아니라 «닿나» 로 판정한다');
+       (`#panel:has(…)::before`). 2280 에서 레일이 눌리는 것은 딤을 «뚫고» 눌리는 것이었다.
+       ⚑⚑ **413(2026-08-29)이 그 진단을 받아 제품을 고쳤다 — 이 절의 방향이 통째로 뒤집힌다.**
+       406 은 «여기를 바꾸면 42 조이스틱이 같이 바뀐다» 며 지금 값을 못박아 두고 별도 등재했고,
+       413 이 그 «조작 설계 결정» 을 **찍힌 값으로** 닫았다(`tools/probe413.js`):
+         · 대조군 — «자기 클릭으로 닫는» 오버레이 5종 전부 그 아래에서 조이스틱이 **이미 죽는다**.
+         · 이 세 시트조차 **1600 에서는 이미 죽는다**(시트 본문이 캔버스를 덮는다).
+         ⇒ «시트 위 이동» 은 규약이 아니라 `#panel` × 2280 한 자리의 사고였다 ⇒ 딤이 막는다.
+       ⇒ 이제 §7 이 못박는 규약은 **«오버레이가 소유한 화면에서 배경은 안 눌린다 — 나갈 길만 남는다»**
+         이고, 감점 축(«2280 은 닿는데 1600 은 안 닿는») 은 **양쪽 다 안 닿음**으로 닫혔다. */
+    console.log('[§7] 406·413 규약 — 오버레이가 소유한 화면에서 배경은 안 눌린다(나갈 길만 남는다)');
     const RAIL = ['attend', 'roul', 'quest'];
+    const HUDC = ['cur_gold', 'cur_dia'];
     const rc19 = s19.reach, rc13 = s13.reach;
-    RAIL.every((k) => rc19[k] && rc19[k].on)
-      ? ok('[전제 7-a] 2280 스킬 시트에서 레일 상위 3칸이 닿는다', RAIL.map((k) => k + '=' + (rc19[k].on ? '닿음' : rc19[k].by)).join(' · '))
-      : no('[전제 7-a] 2280 스킬 시트에서 레일 상위 3칸이 닿는다', RAIL.map((k) => k + '=' + (rc19[k] ? rc19[k].by : '?')).join(' · '));
+    /* [전제 7-a] — 자가 «닿음» 을 실제로 잴 수 있고, 시트가 정말로 열렸는가.
+       ⚠ 이 전제가 없으면 아래 «안 닿는다» 항 전부가 **진입 실패로도 초록**이 된다(LESSONS 356-⑬). */
+    (s19.panel && s13.panel && s19.reach.escClose.on && s13.reach.escClose.on)
+      ? ok('[전제 7-a] 두 해상도 다 시트가 열렸고 자가 닿음을 잴 수 있다(✕ 칸이 닿는다)')
+      : no('[전제 7-a] 두 해상도 다 시트가 열렸고 자가 닿음을 잰다', `2280 ✕=${s19.reach.escClose.by} · 1600 ✕=${s13.reach.escClose.by}`);
+    /* [7-a2] 413 본체 — 2280 레일 3칸이 이제 **딤에 막힌다**(종전엔 닿았다). */
+    RAIL.every((k) => rc19[k] && !rc19[k].on && rc19[k].by === '#panel')
+      ? ok('[7-a2] 2280 레일 3칸이 딤(#panel)에 막힌다 — 413 이 닫은 통로', RAIL.map((k) => k + '=' + rc19[k].by).join(' · '))
+      : no('[7-a2] 2280 레일 3칸이 딤에 막힌다', RAIL.map((k) => k + '=' + (rc19[k] ? (rc19[k].on ? '여전히 닿음' : rc19[k].by) : '?')).join(' · '));
+    /* [7-a3] ⚑ 등재문이 못 본 자리 — HUD 재화 알약은 **두 프레임 다** 새고 있었다(`probe413` [N2b]).
+       이 항이 없으면 413 은 «2280 만 고친 수리» 로 남고 1600 의 누출 2칸이 조용히 살아 있게 된다. */
+    HUDC.every((k) => rc19[k] && !rc19[k].on && rc13[k] && !rc13[k].on)
+      ? ok('[7-a3] HUD 재화 알약 2칸이 두 프레임 다 막힌다 — 등재문의 «2280 만» 을 넓힌 자리',
+        HUDC.map((k) => k + '=' + rc19[k].by + '/' + rc13[k].by).join(' · '))
+      : no('[7-a3] HUD 재화 알약 2칸이 두 프레임 다 막힌다',
+        HUDC.map((k) => k + '=' + (rc19[k] ? (rc19[k].on ? '2280닿음' : rc19[k].by) : '?') + '/' + (rc13[k] ? (rc13[k].on ? '1600닿음' : rc13[k].by) : '?')).join(' · '));
     (rc19.promo && !rc19.promo.on && rc19.coll && !rc19.coll.on)
-      ? ok('[7-b] 2280 에서도 아래 두 칸(promo·coll)은 이미 시트가 막는다 — «레일은 늘 눌린다» 는 불변식이 없다',
+      ? ok('[7-b] 2280 아래 두 칸(promo·coll)은 시트 본문이 막는다 — 딤 말고 다른 축도 산다',
         `promo=${rc19.promo.by} · coll=${rc19.coll.by}`)
       : no('[7-b] 2280 아래 두 칸은 시트가 막는다', `promo=${rc19.promo && rc19.promo.by} · coll=${rc19.coll && rc19.coll.by}`);
     RAIL.every((k) => rc13[k] && !rc13[k].on)
-      ? ok('[7-c] 1600 에서는 그 3칸이 안 닿는다', RAIL.map((k) => k + '=' + rc13[k].by).join(' · '))
-      : no('[7-c] 1600 에서는 그 3칸이 안 닿는다', RAIL.map((k) => k + '=' + (rc13[k] ? (rc13[k].on ? '닿음' : rc13[k].by) : '?')).join(' · '));
-    /* ⚑ 무엇이 막았는지가 뿌리를 가른다 — 딤(`#panel` 자신)이면 «딤이 커졌다» 지만
-       시트 «본문 자식»이면 «시트가 자라 통로를 먹었다» 다. 후자임을 못박는다. */
+      ? ok('[7-c] 1600 에서도 그 3칸이 안 닿는다 — 두 해상도가 같아졌다', RAIL.map((k) => k + '=' + rc13[k].by).join(' · '))
+      : no('[7-c] 1600 에서도 그 3칸이 안 닿는다', RAIL.map((k) => k + '=' + (rc13[k] ? (rc13[k].on ? '닿음' : rc13[k].by) : '?')).join(' · '));
+    /* [7-d] ⚑ 1600 에서 막는 것이 **여전히 시트 본문**임을 남겨 둔다 — 413 은 딤 한 속성만
+       바꿨으므로 시트 본문이 캔버스를 덮는다는 1600 의 사실은 그대로여야 한다. 이 항이
+       «#panel 이어도 통과» 로 물러지면 «시트가 사라져도 딤이 막으니 초록» 이 된다. */
     RAIL.every((k) => rc13[k] && !rc13[k].on && rc13[k].by && rc13[k].by !== '#panel')
-      ? ok('[7-d] 1600 에서 막는 것은 딤(#panel)이 아니라 시트 본문이다', RAIL.map((k) => rc13[k].by).join(' · '))
+      ? ok('[7-d] 1600 에서 막는 것은 딤이 아니라 여전히 시트 본문이다', RAIL.map((k) => rc13[k].by).join(' · '))
       : no('[7-d] 1600 에서 막는 것은 시트 본문이다', RAIL.map((k) => rc13[k] && rc13[k].by).join(' · '));
     /* 나갈 길 — 규약이 «레일은 조작 대상이 아니다» 로 가는 대가로, 닫는 길은 반드시 있어야 한다. */
     (s19.reach.escClose.on && s13.reach.escClose.on)
@@ -492,16 +535,29 @@ async function shot(browser, h, opener, revert) {
     const rs56t = await shot(br, 2280, 'saver', true);
     eq('[R-h] 되돌려도 2280 안내문은 같다(9:19 무관)', rs56t.frameH - rs56t.svHint.bot, 195);
 
-    /* [R-i](406) — §7 의 **진단**을 되돌림으로 못박는다.
-       §7 은 «2280 은 닿고 1600 은 안 닿는다» 는 현상만 적는다. 그 통로가 무엇인지는
-       딤의 `pointer-events` 를 auto 로 바꿔 보면 답이 나온다 — 2280 이 그 즉시 1600 과
-       같아지면 통로는 «딤을 뚫는 것» 이고, 안 바뀌면 내 진단이 틀린 것이다. */
+    /* [R-i](406 → **413 에서 방향을 뒤집었다**) — §7 의 처방을 되돌림으로 못박는다.
+       406 때는 제품이 `none` 이라 «auto 로 바꾸면 막히나» 가 진단이었다. 413 이 제품을 `auto` 로
+       고쳤으므로 이제 물어야 할 것은 그 반대다 — **`none` 으로 되돌리면 통로가 다시 열리나.**
+       열리면 §7 은 «이미 참인 것을 굳힌 게이트» 가 아니라 실제로 그 한 속성을 잡고 있는 것이다
+       (338 교훈). ⚠ 두 프레임 다 되돌린다 — HUD 알약은 1600 에서도 새던 자리라 2280 만 보면
+       [7-a3] 의 절반이 되돌림 없이 남는다. */
     const dp19 = await shot(br, 2280, 'sheet', 'dimpe');
-    ['attend', 'roul', 'quest'].every((k) => !dp19.reach[k].on && dp19.reach[k].by === '#panel')
-      ? ok('[R-i] 딤을 pointer-events:auto 로 바꾸면 2280 레일이 딤에 막힌다 = 통로는 그 한 속성이다',
-        ['attend', 'roul', 'quest'].map((k) => k + '=' + dp19.reach[k].by).join(' · '))
-      : no('[R-i] 딤을 pointer-events:auto 로 바꾸면 2280 레일이 딤에 막힌다',
-        ['attend', 'roul', 'quest'].map((k) => k + '=' + (dp19.reach[k].on ? '여전히 닿음' : dp19.reach[k].by)).join(' · '));
+    const dp13 = await shot(br, 1600, 'sheet', 'dimpe');
+    ['attend', 'roul', 'quest'].every((k) => dp19.reach[k].on)
+      ? ok('[R-i] 딤을 pointer-events:none 으로 되돌리면 2280 레일 3칸이 다시 닿는다 = 통로는 그 한 속성이다',
+        ['attend', 'roul', 'quest'].map((k) => k + '=닿음').join(' · '))
+      : no('[R-i] 되돌리면 2280 레일 3칸이 다시 닿는다',
+        ['attend', 'roul', 'quest'].map((k) => k + '=' + (dp19.reach[k].on ? '닿음' : dp19.reach[k].by)).join(' · '));
+    /* [R-i2] — 되돌리면 HUD 알약은 **두 프레임 다** 새야 한다. [7-a3] 의 짝이다. */
+    (['cur_gold', 'cur_dia'].every((k) => dp19.reach[k].on) && ['cur_gold', 'cur_dia'].every((k) => dp13.reach[k].on))
+      ? ok('[R-i2] 되돌리면 HUD 알약 2칸이 두 프레임 다 다시 닿는다 — 1600 누출도 413 이 닫은 것이다')
+      : no('[R-i2] 되돌리면 HUD 알약 2칸이 두 프레임 다 다시 닿는다',
+        ['cur_gold', 'cur_dia'].map((k) => k + '=' + (dp19.reach[k].on ? '2280닿음' : dp19.reach[k].by) + '/' + (dp13.reach[k].on ? '1600닿음' : dp13.reach[k].by)).join(' · '));
+    /* [R-i3] 음성항 — 되돌려도 **나갈 길은 그대로**다. 되돌림이 «전부를 바꾼다» 면
+       [R-i]·[R-i2] 는 그 속성이 아니라 사본 주입 자체를 잰 것이 된다. */
+    (dp19.reach.escClose.on && dp13.reach.escClose.on)
+      ? ok('[R-i3] 음성항 — 되돌려도 나갈 길(✕ 칸)은 두 해상도 다 그대로 닿는다')
+      : no('[R-i3] 음성항 — 되돌려도 나갈 길은 그대로', `2280=${dp19.reach.escClose.by} · 1600=${dp13.reach.escClose.by}`);
     /* [R-n][R-o][R-p][R-q](390) — 띠를 옛 상수(126/150 · 168/276)로 되돌리면 §9 가 실제로 빨개지는가.
        이게 없으면 [9-e][9-f] 는 «이미 참인 것을 굳힌 게이트» 와 구별이 안 된다(338 교훈).
        ⚠ **두 자리를 따로 되돌려 따로 잡는다** — 한 항으로 묶으면 «둘 중 하나만 되돌려도

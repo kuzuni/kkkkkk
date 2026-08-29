@@ -10195,9 +10195,22 @@
   #panel:has(:is(#bSk,#bPet,#bCos).on){height:1484px;background:#F0D9BA;border:7px solid #000;border-bottom:0;
     border-radius:38px 38px 0 0;box-sizing:border-box;z-index:9;   /* position 은 #panel(absolute) 상속 — 작업 38 */
     box-shadow:inset 7px 0 0 #FDF5E0,inset -7px 0 0 #FDF5E0}
-  /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28) */
+  /* 시트 위 게임 화면 딤 — ref 투과율 0.721 → rgba(0,0,0,.28)
+     ── 413 — 이 딤은 **포인터도 막는다**(2026-08-29). 종전 `pointer-events:none` 은 통로였다 ──
+     406 이 남긴 12건의 뿌리가 이 한 속성이었고, 413 이 셋(ⓐ 막는다 / ⓑ 캔버스만 통과 /
+     ⓒ 지금을 규약으로 적는다) 중 ⓐ 를 **찍힌 값으로** 골랐다(`tools/probe413.js`):
+       · [C1] «자기 클릭으로 닫는» 오버레이 **대조군 5종 전부** 그 아래에서 조이스틱이 이미 죽는다.
+       · [N3] 그리고 이 세 시트조차 **1600 에서는 이미 죽는다**(시트 본문이 캔버스를 덮는다).
+         ⇒ «시트 위에서 캐릭터를 움직인다» 는 이 게임의 규약이 아니라 `#panel` × 2280 한 자리의 사고다.
+       · [N2b] ⚑ 등재문이 «2280 만의 일» 로 적었지만 **HUD 재화 알약 2칸은 1600 에서도 누출**됐다 —
+         화면 맨 위 알약은 두 프레임 다 딤 구역에 있어 **딤 말고는 막을 것이 없다.**
+       · [U2] 막아도 **나갈 길은 그대로다** — 시트는 앱 탭바 위에서 끝나므로 탭바 5칸은 계속 닿는다
+         (`verify351` [7-e] 가 요구하는 대가). 딤을 «닫기 버튼» 으로 만들지는 않았다 —
+         닫는 길이 이미 있고, 그것은 새 조작 결정이라 이 작업 단위 밖이다.
+     제품 자신의 42 설계 주석(«사이드 아이콘·탭바·팝업은 자기가 포인터를 먹으므로 여기까지 오지
+     않는다» ~15974)이 원래 요구하던 값이기도 하다. 되돌리면 `verify413` 전 절이 빨개진다. */
   #panel:has(:is(#bSk,#bPet,#bCos).on)::before{content:'';position:absolute;left:-7px;right:-7px;
-    bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:none}
+    bottom:calc(100% + 7px);height:1800px;background:rgba(0,0,0,.28);pointer-events:auto}
   /* 96 — 패널 상단 구버전 서브탭 바(#herosub)는 폐기했다. 장비는 패널 본문이 없어(HEROBODY 에 eq 없음)
      패널 자체가 접히고, 스킬·동료·코스튬은 시트가 자기 서브탭 바를 그려서 **한 번도 보인 적이 없는 노드**였다. */
   :is(#bSk,#bPet,#bCos).on{padding:0;overflow:hidden;position:relative;display:block}
