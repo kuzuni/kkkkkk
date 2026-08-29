@@ -216,6 +216,15 @@ const SCAN = function () {
   /* HUD 판때기 = 사람이 보는 «판» 의 가장 아래(LESSONS 351-① — 글자줄 `.pcp` 가 아니라 `.pedge`) */
   const pedge = document.querySelector('.pedge');
   if (pedge && vis(pedge)) navs.push({ name: 'hud', r: pedge.getBoundingClientRect(), el: pedge });
+  /* ⚑ 407 — 미션 배너 `#tuto` 를 목록에 넣는다. 여기 없어서 자가 **원리적으로 못 보던** 자리가 있었다:
+     33 재화 정보 팝업이 1600 에서 배너를 70.5px 파고들고 [진행중] 버튼 잉크가 87.5% 덮이는데
+     (`probe407`), 5~7회차 내내 D7 은 조용했고 비평가 3인(BY·BZ·CA)이 눈으로 먼저 짚었다.
+     ⚠ **`probe351c` 의 E1(닿음)로는 이 자리를 못 낸다** — 배너는 딤 뒤라 **2280 에서도 안 닿아**
+     차분에서 소거된다. 위 D7 주석이 탭바에 대해 적어 둔 함정과 같은 자리다 ⇒ D7 의 몫이 맞다.
+     배너는 하단 앵커(`bottom:171` + 탭바 180 ⇒ 상변 = 프레임 하변 − 501)라 탭바·HUD 와 같은
+     «고정 요소» 다 — 던전 런 중에는 `display:none` 이므로 vis() 가 알아서 뺀다. */
+  const tuto = document.getElementById('tuto');
+  if (tuto && vis(tuto)) navs.push({ name: 'tuto', r: tuto.getBoundingClientRect(), el: tuto });
 
   if (navs.length) {
     for (const el of all) {
