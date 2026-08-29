@@ -26,7 +26,7 @@ const SHOT = path.join(ROOT, 'docs', 'shots', '352.png');
 
 const RADIUS = 30;          /* ⓐ */
 const BORDER = 6;           /* ⓑ — 기각된 8 이 아니라 6 */
-const SEP_TOP = 16, SEP_H = 54, SEP_W = 5, SEP_X = 704;   /* ⓒ */
+const SEP_TOP = 16, SEP_H = 54, SEP_W = 6, SEP_CX = 706;  /* ⓒ — left 가 아니라 **중심**을 묻는다 */
 const RIM = 7, RIM_HEX = '#705F4B';                       /* ⓓ */
 const FACE_HEX = '#61523D';
 
@@ -171,7 +171,9 @@ const isBlack = h => close(h, '#000000', 8);
       const s = g.seps[0];
       ok(name + ' 구분선 ' + SEP_W + 'x' + SEP_H, near(s.w, SEP_W, 0.6) && near(s.h, SEP_H, 0.6), f1(s.w) + 'x' + f1(s.h));
       ok(name + ' 구분선 상변 = 콘텐츠 상변 + ' + SEP_TOP, near(s.y - cy, SEP_TOP, 0.6), f1(s.y - cy));
-      ok(name + ' 구분선 left = 콘텐츠 좌변 + ' + SEP_X, near(s.x - cx, SEP_X, 0.6), f1(s.x - cx));
+      /* 352 5회차 — left 가 아니라 **중심**을 묻는다. 폭이 바뀌면 left 는 따라 움직여야 하는데
+         left 만 묻는 게이트는 «중심이 밀린 것» 을 못 본다(ref 중심 = 콘텐츠 좌변 + 706.43). */
+      ok(name + ' 구분선 중심 = 콘텐츠 좌변 + ' + SEP_CX, near(s.x + s.w / 2 - cx, SEP_CX, 0.6), f1(s.x + s.w / 2 - cx));
       ok(name + ' 구분선 하변이 알약 하변 안 (돌출 0)',
         s.y + s.h <= g.bar.y + g.border + 85 + 0.6, f1(s.y + s.h - (g.bar.y + g.border)));
     }
@@ -224,12 +226,12 @@ const isBlack = h => close(h, '#000000', 8);
       let i = 0; while (i < col.length && !isBlack(col[i])) i++;
       let nb = 0; while (i + nb < col.length && isBlack(col[i + nb])) nb++;
       let j = i + nb, nr = 0;
-      while (j < col.length && !close(col[j], '#6F6251', 14) && !close(col[j], '#706049', 14)) j++;
+      while (j < col.length && !close(col[j], RIM_HEX, 8)) j++;
       const st = j;
-      while (j < col.length && (close(col[j], '#6F6251', 14) || close(col[j], '#706049', 14))) { nr++; j++; }
+      while (j < col.length && close(col[j], RIM_HEX, 8)) { nr++; j++; }
       console.log('   ' + tag + ' ' + col.slice(0, 16).join(' '));
       ok('07 ' + tag + ' 검정 띠 = 테두리 ' + BORDER + ' (보간 ±1)', Math.abs(i + nb - BORDER) <= 1, i + '+' + nb);
-      ok('07 ' + tag + ' 밝은 띠 ' + RIM + 'px — 네 면이 한 규약 (보간 ±1)',
+      ok('07 ' + tag + ' 밝은 띠 ' + RIM + 'px ' + RIM_HEX + ' — 네 면이 한 규약(색까지) (보간 ±1)',
         Math.abs(nr - RIM) <= 1 && st <= BORDER + 1, nr + '칸 @' + st);
     }
 
