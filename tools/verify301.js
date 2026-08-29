@@ -144,6 +144,14 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
      '[5] ★ 지급 = 받을 칸 합계 (골드 +' + before.want.gold + ' · 다이아 +' + before.want.dia
      + ' · 유물조각 +' + before.want.relic + ')',
      'Δ ' + (after.gold - before.gold) + '/' + (after.dia - before.dia) + '/' + (after.relic - before.relic));
+  /* 398(2026-08-29) — 보상 재화가 dia 하나로 줄어 위 항의 골드·유물조각 기대값이 **둘 다 0** 이 됐다.
+     0 == 0 은 «안 줬다» 도 «못 줬다» 도 통과시키므로 표본이 헐거워진다 — 두 항을 더 박는다:
+     ① 받을 칸이 실제로 있었다(다이아 기대 > 0) ② 골드·유물조각은 한 톨도 안 는다(다른 재화 부활 감지). */
+  ok(before.want.dia > 0 && before.n > 0,
+     '[5] ★ 표본이 비어 있지 않다 — 받을 칸 ' + before.n + '개 · 다이아 기대 +' + before.want.dia);
+  ok(after.gold === before.gold && after.relic === before.relic,
+     '[5] ★ 398 — 일괄 받기가 골드·유물조각은 한 톨도 안 준다',
+     'Δgold ' + (after.gold - before.gold) + ' · Δrelic ' + (after.relic - before.relic));
   ok(after.savedGot === before.n, '[5] 세이브에 수령 기록 ' + before.n + '칸', String(after.savedGot));
   ok(/일괄 받기/.test(after.toast), '[5] 토스트가 같은 사실을 말한다(156)', after.toast.slice(0, 60));
 

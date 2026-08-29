@@ -3203,7 +3203,7 @@
   /* 104 — 공용 아이템 프레임 `.ifr`. 화면이 주는 것은 크기(138)와 면/림 색뿐이다.
      림이 혼자 5 였고(나머지 6~7) 코너는 34 → 138×.233 = 32.2 로 공용 비율을 따른다. */
   .at-if{--if-w:138px;--if-ic:76px;--if-face:#D07810;--if-rimc:#F8C030}
-  .at-if.rl{--if-face:#9820D0;--if-rimc:#C860F8}
+  /* 399 — 유물조각 칸(보라 프레임) 짝은 28칸이 전부 다이아가 되면서 붙는 노드가 0 이 됐다 → 지웠다 */
   .at-if>em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font-style:normal;font-size:76px;line-height:76px}
   /* 수량 — 잉크 하단 = 프레임 하단 +8 (프레임 아래 테두리에 걸친다).
@@ -12455,9 +12455,9 @@
   .ps-bx>b>em{transform:scaleX(1.25)}
   /* 긴 수량은 칸 안쪽 폭 146px 을 넘지 않게 **가로로만 압축**한다 — font-size 를 줄이면
      한 화면에 잉크 높이가 26/20 두 종류로 공존해서 오히려 눈에 띈다(7회차 K-5). ref 는 전부 h26 이다. */
+  /* 398 — 8자(.ln2)·10자(.ln3) 짝은 골드 칸이 사라지면서 붙는 노드가 0 이 됐다(최장 6자) → 지웠다.
+     남은 .ln1 은 «30,000»(36 프리미엄 1일차)이 실제로 쓴다. */
   .ps-bx>b.ln1>em{transform:scaleX(1.05)}
-  .ps-bx>b.ln2>em{transform:scaleX(.84)}
-  .ps-bx>b.ln3>em{transform:scaleX(.72)}
   /* 잠금 — 흰 코어 50x57 / 외곽 포함 59x69, 박스 우상단 모서리에 걸침 */
   /* 자체 스캔(tools/scan36.py, 평균RGB>190): ref 잉크 85×97 vs 우리 63×98 → **폭만 −26%**.
      이모지는 가로세로가 같이 커져서 font-size 로는 못 맞춘다 — scaleX 로만 벌린다(LESSONS 30-③). */
@@ -16820,17 +16820,18 @@ function relDunName(){
 }
 
 /* ---- 출석 (28일) ----
-   70(2026-08-25): 레퍼런스의 «7일차 전폭 카드 = 보상 3개 가로 나열» 을 재현하려면 주차 마지막 날이
-   3종 보상이어야 한다. 7 배수 날에 기존 다이아 + 유물조각 + 골드 3종을 준다(다른 날은 종전 그대로 1종). */
+   399(주인 지시 2026-08-29) — «패스 보상 출석보상 전부 다이아로 줘라». 28칸이 **전부 다이아 한 종류**다.
+   폐기: 유물조각(rel) 칸 · 골드(goldMul) 칸 · 28일차 `ic:'🔥'`(125 규약 위반 — 화폐 자리에 이모지를 안 박는다).
+   ⚠ 70 이 세운 «7일차 전폭 카드 = 보상 3개 가로 나열» 은 재화가 셋이던 시절의 근거다 — 지금은 한 칸이고
+   주차 강조는 «전폭 카드 + 금색 밴드 + 큰 수량» 이 맡는다(측정표 70 정오표 · 주인 지시가 레퍼런스보다 우선).
+   갈래는 셋만 남았고 값은 **눈금(일반 < 7일차 < 28일차)** 으로만 가른다:
+     일반 350+30i(380…1,160) · 7 배수 1,500+60i(1,920/2,340/2,760) · 28일차 5,000.
+   28일 합계 **30,500 다이아**(수리 전 dia 19,080 + rel 7,625 + goldMul 660단위).
+   유물조각 일일 수입원이 하나 줄어드는 것과 다이아 환산 보정은 **199 몫**이다(326·331 과 같은 처리). */
 const ATTEND = [];
 for(let i=1;i<=28;i++){
-  let r;
-  if(i % 28 === 0)      r = { ic:'🔥', t:'다이아', dia:3000, rel:1500, goldMul:60 };
-  else if(i % 7 === 0)  r = { ic:curIc('dia'), t:'다이아', dia:1500 + i*60, rel:400 + i*25, goldMul:60 };
-  else if(i % 5 === 0)  r = { ic:curIc('relic'), t:'유물조각', rel:400 + i*25 };
-  else if(i % 3 === 0)  r = { ic:curIc('gold'), t:'골드',   goldMul:60 };
-  else                  r = { ic:curIc('dia'), t:'다이아', dia:350 + i*30 };
-  ATTEND.push(r);
+  const dia = i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
+  ATTEND.push({ ic:curIc('dia'), t:'다이아', dia });
 }
 
 /* ---- 룰렛 (하루 5회) ----
@@ -22641,7 +22642,10 @@ function giveReward(r){
   /* 210 — 단련석(단련 포인트 전환 전용). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
   if(r.tstone){  S.tstone += r.tstone; out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
   if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
-  if(r.goldMul){ const g = eGold(S.best)*50*r.goldMul*stat.goldMul; S.gold += g; out.push(curIc('gold') + ' ' + fmtG(g)); }
+  /* 399 — `r.goldMul`(스테이지 환산 골드) 분기는 지웠다. 이 표를 쓰던 곳은 ATTEND 하나뿐이었고
+     그 28칸이 전부 dia 가 되면서 실제로 죽은 코드가 됐다(155 §2 가 «살아 있어야 한다» 고 박아 둔 못도
+     같이 뽑았다 — `verify398` §2 가 그 자리를 «ATTEND 는 dia 하나뿐» 으로 갈아 끼웠다).
+     13 광고 상품의 `a.r.goldMul`(~26760)은 **다른 함수**라 여기 없어도 그대로 산다. */
   if(r.frag){
     const pool = SKILLS.concat(EQUIPS, PETS).filter(x => has(x.id));
     for(let i=0;i<r.frag;i++){
@@ -24347,15 +24351,12 @@ function renderSt(){
    레퍼런스에 페이지 화살표가 없고, 넘길 수 있어도 미래 주차는 볼 것 말고 할 게 없다).
    레퍼런스에 하단 버튼·닫기 ✕ 가 없으므로 수령은 «오늘 카드 탭», 닫기는 딤 탭이다.
    7일차 밴드가 강조색인 것은 «오늘» 이라서가 아니라 «주차 최종 보상» 강조다(실측 §7). */
-function atRewards(r){                                  /* 카드에 그릴 보상 칸(최대 3) */
-  const out = [];
-  if(r.dia)     out.push({ ic:curIc('dia'), v:fmt(r.dia) });
-  if(r.rel)     out.push({ ic:curIc('relic'), v:fmt(r.rel), rl:true });
-  if(r.goldMul) out.push({ ic:curIc('gold'), v:fmtG(Math.round(eGold(S.best)*50*r.goldMul*stat.goldMul)) });
-  if(r.gold)    out.push({ ic:curIc('gold'), v:fmtG(r.gold) });
-  return out.slice(0, 3);
-}
-const AT_F7X = [149.5, 309.5, 469.5];                   /* 7일차 프레임 3개 left (pitch 160) */
+/* 399 — 보상이 다이아 하나로 줄어 이 함수도 한 갈래다(유물조각·골드·goldMul 분기 폐기).
+   배열 꼴은 남긴다 — 156 이 «표기 칸 수 = 지급 종류 수 = 이펙트 수» 를 이 길이로 재기 때문이다. */
+function atRewards(r){ return r.dia ? [{ ic:curIc('dia'), v:fmt(r.dia) }] : []; }
+/* 399 — 7일차 전폭 카드의 프레임 left. 3칸(149.5/309.5/469.5) 시절의 가운데 자리 하나만 남았다:
+   `.at-c7` 안쪽 폭이 757 이라 309.5 + 138/2 = 378.5 = 카드 중심이다(자리를 눈대중으로 안 옮겼다). */
+const AT_F7X = [309.5];
 function openAttend(){
   const day = S.att.n % 28, can = S.att.date !== today();
   const base = Math.floor(day / 7) * 7;                 /* 현재 주차 자동 표시 */
@@ -24367,7 +24368,7 @@ function openAttend(){
     const rw = atRewards(r);
     const frames = rw.map((x, k) =>
       '<div class="at-rw"' + (sev ? ' style="left:' + AT_F7X[k] + 'px"' : '') + '>'
-      + '<div class="at-if ifr' + (x.rl ? ' rl' : '') + '"><em>' + x.ic + '</em>'
+      + '<div class="at-if ifr"><em>' + x.ic + '</em>'
       +   '<b class="ifq">' + x.v + '</b></div>'
       + '</div>').join('');
     /* 318(주인 지시 2026-08-28) — «받을 수 있는 칸» 에 레드닷. 293·294·301 과 같은 처방이다:
@@ -29757,11 +29758,15 @@ const PASS_STEP = 5;      /* 5스테이지마다 한 단계 */
 const PASS_N    = 40;     /* 단계 수 — 스테이지 5..200 */
 /* 등급색 [림, 내부] — 측정표 §5-4 실측 */
 const PASS_GRADE = [['#46A7DE','#347DC1'],['#C7E549','#98C135'],['#CA66FA','#9A25D6'],['#FCC334','#D37C13']];
-/* 보상 재화는 기존 3종만 쓴다(새 재화를 만들지 않는다 → 세이브 구조 무변경) */
+/* 398(주인 지시 2026-08-29) — 스테이지 패스 보상은 **다이아 한 종류**다(«패스 보상 출석보상 전부 다이아로 줘라»).
+   골드(20000·(i+1)²)·유물조각(3+i) 칸은 폐기했다. 배열 꼴을 남긴 것은 155(룰렛 «다이아만»)·156 과 같은 이유다 —
+   «지금 dia 인가» 가 아니라 «다른 재화가 되살아나면 빨개진다» 를 `verify398` §1 이 이 배열에 대고 잰다.
+   ⚠ 골드 칸의 수량을 그대로 다이아로 옮기지 않았다 — 40단계에서 3,200만 다이아다(자릿수가 다른 곡선이다).
+   새 곡선 `100 + 50i` 는 무료 칸 기준 100(5스테이지) → 2,050(200스테이지)이고 프리미엄 배수(×3·×2)까지
+   합치면 패스 한 벌 **258,000 다이아**다(견줄 자: 룰렛 1,700/일 · 출석 30,500/28일).
+   **계수 확정은 199 몫**이다(326·331 과 같은 처리 — 값·지렛대는 `docs/review/398-399-패스출석다이아통일.md` §4). */
 const PASS_CUR = [
-  { k:'gold',  ic:curIc('gold'), n:i => 20000 * (i + 1) * (i + 1) },
-  { k:'dia',   ic:curIc('dia'), n:i => 30 + i * 10 },
-  { k:'relic', ic:curIc('relic'), n:i => 3 + i }
+  { k:'dia', ic:curIc('dia'), n:i => 100 + i * 50 }
 ];
 /* 탭 슬롯 — 35 가 깐 골격에 36(출석)이 자기 칸만 채운 것이다(측정표 §9-2·§9-3).
    step/n/prog = 단계 간격·단계 수·해금 진행도 소스. 출석은 «접속일(S.att.n)» 이 진행도다.
@@ -29792,7 +29797,8 @@ const passPrem = () => !!(S.pass.prem && S.pass.prem[passTab]);
 function passRw(i, c){
   const T = passT();
   if(T.rw) return T.rw(i, c);                 /* 탭이 자기 보상표를 갖고 있으면 그걸 쓴다(36) */
-  const cur = PASS_CUR[(i + c) % 3], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);
+  /* 398 — 재화가 하나로 줄어 «(i + c) % 3» 순환이 사라졌다. 칸별 배수(무료 1 · 프리미엄 3·2)는 그대로다. */
+  const cur = PASS_CUR[0], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);
   return { k:cur.k, ic:cur.ic, n:Math.max(1, Math.round(cur.n(i) * mul)),
            g:Math.min(3, Math.floor(i / 8) + c) };
 }
@@ -29822,7 +29828,9 @@ function passClaim(i, c){
   if(!passOpen(i) || passGot(i, c)) return false;
   if(c > 0 && !passPrem()){ notify('🔒 <b>프리미엄 패스</b>를 활성화하면 받습니다'); return false; }
   const r = passRw(i, c);
-  if(r.k === 'gold') S.gold += r.n; else if(r.k === 'dia') S.dia += r.n; else S.relic += r.n;
+  /* 398 — 두 탭 모두 보상이 dia 하나다(35 는 PASS_CUR · 36 은 PASS_TABS.att.rw).
+     골드·유물조각 분기는 지웠다 — 다른 키가 되살아나면 `verify398` §1 이 먼저 빨개진다. */
+  S.dia += r.n;
   S.pass.got[passTab + ':' + i + ':' + c] = 1;
   save(); renderPass(); uiDirty = true; renderUI();
   return true;
@@ -29845,23 +29853,19 @@ function passReadyCnt(){
    묶어서 쏘므로 저절로 합계 1묶음이다). */
 function passClaimAll(){
   const T = passT(), prem = passPrem();
-  const sum = {}; let n = 0;
+  let sum = 0, n = 0;                              /* 398 — 재화가 dia 하나라 종류별 묶음이 한 줄로 줄었다 */
   for(let i = 0; i < T.n; i++){
     if(!passOpen(i)) break;
     for(let c = 0; c < T.cols; c++){
       if(c > 0 && !prem) continue;
       if(passGot(i, c)) continue;
-      const r = passRw(i, c);
-      sum[r.k] = (sum[r.k] || 0) + r.n; n++;
+      sum += passRw(i, c).n; n++;
       S.pass.got[passTab + ':' + i + ':' + c] = 1;
     }
   }
   if(!n) return;
-  if(sum.gold)  S.gold  += sum.gold;
-  if(sum.dia)   S.dia   += sum.dia;
-  if(sum.relic) S.relic += sum.relic;
-  notify('🎫 <b>일괄 받기</b> ' + n + '칸 — '
-    + ['gold', 'dia', 'relic'].filter(k => sum[k]).map(k => curIc(k) + ' +' + won(sum[k])).join(' · '));
+  S.dia += sum;
+  notify('🎫 <b>일괄 받기</b> ' + n + '칸 — ' + curIc('dia') + ' +' + won(sum));
   save(); renderPass(); uiDirty = true; renderUI();
 }
 /* 결제 연동은 아직 없다 — 44 와 같이 지급을 함수 하나로 모아 두고 버튼은 «준비 중» 이다.
@@ -29916,10 +29920,12 @@ function renderPass(){
           /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00A» 로 줄여 버린다(3회차 비평 C-10,
              LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
           /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
-             레퍼런스 수량은 2~5자라 이 상황이 안 보이지만 우리 골드 보상은 20,000×(i+1)² 라 9자까지 간다.
-             표기(쉼표)는 그대로 두고 **글자만 줄인다** — 10자 이상은 .ln3, 8자 이상은 .ln2, 6자 이상은 .ln1
-             (8회차: «13,500,000» 10자가 .ln2 로도 147~154px 이라 칸을 넘어 M·N 이 같이 지적했다) */
-          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 10 ? 'ln3' : (won(r.n).length >= 8 ? 'ln2' : (won(r.n).length >= 6 ? 'ln1' : '')))
+             398(2026-08-29): 골드 칸(20,000×(i+1)² = 9자)이 사라져 **최장 표기가 6자**다
+             (36 프리미엄 «30,000» — 35 는 새 다이아 곡선의 최대가 «6,150» 5자다).
+             ⇒ 8자·10자 분기(.ln2/.ln3)는 헛도는 분기라 CSS 와 함께 지웠고, **자리를 비우지는 않았다** —
+             `verify398` §1 이 «두 탭 전 칸 표기 ≤ 7자 · 잉크가 칸 안쪽 146 을 안 넘는다» 로 대신 지킨다.
+             (7자를 넘기는 곡선을 199 가 다시 넣으면 그 항이 빨개진다 = 클램프를 다시 만들라는 신호다) */
+          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 6 ? 'ln1' : '')
           + '"><em>' + won(r.n) + '</em></b>'
           + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : ''))
           + (ready ? '<s class="updot"></s>' : '') + '</div>';        /* 301 — 우상단 레드닷(299 규약) */

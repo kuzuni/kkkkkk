@@ -121,29 +121,61 @@ async function open(browser) {
     }
     await c.ctx.close();
 
-    /* ---- [D] 과교정 방지 — 여러 재화를 «표기대로» 주는 경로는 그대로 여러 재화 ---- */
-    console.log('[D] 출석 7일차 — 표기 3종이면 이펙트도 3종 (과교정 아님)');
+    /* ---- [D] 과교정 방지 — 여러 재화를 «표기대로» 주는 경로는 그대로 여러 재화 ----
+       399(2026-08-29): 옛 표본은 «출석 7일차(다이아+유물조각+골드)» 였는데 주인 지시로 출석 28칸이
+       **전부 다이아**가 돼 다재화 표본으로서 죽었다. 자리를 비우지 않고(333 처방) **살아 있는 다재화
+       경로**로 갈아 끼운다 — 아레나 승리 보상 `arenaReward(true)` = 골드 + 다이아 + 강화석 3종.
+       ⚠ 비행(fxFly)은 `FXCUR` 에 알약이 있는 **골드·다이아 둘뿐**이다(강화석은 HUD 알약이 없다) —
+       «표기 3 = 이펙트 3» 이 아니라 «표기한 재화는 하나도 빠짐없이 지급되고, 알약이 있는 것은 전부 난다» 가
+       이 절이 지키는 성질이다. */
+    console.log('[D] 아레나 승리 보상 — 표기 3종이면 3종 다 지급 (과교정 아님)');
     const d = await open(browser);
-    const atRec = await d.page.evaluate(async () => {
+    const arRec = await d.page.evaluate(async () => {
       window.step = () => {};
       await new Promise(r => setTimeout(r, 120));
       fxFlush(); fxWatch(performance.now());
       const rec = [];
       const orig = window.fxFly;
       window.fxFly = (from, cur, n) => { rec.push(cur); return orig(from, cur, n); };
-      S.att.n = 6; S.att.date = '';                 /* 다음 칸 = 7일차(다이아+유물조각+골드) */
-      const shown = atRewards(ATTEND[6]).length;
-      const g0 = S.gold, d0 = S.dia;
-      claimAttend(null);
-      const paid = { dg: S.gold - g0, dd: S.dia - d0 };
+      const rw = arenaReward(true);
+      const g0 = S.gold, d0 = S.dia, s0 = S.stone;
+      const txt = giveReward(rw);                    /* 아레나 결과 토스트가 그대로 쓰는 표기다 */
+      const paid = { dg: S.gold - g0, dd: S.dia - d0, ds: S.stone - s0 };
       await new Promise(r => setTimeout(r, 1500));
       window.fxFly = orig;
-      return { rec: [...new Set(rec)].sort(), shown, paid };
+      return { rec: [...new Set(rec)].sort(), shown: txt.split(' · ').length, keys: Object.keys(rw).sort(), paid, want: rw };
     });
-    eq('출석 7일차 카드 표기 칸 수', atRec.shown, 3);
-    atRec.paid.dg > 0 ? ok(`출석 7일차 ΔS.gold = ${Math.round(atRec.paid.dg)} (> 0 — 표기대로)`)
-                      : fail('출석 7일차가 골드를 안 줬다 — 156 이 과교정했다');
-    eq('출석 7일차 fxFly 재화', JSON.stringify(atRec.rec), JSON.stringify(['dia', 'gold']));
+    eq('아레나 승리 보상 표기 조각 수', arRec.shown, 3);
+    eq('아레나 승리 보상 재화 3종', JSON.stringify(arRec.keys), JSON.stringify(['dia', 'gold', 'stone']));
+    arRec.paid.dg > 0 && arRec.paid.dd === arRec.want.dia && arRec.paid.ds === arRec.want.stone
+      ? ok(`아레나 승리 — 표기 3종이 전부 지급됐다 (골드 +${Math.round(arRec.paid.dg)} · 다이아 +${arRec.paid.dd} · 강화석 +${arRec.paid.ds})`)
+      : fail(`아레나 승리 지급이 표기와 어긋난다 — Δgold ${Math.round(arRec.paid.dg)} · Δdia ${arRec.paid.dd}(기대 ${arRec.want.dia}) · Δstone ${arRec.paid.ds}(기대 ${arRec.want.stone})`);
+    eq('아레나 승리 fxFly 재화 (FXCUR 에 알약이 있는 둘)', JSON.stringify(arRec.rec), JSON.stringify(['dia', 'gold']));
+
+    /* ---- [E] 399 — 출석은 이제 «한 재화» 쪽 표본이다(표기 1 = 지급 1 = 이펙트 1) ---- */
+    console.log('[E] 출석 7일차 — 표기 1종이면 지급·이펙트도 1종 (399)');
+    const atRec = await d.page.evaluate(async () => {
+      window.step = () => {};
+      fxFlush(); fxWatch(performance.now());
+      const rec = [];
+      const orig = window.fxFly;
+      window.fxFly = (from, cur, n) => { rec.push(cur); return orig(from, cur, n); };
+      S.att.n = 6; S.att.date = '';                 /* 다음 칸 = 7일차 */
+      const shown = atRewards(ATTEND[6]).length, want = ATTEND[6].dia;
+      const g0 = S.gold, d0 = S.dia, r0 = S.relic;
+      claimAttend(null);
+      const paid = { dg: S.gold - g0, dd: S.dia - d0, dr: S.relic - r0 };
+      await new Promise(r => setTimeout(r, 1500));
+      window.fxFly = orig;
+      return { rec: [...new Set(rec)].sort(), shown, want, paid };
+    });
+    eq('출석 7일차 카드 표기 칸 수', atRec.shown, 1);
+    eq('출석 7일차 ΔS.dia = 표기대로', atRec.paid.dd, atRec.want);
+    atRec.paid.dr === 0 && Math.round(atRec.paid.dg) === 0
+      ? ok('출석 7일차 — 유물조각·골드는 한 톨도 안 준다(399)')
+      : fail(`출석 7일차가 다이아 말고 다른 것을 줬다 — Δrel ${atRec.paid.dr} · Δgold ${Math.round(atRec.paid.dg)}`);
+    eq('출석 7일차 fxFly 재화', JSON.stringify(atRec.rec), JSON.stringify(['dia']));
+
     const dErrs = d.errs.filter(e => !/favicon|net::ERR/i.test(e));
     eq('콘솔 에러', dErrs.length, 0);
     if (dErrs.length) dErrs.slice(0, 3).forEach(e => console.log('       ' + e));

@@ -101,11 +101,24 @@ const settle = async (p) => {
   const segc = await p.evaluate(() => ({
     isArr: Array.isArray(ROUL_SEGC), n: Array.isArray(ROUL_SEGC) ? ROUL_SEGC.length : Object.keys(ROUL_SEGC).length,
     label: roulLabel.toString(),
-    attendGold: ATTEND.some(r => !!r.goldMul)              /* 출석 쪽 goldMul 은 살아 있어야 한다 */
+    /* 399(2026-08-29, 주인 지시 «패스 보상 출석보상 전부 다이아로 줘라») — 종전 이 자리는
+       «ATTEND 의 goldMul 은 살아 있어야 한다(giveReward 분기는 죽은 코드가 아니다)» 였다.
+       출석 28칸이 전부 dia 가 되면서 그 분기가 **실제로 죽어** 같이 걷어냈다. 자리를 비우지 않고
+       (333 처방) 룰렛과 **같은 성질**을 출석에도 묻는다 — «다른 재화가 되살아나면 빨개진다». */
+    attendKeys: [...new Set(ATTEND.flatMap(r => Object.keys(r).filter(k => k !== 'ic' && k !== 't')))].sort(),
+    attendN: ATTEND.length,
+    /* 소스 문자열이 아니라 **동작**으로 묻는다 — 주석에 남은 «goldMul» 글자에 걸리면 안 되고,
+       분기가 진짜 죽었는지는 «goldMul 만 든 보상을 줘도 골드가 안 는다» 가 답이다. */
+    goldMulDead: (() => { const g0 = S.gold, out = giveReward({ goldMul: 60 }); const r = { g: S.gold - g0, out }; S.gold = g0; return r; })()
   }));
   ok(segc.isArr && segc.n === 2, '§2 ROUL_SEGC = 칸 구분용 2색 배열', `${segc.isArr ? 'array' : 'object'}/${segc.n}`);
   ok(!/goldMul|\br\.rel\b|유물조각/.test(segc.label), '§2 roulLabel 이 goldMul·rel 을 더 안 본다', segc.label.replace(/\s+/g, ' '));
-  ok(segc.attendGold, '§2 ATTEND 의 goldMul 은 그대로 살아 있다(giveReward 분기는 죽은 코드가 아니다)');
+  ok(segc.attendN === 28 && segc.attendKeys.join(',') === 'dia',
+     '§2 출석 28칸도 보상 키가 dia 하나뿐 (399 — goldMul·rel·gold 가 되살아나면 빨강)',
+     segc.attendN + '칸 · [' + segc.attendKeys.join(',') + ']');
+  ok(segc.goldMulDead.g === 0 && segc.goldMulDead.out === '',
+     '§2 giveReward 의 goldMul 분기가 죽었다 (399 — goldMul 만 든 보상은 아무것도 안 준다)',
+     'Δgold ' + segc.goldMulDead.g + ' · 표기 «' + segc.goldMulDead.out + '»');
   const roulBlock = SRC.slice(SRC.indexOf('const ROULETTE = ['), SRC.indexOf('const ROUL_FREE'));
   ok(!/goldMul|rel:|🎁/.test(roulBlock), '§2 ROULETTE 배열에 goldMul·rel·🎁 잔재 없음');
 

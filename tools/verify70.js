@@ -49,6 +49,14 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
     checks: document.querySelectorAll('#mbox .at-ck').length,
     crowns: document.querySelectorAll('#mbox .at-cr').length,
     d7frames: document.querySelectorAll('#mbox .at-c7 .at-rw').length,
+    /* 399 — 보상이 다이아 하나로 줄어 «3칸» 이 «1칸» 이 됐다. 자리를 비우지 않으려고(333 처방)
+       «그 한 칸이 전폭 카드 한복판인가» 를 같이 잰다 — 옛 3칸의 가운데 자리(left 309.5)가 정답이다. */
+    d7ctr: (() => {
+      const c = document.querySelector('#mbox .at-c7'), f = document.querySelector('#mbox .at-c7 .at-rw');
+      if (!c || !f) return null;
+      const cb = c.getBoundingClientRect(), fb = f.getBoundingClientRect();
+      return +((fb.left + fb.width / 2) - (cb.left + cb.width / 2)).toFixed(2);
+    })(),
     hiBands: [...document.querySelectorAll('#mbox .at-bd')].map((e) => e.classList.contains('hi')),
     txt: document.getElementById('mbox').textContent,
   }));
@@ -62,7 +70,9 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
     g.got.filter(Boolean).length === 2 && g.checks === 2 && g.got[0] && g.got[1]);
   ok('오늘 = 10일 차 1장 (👑 포인터 1개)',
     g.today.filter(Boolean).length === 1 && g.today[2] && g.crowns === 1);
-  ok('7일차 카드 보상 3칸', g.d7frames === 3, String(g.d7frames));
+  ok('7일차 카드 보상 1칸 (399 — 28칸 전부 다이아)', g.d7frames === 1, String(g.d7frames));
+  ok('7일차 보상 칸이 전폭 카드 한복판 (399 — 3칸의 가운데 자리를 그대로 쓴다)',
+    g.d7ctr !== null && Math.abs(g.d7ctr) <= 1, g.d7ctr + 'px');
   ok('강조 밴드 = 오늘(10일) + 7일차(14일) 2개', g.hiBands.filter(Boolean).length === 2 && g.hiBands[2] && g.hiBands[6]);
   ok('NaN/undefined 없음', !/NaN|undefined/.test(g.txt));
 
@@ -84,7 +94,12 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
   /* 10일차 = i%5===0 → 유물석 400+10*25 = 650 */
   ok('오늘 카드 탭 → 보상 실지급 (S 반영)', after.dia + after.rel + after.gold > before.dia + before.rel + before.gold,
     `Δdia ${after.dia - before.dia} · Δrel ${after.rel - before.rel} · Δgold ${Math.round(after.gold - before.gold)}`);
-  ok('10일차 보상 = 유물석 650 (ATTEND 데이터 그대로)', after.rel - before.rel === 650, String(after.rel - before.rel));
+  /* 399 — 10일차는 5 배수(유물석 650) 갈래였다. 갈래가 «일반 350+30i» 로 합쳐져 **다이아 650** 이다
+     (같은 650 이지만 재화가 다르다 — 유물석은 한 톨도 안 는다는 항을 같이 둔다). */
+  ok('10일차 보상 = 다이아 650 (ATTEND 데이터 그대로)', after.dia - before.dia === 650, String(after.dia - before.dia));
+  ok('10일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다)',
+    after.rel === before.rel && Math.round(after.gold - before.gold) === 0,
+    `Δrel ${after.rel - before.rel} · Δgold ${Math.round(after.gold - before.gold)}`);
   ok('S.att.n +1 · S.att.date = 오늘', after.n === before.n + 1 && after.date === after.today);
   ok('팝업이 그 자리에서 재렌더 (닫히지 않음)', after.on);
   ok('수령한 칸이 ✔ 로 바뀌고 👑 사라짐 (내일 칸은 «미래» 유지)',
