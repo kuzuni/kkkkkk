@@ -887,13 +887,32 @@ async function ampCheck(p, hosts) {
      문턱은 3.0 루마 — 18회차 이전 값이 소환 +23.5 · 재화 +18.4 였으니 한참 아래다. */
   console.log('§24 광택이 제목 글자 잉크를 깎지 않는가 (18회차 신설 — 2인 화소 일치)');
   const INK_RISE_HI = 3.0;
-  async function inkRise(p, sel, stops) {
-    const box = await p.evaluate(s => {
+  /* ⚑ 375 — **상자를 «잘리는 조상» 과 교집합** 낸다(2026-08-29).
+     `.cn-cd>.hd>i` 는 `left:-30px;right:-30px`(글리프 advance 보다 넓은 박스, A1 교훈) 이라
+     bbox 가 카드 밖으로 **좌 31px · 우 30px** 삐져나온다. 그런데 실제로 칠해지는 잉크는
+     `.hd{overflow:hidden}` 이 카드 안으로 잘라 낸 것뿐이다 — 밖의 화소는 «제목» 이 아니라
+     **페이지 바탕 레이어(`#shopw>.jzb`, 13회차 ①-0)** 이고, 그것은 설계대로 움직인다.
+     `luma<40` 마스크는 그 바탕(실측 기준 39.72)까지 «잉크» 로 세고 있었고, 3040화소 중 **1178개**가
+     그것이었다. 카드 안 화소(진짜 잉크 기준 1.27)의 상승은 **0.06** 인데 전체 평균이 5.39 로 읽힌
+     이유가 그것이다(`tools/probe375.js` §B 가 구역별로 갈라 실측 · §C 대조: 365 이전 3열 기하로
+     되돌려도 **5.80** 이라 열 수와 무관하다).
+     ⚠ 문턱(3.0)은 한 칸도 안 넓혔다 — 무르게 푸는 대신 **자가 다른 것을 재던 것**을 고쳤다(334 처방 ①).
+     자가 여전히 살아 있음은 아래 «음성항»(제목을 광택 아래 z:1 로 내리면 빨개진다)이 못박는다. */
+  async function inkRise(p, sel, stops, clipSel) {
+    const box = await p.evaluate(([s, cs]) => {
       const e = document.querySelector(s); if (!e) return null;
       const r = e.getBoundingClientRect();
-      if (r.width < 4 || r.height < 4 || r.top < 0 || r.bottom > innerHeight) return null;
-      return { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
-    }, sel);
+      let x1 = r.left, y1 = r.top, x2 = r.right, y2 = r.bottom;
+      if (cs) {
+        const c = e.closest(cs); if (!c) return null;
+        const q = c.getBoundingClientRect();
+        x1 = Math.max(x1, q.left); y1 = Math.max(y1, q.top);
+        x2 = Math.min(x2, q.right); y2 = Math.min(y2, q.bottom);
+      }
+      const w = x2 - x1, h = y2 - y1;
+      if (w < 4 || h < 4 || y1 < 0 || y2 > innerHeight) return null;
+      return { x: Math.round(x1), y: Math.round(y1), width: Math.round(w), height: Math.round(h) };
+    }, [sel, clipSel || null]);
     if (!box) return null;
     let mask = null, base = 0, peak = -1e9, peakAt = 0;
     for (const t of stops) {
@@ -919,7 +938,8 @@ async function ampCheck(p, hosts) {
   }
   {
     const SW2 = 4800, S2 = [0, 480, 960, 1440, 1920, 2400, 2880, 3360, 3840, 4320];
-    const coinInk = await inkRise(p, '#shopList .cn-cd>.hd>i', S2.map(v => v + 40));
+    const COIN_TI = '#shopList .cn-cd>.hd>i', COIN_CLIP = '.hd';
+    const coinInk = await inkRise(p, COIN_TI, S2.map(v => v + 40), COIN_CLIP);
     if (coinInk && coinInk.n) {
       console.log('   재화 카드 제목  잉크 화소 ' + coinInk.n + '개 · 한 주기 최대 상승 '
         + coinInk.rise.toFixed(2) + ' 루마 (t=' + coinInk.peakAt + 'ms)');
@@ -927,9 +947,25 @@ async function ampCheck(p, hosts) {
         + ' < ' + INK_RISE_HI + ' (18회차 이전 AM 실측 +18.4)');
     } else ok(false, '재화 카드 제목 잉크 마스크를 못 떴다' + (coinInk ? ' (화소 ' + coinInk.few + '개)' : ''));
 
+    /* ⚑ 375 음성항(재화 쪽) — 자를 좁혔으니 «좁힌 자가 여전히 결함을 잡는가» 를 여기서 못박는다.
+       18회차가 만든 음성항은 **소환 헤더에만** 있었다(재화 칸은 자가 없는 채로 초록이었다).
+       제목을 광택 «아래»(z:1)로 되돌리면 이 자가 3.0 이상으로 빨개져야 한다. */
+    await p.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v122neg24c';
+      s.textContent = '#shopList .cn-cd>.hd>i{z-index:1 !important}';
+      document.head.appendChild(s);
+    });
+    const negCoin = await inkRise(p, COIN_TI, S2.map(v => v + 40), COIN_CLIP);
+    await p.evaluate(() => { const s = document.getElementById('v122neg24c'); if (s) s.remove(); });
+    ok(!!(negCoin && negCoin.n && negCoin.rise >= INK_RISE_HI),
+      '음성항 — 재화 카드 제목을 광택 아래(z:1)로 내리면 좁힌 자가 잡는다 (상승 '
+      + (negCoin && negCoin.n ? negCoin.rise.toFixed(2) : '?') + ' >= ' + INK_RISE_HI + ')');
+    const backCoin = await inkRise(p, COIN_TI, S2.map(v => v + 40), COIN_CLIP);
+    ok(!!(backCoin && backCoin.n && backCoin.rise < INK_RISE_HI), '음성항 제거 후 원상 복귀(재화)');
+
     await p.evaluate(() => { shopCat = 'summon'; setShopCatTabs('summon'); renderShopPage(); });
     await p.waitForTimeout(200);
-    const sumInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    const sumInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40), '.chd');
     if (sumInk && sumInk.n) {
       console.log('   소환 헤더 제목  잉크 화소 ' + sumInk.n + '개 · 한 주기 최대 상승 '
         + sumInk.rise.toFixed(2) + ' 루마 (t=' + sumInk.peakAt + 'ms)');
@@ -943,12 +979,12 @@ async function ampCheck(p, hosts) {
       s.textContent = '#shopList>.shp-card>.chd>i{z-index:1 !important}';
       document.head.appendChild(s);
     });
-    const negInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    const negInk = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40), '.chd');
     await p.evaluate(() => { const s = document.getElementById('v122neg24'); if (s) s.remove(); });
     ok(!!(negInk && negInk.n && negInk.rise >= INK_RISE_HI),
       '음성항 — 제목을 광택 아래(z:1)로 되돌리면 이 자가 잡는다 (상승 '
       + (negInk && negInk.n ? negInk.rise.toFixed(2) : '?') + ' >= ' + INK_RISE_HI + ')');
-    const back = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40));
+    const back = await inkRise(p, '#shopList>.shp-card>.chd>i', [0, 320, 640, 960, 1280, 1600, 1920, 2240, 2560, 2880].map(v => v + 40), '.chd');
     ok(!!(back && back.n && back.rise < INK_RISE_HI), '음성항 제거 후 원상 복귀');
     /* ── §25 가격 버튼 [10회]·[30회] 보조 링 (19회차 신설) ────────────────
        18회차 자체 실측(§23-7)이 잡은 «죽은 버튼» 의 실체다 — 소환 카드 버튼 3개 중
