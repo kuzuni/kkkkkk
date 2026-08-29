@@ -22,7 +22,9 @@
  *       (등재문이 뿌리로 지목한 «365 의 4종 2열 재배치» 를 기각하는 항. 365 **이전 커밋**에서도
  *        같은 +1px 넘침이 재현된다 — `node tools/probe377.js <옛 사본>`)
  *   [F] 자르는 조상은 그대로다 — `.cn-cd{overflow:hidden}` 를 풀어서 «해결» 한 것이 아니다
- *   [R] 되돌림 시험 — `qx` 를 옛 1.24 로 되돌린 **사본**에서는 [A]·[B] 가 빨개진다
+ *   [R] 되돌림 시험 — **377 이 고치기 전 상태**(옛 `qx` 1.24 + 380 이전 `font-size` 39.3px)로 되돌린
+ *       **사본**에서는 [A]·[B] 가 빨개진다. ⚠ 380 이 글자를 작게 만든 뒤로는 `qx` 하나만 되돌리면
+ *       안 넘쳐서 이 항이 구조적으로 초록이 된다 — 두 축을 함께 되돌려야 «그 시절의 잉크» 가 나온다
  *       (무르게 푼 수리가 아님의 증명. 여기가 0 이면 이 게이트는 헛초록이다)
  *   [G] 콘솔 에러 0
  *
@@ -38,7 +40,15 @@ const W = 1080, H = 2280;
 /* 측정표 §5-3(ref ② 공물 «×50» 잉크 81×30) · index.html 6회차 정오(ref ① «×100» 잉크 97~98×31) */
 const REF = { '×50': 81, '×100': 97.5 };
 const TOL = 5;
-const OLD_QX = '1.24', NEW_QX = '1.08';
+/* ⚑ 380 이관(2026-08-29) — 이 게이트가 지키는 것은 «잉크가 카드 밖으로 안 나간다» 이고 그 자리는 그대로다.
+   바뀐 것은 **가로 보정값의 눈금**이다: 380 이 세로 축(`.cn-cd>.qt{font-size}`)을 39.3 → 31 로 내리면서
+   같은 ref 잉크폭을 내는 `qx` 가 1.08 → 1.33 이 됐다(값의 뜻은 그대로 «ref 잉크폭 역산»).
+   되돌림 시험도 같이 옮긴다 — 이제 «옛 qx» 하나만 되돌리면 글자가 작아진 채라 안 넘쳐서 [R] 이
+   구조적으로 초록이 된다(헛초록). **377 이 고치기 전 상태 = 옛 fs + 옛 qx** 를 통째로 되돌려야
+   그 시절의 잉크(115×37)가 재현된다. 그래서 사본은 두 값을 함께 되돌리고, 편집이 실제로 먹었는지를
+   [R-0] 이 먼저 묻는다(313·368 교훈 — «사본 편집이 안 먹은 초록» 이 가장 잘 속인다). */
+const OLD_QX = '1.24', NEW_QX = '1.33';
+const OLD_FS = 'font-size:39.3px;line-height:30px', NEW_FS = 'font-size:31px;line-height:30px';
 
 let pass = 0, fail = 0;
 const is = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : ' FAIL ') + m); };
@@ -173,7 +183,7 @@ const whiteRight = async (page) => {
   /* [R] 용 «수리 전» 사본 — 상대 경로 자산(웹폰트 126) 때문에 **반드시 같은 폴더**에 둔다.
      ⚑ 이것은 취향이 아니라 실측이다: 저장소 밖(/tmp)에 두면 GameKR 이 안 붙어 글자 폭이 통째로
      달라지고, 같은 커밋인데 넘침이 +1 → +3 으로 바뀐다(1회차에 실제로 그랬다). */
-  const revSrc = src.replace(/qx:1\.08/g, 'qx:' + OLD_QX);
+  const revSrc = src.replace(/qx:1\.33/g, 'qx:' + OLD_QX).replace(NEW_FS, OLD_FS);
   const revPath = path.join(path.dirname(SRC), '.verify377-rev.html');
   fs.writeFileSync(revPath, revSrc);
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
@@ -230,8 +240,12 @@ const whiteRight = async (page) => {
     is(/hidden/.test(ov), '  F `.cn-cd` overflow = ' + ov);
   }
 
-  console.log('\n[R] 되돌림 시험 — `qx` 를 옛 ' + OLD_QX + ' 로 되돌린 사본에서는 [A]·[B] 가 빨개진다');
+  console.log('\n[R] 되돌림 시험 — 377 이 고치기 전(옛 `qx` ' + OLD_QX + ' + 옛 `font-size` 39.3px)으로'
+    + ' 되돌린 사본에서는 [A]·[B] 가 빨개진다');
   {
+    /* [R-0] — 사본 편집이 실제로 먹었는가. 안 먹은 사본은 «현행과 같아서» [R] 이 통째로 초록이 된다 */
+    is(revSrc !== src && revSrc.includes('qx:' + OLD_QX) && revSrc.includes(OLD_FS),
+      '  R-0 사본이 두 축을 모두 되돌렸다 — `qx:' + OLD_QX + '` · `' + OLD_FS.split(';')[0] + '`');
     const rev = await open(ctx, 'file://' + revPath);
     const RM = await measure(rev.page);
     const r100 = RM.find(c => c.txt === '×100');
