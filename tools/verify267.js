@@ -119,7 +119,9 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
   };
 
   /* ── 룰렛 ─────────────────────────────────────────────────────────────── */
-  await page.evaluate(() => { S.daily.spins = ROUL_FREE; openRoulette(); });
+  /* 367 이관 — 하루 총량 상수가 `ROUL_FREE`(이제 «앞의 무료분» 3) 에서 `ROUL_TRY`(5) 로 갈렸다.
+     이 절이 보는 것은 «버튼 부품» 이므로 만석에서 시작해 무료 구간의 라벨로 왕복을 잰다(F5). */
+  await page.evaluate(() => { S.daily.spins = ROUL_TRY; openRoulette(); });
   await page.waitForTimeout(400);
   {
     const n = await page.evaluate(() => ({
@@ -139,9 +141,11 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
     await page.click('#rouBtn');
     await page.waitForTimeout(500);
     const mid = await page.evaluate(() => {
-      const b = document.getElementById('rouBtn'), lb = b.querySelector('b');
+      /* 367 이관 — 셀렉터를 `:scope>b` 로 좁혔다. 광고 구간 ▶AD 뱃지가 버튼 안에 `<b>AD</b>` 를
+         하나 더 들여오므로 `querySelector('b')` 는 «라벨» 을 가리킨다는 보장이 없다. */
+      const b = document.getElementById('rouBtn'), lb = b.querySelector(':scope>b');
       return { spin: rouSpinning, mark: !!document.querySelector('#modal.rou-spin'),
-               txt: (b.textContent || '').trim(), hasB: !!lb,
+               txt: (lb ? lb.textContent : b.textContent || '').trim(), hasB: !!lb,
                fs: lb ? parseFloat(getComputedStyle(lb).fontSize) : -1,
                pe: getComputedStyle(b).pointerEvents, dis: b.disabled };
     });
@@ -154,17 +158,24 @@ const near = (a, b, t) => Math.abs(a - b) <= (t === undefined ? 0.6 : t);
 
     await page.waitForTimeout(5200);
     const end = await page.evaluate(() => {
-      const b = document.getElementById('rouBtn'), lb = b.querySelector('b');
+      const b = document.getElementById('rouBtn'), lb = b.querySelector(':scope>b');   /* 367 이관 */
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem('idle_hunter_save_v4') || 'null'); } catch (e) {}
-      return { spin: rouSpinning, txt: (b.textContent || '').trim(),
+      return { spin: rouSpinning, txt: (lb ? lb.textContent : b.textContent || '').trim(),
+               adB: b.querySelectorAll('b').length,
                fs: lb ? parseFloat(getComputedStyle(lb).fontSize) : -1,
                pe: getComputedStyle(b).pointerEvents,
                res: (document.getElementById('rouRes') || {}).textContent || '',
                dia: S.dia, savedDia: saved ? saved.dia : null };
     });
     ok(!end.spin, 'F4 회전이 끝났다');
-    ok(/룰렛 돌리기|내일 다시/.test(end.txt), 'F5 라벨이 돌아왔다', end.txt);
+    ok(/룰렛 돌리기|광고 보고 돌리기|내일 다시/.test(end.txt), 'F5 라벨이 돌아왔다', end.txt);
+    /* 367 이관 — 뱃지가 `<b>` 를 하나 더 들여왔다. 267 의 계약(«라벨은 `<b>` 안»)이 그래도 성립하는지
+       **여기서** 묻는다: 버튼 안 `<b>` 는 2개인데 `rouBtnTx` 가 고른 것은 라벨이어야 한다.
+       이 항이 없으면 뱃지가 라벨을 가로채도 이 게이트가 초록이다(328·330 «이관» 교훈). */
+    ok(end.adB === 2 && !/AD/.test(end.txt),
+       '★ F5b 367 ▶AD 뱃지가 들어와도 `rouBtnTx` 는 라벨 `<b>` 를 고른다',
+       '버튼 안 b ' + end.adB + '개 · 라벨 «' + end.txt + '»');
     ok(near(end.fs, REF.fs, 0.1), 'F6 복귀 라벨도 46.6px 규격', 'fs=' + end.fs);
     ok(end.pe !== 'none', 'G3 회전이 끝나면 다시 눌린다', 'pointer-events=' + end.pe);
     ok(/획득/.test(end.res), 'F7 결과줄에 획득 표시', end.res.trim());

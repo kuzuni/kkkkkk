@@ -68,7 +68,8 @@ const settle = async (p) => {
   console.log('§1 보상표 — 다이아만 · 100~1000');
   const R = await p.evaluate(() => ({
     rows: ROULETTE.map(r => ({ dia: r.dia || 0, w: r.w, keys: Object.keys(r).filter(k => k !== 'ic' && k !== 't' && k !== 'w') })),
-    free: ROUL_FREE
+    free: ROUL_FREE, ad: (typeof ROUL_AD !== 'undefined' ? ROUL_AD : 0),
+    tot: (typeof ROUL_TRY !== 'undefined' ? ROUL_TRY : ROUL_FREE)
   }));
   eq('§1 칸 수', R.rows.length, 8);
   ok(R.rows.every(r => r.keys.length === 1 && r.keys[0] === 'dia'),
@@ -84,8 +85,16 @@ const settle = async (p) => {
   eq('§1 w 합(= 백분율)', wsum, 100);
   const ev = R.rows.reduce((s, r) => s + r.dia * r.w, 0) / wsum;
   ok(ev >= 100 && ev <= 1000, `§1 기대값 ${ev} 다이아/회 (100~1000 안)`);
-  eq('§1 하루 무료 횟수', R.free, 5);
-  console.log(`  · 기대값 ${ev}/회 × ${R.free}회 = ${ev * R.free} 다이아/일`);
+  /* 367 이관 — 155 가 «하루 5회» 로 쓰던 상수가 `ROUL_FREE`(이제 앞의 무료분 3) 에서
+     `ROUL_TRY`(총량 5) 로 갈렸다. 155 의 성질은 «하루 기대값» 이므로 **총량**을 봐야 하고,
+     그 총량이 367 뒤에도 5로 불변이라는 것이 이 절이 지킬 것이다. 갈린 두 항도 같이 못박는다 —
+     항을 눌러 초록으로 되돌리기만 하면 «367 이 통째로 사라져도 초록» 이 된다(328·330 교훈). */
+  eq('§1 하루 총 횟수(ROUL_TRY)', R.tot, 5);
+  eq('★ §1 367 — 그 중 무료(ROUL_FREE)', R.free, 3);
+  eq('★ §1 367 — 그 중 광고(ROUL_AD)', R.ad, 2);
+  ok(R.free + R.ad === R.tot, '§1 무료 + 광고 = 총량 (재고가 한 벌이라는 산술)',
+     R.free + ' + ' + R.ad + ' = ' + R.tot);
+  console.log(`  · 기대값 ${ev}/회 × ${R.tot}회 = ${ev * R.tot} 다이아/일 (367 이 총량을 안 바꿨으므로 불변)`);
 
   /* ── §2 죽은 코드 없음 ───────────────────────────────────────── */
   console.log('§2 골드·유물조각 전용 코드가 남지 않았다');
@@ -178,12 +187,18 @@ const settle = async (p) => {
   await settle(p);
   const end = await p.evaluate(() => ({
     spins: S.daily.spins, cnt: ($('rouCnt') || {}).textContent || '',
-    dis: $('rouBtn').disabled, txt: $('rouBtn').textContent.trim(), dia: S.dia
+    /* 367 이관 — 라벨은 `<b>` 안이다(267 규약). ▶AD 뱃지가 버튼 안에 `<b>AD</b>` 를 하나 더
+       들여왔으므로 버튼 전체 textContent 를 읽으면 «…충전됩니다AD» 가 된다. */
+    dis: $('rouBtn').disabled, txt: ($('rouBtn').querySelector(':scope>b') || $('rouBtn')).textContent.trim(),
+    adShown: (function(){ var a = $('rouBtn').querySelector(':scope>.ad');
+                          return a ? getComputedStyle(a).display !== 'none' : null; })(), dia: S.dia
   }));
   eq('§6 남은 횟수', end.spins, 0);
   eq('§6 카운터 표시', end.cnt.trim(), '0 / 5');
   ok(end.dis, '§6 버튼이 비활성');
   eq('§6 버튼 문구', end.txt, '내일 다시 충전됩니다');
+  ok(end.adShown === false, '★ §6 367 — 소진 상태에는 ▶AD 도 없다 (누를 것이 없다)',
+     'AD 표시=' + end.adShown);
   const again = await p.evaluate(() => { const d = S.dia; spinRoulette(); return S.dia - d; });
   eq('§6 소진 후 재시도 지급', again, 0);
   await p.evaluate(() => closeModal());

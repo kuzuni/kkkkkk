@@ -97,6 +97,14 @@ const BTN_DOT = '#rouBtn > s.updot';
   }));
   const sb0 = await badge(page, SIDE_BDG);
   ok(st0.spins === 1, '[1] 남은 횟수 1회 상태다 (판정 재료)', 'spins=' + st0.spins);
+  /* 367 이관 — 이 표본(남은 1회)은 367 이후 «광고 구간» 이다. 321 의 계약은 «지금 누를 수 있으면 켠다»
+     이고 광고 구간도 그 자리에서 돌아가므로 점등은 그대로 참이다. 그것을 **묻는 항**을 한 줄 넣는다:
+     안 넣으면 이 게이트는 «표본이 어느 구간인지 모르는 채» 초록이고, 367 이 통째로 사라져도 초록이다
+     (328·330 «이관» 교훈 — 누른 항을 묻는 항을 한 줄 더 넣는다). */
+  const seg = await page.evaluate(() => ({ ad: roulAdNext(), free: ROUL_FREE, tot: ROUL_TRY }));
+  ok(seg.ad === true && seg.tot === seg.free + 2,
+    '★ [1] 367 — 이 표본은 «광고 구간» 인데도 켜지는 자리다 (레드닷 = 지금 누를 수 있다)',
+    'roulAdNext=' + seg.ad + ' · 무료 ' + seg.free + ' / 총 ' + seg.tot);
   ok(st0.on === true, '[1] 사이드 «룰렛» 버튼에 `.on`');
   ok(sb0.display === 'block' && sb0.red > 100,
     '[1] 사이드 배지가 «논리 + 화소» 로 실제 보인다', 'display=' + sb0.display + ' 빨강=' + sb0.red + '화소');
