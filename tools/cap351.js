@@ -81,6 +81,33 @@ const SET3 = [
 const SET = (() => { const i = process.argv.indexOf('--set'); return i > 0 ? process.argv[i + 1] : 'r2'; })();
 const SCREENS = SET === 'r1' ? SET1 : SET === 'r3' ? SET3 : SET === 'all' ? [...SET1, ...SET2, ...SET3] : SET2;
 
+/* ⚑ 10회차(2026-08-29) — **재화 알약이 지금 화면에 없으면 «호스트» 를 먼저 연다.**
+   `cur:relic` 은 8회차의 상점 세 화면과 **같은 사고**를 내고 있었다: 유물조각 알약은 89 유물
+   페이지(`#relw`) 안 `.pcb` 에만 있어(index.html 14265 — 골드·다이아와 달리 HUD 에는 없다)
+   메인 화면에서는 상자가 0×0 이고, `force:true` 도 상자가 없으면 못 누른다. `.catch()` 가 삼켜
+   **아무 것도 안 누른 채 필드 화면이 찍혔고** 10회차 비평가 CN·CP 가 각자 «13-relic 은 두 장 다
+   필드 화면» 이라고 짚어 드러났다(화면목록 서명도 오버레이 id 가 빈칸이었다).
+   ⚠ 표(«relic → 보물상자 탭»)를 만들지 않는다(402 «표는 뒤처진다») — 탭을 하나씩 눌러 보며
+   **제품에게 묻는다**. ⚠ `probe351lib.drive()` 에 같은 처방이 따로 들어간다 — 두 자가 같은 화면을
+   봐야 «자는 초록인데 사람은 감점» 을 그 자리에서 대조할 수 있다(cap351 은 자기 drive 를 쓴다). */
+async function openCur(page, key, click, tapIn) {
+  const sel = `[data-cur="${key}"]`;
+  const drawn = () => page.evaluate((s) => {
+    const el = document.querySelector(s);
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }, sel).catch(() => false);
+  if (await drawn()) { await click(sel); return; }
+  const tabs = await page.$$eval('.tab[data-t]', (els) => els.map((e) => e.dataset.t)).catch(() => []);
+  for (const t of tabs) {
+    await click(`.tab[data-t="${t}"]`);
+    await page.waitForTimeout(320);
+    if (await drawn()) { await tapIn(sel); return; }
+  }
+  console.log(`  ⚠ cur:${key}  ${sel} 이 어느 탭에서도 안 그려진다 — 진입 실패(필드 화면이 찍힌다)`);
+}
+
 async function drive(page, how) {
   const ev = (fn, a) => page.evaluate(fn, a).catch(() => {});
   const i = how.indexOf(':');
@@ -92,7 +119,7 @@ async function drive(page, how) {
   if (kind === 'tab') await click(`.tab[data-t="${key}"]`);
   else if (kind === 'side') await click(`.side .ibtn[data-pop="${key}"]`);
   else if (kind === 'util') await click(`#botleft .ubtn[data-util="${key}"]`);
-  else if (kind === 'cur') await click(`[data-cur="${key}"]`);
+  else if (kind === 'cur') await openCur(page, key, click, tapIn);
   else if (kind === 'menu' && !key) await ev(() => document.querySelector('#menub').click());
   else if (kind === 'menu') {
     await ev(() => document.querySelector('#menub').click());

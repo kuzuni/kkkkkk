@@ -150,9 +150,17 @@
  },
  {
   "label": "cur:relic",
-  "tall": 9,
-  "short": 9,
-  "regress": []
+  "tall": 24,
+  "short": 25,
+  "regress": [
+   {
+    "kind": "D2",
+    "path": "#relw>div.rw-panel",
+    "key": "D2|#relw>div.rw-panel|ovfY",
+    "k": "ovfY",
+    "by": 60
+   }
+  ]
  },
  {
   "label": "dunsub:raid",
@@ -206,7 +214,7 @@
     "path": "#shopList>div.cn-wrap>div.cn-cd.dia>div.pn",
     "key": "D2|#shopList>div.cn-wrap>div.cn-cd.dia>div.pn|ovfX",
     "k": "ovfX",
-    "by": 4
+    "by": 3
    }
   ]
  },

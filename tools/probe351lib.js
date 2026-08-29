@@ -114,8 +114,39 @@ async function drive(page, o) {
       `키 ${Object.keys(o).filter((k) => k !== 'label').join(',') || '(없음)'}. ` +
       '갈래를 추가하지 않으면 아무 것도 안 누른 채 메인 화면을 스캔해 «결함 없음» 으로 읽힌다.');
   }
-  if (o.sel) await page.click(o.sel, { timeout: 3000, force: true }).catch(() => {});
-  else if (o.hero) {
+  if (o.sel) {
+    /* ⚑ 10회차(2026-08-29) — **누를 것이 지금 화면에 없으면 «호스트» 를 먼저 연다.**
+       `cur:relic`(`[data-cur="relic"]`)이 8회차의 상점 세 화면과 **같은 사고**를 내고 있었다:
+       유물조각 알약은 89 유물 페이지(`#relw`) 안 `.pcb` 에만 있어(index.html 14265 — 골드·다이아와
+       달리 HUD 에는 없다) 메인 화면에서는 **상자가 0×0** 이다. `force:true` 도 상자가 없으면 못 누르고
+       `.catch()` 가 삼켜 **아무 것도 안 누른 채 메인 화면을 스캔**했다 = 「결함 없음」.
+       10회차 비평가 CN·CP 가 **각자 독립으로** «13-relic 은 두 장 다 필드 화면» 이라고 짚어 드러났다.
+       ⚠ 처방은 «relic → 보물상자 탭» 표가 아니다(402 «표는 뒤처진다») — **제품에게 묻는다**:
+       탭을 하나씩 눌러 보며 대상이 실제로 그려지는 탭을 찾는다. 못 찾으면 **던진다**(8회차 OPENER_KEYS
+       와 같은 이유 — 조용한 실패가 초록으로 읽히면 안 된다). */
+    const drawn = () => page.evaluate((s) => {
+      const el = document.querySelector(s);
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    }, o.sel).catch(() => false);
+    if (await drawn()) {
+      await page.click(o.sel, { timeout: 3000, force: true }).catch(() => {});
+    } else {
+      const tabs = await page.$$eval('.tab[data-t]', (els) => els.map((e) => e.dataset.t)).catch(() => []);
+      let host = null;
+      for (const t of tabs) {
+        await page.click(`.tab[data-t="${t}"]`, { timeout: 3000, force: true }).catch(() => {});
+        await page.waitForTimeout(320);
+        if (await drawn()) { host = t; break; }
+      }
+      if (!host) {
+        throw new Error(`[351lib] 오프너 «${o.label}» 의 대상 ${o.sel} 이 어느 탭에서도 안 그려진다 — ` +
+          '눌리지 않은 채 메인 화면이 스캔되면 «결함 없음» 으로 읽힌다. 진입 경로를 확인할 것.');
+      }
+      await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.sel);
+    }
+  } else if (o.hero) {
     await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
     await page.waitForTimeout(400);
     await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.hero);
