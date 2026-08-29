@@ -148,6 +148,19 @@ def face_arc(tag, px, l, t, rows):
     return f
 
 
+
+def black_at(px, l, t, rel, n=34):
+    """검정(K) 런 — 코너에서 «등폭 링인가 평행이동 밴드인가» 를 가르는 자.
+       BC(1회차 비평가)가 이 값 하나로 ④ 를 5 로 깎았다."""
+    s = row(px, l, t + rel, n, 1)
+    i = s.find('K')
+    if i < 0:
+        return 0
+    j = i
+    while j < len(s) and s[j] == 'K':
+        j += 1
+    return j - i
+
 def main():
     all_ = '--all' in sys.argv
     ref7, cap7 = load(REF7).load(), load(CAP7).load()
@@ -207,6 +220,12 @@ def main():
     tc = face_arc('cap', cap7, cl, ct, top)
     if tr and tc:
         print('   ⇒ 위 코너    ref %.2f ↔ cap %.2f  (Δ %+.1f%%)' % (tr[2], tc[2], (tc[2] / tr[2] - 1) * 100))
+
+    print('\n ⓗ 검정 옆띠 두께 — 코너에서 등폭(ref)인가 평행이동(우리)인가')
+    rr = list(range(56, 85, 2))
+    print('   rel  %s' % ' '.join('%3d' % r for r in rr))
+    print('   ref  %s' % ' '.join('%3d' % black_at(ref7, rl, rt, r) for r in rr))
+    print('   cap  %s' % ' '.join('%3d' % black_at(cap7, cl, ct, r) for r in rr))
 
     print('\n ⓖ 요약 — 한 줄로 «얼마나 가까워졌나»')
     axw_r = sum(row(ref7, rl + 10, rt + r, 7).count('D') for r in range(60, 78))
