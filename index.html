@@ -13077,6 +13077,15 @@
   #cfw{position:absolute;inset:0;background:rgba(0,0,0,.55);display:none;z-index:41;
     align-items:center;justify-content:center;box-sizing:border-box;padding:40px 0 63px}
   #cfw.on{display:flex}
+  /* 400 — 40/63 은 «ref y − 84» 를 만족시키려고 고른 한 쌍이라 짧은 프레임에서 금지구역을 덮는다.
+     실측 1600: `.cf55` 가 **115..1462** 로 위로 `.pedge` 하변(142)을 27px · 아래로 탭바 상변(1420)을
+     42px 파고든다(`probe400` · `probe351` D7 3건). 390 이 공용 `#modal` 에서 못박은 진짜 띠
+     — **위 = `.pedge` 하변 142 · 아래 = 탭바 180** — 를 여기에도 준다. ⚠ 55 는 `#modal` 이 아니라
+     `#cfw` 라는 **자기 오버레이**라 390 의 선언을 한 번도 안 지난다(318·293 «경로가 한 칸 짧다» 계열).
+     `.shortf`(frameH < 1842) 안에서만 갈라 2280·1920 은 선언이 안 붙어 Δ0px 다(351-③).
+     ⚑ 띠 1278 < 상자 1347 이라 여백만 갈라서는 안 닫힌다 — 부족분 **69px** 은 `max-height:100%` 가
+     상자를 눌러 흡수하고, 눌린 만큼은 **옵션 리스트 한 장**이 받는다(아래 «바닥 앵커» 절). */
+  #app.shortf #cfw{padding:142px 0 180px}
   /* LESSONS 21-① · 34 부록: `#id 태그` 리셋(1-0-1)은 `.클래스 .클래스`(0-2-0)를 이긴다. */
   #cfw i,#cfw em,#cfw b,#cfw s,#cfw u{display:inline-block;font-style:normal;
     text-decoration:none;font-weight:900;transform-origin:50% 50%}
@@ -13131,7 +13140,15 @@
   .cf55-rule{left:30px;top:162px;width:699px;height:4px;background:#D5C0A5}
 
   /* ── 옵션 리스트 ref x191..889 y824..1333 (699×510) · 모서리 각(반경 0) · 교대 틴트 ── */
-  .cf55-list{left:30px;top:185px;width:699px;height:509px;display:flex;flex-direction:column}
+  /* ── 400 «바닥 앵커» ── 여기부터 아래(리스트 · 계정 패널 · 버튼 3칸 · 푸터)는 `top` 이 아니라
+     `bottom` 으로 선다. 값은 전부 **항등식 `bottom = 1228 − (top + height)`** 이다
+     (1228 = 2280 에서의 본문 패딩상자 높이 = 1347 − 테 14 − 패딩 12 − 헤더 91 − border-top 2)
+     ⇒ 2280·1920 좌표는 **Δ0px**(probe400 이 잰다). 짧은 프레임에서 상자가 눌리면
+     **`top`+`bottom` 을 둘 다 가진 리스트 한 장만** 줄어든다(LESSONS 22-④ · 54 랭킹과 같은 처방).
+     1600 검산: 본문 패딩상자 1159 − 위 185 − 아래 534 = 리스트 **440**(6행 pitch 73.3, 2280 은 84.8).
+     ⚠ 옛 `height:509px` 를 그대로 두면 «top+height+bottom 과잉 지정» 이라 bottom 이 무시돼
+     리스트가 안 줄고 푸터만 위로 올라가 겹친다 — 리스트에서 height 를 뺀 것이 이 처방의 핵심이다. */
+  .cf55-list{left:30px;top:185px;bottom:534px;width:699px;display:flex;flex-direction:column}
   .cf55-row{position:relative;flex:1 1 0;background:#D0BCA1}
   .cf55-row:nth-child(even){background:#E2CDAF}
   #cfw .cf55-row>*{position:absolute}
@@ -13183,13 +13200,13 @@
   #cfw .cf55-sw.on .cf55-kn>i{transform:scaleX(1.06)}
 
   /* ── 계정 연동 패널 ref x191..889 y1364..1561 (699×198) r45 ── */
-  .cf55-acc{left:30px;top:725px;width:699px;height:198px;border-radius:45px;background:#D0BCA1}
+  .cf55-acc{left:30px;bottom:305px;width:699px;height:198px;border-radius:45px;background:#D0BCA1}
   /* 잉크 137×39 — font 35(코어 32.6) + 편측 3 = 38.6 · 폭 scaleX .88 */
-  .cf55-acch{left:30px;top:741px;width:699px;height:46px;line-height:46px;text-align:center;
+  .cf55-acch{left:30px;bottom:441px;width:699px;height:46px;line-height:46px;text-align:center;
     font-size:35px;color:#F8F8F8;-webkit-text-stroke:6px #000;paint-order:stroke fill}
   .cf55-acch>i{transform:scaleX(.88)}
   /* 구글 카드 ref x416..663 y1454..1531 (248×78) r12 — 흰 카드 + 외곽선 없는 유일한 글자 */
-  .cf55-badge{left:255px;top:815px;width:248px;height:78px;box-sizing:border-box;border-radius:12px;
+  .cf55-badge{left:255px;bottom:335px;width:248px;height:78px;box-sizing:border-box;border-radius:12px;
     background:#FFF;white-space:nowrap}
   /* 구글 «G» 자리 — ref x435..474 y1473..1512 (39×39), 카드 기준 left/top 19.
      아트가 들어오면 이 <u> 를 이미지로 갈아끼우면 된다(아트 자리 규칙). 4색 링 + 흰 속 + 파란 가로 막대. */
@@ -13204,7 +13221,7 @@
     font-size:29px;font-weight:800;color:#1A1A1A;transform:scaleX(var(--sx,1));transform-origin:0 50%}
 
   /* ── 하단 버튼 3칸 ref y1588..1686 (217×99) · x201/432/662 (pitch 231) ── */
-  .cf55-btn{top:949px;width:218px;height:99px;box-sizing:border-box;border:6px solid #000;
+  .cf55-btn{bottom:180px;width:218px;height:99px;box-sizing:border-box;border:6px solid #000;
     border-radius:41px;text-align:center;cursor:pointer;
     background:linear-gradient(#F5EE45 0 2.5%,#F6AF09 2.5% 82.7%,#FFEA38 82.7% 92%,#DA7B0D 92% 100%)}
   /* 청록만 «윗 30% 가 한 단계 밝은» 2단이다(금색은 균일) — ref 단면 x300 대조 */
@@ -13216,19 +13233,19 @@
     -webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
   .cf55-btn.b1>i{top:25px;font-size:23px}
   /* ── 푸터 ── */
-  .cf55-del{left:0;right:0;top:1082px;height:36px;line-height:36px;text-align:center;cursor:pointer}
+  .cf55-del{left:0;right:0;bottom:110px;height:36px;line-height:36px;text-align:center;cursor:pointer}
   /* ⚠ `text-decoration:underline` 은 `-webkit-text-stroke` + `paint-order` 와 같이 쓰면 캡처에 안 찍힌다
      (비평 A 가 «밑줄 없음» 으로 잡았다). ref 는 y1750..1751 · x496..585 의 2×90 실선이라 요소로 깐다. */
   .cf55-del>i{font-size:23px;color:#F8F8F8;
     -webkit-text-stroke:5px #000;paint-order:stroke fill;transform:scaleX(var(--sx,1))}
-  .cf55-dl{left:335px;top:1109px;width:90px;height:2px;background:#F4F4F4;
+  .cf55-dl{left:335px;bottom:117px;width:90px;height:2px;background:#F4F4F4;
     box-shadow:0 0 0 1.5px #000;cursor:pointer}
-  .cf55-n1{left:30px;top:1134px;width:699px;height:32px;line-height:32px}
+  .cf55-n1{left:30px;bottom:62px;width:699px;height:32px;line-height:32px}
   .cf55-n1>i{font-size:24px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
   #cfw .cf55-n1>i.r{position:relative;right:6px}
   .cf55-n1>i.r{float:right}
-  .cf55-n2{left:0;right:0;top:1185px;height:32px;line-height:32px;text-align:center}
+  .cf55-n2{left:0;right:0;bottom:11px;height:32px;line-height:32px;text-align:center}
   .cf55-n2>i{font-size:23px;color:#F8F8F8;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:scaleX(var(--sx,1))}
   /* ================= 54 랭킹 페이지 (#rkw) — 측정표 docs/measure/54-랭킹팝업.md =================
