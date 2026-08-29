@@ -130,16 +130,31 @@ const seedPets = p => p.evaluate(() => {
   eq('장착 슬롯 칸 수', s2.length, 3);
   eq('이모지로 남은 슬롯', s2.filter(c => !c.canvas).length, 0);
   eq('슬롯 sp 순서', s2.map(c => c.sp).join(','), seeded.map(s => s.sp).join(','));
+  /* 411 이관 — 슬롯 칸 크기는 이제 손으로 적힌 69x59 가 아니라 «그림 자리»(`SLOT_ART`) 에서
+     역산된다. 174 가 지키려던 뜻(«칸 박스가 아니라 이모지와 **같은 잉크 상자**»)은 그대로이고
+     기준만 옮겼다 — 옛 상수를 그냥 새 상수로 갈아 끼우면 «선언이 사라져도 초록» 이 되므로
+     **제품의 선언을 읽어 와서** 그것과 맞는지를 묻는다(329 교훈). */
+  const A411 = await p.evaluate(() => ({ h: SLOT_ART.h, w: SLOT_ART.w,
+                                         cw: PET_TH.slot.w, ch: PET_TH.slot.h }));
+  eq('411 그림 자리에서 역산된 슬롯 캔버스', `${A411.cw}x${A411.ch}`,
+     `${A411.w + 6}x${A411.h + 6}`);
   s2.forEach(c => {
-    eq(`슬롯 ${c.sp}: 캔버스 크기`, `${c.cw}x${c.ch}`, '69x59');
-    eq(`슬롯 ${c.sp}: 칸 박스`, `${c.hostW}x${c.hostH}`, '115x70');
+    eq(`슬롯 ${c.sp}: 캔버스 크기`, `${c.cw}x${c.ch}`, `${A411.cw}x${A411.ch}`);
+    eq(`슬롯 ${c.sp}: 칸 박스`, `${c.hostW}x${c.hostH}`, '115x91');
     ok(!!c.ink && c.ink.px > 200, `슬롯 ${c.sp}: 잉크 픽셀 ${c.ink ? c.ink.px : 0}개 (>200)`);
     ok(Math.abs(c.dx) <= 1 && Math.abs(c.dy) <= 1,
        `슬롯 ${c.sp}: 캔버스가 칸 정중앙 (Δ${c.dx},${c.dy})`);
-    /* 이모지 잉크 박스 63x53 을 그대로 물려받는다 — «최대변» 이 아니라 **박스 자체**를 본다
-       (1회차가 최대변만 보고 정사각으로 잡아 세로가 18% 커졌다). */
-    if (c.ink) ok(c.ink.w <= 64 && c.ink.h <= 54 && Math.max(c.ink.w, c.ink.h) >= 45,
-      `슬롯 ${c.sp}: 잉크 ${c.ink.w}x${c.ink.h} 가 이모지 박스 63x53 안 (최대변 ≥45)`);
+    /* 411 — 눈금은 **세로 잉크 높이**다. 종횡이 상자보다 넓은 그림(dragon 1.469)만 폭 상한에
+       걸려 낮아지고, 그 경우에는 «폭이 상한에 닿았는가» 로 대신 확인한다(356: 등방이라
+       늘려 채우지 않는다). 둘 다 «상자 안» 이라는 상한도 같이 건다. */
+    if (c.ink) {
+      const capped = c.ink.w >= A411.w - 2;
+      ok(capped ? Math.abs(c.ink.w - A411.w) <= 2 : Math.abs(c.ink.h - A411.h) <= 3,
+        `슬롯 ${c.sp}: 잉크 ${c.ink.w}x${c.ink.h} 가 그림 자리 ${A411.w}x${A411.h} 를 `
+        + (capped ? '폭으로' : '높이로') + ' 채운다');
+      ok(c.ink.w <= A411.w + 2 && c.ink.h <= A411.h + 2,
+        `슬롯 ${c.sp}: 잉크가 그림 자리를 안 넘는다`);
+    }
   });
 
   /* ── §3 카드 격자 ── */
