@@ -8491,8 +8491,12 @@
     border:5px solid #000;border-radius:35px;background:#D37C13;
     box-shadow:inset 0 0 0 7px #FCC132}
   /* 아트 자리 — 레퍼런스 보석 잉크 92×95. 이미지로 교체할 때 이 bbox 를 그대로 쓴다 */
+  /* 356 7회차 — `scaleX(.87)` 은 «자연 잉크 98 을 ref 폭 92 로 누르는» 한 축짜리 보정이었다.
+     주인 지시(«원본 비율») 대로 등방 contain 으로 간다: 자연 98×98 · s = min(92/98, 95/98) = .93878
+     ⇒ 잉크 92×92(ref 92×95 — 높이 3px 은 아트 종횡이 만드는 잔차라 CSS 로 못 닫는다).
+     중심 되돌림 d 는 (0, −0.21) 로 측정 분해능 아래라 안 적는다(`cal356r7`). */
   .ci-ic>i{position:absolute;left:0;right:0;top:1px;height:150px;line-height:150px;
-    text-align:center;font-size:96px;transform:scaleX(.87)}
+    text-align:center;font-size:96px;transform:scale(.93878)}
   /* «보유: n» 코어 y1080..1112(중심 1096) → body 중심 215. 전체가 라임 한 덩어리다 */
   .ci-have{left:0;right:0;top:188px;height:50px;line-height:50px;text-align:center;left:-1.5px;
     font-size:38px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;
@@ -9505,7 +9509,13 @@
        font-size 105 → 165 로 높이를 맞추고(잉크 151 = ref 와 Δ0), 폭은 scaleX .845 → .829 (155 → 152),
        가로 중심은 이모지 어드밴스가 우측으로 치우쳐 있어 text-indent −14px 로 되돌린다(551 → 539.5),
        세로는 line-height 245 → 205 로 18px 올린다(1658 → 1640). */
-    font-size:165px;transform:scale(.829,.893);text-indent:-14px;
+    /* 356 7회차 — `scale(.829,.893)` 은 두 축을 **따로** 눌러 ⚔️ 를 종횡 0.928 로 찌그러뜨리고 있었다
+       (남은 자리 6개 중 두 축이 다 실린 유일한 자리다). 등방 contain 으로 간다:
+       자연 잉크 186×186 · s = min(152/186, 151/186) = .81183 ⇒ 151×151(ref 152×151, 폭 −1px).
+       ⚠ 세로 배율이 .893 → .81183 으로 바뀌면 **잉크 중심이 1.63px 위로 딸려 올라간다**
+       (`line-height 205` > `height 164` 라 잉크 중심이 상자 중심 O 보다 14px 아래다).
+       16·22회차가 ref 에 맞춰 둔 중심을 지키려고 되돌림 이동을 같이 적는다 — 중심 Δ0. */
+    font-size:165px;transform:translate(0,1.63px) scale(.81183);text-indent:-14px;
     border:0;background:none;border-radius:0;padding:0;max-height:none;flex:none}
   /* 16회차(inkcmp23 동일기준 실측): 초록 «+값» 잉크가 ref 126x37 인데 우리는 140x38 —
      **높이는 맞고 폭만 +11%** 다(X P4 는 높이로 읽었다). 세로 중심도 ref 1752 / 우리 1747.5 (−4.5).
@@ -9560,7 +9570,10 @@
      이모지 잉크비는 w/fs 1.00 · h/fs 1.12 이라 fs49 로 높이를 맞추고 폭만 scaleX 로 넓힌다. */
   /* 18회차(α P2 · W·Z 도 코인을 지적): ref 코인 잉크 53w x 55h (w/h 0.96) 인데 우리는 57x53 (1.08) 로
      **종횡비가 뒤집혀** 있었다. 높이를 폰트로 올리고(49 → 50.9) 폭은 scaleX 로 되돌린다(1.08 → .968). */
-  .tr-card>.cb>s{font-size:50.9px;line-height:74px;-webkit-text-stroke:0;transform:scaleX(.968)}
+  /* 356 7회차 — 18회차의 «폭만 scaleX 로 되돌린다» 가 바로 주인 지시가 금지한 손잡이다.
+     등방 contain: 자연 55×55 · s = min(53/55, 55/55) = .96364 ⇒ 53×53(ref 53×55, 높이 −2px).
+     중심 되돌림 d = (−0.01, −0.09) 로 분해능 아래라 안 적는다(`cal356r7`). */
+  .tr-card>.cb>s{font-size:50.9px;line-height:74px;-webkit-text-stroke:0;transform:scale(.96364)}
   /* 19회차(Z · δ P4·P5 — 둘 다 «+9~12% 크고 위로 떠 있다»): ref 글자심 h33~34 · 코인 중심과 Δ−1 인데
      우리는 h37 · Δ−4 였다. 글리프 28 → 24.5 (font 52.5 → 46), 그리고 2px 내린다(top −3 → −1). */
   .tr-card>.cb>i{position:relative;top:-1px;font-size:46px;line-height:62px;color:#F9EB6E;
@@ -10341,6 +10354,13 @@
     box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer;
     box-shadow:inset 7px 0 0 var(--hl),inset -7px 0 0 var(--hl)}
   :is(#bSk,#bPet,#bCos) .sk-btn>i{display:inline-block;transform:scaleX(.866)}
+  /* 356 7회차 — 이 `scaleX(.866)` 은 **라벨 글자**의 잉크 폭 보정이라 지시 대상이 아니다
+     («라벨의 scaleX 는 제외»). 그런데 50 코스튬의 [강화] 라벨만 화폐 아이콘을 품고 있어
+     (`curIc('stone',30)` — 28889행) 그 img 가 .866 을 같이 뒤집어쓴다.
+     라벨을 못 건드리는 자리의 답은 **아이콘만 역보정**이다(3회차 `.cn-cd>.bt.buy>.pr>.cic` 선례) —
+     .866 × 1.15473 = 1.00000 으로 누적이 원본 비율로 돌아온다.
+     ⚠ transform 은 레이아웃을 안 건드리므로 라벨 글자 자리·버튼 상자는 Δ0px 다. */
+  :is(#bSk,#bPet,#bCos) .sk-btn>i>.cic{transform:scaleX(1.15473)}
   .sk-b1{left:240px;color:#fff;--hl:#ADFF86;
     background:linear-gradient(180deg,#ADFF86 0 9px,#78F34B 11px,#76D924 101px,
       #ABFF85 103px 109px,#3EBC2A 109px)}

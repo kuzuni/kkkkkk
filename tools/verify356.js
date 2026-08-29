@@ -84,9 +84,30 @@ const SCOPE = [
   { k: 'div#blsC_hp>div.b>s.tm.alert>b.ck', why: '34 축복 카드2 ⏱ 시계 (같은 규칙 `.bls-c .tm>b.ck`)' },
   { k: 'div#blsC_rate>div.b>s.tm.alert>b.ck', why: '34 축복 카드3 ⏱ 시계 (같은 규칙)' },
   { k: 'div#blsBonus>s.ic', why: '34 보너스 바 💰 (그룹 scale(.706,.748) — 형제 .ch 와 한 그림)' },
+  /* ── 7회차 — **남은 전부**(23 훈련 3 · 33 재화 정보 2 · 50 코스튬 1). 이 회차로 REMAIN 이 0 이 된다.
+     ⚠ 키에 **상태 클래스를 넣지 않는다** — 스캐너 경로는 `div.tr-card.no` · `div.sk-btn.sk-b2.no`
+     처럼 그때그때의 상태를 달고 나오므로, 세이브가 달라 `.ok` 가 되면 «노드 0개» 로 헛초록이 아니라
+     **빨강**이 된다(그건 옳지만 이 자리의 물음이 아니다). 상태가 안 끼는 조각으로 문다. */
+  { k: '>span.ci', why: '23 훈련 카드 아트 ⚔️ (수리 전 scale(.829,.893) — 남은 6자리 중 두 축이 다 실린 유일한 자리)' },
+  { k: 'span.cb>s', why: '23 훈련 카드 비용 코인 (scaleX .968 — wrap + img 2노드)' },
+  { k: 'i#ciIcon', why: '33 재화 정보 팝업 아이콘 (scaleX .87 — 골드·다이아·유물조각 3화면에서 같은 자리)' },
+  /* ⚠ 여기만 **역보정**이다 — 호스트 `<i class="ol3">` 는 «강화 [아이콘] 30» 이라 글자를 품은
+     **라벨**이고, 라벨의 scaleX 는 지시 대상이 아니다(3회차 `u.pr` 선례). 손잡이를 뗄 수 없으므로
+     아이콘 쪽에 `scaleX(1.15473)` 을 걸어 누적을 1.0 으로 되돌렸다. 그래서 이 키가 보는 노드의
+     **자기** 배율은 1.15473 로 비등방이고, 스캐너가 세는 것은 «누적» 이라 초록이다. */
+  { k: 'i.ol3>img.cic', why: '50 코스튬 [강화] 라벨 안 단련석 아이콘 (라벨 scaleX .866 을 뒤집어쓰던 자리 — 역보정)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
-const REMAIN = 6;    /* 6회차 실측(셀렉터 기준) — 5회차 14 → **6**. 노드 수로는 20 → **12**.
+const REMAIN = 0;    /* ⚑ 7회차(2026-08-29, sess-1005-3302 워커 D) — **0**. 노드 수로도 16 → **0**.
+                        닫은 것은 남은 전부다: 23 훈련 3자리(⚔️ · 코인 wrap+img) · 33 재화 정보 2자리
+                        (`#ciIcon` wrap+img — 3화면에서 잡히므로 6노드) · 50 코스튬 1자리(2노드).
+                        ⚠ **0 은 «다 봤다» 가 아니라 «지금 SCREENS 42화면 안에서 0» 이다.** 397 이
+                        못박은 대로 REMAIN 은 표본이 고정일 때만 뜻이 있다 — SCREENS 에 줄을 더하면
+                        늘 수 있고, 그때는 [C] 가 아니라 이 값을 다시 재서 적어라.
+                        ⚠ 0 이 된 뒤로 [B] 는 «새 비균등 아이콘이 하나라도 생기면 빨강» 인 자다.
+
+                        ── 아래는 6회차까지의 이력(값의 출처를 지우지 않는다) ──
+                        6회차 실측(셀렉터 기준) — 5회차 14 → **6**. 노드 수로는 20 → **12**.
                         닫은 것은 34 축복 한 화면(8자리 / 8노드)이다.
                         ⚠ 5회차에 이 값은 **두 번 움직였다**: 먼저 스캐너의 «23 훈련» 즉사를 고치자
                         그 화면이 처음 스캔에 들어와 44 → **47** 로 «늘었고»(고친 것이 아니라 처음 본 것이다.
@@ -526,6 +547,105 @@ async function sweep(browser, inject) {
     if (hit.length >= 4) ok(`[R6] 36 출석 패스 — 옛 값을 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
     else bad(`[R6] 36 출석 패스 — 심어도 ${hit.length}건뿐(≥4 이어야 한다): 이 자리는 감시 밖이다`);
     await ctx.close();
+  }
+
+  /* [S2] 7회차 배율 고정 — [S] 와 같은 이유다. [A] 는 «sx=sy» 만 보므로 `transform:none` 도 초록이고,
+     그러면 «아이콘이 ref 상자에 담기는가» 라는 질문이 아무 자에게도 안 남는다(328~330 계열).
+     ⇒ contain 으로 역산한 네 수를 여기에 못박는다. 값을 바꾸려면 `node tools/cal356r7.js` 로 다시 역산할 것.
+     ⚠ 네 번째(`.sk-btn>i>.cic`)만 **일부러 비등방**이다 — 라벨의 scaleX(.866) 을 되돌리는 역보정이라
+     이 노드의 «자기» 배율은 1.15473/1 이고 **누적**이 1.0 이다. 그래서 기대를 sx·sy 로 나눠 적는다. */
+  console.log('[S2] 7회차 배율 고정 — contain 역산값(과 역보정 상수)이 제품에 그대로 있는가');
+  {
+    const WANT = [
+      { q: '#trCards .tr-card:first-child > .ci',      sx: 0.81183, sy: 0.81183, open: ['.tab[data-t="grow"]'],
+        why: '23 훈련 ⚔️ — 자연 186×186 · ref 152×151 ⇒ min = .81183' },
+      { q: '#trCards .tr-card:first-child > .cb > s',  sx: 0.96364, sy: 0.96364, open: ['.tab[data-t="grow"]'],
+        why: '23 훈련 코인 — 자연 55×55 · ref 53×55 ⇒ min = .96364' },
+      { q: '#ciIcon',                                   sx: 0.93878, sy: 0.93878, open: ['[data-cur="dia"]'],
+        why: '33 재화 정보 — 자연 98×98 · ref 92×95 ⇒ min = .93878' },
+      { q: '#bCos .sk-btn.sk-b2 > i > .cic',            sx: 1.15473, sy: 1,       open: ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]'],
+        why: '50 코스튬 역보정 — .866 × 1.15473 = 1.00000' },
+    ];
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    for (const w of WANT) {
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(800);
+      for (const q of w.open) {
+        await page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); }, q);
+        await page.waitForTimeout(550);
+      }
+      const g = await page.evaluate((q) => {
+        const e = document.querySelector(q);
+        if (!e) return null;
+        const m = /matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/.exec(getComputedStyle(e).transform);
+        return m ? [+m[1], +m[4]] : 'none';
+      }, w.q);
+      if (g === null) bad(`[S2] ${w.q} — 노드가 없다(선택자가 죽었거나 화면에 못 갔다)`);
+      else if (g === 'none') bad(`[S2] ${w.q} — transform 이 통째로 없다: contain 배율이 사라졌다 (${w.why})`);
+      else if (Math.abs(g[0] - w.sx) > 0.004 || Math.abs(g[1] - w.sy) > 0.004)
+        bad(`[S2] ${w.q} — 배율 ${g[0]}/${g[1]}, 기대 ${w.sx}/${w.sy} (${w.why})`);
+      else ok(`[S2] ${w.q} — ${w.sx}/${w.sy} 고정`);
+      await page.close();
+    }
+    await ctx.close();
+  }
+
+  /* [R7] 되돌림 시험(7회차 스코프) — 세 화면 전부 탭·팝업 뒤라 [R]~[R6] 어느 자에도 안 걸린다.
+     세 자리의 «옛 값이 어디에 살았는가» 가 서로 달라서 갈래를 셋으로 나눈다(356-⑥):
+       ⓐ 23 훈련 — 규칙 자체의 비균등 `scale(.829,.893)` · `scaleX(.968)`
+       ⓑ 33 재화 정보 — 규칙 자체의 `scaleX(.87)`
+       ⓒ 50 코스튬 — **역보정을 떼는 것**이 되돌림이다(라벨의 .866 이 그대로 아이콘에 내려온다).
+          ⚠ ⓒ 를 «옛 값 주입» 으로 적으면 안 된다 — 옛 상태는 «아무 규칙도 없는» 상태다.
+     ⚠ 음성항(주입 «전» 0건)과 진입 확인을 셋 다 세운다 — [R4]·[R5]·[R6] 과 같은 이유. */
+  console.log('[R7] 되돌림 시험(7회차 스코프) — 23 훈련 · 33 재화 정보 · 50 코스튬');
+  {
+    const CASES = [
+      { lab: '23 훈련', open: ['.tab[data-t="grow"]'], re: /tr-card/, want: 3,
+        seen: () => document.querySelectorAll('#trCards .tr-card').length,
+        seenName: '.tr-card', min: 1,
+        css: '.tr-card>.ci{transform:scale(.829,.893) !important}'
+           + '.tr-card>.cb>s{transform:scaleX(.968) !important}' },
+      { lab: '33 재화 정보', open: ['[data-cur="dia"]'], re: /ciIcon/, want: 2,
+        seen: () => document.querySelectorAll('#ciw #ciIcon>img.cic').length,
+        seenName: '#ciIcon>img.cic', min: 1,
+        css: '.ci-ic>i{transform:scaleX(.87) !important}' },
+      { lab: '50 코스튬', open: ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]'], re: /i\.ol3>img\.cic/, want: 1,
+        seen: () => document.querySelectorAll('#bCos .sk-btn>i>.cic').length,
+        seenName: '#bCos .sk-btn>i>.cic', min: 1,
+        css: ':is(#bSk,#bPet,#bCos) .sk-btn>i>.cic{transform:none !important}' },
+    ];
+    for (const c of CASES) {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(800);
+      for (const q of c.open) {
+        await page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); }, q);
+        await page.waitForTimeout(550);
+      }
+      /* 진입 확인 — 조용히 실패한 클릭은 «다른 화면» 을 재고 0건으로 초록을 준다(LESSONS 356-⑬) */
+      const n = await page.evaluate(c.seen);
+      if (n < c.min) { bad(`[R7] ${c.lab} — 진입 실패: ${c.seenName} 가 ${n}개다`); await ctx.close(); continue; }
+      ok(`[R7] ${c.lab} — ${c.seenName} ${n}개 진입 확인 (헛초록 방지)`);
+
+      const pre = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (pre.length) bad(`[R7] ${c.lab} — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+      else ok(`[R7] ${c.lab} — 주입 전 0건 (음성항)`);
+
+      await page.evaluate((css) => {
+        const st = document.createElement('style');
+        st.textContent = css;
+        document.head.appendChild(st);
+      }, c.css);
+      await page.waitForTimeout(250);
+      const hit = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (hit.length >= c.want) ok(`[R7] ${c.lab} — 되돌리면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+      else bad(`[R7] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
+      await ctx.close();
+    }
   }
 
   /* [C] 397 — SCREENS 자체의 «무음 실패» 감시.
