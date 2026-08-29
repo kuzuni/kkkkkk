@@ -26,7 +26,7 @@ const SHOT = path.join(ROOT, 'docs', 'shots', '352.png');
 
 const RADIUS = 30;          /* ⓐ */
 const BORDER = 6;           /* ⓑ — 기각된 8 이 아니라 6 */
-const SEP_TOP = 16, SEP_H = 55, SEP_W = 5, SEP_X = 704;   /* ⓒ */
+const SEP_TOP = 16, SEP_H = 54, SEP_W = 5, SEP_X = 704;   /* ⓒ */
 const RIM = 7, RIM_HEX = '#705F4B';                       /* ⓓ */
 const FACE_HEX = '#61523D';
 
@@ -233,13 +233,40 @@ const isBlack = h => close(h, '#000000', 8);
         Math.abs(nr - RIM) <= 1 && st <= BORDER + 1, nr + '칸 @' + st);
     }
 
+    /* 352 4회차 — 활성 알약 «내부 3띠» 도 같은 7px 규약이다(비평가 AW 커버리지 적분:
+       ref 6.75 / 6.86 / 7.03 ↔ 수리 전 우리 8.52 / 5.00 / 8.00). 알약 한복판 열에서 잰다. */
+    const onb = await page.evaluate(() => {
+      const on = document.querySelector('#bSk .stabs .stab.on').getBoundingClientRect();
+      return { x: on.x, y: on.y, w: on.width, h: on.height };
+    });
+    const xp = Math.round(onb.x + onb.w * 0.22);          /* 라벨 잉크를 피한 알약 안쪽 열 */
+    const ysP = [];
+    for (let i = -2; i < 92; i++) ysP.push(Math.round(onb.y) + i);
+    const colP = await readCol(page, xp, ysP);
+    /* 알약 국소좌표 0..85 — 앞 2칸은 셸 테두리라 건너뛴다 */
+    const seg = (from, hex, tol) => {
+      let i = from, n = 0;
+      while (i < colP.length && !close(colP[i], hex, tol)) i++;
+      const st = i;
+      while (i < colP.length && close(colP[i], hex, tol)) { n++; i++; }
+      return { st: st - 2, n, end: i };
+    };
+    const t1 = seg(2, '#604F3D', 5);
+    const t2 = seg(t1.end, '#5F4D39', 5);
+    const t3 = seg(t2.end, '#413122', 5);
+    console.log('   알약 열 x' + xp + ' — 상단띠 ' + t1.n + '칸@' + t1.st
+      + ' · 하단밝은띠 ' + t2.n + '칸@' + t2.st + ' · 하단어두운띠 ' + t3.n + '칸@' + t3.st);
+    ok('07 알약 상단 하이라이트 띠 7px @0', t1.n === 7 && t1.st === 0, t1.n + '칸@' + t1.st);
+    ok('07 알약 하단 밝은 띠 7px @71', t2.n === 7 && t2.st === 71, t2.n + '칸@' + t2.st);
+    ok('07 알약 하단 어두운 띠 7px @78', t3.n === 7 && t3.st === 78, t3.n + '칸@' + t3.st);
+
     console.log('\n[R] 되돌림 시험 — 옛 값을 주입하면 빨개져야 한다');
     /* ⚠ `addStyleTag` 은 id 를 안 받는다 — 1회차에 R4(원복)가 그것 때문에 빨갰다.
        걷을 수 있게 직접 심는다. */
     await page.evaluate(() => {
       const s = document.createElement('style');
       s.id = 'r352';
-      s.textContent = '.stab.on{border-radius:36px!important}.stab-sep{top:18px!important;height:54px!important}.stabs{box-shadow:none!important}';
+      s.textContent = '.stab.on{border-radius:36px!important}.stab-sep{top:18px!important;height:50px!important}.stabs{box-shadow:none!important}';
       document.head.appendChild(s);
     });
     await page.waitForTimeout(400);

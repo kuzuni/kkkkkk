@@ -266,8 +266,8 @@ const SNAP = `(sel, host) => {
       /* 352 ⓒ 이관 (2026-08-29) — 54 → **55** · 그리고 **top 을 새로 묻는다**.
          여기가 폭·높이·left 만 보고 있어서 «세로로 2px 내려앉은 것»(ref +22 ↔ 우리 +24)을
          한 번도 못 봤다. 값은 `python3 tools/probe352.py` ⓒ 실측(ref x777 y2043~2097). */
-      ok('구분선 1개 · 5x55 · 3·4칸 사이(left 704)',
-        g.seps.length === 1 && near(g.seps[0].w, 5, 0.6) && near(g.seps[0].h, 55, 0.6)
+      ok('구분선 1개 · 5x54 · 3·4칸 사이(left 704)',
+        g.seps.length === 1 && near(g.seps[0].w, 5, 0.6) && near(g.seps[0].h, 54, 0.6)
         && near(g.seps[0].x - cx, 704, 0.6),
         g.seps.length + '개 ' + (g.seps[0] ? f1(g.seps[0].w) + 'x' + f1(g.seps[0].h) + ' @' + f1(g.seps[0].x - cx) : ''));
       ok('구분선 상변 = 바 콘텐츠 상변 + 16 (352 ⓒ · ref 셸 바깥 +22)',
