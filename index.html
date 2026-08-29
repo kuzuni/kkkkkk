@@ -12035,7 +12035,9 @@
        (폭이 s 를 정하므로) **중심이 6px 어긋난다**. `cal356r6` 이 잴 동안만 `overflow:visible` 로 연다.
      요소별로는 `translate(Tx + s·L − L, Ty + s·T₀ − T₀) scale(s)` 로 나눠 준다(아래 두 줄).
      ⚑ **중심은 ref 와 Δ0 으로 박힌다** — 역산이 중심을 식의 미지수로 놓았기 때문이다(상수 0개).
-     ⚑ 남는 것은 아트 몫: 우리 조합(이모지 💰 + CSS 셰브론)이 1.181:1 인데 ref 아트는 0.983:1 이라
+     ⚑ 남는 것은 아트 몫: 우리 조합(`img.cic` 64×64 + CSS 셰브론 `.ch`)이 1.181:1 인데 ref 아트는 0.983:1 이라
+       (⚠ 윗 주석들이 이 자리를 «이모지» 라고 부르는 것은 **옛말**이다 — 지금은 `img.cic` 를 감싼 wrap 이고
+        `object-fit:contain` + 정사각 상자라 이미지 자체가 눌리는 자리는 없다. 6회차 비평가 BA 관측)
        등방으로는 높이가 −6.3% 남는다(109.6 ↔ ref 117) — 아트가 오면 이 변환을 지우고 이미지 bbox 를 115×117 로 잡는다. */
   .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px;
     transform-origin:0 0;transform:translate(60.50px,17.21px) scale(.6765)}
