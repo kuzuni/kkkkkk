@@ -130,6 +130,27 @@ async function shot(browser, h, opener, revert) {
     }
     const bd = document.querySelector('.ml69 .mbody');
     const tabs = document.getElementById('tabbar');
+    /* 오버레이의 «지금 실제로 그려지는» 세로 범위 — 자손 union 에 클리핑을 접어 넣는다. */
+    function ink(hostSel) {
+      const host = document.querySelector(hostSel); if (!host) return null;
+      let y1 = Infinity, y2 = -Infinity;
+      host.querySelectorAll('*').forEach((n) => {
+        const cs = getComputedStyle(n);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return;
+        const r = n.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return;
+        let a = r.top, b = r.bottom;
+        for (let p = n.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+          const pcs = getComputedStyle(p);
+          if (pcs.overflowY === 'visible') continue;
+          const pr = p.getBoundingClientRect();
+          a = Math.max(a, pr.top); b = Math.min(b, pr.bottom);
+        }
+        if (b - a < 2) return;
+        y1 = Math.min(y1, a); y2 = Math.max(y2, b);
+      });
+      return isFinite(y1) ? { top: Math.round(y1 - A.top), bot: Math.round(y2 - A.top) } : null;
+    }
     return {
       frameH: Math.round(A.height),
       shortf: app.classList.contains('shortf'),
@@ -140,8 +161,14 @@ async function shot(browser, h, opener, revert) {
       panel: box('#panel'), sheetOn: !!document.querySelector('#bSk.on'),
       mbox: box('#modal.ml69 .mbox'), mailX: box('#mailX'),
       /* §8(390) — 공용 모달 «띠». `.pedge` 하변(위)·탭바 상변(아래)이 금지구역이고,
-         상자가 그 사이에 **정확히** 서는지를 본다. `qbody` 는 반대급부(본문을 눌러 자르는 것). */
+         그 사이에 **정확히** 서는지를 본다. `qbody` 는 반대급부(본문을 눌러 자르는 것).
+         ⚠ 재는 것은 상자가 아니라 **잉크**다 — `.ml69` 의 ✕(57px) · 21 도감의 리본(10px)과
+         깃발 서브탭(149px)이 상자 **밖으로** 나온다. 상자만 보면 «띠 안» 이라고 초록을 주면서
+         그 부품이 탭바 밑에 묻히는 것을 못 본다(1회차에 실제로 그랬다 — LESSONS 390-②).
+         ⚠ 클리핑은 접는다(LESSONS 351-⑧) — 도감 목록은 그릇 밖으로 3601px 뻗지만 안 그려진다. */
       qbox: box('#modal.on .mbox'), cl: box('#collw.on .cl'),
+      qink: ink('#modal.on'), clink: ink('#collw.on'),
+      collTabs: box('#collTabs'), clRib: box('#collw.on .cl-rib'),
       qbody: (() => { const b = document.querySelector('#modal.on .mbody');
         return b ? { over: b.scrollHeight - b.clientHeight } : null; })(),
       clBody: (() => { const b = document.querySelector('#collw.on .cl-body');
@@ -397,31 +424,38 @@ async function shot(browser, h, opener, revert) {
     eq('[8-c] 2280 21 도감 상자 상변(불변)', c19.cl.top, 273, 1);
     eq('[8-d] 2280 21 도감 상자 하변(불변)', c19.cl.bot, 1816, 1);
     /* ⚠ 기준선을 못 찾으면 «침범 없음» 이 아니라 **판정 불가**다(LESSONS 351-④ — 「A > null」 은 true). */
+    /* ⚠ 재는 것은 **잉크**다(상자가 아니다) — 상자 밖으로 나온 부품이 실재한다.
+       ⚠ 기준선·잉크를 못 찾으면 «침범 없음» 이 아니라 **판정 불가**다(LESSONS 351-④ — 「A > null」 은 true). */
     const band = (tag, d, b) => {
-      if (!b || typeof d.tabsTop !== 'number' || !d.pedge) { no(tag, '상자·기준선을 못 찾았다 — 판정 불가'); return; }
+      if (!b || typeof d.tabsTop !== 'number' || !d.pedge) { no(tag, '잉크·기준선을 못 찾았다 — 판정 불가'); return; }
       (b.top >= d.pedge.bot && b.bot <= d.tabsTop)
-        ? ok(tag, `${b.top}..${b.bot} ⊂ 띠 ${d.pedge.bot}..${d.tabsTop}`)
-        : no(tag, `${b.top}..${b.bot} ⊄ 띠 ${d.pedge.bot}..${d.tabsTop}`);
+        ? ok(tag, `잉크 ${b.top}..${b.bot} ⊂ 띠 ${d.pedge.bot}..${d.tabsTop}`)
+        : no(tag, `잉크 ${b.top}..${b.bot} ⊄ 띠 ${d.pedge.bot}..${d.tabsTop}`);
     };
-    band('[8-e] 1600 22 퀘스트 상자가 띠 안', q13, q13.qbox);
-    band('[8-f] 1600 21 도감 상자가 띠 안', c13, c13.cl);
+    band('[8-e] 1600 22 퀘스트 잉크가 띠 안', q13, q13.qink);
+    band('[8-f] 1600 21 도감 잉크(리본~깃발탭)가 띠 안', c13, c13.clink);
     /* 음성항 — 상한에 **안 걸린** 작은 상자도 띠 안이어야 한다(가운데 정렬이 띠를 따라 움직인다).
        이게 없으면 §8 은 «큰 상자만 보는» 게이트가 된다. */
-    band('[8-g] 1600 작은 다이얼로그(popup)도 띠 안', n13, n13.qbox);
-    /* ⓒ 반대급부 ①  — 띠를 **다 쓴다**. 322 보다 크게 비우면 상자가 그만큼 눌린다. */
+    band('[8-g] 1600 작은 다이얼로그(popup)도 띠 안', n13, n13.qink);
+    /* ⓒ 반대급부 ① — 띠를 **다 쓴다**. 더 비우면 상자가 그만큼 눌린다.
+       공용 `#modal` 은 상자가 곧 잉크라 142+180 = **322**.
+       21 도감은 위아래 오버행(리본 10 · 깃발탭 149)까지 비워야 하므로 194+287 = **481**. */
     eq('[8-h] 1600 22 퀘스트 상자 높이 = 프레임 − 322', q13.qbox.h, 1600 - 322, 1);
-    eq('[8-i] 1600 21 도감 상자 높이 = 프레임 − 322', c13.cl.h, 1600 - 322, 1);
+    eq('[8-i] 1600 21 도감 상자 높이 = 프레임 − 481', c13.cl.h, 1600 - 481, 1);
     /* ⓒ 반대급부 ② — 상자를 눌러 본문을 자르지 않는다. */
     (q13.qbody && q13.qbody.over <= 1)
       ? ok('[8-j] 1600 22 퀘스트 본문이 안 잘린다', `넘침 ${q13.qbody.over}px`)
       : no('[8-j] 1600 22 퀘스트 본문이 안 잘린다', `넘침 ${q13.qbody ? q13.qbody.over : '?'}px`);
-    /* ⓒ 반대급부 ③ — 21 도감은 아래를 **줄이는 것이 회수**다. `.cl-body` 는 `top:111 · bottom:3` 로
-       `.cl` 의 **패딩 상자**에 매달리므로 테두리(위 8 + 아래 5)를 먼저 뺀다:
-       1278 − 13 − 114 = **1151**(수리 전 1156 − 13 − 114 = 1029 ⇒ **+122px**).
-       ⚠ 상자 높이(1278)로 바로 빼면 1164 가 나와 이 항이 «영원히 빨간 게이트» 가 된다 — 첫 판이 그랬다. */
-    (c13.clBody && c13.clBody.h >= 1151)
-      ? ok('[8-k] 1600 21 도감 목록 그릇이 띠를 다 받는다', `${c13.clBody.h}px ≥ 1151 (수리 전 1029)`)
-      : no('[8-k] 1600 21 도감 목록 그릇이 띠를 다 받는다', `${c13.clBody ? c13.clBody.h : '?'}px`);
+    /* ⓒ 반대급부 ③ — 21 도감의 **두 오버행을 각각** 못박는다. 하나만 물으면 나머지가 조용히
+       금지구역으로 넘어간다(1회차에 깃발탭이 그렇게 1419..1569 로 탭바 밑에 묻혔다). */
+    (c13.clRib && c13.clRib.top === c13.pedge.bot)
+      ? ok('[8-k] 1600 21 도감 리본 상변이 HUD 잉크 끝에 정확히 선다', `${c13.clRib.top} = ${c13.pedge.bot}`)
+      : no('[8-k] 1600 21 도감 리본 상변이 HUD 잉크 끝에 정확히 선다', `${c13.clRib ? c13.clRib.top : '?'} vs ${c13.pedge.bot}`);
+    (c13.collTabs && c13.collTabs.bot === c13.tabsTop)
+      ? ok('[8-l] 1600 21 도감 깃발 서브탭 하변이 탭바 상변에 정확히 선다', `${c13.collTabs.bot} = ${c13.tabsTop}`)
+      : no('[8-l] 1600 21 도감 깃발 서브탭 하변이 탭바 상변에 정확히 선다', `${c13.collTabs ? c13.collTabs.bot : '?'} vs ${c13.tabsTop}`);
+    /* 2280 대조 — 깃발탭은 9:19 에서 탭바보다 한참 위다(여기가 움직이면 규칙이 샌 것이다). */
+    eq('[8-m] 2280 21 도감 깃발 서브탭 하변(불변)', c19.collTabs.bot, 1965, 1);
 
     /* ---------------- §R 되돌림 시험 ---------------- */
     console.log('[§R] 처방을 뺀 사본에서 같은 항이 빨개지는가');
@@ -475,9 +509,14 @@ async function shot(browser, h, opener, revert) {
       : no('[R-j] 되돌리면 1600 22 퀘스트 상자가 HUD·탭바를 둘 다 문다',
         `${rq13.qbox.top}..${rq13.qbox.bot} vs 띠 ${rq13.pedge.bot}..${rq13.tabsTop}`);
     const rk13 = await shot(br, 1600, 'coll', true);
-    (rk13.cl.top < rk13.pedge.bot)
-      ? ok('[R-k] 되돌리면 1600 21 도감 상자가 HUD 를 문다', `상변 ${rk13.cl.top} < ${rk13.pedge.bot} (침범 ${rk13.pedge.bot - rk13.cl.top}px)`)
-      : no('[R-k] 되돌리면 1600 21 도감 상자가 HUD 를 문다', `상변 ${rk13.cl.top} · 잉크 끝 ${rk13.pedge.bot}`);
+    /* ⚠ **두 오버행을 각각** 되돌림으로 잡는다 — 리본(위)과 깃발탭(아래)은 서로 다른 값이 만든다.
+       한 항만 두면 «둘 중 하나만 되돌려도 조용한 게이트» 가 된다(369 [R] 선례). */
+    (rk13.clRib.top < rk13.pedge.bot)
+      ? ok('[R-k] 되돌리면 1600 21 도감 리본이 HUD 를 문다', `리본 상변 ${rk13.clRib.top} < ${rk13.pedge.bot} (침범 ${rk13.pedge.bot - rk13.clRib.top}px)`)
+      : no('[R-k] 되돌리면 1600 21 도감 리본이 HUD 를 문다', `리본 상변 ${rk13.clRib.top} · 잉크 끝 ${rk13.pedge.bot}`);
+    (rk13.collTabs.bot > rk13.tabsTop)
+      ? ok('[R-m] 되돌리면 1600 21 도감 깃발 서브탭이 탭바를 문다', `깃발탭 하변 ${rk13.collTabs.bot} > 탭바 ${rk13.tabsTop} (침범 ${rk13.collTabs.bot - rk13.tabsTop}px)`)
+      : no('[R-m] 되돌리면 1600 21 도감 깃발 서브탭이 탭바를 문다', `깃발탭 하변 ${rk13.collTabs.bot} · 탭바 ${rk13.tabsTop}`);
     /* 되돌린 사본에서도 2280 은 같아야 한다 = 처방이 9:19 를 안 건드렸다는 세 번째 증거 */
     const rq19 = await shot(br, 2280, 'quest', true);
     eq('[R-l] 되돌려도 2280 22 퀘스트 상자 상변은 같다(9:19 무관)', rq19.qbox.top, 380, 1);
