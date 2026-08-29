@@ -13671,8 +13671,16 @@
     text-align:right;font-size:32px;letter-spacing:var(--rvls,0px);white-space:nowrap;
     transform:scaleX(var(--rvsx,1.086));transform-origin:right center}
 
-  /* F 해제 안내 — 잉크 312×43 @ y2040(하단 여백 198), #888888. 하단 기준 배치(LESSONS 30-⑤) */
-  #svw .sv-hint{position:absolute;left:0;right:0;bottom:var(--hnb,195px);height:52px;line-height:52px;
+  /* F 해제 안내 — 잉크 312×43 @ y2040(하단 여백 198), #888888. 하단 기준 배치(LESSONS 30-⑤)
+     ⚠ **하단 앵커와 상단 앵커가 짧은 프레임에서 충돌한다(351 6회차).** 이 줄만 bottom 기준이고
+       통계 패널 `.sv-p` 는 `top:1129 + height:350` = 하변 **1479** 로 상단 기준이라, 프레임이
+       1756px 아래로 내려가는 순간부터 안내문이 패널 **안으로 빨려 들어간다** — 1600 에서는
+       상변 1353 으로 3행 알약(1366..1430)과 포개져 «획득한 골드» 와 «밀어서 잠금 해제» 가
+       **양쪽 다 못 읽는다**(비평가 BY·BZ·CA 3인 독립 일치 · `probe351c` E3 겹침 **77%**).
+       ⇒ 패널 하변 + 여백 30 아래로 내려오지 못하게 **클램프 한 겹**만 씌운다. 195 는 그대로다 —
+       1756 이상에서는 `min()` 이 언제나 195 를 고르므로 9:19 기준 배치는 **Δ0px**(교차점에서도
+       연속: 1756 에서 두 항이 정확히 195 로 같다). 1479 + 52(높이) + 30(여백) = **1561**. */
+  #svw .sv-hint{position:absolute;left:0;right:0;bottom:min(var(--hnb,195px), calc(100% - 1561px));height:52px;line-height:52px;
     text-align:center;font-size:46px;color:#888;letter-spacing:var(--hnls,0px);white-space:nowrap;
     transform:translateX(var(--hnx,1.5px)) scaleX(var(--hnsx,.919))}
 

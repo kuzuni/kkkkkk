@@ -39,6 +39,7 @@ const REVERT = `
   #panel{max-height:calc(100% - 284px) !important}
   #app.shortf #modal.ml69{padding:126px 91px !important}
   #app.shortf #modal.ml69 .mbox{max-height:min(1303px,calc(100% - 120px)) !important}
+  #svw .sv-hint{bottom:var(--hnb,195px) !important}
 `;
 
 async function shot(browser, h, opener, revert) {
@@ -59,6 +60,9 @@ async function shot(browser, h, opener, revert) {
     await page.evaluate(() => document.querySelector('#menub').click()).catch(() => {});
     await page.waitForTimeout(340);
     await page.evaluate(() => { const e = document.querySelector('#mnw [data-mn="mail"]'); if (e) e.click(); }).catch(() => {});
+  } else if (opener === 'saver') {
+    /* 56 절전은 오프너가 함수 하나다(다른 후보와 같이 열면 `#app.sv` 가 서로를 지운다 — smoke 472 주석). */
+    await page.evaluate(() => { if (typeof openSaver === 'function') openSaver(); }).catch(() => {});
   }
   await page.waitForTimeout(700);
   await page.waitForFunction(() => {
@@ -113,6 +117,8 @@ async function shot(browser, h, opener, revert) {
       tabsTop: tabs ? Math.round(tabs.getBoundingClientRect().top - A.top) : null,
       pcp, hit, pcpCoveredByEq: !!inEq,
       pedge, deepHit, deepInSheet,
+      /* 56 절전 — 하단 앵커(안내문) ↔ 상단 앵커(통계 패널) 충돌을 재는 세 상자 */
+      svP: box('#svw .sv-p'), svHint: box('#svw .sv-hint'), svR3: box('#svw .sv-r:nth-of-type(3)'),
     };
   });
   await ctx.close();
@@ -210,6 +216,41 @@ async function shot(browser, h, opener, revert) {
                : ok('[3-a] 1920 .shortf 없음');
     eq('[3-b] 1920 ✕ 가 흐름 그대로(스트립 하변 +21)', b16.blsX.top - b16.promo.bot, 21);
 
+    /* ---------------- §6 56 절전 (6회차 신설) ----------------
+       왜 이 절이 생겼나: 6회차 비평가 BY·BZ·CA 3인이 **각자 독립으로** «밀어서 잠금 해제» 가
+       통계 패널 안으로 빨려 들어가 «획득한 골드» 와 서로 못 읽게 된다고 적었고, 새 자
+       `probe351c` 의 E3(잉크 충돌)가 **겹침 77%** 로 같은 자리를 짚었다 — 눈과 자가 다른
+       경로로 같은 답을 냈다(LESSONS 351-⑨). 뿌리는 **앵커가 둘**이라는 것이다:
+       `.sv-hint` 만 bottom 기준(LESSONS 30-⑤)이고 `.sv-p` 는 top 기준이라, 프레임이 짧아지면
+       둘이 마주 보고 다가온다. 처방은 클램프 한 겹이고, 이 절이 그것을 지킨다. */
+    console.log('[§6] 56 절전 — 하단 앵커 안내문이 상단 앵커 패널을 침범하지 않는가');
+    const v19 = await shot(br, 2280, 'saver', false);
+    const v13 = await shot(br, 1600, 'saver', false);
+    /* [6-a] 9:19 는 Δ0 — 레퍼런스가 정한 하단 여백 195 를 처방이 한 픽셀도 안 건드렸다는 증거 */
+    eq('[6-a] 2280 안내문 하단 여백 195', v19.frameH - v19.svHint.bot, 195);
+    eq('[6-b] 2280 안내문 상변 2033', v19.svHint.top, 2033);
+    /* [6-c] 패널은 두 해상도가 같은 자리다(상단 앵커) — 이 항이 빨개지면 아래 판정의 전제가 깨진 것 */
+    (v19.svP.top === v13.svP.top && v19.svP.bot === v13.svP.bot)
+      ? ok('[전제 6-c] 통계 패널은 두 해상도가 같은 자리', `${v13.svP.top}..${v13.svP.bot}`)
+      : no('[전제 6-c] 통계 패널은 두 해상도가 같은 자리', `2280 ${v19.svP.top}..${v19.svP.bot} ↔ 1600 ${v13.svP.top}..${v13.svP.bot}`);
+    /* [6-d] 본체 — 1600 에서 안내문이 패널 하변 아래에 있다 */
+    (v13.svHint.top >= v13.svP.bot)
+      ? ok('[6-d] 1600 안내문이 패널 아래', `안내 ${v13.svHint.top} ≥ 패널 하변 ${v13.svP.bot} (여백 ${v13.svHint.top - v13.svP.bot}px)`)
+      : no('[6-d] 1600 안내문이 패널 아래', `안내 ${v13.svHint.top} < 패널 하변 ${v13.svP.bot} (침범 ${v13.svP.bot - v13.svHint.top}px)`);
+    /* [6-e] 3행 알약과 세로로 안 겹친다 — 비평가 3인이 실제로 «못 읽는다» 고 적은 그 자리 */
+    (v13.svHint.top >= v13.svR3.bot)
+      ? ok('[6-e] 1600 안내문 ↔ 3행 알약 겹침 0', `안내 ${v13.svHint.top} ≥ 3행 하변 ${v13.svR3.bot}`)
+      : no('[6-e] 1600 안내문 ↔ 3행 알약 겹침 0', `겹침 ${v13.svR3.bot - v13.svHint.top}px`);
+    /* [6-f] 그러면서 프레임 밖으로도 안 나간다(클램프가 반대쪽으로 넘치면 안 된다) */
+    (v13.svHint.bot <= v13.frameH)
+      ? ok('[6-f] 1600 안내문이 프레임 안', `하변 ${v13.svHint.bot} ≤ ${v13.frameH} (여백 ${v13.frameH - v13.svHint.bot}px)`)
+      : no('[6-f] 1600 안내문이 프레임 안', `하변 ${v13.svHint.bot} > ${v13.frameH}`);
+    /* [6-g] 교차점 1756 에서 두 항이 정확히 만난다 = 클램프가 «끊기지» 않는다.
+       이 항이 없으면 «어딘가에서 툭 튀는» 처방과 구별이 안 된다. */
+    const v17 = await shot(br, 1756, 'saver', false);
+    eq('[6-g] 교차 프레임 1756 에서 하단 여백이 여전히 195', v17.frameH - v17.svHint.bot, 195);
+    eq('[6-h] 교차 프레임 1756 에서 패널↔안내 여백 30', v17.svHint.top - v17.svP.bot, 30);
+
     /* ---------------- §R 되돌림 시험 ---------------- */
     console.log('[§R] 처방을 뺀 사본에서 같은 항이 빨개지는가');
     const r13 = await shot(br, 1600, 'bless', true);
@@ -232,6 +273,14 @@ async function shot(browser, h, opener, revert) {
     const rm19 = await shot(br, 2280, 'mail', true);
     eq('[R-f] 되돌려도 2280 우편 ✕ 는 같다(9:19 무관)', rm19.mailX.top, 1734, 1);
     /* 되돌린 사본에서도 2280 은 같아야 한다 = 처방이 9:19 를 안 건드렸다는 두 번째 증거 */
+    /* 6회차 신설 — 클램프를 걷어낸 사본에서 §6 이 실제로 빨개지는가.
+       [R-g] 가 없으면 [6-d][6-e] 는 «이미 참인 것을 굳힌 게이트» 일 수 있다(338 교훈). */
+    const rs56 = await shot(br, 1600, 'saver', true);
+    (rs56.svHint.top < rs56.svP.bot && rs56.svHint.top < rs56.svR3.bot)
+      ? ok('[R-g] 되돌리면 1600 안내문이 패널·3행 알약 안으로', `안내 ${rs56.svHint.top} < 패널 하변 ${rs56.svP.bot} · 3행 하변 ${rs56.svR3.bot}`)
+      : no('[R-g] 되돌리면 1600 안내문이 패널·3행 알약 안으로', `안내 ${rs56.svHint.top} · 패널 ${rs56.svP.bot} · 3행 ${rs56.svR3.bot}`);
+    const rs56t = await shot(br, 2280, 'saver', true);
+    eq('[R-h] 되돌려도 2280 안내문은 같다(9:19 무관)', rs56t.frameH - rs56t.svHint.bot, 195);
     const r19 = await shot(br, 2280, 'bless', true);
     eq('[R-c] 되돌려도 2280 ✕ 상변은 같다(9:19 무관)', r19.blsX.top, 1793);
   } finally { await br.close(); }
