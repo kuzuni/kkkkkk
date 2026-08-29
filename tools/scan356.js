@@ -31,37 +31,58 @@ const TOL = Number(process.env.SCAN356_TOL || 0.02);   /* |sx/sy − 1| 허용�
 /* ---------- 화면 목록 ----------
    smoke.js 오프너 목록과 같은 자리를 돈다. 단계는 «셀렉터를 페이지 안에서 찾아 누른다» 로 통일 —
    재렌더가 잦은 화면에서 resolve↔click 사이에 노드가 detach 되는 함정을 피한다(LESSONS 50-①). */
+/* ⚑ 397 — 이 목록의 «무음 실패» 가 356 의 스코프 구멍이었다(2026-08-29).
+   단계는 `querySelector(q); if (el) el.click()` 이라 **셀렉터가 안 맞으면 예외 없이 조용히 넘어간다.**
+   그래서 «화면 이름은 있는데 한 번도 그 화면에 간 적이 없는» 줄이 넷 있었고
+   (`[data-eqtab="eq"]`·`[data-eqtab="mate"]`·`#relTabs [data-reltab="rel"]`·`[data-opencoll]`
+   — 넷 다 DOM 에 없는 이름이다), 그 줄들은 직전 화면을 두 번 센 것이었다.
+   ⇒ `tools/probe397.js` 가 단계마다 resolved/moved 를 찍어 이것을 감시한다.
+   **이 목록에 줄을 더할 때는 반드시 probe397 을 돌려 resolved=true 를 확인할 것.**
+   그리고 «탭·서브탭을 갈아타야만 붙는 CSS»(`#psw.att …` 처럼)는 그 탭에 실제로 가야 보인다 —
+   397 의 눌린 젬이 그 자리였다. */
 const SCREENS = [
   ['02 메인', []],
   ['A1 탭바 열림', ['.tab[data-t="hero"]']],
-  ['06 장비', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="eq"]']],
+  ['06 장비', ['.tab[data-t="hero"]', '#eqTabs .stab-c1']],
   ['07 스킬', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="sk"]']],
   ['50 코스튬', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]']],
-  ['26 동료', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="mate"]']],
+  ['26 펫', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="pet"]']],
   ['23 훈련', ['.tab[data-t="grow"]']],
   ['23 룬', ['.tab[data-t="grow"]', '#trSubs [data-trsub="rune"]']],
+  ['23 단련', ['.tab[data-t="grow"]', '#trSubs [data-trsub="temper"]']],
   ['03 던전', ['.tab[data-t="adv"]']],
   ['03 레이드', ['.tab[data-t="adv"]', '#dunSub [data-dsub="raid"]']],
-  ['08 보물상자', ['.tab[data-t="box"]']],
-  ['89 유물', ['.tab[data-t="box"]', '#relTabs [data-reltab="rel"]']],
-  ['21 도감', ['.tab[data-t="box"]', '[data-opencoll]']],
+  ['03 탑', ['.tab[data-t="adv"]', '#dunSub [data-dsub="tower"]']],
+  ['89 유물', ['.tab[data-t="box"]']],
   ['10 상점', ['.tab[data-t="shop"]']],
   ['13 재화 탭', ['.tab[data-t="shop"]', '#shopCats .shp-ct[data-cat="coin"]']],
+  ['124 이용권 탭', ['.tab[data-t="shop"]', '#shopCats .shp-ct[data-cat="pass"]']],
   ['52 메뉴', ['#menub']],
   ['53 우편', ['#menub', '#mnw [data-mn="mail"]']],
   ['54 랭킹', ['#menub', '#mnw [data-mn="rank"]']],
   ['55 설정', ['#menub', '#mnw [data-mn="conf"]']],
   ['56 가방', ['#menub', '#mnw [data-mn="bag"]']],
-  ['35 패스', ['#menub', '#psGo']],
+  ['35 패스(스테이지)', ['#menub', '#psGo']],
+  /* ⚑ 397 — `#psw.att …` 규칙은 이 탭에서만 붙는다. 여기가 스캔 밖이라 눌린 젬이 살아남았다. */
+  ['36 출석 패스', ['#menub', '#psGo', '#psBar [data-ptab="att"]']],
+  ['35 패스(보물상자)', ['#menub', '#psGo', '#psBar [data-ptab="box"]']],
+  ['35 패스(시련의탑)', ['#menub', '#psGo', '#psBar [data-ptab="tower"]']],
   ['70 출석', ['.side .ibtn[data-pop="attend"]']],
   ['29 룰렛', ['.side .ibtn[data-pop="roul"]']],
   ['22 퀘스트', ['.side .ibtn[data-pop="quest"]']],
   ['승급전', ['.side .ibtn[data-pop="promo"]']],
-  ['도감 사이드', ['.side .ibtn[data-pop="coll"]']],
+  ['21 도감(스킬)', ['.side .ibtn[data-pop="coll"]']],
+  ['21 도감(무기)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="weapon"]']],
+  ['21 도감(방패)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="shield"]']],
+  ['21 도감(목걸이)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="amulet"]']],
+  ['21 도감(펫)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="pet"]']],
+  ['21 도감(유물)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="relic"]']],
   ['34 축복', ['.side .ibtn[data-pop="bless"]']],
   ['19 프로필', ['#profBtn']],
   ['20 스펙', ['#profBtn', '.pf-tgl>.lb']],
-  ['33 재화 정보', ['[data-cur="gold"]']],
+  ['33 재화 정보(골드)', ['[data-cur="gold"]']],
+  ['33 재화 정보(다이아)', ['[data-cur="dia"]']],
+  ['33 재화 정보(유물조각)', ['[data-cur="relic"]']],
   ['103 채팅', ['#botleft .ubtn[data-util="chat"]']],
 ];
 

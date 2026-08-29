@@ -43,7 +43,11 @@ const SCOPE = [
   /* ⚠ 스캐너 경로는 id 를 만나면 거기서 멈춘다 — `.ps-bar` 가 아니라 **`#psBar`** 로 잡아야 한다
      (`.ps-bar` 로 뒀더니 «노드 0개» 로 빨개졌다 = 헛초록 방지 항이 제 일을 했다) */
   { k: '#psBar', why: '35 패스 하단 탭 아이콘 4칸 (.87~1.6)' },
-  { k: '.ps-bx', why: '35 패스 칸 자물쇠 (1.10·1.21)' },
+  /* ⚑ 397(2026-08-29) — 이 키는 2회차부터 있었는데도 **36 출석 패스의 보상 젬**(scaleX .76)이
+     살아남았다. 스코프가 아니라 `scan356.js` 의 SCREENS 가 출석 탭을 안 열어서다
+     (`#psw.att …` 는 그 탭에서만 붙는다) = «스코프 키는 있는데 그 화면을 본 적이 없는» 헛초록.
+     되돌림은 [R6], SCREENS 자체의 무음 실패 감시는 [C]. */
+  { k: '.ps-bx', why: '35 패스 칸 자물쇠 (1.10·1.21) + 36 출석 패스 보상 젬 (397 — .76)' },
   { k: '.at-cr', why: '70 출석 👑 (1.4)' },
   { k: 'i.cdic', why: '21 도감 칸 아이콘 (1.15 — `.pt` 는 이미 transform:none 이었다)' },
   /* ── 3회차 — 상점 팝업 두 탭(10 소환 · 13 재화). 남은 자리 중 비율이 가장 컸다(1.631·1.433·1.234) ── */
@@ -89,7 +93,15 @@ const REMAIN = 6;    /* 6회차 실측(셀렉터 기준) — 5회차 14 → **6*
                         SVG 노드의 className 은 SVGAnimatedString 이라 `.slice` 가 없었다 — 그 화면은
                         내내 래칫의 감시 밖 = 헛초록), 그 뒤 03 세 자리를 닫아 47 → 14.
                         ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44·14·6 과 직접 비교 불가.
-                        남은 6자리: 23 훈련 3 · 33 재화 정보 2 · 50 코스튬 1 (docs/review/356 §13 표). */
+                        남은 6자리: 23 훈련 3 · 33 재화 정보 2 · 50 코스튬 1 (docs/review/356 §13 표).
+
+                        ⚑ 397(2026-08-29) — **표본이 넓어졌는데 값은 6 그대로다. 우연이 아니라 계산이다.**
+                        SCREENS 를 31 → **42화면**(무음 실패 4줄 교정 + 탭·서브탭 11줄 신설)으로 채우자
+                        스캔 노드가 1886 → **3318** 로 늘고 자리가 6 → **10** 이 됐는데, 늘어난 4자리가
+                        전부 36 출석 패스의 보상 젬(`.ps-bx`)이라 **[B] 가 아니라 [A] 가 잡는 자리**였다
+                        (`.ps-bx` 는 스코프 안이다). 397 이 그 자리를 닫아 다시 6 이 된 것이다.
+                        ⚠ **노드 수는 12 → 16 으로 늘었다** — 자리가 는 게 아니라 «33 재화 정보» 2자리가
+                        골드·다이아·유물조각 3화면에서 각각 잡히기 때문이다(같은 자리 × 3). */
 
 const fails = [];
 const oks = [];
@@ -461,6 +473,85 @@ async function sweep(browser, inject) {
       .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
     if (hit.length >= 7) ok(`[R5] 34 축복 — 옛 값을 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
     else bad(`[R5] 34 축복 — 심어도 ${hit.length}건뿐(≥7 이어야 한다): 이 자리는 감시 밖이다`);
+    await ctx.close();
+  }
+
+  /* [R6] 397(2026-08-29) — 36 출석 패스 보상 젬.
+     ⚑ 이 자리가 남아 있던 이유는 스코프에 없어서가 아니다 — `.ps-bx` 는 **2회차부터 SCOPE 에
+     있었다.** `scan356.js` 의 SCREENS 가 «35 패스» 를 `['#menub','#psGo']` 까지만 열어
+     **출석 탭으로 갈아타는 단계가 없었고**, `#psw.att …` 규칙은 그 탭에서만 붙으므로
+     스캐너가 이 노드를 한 번도 «본 적이» 없었다. 즉 결손은 스코프가 아니라 **화면 목록**이었다.
+     (그래서 397 은 SCREENS 를 먼저 채우고 전수 재스캔했다 — 자리 6 → 10 으로 «늘었다».)
+     ⇒ 이 자는 그 함정을 그대로 재연한다: **탭까지 갈아탄 뒤** 옛 `scaleX(.76)` 을 심는다.
+     ⚠ 진입 확인을 반드시 세운다 — `#psw.att` 가 안 붙은 채로 재면 0건 = 헛초록이고,
+     그것이 397 이 살아남은 경로 자체다(LESSONS 356-⑬ · 397). */
+  console.log('[R6] 되돌림 시험(397) — 36 출석 패스 보상 젬에 옛 scaleX(.76) 을 도로 심으면 빨개지는가');
+  {
+    const RE = /ps-bx/;
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const q of ['#menub', '#psGo', '#psBar [data-ptab="att"]']) {
+      await page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); }, q);
+      await page.waitForTimeout(450);
+    }
+    await page.waitForTimeout(250);
+
+    /* 진입 확인 — «출석 탭이 실제로 켜졌는가» 를 클래스로 묻는다. 이 항이 없으면
+       스테이지 탭을 재고 초록을 주는 것이 정확히 397 의 구멍이다. */
+    const att = await page.evaluate(() => {
+      const w = document.querySelector('#psw');
+      return { on: !!(w && w.classList.contains('att')), bx: document.querySelectorAll('#psw.att .ps-bx').length };
+    });
+    if (!att.on) bad('[R6] 36 출석 패스 — 진입 실패: #psw 에 .att 가 안 붙었다 (스테이지 탭을 재고 있다)');
+    else ok('[R6] 36 출석 패스 — #psw.att 진입 확인 (헛초록 방지)');
+    if (!att.bx) bad('[R6] 36 출석 패스 — `.ps-bx` 칸이 0개다 (보상 칸이 안 그려졌다)');
+    else ok(`[R6] 36 출석 패스 — 보상 칸 ${att.bx}개 확인`);
+
+    /* 음성항 — 수리 후에는 이 자리가 깨끗해야 한다 */
+    const pre = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
+    if (pre.length) bad(`[R6] 36 출석 패스 — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+    else ok('[R6] 36 출석 패스 — 주입 전 0건 (음성항)');
+
+    await page.evaluate(() => {
+      const st = document.createElement('style');
+      st.textContent = '#psw.att .ps-bx>i{font-size:96px !important;transform:scaleX(.76) !important}';
+      document.head.appendChild(st);
+    });
+    await page.waitForTimeout(250);
+    const hit = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
+    if (hit.length >= 4) ok(`[R6] 36 출석 패스 — 옛 값을 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+    else bad(`[R6] 36 출석 패스 — 심어도 ${hit.length}건뿐(≥4 이어야 한다): 이 자리는 감시 밖이다`);
+    await ctx.close();
+  }
+
+  /* [C] 397 — SCREENS 자체의 «무음 실패» 감시.
+     scan356 의 단계는 `querySelector(q); if (el) el.click()` 이라 셀렉터가 안 맞아도
+     예외가 안 난다 = 화면 이름만 있고 한 번도 못 간 줄이 조용히 생긴다(397 이 그 사고다).
+     ⇒ 모든 단계 셀렉터가 실제로 resolve 되는지 여기서 못박는다. 상세 재현은 tools/probe397.js. */
+  console.log('[C] SCREENS 무음 실패 — 모든 단계 셀렉터가 DOM 에 실재하는가');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    let dead = 0;
+    for (const [label, steps] of SCREENS) {
+      if (!steps.length) continue;
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(700);
+      for (const s of steps) {
+        const found = await page.evaluate((q) => {
+          const el = document.querySelector(q);
+          if (el) el.click();
+          return !!el;
+        }, s);
+        if (!found) { bad(`[C] «${label}» 단계가 무음 실패: '${s}' 가 DOM 에 없다`); dead++; }
+        await page.waitForTimeout(420);
+      }
+    }
+    if (!dead) ok(`[C] SCREENS ${SCREENS.length}화면의 모든 단계 셀렉터가 resolve 된다`);
     await ctx.close();
   }
 
