@@ -63,12 +63,25 @@ const SP3_CSS   = at('SP3_CSS',   /^\s*\.stabs\.sp3\s*>\s*\.stab\s*\{/,         
 /* 03 던전에 «넷» 칸을 하나 더 — 칸 수만 늘린다(키는 아무 데도 안 걸리는 새 값) */
 const DUN_4TH = cat(DUN_TOWER, '\n', DUN_TOWER && ind(DUN_TOWER),
   '<div class="stab dns-t off" data-dsub="x4"><i class="ol3">넷</i></div>');
-/* `.sp4` 규칙 — 96 부품의 `.sp2`/`.sp3` 과 같은 꼴(들여쓰기는 제품 줄에서 물려받는다) */
+/* `.sp4` 규칙 — 96 부품의 `.sp2`/`.sp3` 과 같은 꼴(들여쓰기는 제품 줄에서 물려받는다).
+   ⚑ 379 이관 (2026-08-29) — **그 «같은 꼴» 이 바뀌었다.** 칸은 패딩박스가 아니라 **바 바깥 상자**를
+   나누고(칸폭 = (100%+12)/4 = `25% + 3px` · 칸 k 왼끝 = `k×칸폭 − 6`), 활성 알약은 자유로운 면마다
+   **11.75** 를 더 먹으며 셸 안쪽 변에 닿는 면은 패딩 변에 붙는다(378 이 그 면의 검정을 셸에 넘겼다).
+   N9 는 «게이트가 새 칸 수를 따라오는가» 를 묻는 **양성 대조**라 여기 규칙이 379 규약을 따라야
+   초록이 된다 — 옛 `width:25%` 를 그대로 두면 N9 는 «279 가 깨졌다» 가 아니라
+   «379 를 안 지킨 CSS» 를 잡아 **헷갈리는 빨강**이 된다. */
 const SP4_CSS = SP3_CSS == null ? null : (() => {
   const p = '\n' + ind(SP3_CSS);
-  return SP3_CSS + p + '.stabs.sp4>.stab{width:25%}'
-    + p + '.stabs.sp4>.stab:nth-of-type(1){left:0}'  + p + '.stabs.sp4>.stab:nth-of-type(2){left:25%}'
-    + p + '.stabs.sp4>.stab:nth-of-type(3){left:50%}' + p + '.stabs.sp4>.stab:nth-of-type(4){left:75%}';
+  return SP3_CSS
+    + p + '.stabs.sp4>.stab{width:calc(25% + 3px)}'
+    + p + '.stabs.sp4>.stab:nth-of-type(1){left:-6px}'
+    + p + '.stabs.sp4>.stab:nth-of-type(2){left:calc(25% - 3px)}'
+    + p + '.stabs.sp4>.stab:nth-of-type(3){left:50%}'
+    + p + '.stabs.sp4>.stab:nth-of-type(4){left:calc(75% + 3px)}'
+    + p + '.stabs.sp4>.stab.on:nth-of-type(1){left:0;width:calc(25% + 8.75px)}'
+    + p + '.stabs.sp4>.stab.on:nth-of-type(2){left:calc(25% - 14.75px);width:calc(25% + 26.5px)}'
+    + p + '.stabs.sp4>.stab.on:nth-of-type(3){left:calc(50% - 11.75px);width:calc(25% + 26.5px)}'
+    + p + '.stabs.sp4>.stab.on:nth-of-type(4){left:calc(75% - 8.75px);width:calc(25% + 8.75px)}';
 })();
 /* 바의 분할 선언만 `.sp4` 로 — 토큰이 없으면 no-op 이 되고, 그것은 편집 루프가 «자리 없음» 으로 읽는다 */
 const DUN_BAR_SP4 = DUN_BAR == null ? null : DUN_BAR.replace(/\bsp3\b/, 'sp4');
@@ -81,7 +94,8 @@ const A_CSS   = '.tr-sub CSS 규칙·class 토큰 0건';
 const A_SELF  = '[0] 자가검사 — 같은 매처가';
 const A_DECL  = '전제 — 바가 칸 수를 스스로 선언한다';
 const A_N3    = '칸 3개 (바의 .sp3 선언에서 파생)';
-const A_W4    = '칸 폭 = 콘텐츠 ÷4';
+/* 379 이관 — verify47 [2] 의 이 항이 «콘텐츠 ÷N» 에서 «바깥 ÷N» 으로 바뀌었다 */
+const A_W4    = '칸 폭 = **바깥** ÷4';
 
 /* [from, to] 를 여러 개 적을 수 있다. green:true 면 «FAIL 0건» 이 기대다. */
 const TESTS = [
