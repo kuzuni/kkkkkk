@@ -34,8 +34,13 @@ async function rowsAt(H, tag) {
     /* 8칸 중 6칸만 채운다 — «빈 칸([+])» 과 «장착 칸» 이 한 줄에 같이 보여야
        형제 부품(`.sk-plus`)의 덩치도 같이 채점된다(394 선례) */
     SKILLS.slice(0, 6).forEach(s => toggleEquip(s, 'skill'));
+    /* 펫 3칸은 **스프라이트 3종을 하나씩** 채운다 — 앞에서 둘을 집으면 둘 다 robo(종횡 0.579)라
+       가장 넓은 dragon(1.469)이 캡처에 안 잡히고, 채점이 실제 범위를 못 본다(표본 고르기 자체가
+       채점 결과를 정한다). */
     S.pet = {}; S.eqPet = [];
-    PETS.slice(0, 2).forEach(t => { S.pet[t.id] = { n: 3, l: 2 }; toggleEquip(t, 'pet'); });
+    const seenSp = {};
+    PETS.forEach(t => { if (S.eqPet.length >= 3 || seenSp[t.sp]) return;
+      seenSp[t.sp] = 1; S.pet[t.id] = { n: 3, l: 2 }; toggleEquip(t, 'pet'); });
     buildSlots(); uiDirty = true; renderUI();
   });
 
