@@ -42,7 +42,10 @@ const OLD = `
   .dnc .lb{height:33px!important;line-height:33px!important;font-size:26px!important}
   .dnc .nm{word-spacing:3px!important}
   .dnc .sp>i{top:6px!important;height:34px!important;line-height:34px!important;font-size:41px!important}
-  .dnc .sp.lv>i{left:64px!important}
+  /* 383 이 이 자리의 **모델**을 바꿨다(좌단 고정 → 중앙 정렬). 옛 CSS 를 재현하려면 좌표뿐
+     아니라 383 이 새로 준 손잡이(width·text-align)도 같이 되돌려야 한다 — 안 그러면
+     «옛 좌표 + 새 상자» 라는 어디에도 없던 상태를 재현하게 된다. */
+  .dnc .sp.lv>i{left:64px!important;width:auto!important;text-align:left!important}
   .dnc .lk>u{padding-right:1px!important}`;
 
 async function measure(p, injectOld) {
@@ -122,8 +125,11 @@ async function measure(p, injectOld) {
         lbA: relI(inkBox(c.querySelector('.lb.a'), 0, 22)),
         lbB: relI(inkBox(c.querySelector('.lb.b'), 0, 22)),
         spLv: rel(c.querySelector('.sp.lv')),
-        /* 3회차 — 알약 «값» 숫자. 흰 글자라 박스 안으로 창을 자른다. */
+        /* 3회차 — 알약 «값» 숫자. 흰 글자라 박스 안으로 창을 자른다.
+           ⚠ 383 이후 상자가 «글리프보다 넓은 중앙 정렬 상자» 라 창을 박스로 자르면 잉크가
+             통째로 들어온다(문제 없음). 창은 그대로 두고 **자를 중심으로** 바꿨다. */
         spLvI: relI(inkBox(c.querySelector('.sp.lv>i'), 2, 26)),
+        spLvB: rel(c.querySelector('.sp.lv>i')),   /* 383 — 배치(상자) 축 */
         spTkI: relI(inkBox(c.querySelector('.sp.tk>i'), 2, 26)) });
     });
     return out;
@@ -196,10 +202,18 @@ async function measure(p, injectOld) {
      한글은 서체 탓에 폭이 −8~10% 인데 **숫자만 반대로 +7% 컸다** — 서체 몫이 아니라 크기 설정이다. */
   console.log('\n[§6 알약 «값» 숫자] (ref 레벨 좌 201·잉크상변 카드+286·cap 28 · 횟수 좌 402·폭 67)');
   for (const c of un) {
-    /* ⚠ 허용 오차를 ±3 으로 두면 **옛 값(좌 149 · 높이 30)도 초록**이라 3회차가 통째로
-       되돌아가도 안 빨개진다(LESSONS 328). ref 28/151 에서 우리 27/151 은 안, 옛 30/149 는
-       밖이 되는 ±1.5 로 좁혔다 — §R 의 R-i 가 그 폭을 지킨다. */
-    near(`카드${c.n} 레벨 숫자 잉크 좌변`, c.spLvI && +c.spLvI.x, 151, 1.5);   /* 절대 201 = 카드+151 */
+    /* ⚠ 허용 오차를 ±3 으로 두면 **옛 값(높이 30)도 초록**이라 3회차가 통째로
+       되돌아가도 안 빨개진다(LESSONS 328). ref 28 에서 우리 27 은 안, 옛 30 은
+       밖이 되는 ±1.5 로 좁혔다 — §R 의 R-i 가 그 폭을 지킨다.
+       ⚑ **383 이관(2026-08-29)** — 종전 이 자리는 «잉크 **좌변** = 151» 이었다. 383 이
+         ref 를 다시 읽어(342 §10 · 4회차 AY ④) 이 값의 고정점이 좌단이 아니라 **중심 카드+159.5**
+         임을 못박았으므로, 기대값만 갈지 않고 **묻는 축 자체를 중심으로 옮긴다**(334 처방).
+         좌변으로 남겨 두면 383 이 통째로 되돌아가야 초록인 게이트가 된다.
+         자는 둘로 가른다(357 처방) — 배치(상자) ±0.5 · 잉크 ±2(글리프 side bearing 몫.
+         ref 자신도 «1» 208.5 ↔ «3» 210 으로 1.5px 벌어진다). 모델 축(«자릿수가 늘어도
+         중심이 안 움직인다»)은 `tools/verify383.js` §3 이 갖는다. */
+    near(`카드${c.n} 레벨 숫자 상자 중심`, c.spLvB && +(+c.spLvB.x + c.spLvB.w / 2).toFixed(2), 159.5, 0.5);
+    near(`카드${c.n} 레벨 숫자 잉크 중심`, c.spLvI && +(+c.spLvI.x + c.spLvI.w / 2).toFixed(1), 158.5, 2);
     near(`카드${c.n} 레벨 숫자 잉크 상변`, c.spLvI && +c.spLvI.y, 286, 3);
     near(`카드${c.n} 레벨 숫자 잉크 높이`, c.spLvI && c.spLvI.h, 28, 1.5);
     near(`카드${c.n} 횟수 숫자 잉크 좌변`, c.spTkI && +c.spTkI.x, 352, 2);     /* 절대 402 = 카드+352 */
@@ -243,8 +257,8 @@ async function measure(p, injectOld) {
     `R-g 옛 CSS 에서 라벨↔알약 간격이 빨갛다 — ${ou.map((c) => (c.spLv.y - c.lbA.y - c.lbA.h).toFixed(1)).join('/')} ≠ 5`);
   ok(ou.some((c) => c.nmGap !== null && Math.abs(c.nmGap - 25) > 5),
     `R-h 옛 CSS 에서 어절 공백이 빨갛다 — ${ou.map((c) => c.nmGap).join('/')} ≠ 24~26`);
-  ok(ou.some((c) => Math.abs(c.spLvI.h - 28) > 1.5 || Math.abs(+c.spLvI.x - 151) > 1.5),
-    `R-i 옛 CSS 에서 §6 이 빨갛다 — 레벨 숫자 좌/높이 ${ou.map((c) => c.spLvI.x + '/' + c.spLvI.h).join(' · ')} ≠ 151/28`);
+  ok(ou.some((c) => Math.abs(c.spLvI.h - 28) > 1.5 || Math.abs(+c.spLvI.x + c.spLvI.w / 2 - 158.5) > 2),
+    `R-i 옛 CSS 에서 §6 이 빨갛다 — 레벨 숫자 잉크중심/높이 ${ou.map((c) => (+c.spLvI.x + c.spLvI.w / 2).toFixed(1) + '/' + c.spLvI.h).join(' · ')} ≠ 158.5/28`);
   ok(ou.some((c) => {
     const t = +c.pillInk.y - c.pill.y, b2 = (c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h);
     return Math.abs(t - b2) > 3;
