@@ -69,6 +69,9 @@ const f1 = n => (Math.round(n * 10) / 10).toFixed(1);
 const BAR_H = 97, BAR_BORDER = 6, CELL_H = 85;
 /* 활성 알약의 좌우 «검정 7 + 밝은 림 7» = 면이 시작되는 안쪽 여백 */
 const PILL_LIP = 14;
+/* 378 (2026-08-29) — **셸 콘텐츠 변에 닿는 면**은 검정 7 을 셸 테두리에 넘기므로 림이 베벨 7 뿐이다
+   (ref 는 그 자리에 검정을 겹치지 않는다 — 352 §8 · `tools/probe378.js`). 끝 칸이 활성일 때만 쓴다. */
+const PILL_EDGE_LIP = 7;
 /* 4칸 격자 — 바 콘텐츠 기준 상대 좌표(.stab-c1~c4) */
 const GRID4 = [[0, 224], [220, 261], [481, 223], [709, 229]];
 
@@ -284,22 +287,43 @@ const SNAP = `(sel, host) => {
     /* 352 ⓐ 이관 (2026-08-29) — 36 → **32**. 묻는 것은 그대로다(«반경과 좌우 밴드»).
        값은 `python3 tools/probe352.py` ⓐ 의 원호 역산 — ref 32.0(좌 30.1 · 우 33.9) ↔ 우리 32.0.
        ⚠ `PILL_LIP 14`(좌우 검정 7 + 림 7)는 **세로 한복판**의 두께라 반경과 무관하게 불변이다. */
-    ok('활성 알약 radius 30 · 좌우 검정 7 + 림 14 (칸 안쪽에만)',
-      g.onRadius === '30px' && /rgb\(0, 0, 0\) 7px 0px 0px 0px inset/.test(g.onShadow)
-      && /rgb\(0, 0, 0\) -7px 0px 0px 0px inset/.test(g.onShadow)
-      && /14px 0px 0px 0px inset/.test(g.onShadow) && /-14px 0px 0px 0px inset/.test(g.onShadow),
-      g.onRadius + ' / ' + g.onShadow.slice(0, 60));
+    /* 378 이관 (2026-08-29) — 이 항은 «네 겹이 다 있나» 를 물었다. 378 이 **셸 안쪽 변에 닿는 면**
+       의 검정 7 을 셸 테두리에 넘겼다(ref 는 그 자리에 검정을 겹치지 않는다 — 352 §8 실측 ·
+       `tools/probe378.js` 재현: 수리 전 닿는 면 9/9 가 `#000000 ×13`, 수리 후 9/9 가 ×6).
+       ⚠ **기대값만 갈면 안 된다** — «검정이 통째로 사라져도 초록» 이 되기 때문이다.
+       물음을 **면별로** 옮긴다. 두 갈래를 둘 다 단언하므로 어느 쪽을 지워도 빨개진다:
+         · 셸 콘텐츠 변에 **닿는** 면 → 검정 없음 + 베벨 `#634F37` 7 (셸 테두리가 그 변을 겸한다)
+         · **안 닿는** 면            → 검정 7 + 베벨 14 (측정표 07 §9 «좌우 테두리 7px #000000») */
+    const bwn = parseFloat(g.bw), ccx = g.bar.x + bwn, ccw = g.bar.w - 2 * bwn;
+    const onC = g.onIdx >= 0 ? g.cells[g.onIdx] : null;
+    const touchL = !!onC && Math.abs(onC.x - ccx) <= 0.6;
+    const touchR = !!onC && Math.abs(onC.x + onC.w - (ccx + ccw)) <= 0.6;
+    const sh = g.onShadow || '';
+    const has = re => new RegExp(re + ' 0px 0px 0px inset').test(sh);
+    const BLK = 'rgb\\(0, 0, 0\\)', BEV = 'rgb\\(99, 79, 55\\)';
+    const sideOK = (t, sign) => t
+      ? (has(BEV + ' ' + sign + '7px') && !has(BLK + ' ' + sign + '7px'))
+      : (has(BLK + ' ' + sign + '7px') && has(BEV + ' ' + sign + '14px'));
+    ok('활성 알약 radius 30 · 좌 ' + (touchL ? '셸에 닿음 → 베벨 7 (검정 0)' : '검정 7 + 베벨 14')
+      + ' · 우 ' + (touchR ? '셸에 닿음 → 베벨 7 (검정 0)' : '검정 7 + 베벨 14'),
+      g.onRadius === '30px' && sideOK(touchL, '') && sideOK(touchR, '-'),
+      g.onRadius + ' / ' + sh.slice(0, 60));
     g.cells.forEach((c, i) => {
       const k = g.ink[i];
       if (!k) { ok('칸' + (i + 1) + ' 라벨 <i> 존재', false); return; }
       const on = i === g.onIdx;
       ok('칸' + (i + 1) + '«' + g.labels[i] + '» 잉크 중심 = 칸 중심 (Δ ≤ 2)',
         near(k.x + k.w / 2, c.x + c.w / 2, 2), 'Δ' + f1(k.x + k.w / 2 - (c.x + c.w / 2)));
-      /* 활성 칸은 «면» 안(좌우 림 14 침범 0), 비활성 칸은 칸 안 */
-      const lo = c.x + (on ? PILL_LIP : 0), hi = c.x + c.w - (on ? PILL_LIP : 0);
-      ok('칸' + (i + 1) + ' 잉크 ' + (on ? '알약 면' : '칸') + ' 안 (잘림 0)',
+      /* 활성 칸은 «면» 안(좌우 림 침범 0), 비활성 칸은 칸 안.
+         378 이관 — 림은 이제 **면마다 다르다**: 셸 콘텐츠 변에 닿는 면은 검정 7 을 셸에 넘겨
+         `PILL_EDGE_LIP 7`, 안 닿는 면은 그대로 `PILL_LIP 14`. 실제 림보다 넓게 잡으면
+         «면 밖으로 나간 잉크» 를 놓치므로 값을 면별로 쓴다. */
+      const lipL = on && touchL ? PILL_EDGE_LIP : PILL_LIP;
+      const lipR = on && touchR ? PILL_EDGE_LIP : PILL_LIP;
+      const lo = c.x + (on ? lipL : 0), hi = c.x + c.w - (on ? lipR : 0);
+      ok('칸' + (i + 1) + ' 잉크 ' + (on ? '알약 면(림 ' + lipL + '/' + lipR + ')' : '칸') + ' 안 (잘림 0)',
         k.x >= lo - 0.5 && k.x + k.w <= hi + 0.5,
-        f1(k.x - c.x) + '..' + f1(k.x + k.w - c.x) + ' / ' + (on ? f1(PILL_LIP) + '..' + f1(c.w - PILL_LIP) : '0..' + f1(c.w)));
+        f1(k.x - c.x) + '..' + f1(k.x + k.w - c.x) + ' / ' + (on ? f1(lipL) + '..' + f1(c.w - lipR) : '0..' + f1(c.w)));
       ok('칸' + (i + 1) + ' 라벨 외곽선 = ' + (on ? 'ol4(활성)' : 'ol3(비활성)'),
         on ? (k.ol4 && !k.ol3) : (k.ol3 && !k.ol4), 'ol3=' + k.ol3 + ' ol4=' + k.ol4);
     });
@@ -331,10 +355,14 @@ const SNAP = `(sel, host) => {
     ok('본문이 실제로 반응했다', !!after && after !== before, String(before) + ' → ' + String(after));
     if (!g2.missing) {
       const c = g2.cells[g2.onIdx], k = g2.ink[g2.onIdx];
-      /* 활성 스타일은 fs43→41 · scaleX .914→.893 으로 잉크가 바뀐다 — 옮겨간 칸에서 다시 잰다 */
-      ok('옮겨간 활성 칸 잉크도 알약 면 안 (잘림 0)',
-        k && k.x >= c.x + PILL_LIP - 0.5 && k.x + k.w <= c.x + c.w - PILL_LIP + 0.5,
-        k ? f1(k.x - c.x) + '..' + f1(k.x + k.w - c.x) + ' / 면 ' + PILL_LIP + '..' + f1(c.w - PILL_LIP) : '잉크 없음');
+      /* 활성 스타일은 fs43→41 · scaleX .914→.893 으로 잉크가 바뀐다 — 옮겨간 칸에서 다시 잰다.
+         378 이관 — 옮겨간 칸도 끝 칸일 수 있다(03 은 «컨텐츠» = 첫 칸으로 옮긴다) → 림을 면별로. */
+      const bw2 = parseFloat(g2.bw), cx2 = g2.bar.x + bw2, cw2 = g2.bar.w - 2 * bw2;
+      const lipL2 = Math.abs(c.x - cx2) <= 0.6 ? PILL_EDGE_LIP : PILL_LIP;
+      const lipR2 = Math.abs(c.x + c.w - (cx2 + cw2)) <= 0.6 ? PILL_EDGE_LIP : PILL_LIP;
+      ok('옮겨간 활성 칸 잉크도 알약 면 안 (잘림 0 · 림 ' + lipL2 + '/' + lipR2 + ')',
+        k && k.x >= c.x + lipL2 - 0.5 && k.x + k.w <= c.x + c.w - lipR2 + 0.5,
+        k ? f1(k.x - c.x) + '..' + f1(k.x + k.w - c.x) + ' / 면 ' + lipL2 + '..' + f1(c.w - lipR2) : '잉크 없음');
       ok('옮겨간 활성 칸 라벨 외곽선 ol4 (stabInk 토글)', !!k && k.ol4 && !k.ol3,
         k ? 'ol3=' + k.ol3 + ' ol4=' + k.ol4 : '잉크 없음');
     }
