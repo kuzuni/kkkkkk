@@ -68,7 +68,8 @@ const settled = async page => {
     const bar = document.getElementById('shopCats');
     return {
       bar: r(bar),
-      cells: [...bar.querySelectorAll('.shp-ct')].map(r),
+      /* 379 — 활성 칸은 «알약» 이라 칸과 상자가 다르다(오버행). 격자 판정에서 가려내려고 표시한다. */
+      cells: [...bar.querySelectorAll('.shp-ct')].map(e => ({ ...r(e), on: e.classList.contains('on') })),
       labels: [...bar.querySelectorAll('.shp-ct > i')].map(e => {
         const rg = document.createRange(); rg.selectNodeContents(e);
         const b = rg.getBoundingClientRect();      /* 글자 실폭(잉크) — 박스 폭이 아니다 */
@@ -84,15 +85,34 @@ const settled = async page => {
      337 (2026-08-28) 이관 — 99 → 97. ref 둘(03 §4-1 · 07 §9)이 검정 테두리 행으로 97 을 같이 말한다. */
   ok('바 높이 97 (96 공용 부품 · 337 재측정)', near(g.bar.h, 97), g.bar.h.toFixed(1));
   ok('바 좌 45', near(g.bar.x, 45), g.bar.x.toFixed(1));
-  const inner = g.bar.w - g.bw * 2, sw = inner / 3;
-  ok('칸 3개가 패딩박스를 정확히 3등분', g.cells.length === 3 && g.cells.every(c => near(c.w, sw)),
-    g.cells.map(c => c.w.toFixed(1)).join(' / ') + ' (패딩박스 ' + inner.toFixed(0) + ')');
-  for (let i = 1; i < 3; i++)
-    ok('칸' + i + '↔' + (i + 1) + ' 맞닿음(빈틈·겹침 0)',
-      near(g.cells[i - 1].x + g.cells[i - 1].w, g.cells[i].x),
-      '경계 ' + (g.cells[i - 1].x + g.cells[i - 1].w).toFixed(1) + ' vs ' + g.cells[i].x.toFixed(1));
-  ok('칸3이 바 우측 안쪽 끝에서 끝남', near(g.cells[2].x + g.cells[2].w, g.bar.x + g.bar.w - g.bw),
-    (g.cells[2].x + g.cells[2].w).toFixed(1));
+  const inner = g.bar.w - g.bw * 2, sw = g.bar.w / 3;
+  /* ── 379 이관 (2026-08-29) — **나누는 상자가 패딩박스에서 «바깥 상자» 로 바뀌었다.**
+     ref 07 에서 픽셀로 확정된 유일한 칸 경계(구분선 3 중심 777)가 바깥 4등분 경계 777.5 와 Δ0.5
+     다(측정표 07 §9). 이 바의 수리 전 칸은 325.98 ↔ 바깥/3 330.00 = **−4.02** 였다.
+     활성 칸은 «알약» 이라 오버행(면당 11.75)만큼 넓으므로 격자 판정에서 가려낸다. */
+  const onIdx = g.cells.findIndex(c => c.on);
+  const rest = g.cells.map((c, i) => ({ c, i })).filter(o => o.i !== onIdx);
+  ok('전제 — 활성 칸이 정확히 1개 (알약은 칸과 상자가 다르다 — 379)',
+    g.cells.filter(c => c.on).length === 1, '활성 idx ' + onIdx);
+  ok('칸 3개가 **바깥 상자**를 정확히 3등분 (379 — 패딩박스 ' + inner.toFixed(0) + ' 이 아니다)',
+    g.cells.length === 3 && rest.every(o => near(o.c.w, sw)),
+    rest.map(o => o.c.w.toFixed(1)).join(' / ') + ' (바깥 ' + g.bar.w.toFixed(0) + ' ÷3 = ' + sw.toFixed(1) + ')');
+  rest.forEach(o => ok('칸' + (o.i + 1) + ' 왼끝 = 바깥 ' + o.i + '/3 지점',
+    near(o.c.x, g.bar.x + sw * o.i),
+    (o.c.x - g.bar.x).toFixed(2) + ' vs ' + (sw * o.i).toFixed(2)));
+  ok('칸3이 바 **바깥** 오른끝에서 끝남',
+    onIdx === 2 || near(g.cells[2].x + g.cells[2].w, g.bar.x + g.bar.w),
+    onIdx === 2 ? '활성 — 면제' : (g.cells[2].x + g.cells[2].w).toFixed(1));
+  /* 오버행 — 알약은 자기 칸보다 면당 11.75 넓다. 셸 안쪽 변에 닿는 면은 패딩 변에 붙는다(378). */
+  if (onIdx >= 0) {
+    const p = g.cells[onIdx], gl = g.bar.x + sw * onIdx, gr = gl + sw;
+    ok('활성 알약 좌 오버행 ' + (onIdx === 0 ? '= 패딩 왼변에 붙음 (378)' : '+11.75'),
+      onIdx === 0 ? near(p.x, g.bar.x + g.bw) : near(gl - p.x, 11.75),
+      onIdx === 0 ? (p.x - g.bar.x - g.bw).toFixed(2) : '+' + (gl - p.x).toFixed(2));
+    ok('활성 알약 우 오버행 ' + (onIdx === 2 ? '= 패딩 오른변에 붙음 (378)' : '+11.75'),
+      onIdx === 2 ? near(p.x + p.w, g.bar.x + g.bar.w - g.bw) : near(p.x + p.w - gr, 11.75),
+      onIdx === 2 ? (p.x + p.w - (g.bar.x + g.bar.w - g.bw)).toFixed(2) : '+' + (p.x + p.w - gr).toFixed(2));
+  }
   g.labels.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 중앙 (±3px)',
     near(l.ink.cx, g.cells[i].cx, 3), '잉크중심 ' + l.ink.cx.toFixed(1) + ' vs 칸중심 ' + g.cells[i].cx.toFixed(1)));
   g.labels.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 안에 들어감(잘림 0)',
@@ -115,7 +135,8 @@ const settled = async page => {
     const bar = document.getElementById('shopCats');
     return {
       bar: r(bar), bw: parseFloat(getComputedStyle(bar).borderTopWidth),
-      cells: [...bar.querySelectorAll('.shp-ct')].map(r),
+      /* 379 — 활성 칸은 «알약» 이라 칸과 상자가 다르다(오버행). 격자 판정에서 가려내려고 표시한다. */
+      cells: [...bar.querySelectorAll('.shp-ct')].map(e => ({ ...r(e), on: e.classList.contains('on') })),
       on: r(bar.querySelector('.shp-ct.on')),
       onTab: [...bar.querySelectorAll('.shp-ct.on')].map(e => e.dataset.cat),
       coinCls: document.getElementById('shopList').classList.contains('coin'),

@@ -67,6 +67,10 @@ const f1 = n => (Math.round(n * 10) / 10).toFixed(1);
    ⚠ **CELL_H 85 는 그대로다** — 고친 것은 셸뿐이고, 그래서 패딩박스(97−12=85)가 알약과 같아지며
    AL·AM 이 지적한 «알약 하단 바 면 2px 노출» 이 값 하나로 사라진다. 상세 docs/review/337-공용서브탭부품.md */
 const BAR_H = 97, BAR_BORDER = 6, CELL_H = 85;
+/* 379 — 활성 알약이 «자기 격자 칸» 보다 넓은 양(한 면). ref 07 활성 알약 291/261 ↔
+   그 칸(바깥 4등분 2번째) 302.5..540 ⇒ 좌 +11.5 · 우 +12.0 = 총 23.5 ⇒ 면당 11.75.
+   좌·우 0.5 차는 352 정오표가 밝힌 JPEG AA 편향(양쪽 같은 방향)이라 구조가 아니다. */
+const PILL_OVER = 11.75;
 /* 활성 알약의 좌우 «검정 7 + 밝은 림 7» = 면이 시작되는 안쪽 여백 */
 const PILL_LIP = 14;
 /* 378 (2026-08-29) — **셸 콘텐츠 변에 닿는 면**은 검정 7 을 셸 테두리에 넘기므로 림이 베벨 7 뿐이다
@@ -237,25 +241,58 @@ const SNAP = `(sel, host) => {
 
     /* ---- 2. 칸 격자 ---- */
     console.log('\n[2] ' + b.name + ' — 칸 격자');
-    const cx = g.bar.x + BAR_BORDER, cw = g.bar.w - BAR_BORDER * 2;   /* 바 «콘텐츠» 상자 */
+    const cx = g.bar.x + BAR_BORDER, cw = g.bar.w - BAR_BORDER * 2;   /* 바 «콘텐츠»(패딩) 상자 */
+    const ox = g.bar.x, ow = g.bar.w;                                 /* 바 «바깥» 상자 — 379 가 격자를 여기로 옮겼다 */
     /* 124 — 균등분할 바(.spN)는 칸 수와 무관하게 «콘텐츠 상자 ÷ N» 규칙 하나로 본다.
        279 — N 은 [1] 에서 바의 선언으로 파생한 값이다. 이 절이 그 선언을 **실측으로 되받는 자리**다:
        `.sp4` 로 고쳐 놓고 CSS 규칙을 안 만들면 폭이 100/N% 가 안 나와 여기서 빨개진다. */
     if (nDecl >= 2) {
-      const sw = cw / n;
-      ok(n + '칸 균등 (Δ ≤ 0.5)', g.cells.every(c => near(c.w, g.cells[0].w, 0.5)),
-        g.cells.map(c => f1(c.w)).join(' / '));
-      ok('칸 폭 = 콘텐츠 ÷' + n + ' = ' + f1(sw), near(g.cells[0].w, sw, 0.6), f1(g.cells[0].w));
-      for (let i = 1; i < n; i++) {
-        ok('칸 경계' + i + ' 맞닿음 (빈틈·겹침 0)',
-          near(g.cells[i - 1].x + g.cells[i - 1].w, g.cells[i].x, 0.5),
-          'Δ' + f1(g.cells[i].x - g.cells[i - 1].x - g.cells[i - 1].w));
-        ok('경계' + i + ' = 콘텐츠 ' + i + '/' + n + ' 지점', near(g.cells[i].x, cx + sw * i, 0.6),
-          f1(g.cells[i].x - cx) + ' vs ' + f1(sw * i));
+      /* ── 379 이관 (2026-08-29) — 이 절의 **정의가 바뀌었다.**
+         종전에는 «콘텐츠(패딩) 상자 ÷ N» 이었다. 379 가 ref 07 에서 **픽셀로 확정된 유일한 칸
+         경계**(세로 구분선 3 중심 777 · 측정표 07 §9)가 바깥 4등분 경계 777.5 와 Δ0.5 임을 들어
+         나누는 상자를 **바깥 상자**로 옮겼다(수리 전 03 칸 폭 260.66 ↔ 264.67 = −4.01).
+         ⚠ **값만 갈지 않았다** — 값만 `ow/n` 으로 고치면 «칸 == 알약» 이던 옛 그림도 초록이다.
+         두 가지를 새로 묻는다: ⓐ 격자는 **비활성 칸**으로만 재고(활성 칸은 알약이라 상자가 다르다)
+         ⓑ 그 활성 알약이 자기 «격자 칸» 보다 얼마나 넓은지를 **직접** 묻는다. */
+      const sw = ow / n;
+      const rest = g.cells.map((c, i) => ({ c, i })).filter(o => o.i !== g.onIdx);
+      ok('전제 — 활성 칸을 가려낼 수 있다 (알약은 칸과 상자가 다르다)',
+        g.onIdx >= 0 && rest.length === n - 1, '활성 idx ' + g.onIdx + ' · 비활성 ' + rest.length + '칸');
+      ok(n + '칸 균등 — 비활성 칸끼리 (Δ ≤ 0.5)',
+        rest.every(o => near(o.c.w, rest[0].c.w, 0.5)), rest.map(o => f1(o.c.w)).join(' / '));
+      ok('칸 폭 = **바깥** ÷' + n + ' = ' + f1(sw) + ' (379 — 콘텐츠 ÷' + n + ' = ' + f1(cw / n) + ' 이 아니다)',
+        rest.every(o => near(o.c.w, sw, 0.6)), rest.map(o => f1(o.c.w)).join(' / '));
+      rest.forEach(o => {
+        ok('칸' + (o.i + 1) + ' 왼끝 = 바깥 ' + o.i + '/' + n + ' 지점',
+          near(o.c.x, ox + sw * o.i, 0.6),
+          f1(o.c.x - ox) + ' vs ' + f1(sw * o.i));
+      });
+      ok('첫 칸 왼끝 = 바 **바깥** 왼끝 (379 — 콘텐츠 왼끝이 아니다)',
+        near(g.cells[0].x, ox, 0.6) || g.onIdx === 0,
+        f1(g.cells[0].x - ox) + (g.onIdx === 0 ? ' (활성 — 면제)' : ''));
+      ok('마지막 칸 오른끝 = 바 **바깥** 오른끝',
+        near(g.cells[n - 1].x + g.cells[n - 1].w, ox + ow, 0.6) || g.onIdx === n - 1,
+        f1(g.cells[n - 1].x + g.cells[n - 1].w - ox) + ' vs ' + f1(ow)
+        + (g.onIdx === n - 1 ? ' (활성 — 면제)' : ''));
+      /* ⓑ 오버행 — 379 의 본체. ref 07 활성 알약 291/261 ↔ 그 칸(바깥 4등분 2번째) 302.5..540
+         ⇒ 좌 +11.5 · 우 +12.0 = 총 23.5 ⇒ 자유로운 면마다 11.75.
+         셸 안쪽 변에 닿는 면은 오버행을 내밀지 않고 콘텐츠 변에 붙는다(378 이 그 면의 검정을
+         셸 테두리에 넘긴 전제 — 내밀면 알약이 셸 검정을 덮어 378 이 되돌아간다). */
+      if (g.onIdx >= 0) {
+        const p = g.cells[g.onIdx];
+        const gl = ox + sw * g.onIdx, gr = gl + sw;
+        const firstCell = g.onIdx === 0, lastCell = g.onIdx === n - 1;
+        ok('활성 알약 좌 오버행 ' + (firstCell ? '= 콘텐츠 왼변에 붙음 (378 규약)' : '+' + PILL_OVER),
+          firstCell ? near(p.x, cx, 0.6) : near(gl - p.x, PILL_OVER, 0.6),
+          firstCell ? f1(p.x - cx) : '+' + f1(gl - p.x));
+        ok('활성 알약 우 오버행 ' + (lastCell ? '= 콘텐츠 오른변에 붙음 (378 규약)' : '+' + PILL_OVER),
+          lastCell ? near(p.x + p.w, cx + cw, 0.6) : near(p.x + p.w - gr, PILL_OVER, 0.6),
+          lastCell ? f1(p.x + p.w - (cx + cw)) : '+' + f1(p.x + p.w - gr));
+        ok('활성 알약 폭 = 칸 + 오버행 (자유로운 면만)',
+          near(p.w, sw + (firstCell ? 0 : PILL_OVER) + (lastCell ? 0 : PILL_OVER)
+            - (firstCell || lastCell ? BAR_BORDER : 0), 0.8),
+          f1(p.w) + ' vs 칸 ' + f1(sw));
       }
-      ok('마지막 칸 오른끝 = 콘텐츠 오른끝',
-        near(g.cells[n - 1].x + g.cells[n - 1].w, cx + cw, 0.6),
-        f1(g.cells[n - 1].x + g.cells[n - 1].w - cx) + ' vs ' + f1(cw));
       ok('구분선 0개 (균등분할 바는 구분선을 두지 않는다 — 96)', g.seps.length === 0, g.seps.length + '개');
     } else {
       GRID4.forEach(([l, w], i) => {
@@ -277,9 +314,28 @@ const SNAP = `(sel, host) => {
         g.seps.length === 1 && near(g.seps[0].y - (g.bar.y + BAR_BORDER), 16, 0.6),
         g.seps[0] ? f1(g.seps[0].y - (g.bar.y + BAR_BORDER)) : '없음');
     }
-    ok('모든 칸이 바 콘텐츠 안 (돌출 0)',
-      g.cells.every(c => c.x >= cx - 0.6 && c.x + c.w <= cx + cw + 0.6),
-      g.cells.map(c => f1(c.x - cx) + '..' + f1(c.x + c.w - cx)).join(' '));
+    /* 379 이관 — 이 항도 **정의째** 바뀐다. 균등분할 바의 칸은 이제 «바깥 상자» 를 나누므로
+       끝 칸은 콘텐츠 변보다 6px(테두리) 밖에 있다. 대신 **두 가지**를 나눠서 묻는다:
+         ⓐ 칸은 바 «바깥» 을 안 넘는다        — 격자가 바를 벗어나지 않는다
+         ⓑ **배경을 가진 알약**은 콘텐츠 안에 머문다 — 이것이 셸 검정을 지키는 항이다
+            (칸은 배경이 없어 테두리 밑에 들어가도 아무것도 안 덮지만, 알약이 나가면
+             셸 테두리를 덮어 378 이 통째로 되돌아간다).
+       4칸 격자(.stab-cN)는 종전대로 콘텐츠 안이다 — 그 격자는 379 가 안 건드렸다. */
+    if (nDecl >= 2) {
+      ok('모든 칸이 바 **바깥** 안 (돌출 0)',
+        g.cells.every(c => c.x >= ox - 0.6 && c.x + c.w <= ox + ow + 0.6),
+        g.cells.map(c => f1(c.x - ox) + '..' + f1(c.x + c.w - ox)).join(' '));
+      ok('활성 알약은 바 **콘텐츠** 안 (셸 검정을 안 덮는다 — 378 이 여기에 얹혀 있다)',
+        g.onIdx < 0 || (g.cells[g.onIdx].x >= cx - 0.6
+          && g.cells[g.onIdx].x + g.cells[g.onIdx].w <= cx + cw + 0.6),
+        g.onIdx < 0 ? '활성 없음'
+          : f1(g.cells[g.onIdx].x - cx) + '..' + f1(g.cells[g.onIdx].x + g.cells[g.onIdx].w - cx)
+            + ' / 콘텐츠 0..' + f1(cw));
+    } else {
+      ok('모든 칸이 바 콘텐츠 안 (돌출 0)',
+        g.cells.every(c => c.x >= cx - 0.6 && c.x + c.w <= cx + cw + 0.6),
+        g.cells.map(c => f1(c.x - cx) + '..' + f1(c.x + c.w - cx)).join(' '));
+    }
 
     /* ---- 3. 칸 안 정합 ---- */
     console.log('\n[3] ' + b.name + ' — 활성 알약 · 라벨 잉크');

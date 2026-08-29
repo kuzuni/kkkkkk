@@ -90,22 +90,42 @@ function safeElapsed(bless, until0, cands) {
     const r = e => { const b = e.getBoundingClientRect(); return { x: b.x, w: b.width, cx: b.x + b.width / 2 }; };
     const bar = document.getElementById('shopCats');
     return { bar: r(bar), bw: parseFloat(getComputedStyle(bar).borderTopWidth),
-      cells: [...bar.querySelectorAll('.shp-ct')].map(r),
+      /* 379 — 활성 칸은 «알약» 이라 칸과 상자가 다르다(오버행). 격자 판정에서 가려내려고 표시한다. */
+      cells: [...bar.querySelectorAll('.shp-ct')].map(e => ({ ...r(e), on: e.classList.contains('on') })),
       inks: [...bar.querySelectorAll('.shp-ct>i')].map(e => {
         const rg = document.createRange(); rg.selectNodeContents(e);
         const b = rg.getBoundingClientRect(); return { x: b.x, w: b.width, cx: b.x + b.width / 2 };
       }) };
   });
-  const inner = g.bar.w - g.bw * 2, sw = inner / 3;
+  const inner = g.bar.w - g.bw * 2, sw = g.bar.w / 3;
   ok('칸 3개', g.cells.length === 3, g.cells.length + '개');
-  ok('칸 폭 = 패딩박스 ÷3 = ' + sw.toFixed(1), g.cells.every(c => near(c.w, sw)),
-    g.cells.map(c => c.w.toFixed(1)).join(' / '));
-  ok('칸 3개가 빈틈·겹침 없이 이어짐',
-    near(g.cells[0].x + g.cells[0].w, g.cells[1].x) && near(g.cells[1].x + g.cells[1].w, g.cells[2].x),
-    'Δ' + (g.cells[1].x - g.cells[0].x - g.cells[0].w).toFixed(2)
-    + ' / Δ' + (g.cells[2].x - g.cells[1].x - g.cells[1].w).toFixed(2));
-  ok('칸3 오른끝 = 바 안쪽 오른끝', near(g.cells[2].x + g.cells[2].w, g.bar.x + g.bar.w - g.bw),
-    (g.cells[2].x + g.cells[2].w).toFixed(1));
+  /* ── 379 이관 (2026-08-29) — **나누는 상자가 패딩박스에서 «바깥 상자» 로 바뀌었다.**
+     ref 07 에서 픽셀로 확정된 유일한 칸 경계(구분선 3 중심 777)가 바깥 4등분 경계 777.5 와
+     Δ0.5 다(측정표 07 §9). 수리 전 이 바의 칸은 325.98 ↔ 바깥/3 330.00 = **−4.02** 였다.
+     ⚠ 값만 `bar.w/3` 으로 갈면 «칸 == 알약» 이던 옛 그림도 초록이므로 **활성 칸을 가려내고**
+     (알약은 오버행 때문에 칸보다 넓다) 그 알약은 아래 §오버행 절이 따로 문다. */
+  const onIdx = g.cells.findIndex(c => c.on);
+  const rest = g.cells.map((c, i) => ({ c, i })).filter(o => o.i !== onIdx);
+  ok('전제 — 활성 칸이 정확히 1개 (알약은 칸과 상자가 다르다 — 379)',
+    g.cells.filter(c => c.on).length === 1, '활성 idx ' + onIdx);
+  ok('칸 폭 = **바깥 상자** ÷3 = ' + sw.toFixed(1) + ' (379 — 패딩박스 ÷3 = ' + (inner / 3).toFixed(1) + ' 이 아니다)',
+    rest.every(o => near(o.c.w, sw)), rest.map(o => o.c.w.toFixed(1)).join(' / '));
+  rest.forEach(o => ok('칸' + (o.i + 1) + ' 왼끝 = 바깥 ' + o.i + '/3 지점',
+    near(o.c.x, g.bar.x + sw * o.i), (o.c.x - g.bar.x).toFixed(2) + ' vs ' + (sw * o.i).toFixed(2)));
+  ok('칸3 오른끝 = 바 **바깥** 오른끝',
+    onIdx === 2 || near(g.cells[2].x + g.cells[2].w, g.bar.x + g.bar.w),
+    onIdx === 2 ? '활성 — 면제' : (g.cells[2].x + g.cells[2].w - g.bar.x).toFixed(1) + ' vs ' + g.bar.w.toFixed(1));
+  /* 오버행 — ref 07 활성 알약 291/261 ↔ 그 칸 302.5..540 ⇒ 면당 11.75.
+     셸 안쪽 변에 닿는 면은 내밀지 않고 패딩 변에 붙는다(378 이 그 면의 검정을 셸에 넘겼다). */
+  if (onIdx >= 0) {
+    const p = g.cells[onIdx], gl = g.bar.x + sw * onIdx, gr = gl + sw;
+    ok('활성 알약 좌 오버행 ' + (onIdx === 0 ? '= 패딩 왼변에 붙음 (378)' : '+11.75'),
+      onIdx === 0 ? near(p.x, g.bar.x + g.bw) : near(gl - p.x, 11.75),
+      onIdx === 0 ? (p.x - g.bar.x - g.bw).toFixed(2) : '+' + (gl - p.x).toFixed(2));
+    ok('활성 알약 우 오버행 ' + (onIdx === 2 ? '= 패딩 오른변에 붙음 (378)' : '+11.75'),
+      onIdx === 2 ? near(p.x + p.w, g.bar.x + g.bar.w - g.bw) : near(p.x + p.w - gr, 11.75),
+      onIdx === 2 ? (p.x + p.w - (g.bar.x + g.bar.w - g.bw)).toFixed(2) : '+' + (p.x + p.w - gr).toFixed(2));
+  }
   g.inks.forEach((l, i) => ok('라벨' + (i + 1) + ' 잉크가 칸 안 중앙 (±3px, 잘림 0)',
     near(l.cx, g.cells[i].cx, 3) && l.x >= g.cells[i].x - 0.5 && l.x + l.w <= g.cells[i].x + g.cells[i].w + 0.5,
     '잉크 ' + l.x.toFixed(1) + '~' + (l.x + l.w).toFixed(1) + ' / 칸 ' + g.cells[i].x.toFixed(1)
