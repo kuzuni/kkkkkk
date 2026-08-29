@@ -176,3 +176,9 @@ index.verify350-revert.html
 .v367-neg.html
 .verify410-rev.html
 .probe410-pre.html
+
+# 워커 캡처 — 커밋 금지 (2026-08-30 이력 정리)
+docs/shots/
+docs/review/*.png
+tools/*.png
+/*.png
