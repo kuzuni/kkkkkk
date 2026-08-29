@@ -139,11 +139,21 @@ function stripComments(src) {
     const a2 = COIN_ADS.find((a) => a.id === 'a2');
     const dom = [...document.querySelectorAll('#shopList .cn-cd > .hd > i')].map((e) => e.textContent.trim())
       .slice(0, COIN_ADS.length);
-    return { n: a2.n, fs: a2.fs, sx: a2.sx, qx: a2.qx, dom, gone: !COIN_ADS.some((a) => a.id === 'a6') };
+    return { n: a2.n, q: a2.q, fs: a2.fs, sx: a2.sx, qx: a2.qx, dom, gone: !COIN_ADS.some((a) => a.id === 'a6') };
   });
   await page.waitForTimeout(250);
   eq('  F1 이름만 바뀐 칸(a2) 라벨', F.n, '유물');
-  eq('  F2 그 칸의 fs/sx/qx 불변(ref 폭은 옛 문자열 기준 — 재보정 금지)', [F.fs, F.sx, F.qx], [39.4, 0.894, 1.24]);
+  /* ⚑ 377 이관(2026-08-29) — 옛 F2 는 `fs/sx/qx` 셋을 **한 덩어리로** 묶어 1.24 에 못 박고 있었다.
+     그런데 이 규약(«이름만 바뀐 칸은 재보정 금지»)이 지키는 것은 **이름(«공물»→«유물»)에서 나온 값**,
+     즉 헤더 잉크 폭 보정 `fs`·`sx` 다. `qx` 는 같은 칸의 **수량 문자열 «×50» 의 가로 보정**이고
+     그 문자열은 173 이 한 글자도 안 바꿨다 — 그래서 «새 문자열에는 ref 목표폭이 없다» 는 이 절의
+     근거가 `qx` 에는 애초에 걸리지 않는다(레퍼런스 ② 공물 칸의 «×50» 잉크 폭 81 이 측정표 §5-3 에 있다).
+     377 이 그 ref 81 에서 역산해 1.24 → 1.08 로 내렸다(수리 전 실측 93 = ref +15%).
+     ⇒ 규약이 진짜 지키던 두 값은 **그대로 못 박아 두고**(F2), 수량 축만 갈라 새 값으로 옮긴다(F2b).
+     이렇게 갈라야 나중에 누가 «유물» 기준으로 헤더를 재보정하면 F2 가 여전히 빨개진다. */
+  eq('  F2 그 칸의 fs/sx 불변(이름에서 나온 값 — ref 폭은 옛 문자열 기준이라 재보정 금지)', [F.fs, F.sx], [39.4, 0.894]);
+  eq('  F2b 수량 문자열은 그대로 «×50» 이다 — 이 축에는 ref 목표폭이 있다(측정표 §5-3 잉크 81)', F.q, '×50');
+  eq('  F2c 그 축의 보정 `qx` = 377 이 ref 81 에서 역산한 값', F.qx, 1.08);
   eq('  F3 카드 DOM 전 칸 «동료» 0건', F.dom.filter((x) => x.includes('동료')).length, 0);
   /* 원 표본 a6 «일반 펫 소환 열쇠» 는 365(주인 지시)로 상품째 사라졌다 — «사라졌다» 를 단언해
      둬야 나중에 되살아났을 때 [A] 소스 전수와 이 절이 어긋나지 않는다 */
