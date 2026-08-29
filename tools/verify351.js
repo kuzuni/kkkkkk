@@ -48,6 +48,10 @@ const REVERT = `
   #svw .sv-hint{bottom:var(--hnb,195px) !important}
   .spc-list{height:760px !important}
   .spc-tabs{top:1242px !important;bottom:auto !important}
+  #app.shortf #modal{padding-top:126px !important;padding-bottom:150px !important}
+  #app.shortf #modal.sk8{padding-top:132px !important}
+  #app.shortf #modal.at70{padding-top:159px !important;padding-bottom:150px !important}
+  #app.shortf #collw{padding:168px 0 276px !important}
 `;
 
 async function shot(browser, h, opener, revert) {
@@ -76,6 +80,16 @@ async function shot(browser, h, opener, revert) {
   } else if (opener === 'saver') {
     /* 56 절전은 오프너가 함수 하나다(다른 후보와 같이 열면 `#app.sv` 가 서로를 지운다 — smoke 472 주석). */
     await page.evaluate(() => { if (typeof openSaver === 'function') openSaver(); }).catch(() => {});
+  } else if (opener === 'quest') {
+    /* §8(390) — 22 퀘스트. 공용 `#modal` 중 **상한에 걸린** 상자라 띠를 그대로 드러낸다. */
+    await page.click('.side .ibtn[data-pop="quest"]', { force: true }).catch(() => {});
+  } else if (opener === 'coll') {
+    /* §8(390) — 21 도감(`#collw`). 공용 `#modal` 을 한 번도 안 지나는 **자기 오버레이**다. */
+    await page.click('.side .ibtn[data-pop="coll"]', { force: true }).catch(() => {});
+  } else if (opener === 'plain') {
+    /* §8(390) 음성항 — 상한에 **안 걸린** 작은 상자. 제품 자신의 공용 다이얼로그 경로
+       (`popup()` — 약관·고객지원·랭커 상세·승급 성공·notify 폴백이 쓴다). */
+    await page.evaluate(() => { if (typeof popup === 'function') popup('안내', '<p>한 줄</p>'); }).catch(() => {});
   }
   await page.waitForTimeout(700);
   await page.waitForFunction(() => {
@@ -125,6 +139,13 @@ async function shot(browser, h, opener, revert) {
       eqp: box('#eqw .eqp'),
       panel: box('#panel'), sheetOn: !!document.querySelector('#bSk.on'),
       mbox: box('#modal.ml69 .mbox'), mailX: box('#mailX'),
+      /* §8(390) — 공용 모달 «띠». `.pedge` 하변(위)·탭바 상변(아래)이 금지구역이고,
+         상자가 그 사이에 **정확히** 서는지를 본다. `qbody` 는 반대급부(본문을 눌러 자르는 것). */
+      qbox: box('#modal.on .mbox'), cl: box('#collw.on .cl'),
+      qbody: (() => { const b = document.querySelector('#modal.on .mbody');
+        return b ? { over: b.scrollHeight - b.clientHeight } : null; })(),
+      clBody: (() => { const b = document.querySelector('#collw.on .cl-body');
+        return b ? { h: Math.round(b.getBoundingClientRect().height) } : null; })(),
       mailFits: bd ? (bd.scrollHeight <= bd.clientHeight + 1) : null,
       mailOver: bd ? (bd.scrollHeight - bd.clientHeight) : null,
       tabsTop: tabs ? Math.round(tabs.getBoundingClientRect().top - A.top) : null,
@@ -359,6 +380,48 @@ async function shot(browser, h, opener, revert) {
     /* 흡수한 대가가 «리스트가 탭 줄을 먹는 것» 이면 안 된다 — 간격은 2280 과 같은 38.5 여야 한다 */
     eq('[8-g] 1600 리스트↔탭 줄 간격 = 2280 과 같다', sp13.spcTabs.top - sp13.spcList.bot,
       sp19.spcTabs.top - sp19.spcList.bot, 1);
+    /* ---------------- §8 390 공용 모달 «띠» ---------------- */
+    /* 잠그는 것: 짧은 프레임의 띠는 **위 = `.pedge` 하변 · 아래 = 탭바 상변**이고,
+       상자는 그 사이에 **정확히** 선다(142 + 180 = 322 는 프레임 높이와 무관한 상수).
+       ⚠ 세 축을 같이 묻는다 — ⓐ 2280 Δ0 · ⓑ 1600 침범 0 · ⓒ **반대급부**(띠를 넓혀 상자를
+       눌러 본문을 자르는 것). ⓒ 가 없으면 «패딩을 크게 주면 늘 초록» 인 게이트가 된다. */
+    console.log('[§8] 390 공용 모달 — 짧은 프레임에서 상자가 «진짜 띠» 안에 정확히 선다');
+    const q19 = await shot(br, 2280, 'quest', false);
+    const q13 = await shot(br, 1600, 'quest', false);
+    const c19 = await shot(br, 2280, 'coll', false);
+    const c13 = await shot(br, 1600, 'coll', false);
+    const n13 = await shot(br, 1600, 'plain', false);
+    /* 9:19 Δ0 — 이 셋이 움직이면 `.shortf` 밖으로 규칙이 샌 것이다(패딩은 가운데 정렬의 입력이다). */
+    eq('[8-a] 2280 22 퀘스트 상자 상변(불변)', q19.qbox.top, 380, 1);
+    eq('[8-b] 2280 22 퀘스트 상자 하변(불변)', q19.qbox.bot, 1877, 1);
+    eq('[8-c] 2280 21 도감 상자 상변(불변)', c19.cl.top, 273, 1);
+    eq('[8-d] 2280 21 도감 상자 하변(불변)', c19.cl.bot, 1816, 1);
+    /* ⚠ 기준선을 못 찾으면 «침범 없음» 이 아니라 **판정 불가**다(LESSONS 351-④ — 「A > null」 은 true). */
+    const band = (tag, d, b) => {
+      if (!b || typeof d.tabsTop !== 'number' || !d.pedge) { no(tag, '상자·기준선을 못 찾았다 — 판정 불가'); return; }
+      (b.top >= d.pedge.bot && b.bot <= d.tabsTop)
+        ? ok(tag, `${b.top}..${b.bot} ⊂ 띠 ${d.pedge.bot}..${d.tabsTop}`)
+        : no(tag, `${b.top}..${b.bot} ⊄ 띠 ${d.pedge.bot}..${d.tabsTop}`);
+    };
+    band('[8-e] 1600 22 퀘스트 상자가 띠 안', q13, q13.qbox);
+    band('[8-f] 1600 21 도감 상자가 띠 안', c13, c13.cl);
+    /* 음성항 — 상한에 **안 걸린** 작은 상자도 띠 안이어야 한다(가운데 정렬이 띠를 따라 움직인다).
+       이게 없으면 §8 은 «큰 상자만 보는» 게이트가 된다. */
+    band('[8-g] 1600 작은 다이얼로그(popup)도 띠 안', n13, n13.qbox);
+    /* ⓒ 반대급부 ①  — 띠를 **다 쓴다**. 322 보다 크게 비우면 상자가 그만큼 눌린다. */
+    eq('[8-h] 1600 22 퀘스트 상자 높이 = 프레임 − 322', q13.qbox.h, 1600 - 322, 1);
+    eq('[8-i] 1600 21 도감 상자 높이 = 프레임 − 322', c13.cl.h, 1600 - 322, 1);
+    /* ⓒ 반대급부 ② — 상자를 눌러 본문을 자르지 않는다. */
+    (q13.qbody && q13.qbody.over <= 1)
+      ? ok('[8-j] 1600 22 퀘스트 본문이 안 잘린다', `넘침 ${q13.qbody.over}px`)
+      : no('[8-j] 1600 22 퀘스트 본문이 안 잘린다', `넘침 ${q13.qbody ? q13.qbody.over : '?'}px`);
+    /* ⓒ 반대급부 ③ — 21 도감은 아래를 **줄이는 것이 회수**다. `.cl-body` 는 `top:111 · bottom:3` 로
+       `.cl` 의 **패딩 상자**에 매달리므로 테두리(위 8 + 아래 5)를 먼저 뺀다:
+       1278 − 13 − 114 = **1151**(수리 전 1156 − 13 − 114 = 1029 ⇒ **+122px**).
+       ⚠ 상자 높이(1278)로 바로 빼면 1164 가 나와 이 항이 «영원히 빨간 게이트» 가 된다 — 첫 판이 그랬다. */
+    (c13.clBody && c13.clBody.h >= 1151)
+      ? ok('[8-k] 1600 21 도감 목록 그릇이 띠를 다 받는다', `${c13.clBody.h}px ≥ 1151 (수리 전 1029)`)
+      : no('[8-k] 1600 21 도감 목록 그릇이 띠를 다 받는다', `${c13.clBody ? c13.clBody.h : '?'}px`);
 
     /* ---------------- §R 되돌림 시험 ---------------- */
     console.log('[§R] 처방을 뺀 사본에서 같은 항이 빨개지는가');
@@ -401,6 +464,23 @@ async function shot(browser, h, opener, revert) {
         ['attend', 'roul', 'quest'].map((k) => k + '=' + dp19.reach[k].by).join(' · '))
       : no('[R-i] 딤을 pointer-events:auto 로 바꾸면 2280 레일이 딤에 막힌다',
         ['attend', 'roul', 'quest'].map((k) => k + '=' + (dp19.reach[k].on ? '여전히 닿음' : dp19.reach[k].by)).join(' · '));
+    /* [R-j][R-k](390) — 띠를 옛 상수(126/150 · 168/276)로 되돌리면 §8 이 실제로 빨개지는가.
+       이게 없으면 [8-e][8-f] 는 «이미 참인 것을 굳힌 게이트» 와 구별이 안 된다(338 교훈).
+       ⚠ **두 자리를 따로 되돌려 따로 잡는다** — 한 항으로 묶으면 «둘 중 하나만 되돌려도
+       조용한 게이트» 가 된다(369 [R] 선례). */
+    const rq13 = await shot(br, 1600, 'quest', true);
+    (rq13.qbox.top < rq13.pedge.bot && rq13.qbox.bot > rq13.tabsTop)
+      ? ok('[R-j] 되돌리면 1600 22 퀘스트 상자가 HUD·탭바를 둘 다 문다',
+        `${rq13.qbox.top}..${rq13.qbox.bot} vs 띠 ${rq13.pedge.bot}..${rq13.tabsTop} (위 ${rq13.pedge.bot - rq13.qbox.top} · 아래 ${rq13.qbox.bot - rq13.tabsTop})`)
+      : no('[R-j] 되돌리면 1600 22 퀘스트 상자가 HUD·탭바를 둘 다 문다',
+        `${rq13.qbox.top}..${rq13.qbox.bot} vs 띠 ${rq13.pedge.bot}..${rq13.tabsTop}`);
+    const rk13 = await shot(br, 1600, 'coll', true);
+    (rk13.cl.top < rk13.pedge.bot)
+      ? ok('[R-k] 되돌리면 1600 21 도감 상자가 HUD 를 문다', `상변 ${rk13.cl.top} < ${rk13.pedge.bot} (침범 ${rk13.pedge.bot - rk13.cl.top}px)`)
+      : no('[R-k] 되돌리면 1600 21 도감 상자가 HUD 를 문다', `상변 ${rk13.cl.top} · 잉크 끝 ${rk13.pedge.bot}`);
+    /* 되돌린 사본에서도 2280 은 같아야 한다 = 처방이 9:19 를 안 건드렸다는 세 번째 증거 */
+    const rq19 = await shot(br, 2280, 'quest', true);
+    eq('[R-l] 되돌려도 2280 22 퀘스트 상자 상변은 같다(9:19 무관)', rq19.qbox.top, 380, 1);
     const r19 = await shot(br, 2280, 'bless', true);
     eq('[R-c] 되돌려도 2280 ✕ 상변은 같다(9:19 무관)', r19.blsX.top, 1793);
     /* 7회차 신설 — 무르게 푼 수리가 아님을 두 항이 못박는다. [R-j] 는 «되돌리면 탭 줄이 패널 밖으로
