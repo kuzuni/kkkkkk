@@ -398,12 +398,24 @@ const motifInk = (t) => {
       const p0 = await ev(prep, k);
       if (guard(p0, tag + '-' + k)) return;
       await page.waitForTimeout(420);
-      const pt = await ev(({ fn, sel }) => (new Function('return ' + fn))()(sel, 14, 25.5),
-                          { fn: POINT_FN, sel: typeof sel === 'function' ? sel(k) : sel });
-      if (guard(pt, tag + '-' + k)) return;
-      if (!pt) { bad.push(k + '(자리 없음)'); continue; }
-      const px = await shotSample({ [k]: pt });
-      if (guard(px, tag + '-' + k)) return;
+      /* 표본은 **띠 안 네 자리**를 찍어 최빈값을 쓴다 — 한 점만 찍으면 회전·스냅으로 1px 어긋난 실행에서
+         검은 테가 잡혀 «이 장만 실패» 가 된다(5회 중 1회 그렇게 흔들렸다). 판정 자체는 안 무르게 두고
+         («띠 색이 이름 창 안인가») 표본 잡는 손만 안정시킨다. */
+      const pts = await ev(({ fn, sel }) => {
+        const f = (new Function('return ' + fn))();
+        const uv = [[14, 25.5], [50, 25.5], [14, 44.5], [50, 44.5]];
+        const out = {};
+        for (let i = 0; i < uv.length; i++) { const p = f(sel, uv[i][0], uv[i][1]); if (!p) return null; out['p' + i] = p; }
+        return out;
+      }, { fn: POINT_FN, sel: typeof sel === 'function' ? sel(k) : sel });
+      if (guard(pts, tag + '-' + k)) return;
+      if (!pts) { bad.push(k + '(자리 없음)'); continue; }
+      const got = await shotSample(pts);
+      if (guard(got, tag + '-' + k)) return;
+      const tally = {};
+      for (const q in got) { const key = got[q].join(','); tally[key] = (tally[key] || 0) + 1; }
+      const best = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+      const px = { [k]: best.split(',').map(Number) };
       const r = named(NAMED[k][1], px[k]);
       if (!r.ok) bad.push(k + ' «' + NAMED[k][1] + '» 인데 rgb(' + px[k].join(',') + ') h' + r.h.toFixed(0) + '°/L*' + r.L.toFixed(0));
     }
@@ -433,14 +445,30 @@ const motifInk = (t) => {
     });
     if (ready && !ready.__err) {
       await page.waitForTimeout(420);
-      const pt = await ev(({ fn, sel }) => (new Function('return ' + fn))()(sel, 14, 25.5),
-                          { fn: POINT_FN, sel: '#dgdTki img.cic' });
-      const px = pt && !pt.__err ? await shotSample({ relic1: pt }) : { __err: '자리 없음' };
+      /* ⚠ **전제부터 세운다** — 캡처가 «필터가 아직 안 얹힌 프레임» 을 잡으면 표본이 원래 갈색으로 나와
+         이 항이 «되돌려도 안 빨개진다» 로 뒤집힌다(12회 중 1회 그렇게 흔들렸다: rgb(87,44,17)).
+         그래서 «찍힌 색이 필터 없는 채움과 충분히 다르다»(ΔE > 15)를 **전제**로 걸고, 아닐 때만 다시 찍는다.
+         전제가 끝내 안 서면 초록으로 넘기지 말고 그 사실을 빨갛게 말한다(431-② — 못 잰 것을 초록으로 부르지 않는다). */
+      const raw = lab(rgbOf(fillHex(src.relic1)));
+      let px = null, tried = 0;
+      for (; tried < 6; tried++) {
+        const pt = await ev(({ fn, sel }) => (new Function('return ' + fn))()(sel, 14, 25.5),
+                            { fn: POINT_FN, sel: '#dgdTki img.cic' });
+        if (!pt || pt.__err) break;
+        const got = await shotSample({ relic1: pt });
+        /* 전제 = «색상이 실제로 돌았다» — 60 쥬시 열림 연출이 도는 동안에는 애니메이션의 `filter` 가
+           인라인 필터를 덮어 원래 갈색이 찍힌다(그 프레임을 잡으면 이 항이 거꾸로 뒤집힌다).
+           밝기만 다른 프레임(ΔE 는 크고 색상은 그대로)이 그 함정이라 **색상각**으로 묻는다. */
+        if (got && !got.__err && dHue(lab(got.relic1), raw) > 40) { px = got; break; }
+        await page.waitForTimeout(350);
+      }
       await ev(() => { const h = document.getElementById('dgdTki'); if (h) h.style.filter = ''; closeDunDetail(); });
-      if (!guard(px, '§R7')) {
+      if (!px) {
+        ok(false, '§R7 전제 — 필터가 얹힌 프레임을 못 잡았다(못 잰 것을 초록으로 부르지 않는다)', tried + '회 시도');
+      } else {
         const r = named('갈색', px.relic1);
         ok(!r.ok, '§R7 04 팝업의 옛 `hue-rotate` 를 도로 켜면 E6 가 빨개진다(그 필터가 8색을 초록으로 되접었다)',
-           'rgb(' + px.relic1.join(',') + ') h' + r.h.toFixed(0) + '° → «갈색» 창 밖');
+           'rgb(' + px.relic1.join(',') + ') h' + r.h.toFixed(0) + '° → «갈색» 창 밖 (재시도 ' + tried + '회)');
       }
     }
   }
