@@ -145,14 +145,19 @@ const runGate = () => {
     out = execFileSync('node', [path.join(__dirname, 'verify71.js')],
       { cwd: ROOT, env: Object.assign({}, process.env, { V71_SRC: TMP }), encoding: 'utf8' });
   } catch (e) { out = (e.stdout || '') + (e.stderr || ''); }
-  return out.split('\n').filter(l => /^\s*FAIL /.test(l)).map(l => l.trim().replace(/^FAIL /, ''));
+  const fails = out.split('\n').filter(l => /^\s*FAIL /.test(l)).map(l => l.trim().replace(/^FAIL /, ''));
+  /* ⚑ 381 — 기준선 점수는 **재서 적는다**. 여기 «66/66» 이 손으로 박혀 있었는데
+     356 이 verify71 에 2항을 더해 68/68 이 된 뒤로도 66 을 말하고 있었다 —
+     이 게이트를 죽인 행 상수와 **같은 종류의 굳은 스냅샷**이라 같이 걷어냈다. */
+  fails.score = (out.match(/VERIFY71 \w+ (\d+\/\d+)/) || [, '?'])[1];
+  return fails;
 };
 
 (async () => {
   console.log('[0] 기준선 — 갈아 끼우지 않은 사본은 초록이어야 한다');
   fs.writeFileSync(TMP, SRC);
   const base = runGate();
-  ok('사본 그대로 = FAIL 0건', base.length === 0, base.length ? base.slice(0, 3).join(' / ') : '66/66');
+  ok('사본 그대로 = FAIL 0건', base.length === 0, base.length ? base.slice(0, 3).join(' / ') : base.score);
 
   for (const t of TESTS) {
     console.log('\n[' + t.id + '] ' + t.why);
