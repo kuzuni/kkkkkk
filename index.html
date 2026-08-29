@@ -8492,11 +8492,17 @@
     box-shadow:inset 0 0 0 7px #FCC132}
   /* 아트 자리 — 레퍼런스 보석 잉크 92×95. 이미지로 교체할 때 이 bbox 를 그대로 쓴다 */
   /* 356 7회차 — `scaleX(.87)` 은 «자연 잉크 98 을 ref 폭 92 로 누르는» 한 축짜리 보정이었다.
-     주인 지시(«원본 비율») 대로 등방 contain 으로 간다: 자연 98×98 · s = min(92/98, 95/98) = .93878
-     ⇒ 잉크 92×92(ref 92×95 — 높이 3px 은 아트 종횡이 만드는 잔차라 CSS 로 못 닫는다).
-     중심 되돌림 d 는 (0, −0.21) 로 측정 분해능 아래라 안 적는다(`cal356r7`). */
-  .ci-ic>i{position:absolute;left:0;right:0;top:1px;height:150px;line-height:150px;
-    text-align:center;font-size:96px;transform:scale(.93878)}
+     주인 지시(«원본 비율») 대로 등방 contain 으로 갔다: 자연 98×98 · s = min(92/98, 95/98) = .93878.
+     ── 8회차(비평가 BD) — 그 등방 배율이 **DSF 2·3 에서 잉크를 92×91 로 그렸다**(종횡 1.011).
+     뿌리는 배율이 아니라 **소수 상자**다: `.cic{width:1.08em}` × `font-size:96` = **103.68px** 라
+     페인트 스냅이 세로 1px 을 먹고, 그 위에 소수 배율이 또 얹혔다. DSF 1 에서는 그 1px 이
+     반올림에 묻혀 **캡처만 보면 안 잡힌다**(그래서 7회차의 자·비평가 한 명이 놓쳤다).
+     ⇒ 배율을 통째로 걷고 **상자를 정수 98px** 로 잡는다 — 잉크는 그대로 92×92(ref 폭 Δ0)이고
+     DSF 1·2·3 에서 전부 편차 0.00% 다(`probe356r8`). 상자가 5.68px 작아진 만큼 잉크가 내려가므로
+     `top` 을 1 → **−0.84** 로 되민다(실측 — 중심 895.0 유지 · 현행 894.5~895.0). */
+  .ci-ic>i{position:absolute;left:0;right:0;top:-0.84px;height:150px;line-height:150px;
+    text-align:center;font-size:96px}
+  .ci-ic>i>.cic{width:98px;height:98px}
   /* «보유: n» 코어 y1080..1112(중심 1096) → body 중심 215. 전체가 라임 한 덩어리다 */
   .ci-have{left:0;right:0;top:188px;height:50px;line-height:50px;text-align:center;left:-1.5px;
     font-size:38px;color:#B8FA5F;-webkit-text-stroke:6px #000;paint-order:stroke fill;

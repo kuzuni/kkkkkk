@@ -561,8 +561,12 @@ async function sweep(browser, inject) {
         why: '23 훈련 ⚔️ — 자연 186×186 · ref 152×151 ⇒ min = .81183' },
       { q: '#trCards .tr-card:first-child > .cb > s',  sx: 0.96364, sy: 0.96364, open: ['.tab[data-t="grow"]'],
         why: '23 훈련 코인 — 자연 55×55 · ref 53×55 ⇒ min = .96364' },
-      { q: '#ciIcon',                                   sx: 0.93878, sy: 0.93878, open: ['[data-cur="dia"]'],
-        why: '33 재화 정보 — 자연 98×98 · ref 92×95 ⇒ min = .93878' },
+      /* ⚠ 33 재화 정보만 8회차에 **손잡이가 바뀌었다** — 배율이 아니라 «정수 상자» 다.
+         소수 상자(103.68) + 소수 배율이 DSF 2·3 에서 잉크를 92×91 로 그렸기 때문이다.
+         그래서 이 자리의 기대는 `transform:none` 이고, 물음은 [S3] 으로 옮겼다(«상자가 정수 98 인가»).
+         여기 남겨 두는 이유는 **옛 배율이 되살아나는 것**을 잡기 위해서다. */
+      { q: '#ciIcon',                                   sx: 1, sy: 1, open: ['[data-cur="dia"]'],
+        why: '33 재화 정보 — 8회차에 배율을 걷고 정수 상자로 갔다(상자 자체는 [S3])', none: true },
       { q: '#bCos .sk-btn.sk-b2 > i > .cic',            sx: 1.15473, sy: 1,       open: ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]'],
         why: '50 코스튬 역보정 — .866 × 1.15473 = 1.00000' },
     ];
@@ -582,13 +586,134 @@ async function sweep(browser, inject) {
         return m ? [+m[1], +m[4]] : 'none';
       }, w.q);
       if (g === null) bad(`[S2] ${w.q} — 노드가 없다(선택자가 죽었거나 화면에 못 갔다)`);
+      else if (w.none) {
+        if (g === 'none' || (Math.abs(g[0] - 1) < 1e-6 && Math.abs(g[1] - 1) < 1e-6))
+          ok(`[S2] ${w.q} — transform 없음 고정 (${w.why})`);
+        else bad(`[S2] ${w.q} — transform ${g[0]}/${g[1]}: 8회차가 걷어낸 소수 배율이 되살아났다 (${w.why})`);
+      }
       else if (g === 'none') bad(`[S2] ${w.q} — transform 이 통째로 없다: contain 배율이 사라졌다 (${w.why})`);
       else if (Math.abs(g[0] - w.sx) > 0.004 || Math.abs(g[1] - w.sy) > 0.004)
         bad(`[S2] ${w.q} — 배율 ${g[0]}/${g[1]}, 기대 ${w.sx}/${w.sy} (${w.why})`);
       else ok(`[S2] ${w.q} — ${w.sx}/${w.sy} 고정`);
       await page.close();
     }
+    /* [S2-b] 역보정의 «짝» 을 묻는다 — 7회차 비평가 BC 가 축 밖으로 짚은 구멍이다.
+       50 코스튬 아이콘의 1.15473 은 **라벨의 .866 과 서로를 모르는 채 묶여 있는** 상수다.
+       위의 [S2] 는 아이콘 쪽 상수만 보므로, 라벨의 .866 을 누가 바꾸면 **상쇄가 깨져 아이콘이
+       즉시 찌그러지는데 [S2] 는 초록**이다([A] 는 누적을 보지만 «왜 1.0 이어야 하는지» 는 안 묻는다).
+       ⇒ 물어야 할 것은 상수 하나가 아니라 **곱이 1 인가** 다. */
+    {
+      const page = await ctx.newPage();
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(800);
+      for (const q of ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]']) {
+        await page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); }, q);
+        await page.waitForTimeout(550);
+      }
+      const g = await page.evaluate(() => {
+        const im = document.querySelector('#bCos .sk-btn.sk-b2 > i > .cic');
+        if (!im) return null;
+        const sx = (q) => {
+          const m = /matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/.exec(getComputedStyle(q).transform);
+          return m ? [+m[1], +m[4]] : [1, 1];
+        };
+        const a = sx(im), b = sx(im.parentElement);
+        return { prod: [a[0] * b[0], a[1] * b[1]], label: b, icon: a };
+      });
+      if (!g) bad('[S2-b] 50 코스튬 — 아이콘 노드가 없다(라벨이 MAX 라 아이콘이 안 그려졌을 수 있다)');
+      else if (Math.abs(g.prod[0] / g.prod[1] - 1) > 0.002)
+        bad(`[S2-b] 50 코스튬 — 라벨 ${g.label[0]} × 아이콘 ${g.icon[0]} = ${g.prod[0].toFixed(5)} (세로 ${g.prod[1]}): 상쇄가 깨졌다`);
+      else ok(`[S2-b] 50 코스튬 — 라벨 ${g.label[0]} × 아이콘 ${g.icon[0]} = ${g.prod[0].toFixed(5)} ⇒ 누적 등방 (역보정의 짝이 살아 있다)`);
+      await page.close();
+    }
     await ctx.close();
+  }
+
+  /* [S3] 8회차 — **«찍힌 픽셀» 을 묻는 유일한 항이다.**
+     [A]·[S2] 는 둘 다 «선언된 변환» 을 본다. 그런데 7회차 비평가 BD 가 찾아낸 것은 선언이 아니라
+     **페인트 스냅**이었다 — `.cic{width:1.08em}` × `font-size:96` = 103.68px 라는 소수 상자에
+     소수 배율이 얹히자 DSF 2·3 에서 잉크가 **92×91**(종횡 1.011)로 그려졌다.
+     ⚠ **DSF 1 에서는 그 1px 이 반올림에 묻혀 92×92 로 보인다** — 7회차의 자도, 캡처도, 비평가 한 명도
+     그래서 못 봤다. ⇒ 이 항은 반드시 **deviceScaleFactor 2** 로 재고, 되돌림(소수 상자 재주입)까지 한 벌이다.
+     ⇒ 교훈: «종횡비 0» 을 선언으로만 물으면 래스터가 만드는 찌그러짐은 통째로 감시 밖이다. */
+  console.log('[S3] 8회차 그려진 잉크 — 33 재화 정보 보석이 DSF 2 에서도 정사각인가');
+  {
+    const inkOf = async (page, sel) => {
+      const r = await page.evaluate((s) => {
+        const e = document.querySelector(s); if (!e) return null;
+        const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height };
+      }, sel);
+      if (!r) return null;
+      const PAD = 60;
+      const clip = { x: Math.max(0, Math.floor(r.x - PAD)), y: Math.max(0, Math.floor(r.y - PAD)),
+        width: Math.ceil(r.w + PAD * 2), height: Math.ceil(r.h + PAD * 2) };
+      await page.waitForTimeout(180);
+      const on = await page.screenshot({ clip });
+      await page.evaluate((s) => { for (const e of document.querySelectorAll(s)) e.style.opacity = '0'; }, sel);
+      await page.waitForTimeout(180);
+      const off = await page.screenshot({ clip });
+      await page.evaluate((s) => { for (const e of document.querySelectorAll(s)) e.style.opacity = ''; }, sel);
+      await page.waitForTimeout(120);
+      const d = await calcPage.evaluate(async ([a, b2]) => {
+        const load = async (s) => { const im = new Image(); im.src = 'data:image/png;base64,' + s; await im.decode();
+          const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+          const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+          return { d: g.getImageData(0, 0, c.width, c.height).data, W: c.width, H: c.height }; };
+        const A = await load(a), B = await load(b2);
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+        for (let y = 0; y < A.H; y++) for (let x = 0; x < A.W; x++) { const i = (y * A.W + x) * 4;
+          const dd = Math.abs(A.d[i] - B.d[i]) + Math.abs(A.d[i + 1] - B.d[i + 1]) + Math.abs(A.d[i + 2] - B.d[i + 2]);
+          if (dd > 12) { n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+        return n ? { w: x1 - x0 + 1, h: y1 - y0 + 1 } : null;
+      }, [on.toString('base64'), off.toString('base64')]);
+      return d ? { w: d.w / 2, h: d.h / 2 } : null;
+    };
+    const calcPage = await browser.newPage();
+    await calcPage.setContent('<body></body>');
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 2 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(1000);
+    await page.evaluate(() => { const e = document.querySelector('[data-cur="dia"]'); if (e) e.click(); });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => {
+      for (const a of document.getAnimations()) { try { a.finish(); } catch (e) {} }
+      for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
+      window.requestAnimationFrame = () => 0;
+    });
+    const SEL = '#ciIcon>img.cic';
+    const n = await page.evaluate((s) => document.querySelectorAll(s).length, SEL);
+    if (!n) bad('[S3] 33 재화 정보 — 진입 실패: `#ciIcon>img.cic` 가 0개다');
+    else {
+      ok(`[S3] 33 재화 정보 — ${SEL} ${n}개 진입 확인 (헛초록 방지)`);
+      /* 상자가 정수인가 — 이것이 8회차가 바꾼 손잡이 자체다 */
+      const box = await page.evaluate((s) => { const b = document.querySelector(s).getBoundingClientRect(); return [b.width, b.height]; }, SEL);
+      if (Math.abs(box[0] - 98) > 0.01 || Math.abs(box[1] - 98) > 0.01)
+        bad(`[S3] 33 재화 정보 — 상자 ${box[0]}×${box[1]}, 기대 98×98 정수 (소수 상자가 되살아났다)`);
+      else ok('[S3] 33 재화 정보 — 상자 98×98 정수 고정');
+
+      const a = await inkOf(page, SEL);
+      const a2 = await inkOf(page, SEL);
+      if (!a) bad('[S3] 33 재화 정보 — 잉크 차분이 0이다(요소가 안 그려졌다)');
+      else {
+        if (a.w !== a2.w || a.h !== a2.h) bad(`[S3] 33 재화 정보 — 재실행이 흔들린다 ${a.w}×${a.h} ↔ ${a2.w}×${a2.h}`);
+        else ok(`[S3] 33 재화 정보 — 재실행 일치 ${a.w}×${a.h}`);
+        const dev = Math.abs(a.w / a.h - 1) * 100;
+        if (dev > 0.5) bad(`[S3] 33 재화 정보 — DSF2 잉크 ${a.w}×${a.h} 종횡 편차 ${dev.toFixed(2)}% (0.5% 이내여야 한다)`);
+        else ok(`[S3] 33 재화 정보 — DSF2 잉크 ${a.w}×${a.h} · 편차 ${dev.toFixed(2)}%`);
+        if (Math.abs(a.w - 92) > 1) bad(`[S3] 33 재화 정보 — 잉크 폭 ${a.w}, ref 92 에서 ${Math.abs(a.w - 92)}px 벗어났다`);
+        else ok(`[S3] 33 재화 정보 — 잉크 폭 ${a.w} = ref 92 (±1)`);
+      }
+      /* 되돌림 — 소수 상자를 도로 심으면 그 1px 이 돌아오는가. 이 항이 없으면 위 셋은
+         «지금 우연히 초록» 일 뿐이고, 무엇이 그것을 지키는지 아무도 안 묻는다. */
+      await page.addStyleTag({ content: '.ci-ic>i>.cic{width:1.08em !important;height:1.08em !important}.ci-ic>i{transform:scale(.93878) !important}' });
+      await page.waitForTimeout(250);
+      const r = await inkOf(page, SEL);
+      if (r && Math.abs(r.w / r.h - 1) * 100 > 0.5) ok(`[S3] 되돌림 — 소수 상자(103.68)+소수 배율을 심으면 ${r.w}×${r.h} 로 빨개진다 (자가 살아 있다)`);
+      else bad(`[S3] 되돌림 — 심어도 ${r ? r.w + '×' + r.h : '차분 0'} 로 정사각이다: 이 항은 감시 밖이다`);
+    }
+    await ctx.close();
+    await calcPage.close();
   }
 
   /* [R7] 되돌림 시험(7회차 스코프) — 세 화면 전부 탭·팝업 뒤라 [R]~[R6] 어느 자에도 안 걸린다.
