@@ -121,20 +121,29 @@ const dh = (a, b) => { let d = Math.abs(hue(a) - hue(b)); return d > 180 ? 360 -
   const rows = [];
   for (let i = 0; i < KEYS.length; i++) for (let j = i + 1; j < KEYS.length; j++) {
     const a = KEYS[i], b = KEYS[j];
-    rows.push({ p: a + '↔' + b, e: dE(L[a].f, L[b].f), h: dh(L[a].f, L[b].f), l: Math.abs(L[a].f[0] - L[b].f[0]) });
+    rows.push({ p: a + '↔' + b, e: dE(L[a].f, L[b].f), h: dh(L[a].f, L[b].f), l: Math.abs(L[a].f[0] - L[b].f[0]),
+                c: Math.abs(chroma(L[a].f) - chroma(L[b].f)) });
   }
   rows.sort((x, y) => x.e - y.e);
   console.log('  하위 6쌍: ' + rows.slice(0, 6).map((r) => r.p + ' ΔE' + r.e.toFixed(1) + '/Δh' + r.h.toFixed(0) + '°/ΔL' + r.l.toFixed(0)).join('\n             '));
   console.log('  최소 ΔE ' + rows[0].e.toFixed(1) + ' · 중앙값 ' + rows[(rows.length / 2) | 0].e.toFixed(1) + ' · 최대 ' + rows[rows.length - 1].e.toFixed(1));
   ok(rows[0].e >= 35, '②-a 쌍별 최소 ΔE ≥ 35 (등재문 실측 12.4)', rows[0].p + ' ' + rows[0].e.toFixed(1));
-  const weak = rows.filter((r) => r.h < 30 && r.l < 18);
-  ok(weak.length === 0, '②-b «색상각 ≥30° 또는 L* 차 ≥18» 을 못 넘는 쌍 0건(명도만으로 갈린 쌍 금지)',
+  /* 430 이관 — 축이 셋이 됐다(색상 · 명도 · **채도**). 430 팔레트의 무채색 2장(회색·흰색)은
+     색상각이 없고 «채도가 0 이라는 것» 자체로 갈린다. */
+  const weak = rows.filter((r) => r.h < 30 && r.l < 18 && r.c < 25);
+  ok(weak.length === 0, '②-b «색상각 ≥30° 또는 L* 차 ≥18 또는 C* 차 ≥25» 를 못 넘는 쌍 0건',
      weak.length ? weak.map((r) => r.p).join(',') : '0건');
   const Ls = KEYS.map((k) => L[k].f[0]), Cs = KEYS.map((k) => chroma(L[k].f));
   console.log('  L* 밴드 ' + Math.min(...Ls).toFixed(1) + '~' + Math.max(...Ls).toFixed(1)
     + ' · C* 밴드 ' + Math.min(...Cs).toFixed(1) + '~' + Math.max(...Cs).toFixed(1));
-  ok(Math.max(...Ls) - Math.min(...Ls) <= 4, '②-c 명도가 한 밴드다(«통일감» — L* 폭 ≤ 4)',
-     (Math.max(...Ls) - Math.min(...Ls)).toFixed(1));
+  /* ⚠ 412 의 이 자리는 «명도가 한 밴드다(L* 폭 ≤ 4)» 였다 — **430 주인 재재지시로 폐기**됐다.
+     그 규칙이 여덟을 L*64 로 묶어 색상환 이웃 넷을 «파랑 계열 넷» 으로 만든 것이 결함의 뿌리였고,
+     주인이 «이름대로»(노랑·초록·갈색·회색·빨강·흰색·주황·파랑) 를 세 번째로 지시했다.
+     자리는 비우지 않고 **정반대 축**(회색조 사다리)으로 갈아 끼운다 — 상세는 verify430 [B2]. */
+  const sorted = [...Ls].sort((a, b) => a - b);
+  let gap = 1e9; for (let i = 1; i < sorted.length; i++) gap = Math.min(gap, sorted[i] - sorted[i - 1]);
+  ok(gap >= 8, '②-c 회색조 사다리 — L* 최소 인접차 ≥ 8 (412 의 «한 밴드» 규칙은 430 에서 폐기)',
+     gap.toFixed(1) + ' · 사다리 ' + sorted.map((x) => x.toFixed(0)).join('/'));
 
   blk('③ 문양 — 색이 죽어도 남는 축');
   const sig = {}; KEYS.forEach((k) => sig[k] = motif[k].join('|'));

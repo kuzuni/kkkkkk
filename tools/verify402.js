@@ -121,7 +121,15 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
        ③ 한 밴드(L* 폭 ≤ 4 · 최소 C* ≥ 30)  ④ 테는 같은 색상의 어두운 짝
      ⚠ 이 자는 카드색을 **안 본다** — 402 의 «카드↔권종 색 연상» 은 주인 지시로 끊겼고,
         대신 «껍데기·속띠 기하 픽셀 동일»(B2·B3)과 «문양 규격 공용»(B8)이 세트를 지탱한다. */
-  const DE_MIN = 35, DH_MIN = 30, DL_MIN = 18;
+  /* ── 430 이관(주인 재재지시 2026-08-30 «노랑(황금) … 파랑(룬) 으로 해야할거 같다») ─────────
+     412 가 세운 두 규칙이 여기서 **폐기**됐다 — ⓐ «L* 폭 ≤ 4 한 밴드» · ⓑ «최소 C* ≥ 30».
+     그 둘이 여덟을 전부 L*64 중채도로 묶어 색상환 이웃 넷을 «파랑 계열 넷» 으로 만들었고
+     (probe430: 412 팔레트는 이름 일치 **0/8**), 주인이 세 번째로 같은 결함을 지적했다.
+     자리는 비우지 않는다(333 처방) — B6 은 정반대 축(«회색조 사다리»)으로 갈아 끼웠고,
+     «이름대로의 색인가» 는 tools/verify430.js [A] 가 **찍힌 픽셀**로 본다.
+     B5 에는 축이 하나 늘었다(채도) — 430 팔레트에는 무채색 2장(회색·흰색)이 있어서
+     «채도가 0 이라는 것» 자체가 갈림의 축이다(회색 ↔ 파랑은 색상각이 아니라 채도로 갈린다). */
+  const DE_MIN = 35, DH_MIN = 30, DL_MIN = 18, DC_MIN = 25, GRAY_MIN = 8;
   const finv = (t) => (t > 0.04045 ? Math.pow((t + 0.055) / 1.055, 2.4) : t / 12.92);
   const lab = (hex) => {
     const n = parseInt(hex.slice(1), 16);
@@ -143,29 +151,37 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
   const pairs = [];
   for (let i = 0; i < ALL8.length; i++) for (let j = i + 1; j < ALL8.length; j++) {
     const a = ALL8[i], b = ALL8[j], la = lab(tone[a].r), lb = lab(tone[b].r);
-    pairs.push({ p: a + '↔' + b, e: dE(la, lb), h: dHue(la, lb), l: Math.abs(la[0] - lb[0]) });
+    pairs.push({ p: a + '↔' + b, e: dE(la, lb), h: dHue(la, lb), l: Math.abs(la[0] - lb[0]),
+                 c: Math.abs(chOf(la) - chOf(lb)) });
   }
   pairs.sort((x, y) => x.e - y.e);
   ok(pairs.length === 28 && pairs[0].e >= DE_MIN,
      'B4 속띠 28쌍의 최소 ΔE ≥ ' + DE_MIN + ' (412 전 실측 12.4 — dia↔rstone)',
      '최소 ' + pairs[0].e.toFixed(1) + ' (' + pairs[0].p + ') · 중앙값 ' + pairs[14].e.toFixed(1));
-  const weak = pairs.filter((r) => r.h < DH_MIN && r.l < DL_MIN);
+  const weak = pairs.filter((r) => r.h < DH_MIN && r.l < DL_MIN && r.c < DC_MIN);
   ok(weak.length === 0,
-     'B5 «색상각 ≥ ' + DH_MIN + '° 또는 L* 차 ≥ ' + DL_MIN + '» 을 못 넘는 쌍 0건(명도만으로 갈린 쌍 금지)',
-     weak.length ? weak.map((r) => r.p + ' Δh' + r.h.toFixed(0) + '/ΔL' + r.l.toFixed(0)).join(', ')
-                 : '0건 (최소 Δh ' + Math.min(...pairs.map((r) => r.h)).toFixed(0) + '°)');
-  const Ls = ALL8.map((n) => lab(tone[n].r)[0]), Cs = ALL8.map((n) => chOf(lab(tone[n].r)));
-  ok(Math.max(...Ls) - Math.min(...Ls) <= 4 && Math.min(...Cs) >= 30,
-     'B6 «통일감» — 채도·명도가 한 밴드다(L* 폭 ≤ 4 · 최소 C* ≥ 30. 412 전 L* 폭 44.8)',
-     'L* ' + Math.min(...Ls).toFixed(1) + '~' + Math.max(...Ls).toFixed(1)
-     + ' · C* ' + Math.min(...Cs).toFixed(1) + '~' + Math.max(...Cs).toFixed(1));
+     'B5 «색상각 ≥ ' + DH_MIN + '° 또는 L* 차 ≥ ' + DL_MIN + ' 또는 C* 차 ≥ ' + DC_MIN + '» 을 못 넘는 쌍 0건',
+     weak.length ? weak.map((r) => r.p + ' Δh' + r.h.toFixed(0) + '/ΔL' + r.l.toFixed(0) + '/ΔC' + r.c.toFixed(0)).join(', ')
+                 : '0건 (축 셋 — 색상 · 명도 · 채도)');
+  /* B6 — 412 의 «한 밴드» 자리에 430 의 정반대 규칙이 들어왔다: 회색조에서도 갈려야 한다.
+     412 는 이 자리에서 L* 폭 0.1 로 초록이었고, 그 초록이 곧 주인이 본 결함이었다. */
+  const Ls = ALL8.map((n) => lab(tone[n].r)[0]).sort((a, b) => a - b);
+  let gmin = 1e9, gp = '';
+  for (let i = 1; i < Ls.length; i++) if (Ls[i] - Ls[i - 1] < gmin) { gmin = Ls[i] - Ls[i - 1]; gp = Ls[i - 1].toFixed(1) + '→' + Ls[i].toFixed(1); }
+  ok(gmin >= GRAY_MIN,
+     'B6 회색조(L* 만) 최소 인접차 ≥ ' + GRAY_MIN + ' — 430 이 412 의 «한 밴드»(0.0)를 폐기한 자리',
+     gmin.toFixed(1) + ' (' + gp + ') · 사다리 ' + Ls.map((x) => x.toFixed(0)).join('/'));
+  /* B7 — 테는 여전히 «같은 손잡이» 지만, 430 의 무채색 2장(회색·흰색)은 색상각이 없다.
+     ⇒ 유채색은 «같은 색상의 어두운 짝», 무채색은 «중성 회색». 밝은 장(노랑·흰색·주황)은
+        테를 채움 −26 에 두면 배경에서 녹으므로 **테 L* 상한 45** 로 눌렀다(문양 잉크도 그 테색이다). */
   const twoTone = ALL8.map((n) => {
     const ls = lab(tone[n].s), lr = lab(tone[n].r);
-    return { n, dh: dHue(ls, lr), dl: lr[0] - ls[0] };
+    return { n, dh: dHue(ls, lr), dl: lr[0] - ls[0], sl: ls[0], sc: chOf(ls), rc: chOf(lr) };
   });
-  const ttBad = twoTone.filter((t) => t.dh > 6 || t.dl < 23 || t.dl > 29);
-  ok(ttBad.length === 0, 'B7 테는 «같은 색상의 어두운 짝» 이다(Δh ≤ 6° · ΔL 26±3 — 8장이 같은 손잡이)',
-     ttBad.length ? ttBad.map((t) => t.n + ' Δh' + t.dh.toFixed(0) + '/ΔL' + t.dl.toFixed(1)).join(', ')
+  const ttBad = twoTone.filter((t) => (t.rc <= 8 ? t.sc > 8 : t.dh > 6) || t.dl < 15 || t.sl > 45);
+  ok(ttBad.length === 0,
+     'B7 테는 «더 어두운 짝» 이다(유채색 Δh ≤ 6° · 무채색 C* ≤ 8 · ΔL ≥ 15 · 테 L* ≤ 45)',
+     ttBad.length ? ttBad.map((t) => t.n + ' Δh' + t.dh.toFixed(0) + '/ΔL' + t.dl.toFixed(1) + '/테L*' + t.sl.toFixed(0)).join(', ')
                   : 'ΔL ' + twoTone.map((t) => t.dl.toFixed(0)).join('/'));
 
   /* ── 문양 — 색이 죽어도 남는 축(색각 이상·회색조·저해상도) */
@@ -177,12 +193,18 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
     if (sig[ALL8[i]] === sig[ALL8[j]]) dup.push(ALL8[i] + '↔' + ALL8[j]);
   ok(dup.length === 0, 'B8 속 문양 path 중복 0건 — 8장이 서로 다른 실루엣이다(412 전 6장이 같은 별 = 15쌍)',
      dup.length ? dup.join(', ') : '8장 → ' + new Set(Object.values(sig)).size + '종');
+  /* B9 — 430 이관: 잉크가 «흰색 고정» 에서 «흰색 ↔ 테색 중 대비가 큰 쪽» 으로 넓어졌다.
+     채움이 밝은 장 셋(노랑 L*85.8 · 흰색 100 · 주황 74)은 흰 문양이 1.0~2.0:1 로 안 보인다.
+     넓어진 것은 **잉크 하나뿐**이고 나머지 규격(opacity .92 · stroke = 테색 · width 1.6)은 그대로다.
+     «어느 쪽을 골랐나» 의 판정은 verify430 [D3] 이 대비로 본다(여기서는 규격만). */
   const specBad = ALL8.filter((n) => {
-    const m = (files[n] || '').match(/<path d="[^"]+" fill="#FFFFFF" opacity="\.92" stroke="(#[0-9A-Fa-f]{6})" stroke-width="1\.6"/);
-    return !m || m[1].toUpperCase() !== tone[n].s;
+    const m = (files[n] || '').match(/<path d="[^"]+" fill="(#[0-9A-Fa-f]{6})" opacity="\.92" stroke="(#[0-9A-Fa-f]{6})" stroke-width="1\.6"/);
+    if (!m) return true;
+    const ink = m[1].toUpperCase();
+    return (ink !== '#FFFFFF' && ink !== tone[n].s) || m[2].toUpperCase() !== tone[n].s;
   });
   ok(specBad.length === 0,
-     'B9 문양 획 규격이 8장 공용이다(흰색 · opacity .92 · stroke = 그 장의 테색 · stroke-width 1.6)',
+     'B9 문양 획 규격이 8장 공용이다(잉크 = 흰색 또는 그 장의 테색 · opacity .92 · stroke = 테색 · width 1.6)',
      specBad.length ? specBad.join(',') : '8/8');
   /* 잉크 bbox — «실루엣만 바꾸고 덩치는 같게» 를 브라우저 getBBox 로 잰다(선언이 아니라 그려진 것) */
   const BOX = await ev((mo) => {
@@ -361,16 +383,20 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
       for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) {
         const a = lab(map[ks[i]]), b = lab(map[ks[j]]);
         const e = dE(a, b), h = dHue(a, b), l = Math.abs(a[0] - b[0]);
+        const c = Math.abs(chOf(a) - chOf(b));
         if (e < mn) { mn = e; mp = ks[i] + '↔' + ks[j]; }
-        if (h < DH_MIN && l < DL_MIN) weakN++;
+        if (h < DH_MIN && l < DL_MIN && c < DC_MIN) weakN++;
       }
       return { mn, mp, weakN };
     };
     const now = {}; ALL8.forEach((n) => now[n] = tone[n].r);
-    const old = Object.assign({}, now, { rstone: '#2FD4C4' });   /* ← 412 이전 룬강화석 청록 */
+    /* ← 430 이관: 되돌림 표본이 «이웃 계열로 접힌 한 장» 이다(402 의 «보라 넷» 이 그 꼴이었다).
+       412 시절 표본(`rstone: '#2FD4C4'`)은 430 팔레트에서는 아무 쌍과도 안 가까워
+       §R5 가 «되돌려도 초록» 이 됐다 — 표본을 지금 팔레트의 이웃(갈색 옆 밝은 갈색)으로 갈아 끼운다. */
+    const old = Object.assign({}, now, { relic3: '#8C4A18' });
     const N = worst(now), O = worst(old);
     ok(N.mn >= DE_MIN && O.mn < DE_MIN,
-       '§R5 한 장을 412 이전 색으로 되돌리면 B4 가 빨개진다(자가 무르지 않다)',
+       '§R5 한 장을 이웃 계열로 되돌리면 B4 가 빨개진다(자가 무르지 않다)',
        '지금 ' + N.mn.toFixed(1) + ' (' + N.mp + ') vs 되돌림 ' + O.mn.toFixed(1) + ' (' + O.mp + ')');
     ok(N.weakN === 0 && O.weakN > 0,
        '§R6 그 되돌림은 B5(«색상각 또는 명도») 도 같이 빨갛게 한다',
