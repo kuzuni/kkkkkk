@@ -51,12 +51,19 @@ const SCOPE = [
   { k: 'span.gem', why: '10 상점 [10/30회 소환] 버튼 💎 (1.234 — transform 이 아니라 object-fit:fill 축)' },
   { k: 'div.cn-bn', why: '13 재화 탭 배너 🎁 (1.433)' },
   { k: 'u.pr', why: '13 재화 탭 구매가 화폐 아이콘 (라벨 scaleX 1.02 를 자식이 뒤집어쓰던 자리)' },
+  /* ── 4회차 — §9 가 «자리가 한 화면에 몰려 있다» 로 넘긴 두 화면 + 전 화면 상시 크롬 한 자리 ── */
+  { k: 'b.ch-bd', why: '103 채팅 이름줄 배지 (수리 전 1.09~1.55 — 잔여 최악. `CHAT_BSX` 표째 폐기)' },
+  { k: 'b.ch-sx', why: '103 채팅 성별 기호 ♂♀ (1.06 · 1.55)' },
+  { k: 'i.cf55-ic', why: '55 설정 행 아이콘 6칸 (.87~1.48 — 데이터 `CF_ROWS.ix` 폐기)' },
+  /* ⚠ 스캐너 경로는 id 를 만나면 멈춘다 — `.ri` 가 아니라 **`#tutoRew`** 로 잡는다(2회차 `#psBar` 선례).
+     이 한 자리가 노드 수로는 가장 컸다 — 30화면 «전부» 에서 같은 노드를 집으므로 60노드다. */
+  { k: '#tutoRew', why: '61 가이드 미션 배너 보상 아이콘 (전 화면 상시 · todo .834/.968 · ready .94/.79)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
-const REMAIN = 54;   /* 3회차 실측(셀렉터 기준) — 2회차 63 → **54**. 스캐너 머리글의 «자리» 와는 자가 다르다
-                        (스캐너는 셀렉터+비율로 접어 79→66, 이 자는 셀렉터만으로 접어 63→54).
-                        같은 자로 두 번 잰 값이 54 다(`scan356` 출력의 스코프 밖 셀렉터 unique 도 54).
-                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·50 과 직접 비교 불가(자가 바뀌었다). */
+const REMAIN = 44;   /* 4회차 실측(셀렉터 기준) — 3회차 54 → **44**. 스캐너 머리글의 «자리» 와는 자가 다르다
+                        (스캐너는 셀렉터+비율로 접어 66→44, 이 자는 셀렉터만으로 접어 54→44 — 4회차에는
+                        두 자가 같은 값에서 만났다). 노드 수로는 162 → **59**(#tutoRew 가 60노드였다).
+                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44 와 직접 비교 불가(자가 바뀌었다). */
 
 const fails = [];
 const oks = [];
@@ -162,6 +169,28 @@ async function sweep(browser, inject) {
       check('#shopList .cn-bn>.art');
       return out;
     });
+    /* 4회차 스코프 — 55 설정·103 채팅. 여기는 «상자보다 넓어지는» 쪽 위험이 다르다:
+       ix<1 이던 셋은 fs 를 내려 흡수했으니 좁아지기만 하고, ix>1 이던 셋은 선언만 뗐으니
+       advance 는 그대로다. 즉 **수리로 새로 넘칠 수 있는 자리는 없다** — 그래도 잰다(357 함정). */
+    const over3 = await page.evaluate(async () => {
+      const out = [];
+      const check = (sel) => {
+        for (const el of document.querySelectorAll(sel)) {
+          const r = el.getBoundingClientRect(); if (!r.width) continue;
+          const adv = parseFloat(getComputedStyle(el).fontSize) * 1.2478;
+          const boxw = el.clientWidth || r.width;
+          if (adv > boxw + 0.5) out.push({ sel, adv: +adv.toFixed(2), boxw: +boxw.toFixed(2) });
+        }
+      };
+      document.querySelector('#menub').click();
+      await new Promise((r) => setTimeout(r, 400));
+      document.querySelector('#mnw [data-mn="conf"]').click();
+      await new Promise((r) => setTimeout(r, 500));
+      check('#cfList .cf55-ic');
+      return out;
+    });
+    if (over3.length) over3.forEach((o) => bad(`advance 넘침 ${o.sel}: ${o.adv} > 상자 ${o.boxw}`));
+    else ok('4회차 스코프(55 설정 행 아이콘) advance ≤ 상자');
     /* `.ibtn .si`·`.tab .ti` 는 상자를 일부러 1.6배·172px 로 넓혀 둔 자리라 넘치면 실패다 */
     if (over.length) over.forEach((o) => bad(`advance 넘침 ${o.sel}: ${o.adv} > 상자 ${o.boxw}`));
     else ok('스코프 4부품 전부 advance ≤ 상자 (넘치는 줄 0)');
@@ -223,6 +252,51 @@ async function sweep(browser, inject) {
     const lab = cat ? '13 재화 탭' : '10 상점';
     if (hit.length >= want) ok(`[R2] ${lab} — 옛 값을 심으면 ${hit.length}자리가 빨개진다 (자가 살아 있다)`);
     else bad(`[R2] ${lab} — 심어도 ${hit.length}건뿐(≥${want} 이어야 한다): 이 자리는 감시 밖이다`);
+    await ctx.close();
+  }
+
+  /* [R3] 4회차 스코프 — 55 설정·103 채팅은 팝업 안이라 [R]·[R2] 어느 자에도 안 걸린다.
+     ⚠ 두 화면은 되돌림의 «모양» 이 서로 다르다:
+       · 103 은 CSS 배율(`--bsx`·`scaleX`)이라 옛 값을 스타일로 도로 심으면 된다.
+       · 55 는 **데이터**(`CF_ROWS.ix`)라 스타일로는 못 되돌린다 — 인라인 `--sx` 를 직접 심고
+         `.cf55-ic` 의 transform 에 그 손잡이를 다시 붙여야 «폐기 전» 과 같은 모양이 된다.
+     이 갈래를 안 나누면 55 쪽은 «심어도 안 빨개지는» 헛초록이 된다. */
+  console.log('[R3] 되돌림 시험(4회차 스코프) — 55 설정 · 103 채팅에서 옛 값을 도로 심으면 빨개지는가');
+  for (const [lab, steps, revert, want] of [
+    ['103 채팅', ['#botleft .ubtn[data-util="chat"]'], () => {
+      const st = document.createElement('style');
+      st.textContent = '.ch-nm>.ch-bd{transform:translateY(-4px) scaleX(var(--bsx,1.25)) !important}'
+        + '.ch-nm>.ch-sx.m{transform:scaleX(1.06) !important}'
+        + '.ch-nm>.ch-sx.f{transform:scaleX(1.55) !important}';
+      document.head.appendChild(st);
+      const T = { '⭐': 1.09, '👿': 1.13, '🛡️': 1.30, '🎖️': 1.55, '🔥': 1.40, '👑': 1.20 };
+      for (const b of document.querySelectorAll('.ch-nm>.ch-bd'))
+        b.style.setProperty('--bsx', T[b.textContent.trim()] || 1.25);
+    }, 3],
+    ['55 설정', ['#menub', '#mnw [data-mn="conf"]'], () => {
+      const st = document.createElement('style');
+      st.textContent = '.cf55-ic{transform:translate(var(--dx,0px),var(--dy,0px)) scaleX(var(--sx,1)) !important}';
+      document.head.appendChild(st);
+      const IX = [0.96, 1.18, 1.48, 1.24, 0.92, 0.87];   /* 폐기한 CF_ROWS.ix — 행 순서 그대로 */
+      document.querySelectorAll('#cfList .cf55-ic').forEach((el, i) => {
+        if (IX[i]) el.style.setProperty('--sx', IX[i]);
+      });
+    }, 4],
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const s of steps) {
+      await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+      await page.waitForTimeout(450);
+    }
+    await page.evaluate(revert);
+    await page.waitForTimeout(200);
+    const got = await page.evaluate(COLLECT, { all: false });
+    const hit = got.filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel));
+    if (hit.length >= want) ok(`[R3] ${lab} — 옛 값을 심으면 ${hit.length}자리가 빨개진다 (자가 살아 있다)`);
+    else bad(`[R3] ${lab} — 심어도 ${hit.length}건뿐(≥${want} 이어야 한다): 이 자리는 감시 밖이다`);
     await ctx.close();
   }
 

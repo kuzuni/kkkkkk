@@ -14,6 +14,22 @@ const ck = (name, got, want, tol = 0) => {
   console.log((ok ? '  OK   ' : '  FAIL ') + name.padEnd(46) + ' got ' + got + ' / want ' + want + (tol ? ' ±' + tol : ''));
 };
 
+/* 356(주인 지시 2026-08-29) — «어떤 아이콘도 찌그러뜨리지 않는다».
+   computed transform 문자열에서 sx/sy 를 뽑아 «등방인가» 를 돌려준다.
+   ⚠ `/matrix/` 만 보는 자는 등방·비균등을 못 가른다 — 그래서 scaleX 가 돌아와도 초록이었다. */
+const tfRatio = (s) => {
+  if (!s || s === 'none') return null;
+  const n = s.match(/matrix(3d)?\(([^)]+)\)/);
+  if (!n) return null;
+  const v = n[2].split(',').map(Number);
+  const [a, b, c, d] = n[1] ? [v[0], v[1], v[4], v[5]] : [v[0], v[1], v[2], v[3]];
+  return { sx: Math.hypot(a, b), sy: Math.hypot(c, d) };
+};
+const isoOf = (s) => {
+  const r = tfRatio(s);
+  return r ? +(r.sx / r.sy).toFixed(3) : null;
+};
+
 /* smoke.js 와 같은 폴백 — 번들 브라우저 버전이 어긋난 러너는 /opt/pw-browsers/chromium 을 쓴다 (76) */
 async function launchAny(){
   try { return await launch(chromium); }
@@ -113,7 +129,11 @@ async function launchAny(){
   ck('L1 에 잉크폭 보정 transform 있음',   /matrix/.test(T.l1tf), true);
   ck('L3 에 잉크폭 보정 transform 있음',   /matrix/.test(T.l3tf), true);
   ck('수량에 잉크폭 보정 transform 있음',   /matrix/.test(T.subtf), true);
-  ck('젬에 잉크폭 보정 transform 있음',     /matrix/.test(T.gemtf), true);
+  /* 356 4회차 이관 — 항을 지우지 않고 «기대값을 뒤집었다»(328 교훈).
+     옛 항은 `/matrix/` 만 봐서 **scaleX 가 돌아와도 초록**이었다. «transform 이 있다» 는 뜻은
+     그대로 두고(null 이면 빨강), 거기에 «그 transform 이 등방이다» 를 더한다. */
+  ck('젬에 크기 보정 transform 있음',       /matrix/.test(T.gemtf), true);
+  ck('젬 transform 이 등방(356 — 찌그러짐 0)', isoOf(T.gemtf), 1, 0.005);
   ck('보상칸 좌단 x',                    T.rew.x, 948);
   ck('보상칸 상단 ref y',                T.rew.y + OFF, 1855, 2);
   ck('보상칸 크기 w',                    T.rew.w, 118, 1);
@@ -134,7 +154,12 @@ async function launchAny(){
   ck('보상칸 bbox = 02 값 유지(117)',     D.rew.x + ',' + D.rew.w + ',' + D.rew.h, '948,117,117');
   ck('L1 transform — 02 가 건 scaleX(1.13)', D.l1tf, 'matrix(1.13, 0, 0, 1, 0, 0)');
   ck('수량 transform 없음',               D.subtf, 'none');
-  ck('젬 transform 없음',                 D.gemtf, 'none');
+  /* ⚠ 356 4회차 이관 — 이 항은 **내 변경 전에도 빨갰다**(대조 실행: `matrix(0.94, 0, 0, 0.79, 0, 0)` /
+     want none). 어느 회차엔가 `#tuto.ready .trew .ri` 에 `scale(.94,.79)` 가 들어왔는데 게이트만
+     «없음» 시절에 굳어 있었다 = 게이트 부패. 자리를 비우지 않고(333 처방) **살아 있는 규약**으로
+     갈아 끼운다 — ready 상태의 젬도 «크기 보정은 있되 등방» 이어야 한다. */
+  ck('젬(ready)에 크기 보정 transform 있음', /matrix/.test(D.gemtf), true);
+  ck('젬(ready) transform 이 등방(356)',     isoOf(D.gemtf), 1, 0.005);
   ck('L3 줄 숨김(02 는 2줄)',             D.l3disp, 'none');
   ck('레드닷 표시',                       D.dot !== 'none', true);
 

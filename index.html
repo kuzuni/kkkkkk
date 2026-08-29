@@ -1200,8 +1200,11 @@
   #tuto.ready .tinfo{top:73px}   /* 껍데기 상단이 2px 내려온 만큼 2행도 되올린다 */
   #tuto.ready .trew{top:11px}    /* 초록 보상칸도 같은 이유로 2px 되올린다 */
   /* 보상 아이콘 잉크가 ref 72x54 인데 77x68 이었다(비평가 A 4회차 D4 · C 5회차 D1, 둘 다 «세로 +21~26%»).
-     초록칸 내부 상하 패딩이 26 → 19 로 좁아 보이는 원인이다. 중심 유지한 채 눌러 준다. */
-  #tuto.ready .trew .ri{transform:scale(.94,.79)}
+     초록칸 내부 상하 패딩이 26 → 19 로 좁아 보이는 원인이다. 중심 유지한 채 눌러 준다.
+     ⚠ 356 4회차 — `scale(.94,.79)` 는 비균등(−13.8%)이었다. 규칙 §2 «작은 쪽으로» =
+     min(72/77, 54/68) = min(.935, .794) → **등방 .79**. 세로는 Δ0 이고 가로만 자연 비율로 돌아온다
+     (ref 72 자리에 잉크 60.8 — 남는 폭은 아트가 들어오면 채운다. 1회차 28 보스 해골과 같은 모양). */
+  #tuto.ready .trew .ri{transform:scale(.79)}
   /* 1행 잉크는 ref 132x25 인데 font 30 에서는 136x29(높이 +16%) 였다. 높이를 ref 에 맞춰 font 26 으로
      내리면 폭이 117 로 좁아지므로 **좌단(ref 728)을 고정한 채** 가로만 되편다 — 게임 서체가 들어오면
      이 scaleX 만 지운다. `.todo` 로 새지 않게 `.ready` 로 좁혀 건다. */
@@ -1355,8 +1358,10 @@
        두 비평가가 «우리에게만 있는 잉여 레이어» 로 지적했다. 아트가 들어오면 필터를 통째로 지우고
        이미지로 교체한다(측정표 §8 «아트 필요»). */
   /* ★ 7회차 — 젬 잉크가 57×62 로 ref 58×60 보다 **세로 +2 · 가로 −1**(비평가 M·N + 자체 스캔 3자 일치).
-     scaleX 단독을 scale(x,y) 로 바꿔 세로만 눌러 준다(.968=60/62 · 가로 .82→.834=58/57). */
-  #tuto.todo .trew .ri{font-size:64px;transform:translateZ(0) translateY(2px) scale(.834,.968);filter:none;
+     ⚠ 356 4회차 — `scale(.834,.968)` 는 비균등(−13.8%)이었고 **전 화면에 상시로 보이는 자리**다
+     (스캐너가 30화면 전부에서 같은 노드를 집었다). 규칙 §2 «작은 쪽으로» =
+     min(58/57, 60/62) = min(1.0175, .968) → **등방 .968**. 세로는 Δ0, 가로만 자연 비율로 돌아온다. */
+  #tuto.todo .trew .ri{font-size:64px;transform:translateZ(0) translateY(2px) scale(.968);filter:none;
     text-shadow:5px 0 0 #000,-5px 0 0 #000,0 4px 0 #000,0 -4px 0 #000,
                 4px 3px 0 #000,-4px 3px 0 #000,4px -3px 0 #000,-4px -3px 0 #000}
   /* 수량 `200` 잉크 75×26 @ ref (969,1957) — 우리 숫자는 폭이 24% 모자라고,
@@ -12651,10 +12656,13 @@
   /* 아이콘 자리 — ref 잉크 x214..283 (칸 70×58), 세로 중앙 */
   /* 아트 자리 규칙 — 이모지 대체물은 «레퍼런스 아이콘 bbox(w×h·중심)를 정확히 차지» 해야 한다
      (나중에 이미지로 교체만 하면 되게). 레퍼런스 6개는 56×56·50×50·64×44·71×56·48×50·58×64 로
-     제각각이라 A2·52 방식대로 행마다 --sf(크기)·--sx(가로)·--dy(세로) 를 실측 역산해 붙인다. */
+     제각각이라 A2·52 방식대로 행마다 --sf(크기)·--dy(세로) 를 실측 역산해 붙인다.
+     ⚠ 356(주인 지시 2026-08-29) — «어떤 아이콘도 찌그러뜨리지 않는다»: 가로만 늘이던 --sx 는
+     폐기했다(4회차). ref bbox 가 정사각이 아닌 행(64×44 · 71×56 · 58×64)은 «작은 쪽으로» 맞춰
+     bbox 안에 들어가고, 남는 폭은 아트가 들어오면 자연히 채워진다. --sx 를 되살리지 마라. */
   .cf55-ic{left:24px;top:50%;width:70px;height:58px;margin-top:-29px;
     line-height:58px;text-align:center;font-size:calc(46px * var(--sf,1));
-    transform:translate(var(--dx,0px),var(--dy,0px)) scaleX(var(--sx,1))}
+    transform:translate(var(--dx,0px),var(--dy,0px))}
   /* 라벨 — 좌단 x300 고정(6행 전부 일치). 잉크 높이 28~33 → font-size 34(÷0.93).
      ref 서체가 우리보다 좁아 폭은 --sx 로 회수한다(LESSONS 01). */
   /* 잉크 높이 목표 28~33 — font 30(코어 27.9) + 편측 2.5 = 32.9. 외곽선 7 이면 38.6 으로 6px 크다. */
@@ -13309,12 +13317,17 @@
      (1회차 비평 Y D3 «폭 −57~68% · 높이 −48~52%»). 아트 자리 규칙대로 **박스를 고정하고 글리프를 키운다.** */
   .ch-nm>.ch-sx{margin-left:-7px;width:32px;height:36px;font-size:74px;line-height:36px;
     text-align:center;overflow:visible}
-  /* ♂ 와 ♀ 는 같은 fs 에서 잉크 폭이 다르다(ref ♂ 33×32 · ♀ 28×38) — 잉크를 ref bbox 에 맞춘다 */
-  .ch-nm>.ch-sx.m{color:#2E6BD0;transform:scaleX(1.06)}
-  .ch-nm>.ch-sx.f{color:#C23A5B;font-size:63px;transform:scaleX(1.55)}
-  /* 배지 56×48 — 이름줄 위로 11px 넘친다(ref −5). 아트 자리 규칙대로 bbox 를 정확히 차지시킨다 */
+  /* ♂ 와 ♀ 는 같은 fs 에서 잉크 폭이 다르다(ref ♂ 33×32 · ♀ 28×38).
+     ⚠ 356 4회차(주인 지시) — 폭만 늘이던 scaleX(♂ 1.06 · ♀ 1.55)는 폐기했다.
+     ♀ 는 자연 잉크가 세로로 긴 글리프라 ref 28×38 의 «작은 쪽»(폭)에 맞춰 fs 로만 잡는다. */
+  .ch-nm>.ch-sx.m{color:#2E6BD0}
+  .ch-nm>.ch-sx.f{color:#C23A5B;font-size:63px}
+  /* 배지 56×48 — 이름줄 위로 11px 넘친다(ref −5). 아트 자리 규칙대로 bbox 를 정확히 차지시킨다.
+     ⚠ 356 4회차 — 배지마다 달랐던 가로 배율(`--bsx` 1.09~1.55)을 폐기했다. 글리프마다 자연 폭이
+     다른 것은 «글리프의 성질» 이고(371 선례 — 답은 배율이 아니라 글리프 교체),
+     가로로만 늘이면 그 배지 하나만 찌그러진다. `--bsx` 를 되살리지 마라(기본값도 없다). */
   .ch-nm>.ch-bd{margin-left:17px;width:56px;height:48px;font-size:46px;line-height:48px;
-    text-align:center;transform:translateY(-4px) scaleX(var(--bsx,1.25))}
+    text-align:center;transform:translateY(-4px)}
   /* 시각 — 우측 정렬 우끝 x967(우 margin 113). 잉크 h23 → fs 25 */
   .ch-tm{right:111px;top:-3px;height:36px;line-height:36px;font-size:34px;color:#7A6550;font-weight:900;
     transform:scaleX(1.02);transform-origin:right center}
@@ -27515,13 +27528,18 @@ window.openBag = openBag;
    레퍼런스 6행 순서 그대로: 언어 · BGM · SFX · 화면 흔들림 · 푸시 알림 · 야간 알림 수신 동의.
    78 로 오디오가 들어왔다 — BGM·SFX 토글·볼륨은 auApply() 로 즉시 반영된다(파일 맨 끝 «78» 절).
    푸시·야간만 아직 «저장되는 사용자 설정» 까지다. */
+/* ⚠ 356 4회차 — 행 아이콘의 `ix`(가로만 늘이던 --sx) 를 폐기했다. 규칙은 §2 «작은 쪽으로»:
+   ix > 1 이던 셋(BGM 1.18 · SFX 1.48 · 흔들림 1.24)은 선언만 뗐고(세로 앵커 Δ0),
+   ix < 1 이던 셋은 그 값을 sf 에 곱해 등방으로 흡수했다
+   (언어 1.08×.96 = 1.0368 · 푸시 1.02×.92 = .9384 · 야간 1.28×.87 = 1.1136).
+   `sx` 는 **라벨 글자** 몫이라 그대로다 — 주인 지시의 대상은 아이콘이다. */
 const CF_ROWS = [
-  { k:'lang',  ic:'💬', n:'언어',               sx:.90, val:'한국어', sf:1.08, ix:.96, dy:1 },
-  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.89, lf:34, sf:1.06, ix:1.18, dy:0 },
-  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.86, lf:34, sf:.85, ix:1.48, dy:2 },
-  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.85, sf:1.10, ix:1.24, dy:-2 },
-  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.84, sf:1.02, ix:.92, dy:0 },
-  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.87, sf:1.28, ix:.87, dy:-2, dx:-4 }
+  { k:'lang',  ic:'💬', n:'언어',               sx:.90, val:'한국어', sf:1.0368, dy:1 },
+  { k:'bgm',   ic:'🎵', n:'BGM',                sx:.89, lf:34, sf:1.06, dy:0 },
+  { k:'sfx',   ic:'🔊', n:'SFX',                sx:.86, lf:34, sf:.85, dy:2 },
+  { k:'shake', ic:'🎥', n:'화면 흔들림',        sx:.85, sf:1.10, dy:-2 },
+  { k:'push',  ic:'🔔', n:'푸시 알림',          sx:.84, sf:.9384, dy:0 },
+  { k:'night', ic:'🌙', n:'야간 알림 수신 동의', sx:.87, sf:1.1136, dy:-2, dx:-4 }
 ];
 /* 오디오 게이트 — 78 의 sfx()/bgmApply() 가 재생 직전마다 이 값을 읽는다 */
 const sndOn = k => !!(S.opt && S.opt[k]) && (S.opt.vol | 0) > 0;
@@ -27545,8 +27563,9 @@ function renderConf(){
       ? '<div class="cf55-gold" data-cfr="' + r.k + '"><i style="--sx:.82">' + r.val + '</i></div>'
       : '<div class="cf55-sw' + (S.opt[r.k] ? ' on' : '') + '" data-cfr="' + r.k + '">'
         + '<s class="cf55-kn"><i>' + (S.opt[r.k] ? 'ON' : 'OFF') + '</i></s></div>';
+    /* ⚠ 356 — 아이콘 칸에는 --sx 를 실어 보내지 않는다(등방). 아래 라벨의 --sx 는 글자 몫이라 남는다. */
     return '<div class="cf55-row"><i class="cf55-ic" style="--sf:' + (r.sf || 1)
-      + ';--sx:' + (r.ix || 1) + ';--dy:' + (r.dy || 0) + 'px;--dx:' + (r.dx || 0) + 'px">' + r.ic + '</i>'
+      + ';--dy:' + (r.dy || 0) + 'px;--dx:' + (r.dx || 0) + 'px">' + r.ic + '</i>'
       + '<div class="cf55-lb"' + (r.lf ? ' style="--lf:' + r.lf + 'px"' : '') + '>'
       + '<i style="--sx:' + r.sx + '">' + r.n + '</i></div>'
       + '<div class="cf55-ct">' + ctl + '</div></div>';
@@ -27788,10 +27807,12 @@ const CHAT_SEED = [
   [5,  0, 0, '👿',  33, '출석 보상도 잊지 마시고'],
   [23, 2, 1, '⭐',  35, '오늘도 다들 화이팅']
 ];
-/* 배지는 «아트 자리» 다 — 나중에 이미지로 교체할 자리(56×48)를 지금은 이모지가 «정확히» 차지해야 한다.
-   그런데 이모지마다 잉크 폭이 달라(4회차 실측: ⭐64 · 👿62 · 🛡54 · 🎖41, 전부 scaleX 1.25 기준)
-   한 값으로 주면 옆 gap 이 1~12px 로 튄다(R D1 · S D2). 이모지별로 «잉크 56» 이 되게 역산한다. */
-const CHAT_BSX = { '⭐':1.09, '👿':1.13, '🛡️':1.30, '🎖️':1.55, '🔥':1.40, '👑':1.20 };
+/* 배지는 «아트 자리» 다 — 나중에 이미지로 교체할 자리(56×48)를 지금은 이모지가 차지한다.
+   ⚠ 356 4회차(주인 지시 «아이콘을 찌그러뜨리지 마라») — 이모지별 가로 배율표 `CHAT_BSX`
+   (⭐1.09 · 👿1.13 · 🛡1.30 · 🎖1.55 · 🔥1.40 · 👑1.20)를 폐기했다. 그 표는 «잉크 폭 56» 을
+   가로로만 늘여 맞추던 것이라 🎖 는 55% 늘어난 채로 찍혔다. 상자(56×48)는 그대로라
+   **레이아웃·형제 gap 은 Δ0** 이고, 달라지는 것은 상자 «안» 의 잉크 폭뿐이다.
+   폭이 형제와 다른 글리프는 371 선례대로 **글리프 교체**로 푼다(배율로 풀지 마라). */
 const chEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /* 더미 시각은 03:31 기준 누적분 — 실시계를 쓰면 캡처마다 값이 달라져 채점이 흔들린다(LESSONS 04-①) */
@@ -27830,7 +27851,7 @@ function chRowHTML(m, i){
   const name = '<div class="ch-nm"><b class="ch-gd">[' + chEsc(m.g) + ']</b>'
     + '<b class="ch-nk">' + chEsc(m.n) + '</b>'
     + '<b class="ch-sx ' + (m.s ? 'm' : 'f') + '">' + (m.s ? '♂' : '♀') + '</b>'
-    + (m.b ? '<b class="ch-bd" style="--bsx:' + (CHAT_BSX[m.b] || 1.25) + '">' + m.b + '</b>' : '') + '</div>'
+    + (m.b ? '<b class="ch-bd">' + m.b + '</b>' : '') + '</div>'
     + '<i class="ch-tm">' + m.t + '</i>';
   const body = m.vs ? chCardHTML(m, i)
     : '<div class="ch-bb">' + chEsc(m.m).replace(/\n/g, '<br>') + '</div>';
