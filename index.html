@@ -4690,7 +4690,13 @@
   /* 라벨은 **흐름 안**에 둔다 — 절대배치면 캡슐이 글자를 못 잰다(그것이 90 의 scaleX 를 부른 원인).
      fs 30 → 34 는 잉크 «높이» 를 ref 에 맞춘 것이다(25 → 28.3 · ref 28~29). 폭은 서체 몫이라
      여기서 끝까지 안 밀었다 — 늘어난 잉크폭이 여백을 87 → 57(ref 52)로 데려온다. */
+  /* 342 3회차 — 비평가 AU·AT 가 **각자 재서 같은 값**을 냈다: 캡슐 안 라벨이 광학 중심에서
+     위로 3px 떠 있다(우리 상5~6 / 하11 ↔ ref 상8~10 / 하8~9). 내 실측도 같다.
+     잉크 «높이» 는 이미 ref 라(30 ↔ 29) 크기 문제가 아니고 **라인박스 안 baseline** 몫이다.
+     ⇒ 흐름은 그대로 두고(캡슐이 글자를 감싸야 한다) `position:relative;top` 으로만 내린다 —
+     `padding`/`height` 를 건드리면 캡슐 세로 기하(121..166, ref Δ0)가 같이 움직인다. */
   .dnc .pill>i{display:inline-block;vertical-align:top;height:46px;line-height:46px;font-size:34px;
+    position:relative;top:3px;
     font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
 
   /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
@@ -4717,10 +4723,20 @@
     transform:scaleY(.91)}
   .dnc .sp.tk>em{left:-18px;top:0;width:64px;height:50px;font-size:56px;line-height:50px;
     transform:scaleY(1.25)}
-  .dnc .sp>i{position:absolute;top:6px;height:34px;line-height:34px;font-size:41px;
+  /* 342 3회차(2026-08-29) — 비평가 AT 가 «네 번째 자리» 를 찾았다. 여기만 **반대 방향**이다:
+     한글 잉크는 전 구간 −8~10%(서체 몫) 인데 **숫자만 +7% 크다**. 잠금 카드는 ref·우리 둘 다
+     «2/2» 라 문자열이 같아 직접 비교가 되고, 카드1 도 측정표 §3-5-2·§3-5-3 과 맞물린다:
+       ref 레벨 숫자 cap 높이 **28**(x201~219) · 횟수 «3/2» 폭 **67**(x402~468)
+       우리        cap 높이  30            ·        폭  72
+     ⇒ fs 41 → 38 (cap 30 → 27.8 = ref). 상자·행높이도 **같은 배율**(34 → 31.5)로 줄이고
+     `top` 은 6 → 10 으로 내린다 — 잉크 상변이 카드+282 였고 ref 는 **+286** 이다
+     (바닥선은 원래 맞았다: 311 ↔ ref 313). 342 의 순서 그대로 «높이 먼저, 자리 나중». */
+  .dnc .sp>i{position:absolute;top:10px;height:31.5px;line-height:31.5px;font-size:38px;
     font-weight:900;color:#fff;white-space:nowrap;
     -webkit-text-stroke:5.5px #000;paint-order:stroke fill}
-  .dnc .sp.lv>i{left:64px}
+  /* 64 → 66: 숫자 잉크 좌변이 199 였고 ref 는 **201**(측정표 §3-5-2 «x201~219»). 횟수 알약 쪽은
+     좌변 402 로 원래 ref 와 Δ0 이라 `.tk` 는 안 건드린다(비평가 AT ①). */
+  .dnc .sp.lv>i{left:66px}
   .dnc .sp.tk>i{left:71px;letter-spacing:4px}
   /* 46 레이드 카드 — 던전 카드와 «같은 규격»(좌표·높이·radius·색 전부 동일)이지만
      값 문자열이 층 번호(1~2자)가 아니라 «60초 / 1.23M» 이라 알약 폭만 내용에 맞춘다.

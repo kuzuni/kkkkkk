@@ -40,7 +40,9 @@ const OLD = `
   .dnc .lk>u{top:211px!important;height:45px!important;line-height:45px!important;
     font-size:45px!important;word-spacing:normal!important}
   .dnc .lb{height:33px!important;line-height:33px!important;font-size:26px!important}
-  .dnc .nm{word-spacing:3px!important}`;
+  .dnc .nm{word-spacing:3px!important}
+  .dnc .sp>i{top:6px!important;height:34px!important;line-height:34px!important;font-size:41px!important}
+  .dnc .sp.lv>i{left:64px!important}`;
 
 async function measure(p, injectOld) {
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
@@ -118,7 +120,10 @@ async function measure(p, injectOld) {
            pad 6 짜리 창이 아래 알약의 «흰 숫자» 를 물어 잉크 높이가 24 대신 39 로 읽혔다. */
         lbA: relI(inkBox(c.querySelector('.lb.a'), 0, 22)),
         lbB: relI(inkBox(c.querySelector('.lb.b'), 0, 22)),
-        spLv: rel(c.querySelector('.sp.lv')) });
+        spLv: rel(c.querySelector('.sp.lv')),
+        /* 3회차 — 알약 «값» 숫자. 흰 글자라 박스 안으로 창을 자른다. */
+        spLvI: relI(inkBox(c.querySelector('.sp.lv>i'), 2, 26)),
+        spTkI: relI(inkBox(c.querySelector('.sp.tk>i'), 2, 26)) });
     });
     return out;
   }, shot);
@@ -184,7 +189,30 @@ async function measure(p, injectOld) {
     near(`카드${c.n} 라벨 하변 → 알약 상변`, +(c.spLv.y - c.lbA.y - c.lbA.h).toFixed(1), 5, 2);
   }
 
-  console.log('\n[§6 콘솔]');
+  /* 3회차 — 비평가 AT ②. 측정표 §3-5-2 «레벨 숫자 x201~219 · cap 28» · §3-5-3 «횟수 x402~468 w67».
+     한글은 서체 탓에 폭이 −8~10% 인데 **숫자만 반대로 +7% 컸다** — 서체 몫이 아니라 크기 설정이다. */
+  console.log('\n[§6 알약 «값» 숫자] (ref 레벨 좌 201·잉크상변 카드+286·cap 28 · 횟수 좌 402·폭 67)');
+  for (const c of un) {
+    /* ⚠ 허용 오차를 ±3 으로 두면 **옛 값(좌 149 · 높이 30)도 초록**이라 3회차가 통째로
+       되돌아가도 안 빨개진다(LESSONS 328). ref 28/151 에서 우리 27/151 은 안, 옛 30/149 는
+       밖이 되는 ±1.5 로 좁혔다 — §R 의 R-i 가 그 폭을 지킨다. */
+    near(`카드${c.n} 레벨 숫자 잉크 좌변`, c.spLvI && +c.spLvI.x, 151, 1.5);   /* 절대 201 = 카드+151 */
+    near(`카드${c.n} 레벨 숫자 잉크 상변`, c.spLvI && +c.spLvI.y, 286, 3);
+    near(`카드${c.n} 레벨 숫자 잉크 높이`, c.spLvI && c.spLvI.h, 28, 1.5);
+    near(`카드${c.n} 횟수 숫자 잉크 좌변`, c.spTkI && +c.spTkI.x, 352, 2);     /* 절대 402 = 카드+352 */
+    near(`카드${c.n} 횟수 숫자 잉크 높이`, c.spTkI && c.spTkI.h, 28, 1.5);
+  }
+
+  /* 3회차 — 비평가 AU ④ · AT ③ 이 각자 재서 같은 값을 냈다: 캡슐 안 라벨이 위로 3px 떠 있었다.
+     ref 는 상/하 여백이 8~10 으로 대칭이다. 잉크 높이는 이미 맞으므로 baseline 몫이다. */
+  console.log('\n[§7 재화 알약 라벨 수직 대칭] (ref 상10 / 하9~10 · 수리 전 상5 / 하11)');
+  for (const c of un) {
+    const top = +c.pillInk.y - c.pill.y, bot = (c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h);
+    ok(Math.abs(top - bot) <= 3, `카드${c.n} 캡슐 상/하 여백 대칭 — 상 ${top.toFixed(1)} / 하 ${bot.toFixed(1)} (차 ${Math.abs(top - bot).toFixed(1)} ≤ 3)`);
+    near(`카드${c.n} 캡슐 위 여백`, +top.toFixed(1), 9, 3);
+  }
+
+  console.log('\n[§8 콘솔]');
   ok(errs.length === 0, `콘솔 에러 0건 (${errs.length})`);
 
   /* ── §R 되돌림 시험 ────────────────────────────────────────────────── */
@@ -212,6 +240,12 @@ async function measure(p, injectOld) {
     `R-g 옛 CSS 에서 라벨↔알약 간격이 빨갛다 — ${ou.map((c) => (c.spLv.y - c.lbA.y - c.lbA.h).toFixed(1)).join('/')} ≠ 5`);
   ok(ou.some((c) => c.nmGap !== null && Math.abs(c.nmGap - 25) > 5),
     `R-h 옛 CSS 에서 어절 공백이 빨갛다 — ${ou.map((c) => c.nmGap).join('/')} ≠ 24~26`);
+  ok(ou.some((c) => Math.abs(c.spLvI.h - 28) > 1.5 || Math.abs(+c.spLvI.x - 151) > 1.5),
+    `R-i 옛 CSS 에서 §6 이 빨갛다 — 레벨 숫자 좌/높이 ${ou.map((c) => c.spLvI.x + '/' + c.spLvI.h).join(' · ')} ≠ 151/28`);
+  ok(ou.some((c) => {
+    const t = +c.pillInk.y - c.pill.y, b2 = (c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h);
+    return Math.abs(t - b2) > 3;
+  }), `R-j 옛 CSS 에서 §7 이 빨갛다 — 캡슐 상/하 ${ou.map((c) => (+c.pillInk.y - c.pill.y).toFixed(1) + '/' + ((c.pill.y + c.pill.h) - (+c.pillInk.y + c.pillInk.h)).toFixed(1)).join(' · ')} 비대칭 아님`);
 
   console.log('\nVERIFY342 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   await b.close();
