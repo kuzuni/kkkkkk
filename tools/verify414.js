@@ -87,6 +87,7 @@ async function measure(browser, file, H, opt) {
       inkEnd: q('.pedge') ? box(q('.pedge')).b : null,
       tabTop: tb.t, tabH: tb.h,
       bls: box(q('#blsw .bls')), promo: box(q('#blsw .bls-promo')), x: box(q('#blsw .bls-x')),
+      note: box(q('#blsw .bls-note')), top: box(document.getElementById('top')),
       flowTop: Math.min(...flow.map((k) => k.t)), flowBot: Math.max(...flow.map((k) => k.b)),
       coverPromo: Math.max(0, box(q('#blsw .bls-promo')).b - tb.t),
       coverAny: Math.max(...kids.map((k) => Math.max(0, k.b - tb.t))),
@@ -205,6 +206,15 @@ async function measure(browser, file, H, opt) {
     `[3-e] 블록이 «쓸 수 있는 띠(142..1600)» 한가운데 — 위 ${r1(gTop)} ≈ 아래 ${r1(gBot)} (391 자)`);
   ok(gTop >= 0 && gBot >= 0,
     `[3-f] 위는 HUD 잉크를 안 물고 아래는 프레임을 안 넘는다 (위 ${r1(gTop)} ≥ 0 · 아래 ${r1(gBot)} ≥ 0)`);
+  /* ✕ 는 shortf 에서 팝업 우상단 코너로 올라간다 — 그 자리는 위아래로 막힌 슬롯이다:
+     위 = 살아 있는 상단 재화 바 `#top`(하변 104) · 아래 = 본문 안내문 `.bls-note`(상변 298).
+     ⇒ 슬롯 194 안에 138 짜리 ✕ 를 넣으면 남는 것이 56 뿐이고, 지금은 30/26 으로 거의 한가운데다. */
+  const X = M[1600].x, xUp = X.t - M[1600].top.b, xDn = M[1600].note.t - X.b;
+  ok(xUp > 0 && xDn > 0 && Math.abs(xUp - xDn) <= 6,
+    `[3-g] 1600 ✕ 가 «HUD 재화 바 ↔ 본문 안내문» 슬롯의 한가운데 — 위 ${r1(xUp)} ≈ 아래 ${r1(xDn)} `
+    + `(슬롯 ${r1(M[1600].note.t - M[1600].top.b)} · ✕ ${r1(X.b - X.t)} ⇒ 남는 것은 ${r1(xUp + xDn)} 뿐)`);
+  ok(X.t >= 126 && X.b <= M[1600].frameH,
+    `[3-h] 1600 ✕ 가 HUD 가드(126) 아래이고 프레임 안 (${r1(X.t)}..${r1(X.b)} ⊂ 126..${M[1600].frameH}) — verify351 [1-g][1-h] 와 같은 축`);
 
   console.log('\n§R 되돌림 시험 ───────────────────────────────────────────────');
   ok(RG.scrollH > RG.clientH,
