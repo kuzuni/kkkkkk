@@ -50,7 +50,13 @@ const TOAST_SITES = [
   ['스킬 슬롯 부족',             '스킬은 최대 <b>8개</b>까지 장착합니다'],
   ['펫 슬롯 부족',               '펫은 최대 <b>3마리</b>까지 장착합니다'],
   ['가이드 소환 차단',           '소환</b>을 먼저 해주세요'],
-  ['룰렛 무료 소진',             '무료 룰렛 소진'],
+  /* 401 — 367(주인 지시 «룰렛 3회 무료 + 2회 광고»)이 «5회 중 뒤 2회는 광고 구간이라 더는 무료
+     소진이 아니다» 며 문구를 «오늘 룰렛 소진» 으로 바꿨다. **367 은 잘못한 게 없다** — 옛 문구를
+     상수로 박아 둔 이쪽이 부패한 것이다(368 과 같은 병). 조각을 살아 있는 문구로 갈아 끼운다.
+     149 가 재는 성질(«팝업이 아니라 토스트로 나간다»)은 그대로다.
+     ⚠ 자리를 비우지 마라(333 처방) — 문구만 갈아 끼우면 «367 이 통째로 사라져도 초록» 이 되므로,
+     그 문구가 선 근거(광고 구간)를 묻는 절을 아래 [367] 에 세웠다. */
+  ['룰렛 소진',                  '오늘 룰렛 소진 — 내일 <b>'],
   ['던전 잠김(상세)',            '\' + dunLockTxt(d) + \' 필요\');\n    return;'],
   /* 204 — «내일 N회 리필» 폐기 → «출석 보상마다 +N장 적립» */
   ['던전 입장 소진(상세)',       '입장권 없음 — 출석 보상마다'],
@@ -203,6 +209,39 @@ const WORST = [
   POPUP_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'popup') pOk++; else ck('§1 팝업 유지 — ' + n, false, c ? '토스트로 밀렸다' : '조각을 못 찾음'); });
   ck('§1 팝업 유지 ' + pOk + '/' + POPUP_SITES.length, pOk === POPUP_SITES.length);
 
+  /* ── §367 (401) — 소진 문구가 «무료» 가 아니라 «오늘» 인 **근거**를 같이 잡는다 ────────────
+     위 §1 의 조각을 살아 있는 문구로 갈아 끼우는 것만으로 끝내면, 367 이 통째로 되돌아가
+     «5회 전부 무료» 가 돼도 이 절은 초록으로 남는다(333 — 자리를 비우지 마라 · 177-③).
+     ⚠ 구간의 **동작**(라벨 «광고 보고 돌리기» · ▶AD 표식 · 회차별 전환)은 `verify367` 이 소유한다.
+     여기서 묻는 것은 딱 하나 — «149 가 지키는 이 토스트가 그 구성 위에 서 있는가» 다. */
+  const roulSeg = src => {
+    const g = re => { const m = src.match(re); return m ? +m[1] : NaN; };
+    return { free: g(/const ROUL_FREE\s*=\s*(\d+)/), ad: g(/const ROUL_AD\s*=\s*(\d+)/),
+             sum: /const ROUL_TRY\s*=\s*ROUL_FREE\s*\+\s*ROUL_AD/.test(src) };
+  };
+  const RS = roulSeg(SRC);
+  ck('§367 [전제] 광고 구간이 실재한다 (무료 n + 광고 m)',
+     RS.free >= 1 && RS.ad >= 1 && RS.sum,
+     'ROUL_FREE=' + RS.free + ' · ROUL_AD=' + RS.ad + ' · ROUL_TRY=ROUL_FREE+ROUL_AD ' + (RS.sum ? '✓' : '✗')
+     + (RS.ad >= 1 ? '' : '  ← 광고 구간이 사라졌다: 소진 문구는 다시 «무료 …» 여야 한다'));
+  /* 충전량을 리터럴 5 로 적으면 구간을 늘려도 문구가 안 따라온다 — 총량 상수로만 말해야 한다 */
+  ck('§367 소진 토스트가 충전량을 상수 ROUL_TRY 로 말한다',
+     /notify\('🎰 오늘 룰렛 소진[^']*'\s*\+\s*ROUL_TRY\s*\+/.test(SRC), '소스 grep');
+  /* 옛 문구가 «살아 있는 코드» 로 돌아왔는가. 367 이 남긴 설명 주석에 같은 글자가 있으므로
+     주석을 걷어낸 사본에서 본다(걷어내다 그 구간째 날아가면 음성항이 헛초록이 되므로 전제도 같이 찍는다). */
+  const SRC_NC = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  ck('§367 옛 «무료 룰렛 소진» 이 살아 있는 코드로 안 돌아왔다',
+     SRC_NC.includes('오늘 룰렛 소진') && !SRC_NC.includes('무료 룰렛 소진'),
+     SRC_NC.includes('오늘 룰렛 소진') ? '주석 제외 grep' : '← 주석 제거가 이 구간째 지웠다(자가 헛초록)');
+  /* §R — 무르게 푼 수리가 아님을 못박는다: 367 **이전**(무료 5 · 광고 0) 사본에서 [전제] 가 빨개진다.
+     `verify367` [R] 과 같은 되돌림이지만 여기서는 «그러면 149 의 이 절이 빨개지는가» 만 본다. */
+  const REV = SRC.replace('const ROUL_FREE = 3;', 'const ROUL_FREE = 5;')
+                 .replace('const ROUL_AD   = 2;', 'const ROUL_AD   = 0;');
+  const RR = roulSeg(REV);
+  ck('§367 §R 되돌림 — ROUL_AD=0 사본에서는 [전제] 가 빨갛다',
+     REV !== SRC && RR.free === 5 && RR.ad === 0 && !(RR.free >= 1 && RR.ad >= 1 && RR.sum),
+     REV === SRC ? '사본이 안 만들어졌다(상수 표기가 바뀌었다)' : 'ROUL_FREE=5 · ROUL_AD=0 ⇒ 전제 FAIL');
+
   const browser = await launch(chromium);
   for (const H of HEIGHTS) {
     console.log('\n[frame 1080x' + H + ']');
@@ -277,6 +316,15 @@ const WORST = [
       run('최고 계급',                () => { const keep = S.rank; S.rank = RANKS.length - 1; openPromo(); S.rank = keep; });
       run('이용권 — 다이아 부족',     () => { const p = PASS_ITEMS.find(x => !passOwned(x)); if (p) buyPass(p.id); else throw new Error('미보유 이용권 없음'); });
       run('설정 — 언어',              () => notify('💬 현재 <b>한국어</b>만 지원합니다'));
+      /* 401 — §1 이 정적으로만 보던 자리를 실동작으로도 한 줄 세운다. 333-③ 대로 분기를 베껴 쓰지 않고
+         **실제로 배선된 핸들러**(`#rouBtn.onclick` = `spinRoulette`)를 부른다 — 게이트가 제 손으로
+         부른 notify 를 세면 아무것도 검증하지 않는다. † 룰렛 팝업이 열린 채라 모달 ON 을 허용한다. */
+      run('룰렛 소진 †',              () => {
+        S.daily.spins = 0; openRoulette();
+        const b = document.getElementById('rouBtn');
+        if (!b || !b.onclick) throw new Error('#rouBtn 이 없다');
+        b.onclick();
+      }, true);
 
       /* ── 206 — 149 가 «결과» 라서 모달로 남겼던 자리들. 전부 **제품 함수를 실제로 부른다**
          (문구를 게이트에서 손으로 조립해 notify 에 넣으면 아무것도 검증하지 않는다).
