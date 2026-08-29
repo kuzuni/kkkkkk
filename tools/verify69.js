@@ -307,11 +307,42 @@ async function fresh(browser, w = 1080, h = 2280) {
     /* ---------- 4. 기능 — 실제 클릭으로 상태가 바뀌는가 ---------- */
     console.log('[4] 기능 — 헤드리스 «실제 클릭»');
     /* LESSONS 51-③ — 유휴 루프가 «골드» 를 계속 굴린다(자동구매를 꺼도 전투 수입은 들어온다).
-       다이아·유물석은 안 굴러가지만 골드만은 «드리프트» 를 먼저 재서 그만큼을 허용치로 쓴다. */
-    const dg0 = await page.evaluate(() => S.gold);
-    await page.waitForTimeout(600);
-    const drift = Math.max(4, (await page.evaluate(() => S.gold) - dg0) * 3);
-    ok(`골드 유휴 드리프트 측정 — 600ms 당 ${Math.round(drift / 3)} → 허용치 ±${Math.round(drift)}`);
+       ⚠ **395 — 여기 있던 «유휴 드리프트» 자를 폐기했다.** 그 자는 600ms 를 표본으로 떠서 ×3 한 값을
+       허용치로 썼는데, 그것은 오염원이 **연속 수입**이라는 전제 위에 서 있었다. `probe395` 로 재니 둘 다 틀렸다:
+         · 이름 — 오염원은 «방치(offline) 수익» 이 아니라 **전투 킬 보상**이다(골드가 오른 프레임에 예외 없이 킬이 붙는다).
+         · 모양 — **이산(틱)** 이다. 15초에 3틱 · 틱 간격 최대 **7.6초** · 한 틱은 늘 **4.08**.
+       ⇒ 600ms 표본은 대개 **한 틱도 못 잡아** 허용치가 바닥값 `Math.max(4, 0)` = **±4** 로 떨어지는데,
+       표본 창(클릭 후 ≈1s)에 틱이 하나만 얹히면 4.08 이라 **0.08 로 넘긴다** = 4회 중 1~3회 빨강.
+       자가 «값» 이 아니라 **«틱 운»** 을 재고 있었다.
+       ⚠ 허용치를 벌려서 닫지 않았다 — ±4 를 ±8 로 벌리면 「연타 3회인데 골드는 1회분만」 이라는
+       **본 단언이 통째로 무뎌진다**(그 자리가 재는 양이 한 틱과 같은 자리수다).
+       ⇒ 오염원 자체를 표본 구간 동안 끊는다. 전투 골드는 예외 없이 `stat.goldMul` 을 타므로
+       (`killEnemy` 의 `e.gold * stat.goldMul` · 스테이지 보너스 `eGold(...)*12*stat.goldMul` 2자리)
+       그 **getter 하나만 0 으로 덮으면** 전투는 그대로 돌면서 수입만 0 이 된다. 우편 보상은 `m.g` 를
+       그대로 더하는 경로(`claimMail`)라 이 동결에 안 걸린다 ⇒ **허용치를 ±drift 에서 `0` 으로 좁혔다.**
+       제품 `index.html` 은 0줄이다. */
+    const frz = await page.evaluate(() => {
+      /* 전투 수입 경로를 «기다리지» 않고 직접 부른다 — 틱 간격이 최대 7.6초라
+         «표본 창에 킬이 온다» 에 기대면 내가 고치려던 플레이키를 그대로 새로 만든다. */
+      const shot = () => {
+        if (typeof enemies === 'undefined' || !Array.isArray(enemies) || !enemies.length) return null;
+        const g0 = S.gold; killEnemy(enemies[0]); return +(S.gold - g0).toFixed(4);
+      };
+      const live = shot();
+      const d = Object.getOwnPropertyDescriptor(stat, 'goldMul');
+      if (!d || typeof d.get !== 'function') return { desc: false, live };
+      window.__gm69 = d;
+      Object.defineProperty(stat, 'goldMul', { get: () => 0, configurable: true });
+      return { desc: true, live, off: shot() };
+    });
+    frz.desc ? ok('전투 골드 동결 — `stat.goldMul` getter 를 표본 구간 동안만 0 으로 덮었다')
+             : fail('`stat.goldMul` 이 getter 가 아니다 — 동결을 못 건다(아래 재화 항이 다시 틱 운을 잰다)');
+    /* [전제] — 이 두 줄이 없으면 아래 «증가분» 항의 초록이 «오염이 없어서» 인지 «전투가 안 돌아서» 인지
+       구별이 안 된다. 강제 킬로 오염원을 **직접 불러** 동결 전엔 들어오고 동결 중엔 안 들어옴을 못박는다. */
+    frz.live > 0 ? ok(`[전제] 동결 전 강제 킬 = +${frz.live} — 오염원이 실재하고 자가 그것을 부를 수 있다`)
+                 : fail(`[전제] 동결 전 강제 킬이 ${frz.live} — 전투 수입 경로를 못 불렀다(아래 초록이 공허하다)`);
+    frz.off === 0 ? ok('[전제] 동결 중 강제 킬 = **+0** — 표본 구간에 전투 골드가 안 섞인다(허용치 0 의 근거)')
+                  : fail(`[전제] 동결 중인데 강제 킬 골드가 +${frz.off} — goldMul 을 안 타는 골드 경로가 더 있다`);
 
     const before = await page.evaluate(() => ({ g: S.gold, c: S.dia, r: S.relic, mail: { ...S.mail } }));
     const m0 = await page.evaluate(() => ({ ...MAILS[0] }));
@@ -340,7 +371,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       done: document.querySelector('.ml-r').classList.contains('done')
     }));
     after.mail[m0.id] === 1 ? ok('S.mail[m1] = 1 (수령 기록)') : fail('S.mail 이 안 바뀌었다');
-    near('골드 증가분', after.g - before.g, m0.g, drift);
+    near('골드 증가분', after.g - before.g, m0.g, 0);            /* 395 — ±drift → **0**(동결 구간) */
     near('다이아 증가분', after.c - before.c, m0.c, 0);
     near('유물석 증가분', after.r - before.r, m0.r || 0, 0);
     after.saved[m0.id] === 1 ? ok('localStorage[KEY] 에 세이브 반영') : fail('세이브에 반영 안 됨');
@@ -360,7 +391,7 @@ async function fresh(browser, w = 1080, h = 2280) {
     await page.waitForTimeout(900);
     const dblPost = await page.evaluate(() => ({ g: S.gold, c: S.dia }));
     if (m1) {
-      near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, drift);
+      near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, 0);   /* 395 — ±drift → **0** */
       near('연타 3회 — 다이아는 1회분만', dblPost.c - dblPre.c, m1.c, 0);
     } else fail('연타 검증용 미수령 행이 없다');
 
@@ -430,8 +461,13 @@ async function fresh(browser, w = 1080, h = 2280) {
     delPre.read.every((id) => delPost.saved[id] === 2)
       ? ok('삭제 상태가 세이브에 반영') : fail('삭제가 세이브에 반영 안 됨');
     delPost.dis ? ok('삭제 후 [읽음 전체 삭제] 비활성(지울 게 없다)') : fail('지울 게 없는데 아직 활성');
+    /* 395 — 여기는 원래 다이아·유물석만 봤다(골드는 «드리프트» 때문에 물어볼 수 없었다).
+       동결 구간이라 이제 **골드까지 정확히** 물을 수 있다 — 삭제가 보상을 다시 지급하지 않는지. */
     (delPost.c === delPre.c && delPost.r === delPre.r)
       ? ok('삭제는 재화를 건드리지 않는다') : fail('삭제인데 재화가 바뀌었다');
+    delPost.g === delPre.g
+      ? ok('삭제는 **골드도** 안 건드린다(395 — 동결 구간이라 ±0 으로 물을 수 있다)')
+      : fail(`삭제인데 골드가 ${delPost.g - delPre.g} 바뀌었다`);
     delPost.open ? ok('삭제 후에도 우편함이 열려 있다') : fail('삭제하니 팝업이 닫혔다');
     /* 원본 MAILS 는 불변 */
     const srcLen = await page.evaluate(() => MAILS.length);
@@ -453,7 +489,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       stillOpen: document.getElementById('modal').classList.contains('ml69')
     }));
     leftBefore > 0 ? ok(`전체 수령 전 미수령 ${leftBefore}통`) : fail('미수령이 0이라 전체 수령을 검증 못 함');
-    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, drift);
+    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, 0);       /* 395 — ±drift → **0** */
     near('전체 수령 다이아', post2.c - pre2.c, sumRest.c, 0);
     near('전체 수령 유물석', post2.r - pre2.r, sumRest.r, 0);
     post2.left === 0 ? ok('미수령 0통') : fail('아직 ' + post2.left + '통 남음');
@@ -462,6 +498,17 @@ async function fresh(browser, w = 1080, h = 2280) {
       ? ok('[일괄 읽기&수령] → 비활성 · 라벨 고정')
       : fail('하단 버튼 상태 = ' + post2.btn + ' / disabled=' + post2.btnDis);
     post2.stillOpen ? ok('수령 후에도 우편함이 열려 있다(옛 popup() 덮어쓰기 회귀 없음)') : fail('수령 후 팝업이 덮였다');
+
+    /* 395 — 재화 표본 구간은 여기서 끝난다(아래 [4-b] 뒷부분·[5] 는 재화를 안 잰다) ⇒ 동결 해제.
+       푼 뒤에 강제 킬을 한 번 더 쳐서 **수입이 돌아오는지**까지 본다 — 안 그러면 이 자가
+       «게임의 전투 수입을 영구히 꺼 놓고 초록» 인지 구별이 안 된다(공허한 초록의 다른 얼굴). */
+    const unfrz = await page.evaluate(() => {
+      if (window.__gm69) Object.defineProperty(stat, 'goldMul', window.__gm69);
+      if (typeof enemies === 'undefined' || !Array.isArray(enemies) || !enemies.length) return null;
+      const g0 = S.gold; killEnemy(enemies[0]); return +(S.gold - g0).toFixed(4);
+    });
+    unfrz > 0 ? ok(`[전제] 동결 해제 뒤 강제 킬 = +${unfrz} — 동결은 표본 구간에만 걸렸다(게임은 그대로다)`)
+              : fail(`[전제] 동결을 풀었는데 강제 킬 골드가 ${unfrz} — 자가 게임 상태를 망가뜨렸다`);
 
     /* 92 — 전부 읽은 뒤 다시 삭제하면 목록이 비고 «우편이 없습니다» 가 뜬다 */
     await page.evaluate(() => { document.getElementById('mailDel').click(); });
