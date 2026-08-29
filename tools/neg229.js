@@ -25,9 +25,34 @@ const TMP = path.join(ROOT, '.v229-neg.html');
    보정을 통째로 걷어내 **되돌릴 자리 자체가 바뀌었다** — 옛 N3·N4(보정 4줄 제거)는 지울 줄이
    없어져 «갈아 끼울 자리가 1곳» 에서 죽는다. 그 둘을 **반대 방향**으로 다시 세운다:
    이제 되돌림은 «보정을 지우는 것» 이 아니라 **«ref 의 비균등 규격을 되살리는 것»** 이다. */
-const COLL_ROW = `      <div class="ibtn" data-pop="coll" style="--sf:.864;--sx:1.067;--dx:2px;--dy:.5px"><span class="si">📚</span><span class="sl">도감</span><span class="bdg"></span></div>`;
-const BLESS_ROW = `      <div class="ibtn" data-pop="bless" style="--sf:.862;--sx:1.235;--dx:2px;--dy:1.5px"><span class="si">🙏</span><span class="sl">축복</span><span class="bdg"></span></div>`;
-const ATTEND_ROW = `      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.896;--sx:1.130;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>`;
+/* ⚑ 381 이관(2026-08-29). 이 셋은 원래 «71/83/360 당시의 행 문자열» 을 통째로 박아 둔 상수였다.
+   그래서 행의 **인라인 스타일이 한 글자라도 바뀌면** 갈아 끼울 자리가 0곳이 되고, 그 자리를 쓰는
+   N1·N2·N3·N6 네 블록이 통째로 죽는다(`continue` 라 want/not 이 아예 안 세진다 = 조용한 구멍).
+   실제로 356(주인 지시 «아이콘은 원본 비율 — 비균등 scaleX 금지»)이 `--sx` 를 걷어내고
+   371 이 축복 글리프를 🙏 → 😇 로 바꾸자 **셋 다 0곳**이 되어 `NEG229 42/46` 으로 죽었다.
+   ⇒ 368 처방 그대로 «자리를 상수에서 빼고 제품에게 묻는다» — `data-pop` 으로 행을 뽑는다.
+   이제 다음 `--sf`/글리프 변경에 이 게이트는 안 죽는다. 뽑기가 실패하면 조용히 지나가지 않고
+   **그 자리에서 죽는다**(아래 세 겹 가드) — 조용한 0곳이 바로 381 이 고치는 결함이기 때문이다. */
+const row = pop => {
+  const re = new RegExp(`^[ \\t]*<div class="ibtn"[^\\n]*?data-pop="${pop}"[^\\n]*?</div>$`, 'gm');
+  const hit = SRC.match(re) || [];
+  if (hit.length !== 1) {
+    console.error(`neg229: 행 data-pop="${pop}" 을 index.html 에서 ${hit.length}곳 찾았다 — 정확히 1곳이어야 한다`);
+    process.exit(1);
+  }
+  /* 뽑은 것이 «진짜 그 행» 인지 세 겹으로 못박는다 — 정규식이 엉뚱한 줄을 물면
+     N1~N6 이 «갈아 끼우기는 했는데 아무것도 안 바뀌는» 거짓 초록이 된다. */
+  const r = hit[0];
+  for (const [why, cond] of [
+    ['class="ibtn" 를 품는다(N3 의 .solo 치환 좌변)', r.includes('class="ibtn"')],
+    ['--sf 를 품는다(사이드 행 규격)', r.includes('--sf:')],
+    ['라벨 <span class="sl"> 을 품는다', r.includes('<span class="sl">')],
+  ]) if (!cond) { console.error(`neg229: 뽑은 행 data-pop="${pop}" 이 «${why}» 를 어긴다 — ${r.slice(0, 120)}`); process.exit(1); }
+  return r;
+};
+const COLL_ROW = row('coll');
+const BLESS_ROW = row('bless');
+const ATTEND_ROW = row('attend');
 const SIDE_CONST = `const SIDE = { ART:82, LABEL:32, GAP:20, TOP:72, N:6, PAD:8, LMIN:22, CLEAR:34 };`;
 const ROW7 = `      <div class="ibtn" data-pop="guild" style="--sf:.9;--sx:1;--dx:0;--dy:0"><span class="si">🏰</span><span class="sl">길드</span><span class="bdg"></span></div>\n`;
 /* CSS 삽입 지점 — `.ibtn` 규칙 바로 다음. 여기에 옛 규격을 도로 붙여 «360 되돌림» 을 만든다. */
