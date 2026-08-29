@@ -1,0 +1,1083 @@
+[
+  {
+    "label": "tab:hero",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "tab:grow",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "tab:adv",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.nm",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.nm|잊힌 신전",
+        "k": "잊힌 신전",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.lk>u",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.lk>u|고대 유적 5층 클리어",
+        "k": "고대 유적 5층 클리어",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.nm",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.nm|용의 무덤",
+        "k": "용의 무덤",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.lk>u",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.lk>u|잊힌 신전 5층 클리어",
+        "k": "잊힌 신전 5층 클리어",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "tab:box",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "tab:shop",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cmag",
+        "key": "F1|#shopList>div.shp-card.gm>div.cmag|🔍",
+        "k": "🔍",
+        "vis": 0,
+        "was": 100,
+        "list": "shp-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1|10회 소환2/2",
+        "k": "10회 소환2/2",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1>u.lab|10회 소환",
+        "k": "10회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1>u.sub",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1>u.sub|2/2",
+        "k": "2/2",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b2>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b2>u.lab|10회 소환",
+        "k": "10회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b3>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b3>u.lab|30회 소환",
+        "k": "30회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "side:attend",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "side:roul",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "side:quest",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn",
+        "key": "F1|#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn|보상 받기",
+        "k": "보상 받기",
+        "vis": 0,
+        "was": 100,
+        "list": "qs-r",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "side:promo",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "side:coll",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "side:bless",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "util:chat",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:mail",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:rank",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:guide",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:bag",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:saver",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:conf",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "menu:pass",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|250",
+        "k": "250",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|750",
+        "k": "750",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|500",
+        "k": "500",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|300",
+        "k": "300",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|900",
+        "k": "900",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|600",
+        "k": "600",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|350",
+        "k": "350",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "div.ps-r>div.ps-bx.c1>b>em",
+        "key": "F1|div.ps-r>div.ps-bx.c1>b>em|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|700",
+        "k": "700",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      }
+    ]
+  },
+  {
+    "label": "cur:gold",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "cur:dia",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "cur:relic",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "dunsub:raid",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "dunsub:dun",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.nm",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.nm|잊힌 신전",
+        "k": "잊힌 신전",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.lk>u",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.lk>u|고대 유적 5층 클리어",
+        "k": "고대 유적 5층 클리어",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.nm",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.nm|용의 무덤",
+        "k": "용의 무덤",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#dunList>div.dnc.bgm-rel>div.lk>u",
+        "key": "F1|#dunList>div.dnc.bgm-rel>div.lk>u|잊힌 신전 5층 클리어",
+        "k": "잊힌 신전 5층 클리어",
+        "vis": 0,
+        "was": 100,
+        "list": "dnc",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "dunsub:tower",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "trsub:train",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "trsub:rune",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "trsub:temper",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "shopcat:summon",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cmag",
+        "key": "F1|#shopList>div.shp-card.gm>div.cmag|🔍",
+        "k": "🔍",
+        "vis": 0,
+        "was": 100,
+        "list": "shp-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1|10회 소환2/2",
+        "k": "10회 소환2/2",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1>u.lab|10회 소환",
+        "k": "10회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b1>u.sub",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b1>u.sub|2/2",
+        "k": "2/2",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b2>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b2>u.lab|10회 소환",
+        "k": "10회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#shopList>div.shp-card.gm>div.cbtn.b3>u.lab",
+        "key": "F1|#shopList>div.shp-card.gm>div.cbtn.b3>u.lab|30회 소환",
+        "k": "30회 소환",
+        "vis": 0,
+        "was": 100,
+        "list": "cbtn",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "shopcat:coin",
+    "regress": [
+      {
+        "kind": "F1",
+        "path": "#cnMove",
+        "key": "F1|#cnMove|이동",
+        "k": "이동",
+        "vis": 0,
+        "was": 100,
+        "list": null,
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#cnMove>i",
+        "key": "F1|#cnMove>i|이동",
+        "k": "이동",
+        "vis": 0,
+        "was": 100,
+        "list": null,
+        "back": 100
+      }
+    ],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "div.cn-wrap>div.cn-cd.alert>div.bt.alert>u.lab",
+        "key": "F1|div.cn-wrap>div.cn-cd.alert>div.bt.alert>u.lab|받기",
+        "k": "받기",
+        "vis": 0,
+        "was": 100,
+        "list": "cn-cd",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.cn-wrap>div.cn-cd.alert>div.bt.alert>u.cnt",
+        "key": "F1|div.cn-wrap>div.cn-cd.alert>div.bt.alert>u.cnt|(5/5)",
+        "k": "(5/5)",
+        "vis": 0,
+        "was": 100,
+        "list": "cn-cd",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "shopcat:pass",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#shopList>div.cn-wrap.pv>div.pvc.pg>div.bt",
+        "key": "F1|#shopList>div.cn-wrap.pv>div.pvc.pg>div.bt|22,900원",
+        "k": "22,900원",
+        "vis": 0,
+        "was": 100,
+        "list": "pvc",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.cn-wrap.pv>div.pvc.pg>div.bt>i",
+        "key": "F1|div.cn-wrap.pv>div.pvc.pg>div.bt>i|22,900원",
+        "k": "22,900원",
+        "vis": 0,
+        "was": 100,
+        "list": "pvc",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "eqtab:sk",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci",
+        "key": "F1|div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci|🏹",
+        "k": "🏹",
+        "vis": 0,
+        "was": 100,
+        "list": "sk-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci",
+        "key": "F1|div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci|🔷",
+        "k": "🔷",
+        "vis": 0,
+        "was": 100,
+        "list": "sk-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci",
+        "key": "F1|div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci|🍥",
+        "k": "🍥",
+        "vis": 0,
+        "was": 100,
+        "list": "sk-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci",
+        "key": "F1|div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci|🔴",
+        "k": "🔴",
+        "vis": 0,
+        "was": 100,
+        "list": "sk-card",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci",
+        "key": "F1|div.shsc-in>div.sk-gp>div.sk-card.ifr>b.sk-ci|☠️",
+        "k": "☠️",
+        "vis": 0,
+        "was": 100,
+        "list": "sk-card",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "eqtab:cos",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "eqtab:pet",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "prof:19",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "prof:20-스펙",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "qtab:daily",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn",
+        "key": "F1|#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn|보상 받기",
+        "k": "보상 받기",
+        "vis": 0,
+        "was": 100,
+        "list": "qs-r",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "qtab:rep",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn",
+        "key": "F1|#mbox>div.qs-pn>div.qs-r>button.qs-b.ifbtn|보상 받기",
+        "k": "보상 받기",
+        "vis": 0,
+        "was": 100,
+        "list": "qs-r",
+        "back": 100
+      }
+    ]
+  },
+  {
+    "label": "pass:35",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|250",
+        "k": "250",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|750",
+        "k": "750",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|500",
+        "k": "500",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|300",
+        "k": "300",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|900",
+        "k": "900",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|600",
+        "k": "600",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|350",
+        "k": "350",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "div.ps-r>div.ps-bx.c1>b>em",
+        "key": "F1|div.ps-r>div.ps-bx.c1>b>em|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|700",
+        "k": "700",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      }
+    ]
+  },
+  {
+    "label": "ptab:stage",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|250",
+        "k": "250",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|750",
+        "k": "750",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|500",
+        "k": "500",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|300",
+        "k": "300",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|900",
+        "k": "900",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|600",
+        "k": "600",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|350",
+        "k": "350",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "div.ps-r>div.ps-bx.c1>b>em",
+        "key": "F1|div.ps-r>div.ps-bx.c1>b>em|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|700",
+        "k": "700",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      }
+    ]
+  },
+  {
+    "label": "ptab:box",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|250",
+        "k": "250",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|750",
+        "k": "750",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|500",
+        "k": "500",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|300",
+        "k": "300",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|900",
+        "k": "900",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|600",
+        "k": "600",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|350",
+        "k": "350",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "div.ps-r>div.ps-bx.c1>b>em",
+        "key": "F1|div.ps-r>div.ps-bx.c1>b>em|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|700",
+        "k": "700",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      }
+    ]
+  },
+  {
+    "label": "ptab:tower",
+    "regress": [],
+    "soft": [
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|250",
+        "k": "250",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|750",
+        "k": "750",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|500",
+        "k": "500",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 100
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|300",
+        "k": "300",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|900",
+        "k": "900",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|600",
+        "k": "600",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c0>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c0>b|350",
+        "k": "350",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c1>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c1>b|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "div.ps-r>div.ps-bx.c1>b>em",
+        "key": "F1|div.ps-r>div.ps-bx.c1>b>em|1,050",
+        "k": "1,050",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      },
+      {
+        "kind": "F1",
+        "path": "#psTk>div.ps-r>div.ps-bx.c2>b",
+        "key": "F1|#psTk>div.ps-r>div.ps-bx.c2>b|700",
+        "k": "700",
+        "vis": 0,
+        "was": 100,
+        "list": "ps-bx",
+        "back": 99
+      }
+    ]
+  },
+  {
+    "label": "ptab:att",
+    "regress": [],
+    "soft": []
+  },
+  {
+    "label": "saver:56",
+    "regress": [],
+    "soft": []
+  }
+]

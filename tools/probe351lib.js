@@ -81,8 +81,22 @@ async function collectOpeners(browser) {
   return openers;
 }
 
+/* `collectOpeners` 가 만드는 오프너의 «갈래 키» 전부. `drive` 가 모르는 키가 생기면 **즉시 던진다**.
+   ⚑ 8회차(2026-08-29) — 이 목록이 없어서 자가 세 화면을 **한 번도 연 적이 없다**:
+   `shopcat:{summon,coin,pass}` 는 `{shop: …}` 로 만들어지는데 `drive` 에 그 갈래가 없어
+   **아무 것도 안 누르고** 메인 화면을 그대로 스캔했다. 그 결과가 «결함 없음» 으로 읽혔고,
+   8회차 비평가 셋(CH·CI·CJ)이 각자 1순위로 짚은 «상점 [받기]·[이동] 이 스크롤 0 에서 0% 보임» 을
+   자는 5·6·7회차 내내 조용히 지나쳤다. 조용한 실패가 초록으로 읽히는 것을 막는 것이
+   이 목록의 유일한 일이다(LESSONS 356-⑬ «진입 서명» 과 같은 처방, 341 [전제] 절과 같은 이유). */
+const OPENER_KEYS = ['sel', 'hero', 'mn', 'dun', 'tr', 'shop', 'pass', 'cos', 'prof', 'coll', 'quest', 'saver'];
+
 async function drive(page, o) {
   const ev = (fn, arg) => page.evaluate(fn, arg).catch(() => {});
+  if (!OPENER_KEYS.some((k) => k in o)) {
+    throw new Error(`[351lib] 오프너 «${o.label}» 의 갈래를 drive() 가 모른다 — ` +
+      `키 ${Object.keys(o).filter((k) => k !== 'label').join(',') || '(없음)'}. ` +
+      '갈래를 추가하지 않으면 아무 것도 안 누른 채 메인 화면을 스캔해 «결함 없음» 으로 읽힌다.');
+  }
   if (o.sel) await page.click(o.sel, { timeout: 3000, force: true }).catch(() => {});
   else if (o.hero) {
     await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
@@ -100,6 +114,11 @@ async function drive(page, o) {
     await page.click('.tab[data-t="grow"]', { timeout: 3000, force: true }).catch(() => {});
     await page.waitForTimeout(400);
     await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.tr);
+  } else if (o.shop) {
+    /* 8회차 신설 — `dun`·`tr` 과 같은 «탭 → 서브탭» 꼴이다(상점 탭을 연 뒤 구획 알약을 누른다). */
+    await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+    await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.shop);
   } else if (o.pass) {
     await ev(() => document.getElementById('menub').click());
     await page.waitForTimeout(300);
