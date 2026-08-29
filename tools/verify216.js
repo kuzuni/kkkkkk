@@ -12,7 +12,11 @@
      [2] 기하   — 9자~61자(1e8~1e308) 전 구간에서 알약 우단 ~ 슬롯 좌단 여백 ≥ RD_SPGAP
      [3] 클램프 — 알파벳 표기는 그릇에 여유가 있어 `fitNum` 이 아예 개입하지 않는다(인라인 fs 없음)
                   = FITMIN 바닥에 서 있지 않다(등재문이 말한 «바닥에 걸려» 상태가 아니다)
-     [4] 음성항 — 표기만 `fmt` 로 되돌리면 21자에서 **실제로 침범이 재현**된다(자가 진짜로 잰다는 증거)
+     [4] 음성항 — 표기만 `fmt` 로 되돌리면 **실제로 침범이 재현**된다(자가 진짜로 잰다는 증거).
+                  393(2026-08-29): 자릿수를 상수로 안 박고 **제품에게 물어서** 침범이 시작되는
+                  표본을 찾는다 — 등재문의 «21자 −8.1» 은 342 3회차가 `.dnc .sp>i` 를 41 → 38 로
+                  내려 클램프 바닥이 22.55 → 20.90 이 되면서 **여백 +13.8 로 안전해진** 죽은 표본이다.
+                  [4-c] 가 그 인과(base 를 41 로 되돌리면 21자가 다시 −8.1)를 못박는다.
      [5] 아레나 — 같은 부품(`.dnc.rd`)을 쓰는 이웃 카드도 침범 0 (216 이 이 자리를 안 흔들었다)
      [6] 04 세부 — 같은 기록을 쓰는 세부 팝업 표기도 알파벳 단위다(표기층이 한 벌이다) */
 const path = require('path');
@@ -56,13 +60,22 @@ const ALPHA = /^\d{1,3}(\.\d{1,2})?[A-Z]{0,2}$/;
     const rg = document.createRange(); rg.selectNodeContents(i);
     const ink = rg.getBoundingClientRect();
     const padR = parseFloat(getComputedStyle(sp).paddingRight) || 0;
+    /* 393 — 바닥은 «base × FITMIN» 이고 base 는 **CSS 가 정한다**(342 가 41 → 38 로 내렸다).
+       41 을 박아 두면 자가 또 굳는다 ⇒ 인라인을 잠깐 비워 base 를 제품에게 묻고 원상 복구한다.
+       ⚠ getComputedStyle 은 살아 있는 객체다 — «지금 값» 을 먼저 숫자로 떠 놓고 비울 것. */
+    const fsNow = parseFloat(getComputedStyle(i).fontSize) || 0;
+    const inline = i.style.fontSize || '';
+    i.style.fontSize = '';
+    const base = parseFloat(getComputedStyle(i).fontSize) || 0;
+    i.style.fontSize = inline;
     return {
       txt: i.textContent,
-      fs: +parseFloat(getComputedStyle(i).fontSize).toFixed(2),
-      inline: i.style.fontSize,
+      fs: +fsNow.toFixed(2),
+      base: +base.toFixed(2),
+      inline,
       gap: +((th.getBoundingClientRect().left - ink.right) / sc - padR).toFixed(1),
       minGap: typeof RD_SPGAP === 'number' ? RD_SPGAP : 16,
-      floor: +(parseFloat(getComputedStyle(i).fontSize) <= 41 * FITMIN + 0.01),
+      floor: +(fsNow <= base * FITMIN + 0.01),
     };
   }, sel);
   const setDps = async (v) => { await p.evaluate((x) => {
@@ -86,7 +99,7 @@ const ALPHA = /^\d{1,3}(\.\d{1,2})?[A-Z]{0,2}$/;
   seen.forEach(({ nm, g }) => ok(!g.inline && !g.floor,
     `${nm} font-size ${g.fs}px · 인라인 ${g.inline || '없음'} · 바닥 아님`));
 
-  console.log('[4] 음성 대조 — 표기만 150 시절 `fmt` 로 되돌리면 21자에서 침범이 재현된다');
+  console.log('[4] 음성 대조 — 표기만 150 시절 `fmt` 로 되돌리면 침범이 재현된다');
   const patched = await p.evaluate(() => {
     /* 카드 렌더의 그 한 자리만 «옛 표기» 로 바꿔친다 (renderRaidPage 는 전역이라 치환이 먹는다) */
     window.__rrp216 = renderRaidPage;
@@ -95,12 +108,52 @@ const ALPHA = /^\d{1,3}(\.\d{1,2})?[A-Z]{0,2}$/;
     return /fmt\(b\.dps\)/.test(String(window.renderRaidPage));
   });
   ok(patched, '되돌림 패치 적용 (DPS = fmt «숫자 그대로»)');
-  await setDps(9.9e15);
-  const neg = await geo('#dunList .dnc.rd');
-  ok(neg.txt.replace(/,/g, '').length >= 16 && neg.gap < 0,
-     `되돌림 21자 «${neg.txt.slice(0, 12)}…» 여백 ${neg.gap}px < 0 = 침범 재현 (등재문 실측 −8.1)`);
-  ok(neg.floor === 1, `되돌림 판은 FITMIN 바닥(${neg.fs}px)에 서 있다 — 등재문이 말한 그 상태`);
-  await p.evaluate(() => { window.renderRaidPage = window.__rrp216; });
+
+  /* 393 — **자릿수를 상수로 박지 않는다.** 등재문 시절의 «21자» 는 클램프 바닥이 22.55px
+     (base 41)이던 때의 표본이고, 342 3회차가 base 를 38 로 내리면서 바닥이 20.90 이 되자
+     같은 21자가 여백 +13.8px 로 **안전해졌다** — 자만 옛 표본을 붙들어 33/34 로 빨갰다.
+     ⇒ 침범이 시작되는 자릿수를 **제품에게 물어서** 찾는다(368 처방 «자리를 상수에서 빼라»).
+     기대값을 «≥0» 으로 뒤집는 무른 수리와 다른 점: 여기서 요구하는 것은 여전히
+     **실제 침범이 일어난다**는 것이라, 클램프가 통째로 사라져도 초록이 되지 않는다(334 처방). */
+  let neg = null;
+  for (let e = 15; e <= 30 && !neg; e++) {
+    await setDps(9.9 * Math.pow(10, e));
+    const g = await geo('#dunList .dnc.rd');
+    if (g.gap < 0) neg = g;
+  }
+  ok(!!neg, neg
+    ? `되돌림에서 침범이 시작되는 가장 짧은 표본 = ${neg.txt.length}자 «${neg.txt.slice(0, 12)}…»`
+      + ` 여백 ${neg.gap}px < 0 = 침범 재현`
+    : '되돌림 1e15~1e30 전 구간에서 침범이 한 번도 안 난다 — 음성항이 공허하다(자가 안 재고 있다)');
+  ok(neg && neg.floor === 1,
+     `그 표본은 FITMIN 바닥(${neg ? neg.fs : '?'}px)에 서 있다 — «클램프가 덜 눌렀다» 가 아니라 바닥까지 눌러도 넘친다`);
+
+  /* [4-c] 왜 등재문의 «21자 −8.1» 이 죽었는지를 자에 새겨 둔다(`probe393` 이 못박은 인과).
+     base 를 342 이전 41 로만 되돌리면 바닥이 22.55 로 올라가 **그 21자가 다시 침범한다** —
+     즉 표본을 옮긴 이유는 «제품이 안전해져서» 지 «자를 무르게 풀어서» 가 아니다.
+     ⚠ `!important` 로 넣으면 fitNum 의 인라인까지 눌러 «클램프 없는 판» 을 재게 된다. */
+  await setDps(9.9e15);                       /* 위 스캔이 두고 간 값이 아니라 «등재문의 21자» 로 되돌린다 */
+  await p.evaluate(() => {
+    const st = document.createElement('style'); st.id = 'v216b';
+    st.textContent = '.dnc .sp>i{font-size:41px}';
+    document.head.appendChild(st);
+    document.querySelectorAll('#dunList .dnc.rd .sp.tk>i').forEach((i) => {
+      i.style.fontSize = ''; delete i.dataset.fitT; delete i.dataset.fitB;   /* fitNum 캐시 비우기 */
+    });
+    raidFitNums();
+  });
+  await p.waitForTimeout(120);
+  const old41 = await geo('#dunList .dnc.rd');
+  ok(old41.gap < 0 && old41.txt.length === 21,
+     `[4-c] base 를 342 이전 41 로 되돌리면 등재문의 21자가 다시 침범한다 — 여백 ${old41.gap}px`
+     + ` (등재문 실측 −8.1 · 바닥 ${old41.fs}px) ⇒ 표본이 옮겨진 뿌리는 342 의 41 → 38`);
+  await p.evaluate(() => {
+    const e = document.getElementById('v216b'); if (e) e.remove();
+    document.querySelectorAll('#dunList .dnc.rd .sp.tk>i').forEach((i) => {
+      i.style.fontSize = ''; delete i.dataset.fitT; delete i.dataset.fitB;
+    });
+    window.renderRaidPage = window.__rrp216;
+  });
   await setDps(9.9e15);
   const back = await geo('#dunList .dnc.rd');
   ok(back.gap >= back.minGap && ALPHA.test(back.txt),
