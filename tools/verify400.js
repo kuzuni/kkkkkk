@@ -39,7 +39,7 @@ const SRC = fs.readFileSync(FILE, 'utf8');
 
 const BAND = '#app.shortf #cfw{padding:142px 0 180px}';
 const SQ = '--sq:clamp(0px, calc(1669px - var(--frameh, 2280px)), 69px)';
-const LIST = '.cf55-list{left:30px;top:185px;bottom:calc(534px - var(--sq) * 0.695652);width:699px;display:flex;flex-direction:column}';
+const LIST = '.cf55-list{left:30px;top:calc(185px - var(--sq) * 0.188406);bottom:calc(534px - var(--sq) * 0.449275);width:699px;display:flex;flex-direction:column}';
 const LIST_OLD = '.cf55-list{left:30px;top:185px;width:699px;height:509px;display:flex;flex-direction:column}';
 const INK = 142;   /* HUD 판때기 `.pedge` 하변 — 351 4회차가 못박은 축 */
 const H0 = 1347;   /* 2280 에서의 `.cf55` 높이(측정표 55) */
@@ -163,32 +163,45 @@ async function read(page, h, KIDS) {
   eq('[1600] 눌린 양 = 1347 − 1278', H0 - M[1600].h, 69);
   /* 1회차 실패의 자: 리스트 한 장에 다 떠넘기면 440(행 73.3 · 데드존 4.3)이 된다.
      비평가 CG 6 / CH 5 가 그 한 축(④ 조작성)만으로 갈렸다 — 그 값이 다시 나오면 빨갛다. */
-  eq('[1600] 리스트 높이 488 (1회차의 440 이 아니다)', M[1600].kids['.cf55-list'][3], 488);
+  eq('[1600] 리스트 높이 500 (1회차 440 · 2회차 488 이 아니다)', M[1600].kids['.cf55-list'][3], 500);
   eq('[2280] 리스트 높이 509', M[2280].kids['.cf55-list'][3], 509);
   const rowH = (h) => M[h].rows[0].h;
-  ok(rowH(1600) - 69 >= 12, `[1600] 이웃 토글 사이 데드존 ${(rowH(1600) - 69).toFixed(1)}px ≥ 12 (1회차 4.3 · 2280 은 15.8)`);
-  ok(rowH(1600) / rowH(2280) > 0.94,
-    `[1600] 행 pitch 감소 ${(100 - 100 * rowH(1600) / rowH(2280)).toFixed(1)}% < 6% (1회차 13.5%)`);
+  ok(rowH(1600) - 69 >= 14, `[1600] 이웃 토글 사이 데드존 ${(rowH(1600) - 69).toFixed(1)}px ≥ 14 (1회차 4.3 · 2회차 12.3 · 2280 은 15.8)`);
+  ok(rowH(1600) / rowH(2280) > 0.97,
+    `[1600] 행 pitch 감소 ${(100 - 100 * rowH(1600) / rowH(2280)).toFixed(1)}% < 3% (1회차 13.5% · 2회차 4.1%)`);
   /* 지분표 — 1600 에서 «블록 사이 여백» 이 전부 줄되 한 자리도 반토막 나지 않는다 */
   const GAP = [
-    ['리스트 → 계정 패널', '.cf55-list', '.cf55-acc', 31, 24],
-    ['계정 패널 → 버튼', '.cf55-acc', '.cf55-btn.b1', 26, 20],
-    ['버튼 → 계정 삭제', '.cf55-btn.b1', '.cf55-del', 34, 26],
-    ['계정 삭제 → UID', '.cf55-del', '.cf55-n1', 16, 12.5],
-    ['UID → Gamer Id', '.cf55-n1', '.cf55-n2', 19, 15],
+    ['볼륨 제목 → 슬라이더', '.cf55-sub', '.cf55-track', 10, 8],
+    ['「0」 → 구분선', '.cf55-e0', '.cf55-rule', 12, 9],
+    ['구분선 → 리스트', '.cf55-rule', '.cf55-list', 19, 14],
+    ['리스트 → 계정 패널', '.cf55-list', '.cf55-acc', 31, 27],
+    ['계정 패널 → 버튼', '.cf55-acc', '.cf55-btn.b1', 26, 22],
+    ['버튼 → 계정 삭제', '.cf55-btn.b1', '.cf55-del', 34, 29],
+    ['계정 삭제 → UID', '.cf55-del', '.cf55-n1', 16, 14],
+    ['UID → Gamer Id', '.cf55-n1', '.cf55-n2', 19, 16],
   ];
   for (const [nm, a, b, w2280, w1600] of GAP) {
     const g = (h) => +(M[h].kids[b][1] - (M[h].kids[a][1] + M[h].kids[a][3])).toFixed(1);
     ok(Math.abs(g(2280) - w2280) < 0.6, `[2280] ${nm} 여백 ${w2280} (실제 ${g(2280)})`);
     ok(Math.abs(g(1600) - w1600) < 0.6, `[1600] ${nm} 여백 ${w1600} (실제 ${g(1600)})`);
-    ok(g(1600) / g(2280) > 0.7, `[1600] ${nm} 이 30% 넘게 안 줄었다 (${(100 - 100 * g(1600) / g(2280)).toFixed(1)}%)`);
+    ok(g(1600) / g(2280) > 0.72, `[1600] ${nm} 이 28% 넘게 안 줄었다 (${(100 - 100 * g(1600) / g(2280)).toFixed(1)}%)`);
   }
-  eq('[1600] 계정 패널 높이 181 (2280 은 198)', M[1600].kids['.cf55-acc'][3], 181);
+  eq('[1600] 계정 패널 높이 187 (2280 은 198)', M[1600].kids['.cf55-acc'][3], 187);
+  eq('[1600] 헤더 높이 75 (2280 은 91 — 3회차에 지분으로 편입했다)', M[1600].kids['.cf55-head'][3], 75);
+  eq('[2280] 헤더 높이 91', M[2280].kids['.cf55-head'][3], 91);
   eq('[2280] 계정 패널 높이 198', M[2280].kids['.cf55-acc'][3], 198);
-  /* 볼륨 그룹(리스트 위)은 지분에서 뺐다 — 상자 상변 기준 offset 이 세 프레임 동일해야 한다 */
+  /* ⚑ 3회차 — 헤더·볼륨 그룹도 지분에 넣었다. 비평가 CJ 가 «흰공간 전부에서 균등하게 라고 해놓고
+     헤더 53px 패딩과 볼륨 블록 여백을 면제해 준 채 부담을 데드존에 떠넘겼다» 를 짚었다(④ 7점).
+     그래서 이 다섯 자리는 이제 «2280 과 같아야» 가 아니라 «줄되 표적은 안 건드려야» 한다. */
   for (const s2 of ['.cf55-head', '.cf55-sub', '.cf55-track', '.cf55-rule', '.cf55-list']) {
-    ok(Math.abs((M[1600].kids[s2][1] - M[1600].kids['.cf55'][1]) - (M[2280].kids[s2][1] - M[2280].kids['.cf55'][1])) < 0.6,
-      `[1600↔2280] ${s2} 의 상자 상변 기준 offset 이 같다 (볼륨 그룹은 안 건드렸다)`);
+    const o = (h) => +(M[h].kids[s2][1] - M[h].kids['.cf55'][1]).toFixed(1);
+    ok(o(1600) < o(2280) || s2 === '.cf55-head', `[1600] ${s2} 도 지분을 냈다 (${o(2280)} → ${o(1600)})`);
+    ok(o(1920) === o(2280), `[1920↔2280] ${s2} 의 상자 상변 기준 offset 이 같다 (기준 프레임 Δ0px)`);
+  }
+  /* 표적은 한 픽셀도 안 줄었다 — 이것이 세 회차 내내 지킨 선이다 */
+  for (const s2 of ['.cf55-btn.b1', '.cf55-btn.b2', '.cf55-btn.b3', '.cf55-badge', '.cf55-track', '.cf55-knob']) {
+    ok(M[1600].kids[s2][3] === M[2280].kids[s2][3] && M[1600].kids[s2][2] === M[2280].kids[s2][2],
+      `[1600] ${s2} 크기 0% 변화 (${M[2280].kids[s2][2]}×${M[2280].kids[s2][3]})`);
   }
   /* 연속 — 문턱이 아니라 `--frameh` 라 1600↔1669 사이에 층이 안 생긴다 */
   ok(rowH(1600) < rowH(1634) && rowH(1634) < rowH(1669),
@@ -204,7 +217,7 @@ async function read(page, h, KIDS) {
     ok(gaps.every((g) => Math.abs(g) < 0.6), `[${h}] 6행이 안 겹치고 안 벌어진다 (${JSON.stringify(gaps)})`);
     ok(M[h].accTop - M[h].listBot > 20, `[${h}] 리스트 하변 ↔ 계정 패널 사이 ${(M[h].accTop - M[h].listBot).toFixed(1)}px`);
     const rh = M[h].rows[0].h;
-    ok(rh >= 81, `[${h}] 행 높이 ${rh} ≥ 81 (토글 69 + 데드존 12)`);
+    ok(rh >= 83, `[${h}] 행 높이 ${rh} ≥ 83 (토글 69 + 데드존 14)`);
   }
   ok(errs.length === 0, `콘솔·런타임 에러 0 (${errs.length})`);
   await ctx.close();
