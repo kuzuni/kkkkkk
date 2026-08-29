@@ -1,0 +1,12 @@
+70-attend	70 출석 팝업(카드 격자)	side:attend
+29-roul	29 룰렛(원판 — 세로로 큰 블록)	side:roul
+22-quest	22 퀘스트 팝업(목록)	side:quest
+54-promo	승급전 팝업	side:promo
+21-coll	21 도감 보너스 팝업	side:coll
+69-mail	69 우편함	menu:mail
+35-pass	35 패스(가장 요소 많은 페이지)	pass:35
+06-eqsk	08 영웅 → 스킬 시트	eqtab:sk
+06-eqcos	08 영웅 → 코스튬 시트	eqtab:cos
+06-eqpet	08 영웅 → 펫 시트	eqtab:pet
+30-tower	03 모험 → 탑 서브탭	dunsub:tower
+19-prof	19 프로필 팝업	prof:19
