@@ -1839,6 +1839,27 @@
      min-height 는 «결과 없음(&nbsp;)» 일 때도 한 줄 자리를 잡아 두는 값이라 35×1.7 로 올린다. */
   #rouGuide,#rouRes{font-size:35px}
   #rouRes{min-height:60px}
+  /* ── 367 — 안내줄 꼬리표 «(무료 3 · 광고 2)» ──
+     `<i>` 라 기울기를 끄고, 남은 횟수(`#rouCnt` 35px)보다 한 단 작게 둔다: 이 줄에서 **읽어야 하는 값**은
+     남은 횟수이고 구성은 규칙 설명이다(265 가 세운 «22 퀘스트 급» 본문 크기를 값 쪽에만 남긴다). */
+  #rouMix{font-style:normal;font-size:26px;color:#B9A88C;margin-left:12px;white-space:nowrap}
+  /* ── 367 — ▶AD 뱃지 (13 광고 상품 `.cn-cd>.bt>.ad` 와 같은 부품) ──
+     13 의 뱃지는 **80px 높이 버튼**에 맞춰 실측된 값이다(측정표 13 §5). 이 버튼은 130px 이므로
+     부품 전체를 **k = 130/80 = 1.625** 로 곱했다 — 눈대중이 아니라 호스트 높이비 한 개에서 나온
+     한 벌이고, 새 상수는 그 k 하나뿐이다(61→99.1 · 47→76.4 · r9→14.6 · 테두리 4→6.5 …).
+     자리: 좌 여백 24 는 **321 레드닷의 우 여백 24 를 거울로 뒤집은 값**이라 버튼 좌우 인셋이 같아지고,
+     세로는 가운데((130 − 76.4)/2 = 26.8). 라벨 잉크(중앙 ±163)와의 간격은 124px 로 안 겹친다. */
+  .ifbtn.pbtn>.ad{position:absolute;left:24px;top:26.8px;width:99.1px;height:76.4px;border-radius:14.6px;
+    box-sizing:border-box;border:6.5px solid #000;z-index:5;display:none;pointer-events:none;
+    background:linear-gradient(180deg,#FED152 0,#FDB128 60%,#F1AA1E 100%)}
+  .ifbtn.pbtn>.ad>s{position:absolute;left:9.75px;top:6.5px;width:68.25px;height:48.75px;border-radius:6.5px;
+    text-decoration:none;background:linear-gradient(180deg,#863C00 0,#BC5417 50%,#9F4E00 100%)}
+  .ifbtn.pbtn>.ad>s::after{content:'';position:absolute;left:22.75px;top:6.5px;width:0;height:0;
+    border-left:26px solid #FFFCDB;border-top:19.5px solid transparent;border-bottom:19.5px solid transparent}
+  .ifbtn.pbtn>.ad>b{position:absolute;left:61.75px;top:48.75px;font-size:30.2px;line-height:30.9px;
+    font-weight:900;color:#fff;-webkit-text-stroke:9.75px #000;paint-order:stroke fill;white-space:nowrap}
+  /* 켜는 조건은 `rouBtnAd()` 한 곳뿐이다(166 규약 — 조건은 호스트 클래스, 부품은 노드) */
+  .ifbtn.pbtn.adon>.ad{display:block}
   /* ── 회전 중 정지 (작업 65) — «원판만 돈다» ──
      저장소 주인 지시: 룰렛을 돌릴 때 원판(#rouDisc)만 회전하고 **모달 박스·딤·배경·버튼은 완전히 정지**.
      60 쥬시가 전역 부착이라 룰렛 팝업도 자동 편입돼 있는데, 회전 중에는 그게 그대로 «흔들림»이 된다:
@@ -6280,12 +6301,15 @@
     line-height:32px;-webkit-text-stroke:6px #000;paint-order:stroke fill;white-space:nowrap}
 
   /* 124 — 광고 제거 이용권 보유 중에는 «광고 시청» 표식을 전부 감춘다(수령은 그대로 된다).
-     13 광고 상품 ▶AD · 10 무료 소환 ▶AD · 01 오프라인 1.5배 AD — 세 곳이 전부다. */
+     13 광고 상품 ▶AD · 10 무료 소환 ▶AD · 01 오프라인 1.5배 AD · **29 룰렛 뒤 2회 ▶AD(367)** — 네 곳이다. */
   #app.noads .cn-cd>.bt>.ad{display:none}
   #app.noads .cn-cd>.bt>.lab{left:9px;width:227px}
   #app.noads .cn-cd>.bt>.cnt{left:9px;width:227px}
   #app.noads .shp-card>.adbadge{display:none}
   #app.noads .ofr-ad{display:none}
+  /* 367 — 룰렛 광고 구간 뱃지. 판정식(`roulAdMark`)이 이미 `noAdsOn()` 을 보므로 이 규칙은 두 번째 겹이다 —
+     190 이 «두 조건은 OR 로 합성된다» 고 적어 둔 그 모양 그대로다(표식이 두 벌이면 그게 더 안 읽힌다). */
+  #app.noads .ifbtn.pbtn>.ad{display:none}
   /* 190 — «오늘 무광고 1회가 남은» 상자 칸도 ▶AD 를 감춘다. 124(영구)와 **같은 표현**을 쓴다:
      플레이어에게 두 상태는 «지금 광고 없이 뽑는다» 로 똑같고, 표식이 두 벌이면 그게 더 안 읽힌다.
      기하는 안 건드린다 — 뱃지는 카드 직속 자식이고 버튼 3개는 자기 좌표를 그대로 쓴다(verify10). */
@@ -16447,7 +16471,8 @@ for(let i=1;i<=28;i++){
    155(2026-08-27, 저장소 주인 지시): «룰렛에는 다이아만, 100~1000개로».
    골드(goldMul)·유물조각(rel)·🎁대박 칸은 폐기했다 — 8칸 전부 `dia` 한 종류다.
    가중치 w 는 합이 100 이라 그대로 백분율이고, **낮은 값일수록 크다**(100 이 24% · 1000 이 3%).
-   기대값 = Σ(dia·w)/100 = **340 다이아/회** · 하루 5회(ROUL_FREE) = **1,700 다이아/일**. */
+   기대값 = Σ(dia·w)/100 = **340 다이아/회** · 하루 5회(ROUL_TRY) = **1,700 다이아/일**.
+   367 이 5회를 «무료 3 + 광고 2» 로 갈랐지만 **총량은 그대로** 5회다 — 이 기대값은 안 바뀐다. */
 const ROULETTE = [
   { ic:curIc('dia'), t:'다이아', dia:100,  w:24 },
   { ic:curIc('dia'), t:'다이아', dia:200,  w:20 },
@@ -16458,7 +16483,22 @@ const ROULETTE = [
   { ic:curIc('dia'), t:'다이아', dia:800,  w:6  },
   { ic:curIc('dia'), t:'다이아', dia:1000, w:3  }
 ];
-const ROUL_FREE = 5;
+/* ── 367(2026-08-29, 저장소 주인 지시) — «룰렛은 3번까지 공짜 나머지 2번은 광고봐야 가능하게» ──
+   **하루 총 횟수는 5회 그대로**이고, 그 5회를 «앞 3회 무료 · 뒤 2회 광고» 로 가른 것이 전부다.
+   `S.daily.spins` 는 종전처럼 «오늘 남은 횟수» 하나이며(5 → 0), 어느 구간인지는 **남은 수로 파생**한다:
+   남은 수가 ROUL_AD 이하면 = 앞의 무료분을 이미 다 쓴 것 = 광고 구간(4·5회째).
+   ⚠ 재고를 두 벌(freeLeft/adLeft)로 쪼개지 않은 이유는 190 이 세운 규약과 같다 — 재고가 하나면
+   «돌릴 수 있다» 판정(사이드·버튼 레드닷 · 퀘스트 · 배너)이 전부 `spins > 0` 한 줄로 남는다.
+   ⚠ 세이브 이관 없음: 총량이 5로 불변이라 구 세이브의 `spins`(0~5)가 새 구조에서 그대로 합법이다.
+   광고 SDK 는 없다(124 ②) — «광고를 본다» 는 이 게임에서 **표식뿐**이므로(190 ⓐ) 367 이 만드는 것도
+   ▶AD 표식과 라벨이고, 누르면 그 자리에서 돌아간다. 124(광고 제거 이용권)는 그 표식을 감춘다. */
+const ROUL_FREE = 3;                 /* 앞의 n 회는 광고 없이 */
+const ROUL_AD   = 2;                 /* 나머지 n 회는 ▶AD 를 달고 */
+const ROUL_TRY  = ROUL_FREE + ROUL_AD;   /* 하루 총 횟수 — 표기(n/5)·충전·리셋이 보는 값 */
+/* 다음 1회가 «광고 구간» 인가. 판정은 이 한 곳이다(166·190 규약 — 표식의 유일한 판정식).
+   124 로 광고를 영구히 지운 사람에게는 표식을 감춘다 — 13·10·01 세 자리와 **같은 표현**이다. */
+const roulAdNext = () => S.daily.spins > 0 && S.daily.spins <= ROUL_AD;
+const roulAdMark = () => roulAdNext() && !noAdsOn();
 
 /* ---- 승급전 (계급) ---- */
 const RANKS = [
@@ -17294,7 +17334,7 @@ const DEF = () => ({
      `load()` 의 `Object.assign(DEF().daily, d.daily)` 가 기본값(3)으로 채워 준다
      (44 교훈 2 «없는 키는 기본값» — 저장 구조가 아니라 값이 하나 는 것이라 KEY 는 안 올린다).
      204 — `dun`(하루 리필 던전 입장 횟수) 은 폐기됐다. 던전 입장권은 아래 `dunTk`(영구)다. */
-  daily:{ date:'', spins:ROUL_FREE, raid:RAID_TRY, arena:ARENA_TRY,
+  daily:{ date:'', spins:ROUL_TRY, raid:RAID_TRY, arena:ARENA_TRY,   /* 367 — 무료 3 + 광고 2 (총량 불변) */
           freeSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {}),   /* 상자별 오늘 남은 무료 10연 */
           /* 190 — 그 중 «광고 없이» 쓸 수 있는 남은 횟수. 키가 없는 구 세이브는 noAdSumLeft() 가
              cap(SHOP_NOAD)으로 폴백한다(«없는 키는 cap» 관례 — freeLeft 와 같다. KEY 안 올린다). */
@@ -17635,7 +17675,7 @@ function dailyCheck(){
   const t = today();
   if(S.daily.date !== t){
     S.daily.date = t;
-    S.daily.spins = ROUL_FREE;
+    S.daily.spins = ROUL_TRY;                  /* 367 — 무료 ROUL_FREE 회 + 광고 ROUL_AD 회 */
     /* 205 — 순수 리셋. 어제 남은 횟수는 «더해지지 않고» 버려진다(204 던전 입장권과 반대). */
     S.daily.raid  = RAID_TRY;
     S.daily.arena = ARENA_TRY;
@@ -22271,9 +22311,13 @@ function claimAttend(at){
 function spinRoulette(){
   if(rouSpinning) return;                       /* 회전 중 재입력 차단 */
   if(S.daily.spins <= 0){
-    notify('🎰 무료 룰렛 소진 — 내일 <b>' + ROUL_FREE + '회</b> 충전');
+    /* 367 — 5회 중 뒤 2회는 광고 구간이라 더는 «무료 룰렛 소진» 이 아니다.
+       충전량은 총량(ROUL_TRY)으로 말하고, 구성은 팝업 안내줄이 상시로 말한다(토스트 폭 예산 — 149). */
+    notify('🎰 오늘 룰렛 소진 — 내일 <b>' + ROUL_TRY + '회</b> 충전');
     return;
   }
+  /* 367 — «광고를 본다» 는 이 게임에서 표식뿐이므로(124 ② · 190 ⓐ) 여기에 절차가 새로 붙지 않는다.
+     구간(무료/광고)은 `S.daily.spins` 하나에서 파생되므로 차감 외에 기록할 상태도 없다. */
   S.daily.spins--; S.cnt.spins++;
   const tot = ROULETTE.reduce((s,x) => s+x.w, 0);
   let r = Math.random()*tot, idx = 0;
@@ -23998,7 +24042,10 @@ const ROUL_OVER = 6, ROUL_BACK_MS = 260;
 function roulSpinMark(on){ const m = $('modal'); if(m) m.classList.toggle('rou-spin', !!on); }
 /* 267 — `.pbtn` 라벨은 `<b>` 안에 있다(`.ifbtn` 규약). 예전처럼 `btn.textContent = …` 로 쓰면
    그 `<b>` 가 통째로 날아가 버튼이 «큰 규격만 남고 글씨는 26px 맨몸» 이 된다. 여기 한 곳으로 모은다. */
-function rouBtnTx(btn, t){ if(!btn) return; const b = btn.querySelector('b') || btn.firstElementChild;
+/* 367 — 셀렉터를 `:scope>b` 로 좁혔다. ▶AD 뱃지가 안에 `<b>AD</b>` 를 하나 더 들여오면서
+   `querySelector('b')` 는 «버튼 안 아무 b» 를 잡는다 — 뱃지를 라벨 **뒤**에 두어도 문서 순서가 아니라
+   자식 여부로 골라야 다음 사람이 순서를 바꿔도 안 깨진다(LESSONS 267 «라벨은 `<b>` 안» 규약의 보강). */
+function rouBtnTx(btn, t){ if(!btn) return; const b = btn.querySelector(':scope>b') || btn.firstElementChild;
   if(b) b.textContent = t; else btn.textContent = t; }
 /* 321(주인 지시 2026-08-28) — «돌릴 수 있으면 [룰렛 돌리기] 버튼에도 레드닷».
    318(출석)과 똑같은 «경로가 한 칸 짧다» 결손이었다: 판정·점등은 `sideAlert('roul', S.daily.spins>0)`
@@ -24010,6 +24057,17 @@ function rouBtnTx(btn, t){ if(!btn) return; const b = btn.querySelector('b') || 
 function rouBtnDot(){
   const b = $('rouBtn');
   if(b) b.classList.toggle('alert', S.daily.spins > 0 && !rouSpinning);
+}
+/* 367 — 다음 1회의 «구간» 을 버튼에 적는 유일한 곳. 라벨과 ▶AD 표식이 **한 판정식**(roulAdMark)에서
+   같이 나온다 — 둘이 갈리면 «▶AD 가 붙었는데 라벨은 (무료)» 같은 거짓 신호가 생긴다(LESSONS 363 «표시가
+   하나로는 모자랐다» 의 반대 함정: 여기서는 표시가 둘이어야 할 이유가 없다).
+   회전 중(`돌아가는 중…`)·소진(`내일 다시 충전됩니다`)에는 라벨을 여기서 안 건드리고 표식만 감춘다 —
+   그 두 라벨은 각각 `roulSpinTo`·`roulFinish` 가 쓰는 «상태 문구» 라서 구간과 무관하다. */
+function rouBtnLab(){ return roulAdMark() ? '광고 보고 돌리기' : '룰렛 돌리기 (무료)'; }
+function rouBtnAd(){
+  const b = $('rouBtn'); if(!b) return;
+  const on = roulAdMark() && !rouSpinning && S.daily.spins > 0;
+  b.classList.toggle('adon', on);
 }
 /* 155 — 보상이 다이아 한 종류가 되면서 «보상 종류별 팔레트» 도 필요 없어졌다.
    골드·유물조각·대박 전용 색은 죽은 코드라 지웠고, 남은 것은 칸 구분용 «다이아 2색 교대» 뿐이다. */
@@ -24035,7 +24093,11 @@ function openRoulette(){
   const bg = 'repeating-conic-gradient(from -0.5deg,rgba(0,0,0,.5) 0 1deg,rgba(0,0,0,0) 1deg ' + seg + 'deg),'
            + 'conic-gradient(from 0deg,' + cg.join(',') + ')';
   const h = '<h2>🎰 행운 룰렛</h2>'
-    + '<p id="rouGuide">오늘 남은 횟수 <b id="rouCnt">' + S.daily.spins + ' / ' + ROUL_FREE + '</b></p>'   /* 265 — 글씨 크기를 이 줄만 22 급으로 올리기 위한 id */
+    /* 367 — 표기는 «오늘 남은 횟수 n / 5»(총량) 그대로다. 구성은 그 뒤에 «(무료 3 · 광고 2)» 한 마디로만
+       덧붙인다 — 남은 수를 두 벌(무료 n · 광고 m)로 쪼개 적으면 «지금 무엇을 누르는가» 는 버튼이 이미
+       말하는데 안내줄까지 상태를 말하게 돼 신호가 둘로 갈린다(166 «신호는 한 곳» 계열). */
+    + '<p id="rouGuide">오늘 남은 횟수 <b id="rouCnt">' + S.daily.spins + ' / ' + ROUL_TRY + '</b>'
+    +   '<i id="rouMix">(무료 ' + ROUL_FREE + ' · 광고 ' + ROUL_AD + ')</i></p>'   /* 265 — 글씨 크기를 이 줄만 22 급으로 올리기 위한 id */
     + '<div class="rlt"><div class="rlt-rim"></div>'
     +   '<div class="rlt-disc" id="rouDisc" style="background:' + bg
     +     ';transform:rotate(' + rouRot.toFixed(2) + 'deg)">' + segs + '</div>'
@@ -24045,14 +24107,18 @@ function openRoulette(){
        라벨을 `<b>` 로 감싸는 것이 `.ifbtn` 부품의 규약이다(`.qs-all`·`.cl-all` 과 같다). */
     /* 321 — 레드닷은 `<b>` **뒤**에 붙인다: `rouBtnTx` 가 라벨을 찾는 규약(`<b>`)을 깨지 않게
        형제로 두고, 점등은 아래 `rouBtnDot()` 이 호스트 `.alert` 로만 한다(166). */
+    /* 367 — ▶AD 표식은 13 광고 상품 뱃지(`.cn-cd>.bt>.ad`)와 **같은 부품·같은 모양**이고, 노드는 늘 두고
+       `.adon`(= 다음 1회가 광고 구간) 이 켜고 끈다. 124 는 `#app.noads` 로 그 위를 한 겹 더 덮는다. */
     + '<button class="ifbtn pbtn" id="rouBtn"' + (S.daily.spins > 0 ? '' : ' disabled') + '><b>'
-    + (S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다') + '</b>'
+    + (S.daily.spins > 0 ? rouBtnLab() : '내일 다시 충전됩니다') + '</b>'
+    + '<div class="ad"><s></s><b>AD</b></div>'
     + '<s class="updot"></s></button>';
   showModal(h);
   rouSpinning = false;
   roulSpinMark(false);                           /* 65 — 표식은 #modal 에 남으므로 렌더 때마다 초기화한다 */
   $('rouBtn').onclick = spinRoulette;
   rouBtnDot();                                   /* 321 — 열자마자 «돌릴 수 있으면» 점등 */
+  rouBtnAd();                                    /* 367 — 열자마자 다음 1회의 구간(▶AD)도 같이 */
 }
 /* idx 칸이 북(포인터)에 오도록 감속 정지시킨다.
    세그먼트 i 의 중심각 c = i*45+22.5 이므로 최종 회전각 ≡ −c (mod 360) 이면 된다. */
@@ -24079,8 +24145,9 @@ function roulSpinTo(idx){
   const btn = $('rouBtn'), res = $('rouRes'), cnt = $('rouCnt');
   if(btn){ btn.disabled = true; rouBtnTx(btn, '돌아가는 중…'); }
   rouBtnDot();                                   /* 321 — 회전 시작 = 즉시 소등(rouSpinning 이 true 다) */
+  rouBtnAd();                                    /* 367 — 회전 중에는 ▶AD 도 같이 끈다(라벨이 상태 문구다) */
   if(res) res.innerHTML = '&nbsp;';
-  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
+  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_TRY;
   document.querySelectorAll('#rouDisc .rlt-seg.hit').forEach(s => s.classList.remove('hit'));
   const c = idx * (360/ROULETTE.length) + (360/ROULETTE.length)/2;
   const base = rouRot + 360*ROUL_TURNS;
@@ -24138,10 +24205,12 @@ function roulFinish(idx){
   segs.forEach((s, i) => s.classList.toggle('hit', i === idx));
   const res = $('rouRes'), btn = $('rouBtn'), cnt = $('rouCnt');
   if(res) res.innerHTML = '획득! <b>' + (txt || ROULETTE[idx].t) + '</b>';
-  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_FREE;
+  if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_TRY;
   if(btn){ btn.disabled = S.daily.spins <= 0;
-           rouBtnTx(btn, S.daily.spins > 0 ? '룰렛 돌리기 (무료)' : '내일 다시 충전됩니다'); }
+           /* 367 — 3회를 다 쓰면 **이 자리에서** 라벨이 «광고 보고 돌리기» 로 넘어간다(팝업을 닫았다 열 필요 없음) */
+           rouBtnTx(btn, S.daily.spins > 0 ? rouBtnLab() : '내일 다시 충전됩니다'); }
   rouBtnDot();                                   /* 321 — 라벨이 «내일 다시» 로 바뀌는 이 경로에서도 동기화 */
+  rouBtnAd();                                    /* 367 — 구간이 넘어가는 유일한 순간이 여기다 */
 }
 /* 181 안전망 — 지급이 «멈춘 뒤» 로 옮겨 갔으므로, 회전 3.9초 안에 앱을 닫으면 보상이 증발한다
    (횟수는 돌리는 순간 이미 깎이고 저장된다). `pagehide` 는 탭 종료·백그라운드 폐기·새로고침에
