@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-/* PROGRESS 완료행 되돌림 탐지 — 끝난 작업이 «미착수» 로 되살아나는 것을 잡는다 (작업 374)
+/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388)
+ *
+ * 자가 둘이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
+ *   §1 되돌림  (374) — 완료행이 **병합으로** 등재문으로 되돌아간다. 이력(그 done 커밋)과 대조한다.
+ *   §2 자기모순(388) — **되돌림이 아니다.** `done(<ID>)` 커밋 **자신**이 완료문을 비고 칸
+ *                      «끝에만» 덧붙이고 구현 칸·루프 횟수·비고 머리말을 등재 상태로 남긴다.
+ *                      이력과는 아무 차이가 없으므로 §1 은 **영원히 초록**이다 — 표 자체를 봐야 한다.
  *
  *   node tools/verifyProgress.js                 작업 트리의 docs/PROGRESS.md 를 본다
  *   node tools/verifyProgress.js --rev <rev>     그 리비전의 PROGRESS 를 본다(§R 되돌림 시험용)
@@ -37,7 +43,15 @@
  * 루틴 컨테이너의 클론은 **shallow** 다(2026-08-29 실측: 56 커밋 ≈ 3시간).
  * done() 커밋의 부모가 이력 경계 밖이면 [정확 되돌림] 을 **잴 수 없다** —
  * 그런 ID 는 조용히 넘기지 않고 «부분검사» 로 세어 요약에 찍는다.
- * 되돌림 사고는 몇 시간 안에 일어나므로 shallow 창으로도 실전 커버리지는 충분하다.
+ * ⚠ **shallow 창은 실행마다 다르다**(388 실측: 같은 트리에서 첫 실행 `done() 기록 7건`,
+ * `git fetch --deepen=200` 뒤 **36건** — **둘 다 «PROGRESS OK»** 였다). 그래서 §1 의 커버리지를
+ * «충분하다» 고 부르지 않고, shallow 면 요약에 **⚠ 한 줄로 창 크기를 찍는다**(§2 는 표만 보므로 영향 없다).
+ *
+ * ── §2 는 왜 칸을 «위치» 로 세지 않는가 ───────────────────────────────────
+ * 이 표는 칸을 `|` 로 나누지만 본문 안에도 `|` 가 있다(코드 스팬 · 산문의 «ⓐ | ⓑ» · `\|`).
+ * 실측 389 행 중 7칸은 268 행뿐이라 **`cols[3]` 같은 위치 인덱스는 못 쓴다**(174·319·336~344 행은
+ * 구현 칸이 통째로 밀린다). 그래서 위치가 아니라 **모양**으로 앵커한다 —
+ * `| <구현 –> | <점수 –> | <횟수> | **<미착수|등재만|착수 전>`. 재현·음성항은 `tools/probe388.js`.
  */
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -71,6 +85,15 @@ function rowsOf(text) {
   return m;
 }
 const DONE_MARK = /✅|완료\(/;
+
+/* ── §2 자기모순 자 (작업 388) ──────────────────────────────────────────────
+ * DONE_DATED — «했다» 표지 = «완료·해결·통과·폐기 + **날짜**». 날짜를 요구하는 것이 이 자의 절반이다:
+ *              산문은 그 낱말을 인용만 하고 날짜를 안 붙인다(388 자신의 등재문이 처방을 인용해
+ *              첫 판에서 자기 자신을 빨갛게 만들었다). ⏸(보류)·🔧(진행 중)은 **일부러 뺐다** —
+ *              그 둘은 «아직 안 끝났다» 라 비고가 «미착수» 여도 모순이 아니다(199·351·72 가 그 자리다).
+ * NOT_YET    — «안 했다» 를 **비고 칸의 머리말에서만** 읽는 모양 앵커(위 주석 참조). */
+const DONE_DATED = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
+const NOT_YET = /\|\s*(?:–|—|-|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(미착수|등재만|착수 전)/;
 
 /* ── 검사 대상 상태 ── */
 let curText, curLabel;
@@ -136,6 +159,16 @@ for (const [id, { sha, subj }] of [...newestDone.entries()].sort((a, b) => a[0].
   okIds.push(id);
 }
 
+/* ── §2 자기모순 판정 — 이력이 아니라 «지금 표» 만 본다 ── */
+const contra = [];
+for (const [id, line] of cur) {
+  const y = NOT_YET.exec(line);
+  if (!y) continue;
+  const d = DONE_DATED.exec(line);
+  if (!d) continue;                                /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
+  contra.push({ id, head: y[1], mark: d[0] });
+}
+
 /* ── 출력 ── */
 if (!quiet) {
   console.log('PROGRESS 되돌림 검사 — ' + curLabel + ' · done() 기록 ' + newestDone.size + '건');
@@ -145,8 +178,27 @@ if (!quiet) {
   /* 넷의 합 = done() 기록 수. 셈이 안 맞으면 어딘가를 조용히 건너뛴 것이다. */
   console.log('  셈 ' + (okIds.length + partial.length + noRow.length + bad.length) + '/' + newestDone.size +
               (okIds.length + partial.length + noRow.length + bad.length === newestDone.size ? ' 맞음' : ' ⚠ 안 맞음 — 조용히 건너뛴 ID 가 있다'));
+  /* 못 보는 것을 초록으로 부르지 않는다 — shallow 면 §1 의 창 크기를 밝힌다(작업 388). */
+  if (fs.existsSync(path.join(ROOT, '.git', 'shallow'))) {
+    console.log('  ⚠ 얕은 클론(.git/shallow) — §1 이 볼 수 있는 이력은 done() ' + newestDone.size +
+                '건뿐이다. 경계 밖의 되돌림은 안 세진다.');
+    console.log('    창을 넓히려면: git fetch --deepen=200 origin main  (§2 자기모순은 표만 보므로 영향 없다)');
+  }
+  console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건');
 }
 for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.detail);
+for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · 구현 칸이 «–» 이고 비고가 «' + c.head +
+                                    '» 로 여는데 같은 행에 완료 표지 «' + c.mark + '» 가 있다');
+
+if (contra.length) {
+  console.log('\nPROGRESS SELF-CONTRADICTION ' + contra.length + '건 — ' + contra.map(c => c.id).join(' '));
+  console.log('  뜻: 그 작업은 끝났는데 표는 «미완료» 로 보여 준다 = 다음 워커의 티어 스캔이 재선점한다.');
+  console.log('    (371 이 실제로 그랬다 — sess-0400-28780 이 선점했다가 회차 0 소모로 놓았다.)');
+  console.log('  고치는 법: 완료문을 비고 «끝에만» 붙이지 말고 **세 칸을 같이** 갱신한다 —');
+  console.log('    ① 구현 칸 «–» → «✅ 완료(날짜, 세션 · n회차) — 한 줄 요약»');
+  console.log('    ② 루프 횟수 «0/5» → 실제 회차');
+  console.log('    ③ 비고 머리말 «미착수/등재만» → 등재문임을 밝히는 말로(등재문 본문은 지우지 마라)');
+}
 
 if (bad.length) {
   console.log('\nPROGRESS REVERTED ' + bad.length + '건 — ' + bad.map(b => b.id).join(' '));
@@ -156,5 +208,6 @@ if (bad.length) {
   console.log('    있었으면 그것까지 살린다(규칙 8 «양쪽 행을 모두 살린다» 그대로).');
   process.exit(1);
 }
-if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음');
+if (contra.length) process.exit(1);
+if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음');
 process.exit(0);

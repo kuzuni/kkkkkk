@@ -41,6 +41,11 @@ const run = (...args) => {
 };
 /* 빨간 항목의 ID 목록 — 요약줄이 아니라 «✗» 줄에서 읽는다(요약 문구가 바뀌어도 안 흔들린다) */
 const redIds = out => (out.match(/^\s*✗\s+(\S+) —/gm) || []).map(s => /✗\s+(\S+) —/.exec(s)[1]);
+/* 388 이 같은 자 파일에 **두 번째 절**(§2 자기모순)을 얹었다. 374 가 소유한 것은 §1(되돌림)이므로
+   «자가 초록인가» 를 묻던 항은 «§1 이 조용한가» 로 옮긴다(334 처방 — 기대값을 누르는 대신 무엇을 묻는지를 옮긴다).
+   그냥 종료 코드로 두면 §2 가 빨간 날 374 가 **자기 것이 아닌 이유로** 빨개져, 진짜 되돌림 사고가 그 소음에 묻힌다. */
+const s1Ids = out => (out.match(/^\s*✗\s+(\S+) — (?!자기모순)/gm) || []).map(s => /✗\s+(\S+) —/.exec(s)[1]);
+const s1Quiet = out => s1Ids(out).length === 0 && !/PROGRESS REVERTED/.test(out);
 
 /* 사고 커밋들 — 이 저장소의 실제 이력이다(shallow 창 안). */
 const CRASH = '5fe9d37';   /* done(370) — 368·369 를 되돌린 커밋 */
@@ -67,15 +72,15 @@ ok(Number(tally && tally[2]) > 0, 'B4 볼 done() 기록이 실제로 있다(빈 
 /* ─────────────────────────── [R] 되돌림 시험 ─────────────────────────── */
 console.log('[R] 되돌림 시험 — 실제 사고 커밋에 자를 대면 빨개진다');
 const crash = run('--rev', CRASH);
-const cIds = redIds(crash.out);
+const cIds = s1Ids(crash.out);   /* §1 이 이 절의 주어다 — §2 는 그 시점 표의 다른 결함을 말한다(388 이관) */
 ok(crash.code === 1, 'R1 ' + CRASH + ' 종료 코드 1', String(crash.code));
 ok(cIds.length === 2 && cIds.includes('368') && cIds.includes('369'),
-   'R2 빨간 행이 정확히 368·369 두 건', cIds.join(' ') || '없음');
+   'R2 §1 빨간 행이 정확히 368·369 두 건', cIds.join(' ') || '없음');
 ok(/368 — 정확 되돌림/.test(crash.out) && /369 — 정확 되돌림/.test(crash.out),
    'R3 진단이 «정확 되돌림»(= 병합을 내 사본으로 푼 모양)', 'ok');
 const before = run('--rev', BEFORE);
-ok(before.code === 0, 'R4 사고 직전 ' + BEFORE + ' 는 초록(사고 전후를 가른다)', String(before.code));
-ok(redIds(before.out).length === 0, 'R5 그 시점 빨강 0건', String(redIds(before.out).length));
+ok(s1Quiet(before.out), 'R4 사고 직전 ' + BEFORE + ' 는 §1 초록(사고 전후를 가른다)', s1Ids(before.out).join(' ') || '§1 조용');
+ok(s1Ids(before.out).length === 0, 'R5 그 시점 §1 빨강 0건', String(s1Ids(before.out).length));
 
 /* ─────────────────────────── [C] 감도 — 합성 사본 ─────────────────────────── */
 console.log('[C] 감도 — 세 갈래를 각각 확인한다(빨강 2 · 초록 1)');
@@ -108,11 +113,17 @@ if (SAMPLE && HEADTXT) {
   /* C3 — 정상 편집(뒤 세션이 정오표를 덧붙임)은 초록이어야 한다. 헛빨강 방지. */
   const grown = HEADTXT.replace(rowRe(SAMPLE), m => m.replace(/\|\s*$/, '') + '<br>⚑ (뒤 세션이 덧붙인 정오표 — 정상 편집) |');
   const r3 = run('--file', mk('grown.md', grown));
-  ok(r3.code === 0 && redIds(r3.out).length === 0, 'C3 행이 자란 것은 초록(헛빨강 없음)', redIds(r3.out).join(' ') || '초록');
+  ok(s1Quiet(r3.out), 'C3 행이 자란 것은 §1 초록(헛빨강 없음)', s1Ids(r3.out).join(' ') || '§1 조용');
 
-  /* C4 — 손 안 댄 사본은 초록(자가 --file 경로에서도 같은 답을 낸다) */
+  /* C4 — 손 안 댄 사본은 §1 초록(자가 --file 경로에서도 같은 답을 낸다) */
   const r4 = run('--file', mk('same.md', HEADTXT));
-  ok(r4.code === 0, 'C4 손 안 댄 사본은 초록', String(r4.code));
+  ok(s1Quiet(r4.out), 'C4 손 안 댄 사본은 §1 초록', s1Ids(r4.out).join(' ') || '§1 조용');
+
+  /* C5 — 두 자가 서로를 가리지 않는다(388 이관). C1 의 «행 삭제» 사본에서 §1 은 그 ID 를 지목하고,
+          §2 의 진단(«자기모순»)은 §1 의 진단과 **다른 낱말**로 갈린다. 낱말이 섞이면 s1Ids 가 무너져
+          이 이관 자체가 조용히 헛것이 된다 — 그래서 자가 자기 전제를 여기서 한 번 확인한다. */
+  ok(!s1Ids(r1.out).includes('자기모순') && s1Ids(r1.out).includes(SAMPLE),
+     'C5 §1·§2 의 진단 낱말이 갈린다(두 자가 서로를 안 가린다)', s1Ids(r1.out).join(' '));
 }
 fs.rmSync(tmp, { recursive: true, force: true });
 
