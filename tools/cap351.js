@@ -193,6 +193,22 @@ const SIG = function () {
   return [box.slice(0, 2).map((b) => b.id + '@' + b.z).join(','), head.slice(0, 24), sheet, subs].join('|');
 };
 
+/* 9회차 — «이 오프너의 표적이 제품에서 잠겨 있나». 잠긴 탭은 눌러도 화면이 안 바뀌는 것이
+   **정상**이라 중복 서명을 경고로 찍으면 안 된다(위 dup 갈래 주석).
+   ⚠ 표는 «어느 갈래가 잠길 수 있나» 만 적는다 — 잠김 여부 자체는 **제품에게 묻는다**(`.lk`).
+   상태를 상수로 베껴 적으면 제품이 해금하는 날 이 자만 옛말을 하게 된다(402 «표가 뒤처진다»).
+   ⚠ 표를 **함수 안에** 둔 것은 취향이 아니다 — 이 함수는 `page.evaluate` 로 브라우저에서 돌아
+   노드 스코프의 const 를 못 본다. probe351e 첫 판이 `MIN_AREA is not defined` 로 통째로 죽고도
+   `.catch` 에 삼켜져 «결함 0건 = 초록» 으로 읽힌 것이 정확히 이 함정이다(8회차 교훈). */
+const LOCKED = function (how) {
+  const i = String(how || '').indexOf(':');
+  if (i < 0) return false;
+  const tpl = ({ 'ptab': '#psBar [data-ptab="%"]' })[how.slice(0, i)];
+  if (!tpl) return false;
+  const el = document.querySelector(tpl.replace('%', how.slice(i + 1)));
+  return !!(el && el.classList.contains('lk'));
+};
+
 (async () => {
   const br = await launch(chromium);
   const list = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
@@ -205,21 +221,36 @@ const SIG = function () {
       await page.goto(FILE, { waitUntil: 'load' });
       await page.waitForTimeout(1100);
       await drive(page, s.how);
-      if (h === 1600) s.sig = await page.evaluate(SIG).catch(() => '?');
+      if (h === 1600) {
+        s.sig = await page.evaluate(SIG).catch(() => '?');
+        s.lk = await page.evaluate(LOCKED, s.how).catch(() => false);
+      }
       const f = path.join(OUT, `351-${R}-${s.id}-${h}.png`);
       await page.screenshot({ path: f });
       made.push(path.basename(f));
       await ctx.close();
     }
     const dup = sigs.get(s.sig);
-    if (dup) console.log(`  ⚠ ${s.id.padEnd(10)} 진입 실패 의심 — «${dup}» 과 같은 화면(서명 ${s.sig})`);
+    /* 9회차 — 중복 서명의 뜻을 **둘로 갈랐다.** 8회차는 `35-pbox`·`35-ptower` 를 «진입 실패 의심» 으로
+       찍어 두고 «잠김 탭이라 진짜 같은 화면일 수 있으나 확인 안 된 채 채점에 들어간다» 를 숙제로 남겼다.
+       확인 결과 **잠김이 맞다** — 두 탭은 마크업에 `class="pt lk"` 를 달고 있고(index.html 14554·14555)
+       `#psBar` 핸들러가 `if(b.classList.contains('lk')){ notify(…); return; }` 로 **탭 전환 자체를 거절**한다.
+       ⇒ 같은 화면인 것이 정상이다. 그런데 그러면 **비평가에게 같은 화면이 두 번 더 들어간다** —
+       한 벌을 세 번 채점하는 것이고, 더 나쁘게는 «보물상자 탭인데 스테이지 내용이 보인다» 를
+       결함으로 짚을 수 있다(없는 결함 = 유령). 그래서 잠김은 «정상» 으로 갈라 찍고 목록에도 남긴다. */
+    if (dup && s.lk) console.log(`  · ${s.id.padEnd(10)} 잠김 탭(제품 상태) — «${dup}» 과 같은 화면이 **정상**이다`);
+    else if (dup) console.log(`  ⚠ ${s.id.padEnd(10)} 진입 실패 의심 — «${dup}» 과 같은 화면(서명 ${s.sig})`);
     else sigs.set(s.sig, s.id);
     console.log(`  ${s.id.padEnd(10)} ${s.label}`);
   }
   await br.close();
   const dups = list.length - new Set(list.map((s) => s.sig)).size;
+  const lkDups = list.filter((s) => s.lk).length;
+  /* 목록에 잠김 표시를 남긴다 — 채점 프롬프트를 짜는 다음 세션이 «이 둘은 빼거나 묶어라» 를
+     파일 하나만 보고 알 수 있어야 한다(8회차는 그걸 몰라 같은 화면을 셋으로 채점했다). */
   fs.writeFileSync(path.join(OUT, `351-${R}-화면목록.txt`),
-    list.map((s) => `${s.id}\t${s.label}\t${s.how}\t${s.sig || ''}`).join('\n') + '\n');
+    list.map((s) => `${s.id}\t${s.label}\t${s.how}\t${s.sig || ''}${s.lk ? '\t잠김' : ''}`).join('\n') + '\n');
   console.log(`\n[351] ${made.length}장 → docs/review/351-${R}-*.png`);
-  console.log(`[351] 진입 서명 중복 ${dups}건 ${dups ? '— ⚠ 위 목록 확인' : '(전부 다른 화면)'}`);
+  console.log(`[351] 진입 서명 중복 ${dups}건 (그중 잠김 탭 ${lkDups}건 = 정상) ` +
+    `${dups - lkDups ? '— ⚠ 나머지는 위 목록 확인' : '— 설명 안 되는 중복 없음'}`);
 })();
