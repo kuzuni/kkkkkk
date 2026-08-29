@@ -115,6 +115,19 @@ const SCAN = function () {
     const p = m[1].split(',').map((s) => parseFloat(s));
     return p.length > 3 ? p[3] : 1;
   };
+  /* ⚑ 7회차 — «칠해졌나» 는 `backgroundColor` 하나로 못 묻는다(406 이 E1 에 한 것과 같은 정정).
+     이 게임의 띠·패널은 태반이 `background:linear-gradient(...)` 라 **`backgroundColor` 가
+     `rgba(0,0,0,0)` 으로 계산된다** — 눈에는 꽉 찬 불투명 초록인데 자에게는 «배경 없음» 이다.
+     그래서 6회차 E3 7건 중 **bless 4건이 통째로 유령**이었다: `.bls-promo`(초록 그라데이션,
+     952×249)가 탭바 글자를 완전히 덮고 있는데 자는 그 글자를 «아직 읽힌다» 로 세고 그 위의
+     띠 글자와 «둘 다 못 읽는 충돌» 이라고 적었다.
+     못박은 것은 자가 아니라 **찍힌 픽셀**이다(`tools/probe351d.js`, 350 처방) — 탭바를 숨겨도
+     겹침 띠에서 바뀌는 픽셀이 **0 / 13860 · 0 / 1836 · 0 / 3456** 이었다.
+     ⇒ 배경 이미지(그라데이션·url)도 «칠» 로 센다. */
+  const paints = (el) => {
+    if (alphaOf(el) >= 0.9) return true;
+    return getComputedStyle(el).backgroundImage !== 'none';
+  };
   const related = (a, b) => a === b || a.contains(b) || b.contains(a);
 
   /* 이 점에서 el 위에 **불투명하게** 얹힌 것이 있는가.
@@ -123,7 +136,7 @@ const SCAN = function () {
     for (const h of document.elementsFromPoint(x, y)) {
       if (related(h, el)) return null;                  /* 자기(또는 부모/자식)를 만났다 = 위엔 없다 */
       if (h.classList && h.classList.contains('dim')) continue;   /* 딤은 규칙상 감점 아님 */
-      if (alphaOf(h) >= 0.9) return h;
+      if (paints(h)) return h;
     }
     return null;
   };
@@ -214,7 +227,7 @@ const SCAN = function () {
     if (parseFloat(getComputedStyle(el).fontSize) < 11) continue;
     const r = drawnRect(el);
     if (!(r.w > 8 && r.h > 8) || r.w * r.h > 300000) continue;
-    if (alphaOf(el) >= 0.9) continue;                    /* 배경이 있으면 그것은 상자다(E1 의 몫) */
+    if (paints(el)) continue;                            /* 배경이 있으면 그것은 상자다(E1 의 몫) — 그라데이션 포함(7회차) */
     /* 지금 보이나 — 중심이 불투명한 남에게 덮여 있으면 뺀다 */
     if (coverAt(el, (r.x1 + r.x2) / 2, (r.y1 + r.y2) / 2)) continue;
     textLeaves.push({ el, r, txt: t.trim().slice(0, 14) });

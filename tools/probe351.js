@@ -219,10 +219,16 @@ const SCAN = function () {
       const cs2 = getComputedStyle(el);
       const bg = cs2.backgroundColor || '';
       const m = bg.match(/rgba?\(([^)]+)\)/);
-      if (!m) continue;
-      const parts = m[1].split(',').map((s) => parseFloat(s));
-      const alpha = parts.length > 3 ? parts[3] : 1;
-      if (!(alpha >= 0.9)) continue;                              /* 불투명 상자만 */
+      const parts = m ? m[1].split(',').map((s) => parseFloat(s)) : [];
+      const alpha = m ? (parts.length > 3 ? parts[3] : 1) : 0;
+      /* ⚑ 7회차 — «불투명 상자» 를 `backgroundColor` 하나로 물으면 **이 게임의 띠는 태반이 안 걸린다.**
+         `background:linear-gradient(...)` 는 `backgroundColor` 가 `rgba(0,0,0,0)` 으로 계산되기 때문이다.
+         실제로 34 축복의 `.bls-promo`(952×249 · 초록 그라데이션)가 1600 에서 탭바를 **164px** 덮고
+         있는데 D7 은 5·6회차 내내 조용했다. 못박은 것은 자가 아니라 **찍힌 픽셀**이다
+         (`tools/probe351d.js` — 그 띠에서 탭바를 숨겨도 바뀌는 픽셀 0/13860). 406 이 E1 을
+         «덮임 → 닿음» 으로 고친 것과 같은 종류의 정정이고, 이쪽은 **자가 덜 세고 있었다.**
+         ⇒ 배경 이미지(그라데이션·url)도 «칠» 로 센다. */
+      if (!(alpha >= 0.9 || cs2.backgroundImage !== 'none')) continue;   /* 불투명 상자만 */
       /* ⚠ **raw 상자로 재면 유령이 쏟아진다** — 첫 판에 08 시트 카드 배경(`.eqc>.gnd`)이
          «탭바를 140px 덮는다» 로 찍혔다. 그 노드는 `.shsc` 안이라 **탭바 근처에는 한 픽셀도
          안 그려진다.** 1회차가 D1~D4 에서 이미 배운 것과 같다 ⇒ D7 도 **클리핑을 접은

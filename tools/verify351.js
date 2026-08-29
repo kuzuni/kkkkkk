@@ -46,6 +46,8 @@ const REVERT = `
   #app.shortf #modal.ml69{padding:126px 91px !important}
   #app.shortf #modal.ml69 .mbox{max-height:min(1303px,calc(100% - 120px)) !important}
   #svw .sv-hint{bottom:var(--hnb,195px) !important}
+  .spc-list{height:760px !important}
+  .spc-tabs{top:1242px !important;bottom:auto !important}
 `;
 
 async function shot(browser, h, opener, revert) {
@@ -66,6 +68,11 @@ async function shot(browser, h, opener, revert) {
     await page.evaluate(() => document.querySelector('#menub').click()).catch(() => {});
     await page.waitForTimeout(340);
     await page.evaluate(() => { const e = document.querySelector('#mnw [data-mn="mail"]'); if (e) e.click(); }).catch(() => {});
+  } else if (opener === 'spec') {
+    /* 20 스펙 정보 = 19 프로필 → 하단 토글. ⚠ 진입 확인은 `#specw.on` 이다(LESSONS 356-⑬). */
+    await page.click('#profBtn', { force: true }).catch(() => {});
+    await page.waitForTimeout(420);
+    await page.evaluate(() => { const e = document.querySelector('.pf-tgl>.lb'); if (e) e.click(); }).catch(() => {});
   } else if (opener === 'saver') {
     /* 56 절전은 오프너가 함수 하나다(다른 후보와 같이 열면 `#app.sv` 가 서로를 지운다 — smoke 472 주석). */
     await page.evaluate(() => { if (typeof openSaver === 'function') openSaver(); }).catch(() => {});
@@ -125,6 +132,10 @@ async function shot(browser, h, opener, revert) {
       pedge, deepHit, deepInSheet,
       /* 56 절전 — 하단 앵커(안내문) ↔ 상단 앵커(통계 패널) 충돌을 재는 세 상자 */
       svP: box('#svw .sv-p'), svHint: box('#svw .sv-hint'), svR3: box('#svw .sv-r:nth-of-type(3)'),
+      /* §8(7회차) — 20 스펙 정보. `.spc` 가 `max-height:100%` 로 눌리는데 `.spc-tabs` 만
+         위에 못 박혀 있어 패널 밖으로 밀려나던 자리다. */
+      specOn: !!document.querySelector('#specw.on'),
+      spc: box('.spc'), spcBody: box('.spc-body'), spcList: box('.spc-list'), spcTabs: box('.spc-tabs'),
       /* §7(406) — 배경 고정 조작 요소가 **닿나**. «덮였나» 가 아니다:
          덮임은 딤만으로도 생기지만 조작 상실은 «포인터가 못 간다» 일 때만 생긴다. */
       reach: (() => {
@@ -322,6 +333,33 @@ async function shot(browser, h, opener, revert) {
       : no('[7-f] 음성항 — 시트가 안 열린 화면에서는 레일 6칸이 두 해상도 다 닿는다',
         ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'].map((k) => k + '=' + (p13.reach[k].on ? '1600닿음' : '1600' + p13.reach[k].by)).join(' · '));
 
+    /* ---------------- §8 20 스펙 정보(7회차) ---------------- */
+    console.log('[§8] 20 스펙 — 눌린 패널을 리스트가 흡수하고, 탭 줄은 패널 안에 남는다');
+    const sp19 = await shot(br, 2280, 'spec', false);
+    const sp13 = await shot(br, 1600, 'spec', false);
+    /* [전제] — 진입에 실패하면 아래 값이 전부 «없음» 인 채 초록이 될 수 있다(LESSONS 356-⑬). */
+    (sp19.specOn && sp13.specOn && sp19.spcTabs && sp13.spcTabs)
+      ? ok('[8-전제] 두 해상도 다 20 스펙 화면에 들어갔다')
+      : no('[8-전제] 두 해상도 다 20 스펙 화면에 들어갔다', `2280 ${sp19.specOn} · 1600 ${sp13.specOn}`);
+    /* 9:19 Δ0 — 이 셋이 폴리시 20 이 못 박아 둔 절대값이다(측정표 20 §7-1·§9) */
+    eq('[8-a] 2280 리스트 높이(불변)', sp19.spcList.h, 760);
+    eq('[8-b] 2280 탭 줄 상변(불변)', sp19.spcTabs.top, 1692, 1);
+    eq('[8-c] 2280 탭 줄 하변(불변)', sp19.spcTabs.bot, 1786, 1);
+    /* 1600 — 눌린 155px 을 리스트가 흡수했나 */
+    (sp13.spc.h === 1240 && sp13.spcList.h < 760)
+      ? ok('[8-d] 1600 패널이 눌리면 리스트가 줄어든다', `패널 ${sp13.spc.h} · 리스트 ${sp13.spcList.h}`)
+      : no('[8-d] 1600 패널이 눌리면 리스트가 줄어든다', `패널 ${sp13.spc.h} · 리스트 ${sp13.spcList.h}`);
+    /* ⚑ 본체 — 탭 줄이 패널(크림 본문) 안에 남는가. 이것이 8841 주석이 «삐져나온다» 고 적어 둔 자리다. */
+    (sp13.spcTabs.bot <= sp13.spcBody.bot)
+      ? ok('[8-e] 1600 탭 줄이 크림 본문 안', `탭 ${sp13.spcTabs.bot} ≤ 본문 ${sp13.spcBody.bot}`)
+      : no('[8-e] 1600 탭 줄이 크림 본문 안', `탭 ${sp13.spcTabs.bot} > 본문 ${sp13.spcBody.bot} (밖으로 ${sp13.spcTabs.bot - sp13.spcBody.bot}px)`);
+    (typeof sp13.tabsTop === 'number' && sp13.spcTabs.bot <= sp13.tabsTop)
+      ? ok('[8-f] 1600 탭 줄이 앱 탭바를 안 문다', `탭 줄 하변 ${sp13.spcTabs.bot} ≤ 탭바 ${sp13.tabsTop}`)
+      : no('[8-f] 1600 탭 줄이 앱 탭바를 안 문다', `탭 줄 하변 ${sp13.spcTabs.bot} · 탭바 ${sp13.tabsTop}`);
+    /* 흡수한 대가가 «리스트가 탭 줄을 먹는 것» 이면 안 된다 — 간격은 2280 과 같은 38.5 여야 한다 */
+    eq('[8-g] 1600 리스트↔탭 줄 간격 = 2280 과 같다', sp13.spcTabs.top - sp13.spcList.bot,
+      sp19.spcTabs.top - sp19.spcList.bot, 1);
+
     /* ---------------- §R 되돌림 시험 ---------------- */
     console.log('[§R] 처방을 뺀 사본에서 같은 항이 빨개지는가');
     const r13 = await shot(br, 1600, 'bless', true);
@@ -365,6 +403,16 @@ async function shot(browser, h, opener, revert) {
         ['attend', 'roul', 'quest'].map((k) => k + '=' + (dp19.reach[k].on ? '여전히 닿음' : dp19.reach[k].by)).join(' · '));
     const r19 = await shot(br, 2280, 'bless', true);
     eq('[R-c] 되돌려도 2280 ✕ 상변은 같다(9:19 무관)', r19.blsX.top, 1793);
+    /* 7회차 신설 — 무르게 푼 수리가 아님을 두 항이 못박는다. [R-j] 는 «되돌리면 탭 줄이 패널 밖으로
+       나가 탭바를 문다», [R-k] 는 «되돌려도 2280 은 같다»(= 처방이 9:19 를 안 건드렸다). */
+    const rp13 = await shot(br, 1600, 'spec', true);
+    (rp13.spcTabs && rp13.spcTabs.bot > rp13.spcBody.bot && rp13.spcTabs.bot > rp13.tabsTop)
+      ? ok('[R-j] 되돌리면 1600 탭 줄이 패널 밖으로 나가 탭바를 문다',
+        `탭 줄 ${rp13.spcTabs.top}..${rp13.spcTabs.bot} · 본문 하변 ${rp13.spcBody.bot} · 탭바 ${rp13.tabsTop} (침범 ${rp13.spcTabs.bot - rp13.tabsTop}px)`)
+      : no('[R-j] 되돌리면 1600 탭 줄이 패널 밖으로 나가 탭바를 문다',
+        `탭 줄 ${rp13.spcTabs && rp13.spcTabs.bot} · 본문 ${rp13.spcBody && rp13.spcBody.bot} · 탭바 ${rp13.tabsTop}`);
+    const rp19 = await shot(br, 2280, 'spec', true);
+    eq('[R-k] 되돌려도 2280 탭 줄 상변은 같다(9:19 무관)', rp19.spcTabs.top, 1692, 1);
   } finally { await br.close(); }
 
   console.log(`\nVERIFY351 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);

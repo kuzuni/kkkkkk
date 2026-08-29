@@ -8933,7 +8933,15 @@
      즉 상단 패딩이 18 이 아니라 23 이고, 하단은 13행이 **16px 노출된 채 클리핑**된다(스크롤 어포던스).
      비평가 I·J 가 «13행 슬라이버 누락» 으로 독립 지적한 것이 이것이다. abs top = 449.5+443.5 = 893 = ref 977 ✓ */
   /* 코너 반경 20→28: ref 는 상변에서 좌우로 26px 들어간 지점부터 시작해 dy24 에 풀폭 도달, 우리는 dy16 이었다 */
-  .spc-list{left:28px;top:443.5px;width:800px;height:760px;border-radius:34px;
+  /* 작업 351 7회차(9:13.3) — 높이를 **상수 760 에서 «남는 만큼»** 으로 바꿨다.
+     `.spc` 는 `max-height:100%` 라 1600 프레임에서 1395 → **1240** 으로 눌리는데, 그 아래 형제인
+     `.spc-tabs` 는 `top:1242px` 로 **위에 못 박혀 있어** 패널 밖으로 41px 밀려나 탭바 위에 얹혔다
+     (8841 주석이 이미 «짧은 기기에서 크림 박스 아래로 삐져나온다» 고 적어 둔 그 자리다).
+     탭 줄을 아래 앵커로 돌리는 것만으로는 이번엔 **리스트와 94px 겹친다** — 눌린 155px 을
+     누군가는 흡수해야 하고, 이 시트에서 흡수할 수 있는 것은 **내부 스크롤 그릇인 이 리스트뿐**이다.
+     596 = 리스트 top 443.5 + 리스트↔탭 간격 38.5 + 탭 줄 94 + 탭 줄 아래 여백 20 (전부 2280 실측).
+     ⇒ 2280·1920 에서 `1356 − 596 = 760` 으로 **Δ0px**(min 이 상수 쪽을 고른다), 1600 에서만 605. */
+  .spc-list{left:28px;top:443.5px;width:800px;height:min(760px, calc(100% - 596px));border-radius:34px;
     background:#FEEFD2;padding-top:23px;box-sizing:border-box;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .spc-list::-webkit-scrollbar{width:0;height:0}
@@ -8959,7 +8967,10 @@
     font-size:33.5px;color:#B5F65F;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     text-align:right;white-space:nowrap}
   /* 하단 토글 탭 컨테이너 767×94 — 검정 5, 세로 그라(66,54,42→53,43,31) + 상하 밝은 인셋 라인 */
-  .spc-tabs{left:46px;top:1242px;width:767px;height:94px;box-sizing:border-box;
+  /* 작업 351 7회차 — 앵커를 위(`top:1242`)에서 **아래(`bottom:20`)** 로 돌렸다.
+     2280 실측 `.spc-body` 높이 1356 에서 1356 − 1242 − 94 = **20** 이므로 기준 프레임은 Δ0px 이고,
+     1600 에서는 눌린 패널을 따라 같이 올라와 탭바(1420) 밖으로 나가지 않는다. */
+  .spc-tabs{left:46px;bottom:20px;width:767px;height:94px;box-sizing:border-box;
     border:5px solid #000;border-radius:22px;
     background:linear-gradient(180deg,#42362A 0,#352B1F 100%);
     box-shadow:inset 0 5px 0 #5C4F46,inset 0 -5px 0 #5C4F46}
