@@ -208,6 +208,18 @@ def main():
     if tr and tc:
         print('   ⇒ 위 코너    ref %.2f ↔ cap %.2f  (Δ %+.1f%%)' % (tr[2], tc[2], (tc[2] / tr[2] - 1) * 100))
 
+    print('\n ⓖ 요약 — 한 줄로 «얼마나 가까워졌나»')
+    axw_r = sum(row(ref7, rl + 10, rt + r, 7).count('D') for r in range(60, 78))
+    axw_c = sum(row(cap7, cl + 10, ct + r, 7).count('D') for r in range(60, 78))
+    print('   AX 창(rel 60..77 × x rel 10..16) D 픽셀   ref %d ↔ cap %d   (수리 전 cap = 3)' % (axw_r, axw_c))
+    ds, n = 0.0, 0
+    for rel in range(56, 71):
+        a, b = face_left(ref7, rl, rt, rel), face_left(cap7, cl, ct, rel)
+        if a is not None and b is not None:
+            ds += abs(a - b); n += 1
+    if n:
+        print('   채움면 좌 경계 평균 |Δ| (rel 56..70)        **%.1f px** / %d행   (수리 전 = 6.8)' % (ds / n, n))
+
     if all_:
         cap3 = load(CAP3).load()
         c3l, c3r, c3t = BOX['03']['cap']
