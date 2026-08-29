@@ -43,13 +43,23 @@ const text = fs.readFileSync(SRC, 'utf8');
 const lines = text.split('\n');
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
 const idxOf = id => lines.findIndex(l => { const g = ROW.exec(l); return g && g[1] === id; });
-/* 자와 같은 두 모양 — §N 의 «진짜 미착수» 표본을 표에게 물어서 고르는 데 쓴다(리터럴 금지) */
-const NOT_YET_SHAPE = /\|\s*(?:–|—|-|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(미착수|등재만|착수 전)/;
+/* 자와 같은 두 모양 — §N 의 «진짜 미착수» 표본을 표에게 물어서 고르는 데 쓴다(리터럴 금지)
+   ⚠ **자와 같아야 한다** — 이 모양이 `verifyProgress.js` 의 `NOT_YET` 과 어긋나면 §N 은
+   «자가 못 보는 자리» 를 표본으로 골라 놓고 조용하다(작업 422 가 그렇게 빨개졌다). */
+const NOT_YET_SHAPE = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
 const DONE_DATED_MARK = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
 
 /* 마감 표시를 등재 모양으로 되짚는다 — 구현·점수·횟수 세 칸에는 `|` 가 없으므로
    «(등재문 …)» 표지에서 파이프를 넷 되짚으면 정확히 그 세 칸의 앞에 선다. */
-function toEnrolled(line) {
+/* 되짚는 «등재 모양» 은 하나가 아니다(작업 422) — 표의 관행이 그 사이 둘 더 늘었고,
+   자가 그 둘을 못 읽는 동안 §N 의 표본은 **0건**이었다. 세 관행을 각각 되짚어 건다. */
+const ENROLL_STYLES = {
+  old:   { impl: '–', head: '**미착수 · ', why: '옛 관행 — 구현 «–» · 머리말 «미착수»' },
+  arrow: { impl: '–', head: '**←(등재문) 미착수 · ', why: '지금 관행 ⓐ — 머리말 앞에 «←(등재문)» 표지(409·415·416·419~424)' },
+  impl:  { impl: '미착수.', head: '**미착수.** ', why: '지금 관행 ⓑ — 구현 칸에 «–» 대신 «미착수.»(425~430)' },
+};
+function toEnrolled(line, styleKey) {
+  const st = ENROLL_STYLES[styleKey || 'old'];
   const i = line.indexOf('**(등재문');
   if (i < 0) return null;
   let p = line.lastIndexOf('|', i);          if (p < 0) return null;
@@ -57,7 +67,7 @@ function toEnrolled(line) {
   let p3 = line.lastIndexOf('|', p2 - 1);    if (p3 < 0) return null;
   let p4 = line.lastIndexOf('|', p3 - 1);    if (p4 < 0) return null;
   const body = line.slice(i).replace(/^\*\*\(등재문[^)]*\)\*\*\s*/, '');
-  return line.slice(0, p4) + '| – | – | 0/5 | **미착수 · ' + body;
+  return line.slice(0, p4) + '| ' + st.impl + ' | – | 0/5 | ' + st.head + body;
 }
 
 /* 사본을 임시 파일로 떠서 자에게 물린다. */
@@ -86,7 +96,7 @@ const CLOSED = ['308', '371', '378'];
 for (const id of CLOSED) {
   const i = idxOf(id);
   if (i < 0) { no('행 ' + id + ' 을 찾지 못했다'); continue; }
-  const rev = toEnrolled(lines[i]);
+  const rev = toEnrolled(lines[i], 'old');
   if (rev == null) { no(id + ' — «(등재문 …)» 표지가 없다(마감 문구가 바뀌었으면 이 자를 같이 고쳐라)'); continue; }
   chk(/\|\s*–\s*\|\s*–\s*\|\s*0\/5\s*\|\s*\*\*미착수/.test(rev), '[R-' + id + '] 사본이 실제로 등재 모양이다(구현 – · 0/5 · 미착수)');
   const copy = lines.slice(); copy[i] = rev;
@@ -97,6 +107,32 @@ for (const id of CLOSED) {
   const others = CLOSED.filter(x => x !== id);
   chk(others.every(x => !new RegExp('✗ ' + x + ' — 자기모순').test(r.out)),
       '[R-' + id + '] 나머지 ' + others.join('·') + ' 는 조용하다');
+}
+
+/* ── §R2 되돌림 시험 — «지금 표가 실제로 쓰는» 등재 관행으로도 걸리는가 (작업 422) ──
+ * §R 은 옛 관행(구현 «–» · 머리말 «미착수») 하나로만 걸어서, 표가 관행을 바꾼 뒤에도 초록이었다.
+ * 그 사이 자는 **지금 표의 등재행을 한 줄도 못 읽고 있었다**(§N 표본 0건 = [N] 하한이 빨개진 자리).
+ * ⇒ 두 관행 각각으로 되짚어 «자가 빨갛고 그 ID 를 지목하는지» 를 묻는다.
+ *   이 절이 이 수리가 무르지 않음을 못박는다 — 넓힌 모양을 되돌리면 여기가 즉시 빨개진다. */
+console.log('');
+console.log('[R2] 지금 등재 관행으로 되돌려도 걸리는가 (422 — 관행이 자를 앞질러 갔던 자리)');
+{
+  const id = '371';                                /* 마감된 행 하나면 충분하다 — 관행별로 묻는 절이다 */
+  const i = idxOf(id);
+  if (i < 0) no('[R2] 행 ' + id + ' 을 찾지 못했다');
+  else for (const key of ['arrow', 'impl']) {
+    const st = ENROLL_STYLES[key];
+    const rev = toEnrolled(lines[i], key);
+    if (rev == null) { no('[R2-' + key + '] «(등재문 …)» 표지가 없다'); continue; }
+    chk(NOT_YET_SHAPE.test(rev), '[R2-' + key + '] 사본이 실제로 그 관행의 등재 모양이다', st.why);
+    const copy = lines.slice(); copy[i] = rev;
+    const r = askGate(copy, 'r2' + key);
+    chk(r.code === 1, '[R2-' + key + '] 자가 빨갛다', '종료 코드 ' + r.code);
+    chk(new RegExp('✗ ' + id + ' — 자기모순').test(r.out), '[R2-' + key + '] 그 ID 를 지목한다');
+  }
+  /* 음성 짝 — 넓힌 모양이 «완료행» 까지 끌어오지 않는다(넓히다 새면 여기가 빨개진다) */
+  const live2 = live.out;
+  chk(!/✗ .* — 자기모순/.test(live2), '[R2] 넓힌 뒤에도 실물 표는 빨간 행 0건이다(넓히기가 완료행으로 안 샌다)');
 }
 
 /* ── §N 음성항 ── */
