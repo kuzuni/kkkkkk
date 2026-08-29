@@ -309,6 +309,54 @@ const SCAN = function () {
       }
     }
   }
+
+  /* ── D7 — «불투명 상자가 고정 내비(탭바)·HUD 판때기를 덮는다» (5회차 신설) ─────────────
+     왜 새 축이 필요한가: 5회차에 비평가 3인이 **각자 1순위로** 22 퀘스트 모달이 하단 탭바를
+     11~26px 물고 들어간 것을 짚었는데 **자는 한 건도 못 봤다.** 원리적으로 못 본다 —
+       · D1~D5 는 «클리핑·넘침» 을 재는데 모달은 아무것도 자르지 않는다(그냥 위에 얹힌다).
+       · D6 은 포인터를 쓰지만, 모달이 열리면 탭바는 **2280 에서도 딤에 막힌다** ⇒ 같은 key 가
+         두 해상도에 다 있어 차분에서 **소거된다**.
+     그래서 «딤이 덮은 것» 과 «상자가 덮은 것» 을 갈라야 한다. 채점 규칙이 이미 그렇게 갈라 뒀다 —
+     «가운데 다이얼로그가 딤 뒤 배경을 가리는 것은 감점 아님 / 상자가 고정 내비를 덮으면 감점».
+     ⇒ 딤(`.dim`, 반투명 판)을 빼고 **불투명 상자**(배경 alpha ≥ .9)만 골라 탭바·HUD 판때기와의
+        세로 겹침 px 를 잰다. 2280 에는 없고 1600 에만 있으면 그것이 이 루프가 묻는 결함이다.
+     ⚠ 기준선을 못 찾으면 «침범 없음» 이 아니라 아무것도 세지 않는다(LESSONS 351-④ 의 짝 —
+        `A > null` 이 true 로 굴러 헛초록이 됐던 자리라, 여기서는 목표가 없으면 축을 끈다). */
+  const navs = [];
+  const tabbar = document.getElementById('tabbar');
+  if (tabbar && vis(tabbar)) navs.push({ name: 'tabbar', r: tabbar.getBoundingClientRect(), el: tabbar });
+  /* HUD 판때기 = 사람이 보는 «판» 의 가장 아래(LESSONS 351-① — 글자줄 `.pcp` 가 아니라 `.pedge`) */
+  const pedge = document.querySelector('.pedge');
+  if (pedge && vis(pedge)) navs.push({ name: 'hud', r: pedge.getBoundingClientRect(), el: pedge });
+
+  if (navs.length) {
+    for (const el of all) {
+      if (!vis(el)) continue;
+      if (el.classList.contains('dim')) continue;                 /* 딤은 규칙상 감점 아님 */
+      const cs2 = getComputedStyle(el);
+      const bg = cs2.backgroundColor || '';
+      const m = bg.match(/rgba?\(([^)]+)\)/);
+      if (!m) continue;
+      const parts = m[1].split(',').map((s) => parseFloat(s));
+      const alpha = parts.length > 3 ? parts[3] : 1;
+      if (!(alpha >= 0.9)) continue;                              /* 불투명 상자만 */
+      /* ⚠ **raw 상자로 재면 유령이 쏟아진다** — 첫 판에 08 시트 카드 배경(`.eqc>.gnd`)이
+         «탭바를 140px 덮는다» 로 찍혔다. 그 노드는 `.shsc` 안이라 **탭바 근처에는 한 픽셀도
+         안 그려진다.** 1회차가 D1~D4 에서 이미 배운 것과 같다 ⇒ D7 도 **클리핑을 접은
+         «지금 실제로 그려지는» 상자**(drawn)로 잰다. */
+      const { drawn: r } = clipped(el);
+      r.width = r.x2 - r.x1; r.height = r.y2 - r.y1;
+      r.left = r.x1; r.right = r.x2; r.top = r.y1; r.bottom = r.y2;
+      if (r.width < 300 || r.height < 200) continue;              /* 다이얼로그·시트 급만 */
+      if (r.width * r.height < 120000) continue;
+      for (const nav of navs) {
+        if (el === nav.el || el.contains(nav.el) || nav.el.contains(el)) continue;
+        const ov = Math.min(r.bottom, nav.r.bottom) - Math.max(r.top, nav.r.top);
+        const ox = Math.min(r.right, nav.r.right) - Math.max(r.left, nav.r.left);
+        if (ov > 2 && ox > 40) push('D7', el, { k: 'covers:' + nav.name, by: Math.round(ov), wide: Math.round(ox) });
+      }
+    }
+  }
   return { defects: out, frame: { top: A.top, bottom: A.bottom, h: A.height } };
 };
 
