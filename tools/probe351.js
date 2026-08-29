@@ -275,11 +275,35 @@ const SCAN = function () {
     }
 
     /* D4 — 누를 것이 클리핑 뒤로 절반 넘게 사라졌다 */
-    if (el.matches('button, .tab, .ibtn, .ubtn, .cbtn, .ifbtn, .mbtn, [data-pop], [data-mn], [data-cur], [data-eqtab], [data-costab], [data-dsub], [data-trsub], [data-ptab], [data-ct], .stab, .shp-ct, .clk')) {
+    const isBtn = el.matches('button, .tab, .ibtn, .ubtn, .cbtn, .ifbtn, .mbtn, [data-pop], [data-mn], [data-cur], [data-eqtab], [data-costab], [data-dsub], [data-trsub], [data-ptab], [data-ct], .stab, .shp-ct, .clk');
+    if (isBtn) {
       const visArea = Math.max(0, k.w) * Math.max(0, k.h);
       const rawArea = raw.width * raw.height;
       if (rawArea > 100 && visArea < rawArea * 0.5) {
         push('D4', el, { k: 'hidbtn', pct: Math.round(100 * visArea / rawArea) });
+      }
+
+      /* D6 — «가려짐»(ⓑ·ⓓ). 클리핑이 아니라 **z 순서로 남이 위를 덮는** 경우는 위 자들이 원리적으로
+         못 본다(상자는 멀쩡히 프레임 안에 있다). 그래서 실제 포인터가 닿는 것을 묻는다 —
+         버튼 상자 안 9점을 `elementFromPoint` 로 찍어 자기(또는 자기 자손·조상)가 아닌 것이
+         잡히는 비율을 센다. 이것이 ⓓ 조작성의 정의 그 자체다.
+         ⚠ `pointer-events:none` 인 장식(HUD `#stinfo` 류, LESSONS 350)은 포인터를 통과시키므로
+            «시각적 겹침» 은 여기 안 걸린다 — 그건 ⓑ 로 사람이 볼 몫이다. */
+      if (drawn && k.w > 4 && k.h > 4) {
+        let blocked = 0, tested = 0, by = '';
+        for (const fx of [0.5, 0.2, 0.8]) for (const fy of [0.5, 0.2, 0.8]) {
+          const x = k.x1 + k.w * fx, y = k.y1 + k.h * fy;
+          if (x < A.left || x > A.right || y < A.top || y > A.bottom) continue;
+          tested++;
+          const hit = document.elementFromPoint(x, y);
+          if (!hit) { blocked++; continue; }
+          if (hit === el || el.contains(hit) || hit.contains(el)) continue;
+          blocked++;
+          if (!by) by = hit.id ? '#' + hit.id : hit.tagName.toLowerCase() + '.' + String(hit.className).trim().split(/\s+/).slice(0, 2).join('.');
+        }
+        if (tested >= 5 && blocked > tested * 0.5) {
+          push('D6', el, { k: 'covered', pct: Math.round(100 * blocked / tested), by });
+        }
       }
     }
   }

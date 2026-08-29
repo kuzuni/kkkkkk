@@ -1,0 +1,10 @@
+34-bless	34 축복 팝업	side:bless
+89-relic	89 유물(보물상자 탭)	tab:box
+10-shop	10 상점 탭	tab:shop
+08-hero	08 영웅(장비 시트)	tab:hero
+03-adv	03 모험(던전 카드)	tab:adv
+23-grow	23 성장(훈련 시트)	tab:grow
+54-rank	54 랭킹(바닥 앵커 3장)	menu:rank
+103-chat	103 채팅(바닥 앵커 입력 바)	util:chat
+55-conf	55 설정(가장 키 큰 다이얼로그)	menu:conf
+53-bag	53 가방(가운데 다이얼로그)	menu:bag
