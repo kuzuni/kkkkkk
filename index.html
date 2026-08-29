@@ -4872,23 +4872,27 @@
      이모지는 정사각 글리프라 274×204(가로가 긴 상자)를 한 축만으로는 못 채운다 →
      font-size 로 **높이**를 맞추고 `transform:scaleX()` 로 **폭**을 채운다.
      122 의 상시 연출은 개별 속성(`scale`/`translate`/`rotate`)만 쓰므로 `transform` 칸은 비어 있다 — 충돌 없음. */
+  /* ⚠ 356(주인 지시 2026-08-29) — 위 «폭은 scaleX 로 채운다» 는 **폐기됐다**. 아이콘은 원본 비율이
+     우선이므로 `transform:scaleX()` 를 전부 뗀다(규칙 «작은 쪽으로» = min(sx,1) = 1 → 선언 삭제).
+     font-size 로 잡은 **높이**와 상자·중심은 Δ0 이고, 폭만 글리프 자연값으로 돌아온다.
+     ref 잉크 폭(274)과의 차이는 이제 **자산 몫**이다(일러스트로 갈아 끼우는 자리 — 측정표 10 «아트 필요»). */
   .shp-card .cart{left:101px;top:158px;width:274px;height:204px;font-size:185px;line-height:204px;
-    text-align:center;transform:scaleX(1.343);filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+    text-align:center;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
   /* 4회차 — 비평가 G·H 공통 지적 «카드2 아트 폭 −18%». 원인은 **이모지마다 글리프 종횡비가 다른데
      scaleX 를 한 값으로 돌려쓴 것**이다. font-size 200 에서 잰 글리프 잉크(도구 없이 재현 가능:
      흰 바탕에 fs200 으로 찍고 잉크 bbox):
        🗡️ 221×221 · 🛡️ **182**×221 · 📿 222×221 · 📜 223×212 · 🐾 220×197
      슬롯 274×204 를 채우려면 fs = 200×204/h, scaleX = 274/(w×204/h) 를 **칸마다** 따로 줘야 한다.
      🛡️ 는 폭이 다른 것들보다 18% 좁아서 공용 1.343 으로는 224px 밖에 안 찼다. */
-  .shp-card:nth-child(2) .cart{font-size:185px;transform:scaleX(1.631)}   /* 🛡️ 182×221 */
+  .shp-card:nth-child(2) .cart{font-size:185px}   /* 🛡️ 182×221 — 356: scaleX(1.631) 폐기 */
   /* ⚠ 8회차 — 비평가 N·O 가 «카드3 아트 높이 −28px» 이라고 했지만 **반증됐다**(임계 스윕).
      레퍼런스에는 상자 뒤에 밝은 **방사 버스트**가 있고 우리는 2회차에 그걸 일부러 감광했다(비평가 C 지적).
      그래서 «배경과의 색 거리» 마스크를 **낮은 임계**로 돌리면 레퍼런스만 버스트까지 «아트» 로 세어
      ref 326×238 / 구현 274×215 처럼 보인다. 임계를 올려 둘 다 안정되는 구간(유클리드 70~95)에서는
      **ref 278×216 cy257.5 vs 구현 273×214 cy258.5** 로 이미 맞다. 여기를 키우면 되레 15px 초과한다. */
-  .shp-card:nth-child(3) .cart{font-size:185px;transform:scaleX(1.337)}   /* 📿 222×221 */
-  .shp-card:nth-child(4) .cart{font-size:192px;transform:scaleX(1.277)}   /* 📜 223×212 */
-  .shp-card:nth-child(5) .cart{font-size:207px;transform:scaleX(1.203)}   /* 🐾 220×197 */
+  .shp-card:nth-child(3) .cart{font-size:185px}   /* 📿 222×221 — 356: scaleX(1.337) 폐기 */
+  .shp-card:nth-child(4) .cart{font-size:192px}   /* 📜 223×212 — 356: scaleX(1.277) 폐기 */
+  .shp-card:nth-child(5) .cart{font-size:207px}   /* 🐾 220×197 — 356: scaleX(1.203) 폐기 */
 
   /* 🔍 확률 버튼 — 정원 59, 채움 #9DA3B8, 링 #4A4E5A 3px */
   .shp-card .cmag{left:381px;top:128px;width:59px;height:58px;border-radius:50%;
@@ -4994,7 +4998,11 @@
      50×50 박스에서 잉크가 38×42 로 나온다 → `object-fit:fill` 로 박스를 49×44 로 눌러 잉크 37×37 을 만든다. */
   .shp-card .cbtn>.pan .gem{position:absolute;left:-8.7px;top:-2.7px;width:58px;height:47px;
     -webkit-text-stroke:0;line-height:47px;text-align:center}
-  .shp-card .cbtn>.pan .gem>.cic{width:58px;height:47px;object-fit:fill;vertical-align:top}
+  /* ⚠ 356 — `object-fit:fill` + 58×47 상자는 정사각(viewBox 64×64) 원본을 **가로로 1.234배** 늘리고
+     있었다(transform 이 아니라 «상자 종횡비 ≠ 원본 종횡비» 축 — 스캐너의 두 번째 축).
+     «작은 쪽으로» = min(58/64, 47/64) = 47/64 ⇒ **47×47**. 높이·중심 Δ0(상자 58 안에서 text-align:center),
+     폭만 자연값으로 돌아온다. `object-fit` 은 `.cic` 기본값 `contain` 을 그대로 쓴다. */
+  .shp-card .cbtn>.pan .gem>.cic{width:47px;height:47px;vertical-align:top}
   /* 부족한 값(가격 · 남은 무료 횟수)만 빨강. 충분하면 `.cbtn>u` 의 흰색을 그대로 쓴다. */
   .shp-card .cbtn.lack>.cost{color:#EB6D68;paint-order:stroke fill;
     -webkit-text-stroke:calc(var(--st-body) * 1em) #000}   /* 126 ② — 5.5px = r .212 */
@@ -5894,8 +5902,10 @@
   /* 6회차 — 박스는 ref bbox(276×206) 그대로인데 **안의 글리프 잉크가 202×216** 이라 박스를 못 채우고
      있었다(비평가 AA ④: 종횡비 ref 1.34 ↔ 우리 0.94 로 뒤집힘). A2 방식대로 «높이=font-size ·
      폭=scaleX» 로 잉크를 박스에 정규화한다 — 나중에 일러스트로 바꿔 끼우기만 하면 되는 자리다. */
+  /* ⚠ 356 — 위 6회차의 «폭=scaleX» 정규화는 폐기(주인 지시: 아이콘은 원본 비율).
+     min(1.433, 1) = 1 ⇒ 선언 삭제. 상자·높이·중심 Δ0, 잉크 폭만 자연값(202)으로 돌아온다. */
   .cn-bn>.art{position:absolute;left:240px;top:126px;width:276px;height:206px;
-    font-size:186.9px;line-height:206px;text-align:center;transform:scaleX(1.433)}
+    font-size:186.9px;line-height:206px;text-align:center}
   .cn-bn>.gem{position:absolute;font-size:74px;line-height:74px;color:#49CDF4}
   /* §2 `재화 상점` 타이틀 — 잉크 x686 y335(local 143) 268x65, 중심 819.5, #FFF8AA */
   .cn-ti{left:670px;top:139px;width:301px;height:78px;text-align:center}
@@ -6093,6 +6103,10 @@
     #F0A415 59px,#FFE07A 59px,#FFE07A 64px,#E29A10 64px,#9A6403 69px)}
   .cn-cd>.bt.buy>.pr{left:0;right:0;width:auto;top:19px;font-size:33px;line-height:36px;
     transform:scaleX(1.02)}
+  /* 356 — 위 1.02 는 **라벨(가격 글자)** 의 잉크폭 보정이라 지시 대상이 아니다(«라벨의 scaleX 는 제외»).
+     그런데 같은 줄의 화폐 아이콘이 자식이라 **1.02 를 같이 뒤집어쓴다**(A1 `.tab>.ti` · A2 `.ibtn>.si` 와
+     같은 «감싼 상자가 거는» 구조). 아이콘만 역보정해 누적 스케일을 1.0 으로 되돌린다. */
+  .cn-cd>.bt.buy>.pr>.cic{transform:scaleX(.98039)}
   /* 마일리지 쿠폰 뱃지 — 아이템 판(dx11 dy69 256×157) 우상단에 물린다 */
   .cn-cd>.cp{left:141px;top:78px;width:120px;height:46px;border-radius:23px;border:4px solid #000;
     background:linear-gradient(180deg,#F6A3FF 0,#D24CF2 55%,#A521C9 100%)}

@@ -58,11 +58,13 @@ const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
       const r = e.getBoundingClientRect();
       o[k] = { dx: r.left - or.left, dy: r.top - or.top, w: r.width, h: r.height };
     };
-    /* .cart 는 3회차부터 `transform:scaleX()` 로 폭을 채우므로 getBoundingClientRect 는
-       변환 후 박스를 준다 — 레이아웃 슬롯은 offset* 로 잰다(측정표 §2 #3 은 슬롯 기준). */
+    /* .cart 는 3회차부터 `transform:scaleX()` 로 폭을 채웠고, **356(주인 지시 2026-08-29)이 그것을
+       폐기했다** — 아이콘은 원본 비율이 우선이다. 레이아웃 슬롯은 그때나 지금이나 offset* 로 잰다. */
     { const e = c1.querySelector('.cart');
       o.art = { dx: e.offsetLeft, dy: e.offsetTop, w: e.offsetWidth, h: e.offsetHeight }; }
-    o.artScaleX = +getComputedStyle(c1.querySelector('.cart')).transform.split('(')[1].split(',')[0];
+    /* 5칸 **전부** 를 본다 — 356 은 `.cart` 기본 규칙과 nth-child(2)~(5) 다섯 자리를 같이 뗐다.
+       한 칸만 재면 «한 칸만 되살아난» 재발을 놓친다. */
+    o.artTf = cards.map((c) => { const e = c.querySelector('.cart'); return e ? getComputedStyle(e).transform : 'x'; });
     rel('hd', '.chd'); rel('mag', '.cmag'); rel('lv', '.clv');
     rel('bar', '.cbar'); rel('b1', '.b1'); rel('b2', '.b2'); rel('b3', '.b3');
     rel('ad', '.adbadge'); rel('pan', '.b2>.pan'); rel('exp', '.cbar>b');
@@ -109,8 +111,11 @@ const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
      레퍼런스 가로 단면(카드기준 dy226)에서 어두운 띠는 좌우 2px 뿐이고 태그 바깥은 x708..762 = **55px**,
      금색 채움 51×41 과도 맞물린다(51 + 2×2 = 55). 구현 55×45 · 검정 2px · rotate(−6°)
      → 회전 bbox = 55·cos6 + 45·sin6 = 59.4 / 55·sin6 + 45·cos6 = 50.5 */
-  /* 아트 슬롯은 이모지라 잉크가 슬롯보다 작다 — 폭을 scaleX 로 채운다(3회차 실측 1.334) */
-  chk('상자 아트 scaleX (잉크 폭 채움)', g.artScaleX, 1.334, .05);
+  /* ⚠ 356(주인 지시 2026-08-29) 이관 — 옛 기대 «상자 아트 scaleX 1.334(잉크 폭 채움)» 는 **뒤집혔다**.
+     아이콘은 원본 비율이 우선이라 다섯 칸 전부 스케일 선언이 없어야 한다. 항을 지우지 않고
+     기대값만 뒤집는다(328 교훈) — 지웠으면 «356 이 통째로 사라져도 초록인 게이트» 가 된다.
+     슬롯 상자(274×204 · dx99 dy160)는 위에서 그대로 재고 있으므로 «폭이 줄었다» 는 여기 안 섞인다. */
+  chk('상자 아트 — 5칸 전부 스케일 선언 없음 (356)', g.artTf.join('|'), 'none|none|none|none|none', 0);
   chk('AD 뱃지 w(회전 bbox)', g.ad.w, 59.4, 2);
   chk('AD 뱃지 h(회전 bbox)', g.ad.h, 50.5, 2);
 
@@ -121,7 +126,10 @@ const chk = (n, got, want, tol = 2) => T.push([n, got, want, tol]);
 
   let bad = 0;
   for (const [n, got, want, tol] of T) {
+    /* 356 이관으로 문자열 기대값이 생겼다(«transform 이 none 인가»). 숫자 자에 문자열을 태우면
+       `Math.abs(NaN) <= tol` 가 항상 false 라 **영원히 빨간 항**이 된다 — 갈래를 하나 더 둔다. */
     const ok = typeof want === 'boolean' || typeof got === 'boolean'
+      || typeof want === 'string' || typeof got === 'string'
       ? got === want
       : Math.abs(got - want) <= tol;
     if (!ok) { bad++; console.log(`  ✗ ${n}: ${typeof got === 'number' ? got.toFixed(1) : got} (기대 ${want}${tol ? ' ±' + tol : ''})`); }
