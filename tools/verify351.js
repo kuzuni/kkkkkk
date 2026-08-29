@@ -31,6 +31,12 @@ const ok = (m, d) => { pass++; console.log(`  ok  ${m}${d ? ' — ' + d : ''}`);
 const no = (m, d) => { fail++; console.log(`  NG  ${m}${d ? ' — ' + d : ''}`); };
 const eq = (m, got, want, tol = 0) => (Math.abs(got - want) <= tol ? ok(m, `${got}`) : no(m, `${got} (기대 ${want}±${tol})`));
 
+/* §R-i(406) 전용 사본 — 시트 위 딤이 포인터를 «막게» 만든다.
+   지금 제품은 이 딤만 `pointer-events:none` 이라, 2280 에서 레일이 **딤을 뚫고** 눌린다.
+   이것을 auto 로 바꾸면 2280 이 1600 과 같아진다 = 그 세 시트의 12건이 «시트가 자라서» 가
+   아니라 **이 한 속성 때문**임의 증명이다(338 교훈 — 뿌리를 안 짚은 게이트는 헛초록이 된다). */
+const DIMPE = `#panel:has(:is(#bSk,#bPet,#bCos).on)::before{pointer-events:auto !important}`;
+
 /* 처방을 걷어낸 사본 — §R 에서만 주입한다 */
 const REVERT = `
   #blsw{padding-bottom:146px !important}
@@ -47,7 +53,7 @@ async function shot(browser, h, opener, revert) {
   const page = await ctx.newPage();
   await page.goto(FILE, { waitUntil: 'load' });
   await page.waitForTimeout(1100);
-  if (revert) await page.addStyleTag({ content: REVERT });
+  if (revert) await page.addStyleTag({ content: revert === 'dimpe' ? DIMPE : REVERT });
   if (opener === 'bless') await page.click('.side .ibtn[data-pop="bless"]', { force: true }).catch(() => {});
   else if (opener === 'hero') await page.click('.tab[data-t="hero"]', { force: true }).catch(() => {});
   else if (opener === 'sheet') {
@@ -119,6 +125,27 @@ async function shot(browser, h, opener, revert) {
       pedge, deepHit, deepInSheet,
       /* 56 절전 — 하단 앵커(안내문) ↔ 상단 앵커(통계 패널) 충돌을 재는 세 상자 */
       svP: box('#svw .sv-p'), svHint: box('#svw .sv-hint'), svR3: box('#svw .sv-r:nth-of-type(3)'),
+      /* §7(406) — 배경 고정 조작 요소가 **닿나**. «덮였나» 가 아니다:
+         덮임은 딤만으로도 생기지만 조작 상실은 «포인터가 못 간다» 일 때만 생긴다. */
+      reach: (() => {
+        const hitOf = (el) => {
+          const r = el.getBoundingClientRect();
+          const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+          const nm = h ? (h.id ? '#' + h.id : h.tagName.toLowerCase() + '.' + String(h.className).trim().split(/\s+/).slice(0, 2).join('.')) : null;
+          return { on: !!(h && (h === el || el.contains(h))), by: nm };
+        };
+        const o = {};
+        for (const id of ['attend', 'roul', 'quest', 'promo', 'coll', 'bless']) {
+          const el = document.querySelector('.side .ibtn[data-pop="' + id + '"]');
+          if (el) o[id] = hitOf(el);
+        }
+        const mb = document.getElementById('menub');
+        if (mb) o.menub = hitOf(mb);
+        /* 나갈 길 — `#panel` 계열은 열린 탭이 탭바에서 ✕ 칸으로 치환된다(마크업 13970) */
+        const cl = document.querySelector('#tabbar .tab.close');
+        o.escClose = cl ? hitOf(cl) : { on: false, by: '(.tab.close 없음)' };
+        return o;
+      })(),
     };
   });
   await ctx.close();
@@ -251,6 +278,50 @@ async function shot(browser, h, opener, revert) {
     eq('[6-g] 교차 프레임 1756 에서 하단 여백이 여전히 195', v17.frameH - v17.svHint.bot, 195);
     eq('[6-h] 교차 프레임 1756 에서 패널↔안내 여백 30', v17.svHint.top - v17.svP.bot, 30);
 
+    /* ---------------- §7 406 — «덮임» 이 아니라 «닿음» 이 축이다 ----------------
+       406 이 정한 규약을 잠근다. 6회차의 자(E1)는 «불투명 상자가 배경 조작 요소를 덮는 %»
+       를 세어 88건을 냈고 비평가 셋이 그 자리에서 갈렸다(CB·CC 1순위 ↔ CD 없음).
+       406 이 88건을 `elementFromPoint` 로 전수 재판정하니 **76건은 2280 에서도 이미 안 닿았다**
+       (딤이 막는다) — 1600 에서 더 «덮이는» 것은 6회차가 E2 를 버린 그 이유와 같다.
+       ⇒ 규약: **오버레이가 소유한 화면에서 배경 레일이 안 눌리는 것은 설계다.**
+                감점은 «2280 에서는 닿는데 1600 에서 안 닿는» 자리 뿐이고, 그런 자리는
+                `#panel` 계열 세 시트(07 스킬·26 펫·50 코스튬)에만 있다.
+       그 셋의 뿌리는 «시트가 자란다» 가 아니라 **딤만 `pointer-events:none` 이라는 것**이다
+       (`#panel:has(…)::before` — index.html 10080). 2280 에서 레일이 눌리는 것은 딤을 «뚫고»
+       눌리는 것이고, 1600 에서는 딤이 아니라 시트 **본문**이 덮으므로 그 통로가 사라진다.
+       ⚠ 그래서 이 절은 **지금 값을 그대로 못박는다** — 여기를 바꾸는 것은 42 터치 조이스틱
+         (시트 위 게임 화면을 뚫고 조작하는 것)의 동작을 같이 바꾸므로 별도 작업으로 등재했다. */
+    console.log('[§7] 406 규약 — 배경 조작 요소는 «덮였나» 가 아니라 «닿나» 로 판정한다');
+    const RAIL = ['attend', 'roul', 'quest'];
+    const rc19 = s19.reach, rc13 = s13.reach;
+    RAIL.every((k) => rc19[k] && rc19[k].on)
+      ? ok('[전제 7-a] 2280 스킬 시트에서 레일 상위 3칸이 닿는다', RAIL.map((k) => k + '=' + (rc19[k].on ? '닿음' : rc19[k].by)).join(' · '))
+      : no('[전제 7-a] 2280 스킬 시트에서 레일 상위 3칸이 닿는다', RAIL.map((k) => k + '=' + (rc19[k] ? rc19[k].by : '?')).join(' · '));
+    (rc19.promo && !rc19.promo.on && rc19.coll && !rc19.coll.on)
+      ? ok('[7-b] 2280 에서도 아래 두 칸(promo·coll)은 이미 시트가 막는다 — «레일은 늘 눌린다» 는 불변식이 없다',
+        `promo=${rc19.promo.by} · coll=${rc19.coll.by}`)
+      : no('[7-b] 2280 아래 두 칸은 시트가 막는다', `promo=${rc19.promo && rc19.promo.by} · coll=${rc19.coll && rc19.coll.by}`);
+    RAIL.every((k) => rc13[k] && !rc13[k].on)
+      ? ok('[7-c] 1600 에서는 그 3칸이 안 닿는다', RAIL.map((k) => k + '=' + rc13[k].by).join(' · '))
+      : no('[7-c] 1600 에서는 그 3칸이 안 닿는다', RAIL.map((k) => k + '=' + (rc13[k] ? (rc13[k].on ? '닿음' : rc13[k].by) : '?')).join(' · '));
+    /* ⚑ 무엇이 막았는지가 뿌리를 가른다 — 딤(`#panel` 자신)이면 «딤이 커졌다» 지만
+       시트 «본문 자식»이면 «시트가 자라 통로를 먹었다» 다. 후자임을 못박는다. */
+    RAIL.every((k) => rc13[k] && !rc13[k].on && rc13[k].by && rc13[k].by !== '#panel')
+      ? ok('[7-d] 1600 에서 막는 것은 딤(#panel)이 아니라 시트 본문이다', RAIL.map((k) => rc13[k].by).join(' · '))
+      : no('[7-d] 1600 에서 막는 것은 시트 본문이다', RAIL.map((k) => rc13[k] && rc13[k].by).join(' · '));
+    /* 나갈 길 — 규약이 «레일은 조작 대상이 아니다» 로 가는 대가로, 닫는 길은 반드시 있어야 한다. */
+    (s19.reach.escClose.on && s13.reach.escClose.on)
+      ? ok('[7-e] 나갈 길(탭바 ✕ 칸)이 두 해상도 모두 닿는다')
+      : no('[7-e] 나갈 길(탭바 ✕ 칸)이 두 해상도 모두 닿는다', `2280=${s19.reach.escClose.by} · 1600=${s13.reach.escClose.by}`);
+    /* 음성항 — 오버레이가 «안 열린» 화면에서는 레일이 두 해상도 다 닿아야 한다.
+       이게 없으면 §7 은 «레일은 언제나 안 닿아도 된다» 는 게이트가 된다. */
+    const p19 = await shot(br, 2280, 'none', false);
+    const p13 = await shot(br, 1600, 'none', false);
+    ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'].every((k) => p19.reach[k].on && p13.reach[k].on)
+      ? ok('[7-f] 음성항 — 시트가 안 열린 화면에서는 레일 6칸이 두 해상도 다 닿는다')
+      : no('[7-f] 음성항 — 시트가 안 열린 화면에서는 레일 6칸이 두 해상도 다 닿는다',
+        ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'].map((k) => k + '=' + (p13.reach[k].on ? '1600닿음' : '1600' + p13.reach[k].by)).join(' · '));
+
     /* ---------------- §R 되돌림 시험 ---------------- */
     console.log('[§R] 처방을 뺀 사본에서 같은 항이 빨개지는가');
     const r13 = await shot(br, 1600, 'bless', true);
@@ -281,6 +352,17 @@ async function shot(browser, h, opener, revert) {
       : no('[R-g] 되돌리면 1600 안내문이 패널·3행 알약 안으로', `안내 ${rs56.svHint.top} · 패널 ${rs56.svP.bot} · 3행 ${rs56.svR3.bot}`);
     const rs56t = await shot(br, 2280, 'saver', true);
     eq('[R-h] 되돌려도 2280 안내문은 같다(9:19 무관)', rs56t.frameH - rs56t.svHint.bot, 195);
+
+    /* [R-i](406) — §7 의 **진단**을 되돌림으로 못박는다.
+       §7 은 «2280 은 닿고 1600 은 안 닿는다» 는 현상만 적는다. 그 통로가 무엇인지는
+       딤의 `pointer-events` 를 auto 로 바꿔 보면 답이 나온다 — 2280 이 그 즉시 1600 과
+       같아지면 통로는 «딤을 뚫는 것» 이고, 안 바뀌면 내 진단이 틀린 것이다. */
+    const dp19 = await shot(br, 2280, 'sheet', 'dimpe');
+    ['attend', 'roul', 'quest'].every((k) => !dp19.reach[k].on && dp19.reach[k].by === '#panel')
+      ? ok('[R-i] 딤을 pointer-events:auto 로 바꾸면 2280 레일이 딤에 막힌다 = 통로는 그 한 속성이다',
+        ['attend', 'roul', 'quest'].map((k) => k + '=' + dp19.reach[k].by).join(' · '))
+      : no('[R-i] 딤을 pointer-events:auto 로 바꾸면 2280 레일이 딤에 막힌다',
+        ['attend', 'roul', 'quest'].map((k) => k + '=' + (dp19.reach[k].on ? '여전히 닿음' : dp19.reach[k].by)).join(' · '));
     const r19 = await shot(br, 2280, 'bless', true);
     eq('[R-c] 되돌려도 2280 ✕ 상변은 같다(9:19 무관)', r19.blsX.top, 1793);
   } finally { await br.close(); }
