@@ -13591,7 +13591,14 @@
            --sf/--sx 는 각 이모지의 실측 잉크(차분법 `tools/probe360.js`)로 역산한 배율이다.
            360 이후 기준은 «그 칸의 레퍼런스 스프라이트» 가 아니라 **형제 6행 공통 잉크 108×97**
            이다(±3%). 이모지를 바꾸면 두 값을 다시 재야 한다. -->
-      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.896;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
+      <!-- 작업 382(2026-08-29): `--sf .896 → .920`. 360 이 «다른거랑 같게» 를 지시했는데 📅 만
+           형제 평균 대비 폭 **−4.0%** 로 남아 ±5% 밴드에 **여유 1.0pp** 로 붙어 있었다(그래서
+           `verify360` [3] 이 6회 중 1회 빨갰다 — 상세는 `docs/review/382-*.md`).
+           ⚠ 폭을 0% 에 붙이는 값(.944)도 있지만 📅 는 형제보다 세로로 긴 글리프라 그러면 높이가
+           +3.8% 로 밀려 여유가 **더 좁아진다**(356 규칙상 손잡이가 등방 하나뿐이다).
+           .920 은 폭·높이 여유를 같이 벌리는 자리다 — Δ폭 −2.0% · Δ높이 +1.8% ⇒ 여유 3.0pp.
+           역산은 `tools/probe382.js` [3] 스윕(정착된 자). 레이아웃 상자·판정·밸런스 0줄. -->
+      <div class="ibtn" data-pop="attend" title="출석" style="--sf:.920;--dx:.5px;--dy:2.5px"><span class="si">📅</span><span class="sl">출석</span><span class="bdg"></span></div>
       <div class="ibtn" data-pop="roul"  style="--sf:.866;--dx:3.5px;--dy:-1.5px"><span class="si">🎰</span><span class="sl">룰렛</span><span class="bdg"></span></div>
       <!-- 작업 71(2026-08-25, 저장소 주인 지시): 3행 «우편»(📬) 삭제 — 52 ▦ 메뉴의 «우편» 칸과 중복이다.
            우편 진입은 ▦ 메뉴 하나뿐(openMail). 레드닷은 `sideAlert('mail')` 이 #menub 의 `.bdg` 로 옮겨 켠다.

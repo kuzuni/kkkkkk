@@ -63,6 +63,20 @@ async function boot(ctx, url) {
     for (let i = 1; i < 5000; i++) clearInterval(i); });
   await p.addStyleTag({ content:
     '*,*::before,*::after{animation-play-state:paused!important;transition:none!important}' });
+  /* ★ 382(2026-08-29) — **자를 정착시킨다.** [3] 이 «6회 중 1회» 빨갛던 뿌리는 제품도 attend 도
+     아니었다: 차분법은 임계값 8 로 «바뀐 픽셀» 을 세는데, 글리프 가장자리의 안티에일리어싱은
+     **뒤에 깔린 색과 섞인 값**이다. 아이콘 뒤는 전투 캔버스라 **로드마다 그림이 달라서** 테두리
+     한 줄이 임계를 넘었다 말았다 했다 = 6칸 전부 ±1~2px, 분모(형제 4칸 평균)가 98.25~99.75 로
+     움직인다. attend 가 흔들린 것이 아니라 **분모가 올라간 실행에서만** 밴드를 넘었다
+     (`probe382` ⓐ~ⓓ — 등재문의 «attend 가 93 으로 읽힌다» 는 관측 0건으로 기각).
+     ⇒ 캔버스를 끄고 **단색 판**을 깐다. 판 색이 곧 «무엇을 재는가» 다:
+        · 근흑 판(#0a0c16) — 외곽선 `--o`(#080a0a)가 임계 8 을 못 넘어 **실루엣에서 통째로 빠진다**
+        · 흰 판          — 📅 처럼 흰 잉크를 가진 글리프가 판에 먹힌다
+        · **마젠타**      — 근흑 외곽선과도 흰 잉크와도 멀어 실루엣을 통째로 센다 ⇒ 이것을 쓴다
+     아이콘은 z 3, 캔버스는 그 아래라 **측정 대상은 안 바뀐다**(probe382 [4]: 14/14 전부 같은 값,
+     산포 16px → 0px). ⚠ 이 판을 걷으면 [3] 이 다시 플레이키가 된다. */
+  await p.addStyleTag({ content:
+    '#view{visibility:hidden!important}#stagearea{background:#ff00ff!important}' });
   await p.waitForTimeout(250);
   return { p, errs };
 }
@@ -201,6 +215,19 @@ async function survey(p) {
   ok(at && Math.abs((at.ink.h / ah - 1) * 100) <= BAND,
      '★ 출석 — 잉크 «높이» 가 형제와 같은 급 (수리 전 +20~23%: 아트 101 단독 규격)',
      at ? ((at.ink.h / ah - 1) * 100).toFixed(1) + '%' : 'X');
+  /* ★ 382(2026-08-29) — «밴드 안» 만으로는 모자란 자리다.
+     360 뒤 attend 는 폭 −4.0% 로 밴드(±5%) **안**이었지만 여유가 1.0pp 뿐이라, 자가 1px 만
+     흔들려도(=1.06pp) 넘었다. 자는 위 boot 의 단색 판이 정착시켰고, 여기서는 **여유 자체**를
+     묻는다 — 자를 고쳐도 여유가 얇으면 다음 아트 교체·브라우저 갱신에 그대로 재발한다.
+     ⚠ 이 항은 «밴드 안인가» 와 **다른 것을 묻는다**: 위 루프의 attend 항이 초록인 채로
+        이 항만 빨개지는 것이 정상이고, §R-c 가 바로 그 상태를 실증한다.
+     1.5pp 인 이유: 관측된 1px 노이즈가 1.06pp 다(probe382 [2]). 그보다 커야 «자가 흔들려도
+     안 넘는다» 가 성립한다. 지금 값은 3.0pp 라 두 배 여유가 있다. */
+  const MARGIN = 1.5;
+  const atMg = at ? BAND - Math.abs((at.ink.w / aw - 1) * 100) : -1;
+  ok(atMg >= MARGIN,
+     `★ 출석 — 폭이 밴드 끝에서 ${MARGIN}pp 넘게 떨어져 있다 (382 — 1px 노이즈 1.06pp 보다 넓은 여유)`,
+     at ? `여유 ${atMg.toFixed(2)}pp (Δ폭 ${((at.ink.w / aw - 1) * 100).toFixed(2)}%)` : 'X');
   /* ★ 371(2026-08-29) — 이 항이 **제자리로 돌아왔다.**
      내력: 360 은 🙏 의 좁은 자연 폭을 `--sx 1.235` 로 늘려 형제 급에 맞췄고, 356(«아이콘은 원본 비율»)이
      그 배율을 폐기하자 축복만 **폭 −11.5~12.9%** 로 내려앉았다. 356 은 그 값을 기대값으로 **못 박아**
@@ -320,6 +347,42 @@ async function survey(p) {
     /* 죽은 참조 방지 — 위 두 사본이 쓰는 글리프 상수가 실제 소스와 같은지 한 번 더 못 박는다 */
     ok(src.split(BLESS_GLYPH).length - 1 === 1, '[R] 축복 글리프 😇 가 소스에 정확히 1곳',
        src.split(BLESS_GLYPH).length - 1);
+
+    /* ── [R-c] 382 되돌림 시험 ────────────────────────────────────────────────
+       위 ★ 출석 여유 항이 **무르지 않다**는 것을, 그리고 «밴드 안» 과 «여유» 가 정말 다른 것을
+       묻는다는 것을 한 사본으로 같이 못박는다. 360 당시 값(.896)으로 되돌린 사본에서
+         · 밴드 항(|Δ폭| ≤ 5%)  → **그대로 초록**  ← 이것이 382 가 잡은 병의 정확한 모양이다
+         · 여유 항(≥ 1.5pp)     → **빨강**
+       둘 중 하나라도 어긋나면 이 항은 «아무거나 흔들면 빨개지는» 것이거나 헛초록이다. */
+    const ATT_SF = '<div class="ibtn" data-pop="attend" title="출석" style="--sf:.920;';
+    const attHits = src.split(ATT_SF).length - 1;
+    ok(attHits === 1, '[R-c] 갈아 끼울 자리(출석 행 --sf)가 정확히 1곳', attHits);
+    if (attHits === 1) {
+      console.log('\n[R-c] 되돌림 시험 — 출석 --sf 를 360 당시 값(.896)으로 되돌린 사본 (382 본체)');
+      const f = path.join(ROOT, '.v360-neg-c.html');
+      fs.writeFileSync(f, src.replace(ATT_SF, ATT_SF.replace('--sf:.920;', '--sf:.896;')));
+      const { p: p3, errs: e3 } = await boot(ctx, 'file://' + f);
+      const s3 = await survey(p3);
+      const g3 = s3.list.filter(r => r.ink);
+      const r3 = g3.filter(r => r.pop !== 'attend' && r.pop !== 'bless');
+      const aw3 = r3.reduce((a, r) => a + r.ink.w, 0) / r3.length;
+      const at3 = g3.find(r => r.pop === 'attend');
+      const d3 = at3 ? (at3.ink.w / aw3 - 1) * 100 : 0;
+      const mg3 = BAND - Math.abs(d3);
+      ok(at3 && Math.abs(d3) <= BAND,
+         '[R-c] 되돌린 사본은 **밴드 안이다** — 382 가 잡은 것은 «밴드를 넘었다» 가 아니라 «여유가 없다» 였다',
+         `Δ폭 ${d3.toFixed(2)}%`);
+      ok(mg3 < MARGIN,
+         '[R-c] 그런데 여유 항은 빨개진다 — ★ 출석 여유 항이 실제로 무언가를 지킨다',
+         `여유 ${mg3.toFixed(2)}pp < ${MARGIN}pp`);
+      ok(g3.filter(r => r.pop !== 'attend').every(r => BAND - Math.abs((r.ink.w / aw3 - 1) * 100) >= MARGIN),
+         '[R-c] 나머지 5행의 여유는 그대로 넉넉하다 — «아무거나 흔들면 빨개지는» 항등식이 아니다',
+         g3.filter(r => r.pop !== 'attend')
+           .map(r => `${r.pop} ${(BAND - Math.abs((r.ink.w / aw3 - 1) * 100)).toFixed(1)}`).join('/'));
+      ok(e3.length === 0, '[R-c] 사본 콘솔 에러 0건', e3.length ? e3.join(' | ') : '없음');
+      await p3.close();
+      try { fs.unlinkSync(f); } catch (_) {}
+    }
   }
 
   await b.close();
