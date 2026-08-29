@@ -1916,6 +1916,23 @@
   #modal{position:absolute;inset:0;background:rgba(0,0,0,.54);display:none;align-items:center;
     justify-content:center;padding:126px 91px 150px;z-index:30}
   #modal.on{display:flex}
+  /* 390 — 위 126 · 아래 150 은 **어디서도 실측된 값이 아니다**(63 2회차가 «ref y − 84» 를 만족시키려고
+     고른 한 쌍이다). 짧은 프레임에서 그 띠는 금지구역을 덮는다 — 실측 1600: 22 퀘스트 상자가
+     **126..1450** 으로 위로 HUD 잉크 끝(142)을 16px · 아래로 탭바 상변(1420)을 30px 파고든다
+     (`probe390` · `probe351` D7 · 5회차 비평가 3인 1순위가 **같은 값**을 가리켰다 — LESSONS 351-⑨).
+     진짜 띠는 **위 = `.pedge` 하변 142** · **아래 = 탭바 180** 이다(351 4회차가 못박은 축).
+     ⚠ 패딩은 «가운데 정렬» 의 입력이라 2280 에서 건드리면 모든 다이얼로그가 통째로 −7px 움직인다
+     (LESSONS 351-③) ⇒ `.shortf`(frameH < 1842) 안에서만 가른다. 2280·1920 은 선언이 안 붙어 Δ0.
+     ⚑ 142+180 = 322 는 **프레임 높이와 무관한 상수**라, 짧은 프레임에서 상자는 늘 상한에 걸려
+     상변이 정확히 142 · 하변이 정확히 탭바 상변에 선다(1600·1700·1841 검산 동일).
+     ⚠ 띠는 **바닥값**이다 — 자기 값이 이미 142 위인 껍데기는 그 값을 지킨다(아래 두 줄).
+        `.ml69`(69 우편)는 ✕ 가 상자 밖으로 57px 나오므로 **아래 237** 을 따로 갖는다(3133행). */
+  #app.shortf #modal{padding-top:142px;padding-bottom:180px}
+  /* `.sk8` 의 132 는 «공용 126 + 6»(하단 테두리가 6px 두꺼워 생긴 3px 쏠림을 되돌리는 값, 2054행)이라
+     바닥이 142 가 되면 그 뜻도 142+6 이다 — 상수 132 를 그대로 두면 보정이 통째로 사라진다. */
+  #app.shortf #modal.sk8{padding-top:148px}
+  /* `.at70` 의 159 는 이미 142 위다(자기 실측값) — 위는 그대로 두고 아래만 띠(180)를 받는다. */
+  #app.shortf #modal.at70{padding-top:159px}
   /* 검정 7px 은 헤더까지 감싸고, 갈색 프레임 11px(바깥 6 #564438 · 안쪽 5 #46382D)은 본문 좌·우·아래만 두른다.
      (레퍼런스에서 헤더 바는 검정 테두리 바로 안쪽까지 꽉 찬다 — 헤더 위에 갈색이 깔리지 않는다) */
   /* 검정 8px + 갈색 프레임 10px(바깥 7 #564438 · 안쪽 3 #46382D) = 편측 18px */
@@ -8177,6 +8194,16 @@
      검산(2280): .cl h1543 → 168+(1836−1543)/2−42 = 272.5 (ref 중심 1127.5 → top 356, −84 = 272 ✓) */
   #collw{position:absolute;inset:0;background:rgba(0,0,0,.53);display:none;z-index:33;
     align-items:center;justify-content:center;padding:168px 0 276px;box-sizing:border-box}
+  /* 390 — 공용 `#modal` 과 **같은 결함이 같은 이유로** 여기에도 있다(이쪽은 자기 오버레이라
+     `#modal` 의 선언을 한 번도 안 지난다 — 318·293·351-② «경로가 한 칸 짧다» 계열).
+     실측 1600: `.cl` 이 **126..1282** 로 HUD 잉크 끝(142)을 16px 파고든다(`probe390` · D7).
+     168 은 «126 + translateY 42» 로 잡힌 값이라, 바닥이 142 가 되면 **142 + 42 = 184** 다.
+     아래는 탭바 180 에서 그 42 를 되돌려 **138**(= 180 − 42) — 두 값의 합 322 가 공용 `#modal`
+     과 같으므로 상자는 프레임 높이와 무관하게 **142 .. 탭바 상변**에 정확히 선다.
+     ⚑ 아래를 276 → 138 로 **줄이는 것이 회수다** — `.cl` 은 짧은 프레임에서 늘 `max-height:100%`
+     에 걸리므로 비운 만큼이 곧 `.cl-body`(top 111 · bottom 3 의 스크롤 그릇) 높이다:
+     1600 에서 상자 1156 → **1278**(+122px)이 스크롤 없이 보인다. 2280 은 선언이 안 붙어 Δ0. */
+  #app.shortf #collw{padding:184px 0 138px}
   #collw.on{display:flex}
   #collw i,#collw s,#collw b,#collw em{display:inline-block;font-style:normal;font-weight:900}
   .cl{position:relative;flex:none;width:895px;height:1543px;max-height:100%;box-sizing:border-box;
