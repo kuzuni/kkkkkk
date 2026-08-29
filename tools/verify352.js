@@ -253,8 +253,8 @@ const isBlack = h => close(h, '#000000', 8);
       while (i < colP.length && close(colP[i], hex, tol)) { n++; i++; }
       return { st: st - 2, n, end: i };
     };
-    const t1 = seg(2, '#604F3D', 5);
-    const t2 = seg(t1.end, '#5F4D39', 5);
+    const t1 = seg(2, '#634F37', 5);
+    const t2 = seg(t1.end, '#634F37', 5);
     const t3 = seg(t2.end, '#413122', 5);
     console.log('   알약 열 x' + xp + ' — 상단띠 ' + t1.n + '칸@' + t1.st
       + ' · 하단밝은띠 ' + t2.n + '칸@' + t2.st + ' · 하단어두운띠 ' + t3.n + '칸@' + t3.st);
