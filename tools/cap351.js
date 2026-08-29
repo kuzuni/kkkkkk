@@ -152,10 +152,38 @@ async function drive(page, how) {
   await page.waitForTimeout(200);
 }
 
+/* 진입 확인 — «조용히 실패한 클릭» 은 예외를 안 내고 **다른 화면**을 찍는다(LESSONS 356-⑬).
+   오프너는 전부 `.catch(() => {})` 라 실패가 안 보이므로, 찍기 직전에 «지금 무슨 화면인가» 를
+   서명으로 받아 둔다. 서명이 **둘 이상 화면에서 같으면** 그 중 하나는 안 열린 것이다. */
+const SIG = function () {
+  /* ⚠ 항상 떠 있는 연출 층(fx*)은 빼고 **z 가 가장 높은 큰 상자**를 쓴다.
+     처음엔 «마지막 두 개» 로 잡았다가 collw/psw/panel/pfw 가 전부 fxlc·fxl 뒤로 밀려
+     서로 다른 다섯 화면이 같은 서명을 받았다 — 서명이 화면을 못 가르면 이 검사 자체가 헛초록이다. */
+  const box = [];
+  document.querySelectorAll('#app [id]').forEach((el) => {
+    if (/^fx/.test(el.id)) return;
+    const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
+    if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return;
+    if (r.width < 300 || r.height < 300) return;
+    const z = Number(cs.zIndex); if (!Number.isFinite(z) || z < 5) return;
+    box.push({ id: el.id, z });
+  });
+  box.sort((a, b) => b.z - a.z);
+  /* 껍데기(#modal 등)만으로는 팝업끼리 안 갈리므로 그 안의 제목 글자를 같이 쓴다. */
+  const head = [...document.querySelectorAll('.mhead,.mtitle,.mbox h3,.mbox b,.pop h3,.sh-hd,.eqp-hd')]
+    .map((e) => (e.textContent || '').trim()).filter(Boolean).slice(0, 2).join('/');
+  const sheet = ['#bSk', '#bCos', '#bPet', '#bEq', '#blsw']
+    .filter((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return r.height > 50 && getComputedStyle(e).display !== 'none'; }).join(',');
+  const sub = document.querySelector('#dunSub [data-dsub].on,#eqTabs [data-eqtab].on,#trSubs [data-trsub].on');
+  return [box.slice(0, 2).map((b) => b.id + '@' + b.z).join(','), head.slice(0, 24), sheet,
+    sub ? sub.textContent.trim().slice(0, 10) : ''].join('|');
+};
+
 (async () => {
   const br = await launch(chromium);
   const list = ONLY ? SCREENS.filter((s) => s.id.includes(ONLY)) : SCREENS;
   const made = [];
+  const sigs = new Map();
   for (const s of list) {
     for (const h of [2280, 1600]) {
       const ctx = await br.newContext({ viewport: { width: 1080, height: h }, deviceScaleFactor: 1 });
@@ -163,15 +191,21 @@ async function drive(page, how) {
       await page.goto(FILE, { waitUntil: 'load' });
       await page.waitForTimeout(1100);
       await drive(page, s.how);
+      if (h === 1600) s.sig = await page.evaluate(SIG).catch(() => '?');
       const f = path.join(OUT, `351-${R}-${s.id}-${h}.png`);
       await page.screenshot({ path: f });
       made.push(path.basename(f));
       await ctx.close();
     }
+    const dup = sigs.get(s.sig);
+    if (dup) console.log(`  ⚠ ${s.id.padEnd(10)} 진입 실패 의심 — «${dup}» 과 같은 화면(서명 ${s.sig})`);
+    else sigs.set(s.sig, s.id);
     console.log(`  ${s.id.padEnd(10)} ${s.label}`);
   }
   await br.close();
+  const dups = list.length - new Set(list.map((s) => s.sig)).size;
   fs.writeFileSync(path.join(OUT, `351-${R}-화면목록.txt`),
-    list.map((s) => `${s.id}\t${s.label}\t${s.how}`).join('\n') + '\n');
+    list.map((s) => `${s.id}\t${s.label}\t${s.how}\t${s.sig || ''}`).join('\n') + '\n');
   console.log(`\n[351] ${made.length}장 → docs/review/351-${R}-*.png`);
+  console.log(`[351] 진입 서명 중복 ${dups}건 ${dups ? '— ⚠ 위 목록 확인' : '(전부 다른 화면)'}`);
 })();
