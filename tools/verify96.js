@@ -104,7 +104,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
         offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
-        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp),
+        /* 378 (2026-08-29) — 활성 칸이 **셸 안쪽 변에 닿는가**. 닿는 면은 알약의 검정 7 을
+           셸 테두리에 넘기므로(ref 규약 — 352 §8) 같은 부품이라도 boxShadow 가 갈린다.
+           «부품이 하나» 라는 이 게이트의 물음은 그대로 두되, 비교를 **같은 자리끼리** 한다. */
+        onPos: (() => {
+          const b = bar.getBoundingClientRect(), on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
+          return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 06 장비 — 같은 영웅 탭의 오버레이 */
@@ -115,7 +124,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
         offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
-        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp),
+        /* 378 (2026-08-29) — 활성 칸이 **셸 안쪽 변에 닿는가**. 닿는 면은 알약의 검정 7 을
+           셸 테두리에 넘기므로(ref 규약 — 352 §8) 같은 부품이라도 boxShadow 가 갈린다.
+           «부품이 하나» 라는 이 게이트의 물음은 그대로 두되, 비교를 **같은 자리끼리** 한다. */
+        onPos: (() => {
+          const b = bar.getBoundingClientRect(), on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
+          return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 03 던전 */
@@ -126,7 +144,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
         offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
-        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp),
+        /* 378 (2026-08-29) — 활성 칸이 **셸 안쪽 변에 닿는가**. 닿는 면은 알약의 검정 7 을
+           셸 테두리에 넘기므로(ref 규약 — 352 §8) 같은 부품이라도 boxShadow 가 갈린다.
+           «부품이 하나» 라는 이 게이트의 물음은 그대로 두되, 비교를 **같은 자리끼리** 한다. */
+        onPos: (() => {
+          const b = bar.getBoundingClientRect(), on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
+          return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
     /* 10 상점 */
@@ -137,14 +164,37 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       return { bar: G(bar, bp),
         off: G(bar.querySelector('.stab:not(.on)'), cp), on: G(bar.querySelector('.stab.on'), cp),
         offI: G(bar.querySelector('.stab:not(.on)>i'), ip), onI: G(bar.querySelector('.stab.on>i'), ip),
-        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp) };
+        offS: G(bar.querySelector('.stab:not(.on)>i'), sp), onS: G(bar.querySelector('.stab.on>i'), sp),
+        /* 378 (2026-08-29) — 활성 칸이 **셸 안쪽 변에 닿는가**. 닿는 면은 알약의 검정 7 을
+           셸 테두리에 넘기므로(ref 규약 — 352 §8) 같은 부품이라도 boxShadow 가 갈린다.
+           «부품이 하나» 라는 이 게이트의 물음은 그대로 두되, 비교를 **같은 자리끼리** 한다. */
+        onPos: (() => {
+          const b = bar.getBoundingClientRect(), on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
+          return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
-    const diff = (a, b) => Object.keys(a).filter(k => a[k] !== b[k]).map(k => k + ': ' + a[k] + ' ≠ ' + b[k]);
+    const diff = (a, b, skip) => Object.keys(a).filter(k => !(skip || []).includes(k) && a[k] !== b[k])
+      .map(k => k + ': ' + a[k] + ' ≠ ' + b[k]);
+    /* 378 이관 — 알약의 좌·우 밴드는 «면이 셸 안쪽 변에 닿는가» 하나로 정해진다.
+       규칙을 **여기서 다시 조립**해 둔다 — 문자열을 통째로 박아 두면 값이 바뀔 때 뜻을 잃는다. */
+    const BLK = 'rgb(0, 0, 0)', BEV = 'rgb(99, 79, 55)';
+    const shadowRule = p => !p ? null : [
+      p.L ? BEV + ' 7px 0px 0px 0px inset' : BLK + ' 7px 0px 0px 0px inset, ' + BEV + ' 14px 0px 0px 0px inset',
+      p.R ? BEV + ' -7px 0px 0px 0px inset' : BLK + ' -7px 0px 0px 0px inset, ' + BEV + ' -14px 0px 0px 0px inset',
+    ].join(', ');
+    const posName = p => !p ? '?' : (p.L ? '좌' : '') + (p.R ? '우' : '') || '가운데';
     const cmp = (label, key, props) => {
       [['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
-        const d = diff(hero[key], o[key]);
-        ok(label + ' — 영웅 vs ' + n + ' Δ0', d.length === 0, d.length ? d.slice(0, 3).join(' / ') : props.length + '개 속성 일치');
+        /* 활성 칸끼리 비교할 때, **자리가 다르면** boxShadow 만 빼고 나머지 11개를 그대로 묻는다.
+           뺀 한 개는 아래 [1-c] 가 자리별 규칙으로 각 호스트에서 따로 문다 — 무르게 푼 게 아니다. */
+        const posDiff = key === 'on' && hero.onPos && o.onPos
+          && (hero.onPos.L !== o.onPos.L || hero.onPos.R !== o.onPos.R);
+        const d = diff(hero[key], o[key], posDiff ? ['boxShadow'] : []);
+        ok(label + ' — 영웅 vs ' + n + ' Δ0' + (posDiff ? ' (자리 ' + posName(hero.onPos) + ' vs ' + posName(o.onPos) + ' — 밴드는 [1-c])' : ''),
+          d.length === 0, d.length ? d.slice(0, 3).join(' / ') : (props.length - (posDiff ? 1 : 0)) + '개 속성 일치');
       });
     };
     cmp('바 껍데기', 'bar', BAR_PROPS);
@@ -152,6 +202,21 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     cmp('활성 칸', 'on', CELL_PROPS);
     cmp('비활성 라벨', 'offI', INK_PROPS);
     cmp('활성 라벨', 'onI', INK_PROPS);
+
+    /* ---------- [1-b] 378 — 알약 좌·우 밴드는 «자리» 하나로 정해진다 ----------
+       cmp 가 자리 차이로 뺀 boxShadow 를 여기서 **호스트마다** 되받는다. 네 호스트 중
+       가운데(영웅·03)와 끝(06·10)이 둘 다 표본에 있어 두 갈래가 모두 살아 있다 —
+       한 갈래만 있으면 규칙을 통째로 지워도 초록이 된다(LESSONS 328·334). */
+    console.log('\n[1-c] 378 — 활성 알약 좌·우 밴드 = 자리 규칙 (닿는 면은 검정을 셸에 넘긴다)');
+    let posEnd = 0, posMid = 0;
+    [['영웅', hero], ['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
+      const want = shadowRule(o.onPos);
+      if (o.onPos && (o.onPos.L || o.onPos.R)) posEnd++; else posMid++;
+      ok(n + ' 활성 칸 자리 «' + posName(o.onPos) + '» → 밴드가 그 자리 규칙과 같다',
+        !!want && o.on.boxShadow === want, o.on.boxShadow);
+    });
+    ok('두 갈래가 표본에 다 있다 (끝 ' + posEnd + ' · 가운데 ' + posMid + ')', posEnd >= 1 && posMid >= 1,
+      '끝 ' + posEnd + ' / 가운데 ' + posMid);
     /* 활성이 «비활성과 구별» 되기는 해야 한다 — 전부 같아 버리면 위 비교는 무의미하다 */
     ok('활성 ≠ 비활성 (구별은 남아 있다)', diff(hero.on, hero.off).length > 0,
       diff(hero.on, hero.off).length + '개 속성 차이');
