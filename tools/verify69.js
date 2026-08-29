@@ -17,6 +17,13 @@ const ok = (m) => { pass++; console.log('  ✓ ' + m); };
 const fail = (m) => { failed++; console.log('  ✗ ' + m); };
 const near = (name, got, want, tol = 1.0) =>
   Math.abs(got - want) <= tol ? ok(`${name} ${got} (기준 ${want})`) : fail(`${name} ${got} ≠ ${want} (허용 ±${tol})`);
+/* 395 — 재화 항의 허용치. **«오차 예산» 이 아니라 IEEE754 잡음 폭**이다.
+   동결(아래 [4])이 오염원을 없앤 뒤 남는 유일한 흔들림은 부동소수점 누적 오차였다:
+   `S.gold` 가 4.08 씩 쌓인 뒤라 «전체 수령 골드» 가 `32000.000000000004 ≠ 32000` 로 빨개졌다(6회 중 3회).
+   한 틱(4.08)의 **4백만분의 1** 이라 틱은 물론 0.001 의 어긋남도 그대로 잡는다 — 되돌림 시험 §R 이 그것을 못박는다.
+   ⚠ 이 값을 «가끔 빨개서» 라는 이유로 올리지 마라. 이 자리가 재는 양(우편 1회분)과 한 틱은 자리수가 같아서,
+      틱만 한 허용치는 「연타 3회인데 골드는 1회분만」 이라는 본 단언을 통째로 무디게 만든다(395 등재문 ⚠). */
+const EPS = 1e-6;
 
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
@@ -371,7 +378,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       done: document.querySelector('.ml-r').classList.contains('done')
     }));
     after.mail[m0.id] === 1 ? ok('S.mail[m1] = 1 (수령 기록)') : fail('S.mail 이 안 바뀌었다');
-    near('골드 증가분', after.g - before.g, m0.g, 0);            /* 395 — ±drift → **0**(동결 구간) */
+    near('골드 증가분', after.g - before.g, m0.g, EPS);          /* 395 — ±drift → **IEEE754 잡음 폭**(동결 구간) */
     near('다이아 증가분', after.c - before.c, m0.c, 0);
     near('유물석 증가분', after.r - before.r, m0.r || 0, 0);
     after.saved[m0.id] === 1 ? ok('localStorage[KEY] 에 세이브 반영') : fail('세이브에 반영 안 됨');
@@ -391,7 +398,7 @@ async function fresh(browser, w = 1080, h = 2280) {
     await page.waitForTimeout(900);
     const dblPost = await page.evaluate(() => ({ g: S.gold, c: S.dia }));
     if (m1) {
-      near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, 0);   /* 395 — ±drift → **0** */
+      near('연타 3회 — 골드는 1회분만', dblPost.g - dblPre.g, m1.g, EPS); /* 395 — ±drift → **IEEE754 잡음 폭** */
       near('연타 3회 — 다이아는 1회분만', dblPost.c - dblPre.c, m1.c, 0);
     } else fail('연타 검증용 미수령 행이 없다');
 
@@ -489,7 +496,7 @@ async function fresh(browser, w = 1080, h = 2280) {
       stillOpen: document.getElementById('modal').classList.contains('ml69')
     }));
     leftBefore > 0 ? ok(`전체 수령 전 미수령 ${leftBefore}통`) : fail('미수령이 0이라 전체 수령을 검증 못 함');
-    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, 0);       /* 395 — ±drift → **0** */
+    near('전체 수령 골드', post2.g - pre2.g, sumRest.g, EPS);     /* 395 — ±drift → **IEEE754 잡음 폭** */
     near('전체 수령 다이아', post2.c - pre2.c, sumRest.c, 0);
     near('전체 수령 유물석', post2.r - pre2.r, sumRest.r, 0);
     post2.left === 0 ? ok('미수령 0통') : fail('아직 ' + post2.left + '통 남음');
@@ -572,6 +579,51 @@ async function fresh(browser, w = 1080, h = 2280) {
       });
       bad.length === 0 ? ok(`${w}×${h} 잘림 없음`) : fail(`${w}×${h}: ${bad.join(' / ')}`);
       if (s.errs.length) fail(`${w}×${h} 콘솔 에러 ${s.errs.length}`);
+      await s.ctx.close();
+    }
+
+    /* ---------- R. 되돌림 시험 (395) ----------------------------------------
+       [4] 의 골드 항 셋을 «±drift» 에서 «±0» 으로 좁혔다. 좁힌 자가 **정말 0 인지**,
+       그리고 동결이 «오염을 못 보게 눈을 가린 것» 이 아니라 «오염을 없앤 것» 인지를 여기서 못박는다.
+       방법 — 같은 표본을 다시 뜨되 **틱 하나를 일부러 창 안에 떨어뜨린다**(동결을 잠깐 풀고 강제 킬).
+       그러면 증가분이 `m.g + 4.08` 이 되어야 하고, 좁힌 자는 그것을 **빨갛게** 봐야 한다.
+       ⚠ 이 절이 없으면 «±0 으로 적어 놓고 실은 동결이 우편 보상까지 0 으로 만든» 무른 수리와
+          구별이 안 된다 — 그 경우 증가분은 0 이 되어 아래 [R-2] 가 빨개진다. */
+    console.log('[R] 되돌림 시험(395) — 창에 틱을 일부러 떨어뜨리면 좁힌 자가 빨개져야 한다');
+    {
+      const s = await fresh(browser);
+      await s.page.evaluate(() => openMail());
+      await s.page.waitForTimeout(350);
+      const r = await s.page.evaluate(() => new Promise((res) => {
+        const d = Object.getOwnPropertyDescriptor(stat, 'goldMul');
+        const freeze = () => Object.defineProperty(stat, 'goldMul', { get: () => 0, configurable: true });
+        const thaw = () => Object.defineProperty(stat, 'goldMul', d);
+        freeze();
+        const want = MAILS[0].g, g0 = S.gold;
+        document.querySelector('.ml-r [data-ml]').click();
+        setTimeout(() => {
+          /* 오염 주입 — 동결을 잠깐 풀고 «한 틱» 을 창 안에 떨어뜨린다 */
+          thaw();
+          let tick = 0;
+          if (Array.isArray(enemies) && enemies.length) { const a = S.gold; killEnemy(enemies[0]); tick = +(S.gold - a).toFixed(4); }
+          freeze();
+          setTimeout(() => { const got = +(S.gold - g0).toFixed(4); thaw(); res({ want, got, tick }); }, 700);
+        }, 300);
+      }));
+      const clean = Math.abs(r.got - r.want) <= EPS;
+      r.tick > 0
+        ? ok(`[R-1] 창 안에 틱을 하나 떨어뜨렸다 — +${r.tick}`)
+        : fail('[R-1] 틱을 못 떨어뜨렸다 — 이 절이 공허하다(적이 없거나 전투 수입이 죽었다)');
+      r.got > 0
+        ? ok(`[R-2] 우편 보상은 그대로 들어온다 — 증가분 ${r.got} (동결이 «보상까지 0» 으로 만든 게 아니다)`)
+        : fail(`[R-2] 증가분이 ${r.got} — 동결이 우편 보상까지 껐다(무른 수리)`);
+      !clean && Math.abs(r.got - r.want - r.tick) <= 0.001
+        ? ok(`[R-3] 좁힌 자가 그 틱을 **빨갛게** 본다 — ${r.got} ≠ ${r.want} (허용 ±${EPS} · 초과 ${+(r.got - r.want).toFixed(2)})`)
+        : fail(`[R-3] 틱을 떨어뜨렸는데 자가 초록이다 — got ${r.got} · want ${r.want} · tick ${r.tick} (허용치가 잡음 폭보다 넓다)`);
+      r.tick > 4
+        ? ok(`[R-4] 한 틱(${r.tick}) > 옛 허용치 바닥 ±4 — 옛 자가 «4회 중 1~3회» 빨갰던 이유 그 자체`)
+        : ok(`[R-4] 한 틱 ${r.tick} ≤ 4 — 이 표본에서는 옛 바닥값 안이다(스테이지·배수에 따라 달라진다)`);
+      if (s.errs.length) fail(`[R] 콘솔 에러 ${s.errs.length}`);
       await s.ctx.close();
     }
   } finally {
