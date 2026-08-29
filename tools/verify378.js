@@ -31,11 +31,17 @@ const PILL_FACE = '#4B3E2D';
 const RIM = '#705F4B';      /* 셸 안쪽 밝은 림 (352 ⓓ) */
 const SHELL_FACE = '#61523D';
 
-/* 378 이전 선언 — §R 되돌림 시험이 도로 주입한다 */
+/* 378 이전 선언 — §R 되돌림 시험이 도로 주입한다.
+   ⚑ 409 이관 (2026-08-29) — 검정은 이제 밴드가 아니라 `::after` 의 **등폭 링**이고, 끝 칸에서
+   그 면을 비우는 손잡이가 하나 더 생겼다(`--pill-mask` = 링이 붙는 기둥). 되돌림은 **두 손잡이를
+   같이** 되돌려야 «378 이전 그림»이다 — 하나만 되돌리면 «밴드는 왔는데 링은 없는» 적 없던 상태를
+   되살린 뒤 그 위에서 채점하게 된다. */
 const OLD_CSS = '.stabs.sp2>.stab.on:nth-of-type(1),.stabs.sp3>.stab.on:nth-of-type(1),'
-  + '.stab.on.stab-c1{--pill-l:inset 7px 0 0 #000,inset 14px 0 0 #634F37}'
+  + '.stab.on.stab-c1{--pill-l:inset 7px 0 0 #000,inset 14px 0 0 #634F37;'
+  + '--pill-mask:linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))}'
   + '.stabs.sp2>.stab.on:nth-of-type(2),.stabs.sp3>.stab.on:nth-of-type(3),'
-  + '.stab.on.stab-c4{--pill-r:inset -7px 0 0 #000,inset -14px 0 0 #634F37}';
+  + '.stab.on.stab-c4{--pill-r:inset -7px 0 0 #000,inset -14px 0 0 #634F37;'
+  + '--pill-mask:linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))}';
 
 /* 호스트 — verify352/probe378 과 같은 진입 경로. 끝 칸을 강제로 활성으로 만들어 잰다.
    ⚠ 23 훈련(#trSubs)은 renderUI() 가 매 틱 `.on` 을 상태에서 다시 그려 주입이 되돌려진다 —
@@ -178,6 +184,10 @@ async function measure(page, sel, i) {
       return {
         vars: /\.stab\.on\s*\{[^}]*--pill-l:[^}]*--pill-r:/.test(css.replace(/\n/g, ' ')),
         uses: /box-shadow:\s*var\(--pill-l\),\s*var\(--pill-r\)/.test(css),
+        /* 409 이관 — 검정이 밴드에서 링으로 옮겨 갔으므로 «면별 손잡이» 도 하나 더다.
+           이 항이 없으면 링을 통째로 지워도 [1] 이 초록이다(끝 칸 면은 원래 검정 0 이라 [2] 도 안 문다). */
+        mask: /--pill-mask:\s*linear-gradient\(90deg,\s*transparent 0 calc\(100% - 30px\)/.test(css)
+          && /--pill-mask:\s*linear-gradient\(90deg,\s*#000 0 30px,\s*transparent 30px\)/.test(css),
         endL: /--pill-l:\s*inset 7px 0px 0px #634F37|--pill-l:\s*inset 7px 0 0 #634F37/i.test(css),
         endR: /--pill-r:\s*inset -7px 0px 0px #634F37|--pill-r:\s*inset -7px 0 0 #634F37/i.test(css),
         raw: css.length,
@@ -187,6 +197,7 @@ async function measure(page, sel, i) {
     ok('`box-shadow` 가 그 변수 둘로만 조립된다', decl.uses);
     ok('끝 칸 좌 override — `--pill-l` 이 베벨 7 (검정 0)', decl.endL);
     ok('끝 칸 우 override — `--pill-r` 이 베벨 7 (검정 0)', decl.endR);
+    ok('끝 칸 override 가 **검정 링 기둥**도 뺀다 (409 이관 — 손잡이 둘을 같이 옮긴다)', decl.mask);
 
     /* ---- 2·3·4. 찍힌 픽셀 ---- */
     console.log('\n[2] 찍힌 픽셀 — 셸에 «닿는» 면: 검정 ' + SHELL_B + ' (셸 테두리뿐) → 베벨 ' + BEVEL);

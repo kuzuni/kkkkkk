@@ -43,9 +43,18 @@ const INK = '#F2BC8D';      /* 활성 라벨 색 */
 
 /* 감김 폭은 반경 30 의 호에서 나온다: 행 rel 에서 D 폭 = x1(rel+7) − x1(rel).
    rel 68 → 4.7 · rel 74 → 8.2 (probe384.py §ⓓ 와 같은 값). 여유 ±2 로 문다. */
+/* ⚑ 409 이관 (2026-08-29) — **검정이 «등폭 링» 이 되면서 이 창이 좁아졌다.**
+   384 당시 옆띠는 가로 평행이동이라 코너에서 법선 두께가 7·cosα 로 얇아졌고, 그만큼
+   어두운 띠가 바깥으로 더 나와 보였다(rel 74 에서 D 8~9px). 409 가 옆띠를 법선 7 로 되돌리자
+   그 7 이 D 의 **바깥 몫을 도로 가져갔다** — ref 도 같은 그림이다(ref rel 74 `K8 D8`,
+   우리 `K10 D5`: 둘의 «검정+D» 합은 16 ↔ 15 로 1px 안이다).
+   ⇒ 기대값을 실측(rel 68 → 3 · rel 74 → 5)에서 **1px 여유**로 다시 잡는다. 무르게 푼 게
+   아님은 세 겹이 못박는다: [3]·[4] 음성항(한복판·위 코너는 0) · [5] «아래로 갈수록 두껍다» ·
+   §R 되돌림(띠를 끄면 0). 그리고 **[2b] 가 새로 «검정+D 합»** 을 물어 링이 D 를 통째로
+   먹어 버리는 길을 막는다(합이 줄면 빨개진다). */
 const ROWS = [
-  { rel: 68, min: 3 },
-  { rel: 74, min: 6 },
+  { rel: 68, min: 2, sum: 8 },
+  { rel: 74, min: 4, sum: 12 },
 ];
 
 const HOSTS = [
@@ -140,12 +149,16 @@ const PILL = sel => {
   const on = bar.querySelector(':scope > .stab.on');
   if (!on) return null;
   const b = on.getBoundingClientRect();
-  const cs = getComputedStyle(on, '::after');
+  /* 409 — 가로 띠 의사요소는 ::before 로 내려갔다(칠 순서만 바뀌었다: 검정 등폭 링이
+     ::after 로 그 **위**에 온다). 묻는 것은 그대로 «어느 상자의 코너를 도는가» 다. */
+  const cs = getComputedStyle(on, '::before');
+  const ring = getComputedStyle(on, '::after');
   return {
     x: b.x, y: b.y, w: b.width, h: b.height,
     label: (on.querySelector('i') || {}).textContent || '',
     pe: cs.pointerEvents, shadow: cs.boxShadow, radius: cs.borderRadius,
     left: cs.left, right: cs.right,
+    ringSh: ring.boxShadow, ringMask: ring.maskImage || ring.webkitMaskImage || '',
   };
 };
 
@@ -199,7 +212,7 @@ async function readCorner(page, p, rel, side, n = 30) {
     const d0 = await page.evaluate(PILL, '#bSk .stabs');
     ok('활성 알약을 찾았다', !!d0, d0 ? d0.label + ' ' + Math.round(d0.w) + '×' + Math.round(d0.h) : '없음');
     ok('알약 높이 = ' + PILL_H, !!d0 && Math.abs(d0.h - PILL_H) <= 0.6, d0 ? d0.h.toFixed(2) : '—');
-    ok('`::after` 가 좌·우 7px 인셋 상자다 (검정 «안쪽» 윤곽)',
+    ok('`::before` 가 좌·우 7px 인셋 상자다 (검정 «안쪽» 윤곽)',
       !!d0 && d0.left === '7px' && d0.right === '7px', d0 ? d0.left + ' / ' + d0.right : '—');
     ok('그 상자의 반경이 알약과 같은 30px (평행이동은 반경을 안 바꾼다)',
       !!d0 && /^30px/.test(d0.radius), d0 ? d0.radius : '—');
@@ -207,6 +220,10 @@ async function readCorner(page, p, rel, side, n = 30) {
       !!d0 && /inset/.test(d0.shadow) && (d0.shadow.match(/inset/g) || []).length === 3,
       d0 ? d0.shadow.replace(/\s+/g, ' ').slice(0, 110) : '—');
     ok('`pointer-events:none` — 클릭은 그대로 칸이 받는다', !!d0 && d0.pe === 'none', d0 ? d0.pe : '—');
+    /* 409 — 이 띠가 «검정 밑» 에 있다는 전제가 이제 **칠 순서**로 성립한다(::before < ::after).
+       링이 사라지면 이 게이트의 기대값(아래 ROWS)도 같이 틀려지므로 여기서 한 번 묻는다. */
+    ok('그 위에 409 의 검정 등폭 링(`::after`)이 얹혀 있다',
+      !!d0 && /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(d0.ringSh), d0 ? d0.ringSh : '—');
 
     /* ---- 2·3·4·5. 찍힌 픽셀 ---- */
     console.log('\n[2] 코너 — 옆띠 다음에 어두운 띠 ' + DARK + ' 가 있다 (감김)');
@@ -228,6 +245,11 @@ async function readCorner(page, p, rel, side, n = 30) {
         for (let i = 0; i < ROWS.length; i++) {
           ok('[2] ' + tag + ' rel ' + ROWS[i].rel + ' — 어두운 띠 ≥ ' + ROWS[i].min + 'px',
             w[i].dark >= ROWS[i].min, 'D ' + w[i].dark + 'px : ' + w[i].txt);
+          /* [2b] 409 — «옆띠 + 어두운 띠» 합. 링이 D 를 밀어내 가져간 몫까지 세므로
+             둘 중 하나가 얇아지면(또는 링이 D 를 통째로 먹으면) 여기서 잡힌다. */
+          const sum = (w[i].band ? w[i].band.n : 0) + w[i].dark;
+          ok('[2b] ' + tag + ' rel ' + ROWS[i].rel + ' — 옆띠+어두운 띠 합 ≥ ' + ROWS[i].sum + 'px',
+            sum >= ROWS[i].sum, '합 ' + sum + 'px : ' + w[i].txt);
         }
         ok('[2] ' + tag + ' — 어두운 띠 **다음**이 베벨 ' + BEVEL + ' 이다 (면이 바로 안 온다)',
           !!w[0].next && (w[0].next.c === 'B' || w[0].next.c === 'D'),
@@ -245,7 +267,7 @@ async function readCorner(page, p, rel, side, n = 30) {
     ok('실제로 잰 면이 8 면 이상', samples >= 8, samples + '면');
 
     /* ---- R. 되돌림 시험 ---- */
-    console.log('\n[R] 되돌림 시험 — 의사요소의 그림자를 끄면 코너의 어두운 띠가 0px 로 돌아간다');
+    console.log('\n[R] 되돌림 시험 — 의사요소(::before)의 그림자를 끄면 코너의 어두운 띠가 0px 로 돌아간다');
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(800);
     await page.evaluate(SETTLE);
@@ -257,7 +279,8 @@ async function readCorner(page, p, rel, side, n = 30) {
 
     await page.evaluate(() => {
       const s = document.createElement('style'); s.id = 'v384off';
-      s.textContent = '.stab.on::after{box-shadow:none!important}';
+      /* 409 — 가로 띠는 `::before` 로 내려갔다. `::after` 를 끄면 이제 검정 링이 꺼진다. */
+      s.textContent = '.stab.on::before{box-shadow:none!important}';
       document.head.appendChild(s);
     });
     await page.waitForTimeout(200);

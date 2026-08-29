@@ -158,6 +158,11 @@ const SNAP = `(sel, host) => {
     cells: cells.map(R), cellTop: cells.map(c => getComputedStyle(c).top),
     onN: cells.filter(c => c.classList.contains('on')).length, onIdx,
     onRadius: onCs ? onCs.borderRadius : '', onShadow: onCs ? onCs.boxShadow : '',
+    /* 409 — 검정 옆띠는 ::after 의 등폭 링이고, 어느 면에 붙는지는 마스크 기둥이 정한다.
+       ⚠ 이 블록은 SNAP 템플릿 리터럴 안이라 **주석에도 백틱을 쓰면 안 된다**(서두 경고). */
+    onRing: onIdx >= 0 ? getComputedStyle(cells[onIdx], '::after').boxShadow : '',
+    onMask: onIdx >= 0 ? (getComputedStyle(cells[onIdx], '::after').maskImage
+      || getComputedStyle(cells[onIdx], '::after').webkitMaskImage || '') : '',
     labels: cells.map(c => (c.querySelector('i') || {}).textContent || ''),
     ink, seps, host: hostEl ? R(hostEl) : null,
     bdg: [...bar.querySelectorAll('.bdg')].map(b => ({ cell: cells.findIndex(c => c.contains(b)), r: R(b) })),
@@ -354,12 +359,26 @@ const SNAP = `(sel, host) => {
     const onC = g.onIdx >= 0 ? g.cells[g.onIdx] : null;
     const touchL = !!onC && Math.abs(onC.x - ccx) <= 0.6;
     const touchR = !!onC && Math.abs(onC.x + onC.w - (ccx + ccw)) <= 0.6;
+    /* 409 이관 (2026-08-29) — **검정이 밴드에서 «등폭 링» 으로 옮겨 갔다**(`::after` 에 스프레드
+       인셋 7px, 코너 기둥 30px 마스크). 그래서 이 항의 «검정 7» 은 부모 box-shadow 에 더 이상
+       없다 — 없다고 기대값만 지우면 «검정이 통째로 사라져도 초록» 이 되므로 378 때와 같은 규칙으로
+       **묻는 자리를 옮긴다**: 검정은 링에서, 베벨은 그대로 부모 밴드에서, 그리고 «그 면에 링이
+       붙어 있나» 는 마스크 기둥에서 묻는다(닿는 면은 기둥이 빠져 있어야 한다).
+       ⇒ 어느 하나를 지워도 빨개진다: 링 제거 → ringOK 빨강 · 마스크 예외 제거 → 닿는 면 빨강 ·
+         베벨 밴드 제거 → sideOK 빨강. 찍힌 픽셀 쪽은 `verify378` [2][3]·`verify409` 가 문다. */
     const sh = g.onShadow || '';
+    const ring = g.onRing || '';           /* ::after box-shadow */
+    const mask = g.onMask || '';           /* ::after mask-image */
     const has = re => new RegExp(re + ' 0px 0px 0px inset').test(sh);
     const BLK = 'rgb\\(0, 0, 0\\)', BEV = 'rgb\\(99, 79, 55\\)';
+    const ringOK = /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(ring);
+    /* 마스크 기둥 — 좌 기둥은 «rgb(0,0,0) 0px» 로 시작하고, 우 기둥은 «rgb(0,0,0) calc(100% - 30px)» 로 끝난다 */
+    const colL = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px/.test(mask);
+    const colR = /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(mask.trim());
     const sideOK = (t, sign) => t
-      ? (has(BEV + ' ' + sign + '7px') && !has(BLK + ' ' + sign + '7px'))
-      : (has(BLK + ' ' + sign + '7px') && has(BEV + ' ' + sign + '14px'));
+      ? (has(BEV + ' ' + sign + '7px') && !has(BLK + ' ' + sign + '7px')
+         && !(sign === '' ? colL : colR))
+      : (ringOK && (sign === '' ? colL : colR) && has(BEV + ' ' + sign + '14px'));
     ok('활성 알약 radius 30 · 좌 ' + (touchL ? '셸에 닿음 → 베벨 7 (검정 0)' : '검정 7 + 베벨 14')
       + ' · 우 ' + (touchR ? '셸에 닿음 → 베벨 7 (검정 0)' : '검정 7 + 베벨 14'),
       g.onRadius === '30px' && sideOK(touchL, '') && sideOK(touchR, '-'),
