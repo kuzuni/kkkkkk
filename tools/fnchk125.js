@@ -65,34 +65,63 @@ const ok = (b, act, effect, detail) => {
   ok(/gold/.test(mail.ic || '') && /dia/.test(mail.ic || '') && !mail.raw,
      '우편 수령 토스트', '아이콘 이미지 표시(태그 문자열 아님)', String(mail.ic));
 
-  /* 3. 유물조각 교환 — 다이아 → 유물조각, 완료 팝업에 두 아이콘 */
-  const ex = await run(() => {
-    S.dia = 1e9;
+  /* 3. 유물조각 교환 — 다이아는 **즉시** 나가고 유물조각은 **우편으로** 온다
+     ⚠ 405 이관(2026-08-29) — 옛 항목은 「다이아 감소·유물조각 증가」를 **한 물음에 묶어** 클릭 순간의
+       `S.relic` 을 봤고 −1000/+0 으로 빨갛게 굳어 있었다. 제품은 옳다 — **153**(주인 지시 2026-08-26
+       «상점 지급품은 우편으로»)이 그 사이에 지급 경로를 바꿨고, 자만 그 이전 세계에 남아 있었다.
+       333 처방대로 **자리를 비우지 않고** 살아 있는 계약으로 갈아 끼우되, 247-ⓓ 대로 **물음을 가른다**:
+       ⓐ 클릭 순간 = 다이아만 나가고 우편 한 통이 온다 · ⓑ 그 우편을 받으면 유물조각이 실제로 는다.
+       되묶으면 «어느 쪽이 죽었는지» 를 자가 말하지 못한다(153 이 되돌려져 즉시 지급이 돼도 초록이 된다). */
+  const ex = await run(async () => {
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    S.dia = 1e9; S.mailx = [];
+    /* 앞 절이 띄운 토스트(수명 1060ms)가 남아 있으면 완료 통보가 **드롭**된다(`fxToast` 는 4장부터) */
+    document.querySelectorAll('#fxl .fx-toast').forEach(n => n.remove());
     const d0 = S.dia, r0 = S.relic;
     openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
     const btn = document.querySelector('#shopList .bt.buy[data-ex]');
     if (!btn) return { err: '교환 버튼 없음' };
+    /* 기대 수량은 리터럴이 아니라 **런타임 계산**이다(185-①) — EXCHANGE 표가 바뀌면 자도 따라간다 */
+    const row = EXCHANGE.find(v => v.dia === +btn.dataset.ex);
     btn.click();
-    const ic = [...document.querySelectorAll('#modal img.cic')].map(i => i.dataset.curIc);
-    return { dd: S.dia - d0, dr: S.relic - r0, ic: ic.join(','), title: ($('mtitle') || {}).textContent };
+    const m = (S.mailx || [])[0];
+    const mid = { dd: S.dia - d0, dr: S.relic - r0, mailN: (S.mailx || []).length,
+                  mailR: m && m.r, want: row && row.rel };
+    const ic = [...document.querySelectorAll('#fxl .fx-toast img.cic')].map(i => i.dataset.curIc);
+    const r1 = S.relic;
+    openMail(); claimAllMail(); await sleep(150); closeModal();
+    return Object.assign(mid, { ic: ic.join(','), got: S.relic - r1 });
   });
-  ok(!ex.err && ex.dd < 0 && ex.dr > 0, '재화 탭 [유물조각 교환]', '다이아 감소·유물조각 증가',
-     (ex.dd || 0) + ' / +' + (ex.dr || 0));
+  ok(!ex.err && ex.dd < 0 && ex.dr === 0 && ex.mailN === 1 && ex.mailR === ex.want,
+     '재화 탭 [유물조각 교환]', '다이아 즉시 감소 · 유물조각은 우편으로(153)',
+     (ex.dd || 0) + ' / 즉시 +' + (ex.dr || 0) + ' / 우편 ' + ex.mailN + '통 r=' + ex.mailR);
+  ok(!ex.err && ex.got >= (ex.want || 1),
+     '교환 우편 [수령]', '유물조각이 실제로 늘어난다(흐름 완결)', '+' + (ex.got || 0));
   ok(/relic/.test(ex.ic || '') && /dia/.test(ex.ic || ''),
-     '교환 완료 팝업', '두 재화 아이콘이 이미지', String(ex.ic));
+     '교환 완료 통보', '두 재화 아이콘이 이미지', String(ex.ic));
 
-  /* 4. 부족 팝업 — 제목은 «아이콘 없는 한글» 이어야 하고(showModal 이 textContent 로 넣는다),
-        60 쥬시의 «어느 알약을 흔들지» 판정이 이모지 없이도 계속 선다 */
+  /* 4. 부족 안내 — 문구는 «태그가 글자로 새지 않은 한글» 이어야 하고,
+        60 쥬시의 «어느 알약을 흔들지» 판정이 이모지 없이도 계속 선다
+     ⚠ 405 이관(2026-08-29) — 옛 항목은 `$('mtitle')`(팝업 제목)을 읽었고 **"우편함"** 으로 빨갰다.
+       그 "우편함" 은 부족 안내가 아니라 **§2 가 연 우편함 팝업의 잔재**다 — `probe405` §3 이
+       «클릭으로 mtitle 이 한 글자도 안 바뀐다» + «팝업을 한 번도 안 연 페이지에서는 빈 값» 으로 못박았다.
+       부족 안내는 **149·206**(주인 지시 «안내는 팝업 말고 토스트로»)으로 토스트로 내려갔으므로
+       재는 자리를 옮긴다(185-④). 자리만 옮기면 «206 이 되돌려져 팝업이 돌아와도 초록» 이 되므로
+       **「팝업이 아니다」 를 같은 자리에서 동반 단언**한다(230-③). */
   const lack = await run(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     closeModal(); closeShopPage();
     await sleep(350);                                   /* 모달이 «닫힌» 뒤라야 여는 연출(jzOpen)이 다시 돈다 */
+    document.querySelectorAll('#fxl .fx-toast, #fxl .jz-badp').forEach(n => n.remove());
+    document.querySelectorAll('.jz-bad').forEach(n => n.classList.remove('jz-bad'));
     S.dia = 0;
     openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
     const btn = document.querySelector('#shopList .bt.buy[data-ex]');
     btn && btn.click();
     await sleep(90);
-    const t = ($('mtitle') || {}).textContent || '';
+    const tn = document.querySelector('#fxl .fx-toast');
+    const t = tn ? tn.textContent.trim() : '';
+    const modalOn = $('modal').classList.contains('on');
     /* 플래시는 «한 시점» 이 아니라 «구간» 이다 — 실측으로 클릭 +100ms 쯤 붙어 700ms 쯤 걷힌다.
        고정 90ms 한 장으로 찍으면 시작 모서리에 딱 걸려 머신 속도에 따라 뜨고 진다(작업 145).
        jzBadPill 의 수명(480ms) 안에서 «뜰 때까지» 기다렸다가 판정한다 — 뜨면 즉시 빠져나온다. */
@@ -101,11 +130,19 @@ const ok = (b, act, effect, detail) => {
       bad = !!document.querySelector('.cDia.jz-bad, #fxl .jz-badp');
       if (!bad) await sleep(20);
     }
-    return { title: t, leak: /img\s|cur-[a-z]+\.svg/.test(t), bad };
+    /* 기대 문구는 리터럴이 아니라 **런타임 계산**이다(185-①) — 값이 바뀌면 자도 따라간다 */
+    const row = btn && EXCHANGE.find(v => v.dia === +btn.dataset.ex);
+    const want = row ? fmt(row.dia - S.dia) + ' 더 필요합니다' : null;
+    return { title: t, want, leak: /img\s|cur-[a-z]+\.svg|[<>]/.test(t), modalOn,
+             icons: tn ? [...tn.querySelectorAll('img.cic')].map(i => i.dataset.curIc).join(',') : '', bad };
   });
-  ok(/부족/.test(lack.title) && !lack.leak,
-     '다이아 부족 상태에서 [교환]', '부족 팝업 제목이 깨끗한 한글', JSON.stringify(lack.title));
-  ok(lack.bad === true, '부족 팝업', '다이아 알약이 빨갛게 튄다(60 쥬시 유지)', String(lack.bad));
+  ok(/부족|더 필요/.test(lack.title) && lack.title === lack.want && !lack.leak,
+     '다이아 부족 상태에서 [교환]', '부족 안내 문구가 깨끗한 한글(모자란 만큼을 적는다)',
+     JSON.stringify(lack.title) + ' (기대 ' + JSON.stringify(lack.want) + ')');
+  ok(lack.modalOn === false && /dia/.test(lack.icons || ''),
+     '부족 안내', '팝업이 아니라 토스트다(149·206) · 재화는 이미지',
+     'modal.on=' + lack.modalOn + ' · 아이콘 [' + lack.icons + ']');
+  ok(lack.bad === true, '부족 안내', '다이아 알약이 빨갛게 튄다(60 쥬시 유지)', String(lack.bad));
 
   /* 5. 훈련 강화 — 골드가 실제로 빠지고 카드 비용행 아이콘이 이미지 */
   const tr = await run(async () => {
