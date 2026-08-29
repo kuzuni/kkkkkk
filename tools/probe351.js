@@ -275,7 +275,9 @@ const SCAN = function () {
     }
 
     /* D4 — 누를 것이 클리핑 뒤로 절반 넘게 사라졌다 */
-    const isBtn = el.matches('button, .tab, .ibtn, .ubtn, .cbtn, .ifbtn, .mbtn, [data-pop], [data-mn], [data-cur], [data-eqtab], [data-costab], [data-dsub], [data-trsub], [data-ptab], [data-ct], .stab, .shp-ct, .clk');
+    /* `[data-eqslot]`(08 장비 칸)은 3회차에 **빠져 있던 것을 비평가 3인이 먼저 찾아** 넣었다 —
+       자의 후보 목록이 곧 사각지대다. 새 «누를 것» 을 만들면 여기에도 같이 적어라. */
+    const isBtn = el.matches('button, .tab, .ibtn, .ubtn, .cbtn, .ifbtn, .mbtn, [data-pop], [data-mn], [data-cur], [data-eqtab], [data-eqslot], [data-costab], [data-dsub], [data-trsub], [data-ptab], [data-ct], .stab, .shp-ct, .clk');
     if (isBtn) {
       const visArea = Math.max(0, k.w) * Math.max(0, k.h);
       const rawArea = raw.width * raw.height;
