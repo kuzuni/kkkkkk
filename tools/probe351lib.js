@@ -42,13 +42,36 @@ async function settle(page) {
      **2280 43% · 1600 40% 로 두 프레임이 같다**(= 프레임 탓이 아니다). 유령 확률은 한 자리당 ~24%.
      ⇒ 재기 직전에 무한 반복 연출만 **위상 0 으로 세운다**. 위상이 두 판에서 같아지므로 차분이
      장식을 자동으로 소거한다. 실재하는 넘침은 위상과 무관하므로 그대로 잡힌다(§되돌림 시험). */
-  await page.evaluate(() => {
+  /* ⚑ 421(2026-08-29) — **«세운다» 는 말은 맞았는데 «0 에» 가 안 됐다.** 10회차가 적은 순서
+     `a.currentTime = 0; a.pause()` 는 실측에서 위상을 **50~83ms(3~5프레임) 자리에** 굳혔다
+     (`node tools/verify421.js` [3] 되돌림 시험이 그 값을 찍는다). 웹애니메이션 규약 탓이다:
+       · **도는** 애니메이션에 `currentTime` 을 넣으면 hold time 이 아니라 **start time 이 옮겨진다**
+         («지금 위상을 0 으로 본다» 는 뜻일 뿐, 시계는 계속 간다).
+       · `pause()` 는 그 자리에서 멈추는 게 아니라 **보류 작업(pending pause task)** 을 걸고,
+         hold time 은 그 작업이 **실제로 도는 프레임의 시각**으로 정해진다 ⇒ 세운 자리는
+         «0 + 보류 작업이 늦은 만큼» 이고, 그 지연은 실행마다 다르다.
+     결과가 421 이 등재한 플레이키다 — 122 재화 탭의 20초 회전 광선(`.cn-cd.dia.top>.pn>.ray`,
+     판 256 안의 260px 상자)이 위상 0 에서는 `ovfX 2`(D2 문턱 = clientW+2 이하 ⇒ 안 걸림)인데
+     0.9~1.5° 만 돌아도 회전 bbox 가 넓어져 **3~5px** 가 되고, 두 해상도가 서로 다른 위상에
+     굳으면 차분이 그것을 «1600 전용 결함» 으로 낸다(7회 중 3회).
+     ⇒ **순서를 뒤집는다**: 먼저 `pause()` 로 보류 작업을 걸고 그 다음 `currentTime = 0` 을 넣으면
+        규약이 «보류 작업을 취소하고 hold time 을 그 값으로 확정» 하도록 정해 놓았다 ⇒ 정확히 0.
+     ⚠ **문턱(2)도 기대값도 한 칸 안 건드렸다**(334 처방) — 실재하는 넘침은 위상과 무관하므로
+        `--selftest` 되돌림 시험이 그대로 2건을 낸다(`verify421` [4]). */
+  await page.evaluate(async () => {
     const app = document.getElementById('app'); if (!app) return;
-    for (const a of app.getAnimations({ subtree: true })) {
-      const t = a.effect && a.effect.getTiming();
-      if (!t || t.iterations !== Infinity) continue;
-      try { a.currentTime = 0; a.pause(); } catch (_) {}
-    }
+    const zero = () => {
+      for (const a of app.getAnimations({ subtree: true })) {
+        const t = a.effect && a.effect.getTiming();
+        if (!t || t.iterations !== Infinity) continue;
+        if (a.playState === 'paused' && Number(a.currentTime) === 0) continue;
+        try { a.pause(); a.currentTime = 0; } catch (_) {}
+      }
+    };
+    zero();
+    /* 한 프레임 뒤 한 번 더 — 그 사이에 새로 붙은(재렌더·지연 시작) 무한 연출도 같이 세운다. */
+    await new Promise((r) => requestAnimationFrame(() => r()));
+    zero();
   }).catch(() => {});
 }
 
