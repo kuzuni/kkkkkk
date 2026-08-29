@@ -1393,8 +1393,14 @@
      상한 = frameH − HUD(104) − 탭바(180). #panel 은 #app(=frameH) 기준 absolute 라
      100% = frameH 이고, bottom:180 을 이미 먹었으므로 calc(100% - 284px) 가 곧 그 상한이다.
      9:16(1920) 이상에서는 상한 1636 > 시트 1484 라 아무것도 달라지지 않는다(회귀 0). */
+  /* 351 4회차 — 상한의 «104» 는 HUD **상자**였고 사람이 보는 것은 **잉크**다.
+     좌상단 프로필 꼬리판의 잉크는 `.pedge` 가 **142** 까지 내려온다(`.plate` 135 · `.pcp` 글자줄 92..129).
+     1600 프레임에서 이 상한이 처음으로 «걸리면서» 시트 상단이 104 에 붙어 🔥 연속출석 줄과
+     초상 카드 아래를 덮었다(비평가 BS·BT·BU **3인 전원 1순위**).
+     ⇒ 284(=탭바 180 + 상자 104) → **322(=180 + 잉크 142)**. 2280 에서는 상한이 애초에 안 걸린다
+     (2280−322=1958 > 시트 1484) = **9:19 레이아웃 Δ0px**. */
   #panel{position:absolute;left:0;right:0;bottom:180px;z-index:9;
-    height:844px;min-height:0;max-height:calc(100% - 284px);
+    height:844px;min-height:0;max-height:calc(100% - 322px);
     background:#0d1020;display:flex;flex-direction:column}
   .body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 28px;display:none}
   .body.on{display:block}
@@ -3114,6 +3120,18 @@
   /* ✕ 글리프 ref 잉크 45×42 → 41×38 (지름의 0.354) */
   #modal.ml69 .ml-close i{font-style:normal;font-size:53px;line-height:53px;font-weight:900;position:relative;top:3px;
     color:#fff;-webkit-text-stroke:7px #000;paint-order:stroke fill;transform:scaleX(1.08)}
+  /* 351 4회차 — 짧은 프레임에서 이 ✕ 가 **하단 탭바 안으로 들어간다**(비평가 BS·BT·BU 3인 일치).
+     실측 1600: 상자 186..1414 · ✕ 1356..**1471** 인데 탭바 상단은 1420 ⇒ 51px(높이의 44%)이
+     탭바 위에 얹혀 «던전» 칸의 NEW 리본을 가리고 그 칸의 히트영역과 겹친다(2280 은 251px 여유).
+     뿌리는 «띠를 잘못 잡은 것» 이다 — `padding:126px 91px` 이 잡는 띠(126..F−126)는 실제로 쓸 수 있는
+     띠가 아니다. 위는 HUD 잉크 끝 **142**(.pedge) · 아래는 탭바 **180** 인데, 이 ✕ 는 상자 밖으로
+     **57px** 더 나오므로 아래로 **180+57 = 237** 을 비워야 한다.
+     ⚠ 패딩은 «가운데 정렬» 의 입력이라 2280 에서 건드리면 상자가 통째로 움직인다 ⇒ 2회차가 만든
+     `.shortf`(frameH < 1842)로 **짧은 프레임에서만** 갈랐다 — 2280·1920 은 선언이 안 붙어 Δ0px.
+     `− 120px` 항은 원래 이 ✕ 자리를 상자 쪽에서 빼 두던 것인데, 이제 패딩이 그 자리를 명시로
+     비우므로 `.shortf` 안에서는 이중 차감이 된다(상자가 1117 로 눌려 본문 1189 가 잘린다) → 뗀다. */
+  #app.shortf #modal.ml69{padding:142px 91px 237px}
+  #app.shortf #modal.ml69 .mbox{max-height:min(1303px,100%)}
   /* ── 70 출석 보상 팝업 — docs/measure/70-출석보상팝업.md (레퍼런스 70 PIL 실측) ──
      껍데기는 A5 공용 다이얼로그의 «층 구성»(검정 외곽 → 어두운 갈색 → 갈색 베벨 → 크림 본문)을 그대로 쓰되,
      레퍼런스 70 은 A5 표준(898 폭)보다 넓은 **940×1077** 이라 `.at70` 에서 폭·높이·테두리만 다시 적는다.
@@ -9011,7 +9029,10 @@
      ζ 가 «행» 기준으로 독립 측정한 네 행(y924:20 · y927:15 · y930:11 · y933:8)도 r=34 에 Δ≤1 로 맞는다
      (r=40 이면 24.8 · 17.6 · 13.9 · 10.9 = 우리 실측 23/17/14/11 그대로 = +2~3px). 두 데이터셋이 같은 답을 준다.
      .tr-wave(검정 상단 테두리 링)도 동심이라 같이 34 로 내린다. */
-  .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 104px);
+  /* 351 4회차 — 상한의 축을 «HUD 상자 104» 에서 «HUD 잉크 142»(`.pedge`)로 통일했다.
+     이 시트는 1245 라 1600 에서도 상한(1420−142=1278)에 안 닿아 **오늘은 Δ0px** 이지만,
+     104 를 남겨 두면 더 짧은 프레임에서 06·07 과 같은 결함이 여기서 되살아난다. */
+  .tr-sheet{left:0;right:0;bottom:0;height:1245px;max-height:calc(100% - 142px);
     background:#E6C695;border-radius:34px 34px 0 0;overflow:hidden}
   /* 24회차(비평가 η P1 — 이 회차 ② 최대 편차 +88%): ref 는 시트 바닥 검정이 y2161..2164 = **4px** 뿐인데
      우리는 2161..2167 = 7.5px 이었다. 내역을 보면 우리 4px(이 ::after) + 하단 탭바 상단 테두리 3px 이고,
@@ -9766,7 +9787,10 @@
      (`elementFromPoint(202,111)` → `.eqp-hd`. 2280 에서는 `.dim` 이라 = 안 덮는다).
      ⇒ 가드를 잉크 끝 **129** 로 올린다. 2280 은 상한이 애초에 안 걸려(1584 < 2176) **Δ0px** 이고,
      짧은 프레임에서만 시트가 25px 내려온다. `.tr-sheet`(1245)는 상한 자체에 안 닿아 그대로 둔다. */
-  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;max-height:calc(100% - 129px);
+  /* 351 4회차 — 2회차가 이 상한을 104(HUD 상자) → 129(`.pcp` 글자줄 하변)로 올렸는데 **13px 모자랐다**.
+     꼬리판의 실제 잉크 끝은 `.pedge` 의 **142** 다 — 129 로는 `elementFromPoint(202,138)` 이
+     1600 에서 `.eqp-hd` 를 돌려준다(2280 은 `.dim`). 같은 자를 세 시트에 같은 값으로 맞춘다. */
+  .eqp{position:absolute;left:0;right:0;bottom:0;height:1584px;max-height:calc(100% - 142px);
     background:#000;border-radius:38px 38px 0 0;overflow:hidden}
   .eqp>*,.eqp .shsc-in>*{position:absolute}
   /* 헤더는 본문 뷰포트 «위»에 얹힌다 — 스크롤된 카드가 헤더를 덮지 않게 (DOM 순서상 뒤라 z 필요) */
