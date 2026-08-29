@@ -106,18 +106,56 @@ const measure = () => {
     sheetH: +sb.height.toFixed(1),
     vp: scL.h, slack: sc.scrollHeight - sc.clientHeight,
     card: q('.eqc'), ribbon: q('.eqrb'), pill: q('.eqst.a'), sw: q('.eqic.sw'), hp: q('.eqic.hp'),
-    canvas: q('.eqil-cv'), gnd: (() => { const g = sheet.querySelector('.eqc .gnd'), c = sheet.querySelector('.eqc');
+    canvas: q('.eqil-cv'),
+    /* 스크린샷 클립에 쓸 화면 좌표 — 잉크 상변은 «찍힌 픽셀» 로 따로 잰다(아래 inkTop) */
+    canvasBox: (() => { const cv = sheet.querySelector('.eqil-cv'); if (!cv) return null;
+      const b = cv.getBoundingClientRect();
+      return { x: b.x, y: b.y, w: b.width, h: b.height, sheetTop: sb.top }; })(),
+    gnd: (() => { const g = sheet.querySelector('.eqc .gnd'), c = sheet.querySelector('.eqc');
       if (!g || !c) return null; return +(g.getBoundingClientRect().top - c.getBoundingClientRect().top).toFixed(1); })(),
     slots, badges,
     vis: named.map(([n, e]) => ({ n, p: vis(e) })),
   };
 };
 
+/* 캐릭터 «잉크» 상변을 **찍힌 픽셀**로 잰다(341·350 의 방식 — 캔버스는 file:// 아틀라스로 오염돼
+   `getImageData` 가 던진다. 스크린샷을 data URL 로 페이지에 되돌려 읽으면 오염되지 않는다).
+   ⚠ 리본은 캔버스 상자와 가로로 겹치므로 **재기 전에 숨긴다** — 안 숨기면 리본 자신이
+   «잉크 상변» 으로 잡혀 검사가 늘 통과한다(헛초록). 배경은 하늘 #F9E9C8 · 무늬 #F3DCBA 두 색뿐이다. */
+async function inkTop(page, box) {
+  if (!box) return null;
+  await page.addStyleTag({ content: '.eqrb{visibility:hidden !important}' });
+  await page.waitForTimeout(60);
+  const clip = { x: Math.max(0, Math.floor(box.x)), y: Math.max(0, Math.floor(box.y)),
+    width: Math.ceil(box.w), height: Math.ceil(box.h) };
+  const buf = await page.screenshot({ clip });
+  const y = await page.evaluate(async b64 => {
+    const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data;
+    const bg = [[249, 233, 200], [243, 220, 186]];
+    const isBg = (r, gg, b) => bg.some(p => Math.abs(r - p[0]) <= 8 && Math.abs(gg - p[1]) <= 8 && Math.abs(b - p[2]) <= 8);
+    for (let yy = 0; yy < c.height; yy++) {
+      let n = 0;
+      for (let xx = 0; xx < c.width; xx++) {
+        const i = (yy * c.width + xx) * 4;
+        if (d[i + 3] > 8 && !isBg(d[i], d[i + 1], d[i + 2])) n++;
+      }
+      if (n >= 3) return yy;      /* 3px 이상이어야 «잉크» — 안티에일리어싱 1~2px 은 무시 */
+    }
+    return -1;
+  }, buf.toString('base64'));
+  await page.evaluate(() => { const st = [...document.querySelectorAll('style')].pop(); if (st) st.remove(); });
+  return y < 0 ? null : +(box.y - box.sheetTop + y).toFixed(1);
+}
+
 (async () => {
   const browser = await launch(chromium);
   const grab = async (w, h, revert) => {
     const { ctx, page, errs } = await open(browser, w, h, revert);
     const m = await page.evaluate(measure);
+    m.inkTop = await inkTop(page, m.canvasBox);
     await ctx.close();
     return { m, errs };
   };
@@ -171,6 +209,10 @@ const measure = () => {
     ck(`${nm} 블록 위 여백 = 0.09502·C`, near(m.slots[0].t - m.card.t, 0.09502 * C, 1.5), `${(m.slots[0].t - m.card.t).toFixed(1)} vs ${(0.09502 * C).toFixed(1)}`);
     ck(`${nm} 블록 아래 여백 = 0.10436·C`, near(m.card.b - m.slots[2].b, 0.10436 * C, 1.5), `${(m.card.b - m.slots[2].b).toFixed(1)} vs ${(0.10436 * C).toFixed(1)}`);
     ck(`${nm} 지면 경계 = 카드의 68.536%`, near(m.gnd, 0.68536 * C, 1.5), `${m.gnd} vs ${(0.68536 * C).toFixed(1)}`);
+    ck(`${nm} 캐릭터 잉크가 이름 리본을 안 밟는다(픽셀로 잰 잉크 상변 > 리본 하변)`,
+      m.inkTop != null && m.inkTop > m.ribbon.b, `잉크 상변 ${m.inkTop} vs 리본 하변 ${m.ribbon.b}`);
+    ck(`${nm} 캐릭터 상자 높이 831 **고정**(정수 배율 13 = floor(831/63) 유지)`, near(m.canvas.b - m.canvas.t, 831, 1),
+      `${(m.canvas.b - m.canvas.t).toFixed(1)}`);
     ck(`${nm} 뱃지 = 슬롯 − 19`, m.badges.every((b, i) => near(b.t, m.slots[i].t - 19, 1)), m.badges.map((b, i) => (b.t - m.slots[i].t).toFixed(1)).join('/'));
     /* 351 이 두 번 올린 가드(142)·24 의 탭바(180)를 안 건드렸다는 증거 */
     ck(`${nm} 시트 높이 = min(1584, frameH − 322)`, near(m.sheetH, Math.min(1584, m.frameH - 322), 1),
