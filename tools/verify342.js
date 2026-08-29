@@ -38,7 +38,9 @@ const OLD = `
   .dnc .pill>i{position:absolute!important;left:58px!important;top:8px!important;
     height:30px!important;line-height:30px!important;font-size:30px!important}
   .dnc .lk>u{top:211px!important;height:45px!important;line-height:45px!important;
-    font-size:45px!important;word-spacing:normal!important}`;
+    font-size:45px!important;word-spacing:normal!important}
+  .dnc .lb{height:33px!important;line-height:33px!important;font-size:26px!important}
+  .dnc .nm{word-spacing:3px!important}`;
 
 async function measure(p, injectOld) {
   await p.evaluate(() => { document.querySelector('#tabbar [data-t="adv"]').click(); });
@@ -72,6 +74,32 @@ async function measure(p, injectOld) {
       }
       return bx1 < 0 ? null : { x: bx0, y: by0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 };
     };
+    /* 어절 공백 — 던전명 노란 잉크를 열 프로파일로 훑어 «8px 이상 끊긴 자리» 를 센다.
+       342 2회차(비평가 AS ③-2): ref 24~28 ↔ 수리 전 14~16. */
+    const wordGap = (el) => {
+      if (!el) return null;
+      const r0 = el.getBoundingClientRect();
+      const y0 = Math.floor(r0.top) - 8, y1 = Math.ceil(r0.bottom) + 8;
+      const cols = [];
+      for (let x = Math.floor(r0.left) - 8; x < Math.ceil(r0.right) + 8; x++) {
+        let n = 0;
+        for (let y = y0; y < y1; y++) {
+          const i = (y * cv.width + x) * 4;
+          if (D[i] >= 190 && D[i + 1] >= 190 && D[i + 1] - D[i + 2] >= 90 && Math.abs(D[i] - D[i + 1]) <= 25) n++;
+        }
+        cols.push(n >= 2);
+      }
+      const runs = []; let s2 = null;
+      cols.forEach((v, i) => { if (v && s2 === null) s2 = i; if (!v && s2 !== null) { runs.push([s2, i - 1]); s2 = null; } });
+      if (s2 !== null) runs.push([s2, cols.length - 1]);
+      const big = runs.filter((r) => r[1] - r[0] >= 8);
+      if (big.length < 2) return null;
+      const m = [big[0].slice()];
+      for (const r of big.slice(1)) {
+        if (r[0] - m[m.length - 1][1] - 1 < 8) m[m.length - 1][1] = r[1]; else m.push(r.slice());
+      }
+      return m.length < 2 ? null : m[1][0] - m[0][1] - 1;
+    };
     const out = [];
     document.querySelectorAll('#dunList .dnc').forEach((c, i) => {
       const cr = c.getBoundingClientRect();
@@ -83,9 +111,14 @@ async function measure(p, injectOld) {
       const nm = c.querySelector('.nm'), pl = c.querySelector('.pill'),
         pi = pl && pl.querySelector('i'), lu = c.querySelector('.lk>u');
       out.push({ n: i + 1, locked: c.classList.contains('lkd'),
-        nm: rel(nm), nmInk: relI(inkBox(nm, 8, 26)),
+        nm: rel(nm), nmInk: relI(inkBox(nm, 8, 26)), nmGap: wordGap(nm),
         pill: rel(pl), pillInk: relI(inkBox(pi, 6, 30)),
-        lkuInk: relI(inkBox(lu, 6, 20)) });
+        lkuInk: relI(inkBox(lu, 6, 20)),
+        /* ⚠ 라벨 창은 **박스 안** 으로 자른다(pad 0) — 342 2회차에 박스가 33 → 38 로 커지며
+           pad 6 짜리 창이 아래 알약의 «흰 숫자» 를 물어 잉크 높이가 24 대신 39 로 읽혔다. */
+        lbA: relI(inkBox(c.querySelector('.lb.a'), 0, 22)),
+        lbB: relI(inkBox(c.querySelector('.lb.b'), 0, 22)),
+        spLv: rel(c.querySelector('.sp.lv')) });
     });
     return out;
   }, shot);
@@ -107,7 +140,10 @@ async function measure(p, injectOld) {
   for (const c of un) {
     near(`카드${c.n} 던전명 잉크 상변`, c.nmInk && +c.nmInk.y, R.nmInkTop, 2);
     near(`카드${c.n} 던전명 잉크 높이`, c.nmInk && c.nmInk.h, R.nmInkH, 2.5);
-    ok(c.nm && Math.abs(c.nm.x - 39) <= 1, `카드${c.n} 던전명 박스 좌변 ${c.nm && c.nm.x} = 39 (불변)`);
+    /* 좌변은 «박스» 가 아니라 **잉크**로 묻는다 — 342 가 fs 를 올리자 잉크 오프셋이 커져
+       박스를 39 → 40 으로 1px 밀어야 잉크가 ref 자리(카드+42, §3-3)에 앉았다. */
+    near(`카드${c.n} 던전명 잉크 좌변`, c.nmInk && +c.nmInk.x, 42, 2);
+    near(`카드${c.n} 던전명 어절 공백`, c.nmGap, 25, 5);   /* ref 24 / 26 */
   }
 
   console.log('\n[§2 ⓐ-2 타이틀 하변 ↔ 알약 상변] (ref 26~27 · 수리 전 34)');
@@ -135,7 +171,20 @@ async function measure(p, injectOld) {
     near(`카드${c.n} 문구 가로 중심`, +(+c.lkuInk.x + c.lkuInk.w / 2).toFixed(1), R.lkCx, 5);
   }
 
-  console.log('\n[§5 콘솔]');
+  /* 2회차 — 비평가 AR 이 찾은 «같은 병의 세 번째 자리». 측정표 03 §3-5-1:
+     «레벨» 잉크 카드+136 / +248 · h24 · «남은 횟수» 카드+318 / +247 · h26 · 라벨 하변↔알약 상변 5 */
+  console.log('\n[§5 하단 «레벨»·«남은 횟수» 라벨] (ref +136/+248 h24 · +318/+247 h26 · 알약까지 5)');
+  for (const c of un) {
+    near(`카드${c.n} «레벨» 잉크 좌변`, +c.lbA.x, 136, 2);
+    near(`카드${c.n} «레벨» 잉크 상변`, +c.lbA.y, 248, 2);
+    near(`카드${c.n} «레벨» 잉크 높이`, c.lbA.h, 24, 2);
+    near(`카드${c.n} «남은 횟수» 잉크 좌변`, +c.lbB.x, 318, 2);
+    near(`카드${c.n} «남은 횟수» 잉크 상변`, +c.lbB.y, 247, 2);
+    near(`카드${c.n} «남은 횟수» 잉크 높이`, c.lbB.h, 26, 2);
+    near(`카드${c.n} 라벨 하변 → 알약 상변`, +(c.spLv.y - c.lbA.y - c.lbA.h).toFixed(1), 5, 2);
+  }
+
+  console.log('\n[§6 콘솔]');
   ok(errs.length === 0, `콘솔 에러 0건 (${errs.length})`);
 
   /* ── §R 되돌림 시험 ────────────────────────────────────────────────── */
@@ -157,6 +206,12 @@ async function measure(p, injectOld) {
     `R-d 옛 CSS 에서 «감싼다» 항이 빨갛다 — 폭 ${[...new Set(o.map((c) => Math.round(c.pill.w)))].join(',')} (고정)`);
   ok(olk.some((c) => Math.abs(c.lkuInk.y - R.lkTop) > 2 || Math.abs(c.lkuInk.h - R.lkH) > 2.5),
     `R-e 옛 CSS 에서 §4 가 빨갛다 — 상변/높이 ${olk.map((c) => c.lkuInk.y + '/' + c.lkuInk.h).join(' · ')} ≠ 223/41`);
+  ok(ou.some((c) => Math.abs(c.lbA.h - 24) > 2 || Math.abs(c.lbB.h - 26) > 2),
+    `R-f 옛 CSS 에서 §5 가 빨갛다 — 라벨 잉크 높이 ${ou.map((c) => c.lbA.h + '/' + c.lbB.h).join(' · ')} ≠ 24/26`);
+  ok(ou.some((c) => Math.abs((c.spLv.y - c.lbA.y - c.lbA.h) - 5) > 2),
+    `R-g 옛 CSS 에서 라벨↔알약 간격이 빨갛다 — ${ou.map((c) => (c.spLv.y - c.lbA.y - c.lbA.h).toFixed(1)).join('/')} ≠ 5`);
+  ok(ou.some((c) => c.nmGap !== null && Math.abs(c.nmGap - 25) > 5),
+    `R-h 옛 CSS 에서 어절 공백이 빨갛다 — ${ou.map((c) => c.nmGap).join('/')} ≠ 24~26`);
 
   console.log('\nVERIFY342 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   await b.close();

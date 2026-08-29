@@ -4656,8 +4656,14 @@
      그 다음 자리를 잡는다(top 40 → 44 · 잉크 상변 평균 44 = ref). 그러면 잉크 하변이
      94.3 으로 내려와 알약 상변(121)과의 간격이 **26.7 = ref 26~27** 로 같이 닫힌다.
      ⚠ 스트로크는 `1em` 비례라 fs 를 올리면 바깥 4.48 → 4.8 로 따라온다(ref 실측 4~5). */
-  .dnc .nm{left:39px;top:44px;height:60px;line-height:60px;font-size:60px;font-weight:900;
-    letter-spacing:-5px;word-spacing:3px;color:#FDFF84;
+  /* left 39 → 40: fs 를 올리자 잉크 오프셋이 +2 로 커져 잉크 좌변이 카드+41 이 됐다
+     (측정표 §3-3 «x 글리프 좌단 = 카드+42»). 박스를 1px 밀어 잉크를 ref 자리에 놓는다. */
+  .dnc .nm{left:40px;top:44px;height:60px;line-height:60px;font-size:60px;font-weight:900;
+    /* 342 2회차 — 어절 공백 3 → 15 (비평가 AS ③-2). 실측: ref «골드 던전» 26 · «보석 던전» 28
+       ↔ 우리 «황금 동굴» 14 · «수정 광산» 16 = **−45%**. 양쪽 다 «2글자+2글자» 라 글자 수 탓이 아니다.
+       `letter-spacing` 이 아니라 `word-spacing` 으로 벌린다 — 자간을 건드리면 글자 사이가 같이
+       벌어져 advance 가 ref 를 넘는다(잠금 문구 §4 와 같은 처방). */
+    letter-spacing:-5px;word-spacing:15px;color:#FDFF84;
     /* 126 10회차 — 측정표 03 던전 이름: ref 외곽선 바깥 4~5px(x86~90 검정 -> 91부터 노랑).
        fs 56 에서 필요한 스트로크는 8~10px = r .143~.179 → 본문 토큰(.16 = 8.96 · 바깥 4.48)이
        그 한가운데다. 작은라벨(.13 = 7.28 · 바깥 3.64)은 ref 하한보다 얇다. */
@@ -4688,7 +4694,15 @@
     font-weight:800;letter-spacing:-2.5px;white-space:nowrap;color:var(--pt)}
 
   /* 하단 라벨 — 레벨 rel x+136 y+248 / 남은 횟수 rel x+318 y+247, 잉크 24~26 */
-  .dnc .lb{top:243px;height:33px;line-height:33px;font-size:26px;font-weight:800;
+  /* 342 2회차(2026-08-29) — 비평가 AR 이 **같은 병의 세 번째 자리**를 찾아냈다: 잉크가
+     «레벨» 21(ref **24**) · «남은 횟수» 22(ref **26**) 로 −12~15% 다. 같은 행의 «값» 텍스트
+     (알약 안 숫자 h31)는 ref 와 Δ0 이라 라벨 전용 크기 문제다.
+     처방도 §1·§4 와 같다 — 높이를 먼저 세운다: fs 26 → 30(잉크 21 → 24.2 · 22 → 25.4 = ref).
+     `height`·`line-height` 도 **같은 배율**(33 → 38 ≈ 33×30/26)로 올려야 라인박스 안 잉크
+     오프셋이 보존돼 상변이 안 움직인다(잉크 상변 카드+247.6 ≈ ref +248, top 은 안 건드린다).
+     ⚑ 라벨↔알약 간격이 5 → 9 로 벌어져 있던 것도 여백 상수가 아니라 **이 잉크 높이**가
+     원인이었다(AR ③-2) — 높이를 세우면 자동으로 ref 5 로 돌아온다. 여백은 손대지 않았다. */
+  .dnc .lb{top:243px;height:38px;line-height:38px;font-size:30px;font-weight:800;
     letter-spacing:-2.5px;word-spacing:0;color:#fff;white-space:nowrap;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .dnc .lb.a{left:134px}
