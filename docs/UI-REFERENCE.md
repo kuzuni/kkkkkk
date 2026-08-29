@@ -2901,7 +2901,18 @@ BLESS_EFFLV = 0.10   BLESS_MAXLV = 51   blessLv() = clamp(S.bless.lv, 1, 51)
 - [x] **기능** — **78 로 오디오가 들어왔다**: BGM·SFX 토글·볼륨은 `auApply()` 로 즉시 반영(78 절 참조). 푸시/야간만
       «저장되는 설정» 까지. 화면 흔들림은 67 `cam.shake` 단일 게이트. 오디오 게이트 `sndOn()` 은 재생 직전마다 읽는다.
       쿠폰(코드 3종 · 재사용 차단 · **새로고침을 견디는 이력**) · 개인정보 처리 방침 · 고객 지원 · 계정 삭제 전부 동작. 52 메뉴 «설정» placeholder 제거
-- [x] 게이트 `node tools/verify55.js` → **VERIFY55 63/63 PASS** · `node tools/smoke.js` → **SMOKE PASS**(화면비 6종) · 기록 `docs/review/55-설정팝업.md`
+- [x] **짧은 프레임(9:13.3)에서 띠 안에 들어앉는다 — 작업 400.** 1600 에서 쓸 수 있는 띠는
+      **1278**(HUD 판때기 `.pedge` 하변 **142** ~ 탭바 상변 **1420**)인데 상자가 **1347** 이라
+      **69px 이 구조적으로 모자란다**(수리 전: 탭바 42px · HUD 27px 침범). `#app.shortf #cfw{padding:142px 0 180px}`
+      로 띠를 주고(390 이 공용 `#modal` 에 못박은 것과 **같은 상수**), 눌리는 69px 은 `--sq`(= max(0, 1669 − frameH),
+      상한 69) **지분**으로 **흰공간 16자리가 나눠 받는다** — 헤더 91→75 · 볼륨 여백 −13 · 리스트 509→500 ·
+      계정 패널 198→187 · 블록 사이 여백 5곳. **터치 표적·글자 잉크·아이콘은 0% 변화**이고
+      **2280·1920 은 원소별 Δ0px**(`.shortf` 가 안 붙고 `--sq` 가 0 이라 calc 항이 사라진다).
+      ⚠ 본문 아래 9자리는 `top` 이 아니라 **`bottom` 앵커**다 — 옛 `top`+`height` 를 되살리면 과잉 지정이라
+      `bottom` 이 조용히 무시된다. 측정표 55 정오표 · `docs/review/400-55설정팝업짧은프레임띠.md`
+- [x] 게이트 `node tools/verify55.js` → **VERIFY55 66/66 PASS** · `node tools/verify400.js` → **VERIFY400 156/156 PASS**
+      · `node tools/probe351.js --only menu:conf` → **D7 0건** · `node tools/smoke.js` → **SMOKE PASS**(화면비 6종)
+      · 기록 `docs/review/55-설정팝업.md` · `docs/review/400-55설정팝업짧은프레임띠.md`
 
 ## 56. 절전 모드
 
