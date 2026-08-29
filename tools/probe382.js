@@ -29,7 +29,7 @@ const CLIP = { x: 0, y: 0, width: 260, height: 1200 };
 const BAND = 5;                                    /* verify360 [3] 과 같은 허용폭 */
 const ROSTER = ['attend', 'roul', 'quest', 'promo', 'coll', 'bless'];
 const REF_ROWS = ['roul', 'quest', 'promo', 'coll'];   /* 분모 — 출석·축복은 뺀다 */
-const SF0 = 0.896;                                 /* 현행 attend --sf (index.html ~13575) */
+const SF0 = 0.896;   /* ★ **수리 전** attend --sf — 382 가 .920 으로 올렸다. 재현은 이 값 위에서 한다(boot 주석) */
 
 const arg = (k, d) => { const m = process.argv.find(a => a.startsWith(`--${k}=`));
   return m ? +m.split('=')[1] : d; };
@@ -120,6 +120,13 @@ async function boot(ctx, quiet) {
      측정 대상을 바꾸지 않는다(`.si` 는 z 3, 캔버스는 그 아래다). */
   if (quiet) await p.addStyleTag({ content:
     `#view{visibility:hidden!important}#stagearea{background:${quiet}!important}` });
+  /* ⚑ **재현은 «수리 전 값» 위에서 해야 영원히 재현된다.** 382 가 `--sf` 를 .920 으로 올린 뒤
+     이 도구를 현행 트리에서 그대로 돌리면 ⓐ·ⓔ 가 «밴드를 넘는 경로가 없다» 로 빨개진다 —
+     결함이 고쳐졌으니 당연한 것이고, 그러면 **재현 도구가 자기 결론을 잃는다**.
+     ⇒ [1]·[4] 는 attend 를 항상 수리 전 값(SF0 = .896)으로 되돌려 놓고 잰다(§R 사본과 같은 규율).
+     [3] 스윕만 이 값을 자기가 갈아 끼우며 돈다. */
+  await p.evaluate(v => { document.querySelector('#sideL .ibtn[data-pop="attend"]')
+    .style.setProperty('--sf', v); }, String(SF0));
   await p.waitForTimeout(250);
   return { p, errs };
 }
@@ -134,6 +141,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); const h = s.length >>
 
   /* ── ① 재현 — 무엇이 흔들리는가 (attend 인가, 분모인가) ────────────────────── */
   console.log(`[1] 재현 — 페이지 ${PAGES}개 × 페이지당 ${N}회, 6칸 잉크를 그대로 다시 잰다`);
+  console.log(`    (attend 는 항상 **수리 전 값** --sf ${SF0} 으로 되돌려 놓고 잰다 — 위 boot 주석)`);
   const samples = [];
   let bootErrs = 0;
   for (let pg = 0; pg < PAGES; pg++) {
@@ -227,7 +235,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); const h = s.length >>
     .style.setProperty('--sf', v); }, String(SF0));
   const best = sweep.reduce((a, x) => (x.margin > a.margin ? x : a));
   const cur = sweep.find(x => Math.abs(x.sf - SF0) < 1e-6);
-  console.log(`\n    현행 --sf ${SF0}  ⇒ 여유 ${cur.margin.toFixed(2)}pp`);
+  console.log(`\n    수리 전 --sf ${SF0}  ⇒ 여유 ${cur.margin.toFixed(2)}pp`);
   console.log(`    최선 --sf ${best.sf.toFixed(4)} ⇒ 여유 ${best.margin.toFixed(2)}pp` +
               `  (잉크 ${best.w}×${best.h} · Δ폭 ${best.dw.toFixed(2)}% · Δ높이 ${best.dh.toFixed(2)}%)`);
 
@@ -291,7 +299,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); const h = s.length >>
   ok(spread(qdws) === 0,
      'ⓚ 정착 후 Δ폭은 전 표본 한 값 — 플레이키가 사라진다',
      `${Math.min(...qdws).toFixed(2)}~${Math.max(...qdws).toFixed(2)}%`);
-  console.log(`    ⇒ 정착 후 현행 --sf ${SF0} 의 Δ폭 = ${med(qdws).toFixed(2)}%` +
+  console.log(`    ⇒ 정착 후 «수리 전» --sf ${SF0} 의 Δ폭 = ${med(qdws).toFixed(2)}%` +
               `  (여유 ${(BAND - Math.abs(med(qdws))).toFixed(2)}pp)`);
 
   console.log(`\nPROBE382 ${pass}/${pass + fail} ${fail ? 'FAIL' : 'PASS'}`);
