@@ -12,13 +12,30 @@
  *
  *   [A] 소스   — 도구가 있고 문법이 성하며, 못 보는 것(shallow 경계)을 문서에 적어 뒀다.
  *   [B] 현재   — 지금 HEAD·작업 트리는 초록이고 셈이 맞는다(조용히 건너뛴 ID 0).
- *   [R] 되돌림 — **실제 사고 커밋 `5fe9d37`** 에 자를 대면 정확히 2건(368·369)이 «정확 되돌림» 으로 빨갛다.
- *                그 앞뒤(사고 직전 `16d96a4` · 복원 뒤 HEAD)는 초록이다.
+ *   [R] 되돌림 — 사고를 **합성으로 재현**한다: 이력에서 «직전 판본이 창 안에 있는» done 행을 골라
+ *                그 행을 **직전 판본으로 바이트까지 되돌린** 사본을 만들어 자에 물린다.
+ *                고른 행이 정확히 그만큼 «정확 되돌림» 으로 빨개져야 한다.
+ *   [H] 실물   — **실제 사고 커밋 `5fe9d37`** 에 자를 대는 보강 절. 깊은 클론에서만 돈다.
  *   [C] 감도   — 합성 사본으로 세 갈래를 각각 확인한다(빨강 2 · 초록 1).
  *                ⚠ **C3(정상 편집은 초록)** 이 없으면 이 자는 «행을 건드리면 빨개지는 자» 가 되어
  *                뒤 세션이 정오표를 못 붙인다 — 헛빨강은 헛초록만큼 나쁘다.
  *   [D] 문서   — 규칙 8(PROGRESS)·지시서 [4] 가 이 도구를 부르라고 적어 뒀다.
  *                자가 있어도 아무도 안 돌리면 없는 것과 같다.
+ *
+ * ── 왜 §R 을 이력에서 꺼내지 않고 합성하는가 (작업 431) ────────────────────
+ * 첫 판의 §R 은 사고 커밋 `5fe9d37`·`16d96a4` **두 SHA 를 상수로 박았다**. 루틴 컨테이너의
+ * 클론은 **shallow** 라(431 실측: 창 55커밋) 그 객체가 없고, `--rev` 를 대는 순간 본체가
+ * **종료 코드 2**(도구 오류)를 돌려준다 ⇒ R1·R2·R3 이 통째로 빨갛다(19/22).
+ * ⚠ 더 나쁜 것은 **R4·R5 가 그 상태에서 «초록» 이었다**는 것이다 — 도구 오류로 빨간 행이
+ * 0건이니 «§1 조용» 으로 읽혔다. **못 보는 것을 초록으로 부르는** 자리였다.
+ * `verify388.js` 헤더가 이미 이 함정을 적어 뒀다(«커밋 하나를 상수로 박으면 그 게이트는
+ * 얕은 창에서 즉사한다») — 388 은 피했는데 374 는 안 피했다.
+ * ⇒ **사고의 «모양» 을 합성한다**(388 §R 처방). 재는 것은 원래부터 특정 SHA 가 아니라
+ *   «행이 직전 판본으로 바이트까지 되돌아갔을 때 자가 빨개지는가» 이고, 그 모양은
+ *   창 안의 아무 done 행으로도 만들 수 있다. 표본은 **실행할 때 이력에서 고른다**(하드코딩 금지 —
+ *   shallow 창은 실행마다 다르다).
+ * ⚠ `git fetch --deepen` 을 자 안에서 부르지 않는다 — 네트워크를 게이트의 전제로 삼으면
+ *   오프라인에서 다시 즉사한다.
  */
 const { execFileSync, spawnSync } = require('child_process');
 const fs = require('fs');
@@ -47,9 +64,17 @@ const redIds = out => (out.match(/^\s*✗\s+(\S+) —/gm) || []).map(s => /✗\s
 const s1Ids = out => (out.match(/^\s*✗\s+(\S+) — (?!자기모순)/gm) || []).map(s => /✗\s+(\S+) —/.exec(s)[1]);
 const s1Quiet = out => s1Ids(out).length === 0 && !/PROGRESS REVERTED/.test(out);
 
-/* 사고 커밋들 — 이 저장소의 실제 이력이다(shallow 창 안). */
+/* 사고 커밋들 — 이 저장소의 실제 이력이다. **얕은 창에는 없을 수 있다**(§H 가 그때 건너뛴다). */
 const CRASH = '5fe9d37';   /* done(370) — 368·369 를 되돌린 커밋 */
 const BEFORE = '16d96a4';  /* done(369) — 사고 직전, 두 행이 다 완료 */
+/* ⚠ `git()` 는 stderr 를 물려받아 «fatal: Not a valid object name» 이 새어 나온다 —
+   얕은 창에서 그 줄이 뜨면 «자가 깨졌다» 로 읽힌다. 있음/없음만 조용히 묻는다. */
+const has = rv => spawnSync('git', ['cat-file', '-e', rv + '^{commit}'],
+  { cwd: ROOT, encoding: 'utf8', stdio: 'ignore' }).status === 0;
+
+/* 건너뛴 절은 초록도 빨강도 아니다 — 세어서 요약에 찍는다(본체 §1 의 «부분검사» 와 같은 규약). */
+let skipped = 0;
+const skip = (name, why) => { console.log('  ⊘   ' + name + ' — 건너뜀: ' + why); skipped++; };
 
 /* ─────────────────────────── [A] 소스 ─────────────────────────── */
 console.log('[A] 소스 — 도구가 있고, 못 보는 것을 적어 뒀다');
@@ -69,25 +94,93 @@ const tally = /셈 (\d+)\/(\d+) (맞음|⚠)/.exec(now.out);
 ok(!!tally && tally[1] === tally[2] && tally[3] === '맞음', 'B3 셈이 맞는다(조용히 건너뛴 ID 0)', tally ? tally[1] + '/' + tally[2] : '요약줄 없음');
 ok(Number(tally && tally[2]) > 0, 'B4 볼 done() 기록이 실제로 있다(빈 검사로 초록이 아니다)', tally ? tally[2] + '건' : '0');
 
-/* ─────────────────────────── [R] 되돌림 시험 ─────────────────────────── */
-console.log('[R] 되돌림 시험 — 실제 사고 커밋에 자를 대면 빨개진다');
-const crash = run('--rev', CRASH);
-const cIds = s1Ids(crash.out);   /* §1 이 이 절의 주어다 — §2 는 그 시점 표의 다른 결함을 말한다(388 이관) */
-ok(crash.code === 1, 'R1 ' + CRASH + ' 종료 코드 1', String(crash.code));
-ok(cIds.length === 2 && cIds.includes('368') && cIds.includes('369'),
-   'R2 §1 빨간 행이 정확히 368·369 두 건', cIds.join(' ') || '없음');
-ok(/368 — 정확 되돌림/.test(crash.out) && /369 — 정확 되돌림/.test(crash.out),
-   'R3 진단이 «정확 되돌림»(= 병합을 내 사본으로 푼 모양)', 'ok');
-const before = run('--rev', BEFORE);
-ok(s1Quiet(before.out), 'R4 사고 직전 ' + BEFORE + ' 는 §1 초록(사고 전후를 가른다)', s1Ids(before.out).join(' ') || '§1 조용');
-ok(s1Ids(before.out).length === 0, 'R5 그 시점 §1 빨강 0건', String(s1Ids(before.out).length));
-
-/* ─────────────────────────── [C] 감도 — 합성 사본 ─────────────────────────── */
-console.log('[C] 감도 — 세 갈래를 각각 확인한다(빨강 2 · 초록 1)');
+/* ─────────────────────────── 합성 사본 준비 ─────────────────────────── */
 const HEADTXT = git('show', 'HEAD:' + REL);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'v374-'));
 const mk = (name, text) => { const p = path.join(tmp, name); fs.writeFileSync(p, text); return p; };
 const rowRe = id => new RegExp('^\\|\\s*' + id + '\\s*\\|.*$', 'm');
+/* 치환문 안의 `$&`·`$1` 이 살아 있으면 옛 판본이 **바이트까지 같게** 안 들어간다(= 정확 되돌림이 안 만들어진다). */
+const putRow = (text, id, line) => text.replace(rowRe(id), () => line);
+
+/* ─────────────────────────── [R] 되돌림 시험 — 합성 ─────────────────────────── */
+console.log('[R] 되돌림 시험 — 사고의 «모양» 을 합성해서 자에 물린다(SHA 를 안 박는다)');
+const ROWRE_G = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
+const rowsOf = text => {
+  const m = new Map();
+  if (text == null) return m;
+  for (const line of text.split('\n')) { const g = ROWRE_G.exec(line); if (g && !m.has(g[1])) m.set(g[1], line); }
+  return m;
+};
+const rowAt = (rv, id) => rowsOf(git('show', rv + ':' + REL)).get(id) || null;
+
+/* 표본 — «done 커밋이 완료로 적었고, 그 직전 판본이 창 안에 있고, 둘이 다른» 행.
+   이력에서 고르므로 얕은 창이든 깊은 창이든 그 창 안에서 성립하는 표본을 쓴다. */
+const doneHist = [...new Set((git('log', 'HEAD', '--format=%H%x09%s', '--', REL) || '').split('\n')
+  .filter(Boolean).flatMap(line => {
+    const [sha, ...rest] = line.split('\t');
+    const g = /^done\(([0-9A-Z, ]+)\)/.exec(rest.join('\t'));
+    return g ? g[1].split(',').map(s => ({ id: s.trim(), sha })) : [];
+  }).filter(e => e.id).map(e => e.id + '\t' + e.sha))].map(s => { const [id, sha] = s.split('\t'); return { id, sha }; });
+const seenId = new Set();
+const REVERTABLE = [];
+for (const { id, sha } of doneHist) {
+  if (seenId.has(id)) continue;             /* ID 마다 «가장 최근» done 만 — 본체와 같은 기준 */
+  seenId.add(id);
+  const done = rowAt(sha, id), prev = rowAt(sha + '^', id);
+  if (done && prev && done !== prev && /✅|완료\(/.test(done) && rowRe(id).test(HEADTXT || '')) REVERTABLE.push({ id, prev });
+}
+const PICK = REVERTABLE.slice(0, 2);        /* 두 건이면 사고와 같은 모양(368·369). 한 건뿐이면 한 건으로 건다. */
+ok(PICK.length > 0, 'R0 되돌릴 표본을 이력에서 골랐다(하드코딩 아님)',
+   PICK.map(p => p.id).join(' ') || '없음 — 창 안에 «직전 판본이 있는 done 행» 이 0건');
+
+if (PICK.length) {
+  const want = PICK.map(p => p.id).sort();
+  /* 사고 재현 — 고른 행을 각각 **직전 판본으로 바이트까지** 되돌린다(병합을 «내 사본» 으로 푼 모양). */
+  let revertedTxt = HEADTXT;
+  for (const p of PICK) revertedTxt = putRow(revertedTxt, p.id, p.prev);
+  ok(PICK.every(p => revertedTxt.includes(p.prev)), 'R0b 합성본이 옛 판본을 바이트까지 담았다', want.join(' '));
+
+  const rv = run('--file', mk('reverted.md', revertedTxt));
+  const rIds = s1Ids(rv.out).sort();   /* §1 이 이 절의 주어다 — §2 는 다른 결함을 말한다(388 이관) */
+  ok(rv.code === 1, 'R1 되돌린 사본 종료 코드 1', String(rv.code));
+  ok(rIds.length === want.length && want.every(id => rIds.includes(id)),
+     'R2 §1 빨간 행이 정확히 되돌린 그 행뿐', rIds.join(' ') || '없음');
+  /* 진단 낱말까지 묻는다 — «빨갛기만» 하면 표지 자(«완료 표지가 사라졌다»)가 되돌림 자를 가려도 통과한다.
+     실제로 본체 첫 판이 그 모양이었다(368·369 를 병합 사고라고 부르지 못했다). */
+  const named = PICK.filter(p => new RegExp('✗\\s+' + p.id + ' — 정확 되돌림').test(rv.out)).map(p => p.id);
+  ok(named.length === PICK.length,
+     'R3 진단이 «정확 되돌림»(= 병합을 내 사본으로 푼 모양)',
+     named.join(' ') || '그 낱말로 불린 행 0건');
+
+  /* 사고 «전» — 같은 기계로 되돌리기만 뺀 사본. 전후를 가르는 것이 이 두 항이다. */
+  const base = run('--file', mk('base.md', HEADTXT));
+  ok(s1Quiet(base.out), 'R4 되돌리기 전 사본은 §1 초록(사고 전후를 가른다)', s1Ids(base.out).join(' ') || '§1 조용');
+  ok(s1Ids(base.out).length === 0, 'R5 그 사본 §1 빨강 0건', String(s1Ids(base.out).length));
+}
+
+/* ─────────────────────────── [H] 실물 사고 커밋 — 깊은 클론에서만 ─────────────────────────── */
+console.log('[H] 실물 — 실제 사고 커밋에 자를 대면 빨개진다(깊은 클론 전용 보강 절)');
+if (!has(CRASH) || !has(BEFORE)) {
+  const why = '얕은 클론 — ' + CRASH + '/' + BEFORE + ' 가 이력 창 밖이다(§R 이 같은 모양을 합성으로 건다)';
+  skip('H1 ' + CRASH + ' 종료 코드 1', why);
+  skip('H2 §1 빨간 행이 정확히 368·369 두 건', why);
+  skip('H3 진단이 «정확 되돌림»', why);
+  skip('H4 사고 직전 ' + BEFORE + ' 는 §1 초록', why);
+} else {
+  const crash = run('--rev', CRASH);
+  const cIds = s1Ids(crash.out);
+  ok(crash.code === 1, 'H1 ' + CRASH + ' 종료 코드 1', String(crash.code));
+  ok(cIds.length === 2 && cIds.includes('368') && cIds.includes('369'),
+     'H2 §1 빨간 행이 정확히 368·369 두 건', cIds.join(' ') || '없음');
+  ok(/368 — 정확 되돌림/.test(crash.out) && /369 — 정확 되돌림/.test(crash.out),
+     'H3 진단이 «정확 되돌림»(= 병합을 내 사본으로 푼 모양)', 'ok');
+  const before = run('--rev', BEFORE);
+  ok(s1Quiet(before.out) && s1Ids(before.out).length === 0,
+     'H4 사고 직전 ' + BEFORE + ' 는 §1 초록(사고 전후를 가른다)', s1Ids(before.out).join(' ') || '§1 조용');
+}
+
+/* ─────────────────────────── [C] 감도 — 합성 사본 ─────────────────────────── */
+console.log('[C] 감도 — 세 갈래를 각각 확인한다(빨강 2 · 초록 1)');
 
 /* 표본 ID 는 «HEAD 에서 done 이고 행이 살아 있는» 것 중 하나를 이력에서 고른다(하드코딩하지 않는다) */
 const doneIds = [...new Set((git('log', 'HEAD', '--format=%s', '--', REL) || '')
@@ -139,5 +232,9 @@ const step4 = sect(routine, '[4] 병렬 충돌 처리', '[5] 컨텍스트 관리
 ok(/verifyProgress\.js/.test(rule8), 'D1 PROGRESS «병렬 세션 규칙» 절이 도구를 적어 뒀다', rule8 ? 'ok' : '절을 못 찾음');
 ok(/verifyProgress\.js/.test(step4), 'D2 지시서 [4] 병렬 충돌 처리 절이 도구를 적어 뒀다', step4 ? 'ok' : '절을 못 찾음');
 
-console.log('\nVERIFY374 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
+/* 건너뛴 절을 «초록» 으로 부르지 않는다 — 세어서 밝힌다(본체 §1 «부분검사» 와 같은 규약).
+   ⚠ 건너뜀은 실패로 세지 않는다. §H 는 §R 이 합성으로 이미 건 것을 실물로 한 번 더 거는 보강 절이라,
+   얕은 창에서 빨갛게 부르면 «고칠 수 없는 빨강» 이 되어 게이트 전체가 무시된다(431 이 그 상태였다). */
+console.log('\nVERIFY374 ' + pass + '/' + (pass + fail) + (skipped ? ' · 건너뜀 ' + skipped + '항(깊은 클론 전용)' : '') +
+            (fail ? ' FAIL' : ' PASS'));
 process.exit(fail ? 1 : 0);
