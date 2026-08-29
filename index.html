@@ -9809,8 +9809,18 @@
   .eqp-hd,.eqp-ti{z-index:3}
   /* 본문 뷰포트 — 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1584−1444=140).
      콘텐츠 마지막 bottom 은 카드 컨테이너 1418 이라 9:16(뷰포트 1444)에서는 스크롤 없음 */
+  /* ── 403(저장소 주인 지시 2026-08-29) — 9:13.3(1600)에서 «스크롤 없이 다 보이게» ──────────
+     결손: `.shsc-in` 이 **상수 1418** 이라 1600 프레임의 뷰포트 1138 보다 280px 길었다.
+     숨는 것은 3번째 부위 슬롯 아래 146px 과 스탯 알약 두 개다(`tools/probe403.js` 수리 전 7/12).
+     처방: 콘텐츠를 «상수» 가 아니라 «뷰포트» 로 만들고, 남는/모자란 높이는 **카드 컨테이너 하나가
+     흡수**한다 — 프레임 높이를 전투 캔버스가 흡수하는 것과 같은 규칙([2] 규칙)이고, 카드가 원래
+     그 자리다(레퍼런스 카드 581 → 1284 로 «남는 높이를 흡수» 하려고 키운 것이 이 상자다, 28883 주석).
+     ⚑ **9:19·9:16 은 Δ0px 다** — 아래 계수는 전부 «P=1444 에서 지금 값이 그대로 나오도록» 역산했다
+     (검산은 `tools/verify403.js` [A]). 즉 이 작업은 레퍼런스 이탈이 **아니고**, 짧은 프레임에서만
+     카드가 줄어든다. 자세한 유도는 `.eqsl` 위 §403 표.
+     ⚠ 가드 142(`max-height`)·탭바 180 은 351 이 두 번 올린 값이라 **한 픽셀도 안 건드렸다**. */
   .eqp>.shsc{top:0;bottom:140px}
-  .eqp .shsc-in{height:1418px}
+  .eqp .shsc-in{height:100%}
 
   /* 헤더 583~694(h112) + 상단 베벨 6px + 좌우 베벨 7px */
   .eqp-hd{left:6px;top:6px;width:1068px;height:112px;background:#5B493F;
@@ -9838,11 +9848,15 @@
 
   /* 카드 컨테이너 34,711 1013x1284 — 배경(하늘/바닥/잠금띠)만 여기서 클립한다.
      전경(리본·슬롯·알약·잠금원반)은 .eqp 직속으로 두어 측정 x 를 1:1 로 유지 */
-  .eqc{left:34px;top:134px;width:1013px;height:1284px;border-radius:31px;overflow:hidden}
+  /* 403 — 높이가 «남는 높이를 흡수하는» 값이 됐다. C(카드 높이) = 뷰포트 P − 160
+     (상변 134 + 하변 여백 26). P=1444(9:19·9:16)에서 1284 = 종전 상수와 **정확히 같다**. */
+  .eqc{left:34px;top:134px;width:1013px;height:calc(100% - 160px);border-radius:31px;overflow:hidden}
   .eqc>*{position:absolute;left:0;right:0}
-  .eqc .sky{background:#F9E9C8}
+  /* 403 — 하늘·바닥은 카드를 꽉 채우고 «경계» 만 비율로 잡는다(종전 인라인 상수 1284/880/404 폐기).
+     68.536% × 1284 = 880.0 · 바닥 404 라 9:19 Δ0 이고, 비율의 근거는 레퍼런스 카드1(398/581 = 68.5%) 그대로다. */
+  .eqc .sky{background:#F9E9C8;top:0;bottom:0}
   /* 하늘/바닥 경계는 직선이 아니라 완만한 아치 — 중앙 394, 좌우 끝 413(+19) */
-  .eqc .gnd{background:#E1BE99;border-radius:50% 50% 0 0/24px 24px 0 0}
+  .eqc .gnd{background:#E1BE99;border-radius:50% 50% 0 0/24px 24px 0 0;top:68.536%;bottom:0}
   /* 배경 실루엣 무늬(#F3DCBA, 낱개 73x68, pitch 152) — 하늘 영역에만 */
   .eqc .sky::before{content:'';position:absolute;inset:0;
     background-image:radial-gradient(ellipse 30px 26px at 26px 40px,#F3DCBA 0 99%,transparent 99%),
@@ -9851,13 +9865,13 @@
     background-size:152px 152px,152px 152px,152px 152px;
     background-position:14px 20px,14px 20px,14px 20px}
   /* 컨테이너 테두리 6px #D7AA81 + 안쪽 2px 하이라이트 */
-  .eqc-fr{left:34px;top:134px;width:1013px;height:1284px;border:6px solid #D7AA81;
+  .eqc-fr{left:34px;top:134px;width:1013px;height:calc(100% - 160px);border:6px solid #D7AA81;
     border-radius:31px;box-sizing:border-box;pointer-events:none}
   /* ⚠ 하이라이트는 **좌우에만** 있다(측정표 §2-0 은 x 44 / 1035 만 적는다).
      사방 border 로 두면 아래 테두리가 ref y1983~1984 전폭에 크림색 2px 줄을 긋고
      잠금 라벨 «반지·목걸이·탈것» 을 가로지른다(원본 같은 y 는 밝은 픽셀 0개, 구현 776개).
      비평가 2명이 독립적으로 같은 줄을 지적했다 */
-  .eqc-hl{left:44px;top:144px;width:993px;height:1264px;
+  .eqc-hl{left:44px;top:144px;width:993px;height:calc(100% - 180px);
     border-left:2px solid #FCEFD0;border-right:2px solid #FCEFD0;
     border-radius:21px;box-sizing:border-box;pointer-events:none}
 
@@ -9900,8 +9914,23 @@
   /* 261 — 림·채움 색을 «장착한 장비의 등급색» 으로 연다(저장소 주인 보고 2026-08-27).
      폴백값 3개는 **레퍼런스 실측 그대로**(측정표 §2-6)이고, 그것이 곧 `EQSL_G[1]`(고급) 이다 —
      레퍼런스 상태(고급 장착)에서는 1px 도 안 바뀐다. 빈 칸은 변수를 안 받아 폴백 = 초록으로 남는다. */
+  /* ── §403 슬롯 3칸의 세로 자리 (2026-08-29) ────────────────────────────────────────────
+     종전에는 `EQP_GEO.sl = [256,656,1056]` 상수를 JS 가 인라인 top 으로 박았다. 그 값은
+     «칸 228 고정 · 블록을 카드 세로 중앙 · 블록이 카드의 80%»(28883 주석)라는 **규칙에서 나온 값**이지
+     레퍼런스 절대값이 아니다(레퍼런스 카드는 2칸·581px 짜리다). 403 이 카드 높이를 «흡수하는 값» 으로
+     바꿨으므로 **같은 규칙을 새 카드 높이에 다시 적용**한다 — 새 규칙을 만들지 않았다.
+       C  = 카드 높이 = 100% − 160   (100% = 뷰포트 P = 시트 − 140)
+       위 여백 = 0.09502·C · 아래 여백 = 0.10436·C · 블록 = 0.80062·C · 칸 228 **고정**
+       ⇒ 피치 p = (0.80062·C − 228)/2 = 0.40031·C − 114
+       ⇒ top1 = 134 + 0.09502·C · top2 = 20 + 0.49533·C · top3 = −94 + 0.89564·C
+     검산 — C=1284(9:19·9:16): 256.01 / 656.00 / 1056.00 = **종전 상수와 0.01px 이내**(Δ0).
+              C=978(9:13.3):    226.93 / 504.43 / 781.93 · 3번 칸 하변 1009.9 < 카드 하변 1112.
+     부위 뱃지는 예나 지금이나 «슬롯 − 19» 라 같은 식에서 19 만 뺀다. */
   .eqsl{left:724px;width:228px;height:228px;border-radius:40px;background:#000;
     box-shadow:5px 6px 0 #686052;cursor:pointer}
+  .eqsl.s1{top:calc(134px + 0.09502 * (100% - 160px))}
+  .eqsl.s2{top:calc(20px + 0.49533 * (100% - 160px))}
+  .eqsl.s3{top:calc(-94px + 0.89564 * (100% - 160px))}
   .eqsl>.rim{position:absolute;inset:6px;border-radius:34px;background:var(--r,#C7E746)}
   .eqsl>.rim>.fi{position:absolute;inset:7px;border-radius:27px;overflow:hidden;
     background:linear-gradient(180deg,var(--f,#9CC638),var(--fb,#97BD36))}
@@ -9920,11 +9949,17 @@
      폴백 3색도 레퍼런스 실측(측정표 §2-6-1) 그대로 = `EQSL_G[1]` 의 뱃지 3색이다. */
   .eqbd{left:704px;width:78px;height:78px;border-radius:50%;background:var(--bf,#7C9A38);
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 12px var(--br,#ACC640),inset 0 0 0 16px var(--bm,#9EBA3C)}
+  /* 403 — 슬롯 − 19(§403 표) */
+  .eqbd.s1{top:calc(115px + 0.09502 * (100% - 160px))}
+  .eqbd.s2{top:calc(1px + 0.49533 * (100% - 160px))}
+  .eqbd.s3{top:calc(-113px + 0.89564 * (100% - 160px))}
   .eqbd>em{position:absolute;left:0;right:0;top:14px;height:50px;line-height:50px;
     text-align:center;font-size:38px;filter:grayscale(1) brightness(3) drop-shadow(0 0 2px #000)}
 
   /* ---- 스탯 알약 (1행 2열, 카드 top +489, h49) ---- */
-  .eqst{height:49px;border-radius:25px;background:#835848}
+  /* 403 — «카드 바닥에서 39px» 규칙(28883 주석)을 상수 top 1330 이 아니라 **바닥 기준**으로 적는다.
+     카드 하변 = P − 26 이므로 알약 하변 = P − 65. P=1444 에서 1379 = 1330+49 로 Δ0. */
+  .eqst{height:49px;border-radius:25px;background:#835848;bottom:65px}
   .eqst.a{left:165px;width:181px}
   .eqst.b{left:425px;width:182px}
   /* 잉크 h22~23 → font 31. 알약 안 가로 중앙.
@@ -9947,7 +9982,10 @@
      팔레트도 어긋난다(실측: 레퍼런스 금색 #F0C040 492px·은색 240,240,240 341px →
      이모지 58px·다른 은색). 하트와 같은 이유로 CSS 로 직접 그린다.
      실측 잉크 bbox x121~189(69) · y1191~1264(74) · 축이 수평에서 약 56°(= 세로 기준 34° 시계) */
-  .eqic.sw{left:121px;width:69px;height:74px}
+  /* 403 — 알약과 같은 손잡이로 바닥 기준. 종전 top 1317 = 알약 top − 13 이고
+     알약 하변이 P−65 이므로 검 하변 = P−65+49−74−13+74 … 로 풀지 말고 **직접**: 1391 = 1317+74,
+     P=1444 ⇒ 하변 여백 53. (하트도 같은 식으로 64.) */
+  .eqic.sw{left:121px;width:69px;height:74px;bottom:53px}
   /* ⚠ 외곽선 filter 는 **부모**에 건다. 같은 요소에 `clip-path` 와 `filter` 를 함께 주면
      렌더 순서가 «filter → clip-path» 라 clip-path 가 drop-shadow 를 통째로 잘라낸다
      (실측: 검정 102px 만 남고 외곽선이 사라졌다) */
@@ -9967,7 +10005,7 @@
       30% 100%,10% 95%,10% 65%,0 65%)}
   /* 하트는 ❤️ 이모지가 «단색 빨강(244,67,54)» 이라 레퍼런스(분홍 #FF3B84 + 안쪽 초록 `+`)와
      색이 통째로 다르다. 자물쇠와 같은 이유로 CSS 로 직접 그린다 — 실측 65x54 @x369 */
-  .eqic.hp{left:369px;width:65px;height:54px}
+  .eqic.hp{left:369px;width:65px;height:54px;bottom:64px}
   .eqic.hp>i{position:absolute;left:0;top:0;width:65px;height:54px;transform:none}
   /* 하트 = 원 2개 + 회전 사각형. 검정 외곽선은 blur 0 오프셋 체이닝으로 실루엣 바깥에만 얹는다.
      실측 분홍 잉크 bbox = **65x54 @ (369,1200)** 이므로 하트가 박스를 꽉 채운다(인셋 없음) */
@@ -10001,7 +10039,10 @@
      floor(831/63))라 잉크는 약 598×598 로 박스보다 작지만, 비정수·비율 왜곡 스케일은 픽셀 아트가
      흐려지므로 금지. 코스튬(61)은 전투와 같은 tinted('knight', AV[cosCur()].tint) 를 지나므로
      코스튬을 바꾸면 전투와 시트가 동시에 바뀐다. */
-  .eqil-cv{left:45px;width:640px;top:495px;height:831px;pointer-events:none;image-rendering:pixelated}
+  /* 403 — 상자 세로 자리도 «카드 바닥» 기준이다(잉크 바닥이 스탯 알약 상단 4px 위 = 위 주석의 앵커).
+     알약 상변 = P−114 이므로 캔버스 하변 = P−118. P=1444 ⇒ top 495 로 Δ0 이고, 짧은 프레임에서는
+     상자째 올라간다(높이 831 은 **안 건드린다** — 정수 배율 13 = floor(831/63) 이 깨지면 픽셀 아트가 흐려진다). */
+  .eqil-cv{left:45px;width:640px;bottom:118px;height:831px;pointer-events:none;image-rendering:pixelated}
 
   /* 작업 50 — 잠금 탭(«기타» 🔒)이 폐기되면서 `.eqli` 자물쇠 아이콘도 같이 제거했다.
      06 서브탭은 이제 «장비·스킬·코스튬·동료» 4개가 전부 해금이라 쓰는 곳이 없다. */
@@ -10045,8 +10086,20 @@
   /* 작업 51 — 본문 뷰포트: 시트 top 0(헤더 뒤로 이어짐) ~ 서브탭 바 상단(1477−1337=140).
      본문 콘텐츠 마지막 bottom 은 버튼 1289 라 9:16(뷰포트 1337)에서는 스크롤이 안 걸린다.
      헤더는 DOM 순서상 뷰포트보다 앞이라 z-index 로 위에 올려야 카드가 헤더를 덮지 않는다. */
+  /* ── 404(저장소 주인 보고 2026-08-29) — 9:13.3(1600)에서 액션 버튼이 «한 픽셀도» 안 보인다 ──
+     결손: `.shsc-in` 이 **상수 1289** 인데 1600 프레임의 뷰포트는 1138 이라 151px 이 모자랐고,
+     `.sk-btn` 이 1158..1289 라 [스킬 소환]·[일괄 강화] 가 통째로 밖이었다(`tools/probe351b.js`
+     수리 전 «스크롤 전 보임 0%» · 비평가 3인 1순위 · 어포던스 0).
+     처방: 403 과 **같은 답** — 콘텐츠를 뷰포트로 만들고 남는/모자란 높이는 **격자 하나가 흡수**한다.
+     이 시트에서 그 자리는 이미 정해져 있었다: `.sk-gp` 만 자기 스크롤러다(10107·87 작업).
+     즉 «시트가 스크롤되고 버튼이 밖으로 나간다» 가 «격자가 스크롤되고 버튼은 늘 제자리» 로 바뀐다.
+     ⚑ **9:19·9:16 은 Δ0px** — 격자 657 · 총효과 208 · 버튼 48 은 P=1337 에서 종전 값이 그대로
+     나오도록 역산했다(검산 `tools/verify404.js` [A]).
+     ⚠ **P 는 1344 가 아니라 1337 이다** — `#panel` 은 `box-sizing:border-box` 에 위 테두리 7px 이라
+     자식 좌표계(패딩 상자)가 시트보다 7 짧다. 1344 로 잡으면 9:19 에서 전부 7px 씩 위로 밀린다
+     (실제로 한 번 그렇게 나왔다). 403 의 `.eqp` 는 테두리가 없어 P = 시트 − 140 그대로다. */
   :is(#bSk,#bPet,#bCos)>.shsc{top:0;bottom:140px}
-  :is(#bSk,#bPet,#bCos) .shsc-in{height:1289px}
+  :is(#bSk,#bPet,#bCos) .shsc-in{height:100%}
   .sk-head{z-index:3}
   :is(#bSk,#bPet,#bCos) i,:is(#bSk,#bPet,#bCos) b,:is(#bSk,#bPet,#bCos) u,:is(#bSk,#bPet,#bCos) s,:is(#bSk,#bPet,#bCos) em{display:block;font-style:normal;font-weight:900;
     text-decoration:none}
@@ -10104,7 +10157,10 @@
      패널 기하(1000x680 · top 387)는 레퍼런스 그대로 두고 **안쪽만 세로 스크롤**한다 —
      .sk-tot(1085) · .sk-btn(1158) 의 y 가 밀리지 않으므로 04 레이아웃 점수에 영향이 없다.
      .sk-gsp 는 절대배치 카드가 만들지 못하는 «스크롤 높이»를 세우는 스페이서다. */
-  .sk-gp{left:33px;top:387px;width:1000px;height:680px;border-radius:25px;background:#CBB397;
+  /* 404 — 높이가 «남는 높이를 흡수하는» 값이 됐다. 격자 위(top 387)와 아래(총효과 18+44 ·
+     버튼 29+131 · 바닥 여백 48 = 270)가 전부 고정이므로 격자 = P − 387 − 270 = `100% - 657px`.
+     P=1337(9:19·9:16) ⇒ 680 = 종전 상수와 **정확히 같다**. P=1131(9:13.3) ⇒ 474. */
+  .sk-gp{left:33px;top:387px;width:1000px;height:calc(100% - 657px);border-radius:25px;background:#CBB397;
     overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   .sk-gp::-webkit-scrollbar{width:0;height:0}
   .sk-gsp{position:relative!important;width:1px;pointer-events:none}
@@ -10223,7 +10279,8 @@
     font-size:32px;line-height:44px;color:#A2E941;transform:scaleX(.85)}
 
   /* 7 총 보유 효과 — 잉크 h30(fs32) · 잉크중심 x571.5 = 화면중심 +31.5 (측정표 §7) */
-  .sk-tot{left:0;right:0;top:1085px;height:44px;text-align:center;line-height:44px;
+  /* 404 — 격자 아래에 매달린 줄이라 자리를 «바닥 기준» 으로 적는다. P=1337 ⇒ top 1085 로 Δ0. */
+  .sk-tot{left:0;right:0;bottom:208px;height:44px;text-align:center;line-height:44px;
     padding-left:56px;font-size:32px;white-space:nowrap}
   /* 라벨 «총 보유 효과:» 잉크 ref 169x30, 우리 서체는 fs32 에서 183 (+8.3%) → scaleX 로 좁힌다 */
   .sk-tot>i{color:#fff;transform:scaleX(.923)}
@@ -10234,7 +10291,10 @@
      실측(초록, y1900 가로): 검정 249~255 → **라이트 림 256~262** → 면 265~
              (x430 세로): 라이트 1850~1856 → 면 1859~1949 → **라이트 1951~1956** → **언더립 1958~1963**
      좌우 림이 없으면 버튼이 납작해 보이고, 하단 라이트를 13px 로 깔면 면을 6px 잡아먹는다. */
-  .sk-btn{top:1158px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
+  /* 404 — 같은 손잡이. 바닥 여백 48 은 9:19 의 «버튼 하변 1289 ↔ 뷰포트 하변 1337» 그대로다.
+     ⚠ 자리만 바닥 기준으로 바뀌었을 뿐 버튼은 여전히 `.shsc-in` 안이라 `.sk-btn>.updot`
+     (299 안쪽 우상단 규약, 10409)의 기준 상자는 버튼 자신 그대로다 — 364 가 틀리게 읽은 그 축. */
+  .sk-btn{bottom:48px;width:275px;height:131px;border-radius:50px;border:7px solid #000;
     box-sizing:border-box;text-align:center;line-height:105px;font-size:45px;cursor:pointer;
     box-shadow:inset 7px 0 0 var(--hl),inset -7px 0 0 var(--hl)}
   :is(#bSk,#bPet,#bCos) .sk-btn>i{display:inline-block;transform:scaleX(.866)}
@@ -14077,8 +14137,10 @@
         <div class="eqc">
           <!-- 작업 25: 카드 1장. 하늘/지면 비율은 레퍼런스 카드1 그대로(398/581 = 68.5%),
                잠금 슬롯 띠(.band)는 폐기 -->
-          <div class="sky" style="top:0;height:1284px"></div>
-          <div class="gnd" style="top:880px;height:404px"></div>
+          <!-- 403 — 인라인 상수(1284 / 880·404)를 걷어냈다. 카드가 «남는 높이를 흡수» 하게 되면서
+               하늘은 카드를 꽉 채우고 바닥은 경계 비율(68.536%)로만 잡는다(CSS `.eqc .sky/.gnd`). -->
+          <div class="sky"></div>
+          <div class="gnd"></div>
         </div>
         <div class="eqc-fr"></div>
         <div class="eqc-hl"></div>
@@ -28910,7 +28972,10 @@ function showCosDetail(id){
    pitch 400 이면 블록이 81% · 여백 116/128 로 레퍼런스 비율이 복원된다.
    스탯 알약은 카드1 과 같은 «카드 바닥에서 39px» 규칙으로 카드 바닥(패널 1418)에 맞춰 내렸다.
    sw/hp 아이콘 오프셋(−13/−4)도 카드1 그대로 */
-const EQP_GEO = { rb:167, sl:[256, 656, 1056], st:1330, sw:1317, hp:1326 };
+/* 403 — `sl`·`st`·`sw`·`hp` 는 **CSS 로 옮겼다**(§403 표 · `.eqsl.s1~.s3` · `.eqst` · `.eqic`).
+   전부 «카드 높이에서 나오는 값» 이라 JS 상수로 두면 짧은 프레임에서 따라오지 못한다.
+   남은 `rb`(이름 리본)는 카드 상변에서 +33 인 **레퍼런스 절대값**이라 그대로 상수다. */
+const EQP_GEO = { rb:167 };
 const EQP_CARD = { n:'용사', rb:'#F87D2F', rd:'#C7501D', rt:'#E86F2A' }; /* ic(🦸) 는 작업 79 로 폐기 — 스프라이트 캔버스 */
 
 /* ── 261 부위 슬롯 등급색 (저장소 주인 보고 2026-08-27 · 스크린샷) ─────────────────
@@ -28936,15 +29001,19 @@ const EQSL_G = WGRADE.map((w, g) => g === 1
 /* 283 — `up` 은 «이 부위에 강화 가능한 장비가 있나». 06 의 부위 슬롯은 05 무기 팝업으로 가는
    **유일한 진입 버튼**이라(작업 57), 여기가 비면 «장비 서브탭에 빨간점은 떴는데 어느 부위인지
    모르는» 상태가 된다 — 주인 보고의 «장비 탭 한 곳에만» 이 이 자리다. */
-function eqpSlot(y, badge, ic, lv, attr, col, up){
-  const cv = col ? ';--r:' + col.r + ';--f:' + col.f + ';--fb:' + col.fb : '';
-  const bv = col ? ';--br:' + col.br + ';--bm:' + col.bm + ';--bf:' + col.bf : '';
-  return '<div class="eqsl' + (ic ? '' : ' empty') + (up ? ' alert' : '') + '" style="top:' + y + 'px' + cv + '" ' + attr + '>'
+/* 403 — 첫 인자가 «인라인 top(px)» 에서 «몇 번째 칸인가(0~2)» 로 바뀌었다.
+   세로 자리는 이제 CSS `.eqsl.s1~.s3` / `.eqbd.s1~.s3` 가 카드 높이에서 계산한다(§403 표).
+   JS 가 상수를 박으면 프레임이 바뀔 때 따라오지 못한다 — 그래서 자리는 CSS 로, 색·상태만 인라인으로 남겼다. */
+function eqpSlot(j, badge, ic, lv, attr, col, up){
+  const sc = ' s' + (j + 1);
+  const cv = col ? '--r:' + col.r + ';--f:' + col.f + ';--fb:' + col.fb : '';
+  const bv = col ? '--br:' + col.br + ';--bm:' + col.bm + ';--bf:' + col.bf : '';
+  return '<div class="eqsl' + sc + (ic ? '' : ' empty') + (up ? ' alert' : '') + '" style="' + cv + '" ' + attr + '>'
        +   '<div class="rim"><div class="fi"><em>' + (ic || '') + '</em></div></div>'
        +   (lv == null ? '' : '<u><i>Lv. ' + lv + '</i></u>')
        +   (up ? '<s class="updot"></s>' : '')
        + '</div>'
-       + '<div class="eqbd" style="top:' + (y - 19) + 'px' + bv + '"><em>' + badge + '</em></div>';
+       + '<div class="eqbd' + sc + '" style="' + bv + '"><em>' + badge + '</em></div>';
 }
 /* 작업 79 — 시트 캐릭터의 idle 애니메이션 상태. 전투 player 초기화(akey knight·idle·8fps)와 동일 규격.
    rAF 는 시트가 보이는 동안만 돌고(#eqw.on 해제 시 다음 틱에서 자멸) 닫히면 정지한다. */
@@ -28971,17 +29040,18 @@ function renderEqPage(){
   /* 부위 슬롯 3칸 = SLOTS(무기·방패·목걸이). 뱃지 아이콘도 SLOTS 정의를 그대로 쓴다 */
   SLOTS.forEach((s, j) => {
     const id = S.eqSlot[s.k], it = id ? EQ[id] : null;
-    h += eqpSlot(g.sl[j], s.ic, it ? it.ic : '', it ? oLv(it.id) : null,
+    h += eqpSlot(j, s.ic, it ? it.ic : '', it ? oLv(it.id) : null,
                  'data-eqslot="' + s.k + '"', it ? EQSL_G[Math.min(it.g, EQSL_G.length - 1)] : null,
                  /* 283 — 그 부위에 강화 가능한 장비가 하나라도 있으면 진입 슬롯에 레드닷 */
                  EQUIPS.some(e => e.slot === s.k && canLevel(e)));
   });
   /* 알약 → 아이콘 순서. 06 부터 «아이콘 먼저» 였는데 뒤 형제가 위로 오므로 알약이 검·하트를
      잘라먹고 있었다(하트 우측 로브가 통째로 잘려 세로 54 → 50). 레퍼런스는 아이콘이 알약 위다 */
-  h += '<div class="eqst a" style="top:' + g.st + 'px"><i>' + fmtB(stat.dmg) + '</i></div>'
-    +  '<div class="eqst b" style="top:' + g.st + 'px"><i>' + fmtB(stat.maxHp) + '</i></div>'
-    +  '<div class="eqic sw" style="top:' + g.sw + 'px"><i></i></div>'
-    +  '<div class="eqic hp" style="top:' + g.hp + 'px"><i></i></div>';
+  /* 403 — 알약·아이콘의 세로 자리도 CSS(바닥 기준)로 옮겼다 — 인라인 top 상수 폐기 */
+  h += '<div class="eqst a"><i>' + fmtB(stat.dmg) + '</i></div>'
+    +  '<div class="eqst b"><i>' + fmtB(stat.maxHp) + '</i></div>'
+    +  '<div class="eqic sw"><i></i></div>'
+    +  '<div class="eqic hp"><i></i></div>';
   /* 283 — `setBody()` 와 같은 «내용이 같으면 갈아끼우지 않는다» 규약을 여기에도 건다.
      이 함수는 renderUI() 가 0.35s 마다 부르는데 종전에는 매번 innerHTML 을 통째로 갈았다.
      노드가 새로 생기면 60 쥬시의 `jzDotIn`(.3s, scale 0→1.3→1)이 매 틱 다시 시작해

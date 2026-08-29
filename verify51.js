@@ -22,7 +22,11 @@ const SHEETS = [
   { id: '장비#eqw', key: 'hero', hero: 'eq', sel: '.eqp' },
   { id: '스킬#panel', key: 'hero', hero: 'sk', sel: '#panel' },
   { id: '동료#panel', key: 'hero', hero: 'pet', sel: '#panel' },
-  { id: '유물#rlw', key: 'box', hero: null, sel: '#rlw', relic: 'rel' },
+  /* 403 — 유물 시트는 `#rlw`(옛 이름)·`relicSub`(옛 전역) 둘 다 없어져 이 행이 «요소 없음» 으로
+     **즉사**하고 있었다(2026-08-29 실측: 첫 화면비에서 예외로 프로세스가 죽어 표가 한 줄도 안 나온다).
+     지금 이름은 `#relw` 이고 여는 곳은 탭이 아니라 `openRelw()` 다(26387) — 자리를 비우지 않고
+     살아 있는 경로로 갈아 끼운다(333 처방). */
+  { id: '유물#relw', key: 'box', hero: null, sel: '#relw', fn: 'openRelw' },
   { id: '던전#dunw', key: 'adv', hero: null, sel: '#dunw' },
   { id: '상점#shopw', key: 'shop', hero: null, sel: '#shopw' },
 ];
@@ -30,15 +34,22 @@ const SHEETS = [
 /* 메인 화면 회귀 대조 — 작업 38 규칙(패널 개폐가 메인 요소를 움직이면 안 된다) */
 const MAIN = ['#top', '#sideL', '#sideR', '#slots', '#stagearea', '#tabbar', '#tuto'];
 
+/* 403 — `closeRelicPage`/`closeRelicTab` 은 제품에서 사라진 이름이라 이 함수가 **첫 호출에서
+   ReferenceError 로 즉사**했다(319 와 같은 «게이트 부패»). 278 처방대로 «즉사» 대신 «그 항만»
+   빠지게 이름별로 감싼다 — 새 이름(`closeRelw`)까지 같이 부른다. */
 function closeAll() {
-  closeTrain(); closeDungeon(); closeShopPage(); closeRelicPage(); closeRelicTab();
-  if (panelOpen) { panelOpen = false; syncPanel(); }
+  ['closeTrain', 'closeDungeon', 'closeShopPage', 'closeRelicPage', 'closeRelicTab', 'closeRelw']
+    .forEach(n => { try { if (typeof window[n] === 'function') window[n](); } catch (e) {} });
+  if (typeof panelOpen !== 'undefined' && panelOpen) { panelOpen = false; syncPanel(); }
 }
 
+/* 403 — 옛 방식(`heroTab` 을 미리 적고 goTab)은 **159 가 지운다**: `goTab('hero')` 가
+   «여는 순간 서브탭을 장비로 리셋»(index.html 29777) 하므로 스킬·동료 시트가 한 번도 열린 적이
+   없었다(표에서 `#panel` 이 전 화면비 0×0 인 이유가 이것이다). 연 «뒤에» `heroSubGo` 로 옮긴다. */
 function openSheet(o) {
-  if (o.hero) { heroTab = o.hero; S.heroTab = o.hero; }
-  if (o.relic) relicSub = o.relic;
   goTab(o.key);
+  if (o.hero && typeof heroSubGo === 'function') heroSubGo(o.hero);
+  if (o.fn && typeof window[o.fn] === 'function') window[o.fn]();
 }
 
 /* 프레임(#app) 로컬 좌표로 환산한 시트 사각형 + 내부 스크롤 상태 */
@@ -135,7 +146,7 @@ async function boot(file, w, h) {
     for (const s of SHEETS) {
       await page.evaluate(closeAll);
       await page.evaluate(openSheet, s);
-      await page.waitForTimeout(150);
+      await page.waitForTimeout(800);   /* 403 — 150ms 는 fit()/ResizeObserver 가 끝나기 전이라 시트가 그 뒤 181px 움직였다(«고정 실패» 오탐) */
       const m = await page.evaluate(probe, s.sel);
       const out = await page.evaluate(outside, s.sel);
       const now = await page.evaluate(rects, MAIN);
@@ -182,7 +193,7 @@ async function boot(file, w, h) {
     for (const o of SCROLLED) {
       await page.evaluate(closeAll);
       await page.evaluate(openSheet, o);
-      await page.waitForTimeout(150);
+      await page.waitForTimeout(800);   /* 403 — 150ms 는 fit()/ResizeObserver 가 끝나기 전이라 시트가 그 뒤 181px 움직였다(«고정 실패» 오탐) */
       const top = await page.evaluate(scrollProbe, o);
       await page.evaluate(s => { const v = document.querySelector(s + ' .shsc');
         if (v) v.scrollTop = v.scrollHeight; }, o.sel);
