@@ -174,3 +174,5 @@ index.verify350-revert.html
 # 367 verify367.js §R 이 «367 이전(무료 5 · 광고 0)» 대조용으로 잠깐 뽑는 사본 (시험이 끝나면 지운다)
 # ⚠ 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 리소스가 통째로 404 다(360 자리와 같은 이유).
 .v367-neg.html
+.verify410-rev.html
+.probe410-pre.html

@@ -194,15 +194,17 @@ async function boot(file, w, h) {
         되돌리면(콘텐츠를 다시 상수로 박으면) 곧바로 빨개진다.
      ② `shown` 도 «스크롤 **끝에서** 보이나» 에서 «스크롤 **0 에서** 보이나»(`shown0`)로 올린다.
         351 이 두 번 «스크롤로 회수되니 감점 아님» 으로 넘긴 자리가 정확히 여기다.
-     ⚠ closeAll 뒤 250ms 를 기다린다 — 60 쥬시의 닫힘 연출(0.12s)이 끝나기 전에 다시 열면
-        그 연출의 마무리가 `#panel` 의 inline display 를 'none' 으로 되돌려 시트가 0×0 이 된다
-        (등재 **405**). 제품 결함이지만 403·404 와 다른 축이라 여기서는 **기다려서 비켜 간다**. */
+     ⚑ **410 이 그 대기를 걷어냈다(2026-08-29).** 종전에는 closeAll 뒤 **250ms** 를 기다렸다 —
+        60 쥬시의 닫힘 연출(0.12s)이 끝나기 전에 다시 열면 그 연출의 마무리가 `#panel` 의
+        inline display 를 'none' 으로 되돌려 시트가 **0×0** 이 됐기 때문이다(등재 405 → 번호 개정 **410**).
+        403·404 는 축이 달라 «기다려서 비켜 갔고», 410 이 그 제품 결함을 고쳤다(닫힘 연출은 이제
+        inline display 를 안 쓴다). ⇒ **대기를 빼서 이 절이 410 의 회귀를 잡게 한다** — 410 이
+        되돌아가면 `shown0`·`noScroll` 이 «0×0 인 시트» 를 재게 되어 여기가 곧바로 빨개진다. */
   console.log('\n[2차] 접힌 시트 — 헤더·서브탭 고정 / 본문 마지막 요소가 «스크롤 0 에서» 보임 (4:3, frameH 1600)');
   {
     const { browser, page, errs } = await boot(file, 1024, 768);
     for (const o of SCROLLED) {
       await page.evaluate(closeAll);
-      await page.waitForTimeout(250);
       await page.evaluate(openSheet, o);
       await page.waitForTimeout(800);   /* 403 — 150ms 는 fit()/ResizeObserver 가 끝나기 전이라 시트가 그 뒤 181px 움직였다(«고정 실패» 오탐) */
       const top = await page.evaluate(scrollProbe, o);

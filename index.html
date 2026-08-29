@@ -11719,6 +11719,13 @@
      닫기에선 **끝 15ms 에 딤의 72% 가 한 번에 증발하는 절벽**이 된다(8회차 비평 실측).
      닫기는 자기 곡선을 따로 갖는다. */
   .jz-c{animation:jzDimOut .12s ease-in both}
+  /* 410 — 닫힘 연출 동안 «보이게» 하는 손잡이. 종전에는 inline `style.display` 였고,
+     연출이 끝날 때 원래 값을 되돌리다가 «그 사이 다시 연 쪽» 을 덮어썼다(0×0).
+     클래스로 하면 되돌릴 값 자체가 없다. `!important` 는 상대가 inline `display:none` 이라 필요하다.
+     ⚠ 이 셋은 `jzDispOn()` 만 붙이고 `jzDispOff()` 만 뗀다 — 다른 규칙에서 쓰지 마라. */
+  .jz-df{display:flex!important}
+  .jz-db{display:block!important}
+  .jz-dg{display:grid!important}
   @keyframes jzDim{from{opacity:0}to{opacity:1}}
   @keyframes jzDimOut{from{opacity:1}to{opacity:0}}
   /* 가운데 다이얼로그 — 박스 .92→1.02→1 (스프링 220ms)
@@ -33356,33 +33363,61 @@ function jzShellBack(el, prevCls){
   for(const c of back) el.classList.add(c);
   return back;
 }
+/* ── 410 «닫자마자 다시 열면 0×0» (2026-08-29) ────────────────────────────────
+   닫힘 연출은 «이미 숨겨진 것» 을 0.12s 더 보여 줘야 하므로 display 를 한 번 되살린다.
+   종전에는 그것을 **inline `style.display`** 로 했고, 그래서 연출이 끝나는 곳에서 원래 값을
+   되돌려야 했다(`el.style.display = inl`). 그 되돌림이 «그 사이 다시 연 쪽» 을 덮어썼다 —
+   `probe410` [2] 실측: 다시 연 직후 `#panel` 1080×1484 → **t=187ms 에 inline 이 flex → none**
+   → 상자 **0×0**(규칙 height 1484 는 내내 맞았다). `__jzGen` 세대 가드는 «연출 도중 또 닫힐 때»
+   만 막고 «다시 열릴 때» 는 세대를 한 칸도 안 올린다(같은 자 [3] — 4 → 4).
+   ⇒ 되돌릴 값을 아예 안 만든다. 보이게 하는 것은 **클래스**이고 inline 은 손도 안 댄다.
+   `!important` 가 필요한 이유는 이기려는 상대가 inline `display:none` 이기 때문이다(`#panel`).
+   값 집합은 probe410 [5-b] 가 잰 것(flex·block)에 grid 를 더해 셋이고, `verify410` [A] 가
+   «22개 오버레이의 뜰 때 display 가 전부 이 표 안에 있는가» 를 물어 새 오버레이의 이탈을 잡는다. */
+const JZ_DSP = { flex:'jz-df', block:'jz-db', grid:'jz-dg' };
+function jzDispOn(el, disp){
+  const c = JZ_DSP[disp] || 'jz-df';
+  el.__jzDsp = c;
+  el.classList.add(c);
+}
+function jzDispOff(el){
+  if(!el.__jzDsp) return;
+  el.classList.remove(el.__jzDsp);
+  el.__jzDsp = '';
+}
 function jzClose(el, disp, prevCls){
   sfx('close');                                         /* 78 — 팝업 닫힘 */
-  const inl = el.style.display;                         /* 닫은 쪽이 남긴 inline 값(''(=클래스로 숨김) 또는 'none') */
   /* 345 — display 를 되살리기 **전에** 판별해야 한다(되살린 뒤엔 무엇을 붙여도 «뜬다» 로 읽힌다).
      껍데기를 먼저 되돌려야 아래 jzKind·jzDimBg·jzDimKids 도 «열려 있던 그대로» 를 읽는다. */
   const shell = jzShellBack(el, prevCls);
   const k = jzKind(el);
   el.__jzBusy = 1;
-  el.style.display = disp;                              /* 닫히기 «직전» 의 실제 display 로 되살려 역재생 */
+  el.__jzInl0 = el.style.display;                       /* 410 — «누가 inline 을 바꿨나» 의 기준선(MO 가 읽는다) */
+  jzDispOn(el, disp);                                   /* 410 — 닫히기 «직전» 의 display 를 클래스로 세워 역재생 */
   el.classList.remove('jz-o', 'jz-dlg', 'jz-pg', 'jz-sh2');
   jzDimBg(el, k);                                       /* display 를 되살린 «뒤» 라야 배경색·기하가 읽힌다 */
   if(k === 'jz-sh2') jzDimKids(el);
   el.classList.add('jz-c', k);
   clearTimeout(el.__jzT);
   const gen = el.__jzGen = (el.__jzGen || 0) + 1;
-  const offC = () => {
-    if(el.__jzGen !== gen) return;
+  /* 연출을 걷는 뒷정리 — 끝나서(offC) 걷든, 다시 열려서(__jzCancel) 걷든 **같은 절차**다.
+     345 — 되살린 껍데기는 여기서 뗀다. 단 연출 도중에 누가 **다시 열었으면** 지금도 떠 있으므로
+     그 클래스는 «연 쪽» 의 것이라 안 건드린다(판별은 종전 그대로 computed display 로 한다 —
+     이제 `jzDispOff` 로 강제 표시를 걷은 «뒤» 라야 그 물음이 뜻을 갖는다). */
+  const done = () => {
     el.classList.remove('jz-c', k);
-    el.style.display = inl;                             /* 원래대로 — #panel 처럼 inline 'none' 을 쓰는 것도 보존 */
-    /* 345 — 되살린 껍데기는 연출이 끝난 여기서 뗀다. 단 연출 도중에 누가 **다시 열었으면**
-       (inline display 를 되돌린 지금도 클래스로 떠 있으면) 그 클래스는 «연 쪽» 의 것이므로 안 건드린다. */
+    jzDispOff(el);
     if(shell){
       let d = 'none'; try { d = getComputedStyle(el).display; } catch(_){}
       if(d === 'none') for(const c of shell) el.classList.remove(c);
     }
     el.__jzBusy = 0;
+    el.__jzCancel = null;
   };
+  const offC = () => { if(el.__jzGen !== gen) return; done(); };
+  /* 410 — 연출 도중에 «다시 열렸을» 때 MutationObserver 가 부른다. 세대를 올려 늦게 오는
+     offC 를 무력화하고(= 세대 가드를 «다시 열림» 쪽에도 세운다) 연출 흔적만 걷는다. */
+  el.__jzCancel = () => { clearTimeout(el.__jzT); el.__jzGen++; done(); };
   void el.offsetWidth;
   const hookedC = jzDoneThen(jzAnims(el), () => { clearTimeout(el.__jzT); offC(); });
   el.__jzT = setTimeout(offC, hookedC ? 2500 : 140);   /* 연출이 안 붙었으면 짧게 닫는다 */
@@ -33626,7 +33661,24 @@ function jzInit(){
       if(m.attributeName === 'class' && !was0.has(m.target)) was0.set(m.target, m.oldValue || '');
     for(const m of ms){
       const el = m.target;
-      if(el.__jzBusy) continue;
+      /* 410 — 닫힘 연출이 도는 동안(`__jzBusy`)은 jz 자신이 만든 변이가 쏟아지므로 종전대로 건너뛴다.
+         단 **딱 하나** 는 봐야 한다: 그 사이에 누가 `style.display` 로 «다시 연 것».
+         이제 jz 는 닫는 동안 inline display 를 한 번도 안 쓰므로(클래스로 세운다) 여기서 잡히는
+         inline 변화는 예외 없이 «바깥이 연 것»이다 — 기준선 `__jzInl0` 과 달라졌고 숨김값이 아니면 그렇다.
+         그러면 닫힘을 취소하고(늦게 오는 offC 무력화) 여는 연출로 넘긴다.
+         ⚠ `jzQuiet`(96 서브탭 전환) 중이면 취소만 하고 연출은 안 건다 — 상태만 최신으로 둔다. */
+      if(el.__jzBusy){
+        const inl = el.style.display;
+        if(m.attributeName === 'style' && inl && inl !== 'none' && inl !== el.__jzInl0 && el.__jzCancel){
+          el.__jzCancel();
+          el.__jzVis = true;
+          el.__jzOpT = performance.now();
+          let d = 'flex'; try { d = getComputedStyle(el).display; } catch(_){}
+          el.__jzLast = d;
+          if(!jzQuiet) jzOpen(el);
+        }
+        continue;
+      }
       let disp = 'none';
       try { disp = getComputedStyle(el).display; } catch(_){}
       const vis = disp !== 'none', was = !!el.__jzVis;
