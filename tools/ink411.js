@@ -26,11 +26,12 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
     const N = 400;
     const cv = document.createElement('canvas'); cv.width = N; cv.height = N;
     const g = cv.getContext('2d', { willReadFrequently: true });
+    const TH = (window.__th411 != null) ? window.__th411 : 8;
     const bbox = (ctx2, w, h) => {
       const d = ctx2.getImageData(0, 0, w, h).data;
       let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
       for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
-        if (d[(y * w + x) * 4 + 3] > 8) {
+        if (d[(y * w + x) * 4 + 3] > TH) {
           if (x < x0) x0 = x; if (x > x1) x1 = x;
           if (y < y0) y0 = y; if (y > y1) y1 = y;
         }

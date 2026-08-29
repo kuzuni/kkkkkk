@@ -96,6 +96,9 @@ const SEED = () => {
   S.own = {}; SKILLS.slice(0, 8).forEach(s => S.own[s.id] = { n: 3, l: 4 });
   S.eqSkill = [];
   SKILLS.slice(0, 6).forEach(s => toggleEquip(s, 'skill'));
+  /* [B] 표본은 «폭 상한에 안 걸리는» 그림들이다 — 앞의 두 펫(robo·bird)이 그렇다.
+     폭에 걸리는 dragon 은 [C] 전수 스윕이 이름과 값을 적어 따로 못박으므로 여기서 빠져도
+     숨는 곳이 없다(오히려 [B] 에 섞으면 «아트 종횡» 이 «자리 결함» 으로 읽힌다). */
   S.pet = {}; S.eqPet = [];
   PETS.slice(0, 2).forEach(t => { S.pet[t.id] = { n: 3, l: 2 }; toggleEquip(t, 'pet'); });
   buildSlots(); uiDirty = true; renderUI();
@@ -212,12 +215,16 @@ async function inksOf(p) {
   ok(all.every(e => e.w <= sw.box.w + 1 && e.h <= sw.box.h + 1),
      '전 품목이 그림 자리 안에 담긴다', sw.box.w + 'x' + sw.box.h);
   /* 폭 상한에 걸리는 것 = 종횡이 상자보다 넓은 그림. 그 외는 전부 세로를 채운다 */
-  const capped = all.filter(e => e.w >= sw.box.w - 1);
-  const free = all.filter(e => e.w < sw.box.w - 1);
+  /* «폭 상한에 걸렸다» 의 판정은 폭 픽셀이 아니라 **종횡**으로 한다 — 상자 종횡(w/h)보다 넓은
+     그림만 걸린다는 것이 이 설계의 정의다. 폭으로 재면 «마침 폭이 상한에 닿은 정사각» 이
+     걸린 것처럼 읽힌다(w 를 82 로 좁혔던 회차에 🛸 가 실제로 그랬다). */
+  const BA = sw.box.w / sw.box.h;
+  const capped = all.filter(e => e.w / e.h > BA + 0.01);
+  const free = all.filter(e => e.w / e.h <= BA + 0.01);
   ok(free.every(e => Math.abs(e.h - sw.box.h) <= 3.5), '폭 상한에 안 걸린 품목은 전부 세로를 채운다',
      free.length + '종 · h ' + px(Math.min(...free.map(e => e.h))) + '~' + px(Math.max(...free.map(e => e.h))));
-  ok(capped.every(e => e.w / e.h > sw.box.w / sw.box.h),
-     '폭 상한에 걸린 것은 «상자보다 넓은» 그림뿐이다(356 등방 — 늘려 채우지 않는다)',
+  ok(capped.every(e => Math.abs(e.w - sw.box.w) <= 1.5),
+     '폭 상한에 걸린 그림은 폭을 정확히 채운다(356 등방 — 늘려 채우지 않는다)',
      capped.map(e => (e.ic || e.sp) + ' ' + px(e.w) + 'x' + px(e.h)).join(' · ') || '없음');
 
   /* ── [D] 형제 부품 ── */
@@ -242,7 +249,7 @@ async function inksOf(p) {
     return { plus: r ? [Math.round(r.width), Math.round(r.height)] : null };
   });
   ok(!!sib2.plus, '빈 칸 [+] 가 있다');
-  if (sib2.plus) eq('[+] 크기가 같이 커졌다(52 → 64)', sib2.plus.join('x'), '64x64');
+  if (sib2.plus) eq("[+] 크기가 그림 덩치에 맞춰 커졌다(52 → 74)", sib2.plus.join("x"), "74x74");
   const lockScale = /\.sk-slot\.lock>\.sk-lock\{[^}]*transform:scale\(([\d.]+)\)/.exec(SRC);
   ok(!!lockScale && +lockScale[1] > 1.2, '자물쇠도 같이 비례한다(1.061 → ≥1.2)',
      lockScale ? lockScale[1] : '없음');

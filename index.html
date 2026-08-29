@@ -10158,10 +10158,12 @@
   /* 272 — «해금됐지만 비어 있는» 칸. 자물쇠가 아니라 [+] 자리다(주인 지시 2026-08-27) */
   .sk-slot.free{background:#9E8A70;box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D8C4A8;
     cursor:default}
-  /* 411 — 장착 칸 그림과 같은 비(1.23)로 같이 커진다. 52 → 64 · 획 14 → 17 */
-  .sk-plus{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
-    background:linear-gradient(#fff,#fff) center/64px 17px no-repeat,
-               linear-gradient(#fff,#fff) center/17px 64px no-repeat;
+  /* 411 — 장착 칸 그림과 **눈에 보이는 덩치**를 맞춘다. 이 십자는 사방 3px 검정 그림자를 달고 있어
+     화면 덩치가 `width + 6` 이다 ⇒ 그림 80 에 맞추려면 74 다(52 → 74 · 획 14 → 20).
+     ⚠ 64 로 뒀던 2회차에 비평가 AU·AV 가 독립으로 «빈 칸이 장착 그림보다 12.5~18% 작다» 고 짚었다. */
+  .sk-plus{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;
+    background:linear-gradient(#fff,#fff) center/74px 20px no-repeat,
+               linear-gradient(#fff,#fff) center/20px 74px no-repeat;
     filter:drop-shadow(3px 0 0 #000) drop-shadow(-3px 0 0 #000)
            drop-shadow(0 3px 0 #000) drop-shadow(0 -3px 0 #000);
     opacity:.92;pointer-events:none}
@@ -22019,11 +22021,11 @@ const UPR_FB  = { dragon:'🐉', bird:'🐦', robo:'🤖' };   /* 아틀라스�
    ⚑ **눈금은 세로 잉크 높이다**(폭도 면적도 아니다). 채점이 «세 시트의 슬롯 줄을 한 장에 나란히
    놓고» 보는 것이라 눈이 맞대어 보는 축이 높이이기 때문이다. 폭은 **상한만** 준다.
    `tools/ink411.js` 실측 종횡(w/h): 이모지 0.683~1.129 · 펫 0.579(robo)~1.469(dragon) · 기사 0.933.
-   ⇒ 종횡이 w/h(=1.10) 이하인 그림은 **전부 정확히 h** 이고, 그보다 넓은 것(dragon)만 폭에 걸려
+   ⇒ 종횡이 w/h(=1.075) 이하인 그림은 **전부 정확히 h** 이고, 그보다 넓은 것(dragon)만 폭에 걸려
    낮아진다 — 356 규약이 «등방» 이라 늘려 채우는 것은 금지다. 그 한 자리는 아트의 성질이지
    자리의 결함이 아니며, 게이트가 그 값을 따로 적는다.
    ⚠ **캔버스 크기 ≠ 잉크**(21983 아래 주석) — 아래 역산은 전부 «잉크가 이 상자가 되도록» 이다. */
-const SLOT_ART = { h: 80, w: 88 };
+const SLOT_ART = { h: 80, w: 86 };
 /* 기사 idle0 잉크 42x45(프레임 44x46 안 · `ink411` 실측). 배율은 정수가 아니다 —
    79/80 의 «정수 배율» 은 흐림을 막자는 규칙인데 `imageSmoothingEnabled=false` 라 흐리지 않고,
    정수만 쓰면 45 / 90 / 135 로 양자화돼 이 상자(80)를 **못 맞춘다**(90 이면 11% 초과 = 지금 결함). */
