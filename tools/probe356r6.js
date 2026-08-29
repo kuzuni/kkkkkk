@@ -40,15 +40,25 @@ const REF = {
   bn:   { w: 115, h: 117, why: '측정표 34 §15-3 «ref 잉크 x138..252 (115) × y1274..1390 (117)»' },
 };
 
-/* 자리 — css 는 «내가 고칠 규칙» · sel 은 «잴 노드» */
+/* 자리 — css 는 «내가 고칠 규칙» · sel 은 «잴 노드» · old 는 **수리 전 선언**이다.
+   ⚠ 재현기는 «지금 상태를 읽어» 부호를 물으면 안 된다 — 수리하는 순간 그 물음이 사라져
+   다음 세션에게 아무것도 안 남긴다(5회차 [R4] 가 음성항을 따로 세운 것과 같은 이유).
+   그래서 이 자는 수리 전 값을 **주입해서** 재현하고, 지금 값은 따로 [D] 에서 잰다. */
 const SITES = [
-  { key: 'atk',  css: '#blsC_atk  .ic',        sel: '#blsC_atk > .b > s.ic' },
-  { key: 'hp',   css: '#blsC_hp   .ic',        sel: '#blsC_hp > .b > s.ic' },
-  { key: 'rate', css: '#blsC_rate .ic',        sel: '#blsC_rate > .b > s.ic' },
-  { key: 'ck',   css: '.bls-c .tm>b.ck',       sel: '#blsC_atk > .b > s.tm > b.ck' },
+  { key: 'atk',  css: '#blsC_atk  .ic',  sel: '#blsC_atk > .b > s.ic',
+    old: 'transform:scaleX(.974) !important;font-size:140px !important' },
+  { key: 'hp',   css: '#blsC_hp   .ic',  sel: '#blsC_hp > .b > s.ic',
+    old: 'transform:scaleX(.858) !important;font-size:153px !important' },
+  { key: 'rate', css: '#blsC_rate .ic',  sel: '#blsC_rate > .b > s.ic',
+    old: 'transform:scaleX(.875) !important;font-size:140px !important' },
+  { key: 'ck',   css: '.bls-c .tm>b.ck', sel: '#blsC_atk > .b > s.tm > b.ck',
+    old: 'transform:scaleX(.97) !important' },
   /* 보너스 바는 «형제 둘이 한 그림» 이다 — 이모지 .ic + CSS 셰브론 .ch.
-     ref 115×117 은 그 **둘의 합** bbox 라 잴 때도 둘을 같이 숨긴다. */
-  { key: 'bn',   css: '#blsBonus>s.ic',        sel: '#blsBonus > s.ic, #blsBonus > s.ch', group: true },
+     ref 115×117 은 그 **둘의 합** bbox 라 잴 때도 둘을 같이 숨기고, 주입도 둘에 같이 건다.
+     (형제라 translate 가 서로 다르지만 **비균등이라는 성질**은 scale 부분에만 있다) */
+  { key: 'bn',   css: '#blsBonus>s.ic',  sel: '#blsBonus > s.ic, #blsBonus > s.ch', group: true,
+    oldEach: { '#blsBonus>s.ic': 'transform:translate(57.71px,7.62px) scale(.706,.748) !important',
+               '#blsBonus>s.ch': 'transform:translate(21.55px,-12.54px) scale(.706,.748) !important' } },
 ];
 
 /* ── 페이지 안에서 도는 헬퍼 ─────────────────────────────────────────────── */
@@ -152,30 +162,67 @@ const DIFF = async ([a, b, tol]) => {
   console.log(`  진입 확인: .bls-c 카드 ${seen.cards}장\n`);
 
   const plan = {};
+  /* 규칙을 임시로 덮었다가 도로 벗기는 자 — addStyleTag 는 못 지우므로 «되돌리는 규칙» 을 덧쓴다 */
+  const CSSOF = (sel) => p.evaluate((q) => {
+    const out = {};
+    for (const one of q.split(',')) {
+      const e = document.querySelector(one.trim());
+      if (e) out[one.trim()] = getComputedStyle(e).transform + '|' + getComputedStyle(e).fontSize;
+    }
+    return out;
+  }, sel);
+  const RESTORE = async (sel, snap) => {
+    let css = '';
+    for (const [q, v] of Object.entries(snap)) {
+      const [tf, fs] = v.split('|');
+      css += `${q}{transform:${tf} !important;font-size:${fs} !important}`;
+    }
+    await p.addStyleTag({ content: css });
+    await p.waitForTimeout(150);
+    await p.evaluate(() => { for (const a of document.getAnimations()) { try { a.pause(); } catch (e) {} } });
+  };
+
   for (const s of SITES) {
-    const now = await inkTwice(s.sel);
-    if (!now) { console.log(`  (없음) ${s.css}\n`); continue; }
+    const snap = await CSSOF(s.sel);
+    /* ⓐ 지금(수리 후) */
+    const cur = await inkTwice(s.sel);
+    if (!cur) { console.log(`  (없음) ${s.css}\n`); continue; }
+    const tfCur = Object.values(snap)[0].split('|')[0];
 
-    const tf = await p.evaluate((sel) => {
-      const e = document.querySelector(sel.split(',')[0].trim());
-      return e ? getComputedStyle(e).transform : '';
-    }, s.sel);
-
-    /* transform 을 떼고 자연 잉크 — 그룹 자리는 형제까지 같이 뗀다 */
+    /* ⓑ 자연 — transform 을 떼고 (그룹 자리는 형제까지 같이 뗀다)
+       ⚠ 보너스 바는 `.bls-bn{height:150;overflow:hidden}` 이라 transform 을 뗀 «큰» 이모지가
+          바 하변에서 **잘린다**(하변이 바 하변과 정확히 겹치는 것이 잘림의 서명). 잘린 자연으로
+          예측하면 [E] 가 «97.4 ↔ 실측 110» 으로 엉뚱하게 빨개진다 — 제품이 아니라 자가 틀린 것이다.
+          그래서 재는 동안만 클립을 연다(cal356r6 과 같은 처방). */
+    if (s.key === 'bn') await p.addStyleTag({ content: '.bls-bn{overflow:visible !important}' });
     await p.addStyleTag({ content: `${s.sel}{transform:none !important}` });
     await p.waitForTimeout(150);
     await p.evaluate(() => { for (const a of document.getAnimations()) { try { a.pause(); } catch (e) {} } });
     const nat = await inkTwice(s.sel);
-    /* 원복 — addStyleTag 는 못 지우므로 나중 규칙으로 도로 덮는다 */
-    await p.addStyleTag({ content: `${s.sel}{transform:${tf} !important}` });
+    if (s.key === 'bn') await p.addStyleTag({ content: '.bls-bn{overflow:hidden !important}' });
+    await RESTORE(s.sel, snap);
+
+    /* ⓒ 수리 전 — 옛 선언을 **주입**해서 재현한다 */
+    const inj = s.oldEach
+      ? Object.entries(s.oldEach).map(([q, v]) => `${q}{${v}}`).join('')
+      : `${s.sel}{${s.old}}`;
+    await p.addStyleTag({ content: inj });
     await p.waitForTimeout(150);
+    await p.evaluate(() => { for (const a of document.getAnimations()) { try { a.pause(); } catch (e) {} } });
+    const now = await inkTwice(s.sel);
+    const tf = await p.evaluate((sel) => {
+      const e = document.querySelector(sel.split(',')[0].trim());
+      return e ? getComputedStyle(e).transform : '';
+    }, s.sel);
+    await RESTORE(s.sel, snap);
 
     const ref = REF[s.key];
     const sFit = Math.min(ref.w / nat.w, ref.h / nat.h);
-    plan[s.key] = { now, nat, ref, sFit: +sFit.toFixed(4), tf };
+    plan[s.key] = { now, nat, cur, ref, sFit: +sFit.toFixed(4), tf, tfCur };
 
-    console.log(`── ${s.css}   (노드 ${now.nodes}개)   ${tf}`);
-    console.log(`   지금 그려짐  ${now.w}×${now.h}   종횡 ${(now.w / now.h).toFixed(3)}   @(${now.x0},${now.y0})  재실행 일치 ${now.stable}`);
+    console.log(`── ${s.css}   (노드 ${now.nodes}개)`);
+    console.log(`   지금(수리 후) ${cur.w}×${cur.h}   종횡 ${(cur.w / cur.h).toFixed(3)}   @(${cur.x0},${cur.y0})   ${tfCur}`);
+    console.log(`   수리 전(주입) ${now.w}×${now.h}   종횡 ${(now.w / now.h).toFixed(3)}   @(${now.x0},${now.y0})  재실행 일치 ${now.stable}   ${tf}`);
     console.log(`   자연(tf 뗌)  ${nat.w}×${nat.h}   종횡 ${(nat.w / nat.h).toFixed(3)}   @(${nat.x0},${nat.y0})  재실행 일치 ${nat.stable}`);
     console.log(`   ref          ${ref.w}×${ref.h}   종횡 ${(ref.w / ref.h).toFixed(3)}   ${ref.why}`);
     console.log(`   ⇒ contain 등방 s = min(${(ref.w / nat.w).toFixed(4)}, ${(ref.h / nat.h).toFixed(4)}) = ${sFit.toFixed(4)}`);
@@ -202,13 +249,51 @@ const DIFF = async ([a, b, tol]) => {
       plan[k].nat.h * plan[k].sFit <= plan[k].ref.h + 0.5, true);
   }
 
-  console.log('\n[C] 부호 — 지금 손잡이가 ref 에 «가까워지는» 쪽인가 «멀어지는» 쪽인가');
+  console.log('\n[C] 부호 — 수리 전 손잡이는 ref 에 «가까워지는» 쪽이었나 «멀어지는» 쪽이었나');
+  console.log('    ⚑ 5회차(03)와 여기가 갈리는 자리다. 03 은 손잡이가 ref 에서 «멀어지고» 있어서');
+  console.log('       등방으로 바꾸는 것이 ref 에도 이득이었다. 34 는 반대다 — 수리 전이 ref 에 더 가깝다.');
+  console.log('       그래도 걷어내는 근거는 «주인 지시가 레퍼런스보다 우선»(354 선례)이고,');
+  console.log('       남는 거리는 CSS 가 아니라 **아트 종횡**이 만든 것이라 아트 교체로만 닫힌다.');
   for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
     const q = plan[k];
-    const dNow = Math.hypot(q.now.w - q.ref.w, q.now.h - q.ref.h);
-    const dFit = Math.hypot(q.nat.w * q.sFit - q.ref.w, q.nat.h * q.sFit - q.ref.h);
-    console.log(`  ${k}: 지금 ref 거리 ${dNow.toFixed(1)}px · contain 후 ${dFit.toFixed(1)}px` +
-      `  → ${dFit <= dNow ? '등방이 ref 에 더 가깝거나 같다' : `등방이 ${(dFit - dNow).toFixed(1)}px 멀어진다 (아트 대기 자리)`}`);
+    const dOld = Math.hypot(q.now.w - q.ref.w, q.now.h - q.ref.h);
+    const dNew = Math.hypot(q.cur.w - q.ref.w, q.cur.h - q.ref.h);
+    console.log(`  ${k}: 수리 전 ref 거리 ${dOld.toFixed(1)}px · 수리 후 ${dNew.toFixed(1)}px` +
+      `  → ${dNew <= dOld ? '등방이 ref 에 더 가깝거나 같다' : `등방이 ${(dNew - dOld).toFixed(1)}px 멀어진다 (아트 대기)`}`);
+  }
+
+  console.log('\n[D] 수리 후 — 다섯 자리가 전부 «자연 종횡» 이다 (이 라운드의 통과 조건)');
+  console.log('    자는 «종횡비 차» 가 아니라 **픽셀 띠**다 — 잉크가 33px 인 ⏱ 에서는 잉크 경계');
+  console.log('    한 칸(±0.5px)이 종횡비를 0.027 씩 흔들어, 고정 종횡 허용치는 작은 글리프를 반드시');
+  console.log('    빨갛게 만든다(첫 실행이 그랬다). 대신 «세로에서 뽑은 배율 k 를 가로에 대 봐서');
+  console.log('    한 픽셀 안에 드는가» 를 묻는다 — 이것이 등방의 정의 그대로다.');
+  for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
+    const q = plan[k];
+    const kk = q.cur.h / q.nat.h;
+    const wantW = kk * q.nat.w;
+    ck(`${k} 세로 배율 ${kk.toFixed(4)} 를 가로에 대면 ${wantW.toFixed(1)} ↔ 실측 ${q.cur.w} (Δ ${Math.abs(q.cur.w - wantW).toFixed(1)}px)`,
+      Math.abs(q.cur.w - wantW) <= 1.5, true);
+  }
+
+  console.log('\n[E] 수리 후 잉크 = contain 이 예측한 값 (역산이 제품에 실제로 실렸는가)');
+  for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
+    const q = plan[k];
+    const pw2 = q.nat.w * q.sFit, ph = q.nat.h * q.sFit;
+    ck(`${k} 예측 ${pw2.toFixed(1)}×${ph.toFixed(1)} ↔ 실측 ${q.cur.w}×${q.cur.h}`,
+      Math.abs(q.cur.w - pw2) <= 1.5 && Math.abs(q.cur.h - ph) <= 1.5, true);
+  }
+
+  console.log('\n[F] 수리 후 ref 상자를 안 넘는다 — 잘림·이웃 침범이 구조적으로 없다');
+  for (const k of ['atk', 'hp', 'rate', 'ck', 'bn']) {
+    ck(`${k} 잉크 ≤ ref 상자`, plan[k].cur.w <= plan[k].ref.w + 1 && plan[k].cur.h <= plan[k].ref.h + 1, true);
+  }
+
+  console.log('\n[G] 보너스 바 — 역산이 중심을 미지수로 놓았으니 중심은 ref 와 Δ0 이어야 한다');
+  {
+    const q = plan.bn;
+    const cx = q.cur.x0 + q.cur.w / 2, cy = q.cur.y0 + q.cur.h / 2;
+    ck(`중심 (${cx.toFixed(1)}, ${cy.toFixed(1)}) ↔ ref (195, 1332)`,
+      Math.abs(cx - 195) <= 1.5 && Math.abs(cy - 1332) <= 1.5, true);
   }
 
   console.log(`\n[probe356r6] ${pass}/${pass + fail}`);

@@ -11910,10 +11910,23 @@
      ❤️ 만 높이가 141 로 13px 낮아 font-size 를 먼저 올리고 폭을 scaleX 로 되돌린다. */
   /* 17회차 — T «아이콘 블록이 2px 위 (ref y814..967 / 우리 812..965) · 헤더 하단→아이콘 상단 ref 20.5 vs 우리 17.5»
      · U «ref 816 / 우리 815». bbox(w 151/145/133)는 T·U 둘 다 «ref 와 정확히 일치» 라고 확인했으므로 top 만 +2. */
+  /* 356 6회차 (주인 지시 «아이콘은 원본 비율 — 비균등 스케일 금지») — 위 두 주석의 `scaleX` 를 폐기했다.
+     ⚠ **여기의 scaleX 는 5회차 03 과 반대로 «ref 에 가까워지던» 손잡이였다**(probe356r6 [C]:
+     수리 전 잉크가 ref 대비 폭 1.4~2.7% · 높이 0.6~2.6%). 그래도 걷어내는 이유는 주인 지시가
+     «폭을 맞춰라» 가 아니라 «찌그러뜨리지 마라» 이고, 지시가 레퍼런스보다 우선이기 때문이다(354 선례).
+     자는 4·5회차와 같은 **contain** — s = min(refW/natW, refH/natH). ref 상자를 절대 안 넘으므로
+     잘림·이웃 침범이 구조적으로 없고(356-⑩), 나중에 **ref 종횡의 아트로 갈아 끼우면 s 가 그대로 정답**이 된다.
+     ref 잉크(이 세션이 `scan34.js mask .. noty` 로 재측정 — 창을 y1052 로 닫아야 초록 효과값 윗머리가 안 섞인다):
+       ⚔️ 150×153 · ❤️ 145×154 · 🌀 132×156   (옛 기록 «151/145/133» 과 폭 ±1 · ❤️ 높이는 «154» 와 정확히 일치)
+     자연 잉크(fs 140, tf 없음, 찍힌 픽셀): ⚔️ 158×157 · ❤️ 157×144 · 🌀 152×157
+     ⚑ **font-size 153 을 140 으로 되돌렸다** — 그 값은 «scaleX 로 폭을 되돌릴 것» 을 전제로 ❤️ 높이를
+       끌어올리려 올려 둔 것이라 등방에서는 뜻이 없다(contain 은 배율 불변 — `cal356r6` 이 잉크 차 0.14px 로 확인).
+     ⚑ **남는 것은 아트 몫이다**: 우리 이모지는 ref 아트보다 가로로 넓어(❤️ 종횡 1.089 ↔ ref 0.942)
+       어떤 등방 배율로도 두 축을 동시에 못 맞춘다 ⇒ 높이가 ❤️ −13.6% · 🌀 −12.6% 남는다(측정표 §16 «아트 대기»). */
   .bls-c .ic{left:0;right:0;top:21px;height:166px;line-height:166px;text-align:center;font-size:140px}
-  #blsC_atk  .ic{transform:scaleX(.974)}
-  #blsC_hp   .ic{font-size:153px;transform:scaleX(.858)}
-  #blsC_rate .ic{transform:scaleX(.875)}
+  #blsC_atk  .ic{transform:scale(.9494)}
+  #blsC_hp   .ic{transform:scale(.9236)}
+  #blsC_rate .ic{transform:scale(.8684)}
   /* 1회차: 초록 코어 h29·w105 (ref h32·w119) → fs 42→46 */
   /* 13회차 — K «h +12.5%» · L «h +9%» 일치(둘 다 «이 줄만 혼자 크다» 로 위계 붕괴의 원인이라 지목).
      자체 초록 코어 ref 119x32 / 우리 112x35 ⇒ 높이는 −9%, 폭은 +6% 다 — fs 를 내리고 폭은 scaleX 로 돌려놓는다.
@@ -11944,8 +11957,12 @@
        · 시계~숫자 간격 ref 7 · 우리 12 → margin-right 로 좁힌다. */
   /* ⚠ 시계를 `<i>` 밖으로 빼면 `<i>` 의 흰 채움·검정 외곽선을 못 물려받아 «윤곽선만 있는 유령 글리프» 가
      된다(13회차에 한 번 겪었다 — 잉크 마스크에 아예 안 잡혔다). 같은 색·같은 외곽선을 다시 준다. */
+  /* 356 6회차 — `scaleX(.97)` → 등방 `scale(.9167)`.
+     자연 잉크 36×40 · ref 33×39(측정표 §14) ⇒ contain s = min(33/36, 39/40) = .9167 → 33.0×36.7.
+     transform-origin 이 상자 중심이라 **시계 세로 중심 1093 은 Δ0**(ref §14 와 같은 값)이고,
+     잉크가 폭 35→33 으로 줄어든 만큼 «시계↔숫자» 시각 간격만 1px 넓어진다(ref 6 → 7). */
   .bls-c .tm>b.ck{position:relative;top:4px;font-size:40px;line-height:97px;vertical-align:top;margin-right:10px;
-    color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scaleX(.97)}
+    color:#fff;-webkit-text-stroke:6px #1A1206;paint-order:stroke fill;transform:scale(.9167)}
   /* 17회차 — T: ref 타이머 잉크 폭 181/181/183(편차 2px, 등폭) vs 우리 179/170/178(편차 **9px**).
      «00:01:21» 만 혼자 9px 좁아 카드 3장이 시각적으로 안 맞는다 — 비례폭 숫자라 글리프마다 advance 가 다르다.
      ref 대조 이전에 **우리 세 카드끼리 어긋나는** 결함이므로 tabular-nums 로 등폭 고정. */
@@ -12007,12 +12024,25 @@
        요소가 로컬 (L,T) 에 있을 때  dx = 58.3 + .706·L − L ·  dy = 7.9 + .748·T − T
      비율이 가로 .706 / 세로 .748 로 다른 이유는 ref 아트가 거의 정사각(115×117)인데 우리 조합은 1.38:1 이라서다.
      아트가 들어오면 이 변환을 지우고 이미지 bbox 를 115×117 @(138,1274) 로 잡으면 된다. */
+  /* 356 6회차 — 위 «가로 .706 / 세로 .748» 이 바로 주인 지시가 금지한 비균등 그룹 스케일이다
+     (스캐너가 |sx/sy−1| = .056 으로 잡는다). 그룹을 **등방 .6765** 로 바꿨다.
+     그룹 변환은 바 로컬에서 `local' = T + s·local` 이고, T 는 «자연 잉크 중심 N 을 ref 중심 C 로 보낸다»
+     한 식에서 나온다 —  T = C − B − s·(N − B).  `cal356r6` 이 제품에게 직접 물어 역산했다:
+       바 원점 B (75, 1254) · 자연 그룹 잉크 170×162 중심 N (162, 1341) · ref 115×117 중심 C (195, 1332)
+       ⇒ s = min(115/170, 117/162) = .6765 · T = (61.15, 19.15)
+     ⚠ **자연 잉크를 잴 때 클립을 열어야 한다** — `.bls-bn{height:150;overflow:hidden}` 이 transform 을
+       뗀 순간의 큰 이모지를 바 하변에서 자른다. 잘린 값(높이 144)으로 역산하면 배율은 우연히 같지만
+       (폭이 s 를 정하므로) **중심이 6px 어긋난다**. `cal356r6` 이 잴 동안만 `overflow:visible` 로 연다.
+     요소별로는 `translate(Tx + s·L − L, Ty + s·T₀ − T₀) scale(s)` 로 나눠 준다(아래 두 줄).
+     ⚑ **중심은 ref 와 Δ0 으로 박힌다** — 역산이 중심을 식의 미지수로 놓았기 때문이다(상수 0개).
+     ⚑ 남는 것은 아트 몫: 우리 조합(이모지 💰 + CSS 셰브론)이 1.181:1 인데 ref 아트는 0.983:1 이라
+       등방으로는 높이가 −6.3% 남는다(109.6 ↔ ref 117) — 아트가 오면 이 변환을 지우고 이미지 bbox 를 115×117 로 잡는다. */
   .bls-bn .ic{left:2px;top:6px;width:150px;height:140px;line-height:140px;text-align:center;font-size:150px;
-    transform-origin:0 0;transform:translate(57.71px,7.62px) scale(.706,.748)}
+    transform-origin:0 0;transform:translate(60.50px,17.21px) scale(.6765)}
   /* ref 는 «금화주머니 + 초록 더블 셰브론(↑↑)» 두 덩어리다 — 셰브론이 통째로 빠지면 잉크 폭이 172→126 이 된다.
      CSS 로 그려 ref bbox(오른쪽 46px 구간)를 차지하게 한다. 아트가 오면 통째로 교체. */
   .bls-bn .ch{left:125px;top:86px;width:46px;height:48px;
-    transform-origin:0 0;transform:translate(21.55px,-12.54px) scale(.706,.748)}
+    transform-origin:0 0;transform:translate(20.71px,-8.68px) scale(.6765)}
   .bls-bn .ch::before,.bls-bn .ch::after{content:'';position:absolute;left:4px;width:38px;height:19px;
     box-sizing:border-box;border:9px solid #6BE01E;border-right:0;border-bottom:0;
     rotate:45deg;transform:skew(-10deg,-10deg)}
