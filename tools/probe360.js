@@ -33,6 +33,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
+const { plate } = require('./plate360');   /* 385 — 차분법의 공용 판(마젠타). 규약·근거는 그 파일 머리말 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -71,6 +72,10 @@ async function boot(ctx, url) {
   await p.addStyleTag({ content:
     '*,*::before,*::after{animation-play-state:paused!important;transition:none!important}' });
   await p.waitForTimeout(250);
+  /* ★ 385(2026-08-29) — **판을 깔고 잰다.** 382 가 `verify360` 에만 넣은 정착 두 줄이 이 자에는
+     안 와서, 같은 차분법이 게이트와 다른 숫자를 돌려주고 있었다(게이트 attend 98×100 ↔ 여기
+     96×99 · 로드마다 ±1~2px). 판 색 규약과 근거는 `tools/plate360.js` 머리말. */
+  await plate(p);
   return { p, errs };
 }
 

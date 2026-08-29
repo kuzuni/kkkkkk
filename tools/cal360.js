@@ -3,18 +3,27 @@
  *   node tools/cal360.js [목표폭] [목표높이]      (기본 108 × 97)
  *
  * 왜 계산이 아니라 «재고 고친다» 인가:
- *   잉크 = 글리프 잉크 × font-size × scaleX 에 **외곽선(drop-shadow 4겹 체이닝)** 이 더해지는데,
- *   그 외곽선은 `--o = --ih × .028` 이라 font-size 에 비례하지 **않고**, transform 뒤에 걸리므로
- *   가로만 scaleX 를 한 번 더 먹는다. 닫힌 식을 세우면 상수를 하나 더 심는 꼴이라(LESSONS 336-②)
- *   **실측 → 선형 보정 → 재측정** 을 3바퀴 돌려 수렴시킨다. 잉크는 fs·sx 에 거의 선형이라 2~3회면 붙는다.
+ *   잉크 = 글리프 잉크 × font-size 에 **외곽선(drop-shadow 4겹 체이닝)** 이 더해지는데, 그 외곽선은
+ *   `--o = --ih × .028` 이라 font-size 에 비례하지 **않는다**. 닫힌 식을 세우면 상수를 하나 더 심는
+ *   꼴이라(LESSONS 336-②) **실측 → 선형 보정 → 재측정** 을 돌려 수렴시킨다.
  *
- * 측정법은 probe360 과 같은 **차분법**이다(capA2 3회차 교훈: 임계값 마스크는 드롭섀도를 물어 수 px 틀린다).
+ * 측정법은 probe360·verify360 과 같은 **차분법**이고, 판(마젠타)은 `tools/plate360.js` 공용이다
+ *   (385 — 그 전에는 이 자만 캔버스 위에서 재서 게이트와 2px 다른 숫자를 돌려줬다).
  *
- * 출력은 그대로 index.html `#sideL` 의 style 에 옮겨 적는 `--sf`/`--sx` 값이다.
+ * ⚠ **손잡이는 `--sf`(등방) 하나뿐이다 — 356(주인 지시: «아이콘은 원본 비율, 비균등 scaleX 금지»).**
+ *   385 실측: 이 자는 356 뒤에도 `--sx` 를 밀고 있었는데 제품(`#sideL .ibtn .si`, index.html 947)이
+ *   그 변수를 **더는 안 읽어서** 폭 보정이 통째로 no-op 이었다 — 회차마다 `--sx` 만 1.15 → 1.71 로
+ *   부풀고 잉크는 한 픽셀도 안 움직였다. 그런데도 마지막 줄은 그 값을 «옮겨 적을 값» 으로 찍었다.
+ *   심으면 죽은 선언이 하나 늘고 `verify360` «--sx 선언 0건» 이 곧바로 빨개진다.
+ *   ⇒ **높이를 눈금으로 삼아 `--sf` 만 민다**(probe371 과 같은 규약). 폭은 목표가 아니라 **결과**다
+ *      — 등방 손잡이 하나로 두 축을 동시에 붙일 수는 없다(LESSONS 382-⑤).
+ *
+ * 출력은 그대로 index.html `#sideL` 의 style 에 옮겨 적는 `--sf` 값이다(`--sx` 는 적지 마라).
  */
 'use strict';
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { plate } = require('./plate360');   /* 385 — 차분법의 공용 판(마젠타). 규약·근거는 그 파일 머리말 */
 const { chromium } = pw();
 
 const TW = +(process.argv[2] || 108);
@@ -81,13 +90,16 @@ async function measure(p, rows) {
   await p.addStyleTag({ content:
     '*,*::before,*::after{animation-play-state:paused!important;transition:none!important}' });
   await p.waitForTimeout(250);
+  /* ★ 385(2026-08-29) — **판을 깔고 잰다.** 382 가 `verify360` 에만 넣은 정착 두 줄이 이 자에는
+     안 와서, 같은 차분법이 게이트와 다른 숫자를 돌려주고 있었다(게이트 attend 98×100 ↔ 여기
+     96×99 · 로드마다 ±1~2px). 판 색 규약과 근거는 `tools/plate360.js` 머리말. */
+  await plate(p);
 
   const rows = await p.evaluate(() => [...document.querySelectorAll('#sideL .ibtn')].map(e => e.dataset.pop));
   const cur = await p.evaluate(() => {
     const o = {};
     document.querySelectorAll('#sideL .ibtn').forEach(e => { o[e.dataset.pop] = {
-      sf: parseFloat(e.style.getPropertyValue('--sf')) || 0.96,
-      sx: parseFloat(e.style.getPropertyValue('--sx')) || 1.15 }; });
+      sf: parseFloat(e.style.getPropertyValue('--sf')) || 0.96 }; });
     return o;
   });
 
@@ -95,37 +107,34 @@ async function measure(p, rows) {
   for (let it = 1; it <= 4; it++) {
     const ink = await measure(p, rows);
     console.log(`--- ${it}회 측정`);
-    let worst = 0;
+    let worstH = 0, worstW = 0;
     rows.forEach((k, i) => {
       const m = ink[i]; if (!m) { console.log(`    ${k}: 측정 실패`); return; }
       const dw = (m.w / TW - 1) * 100, dh = (m.h / TH - 1) * 100;
-      worst = Math.max(worst, Math.abs(dw), Math.abs(dh));
+      worstH = Math.max(worstH, Math.abs(dh)); worstW = Math.max(worstW, Math.abs(dw));
       console.log(`    ${k.padEnd(7)} ${String(m.w).padStart(4)}×${String(m.h).padStart(4)}` +
                   `  Δ폭 ${dw.toFixed(1).padStart(6)}%  Δ높이 ${dh.toFixed(1).padStart(6)}%` +
-                  `  (--sf ${cur[k].sf.toFixed(4)} · --sx ${cur[k].sx.toFixed(4)})`);
+                  `  (--sf ${cur[k].sf.toFixed(4)})`);
     });
-    console.log(`    ⇒ 최대 오차 ${worst.toFixed(2)}%`);
-    if (worst < 1.0 || it === 4) break;
-    /* 선형 보정 — 높이는 fs(=ih×sf) 로, 폭은 sx 로 민다. 높이를 고치면 폭도 같이 움직이므로
-       폭 보정은 «높이를 고친 뒤의 예상 폭» 기준으로 잡는다(그래서 한 바퀴가 아니라 여러 바퀴다). */
+    /* 수렴 판정은 **높이**로만 한다 — 등방 손잡이가 미는 축이 그것이다(356).
+       폭은 결과라 여기 같이 세면 «영원히 안 붙는» 루프가 된다(385 실측: --sx no-op 시절의 12.04%). */
+    console.log(`    ⇒ 최대 오차 높이 ${worstH.toFixed(2)}% (폭은 결과 — 최대 ${worstW.toFixed(2)}%)`);
+    if (worstH < 1.0 || it === 4) break;
+    /* 선형 보정 — 높이를 fs(=ih×sf)로 민다. 폭은 같은 배율로 따라 움직인다(등방). */
     rows.forEach((k, i) => {
       const m = ink[i]; if (!m) return;
-      const kh = TH / m.h;
-      cur[k].sf *= kh;
-      cur[k].sx *= TW / (m.w * kh);
+      cur[k].sf *= TH / m.h;
     });
     await p.evaluate(v => {
       document.querySelectorAll('#sideL .ibtn').forEach(e => {
         const c = v[e.dataset.pop]; if (!c) return;
         e.style.setProperty('--sf', c.sf.toFixed(4));
-        e.style.setProperty('--sx', c.sx.toFixed(4));
       });
     }, cur);
     await p.waitForTimeout(120);
   }
 
-  console.log('\n=== index.html 에 옮겨 적을 값 ===');
-  rows.forEach(k => console.log(
-    `    ${k.padEnd(7)} --sf:${cur[k].sf.toFixed(3)};--sx:${cur[k].sx.toFixed(3)}`));
+  console.log('\n=== index.html 에 옮겨 적을 값 (--sx 는 적지 마라 — 356) ===');
+  rows.forEach(k => console.log(`    ${k.padEnd(7)} --sf:${cur[k].sf.toFixed(3)}`));
   await b.close();
 })().catch(e => { console.error('cal360 즉사:', e); process.exit(2); });

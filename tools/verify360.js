@@ -24,6 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+const { plate } = require('./plate360');   /* 385 — 차분법의 공용 판(마젠타). 규약·근거는 그 파일 머리말 */
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -75,9 +76,7 @@ async function boot(ctx, url) {
         · **마젠타**      — 근흑 외곽선과도 흰 잉크와도 멀어 실루엣을 통째로 센다 ⇒ 이것을 쓴다
      아이콘은 z 3, 캔버스는 그 아래라 **측정 대상은 안 바뀐다**(probe382 [4]: 14/14 전부 같은 값,
      산포 16px → 0px). ⚠ 이 판을 걷으면 [3] 이 다시 플레이키가 된다. */
-  await p.addStyleTag({ content:
-    '#view{visibility:hidden!important}#stagearea{background:#ff00ff!important}' });
-  await p.waitForTimeout(250);
+  await plate(p);   /* ★ 385 — 이 두 줄은 `tools/plate360.js` 한 곳에 있다(자매 자 셋도 그것을 부른다) */
   return { p, errs };
 }
 
