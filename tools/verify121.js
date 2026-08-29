@@ -339,31 +339,90 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const full = (ATLAS[akey] && ATLAS[akey].a && ATLAS[akey].a[anim]) || null;
     const list = w || full || [];
     const afps = (c._an && c._an.afps) || 8;
-    return { akey, anim, lkd: !!c.closest('.dnc.lkd'),
+    return { akey, anim, lkd: !!c.closest('.dnc.lkd'), afps,   /* 376 — ⓐ 위상 축이 fps 를 쓴다 */
              uniq: new Set(list).size, cycle: Math.round(list.length / afps * 1000) };
   }), sel);
+  /* ⚠⚠ **376(2026-08-29) — «관측 고유 = 창 고유» 판정을 걷어냈다. 허용 오차를 넓힌 것이 아니라 자를 바꿨다.**
+     239 가 «두 점» 을 «촘촘한 다점» 으로 옮겨 위상 운을 없앴는데, 판정문이 여전히
+     «창의 **모든** 프레임이 실제로 나왔다» 였다. 그것은 표본의 성질이 아니라 **제품이 한 프레임도 안 빠뜨리고
+     그린다**는 약속이고, 제품은 그런 약속을 한 적이 없다 — `setInterval(raidIdleTick, 125)` 폴링 격자 위에서
+     `at += dt × afps` 로 구르므로 **틱이 한 번 길면 `floor(at)` 이 정수 경계를 두 번 넘어 그 프레임은 통째로
+     안 그려진다.** `tools/probe376.js` 실측(같은 창에서 10ms «진실» 자와 50ms «게이트» 자를 동시에 댄다):
+       · 12시행 중 2시행이 5/6 — 그 2시행 모두 **10ms 자도 5/6**(= 표본이 놓친 게 아니라 제품이 건너뛴 것)
+       · 궤적 `…frame0002(at93) → frame0004(at94.08)…` — Δat 는 **1.08뿐인데** floor 는 93→94 가 아니라
+         두 칸을 넘어 frame0003 이 사라진다. 그래서 «Δat > 1» 로 재면 안 보인다(자는 `floor(at)` 의 차다).
+       · 건너뛴 프레임은 한 창 안에서 **같은 번호가 두 번** 빠진다(주기 공명) — 창을 늘려도 안 낫는다.
+     8fps 에서 프레임 한 장이 가끔 빠지는 것은 결함이 아니다. 그래서 이 항이 지키려는 뜻
+     («두 기사가 아이들을 **돌고 있다**»)을 **표본 운과 무관한 세 축**으로 나눠 묻는다:
+       ⓐ 위상 — 창 동안 `_an.at` 이 선언한 fps 로 굴렀다(정지하면 0. 실측 하한비 0.967~1.034)
+       ⓑ 그림 — `_fr` 이 실제로 갈아 끼워졌고(고유 ≥ 2 · 전이 ≥ 2), 같은 프레임에 눌러앉은
+          최대 구간이 창의 절반을 안 넘는다(등재문 처방 ⓑ. 실측 최대 정체 1~4표본 / 창 ~36표본)
+       ⓒ 창 — 제품의 `thCurFrame` 에 위상을 직접 먹여 한 바퀴 돌려 «창의 고유 프레임을 다 쓴다» 를
+          **결정론으로** 묻는다(등재문 처방 ⓐ 의 뜻을 표본이 아니라 함수에 물어 얻는다)
+     ⓒ 가 있어서 이것은 «무르게 푼 것» 이 아니다 — 창의 일부만 도는 회귀는 옛 판정과 똑같이 잡히고,
+     ⓐⓑ 는 옛 판정이 못 잡던 «위상은 구르는데 그림이 굳었다» 까지 잡는다. 되돌림 시험은 아래 §6-R. */
   /* 창 한 바퀴 ×2 + 여유. 프레임 체류가 125ms 라 50ms 간격이면 모든 프레임이 한 바퀴에 두 번 이상 잡힌다. */
-  const idleSeen = (sel, span) => p.evaluate(async ([s, sp]) => {
+  const idleWatch = (sel, span) => p.evaluate(async ([s, sp]) => {
     const cs = [...document.querySelectorAll(s)];
     const acc = cs.map(() => new Set());
+    const chg = cs.map(() => 0), stall = cs.map(() => 0), run = cs.map(() => 0);
+    const at0 = cs.map(c => (c._an && c._an.at) || 0);
+    const last = cs.map(c => c._fr);
     const t0 = performance.now();
+    let n = 0;
     while (performance.now() - t0 < sp) {
-      cs.forEach((c, i) => acc[i].add(c._fr));
+      cs.forEach((c, i) => {
+        acc[i].add(c._fr);
+        if (c._fr === last[i]) { run[i]++; if (run[i] > stall[i]) stall[i] = run[i]; }
+        else { chg[i]++; run[i] = 0; last[i] = c._fr; }
+      });
+      n++;
       await new Promise(r => setTimeout(r, 50));
     }
-    return acc.map(x => x.size);
+    return cs.map((c, i) => ({ uniq: acc[i].size, frames: [...acc[i]], chg: chg[i], stall: stall[i], n,
+      dat: +(((c._an && c._an.at) || 0) - at0[i]).toFixed(2) }));
   }, [sel, span]);
+
+  /* ⓒ 창 축 — 살아 있는 엔티티는 안 건드리고 **위상만 베낀 사본**을 제품 함수에 먹인다.
+     ⚠ `aloop` 을 안 베끼면 `curFrame` 이 «한 번 재생» 분기로 떨어져 마지막 프레임에 고정된다
+     (창 없는 키 `knight/idle` 은 `thCurFrame` 이 `curFrame` 으로 내려간다 — 고유 1 이 나오면 그 함정이다). */
+  const idleSweep = sel => p.evaluate(s => [...document.querySelectorAll(s)].map(c => {
+    const e = c._an;
+    if (!e) return { swept: 0, win: 0, list: [] };
+    const w = (typeof TH_IDLE !== 'undefined' && TH_IDLE[e.akey + '/' + e.anim])
+      || (ATLAS[e.akey] && ATLAS[e.akey].a && ATLAS[e.akey].a[e.anim]) || [];
+    const out = new Set();
+    for (let k = 0; k < w.length * 4; k++)
+      out.add(thCurFrame({ akey: e.akey, anim: e.anim, aloop: e.aloop, at: e.at + k * 0.25 }));
+    return { swept: out.size, win: w.length, list: [...new Set(w)] };
+  }), sel);
+
+  /* 한 칸이 «돌고 있다» 의 정의 — 세 축이 **동시에** 참일 때만. 하나라도 무너지면 빨갛다. */
+  const cycOK = (sp, w, sw, span) => sp.uniq >= 2
+    && sw.win > 0 && sw.swept === sp.uniq                       /* ⓒ 창을 다 쓴다(결정론) */
+    && w.dat >= span / 1000 * sp.afps * 0.7                      /* ⓐ 위상이 굴렀다 */
+    && w.uniq >= 2 && w.chg >= 2                                 /* ⓑ 그림이 갈아 끼워졌다 */
+    && w.stall <= Math.ceil(w.n / 2)                             /* ⓑ 정체가 창의 절반을 안 넘는다 */
+    && w.frames.every(f => sw.list.includes(f));                 /* 그린 프레임이 그 창의 것이다 */
+  const cycMsg = (sp, w, sw, span) => `${sp.akey}/${sp.anim} ` +
+    `[ⓐ위상 Δat ${w.dat}/${(span / 1000 * sp.afps).toFixed(1)}] ` +
+    `[ⓑ그림 고유 ${w.uniq} · 전이 ${w.chg} · 최대정체 ${w.stall}/${w.n}표본] ` +
+    `[ⓒ창 ${sw.swept}/${sp.uniq}]`;
 
   const spec = await idleSpec(IDLE_SEL);
   const span = Math.max(300, ...spec.map(s => s.cycle)) * 2 + 300;
-  const seen = await idleSeen(IDLE_SEL, span);
+  const watch = await idleWatch(IDLE_SEL, span);
+  const sweep = await idleSweep(IDLE_SEL);
+  const seen = watch.map(w => w.uniq);
   const liveIdx = spec.map((s, i) => s.lkd ? -1 : i).filter(i => i >= 0);
   const lockIdx = spec.map((s, i) => s.lkd ? i : -1).filter(i => i >= 0);
-  ok(liveIdx.length > 0 && liveIdx.every(i => spec[i].uniq >= 2 && seen[i] === spec[i].uniq),
-    `해금 칸 ${liveIdx.length}개 전부 아이들 창을 한 바퀴 돈다 — ${span}ms 동안 관측된 고유 프레임 ` +
-    liveIdx.map(i => `${spec[i].akey}/${spec[i].anim} ${seen[i]}/${spec[i].uniq}`).join(' · '));
-  ok(lockIdx.length === 0 || lockIdx.every(i => seen[i] === 1),
-    `잠금 칸 ${lockIdx.length}개 프레임 정지 (관측 고유 ${lockIdx.map(i => seen[i]).join(',') || '-'} = 전부 1)`);
+  ok(liveIdx.length > 0 && liveIdx.every(i => cycOK(spec[i], watch[i], sweep[i], span)),
+    `해금 칸 ${liveIdx.length}개 전부 아이들 창을 돈다 — ${span}ms · ` +
+    liveIdx.map(i => cycMsg(spec[i], watch[i], sweep[i], span)).join(' · '));
+  /* 잠금 칸은 반대 방향 — 프레임도 위상도 굳어 있어야 한다(한 방향만 재면 «항상 통과» 하는 게이트가 된다) */
+  ok(lockIdx.length === 0 || lockIdx.every(i => seen[i] === 1 && watch[i].dat === 0),
+    `잠금 칸 ${lockIdx.length}개 프레임·위상 정지 (고유 ${lockIdx.map(i => seen[i]).join(',') || '-'} = 전부 1 · ` +
+    `Δat ${lockIdx.map(i => watch[i].dat).join(',') || '-'} = 전부 0)`);
   /* 아레나는 기본 세이브에서 잠겨 있다 — 해금해서 «두 기사가 서로 다른 위상으로 도는지» 까지 본다(지시 ⑥) */
   if (arn) {
     await p.evaluate(() => { S.best = 999; renderDunPage(); });
@@ -373,10 +432,12 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     const ARN_SEL = '#dunList .dnc.arn2 canvas.thcv';
     const aspec = await idleSpec(ARN_SEL);
     const aspan = Math.max(300, ...aspec.map(s => s.cycle)) * 2 + 300;
-    const aseen = await idleSeen(ARN_SEL, aspan);
-    ok(aspec.length === 2 && aspec.every((s, i) => s.uniq >= 2 && aseen[i] === s.uniq),
-      `해금 아레나 두 기사 아이들 순환 — ${aspan}ms 관측 고유 ` +
-      aspec.map((s, i) => `${aseen[i]}/${s.uniq}`).join(' · '));
+    /* 376 — 이 항이 «고유 5/6» 으로 간헐적으로 빨갛던 자리다. 자는 위 §6 주석의 세 축으로 바꿨다. */
+    let awatch = await idleWatch(ARN_SEL, aspan);
+    let asweep = await idleSweep(ARN_SEL);
+    ok(aspec.length === 2 && aspec.every((s, i) => cycOK(s, awatch[i], asweep[i], aspan)),
+      `해금 아레나 두 기사 아이들 순환 — ${aspan}ms · ` +
+      aspec.map((s, i) => cycMsg(s, awatch[i], asweep[i], aspan)).join(' · '));
     /* ⚠ «지금 이 순간 두 칸의 프레임이 다른가» 로 물으면 안 된다 — 위상차가 0.7프레임이라
        Math.floor 결과가 같아지는 구간이 30% 있어 **실행마다 튀는 게이트**가 된다(실제로 한 번 거짓 FAIL 났다).
        불변량은 «두 칸의 애니메이션 위상이 다르다» 이므로 엔티티의 at 차이를 잰다(항상 0.7). */
@@ -385,6 +446,42 @@ const RAID_TH = [[311, 36], [296, 52], [330, 11]];
     ok(at.length === 2 && at.every(v => typeof v === 'number')
       && Math.abs((at[0] - at[1]) % 1) > 0.25 && Math.abs((at[0] - at[1]) % 1) < 0.75,
       `두 기사의 아이들 위상차 ${at.length === 2 ? Math.abs(at[0] - at[1]).toFixed(2) : '?'}프레임 (한 몸처럼 안 뛴다)`);
+
+    /* ---------- §6-R 되돌림 시험 (376) ----------
+       ⚠ 판정을 «고유 = 창» 에서 세 축으로 옮긴 이상, «아이들이 통째로 멈춰도 초록» 이 아님을
+       **결함을 심어서** 못박아야 한다(LESSONS 328 · 등재문 ⚠). 축마다 한 건씩 심고, 마지막에
+       원복하면 다시 초록인지까지 본다 — 셋 다 «심으면 빨강 · 빼면 초록» 이어야 자가 산 것이다. */
+    sec('§6-R 되돌림 시험 — 심은 결함마다 그 축이 빨개지는가 (376)');
+    await p.evaluate(() => { window.__origThCur = thCurFrame; });
+    /* R1 — 위상이 멈춘다(제품의 하네스 스위치 `__idleFrozen` = 틱 자체가 쉰다). ⓐ 가 잡아야 한다. */
+    await p.evaluate(() => { window.__idleFrozen = true; });
+    const r1 = await idleWatch(ARN_SEL, aspan), r1s = await idleSweep(ARN_SEL);
+    ok(aspec.every((s, i) => !cycOK(s, r1[i], r1s[i], aspan)),
+      `[R1] 위상이 멈추면 빨갛다 — ${aspec.map((s, i) => cycMsg(s, r1[i], r1s[i], aspan)).join(' · ')}`);
+    await p.evaluate(() => { window.__idleFrozen = false; });
+    /* R2 — 위상은 구르는데 **그림이 한 프레임에 굳는다**(옛 판정도 잡았지만, 여기서는 ⓑ 가 잡는다). */
+    await p.evaluate(() => {
+      const w = ATLAS.knight.a.idle;
+      window.thCurFrame = () => w[0];
+    });
+    const r2 = await idleWatch(ARN_SEL, aspan), r2s = await idleSweep(ARN_SEL);
+    ok(aspec.every((s, i) => !cycOK(s, r2[i], r2s[i], aspan)),
+      `[R2] 그림이 한 프레임에 굳으면 빨갛다 — ${aspec.map((s, i) => cycMsg(s, r2[i], r2s[i], aspan)).join(' · ')}`);
+    /* R3 — **창의 일부만 돈다**(6칸 중 3칸). 이것이 옛 판정이 지키던 바로 그것이고, ⓒ 가 결정론으로 잡는다. */
+    await p.evaluate(() => {
+      const w = ATLAS.knight.a.idle;
+      window.thCurFrame = e => w[Math.floor(e.at) % 3];
+    });
+    const r3 = await idleWatch(ARN_SEL, aspan), r3s = await idleSweep(ARN_SEL);
+    ok(aspec.every((s, i) => !cycOK(s, r3[i], r3s[i], aspan)),
+      `[R3] 창의 절반만 돌면 빨갛다 — ${aspec.map((s, i) => cycMsg(s, r3[i], r3s[i], aspan)).join(' · ')}`);
+    /* R4 — 원복하면 다시 초록. «심으면 빨강» 만 보고 끝내면 자가 항상 빨간 것과 구별이 안 된다. */
+    await p.evaluate(() => { window.thCurFrame = window.__origThCur; });
+    awatch = await idleWatch(ARN_SEL, aspan);
+    asweep = await idleSweep(ARN_SEL);
+    ok(aspec.every((s, i) => cycOK(s, awatch[i], asweep[i], aspan)),
+      `[R4] 셋을 전부 빼면 다시 초록 — ${aspec.map((s, i) => cycMsg(s, awatch[i], asweep[i], aspan)).join(' · ')}`);
+
     await p.evaluate(() => { S.best = 1; renderDunPage(); });
     await p.waitForTimeout(400);
   }
