@@ -198,6 +198,33 @@ const seek = (p, ms) => p.evaluate(t => {
     + '  vs  3열 전체 ' + r3.all.toFixed(2) + ' / 카드안 ' + r3.inside.toFixed(2));
   ok(r3.inside < 3, '3열에서도 «카드 안» 잉크는 안 씻긴다 (' + r3.inside.toFixed(2) + ')');
 
+  /* ── §D 곁다리 — 비평가 AU 의 «×100 이 카드 우변에 2.87px 까지 붙는다» ──────
+     등재문이 «365 재배치의 잔재로 보인다» 고 적어 둔 관측이다. 여기서는 **수량 라벨의
+     잉크 우변 ↔ 카드 안쪽 테두리** 여유를 칸마다 재서 그 진단이 맞는지만 본다
+     (열 수와 무관한 «문자열 길이» 문제라면 365 와 무관하다 — §C 와 같은 갈래). */
+  console.log('§D 곁다리 — 수량 라벨 «×N» 의 카드 우변 여유 (등재 377 의 «뿌리는 365» 를 확인한다)');
+  const qtScan = () => p.evaluate(() => [...document.querySelectorAll('#shopList .cn-cd')].slice(0, 8).map(cd => {
+    const q = cd.querySelector(':scope>.qt'); if (!q) return null;
+    const r = q.getBoundingClientRect(), c = cd.getBoundingClientRect();
+    const fr = getComputedStyle(cd.querySelector(':scope>.fr'));
+    const bw = parseFloat(fr.borderRightWidth) || 0;
+    return { t: q.textContent.trim(), right: +(c.right - bw - r.right).toFixed(2), out: +(c.right - r.right).toFixed(2),
+             w: +r.width.toFixed(2), over: q.scrollWidth > q.clientWidth };
+  }).filter(Boolean));
+  /* ① 아직 §C 의 3열(365 이전) 상태다 */
+  const qt3 = await qtScan();
+  console.log('   3열(365 이전) — ' + qt3.slice(0, 4).map(v => '«' + v.t + '» 안쪽 ' + v.right + 'px').join(' | '));
+  /* ② 2열(현행)로 되돌려 같은 자를 댄다 */
+  await p.evaluate(() => { if (window.__adsBak) { COIN_ADS.length = 0; COIN_ADS.push(...window.__adsBak); renderCoinPage(document.getElementById('shopList')); } });
+  await p.waitForTimeout(300);
+  const qt = await qtScan();
+  qt.forEach(v => console.log('     «' + v.t + '» 폭 ' + v.w + ' · 테두리 안쪽까지 여유 '
+    + v.right + 'px (카드 바깥변까지 ' + v.out + 'px)' + (v.over ? ' · 넘침!' : '')));
+  ok(qt.every(v => !v.over), '수량 라벨에 넘침(scrollWidth>clientWidth) 0건 — 377 이 «상자가 아니라 잉크» 라고 적은 그대로');
+  ok(qt[0].right < 6 && qt[1].right > 12, '«×100» 칸만 여유가 6px 미만 (형제 «×50» 은 ' + qt[1].right + 'px)');
+  ok(Math.abs(qt3[0].right - qt[0].right) < 0.5,
+    '⇒ 그 여유는 **열 수와 무관**하다 — 3열 ' + qt3[0].right + 'px vs 2열 ' + qt[0].right + 'px (377 의 «뿌리는 365» 가설은 기각된다)');
+
   await b.close();
   console.log('PROBE375 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
   process.exit(fail ? 1 : 0);
