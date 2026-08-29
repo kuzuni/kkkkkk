@@ -217,8 +217,8 @@ const SNAP = `(sel, host) => {
     if (g.missing) { ok('바 존재', false, b.sel + ' 없음 — 이후 절 건너뜀'); continue; }
 
     ok('바 높이 ' + BAR_H, near(g.bar.h, BAR_H, 0.6), f1(g.bar.h));
-    ok('바 radius 50 · border 6 #000 · border-box',
-      g.radius === '50px' && g.bw === BAR_BORDER + 'px' && g.bc === 'rgb(0, 0, 0)' && g.boxSizing === 'border-box',
+    ok('바 radius 43 · border 6 #000 · border-box',
+      g.radius === '43px' && g.bw === BAR_BORDER + 'px' && g.bc === 'rgb(0, 0, 0)' && g.boxSizing === 'border-box',
       g.radius + ' / ' + g.bw + ' ' + g.bc + ' / ' + g.boxSizing);
     /* 279 — 칸 수는 «게이트가 든 숫자» 가 아니라 «바가 선언한 분할» 이다.
        전제를 결론과 갈라 둔다(185-③): 선언을 못 읽으면 결론(격자 판정)이 아니라 **이 줄**이 빨개진다. */

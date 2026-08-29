@@ -116,8 +116,8 @@ const mat = tr => {
       const s = g.h / BAR_H;
       ok(name + ' 바 높이 ' + BAR_H + ' (입장 연출 배율 보정)',
         near(s, 1, 0.02) && near(g.h / s, BAR_H, 0.6), 'h ' + g.h.toFixed(1) + ' (배율 ' + s.toFixed(3) + ')');
-      ok(name + ' 테두리 ' + BORDER + ' · radius 50 · border-box',
-        near(g.bw / s, BORDER, 0.3) && g.rad === '50px' && g.box === 'border-box',
+      ok(name + ' 테두리 ' + BORDER + ' · radius 43 · border-box',
+        near(g.bw / s, BORDER, 0.3) && g.rad === '43px' && g.box === 'border-box',
         g.bw.toFixed(1) + ' / ' + g.rad + ' / ' + g.box);
       ok(name + ' 칸 높이 ' + CELL_H, g.cells.every(c => near(c.h / s, CELL_H, 0.6)),
         g.cells.map(c => (c.h / s).toFixed(1)).join(' '));
