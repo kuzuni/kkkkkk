@@ -8,9 +8,10 @@
        명도도 축이다 — 8장의 L* 를 29.5~100 에 **최소 8 간격**으로 벌려 회색조(색각 이상·저해상도)에서도 갈린다.
        속 문양은 «동전(고리)» — 412 의 8종 실루엣·bbox 21×21·중심 (32,35.5) **그대로**(bbox Δ0).
        ⚠ 이 장은 채움이 밝아 흰 문양이 안 보인다 — 문양 잉크를 **테색**으로 갈았다(대비가 큰 쪽).
+       그래서 문양 외곽선·세부 획은 **채움색**이다 — 안 그러면 어두운 잉크가 어두운 테와 밑변에서 붙어 잘려 보인다.
        게이트 tools/verify430.js 가 색이름 구간·ΔE·회색조 간격·문양 대비를, tools/verify402.js [B] 가 기하·문양을 잰다. -->
   <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#696700" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
   <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#E8DA33"/>
-  <path d="M32 25a10.5 10.5 0 1 0 0 21 10.5 10.5 0 1 0 0-21z" fill="#696700" opacity=".92" stroke="#696700" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M32 25a10.5 10.5 0 1 0 0 21 10.5 10.5 0 1 0 0-21z" fill="#696700" opacity=".92" stroke="#E8DA33" stroke-width="1.6" stroke-linejoin="round"/>
   <path d="M32 30a5.5 5.5 0 1 0 0 11 5.5 5.5 0 1 0 0-11z" stroke="#E8DA33" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

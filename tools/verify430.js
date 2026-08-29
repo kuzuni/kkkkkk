@@ -269,13 +269,16 @@ const motifInk = (t) => {
       /* «흰색 ↔ 테색» 중 대비가 큰 쪽을 골랐는가 — 밝은 장 셋이 테색으로 넘어간 이유가 이것이다 */
       const want = cWhite >= cRim ? '#FFFFFF' : r.toUpperCase();
       if (ink.fill !== want) pickBad.push(k + '(' + ink.fill + ' ≠ ' + want + ')');
-      if (ink.stroke !== r.toUpperCase()) inkBad.push(k + '(획이 테색이 아니다)');
+      /* 획은 «잉크의 반대쪽» — 흰 잉크면 테색, 테색 잉크면 채움색(밝은 후광).
+         밝은 장 셋은 잉크가 테와 같은 색이라 획까지 테색이면 문양 밑변이 테에 붙어 잘려 보인다. */
+      const wantStroke = (ink.fill === '#FFFFFF' ? r : f).toUpperCase();
+      if (ink.stroke !== wantStroke) inkBad.push(k + '(획 ' + ink.stroke + ' ≠ ' + wantStroke + ')');
       rows.push(k + ':' + cInk.toFixed(2));
     }
     ok(rimBad.length === 0,
        'D1 테는 «더 어두운 짝» 이다(ΔL ≥ ' + RIM_DL + ' · 테 L* ≤ ' + RIM_LMAX + ' · 유채색은 Δh ≤ 6° · 무채색은 C* ≤ 8)',
        rimBad.length ? rimBad.join(', ') : '8/8');
-    ok(inkBad.length === 0, 'D2 문양 잉크가 채움 위에서 대비 ≥ ' + INK_MIN + ' 이고 획은 그 장의 테색이다',
+    ok(inkBad.length === 0, 'D2 문양 잉크가 채움 위에서 대비 ≥ ' + INK_MIN + ' 이고 획은 «잉크의 반대쪽» 색이다',
        inkBad.length ? inkBad.join(', ') : rows.join(' · '));
     ok(pickBad.length === 0, 'D3 문양 잉크는 «흰색 ↔ 테색» 중 대비가 큰 쪽이다(노랑·흰색·주황이 테색으로 넘어간다)',
        pickBad.length ? pickBad.join(', ') : '8/8');
@@ -346,6 +349,121 @@ const motifInk = (t) => {
         const dark = Math.max(cont(r0, b0), cont(f0, b0), cont(r0, b0));
         ok(dark < 3, '§R6 어두운 장의 문양을 테색으로 바꾼 사본은 E4 가 빨개진다(흰 문양이 그 장을 살린다)',
            '문양을 테색으로 두면 최선 ' + dark.toFixed(2) + ':1 < 3');
+      }
+    }
+  }
+
+  /* ── [E5] **화면에 찍힌 픽셀** — 선언(src)이 맞아도 호스트가 색을 되접을 수 있다.
+     실제로 그랬다: `.dgd-tki` 에 `filter:hue-rotate(108deg) saturate(.7) brightness(1.7)` 가 남아 있어
+     04 세부 팝업이 8색을 **초록 한 색으로** 되접고 있었다(갈색 → #23864E · 주황 → #2D9350).
+     ⇒ 두 자리(03 카드 · 04 세부)에서 캡처를 되읽어 **그 이름 창 안인가**를 다시 묻는다(350 처방). */
+  const shotSample = async (pts) => {
+    /* 캡처를 data URL 로 페이지에 되돌려 «찍힌 픽셀» 을 읽는다(호스트가 filter 를 쓰면 rect 만으로는 못 잡는다) */
+    const png = (await page.screenshot({ type: 'png' })).toString('base64');
+    return ev(async ({ png, pts }) => {
+      const img = new Image();
+      await new Promise((r) => { img.onload = r; img.src = 'data:image/png;base64,' + png; });
+      const cv = document.createElement('canvas');
+      cv.width = img.width; cv.height = img.height;
+      const g = cv.getContext('2d');
+      g.drawImage(img, 0, 0);
+      const out = {};
+      for (const k in pts) out[k] = [...g.getImageData(Math.round(pts[k].x), Math.round(pts[k].y), 1, 1).data].slice(0, 3);
+      return out;
+    }, { png, pts });
+  };
+  /* 아이콘 안의 (u,v)[64 뷰박스 좌표] 가 **화면 어디에 찍히는지** 를 제품에게 묻는다.
+     ⚠ 04 팝업의 `.dgd-tki` 는 `rotate(-18deg)` 라 `getBoundingClientRect` 는 **회전 전 상자보다 큰
+        축정렬 상자**다 — 그 상자에 비율로 찍으면 표본이 테(검정)로 빗나간다. 조상 transform 의
+        회전·배율만 곱해 중심 기준으로 되민다(이동분 e·f 는 rect 가 이미 갖고 있다). */
+  const POINT_FN = `(sel, u, v) => {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    const s = Math.min(el.offsetWidth, el.offsetHeight) / 64;
+    let m = new DOMMatrix();
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+      const t = getComputedStyle(n).transform;
+      if (t && t !== 'none') m = new DOMMatrix(t).multiply(m);
+    }
+    const rot = new DOMMatrix([m.a, m.b, m.c, m.d, 0, 0]);
+    const p = rot.transformPoint(new DOMPoint((u - 32) * s, (v - 32) * s));
+    const r = el.getBoundingClientRect();
+    return { x: r.x + r.width / 2 + p.x, y: r.y + r.height / 2 + p.y };
+  }`;
+  /* prep 로 «그 자리를 화면에 세우고», 연출이 앉은 **뒤에** 표본 자리를 잰다 —
+     열자마자 잰 자리는 60 쥬시가 아직 움직이는 자리라 표본이 배경으로 빗나간다(350 교훈). */
+  const onScreen = async (tag, where, prep, sel) => {
+    const bad = [];
+    for (const k of KEYS) {
+      const p0 = await ev(prep, k);
+      if (guard(p0, tag + '-' + k)) return;
+      await page.waitForTimeout(420);
+      const pt = await ev(({ fn, sel }) => (new Function('return ' + fn))()(sel, 14, 25.5),
+                          { fn: POINT_FN, sel: typeof sel === 'function' ? sel(k) : sel });
+      if (guard(pt, tag + '-' + k)) return;
+      if (!pt) { bad.push(k + '(자리 없음)'); continue; }
+      const px = await shotSample({ [k]: pt });
+      if (guard(px, tag + '-' + k)) return;
+      const r = named(NAMED[k][1], px[k]);
+      if (!r.ok) bad.push(k + ' «' + NAMED[k][1] + '» 인데 rgb(' + px[k].join(',') + ') h' + r.h.toFixed(0) + '°/L*' + r.L.toFixed(0));
+    }
+    ok(bad.length === 0, tag + ' ' + where + ' — **찍힌 픽셀**이 8장 다 이름 창 안이다(호스트가 색을 안 되접는다)',
+       bad.length ? bad.join(' | ') : '8/8');
+  };
+  await onScreen('E5', '03 던전 카드',
+    (id) => {
+      closeDunDetail(); openDungeon();
+      const el = document.querySelector('#dunList [data-dcard="' + id + '"] .sp.tk img.cic');
+      if (el) el.scrollIntoView({ block: 'center' });
+      return 1;
+    },
+    (k) => '#dunList [data-dcard="' + k + '"] .sp.tk img.cic');
+  await onScreen('E6', '04 세부 팝업',
+    (id) => { closeDunDetail(); openDunDetail(DUNGEONS.find((d) => d.id === id)); return 1; },
+    '#dgdTki img.cic');
+  /* §R7 — 되돌림: 그 filter 를 도로 켜면 E6 가 실제로 빨개지는가(양성항만 보는 자가 아니다) */
+  {
+    const ready = await ev(() => {
+      const host = document.getElementById('dgdTki');
+      if (!host) return null;
+      host.style.filter = 'hue-rotate(108deg) saturate(.7) brightness(1.7)';
+      closeDunDetail();
+      openDunDetail(DUNGEONS.find((d) => d.id === 'relic1'));
+      return 1;
+    });
+    if (ready && !ready.__err) {
+      await page.waitForTimeout(420);
+      const pt = await ev(({ fn, sel }) => (new Function('return ' + fn))()(sel, 14, 25.5),
+                          { fn: POINT_FN, sel: '#dgdTki img.cic' });
+      const px = pt && !pt.__err ? await shotSample({ relic1: pt }) : { __err: '자리 없음' };
+      await ev(() => { const h = document.getElementById('dgdTki'); if (h) h.style.filter = ''; closeDunDetail(); });
+      if (!guard(px, '§R7')) {
+        const r = named('갈색', px.relic1);
+        ok(!r.ok, '§R7 04 팝업의 옛 `hue-rotate` 를 도로 켜면 E6 가 빨개진다(그 필터가 8색을 초록으로 되접었다)',
+           'rgb(' + px.relic1.join(',') + ') h' + r.h.toFixed(0) + '° → «갈색» 창 밖');
+      }
+    }
+  }
+  await ev(() => closeDunDetail());
+  /* §R7 — 되돌림: 그 filter 를 도로 켜면 E6 가 실제로 빨개지는가(양성항만 보는 자가 아니다) */
+  {
+    const back = await ev(async () => {
+      const host = document.getElementById('dgdTki');
+      if (!host) return null;
+      host.style.filter = 'hue-rotate(108deg) saturate(.7) brightness(1.7)';
+      openDunDetail(DUNGEONS.find((d) => d.id === 'relic1'));
+      const el = host.querySelector('img.cic');
+      const r = el.getBoundingClientRect();
+      return { x: r.x, y: r.y, w: r.width, h: r.height };
+    });
+    if (back && !back.__err) {
+      await page.waitForTimeout(200);
+      const px = await shotSample({ relic1: back });
+      await ev(() => { const h = document.getElementById('dgdTki'); if (h) h.style.filter = ''; closeDunDetail(); });
+      if (!guard(px, '§R7')) {
+        const r = named('갈색', px.relic1);
+        ok(!r.ok, '§R7 04 팝업의 옛 `hue-rotate` 를 도로 켜면 E6 가 빨개진다(그 필터가 8색을 초록으로 되접었다)',
+           'rgb(' + px.relic1.join(',') + ') h' + r.h.toFixed(0) + '° → «갈색» 창 밖');
       }
     }
   }

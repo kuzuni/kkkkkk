@@ -41,9 +41,24 @@ const OUT = path.join(ROOT, 'docs/shots');
   await page.screenshot({ path: path.join(OUT, 'cap430-04-detail-relic1.png') });
   await page.evaluate(() => closeDunDetail());
 
-  await page.evaluate(() => { openShopTab('coin'); });
+  /* ⚠ 13 재화 탭은 입장권 교환 카드가 **접힌 아래쪽**에 있다 — 스크롤을 안 하면 캡처에 한 장도 안 담긴다
+     (1회차 캡처가 그래서 «입장권이 없다» 로 읽혔다). 첫 교환 카드를 화면 가운데로 올리고 찍는다. */
+  await page.evaluate(() => {
+    openShopTab('coin');
+    const c = document.querySelector('#shopList .cn-cd.dtk');
+    if (c) c.scrollIntoView({ block: 'center' });
+  });
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(OUT, 'cap430-13-exchange.png') });
+
+  /* 03 카드 8장은 한 화면에 안 들어온다 — 아래쪽 4장을 따로 한 장 더 찍는다 */
+  await page.evaluate(() => {
+    openDungeon();
+    const c = document.querySelector('#dunList [data-dcard="relic4"]');
+    if (c) c.scrollIntoView({ block: 'center' });
+  });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(OUT, 'cap430-03-dun-below.png') });
 
   /* 8장 나란히 — «세트로 읽히는가» 는 따로 보면 안 보인다(411 교훈) */
   await page.evaluate(() => {

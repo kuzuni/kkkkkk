@@ -200,11 +200,14 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
   const specBad = ALL8.filter((n) => {
     const m = (files[n] || '').match(/<path d="[^"]+" fill="(#[0-9A-Fa-f]{6})" opacity="\.92" stroke="(#[0-9A-Fa-f]{6})" stroke-width="1\.6"/);
     if (!m) return true;
-    const ink = m[1].toUpperCase();
-    return (ink !== '#FFFFFF' && ink !== tone[n].s) || m[2].toUpperCase() !== tone[n].s;
+    const ink = m[1].toUpperCase(), stk = m[2].toUpperCase();
+    if (ink !== '#FFFFFF' && ink !== tone[n].s) return true;
+    /* 획은 늘 **잉크의 반대쪽** 색이다 — 흰 잉크면 테색(어두운 테두리), 테색 잉크면 채움색(밝은 테두리).
+       밝은 장 셋은 잉크가 테와 같은 어두운 색이라, 획까지 테색이면 문양 밑변이 테와 붙어 잘려 보인다. */
+    return stk !== (ink === '#FFFFFF' ? tone[n].s : tone[n].r);
   });
   ok(specBad.length === 0,
-     'B9 문양 획 규격이 8장 공용이다(잉크 = 흰색 또는 그 장의 테색 · opacity .92 · stroke = 테색 · width 1.6)',
+     'B9 문양 획 규격이 8장 공용이다(잉크 = 흰색 또는 테색 · opacity .92 · 획 = 잉크의 반대쪽 색 · width 1.6)',
      specBad.length ? specBad.join(',') : '8/8');
   /* 잉크 bbox — «실루엣만 바꾸고 덩치는 같게» 를 브라우저 getBBox 로 잰다(선언이 아니라 그려진 것) */
   const BOX = await ev((mo) => {

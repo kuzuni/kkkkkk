@@ -7842,8 +7842,13 @@
     text-align:center;line-height:45px}
   .dgd-tk i{font-size:29px;font-weight:900;color:#fff;-webkit-text-stroke:5px #000;paint-order:stroke fill;
     transform:translateX(25px) scaleX(1.36)}
+  /* ⚠ 여기 있던 `filter:hue-rotate(108deg) saturate(.7) brightness(1.7)` 는 **430 에서 걷어냈다**(주인 재재지시).
+     ref 04 팝업의 티켓이 초록(#57A888)이라 «한 장짜리 입장권» 시절에 색을 그쪽으로 돌려 맞춘 값인데,
+     402(던전마다 한 장) 이후로는 그 필터가 **8색을 전부 초록 한 색으로 되접는다** — 갈색이 #23864E 로,
+     주황이 #2D9350 으로 찍혔다(probe430 [E5] 재현). 주인 지시가 레퍼런스보다 우선이라 색을 살렸다
+     (측정표 04 §6 정오표 — 의도적 이탈). 기울기(-18°)·자리·크기는 ref 그대로다. */
   .dgd-tki{left:111px;top:819px;width:69px;height:54px;font-size:40px;line-height:54px;text-align:center;
-    transform:rotate(-18deg);transform-origin:50% 50%;filter:hue-rotate(108deg) saturate(.7) brightness(1.7)}
+    transform:rotate(-18deg);transform-origin:50% 50%}
   .dgd-cb{left:446px;top:830px;width:40px;height:40px;border-radius:50%;box-sizing:border-box;
     border:2px solid #000;padding:0;cursor:pointer;font-family:inherit;
     background:radial-gradient(closest-side,#7F5B45 0 62%,#75543F 62% 82%,#A07059 82% 100%)}
