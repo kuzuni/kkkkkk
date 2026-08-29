@@ -14,6 +14,8 @@
  *   [F] 구 세이브 — 총량이 5로 불변이라 이관이 없다. `spins:4` 인 구 세이브가 «광고 구간 없이 4회»
  *       가 아니라 새 규칙(다음 1회는 무료, 뒤 2회는 광고)으로 **그대로 합법**이어야 한다
  *   [G] 기하 — ▶AD 뱃지가 라벨 잉크·레드닷과 겹치지 않고 버튼 안에 있다 · 버튼 위치 Δ0(레이아웃 불변)
+ *       ⚠ 408 — 기하는 **«정착 상태»** 에서 잰다: 팝업이 앉을 때까지 기다리고(`settle`) 레드닷의
+ *       무한 펄스를 재는 동안만 끈다(`__rou(true)`). 안 그러면 [G4] 가 회차마다 흔들린다. §R 은 [G4r].
  *   [H] 레드닷(321 회귀) — 광고 구간에서도 켜진다(«지금 누를 수 있다» 가 참이다) · 0회면 꺼진다
  *   [R] 되돌림 시험 — `ROUL_AD = 0` 사본(= 367 이전 «5회 전부 무료»)에서 [B]·[C] 의 광고항이
  *       **빨개져야** 한다. 이 항이 없으면 «이미 참인 것을 굳힌 게이트» 다(338·334 교훈).
@@ -35,19 +37,39 @@ let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d !== undefined && d !== '' ? ' — ' + d : '')); };
 const px = n => Math.round(n * 100) / 100;
 
-/* 룰렛 팝업의 현재 상태를 한 번에 긁는다 — 페이지 안에서만 도는 헬퍼 */
+/* 룰렛 팝업의 현재 상태를 한 번에 긁는다 — 페이지 안에서만 도는 헬퍼
+ *
+ * 408 — `__rou(true)` 는 **기하를 «정착 상태» 에서 잰다.** 인자 없이 부르면 종전 그대로다
+ *   (표기·상태 항들은 기하를 안 쓰므로 제품을 건드리지 않는 쪽이 낫다).
+ *   ⚠ 60 쥬시가 `index.html` **11822행**에서 레드닷에 `scale` 애니메이션을 건다:
+ *     `.alert>.updot{animation:jzDotIn .3s var(--jzs) both, jzDotPulse 2s ease-in-out .3s infinite}`
+ *   `.updot` 규칙(10451)의 `transform:none` 은 여기 안 걸린다 — `transform` 이 아니라 **`scale` 속성**이다.
+ *   `jzDotPulse` 는 **infinite** 라 닷의 `getBoundingClientRect()` 는 영원히 안 앉고, 게이트가
+ *   `waitForTimeout(250)` 한 자리에서 재면 **그 순간의 위상이 곧 값**이 된다 = 회차마다 흔들린다
+ *   (`probe408` [1] 실측: 한 번 여는 동안 우 인셋이 13.55~29.9 를 훑는다 — 허용 오차 1.2 의 열 배가 넘는다).
+ *   ⇒ 재는 동안만 닷의 애니메이션을 끄고 되돌린다. `verify299`(59행)·`verify321`(151행)·
+ *     `probe322`·`probe325`·`probe328`·`probe364` 가 **같은 닷을 잴 때 전부 쓰는 집안 처방**이고
+ *     367 만 안 쓰고 있었다. 허용 오차는 한 칸도 안 넓혔다 — [G4] 의 «321 레드닷의 우 인셋을 거울로»
+ *     라는 축은 그대로다(아래 [G4r] 되돌림 시험이 그것을 못박는다). */
 const SNAP = `
-window.__rou = function(){
+window.__rou = function(freeze){
   var ink = function(el){ if(!el) return null; var r=document.createRange(); r.selectNodeContents(el);
     var b=r.getBoundingClientRect(); return [b.left,b.top,b.width,b.height]; };
   var bt = document.getElementById('rouBtn');
-  var br = bt ? bt.getBoundingClientRect() : null;
   var lb = bt ? bt.querySelector(':scope>b') : null;
   var ad = bt ? bt.querySelector(':scope>.ad') : null;
   var dt = bt ? bt.querySelector(':scope>.updot') : null;
   var g  = document.getElementById('rouGuide');
   var mx = document.getElementById('rouMix');
   var rect = function(el){ if(!el) return null; var r=el.getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; };
+  var pdt = dt ? dt.style.animation : null;
+  if(freeze && dt){ dt.style.animation = 'none'; void dt.offsetWidth; }
+  /* 네 상자를 **같은 순간**에 잡는다 — 팝업 열림 연출이 조상을 통째로 스케일하는 동안에도
+     넷이 같은 배율을 타야 «차»(인셋·간격)가 뜻을 갖는다(probe408 [3]). */
+  var _btn = bt ? rect(bt) : null;
+  var _adRect = ad ? rect(ad) : null, _dotRect = dt ? rect(dt) : null,
+      _labInk = lb ? ink(lb) : null;
+  if(freeze && dt){ dt.style.animation = pdt; }
   return {
     spins: S.daily.spins,
     free: ROUL_FREE, ad: ROUL_AD, tot: ROUL_TRY,
@@ -57,10 +79,10 @@ window.__rou = function(){
     alert: bt ? bt.classList.contains('alert') : null,
     adon: bt ? bt.classList.contains('adon') : null,
     adShown: ad ? getComputedStyle(ad).display !== 'none' : null,
-    adRect: ad ? rect(ad) : null,
-    labInk: lb ? ink(lb) : null,
-    dotRect: dt ? rect(dt) : null,
-    btn: br ? [br.left, br.top, br.width, br.height] : null,
+    adRect: _adRect,
+    labInk: _labInk,
+    dotRect: _dotRect,
+    btn: _btn,
     guide: g ? g.textContent : null,
     mix: mx ? mx.textContent : null,
     guideInk: g ? ink(g) : null,
@@ -90,6 +112,23 @@ async function boot(browser, opts) {
 }
 /* 회전 대기를 없앤 사본 — `roulSpinTo` 의 «원판이 사라졌으면 즉시 결판»(181) 과 같은 종착점이다 */
 const fastSpin = page => page.evaluate(() => { window.roulSpinTo = idx => { roulFinish(idx); }; });
+
+/* 408 — 기하를 재기 전에 **팝업이 앉을 때까지** 기다린다.
+   흔들림의 뿌리는 둘이었고(probe408 [2]) 닷을 얼리는 것만으로는 «차» 만 낫는다:
+     ⓐ 닷 자신의 `jzDotIn`+`jzDotPulse`(infinite) — 우 인셋만 흔든다 → `__rou(true)` 가 끈다
+     ⓑ 팝업 열림 연출이 **조상을 통째로 스케일** — 좌·우에 같은 배율로 걸려 «차» 에서는 상쇄되지만
+        [G1]·[G2]·[G3]·[G5]·[G6] 이 찍는 **절대 px** 은 그동안 뜻이 없다(250ms 에서 우 인셋 18.28~19.22).
+   ⓑ 는 시간이 지나면 앉으므로 «몇 ms» 를 고르지 않고 **버튼 상자가 두 프레임 연속 같아질 때까지** 기다린다
+   (338·368 처방 — 자리를 상수에서 빼고 제품에게 묻는다). 닷은 영원히 안 앉으므로 여기서 안 본다. */
+const settle = async page => {
+  await page.evaluate(() => { window.__prevRou = null; });
+  await page.waitForFunction(() => {
+    const b = document.getElementById('rouBtn'); if (!b) return false;
+    const r = b.getBoundingClientRect(), c = [r.left, r.top, r.width, r.height];
+    const p = window.__prevRou; window.__prevRou = c;
+    return !!p && p.every((v, i) => Math.abs(v - c[i]) < 0.01);
+  }, null, { polling: 'raf', timeout: 5000 });
+};
 
 (async () => {
   const browser = await launch(chromium);
@@ -186,8 +225,9 @@ const fastSpin = page => page.evaluate(() => { window.roulSpinTo = idx => { roul
   /* ══ [G] 기하 — 뱃지가 무엇도 안 밟는다 · 버튼은 안 움직인다 ═══════════ */
   {
     await b.page.evaluate(() => { S.daily.spins = 1; uiDirty = true; renderUI(); openRoulette(); });
-    await b.page.waitForTimeout(250);
-    const s = await b.page.evaluate(() => window.__rou());
+    /* 408 — «250ms 뒤» 가 아니라 «앉은 뒤» 에 잰다(위 `settle` 주석) · 기하는 `__rou(true)` 로 얼려서 */
+    await settle(b.page);
+    const s = await b.page.evaluate(() => window.__rou(true));
     const [bx, by, bw, bh] = s.btn, [ax, ay, aw, ah] = s.adRect;
     const li = s.labInk, dr = s.dotRect;
     ok(s.adShown === true, '[G0] 광고 구간에서 뱃지가 실제로 그려진다');
@@ -208,10 +248,32 @@ const fastSpin = page => page.evaluate(() => { window.roulSpinTo = idx => { roul
     const gapT = ay - by, gapB = by + bh - ay - ah;
     ok(Math.abs(gapT - gapB) < 0.6, '[G5] 세로 가운데', '위 ' + px(gapT) + ' · 아래 ' + px(gapB));
 
+    /* ── 408 §R — [G4] 되돌림 시험 ─────────────────────────────────────────
+       «얼려서 재기» 가 흔들림만 없앤 것이지 **축까지 죽인 것은 아님**을 못박는다.
+       닷을 8px 옮긴 사본에서 [G4] 는 반드시 빨개져야 하고, 원복하면 도로 초록이어야 한다.
+       (338·334 교훈 — 이 항이 없으면 «이미 참인 것을 굳힌 게이트» 와 «무르게 푼 수리» 를 못 가른다.
+        허용 오차 1.2 는 한 칸도 안 넓혔다는 증거이기도 하다.) */
+    const rev = await b.page.evaluate(() => {
+      const bt = document.getElementById('rouBtn'), dt = bt.querySelector(':scope>.updot');
+      const prev = dt.style.right;
+      dt.style.right = '20px';                       /* CSS 12 → 20 = 화면에서 8px 왼쪽 */
+      const moved = window.__rou(true);
+      dt.style.right = prev;
+      const back = window.__rou(true);
+      return { moved, back };
+    });
+    const dRev = Math.abs((rev.moved.adRect[0] - rev.moved.btn[0]) -
+                          ((rev.moved.btn[0] + rev.moved.btn[2]) - (rev.moved.dotRect[0] + rev.moved.dotRect[2])));
+    const dBack = Math.abs((rev.back.adRect[0] - rev.back.btn[0]) -
+                           ((rev.back.btn[0] + rev.back.btn[2]) - (rev.back.dotRect[0] + rev.back.dotRect[2])));
+    ok(dRev >= 1.2, '★ [G4r] 되돌림 — 닷을 8px 옮긴 사본에서 [G4] 는 **빨개진다** (축이 살아 있다)',
+       '사본 |좌−우| ' + px(dRev) + 'px ≥ 1.2');
+    ok(dBack < 1.2, '[G4r] 원복하면 도로 초록이다', '원복 |좌−우| ' + px(dBack) + 'px');
+
     /* 레이아웃 불변 — 무료 구간(뱃지 없음)과 광고 구간(뱃지 있음)의 버튼 자리가 같다 */
     await b.page.evaluate(() => { S.daily.spins = 5; uiDirty = true; renderUI(); openRoulette(); });
-    await b.page.waitForTimeout(250);
-    const f = await b.page.evaluate(() => window.__rou());
+    await settle(b.page);
+    const f = await b.page.evaluate(() => window.__rou(true));
     ok(Math.abs(f.btn[1] - by) < 0.5 && Math.abs(f.btn[3] - bh) < 0.5,
        '★ [G6] 뱃지가 붙어도 버튼 위치·높이 Δ0 (레이아웃 0px 변경)',
        '무료 y' + px(f.btn[1]) + ' h' + px(f.btn[3]) + ' ↔ 광고 y' + px(by) + ' h' + px(bh));
