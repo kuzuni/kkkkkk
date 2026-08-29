@@ -724,6 +724,94 @@ async function sweep(browser, inject) {
     await calcPage.close();
   }
 
+  /* [S4] 9회차 — 8회차 비평가 BF 가 «세 화면 밖» 에서 찾아낸 같은 계열.
+     70 출석 보상 젬 7칸 중 **가운데 열 3칸**이 소수 상자(1.08em × fs76 = 82.0781)가 소수 x 에 앉아
+     가로만 1px 더 먹고 있었다(DSF 2·3·4 에서 1.30 / 1.29 / 1.30% — **안 줄어든다**).
+     ⚑ 같은 격자의 나머지 4칸은 정확히 정사각이라 «칸마다 우연» 이고, 그래서 **7칸을 전부** 재야 한다.
+     ⚠ BF 가 같이 낸 34 축복 보너스 💰 는 **기각**했다 — DSF1 −0.91% → DSF2 −0.45% → DSF3·4 **0.00%** 로
+     수렴하므로 «측정 바닥» 이다(진짜 기하는 배율을 올려도 안 줄어든다). 상세 `probe356r9`. */
+  console.log('[S4] 9회차 그려진 잉크 — 70 출석 보상 젬 7칸이 DSF 2 에서 전부 정사각인가');
+  {
+    const calcPage = await browser.newPage();
+    await calcPage.setContent('<body></body>');
+    const SEL = '#modal.at70 .at-rw .at-if.ifr > em > img.cic';
+    const inkAt = async (page, i) => {
+      const r = await page.evaluate(([s, k]) => {
+        const e = document.querySelectorAll(s)[k]; if (!e) return null;
+        const b = e.getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height };
+      }, [SEL, i]);
+      if (!r) return null;
+      /* ⚠ 여백을 좁게 잡는다 — 칸 간격이 좁아 넓은 여백은 **이웃 칸**을 차분에 끌어들인다 */
+      const PAD = 8;
+      const clip = { x: Math.max(0, Math.floor(r.x - PAD)), y: Math.max(0, Math.floor(r.y - PAD)),
+        width: Math.ceil(r.w + PAD * 2), height: Math.ceil(r.h + PAD * 2) };
+      await page.waitForTimeout(120);
+      const on = await page.screenshot({ clip });
+      await page.evaluate(([s, k]) => { document.querySelectorAll(s)[k].style.opacity = '0'; }, [SEL, i]);
+      await page.waitForTimeout(120);
+      const off = await page.screenshot({ clip });
+      await page.evaluate(([s, k]) => { document.querySelectorAll(s)[k].style.opacity = ''; }, [SEL, i]);
+      await page.waitForTimeout(80);
+      const d = await calcPage.evaluate(async ([a, b2]) => {
+        const load = async (s) => { const im = new Image(); im.src = 'data:image/png;base64,' + s; await im.decode();
+          const c = document.createElement('canvas'); c.width = im.naturalWidth; c.height = im.naturalHeight;
+          const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0);
+          return { d: g.getImageData(0, 0, c.width, c.height).data, W: c.width, H: c.height }; };
+        const A = await load(a), B = await load(b2);
+        let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+        for (let y = 0; y < A.H; y++) for (let x = 0; x < A.W; x++) { const i2 = (y * A.W + x) * 4;
+          const dd = Math.abs(A.d[i2] - B.d[i2]) + Math.abs(A.d[i2 + 1] - B.d[i2 + 1]) + Math.abs(A.d[i2 + 2] - B.d[i2 + 2]);
+          if (dd > 12) { n++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+        return n ? { w: x1 - x0 + 1, h: y1 - y0 + 1 } : null;
+      }, [on.toString('base64'), off.toString('base64')]);
+      return d;
+    };
+    const sweep = async (page) => {
+      const n = await page.evaluate((s) => document.querySelectorAll(s).length, SEL);
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        const d = await inkAt(page, i);
+        out.push(d ? { i, w: d.w, h: d.h, dev: Math.abs(d.w / d.h - 1) * 100 } : { i, dev: -1 });
+      }
+      return out;
+    };
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 2 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(1000);
+    await page.evaluate(() => { const e = document.querySelector('.side .ibtn[data-pop="attend"]'); if (e) e.click(); });
+    await page.waitForTimeout(900);
+    await page.evaluate(() => {
+      for (const a of document.getAnimations()) { try { a.finish(); } catch (e) {} }
+      for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
+      window.requestAnimationFrame = () => 0;
+    });
+    const cells = await page.evaluate((s) => document.querySelectorAll(s).length, SEL);
+    if (cells !== 7) bad(`[S4] 70 출석 — 진입 실패 또는 격자 변경: 보상 젬이 ${cells}칸(7 이어야 한다)`);
+    else {
+      ok('[S4] 70 출석 — 보상 젬 7칸 진입 확인 (헛초록 방지)');
+      const box = await page.evaluate((s) => document.querySelector(s).getBoundingClientRect().width, SEL);
+      if (Math.abs(box - 82) > 0.01) bad(`[S4] 70 출석 — 상자 ${box}, 기대 82 정수 (소수 상자 1.08em 이 되살아났다)`);
+      else ok('[S4] 70 출석 — 상자 82 정수 고정');
+
+      const a = await sweep(page);
+      const bad3 = a.filter((r) => r.dev > 0.5);
+      if (a.some((r) => r.dev < 0)) bad('[S4] 70 출석 — 차분이 0인 칸이 있다(안 그려졌다)');
+      else if (bad3.length) bad(`[S4] 70 출석 — DSF2 에서 ${bad3.length}칸이 비정사각: ` + bad3.map((r) => `#${r.i} ${r.w}×${r.h} ${r.dev.toFixed(2)}%`).join(' · '));
+      else ok(`[S4] 70 출석 — DSF2 7칸 전부 정사각 (${a[0].w}×${a[0].h})`);
+
+      /* 되돌림 — 소수 상자를 도로 심으면 가운데 열 3칸이 돌아오는가 */
+      await page.addStyleTag({ content: '.at-if>em>.cic{width:1.08em !important;height:1.08em !important}' });
+      await page.waitForTimeout(250);
+      const r = await sweep(page);
+      const hit = r.filter((x) => x.dev > 0.5);
+      if (hit.length >= 3) ok(`[S4] 되돌림 — 소수 상자(82.0781)를 심으면 ${hit.length}칸이 빨개진다 (자가 살아 있다)`);
+      else bad(`[S4] 되돌림 — 심어도 ${hit.length}칸뿐(≥3 이어야 한다): 이 항은 감시 밖이다`);
+    }
+    await ctx.close();
+    await calcPage.close();
+  }
+
   /* [R7] 되돌림 시험(7회차 스코프) — 세 화면 전부 탭·팝업 뒤라 [R]~[R6] 어느 자에도 안 걸린다.
      세 자리의 «옛 값이 어디에 살았는가» 가 서로 달라서 갈래를 셋으로 나눈다(356-⑥):
        ⓐ 23 훈련 — 규칙 자체의 비균등 `scale(.829,.893)` · `scaleX(.968)`
