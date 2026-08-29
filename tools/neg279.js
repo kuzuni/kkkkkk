@@ -25,20 +25,53 @@ const ROOT = path.resolve(__dirname, '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const TMP = path.join(ROOT, '.v279-neg.html');
 
-/* ---- 갈아 끼울 자리 — 전부 index.html 의 실제 문자열이다(못 찾으면 시험 자체를 FAIL 시킨다) ---- */
-const TR_BAR    = '        <div class="stabs sp3 tr-subs" id="trSubs">';
-const TR_TEMPER = '          <div class="stab" data-trsub="temper"><i class="ol3">단련</i><s class="bdg"></s></div>';
-const TR_CSS    = '  .tr-subs{left:126px;bottom:40px;width:794px}';
-const DUN_BAR   = '    <div class="dns-sub stabs sp3" id="dunSub">';
-const DUN_TOWER = '      <div class="stab dns-t off" data-dsub="tower"><i class="ol3">탑</i></div>';
-const SP3_CSS   = '  .stabs.sp3>.stab{width:33.3333%}';
+/* ---- 갈아 끼울 자리 — 리터럴이 아니라 «제품에게 묻는다» (2026-08-29, 작업 387 · 368 처방) ----
+ *
+ * 처음에는 줄을 통째로 리터럴로 박아 뒀다. 그 자리들은 전부 **남의 작업 구간**이라
+ * 곁다리 변경 하나에 다섯 항(N3·N6·N7·N8·N9)이 **조용히 죽었다** — 값 하나
+ * (`.tr-subs{bottom:40→42px}`)와 형제 노드 하나(«탑» 칸의 `<s class="bdg">`, 298)뿐인데
+ * 그 다섯은 «갈아 끼울 자리를 못 찾았다» 로 넘어가 **아무것도 검사하지 않게** 됐다.
+ * 리터럴을 새 값으로 갱신하는 것은 같은 죽음을 다음 폴리시까지 미루는 것뿐이다.
+ *
+ * ⇒ 자리를 **정체(id · data 키 · 선택자)** 로만 지목하고, 줄 내용·들여쓰기·형제는
+ *   그때그때 `index.html` 에서 **읽는다**. 새 상수는 0개다.
+ *   못 찾거나(0줄) 둘 이상 찾으면(≥2줄) §[A] 가 **빨개진다** — 조용히 죽는 길이 없다.
+ *   치환이 no-op 이 되는 길(앵커 줄에 갈아 낄 토큰이 없다)도 편집 루프가 «자리 없음» 으로 읽는다.
+ *   이 해석기가 «무엇이 와도 초록» 이 아님은 §R 이 증명한다.
+ */
+const LINES = SRC.split('\n');
+const ANCHORS = [];
+const ind = s => (s.match(/^[ \t]*/) || [''])[0];
+
+/* 정체로 한 줄을 지목한다 — 정확히 한 줄일 때만 값을 돌려준다(아니면 null + §[A] 빨강) */
+const at = (name, re, why) => {
+  const hit = [];
+  LINES.forEach((l, i) => { if (re.test(l)) hit.push(i); });
+  ANCHORS.push({ name, why, n: hit.length, at: hit.length === 1 ? hit[0] + 1 : 0 });
+  return hit.length === 1 ? LINES[hit[0]] : null;
+};
+/* 부분이 하나라도 없으면 통째로 null — 그 시험은 «자리 없음» 으로 빨개진다 */
+const cat = (...parts) => parts.some(p => p == null) ? null : parts.join('');
+
+const TR_BAR    = at('TR_BAR',    /^\s*<div\b[^>]*\bid="trSubs"[^>]*>\s*$/,          '23 훈련 서브탭 바(203·210 이 쓰는 그 바)');
+const TR_TEMPER = at('TR_TEMPER', /^\s*<div\b[^>]*\bdata-trsub="temper"[^>]*>/,      '그 바의 «단련» 칸 — 형제를 끼워 넣는 자리');
+const TR_CSS    = at('TR_CSS',    /^\s*\.tr-subs\s*\{/,                              '`.tr-subs` 규칙 한 줄(88 의 `.tr-sub` 와 한 글자 차이)');
+const DUN_BAR   = at('DUN_BAR',   /^\s*<div\b[^>]*\bid="dunSub"[^>]*>\s*$/,          '03 던전 서브탭 바(209 가 «탑» 을 더한 그 바)');
+const DUN_TOWER = at('DUN_TOWER', /^\s*<div\b[^>]*\bdata-dsub="tower"[^>]*>/,        '그 바의 «탑» 칸 — 4번째 칸을 끼워 넣는 자리');
+const SP3_CSS   = at('SP3_CSS',   /^\s*\.stabs\.sp3\s*>\s*\.stab\s*\{/,              '96 부품의 `.sp3` 칸 폭 규칙');
 
 /* 03 던전에 «넷» 칸을 하나 더 — 칸 수만 늘린다(키는 아무 데도 안 걸리는 새 값) */
-const DUN_4TH = DUN_TOWER + '\n      <div class="stab dns-t off" data-dsub="x4"><i class="ol3">넷</i></div>';
-/* `.sp4` 규칙 — 96 부품의 `.sp2`/`.sp3` 과 같은 꼴 */
-const SP4_CSS = SP3_CSS + '\n  .stabs.sp4>.stab{width:25%}'
-  + '\n  .stabs.sp4>.stab:nth-of-type(1){left:0}\n  .stabs.sp4>.stab:nth-of-type(2){left:25%}'
-  + '\n  .stabs.sp4>.stab:nth-of-type(3){left:50%}\n  .stabs.sp4>.stab:nth-of-type(4){left:75%}';
+const DUN_4TH = cat(DUN_TOWER, '\n', DUN_TOWER && ind(DUN_TOWER),
+  '<div class="stab dns-t off" data-dsub="x4"><i class="ol3">넷</i></div>');
+/* `.sp4` 규칙 — 96 부품의 `.sp2`/`.sp3` 과 같은 꼴(들여쓰기는 제품 줄에서 물려받는다) */
+const SP4_CSS = SP3_CSS == null ? null : (() => {
+  const p = '\n' + ind(SP3_CSS);
+  return SP3_CSS + p + '.stabs.sp4>.stab{width:25%}'
+    + p + '.stabs.sp4>.stab:nth-of-type(1){left:0}'  + p + '.stabs.sp4>.stab:nth-of-type(2){left:25%}'
+    + p + '.stabs.sp4>.stab:nth-of-type(3){left:50%}' + p + '.stabs.sp4>.stab:nth-of-type(4){left:75%}';
+})();
+/* 바의 분할 선언만 `.sp4` 로 — 토큰이 없으면 no-op 이 되고, 그것은 편집 루프가 «자리 없음» 으로 읽는다 */
+const DUN_BAR_SP4 = DUN_BAR == null ? null : DUN_BAR.replace(/\bsp3\b/, 'sp4');
 
 /* 단언 이름(앞머리로 대조한다) */
 const A_ID    = '#trSub 노드 0';
@@ -53,27 +86,29 @@ const A_W4    = '칸 폭 = 콘텐츠 ÷4';
 /* [from, to] 를 여러 개 적을 수 있다. green:true 면 «FAIL 0건» 이 기대다. */
 const TESTS = [
   { id: 'N1', why: '«스탯» 칸 부활 — 47 의 옛 대상 그 자체(data-trsub="stat")',
-    edit: [[TR_TEMPER, TR_TEMPER + '\n          <div class="stab" data-trsub="stat"><i class="ol3">스탯</i></div>']],
+    edit: [[TR_TEMPER, cat(TR_TEMPER, '\n', TR_TEMPER && ind(TR_TEMPER),
+      '<div class="stab" data-trsub="stat"><i class="ol3">스탯</i></div>')]],
     want: [A_STAT], not: [A_ID, A_PRE, A_CSS, A_SELF] },
 
   { id: 'N2', why: '88 의 바가 «속성 표기» 로 부활 — id="trSub" · class="tr-sub" (선택자 표기만 보면 놓치는 자리, 277 함정)',
-    edit: [[TR_BAR, '        <div class="tr-sub" id="trSub"></div>\n' + TR_BAR]],
+    edit: [[TR_BAR, cat(TR_BAR && ind(TR_BAR), '<div class="tr-sub" id="trSub"></div>\n', TR_BAR)]],
     want: [A_ID, A_CSS], not: [A_PRE, A_SELF] },
 
   { id: 'N3', why: '`.tr-sub` CSS 규칙만 부활 — 마크업은 그대로(규칙 축과 마크업 축이 안 샌다)',
-    edit: [[TR_CSS, '  .tr-sub{left:126px;bottom:40px;width:794px}\n' + TR_CSS]],
+    /* 규칙 본문은 제품에서 물려받는다 — 한 글자(`.tr-subs` → `.tr-sub`)만 다른 줄이 되는 것이 이 시험의 전부다 */
+    edit: [[TR_CSS, cat(TR_CSS && TR_CSS.replace('.tr-subs', '.tr-sub'), '\n', TR_CSS)]],
     want: [A_CSS], not: [A_ID, A_PRE, A_STAT, A_SELF] },
 
   { id: 'N4', why: '훈련 팝업에 스탯 분배 UI 부활 — [data-sp]',
-    edit: [[TR_BAR, '        <div data-sp="atk"></div>\n' + TR_BAR]],
+    edit: [[TR_BAR, cat(TR_BAR && ind(TR_BAR), '<div data-sp="atk"></div>\n', TR_BAR)]],
     want: [A_STAT], not: [A_ID, A_PRE, A_CSS, A_SELF] },
 
   { id: 'N5', why: '`[data-trsub]` 칸이 203/210 의 바 **밖**에 생긴다 — 전제(«그 바의 것이 맞나»)가 빨개져야 한다',
-    edit: [[DUN_BAR, '    <div class="stab" data-trsub="train"></div>\n' + DUN_BAR]],
+    edit: [[DUN_BAR, cat(DUN_BAR && ind(DUN_BAR), '<div class="stab" data-trsub="train"></div>\n', DUN_BAR)]],
     want: [A_PRE], not: [A_ID, A_STAT, A_CSS, A_SELF] },
 
   { id: 'N6', why: '자가검사 — 스타일시트를 못 읽거나 토큰 매처가 죽으면(`.tr-subs` 규칙 제거) «0건» 이 헛초록이 된다',
-    edit: [[TR_CSS, '  .tr-subsX{left:126px;bottom:40px;width:794px}']],
+    edit: [[TR_CSS, TR_CSS && TR_CSS.replace('.tr-subs', '.tr-subsX')]],
     want: [A_SELF], not: [A_ID, A_PRE, A_STAT, A_CSS] },
 
   /* ---- ⓑ 칸 수 파생 ---- */
@@ -82,16 +117,17 @@ const TESTS = [
     want: [A_N3], not: [A_DECL] },
 
   { id: 'N8', why: '`.sp4` 로 선언하고 칸도 4개인데 **`.sp4` CSS 규칙이 없다** — 선언은 맞고 실측이 안 따라온다',
-    edit: [[DUN_BAR, DUN_BAR.replace('sp3', 'sp4')], [DUN_TOWER, DUN_4TH]],
+    edit: [[DUN_BAR, DUN_BAR_SP4], [DUN_TOWER, DUN_4TH]],
     want: [A_W4], not: [A_DECL] },
 
   /* ---- 양성 대조 ---- */
   { id: 'N9', why: '★ 279 회귀 시험 — 03 던전이 4칸(.sp4 + 규칙)이 돼도 게이트는 따라온다. 옛 `n: 2` 였다면 여기서도 빨갰다',
-    edit: [[DUN_BAR, DUN_BAR.replace('sp3', 'sp4')], [DUN_TOWER, DUN_4TH], [SP3_CSS, SP4_CSS]],
+    edit: [[DUN_BAR, DUN_BAR_SP4], [DUN_TOWER, DUN_4TH], [SP3_CSS, SP4_CSS]],
     green: true },
 
   { id: 'N10', why: '양성 대조 — 203/210 계열 칸이 하나 더 늘어도 §[0] 은 초록이다(옛 «[data-trsub] 0개» 였다면 빨갰다)',
-    edit: [[TR_TEMPER, TR_TEMPER + '\n          <div class="stab" data-trsub="rune2"><i class="ol3">룬2</i></div>']],
+    edit: [[TR_TEMPER, cat(TR_TEMPER, '\n', TR_TEMPER && ind(TR_TEMPER),
+      '<div class="stab" data-trsub="rune2"><i class="ol3">룬2</i></div>')]],
     green: true },
 ];
 
@@ -109,19 +145,50 @@ const runGate = () => {
 
 (async () => {
   try {
-    console.log('[0] 기준선 — 갈아 끼우지 않은 사본은 초록이어야 한다');
+    /* [A] 자리 해석 — «초록 항의 수» 보다 먼저 볼 절이다(387).
+     * 다섯 항이 조용히 죽어 있던 동안에도 [0]·N10 은 계속 초록이었다. */
+    console.log('[A] 갈아 끼울 자리 — 제품에서 정확히 한 줄씩 해석된다');
+    ANCHORS.forEach(a => ok('앵커 ' + a.name + ' — ' + a.why,
+      a.n === 1, a.n === 1 ? 'index.html:' + a.at : (a.n === 0 ? '0줄 — 그 자리가 사라졌다' : a.n + '줄 — 지목이 모호하다')));
+
+    console.log('\n[R] 되돌림 시험 — 이 해석기가 «무엇이 와도 초록» 이 아님');
+    const probe = re => { let n = 0; LINES.forEach(l => { if (re.test(l)) n++; }); return n; };
+    ok('R1 없는 자리는 0줄로 읽힌다(해석 실패)', probe(/^\s*\.__없는규칙__\s*\{/) === 0, '0줄');
+    ok('R2 모호한 지목은 2줄 이상으로 읽힌다(해석 실패)', probe(/^\s*<div class="stab\b/) > 1, probe(/^\s*<div class="stab\b/) + '줄');
+    ok('R3 no-op 치환은 «자리 없음» 으로 읽힌다', DUN_BAR != null && DUN_BAR.replace(/\bsp9\b/, 'sp4') === DUN_BAR,
+      '갈아 낄 토큰이 없으면 from === to');
+
+    /* R4 — 387 을 만든 그 드리프트를 **다시 먹여 본다**. 값 하나(폴리시)와 형제 노드 하나(298 계열)가
+     * 바뀌어도 앵커는 여전히 한 줄로 해석돼야 한다. 옛 «줄 통째 리터럴» 은 바로 여기서 죽었다. */
+    const probeIn = (lines, re) => lines.filter(l => re.test(l)).length;
+    const drifted = LINES.map(l =>
+      l === TR_CSS    ? TR_CSS.replace(/(\d+)px/, (_, d) => (Number(d) + 7) + 'px') :
+      l === DUN_TOWER ? DUN_TOWER.replace('</div>', '<s class="bdg2"></s></div>') : l);
+    const moved = drifted.filter((l, i) => l !== LINES[i]).length;
+    ok('R4 드리프트를 실제로 먹였다(값 1 + 형제 노드 1)', moved === 2, moved + '줄 바뀜');
+    ok('R4 값이 바뀌어도 TR_CSS 는 한 줄', probeIn(drifted, /^\s*\.tr-subs\s*\{/) === 1,
+      probeIn(drifted, /^\s*\.tr-subs\s*\{/) + '줄');
+    ok('R4 형제가 늘어도 DUN_TOWER 는 한 줄', probeIn(drifted, /^\s*<div\b[^>]*\bdata-dsub="tower"[^>]*>/) === 1,
+      probeIn(drifted, /^\s*<div\b[^>]*\bdata-dsub="tower"[^>]*>/) + '줄');
+    ok('R4 옛 «줄 통째 리터럴» 은 그 자리에서 죽는다(387 재현)',
+      TR_CSS != null && DUN_TOWER != null && drifted.indexOf(TR_CSS) < 0 && drifted.indexOf(DUN_TOWER) < 0,
+      '리터럴 대조는 0곳 — 이것이 27/32 였다');
+
+    console.log('\n[0] 기준선 — 갈아 끼우지 않은 사본은 초록이어야 한다');
     fs.writeFileSync(TMP, SRC);
     const base = runGate();
     ok('사본 그대로 = FAIL 0건', base.length === 0, base.length ? base.slice(0, 3).join(' / ') : 'ALL PASS');
 
     for (const t of TESTS) {
       console.log('\n[' + t.id + '] ' + t.why);
-      let next = SRC, found = true;
+      let next = SRC, found = true, why = '';
       for (const [from, to] of t.edit) {
-        if (next.indexOf(from) < 0) { found = false; break; }
+        if (from == null || to == null) { found = false; why = '앵커 해석 실패 — §[A] 를 보라'; break; }
+        if (from === to) { found = false; why = '치환이 no-op — 앵커 줄에 갈아 낄 토큰이 없다'; break; }
+        if (next.indexOf(from) < 0) { found = false; why = '문자열 없음 — index.html 이 바뀌었다'; break; }
         next = next.replace(from, to);
       }
-      ok(t.id + ' 갈아 끼울 자리를 찾았다', found, found ? t.edit.length + '곳' : '문자열 없음 — index.html 이 바뀌었다');
+      ok(t.id + ' 갈아 끼울 자리를 찾았다', found, found ? t.edit.length + '곳' : why);
       if (!found) continue;
       fs.writeFileSync(TMP, next);
       const fails = runGate();
