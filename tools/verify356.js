@@ -58,12 +58,24 @@ const SCOPE = [
   /* ⚠ 스캐너 경로는 id 를 만나면 멈춘다 — `.ri` 가 아니라 **`#tutoRew`** 로 잡는다(2회차 `#psBar` 선례).
      이 한 자리가 노드 수로는 가장 컸다 — 30화면 «전부» 에서 같은 노드를 집으므로 60노드다. */
   { k: '#tutoRew', why: '61 가이드 미션 배너 보상 아이콘 (전 화면 상시 · todo .834/.968 · ready .94/.79)' },
+  /* ── 5회차 — 03 던전/레이드 카드 알약 아이콘 세 자리. 잔여 중 **노드 수가 가장 컸다**(48노드).
+     4회차 교훈(«자리» 와 «노드» 는 다르다)대로 «비율 × 보이는 화면 수» 로 줄을 세워 고른 자리다.
+     ⚑ 세 자리 다 세로 축(scaleY)이라 앞 회차의 scaleX 자에는 한 번도 안 걸렸다. */
+  { k: 'div.sp.tk>em', why: '03 던전/레이드 입장권 알약 아이콘 (수리 전 scaleY 1.25 = 잉크가 ref 50 대비 75.6)' },
+  { k: 'div.sp.lv>em', why: '03 던전/레이드 레벨 알약 아이콘 (scaleY .91)' },
+  /* ⚠ 두 키로 나눠 적는다 — 경로가 `div.pill.p2>em`(레이드 둘째 알약)일 때는 `div.pill>em` 이
+     **부분 일치가 안 된다**(클래스가 사이에 끼어든다). 한 키로 뒀으면 그 자리는 감시 밖이었다. */
+  { k: 'div.pill>em', why: '03 던전/레이드 재화 알약 아이콘 (scaleY 1.08)' },
+  { k: 'div.pill.p2>em', why: '03 레이드 둘째 재화 알약 아이콘 (같은 규칙)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
-const REMAIN = 44;   /* 4회차 실측(셀렉터 기준) — 3회차 54 → **44**. 스캐너 머리글의 «자리» 와는 자가 다르다
-                        (스캐너는 셀렉터+비율로 접어 66→44, 이 자는 셀렉터만으로 접어 54→44 — 4회차에는
-                        두 자가 같은 값에서 만났다). 노드 수로는 162 → **59**(#tutoRew 가 60노드였다).
-                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44 와 직접 비교 불가(자가 바뀌었다). */
+const REMAIN = 14;   /* 5회차 실측(셀렉터 기준) — 4회차 44 → **14**.
+                        ⚠ 이 값은 **두 번 움직였다**: 5회차가 먼저 스캐너의 «23 훈련» 즉사를 고치자
+                        그 화면이 처음 스캔에 들어와 44 → **47** 로 «늘었다»(고친 것이 아니라 처음 본 것이다.
+                        SVG 노드의 className 은 SVGAnimatedString 이라 `.slice` 가 없었다 — 그 화면은
+                        내내 래칫의 감시 밖 = 헛초록). 그 뒤 03 세 자리를 닫아 47 → 14.
+                        노드 수로는 59 → (23 훈련 편입) 68 → **20**.
+                        ⚠ 1회차의 96 은 «셀렉터+비율» 로 세던 값이라 63·54·44·14 와 직접 비교 불가. */
 
 const fails = [];
 const oks = [];
@@ -297,6 +309,48 @@ async function sweep(browser, inject) {
     const hit = got.filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel));
     if (hit.length >= want) ok(`[R3] ${lab} — 옛 값을 심으면 ${hit.length}자리가 빨개진다 (자가 살아 있다)`);
     else bad(`[R3] ${lab} — 심어도 ${hit.length}건뿐(≥${want} 이어야 한다): 이 자리는 감시 밖이다`);
+    await ctx.close();
+  }
+
+  /* [R4] 5회차 스코프 — 03 던전/레이드는 탭을 눌러야 열리는 페이지라 [R]·[R2]·[R3] 어느 자에도 안 걸린다.
+     되돌림은 «옛 scaleY 를 도로 심는 것» 하나로 끝난다(세 자리 다 CSS 배율이라 55 같은 데이터 갈래가 없다).
+     ⚠ 음성항을 같이 세운다 — 심기 «전» 에 0건이어야 [R4] 가 «주입 때문에 빨개진 것» 을 증명한다.
+     안 그러면 원래 빨간 자리를 주입 공로로 읽는 헛초록이 된다. */
+  console.log('[R4] 되돌림 시험(5회차 스코프) — 03 던전 카드에 옛 scaleY 를 도로 심으면 빨개지는가');
+  for (const [lab, sub] of [['03 던전', null], ['03 레이드', 'raid']]) {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => { document.querySelector('.tab[data-t="adv"]').click(); });
+    await page.waitForTimeout(600);
+    if (sub) {
+      await page.evaluate(() => {
+        const el = [...document.querySelectorAll('#dunSub .stab')].find((b) => /레이드/.test(b.textContent));
+        if (el) el.click();
+      });
+      await page.waitForTimeout(500);
+    }
+    /* 음성항 — 주입 전에는 이 스코프가 깨끗해야 한다 */
+    const pre = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel)
+        && /sp\.tk>em|sp\.lv>em|pill(\.p2)?>em/.test(r.sel));
+    if (pre.length) bad(`[R4] ${lab} — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+    else ok(`[R4] ${lab} — 주입 전 0건 (음성항)`);
+
+    await page.evaluate(() => {
+      const st = document.createElement('style');
+      st.textContent = '.dnc .sp.tk>em{transform:scaleY(1.25) !important}'
+        + '.dnc .sp.lv>em{transform:scaleY(.91) !important}'
+        + '.dnc .pill>em{transform:scaleY(1.08) !important}';
+      document.head.appendChild(st);
+    });
+    await page.waitForTimeout(200);
+    const hit = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel)
+        && /sp\.tk>em|sp\.lv>em|pill(\.p2)?>em/.test(r.sel));
+    if (hit.length >= 3) ok(`[R4] ${lab} — 옛 scaleY 를 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+    else bad(`[R4] ${lab} — 심어도 ${hit.length}건뿐(≥3 이어야 한다): 이 자리는 감시 밖이다`);
     await ctx.close();
   }
 

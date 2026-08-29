@@ -4692,8 +4692,12 @@
   .dnc .pill{left:92px;top:121px;height:46px;border-radius:23px;background:rgba(0,0,0,.58);
     box-sizing:border-box;padding:0 51px 0 58px;white-space:nowrap}
   .dnc .pill.p2{top:182px}
+  /* 356 5회차 — `scaleY(1.08)` 은 아이콘을 세로로만 늘려 찌그러뜨리고 있었다(주인 지시: 원본 비율).
+     4회차 61 배너 젬과 같은 자로 갈아 끼운다 — «원본 비율을 지킨 채 ref 상자에 담는다»:
+     자연 잉크 47.52² · ref §3-4-1 코인 51×53 ⇒ s = min(51/47.52, 53/47.52) = 1.0732 → 잉크 51×51.
+     실측 잉크 중심 Δ(0, +0.02) — 흐름(절대배치)은 transform 과 무관하고 원점이 상자 중심이다. */
   .dnc .pill>em{position:absolute;left:-35px;top:-2px;width:52px;height:52px;
-    font-size:44px;line-height:52px;text-align:center;transform:scaleY(1.08)}
+    font-size:44px;line-height:52px;text-align:center;transform:scale(1.0732)}
   /* 라벨은 **흐름 안**에 둔다 — 절대배치면 캡슐이 글자를 못 잰다(그것이 90 의 scaleX 를 부른 원인).
      fs 30 → 34 는 잉크 «높이» 를 ref 에 맞춘 것이다(25 → 28.3 · ref 28~29). 폭은 서체 몫이라
      여기서 끝까지 안 밀었다 — 늘어난 잉크폭이 여백을 87 → 57(ref 52)로 데려온다. */
@@ -4726,10 +4730,21 @@
   .dnc .sp.lv{left:84px;width:156px}
   .dnc .sp.tk{left:279px;width:171px}
   .dnc .sp>em{position:absolute;text-align:center}
+  /* 356 5회차 — 두 자리 다 세로로만 눌리거나 늘어나 있었다. ⚑ 재현(`probe356r5`)이 밝힌 것은
+     이 손잡이들이 **ref 에서 멀어지는 방향**이었다는 것이다: 입장권은 ref 잉크가 50 인데
+     `scaleY(1.25)` 가 75.6 까지 늘려 놨었다(+51%). 등방 contain 으로 갈아 끼운다 —
+       lv  자연 64.89×52   · ref §3-5-2 🔥 49×61 ⇒ s = min(49/64.89, 61/52)   = .7551 → 49×39.3
+       tk  자연 60.47×60.47 · ref §3-5-3 입장권 64×50 ⇒ s = min(64/60.47, 50/60.47) = .8269 → 50×50
+     둘 다 ref 상자 안에 들어간다(넘쳐 잘리는 356 함정 없음). ⚠ 상자 중심은 Δ0 이지만 **잉크 중심**은
+     Δ0 이 아니다 — 잉크가 상자보다 커서 비대칭으로 넘쳐 있었기 때문이다(실측 tk Δ(0,−2.21) ·
+     lv Δ(−2.07,+0.07)). 둘 다 **ref 쪽으로** 움직였다: tk 잉크는 ref 434..483 대비
+     수리 전 427.7..503.3(높이 +51%) → 수리 후 438.3..488.3(높이 Δ0) · lv 중심은 ref 457 대비 457.12.
+     ⚠ 남은 «잉크가 ref 를 덜 채운다» 는 **아트 몫**이다 — 이모지 🔥 는 가로로 넓고 ref 불꽃은
+        세로로 길다. 배율로는 못 메우고 371 처방(«답은 배율이 아니라 글리프 교체»)의 자리다. */
   .dnc .sp.lv>em{left:-31px;top:-7px;width:48px;height:61px;font-size:52px;line-height:61px;
-    transform:scaleY(.91)}
+    transform:scale(.7551)}
   .dnc .sp.tk>em{left:-18px;top:0;width:64px;height:50px;font-size:56px;line-height:50px;
-    transform:scaleY(1.25)}
+    transform:scale(.8269)}
   /* 342 3회차(2026-08-29) — 비평가 AT 가 «네 번째 자리» 를 찾았다. 여기만 **반대 방향**이다:
      한글 잉크는 전 구간 −8~10%(서체 몫) 인데 **숫자만 +7% 크다**. 잠금 카드는 ref·우리 둘 다
      «2/2» 라 문자열이 같아 직접 비교가 되고, 카드1 도 측정표 §3-5-2·§3-5-3 과 맞물린다:
