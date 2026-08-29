@@ -1,0 +1,23 @@
+00-menu	메뉴 시트	menu	mnw@28|재화||던전+훈련+소환
+56-saver	56 절약 모드	saver:56	svw@62|재화||던전+훈련+소환
+55-guide	가이드	menu:guide	modal@30|길라잡이/스킬 2종 보유하기||던전+훈련+소환
+20-spec	20 프로필 스펙	prof:20-스펙	specw@34|재화||던전+훈련+소환
+13-gold	13 재화(골드)	cur:gold	ciw@44|골드||던전+훈련+소환
+13-dia	13 재화(다이아)	cur:dia	ciw@44|다이아||던전+훈련+소환
+13-relic	13 재화(유물조각)	cur:relic	|재화||던전+훈련+소환
+30-raid	03 모험 → 레이드	dunsub:raid	dunw@28|재화||컨텐츠+훈련+소환
+30-dun	03 모험 → 던전	dunsub:dun	dunw@28|재화||던전+훈련+소환
+23-train	23 성장 → 훈련	trsub:train	trw@29|재화||던전+훈련+소환
+23-rune	23 성장 → 룬	trsub:rune	trw@29|재화||던전+룬+소환
+23-temper	23 성장 → 단련	trsub:temper	trw@29|재화||던전+단련+소환
+10-summon	10 상점 → 소환	shopcat:summon	shopw@28|재화||던전+훈련+소환
+10-coin	10 상점 → 재화	shopcat:coin	shopw@28|재화||던전+훈련+재화
+10-pass	10 상점 → 패스	shopcat:pass	shopw@28|재화||던전+훈련+이용권
+22-daily	22 퀘스트 → 일일	qtab:daily	modal@30|퀘스트/0/30||던전+훈련+소환+일일
+22-rep	22 퀘스트 → 반복	qtab:rep	modal@30|퀘스트/0/5||던전+훈련+소환+반복
+35-pstage	35 패스 → 스테이지	ptab:stage	psw@34|재화||던전+훈련+💎스테이지+소환
+35-pbox	35 패스 → 상자	ptab:box	psw@34|재화||던전+훈련+💎스테이지+소환
+35-ptower	35 패스 → 탑	ptab:tower	psw@34|재화||던전+훈련+💎스테이지+소환
+35-patt	35 패스 → 출석	ptab:att	psw@34|재화||던전+훈련+📅출석+소환
+89-collall	21 도감(보물상자 경유)	coll21	relw@28|재화||던전+훈련+소환
+10-cart	10 상점(장바구니 잉크 D3 자리)	tab:shop	shopw@28|재화||던전+훈련+소환
