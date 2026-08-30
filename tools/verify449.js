@@ -320,7 +320,10 @@ const fmt = a => a.map(([c, n]) => c + n.toFixed(1)).join(' ');
 
     /* [R3] 4회차가 걸렀던 길 — «새 상자»(사방 7 인셋 · r23 · 기둥 마스크)를 이 면에 걸면 면색 갭이 뜬다.
        이 항이 «왜 인셋을 **밖으로** 밀었나» 를 못박는다(안으로 밀면 검정이 없어 윤곽이 어긋난다). */
-    const MASK = 'linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))';
+/* 463 (2026-08-30) — 기둥 폭은 **이 상자의 국소 좌표**다. «새 상자» 는 좌·우 7 인셋이라
+       30 이 아니라 **23**(= 30 − 7) 이어야 «알약 x 0..30» 을 덮는다. 제품이 그렇게 고쳐졌으므로
+       이 반사실 주입도 같은 값을 쓴다 — 30 을 그대로 두면 «제품에 없는 상자» 를 시험하게 된다. */
+    const MASK = 'linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px))';
     await inject('v449R3', '.stab.on.stab-c1::before{left:7px!important;top:7px!important;bottom:7px!important;'
       + 'border-radius:23px!important;-webkit-mask-image:' + MASK + '!important;mask-image:' + MASK + '!important}');
     let gapF = 0, gapAt = '';

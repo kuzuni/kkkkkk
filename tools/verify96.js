@@ -282,8 +282,20 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     ].join(', ');
     /* 409 이관 — 자리 규칙의 **나머지 반쪽**. 링은 코너 기둥(좌·우 30px = 반경)에만 남고,
        셸에 닿는 면은 그 기둥이 통째로 빠진다. 문자열을 박지 않고 «기둥이 있나» 로 묻는다. */
-    const maskHasL = m => /^linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) 30px/.test(m);
-    const maskHasR = m => /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(m);
+    /* 463 이관 (2026-08-30) — **기둥 폭은 층마다 다르다. 한 술어로 둘을 물으면 안 된다.**
+       마스크는 자기 상자의 국소 좌표로 읽히므로 «알약 x 0..30 을 덮는다» 는 뜻을 지키려면
+       기둥 폭 = **30 − 그 층의 가로 인셋** 이어야 한다:
+         · `::after`(링)  = 인셋 0 → **30**
+         · `::before`(띠) = 인셋 7 → **23**   ← 463 이 고친 자리(수리 전에는 둘 다 30 이라
+                                                띠가 직선부 7px 을 더 덮고 있었다)
+       ⇒ 값을 두 벌 박지 말고 «인셋 + 기둥 = 30» 이라는 **한 불변식**에서 유도해 묻는다.
+       그러면 다음에 어느 층의 인셋이 바뀌어도 이 자가 곧바로 그 층에게 맞는 값을 요구한다. */
+    const COL = 30;                                   /* 알약 반경 = 코너 기둥의 폭(352 §10) */
+    const maskHasLn = (m, n) => new RegExp('^linear-gradient\\(90deg, rgb\\(0, 0, 0\\) 0px, rgb\\(0, 0, 0\\) ' + n + 'px').test(m);
+    const maskHasRn = (m, n) => new RegExp('rgb\\(0, 0, 0\\) calc\\(100% - ' + n + 'px\\)\\)$').test((m || '').trim());
+    /* 링(`::after`)은 인셋 0 이라 30 — 아래 [1-c] 링 항이 이 짝을 쓴다. */
+    const maskHasL = m => maskHasLn(m, COL);
+    const maskHasR = m => maskHasRn(m, COL);
     const posName = p => !p ? '?' : (p.L ? '좌' : '') + (p.R ? '우' : '') || '가운데';
     const cmp = (label, key, props) => {
       [['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
@@ -363,9 +375,19 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       /* ⚠ 이 층의 마스크는 «자리» 손잡이(`--pill-mask`)를 **안 쓴다** — 한 번 그렇게 썼다가
          `verify384` 가 17건으로 빨개졌다(닿는 면에도 바닥 띠 감김은 있어야 한다). 가운데 칸은
          **양쪽 기둥을 늘 켠 고정 마스크**, 끝 칸은 옛 상자라 마스크가 아예 없다. */
-      ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 마스크가 그 자리의 규격이다',
-        !!b && (endCell ? (!b.mask || b.mask === 'none') : (maskHasL(b.mask) && maskHasR(b.mask))),
-        b ? (b.mask && b.mask !== 'none' ? ('좌기둥 ' + maskHasL(b.mask) + ' · 우기둥 ' + maskHasR(b.mask)) : 'none') : '없음');
+      /* 463 이관 — 기둥 폭을 **이 층의 인셋에서 유도**한다(`인셋 + 기둥 = 30`).
+         이 상자는 좌·우 7 인셋이라 23 이 맞다. 30 을 도로 적으면 코너가 끝난 뒤
+         직선부 7px 까지 이 층이 살아 남아 위 베벨이 두 겹이 된다(`probe463` [C]). */
+      const colB = b ? COL - parseFloat(b.left) : NaN;
+      const colBr = b ? COL - parseFloat(b.right) : NaN;
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 마스크가 그 자리의 규격이다'
+        + (endCell ? '' : ' (기둥 = 30 − 인셋 = ' + colB + '/' + colBr + ' · 463)'),
+        !!b && (endCell ? (!b.mask || b.mask === 'none')
+                        : (maskHasLn(b.mask, colB) && maskHasRn(b.mask, colBr))),
+        b ? (b.mask && b.mask !== 'none'
+          ? ('좌기둥 ' + maskHasLn(b.mask, colB) + ' · 우기둥 ' + maskHasRn(b.mask, colBr)
+             + ' · ' + b.mask.slice(0, 64))
+          : 'none') : '없음');
     });
     ok('두 갈래가 표본에 다 있다 (끝 ' + posEnd + ' · 가운데 ' + posMid + ')', posEnd >= 1 && posMid >= 1,
       '끝 ' + posEnd + ' / 가운데 ' + posMid);

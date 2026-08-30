@@ -38,7 +38,8 @@ const DEGS = [0, 15, 30, 45, 60, 75];
 const END = '.stabs.sp2>.stab.on:nth-of-type(1),.stabs.sp3>.stab.on:nth-of-type(1),.stab.on.stab-c1';
 const END_B = '.stabs.sp2>.stab.on:nth-of-type(1)::before,.stabs.sp3>.stab.on:nth-of-type(1)::before,'
   + '.stab.on.stab-c1::before';
-const MASK = 'linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))';
+/* 463 (2026-08-30) — 좌·우 7 인셋 상자의 기둥은 **23**(= 30 − 7) 이다. 제품이 그렇게 고쳐졌다. */
+const MASK = 'linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px))';
 const CONCENTRIC = END_B + '{top:7px!important;bottom:7px!important;border-radius:23px!important;'
   + '-webkit-mask-image:' + MASK + '!important;mask-image:' + MASK + '!important}';
 const GRAD = 'linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 71px,#634F37 71px 78px,#413122 78px 85px)';
