@@ -272,19 +272,11 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       .map(k => k + ': ' + a[k] + ' ≠ ' + b[k]);
     /* 378 이관 — 알약의 좌·우 밴드는 «면이 셸 안쪽 변에 닿는가» 하나로 정해진다.
        규칙을 **여기서 다시 조립**해 둔다 — 문자열을 통째로 박아 두면 값이 바뀔 때 뜻을 잃는다. */
-    const BLK = 'rgb(0, 0, 0)', BEV = 'rgb(99, 79, 55)', DRK = 'rgb(65, 49, 34)';   /* 409 6회차 — 바닥 띠 #413122 */
+    const BLK = 'rgb(0, 0, 0)', BEV = 'rgb(99, 79, 55)';
     /* 409 이관 (2026-08-30) — **밴드에는 이제 베벨만 남는다.** 검정은 `::after` 의 등폭 링이
        그리므로(384 §6-1 ⓐ 가 되돌린 자리 — 검정을 여기 두면 코너에서 7·cos α 로 깎인다),
        자리 규칙은 «닿는 면은 베벨이 7 에서 시작한다»(= 검정 몫 7 을 셸에 넘겼다) 로 읽는다. */
-    /* 409 6회차 이관 — **손잡이가 넷이다(가운데 칸에 한해).** 접선 테이퍼(6회차)가 벗긴 r 23..30 을
-       `::before` 의 바깥 그림자가 받는데, 그 그림자와 `::before` 의 안쪽 띠는 같은 윤곽의 양쪽에서
-       각각 AA 되어 경계 픽셀 알파가 1 로 안 붙는다 ⇒ 그 잔여를 부모의 위·아래 띠가 받는다
-       (`--pill-t`·`--pill-b`). 직선 구간에서는 배경 정지점(437: B 0..7 · D 77..84)과 **같은 색·같은 자리**라 Δ0.
-       ⚠ **끝 칸은 넷이 아니라 둘이다** — 그 칸의 `::before` 는 알약과 동심(449)이라 이음매가 없어
-          메울 것이 없고, 켜 두면 449 가 닫은 «닿는 면» 의 띠 두께가 바뀐다(`verify449` R1~R3).
-          ⇒ 자리 규칙이 «몇 겹인가» 까지 가른다: 가운데 4겹 · 끝 칸 2겹. */
     const shadowRule = p => !p ? null : [
-      ...((p.L || p.R) ? [] : [BEV + ' 0px 7px 0px 0px inset', DRK + ' 0px -7px 0px 0px inset']),
       (p.L ? BEV + ' 7px' : BEV + ' 14px') + ' 0px 0px 0px inset',
       (p.R ? BEV + ' -7px' : BEV + ' -14px') + ' 0px 0px 0px inset',
     ].join(', ');
@@ -333,22 +325,10 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       if (o.onPos && (o.onPos.L || o.onPos.R)) posEnd++; else posMid++;
       ok(n + ' 활성 칸 자리 «' + posName(o.onPos) + '» → 밴드(베벨)가 그 자리 규칙과 같다',
         !!want && o.on.boxShadow === want, o.on.boxShadow);
-      /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다.
-         ⚑ **462 이관 (2026-08-30) — 이 층은 이제 «부품 하나» 가 아니다.** 끝 칸의 «셸에 안 닿는»
-            면은 세 띠를 그릴 상자가 없어서(세로 인셋을 두 면이 공유한다) 이 `::after` 에
-            **스프레드 7 짜리 띠 두 겹**을 얹었다 — 그림자 상자가 «알약 사방 7 인셋»(= 가운데 칸
-            `::before` 의 상자)이 되어 같은 띠가 같은 자리에 생긴다.
-            값만 넓혀 통과시키면 «462 가 통째로 사라져도 초록» 이 되므로 **묻는 것을 갈았다**:
-            ① 검정 링은 여전히 **첫 항**이고 등폭 7(409 그대로) ②그 뒤가 **자리 규칙**을 따른다 —
-            가운데 칸은 링 하나뿐 · 끝 칸은 462 두 겹이 정확히 뒤따른다. 어느 쪽이 사라져도 빨갛다. */
+      /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다. */
       const r = o.onRing;
-      const RING = BLK + ' 0px 0px 0px 7px inset';
-      const B462 = ', rgb(65, 49, 34) 0px -7px 0px 7px inset, rgb(99, 79, 55) 0px -14px 0px 7px inset';
-      const isEnd = !!o.onPos && (o.onPos.L || o.onPos.R);
-      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이고 **첫 항**이다 (409)',
-        !!r && (r.sh || '').startsWith(RING), r ? r.sh : '없음');
-      ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 뒤의 462 띠 두 겹 (가운데는 없다 · 끝 칸만 있다)',
-        !!r && r.sh === RING + (isEnd ? B462 : ''), r ? r.sh : '없음');
+      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이다 (부품은 하나)',
+        !!r && r.sh === BLK + ' 0px 0px 0px 7px inset', r ? r.sh : '없음');
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
         !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
         r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
@@ -390,16 +370,8 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         + (endCell ? ' (닿는 면 30 = 동심 · 반대 면 37 = 옛 평행이동)' : ' (알약과 동심)'),
         !!b && Math.abs(cxL - wantCxL) < 0.6 && Math.abs(cxR - wantCxR) < 0.6,
         b ? ('좌 ' + b.left + '+' + b.r + '=' + cxL + ' · 우 ' + b.right + '+' + b.r + '=' + cxR) : '없음');
-      /* 409 6회차 이관 — 이 층은 이제 **안쪽 세 띠 + 바깥 두 겹**이다. 바깥 두 겹(`0 -7px`·`0 7px`)이
-         테이퍼가 벗긴 r 23..30 을 받는데, **끝 칸에는 없다**(위 shadowRule 주석의 같은 이유).
-         ⇒ «영웅과 Δ0» 은 **안쪽 세 띠**에 대해서만 묻고, 바깥 두 겹은 자리로 갈라 따로 묻는다 —
-            둘을 합쳐 물으면 끝 칸이 영원히 빨갛고, 안 물으면 바깥 두 겹을 지워도 초록이다. */
-      const insetOnly = t => (t || '').split(/,\s*(?![^(]*\))/).filter(x => /inset/.test(x)).join(', ');
-      const outerN = t => (t || '').split(/,\s*(?![^(]*\))/).filter(x => !/inset/.test(x)).length;
-      ok(n + ' — 안쪽 세 띠(inset 3겹)는 영웅과 Δ0',
-        !!b && insetOnly(b.sh) === insetOnly(hero.onBand.sh), b ? insetOnly(b.sh).slice(0, 60) : '없음');
-      ok(n + ' — 바깥 겹은 ' + (endCell ? '0 (끝 칸은 동심이라 이음매가 없다)' : '2 (테이퍼가 벗긴 자리를 받는다)'),
-        !!b && outerN(b.sh) === (endCell ? 0 : 2), b ? String(outerN(b.sh)) + '겹' : '없음');
+      ok(n + ' — 세 띠(그림자 3겹)는 영웅과 Δ0',
+        !!b && b.sh === hero.onBand.sh, b ? b.sh.slice(0, 60) : '없음');
       /* ⚠ 이 층의 마스크는 «자리» 손잡이(`--pill-mask`)를 **안 쓴다** — 한 번 그렇게 썼다가
          `verify384` 가 17건으로 빨개졌다(닿는 면에도 바닥 띠 감김은 있어야 한다). 가운데 칸은
          **양쪽 기둥을 늘 켠 고정 마스크**, 끝 칸은 옛 상자라 마스크가 아예 없다. */

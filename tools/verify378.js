@@ -190,16 +190,7 @@ async function measure(page, sel, i) {
         .map(r => r.cssText || '').join('\n');
       return {
         vars: /\.stab\.on\s*\{[^}]*--pill-l:[^}]*--pill-r:/.test(css.replace(/\n/g, ' ')),
-        /* 409 6회차 이관 — 손잡이가 **셋**이다. 테이퍼(6회차)가 벗긴 r 23..30 을 아래 코너에서
-           어두운 띠가 받아야 하는데(ref 순서 «가장 바깥은 어두운 띠» — 449 실측), 그 층은
-           `--pill-l` **위**여야 해서 밴드 목록 맨 앞에 선다. 끝 칸은 `--pill-b:0 0 #0000` 으로 끈다.
-           ⚠ 이 항이 묻는 것은 «몇 개인가» 가 아니라 **«면별로 손잡이가 있는가»** 다 —
-             값을 박지 않고 세 변수가 모두 `box-shadow` 조립에 쓰이는지만 본다. */
-        uses: /box-shadow:\s*var\(--pill-t,[^)]*\),\s*var\(--pill-b,[^)]*\),\s*var\(--pill-l\),\s*var\(--pill-r\)/.test(css),
-        /* 끝 칸은 위·아래 띠 손잡이를 아예 안 쓴다 — `box-shadow` 를 좌·우 둘로 다시 조립해
-           **수리 전과 글자 그대로 같은 값**을 갖는다(449 가 닫은 «닿는 면» 을 한 픽셀도 안 건드린다).
-           끄는 방식이 아니라 «다시 적는» 방식인 것은 «투명 그림자 한 겹» 도 안 남기기 위해서다. */
-        endB: (css.match(/box-shadow:\s*var\(--pill-l\),\s*var\(--pill-r\)\s*;/g) || []).length === 2,
+        uses: /box-shadow:\s*var\(--pill-l\),\s*var\(--pill-r\)/.test(css),
         /* 409 이관 — 검정이 밴드에서 링으로 옮겨 갔으므로 «면별 손잡이» 도 하나 더다.
            이 항이 없으면 링을 통째로 지워도 [1] 이 초록이다(끝 칸 면은 원래 검정 0 이라 [2] 도 안 문다). */
         mask: /--pill-mask:\s*linear-gradient\(90deg,\s*transparent 0 calc\(100% - 30px\)/.test(css)
@@ -210,8 +201,7 @@ async function measure(page, sel, i) {
       };
     });
     ok('`.stab.on` 이 좌·우 밴드를 변수 둘로 갖는다', decl.vars);
-    ok('`box-shadow` 가 면별 손잡이 넷(`--pill-t`·`--pill-b`·`--pill-l`·`--pill-r`)으로만 조립된다', decl.uses);
-    ok('끝 칸 override 가 위·아래 띠를 빼고 좌·우 둘로만 다시 조립한다 (409 6회차 — 449 를 안 건드린다)', decl.endB);
+    ok('`box-shadow` 가 그 변수 둘로만 조립된다', decl.uses);
     ok('끝 칸 좌 override — `--pill-l` 이 베벨 7 (검정 0)', decl.endL);
     ok('끝 칸 우 override — `--pill-r` 이 베벨 7 (검정 0)', decl.endR);
     ok('끝 칸 override 가 **검정 링 기둥**도 뺀다 (409 이관 — 손잡이 둘을 같이 옮긴다)', decl.mask);
