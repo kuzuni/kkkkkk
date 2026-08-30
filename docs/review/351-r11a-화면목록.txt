@@ -1,0 +1,10 @@
+34-bless	34 축복 팝업	side:bless	blsw@41|재화|#blsw|던전+훈련+소환
+89-relic	89 유물(보물상자 탭)	tab:box	relw@28|재화||던전+훈련+소환
+10-shop	10 상점 탭	tab:shop	shopw@28|재화||던전+훈련+소환
+08-hero	08 영웅(장비 시트)	tab:hero	eqw@28|재화||던전+훈련+소환
+03-adv	03 모험(던전 카드)	tab:adv	dunw@28|재화||던전+훈련+소환
+23-grow	23 성장(훈련 시트)	tab:grow	trw@29|재화||던전+훈련+소환
+54-rank	54 랭킹(바닥 앵커 3장)	menu:rank	rkw@42|재화||던전+훈련+소환
+103-chat	103 채팅(바닥 앵커 입력 바)	util:chat	chw@43|재화||던전+훈련+소환
+55-conf	55 설정(가장 키 큰 다이얼로그)	menu:conf	cfw@41|재화||던전+훈련+소환
+53-bag	53 가방(가운데 다이얼로그)	menu:bag	bagw@41|재화||던전+훈련+소환

@@ -1,0 +1,12 @@
+70-attend	70 출석 팝업(카드 격자)	side:attend	modal@30|출석 보상/380||던전+훈련+소환
+29-roul	29 룰렛(원판 — 세로로 큰 블록)	side:roul	modal@30|행운 룰렛/5 / 5||던전+훈련+소환
+22-quest	22 퀘스트 팝업(목록)	side:quest	modal@30|퀘스트/0/5||던전+훈련+소환+반복
+54-promo	승급전 팝업	side:promo	modal@30|승급전/🥉 브론즈||던전+훈련+소환
+21-coll	21 도감 보너스 팝업	side:coll	collw@33|재화||던전+훈련+소환+무기
+69-mail	69 우편함	menu:mail	modal@30|우편함/받기||던전+훈련+소환
+35-pass	35 패스(가장 요소 많은 페이지)	pass:35	psw@34|재화||던전+훈련+💎스테이지+소환
+06-eqsk	08 영웅 → 스킬 시트	eqtab:sk	panel@9|재화|#bSk|던전+훈련+소환
+06-eqcos	08 영웅 → 코스튬 시트	eqtab:cos	panel@9|재화|#bCos|던전+훈련+소환
+06-eqpet	08 영웅 → 펫 시트	eqtab:pet	panel@9|재화|#bPet|던전+훈련+소환
+30-tower	03 모험 → 탑 서브탭	dunsub:tower	dunw@28|재화||탑+훈련+소환
+19-prof	19 프로필 팝업	prof:19	pfw@33|재화||던전+훈련+소환
