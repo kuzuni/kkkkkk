@@ -121,19 +121,27 @@ const runFrom = (cols, from, step) => {
        도는 동안 읽으면 칸 높이가 84 ↔ 89 로 흔들린다(1회차에 «13 재화 89.0» 로 한 번
        빨갰다). 무한 루프 연출은 `finished` 가 영영 안 오므로 이름으로 걸러낸다.
        47·337 이 쓰는 것과 같은 자다 — **플레이키 게이트를 새로 만들지 않는다**. */
-    const SETTLE = () => {
-      const A = document.getAnimations ? document.getAnimations() : [];
-      const P = A.filter(a => !/^(jzDotPulse|jz122|bgm)/.test(a.animationName || ''))
-        .map(a => a.finished.catch(() => 0));
-      return Promise.all(P).then(() => new Promise(r =>
-        requestAnimationFrame(() => requestAnimationFrame(() => r(P.length)))));
+    /* ⚠ settle — 60·122 쥬시의 입장 연출과 알약 전환이 도는 동안 읽으면 칸 높이가 84 ↔ 89 로
+       흔들린다(1회차에 «13 재화 89.0» 로 한 번 빨갰다). **`getAnimations().finished` 를 기다리면 안 된다** —
+       이 페이지에는 무한 루프 연출이 여럿이라(레드닷 점멸·썸네일 bob …) 이름으로 다 못 걸러내고
+       하나라도 걸리면 **영영 안 끝난다**(실제로 16분을 매달렸다). 대신 **읽은 값이 두 번 같을 때까지**
+       다시 읽는다 — 상한(10회)이 있어 매달릴 수 없고, 무엇이 흔들리든 상관없다. */
+    const readStable = async (sel) => {
+      let prev = null;
+      for (let i = 0; i < 10; i++) {
+        const g = await page.evaluate(READ, sel);
+        const k = g && JSON.stringify([g.h, g.bw, g.cells.map(c => [f1(c.l), f1(c.w), f1(c.h)])]);
+        if (prev !== null && k === prev) return g;
+        prev = k;
+        await page.waitForTimeout(160);
+      }
+      return page.evaluate(READ, sel);
     };
     const snap = {};
     for (const [name, sel, open] of HOSTS) {
       await page.evaluate(open);
-      await page.waitForTimeout(420);
-      await page.evaluate(SETTLE);
-      snap[name] = await page.evaluate(READ, sel);
+      await page.waitForTimeout(320);
+      snap[name] = await readStable(sel);
     }
 
     /* ── [G] 결속 — 이 게이트의 본체 ─────────────────────────────────────── */
@@ -162,8 +170,7 @@ const runFrom = (cols, from, step) => {
     console.log('\n[P] 찍힌 픽셀 — 검정 런이 테두리와 같은가 (선언이 아니라 그림)');
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(500);
-    await page.evaluate(SETTLE);
-    const g7 = await page.evaluate(READ, '#bSk .stabs');
+    const g7 = await readStable('#bSk .stabs');
     /* 코너 반경 43 밖 · 활성 알약(가운데 칸) 밖 · 구분선 밖인 열 */
     const XCOL = Math.round(g7.x + g7.w - 90);
     const ys = [];
