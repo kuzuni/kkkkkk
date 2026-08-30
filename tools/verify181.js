@@ -11,6 +11,8 @@
  * 검사(전부 수치 · 비평가 없음 — 지시서 [3]-(가)):
  *   [A] 회전 중 `#fxl` 에 새 연출 노드 **0개**
  *   [B] 회전 중 모달 박스 안 **픽셀 Δ0**(원판 사각 제외) — 「위를 지나가는 것」까지 잡는다
+ *   [B2][B3] 마스크(둥근 모서리) 안의 잔변화 — **쌍당** 화소 수와 Δ 크기로 「AA 뒤집힘인가 이동인가」를 가른다
+ *   §R 되돌림 시험 — 모서리 «안» 에 노드를 얹으면 [B2]·[B3] 가 실제로 빨개진다(허용치가 무르지 않다는 증명)
  *   [C] 회전 중 비활성 버튼을 5회 재터치 → 새 연출 노드 0 · `jz-sh`/`jz-why` 0 · 모달 클래스 불변
  *   [D] 정지 «후» 에는 당첨 연출이 **살아 있다** (연출을 지운 게 아니라 미룬 것이다)
  *   [E] 보상은 정확히 당첨 칸만큼 1회 지급 (회전 중에는 0)
@@ -34,6 +36,13 @@ const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/
 const fails = [];
 const fail = (m) => { fails.push(m); console.log('  ✗ ' + m); };
 const ok = (m) => console.log('  ✓ ' + m);
+
+/* 544 — 모서리 마스크 잔변화의 상한. **쌍당** 값이다(누적 아님 — 근거는 `diffPixels` 위 주석).
+   실측(tools/probe544.js · 같은 트리 8회): 쌍당 최대 79/79/82/86/101/101/105/105 · Δ 최대 전부 61. */
+const CORNER_MAX = 160;
+const CORNER_DMAX = 90;
+const newCorner = () => ({ n: 0, max: 0, maxBox: 0, maxBtn: 0, dmax: 0, pairs: 0,
+                           cur: 0, curBox: 0, curBtn: 0, dcur: 0 });
 
 /* 모달 박스·원판 사각은 페이지에서 실측해 넘긴다(하드코딩하면 레이아웃 작업에 바로 낡는다) */
 async function main() {
@@ -134,7 +143,7 @@ async function main() {
 
   /* ── [B] 박스 안 픽셀 Δ0 ── */
   const PNG = pngRead;
-  const corner = { n: 0 };
+  const corner = newCorner();
   let worst = 0, worstAt = -1;
   for (let i = 1; i < shots.length; i++) {
     if (!shots[i].spin || !shots[i - 1].spin) continue;
@@ -143,8 +152,17 @@ async function main() {
   }
   if (worst > 0) fail(`[B] 회전 중 모달 박스 안 픽셀이 ${worst}개 바뀐다 (프레임 ${worstAt}, 원판 제외) ` +
     JSON.stringify(diffBox(shots[worstAt - 1].buf, shots[worstAt].buf, geo, PNG)));
-  else ok(`[B] 회전 중 모달 박스 안 픽셀 Δ0 (원판 사각·모서리 AA 제외 · 모서리 잔변화 ${corner.n}화소)`);
-  if (corner.n > 200) fail(`[B] 모서리 AA 잔변화가 ${corner.n}화소 — 실측 기준(16)의 12배가 넘는다. AA 가 아니라 진짜 움직임을 의심하라`);
+  else ok(`[B] 회전 중 모달 박스 안 픽셀 Δ0 (원판 사각·모서리 AA 제외 · 모서리 잔변화 쌍당 최대 ` +
+    `${corner.max}화소 [박스 ${corner.maxBox} · 버튼 ${corner.maxBtn}] · 쌍 ${corner.pairs}개 · 누적 ${corner.n})`);
+  /* 544 — 쌍당(누적 아님) · 실측 79~105 → 상한 160 */
+  if (corner.max > CORNER_MAX)
+    fail(`[B2] 모서리 잔변화가 쌍당 ${corner.max}화소 — 실측 상한(${CORNER_MAX})을 넘는다. AA 가 아니라 진짜 움직임을 의심하라 ` +
+      `(박스 ${corner.maxBox} · 버튼 ${corner.maxBtn})`);
+  else ok(`[B2] 모서리 잔변화 쌍당 ${corner.max} ≤ ${CORNER_MAX}화소 (AA 한 겹 실측 79~105)`);
+  /* 544 — 크기 축. 노드가 «위를 지나가면» 배경색↔연출색이라 Δ 가 크다(AA 는 실측 61) */
+  if (corner.dmax > CORNER_DMAX)
+    fail(`[B3] 모서리 잔변화의 Δ 가 ${corner.dmax} — 실측 상한(${CORNER_DMAX})을 넘는다. 호 위 AA 가 아니라 무언가가 덮었다`);
+  else ok(`[B3] 모서리 잔변화 Δ ${corner.dmax} ≤ ${CORNER_DMAX} (AA 실측 61 · 평균 21)`);
 
   /* ── [C] 재터치 무반응 ── */
   if (midSpin.w.why > 0) fail(`[C] 회전 중 «왜 안 되는지» 캡션(jz-why)이 ${midSpin.w.why}회 떴다`);
@@ -256,6 +274,58 @@ async function main() {
   if (still.length) fail(`[G] 원판이 안 돈다 — 서로 다른 각도가 ${Math.min(...wheel.map((w) => w.uniq))}개뿐인 칸이 있다`);
   else ok(`[G-2] 원판은 그대로 돈다 (칸당 서로 다른 각도 최소 ${Math.min(...wheel.map((w) => w.uniq))}개)`);
 
+  /* ── §R 되돌림 시험 (544) — [B2]·[B3] 의 허용치가 «무르지 않다» 는 증명 ──
+     모서리 마스크 «안» 에 노드를 한 프레임만 얹는다. 본 [B] 는 그 자리를 마스크로 빼 두므로
+     이 자리를 볼 수 있는 것은 [B2]·[B3] 뿐이다 — 둘이 빨개져야 감지기가 살아 있는 것이다.
+     ⚠ 정적으로 «놓여 있는» 노드는 프레임 차가 0 이라 안 잡힌다. 실제 위협(연출이 지나간다)의
+     모양대로 **없는 프레임 → 있는 프레임** 한 쌍으로 잰다. */
+  /* ⚠ 여기서는 `page.click` 을 못 쓴다 — [G] 까지 오는 동안 전투가 굴러 18 패배 화면(`#defw`)이
+     떠 있으면 포인터를 가로챈다. 앞의 [F]·[H] 와 같은 길(제품 함수 직접 호출)로 회전을 건다. */
+  await page.evaluate(async () => {
+    while (rouSpinning || rouPend >= 0) await new Promise((r) => setTimeout(r, 100));
+    S.daily.spins = 30; S.dia = 0; rouRot = 0; rouSpinning = false; openRoulette(); spinRoulette();
+  });
+  await page.waitForTimeout(250);
+  const rGeo = await page.evaluate(() => {
+    const g = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect();
+      return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+    return { box: g('#modal .mbox'), btn: g('#rouBtn'), spin: rouSpinning };
+  });
+  if (!rGeo.box || !rGeo.btn || !rGeo.spin) fail('[§R] 되돌림 시험 표본을 못 만들었다 (회전 중 룰렛이 안 열렸다)');
+  else {
+    const clip = { x: rGeo.box.x, y: rGeo.box.y, width: rGeo.box.w, height: rGeo.box.h };
+    const rA = await page.screenshot({ clip });
+    const put = await page.evaluate((g) => {
+      const l = document.getElementById('fxl'); if (!l) return false;
+      const lr = l.getBoundingClientRect();
+      const sc = lr.width / (l.offsetWidth || lr.width) || 1;
+      const d = document.createElement('div');
+      d.id = '__r544';
+      /* 버튼 우상단 모서리 정사각(radius+6 = 49) «안» 에 완전히 들어가는 40×40 */
+      d.style.cssText = 'position:absolute;width:40px;height:40px;border-radius:50%;background:#fff;' +
+        'left:' + ((g.btn.x + g.btn.w - 45 - lr.x) / sc) + 'px;top:' + ((g.btn.y + 4 - lr.y) / sc) + 'px';
+      l.appendChild(d);
+      return true;
+    }, rGeo);
+    if (!put) fail('[§R] #fxl 이 없어 되돌림 시험을 못 했다');
+    else {
+      const rB = await page.screenshot({ clip });
+      const rCorner = newCorner();
+      const rMain = diffPixels(rA, rB, { box: rGeo.box, rlt: geo.rlt, btn: rGeo.btn, rr: geo.rr, br: geo.br }, PNG, rCorner);
+      await page.evaluate(() => { const d = document.getElementById('__r544'); if (d) d.remove(); });
+      if (rCorner.max <= CORNER_MAX)
+        fail(`[§R] 모서리 «안» 에 40×40 노드를 얹었는데 [B2] 가 ${rCorner.max}화소로 조용하다 — 감지기가 죽었다`);
+      else ok(`[§R] 모서리 «안» 노드 → [B2] ${rCorner.max}화소 (> ${CORNER_MAX}) 빨강`);
+      if (rCorner.dmax <= CORNER_DMAX)
+        fail(`[§R] 같은 노드에 [B3] Δ 가 ${rCorner.dmax} 뿐이다 — 크기 축이 죽었다`);
+      else ok(`[§R] 모서리 «안» 노드 → [B3] Δ ${rCorner.dmax} (> ${CORNER_DMAX}) 빨강`);
+      /* 음성항 — 그 노드는 마스크 안이라 본 [B] 에는 안 잡힌다(두 센서가 박스를 나눠 본다) */
+      if (rMain !== 0) ok(`[§R2] 참고 — 본 [B] 도 ${rMain}화소를 봤다 (노드가 모서리 밖으로 샜다)`);
+      else ok('[§R2] 그 노드는 본 [B] 에는 0화소 — 모서리 자리를 지키는 것은 [B2]·[B3] 뿐이다');
+      await page.evaluate(async () => { while (rouSpinning) await new Promise((r) => setTimeout(r, 100)); closeModal(); });
+    }
+  }
+
   if (errs.length) errs.slice(0, 5).forEach((e) => fail(e));
   else ok('콘솔 에러 0건');
 
@@ -309,7 +379,26 @@ function pngRead(buf) {
       왔다 갔다 한다(Δ≤34, 좌우 대칭, 다음 프레임에 원래 색으로 되돌아온다 = 이동이 아니라
       래스터 AA 뒤집힘). 배경(#view·#stagearea·#tabbar·#top)을 전부 내려도 남고, 회전이 없으면
       6프레임 연속 Δ0 이라 «원판 레이어 재래스터의 부산물» 로 확정했다. 감추지 않고 따로 세어
-      리포트에 찍는다 — 여기 수가 갑자기 커지면 그건 진짜 무슨 일이 난 것이다. */
+      리포트에 찍는다 — 여기 수가 갑자기 커지면 그건 진짜 무슨 일이 난 것이다.
+
+   ⚑ 544(2026-08-30) — 이 절의 «16» 은 **① 박스 모서리만 있던 시절의 값**이고, 267 이 ③ 버튼
+      네 모서리를 마스크에 더한 뒤로 세는 면적이 10,000 → 19,604화소(1.96배)가 됐다. 게다가
+      옛 판정은 `corner.n` 을 **프레임 쌍마다 누적**해 놓고 상한 하나(200)로 물었다 —
+      회전 중 캡처가 5~7쌍으로 실행마다 달라지므로 같은 트리에서 99 / 182 / 220 / 256 / 341 /
+      348 / 423 이 나왔다(`tools/probe544.js` 8회). **누적을 상한으로 물은 것이 플레이키의 뿌리다.**
+      probe544 로 «어디서 나오는가» 를 찍어 갈래를 갈랐다:
+        · 회전 중 `#fxl` 자식 **0개**(전 회전 프레임) · 박스 안쪽(마스크 밖) **Δ0** ⇒ «진짜 이동» 아님
+        · 바뀐 화소는 **같은 자리 ~100곳**(박스 모서리 10~19 · 버튼 위 모서리 LT/RT 79~86)이고
+          화소당 서로 다른 값이 **2개**(86~97%) — 호 위 AA 한 겹이 두 값 사이를 오간다
+        · Δ 최대 **61**(평균 21) — 노드가 덮으면 배경색↔연출색이라 이보다 훨씬 크다
+      ⇒ 판정을 **«쌍당»** 으로 바꾸고(누적은 리포트에만), 상한을 실측에서 다시 적었다.
+        실측 쌍당 최대 8회: 79 / 79 / 82 / 86 / 101 / 101 / 105 / 105 → **[B2] 160**(여유 1.5배)
+        실측 Δ 최대 8회 전부 61 → **[B3] 90**(여유 1.5배)
+      허용치를 늘린 것이 무른 수리가 아님은 **§R 되돌림 시험**이 못박는다(모서리 «안» 에 노드를
+      얹으면 [B2]·[B3] 가 둘 다 빨개진다 — 본 [B] 는 마스크라 그 자리를 못 본다).
+      ⚠ 대조군에서 **정지 중** 버튼 모서리는 740~1546화소로 시끄럽다 — 321 레드닷
+      (`.updot` 27×27 · `jzDotPulse` 2s)이 버튼 우상단 모서리 마스크 «안» 이기 때문이고,
+      회전 중에는 `rouBtnDot()` 이 꺼서 이 절에 안 섞인다. 이 절은 **회전 쌍만** 센다. */
 function inCorner(x, y, w, h, r) {
   const R = r + 6;
   return (x < R || x >= w - R) && (y < R || y >= h - R);
@@ -329,20 +418,32 @@ function diffPixels(bufA, bufB, geo, read, cornerOut) {
   const rx0 = geo.rlt.x - geo.box.x, ry0 = geo.rlt.y - geo.box.y;
   const rx1 = rx0 + geo.rlt.w, ry1 = ry0 + geo.rlt.h;
   let n = 0;
+  /* 544 — 모서리 잔변화는 **이 한 쌍의 값**으로 잰다(누적은 리포트용으로만 남긴다) */
+  if (cornerOut) { cornerOut.cur = 0; cornerOut.dcur = 0; cornerOut.curBox = 0; cornerOut.curBtn = 0; }
   for (let y = 0; y < A.h; y++) {
     const inR = y >= ry0 && y <= ry1;
     for (let x = 0; x < A.w; x++) {
       if (inR && x >= rx0 && x <= rx1) continue;
-      if (inCorner(x, y, A.w, A.h, geo.rr) || inBtnCorner(x, y, geo)) {
-        const j = (y * A.w + x) * bpp;
-        if (cornerOut && (Math.abs(A.data[j] - B.data[j]) > 8 || Math.abs(A.data[j + 1] - B.data[j + 1]) > 8 ||
-            Math.abs(A.data[j + 2] - B.data[j + 2]) > 8)) cornerOut.n++;
+      const cBox = inCorner(x, y, A.w, A.h, geo.rr), cBtn = !cBox && inBtnCorner(x, y, geo);
+      if (cBox || cBtn) {
+        if (cornerOut) {
+          const j = (y * A.w + x) * bpp;
+          const d = Math.max(Math.abs(A.data[j] - B.data[j]), Math.abs(A.data[j + 1] - B.data[j + 1]),
+                             Math.abs(A.data[j + 2] - B.data[j + 2]));
+          if (d > 8) { cornerOut.cur++; if (cBox) cornerOut.curBox++; else cornerOut.curBtn++;
+                       if (d > cornerOut.dcur) cornerOut.dcur = d; }
+        }
         continue;
       }
       const i = (y * A.w + x) * bpp;
       if (Math.abs(A.data[i] - B.data[i]) > 8 || Math.abs(A.data[i + 1] - B.data[i + 1]) > 8 ||
           Math.abs(A.data[i + 2] - B.data[i + 2]) > 8) n++;
     }
+  }
+  if (cornerOut) {
+    cornerOut.pairs++; cornerOut.n += cornerOut.cur;
+    if (cornerOut.cur > cornerOut.max) { cornerOut.max = cornerOut.cur; cornerOut.maxBox = cornerOut.curBox; cornerOut.maxBtn = cornerOut.curBtn; }
+    if (cornerOut.dcur > cornerOut.dmax) cornerOut.dmax = cornerOut.dcur;
   }
   return n;
 }
