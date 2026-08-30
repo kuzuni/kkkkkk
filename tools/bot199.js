@@ -89,6 +89,7 @@ const BOT_SRC = function (cfg) {
     diaIn: {},           /* 다이아 유입 출처별 */
     diaOut: {},          /* 다이아 씽크 */
     seedN: 0,
+    cnt: { dunRun: 0, dunReplay: 0, dunClear: 0, towerRun: 0, towerFold: 0, towerUp: 0 },
   };
   window.BOT = B;
 
@@ -105,8 +106,30 @@ const BOT_SRC = function (cfg) {
   B.setSeed = setSeed;
   B.realRandom = REAL_RANDOM;
 
-  /* ── rAF 정지 (probe494 [B]) ─────────────────────────────────────────── */
-  B.freeze = () => { window.requestAnimationFrame = () => 0; };
+  /* ── rAF 정지 + «무대장치» 끄기 (probe494 [B]) ───────────────────────── */
+  /* ⚑ 4회차 실측 — 예산을 먹던 것은 전투가 아니라 **`save()`** 였다. `trainBuy`·`applyBuy`·
+     `giveReward` 가 한 번 팔릴 때마다 `save()` 를 부르고, 그것이 세이브 전체를 `JSON.stringify`
+     해 `localStorage` 에 쓴다 — 봇은 그 함수를 분당 수천 번 지난다. 봇에게 «디스크» 는 아무
+     뜻도 없으므로(한 컨텍스트가 곧 한 플레이어다) 시각 갱신만 남기고 직렬화를 끊는다.
+     같은 이유로 순수 UI 함수(토스트·연출·재렌더)도 끈다 — 그리기는 loop() 와 함께 이미 멎었지만
+     이 넷은 **손잡이 안에서 직접** 불리므로 rAF 를 세워도 계속 돈다.
+     ⚠ 끄는 것은 **상태를 안 바꾸는 함수만**이다. `markDirty`·`dailyCheck`·`giveReward` 처럼
+       판정·재화가 걸린 것은 한 줄도 안 건드린다. */
+  B.freeze = () => {
+    window.requestAnimationFrame = () => 0;
+    window.save = function () { S.time = Date.now(); };
+    /* ⚑ 5회차 프로파일 — 하루의 절반을 **유물 소환**이 먹고 있었다(10일 24.5초/47초). 전투가 아니라
+       `summonRelic`(28743)이 매 회 `renderRelw()` 로 격자를 통째로 다시 그리고 `querySelector` 로
+       칸을 찾아 `fxUpOk` 를 걸기 때문이다 — 봇은 그 함수를 하루 수천 번 지난다.
+       ⚠ 끄는 것은 **순수 UI 함수만**이다. 재화·판정·상태를 한 줄이라도 바꾸는 함수는 여기 없다
+         (`markDirty`·`giveReward`·`summonRelic` 본체·`openDunClear` 는 그대로 둔다 —
+          마지막 것은 339 연속 도전이 읽는 상태를 세운다). */
+    ['notify', 'fxToast', 'fxReward', 'fxAt', 'fxPop', 'fxFlash', 'fxCheck', 'fxBurst', 'fxFly', 'fxUpOk',
+     'renderUI', 'renderRelw', 'renderCoinPage', 'renderTrain', 'renderPcb', 'drawHud',
+     'syncSummonBtns', 'showSummonResult', 'hbBeat', 'openStatUp', 'openUpAll', 'showMsg'].forEach((n) => {
+      if (typeof window[n] === 'function') window[n] = function () {};
+    });
+  };
 
   /* ── 시계 ────────────────────────────────────────────────────────────── */
   const MIN = 60000;
@@ -136,7 +159,13 @@ const BOT_SRC = function (cfg) {
   const meterReset = () => { dmgAcc = killAcc = hpRat = goldRat = 0; };
 
   /* ── try 래퍼 — 한 손잡이가 없어져도 봇 전체가 안 죽는다(LESSONS 319) ── */
-  const T = (tag, fn) => { try { return fn(); } catch (e) { B.warn.push(tag + ': ' + String(e && e.message || e).slice(0, 120)); return null; } };
+  B.prof = {};
+  const T = (tag, fn) => {
+    const t0 = performance.now();
+    try { return fn(); }
+    catch (e) { B.warn.push(tag + ': ' + String(e && e.message || e).slice(0, 120)); return null; }
+    finally { B.prof[tag] = (B.prof[tag] || 0) + (performance.now() - t0); }
+  };
 
   /* ── 재화 장부 ───────────────────────────────────────────────────────── */
   let diaPrev = 0;
@@ -363,44 +392,87 @@ const BOT_SRC = function (cfg) {
   });
 
   /* 던전·탑 — **실전**. 제한 시간이 곧 판정이라 접으면 뜻이 사라진다. */
+  const FOLD_STEP = 10;          /* 실전 한 판마다 접는 판 수(= 재확인 주기) */
   const runBattle = (maxSec, done) => {
     const N = Math.round(maxSec * 30);
     for (let i = 0; i < N; i++) { step(1 / 30); if (done()) return i / 30; }
     return maxSec;
   };
+  /* ⚑ **입장권이 많으면 실전만으로는 예산이 안 선다.** 490 이 다이아→입장권 교환을 1,000 으로
+     열어 둔 뒤로 부지런한 봇은 하루 150장 넘게 산다 — 한 판 20초씩 실전으로 돌리면 30일 1시드가
+     2시간이다(4회차 실측: 3일 1시드 56.6초). 그래서 **던전마다 하루 한 판만 실전으로 돌고,
+     그 판이 층을 못 올렸으면(= 같은 층·같은 전투력이라 결과가 같다) 나머지 표는 그 판의
+     재화 델타를 그대로 복제**한다. 층이 올랐으면 판이 달라졌으므로 다시 실전으로 돈다.
+     ⚠ 복제 상한(`REPLAY_CAP`)을 두는 이유는 예산이 아니라 **자기 검증**이다 — 상한에 닿았다는
+       것은 «봇이 하루에 이만큼 도는 것이 정상인가» 를 199 가 봐야 한다는 뜻이라 표에 적는다. */
+  /* ⚑ **입장권이 많으면 실전만으로는 예산이 안 선다.** 490 이 다이아→입장권 교환을 1,000 으로
+     열어 둔 뒤로 부지런한 봇은 하루 150장 넘게 사고, 지금 곡선에서는 **그 판을 거의 다 클리어한다**
+     (4회차 실측: 3일에 던전 472판 중 467판 클리어 = 3일 1시드 52초 · 30일 20시드면 2시간).
+     그래서 «실전 한 판 → 그 결과가 유지되는 동안 수식으로 접기» 를 던전에도 그대로 쓴다:
+       · 실전 한 판을 돌아 **클리어했는가**를 본다.
+       · 클리어했으면 다음 `FOLD_STEP−1` 판은 **제품의 보상표 `d.rw(f)` 로 직접** 정산한다
+         (근사가 아니다 — `finishDunRun`(25277)이 하는 일이 정확히 «층 +1 · `giveReward(d.rw(f))`» 다).
+       · `FOLD_STEP` 판마다 다시 실전으로 돌아 «아직도 클리어하는가» 를 확인한다.
+         이 재확인이 없으면 요구 전투력(`d.req(f)`)이 봇을 앞지른 뒤에도 영원히 클리어한다.
+       · 실전 판이 **실패**하면 접지 않는다 — 남은 표는 그대로 두고 그 던전을 접는다.
+     ⚠ 클리어를 못 하는 구간에서는 접기가 아예 안 열리므로 «벽» 은 언제나 실전이 판정한다. */
   R.dungeons = () => T('던전', () => {
-    let runs = 0, clears = 0;
+    let real = 0, fold = 0;
+    const lv0 = DUNGEONS.reduce((n, d) => n + ((S.dun && S.dun[d.id]) | 0), 0);
     for (const d of DUNGEONS) {
       let guard = 0;
-      while ((S.dunTk[d.id] | 0) > 0 && guard++ < 12) {
-        const tk0 = S.dunTk[d.id] | 0;
+      while ((S.dunTk[d.id] | 0) > 0 && guard++ < 400) {
+        const tk0 = S.dunTk[d.id] | 0, f0 = (S.dun && S.dun[d.id]) | 0;
         challengeDungeon(d);
         if ((S.dunTk[d.id] | 0) === tk0) break;             /* 잠김·전투 중 — 더 못 돈다 */
-        runs++;
-        runBattle(DUN_SEC + 8, () => !dunRun);
+        real++;
+        runBattle(DUN_SEC + 12, () => !dunRun);
         if (dunRun) { T('던전:포기', () => { if (typeof endDunRun === 'function') endDunRun(); }); }
-        if (S.dunLv && S.dunLv[d.id] != null) clears += 0;   /* 층 수는 아래 표에서 직접 읽는다 */
+        if (((S.dun && S.dun[d.id]) | 0) === f0) break;      /* 실패 — 이 던전은 여기가 한계다 */
+        /* 클리어했다 — 다음 FOLD_STEP−1 판을 제품 보상표로 접는다 */
+        let n = Math.min(FOLD_STEP - 1, S.dunTk[d.id] | 0);
+        while (n-- > 0) {
+          const f = S.dun[d.id];
+          S.dunTk[d.id]--; S.dun[d.id]++;
+          T('던전:접기', () => giveReward(d.rw(f)));
+          fold++;
+        }
       }
     }
+    const clears = DUNGEONS.reduce((n, d) => n + ((S.dun && S.dun[d.id]) | 0), 0) - lv0;
+    B.cnt.dunRun += real; B.cnt.dunReplay += fold; B.cnt.dunClear += clears;
     ledger('던전');
-    return { runs, clears };
+    return { real, fold, clears };
   });
+  /* 탑도 던전과 **같은 접기**를 쓴다(`challengeTower` 는 `startDunRun` 을 탄다 — 24780).
+     ⚠ 진행 키가 다르다: `finishDunRun`(25284)은 탑에서 `towerSetFloor(d, f+1)` 를 쓰고
+       던전에서만 `S.dun[id]++` 를 쓴다. 접기도 그 함수를 그대로 따라가야 한다. */
   R.towers = () => T('탑', () => {
-    let runs = 0;
+    let real = 0, up = 0, fold = 0;
     for (const id of ['tower', 'tower2']) {
+      const t = towerById(id);
       let guard = 0;
-      while (guard++ < 6) {
+      while (guard++ < 200) {
         const lv0 = S[id] | 0;
         T('탑:' + id, () => challengeTower(id));
-        runs++;
-        runBattle(BOSS_SEC + 8, () => !inBossFight || !inBossFight());
+        if (!dunRun) break;                                 /* 잠김·전투 중 — 못 들어갔다 */
+        real++;
+        runBattle(DUN_SEC + 12, () => !dunRun);
+        if (dunRun) T('탑:포기', () => { if (typeof endDunRun === 'function') endDunRun(); });
         if ((S[id] | 0) === lv0) break;                     /* 못 올라갔다 = 여기가 그 유저의 탑 한계 */
+        up++;
+        /* 클리어했다 — 다음 FOLD_STEP−1 층을 제품 보상표로 접고 다시 실전으로 확인한다 */
+        for (let k = 0; k < FOLD_STEP - 1 && guard < 200; k++) {
+          const f = towerFloor(t);
+          T('탑:접기', () => { towerSetFloor(t, f + 1); giveReward(t.rw(f)); });
+          up++; fold++; guard++;
+        }
       }
     }
+    B.cnt.towerRun += real; B.cnt.towerUp += up; B.cnt.towerFold += fold;
     ledger('탑');
-    return runs;
+    return real;
   });
-
   R.bless = () => T('축복', () => { let n = 0; for (const b of BLESS) { if (!blessOn(b.k) && typeof blessStart === 'function') { blessStart(b.k); n++; } } return n; });
 
   /* ── 재화 소진 ─────────────────────────────────────────────────────── */
@@ -433,9 +505,12 @@ const BOT_SRC = function (cfg) {
     ledger('소환');
     return n;
   });
+  /* 89 유물 소환은 상자(`SHOP_BOXES`) 계열이 아니라 **자기 함수**를 쓴다(`summonRelic`, 28744).
+     3회차에 `doSummon('relic', 1)` 로 부르다 «Cannot read properties of undefined» 로 통째로
+     빠져 있었다 — 경고 한 줄이 그것을 잡았다(경고 표를 남긴 이유가 이것이다). */
   R.relicSummon = () => T('유물소환', () => {
     let n = 0, guard = 0;
-    while (guard++ < 200) { const r0 = S.relic; doSummon('relic', 1); if (S.relic === r0) break; n++; }
+    while (guard++ < 500 && relicSummonReady()) { if (!summonRelic(true)) break; n++; }
     ledger('유물소환');
     return n;
   });
@@ -450,24 +525,36 @@ const BOT_SRC = function (cfg) {
     return n;
   });
 
+  /* ⚑ **«한 번에 한 레벨» 이 예산을 먹는다.** 4회차에 하루가 4.3초였고 그 대부분이 전투가 아니라
+     이 두 고리였다 — 봇은 5분마다 «강화 한 바퀴» 를 도는데 골드가 1e19 급이면 한 바퀴가
+     수천 번의 매수다. 제품이 이미 «MAX 구매»(`maxBuy`, 25936 · 한 번에 500레벨)와 수량 탭을
+     갖고 있으므로 그것을 쓴다 — **식은 한 줄도 안 바꾸고 «누르는 단위» 만 키운다.**
+     ⚠ `S.buyQty` 는 강화·훈련이 **공유**한다(`trainQty()` 25969 는 [1,10,30] 만 받고 그 밖은 1 이다).
+       그래서 고리마다 값을 세우고 끝나면 되돌린다. 훈련 쪽은 수량표에 500 이 없으므로
+       `trainQty` 자체를 봇 하네스에서 500 으로 덮는다(«버튼을 몇 번 누르는가» 일 뿐 곡선이 아니다). */
   R.train = () => T('훈련', () => {
+    const q0 = S.buyQty, tq0 = window.trainQty;
+    S.buyQty = 30; window.trainQty = () => 500;
     let n = 0, guard = 0;
-    while (guard++ < 4000) {
+    while (guard++ < 2000) {
       let any = false;
       for (const id of TRAIN_STATS) { if (trainBuy(id)) { any = true; n++; } }
       if (typeof trainReady === 'function' && trainReady()) { T('훈련단계', () => trainUp()); any = true; }
       if (!any) break;
     }
+    S.buyQty = q0; window.trainQty = tq0;
     return n;
   });
   R.upgrade = () => T('강화', () => {
-    let n = 0, guard = 0;
     if (typeof UPG === 'undefined') return 0;
-    while (guard++ < 4000) {
+    const q0 = S.buyQty; S.buyQty = 'MAX';
+    let n = 0, guard = 0;
+    while (guard++ < 2000) {
       let any = false;
       for (const u of UPG) { const bi = buyInfo(u); if (bi && bi.ok && bi.n > 0) { applyBuy(u, bi.n, bi.cost); markDirty(); any = true; n++; } }
       if (!any) break;
     }
+    S.buyQty = q0;
     return n;
   });
   R.levelAll = () => T('일괄강화', () => {
@@ -483,8 +570,11 @@ const BOT_SRC = function (cfg) {
     return n;
   });
   R.temper = () => T('단련', () => {
+    /* JSON.stringify 로 변화를 보던 4회차 판은 고리마다 세이브 조각을 통째로 직렬화했다 —
+       레벨 합 한 수로 충분하다. */
+    const sum = () => TEMPERS.reduce((a, t) => a + ((S.temper && S.temper[t.k]) | 0), 0);
     let n = 0, guard = 0;
-    while (guard++ < 3000) { let any = false; for (const t of TEMPERS) { const b = S.temper ? JSON.stringify(S.temper) : ''; temperUp(t.k); if (JSON.stringify(S.temper || {}) !== b) { any = true; n++; } } if (!any) break; }
+    while (guard++ < 3000) { const b = sum(); for (const t of TEMPERS) temperUp(t.k); if (sum() === b) break; n++; }
     return n;
   });
   R.costume = () => T('코스튬강화', () => {
@@ -618,7 +708,9 @@ async function runOne(page, pol, seed, days, onRow) {
         B.audit('day' + day + '/h' + h);
         /* ── 활성 파밍 ── */
         for (let m = 0; m < a.activeMin; m++) {
+          const _t = performance.now();
           B.farmMinute();
+          B.prof['파밍'] = (B.prof['파밍'] || 0) + (performance.now() - _t);
           if (m % 5 === 4) R.spendGold();          /* 재도전 사이 «강화 한 바퀴» */
           minute++; B.advance(60000);
           if (S.stage !== lastStage) {
@@ -638,6 +730,8 @@ async function runOne(page, pol, seed, days, onRow) {
       out.walls.push({ stage: lastStage, min: stageSince, len: minute - stageSince });
     out.diaIn = B.diaIn; out.diaOut = B.diaOut; out.viol = B.viol.slice(); out.warn = B.warn.slice();
     out.final = B.snap('final', minute);
+    out.cnt = B.cnt;
+    out.prof = B.prof;
     return out;
   }, { seed, days, logins: P.logins, activeMin: P.activeMin, offlineMul: P.offlineMul, wallMin: WALL_MIN });
   if (onRow) onRow(res);
@@ -683,6 +777,7 @@ async function runOne(page, pol, seed, days, onRow) {
       report.viol.push(...r.viol.map(v => pol + '#' + (i + 1) + ' ' + v));
       await ctx.close();
       process.stdout.write(`\r[${pol}] 시드 ${i + 1}/${SEEDS} — s${r.final.stage} cp${r.final.cp} 벽${r.walls.length}   `);
+      if (ARG.prof && r.prof) console.log('\n  프로파일: ' + Object.keys(r.prof).sort((x, y) => r.prof[y] - r.prof[x]).slice(0, 10).map(k => k + ' ' + (r.prof[k] / 1000).toFixed(1) + 's').join(' · '));
     }
     console.log('');
     report.policies[pol] = runs;
@@ -762,6 +857,17 @@ function writeReport(rep) {
       L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 |`);
     });
     L.push('');
+    /* 실전으로 돈 전투 */
+    const cnts = runs.map(r => r.cnt).filter(Boolean);
+    if (cnts.length) {
+      const m = (k) => med(cnts.map(c => c[k]));
+      L.push(`### 실전으로 돈 전투 — ${P} (시드 중앙값)`);
+      L.push('');
+      L.push('| 던전 실전 | 던전 접기 | 던전 층 상승 | 탑 실전 | 탑 접기 | 탑 레벨 상승 |');
+      L.push('|---|---|---|---|---|---|');
+      L.push(`| ${m('dunRun')} | ${m('dunReplay')} | ${m('dunClear')} | ${m('towerRun')} | ${m('towerFold')} | ${m('towerUp')} |`);
+      L.push('');
+    }
     /* 다이아 */
     const inAll = {}, outAll = {};
     runs.forEach(r => { for (const k in r.diaIn) inAll[k] = (inAll[k] || 0) + r.diaIn[k] / runs.length; for (const k in r.diaOut) outAll[k] = (outAll[k] || 0) + r.diaOut[k] / runs.length; });
