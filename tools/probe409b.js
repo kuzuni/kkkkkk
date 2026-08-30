@@ -30,7 +30,8 @@ const VARIANTS = [
   /* 409 2회차 §R — **되돌림 시험.** 2회차가 넣은 것은 `::after` 의 배경 고리 한 벌뿐이므로
      그것만 떼면 1회차 상태가 그대로 돌아온다. TL «≥2px» 가 코너로 갈수록 무너지면(B2.0/F18.0)
      자가 진짜로 그 축을 재고 있다는 뜻이고, BL 은 A 와 Δ0 이어야 한다(384 를 안 건드렸다는 증거). */
-  ['R 되돌림(2회차 배경 고리 제거 = 1회차 상태)', '.stab.on::after{background:none!important}'],
+  ['R 되돌림(2·3회차 배경 고리 전부 제거 = 1회차 상태)',
+    '.stab.on::after{background:none!important}.stab.on{--pill-bl:none;--pill-br:none}'],
   ['B 띠를 위로', '.stab.on::before{z-index:1}.stab.on::after{z-index:0}'],
   ['C 이중 링(검정7+베벨7)',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 0 0 14px #634F37!important}'],

@@ -152,6 +152,21 @@ function innerRun(s, out = 0, step = 0.5) {
   while (rs[si] && rs[si][1] * step < 2.0) si++;
   return rs[si] ? [rs[si][0], rs[si][1] * step] : ['-', 0];
 }
+/* 409 3회차 — **아래 코너의 «어두운 띠 뒤 밝은 베벨».**
+   위 코너는 검정 바로 안쪽이 베벨이지만(→ `innerRun`), 아래 코너는 ref 도 우리도 «검정 → 어두운 띠 →
+   베벨» 순서다. 그래서 아래에서는 **K 뒤 첫 B 런(≥2px)** 을 읽는다 — 사이에 낀 D·AA 이음매는 건너뛰되
+   D 자체는 [8-Δ] 가 따로 물고 있으므로 여기서 숨겨지는 값이 없다. */
+function bevelRun(s, step = 0.5) {
+  const rs = [];
+  for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], j - i]); i = j; }
+  const k = rs.findIndex(r => r[0] === 'K');
+  if (k < 0 || k > 6) return 0;
+  for (let i = k + 1; i < rs.length; i++) {
+    if (rs[i][0] === 'B' && rs[i][1] * step >= 2.0) return rs[i][1] * step;
+    if (rs[i][0] === 'F' && rs[i][1] * step >= 3.0) return 0;   /* 면이 먼저 나오면 베벨은 없다 */
+  }
+  return 0;
+}
 const fmtRuns = s => {
   const out = [];
   for (const ch of s) {
@@ -273,9 +288,9 @@ const SETTLE = () => {
     console.log('[3] 음성항 — 직선 상·하변에는 검정이 없다 (링을 네 면에 두른 게 아니다)');
     console.log('[4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 통째로 빠진다 (378)');
     console.log('[5] 밴드 대조 — 60°/75° 가 7·cos α (3.5/1.8) 를 크게 넘는다\n');
-    let faces = 0, offFaces = 0, deltaFaces = 0;
+    let faces = 0, offFaces = 0, deltaFaces = 0, collapsed = 0;
     for (const [name, sel, setup] of HOSTS) {
-      const botOn = {};
+      const botOn = {}, botBev = {};
       try { await page.evaluate(setup); } catch (e) { ok(name + ' 진입', false, e.message.slice(0, 60)); continue; }
       await page.waitForTimeout(700);
       await page.evaluate(SETTLE);
@@ -320,6 +335,13 @@ const SETTLE = () => {
             botOn[corner] = inner;
             ok('[8] ' + tag + ' — 검정 안쪽 런을 쟀다 (아래 코너 · Δ0 판정은 [8-Δ] 에서)',
               inner.every(r => r[0] !== '-'), iline);
+            /* [9] 409 3회차 — 아래 코너의 «어두운 띠 뒤 밝은 베벨» 도 각도와 무관해야 한다
+               (ref 6.66~7.80 · 수리 전 4.04~5.97 로 코너로 갈수록 단조 감소했다 — CY·CZ 2인 독립). */
+            const bev = [];
+            for (const dg of BEV_DEGS) bev.push(bevelRun(await ray(page, p, corner, dg)));
+            botBev[corner] = bev;
+            ok('[9] ' + tag + ' — 어두운 띠 뒤 베벨 ≥ ' + MIN_BEV.toFixed(1) + 'px (아래 코너도 등폭)',
+              bev.every(v => v >= MIN_BEV), BEV_DEGS.map((d, i) => d + '°:' + bev[i].toFixed(1)).join(' '));
           }
           faces++;
         }
@@ -357,8 +379,39 @@ const SETTLE = () => {
         await page.waitForTimeout(150);
         await shoot(page);
       }
+
+      /* [9-R] 3회차의 되돌림 — 부모 배경의 아래 코너 고리 둘만 끄면 [9] 가 빨개져야 한다.
+         (`::after` 의 위 코너 고리와 **다른 손잡이**라, 이 시험이 둘을 서로 헷갈리지 않게 가른다.) */
+      if (Object.keys(botBev).length) {
+        await page.evaluate(() => {
+          const s = document.createElement('style'); s.id = 'v409bevB';
+          s.textContent = '.stab.on{--pill-bl:none!important;--pill-br:none!important}';
+          document.head.appendChild(s);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        for (const corner of Object.keys(botBev)) {
+          const off = [];
+          for (const dg of BEV_DEGS) off.push(bevelRun(await ray(page, p, corner, dg)));
+          const on = botBev[corner];
+          const f = a => BEV_DEGS.map((d, i) => d + '°:' + a[i].toFixed(1)).join(' ');
+          /* ⚠ 호스트마다 «MIN_BEV 아래로 떨어진다» 를 요구하면 **`03 던전` BL 이 빨개진다** — 그 자리는
+             438(바닥 띠 감김이 그 호스트에서만 빠진다)이 이미 등재된 자리라 수리 전 값이 5.0~7.0 으로
+             선 위에 걸친다. 남의 결함이 내 되돌림 항의 색을 정하지 않게, 호스트별로는 «**고리가 실제로
+             더 두껍게 만든다**»(전 각도에서 켬 > 끔)를 묻고, «5.0 이라는 선 자체가 문다» 는 것은
+             아래 전역 항이 한 번 못박는다. 무른 항이 아니다 — 고리가 죽으면 켬 = 끔 이 되어 빨개진다. */
+          ok('[9-R] ' + name + ' ' + corner + ' — 아래 고리를 끄면 전 각도에서 베벨이 얇아진다 (고리가 실제로 그린다)',
+            on.every((v, i) => v >= MIN_BEV && v > off[i]), '켬 ' + f(on) + '  ↔  끔 ' + f(off));
+          if (off.some(v => v < MIN_BEV)) collapsed++;
+        }
+        await page.evaluate(() => { const s = document.getElementById('v409bevB'); if (s) s.remove(); });
+        await page.waitForTimeout(150);
+        await shoot(page);
+      }
     }
     ok('[8-Δ] 아래 코너를 4 면 이상 껐다 켰다 (Δ0 항이 공허하지 않다)', deltaFaces >= 4, deltaFaces + '면');
+    ok('[9-R] 아래 고리를 끄면 MIN_BEV(' + MIN_BEV.toFixed(1) + ') 아래로 무너지는 면이 실제로 있다 (선 자체가 문다)',
+      collapsed >= 3, collapsed + '면');
     ok('링이 살아 있는 면을 8 면 이상 쟀다', faces >= 8, faces + '면');
     ok('378 이 넘긴 면도 실제로 있었다 (음성항이 공허하지 않다)', offFaces >= 2, offFaces + '면');
 

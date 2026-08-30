@@ -237,14 +237,30 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     const maskHasL = m => /^linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) 30px/.test(m);
     const maskHasR = m => /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(m);
     const posName = p => !p ? '?' : (p.L ? '좌' : '') + (p.R ? '우' : '') || '가운데';
+    /* 409 3회차 이관 (2026-08-30) — **자리 규칙에 손잡이가 둘 늘었다.** 아래 두 코너의 베벨 동심 고리는
+       부모 `background` 에 깔리고(`::after` 에 얹으면 384 의 바닥 띠 감김을 덮는다), 셸에 닿는 면에서는
+       `--pill-bl`/`--pill-br` 가 `none` 이 된다 — `--pill-l`/`--pill-r`·`--pill-mask` 와 **같은 자리에서**.
+       ⇒ 그래서 `backgroundImage` 도 boxShadow 처럼 «자리가 다르면 cmp 에서 빼고 [1-c] 가 되받는다».
+       ⚠ 무르게 뺀 게 아니다 — 아래 [1-c] 가 ⓐ 층이 셋인지 ⓑ 고리 둘이 자리 규칙과 같은지
+          ⓒ **세 띠 그라데이션(층 3)은 네 호스트 전부 Δ0 인지** 를 각각 묻는다. */
+    const bgLayers = b => {
+      const out = []; let d = 0, cur = '';
+      for (const ch of (b || '')) {
+        if (ch === '(') d++;
+        if (ch === ')') d--;
+        if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch;
+      }
+      if (cur.trim()) out.push(cur.trim());
+      return out;
+    };
     const cmp = (label, key, props) => {
       [['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
         /* 활성 칸끼리 비교할 때, **자리가 다르면** boxShadow 만 빼고 나머지 11개를 그대로 묻는다.
            뺀 한 개는 아래 [1-c] 가 자리별 규칙으로 각 호스트에서 따로 문다 — 무르게 푼 게 아니다. */
         const posDiff = key === 'on' && hero.onPos && o.onPos
           && (hero.onPos.L !== o.onPos.L || hero.onPos.R !== o.onPos.R);
-        const d = diff(hero[key], o[key], posDiff ? ['boxShadow'] : []);
-        ok(label + ' — 영웅 vs ' + n + ' Δ0' + (posDiff ? ' (자리 ' + posName(hero.onPos) + ' vs ' + posName(o.onPos) + ' — 밴드는 [1-c])' : ''),
+        const d = diff(hero[key], o[key], posDiff ? ['boxShadow', 'backgroundImage'] : []);
+        ok(label + ' — 영웅 vs ' + n + ' Δ0' + (posDiff ? ' (자리 ' + posName(hero.onPos) + ' vs ' + posName(o.onPos) + ' — 밴드·코너 고리는 [1-c])' : ''),
           d.length === 0, d.length ? d.slice(0, 3).join(' / ') : (props.length - (posDiff ? 1 : 0)) + '개 속성 일치');
       });
     };
@@ -272,6 +288,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
         !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
         r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
+      /* 409 3회차 이관 — 자리 규칙의 **셋째 반쪽**: 아래 코너 베벨 고리 둘. */
+      const bg = bgLayers(o.on.backgroundImage);
+      ok(n + ' — 부모 배경이 «아래 코너 고리 둘 + 세 띠» 세 층이다',
+        bg.length === 3 && /^linear-gradient\(/.test(bg[2]), bg.length + '층');
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 아래 코너 고리가 그 자리 규칙과 같다 (닿는 면은 뺀다)',
+        bg.length === 3 && !!o.onPos
+          && (bg[0] !== 'none') === !o.onPos.L && (bg[1] !== 'none') === !o.onPos.R,
+        bg.length === 3 ? ('좌고리 ' + (bg[0] !== 'none') + ' · 우고리 ' + (bg[1] !== 'none')) : '층 수 이상');
+      ok(n + ' — 세 띠 그라데이션(층 3)은 영웅과 Δ0 (자리와 무관한 부분은 여전히 같다)',
+        bg.length === 3 && bg[2] === bgLayers(hero.on.backgroundImage)[2], bg[2] ? bg[2].slice(0, 60) : '없음');
     });
     ok('두 갈래가 표본에 다 있다 (끝 ' + posEnd + ' · 가운데 ' + posMid + ')', posEnd >= 1 && posMid >= 1,
       '끝 ' + posEnd + ' / 가운데 ' + posMid);

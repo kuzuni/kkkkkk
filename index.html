@@ -10926,7 +10926,25 @@
        되돌린 자리로 되돌아간다(가로 띠 의사요소가 코너에서 그 검정을 7·cosα 로 깎는다). */
     --pill-l:inset 14px 0 0 #634F37;
     --pill-r:inset -14px 0 0 #634F37;
-    background:linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 71px,#634F37 71px 78px,
+    /* 409 3회차 (2026-08-30) — **아래 두 코너의 베벨도 동심 고리로.** 2회차가 위 코너에서 고친 것과
+       **같은 병이 아래에 그대로 남아 있었다**(비평가 CY·CZ **2인 독립 일치** — 밝은 베벨
+       ref 6.66~7.80 ↔ 우리 4.04~5.97, 코너로 갈수록 단조 감소 −28~48%).
+       ⚠ **위 코너처럼 `::after` 에 얹으면 안 된다** — 그 층은 `::before` **위**라 384 의 바닥 어두운 띠
+          감김을 덮는다(`probe409b` 후보 C·E 가 그렇게 무너졌다). 그래서 **부모 배경**에 깐다:
+          부모 배경은 `::before`(띠) 밑이라 어두운 띠가 그 위에 그대로 칠해지고, 검정 링(`::after`)도
+          그 위다 ⇒ «검정 → 어두운 띠 → 베벨» 이라는 ref 의 순서가 저절로 선다.
+       ⚠ **반지름 13..24 는 «7..14» 가 아니다** — 아래 코너에는 어두운 띠가 먼저 끼므로 베벨은 그만큼
+          **안쪽에서 시작**한다. 실측으로 역산했다: 어두운 띠가 법선 7..9.8(우리 2.0~2.8) 이므로
+          고리를 법선 6..17(= r 13..24)로 잡아야 띠 뒤에 남는 베벨이 **7.2~7.9** 가 되어
+          ref(7.22/7.20/6.66/6.96/7.80)와 Δ≤1 로 맞는다. 8px 짜리(위 코너 규격)로는 4.2 밖에 안 남는다.
+       ⚠ 끝 칸(378)의 «셸에 닿는 면» 은 검정 링이 통째로 없으므로 이 고리도 빼야 한다 — 위 코너는
+          `--pill-mask` 가 공짜로 해 주지만 부모는 마스크를 못 걸어 **손잡이 둘**(`--pill-bl`·`--pill-br`)을
+          `--pill-l`·`--pill-r` 와 **같은 자리에서** 끈다. */
+    --pill-bl:radial-gradient(circle at 30px 0,transparent 0 13px,#634F37 13px 24px,transparent 24px);
+    --pill-br:radial-gradient(circle at 0 0,transparent 0 13px,#634F37 13px 24px,transparent 24px);
+    background:var(--pill-bl) 0 100%/30px 30px no-repeat,
+      var(--pill-br) 100% 100%/30px 30px no-repeat,
+      linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 71px,#634F37 71px 78px,
       #413122 78px 85px);
     /* 384 2회차 (2026-08-29) — **«등폭 링» 은 여기서 안 된다. 시도하고 되돌린 기록을 남긴다.**
        1회차 채점에서 BB·BC 가 2인 독립으로 같은 것을 짚었다(BB ④4 «대각 검정 4.94 ↔ ref 7.08, −30%» ·
@@ -11024,11 +11042,11 @@
      (`c4` 는 709+229 = 938 = 950−12 로 콘텐츠 우변과 같다). 가운데 칸은 한 면도 안 바뀐다. */
   .stabs.sp2>.stab.on:nth-of-type(1),
   .stabs.sp3>.stab.on:nth-of-type(1),
-  .stab.on.stab-c1{--pill-l:inset 7px 0 0 #634F37;
+  .stab.on.stab-c1{--pill-l:inset 7px 0 0 #634F37;--pill-bl:none;
     --pill-mask:linear-gradient(90deg,transparent 0 calc(100% - 30px),#000 calc(100% - 30px))}
   .stabs.sp2>.stab.on:nth-of-type(2),
   .stabs.sp3>.stab.on:nth-of-type(3),
-  .stab.on.stab-c4{--pill-r:inset -7px 0 0 #634F37;
+  .stab.on.stab-c4{--pill-r:inset -7px 0 0 #634F37;--pill-br:none;
     --pill-mask:linear-gradient(90deg,#000 0 30px,transparent 30px)}
   /* 409 — 끝 칸의 «셸에 닿는 면» 은 검정 링 기둥을 통째로 뺀다(378 이 밴드로 하던 일을 링에서도 한다).
      ⚠ 남는 면의 기둥은 그대로다 — 그래서 «닿는 면만» 검정 0 이고 반대 면은 코너까지 검정 7 이다. */
