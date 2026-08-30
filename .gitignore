@@ -182,3 +182,10 @@ docs/shots/
 docs/review/*.png
 tools/*.png
 /*.png
+
+# 439 verify439.js 가 «420 규칙을 뺀 사본» 대조용으로 잠깐 뽑는 파일 (게이트가 끝나면 지운다)
+# ⚠ 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 assets/** 가 통째로 404 다
+#    (360·367 이 같은 이유로 루트에 둔 선례).
+.v439-neg.html
+.v439-now.json
+.v439-neg.json

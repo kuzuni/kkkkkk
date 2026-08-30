@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* 351 프로브 — 9:19(1080×2280) 대비 9:13.3(1080×1600) «에서만 나빠진 것» 을 기계로 좁힌다.
  *
- * 실행: node tools/probe351.js [--only <라벨조각>] [--json <경로>] [--selftest] [--navtest]
+ * 실행: node tools/probe351.js [--only <라벨조각>] [--json <경로>] [--selftest] [--navtest] [--ctatest]
  *
  * 왜 프로브를 먼저 두는가(338·341·350·363·368 규칙):
  *   351 은 «비평가 3명 × 전 화면» 루프라 회차가 비싸다. 등재문의 네 축 중 ⓐ 잘림 · ⓑ 겹침 ·
@@ -26,7 +26,9 @@ const { chromium } = pw();
 const path = require('path');
 const fs = require('fs');
 
-const FILE = 'file://' + path.resolve(__dirname, '../index.html');
+/* 대상 파일은 하네스(`probe351lib`)가 정한다 — 여기서 또 적으면 두 자가 다른 파일을 잰다
+   (385 «자매 자 드리프트»). `P351_FILE` 로 갈아 끼울 수 있다(439). */
+const { FILE } = require('./probe351lib');
 const ONLY = (() => { const i = process.argv.indexOf('--only'); return i > 0 ? process.argv[i + 1] : null; })();
 const JSONOUT = (() => { const i = process.argv.indexOf('--json'); return i > 0 ? process.argv[i + 1] : null; })();
 /* --selftest — **되돌림 시험**(334·348 처방). 10회차가 `settle()` 에 «무한 반복 연출 세우기» 를
@@ -52,6 +54,11 @@ const SELFTEST = process.argv.includes('--selftest');
       게임 루프가 그 사이에 노드를 다시 써서 «영원히 초록인 시험» 이 된다).
    권장 실행: `node tools/probe351.js --only tab:hero --navtest` (오버레이가 없어 탭바가 닿는 화면). */
 const NAVTEST = process.argv.includes('--navtest');
+/* --ctatest — **439 CTA 축의 되돌림 시험.** D7 에 더한 넷째 축(«페이지가 소유한 주 행동 버튼»)이
+   «한 번도 안 켜지는 축» 이 아님을 못박는다: 1600 판에서만 그 화면의 CTA 위에 다이얼로그 급
+   불투명 상자를 심고 D7 이 `covers:cta:…` 로 내는지 본다.
+   권장 실행: `node tools/probe351.js --only cur:relic --ctatest`(CTA 가 `#rwBasin` 인 화면). */
+const CTATEST = process.argv.includes('--ctatest');
 
 const TALL = [1080, 2280];   /* 9:19 기준 */
 const SHORT = [1080, 1600];  /* 9:13.3 — 지원 최저 세로 */
@@ -253,7 +260,8 @@ const SCAN = function (opt) {
     }
   }
 
-  /* ── D7 — «불투명 상자가 고정 내비(탭바)·HUD 판때기를 덮는다» (5회차 신설) ─────────────
+  /* ── D7 — «불투명 상자가 고정 내비(탭바)·HUD 판때기·미션 배너·**페이지 주 CTA**(439)를 덮는다»
+     (5회차 신설 · 407 배너 추가 · 424 이름표 · 439 CTA 축) ───────────────────────────
      왜 새 축이 필요한가: 5회차에 비평가 3인이 **각자 1순위로** 22 퀘스트 모달이 하단 탭바를
      11~26px 물고 들어간 것을 짚었는데 **자는 한 건도 못 봤다.** 원리적으로 못 본다 —
        · D1~D5 는 «클리핑·넘침» 을 재는데 모달은 아무것도 자르지 않는다(그냥 위에 얹힌다).
@@ -280,6 +288,82 @@ const SCAN = function (opt) {
      «고정 요소» 다 — 던전 런 중에는 `display:none` 이므로 vis() 가 알아서 뺀다. */
   const tuto = document.getElementById('tuto');
   if (tuto && vis(tuto)) navs.push({ name: 'tuto', r: tuto.getBoundingClientRect(), el: tuto });
+
+  /* ⚑ 439 — 목록의 **넷째 축: «페이지가 소유한 주 행동 버튼»**.
+     왜 필요한가: 위 셋(`#tabbar`·`.pedge`·`#tuto`)은 전부 **전역 고정 요소**라, 오버레이가
+     «그 화면에만 있는 주 버튼» 을 물면 D7 은 **원리적으로** 못 본다. 420 이 그 표본이다 —
+     33 재화 팝업이 89 유물 페이지의 「유물 소환」(`#rwBasin` 400×216)을 1600 에서 35px
+     (최악 44.7px) 물었는데 5~10회차 내내 D7 은 조용했다(`probe439` §1 이 420 규칙을 뺀 사본으로
+     그 프레임을 다시 만들어 «겹침 35px 은 찍히는데 D7 0건» 을 못박는다). `probe351c` E1 도 못 낸다 —
+     `#ciw` 는 딤(`inset:0`)이라 **2280 에서도 «닿아»** 있어 차분에서 소거된다(위 407 주석의
+     함정과 같은 자리이고, 그래서 이것도 D7 의 몫이다).
+     ⚠ **화면별 CTA 이름을 표로 적지 않는다**(402 «표는 손으로 적는 목록이라 뒤처진다» — 등재문이
+        못박은 조건이다). 네 성질로 **제품에게 묻는다**:
+          ① `cursor:pointer`             — 누를 수 있는 것
+          ② 최상위 그릇이 «지금 열린 판»   — `#app` 직계 자식 + `.on`. 상시 HUD(`#top`)·전투 필드
+                                           (`#stagearea`)·탭바는 `.on` 을 안 달아 여기서 갈린다
+                                           ⇒ 위 세 축과 **겹치지 않는다**(중복 계수 없음)
+          ③ 그 그릇 안에서 **유일한** 클릭  — 리스트 카드·서브탭·격자 칸은 형제가 전부 눌리므로
+                                           «주» 가 아니다. 이 한 조건이 후보를 253 → 46 으로 줄인다
+                                           (`probe439` 규칙 E→F 실측)
+          ④ 스크롤로 못 되돌림 + 상자 ≥160×60 — 스크롤하면 나오는 것은 «가려짐» 이 아니고
+                                           (이 프로브의 대전제) 잔글씨 링크는 «주 버튼» 이 아니다
+        그중 **판마다 그려진 면적이 가장 큰 하나**만 채택한다(= 그 판에서 제일 큰 단독 버튼).
+     ⚠ 이름에 **자리를 담는다**(`cta:<pathOf>`) — 이름이 `cta` 하나면 두 해상도가 서로 다른 버튼을
+        골랐을 때 차분이 그것을 «1600 전용 결함» 으로 낸다. 실측(`probe439`)에서 **45/45 화면이
+        두 해상도에서 같은 자리**를 골랐으므로 이 이름은 짝이 맞는다.
+     되돌림 시험은 `--ctatest`(아래) — «한 번도 안 켜지는 축» 이 되지 않게 못박는다(435 교훈). */
+  {
+    const best = {};
+    for (const el of all) {
+      if (!vis(el)) continue;
+      if (getComputedStyle(el).cursor !== 'pointer') continue;
+      let top = el;
+      while (top.parentElement && top.parentElement !== app) top = top.parentElement;
+      if (top === el || !top.classList.contains('on')) continue;      /* ② 열린 판이 소유한 것만 */
+      const par = el.parentElement;
+      if (!par) continue;
+      let ptr = 0;
+      for (const sib of par.children) {
+        if (sib.nodeType !== 1 || !vis(sib)) continue;
+        if (getComputedStyle(sib).cursor === 'pointer') ptr++;
+      }
+      if (ptr !== 1) continue;                                        /* ③ 그릇 안 유일한 클릭 */
+      let scrollable = false;
+      for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) {
+        const cs3 = getComputedStyle(p);
+        if (/auto|scroll/.test(cs3.overflowX) && p.scrollWidth > p.clientWidth + 2) { scrollable = true; break; }
+        if (/auto|scroll/.test(cs3.overflowY) && p.scrollHeight > p.clientHeight + 2) { scrollable = true; break; }
+      }
+      if (scrollable) continue;                                       /* ④ 스크롤로 되돌리면 «고정» 이 아니다 */
+      const { drawn: dd } = clipped(el);
+      if (dd.w < 160 || dd.h < 60) continue;
+      const key = top.id || ('top:' + String(top.className || ''));
+      const area = dd.w * dd.h;
+      if (!best[key] || area > best[key].area) {
+        best[key] = { el, area, r: { left: dd.x1, top: dd.y1, right: dd.x2, bottom: dd.y2, width: dd.w, height: dd.h } };
+      }
+    }
+    for (const k of Object.keys(best)) navs.push({ name: 'cta:' + pathOf(best[k].el), r: best[k].r, el: best[k].el });
+  }
+
+  /* ⚑ 439 `--ctatest` — **CTA 축의 되돌림 시험**(435 교훈: «심었는데 안 잡히는» 시험은 시험이 아니다).
+     1600 판에서만 방금 고른 CTA 위에 «불투명하고 다이얼로그 급인» 상자를 심고, D7 이 그것을
+     `covers:cta:…` 로 내는지 본다. 2280 에는 안 심으므로 차분에 그대로 남아야 한다.
+     ⚠ 심는 자리는 이 `evaluate` **안**이다(435). 그리고 `all` 은 정적 NodeList 라 심은 노드가
+        안 들어가므로 아래 D7 루프는 `d7all`(= all + 심은 상자)을 훑는다. */
+  let ctaBox = null;
+  if (opt.ctatest) {
+    const cta = navs.find((n) => /^cta:/.test(n.name));
+    if (cta) {
+      ctaBox = document.createElement('div');
+      ctaBox.id = 'ctatestBox';
+      ctaBox.style.cssText = 'position:fixed;left:' + (cta.r.left - 40) + 'px;width:' +
+        Math.max(360, cta.r.width + 80) + 'px;top:' + (cta.r.top - 120) + 'px;height:' +
+        Math.max(260, cta.r.height + 130) + 'px;background:#123456;z-index:99998';
+      app.appendChild(ctaBox);
+    }
+  }
 
   /* ⚑ 424 — 406 규약(«2280 에서 이미 안 닿는 것은 판정 불가»)을 D7 에 **분류로** 가져온다.
      무엇이 어긋나 있었나: 406 은 `probe351c` E1 을 «덮임» → «닿음» 으로 갈면서 그 규약을
@@ -312,8 +396,9 @@ const SCAN = function (opt) {
     navReach[nav.name] = tested < 8 ? null : Math.round(100 * reach / tested);
   }
 
+  const d7all = ctaBox ? [...all, ctaBox] : all;
   if (navs.length) {
-    for (const el of all) {
+    for (const el of d7all) {
       if (!vis(el)) continue;
       if (el.classList.contains('dim')) continue;                 /* 딤은 규칙상 감점 아님 */
       const cs2 = getComputedStyle(el);
@@ -358,13 +443,13 @@ const SCAN = function (opt) {
     console.log(`[351] 화면 ${openers.length}개 × 2해상도 스캔`);
 
     for (const o of openers) {
-      const scan = async ([w, h], inject, navtest) => {
+      const scan = async ([w, h], inject, navtest, ctatest) => {
         const { ctx, page } = await fresh(browser, w, h);
         await drive(page, o);
         await settle(page);
         /* ⚑ 435 — 주입은 **SCAN 안**이다(위 SELFTEST 주석). 여기서 따로 심으면 그 사이 프레임에
            게임 루프가 지워 시험이 통째로 무효가 된다. `--navtest`(424)도 같은 이유로 SCAN 안이다. */
-        const r = await page.evaluate(SCAN, { inject: !!inject, navtest: !!navtest })
+        const r = await page.evaluate(SCAN, { inject: !!inject, navtest: !!navtest, ctatest: !!ctatest })
           .catch((e) => ({ defects: [], injected: [], err: String(e.message || e) }));
         await ctx.close();
         if (inject) {
@@ -376,7 +461,7 @@ const SCAN = function (opt) {
         return r;
       };
       const tall = await scan(TALL);
-      const short = await scan(SHORT, SELFTEST, NAVTEST);
+      const short = await scan(SHORT, SELFTEST, NAVTEST, CTATEST);
       const tallKeys = new Set(tall.defects.map((d) => d.key));
       const regress = short.defects.filter((d) => !tallKeys.has(d.key));
       /* ⚑ 424 — D7 에 406 규약 이름표를 붙인다(SCAN 의 navReach 주석 참조).
@@ -433,6 +518,17 @@ const SCAN = function (opt) {
       `이름표 «조작+그림» ${okB ? 'OK' : 'FAIL'}` + (hit.length ? ` (${hit.map((d) => d.axis + ' ' + d.navHit).join(', ')})` : ''));
     if (!(okA && okB)) { console.log('  [navtest] ⚠ 되돌림 시험 실패 — 축 또는 이름표가 죽었다'); process.exit(1); }
     console.log('  [navtest] PASS');
+  }
+  if (CTATEST) {
+    /* 심은 상자가 **CTA 축으로** 나와야 시험이 성립한다 — 탭바·HUD·배너로만 나오면 그것은
+       앞의 세 축이 잡은 것이지 439 가 더한 축이 잡은 것이 아니다. */
+    const hit = d7.filter((d) => String(d.path).includes('#ctatestBox'));
+    const cta = hit.filter((d) => /^covers:cta:/.test(String(d.k || '')));
+    console.log(`  [ctatest] 심은 상자 D7 검출 ${hit.length ? 'OK' : 'FAIL'} (${hit.length}건) · ` +
+      `그중 «cta:» 축 ${cta.length ? 'OK' : 'FAIL'} (${cta.length}건)` +
+      (cta.length ? ` — ${cta.map((d) => d.k + ' by' + d.by).join(', ')}` : ''));
+    if (!cta.length) { console.log('  [ctatest] ⚠ 되돌림 시험 실패 — CTA 축이 죽었다'); process.exit(1); }
+    console.log('  [ctatest] PASS');
   }
   if (JSONOUT) { fs.writeFileSync(JSONOUT, JSON.stringify(results, null, 1)); console.log('  JSON → ' + JSONOUT); }
 
