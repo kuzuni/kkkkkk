@@ -96,9 +96,15 @@ const BEFORE = {
    `#relw` 가 `opacity:0` 이라 불투명 상자에서 빠진다), 순서를 바로잡자 자에서도 사라졌다. */
 const TOL = {};
 
-/* 페이지 안에서 재는 자 — «불투명 상자» 판정·클리핑 접기는 `probe351` D7 과 **글자 그대로 같다**.
-   같은 자리를 다른 자로 재면 값이 안 붙는다(LESSONS 351-⑨). */
-const MEAS = function (boxSel) {
+/* 페이지 안에서 재는 자 — «불투명 상자» 판정·클리핑 접기·덮임 면적은 `probe351` D7 과 **한 벌**이다.
+   같은 자리를 다른 자로 재면 값이 안 붙는다(LESSONS 351-⑨).
+   ⚑ 476(2026-08-30) — 그 «한 벌» 이 오래 **말뿐이었다.** 여기 있던 사본은 «덮임 면적» 까지 세는데
+   D7 은 «상자 ↔ 내비 세로 겹침» 만 재서, 같은 자리(05 장비 세부 팝업)를 두 자가 반대로 답했다
+   (D7 «배너를 37px 덮는다» ↔ 여기 «배너 보임 0%» = 덮을 것이 애초에 없다). ⇒ 계산을
+   `tools/cover351lib.js` 로 갈라 **두 자가 같은 함수를 페이지에 넣는다**(385 «자매 자 드리프트»).
+   값은 한 칸도 안 바뀌었다 — 476 이 옮기기 전후로 §1·§2·§3·§R 전항을 대조했다. */
+const { COVER_SRC } = require('./cover351lib');
+const MEAS = function (opt) {
   const app = document.getElementById('app');
   const A = app.getBoundingClientRect();
   const tuto = document.getElementById('tuto');
@@ -106,21 +112,10 @@ const MEAS = function (boxSel) {
     const cs = getComputedStyle(el);
     return !(cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0);
   };
-  const clipped = (el) => {
-    const r = el.getBoundingClientRect();
-    const d = { x1: r.left, y1: r.top, x2: r.right, y2: r.bottom };
-    for (let p = el.parentElement; p && p !== document.documentElement; p = p.parentElement) {
-      const cs = getComputedStyle(p);
-      if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
-      const pr = p.getBoundingClientRect();
-      if (cs.overflowX !== 'visible') { d.x1 = Math.max(d.x1, pr.left); d.x2 = Math.min(d.x2, pr.right); }
-      if (cs.overflowY !== 'visible') { d.y1 = Math.max(d.y1, pr.top); d.y2 = Math.min(d.y2, pr.bottom); }
-    }
-    return d;
-  };
+  const cover = new Function('return (' + opt.coverSrc + ')')();
   const out = { frameH: Math.round(A.height), box: null, hidden: true, visPct: null, stub: null, disp: null };
-  if (boxSel) {
-    const b = document.querySelector(boxSel);
+  if (opt.boxSel) {
+    const b = document.querySelector(opt.boxSel);
     if (b && vis(b)) {
       const r = b.getBoundingClientRect();
       out.box = [Math.round((r.left - A.left) * 10) / 10, Math.round((r.top - A.top) * 10) / 10,
@@ -132,43 +127,9 @@ const MEAS = function (boxSel) {
   out.hidden = false;
   const t = tuto.getBoundingClientRect();
   out.tutoY1 = Math.round((t.top - A.top) * 10) / 10;
-  const area = (t.right - t.left) * (t.bottom - t.top);
-  const rects = [];
-  for (const el of app.querySelectorAll('*')) {
-    if (!vis(el) || el === tuto || el.contains(tuto) || tuto.contains(el)) continue;
-    if (el.classList.contains('dim')) continue;
-    const cs = getComputedStyle(el);
-    const m = (cs.backgroundColor || '').match(/rgba?\(([^)]+)\)/);
-    const parts = m ? m[1].split(',').map((s) => parseFloat(s)) : [];
-    const alpha = m ? (parts.length > 3 ? parts[3] : 1) : 0;
-    if (!(alpha >= 0.9 || cs.backgroundImage !== 'none')) continue;
-    const d = clipped(el);
-    const w = d.x2 - d.x1, h = d.y2 - d.y1;
-    if (w < 300 || h < 200 || w * h < 120000) continue;
-    if (Math.min(d.y2, t.bottom) - Math.max(d.y1, t.top) <= 2) continue;
-    if (Math.min(d.x2, t.right) - Math.max(d.x1, t.left) <= 40) continue;
-    rects.push({ x1: Math.max(d.x1, t.left), y1: Math.max(d.y1, t.top), x2: Math.min(d.x2, t.right), y2: Math.min(d.y2, t.bottom) });
-  }
-  let covered = 0;
-  if (rects.length) {
-    const xs = [...new Set(rects.flatMap((r) => [r.x1, r.x2]))].sort((p, q) => p - q);
-    for (let i = 0; i + 1 < xs.length; i++) {
-      const x1 = xs[i], x2 = xs[i + 1];
-      if (x2 <= x1) continue;
-      const spans = rects.filter((r) => r.x1 <= x1 && r.x2 >= x2).map((r) => [r.y1, r.y2]).sort((p, q) => p[0] - q[0]);
-      let cy = 0, cur = null;
-      for (const [y1, y2] of spans) {
-        if (!cur) { cur = [y1, y2]; continue; }
-        if (y1 <= cur[1]) cur[1] = Math.max(cur[1], y2); else { cy += cur[1] - cur[0]; cur = [y1, y2]; }
-      }
-      if (cur) cy += cur[1] - cur[0];
-      covered += (x2 - x1) * cy;
-    }
-  }
-  let stub = t.right - t.left;
-  for (const r of rects) if (r.y2 - r.y1 > (t.bottom - t.top) * 0.9) stub = Math.min(stub, t.right - r.x2);
-  out.visPct = Math.round(1000 * (1 - covered / area)) / 10;
-  out.stub = Math.round(stub * 10) / 10;
+  const c = cover(tuto, t);
+  out.visPct = c.visPct;
+  out.stub = c.stub;
   return out;
 };
 
@@ -184,7 +145,7 @@ async function shot(browser, o, H, file) {
      보인다» 는 유령(1회차에 실제로 그랬다 — 찍힌 픽셀로는 0 이었다). */
   if (o) await drive(page, o);
   await settle(page);
-  const m = await page.evaluate(MEAS, o && o.box ? o.box : null);
+  const m = await page.evaluate(MEAS, { boxSel: o && o.box ? o.box : null, coverSrc: COVER_SRC });
   await ctx.close();
   return { ...m, errs };
 }

@@ -59,6 +59,16 @@ const NAVTEST = process.argv.includes('--navtest');
    불투명 상자를 심고 D7 이 `covers:cta:…` 로 내는지 본다.
    권장 실행: `node tools/probe351.js --only cur:relic --ctatest`(CTA 가 `#rwBasin` 인 화면). */
 const CTATEST = process.argv.includes('--ctatest');
+/* --covtest — **476 이름표(«이미 가려짐»)의 되돌림 시험.** 두 판을 한 번에 심어 이름표가
+   «양쪽으로» 살아 있음을 못박는다(424-④ — 전수 0건은 «없다» 와 «죽었다» 를 안 가른다):
+     ⓐ 양성 — 두 해상도 **다** 탭바를 100% 덮는 상자(`#covtestBase`)를 깔고, 1600 에만
+        탭바를 40px 무는 상자(`#covtestOver`)를 얹는다 ⇒ 그 D7 은 `이미 가려짐` 이어야 한다
+     ⓑ 음성 — 1600 에만 HUD 판때기(`.pedge`)를 40px 무는 상자(`#covtestReal`)를 얹는다.
+        HUD 는 2280 에서 멀쩡히 보이므로(실측 73.2%) 그 D7 은 `이미 가려짐` 이 **아니어야** 한다
+   ⚠ 심는 자리는 SCAN **안**이다(424-③·435 — 주입과 판정이 다른 라운드트립으로 갈리면 게임
+      루프가 그 사이에 노드를 다시 써서 «영원히 초록인 시험» 이 된다).
+   권장 실행: `node tools/probe351.js --only tab:hero --covtest`(탭바·HUD 둘 다 안 가려진 화면). */
+const COVTEST = process.argv.includes('--covtest');
 
 const TALL = [1080, 2280];   /* 9:19 기준 */
 const SHORT = [1080, 1600];  /* 9:13.3 — 지원 최저 세로 */
@@ -70,6 +80,11 @@ const NAVREACH = 50;
    여기 있던 fresh/settle/collectOpeners/drive 를 `tools/probe351lib.js` 로 그대로 옮겼고,
    옮긴 뒤 전수 재실행이 옮기기 전과 같은 결과(21건 · 화면 11/45)임을 대조로 확인했다. */
 const { fresh, settle, collectOpeners, drive } = require('./probe351lib');
+/* ⚑ 476 — «그 내비가 **이미 다른 불투명 상자에 덮여 있나**» 는 `verify419` MEAS 와 **한 벌**로
+   센다(`cover351lib`). D7 주석은 오래 「MEAS 와 글자 그대로 같다」고 적어 뒀지만 실제로는
+   덮임 항 하나가 빠져 있었고, 그래서 `eqslot:*` 3화면에서 **보임 0% 인 배너**와의 겹침을
+   «1600 전용 결함» 으로 내고 있었다(476 등재문 · 385 «자매 자 드리프트»). */
+const { COVER_SRC, GONE } = require('./cover351lib');
 
 /* ---------------- 페이지 안에서 재는 자 ---------------- */
 const SCAN = function (opt) {
@@ -86,6 +101,38 @@ const SCAN = function (opt) {
       box.style.cssText = 'position:fixed;left:0;width:1080px;top:' + (nr.top - 60) +
         'px;height:' + (nr.height + 60) + 'px;background:#123456;z-index:99999';
       app.appendChild(box);
+    }
+  }
+  /* ⚑ 476 `--covtest` — 이름표 «이미 가려짐» 의 되돌림 시험용 상자 셋. **재는 것과 같은
+     `evaluate` 안**에서 심는다(424-③). `covtest`: 'base' = 2280 판(깔개만) · 'full' = 1600 판.
+     ⚠ 깔개는 h ≥ 200 이어야 «다이얼로그·시트 급» 문턱을 넘는다(탭바 180 + 60). */
+  if (opt.covtest) {
+    const tb = document.getElementById('tabbar');
+    if (tb) {
+      const r = tb.getBoundingClientRect();
+      const base = document.createElement('div');
+      base.id = 'covtestBase';
+      base.style.cssText = 'position:fixed;left:0;width:1080px;top:' + (r.top - 30) +
+        'px;height:' + (r.height + 60) + 'px;background:#123456;z-index:99990';
+      app.appendChild(base);
+      if (opt.covtest === 'full') {
+        const over = document.createElement('div');
+        over.id = 'covtestOver';
+        over.style.cssText = 'position:fixed;left:0;width:1080px;top:' + (r.top - 260) +
+          'px;height:300px;background:#654321;z-index:99991';
+        app.appendChild(over);
+      }
+    }
+    if (opt.covtest === 'full') {
+      const pe = document.querySelector('.pedge');
+      if (pe) {
+        const pr = pe.getBoundingClientRect();
+        const real = document.createElement('div');
+        real.id = 'covtestReal';
+        real.style.cssText = 'position:fixed;left:' + pr.left + 'px;width:' + Math.max(400, pr.width) +
+          'px;top:' + (pr.bottom - 40) + 'px;height:260px;background:#224466;z-index:99992';
+        app.appendChild(real);
+      }
     }
   }
   const A = app.getBoundingClientRect();
@@ -396,6 +443,22 @@ const SCAN = function (opt) {
     navReach[nav.name] = tested < 8 ? null : Math.round(100 * reach / tested);
   }
 
+  /* ⚑ 476 — **«보이나»** 를 같이 잰다. `navReach`(닿나)와 짝이고, 계산은 `verify419` MEAS 와
+     **한 벌**(`cover351lib`)이다 — 자를 두 벌 적어 두면 두 자가 같은 자리를 다르게 답한다(385).
+     왜 필요한가: D7 은 «상자 ↔ 내비 세로 겹침» 만 재므로, **그 내비가 이미 다른 불투명 상자에
+     통째로 덮여 있어도** 겹침이 생기면 결함을 낸다. 실측(`probe476`) — `eqslot:*` 3화면에서
+     `#wpnGrid` 가 미션 배너를 37px 무는데 그 배너는 06 시트(`div.eqp`)가 두 해상도 **다** 100%
+     덮어 보임 0% 다. 그 자리를 «1600 에서 나빠진 것» 으로 읽으면 유령이다.
+     ⚠ **거르지 않는다**(424-②) — 값 한 칸을 더 적을 뿐이고, 이름표는 러너가 붙인다. */
+  const navVis = {};
+  if (opt.coverSrc) {
+    const cover = new Function('return (' + opt.coverSrc + ')')();
+    for (const nav of navs) {
+      const c = cover(nav.el, nav.r);
+      navVis[nav.name] = c ? c.visPct : null;
+    }
+  }
+
   const d7all = ctaBox ? [...all, ctaBox] : all;
   if (navs.length) {
     for (const el of d7all) {
@@ -431,7 +494,7 @@ const SCAN = function (opt) {
       }
     }
   }
-  return { defects: out, navReach, injected, frame: { top: A.top, bottom: A.bottom, h: A.height } };
+  return { defects: out, navReach, navVis, injected, frame: { top: A.top, bottom: A.bottom, h: A.height } };
 };
 
 (async () => {
@@ -443,13 +506,13 @@ const SCAN = function (opt) {
     console.log(`[351] 화면 ${openers.length}개 × 2해상도 스캔`);
 
     for (const o of openers) {
-      const scan = async ([w, h], inject, navtest, ctatest) => {
+      const scan = async ([w, h], inject, navtest, ctatest, covtest) => {
         const { ctx, page } = await fresh(browser, w, h);
         await drive(page, o);
         await settle(page);
         /* ⚑ 435 — 주입은 **SCAN 안**이다(위 SELFTEST 주석). 여기서 따로 심으면 그 사이 프레임에
-           게임 루프가 지워 시험이 통째로 무효가 된다. `--navtest`(424)도 같은 이유로 SCAN 안이다. */
-        const r = await page.evaluate(SCAN, { inject: !!inject, navtest: !!navtest, ctatest: !!ctatest })
+           게임 루프가 지워 시험이 통째로 무효가 된다. `--navtest`(424)·`--covtest`(476)도 같다. */
+        const r = await page.evaluate(SCAN, { inject: !!inject, navtest: !!navtest, ctatest: !!ctatest, covtest: covtest || null, coverSrc: COVER_SRC })
           .catch((e) => ({ defects: [], injected: [], err: String(e.message || e) }));
         await ctx.close();
         if (inject) {
@@ -460,8 +523,8 @@ const SCAN = function (opt) {
         }
         return r;
       };
-      const tall = await scan(TALL);
-      const short = await scan(SHORT, SELFTEST, NAVTEST, CTATEST);
+      const tall = await scan(TALL, false, false, false, COVTEST ? 'base' : null);
+      const short = await scan(SHORT, SELFTEST, NAVTEST, CTATEST, COVTEST ? 'full' : null);
       const tallKeys = new Set(tall.defects.map((d) => d.key));
       const regress = short.defects.filter((d) => !tallKeys.has(d.key));
       /* ⚑ 424 — D7 에 406 규약 이름표를 붙인다(SCAN 의 navReach 주석 참조).
@@ -473,8 +536,16 @@ const SCAN = function (opt) {
         const s = short.navReach ? short.navReach[nav] : undefined;
         const show = (v) => (v === null || v === undefined ? '?' : v + '%');
         d.navHit = show(t) + '→' + show(s);
-        d.axis = (typeof t === 'number' && typeof s === 'number' && t >= NAVREACH && s < NAVREACH)
-          ? '조작+그림' : '그림만';
+        /* ⚑ 476 — 셋째 이름표 «이미 가려짐». 그 내비가 **두 해상도 다** 다른 불투명 상자에
+           통째로 덮여 있으면(보임 ≤ 0.05%) 1600 에서 «새로 잃은 그림» 이 없다 ⇒ 조작도 그림도
+           아니다. 424 가 «필터가 아니라 분류» 를 고른 이유를 그대로 따른다 — **건수는 그대로**다. */
+        const tv = tall.navVis ? tall.navVis[nav] : undefined;
+        const sv = short.navVis ? short.navVis[nav] : undefined;
+        d.navVis = show(tv) + '→' + show(sv);
+        d.axis = (typeof tv === 'number' && typeof sv === 'number' && tv <= GONE && sv <= GONE)
+          ? '이미 가려짐'
+          : ((typeof t === 'number' && typeof s === 'number' && t >= NAVREACH && s < NAVREACH)
+            ? '조작+그림' : '그림만');
       }
       /* ⚑ 435 — «심은 것이 실제로 잡혔는가» 를 **그 자리에서** 센다. 주입은 1600 판에만 했으므로
          잡혔다면 그것은 차분에도 남아야 한다(= 1600 전용 결함). 여기서 세지 않으면 selftest 는
@@ -505,8 +576,17 @@ const SCAN = function (opt) {
   for (const r of results) for (const d of r.regress) if (d.kind === 'D7') d7.push(d);
   if (d7.length) {
     const op = d7.filter((d) => d.axis === '조작+그림').length;
-    console.log(`  D7 축(424): 조작+그림 ${op} · 그림만 ${d7.length - op}  (합계 ${d7.length} = 위 D7 값 — 거른 것 0건)`);
+    const gone = d7.filter((d) => d.axis === '이미 가려짐').length;
+    console.log(`  D7 축(424·476): 조작+그림 ${op} · 그림만 ${d7.length - op - gone} · 이미 가려짐 ${gone}`
+      + `  (합계 ${d7.length} = 위 D7 값 — 거른 것 0건)`);
     if (!op) console.log('    ⚠ `조작+그림` 0건 — 이름표가 한 번도 안 켜졌다. 죽은 축인지 `--navtest` 로 확인하라.');
+    /* ⚑ 476 — «이미 가려짐» 은 **감점이 아니라 유령**이다(그 자리는 사람이 볼 것이 없다).
+       자리를 적어 두는 이유는 424-② 와 같다 — 지우면 왜 안 세는지가 다음 세션에서 사라진다. */
+    if (gone) {
+      console.log('    이미 가려짐(= 두 해상도 다 보임 0% 인 내비와의 기하 겹침 · 476):');
+      for (const d of d7.filter((x) => x.axis === '이미 가려짐'))
+        console.log(`      · ${d.path} ${d.k} by${d.by} 보임 ${d.navVis}`);
+    }
   }
   if (NAVTEST) {
     /* 심은 상자가 **나오고** 그 자리가 `조작+그림` 이어야 시험이 성립한다.
@@ -518,6 +598,21 @@ const SCAN = function (opt) {
       `이름표 «조작+그림» ${okB ? 'OK' : 'FAIL'}` + (hit.length ? ` (${hit.map((d) => d.axis + ' ' + d.navHit).join(', ')})` : ''));
     if (!(okA && okB)) { console.log('  [navtest] ⚠ 되돌림 시험 실패 — 축 또는 이름표가 죽었다'); process.exit(1); }
     console.log('  [navtest] PASS');
+  }
+  if (COVTEST) {
+    /* ⓐ 양성 — 두 해상도 다 100% 덮인 탭바 위에 1600 에서만 얹은 상자는 `이미 가려짐` 이어야 한다.
+       ⓑ 음성 — 2280 에서 멀쩡히 보이는 HUD 를 1600 에서만 문 상자는 `이미 가려짐` 이면 **안 된다**
+          (여기가 무너지면 이름표가 «전부 유령» 으로 굴러 406·420·407 이 갚은 자리가 사라진다 — 424-②). */
+    const pos = d7.filter((d) => String(d.path).includes('#covtestOver') && d.k === 'covers:tabbar');
+    const neg = d7.filter((d) => String(d.path).includes('#covtestReal') && d.k === 'covers:hud');
+    const okA = pos.length > 0 && pos.every((d) => d.axis === '이미 가려짐');
+    const okB = neg.length > 0 && neg.every((d) => d.axis !== '이미 가려짐');
+    console.log(`  [covtest] ⓐ 이미 가려진 탭바 위 상자 → «이미 가려짐» ${okA ? 'OK' : 'FAIL'} (${pos.length}건`
+      + (pos.length ? ` · ${pos.map((d) => d.axis + ' ' + d.navVis).join(', ')}` : '') + ')');
+    console.log(`  [covtest] ⓑ 멀쩡히 보이던 HUD 위 상자 → 이름표 **아님** ${okB ? 'OK' : 'FAIL'} (${neg.length}건`
+      + (neg.length ? ` · ${neg.map((d) => d.axis + ' ' + d.navVis).join(', ')}` : '') + ')');
+    if (!(okA && okB)) { console.log('  [covtest] ⚠ 되돌림 시험 실패 — 이름표가 죽었거나 전부를 삼킨다'); process.exit(1); }
+    console.log('  [covtest] PASS');
   }
   if (CTATEST) {
     /* 심은 상자가 **CTA 축으로** 나와야 시험이 성립한다 — 탭바·HUD·배너로만 나오면 그것은
