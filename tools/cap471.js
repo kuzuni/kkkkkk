@@ -59,7 +59,13 @@ const STEPS = [
         r = h.getBoundingClientRect();
       }
       if (!r.width || r.bottom < 0 || r.top > innerHeight) return null;
-      return { x: r.left, y: r.top, w: r.width, h: r.height };
+      /* ⚑ 4회차 비평(BV) — «03 메뉴 버튼 닷만 바깥지름 45.6 = 선언 40 의 1.14배, 맥박 잔재 의심».
+         눈으로만 재던 값을 **시트 자신이 텍스트로 같이 뱉게** 한다(자를 자로 검산 — 385 처방).
+         맥박 봉우리면 여기 40 이 아니라 45.6 이 찍힌다. */
+      const d0 = h.querySelector('.updot,.bdg,s.dot,.dot');
+      const dr = d0 ? d0.getBoundingClientRect() : null;
+      return { x: r.left, y: r.top, w: r.width, h: r.height,
+        dw: dr && dr.width ? Math.round(dr.width * 100) / 100 : null };
     }, hostSel);
     if (!box) { console.log('  (건너뜀) ' + label + ' — 상자 없음'); return; }
     /* ⚑ 2회차 비평(BP) 이 드러낸 **이 자의 결함** — 1·2회차 시트는 칸마다 «호스트 전체 + 여백» 을 잘라
@@ -85,7 +91,8 @@ const STEPS = [
     shots.push({ label, note, b64: buf.toString('base64'), w: clip.width, h: clip.height,
       fx: (cxr - clip.x) / clip.width, fy: (cyr - clip.y) / clip.height });
     console.log('  ' + label.padEnd(28) + Math.round(box.w) + '×' + Math.round(box.h)
-      + ' @ (' + Math.round(box.x) + ',' + Math.round(box.y) + ')' + (note ? '  ' + note : ''));
+      + ' @ (' + Math.round(box.x) + ',' + Math.round(box.y) + ')'
+      + '  닷Ø' + (box.dw === null ? '—' : box.dw) + (note ? '  ' + note : ''));
   };
 
   const ev = f => page.evaluate(f).catch(() => {});
