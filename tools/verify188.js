@@ -138,14 +138,20 @@ const RAWNUM = /\d,\d/;
     await sleep(200);
     out.eqA = t('.eqst.a i'); out.eqB = t('.eqst.b i');
 
-    /* 23 훈련 카드 — 증가분(+N) · 상세 효과값.
-       증가분은 «레벨당 K × 구매 수량» 이라 x1 에서는 세 자리(+20)다 — 두 표기층이 같은 글자를 내는
-       구간이므로 **체력 카드 x30(= 레벨당 100 × 30 = +3000)** 으로 «접히는지» 를 실제로 가른다
-       (150 규약이면 «+3,000»). 공격력은 레벨당 20 이라 x30 에서도 +600 = 세 자리다. */
+    /* 23 훈련 카드 — 상세 효과값 · 카드 알약.
+       ⚠ **486 이관(2026-08-30)** — 알약(`.cv`)은 더 이상 «증가분(+N)» 이 아니라 **지금 최종값**이다
+       (주인 지시 «최종값이 몇인지 각각 써있어야함»). 그래서 이 자리의 «+» 접두 기대는 폐기다.
+       ⛔ 그렇다고 항을 지우지는 않았다 — 188 이 여기서 묻던 것은 «훈련 카드가 전투 수치 표기층을
+          타는가» 이고 그 물음은 그대로 살아 있다. 그래서 **두 칸으로 갈랐다**:
+            · `trGain` = 알약 = 최종값 → 알파벳 단위, «+» 없음
+            · `trDelta` = 58 «+n» 플로터(`trDeltaTxt`) = 증가분이 옮겨 간 자리 → «+» + 알파벳 단위
+          «접히는지» 를 가르는 표본 성격은 **체력 카드 x30**(레벨 900 · 최종값 9만대) 그대로다. */
     S.buyQty = 30;
     renderTrain();
     await sleep(150);
     out.trGain = t('#trCards [data-tr="hp"] .cv i');
+    out.trNow  = fmtB(stat.maxHp);
+    out.trDelta = trDeltaTxt(document.querySelector('#trCards [data-tr="hp"]'));
     out.trShow = U.atk.show(lv('atk'));
     out.trHp   = U.hp.show(lv('hp'));
 
@@ -197,7 +203,12 @@ const RAWNUM = /\d,\d/;
   eq('③ 전투 데미지 1.234e7 (옛 규약이면 «12,340,000»)', run.dmg, '12.3B');
   yes('③ 06 장비 공격력 알약 «' + run.eqA + '»', UNIT.test(run.eqA));
   yes('③ 06 장비 체력 알약 «' + run.eqB + '»', UNIT.test(run.eqB));
-  yes('③ 23 훈련 체력 카드 증가분(x30) «' + run.trGain + '»', /^\+\d{1,3}(\.\d+)?[A-Z]{1,2}$/.test(run.trGain));
+  /* 486 이관 — 알약은 «지금 최종값»(«+» 없음) · 증가분은 58 플로터로 옮겨 갔다 */
+  yes('③ 23 훈련 체력 카드 최종값 «' + run.trGain + '» 알파벳 단위(486 — «+» 접두 없음)',
+    UNIT.test(run.trGain) && !/^\+/.test(run.trGain));
+  eq('③ 23 훈련 체력 카드 알약 = fmtB(stat.maxHp) (486)', run.trGain, run.trNow);
+  yes('③ 23 훈련 증가분(58 플로터, x30) «' + run.trDelta + '»',
+    /^\+\d{1,3}(\.\d+)?[A-Z]{1,2}$/.test(run.trDelta));
   yes('③ 23 훈련 «피해 N» «' + run.trShow + '»', UNIT.test(run.trShow.replace('피해 ', '')));
   yes('③ 23 훈련 «최대 체력» «' + run.trHp + '»', UNIT.test(run.trHp));
   yes('③ 25 정보 탭 공격력 «' + run.spcAtk + '»', UNIT.test(run.spcAtk || ''));
@@ -280,13 +291,17 @@ const RAWNUM = /\d,\d/;
     const t = sel => ((document.querySelector(sel) || {}).textContent || '').trim();
     const o = {};
 
-    /* F1 — 23 훈련 [강화]: 골드가 줄고 전투력이 오른다. 비용은 골드(fmtG), 증가분은 전투 수치(fmtB) */
+    /* F1 — 23 훈련 [강화]: 골드가 줄고 전투력이 오른다. 비용은 골드(fmtG), 카드 값은 전투 수치(fmtB).
+       486 이관 — 알약은 «최종값»(«+» 없음)이고 증가분은 58 플로터로 옮겨 갔다. 둘 다 본다. */
     S.trainStage = 12; S.buyQty = 30; S.gold = 4.2e25; renderTrain(); await sleep(120);
     o.f1cost0 = t('#trCards [data-tr="hp"] .cb i'); o.f1gain0 = t('#trCards [data-tr="hp"] .cv i');
     const cp0 = cp();
+    o.f1delta = trDeltaTxt(document.querySelector('#trCards [data-tr="hp"]'));
     trainBuy('hp');
     renderTrain(); drawHud(); await sleep(120);
     o.f1cp = cp() > cp0; o.f1cost = t('#trCards [data-tr="hp"] .cb i'); o.f1gain = t('#trCards [data-tr="hp"] .cv i');
+    o.f1now = fmtB(stat.maxHp);
+    o.f1moved = o.f1gain !== o.f1gain0;
 
     /* F2 — 06 장비 [장착]: 능력치 알약이 새 값으로 다시 그려진다 */
     goTab('hero'); heroTab = 'eq'; renderEqPage(); await sleep(150);
@@ -308,8 +323,12 @@ const RAWNUM = /\d,\d/;
   });
   yes('⑤ [F1] 23 훈련 [강화] — 전투력 상승', fn.f1cp === true);
   yes('⑤ [F1] 훈련 비용 «' + fn.f1cost + '» 골드(알파벳)', UNIT.test(fn.f1cost || ''));
-  yes('⑤ [F1] 훈련 증가분 «' + fn.f1gain + '» 전투 수치(알파벳)',
-    /^\+\d{1,3}(\.\d+)?[A-Z]{1,2}$/.test(fn.f1gain || ''));
+  /* 486 이관 — 산 뒤에도 «최종값 + 알파벳 단위» 가 유지되고, 그 값이 실제로 움직인다 */
+  yes('⑤ [F1] 훈련 카드 최종값 «' + fn.f1gain0 + '» → «' + fn.f1gain + '» 갱신 + 알파벳(486)',
+    fn.f1moved === true && UNIT.test(fn.f1gain || '') && !/^\+/.test(fn.f1gain || ''));
+  eq('⑤ [F1] 훈련 카드 알약 = fmtB(stat.maxHp) (486)', fn.f1gain, fn.f1now);
+  yes('⑤ [F1] 훈련 증가분(58 플로터) «' + fn.f1delta + '» 전투 수치(알파벳)',
+    /^\+\d{1,3}(\.\d+)?[A-Z]{1,2}$/.test(fn.f1delta || ''));
   yes('⑤ [F2] 06 장비 능력치 알약 «' + fn.f2a0 + '» → «' + fn.f2a + '» 갱신 + 알파벳',
     fn.f2changed === true && UNIT.test(fn.f2a || ''));
   yes('⑤ [F3] 레이드 누적 피해 ' + Math.round(fn.f3dmg) + ' → HUD «' + fn.f3hp + '» 알파벳',

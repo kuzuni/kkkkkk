@@ -18488,7 +18488,13 @@ const TRAIN_STATS = ['atk', 'hp', 'regen'];
 const TRAIN_CAP_STEP = 100;                  /* 단계 n 을 돌파하는 데 필요한 «그 단계 몫» 의 계수(스탯당 100×n) */
 const TRAIN_BONUS = 0.10;                    /* 단계당 전 스탯 +10% */
 const TRAIN_QTYS = [1, 10, 30];              /* 구매 단위 x1 / x10 / x30 */
-const TRAIN_LABEL = { atk:'공격력', hp:'체력', regen:'체력 회복' };
+/* 486 (저장소 주인 지시 2026-08-30) — 카드 알약이 «증가분» 이 아니라 «지금 최종값» 을 말하게 되면서
+   체력 회복만 단위가 필요해졌다(공격력·체력은 그냥 크기지만 재생은 «초당» 이다). 값 옆이 아니라
+   **이름 줄**에 붙인다 — 알약(.cv)은 수만 담고, 단위는 라벨(.cn)이 상시로 말한다. */
+const TRAIN_LABEL = { atk:'공격력', hp:'체력', regen:'체력 회복/초' };
+/* 486 — 카드가 보여 줄 «지금 최종값». 전투가 실제로 쓰는 `stat.*` 를 그대로 읽는다(훈련·장비·펫·
+   축복·도감이 다 곱해진 값 — 주인이 보고 싶어 한 것이 이것이다. `U[k].val(lv)` 원값이 아니다). */
+const TRAIN_NOW = { atk:() => stat.dmg, hp:() => stat.maxHp, regen:() => stat.regen };
 const trainStage = () => Math.max(1, S.trainStage | 0);
 /* ---- 326 요구치 «증가식» (저장소 주인 지시 2026-08-28) ------------------------
    «훈련단계 계속 300 채워지면 올라가게 되있는데 600, 900 이런식으로 점점 늘어나는식으로.
@@ -31273,15 +31279,20 @@ $('eqTabs').addEventListener('click', e => {
    하단 탭 «훈련» 직행. 88 — 서브탭(훈련/스탯 훈련) 폐기, 훈련(골드) 단일 화면.
    ========================================================================== */
 /* 카드 3장의 표시값 — 골드/실수치 */
+/* 486 — `gain`(증가분)은 **화면에서는 사라졌지만 데이터에서는 남는다.** 58 «+n» 플로터가
+   «방금 얻은 양» 을 말해야 하기 때문이다(아래 trDeltaTxt). 지우면 플로터가 총량을 띄운다. */
 function trainCardData(){
   return TRAIN_STATS.map(k => {
     const u = U[k], l = lv(k), bi = trainBuyInfo(k);
     const gain = bi.n ? u.val(l + bi.n) - u.val(l) : 0;
     return { k, icon:u.icon, name:TRAIN_LABEL[k], lvTxt:'Lv. ' + fmt(l),
-      gain:'+' + fmtB(gain), cost:fmtG(bi.cost), coin:curIc('gold'),
+      now:fmtB(TRAIN_NOW[k]()), gain:'+' + fmtB(gain), cost:fmtG(bi.cost), coin:curIc('gold'),
       n:bi.n, ok:bi.ok, full:bi.full };
   });
 }
+/* 486 — 58 플로터 전용. 카드가 더는 증가분을 «글자로» 들고 있지 않으므로 여기서 다시 센다.
+   (한 줄짜리지만 계산은 위와 같은 식이라 `trainCardData()` 하나에서 꺼내 쓴다 — 두 벌로 적지 않는다) */
+const trainGainTxt = k => (trainCardData().find(c => c.k === k) || {}).gain || '';
 /* 리본·진행바·↑버튼 — 카드를 다시 그리지 않는 «가벼운» 갱신에서도 쓴다(작업 64 renderTrainLive) */
 function trSyncHead(){
   const stage = trainStage(), prog = trainProg(), max = trainMax(), ready = trainReady();
@@ -31335,7 +31346,7 @@ function renderTrainLive(){
     if(el.dataset.tr !== c.k) return renderTrain();
     const set = (sel, v) => { const n = el.querySelector(sel); if(n && n.textContent !== v) n.textContent = v; };
     set('.ch i', c.lvTxt);
-    set('.cv i', c.full ? 'MAX' : c.gain);
+    set('.cv i', c.full ? 'MAX' : c.now);          /* 486 — 증가분 → 지금 최종값 */
     set('.cb i', c.full ? '상한' : c.cost);
     el.classList.toggle('no', !c.ok);
     el.classList.toggle('full', !!c.full);
@@ -31362,7 +31373,7 @@ function renderTrain(){
     '<div class="tr-card' + (c.ok ? '' : ' no') + (c.full ? ' full' : '') + '" data-tr="' + c.k + '">'
     + '<span class="ch"><i>' + c.lvTxt + '</i></span>'
     + '<span class="ci">' + c.icon + '</span>'
-    + '<span class="cv"><i>' + (c.full ? 'MAX' : c.gain) + '</i></span>'
+    + '<span class="cv"><i>' + (c.full ? 'MAX' : c.now) + '</i></span>'   /* 486 — 지금 최종값 */
     + '<span class="cn"><i>' + c.name + '</i></span>'
     + '<span class="cb"><s>' + c.coin + '</s><i>' + (c.full ? '상한' : c.cost) + '</i></span>'
     + (c.ok ? '<em class="dot"></em>' : '') + '</div>').join('');
@@ -31753,10 +31764,16 @@ function trBuyOnce(key){
    낱말을 빼면 폭이 156.6 → ≈70 으로 내려가 카드 우측 빈 자리(x203~326)에 통째로 들어간다.
    ⛔ 값을 «+0.2»(증분)로 바꾸는 것은 23·24회차가 «거짓말» 로 못 박은 항목이라 안 한다 —
       플레이어가 방금 얻은 것은 0.2 가 아니라 2.2 다(19회차 `trainCardData()` 확인). */
+/* 486 — ⚠ **더는 `.cv` 를 읽지 못한다.** 그 알약은 이제 «지금 총량» 이라(주인 지시 2026-08-30),
+   그대로 띄우면 «방금 9.64G 를 얻었다» 는 거짓말이 된다 — 26회차가 «거짓말» 로 못 박은 바로 그 항목의
+   부호만 뒤집힌 꼴이다. 값은 `trainGainTxt()` 로 다시 세고, 상한(MAX)에서 안 띄우는 규칙은 그대로다.
+   ⚠ 이 함수는 **구매 «전»** 에 불린다(trHoldStart) — 그래서 `trainBuyInfo` 가 보는 것이
+   «이번에 살 양» 이고, 그것이 플레이어가 방금 얻는 양이다. */
 function trDeltaTxt(card){
-  const v = card && card.querySelector('.cv i'), n = card && card.querySelector('.cn i');
-  if(!v || !n || v.textContent === 'MAX') return '';
-  return v.textContent;
+  const key = card && card.dataset && card.dataset.tr;
+  if(!key || !U[key]) return '';
+  if(trainBuyInfo(key).full) return '';
+  return trainGainTxt(key);
 }
 /* 정지 사유와 무관하게 여기 한 곳으로 모인다 — 타이머 해제 + 반복분 연출 정산 */
 function trHoldStop(bad){
@@ -31778,10 +31795,13 @@ function trHoldTick(){
 }
 function trHoldStart(key, card){
   trHoldStop(false);
+  /* 486 — 문구는 **구매 «전»** 에 잡는다. 예전에는 `.cv` 가 재렌더 전이라 저절로 그랬는데,
+     이제 값을 계산해서 만들므로 순서를 명시한다(상한 직전 x30 이 7개만 사지는 자리에서 갈린다). */
+  const txt = trDeltaTxt(card);
   const ok = trBuyOnce(key);
   /* 58(다른 세션 변경분 유지) — 오버레이는 **재렌더 «전»** 에 쏜다. 뒤에 쏘면 렌더 비용만큼 연출이 늦는다.
      그 뒤 노드가 «바뀌었을 때만» fx-hit 를 새 노드에 다시 붙인다(renderTrainLive 는 노드를 유지하므로 보통 no-op). */
-  if(ok) fxUpOk(card, card, trDeltaTxt(card));
+  if(ok) fxUpOk(card, card, txt);
   renderTrainLive();
   if(!ok){                                                             /* 첫 누름부터 실패면 반복 없음 */
     const el = trCard(key) || card;
