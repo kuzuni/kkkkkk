@@ -243,7 +243,11 @@ const RUN_DUN = () => {
   {
     /* 지렛대 둘째 — «스테이지 시계는 보스가 서고 국면이 끝난 뒤에만 흐른다» 가드를 걷어낸 사본.
        상수(지렛대 첫째)를 그대로 두므로 «국면은 도는데 시계가 새는» 수리 전 상태를 정확히 재현한다. */
-    const GATE = "if(bossT > 0 && !promo && !bossIntro && (bossT < BOSS_SEC || enemies.some(e => e.tk === 'boss'))){";
+    /* ⚑ 475 이관(2026-08-30) — 같은 줄에 «격파 뒤 연출 창»(`!bossClear`) 항이 하나 더 붙었다.
+       475 는 보스가 죽는 프레임에 `bossT` 를 0 으로 떨구지 않고 시퀀스 동안 얼리므로, 그 항이 없으면
+       이긴 판이 연출 도중 시간 초과로 뒤집힌다. 457 이 재는 것(국면 동안 안 샌다)은 그대로다 —
+       사본은 두 항을 **같이** 걷어내 «수리 전» 상태를 만든다. */
+    const GATE = "if(bossT > 0 && !promo && !bossIntro && !bossClear && (bossT < BOSS_SEC || enemies.some(e => e.tk === 'boss'))){";
     if (src.indexOf(GATE) >= 0) {
       fs.writeFileSync(gatePath, src.replace(GATE, 'if(bossT > 0 && !promo){'));
       gateOk = true;

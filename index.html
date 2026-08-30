@@ -20448,7 +20448,12 @@ function killEnemy(e){
                    tint:e.tint || null };
   corpses.push(corpse);
   if(e.tk === 'boss'){
-    cam.shake = 12; bossT = 0; S.bossFarm = false;                       /* 28 — 클리어 → 자동 진행 재개 */
+    /* ⚑ 475 — `bossT = 0` 을 여기서 빼고 **시퀀스 끝**(`bossClearDone` → `spawnStage`)으로 옮겼다.
+       0 으로 떨구면 격파 연출 내내 ⏱ 가 «0.0» 으로 서 있어 이긴 판이 «시간 초과» 처럼 읽힌다 —
+       던전은 332 이후 남은 시간이 **격파 시점 값으로 얼어붙는데**(step 던전 분기) 스테이지만 달랐다.
+       시계가 계속 흐르지 않는 것은 아래 시계 블록의 `!bossClear` 항이 보장한다(그래서 연출 도중
+       «시간 초과 실패» 로 뒤집히는 경합도 같이 사라진다 — 332 가 던전에서 세운 그 성질). */
+    cam.shake = 12; S.bossFarm = false;                                  /* 28 — 클리어 → 자동 진행 재개 */
     /* 162 — **보스 격파 = 스테이지 클리어**. 여기서 바로 올리지 않고 예약만 한다(선언부 주석 참고).
        레이드 샌드백도 tk 'boss' 라서 `bossOn` 으로 «진짜 스테이지 보스» 만 걸러 낸다.
        ⚑ 475 — 예약을 세우는 자리가 **격파 프레임에서 시퀀스 끝으로** 옮겨졌다(`bossClearDone`).
@@ -21774,7 +21779,10 @@ function step(dt){
      격파가 아닌 경로로 사라진 판에서 시계가 영영 멈춰 `bossOn` 이 안 풀린다(= 다른 전투 입장이
      453 가드에 영원히 막힌다). `bossT < BOSS_SEC` 는 «이미 한 프레임 이상 흘렀다» 는 뜻이고
      새 상태가 아니다 — 시작값이 정확히 `BOSS_SEC` 라는 사실 하나에서 나온다. */
-  if(bossT > 0 && !promo && !bossIntro && (bossT < BOSS_SEC || enemies.some(e => e.tk === 'boss'))){   /* 승급전이 끼어들면 보스전 시계는 멈춘다(endPromo 가 스테이지를 다시 깐다) */
+  /* ⚑ 475 — `!bossClear` 는 «격파 뒤 연출 창» 이다. 보스가 죽은 프레임에 시계를 0 으로 떨구는 대신
+     시퀀스 동안 **얼려** 두므로(던전과 같은 그림) 그 창에서 시계가 계속 돌면 이긴 판이 연출 도중
+     `failBoss('시간 초과')` 로 뒤집힌다. 국면(`!bossIntro`)과 같은 자리·같은 이유의 한 항이다. */
+  if(bossT > 0 && !promo && !bossIntro && !bossClear && (bossT < BOSS_SEC || enemies.some(e => e.tk === 'boss'))){   /* 승급전이 끼어들면 보스전 시계는 멈춘다(endPromo 가 스테이지를 다시 깐다) */
     bossT -= dt;
     if(bossT <= 0){ bossT = 0; failBoss('시간 초과'); }
   }

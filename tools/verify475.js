@@ -237,13 +237,20 @@ const SETUP = `
     spawnStage();
     enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT;
     for (let i = 0; i < 600 && (!enemies.some((e) => e.tk === 'boss') || bossIntro); i++) step(1 / 60);
+    /* ⚠ 시계를 «반쯤 쓴» 상태로 만든다(0.5초). 시작값 그대로면 `bossT < BOSS_SEC` 가 거짓이라
+       시계 블록이 애초에 안 돌아, [D-h] 가 «이미 참인 것» 을 재게 된다(338 교훈). */
+    for (let i = 0; i < 30; i++) step(1 / 60);
     const b = enemies.find((e) => e.tk === 'boss');
     if (!b) return { err: '보스가 안 섰다' };
     /* 시전 직전까지 쿨을 몰아 둔다 — «안 흐른다» 를 재려면 흐르면 곧 터질 상태여야 한다 */
     for (const id of S.eqSkill) skillCd[id] = 0.05;
+    shots.length = 0; zones.length = 0; booms.length = 0;   /* 전투 중 나간 것은 세지 않는다 */
     const hp0 = player.hp;
     killEnemy(b);
     const cd0 = S.eqSkill.map((id) => skillCd[id]);
+    /* ⏱ 는 격파 프레임에 «0» 으로 떨어지지 않고 그 시점 값으로 언다(던전과 같은 그림) */
+    const tm0 = bossT;
+    let tmMin = bossT, tmMax = bossT;
     let shotsMax = 0, zonesMax = 0, boomsMax = 0, hpMin = hp0, mobs = 0;
     while (bossClear) {
       step(1 / 60);
@@ -255,9 +262,11 @@ const SETUP = `
       boomsMax = Math.max(boomsMax, booms.length);
       hpMin = Math.min(hpMin, player.hp);
       mobs = Math.max(mobs, spawnQ.length);
+      tmMin = Math.min(tmMin, bossT); tmMax = Math.max(tmMax, bossT);
     }
     const cd1 = S.eqSkill.map((id) => skillCd[id]);
-    return { cd0, cd1, shotsMax, zonesMax, boomsMax, hp0, hpMin, mobs };
+    return { cd0, cd1, shotsMax, zonesMax, boomsMax, hp0, hpMin, mobs,
+             tm0, tmMin, tmMax, tmEnd: bossT, fight: bossOn };
   }, [SETUP]);
   if (!blk('[D]', D)) {
     if (D.err) no('[D] ' + D.err);
@@ -268,6 +277,12 @@ const SETUP = `
       is('[D-d] 터진 운석 0(meteor)', D.boomsMax, 0);
       is('[D-e] 시퀀스 중 잡몹 큐 0', D.mobs, 0);
       is('[D-f] 시퀀스 중 플레이어 피해 0(잔존 투사체 포함)', D.hpMin, D.hp0);
+      /* ⏱ — 격파 프레임에 0 으로 떨어지면 이긴 판이 «시간 초과» 처럼 읽힌다(던전은 얼어붙는다) */
+      yes('[D-g] 격파 시점의 ⏱ 가 0 이 아니다(얼어붙는다)', D.tm0 > 0, D.tm0);
+      is('[D-h] 시퀀스 중 ⏱ 가 한 프레임도 안 줄었다(최솟값)', +D.tmMin.toFixed(4), +D.tm0.toFixed(4));
+      is('[D-i] 시퀀스 중 ⏱ 가 안 늘었다(최댓값)', +D.tmMax.toFixed(4), +D.tm0.toFixed(4));
+      is('[D-j] 후속 프레임에서 다음 판이 ⏱ 를 0 으로 되돌린다(spawnStage)', D.tmEnd, 0);
+      yes('[D-k] 후속 프레임에 보스전 깃발이 풀린다', !D.fight);
     }
   }
 
