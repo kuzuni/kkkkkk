@@ -67,22 +67,91 @@ function launchOpts(){
   /* ---------- [B] 라우팅: fxFly / fxPlus 레이어 선택 ---------- */
   console.log('[B] fxFly 레이어 라우팅');
   {
-    const r = await page.evaluate(async () => {
-      const cnt = (el) => ({ fly: el.querySelectorAll('.fx-fly').length, plus: el.querySelectorAll('.fx-plus').length });
-      const L = document.getElementById('fxl'), LC = document.getElementById('fxlc');
-      const b0 = cnt(L), c0 = cnt(LC);
-      fxFly({ x: 540, y: 1200, combat: true }, 'gold', 100);
-      const c1 = cnt(LC).fly - c0.fly;
-      fxFly({ x: 540, y: 1200 }, 'gold', 100);
-      const b1 = cnt(L).fly - b0.fly;
-      /* +n 은 첫 도착 때 뜬다 — 0.6초 기다렸다 양쪽 레이어의 plus 를 센다 */
-      await new Promise((res) => setTimeout(res, 700));
-      return { combatFly: c1, uiFly: b1, combatPlus: cnt(LC).plus - c0.plus, uiPlus: cnt(L).plus - b0.plus };
+    /* ⚑ 552 — 종전 [B] 는 층별 `.fx-plus` 의 **개수 델타**로 쟀고, 그래서 뜨고 지는 FAIL 이었다.
+       이 자는 배경 자동 전투가 도는 채로 재는데 전투 `+n` 의 수명은 840ms(`fxBye(el, 840)`)라,
+       **호출 직전 #fxlc 에 남아 있던 «남의» +n** 이 700ms 창 안에 사라지면
+       내 +n 이 제 층에 정확히 들어와도 «들어온 1 − 나간 1 = 0» 으로 빨개진다.
+       `probe552` 가 이것을 찍었다 — 배경 그대로면 10회 중 **8회 델타 0** 인데
+       내 combat +n 은 **10/10 이 #fxlc 에** 붙었고(중앙 270ms) #fxl 로는 **0회** 샜다.
+       ⇒ 제품은 옳다. 542 처방 그대로 **씬을 격리하고**([E] 의 `killEnemy` 선례)
+       **금액으로 내 묶음을 고른다**(두 묶음에 다른 금액을 준다).
+       판정이 «개수» 에서 «어느 층에 붙었나» 로 바뀌면서 **음성항 2개**(반대 층에 안 붙었다)와
+       **전제 2개**(금액이 실제로 갈린다 · 격리 창에 남의 +n 0건)가 같이 선다 —
+       허용 오차를 넓힌 것이 아니라 **자를 좁힌 것**이다(아래 [B-R] 되돌림 시험이 못박는다). */
+    await page.evaluate(() => {
+      /* 페이지 안에 측정 한 벌을 심는다 — [B] 본체와 [B-R] 되돌림 시험이 **같은 자**를 쓴다. */
+      window.__b552 = async () => {
+        const realKill = killEnemy; killEnemy = () => {};      /* 배경 전투 획득 차단([E] 선례) */
+        try {
+          await new Promise((res) => setTimeout(res, 1000));   /* 앞 비행이 착지할 때까지 */
+          const L = document.getElementById('fxl'), LC = document.getElementById('fxlc');
+          const log = [];
+          const watch = (id, el) => {
+            const o = new MutationObserver((ms) => {
+              for (const m of ms) for (const n of m.addedNodes) {
+                if (!n.classList) continue;
+                if (n.classList.contains('fx-plus')) log.push({ lay: id, kind: 'plus', txt: n.textContent });
+                else if (n.classList.contains('fx-fly')) log.push({ lay: id, kind: 'fly' });
+              }
+            });
+            o.observe(el, { childList: true });
+            return o;
+          };
+          const oL = watch('fxl', L), oLC = watch('fxlc', LC);
+          const cN = 1010, uN = 2020;                          /* 두 묶음을 금액으로 가른다 */
+          const cTxt = '+' + fmtCur('gold', cN), uTxt = '+' + fmtCur('gold', uN);
+          fxFly({ x: 540, y: 1200, combat: true }, 'gold', cN);
+          fxFly({ x: 540, y: 1200 }, 'gold', uN);
+          /* +n 은 그 묶음의 «첫 도착» 때 뜬다 — probe552 실측 218~299ms 라 700ms 면 4배 여유다.
+             ⚠ 창을 늘려도 안 되고(전투 +n 수명 840ms) 줄여도 안 된다(첫 도착 300ms). */
+          await new Promise((res) => setTimeout(res, 700));
+          oL.disconnect(); oLC.disconnect();
+          const lays = (kind, txt) => log
+            .filter((e) => e.kind === kind && (txt === undefined || e.txt === txt))
+            .map((e) => e.lay);
+          return {
+            cTxt, uTxt, distinct: cTxt !== uTxt,
+            flyLC: lays('fly').filter((l) => l === 'fxlc').length,
+            flyL: lays('fly').filter((l) => l === 'fxl').length,
+            cPlus: lays('plus', cTxt), uPlus: lays('plus', uTxt),
+            foreign: log.filter((e) => e.kind === 'plus' && e.txt !== cTxt && e.txt !== uTxt).length,
+          };
+        } finally { killEnemy = realKill; }
+      };
     });
-    if (r.combatFly > 0) ok(`combat 출발 → #fxlc (${r.combatFly}개)`); else fail('combat 출발인데 #fxlc 에 fly 가 없다');
-    if (r.uiFly > 0) ok(`UI 출발 → #fxl (${r.uiFly}개)`); else fail('UI 출발인데 #fxl 에 fly 가 없다');
-    if (r.combatPlus > 0) ok('combat +n → #fxlc'); else fail('combat 묶음의 +n 이 #fxlc 에 없다');
-    if (r.uiPlus > 0) ok('UI +n → #fxl'); else fail('UI 묶음의 +n 이 #fxl 에 없다');
+    const r = await page.evaluate(() => window.__b552());
+    /* [전제] — 이 둘이 깨지면 아래 판정은 «헛초록» 이다(130·341 규약: 전제를 본체와 가른다) */
+    if (r.distinct) ok(`[전제] 두 묶음이 금액으로 갈린다 (combat «${r.cTxt}» ↔ UI «${r.uTxt}»)`);
+    else fail(`[전제] 두 묶음의 +n 글자가 같다(«${r.cTxt}») — 금액으로 못 고른다`);
+    if (r.foreign === 0) ok('[전제] 격리 창에 «남의» +n 0건');
+    else fail(`[전제] 격리했는데 «남의» +n 이 ${r.foreign}건 — 씬이 안 격리됐다`);
+    if (r.flyLC > 0) ok(`combat 출발 → #fxlc (${r.flyLC}개)`); else fail('combat 출발인데 #fxlc 에 fly 가 없다');
+    if (r.flyL > 0) ok(`UI 출발 → #fxl (${r.flyL}개)`); else fail('UI 출발인데 #fxl 에 fly 가 없다');
+    if (r.cPlus.includes('fxlc')) ok('combat +n → #fxlc'); else fail('combat 묶음의 +n 이 #fxlc 에 없다');
+    if (!r.cPlus.includes('fxl')) ok('combat +n 이 #fxl(팝업 위)로 안 샌다'); else fail('combat 묶음의 +n 이 #fxl 로 샜다');
+    if (r.uPlus.includes('fxl')) ok('UI +n → #fxl'); else fail('UI 묶음의 +n 이 #fxl 에 없다');
+    if (!r.uPlus.includes('fxlc')) ok('UI +n 이 #fxlc 로 안 샌다'); else fail('UI 묶음의 +n 이 #fxlc 로 샜다');
+  }
+
+  /* ---------- [B-R] 되돌림 시험: 새 자가 «층이 갈리는 것» 을 실제로 잡는가 ---------- */
+  /* ⚑ 552 — 무르게 풀어 닫은 게 아님을 여기서 못박는다. 제품의 `fxPlus` 가 `combat` 을 잃으면
+     ([E] 가 `killEnemy` 를 바꿔 끼우는 것과 같은 방식으로 **사본만** 갈아 끼운다)
+     [B] 의 combat 항 두 개가 반드시 빨개져야 한다 — 안 빨개지면 그 항은 뜻이 없다. */
+  console.log('[B-R] 되돌림 시험 — fxPlus 가 combat 을 잃으면 [B] 가 잡는가');
+  {
+    const r = await page.evaluate(async () => {
+      const orig = fxPlus;
+      fxPlus = (cur, n, combat, at) => orig(cur, n, false, at);   /* «층이 안 따라가는» 사본 */
+      try { return await window.__b552(); }
+      finally { fxPlus = orig; }
+    });
+    const caught = r.cPlus.includes('fxl') && !r.cPlus.includes('fxlc');
+    if (caught) ok('사본에서 combat +n 이 #fxl 로 새고 #fxlc 에는 없다 — [B] 가 빨개진다');
+    else fail(`되돌림 시험이 안 잡힌다 — 사본에서도 combat +n 이 [${r.cPlus.join(',') || '없음'}] (자가 헛돈다)`);
+    /* 사본을 되돌린 뒤 다시 초록인지 — 되돌림 시험 자체가 상태를 더럽히지 않았는가 */
+    const back = await page.evaluate(() => window.__b552());
+    if (back.cPlus.includes('fxlc') && !back.cPlus.includes('fxl')) ok('원복 후 다시 #fxlc (시험이 상태를 안 더럽혔다)');
+    else fail(`원복했는데 combat +n 이 [${back.cPlus.join(',') || '없음'}]`);
   }
 
   /* ---------- [C] 스태킹: 오버레이가 #fxlc 를 덮고 #fxl 은 못 덮는가 ---------- */
