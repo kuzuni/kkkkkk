@@ -6535,6 +6535,15 @@
     font-size:50px;line-height:50px;white-space:nowrap;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:scaleX(1.09)}
   .pvc>.bt.on{background:#1C8D5E;cursor:default}
+  /* 477 — «다이아 대체가» 는 그 카드의 값이라 카드에 붙는다(하단 한 줄에 3종을 다 이어 붙였더니
+     폭 1278 로 858 상자를 419px 넘어 프레임 밖에서 잘렸다 — `probe477`).
+     자리는 가격 버튼 바로 위 같은 폭(우 72 · 폭 308)이다. 세로는 bottom 기준이라
+     불릿형(690)·배너형(534) 둘 다 같은 식으로 앉는다: 버튼 상변(bottom−132) 위 13px.
+     ⚠ 151 이 «버튼 **안** 두 줄» 을 시도했다가 원화 글자와 겹치고 검정 테를 뚫었다 — 버튼 밖이다. */
+  .pvc>.pvd{right:72px;bottom:145px;width:308px;text-align:center;color:#FFE9A8;
+    font-size:30px;line-height:34px;white-space:nowrap;
+    -webkit-text-stroke:6px #000;paint-order:stroke fill}
+  .pvc>.pvd>.cic{width:32px;height:32px;vertical-align:-5px}
   /* 보유 중 카드 — 몸통을 한 단 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
   .pvc.own>.bg,.pvc.own>.hdb{filter:brightness(.72) saturate(.8)}
   /* 안내문 — 카드 아래 2줄(효과 설명). 배너·패널을 새로 만들지 않고 텍스트만 둔다 */
@@ -28547,7 +28556,9 @@ function renderPassPage(list){
       +  rib('rb2', '구매 즉시 보석 지급', p.once, RB.w2, RB.g2)
       +  (own
           ? '<div class="bt on"><i>이용 중</i></div>'
-          : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
+          /* 477 — 이 카드의 다이아 대체가. 버튼 «밖» 바로 위(151 이 버튼 안 두 줄로 겹쳤던 자리) */
+          : '<div class="pvd">대체 ' + curIc('dia') + ' ' + fmt(p.dia) + '</div>'
+            + '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
       +  '<div class="fr"></div></div>';
   });
   /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
@@ -28563,8 +28574,11 @@ function renderPassPage(list){
   }
   /* 44·151 — 결제 SDK 가 없어 «원화 표기 · 다이아 대체 결제» 다. 그 사실을 화면에도 적는다
      (버튼 안에 두 줄로 넣었더니 원화 글자와 겹치고 검정 테를 뚫었다 — 비평 1회차 ①). */
+  /* 477 — 여기는 **총론 한 줄**만이다. 이용권 3종의 이름·아이콘·금액을 다 이어 붙였더니
+     한 줄 폭이 1278 로 858 상자를 419px 넘어 프레임(1080) 밖에서 잘렸다(`probe477` 재현).
+     각 카드의 대체가는 그 카드의 `.pvd`(가격 버튼 위)로 갔다 — 이용권이 늘어도 이 줄은 안 늘어난다. */
   h += '<div class="pv-bt" style="top:' + (barY + 66) + 'px">결제 미연동 — 구매 시 '
-    + PASS_ITEMS.map(q => q.n + ' ' + curIc('dia') + ' ' + fmt(q.dia)).join(' · ') + ' 로 대체 결제됩니다</div>';
+    + curIc('dia') + ' 다이아로 대체 결제됩니다</div>';
   h += '</div>';
   list.innerHTML = h;
 }
