@@ -197,6 +197,14 @@ const openRel = async (page) => {
       okBtn: !!document.getElementById('okBtn'),
       skd: !!box.querySelector('.skd'), act: !!box.querySelector('.sk-act'),
       overflow: w ? Math.round((w.getBoundingClientRect().bottom - box.getBoundingClientRect().bottom) * 10) / 10 : 0,
+      /* 가로도 같이 본다 — 문단이 길어지면 잉크가 래퍼 밖으로 삐져나올 수 있다.
+         `.mbody` 좌우 여백 21px 은 A5 공용이라 못 건드리므로(269 와 **같은 값**),
+         지킬 수 있는 것은 «문단 잉크가 래퍼 안에 든다» 뿐이다. 잰 것은 Range 의 줄 상자다. */
+      sideMin: w ? (() => { let m = 1e9; const wb = w.getBoundingClientRect();
+        for (const p of w.querySelectorAll('p')) { const r = document.createRange(); r.selectNodeContents(p);
+          for (const q of r.getClientRects()) m = Math.min(m, q.left - wb.left, wb.right - q.right); }
+        return Math.round(m * 10) / 10; })() : 0,
+      bodyPad: getComputedStyle(box.closest('.mbody') || box).padding,
       /* 제품 상수 — 문구가 여기서 나와야 한다 */
       cost: fmt(relicCost()), kinds: RELICS.length,
       effs: Object.values(RELIC_EFF), dun: REL_DUN.map((r) => r.n), tower: TOWER.n };
@@ -221,6 +229,8 @@ const openRel = async (page) => {
     ok(!/층|레벨/.test(all), 'C13 탑을 «층»/«레벨» 로 안 부른다(427 이 그 낱말을 정하는 중이다)');
   }
   ok(C.overflow <= 0, 'C14 본문이 `.mbox` 를 안 넘친다', 'Δ' + C.overflow + 'px');
+  ok(C.sideMin >= 0, 'C14b 문단 잉크가 래퍼 좌우를 안 넘는다(가장 빠듯한 줄 ' + C.sideMin + 'px)',
+    '`.mbody` 좌우 여백 ' + C.bodyPad + ' 은 A5 공용 — 269 와 같은 값이라 못 건드린다');
   await page.click('#okBtn', { force: true });
   await page.waitForTimeout(350);
   ok(await page.evaluate(() => !document.getElementById('modal').classList.contains('on')),
