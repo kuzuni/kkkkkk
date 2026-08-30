@@ -57,6 +57,25 @@ const ROWS = [
   { rel: 74, min: 4, sum: 12 },
 ];
 
+/* ⚑ 438 이관 (2026-08-30) — **가로 행은 45° 언저리에서 멈춘다.**
+   알약 반경 30 · 높이 85 라 좌하 코너 원 중심은 rel 55 이고, 법선 각 α 의 바깥 점은
+   rel = 55 + 30·sin α 다:  30° → 70.0 · 45° → 76.2 · 60° → 81.0 · 75° → 84.0.
+   위 ROWS 는 rel 68·74 뿐이라 **60° 아래를 한 번도 안 본다.**
+   `tools/probe438.js` 가 그 자리를 가로 행으로 재 보고 «행으로는 못 본다» 를 값으로 못박았다
+   (03 던전 좌): rel 76 은 수리 후 D 6px ↔ 수리 전 5px 로 **1px** 차이뿐이고,
+   rel 78 부터는 행이 호 밖으로 나가 D 가 양쪽 다 0 이다.
+   ⇒ 이 자리는 **행이 아니라 법선(각도)** 으로만 물을 수 있다.
+   ⚑ **438 이 실제로 그 구멍에서 났다** — 수리 전 트리(`V384_SRC=.v438-pre.html`)에 이 자를
+   돌리면 [2]·[2b]·[5] 가 **전부 초록**이다(95/96, 유일한 빨강은 409 가 4회차에 넣은 «선언» 항).
+   이 파일 서두가 «선언만 물면 «있는데 안 보인다» 를 놓친다» 라고 적어 둔 바로 그 함정이라
+   여기서 닫는다.
+   ⚑ **자리의 소유는 384 다.** 지금 같은 값을 `verify409` [10] 이 «어두운 띠(384) 축» 이라는
+   이름으로 **빌려** 들고 있다 — 409 의 주제는 검정 등폭 링이므로, 그 축이 나중에 다시
+   범위를 잡으면 384 의 성질은 아무도 안 보게 된다. 그래서 owner 사본을 여기 세운다. */
+const DEEP_DEGS = [60, 75];
+const MIN_DEEP = 4.0;   /* 수리 후 6.0 ↔ 수리 전 0.0~2.5 사이에 그은 선 (409 [10] 과 같은 값) */
+const R = 30;           /* 알약 코너 반경 */
+
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
   ['06 장비', '#eqTabs', () => heroSubGo('eq')],
@@ -185,6 +204,58 @@ function wrapAt(rs) {
   return { band: rs[i - 1], dark: rs[i].n, next: rs[i + 1] || null, txt: fmt(rs) };
 }
 
+/* ── 438 — 코너 원 중심에서 **법선**으로 쏘는 광선. 기하는 `verify409` 의 `ray` 와 같게 둔다
+      (두 자가 다른 기하로 같은 자리를 말하면 값을 견줄 수 없다).
+      d = 0 이 윤곽이고 안쪽으로 `inn` px 까지 읽는다 — **바깥은 안 읽는다**: 셸에 닿는 면은
+      바로 밖이 셸 검정 6px 이라 밖을 읽으면 378 이 넘긴 면까지 «검정이 있다» 로 읽힌다. */
+const ray = (page, p, corner, deg, inn = 20, step = 0.5) => page.evaluate(([box, cor, dg, i2, st, pal, r]) => {
+  const g = window.__v384;
+  const a = dg * Math.PI / 180;
+  const bottom = cor[0] === 'B', right = cor[1] === 'R';
+  const cx = box.x + (right ? box.w - r : r);
+  const cy = box.y + (bottom ? box.h - r : r);
+  const ux = (right ? 1 : -1) * Math.cos(a);
+  const uy = (bottom ? 1 : -1) * Math.sin(a);
+  const near = (R2, G2, B2) => {
+    let best = '?', bd = Infinity;
+    for (const [ch, hex] of pal) {
+      const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+      const d2 = (R2 - rr) ** 2 + (G2 - gg) ** 2 + (B2 - bb) ** 2;
+      if (d2 < bd) { bd = d2; best = ch; }
+    }
+    return best;
+  };
+  let s = '';
+  for (let d = 0; d <= i2 + 1e-9; d += st) {
+    const px = Math.round(cx + ux * (r - d)), py = Math.round(cy + uy * (r - d));
+    const q = g.getImageData(px, py, 1, 1).data;
+    s += near(q[0], q[1], q[2]);
+  }
+  return s;
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, corner, deg, inn, step, PAL, R]);
+
+/* 광선 위에서 «검정 옆띠 **다음**에 오는 어두운 띠» 의 법선 두께.
+   ⚠ 검정을 먼저 만나야 한다(k ≤ 6) — 알약 밖에서 시작한 광선이 아님을 그것이 보증한다.
+   ⚠ D 가 아닌 두꺼운 런이 먼저 나오면 **0** 이다: 438 이 잡힌 자리가 정확히 그 모양이었다
+     (03 던전 좌하 75° 가 `B8.0` — 어두운 띠 자리에 베벨이 나왔다). */
+function deepDark(s, step = 0.5) {
+  const rs = [];
+  for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], j - i]); i = j; }
+  const k = rs.findIndex(r => r[0] === 'K');
+  if (k < 0 || k > 6) return 0;
+  for (let i = k + 1; i < rs.length; i++) {
+    if (rs[i][0] === 'D' && rs[i][1] * step >= 2.0) return rs[i][1] * step;
+    if (rs[i][1] * step >= 2.0) return 0;
+  }
+  return 0;
+}
+const deepLine = a => DEEP_DEGS.map((d, i) => d + '°:' + a[i].toFixed(1)).join(' ');
+async function deepRead(page, p, corner) {
+  const out = [];
+  for (const dg of DEEP_DEGS) out.push(deepDark(await ray(page, p, corner, dg)));
+  return out;
+}
+
 async function readCorner(page, p, rel, side, n = 30) {
   const y = Math.round(p.y + rel);
   const x0 = side === 'L' ? Math.round(p.x) - 2 : Math.round(p.x + p.w) + 1;
@@ -244,7 +315,7 @@ async function readCorner(page, p, rel, side, n = 30) {
     console.log('[3] 세로 한복판 — 거기엔 어두운 띠가 없다 (옆면 전체로 번지게 한 게 아니다)');
     console.log('[4] 위 코너 — 거기에도 없다 (아래쪽만 감긴다)');
     console.log('[5] 아래로 갈수록 두꺼워진다 — 수평 줄이 아니라 호(弧)다\n');
-    let samples = 0;
+    let samples = 0, deep = 0;
     for (const [name, sel, setup] of HOSTS) {
       try { await page.evaluate(setup); } catch (e) { ok(name + ' 진입', false, e.message.slice(0, 60)); continue; }
       await page.waitForTimeout(700);
@@ -277,8 +348,24 @@ async function readCorner(page, p, rel, side, n = 30) {
         ok('[4] ' + tag + ' rel 17(위 코너) — 어두운 띠 0px', top.dark === 0, top.txt);
         samples++;
       }
+      /* ---- 8. 438 — 깊은 코너(법선 60°·75°). 가로 행이 못 가는 자리다. ----
+         ⚠ **가운데 칸(동심 안쪽 윤곽 · r23)만 잰다.** 셸에 닿는 끝 칸은 그 면에 검정이 없어
+         (378) 옛 상자를 그대로 쓰고, 거기서는 띠가 수평 줄인 것이 **정답**이다 —
+         그 쪽은 `verify409` [E] 가 «옛 상자 그대로» 로 따로 문다. 여기서 두께를 요구하면
+         378 이 넘긴 면에 거짓 결함이 선다. */
+      if (/^23px/.test(p.radius || '')) {
+        for (const corner of ['BL', 'BR']) {
+          const dk = await deepRead(page, p, corner);
+          ok('[8] ' + name + ' ' + corner + ' — 깊은 코너 법선 어두운 띠 ≥ ' + MIN_DEEP.toFixed(1)
+            + 'px (rel 68·74 행이 못 보는 자리)', dk.every(v => v >= MIN_DEEP), deepLine(dk));
+          deep++;
+        }
+      }
     }
     ok('실제로 잰 면이 8 면 이상', samples >= 8, samples + '면');
+    /* [8] 이 «공허하지 않다» — 가운데 칸이 표본에 실제로 있었는가.
+       끝 칸만 남는 트리에서는 위 if 가 통째로 안 돌아 [8] 이 0 항으로 조용히 사라진다. */
+    ok('[8] 깊은 코너를 4 면 이상에서 쟀다 (가운데 칸이 표본에 있다)', deep >= 4, deep + '면');
 
     /* ---- R. 되돌림 시험 ---- */
     console.log('\n[R] 되돌림 시험 — 의사요소(::before)의 그림자를 끄면 코너의 어두운 띠가 0px 로 돌아간다');
@@ -311,6 +398,30 @@ async function readCorner(page, p, rel, side, n = 30) {
     await shoot(page);
     const back68 = wrapAt(await readCorner(page, p0, 68, 'L'));
     ok('R4 주입을 걷으면 다시 감긴다', back68.dark >= 3, 'D ' + back68.dark + 'px : ' + back68.txt);
+
+    /* R5·R6 (438) — **옛 «평행이동 상자» 를 도로 주입하면 깊은 코너가 무너진다.**
+       이게 없으면 [8] 은 «원래 그랬던 것을 게이트로 굳힌 것» 과 구분이 안 된다(338 교훈).
+       주입값은 지어낸 것이 아니라 **수리 전 트리의 실측 선언**이다 —
+       `probe438` 이 `.v438-pre.html` 에서 읽은 `::before 30px · left 7px · top 0px/0px`.
+       ⚠ 위 R2 의 `v384off` 와 달리 그림자를 끄지 않는다: 띠는 그대로 두고 **상자만** 되돌려야
+       «호를 따라가는가» 하나만 갈린다. */
+    const deepOn = await deepRead(page, p0, 'BL');
+    ok('R5 지금은 깊은 코너가 ≥ ' + MIN_DEEP.toFixed(1) + 'px', deepOn.every(v => v >= MIN_DEEP), deepLine(deepOn));
+    await page.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v384old';
+      s.textContent = '.stab.on::before{top:0!important;bottom:0!important;border-radius:30px!important}';
+      document.head.appendChild(s);
+    });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const deepOld = await deepRead(page, p0, 'BL');
+    ok('R6 옛 상자(세로 인셋 0 · r30)를 주입하면 깊은 코너가 ' + MIN_DEEP.toFixed(1) + 'px 아래로 무너진다',
+      deepOld.some(v => v < MIN_DEEP), '켬 ' + deepLine(deepOn) + '  ↔  끔 ' + deepLine(deepOld));
+    await page.evaluate(() => { const s = document.getElementById('v384old'); if (s) s.remove(); });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const deepBack = await deepRead(page, p0, 'BL');
+    ok('R7 주입을 걷으면 다시 ≥ ' + MIN_DEEP.toFixed(1) + 'px', deepBack.every(v => v >= MIN_DEEP), deepLine(deepBack));
 
     /* 클릭이 그대로 칸으로 간다 — 오버레이가 히트 테스트를 안 가로챈다 */
     console.log('\n[6] 조작 — 오버레이가 클릭을 안 가로챈다');
