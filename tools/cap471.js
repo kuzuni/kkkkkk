@@ -44,6 +44,12 @@ const STEPS = [
       const h = document.querySelector(s);
       if (!h) return null;
       h.getAnimations({ subtree: true }).forEach(a => { try { a.pause(); a.currentTime = (a.effect.getTiming().duration || 0); } catch (_) {} });
+      /* ⚑ 3회차 비평(BR) — 04·15 가 «세로 인셋비 0.82(기준의 1.9배)» 로 읽혔다. 제품 실측은 11px 이다.
+         뿌리는 **닷의 맥박 애니메이션을 «끝 프레임» 에 세운 것**이다(위 줄) — 무한 반복 키프레임의
+         100% 는 base 가 아니라 커진·밀린 상태라 시트의 점이 자 값과 다른 자리에 찍힌다.
+         `probe471` 은 같은 자리를 `animation:'none'`(= base)으로 잰다 ⇒ **두 자가 다른 것을 보고 있었다**
+         (385 «자매 자 드리프트»). 시트 쪽을 자에 맞춘다. */
+      h.querySelectorAll('.updot,.bdg,s.dot,.dot').forEach(d => { d.style.animation = 'none'; });
       let r = h.getBoundingClientRect();
       /* ⚑ 3회차 — 스크롤 그릇 밖으로 밀려난 자리(35 패스 보상 칸)는 «상자 없음» 으로 조용히 빠져
          **빈 칸이 채점에 실렸다**(1회차 비평이 빈 칸 셋을 «가장 나쁜 자리» 로 꼽았던 그 사고).
@@ -70,7 +76,14 @@ const STEPS = [
                    y: Math.max(0, Math.min(2280 - WIN, cyr - WIN * 0.38)),
                    width: WIN, height: WIN };
     const buf = await page.screenshot({ clip });
-    shots.push({ label, note, b64: buf.toString('base64'), w: clip.width, h: clip.height });
+    /* ⚑ 3회차 비평(BR)이 잡은 **이 자의 두 번째 결함** — 십자선을 «창의 0.62/0.38 자리» 에
+       고정으로 그리고 있었다. 창이 **화면 변에서 잘리면**(`Math.min(1080-WIN, …)`) 코너는
+       그 자리에 안 온다: `#menub`(우변 1036)·03 던전 카드(우변 1030)는 창이 x840 에 물려
+       코너가 창 안 196·190 에 오는데 십자선은 148.8 에 그려졌다 ⇒ 사람 눈에는 점이 코너에서
+       **67·57px 밖으로 떨어진 것**으로 보인다(BR 실측과 정확히 일치 — 제품은 둘 다 11px 이다).
+       ⇒ 십자선 자리를 **창 안의 실제 코너 좌표**로 같이 실어 보낸다. */
+    shots.push({ label, note, b64: buf.toString('base64'), w: clip.width, h: clip.height,
+      fx: (cxr - clip.x) / clip.width, fy: (cyr - clip.y) / clip.height });
     console.log('  ' + label.padEnd(28) + Math.round(box.w) + '×' + Math.round(box.h)
       + ' @ (' + Math.round(box.x) + ',' + Math.round(box.y) + ')' + (note ? '  ' + note : ''));
   };
@@ -184,7 +197,7 @@ const STEPS = [
     const imgs = await Promise.all(items.map(async it => {
       const im = new Image();
       await new Promise(r => { im.onload = r; im.src = 'data:image/png;base64,' + it.b64; });
-      return { im, label: it.label, note: it.note };
+      return { im, label: it.label, note: it.note, fx: it.fx, fy: it.fy };
     }));
     /* 모든 칸이 같은 창(240×240 제품px, dsf2 라 480×480)이라 **배율도 하나**다 */
     const COL = 4, CELL = 470, PADT = 54;
@@ -206,9 +219,12 @@ const STEPS = [
       /* 창 한복판에 호스트 코너가 오도록 잘랐다 — 십자선을 그려 «코너» 를 눈에 보이게 한다 */
       g.strokeStyle = 'rgba(120,200,255,.55)'; g.lineWidth = 1;
       const ox = cx + (CELL - w) / 2, oy = cy + PADT + (CELL - h) / 2;
+      /* ⚠ 0.62/0.38 고정이 아니라 **찍을 때 잰 실제 코너 자리**를 쓴다(창이 화면 변에 물리면
+         코너가 그 자리에 안 온다 — 3회차 비평 BR 이 이것을 «점이 67px 밖으로 떨어졌다» 로 봤다). */
+      const fx = (o.fx === undefined ? 0.62 : o.fx), fy = (o.fy === undefined ? 0.38 : o.fy);
       g.beginPath();
-      g.moveTo(ox + w * 0.62, oy); g.lineTo(ox + w * 0.62, oy + h);
-      g.moveTo(ox, oy + h * 0.38); g.lineTo(ox + w, oy + h * 0.38);
+      g.moveTo(ox + w * fx, oy); g.lineTo(ox + w * fx, oy + h);
+      g.moveTo(ox, oy + h * fy); g.lineTo(ox + w, oy + h * fy);
       g.stroke();
     });
     return c.toDataURL('image/png');
