@@ -17461,87 +17461,105 @@ SLOTS.forEach(s => EQ_NAMES[s.k].forEach((tier, g) =>
 /* ---- 펫(동료, 최대 3마리) ----
    작업 106(2026-08-26, 저장소 주인 지시) — «소환에 동료 소환도 넣고, 동료도 무기처럼 등급을 여러 개로.
    개수는 무기와 똑같이.» → 85 의 장비와 **같은 8등급 × (5,5,5,5,5,5,5,1) = 36종**(무기 부위당 종 수와 동일).
-   구조는 EQ_NAMES 와 같은 «등급 → 항목 배열». **구 9종(bird0·robo0…)은 id·이름·m·cd 를 한 글자도 안 바꿨다**
-   (구 세이브 `S.own`·`S.eqPet` 호환 + 기존 밸런스 불변). 신설 27종만 아래 곡선에서 파생한다.
-     · `m`(피해 계수) = `PET_M[g] × v` — `PET_M[g] = 0.45 × GRADE[g].mul^0.88`.
-       지수 0.88 은 «각 등급 최강 구 펫»(robo0 0.65 · robo1 0.95 · robo2 1.40 · drag1 2.20 · drag2 3.40)에
-       맞춘 값이다(예측 0.639·0.930·1.380·2.210·3.414 — 오차 ≤2%). 그대로 16·26 등급까지 잇는다.
-     · `cd`(공격 주기) = `PET_CD[g] = 1.30 × GRADE[g].mul^-0.20` — 구 펫 1.30·1.20·1.10·0.95·0.80 에 맞춘 지수.
-     · `v` = 같은 등급 안 개체차 배율(0.90~1.15, 85 의 EQ_NAMES.v 와 같은 역할). 구 9종은 v 를 쓰지 않는다.
-       ⚠ 펫에는 `slot` 이 없으므로 `eqv()` 가 v 를 곱하지 않는다 — v 는 **오직 m 파생용**이고 도감·보유 효과는 불변.
+   구조는 EQ_NAMES 와 같은 «등급 → 항목 배열». id·이름은 구 9종(bird0·robo0…)까지 한 글자도 안 바꿨다
+   (구 세이브 `S.own`·`S.eqPet` 호환).
+     · **작업 481(2026-08-30, 저장소 주인 지시) — 펫의 «수치» 축이 하나로 줄었다.**
+       주인 원문: «펫의 피해량이 플레이어 공격력 대로 되게 해줘 걍. 그리고 등급에 따라 공격주기만 좀 빨라지는식으로».
+       ⇒ **피해는 전 펫이 똑같이 `stat.dmg`**(아래 `petDmg`) 이고, 등급·개체차·강화 Lv 가 정하는 것은
+       **공격 주기 `cd` 하나뿐**이다. 106 이 세운 피해 계수 표 `PET_M`·항목 필드 `m` 은 **삭제했다**
+       (LESSONS 295-② — 죽은 축은 자리째 걷어낸다).
+     · `cd`(공격 주기) = `PET_CD[g] / v`.
+       `PET_CD[g] = 1.30 × (0.40/1.30)^(g/7)` — 일반 1.30초에서 불멸 0.40초까지 **등비**로 내려간다.
+       한 등급당 ×0.845 = **15.5% 빨라진다**(등재문이 요구한 «인접 등급 차 ≥ 8%» 를 두 배로 넘긴다).
+       ⚠ 구 곡선(`1.30 × mul^-0.20`)은 인접 차가 **7.7%** 뿐이라 «등급이 오를수록 빨라진다» 가 체감되지
+         않았고, 게다가 구 9종의 `cd` 오버라이드가 등급 경계를 **세 자리에서 뒤집어** 놓고 있었다
+         (`probe481` ⓔ — robo0 1.40 > bird0 1.30). 그래서 오버라이드도 같이 걷어냈다 —
+         이제 36종 전부 (등급, 자리) 에서 파생한다.
+     · `v` = 같은 등급 안 개체차 배율. **표가 아니라 자리에서 파생한다**: `1 + (j − (n−1)/2) × PET_V_STEP`
+       (5종 등급이면 0.94·0.97·1.00·1.03·1.06, 1종뿐인 불멸은 1.00). 402 의 교훈대로 «손으로 적는 목록» 을
+       두지 않는다 — 종이 늘어도 이 줄만 읽으면 된다.
+       ⚠ 폭(×1.128)은 **등급 한 칸(×0.845)보다 좁아야** 한다 — 안 그러면 «최강 일반이 최약 고급보다 빠른»
+         등급 경계 역전이 난다(0.94/1.06 = 0.887 > 0.845 이므로 성립). 게이트 `verify481` [B].
+       ⚠ 펫에는 `slot` 이 없으므로 `eqv()` 가 v 를 곱하지 않는다 — v 는 **오직 cd 파생용**이고 도감·보유 효과는 불변.
      · id 는 구 9종만 원래 이름을 유지하고 신설은 `pet<g>_<j>`(j = 등급 안 자리). 다른 계열 id 와 겹치지 않는다.
        **작업 260(2026-08-27)부터 신설 27종도 id 를 명시로 박는다** — 아래 재배치로 자리(j)가 바뀌어
        `pet<g>_<j>` 파생식이 더는 성립하지 않기 때문이다. 값은 그대로이므로 구 세이브는 안 깨진다.
-     · **작업 260 — 각 등급 배열을 «세기»(= `power(p,'pet')` = `m / cd`) 오름차순으로 재배치했다.**
-       m·cd·v·이름·tint 를 한 개도 안 바꾸고 **자리만** 옮겼으므로 106 의 «구 9종 m·cd 완전 보존» 도
-       그대로 산다(`verify106` A5). 재배치만으로 7개 등급 전부 단조 증가가 됐고, 등급 경계도
-       역전이 없다(g0 최대 0.388 < g1 최소 0.464 … g6 최대 7.71 < g7 11.64). 게이트 `tools/verify260.js`.
+     · **작업 260 — 각 등급 배열은 «세기» 오름차순이다.** 481 이후 그 세기는 `power(p,'pet')` = `1 / cd` 이고,
+       자리(j)가 곧 v 이므로 **배열 순서가 그대로 약→강**이 된다(자리를 안 옮겨도 규약이 저절로 성립한다).
+       485 의 `petEquipVal` 이 읽는 «티어» 도 같은 j 라 장착 효과 축과도 한 방향이다. 게이트 `tools/verify260.js`.
      · 아이콘은 항목별 이모지를 두지 않는다 — `itemIcon()` 이 `sp`(bird/robo/dragon)로 🐦/🤖/🐉 를 고른다.
        개체는 **스프라이트 3종 × tint** 로 구분한다(같은 등급 안에서 같은 스프라이트가 겹치면 tint 를 크게 벌렸다). */
-const PET_M  = [0.450, 0.643, 0.937, 1.389, 2.178, 3.414, 5.162, 7.914];   /* 0.45 × mul^0.88 (소수 3자리 반올림) */
-const PET_CD = [1.30,  1.20,  1.10,  1.01,  0.91,  0.82,  0.75,  0.68 ];   /* 1.30 × mul^-0.20 (소수 2자리 반올림) */
+const PET_CD_TOP = 1.30, PET_CD_END = 0.40;   /* 481 — 일반·불멸의 공격 주기(초). 그 사이는 등비 */
+const PET_CD = GRADE.map((_, g) =>
+  Math.round(PET_CD_TOP * Math.pow(PET_CD_END / PET_CD_TOP, g / (GRADE.length - 1)) * 100) / 100);
+const PET_V_STEP = 0.03;   /* 481 — 등급 안 자리 한 칸당 개체차. 폭(4칸 = ±0.06)은 등급 한 칸보다 좁다 */
 const PET_NAMES = [
   /* 0 일반 */
   [
-    { id:'pet0_1', n:'고물 드론', sp:'robo', tint:'#b9c2d0', v:0.92 },
-    { id:'pet0_4', n:'나무 인형', sp:'robo', tint:'#c39a6b', v:0.96 },
-    { id:'bird0', n:'꼬마 새', sp:'bird', tint:null, m:0.45, cd:1.30 },
-    { id:'pet0_2', n:'새끼 도마뱀', sp:'dragon', tint:'#9ad6a0', v:1.06 },
-    { id:'pet0_3', n:'참새 정찰병', sp:'bird', tint:'#d9c98a', v:1.12 } ],
+    { id:'pet0_1', n:'고물 드론', sp:'robo', tint:'#b9c2d0' },
+    { id:'pet0_4', n:'나무 인형', sp:'robo', tint:'#c39a6b' },
+    { id:'bird0', n:'꼬마 새', sp:'bird', tint:null },
+    { id:'pet0_2', n:'새끼 도마뱀', sp:'dragon', tint:'#9ad6a0' },
+    { id:'pet0_3', n:'참새 정찰병', sp:'bird', tint:'#d9c98a' } ],
   /* 1 고급 */
   [
-    { id:'robo0', n:'수호 로봇', sp:'robo', tint:null, m:0.65, cd:1.40 },
-    { id:'bird1', n:'화염 조', sp:'bird', tint:'#ff9d6a', m:0.60, cd:1.20 },
-    { id:'pet1_3', n:'청동 매', sp:'bird', tint:'#c98f4a', v:0.94 },
-    { id:'pet1_4', n:'순찰 드론', sp:'robo', tint:'#7fe0b0', v:1.05 },
-    { id:'pet1_2', n:'강철 익룡', sp:'dragon', tint:'#9fb4c9', v:1.10 } ],
+    { id:'robo0', n:'수호 로봇', sp:'robo', tint:null },
+    { id:'bird1', n:'화염 조', sp:'bird', tint:'#ff9d6a' },
+    { id:'pet1_3', n:'청동 매', sp:'bird', tint:'#c98f4a' },
+    { id:'pet1_4', n:'순찰 드론', sp:'robo', tint:'#7fe0b0' },
+    { id:'pet1_2', n:'강철 익룡', sp:'dragon', tint:'#9fb4c9' } ],
   /* 2 희귀 */
   [
-    { id:'bird2', n:'서리 조', sp:'bird', tint:'#8fd6ff', m:0.85, cd:1.10 },
-    { id:'pet2_3', n:'폭풍 매', sp:'bird', tint:'#c8b6ff', v:0.92 },
-    { id:'robo1', n:'전투 드론', sp:'robo', tint:'#8fd6ff', m:0.95, cd:1.20 },
-    { id:'pet2_4', n:'은빛 경비병', sp:'robo', tint:'#dfe6ef', v:1.08 },
-    { id:'pet2_2', n:'기사의 비룡', sp:'dragon', tint:'#7f9bff', v:1.12 } ],
+    { id:'bird2', n:'서리 조', sp:'bird', tint:'#8fd6ff' },
+    { id:'pet2_3', n:'폭풍 매', sp:'bird', tint:'#c8b6ff' },
+    { id:'robo1', n:'전투 드론', sp:'robo', tint:'#8fd6ff' },
+    { id:'pet2_4', n:'은빛 경비병', sp:'robo', tint:'#dfe6ef' },
+    { id:'pet2_2', n:'기사의 비룡', sp:'dragon', tint:'#7f9bff' } ],
   /* 3 영웅 */
   [
-    { id:'drag0', n:'아기 드래곤', sp:'dragon', tint:null, m:1.30, cd:1.10 },
-    { id:'pet3_3', n:'룬 비룡', sp:'dragon', tint:'#8f7bff', v:0.95 },
-    { id:'robo2', n:'파괴 병기', sp:'robo', tint:'#ff8f8f', m:1.40, cd:1.00 },
-    { id:'pet3_2', n:'룬 올빼미', sp:'bird', tint:'#b98cff', v:1.08 },
-    { id:'pet3_4', n:'마력 골렘', sp:'robo', tint:'#6fe0c8', v:1.12 } ],
+    { id:'drag0', n:'아기 드래곤', sp:'dragon', tint:null },
+    { id:'pet3_3', n:'룬 비룡', sp:'dragon', tint:'#8f7bff' },
+    { id:'robo2', n:'파괴 병기', sp:'robo', tint:'#ff8f8f' },
+    { id:'pet3_2', n:'룬 올빼미', sp:'bird', tint:'#b98cff' },
+    { id:'pet3_4', n:'마력 골렘', sp:'robo', tint:'#6fe0c8' } ],
   /* 4 전설 */
   [
-    { id:'pet4_2', n:'용살자 기갑', sp:'robo', tint:'#ff6f4f', v:0.94 },
-    { id:'drag1', n:'홍염 드래곤', sp:'dragon', tint:'#ff8a5c', m:2.20, cd:0.95 },
-    { id:'pet4_3', n:'벽력 비룡', sp:'dragon', tint:'#7fd0ff', v:1.05 },
-    { id:'pet4_1', n:'용아 수리', sp:'bird', tint:'#ffcf6a', v:1.10 },
-    { id:'pet4_4', n:'용왕의 매', sp:'bird', tint:'#e08cff', v:1.13 } ],
+    { id:'pet4_2', n:'용살자 기갑', sp:'robo', tint:'#ff6f4f' },
+    { id:'drag1', n:'홍염 드래곤', sp:'dragon', tint:'#ff8a5c' },
+    { id:'pet4_3', n:'벽력 비룡', sp:'dragon', tint:'#7fd0ff' },
+    { id:'pet4_1', n:'용아 수리', sp:'bird', tint:'#ffcf6a' },
+    { id:'pet4_4', n:'용왕의 매', sp:'bird', tint:'#e08cff' } ],
   /* 5 신화 */
   [
-    { id:'pet5_2', n:'별빛 수호기', sp:'robo', tint:'#9fd6ff', v:0.95 },
-    { id:'drag2', n:'황금 드래곤', sp:'dragon', tint:'#ffd45e', m:3.40, cd:0.80 },
-    { id:'pet5_3', n:'월광 비룡', sp:'dragon', tint:'#cfd8ff', v:1.06 },
-    { id:'pet5_4', n:'일식의 까마귀', sp:'bird', tint:'#8f7fa0', v:1.10 },
-    { id:'pet5_1', n:'천공의 봉황', sp:'bird', tint:'#ff7fa8', v:1.15 } ],
+    { id:'pet5_2', n:'별빛 수호기', sp:'robo', tint:'#9fd6ff' },
+    { id:'drag2', n:'황금 드래곤', sp:'dragon', tint:'#ffd45e' },
+    { id:'pet5_3', n:'월광 비룡', sp:'dragon', tint:'#cfd8ff' },
+    { id:'pet5_4', n:'일식의 까마귀', sp:'bird', tint:'#8f7fa0' },
+    { id:'pet5_1', n:'천공의 봉황', sp:'bird', tint:'#ff7fa8' } ],
   /* 6 초월 */
   [
-    { id:'pet6_2', n:'공허의 갈까마귀', sp:'bird', tint:'#6f6f8f', v:0.94 },
-    { id:'pet6_0', n:'차원의 용', sp:'dragon', tint:'#4fe3c4', v:1.00 },
-    { id:'pet6_3', n:'무한의 비룡', sp:'dragon', tint:'#b0ffe8', v:1.05 },
-    { id:'pet6_1', n:'시간의 파수기', sp:'robo', tint:'#ffe08a', v:1.08 },
-    { id:'pet6_4', n:'초신성 기갑', sp:'robo', tint:'#ff9de0', v:1.12 } ],
+    { id:'pet6_2', n:'공허의 갈까마귀', sp:'bird', tint:'#6f6f8f' },
+    { id:'pet6_0', n:'차원의 용', sp:'dragon', tint:'#4fe3c4' },
+    { id:'pet6_3', n:'무한의 비룡', sp:'dragon', tint:'#b0ffe8' },
+    { id:'pet6_1', n:'시간의 파수기', sp:'robo', tint:'#ffe08a' },
+    { id:'pet6_4', n:'초신성 기갑', sp:'robo', tint:'#ff9de0' } ],
   /* 7 불멸 */
   [
-    { id:'pet7_0', n:'만물의 수호룡', sp:'dragon', tint:'#f0edd2', v:1.00 } ]
+    { id:'pet7_0', n:'만물의 수호룡', sp:'dragon', tint:'#f0edd2' } ]
 ];
 const PETS = [];
 /* 485 — `j`(등급 안 자리 = 260 이 정한 약→강 순서)를 실어 둔다. 장비(`EQUIPS[].j`)와 같은 이름·같은
    뜻이고, `petEquipVal` 이 이것을 «티어» 로 읽어 `EQ_BASE` 를 탄다. 값·순서는 한 개도 안 바뀐다. */
-PET_NAMES.forEach((tier, g) => tier.forEach((x, j) => PETS.push({
-  id: x.id || ('pet' + g + '_' + j), n:x.n, g, j, sp:x.sp, tint:x.tint || null, v:x.v || 1,
-  m:  x.m  != null ? x.m  : Math.round(PET_M[g] * (x.v || 1) * 1000) / 1000,
-  cd: x.cd != null ? x.cd : PET_CD[g]
-})));
+PET_NAMES.forEach((tier, g) => tier.forEach((x, j) => {
+  /* 481 — 개체차 `v` 도 «자리» 에서 파생한다(가운데가 1.00 인 대칭 계단). 등급 안 종 수가
+     달라져도(1종뿐인 불멸) 식이 그대로 성립한다: n = 1 이면 j − (n−1)/2 = 0 → v = 1.00. */
+  const v = 1 + (j - (tier.length - 1) / 2) * PET_V_STEP;
+  PETS.push({
+    id: x.id || ('pet' + g + '_' + j), n:x.n, g, j, sp:x.sp, tint:x.tint || null,
+    v:  Math.round(v * 1000) / 1000,
+    cd: Math.round(PET_CD[g] / v * 1000) / 1000   /* 481 — 등급이 표를 정하고 자리가 그 안을 가른다 */
+  });
+}));
 const PET_SP = {
   bird:   { anim:'anim',    fps:14, scale:0.34, faceRight:true },
   robo:   { anim:'Running', fps:16, scale:0.16, faceRight:true },
@@ -19573,10 +19591,21 @@ const stat = {
     return d * this.critMul;
   }
 };
-/* 197 — 장착 스킬·펫의 피해도 «착용 파워 계단»(gWear). 펫의 `m` 에 이미 들어 있는 `PET_M[g]`
-   (= 0.45 × mul^0.88, 106)은 **등급 가중치 쪽**이라 건드리지 않는다 — 곡선(106 게이트)은 그대로다. */
+/* 197 — 장착 스킬의 피해는 «착용 파워 계단»(gWear)을 탄다. **펫은 481 부터 안 탄다**(아래). */
 const skillDmg = s => stat.dmg * s.m * gWear(s.g) * lvWear(oLv(s.id));
-const petDmg   = p => stat.dmg * p.m * gWear(p.g) * lvWear(oLv(p.id)) * bonus().pet;
+/* 481(2026-08-30, 저장소 주인 지시) — «펫의 피해량이 플레이어 공격력 대로 되게 해줘 걍».
+   ⇒ 펫 고유의 세 축(피해 계수 `m` · 등급 계단 `gWear` · 강화 `lvWear`)을 전부 걷어냈다.
+     수리 전 실측(`probe481` ⓐ): 불멸 펫 한 마리가 `stat.dmg` 의 **×17,515** 였다 —
+     피해가 등급으로도 레벨로도 자라서 «플레이어 공격력» 과 아무 관계가 없었다.
+   ⚠ **`bonus().pet` 은 남긴다 — 등재문(PROGRESS 481)의 «보유 효과 축이라 이중 적용» 은 재현으로 기각됐다.**
+     `probe481` ⓑ 가 직접 흔들어 보였다: 전 펫을 보유(Lv50)해도 `b.pet` 은 1 에서 1px 도 안 움직이고
+     (보유 효과는 `b.atk`·`b.gold` 로 간다), 이 값을 올리는 것은 **21 도감 «펫» 세트 하나뿐**이다
+     (만단계 ×14.28). 걷어냈으면 «펫 피해 +n%» 라고 적힌 도감 세트 6개가 아무 일도 안 하는
+     죽은 축이 됐을 것이다(333 — 죽은 분기는 만들지 않는다). 등급·레벨·개체차가 사라졌다는
+     지시의 뜻은 게이트가 «전 펫 같은 피해» 로 못박는다(`verify481` [A]).
+   ⚠ 도감 축을 «주기» 로 옮기는 길은 **막혀 있다** — 배수가 ×14.28 이라 불멸 펫의 주기가 0.028초가 되어
+     초당 발사체가 3마리 108발이 된다(피해에 곱할 때와 DPS 는 같지만 화면·성능이 다른 물건이 된다). */
+const petDmg   = p => stat.dmg * bonus().pet;
 /* 88 — 캐릭터 레벨(plv/pexp)·스탯 포인트(분배·자동분배·초기화) 시스템 폐기(저장소 주인 지시). */
 
 /* 전투력 */
@@ -23681,7 +23710,7 @@ function tierScore(it, bkey){
     const hits = it.id === 'shuri' ? 8 : it.id === 'bolt' ? 3 : it.id === 'multi' ? 3 : (it.hits || 1);
     return it.cd > 0 ? it.m * hits / it.cd : it.m * 3;
   }
-  if(bkey === 'pet') return it.m / it.cd;
+  if(bkey === 'pet') return 1 / it.cd;   /* 481 — 피해가 전 펫 같아졌으므로 세기는 «주기» 하나다 */
   return it.v;                     /* 장비 — 85 의 개체차 배율(260 이 등급 안 오름차순으로 정렬) */
 }
 /* 한 등급 풀의 정규화 가중치(합 = 1). 반환 배열의 자리는 **입력 pool 의 자리 그대로**다.
@@ -25848,10 +25877,13 @@ function showItem(id){
     : cat === 'pet'
       /* 485 — 펫에 «장착 효과 — 공격력 +n%» 축이 생겼다(장비와 같은 `EQ_BASE` 표).
          ⚠ **줄 수를 3 으로 유지한다** — `.sk-db` 는 750×290 고정이라 한 줄이 늘면 상자를 넘는다.
-           그래서 «전투 참여 피해» 를 새 줄로 빼지 않고 같은 줄에 가운뎃점으로 붙였다. */
+           그래서 «전투 피해» 를 새 줄로 빼지 않고 같은 줄에 가운뎃점으로 붙였다.
+         481 — 그 피해가 이제 **플레이어 공격력 그대로**라 괄호로 «무엇과 같은 값인지» 를 적는다.
+           수치 자체는 남긴다(표 «피해량» 칸과 같은 값 · 188 표기층 싱크가 이 자리를 센다).
+           ⚠ 강화 Lv 는 이 줄의 **앞 칸(장착 효과)만** 올린다 — 뒤 칸(전투 피해)은 레벨을 안 탄다. */
       ? '플레이어를 따라다니며 <em>' + it.cd.toFixed(2) + '초</em>마다 자동 공격합니다.<br>'
-        + '장착 효과 — 공격력 <em>+' + pctB(petEquipVal(it)) + '</em> · 전투 참여 피해 <em>'
-        + fmtB(petDmg(it)) + '</em><br>'
+        + '장착 효과 — 공격력 <em>+' + pctB(petEquipVal(it)) + '</em> · 전투 피해 <em>'
+        + fmtB(petDmg(it)) + '</em>(플레이어 공격력)<br>'
         + '펫은 최대 <em>3마리</em>까지 장착합니다.'   /* 173 — «동료는» → «펫은»(조사가 같이 바뀐다, 369) */
     : cat === 'equip'
       ? '<em>' + slot.n + '</em> 부위에 장착하는 장비입니다.<br>'
