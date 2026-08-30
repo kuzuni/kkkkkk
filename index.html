@@ -29297,6 +29297,32 @@ function collFitEff(){
     if(room > 0) fitNum(eff, room);
   });
 }
+/* 487 — 카드 라벨 «Lv. n/m» 이 카드(`.cd{overflow:hidden}`)에 잘리는 것을 막는다.
+   ⚑ 등재문의 처방 셋(ⓐ fs 26→24 · ⓑ letter-spacing 음수 · ⓒ 3자리에서 «Lv.» 접두어 제거)은
+   전부 **«Lv. 100/1»(−2.9px)** 한 문자열을 보고 잰 것이다. `tools/probe487.js` 로 축을 둘로
+   갈라 굴려 보니 실재하는 최장 문자열은 **«Lv. 100/10»(잉크 133.6 vs 안쪽 111 = −17.3px)** 이고
+   (req = 받은 단계 + 1 이라 단계 9 에서 두 자리가 된다), ⓐ 는 fs 24 에서도 잉크 123.7 로
+   **여전히 잘린다**. ⓑ·ⓒ 도 같은 −2.9 를 보고 잰 값이라 같은 벽에 부딪힌다.
+   ⇒ 상수를 새로 박지 않고 **452 가 같은 화면에서 쓴 부품(`fitNum`)** 을 그대로 쓴다 —
+   «넘칠 때만 그 문자열을 줄인다». 레퍼런스에 찍힌 짧은 문자열(«Lv. 1/1» 잉크 83.4 · 측정표 21
+   ref 85×20)은 **한 픽셀도 안 움직인다** = 처방 셋과 달리 ref 대조가 Δ0 다.
+   ⚠ 방(room)도 상수가 아니라 카드에게 묻는다(368 처방) — 클라이언트 폭에서 **카드 자신의
+   테두리 두께를 좌우 거울로**(452 가 바의 padding-left 를 거울로 쓴 것과 같은 꼴) 빼고,
+   `-webkit-text-stroke` 가 Range bbox 밖으로 나가는 몫(sw/2 × 2)을 마저 뺀다(340 교훈). */
+function collFitLv(){
+  document.querySelectorAll('#collList .clb .cd').forEach(cd => {
+    const el = cd.querySelector('i.cl2');
+    if(!el || !cd.offsetWidth) return;
+    const r = cd.getBoundingClientRect();
+    if(!r.width) return;                                     /* 팝업이 안 떠 있으면 잴 것이 0 이다 */
+    const sc = r.width / cd.offsetWidth;                     /* 프레임 → 화면 배율(fit()) */
+    const cs = getComputedStyle(cd);
+    const bd = parseFloat(cs.borderLeftWidth) || 0;          /* 카드 테두리를 좌우 여백의 거울로 */
+    const sw = parseFloat(getComputedStyle(el).webkitTextStrokeWidth) || 0;
+    const room = (cd.clientWidth - bd * 2 - sw) * sc;
+    if(room > 0) fitNum(el, room);
+  });
+}
 /* 91 — 블록 = 세트 하나. 뱃지 Lv = 세트 최저 Lv, 카드 라벨 = «Lv. 현재/다음 단계 요구»,
    머리 우측 «단계 받은/가능», 효과 바 = 받은 단계 기준 누적 수치, [강화] = 한 단계 올림. */
 function renderColl21(){
@@ -29345,10 +29371,11 @@ function renderColl21(){
   $('collw').classList.toggle('upall', pend > 0);
   $('collAll').innerHTML = '<b>일괄 강화' + (pend ? ' (' + pend + ')' : '') + '</b>';
   collFitEff();                              /* 452 — 그린 직후 효과문을 버튼 앞에서 끊는다 */
+  collFitLv();                               /* 487 — 카드 라벨도 같은 순간에 카드 안쪽으로 끊는다 */
 }
 /* 452 — `openColl21` 은 **숨은 채로** 그린 뒤 `.on` 을 붙인다(display:none 이면 잴 것이 0 이다).
    그래서 보이게 만든 «뒤» 에 한 번 더 부른다 — renderColl21 안의 호출만으로는 첫 열기가 안 잡힌다. */
-function openColl21(tab){ if(tab) collTab = tab; renderColl21(); $('collList').parentNode.scrollTop = 0; $('collw').classList.add('on'); collFitEff(); }
+function openColl21(tab){ if(tab) collTab = tab; renderColl21(); $('collList').parentNode.scrollTop = 0; $('collw').classList.add('on'); collFitEff(); collFitLv(); }
 function closeColl21(){ $('collw').classList.remove('on'); }
 $('collw').addEventListener('click', e => {
   if(e.target.id === 'collw'){ closeColl21(); return; }

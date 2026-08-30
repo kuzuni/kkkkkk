@@ -16,15 +16,18 @@
  *   [B] 등재 자리 — 주인이 지목한 **소환 계열 3화면**(10 상점 소환 탭 · 11 확률 팝업 ·
  *       12 결과 팝업)의 «Lv» 노드가 [C]하드클립·[B]테두리물림·[S]획파먹힘 **어느 축에도
  *       안 걸린다**. 이것이 «그 자리는 정상이다» 의 게이트다.
- *   [C] 래칫 — 전수 하드 클립은 **21 도감 `.cd > i.cl2` 여섯 탭뿐**이다(REMAIN = 6).
- *       그 밖의 자리에서 새 클립이 생기면 빨개진다. 21 도감 건은 별도 번호(487)로 등재돼
- *       있으므로 여기서 고치지 않되, **늘어나는 것은 막는다**.
+ *   [C] 래칫 — 전수 하드 클립 **0건**(REMAIN = 0). 4회차에 남아 있던 유일한 자리
+ *       (21 도감 `.cd > i.cl2` 여섯 탭)는 **작업 487 이 닫았다**(2026-08-30) —
+ *       `collFitLv()` 가 넘치는 문자열만 카드 안쪽으로 줄인다. 이 항은 그 뒤로
+ *       «어디서든 새 클립이 생기면 빨개진다» 는 뜻이 됐다.
  *   [S] 획 — «Lv» 노드 전수에서 `-webkit-text-stroke` 를 쓰면서 `paint-order:stroke fill`
  *       이 빠진 자리 0건(등재문 처방 ② — 손댈 것이 없음을 못박는다).
  *   [R] 되돌림 시험 — 자가 무른지 시험한다. 자 자신을 못 믿으면 위 셋은 전부 무의미하다:
  *       R1 소환 배너 알약(`.clv`)을 강제로 좁히면 [B] 가 **빨개진다**(양성 통제).
- *       R2 21 도감 카드의 클리핑을 풀면 [C] 의 REMAIN 이 **6 → 0 으로 떨어진다**
- *          (탐지기가 실제로 그 자리를 보고 있다 — 상수를 세고 있는 게 아니다).
+ *       R2 21 도감 카드 라벨의 fit 을 `!important` 로 무력화하면 [C] 가 **다시 빨개진다**
+ *          (487 이전 상태의 재현 — 탐지기가 그 자리를 실제로 보고 있지, 상수를 세고 있는 게 아니다).
+ *          ⚠ 487 전에는 이 자리가 `.cd{overflow:visible}` 로 «6 → 0» 을 보였다. 클립이 0 이 된
+ *          지금 그 축은 «0 → 0» 이라 아무것도 못 가른다 — 축을 뒤집어 양성 통제로 세운다.
  *   [H] 페이지 에러 0.
  */
 const path = require('path');
@@ -42,8 +45,8 @@ const ok = (b, name, detail) => {
 
 /* 등재문이 지목한 자리 = 주인 원문의 «소환팝업쪽» */
 const SUMMON = ['10 상점(소환)', '11 소환 확률', '12 소환 결과'];
-/* 래칫 — 지금 남아 있는 하드 클립은 21 도감 한 부품(6탭)뿐이고 별도 번호(487)로 등재돼 있다 */
-const REMAIN = 6;
+/* 래칫 — 487 이 21 도감 카드 라벨을 닫은 뒤로 전수 하드 클립은 **0건**이다 */
+const REMAIN = 0;
 const REMAIN_SEL = 'i.cl2';
 const REMAIN_SCREEN = /^21 도감/;
 
@@ -119,7 +122,7 @@ async function scanScreen(p, name, steps, extra, extraCss) {
     + '개 (0 이면 위 초록은 «아무것도 안 본» 초록이다)');
 
   /* ── [C]·[S] 전수 래칫 ──────────────────────────────────────────────── */
-  console.log('\n[C] 전수 래칫 — 하드 클립은 21 도감 한 부품(6탭)뿐');
+  console.log('\n[C] 전수 래칫 — 하드 클립 0건(487 이 21 도감 카드 라벨을 닫았다)');
   const allC = [], allS = [];
   for (const [name, rows] of all) {
     const { C, S } = classify(rows);
@@ -127,7 +130,7 @@ async function scanScreen(p, name, steps, extra, extraCss) {
     S.forEach(r => allS.push({ name, ...r }));
   }
   const foreign = allC.filter(r => !(REMAIN_SCREEN.test(r.name) && r.sel === REMAIN_SEL));
-  ok(foreign.length === 0, 'C1 21 도감 밖의 하드 클립 0',
+  ok(foreign.length === 0, 'C1 21 도감 «밖» 의 하드 클립 0',
     foreign.length ? foreign.map(r => r.name + '/' + r.sel).join(' · ')
                    : '전수 ' + all.length + '화면에서 새 클립 없음');
   /* 래칫은 «자리» 로 센다 — `scan470` 의 출력과 같은 열쇠(화면|노드|문자열)로 접는다.
@@ -136,7 +139,7 @@ async function scanScreen(p, name, steps, extra, extraCss) {
   const sites = new Set(allC.map(r => r.name + '|' + r.sel + '|' + r.txt));
   ok(sites.size <= REMAIN, 'C2 래칫 REMAIN ≤ ' + REMAIN,
     '지금 ' + sites.size + '자리 / 원시 ' + allC.length + '행'
-    + ' (전부 21 도감 .cd > i.cl2 — 별도 번호 487 로 등재)');
+    + ' (487 이 21 도감 .cd > i.cl2 를 닫아 6 → 0 으로 내렸다)');
   ok(allS.length === 0, 'S1 paint-order 빠진 «Lv» 노드 0',
     allS.length ? allS.map(r => r.name + '/' + r.sel).join(' · ') : '전수 0건 — 등재문 처방 ② 는 손댈 것이 없다');
 
@@ -154,13 +157,14 @@ async function scanScreen(p, name, steps, extra, extraCss) {
       bad ? '클립 ' + bad.C.length + ' · 물림 ' + bad.B.length + ' (0/0 이면 이 자는 아무것도 안 본다)' : '스캔 실패');
   }
 
-  /* R2 — 21 도감의 클리핑을 풀면 REMAIN 이 6 → 0 으로 떨어져야 한다 */
+  /* R2 — 487 의 fit 을 무력화하면 21 도감 클립이 다시 나와야 한다(양성 통제) */
   {
     const hit = SCREENS.find(([n]) => n === '21 도감(스킬)');
-    const rows = await scanScreen(p, hit[0], hit[1], hit[2], '.cd{overflow:visible!important}');
+    const rows = await scanScreen(p, hit[0], hit[1], hit[2],
+      '.clb .cd>i.cl2{font-size:26px!important}');
     const c = rows ? classify(rows).C.length : -1;
-    ok(c === 0, 'R2 `.cd{overflow:visible}` 로 풀면 21 도감 클립이 사라진다',
-      '클립 ' + c + '건 (풀어도 남으면 탐지기가 다른 것을 세고 있다)');
+    ok(c > 0, 'R2 487 의 fit 을 무력화하면 21 도감 클립이 되살아난다',
+      '클립 ' + c + '건 (0 이면 이 자는 그 자리를 안 보고 있다 — `!important` 는 fitNum 의 인라인 fs 를 이긴다)');
   }
 
   /* ── [H] ─────────────────────────────────────────────────────────────── */
