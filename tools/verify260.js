@@ -12,7 +12,7 @@
  *   [A] 장비 — 24티어(3부위 × 8등급) 전부 `v` 단조 증가 · 등급 경계 비역전(gWear × v)
  *              · `power(it)` 순서 = 배열 순서 · v 전부 0.90~1.15
  *   [B] 펫   — 8티어 전부 «세기»(m/cd) 단조 증가 · 등급 경계 비역전 · 구 9종 m·cd 보존(106 A5 재확인)
- *   [C] 스킬 — 등급 안 `m × hits / cd` 최대/최소 ≤ 3.0 (오름차순은 요구하지 않는다)
+ *   [C] 스킬 — 등급 안 `m × hits / cd` 최대/최소 ≤ 1.03 (484 — «같은 등급은 같은 세기»)
  *   [D] id 짝 보존 — 재배치가 id↔이름·수치 짝을 안 바꿨다(구 세이브 안전).
  *                   구 54종 장비 id + 구 9종 펫 id 전부 생존 · id 유일 · 총 144종
  *   [E] 나열 순서 — 05 무기 격자(`#wpnGrid`)의 DOM 순서 · 21 도감 세트 32개의 구성원 순서가
@@ -34,7 +34,11 @@ const { chromium } = (() => {
 })();
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
-const SK_RATIO_MAX = 3.0;   /* [C] 등급 안 세기 편차 상한 — index.html SKILLS 주석의 «기준선» 과 한 벌 */
+/* [C] 등급 안 세기 편차 상한 — index.html SKILLS 주석의 «기준선» 과 한 벌.
+   484(2026-08-30, 주인 지시) 이관: 3.0(«크게 안 벌어지면 된다») → **1.03(«같은 등급은 같은 세기»)**.
+   상세·되돌림 시험은 `tools/verify484.js`. 이 자리는 260 의 장비·펫 절과 한 파일에 있어야
+   «세 계열의 등급 안 규칙» 을 한 번에 읽을 수 있으므로 남긴다(333: 자리를 비우지 마라). */
+const SK_RATIO_MAX = 1.03;
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
   console.log((b ? 'PASS' : 'FAIL') + ' ' + name + (detail ? ' — ' + detail : ''));
@@ -73,9 +77,19 @@ const ok = (b, name, detail) => {
       });
       for (let g = 0; g + 1 < tiers.length; g++) {
         if (!tiers[g].length || !tiers[g + 1].length) continue;
-        const hi = gWear(g) * Math.max(...tiers[g].map(e => e.v));
-        const lo = gWear(g + 1) * Math.min(...tiers[g + 1].map(e => e.v));
+        /* 472 이관 — 장착 축이 `gWear × v` 에서 **`EQ_BASE(등급, 티어)`** 로 갈아탔다.
+           옛 식으로 재면 «제품이 안 쓰는 축» 을 단언하는 초록 게이트가 된다(328~330 교훈).
+           같은 뜻(«그 등급 최강 < 다음 등급 최약»)을 **제품이 실제로 쓰는 함수**로 잰다. */
+        const at1 = it => { const keep = S.own[it.id]; S.own[it.id] = { l: 1 };
+          const v = equipVal(it); if (keep) S.own[it.id] = keep; else delete S.own[it.id]; return v; };
+        const hi = Math.max(...tiers[g].map(at1));
+        const lo = Math.min(...tiers[g + 1].map(at1));
         if (!(hi < lo)) badEdge.push(s.k + ' g' + g + '→g' + (g + 1) + ' ' + hi.toFixed(3) + '≥' + lo.toFixed(3));
+        /* 보유 축(ownVal — v 가 사는 자리)도 같은 규칙을 지켜야 한다. 472 가 v 를 장착 축에서
+           뺐다고 해서 v 의 «등급 경계 비역전» 규약이 사라지는 것은 아니다(333: 자리를 비우지 마라). */
+        const ho = gMul(g) * Math.max(...tiers[g].map(e => e.v));
+        const lw = gMul(g + 1) * Math.min(...tiers[g + 1].map(e => e.v));
+        if (!(ho < lw)) badEdge.push('보유축 ' + s.k + ' g' + g + '→g' + (g + 1));
       }
     });
     return {
@@ -90,7 +104,8 @@ const ok = (b, name, detail) => {
   ok(A.total === 108, 'A1 장비 108종', String(A.total));
   ok(A.badMono.length === 0, 'A2 24티어 전부 v 단조 증가(1번째가 최약)', A.badMono.slice(0, 4).join(' / ') || '위반 0');
   ok(A.badPow.length === 0, 'A3 power() 순서 = 배열 순서', A.badPow.slice(0, 4).join(' / ') || '위반 0');
-  ok(A.badEdge.length === 0, 'A4 등급 경계 비역전(그 등급 최강 < 다음 등급 최약)', A.badEdge.slice(0, 3).join(' / ') || '위반 0');
+  ok(A.badEdge.length === 0, 'A4 등급 경계 비역전(그 등급 최강 < 다음 등급 최약) — 장착 축(472 EQ_BASE) · 보유 축(v) 둘 다',
+    A.badEdge.slice(0, 3).join(' / ') || '위반 0');
   ok(A.vBad === 0, 'A5 v 전부 0.90~1.15', '위반 ' + A.vBad);
   ok(A.vSpan < A.gSpan, 'A6 개체차 폭 < 등급 배수 최소 비(경계 여유)',
     A.vSpan.toFixed(3) + ' < ' + A.gSpan.toFixed(3));
@@ -147,8 +162,12 @@ const ok = (b, name, detail) => {
   }, SK_RATIO_MAX);
   C.rows.forEach(r => console.log('     g' + r.g + ' n=' + r.n + ' 최대/최소=' + r.ratio.toFixed(2)
     + '  (최약 ' + r.lo + ' · 최강 ' + r.hi + ')'));
-  ok(C.over.length === 0, 'C1 스킬 등급 안 세기 편차 ≤ ' + SK_RATIO_MAX.toFixed(1),
-    C.over.map(r => 'g' + r.g + '=' + r.ratio.toFixed(2)).join(' / ') || '전 등급 기준선 안');
+  /* 484 이관(2026-08-30, 주인 지시 «같은 등급끼리 더 쎌 필요 없고») — 260 이 스킬에만 걸어 뒀던
+     완화(«편차 ≤ 3.0»)를 **«등급 안 DPS 동일»** 로 갈아 끼운다. 옛 상한을 그대로 두면
+     484 가 통째로 되돌아가도 초록인 게이트가 된다(328~330 교훈). 장비·펫 절([A]·[B])은 그대로다. */
+  ok(C.over.length === 0, 'C1 스킬 등급 안 세기 편차 ≤ ' + SK_RATIO_MAX.toFixed(2) + ' (484 — 동일 DPS)',
+    C.over.map(r => 'g' + r.g + '=' + r.ratio.toFixed(3)).join(' / ') || '전 등급 기준선 안');
+  ok(C.rows.length === 6, 'C2 6등급 전부 쟀다', C.rows.map(r => 'g' + r.g).join('·'));
 
   /* ── [D] id 짝 보존 ─────────────────────────────────────── */
   const D = await page.evaluate(() => {
