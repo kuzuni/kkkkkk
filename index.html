@@ -1643,7 +1643,10 @@
      평균 밝기 123 → 174 (+41%)». 둘 다 «림 하이라이트는 상단 25% 이내» 로 처방이 같다.
      → 코어를 #f22e52 로 두고 하이라이트를 상단 작은 원반으로 되돌린다. ⌀41·중심은 6회차에
      레퍼런스 실측으로 못 박은 값이라 건드리지 않는다(측정표 §6). */
-  .tab .bdg{position:absolute;--dot-r:20.5px;width:41px;height:41px;border-radius:50%;
+  /* 471 예외 ② — 탭바 칸은 **프레임 좌우 변에 맞닿아** 있어 끝 칸이 코너를 쓰면 `#app` 밖으로
+     나가 잘린다(수리 전에도 7px, 규약값이면 17px). 칸끼리 어긋나면 그게 더 큰 결함이므로
+     계열 전체를 «칸 안쪽에 딱 붙는» 값(= 자기 반지름)으로 든다. 같은 이유로 35 패스 하단 탭바도. */
+  .tab .bdg{position:absolute;--dot-r:20.5px;--dot-in:28px;width:41px;height:41px;border-radius:50%;
     background:radial-gradient(circle at 50% 20%,#ff7891 0 2.5px,#f22e52 6px);
     border:5px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}
@@ -4329,7 +4332,10 @@
      그 회차의 **유일한 구조적 결함**으로 짚었다. 153 은 클립선을 카드5 하변(=카드 경계)에 두어
      그 줄을 원천적으로 안 만든다 — «40 + 99 + 14» 라는 산식보다 **«카드 경계에서 끊는다»** 가 이 값의 뜻이다.
      검산: y1947~1960 구간에 검정 픽셀 0개(페이지 바탕 #26211B 만) — `python3 tools/scan335.py`. */
-  .dns-list{position:absolute;left:0;right:0;top:45px;padding-top:8px;bottom:153px;overflow-y:auto;
+  /* 471 ② — 클립 띠만 3px 위로 올리고 padding 으로 그만큼 되민다: 카드 절대 좌표는 Δ0 이고
+     첫 카드 레드닷 링이 목록 상변에 2.1px 잘리던 것만 사라진다(probe471). 스크롤 그릇이라
+     `overflow` 자체는 못 푼다. */
+  .dns-list{position:absolute;left:0;right:0;top:42px;padding-top:11px;bottom:153px;overflow-y:auto;
     overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .dns-list::-webkit-scrollbar{width:0;height:0}
 
@@ -6239,7 +6245,7 @@
     -webkit-text-stroke:8px #000;paint-order:stroke fill;white-space:nowrap;
     transform:scaleX(calc(var(--qx,1.3) * var(--qk,1)));transform-origin:0 50%}
   /* [받기] 버튼 — dx17 dy214 245x80 r28, 밴드 검정5 → 림4 → face55 → 림5 → 립5 */
-  .cn-cd>.bt,.cn-cd>.btstk{left:17px;top:214px;width:245px;height:80px;border-radius:28px;border:5px solid #000;
+  .cn-cd>.bt,.cn-cd>.btstk{left:17px;top:214px;width:245px;height:80px;border-radius:28px;border:5px solid #000;--dot-bw:5px;
     cursor:pointer;background:linear-gradient(180deg,#6BDCEA 0,#51E7F8 4px,#3AD0E8 4px,
       #1EB4D5 59px,#53E6FA 59px,#53E6FA 64px,#1EB3D1 64px,#14809D 69px)}
   .cn-cd>.bt>u{position:absolute;left:71px;width:165px;text-align:center;color:#fff;
@@ -8098,7 +8104,10 @@
   .wgc{position:absolute;--if-w:148px;--if-h:158px;--if-ic:66px;
     --if-face:var(--gc);--if-rimc:var(--gr);
     border-radius:calc(var(--if-w) * var(--if-rr)) calc(var(--if-w) * var(--if-rr)) 12px 12px;
-    overflow:hidden;cursor:pointer}
+    /* 471 ② — `overflow:hidden` 을 걷었다. 이 카드가 닷 링을 상·우 9.8px 잘랐다(probe471).
+       자를 대상이었던 하단 진행바 `.pb` 는 자기 모서리를 직접 들고(아래 border-radius) 자기
+       overflow 로 채움을 자르므로 카드 클립이 없어도 그림이 같다. */
+    overflow:visible;cursor:pointer}
   .wgc.eq{border-color:#134E52;--if-face:var(--ge);--if-rimc:#35DCEE}
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:8px;height:100px;line-height:100px;text-align:center;font-size:66px}
@@ -8107,7 +8116,7 @@
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
-  .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;
+  .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;border-radius:0 0 12px 12px;
     background:linear-gradient(180deg,#8182A0 0 19px,#717799 19px);
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
@@ -10872,6 +10881,10 @@
   .stab>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+  /* 471 §2 — 주인 스크린샷 ①(«반달») 의 실제 뿌리. `.stabs>*` 는 절대배치 형제이고 활성 알약이
+     이웃 칸 위로 11.75px 오버행해서(379) **다음 칸이 앞 칸의 배지를 덮었다**(probe471b 코어 7/8).
+     클리핑이 아니라 쌓임 순서였다 — 배지를 칸 위로 올린다(`.updot` 의 z6 과 같은 층). */
+  .stab>.bdg{z-index:6}
   .stab.alert>.bdg{display:block}
   /* 202 — **166 ⓔ 와 똑같은 특이성 함정이 여기에도 있었다.** 07·26·50 시트는
      `:is(#bSk,#bPet,#bCos) s{display:block}`(ID 급) 로 시트 안 `<s>` 를 통째로 켜 두는데,
@@ -11013,7 +11026,11 @@
   #shopw .alert>.updot{display:block}
   #shopw .stab>.bdg{display:none}
   #shopw .stab.alert>.bdg{display:block}
-  .shp-card>.updot{right:46.5px;top:132.5px}
+  /* 471 예외 ① — 호스트는 카드가 아니라 «10회 소환» 버튼인데 `.cbtn{overflow:hidden}`(5129) 이
+     ::before/::after 띠를 둥근 모서리에 맞춰 자르고 있어 **노드를 버튼 안에 못 넣는다**(328 실측).
+     그래서 좌표는 카드 기준으로 남기되 **규약 상수에 묶는다** — 46.5/132.5 는 «버튼 코너에 중심»
+     이고 거기서 `--dot-in` 만큼 안으로 들어가면 다른 자리와 같은 걸침이 된다. */
+  .shp-card>.updot{right:calc(46.5px + var(--dot-in));top:calc(132.5px + var(--dot-in))}
   /* ── 329(2026-08-28, 주인 지시) — 13 재화 탭 «광고 보고 받기» 버튼 레드닷 ──────────────
      여기는 `.cn-cd{overflow:hidden}`(6926) 이라 **바깥 코너가 카드에 잘린다**(실측 +5.24px 초과).
      대신 안쪽 우상단이 실제로 비어 있다 — 라벨 잉크 오른쪽 **55.08px**(≥42) 라
@@ -11036,7 +11053,6 @@
        · 타이틀 잉크와 **세로로** 6.2px 떨어진다(가장 긴 «스킨 강화석» 이 x215.53 까지 와서 가로
          여유는 3.67px 뿐이다 — 그래서 여유를 세로에 둔다. 두 축 다 좁으면 글자가 한 글자만
          길어져도 물린다). 아이콘(x79~199)과는 34px · ×N(y174~) · 버튼(y214~) 과는 세로로 안 닿는다. */
-  .cn-cd>.updot{right:18px;top:84px}
   /* ── 330(2026-08-28, 주인 지시) — 89 유물 «소환» 수반 버튼 레드닷 ────────────────────
      주인 원문: «유물 소환버튼에도 빨간 점 알림있어야함 소환가능한상태면».
      ⚠ 특이성 함정(166 ⓔ · 202 §3 · 283 · 294 · 325 와 **같은 모양**) — `#relw` 는
@@ -13375,7 +13391,7 @@
   .ps-bar>div.pt.on{background:#7D574C}
   /* 301 — 탭 레드닷(«받을 보상 있음»). `.stab>.bdg` 규격(27Ø · #F22E52 · 광택/이중 링) 그대로.
      ⚠ `#psw s{display:inline-block}` 태그 리셋(ID 급)이 있어 기본 꺼짐도 ID 급으로 명시한다(202 함정). */
-  #psBar .pt>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
+  #psBar .pt>.bdg{position:absolute;--dot-r:13.5px;--dot-in:21px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   #psBar .pt.alert>.bdg{display:block}
@@ -28224,16 +28240,22 @@ function renderCoinPage(list){
              는 이제 카드 직속 자식이고 `.alert` 도 카드가 든다). 판정식 `coinAdReady(a)` 는 그대로다.
              `done` 갈래에는 버튼이 없으므로 여기 오면 이미 `left > 0` 이지만, 조건을 마크업 갈래에서
              «파생» 시키지 않고 명시한다 — 갈래가 바뀌어도 계약이 남는다(LESSONS 111-1 계열). */
-          : '<div class="bt" data-cnad="' + a.id + '">'
+          : '<div class="bt' + (coinAdReady(a) ? ' alert' : '') + '" data-cnad="' + a.id + '">'
             + '<div class="ad"><s></s><b>AD</b></div>'
             + '<u class="lab">' + (noAdsOn() ? '무료 수령' : '받기') + '</u>'
             + '<u class="cnt">(' + left + '/' + a.cap + ')</u>'
+            /* 471 4 + 479(주인 번복 2026-08-30) — 닷은 **[받기] 버튼의 자식**이다.
+               364 가 «카드 우상단» 으로 옮겼던 것을 주인이 다시 «버튼 코너» 로 돌렸고,
+               471 규약은 «호스트 코너» 라 노드가 그 호스트 안에 있어야 좌표가 저절로 따라온다.
+               버튼에는 overflow 가 없어 링이 버튼 밖으로 나가도 안 잘리고, 카드 클립
+               (.cn-cd overflow:hidden) 까지는 x272/278 · y204~246 으로 여유가 있다(probe471). */
+            + (coinAdReady(a) ? '<s class="updot"></s>' : '')
             + '</div>'
             + '<i class="stk btstk"></i>'
             /* 닷 노드는 **카드 직속 자식**이지만 «받을 수 있는» 갈래에서만 그린다 —
                소진 칸에 숨은 죽은 노드를 남기지 않는다(verify329 [B]·[C] «죽은 마크업 0» 이
                이것을 잰다. 323 `promoReady() ? … : ''` 와 같은 모양). */
-            + (coinAdReady(a) ? '<s class="updot"></s>' : ''))
+            )
       +  '<div class="fr"></div></div>';
   });
   /* §6 평생 광고 제거 배너 — 작업 68: [이동] 은 구버전 패널 상점이 아니라 같은 페이지로 스크롤했다.

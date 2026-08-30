@@ -61,7 +61,8 @@ const JSONOUT = process.argv.includes('--json');
       return { r, host };
     };
 
-    const sweep = (label, dotSel, hostSel, mk) => {
+    /* mHost: «재는 호스트» 를 따로 줄 때(노드의 부모와 시각적 호스트가 다른 자리 — 328). */
+    const sweep = (label, dotSel, hostSel, mk, mHost) => {
       let dots = [...document.querySelectorAll(dotSel)];
       let tmp = null;
       if (!dots.length && mk) {
@@ -71,7 +72,8 @@ const JSONOUT = process.argv.includes('--json');
       if (!dots.length) { out.push({ label, missing: true }); return; }
       const seen = [];
       dots.forEach(d => {
-        const h = hostSel ? d.closest(hostSel) : d.parentElement;
+        let h = hostSel ? d.closest(hostSel) : d.parentElement;
+        if (mHost && h) h = h.querySelector(mHost) || h;
         if (!h) return;
         const prev = d.style.display, prevA = d.style.animation;
         d.style.display = 'block'; d.style.animation = 'none';
@@ -82,7 +84,10 @@ const JSONOUT = process.argv.includes('--json');
         if (!hr.width || !dr.width) return;
         const cx = dr.left + dr.width / 2, cy = dr.top + dr.height / 2;
         const R = dr.width / 2 + RING;
-        const cut = [
+        /* ⚠ 스크롤 그릇 밖으로 밀려난 행(«지금 안 보이는 카드»)은 «잘림» 이 아니다 —
+           그 자리의 결함은 스크롤하면 사라진다. 호스트가 클립 띠 안에 있을 때만 센다. */
+        const inBand = hr.top >= clip.r.t - 1 && hr.bottom <= clip.r.b + 1;
+        const cut = !inBand ? [0, 0, 0, 0] : [
           Math.max(0, clip.r.t - (cy - R)),      /* 위 */
           Math.max(0, (cx + R) - clip.r.rt),     /* 우 */
           Math.max(0, (cy + R) - clip.r.b),      /* 아래 */
@@ -145,11 +150,11 @@ const JSONOUT = process.argv.includes('--json');
     closeTrain(); await wait(120);
 
     openShopPage(); await wait(250);
-    sweep('10 카드 .shp-card>.updot', '.shp-card>.updot', '.shp-card');
+    sweep('10 «10회 소환» 버튼 .cbtn.b1 (328 — 노드는 카드 자식)', '.shp-card>.updot', '.shp-card', null, '.cbtn.b1');
     sweep('10 탭 #shopCats .stab>.bdg', '#shopCats .stab>.bdg', '.stab');
     S.daily.adBuy = {};
     openShopPage(null, 'coin'); await wait(300);
-    sweep('13 광고 카드 .cn-cd>.updot', '#shopList .cn-cd>.updot', '.cn-cd');
+    sweep('13 광고 [받기] 버튼 .cn-cd .bt>.updot (479)', '#shopList .cn-cd .bt>.updot', '.cn-cd>.bt');
     openShopPage(null, 'summon'); await wait(150);
     closeShopPage(); await wait(120);
 
