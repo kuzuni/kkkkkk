@@ -83,9 +83,10 @@ const eg = k => num(new RegExp(k + ":\\s*\\{[\\s\\S]{0,320}?gold:([\\d.]+)"), k 
 const eh = k => num(new RegExp(k + ":\\s*\\{[\\s\\S]{0,320}?hp:([\\d.]+)"),   k + ' hp');
 const G_ZOM = eg('zombie'), G_GOB = eg('goblin'), G_DRK = eg('dark'), G_BOS = eg('boss');
 const H_ZOM = eh('zombie'), H_GOB = eh('goblin'), H_DRK = eh('dark'), H_BOS = eh('boss');
-const ASPD0 = num(/\{ id:'aspd'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/,  'aspd Lv0');
-const CRIT0 = num(/\{ id:'crit'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/,  'crit Lv0');
-const CDMG0 = num(/\{ id:'cdmg'[\s\S]{0,300}?val:l => ([\d.]+)\s*\+/,        'cdmg Lv0');
+/* 553 — «훈련만» DPS 대용식은 네 시뮬이 손으로 베끼던 것을 `tools/dpsk.js` 한 곳으로 모았다.
+   훈련 밖 7종 Lv 0 값(공속·치명·치명피해)도 거기서 같이 읽는다. */
+const DK = require('./dpsk')(SRC, 'SIM177');
+const ASPD0 = DK.ASPD0, CRIT0 = DK.CRIT0, CDMG0 = DK.CDMG0;
 const C_KNEE = num(/const TRAIN_KNEE\s*=\s*(\d+)/,      'TRAIN_KNEE');
 const C_R    = num(/const TRAIN_COST_R\s*=\s*([\d.]+)/, 'TRAIN_COST_R');
 /* 162 — «보스는 10의 배수 스테이지» 가 폐기되고 **모든 스테이지**가 «50킬 + 보스» 다.
@@ -134,7 +135,12 @@ const TCAP  = n => { let s = 0; for(let k = 1; k <= n; k++) s += TSTEP(k); retur
 const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 const tval = (id,l) => LIN_B[id] + LIN_K[id]*l;
-const DPS_K = ASPD0 * (1 + CRIT0*(CDMG0-1));
+/* 553 — 대용식에 **스킬 항**이 빠져 있었다. 이 게임에는 기본 공격이 없어 피해가 전부
+   «장착 스킬» 에서 나오는데(`stat.dps`), 옛 식 `ASPD0 × critMul` 은 «일반 등급 스킬 1개» 의
+   기여를 1.0 으로 접어 두고 있었다 — 504 가 `SK_DPS_REF` 를 1.84 → 6.49 로 재정박하자
+   실측/대용 = **4.64** 가 되어 `verify177` ⑤ 가 빨개졌다(`probe553` 이 항등식으로 못박았다).
+   식은 이제 `tools/dpsk.js` 가 소스에서 읽어 만든다. */
+const DPS_K = DK.K;
 /* 유휴 가정 h 에서의 스테이지별 도달 Lv. 162 — 보스가 매 스테이지에 있으므로 보스 골드도 매 스테이지
    들어온다(sim168 은 s%10 가정이었다). */
 function levelsFor(h){
@@ -228,7 +234,8 @@ console.log('  표기  ' + (EC.form === '249' ? '177 «선형 × 구간별 저�
 console.log('  훈련  val(선형·168) ' + STATS.map(id => id + ' ' + LIN_B[id] + '+' + LIN_K[id] + '×l').join(' · ') + ' — **177 이 안 건드린 축**');
 console.log('  훈련  비용(112 무릎 Lv ' + C_KNEE + ' 이후 ×' + C_R + ') — **177 이 안 건드린 축**');
 console.log('  페이싱 162 «모든 스테이지 = ' + N_MOB + '킬 + 보스» : ' + (PACE_162 ? '확인' : '⚠ 구 isBossStage 잔존'));
-console.log('  보스  HP ×' + H_BOS + ' · 제한 ' + BSEC + '초 · DPS 계수 ' + DPS_K.toFixed(4) + '(훈련 밖 7종 Lv 0)');
+console.log('  보스  HP ×' + H_BOS + ' · 제한 ' + BSEC + '초');
+console.log('  DPS   ' + DK.desc + ' → DPS 계수 ' + DPS_K.toFixed(4) + '   (553 — 스킬 항 포함)');
 console.log('  RANKS 계급 요구 전투력 — ' + RANKS.map(r => 's'+r.s+':'+(r.cp?r.cp.toExponential(0):'0')).join(' · '));
 console.log('');
 

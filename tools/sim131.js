@@ -78,9 +78,10 @@ const H_DRK = num(/dark:\s*\{[\s\S]{0,320}?hp:([\d.]+)/,     'dark hp');
 const H_GOB = num(/goblin:\s*\{[\s\S]{0,320}?hp:([\d.]+)/,   'goblin hp');
 const H_BOS = num(/boss:\s*\{[\s\S]{0,320}?hp:([\d.]+)/,     'boss hp');
 /* 훈련이 못 파는 7종은 Lv 0 에 고정돼 있다 — 그 «Lv 0 값» 이 전투 계산의 상수다 */
-const ASPD0 = num(/\{ id:'aspd'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/,  'aspd Lv0');
-const CRIT0 = num(/\{ id:'crit'[\s\S]{0,300}?val:l => Math\.min\(([\d.]+)/,  'crit Lv0');
-const CDMG0 = num(/\{ id:'cdmg'[\s\S]{0,300}?val:l => ([\d.]+)\s*\+/,        'cdmg Lv0');
+/* 553 — «훈련만» DPS 대용식은 네 시뮬이 손으로 베끼던 것을 `tools/dpsk.js` 한 곳으로 모았다.
+   훈련 밖 7종 Lv 0 값(공속·치명·치명피해)도 거기서 같이 읽는다. */
+const DK = require('./dpsk')(SRC, 'SIM131');
+const ASPD0 = DK.ASPD0, CRIT0 = DK.CRIT0, CDMG0 = DK.CDMG0;
 
 function upgCurve(id, field){
   const m = pick(new RegExp("\\{ id:'" + id + "',[\\s\\S]{0,300}?" + field + ":l => ([\\d.]+)\\*Math\\.pow\\(([\\d.]+),l\\)"),
@@ -149,7 +150,12 @@ const valAt = (id, l, K, RV) => VAL[id].b * Math.pow(VAL[id].r, Math.min(l, K))
 
 /* 전투 모델 — 훈련 3종만. 장비·스킬·펫 배율은 전부 1(«훈련만» 하한).
    훈련이 못 파는 7종(aspd·crit·cdmg…)은 Lv 0 값에 고정돼 있다. */
-const DPS_K = ASPD0 * (1 + CRIT0*(CDMG0-1));
+/* 553 — 대용식에 **스킬 항**이 빠져 있었다. 이 게임에는 기본 공격이 없어 피해가 전부
+   «장착 스킬» 에서 나오는데(`stat.dps`), 옛 식 `ASPD0 × critMul` 은 «일반 등급 스킬 1개» 의
+   기여를 1.0 으로 접어 두고 있었다 — 504 가 `SK_DPS_REF` 를 1.84 → 6.49 로 재정박하자
+   실측/대용 = **4.64** 가 되어 `verify177` ⑤ 가 빨개졌다(`probe553` 이 항등식으로 못박았다).
+   식은 이제 `tools/dpsk.js` 가 소스에서 읽어 만든다. */
+const DPS_K = DK.K;
 const dps   = (L,K,RV) => valAt('atk',L,K,RV) * tb(L) * DPS_K;
 const mobSec  = (s,K,RV) => eHp(s)*mobHpMul(s) / dps(LV[s],K,RV);
 const bossSec = (s,K,RV) => eHp(s)*H_BOS       / dps(LV[s],K,RV);
@@ -169,8 +175,7 @@ console.log('SIM131 — 훈련 val 곡선 (index.html 실측 상수)');
 console.log('  eHp ' + EH_B + '×' + EH_R + '^(s-1) · eDmg ' + ED_B + '×' + ED_R + '^(s-1) · 보스 HP ×' + H_BOS + ' · 제한 ' + BSEC + '초');
 console.log('  훈련 val  ' + STATS.map(id => id+' '+VAL[id].b+'×'+VAL[id].r+'^l').join(' · '));
 console.log('  훈련 비용 무릎 Lv ' + C_KNEE + ' 이후 ×' + C_R + '  (112)');
-console.log('  훈련 밖 7종은 Lv 0 고정 — 공속 ' + ASPD0 + '/s · 치명 ' + CRIT0 + '·×' + CDMG0
-          + ' → DPS 계수 ' + DPS_K.toFixed(4));
+console.log('  ' + DK.desc + ' → DPS 계수 ' + DPS_K.toFixed(4) + '   (553 — 스킬 항 포함)');
 console.log('');
 
 const INF = { atk:Infinity, hp:Infinity, regen:Infinity };

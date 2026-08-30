@@ -10,6 +10,8 @@
      ③ 불변   — 스테이지 1 은 구 곡선과 완전히 동일(55 · 6) · 무릎에서 점프 없음 · 단조 증가
      ④ 스폰   — **실제로 스폰된 몹·보스의 hp/dmg 가 곡선 값**이다(표시가 아니라 전투 개체)
      ⑤ 진행   — 훈련만 있는 캐릭터로 s60 몹을 **실제로 때려서** 곡선이 예고한 시간 안에 죽인다
+                 (553 — «시뮬 대용식» 대조는 이 파일의 사본이 아니라 **sim177 이 찍은 DPS 계수**를
+                  읽어서 한다. 되돌림 시험이 옛 대용식 사본으로 빨간 것을 확인한다)
      ⑥ 파급   — eHp 를 쓰는 다른 자리(승급 수호자 hp = eHp×60 · 재화 정보 팝업 표기)가 따라온다
      ⑦ 경제   — eGold 는 한 글자도 안 바뀌었다(112 가 TRAIN_COST_R 을 여기서 역산했다)
      ⑧ 교차   — `sim177` 이 SIM177 PASS 이고 그 [D] after 표가 실코드 값과 일치
@@ -147,7 +149,9 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     S.stage = 60; spawnStage();
     for(let i=0;i<240 && enemies.length === 0;i++) await new Promise(r => requestAnimationFrame(r));
     const k0 = killed, start = performance.now();
-    const proxy = stat.dmg * stat.rate * stat.critMul;    /* 시뮬의 대용식 */
+    /* 553 이전에 이 파일이 «시뮬의 대용식» 이라고 손으로 적어 두던 식. 이제 판정에는 안 쓰고
+       (판정은 sim177 이 찍은 계수로 한다) **수리 전후 대조용 숫자**로만 남긴다. */
+    const proxy = stat.dmg * stat.rate * stat.critMul;
     const real  = stat.dps;                               /* 실코드의 DPS */
     while(killed - k0 < 3 && performance.now() - start < 25000) await new Promise(r => requestAnimationFrame(r));
     return { killed: killed - k0, sec: (performance.now()-start)/1000, proxy, real,
@@ -165,10 +169,50 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   near('⑤ s60 훈련 공격력(배수 전) = 168 선형식 18+20×236', fight.raw, 18+20*236, 1e-12);
   near('⑤ s60 실제 피해 = 훈련값 × bonus().atk(단계보너스 포함) ' + fight.mul.toFixed(3),
        fight.atk, (18+20*236)*fight.mul, 1e-9);
-  yes('⑤ 시뮬 DPS 대용식이 실코드와 같은 자릿수다 — 대용 ' + fight.proxy.toExponential(2)
-      + ' vs 실측 ' + fight.real.toExponential(2) + ' (비 ' + (fight.real/fight.proxy).toFixed(2)
+  /* ── ⑤ 대용식 대조 (553 에서 갈아 끼움) ────────────────────────────────────
+     옛 항목은 대용식 `stat.dmg × stat.rate × stat.critMul` 을 **이 파일에 손으로 적어** 두고
+     실측과 비교했다. 그 식은 시뮬이 쓰는 식의 **네 번째 사본**이었고, 그래서 이 항목은
+     «시뮬이 실코드를 따라가는가» 가 아니라 «내가 적어 둔 식이 실코드를 따라가는가» 를 재고 있었다.
+     504(`SK_DPS_REF` 1.84 → 6.49)가 그 사본을 통째로 낡게 만들자 비가 **4.64** 로 튀었다
+     (`probe553` 이 항등식 «비 = SK_DPS_REF ÷ aspd Lv0» 로 뿌리를 못박았다).
+     ⇒ 553 은 사본을 없애고(`tools/dpsk.js` 한 곳) 이 항목을 **시뮬이 실제로 찍은 계수**로 잰다.
+       시뮬이 다시 뒤처지면 여기서 곧바로 빨개진다 — 게이트가 자기 사본을 보던 시절에는 그럴 수 없었다.
+     ⚠ 허용 폭(0.5~2.0)은 **한 칸도 안 넓혔다.** 그 위에 «항등»(±1%) 을 한 항 더 얹는다 —
+       이제 둘은 같은 것을 모델하므로 자릿수가 아니라 값이 같아야 한다. */
+  const simOut = execFileSync(process.execPath, [path.join(__dirname, 'sim177.js')], { encoding:'utf8' });
+  const simK = parseFloat((simOut.match(/DPS 계수 ([\d.]+)/) || [])[1]);
+  yes('⑤ sim177 이 찍은 «DPS 계수» 를 읽었다 (K = ' + simK + ')', Number.isFinite(simK));
+  const simDps = fight.atk * simK;                 /* 시뮬이 이 표본에 예측하는 DPS */
+  const ratio  = fight.real / simDps;
+  yes('⑤ 시뮬 DPS 대용식이 실코드와 같은 자릿수다 — 시뮬 예측 ' + simDps.toExponential(2)
+      + ' vs 실측 ' + fight.real.toExponential(2) + ' (비 ' + ratio.toFixed(2)
       + ', 0.5~2.0 이어야 sim177 의 «훈련만» 판정이 성립한다)',
-      fight.real/fight.proxy >= 0.5 && fight.real/fight.proxy <= 2.0);
+      ratio >= 0.5 && ratio <= 2.0);
+  near('⑤ 그리고 항등이다 — 시뮬 계수 K = SK_DPS_REF × 공속항 × 치명배수 (±1%)'
+       + ' [553 이전 대용식이었으면 ' + (fight.real/fight.proxy).toFixed(2) + ']', ratio, 1, 1e-2);
+  /* 553 되돌림 시험 — 옛 대용식(`ASPD0 × critMul`, 스킬 항 없음)을 심은 **사본**을 만들어
+     같은 자를 대면 이 항목이 빨개지는지 본다. 안 빨개지면 위 두 항은 아무것도 안 지키는 것이다.
+     ⚠ 살아 있는 sim177.js 를 고쳤다 되돌리지 않는다 — 사본을 tools/ 안에 만들어 돌리고 지운다
+       (상대 require `./dpsk`·`./ecurve` 가 그대로 풀리려면 같은 디렉터리여야 한다). */
+  const SIMNEG = path.join(__dirname, '.v553-simneg.js');
+  let negRatio = null, negErr = '';
+  try {
+    const simSrc = fs.readFileSync(path.join(__dirname, 'sim177.js'), 'utf8');
+    const negSrc = simSrc.replace('const DPS_K = DK.K;',
+                                  'const DPS_K = DK.ASPD0 * DK.CRITMUL;   /* 553 음성 — 504 이전 대용식 */');
+    if(negSrc === simSrc) negErr = 'sim177.js 에서 `const DPS_K = DK.K;` 를 못 찾았다';
+    else {
+      fs.writeFileSync(SIMNEG, negSrc);
+      const negOut = execFileSync(process.execPath, [SIMNEG], { encoding:'utf8' });
+      const negK = parseFloat((negOut.match(/DPS 계수 ([\d.]+)/) || [])[1]);
+      negRatio = fight.real / (fight.atk * negK);
+    }
+  } catch(e){ negErr = String(e && e.message || e); }
+  finally { try { fs.unlinkSync(SIMNEG); } catch(_){} }
+  yes('⑤ [되돌림] 옛 대용식(스킬 항 없음) 사본에서는 이 항목이 빨개진다 (비 '
+      + (negRatio === null ? '—' : negRatio.toFixed(2)) + ' — 0.5~2.0 밖이어야 한다)'
+      + (negErr ? ' ⚠ ' + negErr : ''),
+      negRatio !== null && (negRatio < 0.5 || negRatio > 2.0));
   yes('⑤ 실측 DPS 로도 s60 몹 처치가 2초 이하다 (' + (fight.mobHp/fight.real).toFixed(2) + '초)',
       fight.mobHp / fight.real <= 2);
 
@@ -199,8 +243,7 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   eq('⑦ 112 비용 무릎 Lv 불변', econ.knee, 15);
   eq('⑦ 112 비용 배율 불변', econ.cr, 1.05);
 
-  /* ── ⑧ 교차 — sim177 ── */
-  const simOut = execFileSync(process.execPath, [path.join(__dirname, 'sim177.js')], { encoding:'utf8' });
+  /* ── ⑧ 교차 — sim177 (실행은 ⑤ 에서 이미 했다 · 553) ── */
   yes('⑧ sim177 이 SIM177 PASS', /SIM177 PASS/.test(simOut));
   const after = simOut.split('after  — 177 설치본')[1] || '';
   const rows = {};
