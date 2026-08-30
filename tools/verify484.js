@@ -51,7 +51,7 @@ const OLD_SHAPE = { slash:[0.85,''], shuri:[2.20,''], stone:[1.30,1], curve:[1.6
   lance:[2.30,3], nova:[3.60,1], laser:[3.40,1.7] };
 /* [E] 실전 실측 — «수리 전(a72cad0) 커밋에서 같은 하네스로 잰 값». 338·344 규칙대로 대조용이다.
    관통·링형(lance·gale)은 모델과 크게 어긋나는데 **그 어긋남이 484 이전에도 똑같이 있었다** —
-   484 는 m 만 바꿨으므로 이 축은 내 작업 단위가 아니다(→ PROGRESS 500 등재). */
+   484 는 m 만 바꿨으므로 이 축은 내 작업 단위가 아니다(→ PROGRESS 504 등재). */
 const PRE484_HITS = { slash:1.02, shuri:8.00, bolt:3.00, lance:12.22, gale:7.93 };
 const FIXED_TGT = ['slash', 'shuri', 'bolt'];   /* 발수가 «몇 명/몇 발» 로 확정되는 종 */
 
@@ -196,7 +196,7 @@ const FIXED_TGT = ['slash', 'shuri', 'bolt'];   /* 발수가 «몇 명/몇 발»
   ok(pierce.every(x => {
        const pre = PRE484_HITS[x.id];
        return x.per > 0 && Math.abs(x.per / pre - 1) <= 0.35;   /* 표본 흔들림 폭 */
-     }), 'E3 관통·링형(lance·gale)의 모델 이탈은 484 이전과 같은 자리다(→ 500)',
+     }), 'E3 관통·링형(lance·gale)의 모델 이탈은 484 이전과 같은 자리다(→ 504)',
      pierce.map(x => x.id + ' 실측 ' + x.per + ' / 수리 전 ' + PRE484_HITS[x.id]
        + ' / 모델 ' + x.declared).join(' · '));
 
