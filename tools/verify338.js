@@ -63,6 +63,24 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
      얼리지 않으면 evaluate 왕복 사이에 rAF 가 틱을 더 흘려 «격파 프레임» 이 어디인지 흔들린다. */
   await ev(() => { window.requestAnimationFrame = () => 0; });
 
+  /* 전장을 «중립» 으로 되돌린다 — 466(2026-08-30).
+     453 이 «전투 중에는 어떤 전투에도 못 들어간다» 를 `startDunRun` 첫 줄 가드로 세운 뒤로는,
+     **자기가 세운 보스전을 자기가 치우지 않으면** 다음 입장이 `battleBusy()` 에 통째로 막힌다.
+     종전에는 `endDunRun` 하나만 불러서 «던전» 만 껐고, §1 이 켜 둔 **스테이지 보스전**(`bossOn`)은
+     아무도 안 껐다 — 그래서 §2 의 10종이 전부 «입장 실패» 였다(`probe466` [2]~[4] 로 못박았다).
+     `verify457` §HARNESS 의 `reset()` 과 **같은 꼴**로 통일한다(모드가 늘어도 여기 한 곳만 는다).
+     페이지 안에서 두 곳(진입 준비 · 뒷정리)이 쓰므로 문자열로 심는다 — evaluate 는 클로저를 안 나른다. */
+  await page.evaluate(`window.__v338neutral = function(){
+    if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
+    if (typeof arena !== 'undefined' && arena) endArena(null);
+    if (typeof raidOn !== 'undefined' && raidOn) endRaid(false);
+    if (typeof promo !== 'undefined' && promo) promo = null;
+    bossIntro = null; bossOn = false; bossT = 0; S.bossFarm = false; stageWin = false;
+    enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0; corpses.length = 0;
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.hp = stat.maxHp; player.dead = 0;
+    var c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y;
+  };`);
+
   /* 실제 진입점으로 들어간다(T2 기능 완성 규칙 — 상태를 손으로 만들지 않는다).
      탑은 제 진입점(`challengeTower`)이 따로다(209·210). */
   const enter = (id) => ev(([i]) => {
@@ -70,7 +88,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     Object.assign(S, DEF());
     S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
     S.stage = 20; S.best = 20; S.guide.idx = 99;
-    if (dunRun) endDunRun(false, true);
+    window.__v338neutral();
     if (TOWERS.some((t) => t.id === i)) { challengeTower(i); }
     else {
       const d = DUNGEONS.find((x) => x.id === i);
@@ -82,12 +100,14 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       }
       challengeDungeon(d);
     }
-    if (!dunRun) return { err: '입장 실패' };
+    /* 466 — 막힌 이유를 같이 들고 나온다. «입장 실패» 넉 자로는 어느 모드가 안 꺼졌는지 알 수 없어
+       457 회귀에서 원인을 찾는 데만 한 회차가 들었다(453 이후로는 그 답이 늘 `bossMode()` 다). */
+    if (!dunRun) return { err: '입장 실패 (battleBusy=' + battleBusy() + ' · bossMode="' + bossMode() + '")' };
     return { bn: dunRun.bossN, mode: dunRun.bossMode };
   }, [id]);
 
   const cleanup = () => ev(() => {
-    if (typeof dunRun !== 'undefined' && dunRun) endDunRun(false, true);
+    window.__v338neutral();                 /* 466 — 던전만 끄던 것을 «전 모드 중립화» 로 통일 */
     document.querySelectorAll('.modal.on, .mw.on').forEach((el) => el.classList.remove('on'));
     const cl = document.getElementById('dclw'); if (cl) cl.classList.remove('on');
     if (typeof closeModal === 'function') closeModal();
@@ -123,13 +143,19 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
           : no('#bossHpF — 체력이 줄어도 바가 안 준다 (' + r.full.toFixed(0) + ' → ' + r.half.toFixed(0) + ' → ' + r.low.toFixed(0) + 'px)');
       }
     }
+    /* 466 — 위 표본이 세운 **스테이지 보스전을 여기서 자기가 끈다.** 종전에는 `endDunRun` 만 불러
+       «던전» 을 껐는데, 켜져 있던 것은 `bossOn` 이라 아무 일도 안 일어났고(`probe466` [4] 음성항),
+       453 이후로는 그 채로 다음 입장이 전부 막힌다. «남이 치워 주겠지» 를 없앤다. */
     const d = await ev(() => {
-      if (dunRun) endDunRun(false, true);
-      return null;
+      window.__v338neutral();
+      return { busy: battleBusy(), mode: bossMode() };
     });
-    void d;
+    if (!blk('§1 뒷정리', d)) {
+      is('§1 자기가 세운 보스전을 자기가 껐다 — battleBusy()', d.busy, false);
+      is('§1 뒷정리 뒤 bossMode()', d.mode, '');
+    }
     const p = await enter('gold');
-    if (!blk('§1 던전 입장', p) && !p.err) {
+    if (blk('§1 던전 입장', p) || p.err) { if (p.err) no('§1 던전 입장 — ' + p.err); } else {
       const q = await ev(() => {
         const w = () => { drawDunHud(); return parseFloat(document.getElementById('dunBarF').style.width); };
         dunBossTick(); spawnQ.forEach((x) => { if (x.t === 'dunboss') x.delay = 0; }); step(1 / 60);
@@ -286,7 +312,10 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
   console.log('\n[R] 되돌림 시험 — 옛 식을 주입하면 빨개지고, 원복하면 초록이다');
   {
     const p = await enter('rstone');                    /* 3마리·동시 — 계단이 가장 많은 조합 */
-    if (!blk('§R 입장', p) && !p.err) {
+    /* 466 — 입장이 실패하면 **한 줄도 안 찍고** 절 전체를 건너뛰던 자리다(§1 던전과 함께 2곳).
+       그래서 10건이 빨개진 회차에도 §R 은 «없는 것» 으로 조용히 초록이었다(LESSONS 319 반대 방향의
+       같은 병 — 절이 죽으면 죽었다고 말해야 한다). */
+    if (blk('§R 입장', p) || p.err) { if (p.err) no('§R 입장 — ' + p.err); } else {
       const r = await ev(() => {
         const bar = document.getElementById('dunBarF'), num = document.getElementById('dunBarN');
         const w = () => parseFloat(getComputedStyle(bar).width);
