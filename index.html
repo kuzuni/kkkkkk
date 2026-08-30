@@ -19298,6 +19298,24 @@ const SOLO_CHASER = { boss:1, promo:1, arena:1, dunboss:1 };
 /* 28 스테이지 보스와 «보스 대접» 을 함께 받는 종 — 스폰 링(가까운 쪽) · 등장음 · 처치 연출 · 체력바 색.
    판정 플래그(bossOn·bossT·S.bossFarm·stageWin)는 **스테이지 보스 전용**이라 여기 들어오지 않는다. */
 const isBossKind = tk => tk === 'boss' || tk === 'dunboss';
+/* ⚑ 541(2026-08-31, 저장소 주인 지시 «플레이어 크기 1.5배 키우고 스킬들 크기 2배 키우기
+   적들 크기 1.2배 키우기. 보스는 그대로») — 전투 화면의 «크기» 손잡이 셋.
+   ⚠ **`ETYPE` 표 값을 손으로 곱하지 않는다.** 표를 곱해 두면 «원본이 얼마였는지» 가 사라져
+     다음 조정 때 1.2 가 또 곱해진다 — 배수는 언제나 여기 세 상수에만 산다.
+   ⚠ **보스는 이 표에 한 항도 안 들어온다.** `ETYPE.boss` 를 안 건드리면 던전 보스(`dunBossType`)·
+     승급 수호자(`promoType`)도 «자동으로» 그대로다 — 둘은 `bossDrawnH()`/`bossRK()` 로
+     28 보스의 «그려진 높이» 에서 자기 배율·반경을 역산하기 때문이다(폴백 4.84/66 은 안 쓰인다).
+   ⚑ **아레나(123 도전자)는 잡몹이 아니라 플레이어를 따라간다** — 그 항의 주석이 «아틀라스·배율·
+     반경을 플레이어와 같게 맞춰 «같은 종족 1:1» 로 읽히게 한다» 고 못 박았다. 잡몹 ×1.2 를
+     먹이면 도전자가 나보다 작아져 그 규약이 깨진다.
+   ⚑ **그림과 판정이 같은 손잡이를 지난다**(`bossRK()` 주석의 «판정이 몸통에 붙게» 규약) —
+     `unitSc` 는 `drawFrame` 배율과 `r`(피격·스폰 밀어내기) 양쪽이 같이 읽는다.
+   ⚠ **난이도는 이 행에서 상쇄하지 않는다** — 피격 거리 `e.r + player.r + 6` 이 좀비 기준
+     39 → 51.6(+32%)로 벌어져 501·502 와 **정반대 방향**으로 밀린다. 계수는 199 몫이다. */
+const PLAYER_DRAW_SC = 1.5;
+const MOB_DRAW_SC    = 1.2;
+const SK_DRAW_SC     = 2;
+const unitSc = tk => tk === 'arena' ? PLAYER_DRAW_SC : (SOLO_CHASER[tk] ? 1 : MOB_DRAW_SC);
 /* 162 — 구 `isBossStage`(= S.stage % 10 === 0) 폐기. 판정은 전부 «지금 보스전이냐» 하나로 모인다. */
 const inBossFight = () => bossOn;
 const stageTotal = () => bossOn ? 1 : ENEMY_COUNT;
@@ -20225,7 +20243,8 @@ const promoReady  = () => { const r = nextRank(); return !!r && S.best >= r.stag
    전투 상태
    ========================================================================== */
 const player = {
-  x: WORLD.w/2, y: WORLD.h/2, r: 16, hp: 1, vx: 0, vy: 0,
+  /* 541 — 판정 반경도 그림과 **같은 손잡이**를 지난다(16 × 1.5 = 24). 리터럴 16 은 «원본» 이라 남긴다 */
+  x: WORLD.w/2, y: WORLD.h/2, r: 16*PLAYER_DRAW_SC, hp: 1, vx: 0, vy: 0,
   /* 460 — `atkFx`(공격 모션 타이머)를 필드째 걷어냈다. 소비처가 애니 선택 한 줄뿐이었고
      그 줄이 폐지 대상이라, 값만 남기면 «아무도 안 읽는 상태» 가 굳는다(LESSONS 295-②).
      `hitFx` 는 다르다 — 애니 말고 **피격 틴트**(아래 `player.hitFx > 0 && fr`)가 읽으므로 그대로 둔다. */
@@ -20458,6 +20477,9 @@ const soloClash = (tk, r, x, y) => {
 };
 function makeEnemy(tk){
   const T2 = ETYPE[tk], s = S.stage;
+  /* 541 — 판정 반경은 그림과 같은 배수를 지난다. 스폰 밀어내기(`soloClash`)도 이 값을 봐야
+     «커진 몸» 끼리 겹친 채 태어나지 않는다(단독 개체는 배수 1 이라 좌표가 한 px 도 안 움직인다). */
+  const T2r = T2.r*unitSc(tk);
   let x, y, tries = 0;
   do{
     const a = Math.random()*6.283, r = rnd(SPAWN_RMIN, isBossKind(tk) ? BOSS_RMAX : SPAWN_RMAX);
@@ -20466,15 +20488,15 @@ function makeEnemy(tk){
   /* ⚠ 새 항은 **맨 뒤**다. 필드에 단독 개체가 하나뿐이면(스테이지 보스·승급 수호자·아레나·
      46 레이드 샌드백·보스 1마리 던전) `soloClash` 는 언제나 null 이라 뽑는 횟수도 난수 소비도
      한 번도 안 달라진다 = 그 다섯 경로의 좌표는 한 px 도 안 움직인다(66/172/257 [7] 불변). */
-  while((x < 60 || x > WORLD.w-60 || y < 60 || y > WORLD.h-60 || soloClash(tk, T2.r, x, y)) && tries < 40);
+  while((x < 60 || x > WORLD.w-60 || y < 60 || y > WORLD.h-60 || soloClash(tk, T2r, x, y)) && tries < 40);
   /* 링이 통째로 월드 밖인 극단(맵 구석)에서도 무한 루프가 되지 않게 마지막 값을 가둔다 */
   x = clamp(x, 60, WORLD.w-60); y = clamp(y, 60, WORLD.h-60);
   /* 40번을 다 써도 자리가 없는 극단(좁은 월드 · 반경 90 보스 여럿)에서는 마지막에 «밀어서» 보장한다.
      미는 것은 **새로 태어나는 쪽뿐**이다 — 이미 서 있는 개체의 좌표는 여기서도 안 움직인다. */
   for(let pass = 0; pass < 4; pass++){
-    const o = soloClash(tk, T2.r, x, y); if(!o) break;
+    const o = soloClash(tk, T2r, x, y); if(!o) break;
     let ox = x-o.x, oy = y-o.y, od = Math.hypot(ox, oy);
-    const md = T2.r + o.r;
+    const md = T2r + o.r;
     if(od <= 0.01){ ox = Math.cos(enemies.length*1.7); oy = Math.sin(enemies.length*1.7); od = 1; }
     x = clamp(x + ox/od*(md-od), 60, WORLD.w-60);
     y = clamp(y + oy/od*(md-od), 60, WORLD.h-60);
@@ -20483,7 +20505,7 @@ function makeEnemy(tk){
      던전 보스(178)·승급 수호자(208)·아레나(123)는 자기 체력식을 따로 쓰므로 여기 안 걸린다. */
   const hp = eHp(s) * T2.hp * (tk === 'boss' ? bossGateHp(s) : 1);
   enemies.push({
-    tk, T:T2, x, y, r:T2.r, hp, max:hp,
+    tk, T:T2, x, y, r:T2r, hp, max:hp,
     dmg: eDmg(s)*T2.dmg, gold: eGold(s)*T2.gold,
     /* 502 — 스테이지 비례항 삭제 + 천장. 어떤 스테이지·어떤 타입이어도 잡몹은 플레이어를 못 따라잡는다.
        ⚠ ±10% 난수는 천장 **안쪽**이다(밖에 두면 상한이 1.1배까지 새어 나간다). */
@@ -21085,7 +21107,8 @@ function killEnemy(e){
   const big = isBossKind(e.tk);                                            /* 178 — 던전 보스도 «보스 처치» 연출 */
   burst(e.x, e.y - e.r, e.T.col, big ? 46 : 13, big ? 330 : 190);
   const corpse = { akey:e.T.atlas, anim:e.T.die, at:0, afps:CORPSE_FPS, aloop:false,
-                   x:e.x, y:e.y, scale:e.T.scale, flip:e.flip, life:CORPSE_LIFE, col:e.T.col, r:e.r,
+                   /* 541 — 시체도 살아 있을 때와 같은 배수로 그린다(안 그러면 죽는 프레임에 몸이 줄어든다) */
+                   x:e.x, y:e.y, scale:e.T.scale*unitSc(e.tk), flip:e.flip, life:CORPSE_LIFE, col:e.T.col, r:e.r,
                    yo:e.T.yo || 0,     /* 178 — 시체도 같은 발밑 보정을 이어받는다(안 그러면 죽는 순간 튄다) */
                    /* 208 ③ — 틴트도 이어받는다. 이게 없으면 «죽는 순간 색이 벗겨진» 무틴트 기사가 된다
                       (208 승급 수호자 · 123 아레나 도전자 둘 다 해당. 틴트 없는 적은 null 이라 불변). */
@@ -22775,7 +22798,7 @@ function drawTrails(){
         ctx.fillStyle = b.col;
         ctx.beginPath();
         /* 지름 테이퍼 30% → 100% (1회차 비평 ⑤ «테이퍼 없음») */
-        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], 2.0 + 5.0*f, 0, 6.283);
+        ctx.arc(b.tr[idx*2], b.tr[idx*2+1], (2.0 + 5.0*f)*SK_DRAW_SC, 0, 6.283);   /* 541 */
         ctx.fill();
       }
     }else if(k === 'ice'){
@@ -22785,7 +22808,7 @@ function drawTrails(){
         const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, nn-1)) % TRAIL_N;
         const f = (i+1)/(nn-1);
         ctx.globalAlpha = f*f*0.5*(farIn ? 1 : edgeFade(b.tr[i1*2], b.tr[i1*2+1], ew));
-        ctx.lineWidth = 3 + 12*f;
+        ctx.lineWidth = (3 + 12*f)*SK_DRAW_SC;                                    /* 541 */
         ctx.beginPath();
         ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
         ctx.stroke();
@@ -22796,20 +22819,20 @@ function drawTrails(){
         const x = b.tr[idx*2], y = b.tr[idx*2+1];
         ctx.globalAlpha = (0.25 + f*0.6)*(farIn ? 1 : edgeFade(x, y, ew));
         ctx.fillStyle = i % 2 ? '#dff6ff' : b.col;
-        const s2 = 2.4 + 5.0*f, off = (i % 3 - 1)*5.5*(1-f);
+        const s2 = (2.4 + 5.0*f)*SK_DRAW_SC, off = (i % 3 - 1)*5.5*(1-f);          /* 541 */
         ctx.beginPath();
         ctx.moveTo(x, y-s2+off); ctx.lineTo(x+s2, y+off); ctx.lineTo(x, y+s2+off); ctx.lineTo(x-s2, y+off);
         ctx.closePath(); ctx.fill();
       }
     }else{
       /* 폴리라인 잔상 — 검기(넓은 띠) · 화염(꼬리) · 그 외(가는 선) */
-      const w = k === 'slash' ? 13 : fire ? 15 : 8;
+      const w = (k === 'slash' ? 13 : fire ? 15 : 8);
       for(let i=0;i<nn-1;i+=lod){
         const i0 = (first + i) % TRAIL_N, i1 = (first + Math.min(i+lod, nn-1)) % TRAIL_N;
         const f = (i+1)/(nn-1);
         ctx.globalAlpha = f*f*(fire ? 0.85 : 0.7)*(farIn ? 1 : edgeFade(b.tr[i1*2], b.tr[i1*2+1], ew));
         ctx.strokeStyle = fire ? (f > 0.6 ? '#ffdc8a' : b.col) : b.col;
-        ctx.lineWidth = 1.2 + w*f;
+        ctx.lineWidth = (1.2 + w*f)*SK_DRAW_SC;                                   /* 541 */
         ctx.beginPath();
         ctx.moveTo(b.tr[i0*2], b.tr[i0*2+1]); ctx.lineTo(b.tr[i1*2], b.tr[i1*2+1]);
         ctx.stroke();
@@ -22861,6 +22884,15 @@ function draw(){
   ctx.strokeRect(0, 0, WORLD.w, WORLD.h);
 
   /* 독 장판 · 193 ⑧ 불 장판 · 193 ⑥ 레이저 */
+  /* ⚑ 541 — **여기에는 `SK_DRAW_SC` 를 안 태운다.** 이 세 자리(장판·레이저·오라)와 area 화구는
+     «그린 반경 = 피해 반경» 이 코드로 같은 값이다(아래 `z.r` 은 그리기와 `hitEnemy` 판정이 한 벌로
+     읽고, 193 ⑥ 주석이 «캡슐(판정)과 같은 축·같은 폭으로 그린다», 114 ④ 가 «화구를 피해 반경에 맞게»
+     라고 못 박아 뒀다). 그림만 2배로 하면 **피해 범위를 두 배로 거짓 표시**하는 화면이 되고
+     (338 이 «눈금이 거꾸로다» 로, 350 이 «규칙이 안 따라온다» 로 고친 것이 정확히 그 종류다),
+     판정까지 2배로 하면 **피해 면적이 4배**라 명백한 밸런스 변경이다.
+     ⇒ 541 은 «그 자신이 피해 범위를 선언하지 않는» 그림(투사체 몸통·잔상·꼬리·회전검 칼날)만 키우고,
+       이 네 자리는 **그림과 판정을 같이** 정해야 하므로 **199 로 넘긴다**(PROGRESS 541·199 행).
+     현재값: 독 92 · 불 105 · 레이저 34/470 · 노바 250 · 오라 92+6·Lv. */
   for(const z of zones){
     if(z.k === 'laser'){
       /* 193 ⑥ — 캡슐(판정)과 같은 축·같은 폭으로 그린다. 184 준수: 화면 전체 플래시가 아니라
@@ -22953,10 +22985,10 @@ function draw(){
   order.sort((a, b) => a.y - b.y);
   for(const o of order){
     if(o === player){
-      drawShadow(player.x, player.y, 15);
+      drawShadow(player.x, player.y, 15*PLAYER_DRAW_SC);   /* 541 — 그림자도 몸과 같이 커진다 */
       const fr = curFrame(player);
       const av = AV[S.avatar], aimg = av && av.tint ? tinted('knight', av.tint) : null;
-      if(!fr || !drawFrame('knight', fr, player.x, player.y, 1.0, player.flip, 1, aimg)){
+      if(!fr || !drawFrame('knight', fr, player.x, player.y, PLAYER_DRAW_SC, player.flip, 1, aimg)){
         ctx.save(); ctx.translate(player.x, player.y-18); ctx.rotate(player.aim);
         ctx.fillStyle = '#7fe6ff'; ctx.beginPath();
         ctx.moveTo(20,0); ctx.lineTo(-13,13); ctx.lineTo(-6,0); ctx.lineTo(-13,-13);
@@ -22964,7 +22996,7 @@ function draw(){
       }
       if(player.hitFx > 0 && fr){
         ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.5;
-        drawFrame('knight', fr, player.x, player.y, 1.0, player.flip, 1, aimg);
+        drawFrame('knight', fr, player.x, player.y, PLAYER_DRAW_SC, player.flip, 1, aimg);
         ctx.restore();
       }
       continue;
@@ -23025,13 +23057,15 @@ function draw(){
        ⚠ 그리기 전용이다 — `e.y` 자체는 안 건드리므로 그림자·판정·깊이 정렬·AI 는 그대로다.
        `yo` 가 없는 기존 적(좀비·고블린·다크엘프·보스·승급·아레나)은 `||0` 이라 한 줄도 안 바뀐다. */
     const ey = e.y + (T2.yo || 0);
-    const ok = fr && drawFrame(T2.atlas, fr, e.x, ey, T2.scale*(0.4+0.6*sgrow), e.flip, sgrow, eimg);
+    /* 541 — 표 값 × 종별 배수(잡몹 1.2 · 아레나 1.5 · 보스 1). 팝인 항(0.4+0.6*sgrow)은 그대로다 */
+    const esc = T2.scale*unitSc(e.tk);
+    const ok = fr && drawFrame(T2.atlas, fr, e.x, ey, esc*(0.4+0.6*sgrow), e.flip, sgrow, eimg);
     if(!ok){
       ctx.globalAlpha = sgrow; ctx.fillStyle = e.fx > 0 ? '#fff' : T2.col;
       ctx.beginPath(); ctx.arc(e.x, e.y-e.r, e.r*sgrow, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
     }else if(e.fx > 0){
       ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.55;
-      drawFrame(T2.atlas, fr, e.x, ey, T2.scale, e.flip, 1, eimg);
+      drawFrame(T2.atlas, fr, e.x, ey, esc, e.flip, 1, eimg);
       ctx.restore();
     }
     if(e.slow > 0){
@@ -23070,7 +23104,7 @@ function draw(){
       for(let t=0;t<6;t+=ostep){
         const f = 1 - t/6, a0 = a - t*0.055, a1 = a0 - 0.055*ostep;
         ctx.globalAlpha = f*f*0.55;
-        ctx.lineWidth = 1.5 + 7*f;
+        ctx.lineWidth = (1.5 + 7*f)*SK_DRAW_SC;                                   /* 541 */
         ctx.beginPath();
         ctx.moveTo(player.x + Math.cos(a0)*R, player.y - 22 + Math.sin(a0)*R*0.75);
         ctx.lineTo(player.x + Math.cos(a1)*R, player.y - 22 + Math.sin(a1)*R*0.75);
@@ -23082,6 +23116,7 @@ function draw(){
       const a = orbitAng + i*(6.283/cnt);
       const bx = player.x + Math.cos(a)*R, by = player.y - 22 + Math.sin(a)*R*0.75;
       ctx.save(); ctx.translate(bx, by); ctx.rotate(a + 1.57);
+      ctx.scale(SK_DRAW_SC, SK_DRAW_SC);   /* 541 — 칼날 «그림» 만. 궤도 반경 R 78 은 자리(판정)라 그대로다 */
       ctx.fillStyle = 'rgba(255,225,160,.92)';
       ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(5,0); ctx.lineTo(0,14); ctx.lineTo(-5,0);
       ctx.closePath(); ctx.fill();
@@ -23281,6 +23316,11 @@ function draw(){
        판정은 살아 있으므로 밸런스는 불변이고, 다시 맞을 수 있게 되면 같은 속도로 도로 나타난다. */
     if(b.mf !== undefined) ctx.globalAlpha *= b.mf;
     ctx.translate(b.x, b.y);
+    /* ⚑ 541 — «스킬 크기 2배»(주인 지시). **그림만** 키운다: 자리(b.x·b.y)·속도·수명·관통·
+       명중 반경은 한 글자도 안 건드리므로 밸런스는 구성상 불변이다(114 의 «그리기만» 처방과 같은 문법).
+       ⚠ 여기 있는 것은 «그 자신이 피해 범위를 선언하지 않는» 그림뿐이다 — 장판·레이저·오라는
+         그린 반경이 곧 피해 반경(그림 = 판정)이라 이 배수를 안 태운다. 상세는 아래 장판 주석. */
+    ctx.scale(SK_DRAW_SC, SK_DRAW_SC);
     shotBody(b);
     ctx.restore();
     ctx.globalAlpha = 1;
@@ -23293,7 +23333,8 @@ function draw(){
     ctx.save();
     ctx.globalAlpha = (1-f)*(1-f) * edgeFade(q.x, q.y, 26);
     ctx.translate(q.x, q.y);
-    ctx.scale(1 + f*0.35, 1 + f*0.35);
+    /* 541 — 잔상은 투사체와 «한 글자도 다르지 않은 그림» 이라 같은 배수를 탄다(안 그러면 닿는 순간 반으로 준다) */
+    ctx.scale(SK_DRAW_SC*(1 + f*0.35), SK_DRAW_SC*(1 + f*0.35));
     shotBody(q);
     ctx.restore();
   }
