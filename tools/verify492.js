@@ -199,6 +199,25 @@ window.__ink492 = function (host, cardEl) {
      `최대 겹침 ${px(Math.max(...cards.map(c => c.barOv)))}px`);
   ok(cards.every(c => c.rW <= 1), '[E4] 잉크 가로가 아이콘 영역 안이다',
      `최대 ${Math.max(...cards.map(c => c.rW)).toFixed(3)}`);
+  /* [E5] 뱃지 안전폭 — 카드 좌상단 «+»/«─»(`.sk-eq` 49x49 @ −4,−4 ⇒ 카드 x −4..45)가 50칸 중
+     39칸에 뜬다. 잉크가 좌로 45 를 넘어 자라면 그 뱃지 밑으로 들어간다. 지금 잉크 좌단은
+     카드 x42 로 여유 3px 이고, 이것이 **폭 상한(CARD_ART.w 120)을 더 못 올리는 이유**다.
+     2회차 비평가 AX 가 «1px 밖에 안 남았다 · 코스튬에는 상한 인상을 적용하지 마라» 로 짚은 자리. */
+  const badge = await p.evaluate(() => {
+    const cs = Array.from(document.querySelectorAll('#bCos .sk-card[data-cosit]'));
+    let n = 0, right = -1e9;
+    cs.forEach(k => { const e = k.querySelector('.sk-eq'); if (!e) return; n++;
+      const kb = k.getBoundingClientRect(), eb = e.getBoundingClientRect();
+      right = Math.max(right, eb.right - kb.x); });
+    const k0 = cs[0], kb = k0.getBoundingClientRect();
+    const ci = k0.querySelector('.sk-ci').getBoundingClientRect();
+    return { n, right, ciX: ci.x - kb.x, ciW: ci.width };
+  });
+  const inkLeft = badge.ciX + (badge.ciW - cards[0].w) / 2;
+  const under = badge.right - inkLeft;
+  ok(badge.n > 0 && under <= 4,
+     '[E5] «+» 뱃지가 잉크를 «스치는» 정도(≤4px)에 머문다 — 폭 상한을 더 올리면 여기가 먼저 깨진다',
+     `뱃지 우단 ${px(badge.right)} − 잉크 좌단 ${px(inkLeft)} = ${px(under)}px (뱃지 ${badge.n}/50칸)`);
 
   /* ─── [F] 형제 자리 회귀 (411 · 08) ─────────────────────────────────────── */
   const slot = await p.evaluate(() => Array.from(document.querySelectorAll('#bCos .sk-slot[data-cosun]'))
@@ -215,8 +234,9 @@ window.__ink492 = function (host, cardEl) {
   const pets = await p.evaluate(() => Array.from(document.querySelectorAll('#bPet .sk-card .sk-ci'))
     .map(el => window.__ink492(el, el.parentElement)).filter(Boolean));
   ok(pets.length >= 30, '[G0] 26 펫 카드를 전수로 쟀다', String(pets.length));
-  const pW = pets.filter(c => c.w >= 96 - 2);                       /* 폭 상한에 걸린 칸 */
-  const pH = pets.filter(c => !(c.w >= 96 - 2)).map(c => c.h);
+  const CW = await p.evaluate(() => CARD_ART.w);
+  const pW = pets.filter(c => c.w >= CW - 2);                       /* 폭 상한에 걸린 칸 */
+  const pH = pets.filter(c => !(c.w >= CW - 2)).map(c => c.h);
   /* ⚠ 허용 오차 2px 은 «무르게 푼 것» 이 아니라 contain 의 반올림이다 — `drawSpriteTo` 가
      `Math.round(fr[3] × k)` 로 앉히고 림 2px 은 실루엣이 있는 변에만 붙으므로 원본 종횡에 따라
      1~2px 이 남는다(411 이 슬롯에서 쓴 오차도 3px 이다). 2/90 = 2.2% 로 411 «세로 덩치
