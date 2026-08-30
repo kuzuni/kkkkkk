@@ -99,7 +99,7 @@ const GAP = function (sel) {
       j1 && j2 ? `1841 gap ${j1.gap} ↔ 1842 gap ${j2.gap}` : '측정 실패');
 
     /* ── [C] 레퍼런스 불변 ────────────────────────────────────────────────────── */
-    console.log('\n[C] 레퍼런스 불변 — 흡수항은 h ≥ 2009 에서 0 이다');
+    console.log('\n[C] 레퍼런스 불변 — 흡수항은 h ≥ 2050 에서 0 이다(447 이관 전 2009)');
     const ref = await measure('side:coll', '.cl', 2280);
     ok(ref && Math.abs(ref.top - 272.5) < 0.6, '[C] 2280 `.cl` 상변 272.5 (8220행 검산값) Δ0px', ref ? ref.top : '측정 실패');
     const ref26 = await measure('side:coll', '.cl', 2600);
@@ -117,10 +117,25 @@ const GAP = function (sel) {
     ok(rv2 && rv2.gap >= 0, '[R] 주입을 걷으면 같은 프레임이 다시 초록이다(주입이 새지 않았다)',
       rv2 ? `gap ${rv2.gap}` : '측정 실패');
 
-    /* 제품 쪽 선언이 실제로 그 모양인지 — 자가 «다른 길로 우연히 초록» 이 되는 것을 막는다. */
+    /* 제품 쪽 선언이 실제로 그 모양인지 — 자가 «다른 길로 우연히 초록» 이 되는 것을 막는다.
+       ⚑ **447 이관(2026-08-30)** — 447 이 같은 규칙의 **위쪽**에도 흡수항을 붙이면서 아래쪽 상수가
+       2009 → **2035** 로 옮겨졌다(위 흡수항 a 가 상자를 아래로 a/2 밀어 «상자가 상한에 걸리는»
+       구간이 26 늘어난다 ⇒ 아래 11 도 그만큼 더 오래 내야 한다. 안 옮기면 2009 ≤ h < 2013 에서
+       `.cl-tabs` 가 다시 −11 이 된다 — 실제로 447 1회차가 그 경로를 산수로 기각했다).
+       ⚠ **낡은 상수를 빼서 초록으로 돌리지 않았다** — 항을 **더 조였다**: 두 흡수항이 **같은 무릎**
+       (2050 − 26 = 2035 − 11 = **2024**)에서 끝난다는 것까지 묻는다. 그 짝이 어긋나면 위·아래
+       조건(h + a − b ≥ 2039 · h + b − a ≥ 2009)이 동시에 성립하는 구간이 갈라져 한쪽이 음수가 된다. */
     const src = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
-    ok(/#collw\{padding-bottom:calc\(276px \+ clamp\(0px, 2009px - var\(--frameh, 2280px\), 11px\)\)\}/.test(src),
-      '[B] 처방이 «연속 흡수항» 그대로다(상수 분기가 아니라 clamp)');
+    const mTop = src.match(/#collw\{padding-top:calc\(168px \+ clamp\(0px, (\d+)px - var\(--frameh, 2280px\), (\d+)px\)\);/);
+    const mBot = src.match(/padding-bottom:calc\(276px \+ clamp\(0px, (\d+)px - var\(--frameh, 2280px\), (\d+)px\)\)\}/);
+    ok(!!mTop && !!mBot, '[B] 처방이 «연속 흡수항» 그대로다(상수 분기가 아니라 clamp — 위·아래 두 항)',
+      `위 ${mTop ? mTop[0] : '없음'} · 아래 ${mBot ? mBot[0] : '없음'}`);
+    ok(!!mTop && !!mBot && +mTop[2] === 26 && +mBot[2] === 11,
+      '[B] 흡수량이 390 이 `.shortf` 에서 낸 값 그대로다(위 26 · 아래 11)',
+      mTop && mBot ? `위 ${mTop[2]} · 아래 ${mBot[2]}` : '못 읽음');
+    ok(!!mTop && !!mBot && +mTop[1] - +mTop[2] === +mBot[1] - +mBot[2],
+      '[B] 두 흡수항의 «무릎» 이 같은 프레임이다(2050−26 = 2035−11 = 2024)',
+      mTop && mBot ? `위 ${+mTop[1] - +mTop[2]} · 아래 ${+mBot[1] - +mBot[2]}` : '못 읽음');
   } finally { await browser.close(); }
 
   console.log(`\nVERIFY436 ${pass}/${pass + fail}`);
