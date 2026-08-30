@@ -22403,6 +22403,13 @@ function step(dt){
       /* 272 — 칸이 열리면 그 자리에서 알린다(스킬 시트를 열어 봐야 아는 해금은 없는 것과 같다) */
       if(skSlotMax() > slot0) notify('🔓 <b>스킬 슬롯</b>이 한 칸 열렸습니다! (' + skSlotMax() + '/8)');
       const bonusG = eGold(S.stage-1) * 12 * stat.goldMul;
+      /* ⚑ 518 — 이 골드는 «전투 발» 인데 종전에는 발원 표시가 **없었다**. 표시가 없으면 fxSrc 가
+         남아 있는 힌트 중 더 최근 것을 고르는데, 475 가 격파와 이 줄 사이에 1초를 넣은 뒤로는
+         `killEnemy` 의 전투 힌트(창 600ms)가 이미 만료돼 **마지막으로 누른 버튼**(창 1200ms)이 이긴다
+         ⇒ 팝업을 열어 둔 채 스테이지가 클리어되면 코인이 그 버튼에서 튀어나와 #fxl(z60 · 팝업 **위**)로
+         날고 딤 위에 밝은 골드 알약 복제(fx-lit)까지 켠다 = 주인이 본 «쌩뚱맞은 곳의 골드 이펙트».
+         77 이 만든 «전투 발은 #fxlc(z7 · 팝업 아래)» 규칙을 이 줄이 안 타고 있었을 뿐이다. */
+      fxAt(fxWorld(player.x, player.y - player.r), 'combat');
       S.gold += bonusG; goldWin += bonusG;
       /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다.
          170 — ⛔ **스테이지 클리어 보상은 골드뿐이다(주인 지시 2026-08-27).** 최고 기록 첫 돌파 시
@@ -22428,6 +22435,7 @@ function step(dt){
          보스는 [스테이지 재도전](retryBoss) 으로만 선다. */
       if(S.bossFarm){
         const bonusG = eGold(S.stage) * 12 * stat.goldMul;
+        fxAt(fxWorld(player.x, player.y - player.r), 'combat');   /* 518 — 위 클리어 보너스와 같은 이유 */
         S.gold += bonusG; goldWin += bonusG;
         /* 94 — 웨이브가 전멸할 때마다 반복되던 30자 문구는 없다. 파밍 골드는
            58 재화 감시(fxWatch)가 S.gold 증가를 보고 코인 비행으로 이미 보여 준다. */
@@ -33699,7 +33707,43 @@ function fxSrc(now){
   if(a < -1e8 && b < -1e8) return null;
   /* 77 — 출처를 좌표와 함께 돌려준다. combat 이면 fxFly/fxBurst 가 #fxlc(팝업 아래)를 고른다. */
   if(a >= b) return fxOrigSrc === 'combat' ? { x:fxOrig.x, y:fxOrig.y, combat:true } : fxOrig;
-  return fxPt(fxTapEl);
+  /* 518 — 탭 폴백은 «화면이 알려 준 발원» 이 아니라 **추측**이다. 추측이었다는 사실을 표시해
+     넘긴다(`tap:true`) — fxFly 가 «팝업이 떠 있는 동안에는 추측을 믿지 않는다» 를 판정해야 한다. */
+  const q = fxPt(fxTapEl);
+  return q ? { x:q.x, y:q.y, el:fxTapEl, tap:true } : null;
+}
+/* ⚑ 518 (저장소 주인 보고 «쌩뚱맞은 곳에서 골드 이펙트가 터진다») —
+   **팝업이 떠 있는 동안에는 «누가 줬는지 아는 재화» 만 팝업 위에서 연출한다.**
+   77 이 «전투 발은 #fxlc(z7 · 팝업 아래)» 를 세웠지만 그 규칙은 **발원 표시가 붙은 증가분에만**
+   적용된다. 표시가 없는 증가분(스테이지·파도 보너스 같은 자동 수입)은 fxSrc 가 «마지막으로 누른
+   버튼»(창 1200ms)을 **추측**으로 집어 UI 발로 만들고, UI 발은 #fxl(z60 = 모든 팝업 위) +
+   딤 위 알약 복제까지 켠다 ⇒ 소환 결과를 보는 동안·[일괄 강화]를 누른 직후에 배경 전투가 번 골드가
+   **내가 방금 누른 그 자리에서** 팝업 위로 쏟아진다(주인 원문 그대로의 그림).
+   ⚠ 개별 자리에 표시를 붙이는 것만으로는 안 닫힌다 — 새 수입원이 생길 때마다 같은 구멍이 다시
+   열리고, «팝업 안 카드를 누른 직후» 는 그 노드가 가려져 있지도 않아 자리로는 못 가른다.
+   ⇒ 판정을 **«추측인가 아닌가»** 로 옮긴다: 화면을 덮는 층이 떠 있는 동안 탭 추측 발원은 믿지 않고,
+   UI 발 3박자·소리·개수·경로는 그대로 둔 채 **그리는 층만** #fxlc 로 내리고 알약 복제를 뺀다.
+   (층만 내린다 — 타이밍·개수·소리를 건드리면 58/93/77 게이트가 재는 축이 통째로 바뀐다)
+   ✅ 화면이 `fxAt(요소)` 로 «여기서 났다» 고 **알려 준** 보상(우편·퀘스트·룰렛·패스·상점 = 27033·
+   27175·24572·24719·26921·32721)은 추측이 아니므로 종전 그대로 팝업 위에서 난다. */
+function fxZOf(el){
+  const v = el ? parseInt(getComputedStyle(el).zIndex, 10) : NaN;
+  return Number.isFinite(v) ? v : 0;
+}
+let fxCovF = -1, fxCovC = false;
+function fxCovered(){                                 /* 지금 화면을 덮는 층(팝업·시트·딤)이 있는가 */
+  if(fxCovF === fxFrame) return fxCovC;               /* 프레임당 1회만 — 레이아웃 스래싱 방지 */
+  fxCovF = fxFrame; fxCovC = false;
+  const app = $('app'); if(!app) return false;
+  for(const n of app.children){
+    if(n.id === 'fxl' || n.id === 'fxlc') continue;
+    if(fxZOf(n) <= 7) continue;                       /* #fxlc(z7) 아래·같은 층은 «덮는 층» 이 아니다 */
+    const cs = getComputedStyle(n);
+    if(cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
+    const r = fxRect(n);                              /* 프레임 px — 화면 배율은 fxRect 가 되돌린다 */
+    if(r && r.w >= FRAME_W * 0.9 && r.h >= frameH * 0.9){ fxCovC = true; break; }
+  }
+  return fxCovC;
 }
 
 /* ── 재화 비행 ── */
@@ -33709,7 +33753,10 @@ let fxCnt2 = false;                                   /* 93 4회차 — 이번 �
 function fxFly(from, cur, n){
   /* 77 — 전투 발이면 팝업 아래 레이어(#fxlc). +n 도 같은 레이어에 뜨도록 batch 에 기억한다. */
   const combat = !!(from && from.combat);
-  const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
+  /* 518 — 팝업이 떠 있는데 발원이 «탭 추측» 이면 UI 발 그대로 날리되 **층만** 팝업 아래로 내린다.
+     타이밍·개수·소리·경로는 한 값도 안 바뀐다(아래 계산은 전부 `combat` 만 본다). */
+  const buried = !combat && !!(from && from.tap) && fxCovered();
+  const C = FXCUR[cur], L = (combat || buried) ? fxLC() : fxL(); if(!C || !L) return;
   const pill = fxPill(C); if(!pill) return;
   const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
@@ -33739,12 +33786,14 @@ function fxFly(from, cur, n){
   }
   if(cnt < 1 || L.childElementCount + cnt > FXMAX) return;
   /* 이 묶음의 «첫 도착» 에서만 `+n` 과 숫자 롤링을 트리거한다. ting 은 93 의 «도착음 피치 3단계» 카운터. */
-  const batch = { fired:false, combat, ting:0, landed:0, cnt:0, base:null };
+  /* 518 — `+n` 도 코인과 **같은 층**이어야 한다. 층이 갈리면 팝업 위에 숫자만 남아
+     «코인 없이 +n 만 뜨는» 더 이상한 그림이 된다(그래서 batch 에는 «내려간 층» 을 적는다). */
+  const batch = { fired:false, combat: combat || buried, ting:0, landed:0, cnt:0, base:null };
   /* 93 — 마지막 도착(1.26s)까지 숫자가 안 끝나야 «코인과 숫자가 같이 오른다» (1400 → 2000) */
   batch.cnt = cnt;
   /* 10회차 — 복제판을 «첫 도착» 에 만들면 그 전까지 톱바가 딤 아래(휘도 25)라 첫 튐이 안 보인다
      (비평가 AB ⑤: 첫 착지 2~4개의 튐·착지 표시가 화면에 0개). 스폰 시점에 미리 올린다. */
-  if(!combat) fxLitOn(pill);
+  if(!combat && !buried) fxLitOn(pill);               /* 518 — 가려진 발원이면 딤 위 알약 복제도 없다 */
   /* 31회차 — 30차 BA P6 «씬 A 만 발원 버스트가 없다». 씬 B(퀘스트 수령)는 `fxBurst(btn,…,10)`,
      씬 C(강화)는 카드 버스트가 «여기서 났다» 를 말하는데, 씬 A(전투 드랍)만 코인이 **아무 신호 없이**
      생긴다 — 공용 모듈인데 세 씬 중 하나에만 발원 표시가 없으면 ④ 일관성이 성립하지 않는다.
