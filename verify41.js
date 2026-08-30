@@ -273,7 +273,10 @@ async function open(browser, file, which, freeze) {
         return { top: +((bar.top - a.top) / sc).toFixed(1), h: +(bar.height / sc).toFixed(1),
           covers: bar.top <= t.top + 0.5 && bar.bottom >= t.bottom - 0.5,
           inside: bar.top >= a.top - 0.5 && bar.left >= a.left - 0.5 && bar.right <= a.right + 0.5, pills,
-          pulsing: ps.some((e) => getComputedStyle(e).transform !== 'none') };
+          /* ⚠ «펄스 중» 을 `getComputedStyle(e).transform !== 'none'` 으로 재면 안 된다 —
+             `fx-punch` 는 `animation:… both` 라 **한 번 튄 뒤로는 영원히** matrix(1,0,0,1) 이
+             남아서 «상시 펄스 중» 으로 읽힌다(probe534 [C] 에서 실측). 도는 애니메이션만 센다. */
+          pulsing: ps.some((e) => e.getAnimations().some((an) => an.playState === 'running')) };
       }, which);
       let r = await meas();
       for (let i = 0; i < 20 && r.pulsing; i++) { await page.waitForTimeout(100); r = await meas(); }
