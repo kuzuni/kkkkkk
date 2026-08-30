@@ -170,15 +170,34 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         const b = enemies.find((e) => e.tk === 'dunboss');
         if (b) b.hp = b.max * 0.4;
       }
-      let msg = '';
+      /* ⚑ 425 이관(2026-08-30) — 제한 시간은 «보스가 서고 등장 국면이 끝난 뒤» 부터 흐른다.
+         · `doTick`(보스 체력 남음) 갈래: 국면이 끝날 때까지 흘린 **뒤에** 시간 초과를 만든다.
+         · 보스 미등장 갈래: 시간 초과로는 이제 닿을 수 없다(그래서 이 문구는 방어 분기다 —
+           index.html finishDunRun 주석). 그 사실 자체를 아래 [E-425] 로 묻고, 갈래의 «뜻» 은
+           «보스 전에 실패로 끝난 런» 을 직접 만들어 확인한다. 항을 눌러 초록으로 되돌리지 않는다. */
+      let msg = '', noTimeout = null;
+      if (doTick) for (let i = 0; i < 900 && dunRun && !dunRun.fight; i++) step(1 / 60);
+      else {
+        /* ⚠ 60프레임까지만 흘린다 — 스폰 딜레이가 1.4초(84프레임)라 그 안쪽이어야 «보스 미등장» 이
+           실제로 미등장이다. 90프레임을 흘렸더니 보스가 서서 «체력 100% 남음» 이 떴다(1차 실측). */
+        dunRun.t = 0.005;
+        for (let i = 0; i < 60 && dunRun; i++) step(1 / 60);
+        noTimeout = { run: !!dunRun, t: dunRun ? dunRun.t : null, fight: !!(dunRun && dunRun.fight),
+                      bossIn: !!(dunRun && dunRun.bossIn) };
+      }
       const on = notify;
       notify = function (m) { msg = String(m); return on.apply(this, arguments); };
-      dunRun.t = 0.005;
-      step(1 / 60);
+      if (doTick) { dunRun.t = 0.005; step(1 / 60); }
+      else endDunRun(false);                     /* 보스가 서기 전의 실패 — 방어 분기를 직접 태운다 */
       notify = on;
-      return { msg: msg.replace(/<[^>]+>/g, ''), f: towerFloor(towerById(id)) };
+      return { msg: msg.replace(/<[^>]+>/g, ''), f: towerFloor(towerById(id)), noTimeout };
     }, [tid, tick]);
     if (r.err) { no(tid + ' — ' + r.err); continue; }
+    if (r.noTimeout) {
+      is('[E-425] ③ ' + tid + ' — 보스가 서기 전에는 t=0.005 여도 시간 초과가 없다', r.noTimeout.run, true);
+      is('[E-425] ③ ' + tid + ' — 그 동안 t 는 한 프레임도 안 깎인다', r.noTimeout.t, 0.005);
+      is('[E-425] ③ ' + tid + ' — 표본이 실제로 «보스 미등장» 이다(스폰 딜레이 안쪽)', r.noTimeout.bossIn, false);
+    }
     yes('③ ' + tid + ' — 실패 통보가 보스를 말한다 (' + label + ')',
       /보스\s*(미등장|체력)/.test(r.msg), '«' + r.msg + '»');
     yes('③ ' + tid + ' — 옛 «피해 n / m» 문구가 남아 있지 않다', !/피해\s*[\d.,]+\s*\//.test(r.msg));

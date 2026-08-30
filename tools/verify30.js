@@ -148,6 +148,16 @@ const near = (label, got, want, tol) => {
   console.log('  info computed: ' + JSON.stringify(inkBox));
 
   console.log('\n[E] 기능 체크 — «눌렀을 때 무엇이 바뀌는지»');
+  /* ⚑ 425 이관(2026-08-30) — 제한 시간은 «보스가 서고 등장 국면이 끝난 뒤» 부터 흐른다(`dunRun.fight`).
+     입장 직후 1.2초를 기다려 재던 옛 표본은 스폰 딜레이(1.4s) + 등장 국면(1.4s) 안쪽이라 «안 줄어든다».
+     ⚠ 항을 눌러 초록으로 되돌리지 않는다 — **전투가 시작될 때까지 기다린 뒤** 재고,
+        «그 전에는 멈춰 있다» 를 묻는 항을 하나 새로 세운다. */
+  const pre = await page.evaluate(() => ({ t: dunRun && dunRun.t, sec: DUN_SEC, fight: !!(dunRun && dunRun.fight),
+                                           txt: document.getElementById('dunTmN').textContent }));
+  (pre.t === pre.sec && !pre.fight)
+    ? ok('425 — 등장 국면 전에는 시계가 ' + pre.txt + ' 에 멈춰 있다')
+    : no('425 — 입장 직후인데 시계가 이미 움직였다 ' + JSON.stringify(pre));
+  await page.waitForFunction(() => !dunRun || dunRun.fight, null, { timeout: 15000 }).catch(() => {});
   const f1 = await page.evaluate(() => ({ t: dunRun && dunRun.t, txt: document.getElementById('dunTmN').textContent }));
   await page.waitForTimeout(1200);
   const f2 = await page.evaluate(() => ({ t: dunRun && dunRun.t, txt: document.getElementById('dunTmN').textContent, dmg: dunRun && dunRun.dmg }));
@@ -218,9 +228,14 @@ const near = (label, got, want, tol) => {
     const d = DUNGEONS[1]; S.dunTk[d.id] = 3;
     const f0 = S.dun[d.id];
     challengeDungeon(d);
-    dunRun.t = 0.01; dunRun.dmg = 0; dunRun.need = 1e30;
+    dunRun.dmg = 0; dunRun.need = 1e30;
+    /* 425 — 전투가 시작돼야 시간이 흐른다. 등장 국면(스폰 1.4s + 국면 1.4s)이 끝나기를 기다린 뒤
+       시간 초과를 만든다 — 그 전에 t 를 0.01 로 두면 영영 안 끝난다(옛 표본이 그래서 빨갰다). */
+    for (let i = 0; i < 100 && dunRun && !dunRun.fight; i++) await new Promise((r) => setTimeout(r, 60));
+    const fight = !!(dunRun && dunRun.fight);
+    if (dunRun) dunRun.t = 0.01;
     await new Promise((r) => setTimeout(r, 700));
-    return { run: !!dunRun, f0, f1: S.dun[d.id] };
+    return { run: !!dunRun, f0, f1: S.dun[d.id], fight };
   });
   (!failp.run && failp.f1 === failp.f0) ? ok('시간 초과 → 실패 + 층 유지 (' + failp.f1 + ')') : no('실패 경로 이상 ' + JSON.stringify(failp));
 

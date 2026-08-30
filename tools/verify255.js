@@ -61,6 +61,15 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     if (typeof closeModal === 'function') closeModal();
   });
 
+  /* ⚑ 425 이관(2026-08-30) — **«시간은 언제나 흐른다» 는 전제가 깨졌다.**
+     주인 지시로 던전은 «보스가 서고 등장 국면이 끝난 뒤» 부터 제한 시간이 흐른다(`dunRun.fight`).
+     아래 [E] 는 `dunRun.t = 0.005` 한 줄로 시간 초과를 만드는데, 국면 전에는 t 가 한 프레임도
+     안 깎이므로 그 표본이 통째로 «영원히 안 끝나는 런» 이 됐다.
+     ⚠ 항을 눌러 초록으로 되돌리지 않는다(LESSONS 328) — **표본을 살아 있는 자리로 옮기고**,
+        «국면 중에는 시간 초과가 안 일어난다» 를 묻는 항을 [E-0] 으로 **새로 세운다**.
+     표본을 옮기는 절차는 각 [E] 블록 **안에서** 돈다 — 이 게이트는 rAF 를 얼리지 않아
+     evaluate 경계에 실제 루프가 끼어들기 때문이다(그 함정은 [E] 첫 블록 주석에 적어 두었다). */
+
   const DUNS = await page.evaluate(() => DUNGEONS.map((d) => d.id));
 
   console.log('\n[A] 요구 피해만으로는 클리어되지 않는다 (255 의 핵심 — 던전 8종)');
@@ -210,13 +219,27 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
   console.log('\n[E] 실패 — 시간 초과면 층이 안 오르고, 통보가 «보스» 를 말한다');
   {
     const p = await prep('gold', { fill: null });
+    /* ⚠ [E-0]·[E] 를 **한 evaluate 안에서** 끝낸다. 이 게이트는 rAF 를 얼리지 않으므로 evaluate 사이에
+       실제 게임 루프가 돈다 — `t = 0.005 · fight = true` 로 둔 채 evaluate 를 나가면 그 사이에 런이
+       끝나 다음 블록이 `dunRun` null 을 만진다(1차 실측에서 정확히 그렇게 터졌다). */
     const r = await page.evaluate(async ([f0]) => {
-      let msg = '';
+      let msg = '', introSeen = 0, g = 0;
+      /* 425 — [E-0] 음성항. 등장 국면(과 그 앞 스폰 딜레이) 동안에는 t 가 0.005 여도 시간 초과가 없다.
+         이 항이 없으면 아래 [E] 를 «국면 뒤로 옮긴 것» 이 무른 수리인지 규약인지 구분되지 않는다. */
+      dunRun.t = 0.005;
+      for (let i = 0; i < 60 && dunRun && !dunRun.fight; i++) { if (dunRun.introOn) introSeen++; step(1 / 60); }
+      const e0 = { run: !!dunRun, t: dunRun ? dunRun.t : null };
+      spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
+      while (dunRun && !dunRun.fight && g++ < 900) { if (dunRun.introOn) introSeen++; step(1 / 60); }
+      const fight = !!(dunRun && dunRun.fight);
       const on = notify; notify = function (m) { msg = String(m); return on.apply(this, arguments); };
-      dunRun.t = 0.005; step(1 / 60);
+      if (dunRun) { dunRun.t = 0.005; step(1 / 60); }
       notify = on;
-      return { run: !!dunRun, f1: S.dun.gold, f0, msg };
+      return { e0, fight, introSeen, frames: g, run: !!dunRun, f1: S.dun.gold, f0, msg };
     }, [p.f]);
+    is('[E-0] 425 — 등장 국면 전/중에는 t=0.005 여도 런이 안 끝난다', r.e0.run, true);
+    is('[E-0] 그 구간 동안 t 는 한 프레임도 안 깎인다', r.e0.t, 0.005);
+    is('[E-0] 국면을 지나 전투가 시작됐다 (' + r.frames + '프레임 · 국면 ' + r.introSeen + '프레임)', r.fight, true);
     is('시간 초과 → 런 종료', r.run, false);
     is('층 유지 (' + r.f1 + ')', r.f1, p.f);
     /보스\s*(미등장|체력)/.test(r.msg.replace(/<[^>]+>/g, '')) ? ok('실패 통보가 보스를 말한다 — «' + r.msg.replace(/<[^>]+>/g, '') + '»')
@@ -229,6 +252,8 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       let msg = '';
       /* 331 — 소환 눈금 폐지: 보스는 startDunRun 이 이미 예약했다(dmg 를 안 건드린다) */
       dunBossTick(); spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; }); step(1 / 60);
+      /* 425 — 등장 국면이 끝날 때까지 흘린다(그 전에는 t 가 안 깎여 «시간 초과 실패» 자체가 없다) */
+      for (let i = 0; i < 900 && dunRun && !dunRun.fight; i++) step(1 / 60);
       const b = enemies.find((e) => e.tk === 'dunboss');
       b.hp = b.max * 0.4;
       const on = notify; notify = function (m) { msg = String(m); return on.apply(this, arguments); };
