@@ -86,6 +86,13 @@ const OUT = path.join(ROOT, 'docs/review');
     const want = Math.round(STOPS[i] * 60);
     if (want > cur) { await advance(want - cur); cur = want; }
     const st = await state();
+    /* ⚠ 찍기 직전에 **한 번 더 그린다**(상태는 안 움직인다 — `draw()` 는 현재 상태를 칠할 뿐이다).
+       던전 입장은 `#app.dunrun` 으로 레이아웃을 바꾸고 그 뒤 ResizeObserver → `fit()` 이 전장 캔버스를
+       **다시 잡으면서 지운다**. 그 리사이즈는 evaluate 가 끝난 뒤(다음 태스크)에 돌기 때문에,
+       바로 찍으면 «칠해지기 전» 이 찍힌다 — 1회차 캡처의 f1 이 정확히 그래서 필드가 통째로 검었고
+       비평가 CQ 가 그것을 ④ 3점으로 짚었다(파일 86.6KB vs 나머지 475KB). 제품 결함이 아니라 캡처 함정이다. */
+    await page.waitForTimeout(60);
+    await page.evaluate(() => { draw(); drawHud(); });
     const f = 'docs/review/425-f' + (i + 1) + '.png';
     await page.screenshot({ path: path.join(ROOT, f) });
     rows.push({ n: i + 1, at: STOPS[i], ...st });

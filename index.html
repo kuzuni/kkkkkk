@@ -20153,6 +20153,24 @@ function castSkillRaw(s){
    시뮬레이션
    ========================================================================== */
 function step(dt){
+  /* ⚑ 425 — **던전 «등장 국면» 은 배타적 상태다**(주인 지시 2026-08-30: «보스 잠깐 비췄다가
+     플레이어쪽으로 카메라 다시 하고 **전투 시작**»). 332 격파 시퀀스와 같은 방식 — 타이머 체인이
+     아니라 런에 얹은 상태 하나라 «연출 도중 시간 초과» 같은 경합이 구조적으로 없다.
+     이 1.4초 동안 **액터는 한 프레임도 움직이지 않는다**: 이동·공격·투사체·피해·부활·재생·스킬이 전부
+     멈추고 `dunRun.t` 도 안 흐른다. 시계만 멈추고 전투는 돌던 1회차 설계를 비평가 CQ·CR 이 **2인
+     독립으로 같은 1순위**로 짚었다(국면 안에서 보스 체력 300 → 280 · 플레이어가 «부활 중» 이 됐다) —
+     «시간이 안 흐르는 창에서 치명타가 들어간다» 는 주인 지시와 정면으로 어긋난다.
+     ⚠ 다만 **스프라이트 애니메이션은 계속 돌린다.** 전면 정지로 두면 1.4초가 «비춘다» 가 아니라
+        «멎었다» 로 읽힌다 — 도는 것은 프레임 번호뿐이고 좌표·판정은 한 줄도 안 움직인다.
+     ⚠ 국면 자체를 여는 곳은 `dunBossTick`(보스가 «필드에 선» 프레임)이고, 여기서는 **끝내기만** 한다. */
+  if(dunRun && dunRun.introOn && !dunRun.bossDown){
+    dunRun.introT += dt;
+    stepAnim(player, dt);
+    for(const p of pets) stepAnim(p, dt);
+    for(const e of enemies) stepAnim(e, dt);
+    if(dunRun.introT >= dunIntroLen()){ dunRun.introOn = false; dunRun.fight = true; }
+    return;
+  }
   /* 339 — 31 클리어 화면의 «n초 뒤 자동 도전» 시계. **맨 위**여야 한다: 0 초에 새 런을 시작하면
      `startDunRun` 이 enemies·spawnQ 를 통째로 비우는데, 그것이 아래 순회 도중에 일어나면 안 된다.
      여기서 갈아 끼우면 이번 프레임은 처음부터 새 런의 상태로 도는 = 버튼을 그 순간 누른 것과 같다. */
@@ -20887,17 +20905,13 @@ function step(dt){
       if(!dunRun.clrMsg && dunRun.clrT >= dunRun.clrDie){ dunRun.clrMsg = true; showMsg(DUN_CLR_TXT); }
       /* ③ 그로부터 1초 뒤 완료 화면. 문구는 endDunRun → spawnStage 의 «STAGE n» 이 자연히 걷어 간다 */
       if(dunRun.clrT >= dunRun.clrDie + DUN_CLR_HOLD) endDunRun(true);
-    }else if(dunRun.introOn){
-      /* ⚑ 425 — **등장 국면. `dunRun.t` 를 깎지 않는다**(주인 지시: «전투 시작할때부터 시간 흘러야함»).
-         332 와 같은 «배타적 상태» 방식이라 타이머 체인이 없다 = «연출 도중에 시간이 다 돼 실패» 가
-         구조적으로 불가능하다. 국면이 끝나는 프레임에 `fight` 가 서고 **다음 프레임부터** t 가 흐른다. */
-      dunRun.introT += dt;
-      if(dunRun.introT >= dunIntroLen()){ dunRun.introOn = false; dunRun.fight = true; }
     }else if(dunRun.fight){
       dunRun.t -= dt;
       if(dunRun.t <= 0){ dunRun.t = 0; endDunRun(false); }
     }
-    /* ⚑ 425 — 위 세 갈래 어디에도 안 걸리는 유일한 구간이 «보스가 아직 안 선» 스폰 딜레이(1.4초)다.
+    /* ⚑ 425 — 등장 국면(`introOn`)은 여기 오지 않는다. `step()` **맨 위**에서 배타적 상태로 갈라져
+       그 프레임을 통째로 가져가기 때문이다(액터 정지 + `introT` 진행 + return). 여기 남은 두 갈래
+       바깥, 즉 «보스가 아직 안 선» 스폰 딜레이(1.4초)에서도 t 는 안 깎인다.
        거기서도 t 는 안 깎인다 — 수리 전에는 그 1.4초가 제한 시간에서 통째로 샜다(`tools/probe425.js`
        수리 전 표: 10종 전부 «보스가 서는 순간 이미 13.6/15» = 9.33% 유실). 때릴 대상이 없는 동안
        시간이 흐르는 것이 결손 자체였고, `dunBossTick` 이 보스를 반드시 세우므로 이 구간은 유한하다. */
@@ -23612,11 +23626,17 @@ function dunIntroW(){
   const b = u - DUN_INTRO_PAN - DUN_INTRO_STAY;
   return DUN_INTRO_BACK > 0 ? 1 - ez(b/DUN_INTRO_BACK) : 0;
 }
-/* 비출 자리 — 보스가 살아 있으면 지금 좌표, 사라졌으면 마지막으로 선 자리(카메라가 튀지 않게). */
+/* 비출 자리 — 보스가 살아 있으면 지금 좌표, 사라졌으면 마지막으로 선 자리(카메라가 튀지 않게).
+   ⚑ 세로는 **발밑 앵커가 아니라 «몸통 중심»** 이다. 적의 좌표 `e.y` 는 지면 앵커(그림자 자리)라
+   그대로 가운데에 놓으면 보스 그림이 화면 중앙보다 위로 밀린다 — 비평가 CQ·CR 이 2인 독립으로
+   **97.5 / 100px 위**(화면 높이의 8.6~8.8%)로 같은 값을 쟀다. 새 상수를 만들지 않고 이미 있는
+   반지름 `e.r` 을 쓴다(같은 값을 두 곳에 적지 않는다 — LESSONS 90-①): 실측 스프라이트 높이가
+   앵커 위 `1.96·r` 이라 그 절반 `0.98·r ≈ r` 이 곧 몸통 중심이고, r=90 이면 90px 로 두 실측(97.5·79.75)
+   사이에 든다. ⚠ 자르지 말 것 — 위로 더 밀면 보스 머리가 HUD 뒤로 들어간다. */
 function dunIntroPos(){
   const r = dunRun; if(!r) return null;
   const e = r.introE;
-  if(e && e.hp > 0 && enemies.indexOf(e) >= 0){ r.introP = { x:e.x, y:e.y }; }
+  if(e && e.hp > 0 && enemies.indexOf(e) >= 0){ r.introP = { x:e.x, y:e.y - (e.r || 0) }; }
   return r.introP;
 }
 /* 매 프레임 국면 판정 — step() 의 던전 분기가 부른다 */

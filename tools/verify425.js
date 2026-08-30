@@ -103,6 +103,9 @@ const RUN = ([id]) => {
   let tMinBeforeFight = t0, camBossMin = Infinity, camPlayMaxIntro = 0, wMax = 0;
   let camPlayAtEnd = null, fIntroEnd = -1, introFrames = 0, tAtIntroEnd = null;
   let wRises = 0, wFalls = 0, wPrev = 0, wZeroAfterOne = false, sawOne = false;
+  /* 2회차 — 국면 «정지» 축. 비평가 CQ·CR 2인 독립 1순위였다: 시계만 멈추고 전투가 돌면
+     «시간이 안 흐르는 창에서 치명타가 들어간다». 좌표·체력이 한 프레임도 안 움직이는지 본다. */
+  let frz = null, frzMoveMax = 0, frzHpBoss = 0, frzHpPlayer = 0, frzAnim = 0;
   const bar = () => parseFloat(getComputedStyle(document.getElementById('dunBarF')).width) || 0;
   const hud = () => (document.getElementById('dunTmN') || {}).textContent;
   while (dunRun && f < 60 * 10) {
@@ -119,8 +122,20 @@ const RUN = ([id]) => {
     if (r.introOn) {
       introFrames++;
       const b = H.boss();
-      if (b) camBossMin = Math.min(camBossMin, d2(cam, b));
+      /* 카메라가 맞추는 자리는 발밑 앵커가 아니라 **몸통 중심**(`e.y - e.r`)이다(2회차) */
+      if (b) camBossMin = Math.min(camBossMin, d2(cam, { x: b.x, y: b.y - (b.r || 0) }));
       camPlayMaxIntro = Math.max(camPlayMaxIntro, d2(cam, player));
+      const now = { bx: b ? b.x : null, by: b ? b.y : null, bhp: b ? b.hp : null,
+                    px: player.x, py: player.y, php: player.hp,
+                    at: b ? b.at : null, pat: player.at };
+      if (frz) {
+        if (now.bx !== null && frz.bx !== null) frzMoveMax = Math.max(frzMoveMax, Math.hypot(now.bx - frz.bx, now.by - frz.by));
+        frzMoveMax = Math.max(frzMoveMax, Math.hypot(now.px - frz.px, now.py - frz.py));
+        if (now.bhp !== null && frz.bhp !== null && now.bhp !== frz.bhp) frzHpBoss++;
+        if (now.php !== frz.php) frzHpPlayer++;
+        if (now.at !== null && frz.at !== null && now.at !== frz.at) frzAnim++;
+      }
+      frz = now;
     }
     if (wasIntro && !r.introOn && fIntroEnd < 0) {
       fIntroEnd = f; tAtIntroEnd = +r.t.toFixed(6);
@@ -137,6 +152,7 @@ const RUN = ([id]) => {
     camBossMin: camBossMin === Infinity ? null : +camBossMin.toFixed(2),
     camPlayMaxIntro: +camPlayMaxIntro.toFixed(2), camPlayAtEnd,
     wMax: +wMax.toFixed(4), wRises, wFalls, wZeroAfterOne,
+    frzMoveMax: +frzMoveMax.toFixed(4), frzHpBoss, frzHpPlayer, frzAnim,
     tNow: r ? +r.t.toFixed(4) : null, camKeys: Object.keys(cam).sort().join(','),
   };
   H.cleanup();
@@ -210,8 +226,15 @@ const RUN_OTHER = ([mode]) => {
   if (!m) { no('[전제] DUN_INTRO_PAN/STAY/BACK 세 상수를 못 찾았다 — 수리가 사라졌다'); }
   else ok('[전제] 상수 셋 = PAN ' + m[1] + 's · STAY ' + m[2] + 's · BACK ' + m[3] + 's (합 ' +
           (+m[1] + +m[2] + +m[3]).toFixed(2) + 's)');
-  is('[전제] 등장 국면 동안 t 를 깎지 않는 갈래가 있다', /else if\(dunRun\.introOn\)\{/.test(src.replace(/\s+/g, '')) ||
-     /}else if\(dunRun\.introOn\)\{/.test(src), true);
+  /* 2회차 — 국면은 `step()` **맨 위**의 배타적 상태 블록으로 옮겼다(액터 정지 + introT 진행 + return).
+     그 자리를 소스에서 못박는다: `if(dunRun && dunRun.introOn && !dunRun.bossDown){ … return; }` */
+  const EXCL = /if\(dunRun && dunRun\.introOn && !dunRun\.bossDown\)\{[\s\S]{0,600}?return;\s*\n\s*\}/;
+  is('[전제] 등장 국면이 step() 의 배타적 상태다(액터 정지 + return)', EXCL.test(src), true);
+  const excl = (src.match(EXCL) || [''])[0];
+  is('[전제] 그 블록이 introT 를 굴린다', /dunRun\.introT \+= dt;/.test(excl), true);
+  is('[전제] 그 블록이 스프라이트 애니메이션만 돌린다(좌표·판정 0줄)',
+     /stepAnim\(player, dt\);/.test(excl) && /for\(const e of enemies\) stepAnim\(e, dt\);/.test(excl) &&
+     !/\.x \+=|\.y \+=|hitEnemy|hurtPlayer/.test(excl), true);
   is('[전제] 전투 깃발이 선 뒤에만 t 가 깎인다', /else if\(dunRun\.fight\)\{\s*\n?\s*dunRun\.t -= dt;/.test(src), true);
 
   /* §R 용 «상수 0» 사본 — 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
@@ -256,10 +279,19 @@ const RUN_OTHER = ([mode]) => {
   if (gold) {
     is('[B-a] 가중치 최대 w = 1 에 도달(보스에 완전히 붙는다)', gold.wMax, 1);
     ge('[B-b] 국면 중 카메라가 플레이어에게서 떨어진 최대 거리(px)', Math.round(gold.camPlayMaxIntro), 100);
-    le('[B-c] 국면 중 카메라–보스 최소 거리(px) — 실제로 «비춘다»', gold.camBossMin, 1);
+    le('[B-c] 국면 중 카메라–보스 «몸통 중심»(e.y−e.r) 최소 거리(px) — 실제로 «비춘다»', gold.camBossMin, 1);
     is('[B-d] w 가 0 → 1 → 0 으로 **한 번만** 왕복(내려간 뒤 다시 안 올라간다)', gold.wZeroAfterOne, true);
     le('[B-e] 국면이 끝난 프레임의 카메라–플레이어 거리(px) — 이음매 없이 전투로', gold.camPlayAtEnd, 40);
     is('[B-f] 108 규약 — cam 필드는 그대로', gold.camKeys, 'shake,x,y,z');
+  }
+
+  /* ═══ §Z — 국면 «정지» (2회차 · 비평가 CQ·CR 2인 독립 1순위) ═════════════ */
+  console.log('\n[Z] 정지 — 국면 동안 액터는 한 프레임도 안 움직이고, 그림만 돈다');
+  if (gold) {
+    is('[Z-a] 국면 중 보스·플레이어 좌표 이동 최대(px)', gold.frzMoveMax, 0);
+    is('[Z-b] 국면 중 보스 체력이 바뀐 프레임 수', gold.frzHpBoss, 0);
+    is('[Z-c] 국면 중 플레이어 체력이 바뀐 프레임 수(재생·피격 둘 다 멈춘다)', gold.frzHpPlayer, 0);
+    ge('[Z-d] 그래도 스프라이트 애니메이션은 돈다(프레임 번호가 움직인 프레임 수)', gold.frzAnim, 1);
   }
 
   console.log('\n[E] HUD — 국면 동안 시계는 멈춰 보이고 338 체력바는 만피다');

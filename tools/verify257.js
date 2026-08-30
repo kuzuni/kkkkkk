@@ -327,6 +327,12 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
         dunBossTick();
         spawnQ.forEach((q) => { if (q.t === 'dunboss') q.delay = 0; });
         step(1 / 60);                                   /* 보스가 서는 프레임 */
+        /* ⚑ 425 이관(2026-08-30) — 보스가 선 프레임부터 «등장 국면»(1.4초)이 열리고 그 동안
+           **액터가 한 프레임도 안 움직인다**(주인 지시: 카메라가 보스를 비추는 동안 전투 정지).
+           R2 는 «40프레임 굴리면 위치가 해소된다» 를 보는 항이라 그 40프레임이 국면 안에 들어가면
+           아무도 안 움직여 영영 12% 다. 국면이 끝난 **뒤**에 굴린다 — 항을 눌러 초록으로 되돌리는 게
+           아니라 «위치 해소는 살아 있다» 를 실제로 물을 수 있는 자리로 표본을 옮긴 것이다. */
+        for (let i = 0; i < 900 && dunRun && !dunRun.fight; i++) step(1 / 60);
         const bs = enemies.filter((e) => e.tk === 'dunboss');
         if (bs.length < 2) return { err: '보스가 2마리 미만' };
         const sep = () => {
