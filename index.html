@@ -11191,12 +11191,14 @@
       radial-gradient(circle 9px at 30px 11px,transparent 0 9px,#000 9px),
       radial-gradient(circle 23px at calc(100% - 30px) 30px,#000 0 23px,transparent 23px),
       radial-gradient(circle 9px at calc(100% - 30px) 11px,transparent 0 9px,#000 9px),
+      radial-gradient(circle 22px at 30px calc(100% - 30px),#000 0 22px,transparent 22px),
       radial-gradient(circle 9px at 30px calc(100% - 11px),transparent 0 9px,#000 9px),
+      radial-gradient(circle 22px at calc(100% - 30px) calc(100% - 30px),#000 0 22px,transparent 22px),
       radial-gradient(circle 9px at calc(100% - 30px) calc(100% - 11px),transparent 0 9px,#000 9px);
     -webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),var(--pill-taper),var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)));
     mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),var(--pill-taper),var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)));
-    -webkit-mask-composite:source-in,source-over,source-in,source-over,source-in,source-in,source-in,source-over;
-    mask-composite:intersect,add,intersect,add,intersect,intersect,intersect,add}
+    -webkit-mask-composite:source-in,source-over,source-in,source-over,source-in,source-over,source-in,source-over,source-in,source-over;
+    mask-composite:intersect,add,intersect,add,intersect,add,intersect,add,intersect,add}
   /* 384 (2026-08-29) — **바닥 어두운 띠가 코너를 감고 올라간다.**
      `tools/probe384.py` 재현(찍힌 픽셀 · 07 활성 «스킬» 알약 좌 코너, rel 행별 클래스 런):
          ref  rel 60 K7 **D2** B8 · rel 68 K7 **D5** B10 · rel 74 K8 **D8** F1 B1
