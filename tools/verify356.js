@@ -19,7 +19,8 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { SCREENS, COLLECT, URL } = require('./scan356.js');
+const fs = require('fs');
+const { SCREENS, COLLECT, URL, derivePassScreens, HTML } = require('./scan356.js');
 
 const TOL = 0.02;
 
@@ -131,6 +132,11 @@ const bad = (m) => { fails.push(m); console.log('  ✗ ' + m); };
 
 const inScope = (sel) => SCOPE.find((s) => sel.includes(s.k));
 
+/* ⚑ 443 — [A]·[B] 가 **실제로 돈 스윕**에서 무음 실패가 있었는지. [C] 는 스윕이 끝난 뒤 새 페이지에서
+   다시 물어보는 자라, 스윕 자신의 숫자(관측 노드 수·래칫)가 어느 화면을 빼먹고 나온 값인지는 못 말한다.
+   428 사고의 나머지 절반이 그것이다 — «92/93» 한 줄이 빨개지는 동안 [A]·[B] 는 초록이었다. */
+const SWEEP_MISS = [];
+
 async function sweep(browser, inject) {
   const rows = [];
   for (const [label, steps] of SCREENS) {
@@ -140,7 +146,8 @@ async function sweep(browser, inject) {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
+        if (!found && !SWEEP_MISS.includes(`«${label}» → '${s}'`)) SWEEP_MISS.push(`«${label}» → '${s}'`);
         await page.waitForTimeout(400);
       }
       if (inject) { await page.evaluate(inject); await page.waitForTimeout(120); }
@@ -160,6 +167,9 @@ async function sweep(browser, inject) {
   const rows = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
+  /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
+  if (SWEEP_MISS.length) bad(`[A] 스윕이 무음 실패한 단계 ${SWEEP_MISS.length}건 — 이 실행의 관측 수·래칫은 그 화면을 빼먹은 값이다: ${SWEEP_MISS.join(' · ')}`);
+  else ok(`[A] 스윕 ${SCREENS.length}화면의 모든 단계가 resolve 됐다 (관측 수·래칫이 전 화면 값이다)`);
 
   const badRows = rows.filter((r) => Math.abs(r.ratio - 1) > TOL);
   for (const s of SCOPE) {
@@ -809,6 +819,68 @@ async function sweep(browser, inject) {
     }
     if (!dead) ok(`[C] SCREENS ${SCREENS.length}화면의 모든 단계 셀렉터가 resolve 된다`);
     await ctx.close();
+  }
+
+  /* [D] 443 — «resolve 된다» 는 **빠진 화면**을 못 잡는다.
+     [C] 는 목록에 적힌 줄이 살아 있는지만 묻는다. 428 이 탭 하나를 «신설»(tower2)했다면 [C] 는
+     끝까지 초록인 채로 그 탭이 통째로 스캔 밖에 남았을 것이다 — 397 이 36 출석 패스에서 겪은 그것이다.
+     ⇒ 여기서는 반대 방향을 묻는다: **살아 있는 DOM 의 패스 탭 전부가 목록에 있는가.**
+     목록이 마크업 파생(scan356 derivePassScreens)이므로 이 항은 «파생이 실제 DOM 과 같은가» 의 자다. */
+  console.log('[D] 443 — 패스 탭 스코프: 살아 있는 DOM 의 탭이 전부 SCREENS 에 있는가');
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(700);
+    await page.evaluate(() => { const e = document.querySelector('#menub'); if (e) e.click(); });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => { const e = document.querySelector('#psGo'); if (e) e.click(); });
+    await page.waitForTimeout(500);
+    const live = await page.evaluate(() =>
+      [...document.querySelectorAll('#psBar [data-ptab]')].map((e) => e.dataset.ptab));
+    const mine = SCREENS.flatMap(([, st]) => st)
+      .map((s) => (s.match(/#psBar \[data-ptab="([^"]+)"\]/) || [])[1]).filter(Boolean);
+    if (live.length < 2) bad(`[D] 살아 있는 #psBar 탭이 ${live.length}개다 — 진입 실패(헛초록 방지)`);
+    else {
+      ok(`[D] 살아 있는 패스 탭 ${live.length}개 확인: ${live.join(' · ')} (헛초록 방지)`);
+      const missing = live.filter((k) => !mine.includes(k));
+      const ghost = mine.filter((k) => !live.includes(k));
+      if (missing.length) bad(`[D] 스캔 밖 탭 ${missing.length}개: ${missing.join(' · ')} — 이 탭의 CSS 는 356 이 한 번도 본 적이 없다`);
+      else ok(`[D] 살아 있는 탭 ${live.length}개가 전부 SCREENS 에 있다 (사각지대 0)`);
+      if (ghost.length) bad(`[D] 유령 탭 ${ghost.length}개: ${ghost.join(' · ')} — DOM 에 없는 이름을 목록이 붙들고 있다`);
+      else ok('[D] SCREENS 의 패스 탭 이름 중 DOM 에 없는 것 0개');
+    }
+    await ctx.close();
+  }
+
+  /* [R8] 443 되돌림 시험 — 목록이 «파생» 인지 «표» 인지.
+     제품(index.html)이 아니라 **파생 함수에 사본 문자열을 먹여** 묻는다:
+       ⓐ 탭 키를 바꾼 사본 → 파생 줄이 따라오면 표가 아니다
+       ⓑ `#psBar` 를 지운 사본 → **던져야 한다**(조용히 빈 목록을 내면 [B] 래칫이 헛초록이 된다)
+     ⚠ 기대값만 뒤집지 않았다(334) — [D] 는 여전히 «살아 있는 DOM 과 같아야 한다» 를 요구한다. */
+  console.log('[R8] 되돌림 시험(443) — 화면 목록이 마크업 파생인가');
+  {
+    const src = fs.readFileSync(HTML, 'utf8');
+    const now = derivePassScreens(src).flatMap(([, st]) => st)
+      .map((s) => (s.match(/data-ptab="([^"]+)"/) || [])[1]).filter(Boolean);
+    if (now.length < 2) bad(`[R8] 파생이 탭 ${now.length}개뿐이다 (헛초록 방지)`);
+    else ok(`[R8] 지금 마크업에서 파생한 탭 ${now.length}개: ${now.join(' · ')}`);
+
+    const renamed = src.replace(/data-ptab="tower2"/g, 'data-ptab="zzTest"');
+    if (renamed === src) bad('[R8] 되돌림 표본을 못 심었다 — `data-ptab="tower2"` 가 마크업에 없다');
+    else {
+      const after = derivePassScreens(renamed).flatMap(([, st]) => st)
+        .map((s) => (s.match(/data-ptab="([^"]+)"/) || [])[1]).filter(Boolean);
+      if (after.includes('zzTest') && !after.includes('tower2'))
+        ok('[R8] 마크업의 키를 바꾸면 화면 목록이 따라온다 (tower2 → zzTest — 표가 아니라 파생이다)');
+      else bad(`[R8] 키를 바꿔도 목록이 그대로다: ${after.join(' · ')} — 어딘가에 표가 남아 있다`);
+    }
+
+    let threw = '';
+    try { derivePassScreens(src.replace('id="psBar"', 'id="psBarGONE"')); }
+    catch (e) { threw = String(e.message || e); }
+    if (threw) ok('[R8] `#psBar` 를 지운 사본에는 **던진다** (무음으로 빈 목록을 내지 않는다)');
+    else bad('[R8] `#psBar` 가 없는데도 조용히 목록을 냈다 — 무음 실패를 다른 무음으로 갈아 끼운 것이다');
   }
 
   await browser.close();

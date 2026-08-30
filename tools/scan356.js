@@ -19,11 +19,13 @@
  * 화면에 찍히는 것은 찌그러진 아이콘이다(A1 `.ti` · A2 `.si` 가 그 구조다).
  * 개별 `scale` 속성(transform 과 별개 프로퍼티)도 같이 읽는다.
  */
+const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
+const HTML = path.resolve(__dirname, '..', 'index.html');
+const URL = 'file://' + HTML.replace(/\\/g, '/');
 const JSON_OUT = process.argv.includes('--json');
 const ALL = process.argv.includes('--all');
 const TOL = Number(process.env.SCAN356_TOL || 0.02);   /* |sx/sy − 1| 허용치 */
@@ -40,6 +42,28 @@ const TOL = Number(process.env.SCAN356_TOL || 0.02);   /* |sx/sy − 1| 허용�
    **이 목록에 줄을 더할 때는 반드시 probe397 을 돌려 resolved=true 를 확인할 것.**
    그리고 «탭·서브탭을 갈아타야만 붙는 CSS»(`#psw.att …` 처럼)는 그 탭에 실제로 가야 보인다 —
    397 의 눌린 젬이 그 자리였다. */
+
+/* ⚑ 443(2026-08-30) — **패스 탭 줄은 손으로 안 적는다. 마크업에서 파생한다**(402 «표가 아니라 id 파생»).
+   397 이 이 목록을 손으로 채운 뒤 428(주인 지시)이 패스 탭을 «보물상자·시련의탑» →
+   «시련의 탑·절망의 탑»(box → tower·tower2)으로 갈았는데, 여기 박아 둔
+   `#psBar [data-ptab="box"]` 한 줄은 안 따라와 **다시 무음 실패**했다(verify356 [C] 92/93).
+   = 397 이 고친 것은 «그때의 네 줄» 이지 «목록이 뒤처지는 구조» 가 아니었다.
+   ⇒ `#psBar` 마크업의 `data-ptab` 을 읽어 탭 수만큼 줄을 만든다. 탭이 개명·신설·폐지돼도 따라온다.
+   ⚠ **못 읽으면 조용히 빈 목록을 내지 않고 던진다** — 무음 실패를 «화면 0개» 라는 다른 무음으로
+   갈아 끼우면 [B] 래칫이 헛초록이 된다(397 의 «직전 화면을 두 번 셌다» 와 같은 사고).
+   ⚠ 라벨 글자는 renderPass() 가 PASS_TABS[].tab 으로 덮어쓰므로(210 «한 곳 규약») 화면 이름은
+   읽기 편하라고 쓰는 것뿐이고, **자리를 정하는 것은 키(`data-ptab`)** 다. */
+function derivePassScreens(src) {
+  const bar = src.match(/id="psBar"[\s\S]*?<\/div>\s*<\/div>/);
+  if (!bar) throw new Error('[scan356] index.html 에서 `#psBar` 마크업을 못 찾았다 — 패스 탭 화면을 파생할 수 없다');
+  const tabs = [...bar[0].matchAll(/data-ptab="([^"]+)"[\s\S]*?<b><em>([^<]*)<\/em><\/b>/g)]
+    .map((m) => ({ k: m[1], txt: m[2].trim() }));
+  if (tabs.length < 2)
+    throw new Error(`[scan356] \`#psBar\` 에서 파생한 탭이 ${tabs.length}개다 — 파생 규칙이 마크업과 어긋났다`);
+  return tabs.map((t) => [`35 패스(${t.txt || t.k})`, ['#menub', '#psGo', `#psBar [data-ptab="${t.k}"]`]]);
+}
+const PASS_SCREENS = derivePassScreens(fs.readFileSync(HTML, 'utf8'));
+
 const SCREENS = [
   ['02 메인', []],
   ['A1 탭바 열림', ['.tab[data-t="hero"]']],
@@ -62,11 +86,10 @@ const SCREENS = [
   ['54 랭킹', ['#menub', '#mnw [data-mn="rank"]']],
   ['55 설정', ['#menub', '#mnw [data-mn="conf"]']],
   ['56 가방', ['#menub', '#mnw [data-mn="bag"]']],
-  ['35 패스(스테이지)', ['#menub', '#psGo']],
-  /* ⚑ 397 — `#psw.att …` 규칙은 이 탭에서만 붙는다. 여기가 스캔 밖이라 눌린 젬이 살아남았다. */
-  ['36 출석 패스', ['#menub', '#psGo', '#psBar [data-ptab="att"]']],
-  ['35 패스(보물상자)', ['#menub', '#psGo', '#psBar [data-ptab="box"]']],
-  ['35 패스(시련의탑)', ['#menub', '#psGo', '#psBar [data-ptab="tower"]']],
+  /* ⚑ 397 — `#psw.att …` 규칙은 출석 탭에서만 붙는다. 그 탭이 스캔 밖이라 눌린 젬이 살아남았다.
+     ⚑ 443 — 그 네 줄을 손으로 적는 대신 마크업에서 파생한다(위 derivePassScreens 주석).
+     지금 파생값: 35 패스(스테이지) · 35 패스(시련의 탑) · 35 패스(절망의 탑) · 35 패스(출석) */
+  ...PASS_SCREENS,
   ['70 출석', ['.side .ibtn[data-pop="attend"]']],
   ['29 룰렛', ['.side .ibtn[data-pop="roul"]']],
   ['22 퀘스트', ['.side .ibtn[data-pop="quest"]']],
@@ -203,7 +226,7 @@ const COLLECT = function (opt) {
   return out;
 };
 
-module.exports = { SCREENS, COLLECT, URL, TOL };
+module.exports = { SCREENS, COLLECT, URL, TOL, derivePassScreens, PASS_SCREENS, HTML };
 
 if (require.main !== module) return;
 
@@ -218,7 +241,10 @@ if (require.main !== module) return;
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+        /* ⚑ 443 — 안 맞는 셀렉터는 **조용히 넘어가지 않는다**. 예전에는 `if (el) el.click()` 이라
+           그 줄이 직전 화면을 두 번 세고도 아무 표시가 없었다(397·443 이 같은 자리에서 두 번). */
+        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
+        if (!found) errs.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다`);
         await page.waitForTimeout(420);
       }
       await page.waitForTimeout(250);
