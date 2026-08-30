@@ -112,13 +112,24 @@ const srv = http.createServer((req, res) => {
         if(s && g) out.push({ who:'적 '+tk+'('+T.name+')', flip, dx:g.cx - s.cx, w:g.w, sc });
       }
     }
-    /* 플레이어 — draw() 는 drawShadow(player.x, player.y, 15) 와 drawFrame('knight', curFrame(player), …, 1.0) */
+    /* 플레이어 — draw() 는 drawShadow(player.x, player.y, 15) 와 drawFrame('knight', curFrame(player), …, 1.0)
+       ⚑ 446 — 표본은 «그 순간의 자세»(curFrame 을 그대로 읽는 것)가 아니라 **쉬는 자세**다. 적은
+       T.walk[0], 펫은 sp.anim[0] 으로 처음부터 쉬는 자세에 고정돼 있는데 플레이어만 살아 있는
+       프레임을 뽑아 달리기·공격 자세가 섞였고(재적재마다 3~5종), 그 자세들의 앞뒤 내지름은 §4 가
+       «살아 있어야 한다» 고 단언하는 바로 그 움직임이라 판정이 동전 던지기가 됐다
+       (probe446 [1]·[2] — 착지 가능한 프레임의 16/22 가 허용 밖, 같은 트리에서 실행마다 빨강 0~3건).
+       자세는 손으로 박지 않고 **제품에게 묻는다** — 제품이 «안 움직일 때» 거는 그 호출 그대로
+       (index.html 20443 «else setAnim(player,'knight','idle',8,true)» · 33796 부팅). */
     {
-      const A = ATLAS.knight, fn = curFrame(player) || A.a.idle[0], fr = A.f[fn], sc = bigScale(fr);
+      const A = ATLAS.knight;
+      const sav = { anim:player.anim, akey:player.akey, at:player.at, afps:player.afps, aloop:player.aloop };
+      setAnim(player, 'knight', 'idle', 8, true); player.at = 0;  /* setAnim 은 같은 애니면 곧장 되돌아간다 — at 은 따로 0 */
+      const fn = curFrame(player) || A.a.idle[0], fr = A.f[fn], sc = bigScale(fr);
+      Object.assign(player, sav);                                  /* 재는 것 말고는 아무것도 안 바꾼다(§3 규약) */
       for(const flip of [false, true]){
         const s = ink(() => drawShadow(AX, AY, 15));
         const g = ink(() => drawFrame('knight', fn, AX, AY, sc, flip, 1, null));
-        if(s && g) out.push({ who:'플레이어', flip, dx:g.cx - s.cx, w:g.w, sc });
+        if(s && g) out.push({ who:'플레이어', flip, dx:g.cx - s.cx, w:g.w, sc, frame:fn });
       }
     }
     /* 펫 — drawShadow(p.x, p.y+26, 9) + drawFrameC(sp, fr, p.x, p.y, scale) → 가로 중심은 둘 다 p.x */
@@ -139,6 +150,33 @@ const srv = http.createServer((req, res) => {
     const lim = Math.max(3, r.w * 0.03);
     le('§1 ' + (r.who + (r.flip ? ' flip' : '')).padEnd(24) + ' Δx(잉크중심−그림자중심, ×' + r.sc + ')', r.dx, lim);
   }
+
+  /* ⚑ 446 — 표본이 «흔들리지 않는 자세» 라는 것 자체를 항으로 세운다. 안 세우면 다음 세션이
+     `curFrame(player)` 로 되돌려 놓아도 자는 조용히 초록·빨강을 오간다(그게 446 이 등재된 경위다). */
+  const plFrame = (stand.find(r => r.who === '플레이어') || {}).frame;
+  const idle0 = await page.evaluate(() => ATLAS.knight.a.idle[0]);
+  is('§1 플레이어 표본 = 제품이 «안 움직일 때» 거는 쉬는 자세의 0프레임(446 — 살아 있는 프레임이 아니다)',
+    plFrame, idle0);
+
+  /* ⚑ 446 되돌림 시험 — 표본을 제자리에 놓은 것이 «자를 무르게 푼 것» 이 아님을 못박는다.
+     그 쉬는 자세의 `xo` 를 0 으로(=243 수리 전) 되돌리면 같은 항이 허용을 크게 넘어야 한다.
+     ⚠ 기대값을 손으로 박지 않는다 — 지금 허용치와 그때 값을 그 자리에서 견준다(212-①). */
+  const rev = await page.evaluate(new Function(HARNESS + `
+    const A = ATLAS.knight, fn = A.a.idle[0], fr = A.f[fn], sc = bigScale(fr);
+    const m = frameXo('knight', A), keep = Object.assign({}, m);
+    const at = () => { const s = ink(() => drawShadow(AX, AY, 15));
+      const g = ink(() => drawFrame('knight', fn, AX, AY, sc, false, 1, null));
+      return { dx: g.cx - s.cx, w: g.w }; };
+    const now = at();
+    for(const k in m) m[k] = 0;
+    const off = at();
+    Object.assign(m, keep);
+    return { now, off, back: at(), sc };
+  `));
+  (Math.abs(rev.off.dx) > Math.max(3, rev.off.w * 0.03) ? ok : no)(
+    '§1 되돌림 — knight `xo` 를 빼면 그 쉬는 자세가 허용을 넘는다(자는 여전히 243 을 지킨다) — Δx '
+    + rev.off.dx.toFixed(1) + ' > ±' + Math.max(3, rev.off.w * 0.03).toFixed(1));
+  is('§1 되돌림 뒤 원복 — 값이 되돌아온다(자가 제품을 더럽히지 않았다)', rev.back.dx, rev.now.dx);
 
   /* ---------- §2 방향 전환 순간이동 ---------- */
   console.log('\n[2] 방향을 트는 순간의 순간이동 = |Δx(정) − Δx(역)| (고치기 전: 기사 249 · 28 보스 210)');
