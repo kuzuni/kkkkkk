@@ -6,9 +6,9 @@
  * 지시서 [3]-(가) 기계적·기능 작업 — 비평가 없이 헤드리스 실동작만 본다.
  * (카드·격자 기하는 07/26 규격 그대로라 레이아웃 채점 대상이 아니다. 늘어난 것은 «종 수» 뿐이다.)
  *
- *   [A] 데이터   PETS 36종 · 분포 (5,5,5,5,5,5,5,1) · 무기 종 수와 동일 · id 중복 0 · 구 9종 완전 보존
- *   [B] 곡선     PET_M = 0.45·mul^0.88 · PET_CD = 1.30·mul^-0.20 · 신설분 m = PET_M[g]·v
- *                · 등급 간 DPS(m/cd) 단조(등급 g 최댓값 < 등급 g+1 최솟값)
+ *   [A] 데이터   PETS 36종 · 분포 (5,5,5,5,5,5,5,1) · 무기 종 수와 동일 · id 중복 0 · 구 9종 id·이름·등급 보존
+ *   [B] 곡선     (481 이관) 피해 계수 축 폐지 · PET_CD = 1.30·(0.40/1.30)^(g/7) · 36종 cd = PET_CD[g]/v
+ *                · 등급 간 세기(1/cd) 단조(등급 g 최댓값 < 등급 g+1 최솟값)
  *   [C] 확률표   rollOf('pet') = 8행(GRADE_ROLL_EQ) · 해금 Lv20/24(196) · 확률 합 1 · 이정표 8개
  *   [D] 상점     SHOP_BOXES 5장 · «펫 상자» 카드 DOM · 가격 = 나머지 배너와 동일(195: 1,000/3,000) · 무료 2/2
  *   [E] 실동작   10연 → 다이아 차감 · 결과 팝업 10장 · S.cnt.sumPet +10 · 보유 종 수 증가 · 소환 경험치 연동(196)
@@ -99,16 +99,22 @@ async function open(browser, seed) {
   const A = await page.evaluate(() => {
     const dist = new Array(GRADE.length).fill(0);
     PETS.forEach(p => dist[p.g]++);
+    /* 481 이관(2026-08-30, 주인 지시) — 구 9종에서 **보존되는 것이 id·이름·등급뿐**이 됐다.
+       481 이 «피해 = 플레이어 공격력 · 등급은 주기» 로 축을 갈면서 피해 계수 `m` 은 사라졌고
+       `cd` 는 (등급, 자리)에서 파생한다 — 옛 오버라이드 9칸은 등급 경계를 세 자리에서
+       뒤집고 있던 값이라 같이 걷어냈다(`probe481` ⓒ). **묻는 것은 그대로다**: 구 세이브가
+       가리키는 그 9종이 «같은 id·같은 이름·같은 등급» 으로 살아 있는가(A5 의 뜻).
+       수치가 정말 새 규칙 위에 있는지는 `verify481` [B] 가 36종 전수로 본다. */
     const legacy = {
-      bird0: { n: '꼬마 새', g: 0, m: 0.45, cd: 1.30 }, bird1: { n: '화염 조', g: 1, m: 0.60, cd: 1.20 },
-      robo0: { n: '수호 로봇', g: 1, m: 0.65, cd: 1.40 }, bird2: { n: '서리 조', g: 2, m: 0.85, cd: 1.10 },
-      robo1: { n: '전투 드론', g: 2, m: 0.95, cd: 1.20 }, drag0: { n: '아기 드래곤', g: 3, m: 1.30, cd: 1.10 },
-      robo2: { n: '파괴 병기', g: 3, m: 1.40, cd: 1.00 }, drag1: { n: '홍염 드래곤', g: 4, m: 2.20, cd: 0.95 },
-      drag2: { n: '황금 드래곤', g: 5, m: 3.40, cd: 0.80 }
+      bird0: { n: '꼬마 새', g: 0 }, bird1: { n: '화염 조', g: 1 },
+      robo0: { n: '수호 로봇', g: 1 }, bird2: { n: '서리 조', g: 2 },
+      robo1: { n: '전투 드론', g: 2 }, drag0: { n: '아기 드래곤', g: 3 },
+      robo2: { n: '파괴 병기', g: 3 }, drag1: { n: '홍염 드래곤', g: 4 },
+      drag2: { n: '황금 드래곤', g: 5 }
     };
     const bad = Object.keys(legacy).filter(id => {
       const p = PT[id], q = legacy[id];
-      return !p || p.n !== q.n || p.g !== q.g || p.m !== q.m || p.cd !== q.cd;
+      return !p || p.n !== q.n || p.g !== q.g || typeof p.cd !== 'number' || p.m !== undefined;
     });
     const ids = PETS.map(p => p.id);
     const allIds = SKILLS.concat(EQUIPS, PETS, RELICS).map(x => x.id);
@@ -124,51 +130,59 @@ async function open(browser, seed) {
   ok(JSON.stringify(A.dist) === '[5,5,5,5,5,5,5,1]', 'A2 등급 분포 (5,5,5,5,5,5,5,1)', JSON.stringify(A.dist));
   ok(A.len === A.weapons, 'A3 무기 부위 종 수와 동일', A.len + ' vs ' + A.weapons);
   ok(A.uniq === A.len && A.crossDup === 0, 'A4 id 중복 0 (계열 간 포함)', 'uniq=' + A.uniq + ' cross=' + A.crossDup);
-  ok(A.bad.length === 0, 'A5 구 9종 id·이름·등급·m·cd 완전 보존', A.bad.join(',') || '전부 일치');
+  ok(A.bad.length === 0, 'A5 구 9종 id·이름·등급 보존 (481 이관 — m 폐지 · cd 는 파생)',
+    A.bad.join(',') || '전부 일치');
   ok(A.badN === 0, 'A6 이름이 «사람이 읽는 이름» (자동 생성 번호 금지)', String(A.badN));
   ok(A.sp === 'bird,dragon,robo' && A.noSprite === 0, 'A7 스프라이트 3종만 사용 · 전부 PET_SP 에 있음', A.sp);
 
-  /* A8 — 260(2026-08-27, 주인 보고) 회귀 방지. 등급 안 자리 순서 = 세기(m/cd) 오름차순.
-     펫을 새로 덧붙이거나 v·m·cd 를 손대면 여기서 잡힌다. 상세는 `tools/verify260.js` [B]. */
+  /* A8 — 260(2026-08-27, 주인 보고) 회귀 방지. 등급 안 자리 순서 = 세기 오름차순.
+     481 이관 — 그 «세기» 가 `m/cd` 에서 **`1/cd`** 로 바뀌었다(피해가 전 펫 같아졌으므로 세기는
+     주기 하나다 · `power(p,'pet')`·`tierScore` 와 같은 식). 펫을 새로 덧붙이거나 자리를 옮기면
+     여기서 잡힌다. 상세는 `tools/verify260.js` [B]. */
   const A8 = await page.evaluate(() => {
     const bad = [];
     GRADE.forEach((_, g) => {
       const t = PETS.filter(p => p.g === g);
       for (let j = 1; j < t.length; j++)
-        if (!(t[j].m / t[j].cd > t[j - 1].m / t[j - 1].cd)) bad.push('g' + g + '[' + j + '] ' + t[j].id);
+        if (!(1 / t[j].cd > 1 / t[j - 1].cd)) bad.push('g' + g + '[' + j + '] ' + t[j].id);
     });
     return bad;
   });
-  ok(A8.length === 0, 'A8 등급 안 자리 순서 = 세기(m/cd) 오름차순 (260)', A8.slice(0, 4).join(' / ') || '위반 0');
+  ok(A8.length === 0, 'A8 등급 안 자리 순서 = 세기(1/cd) 오름차순 (260 · 481 축 이동)',
+    A8.slice(0, 4).join(' / ') || '위반 0');
 
   /* ---------------- [B] 곡선 ---------------- */
+  /* 481 이관(2026-08-30, 주인 지시 «피해는 플레이어 공격력 그대로 · 등급은 공격 주기만») —
+     106 의 곡선 두 벌(`PET_M` 피해 · `PET_CD` 주기) 중 **피해 쪽이 통째로 사라졌다.**
+     자리는 비우지 않는다(333) — 같은 다섯 항이 «이제 하나뿐인 곡선» 을 같은 깊이로 묻는다:
+     표가 식 위에 있는가(B1) · 36종이 전부 그 표에서 파생하는가(B3) · 개체차 폭(B4) ·
+     등급 간 세기 단조(B5). 되돌림 시험은 `verify481` §R. */
   const B = await page.evaluate(() => {
-    const mErr = GRADE.map((g, i) => Math.abs(PET_M[i] - 0.45 * Math.pow(g.mul, 0.88)));
-    const cErr = GRADE.map((g, i) => Math.abs(PET_CD[i] - 1.30 * Math.pow(g.mul, -0.20)));
-    /* 신설분(구 9종 제외)은 m 이 PET_M[g] × v 여야 한다 */
-    const legacy = ['bird0', 'bird1', 'robo0', 'bird2', 'robo1', 'drag0', 'robo2', 'drag1', 'drag2'];
-    const off = PETS.filter(p => legacy.indexOf(p.id) < 0)
-      .filter(p => Math.abs(p.m - Math.round(PET_M[p.g] * p.v * 1000) / 1000) > 1e-9 || p.cd !== PET_CD[p.g])
+    const cErr = PET_CD.map((c, g) => Math.abs(c -
+      Math.round(PET_CD_TOP * Math.pow(PET_CD_END / PET_CD_TOP, g / (GRADE.length - 1)) * 100) / 100));
+    /* 36종 전부 cd 가 PET_CD[g] / v 여야 한다 — 구 9종 오버라이드도 481 이 걷어냈다 */
+    const off = PETS.filter(p => Math.abs(p.cd - Math.round(PET_CD[p.g] / p.v * 1000) / 1000) > 1e-9)
       .map(p => p.id);
-    const vs = PETS.filter(p => legacy.indexOf(p.id) < 0).map(p => p.v);
+    const mLeft = PETS.filter(p => p.m !== undefined).map(p => p.id);
+    const vs = PETS.map(p => p.v);
     const dps = {};
-    PETS.forEach(p => { (dps[p.g] = dps[p.g] || []).push(p.m / p.cd); });
+    PETS.forEach(p => { (dps[p.g] = dps[p.g] || []).push(1 / p.cd); });
     const mono = [];
     for (let g = 0; g < GRADE.length - 1; g++) {
       if (!dps[g] || !dps[g + 1]) continue;
       mono.push(Math.max.apply(null, dps[g]) < Math.min.apply(null, dps[g + 1]));
     }
-    return { mErr: Math.max.apply(null, mErr), cErr: Math.max.apply(null, cErr), off,
+    return { cErr: Math.max.apply(null, cErr), off, mLeft,
              vMin: Math.min.apply(null, vs), vMax: Math.max.apply(null, vs),
              mono: mono.every(Boolean), monoN: mono.length,
              top: Math.max.apply(null, dps[7]) / Math.min.apply(null, dps[0]) };
   });
-  ok(B.mErr <= 0.0005, 'B1 PET_M = 0.45 × mul^0.88', '최대 오차 ' + B.mErr.toFixed(5));
-  ok(B.cErr <= 0.005, 'B2 PET_CD = 1.30 × mul^-0.20', '최대 오차 ' + B.cErr.toFixed(5));
-  ok(B.off.length === 0, 'B3 신설 27종 m = PET_M[g]×v · cd = PET_CD[g]', B.off.join(',') || '전부 곡선 위');
+  ok(B.mLeft.length === 0, 'B1 피해 계수 축(PET_M·항목 m)은 폐지됐다 (481)', B.mLeft.join(',') || '남은 m 0종');
+  ok(B.cErr <= 1e-9, 'B2 PET_CD = 1.30 × (0.40/1.30)^(g/7) (481 곡선)', '최대 오차 ' + B.cErr.toFixed(6));
+  ok(B.off.length === 0, 'B3 36종 전부 cd = PET_CD[g] / v', B.off.join(',') || '전부 곡선 위');
   ok(B.vMin >= 0.90 && B.vMax <= 1.15, 'B4 개체차 v 는 0.90~1.15', B.vMin + '~' + B.vMax);
-  ok(B.mono && B.monoN === 7, 'B5 등급 간 DPS 단조 (g 최대 < g+1 최소)', B.monoN + '경계');
-  console.log('     · 불멸/일반 DPS 배수 = ×' + B.top.toFixed(1));
+  ok(B.mono && B.monoN === 7, 'B5 등급 간 세기(1/cd) 단조 (g 최대 < g+1 최소)', B.monoN + '경계');
+  console.log('     · 불멸/일반 펫 DPS 배수 = ×' + B.top.toFixed(2));
 
   /* ---------------- [C] 확률표 ---------------- */
   const C = await page.evaluate(() => {

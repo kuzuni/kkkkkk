@@ -128,16 +128,31 @@ const ok = (b, name, detail) => {
     S.own[p.id] = { l: 3 }; markDirty();
     const own = ownVal(p), dmg = petDmg(p);
     const wantOwn = 0.02 * gMul(p.g) * lvMul(3) * 1;   /* 펫엔 slot 이 없어 eqv=1 (106 규약) */
-    const wantDmg = stat.dmg * p.m * gWear(p.g) * lvWear(3) * bonus().pet;
+    /* 481 이관(2026-08-30, 주인 지시) — 485 가 «안 건드렸다» 고 못박아 둔 두 축이 481 로 바뀌었다.
+       ⓐ 피해는 이제 `stat.dmg × bonus().pet` 하나다(등급·자리·레벨 0) ⓑ 피해 계수 표는 폐지되고
+       주기 표가 새 곡선(1.30 → 0.40 등비)으로 갈렸다. 485 가 여기서 지키려던 것은 «내가 얹은 축이
+       옆 축을 밀지 않았다» 이므로, 묻는 것을 **지금의 옆 축**으로 옮긴다(333: 자리를 비우지 마라). */
+    const wantDmg = stat.dmg * bonus().pet;
+    /* ⚠ 절대값으로 재면 안 된다 — 보유 효과(ownVal)가 `b.atk` 를 통해 `stat.dmg` 를 올리므로
+       레벨을 바꾸면 petDmg 의 **절대값**은 (정상적으로) 움직인다. 481 이 못박는 것은
+       «펫 자신의 피해 축» 이므로 `stat.dmg` 대비 **비율**로 잰다. */
+    const lvFree = petDmg(p) / stat.dmg;
+    S.own[p.id] = { l: 90 }; markDirty();
+    const lvFree2 = petDmg(p) / stat.dmg, cd2 = p.cd;
     delete S.own[p.id]; markDirty();
-    return { own, wantOwn, dmg, wantDmg, m: p.m, cd: p.cd,
-             petM: PET_M.join('·'), petCd: PET_CD.join('·') };
+    return { own, wantOwn, dmg, wantDmg, cd: p.cd,
+             lvFlat: lvFree === lvFree2 && cd2 === p.cd,
+             hasM: PETS.some(x => x.m !== undefined),
+             petCd: PET_CD.join('·') };
   });
   ok(Math.abs(D.own - D.wantOwn) < 1e-12, 'D1 보유 효과(ownVal)는 식·값 그대로', (D.own * 100).toFixed(4) + '%');
-  ok(Math.abs(D.dmg - D.wantDmg) < 1e-9, 'D2 펫 피해(petDmg)는 식·값 그대로 — 485 는 새 축만 얹었다',
+  ok(Math.abs(D.dmg - D.wantDmg) < 1e-9, 'D2 펫 피해(petDmg) = stat.dmg × 도감 펫 축 (481 이관)',
      D.dmg.toFixed(3));
-  ok(D.petM === '0.45·0.643·0.937·1.389·2.178·3.414·5.162·7.914', 'D3 106 곡선 PET_M 불변', D.petM);
-  ok(D.petCd === '1.3·1.2·1.1·1.01·0.91·0.82·0.75·0.68', 'D4 106 곡선 PET_CD 불변', D.petCd);
+  ok(!D.hasM, 'D3 펫 피해 계수 축(m)은 폐지됐다 — 485 의 장착 효과 축과 겹치지 않는다 (481 이관)',
+     D.hasM ? '남아 있다' : '0종');
+  ok(D.petCd === '1.3·1.1·0.93·0.78·0.66·0.56·0.47·0.4', 'D4 481 곡선 PET_CD (등급 = 주기 축)', D.petCd);
+  ok(D.lvFlat, 'D5 강화 Lv 는 피해·주기 어디에도 안 붙는다 — 레벨은 보유·장착 효과 축에만 (481)',
+     'Lv3 ↔ Lv90 피해·주기 동일');
 
   /* ── [E] 표시 ───────────────────────────────────────────── */
   const E = await page.evaluate(async () => {
@@ -159,11 +174,11 @@ const ok = (b, name, detail) => {
     if (typeof closeModal === 'function') closeModal();
     delete S.own[p.id];
     return { html, lines: (html.match(/<br>/g) || []).length + 1, over, rect, pRect,
-             hasEq: /장착 효과 — 공격력 \+/.test(txt), hasDmg: /전투 참여 피해/.test(txt),
+             hasEq: /장착 효과 — 공격력 \+/.test(txt), hasDmg: /전투 피해/.test(txt),
              oldTxt: /전투에 참여해/.test(txt), digits: (txt.match(/\d/g) || []).length };
   });
   ok(E.hasEq, 'E1 08 세부 팝업이 «장착 효과 — 공격력 +n%» 를 말한다', E.html);
-  ok(E.hasDmg && !E.oldTxt, 'E2 옛 문구(«전투에 참여해 n 피해»)는 «전투 참여 피해» 로 갈아 끼웠다');
+  ok(E.hasDmg && !E.oldTxt, 'E2 옛 문구(«전투에 참여해 n 피해»)는 «전투 피해» 로 갈아 끼웠다 (481 — 라벨 단축)');
   ok(E.lines === 3, 'E3 줄 수 3 — 485 전과 같다(`.sk-db` 750×290 고정이라 한 줄이 늘면 넘친다)',
      String(E.lines));
   ok(E.over && E.over.w <= 0 && E.over.h <= 0, 'E4 상자가 안 넘친다',

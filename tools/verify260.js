@@ -11,7 +11,7 @@
  * 검사 항목:
  *   [A] 장비 — 24티어(3부위 × 8등급) 전부 `v` 단조 증가 · 등급 경계 비역전(gWear × v)
  *              · `power(it)` 순서 = 배열 순서 · v 전부 0.90~1.15
- *   [B] 펫   — 8티어 전부 «세기»(m/cd) 단조 증가 · 등급 경계 비역전 · 구 9종 m·cd 보존(106 A5 재확인)
+ *   [B] 펫   — 8티어 전부 «세기»(1/cd · 481) 단조 증가 · 등급 경계 비역전 · 구 9종 등급·자리 보존
  *   [C] 스킬 — 등급 안 `m × hits / cd` 최대/최소 ≤ 1.03 (484 — «같은 등급은 같은 세기»)
  *   [D] id 짝 보존 — 재배치가 id↔이름·수치 짝을 안 바꿨다(구 세이브 안전).
  *                   구 54종 장비 id + 구 9종 펫 id 전부 생존 · id 유일 · 총 144종
@@ -112,7 +112,10 @@ const ok = (b, name, detail) => {
 
   /* ── [B] 펫 ─────────────────────────────────────────────── */
   const B = await page.evaluate(() => {
-    const str = p => p.m / p.cd;                       /* power(p,'pet') 와 같은 순서(공통 배수만 다르다) */
+    /* 481 이관(2026-08-30, 주인 지시) — 펫의 «세기» 자가 `m/cd` 에서 **`1/cd`** 가 됐다.
+       피해가 전 펫 `stat.dmg` 로 같아졌으므로(`petDmg`) 등급 안 순서도 등급 경계도 **주기 하나**로
+       갈린다. `power(p,'pet') = petDmg/cd` 와 여전히 같은 순서다(공통 배수만 다르다). */
+    const str = p => 1 / p.cd;
     const badMono = [], badEdge = [];
     const tiers = GRADE.map((_, g) => PETS.filter(p => p.g === g));
     tiers.forEach((t, g) => {
@@ -125,21 +128,24 @@ const ok = (b, name, detail) => {
       const hi = Math.max(...tiers[g].map(str)), lo = Math.min(...tiers[g + 1].map(str));
       if (!(hi < lo)) badEdge.push('g' + g + '→g' + (g + 1) + ' ' + hi.toFixed(3) + '≥' + lo.toFixed(3));
     }
-    /* 106 A5 재확인 — 재배치는 «자리만» 옮긴 것이라 구 9종 수치가 그대로여야 한다 */
-    const OLD = { bird0: [0.45, 1.30], bird1: [0.60, 1.20], robo0: [0.65, 1.40], bird2: [0.85, 1.10],
-                  robo1: [0.95, 1.20], drag0: [1.30, 1.10], robo2: [1.40, 1.00], drag1: [2.20, 0.95],
-                  drag2: [3.40, 0.80] };
-    const oldBad = Object.keys(OLD).filter(id => {
+    /* 481 이관 — 구 9종의 `m`·`cd` 오버라이드는 폐기됐다(그 값들이 «주기» 축의 등급 경계를
+       세 자리에서 뒤집고 있었다 — `probe481` ⓒ). 260 이 이 자리에서 지키려던 것은 «재배치가
+       자리만 옮겼는가» 이므로, 묻는 것을 **«구 9종이 배열의 그 자리에 그대로 있는가»** 로 옮긴다
+       (자리 = 485 `petEquipVal` 의 티어이기도 하다 — 자리가 흔들리면 장착 효과가 같이 흔들린다). */
+    const OLD_J = { bird0: [0, 2], bird1: [1, 1], robo0: [1, 0], bird2: [2, 0],
+                    robo1: [2, 2], drag0: [3, 0], robo2: [3, 2], drag1: [4, 1],
+                    drag2: [5, 1] };
+    const oldBad = Object.keys(OLD_J).filter(id => {
       const p = PT[id];
-      return !p || Math.abs(p.m - OLD[id][0]) > 1e-9 || Math.abs(p.cd - OLD[id][1]) > 1e-9;
+      return !p || p.g !== OLD_J[id][0] || p.j !== OLD_J[id][1] || p.m !== undefined;
     });
     return { badMono, badEdge, oldBad, total: PETS.length,
              dist: tiers.map(t => t.length).join(',') };
   });
   ok(B.total === 36 && B.dist === '5,5,5,5,5,5,5,1', 'B1 펫 36종 · 분포 5,5,5,5,5,5,5,1', B.dist);
-  ok(B.badMono.length === 0, 'B2 8티어 전부 세기(m/cd) 단조 증가', B.badMono.slice(0, 4).join(' / ') || '위반 0');
+  ok(B.badMono.length === 0, 'B2 8티어 전부 세기(1/cd) 단조 증가 (481 축 이동)', B.badMono.slice(0, 4).join(' / ') || '위반 0');
   ok(B.badEdge.length === 0, 'B3 등급 경계 비역전', B.badEdge.join(' / ') || '위반 0');
-  ok(B.oldBad.length === 0, 'B4 구 9종 m·cd 보존(106 A5)', B.oldBad.join(',') || '전부 일치');
+  ok(B.oldBad.length === 0, 'B4 구 9종이 등급·자리 그대로 (481 이관 — m·cd 오버라이드 폐지)', B.oldBad.join(',') || '전부 일치');
 
   /* ── [C] 스킬 ───────────────────────────────────────────── */
   const C = await page.evaluate(max => {

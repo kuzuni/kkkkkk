@@ -8,7 +8,7 @@
  *   본다:
  *     [A] 축 분리   GRADE 에 `wear` 8칸 · 점프가 전 구간 정확히 ×GRADE_JUMP · g0 = 1
  *                   `mul` 은 197 **전 값 그대로**(85 «16·26» · 91 도감 · 89 유물 · 106 펫 곡선의 근거)
- *     [B] 착용 파이프  equipVal · skillDmg · petDmg · power(장비) 가 전부 `wear` 를 탄다
+ *     [B] 착용 파이프  equipVal · skillDmg · power(장비) 가 `wear` 를 탄다 · 펫은 481 로 «주기» 축으로 빠졌다
  *                   — 등급을 한 칸 올리면 값이 정확히 ×GRADE_JUMP (지시 ①)
  *     [C] 동티어    lvMul(MAX_LEVEL) < 점프 · 개체차 v 폭(max/min) < 점프 (지시 ②
  *                   «점프 대비 확실히 작게») · 만렙 하위등급 < Lv0 상위등급
@@ -93,12 +93,17 @@ async function open(browser) {
       }
       /* 스킬·펫 — 계수 m 을 고정하고 등급만 올린다 */
       S.eqSkill = []; S.eqPet = [];
-      out.sk = [], out.pt = [];
+      out.sk = [], out.pt = [], out.ptCd = [];
       for (let g = 1; g <= 5; g++) {
         out.sk.push(skillDmg({ g: g, m: 1, id: '__s' }) / skillDmg({ g: g - 1, m: 1, id: '__s' }));
       }
+      /* 481 이관(2026-08-30, 주인 지시 «피해는 플레이어 공격력 그대로 · 등급은 공격 주기만») —
+         펫 피해는 이제 착용 계단을 **안 탄다**. 197 이 이 자리에서 지키려던 것은 «펫의 등급 축이
+         전 구간 일정한 계단인가» 이므로, 자를 **주기** 로 옮겨 같은 것을 묻는다(333: 자리를 비우지 마라).
+         두 방향을 같이 센다 — ① 피해에는 등급이 한 톨도 안 붙는다(비 = 1) ② 주기는 전 구간 일정한 등비. */
       for (let g = 1; g < GRADE.length; g++) {
-        out.pt.push(petDmg({ g: g, m: 1, cd: 1, id: '__p' }) / petDmg({ g: g - 1, m: 1, cd: 1, id: '__p' }));
+        out.pt.push(petDmg({ g: g, cd: 1, id: '__p' }) / petDmg({ g: g - 1, cd: 1, id: '__p' }));
+        out.ptCd.push(PET_CD[g] / PET_CD[g - 1]);
       }
       /* power() 의 장비 분기 */
       out.pw = [];
@@ -119,8 +124,16 @@ async function open(browser) {
        B.eq.map(v => v.toFixed(4)).join('/'));
     ok(allJump(B.sk, 5), 'B2 스킬 피해 — 등급 +1 이 정확히 ×' + B.jump,
        B.sk.map(v => v.toFixed(2)).join('/'));
-    ok(allJump(B.pt, 7), 'B3 펫 피해 — 등급 +1 이 정확히 ×' + B.jump,
+    /* 481 이관 — 두 항으로 갈랐다(한 항이 두 자리를 겸하면 한쪽이 사라져도 초록이다, 326 교훈). */
+    ok(B.pt.length === 7 && B.pt.every(r => near(r, 1, 1e-9)),
+       'B3 펫 피해 — 등급이 한 톨도 안 붙는다 (481 — 플레이어 공격력 그대로)',
        B.pt.map(v => v.toFixed(2)).join('/'));
+    {
+      const r0 = B.ptCd[0];
+      ok(B.ptCd.length === 7 && B.ptCd.every(r => Math.abs(r - r0) <= 0.01) && r0 < 0.92,
+         'B3b 펫 등급 축은 «주기» 로 옮겨 갔고 그 계단도 전 구간 일정하다 (481)',
+         B.ptCd.map(v => v.toFixed(3)).join('/'));
+    }
     ok(allEqJump(B.pw, 7), 'B4 power() 장비 순위 — 등급 +1 이 정확히 ×' + B.eqJump + ' (472 · equipVal 과 한 축)',
        B.pw.map(v => v.toFixed(4)).join('/'));
     ok(near(B.eqJump / Math.pow(1.5, 4), B.jump, 1e-9),

@@ -65,7 +65,12 @@ const RAWNUM = /\d,\d/;
        (326 교훈 — 한 항이 두 자리를 겸하면 한쪽이 사라져도 초록이다). */
     ['04 스킬 피해 — 세부 표 «피해량» 칸(dmgNow)', /const dmgNow = \(\) => own \? fmtB\(skillDmg\(it\)\) : '—';/],
     ['07 펫 피해 — 세부 표 «피해량» 칸(ct3Now)', /ct3Now = \(\) => cat === 'pet'\s+\? \(own \? fmtB\(petDmg\(it\)\) : '—'\)/],
-    ['07 펫 피해 — 설명문 «장착 효과» 줄', /장착 효과 — 전투에 참여해 <em>' \+ fmtB\(petDmg\(it\)\) \+ '<\/em> 피해\./],
+    /* 481 이관(2026-08-30) — 이 항은 **485 가 그 줄을 다시 쓴 뒤로 빨갰다**(수리 전 76/79).
+       485 가 «장착 효과 — 공격력 +n%» 를 앞에 붙이고 481 이 라벨을 «전투 참여 피해» → «전투 피해»
+       로 줄이면서 옛 조립문이 사라진 것이고, 제품은 그 사이에도 내내 `fmtB(petDmg(it))` 를 불렀다
+       (343 이 이 파일에서 이미 한 번 겪은 것과 같은 꼴 — 굳은 것은 게이트뿐이다).
+       ⇒ 자리만 지금 그 줄로 옮기고 **묻는 것은 그대로 둔다**: 이 값이 fmtB 를 지나는가. */
+    ['07 펫 피해 — 설명문 «전투 피해» 칸', /· 전투 피해 <em>'\s*\+\s*fmtB\(petDmg\(it\)\) \+ '<\/em>/],
     ['06 장비 공격력 알약', /class="eqst a"[^\n]*fmtB\(stat\.dmg\)/],
     ['06 장비 체력 알약', /class="eqst b"[^\n]*fmtB\(stat\.maxHp\)/],
     ['25 정보 탭 공격력', /\['햄지 공격력', fmtB\(stat\.dmg\)\]/],
@@ -221,8 +226,9 @@ const RAWNUM = /\d,\d/;
     o.ptId = (PETS[0] || {}).id; S.own[o.ptId] = { l: 40, n: 5 };
     closeModal(); showItem(o.ptId); await sleep(150);
     o.ptHead = t('#mbox .sk-ct .hd .nt b'); o.ptVal = t('#mbox .sk-ct .vl .nt b');
-    /* 설명문 «장착 효과 — 전투에 참여해 <em>N</em> 피해.» — em 은 셋(주기·피해·마리수)이다 */
-    o.ptDesc = [].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[1];
+    /* 설명문 em 은 넷이다 — [0] 주기 · [1] 485 장착 효과 % · [2] 481 전투 피해 · [3] 마리수.
+       재는 것은 «피해» 칸이므로 481 이관으로 자리를 1 → 2 로 옮긴다(라벨은 아래 eq 로 못박는다). */
+    o.ptDesc = [].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[2];
     closeModal();
     return o;
   });
@@ -241,7 +247,7 @@ const RAWNUM = /\d,\d/;
                     정말 이 표기층을 지나 나온다는 뜻이고, 원복하면 실제 값으로 돌아온다.  */
   const SK04 = SINK.find(s => s[0].startsWith('04 스킬 피해'))[1];
   const PT07 = SINK.find(s => s[0].startsWith('07 펫 피해 — 세부'))[1];
-  const PT07D = SINK.find(s => s[0].startsWith('07 펫 피해 — 설명문'))[1];
+  const PT07D = SINK.find(s => s[0].startsWith('07 펫 피해 — 설명문'))[1];   /* 481 — «전투 피해» 칸 */
   const leak = s => (s.match(/\bfmt[A-Za-z]*\((skillDmg|petDmg)\(/g) || []).filter(x => !x.startsWith('fmtB(')).length;
   const rSk = src.replace(/fmtB\(skillDmg\(it\)\)/g, 'fmt(skillDmg(it))');
   const rPt = src.replace(/fmtB\(petDmg\(it\)\)/g, 'fmt(petDmg(it))');
@@ -251,7 +257,7 @@ const RAWNUM = /\d,\d/;
   const rev = await p.evaluate(async (ids) => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     const t = s => ((document.querySelector(s) || {}).textContent || '').trim();
-    const em1 = () => ([].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[1] || '');
+    const em1 = () => ([].map.call(document.querySelectorAll('#mbox .sk-db p em'), e => e.textContent.trim())[2] || '');
     const o = {}, keep = fmtG;
     window.fmtG = () => '⟪B⟫';
     closeModal(); showSkillDetail(ids.sk); await sleep(120); o.sk = t('#mbox .sk-ct .vl .nt b');
