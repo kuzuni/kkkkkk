@@ -120,7 +120,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const r = await ev(() => {
       localStorage.clear(); Object.assign(S, DEF());
       S.stage = 20; S.best = 20; S.guide.idx = 99;
-      if (dunRun) endDunRun(false, true);
+      window.__v338neutral();          /* 466 — 여기도 «던전만» 이 아니라 전 모드 중립화를 읽는다 */
       spawnStage(); enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT;
       step(1 / 60);                                  /* 이 틱이 startBoss() 를 부른다 */
       spawnQ.forEach((q) => { if (q.t === 'boss') q.delay = 0; });
