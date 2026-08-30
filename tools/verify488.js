@@ -253,7 +253,9 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   if (cE) await holdTouch(cE, HOLD);
   const E = await grab();
   console.log('  · 시도 ' + E.tries + ' · 맥박 ' + E.hb + ' · 결과 플로터 ' + (E.fOk + E.fNo) + ' · 비용 ' + E.fPay);
-  ok(E.tries >= 5, '[E1] 유물 홀드가 여러 번 시도한다(전제)', E.tries + '회');
+  /* ⚠ 문턱은 «잰 값» 이다(504-④) — 유물은 소환마다 `relicCost()` 가 오르는 자리라 같은 홀드에서
+     4~10회 사이로 흔들린다. 5 로 조이면 살아 있는 게이트가 매번 빨개진다. */
+  ok(E.tries >= 4, '[E1] 유물 홀드가 여러 번 시도한다(전제)', E.tries + '회');
   ok(E.hb === E.tries, '[E2] ★ 맥박 수 = 시도 수', E.hb + ' / ' + E.tries);
   ok(E.fPay === E.tries, '[E3] «−n» 수 = 시도 수', E.fPay + ' / ' + E.tries);
   ok(E.fOk === 0 && E.fNo === 0, '[E4] ★ 결과 문구는 안 띄운다 — 격자 칸의 «이름 Lv.n» 델타와 두 벌이 되면 안 된다', (E.fOk + E.fNo) + '건');
@@ -521,6 +523,60 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(I.relic.ok.length === 0 && I.relic.pay.length === 0,
      '[I10] 89 유물 — 두 봉투가 그릇 안 재료 행·`.rw-cost` 를 안 밟는다',
      '[' + I.relic.ok.join(',') + '] / [' + I.relic.pay.join(',') + ']');
+
+  /* ══ [K] 사다리 기하 — 잉크가 칸보다 좁은가 · 클램프가 칸을 미는가 (5회차 신설) ══ */
+  console.log('[K] 사다리 — «잉크 폭 < 칸 간격» 과 «클램프가 칸을 안 민다»(4·5회차에 두 번 깨진 자리)');
+  const K = await p.evaluate(() => {
+    const SLOTS = 5, INK_FALLBACK = 69;
+    const out = [];
+    const meas = (name, hostSel, txts) => {
+      const host = document.querySelector(hostSel); if (!host) return;
+      const cs = getComputedStyle(host), r = host.getBoundingClientRect();
+      const num = (k, d0) => { const v = parseFloat(cs.getPropertyValue(k)); return Number.isFinite(v) ? v : d0; };
+      const n = Math.max(2, Math.round(num('--hb-slots', SLOTS)));
+      const sw = Number.isFinite(num('--hb-sw', NaN)) ? num('--hb-sw', NaN)
+               : Math.max(34, Math.min(80, (r.width - 70) / Math.max(1, n - 1)));
+      const pad = num('--hb-pad', 26);
+      /* 잉크 폭은 «상상» 하지 않고 진짜로 하나 그려서 잰다 — 문자열마다 다르다(「+1」29 ↔ 「−53」54) */
+      const L = document.getElementById('fxl');
+      /* 제품과 **같은 규칙**으로 눌러 넣은 뒤 잰다(150 규약 — 긴 문자열은 칸에 맞춰 fs 를 줄인다) */
+      let ink = 0;
+      for (const t of txts) {
+        const d = document.createElement('b');
+        d.className = 'fx-plus hb'; d.style.left = '-9999px'; d.textContent = t;
+        L.appendChild(d);
+        const maxW = Math.max(24, sw - 8);
+        for (let i = 0; i < 4 && d.offsetWidth > maxW; i++) {
+          const base = parseFloat(getComputedStyle(d).fontSize) || 30;
+          d.style.fontSize = Math.max(16, base * maxW / d.offsetWidth).toFixed(1) + 'px';
+        }
+        ink = Math.max(ink, d.offsetWidth); d.remove();
+      }
+      if (!ink) ink = INK_FALLBACK;
+      /* 끝 칸이 클램프에 걸리는가 — 두 줄기 중심을 각각 본다 */
+      const worst = ['--hb-x', '--hb-x2'].map(k => {
+        const cx = num(k, 0.5) * r.width, half = ink / 2;
+        const end = cx + (n - 1) / 2 * sw;                    /* 바깥 칸 중심 */
+        const hi = r.width - half - pad, lo = half + pad;
+        return Math.max(0, end - hi, lo - (cx - (n - 1) / 2 * sw));
+      });
+      out.push({ name, n, sw: +sw.toFixed(1), ink, gap: +(sw - ink).toFixed(1), pad, push: +Math.max(...worst).toFixed(1) });
+    };
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+    meas('룬 카드', '.tr-rn', ['+1', '실패', '−1,234']);
+    setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
+    meas('단련 행', '.tr-tp', ['+1', '−1,234 pt']);
+    setTrSub('train'); renderTrain();
+    meas('훈련 카드', '.tr-card', ['−53', '−2.12M']);
+    return out;
+  });
+  K.forEach(k => console.log('  · ' + k.name.padEnd(8) + ' 칸 ' + k.n + '개 × ' + k.sw + 'px · 최장 잉크 ' + k.ink
+    + 'px · 이웃 빈 폭 ' + k.gap + 'px · 클램프가 미는 양 ' + k.push + 'px'));
+  ok(K.length === 3, '[K1] 세 호스트를 다 쟀다', K.map(k => k.name).join(','));
+  ok(K.every(k => k.gap >= 8), '[K2] ★ 이웃 빈 폭 ≥ 8px — 두 알림이 한 문자열로 붙지 않는다',
+     K.map(k => k.name + ' ' + k.gap).join(' · '));
+  ok(K.every(k => k.push <= 0.5), '[K3] ★ 클램프가 끝 칸을 밀지 않는다 — 격자가 균일하다',
+     K.map(k => k.name + ' ' + k.push).join(' · '));
 
   /* ══ [R] 되돌림 시험 — 부품을 빼면 위 등식이 전부 0 이 된다 ════════ */
   console.log('[R] 되돌림 시험 — hbBeat 를 no-op 으로 바꾼 사본에서 세 축이 0 이 되는가');
