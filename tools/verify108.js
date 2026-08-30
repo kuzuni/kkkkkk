@@ -101,7 +101,8 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
   enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT;   /* 다음 step 이 startBoss() 를 부른다 */
   const r = {
     n: 0, zBad: 0, zMin: Infinity, zMax: -Infinity,
-    lagBad: 0, lagMax: 0, lagMaxFree: 0, clamped: 0,
+    lagBad: 0, lagMax: 0, lagMaxFree: 0, clamped: 0, introFrames: 0,
+    introLen: (typeof bossIntroLen === 'function' ? bossIntroLen() : 0),
     bossSeen: 0, bossKilled: 0, shakeMax: 0, nan: 0,
     keys: Object.keys(cam).sort().join(','),
   };
@@ -127,15 +128,21 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
     if (!isFinite(cam.x) || !isFinite(cam.y) || !isFinite(z)) r.nan++;
     r.shakeMax = Math.max(r.shakeMax, cam.shake || 0);
 
-    /* 클램프가 걸린 프레임(월드 가장자리)은 «카메라가 플레이어를 못 따라가는 게 정상» 이라 제외한다 */
+    /* 클램프가 걸린 프레임(월드 가장자리)은 «카메라가 플레이어를 못 따라가는 게 정상» 이라 제외한다.
+       ⚑ 457 이관(주인 지시 2026-08-30 «모든 보스전») — 예외가 하나 더 생겼다: **보스 등장 국면**은
+          카메라가 «일부러» 플레이어를 떠나는 창이다(425 가 던전에서 연 이탈을 457 이 28·승급전·
+          레이드로 넓혔다). 항을 눌러서 상한을 올리지 않고 **그 창을 세어서** 따로 묻는다 —
+          국면이 0프레임이면 아래 [457] 항이 빨개지므로 «이탈을 핑계로 넓힌 게이트» 가 되지 않는다. */
+    const intro = (typeof bossIntro !== 'undefined' && bossIntro);
+    if (intro) r.introFrames++;
     const hw = VW / 2, hh = VH / 2;
     const tx = WORLD.w <= hw * 2 ? WORLD.w / 2 : Math.min(Math.max(player.x, hw), WORLD.w - hw);
     const ty = WORLD.h <= hh * 2 ? WORLD.h / 2 : Math.min(Math.max(player.y, hh), WORLD.h - hh);
-    const free = (tx === player.x && ty === player.y);
+    const free = (tx === player.x && ty === player.y) && !intro;
     const lag = Math.hypot(cam.x - player.x, cam.y - player.y);
-    r.lagMax = Math.max(r.lagMax, lag);
+    if (!intro) r.lagMax = Math.max(r.lagMax, lag);
     if (free) { r.lagMaxFree = Math.max(r.lagMaxFree, lag); if (lag > lagMax) r.lagBad++; }
-    else r.clamped++;
+    else if (!intro) r.clamped++;
     r.n++;
     if (f % 900 === 0) await new Promise(res => setTimeout(res, 0));
   }
@@ -183,7 +190,13 @@ const RUN = async ({ frames, lagMax, killAfter }) => {
 
   ok(r.zBad === 0, `cam.z 가 1 이 아닌 프레임 ${r.zBad}`);
   ok(r.keys === 'shake,x,y,z', `cam 필드 = {${r.keys}} (기대: shake,x,y,z)`);
-  ok(r.lagBad === 0, `클램프 밖에서 카메라–플레이어 ${LAG_MAX}px 초과 프레임 ${r.lagBad} (최대 ${r.lagMaxFree.toFixed(1)}px)`);
+  ok(r.lagBad === 0, `클램프·등장 국면 밖에서 카메라–플레이어 ${LAG_MAX}px 초과 프레임 ${r.lagBad} (최대 ${r.lagMaxFree.toFixed(1)}px)`);
+  /* 457 이관 — 위에서 «국면 프레임» 을 제외한 것이 무르게 푼 것이 아님을 여기서 못박는다:
+     ① 그 창이 실제로 존재하고(457 이 사라지면 0 이 되어 빨개진다) ② 길이가 상수 그대로여서
+     «카메라가 아무 때나 플레이어를 떠나는» 것이 아니다(상수 × 60 + 오차 2프레임). */
+  ok(r.introFrames > 0, `[457] 28 스테이지 보스전에 등장 국면이 있다 — ${r.introFrames}프레임`);
+  ok(r.introFrames <= Math.round(r.introLen * 60) + 2,
+     `[457] 그 국면이 상수 길이(${r.introLen}s ≈ ${Math.round(r.introLen * 60)}프레임)를 안 넘는다 — ${r.introFrames}프레임`);
   ok(r.bossSeen >= 1, `보스 등장 ${r.bossSeen}회 (1회 이상 필요)`);
   ok(r.bossKilled >= 1, `보스 처치/소멸 ${r.bossKilled}회 (1회 이상 필요 — 처치 직후 카메라를 봐야 한다)`);
   ok(r.nan === 0, `NaN/Infinity ${r.nan} 건`);

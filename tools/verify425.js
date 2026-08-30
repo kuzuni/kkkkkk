@@ -67,12 +67,31 @@ window.__v425 = {
     return !!dunRun;
   },
   boss(){ return enemies.find(e => e.tk === 'dunboss' && e.hp > 0) || null; },
-  w(){ return typeof dunIntroW === 'function' ? dunIntroW() : 0; },
+  w(){ return typeof bossIntroW === 'function' ? bossIntroW() : 0; },
   cleanup(){
     if(dunRun) endDunRun(false, true);
     document.querySelectorAll('.modal.on, .mw.on').forEach(el => el.classList.remove('on'));
     const cl = document.getElementById('dclw'); if(cl) cl.classList.remove('on');
     if(typeof closeModal === 'function') closeModal();
+  },
+  /* 457 이관 — §C 가 «다른 모드» 를 실제로 세워야 하게 됐다(종전에는 «아무 일도 안 일어난다» 를
+     보는 절이라 입장이 막혀도 초록이었다). 모드를 갈아탈 때 전장을 중립으로 되돌린다 —
+     안 되돌리면 앞 모드가 남아 battleBusy()(453) 가 다음 입장을 막는다. */
+  reset(){
+    localStorage.clear();
+    Object.assign(S, DEF());
+    S.own.slash = { n:0, l:1 }; S.eqSkill = ['slash'];
+    S.stage = 20; S.best = 20; S.guide.idx = 99;
+    if(dunRun) endDunRun(false, true);
+    if(typeof arena !== 'undefined' && arena) endArena(null);
+    if(raidOn) endRaid(false);
+    if(promo) promo = null;
+    if(typeof bossIntro !== 'undefined') bossIntro = null;
+    bossOn = false; bossT = 0; S.bossFarm = false; stageWin = false;
+    enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0; corpses.length = 0;
+    player.x = WORLD.w/2; player.y = WORLD.h/2; player.hp = stat.maxHp; player.dead = 0;
+    const c = camClamp(player.x, player.y); cam.x = c.x; cam.y = c.y;
+    this.cleanup();
   }
 };`;
 
@@ -124,8 +143,8 @@ const RUN = ([id]) => {
       introFrames++;
       const b = H.boss();
       /* 카메라가 맞추는 자리는 발밑 앵커가 아니라 **몸통 중심**(`e.y - e.r`)이다(2회차) */
-      /* 3회차 — 비추는 자리는 아틀라스에서 뽑은 «그려지는 스프라이트 중심» 이다(dunIntroMid) */
-      if (b) { const m = dunIntroMid(b); camBossMin = Math.min(camBossMin, d2(cam, { x: b.x + m.x, y: b.y + m.y })); }
+      /* 3회차 — 비추는 자리는 아틀라스에서 뽑은 «그려지는 스프라이트 중심» 이다(bossIntroMid) */
+      if (b) { const m = bossIntroMid(b); camBossMin = Math.min(camBossMin, d2(cam, { x: b.x + m.x, y: b.y + m.y })); }
       camPlayMaxIntro = Math.max(camPlayMaxIntro, d2(cam, player));
       /* ⚑ «그려지는 크기» 축(2회차 비평 CT). `drawEnemy` 는 `born < 0.3` 인 적을 `born/0.3` 배로
          그린다 — 국면이 born 을 세우면 보스가 5.6% 크기로 찍혀 «등장 연출인데 빈 바닥» 이 된다. */
@@ -184,45 +203,57 @@ const RUN_PHASE2 = ([id]) => {
   const b1 = enemies.find((e) => e.tk === 'dunboss');
   if (b1) killEnemy(b1);
   let k = 0, w2 = 0, introFrames2 = 0, t0 = dunRun ? dunRun.t : 0, sawSecond = false;
+  /* ⚠ 457 1회차 — «샌 시간» 을 **루프가 끝난 뒤** `dunRun.t` 로 재면 그 값이 «런이 그때까지 살아
+     있었나» 에 걸린다. 2번째 보스는 145~180프레임에 죽는 판이 흔해서(재현 `dbg` 12/12) 런이 먼저
+     사라지면 `dunRun` 이 null 이라 답이 «0초» 로 읽혔다 — 결함이 아니라 **표본이 없어진 것**이다.
+     질문은 그대로 두고 재는 법만 고친다: 매 프레임 t 를 보고 «본 것 중 가장 작은 값» 으로 낙차를
+     누적한다. 런이 언제 끝나든 그때까지 흐른 시간이 그대로 남는다. */
+  let tMin = t0;
   while (dunRun && !dunRun.bossDown && k++ < 900) {
     H.tick();
     if (!dunRun) break;
+    tMin = Math.min(tMin, dunRun.t);
     w2 = Math.max(w2, H.w());
     if (dunRun.introOn) introFrames2++;
     if (dunRun.bossUp > before.up && enemies.some((e) => e.tk === 'dunboss')) sawSecond = true;
     if (sawSecond && k > 180) break;
   }
   const out = { w2: +w2.toFixed(4), introFrames2, sawSecond,
-                drop: dunRun ? +(t0 - dunRun.t).toFixed(3) : null, frames: k };
+                drop: +(t0 - tMin).toFixed(3), frames: k };
   H.cleanup();
   return out;
 };
 
-/* 28 스테이지 보스 · 46 레이드 · 승급전 — dunRun 이 없으면 가중치가 0 이고 카메라가 플레이어를 안 놓는다 */
+/* 28 스테이지 보스 · 46 레이드 · 승급전 · 123 아레나 — 425 의 국면이 그 모드에서 도는지 본다.
+   ⚑ 457 이관: 이 절의 «답» 이 뒤집혔다. 425 때는 넷 다 «국면 0회» 가 정답이었지만(등재문이
+   범위를 던전 런으로 못박았다), 457(주인 지시 «모든 보스전»)이 그 제한을 풀어 **아레나만** 0회다. */
 const RUN_OTHER = ([mode]) => {
   const H = window.__v425;
-  localStorage.clear();
-  Object.assign(S, DEF());
-  S.own.slash = { n: 0, l: 1 }; S.eqSkill = ['slash'];
-  S.stage = 20; S.best = 20; S.guide.idx = 99;
-  if (dunRun) endDunRun(false, true);
-  if (mode === 'boss') { enemies.length = 0; spawnQ.length = 0; killed = ENEMY_COUNT; }
+  H.reset();
+  if (mode === 'boss') { if (typeof startBoss === 'function') startBoss(); }
   /* 46 — `startRaid(r)` 는 «어느 레이드냐» 를 받는다(RAIDS 표의 행). 인자 없이 부르면 그 안에서 죽는다. */
   else if (mode === 'raid') { if (typeof startRaid === 'function' && typeof RAIDS !== 'undefined') startRaid(RAIDS[0]); }
   else if (mode === 'promo') { if (typeof startPromo === 'function') startPromo(); }
-  let wMax = 0, lagMax = 0, n = 0, sawBoss = 0;
+  else if (mode === 'arena') { if (typeof startArena === 'function') startArena(); }
+  let wMax = 0, lagMax = 0, n = 0, sawBoss = 0, introFrames = 0;
   for (let f = 0; f < 60 * 6; f++) {
     H.tick(); n++;
-    wMax = Math.max(wMax, H.w());
-    /* 108 과 같은 자 — 월드 경계 클램프가 걸린 프레임은 «못 따라가는 게 정상» 이라 제외한다 */
-    const hw = VW / 2, hh = VH / 2;
-    const tx = WORLD.w <= hw * 2 ? WORLD.w / 2 : Math.min(Math.max(player.x, hw), WORLD.w - hw);
-    const ty = WORLD.h <= hh * 2 ? WORLD.h / 2 : Math.min(Math.max(player.y, hh), WORLD.h - hh);
-    if (tx === player.x && ty === player.y) lagMax = Math.max(lagMax, Math.hypot(cam.x - player.x, cam.y - player.y));
-    if (enemies.some((e) => e.tk === 'boss' || e.tk === 'raid' || e.tk === 'promo')) sawBoss++;
+    const w = H.w();
+    wMax = Math.max(wMax, w);
+    if (typeof bossIntro !== 'undefined' && bossIntro) introFrames++;
+    /* 108 과 같은 자 — 월드 경계 클램프가 걸린 프레임은 «못 따라가는 게 정상» 이라 제외한다.
+       ⚑ 국면 프레임은 «카메라가 일부러 플레이어를 떠나는» 창이라 여기서 제외한다(457) —
+          국면 밖에서는 108 그대로여야 한다는 질문 자체는 그대로 살아 있다. */
+    if (!(typeof bossIntro !== 'undefined' && bossIntro)) {
+      const hw = VW / 2, hh = VH / 2;
+      const tx = WORLD.w <= hw * 2 ? WORLD.w / 2 : Math.min(Math.max(player.x, hw), WORLD.w - hw);
+      const ty = WORLD.h <= hh * 2 ? WORLD.h / 2 : Math.min(Math.max(player.y, hh), WORLD.h - hh);
+      if (tx === player.x && ty === player.y) lagMax = Math.max(lagMax, Math.hypot(cam.x - player.x, cam.y - player.y));
+    }
+    if (enemies.some((e) => e.tk === 'boss' || e.tk === 'raid' || e.tk === 'promo' || e.tk === 'arena')) sawBoss++;
   }
-  const out = { wMax: +wMax.toFixed(4), lagMax: +lagMax.toFixed(1), n, sawBoss, dun: !!dunRun };
-  H.cleanup();
+  const out = { wMax: +wMax.toFixed(4), lagMax: +lagMax.toFixed(1), n, sawBoss, introFrames, dun: !!dunRun };
+  H.reset();
   return out;
 };
 
@@ -231,17 +262,19 @@ const RUN_OTHER = ([mode]) => {
 
   /* ── 전제: 수리가 소스에 실제로 있다 ─────────────────────────────────── */
   console.log('[전제] 수리가 소스에 있다');
-  const CONST_RE = /const DUN_INTRO_PAN\s*=\s*([\d.]+);[\s\S]{0,200}?const DUN_INTRO_STAY\s*=\s*([\d.]+);[\s\S]{0,200}?const DUN_INTRO_BACK\s*=\s*([\d.]+);/;
+  /* 457 이관 — 상수가 «던전 전용» 에서 «모든 보스전 공용» 으로 승격되며 이름이 갈렸다
+     (`DUN_INTRO_*` → `BOSS_INTRO_*`). 425 의 보장은 그대로이고 읽는 이름만 바뀐다. */
+  const CONST_RE = /const BOSS_INTRO_PAN\s*=\s*([\d.]+);[\s\S]{0,200}?const BOSS_INTRO_STAY\s*=\s*([\d.]+);[\s\S]{0,200}?const BOSS_INTRO_BACK\s*=\s*([\d.]+);/;
   const m = src.match(CONST_RE);
-  if (!m) { no('[전제] DUN_INTRO_PAN/STAY/BACK 세 상수를 못 찾았다 — 수리가 사라졌다'); }
+  if (!m) { no('[전제] BOSS_INTRO_PAN/STAY/BACK 세 상수를 못 찾았다 — 수리가 사라졌다'); }
   else ok('[전제] 상수 셋 = PAN ' + m[1] + 's · STAY ' + m[2] + 's · BACK ' + m[3] + 's (합 ' +
           (+m[1] + +m[2] + +m[3]).toFixed(2) + 's)');
   /* 2회차 — 국면은 `step()` **맨 위**의 배타적 상태 블록으로 옮겼다(액터 정지 + introT 진행 + return).
      그 자리를 소스에서 못박는다: `if(dunRun && dunRun.introOn && !dunRun.bossDown){ … return; }` */
-  const EXCL = /if\(dunRun && dunRun\.introOn && !dunRun\.bossDown\)\{[\s\S]{0,2000}?\n    return;\n  \}/;
+  const EXCL = /if\(bossIntro && !\(dunRun && dunRun\.bossDown\)\)\{[\s\S]{0,2000}?\n    return;\n  \}/;
   is('[전제] 등장 국면이 step() 의 배타적 상태다(액터 정지 + return)', EXCL.test(src), true);
   const excl = (src.match(EXCL) || [''])[0];
-  is('[전제] 그 블록이 introT 를 굴린다', /dunRun\.introT \+= dt;/.test(excl), true);
+  is('[전제] 그 블록이 국면 경과를 굴린다', /bossIntro\.t \+= dt;/.test(excl), true);
   /* 도는 것은 «그림» 뿐이다 — 스프라이트 프레임(stepAnim)과 등장 팝인 시계(born).
      좌표를 옮기거나 피해를 주는 줄이 한 줄이라도 들어오면 이 항이 빨개진다. */
   is('[전제] 그 블록이 그림만 돌린다(좌표·판정 0줄)',
@@ -255,11 +288,11 @@ const RUN_OTHER = ([mode]) => {
   let revOk = false;
   if (m) {
     const zeroed = src
-      .replace(/const DUN_INTRO_PAN\s*=\s*[\d.]+;/, 'const DUN_INTRO_PAN  = 0;')
-      .replace(/const DUN_INTRO_STAY\s*=\s*[\d.]+;/, 'const DUN_INTRO_STAY = 0;')
-      .replace(/const DUN_INTRO_BACK\s*=\s*[\d.]+;/, 'const DUN_INTRO_BACK = 0;');
-    revOk = /const DUN_INTRO_PAN  = 0;/.test(zeroed) && /const DUN_INTRO_STAY = 0;/.test(zeroed) &&
-            /const DUN_INTRO_BACK = 0;/.test(zeroed);
+      .replace(/const BOSS_INTRO_PAN\s*=\s*[\d.]+;/, 'const BOSS_INTRO_PAN  = 0;')
+      .replace(/const BOSS_INTRO_STAY\s*=\s*[\d.]+;/, 'const BOSS_INTRO_STAY = 0;')
+      .replace(/const BOSS_INTRO_BACK\s*=\s*[\d.]+;/, 'const BOSS_INTRO_BACK = 0;');
+    revOk = /const BOSS_INTRO_PAN  = 0;/.test(zeroed) && /const BOSS_INTRO_STAY = 0;/.test(zeroed) &&
+            /const BOSS_INTRO_BACK = 0;/.test(zeroed);
     if (revOk) fs.writeFileSync(revPath, zeroed);
   }
   process.on('exit', () => { try { fs.unlinkSync(revPath); } catch (e) {} });
@@ -359,14 +392,22 @@ const RUN_OTHER = ([mode]) => {
     }
   }
 
-  /* ═══ §C — 28·46·승급전 무영향 ═══════════════════════════════════════ */
-  console.log('\n[C] 무영향 — 28 스테이지 보스·46 레이드·승급전은 카메라가 플레이어 그대로');
-  for (const [mode, nm] of [['boss', '28 스테이지 보스'], ['raid', '46 레이드'], ['promo', '승급전']]) {
+  /* ═══ §C — 다른 모드 (457 이관: «무영향» → «같은 국면, 아레나만 예외») ══════ */
+  /* ⚑ 이관을 «항을 눌러» 하지 않았다(LESSONS 328). 425 의 §C 는 «28·46·승급전은 국면이 0회» 를
+     물었고 457 이 그 답을 뒤집었다 — 항을 그냥 지우거나 0 → 1 로 고치기만 하면 «457 이 통째로
+     사라져도 초록인 게이트» 가 된다. 그래서 **같은 자리에서 새 질문**을 한다:
+     ① 세 모드에서 국면이 실제로 돈다(457 이 사라지면 빨개진다) ·
+     ② 그래도 **아레나는 0회**다(425 가 지키던 «범위가 있다» 는 성질이 여기로 옮겨 왔다) ·
+     ③ 국면 «밖» 에서는 카메라가 108 그대로다(425 가 원래 묻던 것 — 그대로 산다). */
+  console.log('\n[C] 다른 모드 — 457 이후 28·46·승급전에도 같은 국면이 돌고, 아레나만 0회다');
+  for (const [mode, nm, want] of [['boss', '28 스테이지 보스', 1], ['raid', '46 레이드', 1],
+                                  ['promo', '승급전', 1], ['arena', '123 아레나', 0]]) {
     const r = await cur.ev(RUN_OTHER, [mode]);
     if (blk('[C] ' + nm, r)) continue;
-    is('[C] ' + nm + ' — 등장 국면 가중치 최대 w', r.wMax, 0);
-    is('[C] ' + nm + ' — 던전 런이 서지 않는다', r.dun, false);
-    le('[C] ' + nm + ' — 카메라–플레이어 최대 거리(px, 클램프 밖)', r.lagMax, 60);
+    ge('[C] ' + nm + ' — 그 모드가 실제로 섰다(적이 필드에 있는 프레임 수)', r.sawBoss, 30);
+    is('[C] ' + nm + ' — 등장 국면 가중치 최대 w', r.wMax, want);
+    is('[C] ' + nm + ' — 던전 런이 서지 않는다(모드가 안 섞였다)', r.dun, false);
+    le('[C] ' + nm + ' — 국면 «밖» 카메라–플레이어 최대 거리(px, 클램프 밖) — 108 그대로', r.lagMax, 60);
   }
 
   /* ═══ §G — 108 이관 ══════════════════════════════════════════════════ */

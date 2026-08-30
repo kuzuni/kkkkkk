@@ -53,7 +53,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
   const CONST = await ev(() => ({
     sec: DUN_SEC, dly: DUN_BOSS_DLY, pdly: DUN_PHASE_DLY,
-    intro: (typeof dunIntroLen === 'function' ? dunIntroLen() : null),
+    intro: (typeof bossIntroLen === 'function' ? bossIntroLen() : null),
   }));
   console.log('상수 — DUN_SEC ' + CONST.sec + 's · DUN_BOSS_DLY ' + CONST.dly + 's · DUN_PHASE_DLY ' + CONST.pdly +
               's · 등장 국면 ' + (CONST.intro === null ? '없음(수리 전)' : CONST.intro.toFixed(2) + 's'));
@@ -103,7 +103,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
         const dB = d2(cam.x, cam.y, b.x, b.y);
         if (dB < camBossMin) { camBossMin = dB; camBossAt = +(f / 60).toFixed(3); }
       }
-      if (typeof dunIntroW === 'function') wSeen = Math.max(wSeen, dunIntroW());
+      if (typeof bossIntroW === 'function') wSeen = Math.max(wSeen, bossIntroW());
       if (fIn < 0 && r.bossIn) { fIn = f; tIn = +r.t.toFixed(4); hudAtIn = hud(); }
       /* «전투 시작» = 이 프레임에 t 가 처음 줄어든 프레임 */
       if (fFight < 0 && r.t < t0 - 1e-9) { fFight = f; tFight = +r.t.toFixed(4); }
@@ -155,7 +155,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     /* 1번째 보스가 설 때까지 → 죽인다 → 2번째가 설 때까지의 카메라 왕복을 센다 */
     let g = 0;
     while (dunRun && !dunRun.bossIn && g++ < 600) { step(DT); camStep(); }
-    /* ⚠ 국면이 **끝날 때까지** 흘린다 — `dunIntroW()` 는 국면이 막 열린 프레임에도 0 이라
+    /* ⚠ 국면이 **끝날 때까지** 흘린다 — `bossIntroW()` 는 국면이 막 열린 프레임에도 0 이라
        (이징 시작점) 그것으로 while 을 돌면 첫 프레임에 빠져나가 첫 왕복의 꼬리가 아래 표본에 섞인다. */
     let g2 = 0;
     while (dunRun && dunRun.introOn && g2++ < 600) { step(DT); camStep(); }
@@ -165,7 +165,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     const t0 = dunRun ? dunRun.t : 0;
     while (dunRun && !dunRun.bossDown && k++ < 600) {
       step(DT); camStep();
-      if (typeof dunIntroW === 'function') w2 = Math.max(w2, dunIntroW());
+      if (typeof bossIntroW === 'function') w2 = Math.max(w2, bossIntroW());
       const b = enemies.find((e) => e.tk === 'dunboss' && e.hp > 0);
       if (b) camBossMin = Math.min(camBossMin, Math.hypot(cam.x - b.x, cam.y - b.y));
       if (dunRun && dunRun.bossUp >= 2 && k > 240) break;

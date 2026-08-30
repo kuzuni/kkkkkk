@@ -58,7 +58,7 @@ const OUT = path.join(ROOT, 'docs/review');
     /* 보스가 «필드에 설» 때까지 = 등장 국면이 열리는 프레임까지 */
     let g = 0;
     while (dunRun && !dunRun.bossIn && g++ < 600) tick();
-    return { g, len: dunIntroLen(), sec: DUN_SEC, name: d.n };
+    return { g, len: bossIntroLen(), sec: DUN_SEC, name: d.n };
   }, [ID]);
   if (setup.err) { console.log('실패: ' + setup.err); await browser.close(); process.exit(1); }
   console.log('입장 «' + setup.name + '» — 보스가 선 프레임 ' + setup.g + ' · 등장 국면 ' + setup.len.toFixed(2) + 's');
@@ -67,7 +67,7 @@ const OUT = path.join(ROOT, 'docs/review');
     const b = enemies.find((e) => e.tk === 'dunboss' && e.hp > 0);
     return {
       u: dunRun ? +(dunRun.introT || 0).toFixed(3) : null,
-      w: +dunIntroW().toFixed(3),
+      w: +bossIntroW().toFixed(3),
       t: dunRun ? +dunRun.t.toFixed(3) : null,
       hud: (document.getElementById('dunTmN') || {}).textContent,
       camPlayer: +Math.hypot(cam.x - player.x, cam.y - player.y).toFixed(1),

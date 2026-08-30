@@ -1,0 +1,566 @@
+{
+ "stage": {
+  "md": "stage",
+  "VW": 540,
+  "VH": 998,
+  "center": [
+   270,
+   499
+  ],
+  "len": 1.4,
+  "shots": [
+   {
+    "u": 0,
+    "w": 0,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 0,
+    "camBoss": 336.4,
+    "player": [
+     270,
+     499
+    ],
+    "bossFoot": [
+     570.3,
+     440.6
+    ],
+    "bossMid": [
+     560.9,
+     330.1
+    ],
+    "born": 0.017
+   },
+   {
+    "u": 0.18,
+    "w": 0.546,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 183.8,
+    "camBoss": 152.6,
+    "player": [
+     111,
+     591.3
+    ],
+    "bossFoot": [
+     411.3,
+     532.9
+    ],
+    "bossMid": [
+     401.9,
+     422.4
+    ],
+    "born": 0.033
+   },
+   {
+    "u": 0.35,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 336.4,
+    "camBoss": 0,
+    "player": [
+     -20.9,
+     667.9
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.2
+   },
+   {
+    "u": 0.7,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 336.4,
+    "camBoss": 0,
+    "player": [
+     -20.9,
+     667.9
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.55
+   },
+   {
+    "u": 1.05,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 336.4,
+    "camBoss": 0,
+    "player": [
+     -20.9,
+     667.9
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.9
+   },
+   {
+    "u": 1.23,
+    "w": 0.454,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 152.6,
+    "camBoss": 183.8,
+    "player": [
+     138.1,
+     575.6
+    ],
+    "bossFoot": [
+     438.4,
+     517.2
+    ],
+    "bossMid": [
+     429,
+     406.7
+    ],
+    "born": 1.083
+   },
+   {
+    "u": 1.4,
+    "w": 0,
+    "intro": false,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 1.4,
+    "camBoss": 335,
+    "player": [
+     268.8,
+     499.7
+    ],
+    "bossFoot": [
+     569.1,
+     441.3
+    ],
+    "bossMid": [
+     559.7,
+     330.8
+    ],
+    "born": 1.25
+   },
+   {
+    "u": 2,
+    "w": 0,
+    "intro": false,
+    "hud": "14.4",
+    "clock": 14.4,
+    "camPlayer": 16.3,
+    "camBoss": 253.2,
+    "player": [
+     286,
+     496
+    ],
+    "bossFoot": [
+     465.5,
+     460.8
+    ],
+    "bossMid": [
+     474.9,
+     350.3
+    ],
+    "born": 1.85
+   }
+  ]
+ },
+ "promo": {
+  "md": "promo",
+  "VW": 540,
+  "VH": 998,
+  "center": [
+   270,
+   499
+  ],
+  "len": 1.4,
+  "shots": [
+   {
+    "u": 0,
+    "w": 0,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 0,
+    "camBoss": 225.7,
+    "player": [
+     270,
+     499
+    ],
+    "bossFoot": [
+     470,
+     499
+    ],
+    "bossMid": [
+     473.2,
+     400.8
+    ],
+    "born": 0
+   },
+   {
+    "u": 0.18,
+    "w": 0.546,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 123.4,
+    "camBoss": 102.4,
+    "player": [
+     158.9,
+     552.7
+    ],
+    "bossFoot": [
+     358.9,
+     552.7
+    ],
+    "bossMid": [
+     362.2,
+     454.4
+    ],
+    "born": 0.017
+   },
+   {
+    "u": 0.35,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 225.7,
+    "camBoss": 0,
+    "player": [
+     66.8,
+     597.2
+    ],
+    "bossFoot": [
+     266.8,
+     597.2
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.183
+   },
+   {
+    "u": 0.7,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 225.7,
+    "camBoss": 0,
+    "player": [
+     66.8,
+     597.2
+    ],
+    "bossFoot": [
+     266.8,
+     597.2
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.533
+   },
+   {
+    "u": 1.05,
+    "w": 1,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 225.7,
+    "camBoss": 0,
+    "player": [
+     66.8,
+     597.2
+    ],
+    "bossFoot": [
+     266.8,
+     597.2
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.883
+   },
+   {
+    "u": 1.23,
+    "w": 0.454,
+    "intro": true,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 102.4,
+    "camBoss": 123.4,
+    "player": [
+     177.8,
+     543.6
+    ],
+    "bossFoot": [
+     377.8,
+     543.6
+    ],
+    "bossMid": [
+     381.1,
+     445.3
+    ],
+    "born": 1.067
+   },
+   {
+    "u": 1.4,
+    "w": 0,
+    "intro": false,
+    "hud": "15.0",
+    "clock": 15,
+    "camPlayer": 0.9,
+    "camBoss": 224.8,
+    "player": [
+     269.2,
+     499.4
+    ],
+    "bossFoot": [
+     469.2,
+     499.4
+    ],
+    "bossMid": [
+     472.4,
+     401.2
+    ],
+    "born": 1.233
+   },
+   {
+    "u": 2,
+    "w": 0,
+    "intro": false,
+    "hud": "14.4",
+    "clock": 14.4,
+    "camPlayer": 2,
+    "camBoss": 151.4,
+    "player": [
+     268,
+     499.1
+    ],
+    "bossFoot": [
+     389.1,
+     499.8
+    ],
+    "bossMid": [
+     385.9,
+     401.6
+    ],
+    "born": 1.833
+   }
+  ]
+ },
+ "raid": {
+  "md": "raid",
+  "VW": 540,
+  "VH": 998,
+  "center": [
+   270,
+   499
+  ],
+  "len": 1.4,
+  "shots": [
+   {
+    "u": 0,
+    "w": 0,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 0,
+    "camBoss": 238.4,
+    "player": [
+     270,
+     499
+    ],
+    "bossFoot": [
+     471.2,
+     751.2
+    ],
+    "bossMid": [
+     461.8,
+     640.6
+    ],
+    "born": 0
+   },
+   {
+    "u": 0.18,
+    "w": 0.546,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 130.3,
+    "camBoss": 108.1,
+    "player": [
+     165.2,
+     421.6
+    ],
+    "bossFoot": [
+     366.4,
+     673.8
+    ],
+    "bossMid": [
+     357,
+     563.2
+    ],
+    "born": 0.017
+   },
+   {
+    "u": 0.35,
+    "w": 1,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 238.4,
+    "camBoss": 0,
+    "player": [
+     78.2,
+     357.4
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.183
+   },
+   {
+    "u": 0.7,
+    "w": 1,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 238.4,
+    "camBoss": 0,
+    "player": [
+     78.2,
+     357.4
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.533
+   },
+   {
+    "u": 1.05,
+    "w": 1,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 238.4,
+    "camBoss": 0,
+    "player": [
+     78.2,
+     357.4
+    ],
+    "bossFoot": [
+     279.4,
+     609.5
+    ],
+    "bossMid": [
+     270,
+     499
+    ],
+    "born": 0.883
+   },
+   {
+    "u": 1.23,
+    "w": 0.454,
+    "intro": true,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 108.1,
+    "camBoss": 130.3,
+    "player": [
+     183,
+     434.8
+    ],
+    "bossFoot": [
+     384.2,
+     686.9
+    ],
+    "bossMid": [
+     374.8,
+     576.4
+    ],
+    "born": 1.067
+   },
+   {
+    "u": 1.4,
+    "w": 0,
+    "intro": false,
+    "hud": "30.0",
+    "clock": 30,
+    "camPlayer": 1,
+    "camBoss": 237.4,
+    "player": [
+     269.2,
+     498.4
+    ],
+    "bossFoot": [
+     470.4,
+     750.6
+    ],
+    "bossMid": [
+     461,
+     640
+    ],
+    "born": 1.233
+   },
+   {
+    "u": 2,
+    "w": 0,
+    "intro": false,
+    "hud": "29.4",
+    "clock": 29.4,
+    "camPlayer": 16.2,
+    "camBoss": 156.1,
+    "player": [
+     280.1,
+     511.7
+    ],
+    "bossFoot": [
+     405.5,
+     667.8
+    ],
+    "bossMid": [
+     414.9,
+     557.2
+    ],
+    "born": 1.833
+   }
+  ]
+ }
+}
