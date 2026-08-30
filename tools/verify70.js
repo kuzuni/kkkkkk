@@ -15,6 +15,35 @@ function launchOpts(){
 const R = [];
 const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  ✗ ') + n + (d ? '  — ' + d : '')); };
 
+/* 527 — `S.gold` 를 접근자로 갈아 끼워 «누가 올렸나» 를 스택째 기록한다.
+   ⚠ `enumerable:true` 는 취향이 아니다 — `save()` 가 `JSON.stringify(S)` 라 이 플래그를 빼면
+   세이브에서 골드 키가 통째로 사라진다(§3 «새로고침 후에도 유지» 가 즉시 빨개진다). */
+const GOLD_WATCH = () => {
+  let v = S.gold;
+  window.__g70w = { log: [], live: false };
+  Object.defineProperty(S, 'gold', {
+    configurable: true, enumerable: true,
+    get() { return v; },
+    set(nv) {
+      const d = nv - v; v = nv;
+      if (!d) return;
+      const st = (new Error().stack || '');
+      const m = /at ([A-Za-z0-9_$.]+)/.exec(st.split('\n')[2] || '') || [];
+      window.__g70w.log.push({ d, st, fn: m[1] || '?' });
+    },
+  });
+  /* 전제 — 감시자가 실제로 잡는지 여기서 한 번 확인한다(귀속 항이 «공허한 초록» 이 되는 것을 막는다) */
+  const g0 = S.gold; S.gold = g0 + 1; S.gold = g0;
+  window.__g70w.live = window.__g70w.log.length === 2;
+  window.__g70w.log.length = 0;
+};
+const GOLD_READ = () => ({
+  live: window.__g70w.live,
+  all: window.__g70w.log.reduce((s, x) => s + x.d, 0),
+  att: window.__g70w.log.filter((x) => /claimAttend|giveReward/.test(x.st)).reduce((s, x) => s + x.d, 0),
+  who: [...new Set(window.__g70w.log.map((x) => x.fn))].join(','),
+});
+
 (async () => {
   let b;
   try { b = await launch(chromium); }
@@ -79,8 +108,24 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
   /* ---------- 2. 오늘 카드 탭 → 실제 지급 ---------- */
   const before = await p.evaluate(() => ({ dia: S.dia, gold: S.gold, rel: S.relic, n: S.att.n, date: S.att.date,
     hud: (document.querySelector('#top [data-cur="dia"]') || {}).textContent || '' }));
-  await p.evaluate(() => { document.querySelector('#mbox [data-att]').click(); });
+  /* 527 — «수령이 골드를 줬나» 를 420ms 창의 차분으로 재면 안 된다. 그 창 안에서 전투 루프가 돌고,
+     자동 전투가 적 하나를 잡으면 `killEnemy`(index.html ~20961)가 `S.gold += g` 로 스테이지 골드를
+     넣는다 — 스테이지 1 에서 정확히 **4.08**. 자는 그것을 «출석이 준 골드» 로 읽고 24/25 로 빨갰다
+     (수리 전 커밋 넷에서 전부 같은 4 — 플레이키가 아니라 **창이 오염된 것**이다. 재현 `probe527`).
+     처방은 **자를 좁히는 것**이지 허용 오차를 넓히는 것이 아니다(334 처방 ① vs ②) — 두 겹으로 잰다:
+       ⓐ 동기 창 — `click()` 디스패치는 동기라 `claimAttend → giveReward` 가 그 한 태스크 안에서
+          끝난다. 같은 태스크에는 rAF 콜백이 끼어들 수 없으므로 여기 차분은 «출석이 준 것» 뿐이다.
+       ⓑ 귀속 — 그래도 비동기로 주는 경로가 새로 생길 수 있으니, 420ms 창 전체의 `S.gold` 변화를
+          **스택째** 기록해 출석 경로(`claimAttend`/`giveReward`)를 지나는 것이 0 임을 단언한다.
+     [전제] 항이 ⓑ 가 공허한 초록이 아님을(감시자가 살아 있다) 못박고, §R 이 되돌림을 못박는다. */
+  await p.evaluate(GOLD_WATCH);
+  const sync = await p.evaluate(() => {
+    const g0 = S.gold, r0 = S.relic, d0 = S.dia;
+    document.querySelector('#mbox [data-att]').click();
+    return { dg: +(S.gold - g0).toFixed(3), dr: S.relic - r0, dd: S.dia - d0 };
+  });
   await p.waitForTimeout(420);
+  const w = await p.evaluate(GOLD_READ);
   const after = await p.evaluate(() => ({ dia: S.dia, gold: S.gold, rel: S.relic, n: S.att.n, date: S.att.date,
     today: typeof today === 'function' ? today() : '',
     hud: (document.querySelector('#top [data-cur="dia"]') || {}).textContent || '',
@@ -97,9 +142,15 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
   /* 399 — 10일차는 5 배수(유물석 650) 갈래였다. 갈래가 «일반 350+30i» 로 합쳐져 **다이아 650** 이다
      (같은 650 이지만 재화가 다르다 — 유물석은 한 톨도 안 는다는 항을 같이 둔다). */
   ok('10일차 보상 = 다이아 650 (ATTEND 데이터 그대로)', after.dia - before.dia === 650, String(after.dia - before.dia));
-  ok('10일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다)',
-    after.rel === before.rel && Math.round(after.gold - before.gold) === 0,
-    `Δrel ${after.rel - before.rel} · Δgold ${Math.round(after.gold - before.gold)}`);
+  /* 527 ⓐ — 동기 창(수령 그 한 태스크). 유물조각은 전투가 안 주므로 창 전체로도 같이 못박는다. */
+  ok('10일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다 · 527 동기 창)',
+    sync.dg === 0 && sync.dr === 0 && after.rel === before.rel,
+    `동기 Δgold ${sync.dg} · Δrel ${sync.dr} · 창 전체 Δrel ${after.rel - before.rel}`);
+  ok('[전제 527] 골드 감시자가 살아 있다 (귀속 항이 «공허한 초록» 이 아니다)', w.live === true, String(w.live));
+  /* 527 ⓑ — 창 전체 Δ 는 0 이 아니어도 된다(전투 몫). 단 **출석 경로를 지나는 몫**은 한 톨도 없어야 한다. */
+  ok('420ms 창에서도 출석 경로가 올린 골드는 0 (527 귀속 — 창 전체 Δ 는 전투 몫)',
+    Math.abs(w.att) < 1e-9,
+    `출석 ${w.att} · 창 전체 ${w.all.toFixed(2)} · 올린 함수 [${w.who || '없음'}]`);
   ok('S.att.n +1 · S.att.date = 오늘', after.n === before.n + 1 && after.date === after.today);
   ok('팝업이 그 자리에서 재렌더 (닫히지 않음)', after.on);
   ok('수령한 칸이 ✔ 로 바뀌고 👑 사라짐 (내일 칸은 «미래» 유지)',
@@ -141,6 +192,32 @@ const ok = (n, c, d) => { R.push({ n, c, d }); console.log((c ? '  ✓ ' : '  �
   ok('공용 모달 헤더 높이 원복 (91px)', leak.headH === '91px', String(leak.headH));
 
   ok('콘솔 에러 0', errs.length === 0, errs.slice(0, 3).join(' | '));
+
+  /* ---------- §R 되돌림 시험 (527) ----------
+     자를 좁힌 것이 «무르게 푼 것» 이 아님을 못박는다 — 결함(«출석이 골드를 준다»)을 사본에
+     다시 넣으면 ⓐ·ⓑ 두 항이 **둘 다** 빨개져야 한다. 넣는 자리는 표(`ATTEND`) 한 칸이다:
+     `giveReward` 의 `r.gold` 분기는 399 가 표에서 그 칸을 지웠을 뿐 함수에는 살아 있다. */
+  {
+    const rp = await ctx.newPage();
+    await rp.goto('file://' + path.resolve(__dirname, '../index.html'));
+    await rp.waitForTimeout(900);
+    await rp.evaluate(() => { S.autoBuy = false; if (typeof spAuto !== 'undefined') S.spAuto = false; });
+    await rp.evaluate(() => { S.att.n = 9; S.att.date = ''; ATTEND[9 % 28].gold = 7; });   /* ← 결함 주입 */
+    await rp.evaluate(() => { document.querySelector('.side .ibtn[data-pop="attend"]').click(); });
+    await rp.waitForTimeout(320);
+    await rp.evaluate(GOLD_WATCH);
+    const rs = await rp.evaluate(() => {
+      const g0 = S.gold, r0 = S.relic;
+      document.querySelector('#mbox [data-att]').click();
+      return { dg: +(S.gold - g0).toFixed(3), dr: S.relic - r0 };
+    });
+    await rp.waitForTimeout(420);
+    const rw = await rp.evaluate(GOLD_READ);
+    ok('[§R-a] 표에 골드 칸을 되돌리면 «동기 창» 항이 빨개진다', rs.dg === 7, `Δgold ${rs.dg}`);
+    ok('[§R-b] 같은 결함에 «귀속» 항도 빨개진다 (출석 경로 몫이 7)', Math.abs(rw.att - 7) < 1e-9,
+      `출석 ${rw.att} · 창 전체 ${rw.all.toFixed(2)} · 올린 함수 [${rw.who || '없음'}]`);
+    await rp.close();
+  }
 
   await b.close();
   const pass = R.filter((x) => x.c).length;

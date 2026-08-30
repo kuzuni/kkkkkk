@@ -3340,6 +3340,15 @@ BLESS_EFFLV = 0.10   BLESS_MAXLV = 51   blessLv() = clamp(S.bless.lv, 1, 51)
       166 규약대로 **받을 수 없는 칸(수령 완료·미래)에는 0개**이고, 수령하면 재렌더로 두 자리가 같이 꺼진다.
       ⚠ 새 배지를 이 팝업에 더 달면 `tools/verify318.js`·`verify166.js` [8-3]·`verify299.js` 호스트 목록에 같이 올릴 것.
       게이트 `node tools/verify318.js` → **21/21 PASS** · 기록 `docs/review/318-출석레드닷.md`
+- [x] **게이트가 «지급» 을 재는 법 (527, 2026-08-30 · 제품 0줄 · Δ0px)** — `verify70` §5-b 는 수령 전후 **420ms**
+      차분으로 «399 — 다이아 말고는 안 준다» 를 쟀는데, 그 창 안에서 자동 전투가 적을 잡으면
+      `killEnemy`(`index.html` 20961)가 스테이지 골드 **4.08** 을 넣어 자가 그것을 «출석이 준 골드» 로 읽었다.
+      ⇒ 이 절의 «수령» 항을 재는 자는 이제 **두 겹**이다: ⓐ **동기 창**(`evaluate` 한 태스크 안에서
+      `click()` 하고 그 자리에서 차분 — rAF `step` 이 못 끼어든다) · ⓑ **귀속**(`S.gold` 접근자 + 스택 필터로
+      «`claimAttend`/`giveReward` 를 지나는 몫» 만 센다). 창 전체 Δ 는 **0 이 아니어도 된다**(전투 몫).
+      ⚠ 허용 오차로 풀지 마라 — «출석이 골드를 준다» 가 통째로 통과한다. ⚠ 접근자에는 **`enumerable:true`**
+      (`save()` 가 `JSON.stringify(S)`). 게이트 `node tools/verify70.js` → **29/29**(§R 되돌림 시험 포함) ·
+      재현 `node tools/probe527.js` → 5/5 · 기록 `docs/review/527-verify70출석골드창오염.md`
 
 ---
 
