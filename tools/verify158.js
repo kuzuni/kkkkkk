@@ -16,12 +16,26 @@
  *   [D] UI 발 회귀 — 버튼에서 준 보상은 종전대로 그 버튼에서 #fxl 로 난다 (58/93 회귀 방지)
  *   [E] 통합 — 자동 전투를 돌리며 하단 네비·팝업 ✕ 를 8초간 연타: #fxl 에 재화 비행 0건
  *   [F] 프레임 정지(227) — 킬 직후 메인 스레드가 700ms 얼어붙어도 묶음의 발원이 combat 이다
+ *   [G] 되돌림(542) — 씬 격리가 뚫리면(창 안에 «남의 킬» 1건) 위 초록이 실제로 빨개진다
  *
  * 227(2026-08-27): [E] 가 5회 중 1회 빨갰다. 원인은 게이트가 아니라 **제품**이었다 —
  *   힌트의 «나이» 를 벽시계로 재던 `fxSrc` 가, 하단 네비를 누를 때 나는 645~803ms 짜리 프레임 정지에서
  *   전투 힌트(600ms 창)만 만료시키고 탭 힌트(1200ms 창)는 살려 «더 오래된 탭» 이 이겼다.
  *   [E] 는 그 정지가 «킬 직후» 에 걸려야만 빨개져 간헐이었으므로, 같은 실패를 **결정적으로** 세우는
  *   [F] 를 신설했다(정지를 합성한다). [E] 는 통합 스모크로 남긴다.
+ *
+ * 542(2026-08-30): [A~C]·[F] 의 «발원 좌표 = 킬 자리» 가 같은 트리에서 PASS ↔ FAIL(1~3) 을 오갔다.
+ *   `tools/probe542.js` 로 재현하니 **제품이 아니라 씬이 안 격리된 것**이었고, 구멍이 **둘**이다:
+ *     ⓐ 창(합성 킬 → 발사) **안** 에 배경 자동 전투의 진짜 킬이 하나 끼면 제품이 규약대로
+ *        `fxAccSrc` 를 **마지막 킬 자리**로 갱신한다(index.html 35545 — 종전 동작이고 옳다).
+ *     ⓑ 창 **앞** 의 진짜 킬이 자기 묶음을 먼저 쏘는데, 자가 `fxFly` 로그의 **첫** gold 를 골랐다.
+ *        그 시행은 «마지막 묶음» 으로 재면 오차 0 이다 — 자가 남의 묶음을 본 것이다.
+ *   실측(격리 없음 8회): 어긋남 **5/8**(ⓐ 3 · ⓑ 2) · 어긋난 시행도 발원 태그는 **전부 combat** 이라
+ *   실패 문구(«탭이 가로챘다»)부터 거짓이었다. 격리 8회는 8/8 오차 0.
+ *   ⇒ 처방은 씬 격리(`h.quiet()` — 창 내내 enemies·spawnQ 를 비운다) + 묶음을 **금액으로 고르기**
+ *     (`h.pick(cur, 최소액)`) 이고, 무르게 푼 것이 아님은 **음성항**([A0]·[F0] «창 동안 남의 킬 0건»)과
+ *     **[G] 되돌림 시험**(«격리가 뚫린 시행» 을 합성하면 다시 어긋난다)이 못박는다.
+ *   ⚠ 제품(`fxSrc` 의 600/1200ms 창)은 **한 줄도 안 건드렸다** — 77·158·227 이 그 위에 서 있다.
  */
 const path = require('path');
 const fs = require('fs');
@@ -85,49 +99,88 @@ function launchOpts(){
                                 x: from ? from.x : null, y: from ? from.y : null });
           return orig.apply(this, arguments);
         };
+        /* 542 — «남의 킬» 을 세는 자국. killEnemy 가 부르는 fxAt(…, 'combat') 이 유일한 표식이고,
+           이 자가 손으로 넣는 합성 킬은 __v158synth 표시로 갈라 센다. */
+        window.__fxAtLog = [];
+        const oat = window.fxAt;
+        window.fxAt = function (t, tag) {
+          window.__fxAtLog.push({ tag: tag || null, synth: !!window.__v158synth });
+          return oat.apply(this, arguments);
+        };
       }
-      window.__fxLog.length = 0;
+      window.__fxLog.length = 0; window.__fxAtLog.length = 0;
+      /* 542 — 씬 격리. 창(합성 킬 → 발사) 동안 배경 자동 전투가 «진짜 킬» 을 하나라도 내면
+         제품이 규약대로 스냅샷을 그 자리로 갱신해 이 자가 흔들린다. 한 번만 비우면 창 안에
+         새로 스폰된 적이 다시 죽으므로 **창 내내** 비운다. 되돌림 시험([G])은 이것을 끈다. */
+      const quiet = () => {
+        const c = () => { enemies.length = 0; spawnQ.length = 0; };
+        c(); const iv = setInterval(c, 16);
+        return () => clearInterval(iv);
+      };
+      /* 남의 킬(합성이 아닌 combat 자국) 누적 개수 */
+      const foreign = () => window.__fxAtLog.filter((e) => e.tag === 'combat' && !e.synth).length;
+      /* 이 자가 넣는 합성 킬 — killEnemy 와 같은 순서(fxAt(좌표,'combat') → S.gold += g) */
+      const synthKill = (x, y) => { window.__v158synth = true; fxAt({ x, y }, 'combat'); window.__v158synth = false; };
+      /* 542 ⓑ — «첫 gold» 가 아니라 **이 씬이 넣은 금액을 나르는 묶음**을 고른다.
+         창 앞의 진짜 킬이 자기 묶음을 먼저 쏘면 첫 gold 는 남의 것이다(실측 2/8). */
+      const pick = (cur, min) => window.__fxLog.find((e) => e.cur === cur && e.n >= min) || null;
       const toFrame = (r) => {
         if (!r) return null;
         const app = document.getElementById('app').getBoundingClientRect();
         const sc = app.width / 1080;
         return { x: (r.left + r.width / 2 - app.left) / sc, y: (r.top + r.height / 2 - app.top) / sc };
       };
-      return { wait, raf, L, LC, snap, toFrame, log: () => window.__fxLog };
+      return { wait, raf, L, LC, snap, toFrame, log: () => window.__fxLog,
+               quiet, foreign, synthKill, pick };
     });`;
   await page.evaluate(HARNESS);
 
   /* ---------- [A][B][C] 전투 누적 → 탭 → 발사 ---------- */
   console.log('[A~C] 전투 누적 뒤에 탭이 들어와도 발원이 안 뺏긴다');
   {
-    const r = await page.evaluate(async () => {
-      const h = await window.__v158({});
-      /* 전투를 멈춰 놓고(자동 킬이 섞이면 좌표가 흔들린다) 킬 1건을 손으로 흉내낸다 */
-      const KX = 300, KY = 1500;
-      fxAt({ x: KX, y: KY }, 'combat');
-      S.gold += 777;
-      await h.raf();                       /* fxWatch 가 이번 증가분을 누적(스냅샷)한다 */
-      const AS = (typeof fxAccSrc !== 'undefined') ? fxAccSrc : null;
-      const snapped = AS && AS.gold ? { x: AS.gold.x, y: AS.gold.y, combat: !!AS.gold.combat } : null;
-      /* 발사 전에 하단 네비를 «누른다» — 종전 코드라면 이 좌표가 이긴다 */
-      /* 하단 네비는 <button> 이 아니라 `.tab` div 다 — 셀렉터를 틀리면 검사가 조용히 헛돈다 */
-      const btn = document.querySelector('#tabbar .tab');
-      const br = btn.getBoundingClientRect();
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: br.left + br.width / 2, clientY: br.top + br.height / 2 }));
-      const before = h.snap();
-      /* quiet(45ms) 를 넘겨 발사시킨다 */
-      await h.wait(260);
-      const after = h.snap();
-      const shot = h.log().find((e) => e.cur === 'gold');       /* 이 묶음이 실제로 쓴 발원 */
-      const bp = h.toFrame(br);
-      const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
-      const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
-      return {
-        snapped, shotCombat: shot ? shot.combat : null,
-        newFl: after.fl - before.fl, newLc: after.lc - before.lc,
-        dKill: d(fp, { x: KX, y: KY }), dTap: d(fp, bp),
-      };
-    });
+    /* 542 — 씬을 격리한 뒤에도 남의 킬이 끼면 그 시행은 **버리고 다시 돌린다**(상한 6).
+       상한을 다 쓰도록 한 번도 깨끗한 시행이 안 나오면 그것은 빨강이다([A0] 음성항) —
+       «끼면 넘어간다» 로 두면 이 절이 통째로 사라져도 초록인 게이트가 된다. */
+    const TRY = 6;
+    let r = null, tries = 0;
+    while (tries < TRY) {
+      tries++;
+      r = await page.evaluate(async () => {
+        const h = await window.__v158({});
+        const stop = h.quiet();            /* 배경 자동 전투를 창 내내 잠재운다 */
+        const f0 = h.foreign();
+        /* 전투를 멈춰 놓고(자동 킬이 섞이면 좌표가 흔들린다) 킬 1건을 손으로 흉내낸다 */
+        const KX = 300, KY = 1500, AMT = 777;
+        h.synthKill(KX, KY);
+        S.gold += AMT;
+        await h.raf();                       /* fxWatch 가 이번 증가분을 누적(스냅샷)한다 */
+        const AS = (typeof fxAccSrc !== 'undefined') ? fxAccSrc : null;
+        const snapped = AS && AS.gold ? { x: AS.gold.x, y: AS.gold.y, combat: !!AS.gold.combat } : null;
+        /* 발사 전에 하단 네비를 «누른다» — 종전 코드라면 이 좌표가 이긴다 */
+        /* 하단 네비는 <button> 이 아니라 `.tab` div 다 — 셀렉터를 틀리면 검사가 조용히 헛돈다 */
+        const btn = document.querySelector('#tabbar .tab');
+        const br = btn.getBoundingClientRect();
+        btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: br.left + br.width / 2, clientY: br.top + br.height / 2 }));
+        const before = h.snap();
+        /* quiet(45ms) 를 넘겨 발사시킨다 */
+        await h.wait(260);
+        const after = h.snap();
+        stop();
+        const shot = h.pick('gold', AMT);    /* 542 ⓑ — 첫 gold 가 아니라 이 금액을 나르는 묶음 */
+        const bp = h.toFrame(br);
+        const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
+        const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
+        return {
+          snapped, shotCombat: shot ? shot.combat : null, foreign: h.foreign() - f0,
+          newFl: after.fl - before.fl, newLc: after.lc - before.lc,
+          dKill: d(fp, { x: KX, y: KY }), dTap: d(fp, bp),
+        };
+      });
+      if (r.foreign === 0) break;
+      await page.waitForTimeout(250);
+    }
+    if (r.foreign === 0) ok(`[A0] 창 동안 남의 킬 0건 — 씬이 격리됐다 (시행 ${tries}/${TRY})`);
+    else fail(`[A0] ${TRY}시행 전부 남의 킬이 끼었다 (마지막 ${r.foreign}건) — 격리가 안 듣는다`);
     if (r.snapped && r.snapped.combat) ok(`누적 시점 스냅샷 = combat (${Math.round(r.snapped.x)},${Math.round(r.snapped.y)})`);
     else fail(`묶음 스냅샷이 combat 이 아니다 — ${JSON.stringify(r.snapped)}`);
     if (r.snapped && Math.abs(r.snapped.x - 300) < 2 && Math.abs(r.snapped.y - 1500) < 2) ok('스냅샷 좌표 = 킬 자리');
@@ -138,8 +191,11 @@ function launchOpts(){
     else fail(`#fxl 에 ${r.newFl}개 — 탭 좌표가 전투 골드를 가로챘다(=버그 재현)`);
     if (r.shotCombat === true) ok('발사된 묶음의 발원 = combat');
     else fail(`발사된 묶음의 발원이 combat 이 아니다 (${r.shotCombat})`);
+    /* 542 — 실패 문구를 정직하게. 어긋남의 실제 뿌리는 «탭» 이 아니라 **남의 킬 자리**였다
+       (어긋난 시행도 combat 태그는 살아 있었다 — probe542 [1]). 두 거리를 같이 찍어 다음 세션이
+       «탭이 이겼다» 로 오독하지 않게 한다. */
     if (r.dKill >= 0 && r.dKill < 4) ok(`발원 좌표 = 킬 자리 (오차 ${Math.round(r.dKill)}px · 탭까지는 ${Math.round(r.dTap)}px)`);
-    else fail(`발원이 «누른 버튼» 쪽이다 — 킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px`);
+    else fail(`발원이 킬 자리가 아니다 — 킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px (combat=${r.shotCombat} · 남의 킬 ${r.foreign}건)`);
   }
 
   /* ---------- [D] UI 발 회귀 ---------- */
@@ -232,32 +288,44 @@ function launchOpts(){
   /* ---------- [F] 227 — 킬 직후 프레임이 700ms 얼어붙어도 발원을 안 뺏긴다 ---------- */
   console.log('[F] 킬 직후 메인 스레드 700ms 정지 — 묶음의 발원이 combat 을 지킨다');
   {
-    const r = await page.evaluate(async () => {
-      const h = await window.__v158({});
-      /* 실패가 났던 배치 그대로: **탭이 킬보다 먼저** 온다(실측 tapAge 887 · origAge 697).
-         벽시계 나이로 재면 뒤에 온 전투 힌트가 600ms 로 먼저 죽고 앞선 탭이 1200ms 로 살아남는다. */
-      const btn = document.querySelector('#tabbar .tab');
-      const br = btn.getBoundingClientRect();
-      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: br.left + br.width / 2, clientY: br.top + br.height / 2 }));
-      await h.wait(140);
-      const KX = 300, KY = 1500;
-      fxAt({ x: KX, y: KY }, 'combat');
-      S.gold += 500;
-      /* 메인 스레드를 통째로 막는다 — 무거운 패널 렌더가 실제로 하는 일. 이 동안 rAF·타이머 전부 정지. */
-      const t0 = performance.now();
-      while (performance.now() - t0 < 700) { /* busy */ }
-      const froze = Math.round(performance.now() - t0);
-      const before = h.snap();
-      await h.wait(320);
-      const after = h.snap();
-      const shot = h.log().find((e) => e.cur === 'gold');
-      const bp = h.toFrame(br);
-      const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
-      const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
-      return { froze, shotCombat: shot ? shot.combat : null,
-               newFl: after.fl - before.fl, newLc: after.lc - before.lc,
-               dKill: d(fp, { x: KX, y: KY }), dTap: d(fp, bp) };
-    });
+    const TRY = 6;
+    let r = null, tries = 0;
+    while (tries < TRY) {
+      tries++;
+      r = await page.evaluate(async () => {
+        const h = await window.__v158({});
+        const stop = h.quiet();            /* 542 — [A~C] 와 같은 격리 */
+        const f0 = h.foreign();
+        /* 실패가 났던 배치 그대로: **탭이 킬보다 먼저** 온다(실측 tapAge 887 · origAge 697).
+           벽시계 나이로 재면 뒤에 온 전투 힌트가 600ms 로 먼저 죽고 앞선 탭이 1200ms 로 살아남는다. */
+        const btn = document.querySelector('#tabbar .tab');
+        const br = btn.getBoundingClientRect();
+        btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: br.left + br.width / 2, clientY: br.top + br.height / 2 }));
+        await h.wait(140);
+        const KX = 300, KY = 1500, AMT = 500;
+        h.synthKill(KX, KY);
+        S.gold += AMT;
+        /* 메인 스레드를 통째로 막는다 — 무거운 패널 렌더가 실제로 하는 일. 이 동안 rAF·타이머 전부 정지. */
+        const t0 = performance.now();
+        while (performance.now() - t0 < 700) { /* busy */ }
+        const froze = Math.round(performance.now() - t0);
+        const before = h.snap();
+        await h.wait(320);
+        const after = h.snap();
+        stop();
+        const shot = h.pick('gold', AMT);
+        const bp = h.toFrame(br);
+        const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
+        const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
+        return { froze, shotCombat: shot ? shot.combat : null, foreign: h.foreign() - f0,
+                 newFl: after.fl - before.fl, newLc: after.lc - before.lc,
+                 dKill: d(fp, { x: KX, y: KY }), dTap: d(fp, bp) };
+      });
+      if (r.foreign === 0) break;
+      await page.waitForTimeout(250);
+    }
+    if (r.foreign === 0) ok(`[F0] 창 동안 남의 킬 0건 — 씬이 격리됐다 (시행 ${tries}/${TRY})`);
+    else fail(`[F0] ${TRY}시행 전부 남의 킬이 끼었다 (마지막 ${r.foreign}건) — 격리가 안 듣는다`);
     if (r.froze >= 690) ok(`메인 스레드를 ${r.froze}ms 얼렸다 (600ms 창을 확실히 넘긴다)`);
     else fail(`정지가 ${r.froze}ms 뿐이라 이 검사가 헛돈다`);
     if (r.shotCombat === true) ok('정지 뒤 발사된 묶음의 발원 = combat');
@@ -267,7 +335,41 @@ function launchOpts(){
     if (r.newFl === 0) ok('#fxl 0건');
     else fail(`#fxl 에 ${r.newFl}개 — 정지 동안 만료된 전투 힌트를 탭이 가로챘다(=227 재현)`);
     if (r.dKill >= 0 && r.dKill < 4) ok(`발원 좌표 = 킬 자리 (오차 ${Math.round(r.dKill)}px · 탭까지는 ${Math.round(r.dTap)}px)`);
-    else fail(`발원이 «누른 탭» 쪽이다 — 킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px`);
+    else fail(`발원이 킬 자리가 아니다 — 킬까지 ${Math.round(r.dKill)}px / 탭까지 ${Math.round(r.dTap)}px (combat=${r.shotCombat} · 남의 킬 ${r.foreign}건)`);
+  }
+
+  /* ---------- [G] 542 §R 되돌림 시험 ---------- */
+  console.log('[G] 되돌림 — 창 한복판에 «남의 킬» 을 하나 합성하면 다시 어긋난다(격리가 뚫린 시행)');
+  {
+    const r = await page.evaluate(async () => {
+      const h = await window.__v158({});
+      /* 격리는 걸어 두고(다른 배경 킬이 섞이면 이 절 자신이 플레이키해진다) 창 한복판에
+         «남의 킬» 을 **딱 하나** 넣는다 — killEnemy 와 같은 순서 · synth 표시를 안 붙여
+         «남의 것» 으로 세게 한다. 즉 이 절은 «격리가 뚫린 시행» 을 합성해 재현한다. */
+      const stop = h.quiet();
+      const f0 = h.foreign();
+      const KX = 300, KY = 1500, AMT = 500;
+      h.synthKill(KX, KY);
+      S.gold += AMT;
+      await h.raf();
+      fxAt({ x: 900, y: 400 }, 'combat');       /* 남의 킬 */
+      S.gold += 7;
+      await h.wait(320);
+      stop();
+      const shot = h.pick('gold', AMT);
+      const fp = shot && shot.x != null ? { x: shot.x, y: shot.y } : null;
+      const d = (a, b) => a && b ? Math.hypot(a.x - b.x, a.y - b.y) : -1;
+      return { foreign: h.foreign() - f0, shotCombat: shot ? shot.combat : null,
+               dKill: d(fp, { x: KX, y: KY }), dOther: d(fp, { x: 900, y: 400 }) };
+    });
+    if (r.foreign === 1) ok('남의 킬을 정확히 1건 합성했다 (음성항의 자가 헛돌지 않는다)');
+    else fail(`남의 킬이 ${r.foreign}건으로 세졌다 — 1건이어야 한다(격리 또는 자가 고장났다)`);
+    if (r.dKill >= 4) ok(`격리가 뚫리면 발원이 킬 자리에서 ${Math.round(r.dKill)}px 어긋난다 — 위 초록은 «격리 덕» 이다`);
+    else fail(`격리가 뚫렸는데도 오차 ${Math.round(r.dKill)}px — 이 절이 아무것도 안 재고 있다(무르게 푼 수리)`);
+    if (r.dOther >= 0 && r.dOther < 4) ok('어긋난 자리는 «남의 킬 자리» 다 — 탭이 아니다(제품은 옳다)');
+    else fail(`어긋난 자리가 남의 킬 자리도 아니다 (${Math.round(r.dOther)}px) — 뿌리가 또 있다`);
+    if (r.shotCombat === true) ok('그 시행에서도 발원 태그는 combat — «탭이 가로챘다» 가 아니다');
+    else fail(`어긋난 시행의 발원 combat 태그가 ${r.shotCombat} — 탭 가로채기가 실재한다`);
   }
 
   if (errs.length) errs.forEach((e) => fail(e));
