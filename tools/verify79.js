@@ -9,8 +9,11 @@
  *   [C] 잉크 — 캔버스에 실제로 그려졌고(불투명 픽셀 수) 발밑이 박스 바닥, 정수 배율(13)
  *   [D] 틴트 — av0·av3 각각 시트 캔버스 = tinted('knight', AV[av].tint) 재도시와 픽셀 일치(ΔRGB ≤ 3)
  *       (전투 drawFrame 이 쓰는 소스와 같은 tintCache 캔버스이므로 이것이 «전투와 같은 색» 의 근거)
- *   [E] 전투 대조 — 전투 캔버스에서 플레이어의 현재 프레임 불투명 텍셀 1점을 화면좌표로 역산해
+ *   [E] 전투 대조 — 전투 캔버스에서 플레이어의 현재 프레임 텍셀 1점을 화면좌표로 역산해
  *       실제 픽셀을 읽고, 같은 텍셀의 tinted 아틀라스 색과 ΔRGB ≤ 3 (셰이크 0 고정, 10프레임 재시도)
+ *       역산은 제품 `drawFrame` 과 같은 식이어야 한다 — 243 의 가로 보정 `frameXo` 포함(523).
+ *       표본은 «3×3 이 색까지 평평 + 틴트가 실제로 물들이는» 텍셀로 고른다.
+ *       §R1 다른 코스튬 색과 대면 빨갛다 · §R2 243 보정을 빼면 도로 빨갛다 (523 되돌림 시험)
  *   [F] 재생 — 시트가 열려 있는 동안 캔버스 내용이 바뀌고(idle 8fps), 닫으면 rAF 가 멈춘다(eqHeroRaf 0)
  *   [G] 코스튬 연동 — S.avatar 를 av0→av3 로 바꾸면 다시 열지 않아도 시트 색이 바뀐다
  *
@@ -120,6 +123,10 @@ const ok = (b, name, detail) => {
       const cv = document.querySelector('#eqCards .eqil-cv');
       const frN = curFrame(eqHero), fr = ATLAS.knight.f[frN];
       const A = ATLAS.knight, f0 = A.f[A.a.idle[0]];
+      /* ⚠ 523 — 이 `c0` 는 **`drawHeroTo` 의 재중심**이지 [E] 가 쓰는 243 `frameXo` 가 아니다.
+         시트를 그리는 경로(`drawHeroTo`)가 idle 0프레임 잉크 중심을 제 손으로 계산하므로 여기도 그대로
+         따라 적는다(기사에서는 두 값이 같지만, 같아야 할 이유가 다르다 — 바꿔 적으면 이 항이
+         «시트 경로» 를 안 보게 된다). 전투 쪽 역산은 아래 [E] 가 `frameXo` 로 따로 묻는다. */
       const c0 = f0[6] / 2 - f0[4] - f0[2] / 2, sc = 13;
       const img = tinted('knight', AV[cosCur()].tint);
       const t = document.createElement('canvas'); t.width = 640; t.height = 831;
@@ -142,7 +149,14 @@ const ok = (b, name, detail) => {
     ok(!dmax.frameMoved && dmax.dmax <= 3, 'D ' + av + ' 시트 = tinted 재도시 (ΔRGB ≤ 3)', 'Δmax=' + dmax.dmax);
   }
 
-  /* [E] 전투 캔버스 대조 — 플레이어 텍셀 1점 역산 샘플 (10프레임 재시도) */
+  /* [E] 전투 캔버스 대조 — 플레이어 텍셀 1점 역산 샘플 (10프레임 재시도)
+     ⚠ 523 — 역산은 «제품에게 묻는다». `drawFrame` 은 243 의 가로 보정 `frameXo(key, A)[frameName]` 을
+     더해서 그리는데 이 자가 그 항이 없던 시절의 사본을 갖고 있어 **가로로 정확히 xo(기사 12.5 월드 =
+     장치 25px) 어긋난 텍셀**을 읽고 있었다(Δ 25~64, 프레임마다 값이 달라 플레이키로도 읽혔다).
+     `probe523` 이 세 가설을 갈라 놓았다 — ⓐ 비네트: 표본이 전부 안쪽(r ≤ VH·0.34)이라 보정해도 Δ 불변 ·
+     ⓑ tintCache: 전투·시트가 같은 캔버스 객체 · ⓒ 자리: 제품 식으로 역산하면 색 평평 표본 81개 Δmax **0**.
+     ⚠ 표본은 «3×3 이 색까지 같은» 텍셀로 고른다 — 전투 ctx 는 `imageSmoothingEnabled` 기본값(참)이고
+     `player.x` 가 실수라 **색 경계 텍셀은 이웃과 섞여 찍힌다**. 허용 오차(≤3)는 한 칸도 안 넓혔다. */
   let best = { d: 999 };
   for (let t = 0; t < 10 && best.d > 3; t++) {
     const r = await page.evaluate(() => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -150,40 +164,70 @@ const ok = (b, name, detail) => {
       const frN = curFrame(player); if (!frN) return res(null);
       const fr = ATLAS.knight.f[frN];
       const av = AV[S.avatar], img = tinted('knight', av && av.tint);
-      /* 불투명 텍셀 고르기 — src 사각형 중앙에서 바깥으로 탐색 */
-      const tc = document.createElement('canvas'); tc.width = img.width; tc.height = img.height;
-      const tg = tc.getContext('2d'); tg.drawImage(img, 0, 0);
-      const td = tg.getImageData(fr[0], fr[1], fr[2], fr[3]).data;
-      let u = -1, v = -1, col = null;
+      /* §R2 재료 — 다른 코스튬의 tinted 색(같은 텍셀). «어떤 색을 대도 초록» 이 아님을 못박는다 */
+      const other = S.avatar === 'av0' ? 'av3' : 'av0';
+      const img2 = tinted('knight', AV[other] && AV[other].tint);
+      const grab = im => {
+        const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+        const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+        return g.getImageData(fr[0], fr[1], fr[2], fr[3]).data;
+      };
+      const td = grab(img), td2 = grab(img2);
+      const at = (d, px, py) => [d[(py * fr[2] + px) * 4], d[(py * fr[2] + px) * 4 + 1], d[(py * fr[2] + px) * 4 + 2]];
+      /* 텍셀 고르기 — src 사각형 중앙에서 바깥으로 탐색.
+         조건 ① 3×3 전부 불투명 ② 3×3 이 색까지 평평(스무딩 재표집 회피) ③ 틴트가 실제로 물들이는 자리 */
+      let u = -1, v = -1, col = null, col2 = null;
       outer:
       for (let rad = 0; rad < Math.max(fr[2], fr[3]); rad++)
         for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) {
           const px = (fr[2] >> 1) + dx, py = (fr[3] >> 1) + dy;
           if (px < 1 || py < 1 || px >= fr[2] - 1 || py >= fr[3] - 1) continue;
-          /* 3×3 전부 불투명(경계 블렌딩 회피) */
-          let solid = true;
-          for (let j = -1; j <= 1 && solid; j++) for (let i = -1; i <= 1; i++)
-            if (td[((py + j) * fr[2] + px + i) * 4 + 3] < 255) { solid = false; break; }
-          if (solid) { u = px; v = py; col = [td[(py * fr[2] + px) * 4], td[(py * fr[2] + px) * 4 + 1], td[(py * fr[2] + px) * 4 + 2]]; break outer; }
+          const o = (py * fr[2] + px) * 4;
+          let good = true;
+          for (let j = -1; j <= 1 && good; j++) for (let i = -1; i <= 1; i++) {
+            const q = ((py + j) * fr[2] + px + i) * 4;
+            if (td[q + 3] < 255 || td[q] !== td[o] || td[q + 1] !== td[o + 1] || td[q + 2] !== td[o + 2]) { good = false; break; }
+          }
+          if (!good) continue;
+          const a = at(td, px, py), b = at(td2, px, py);
+          if (Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2])) <= 8) continue;
+          u = px; v = py; col = a; col2 = b; break outer;
         }
       if (u < 0) return res(null);
-      /* drawFrame 수학 그대로 화면좌표 역산 (flip 반영) */
+      /* drawFrame 수학 그대로 화면좌표 역산 (flip·243 가로 보정 반영) */
       const z = cam.z || 1;
       let ox = -(cam.x - VW / (2 * z)), oy = -(cam.y - VH / (2 * z));
       if (WORLD.w > VW / z) ox = Math.max(VW / z - WORLD.w, Math.min(0, ox));
       if (WORLD.h > VH / z) oy = Math.max(VH / z - WORLD.h, Math.min(0, oy));
-      const lx0 = -fr[6] / 2 + fr[4], ly0 = -fr[7] + fr[5];
-      const lx = player.flip ? -(lx0 + u + 0.5) : (lx0 + u + 0.5);
-      const wx = player.x + lx, wy = player.y + ly0 + v + 0.5;
-      const dxp = Math.round((wx + ox) * z * SC), dyp = Math.round((wy + oy) * z * SC);
+      const xo = frameXo('knight', ATLAS.knight)[frN] || 0;      /* 243 — 제품이 그릴 때 쓰는 그 값 */
+      const ly0 = -fr[7] + fr[5];
+      const px0 = xoTerm => {
+        const lx0 = -fr[6] / 2 + fr[4] + xoTerm;
+        const lx = player.flip ? -(lx0 + u + 0.5) : (lx0 + u + 0.5);
+        return Math.round((player.x + lx + ox) * z * SC);
+      };
+      const dxp = px0(xo), dyp = Math.round((player.y + ly0 + v + 0.5 + oy) * z * SC);
       if (dxp < 0 || dyp < 0 || dxp >= cvs.width || dyp >= cvs.height) return res(null);
+      const dif = (p, c) => Math.max(Math.abs(p[0] - c[0]), Math.abs(p[1] - c[1]), Math.abs(p[2] - c[2]));
       const pd = ctx.getImageData(dxp, dyp, 1, 1).data;
-      res({ d: Math.max(Math.abs(pd[0] - col[0]), Math.abs(pd[1] - col[1]), Math.abs(pd[2] - col[2])), hit: player.hitFx > 0 });
+      /* §R1 재료 — 243 보정을 뺀 옛 자리(= 부패 당시의 그 자리) */
+      const dxpOld = px0(0);
+      const pdOld = (dxpOld >= 0 && dxpOld < cvs.width) ? ctx.getImageData(dxpOld, dyp, 1, 1).data : null;
+      res({
+        d: dif(pd, col),
+        dOther: dif(pd, col2),                                    /* 다른 코스튬 색과의 거리 */
+        dOld: pdOld ? dif(pdOld, col) : null,                     /* 옛 자리에서 읽은 거리 */
+        xo, shift: dxp - dxpOld, hit: player.hitFx > 0
+      });
     }))));
     if (r && !r.hit && r.d < best.d) best = r;
     await page.waitForTimeout(80);
   }
   ok(best.d <= 3, 'E 전투 캔버스 텍셀 = tinted 색 (ΔRGB ≤ 3)', 'Δ=' + best.d);
+  /* §R — 무르게 푼 수리가 아님을 두 겹으로 못박는다(523) */
+  ok(best.dOther > 3, 'E-R1 같은 자리를 «다른 코스튬 색» 과 대면 빨갛다(문턱이 헐겁지 않다)', 'Δ=' + best.dOther);
+  ok(best.xo !== 0 && best.dOld > 3, 'E-R2 243 가로 보정을 빼면 도로 빨갛다(그 항이 이 판정을 지탱한다)',
+     'xo=' + best.xo + ' · 장치px ' + best.shift + ' · Δ=' + best.dOld);
 
   /* [F] 재생·정지 */
   const f1 = await page.evaluate(() => document.querySelector('#eqCards .eqil-cv').toDataURL());
