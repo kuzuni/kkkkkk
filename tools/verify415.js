@@ -44,11 +44,12 @@ const FILE = path.join(ROOT, 'index.html');
 const SRC = fs.readFileSync(FILE, 'utf8');
 const INK = 142;      /* HUD 잉크 끝 = `.pedge` 하변 */
 const PH = 1396;      /* 기준 프레임 패널 높이 — 241 이 얼려 둔 값 */
-const GAP = 48;       /* 목표 여백 — «내부 패딩보다 넓은 첫 8의 배수» (§3 이 그 뜻을 되묻는다) */
-const KNEE = INK + GAP + PH + GAP;   /* = 1634. 흡수가 시작되는 문턱 — 상수가 아니라 이 합이다 */
+const GAP = 81;       /* 목표 여백 — «카드가 스크롤 뒤로 숨지 않는 최대치» (§2-b 가 그 뜻을 되묻는다) */
+const KNEE = INK + GAP + PH + GAP;   /* = 1700. 흡수가 시작되는 문턱 — 상수가 아니라 이 합이다 */
+const SHMAX = KNEE - 1600;           /* = 100. 흡수분 상한 — 문턱과 지원 최저 프레임의 차 */
 
 const REV = [   /* 415 선언 → 391 시절 선언. 일곱 자리를 **전부** 되돌려야 391 상태가 재현된다 */
-  ['top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
+  ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
   ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
   ['height:calc(544px - var(--pfsh))', 'height:544px'],
   ['top:calc(1026px - var(--pfsh))', 'top:1026px'],
@@ -104,22 +105,22 @@ async function read(page, h) {
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.goto('file://' + FILE); await p.waitForTimeout(900);
 
-  const HS = [1600, 1633, 1634, 1635, 1700, 1841, 1874, 1875, 1876, 1920, 2280, 2600];
+  const HS = [1600, 1699, 1700, 1701, 1841, 1875, 1907, 1908, 1909, 1920, 2280, 2600];
   const M = {};
   for (const h of HS) M[h] = await read(p, h);
 
   /* ── §1 기하 ── */
   console.log('§1 기하 — 1600 에서 48/48 · 얼려 둔 세 프레임 Δ0px');
-  ok(SRC.includes('--pfsh:clamp(0px, calc(1634px - var(--frameh, 2280px)), 34px)'),
+  ok(SRC.includes('--pfsh:clamp(0px, calc(1700px - var(--frameh, 2280px)), 100px)'),
     'index.html 에 415 흡수분 --pfsh 선언이 있다 (연속형 — .shortf 갈래가 아니다)');
-  ok(SRC.includes('top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))'),
-    'index.html 에 415 상한(1444 = 1396 + 48)이 있다');
+  ok(SRC.includes('top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))'),
+    'index.html 에 415 상한(1477 = 1396 + 81)이 있다');
   eq('[1600] HUD 잉크 끝 142', M[1600].ink, INK);
-  eq('[1600] .pf top = 190 (= 142 + 48)', M[1600].top, INK + GAP);
-  eq('[1600] 위 여백 48', M[1600].topGap, GAP);
-  eq('[1600] 아래 여백 48', M[1600].botGap, GAP);
+  eq('[1600] .pf top = 223 (= 142 + 81)', M[1600].top, INK + GAP);
+  eq('[1600] 위 여백 81', M[1600].topGap, GAP);
+  eq('[1600] 아래 여백 81', M[1600].botGap, GAP);
   eq('[1600] 위 = 아래', M[1600].topGap - M[1600].botGap, 0);
-  eq('[1600] 패널 높이 1362 (= 1396 − 흡수분 34)', M[1600].h, 1362);
+  eq('[1600] 패널 높이 1296 (= 1396 − 흡수분 100)', M[1600].h, 1396 - SHMAX);
   for (const h of [1920, 2280, 2600]) {
     eq(`[${h}] .pf top 431 불변`, M[h].top, 431);
     eq(`[${h}] 패널 높이 1396 불변 (흡수분 0)`, M[h].h, PH);
@@ -128,18 +129,30 @@ async function read(page, h) {
       eq(`[${h}] .pf-${k} 패널 local y 불변`, M[h][k].ly, { msn: 1026, ftr: 1089, btn: 1105, tgl: 1261 }[k]);
   }
   /* 415 ⓑ — «1600 만» 이 아니었다. 상한 항이 이기는 구간 전체가 48 이어야 한다 */
-  for (const h of [1600, 1634, 1700, 1841, 1875]) eq(`[${h}] 아래 여백 48 (구간 전체)`, M[h].botGap, GAP);
+  for (const h of [1600, 1700, 1841, 1875, 1907]) eq(`[${h}] 아래 여백 81 (구간 전체)`, M[h].botGap, GAP);
 
   /* ── §2 유도 — 48 도 34 도 상수가 아니다 ── */
-  console.log('§2 유도 — 문턱 1634 = 142 + 48 + 1396 + 48 · 흡수분 = 문턱 − 프레임 · 여백 = (띠 − 패널) ÷ 2');
-  eq('문턱 = HUD 잉크 + 여백 + 패널 + 여백', KNEE, 1634);
-  eq('[1634] 문턱에서 흡수분이 정확히 0 (패널이 온전한 1396)', M[1634].h, PH);
+  console.log('§2 유도 — 문턱 1700 = 142 + 81 + 1396 + 81 · 흡수분 = 문턱 − 프레임 · 여백 = (띠 − 패널) ÷ 2');
+  eq('문턱 = HUD 잉크 + 여백 + 패널 + 여백', KNEE, 1700);
+  eq('[1700] 문턱에서 흡수분이 정확히 0 (패널이 온전한 1396)', M[1700].h, PH);
   eq('[1600] 흡수분 = 문턱 − 프레임', PH - M[1600].h, KNEE - 1600);
-  ok(PH - M[1600].h === 34, `흡수분 상한 34 = 문턱 − 지원 최저 프레임 1600 (${PH - M[1600].h})`);
-  for (const h of [1600, 1633, 1634])
+  ok(PH - M[1600].h === SHMAX, `흡수분 상한 ${SHMAX} = 문턱 − 지원 최저 프레임 1600 (${PH - M[1600].h})`);
+  for (const h of [1600, 1699, 1700])
     eq(`[${h}] 여백 = (띠 ${h - INK} − 패널 ${M[h].h}) ÷ 2`, Math.round((h - INK - M[h].h) / 2), M[h].botGap);
-  ok(M[1700].topGap > M[1600].topGap && M[1700].botGap === M[1600].botGap,
-    `[1700] «여유»형 그대로 — 커지는 쪽은 위 여백뿐 (위 ${M[1600].topGap}→${M[1700].topGap} · 아래 ${M[1700].botGap})`);
+  ok(M[1841].topGap > M[1600].topGap && M[1841].botGap === M[1600].botGap,
+    `[1841] «여유»형 그대로 — 커지는 쪽은 위 여백뿐 (위 ${M[1600].topGap}→${M[1841].topGap} · 아래 ${M[1841].botGap})`);
+
+  /* §2-b 유도 — 81 의 «최대» 근거: 이보다 더 벌리면 카드가 스크롤 뒤로 숨는다.
+     내용 높이는 상수로 안 적고 **상자를 눌러 scrollHeight 로 물어본다**(368 처방 — 제품에게 묻는다). */
+  console.log('§2-b 유도 — 81 은 «카드가 스크롤 뒤로 안 숨는 최대 여백» 이다');
+  const need = await p.evaluate(() => { const g = document.querySelector('#pfw .pf-grid');
+    const old = g.style.height; g.style.height = '100px'; void g.offsetHeight;
+    const n = g.scrollHeight; g.style.height = old; void g.offsetHeight; return n; });
+  await p.setViewportSize({ width: 1080, height: 1600 }); await p.waitForTimeout(360);
+  const m16 = await p.evaluate(MEAS + '()');
+  ok(m16.gClient >= need, `[1600] 카드 리스트가 스크롤 없이 다 보인다 (그릇 ${m16.gClient} ≥ 내용 ${need})`);
+  ok(m16.gClient - need <= 8, `[1600] 그 여유가 ${m16.gClient - need}px 뿐 — 여백을 더 벌리면 카드가 숨는다 (= 81 이 최대)`);
+  ok(M[2280].grid.h - need > 8, `[2280] 기준 프레임에는 아직 여유가 ${M[2280].grid.h - need}px 남아 있다 (얼려 둔 값이라 안 건드렸다)`);
 
   /* ── §3 역전 해소 — 내부 패딩을 «자로» 읽는다 ── */
   console.log('§3 역전 — 외곽 여백이 팝업 내부 패딩(상·하)보다 넓다');
@@ -148,11 +161,16 @@ async function read(page, h) {
   ok(M[1600].botGap > M[1600].padTop, `[1600] 외곽 ${M[1600].botGap} > 내부 상단 ${M[1600].padTop} (CE 가 지적한 6px 역전이 +${M[1600].botGap - M[1600].padTop} 로 뒤집혔다)`);
   ok(M[1600].botGap > M[1600].padBot, `[1600] 외곽 ${M[1600].botGap} > 내부 하단 ${M[1600].padBot} (등재문이 안 적은 9px 역전이 +${M[1600].botGap - M[1600].padBot} 로 뒤집혔다)`);
   ok(M[1600].botGap >= 40, `[1600] CF 의 «라이브 HUD 잉크 대비 최소선 40» 충족 (${M[1600].botGap})`);
+  /* 2회차 — CT·CU 가 독립으로 같은 축을 짚었다: «세로 공기가 좌우 거터(92)의 0.52배로 역전».
+     좌우 거터는 두 프레임 픽셀 동일(92/92)이므로 상수로 안 적고 패널 상자에서 되묻는다. */
+  const gutter = Math.round((1080 - 896) / 2);
+  ok(M[1600].botGap >= gutter * 0.85,
+    `[1600] 세로 공기 ${M[1600].botGap} 이 좌우 거터 ${gutter} 의 ${(M[1600].botGap / gutter).toFixed(2)}배 (1회차 48 = 0.52배가 CU ③=7 의 근거였다)`);
   for (const h of [1600, 2280]) eq(`[${h}] 내부 하단 패딩 40 은 프레임과 무관하게 같다`, M[h].padBot, 40);
 
   /* ── §4 연속 — 임계에서 점프 0 ── */
-  console.log('§4 연속 — 1634·1875 앞뒤로 튀지 않는다 (.shortf 갈래였다면 34px 이 튄다)');
-  for (const [a, b] of [[1633, 1634], [1634, 1635], [1874, 1875], [1875, 1876]]) {
+  console.log('§4 연속 — 1700·1908 앞뒤로 튀지 않는다 (.shortf 갈래였다면 100px 이 튄다)');
+  for (const [a, b] of [[1699, 1700], [1700, 1701], [1907, 1908], [1908, 1909]]) {
     ok(Math.abs(M[b].h - M[a].h) <= 1.5, `[${a}→${b}] 패널 높이 점프 ≤ 1.5px (${M[a].h} → ${M[b].h})`);
     ok(Math.abs(M[b].top - M[a].top) <= 1.5, `[${a}→${b}] 패널 top 점프 ≤ 1.5px (${M[a].top} → ${M[b].top})`);
     ok(Math.abs(M[b].tgl.ly - M[a].tgl.ly) <= 1.5, `[${a}→${b}] 토글 local y 점프 ≤ 1.5px (${M[a].tgl.ly} → ${M[b].tgl.ly})`);
@@ -213,7 +231,7 @@ async function read(page, h) {
       ] },
     { name: '흡수만 제거(상한은 415)', src: revert(SRC, REV.slice(1)),
       chk: (m) => [
-        [m.botGap === 14, `아래 여백이 14 로 무너진다 — 391(31)보다도 나쁘다 (${m.botGap})`],
+        [m.botGap === -19, `패널이 프레임 밖으로 19px 나간다 — 391(31)보다도 나쁘다 (${m.botGap})`],
         [m.topGap !== m.botGap, `비대칭 ${m.topGap} ↔ ${m.botGap}`],
       ] },
     { name: '그릇만 안 줄임(자식만 올림)', src: SRC.replace('height:calc(544px - var(--pfsh))', 'height:544px'),

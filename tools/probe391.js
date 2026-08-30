@@ -33,7 +33,7 @@ const SRC = path.resolve(__dirname, '..', 'index.html');
    ⚠ 「수리 전」은 그대로 **241 선언**이다 — 이 자가 재현하려는 것은 391 등재문의 값
    (top 196 · 아래 여백 8 · 탭바 172)이고 그건 안 바뀌었다. 되돌릴 자리가 여섯으로 늘었을 뿐이다. */
 const REV241 = [
-  ['top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))', 'top:clamp(104px, 431px, calc(100% - 1404px))'],
+  ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))', 'top:clamp(104px, 431px, calc(100% - 1404px))'],
   ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
   ['height:calc(544px - var(--pfsh))', 'height:544px'],
   ['top:calc(1026px - var(--pfsh))', 'top:1026px'],

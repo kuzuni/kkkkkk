@@ -111,14 +111,15 @@ const MEAS = `(function(){
      «쓸 수 있는 띠(HUD 잉크 142 .. 프레임 끝)의 남는 62px 의 절반» 이다. */
   /* 작업 415(2026-08-30) 이관 — 여유가 31 → **48** 로 올라갔다(상한 1427 → 1444).
      ⚠ 숫자만 173 → 190 으로 갈아 끼우면 «왜 48 인가» 를 아무도 안 묻는 자가 된다(391 이 남긴 규칙).
-     48 은 상수가 아니라 **팝업 내부 패딩(상 37 · 하 40)보다 넓은 첫 8의 배수**이고, 그 값이 되도록
-     패널이 짧아진다(`--pfsh`). 그래서 값 항 셋 옆에 유도 항 셋을 나란히 둔다. */
-  eq('[1600] .pf top = 190 (= HUD 잉크 142 + 48)', M[1600].pf.top, 190);
-  eq('[1600] .pf 아래 여백 48 (= 프레임 끝 − 바닥)', -M[1600].pf.bot, 48);
-  eq('[1600] 위 여백(= top − HUD 잉크 142) = 아래 여백 48', M[1600].pf.top - 142, 48);
-  eq('[1600] 패널이 그만큼 짧아졌다 (1396 − 34)', M[1600].pf.h, 1362);
-  eq('[1600] 유도 — 여백 = (띠 1458 − 패널) ÷ 2', Math.round((1600 - 142 - M[1600].pf.h) / 2), 48);
-  ok(-M[1600].pf.bot > 37 && -M[1600].pf.bot > 40,
+     81 은 상수가 아니라 **카드가 스크롤 뒤로 숨지 않는 선에서 낼 수 있는 최대 여백**이고,
+     그 값이 되도록 패널이 짧아진다(`--pfsh`). 그래서 값 항 셋 옆에 유도 항 셋을 나란히 둔다.
+     (2회차 — 1회차의 48 은 비평가 CU 가 «좌우 거터 92 의 0.52배» 로 ③=7 을 줬다) */
+  eq('[1600] .pf top = 223 (= HUD 잉크 142 + 81)', M[1600].pf.top, 223);
+  eq('[1600] .pf 아래 여백 81 (= 프레임 끝 − 바닥)', -M[1600].pf.bot, 81);
+  eq('[1600] 위 여백(= top − HUD 잉크 142) = 아래 여백 81', M[1600].pf.top - 142, 81);
+  eq('[1600] 패널이 그만큼 짧아졌다 (1396 − 100)', M[1600].pf.h, 1296);
+  eq('[1600] 유도 — 여백 = (띠 1458 − 패널) ÷ 2', Math.round((1600 - 142 - M[1600].pf.h) / 2), 81);
+  ok(-M[1600].pf.bot > 37 && -M[1600].pf.bot > 40 && -M[1600].pf.bot >= 81,
     `[1600] 외곽 여백 ${-M[1600].pf.bot} 이 내부 패딩(상 37 · 하 40)보다 넓다 — 415 가 닫은 역전`);
   /* 415 ⓑ — 아래 여백 31 은 «1600 만» 이 아니라 상한 항이 이기는 구간 전체의 성질이었다.
      상한을 올린 지금은 그 구간(1600..1875)이 전부 48 이어야 한다. */
@@ -151,7 +152,7 @@ const MEAS = `(function(){
      묻는 것은 **관계**다: ① 위쪽 앵커(tab·por·grid top)는 여전히 2280 과 같은 값이고
      ② 아래 셋은 «2280 값 − (1396 − 패널 높이)» 이며 ③ 그 흡수는 `.pf-grid` 높이에서만 나온다. */
   const SH = 1396 - M[1600].pf.h;                       /* 흡수분 — 상수가 아니라 실측 */
-  eq('[1600] 흡수분 = 1396 − 패널 높이', SH, 34);
+  eq('[1600] 흡수분 = 1396 − 패널 높이', SH, 100);
   for (const k of ['grid', 'tab', 'por'])
     eq(`[1600] ${k} 패널 local y — 위쪽 앵커는 2280 과 같다`, M[1600][k].ly, LOCAL[k]);
   for (const k of ['msn', 'btn', 'tgl'])
@@ -195,9 +196,9 @@ const MEAS = `(function(){
   for (const good of ['#pfw .pf', '#specw .spc', '#ciw .ci', '#trw .tr-sheet', '#eqw .eqp',
                       '#relw .rw-grid', '#shopw .shp-list', '#dunw .dns-list'])
     ok(CANDS.includes(good), `후보에 안쪽 박스 ${good} 가 있다`);
-  ok(/clamp\(190px,\s*431px,\s*calc\(var\(--frameh, 2280px\) - 1444px\)\)/.test(SRC),
-    'index.html 에 .pf top 상한이 있다 (415: 여유 31 → 48 · 1427 → 1444)');
-  ok(/--pfsh:clamp\(0px,\s*calc\(1634px - var\(--frameh, 2280px\)\),\s*34px\)/.test(SRC),
+  ok(/clamp\(223px,\s*431px,\s*calc\(var\(--frameh, 2280px\) - 1477px\)\)/.test(SRC),
+    'index.html 에 .pf top 상한이 있다 (415: 여유 31 → 81 · 1427 → 1477)');
+  ok(/--pfsh:clamp\(0px,\s*calc\(1700px - var\(--frameh, 2280px\)\),\s*100px\)/.test(SRC),
     'index.html 에 415 흡수분 `--pfsh` 가 있다 (연속형 — `.shortf` 갈래가 아니다)');
 
   /* ── §6 음성항 — 갈아 끼운 사본을 새로 열어서 잰다 ── */
@@ -205,11 +206,22 @@ const MEAS = `(function(){
   const negPath = path.join(ROOT, '.v241-neg.html');
   /* 415 이관 — 사본은 **241 이전 선언 그대로**로 되돌린다(상한도 흡수분도 없는 고정 1396).
      상한만 떼면 흡수분이 남아 밖으로 나가는 양이 227 이 아니라 193 이 되어 원 증상과 달라진다. */
-  const neg = SRC
-    .replace('top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px));', 'top:431px;')
-    .replace('height:calc(1396px - var(--pfsh));', 'height:1396px;');
-  ok(neg !== SRC && !neg.includes('calc(1396px - var(--pfsh))'),
-    '사본을 241 이전 선언(top 431 고정 · height 1396 고정)으로 되돌렸다');
+  const REV241 = [   /* 415 자리 일곱 개를 **전부** 되돌린다 — 상자만 되돌리면 자식이 100px 올라간 채라
+                        «장착 중»·토글이 프레임 안에 남아 241 의 원 증상이 재현되지 않는다 */
+    ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px));', 'top:431px;'],
+    ['height:calc(1396px - var(--pfsh));', 'height:1396px;'],
+    ['height:calc(544px - var(--pfsh));', 'height:544px;'],
+    ['top:calc(1026px - var(--pfsh));', 'top:1026px;'],
+    ['top:calc(1089px - var(--pfsh));', 'top:1089px;'],
+    ['top:calc(1105px - var(--pfsh));', 'top:1105px;'],
+    ['top:calc(1261px - var(--pfsh));', 'top:1261px;'],
+  ];
+  const neg = REV241.reduce((t, [a, b]) => {
+    if (!t.includes(a)) { console.error('갈아 끼울 자리를 못 찾았다: ' + a); process.exit(2); }
+    return t.replace(a, b);
+  }, SRC);
+  ok(neg !== SRC && !neg.includes('var(--pfsh)'),
+    '사본을 241 이전 선언(top 431 고정 · 흡수분 없음)으로 되돌렸다 — 일곱 자리 전부');
   fs.writeFileSync(negPath, neg);
   try {
     const nctx = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });

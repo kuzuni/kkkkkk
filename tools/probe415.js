@@ -29,7 +29,7 @@ const SRC = fs.readFileSync(FILE, 'utf8');
 
 const REV = [   /* 415 선언 → 391 시절 선언 (사본 되돌림 — 여섯 자리를 **전부** 되돌려야 한다:
                    `.pf` 상자만 되돌리면 자식은 올라간 채라 «없던 세 번째 상태»(내부 하단 패딩 74)가 나온다) */
-  ['top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
+  ['top:clamp(223px, 431px, calc(var(--frameh, 2280px) - 1477px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
   ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
   ['height:calc(544px - var(--pfsh))', 'height:544px'],
   ['top:calc(1026px - var(--pfsh))', 'top:1026px'],
@@ -136,14 +136,14 @@ async function read(browser, file, H) {
   const pinned = HS.filter(H => B[H].botGap === 31);
   ok(pinned.length >= 4,
     `[ⓒ 수리 전] 아래 여백 31 은 1600 만의 값이 아니다 — ${pinned.join('·')} 가 전부 31 (상한 항이 이기는 구간 전체의 성질)`);
-  ok(HS.every(H => A[H].botGap >= 48),
-    `[ⓒ 수리 후] 같은 구간이 전부 48 이상 — ${HS.map(H => A[H].botGap).join('·')}`);
+  ok(HS.every(H => A[H].botGap >= 81),
+    `[ⓒ 수리 후] 같은 구간이 전부 81 이상 — ${HS.map(H => A[H].botGap).join('·')}`);
 
   /* ⓓ 흡수 — 그릇 하나만 짧아지고 잘림 0 */
-  ok(A[1600].grid.h === B[1600].grid.h - 34 && A[1600].grid.ly === B[1600].grid.ly,
+  ok(A[1600].grid.h === B[1600].grid.h - 100 && A[1600].grid.ly === B[1600].grid.ly,
     `[ⓓ 1600] 흡수는 .pf-grid 높이에서만 (${B[1600].grid.h} → ${A[1600].grid.h} · top ${A[1600].grid.ly} 불변)`);
   for (const k of ['msn', 'btn', 'tgl'])
-    ok(A[1600][k].ly === B[1600][k].ly - 34, `[ⓓ 1600] .pf-${k} 가 같은 34px 만큼 같이 올라간다 (${B[1600][k].ly} → ${A[1600][k].ly})`);
+    ok(A[1600][k].ly === B[1600][k].ly - 100, `[ⓓ 1600] .pf-${k} 가 같은 100px 만큼 같이 올라간다 (${B[1600][k].ly} → ${A[1600][k].ly})`);
   ok(A[1600].padBot === B[1600].padBot, `[ⓓ 1600] 내부 하단 패딩 40 불변 (${A[1600].padBot})`);
   ok(A[1600].gScroll <= A[1600].gClient + 0.5,
     `[ⓓ 1600] 짧아진 그릇에서도 내용이 넘치지 않는다 (scroll ${A[1600].gScroll} ≤ client ${A[1600].gClient}) — 넘쳐도 overflow-y:auto 라 잘림이 아니라 스크롤이다`);
