@@ -3594,12 +3594,20 @@
      비평가 BP 가 «룬이 신고한 띠는 카드 하단 861 ~ 요약줄 894 = **33px** 뿐인데 봉투가 55~61px 라
      40% 가 띠 밖에서 논다» 로 잡았다(2회차는 형제 `.rsum` 을 안 재고 그릇 높이만 봤다).
      봉투 = 상자 32 + 이동 24 = **56px** 이고, 그것이 룬 카드 안 최대 빈 띠(224–280)와 정확히 같다. */
-  @keyframes fxHb{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
-    18%{opacity:1;transform:translate(-50%,-6px) scale(1)}
+  /* ⚑ 4회차 — **α 램프가 대비를 되돌려 놓고 있었다.** 심 색은 크림 위 5.07:1(초록)·6.77:1(빨강)로
+     고쳤는데, 화면에 찍힌 α 로 다시 재면 3:1 을 넘는 구간이 300ms 중 **99ms 뿐**이고 나머지 201ms(67%)가
+     3:1 미만이었다(BR 실측 · BQ 는 프레임 표본 3/8·2/7 이 3:1 미만으로 독립 확인).
+     ⇒ **불투명 구간을 본체로** 만든다: 10% 에 1.0 으로 올라가 **72% 까지 유지**하고 그 뒤에만 진다.
+     ⚠ 0% 를 0 이 아니라 .6 으로 두는 것은 그대로다 — 58 44회차 «막히면 `fill-mode:both` 가 그
+       «없는» 상태를 유지한다» 를 피하는 값이라 되돌리지 마라. */
+  @keyframes fxHb{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
+    10%{opacity:1;transform:translate(-50%,-4px) scale(1)}
+    72%{opacity:1;transform:translate(-50%,-17px) scale(1)}
     100%{opacity:0;transform:translate(-50%,-24px) scale(.98)}}
   /* 비용은 «빠져나간다» — 58 결제 어휘 그대로 **아래로** 진다(방향이 곧 뜻이다) */
-  @keyframes fxHbDn{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
-    18%{opacity:1;transform:translate(-50%,6px) scale(1)}
+  @keyframes fxHbDn{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
+    10%{opacity:1;transform:translate(-50%,4px) scale(1)}
+    72%{opacity:1;transform:translate(-50%,17px) scale(1)}
     100%{opacity:0;transform:translate(-50%,24px) scale(.96)}}
   .fx-plus.hb{font-size:30px;-webkit-text-stroke:5px rgba(0,0,0,.86);animation:fxHb .3s linear both}
   .fx-plus.hb.dn{animation:fxHbDn .3s linear both}
@@ -34980,7 +34988,19 @@ function hbPulse(host, ok){
 /* kind: 'ok'(성공·초록·위로) · 'no'(실패·빨강·위로) · 'pay'(비용·갈색·아래로) */
 function hbFloat(host, txt, kind){
   const L = fxL(), el = hbHost(host); if(!L || !el || !txt) return false;
-  const r = fxRect(el); if(!r) return false;
+  let r = fxRect(el); if(!r) return false;
+  /* ⚑ 4회차 — 호스트 상자에서 **지금 걸려 있는 변형을 벗긴다.** 회당 맥박(`jz-hb` 팝 · `jz-hbx` −10px)이
+     이미 걸린 뒤에 이 함수가 도므로, 벗기지 않으면 사다리 전체가 그 오프셋을 물고 굳는다 —
+     비평가 BR 실측 «룬-실패 씬의 결과 사다리가 성공 씬 대비 정확히 −10px, 비용 사다리는 −17px 밀려 있다.
+     알림이 자기 카드에서 최대 10px 떨어진 자리에 박힌다». 자리는 «카드가 어디 있어야 하는가» 로 잡는다. */
+  try {
+    const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+    if(m.e || m.f) r = { x:r.x - m.e, y:r.y - m.f, w:r.w, h:r.h };
+    if(m.a && Math.abs(m.a - 1) > 1e-4){
+      const cx0 = r.x + r.w / 2, cy0 = r.y + r.h / 2, w0 = r.w / m.a, h0 = r.h / (m.d || m.a);
+      r = { x:cx0 - w0 / 2, y:cy0 - h0 / 2, w:w0, h:h0 };
+    }
+  } catch(_){}
   if(L.childElementCount >= FXMAX) return false;
   const d = document.createElement('b');
   d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '');
@@ -34999,13 +35019,24 @@ function hbFloat(host, txt, kind){
   d.style.top  = (r.y + lane) + 'px';
   d.textContent = txt;
   L.appendChild(d);
+  /* ⚑ 4회차 계측 — **애니메이션이 붙자마자 시작하지 않는다.** 노드를 넣어도 CSS 애니메이션의
+     `startTime` 은 «다음 스타일 플러시» 에 정해지는데, 홀드 중에는 같은 태스크에서 `renderTrainLive()`·
+     게임 루프가 돌아 그 순간이 밀린다 — 12ms 간격 직접 계측으로 **평균 86~131ms**(나이 336ms 인
+     노드의 `currentTime` 이 250). `fxBye` 는 «만든 때» 부터 세므로 그만큼이 통째로 잘려
+     **뒤 1/4(페이드아웃)이 한 프레임도 안 나오고** 이동도 24px 중 14~15px 에서 멈춘다.
+     비평가 BQ 실측 «α 최솟값 0.518 · 40표본 중 α<0.5 가 0건 · 최대 수명 ≈173ms/300ms» 가 이것이다.
+     (58 44회차 «0% 를 0 으로 두면 막힌 만큼 «없는» 것이 된다» 와 같은 병의 다른 얼굴 — 여기서는 «끝» 이 잘린다.)
+     ⇒ 시작 시각을 **지금**으로 못 박는다. 수명·이동·페이드가 전부 규격대로 돈다. */
+  try { const a = d.getAnimations()[0]; if(a) a.startTime = document.timeline.currentTime; } catch(_){}
   /* 프레임 밖으로 나가지 않게 좌우를 물린다(fxPay 와 같은 규칙).
      ⚑ 3회차 — **호스트 안으로도 물린다.** 칸 간격은 문자열 길이와 무관하게 정해지는데 잉크 폭은
        문자열마다 다르므로(「−53」 47px ↔ 「+1 Lv」 76px) 끝 칸에서 긴 문자열이 호스트 밖으로 샌다 —
        BP 실측 «훈련 1번 칸의 «−» 막대 17px 중 8px 이 테두리 위, 4px 은 카드 바깥». */
   const half = d.offsetWidth / 2;
   let lo = half + 20, hi = FRAME_W - half - 20;
-  if(r.w > 2 * half + 16){ lo = Math.max(lo, r.x + half + 8); hi = Math.min(hi, r.x + r.w - half - 8); }
+  /* 4회차 — 여유 8 → 16. 호스트의 안쪽 면은 테두리(8px inset) 안이라 8 로는 «안쪽 끝에 정확히 붙는다»
+     (BR 실측 «룬 5번 칸 획 오른쪽 끝 x1013 = 카드 안쪽 끝 1013 · 여유 0px»). */
+  if(r.w > 2 * half + 32){ lo = Math.max(lo, r.x + half + 16); hi = Math.min(hi, r.x + r.w - half - 16); }
   if(hi > lo) d.style.left = Math.max(lo, Math.min(hi, parseFloat(d.style.left))) + 'px';
   fxBye(d, HB_LIFE);
   return true;

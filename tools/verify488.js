@@ -348,6 +348,61 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(hb.every(r => r.n <= 10), '[H4] 동시 생존이 10장을 안 넘는다(FXMAX 120 · 눈이 읽을 수 있는 상한)',
      hb.map(r => r.n).join('·'));
 
+  /* ══ [J] 애니메이션이 규격대로 끝까지 도는가 (4회차 신설) ═════════ */
+  console.log('[J] 플로터 수명·α — 3회차에 «뒤 1/4 이 한 프레임도 안 나온다» 로 잡힌 자리');
+  await p.evaluate(() => {
+    if (window.__rate0) runeRate = window.__rate0;
+    runeRate = () => 1;
+    try { closeModal(); closeRelw(); } catch (_) {}
+    S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e12;
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+    /* 만든 시각을 노드에 적어 «나이 ↔ 애니 진행» 을 맞대게 한다 */
+    if (!window.__hbBorn) {
+      window.__hbBorn = true;
+      const of = window.hbFloat;
+      window.hbFloat = function () { const r = of.apply(this, arguments);
+        const L = document.getElementById('fxl'), n = L && L.lastElementChild;
+        if (n && /fx-plus/.test(n.className || '')) n.dataset.born = Math.round(performance.now());
+        return r; };
+    }
+  });
+  await p.waitForTimeout(450);
+  const J = await (async () => {
+    const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
+    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
+    const t0 = Date.now(); const rows = [];
+    for (const t of [900, 1500, 2100, 2700]) {
+      while (Date.now() - t0 < t) await new Promise(r => setTimeout(r, 5));
+      rows.push(...await p.evaluate(() => {
+        const now = performance.now();
+        return [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
+          const a = n.getAnimations()[0];
+          return { age: now - (+n.dataset.born || now), ct: a ? (a.currentTime || 0) : -1,
+                   op: parseFloat(getComputedStyle(n).opacity) };
+        });
+      }));
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await st.catch(() => {});
+    await p.waitForTimeout(250);
+    return rows;
+  })();
+  /* ⚠ 허용 오차는 «바라는 값» 이 아니라 «잰 값» 에서 온다(504-④). 한 표본의 «나이» 와 «애니 진행» 은
+     서로 다른 순간에 읽히고(둘 사이에 `getComputedStyle` 이 26번 돈다) rAF 격자(16.7ms)도 끼므로
+     **최댓값은 잡음이 지배한다** — 4회차 실측에서 중앙값 3~6ms 인데 최댓값만 38ms 로 튄다.
+     그래서 **중앙값**으로 판정하고 최댓값은 기록만 한다. 3회차 값(86~131ms)은 중앙값 기준으로도
+     이 문턱을 훨씬 넘으므로 이 자가 무르게 풀린 것이 아니다. */
+  const lag = J.map(r => Math.abs(r.age - r.ct)).sort((a, b) => a - b);
+  const lagMed = lag[Math.floor(lag.length / 2)], lagMax = lag[lag.length - 1];
+  const opaque = J.filter(r => r.op >= 0.99).length, late = J.filter(r => r.ct > 200).length;
+  console.log('  · 표본 ' + J.length + ' · 나이−진행 중앙 ' + lagMed.toFixed(0) + 'ms(최대 ' + lagMax.toFixed(0) + ') · α=1 표본 ' + opaque + ' · 진행 >200ms 표본 ' + late);
+  ok(J.length >= 8, '[J1] 표본이 충분하다(홀드 중 동시 생존 플로터)', J.length + '개');
+  ok(lagMed <= 25, '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 나이와 진행의 차(중앙값) ≤ 25ms',
+     lagMed.toFixed(0) + 'ms · 최대 ' + lagMax.toFixed(0) + ' (3회차엔 86~131ms 였다)');
+  ok(late > 0, '[J3] ★ 수명 뒤쪽(>200ms)까지 도는 표본이 있다 — 페이드아웃이 실제로 보인다', late + '개');
+  ok(opaque / J.length >= 0.5, '[J4] ★ 표본의 절반 이상이 완전 불투명(α=1) — 판독 하한 아래로 오래 안 머문다',
+     opaque + '/' + J.length);
+
   /* ══ [I] 가림 — 두 줄기의 «봉투» 가 호스트의 정보 요소를 밟지 않는가 ═════ */
   console.log('[I] 봉투 대 정보 요소 — 1회차에 비평가 2인이 손으로 재던 것을 자로 옮긴다');
   const I = await p.evaluate(() => {
