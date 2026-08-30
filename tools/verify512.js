@@ -92,8 +92,9 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   await p.waitForFunction(() => typeof S !== 'undefined' && typeof giveReward === 'function');
   await p.waitForTimeout(900);
 
-  /* 씬 하네스를 페이지에 심는다 — [C]·[D]·[F]·[R] 이 같은 함수를 쓴다(자매 자 드리프트 예방 · 385) */
-  await p.evaluate(() => {
+  /* 씬 하네스를 페이지에 심는다 — [C]·[D]·[F]·[R] 이 같은 함수를 쓴다(자매 자 드리프트 예방 · 385).
+     [G]·[R] 은 페이지를 다시 띄우고 이 함수를 다시 부른다(두 측정이 서로의 상태를 물려받지 않게). */
+  const setup = () => p.evaluate(() => {
     window.step = () => {};
     window.__v512 = {
       raf: () => new Promise(r => requestAnimationFrame(() => r())),
@@ -128,6 +129,7 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
       }
     };
   });
+  await setup();
 
   const scene = js => p.evaluate(async (code) => {
     // eslint-disable-next-line no-new-func
@@ -182,11 +184,18 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   /* ── [G] 찍힌 픽셀(412 방식) — 바뀐 픽셀만 센다 ─────────────────── */
   console.log('\n=== [G] 찍힌 픽셀 — 룰렛 수령 프레임 ===');
   const pixel = async (revert) => {
+    /* ⚠ 두 측정을 **같은 페이지 상태**에서 이어 하면 값이 흔들린다(1회차: 되돌림 dia 6,972 ↔ 30,068).
+       룰렛 팝업의 당첨 하이라이트·비행 코인이 앞 측정의 잔재로 남아 «바뀐 픽셀» 에 섞이기 때문이다.
+       측정마다 페이지를 다시 띄우고 하네스를 다시 심는다(534 «양쪽 캡처를 같은 자리에서» 규약). */
+    await p.goto('file://' + SRC);
+    await p.waitForFunction(() => typeof S !== 'undefined' && typeof roulFinish === 'function');
+    await p.waitForTimeout(900);
+    await setup();
     await p.evaluate((rv) => {
       window.__v512.clear();
       if (rv) for (const k in FXCUR) FXCUR[k].col = '#FFE9A8';   /* [R] 되돌림 — 상수 크림 한 색 */
       S.daily.spins = 30;
-      if (!$('rlw') || !$('rlw').classList.contains('on')) openRoulette();
+      openRoulette();
     }, !!revert);
     await p.waitForTimeout(500);
     const before = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
@@ -224,7 +233,8 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
     }, [
       'data:image/png;base64,' + before.toString('base64'),
       'data:image/png;base64,' + after.toString('base64'),
-      Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))]))
+      Object.fromEntries(Object.entries(Object.assign({ cream: '#FFE9A8' }, cols))
+        .map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))]))
     ]);
   };
   const G = await pixel(false);
@@ -237,8 +247,12 @@ const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[
   console.log('\n=== [R] 되돌림 시험 — 상수 한 색으로 되돌리면 빨개진다 ===');
   const R = await pixel(true);
   console.log('  (되돌림) 바뀐 픽셀 ' + R.changed + ' · 팔레트 적중 ' + JSON.stringify(R.hits));
-  ok(R.hits.dia * 4 < G.hits.dia, '[R1] 표의 색을 상수 크림으로 되돌리면 dia 픽셀이 무너진다',
-    '되돌림 ' + R.hits.dia + ' ↔ 정상 ' + G.hits.dia);
+  /* ⚑ 되돌림의 자는 «dia 픽셀이 준다» 가 아니라 **«수리 전 색이 화면에 있다»** 여야 한다 —
+     비행 코인 아이콘 자체가 다이아 스프라이트(시안)라 dia 화소는 색을 되돌려도 남는다.
+     수리 전 상수 크림(#FFE9A8)은 그 프레임 어디에도 없어야 정상이다. */
+  ok(R.hits.cream > 500 && R.hits.cream > G.hits.cream * 5,
+    '[R1] 되돌리면 «수리 전 크림» 이 화면에 실제로 찍힌다 — 정상 프레임에는 거의 없다',
+    '되돌림 ' + R.hits.cream + ' ↔ 정상 ' + G.hits.cream);
   const rc = await p.evaluate(async () => {
     const r = await window.__v512.scene(() => giveReward({ dia: 500 }));
     for (const k in FXCUR) FXCUR[k].col = null;    /* 색을 아예 빼면 파티클 기본색으로 떨어진다 */
