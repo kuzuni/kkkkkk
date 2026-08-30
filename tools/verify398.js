@@ -124,8 +124,11 @@ const CURKEYS = "(r => Object.keys(r).filter(k => !['ic', 't', 'g', 'n', 'k'].in
       '§1 passClaimAll — ' + claim.all.n + '칸이 다이아 합계 +' + claim.all.want + ' 하나로 들어온다',
       `Δdia ${claim.all.dd} · Δgold ${claim.all.dg} · Δrelic ${claim.all.dr}`);
 
-    /* ══ §2 출석(399) — 28칸이 다이아 하나 ═════════════════════════════════ */
-    console.log('§2 출석(399) — ATTEND 28칸이 다이아 하나');
+    /* ══ §2 출석(399) — 전 칸이 다이아 하나 ═══════════════════════════════
+       513(주인 지시 2026-08-31) — 표가 28칸 → **7칸 무한 순환**이 됐다. 이 절이 묻는 것은
+       «칸 수» 가 아니라 «재화 갈래가 하나인가» 이므로 **길이를 표에 묻고**(상수 재박기 금지 · 328 교훈)
+       나머지 항은 그대로 둔다. 28일차 5,000 을 보던 «눈금» 항은 순환 최종(7일차) 축으로 갈아 끼웠다. */
+    console.log('§2 출석(399·513) — ATTEND 7칸 순환이 다이아 하나');
     const at = await page.evaluate(() => {
       const keys = [...new Set(ATTEND.flatMap(r => Object.keys(r).filter(k => !['ic', 't'].includes(k))))].sort();
       return {
@@ -137,23 +140,24 @@ const CURKEYS = "(r => Object.keys(r).filter(k => !['ic', 't', 'g', 'n', 'k'].in
         total: ATTEND.reduce((s, r) => s + r.dia, 0)
       };
     });
-    console.log('  · 28일 합계 ' + at.total.toLocaleString() + ' 다이아 (일반 ' + at.dias[0] + '…' + at.dias[25]
-      + ' · 7일차 ' + at.dias[6] + ' · 28일차 ' + at.dias[27] + ')');
-    ok(at.n === 28 && at.keys.join(',') === 'dia', '§2 ATTEND 28칸의 보상 키가 dia 하나뿐 (rel·gold·goldMul·frag 0건)',
+    console.log('  · 한 바퀴(' + at.n + '일) 합계 ' + at.total.toLocaleString() + ' 다이아 (일반 ' + at.dias[1]
+      + '…' + at.dias[5] + ' · 순환 최종(7일차) ' + at.dias[6] + ')');
+    ok(at.n === 7 && at.keys.join(',') === 'dia', '§2 ATTEND 7칸 순환(513)의 보상 키가 dia 하나뿐 (rel·gold·goldMul·frag 0건)',
       at.n + '칸 · [' + at.keys.join(',') + ']');
-    ok(at.dias.every(v => v > 0), '§2 28칸 전부 수량 > 0 (빈 칸 없음)');
-    ok(at.emoji.length === 0, '§2 화폐 자리에 이모지가 없다 — 28일차 🔥 폐지(125 규약)',
+    ok(at.dias.every(v => v > 0), '§2 전 칸 수량 > 0 (빈 칸 없음)');
+    ok(at.emoji.length === 0, '§2 화폐 자리에 이모지가 없다 — 🔥 폐지(125 규약)',
       at.emoji.join(' ') || '없음');
     ok(at.labels.length === 1 && at.labels[0] === '다이아', '§2 라벨도 한 갈래 «다이아»', at.labels.join(','));
     ok(at.shown.length === 1 && at.shown[0] === 1, '§2 카드 표기 칸이 전부 1칸 (atRewards 한 갈래)',
       '[' + at.shown.join(',') + ']');
-    ok(at.dias[6] > at.dias[5] && at.dias[27] > at.dias[6],
-      '§2 눈금이 살아 있다 — 일반 < 7일차 < 28일차 (재화가 하나여도 주차 강조가 남는다)',
-      at.dias[5] + ' < ' + at.dias[6] + ' < ' + at.dias[27]);
+    /* 513 — «28일차» 축이 사라져 눈금이 «일반 < 순환 최종» 두 단이 됐다(칸이 없어졌지 강조가 없어진 게 아니다) */
+    ok(at.dias[6] > at.dias[5],
+      '§2 눈금이 살아 있다 — 일반 < 순환 최종(7일차) (재화가 하나여도 마지막 칸 강조가 남는다)',
+      at.dias[5] + ' < ' + at.dias[6]);
 
     const atPay = await page.evaluate(async () => {
-      S.att.n = 9; S.att.date = '';                 /* 다음 칸 = 10일 차 */
-      const want = ATTEND[9].dia, b = { g: S.gold, d: S.dia, r: S.relic };
+      S.att.n = 9; S.att.date = '';                 /* 513 순환 — 다음 칸 = 9 % 7 = #2 = 3일 차 */
+      const want = ATTEND[9 % ATTEND.length].dia, b = { g: S.gold, d: S.dia, r: S.relic };
       claimAttend(null);
       await new Promise(r => setTimeout(r, 60));
       return { want, dg: S.gold - b.g, dd: S.dia - b.d, dr: S.relic - b.r };
@@ -204,9 +208,11 @@ const CURKEYS = "(r => Object.keys(r).filter(k => !['ic', 't', 'g', 'n', 'k'].in
 ];`;
     const rwOld = `  const cur = PASS_CUR[0], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);`;
     const rwRevert = `  const cur = PASS_CUR[(i + c) % 3], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);`;
-    const atOld = `  const dia = i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
+    /* 513 — 선언이 «1..7 순환» 으로 바뀌어 사본 편집 자리의 문자열도 같이 옮겼다.
+       되돌리는 것은 **399 축(재화 갈래)** 하나다 — 칸 수는 이 자의 물음이 아니다(그건 verify513 §R 몫). */
+    const atOld = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
   ATTEND.push({ ic:curIc('dia'), t:'다이아', dia });`;
-    const atRevert = `  const dia = i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
+    const atRevert = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
   ATTEND.push(i % 5 === 0 ? { ic:curIc('relic'), t:'유물조각', rel:400 + i*25 }
                           : { ic:curIc('dia'), t:'다이아', dia });`;
     const found = [passOld, rwOld, atOld].map(x => src.includes(x));

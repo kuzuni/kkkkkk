@@ -62,7 +62,9 @@ const GOLD_READ = () => ({
   const open = () => p.evaluate(() => { document.querySelector('.side .ibtn[data-pop="attend"]').click(); });
 
   /* ---------- 1. 열기 · 껍데기 ---------- */
-  await p.evaluate(() => { S.att.n = 9; S.att.date = ''; });        /* 2주차(8~14일) · 10일차가 오늘 */
+  /* 513 — 표가 7칸 순환이라 «주차» 가 없다. n=9 는 그대로 두되 뜻이 바뀌었다: 9 % 7 = 2 → **3일차가 오늘**.
+     (칸 배치·✔ 2장·👑 1장은 옛 «10일차가 오늘» 과 같은 그림이라 아래 항들은 표본을 안 바꿔도 된다.) */
+  await p.evaluate(() => { S.att.n = 9; S.att.date = ''; });        /* 513 순환 — 3일차가 오늘 */
   await open();
   await p.waitForTimeout(320);
   let g = await p.evaluate(() => ({
@@ -93,16 +95,19 @@ const GOLD_READ = () => ({
   ok('타이틀 «출석 보상» (신규 유저 문구 없음)', g.title === '출석 보상' && !/신규/.test(g.title), g.title);
   ok('캘린더 고리 2개', g.rings === 2, String(g.rings));
   ok('카드 = 3열×2행 6장 + 7일차 전폭 1장', g.cards === 6 && g.wide === 1, g.cards + '+' + g.wide);
-  ok('현재 주차 자동 표시 (S.att.n=9 → 8~14일 차)',
-    g.labels.join(',') === '8일 차,9일 차,10일 차,11일 차,12일 차,13일 차,14일 차', g.labels.join(','));
-  ok('수령 완료 = 8·9일 차 2장 (✔ 오버레이 2개)',
+  /* 513(주인 지시 2026-08-31) — «1~7일 무한 순환». n 이 얼마든 라벨은 «1일 차»~«7일 차» 고정이고
+     «8일 차» 이상 문구는 0건이다(옛 항은 n=9 에서 «8~14일 차» 를 기대했다 — 그 자리를 갈아 끼웠다). */
+  ok('513 순환 — n 이 얼마든 라벨은 «1일 차»~«7일 차» (8일 차 이상 0건)',
+    g.labels.join(',') === '1일 차,2일 차,3일 차,4일 차,5일 차,6일 차,7일 차'
+    && !g.labels.some((s) => (parseInt(s, 10) || 0) > 7), g.labels.join(','));
+  ok('수령 완료 = 1·2일 차 2장 (✔ 오버레이 2개)',
     g.got.filter(Boolean).length === 2 && g.checks === 2 && g.got[0] && g.got[1]);
-  ok('오늘 = 10일 차 1장 (👑 포인터 1개)',
+  ok('오늘 = 3일 차 1장 (👑 포인터 1개 · n=9 → 9 % 7 = 2)',
     g.today.filter(Boolean).length === 1 && g.today[2] && g.crowns === 1);
-  ok('7일차 카드 보상 1칸 (399 — 28칸 전부 다이아)', g.d7frames === 1, String(g.d7frames));
+  ok('7일차 카드 보상 1칸 (399 — 전 칸 다이아)', g.d7frames === 1, String(g.d7frames));
   ok('7일차 보상 칸이 전폭 카드 한복판 (399 — 3칸의 가운데 자리를 그대로 쓴다)',
     g.d7ctr !== null && Math.abs(g.d7ctr) <= 1, g.d7ctr + 'px');
-  ok('강조 밴드 = 오늘(10일) + 7일차(14일) 2개', g.hiBands.filter(Boolean).length === 2 && g.hiBands[2] && g.hiBands[6]);
+  ok('강조 밴드 = 오늘(3일차) + 순환 최종(7일차) 2개', g.hiBands.filter(Boolean).length === 2 && g.hiBands[2] && g.hiBands[6]);
   ok('NaN/undefined 없음', !/NaN|undefined/.test(g.txt));
 
   /* ---------- 2. 오늘 카드 탭 → 실제 지급 ---------- */
@@ -136,14 +141,17 @@ const GOLD_READ = () => ({
     badge: getComputedStyle(document.querySelector('.side .ibtn[data-pop="attend"] .bdg')).display,
     fx: document.querySelectorAll('#fxl > *').length,
   }));
-  /* 10일차 = i%5===0 → 유물석 400+10*25 = 650 */
+  /* 513 — 표가 7칸 순환이라 n=9 가 받는 칸은 #2 = **3일차 440**(옛 «10일차 650» 자리) */
   ok('오늘 카드 탭 → 보상 실지급 (S 반영)', after.dia + after.rel + after.gold > before.dia + before.rel + before.gold,
     `Δdia ${after.dia - before.dia} · Δrel ${after.rel - before.rel} · Δgold ${Math.round(after.gold - before.gold)}`);
-  /* 399 — 10일차는 5 배수(유물석 650) 갈래였다. 갈래가 «일반 350+30i» 로 합쳐져 **다이아 650** 이다
-     (같은 650 이지만 재화가 다르다 — 유물석은 한 톨도 안 는다는 항을 같이 둔다). */
-  ok('10일차 보상 = 다이아 650 (ATTEND 데이터 그대로)', after.dia - before.dia === 650, String(after.dia - before.dia));
+  /* 399 — 재화 갈래가 «다이아 하나» 로 합쳐졌다(유물석은 한 톨도 안 는다는 항을 같이 둔다).
+     513 — 순환으로 칸이 #9 → #2 로 바뀌면서 값이 650 → **440** 이 됐다. 상수를 박지 않고 **표에 묻는다**
+     (328 교훈 — 항을 눌러 초록으로 되돌리면 «표가 통째로 바뀌어도 초록인 게이트» 가 된다). */
+  const atWant = await p.evaluate(() => ATTEND[9 % ATTEND.length].dia);
+  ok('3일차 보상 = 다이아 ' + atWant + ' (ATTEND[n % 길이] 데이터 그대로)',
+    after.dia - before.dia === atWant && atWant === 440, String(after.dia - before.dia) + ' vs ' + atWant);
   /* 527 ⓐ — 동기 창(수령 그 한 태스크). 유물조각은 전투가 안 주므로 창 전체로도 같이 못박는다. */
-  ok('10일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다 · 527 동기 창)',
+  ok('3일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다 · 527 동기 창)',
     sync.dg === 0 && sync.dr === 0 && after.rel === before.rel,
     `동기 Δgold ${sync.dg} · Δrel ${sync.dr} · 창 전체 Δrel ${after.rel - before.rel}`);
   ok('[전제 527] 골드 감시자가 살아 있다 (귀속 항이 «공허한 초록» 이 아니다)', w.live === true, String(w.live));
@@ -202,7 +210,8 @@ const GOLD_READ = () => ({
     await rp.goto('file://' + path.resolve(__dirname, '../index.html'));
     await rp.waitForTimeout(900);
     await rp.evaluate(() => { S.autoBuy = false; if (typeof spAuto !== 'undefined') S.spAuto = false; });
-    await rp.evaluate(() => { S.att.n = 9; S.att.date = ''; ATTEND[9 % 28].gold = 7; });   /* ← 결함 주입 */
+    /* 513 — 표 길이를 자에도 박지 않는다(`% 28` → `% ATTEND.length`). 넣는 칸은 «n=9 가 받는 칸» 이다. */
+    await rp.evaluate(() => { S.att.n = 9; S.att.date = ''; ATTEND[9 % ATTEND.length].gold = 7; });   /* ← 결함 주입 */
     await rp.evaluate(() => { document.querySelector('.side .ibtn[data-pop="attend"]').click(); });
     await rp.waitForTimeout(320);
     await rp.evaluate(GOLD_WATCH);

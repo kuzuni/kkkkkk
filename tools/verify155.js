@@ -113,8 +113,11 @@ const settle = async (p) => {
   }));
   ok(segc.isArr && segc.n === 2, '§2 ROUL_SEGC = 칸 구분용 2색 배열', `${segc.isArr ? 'array' : 'object'}/${segc.n}`);
   ok(!/goldMul|\br\.rel\b|유물조각/.test(segc.label), '§2 roulLabel 이 goldMul·rel 을 더 안 본다', segc.label.replace(/\s+/g, ' '));
-  ok(segc.attendN === 28 && segc.attendKeys.join(',') === 'dia',
-     '§2 출석 28칸도 보상 키가 dia 하나뿐 (399 — goldMul·rel·gold 가 되살아나면 빨강)',
+  /* 513(주인 지시 2026-08-31) — 표가 28칸 → **7칸 무한 순환**. 이 항이 묻는 것은 «칸 수» 가 아니라
+     «재화 갈래가 하나인가» 라, 길이는 verify513 [A-a] 가 맡고 여기서는 **0칸이 아닌가** 만 본다
+     (0 이면 `flatMap` 이 빈 배열을 내 «키가 dia 하나» 가 공허한 초록이 된다). */
+  ok(segc.attendN > 0 && segc.attendKeys.join(',') === 'dia',
+     '§2 출석(513 — 7칸 순환)도 보상 키가 dia 하나뿐 (399 — goldMul·rel·gold 가 되살아나면 빨강)',
      segc.attendN + '칸 · [' + segc.attendKeys.join(',') + ']');
   ok(segc.goldMulDead.g === 0 && segc.goldMulDead.out === '',
      '§2 giveReward 의 goldMul 분기가 죽었다 (399 — goldMul 만 든 보상은 아무것도 안 준다)',
