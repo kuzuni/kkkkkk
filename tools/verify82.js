@@ -64,6 +64,38 @@ function cardStats(A, B, c, sr, sx, sy){
    칸마다 두 번 찍으면 59칸 = 118장이라 느리므로 **스크롤 페이지 단위로 두 장씩**만 찍고
    그 안에 통째로 들어와 있는 칸들을 잘라서 잰다. 스크롤러 밖으로 잘린 칸은 다음 페이지에서 잡는다
    (`.sk-gp` 는 `overflow:hidden auto` 라 «rect 는 멀쩡한데 화면에는 없는» 칸이 생긴다). */
+/* 525 — «재는 자리가 정말 그 칸인가» 를 캡처 **직전**에 묻는다.
+   이 게이트는 자동 플레이가 도는 채로 찍는다. 보스전 사망이 18 패배 화면(#defw)을 띄우면
+   (273 ①) 그 덮개가 시트 위에 앉고, 표시/숨김 두 장이 **덮개로 똑같아져** Δ0.00 이 된다 —
+   «아이콘이 안 보인다» 가 아니라 «아이콘을 안 봤다» 인데 게이트는 전자로 읽었다(36칸 중 22칸).
+   그래서 값이 아니라 **자리**를 먼저 단언한다: 칸의 아이콘 상자 세 점의 최상단 노드가
+   그 칸의 것이 아니면 그 회차는 «못 잰 것» 으로 신고한다(LESSONS 350 — 표시 전용 HUD 는
+   `pointer-events:none` 이라 이 자에 안 걸리므로, 알려진 자동 팝업은 아래 `isolate()` 가 따로 막는다). */
+async function blockedCards(page, o, keys){
+  return page.evaluate(({ cs, is, ks }) => {
+    const bad = [];
+    document.querySelectorAll(cs).forEach(c => {
+      const k = c.getAttribute('data-v82');
+      if(ks.indexOf(k) < 0) return;
+      const ci = c.querySelector(is); if(!ci) return;
+      const r = ci.getBoundingClientRect();
+      const pts = [[r.x + 4, r.y + r.height / 2], [r.x + r.width - 4, r.y + r.height / 2],
+                   [r.x + r.width / 2, r.y + 3]];
+      for(const [x, y] of pts){
+        const el = document.elementFromPoint(x, y);
+        if(!el || !(el === c || c.contains(el))){
+          const nm = el ? el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+                        + (typeof el.className === 'string' && el.className.trim()
+                           ? '.' + el.className.trim().split(/\s+/)[0] : '') : 'null';
+          bad.push((c.dataset.skit || c.dataset.ptit || k) + '←' + nm);
+          break;
+        }
+      }
+    });
+    return bad;
+  }, { cs: o.cardSel, is: o.iconSel, ks: keys });
+}
+
 async function scanLocked(page, decoder, o){
   await page.evaluate(cs => {
     document.querySelectorAll(cs).forEach((c, i) => c.setAttribute('data-v82', i));
@@ -72,10 +104,10 @@ async function scanLocked(page, decoder, o){
     const e = document.querySelector(sc); if(!e) return null;
     return { ch: e.clientHeight, sh: e.scrollHeight };
   }, o.scroller);
-  if(!geo) return [];
+  if(!geo) return { rows: [], blocked: [] };
   const step = Math.max(40, geo.ch - 20);
   const pages = Math.max(1, Math.ceil(geo.sh / step) + 1);
-  const seen = new Set(), out = [];
+  const seen = new Set(), out = [], blocked = [];
   for(let p = 0; p < pages; p++){
     await page.evaluate(({ sc, t }) => { const e = document.querySelector(sc); if(e) e.scrollTop = t; },
                         { sc: o.scroller, t: p * step });
@@ -100,6 +132,7 @@ async function scanLocked(page, decoder, o){
     const fresh = pick.list.filter(c => !seen.has(c.key));
     if(!fresh.length) continue;
     const clip = { x: pick.sr.x, y: pick.sr.y, width: pick.sr.w, height: pick.sr.h };
+    blocked.push(...await blockedCards(page, o, fresh.map(c => c.key)));
     const shown = await page.screenshot({ clip });
     await page.addStyleTag({ content: o.hideCss });
     const hidden = await page.screenshot({ clip });
@@ -109,7 +142,7 @@ async function scanLocked(page, decoder, o){
     for(const c of fresh){ seen.add(c.key); out.push({ id: c.id, ...cardStats(A, B, c, pick.sr, sx, sy) }); }
   }
   await page.evaluate(sc => { const e = document.querySelector(sc); if(e) e.scrollTop = 0; }, o.scroller);
-  return out;
+  return { rows: out, blocked };
 }
 
 /* (225) 옛 `diffStats` — «상수로 적은 자물쇠 패딩 + 상수 밴드» 로 재던 함수는 지웠다.
@@ -134,6 +167,15 @@ async function scanLocked(page, decoder, o){
   page.on('pageerror', e => errs.push(String(e).slice(0, 140)));
   await page.goto('http://127.0.0.1:' + PORT + '/index.html', { waitUntil: 'load' });
   await page.waitForTimeout(600);
+  /* 525 — 알려진 자동 팝업 하나(18 패배 화면)는 아예 막는다. 이 게이트는 시트를 열어 둔 채
+     수십 초를 찍고, 그 사이 자동 플레이의 보스전 사망이 `openDefeat()` 를 부른다(24044).
+     ⚠ 여는 자리를 막는 것이지 «패배 화면» 자체를 지우는 게 아니다 — 그 화면의 성질은
+     `verify273`·`verify123`·`verify458` 이 각자 지킨다(여기서 그 축을 대신 재지 않는다). */
+  await page.evaluate(() => {
+    window.__def82 = window.openDefeat;
+    window.openDefeat = () => {};
+    const d = document.getElementById('defw'); if(d) d.classList.remove('on');
+  });
   const decoder = await browser.newPage();
 
   /* §0 캘리브레이션 — 05 무기 카드(주인이 «이렇게 돼 있으니 같은 구조로» 라고 승인한 기준 구현)의
@@ -146,10 +188,14 @@ async function scanLocked(page, decoder, o){
     await page.evaluate(() => { window.__ru82 = window.renderUI; window.renderUI = () => {}; });
     /* 225 — 스킬·펫과 **같은 자**(자물쇠 bbox+2px · 아이콘 상자 밴드)로 재야 «같은 수준» 비교가 성립한다.
        (LESSONS A3-ⓔ «마스크가 다르면 다른 것을 잰다» — 자가 다르면 두 값은 비교 대상이 아니다) */
-    const cal = await scanLocked(page, decoder, {
+    const cal0 = await scanLocked(page, decoder, {
       scroller: '#wpnGrid', cardSel: '#wpnw .wgc.lk', lockSel: '.lock', iconSel: '.ic',
       hideCss: '.wgc.lk .ic{visibility:hidden!important}'
     });
+    const cal = cal0.rows;
+    /* 525 — 하한을 만드는 05 표본이 덮개 위에서 잰 값이면 그 하한은 거짓이다(그 위의 판정 전부가 거짓이 된다). */
+    ck('§0 전제 — 05 표본이 덮개 없이 찍혔다(칸의 아이콘 자리 최상단 노드 = 그 칸)',
+       cal0.blocked.length === 0, cal0.blocked.slice(0, 4).join(' · ') || '가림 0칸');
     const vals = cal.map(r => r.ratio);
     await page.evaluate(() => { window.renderUI = window.__ru82; closeWeapon(); });
     if(vals.length >= 2){
@@ -216,12 +262,19 @@ async function scanLocked(page, decoder, o){
        225 — 옛 §3 은 **앞에서 3장만** 봤다. 그 창 밖의 «안 보이는 칸» 은 영원히 초록이라,
        23칸 중 5칸이 사라진 채로 게이트가 통과하고 있었다 → 이제 **전 칸**을 잰다. */
     await page.evaluate(() => { window.__ru82 = window.renderUI; window.renderUI = () => {}; }); /* 캡처 중 재렌더 동결 */
-    const rows = await scanLocked(page, decoder, {
+    const scan = await scanLocked(page, decoder, {
       scroller: '#' + bodyId + ' .sk-gp', cardSel: '#' + bodyId + ' .sk-gp .sk-card.lk',
       lockSel: '.sk-lock', iconSel: '.sk-ci',
       hideCss: '.sk-gp .sk-card.lk .sk-ci{visibility:hidden!important}'
     });
+    const rows = scan.rows;
     await page.evaluate(() => { window.renderUI = window.__ru82; });
+    /* 525 전제 — 아래 §3 은 «두 캡처의 차분» 이라 덮개가 앉으면 Δ0 = «아이콘이 안 보인다» 로 읽힌다.
+       그래서 §3 **앞에** 자리를 묻는다. 이 항이 빨가면 §3 값은 읽지 마라(못 잰 것이다). */
+    ck('§3 전제 ' + label + ' — 캡처 순간 칸 위에 덮개가 없다(아이콘 자리 최상단 노드 = 그 칸)',
+       scan.blocked.length === 0,
+       scan.blocked.length ? scan.blocked.length + '칸 가림: ' + scan.blocked.slice(0, 4).join(' · ')
+                           : '가림 0칸 / ' + rows.length + '칸');
     rows.sort((a, b) => a.ratio - b.ratio);
     const under = rows.filter(r => !(r.ratio >= floor));
     const pc = r => r.id + ' ' + (r.ratio * 100).toFixed(1) + '%/Δ' + r.mean.toFixed(2);
@@ -230,6 +283,35 @@ async function scanLocked(page, decoder, o){
        rows.length >= 3 && under.length === 0,
        rows.length + '칸 · 최저 ' + rows.slice(0, 3).map(pc).join(' · ')
        + (under.length ? ' | ✗ 미달 ' + under.length + '칸: ' + under.map(r => r.id).join(',') : ''));
+  }
+
+  /* ── §R 되돌림 시험 (525) ─────────────────────────────────────────────────
+     새 전제 항이 «무르게 푼 수리» 가 아님을 못박는다: 덮개를 **손으로** 씌우면
+     ① 전제가 빨개지고 ② 같은 자의 §3 값이 0% 로 무너지는지(= 525 가 실제로 본 그림),
+     ③ 덮개를 걷으면 도로 초록인지 를 같은 실행 안에서 확인한다. */
+  {
+    await page.evaluate(() => { gmHero('pet'); });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => { window.__ru82 = window.renderUI; window.renderUI = () => {}; });
+    const opt = { scroller: '#bPet .sk-gp', cardSel: '#bPet .sk-gp .sk-card.lk',
+                  lockSel: '.sk-lock', iconSel: '.sk-ci',
+                  hideCss: '.sk-gp .sk-card.lk .sk-ci{visibility:hidden!important}' };
+    await page.evaluate(() => { document.getElementById('defw').classList.add('on'); });
+    await page.waitForTimeout(200);
+    const on = await scanLocked(page, decoder, opt);
+    await page.evaluate(() => { document.getElementById('defw').classList.remove('on'); });
+    await page.waitForTimeout(200);
+    const off = await scanLocked(page, decoder, opt);
+    await page.evaluate(() => { window.renderUI = window.__ru82; });
+    const zero = on.rows.filter(r => r.ratio < 0.012).length;
+    ck('§R 덮개(18 패배 화면)를 씌우면 전제가 빨개진다', on.blocked.length > 0,
+       on.blocked.length + '칸 가림: ' + on.blocked.slice(0, 3).join(' · '));
+    ck('§R 덮개를 씌우면 §3 값이 무너진다(하한 미달 칸이 생긴다)', zero > 0,
+       on.rows.length + '칸 중 미달 ' + zero + '칸');
+    ck('§R 덮개를 걷으면 도로 초록이다(가림 0 · 하한 미달 0)',
+       off.blocked.length === 0 && off.rows.length >= 3 && off.rows.every(r => r.ratio >= floor),
+       '가림 ' + off.blocked.length + '칸 · 미달 ' + off.rows.filter(r => r.ratio < floor).length
+       + '칸 · 최저 ' + (off.rows.length ? (Math.min(...off.rows.map(r => r.ratio)) * 100).toFixed(1) : '-') + '%');
   }
 
   ck('콘솔 에러 0', errs.length === 0, errs.slice(0, 3).join(' | '));
