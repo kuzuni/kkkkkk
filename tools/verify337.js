@@ -214,19 +214,42 @@ const mat = tr => {
       return g;
     };
 
-    /* 437 — 옛 리터럴 99 는 «BAR_H + 2» 였다(테두리 6 · 알약 85 ⇒ 노출 2). 테두리가 7 이 되면서
-       99 는 노출 **1.0** 밖에 안 내 이 되돌림 시험이 «안 깨진다» 고 말해 버렸다 — 리터럴이 아니라
-       **식**으로 되돌린다(BAR_H + 2 ⇒ 노출 2, 문턱 1.5 그대로). 무르게 푼 것이 아님은
-       바로 아래 R1b 가 못박는다: BAR_H + 1 한 칸만 되돌려도 노출 1 이 생긴다. */
-    const r1 = await revert('.stabs{height:' + (BAR_H + 2) + 'px!important}');
-    ok('R1 셸을 ' + (BAR_H + 2) + ' 로 되돌리면 §2(노출 0px)가 깨진다',
-      Math.abs(r1.innerBottom - Math.max(...r1.cells.map(c => c.bottom))) >= 1.5,
-      '노출 ' + (r1.innerBottom - Math.max(...r1.cells.map(c => c.bottom))).toFixed(2) + 'px');
+    /* 노출 = 바 패딩박스 하변 − 알약 하변. §2 가 재는 것과 **같은 식**이라야 되돌림이 §2 를 문다. */
+    const expo = g => g.innerBottom - Math.max(...g.cells.map(c => c.bottom));
 
-    const r1b = await revert('.stabs{height:' + (BAR_H + 1) + 'px!important}');
-    ok('R1b 한 칸(' + (BAR_H + 1) + ')만 되돌려도 노출이 생긴다',
-      Math.abs(r1b.innerBottom - Math.max(...r1b.cells.map(c => c.bottom))) >= 0.8,
-      '노출 ' + (r1b.innerBottom - Math.max(...r1b.cells.map(c => c.bottom))).toFixed(2) + 'px');
+    /* 454 (2026-08-30) — 437 이 칸 높이를 «패딩 상자 파생»(`.stabs>*{height:100%}`)으로 바꾼 뒤로
+       §2 는 **CSS 항등식** 위에 서 있다: 절대배치 자식의 `height:100%` 는 담는 상자의 패딩 상자라
+       «셸 높이만» 되돌리면 칸이 **같이 따라와** 노출이 영영 0.00px 이다. 그래서 옛 R1·R1b
+       («셸을 BAR_H+2 / BAR_H+1 로») 는 **무엇을 주입해도 못 빨개졌다**(90/92 — 454 등재문).
+       파생 자체는 옳은 개선이므로(셋 중 하나만 옮기는 사고가 원리적으로 안 난다) 되돌림을
+       **되살리는** 것이 아니라 **축을 셋으로 가른다** — `verify437` [R-b]~[R-d] 에서 빌려 온 배분이다:
+         R1  337 **이전** 그림을 통째로(셸 99 · 테두리 6 · 칸 리터럴 85 ⇒ 패딩 87 − 알약 85 = 노출 2) → §2 빨강
+         R1b 파생을 **한 칸(1px)만** 깨도 노출 1 → §2 문턱 0.6 이 무르지 않다
+         R1c 셸만 되돌리면 칸이 따라와 노출 0 — **양성항**(파생이 살아 있다).
+             이 항이 없으면 다음 워커가 R1 을 다시 «셸 한 줄» 로 줄여 같은 자기무효를 만든다.
+       ⚠ 435 교훈 — «주입이 실제로 그 상태를 만들었는가» 를 같이 물어야 한다.
+          안 물으면 주입이 무음 실패한 날 되돌림 시험이 또 통째로 자기무효가 된다. */
+    const r1 = await revert('.stabs{--sb:6px!important;height:99px!important}'
+      + '.stabs>*{height:85px!important}');
+    ok('R1 337 이전 그림(셸 99 · 테두리 6 · 칸 리터럴 85)을 통째로 되돌리면 §2(노출 0px)가 깨진다',
+      Math.abs(expo(r1)) >= 1.5, '노출 ' + expo(r1).toFixed(2) + 'px');
+    ok('R1-i ★ 그 주입이 실제로 그 상태를 만들었다 (435 — 안 물으면 되돌림이 자기무효다)',
+      near(r1.h, 99, 0.6) && near(r1.bw, 6, 0.01) && near(r1.cells[0].h, 85, 0.6),
+      '셸 ' + r1.h.toFixed(1) + ' · 테두리 ' + r1.bw.toFixed(1) + ' · 칸 ' + r1.cells[0].h.toFixed(1));
+
+    const r1b = await revert('.stabs>*{height:calc(100% - 1px)!important}');
+    ok('R1b 파생을 한 칸(1px)만 깨도 노출이 생긴다 — §2 문턱 0.6 이 무르지 않다',
+      Math.abs(expo(r1b)) >= 0.8, '노출 ' + expo(r1b).toFixed(2) + 'px');
+    ok('R1b-i ★ 그 주입은 칸만 1px 줄였다 (셸·테두리는 안 건드렸다)',
+      near(r1b.h, BAR_H, 0.6) && near(r1b.bw, BORDER, 0.01)
+      && near(r1b.cells[0].h, BAR_H - 2 * BORDER - 1, 0.6),
+      '셸 ' + r1b.h.toFixed(1) + ' · 테두리 ' + r1b.bw.toFixed(1) + ' · 칸 ' + r1b.cells[0].h.toFixed(1));
+
+    const r1c = await revert('.stabs{height:99px!important}');
+    ok('R1c ★ 셸만 99 로 되돌리면 칸이 **따라와** 노출은 0 그대로 (437 파생이 살아 있다 — 개선이지 결함이 아니다)',
+      Math.abs(expo(r1c)) <= 0.6 && near(r1c.cells[0].h, 99 - 2 * BORDER, 0.6)
+      && !near(r1c.cells[0].h, CELL_H, 0.6),
+      '노출 ' + expo(r1c).toFixed(2) + 'px · 셸 ' + r1c.h.toFixed(1) + ' · 칸 ' + r1c.cells[0].h.toFixed(1));
 
     const r2 = await revert('.stab{font-size:43px!important}.stab.on{font-size:41px!important}');
     const r2on = r2.cells.find(c => c.on), r2off = r2.cells.find(c => !c.on);
