@@ -11875,8 +11875,11 @@
      → 같은 글자를 `::after` 로 한 겹 얹고 **흰 스트로크**를 줘 흰 획만 두껍게 한다.
        검정 외곽선은 아래 레이어가 그대로 유지하므로 bbox 는 변하지 않고,
        비평가가 «검정 잉크 +49% 과다» 라고 한 것도 같이 해소된다(흰색이 그만큼 안쪽을 되찾는다). */
-  #sumw .sm-fat{position:relative}
-  #sumw .sm-fat::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;
+  /* 514 — «연출 스킵» 토글이 12 소환 팝업 밖(16 룰렛)에서도 쓰이면서 이 두 규칙의 `#sumw` 스코프가
+     그대로 «부품이 호스트를 갈아타면 라벨만 얇아지는» 구멍이 됐다(397·429 계열 «스코프 구멍»).
+     선택자를 한 항씩 늘려 부품이 제 획 두께를 들고 다니게 한다 — 규칙을 복제하지 않는다(429 처방). */
+  #sumw .sm-fat,.sm-sk>.sm-fat{position:relative}
+  #sumw .sm-fat::after,.sm-sk>.sm-fat::after{content:attr(data-t);position:absolute;left:0;top:0;white-space:nowrap;
     color:var(--fat,#fff);-webkit-text-stroke:var(--fatw,2px) var(--fat,#fff);paint-order:stroke fill}
   /* 굵기 보정량은 요소마다 다르다 — ref 잉크 «면적» 에 맞춰 개별로 잰 값이다.
      run 중앙값은 인접 획이 붙으면 뭉쳐 읽히므로 **면적** 을 기준으로 삼았다. */
@@ -11989,11 +11992,28 @@
        (크롬과 13px · 그리드와 14px 여유. 카드 개수 배지가 아래로 8px 튀어나오는 몫은 그리드 안 padding-bottom 이
         이미 먹었으므로 이 띠까지 내려오지 않는다).
      ⚠ 기존 요소의 좌표는 한 칸도 안 건드린다 — 절대배치라 패널·그리드·버튼·닫기 전부 Δ0px 다. */
-  .sm-sk{position:absolute;right:36px;bottom:28px;height:56px;z-index:3;
-    display:flex;align-items:center;gap:16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  /* ── 514(주인 지시 2026-08-31) — 이 토글은 이제 **공용 부품**이다(12 소환 + 16 룰렛) ──
+     승격의 뜻은 «CSS 한 벌 · 상태 한 벌 · 호스트 둘» 이다. 그래서 `.sm-sk` 에서 **자리만** 뺐다 —
+     자리는 호스트마다 다르고(12 는 패널 아래 절대배치 · 16 은 버튼 아래 흐름 배치) 부품이 아니다.
+     ⚠ 이름의 `sm-` 접두는 **일부러 그대로 뒀다**(299·341 선례 — 자리를 옮기면서 이름까지 바꾸면
+       앞 세션들이 남긴 grep 경로가 통째로 끊긴다. 부품인지 아닌지는 이 주석과 셀렉터가 말한다). */
+  .sm-sk{height:56px;display:flex;align-items:center;gap:16px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #sumSkip{position:absolute;right:36px;bottom:28px;z-index:3}
+  /* 16 룰렛 — 버튼 아래 여백(48px)만으로는 56px 이 안 들어가고, 위 두 띠(헤더↔패널 59.8 ·
+     버튼↔본문하변 46.9)는 어느 쪽도 노브 54 를 여유 있게 못 받는다(실측 `probe514` [3]).
+     ⇒ 흐름에 한 줄을 더해 팝업이 그만큼 자란다(1102.6 → 1172.6 · 상자가 중앙정렬이라 **위로 35px**).
+     레퍼런스 측정표가 없는 화면이라(29 는 «설계 확정» 이고 `docs/measure` 에 룰렛 표가 없다)
+     이 이동은 정오표 한 줄로 족하다 — `docs/measure/265-룰렛글씨.md` §정오표. */
+  #rouSkip{width:fit-content;margin:14px 0 0 auto}
   /* 라벨 — 패널 면(#2A2835) 위라 흰색은 세다. 320 이 남긴 «남색 상자 위 밝은 크림» 토큰과 같은 색을 쓴다. */
   .sm-sk>i{font-size:30px;line-height:56px;color:#EADCC6;--fat:#EADCC6;--fatw:.5px;transform:scaleX(.96)}
   .sm-sk.on>i{color:#CFF3B4;--fat:#CFF3B4}
+  /* 514 — 룰렛 팝업 본문은 **베이지(#F0D9BA)** 라 크림 라벨이 그대로 사라진다.
+     기하는 부품 것을 그대로 쓰고 **색만** 호스트 면에 맞춘다(320 «남색 상자 위 밝은 크림» 의 거울).
+     끔 = 본문 글자색 `.mbody p`(#5A4634) · 켬 = 325 가 쓴 초록(#2F8F1E). */
+  #rouSkip>i{color:#5A4634;--fat:#5A4634}
+  #rouSkip.on>i{color:#2F8F1E;--fat:#2F8F1E}
   /* 트랙·노브는 55 설정 토글(.cf55-sw/.cf55-kn)과 **같은 어휘**를 축소한 것이다 —
      트랙 169×58 · 노브 99×69(위아래 5.5 넘침) → 트랙 120×46 · 노브 70×54(위아래 4 넘침).
      켬 위치 47 = 트랙 120 − 노브 70 − 3(끔 위치 −3 의 거울). 색은 55 것을 그대로 쓴다. */
@@ -19402,8 +19422,11 @@ const DEF = () => sumAliasView({
      `eqTab`(06 시트 안 무기/방어구 탭)은 그대로 — 그건 시트 내부 상태라 별개다. */
   buyQty:1, autoBuy:false, a105:1, eqTab:'weapon',
   /* 363 — `sumSkip` 은 55 설정 화면이 아니라 **12 소환 결과 팝업 안**의 토글이다(주인 지시 2026-08-29).
-     저장 자리를 `S.opt` 로 둔 것은 «게임 진행이 아니라 취향» 이라는 뜻이 sndOn/shakeOn 과 같기 때문이다. */
-  opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false, sumSkip:false },  /* 55 설정 + 363 */
+     저장 자리를 `S.opt` 로 둔 것은 «게임 진행이 아니라 취향» 이라는 뜻이 sndOn/shakeOn 과 같기 때문이다.
+     514(주인 지시 2026-08-31) — 같은 토글이 16 룰렛에도 붙으면서 키를 `fxSkip` **하나**로 넓혔다.
+     둘로 쪼개지 않은 이유는 190·367 이 재고를 한 벌로 둔 이유와 같다 — 나누면 «어느 쪽을 껐는지» 를
+     사람이 기억해야 한다. 구 세이브의 `sumSkip` 은 아래 `load()` 가 한 줄로 흡수한다(KEY 불변). */
+  opt:{ vol:100, bgm:true, sfx:true, shake:true, push:false, night:false, fxSkip:false },  /* 55 설정 + 363 + 514 */
   seen:{},                                    /* 한 번이라도 연 탭 — NEW 리본 해제용 */
   time:Date.now(), playtime:0, totalKills:0, summons:0, upgrades:0
 });
@@ -19645,10 +19668,15 @@ function load(){
     {
       const o = (d.opt && typeof d.opt === 'object') ? d.opt : {}, D = DEF().opt;
       b.opt = { vol: Number.isFinite(o.vol) ? Math.max(0, Math.min(100, Math.round(o.vol))) : D.vol };
-      /* 363 — `sumSkip` 을 이 목록에 **반드시** 넣는다. 이 블록은 opt 를 «항목별로 다시 짓기» 때문에
-         빠진 키는 새로고침 한 번에 통째로 사라진다(바로 아래 `cp` 주석이 같은 함정을 적어 뒀다).
+      /* 363 — `sumSkip`(514 이후 `fxSkip`)을 이 목록에 **반드시** 넣는다. 이 블록은 opt 를
+         «항목별로 다시 짓기» 때문에 빠진 키는 새로고침 한 번에 통째로 사라진다
+         (바로 아래 `cp` 주석이 같은 함정을 적어 뒀다).
          KEY 는 안 올린다 — 44 교훈 2 «없으면 기본값(false)» 으로 구 세이브가 그대로 흡수된다. */
-      ['bgm','sfx','shake','push','night','sumSkip'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
+      ['bgm','sfx','shake','push','night','fxSkip'].forEach(k => { b.opt[k] = (o[k] === undefined) ? D[k] : !!o[k]; });
+      /* 514 이관 한 줄 — 363 이 쓰던 `sumSkip` 을 새 키로 승계한다. 새 키가 이미 있으면 그쪽이 이긴다
+         (한 번이라도 새 토글을 만진 세이브를 옛 값으로 되돌리지 않는다). 구 키는 그대로 버린다 —
+         `b.opt` 는 위에서 항목별로 다시 짓기 때문에 저장 파일에서도 다음 save() 에 사라진다. */
+      if(o.fxSkip === undefined && o.sumSkip !== undefined) b.opt.fxSkip = !!o.sumSkip;
       /* 쿠폰 사용 이력 — 위에서 opt 를 «항목별로 다시 짓기» 때문에 명시적으로 살리지 않으면
          새로고침 한 번에 통째로 날아가고 같은 코드를 무한히 재사용할 수 있게 된다. */
       b.opt.cp = {};
@@ -24304,7 +24332,9 @@ const SUM_POP_STEP = 0.055;
    ⚠ 버스트를 «지연 0 으로 한꺼번에» 로 두지 않았다: 30칸이면 파티클 420개가 한 프레임에 터져
      «스킵» 이 아니라 **더 센 연출**이 된다. 등급은 카드 면색(SUM_CARD)이 이미 상시로 말하므로
      스킵 상태에서 버스트는 접고, «희귀가 있다» 는 신호만 `sfx('rare')` 한 번으로 남긴다(98 볼륨 규약). */
-const sumSkipOn = () => !!(S.opt && S.opt.sumSkip);
+/* 514 — 상태·부품이 «12 소환 + 16 룰렛» 공용이 되면서 이름도 화면 밖으로 넓혔다(`sumSkip` → `fxSkip`).
+   판정식은 여전히 **한 줄 한 곳**이다 — 두 화면이 같은 값을 읽는다(166 «신호는 한 곳»). */
+const fxSkipOn = () => !!(S.opt && S.opt.fxSkip);
 /* 지연 부품(사운드·버스트)의 타이머 손잡이. 예전에는 손잡이 없이 던져 두고 발화 시점에
    `$('sumw').classList.contains('on')` 로만 걸렀는데, 그 가드는 «팝업이 계속 열린 채
    다음 소환이 시작된» 경우(팝업 안 [10회 소환])를 못 거른다 — 앞 묶음의 소리가 새 묶음 위로 샌다.
@@ -24312,14 +24342,28 @@ const sumSkipOn = () => !!(S.opt && S.opt.sumSkip);
 let sumFxT = [];
 const sumFxClear = () => { sumFxT.forEach(clearTimeout); sumFxT = []; };
 const sumFxAt = (ms, fn) => sumFxT.push(setTimeout(() => { if($('sumw').classList.contains('on')) fn(); }, ms));
-/* 토글 겉모습을 상태에 맞춘다(팝업을 열 때·누를 때 둘 다 여기로 온다) */
-function sumSyncSkip(){
-  const el = $('sumSkip'); if(!el) return;
-  const on = sumSkipOn();
-  el.classList.toggle('on', on);
-  el.setAttribute('aria-checked', on ? 'true' : 'false');
-  const kn = el.querySelector('.sm-skk>em');
-  if(kn) kn.textContent = on ? 'ON' : 'OFF';
+/* 토글 겉모습을 상태에 맞춘다(팝업을 열 때·누를 때 둘 다 여기로 온다).
+   514 — id 하나가 아니라 **지금 문서에 있는 `.sm-sk` 전부**를 맞춘다. 두 화면이 동시에 떠 있는 일은
+   없지만(모달은 한 번에 하나), 한쪽에서 켜고 다른 쪽을 열었을 때 «켜져 있는데 OFF 로 보이는» 자리가
+   생기지 않게 하려면 동기화가 노드 목록을 돌아야 한다. */
+function fxSyncSkip(){
+  const on = fxSkipOn();
+  document.querySelectorAll('.sm-sk').forEach(el => {
+    el.classList.toggle('on', on);
+    el.setAttribute('aria-checked', on ? 'true' : 'false');
+    const kn = el.querySelector('.sm-skk>em');
+    if(kn) kn.textContent = on ? 'ON' : 'OFF';
+  });
+}
+/* 514 — 토글을 누르는 곳도 한 곳이다. 호스트는 «내 노드를 이 함수에 물린다» 만 한다.
+   ⚠ 363 이 못박은 대로 **«켜는 즉시»** 가 규약이라, 켜는 순간 지금 굴러가는 연출을 그 자리에서 끝낸다.
+     12 는 카드 등장 애니(`sumSkipNow`) · 16 은 원판 회전(rAF 루프의 `cut()`)이 그 몫을 한다. */
+function fxSkipToggle(){
+  S.opt.fxSkip = !S.opt.fxSkip;
+  fxSyncSkip();
+  if(S.opt.fxSkip) sumSkipNow();      /* 12 — 켜는 즉시(팝업이 없으면 그리드가 없어 그냥 돌아온다) */
+  sfx('toggle');
+  save();
 }
 /* «다음 소환부터» 가 아니라 **켜는 즉시** — 지금 굴러가는 등장 연출을 그 자리에서 끝낸다.
    `fx-pop` 을 떼면 animation 이 사라져 카드는 정적 상태(transform 없음·opacity 1) = 최종 상태가 된다
@@ -24350,7 +24394,7 @@ function showSummonResult(b, times, res, lvUp){
      칸당 간격(0.055s)은 58 것을 그대로 쓴다. 등재문이 의심한 `jzStagger`(--jzd·jz-st)는 이 그리드에
      **애초에 안 걸린다**(probe252 [A]: `--jzd` 전 칸 공백 · 이긴 animation-name 은 `fxPop`). */
   /* 363 — 스킵이 켜져 있으면 지연도 `fx-pop` 도 안 붙는다(선언 자체가 없으니 «생략» 이 곧 최종 상태다) */
-  const skip = sumSkipOn();
+  const skip = fxSkipOn();
   sumFxClear();                       /* 앞 묶음이 남긴 지연 부품을 먼저 끊는다 */
   const dly = agg.map((_, i) => skip ? 0 : i * SUM_POP_STEP);
   $('sumGridIn').innerHTML = agg.map((a, i) => {
@@ -24369,7 +24413,7 @@ function showSummonResult(b, times, res, lvUp){
        빈 면은 `.sm-grid-in` 의 세로 중앙정렬이 받는다. 상세는 .sm-panel 위 주석. */
   $('sumGrid').scrollTop = 0;
   syncSummonBtns();
-  sumSyncSkip();                      /* 363 — 팝업을 열 때마다 토글 겉모습을 저장값에 맞춘다 */
+  fxSyncSkip();                       /* 363 — 팝업을 열 때마다 토글 겉모습을 저장값에 맞춘다(514: 공용) */
   $('sumw').classList.add('on');
   if(skip){
     /* 363 — 시간축을 안 쓴다. 소리는 «등장 1회 + 희귀 있으면 1회» 로만 축약한다(98). */
@@ -24425,11 +24469,7 @@ $('sumw').addEventListener('click', e => {
 });
 $('sumSkip').addEventListener('click', e => {
   e.stopPropagation();
-  S.opt.sumSkip = !S.opt.sumSkip;
-  sumSyncSkip();
-  if(S.opt.sumSkip) sumSkipNow();     /* 켜는 즉시 — 지금 굴러가는 연출을 그 자리에서 끝낸다 */
-  sfx('toggle');
-  save();
+  fxSkipToggle();                     /* 514 — 누름의 본체는 공용 함수 하나다(호스트는 물리기만 한다) */
 });
 $('sumBF').onclick = () => {
   const b = sumCtx; if(!b) return;
@@ -26976,6 +27016,22 @@ function openRoulette(){
   rouSpinning = false;
   roulSpinMark(false);                           /* 65 — 표식은 #modal 에 남으므로 렌더 때마다 초기화한다 */
   $('rouBtn').onclick = spinRoulette;
+  /* 514(주인 지시 2026-08-31, 세 번째) — «연출 스킵» 토글. **363 의 부품 그대로**이고
+     마크업도 12 것과 한 글자 차이(id)뿐이다 — 새 부품을 짜면 반려라고 등재문이 못박았다.
+     ⚠ `showModal(h)` 의 문자열에 안 넣고 여기서 붙이는 이유: showModal 은 «끝에 붙은 BUTTON/.mrow 묶음»
+       을 패널 밖으로 빼내는데, 토글 div 가 그 뒤에 오면 **꼬리 탐색이 거기서 멈춰 [룰렛 돌리기] 가
+       패널 안에 갇힌다**(베이지 패널 안 버튼 = 다른 팝업과 어긋난 그림). 붙이는 자리는 버튼과 같은
+       `#mbox`(본문) 이고, 문서 순서상 버튼 **뒤**다 = 팝업 우하단.
+     ⚠ 딤 닫기 필터는 손대지 않는다 — `#modal` 핸들러는 `e.target === #modal` 만 보므로(파일 끝)
+       본문 안 노드를 누른 탭은 애초에 닫기로 안 간다. 12 는 `#sumw` 전체가 닫기 영역이라 달랐다. */
+  const sk = document.createElement('div');
+  sk.className = 'sm-sk'; sk.id = 'rouSkip';
+  sk.setAttribute('role', 'switch'); sk.setAttribute('aria-checked', 'false');
+  sk.innerHTML = '<i class="sm-fat" data-t="연출 스킵">연출 스킵</i>'
+               + '<s class="sm-skt"><b class="sm-skk"><em>OFF</em></b></s>';
+  sk.addEventListener('click', e => { e.stopPropagation(); fxSkipToggle(); });
+  $('mbox').appendChild(sk);
+  fxSyncSkip();                                  /* 514 — 열자마자 저장값에 맞춘다(12 와 같은 값이다) */
   rouBtnDot();                                   /* 321 — 열자마자 «돌릴 수 있으면» 점등 */
   rouBtnAd();                                    /* 367 — 열자마자 다음 1회의 구간(▶AD)도 같이 */
 }
@@ -26999,6 +27055,26 @@ function roulSpinTo(idx){
   const disc = $('rouDisc');
   if(!disc){ fin(); return; }                    /* 팝업이 닫혀 있으면 지급만 하고 끝 */
   rouPend = idx;                                 /* 181 — 미지급 당첨 칸(페이지 이탈 안전망이 읽는다) */
+  /* 514 — 목표 각을 **UI 를 건드리기 전에** 잡는다. 스킵은 «회전 상태를 한 번도 거치지 않는» 경로라
+     `돌아가는 중…`·`rou-spin`·결과줄 비우기를 지나면 안 되고, 그러려면 target 이 먼저 있어야 한다. */
+  const c = idx * (360/ROULETTE.length) + (360/ROULETTE.length)/2;
+  const base = rouRot + 360*ROUL_TURNS;
+  const target = base + ((((-c - base) % 360) + 360) % 360);
+  const land = ((target % 360) + 360) % 360;     /* 감속·되감기가 끝나면 앉는 각 = 정답 칸이 북에 온 그림 */
+  /* 514 — 스킵 ON: 원판이 **정답 칸에 멈춘 그림**으로 즉시 서고 그 자리에서 `roulFinish` 가 돈다.
+     접는 것은 «시간축에 얹힌 것» 뿐이다 — 6바퀴 감속(ROUL_MS) · 되감기(ROUL_OVER/ROUL_BACK_MS) ·
+     칸 경계 틱음(`rtick`). **결과 표시는 그대로 남는다**(당첨 칸 하이라이트 · `rstop` · 획득 문구 ·
+     재화 연출) — 363 이 «스킵인데 더 센 연출이 되면 안 된다» 와 함께 못박은 반대쪽 규약이다.
+     ⚠ `rouSpinning` 을 한 프레임도 켜지 않는다: 켰다 끄면 65 의 `rou-spin` 표식이 붙었다 떨어지며
+       팝업 전체 애니메이션이 한 프레임 죽고, 321 레드닷·367 ▶AD 도 껐다 켜는 깜빡임이 된다. */
+  if(fxSkipOn()){
+    rouRot = land;
+    disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+    const cnt0 = $('rouCnt');
+    if(cnt0) cnt0.textContent = S.daily.spins + ' / ' + ROUL_TRY;
+    fin();                                       /* = roulFinish(idx) — 지급·하이라이트·라벨이 여기 다 있다 */
+    return;
+  }
   rouSpinning = true;
   roulSpinMark(true);                            /* 65 — 박스·딤·버튼 정지(원판만 돈다) */
   const btn = $('rouBtn'), res = $('rouRes'), cnt = $('rouCnt');
@@ -27008,9 +27084,6 @@ function roulSpinTo(idx){
   if(res) res.innerHTML = '&nbsp;';
   if(cnt) cnt.textContent = S.daily.spins + ' / ' + ROUL_TRY;
   document.querySelectorAll('#rouDisc .rlt-seg.hit').forEach(s => s.classList.remove('hit'));
-  const c = idx * (360/ROULETTE.length) + (360/ROULETTE.length)/2;
-  const base = rouRot + 360*ROUL_TURNS;
-  const target = base + ((((-c - base) % 360) + 360) % 360);
   const from = rouRot, t0 = performance.now();
   let auSeg = Math.floor(from / (360/ROULETTE.length));  /* 78 — 칸 경계를 지날 때마다 틱 */
   const auTick = () => {
@@ -27022,8 +27095,21 @@ function roulSpinTo(idx){
   /* 181 — «더 볼 사람이 없으면 즉시 결판낸다». 원판이 사라졌거나(다른 팝업이 덮음) 딤이 내려갔으면
      남은 감속을 3.9초 더 돌릴 이유가 없고, 그 사이 지급이 미뤄지는 것도 곤란하다. */
   const gone = () => !disc.isConnected || !($('modal') || {}).classList || !$('modal').classList.contains('on');
+  /* 514 — 회전 **도중에** 토글을 켜면 «다음 회전부터» 가 아니라 그 자리에서 끝난다(363 «켜는 즉시» 규약).
+     끊는 곳을 rAF 루프 안에 둔 이유는 지급 보증 때문이다 — 밖에서 `roulFinish` 를 직접 부르면
+     아직 살아 있는 이 루프가 나중에 `fin()` 을 한 번 더 밟는다(181 이 `paid` 로 막는 그 자리다).
+     루프가 자기 발로 `fin()` 을 지나면 «지급은 정확히 한 번» 이 구조로 유지된다.
+     ⚠ 각을 먼저 `land` 로 스냅한다 — 안 그러면 원판이 «감속 중이던 각» 에 굳어
+       하이라이트(당첨 칸)와 포인터가 어긋난 그림이 남는다. */
+  const cut = () => {
+    if(!fxSkipOn()) return false;
+    rouRot = land;
+    disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
+    return true;
+  };
   const step = now => {
     if(gone()){ fin(); return; }
+    if(cut()){ fin(); return; }
     const p = Math.min(1, (now - t0) / ROUL_MS);
     rouRot = from + (over - from) * (1 - Math.pow(1 - p, 4));      /* easeOutQuart = 감속 */
     disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
@@ -27035,12 +27121,13 @@ function roulSpinTo(idx){
   const t1 = { v: 0 };
   const back = now => {
     if(gone()){ fin(); return; }
+    if(cut()){ fin(); return; }
     if(!t1.v) t1.v = now;
     const p = Math.min(1, (now - t1.v) / ROUL_BACK_MS);
     rouRot = over + (target - over) * (1 - Math.pow(1 - p, 3));
     disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
     if(p < 1) requestAnimationFrame(back);
-    else { rouRot = ((target % 360) + 360) % 360;
+    else { rouRot = land;
            disc.style.transform = 'rotate(' + rouRot.toFixed(2) + 'deg)';
            fin(); }
   };

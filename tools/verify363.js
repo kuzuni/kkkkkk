@@ -9,7 +9,7 @@
 
    ── 이 게이트가 재는 것 ──────────────────────────────────────────────────────
      §1 자리   — 토글이 «패널 아래 여백» 안에 있고, 84 앵커(버튼·닫기)와 327 패널을 **한 칸도 안 민다**
-     §2 저장   — `S.opt.sumSkip` 기본 false · 새로고침 복원 · **키 없는 구 세이브 → false**(KEY 불변)
+     §2 저장   — `S.opt.fxSkip` 기본 false · 새로고침 복원 · **키 없는 구 세이브 → false**(KEY 불변)
      §3 켬     — 첫 프레임부터 전 칸 최종 상태 · fx-pop 없음 · **jz-st 도 없음** · 지연 타이머 0
      §4 끔     — 252 회귀: fx-pop · 인라인 delay = i × 0.055s · fxPop 이 이긴다 · 첫 프레임 미완성
      §5 즉시   — 연출 **한복판**에 토글을 누르면 그 자리에서 끝난다(«다음 소환부터» 가 아니다)
@@ -90,7 +90,7 @@ async function page(b, vp) {
 
 /* 결과 팝업을 연다. skip 은 «열기 전» 상태로 박는다. */
 const OPEN = (n, skip) => `(async () => {
-  S.opt.sumSkip = ${skip ? 'true' : 'false'};
+  S.opt.fxSkip = ${skip ? 'true' : 'false'};
   closeSummonResult();
   const res = ${MAKE(n)};
   showSummonResult('weapon', ${n}, res, false);
@@ -160,21 +160,23 @@ const GEO = `(() => {
   /* ───────────────────────── §2 저장·복원 ───────────────────────── */
   {
     const { c, p } = await page(b, { width: 1080, height: 2280 });
-    ok('2-1 기본값 false', await p.evaluate('S.opt.sumSkip'), false);
-    ok('2-2 DEF() 에도 false 로 있다', await p.evaluate('DEF().opt.sumSkip'), false);
+    ok('2-1 기본값 false', await p.evaluate('S.opt.fxSkip'), false);
+    ok('2-2 DEF() 에도 false 로 있다', await p.evaluate('DEF().opt.fxSkip'), false);
     await p.evaluate(OPEN(10, false));
     await p.waitForTimeout(300);
     await p.click('#sumSkip');
     await p.waitForTimeout(200);
-    ok('2-3 클릭 → true', await p.evaluate('S.opt.sumSkip'), true);
+    ok('2-3 클릭 → true', await p.evaluate('S.opt.fxSkip'), true);
     ok('2-4 localStorage 에 저장된다',
-      await p.evaluate(`JSON.parse(localStorage.getItem(KEY)).opt.sumSkip`), true);
+      await p.evaluate(`JSON.parse(localStorage.getItem(KEY)).opt.fxSkip`), true);
     const key = await p.evaluate('KEY');
     await p.reload(); await p.waitForTimeout(900);
-    ok('2-5 새로고침 복원', await p.evaluate('S.opt.sumSkip'), true);
+    ok('2-5 새로고침 복원', await p.evaluate('S.opt.fxSkip'), true);
     ok('2-6 KEY 를 안 올렸다', await p.evaluate('KEY'), key);
     /* 구 세이브 이관 — 키가 아예 없는 세이브(363 이전)는 기본값 false 로 흡수돼야 한다.
-       ⚠ 이 항이 없으면 `sumSkip` 을 마이그레이션 화이트리스트에 넣는 것을 잊어도 초록이다.
+       ⚠ 이 항이 없으면 `fxSkip` 을 마이그레이션 화이트리스트에 넣는 것을 잊어도 초록이다.
+       ⚠ 514 가 키를 `sumSkip` → `fxSkip` 으로 넓혔다. **구 `sumSkip` 세이브의 승계**를 묻는 항은
+         여기가 아니라 `tools/verify514.js` §6 에 있다(이 게이트는 12 화면 몫만 본다).
        ⚠ **reload 로 재면 못 잰다** — `beforeunload → save()`(index.html 32177)가 새로고침 «직전» 에
          메모리의 S 를 통째로 다시 써서, localStorage 에서 지운 키가 그대로 되살아난다
          (실측: 지웠는데 reload 뒤 true). 그래서 이관은 `load()` 를 **직접** 불러서 잰다.
@@ -183,10 +185,10 @@ const GEO = `(() => {
     const mig = await p.evaluate(`(() => {
       const raw = JSON.parse(localStorage.getItem(KEY));
       const put = (o) => localStorage.setItem(KEY, JSON.stringify(o));
-      const rd = (mut) => { const d = JSON.parse(JSON.stringify(raw)); mut(d); put(d); load(); return S.opt.sumSkip; };
-      const a = rd(d => { delete d.opt.sumSkip; });
-      const c = rd(d => { d.opt.sumSkip = true; });
-      const n = rd(d => { d.opt.sumSkip = false; });
+      const rd = (mut) => { const d = JSON.parse(JSON.stringify(raw)); mut(d); put(d); load(); return S.opt.fxSkip; };
+      const a = rd(d => { delete d.opt.fxSkip; });
+      const c = rd(d => { d.opt.fxSkip = true; });
+      const n = rd(d => { d.opt.fxSkip = false; });
       const e = rd(d => { delete d.opt; });
       put(raw); load();
       return { noKey: a, yes: c, no: n, noOpt: e }; })()`);
@@ -266,7 +268,7 @@ const GEO = `(() => {
                fxpop: cards.filter(e => e.classList.contains('fx-pop')).length,
                anims: cards.reduce((s,e)=>s+e.getAnimations().length,0),
                on: document.getElementById('sumw').classList.contains('on'),
-               opt: S.opt.sumSkip }; })()`);
+               opt: S.opt.fxSkip }; })()`);
     ok('5-2 누른 «그 자리에서» 전 칸이 최종 상태', after.bad, 0, 0);
     ok('5-3 fx-pop 이 전부 떨어졌다', after.fxpop, 0, 0);
     ok('5-4 굴러가던 애니메이션이 없다', after.anims, 0, 0);
@@ -308,7 +310,7 @@ const GEO = `(() => {
   /* ───────────────────────── §7 무료 연속 소환 경로 ───────────────────────── */
   {
     const { c, p } = await page(b, { width: 1080, height: 2280 });
-    await p.evaluate(`(() => { S.opt.sumSkip = true; S.dia = 1e12; doSummonFree('weapon', 10, true); })()`);
+    await p.evaluate(`(() => { S.opt.fxSkip = true; S.dia = 1e12; doSummonFree('weapon', 10, true); })()`);
     const sc = await p.evaluate('window.__scan(500)');
     const st = await p.evaluate(`(() => { const cards=[...document.getElementById('sumGridIn').children];
       return { n: cards.length, fxpop: cards.filter(e=>e.classList.contains('fx-pop')).length,
@@ -319,7 +321,7 @@ const GEO = `(() => {
     ok('7-3 무료 경로에서도 스태거 0', st.jzst, 0, 0);
     ok('7-4 무료 경로 첫 프레임 «미완성» 0', sc.first, 0, 0);
     /* 같은 페이지에서 끄고 다시 부르면 연출이 돌아온다 = 토글이 «경로» 가 아니라 «상태» 를 탄다 */
-    await p.evaluate(`(() => { S.opt.sumSkip = false; closeSummonResult(); doSummonFree('weapon', 10, true); })()`);
+    await p.evaluate(`(() => { S.opt.fxSkip = false; closeSummonResult(); doSummonFree('weapon', 10, true); })()`);
     const sc2 = await p.evaluate('window.__scan(500)');
     ok('7-5 끄면 무료 경로에도 연출이 돌아온다', sc2.first > 0, true);
     await c.close();
