@@ -6471,8 +6471,17 @@
   .pvc>.ban{left:50px;top:138px;width:462px;height:113px;border:7px solid #000;border-radius:10px;
     background:linear-gradient(90deg,#FDE7CF 0 36%,#F3BA4F 36% 100%);
     clip-path:polygon(7% 0,93% 0,100% 24%,100% 76%,93% 100%,7% 100%,0 76%,0 24%)}
+  /* ⚑ 480 — 이 칸의 ▶ 는 **색 이모지가 아니라 텍스트 글리프**(U+25B6 는 VS16 이 없으면 흑백 문자)라
+     카드 본문색 `#E8ECF5`(거의 흰색)을 그대로 물려받았고, 그 밑은 크림 칸 `#FDE7CF` 다 ⇒ **대비 1.01:1**
+     = 사실상 안 보였다(주인 보고 · 재현 `tools/probe480.js`. 등재문의 «연주황 위 연주황» 은 색이 틀렸고
+     «안 보인다» 는 맞았다). 옆의 🎟·⏳ 가 멀쩡한 이유도 같다 — 그 둘은 색 이모지라 제 색으로 그려진다.
+     처방은 이 카드가 이미 쓰는 문법 그대로 «검정 외곽 + 흰 코어»(★ 6px · 라벨 8px · 리본 7px) 다.
+     ⚠ **fs 는 안 내렸다** — 외곽선이 잉크를 사방 3px 늘리는 만큼 fs 를 되내리는 손(380)은 «ref 잉크» 가
+     목표일 때 쓰는 것인데, 여기 ref 잉크는 130×91(측정표 151 §10)로 우리 43×53 보다 **크다**. 되내리면
+     ref 에서 더 멀어진다. 레이아웃 상자(89×68 @57,27)는 Δ0 이고 늘어난 잉크는 칸 안에 다 들어간다. */
   .pvc>.ban>em{position:absolute;left:57px;top:27px;width:89px;height:68px;font-size:62px;
-    line-height:68px;text-align:center}
+    line-height:68px;text-align:center;color:#fff;-webkit-text-stroke:6px #000;
+    paint-order:stroke fill}
   .pvc>.ban>i{position:absolute;left:150px;right:12px;top:36px;text-align:center;color:#fff;
     font-size:36px;line-height:40px;white-space:nowrap;-webkit-text-stroke:8px #000;
     paint-order:stroke fill}
@@ -6493,7 +6502,12 @@
   .pvc.ban1>.art{left:531px;top:78px;width:390px;height:239px}
   .pvc>.art>em{position:absolute;left:0;right:0;top:0;text-align:center;
     font-size:225px;line-height:303px;filter:drop-shadow(0 8px 0 rgba(0,0,0,.35))}
-  .pvc.ban1>.art>em{font-size:180px;line-height:239px}
+  /* ⚑ 480 — 오른쪽 일러스트 자리도 같은 ▶ 라 같은 뿌리로 흐렸다(파랑 판 위 `#E8ECF5` = 대비 1.83:1,
+     WCAG 비텍스트 최소 3:1 미달). 배너 칸과 **한 규칙**으로 외곽선을 준다 — 획 두께만 글리프 크기에
+     비례(62px→6 · 180px→12). 🎟·⏳ 는 색 이모지라 이 규칙이 닿아도 그림이 안 바뀌므로
+     선택자를 `.ban1`(= 광고 제거 카드 하나)에 묶어 둔다. */
+  .pvc.ban1>.art>em{font-size:180px;line-height:239px;color:#fff;
+    -webkit-text-stroke:12px #000;paint-order:stroke fill}
   /* ⑥ 빨강 리본 2줄 — 카드 좌변 밖으로 4px 물려 시작(ref 크림 꼬리)하고,
      오른끝에 금색 판 + 그 아래 수량이 붙는다. 카드 아래쪽에서 bottom 기준으로 앉힌다 */
   .pvc>.rb{left:-3px;height:72px;border:6px solid #000;border-radius:8px;
