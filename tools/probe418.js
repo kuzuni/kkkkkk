@@ -84,6 +84,109 @@ const COLLECT = function () {
 const SETOPA = (v) => { for (const e of document.querySelectorAll('[data-p418]')) e.style.opacity = v; };
 const SETONE = ([id, v]) => { const e = document.querySelector(`[data-p418="${id}"]`); if (e) e.style.opacity = v; };
 
+/* ---------- 530 — «연출 중» 을 걷어 «상시» 상태로 정규화한다 ----------
+   ⚑ **왜 «빼는 것» 이 아니라 «걷는 것» 인가.** 이 자가 지키려는 성질은 356 [A] 가 적은 그대로
+   «**상시** 크롬 아이콘의 종횡» 이지 «연출 중간 프레임» 이 아니다. 그런데 스윕은 화면에 남아 있던
+   재화 비행(`#fxlc > .fx-fly`)·알약 펀치(`.cbox.fx-punch`) 같은 **찰나의 노드**를 같이 쟀고,
+   그 노드가 어느 프레임에서 굳었느냐에 따라 잉크가 통째로 달라져 [S3] ③ 래칫이 실행마다 흔들렸다
+   (530 등재문: 같은 트리에서 칸 50·51·52·53).
+   판정에서만 빼면 «무엇을 뺐는지» 가 결과에 안 남아 스코프가 조용히 줄고(397 사고), 이웃 아이콘은
+   여전히 그 연출에 가려진다. 그래서 **재기 전에 페이지를 상시 상태로 되돌리고**, 그 결과를
+   `fx`(걷은 수)·`fxLeft`(잔여, 0 이어야 한다)로 **돌려준다** — 게이트가 그것을 단언한다.
+   ⚠ 레이어 이름이 바뀌면 **조용히 넘어가지 않고 던진다**(443 «무음 실패를 다른 무음으로 갈지 마라»). */
+const FX_LAYERS = ['fxlc', 'fxl'];
+
+/* ---------- 530 ⓑ — 정지가 «무한 반복» 을 못 세우고 있었다 ----------
+   ⚑ 8회차가 놓은 정지는 `a.finish()` 한 줄이었는데, **무한 반복 애니에서 `finish()` 는 던진다**
+   (`InvalidStateError: Cannot finish Animation with an infinite target effect`).
+   그 예외를 `try/catch` 가 삼켰고, `clearInterval`·rAF 무력화는 **CSS 애니를 안 멈춘다**(합성기에서 돈다)
+   ⇒ 122 가 넣은 «가만히 있어도 살아 있는» 상시 쥬시(10 소환·13 재화 카드)가 **차분 두 장 사이에도
+   계속 흔들리고** 있었다. 실측: `#shopList .gem` 의 top 이 실행마다 359.127~360.697(**1.57px**),
+   같은 그룹이 한 실행은 +0.66%(2칸) 다른 실행은 −0.53%(1칸)으로 문턱 ±0.5% 를 임의로 넘나든다.
+   ⇒ 유한 애니는 그대로 `finish()`(등장 연출은 «끝난 자리» 가 상시다) · 무한 애니만 **주기 0 에 세운다**.
+   ⚠ `cancel()` 이 아니라 `pause()+currentTime 0` 인 이유: cancel 은 그 애니가 유일한 가시 조건인
+     노드를 통째로 지워 스코프를 조용히 줄인다(397 사고). 0 프레임은 결정적이면서 노드를 안 지운다. */
+const FREEZE = function () {
+  let fin = 0, held = 0;
+  for (const a of document.getAnimations()) {
+    try { a.finish(); fin++; continue; } catch (e) {}
+    try { a.pause(); a.currentTime = 0; held++; } catch (e) {}
+  }
+  for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
+  window.requestAnimationFrame = () => 0;
+  return { fin, held };
+};
+
+const SETTLE_FX = function (layers) {
+  let nodes = 0, cls = 0;
+  for (const id of layers) {
+    const el = document.getElementById(id);
+    if (!el) return { missing: id };
+    nodes += el.childElementCount;
+    el.textContent = '';
+    /* ⚠ **비우기만 하면 모자란다** — 정지 뒤에도 늦게 태어나는 연출 노드가 있어서
+       (게임 틱이 우리 `clearInterval` 뒤에 새 타이머를 잡는다) 비운 자리에 또 쌓인다.
+       레이어를 통째로 `display:none` 으로 내리면 그 뒤에 무엇이 생겨도 rect 가 0 이라
+       COLLECT 의 «8px 미만은 건너뛴다» 에 걸려 **판정에 절대 안 섞인다.** */
+    el.style.setProperty('display', 'none', 'important');
+  }
+  const tok = (el) => [...el.classList].filter((c) => c.slice(0, 3) === 'fx-');
+  for (const el of document.querySelectorAll('[class]')) {
+    const fx = tok(el);
+    if (fx.length) { el.classList.remove(...fx); cls += fx.length; }
+  }
+  return { nodes, cls };
+};
+
+/* 530 — 판정 대상과 «연출» 이 섞였는지 **잰 뒤에** 다시 묻는 자.
+   `SETTLE_FX` 가 스스로 «잔여 0» 을 세면 동어반복이다(자기가 방금 지웠으니까) —
+   그래서 잔여는 **정규화가 끝난 화면에서 실제로 잴 수 있는 노드**를 기준으로 센다. */
+const COUNT_FXIN = function (layers) {
+  const app = document.getElementById('app');
+  if (!app) return 0;
+  const inLayer = (el) => layers.some((id) => { const l = document.getElementById(id); return l && l.contains(el); });
+  let n = 0;
+  for (const el of app.querySelectorAll('img, canvas, svg')) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) continue;
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    let fx = inLayer(el);
+    for (let e = el; !fx && e && e !== document.body; e = e.parentElement) {
+      if (e.classList && [...e.classList].some((c) => c.slice(0, 3) === 'fx-')) fx = true;
+    }
+    if (fx) n++;
+  }
+  return n;
+};
+
+/* COLLECT 과 **같은** 가시 조건으로 «잴 수 있는 노드» 수만 센다 — STILL_CSS 가 스코프를 줄이는지 본다 */
+const COUNT_VIS = function () {
+  const app = document.getElementById('app');
+  if (!app) return 0;
+  let n = 0;
+  for (const el of app.querySelectorAll('img, canvas, svg')) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) continue;
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+    n++;
+  }
+  return n;
+};
+
+/* ---------- 530 ⓒ — «상시 쥬시» 는 정지로 못 세운다 ----------
+   `FREEZE` 로 무한 애니를 주기 0 에 세워도 **재렌더가 새 CSSAnimation 을 계속 만든다**
+   (실측: 정지·정규화 뒤에도 `jz122Float`·`jzDotPulse`·`jzUpN` 이 `running` · 500ms 뒤 y 가 또 달랐다).
+   ⇒ 판정 직전에 «애니는 없는 것» 이라고 **선언**해 요소를 자기 **기본 자리**에 세운다 —
+   그것이 356 이 재려는 «상시» 기하다(122 의 떠다니는 프레임은 상시가 아니다).
+   ⚠ 이 선언은 스코프를 줄일 수 있다 — `fill:forwards` 로만 보이던 노드가 기본 자리로 돌아가면
+     안 보일 수 있다. 그래서 **선언 전후로 «잴 수 있는 노드» 수를 세어**(`COUNT_VIS`)
+     줄었으면 `stillLost` 로 신고한다(게이트가 0 을 단언한다). 조용히 줄지 않는다. */
+const STILL_CSS = '*,*::before,*::after{animation:none!important;transition:none!important}';
+
 /* 차분 계산기 — 두 PNG 를 캔버스에 올리고 상자별 bbox 를 읽는다 */
 const DIFF_MANY = async ([a, b, boxes, thr]) => {
   const load = async (s) => {
@@ -120,6 +223,7 @@ async function sweep(opt) {
 
   const rows = [];
   const errs = [];
+  const fx = { nodes: 0, cls: 0, left: 0, lost: 0, fin: 0, held: 0 };   /* 530 — 걷은 연출 노드·클래스 수·잔여·스코프 손실 + 정지한 애니 수 */
   const wanted = (l) => !ONLY || (Array.isArray(ONLY) ? ONLY.some((o) => l.includes(o)) : l.includes(ONLY));
   for (const [label, steps] of SCREENS) {
     if (!wanted(label)) continue;
@@ -137,13 +241,23 @@ async function sweep(opt) {
          사라지면 그 자리는 소수 상자 결함이고, 안 사라지면 아트·AA 라 이 작업 밖이다. */
       if (process.env.PROBE418_CSS) await page.addStyleTag({ content: process.env.PROBE418_CSS });
       await page.waitForTimeout(350);
-      /* 애니·타이머 정지 — 차분 두 장 사이에 다른 것이 바뀌면 bbox 가 분다(8회차 교훈) */
-      await page.evaluate(() => {
-        for (const a of document.getAnimations()) { try { a.finish(); } catch (e) {} }
-        for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
-        window.requestAnimationFrame = () => 0;
-      });
+      /* 애니·타이머 정지 — 차분 두 장 사이에 다른 것이 바뀌면 bbox 가 분다(8회차 교훈)
+         530 — 무한 반복은 `finish()` 가 던져 안 멈췄다. `FREEZE` 머리말 참고. */
+      const frz = await page.evaluate(FREEZE);
+      fx.fin += frz.fin; fx.held += frz.held;
       await page.waitForTimeout(200);
+      /* 530 — 연출을 걷어 «상시» 상태로. 정지(위)만으로는 **이미 떠 있던** 연출 노드가 어느
+         프레임에서 굳었을 뿐이라 남는다 — 그 프레임이 실행마다 달라 래칫이 흔들렸다. */
+      const fxr = await page.evaluate(SETTLE_FX, FX_LAYERS);
+      if (fxr && fxr.missing)
+        throw new Error(`연출 레이어 #${fxr.missing} 가 없다 — 정규화 규칙이 마크업과 어긋났다(530)`);
+      fx.nodes += fxr.nodes; fx.cls += fxr.cls;
+      const n0 = await page.evaluate(COUNT_VIS);
+      await page.addStyleTag({ content: STILL_CSS });
+      await page.waitForTimeout(160);
+      const n1 = await page.evaluate(COUNT_VIS);
+      fx.lost += Math.max(0, n0 - n1);
+      fx.left += await page.evaluate(COUNT_FXIN, FX_LAYERS);
 
       const nodes = await page.evaluate(COLLECT);
       if (!nodes.length) { await ctx.close(); continue; }
@@ -278,10 +392,13 @@ async function sweep(opt) {
 
   return { dsf: DSF, tol: TOL, revert: REVERT, screens: SCREENS.filter(([l]) => wanted(l)).length,
     measured: measured.length, judged: measured.filter((r) => r.judged).length,
-    outside: outside.length, clipped: clipped.length, cells: bad.length, groups: list, errs };
+    outside: outside.length, clipped: clipped.length, cells: bad.length, groups: list, errs,
+    /* 530 — 정규화가 실제로 무엇을 걷었나. `fxLeft` 는 0 이어야 한다(verify356 [S3] ② 가 단언). */
+    fx: fx.nodes, fxCls: fx.cls, fxLeft: fx.left, stillLost: fx.lost, anFin: fx.fin, anHeld: fx.held };
 }
 
-module.exports = { sweep };
+/* 530 — 재현자(`probe530`)가 **같은** 정지·정규화를 쓰게 내놓는다(두 벌로 적으면 한쪽만 늙는다) */
+module.exports = { sweep, SETTLE_FX, FX_LAYERS, FREEZE, STILL_CSS, COUNT_FXIN };
 
 if (require.main !== module) return;
 
@@ -293,6 +410,8 @@ if (require.main !== module) return;
     console.log(`[probe418]${R.revert ? ' «되돌림»' : ''} DSF${R.dsf} · 화면 ${R.screens}개 · 잉크를 잰 노드 ${R.measured}개 ` +
       `(판정 ${R.judged} · 원본비 없음 ${R.outside} · 가려짐·잘림 ${R.clipped}) · ` +
       `종횡 편차 >${(R.tol * 100).toFixed(1)}% 인 칸 ${R.cells}개 → ${R.groups.length}자리`);
+    console.log(`  [530] 연출 정규화 — 레이어 노드 ${R.fx}개 · fx- 클래스 ${R.fxCls}개를 걷고 «상시» 상태에서 쟀다 (잔여 ${R.fxLeft})`);
+    console.log(`  [530] 애니 정지 — 유한 ${R.anFin}개 finish · 무한 ${R.anHeld}개 주기 0 · 상시 쥬시는 \`animation:none\` 으로 기본 자리에 세움 (스코프 손실 ${R.stillLost})`);
     for (const g of R.groups) {
       console.log(`  ${g.dev > 0 ? '+' : ''}${g.dev}%  ${g.sel}  «${g.cls}»  ${g.cells}칸 · 잉크 ${g.ink}`);
       console.log(`      상자 ${g.box} @ ${g.at} · 화면: ${g.screens.join(', ')}`);
