@@ -308,14 +308,37 @@ const table = [];
     /* 서브탭 레드닷(166) — «누를 게 있다» 일 때만.
        ⚠ 탭 상태(on/alert)를 켜고 끄는 곳은 `renderRunes()` **한 곳뿐**이다(203 이 세운 규약).
        `renderTemper()` 는 본문만 그린다 — 그래서 여기서도 renderTrain() 으로 한 바퀴를 돌린다. */
+    const tab = () => document.querySelector('#trSubs [data-trsub="temper"]');
+    const lit = () => tab().classList.contains('alert');
     S.tstone = 0; S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
     renderTrain();
-    const off = !document.querySelector('#trSubs [data-trsub="temper"]').classList.contains('alert');
+    const off = !lit();
     S.tstone = 10; renderTrain();
-    const on = document.querySelector('#trSubs [data-trsub="temper"]').classList.contains('alert');
-    return { off, on };
+    const on = lit();
+    /* 519 이관(2026-08-31) — 위 두 표본은 **옛 식에서도 초록이었다.** 옛 첫 항이
+       «단련석 ≥ TEMPER_PT_COST(=1)» 였으므로 tstone 0/10 은 둘 다 그 항만으로 갈린다
+       ⇒ 519 가 통째로 사라져도 이 항은 안 빨개진다(328 교훈 — 그 순간 게이트는 뜻을 잃는다).
+       가르는 표본을 한 줄 더 놓는다: 세 축을 Lv100 까지 올려 다음 1레벨을 3pt 로 만든 뒤
+       **단련석 1개**만 쥐어 준다 — 전환해 봐야 1pt 라 올릴 수 있는 축이 없다 = 소등이 옳다.
+       옛 식은 여기서 점등이었다(주인이 본 그림). */
+    S.tstone = 1; S.temper = { pts: 0, alloc: { atk: 100, hp: 100, regen: 100 } };
+    renderTrain();
+    const short = !lit(), cost = Math.min.apply(null, TEMPERS.map(t => temperCost(t.k)));
+    S.tstone = 3; renderTrain();
+    const enough = lit();
+    /* 519 ⓓ — 판정이 옳아도 `#trw s`(ID 급) 가 `.stab>.bdg{display:none}` 을 이기면 상시 점등이다.
+       클래스를 뗀 상태에서 «그려지는가» 를 같이 묻는다(166 특이성 함정 5번째 자리). */
+    const b = tab().querySelector('s.bdg'), pa = b ? b.style.animation : null;
+    if (b) b.style.animation = 'none';
+    tab().classList.remove('alert');
+    const drawnOff = b ? getComputedStyle(b).display !== 'none' : true;
+    if (b) b.style.animation = pa;
+    return { off, on, short, enough, cost, drawnOff };
   });
   ok(e6.off && e6.on, '단련 서브탭 레드닷이 «전환·투자할 게 있을 때만» 켜진다(166)');
+  ok(e6.short, '519 — 전환해도 올릴 축이 없으면 **소등**(단련석 1 · 다음 1레벨 ' + e6.cost + 'pt)');
+  ok(e6.enough, '519 음성 대조 — 전환하면 올릴 수 있으면 점등(단련석 3 · ' + e6.cost + 'pt)');
+  ok(!e6.drawnOff, '519 ⓓ — `.alert` 를 떼면 배지가 **안 그려진다**(`#trw` 스코프 짝이 살아 있다)');
 
   /* ================= [F] 효과 ================= */
   console.log('[F] 효과 — bonus() 에 축별로 한 번만 곱해 붙는다 · 168·203 과 별개 축');

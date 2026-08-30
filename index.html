@@ -11040,6 +11040,17 @@
      ⚠ 이 짝을 지우거나 순서를 바꾸면 세 시트에서 배지가 다시 상시 점등이 된다. */
   :is(#bSk,#bPet,#bCos) .stab>.bdg{display:none}
   :is(#bSk,#bPet,#bCos) .stab.alert>.bdg{display:block}
+  /* 519 (2026-08-31, 저장소 주인 보고) — **같은 함정이 23 훈련 팝업 서브탭에서 다섯 번째로 났다.**
+     `#trw i,#trw em,#trw b,#trw u,#trw s{display:inline-block}`(9492 · ID 급 1,0,1) 이
+     위 `.stab>.bdg{display:none}`(0,2,0) 을 이겨서 «단련» 칸 배지가 **`.alert` 와 무관하게 상시 점등**
+     이었다(`tools/probe519.js` [A2]·[B1] — `.alert` 를 떼도 27×27 이 그려진다).
+     주인이 «단련할 게 없는데 빨간점» 이라고 본 것의 절반은 여기다 — 판정식(31958)이 아무리 옳아도
+     이 두 줄이 없으면 그림이 안 따라온다. 같은 급의 스코프 짝을 붙여 규약을 되돌린다.
+     ⚠ 이 짝을 지우면 단련 배지가 다시 상시 점등이 된다(`verify519` [E] 가 그 순간 빨개진다).
+     ⚑ 같은 «짝 없는 ID 스코프» 가 저장소에 **23개 더** 있다 — 오늘은 그 화면에 레드닷 노드가
+        없어서 안 보일 뿐이다(`tools/scan519.js` [2]). 곁다리 528 로 등재했다. */
+  #trw .stab>.bdg{display:none}
+  #trw .stab.alert>.bdg{display:block}
 
   /* ── 283 (2026-08-27, 저장소 주인 보고) — «일괄 강화 가능» 레드닷을 «세 자리» 전부에 ────────
      202 는 ① 탭(탭바 «영웅» + 서브탭) 까지만 켰다. 주인 보고는 «장비 탭 한 곳에만 뜬다» 였고
@@ -31953,10 +31964,19 @@ function runeBuy(id, quiet){
    데이터·판정은 전부 위 단련 모델(temperCost/temperUp/temperCharge/temperReset)을 지난다 —
    여기서는 그리기만 한다. 표기에 쓰는 식은 bonus()·게이트가 보는 그 식이다(두 벌 금지).
    ========================================================================== */
-/* 서브탭 레드닷 — «지금 누를 게 있다» 일 때만(166 규약): 전환할 단련석이 있거나,
-   가진 포인트로 실제로 올릴 수 있는 축이 있을 때. 다이아 회수는 상시 가능하므로 뺀다. */
-const temperAlert = () => (Math.floor(S.tstone) || 0) >= TEMPER_PT_COST
-                       || TEMPERS.some(t => temperUpOk(t.k));
+/* 서브탭 레드닷 — «지금 누를 게 있다» 일 때만(166 규약). 다이아 회수는 상시 가능하므로 뺀다.
+   519 (2026-08-31, 저장소 주인 보고 «단련할 게 없는데 빨간점») — 옛 식은 두 항의 OR 였고
+   첫 항이 `(S.tstone|0) >= TEMPER_PT_COST` 였다. `TEMPER_PT_COST = 1`(18878) 이므로 그것은
+   사실상 «단련석을 1개라도 들고 있는가» 이고, 단련석은 던전에서 계속 들어오므로 **상시 참**이다.
+   그런데 전환해 봐야 `temperUpOk` 를 만족하는 축이 하나도 없으면 **누를 것이 없다** —
+   구간이 오를수록 1레벨 비용이 1 → 3 → 6 … 으로 커지므로(temperSegCost) 그 어긋남은 계속 넓어진다.
+   ⇒ **전환과 투자를 한 판정으로 합친다**(두 벌 금지 — 203 «표기층» 교훈과 같은 자리):
+   «지금 가진 포인트 + 전환해서 얻을 포인트» 로 실제로 올릴 수 있는 축이 하나라도 있는가.
+   (`temperCharge` 가 `floor(use / TEMPER_PT_COST)` 로 주는 그 수를 여기서도 같은 식으로 센다.) */
+const temperAlert = () => {
+  const pts = temperPts() + Math.floor((Math.floor(S.tstone) || 0) / TEMPER_PT_COST);
+  return TEMPERS.some(t => pts >= temperCost(t.k));
+};
 /* 297 — 룬과 같은 규칙: 레벨·포인트를 타는 문자열을 **함수 한 벌**로 뽑아
    통짜 렌더와 `liveTemper()` 가 같은 식을 보게 한다(262 교훈 2ⓐ). */
 function temperRowTxt(t){
