@@ -1,0 +1,255 @@
+#!/usr/bin/env node
+/* 작업 512 게이트 — 「보상 연출이 «받은 재화» 를 따라간다」.
+ *
+ *   node tools/verify512.js
+ *
+ * 주인 지시: «다이아 보상이면 다이아 효과, 골드면 골드효과, 유물석이면 유물석».
+ * 이 자가 지키는 것 여섯(등재문 ⑴~⑹) + 색이 실제로 갈리는가(87·412 계보):
+ *   [A] 표 한 벌 — `FXCUR` 키 ⊂ `CUR_ICON` 키(402 «표 두 벌» 부패 방지) · 비티켓 재화 전수 등재
+ *   [B] 색 리터럴 0건 — 연출 색은 표(`FXCUR`·`FXPAL`)에서만 나온다
+ *   [C] 재화별 버스트 색 = 그 재화 색(골드 자리는 금색 · 유물조각 자리는 유물 색)
+ *   [D] 알약 없는 재화(강화석·룬강화석·단련석·마일리지·닫힌 바의 유물조각)도 연출이 **0건이 아니다**
+ *       — 비행은 안 만들되(도착지가 없다) 버스트 + `+n` 은 뜬다
+ *   [E] 쌍별 ΔE76 ≥ 12 — 87 이 50색에 쓴 통과선 10.3 보다 넓게(색이 7종이면 더 쉬워야 한다)
+ *   [F] 41 재화 바(`.pcb-r`)가 열려 있으면 유물조각은 **그 바로 날아간다**(fxPill 의 41 규칙)
+ *   [G] 찍힌 픽셀(412 방식) — 룰렛 수령 프레임에서 **바뀐 픽셀**을 세면 dia 색이 지배하고 금색이 0 이다
+ *   [R] 되돌림 — 표의 색을 상수 크림 하나로 되돌리면 [C]·[G] 가 즉시 빨개진다
+ *
+ * ⚠ 배경 전투가 돌면 킬 골드가 매 프레임 들어와 모든 씬에 금색이 섞인다(probe512 1회차 사고).
+ *   `window.step = () => {}` 로 전투만 멈추고 연출 루프(fxTick)는 그대로 돌린다.
+ */
+const { pw, launch } = require('./pwlaunch');
+const { chromium } = pw();
+const path = require('path');
+const fs = require('fs');
+
+const SRC = path.resolve(__dirname, '../index.html');
+let pass = 0, fail = 0;
+const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d ? ' — ' + d : '')); };
+
+/* CIE-Lab ΔE76 — 412 가 쓴 자와 같은 식 */
+function lab(hex) {
+  const h = hex.replace('#', '');
+  const v = [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16) / 255)
+    .map(c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const X = v[0] * 0.4124 + v[1] * 0.3576 + v[2] * 0.1805;
+  const Y = v[0] * 0.2126 + v[1] * 0.7152 + v[2] * 0.0722;
+  const Z = v[0] * 0.0193 + v[1] * 0.1192 + v[2] * 0.9505;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const fx = f(X / 0.95047), fy = f(Y), fz = f(Z / 1.08883);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+const dE = (a, b) => { const p = lab(a), q = lab(b); return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+
+(async () => {
+  /* ── [A]·[B] 정적 ───────────────────────────────────────────────── */
+  const src = fs.readFileSync(SRC, 'utf8');
+  console.log('\n=== [A] 표 한 벌 ===');
+  const fxcurBlk = (src.match(/const FXCUR = \{[\s\S]*?\n\};/) || [''])[0];
+  const fxKeys = [...fxcurBlk.matchAll(/^\s{2}(\w+)\s*:?\s*\{/gm)].map(m => m[1]);
+  const iconBlk = (src.match(/const CUR_ICON = \{[\s\S]*?\n\};/) || [''])[0];
+  const iconKeys = [...iconBlk.matchAll(/^\s{2}(\w+)\s*:/gm)].map(m => m[1]);
+  const nonTicket = iconKeys.filter(k => !/^tk/.test(k));
+  ok(fxKeys.length > 0 && fxKeys.every(k => iconKeys.includes(k)),
+    '[A1] FXCUR 키 ⊂ CUR_ICON 키 (402 «표 두 벌» 부패 방지)', fxKeys.join('/'));
+  ok(nonTicket.every(k => fxKeys.includes(k)),
+    '[A2] 티켓이 아닌 재화는 전부 FXCUR 에 있다', nonTicket.filter(k => !fxKeys.includes(k)).join('/') || '빠짐 0');
+  ok(/const fxS = k =>/.test(src) && /st:'mileage'/.test(src),
+    '[A3] 상태 키가 다른 재화(마일리지)는 표의 `st` 로 적고 읽는 자리는 `fxS()` 하나다');
+  ok(/const fxMap = v =>/.test(src) && !/const fx(Disp|Seen|Hold|StepTo|Roll|PayT) = \{ gold:/.test(src),
+    '[A4] 재화별 상태 사전은 손으로 적지 않고 표에서 만든다(fxMap)');
+
+  console.log('\n=== [B] 색은 표에서만 ===');
+  const litLines = src.split('\n').map((l, i) => ({ n: i + 1, l }))
+    .filter(o => /fx(Burst|Reward)\s*\(/.test(o.l) && /#[0-9A-Fa-f]{6}/.test(o.l) && !/^\s*[*/]/.test(o.l));
+  ok(litLines.length === 0, '[B1] fxBurst·fxReward 호출부에 색 리터럴 0건',
+    litLines.map(o => o.n + ': ' + o.l.trim().slice(0, 50)).join(' | ') || '0건');
+  ok(/setProperty\('--c', col \|\| FXPAL\.spark\)/.test(src),
+    '[B2] 파티클 기본색도 표에서 나온다(FXPAL.spark)');
+  ok(/const FXPAL = \{/.test(src), '[B3] 재화가 아닌 연출 색은 FXPAL 한 표에 있다');
+
+  console.log('\n=== [E] 색이 실제로 갈리는가(쌍별 ΔE76) ===');
+  const cols = {};
+  [...fxcurBlk.matchAll(/^\s{2}(\w+)\s*:?\s*\{[^}]*col:'(#[0-9A-Fa-f]{6})'/gm)].forEach(m => { cols[m[1]] = m[2]; });
+  const keys = Object.keys(cols);
+  let worst = { d: 1e9, a: '', b: '' };
+  for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
+    const d = dE(cols[keys[i]], cols[keys[j]]);
+    if (d < worst.d) worst = { d, a: keys[i], b: keys[j] };
+  }
+  ok(keys.length === fxKeys.length, '[E1] 표의 모든 재화가 색을 갖는다', keys.length + '/' + fxKeys.length);
+  ok(worst.d >= 12, '[E2] 쌍별 최소 ΔE76 ≥ 12 (87 통과선 10.3 보다 넓게)',
+    worst.a + '↔' + worst.b + ' = ' + worst.d.toFixed(1));
+
+  /* ── 브라우저 ──────────────────────────────────────────────────── */
+  const b = await launch(chromium);
+  const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  p.on('pageerror', e => errs.push(String(e)));
+  await p.goto('file://' + SRC);
+  await p.waitForFunction(() => typeof S !== 'undefined' && typeof giveReward === 'function');
+  await p.waitForTimeout(900);
+
+  /* 씬 하네스를 페이지에 심는다 — [C]·[D]·[F]·[R] 이 같은 함수를 쓴다(자매 자 드리프트 예방 · 385) */
+  await p.evaluate(() => {
+    window.step = () => {};
+    window.__v512 = {
+      raf: () => new Promise(r => requestAnimationFrame(() => r())),
+      async wait(n) { for (let i = 0; i < n; i++) await this.raf(); },
+      clear() { document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove()); },
+      async scene(fn) {
+        this.clear(); await this.wait(3);
+        if (typeof fxAt === 'function') fxAt({ x: 540, y: 1200 });
+        const seen = [];
+        const mo = new MutationObserver(recs => {
+          for (const rec of recs) for (const n of rec.addedNodes) {
+            if (n.nodeType !== 1 || !n.classList) continue;
+            const c = n.className || '';
+            if (/fx-(fly|spark|plus)/.test(c)) seen.push({ cls: c, col: (n.style.getPropertyValue('--c') || n.style.color || '').trim() });
+          }
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
+        fn();
+        await this.wait(30);
+        mo.disconnect();
+        const g = cls => seen.filter(s => s.cls.indexOf(cls) >= 0);
+        return {
+          fly: g('fx-fly').length, spark: g('fx-spark').length, plus: g('fx-plus').length,
+          sparkCols: [...new Set(g('fx-spark').map(s => s.col.toLowerCase()))],
+          plusCols: [...new Set(g('fx-plus').map(s => s.col.toLowerCase()))]
+        };
+      },
+      rgb(hex) { const h = hex.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); },
+      same(cssCol, hex) {   /* `rgb(a, b, c)` ↔ `#RRGGBB` */
+        const m = String(cssCol).match(/(\d+)\D+(\d+)\D+(\d+)/); if (!m) return String(cssCol).toLowerCase() === hex.toLowerCase();
+        const t = this.rgb(hex); return Math.abs(+m[1] - t[0]) < 3 && Math.abs(+m[2] - t[1]) < 3 && Math.abs(+m[3] - t[2]) < 3;
+      }
+    };
+  });
+
+  const scene = js => p.evaluate(async (code) => {
+    // eslint-disable-next-line no-new-func
+    const fn = new Function(code);
+    return await window.__v512.scene(fn);
+  }, js);
+
+  console.log('\n=== [C] 재화별 버스트 색 = 그 재화 색 ===');
+  const C = {};
+  for (const [k, give] of [
+    ['gold', 'giveReward({gold:50000})'], ['dia', 'giveReward({dia:500})'],
+    ['relic', 'giveReward({rel:5})'], ['stone', 'giveReward({stone:5})'],
+    ['rstone', 'giveReward({rstone:5})'], ['tstone', 'giveReward({tstone:5})'],
+    ['mile', 'S.mileage = (S.mileage||0) + 5']
+  ]) {
+    const r = await scene(give);
+    C[k] = r;
+    ok(r.sparkCols.some(c => c === cols[k].toLowerCase()) && r.sparkCols.length === 1,
+      '[C:' + k + '] 버스트가 ' + cols[k] + ' 하나다', r.sparkCols.join('/') || '버스트 0건');
+  }
+  const both = await scene('giveReward({gold:10000, dia:100})');
+  ok(both.sparkCols.length === 2
+    && both.sparkCols.includes(cols.gold.toLowerCase()) && both.sparkCols.includes(cols.dia.toLowerCase()),
+    '[C:동시] 두 재화 동시 지급은 색을 섞지 않고 묶음을 나눈다(93 규약)', both.sparkCols.join('/'));
+
+  console.log('\n=== [D] 알약 없는 재화도 «연출 0건» 이 아니다 ===');
+  ['relic', 'stone', 'rstone', 'tstone', 'mile'].forEach(k => {
+    const r = C[k];
+    ok(r.spark > 0 && r.plus === 1 && r.fly === 0,
+      '[D:' + k + '] 비행 0(도착지 없음) · 버스트 + `+n` 1장',
+      'fly ' + r.fly + ' · spark ' + r.spark + ' · +n ' + r.plus);
+  });
+  ok(['relic', 'stone', 'rstone', 'tstone', 'mile'].every(k => C[k].plusCols.some(c =>
+    /(\d+)\D+(\d+)\D+(\d+)/.test(c))), '[D:색] `+n` 플로터도 제 재화 색이다',
+    ['relic', 'stone'].map(k => k + ' ' + C[k].plusCols.join('/')).join(' · '));
+
+  console.log('\n=== [F] 41 재화 바가 열려 있으면 유물조각은 그 바로 날아간다 ===');
+  const relFly = await p.evaluate(async () => {
+    openRelw();
+    await window.__v512.wait(8);
+    const r = await window.__v512.scene(() => giveReward({ rel: 7 }));
+    const bar = document.querySelector('.pcb-r');
+    const on = !!(bar && bar.getBoundingClientRect().width);
+    closeRelw && closeRelw();
+    return Object.assign({ barOpen: on }, r);
+  });
+  ok(relFly.barOpen, '[F1] 89 유물 페이지에 `.pcb-r` 바가 실제로 떠 있다');
+  ok(relFly.fly > 0, '[F2] 그 상태에서 유물조각은 비행한다(도착지가 생겼다)', 'fly ' + relFly.fly);
+  ok(relFly.sparkCols.every(c => c === cols.relic.toLowerCase()),
+    '[F3] 그때도 색은 유물 색 그대로', relFly.sparkCols.join('/'));
+
+  /* ── [G] 찍힌 픽셀(412 방식) — 바뀐 픽셀만 센다 ─────────────────── */
+  console.log('\n=== [G] 찍힌 픽셀 — 룰렛 수령 프레임 ===');
+  const pixel = async (revert) => {
+    await p.evaluate((rv) => {
+      window.__v512.clear();
+      if (rv) for (const k in FXCUR) FXCUR[k].col = '#FFE9A8';   /* [R] 되돌림 — 상수 크림 한 색 */
+      S.daily.spins = 30;
+      if (!$('rlw') || !$('rlw').classList.contains('on')) openRoulette();
+    }, !!revert);
+    await p.waitForTimeout(500);
+    const before = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
+    await p.evaluate(() => {
+      const i = ROULETTE.findIndex(x => x && x.dia);
+      roulFinish(i < 0 ? 0 : i);
+    });
+    await p.waitForTimeout(110);
+    const after = await p.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
+    /* 350 처방 — 캡처를 페이지로 되돌려 «찍힌 픽셀» 을 읽는다 */
+    return await p.evaluate(async ([b64a, b64b, palette]) => {
+      const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = src; });
+      const [ia, ib] = await Promise.all([load(b64a), load(b64b)]);
+      const cv = document.createElement('canvas');
+      cv.width = ia.width; cv.height = ia.height;
+      const cx = cv.getContext('2d', { willReadFrequently: true });
+      cx.drawImage(ia, 0, 0); const A = cx.getImageData(0, 0, cv.width, cv.height).data;
+      cx.clearRect(0, 0, cv.width, cv.height);
+      cx.drawImage(ib, 0, 0); const B = cx.getImageData(0, 0, cv.width, cv.height).data;
+      const out = {}; for (const k in palette) out[k] = 0;
+      let changed = 0;
+      for (let i = 0; i < A.length; i += 4) {
+        const dr = B[i] - A[i], dg = B[i + 1] - A[i + 1], db = B[i + 2] - A[i + 2];
+        if (Math.abs(dr) + Math.abs(dg) + Math.abs(db) < 40) continue;
+        changed++;
+        let best = null, bd = 60;
+        for (const k in palette) {
+          const t = palette[k];
+          const d = Math.hypot(B[i] - t[0], B[i + 1] - t[1], B[i + 2] - t[2]);
+          if (d < bd) { bd = d; best = k; }
+        }
+        if (best) out[best]++;
+      }
+      return { changed, hits: out };
+    }, [
+      'data:image/png;base64,' + before.toString('base64'),
+      'data:image/png;base64,' + after.toString('base64'),
+      Object.fromEntries(Object.entries(cols).map(([k, v]) => [k, [0, 2, 4].map(i => parseInt(v.replace('#', '').substr(i, 2), 16))]))
+    ]);
+  };
+  const G = await pixel(false);
+  console.log('  바뀐 픽셀 ' + G.changed + ' · 팔레트 적중 ' + JSON.stringify(G.hits));
+  ok(G.hits.dia > 200, '[G1] 룰렛(전 칸 dia) 수령 프레임에 **dia 색 픽셀**이 실제로 찍힌다', 'dia ' + G.hits.dia);
+  ok(G.hits.gold * 4 < G.hits.dia, '[G2] 그 프레임에 금색이 지배하지 않는다(주인이 본 «골드가 섞여 있다»)',
+    'gold ' + G.hits.gold + ' vs dia ' + G.hits.dia);
+
+  /* ── [R] 되돌림 ────────────────────────────────────────────────── */
+  console.log('\n=== [R] 되돌림 시험 — 상수 한 색으로 되돌리면 빨개진다 ===');
+  const R = await pixel(true);
+  console.log('  (되돌림) 바뀐 픽셀 ' + R.changed + ' · 팔레트 적중 ' + JSON.stringify(R.hits));
+  ok(R.hits.dia * 4 < G.hits.dia, '[R1] 표의 색을 상수 크림으로 되돌리면 dia 픽셀이 무너진다',
+    '되돌림 ' + R.hits.dia + ' ↔ 정상 ' + G.hits.dia);
+  const rc = await p.evaluate(async () => {
+    const r = await window.__v512.scene(() => giveReward({ dia: 500 }));
+    for (const k in FXCUR) FXCUR[k].col = null;    /* 색을 아예 빼면 파티클 기본색으로 떨어진다 */
+    const r2 = await window.__v512.scene(() => giveReward({ dia: 500 }));
+    return { revert: r.sparkCols, none: r2.sparkCols };
+  });
+  ok(!rc.revert.some(c => c === cols.dia.toLowerCase()),
+    '[R2] 되돌린 표에서는 dia 보상이 dia 색을 안 쓴다(자가 무르지 않다)', rc.revert.join('/'));
+
+  ok(errs.length === 0, '콘솔 오류 0건', errs.slice(0, 3).join(' | '));
+  console.log('\n' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));
+  await b.close();
+  process.exit(fail ? 1 : 0);
+})();

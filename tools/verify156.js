@@ -141,16 +141,29 @@ async function open(browser) {
       const g0 = S.gold, d0 = S.dia, s0 = S.stone;
       const txt = giveReward(rw);                    /* 아레나 결과 토스트가 그대로 쓰는 표기다 */
       const paid = { dg: S.gold - g0, dd: S.dia - d0, ds: S.stone - s0 };
-      await new Promise(r => setTimeout(r, 1500));
+      /* 512 이관 — «지났다» 와 «실제로 날았다» 는 다른 사건이다. 뜬 비행 노드를 재화별로 센다. */
+      const flew = new Set();
+      for (let i = 0; i < 40; i++) {
+        await new Promise(r => requestAnimationFrame(() => r()));
+        fxFlies.forEach(f => flew.add(f.cur));
+      }
+      await new Promise(r => setTimeout(r, 1200));
       window.fxFly = orig;
-      return { rec: [...new Set(rec)].sort(), shown: txt.split(' · ').length, keys: Object.keys(rw).sort(), paid, want: rw };
+      return { rec: [...new Set(rec)].sort(), flew: [...flew].sort(), shown: txt.split(' · ').length,
+               keys: Object.keys(rw).sort(), paid, want: rw };
     });
     eq('아레나 승리 보상 표기 조각 수', arRec.shown, 3);
     eq('아레나 승리 보상 재화 3종', JSON.stringify(arRec.keys), JSON.stringify(['dia', 'gold', 'stone']));
     arRec.paid.dg > 0 && arRec.paid.dd === arRec.want.dia && arRec.paid.ds === arRec.want.stone
       ? ok(`아레나 승리 — 표기 3종이 전부 지급됐다 (골드 +${Math.round(arRec.paid.dg)} · 다이아 +${arRec.paid.dd} · 강화석 +${arRec.paid.ds})`)
       : fail(`아레나 승리 지급이 표기와 어긋난다 — Δgold ${Math.round(arRec.paid.dg)} · Δdia ${arRec.paid.dd}(기대 ${arRec.want.dia}) · Δstone ${arRec.paid.ds}(기대 ${arRec.want.stone})`);
-    eq('아레나 승리 fxFly 재화 (FXCUR 에 알약이 있는 둘)', JSON.stringify(arRec.rec), JSON.stringify(['dia', 'gold']));
+    /* ⚑ 512 이관 — 표가 전 재화로 넓어지면서 강화석도 `fxFly` 를 **지나게** 됐다(종전에는 `FXCUR` 에
+       없어서 `fxWatch` 가 아예 안 봤다). 항을 «둘» 에서 «셋» 으로 눌러 초록으로 만들면 이 절이 지키던
+       성질(«알약이 있는 것만 난다»)이 통째로 사라지므로, 328~330 처방대로 **묻는 항을 하나 더 세운다** —
+       ⓐ 표기한 재화는 하나도 빠짐없이 연출 경로를 지난다 · ⓑ 실제로 «나는» 것은 알약이 있는 둘뿐이다
+       (강화석은 도착지가 없어 512 ③ 대로 버스트 + `+n` 까지만). */
+    eq('아레나 승리 — 표기 3종이 전부 fxFly 를 지난다(512)', JSON.stringify(arRec.rec), JSON.stringify(['dia', 'gold', 'stone']));
+    eq('아레나 승리 — 실제로 «나는» 것은 알약이 있는 둘뿐', JSON.stringify(arRec.flew), JSON.stringify(['dia', 'gold']));
 
     /* ---- [E] 399 — 출석은 이제 «한 재화» 쪽 표본이다(표기 1 = 지급 1 = 이펙트 1) ---- */
     console.log('[E] 출석 7일차 — 표기 1종이면 지급·이펙트도 1종 (399)');

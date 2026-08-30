@@ -12,6 +12,15 @@
  *   [D] 실경로 — 룰렛 [돌리기] 를 진짜로 눌러 `roulFinish` 까지 간 뒤의 버스트 색(181 규약 자리).
  *
  * 수리 전/후 **같은 명령**으로 돌려 대조한다(338·344 규칙).
+ *
+ * ── 1회차(수리 전) 실측 — 등재문이 그대로 확인됐다 ─────────────────────────
+ *   [A] FXCUR 2종(gold·dia) ↔ CUR_ICON 비티켓 7종 ⇒ relic·stone·rstone·tstone·mile 이 표 밖
+ *   [B] dia 500 · gold 50000 · 룰렛 실경로 — 버스트가 전부 **#FFE9A8**(상수 크림) 하나
+ *   [C] relic/stone/rstone/tstone/mileage — fly 0 · +n 0 (버스트만, 그것도 크림)
+ *   ⚠ 1회차 첫 실행은 **배경 전투 골드**가 섞여 relic 씬에 fly 4·«+4.1» 이 찍혔다.
+ *      `window.step = () => {}` 로 전투만 멈춘 뒤 값이 위처럼 깨끗해졌다 —
+ *      «내가 지급한 재화의 연출» 을 재려면 그 한 줄이 필요하다.
+ *   아래 판정은 **수리 후 기대치**다(1회차 값은 각 줄 꼬리에 적어 뒀다).
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -146,22 +155,28 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  F
       + '  spark색 ' + (r.roul.sparkCols.join('/') || '—') + '  +n색 ' + (r.roul.plusCols.join('/') || '—'));
   }
 
-  console.log('\n=== 판정(등재문 대조) ===');
+  console.log('\n=== 판정 ===');
   const dia = r.scenes.find(s => /^dia/.test(s.label));
+  const gold = r.scenes.find(s => /^gold 5/.test(s.label));
   const diaCol = (r.cols.dia || '').toLowerCase();
-  ok(dia && dia.sparkCols.length > 0, '[B1] dia 보상에 버스트가 뜬다', dia && dia.sparkCols.join('/'));
-  ok(dia && !dia.sparkCols.some(c => c.toLowerCase() === diaCol),
-    '[B2] 그런데 버스트 색이 dia 색(' + diaCol + ')이 **아니다** ⇒ 등재문 확인', dia && dia.sparkCols.join('/'));
-  ['relic', 'stone', 'rstone', 'tstone', 'mileage'].forEach(k => {
-    const s = r.scenes.find(x => x.label.indexOf(k) === 0 || x.label.indexOf(k) === 0);
+  const goldCol = (r.cols.gold || '').toLowerCase();
+  const has = (s, c) => !!(s && s.sparkCols.some(x => x.toLowerCase() === c));
+  ok(r.fxcur.length === 7, '[A] FXCUR 가 전 재화 7종을 담는다(1회차: 2종)', r.fxcur.join('/'));
+  ok(has(dia, diaCol) && !dia.sparkCols.some(c => c.toLowerCase() === goldCol),
+    '[B] dia 보상 버스트가 dia 색이고 금색이 안 섞인다(1회차: #FFE9A8 하나)', dia && dia.sparkCols.join('/'));
+  ok(has(gold, goldCol), '[B] gold 보상 버스트는 골드 색', gold && gold.sparkCols.join('/'));
+  [['relic 5', 'relic'], ['stone 5', 'stone'], ['rstone 5', 'rstone'],
+   ['tstone 5', 'tstone'], ['mileage 5', 'mile']].forEach(([nm, k]) => {
+    const s = r.scenes.find(x => x.label.indexOf(nm) === 0), col = (r.cols[k] || '').toLowerCase();
+    ok(s && s.fly === 0 && s.plus === 1 && has(s, col),
+      '[C] ' + nm + ' — 알약이 없으니 비행 0 · 버스트+`+n` 은 제 색으로(1회차: 셋 다 0건)',
+      s ? 'fly ' + s.fly + ' · +n ' + s.plus + ' · ' + s.sparkCols.join('/') : '씬 없음');
   });
-  ['relic 5', 'stone 5', 'rstone 5', 'tstone 5', 'mileage 5'].forEach(nm => {
-    const s = r.scenes.find(x => x.label.indexOf(nm) === 0);
-    ok(s && s.fly === 0 && s.plus === 0, '[C] ' + nm + ' — 비행·+n 이 0건이다(등재문 ⓒ)',
-      s ? 'fly ' + s.fly + ' · +n ' + s.plus : '씬 없음');
-  });
-  if (r.roul) ok(!r.roul.sparkCols.some(c => c.toLowerCase() === diaCol),
-    '[D] 룰렛 실경로도 dia 색이 아니다', r.roul.sparkCols.join('/'));
+  const both = r.scenes.find(s => /동시/.test(s.label));
+  ok(both && has(both, diaCol) && has(both, goldCol),
+    '[C] 두 재화 동시 지급은 색을 섞지 않고 묶음을 나눈다', both && both.sparkCols.join('/'));
+  if (r.roul) ok(r.roul.sparkCols.some(c => c.toLowerCase() === diaCol) && r.roul.fly > 0,
+    '[D] 룰렛 실경로(roulFinish)도 dia 색(1회차: #FFE9A8)', r.roul.sparkCols.join('/'));
   ok(errs.length === 0, '콘솔 오류 0건', errs.slice(0, 3).join(' | '));
 
   console.log('\n' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));

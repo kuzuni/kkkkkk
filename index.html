@@ -24783,7 +24783,7 @@ function claimGuide(){
   S.dia += gmDia(m);
   S.guide.idx++; gmStart();
   if(rew) fxPop(rew);                          /* 58 — 보상 팝 + 버스트 */
-  fxReward(rew || box);
+  fxReward(rew || box, ['dia']);              /* 512 — 가이드 미션 보상은 다이아 하나다 */
   fxToast('가이드 미션 완료 — ' + curIc('dia') + ' ' + fmt(gmDia(m)));
   uiDirty = true; save();
   if(!gmCur())                                 /* 206 — 체인 끝 마무리도 토스트다(바로 위 줄이 보상을 이미 알렸다) */
@@ -24847,7 +24847,8 @@ function claimMail(id){
   /* 153 — 동적 우편은 키가 빠져 있을 수 있어 전부 `|| 0` 으로 받는다(undefined 를 더하면 NaN 이 된다) */
   S.gold += m.g || 0; S.dia += m.c || 0; S.relic += m.r || 0;
   if(m.m) S.mileage = (S.mileage || 0) + m.m;
-  fxReward();                                 /* 58 */
+  /* 512 — 우편 한 통이 여러 재화를 담는다. 색을 섞지 않고 **담긴 종류마다** 제 색으로 터뜨린다. */
+  fxReward(null, [m.g && 'gold', m.c && 'dia', m.r && 'relic', m.m && 'mile'].filter(Boolean));
   uiDirty = true; save();
   fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · '));   /* 150 */
 }
@@ -24860,7 +24861,7 @@ function claimAllMail(){
   if(!n) return;
   S.gold += g; S.dia += c; S.relic += r;
   if(mi) S.mileage = (S.mileage || 0) + mi;
-  fxReward();                                 /* 58 */
+  fxReward(null, [g && 'gold', c && 'dia', r && 'relic', mi && 'mile'].filter(Boolean));   /* 512 */
   uiDirty = true; save();
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
@@ -24893,17 +24894,23 @@ function delReadMail(){
    출석 · 룰렛 · 던전 · 상점 · 승급전
    ========================================================================== */
 function giveReward(r){
-  fxReward();                                 /* 58 — 출석·룰렛·던전 보상이 전부 이 함수를 지난다 */
-  const out = [];
-  if(r.dia){     S.dia += r.dia;     out.push(curIc('dia') + ' ' + fmt(r.dia)); }
-  if(r.rel){     S.relic += r.rel;   out.push(curIc('relic') + ' ' + fmt(r.rel)); }
+  /* ⚑ 512 — 종전에는 **함수 입구**에서 `fxReward()` 를 불렀다. 그 자리는 «무엇을 주는지 알기 전»
+     이라 색이 재화를 따라갈 수가 없다(등재문 ⓐ). 지급을 다 한 **뒤**로 옮기고 종류를 넘긴다.
+     ⚠ 181 규약과 충돌하지 않는다 — 룰렛은 «돌리는 순간» 이 아니라 `roulFinish` 에서 이 함수를
+       부르고, `fxAt()` 힌트(600ms)는 바로 앞 줄이라 발원은 그대로 원판 허브다.
+     ⚠ `fxFlush()`(fxReward 꼬리)는 이제 **증감이 다 끝난 뒤**에 돈다 — `fxWatch` 의 누적·발사
+       두 패스(93 3회차)가 같은 프레임에 전 재화를 한 묶음으로 본다(종전에는 입구에서 flush 해
+       버려 이번 지급분은 다음 프레임 몫이었다). */
+  const out = [], kinds = [];
+  if(r.dia){     S.dia += r.dia;     kinds.push('dia');    out.push(curIc('dia') + ' ' + fmt(r.dia)); }
+  if(r.rel){     S.relic += r.rel;   kinds.push('relic');  out.push(curIc('relic') + ' ' + fmt(r.rel)); }
   /* 194 — 강화석(코스튬 강화 전용). 다이아·유물조각과 같은 «숫자 그대로» 표기(150) */
-  if(r.stone){   S.stone += r.stone; out.push(curIc('stone') + ' ' + fmt(r.stone)); }
+  if(r.stone){   S.stone += r.stone; kinds.push('stone');  out.push(curIc('stone') + ' ' + fmt(r.stone)); }
   /* 203 — 룬강화석(룬 강화 전용). 강화석과 같은 «숫자 그대로» 표기(150) */
-  if(r.rstone){  S.rstone += r.rstone; out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
+  if(r.rstone){  S.rstone += r.rstone; kinds.push('rstone'); out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
   /* 210 — 단련석(단련 포인트 전환 전용). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
-  if(r.tstone){  S.tstone += r.tstone; out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
-  if(r.gold){    S.gold += r.gold;   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
+  if(r.tstone){  S.tstone += r.tstone; kinds.push('tstone'); out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
+  if(r.gold){    S.gold += r.gold;   kinds.push('gold');   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   /* 399 — `r.goldMul`(스테이지 환산 골드) 분기는 지웠다. 이 표를 쓰던 곳은 ATTEND 하나뿐이었고
      그 28칸이 전부 dia 가 되면서 실제로 죽은 코드가 됐다(155 §2 가 «살아 있어야 한다» 고 박아 둔 못도
      같이 뽑았다 — `verify398` §2 가 그 자리를 «ATTEND 는 dia 하나뿐» 으로 갈아 끼웠다).
@@ -24917,6 +24924,7 @@ function giveReward(r){
     out.push('🧩 재료 ' + r.frag);
     markDirty();
   }
+  fxReward(null, kinds);                      /* 58·512 — 지급이 끝난 뒤, 받은 재화의 색으로 */
   return out.join(' · ');
 }
 /* 70 — 팝업 안에서 «오늘 카드»를 탭해 수령한다. 레퍼런스에 결과 팝업이 없으므로
@@ -27303,7 +27311,7 @@ function openMail(){
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
-  const fxMail = (btn, el) => { if(btn){ fxCheck(btn); fxBurst(btn, '#FFE9A8', 10); }
+  const fxMail = (btn, el) => { if(btn){ fxCheck(btn); fxBurst(btn, FXPAL.mail, 10); }   /* 512 — 색은 표에서만 */
     if(el){ fxAt(el); fxSolo(el); } fxHoldList(); fxFlush(); };
   $('mailX').onclick = closeModal;
   $('mailBtn').onclick = () => {
@@ -27437,7 +27445,7 @@ function openQuest(tab){
      11회차까지는 둘 다 배지에 걸어서 92px 체크 링이 받은 수량(«90», 44×30px)의 상단 60% 를
      가렸다(비평가 Q·R 공통 실측). 손맛은 손가락 밑에, 재화는 보상 자리에서 나가는 것이 맞다. */
   const fxQuest = (btn, el) => {
-    if(btn){ fxCheck(btn); fxBurst(btn, '#FFE07A', 10); }   /* 18회차 — 시안 버블은 09·12·17 금색 콘페티 톤과 이질(AD ④) */
+    if(btn){ fxCheck(btn); fxBurst(btn, FXPAL.gift, 10); }  /* 18회차 — 시안 버블은 09·12·17 금색 콘페티 톤과 이질(AD ④) · 512 색은 표에서만 */
     /* 22회차 — 21차 비평 AJ #3 · AK #17 (2인 공통): 수령했는데 버튼이 **1396ms 까지 «미수령 초록»**
        으로 남아 있다가 재렌더 순간 1프레임 하드컷으로 회색이 된다(probe58l 실측 — `--gb-mid`
        `#4CBA2E · disabled=false` → t1396ms `#8A8A8A · disabled=true`). 재화가 날아가는 내내
@@ -29506,7 +29514,7 @@ $('shopList').addEventListener('click', e => {
          버튼» 을 추측으로 집는데, 10 상점은 페이지형(z28)이라 3회차부터 «덮는 층» 이다 ⇒ 추측
          발원은 페이지 아래로 내려가 **진짜 보상이 안 보이게** 된다(probe518p 표의 «재화 O + 발원 X»). */
       fxAt(ex0);
-      fxReward();
+      fxReward(null, FXCUR[ex.k] ? [ex.k] : []);   /* 512 — 교환으로 받은 그 재화의 색 */
     }
     uiDirty = true; save();
     renderCoinPage($('shopList'));
@@ -33249,7 +33257,7 @@ function claimOffline(mul){
   if(!offPend) return;
   S.gold += offPend.gold * mul;
   S.dia  += Math.floor(offPend.dia * mul);
-  fxReward();                                 /* 58 */
+  fxReward(null, [offPend.gold && 'gold', offPend.dia && 'dia'].filter(Boolean));   /* 58·512 */
   markDirty();
   closeOfflineReward();
 }
@@ -33789,18 +33797,47 @@ const FX3_BARDIM = 0.75;                             /* 바와 겹치는 프레�
    `scaleX(1.16)` 때문이고 그 규칙은 **A3(#top) 구간**이라 58 이 손대지 않는다).
    → 비행 아이콘 상자를 골드와 같은 55 로 맞춘다(목적지 높이비 1.00 = 비행 높이비 1.00).
    ⚠ 폭까지 맞추겠다고 비행 다이아에 scaleX 를 얹지 마라 — 그건 A3 의 결정을 58 이 복제하는 것이다. */
+/* ⚑ 512 — 표를 **전 재화**로 넓혔다(주인 지시 «다이아 보상이면 다이아 효과, 골드면 골드효과,
+   유물석이면 유물석»). 종전 2항(gold·dia)이라 `fxWatch` 의 `for(const k in FXCUR)` 가
+   유물조각·강화석·룬강화석·단련석·마일리지를 **한 번도 안 봤다** — `probe512` 1회차 실측으로
+   그 다섯은 비행·`+n`·알약 «움푹» 이 전부 **0건**이었다.
+   ⚠ 키는 `CUR_ICON`(재화 아이콘 표)과 **공유**한다 — 402 가 «표 두 벌» 로 만든 부패(던전 티켓
+     8종이 5종으로 접힌 것)의 재발 방지다. 마일리지만 아이콘 키(`mile`)와 상태 키(`S.mileage`)가
+     다르므로 `st` 로 적는다(추측 금지 — 읽는 자리는 `fxS()` 하나다).
+   ⚠ `pill`(메인 HUD 알약)은 골드·다이아 **둘뿐**이다. 나머지는 도착지가 없거나(41 팝업 바가
+     열렸을 때만 있는 유물조각) 아예 없다 — 도착지가 없는 재화는 «비행 없이 버스트 + `+n`» 이다
+     (③ — `fxFly` 가 조용히 return 하던 자리를 그 갈래로 바꿨다).
+   ⚠ 색은 **아이콘 SVG 의 중간 톤을 흰색으로 30% 민 값**이다(gold·dia 는 종전 값 유지 — 58 의
+     26회차가 정한 값이라 건드리지 않는다). 쌍별 최소 ΔE76 = **16.3**(stone↔mile)으로
+     87 이 50색에 쓴 통과선 10.3 보다 넓다(`verify512` [E] 가 매 실행 재계산한다). */
 const FXCUR = {
-  gold:{ pill:'.cGold', pcb:'.pcb-g', cur:'gold', col:'#FFDE6A', fs:46, ics:55 },
-  dia :{ pill:'.cDia',  pcb:'.pcb-d', cur:'dia',  col:'#8FE9FF', fs:46, ics:55 }
+  gold:  { pill:'.cGold', pcb:'.pcb-g', cur:'gold',   col:'#FFDE6A', fs:46, ics:55 },
+  dia :  { pill:'.cDia',  pcb:'.pcb-d', cur:'dia',    col:'#8FE9FF', fs:46, ics:55 },
+  relic: { pill:null,     pcb:'.pcb-r', cur:'relic',  col:'#D3AEFF', fs:46, ics:55 },
+  stone: { pill:null,     pcb:null,     cur:'stone',  col:'#FFB977', fs:46, ics:55 },
+  rstone:{ pill:null,     pcb:null,     cur:'rstone', col:'#78E184', fs:46, ics:55 },
+  tstone:{ pill:null,     pcb:null,     cur:'tstone', col:'#E98177', fs:46, ics:55 },
+  mile:  { pill:null,     pcb:null,     cur:'mile',   col:'#EB9B75', fs:46, ics:55, st:'mileage' }
 };
+/* 재화 키 → 실제 상태 값. 표가 늘어도 읽는 자리가 하나라 «S.mileage 만 이름이 다르다» 가 샐 데가 없다. */
+const fxS = k => { const C = FXCUR[k]; return S[(C && C.st) || k]; };
+/* 재화별 상태 사전을 표에서 만든다(아래 fxDisp·fxAcc·fxHold … 아홉 개가 이걸 쓴다). */
+const fxMap = v => { const o = {}; for(const k in FXCUR) o[k] = v; return o; };
+/* 재화가 아닌 연출의 색도 **표에서만** 나온다(512 ⑵ — 소스에 색 리터럴을 두지 않는다). */
+const FXPAL = { reward:'#FFE9A8', up:'#FFC02E', mail:'#FFE9A8', gift:'#FFE07A', spark:'#FFE07A' };
 /* 81 — 41 재화 바(.pcb)가 있는 페이지(03 던전·10 상점·89 유물)가 열려 있으면
    비행 도착지·+n 앵커는 메인 HUD 알약이 아니라 «그 팝업 안의 바» 다(41 규칙).
    닫힌 오버레이의 알약은 rect 폭이 0 이라 걸러진다. */
+/* 512 — 알약이 **없는 재화**가 표에 들어왔다(강화석·룬강화석·단련석·마일리지는 어느 화면에도
+   알약이 없고, 유물조각은 41 팝업 바가 열렸을 때만 있다). 셀렉터가 null 이면 묻지 않는다 —
+   `querySelector(null)` 은 «null» 이라는 **타입 선택자**를 찾는 꼴이라 조용히 엉뚱해진다. */
 function fxPill(C){
-  for(const p of document.querySelectorAll(C.pcb)){
-    if(p.getBoundingClientRect().width) return p;
+  if(C.pcb){
+    for(const p of document.querySelectorAll(C.pcb)){
+      if(p.getBoundingClientRect().width) return p;
+    }
   }
-  return document.querySelector(C.pill);
+  return C.pill ? document.querySelector(C.pill) : null;
 }
 let fxLay = null;
 const fxL = () => fxLay && fxLay.isConnected ? fxLay : (fxLay = $('fxl'));
@@ -33941,9 +33978,22 @@ function fxFly(from, cur, n){
      타이밍·개수·소리·경로는 한 값도 안 바뀐다(아래 계산은 전부 `combat` 만 본다). */
   const buried = !combat && !!(from && from.tap) && fxCovered();
   const C = FXCUR[cur], L = (combat || buried) ? fxLC() : fxL(); if(!C || !L) return;
-  const pill = fxPill(C); if(!pill) return;
-  const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
+  const pill = fxPill(C);
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };
+  /* ⚑ 512 ③ — 도착지가 없는 재화(강화석·룬강화석·단련석·마일리지, 그리고 41 바가 닫혀 있을 때의
+     유물조각)는 **비행을 만들지 않는다.** 종전에는 여기서 그냥 return 해서 «아무 일도 안 일어남»
+     이었다(probe512 1회차: 다섯 재화 전부 fly 0 · +n 0). «도착 없는 비행» 을 새로 짜지 말고
+     사건 자리에 **버스트 + 플로팅 `+n`** 까지만 남긴다 — 무엇을 받았는지는 그 둘로 다 말한다. */
+  if(!pill){
+    /* ⚠ 보상 수령은 바로 앞 줄에서 `fxReward` 가 **같은 자리에 같은 색**으로 이미 터뜨렸다
+       (`giveReward` → `fxFlush` → 이 함수). 겹쳐 쏘면 한 사건에 파티클 22개라 21회차가 폐기한
+       «손맛이 아니라 잡음» 이 된다 — 전투 발원 버스트가 쓰는 것과 같은 260ms 규약으로 건너뛴다.
+       보상이 아닌 획득(던전 드랍 등)에서는 여기가 유일한 발원 표시라 그대로 터진다. */
+    if(performance.now() - fxRewT > 260) fxBurst(combat ? { x:p0.x, y:p0.y, combat:true } : p0, C.col, 8);
+    fxPlus(cur, n, combat || buried, p0);
+    return;
+  }
+  const to = fxPt(pill.querySelector('i')) || fxPt(pill); if(!to) return;
   /* 78 — 재화 획득. 98: 최소 간격 150ms(AU_MIN) → 킬 연발·같은 프레임의 골드/다이아 두 알약도 1회만 운다.
      93 — UI 발은 «퍼짐» 한 번을 낮은 피치로 깔고(촤르륵 대용), 도착마다 «팅» 을 피치 3단계로 올린다.
      전용 촤르륵/팅 파일은 없다 — coin 을 피치로 나눠 쓰는 임시 처리다(78 규칙대로 소스가 들어오면 교체). */
@@ -34422,7 +34472,7 @@ function fx3LitBusy(){
   if(fxFlies.some(f => f.ui)) return true;           /* 아직 날고 있다 */
   for(const k in fxDisp){                            /* 알약 숫자가 아직 구르고 있다 */
     const d = fxDisp[k];
-    if(d != null && Number.isFinite(d) && Math.round(d) !== Math.round(S[k])) return true;
+    if(d != null && Number.isFinite(d) && Math.round(d) !== Math.round(fxS(k))) return true;
   }
   return false;
 }
@@ -34664,11 +34714,15 @@ function fxBye(el, life){
   const t = a > 0 ? a : (Number.isFinite(life) ? life : 600);
   setTimeout(() => { if(el.parentNode) el.remove(); }, Math.max(0, t) + FXBYE_PAD);
 }
-function fxPlus(cur, n, combat){
+/* 512 — `at`(프레임 좌표)를 주면 «알약 아래» 가 아니라 **그 자리**에 띄운다. 알약이 없는 재화
+   (강화석·룬강화석·단련석·마일리지)는 도착지가 없으므로 사건이 난 자리가 유일한 앵커다.
+   ⚠ 자리만 다르고 색·서식·수명·클램프는 **한 값도 안 바뀐다** — 세 씬의 플로터가 한 자리를 쓴다는
+     44회차 결정(중심 +52 · 아래 34)을 알약 rect 대신 점에 그대로 적용한 것이다. */
+function fxPlus(cur, n, combat, at){
   /* 77 — 전투 발 묶음의 +n 은 #fxlc 에(팝업 아래). UI 발은 종전대로 #fxl. */
   const C = FXCUR[cur], L = combat ? fxLC() : fxL(); if(!C || !L) return;
-  const pill = fxPill(C); if(!pill) return;
-  const r = fxRect(pill); if(!r) return;
+  const pill = at ? null : fxPill(C); if(!pill && !at) return;
+  const r = at ? { x:at.x - 30, y:at.y - 30, w:60, h:60 } : fxRect(pill); if(!r) return;
   const el = document.createElement('b');
   el.className = 'fx-plus';
   el.style.color = C.col;
@@ -34727,7 +34781,7 @@ function fxPlus(cur, n, combat){
    ⓑ 되돌림(환불·마이그레이션)에서 터지지 않게 «양수 금액» 만 받는다. 부팅 첫 표본은 `fxWatch` 의
       `fxSeen === null` 가드가 이미 막는다. */
 const FX_PAY_GAP = 320;
-const fxPayT = { gold:0, dia:0 };
+const fxPayT = fxMap(0);
 function fxPay(cur, n){
   const C = FXCUR[cur]; if(!C || !(n > 0)) return false;
   const now = performance.now();
@@ -34881,7 +34935,7 @@ function fxBurst(t, col, n){
     const sz = Math.round(rnd(24, 34));
     el.style.width = sz + 'px'; el.style.height = sz + 'px';
     el.style.margin = (-sz/2) + 'px 0 0 ' + (-sz/2) + 'px';
-    el.style.setProperty('--c', col || '#FFE07A');    /* 16회차 — 글로우 오브의 본색(radial 중간대) */
+    el.style.setProperty('--c', col || FXPAL.spark);  /* 16회차 — 글로우 오브의 본색(radial 중간대) · 512 표에서만 */
     /* 전부 한 점에서 시작하면 첫 프레임이 «덩어리» 로 읽힌다(9회차 지적) — 각자 조금 떨어져서 출발 */
     /* 21회차 — 넓은 대상(우편 행 826px)에서 타원 반축이 프레임을 넘길 수 있어 좌표를 물린다. */
     /* 28회차 — 27차 **2인 공통**: 씬 C(강화) 파티클이 대상 카드 밖으로 새서 형제 UI 를 덮는다.
@@ -34964,9 +35018,25 @@ function fxFlash(el){
 }
 /* «보상 수령» 공통 꼬리 — 수령 지점에서 방사형 버스트. 이어지는 재화 획득 비행은
    fxWatch 가 자동으로 붙인다(58 «보상 아이템 팝 + 버스트, 이어서 재화 획득 연출로 연결»). */
-function fxReward(t){
+/* ⚑ 512 — `kinds`(받은 재화 키 목록)를 주면 **그 재화의 색**으로 터진다(주인 지시).
+   종전에는 무엇을 받아도 상수 크림 하나였고, 155 이후 전 칸 dia 인 룰렛에서도 금색이 터졌다
+   (`probe512` 1회차: 룰렛 실경로 버스트 `#FFE9A8` — 주인이 본 «골드가 섞여 있다» 는
+    보상 표가 아니라 **연출 색**이었다).
+   ④ 다재화 동시 지급(우편 일괄 = 골드+다이아+유물조각+마일리지)에서는 색을 **섞지 않고**
+   묶음을 종류마다 나눠 각자 자기 색을 쓴다 — 93 이 «두 재화 동시» 를 상한 절반으로 다루는 규약과 같다.
+   개수는 총합이 종전(14)보다 크게 안 늘도록 «14 ÷ 종류 수, 하한 6» 이다. */
+let fxRewT = -1e9;                                    /* 512 — 마지막 보상 버스트 시각(중복 버스트 억제) */
+function fxReward(t, kinds){
   const p = t ? fxPt(t) : fxSrc(performance.now());
-  if(p) fxBurst(p, '#FFE9A8', 14);
+  if(p) fxRewT = performance.now();
+  const ks = (Array.isArray(kinds) ? kinds : []).filter(k => FXCUR[k]);
+  if(p){
+    if(!ks.length) fxBurst(p, FXPAL.reward, 14);       /* 재화가 아닌 보상(재료·아이템)은 공용 크림 */
+    else{
+      const n = ks.length === 1 ? 14 : Math.max(6, Math.round(14 / ks.length));
+      ks.forEach(k => fxBurst(p, FXCUR[k].col, n));
+    }
+  }
   fxFlush();                                          /* 12회차 — 보상은 «한 덩어리» 라 묶을 이유가 없다 */
 }
 /* 강화·업그레이드 «성공» 한 세트 — 대상 카드/행 흰 플래시 + 성공 파티클.
@@ -35007,7 +35077,7 @@ function fxHitEl(t){
 function fxUpOk(target, at, txt){
   if(target){ fxFlash(target); fxHitEl(target); }
   /* 16회차 — 크림 카드 위 #FFE9A8 은 저대비(Z «크림-온-크림»). 더 깊은 앰버로. */
-  fxBurst(at || target, '#FFC02E', 10);
+  fxBurst(at || target, FXPAL.up, 10);        /* 512 — 색은 표에서만(값은 종전 앰버 그대로) */
   /* 델타는 카드의 «수치 행»(.cv) 에서 떠오른다 — 없으면 카드 자체 */
   if(txt) fxDelta((target && target.querySelector && target.querySelector('.cv')) || target || at, txt);
 }
@@ -35552,9 +35622,11 @@ function fxRenderLater(fn){
 /* ── 자동 감시 + 매 프레임 갱신 ──
    fxDisp: HUD 에 «표시되는» 값. 실제 S 값으로 지수적으로 수렴해 숫자가 롤링한다(58 «숫자 롤링»).
    drawHud() 가 이 값을 쓰고, 41 팝업 내장 재화 바(renderPcb)도 같은 값을 쓴다. */
-const fxDisp = { gold:null, dia:null };
-const fxSeen = { gold:null, dia:null };
-const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0, dia:0 };
+/* ⚑ 512 — 재화별 상태는 전부 **표에서 만든다**(손으로 적은 `{gold,dia}` 두 항이 곧 표 두 벌이다).
+   `fxMap` 은 `FXCUR` 키마다 같은 초기값을 깐다 — 표에 재화를 더하면 아래 아홉 개가 같이 따라온다. */
+const fxDisp = fxMap(null);
+const fxSeen = fxMap(null);
+const fxAcc  = fxMap(0), fxAccT = fxMap(0), fxAccS = fxMap(0);
 /* 158 — «묶음의 발원» 은 **누적 시점** 에 스냅샷한다(발사 시점 판정이 버그의 뿌리였다).
    종전에는 flush 때 `fxSrc(now)` 를 새로 물어봤는데, 전투 킬 골드는 최대 900ms 를 `fxAcc` 에
    묶여 있다가 뒤늦게 발사된다 — 그 사이에 사용자가 하단 네비·팝업·✕ 를 누르면 탭 좌표(1200ms 유효)가
@@ -35562,25 +35634,25 @@ const fxAcc  = { gold:0, dia:0 }, fxAccT = { gold:0, dia:0 }, fxAccS = { gold:0,
    (주인 보고 2026-08-27 «골드 얻는 상황도 아닌데 골드 흡수 이펙트가 뜸»).
    게다가 그렇게 뺏긴 출발점에는 combat 태그가 없어 77(⚑ «전투 발은 팝업 아래»)까지 같이 깨졌다.
    재화가 실제로 늘어난 그 프레임의 출처를 적어 두면 이후 어떤 탭도 묶음을 가로챌 수 없다. */
-const fxAccSrc = { gold:null, dia:null };
+const fxAccSrc = fxMap(null);
 /* 비행이 «도착할 때까지» 표시값을 붙잡아 둔다(0 = 안 붙잡음). 도착이 없으면 1.2초 뒤 스스로 풀린다. */
-const fxHold = { gold:0, dia:0 };
+const fxHold = fxMap(0);
 /* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
    0.8초 예산 안에 목표에 못 닿는다(4회차: 645ms 에 26% 진행 — 비평가 2명이 독립적으로 잡았다). */
 const FXROLL = 0.32;
 /* 93 — 롤링 길이를 묶음별로 정한다. UI 발 3박자는 «첫 도착(0.56s) → 마지막 도착(1.26s)» 인 0.70s 로
    늘려 코인과 숫자가 «같이» 오르게 하고, 전투 발은 종전 0.32s 를 그대로 쓴다. */
-const fxRollDur = { gold:FXROLL, dia:FXROLL };
+const fxRollDur = fxMap(FXROLL);
 /* 93 2회차 — UI 발은 **선형** 롤링(도착 개수와 1:1). easeOutCubic 은 앞이 급해 숫자가 도착률을
    최대 43%p 앞섰다(비평가 H ④ 실측: 678ms 숫자 32% · 도착 0%). 전투 발은 종전 easeOutCubic. */
-const fxRollLin = { gold:false, dia:false };
+const fxRollLin = fxMap(false);
 /* 93 4회차 — «도착 계단» 목표. null 이면 실제 보유량(S)을 목표로 쓴다. */
-const fxStepTo = { gold:null, dia:null };
-const fxRoll = { gold:null, dia:null };              /* {from, to, t} */
+const fxStepTo = fxMap(null);
+const fxRoll = fxMap(null);                          /* {from, to, t} */
 function fxWatch(now){
   const flush = fxNow;                                /* 이번 프레임 안에서만 유효 — 다음 프레임엔 다시 묶는다 */
   for(const k in FXCUR){
-    const v = S[k];
+    const v = fxS(k);                                 /* 512 — 마일리지만 상태 키가 다르다(FXCUR.mile.st) */
     if(!Number.isFinite(v)) continue;
     if(fxSeen[k] === null){ fxSeen[k] = v; continue; }
     const d = v - fxSeen[k];
@@ -35707,7 +35779,7 @@ function fxTick(dt){
          숫자는 이미 다 올라간 뒤라 «순서 역전» 으로 읽힌다(3회차 비평 C·D 공통 지적). */
       if(!f.batch.fired){
         f.batch.fired = true; fxHold[f.cur] = 0;
-        f.batch.base = (fxDisp[f.cur] == null || !Number.isFinite(fxDisp[f.cur])) ? S[f.cur] - f.n : fxDisp[f.cur];
+        f.batch.base = (fxDisp[f.cur] == null || !Number.isFinite(fxDisp[f.cur])) ? fxS(f.cur) - f.n : fxDisp[f.cur];
         fxPlus(f.cur, f.n, f.batch.combat);
       }
       /* 93 4회차 — 도착 계단. 마지막 도착에서 계단을 풀어 실제 보유량으로 정확히 마감한다. */
@@ -35962,7 +36034,7 @@ function fxTick(dt){
   for(const k in fxDisp){
     /* 93 4회차 — 도착 계단이 있으면 그 계단이 목표다(늘 S 이하). 마지막 도착에서 null 로 풀린다. */
     const st = fxStepTo[k];
-    const t = (st != null && Number.isFinite(st) && st < S[k]) ? st : S[k];
+    const sv = fxS(k), t = (st != null && Number.isFinite(st) && st < sv) ? st : sv;
     if(!Number.isFinite(t)){ fxDisp[k] = t; continue; }
     if(fxDisp[k] === null || !Number.isFinite(fxDisp[k])){ fxDisp[k] = t; continue; }
     if(fxHold[k]){                                    /* 코인이 «꽂히는 순간» 부터 오르게 붙잡아 둔다 */
@@ -35998,7 +36070,7 @@ function fxTick(dt){
 /* HUD·재화 바가 쓰는 표시값. 롤링이 시작되기 전(초기 1프레임)에는 실제 값을 그대로 준다. */
 function fxVal(k){
   const v = fxDisp[k];
-  return (v === null || !Number.isFinite(v)) ? S[k] : v;
+  return (v === null || v === undefined || !Number.isFinite(v)) ? fxS(k) : v;
 }
 
 /* ==========================================================================
