@@ -221,8 +221,18 @@ const hud = (p) => p.evaluate(() => {
   console.log('§6 회귀 — 30 던전 · 46 레이드 · 123 아레나');
   const dun = await p.evaluate(() => {
     S.stage = 20; spawnStage(); killed = 30;
-    startBoss();                                          /* 보스전 한복판에서 던전 입장 */
+    startBoss();
     const before = bossOn;
+    /* ⚑ 453(주인 지시 2026-08-30) — 여기는 원래 «보스전 한복판에서 던전 입장» 표본이었다.
+       주인이 그 설계를 뒤집어 **전투 중 입장이 전면 차단**됐으므로, 죽은 표본을 붙들지 않고
+       살아 있는 규칙 두 개로 갈아 끼운다(333·402 처방):
+         ⓐ 보스전 중에는 입장 자체가 **막힌다**(453 이 새로 세운 규칙 — 여기서 한 번 더 잰다)
+         ⓑ «입장이 보스 단계를 비운다» 는 여전히 참이다 — 들어갈 수 있는 상태에서 잰다.
+       ⓑ 의 표본은 **파밍 대기**(`S.bossFarm` · `bossOn=false`)다: 파밍은 «전투 중» 이 아니라
+       입장이 열려 있고, 그 깃발이 안 비워지면 던전에서 나올 때 되살아난다(162 가 원래 잡던 그것). */
+    startDunRun(DUNGEONS[0], 1);
+    const blocked = !dunRun;
+    bossOn = false; stageWin = false; S.bossFarm = true; bossT = 7;
     startDunRun(DUNGEONS[0], 1);
     const mid = { bossOn, farm: S.bossFarm, bossT, run: !!dunRun, stage: S.stage };
     /* 던전 중에는 스테이지가 오르지 않는다 */
@@ -230,12 +240,15 @@ const hud = (p) => p.evaluate(() => {
     step(0.016);
     const during = { stage: S.stage, bossOn, q: spawnQ.length };
     endDunRun(false, true);
-    return { before, mid, during };
+    return { before, blocked, mid, during };
   }).catch(e => ({ err: String(e) }));
   ok(!dun.err, '§6 던전 경로가 예외 없이 돈다', dun.err);
   if (!dun.err) {
-    ok(dun.before, '§6 (준비) 던전 입장 직전은 보스전이었다');
-    ok(!dun.mid.bossOn && dun.mid.bossT === 0, '§6 던전 입장이 보스 단계를 비운다');
+    ok(dun.before, '§6 (준비) 보스전이 실제로 섰다');
+    ok(dun.blocked, '§6+453 보스전 한복판에서는 던전 입장이 막힌다(주인 지시 2026-08-30)');
+    ok(dun.mid.run, '§6 (준비) 파밍 대기에서는 던전에 들어간다');
+    ok(!dun.mid.bossOn && dun.mid.bossT === 0 && !dun.mid.farm,
+       '§6 던전 입장이 보스 단계·파밍 깃발을 비운다');
     eq('§6 던전 중에는 스테이지가 안 오른다', dun.during.stage, 20);
     ok(!dun.during.bossOn, '§6 던전 중 50킬이 보스를 부르지 않는다');
     ok(dun.during.q > 0, '§6 던전 중에는 몹을 계속 리필한다(30 거동)');
@@ -265,13 +278,22 @@ const hud = (p) => p.evaluate(() => {
   const arn = await p.evaluate(() => {
     dunRun = null; raidOn = null; arena = null;
     S.stage = 40; spawnStage(); killed = 10; startBoss();
+    /* 453 — 던전 쪽과 같은 갈아 끼움: 보스전 중에는 막히고, 파밍 대기에서는 들어가며 깃발을 비운다 */
+    startArena();
+    const blocked = !arena;
+    bossOn = false; stageWin = false; S.bossFarm = true; bossT = 7;
     startArena();
     const mid = { bossOn, farm: S.bossFarm, bossT, on: !!arena };
     arena = null; S.stage = 40; spawnStage();
-    return { mid };
+    return { blocked, mid };
   }).catch(e => ({ err: String(e) }));
   ok(!arn.err, '§6 아레나 경로가 예외 없이 돈다', arn.err);
-  if (!arn.err) ok(!arn.mid.bossOn && arn.mid.bossT === 0, '§6 아레나 입장이 보스 단계를 비운다');
+  if (!arn.err) {
+    ok(arn.blocked, '§6+453 보스전 한복판에서는 아레나 입장이 막힌다(주인 지시 2026-08-30)');
+    ok(arn.mid.on, '§6 (준비) 파밍 대기에서는 아레나에 들어간다');
+    ok(!arn.mid.bossOn && arn.mid.bossT === 0 && !arn.mid.farm,
+       '§6 아레나 입장이 보스 단계·파밍 깃발을 비운다');
+  }
 
   /* ── §7 콘솔 에러 ───────────────────────────────────────────── */
   console.log('§7 콘솔 에러');

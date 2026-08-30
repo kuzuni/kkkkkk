@@ -55,9 +55,17 @@ const ok = (n, c, got) => { R.push({ n, c: !!c, got }); };
     !/승급 조건 미달/.test(code), (code.match(/.{0,40}승급 조건 미달.{0,20}/) || [''])[0]);
 
   /* 레드닷 호출부가 게이트를 물면 상시 점등이다(166) */
-  ok("[0] `sideAlert('promo', …)` 는 `promoReady()` 를 쓴다(게이트 아님)",
-    /sideAlert\('promo',\s*promoReady\(\)\)/.test(code),
-    (code.match(/sideAlert\('promo',[^)]*\)\)/) || [''])[0]);
+  /* ⚑ 453(주인 지시 2026-08-30) — 이 항을 **갈아 끼웠다.** 종전 정규식은 인자가 `promoReady()` **하나뿐**
+     이어야 통과했는데, 453 이 «전투 중에는 승급전 팝업을 못 연다» 를 넣으면서 축이 한 항 늘었다
+     (`promoReady() && !battleBusy()`). 295 의 뜻(«점등축은 권장 기준이지 입장 게이트가 아니다»)은
+     그대로이므로 **자리를 비우지 않고** 두 항으로 나눠 물었다 —
+     ⓐ 축이 여전히 `promoReady()` 이고 게이트(`canPromote()`)가 아니다 ⓑ 453 항이 실제로 붙어 있다.
+     ⚠ 334 처방 — 「그냥 정규식을 느슨하게」 하면 `promoReady()` 가 통째로 사라져도 초록이 된다. */
+  const saLine = (code.match(/sideAlert\('promo',[^;]*\);/) || [''])[0];
+  ok("[0] `sideAlert('promo', …)` 의 점등축은 `promoReady()` 다(입장 게이트 `canPromote()` 가 아니다)",
+    /promoReady\(\)/.test(saLine) && !/canPromote\(\)/.test(saLine), saLine);
+  ok("[0-b] 453 — 그 축에 `!battleBusy()` 가 함께 걸려 전투 중에는 꺼진다(321 «누를 수 있다» 규약)",
+    /!battleBusy\(\)/.test(saLine), saLine);
 
   /* 팝업 문구 — 표기와 동작이 어긋나면 안 된다(기능 완성 규칙) */
   ok('[0] 승급전 팝업에 «조건을 만족하면 … 등장합니다» 문구가 없다',
