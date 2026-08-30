@@ -140,6 +140,17 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     return { gold: S.gold, dia: S.dia, relic: S.relic, want, n };
   });
   await page.click('#psAll');
+  /* 493 이관(2026-08-31) — 토스트는 **클릭이 돌아온 직후**에 읽는다.
+     아래 [5] 마지막 항(«토스트가 같은 사실을 말한다»)은 종전에 `waitForTimeout(400)` **뒤**의
+     `#fxl` 을 봤다. 토스트 수명은 창조 시점부터 약 1.2초인데(실측 `tools/probe493g.js`),
+     493 이 패스 리스트를 40행 → 600행으로 늘리자 이 경로의 시계가 통째로 뒤로 밀렸다:
+     playwright 의 click 이 137,910px·노드 16,204개짜리 트랙에서 안정성 검사에 **1,258ms**,
+     핸들러(=`renderPass`)가 **835ms** 를 쓴다 ⇒ +400ms 지점이 토스트 수명을 **수십 ms 차이로**
+     지나쳐 «토스트 없음» 이 된다. **제품은 안 바뀌었다** — 토스트는 여전히 뜨고 1.2초 산다.
+     ⇒ 사실(«토스트가 지급액을 말한다»)은 그대로 재되 «리스트 렌더가 얼마나 걸리는가» 에
+        기대지 않는 자리에서 읽는다. 400ms 대기는 세이브·재화 항을 위해 그대로 둔다. */
+  const toastLive = await page.evaluate(() =>
+    (document.getElementById('fxl') || { textContent: '' }).textContent);
   await page.waitForTimeout(400);
   const after = await page.evaluate(() => {
     let saved = null;
@@ -170,7 +181,9 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
      '[5] ★ 398 — 일괄 받기가 골드·유물조각은 한 톨도 안 준다',
      'Δgold ' + (after.gold - before.gold) + ' · Δrelic ' + (after.relic - before.relic));
   ok(after.savedGot === before.n, '[5] 세이브에 수령 기록 ' + before.n + '칸', String(after.savedGot));
-  ok(/일괄 받기/.test(after.toast), '[5] 토스트가 같은 사실을 말한다(156)', after.toast.slice(0, 60));
+  ok(/일괄 받기/.test(toastLive) && new RegExp('\\+' + before.want.dia + '\\b').test(toastLive),
+     '[5] 토스트가 같은 사실을 말한다(156) — 문구 + 지급액 +' + before.want.dia,
+     toastLive.slice(0, 60));
 
   /* ── [6] 음성 — 전부 받으면 네 자리 모두 꺼진다 ── */
   ok(after.ready === false && after.any === false, '[6] passReady 전부 false');

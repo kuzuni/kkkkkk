@@ -282,9 +282,14 @@ const openAttTab = async (page) => {
         load();
         try { passTab = 'att'; renderPass(); } catch (e) { return { err: e.message }; }
         return { t: typeof S.pass, prem: typeof S.pass.prem, got: typeof S.pass.got,
-                 rows: document.querySelectorAll('#psTk .ps-r:not(.ps-hr)').length };
+                 rows: document.querySelectorAll('#psTk .ps-r:not(.ps-hr)').length,
+                 /* 493 이관 — 이 항이 재는 것은 «망가진 세이브를 흡수하고 **리스트가 선다**» 이지
+                    «출석 패스가 30일이다» 가 아니다. 길이를 여기 손으로 적어 두면 길이가 바뀔 때마다
+                    이 자리가 빨개진다(2026-08-31, 30 → 100). 길이 자체는 `verify493` [A] 가 못박는다. */
+                 want: PASS_TABS.att.n };
       }, v === undefined ? undefined : v);
-      if (!res.err && res.t === 'object' && res.prem === 'object' && res.got === 'object' && res.rows === 30)
+      if (!res.err && res.t === 'object' && res.prem === 'object' && res.got === 'object'
+          && res.rows === res.want && res.rows > 0)
         ok('마이그레이션 — pass=' + JSON.stringify(v) + ' → 기본값 흡수');
       else no('마이그레이션 실패 pass=' + JSON.stringify(v) + ': ' + JSON.stringify(res));
     }

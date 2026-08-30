@@ -107,12 +107,17 @@ async function boot(browser, save) {
       price: document.getElementById('psPrice').textContent,
       rows: document.querySelectorAll('#psTk .ps-r').length,
       boxes: document.querySelectorAll('#psTk .ps-bx').length,
+      /* 493 이관 — 이 항이 재는 것은 «탭을 눌렀더니 **리스트가 실제로 선다**» 이지 «탑 패스가 30단이다»
+         가 아니다. 길이를 손으로 적어 두면 길이가 바뀌는 지시마다(2026-08-31 30 → 100) 이 자리가 같이
+         빨개진다 — 길이 자체는 `verify493` [A] 가 못박는다. 대신 «비어 있지 않다 · 칸이 행×3» 을 남긴다. */
+      want: PASS_TABS[passTab].n, cols: PASS_TABS[passTab].cols,
       on: document.querySelector('#psBar .pt.on').dataset.ptab,
       toast: [...document.querySelectorAll('.fx-toast')].map(e => e.textContent).join(' | ')
     }));
     ok(r.tab === k && r.on === k, k + ' — 그 탭으로 갈아탄다 (실측 ' + r.tab + '/' + r.on + ')');
     ok(r.toast === '', k + ' — «준비 중 / 해금되지 않은» 토스트 0건', r.toast || '0건');
-    ok(r.rows === 30 && r.boxes === 90, k + ' — 리스트가 실제로 선다 (30행 × 3칸 = ' + r.boxes + '칸)');
+    ok(r.rows > 0 && r.rows === r.want && r.boxes === r.rows * r.cols,
+       k + ' — 리스트가 실제로 선다 (' + r.rows + '행 × ' + r.cols + '칸 = ' + r.boxes + '칸)');
     ok(r.stl === '최고 레벨 :', k + ' — 스탯 라벨이 427 낱말 «최고 레벨» (실측 ' + r.stl + ')');
     ok(r.price === '₩9,900', k + ' — 가격 ₩9,900 (실측 ' + r.price + ')');
   }
@@ -246,9 +251,10 @@ async function boot(browser, save) {
              open: document.querySelectorAll('#psTk .ps-hex:not(.lk)').length,
              got: Object.keys(S.pass.got).sort().join(','),
              prem: JSON.stringify(S.pass.prem),
-             premHere: passPrem(), rows: document.querySelectorAll('#psTk .ps-r').length };
+             premHere: passPrem(), rows: document.querySelectorAll('#psTk .ps-r').length,
+             want: PASS_TOWER_N };                       /* 493 이관 — 위와 같은 이유(길이는 verify493) */
   });
-  ok(mig.rows === 30 && mig.open === 4,
+  ok(mig.rows > 0 && mig.rows === mig.want && mig.open === 4,
      '새 탭 키가 없는 구 세이브에서도 탑 패스가 정상으로 선다 (S.tower ' + mig.tower + ' → ' + mig.open + '단계)');
   ok(mig.tower2 === 1, '없던 S.tower2 는 기본 1 로 정화된다(210 의 자가 이미 지키는 자리)', String(mig.tower2));
   ok(mig.got.includes('stage:0:0') && !mig.got.includes('tower:'),
