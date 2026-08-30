@@ -62,7 +62,10 @@ const ok = (m) => console.log('  o ' + m);
       rb: R('#eqw .eqrb'), rbText: (document.querySelector('#eqw .eqrb b i') || {}).textContent,
       slots: all('#eqw .eqsl'), badges: all('#eqw .eqbd'),
       badgeIc: [...document.querySelectorAll('#eqw .eqbd em')].map(e => e.textContent),
-      il: R('#eqw .eqil'),
+      /* 작업 532 — 일러스트 자리는 작업 79 가 이모지 자리표시를 폐기하면서
+         `<div class="eqil">` → `<canvas class="eqil-cv">` 로 갈렸다(index.html renderEqPage).
+         상자는 그대로 [45,495,640,831] 이라 자만 이름에 굳어 있었다(제품 0줄 — probe532 로 확인). */
+      il: R('#eqw .eqil-cv'),
       sta: R('#eqw .eqst.a'), stb: R('#eqw .eqst.b'),
       sw: R('#eqw .eqic.sw'), hp: R('#eqw .eqic.hp'),
       nLock: document.querySelectorAll('#eqw .eqlk').length,
@@ -98,13 +101,25 @@ const ok = (m) => console.log('  o ' + m);
   const ordOK = geo.order.join(',').indexOf('eqst a') < geo.order.join(',').indexOf('eqic sw');
   if (ordOK) ok('D1: 알약 → 아이콘 순서 (아이콘이 위)'); else fail('D1: 아이콘이 알약에 가려진다 ' + JSON.stringify(geo.order));
   // §2 파생값
-  const gapRibIl = geo.il[1] - (geo.rb[1] + geo.rb[3]);
-  const pct = Math.round(gapRibIl / geo.eqc[3] * 100);
-  console.log('  · 리본 하단 → 일러스트 상단 gap ' + gapRibIl + 'px (' + pct + '% of 카드) — 기대 223 / 17%');
-  if (gapRibIl === 223 && pct === 17) ok('D5 gap(2회차 박스 기준 223 = 17.4%) 일치'); else fail('D5 gap 불일치');
-  const gapPill = geo.sta[1] - (geo.il[1] + geo.il[3]);
-  console.log('  · 일러스트 박스 하단 → 스탯 알약 상단 gap ' + gapPill + 'px — 기대 4 (D8, ref 와 동일)');
-  if (gapPill === 4) ok('D8 gap 일치'); else fail('D8 gap 불일치 ' + gapPill);
+  /* 작업 532 — 파생값은 «상자가 있다» 를 전제로 한다. 없으면 종전에는 `geo.il[1]` 이
+     TypeError 로 **자를 통째로 죽여** 그 뒤 §3 진입·연결 절이 한 번도 안 돌았다.
+     319 처방대로 «없으면 그 항만 빨갛게, 나머지 절은 계속» 으로 바꾼다.
+     계산을 함수로 뺀 것은 §R 이 같은 함수에 null 을 먹여 볼 수 있게 하려는 것이다. */
+  const derived = (il) => il && {
+    gapRibIl: il[1] - (geo.rb[1] + geo.rb[3]),
+    pct: Math.round((il[1] - (geo.rb[1] + geo.rb[3])) / geo.eqc[3] * 100),
+    gapPill: geo.sta[1] - (il[1] + il[3]),
+  };
+  const d2 = derived(geo.il);
+  if (!d2) {
+    fail('D5 gap — 일러스트 상자가 없어 잴 수 없다(위 «일러스트» 항 참조)');
+    fail('D8 gap — 일러스트 상자가 없어 잴 수 없다(위 «일러스트» 항 참조)');
+  } else {
+    console.log('  · 리본 하단 → 일러스트 상단 gap ' + d2.gapRibIl + 'px (' + d2.pct + '% of 카드) — 기대 223 / 17%');
+    if (d2.gapRibIl === 223 && d2.pct === 17) ok('D5 gap(2회차 박스 기준 223 = 17.4%) 일치'); else fail('D5 gap 불일치');
+    console.log('  · 일러스트 박스 하단 → 스탯 알약 상단 gap ' + d2.gapPill + 'px — 기대 4 (D8, ref 와 동일)');
+    if (d2.gapPill === 4) ok('D8 gap 일치'); else fail('D8 gap 불일치 ' + d2.gapPill);
+  }
   const top = geo.slots[0][1] - 134 - 6, bot = geo.eqc[3] - (geo.slots[2][1] - 134 + 228);
   console.log('  · 슬롯 블록 여백 상 ' + (geo.slots[0][1] - geo.eqc[1]) + ' / 하 ' + (geo.eqc[1] + geo.eqc[3] - geo.slots[2][1] - 228) + ' — 기대 116 / 128');
   if (geo.out === 0) ok('프레임 밖 #eqw 요소 0건'); else fail('프레임 밖 요소 ' + geo.out + '건');
@@ -161,6 +176,25 @@ const ok = (m) => console.log('  o ' + m);
     if (r.heroTab === want && !r.eqwOn) ok(`서브탭 → heroTab=${want} · #eqw 닫힘 · body=${JSON.stringify(r.bodyOn)}`);
     else fail(`서브탭 ${want} 실패: ` + JSON.stringify(r));
   }
+
+  /* --- §R 되돌림 시험 (작업 532) ---
+     셀렉터를 «지금 있는 이름» 으로 갈아 끼우는 수리는 무르게 풀기 쉽다 — 노드가 통째로
+     사라져도 초록이면 «일러스트가 있다» 는 뜻을 잃는다. 그래서 둘을 못박는다:
+       R1 노드를 떼면 셀렉터가 실제로 null 이 된다(자가 진짜 그 노드에 묶여 있다)
+       R2 그때 파생값 계산이 던지지 않고 건너뛴다(319 처방 — 자가 죽지 않는다)
+     R1 이 떼는 캔버스는 renderUI() 의 다음 틱에 renderEqPage() 가 되살린다
+     (eqHeroTick 은 `!cv` 를 이미 가드한다) — 그래서 뒷정리가 따로 필요 없다. */
+  console.log('[R] 되돌림 시험 — 일러스트 노드를 떼면 빨개지는가 · 죽지는 않는가');
+  const rGone = await page.evaluate(() => {
+    const cv = document.querySelector('#eqw .eqil-cv');
+    if (!cv) return 'none';
+    cv.remove();
+    return document.querySelector('#eqw .eqil-cv') ? 'still' : 'gone';
+  });
+  if (rGone === 'gone') ok('R1: 노드를 떼면 `#eqw .eqil-cv` 가 null 이 된다 (셀렉터가 실제 노드에 묶여 있다)');
+  else fail('R1: 노드를 뗐는데 ' + rGone);
+  if (derived(null) === null || derived(null) === undefined) ok('R2: 상자가 null 이면 파생값이 던지지 않고 건너뛴다 (319 처방)');
+  else fail('R2: 파생값 계산이 null 을 안 걸렀다');
 
   if (errs.length) errs.forEach(e => fail('콘솔 ' + e)); else ok('콘솔 에러·경고 0건');
 
