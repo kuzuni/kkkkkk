@@ -154,7 +154,9 @@ const stat = (a) => {
   console.log(`\n[기준 대비] 08 세부 h비 ${d0} ↔ 50 카드 h비 ${k0}  ⇒ 카드가 기준의 ${(k0 / d0 * 100).toFixed(1)}%`);
   console.log(`[콘솔 에러] ${errs.length}건${errs.length ? ' — ' + errs[0] : ''}`);
 
-  require('fs').writeFileSync(path.resolve(__dirname, '..', 'docs', 'review', '.probe492.json'),
-    JSON.stringify(out, null, 1));
+  /* 원자료는 저장소를 더럽히지 않게 임시 디렉터리로 뺀다(다음 워커의 `git status` 를 흐리지 않는다) */
+  const raw = require('path').join(require('os').tmpdir(), 'probe492.json');
+  require('fs').writeFileSync(raw, JSON.stringify(out, null, 1));
+  console.log('[원자료] ' + raw);
   await browser.close();
 })();
