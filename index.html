@@ -16352,6 +16352,44 @@ function frameXo(key, A){
   return m;
 }
 
+/* ⚑ 425 — «그려진 잉크» bbox(프레임 rect 안의 상대 좌표). 243 `frameXo` 가 **가로**를 트림 메타로
+   푸는 것과 같은 병의 **세로 짝**인데, 트림이 없는 시트에는 그 메타가 아예 없다 — `fr[4..7]` 이
+   격자 그대로라 잉크가 칸 안에서 어디로 쏠렸는지 말해 주지 않는다. 그래서 픽셀이 유일한 출처다.
+   캐릭터당 **한 번** 재서 캐시한다(dragon 576×128 = 73k px · 던전 보스를 처음 비출 때 한 번).
+   ⚠ `getImageData` 는 `file://` 에서 캔버스를 «교차 출처» 로 오염시켜 예외를 던진다. 실패하면 `null` 을
+      돌려 호출부가 rect 중심으로 떨어지게 한다 — 배포(GitHub Pages)는 동일 출처라 정확하고,
+      게이트는 `--allow-file-access-from-files` 로 띄운다(`verify348` 선례). 게임 로직에는 안 쓴다. */
+const frInkCache = {};
+function frameInk(key, A){
+  if(frInkCache[key] !== undefined) return frInkCache[key];
+  let m = null;
+  try{
+    const img = A && A.image;
+    if(img && img.width && img.width*img.height <= 4194304){
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const g = c.getContext('2d', { willReadFrequently:true });
+      g.drawImage(img, 0, 0);
+      const D = g.getImageData(0, 0, c.width, c.height).data, W = c.width;
+      m = {};
+      for(const nm in A.f){
+        const fr = A.f[nm];
+        let t = 1e9, b = -1, l = 1e9, r = -1;
+        for(let y = fr[1]; y < fr[1]+fr[3]; y++){
+          for(let x = fr[0]; x < fr[0]+fr[2]; x++){
+            if(D[(y*W + x)*4 + 3] > 16){
+              if(y < t) t = y; if(y > b) b = y;
+              if(x < l) l = x; if(x > r) r = x;
+            }
+          }
+        }
+        m[nm] = b < 0 ? null : { t: t-fr[1], b: b-fr[1], l: l-fr[0], r: r-fr[0] };
+      }
+    }
+  }catch(e){ m = null; }        /* 오염된 캔버스 — 호출부가 rect 중심으로 떨어진다 */
+  return (frInkCache[key] = m);
+}
+
 /* 프레임 그리기 (기준점 = 발밑) */
 function drawFrame(key, frameName, x, y, scale, flip, alpha, img){
   const A = ATLAS[key];
@@ -23719,12 +23757,18 @@ function dunIntroMid(e){
   if(!A || !A.a) return fb;
   const list = A.a[e.anim];
   if(!list || !list.length) return fb;
-  const s = T.scale || 1, xo = frameXo(e.akey, A) || {};
+  const s = T.scale || 1, xo = frameXo(e.akey, A) || {}, ink = frameInk(e.akey, A);
   let sx = 0, sy = 0, n = 0;
   for(const nm of list){
     const fr = A.f[nm]; if(!fr) continue;
-    sx += (-fr[6]/2 + fr[4] + (xo[nm] || 0) + fr[2]/2) * s;
-    sy += (-fr[7] + fr[5] + fr[3]/2) * s;
+    /* ⚑ 4회차 — 프레임 **rect** 의 한가운데가 아니라 «그려진 잉크» 의 한가운데다.
+       트림이 없는 시트는 rect = 격자라, 잉크가 격자 안에서 쏠려 있어도 rect 중심은 안 움직인다
+       (dragon: 격자 중심 32.0 ↔ 잉크 중심 **39.33** = 7.33 아틀라스px 아래 · 배율 3.406 에서 25px).
+       비평가 CW·CX 가 4회차에 «+20 ~ +38px 아래» 로 **2인 독립·같은 부호의 상수 오차**를 쟀고,
+       CW 는 아틀라스 원본을 열어 그 7.33 을 직접 짚었다. 잉크를 못 재면 rect 로 떨어진다. */
+    const k = ink && ink[nm];
+    sx += (-fr[6]/2 + fr[4] + (xo[nm] || 0) + (k ? (k.l + k.r)/2 : fr[2]/2)) * s;
+    sy += (-fr[7] + fr[5] + (k ? (k.t + k.b)/2 : fr[3]/2)) * s;
     n++;
   }
   if(!n) return fb;

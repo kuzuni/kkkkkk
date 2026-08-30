@@ -27,7 +27,9 @@ const ID = process.argv[2] || 'gold';
 const OUT = path.join(ROOT, 'docs/review');
 
 (async () => {
-  const browser = await launch(chromium);
+  /* 425 4회차 — `frameInk` 가 아틀라스 픽셀을 읽는다. file:// 는 이 플래그가 없으면
+     캔버스가 «교차 출처» 로 오염돼 rect 중심 폴백으로 떨어진다(verify348 선례). */
+  const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
