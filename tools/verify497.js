@@ -138,12 +138,17 @@ const openCoin = page => page.evaluate(() => {
   /* ================= [D] 안 건드린 것 ================= */
   const D = await page.evaluate(() => ({
     offplus: typeof PASS_OFFPLUS_DIA === 'undefined' ? null : PASS_OFFPLUS_DIA,
-    runeDia: typeof RUNE_DIA === 'undefined' ? null : RUNE_DIA,
+    newDia: typeof NEW_DIA === 'undefined' ? null : NEW_DIA,
+    monthDia: typeof MONTHLY_DIA === 'undefined' ? null : MONTHLY_DIA,
     adDia: (typeof COIN_ADS === 'undefined' ? [] : COIN_ADS).map(a => (a.r && a.r.dia) || 0),
   }));
   ok(D.offplus === 50000, 'D1 이용권 대체가 PASS_OFFPLUS_DIA 50,000 불변 — 지시 ③(상점 재화로 파는 것만)', String(D.offplus));
   ok(D.adDia.filter(Boolean).every(v => v === 100), 'D2 13 광고 상품 보석 ×100 불변(365)', D.adDia.join('/'));
-  ok(D.runeDia !== null, 'D3 룬 대체가 상수 존재(값은 497 범위 밖 — 안 건드렸다)', String(D.runeDia));
+  /* 497 은 «상점 재화로 파는 것» 만 만졌다 — 같은 화폐의 **수급** 축(180 신규 100만 · 월별 10만)은
+     손이 미끄러지기 쉬운 자리라 여기서 불변을 못박는다. 그 곡선은 498·199 몫이다. */
+  ok(D.newDia === 1000000 && D.monthDia === 100000,
+     'D3 다이아 수급 축(180 신규 NEW_DIA 100만 · MONTHLY_DIA 10만) 불변 — 497 은 판매만 만졌다',
+     D.newDia + ' · ' + D.monthDia);
 
   /* ================= [E] 구 세이브 ================= */
   const ctx2 = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
