@@ -12,7 +12,8 @@
  *   §3 대기 중   — 50킬을 채워도 보스가 자동으로 서지 않는다(파도 보너스 + 재충전만)
  *   §4 버튼      — [스테이지 재도전](#bossRt)이 떠 있고, 누르면 그 자리에서 보스가 선다
  *   §5 클리어 후 — 대기가 풀려 다음 스테이지는 50킬 → **자동** 보스 도전으로 돌아온다
- *   §6 예외      — 던전·레이드·아레나 사망은 이 규칙이 건드리지 않는다(각자 결과 화면이 받는다)
+ *   §6 예외      — 던전·아레나 사망은 **그 모드가** 받는다(던전은 458 뒤로 그 자리에서 실패로 끝난다).
+ *                  273 쪽 불변식(패배 화면·파밍 대기를 안 건드린다)이 여기서 묻는 것이다.
  *   §7 콘솔 에러 0
  */
 const { pw, launch } = require('./pwlaunch');
@@ -146,28 +147,48 @@ const dieToMob = p => p.evaluate(() => {
   ok(auto.bossOn && auto.bossQ === 1, '§5 다음 스테이지는 50킬 → **자동** 보스 도전 — 주인 지시 ④');
   eq('§5 스테이지 유지(클리어는 보스를 잡아야)', auto.stage, 8);
 
-  /* ── §6 던전·레이드·아레나 사망은 건드리지 않는다 ──────────────────── */
+  /* ── §6 다른 모드의 사망은 «그 모드» 가 받는다 ─────────────────────────
+     ⚑ 458(2026-08-30, 주인 지시 «보스전 도중에 죽으면 실패되는거로 해야함») 이관.
+       273 은 여기를 «던전·레이드·아레나 사망은 이 규칙이 건드리지 않는다 — 각자 결과 화면이 받는다»
+       로 적어 뒀는데, `probe458` 이 그 «각자 받는다» 가 **아레나에서만 참**임을 찍었다
+       (던전·탑·승급전·레이드는 아무 일도 안 일어나고 2.4초 뒤 만피로 되살아나 계속 싸웠다).
+       그래서 이 절의 질문을 뒤집는다 — «건드리지 않는다» 가 아니라 **«그 모드의 실패로 끝난다»**.
+       273 의 규칙 자체(①패배 화면은 보스한테 졌을 때만 ②스테이지는 파밍 대기)는 그대로다:
+       여기서 묻는 것은 «던전 사망이 **스테이지** 규칙을 건드리지 않는가» 이고 그 답은 458 뒤에도 같다.
+       자리를 비우지 않고 살아 있는 질문으로 갈아 끼운다(333 처방). 본체는 `verify458`. */
   console.log('§6 다른 모드의 사망');
   const dun = await p.evaluate(() => {
     arena = null; raidOn = null; promo = null;
     S.stage = 12; S.best = 12; spawnStage();
     S.bossFarm = false;
-    dunRun = { d: DUNGEONS[0], f: 1, t: 60, dmg: 0, need: 1e9, stage: S.stage };
+    const d = DUNGEONS[0]; S.dunTk[d.id] = 9;
+    challengeDungeon(d);                              /* 실제 진입점 — 손으로 만든 런은 필드가 모자라 NaN 을 만든다 */
+    if (!dunRun) return { err: '던전 진입 실패' };
+    spawnQ.forEach(q => { if (q.t === 'dunboss') q.delay = 0; });
+    for (let i = 0; i < 30 && !enemies.some(e => e.tk === 'dunboss'); i++) step(1 / 60);
+    for (let i = 0; i < 300 && dunRun && dunRun.introOn; i++) step(1 / 60);   /* 425 등장 국면에서는 안 맞는다 */
     document.getElementById('defw').classList.remove('on');
-    const r = (() => {
-      player.hp = 1; player.inv = 0; player.dead = 0;
-      const e = enemies[0] || (makeEnemy('zombie'), enemies[enemies.length - 1]);
-      e.born = 1; e.cd = 0; e.atkT = 0; e.dmg = 1e9; e.x = player.x; e.y = player.y;
-      for (let i = 0; i < 40 && player.dead <= 0; i++) step(0.016);
-      return { dead: player.dead > 0, defw: document.getElementById('defw').classList.contains('on'),
-               farm: S.bossFarm };
-    })();
+    /* 사망은 «경로» 로 센다 — 458 뒤로는 실패가 그 프레임에 spawnStage() 로 되살리므로
+       사후 상태(player.dead)만 보면 «안 죽었다» 로 읽힌다. */
+    let deaths = 0; const rd = window.playerDied;
+    window.playerDied = function(){ deaths++; return rd.apply(this, arguments); };
+    player.hp = 1; player.inv = 0; player.dead = 0;
+    const e = enemies[0] || (makeEnemy('zombie'), enemies[enemies.length - 1]);
+    e.born = 1; e.cd = 0; e.atkT = 0; e.dmg = 1e9; e.x = player.x; e.y = player.y;
+    for (let i = 0; i < 60 && !deaths; i++) step(0.016);
+    window.playerDied = rd;
+    const r = { dead: deaths > 0, run: !!dunRun,
+                defw: document.getElementById('defw').classList.contains('on'),
+                farm: S.bossFarm };
+    if (dunRun) endDunRun(false, true);
     dunRun = null;
     return r;
   });
+  ok(!dun.err, '§6 (준비) 실제 진입점으로 던전에 들어갔다', dun.err);
   ok(dun.dead, '§6 (준비) 던전 런 중 사망');
-  ok(!dun.defw, '§6 던전 사망 — 패배 화면 없음(잡몹이다)');
-  ok(!dun.farm, '§6 던전 사망 — 스테이지 쪽 대기 상태를 건드리지 않는다');
+  ok(!dun.run, '§6 던전 사망 — 그 런이 실패로 끝난다(458 이관: 구 «건드리지 않는다»)');
+  ok(!dun.defw, '§6 던전 사망 — 패배 화면 없음(18 은 스테이지 보스 전용 — 273 ①)');
+  ok(!dun.farm, '§6 던전 사망 — 스테이지 쪽 대기 상태를 건드리지 않는다(273 ② 불변)');
   const arn = await p.evaluate(() => {
     dunRun = null; raidOn = null;
     S.bossFarm = false;
