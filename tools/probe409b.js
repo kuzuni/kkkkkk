@@ -32,6 +32,27 @@ const VARIANTS = [
      자가 진짜로 그 축을 재고 있다는 뜻이고, BL 은 A 와 Δ0 이어야 한다(384 를 안 건드렸다는 증거). */
   ['R 되돌림(2·3회차 배경 고리 전부 제거 = 1회차 상태)',
     '.stab.on::after{background:none!important}.stab.on{--pill-bl:none;--pill-br:none}'],
+  /* 409 3회차 — **후보 G(다음 회차용 설계안).** 3회차까지의 배경 고리 둘을 **끄고**, 대신
+     `::before` 자체를 «검정 링의 **안쪽 윤곽**»(사방 7 인셋 · 반경 23 = 동심)으로 다시 세운다.
+     384 가 `::before` 를 «좌·우만 7 인셋» 으로 잡은 것은 그때 검정이 **가로 밴드**였기 때문인데,
+     409 1회차가 검정을 **동심 등폭 링**으로 바꾼 순간 그 전제가 바뀌었다 — 검정의 안쪽 윤곽은
+     이제 «사방 7 인셋 · 반경 23» 이다. 직선 구간은 부모 그라데이션이 이미 같은 색을 칠하므로
+     `::before` 를 **코너 기둥으로 마스크**하면 값을 안 치르고 네 코너를 한 부품이 맡는다.
+     ⇒ 이 변종이 «어두운 띠도 호를 따라간다»(3인 독립 지적 CY·CZ·DA)를 값 없이 푸는지 재는 자리다. */
+  ['G ::before 를 동심 안쪽 윤곽(사방 7 인셋 · r23 · 기둥 마스크)으로',
+    '.stab.on::after{background:none!important}.stab.on{--pill-bl:none;--pill-br:none}'
+    + '.stab.on::before{top:7px!important;bottom:7px!important;border-radius:23px!important;'
+    + '-webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important;'
+    + 'mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important}'],
+  /* 409 3회차 — **후보 H = G(아래) + 2회차 `::after` 배경 고리(위).** G 는 아래 코너를 정확히
+     되살리지만 위 코너 30~45° 가 `B5.5/B5.0` 으로 2회차(B7.0/B6.5)보다 얕다 — 위는 `::after` 의
+     동심 고리가 더 낫다. 3회차의 **부모 배경 고리 둘은 끈다**(G 가 그 일을 대신하고, 그대로 두면
+     베벨이 겹쳐 DA 지적 2 «면적 +12~24%» 가 커진다). */
+  ['H = G(아래 ::before 동심) + 2회차 위 코너 고리',
+    '.stab.on{--pill-bl:none;--pill-br:none}'
+    + '.stab.on::before{top:7px!important;bottom:7px!important;border-radius:23px!important;'
+    + '-webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important;'
+    + 'mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important}'],
   ['B 띠를 위로', '.stab.on::before{z-index:1}.stab.on::after{z-index:0}'],
   ['C 이중 링(검정7+베벨7)',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 0 0 14px #634F37!important}'],

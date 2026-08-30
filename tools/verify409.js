@@ -50,6 +50,11 @@ const MAX_SPREAD = 2.0;     /* 0°~75° 편차 — 밴드는 5.2 가 나온다 *
    MIN_BEV 5.0 은 ref 6~7 · 우리 6.0~7.0 · 수리 전 2.0~4.0 사이에 그은 선이다. */
 const BEV_DEGS = [30, 45, 60, 75];
 const MIN_BEV = 5.0;
+/* 409 4회차 — 어두운 띠(384) 축. probe 각도계에서 0° = 옆면 · 90° = 바닥이므로 **바닥 쪽**만 본다
+   (옆면 쪽은 ref 도 1px 근처로 사라지는 것이 정답이다 — 거기서 두께를 요구하면 거짓 결함이 된다).
+   MIN_DARK 4.0 은 ref 6.1~6.2(CZ) · 우리 6.0 · 옛 상자 2.0~2.5 사이에 그은 선이다. */
+const DARK_DEGS = [60, 75];
+const MIN_DARK = 4.0;
 
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
@@ -164,6 +169,18 @@ function bevelRun(s, step = 0.5) {
   for (let i = k + 1; i < rs.length; i++) {
     if (rs[i][0] === 'B' && rs[i][1] * step >= 2.0) return rs[i][1] * step;
     if (rs[i][0] === 'F' && rs[i][1] * step >= 3.0) return 0;   /* 면이 먼저 나오면 베벨은 없다 */
+  }
+  return 0;
+}
+/* 409 4회차 — 검정 뒤 첫 «어두운 띠(D)» 런. AA 이음매(<2px)는 건너뛴다. */
+function darkRun(s, step = 0.5) {
+  const rs = [];
+  for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], j - i]); i = j; }
+  const k = rs.findIndex(r => r[0] === 'K');
+  if (k < 0 || k > 6) return 0;
+  for (let i = k + 1; i < rs.length; i++) {
+    if (rs[i][0] === 'D' && rs[i][1] * step >= 2.0) return rs[i][1] * step;
+    if (rs[i][1] * step >= 2.0) return 0;   /* D 아닌 두꺼운 런이 먼저 나오면 띠는 없다 */
   }
   return 0;
 }
@@ -288,7 +305,7 @@ const SETTLE = () => {
     console.log('[3] 음성항 — 직선 상·하변에는 검정이 없다 (링을 네 면에 두른 게 아니다)');
     console.log('[4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 통째로 빠진다 (378)');
     console.log('[5] 밴드 대조 — 60°/75° 가 7·cos α (3.5/1.8) 를 크게 넘는다\n');
-    let faces = 0, offFaces = 0, deltaFaces = 0, collapsed = 0;
+    let faces = 0, offFaces = 0, deltaFaces = 0, collapsed = 0, endCells = 0, midFaces = 0;
     for (const [name, sel, setup] of HOSTS) {
       const botOn = {}, botBev = {};
       try { await page.evaluate(setup); } catch (e) { ok(name + ' 진입', false, e.message.slice(0, 60)); continue; }
@@ -296,6 +313,7 @@ const SETTLE = () => {
       await page.evaluate(SETTLE);
       const p = await page.evaluate(PILL, sel);
       if (!p) { ok(name + ' 활성 알약 측정', false, '못 찾음'); continue; }
+      const midCell = !p.touchL && !p.touchR;
       await shoot(page);
 
       for (const corner of ['BL', 'BR', 'TL', 'TR']) {
@@ -336,10 +354,14 @@ const SETTLE = () => {
             ok('[8] ' + tag + ' — 검정 안쪽 런을 쟀다 (아래 코너 · Δ0 판정은 [8-Δ] 에서)',
               inner.every(r => r[0] !== '-'), iline);
             /* [9] 409 3회차 — 아래 코너의 «어두운 띠 뒤 밝은 베벨» 도 각도와 무관해야 한다
-               (ref 6.66~7.80 · 수리 전 4.04~5.97 로 코너로 갈수록 단조 감소했다 — CY·CZ 2인 독립). */
+               (ref 6.66~7.80 · 수리 전 4.04~5.97 로 코너로 갈수록 단조 감소했다 — CY·CZ 2인 독립).
+               ⚠ **가운데 칸에서만 묻는다.** 4회차가 새 상자를 «셸에 안 닿는 칸» 으로 한정했기 때문이다
+                  (닿는 면에는 검정이 없어 «검정의 안쪽 윤곽» 이라는 전제가 성립 안 한다 — 449 로 등재).
+                  끝 칸은 아래 [E] 가 «옛 상자 그대로인가» 로 따로 문다 — 자리를 비우지 않는다. */
+            if (!midCell) { continue; }
             const bev = [];
             for (const dg of BEV_DEGS) bev.push(bevelRun(await ray(page, p, corner, dg)));
-            botBev[corner] = bev;
+            botBev[corner] = bev; midFaces++;
             ok('[9] ' + tag + ' — 어두운 띠 뒤 베벨 ≥ ' + MIN_BEV.toFixed(1) + 'px (아래 코너도 등폭)',
               bev.every(v => v >= MIN_BEV), BEV_DEGS.map((d, i) => d + '°:' + bev[i].toFixed(1)).join(' '));
           }
@@ -380,38 +402,71 @@ const SETTLE = () => {
         await shoot(page);
       }
 
-      /* [9-R] 3회차의 되돌림 — 부모 배경의 아래 코너 고리 둘만 끄면 [9] 가 빨개져야 한다.
-         (`::after` 의 위 코너 고리와 **다른 손잡이**라, 이 시험이 둘을 서로 헷갈리지 않게 가른다.) */
-      if (Object.keys(botBev).length) {
+      /* [10] 409 4회차 — 아래 코너의 **어두운 띠**(384)도 호를 따라 두꺼워져야 한다.
+             ref 는 바닥 직선부(7px)에서 옆면(≈1px)으로 매끄럽게 줄어드는데(CY·CZ·DA 3인 독립),
+             옛 상자(좌·우만 7 인셋)에서는 코너 내내 2.0~2.8 로 납작했다.
+             ⇒ **바닥 쪽 각도**(60°·75° — probe 각도계에서 0°=옆면 · 90°=바닥)에서 ≥4.0 을 묻는다.
+         [9-R]·[10-R] 되돌림 — `::before` 를 **옛 상자**(좌·우만 7 인셋 · r30 · 마스크 없음)로 되돌리면
+             둘 다 무너져야 한다. 이 주입이 곧 «384 의 상자를 그대로 쓰면 어떻게 되는가» 다. */
+      if (!midCell) {
+        endCells++;
+        /* [E] 끝 칸 — 4회차가 **일부러** 옛 상자를 남긴 자리다. 그 사실을 여기서 못박아
+           «새 상자가 어쩌다 안 걸린 것» 과 구별한다(449 가 이 자리를 이어받는다). */
+        const bb = await page.evaluate(sel2 => {
+          const on = document.querySelector(sel2 + ' > .stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::before');
+          return { t: cs.top, bt: cs.bottom, r: cs.borderRadius };
+        }, sel);
+        ok('[E] ' + name + ' — 셸에 닿는 칸이라 가로 띠는 **옛 상자**(세로 인셋 0 · r30) 그대로다 (449)',
+          !!bb && bb.t === '0px' && bb.bt === '0px' && /^30px/.test(bb.r),
+          bb ? (bb.t + ' / ' + bb.bt + ' / ' + bb.r) : '없음');
+      }
+      if (midCell && Object.keys(botBev).length) {
+        const darkOn = {};
+        for (const corner of Object.keys(botBev)) {
+          const dk = [];
+          for (const dg of DARK_DEGS) dk.push(darkRun(await ray(page, p, corner, dg)));
+          darkOn[corner] = dk;
+          ok('[10] ' + name + ' ' + corner + ' — 바닥 쪽 어두운 띠 ≥ ' + MIN_DARK.toFixed(1) + 'px (띠도 호를 따라간다)',
+            dk.every(v => v >= MIN_DARK), DARK_DEGS.map((d, i) => d + '°:' + dk[i].toFixed(1)).join(' '));
+        }
         await page.evaluate(() => {
-          const s = document.createElement('style'); s.id = 'v409bevB';
-          s.textContent = '.stab.on{--pill-bl:none!important;--pill-br:none!important}';
-          document.head.appendChild(s);
+          const st = document.createElement('style'); st.id = 'v409box';
+          st.textContent = '.stab.on::before{top:0!important;bottom:0!important;border-radius:30px!important;'
+            + '-webkit-mask-image:none!important;mask-image:none!important}';
+          document.head.appendChild(st);
         });
         await page.waitForTimeout(180);
         await shoot(page);
         for (const corner of Object.keys(botBev)) {
-          const off = [];
-          for (const dg of BEV_DEGS) off.push(bevelRun(await ray(page, p, corner, dg)));
-          const on = botBev[corner];
-          const f = a => BEV_DEGS.map((d, i) => d + '°:' + a[i].toFixed(1)).join(' ');
-          /* ⚠ 호스트마다 «MIN_BEV 아래로 떨어진다» 를 요구하면 **`03 던전` BL 이 빨개진다** — 그 자리는
-             438(바닥 띠 감김이 그 호스트에서만 빠진다)이 이미 등재된 자리라 수리 전 값이 5.0~7.0 으로
-             선 위에 걸친다. 남의 결함이 내 되돌림 항의 색을 정하지 않게, 호스트별로는 «**고리가 실제로
-             더 두껍게 만든다**»(전 각도에서 켬 > 끔)를 묻고, «5.0 이라는 선 자체가 문다» 는 것은
-             아래 전역 항이 한 번 못박는다. 무른 항이 아니다 — 고리가 죽으면 켬 = 끔 이 되어 빨개진다. */
-          ok('[9-R] ' + name + ' ' + corner + ' — 아래 고리를 끄면 전 각도에서 베벨이 얇아진다 (고리가 실제로 그린다)',
-            on.every((v, i) => v >= MIN_BEV && v > off[i]), '켬 ' + f(on) + '  ↔  끔 ' + f(off));
-          if (off.some(v => v < MIN_BEV)) collapsed++;
+          const bOff = [], dOff = [];
+          for (const dg of BEV_DEGS) bOff.push(bevelRun(await ray(page, p, corner, dg)));
+          for (const dg of DARK_DEGS) dOff.push(darkRun(await ray(page, p, corner, dg)));
+          const f = a => a.map(v => v.toFixed(1)).join(' / ');
+          /* ⚠ «전 각도에서 두꺼워진다» 로는 못 쓴다 — 4회차는 어두운 띠를 **두껍게** 만들었고
+             그만큼 베벨의 시작점이 안으로 밀려 바닥 쪽(75°) 한 각도는 오히려 얇아진다(ref 도 같은
+             구조다: 바닥 쪽은 «띠 6.2 + 베벨 7.2» 로 둘이 자리를 나눈다). 그래서 «**가장 얇은 각도가
+             올라간다**» 로 묻는다 — 축이 하나 무너지면 그 각도가 최솟값이 되어 곧바로 빨개진다. */
+          ok('[9-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 띠 뒤 베벨의 최악 각도가 내려간다',
+            botBev[corner].every(v => v >= MIN_BEV) && Math.min(...botBev[corner]) > Math.min(...bOff),
+            '켬 ' + f(botBev[corner]) + '(최악 ' + Math.min(...botBev[corner]).toFixed(1) + ')'
+            + '  ↔  끔 ' + f(bOff) + '(최악 ' + Math.min(...bOff).toFixed(1) + ')');
+          ok('[10-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 어두운 띠가 ' + MIN_DARK.toFixed(1) + ' 아래로 무너진다',
+            darkOn[corner].every(v => v >= MIN_DARK) && dOff.some(v => v < MIN_DARK),
+            '켬 ' + f(darkOn[corner]) + '  ↔  끔 ' + f(dOff));
+          if (bOff.some(v => v < MIN_BEV)) collapsed++;
         }
-        await page.evaluate(() => { const s = document.getElementById('v409bevB'); if (s) s.remove(); });
+        await page.evaluate(() => { const st = document.getElementById('v409box'); if (st) st.remove(); });
         await page.waitForTimeout(150);
         await shoot(page);
       }
     }
     ok('[8-Δ] 아래 코너를 4 면 이상 껐다 켰다 (Δ0 항이 공허하지 않다)', deltaFaces >= 4, deltaFaces + '면');
-    ok('[9-R] 아래 고리를 끄면 MIN_BEV(' + MIN_BEV.toFixed(1) + ') 아래로 무너지는 면이 실제로 있다 (선 자체가 문다)',
-      collapsed >= 3, collapsed + '면');
+    ok('[9-R] 옛 상자로 되돌리면 MIN_BEV(' + MIN_BEV.toFixed(1) + ') 아래로 무너지는 면이 실제로 있다 (선 자체가 문다)',
+      collapsed >= 2, collapsed + '면');
+    ok('[9]·[10] 을 가운데 칸 아래 코너 4 면 이상에서 쟀다 (표본이 공허하지 않다)', midFaces >= 4, midFaces + '면');
+    ok('[E] 끝 칸도 표본에 있다 («가운데만 본다» 가 회피가 아님을 보인다)', endCells >= 2, endCells + '칸');
     ok('링이 살아 있는 면을 8 면 이상 쟀다', faces >= 8, faces + '면');
     ok('378 이 넘긴 면도 실제로 있었다 (음성항이 공허하지 않다)', offFaces >= 2, offFaces + '면');
 
@@ -480,8 +535,13 @@ const SETTLE = () => {
     const bevOff = [], dOff = [];
     for (const dg of BEV_DEGS) { bevOff.push(innerRun(await ray(page, p0, 'TL', dg))); dOff.push(innerRun(await ray(page, p0, 'BL', dg))); }
     const fmtI = a => BEV_DEGS.map((d, i) => d + '°:' + a[i][0] + a[i][1].toFixed(1)).join(' ');
-    ok('R6 배경 동심 고리를 떼면 위 코너 베벨이 ' + MIN_BEV.toFixed(1) + ' 아래로 무너진다 ([8] 이 공허하지 않다)',
-      bevOn.every(r => r[0] === 'B' && r[1] >= MIN_BEV) && bevOff.some(r => r[0] !== 'B' || r[1] < MIN_BEV),
+    /* ⚠ 4회차부터는 «떼면 5.0 아래로 무너진다» 가 아니다 — `::before` 가 동심 윤곽으로 옮겨 오면서
+       위 코너 베벨도 **일부는 그 층이** 그린다(떼도 5.0~6.0 이 남는다). 두 층이 같은 자리를 나눠
+       그리므로, 이 항이 묻는 것은 «`::after` 고리가 그 값을 실제로 끌어올리는가» 다 —
+       가장 얇은 각도가 내려가면 빨개진다(떼면 6.0 → 5.0). */
+    ok('R6 배경 동심 고리를 떼면 위 코너 베벨의 최악 각도가 내려간다 ([8] 이 공허하지 않다)',
+      bevOn.every(r => r[0] === 'B' && r[1] >= MIN_BEV)
+      && Math.min(...bevOn.map(r => r[1])) > Math.min(...bevOff.map(r => r[1])),
       '켬 ' + fmtI(bevOn) + '  ↔  끔 ' + fmtI(bevOff));
     ok('R7 같은 조작으로 **아래** 코너는 Δ0 — 384 의 바닥 띠 감김은 이 고리와 무관하다',
       dOn.every((r, i) => r[0] === dOff[i][0] && Math.abs(r[1] - dOff[i][1]) < 0.01),

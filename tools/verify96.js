@@ -124,6 +124,18 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           const cs = getComputedStyle(on, '::after');
           return { sh: cs.boxShadow,
             mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
+        })(),
+        /* 409 4회차 이관 — 가로 띠(`::before`)도 이제 **자리 손잡이(`--pill-mask`)를 쓴다**.
+           384 때는 상자가 «좌·우만 7 인셋» 이라 자리와 무관했는데, 검정이 동심 링이 되면서
+           이 상자가 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)으로 옮겨 갔고 직선 구간 기여를
+           지우려고 같은 코너 기둥 마스크를 쓴다 ⇒ 끝 칸에서 기둥 하나가 빠진다. */
+        onBand: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::before');
+          return { sh: cs.boxShadow, top: cs.top, bottom: cs.bottom, left: cs.left, right: cs.right,
+            r: cs.borderRadius,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -154,6 +166,18 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           if (!on) return null;
           const cs = getComputedStyle(on, '::after');
           return { sh: cs.boxShadow,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
+        })(),
+        /* 409 4회차 이관 — 가로 띠(`::before`)도 이제 **자리 손잡이(`--pill-mask`)를 쓴다**.
+           384 때는 상자가 «좌·우만 7 인셋» 이라 자리와 무관했는데, 검정이 동심 링이 되면서
+           이 상자가 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)으로 옮겨 갔고 직선 구간 기여를
+           지우려고 같은 코너 기둥 마스크를 쓴다 ⇒ 끝 칸에서 기둥 하나가 빠진다. */
+        onBand: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::before');
+          return { sh: cs.boxShadow, top: cs.top, bottom: cs.bottom, left: cs.left, right: cs.right,
+            r: cs.borderRadius,
             mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
@@ -186,6 +210,18 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           const cs = getComputedStyle(on, '::after');
           return { sh: cs.boxShadow,
             mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
+        })(),
+        /* 409 4회차 이관 — 가로 띠(`::before`)도 이제 **자리 손잡이(`--pill-mask`)를 쓴다**.
+           384 때는 상자가 «좌·우만 7 인셋» 이라 자리와 무관했는데, 검정이 동심 링이 되면서
+           이 상자가 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)으로 옮겨 갔고 직선 구간 기여를
+           지우려고 같은 코너 기둥 마스크를 쓴다 ⇒ 끝 칸에서 기둥 하나가 빠진다. */
+        onBand: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::before');
+          return { sh: cs.boxShadow, top: cs.top, bottom: cs.bottom, left: cs.left, right: cs.right,
+            r: cs.borderRadius,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -217,6 +253,18 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           const cs = getComputedStyle(on, '::after');
           return { sh: cs.boxShadow,
             mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
+        })(),
+        /* 409 4회차 이관 — 가로 띠(`::before`)도 이제 **자리 손잡이(`--pill-mask`)를 쓴다**.
+           384 때는 상자가 «좌·우만 7 인셋» 이라 자리와 무관했는데, 검정이 동심 링이 되면서
+           이 상자가 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)으로 옮겨 갔고 직선 구간 기여를
+           지우려고 같은 코너 기둥 마스크를 쓴다 ⇒ 끝 칸에서 기둥 하나가 빠진다. */
+        onBand: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::before');
+          return { sh: cs.boxShadow, top: cs.top, bottom: cs.bottom, left: cs.left, right: cs.right,
+            r: cs.borderRadius,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -237,30 +285,14 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     const maskHasL = m => /^linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) 30px/.test(m);
     const maskHasR = m => /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(m);
     const posName = p => !p ? '?' : (p.L ? '좌' : '') + (p.R ? '우' : '') || '가운데';
-    /* 409 3회차 이관 (2026-08-30) — **자리 규칙에 손잡이가 둘 늘었다.** 아래 두 코너의 베벨 동심 고리는
-       부모 `background` 에 깔리고(`::after` 에 얹으면 384 의 바닥 띠 감김을 덮는다), 셸에 닿는 면에서는
-       `--pill-bl`/`--pill-br` 가 `none` 이 된다 — `--pill-l`/`--pill-r`·`--pill-mask` 와 **같은 자리에서**.
-       ⇒ 그래서 `backgroundImage` 도 boxShadow 처럼 «자리가 다르면 cmp 에서 빼고 [1-c] 가 되받는다».
-       ⚠ 무르게 뺀 게 아니다 — 아래 [1-c] 가 ⓐ 층이 셋인지 ⓑ 고리 둘이 자리 규칙과 같은지
-          ⓒ **세 띠 그라데이션(층 3)은 네 호스트 전부 Δ0 인지** 를 각각 묻는다. */
-    const bgLayers = b => {
-      const out = []; let d = 0, cur = '';
-      for (const ch of (b || '')) {
-        if (ch === '(') d++;
-        if (ch === ')') d--;
-        if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch;
-      }
-      if (cur.trim()) out.push(cur.trim());
-      return out;
-    };
     const cmp = (label, key, props) => {
       [['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
         /* 활성 칸끼리 비교할 때, **자리가 다르면** boxShadow 만 빼고 나머지 11개를 그대로 묻는다.
            뺀 한 개는 아래 [1-c] 가 자리별 규칙으로 각 호스트에서 따로 문다 — 무르게 푼 게 아니다. */
         const posDiff = key === 'on' && hero.onPos && o.onPos
           && (hero.onPos.L !== o.onPos.L || hero.onPos.R !== o.onPos.R);
-        const d = diff(hero[key], o[key], posDiff ? ['boxShadow', 'backgroundImage'] : []);
-        ok(label + ' — 영웅 vs ' + n + ' Δ0' + (posDiff ? ' (자리 ' + posName(hero.onPos) + ' vs ' + posName(o.onPos) + ' — 밴드·코너 고리는 [1-c])' : ''),
+        const d = diff(hero[key], o[key], posDiff ? ['boxShadow'] : []);
+        ok(label + ' — 영웅 vs ' + n + ' Δ0' + (posDiff ? ' (자리 ' + posName(hero.onPos) + ' vs ' + posName(o.onPos) + ' — 밴드는 [1-c])' : ''),
           d.length === 0, d.length ? d.slice(0, 3).join(' / ') : (props.length - (posDiff ? 1 : 0)) + '개 속성 일치');
       });
     };
@@ -288,16 +320,36 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
         !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
         r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
-      /* 409 3회차 이관 — 자리 규칙의 **셋째 반쪽**: 아래 코너 베벨 고리 둘. */
-      const bg = bgLayers(o.on.backgroundImage);
-      ok(n + ' — 부모 배경이 «아래 코너 고리 둘 + 세 띠» 세 층이다',
-        bg.length === 3 && /^linear-gradient\(/.test(bg[2]), bg.length + '층');
-      ok(n + ' 자리 «' + posName(o.onPos) + '» → 아래 코너 고리가 그 자리 규칙과 같다 (닿는 면은 뺀다)',
-        bg.length === 3 && !!o.onPos
-          && (bg[0] !== 'none') === !o.onPos.L && (bg[1] !== 'none') === !o.onPos.R,
-        bg.length === 3 ? ('좌고리 ' + (bg[0] !== 'none') + ' · 우고리 ' + (bg[1] !== 'none')) : '층 수 이상');
-      ok(n + ' — 세 띠 그라데이션(층 3)은 영웅과 Δ0 (자리와 무관한 부분은 여전히 같다)',
-        bg.length === 3 && bg[2] === bgLayers(hero.on.backgroundImage)[2], bg[2] ? bg[2].slice(0, 60) : '없음');
+      /* 409 4회차 이관 — 자리 규칙의 **셋째 반쪽**: 가로 띠(`::before`)도 같은 기둥 마스크를 쓴다.
+         ⓐ 상자가 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)인가 — 좌·우만 인셋한 옛 상자로 되돌아가면
+            코너 중심이 가로로 7 어긋나 띠가 호에서 얇아진다(3인 독립 지적의 뿌리).
+         ⓑ 세 띠 자체는 네 호스트 Δ0 ⓒ 기둥이 자리 규칙과 같다. */
+      const b = o.onBand;
+      /* 409 4회차 — 상자는 **자리에 따라 둘**이다: 가운데 칸은 «검정의 안쪽 윤곽»(사방 7 인셋 · r23),
+         셸에 닿는 끝 칸은 그 면에 검정이 없어(378) **옛 평행이동 상자**(좌·우만 7 인셋 · r30) 그대로다.
+         둘을 잇는 불변식은 «가로 인셋 + 반경 = 알약 반경 30» — 코너 중심의 x 가 알약과 같다는 뜻이다
+         (`verify384` 가 같은 불변식을 문다). 끝 칸까지 새 상자로 옮기는 것은 **449**. */
+      const endCell = !!o.onPos && (o.onPos.L || o.onPos.R);
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 상자가 그 자리의 규격이다'
+        + (endCell ? ' (끝 칸 = 옛 상자 r30 · 449)' : ' (가운데 = 동심 윤곽 7인셋·r23)'),
+        !!b && b.left === '7px' && b.right === '7px'
+          && (endCell ? (b.top === '0px' && b.bottom === '0px' && /^30px/.test(b.r))
+                      : (b.top === '7px' && b.bottom === '7px' && /^23px/.test(b.r))),
+        b ? [b.left, b.right, b.top, b.bottom, b.r].join(' / ') : '없음');
+      /* 두 상자를 가르는 것은 **코너 중심의 x** 다 — 가운데 칸은 알약과 같고(7+23=30 = 동심),
+         끝 칸은 옛 «평행이동» 이라 7 오른쪽이다(7+30=37). 값을 그냥 적지 않고 **자리에서 유도**해
+         묻는다: 이 두 수 말고 다른 값이 나오면 상자가 어느 쪽도 아니라는 뜻이다. */
+      ok(n + ' — 코너 중심 x = ' + (endCell ? '37 (옛 평행이동)' : '30 (알약과 동심)'),
+        !!b && Math.abs(parseFloat(b.left) + parseFloat(b.r) - (endCell ? 37 : 30)) < 0.6,
+        b ? (b.left + ' + ' + b.r + ' = ' + (parseFloat(b.left) + parseFloat(b.r))) : '없음');
+      ok(n + ' — 세 띠(그림자 3겹)는 영웅과 Δ0',
+        !!b && b.sh === hero.onBand.sh, b ? b.sh.slice(0, 60) : '없음');
+      /* ⚠ 이 층의 마스크는 «자리» 손잡이(`--pill-mask`)를 **안 쓴다** — 한 번 그렇게 썼다가
+         `verify384` 가 17건으로 빨개졌다(닿는 면에도 바닥 띠 감김은 있어야 한다). 가운데 칸은
+         **양쪽 기둥을 늘 켠 고정 마스크**, 끝 칸은 옛 상자라 마스크가 아예 없다. */
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 마스크가 그 자리의 규격이다',
+        !!b && (endCell ? (!b.mask || b.mask === 'none') : (maskHasL(b.mask) && maskHasR(b.mask))),
+        b ? (b.mask && b.mask !== 'none' ? ('좌기둥 ' + maskHasL(b.mask) + ' · 우기둥 ' + maskHasR(b.mask)) : 'none') : '없음');
     });
     ok('두 갈래가 표본에 다 있다 (끝 ' + posEnd + ' · 가운데 ' + posMid + ')', posEnd >= 1 && posMid >= 1,
       '끝 ' + posEnd + ' / 가운데 ' + posMid);

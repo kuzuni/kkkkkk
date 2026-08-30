@@ -157,7 +157,7 @@ const PILL = sel => {
     x: b.x, y: b.y, w: b.width, h: b.height,
     label: (on.querySelector('i') || {}).textContent || '',
     pe: cs.pointerEvents, shadow: cs.boxShadow, radius: cs.borderRadius,
-    left: cs.left, right: cs.right,
+    left: cs.left, right: cs.right, top: cs.top, bottom: cs.bottom,
     ringSh: ring.boxShadow, ringMask: ring.maskImage || ring.webkitMaskImage || '',
   };
 };
@@ -214,8 +214,22 @@ async function readCorner(page, p, rel, side, n = 30) {
     ok('알약 높이 = ' + PILL_H, !!d0 && Math.abs(d0.h - PILL_H) <= 0.6, d0 ? d0.h.toFixed(2) : '—');
     ok('`::before` 가 좌·우 7px 인셋 상자다 (검정 «안쪽» 윤곽)',
       !!d0 && d0.left === '7px' && d0.right === '7px', d0 ? d0.left + ' / ' + d0.right : '—');
-    ok('그 상자의 반경이 알약과 같은 30px (평행이동은 반경을 안 바꾼다)',
-      !!d0 && /^30px/.test(d0.radius), d0 ? d0.radius : '—');
+    /* 409 4회차 이관 (2026-08-30) — **이 항의 전제가 바뀌었다.** «반경 30» 의 근거는 «이 상자는 검정
+       가로 밴드의 내변을 **평행이동**한 것이고 평행이동은 반경을 안 바꾼다» 였다. 409 가 검정을
+       **동심 등폭 링**으로 바꾸면서 그 내변이 «사방 7 인셋 · 반경 23» 인 **동심 윤곽**이 됐고,
+       가운데 칸의 `::before` 는 그리로 옮겨 갔다(그래야 띠가 호를 따라간다 — CY·CZ·DA 3인 독립).
+       셸에 닿는 끝 칸은 그 면에 검정이 없어(378) 옛 상자를 그대로 쓴다.
+       ⇒ 값을 갈아 끼우는 대신 **두 경우를 다 묻고, 둘을 잇는 불변식까지 묻는다**:
+          «가로 인셋 + 반경 = 알약 반경 30» — 상자가 어느 쪽이든 코너 중심의 x 가 알약과 같다는 뜻이고,
+          이것이 384 가 «평행이동» 으로 말하려던 바로 그 성질이다. 무르게 푼 게 아니다:
+          옛 상자를 가운데 칸에 되돌리면 세로 인셋이 0 이라 아래 [2]·[5] 가 즉시 빨개진다. */
+    const boxOK = d0 && ((/^23px/.test(d0.radius) && d0.top === '7px' && d0.bottom === '7px')
+      || (/^30px/.test(d0.radius) && d0.top === '0px' && d0.bottom === '0px'));
+    ok('그 상자가 «동심 안쪽 윤곽(7 인셋·r23)» 이거나 «옛 평행이동 상자(r30)» 다',
+      !!boxOK, d0 ? (d0.radius + ' · top ' + d0.top + ' · bottom ' + d0.bottom) : '—');
+    ok('어느 쪽이든 «가로 인셋 + 반경 = 30» — 코너 중심 x 가 알약과 같다',
+      !!d0 && Math.abs(parseFloat(d0.left) + parseFloat(d0.radius) - 30) < 0.6,
+      d0 ? (d0.left + ' + ' + d0.radius + ' = ' + (parseFloat(d0.left) + parseFloat(d0.radius))) : '—');
     ok('세 띠가 다 걸려 있다 — 바닥 ' + DARK + ' 7 · 바닥 베벨 14 · 상단 베벨 7',
       !!d0 && /inset/.test(d0.shadow) && (d0.shadow.match(/inset/g) || []).length === 3,
       d0 ? d0.shadow.replace(/\s+/g, ' ').slice(0, 110) : '—');
