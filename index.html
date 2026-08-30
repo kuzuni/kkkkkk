@@ -1179,7 +1179,13 @@
      ⚠ 목록은 손으로 적은 표라 뒤처진다(402) ⇒ `verify419` §1 이 **오프너 전수**에 대해 불변식
         «배너는 온전히 보이거나 아예 안 보인다 — 토막 0건» 을 묻는다. 새 오버레이가 배너를 토막 내면
         목록이 아니라 **자가 먼저 빨개진다.** */
-  #app:has(:is(#modal,#collw,#blsw,#bagw,#pfw,#specw,#cfw).on) #tuto{display:none}
+  /* ⚑ 467(2026-08-30) — `#wpnw`(05 장비 세부 팝업)를 목록에 더했다. 위 ⚠ 가 적어 둔 «목록은
+     손으로 적는 표라 뒤처진다» 가 그대로 일어난 자리다 — 419 당시 `probe351lib` 이 `#eqCards`
+     를 **08 영웅 시트를 열기 전에** 물어 `eqslot:*` 세 화면을 한 번도 연 적이 없었고(351 14회차),
+     그래서 이 오버레이가 스코프 밖이었다. 실측(`probe467`): 상자 898 → 토막 **91px**,
+     배너 침범 1600 에서 **150px = 배너 전체**(1920·1842·1805·1791 도 150 · 2280 은 83.5).
+     `#modal` 과 같은 급(딤 + 화면을 소유하는 다이얼로그)이라 같은 처방을 쓴다. */
+  #app:has(:is(#modal,#collw,#blsw,#bagw,#pfw,#specw,#cfw,#wpnw).on) #tuto{display:none}
   /* [보상받기] 라벨 — 상대 (102,18), 잉크 141x34, 금색 + 검정 외곽선 4 */
   /* 4회차 — 1행 잉크가 ref 1858 인데 1855 였다(비평가 A −2.5 / B −3). `.todo` 는 `top:5px` 로
      따로 덮으므로 이 값은 «보상받기» 상태에만 걸린다(32 구간 무영향). */
@@ -7966,7 +7972,17 @@
   /* 모달 박스 — 검정 7px + 갈색 프레임(#564438), radius 42 */
   /* 프레임이 짧은 기기(4:3 → #app 1600)에서는 1469 가 안 들어간다 → max-height 로 눌리고
      본문이 스크롤한다. 눌리지 않는 한 높이는 실측 1469 그대로다. */
-  .wm{position:relative;flex:none;width:898px;height:1469px;max-height:100%;
+  /* ⚑ 467 — `100%` 가 아니라 `100% − 60px` 이다(390·400·407·414·420 계열의 «띠» 축).
+     이 오버레이의 세로 여백은 «위 126 / 아래 150» 인데 **탭바 상변은 프레임 하변 − 180** 이고
+     **HUD 판때기(`.pedge`) 하변은 142** 다 ⇒ 아래가 30px, 위가 16px 모자란다. 상자가
+     `max-height` 로 눌리는 프레임(1805 아래)에서 그 모자람이 그대로 침범으로 나왔다
+     (실측 1600: 탭바 30px · HUD 16px · `.wm-body` 도 탭바 14px — `tools/probe467.js`).
+     ⇒ **가운데 정렬이 값을 두 번 치른다**: 높이에서 60 을 빼면 하변이 30 올라가 탭바 상변에
+     정확히 닿고(bottom = frameH − 180), 상변은 30 내려가 126 → **156** 이 되어 판때기 142 를
+     14px 여유로 비켜난다. 상수를 프레임 높이로 다시 적지 않는 이유가 이것이다 — `100%` 는
+     이미 «여백을 뺀 띠» 라 `--frameh` 를 또 읽으면 같은 값을 두 곳에 적게 된다(385 자매 드리프트).
+     ⚠ 2280·1920·1842 는 `1469 < 100% − 60` 이라 **Δ0px** 다(문턱은 1805 — 그 아래에서만 눌린다). */
+  .wm{position:relative;flex:none;width:898px;height:1469px;max-height:calc(100% - 60px);
     background:#564438;border:8px solid #000;border-radius:42px;box-sizing:border-box}
   .wm>*{position:absolute}
 
@@ -7986,12 +8002,30 @@
     box-shadow:inset 1px 0 0 #887662,inset -1px 0 0 #887662,inset 0 -1px 0 #887662}
   .wm-body::-webkit-scrollbar{width:0;height:0}
   /* 절대좌표 자식은 이 래퍼(실측 858x1347)가 기준이다 — 본문이 눌려도 좌표가 흔들리지 않는다 */
-  .wm-in{position:relative;width:858px;height:1347px}
+  /* ⚑ 467 — «흔들리지 않는다» 의 대가가 **주 행동 버튼 2개**였다. 래퍼가 1347 로 굳어 있으면
+     본문 뷰포트가 그보다 짧아진 프레임에서 넘침이 나고, 넘치는 쪽 끝에 있는 것이 하필
+     [장착]·[일괄 강화] 다 — 1600 실측 넘침 **140px** · 스크롤 0 에서 버튼 **17.6%** 만 보였다.
+     351 재지시 ①(주인 지시 2026-08-29)이 «스크롤로 닿으면 감점 아님» 을 폐기했으므로
+     주 CTA 는 **스크롤 0 에서 100%** 여야 한다.
+     ⚠ 404 처방(«버튼을 스크롤 그릇 밖으로 꺼내 시트 고정 자식으로»)은 **여기엔 안 맞는다** —
+       비평가 셋(DE·DF·DG)이 «버튼은 그릇 밖 고정 푸터라 스크롤로 회수 불가» 라고 적었지만
+       자가 뒤집었다: 두 버튼은 `.wm-body` **안**이고 끝까지 내리면 100% 보인다(`probe467`).
+       없는 병을 고치는 처방이다.
+     ⇒ 403·404 가 주인 지시로 세운 축을 그대로 쓴다 — **«콘텐츠 = 뷰포트 · 남는 높이는
+       격자가 흡수»**. 래퍼는 1347 을 상한으로만 쓰고(`min`), 뷰포트가 그보다 짧으면 뷰포트가
+       된다 ⇒ 넘침 0. 아래 셋(격자 높이 · 총효과 · 버튼)이 그 흡수를 나눠 진다.
+     ⚠ 2280 본문은 1352 라 `min` 이 언제나 1347 을 고른다 = **Δ0px**(1920·1842·2600 도 같다). */
+  .wm-in{position:relative;width:858px;height:min(1347px, 100%)}
   .wm-in>*{position:absolute}
 
   /* 정보/그리드 패널 — 본문기준 좌 7 (ref x118) */
   .wm-info{left:7px;top:32px;width:844px;height:396px;border-radius:37px;background:#D7C0A1}
-  .wm-grid{left:7px;top:458px;width:844px;height:621px;border-radius:22px;background:#D7C0A1;
+  /* ⚑ 467 — 격자가 흡수한다(`.wm-in` 주석). 726 = 458(격자 위) + 268(격자 아래 = 총효과·버튼·여백)
+     이라 **격자 아래 세 값은 한 픽셀도 안 움직이고** 남는 높이만 격자가 먹는다.
+     검산: 2280 본문 1347 − 726 = **621**(측정치 그대로 Δ0) · 1600 은 1147 − 726 = 421.
+     격자는 원래부터 `overflow-y:auto` 라(186 이 8행을 스크롤로 담게 만든 자리) 줄어든 만큼
+     스크롤이 받는다 — 40칸 어느 것도 못 닿게 되지 않는다(`verify186` [D] 가 그것을 묻는다). */
+  .wm-grid{left:7px;top:458px;width:844px;height:calc(100% - 726px);border-radius:22px;background:#D7C0A1;
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
   .wm-grid::-webkit-scrollbar{width:0;height:0}
   .wm-info>*{position:absolute}
@@ -8102,14 +8136,19 @@
   /* 7회차 — 잉크중심이 캡처 1618.5, ref 1623(측정표 §7 ref 잉크 1687~1727 중심 1707 → −84 = 1623)로
      4.5~5px 위였다(비평가 R −5 · S −4.5 독립 일치). top 1104 → 1109.
      잉크 «상단» 여백이 ref 30 보다 벌어지는 것은 우리 글리프 잉크가 3px 낮기 때문이라 중심을 기준으로 맞춘다. */
-  .wm-tot{left:0;right:0;top:1109px;height:46px;line-height:46px;text-align:center;
+  /* ⚑ 467 — 앵커를 위(1109)에서 **아래(192 = 1347 − 1109 − 46)**로 뒤집었다. 값이 아니라
+     기준점만 바뀐 것이라 2280 에서 top 은 그대로 1109 다(Δ0). 격자가 줄면 이 줄과 버튼이
+     같이 따라 올라와 «격자 하변 → 총효과 30px → 버튼 29px → 바닥 32px» 간격이 보존된다. */
+  .wm-tot{left:0;right:0;bottom:192px;height:46px;line-height:46px;text-align:center;
     font-size:40px;color:#fff;-webkit-text-stroke:3px #000;paint-order:stroke fill}
   /* 6회차: 같은 문자열(「총 보유 효과:」)끼리 재면 ref 178 / 캡처 208 → .90 x 178/208 = .77 */
   .wm-tot>i{transform:scaleX(.77)}                /* 라벨 잉크 208 → 178 (h 40 유지) */
   .wm-tot b{color:#B8FE5D}                        /* 직계(>)로 두면 <i> 래퍼 때문에 끊긴다 */
 
   /* 8 버튼 2개 ref x248/558 y1763 274x131 r42 — 본문기준 (137/447, 1184) */
-  .wm-btn{top:1184px;width:274px;height:131px;border-radius:42px;border:7px solid #000;
+  /* ⚑ 467 — 총효과와 같은 이유로 앵커를 아래로(32 = 1347 − 1184 − 131). 2280 offsetTop 은
+     그대로 1184 라 `verify171` [05 레이아웃 보존] 이 무수정으로 초록이다. */
+  .wm-btn{bottom:32px;width:274px;height:131px;border-radius:42px;border:7px solid #000;
     box-sizing:border-box;cursor:pointer;padding:0;font-family:inherit;
     background:linear-gradient(180deg,#A8A8A8 0 11px,#8A8A8A 101px,
       #757575 107px 115px,#000 115px)}

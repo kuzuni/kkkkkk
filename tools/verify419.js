@@ -40,7 +40,19 @@ const ROOT = path.resolve(__dirname, '..');
 const FILE = path.join(ROOT, 'index.html');
 const SRC = fs.readFileSync(FILE, 'utf8');
 
-const RULE = '#app:has(:is(#modal,#collw,#blsw,#bagw,#pfw,#specw,#cfw).on) #tuto{display:none}';
+/* ⚑ 467(2026-08-30) — **선언을 손으로 적어 두었더니 그 목록이 늘어난 날 자가 통째로 빨개졌다.**
+   467 이 `#wpnw`(05 장비 세부 팝업)를 목록에 더하자 이 상수와 안 맞아 `SRC.replace(RULE,'')` 가
+   **아무 것도 안 지운 사본**을 만들었고(= 사본에서도 배너가 숨는다), §3·§R 63항이 한꺼번에
+   `보임 null%` 로 죽었다. 자기가 §0 주석에 «목록은 손으로 적는 표라 뒤처진다(402)» 라고 적어 둔
+   바로 그 사고를 자기 상수가 냈다. ⇒ **제품에게 묻는다** — 목록이 아니라 «그 모양의 선언» 을 찾는다.
+   ⚠ 그래도 «무엇이 목록에 있어야 하는가» 를 안 묻게 되면 안 된다 — 아래 §0 이 `#ciw`·`#relw`
+      **제외**(407·350 이 값을 치른 자리)와 «항이 늘기만 했는가» 를 따로 단언한다. */
+const RULE = (SRC.match(/#app:has\(:is\([^)]*\)\.on\) #tuto\{display:none\}/) || [''])[0];
+/* 419 당시의 일곱 — 여기서 **줄어들면** 그때 갚은 자리가 되살아난다(늘어나는 것은 정상이다). */
+const RULE_MUST = ['#modal', '#collw', '#blsw', '#bagw', '#pfw', '#specw', '#cfw'];
+/* 일부러 뺀 둘 — `#ciw` 는 407 이 하단 여백으로 자리를 만들어 배너를 살려 둔 자리,
+   `#relw` 는 배경이 통째로 덮어 «토막» 이 원리적으로 안 생기는 자리(350 처방으로 유령을 기각했다). */
+const RULE_NEVER = ['#ciw', '#relw'];
 const BAND = 501;      /* 배너 상변 = 프레임 하변 − 501 (`bottom:171` + 탭바 180 + 높이 150) */
 const FRAMES = [2280, 1920, 1600];
 
@@ -57,6 +69,10 @@ const HOSTS = [
   { label: 'menu:conf', mn: 'conf', box: '#cfw>.cf55' },
   { label: 'prof:19', sel: '#profBtn', box: '#pfw>.pf' },
   { label: 'prof:20-스펙', prof: '.pf-tgl>.lb', box: '#specw>.spc' },
+  /* ⚑ 467 — 419 당시 자가 **한 번도 열어 본 적이 없던** 화면이다(`probe351lib` 이 `#eqCards` 를
+     08 영웅 시트를 열기 전에 물어 `eqslot:*` 오프너가 아예 안 만들어졌다 — 351 14회차가 고쳤다).
+     세 슬롯(무기·방패·목걸이)은 기하가 픽셀 동일이라 대표로 무기 한 판만 든다. */
+  { label: 'eqslot:weapon', hero: '#eqCards [data-eqslot="weapon"]', box: '#wpnw>.wm' },
 ];
 /* ⚑ 수리 «전» 절대 좌표는 **상수로 안 박는다** — §3 주석 참조(415 가 1회차 중에 19 프로필 패널을
    1600 에서 1396 → 1296 으로 바꿨다). 기록용 실측표는 `docs/review/419-미션배너덮임.md` §5 에 있다. */
@@ -68,6 +84,9 @@ const BEFORE = {
   'side:bless': { 2280: 100, 1600: 8.9 }, 'menu:bag': { 2280: 100, 1600: 14.3 },
   'menu:conf': { 2280: 89.4, 1600: 30.9 }, 'prof:19': { 2280: 74.4, 1600: 20 },
   'prof:20-스펙': { 2280: 75.2, 1600: 20 },
+  /* 467 — 사본(선언을 뺀 트리)에서 잰 값. ⚠ 이 자리의 «수리 전» 은 **467 이후의 상자**다
+     (467 이 `.wm` 을 1600 에서 156..1420 으로 옮겼다) — 419 선언만 뺀 대조이므로 그것이 맞다. */
+  'eqslot:weapon': { 2280: 0, 1600: 0 },
 };
 /* ⚑ `tab:box`(89 유물)는 여기 없다 — 1회차에 자가 «토막 8.1px» 을 냈지만 **찍힌 픽셀은 0** 이었다
    (`#relw{background:#0D100D}`). 유령의 뿌리는 «세우고 → 연다» 순서였고(열림 연출 한복판에서 재면
@@ -172,9 +191,15 @@ async function shot(browser, o, H, file) {
 
   /* ── §0 전제 ───────────────────────────────────────────────────────────── */
   console.log('§0 전제 — 선언·목록·배너 앵커의 재료');
-  ok(SRC.includes(RULE), '419 선언이 소스에 있다');
-  ok(!/:is\([^)]*#ciw[^)]*\)\.on\) #tuto/.test(SRC),
-    '`#ciw` 는 숨김 목록에 **없다** (407 이 자리를 만들어 배너를 살려 둔 자리 — 406-④ 대가)');
+  ok(!!RULE && SRC.split(RULE).length === 2, '419 선언이 소스에 정확히 한 번 있다', RULE || '(못 찾음)');
+  ok(RULE_MUST.every((s) => RULE.includes(s)),
+    '419 당시 일곱 자리가 목록에 그대로 있다 (줄어들면 그때 갚은 토막이 되살아난다)',
+    RULE_MUST.filter((s) => !RULE.includes(s)).join(',') || '빠진 것 없음');
+  ok(RULE_NEVER.every((s) => !RULE.includes(s)),
+    '`#ciw`·`#relw` 는 숨김 목록에 **없다** (407 이 자리를 만들어 배너를 살려 둔 자리 — 406-④ 대가)',
+    RULE_NEVER.filter((s) => RULE.includes(s)).join(',') || '섞인 것 없음');
+  ok(RULE.includes('#wpnw'),
+    '467 — `#wpnw`(05 장비 세부)가 목록에 있다 (419 스코프 밖이었던 자리 · 351 14회차)');
   ok(SRC.includes('#tuto{position:absolute;right:0;bottom:171px;width:460px;height:150px'),
     '배너 껍데기가 그대로다 (하단 앵커 · 460×150)');
   ok(/#tabbar\{flex:none;height:180px/.test(SRC), '탭바 180 그대로다 (배너 상변 산식의 재료)');
