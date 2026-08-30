@@ -223,7 +223,19 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   });
   await tapBlocked('HUD(#stinfo, pointer-events:none)', hud.x, hud.y);
-  for (const [nm, sel] of [['좌측 사이드 아이콘', '#sideL .ibtn'], ['우측 사이드 아이콘', '#sideR .ibtn'],
+  /* 작업 535(2026-08-30) — 이 절의 표본 «우측 사이드 아이콘 #sideR .ibtn» 이 «요소 없음» 으로 빨갰다.
+     재현(`node tools/probe535.js`)이 «제품이 아니라 자가 뒤처진 쪽» 임을 확정했다: **작업 49**(2026-08-25,
+     저장소 주인 지시)가 우측 사이드 컬럼(#sideR — 이벤트·특권 잠금 아이콘 + 시설 배너)을 통째로 지웠고,
+     index.html 15011 주석이 «우측에 남는 UI 는 우상단 ▦ 메뉴(#menub) 하나뿐» 이라고 못박고 있다.
+     ⚑ 빨강을 «항 삭제» 로 지우는 길은 반려다(333 처방 — 자리를 비우지 마라). 표본을 **살아 있는
+     «캔버스 위에 얹힌 우측 UI»** 로 옮겼다: 우하단 진행형 미션 배너 **#tuto**(620..1080 × 1779..1929 ⊂
+     캔버스 #view 0..1080 × 104..2100 · pointer-events:auto) — 죽은 #sideR 과 **같은 계열의 표본**이다
+     (캔버스를 덮는 우측 DOM 크롬이라 pointerdown 이 cvs 에 닿지 않는다는 같은 기전을 묻는다).
+     #menub 은 바로 아래 항이 이미 쓰고 있어 겹치지 않게 피했다. 후보 실측표는 `tools/probe535.js` [2]. */
+  ok('우측 사이드 레일은 폐지 상태다 (작업 49 — 되살아나면 이 절에 #sideR 표본을 되돌릴 것)',
+    await page.evaluate(() => !document.getElementById('sideR')));
+  let tutoQ = null;
+  for (const [nm, sel] of [['좌측 사이드 아이콘', '#sideL .ibtn'], ['우하단 미션 배너(49 이후 우측 UI)', '#tuto'],
                            ['하단 탭바', '#tabbar > *'], ['우상단 메뉴 버튼', '#menub'],
                            ['좌하단 유틸 버튼', '#botleft .ubtn'], ['스킬 슬롯 영역', '#battlefoot']]) {
     const q = await page.evaluate(sel => {
@@ -232,8 +244,25 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
       return r.width ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
     }, sel);
     if (!q) { ok(nm + ' 위 터치 무시', false, '요소 없음'); continue; }
+    if (sel === '#tuto') tutoQ = q;
     await tapBlocked(nm, q.x, q.y);
   }
+  /* §R 되돌림 시험(535) — 새 표본이 «무엇을 해도 초록» 인 헛초록이 아님을 못박는다.
+     #tuto 에서 포인터를 빼앗으면(pointer-events:none) 그 자리 터치는 캔버스로 떨어져 조이스틱이 **떠야**
+     한다 — 즉 위 항은 «우측 배너가 터치를 실제로 막고 있다» 는 사실 하나에 매달려 있다. */
+  if (tutoQ) {
+    await page.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'r535';
+      s.textContent = '#tuto{pointer-events:none !important}'; document.head.appendChild(s);
+    });
+    await page.mouse.move(tutoQ.x, tutoQ.y); await page.mouse.down(); await page.waitForTimeout(60);
+    ok('§R 되돌림 — #tuto 가 포인터를 안 받으면 그 자리에서 조이스틱이 뜬다 (위 항 = 헛초록 아님)',
+      (await st()).on);
+    await page.mouse.move(2, 2); await page.mouse.up(); await page.waitForTimeout(80);
+    await page.evaluate(() => { const s = document.getElementById('r535'); if (s) s.remove(); });
+    ok('§R 원복 — #tuto 가 다시 포인터를 받는다', await page.evaluate(
+      () => getComputedStyle(document.getElementById('tuto')).pointerEvents === 'auto'));
+  } else ok('§R 되돌림 시험 — 표본 좌표를 못 잡았다', false, '#tuto 없음');
   /* 팝업 — 03 던전 페이지를 열고 그 위를 누른다 */
   await page.evaluate(() => openDungeon());
   await page.waitForTimeout(400);
