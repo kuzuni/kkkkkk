@@ -20814,15 +20814,28 @@ function step(dt){
        제한 시간을 더 이상 깎지 않으므로 «연출 도중 시간이 다 돼 실패로 끝난다» 가 원천적으로 없다
        (타이머 체인이었다면 그 경합이 생긴다 — 그래서 상태 하나로 뒀다). */
     if(dunRun.bossDown){
+      /* 425 — 등장 국면 도중에 보스가 죽으면(펫·지속 피해) 국면은 그 자리에서 닫는다.
+         닫지 않으면 격파 시퀀스가 도는 동안 카메라가 시체를 계속 비춘다. */
+      if(dunRun.introOn){ dunRun.introOn = false; dunRun.fight = true; }
       dunRun.clrT += dt;
       /* ① 보스가 터질 때까지 기다린다(시체 die 애니) → ② «클리어» 를 띄운다 */
       if(!dunRun.clrMsg && dunRun.clrT >= dunRun.clrDie){ dunRun.clrMsg = true; showMsg(DUN_CLR_TXT); }
       /* ③ 그로부터 1초 뒤 완료 화면. 문구는 endDunRun → spawnStage 의 «STAGE n» 이 자연히 걷어 간다 */
       if(dunRun.clrT >= dunRun.clrDie + DUN_CLR_HOLD) endDunRun(true);
-    }else{
+    }else if(dunRun.introOn){
+      /* ⚑ 425 — **등장 국면. `dunRun.t` 를 깎지 않는다**(주인 지시: «전투 시작할때부터 시간 흘러야함»).
+         332 와 같은 «배타적 상태» 방식이라 타이머 체인이 없다 = «연출 도중에 시간이 다 돼 실패» 가
+         구조적으로 불가능하다. 국면이 끝나는 프레임에 `fight` 가 서고 **다음 프레임부터** t 가 흐른다. */
+      dunRun.introT += dt;
+      if(dunRun.introT >= dunIntroLen()){ dunRun.introOn = false; dunRun.fight = true; }
+    }else if(dunRun.fight){
       dunRun.t -= dt;
       if(dunRun.t <= 0){ dunRun.t = 0; endDunRun(false); }
     }
+    /* ⚑ 425 — 위 세 갈래 어디에도 안 걸리는 유일한 구간이 «보스가 아직 안 선» 스폰 딜레이(1.4초)다.
+       거기서도 t 는 안 깎인다 — 수리 전에는 그 1.4초가 제한 시간에서 통째로 샜다(`tools/probe425.js`
+       수리 전 표: 10종 전부 «보스가 서는 순간 이미 13.6/15» = 9.33% 유실). 때릴 대상이 없는 동안
+       시간이 흐르는 것이 결손 자체였고, `dunBossTick` 이 보스를 반드시 세우므로 이 구간은 유한하다. */
   }
 
   /* ---- 승급전 진행 ---- */
@@ -20936,12 +20949,29 @@ function camClamp(x, y){
   };
 }
 function camUpdate(dt){
-  /* 목표는 언제나 «플레이어» 다 — 보스도, 시체도, 빈사 편향도 카메라를 끌지 않는다 */
+  /* 목표는 언제나 «플레이어» 다 — 보스도, 시체도, 빈사 편향도 카메라를 끌지 않는다.
+     ⚑ 425(주인 지시 2026-08-30) — 예외는 하나, **던전 런의 «등장 국면»** 이다. 그때만 화면에 쓰는
+     좌표를 «플레이어 추적점 → 보스» 로 w(0→1→0) 만큼 섞는다. 줌·플래시·슬로모·리드·편향은 없다(108). */
   const t = camClamp(player.x, player.y);
   const k = camDamp(CAM_K, dt);
-  cam.x += (t.x-cam.x)*k; cam.y += (t.y-cam.y)*k;
-  const c = camClamp(cam.x, cam.y);
-  cam.x = c.x; cam.y = c.y;
+  const w = dunIntroW();
+  if(w > 0){
+    /* ⚠ 섞은 값을 `cam` 에 되먹이면 다음 프레임의 감쇠가 그 값에서 출발해 **돌아오지 못한다**
+       (보스 근처에서 추적이 다시 보스로 섞여 제자리걸음이 된다). 그래서 «플레이어 추적» 은
+       `dunRun.introC` 에서 따로 굴리고 `cam` 에는 섞은 결과만 쓴다 — w 가 0 이 되는 프레임의 좌표는
+       국면이 없었을 때의 추적 좌표와 **완전히 같아서** 전투 시작에 이음매가 없다. */
+    const r = dunRun;
+    if(!r.introC) r.introC = { x:cam.x, y:cam.y };
+    r.introC.x += (t.x-r.introC.x)*k; r.introC.y += (t.y-r.introC.y)*k;
+    const b = dunIntroPos() || r.introC;
+    const p = camClamp(r.introC.x + (b.x-r.introC.x)*w, r.introC.y + (b.y-r.introC.y)*w);
+    cam.x = p.x; cam.y = p.y;
+  }else{
+    if(dunRun && dunRun.introC) dunRun.introC = null;   /* 국면이 끝나면 추적점도 같이 버린다 */
+    cam.x += (t.x-cam.x)*k; cam.y += (t.y-cam.y)*k;
+    const c = camClamp(cam.x, cam.y);
+    cam.x = c.x; cam.y = c.y;
+  }
   /* 55 설정 «화면 흔들림» — 끄면 여기서 통째로 죽인다(호출부 8곳을 건드리지 않는 단일 게이트) */
   if(!shakeOn()) cam.shake = 0;
   else if(cam.shake > 0) cam.shake = Math.max(0, cam.shake - dt*28);
@@ -23377,6 +23407,20 @@ const DUN_BOSS_DLY = 1.4;    /* 스폰 딜레이 — 28 startBoss 와 같은 값
    1.4 를 그대로 쓰면 3마리 던전에서 **때릴 대상이 없는 시간이 2.8초** 생겨 30초 예산을 깎는다
    (255 실측 최장 판 20.7초 + 2.8 = 23.5초 — 여유가 6.5초로 준다). 0.5 면 1.0초로 줄어든다. */
 const DUN_PHASE_DLY = 0.5;
+/* ⚑ 425 — **던전 «등장 국면»**(주인 지시 2026-08-30: «던전은 보스 등장하면 등장하고 나서 전투 시작할때부터
+   시간 흘러야함. 등장할때는 보스 잠깐 비췃다가 플레이어쪽으로 카메라 다시 하고 전투 시작해야함»).
+   보스가 **필드에 실제로 선** 프레임(`dunBossTick` 의 `bossIn`)에 시작해 아래 셋을 이어 붙인 만큼 이어지고,
+   그 동안 `dunRun.t` 는 **한 프레임도 안 깎인다**(332 격파 시퀀스와 같은 «배타적 상태» — 타이머 체인 금지).
+   ⚠ 108 이 폐기한 67 연출(줌·플래시·슬로모·리드 `cam.lx/ly`·빈사 편향 `cam.bx/by`)은 되살리지 않는다 —
+      여기서 늘어나는 것은 «목표 좌표를 섞는 팬» 하나뿐이고 `cam` 필드도 {x,y,z,shake} 그대로다.
+      주인 지시가 108 보다 우선하는 **의도적 이탈**이고 범위는 «던전 런의 첫 등장» 뿐이다 —
+      28 스테이지 보스·46 레이드·승급전은 `dunRun` 이 없어 아래 가중치가 언제나 0 이다.
+   ⚑ 셋을 **전부 0 으로 두면 국면 길이가 0** 이라 보스가 선 그 프레임에 곧바로 전투가 시작되고
+      카메라는 플레이어에서 한 픽셀도 안 움직인다(= `verify425` §R 되돌림 시험의 자리). */
+const DUN_INTRO_PAN  = 0.35;   /* 플레이어 → 보스 편도 팬(초) */
+const DUN_INTRO_STAY = 0.70;   /* 보스에 머무는 시간(초) — «잠깐 비췄다가» */
+const DUN_INTRO_BACK = 0.35;   /* 보스 → 플레이어 편도 팬(초) */
+const dunIntroLen = () => DUN_INTRO_PAN + DUN_INTRO_STAY + DUN_INTRO_BACK;
 /* ⚑ 332 — **보스 격파 → 완료 화면** 사이의 시퀀스(주인 지시 2026-08-28: «보스 죽이면 보스 터지고 나서
    클리어 라고 뜨고 1초 뒤에 완료 화면»). 255 까지는 `bossDown` 이 서는 **그 프레임에** `endDunRun(true)` 가
    돌아 완료 화면이 사망 연출을 통째로 덮었다 — 보스가 터지는 것을 볼 수 없었다.
@@ -23481,6 +23525,35 @@ function spawnDunBoss(n, dly){
   for(let i = 0; i < k; i++) spawnQ.push({ t:'dunboss', delay: dly > 0 ? dly : DUN_BOSS_DLY });
   r.bossUp += k;                                    /* 지금까지 «세운» 보스 수(스폰 대기 포함) */
 }
+/* ⚑ 425 — 등장 국면을 연다. 보스가 «필드에 선» 프레임에 `dunBossTick` 이 딱 한 번 부른다.
+   상수 셋이 전부 0 이면 국면을 열지 않고 그 프레임에 곧바로 전투가 시작된다(되돌림 시험의 자리). */
+function dunIntroStart(r){
+  r.introE = enemies.find(e => e.tk === 'dunboss') || null;
+  r.introP = r.introE ? { x:r.introE.x, y:r.introE.y } : null;
+  r.introT = 0;
+  r.introDone = true;
+  if(dunIntroLen() <= 0 || !r.introE){ r.introOn = false; r.fight = true; return; }
+  r.introOn = true;
+}
+/* 등장 국면의 카메라 가중치 — 0 = 플레이어 · 1 = 보스. 왕복은 «가는 팬 → 머묾 → 오는 팬» 한 번뿐이다.
+   국면이 없거나(던전 밖·28·46·승급전) 끝났으면 언제나 0 이라 카메라는 108 그대로다. */
+function dunIntroW(){
+  const r = dunRun; if(!r || !r.introOn) return 0;
+  const u = r.introT;
+  /* easeInOutQuad — 67 의 `camEaseOut`(폐기)을 되살리지 않는 지역 이징 한 줄이다 */
+  const ez = x => x <= 0 ? 0 : x >= 1 ? 1 : (x < 0.5 ? 2*x*x : 1 - Math.pow(-2*x + 2, 2)/2);
+  if(u < DUN_INTRO_PAN) return DUN_INTRO_PAN > 0 ? ez(u/DUN_INTRO_PAN) : 1;
+  if(u < DUN_INTRO_PAN + DUN_INTRO_STAY) return 1;
+  const b = u - DUN_INTRO_PAN - DUN_INTRO_STAY;
+  return DUN_INTRO_BACK > 0 ? 1 - ez(b/DUN_INTRO_BACK) : 0;
+}
+/* 비출 자리 — 보스가 살아 있으면 지금 좌표, 사라졌으면 마지막으로 선 자리(카메라가 튀지 않게). */
+function dunIntroPos(){
+  const r = dunRun; if(!r) return null;
+  const e = r.introE;
+  if(e && e.hp > 0 && enemies.indexOf(e) >= 0){ r.introP = { x:e.x, y:e.y }; }
+  return r.introP;
+}
 /* 매 프레임 국면 판정 — step() 의 던전 분기가 부른다 */
 function dunBossTick(){
   const r = dunRun; if(!r) return;
@@ -23496,7 +23569,16 @@ function dunBossTick(){
   const live = enemies.some(e => e.tk === 'dunboss') || spawnQ.some(q => q.t === 'dunboss');
   /* 255 — «보스가 필드에 실제로 섰다» 는 사실을 남긴다. 실패 통보(206)가 «미등장» 과
      «잡다 말았다» 를 구분하는 근거이고, 스폰 딜레이 1.4초 동안은 아직 선 것이 아니다. */
-  if(live){ if(enemies.some(e => e.tk === 'dunboss')) r.bossIn = true; return; }
+  if(live){
+    if(enemies.some(e => e.tk === 'dunboss')){
+      /* 425 — 보스가 «필드에 선» 바로 그 프레임이 등장 국면의 시작이다. `bossIn` 은 한 번 서면
+         내려가지 않으므로 이 호출도 런당 한 번뿐이다 = 페이즈 2·3번째 보스, «한꺼번에» 던전의
+         둘째부터는 안 비춘다(둘째부터 또 비추면 전투가 끊긴다 — 등재문 ②의 판단). */
+      if(!r.bossIn) dunIntroStart(r);
+      r.bossIn = true;
+    }
+    return;
+  }
   /* 257 — 필드가 비었다. 아직 안 세운 보스가 남았으면 **다음 페이즈**다(딜레이는 짧게). */
   if(r.bossUp < r.bossN){ spawnDunBoss(1, DUN_PHASE_DLY); return; }
   /* 264 이후로는 **탑도 격파가 곧 클리어**라 여기 오는 런이 없다(마지막 보스를 잡은 그 틱에
@@ -23513,8 +23595,14 @@ function startDunRun(d, f){
      수·방식은 **런이 시작될 때 한 번** 표에서 굳힌다 — 런 도중에 데이터가 바뀌어도 판정이 흔들리지 않는다. */
   /* 332 — clrT = 격파 후 시퀀스의 경과(초) · clrDie = 이 던전 보스의 사망 애니 길이 · clrMsg = «클리어» 를 이미 띄웠나.
      `clrDie` 는 **런이 시작될 때 한 번** 재 둔다(수·방식과 같은 이유 — 런 도중 아틀라스가 바뀌어도 시퀀스가 안 흔들린다). */
+  /* 425 — fight = «전투가 시작됐다»(= 이 깃발이 서야 `dunRun.t` 가 깎인다) · introOn = 등장 국면 진행 중 ·
+     introT = 그 국면의 경과(초) · introDone = 이 런에서 왕복을 이미 한 번 썼다(둘째 보스부터는 안 비춘다) ·
+     introE = 비출 보스 · introP = 그 보스가 마지막으로 선 자리 · introC = 국면 동안에도 계속 굴리는 «플레이어 추적점».
+     ⚑ 국면 상태를 `cam` 이 아니라 **런에 얹는다** — 108 게이트가 `cam` 필드를 {x,y,z,shake} 로 못박아 두었고,
+        런이 사라지면(포기·실패·클리어) 국면도 같이 사라져야 «연출만 남아 도는» 경합이 원천적으로 없다. */
   dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage, bossQ:false, bossIn:false, bossDown:false, bossLeft:1,
              bossN: dunBossN(d), bossMode: dunBossMd(d), bossUp:0, bossKilled:0,
+             fight:false, introOn:false, introT:0, introDone:false, introE:null, introP:null, introC:null,
              clrT:0, clrDie: dunBossDieSec(d), clrMsg:false,
              /* 339 — «연속 도전» 은 **런이 시작될 때 한 번** 굳힌다(수·방식·clrDie 와 같은 이유).
                 런 도중에 04 세부 팝업이 닫히거나 다른 던전을 열어 봐도 이 런의 결과 화면은 안 흔들린다. */
