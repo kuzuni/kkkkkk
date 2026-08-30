@@ -85,7 +85,7 @@ async function open(browser) {
       /sendMail\(/.test(bMile) ? ok('mileageExchange — sendMail 경유') : fail('mileageExchange 가 sendMail 을 안 쓴다');
     }
     /* 유물조각 교환은 핸들러 안 블록이라 근처 창으로 본다 */
-    const exI = SRC.indexOf("const ex = EXCHANGE.find(");
+    const exI = SRC.indexOf("const ex = EXCHANGE.find(");   /* 490 — 키로 찾는다(구: 가격) */
     const exW = exI >= 0 ? SRC.slice(exI, exI + 900) : '';
     exI >= 0 ? ok('유물조각 교환 블록 확보') : fail('유물조각 교환 블록을 못 찾았다');
     if (exI >= 0) {
@@ -153,9 +153,10 @@ async function open(browser) {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.dia = 5e6; S.relic = 0;
       openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
       await new Promise(r => setTimeout(r, 60));
-      const btn = document.querySelector('#shopList [data-ex]');
+      /* 490 — `data-ex` 는 재화 키이고 수량은 수량 탭이 정한다(1:1). 유물조각 칸만 고른다. */
+      const btn = document.querySelector('#shopList [data-ex="relic"]');
       if (!btn) return { err: '유물조각 교환 버튼 없음' };
-      const ex = EXCHANGE.find(v => v.dia === +btn.dataset.ex);
+      const ex = { dia: exQtyN(), rel: exQtyN() };
       const d0 = S.dia, r0 = S.relic, n0 = S.mailx.length;
       btn.click();
       const after = { dDia: S.dia - d0, dRel: S.relic - r0, dMail: S.mailx.length - n0 };

@@ -282,7 +282,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   const before6 = await p.evaluate(() => ({ r1: S.rune.r1, r2: S.rune.r2, st: S.rstone, cp: cp() }));
   /* 성공률이 낮으므로 «레벨이 오를 때까지» 가 아니라 «재화가 실제로 빠지고, 오른 룬은 r2 뿐» 을 본다 */
   for (let i = 0; i < 40; i++) {
-    await p.click('.tr-rn [data-runebuy][data-pay="mat"]', { force: true });
+    await p.click('.tr-rn [data-runebuy]', { force: true });   /* 490 — 결제 갈래가 하나라 버튼도 하나 */
     await p.waitForTimeout(40);
   }
   const after6 = await p.evaluate(() => ({ r1: S.rune.r1, r2: S.rune.r2, st: S.rstone,
@@ -297,14 +297,22 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   ok(after6.cp > before6.cp, '★ 전투력(cp)에 반영된다 — «다른 화면에 반영»',
     before6.cp + ' → ' + after6.cp);
 
+  /* 490 — 구 «[다이아] 버튼도 20회분을 쓴다» 두 항의 자리. 결제 갈래가 «룬강화석» 하나가 됐으므로
+     같은 20회를 돌려 **다이아가 0 이고 룬강화석만 정확히 20회분** 나가는지로 뒤집어 묻는다.
+     (자리를 비우면 다이아 갈래를 되살려도 초록이다 — 333·LESSONS 328-330) */
   const dia = await p.evaluate(async () => {
-    const d0 = S.dia, l0 = S.rune.r2;
-    for (let i = 0; i < 20; i++) runeBuy('r2', 'dia');
-    return { spent: d0 - S.dia, up: S.rune.r2 - l0, want: 20 * RUNE_DIA };
+    S.rstone = 1e9; S.dia = 1e6;
+    const d0 = S.dia, s0 = S.rstone, l0 = S.rune.r2;
+    let want = 0;
+    for (let i = 0; i < 20; i++) { want += runeCost(RN.r2, runeLvOf('r2')); runeBuy('r2'); }
+    return { dia: d0 - S.dia, st: s0 - S.rstone, up: S.rune.r2 - l0, want,
+             btn: document.querySelectorAll('#trRunes .tr-rn .rbt').length };
   });
-  ok(dia.spent === dia.want, '[다이아] 버튼도 같은 룬에 20회분 다이아를 쓴다',
-    dia.spent + ' / ' + dia.want);
-  ok(dia.up >= 0, '다이아 시도도 레벨을 내리지 않는다(실패해도 그대로)', String(dia.up));
+  ok(dia.dia === 0 && dia.st === dia.want,
+    '★ 490 — 20회 시도가 다이아를 한 푼도 안 쓰고 룬강화석만 정확히 20회분 쓴다',
+    '다이아 Δ' + dia.dia + ' · 룬강화석 −' + dia.st + ' / ' + dia.want);
+  ok(dia.up >= 0 && dia.btn === 1, '시도는 레벨을 내리지 않고, 카드의 시도 버튼은 하나다',
+    'Δlv ' + dia.up + ' · 버튼 ' + dia.btn + '개');
 
   /* 300 — 주인 지시 «룬은 빨간점 놓지 말기»: 재료가 넘쳐도 룬 탭·하위 탭 어디에도 alert 가 없다.
      (재료 기반 점등은 «쌓이는 즉시 상시 점등» 이 돼 166 의 훈련(골드) 제외와 같은 이유로 폐지) */

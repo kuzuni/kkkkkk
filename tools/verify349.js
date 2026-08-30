@@ -35,8 +35,9 @@ const URL = 'file://' + SRC.replace(/\\/g, '/');
 let pass = 0, fail = 0;
 const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? 'ok  ' : 'FAIL') + ' ' + msg + (extra ? '  [' + extra + ']' : '')); };
 
-const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]';
-const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
+/* 490 — 결제 갈래가 «룬강화석» 하나가 되면서 `data-pay` 도 다이아 칸도 사라졌다.
+   349 가 지킨 성질(«꾹 = 연속»)은 그대로 살아 있어야 하므로 자를 **유일한 버튼**으로 옮겼다. */
+const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
 
 (async () => {
   const browser = await launch(chromium);
@@ -123,12 +124,16 @@ const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
   const hMat = await n();
   ok(hMat >= 5, '★ 재료칸 — 터치 1.5초 홀드에 5회 이상 시도', hMat + '회');
 
-  await reset();
-  await touchHold(await aim(DIA), 1500);
-  const hDia = await n();
-  ok(hDia >= 5, '★ 349 — **다이아칸도** 터치 1.5초 홀드에 5회 이상 시도(297 은 1회였다)', hDia + '회');
-  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA !== 'undefined' && RUNE_HOLD_DIA === true),
-    'RUNE_HOLD_DIA === true (349 주인 확인 완료)');
+  /* 490 이관 — 구 «다이아칸도 홀드를 탄다» 두 항의 자리. 갈래가 하나가 됐으므로
+     «다이아를 안 쓴다» + «칸이 하나다» 로 뒤집어 묻는다(자리를 비우지 않는다 — 333). */
+  await reset({ dia: 1e6 });
+  const d0 = await p.evaluate(() => S.dia);
+  await touchHold(await aim(MAT), 1500);
+  const hRun = await n(), d1 = await p.evaluate(() => S.dia);
+  ok(hRun >= 5 && d0 - d1 === 0,
+    '★ 490 — 1.5초 홀드가 5회 이상 돌면서 다이아는 **한 푼도** 안 나간다', hRun + '회 · 다이아 Δ' + (d0 - d1));
+  ok(await p.evaluate(() => document.querySelectorAll('#trRunes .tr-rn .rbt').length) === 1,
+    '490 — 룬 카드의 시도 버튼이 하나다(구 다이아 칸이 사라졌다)');
 
   /* 가속(×0.86) — 뒤 구간이 앞 구간보다 많이 돈다. 64·297 과 «같은 리듬» 이라는 뜻이다. */
   await reset();
@@ -153,7 +158,7 @@ const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
       v + '회 · 취소 ' + c2);
   }
   ok(await p.evaluate(() => {
-    const el = document.querySelector('#trRunes .tr-rn .rbt[data-pay="mat"]');
+    const el = document.querySelector('#trRunes .tr-rn .rbt.b1');   /* 490 — 버튼 하나 */
     return !!el && getComputedStyle(el).touchAction === 'none';
   }), '★ 처방 — 홀드 버튼이 `touch-action:none` 이라 브라우저가 제스처를 못 채간다');
   ok(await p.evaluate(() => ['#trCards [data-tr="atk"]', '#trRunes [data-runebuy]',
@@ -219,12 +224,17 @@ const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
     const v = await n(), left = await p.evaluate(() => S.rstone);
     ok(v === 3 && left === 0, '재료가 3회분이면 정확히 3회에서 멎고 잔량이 0 이다', v + '회 · 남은 ' + left);
 
-    const dcost = await p.evaluate(() => RUNE_DIA);
-    await reset({ dia: dcost * 4 });
-    await touchHold(await aim(DIA), 2000);
-    const v2 = await n(), dleft = await p.evaluate(() => S.dia);
-    ok(v2 === 4 && dleft === 0, '349 — 다이아도 4회분이면 정확히 4회에서 멎는다(과금 재화 정확 차감)',
-      v2 + '회 · 남은 ' + dleft);
+    /* 490 — 구 «다이아 4회분» 항의 자리. 다이아를 잔뜩 쥐여 주고 룬강화석만 0 으로 두면
+       **한 번도 안 돈다** 는 것을 묻는다(갈래가 되살아나면 이 항이 빨개진다). */
+    await reset({ stone: 0, dia: 1e6 });
+    const dOnly0 = await p.evaluate(() => S.dia);
+    await touchHold(await aim(MAT), 2000);
+    const v2 = await n(), dOnly1 = await p.evaluate(() => S.dia);
+    /* ⚠ `__n` 은 `runeBuy` 호출 수다 — 막힌 첫 누름도 «부족» 안내를 위해 한 번 부른다(1 이 정상).
+       반복이 안 도는 것(= 1 에서 멎는 것)과 다이아가 안 나가는 것을 같이 본다. */
+    ok(v2 === 1 && dOnly0 - dOnly1 === 0,
+      '★ 490 — 룬강화석 0 · 다이아 100만이면 **반복이 한 번도 안 돈다**(다이아 결제 폐지)',
+      v2 + '회(안내 1) · 다이아 Δ' + (dOnly0 - dOnly1));
     await p.evaluate(() => { runeRate = window.__rate0; });
   }
 
@@ -265,8 +275,8 @@ const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
     const v2 = await n();
     ok(v2 >= 5, 'R1b — 걷으면 도로 초록이다(주입이 원인이었다는 대조군)', v2 + '회');
   }
-  ok(/dataset\.pay\s*===\s*'dia'\s*&&\s*!RUNE_HOLD_DIA/.test(fs.readFileSync(SRC, 'utf8')),
-    'R2 — 되돌림 분기가 살아 있다(RUNE_HOLD_DIA=false 한 글자로 297 사양 복귀)');
+  ok(!/data-pay|RUNE_HOLD_DIA|RUNE_DIA/.test(fs.readFileSync(SRC, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')),
+    'R2 — 490 이후 제품 줄에 `data-pay`·`RUNE_*_DIA` 가 0건이다(결제 갈래가 하나로 굳었다)');
 
   console.log('[G] 회귀');
   ok(aimBad === 0, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(양성항 — 팝업이 덮지 않았다)', aimBad + '건 실패');

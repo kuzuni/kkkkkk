@@ -224,7 +224,7 @@ const table = [];
   table.push({ k: '확률', v: 'Lv0 90% → Lv18 5% → Lv60 2% → Lv150 1% → Lv300~ 0.5%' });
 
   /* ================= [5] 시도 ================= */
-  console.log('[5] 시도 — 재료 · 다이아 · 실패해도 레벨 유지');
+  console.log('[5] 시도 — 룬강화석 단일 결제(490) · 실패해도 레벨 유지');
   const tryR = await p.evaluate(() => {
     const out = {};
     /* 성공을 강제 — 확률 굴림을 무력화해 «성공 경로» 만 본다 */
@@ -233,28 +233,35 @@ const table = [];
     const cost = runeCost(RN.r1, 5);
     Math.random = () => 0;                                   /* 무조건 성공 */
     const b0 = { st: S.rstone, lv: runeLvOf('r1') };
-    const r1 = runeTry('r1', 'mat');
+    const r1 = runeTry('r1');
     out.mat = { spent: b0.st - S.rstone, cost, up: r1.up, lv: runeLvOf('r1'), was: b0.lv };
-    const d0 = S.dia, l0 = runeLvOf('r1');
-    const r2 = runeTry('r1', 'dia');
-    out.dia = { spent: d0 - S.dia, up: r2.up, lv: runeLvOf('r1'), was: l0 };
+    /* 490 — 다이아 결제가 폐지됐다. «다이아가 아무리 많아도 룬강화석이 없으면 못 올린다» 로 뒤집는다:
+       이 항이 없으면 다이아 갈래를 되살려도 게이트가 초록이다. */
+    const d0 = S.dia, l0 = runeLvOf('r1'), st0 = S.rstone;
+    S.rstone = 0;
+    const r2 = runeTry('r1');
+    out.dia = { diaSpent: d0 - S.dia, blocked: !r2.ok, lv: runeLvOf('r1'), was: l0 };
+    S.rstone = st0;
     /* 실패를 강제 — 자원만 빠지고 레벨은 그대로여야 한다(주인 지시 ④) */
     Math.random = () => 0.999999;
     const f0 = { st: S.rstone, lv: runeLvOf('r1') };
-    const r3 = runeTry('r1', 'mat');
+    const r3 = runeTry('r1');
     out.failMat = { spent: f0.st - S.rstone, up: r3.up, lv: runeLvOf('r1'), was: f0.lv };
-    const fd0 = { dia: S.dia, lv: runeLvOf('r1') };
-    const r4 = runeTry('r1', 'dia');
-    out.failDia = { spent: fd0.dia - S.dia, up: r4.up, lv: runeLvOf('r1'), was: fd0.lv };
     Math.random = rand;
     /* 잠긴 룬 · 만렙 · 재화 부족은 시도 자체가 막힌다 */
-    out.locked = runeTryOk('r2', 'mat') || runeTryOk('r2', 'dia');
+    out.locked = runeTryOk('r2');
     S.rune.r1 = RUNE_MAXLV;
-    out.maxed = runeTryOk('r1', 'mat') || runeTryOk('r1', 'dia');
-    S.rune.r1 = 10; S.rstone = 0; S.dia = 0;
-    out.broke = runeTryOk('r1', 'mat') || runeTryOk('r1', 'dia');
-    out.brokeNoop = (function () { const l = runeLvOf('r1'); runeTry('r1', 'mat'); return runeLvOf('r1') === l; })();
-    out.diaPrice = RUNE_DIA;
+    out.maxed = runeTryOk('r1');
+    /* 490 — 다이아는 남겨 두고 룬강화석만 비운다(구 코드는 둘 다 비웠다) */
+    S.rune.r1 = 10; S.rstone = 0; S.dia = 1e6;
+    out.broke = runeTryOk('r1');
+    out.brokeNoop = (function () { const l = runeLvOf('r1'); runeTry('r1'); return runeLvOf('r1') === l; })();
+    out.diaKept = S.dia;
+    out.noDiaConst = typeof RUNE_DIA === 'undefined' && typeof RUNE_HOLD_DIA === 'undefined';
+    out.oneBtn = (function () {
+      openTrain && openTrain(); setTrSub('rune'); setRuneSub('r1'); S.rstone = 1e6; renderTrain();
+      return document.querySelectorAll('#trRunes .tr-rn .rbt').length;
+    })();
     /* 비용 곡선 — 레벨이 오르면 재료도 오른다(단조 증가) */
     let inc = true, prev = 0;
     for (let l = 0; l <= RUNE_MAXLV; l += 25) { const c = runeCost(RN.r1, l); if (c < prev) inc = false; prev = c; }
@@ -266,19 +273,20 @@ const table = [];
   ok(tryR.mat.spent === tryR.mat.cost && tryR.mat.cost > 0, '재료 시도가 룬강화석을 정확히 깎는다',
     tryR.mat.spent + ' / ' + tryR.mat.cost);
   ok(tryR.mat.up && tryR.mat.lv === tryR.mat.was + 1, '성공하면 레벨 +1', tryR.mat.was + '→' + tryR.mat.lv);
-  ok(tryR.dia.spent === tryR.diaPrice && tryR.diaPrice === 50, '다이아 시도는 50 다이아(주인 확정)',
-    String(tryR.dia.spent));
-  ok(tryR.dia.up && tryR.dia.lv === tryR.dia.was + 1, '다이아 시도도 같은 판정을 지난다');
+  ok(tryR.dia.blocked && tryR.dia.diaSpent === 0 && tryR.dia.lv === tryR.dia.was,
+    '★ 490 — 룬강화석이 0 이면 **다이아가 100만 개 있어도** 시도가 막히고 다이아는 한 푼도 안 나간다',
+    '다이아 −' + tryR.dia.diaSpent + ' · Lv ' + tryR.dia.lv);
+  ok(tryR.noDiaConst, '490 — `RUNE_DIA`·`RUNE_HOLD_DIA` 가 선언째 사라졌다(결제 갈래가 하나다)');
+  ok(tryR.oneBtn === 1, '490 — 룬 카드의 시도 버튼이 **하나**다', tryR.oneBtn + '개');
   ok(!tryR.failMat.up && tryR.failMat.lv === tryR.failMat.was && tryR.failMat.spent > 0,
     '★ 실패 — 재료는 빠지고 **레벨은 그대로**', '재료 −' + tryR.failMat.spent + ' · Lv ' + tryR.failMat.lv);
-  ok(!tryR.failDia.up && tryR.failDia.lv === tryR.failDia.was && tryR.failDia.spent === 50,
-    '★ 실패 — 다이아도 빠지고 레벨은 그대로', '다이아 −' + tryR.failDia.spent);
   ok(!tryR.locked, '잠긴 룬은 시도 자체가 막힌다');
   ok(!tryR.maxed, '만렙 룬은 시도 자체가 막힌다');
-  ok(!tryR.broke && tryR.brokeNoop, '재화가 없으면 시도가 막히고 레벨도 안 움직인다');
+  ok(!tryR.broke && tryR.brokeNoop && tryR.diaKept === 1e6,
+    '재화가 없으면 시도가 막히고 레벨도 안 움직인다(490 — 다이아로 새지도 않는다)');
   ok(tryR.costMono, '재료 비용이 레벨에 대해 단조 증가');
   table.push({ k: '재료 비용', v: '일반룬 Lv0 ' + tryR.cost.l0 + ' → Lv500 ' + tryR.cost.l500
-                                  + ' · 천상룬 Lv0 ' + tryR.cost.r3l0 + ' (다이아는 상시 50)' });
+                                  + ' · 천상룬 Lv0 ' + tryR.cost.r3l0 + ' (490 — 다이아 결제 폐지)' });
 
   /* ================= [6] 효과 ================= */
   console.log('[6] 효과 — **선형**(489)이고 bonus() 에 «합산 후 1회 곱» 으로 합류한다');
@@ -453,8 +461,8 @@ const table = [];
      호출은 구현이 click → pointerdown 으로 옮겨가면 그대로 죽는 부채다).
      확률을 `runeRate` 스텁으로 고정해 «시도 횟수» 를 재화 차감으로 정확히 센다. */
   console.log('[10] 297 — 룬 강화 시도 «꾹 누르면 연속»(주인 재지시)');
-  const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]';
-  const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
+  /* 490 — 결제 갈래가 하나라 `data-pay` 가 사라졌다. 버튼도 하나뿐이다(`.rbt.b1`). */
+  const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
   /* 항상 실패하게 고정하면 레벨이 안 움직여 **비용이 상수**가 된다 → 차감액 ÷ 비용 = 시도 횟수 */
   /* ⚠ 23 팝업은 열릴 때 슬라이드 애니메이션이 있다 — 곧바로 boundingBox 를 재면 **아직 움직이는
      중의 좌표**(여기서는 y 2345, 뷰포트 2280 바깥)를 집어 마우스가 허공을 누른다.
@@ -544,29 +552,30 @@ const table = [];
   ok(Math.round((exact - left) / s0.cost) === 3 && left < s0.cost,
     '재료가 3회분이면 정확히 3회에서 조용히 멈춘다', '남은 룬강화석 ' + left);
 
-  /* ⓓ **349 로 뒤집혔다(2026-08-29 주인 확인).** 297 은 «다이아는 홀드 제외 · 1.2초를 눌러도
-     1회분» 을 단언했는데, 주인이 «룬 강화버튼 꾹 눌러도 연속이 안 된다» 고 보고한 버튼이
-     **바로 이 칸**이었다(`tools/probe349.js` — 재료칸은 네 조합 전부 10~12회 돌고 있었고 안 도는
-     것은 다이아칸 하나뿐). ⇒ 이제 다이아 칸도 같은 홀드를 탄다.
-     ⚑ 값만 «1회 → n회» 로 고치지 않는다 — 그러면 «349 가 통째로 사라져도 초록인 게이트» 가
-     된다(LESSONS 328-330 의 이관 교훈). 스위치가 실제로 켜져 있는가(true)와, 그 스위치가
-     여전히 **한 줄로 되돌릴 수 있는 이름**으로 남아 있는가를 각각 따로 묻는다. */
+  /* ⓓ **349 의 자리는 490 이 옮겼다.** 297 → 349 는 «다이아 칸도 홀드를 타는가» 였는데,
+     490(주인 지시 «룬 강화는 룬강화석으로만»)이 다이아 갈래를 통째로 없앴다. 349 가 지킨 성질
+     («꾹 = 연속»)은 그대로 살아 있어야 하므로 자리를 비우지 않고 **유일한 버튼**에 옮겨 묻는다:
+       ⓓ1 다이아를 아무리 쥐여 줘도 홀드가 다이아를 **한 푼도 안 쓴다**(갈래가 되살아나면 빨개진다)
+       ⓓ2 그 홀드가 룬강화석은 실제로 3회분 이상 쓴다(«연속» 이 죽지 않았다 = 349 의 본체)
+       ⓓ3 결제 갈래를 되살릴 이름(`RUNE_DIA`·`RUNE_HOLD_DIA`·`data-pay`)이 제품에 없다.
+     ⚑ ⓓ2 를 안 두면 «다이아를 안 쓴다» 는 버튼을 통째로 없애도 초록이다(LESSONS 328-330). */
   s0 = await setHold(30, 1e7);
-  const dia0 = await p.evaluate(() => S.dia);
-  await press(DIA, 1200);
-  const diaSpent = dia0 - (await p.evaluate(() => S.dia));
-  const diaCost = await p.evaluate(() => RUNE_DIA);
-  ok(diaSpent >= diaCost * 3, 'ⓓ 349 — 다이아 칸도 «꾹 = 연속» 이다(1.2초에 3회분 이상, 1회분 '
-    + diaCost + ')', diaSpent + ' 다이아 = ' + Math.round(diaSpent / diaCost) + '회');
+  const pre = await p.evaluate(() => ({ dia: S.dia, st: S.rstone }));
+  await press(MAT, 1200);
+  const post = await p.evaluate(() => ({ dia: S.dia, st: S.rstone }));
+  const stCost = await p.evaluate(() => runeCost(RN.r1, runeLvOf('r1')));
+  ok(pre.dia - post.dia === 0, 'ⓓ1 490 — 홀드가 다이아를 한 푼도 안 쓴다(결제 갈래가 하나다)',
+    '다이아 Δ' + (pre.dia - post.dia));
+  ok(pre.st - post.st >= stCost * 3, 'ⓓ2 349 — 그 버튼의 «꾹 = 연속» 은 살아 있다(1.2초에 3회분 이상)',
+    (pre.st - post.st) + ' 룬강화석 (1회분 ' + stCost + ')');
   /* ⚠ `typeof` 로 감싼다 — 없는 이름을 그냥 읽으면 evaluate 가 던져 **게이트가 즉사**한다
      (FAIL 이 아니라 예외라 그 아래 절이 통째로 안 돈다 — verify61 §10 · LESSONS 262-1) */
-  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA !== 'undefined' && RUNE_HOLD_DIA === true),
-    'ⓓ 349 — 스위치가 켜져 있다(RUNE_HOLD_DIA === true)');
-  /* 되돌릴 수 있는 스위치인가 — 소스에 «false 면 1회» 분기가 살아 있어야 한 줄로 되돌아간다.
-     (분기를 지우고 상수만 true 로 두면 스위치가 아니라 «흔적» 이다) */
-  ok(/dataset\.pay\s*===\s*'dia'\s*&&\s*!RUNE_HOLD_DIA/.test(
-       require('fs').readFileSync(path.resolve(__dirname, '../index.html'), 'utf8')),
-    'ⓓ 되돌림 분기가 살아 있다 — RUNE_HOLD_DIA=false 한 글자로 297 사양으로 돌아간다');
+  ok(await p.evaluate(() => typeof RUNE_HOLD_DIA === 'undefined' && typeof RUNE_DIA === 'undefined'),
+    'ⓓ3 490 — 다이아 결제 상수가 런타임에 없다');
+  ok(!/data-pay|RUNE_HOLD_DIA|RUNE_DIA/.test(
+       require('fs').readFileSync(path.resolve(__dirname, '../index.html'), 'utf8')
+         .replace(/\/\*[\s\S]*?\*\//g, '')),
+    'ⓓ3b 490 — 제품 줄에도 `data-pay`·`RUNE_*_DIA` 가 0건이다(295-② 두 벌 금지)');
 
   /* 팝업을 닫으면 홀드도 같이 멈춘다 */
   s0 = await setHold(30, 1e7);

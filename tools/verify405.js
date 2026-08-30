@@ -188,18 +188,23 @@ const blk = (t) => console.log('\n── ' + t + ' ' + '─'.repeat(Math.max(0, 
   const c = await ev(async () => {
     const sleep = ms => new Promise(r => setTimeout(r, ms));
     closeModal(); await sleep(200);
-    /* ⓐ 부족이면 한 푼도 안 나간다 */
+    /* ⓐ 부족이면 한 푼도 안 나간다
+       ⚠ 490 이후 `data-ex` 는 «가격» 이 아니라 **재화 키**다(1:1 이라 가격 = 고른 수량).
+          수량 탭을 ×100 으로 올려 «10 다이아로는 못 산다» 를 만든다. */
     S.dia = 10; S.relic = 0; S.mailx = [];
     openShopPage(); shopCat = 'coin'; setShopCatTabs('coin'); renderShopPage();
-    let btn = document.querySelector('#shopList .bt.buy[data-ex]');
+    const q100 = document.querySelector('#shopList .cn-qty .q[data-exq="100"]');
+    if (!q100) return { err: '수량 탭 없음' };
+    q100.click();
+    let btn = document.querySelector('#shopList .bt.buy[data-ex="relic"]');
     if (!btn) return { err: '교환 버튼 없음' };
-    const price = +btn.dataset.ex, row = EXCHANGE.find(v => v.dia === price);
+    const price = exQtyN(), row = { rel: price };     /* 490 — 1:1 */
     btn.click();
     const poor = { dia: S.dia, mail: (S.mailx || []).length };
     /* ⓑ 살 수 있으면 다이아만 즉시 나가고 유물조각은 우편으로 */
     S.dia = price; S.mailx = [];
     renderShopPage();
-    btn = document.querySelector('#shopList .bt.buy[data-ex]');
+    btn = document.querySelector('#shopList .bt.buy[data-ex="relic"]');
     btn.click();
     const m = (S.mailx || [])[0];
     const mid = { dia: S.dia, relic: S.relic, mailN: (S.mailx || []).length, mailT: m && m.t, mailR: m && m.r };
@@ -218,6 +223,8 @@ const blk = (t) => console.log('\n── ' + t + ' ' + '─'.repeat(Math.max(0, 
        'C4 대신 우편이 한 통 오고 수량이 EXCHANGE 표와 같다',
        JSON.stringify(c.mid.mailT) + ' r=' + c.mid.mailR + ' (표 ' + c.want + ')');
     ok(c.gained >= c.want, 'C5 그 우편을 받으면 유물조각이 실제로 는다(흐름 완결)', '+' + c.gained);
+    ok(c.price === 100 && c.want === 100,
+       'C6 490 — 교환비가 **1:1** 이다(고른 수량 100 → 다이아 100)', c.price + ' 다이아 → ' + c.want + '개');
   } else ok(false, '[C] 교환 흐름', (c && c.err) || 'null');
 
   /* ==================================================================

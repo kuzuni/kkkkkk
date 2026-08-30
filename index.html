@@ -4638,7 +4638,7 @@
   /* 203 — 룬강화석 던전. 194 가 강화석에 한 것과 같은 방식으로 **기하 전부를 위 블록에서 물려받고
      색 한 줄만** 덮는다(청록 룬빛). 카드 원색(--i #12606B)과 대비되게 밝은 민트다 —
      다이아(#9BE0FF, 푸른 결정)보다 초록이 짙어 두 카드가 갈린다. */
-  .dnc.bgm-rstone{--bgc:#5FF0D5}
+  .dnc.bgm-rstone{--bgc:#5FF06B}   /* 490 — 룬강화석 초록(구 청록 #5FF0D5). 재화·입장권과 한 색 계열 */
   .dnc.bgm-raid{                                                  /* 컨텐츠/레이드 — 붉은 열기 + 번개 잔광 */
     --bgc:#FF9A5E;
     /* ⚠ 5회차 — 같은 이음매 교정(골드 주석 참고). 74° → 가로주기 96/0.9613 = 99.87px, 타일 192px 이라
@@ -6381,6 +6381,20 @@
      z 를 올리면 얼린 값이 **+0.00** 이 된다(대조 «재화 카드 제목» 의 자 바닥 +5.81 미만). */
   .cn-a2>em,.cn-a2>.no,.cn-a2>.gm{z-index:2}
   .cn-nt{width:30px;height:30px;border-radius:50%;background:#272731;left:998px}
+  /* 490 §9 — 재화 교환 «수량 선택» 탭 4칸(×1 · ×10 · ×100 · MAX).
+     자리는 §10 안내줄(`.cn-tknt`)과 **같은 문법**이다 — 리본(top 3084, 높이 92)과 첫 카드 행
+     (top 3270) 사이 94px 빈 구간을 쓴다. 그래서 아래 §10 좌표는 한 줄도 안 움직인다.
+     ⚠ 23 배수 탭(`.tr-qty`)을 좌표째 가져오지 않았다 — 그쪽은 레퍼런스 기하(x142 w761)에 묶인
+       부품이라 상점 격자(111..969)에 안 맞는다. 여기서는 카드 격자 폭을 그대로 4등분한다:
+       858 = 210 × 4 + 6 × 3(칸 210 · 사이 6). */
+  .cn-qty{left:111px;top:3186px;width:858px;height:73px}
+  .cn-qty>.q{position:absolute;top:0;width:210px;height:73px;border-radius:20px;cursor:pointer;
+    text-align:center;line-height:73px;font-size:38px;font-weight:700;color:#F0D9AE;
+    background:linear-gradient(180deg,#4A5570 0,#39415A 100%);
+    box-shadow:inset 0 0 0 4px #141414,0 4px 0 #23293A}
+  .cn-qty>.q.on{color:#2A1C0A;
+    background:linear-gradient(180deg,#F6E7AC 0,#E6A64E 100%);
+    box-shadow:inset 0 0 0 4px #141414,0 4px 0 #A87322}
   /* 204 §10 — 던전 입장권 교환 리본 아래 안내 한 줄. «N/2» 의 N 이 분모를 넘는 것이 정상임을 명시한다.
      리본(top 3654, 높이 92)과 첫 카드 행(top 3844) 사이 94px 을 그대로 쓴다. */
   .cn-tknt{left:66px;top:3752px;width:948px;height:46px;text-align:center}
@@ -10100,13 +10114,14 @@
     font-size:28px;color:#7A5A34;text-decoration:none}
   /* 지금 밟고 있는 계단(197 문법) — 「1레벨의 무게」가 어디서 커지는지 한 줄로 */
   .tr-rn>.rst{left:44px;top:452px;right:44px;height:40px;line-height:40px;font-size:28px;color:#7A5A34}
-  /* 두 개의 시도 버튼 — 재료 / 다이아(주인 지시 ③ «재료 or 다이아 선택») */
+  /* 490 — 시도 버튼은 **하나**다(주인 지시 «룬 강화는 룬강화석으로만»). 구 `.b2`(다이아 칸)는
+     선언째 걷어냈다. 남은 한 칸은 **카드 가로 중앙**으로 옮겼다 — 크기(420×112)·세로(512)는
+     그대로라 카드 안 다른 요소는 한 픽셀도 안 움직인다(left 289 = (998 − 420) / 2). */
   .tr-rn>.rbt{top:512px;width:420px;height:112px;border-radius:24px;cursor:pointer;
     text-align:center;line-height:112px;font-size:38px;color:#fff;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
-  .tr-rn>.rbt.b1{right:534px}
-  .tr-rn>.rbt.b2{right:44px}
+  .tr-rn>.rbt.b1{left:289px}
   /* ── 349 — «꾹 누르기» 버튼은 브라우저에 제스처를 뺏기면 안 된다 ────────────────────────
      실기기 보고(«꾹 눌러도 연속이 안 된다»)의 **둘째 원인**이다. `tools/probe349.js`·§드리프트
      실측: 손가락이 버튼 «안» 에서 ±30px 만 굴러도 크로미움이 그 터치를 스크롤 제스처로 채가
@@ -18596,7 +18611,9 @@ const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
      표기·`bonus()`·게이트가 **같은 식(`runeVal`)** 을 보게 한다 — 표기층이 두 벌이 되면 조용히 갈라진다.
    -------------------------------------------------------------------------- */
 const RUNE_MAXLV = 500;                       /* 주인 확정 — 룬 하나당 상한 */
-const RUNE_DIA   = 50;                        /* 주인 확정 — 다이아 1회 시도 비용 */
+/* 490(주인 지시 2026-08-30) — **다이아 강화 폐지.** 룬은 «룬강화석» 하나로만 올린다.
+   구 `RUNE_DIA`(다이아 1회 50) 와 `pay` 분기는 선언째 걷어냈다(295-② «두 벌 금지») —
+   되살리려면 «다이아로도 올린다» 는 결정부터 다시 받아야 한다. */
 /* ④ 확률 곡선. `to` 는 «이 레벨 미만» 구간이고 마지막 칸이 0.5% 유지분이다.
    Lv 0~17 은 넉넉한 초반 곡선(아래 `runeRate`)이라 표에 p 가 없다. */
 const RUNE_KNEE  = 18;                        /* 주인이 준 «Lv18 부근» — 5% 구간의 시작 */
@@ -18658,20 +18675,20 @@ function runeVal(id, k){
 }
 /* 축별 총효과(배수 −1) — 표기와 bonus() 가 같은 식을 본다 */
 const runeSum = k => RUNES.reduce((s, r) => s + runeVal(r.id, k), 0);
-/* «지금 이 룬을 한 번 시도할 수 있는가» — 개방 · 만렙 아님 · 재화 충분 */
-function runeTryOk(id, pay){
+/* «지금 이 룬을 한 번 시도할 수 있는가» — 개방 · 만렙 아님 · 룬강화석 충분(490 — 결제는 한 갈래) */
+function runeTryOk(id){
   const r = RN[id];
   if(!r || !runeOpen(id) || runeMaxed(id)) return false;
-  return pay === 'dia' ? S.dia >= RUNE_DIA : S.rstone >= runeCost(r, runeLvOf(id));
+  return S.rstone >= runeCost(r, runeLvOf(id));
 }
 /* 실제 시도 1회. 재화를 먼저 소모하고 확률을 굴린다 — **실패해도 레벨은 그대로**(주인 지시 ④).
-   결과는 `{ ok, up, lv, rate, pay, cost }` 로 돌려준다(UI·게이트가 같은 값을 본다). */
-function runeTry(id, pay){
+   결과는 `{ ok, up, lv, rate, cost }` 로 돌려준다(UI·게이트가 같은 값을 본다 · 490 이후 `pay` 없음). */
+function runeTry(id){
   const r = RN[id];
-  if(!runeTryOk(id, pay)) return { ok:false };
+  if(!runeTryOk(id)) return { ok:false };
   const l = runeLvOf(id), rate = runeRate(l);
-  const cost = pay === 'dia' ? RUNE_DIA : runeCost(r, l);
-  if(pay === 'dia') S.dia -= cost; else S.rstone -= cost;
+  const cost = runeCost(r, l);
+  S.rstone -= cost;
   const up = Math.random() < rate;
   if(up){
     if(!S.rune || typeof S.rune !== 'object') S.rune = {};
@@ -18679,7 +18696,7 @@ function runeTry(id, pay){
     markDirty();                              /* 효과가 bonus() 파이프에 있으므로 캐시를 깬다 */
   }
   uiDirty = true; save();
-  return { ok:true, up, lv:runeLvOf(id), rate, pay, cost };
+  return { ok:true, up, lv:runeLvOf(id), rate, cost };
 }
 
 /* ==========================================================================
@@ -18772,27 +18789,35 @@ function temperReset(){
   return back;
 }
 
-/* ---- 유물조각 교환 (다이아 → 유물조각) ---- */
+/* ---- 재화 교환 (다이아 → 유물조각 · 룬강화석) ----
+   ⚑ **490(주인 확정 2026-08-30): «다이아→유물조각 다이아→룬석 전부 1:1 로».**
+   구 표는 3단 묶음(1,000→100 · 9,000→1,000 · 80,000→10,000 = 10:1 고정)이었다. 주인이 비율을
+   1:1 로 못박았으므로 **묶음 카드가 존재할 이유가 사라졌다**(한 칸이 «×100» 이면 나머지 두 칸은
+   같은 버튼을 여러 번 누르는 것과 값이 같다) ⇒ 품목 2종 × **수량 선택 탭**으로 바꿨다.
+   `k` 는 재화 키다 — 수량 = 다이아 값이므로 비율을 적을 자리 자체를 없앴다(1:1 이 구조가 된다).
+   ⚠ 지급 경로가 둘로 갈리는 것은 의도다(490 §2): 유물조각은 **우편**(153 «상점 지급품은 우편»),
+     룬강화석은 **즉시**다 — 우편 스키마(g·c·r·m)에 룬강화석 칸이 없다. 204 입장권이 같은 이유로
+     즉시 지급이고, 여기서 스키마를 늘리면 69·92·153 까지 같이 건드려야 해서 490 구간을 넘는다. */
 const EXCHANGE = [
-  { dia:1000,  rel:100 },
-  { dia:9000,  rel:1000 },
-  { dia:80000, rel:10000 }
+  { k:'relic',  n:'유물조각',  mail:1 },
+  { k:'rstone', n:'룬강화석',  mail:0 }
 ];
+/* 수량 선택 — 13 재화 탭에는 이 부품이 없어 여기서 처음 세운다(23 배수 탭 `.tr-qty` 는 레퍼런스
+   기하에 묶인 부품이라 좌표째 가져올 수 없다). 세이브에 안 넣는다 — 팝업을 다시 열면 ×1 이다. */
+const EX_QTYS = [1, 10, 100, 'MAX'];
+let exQty = 1;
+/* 지금 고른 수량이 실제로 몇 개인가(«MAX» 는 가진 다이아 전부 · 최소 1) */
+const exQtyN = () => exQty === 'MAX' ? Math.max(1, Math.floor(S.dia)) : exQty;
 
 /* ---- 204 던전 입장권 교환 (다이아 → 던전별 입장권) ----
-   주인 지시(2026-08-27): «상점에서 다이아로 던전별 입장권 교환 · 얼마여야 하는지는 밸런스 평가자가».
-   ⚠ **교환가는 199(최종 밸런스 비평 라운드)의 평가 대상이다** — 여기 값은 «굴러가는 잠정치» 이고,
-   199 가 수급 총량표(다이아 유입 vs 씽크)를 세울 때 이 표를 정한다. 그때 고칠 곳은 이 상수 하나다.
-   잠정치의 근거(눈대중 아님): 기준가 `DUN_EX_BASE` × 던전 난이도 계수 k.
-     k 는 던전 요구 전투력 곡선의 배수를 그대로 쓴다 — 유물 1단(relic1)이 1, REL_DUN 의 k 가 2.5/6/15,
-     골드·다이아·강화석 던전은 relic1 의 `req` 계수(2500·4000·4200 / 5000)를 반올림한 0.5/0.8/0.8.
-     15배(relic4)를 그대로 곱하면 4,500 다이아라 «다이아로는 사실상 못 산다» 가 되므로 상위 단은
-     제곱근으로 눌렀다(√k) — 상위 던전일수록 «출석 적립» 이 주 수급처라는 성질은 남기면서
-     막차는 열어 둔다. 표시가는 십의 자리에서 끊는다. */
-const DUN_EX_BASE = 300;
-const DUN_EX_K = { gold:0.5, dia:0.8, relic1:1, relic2:Math.sqrt(2.5), relic3:Math.sqrt(6), relic4:Math.sqrt(15),
-                   stone:0.8, rstone:0.9 };   /* 194 강화석 4200 / 203 룬강화석 4600 ÷ relic1 5000 */
-const dunExPrice = id => Math.round(DUN_EX_BASE * (DUN_EX_K[id] || 1) / 10) * 10;
+   ⚑ **490(주인 확정 2026-08-30): «던전 입장권은 전부 1000 다이아로 해줘».**
+   204 가 «199 가 정할 잠정치» 로 두었던 난이도 계수표(`DUN_EX_BASE` 300 × k 0.5~√15, 십의 자리
+   반올림)는 **주인 확정으로 대체됐다** — 표째 걷어냈다(295-② «두 벌 금지»: 계수표를 남겨 두면
+   다음 세션이 둘 중 하나를 보고 갈라진다). 던전이 늘어도 이 상수 하나가 전부를 답한다.
+   ⚠ 이제 «상위 던전일수록 비싸다» 는 성질이 없다 — 그것은 주인이 뒤집은 결정이지 잊은 것이 아니다.
+   199 이관: 다이아 씽크가 8종 균일 1,000 으로 바뀌었다(구 표는 150~1,160). */
+const DUN_EX_PRICE = 1000;
+const dunExPrice = () => DUN_EX_PRICE;
 
 /* 작업 68 — 구버전 `PACKS`(다이아 패키지 데모)는 폐기했다. 다이아 판매는 `DIA_PACKS`(작업 44) 가 유일한 출처다. */
 
@@ -28942,20 +28967,25 @@ function renderCoinPage(list){
     +   '<i class="mlstk"></i>'   /* 23회차 — 게이지 검은 테 사본(광택 위). 기하는 `.bar` 규칙에서 온다 */
     +   '<div class="rw">마일리지 ' + MILE_NEED + '개 → ' + curIc('dia') + ' ' + fmt(MILE_DIA) + '</div>'
     +   '<div class="ex"' + (milOk ? ' id="cnExch"' : '') + '><i>교환</i></div></div>';
-  /* §9 유물조각 교환 리본 + 카드 3칸 — 구버전 패널 상점(작업 68 폐기)의 «🔮 유물조각 교환소» 이관.
-     `EXCHANGE` 데이터·교환 규칙은 한 줄도 안 바꿨다. 유물조각은 14/15 유물 소환의 재화라
-     대체 획득처가 광고 상품뿐이었으므로 폐기하지 않고 옮긴다. */
+  /* §9 재화 교환 리본 + 수량 탭 + 카드 2칸 — **490 개편**(주인 «전부 1:1»).
+     구 3단 묶음 카드(10:1)는 폐지하고 품목 2종(유물조각·룬강화석)을 **2열 중앙**(x256/546 — 365 가
+     같은 격자에서 쓴 좌표)에 놓는다. 칸 규격·행 pitch 는 Δ0 이고, 리본↔카드 사이 94px 빈 구간에
+     수량 탭(y3186 h73)이 들어간다 — 아래 §10 좌표는 한 줄도 안 움직인다. */
   h += '<div class="cn-rb" style="--jz-d:-2.4s;top:3084px;--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + ';--c:#1AB4D6;--h:#42C7D8;--s:#0C91B0;--t:#0F9BBC;--ts:#0884A6">'
     +   '<s class="tl l"><s></s></s><s class="tl r"><s></s></s><b></b><i>유물조각 교환</i></div>';
+  const exN = exQtyN();
+  h += '<div class="cn-qty">' + EX_QTYS.map((q, i) =>
+        '<b class="q' + (exQty === q ? ' on' : '') + '" data-exq="' + q + '" style="left:' + (i * 216) + 'px">'
+        + (q === 'MAX' ? 'MAX' : '×' + q) + '</b>').join('') + '</div>';
   EXCHANGE.forEach((x, i) => {
-    const px = [111, 401, 691][i % 3];
+    const px = [256, 546][i], big = exN >= 10000;
     h += '<div class="cn-cd rel" style="left:' + px + 'px;top:3270px' + jzK(i, 4) + ';--fs:40.8px;--sx:.98'
-      +  ';--qx:' + (x.rel >= 10000 ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5'
+      +  ';--qx:' + (big ? .88 : 1) + ';--hd:#1AB4D6;--hr:#7FE4F5'
       +  ';--jz-ga:' + jzShineA('#1AB4D6') + ';--jz-gd:' + jzShadeA('#1AB4D6') + '">'
-      +  '<div class="bg"></div><div class="hd"><i>유물조각</i></div>'
-      +  '<div class="pn"><em>' + curIc('relic') + '</em></div>'
-      +  '<div class="qt">×' + fmt(x.rel) + '</div>'
-      +  '<div class="bt buy" data-ex="' + x.dia + '"><u class="pr">' + curIc('dia') + ' ' + fmt(x.dia) + '</u></div><i class="stk btstk"></i>'
+      +  '<div class="bg"></div><div class="hd"><i>' + x.n + '</i></div>'
+      +  '<div class="pn"><em>' + curIc(x.k) + '</em></div>'
+      +  '<div class="qt">×' + fmt(exN) + '</div>'
+      +  '<div class="bt buy" data-ex="' + x.k + '"><u class="pr">' + curIc('dia') + ' ' + fmt(exN) + '</u></div><i class="stk btstk"></i>'
       +  '<div class="fr"></div></div>';
   });
   /* §10 던전 입장권 교환 — 204(주인 지시 «상점에서 다이아로 던전별 입장권 교환»).
@@ -28967,7 +28997,7 @@ function renderCoinPage(list){
     + '<div class="cn-tknt"><i>출석 보상마다 던전별 +' + DUN_TRY + '장 적립 · 안 쓰면 쌓입니다(3/'
     +   DUN_TRY + ' · 5/' + DUN_TRY + ')</i></div>';
   DUNGEONS.forEach((d, i) => {
-    const px = [111, 401, 691][i % 3], py = dxTop + ((i / 3) | 0) * dxPitch, pr = dunExPrice(d.id);
+    const px = [111, 401, 691][i % 3], py = dxTop + ((i / 3) | 0) * dxPitch, pr = dunExPrice();
     h += '<div class="cn-cd dtk" style="left:' + px + 'px;top:' + py + 'px' + jzK(i, 5) + ';--fs:40.8px;--sx:.98'
       +  ';--qx:1;--hd:#D08A2A;--hr:#FFD79A'
       +  ';--jz-ga:' + jzShineA('#D08A2A') + ';--jz-gd:' + jzShadeA('#D08A2A') + '">'
@@ -28989,19 +29019,35 @@ $('shopList').addEventListener('click', e => {
     shopCat = 'pass'; setShopCatTabs('pass'); renderShopPage(); $('shopList').scrollTop = 0;
     return;
   }
-  /* 작업 68 — §9 유물조각 교환(구버전 패널 상점에서 이관). 규칙은 구버전과 동일하다. */
+  /* 490 §9 수량 탭 — 고른 수량만 바꾸고 다시 그린다(세이브 없음 · 재화는 안 움직인다) */
+  const eq = e.target.closest('[data-exq]');
+  if(eq){
+    const v = eq.dataset.exq;
+    exQty = v === 'MAX' ? 'MAX' : +v;
+    renderCoinPage($('shopList'));
+    return;
+  }
+  /* 490 §9 재화 교환 — **1:1**(주인 확정). 수량 n → 다이아 −n · 그 재화 +n. */
   const ex0 = e.target.closest('[data-ex]');
   if(ex0){
-    const ex = EXCHANGE.find(v => v.dia === +ex0.dataset.ex);
+    const ex = EXCHANGE.find(v => v.k === ex0.dataset.ex);
     if(!ex) return;
-    if(S.dia < ex.dia){ notify(curIc('dia') + ' <b>' + fmt(ex.dia - S.dia) + '</b> 더 필요합니다'); return; }
-    /* 153 — 다이아는 즉시 나가고 유물조각은 우편으로 온다(상점 구매분 = 우편 지급) */
-    S.dia -= ex.dia;
-    sendMail({ t:'📦 유물조각 교환', r:ex.rel,
-      b:'상점에서 교환하신 유물조각입니다. 보관 기간은 없습니다.' });
+    const n = exQtyN();
+    if(S.dia < n){ notify(curIc('dia') + ' <b>' + fmt(n - S.dia) + '</b> 더 필요합니다'); return; }
+    S.dia -= n;
+    if(ex.mail){
+      /* 153 — 다이아는 즉시 나가고 유물조각은 우편으로 온다(상점 구매분 = 우편 지급) */
+      sendMail({ t:'📦 ' + ex.n + ' 교환', r:n,
+        b:'상점에서 교환하신 ' + ex.n + '입니다. 보관 기간은 없습니다.' });
+    }else{
+      /* 204 입장권과 같은 처리 — 우편 스키마에 자리가 없는 재화는 즉시 지급하고 58 연출로 보여 준다 */
+      S[ex.k] = (S[ex.k] || 0) + n;
+      fxReward();
+    }
     uiDirty = true; save();
     renderCoinPage($('shopList'));
-    notify(curIc('dia') + ' <b>' + fmt(ex.dia) + '</b> → ' + curIc('relic') + ' <b>' + fmt(ex.rel) + '</b> 우편함 발송');
+    notify(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k) + ' <b>' + fmt(n) + '</b>'
+      + (ex.mail ? ' 우편함 발송' : ' 지급'));
     return;
   }
   /* 204 §10 — 다이아 → 던전별 입장권. 유물조각 교환(§9)과 달리 **즉시 지급**한다:
@@ -29013,7 +29059,7 @@ $('shopList').addEventListener('click', e => {
   if(dx){
     const d = DUNGEONS.find(v => v.id === dx.dataset.dunex);
     if(!d) return;
-    const pr = dunExPrice(d.id);
+    const pr = dunExPrice();
     if(S.dia < pr){ notify(curIc('dia') + ' <b>' + fmt(pr - S.dia) + '</b> 더 필요합니다'); return; }
     S.dia -= pr;
     S.dunTk[d.id] = (S.dunTk[d.id] | 0) + 1;
@@ -29663,7 +29709,7 @@ const CURINFO = {
     get:() => S.rstone,
     d:'룬을 강화할 때 사용합니다. 룬 레벨은 룬마다 최대 ' + RUNE_MAXLV + '입니다.',
     ways:['던전 «' + (DUNGEONS.find(d => d.id === 'rstone') || {}).n + '»', 'DPS 측정장',
-          '다이아 ' + RUNE_DIA + '개로 1회 대체'] },
+          '상점 재화 탭 — 다이아 1:1 교환'] },
   /* 210 — 단련석. 획득처는 주인 지시 ② 그대로 «절망의 탑» 한 곳이다(단일 수급처). */
   tstone:{ ic:curIc('tstone'), n:'단련석',
     get:() => S.tstone,
@@ -31500,8 +31546,7 @@ function runeCardTxt(r){
       + '<s>' + (max ? '최대' : '다음 +' + pct(runeStep1(r, k))) + '</s></span>').join(''),
     step: '1레벨당 증가폭이 Lv.1 ~ Lv.' + RUNE_MAXLV + ' 내내 같습니다 (선형)',
     mat: curIc('rstone', 34) + fmt(runeCost(r, l)),
-    dia: curIc('dia', 34) + fmt(RUNE_DIA),
-    okM: runeTryOk(r.id, 'mat'), okD: runeTryOk(r.id, 'dia')
+    okM: runeTryOk(r.id)
   };
 }
 const runeSumTxt = () => '룬 총효과 — '
@@ -31561,10 +31606,8 @@ function renderRunes(){
       +  '<span class="rst"><i>' + t.step + '</i></span>'
       +  (t.max
           ? '<span class="rmax"><i>최대 레벨</i></span>'
-          : '<span class="rbt b1' + (t.okM ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="mat">'
-            + '<i>' + t.mat + '</i></span>'
-            + '<span class="rbt b2' + (t.okD ? '' : ' no') + '" data-runebuy="' + r.id + '" data-pay="dia">'
-            + '<i>' + t.dia + '</i></span>')
+          : '<span class="rbt b1' + (t.okM ? '' : ' no') + '" data-runebuy="' + r.id + '">'
+            + '<i>' + t.mat + '</i></span>')
       +  (t.max ? '' : '<span class="rhint"><i>실패해도 레벨은 그대로입니다</i></span>')
       +  '<span class="rlk"><i>🔒 ' + runeReqText(r.id) + '</i></span>'
       +  '</div>';
@@ -31594,10 +31637,8 @@ function liveRunes(curId){
   put('.rd', t.eff, true);
   put('.rst i', t.step);
   put('.rbt.b1 i', t.mat, true);
-  put('.rbt.b2 i', t.dia, true);
-  const b1 = card.querySelector('.rbt.b1'), b2 = card.querySelector('.rbt.b2');
+  const b1 = card.querySelector('.rbt.b1');
   if(b1) b1.classList.toggle('no', !t.okM);
-  if(b2) b2.classList.toggle('no', !t.okD);
   const sum = w.querySelector('.rsum i');
   if(sum){ const s = runeSumTxt(); if(sum.innerHTML !== s) sum.innerHTML = s; }
 }
@@ -31606,19 +31647,15 @@ function liveRunes(curId){
    297 — `quiet` 는 «꾹 누르기» 반복분이다: 토스트·실패음·보상 연출·통짜 재렌더를 전부 건너뛴다
    (60ms 로 반복되므로 토스트가 쌓이면 화면이 잠기고 #fxl 이 FXMAX 로 막힌다 — 58·119 G4 규약).
    반복분의 정산은 손을 뗀 «뒤» `rtRuneHold` 의 요약 토스트 한 번이 맡는다. */
-function runeBuy(id, pay, quiet){
+function runeBuy(id, quiet){
   const r = RN[id]; if(!r) return false;
   if(!runeOpen(id)){ if(!quiet) notify('🔒 ' + r.n + ' — ' + runeReqText(id)); return false; }
   if(runeMaxed(id)){ if(!quiet) notify(r.n + ' 은(는) 이미 최대 레벨입니다'); return false; }
-  if(!runeTryOk(id, pay)){
-    if(!quiet){
-      notify(pay === 'dia' ? curIc('dia') + ' <b>다이아</b>가 부족합니다'
-                           : curIc('rstone') + ' <b>룬강화석</b>이 부족합니다');
-      sfx('err');
-    }
+  if(!runeTryOk(id)){
+    if(!quiet){ notify(curIc('rstone') + ' <b>룬강화석</b>이 부족합니다'); sfx('err'); }
     return false;
   }
-  const res = runeTry(id, pay);
+  const res = runeTry(id);
   if(!res.ok) return false;
   if(quiet){ if(res.up) sfx('up'); return res.up; }   /* 반복분 — 성공음만. 렌더는 홀드가 맡는다 */
   if(res.up){ sfx('up'); fxReward(); notify(r.n + ' 강화 성공! <b>Lv. ' + res.lv + '</b>'); }
@@ -31925,15 +31962,14 @@ addEventListener('pointermove', e => {
      `liveRunes`/`liveTemper` 로 «숫자만» 고쳐 쓰고, 손을 뗀 «뒤» 한 번만 통짜로 그린다.
    ⚠ 토스트도 반복분은 죽인다 — 60ms 로 쌓으면 화면이 잠기고 `#fxl` 이 FXMAX 로 막힌다(58).
      정산은 손을 뗀 뒤 **요약 한 줄**이 맡는다(«n회 시도 · 성공 m회»).
-   ⓓ **다이아 결제(룬 50 다이아/1회)** — 297 은 «프리미엄 재화가 초당 16회 빠지는 것은 되돌릴 수
-     없다» 를 이유로 홀드에서 빼고 `RUNE_HOLD_DIA` 한 줄을 **주인 확인 대기**로 남겼다.
-     작업 **349**(2026-08-29 주인 보고 «룬 강화버튼 꾹 누르면 연속으로 강화 되게 해야되는데
-     안되있더라»)가 그 확인이다 — `tools/probe349.js` 로 네 조합(마우스·터치·떨림·게임 루프 ON)을
-     전부 굴려 보니 **재료칸은 어느 조합에서도 10~12회 돌고 있었고, 안 도는 버튼은 다이아칸
-     하나뿐**이었다. 주인이 «안 된다» 고 본 버튼은 이것이다. ⇒ **true**(등재문 처방 «재료·다이아
-     버튼 모두»). 경로는 297 이 이미 pay 를 그대로 받게 짜 두어 스위치 한 줄로 끝난다.
+   ⓓ **다이아 결제는 490 에서 폐지됐다**(주인 지시 2026-08-30 «룬 강화는 걍 룬강화석으로만»).
+     297 이 «프리미엄 재화가 초당 16회 빠지는 것은 되돌릴 수 없다» 로 홀드에서 뺐고, 349 가
+     주인 확인을 받아 `RUNE_HOLD_DIA = true` 로 켰던 그 스위치는 **결제 갈래 자체가 사라져**
+     의미가 없어졌다 — 스위치도 `pay` 인자도 선언째 걷어냈다(333 «자리는 비우지 않는다» —
+     남은 자리는 «버튼 하나 = 룬강화석» 이고 홀드는 그 하나에만 붙는다).
+     ⚑ 349 가 잡은 결함(«꾹 눌러도 연속이 안 된다»)은 **여전히 살아 있는 요구**다: 지금 유일한
+     버튼이 홀드 대상이므로 349 의 자는 그 버튼을 본다(`verify349` [ⓓ] 이관).
    -------------------------------------------------------------------------- */
-const RUNE_HOLD_DIA = true;             /* 349 — 주인 확인 완료(2026-08-29). 다이아 칸도 홀드 */
 let rtHold = null;                      /* {tag, sel, once, live, end, n, iv, timer} */
 function rtHoldOn(tag){ return !!(rtHold && rtHold.tag === tag); }
 const rtEl = sel => document.querySelector(sel);
@@ -31963,10 +31999,10 @@ function rtHoldStart(o){
   rtHold.timer = setTimeout(rtHoldTick, TR_HOLD_DELAY);
 }
 /* 룬 강화 시도 — 확률이라 «시도 횟수» 와 «성공 횟수» 를 따로 센다(요약 토스트가 둘 다 말한다) */
-function rtRuneHold(id, pay){
+function rtRuneHold(id){
   const r = RN[id]; if(!r) return;
   const card = '#trRunes .tr-rn[data-rune="' + CSS.escape(id) + '"]';
-  const sel = card + ' .rbt[data-pay="' + CSS.escape(pay) + '"]';
+  const sel = card + ' .rbt.b1';            /* 490 — 결제 갈래가 하나라 버튼도 하나 */
   /* 488 — 회당 피드백의 호스트는 **버튼이 아니라 카드**다(주인 지시 «카드 자체에»):
      버튼에 걸면 레벨·효과 줄이 안 움직이고, 무엇보다 `jz-dn`(누르고 있는 동안 .94 유지)와
      같은 노드에서 싸운다. 정지 흔들림(`rtShake`)은 종전대로 버튼에 건다 — 뜻이 다르다. */
@@ -31976,14 +32012,15 @@ function rtRuneHold(id, pay){
   rtHoldStart({
     tag:'rune', sel,
     once: () => {
-      if(!runeOpen(id) || runeMaxed(id) || !runeTryOk(id, pay)){
-        if(!tries) runeBuy(id, pay);          /* 첫 누름의 잠금·만렙·부족 안내는 기존 문구 그대로 */
+      if(!runeOpen(id) || runeMaxed(id) || !runeTryOk(id)){
+        if(!tries) runeBuy(id);               /* 첫 누름의 잠금·만렙·부족 안내는 기존 문구 그대로 */
         return false;
       }
       tries++;
-      /* 488 — 비용은 «빠져나가기 전» 에 읽는다(성공하면 레벨이 올라 다음 비용이 달라진다) */
-      const cost = pay === 'dia' ? RUNE_DIA : runeCost(r, runeLvOf(id));
-      const up = runeBuy(id, pay, true);      /* quiet — 토스트·연출·통짜 렌더 없음 */
+      /* 488 — 비용은 «빠져나가기 전» 에 읽는다(성공하면 레벨이 올라 다음 비용이 달라진다)
+         490 — 결제가 룬강화석 하나라 비용도 한 갈래다 */
+      const cost = runeCost(r, runeLvOf(id));
+      const up = runeBuy(id, true);           /* quiet — 토스트·연출·통짜 렌더 없음 */
       if(up) succ++;
       /* 488 — 시도마다 **카드가 답한다**: 성공 팝 + «+1 Lv» / 실패 흔들림 + «실패» · 비용 «−n» */
       hbBeat(sel0, up, up ? '+1 Lv' : '실패', '−' + fmt(cost));
@@ -32053,11 +32090,7 @@ function rtChargeHold(){
 }
 $('trw').addEventListener('pointerdown', e => {
   const rb = e.target.closest('[data-runebuy]');
-  if(rb){
-    /* ⓓ 349 로 `RUNE_HOLD_DIA` 가 true 가 됐다 — 이 분기는 스위치를 되돌릴 때만 도는 자리다 */
-    if(rb.dataset.pay === 'dia' && !RUNE_HOLD_DIA){ runeBuy(rb.dataset.runebuy, 'dia'); return; }
-    rtRuneHold(rb.dataset.runebuy, rb.dataset.pay); return;
-  }
+  if(rb){ rtRuneHold(rb.dataset.runebuy); return; }   /* 490 — 결제 갈래가 하나라 분기가 없다 */
   if(e.target.closest('[data-tpchg]')){ rtChargeHold(); return; }
   const tu = e.target.closest('[data-tempup]');
   if(tu){ rtTemperHold(tu.dataset.tempup); return; }

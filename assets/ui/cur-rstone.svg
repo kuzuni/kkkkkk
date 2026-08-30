@@ -1,12 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" shape-rendering="geometricPrecision">
   <!-- 화폐 아이콘 · 룬강화석 — 작업 203(룬 전용 강화 재화) · 125 단일 출처
        강화석(194, 주황 육각 원석)과 «같은 계열 · 다른 색·형태» 로 갈린다:
-       육각이 아니라 세로로 선 마름모꼴 비석이고 색은 청록(#1FA9A0 계열)이다. -->
-  <path d="M32 2l18 14v32L32 62 14 48V16z" fill="#0F6E70" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M32 9l13 10.5v25L32 55 19 44.5v-25z" fill="#2FD4C4"/>
-  <path d="M32 9v46M19 19.5l26 25M45 19.5l-26 25" stroke="#0F6E70" stroke-width="2.2"/>
+       육각이 아니라 세로로 선 마름모꼴 비석이고 색은 초록(#3FD44F 계열)이다 — 490(주인 지시 2026-08-30 «룬 강화석은 색깔 초록색으로 해줘»)이
+       203 의 청록(#1FA9A0 계열)에서 갈아 끼웠다. 형태(마름모 비석 · ᛉ 문양)는 한 점도 안 건드렸다(bbox Δ0). -->
+  <path d="M32 2l18 14v32L32 62 14 48V16z" fill="#106A18" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M32 9l13 10.5v25L32 55 19 44.5v-25z" fill="#3FD44F"/>
+  <path d="M32 9v46M19 19.5l26 25M45 19.5l-26 25" stroke="#106A18" stroke-width="2.2"/>
   <!-- 새겨진 룬 문양(ᛉ) — 이 재화가 «룬» 전용임을 형태로 알린다 -->
-  <path d="M32 18v28M32 27l-8-8M32 27l8-8" stroke="#052F33" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M32 18v28M32 27l-8-8M32 27l8-8" stroke="#EAFFFB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".85"/>
-  <path d="M32 9L19 19.5l4 7z" fill="#DFFFFA" opacity=".85"/>
+  <path d="M32 18v28M32 27l-8-8M32 27l8-8" stroke="#05330A" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M32 18v28M32 27l-8-8M32 27l8-8" stroke="#EAFFEF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity=".85"/>
+  <path d="M32 9L19 19.5l4 7z" fill="#DFFFE4" opacity=".85"/>
 </svg>
