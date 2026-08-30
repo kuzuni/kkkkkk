@@ -21,7 +21,7 @@
  *   §2 대가       — 406-④ 음성항: 407 이 살려 둔 `#ciw` 는 **숨김이 아니라 100% 보임**,
  *                   오버레이가 없는 화면·전체를 덮는 탭 페이지에서는 배너가 **안 숨는다**,
  *                   닫으면 **되돌아온다**(display 를 지운 것이 아니라 조건부로 감춘 것이다)
- *   §3 Δ0px       — 일곱 호스트 상자의 좌표·크기가 2280·1920·1600 에서 수리 전과 **완전히 같다**
+ *   §3 Δ0px       — 호스트 상자가 «선언을 뺀 사본» 과 2280·1600 에서 0.2px 이내로 같다(상수 0개)
  *   §R 되돌림시험 — 선언을 뺀 **사본**에서 토막이 실측값 그대로 되살아난다(+ 2280 음성항)
  */
 const fs = require('fs');
@@ -58,19 +58,8 @@ const HOSTS = [
   { label: 'prof:19', sel: '#profBtn', box: '#pfw>.pf' },
   { label: 'prof:20-스펙', prof: '.pf-tgl>.lb', box: '#specw>.spc' },
 ];
-/* 수리 «전» 좌표(`geo` 실측) — §3 은 이 값과 **완전히 같아야** 통과한다. */
-const GEO = {
-  'side:attend': { 2280: [70, 606, 940, 1077], 1920: [70, 426, 940, 1077], 1600: [70, 251, 940, 1077] },
-  'side:roul': { 2280: [91, 528.8, 898, 1198.5], 1920: [91, 348.8, 898, 1198.5], 1600: [91, 181.8, 898, 1198.5] },
-  'side:promo': { 2280: [91, 496.5, 898, 1263], 1920: [91, 316.5, 898, 1263], 1600: [91, 149.5, 898, 1263] },
-  'menu:mail': { 2280: [91, 488.5, 898, 1303], 1920: [91, 308.5, 898, 1303], 1600: [91, 142, 898, 1221] },
-  'side:bless': { 2280: [41, 345, 998, 1157], 1920: [41, 165, 998, 1157], 1600: [41, 157, 998, 1157] },
-  'menu:bag': { 2280: [66, 659.5, 948, 967], 1920: [66, 479.5, 948, 967], 1600: [66, 319.5, 948, 967] },
-  'prof:19': { 2280: [92, 431, 896, 1396], 1920: [92, 431, 896, 1396], 1600: [92, 173, 896, 1396] },
-  'prof:20-스펙': { 2280: [92, 430.5, 896, 1395], 1920: [92, 250.5, 896, 1395], 1600: [92, 168, 896, 1240] },
-  'menu:conf': { 2280: [142, 455, 796, 1347], 1920: [142, 275, 796, 1347], 1600: [142, 142, 796, 1278] },
-  'cur:gold': { 2280: [241, 696.5, 598, 813], 1920: [241, 516.5, 598, 813], 1600: [241, 256, 598, 813] },
-};
+/* ⚑ 수리 «전» 절대 좌표는 **상수로 안 박는다** — §3 주석 참조(415 가 1회차 중에 19 프로필 패널을
+   1600 에서 1396 → 1296 으로 바꿨다). 기록용 실측표는 `docs/review/419-미션배너덮임.md` §5 에 있다. */
 /* 수리 «전» 배너 보임 % — §R 이 사본에서 이 값을 되살려야 한다(0 이면 «원래 안 겹쳤다» = 음성항) */
 const BEFORE = {
   'side:attend': { 2280: 100, 1600: 15.2 }, 'side:roul': { 2280: 100, 1600: 19.8 },
@@ -246,40 +235,40 @@ async function shot(browser, o, H, file) {
     await ctx.close();
   }
 
-  /* ── §3 Δ0px — 상자를 한 픽셀도 안 건드렸다 ───────────────────────────── */
-  console.log('§3 Δ0px — 일곱 호스트 상자 좌표·크기가 수리 전과 완전히 같다 (처방이 배경만 만졌다)');
-  for (const o of HOSTS) {
-    const want = GEO[o.label];
-    if (!want) continue;
-    for (const H of FRAMES) {
-      const m = await shot(browser, o, H);
-      ok(m.box !== null, `[${o.label}@${H}] 호스트 상자 ${o.box} 가 열렸다`);
-      if (!m.box) continue;
-      const [x, y, w, h] = m.box, [X, Y, W, Hh] = want[H];
-      near(`[${o.label}@${H}] x`, x, X, 0.2); near(`[${o.label}@${H}] y`, y, Y, 0.2);
-      near(`[${o.label}@${H}] w`, w, W, 0.2); near(`[${o.label}@${H}] h`, h, Hh, 0.2);
-    }
-  }
-  {
-    const m = await shot(browser, { label: 'cur:gold', sel: '[data-cur="gold"]', box: '#ciw>.ci' }, 1600);
-    const [x, y, w, h] = m.box, [X, Y, W, Hh] = GEO['cur:gold'][1600];
-    ok(Math.abs(x - X) < .2 && Math.abs(y - Y) < .2 && Math.abs(w - W) < .2 && Math.abs(h - Hh) < .2,
-      `[cur:gold@1600] 407 팝업 상자도 Δ0 (${m.box.join('/')})`);
-  }
-
-  /* ── §R 되돌림 시험 — 선언을 뺀 사본 ───────────────────────────────────── */
-  console.log('§R 되돌림 시험 — 선언을 뺀 사본에서 토막이 실측값 그대로 되살아난다');
-  /* ⚠ 사본은 **저장소 뿌리에** 둔다(407 선례) — `/tmp` 에 두면 `assets/` 상대 경로가 통째로 깨져
+  /* ── §3 Δ0px + §R 되돌림 시험 — **사본 한 벌로 둘 다 잰다** ────────────────
+     ⚠ 사본은 **저장소 뿌리에** 둔다(407 선례) — `/tmp` 에 두면 `assets/` 상대 경로가 통째로 깨져
      그림이 안 뜨고, 그 차이가 «되돌렸더니 값이 다르다» 로 읽힌다(1회차에 tab:box 1.8 → 0 으로 실제로 그랬다). */
   const tmp = path.join(ROOT, '.v419-neg.html');
   ok(SRC.split(RULE).length === 2, '선언이 소스에 정확히 한 번 있다 (사본을 만들 수 있다)');
   fs.writeFileSync(tmp, SRC.replace(RULE, ''));
   try {
+  console.log('§3 Δ0px — 호스트 상자가 «선언을 뺀 사본» 과 한 픽셀도 안 다르다 (처방이 배경만 만졌다)');
+  /* ⚑ 절대 좌표를 상수로 박지 않는다. 이 시트들은 **다른 워커가 지금도 고치고 있다** —
+     1회차 중에 415 가 19 프로필 패널을 1600 에서 1396 → 1296 으로 바꿨고, 상수를 박았으면
+     남의 정당한 작업에 내 게이트가 빨개졌을 것이다(402 «표는 뒤처진다» 의 좌표판).
+     묻는 것은 «좌표가 얼마냐» 가 아니라 **«내 선언이 그 좌표를 움직였느냐»** 이므로
+     같은 트리의 사본과 견주는 것이 정확히 그 질문이다. 기록용 실측값은 review §5 에 있다. */
+  const PAIR = [2280, 1600];
+  const REV = {};
+  for (const o of [...HOSTS, { label: 'cur:gold', sel: '[data-cur="gold"]', box: '#ciw>.ci' }]) {
+    for (const H of PAIR) {
+      const now = await shot(browser, o, H);
+      const was = await shot(browser, o, H, tmp);
+      REV[o.label + '@' + H] = was;
+      ok(now.box !== null && was.box !== null, `[${o.label}@${H}] 호스트 상자 ${o.box} 가 양쪽에서 열렸다`);
+      if (!now.box || !was.box) continue;
+      const axis = ['x', 'y', 'w', 'h'];
+      for (let k = 0; k < 4; k++) near(`[${o.label}@${H}] ${axis[k]} Δ0`, now.box[k], was.box[k], 0.2);
+    }
+  }
+
+  /* ── §R 되돌림 시험 — 선언을 뺀 사본에서 «토막» 이 되살아난다 ─────────── */
+  console.log('§R 되돌림 시험 — 선언을 뺀 사본에서 토막이 실측값 그대로 되살아난다');
   for (const o of HOSTS) {
     const want = BEFORE[o.label];
     if (!want) continue;
-    for (const H of [2280, 1600]) {
-      const m = await shot(browser, o, H, tmp);
+    for (const H of PAIR) {
+      const m = REV[o.label + '@' + H];
       ok(!m.hidden, `[R][${o.label}@${H}] 사본에서는 배너가 안 숨는다`);
       if (want[H] === 100) {
         /* 음성항 — 이 자리는 사본의 2280 에서 **온전했다**(짧은 프레임이 만든 결함이라는 증명) */
@@ -291,14 +280,14 @@ async function shot(browser, o, H, file) {
     }
   }
   /* 음성항 — 사본의 2280 에서 **100% 보임** 인 다섯은 «짧은 프레임이 새로 만든» 자리다.
-     나머지 일곱은 2280 에서도 이미 토막이라 «1600 전용» 처방(`.shortf` 문턱)으로는 못 닫는다. */
+     나머지 여섯은 2280 에서도 이미 토막이라 «1600 전용» 처방(`.shortf` 문턱)으로는 못 닫는다. */
   {
     const short = ['side:attend', 'side:roul', 'side:promo', 'side:bless', 'menu:bag'];
     const both = ['side:quest', 'menu:mail', 'side:coll', 'menu:conf', 'prof:19', 'prof:20-스펙'];
     ok(short.every((k) => BEFORE[k][2280] === 100), '[R-음성] 다섯 자리는 2280 에서 온전했다 = 짧은 프레임이 만든 결함');
-    ok(both.every((k) => BEFORE[k][2280] < 99), '[R-음성] 일곱 자리는 2280 에서도 토막이었다 = `.shortf` 문턱으로는 못 닫는다');
-    const m = await shot(browser, { label: 'cur:gold', sel: '[data-cur="gold"]', box: '#ciw>.ci' }, 1600, tmp);
-    eq('[R-음성] 사본에서도 cur:gold 는 100% 보임 (407 은 이 선언과 무관하게 산다)', m.visPct, 100);
+    ok(both.every((k) => BEFORE[k][2280] < 99), '[R-음성] 여섯 자리는 2280 에서도 토막이었다 = `.shortf` 문턱으로는 못 닫는다');
+    eq('[R-음성] 사본에서도 cur:gold 는 100% 보임 (407 은 이 선언과 무관하게 산다)',
+      REV['cur:gold@1600'].visPct, 100);
   }
   } finally { fs.unlinkSync(tmp); }
   /* 콘솔 에러 0 */
