@@ -1,17 +1,24 @@
 #!/usr/bin/env node
-/* 116 검증 — 13 재화 상점의 다이아 상품 5종 + 마일리지 교환 다이아가 전부 «÷2» 인가
+/* 116 검증 — 13 재화 상점의 다이아 상품 5종 + 마일리지 교환 다이아
  *
  *   node tools/verify116.js
  *
+ * ⚑ **497(2026-08-31, 주인 확정)이 116 의 «÷2» 를 되돌렸다 — 이 게이트의 [A]·[B]·[D]·[E] 기대값을
+ *   그 결정으로 갈아 끼웠다**(295 가 149 를, 402 가 verify125 H2 를 갈아 끼운 것과 같은 자리다:
+ *   두 지시가 정면으로 부딪히면 **나중 지시가 옳은 쪽**이고, 게이트는 자리를 비우지 않고 이사한다).
+ *   116 이 지키려던 나머지(가격·쿠폰·MILE_NEED 불변 · 라벨이 값에서 파생 · 우편 경유 지급 ·
+ *   구 세이브 무변경 · 넘침 0)는 **한 항도 안 지웠고 허용 오차도 안 넓혔다.**
+ *   «÷2 로 되돌아가면 빨개진다» 는 A5 가 그대로 맡는다(방향만 뒤집혔다).
+ *
  * 지시서(PROGRESS 116 «검증 [3]-(가)») 가 요구한 항목 그대로. [3]-(가) 기계적 작업이므로 비평가는 띄우지 않는다.
- *   [A] 상수 — `DIA_PACKS.map(p=>p.dia)` = 5,000 / 35,000 / 75,000 / 450,000 / 1,000,000 · `MILE_DIA` = 2,500,000
- *       옛 값(10000·70000·150000·900000·2000000·5000000)·옛 라벨(«×1만»류) 소스 스캔 부재
+ *   [A] 상수 — `DIA_PACKS.map(p=>p.dia)` = 10,000 / 70,000 / 150,000 / 900,000 / 2,000,000 · `MILE_DIA` = 5,000,000
+ *       116 값(5000·35000·75000·450000·1000000·2500000)·옛 라벨(«×1만»류) 소스 스캔 부재
  *   [B] 라벨 — 카드 수량 문자열이 **150 규약(다이아 = 숫자 그대로 · 1000 이상 쉼표)** 과 일치.
  *       라벨은 손으로 적은 문자열이 아니라 `fmt(dia)` 파생이어야 한다(값·라벨 동시 이동 보장)
  *   [C] 폭 — 13 재화 탭 실캡처에서 라벨이 카드 안쪽(`.bg` 264px)을 넘치는 칸 0 ·
  *       자릿수가 칸마다 다른 것은 150 이후 **정상**이므로 «폭» 이 아니라 **타입 크기·우변 정렬**을 잰다
  *   [D] 구매 — 헤드리스 `devBuyDia(id)` 5종의 `S.dia` 증가분 = 새 값 · 쿠폰(cp) 지급 = 0/0/0/1/2
- *   [E] 교환 — 쿠폰 10개로 `mileageExchange()` → 다이아 **+2,500,000** · 쿠폰 −10 · 부족하면 false(Δ0) ·
+ *   [E] 교환 — 쿠폰 10개로 `mileageExchange()` → 다이아 **+5,000,000** · 쿠폰 −10 · 부족하면 false(Δ0) ·
  *       결과 안내는 149 이후 **팝업이 아니라 토스트**(`#fxl .fx-toast`)다
  *   [F] 44 회귀 — 가격 `won`(1,000/5,000/11,000/55,000/110,000)·`MILE_NEED`=10 불변 ·
  *       카드 [구매] 클릭은 «준비 중» 팝업만(지급 0) · 쿠폰 10 미만이면 교환 버튼에 `#cnExch` 자체가 없음
@@ -27,7 +34,10 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
-const DIA = [5000, 35000, 75000, 450000, 1000000];
+/* 497(2026-08-31, 주인 확정) — 116 의 «÷2» 를 되돌린 값. 기대값은 페이지의 상수를 다시 읽지 않고
+   게이트가 자기 표로 들고 있는다(LESSONS 212-①: 화면이 쓴 식이 아니라 화면이 써야 할 근거에서). */
+const DIA = [10000, 70000, 150000, 900000, 2000000];
+const MILE = 5000000;
 const WON = [1000, 5000, 11000, 55000, 110000];
 const CP = [0, 0, 0, 1, 2];
 /* 217 (2026-08-27) — 라벨 기대값이 111 알파벳 단위(«×5.00A»…)에 굳어 있었다. 150(주인 지시)이
@@ -38,7 +48,8 @@ const CP = [0, 0, 0, 1, 2];
    (LESSONS 212-①: 기대값은 «화면이 쓴 식» 이 아니라 «화면이 써야 할 근거 데이터» 에서). */
 const comma = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const LAB = DIA.map(d => '×' + comma(d));       /* ×5,000 ×35,000 ×75,000 ×450,000 ×1,000,000 */
-const LAB111 = ['×5.00A', '×35.0A', '×75.0A', '×450A', '×1.00B'];  /* 옛 규약 — 되돌림 감지용 */
+const LAB111 = ['×10.0A', '×70.0A', '×150A', '×900A', '×2.00B'];  /* 옛 111 알파벳 규약 — 되돌림 감지용 */
+const DIA116 = [5000, 35000, 75000, 450000, 1000000];   /* 116 «÷2» 값 — 되돌아가면 A5 가 잡는다 */
 
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
@@ -66,14 +77,15 @@ const openCoin = async page => page.evaluate(() => {
     dia: DIA_PACKS.map(p => p.dia), won: DIA_PACKS.map(p => p.won), cp: DIA_PACKS.map(p => p.cp),
     ids: DIA_PACKS.map(p => p.id), mile: MILE_DIA, need: MILE_NEED,
   }));
-  ok(JSON.stringify(A.dia) === JSON.stringify(DIA), 'A1 DIA_PACKS.dia = 5,000/35,000/75,000/450,000/1,000,000', A.dia.join('·'));
-  ok(A.mile === 2500000, 'A2 MILE_DIA = 2,500,000', String(A.mile));
+  ok(JSON.stringify(A.dia) === JSON.stringify(DIA), 'A1 DIA_PACKS.dia = ' + DIA.map(comma).join('/') + ' (497 «×2»)', A.dia.join('·'));
+  ok(A.mile === MILE, 'A2 MILE_DIA = ' + comma(MILE) + ' (497 «×2»)', String(A.mile));
   ok(A.need === 10, 'A3 MILE_NEED = 10 유지(지시 ③)', String(A.need));
   ok(JSON.stringify(A.ids) === JSON.stringify(['d1', 'd2', 'd3', 'd4', 'd5']), 'A4 상품 id 5종 유지', A.ids.join('·'));
   /* 옛 값의 «부재» 는 런타임으로는 못 본다 — 소스 스캔이다(LESSONS 111-1 ⓐ) */
-  const oldLit = [/dia:\s*10000\b/, /dia:\s*70000\b/, /dia:\s*150000\b/, /dia:\s*900000\b/, /dia:\s*2000000\b/,
-    /MILE_DIA\s*=\s*5000000/];
-  ok(oldLit.every(r => !r.test(SRC)), 'A5 옛 다이아 리터럴(1만·7만·15만·90만·200만·500만) 부재(소스 스캔)',
+  /* 497 — 방향이 뒤집혔다. 이제 «되돌아가면 안 되는 값» 은 116 의 절반 값이다. */
+  const oldLit = [/dia:\s*5000\b/, /dia:\s*35000\b/, /dia:\s*75000\b/, /dia:\s*450000\b/, /dia:\s*1000000\b/,
+    /MILE_DIA\s*=\s*2500000/];
+  ok(oldLit.every(r => !r.test(SRC)), 'A5 116 «÷2» 리터럴(5천·3.5만·7.5만·45만·100만·250만) 부재(소스 스캔)',
      oldLit.filter(r => r.test(SRC)).map(String).join(' ') || '0건');
   const oldLab = /q:\s*'×(1만|7만|15만|90만|200만)'/;
   ok(!oldLab.test(SRC), 'A6 옛 수량 라벨 문자열(«×1만»류) 부재(소스 스캔)');
@@ -158,7 +170,7 @@ const openCoin = async page => page.evaluate(() => {
   });
   ok(E.lack.r === false && E.lack.d === 0 && E.lack.m === 3, 'E1 쿠폰 부족(3/10) → false · 다이아 Δ0',
      'r=' + E.lack.r + ' Δ' + E.lack.d);
-  ok(E.okc.r === true && E.okc.d === 2500000, 'E2 쿠폰 10 → 우편 수령 시 다이아 +2,500,000', '+' + E.okc.d);
+  ok(E.okc.r === true && E.okc.d === MILE, 'E2 쿠폰 10 → 우편 수령 시 다이아 +' + comma(MILE), '+' + E.okc.d);
   ok(E.okc.dMail === 1, 'E2-1 교환 보상이 우편 1통으로 온다(153)', String(E.okc.dMail));
   ok(E.okc.m === 0, 'E3 쿠폰 −10', String(E.okc.m));
   /* 교환 결과 안내문도 새 값으로(문자열은 fmt 파생).
@@ -182,8 +194,8 @@ const openCoin = async page => page.evaluate(() => {
     toast: [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).join(' | '),
     modal: !!document.querySelector('.modal.on, #modal.on'),
   }));
-  ok(E4r.toast.includes(comma(2500000)) && !E4r.toast.includes('2.50B'),
-     'E4 교환 결과 안내(149 토스트)에 «' + comma(2500000) + '»(옛 «2.50B» 부재)', E4r.toast || '(토스트 없음)');
+  ok(E4r.toast.includes(comma(MILE)) && !E4r.toast.includes('5.00B'),
+     'E4 교환 결과 안내(149 토스트)에 «' + comma(MILE) + '»(옛 알파벳 «5.00B» 부재)', E4r.toast || '(토스트 없음)');
   ok(E4.split, 'E4-1 MILE_DIA 에서 골드 규약과 기본 규약이 갈린다 — 단언이 유효한 크기', String(E4.split));
   ok(!E4r.modal, 'E4-2 교환 결과 안내는 팝업이 아니다(149)', String(E4r.modal));
   await page.evaluate(() => { document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove()); });

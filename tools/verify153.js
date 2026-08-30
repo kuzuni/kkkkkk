@@ -214,7 +214,7 @@ async function open(browser) {
     });
     eq('저장된 상점 우편 통수(localStorage)', c2.rawN, 1);
     eq('load() 뒤 남은 미수령 상점 우편 통수', c2.n, 1);
-    eq('load() 뒤 그 우편의 다이아 보상', c2.c, 35000);
+    eq('load() 뒤 그 우편의 다이아 보상', c2.c, 70000);   /* 497 — d2 팩이 ×2. 보존 경로는 그대로다 */
     c2.seq >= 2 ? ok(`load() 뒤 mailSeq 가 id 보다 앞서 있다 = ${c2.seq}`)
                 : fail(`load() 뒤 mailSeq = ${c2.seq} — 재사용 id 가 나올 수 있다`);
     eq('mailx 없는 구 세이브 로드', c2.legacy, 0);
@@ -239,7 +239,7 @@ async function open(browser) {
     console.log('[D] 우편함 [받기] 버튼을 진짜로 눌러 지급되는가');
     const dSel = await d.page.evaluate(() => {
       S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
-      devBuyDia('d4');                        /* 다이아 450,000 · 쿠폰 1 */
+      devBuyDia('d4');                        /* 다이아 900,000 · 쿠폰 1 (497 «×2» — 116 이 내렸던 값을 되돌렸다) */
       openMail();
       const b = document.querySelector('#mbox [data-ml="' + S.mailx[0].id + '"]');
       window.__b153 = { d0: S.dia, m0: S.mileage || 0, id: S.mailx[0].id };
@@ -253,7 +253,7 @@ async function open(browser) {
         dDia: S.dia - window.__b153.d0, dCp: (S.mileage || 0) - window.__b153.m0,
         state: S.mail[window.__b153.id]
       }));
-      eq('클릭 수령 ΔS.dia', dGot.dDia, 450000);
+      eq('클릭 수령 ΔS.dia', dGot.dDia, 900000);   /* 497 — 팩 값이 ×2. 경로(우편 경유)는 그대로다 */
       eq('클릭 수령 Δ쿠폰', dGot.dCp, 1);
       eq('클릭 수령 후 우편 상태', dGot.state, 1);
     }
