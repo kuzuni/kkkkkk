@@ -19427,18 +19427,36 @@ function failBoss(why){
         — 보스전 사망이든 잡몹 사망이든 «보스 도전 대기»(S.bossFarm) 로 들어가고,
         50킬을 다시 채워도 **자동으로 보스가 서지 않는다**(자동 도전은 step ③ 에서 막는다).
         클리어하면 S.bossFarm 이 풀리므로 그 다음 스테이지부터는 평소대로 자동 도전이 돈다.
-   던전·레이드·아레나·승급전은 각자 결과 화면·규칙이 사망을 받으므로 여기서 건드리지 않는다
-   (아레나는 openDefeat() 안에서도 한 번 더 막는다 — 123). */
+   ⚑ 458(2026-08-30, 저장소 주인 지시 «보스전 도중에 죽으면 실패되는거로 해야함») — 273 의
+   «던전·레이드·아레나·승급전은 각자 규칙이 사망을 받는다» 는 **아레나에서만 참이었다**.
+   `tools/probe458.js` 수리 전 표: 던전·탑·승급전·레이드 넷 모두 사망 프레임에 아무 일도 일어나지
+   않고(통보 0건 · bossMode() 그대로) 2.4초 뒤 만피로 되살아나 계속 싸운다 = «죽어도 안 지는 보스전».
+   이제 사망은 **그 모드의 실패 결과 경로**로 바로 들어간다 — 새 실패 경로를 만들지 않고
+   시간 초과가 이미 쓰는 그 함수(`endDunRun(false)`·`endPromo(false)`·`endRaid(false)`)를 그대로 부른다.
+     · 아레나(123)는 그대로 둔다 — `step()` 의 아레나 절이 `player.dead > 0` 를 보고 `endArena(false)` 로 받는다.
+     · 갈림의 «지금 어떤 보스전인가» 는 284 `bossMode()` **한 곳**에서 온다(모드마다 조건을 다시 적으면
+       284 이전의 «모드 판정이 두 벌» 로 돌아간다). 그래서 승급전이 스테이지 보스전 도중에 끼어든
+       경우도 승급전으로 갈린다 — 284 가 정한 우선순위 그대로다(구판은 `inBossFight()` 가 먼저라
+       그 조합에서 승급전 사망이 통째로 묻혔다).
+     · 돌려주는 값은 «이 사망이 모드를 끝냈나» 다. 호출부(접촉 피해)가 «부활 중...» 문구를 그 값으로
+       고른다 — 끝난 모드는 곧바로 `spawnStage()` 로 전장을 갈아엎으므로 «부활» 이 거짓말이 된다.
+   ⚠ 이 함수는 **적 순회 도중**에 불린다. `endDunRun`/`endPromo`/`endRaid` 는 `enemies` 를 비우지만
+     그 순회는 110 이 넣은 `if(!e) break` 가 받는다(역방향 인덱스라 다음 칸이 undefined 다). */
 function playerDied(){
-  if(inBossFight()){
+  const md = bossMode();          /* 284 — 모드 판정은 여기 한 곳에서만 온다 */
+  if(md === 'stage'){
     openDefeat();                 /* 18 패배 화면 — 표시 전용, 자동 부활은 그대로 진행 */
     failBoss('패배');             /* 28 — 스테이지 유지 + 파밍 전환 + [재도전] 노출 */
-    return;
+    return false;                 /* 스테이지는 그 자리에서 부활한다 = «부활 중...» 이 참이다 */
   }
-  if(arena || raidOn || dunRun || promo) return;
-  if(S.bossFarm) return;          /* 이미 대기 상태면 그대로 둔다(재충전·되감기 없음) */
+  if(md === 'arena') return false;                    /* 123 — step 의 아레나 절이 받는다 */
+  if(md === 'dun')  { endDunRun(false); return true; }  /* 30·209 — 206 실패 통보(보스 체력 n% 남음) */
+  if(md === 'promo'){ endPromo(false, true); return true; }
+  if(md === 'raid') { endRaid(false, true);  return true; }
+  if(S.bossFarm) return false;    /* 이미 대기 상태면 그대로 둔다(재충전·되감기 없음) */
   S.bossFarm = true;              /* 잡몹 사망 → 보스 도전 대기. 진행 중인 파도는 그대로 둔다 */
   uiDirty = true; save();
+  return false;
 }
 
 /* 28 — «재도전» 버튼: 같은 스테이지의 보스전을 처음부터 다시 시작한다.
@@ -20945,9 +20963,13 @@ function step(dt){
       if(player.hp <= 0){
         player.hp = 0; player.dead = 2.4;
         burst(player.x, player.y - 20, '#ff5470', 36, 320);
-        cam.shake = 15; showMsg('부활 중...');
+        cam.shake = 15;
         sfx('death');                                   /* 78 — 사망 */
-        playerDied();   /* 273 — 패배 화면·보스 도전 대기 전환을 한곳에서 가른다 */
+        /* 458 — 문구는 **무엇이 끝났는가** 에 달렸다. 실패로 끝난 보스전은 그 자리에서
+           `spawnStage()` 로 전장을 갈아엎으므로 «부활 중...» 이 거짓말이 되고(94 규약),
+           그 모드의 결과 경로가 이미 제 문구·통보를 낸다(던전 «STAGE n» + 206 실패 토스트 ·
+           승급전 실패 토스트 · 레이드 «레이드 실패»). 스테이지·잡몹 사망은 그대로 부활한다. */
+        if(!playerDied()) showMsg('부활 중...');   /* 273 — 패배 화면·보스 도전 대기 전환을 한곳에서 가른다 */
       }
     }
     if(e.atkT <= 0) setAnim(e, e.T.atlas, e.T.walk, e.T.fps, true);
@@ -24623,7 +24645,10 @@ function startPromo(){
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
   closeModal();
 }
-function endPromo(win){
+/* 458 — `died` = «시간 초과가 아니라 플레이어가 죽어서 끝났다». 실패 통보 한 줄이 그 사유를 말한다
+   (LESSONS 295-② — 폐지·불성립한 조건을 말하는 문구는 그 자체로 거짓말이다: 죽어서 진 판에
+    «시간 안에 못 잡았습니다» 라고 적으면 남은 시간이 10초여도 시간을 탓한다). */
+function endPromo(win, died){
   const r = promo.rank;
   promo = null;
   enemies.length = 0;
@@ -24662,8 +24687,10 @@ function endPromo(win){
       promoCosFx();
     }
   }else{
-    /* 206 — 실패 통보에는 고를 것이 없다. 승급 조건표는 승급전 모달이 그대로 들고 있다 */
-    notify('💀 승급 실패 — 시간 안에 <b>승급 수호자</b>를 못 잡았습니다');
+    /* 206 — 실패 통보에는 고를 것이 없다. 승급 조건표는 승급전 모달이 그대로 들고 있다.
+       458 — 사유는 둘뿐이다(시간 초과 · 사망). 앞머리 «💀 승급 실패 — » 는 한 문자열로 유지한다. */
+    notify('💀 승급 실패 — ' + (died ? '<b>승급 수호자</b>에게 쓰러졌습니다'
+                                     : '시간 안에 <b>승급 수호자</b>를 못 잡았습니다'));
   }
   spawnStage();
 }
@@ -27017,7 +27044,9 @@ function startRaid(r){
   showMsg('레이드 시작')            /* 94 — 이름·제한 시간은 46 레이드 HUD 에 이미 떠 있다 */;
   uiDirty = true;
 }
-function endRaid(record){
+/* 458 — `died` = «플레이어가 죽어서 끝났다». 기록을 안 남기는 것은 [포기] 와 같지만
+   («중단» 은 내가 그만둔 것 · «실패» 는 쓰러진 것) 문구는 갈라야 한다(94 — 12자 이내). */
+function endRaid(record, died){
   const r = raidOn; if(!r) return;
   const el = Math.max(0.001, r.sec - Math.max(0, raidT));
   const dmg = raidDmg, dps = dmg / el;
@@ -27048,7 +27077,7 @@ function endRaid(record){
     notify('🏆 ' + r.n + ' — DPS <b>' + fmtB(dps) + '</b> · ' + st + (rec ? ' · <b>신기록!</b>' : ''));
   }else{
     save(); uiDirty = true;
-    showMsg('레이드 중단')            /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 */;
+    showMsg(died ? '레이드 실패' : '레이드 중단')   /* 94 — 기록 미저장은 03 던전 페이지의 기록 칸이 그대로 보여 준다 · 458 사유 분기 */;
   }
   if($('dunw').classList.contains('on')) renderDunPage();
 }
