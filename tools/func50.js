@@ -138,7 +138,9 @@ const tap = (page, sel) => page.evaluate((s) => {
       const want = await S(page,
         "(() => { const n = AVATARS.filter(a => S.avatars[a.id]).length; let m = 1;"
         + " for(let i=1;i<=n;i++) m *= 1 + COS_OWN.atk * COS_STEP[Math.min(COS_STEP.length-1, Math.floor((i-1)/COS_STEP_EVERY))];"
-        + " return '공격력 +' + pct(m * (1 + cosLvVal('atk')) - 1); })()");
+        /* 520 이관 — 주인 지시로 «+» 를 뺐다(코스튬쪽 부호 제거). **값·식은 그대로**라
+           여기서 바뀐 것은 기대 문자열의 부호 한 글자뿐이다. 부호가 되살아나면 이 항이 빨개진다. */
+        + " return '공격력 ' + pct(m * (1 + cosLvVal('atk')) - 1); })()");
       eq('총 보유 효과', shown, want);
       await ctx.close();
     }

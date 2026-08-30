@@ -26388,8 +26388,14 @@ function bindUpHold(btn, o){
     o.live();
     /* 488 — 첫 발은 `o.fx`(fxUpOk = 플래시 + 파티클 + 델타)가 이미 «보이는 사건» 이다.
        반복분에만 회당 맥박을 건다. 호스트는 «레벨 행» — 값이 바뀌는 바로 그 줄이다. */
+    /* 520 — 문구를 **호출부가 정한다**(기본은 488 5회차의 «+1» 그대로 · 룬·단련·08·유물·훈련 Δ0).
+       코스튬만 «+» 를 못 쓴다(주인 지시) — 거기서는 `txt:''` 로 **맥박만** 남긴다.
+       ⚠ `hbBeat` 는 txt 가 falsy 면 플로터를 안 띄우고 `hbPulse` 만 돈다 = 89 유물(`verify488` [E4])이
+         이미 쓰는 «결과 문구 없이 맥박만» 꼴이다 — 새 갈래를 만드는 게 아니다.
+       함수도 받는다(호출 시점의 값을 읽어야 하는 자리 대비 — 지금 쓰는 곳은 없다). */
+    const bTxt = () => typeof o.txt === 'function' ? o.txt() : (o.txt === undefined ? '+1' : o.txt);
     const beat = o.beat === false ? null
-      : paid => hbBeat(o.beat || '#mbox .sk-lv', true, '+1', paid);   /* 5회차 — 문자열 축약(위 룬과 같은 이유) */
+      : paid => hbBeat(o.beat || '#mbox .sk-lv', true, bTxt(), paid);   /* 5회차 — 문자열 축약(위 룬과 같은 이유) */
     /* ⚑ 488 3회차 — **첫 발에도 회당 피드백을 건다.** 2회차까지는 «첫 발은 `fxUpOk` 한 세트가
        맡는다» 로 뒀는데, 비평가 BO·BP 가 독립적으로 «누른 그 순간 카드가 반응하지 않는다 ·
        훈련은 첫 380ms 동안 알림이 0장» 으로 잡았다 — `fxUpOk` 는 플래시·파티클이라 «몇 번째
@@ -31613,9 +31619,12 @@ function renderCos(){
   const own1 = cosOwnMul('atk');
   const tot  = own1 * (1 + cosLvVal('atk')) - 1;
   const nOwn = cosOwnCount();
+  /* 520 — 주인 지시(«그 코스튬쪽에 + − 표시 없애셈») 로 **부호를 뺐다.** 값·식은 0줄이다
+     (표기 = 실효 규약 156·346 그대로 — `pct(tot)` 는 한 글자도 안 바뀐다). ⚠ 이 자리는 «총효과:»
+     라벨이 이미 «더해지는 것» 이라고 말하므로 «+» 는 같은 말을 두 번 하는 자리였다. */
   h += '<div class="sk-tot"><i class="ol3">보유 ' + nOwn + '/' + AVATARS.length
     +  ' · 강화 ' + cosLvSum() + 'Lv · 총효과:</i>'
-    +  '<em class="ol3">공격력 +' + pct(tot) + '</em></div>';
+    +  '<em class="ol3">공격력 ' + pct(tot) + '</em></div>';
 
   /* 8 버튼 2개 — 선택 카드를 대상으로 [착용] / [강화]
      194 — 182 가 놓아 둔 [승급전] 자리를 **[강화]** 가 받는다. 코스튬 시트에서 매번 하는 행동은
@@ -31669,7 +31678,8 @@ function cosHelp(){
       '<div class="cos269">'
     +   '<p><em>승급전</em>을 깨면 코스튬을 받습니다. 어느 승급전이 어느 코스튬을 주는지는 '
     +     '칸을 눌러 나오는 세부 창의 <em>획득 조건</em>에 적혀 있습니다.</p>'
-    +   '<p>코스튬은 <em>가지고만 있어도</em> 보유 효과가 영구 적용됩니다 — 착용 중이 아니어도 됩니다. '
+    /* 520 — 여기 «—» 도 코스튬 화면의 「가로 막대」다(`probe520` [2-c]). 뜻을 바꾸지 않고 마침표로 끊는다. */
+    +   '<p>코스튬은 <em>가지고만 있어도</em> 보유 효과가 영구 적용됩니다. 착용 중이 아니어도 됩니다. '
     +     '착용은 <em>겉모습</em>만 바꿉니다.</p>'
     +   '<p>보유 효과는 모은 코스튬이 <em>' + COS_STEP_EVERY + '개</em> 늘 때마다 한 계단씩 커집니다.</p>'
     +   '<p>코스튬에는 <em>등급이 없습니다</em>. 모든 코스튬의 효율이 같아서, 칸끼리 다른 것은 '
@@ -31745,12 +31755,19 @@ function showCosDetail(id){
      보유 계단 `cosOwnStep(k, n)` + 강화 `lv × COS_LV[k]`. 미보유 칸은 `cosLvOf` 가 0 이라
      같은 식이 «계단만» 으로 자연히 떨어진다 — 분기를 새로 만들지 않는다. */
   const cosEffNow = k => cosOwnStep(k, cosOwnIdx(id)) + cosLvOf(id) * COS_LV[k];
-  const cosEffTxt = () => '공격 <em>+' + pct(cosEffNow('atk')) + '</em> · 체력 <em>+'
-        + pct(cosEffNow('hp')) + '</em> · 골드 <em>+' + pct(cosEffNow('gold')) + '</em>';
+  /* 520 — 주인 지시로 세 축의 «+» 를 뺐다(제품 값·식 0줄 — `pct` 인자도 그대로다).
+     ⚠ 라벨(`.sk-sl`)이 «보유 효과» 라 이 상자의 수치는 이미 «더해지는 것» 이고,
+       세 축이 **음수가 될 수 있는 자리가 아니다**(`cosOwnStep`·`COS_LV` 둘 다 양수 상수). */
+  const cosEffTxt = () => '공격 <em>' + pct(cosEffNow('atk')) + '</em> · 체력 <em>'
+        + pct(cosEffNow('hp')) + '</em> · 골드 <em>' + pct(cosEffNow('gold')) + '</em>';
   const cosDescNow = () => own
       ? cosEffTxt()
-      /* 275 — 미출시 칸은 «…시 지급됩니다» 가 성립하지 않는다(조건이 아니라 «경로 없음») */
-      : cosOff(id) ? '<em>추후 공개</em> — 아직 지급되는 곳이 없는 외형입니다.'
+      /* 275 — 미출시 칸은 «…시 지급됩니다» 가 성립하지 않는다(조건이 아니라 «경로 없음»).
+         520 — 이 줄의 앞머리 «—»(em dash)는 보유 칸의 «+8.0%» 와 **같은 상자·같은 자리**에 앉는다
+         (`probe520` [2] 실측: 둘 다 `.sk-db p` 좌단 x225). 등재문이 «−» 의 세 갈래 중 ⓑ 로 적어 둔
+         자리이고, 재현이 진짜 «−»(U+2212)는 코스튬 화면에 **0건**임을 확인했으므로 이것이 그 «−» 다.
+         ⇒ 뜻(«추후 공개» · 「경로 없음」)은 그대로 두고 어순만 바꿔 막대를 없앴다. */
+      : cosOff(id) ? '아직 지급되는 곳이 없는 <em>추후 공개</em> 외형입니다.'
       : '<em>' + cosReqText(a) + '</em> 시 지급됩니다.';
   const liveCos = () => { const b2 = cosPbNow();
     mdLive({ lvSel:'.sk-gr b', lv:'Lv. ' + cosLvOf(id), p:b2.p, pTxt:b2.t, cell:cosCellNow(), desc:cosDescNow() }); };
@@ -31808,9 +31825,18 @@ function showCosDetail(id){
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
   /* 262 — 보유 칸의 [강화]는 «꾹 누르면 연속»(공용 bindUpHold). 미보유 칸의 [승급전]은
      화면을 옮기는 버튼이라 click 그대로 둔다(꾹 누르기 대상이 아니다). */
+  /* 520 — 회당 피드백에서 «+1» 플로터를 뺀다(주인 지시). 488 이 세운 «beat = 시도 수» 는 그대로다 —
+     문구만 없애고 **맥박은 회당 그대로** 돈다(89 유물 `verify488` [E4] 와 같은 꼴).
+     ⚠ 그러면 맥박이 어디서 도는지가 중요해진다. `bindUpHold` 기본 호스트 `#mbox .sk-lv` 는
+       코스튬에서 «착용 중/보유» 알약이다(194 — 코스튬의 레벨은 `.sk-gr` 에 앉는다) ⇒ 문구를 빼면
+       «값이 안 바뀌는 알약만 뛰는» 꼴이 되므로 호스트를 **레벨 행**으로 옮긴다. 488 주석이 요구하는
+       바로 그 자리다(«호스트는 «레벨 행» — 값이 바뀌는 바로 그 줄이다»). `liveCos` 가 그 줄의 숫자를
+       회당 갱신하므로 «맥박 + 오르는 숫자» 가 부호 없이 시도 수를 말한다. */
   if(own) bindUpHold(b, {
     once: () => cosUpgrade(id),
     fx:   () => { const at = $('mbox').querySelector('.sk-ic'); fxUpOk(at, at, 'Lv. ' + cosLvOf(id)); },
+    beat: '#mbox .sk-gr',
+    txt:  '',
     live: liveCos,
     full: () => { renderUI(); showCosDetail(id); }
   });

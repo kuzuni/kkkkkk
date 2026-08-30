@@ -114,8 +114,13 @@ const count = (hay, v) => (hay.match(new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g,
     ok(r.sl === '보유 효과', '2 Lv.' + r.lv + ' 라벨 «보유 효과»', r.sl);
     ok(r.db && r.want.every(v => r.db.includes(v)),
       '3 Lv.' + r.lv + ' 본문 = 계단 + 강화 합산', r.db + ' vs ' + r.want.join('/'));
-    ok(r.db && /^공격 \+/.test(r.db) && /체력 \+/.test(r.db) && /골드 \+/.test(r.db),
+    /* 520 이관 — 주인 지시로 «+» 를 뺐다. 항을 **무르게 풀지 않는다**(328·330 교훈):
+       ⓐ 세 축의 «머리말» 은 그대로 묻고 ⓑ 「부호가 없다」를 묻는 항을 한 줄 더 세운다.
+       ⓐ 만 남기면 «공격/체력/골드» 세 낱말만 있으면 초록이라 부호가 되살아나도 안 잡힌다. */
+    ok(r.db && /^공격 /.test(r.db) && /체력 /.test(r.db) && /골드 /.test(r.db),
       '3b Lv.' + r.lv + ' 본문이 세 축을 다 든다', r.db);
+    ok(r.db && !/[+＋−﹣－]/.test(r.db),
+      '3c Lv.' + r.lv + ' 본문에 «+»·«−» 부호가 없다 (520 — 주인 지시)', r.db);
     for (const v of r.want)
       ok(count(r.all, v) === 1, '4 Lv.' + r.lv + ' «' + v + '» 이 팝업에 한 번만 적힌다',
         count(r.all, v) + '회');

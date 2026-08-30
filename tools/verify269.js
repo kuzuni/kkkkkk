@@ -346,8 +346,11 @@ const GENERAL = ['영구 적용', '한 계단', '등급이 없', '외형이 바�
       const id = AVATARS[0].id;
       return ['atk', 'hp', 'gold'].map(k => pct(cosOwnStep(k, cosOwnIdx(id)) + lv * COS_LV[k]));
     }, G.lv);
-    ok(/^공격 \+/.test(plain) && /체력 \+/.test(plain) && /골드 \+/.test(plain),
+    /* 520 이관 — 부호를 뺐다(주인 지시). 머리말은 그대로 묻고 «부호 없음» 을 한 항 더 세운다(328·330). */
+    ok(/^공격 /.test(plain) && /체력 /.test(plain) && /골드 /.test(plain),
       'G2 갱신 뒤에도 설명 자리는 «보유 효과» 합산 줄이다(346)', plain.slice(0, 60));
+    ok(!/[+＋−﹣－]/.test(plain),
+      'G2a 그 줄에 «+»·«−» 부호가 없다(520 — 주인 지시 · 홀드 갱신 경로에서도)', plain.slice(0, 60));
     ok(wantG.every(v => plain.includes(v)),
       'G2b 홀드로 오른 레벨(Lv. ' + G.lv + ')이 그 줄에 반영됐다', plain + ' vs ' + wantG.join('/'));
   }
