@@ -91,6 +91,16 @@ async function open(browser, seed) {
   return { ctx, page, errs };
 }
 
+/* 496 — 소환 레벨이 «배너별 5 벌» 에서 «전 배너 공용 하나» 로 내려왔다. 구 세이브의 레벨 숫자는
+   그대로 남지 않고 **뽑기 수를 보존한 채** 새 곡선(need = 200 + 210·n) 위로 다시 놓인다.
+   이 항이 지키려던 것은 «구 세이브가 손해 없이 그대로 로드되는가» 이므로, 숫자 12 를 그대로
+   기대하는 대신 **구 곡선으로 되돌려 센 뽑기 수가 보존되는가** 를 묻는다(그래야 이관이 사라지면
+   빨개진다 — 숫자만 갈아 끼우면 «값이 무엇이든 초록» 인 헛초록이 된다). */
+const V196_TBL = [50, 200, 500, 800, 1200, 1500, 1800, 2100, 2300, 2600,
+                  3000, 3300, 3600, 4000, 4500, 5000];
+const v196Need = lv => V196_TBL[Math.min(Math.max(lv | 0, 1), V196_TBL.length) - 1];
+const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) t += v196Need(n); return t; };
+
 (async () => {
   const browser = await launch(chromium);
   const { ctx, page, errs } = await open(browser, null);
@@ -202,7 +212,9 @@ async function open(browser, seed) {
   });
   ok(C.rows === 8 && C.eq, 'C1 rollOf(\'pet\') = 8행 표(GRADE_ROLL_EQ)', String(C.rows));
   /* 196 — 만렙 25 로 축소되며 사다리가 20/24 로 옮겨졌다(85 와 «동일» 이라는 단언은 그대로). */
-  ok(C.u6 === 20 && C.u7 === 24, 'C2 초월 Lv20 · 불멸 Lv24 해금(85 와 동일 · 196)', C.u6 + '/' + C.u7);
+  /* 496 — 사다리 비례 이동(만렙 25 → 50). 불멸은 만렙에서 역산해 적는다(LESSONS 106-1) */
+  ok(C.u6 === 40 && C.u7 === C.maxlv - 1,
+    'C2 초월 Lv40 · 불멸 만렙−1 해금(85 와 동일 · 196 → 496)', C.u6 + '/' + C.u7);
   ok(near(C.s100, 1, 1e-9) && near(C.s1, 1, 1e-9) && !C.nan, 'C3 확률 합 1 · NaN 0',
     C.s100.toFixed(6) + ' / ' + C.s1.toFixed(6));
   ok(C.p6at54 === 0 && C.p7at74 === 0 && C.p6at100 > 0 && C.p7at100 > 0,
@@ -383,7 +395,8 @@ async function open(browser, seed) {
   const F = await F0.page.evaluate(() => ({
     own: ['bird0', 'robo0', 'drag2'].map(id => (S.own[id] ? S.own[id].l : 0)).join(','),
     frag: ['bird0', 'robo0', 'drag2'].map(id => (S.own[id] ? S.own[id].n : -1)).join(','),
-    eq: S.eqPet.join(','), pets: pets.length, lv: S.sum.pet.lv,
+    eq: S.eqPet.join(','), pets: pets.length, lv: S.sumLv, exp: S.sumExp, maxlv: SUM_MAXLV,
+    back: (() => { let t = S.sumExp; for (let n = 1; n < S.sumLv; n++) t += sumNeedExp(n); return t; })(),
     /* 구 세이브의 «펫» 키가 전부 새 표에 살아 있는지만 본다(로드가 스킬 등 다른 계열을 새로 줄 수 있다) */
     lost: ['bird0', 'robo0', 'drag2'].filter(id => !PT[id]),
     total: PETS.length
@@ -392,7 +405,10 @@ async function open(browser, seed) {
   ok(F.frag === '3,1,0', 'F2 구 세이브 조각 수 유지', F.frag);
   ok(F.eq === 'drag2,robo0,bird0', 'F3 S.eqPet 3마리 순서까지 유지', F.eq);
   ok(F.pets === 3, 'F4 전투 동료 3마리 스폰(syncPets)', String(F.pets));
-  ok(F.lv === 12, 'F5 소환 Lv 유지', String(F.lv));
+  ok(F.back === v496Pulls(12, 3),
+    'F5 ★ 구 세이브 소환 진행도 보존 — 구 Lv12/exp3 = ' + v496Pulls(12, 3).toLocaleString()
+      + ' 뽑이 공용 레벨로 그대로 옮겨졌다(496)',
+    'Lv' + F.lv + '/' + F.exp + ' = ' + F.back.toLocaleString() + ' 뽑');
   ok(F.lost.length === 0 && F.total === 36, 'F6 구 펫 id 전부 새 표에 존재 · 36종',
     F.lost.join(',') || (F.total + '종'));
   ok(F0.errs.length === 0, 'F7 구 세이브 로드 콘솔 에러 0건', F0.errs.slice(0, 3).join(' | ') || '없음');

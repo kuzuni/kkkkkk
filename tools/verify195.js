@@ -59,6 +59,16 @@ async function settleShop(page) {
   }, null, { timeout: 8000 });
 }
 
+/* 496 — 소환 레벨이 «배너별 5 벌» 에서 «전 배너 공용 하나» 로 내려왔다. 구 세이브의 레벨 숫자는
+   그대로 남지 않고 **뽑기 수를 보존한 채** 새 곡선(need = 200 + 210·n) 위로 다시 놓인다.
+   이 항이 지키려던 것은 «구 세이브가 손해 없이 그대로 로드되는가» 이므로, 숫자 12 를 그대로
+   기대하는 대신 **구 곡선으로 되돌려 센 뽑기 수가 보존되는가** 를 묻는다(그래야 이관이 사라지면
+   빨개진다 — 숫자만 갈아 끼우면 «값이 무엇이든 초록» 인 헛초록이 된다). */
+const V196_TBL = [50, 200, 500, 800, 1200, 1500, 1800, 2100, 2300, 2600,
+                  3000, 3300, 3600, 4000, 4500, 5000];
+const v196Need = lv => V196_TBL[Math.min(Math.max(lv | 0, 1), V196_TBL.length) - 1];
+const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) t += v196Need(n); return t; };
+
 (async () => {
   const browser = await launch(chromium);
   const { ctx, page, errs } = await open(browser, null);
@@ -190,15 +200,19 @@ async function settleShop(page) {
     cnt: { sumPet: 7 }, eqPet: ['drag2', 'robo0', 'bird0'], own: { drag2: { lv: 7 }, robo0: { lv: 4 }, bird0: { lv: 12 } } });
   const { ctx: ctx2, page: p2, errs: errs2 } = await open(browser, seed);
   const H = await p2.evaluate(async () => {
-    const lv = S.sum.pet.lv, eq = S.eqPet.slice(), before = S.dia;
+    const lv = S.sumLv, eq = S.eqPet.slice(), before = S.dia;
+    let back = S.sumExp; for (let n = 1; n < S.sumLv; n++) back += sumNeedExp(n);
     /* 73 ③ — 구 세이브는 `S.guide.idx` 가 0(=«스킬 1회 소환» 미션)이라 펫 소환이 **차단**된다.
        여기서 보려는 건 가격이지 차단이 아니므로 가이드를 끝낸 상태로 맞춘다(차단 자체는 verify73 §4 몫). */
     S.guide.idx = GUIDE.length; gmStart(); closeModal();
     doSummon('pet', 1);
     await new Promise(r => setTimeout(r, 200));
-    return { lv, eq: eq.join(','), paid: before - S.dia, c10: summonCost('pet', 10) };
+    return { lv, back, eq: eq.join(','), paid: before - S.dia, c10: summonCost('pet', 10) };
   });
-  ok(H.lv === 12 && H.eq === 'drag2,robo0,bird0', 'H1 구 세이브 그대로 로드(소환 Lv · 장착 펫)', H.lv + ' / ' + H.eq);
+  ok(H.back === v496Pulls(12, 3) && H.eq === 'drag2,robo0,bird0',
+    'H1 ★ 구 세이브 그대로 로드 — 소환 진행도 ' + v496Pulls(12, 3).toLocaleString()
+      + ' 뽑 보존(496 공용화) · 장착 펫 유지',
+    'Lv' + H.lv + ' = ' + H.back.toLocaleString() + ' 뽑 / ' + H.eq);
   ok(H.paid === 100, 'H2 구 세이브에서도 1회 소환 = 100 (마이그레이션 불요)', String(H.paid));
   ok(H.c10 === 1000, 'H3 구 세이브에서도 10연 = 1,000', String(H.c10));
 
