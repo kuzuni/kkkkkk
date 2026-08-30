@@ -5,6 +5,8 @@
  * 저장(S)·HUD·다른 화면에 반영됨» 이어야 완료) 에 맞춘 게이트다. 절 구성:
  *
  *   [A] 재화     — `tstone` 이 CUR_ICON·CURINFO·가방·giveReward 를 전부 지난다 · 아이콘 1종(125)
+ *                 ⚠ **434**(2026-08-30): «입장권은 5종» 상수를 걷어내고 «단련석이 입장권 목록에
+ *                 끼어들지 않는다 · 권종 집합 = DUNGEONS 가 쓰는 집합» 으로 갈아 끼웠다(402·430 이관)
  *   [B] 팝업 탭  — «훈련 · 룬 · 단련» 3칸(96 공용 부품 `.sp3`) 이고, **탭이 3개가 돼도 23 의
  *                 좌표가 안 움직인다**(훈련 5요소 bbox Δ0, 세 탭 왕복) · 단련 5줄 겹침 0 · 잘림 0
  *   [C] 비용 계단 — 주인 예시 «~99: 1pt · 100~: 3pt · 200~: 6pt» 와 **정확히 일치** · 구간 폭 100 ·
@@ -56,8 +58,19 @@ const table = [];
     apart: CUR_ICON.tstone !== CUR_ICON.stone && CUR_ICON.tstone !== CUR_ICON.rstone
            && (function () { S.stone = 5; S.rstone = 7; S.tstone = 9;
                              return S.stone === 5 && S.rstone === 7 && S.tstone === 9; })(),
-    /* 단련석은 던전 계열이 아니다(수급처가 탑이다) — 입장권을 만들지 않았다(125 [H] 5종 유지) */
-    noTicket: !CUR_ICON.tkTstone && Object.keys(CUR_ICON).filter(k => k.startsWith('tk')).length === 5
+    /* 단련석은 던전 계열이 아니다(수급처가 탑이다) — 입장권을 만들지 않았다.
+       ⚠ **434(2026-08-30)** — 이 자리는 원래 «`tk*` 키가 **5개**»(125 옛 [H] «계열 5종»)라는
+         **손으로 적은 상수**를 셌다. 402 가 주인 지시로 입장권을 «던전마다 한 장»(8종)으로
+         뒤집자 그 상수만 뒤처져 빨개졌다 — 제품은 내내 옳았다(`probe434` P1~P6).
+       ⚠ 이 항이 지키려던 뜻은 «입장권이 5종» 이 **아니라** «단련석(절망의 탑 보상)이 입장권
+         목록에 끼어들지 않는다» 이다. 그래서 숫자만 8 로 고쳐 초록으로 되돌리지 않았다 —
+         그렇게 풀면 **던전이 하나 늘 때마다 같은 자리가 네 번째로 뒤처진다**(194·203·402 선례).
+         뜻을 묻는 모양으로 갈아 끼운다(328-330 «이관이 본체» · 125 [H] «숫자를 손으로 적지 않는다»
+         — 세는 것은 **던전 수와의 일치**이지 어떤 상수가 아니다). */
+    tkKeys: Object.keys(CUR_ICON).filter(k => k.startsWith('tk')).sort(),
+    dunTkKeys: [...new Set(DUNGEONS.map(d => dunTk(d.id)))].sort(),
+    hasTkTstone: !!CUR_ICON.tkTstone,
+    tstoneAsTicket: DUNGEONS.filter(d => CUR_ICON[dunTk(d.id)] === CUR_ICON.tstone).map(d => d.id)
   }));
   ok(cur.icon === 'assets/ui/cur-tstone.svg', 'CUR_ICON.tstone 이 전용 SVG 하나', cur.icon);
   ok(cur.ic1 === cur.icon, "curIc('tstone') 이 같은 경로를 낸다(125 단일 출처)", cur.ic1);
@@ -68,7 +81,12 @@ const table = [];
     'DEF() 에 tstone·temper 신설', cur.defT);
   ok(cur.bag, '53 가방 «재화» 탭에 단련석 보유량이 뜬다');
   ok(cur.apart, '194 강화석 · 203 룬강화석과 별개 재화(아이콘·잔고 모두)');
-  ok(cur.noTicket, '단련석은 던전 계열이 아니라 입장권을 안 만들었다(125 [H] 5종 유지)');
+  ok(!cur.hasTkTstone && cur.tstoneAsTicket.length === 0,
+    '단련석은 던전 계열이 아니라 입장권을 안 만들었다(434 — 뜻: 어느 던전도 단련석을 권종으로 안 쓴다)',
+    cur.tstoneAsTicket.length ? '끼어든 던전 ' + cur.tstoneAsTicket.join(',') : '0개');
+  ok(cur.tkKeys.join(',') === cur.dunTkKeys.join(','),
+    '입장권 키 집합 = DUNGEONS 가 실제로 쓰는 권종 집합(여분 0 · 434 — 숫자를 손으로 적지 않는다)',
+    cur.tkKeys.length + '종 ' + cur.tkKeys.join(','));
 
   const give = await p.evaluate(() => {
     S.tstone = 0;
@@ -403,6 +421,18 @@ const table = [];
     /* ⓔ 포인트가 모자란데 투자되면 안 된다 */
     S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
     out.e = temperUp('atk') === false && temperLv('atk') === 0;
+    /* ⓕ **434** — [A] 의 갈아 끼운 «입장권» 두 항이 무르게 풀린 게 아님을 못박는다.
+       단련석 입장권을 일부러 끼워 넣으면 두 항이 **둘 다** 빨개져야 하고, 원복하면 초록이어야
+       한다. (옛 «키가 5개» 상수는 이 조작을 하면 오히려 **6 이 되어** 여전히 빨간 채였고,
+        조작을 안 해도 8 이라 빨갰다 — 뜻과 무관하게 빨간 자였다는 것이 이 대조의 요점이다.) */
+    const tkOf  = () => Object.keys(CUR_ICON).filter(k => k.startsWith('tk')).sort().join(',');
+    const dunOf = () => [...new Set(DUNGEONS.map(d => dunTk(d.id)))].sort().join(',');
+    const same  = () => tkOf() === dunOf();
+    const g0 = !CUR_ICON.tkTstone && same();                 /* 손대기 전 = 초록 */
+    CUR_ICON.tkTstone = CUR_ICON.tstone;                     /* 일부러 끼워 넣는다 */
+    const red = !!CUR_ICON.tkTstone && !same();              /* 두 항 다 빨강 */
+    delete CUR_ICON.tkTstone;                                /* 원복 */
+    out.f = g0 && red && !CUR_ICON.tkTstone && same();
     return out;
   });
   ok(neg.a, 'ⓐ 회수액이 «레벨 수» 가 아니라 «계단을 밟은 총액» 이다(250Lv → 250pt 아님)');
@@ -410,6 +440,7 @@ const table = [];
   ok(neg.c, 'ⓒ 계단이 실제로 올라간다(단조 단언이 공허하지 않다)');
   ok(neg.d, 'ⓓ 효과가 레벨에 비례한다(계수가 0 이 아니다)');
   ok(neg.e, 'ⓔ 포인트가 모자라면 투자가 실제로 막힌다');
+  ok(neg.f, 'ⓕ 434 — 단련석 입장권을 끼워 넣으면 [A] 의 «입장권» 두 항이 빨개진다(원복하면 초록)');
 
   /* ================= [I] 절망의 탑 (주인 지시 ②) ================= */
   console.log('[I] 절망의 탑 — 209 «탑» 탭에 나란히 · 규칙 209 준용 · 보상 = 단련석');
@@ -443,6 +474,13 @@ const table = [];
     S.tower = 3; S.tower2 = 1; S.tstone = 0; S.relic = 0;
     openDungeon(); setDunSub('tower');
     const cards = [...document.querySelectorAll('#dunList [data-tcard]')].map(e => e.dataset.tcard);
+    /* 434 — **그린 것**으로도 못박는다(125 H3 식): 단련석 보상 탑의 카드가 입장권 칸에
+       입장권을 그리면 «탑에는 권종이 없다» 가 선언에서만 참인 것이 된다. */
+    const tkDrawn = [...document.querySelectorAll('#dunList [data-tcard]')].map(e => {
+      const cell = e.querySelector('.sp.tk');
+      return { id: e.dataset.tcard, txt: cell ? cell.textContent.trim() : null,
+               imgs: cell ? cell.querySelectorAll('img.cic').length : -1 };
+    });
     /* 절망의 탑 카드를 눌러 세부를 연다 — 어느 탑을 눌렀는지 카드가 말한다 */
     openTowerDetail('despair');
     const det = { title: document.getElementById('dgdTitle').textContent,
@@ -459,11 +497,15 @@ const table = [];
     challengeTower('despair');
     const running = !!dunRun && dunRun.f === 1 && dunRun.d.id === 'despair';
     endDunRun(true, false);
-    return { cards: cards.join(','), det, running,
+    return { cards: cards.join(','), det, running, tkDrawn,
              t1: S.tower, t1Before, t2: S.tower2, tstone: S.tstone,
              relSame: S.relic === relBefore };
   });
   ok(twRun.cards === 'tower,despair', '«탑» 탭에 카드 2장이 나란히 뜬다', twRun.cards);
+  ok(twRun.tkDrawn.length === 2
+     && twRun.tkDrawn.every(d => d.imgs === 0 && /없음/.test(d.txt || '')),
+    '★ 434 — 탑 카드가 **그린** 것도 입장권이 아니다(입장권 이미지 0장 · «없음»)',
+    twRun.tkDrawn.map(d => d.id + ':' + d.txt + '(img ' + d.imgs + ')').join(' · '));
   ok(twRun.det.title === '절망의 탑' && twRun.det.floor === '1', '세부 팝업이 절망의 탑 1층을 연다',
     twRun.det.title + ' ' + twRun.det.floor);
   ok(twRun.det.icon && twRun.det.amt !== '', '보상 칸이 단련석 아이콘·수량을 그린다(125)', twRun.det.amt);
