@@ -723,7 +723,7 @@
      기본은 꺼짐, `sideAlert('mail', …)` 이 #menub 에 `.alert` 를 토글한다.
      아래 `#menub.mnon .bdg{display:none}` 은 «메뉴 열림» 이라 특이성이 같고 뒤에 와서 이긴다(순서 유지할 것). */
   /* 299 — 레드닷 규약: 부모 우상단. 좌표는 그대로(102−71.5−40=−9.5), left → right 로 의미만 맞춘다 */
-  #menub .bdg{position:absolute;right:-9.5px;top:-3.5px;width:30px;height:30px;border-radius:50%;
+  #menub .bdg{position:absolute;--dot-r:20px;width:30px;height:30px;border-radius:50%;
     background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0;display:none}
   #menub.alert .bdg{display:block}
   /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
@@ -832,7 +832,7 @@
         `.mn-i` 이모지를 바꾸면 이 잉크 폭이 달라지므로 다시 재고 오프셋을 맞출 것.
      생김새는 던전 서브탭 배지(`.stab>.bdg`)와 같은 규격을 그대로 쓴다 — 화면마다 다른 배지를
      만들지 않는다(칸이 100px 로 서브탭 칸과 비슷한 크기라 27px 이 그대로 맞는다). */
-  #mnw .mn-b>.bdg{position:absolute;right:-6px;top:-6px;width:27px;height:27px;border-radius:50%;
+  #mnw .mn-b>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   #mnw .mn-b.alert>.bdg{display:block}
@@ -990,7 +990,7 @@
   /* 측정표 §1-5: 슬롯 우변에서 안쪽 10 → 로컬 중심 x=90, 상단에서 아래 15 → 중심 y=15 */
   /* 299 — 우상단 규약. 같은 자리(50+ih·.232 + 폭 ih·.65 = 우변)를 right 로 다시 적는다:
      right = 100 − (50 + ih·.232) − ih·.65 = 50 − ih·.882 (ih 82 → −22.3 · 101 → −39.1, 종전과 동일) */
-  .ibtn .bdg{position:absolute;right:calc(50px - var(--ih,82px)*.882);top:calc(var(--ih,82px)*-.073);
+  .ibtn .bdg{position:absolute;--dot-r:calc(var(--ih,82px)*.256);
     width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
     background:#f22e52;border:calc(var(--ih,82px)*.069) solid #000;font-size:0;display:none}
   .ibtn.on .bdg{display:block}
@@ -1643,7 +1643,7 @@
      평균 밝기 123 → 174 (+41%)». 둘 다 «림 하이라이트는 상단 25% 이내» 로 처방이 같다.
      → 코어를 #f22e52 로 두고 하이라이트를 상단 작은 원반으로 되돌린다. ⌀41·중심은 6회차에
      레퍼런스 실측으로 못 박은 값이라 건드리지 않는다(측정표 §6). */
-  .tab .bdg{position:absolute;top:-1px;right:.5px;width:41px;height:41px;border-radius:50%;
+  .tab .bdg{position:absolute;--dot-r:20.5px;width:41px;height:41px;border-radius:50%;
     background:radial-gradient(circle at 50% 20%,#ff7891 0 2.5px,#f22e52 6px);
     border:5px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}
@@ -4946,7 +4946,7 @@
 
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
   /* 299 — 우상단 규약. 같은 자리(980−956−27=−3), left → right 로 의미만 맞춘다 */
-  .dnc .dot{right:-3px;top:0;width:27px;height:27px;border-radius:50%;background:#F22E52;
+  .dnc .dot{--dot-r:13.5px;width:27px;height:27px;border-radius:50%;background:#F22E52;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
 
   /* 잠금 — 딤 .65 + 흰 자물쇠(106x123, 카드 중앙, y+60) + 조건 문구(y+223) */
@@ -8654,7 +8654,7 @@
      상시 빨간점**이었다(주인 지적 «무조건 떠 있는 곳» 의 한 사례 — 훈련 배수 탭과 같은 계열).
      ID 를 붙여 특이성을 맞춘다. 기하값은 9·91회차 실측 그대로이므로 한 줄도 안 건드린다. */
   /* 299 — 우상단 규약. 같은 자리(147−103−24=20), left → right 로 의미만 맞춘다 */
-  .cltab>s.dot,#collw .cltab>s.dot{display:none;right:20px;top:2.5px;width:24px;height:24px;border-radius:50%;
+  .cltab>s.dot,#collw .cltab>s.dot{display:none;--dot-r:12px;width:24px;height:24px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#FB5A79,#F12F54 70%)}
   .cltab.alert>s.dot,#collw .cltab.alert>s.dot{display:block}
   /* ==========================================================================
@@ -9895,7 +9895,7 @@
      inset 링은 4변이 같은 두께라 비대칭이 안 되므로 링을 빼고 **타원 radial-gradient 로 코어와 검정 링을
      한 장에** 그린다(반지름 15×16 = 지름 30×32. 21회차의 15.5×16.5 는 31×33 으로 +1 과했다).
      ⚠ 교훈: «기준 확인» 만으로는 부족하고 **산술도 확인**해야 한다. 이 한 줄 뺄셈이 5회차를 갔다. */
-  .tr-card>.dot{right:-12.5px;top:-11px;width:42px;height:42px;border-radius:50%;
+  .tr-card>.dot{--dot-r:21px;width:42px;height:42px;border-radius:50%;
     background:radial-gradient(15px 16px at 50% 50%,#EF3457 0 100%,#000 100%);z-index:4}
   /* 12회차(비평가 T L4): ref y1334 가로 단면은 검정 388..391(4px) → 핑크 393.. 로 **border-box 31 · 링 4px**
      인데 우리는 27 · 링 3px 이었다(−14% / −25%). 핑크 코어 21px 는 양쪽 같으므로 링만 얇았던 것이다.
@@ -10869,7 +10869,7 @@
      298 (2026-08-28) — 그때 «던전» 칸만 배지 노드가 있었다(«컨텐츠»·«탑» 은 켤 대상 자체가 없었다).
      세 칸 다 노드를 달았고, 점등 조건은 칸마다 다르므로 `dunSubAlert(k)` 가 준다 — 그 함수는
      **각 칸의 카드가 dot 을 켜는 조건**을 그대로 OR 한 것이라 탭과 카드가 같이 켜지고 같이 꺼진다. */
-  .stab>.bdg{position:absolute;right:23px;top:-6px;width:27px;height:27px;border-radius:50%;
+  .stab>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .stab.alert>.bdg{display:block}
@@ -10895,9 +10895,35 @@
      클래스 급인 `.updot{display:none}` 은 그 둘에 진다 — 같은 급의 스코프 짝을 반드시 같이 적는다.
      이 짝을 지우면 두 화면에서 레드닷이 «강화 가능 여부와 무관하게 상시 점등» 으로 돌아간다. */
   .updot{position:absolute;width:27px;height:27px;border-radius:50%;background:#F22E52;
-    text-decoration:none;transform:none;display:none;pointer-events:none;z-index:6;
+    text-decoration:none;transform:none;display:none;pointer-events:none;z-index:6;--dot-r:13.5px;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .alert>.updot{display:block}
+  /* ══ 471 (2026-08-30, 저장소 주인 보고) — 레드닷 «호스트 우상단 코너» 규약 ═════════════
+     주인 원문: «저거 빨간점도 짤려보임. 팝업에 빨간점들이 오른쪽위에 딱있어야하는데 위치가 다 어정쩡함».
+     `node tools/probe471.js` 재현(수리 전) — 자리 27곳의 «호스트 테두리 바깥 상자 우상단 코너 ↔
+     닷 중심» 안쪽 거리가 **−1.3 ~ 69.5px(폭 70.8)** 로 흩어져 있었다. 세 유형이 섞여 있던 것이다:
+       ⓐ 코너 밖으로 문 것(−7~−9 선언) ⓑ 안쪽 우상단(12~24) ⓒ 임의 좌표(45·84·132.5).
+     ⚑ **기준 그림은 저장소 안에 있다**(주인 보강 2026-08-30 22:40) — 22 퀘스트 [모두 받기]
+     (`#qAll`, 실측 코너 안쪽 **10.8px**)가 주인이 «맞다» 고 지목한 모양이다. 그 값을 반올림한
+     **11px** 을 규약 상수로 삼는다: 닷 중심이 호스트 코너에서 안쪽으로 11px ⇒ 바깥 링(반지름 21)이
+     코너 밖으로 10px 나가 «걸친다».
+     ⚠ **기준은 «테두리 바깥 상자» 다**(사람이 보는 호스트 변). 절대배치 오프셋은 **패딩 상자**
+     기준이라 테두리가 있는 호스트는 그만큼 되빼야 한다 — 그 값이 `--dot-bw` 다.
+     `.ifbtn` 계열은 자기 테두리 두께를 이미 `--gb-bw` 로 들고 있으므로 **그것을 그대로 읽는다**
+     (새 상수 0개 · 버튼마다 6/7 이 갈리는 것도 저절로 따라온다). 나머지는 아래 한 곳에 모아 적는다.
+     ⚠ 닷 크기는 부품마다 다르다(24·27·30·41·42) — 그래서 좌표가 아니라 **자기 반지름**
+     `--dot-r` 로 식을 세운다. 크기를 바꿔도 중심은 코너에 그대로 남는다.
+     ⇒ 새 부품·새 호스트는 아래 목록에 셀렉터만 더하면 된다. **좌표 상수를 새로 적지 마라.** */
+  :root{--dot-in:11px}
+  .updot,.stab>.bdg,#menub .bdg,#mnw .mn-b>.bdg,.ibtn .bdg,.tab .bdg,
+  .dnc .dot,.tr-card>.dot,.cltab>s.dot,#collw .cltab>s.dot,#psBar .pt>.bdg{
+    right:calc(var(--dot-in) - var(--dot-r) - var(--dot-bw,0px));
+    top:calc(var(--dot-in) - var(--dot-r) - var(--dot-bw,0px))}
+  /* 호스트 테두리 두께 — 위 식이 «테두리 바깥 코너» 를 기준으로 삼기 위해 되빼는 값.
+     `.ifbtn` 은 자기 값을 읽고(6 또는 7 — 버튼마다 다르다), 나머지 넷만 실측값으로 적는다. */
+  .ifbtn{--dot-bw:var(--gb-bw)}
+  .sk-btn,.wm-btn{--dot-bw:7px}
+  .wgc,.at-c,.at-c7,.ps-bx{--dot-bw:5px}
   /* 자리는 «이미 있는 것» 을 피해서 잡는다(실측으로 셋 다 부딪혔다):
      299(주인 지시 2026-08-28 처리) — **레드닷은 전부 부모 우상단 사분면.** 좌상단이던 두 자리를 옮겼다:
      · 07·26 `.sk-card`(폭 168) 우상단 코너는 272 의 해제 뱃지 `.sk-eq`(x123~172, y−4~45)가 쓴다 →
@@ -10909,29 +10935,24 @@
        중심 x126.5 > 74 · y58.5 < 79 — 우상단 사분면 충족.
      · 06 `.eqsl` 은 좌상단 바깥이 부위 뱃지 `.eqbd`(left:704, 슬롯 left 724) 자리 → **우상단 바깥**
      · 버튼 둘은 라벨이 가운데 한 줄이라 안쪽 우상단이 빈다 */
-  .sk-card>.updot{right:56px;top:-14px}
-  .wgc>.updot{right:8px;top:45px}
-  .eqsl>.updot{right:-7px;top:-7px}
-  .sk-btn>.updot,.wm-btn>.updot{right:12px;top:12px}
+  /* 471 — 좌표 상수 삭제(규약으로 흡수). 옛값 right56/top−14 는 `.sk-eq` 를 피하려던 자리다. */
   /* 323 — 267 주 행동 버튼 `.ifbtn.pbtn`(승급전 시작 · 승급전 도전). 라벨 `<b>` 가 가운데
      한 줄이라 안쪽 우상단이 비어 있고, `.pbtn` 은 `position:relative`(1708행) 라 기준상자가 된다.
      `.ifbtn` 에 overflow 는 없지만 검정 테두리 안쪽으로 넣어 베벨 림을 안 밟는다 —
      절대배치 오프셋은 padding box 기준이라 right/top:24 는 «테두리 7 + 24» 다.
      닷 27 + 바깥 링 7.5 → 안쪽 여백 16.5px · 중심은 (우 44.5, 상 44.5) 로 높이 130 의 절반(65)
      위·폭의 절반 오른쪽 = 299 «우상단 사분면» 충족. */
-  .ifbtn.pbtn>.updot{right:24px;top:24px}
   /* 318 — 70 출석 팝업 «오늘(받을 수 있는) 카드». 카드 우상단 **바깥** 코너가 비어 있다
      (`.at-bd` 밴드는 카드 안쪽 top:1, `.at-ck` ✔ 는 수령 완료 칸에만, `.at-cr` 👑 는 하단).
      `.at-in`(overflow:hidden) 의 형제라 잘리지 않고, 카드 바깥 9px 은 그리드 gap(33/44.5) ·
      7일차는 mbody padding(65) 안이라 `.at70 .mbody{overflow:hidden}` 에도 안 걸린다.
      중심 x 221.5/226 · y 4.5/268 → 299 «우상단 사분면» 충족. */
-  .at-c>.updot,.at-c7>.updot{right:-9px;top:-9px}
   /* 321 — 267 주 행동 버튼 `.pbtn` 자체의 레드닷([룰렛 돌리기]). 라벨 `<b>` 는 flex 로 **가운데
      한 줄**이라 안쪽 우상단이 통째로 빈다 — `.sk-btn`(275x131) 이 쓰는 자리(12,12)를 그대로 쓴다
      (`.pbtn` 은 h130 · border 7px 로 규격이 사실상 같다). 절대배치 기준은 padding box 라
      12px 은 검정 테두리 **안쪽** 12px 이고, 외곽 링(±7.5)까지 4.5px 여유로 안 잘린다
      (`.ifbtn` 에 overflow 는 없다). 중심 (w−25.5, 25.5) → 299 «우상단 사분면» 충족. */
-  .ifbtn.pbtn>.updot{right:12px;top:12px}
+  /* 471 ③ — `.ifbtn.pbtn>.updot` **이중 선언**(24/24 와 12/12)을 둘 다 지웠다. 규약 하나만 남는다. */
   /* 322 — 22 퀘스트 행 [보상 받기](`.qs-b` 195×118 · 검정 6) · [모두 받기](`.qs-all` 272×130 · 검정 7).
      ⚠ 이 둘은 `.sk-btn`·`.ifbtn.pbtn` 과 달리 **안쪽 우상단이 비어 있지 않다** — `probe322` 실측:
        `.qs-b`  패딩상자 183×106 · 라벨 잉크 폭 124.9 → 라벨 오른쪽에 남는 폭 **29.1px**
@@ -10945,7 +10966,6 @@
      `.qs-all` 은 `.q22 .mbody{overflow:hidden}`(862 폭) 안 x576.5 에서 끝나고 아래 토글(bottom:43)과
      세로가 안 겹친다. 중심은 `.qs-b` (184.5, 10.5)/195×118 · `.qs-all` (260.5, 11.5)/272×130 —
      둘 다 299 «우상단 사분면» 충족. */
-  .qs-b>.updot,.qs-all>.updot{right:-9px;top:-9px}
   /* 325 — 34 축복 카드의 «받기» 알약 `.tm`(219×98). 322 의 교훈대로 «안쪽 우상단이 빈다» 를
      그대로 베끼지 않고 이 알약에서 **다시 쟀다**(`probe325`):
        받기 상태  글자 잉크 `<i>`("받기") 우단이 알약 좌단+153.17 ⇒ 오른쪽에 남는 폭 **65.83px**
@@ -10962,7 +10982,6 @@
      `#blsw i,#blsw em,#blsw b,#blsw s{display:inline-block}`(ID 급 1,0,1)로 `<s>` 를 통째로 켜 두는
      화면이라 클래스 급인 `.updot{display:none}`(0,1,0) 이 **진다**(실측: 조건과 무관하게 상시 점등).
      같은 급의 스코프 짝을 반드시 같이 적는다 — 이 두 줄을 지우면 상시 점등으로 되돌아간다. */
-  .bls-c .tm>.updot{right:12px;top:12px}
   #blsw .updot{display:none}
   #blsw .alert>.updot{display:block}
   :is(#bSk,#bPet,#bCos) .updot{display:none}
@@ -11030,7 +11049,6 @@
      라벨 «유물 소환» 잉크(y102~142) · `#rwCost`(y149~202) 와 세로로 안 겹친다. */
   #relw .updot{display:none}
   #relw .alert>.updot{display:block}
-  #rwBasin>.updot{right:18px;top:12px}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).
@@ -13336,7 +13354,7 @@
   .ps-bx.dn>i{opacity:.35;filter:grayscale(1)}
   .ps-bx.dn>b{color:#808080}
   /* 301 — 받을 수 있는 보상 칸 레드닷(우상단 — 299 규약). 프리미엄 미보유 칸은 «불가능» 이라 대상 아님(166). */
-  #psw .ps-bx>s.updot{position:absolute;right:-9px;top:-9px;width:27px;height:27px;border-radius:50%;
+  #psw .ps-bx>s.updot{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;z-index:6;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   #psw .ps-bx.alert>s.updot{display:block}
@@ -13357,7 +13375,7 @@
   .ps-bar>div.pt.on{background:#7D574C}
   /* 301 — 탭 레드닷(«받을 보상 있음»). `.stab>.bdg` 규격(27Ø · #F22E52 · 광택/이중 링) 그대로.
      ⚠ `#psw s{display:inline-block}` 태그 리셋(ID 급)이 있어 기본 꺼짐도 ID 급으로 명시한다(202 함정). */
-  #psBar .pt>.bdg{position:absolute;right:14px;top:2px;width:27px;height:27px;border-radius:50%;
+  #psBar .pt>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   #psBar .pt.alert>.bdg{display:block}
