@@ -8336,8 +8336,30 @@
      검산(수리 후 예상 여유): h ≤ 2024 위 0 / 아래 0 · 2024..2035 둘 다 (h−2024)/2 ·
         2035..2050 위 5.5 / 아래 h−2029.5 · **h ≥ 2050 은 a = b = 0 ⇒ 2100·2280·2600 Δ0px**
         (8220행 검산 «2280 상변 272.5» 불변). 임계 점프는 네 경계 전부 0 이다. */
-  #collw{padding-top:calc(168px + clamp(0px, 2050px - var(--frameh, 2280px), 26px));
-    padding-bottom:calc(276px + clamp(0px, 2035px - var(--frameh, 2280px), 11px))}
+  /* 451 — 447 이 갚고 나서 **정확히 0.0 에 착지한** 위쪽 이음매에 «햇빛» 을 준다.
+     447 은 잘못한 게 없다: 리본이 HUD 를 −26 물던 것을 갚으면 여유는 구조적으로 0 이 된다
+     (194 = 142 + translateY 42 + 리본 오버행 10). 남은 물음은 «0.0 을 통과로 볼 것인가» 였고
+     351 13회차 비평가 DB·DD 가 **각자 1순위**로 «두 검은 외곽선이 한 덩어리로 융합돼 리본
+     상변이 소실된다» 고 답했다. `probe451` 이 찍힌 픽셀로 그 기제를 확정했다 —
+     리본의 검정 획(6px) **바로 위 픽셀이 rgb(19,15,12)**(딤 걸린 HUD 잉크)이라 사이에 햇빛이
+     **0px** 다. 딤 배경(rgb 41~50)이 그 사이에 안 깔리면 획은 판때기의 일부로 읽힌다.
+     ⚠ **`.shortf` 안에서만 갚으면 틀린다** — 이 0.0 은 1600 전용이 아니라 **1920 에도 있고**
+        문턱(1842) «위» 다(390 이 그렇게 갚아 447 을 낳았다). 아래 흡수항과 같이 연속으로 푼다.
+     눈금 G = **12px** — 리본 검정 획(6px)의 **두 배**이고, 판때기 clip 이 물러나며 이미 주는
+        햇빛(x380 에서 11px)과 같은 자리수다. 겹침 전 구간(x264~379)이 그 값 이상을 받는다.
+     ⚑ **위·아래는 한 축이라 무릎을 같이 옮긴다**(447 이 산수로 못박은 제약).
+        a = clamp(0, 2074 − h, 38) = 26(390 갚음) + 12(451 햇빛) · b = clamp(0, 2047 − h, 11).
+        무릎 = 2074 − 38 = 2047 − 11 = **2036**(2024 에서 12 올라갔다 — 상자가 12 더 눌리니
+        «상한에 걸리는» 구간도 그만큼 길다). 두 고원이 **같은 무릎**에서 끝나므로 상한 밖에서
+        위·아래 조건이 동시에 참이다 — 무릎이 어긋나면 한쪽이 즉시 음수가 된다(`verify447` [R2]).
+     검산(모형·`probe447` 실측 일치): h ≤ 2036 위 **12** / 아래 0 · 2039 13.5/1.5 · 2047 17.5/5.5
+        · 2050 17.5/8.5 · **h ≥ 2074 는 a = b = 0 ⇒ 2100·2280·2600 Δ0px**(8220행 검산 «2280
+        상변 272.5» 불변). 위·아래 둘 다 h 에 대해 단조 비감소이고 임계 점프는 네 경계 전부 0.
+     ⚠ 대가는 상자 **−12px**(1600 에서 1119 → 1107) — 목록은 스크롤로 닿는다(`verify451` [E]).
+     ⚠ 아래 여유가 2030~2073 구간에서 현행보다 작아진다(2035 5.5 → 0 등). 0 은 436 이 «띠에
+        묶인 고정점» 으로 이미 판정한 값이고 음수가 되는 구간은 없다 — 표준 프레임도 아니다. */
+  #collw{padding-top:calc(168px + clamp(0px, 2074px - var(--frameh, 2280px), 38px));
+    padding-bottom:calc(276px + clamp(0px, 2047px - var(--frameh, 2280px), 11px))}
   /* 390 — 공용 `#modal` 과 **같은 결함이 같은 이유로** 여기에도 있다(이쪽은 자기 오버레이라
      `#modal` 의 선언을 한 번도 안 지난다 — 318·293·351-② «경로가 한 칸 짧다» 계열).
      실측 1600: `.cl` 이 **126..1282** 로 HUD 잉크 끝(142)을 16px 파고든다(`probe390` · D7).
@@ -8356,7 +8378,12 @@
      목록 그릇 `.cl-body` 1029 → **992**. 그 37 은 정확히 «리본이 HUD 를 물던 26 + 깃발탭이 탭바를
      물던 11» 이다(`.cl-body` 는 `.cl` 의 **패딩 상자**에 매달리므로 테두리 8+5 를 먼저 뺀다).
      2280 은 선언이 안 붙어 Δ0. */
-  #app.shortf #collw{padding:194px 0 287px}
+  /* 451 — `#app.shortf #collw{padding:194px 0 287px}` 을 **지웠다**(값을 206 으로 옮긴 게 아니다).
+     390 이 심은 이 줄은 위 연속 흡수항이 붙은 뒤로 **같은 값을 두 곳에 적는 사본**이었고
+     (문턱 아래에서 calc 와 픽셀 동일), 사본이 뒤처지는 것이 390 → 447 → 451 을 낳은 기제다.
+     지운 뒤에도 짧은 프레임은 calc 가 그대로 206/287 을 낸다 — `--frameh` 와 `.shortf` 는
+     `fit()` 의 **같은 두 줄**에서 함께 심기므로 어긋날 수 없다(16262·16263).
+     `verify451` [C] 가 1600(문턱 아래)·1900(문턱 위)의 여유가 **같은 12** 임을 묻는다. */
   #collw.on{display:flex}
   #collw i,#collw s,#collw b,#collw em{display:inline-block;font-style:normal;font-weight:900}
   .cl{position:relative;flex:none;width:895px;height:1543px;max-height:100%;box-sizing:border-box;
@@ -19395,6 +19422,9 @@ let rings = [];     /* 114 — 충격파·임팩트 플래시 링(확장 원). �
    피해 판정 없는 순수한 그림이라 밸런스 불변. */
 let ghosts = [];
 let pets = [], spawnQ = [], skillCd = {};
+/* 459 — «다음에 보스가 표적이 되는 프레임에 스킬 쿨을 0 으로 하라» 는 예약. 다섯 진입점이 걸고
+   step() 이 푼다(자세한 근거는 `resetSkillCd` 위 주석 — 왜 start 함수 «안» 이 아닌지). */
+let cdArm = false;
 let killed = 0, msgTxt = '', msgT = 0, orbitAng = 0, auraTick = 0;
 let promo = null;   /* 승급전 진행 상태 */
 let bossT = 0;      /* 28 보스전 남은 시간(초). > 0 이면 보스전 진행 중 */
@@ -19505,6 +19535,7 @@ function startBoss(){
   S.bossFarm = false; bossOn = true; stageWin = false;
   enemies.length = 0; spawnQ.length = 0; killed = 0;   /* 28 — 보스는 «단독» 스폰. 남은 잡몹은 물린다 */
   spawnQ.push({ t:'boss', delay:1.4 });
+  cdArm = true;                     /* ⚑ 459 — 예약. 보스는 1.4초 뒤에 선다(그 창은 필드가 비어 있다) */
   bossT = BOSS_SEC;
   showMsg('BOSS ' + S.stage);
   uiDirty = true;
@@ -20540,6 +20571,30 @@ function castSkill(s){
   }
   return ok;
 }
+/* ⚑ 459 (주인 지시 2026-08-30 «보스전 시작할떄 스킬 전부 쿨타임 초기화 되있어야함»)
+   — 값은 **0** 이다(23418 장착 규약과 같은 값): 스킬 틱의 `rnd(0, 0.4)` 는 «처음 보는 스킬» 을
+   서로 어긋나게 하는 규약이지 «초기화» 가 아니고, 0 으로 둬도 while 가드는 스킬마다 따로 돌아
+   한 프레임에 장착 4종이 같이 나가는 것뿐이다.
+   ⚠ 펫 쿨(`p.cd`)·자기강화 버프(`sbuf*`)는 **안 건드린다** — 주인 원문이 «스킬» 이다(review 459 §3). */
+function resetSkillCd(){
+  for(const id in skillCd) skillCd[id] = 0;
+  for(const id of S.eqSkill) skillCd[id] = 0;   /* 아직 한 번도 안 돈 장착 스킬(키 없음)까지 0 으로 못박는다 */
+}
+/* ⚑ 459 — **«전투 시작» 은 start 함수가 도는 프레임이 아니다.** 다섯 진입점은 예약만 걸고(`cdArm`),
+   실제 초기화는 «보스가 실제로 표적이 되는» 첫 프레임에 step() 이 푼다(아래 fire 자리).
+   근거는 재현이다(probe459 ④·338 규칙) — start 함수 안에서 0 으로 두면 **대상 없이도 성공하는**
+   poison·meteor 가 빈 바닥에 나가 쿨을 도로 문다:
+     · 스테이지·던전은 보스 스폰까지 1.4초(`DUN_BOSS_DLY`)가 비어 있고
+     · 승급전·레이드·아레나는 그 자리에서 서지만 `nearest()` 가 `born < 0.3` 을 건너뛰므로
+       0.3초 동안은 «선 것처럼 보이는데 아무도 못 때리는» 창이다.
+   수리 전 실측: start 안 초기화 → 보스가 선 프레임에 poison 3.18s · meteor 3.98s 가 남는다
+   (= 「초기화」 가 4종 중 2종에서 거짓말이 된다).
+   ⚠ 예약이 남은 채 판이 끝나도 안전하다 — 이 예약을 푸는 것은 «보스급 적이 표적이 되는 프레임» 뿐이고
+     그 프레임은 정의상 다음 보스전의 시작이다(잡몹은 아래 판별식이 걸러낸다).
+   ⚠ 예약을 거는 자리가 다섯 start 함수라 **던전 페이즈 2·3번째 보스에서는 안 걸린다** —
+     페이즈마다 초기화하면 연출이 아니라 밸런스가 된다(등재문 ②). 선언은 위 `skillCd` 옆에 있다. */
+/* 459 — 이 판별식이 «보스전의 상대» 다. 잡몹(zombie·goblin·dark)은 여기 안 걸린다. */
+const cdFoeUp = e => e.hp > 0 && e.born >= 0.3 && (isBossKind(e.tk) || e.tk === 'promo' || e.tk === 'arena' || e.raid);
 function castSkillRaw(s){
   const dmg = skillDmg(s) * sbAtk();
   const px = player.x, py = player.y - 22;
@@ -20776,6 +20831,14 @@ function step(dt){
       }
     }
   }
+  /* ⚑ 459 — 예약을 푸는 **유일한** 자리(주인 지시 2026-08-30). 스폰 큐 **뒤** · 스킬 틱 **앞** 이라
+     보스가 서는 바로 그 프레임(정확히는 표적이 되는 프레임)에 초기화가 먹고, 같은 프레임에 첫 시전이
+     나간다. 425 등장 국면은 step() 맨 위에서 프레임을 통째로 가져가므로 여기 오지 않는다 =
+     국면이 끝난 뒤에야 풀린다(= «전투 시작부터» 라는 지시와 같은 뜻). */
+  if(cdArm){
+    for(const e of enemies){ if(cdFoeUp(e)){ cdArm = false; resetSkillCd(); break; } }
+  }
+
   const maxHp = stat.maxHp;
 
   /* ---- 플레이어 ---- */
@@ -24384,6 +24447,8 @@ function startDunRun(d, f){
                set(v){ if(bossIntro && bossIntro.md === 'dun') bossIntro.t = v; } }
   });
   bossIntro = null;                                  /* 457 — 새 런은 언제나 국면 없이 시작한다 */
+  cdArm = true;                     /* ⚑ 459 — 예약. 던전·탑은 «스폰 딜레이 1.4초 + 425 등장 국면» 뒤에
+                                       보스가 표적이 되고, step() 이 그 프레임에 푼다(페이즈 2·3은 안 건다) */
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -24863,6 +24928,7 @@ function startPromo(){
      필드에 서므로 국면도 여기서 연다(스폰 딜레이가 없어 «선 순간» 이 곧 이 줄이다).
      `promo.t` 는 국면 동안 한 프레임도 안 깎인다 — step() 맨 위가 그 프레임을 통째로 가져간다. */
   bossIntroStart('promo', enemies[enemies.length-1]);
+  cdArm = true;                     /* ⚑ 459 — 예약만 건다. 상대는 여기서 서지만 born<0.3 인 0.3초는 아무도 못 때린다 */
   if(typeof jzFx === 'function'){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, '승급전', true); }
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
   closeModal();
@@ -24986,23 +25052,40 @@ function setBody(id, html){
   return el;
 }
 /* 455 — 닫는 길은 이 함수 하나다(딤 탭·gmCloseAll·직접 호출 전부). 룰렛이 잠겨 있으면 여기서 되돌린다.
-   ⚠ **등재문이 지목한 `rl16` 은 죽은 이름이다** — `probe455` 가 «가드를 넣었는데 여전히 닫힌다» 로
-     잡았다: `rl16` 은 위 다섯 곳의 `remove()` 목록에만 있고 **`add` 하는 곳이 저장소에 없다**
-     (`grep rl16` 7건 전부 remove/주석). 껍데기로 그것을 물으면 판정은 **영원히 거짓**이다.
+   ⚠ **455 등재문이 지목한 `rl16` 은 죽은 이름이었다** — `probe455` 가 «가드를 넣었는데 여전히 닫힌다» 로
+     잡았고(껍데기로 물으면 판정이 **영원히 거짓**), **464 가 그 이름을 다섯 목록에서 걷어냈다**
+     (`probe464`: `add` 0건 · `.rl16` CSS 규칙 **0/2650** · 붙였다 떼도 bbox **Δ0.00px** = remove 가 이미 no-op).
+     16 룰렛은 껍데기 override 없이 A5 기본 규격을 그대로 쓴다 — 되살리려면 `add` 하는 곳을 먼저 만들 것.
    ⇒ «지금 모달이 룰렛인가» 도 상수·클래스가 아니라 **제품에게 묻는다**(368 처방):
      열려 있고(`on`) 그 안에 원판(`#rouDisc`)이 있는가. 그리기는 이 노드가 곧 룰렛이다.
    순서가 중요하다 — 앞의 두 항이 거짓이면 판정식을 밟지도 않으므로 다른 팝업·부팅 경로는 그대로 지난다.
    돌려주는 값은 «실제로 닫았는가» — 게이트가 이 자리를 직접 물을 수 있게 남긴다(호출부는 안 쓴다). */
+/* 465 — 모달 껍데기(08·22·69·70 전용 **치수 override**)는 «한 번에 하나» 다.
+   종전에는 그 이름 목록이 **여덟 자리에 흩어져** 있었고 서로 비대칭이었다(`probe465` [1]:
+   켜는 자리 6곳 중 «남의 껍데기를 전부 떼는» 곳이 **0곳** — `sk8` 세 자리는 하나도 안 뗐다).
+   그래서 닫지 않고 갈아타면 껍데기가 겹쳤다(전 경로 30개 중 **12개** · 닫힘 연출 중 전환도 12개).
+   겹침의 값도 작지 않다 — 22 퀘스트 → 08 유물 세부에서 본문 높이가 739 → **1379**(Δ640px).
+   지금은 딤이 전면을 덮어 사람이 그 경로를 못 밟지만(«잠복»), 목록이 낡을 자리를 없애는 것이
+   처방이다(LESSONS 265 «그 목록은 이미 다섯 곳에 흩어져 낡는다» · 464 가 죽은 이름을 걷어낸 그 목록).
+   ⇒ **이름은 여기 한 줄** · 켜고 끄는 것도 이 함수 하나다. 새 껍데기는 배열에 한 칸을 더한다. */
+const MODAL_SHELLS = ['sk8', 'q22', 'ml69', 'at70'];
+function modalShell(cls){
+  const m = $('modal');
+  m.classList.remove(...MODAL_SHELLS);      /* 남의 껍데기는 예외 없이 전부 뗀다 */
+  if(cls) m.classList.add(cls);
+  return m;                                  /* 호출부가 이어서 'on' 을 켤 수 있게 노드를 돌려준다 */
+}
 function closeModal(){
   const m = $('modal');
   if(m.classList.contains('on') && m.querySelector('#rouDisc') && rouLocked()) return false;
-  m.classList.remove('on', 'sk8', 'rl16', 'q22', 'ml69', 'at70');
+  m.classList.remove('on');
+  modalShell(null);
   return true;
 }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8', 'rl16', 'q22', 'ml69', 'at70');   /* 08·16·22·69·70 전용 껍데기 override 를 끈다 */
+  modalShell(null);   /* 08·22·69·70 전용 껍데기 override 를 끈다 (464 — 16 룰렛은 껍데기가 없다 · 465 — 목록은 MODAL_SHELLS 한 줄) */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -25312,7 +25395,7 @@ function showSkillDetail(id){
     +   '<button class="sk-u" id="mLv"' + (own && !maxed && canLevel(it) ? '' : ' disabled') + '><b>강화</b></button>'
     + '</div>';
   $('mbox').scrollTop = 0;
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const e = $('mEq'), l = $('mLv');
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
   /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클
@@ -25438,7 +25521,7 @@ function showItem(id){
     + (acts ? '<div class="sk-act' + (canUp ? ' n3' : '') + '">' + acts + '</div>' : '');
   $('mbox').scrollTop = 0;
   if(cat === 'pet') petPaint($('mbox'));     /* 174 규약 — 스프라이트 캔버스는 삽입 «후» 한 번 칠한다 */
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const e = $('mEq'), l = $('mLv'), b = $('mLvAll'), c = $('mCraft');
   if(e && own) e.onclick = () => { toggleEquip(it, cat); showItem(id); };
   /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리)
@@ -25834,9 +25917,8 @@ function openAttend(){
   const hd = document.querySelector('#modal .mhead');
   if(!hd.querySelector('.at-ring'))
     hd.insertAdjacentHTML('beforeend', '<s class="at-ring l"></s><s class="at-ring r"></s>');
-  const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'q22');
-  m.classList.add('at70', 'on');
+  const m = modalShell('at70');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   const t = $('mbox').querySelector('[data-att]');
   if(t) t.onclick = () => { sfx('claim'); claimAttend(t); openAttend(); };   /* 78 */
 }
@@ -26140,9 +26222,8 @@ function openMail(){
     +   '<button class="ml-all ifbtn" id="mailBtn"' + (left ? '' : ' disabled') + '>'
     +     '<b>일괄 읽기&amp;수령</b></button>'
     + '</div>';
-  const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'q22');
-  m.classList.add('ml69', 'on');
+  const m = modalShell('ml69');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
@@ -26271,9 +26352,8 @@ function openQuest(tab){
     + '<span class="sel" style="left:' + (qTab === 'daily' ? -5 : 366) + 'px"></span>'
     + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
     + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>반복</i></b></div>';
-  const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'ml69');
-  m.classList.add('q22', 'on');
+  const m = modalShell('q22');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
      «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
      재화 비행은 fxAt() 로 그 행을 출발점으로 지정만 하면 fxWatch 가 알아서 쏜다. */
@@ -27315,6 +27395,9 @@ function startRaid(r){
        그 시간이 곧 «때릴 대상이 없는 측정 창» 이라 30초 예산의 4.7% 를 그냥 깎는다(주인 지시가
        재라고 한 것은 «30초 만에 넣은 피해» 다). 소리는 보스가 선 채로 울린다. */
   bossInSfx(e);
+  /* ⚑ 459 — 레이드는 1.4초 스폰 딜레이를 안 쓴다(바로 위 264 주석)지만 born 0.3초·457 국면은 그대로다.
+     46 이 재는 것은 «30초 만에 넣은 피해» 라 시작 쿨이 그 측정을 직접 흔든다 — 199 대기 항목. */
+  cdArm = true;
   /* ⚑ 457(주인 지시 2026-08-30) — 레이드도 «모든 보스전» 이다. 샌드백은 위에서 `makeEnemy` 로 이미
      필드에 섰으므로 국면은 여기서 연다. ⚠ **측정 시계(`raidT`)가 국면 동안 안 흐르는 것이 핵심**이다 —
      264 가 «1.4초 스폰 딜레이는 안 쓴다» 고 적은 이유(«30초 만에 넣은 피해» 를 재는 판)가 그대로
@@ -27431,6 +27514,9 @@ function startArena(){
     e.nopop = true;                                   /* 67 — 팝인 없이 «마주 선 채» 시작 */
     arena.foe = e;
   }
+  /* ⚑ 459 — 아레나도 상대가 여기서 마주 선다(`nopop` = 팝인조차 없다). `nopop` 은 **그리기**만 끄고
+     `nearest()` 의 born 0.3초 창은 그대로라, 초기화는 여기가 아니라 step() 이 푼다. */
+  cdArm = true;
   msgTxt = ''; msgT = 0;                              /* 30 과 같은 이유 — 로드 직후 토스트를 지운다 */
   closeDungeon();
   $('app').classList.add('dunrun', 'arn');            /* 30 의 상태(상단 HUD·탭바 숨김 + ◀)를 그대로 탄다 */
@@ -30360,7 +30446,7 @@ function showCosDetail(id){
     + '</div>';
   $('mbox').scrollTop = 0;
   cosPaint($('mbox'));
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
   /* 262 — 보유 칸의 [강화]는 «꾹 누르면 연속»(공용 bindUpHold). 미보유 칸의 [승급전]은
@@ -34678,7 +34764,7 @@ function jzOpen(el){
   if(el.id === 'modal') jzModalMood();
 }
 /* ── 345 «찌그러지며 닫힘» (2026-08-29, 저장소 주인 보고) ────────────────────────────────
-   `closeModal()` 은 `remove('on','sk8','rl16','q22','ml69','at70')` 로 **가시성 스위치와 껍데기
+   `closeModal()` 은 `remove('on','sk8','q22','ml69','at70')` 로 **가시성 스위치와 껍데기
    치수를 한 번에** 뗀다. 닫힘 연출(.12s 역재생)은 그 «뒤» 에 display 를 되살려 도는데, 그 동안
    껍데기 override 가 이미 없어서 상자가 **A5 기본 규격으로 리플로우된 채** 축소된다 = «찌그러짐».
    실측(`tools/probe345.js`, 수리 전): 우편 `.mbox` 1303 → **230**(본문 `.ml69 .mbody{height:1189}`
