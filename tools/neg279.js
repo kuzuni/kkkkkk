@@ -65,24 +65,49 @@ const DUN_4TH = cat(DUN_TOWER, '\n', DUN_TOWER && ind(DUN_TOWER),
   '<div class="stab dns-t off" data-dsub="x4"><i class="ol3">넷</i></div>');
 /* `.sp4` 규칙 — 96 부품의 `.sp2`/`.sp3` 과 같은 꼴(들여쓰기는 제품 줄에서 물려받는다).
    ⚑ 379 이관 (2026-08-29) — **그 «같은 꼴» 이 바뀌었다.** 칸은 패딩박스가 아니라 **바 바깥 상자**를
-   나누고(칸폭 = (100%+12)/4 = `25% + 3px` · 칸 k 왼끝 = `k×칸폭 − 6`), 활성 알약은 자유로운 면마다
+   나누고(칸폭 = 바깥/4 · 칸 k 왼끝 = k×칸폭 − b), 활성 알약은 자유로운 면마다
    **11.75** 를 더 먹으며 셸 안쪽 변에 닿는 면은 패딩 변에 붙는다(378 이 그 면의 검정을 셸에 넘겼다).
    N9 는 «게이트가 새 칸 수를 따라오는가» 를 묻는 **양성 대조**라 여기 규칙이 379 규약을 따라야
-   초록이 된다 — 옛 `width:25%` 를 그대로 두면 N9 는 «279 가 깨졌다» 가 아니라
-   «379 를 안 지킨 CSS» 를 잡아 **헷갈리는 빨강**이 된다. */
-const SP4_CSS = SP3_CSS == null ? null : (() => {
-  const p = '\n' + ind(SP3_CSS);
-  return SP3_CSS
-    + p + '.stabs.sp4>.stab{width:calc(25% + 3px)}'
-    + p + '.stabs.sp4>.stab:nth-of-type(1){left:-6px}'
-    + p + '.stabs.sp4>.stab:nth-of-type(2){left:calc(25% - 3px)}'
-    + p + '.stabs.sp4>.stab:nth-of-type(3){left:50%}'
-    + p + '.stabs.sp4>.stab:nth-of-type(4){left:calc(75% + 3px)}'
-    + p + '.stabs.sp4>.stab.on:nth-of-type(1){left:0;width:calc(25% + 8.75px)}'
-    + p + '.stabs.sp4>.stab.on:nth-of-type(2){left:calc(25% - 14.75px);width:calc(25% + 26.5px)}'
-    + p + '.stabs.sp4>.stab.on:nth-of-type(3){left:calc(50% - 11.75px);width:calc(25% + 26.5px)}'
-    + p + '.stabs.sp4>.stab.on:nth-of-type(4){left:calc(75% - 8.75px);width:calc(25% + 8.75px)}';
-})();
+   초록이 된다 — 379 를 안 지킨 CSS 를 주입하면 N9 는 «279 가 깨졌다» 가 아니라
+   그 CSS 를 잡아 **헷갈리는 빨강**이 된다.
+
+   ⚑ **461 (2026-08-30) — 그 «헷갈리는 빨강» 이 실제로 났고, 뿌리는 여기 아홉 줄이 손으로 적은
+   «b = 6px 시절» 사본이었다는 것이다.** 437 이 테두리를 `--sb` 한 손잡이로 빼고 6 → **7** 로 올리자
+   N9 가 「칸1 왼끝 = 바깥 0/4 지점 **1.0 vs 0.0**」·「첫 칸 왼끝 = 바 바깥 왼끝 **1.0**」·
+   「마지막 칸 오른끝 **793.0 vs 794.0**」 세 항을 **정확히 1px = 7 − 6** 씩 빨갛게 냈다 —
+   **제품은 내내 옳았고 낡은 것은 주입문**이다(279 계열의 전형 · 368 과 같은 꼴).
+   ⚠ 그래서 값을 `3px → 3.5px`·`-6px → -7px` 로 **갱신하지 않았다.** 그것은 위 §[A] 주석이
+   이미 «리터럴을 새 값으로 갱신하는 것은 같은 죽음을 다음 폴리시까지 미루는 것뿐이다» 라고
+   적어 둔 바로 그 길이다 — 다음에 `--sb` 가 움직이면 이 자리는 똑같이 다시 죽는다.
+   ⇒ **자리를 제품에게 묻는다.** 437 이 세운 제품의 4분할 선언(`.stab-c1`~`.stab-c4`,
+   index.html ~11313 — 07 스킬 시트의 4칸 바가 쓰는 살아 있는 규칙)에서 **선언부를 통째로
+   물려받고 선택자만** `.stabs.sp4>.stab…` 으로 갈아 낀다. 이 파일에 적히는 숫자는 **0개**이고,
+   저 아홉 줄이 사라지거나 모호해지면 §[A] 가 빨개진다 — **조용히 죽는 길이 없다**(387 처방).
+   ⚠ 379 규약을 여기서 다시 적지 않는 것이 핵심이다. 제품의 그 아홉 줄이 이미 그 규약이다. */
+const C4_W  = at('C4_W', /^\s*\.stab-c1,\.stab-c2,\.stab-c3,\.stab-c4\s*\{/,
+  '제품 4분할 — 네 칸 공용 칸 폭(437 이 `--sb` 로 뺀 그 줄)');
+const C4_L  = [1, 2, 3, 4].map(k => at('C4_L' + k, new RegExp('^\\s*\\.stab-c' + k + '\\s*\\{'),
+  '제품 4분할 — 칸 ' + k + ' 좌변'));
+const C4_ON = [1, 2, 3, 4].map(k => at('C4_ON' + k, new RegExp('^\\s*\\.stab-c' + k + '\\.on\\s*\\{'),
+  '제품 4분할 — 칸 ' + k + ' 활성 알약'));
+
+/* 첫 `{` 부터 끝까지(= 선언부)만 물려받는다 — 선택자만 우리 것으로 바꾼다 */
+const decl = l => (l == null ? null : l.slice(l.indexOf('{')));
+const rule = (sel, l) => (l == null ? null : sel + decl(l));
+/* 제품 줄에서 파생한 `.sp4` 아홉 규칙. 한 줄이라도 못 읽으면 통째로 null → §[A] 빨강 */
+const sp4Rules = lines => {
+  const one = re => { const h = lines.filter(l => re.test(l)); return h.length === 1 ? h[0] : null; };
+  const w  = one(/^\s*\.stab-c1,\.stab-c2,\.stab-c3,\.stab-c4\s*\{/);
+  const ls = [1, 2, 3, 4].map(k => one(new RegExp('^\\s*\\.stab-c' + k + '\\s*\\{')));
+  const os = [1, 2, 3, 4].map(k => one(new RegExp('^\\s*\\.stab-c' + k + '\\.on\\s*\\{')));
+  const out = [rule('.stabs.sp4>.stab', w)]
+    .concat(ls.map((l, i) => rule('.stabs.sp4>.stab:nth-of-type(' + (i + 1) + ')', l)))
+    .concat(os.map((l, i) => rule('.stabs.sp4>.stab.on:nth-of-type(' + (i + 1) + ')', l)));
+  return out.some(r => r == null) ? null : out;
+};
+const SP4_RULES = sp4Rules(LINES);
+const SP4_CSS = (SP3_CSS == null || SP4_RULES == null) ? null
+  : SP3_CSS + SP4_RULES.map(r => '\n' + ind(SP3_CSS) + r).join('');
 /* 바의 분할 선언만 `.sp4` 로 — 토큰이 없으면 no-op 이 되고, 그것은 편집 루프가 «자리 없음» 으로 읽는다 */
 const DUN_BAR_SP4 = DUN_BAR == null ? null : DUN_BAR.replace(/\bsp3\b/, 'sp4');
 
@@ -187,6 +212,29 @@ const runGate = () => {
     ok('R4 옛 «줄 통째 리터럴» 은 그 자리에서 죽는다(387 재현)',
       TR_CSS != null && DUN_TOWER != null && drifted.indexOf(TR_CSS) < 0 && drifted.indexOf(DUN_TOWER) < 0,
       '리터럴 대조는 0곳 — 이것이 27/32 였다');
+
+    /* R5~R7 — 461. N9 가 주입하는 `.sp4` 규칙이 «제품에서 파생» 인지, 그저 이 파일에 적힌
+     * 상수인지를 가른다. 461 이전에는 상수였고, 437 이 `--sb` 를 6 → 7 로 올린 순간
+     * 그 사실이 «1px 세 항» 으로만 드러났다(무엇이 낡았는지는 말해 주지 않았다). */
+    ok('R5 `.sp4` 아홉 규칙이 제품에서 파생됐다(§[A] 앵커 9줄과 같은 자리)',
+      SP4_RULES != null && [C4_W].concat(C4_L, C4_ON).every(l => l != null) && SP4_RULES.length === 9,
+      SP4_RULES ? SP4_RULES.length + '규칙 — 선언부는 index.html 것' : '파생 실패 — §[A] 를 보라');
+
+    /* 제품 줄을 흔들면 파생물이 **따라와야** 한다 — 안 따라오면 그것은 상수다 */
+    const c3re = /^\s*\.stab-c3\s*\{/;
+    const c3drift = LINES.map(l => (c3re.test(l) ? l.replace('50%', '50.125%') : l));
+    const derivedNow = SP4_RULES && SP4_RULES.join('|');
+    const derivedDrift = sp4Rules(c3drift);
+    ok('R6 제품 4분할 줄을 흔들면 파생물이 따라온다(상수였다면 안 따라온다)',
+      derivedDrift != null && derivedNow != null
+        && !derivedNow.includes('50.125%') && derivedDrift.join('|').includes('50.125%'),
+      derivedDrift ? '칸3 좌변 50% → 50.125% 가 주입문에 그대로 실렸다' : '파생 실패');
+
+    /* 461 의 그 세 항이 돌아오는 유일한 길 = 누군가 다시 손으로 적는 것 */
+    ok('R7 파생물에 «b = 6px 시절» 리터럴이 없다(461 재발 방지)',
+      derivedNow != null && derivedNow.includes('var(--sb)')
+        && !/-6px|25%\s*\+\s*3px|8\.75px|26\.5px/.test(derivedNow),
+      derivedNow == null ? '파생 실패' : '테두리는 `var(--sb)` 한 손잡이로만 들어온다');
 
     console.log('\n[0] 기준선 — 갈아 끼우지 않은 사본은 초록이어야 한다');
     fs.writeFileSync(TMP, SRC);
