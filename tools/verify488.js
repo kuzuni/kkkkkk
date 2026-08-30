@@ -9,11 +9,10 @@
  *   ⓑ 실제 DOM   — `#fxl` 에 붙은 `.fx-plus.hb` 노드 수 · 호스트에 붙은 `jz-hb`/`jz-hbx` 토글 수
  * 둘이 어긋나면 «불렀는데 안 보인다» 이므로 그 자체가 결함이다.
  *
- * ⚠ 첫 발은 자리마다 다르고, 그것이 **설계**다:
- *     룬·단련  — `rtHoldStart` 가 `once()` 를 먼저 부르므로 첫 발도 회당 피드백을 받는다 ⇒ beat = 시도
- *     세부팝업·유물·훈련 — 첫 발은 `fxUpOk`(플래시+파티클+델타) 한 세트가 이미 «보이는 사건» 이라
- *                          회당 맥박을 겹쳐 걸지 않는다 ⇒ beat = 시도 − 1
- *   이 자는 그 차이를 **문서화된 상수**로 단언한다(두루뭉술하게 «≥» 로 덮으면 규약이 사라진다).
+ * ⚠ 3회차부터 **다섯 자리 전부 beat = 시도 수**다(2회차까지는 «세부팝업·유물·훈련은 시도 − 1» 이었다).
+ *   비평가 BO·BP 가 2회차 캡처에서 독립적으로 «누른 그 순간 카드가 반응하지 않는다 · 훈련은 첫 380ms
+ *   동안 알림이 0장» 으로 잡았고, 특히 **비용 «−n» 이 첫 발에 없는 것**이 주인 원문(«돈을 쓰고 있구나»)과
+ *   정면으로 어긋난다. 첫 발의 `fxUpOk`(플래시+파티클+델타)는 그대로 두고 그 위에 회당 맥박을 얹었다.
  *
  * ⚠ 게임 루프는 **돌린 채로** 잰다(349 교훈 — 루프를 세운 게이트는 실기기와 다른 것을 재고 초록이었다).
  */
@@ -219,7 +218,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(sumT(C, /단련/) === 1, '[C4] 단련 정산 토스트는 요약 한 장', sumT(C, /단련/) + '장 / 전체 ' + C.toast);
 
   /* ══ [D] 08 세부 팝업 [강화] 홀드(bindUpHold) ═══════════════════════ */
-  console.log('[D] 08 세부 팝업 [강화] 홀드 — 첫 발은 fxUpOk 라 beat = 시도 − 1');
+  console.log('[D] 08 세부 팝업 [강화] 홀드 — 3회차부터 첫 발에도 beat');
   await p.evaluate(() => {
     try { closeTrain(); closeModal(); } catch (_) {}
     const id = SKILLS[0].id;
@@ -233,9 +232,9 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const D = await grab();
   console.log('  · 시도 ' + D.tries + ' · 맥박 ' + D.hb + ' · 플로터 ' + D.node + ' (비용 ' + D.nodeDn + ')');
   ok(D.tries >= 8, '[D1] 세부 팝업 홀드가 여러 번 시도한다(전제)', D.tries + '회');
-  ok(D.hb === D.tries - 1, '[D2] ★ 맥박 수 = 시도 − 1 (첫 발은 fxUpOk 한 세트가 맡는다)', D.hb + ' / ' + (D.tries - 1));
-  ok(D.fOk === D.tries - 1, '[D3] «+1 Lv» 수 = 시도 − 1', D.fOk + ' / ' + (D.tries - 1));
-  ok(D.fPay === D.tries - 1 && D.nodeDn === D.fPay, '[D4] «−n 조각» 수 = 시도 − 1 · 전부 아래로 진다', D.fPay + ' / ' + (D.tries - 1));
+  ok(D.hb === D.tries, '[D2] ★ 맥박 수 = 시도 수(3회차 — 첫 발에도 건다)', D.hb + ' / ' + D.tries);
+  ok(D.fOk === D.tries, '[D3] «+1 Lv» 수 = 시도 수', D.fOk + ' / ' + D.tries);
+  ok(D.fPay === D.tries && D.nodeDn === D.fPay, '[D4] «−n 조각» 수 = 시도 수 · 전부 아래로 진다', D.fPay + ' / ' + D.tries);
 
   /* ══ [E] 89 유물 소환 홀드(rwHold) ═════════════════════════════════ */
   console.log('[E] 89 유물 소환 홀드 — 결과 문구는 격자 칸(fxUpOk)이 맡고 여기는 맥박 + 비용만');
@@ -251,8 +250,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const E = await grab();
   console.log('  · 시도 ' + E.tries + ' · 맥박 ' + E.hb + ' · 결과 플로터 ' + (E.fOk + E.fNo) + ' · 비용 ' + E.fPay);
   ok(E.tries >= 5, '[E1] 유물 홀드가 여러 번 시도한다(전제)', E.tries + '회');
-  ok(E.hb === E.tries - 1, '[E2] ★ 맥박 수 = 시도 − 1', E.hb + ' / ' + (E.tries - 1));
-  ok(E.fPay === E.tries - 1, '[E3] «−n» 수 = 시도 − 1', E.fPay + ' / ' + (E.tries - 1));
+  ok(E.hb === E.tries, '[E2] ★ 맥박 수 = 시도 수', E.hb + ' / ' + E.tries);
+  ok(E.fPay === E.tries, '[E3] «−n» 수 = 시도 수', E.fPay + ' / ' + E.tries);
   ok(E.fOk === 0 && E.fNo === 0, '[E4] ★ 결과 문구는 안 띄운다 — 격자 칸의 «이름 Lv.n» 델타와 두 벌이 되면 안 된다', (E.fOk + E.fNo) + '건');
 
   /* ══ [F] 23 훈련 카드 홀드(64) ═════════════════════════════════════ */
@@ -268,8 +267,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const F = await grab();
   console.log('  · 시도 ' + F.tries + ' · 맥박 ' + F.hb + ' · 플로터 ' + F.node + ' · 비용 ' + F.fPay);
   ok(F.tries >= 8, '[F1] 훈련 홀드가 여러 번 시도한다(전제)', F.tries + '회');
-  ok(F.hb === F.tries - 1, '[F2] ★ 맥박 수 = 시도 − 1', F.hb + ' / ' + (F.tries - 1));
-  ok(F.fPay === F.tries - 1, '[F3] 골드 «−n» 수 = 시도 − 1(HUD 알약 fxPay 는 종전 그대로 따로 돈다)', F.fPay + ' / ' + (F.tries - 1));
+  ok(F.hb === F.tries, '[F2] ★ 맥박 수 = 시도 수', F.hb + ' / ' + F.tries);
+  ok(F.fPay === F.tries, '[F3] 골드 «−n» 수 = 시도 수(HUD 알약 fxPay 는 종전 그대로 따로 돈다)', F.fPay + ' / ' + F.tries);
   ok(F.fOk === 0 && F.fNo === 0, '[F4] ★ 결과 문구는 안 띄운다 — `.cv` 상시 표기 · `fx-cvswap` · 정지 시 `fxUpOk` 델타와 세 벌이 된다', (F.fOk + F.fNo) + '건');
   ok(sumT(F, /훈련/) === 1, '[F5] 훈련 홀드에도 정산 요약 토스트가 한 장 뜬다(2회차 신설 — 세 씬 마무리 층 일치)', sumT(F, /훈련/) + '장 / 전체 ' + F.toast);
 
@@ -354,7 +353,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const I = await p.evaluate(() => {
     /* 봉투 = 사다리 가로 폭 × 애니메이션 세로 이동 범위. CSS 상수와 같은 값을 여기 적어 두고
        어긋나면 빨개지게 한다(잉크 폭 69 · 상자 높이 32 · 상승 34 · 하강 28 · 칸 5개). */
-    const INK = 69, BOXH = 32, UP = 34, DN = 28, SLOTS = 5;
+    const INK = 69, BOXH = 32, UP = 24, DN = 24, SLOTS = 5;   /* 3회차 — 이동 24 로 통일 */
     const slotW = (w, n, dec) => Number.isFinite(dec) ? dec : Math.max(34, Math.min(80, (w - 70) / Math.max(1, n - 1)));
     const envs = (host) => {
       const cs = getComputedStyle(host), r = host.getBoundingClientRect();
