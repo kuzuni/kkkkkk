@@ -177,12 +177,17 @@ const PILL = sel => {
      ::after 로 그 **위**에 온다). 묻는 것은 그대로 «어느 상자의 코너를 도는가» 다. */
   const cs = getComputedStyle(on, '::before');
   const ring = getComputedStyle(on, '::after');
+  const st = getComputedStyle(on);
   return {
     x: b.x, y: b.y, w: b.width, h: b.height,
     label: (on.querySelector('i') || {}).textContent || '',
     pe: cs.pointerEvents, shadow: cs.boxShadow, radius: cs.borderRadius,
     left: cs.left, right: cs.right, top: cs.top, bottom: cs.bottom,
     ringSh: ring.boxShadow, ringMask: ring.maskImage || ring.webkitMaskImage || '',
+    /* 378 의 손잡이로 «어느 면이 셸에 닿는가» 를 읽는다(자리를 셀렉터로 다시 적지 않는다).
+       449 가 그 면의 층 순서를 바꿨으므로 아래 `wrapAt` 이 면마다 다른 것을 묻는다. */
+    touchL: /(^|\s)7px/.test(st.getPropertyValue('--pill-l').trim()),
+    touchR: /-7px/.test(st.getPropertyValue('--pill-r').trim()),
   };
 };
 
@@ -199,14 +204,37 @@ const SETTLE = () => {
    넘겼기 때문에, 끝 칸(10 상점 좌 등)에서는 스캔이 **셸 검정 6** 을 먼저 만나고 알약의 옆띠는
    그 다음 베벨이다(`K4 B6 D4 B10`). 그래서 **어두운 띠를 먼저 찾고 그 앞 런이 옆띠인지** 를 묻는다.
    두 갈래(검정 옆띠 · 베벨 옆띠)가 한 자로 읽힌다. */
-function wrapAt(rs) {
+/* ⚑ **449 이관 (2026-08-30) — 면에 따라 «앞에 오는 것» 이 다르다.**
+   여기까지의 자는 «어두운 띠 앞에는 두께 ≥4 의 **옆띠**(검정 링이든 베벨 밴드든)가 있다» 를
+   두 갈래로 한꺼번에 물었다. 449 가 닫은 뒤로 그 문장은 **셸에 닿는 면에서 거짓**이다 —
+   그 면엔 알약 자신의 검정이 없고(378), 449 가 세 띠를 «검정 안쪽» 이 아니라 **알약 윤곽**에서
+   시작하게 만들었으므로 어두운 띠 앞에 오는 것은 **셸의 검정뿐**이고 그 두께는 셸의 몫이다
+   (스캔 창이 알약 밖 2px 부터라 3~5px 로 읽힌다 — 알약의 값이 아니다).
+   ref 가 그 순서다: `python3 tools/probe449.py`(03 «던전» 우하) = **셸 검정 → D → B → 면**.
+   ⇒ 값을 넓히지 않고 **면마다 다른 것을 묻는다**:
+       · 안 닿는 면 — 그대로 «옆띠(≥4) → D»
+       · 닿는 면    — «셸 검정 → D» 이고, 그 앞에 **베벨 옆띠(B ≥4)가 없어야** 한다.
+         (있으면 449 이전 = `--pill-l` 가로 밴드가 띠 앞에 깔린 상태다. [2b] 가 그것을 문다.) */
+function wrapAt(rs, touch) {
+  if (touch) {
+    const i = rs.findIndex((r, k) => r.c === 'D' && r.n >= 3 && k > 0 && rs[k - 1].c === 'K');
+    const preB = rs.slice(0, i < 0 ? rs.length : i).some(r => r.c === 'B' && r.n >= 4);
+    /* 못 찾은 자리(세로 한복판·위 코너)는 «띠가 없는 것이 정답» 이다 — [3]·[4] 가 그것을 문다.
+       그 두 항은 «옆띠 자체는 있다» 도 같이 묻는데, 닿는 면의 옆띠는 검정이 아니라 **베벨**이므로
+       안 닿는 면과 같은 폴백(첫 K|B 런 ≥4)으로 돌려준다(`K2 B7 F21` → B7). */
+    if (i < 0) {
+      const b = rs.find(r => (r.c === 'K' || r.c === 'B') && r.n >= 4) || null;
+      return { band: b, dark: 0, next: null, preB, touch: true, txt: fmt(rs) };
+    }
+    return { band: rs[i - 1], dark: rs[i].n, next: rs[i + 1] || null, preB, touch: true, txt: fmt(rs) };
+  }
   const i = rs.findIndex((r, k) => r.c === 'D' && r.n >= 3 && k > 0
     && (rs[k - 1].c === 'K' || rs[k - 1].c === 'B') && rs[k - 1].n >= 4);
   if (i < 0) {
     const b = rs.find(r => (r.c === 'K' || r.c === 'B') && r.n >= 4) || null;
-    return { band: b, dark: 0, next: null, txt: fmt(rs) };
+    return { band: b, dark: 0, next: null, preB: false, touch: false, txt: fmt(rs) };
   }
-  return { band: rs[i - 1], dark: rs[i].n, next: rs[i + 1] || null, txt: fmt(rs) };
+  return { band: rs[i - 1], dark: rs[i].n, next: rs[i + 1] || null, preB: false, touch: false, txt: fmt(rs) };
 }
 
 /* ── 438 — 코너 원 중심에서 **법선**으로 쏘는 광선. 기하는 `verify409` 의 `ray` 와 같게 둔다
@@ -342,26 +370,35 @@ async function readCorner(page, p, rel, side, n = 30) {
       await shoot(page);
       for (const side of ['L', 'R']) {
         const tag = name + '«' + p.label + '» ' + (side === 'L' ? '좌' : '우');
+        const touch = side === 'L' ? !!p.touchL : !!p.touchR;
         const w = [];
-        for (const r of ROWS) w.push(wrapAt(await readCorner(page, p, r.rel, side)));
+        for (const r of ROWS) w.push(wrapAt(await readCorner(page, p, r.rel, side), touch));
         for (let i = 0; i < ROWS.length; i++) {
           ok('[2] ' + tag + ' rel ' + ROWS[i].rel + ' — 어두운 띠 ≥ ' + ROWS[i].min + 'px',
             w[i].dark >= ROWS[i].min, 'D ' + w[i].dark + 'px : ' + w[i].txt);
-          /* [2b] 409 — «옆띠 + 어두운 띠» 합. 링이 D 를 밀어내 가져간 몫까지 세므로
-             둘 중 하나가 얇아지면(또는 링이 D 를 통째로 먹으면) 여기서 잡힌다. */
-          const sum = (w[i].band ? w[i].band.n : 0) + w[i].dark;
-          ok('[2b] ' + tag + ' rel ' + ROWS[i].rel + ' — 옆띠+어두운 띠 합 ≥ ' + ROWS[i].sum + 'px',
-            sum >= ROWS[i].sum, '합 ' + sum + 'px : ' + w[i].txt);
+          if (touch) {
+            /* [2b] 449 — 이 면엔 옆띠가 없으므로 «합» 은 물을 것이 없다. 대신 그 면에서만
+               성립하는 것을 문다: **어두운 띠 앞에 베벨 옆띠가 없다**(= 세 띠가 알약 윤곽에서 시작한다).
+               449 를 되돌리면(`::before` 가로 인셋 7) 곧바로 `B` 가 앞에 깔려 빨개진다. */
+            ok('[2b] ' + tag + ' rel ' + ROWS[i].rel + ' — 어두운 띠 **앞**에 베벨 옆띠가 없다 (449)',
+              !w[i].preB, w[i].txt);
+          } else {
+            /* [2b] 409 — «옆띠 + 어두운 띠» 합. 링이 D 를 밀어내 가져간 몫까지 세므로
+               둘 중 하나가 얇아지면(또는 링이 D 를 통째로 먹으면) 여기서 잡힌다. */
+            const sum = (w[i].band ? w[i].band.n : 0) + w[i].dark;
+            ok('[2b] ' + tag + ' rel ' + ROWS[i].rel + ' — 옆띠+어두운 띠 합 ≥ ' + ROWS[i].sum + 'px',
+              sum >= ROWS[i].sum, '합 ' + sum + 'px : ' + w[i].txt);
+          }
         }
         ok('[2] ' + tag + ' — 어두운 띠 **다음**이 베벨 ' + BEVEL + ' 이다 (면이 바로 안 온다)',
           !!w[0].next && (w[0].next.c === 'B' || w[0].next.c === 'D'),
           w[0].next ? w[0].next.c + w[0].next.n : '없음');
         ok('[5] ' + tag + ' — rel ' + ROWS[1].rel + ' 가 rel ' + ROWS[0].rel + ' 보다 두껍다 (호)',
           w[1].dark > w[0].dark, w[0].dark + ' → ' + w[1].dark + 'px');
-        const mid = wrapAt(await readCorner(page, p, 42, side));
+        const mid = wrapAt(await readCorner(page, p, 42, side), touch);
         ok('[3] ' + tag + ' rel 42(한복판) — 어두운 띠 0px · 옆띠 다음은 베벨',
           mid.dark === 0 && !!mid.band, mid.txt);
-        const top = wrapAt(await readCorner(page, p, 17, side));
+        const top = wrapAt(await readCorner(page, p, 17, side), touch);
         ok('[4] ' + tag + ' rel 17(위 코너) — 어두운 띠 0px', top.dark === 0, top.txt);
         samples++;
       }

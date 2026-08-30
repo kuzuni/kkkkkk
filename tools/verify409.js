@@ -492,17 +492,31 @@ const SETTLE = () => {
              둘 다 무너져야 한다. 이 주입이 곧 «384 의 상자를 그대로 쓰면 어떻게 되는가» 다. */
       if (!midCell) {
         endCells++;
-        /* [E] 끝 칸 — 4회차가 **일부러** 옛 상자를 남긴 자리다. 그 사실을 여기서 못박아
-           «새 상자가 어쩌다 안 걸린 것» 과 구별한다(449 가 이 자리를 이어받는다). */
+        /* [E] 끝 칸 — 4회차는 여기에 **옛 상자를 그대로** 남겼고, **449(2026-08-30)** 가 그 절반을 닫았다.
+           ⚑ **이관이다(값만 갈지 않았다).** 4회차의 [E] 는 «옛 상자 그대로인가»(세로 인셋 0 · r30)만
+              물었는데, 그 문장은 449 가 닫히는 순간 **«아직 안 고쳐졌는가» 를 지키는 항**이 된다.
+              449 가 밝힌 것은 «옛 상자» 가 틀린 게 아니라 그 상자의 **가로 인셋 7** 하나가 틀렸다는
+              것이다 — 이 면엔 검정이 없어 세 띠가 시작할 자리가 «검정 안쪽» 이 아니라 알약 윤곽
+              그 자체이고, 가로 인셋을 0 으로 두면 세로 인셋 0 · r30 과 합쳐져 상자가 곧 **동심**이 된다.
+           ⇒ 그래서 세 값을 다 묻되 **가로 인셋은 «닿는 면만 0»** 으로 묻는다. 이 항은 이제
+              «닿는 면이 동심인가» 를 지키고, 그림 자체는 `tools/verify449.js` 가 법선으로 잰다. */
         const bb = await page.evaluate(sel2 => {
           const on = document.querySelector(sel2 + ' > .stab.on');
           if (!on) return null;
           const cs = getComputedStyle(on, '::before');
-          return { t: cs.top, bt: cs.bottom, r: cs.borderRadius };
+          const st = getComputedStyle(on);
+          return { t: cs.top, bt: cs.bottom, r: cs.borderRadius, l: cs.left, rt: cs.right,
+            pl: st.getPropertyValue('--pill-l').trim(), pr: st.getPropertyValue('--pill-r').trim() };
         }, sel);
-        ok('[E] ' + name + ' — 셸에 닿는 칸이라 가로 띠는 **옛 상자**(세로 인셋 0 · r30) 그대로다 (449)',
+        /* 어느 면이 셸에 닿는가는 378 의 손잡이(`--pill-*` 가 7 로 바뀐 쪽)가 말한다 — 자리를
+           셀렉터로 다시 적지 않는다(378 이 그 규약을 이미 갖고 있다). */
+        const tchL = !!bb && /(^|\s)7px/.test(bb.pl), tchR = !!bb && /-7px/.test(bb.pr);
+        ok('[E] ' + name + ' — 끝 칸의 가로 띠 상자: 세로 인셋 0 · r30 (알약과 같은 반경)',
           !!bb && bb.t === '0px' && bb.bt === '0px' && /^30px/.test(bb.r),
           bb ? (bb.t + ' / ' + bb.bt + ' / ' + bb.r) : '없음');
+        ok('[E] ' + name + ' — **닿는 면만** 가로 인셋 0 (449 — 그 면이 동심이 된다) · 반대 면은 7',
+          !!bb && (tchL ? bb.l === '0px' : bb.l === '7px') && (tchR ? bb.rt === '0px' : bb.rt === '7px'),
+          bb ? ('좌 ' + bb.l + (tchL ? '(닿음)' : '') + ' · 우 ' + bb.rt + (tchR ? '(닿음)' : '')) : '없음');
       }
       if (midCell && Object.keys(botBev).length) {
         const darkOn = {};
