@@ -46,10 +46,22 @@ const EXC = {
     '보이는 호스트 = 림이라 규약을 «림 코너» 에 적용했다(제품 좌표도 `--dot-in` 에 묶여 있다)',
 };
 
-const probe = (file) => {
+/* ── 잉크 호스트 ────────────────────────────────────────────────────────────
+   «예외» 가 아니다 — **같은 규약을 상자가 아니라 «그려진 그림» 에 적용한** 자리다.
+   그래서 [A](상자 축)에서는 빠지고 [F](잉크 축)가 대신 ±3px 로 조인다.
+   여기 들어오려면 `probe471 --ink` 가 «상자와 그림이 실제로 어긋난다» 를 찍어야 한다. */
+const INKHOST = {
+  'HUD 사이드 .ibtn .bdg':
+    '`.ibtn{background:none}` — 상자를 아무도 안 칠한다. 보이는 것은 이모지+라벨뿐이고 ' +
+    '6칸 실측 잉크 우변 91~96(평균 93.5) · 상변 −5~−2(평균 −3.2) 라 상자보다 우 6.5 안쪽 · 상 3.2 위에서 끝난다',
+};
+
+const probe = (file, ink) => {
   const env = { ...process.env };
   if (file) env.P471_FILE = file;
-  const out = execFileSync('node', [path.join(__dirname, 'probe471.js'), '--json'],
+  const args = [path.join(__dirname, 'probe471.js'), '--json'];
+  if (ink) args.push('--ink');
+  const out = execFileSync('node', args,
     { env, cwd: ROOT, maxBuffer: 32 * 1024 * 1024, encoding: 'utf8' });
   /* ⚠ `pwlaunch` 가 «번들 브라우저 없음» 안내를 stdout 으로 먼저 찍는다 — 그 줄의 `[i]` 를
      JSON 시작으로 읽으면 즉사한다. 배열 리터럴의 시작(`[` + 줄바꿈)으로 자른다. */
@@ -69,7 +81,7 @@ const probe = (file) => {
     rows.filter(r => r.missing).map(r => r.label).join(' · ') || '없음');
 
   /* ── [A] 전수 — 코너 거리 ── */
-  const off = seen.filter(r => !(r.label in EXC))
+  const off = seen.filter(r => !(r.label in EXC) && !(r.label in INKHOST))
     .filter(r => Math.abs(r.dxR - inset) > 2 || Math.abs(r.dyT - inset) > 2);
   ok(off.length === 0, '[A] 예외 밖 전 자리 — 중심이 호스트 코너에서 안쪽 --dot-in (±2px)',
     off.length ? off.map(r => r.label + ' ' + r.dxR + '/' + r.dyT).join(' · ')
@@ -79,6 +91,9 @@ const probe = (file) => {
     const r = seen.find(x => x.label === k);
     ok(!!r, '[A] 예외 목록의 자리가 실제로 존재한다 — ' + k, r ? r.dxR + '/' + r.dyT : '없음');
   });
+  ok(seen.length - Object.keys(EXC).length - Object.keys(INKHOST).length > 15,
+    '[A] 규약이 실제로 «대부분» 을 덮는다 (예외·잉크호스트를 늘려서 통과하는 길 ②)',
+    (seen.length - Object.keys(EXC).length - Object.keys(INKHOST).length) + '자리가 상자 축 규약 아래 있다');
   /* ⚑ 음성항 — «예외 목록을 늘려서 통과» 하는 길을 막는다 */
   /* 자리 수를 **정확히** 못박는다 — 한 자리를 늘리려면 이 숫자와 위 사유를 같이 고쳐야 하고,
      그러면 «예외를 늘려서 통과» 가 조용히 일어날 수 없다(리뷰에 반드시 걸린다). */
@@ -110,6 +125,55 @@ const probe = (file) => {
   ok(/\.ifbtn\{--dot-bw:var\(--gb-bw\)\}/.test(src),
     '[D] `.ifbtn` 은 자기 테두리(`--gb-bw`)를 읽는다 — 버튼마다 6/7 이 저절로 따라온다');
 
+  /* ── [F] 잉크 축 — «상자 ≠ 그려진 그림» (5회차 신설) ────────────────────────────
+     비평가 BM·BP·BO 3인 독립 일치의 지적을 **자로 받은** 절이다. `probe471 --ink` 는
+     호스트를 `visibility:hidden` 한 클립과의 차분으로 «그 호스트가 실제로 칠한 화소» 를 잡는다. */
+  const ink = probe(null, true).filter(r => !r.missing);
+  const has = ink.filter(r => r.inkR !== undefined);
+  ok(has.length >= 24, '[F] 잉크 축을 실제로 쟀다 (차분이 비면 «어긋남 0» 으로 읽힌다)',
+    has.length + '/' + ink.length + '자리');
+
+  /* ⚑ 기준점이 흔들리면 이 절 전체가 뜻을 잃는다 — 주인이 «맞다» 고 지목한 자리에서
+     상자와 그림이 같다는 것이 이 축의 전제다. */
+  const base = has.find(r => /★기준/.test(r.label));
+  ok(base && Math.abs(base.inkR) <= 3 && Math.abs(base.inkT) <= 9,
+    '[F] 전제 — 기준 [모두 받기] 는 상자 = 그림이다 (두 축의 읽기가 같은 자리)',
+    base ? '상자↔잉크 ' + base.inkR + '/' + base.inkT : '못 찾음');
+
+  Object.keys(INKHOST).forEach(k => {
+    const r = has.find(x => x.label === k);
+    ok(r && Math.abs(r.dxRi - inset) <= 3 && Math.abs(r.dyTi - inset) <= 3,
+      '[F] 잉크 호스트 — 중심이 **그림** 코너에서 안쪽 --dot-in (±3px) — ' + k,
+      r ? '잉크 기준 ' + r.dxRi + '/' + r.dyTi + ' · 상자 기준 ' + r.dxR + '/' + r.dyT : '없음');
+    ok(r && (Math.abs(r.inkR) > 3 || Math.abs(r.inkT) > 3),
+      '[F] 음성 — 잉크 호스트는 «상자와 그림이 실제로 어긋난» 자리여야 한다 (목록을 늘려 통과하는 길)',
+      r ? '어긋남 ' + r.inkR + '/' + r.inkT : '없음');
+  });
+
+  /* ⚑ 3인 비평의 나머지 절반을 **기각한 것**을 못박는다 — 이 셋이 흔들리면 판단을 다시 해야 한다.
+     («탭바·상점 서브탭도 상자가 그림보다 넓다» 는 2회차 시트의 배율 결함이 만든 값이었다.) */
+  [['HUD 탭바 .tab .bdg', 3], ['35 패스 탭 #psBar .pt>.bdg', 3]]
+    .forEach(([k, tol]) => {
+      const r = has.find(x => x.label === k);
+      ok(r && Math.abs(r.inkR) <= tol && Math.abs(r.inkT) <= tol,
+        '[F] 기각 유지 — 상자 = 그림이라 잉크 호스트가 아니다 — ' + k,
+        r ? '어긋남 ' + r.inkR + '/' + r.inkT + ' (허용 ' + tol + ')' : '없음');
+    });
+
+  /* ⚑ 서브탭 칸은 **셋째 갈래**다 — 상자도 아니고 «칸이 칠한 것» 도 기준이 아니다.
+     칸(`.stab`)은 자기 배경을 안 칠하고(활성일 때만 알약) 모양의 주인은 셸 `.stabs` 이므로,
+     칸의 잉크(= 라벨)에 닷을 맞추면 «글자에 붙은 점» 이 된다. 그래서 잉크 호스트로 올리지 않는다.
+     ⚠ 이 사실 자체는 자로 못박는다 — 칸의 잉크가 상자보다 **한참** 좁다는 것이 근거이고,
+        누가 칸에 배경을 주면(= 상자가 보이게 되면) 이 항이 빨개져 판단을 다시 하게 만든다.
+     ⚠ `#shopCats` 칸은 활성 알약이 대표로 잡히는 회차가 있어 값이 흔들린다(어긋남 상 1.7~13) —
+        그래서 **흔들리지 않는 03·07 두 자리**로 단언한다(플레이키 항을 만들지 않는다 — 344 규칙). */
+  ['03 서브탭 .stab>.bdg', '07 시트 서브탭 .stab>.bdg'].forEach(k => {
+    const r = has.find(x => x.label === k);
+    ok(r && r.inkR > 30,
+      '[F] 서브탭 칸은 «자기 상자를 안 칠한다» — 모양의 주인은 셸이라 잉크 호스트가 아니다 — ' + k,
+      r ? '칸 잉크가 상자보다 우 ' + r.inkR + 'px 좁다 (' + r.ink.w + '×' + r.ink.h + ')' : '없음');
+  });
+
   /* ── [E] 되돌림 시험 ── */
   fs.writeFileSync(NEG, src.replace(':root{--dot-in:' + inset + 'px}', ':root{--dot-in:34px}'));
   let negOff = -1;
@@ -121,7 +185,7 @@ const probe = (file) => {
   ok(negOff > 10, '[E] 되돌림 — `--dot-in` 을 34 로 어긴 사본에서 [A] 가 실제로 무더기로 빨개진다',
     negOff + '자리 위반(허용 오차 ±2 는 한 칸도 안 넓혔다)');
   const back = probe(null).filter(r => !r.missing)
-    .filter(r => !(r.label in EXC))
+    .filter(r => !(r.label in EXC) && !(r.label in INKHOST))
     .filter(r => Math.abs(r.dxR - inset) > 2 || Math.abs(r.dyT - inset) > 2).length;
   ok(back === 0, '[E] 되돌림을 걷으면 도로 초록 (시험이 상태를 안 남긴다)', back + '자리');
 

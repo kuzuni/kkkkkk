@@ -44,7 +44,14 @@ const STEPS = [
       const h = document.querySelector(s);
       if (!h) return null;
       h.getAnimations({ subtree: true }).forEach(a => { try { a.pause(); a.currentTime = (a.effect.getTiming().duration || 0); } catch (_) {} });
-      const r = h.getBoundingClientRect();
+      let r = h.getBoundingClientRect();
+      /* ⚑ 3회차 — 스크롤 그릇 밖으로 밀려난 자리(35 패스 보상 칸)는 «상자 없음» 으로 조용히 빠져
+         **빈 칸이 채점에 실렸다**(1회차 비평이 빈 칸 셋을 «가장 나쁜 자리» 로 꼽았던 그 사고).
+         자리는 있는데 안 보이는 것뿐이니 **끌어와서 찍는다.** */
+      if (r.width && (r.bottom < 0 || r.top > innerHeight)) {
+        try { h.scrollIntoView({ block: 'center' }); } catch (_) {}
+        r = h.getBoundingClientRect();
+      }
       if (!r.width || r.bottom < 0 || r.top > innerHeight) return null;
       return { x: r.left, y: r.top, w: r.width, h: r.height };
     }, hostSel);
