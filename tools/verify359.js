@@ -14,18 +14,29 @@
  *   §1 소스   ⓐ `BOSS_CHASE` 는 1 아래(살짝 느림) · ⓑ 추격 바닥은 여전히 «플레이어 이속 × 비» 형태 ·
  *             ⓒ `DASH` 가 보스·몹 두 벌이고 값이 규격 안 · ⓓ **새 피해 경로가 없다**
  *             (대시 블록 어디에서도 `player.hp` 를 깎지 않는다 = 대시는 «접촉까지의 시간» 만 바꾼다).
- *   §2 평시   보스 평시 걸음(대시·예고·공격 모션이 안 걸친 프레임)이 플레이어보다 **느리다**.
- *             ⚠ 아래로도 벽을 둔다 — 0.86배 밑이면 «바닥이 아예 안 걸린» 것(ETYPE.sp 0.48배)이다.
- *   §3 대시   ⓐ 30초에 보스 대시 ≥ 3회 · ⓑ 돌진 순간 속도가 플레이어보다 **빠르다**(≥ ×2.5) ·
+ *   §2 평시   보스 평시 걸음(대시·예고·공격 모션이 안 걸친 프레임)의 **최고값**이 플레이어보다
+ *             **빠르다** — ⚑ 501 이 뒤집은 축이다(아래 «501 이관» 절).
+ *   §3 대시   ⓐ **대시 창이 열리면 대시가 나간다**(창 5번 중 ≥ 5회 — 501 이관) · ⓑ 돌진 순간 속도가 플레이어보다 **빠르다**(≥ ×2.5) ·
  *             ⓒ 예고 동안 «제자리»(프레임당 이동 0.05px 미만) · ⓓ 잠금 방향이 그 순간의 플레이어를
  *             겨눈다(코사인 ≥ 0.999) · ⓔ 돌진은 «접근» 이다(한 번마다 거리가 줄었다) ·
  *             ⓕ 대시 사이 간격이 쿨다운 하한 이상(폭주하지 않는다).
  *   §4 일반적 몹 필드 30마리에서도 대시가 일어나고(≥ 10회), 몹 대시도 «접근» 이다.
  *   §5 예산   적 30마리 · 30초에서 한 틱 처리 시간이 114 예산 안(≤ 30ms — 60fps 프레임 2배).
  *   §R 되돌림 `DASH` 창을 닫은(min 을 사거리 밖으로 민) **소스 사본**에서 대시가 0회가 되고
- *             첫 접촉이 느려지거나 아예 안 붙는다 — 이게 없으면 «대시가 없어도 초록» 과 구별할 수 없다
+ *             **창 시나리오의 접근이 느려진다** — 이게 없으면 «대시가 없어도 초록» 과 구별할 수 없다
  *             (LESSONS 232-① · 334 선례).
  *   §6 에러   pageerror 0건.
+ *
+ * ⚑ **501 이관(2026-08-31, 주인 보고 «보스가 너무 느려서 플레이어를 공격 못함»)** —
+ *   359 의 «살짝 느리게» 결정을 주인이 뒤집었다(`BOSS_CHASE` 0.94 → 1.10). 두 항을 갈아 끼웠다:
+ *     · §1-ⓐ «< 1» → **«≥ 1.05 이고 ≤ 1.15»**(66 이 실측한 «붙는 최소» 1.08 위 · «스쳐 지나감» 1.15 아래).
+ *     · §2 «평시 걸음 < 플레이어» → **«최고 평시 걸음 ≥ 플레이어 × 1.05»**.
+ *       ⚠ 이 항을 그냥 두면 **헛초록**이 된다 — 평시 «평균» 은 둔화·모서리 프레임 때문에
+ *         수리 뒤에도 110px/s(<115)로 읽혀 게이트가 초록인 채 뜻만 잃는다(334 선례).
+ *     · §3-ⓐ «30초에 ≥ 3회» → **창 시나리오**. 보스가 플레이어보다 빨라지자 melee 에 붙어
+ *       `DASH.min`(60) 안에 머물러 창이 거의 안 열린다(실측 30초 9~10회 → **1회**).
+ *       빈도는 구조적으로 못 지키므로 **«창이 열리면 나가는가»** 로 자를 바꿨다 —
+ *       대시가 죽으면 여전히 빨개진다(§R 이 못박는다). 359 의 뜻(«예고 → 돌진» 이 산다)은 그대로다.
  *
  * 59 교훈 1 — 실시간을 기다리지 않는다(가상 시계 rAF · 고정 dt 1/60s).
  * LESSONS 319 — evaluate 예외는 즉사시키지 말고 그 블록만 빨갛게.
@@ -53,7 +64,7 @@ const RUN_BOSS = async ({ frames }) => {
   const B = () => enemies.find(e => e.tk === 'boss');
   const reach = ETYPE.boss.r + player.r + 6;
   let tClose = -1, atk = 0, dashN = 0, wasDash = false, wasD = false;
-  let walk = 0, walkN = 0, dashPeak = 0, telMax = 0, telN = 0;
+  let walk = 0, walkN = 0, walkMax = 0, dashPeak = 0, telMax = 0, telN = 0;
   const lockCos = [], gain = [], gapSec = [];
   let lock = null, lastStart = null;
   for (let f = 0; f < frames; f++) {
@@ -72,7 +83,7 @@ const RUN_BOSS = async ({ frames }) => {
     if (inD && !wasDash) { dashN++; if (lastStart !== null) gapSec.push(+((f - lastStart) / 60).toFixed(2)); lastStart = f; }
     if (mv !== null && b.dashT > 0) { telMax = Math.max(telMax, mv); telN++; }
     if (mv !== null && b.dashD > 0) dashPeak = Math.max(dashPeak, mv * 60);
-    if (mv !== null && !inD && b.atkT <= 0) { walk += mv * 60; walkN++; }
+    if (mv !== null && !inD && b.atkT <= 0) { walk += mv * 60; walkN++; walkMax = Math.max(walkMax, mv * 60); }
     if (wasTel && b.dashD > 0 && !wasD) {          /* 예고 → 돌진으로 넘어간 «그» 프레임 */
       const tl = Math.hypot(player.x - x0, player.y - y0) || 1;
       lockCos.push(+(((player.x - x0) * b.dvx + (player.y - y0) * b.dvy) / tl).toFixed(4));
@@ -84,7 +95,8 @@ const RUN_BOSS = async ({ frames }) => {
     if (f % 900 === 0) await new Promise(r => setTimeout(r, 0));
   }
   return { reach, tClose, atk, dashN, telN, telMax: +(telMax || 0).toFixed(3),
-           walk: walkN ? +(walk / walkN).toFixed(1) : 0, walkN, dashPeak: +dashPeak.toFixed(1),
+           walk: walkN ? +(walk / walkN).toFixed(1) : 0, walkN, walkMax: +walkMax.toFixed(1),
+           dashPeak: +dashPeak.toFixed(1),
            pSpeed: +stat.speed.toFixed(1), lockCos, gain, gapSec };
 };
 
@@ -122,6 +134,60 @@ const RUN_MOB = async ({ frames }) => {
            msPerTick: +((performance.now() - t0) / frames).toFixed(3), pSpeed: +stat.speed.toFixed(1) };
 };
 
+/* 501 이관 — «대시 창» 시나리오. 보스가 플레이어보다 빨라지면 melee 에 붙어 `DASH.min` 안에
+   머물러 창이 거의 안 열린다. 그래서 **창을 직접 열어** 두고 «그때 대시가 나가는가» 를 묻는다.
+   창마다 보스를 300px(= min 60 < 300 < max 470) 밖으로 옮기고 WIN 프레임 동안 굴린다.
+   ⚠ `dashCd` 는 **건드리지 않는다** — 손대면 §3-ⓕ(쿨다운이 실제로 걸린다)가 뜻을 잃는다.
+   창 간격(2.5초)은 cd1 + tel + dur 보다 넉넉해 자연스럽게 한 번씩 준비된다. */
+const RUN_DASHWIN = async ({ wins, win, dist }) => {
+  S.stage = 30; S.best = 30; S.bossFarm = false;
+  spawnStage(); startBoss();
+  const B = () => enemies.find(e => e.tk === 'boss');
+  /* ⚠ 보스는 «스폰 딜레이 1.4초» 뒤에 태어난다(19611 주석) — 그 전에 창을 열려 하면 대상이 없어
+     첫 창에서 그대로 빠져나온다(1회차에 «대시 0회 / tHit 0s» 로 읽힌 자리다). 태어날 때까지 굴린다. */
+  for (let g = 0; g < 900 && !B(); g++) window.__v359tick();
+  for (let g = 0; g < 900 && (typeof bossIntro !== 'undefined' && bossIntro); g++) window.__v359tick();
+  const reach = ETYPE.boss.r + player.r + 6;
+  let dashN = 0, wasDash = false, wasD = false, dashPeak = 0, telN = 0, telMax = 0;
+  const lockCos = [], gain = [], gapSec = [], tHit = [];
+  let lock = null, lastStart = null, fAbs = 0;
+  for (let w = 0; w < wins; w++) {
+    const b0 = B(); if (!b0) break;
+    const a = Math.random() * 6.283;
+    b0.x = Math.max(60, Math.min(WORLD.w - 60, player.x + Math.cos(a) * dist));
+    b0.y = Math.max(60, Math.min(WORLD.h - 60, player.y + Math.sin(a) * dist));
+    let hit = -1;
+    for (let f = 0; f < win; f++, fAbs++) {
+      const p0 = B();
+      if (p0) p0.hp = p0.max;
+      bossT = 9999; player.inv = 9; player.hp = stat.maxHp; player.dead = 0;
+      const x0 = p0 ? p0.x : 0, y0 = p0 ? p0.y : 0;
+      const d0 = p0 ? Math.hypot(player.x - p0.x, player.y - p0.y) : 0;
+      const wasTel = p0 ? p0.dashT > 0 : false;
+      window.__v359tick();
+      const b = B(); if (!b) { wasDash = false; wasD = false; continue; }
+      const mv = (p0 && b === p0) ? Math.hypot(b.x - x0, b.y - y0) : null;
+      const inD = b.dashT > 0 || b.dashD > 0;
+      if (inD && !wasDash) { dashN++; if (lastStart !== null) gapSec.push(+((fAbs - lastStart) / 60).toFixed(2)); lastStart = fAbs; }
+      if (mv !== null && b.dashT > 0) { telMax = Math.max(telMax, mv); telN++; }
+      if (mv !== null && b.dashD > 0) dashPeak = Math.max(dashPeak, mv * 60);
+      if (wasTel && b.dashD > 0 && !wasD) {
+        const tl = Math.hypot(player.x - x0, player.y - y0) || 1;
+        lockCos.push(+(((player.x - x0) * b.dvx + (player.y - y0) * b.dvy) / tl).toFixed(4));
+        lock = { d0 };
+      }
+      if (wasD && b.dashD <= 0 && lock) { gain.push(+(lock.d0 - Math.hypot(player.x - b.x, player.y - b.y)).toFixed(1)); lock = null; }
+      wasD = b.dashD > 0; wasDash = inD;
+      if (hit < 0 && Math.hypot(player.x - b.x, player.y - b.y) <= reach) hit = f / 60;
+    }
+    tHit.push(hit < 0 ? win / 60 : +hit.toFixed(2));   /* 못 닿았으면 «창 전체» 로 센다 */
+    await new Promise(r => setTimeout(r, 0));
+  }
+  return { dashN, wins, dashPeak: +dashPeak.toFixed(1), telN, telMax: +(telMax || 0).toFixed(3),
+           lockCos, gain, gapSec, tHit, tHitAvg: +(tHit.reduce((x, y) => x + y, 0) / (tHit.length || 1)).toFixed(2),
+           pSpeed: +stat.speed.toFixed(1) };
+};
+
 async function openPage(browser, file) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -144,8 +210,9 @@ async function openPage(browser, file) {
   /* ── §1 소스 ──────────────────────────────────────────────────────── */
   console.log('=== §1 소스 ===');
   const chase = Number((CODE.match(/const BOSS_CHASE\s*=\s*([0-9.]+)/) || [])[1]);
-  ok(chase > 0 && chase < 1, '1-ⓐ `BOSS_CHASE` < 1 — 보스 평시 걸음은 플레이어보다 느리다', 'BOSS_CHASE = ' + chase);
-  ok(chase >= 0.85, '1-ⓐ 그리고 «살짝» 느리다(≥ 0.85) — 못 붙을 만큼 느리게 두지 않았다', String(chase));
+  /* ⚑ 501 이관 — 주인이 «살짝 느리게» 를 뒤집었다. 아래 두 항은 그 뒤집은 축을 잰다. */
+  ok(chase >= 1.05, '1-ⓐ `BOSS_CHASE` ≥ 1.05 — 501 이 뒤집었다(평시 걸음만으로도 붙는다)', 'BOSS_CHASE = ' + chase);
+  ok(chase <= 1.15, '1-ⓐ 그리고 «스쳐 지나감» 위(≤ 1.15) — 66 이 1.15 에서 멀어짐 9.6% 를 실측했다', String(chase));
   ok(/Math\.max\(e\.sp,\s*stat\.speed\*BOSS_CHASE\)/.test(CODE),
     '1-ⓑ 추격 바닥은 여전히 «플레이어 이속 상수 × 비» 형태다(358 §5 와 같은 자리)');
   const dashSrc = (CODE.match(/const DASH\s*=\s*\{[\s\S]*?\n\};/) || [''])[0];
@@ -165,7 +232,7 @@ async function openPage(browser, file) {
     '1-ⓓ 그 블록에 피해 문장이 없다 — 대시는 «접촉까지의 시간» 만 바꾼다(밸런스 계수 0줄)');
 
   const browser = await launch(chromium);
-  let B = null, M = null, errs = [];
+  let B = null, M = null, W = null, errs = [];
   try {
     await blk('§2·§3 보스', async () => {
       const h = await openPage(browser, SRC);
@@ -175,29 +242,44 @@ async function openPage(browser, file) {
     });
 
     /* ── §2 평시 걸음 ───────────────────────────────────────────────── */
-    console.log('\n=== §2 평시 걸음 — 플레이어보다 살짝 느리다 ===');
+    console.log('\n=== §2 평시 걸음 — ⚑ 501: 플레이어보다 빠르다 ===');
     if (B) {
       ok(B.walkN >= 200, '2 평시 표본이 충분하다', `${B.walkN} 프레임`);
-      ok(B.walk < B.pSpeed, '2 보스 평시 걸음 < 플레이어 이동 속도', `${B.walk} < ${B.pSpeed} px/s`);
-      ok(B.walk >= B.pSpeed * 0.86, '2 그래도 «바닥» 은 걸려 있다(≥ ×0.86 — ETYPE.sp 0.48배가 아니다)',
-        `×${(B.walk / B.pSpeed).toFixed(2)}`);
+      /* ⚠ **평균이 아니라 최고값**으로 잰다 — 둔화(스킬 ×0.55)·월드 모서리 프레임이 평균을
+         115 아래로 끌어내려(실측 110px/s) «< 플레이어» 가 수리 뒤에도 초록이었다(334 계열 헛초록). */
+      ok(B.walkMax >= B.pSpeed * 1.05, '2 보스 평시 걸음 **최고값** ≥ 플레이어 × 1.05 — 걸음만으로 붙는다',
+        `${B.walkMax} ≥ ${(B.pSpeed * 1.05).toFixed(1)} px/s (평균 ${B.walk})`);
+      ok(Math.abs(B.walkMax - B.pSpeed * chase) <= B.pSpeed * chase * 0.03,
+        '2 그리고 그 최고값이 바로 «플레이어 이속 × BOSS_CHASE» 다(바닥이 실제로 걸린다)',
+        `${B.walkMax} ↔ ${(B.pSpeed * chase).toFixed(1)} px/s`);
     }
 
     /* ── §3 대시 ────────────────────────────────────────────────────── */
+    /* 501 이관 — 대시의 빈도는 «창이 열리는가» 에 달렸고, 창은 501 이후 melee 에서 거의 안 열린다.
+       그래서 창을 직접 열어 두고 «그때 나가는가» 를 묻는다(위 머리말 §3-ⓐ 참조). */
+    await blk('§3 대시 창', async () => {
+      const h = await openPage(browser, SRC);
+      W = await h.page.evaluate(RUN_DASHWIN, { wins: 5, win: 150, dist: 300 });
+      errs = errs.concat(h.errs);
+      await h.ctx.close();
+    });
     console.log('\n=== §3 대시 공격(보스) ===');
+    if (W) {
+      ok(W.dashN >= W.wins, `3-ⓐ 대시 창(300px)을 ${W.wins}번 열면 대시가 ${W.wins}회 이상 나간다`,
+        `${W.dashN}회 / 창 ${W.wins}번`);
+      ok(W.dashPeak > W.pSpeed * 2.5, '3-ⓑ 돌진 순간 속도 > 플레이어 × 2.5', `${W.dashPeak} px/s (플레이어 ${W.pSpeed})`);
+      ok(W.telN > 0 && W.telMax < 0.05, '3-ⓒ 예고 동안은 «제자리» 다', `예고 ${W.telN}프레임 · 최대 이동 ${W.telMax}px/프레임`);
+      ok(W.lockCos.length > 0 && Math.min.apply(null, W.lockCos) >= 0.999,
+        '3-ⓓ 잠금 방향이 그 순간의 플레이어를 겨눈다', `최저 코사인 ${W.lockCos.length ? Math.min.apply(null, W.lockCos) : '표본 없음'}`);
+      ok(W.gain.length > 0 && W.gain.every(g => g > 0), '3-ⓔ 돌진은 «접근» 이다 — 한 번마다 거리가 줄었다',
+        W.gain.join(' · ') + ' px');
+      const cd0 = Number(((dashSrc.match(/boss:\s*\{[^}]*cd0:\s*([0-9.]+)/) || [])[1]));
+      const gapMin = W.gapSec.length ? Math.min.apply(null, W.gapSec) : 99;
+      ok(gapMin >= cd0, `3-ⓕ 대시가 폭주하지 않는다(간격 ≥ cd0 ${cd0}초 — 쿨다운이 실제로 걸린다)`,
+        `최소 간격 ${gapMin}s · 간격 ${W.gapSec.join('/')}`);
+    }
     if (B) {
-      ok(B.dashN >= 3, `3-ⓐ ${SEC}초에 보스 대시 ≥ 3회`, B.dashN + '회');
-      ok(B.dashPeak > B.pSpeed * 2.5, '3-ⓑ 돌진 순간 속도 > 플레이어 × 2.5', `${B.dashPeak} px/s (플레이어 ${B.pSpeed})`);
-      ok(B.telN > 0 && B.telMax < 0.05, '3-ⓒ 예고 동안은 «제자리» 다', `예고 ${B.telN}프레임 · 최대 이동 ${B.telMax}px/프레임`);
-      ok(B.lockCos.length > 0 && Math.min.apply(null, B.lockCos) >= 0.999,
-        '3-ⓓ 잠금 방향이 그 순간의 플레이어를 겨눈다', `최저 코사인 ${B.lockCos.length ? Math.min.apply(null, B.lockCos) : '표본 없음'}`);
-      ok(B.gain.length > 0 && B.gain.every(g => g > 0), '3-ⓔ 돌진은 «접근» 이다 — 한 번마다 거리가 줄었다',
-        B.gain.join(' · ') + ' px');
-      const gapMin = B.gapSec.length ? Math.min.apply(null, B.gapSec) : 99;
-      ok(gapMin >= 1.2, '3-ⓕ 대시가 폭주하지 않는다(간격 ≥ 1.2초 — 쿨다운이 실제로 걸린다)',
-        `최소 간격 ${gapMin}s · 간격 ${B.gapSec.join('/')}`);
-      ok(B.tClose >= 0, '3 그리고 «붙는다» — 평시 걸음이 느려도 대시가 사거리 안으로 데려온다',
-        B.tClose < 0 ? '한 번도 못 붙음' : B.tClose.toFixed(1) + 's');
+      ok(B.tClose >= 0, '3 그리고 «붙는다»', B.tClose < 0 ? '한 번도 못 붙음' : B.tClose.toFixed(1) + 's');
       ok(B.atk >= 3, '3 붙어서 실제로 때린다', B.atk + '회');
     }
 
@@ -227,13 +309,15 @@ async function openPage(browser, file) {
       fs.writeFileSync(p, off);
       try {
         const h = await openPage(browser, p);
-        const r = await h.page.evaluate(RUN_BOSS, { frames: Math.round(SEC * 60) });
+        /* 501 이관 — 되돌림도 **창 시나리오**로 잰다. 501 이후 melee 의 첫 접촉은 «걸음» 이 만들어
+           대시를 꺼도 거의 안 달라지기 때문이다(그대로 두면 §R 이 «대시가 없어도 초록» 이 된다). */
+        const r = await h.page.evaluate(RUN_DASHWIN, { wins: 5, win: 150, dist: 300 });
         await h.ctx.close();
         ok(r.dashN === 0, 'R1 그 사본에서는 대시가 0회다(§3-ⓐ 가 빨개진다)', r.dashN + '회');
-        ok(r.tClose < 0 || r.tClose > B.tClose,
-          'R2 그리고 붙는 것이 느려지거나 아예 못 붙는다 — «대시가 붙여 준다» 의 증거',
-          `대시 없음 ${r.tClose < 0 ? '못 붙음' : r.tClose.toFixed(1) + 's'} ↔ 대시 있음 ${B.tClose.toFixed(1)}s`);
-        ok(r.atk < B.atk, 'R3 공격 횟수도 줄어든다', `${r.atk}회 ↔ ${B.atk}회`);
+        ok(W && r.tHitAvg > W.tHitAvg,
+          'R2 그리고 300px 밖에서 사거리 안으로 드는 데 더 걸린다 — «대시가 붙여 준다» 의 증거',
+          `대시 없음 ${r.tHitAvg}s ↔ 대시 있음 ${W ? W.tHitAvg : '?'}s`);
+        ok(r.gain.length === 0, 'R3 «접근한 돌진» 표본도 0건이다', r.gain.length + '건');
       } finally { try { fs.unlinkSync(p); } catch (e) {} }
     });
   } finally {
