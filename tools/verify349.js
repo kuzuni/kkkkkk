@@ -39,6 +39,10 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
    349 가 지킨 성질(«꾹 = 연속»)은 그대로 살아 있어야 하므로 자를 **유일한 버튼**으로 옮겼다. */
 const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
 
+/* 524 — reset 이 부르는 «치우기» 훅 이름. 여기 있던 `closeDefeat` 는 제품에 없는 이름이었고
+   `typeof` 가드가 그것을 조용히 삼켰다. [G] 가 이 목록의 실재를 매 실행 묻는다. */
+const RESET_CLOSERS = ['closeDunClear', 'closeModal', 'closeDungeon', 'closeSummonResult'];
+
 (async () => {
   const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, hasTouch: true, deviceScaleFactor: 1 });
@@ -63,13 +67,32 @@ const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
     addEventListener('pointercancel', () => window.__cx++, true);
     /* 죽어서 18 패배 화면이 버튼을 덮는 것만 막는다(74 규약) — 루프 자체는 **돌린다** */
     setInterval(() => { try { if (typeof maxHp === 'function' && S.hp != null) S.hp = maxHp(); } catch (_) {} }, 200);
+    /* ⚑ 524 — 위 hp 되채움만으로는 못 막는다. 200ms 폴링과 «죽는 순간» 은 경주고, 한 번 지면
+       `#defw.on`(z39 · inset:0)이 버튼을 통째로 덮은 채 **굳는다** — 뒤 표본이 전부 «0회» 로
+       읽혀 [R1b] 와 [G] 양성항이 같이 빨개진 것이 등재문의 «22~24/24» 다(`probe524` §3).
+       `openDefeat` 는 제품 주석대로 **표시 전용**(«자동 부활은 그대로 진행», 24084)이므로
+       제품 경로는 그대로 부르고 껍데기만 즉시 걷는다. 몇 번 걷었는지 세어 둔다 —
+       늘 0 인 팔은 아무것도 증명하지 않는다(LESSONS 353-④). */
+    window.__def = 0;
+    const _od = window.openDefeat;
+    window.openDefeat = function () {
+      window.__def++;
+      try { _od.apply(this, arguments); } catch (_) {}
+      const d = document.getElementById('defw');
+      if (d) d.classList.remove('on');
+    };
   });
 
   const reset = async (o) => {
-    o = o || {};
+    o = Object.assign({}, o || {}, { closers: RESET_CLOSERS });
     await p.evaluate(op => {
-      ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
+      /* ⚑ 524 — 이 목록에 있던 `closeDefeat` 는 **제품에 없는 이름**이었다(index.html 0건).
+         `typeof … === 'function'` 가드가 그 사실을 조용히 삼켜, 18 패배 화면을 치우는 팔이
+         한 번도 돈 적이 없다. 이름이 실재하는지는 [G] 가 매 실행 묻는다(유령 재유입 차단). */
+      op.closers
         .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+      /* 위 훅이 놓친 패배 껍데기는 여기서 직접 건다 — 함수 이름이 없는 화면이다 */
+      { const d = document.getElementById('defw'); if (d) d.classList.remove('on'); }
       S.rune = { r1: 0, r2: 0, r3: 0 };
       S.rstone = op.stone == null ? 1e9 : op.stone;
       S.dia = op.dia == null ? 1e9 : op.dia;
@@ -85,14 +108,20 @@ const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
   };
   /* 양성항(LESSONS 263-①) — 누른 좌표의 최상단 노드가 정말 그 버튼인가.
      아니면 «0회» 라는 조용한 오답이 되고 원인을 못 찾는다. */
-  let aimBad = 0;
+  let aimBad = 0; const aimTop = [];
   const aim = async sel => {
     const c = await center(sel);
-    const hit = await p.evaluate(o => {
+    /* 524 — «맞았나» 만 세면 빨개졌을 때 **무엇이 덮었는지** 를 모른다. 등재문이 «양성항이 같이
+       흔들린다» 까지 적어 두고도 원인을 못 짚은 이유가 그것이다 — 유령의 이름을 같이 남긴다. */
+    const top = await p.evaluate(o => {
       const el = document.elementFromPoint(o.x, o.y);
-      return !!(el && el.closest && el.closest(o.sel));
+      if (el && el.closest && el.closest(o.sel)) return 'HIT';
+      if (!el) return '(null)';
+      const cn = el.className && el.className.baseVal != null ? el.className.baseVal : el.className;
+      const cls = String(cn || '').trim();
+      return el.tagName + (el.id ? '#' + el.id : '') + (cls ? '.' + cls.split(/\s+/).join('.') : '');
     }, { sel, x: c.x, y: c.y });
-    if (!hit) aimBad++;
+    if (top !== 'HIT') { aimBad++; aimTop.push(top); }
     return c;
   };
   const n = () => p.evaluate(() => window.__n);
@@ -279,7 +308,17 @@ const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
     'R2 — 490 이후 제품 줄에 `data-pay`·`RUNE_*_DIA` 가 0건이다(결제 갈래가 하나로 굳었다)');
 
   console.log('[G] 회귀');
-  ok(aimBad === 0, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(양성항 — 팝업이 덮지 않았다)', aimBad + '건 실패');
+  ok(aimBad === 0, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(양성항 — 팝업이 덮지 않았다)',
+    aimBad + '건 실패' + (aimTop.length ? ' · 덮은 노드 ' + [...new Set(aimTop)].join(' , ') : ''));
+  /* ⚑ 524 — 유령 이름 재유입 차단. 이 항이 없으면 «치우기» 팔은 오타 하나로 다시 통째로 죽고,
+     그 죽음은 [R1b]·양성항의 «가끔 빨강» 으로만 새어 나온다(등재문이 본 22~24/24). */
+  const closerMiss = await p.evaluate(fs2 => fs2.filter(f => typeof window[f] !== 'function'), RESET_CLOSERS);
+  ok(closerMiss.length === 0,
+    '★ 524 — reset 이 부르는 «치우기» 훅 이름이 전부 제품에 실재한다(typeof 가드가 유령을 삼키지 않는다)',
+    closerMiss.length ? '없는 이름 ' + closerMiss.join(' , ') : RESET_CLOSERS.length + '개 전부 실재');
+  ok(!(await p.evaluate(() => { const d = document.getElementById('defw'); return !!d && d.classList.contains('on'); })),
+    '★ 524 — 측정이 끝난 시점에 18 패배 화면이 켜져 있지 않다(켜지면 뒤 표본이 전부 «0회» 가 된다)',
+    '막은 횟수 ' + (await p.evaluate(() => window.__def)) + '회');
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
   console.log('\nVERIFY349 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
