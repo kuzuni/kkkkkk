@@ -32,7 +32,12 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', '384.png');
 
-const PILL_H = 85;
+/* 437 (2026-08-30) 이관 — 알약 상자 85 → **84**(셸 98/테두리 7/칸 84 한 덩어리 · probe437).
+   ⚠ **아래 ROWS 를 리터럴로 두면 안 된다** — 감김은 **아래 코너**(중심 y = PILL_H − 30)의 호에서
+   나오므로 rel 을 위에서 세면 상자가 1 줄어들 때 표본이 호 위에서 한 칸 위로 미끄러진다
+   (실제로 [5] «rel 74 가 rel 68 보다 두껍다» 가 9 → 8 로 뒤집혀 빨개졌다). 아래 코너 기준
+   («하변에서 17 · 11 위») 으로 다시 적는다 — 85 시절 값 68·74 와 같은 자리다. */
+const PILL_H = 84;
 const BLACK = '#000000';
 const BEVEL = '#634F37';    /* 알약 베벨 (352 6회차) */
 const FACE = '#4B3E2D';     /* 채움면 */
@@ -53,8 +58,8 @@ const INK = '#F2BC8D';      /* 활성 라벨 색 */
    §R 되돌림(띠를 끄면 0). 그리고 **[2b] 가 새로 «검정+D 합»** 을 물어 링이 D 를 통째로
    먹어 버리는 길을 막는다(합이 줄면 빨개진다). */
 const ROWS = [
-  { rel: 68, min: 2, sum: 8 },
-  { rel: 74, min: 4, sum: 12 },
+  { rel: PILL_H - 17, min: 2, sum: 8 },
+  { rel: PILL_H - 11, min: 4, sum: 12 },
 ];
 
 /* ⚑ 438 이관 (2026-08-30) — **가로 행은 45° 언저리에서 멈춘다.**
@@ -339,7 +344,7 @@ async function readCorner(page, p, rel, side, n = 30) {
         ok('[2] ' + tag + ' — 어두운 띠 **다음**이 베벨 ' + BEVEL + ' 이다 (면이 바로 안 온다)',
           !!w[0].next && (w[0].next.c === 'B' || w[0].next.c === 'D'),
           w[0].next ? w[0].next.c + w[0].next.n : '없음');
-        ok('[5] ' + tag + ' — rel 74 가 rel 68 보다 두껍다 (호)',
+        ok('[5] ' + tag + ' — rel ' + ROWS[1].rel + ' 가 rel ' + ROWS[0].rel + ' 보다 두껍다 (호)',
           w[1].dark > w[0].dark, w[0].dark + ' → ' + w[1].dark + 'px');
         const mid = wrapAt(await readCorner(page, p, 42, side));
         ok('[3] ' + tag + ' rel 42(한복판) — 어두운 띠 0px · 옆띠 다음은 베벨',

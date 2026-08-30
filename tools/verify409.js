@@ -31,7 +31,10 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', '409.png');
 
-const PILL_H = 85, R = 30;
+/* 437 (2026-08-30) 이관 — 알약 상자 85 → **84**(셸 98 / 테두리 7 / 칸 84 한 덩어리).
+   409 의 각도 표본은 **코너 원 중심**(반경 30) 기준이라 상자 높이 1 이 줄어도 광선은 같은
+   호를 탄다 — 그래서 이 파일에서 바뀌는 것은 이 상수 하나다(`probe437.py` ⓕ). */
+const PILL_H = 84, R = 30;
 const BLACK = '#000000';
 const BEVEL = '#634F37';    /* 알약 베벨 (352 6회차) */
 const FACE = '#4B3E2D';     /* 채움면 */

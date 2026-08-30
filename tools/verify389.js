@@ -234,14 +234,20 @@ function grade(g, tag) {
     ok('[R-a] 되돌리면 칸 폭이 서로 다르다 (균등 격자가 아니다 — 바깥 ÷4 = ' + f2(C) + ')',
       !rev.cells.every(c => near(c.w, C)),
       rev.cells.map(c => f2(c.w)).join(' / '));
-    ok('[R-b] 되돌리면 c1 이 «칸 == 알약» 이다 (오버행 좌 −6 · 우 −7.5)',
-      near(rev.cells[0].l, rev.bw) && near(rev.cells[0].l + rev.cells[0].w - C, -7.5, 0.8),
+    /* 437 — 기대값 −7.5 는 «주입 리터럴 224 + 테두리 6 − 237.5» 였다. 테두리가 7 이 되자
+       −6.5 가 되어 이 항이 빨개졌다(주입도 제품도 옳은데 **상수만 옛 테두리를 물고 있었다**).
+       리터럴을 다시 적지 않고 **주입값에서 되돌린다** — `bw + 224 − 바깥/4`. */
+    ok('[R-b] 되돌리면 c1 이 «칸 == 알약» 이다 (오버행 좌 −bw · 우 ' + f2(rev.bw + 224 - C) + ')',
+      near(rev.cells[0].l, rev.bw) && near(rev.cells[0].l + rev.cells[0].w - C, rev.bw + 224 - C, 0.8),
       '칸1 ' + f2(rev.cells[0].l) + '..' + f2(rev.cells[0].l + rev.cells[0].w) + ' / 칸 0..' + f2(C));
     ok('[R-c] 되돌리면 c3 중심이 ref(593) 에서 5px 넘게 벌어진다',
       Math.abs(rev.cells[2].l + rev.cells[2].w / 2 - REF_CENTER[2]) > REF_TOL,
       f2(rev.cells[2].l + rev.cells[2].w / 2) + ' vs ref ' + REF_CENTER[2]);
-    ok('[R-d] 되돌리면 끝 칸 오른끝이 바깥 오른끝에 못 미친다 (−' + f2(rev.bw) + ')',
-      near(rev.cells[3].l + rev.cells[3].w, rev.ow - rev.bw) && !near(rev.cells[3].l + rev.cells[3].w, rev.ow),
+    /* 437 — 주입 리터럴 709+229 = **938** 은 «옛 패딩 폭»(950 − 2×6)이다. 테두리가 7 이 되면
+       패딩 폭은 936 이라 938 은 2px 넘치고, 끝 칸 오른끝은 `bw + 938` 이 된다 — 옛 기대식
+       `ow − bw` 는 테두리 6 에서만 우연히 같았다. 주입값으로 되돌려 적는다. */
+    ok('[R-d] 되돌리면 끝 칸 오른끝이 바깥 오른끝에 못 미친다 (−' + f2(rev.ow - (rev.bw + 938)) + ')',
+      near(rev.cells[3].l + rev.cells[3].w, rev.bw + 938) && !near(rev.cells[3].l + rev.cells[3].w, rev.ow),
       f2(rev.cells[3].l + rev.cells[3].w) + ' vs 바깥 ' + f2(rev.ow));
     /* 원복 — 주입한 자를 걷으면 다시 389 값이어야 한다(주입이 영구 오염이 아님을 못박는다) */
     await page.evaluate(() => {

@@ -10690,11 +10690,33 @@
      내 적합(`probe352.py` 계열) ref 41.21(rms 0.51) ↔ 우리 46.59(rms 0.27, 편향 −1.91) ⇒ ref **43.1** ·
      337 의 AR «≈44» · AS «≈44». AV 는 45° 대각 코너컷(+11.5%)과 03(+5.10px)으로 교차검증까지 했다.
      ⇒ **43**(= 완전 캡슐 48.5 가 아니다 — 이 바는 «캡슐» 이 아니라 «많이 둥근 사각형» 이다). */
-  .stabs{height:97px;border-radius:43px;z-index:3;
-    border:6px solid #000;box-sizing:border-box;
-    background:linear-gradient(180deg,#705F4B 0 7px,#61523D 7px 78px,#705F4B 78px 85px,#61523D 85px);
+  /* 437 (2026-08-30) — **셸 세 값을 한 덩어리로 옮겼다: 97/6/85 → 98/7/84.**
+     352 §2 는 «ref 순검정 6, 바깥에 AA 한 줄» 로 이 자리를 한 번 기각했고, 409·384 의 비평가
+     CV·CW·BB 는 «50% 부분화소 교차로 7.91» 이라고 다시 올렸다. `python3 tools/probe437.py` 는
+     그 문턱 싸움을 **자 검산**으로 끝냈다 — 자 넷(순검정·느슨·50%교차·커버리지 적분)을 우리
+     캡처에 대니 **넷 다 오차 0.00**(우리 쪽 진실은 CSS 가 안다: 테두리 6 · 알약 검정 7). 즉
+     문턱은 ref(JPEG) 에서만 갈리므로 ref 는 문턱이 아니라 **색 분류**로 읽었다:
+         ref x330(알약 열)  K2021..2027(**7**) B(7) F(63) B(7) D(7) K2112..2117(6+AA)
+         cap x330           K1961..1966(**6**) B(7) F(64) B(7) D(7) K2052..2057(6)
+     ⇒ **테두리 7 · 칸 84 · 바깥 98**(7+84+7). 세 스크린샷(06·07·23)이 소수 둘째 자리까지 같다.
+     ⚑ **«7.91» 은 «7 + 셸 안쪽 어두운 립 1.4»** 였다 — 활성 알약이 **닿는 면은 7.0 · 안 닿는
+        면은 8.4** 로 갈리고(06 좌 6.98 ↔ 우 8.50 · 23 좌 6.99 ↔ 우 8.51 · 07 은 가운데 칸이라
+        좌·우 둘 다 8.50), 하변만 립이 없다. 그 립은 437 범위 밖이라 **450** 으로 따로 등재했다.
+     ⚑ **등재문의 «알약과 어긋난다» 는 기각** — 같은 자로 ref 는 셸 6.97 ↔ 알약 6.97(비 1.000),
+        우리는 6.00 ↔ 7.00(비 0.857)이다. 어긋난 쪽은 **셸 하나**이고 알약 7 은 이미 Δ0.01 이다
+        (352 4회차 «7 규약»). 알약을 같이 올렸으면 그쪽이 Δ0.9 로 틀어졌다.
+     ⚑ **호스트 앵커가 이 변경을 공짜로 만든다** — 여섯 호스트 중 다섯이 `bottom:42px` 라
+        바 하변은 Δ0 이고 상변만 1961 → **1960**. 테두리가 1 두꺼워지므로 **패딩 상자 상변은
+        1967 그대로**(1961+6 = 1960+7)이고 하변만 2052 → 2051 이다 ⇒ 라벨·배지·구분선·
+        `sk-lock` 은 전부 패딩 상자 top 앵커라 **절대 좌표가 한 픽셀도 안 움직인다**.
+        ref 대조: 바깥 상변 ref 2020.24 ↔ 우리 2020.00(Δ0.24 — 전 0.74) · 하변 2118.27 ↔ 2118.00.
+     ⚠ 배경 그라데이션의 아래 두 정지점은 **칸 상자 기준**이라 84 를 따라 78/85 → **77/84**.
+        알약 띠(`.stab.on::before/::after`)는 자기 상자 기준이라 손댈 것이 없다(0..7 · 77..84 자동). */
+  .stabs{--sb:7px;height:98px;border-radius:43px;z-index:3;
+    border:var(--sb) solid #000;box-sizing:border-box;
+    background:linear-gradient(180deg,#705F4B 0 7px,#61523D 7px 77px,#705F4B 77px 84px,#61523D 84px);
     box-shadow:inset 7px 0 0 #705F4B,inset -7px 0 0 #705F4B}
-  .stabs>*{position:absolute;top:0;height:85px}
+  .stabs>*{position:absolute;top:0;height:84px}
   /* 337 — bottom 41 → 42. 측정표 07 §9 «바 하단 → 시트 바닥 2118 → 2160 = 42» 그대로이고,
      높이 97 과 함께 바 상변이 1960 → **1961** 로 ref(검정 상변 2021 의 −60) 에 앉는다. */
   .sk-tabs{left:58px;bottom:42px;width:950px}
@@ -10724,22 +10746,29 @@
      ⚠ 칸(`.stab`)은 배경이 없다 — 끝 칸이 `left:-6px` 로 테두리 밑에 6px 들어가도 그리는 것이
         라벨·배지뿐이라 셸 검정을 덮지 않는다. 덮을 수 있는 것은 배경을 가진 **알약뿐**이고
         그것은 ⓒ 로 패딩박스 안에 머문다.
-     칸 폭 = 바깥/N = (100% + 12) / N · 칸 k 좌변(패딩 기준) = k×칸폭 − 6. */
+     칸 폭 = 바깥/N = (100% + 2b) / N · 칸 k 좌변(패딩 기준) = k×칸폭 − b (b = 셸 테두리).
+     ⚑ **437 (2026-08-30) — 그 b 를 `--sb` 한 손잡이로 뺐다.** 379 가 적어 둔 «바 폭·테두리가
+        바뀌어도 칸이 저절로 따라간다» 는 **폭에만 참**이었다 — 테두리를 6 → 7 로 올리자 위 상수
+        12·6·4·2 가 전부 −0.67~−1px 씩 틀어져 `verify379` 가 31건 빨개졌다(칸 폭 263.98 ↔
+        바깥/3 264.67 · 끝 칸 우끝 792.98 ↔ 794.00). 상수를 다시 손으로 적는 대신 **b 를 식으로
+        되돌려** 다음 변경이 공짜가 되게 한다. 오버행 11.75/변(ⓑ)은 b 와 무관한 절대값이다. */
   /* 2칸 균등 — 03 던전·10 상점. 칸 경계는 바 바깥 상자 중앙 하나뿐이라 구분선을 두지 않는다 */
-  .stabs.sp2>.stab{width:calc(50% + 6px)}
-  .stabs.sp2>.stab:nth-of-type(1){left:-6px}
+  .stabs.sp2>.stab{width:calc(50% + var(--sb))}
+  .stabs.sp2>.stab:nth-of-type(1){left:calc(-1 * var(--sb))}
   .stabs.sp2>.stab:nth-of-type(2){left:50%}
   .stabs.sp2>.stab.on:nth-of-type(1){left:0;width:calc(50% + 11.75px)}
   .stabs.sp2>.stab.on:nth-of-type(2){left:calc(50% - 11.75px);width:calc(50% + 11.75px)}
   /* 124 — 3칸 균등(10 상점: 소환·재화·이용권 · 03 던전 · 23 훈련). 379 로 «바깥 상자 균등분할» 이
      됐고, 바 폭·테두리가 바뀌어도 칸이 저절로 따라가는 것은 그대로다. 칸 폭 = 990/3 = 330 */
-  .stabs.sp3>.stab{width:calc(33.3333% + 4px)}
-  .stabs.sp3>.stab:nth-of-type(1){left:-6px}
-  .stabs.sp3>.stab:nth-of-type(2){left:calc(33.3333% - 2px)}
-  .stabs.sp3>.stab:nth-of-type(3){left:calc(66.6667% + 2px)}
-  .stabs.sp3>.stab.on:nth-of-type(1){left:0;width:calc(33.3333% + 9.75px)}
-  .stabs.sp3>.stab.on:nth-of-type(2){left:calc(33.3333% - 13.75px);width:calc(33.3333% + 27.5px)}
-  .stabs.sp3>.stab.on:nth-of-type(3){left:calc(66.6667% - 9.75px);width:calc(33.3333% + 9.75px)}
+  .stabs.sp3>.stab{width:calc(33.3333% + var(--sb) * 2 / 3)}
+  .stabs.sp3>.stab:nth-of-type(1){left:calc(-1 * var(--sb))}
+  .stabs.sp3>.stab:nth-of-type(2){left:calc(33.3333% - var(--sb) / 3)}
+  .stabs.sp3>.stab:nth-of-type(3){left:calc(66.6667% + var(--sb) / 3)}
+  .stabs.sp3>.stab.on:nth-of-type(1){left:0;width:calc(33.3333% + 11.75px - var(--sb) / 3)}
+  .stabs.sp3>.stab.on:nth-of-type(2){left:calc(33.3333% - 11.75px - var(--sb) / 3);
+    width:calc(33.3333% + 23.5px + var(--sb) * 2 / 3)}
+  .stabs.sp3>.stab.on:nth-of-type(3){left:calc(66.6667% - 11.75px + var(--sb) / 3);
+    width:calc(33.3333% + 11.75px - var(--sb) / 3)}
   /* 레드닷 — 옛 `.dns-t.r>s`(칸 안 절대좌표 371) 를 칸 우상단 기준으로 옮긴 것 */
   /* 166 (2026-08-27) — 이 배지는 마크업(`<s class="bdg">`)에만 있고 **켜고 끄는 곳이 한 군데도 없어**
      던전 서브탭에서 상시 점등이었다(입장 횟수를 다 써도, 전투력이 모자라도 빨간점). 다른 배지들과 같은
@@ -11004,8 +11033,12 @@
        베벨 **면적이 +12~24%** 로 과해진 것도 같이 짚었다.
        ⇒ 4회차는 고리를 빼고 **뿌리를 고친다**(아래 `::before` 주석). 부모 배경은 384 이전으로 되돌아간
           «세 띠 그라데이션» 하나뿐이고, 손잡이 `--pill-bl`·`--pill-br` 도 같이 사라진다. */
-    background:linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 71px,#634F37 71px 78px,
-      #413122 78px 85px);
+    /* 437 (2026-08-30) — 정지점이 **절대 px** 라 칸 상자 85 → 84 를 안 따라온다. 그대로 두면
+       78..85 가 84 에서 잘려 바닥 띠만 7 → 6 이 됐다(다른 셋은 위 앵커라 멀쩡했다) ⇒ 네 정지점을
+       한 칸씩 당긴다. ref 실측(`probe437.py` ⓑ, 07 알약 열)이 그대로 이 값이다 —
+       B rel 0..7 · F 7..70 · B 70..77 · D 77..84. 352 의 «7 규약» 은 두께째 그대로다. */
+    background:linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 70px,#634F37 70px 77px,
+      #413122 77px 84px);
     /* 384 2회차 (2026-08-29) — **«등폭 링» 은 여기서 안 된다. 시도하고 되돌린 기록을 남긴다.**
        1회차 채점에서 BB·BC 가 2인 독립으로 같은 것을 짚었다(BB ④4 «대각 검정 4.94 ↔ ref 7.08, −30%» ·
        BC ④5 «바닥 코너 y=136 에서 ref 검정 12px ↔ 우리 0.6px»): 옆띠는 **가로 평행이동**이라 코너에서
@@ -11226,15 +11259,16 @@
      ⚠ 칸(`.stab`)은 배경이 없다 — c1 이 `left:-6px` 로 테두리 밑에 들어가도 그리는 것은
         라벨·배지뿐이라 셸 검정을 안 덮는다(379 와 같은 갈래). 덮을 수 있는 알약은 ⓒ 로 패딩 안이다.
      ⚠ `.stab-cN.on` 은 (0,2,0) 이라 위 네 줄(0,1,0)을 이긴다 — 순서를 바꿔도 되지만 지우지는 마라. */
-  .stab-c1,.stab-c2,.stab-c3,.stab-c4{width:calc(25% + 3px)}
-  .stab-c1{left:-6px}
-  .stab-c2{left:calc(25% - 3px)}
+  /* 437 — 위 sp2·sp3 과 같은 식(칸 폭 = 바깥/4 = 25% + b/2 · 칸 k 좌변 = k×칸폭 − b). */
+  .stab-c1,.stab-c2,.stab-c3,.stab-c4{width:calc(25% + var(--sb) / 2)}
+  .stab-c1{left:calc(-1 * var(--sb))}
+  .stab-c2{left:calc(25% - var(--sb) / 2)}
   .stab-c3{left:50%}
-  .stab-c4{left:calc(75% + 3px)}
-  .stab-c1.on{left:0;width:calc(25% + 8.75px)}
-  .stab-c2.on{left:calc(25% - 14.75px);width:calc(25% + 26.5px)}
-  .stab-c3.on{left:calc(50% - 11.75px);width:calc(25% + 26.5px)}
-  .stab-c4.on{left:calc(75% - 8.75px);width:calc(25% + 8.75px)}
+  .stab-c4{left:calc(75% + var(--sb) / 2)}
+  .stab-c1.on{left:0;width:calc(25% + 11.75px - var(--sb) / 2)}
+  .stab-c2.on{left:calc(25% - 11.75px - var(--sb) / 2);width:calc(25% + 23.5px + var(--sb) / 2)}
+  .stab-c3.on{left:calc(50% - 11.75px);width:calc(25% + 23.5px + var(--sb) / 2)}
+  .stab-c4.on{left:calc(75% - 11.75px + var(--sb) / 2);width:calc(25% + 11.75px - var(--sb) / 2)}
   /* 구분선 3 — 활성 알약의 좌우 «검정 7px 테두리» 와 달리, 맨 오른쪽 구분선은
      **바 배경보다 살짝 어두운 함몰선**이고 바 높이를 다 쓰지도 않는다.
      실측(x777 세로 프로파일): y2044~2097 (h54) 에만 존재하고 색은 #483B2B

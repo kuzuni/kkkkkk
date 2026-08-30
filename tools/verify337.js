@@ -30,8 +30,15 @@ const ok = (n, c, d) => {
 const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.0 : t);
 
 /* 337 이 확정한 부품 규격 — 근거는 파일 머리말 ⓐⓑ */
-const BAR_H = 97;          /* ref 검정 테두리 2021~2026 / 2112~2117 → 외곽 2021..2117 (03·07 일치) */
-const BORDER = 6, CELL_H = 85;
+/* 437 (2026-08-30) 이관 — BAR_H 97 → **98** · BORDER 6 → **7** · CELL_H 85 → **84**.
+   337 이 «검정 테두리 행» 으로 97 을 읽고 07 측정표의 99 를 «AA 를 위아래 한 줄씩 먹은 값» 으로
+   기각한 것은 문턱 하나로 두 값을 동시에 판정한 것이었다. `python3 tools/probe437.py` 가 자 넷
+   (순검정·느슨·50%교차·커버리지)을 **우리 캡처로 먼저 검산**했더니 넷 다 오차 0.00 이라
+   문턱 싸움은 ref(JPEG) 쪽 문제였고, ref 를 색 분류로 읽으니 K7·B7·F63·B7·D7·K6(+AA) =
+   테두리 7 · 칸 84 · 바깥 98 이었다(부분화소 바깥 높이 ref 98.02). 99 도 97 도 아니다.
+   ⚠ §2(«알약 하변 = 패딩박스 하변») 는 그대로 살아 있다 — 98 − 2×7 = 84 = 알약. */
+const BAR_H = 98;
+const BORDER = 7, CELL_H = 84;
 const FS = 47;             /* 잉크 높이 38 = ref (활성·비활성 **같은 값**) */
 const SX = 0.97;           /* 잉크 폭 67/71 = ref */
 const TOP = '3px';         /* 잉크 중심 y = ref (활성 2005.5 · 비활성 2010.5, 둘 다 Δ0) */
@@ -126,6 +133,7 @@ const mat = tr => {
     /* ── §2 ③⑤ — 알약 아래로 바 면이 드러나지 않는다 ─────────────────────
        AL·AM 의 «알약 하단에 바 면 2px», AL·AM·AO 의 «셸 외곽 +1~2px» 은 같은 것 하나였다:
        패딩박스(99 − 12 = 87) > 알약(85). 셸을 97 로 내리면 87 → 85 가 되어 둘 다 닫힌다.
+       437 이후에도 같은 항등식이다 — 98 − 2×7 = 84 = 알약.
        ⚠ 이 항이 **이 작업의 본체 중 하나**다 — 절대 높이가 아니라 «차이» 를 재므로 입장 연출 배율과 무관하다. */
     console.log('\n[2] ③⑤ 알약 하변 ↔ 바 패딩박스 하변 = 0 (드러나는 바 면 0px)');
     for (const [name] of HOSTS) {
@@ -206,10 +214,19 @@ const mat = tr => {
       return g;
     };
 
-    const r1 = await revert('.stabs{height:99px!important}');
-    ok('R1 셸을 99 로 되돌리면 §2(노출 0px)가 깨진다',
+    /* 437 — 옛 리터럴 99 는 «BAR_H + 2» 였다(테두리 6 · 알약 85 ⇒ 노출 2). 테두리가 7 이 되면서
+       99 는 노출 **1.0** 밖에 안 내 이 되돌림 시험이 «안 깨진다» 고 말해 버렸다 — 리터럴이 아니라
+       **식**으로 되돌린다(BAR_H + 2 ⇒ 노출 2, 문턱 1.5 그대로). 무르게 푼 것이 아님은
+       바로 아래 R1b 가 못박는다: BAR_H + 1 한 칸만 되돌려도 노출 1 이 생긴다. */
+    const r1 = await revert('.stabs{height:' + (BAR_H + 2) + 'px!important}');
+    ok('R1 셸을 ' + (BAR_H + 2) + ' 로 되돌리면 §2(노출 0px)가 깨진다',
       Math.abs(r1.innerBottom - Math.max(...r1.cells.map(c => c.bottom))) >= 1.5,
       '노출 ' + (r1.innerBottom - Math.max(...r1.cells.map(c => c.bottom))).toFixed(2) + 'px');
+
+    const r1b = await revert('.stabs{height:' + (BAR_H + 1) + 'px!important}');
+    ok('R1b 한 칸(' + (BAR_H + 1) + ')만 되돌려도 노출이 생긴다',
+      Math.abs(r1b.innerBottom - Math.max(...r1b.cells.map(c => c.bottom))) >= 0.8,
+      '노출 ' + (r1b.innerBottom - Math.max(...r1b.cells.map(c => c.bottom))).toFixed(2) + 'px');
 
     const r2 = await revert('.stab{font-size:43px!important}.stab.on{font-size:41px!important}');
     const r2on = r2.cells.find(c => c.on), r2off = r2.cells.find(c => !c.on);

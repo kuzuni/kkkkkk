@@ -25,7 +25,14 @@ const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', '352.png');
 
 const RADIUS = 30;          /* ⓐ */
-const BORDER = 6;           /* ⓑ — 기각된 8 이 아니라 6 */
+/* 437 (2026-08-30) 이관 — BORDER 6 → **7** · BAR_H 97 → **98** · CELL_H 85 → **84**.
+   352 가 8 을 기각한 근거(«ref 순검정 6 + AA 한 줄»)와 409·384 비평가의 7.91 을 `probe437.py`
+   가 **자 검산**으로 갈랐다 — 자 넷을 우리 캡처(진실은 CSS 가 안다)에 대니 넷 다 오차 0.00 이라
+   문턱은 ref 에서만 갈린다. 그래서 ref 를 **색 분류**로 읽으니 K7·B7·F63·B7·D7·K6(+AA) 이고,
+   테두리 7 · 칸 84 · 바깥 98 이 7+84+7 로 서로를 검산한다. «8» 은 **테두리 7 + 셸 안쪽 립 1.4**
+   였고(활성 알약이 닿는 면에서는 7.0), 그 립은 **450** 으로 따로 등재했다.
+   ⚠ 아래 [2] 항등식은 그대로 살아 있다 — 셋 중 하나만 되돌아가면 그 항이 곧바로 빨개진다. */
+const BORDER = 7, BAR_H = 98, CELL_H = 84;
 const SEP_TOP = 16, SEP_H = 54, SEP_W = 6, SEP_CX = 706;  /* ⓒ — left 가 아니라 **중심**을 묻는다 */
 const RIM = 7, RIM_HEX = '#705F4B';                       /* ⓓ */
 const FACE_HEX = '#61523D';
@@ -140,8 +147,8 @@ const isBlack = h => close(h, '#000000', 8);
       const g = await page.evaluate(READ, sel);
       snap[name] = g;
       if (!g) { ok(name + ' 바가 보인다', false, '없음'); continue; }
-      ok(name + ' 셸 높이 97 · 테두리 ' + BORDER,
-        near(g.bar.h, 97, 0.6) && near(g.border, BORDER, 0.01),
+      ok(name + ' 셸 높이 ' + BAR_H + ' · 테두리 ' + BORDER,
+        near(g.bar.h, BAR_H, 0.6) && near(g.border, BORDER, 0.01),
         f1(g.bar.h) + ' / ' + g.borders);
       ok(name + ' 활성 알약 반경 ' + RADIUS + 'px', g.onRadius === RADIUS + 'px', g.onRadius);
       ok(name + ' 셸 안쪽 림 그림자 좌·우 ' + RIM + 'px (352 ⓓ)',
@@ -150,11 +157,11 @@ const isBlack = h => close(h, '#000000', 8);
         (g.shadow || 'none').slice(0, 70));
     }
 
-    console.log('\n[2] ⓑ 셸 테두리는 6 이다 — «ref 8» 은 JPEG AA 다 (항등식으로 못박는다)');
+    console.log('\n[2] ⓑ 셸 테두리 = (셸 − 알약)/2 — 셋이 한 덩어리임을 항등식으로 못박는다 (437)');
     for (const [name] of HOSTS) {
       const g = snap[name];
       if (!g || g.onH == null) continue;
-      ok(name + ' (셸 97 − 알약 ' + f1(g.onH) + ') / 2 = 테두리 ' + BORDER,
+      ok(name + ' (셸 ' + f1(g.bar.h) + ' − 알약 ' + f1(g.onH) + ') / 2 = 테두리 ' + BORDER,
         near((g.bar.h - g.onH) / 2, BORDER, 0.6), f1((g.bar.h - g.onH) / 2));
       ok(name + ' 네 면이 같은 테두리 한 줄', g.borders === (BORDER + 'px/').repeat(3) + BORDER + 'px', g.borders);
     }
@@ -175,7 +182,7 @@ const isBlack = h => close(h, '#000000', 8);
          left 만 묻는 게이트는 «중심이 밀린 것» 을 못 본다(ref 중심 = 콘텐츠 좌변 + 706.43). */
       ok(name + ' 구분선 중심 = 콘텐츠 좌변 + ' + SEP_CX, near(s.x + s.w / 2 - cx, SEP_CX, 0.6), f1(s.x + s.w / 2 - cx));
       ok(name + ' 구분선 하변이 알약 하변 안 (돌출 0)',
-        s.y + s.h <= g.bar.y + g.border + 85 + 0.6, f1(s.y + s.h - (g.bar.y + g.border)));
+        s.y + s.h <= g.bar.y + g.border + CELL_H + 0.6, f1(s.y + s.h - (g.bar.y + g.border)));
     }
 
     console.log('\n[4] ⓓ 찍힌 픽셀 — 검정 ' + BORDER + ' → 림 ' + RIM + ' → 바 면 (선언이 아니라 그림)');
@@ -245,7 +252,7 @@ const isBlack = h => close(h, '#000000', 8);
     const ysP = [];
     for (let i = -2; i < 92; i++) ysP.push(Math.round(onb.y) + i);
     const colP = await readCol(page, xp, ysP);
-    /* 알약 국소좌표 0..85 — 앞 2칸은 셸 테두리라 건너뛴다 */
+    /* 알약 국소좌표 0..CELL_H — 앞 2칸은 셸 테두리라 건너뛴다 */
     const seg = (from, hex, tol) => {
       let i = from, n = 0;
       while (i < colP.length && !close(colP[i], hex, tol)) i++;
@@ -259,8 +266,10 @@ const isBlack = h => close(h, '#000000', 8);
     console.log('   알약 열 x' + xp + ' — 상단띠 ' + t1.n + '칸@' + t1.st
       + ' · 하단밝은띠 ' + t2.n + '칸@' + t2.st + ' · 하단어두운띠 ' + t3.n + '칸@' + t3.st);
     ok('07 알약 상단 하이라이트 띠 7px @0', t1.n === 7 && t1.st === 0, t1.n + '칸@' + t1.st);
-    ok('07 알약 하단 밝은 띠 7px @71', t2.n === 7 && t2.st === 71, t2.n + '칸@' + t2.st);
-    ok('07 알약 하단 어두운 띠 7px @78', t3.n === 7 && t3.st === 78, t3.n + '칸@' + t3.st);
+    /* 437 — 띠 **두께 7 은 그대로**이고 시작점만 칸 상자 85 → 84 를 따라 한 칸씩 당겨진다.
+       ref 실측(probe437 ⓑ)도 rel 70..77 · 77..84 다. */
+    ok('07 알약 하단 밝은 띠 7px @' + (CELL_H - 14), t2.n === 7 && t2.st === CELL_H - 14, t2.n + '칸@' + t2.st);
+    ok('07 알약 하단 어두운 띠 7px @' + (CELL_H - 7), t3.n === 7 && t3.st === CELL_H - 7, t3.n + '칸@' + t3.st);
 
     console.log('\n[R] 되돌림 시험 — 옛 값을 주입하면 빨개져야 한다');
     /* ⚠ `addStyleTag` 은 id 를 안 받는다 — 1회차에 R4(원복)가 그것 때문에 빨갰다.
