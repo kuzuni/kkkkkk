@@ -325,10 +325,22 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       if (o.onPos && (o.onPos.L || o.onPos.R)) posEnd++; else posMid++;
       ok(n + ' 활성 칸 자리 «' + posName(o.onPos) + '» → 밴드(베벨)가 그 자리 규칙과 같다',
         !!want && o.on.boxShadow === want, o.on.boxShadow);
-      /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다. */
+      /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다.
+         ⚑ **462 이관 (2026-08-30) — 이 층은 이제 «부품 하나» 가 아니다.** 끝 칸의 «셸에 안 닿는»
+            면은 세 띠를 그릴 상자가 없어서(세로 인셋을 두 면이 공유한다) 이 `::after` 에
+            **스프레드 7 짜리 띠 두 겹**을 얹었다 — 그림자 상자가 «알약 사방 7 인셋»(= 가운데 칸
+            `::before` 의 상자)이 되어 같은 띠가 같은 자리에 생긴다.
+            값만 넓혀 통과시키면 «462 가 통째로 사라져도 초록» 이 되므로 **묻는 것을 갈았다**:
+            ① 검정 링은 여전히 **첫 항**이고 등폭 7(409 그대로) ②그 뒤가 **자리 규칙**을 따른다 —
+            가운데 칸은 링 하나뿐 · 끝 칸은 462 두 겹이 정확히 뒤따른다. 어느 쪽이 사라져도 빨갛다. */
       const r = o.onRing;
-      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이다 (부품은 하나)',
-        !!r && r.sh === BLK + ' 0px 0px 0px 7px inset', r ? r.sh : '없음');
+      const RING = BLK + ' 0px 0px 0px 7px inset';
+      const B462 = ', rgb(65, 49, 34) 0px -7px 0px 7px inset, rgb(99, 79, 55) 0px -14px 0px 7px inset';
+      const isEnd = !!o.onPos && (o.onPos.L || o.onPos.R);
+      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이고 **첫 항**이다 (409)',
+        !!r && (r.sh || '').startsWith(RING), r ? r.sh : '없음');
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 뒤의 462 띠 두 겹 (가운데는 없다 · 끝 칸만 있다)',
+        !!r && r.sh === RING + (isEnd ? B462 : ''), r ? r.sh : '없음');
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
         !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
         r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
