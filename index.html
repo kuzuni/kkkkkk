@@ -3565,6 +3565,27 @@
     100%{opacity:0;transform:translate(-50%,40px) scale(.96)}}
   .fx-plus.pay{animation:fxMinus .5s linear both;opacity:.9}
 
+  /* ⚑ 488 — «꾹 누르는 동안» 회당 피드백 플로터 (2026-08-30, 저장소 주인 지시)
+     58 의 `+n`(획득) · `−n`(결제)과 **같은 부품**이고 다른 것은 셋뿐이다:
+       ⓐ 앵커가 HUD 알약이 아니라 **홀드 호스트**(룬 카드·단련 행·세부 팝업 레벨 행·유물 그릇)다 —
+          꾹 누르는 동안 눈은 카드에 있지 HUD 에 있지 않다.
+       ⓑ 수명이 짧다(.42s) — 홀드 주기가 160→60ms 라 .6s 짜리를 쌓으면 열 장이 겹친다.
+       ⓒ 잉크가 작다(30px vs 34px) — 회당 한 장씩 흐르는 것이라 «사건 하나» 크기여야 한다.
+     ⚠ 색은 크림 카드(#FFFDF2) 위라 **어두운 심**을 쓴다 — 58 31회차가 같은 자리에서
+       밝은 앰버(#FFD24A)로 대비 1.30:1 을 맞고 #9C5C00 으로 내려온 것과 같은 이유다.
+       성공 #2E7D14(대비 5.2:1) · 실패 #B01B2E(7.0:1) · 비용 #7A3A10(6.4:1).
+     ⚠ 0% 를 `opacity:0` 으로 두지 않는다 — 58 44회차 함정(메인 스레드가 막히면 `fill-mode:both`
+       가 그 «없는» 상태를 유지해 비평가가 «반응이 통째로 사라진다» 로 읽었다). .5 에서 시작한다. */
+  @keyframes fxHb{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
+    14%{opacity:1;transform:translate(-50%,-9px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-52px) scale(.98)}}
+  /* 비용은 «빠져나간다» — 58 결제 어휘 그대로 **아래로** 진다(방향이 곧 뜻이다) */
+  @keyframes fxHbDn{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
+    14%{opacity:1;transform:translate(-50%,7px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,40px) scale(.96)}}
+  .fx-plus.hb{font-size:30px;-webkit-text-stroke:5px rgba(0,0,0,.86);animation:fxHb .42s linear both}
+  .fx-plus.hb.dn{animation:fxHbDn .42s linear both}
+
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
      (씬 A·B 37px vs 씬 C 31~33px = −14~19%. 23회차 «플로터 31px» 의 부작용).
@@ -12452,6 +12473,27 @@
     55%{scale:1.04;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
+  /* ⚑ 488 — 홀드 «회당» 호스트 반응. `jz-dn/jz-up`(누름·뗌)·`jz-sh`(정지) 와 **다른 어휘**다:
+     저 셋은 «한 번의 누름» 을 말하고 이것은 «지금 한 번 더 시도했다» 를 말한다.
+     ⚠ 길이가 홀드 주기(TR_HOLD_IVMIN 60ms)와 겹치므로 `jzOn` 이 매 회 재시작한다 —
+       그래서 «끊긴 열 장» 이 아니라 «맥박» 으로 읽힌다(9~16Hz).
+     ⚠ 진폭은 호스트가 정한다(`--hb-s`) — 룬 카드는 998×700 이라 1.06 이면 좌우로 30px 씩
+       부풀어 `.tr-box` 를 넘본다. 기본 1.06(지시 원문) · 큰 카드만 1.02(측정 근거는 review §3).
+     ⚠ `jz-sh` 와 달리 **밝기를 안 건드린다** — brightness(.82)는 «죽은 버튼» 의 뜻이고(60),
+       실패는 «죽었다» 가 아니라 «이번엔 안 됐다» 다. */
+  .jz-hb{animation:jzHb .08s ease-out both}
+  @keyframes jzHb{0%{scale:var(--hb-s,1.06)}100%{scale:1}}
+  .jz-hbx{animation:jzHbx .12s ease-out both}
+  @keyframes jzHbx{0%,100%{translate:0 0}25%{translate:-3px 0}75%{translate:3px 0}}
+  /* ⚠ 진폭 1.06 은 **작은 호스트의 값**이다. 큰 카드에 그대로 쓰면 이웃을 침범한다 — 실측:
+       `.tr-rn` 998×700 안에 든 그릇 `.tr-box` 안폭 **1046** ⇒ 1.06 = 1057.9 로 **11.9px 넘친다**
+       `.tr-card` 326 폭 · 이웃 간 틈 **16px**(left 18/360/701) ⇒ 1.06 = +9.8×2 = 19.6 로 **3.6px 겹친다**
+                   높이 510 이 그릇 `.tr-cards` 높이 510 과 같아 위아래로 15.3px 씩 샌다
+       `.tr-tp` 222 높이 · 행 pitch 236 ⇒ 틈 14px 인데 1.06 = +6.7×2 = 13.3 으로 **거의 맞닿는다**
+     ⇒ 이 셋만 **1.02**(각각 +10.0 / +3.3·+5.1 / +2.2px — 전부 틈의 절반 아래).
+     ⛔ 「전부 1.02 로 통일」은 안 한다 — `.sk-lv`(모달 레벨 행)·`#rwBasin`(400×216)에서는
+        1.02 가 2~4px 라 1080 폭에서 육안 판별 한계다(58 44회차 «3px 는 안 읽힌다»). */
+  .tr-rn,.tr-tp,.tr-card{--hb-s:1.02}
   /* 94 ④ — «왜 안 되는지» 캡션. 예전에는 전투 캔버스 중앙에 56px 대형 텍스트(showMsg)로 띄웠는데,
      ⓐ 팝업이 열려 있으면 딤 뒤에 가려 안 보이고 ⓑ 사유 문구가 길어 프레임 밖으로 나갔다.
      이제 흔들리는 버튼 «옆(위)» 에 작은 DOM 캡션으로 붙인다 — #fxl(z60) 안이라 팝업 위에 뜬다.
@@ -25848,7 +25890,10 @@ function upHoldStop(bad){
 function upHoldTick(){
   const h = upHold; if(!h) return;
   if(!$('modal').classList.contains('on')){ upHoldStop(false); return; }   /* 팝업이 닫히면 같이 멈춘다 */
+  /* 488 — 비용은 «내기 전» 에 읽어 둔다(성공하면 레벨이 올라 다음 비용이 달라진다) */
+  const paid = h.cost ? h.cost() : null;
   if(!h.once()){ upHoldStop(true); return; }                              /* 부족·상한 → 조용히 정지 */
+  if(h.beat) h.beat(paid);                                                /* 488 — 회당 피드백(반복분) */
   h.n++; h.live();
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   h.timer = setTimeout(upHoldTick, h.iv);
@@ -25880,7 +25925,11 @@ function bindUpHold(btn, o){
     if(!o.once()){ shake(btn); return; }        /* 첫 누름부터 실패 → 반복 없음 + 흔들림 */
     if(o.fx) o.fx(btn);                         /* 58 — 반복분은 연출을 걸지 않는다(60ms 로 쏘면 #fxl 이 막힌다) */
     o.live();
-    upHold = { btn, once:o.once, live:o.live, n:1, iv:TR_HOLD_IV0, timer:0,
+    /* 488 — 첫 발은 `o.fx`(fxUpOk = 플래시 + 파티클 + 델타)가 이미 «보이는 사건» 이다.
+       반복분에만 회당 맥박을 건다. 호스트는 «레벨 행» — 값이 바뀌는 바로 그 줄이다. */
+    const beat = o.beat === false ? null
+      : paid => hbBeat(o.beat || '#mbox .sk-lv', true, '+1 Lv', paid);
+    upHold = { btn, once:o.once, live:o.live, beat, cost:o.cost, n:1, iv:TR_HOLD_IV0, timer:0,
                end:(n, bad) => { o.full(n); if(bad) shake($('mLv') || btn); } };
     upHold.timer = setTimeout(upHoldTick, TR_HOLD_DELAY);
   });
@@ -25953,6 +26002,8 @@ function showSkillDetail(id){
     once: () => levelUp(it),
     fx:   b => fxUpOk($('mbox').querySelector('.sk-lv'), b),
     live: liveSk,
+    /* 488 — 반복분 회당 피드백. 호스트는 값이 바뀌는 그 줄(`.sk-lv`) · 비용은 이번에 쓸 조각 수 */
+    cost: () => '−' + fmt(fragNeed(oLv(id))) + ' 조각',
     full: () => { showSkillDetail(id); fxHitEl('#mbox .sk-lv'); }
   });
 }
@@ -26086,6 +26137,8 @@ function showItem(id){
     once: () => levelUp(it),
     fx:   b => fxUpOk($('mbox').querySelector('.sk-lv'), b),
     live: liveIt,
+    /* 488 — 08 스킬(위)과 **같은 부품·같은 호스트**다. 계열(장비·펫·유물·코스튬)이 달라도 줄은 하나다. */
+    cost: () => '−' + fmt(fragNeed(oLv(id))) + ' 조각',
     full: () => { showItem(id); fxHitEl('#mbox .sk-lv'); }
   });
   if(b) b.onclick = () => {
@@ -28569,7 +28622,12 @@ function rwHoldStop(bad){
 function rwHoldTick(){
   const h = rwHold; if(!h) return;
   if(!$('relw').classList.contains('on')){ rwHoldStop(false); return; }
+  const cost = relicCost();               /* 488 — «내기 전» 값 */
   if(!summonRelic(true)){ rwHoldStop(true); return; }
+  /* 488 — `summonRelic` 은 이미 격자 칸에 `fxUpOk` 를 건다(회당 «보이는 사건» 이 원래 있었다).
+     여기서 더하는 것은 **누르고 있는 버튼 자신의 맥박과 «−n»** 이다 — 눈이 그릇에 있기 때문이다.
+     결과 문구는 안 띄운다(칸의 «이름 Lv.n» 델타와 두 벌이 된다). */
+  hbBeat('#rwBasin', true, null, '−' + fmt(cost));
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   h.timer = setTimeout(rwHoldTick, h.iv);
 }
@@ -31805,9 +31863,15 @@ function trHoldStop(bad){
 function trHoldTick(){
   const h = trHold; if(!h) return;
   if(!$('trw').classList.contains('on')){ trHoldStop(false); return; }  /* 팝업이 닫히면 같이 멈춘다 */
+  const bi = trainBuyInfo(h.key);                                       /* 488 — 비용은 «내기 전» 값 */
   if(!trBuyOnce(h.key)){ renderTrainLive(); trHoldStop(true); return; } /* 부족·상한 → 정지 + shake */
   h.n++;
   renderTrainLive();
+  /* ⚑ 488 — 반복분 회당 피드백. 64 의 «반복분 연출은 정지할 때 한 번» 은 **`fxUpOk`(플래시+파티클
+     +델타) 한 세트**를 두고 한 말이다(60ms 로 쏘면 #fxl 이 FXMAX 로 막힌다). 여기서 얹는 것은
+     그보다 훨씬 가벼운 «맥박 + 플로터 두 장» 이고, 정지 시 정산(`trHoldStop` 의 fxUpOk)은
+     한 줄도 안 건드렸다 — 재현에서 이 자리가 시도당 **0.37** 이었다(등재문 ③ 의 네 자리와 같은 병). */
+  hbBeat(trCard(h.key), true, trDeltaTxt(trCard(h.key)), bi.cost ? '−' + fmt(bi.cost) : null);
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   h.timer = setTimeout(trHoldTick, h.iv);
 }
@@ -31901,7 +31965,12 @@ function rtHoldStart(o){
 /* 룬 강화 시도 — 확률이라 «시도 횟수» 와 «성공 횟수» 를 따로 센다(요약 토스트가 둘 다 말한다) */
 function rtRuneHold(id, pay){
   const r = RN[id]; if(!r) return;
-  const sel = '#trRunes .tr-rn[data-rune="' + CSS.escape(id) + '"] .rbt[data-pay="' + CSS.escape(pay) + '"]';
+  const card = '#trRunes .tr-rn[data-rune="' + CSS.escape(id) + '"]';
+  const sel = card + ' .rbt[data-pay="' + CSS.escape(pay) + '"]';
+  /* 488 — 회당 피드백의 호스트는 **버튼이 아니라 카드**다(주인 지시 «카드 자체에»):
+     버튼에 걸면 레벨·효과 줄이 안 움직이고, 무엇보다 `jz-dn`(누르고 있는 동안 .94 유지)와
+     같은 노드에서 싸운다. 정지 흔들림(`rtShake`)은 종전대로 버튼에 건다 — 뜻이 다르다. */
+  const sel0 = card;
   let tries = 0, succ = 0;
   const lv0 = runeLvOf(id);
   rtHoldStart({
@@ -31912,7 +31981,12 @@ function rtRuneHold(id, pay){
         return false;
       }
       tries++;
-      if(runeBuy(id, pay, true)) succ++;      /* quiet — 토스트·연출·통짜 렌더 없음 */
+      /* 488 — 비용은 «빠져나가기 전» 에 읽는다(성공하면 레벨이 올라 다음 비용이 달라진다) */
+      const cost = pay === 'dia' ? RUNE_DIA : runeCost(r, runeLvOf(id));
+      const up = runeBuy(id, pay, true);      /* quiet — 토스트·연출·통짜 렌더 없음 */
+      if(up) succ++;
+      /* 488 — 시도마다 **카드가 답한다**: 성공 팝 + «+1 Lv» / 실패 흔들림 + «실패» · 비용 «−n» */
+      hbBeat(sel0, up, up ? '+1 Lv' : '실패', '−' + fmt(cost));
       return true;
     },
     live: () => renderTrainLive(),
@@ -31934,14 +32008,19 @@ function rtRuneHold(id, pay){
 /* 단련 투자 — 확정 처리라 «투자 횟수» 하나면 된다 */
 function rtTemperHold(k){
   const t = TEMPERS.find(x => x.k === k); if(!t) return;
-  const sel = '#trTemper .tr-tp[data-temper="' + CSS.escape(k) + '"] .tb';
+  const host = '#trTemper .tr-tp[data-temper="' + CSS.escape(k) + '"]';   /* 488 — 회당 피드백은 행 전체에 */
+  const sel = host + ' .tb';
   let n = 0;
   rtHoldStart({
     tag:'temper', sel,
     once: () => {
       if(!temperUpOk(k)){ if(!n) temperUpBtn(k); return false; }
+      const cost = temperCost(k);             /* 488 — 계단이라 «오르기 전» 값이 이번에 낸 값이다 */
       if(!temperUpBtn(k, true)) return false;
-      n++; return true;
+      n++;
+      /* 488 — 단련은 확정 처리라 실패 갈래가 없다. 회당 «+1 Lv» + «−n pt» 한 벌 */
+      hbBeat(host, true, '+1 Lv', '−' + fmt(cost) + ' pt');
+      return true;
     },
     live: () => renderTrainLive(),
     end: () => {
@@ -34403,6 +34482,72 @@ function fxDelta(el, txt){
     el.classList.add('fx-cvswap');
     setTimeout(() => el.classList && el.classList.remove('fx-cvswap'), 400);
   }
+}
+
+/* ==========================================================================
+   ⚑ 488 — «꾹 누르는 동안» 회당 피드백 공용 부품 (2026-08-30, 저장소 주인 지시)
+   --------------------------------------------------------------------------
+   주인 원문: «룬에서 연속강화할때 알림이 계속 떠야지 이게 강화가 되고있고 돈을 쓰고있구나
+   인식하는데 안뜨니까 좀 그럼 강화 시도했는데 뭐 실패 했고 그런거 뜨게 해줘야함».
+
+   ★ 재현이 등재문을 **그대로 확인했고, 범위는 등재문보다 넓었다**(`tools/probe488.js`, 338 규칙).
+     홀드 3초 동안 «홀드 호스트 안에서 일어난 사건 ÷ 시도» 실측:
+       룬 27시도 → **0.00** · 단련 28시도 → **0.00** · 08 세부 [강화] 30시도 → **0.03**(첫 발 하나)
+       유물 1시도 → 6.00 · (대조) 23 훈련 카드 27시도 → 0.37
+     즉 «요약 한 줄뿐» 은 룬만의 일이 아니라 **297·262 가 공유하는 «반복분은 조용히» 규약의 결과**다.
+   ⚠ 1회차 계측 함정 — 처음엔 `document.body` 전수로 셌더니 룬이 «시도당 1.36» 으로 나왔다.
+     그 34건은 전부 팝업 뒤 02 스킬 슬롯의 쿨타임 글로우(`jz-cdok`)와 전투 골드의 HUD 반응이라
+     룬과 무관하다. 스코프를 호스트로 좁히자 **0.00** 이 됐다(A3-ⓔ «마스크가 다르면 다른 것을 잰다»).
+
+   구조 — 호스트만 다르고 부품은 하나다(349·354 가 네 자리를 한 규칙으로 묶은 선례):
+     `hbBeat(host, ok, txt, cost)` 한 번 = «시도 한 번». 안에서 셋을 건다.
+       ① 호스트 맥박  `jz-hb`(성공 팝 80ms) / `jz-hbx`(실패 흔들림 ±3px 120ms)
+       ② 결과 플로터  성공 초록 «+1 Lv» / 실패 빨강 «실패»
+       ③ 비용 플로터  «−n 재료» — 아래로 진다(58 결제 어휘)
+   ⚠ **토스트를 쓰지 않는다** — 60ms 주기로 쌓으면 206 규약(스택 4장)이 깨지고 `#fxl` 이 FXMAX 로
+     막힌다. 정산 요약 토스트 한 장은 `end` 에 그대로 남는다(지시 ②).
+   ⚠ **`−n` 을 HUD 알약(fxPay)에 안 붙인 이유**: ⓐ `fxPay` 는 320ms 스로틀이라 홀드 주기(60~160ms)
+     에서 시도의 1/3 만 찍힌다 ⓑ 룬 재료(`S.rstone`)·단련 포인트는 **HUD 알약이 아예 없다**
+     (FXCUR = gold·dia 둘뿐) ⓒ 꾹 누르는 동안 눈은 카드에 있다. HUD 쪽 `fxPay` 는 손대지 않았으므로
+     골드·다이아 결제의 «알약 움푹» 은 종전 그대로 같이 뜬다(두 신호가 겹치는 게 아니라 층이 다르다).
+   ⚠ 노드는 셀렉터로 다시 찾는다 — 홀드 중 `live` 렌더가 노드를 갈 수 있다(64 교훈 1 · 262 ⓑ).
+   ========================================================================== */
+const HB_POP = 80, HB_SHAKE = 120, HB_LIFE = 470;
+/* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 지그재그로 흩는다.
+   회당 한 장이라 자리를 안 흩으면 열 장이 한 글자처럼 뭉쳐 «한 번 뜬 것» 으로 읽힌다. */
+let hbSeq = 0;
+const hbHost = h => (typeof h === 'string' ? document.querySelector(h) : h);
+function hbPulse(host, ok){
+  const el = hbHost(host);
+  if(!el || typeof jzOn !== 'function') return false;
+  jzOn(el, ok ? 'jz-hb' : 'jz-hbx', ok ? HB_POP : HB_SHAKE);
+  return true;
+}
+/* kind: 'ok'(성공·초록·위로) · 'no'(실패·빨강·위로) · 'pay'(비용·갈색·아래로) */
+function hbFloat(host, txt, kind){
+  const L = fxL(), el = hbHost(host); if(!L || !el || !txt) return false;
+  const r = fxRect(el); if(!r) return false;
+  if(L.childElementCount >= FXMAX) return false;
+  const d = document.createElement('b');
+  d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '');
+  d.style.color = kind === 'ok' ? '#2E7D14' : kind === 'no' ? '#B01B2E' : '#7A3A10';
+  const i = hbSeq++;
+  /* 결과는 호스트 위쪽 1/3 지점에서, 비용은 아래쪽 1/3 지점에서 — 둘이 서로를 안 덮는다 */
+  d.style.left = (r.x + r.w / 2 + ((i % 3) - 1) * 34) + 'px';
+  d.style.top  = (r.y + r.h * (kind === 'pay' ? 0.66 : 0.30) + ((i % 2) ? 9 : 0)) + 'px';
+  d.textContent = txt;
+  L.appendChild(d);
+  /* 프레임 밖으로 나가지 않게 좌우를 물린다(fxPay 와 같은 규칙) */
+  const half = d.offsetWidth / 2, lo = half + 20, hi = FRAME_W - half - 20;
+  if(hi > lo) d.style.left = Math.max(lo, Math.min(hi, parseFloat(d.style.left))) + 'px';
+  fxBye(d, HB_LIFE);
+  return true;
+}
+/* 시도 한 번의 전부. `cost` 는 «이번 시도에 실제로 빠져나간 것» 의 표기 문자열(없으면 생략). */
+function hbBeat(host, ok, txt, cost){
+  hbPulse(host, ok);
+  if(txt)  hbFloat(host, txt, ok ? 'ok' : 'no');
+  if(cost) hbFloat(host, cost, 'pay');
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
