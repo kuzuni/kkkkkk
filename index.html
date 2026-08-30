@@ -12967,11 +12967,14 @@
      임계값에 따라 폭이 111~190 으로 흔들린다(비평가들이 «−38%» 와 «+50%» 로 정반대로 읽은 원인이 이것이다).
      우리 이모지는 전부 불투명이라 흩뿌림까지 채우면 실제보다 훨씬 무거워 보인다 →
      ref 조밀부(열당 8px 이상): 스테이지 169 · 보물상자 123 · 시련의탑 105 · 출석 137 에 맞춘다. */
-  .ps-bar>div[data-ptab="box"]>i>em{}  /* 356 — scaleX(1.3) 폐기 */
+  /* 428 — `box`(보물상자) 칸이 사라져 그 규격도 같이 사라졌다. 새 두 칸은 둘 다 «탑» 이라
+     아래 `tower`/`tower2` 규칙이 받는다(측정표 35 §3-1 정오표). */
   /* 🏰 는 글리프 잉크가 라인박스 안에서 낮게 앉아(우리 @+38, ref @+25) 높이도 −16% 였다 —
      font-size 로 높이를 올리고 넘치는 폭은 scaleX 로 되민다(7회차 L-7) */
-  .ps-bar>div[data-ptab="tower"]>i{top:11px;height:109px;line-height:109px;font-size:109px}
-  .ps-bar>div[data-ptab="tower"]>i>em{transform:scale(.87)}  /* 356 — k<1 은 등방으로 흡수 */
+  .ps-bar>div[data-ptab="tower"]>i,
+  .ps-bar>div[data-ptab="tower2"]>i{top:11px;height:109px;line-height:109px;font-size:109px}
+  .ps-bar>div[data-ptab="tower"]>i>em,
+  .ps-bar>div[data-ptab="tower2"]>i>em{transform:scale(.87)}  /* 356 — k<1 은 등방으로 흡수 */
   /* 📅 는 글리프가 박스 안에서 우측·위로 치우쳐 있어 중심만 되민다. 남은 폭 +9% · 상단 −8px 은
      이모지 종횡비 한계라 아트 교체분이다(비평가 3명이 모두 «탭 아이콘은 전용 아트 필요» 로 분류). */
   .ps-bar>div[data-ptab="att"]>i{right:40px}
@@ -12996,8 +12999,10 @@
      비평가 Q-12 와 tools/scan35.py 가 **독립적으로 같은 값**을 냈다. 칸별 scaleX 로 가른다.
      «스테이지»(+1~2) ·«출석»(−1~2)은 이미 맞았으니 건드리지 않는다.
      하단바는 35·36 이 «같은 4칸» 을 공유하고 36 쪽 전용 덮어쓰기가 없어 공통 규칙으로 둔다. */
-  .ps-bar>div[data-ptab="box"]>b>em{transform:scaleX(1.07)}
-  .ps-bar>div[data-ptab="tower"]>b>em{transform:scaleX(1.228)}
+  /* 428 — 두 새 칸의 라벨은 **레퍼런스에 없다**(주인 지시 신설 콘텐츠). 9회차가 «시련의탑» 4글자를
+     ref 전용 서체 폭 130 에 맞추려고 걸어 둔 scaleX(1.228)·«보물상자» 1.07 은 **맞출 대상이 사라진 값**이라
+     걷어냈다 — 공용 1.15 를 그대로 쓴다. 5글자(«시련의 탑»)에 1.228 을 그대로 얹으면 잉크가
+     비활성 칸 190px 을 넘는다. 측정표 35 §3-1 정오표. */
   /* 6회차 I-7: 하단바 자물쇠가 ref 보다 14px 위였다(우리 본체+82..142 / ref +96..158) */
   .ps-bar>div>s.lk{position:absolute;left:0;right:0;top:92px;height:64px;line-height:64px;
     text-align:center;font-size:58px;z-index:2}
@@ -14754,8 +14759,11 @@
       <div class="bk" data-pback="1"><u></u></div>
       <!-- 301 — 탭마다 «받을 보상 있음» 레드닷 자리. renderPass() 가 passReadyTab(탭)으로 토글한다 -->
       <div class="pt" data-ptab="stage"><i><em>💎</em></i><b><em>스테이지</em></b><s class="bdg"></s></div>
-      <div class="pt lk" data-ptab="box"><i><em>🎁</em></i><b><em>보물상자</em></b><s class="lk">🔒</s><s class="bdg"></s></div>
-      <div class="pt lk" data-ptab="tower"><i><em>🏰</em></i><b><em>시련의탑</em></b><s class="lk">🔒</s><s class="bdg"></s></div>
+      <!-- 428(주인 지시 2026-08-30) — «보물상자 · 시련의탑» → «시련의 탑 · 절망의 탑», 자물쇠 해제.
+           89 가 보물상자 시스템을 폐기해 `box` 는 죽은 이름이었다. 라벨 글자는 renderPass() 가
+           PASS_TABS[].tab(= TOWERS 의 이름)으로 덮어쓴다 — 이름을 두 곳에 적지 않는다(210 «한 곳 규약»). -->
+      <div class="pt" data-ptab="tower"><i><em>🏰</em></i><b><em>시련의 탑</em></b><s class="bdg"></s></div>
+      <div class="pt" data-ptab="tower2"><i><em>🗼</em></i><b><em>절망의 탑</em></b><s class="bdg"></s></div>
       <div class="pt" data-ptab="att"><i><em>📅</em></i><b><em>출석</em></b><s class="bdg"></s></div>
     </div>
   </div>
@@ -30505,6 +30513,7 @@ document.querySelectorAll('#botleft .ubtn').forEach(b => {
    ========================================================================== */
 const PASS_STEP = 5;      /* 5스테이지마다 한 단계 */
 const PASS_N    = 40;     /* 단계 수 — 스테이지 5..200 */
+const PASS_TOWER_N = 30;  /* 428 — 탑 패스 단계 수(레벨 1..30). 36 출석 30단과 같은 길이다 */
 /* 등급색 [림, 내부] — 측정표 §5-4 실측 */
 const PASS_GRADE = [['#46A7DE','#347DC1'],['#C7E549','#98C135'],['#CA66FA','#9A25D6'],['#FCC334','#D37C13']];
 /* 398(주인 지시 2026-08-29) — 스테이지 패스 보상은 **다이아 한 종류**다(«패스 보상 출석보상 전부 다이아로 줘라»).
@@ -30524,15 +30533,43 @@ const PASS_TABS = {
   stage:{ ttl:'스테이지 패스 1', sub:'스테이지를 클리어해 패스 단계\n보상을 받으세요!',
           /* 8회차: 집은 `.ps-hs` 슬롯(우상단 390x380)이 맡는다 — 여기 🏠 를 두면 ref 에 없는
              «화면 중앙 하단 집» 이 하나 더 생겨 덩어리가 두 곳으로 갈린다. 코인 더미만 남긴다. */
+          tab:'스테이지',
           stl:'최고 스테이지 :', stv:() => fmt(S.best), price:'₩14,900', art:curIc('gold') + curIc('gold'), cols:3,
           step:PASS_STEP, n:PASS_N, prog:() => S.best, head:'' },
   /* 36 — 레퍼런스는 보상이 **전 행 같은 아이템(파란 보석 = 다이아)** 이다(측정표 §8-3).
      무료 1,000 고정 · 프리미엄은 1일차만 30,000 이고 그 뒤는 10,000 · 등급은 전 칸 에픽(§8-4). */
-  att:  { ttl:'출석 패스 1',   sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
+  att:  { ttl:'출석 패스 1',   tab:'출석', sub:'매일매일 접속하고 패스 단계 보\n상을 받으세요!',
           stl:'접속일', stv:() => fmt(S.att.n), price:'₩5,900', art:curIc('dia'), cols:2,
           step:1, n:30, prog:() => S.att.n, head:'접속일',
-          rw:(i, c) => ({ k:'dia', ic:curIc('dia'), n: c === 0 ? 1000 : (i === 0 ? 30000 : 10000), g:3 }) }
+          rw:(i, c) => ({ k:'dia', ic:curIc('dia'), n: c === 0 ? 1000 : (i === 0 ? 30000 : 10000), g:3 }) },
+  /* 428(주인 지시 2026-08-30) — «보물상자 · 시련의탑» 두 칸을 **두 탑의 실제 패스 탭**으로 바꿨다.
+     «자물쇠 풀기» 는 «준비 중 토스트» 로는 푼 것이 아니다(주인이 두 번 말했다) — 두 탭은 여기 있어야
+     `openPass`·`passReadyTab`·301 레드닷·302 [일괄 받기]·▦ 메뉴 배지가 **저절로** 센다
+     (`Object.keys(PASS_TABS)` 순회 — 새 탭을 손으로 등록하는 자리가 한 곳도 없다).
+     이름·진행 키는 다시 안 적는다: 라벨·타이틀은 `TOWERS` 의 이름, 진행은 `towerFloor`(= `fk`)다.
+     ⚠ **보상은 다이아다.** 등재문은 «그 탑의 산출 재화(유물조각·단련석)» 를 적었지만
+        398·399(주인 원문 «패스 보상 출석보상 전부 다이아로 줘라», 2026-08-29)가 **더 나중이고 더 넓은**
+        지시라 그쪽을 따랐다. `verify398` §1 이 `Object.keys(PASS_TABS)` 를 돌며 «전 칸 dia» 를 재므로
+        다른 재화를 넣으면 그 자리에서 빨개진다(= 이 결정이 게이트로 굳어 있다).
+     ⚠ 단계 수는 **30**(36 출석 30단 선례 · 등재문 «한 탭 30~50단계 안»)이고 곡선은 `PASS_CUR` 공용이다.
+        가격 ₩9,900 은 칸 수로 잡았다 — 스테이지 120칸 ₩14,900 · 출석 60칸 ₩5,900 사이의 90칸.
+        **계수 확정은 199 몫**이다(326·331·398 과 같은 처리). */
+  tower: { ttl:towerById('tower').n + ' 패스 1', tab:towerById('tower').n,
+           sub:towerById('tower').n + ' 레벨을 올려 패스 단계\n보상을 받으세요!',
+           stl:'최고 레벨 :', stv:() => fmt(passTowerLv('tower')), price:'₩9,900',
+           art:curIc('dia') + curIc('dia'), cols:3,
+           step:1, n:PASS_TOWER_N, prog:() => passTowerLv('tower'), head:'' },
+  tower2:{ ttl:TOWER_DESPAIR_N + ' 패스 1', tab:TOWER_DESPAIR_N,
+           sub:TOWER_DESPAIR_N + ' 레벨을 올려 패스 단계\n보상을 받으세요!',
+           stl:'최고 레벨 :', stv:() => fmt(passTowerLv('despair')), price:'₩9,900',
+           art:curIc('dia') + curIc('dia'), cols:3,
+           step:1, n:PASS_TOWER_N, prog:() => passTowerLv('despair'), head:'' }
 };
+/* 428 — 탑 패스의 진행도. `S.tower`/`S.tower2` 는 «지금 도전 가능한 레벨» 이라 아무것도 안 깬
+   세이브에서도 1 이다 — 그대로 진행도로 쓰면 1단계를 **깨기도 전에** 받게 된다.
+   스테이지 패스의 `S.best`(= 달성한 값)와 뜻을 맞춰 **깬 레벨**(도전 가능 −1)로 읽는다.
+   키를 여기서 다시 고르지 않는다 — `towerFloor` 한 곳이 `TOWERS[].fk` 를 본다(209·210 규약). */
+const passTowerLv = id => Math.max(0, towerFloor(towerById(id)) - 1);
 let passTab = 'stage';
 const passT    = () => PASS_TABS[passTab] || PASS_TABS.stage;
 const passTier = i => (i + 1) * passT().step;                    /* 그 단계의 목표(스테이지 / 접속일) */
@@ -30638,6 +30675,10 @@ function renderPass(){
   $('psBuy').style.display = prem ? 'none' : '';
   document.querySelectorAll('#psBar .pt').forEach(b => {
     b.classList.toggle('on', b.dataset.ptab === passTab);
+    /* 428 — 탭 라벨은 마크업이 아니라 모델이 말한다(«시련의 탑»·«절망의 탑» 은 TOWERS 의 이름이다).
+       마크업의 글자는 자리 표시일 뿐이고, 이름이 바뀌면 여기 한 곳으로 따라온다. */
+    const TB = PASS_TABS[b.dataset.ptab], lb = b.querySelector('b>em');
+    if(TB && TB.tab && lb && lb.textContent !== TB.tab) lb.textContent = TB.tab;
     /* 301 — 탭마다 «받을 보상 있음» 레드닷 (준비 중 탭은 PASS_TABS 에 없어 항상 꺼짐) */
     b.classList.toggle('alert', passReadyTab(b.dataset.ptab));
   });

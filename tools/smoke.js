@@ -208,10 +208,12 @@ function staticSyntax() {
       openers.push({ label: 'qtab:daily', sel: null, quest: 'daily' });
       openers.push({ label: 'qtab:rep', sel: null, quest: 'rep' });
       /* 35 패스 페이지(#psw) — 진입이 «▦ 메뉴 → 🎫 패스» 2단계라 위 수집(.tab/.side/[data-cur])에 안 걸린다.
-         하단 패스 종류 탭 4칸(스테이지·보물상자🔒·시련의탑🔒·출석)과 뒤로가기까지 전부 돈다(작업 35). */
+         하단 패스 종류 탭 4칸과 뒤로가기까지 전부 돈다(작업 35).
+         428(주인 지시 2026-08-30) — 잠겨 있던 «보물상자🔒·시련의탑🔒» 두 칸이 **두 탑의 실제 패스 탭**
+         (tower·tower2)이 됐다. 죽은 키 `box` 를 그대로 두면 여기서 `null.click()` 으로 즉사한다. */
       if (await page.$('#psw')) {
         openers.push({ label: 'pass:35', sel: null, pass: true });
-        for (const k of ['stage', 'box', 'tower', 'att'])
+        for (const k of ['stage', 'tower', 'tower2', 'att'])
           openers.push({ label: 'ptab:' + k, sel: null, pass: `#psBar [data-ptab="${k}"]` });
         openers.push({ label: 'pass:back', sel: null, pass: '#psBar [data-pback]' });
       }

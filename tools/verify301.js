@@ -41,12 +41,24 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     S.lastMonthly = monthKey(); S.mailx = [];
     allMails().forEach(m => S.mail[m.id] = 2);      /* 고정 우편 m1~m5 까지 전부 처리됨으로 */
     uiDirty = true; renderUI();
+    /* 428 — «준비 중» 탭 두 칸이 **실제 패스 탭**(tower·tower2)이 됐다. 옛 표본(`box`)은
+       PASS_TABS 에 없는 이름이라 «항상 false» 였고, 그건 이 절이 지키려던 «받을 게 있을 때만 켜진다» 를
+       한 번도 안 물었다(333 처방 — 자리를 비우지 말고 살아 있는 표본으로 갈아 끼운다).
+       탑 진행은 부팅 세이브에서 «한 레벨도 안 깬» 상태(S.tower = 1 ⇒ 깬 레벨 0)라 여기서는 꺼져 있어야 한다. */
+    const before = { tower: passReadyTab('tower'), tower2: passReadyTab('tower2'), lv: passTowerLv('tower') };
+    S.tower = 4;                                   /* 레벨 3 까지 깼다 ⇒ 탑 패스 3단계 해금 */
+    const after = { tower: passReadyTab('tower'), lv: passTowerLv('tower') };
+    S.tower = 1;                                   /* 뒤 절이 «꺼진 탑 탭» 을 전제하므로 되돌린다 */
     return { stage: passReadyTab('stage'), att: passReadyTab('att'),
-             box: passReadyTab('box'), any: passReadyAny() };
+             before, after, noBox: !PASS_TABS.box, any: passReadyAny() };
   });
   ok(j.stage === true, '[1] 스테이지 패스 — 해금·미수령 칸이 있어 ready', String(j.stage));
   ok(j.att === false, '[1] 출석 패스 — 접속일 0 이라 ready 아님', String(j.att));
-  ok(j.box === false, '[1] 준비 중 탭(box)은 항상 ready 아님', String(j.box));
+  ok(j.noBox === true, '[1] 428 — 죽은 탭 이름 «box» 는 PASS_TABS 에 없다(89 가 보물상자를 폐기했다)');
+  ok(j.before.tower === false && j.before.tower2 === false,
+     '[1] 428 — 두 탑 패스: 한 레벨도 안 깬 세이브에서는 ready 아님 (깬 레벨 ' + j.before.lv + ')');
+  ok(j.after.tower === true,
+     '[1] 428 — ★ 레벨을 깨면 그 탑 패스가 ready 로 켜진다 (깬 레벨 ' + j.after.lv + ')');
   ok(j.any === true, '[1] passReadyAny = true');
 
   /* ── [2] 301 체인 ①② — ▦ 메뉴 버튼 · 메뉴 안 «패스» 칸 ── */
@@ -81,7 +93,7 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     const dot = c => { const d = c.querySelector('s.updot'); return d ? getComputedStyle(d).display : null; };
     const lit = cells.filter(c => c.classList.contains('alert'));
     return {
-      stage: tab('stage'), att: tab('att'), box: tab('box'), tower: tab('tower'),
+      stage: tab('stage'), att: tab('att'), box: tab('box'), tower: tab('tower'), tower2: tab('tower2'),
       litN: lit.length,
       litAllFree: lit.every(c => c.classList.contains('c0')),
       litDotsShown: lit.every(c => dot(c) === 'block'),
@@ -99,8 +111,13 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
      '[3] ③ «스테이지» 탭 레드닷 점등', inpass.stage.alert + '/' + inpass.stage.shown);
   ok(inpass.att.alert === false && inpass.att.shown === 'none',
      '[3] ③ «출석» 탭은 꺼짐', inpass.att.alert + '/' + inpass.att.shown);
-  ok(inpass.box.alert === false && inpass.tower.alert === false,
-     '[3] ③ 준비 중 탭 2개는 꺼짐');
+  /* 428 — 옛 항은 «준비 중 탭 2개(box·tower)는 꺼짐» 이었다. 그 둘은 PASS_TABS 에 없어서 꺼져 있던 것이라
+     탭이 실제 패스가 된 지금 그 문장은 **표본을 잃었다.** 지키려던 뜻(«받을 게 없는 탭은 꺼진다»)은
+     그대로 두 탑 탭에 물리고, 죽은 이름 box 는 «칸 자체가 없다» 로 못 박는다. */
+  ok(inpass.box.shown === 'no-node', '[3] ③ 428 — 죽은 탭 «box» 칸이 탭바에서 사라졌다', inpass.box.shown);
+  ok(inpass.tower.alert === false && inpass.tower2.alert === false,
+     '[3] ③ 두 탑 패스는 꺼짐 — 이 세이브는 한 레벨도 안 깼다',
+     inpass.tower.alert + '/' + inpass.tower2.alert);
   ok(inpass.litN === 3, '[3] ④ 받을 수 있는 보상 칸 = 3(단계 3 × 무료)', String(inpass.litN));
   ok(inpass.litAllFree === true, '[3] ④ 점등 칸은 전부 무료 컬럼(166 — 프리미엄 미보유 칸 제외)');
   ok(inpass.litDotsShown === true, '[3] ④ 점등 칸 레드닷이 실제로 보인다(우상단 — 299 규약)');
