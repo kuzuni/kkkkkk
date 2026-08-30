@@ -19272,7 +19272,10 @@ const promoReady  = () => { const r = nextRank(); return !!r && S.best >= r.stag
    ========================================================================== */
 const player = {
   x: WORLD.w/2, y: WORLD.h/2, r: 16, hp: 1, vx: 0, vy: 0,
-  aim: -Math.PI/2, flip: false, dead: 0, hitFx: 0, atkFx: 0, buffFx: 0, inv: 0,
+  /* 460 — `atkFx`(공격 모션 타이머)를 필드째 걷어냈다. 소비처가 애니 선택 한 줄뿐이었고
+     그 줄이 폐지 대상이라, 값만 남기면 «아무도 안 읽는 상태» 가 굳는다(LESSONS 295-②).
+     `hitFx` 는 다르다 — 애니 말고 **피격 틴트**(아래 `player.hitFx > 0 && fr`)가 읽으므로 그대로 둔다. */
+  aim: -Math.PI/2, flip: false, dead: 0, hitFx: 0, buffFx: 0, inv: 0,
   akey:'knight', anim:'idle', at:0, afps:8, aloop:true, adone:false
 };
 let enemies = [], shots = [], parts = [], nums = [], corpses = [], zones = [], booms = [], bolts = [];
@@ -20279,7 +20282,7 @@ function castGeneric(s, dmg){
                      /* 곡선탄은 부채의 양 끝이 서로 **반대로** 휘어야 «곡선» 으로 읽힌다 */
                      cvs:(n > 1 && s.cv) ? (i < n/2 ? -1 : 1) : 1 });
       }
-      if(s.k === 'slash') player.atkFx = 0.22;
+      /* 460 — 여기 있던 `player.atkFx = 0.22`(공격 모션 켜기)는 폐지했다(주인 지시 «공격모션없이»). */
       return true;
     }
     /* 193 ③ 나선탄 — 플레이어 중심의 극좌표(각 sa · 반경 sr)로 난다. 각속도 av · 반경속도 rv 가
@@ -20441,7 +20444,7 @@ function castSkillRaw(s){
       const a = Math.atan2(tg.y - tg.r - py, tg.x - px);
       shots.push({ k:'slash', x:px, y:py, vx:Math.cos(a)*620, vy:Math.sin(a)*620, a,
                    dmg, life:1.15, pierce:stat.pierce, hit:[], col:'#dff2ff' });
-      player.atkFx = 0.22;
+      /* 460 — 공격 모션 타이머 폐지(위 `player` 선언의 460 주석) */
       return true;
     }
     case 'multi': {
@@ -20454,7 +20457,7 @@ function castSkillRaw(s){
         shots.push({ k:'slash', x:px, y:py, vx:Math.cos(a)*600, vy:Math.sin(a)*600, a,
                      dmg, life:1.15, pierce:stat.pierce, hit:[], col:'#bfe0ff' });
       }
-      player.atkFx = 0.22;
+      /* 460 — 공격 모션 타이머 폐지(위 `player` 선언의 460 주석) */
       return true;
     }
     case 'shuri': {
@@ -20668,8 +20671,7 @@ function step(dt){
     player.hp = Math.min(maxHp, player.hp + stat.regen*sbRegen()*dt);   /* 86 — 치유의 빛 */
     if(player.hitFx > 0) player.hitFx -= dt;
     if(player.buffFx > 0) player.buffFx -= dt;
-    if(player.atkFx > 0) player.atkFx -= dt;
-    if(player.inv > 0) player.inv -= dt;
+    if(player.inv > 0) player.inv -= dt;                                /* 460 — atkFx 감쇠 폐지 */
 
     const tg = nearest(player.x, player.y);
     let td = tg ? Math.hypot(tg.x-player.x, tg.y-player.y) : 0;
@@ -20753,11 +20755,14 @@ function step(dt){
       }
     }
 
+    /* 460 (주인 지시 2026-08-30 «플레이어는 공격모션없이 가만히 있을때는 idle 움직일떄는 move만»)
+       — 살아 있는 동안의 애니는 **둘뿐**이다. `attack_A`(atkFx)·`get_hit`(hitFx) 분기를 걷어냈다.
+       ⚠ 사망 `die` 는 위 `player.dead > 0` 가지에 있고 «공격 모션» 이 아니라 상태 연출이라 남긴다.
+       ⚠ `hitFx` 는 여기서만 빠진다 — 피격 틴트(그리기)가 그 값을 계속 읽는다.
+       ⚠ 아틀라스의 attack_A·get_hit 프레임은 지우지 않았다(에셋은 두고 «선택만» 안 한다). */
     const moving = Math.hypot(player.vx, player.vy) > 25;
-    if(player.atkFx > 0)      setAnim(player, 'knight', 'attack_A', 16, false);
-    else if(player.hitFx > 0) setAnim(player, 'knight', 'get_hit', 12, false);
-    else if(moving)           setAnim(player, 'knight', 'run', 14, true);
-    else                      setAnim(player, 'knight', 'idle', 8, true);
+    if(moving) setAnim(player, 'knight', 'run', 14, true);
+    else       setAnim(player, 'knight', 'idle', 8, true);
   }
   stepAnim(player, dt);
 
