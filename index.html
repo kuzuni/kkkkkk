@@ -29050,6 +29050,23 @@ function wpnCur(){
   const l = wpnList();
   return l.find(e => e.id === wpnSel) || l.find(e => e.id === S.eqSlot[wpnPart]) || l[0];
 }
+/* ---- 482 «제일 좋은 것» (2026-08-30, 저장소 주인 지시) ----------------------
+   주인 원문: «장비 같은거 팝업 들어가면 제일 좋은거에 선택 되있는 상태로 해줘야함.
+   혹은 일괄 강화할때도 강화후에 제일 좋은거 선택 되있는 상태로 되고 장착버튼을 누르면
+   바로 그거로 장착될수있는식으로 되야함».
+   척도는 **장착 효과 `equipVal`** 하나다 — 이 팝업의 [장착] 이 바꾸는 값이 바로 그것이고,
+   등급·티어(260 자리)·강화 레벨을 이미 전부 품는다(보유 효과 `ownVal` 은 장착과 무관하므로
+   척도로 쓰면 «장착 버튼이 바꾸지 않는 값» 으로 줄을 세우게 된다).
+   동률은 260 이 정한 축 순서로만 가른다: 등급 → 강화 레벨 → 등급 안 티어.
+   ⚠ **보유한 것 중에서만** 고른다. 미보유 칸은 자물쇠라 [장착] 이 애초에 안 먹는다.
+   ⚠ 263/105 «자동 장착 폐기» 는 그대로다 — 여기서 바뀌는 것은 **선택**뿐이고 `S.eqSlot` 은
+     [장착] 버튼을 누를 때만 움직인다. */
+const wpnCmp = (a, b) => (equipVal(a) - equipVal(b)) || (a.g - b.g)
+                      || (oLv(a.id) - oLv(b.id)) || (equipTier(a) - equipTier(b));
+function wpnBest(part){
+  const l = (part ? EQUIPS.filter(e => e.slot === part) : wpnList()).filter(e => has(e.id));
+  return l.length ? l.reduce((b, e) => (wpnCmp(e, b) > 0 ? e : b)) : null;
+}
 const wpnTotalOwn = () => wpnList().reduce((s, e) => s + (has(e.id) ? ownVal(e) : 0), 0);
 
 function renderWpn(){
@@ -29123,7 +29140,11 @@ function renderWpn(){
 function openWeapon(id, part){
   wpnPart = (part && SLOTS.some(s => s.k === part)) ? part
           : (id && EQ[id]) ? EQ[id].slot : 'weapon';
-  wpnSel = id || S.eqSlot[wpnPart] || null;
+  /* 482 — `id` 가 «명시된» 경로(특정 카드를 눌러 들어온 진입)는 그 카드를 그대로 존중하고,
+     인자 없이 열린 경로(06 슬롯·서브탭·직접 호출)만 «제일 좋은 것» 으로 연다.
+     보유가 0 이면 종전 폴백(장착 중 → null → `wpnCur()` 의 첫 칸)으로 그대로 떨어진다. */
+  const best = id ? null : wpnBest();
+  wpnSel = id || (best && best.id) || S.eqSlot[wpnPart] || null;
   renderWpn();
   $('wpnw').classList.add('on');
   $('wpnGrid').scrollTop = 0;
@@ -29141,6 +29162,10 @@ $('wpnBtnEq').onclick = () => {
 };
 $('wpnBtnUp').onclick = () => {
   const r = levelUpAll(wpnList());
+  /* 482 — 강화가 순위를 뒤집으면 선택이 따라간다(주인 원문 «일괄 강화할때도 강화후에
+     제일 좋은거 선택 되있는 상태»). `renderWpn()` **앞**에서 옮겨야 한 번만 그린다. */
+  const best = wpnBest();
+  if(best) wpnSel = best.id;
   renderWpn();
   uiDirty = true; renderUI();                   /* 202 — 탭바 영웅 칸·장비 서브탭 레드닷 즉시 소등 */
   if(!openUpAll(r.ups))
@@ -30566,9 +30591,26 @@ function porHud(){
   if(k === porKey) return;
   if(porPaint(cv)) porKey = k;
 }
+/* 482 — 코스튬의 «제일 좋은 것».
+   ⚠ 척도가 장비와 다르다 — 197 로 코스튬은 **효율이 전부 같다**(외형만 다르다). 그래서 줄을 세울
+   수 있는 축은 194 가 신설한 **강화 레벨**뿐이고, 동률이면 «착용 중» → `AVATARS` 표 순서로 가른다
+   (동률에서 착용 중을 앞에 두는 이유: 그래야 «다 같은 Lv» 인 새 세이브에서 종전 그림이 그대로 열린다). */
+function cosBest(){
+  const cur = cosCur();
+  let b = null;
+  AVATARS.forEach(a => {
+    if(!cosOwn(a.id)) return;
+    if(!b) { b = a; return; }
+    const d = cosLvOf(a.id) - cosLvOf(b.id);
+    if(d > 0 || (d === 0 && a.id === cur && b.id !== cur)) b = a;
+  });
+  return b ? b.id : cur;
+}
 function renderCos(){
   const cur = cosCur();
-  if(!cosSel || !AV[cosSel]) cosSel = cur;
+  /* 482 — 기본 선택은 «착용 중» 이 아니라 «제일 좋은 것» 이다(주인 지시 — 05 장비와 같은 규칙).
+     시트를 여는 자리(`heroSubGo`·`goTab`)가 `cosSel` 을 비우므로 **열 때마다** 여기로 떨어진다. */
+  if(!cosSel || !AV[cosSel]) cosSel = cosBest();
   let h = '<div class="sk-head"><i class="ol5">코스튬</i></div>';
   /* 269 — 헤더 좌상단 [?] 도움말 (저장소 주인 지시 2026-08-27). «코스튬이 무엇인가» 라는
      **개별 칸과 무관한 일반 설명**은 이제 여기 하나뿐이다 — 슬롯 상세 팝업(`showCosDetail`)
@@ -31694,6 +31736,9 @@ function syncPanel(){
    영웅 탭을 «처음 열 때» 는 이 경로가 아니라 goTab() 이라 시트 등장 연출이 그대로 붙는다. */
 function heroSubGo(k){
   if(!k || k === heroTab) return;
+  /* 482 — 50 코스튬 시트를 «여는» 자리. `cosSel` 은 모듈 수명 변수라 한 번 고르면 재열기에도
+     남는다 — 비워 두면 `renderCos()` 가 `cosBest()` 로 떨어진다(05 의 `openWeapon` 과 같은 뜻). */
+  if(k === 'cos') cosSel = null;
   /* 159 — `S.heroTab` 저장은 폐기했다. 서브탭은 «팝업이 열려 있는 동안만» 사는 값이라
      세이브에 남길 이유가 없다(남기면 재열기·재접속 때 마지막 탭이 되살아난다). */
   jzHush(() => { heroTab = k; syncPanel(); });
@@ -31750,6 +31795,7 @@ function goTab(k, forceOpen){
      타지 않으므로 열려 있는 동안의 탭 전환은 그대로 살아 있다.
      예외는 가이드 미션이 예약한 `heroSubReq` 하나뿐 — 1회 쓰고 비운다. */
   if(k === 'hero'){ heroTab = (heroSubReq && (heroSubReq === 'eq' || HEROBODY[heroSubReq])) ? heroSubReq : 'eq'; }
+  if(k === 'hero' && heroTab === 'cos') cosSel = null;   /* 482 — 코스튬 시트를 여는 두 번째 자리 */
   heroSubReq = null;
   curTab = k; panelOpen = true;
   if(!S.seen[k]){ S.seen[k] = 1; }   /* 한 번 열면 NEW 리본이 사라진다 */
