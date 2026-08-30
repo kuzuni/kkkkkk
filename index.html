@@ -17964,19 +17964,28 @@ const SHOP_FREE = 2;   /* 상자별 하루 무료 10연 횟수(레퍼런스 «2/
    ⓒ 소진 순서는 «무광고 먼저» 다(useFreeSum). 그래야 뱃지가 «있다 → 없다» 로 뒤집히지 않는다. */
 const SHOP_NOAD = 1;   /* 상자별 하루 «광고 없이» 소환 횟수 (SHOP_FREE 안에서 앞의 n 회) */
 
-/* 소환 레벨 1~25 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
+/* 소환 레벨 1~50 · 등급별 해금 레벨과 (해금 → 만렙) 확률 */
 /* 작업 196 (2026-08-27, 저장소 주인 지시) — 소환 만렙 **100 → 25**, 필요 경험치는 주인 확정표.
    ⚠ 해금 사다리를 같이 옮기지 않으면 «전설 이상이 영원히 안 나온다»(구 해금 30·40·55·75 가 전부
    새 만렙 25 를 넘는다). 주인 지시의 예시 사다리 **5 / 8 / 12 / 16 / 20 / 24** 를 그대로 쓴다
    (희귀5 · 영웅8 · 전설12 · 신화16 · 초월20 · 불멸24 — 불멸만 만렙 직전 1레벨 램프다). */
-const SUM_MAXLV = 25;
+/* 작업 496 (2026-08-31, 저장소 주인 확정) — 만렙 **25 → 50**, 레벨은 **전 배너 공용 하나**.
+   해금 사다리는 «25 기준 → 50 기준» 으로 비례 이동한다: 5/8/12/16 → **10/16/24/32**,
+   초월 20 → **40**, 불멸 24 → **SUM_MAXLV − 1**(= 49. 196 이 정한 «만렙 직전 1레벨 램프» 는
+   숫자가 아니라 규칙이므로 만렙에서 역산해 적는다 — LESSONS 106-1 «만렙을 손으로 적지 마라»).
+   ⚠ **바닥 두 행(`unlock:1`)은 ×2 하지 않는다.** 그 둘은 «해금 레벨» 이 아니라 «항상 열려 있다»
+   는 바닥이고, 2 로 밀면 Lv1 에서 전 등급 가중치가 0 이 된다 — `gradeProbs` 의 `|| 1` 폴백은
+   분모만 1 로 만들 뿐이라 **확률이 전부 0** 이 되어 «뽑을 등급이 없는 레벨» 이 생긴다.
+   추측이 아니라 실측이다: `node tools/probe496.js` ⓔ1·ⓔ2 가 ×2 안에서 Σw = 0 · Σp = 0 을 찍고,
+   바닥을 1 로 둔 안(ⓔ3)은 Lv1 에서 합 1 · 일반 0.800 을 찍는다. */
+const SUM_MAXLV = 50;
 const GRADE_ROLL = [
   { unlock:1,  p0:0.80, p1:0.05 },
   { unlock:1,  p0:0.20, p1:0.15 },
-  { unlock:5,  p0:0.00, p1:0.30 },
-  { unlock:8,  p0:0.00, p1:0.25 },
-  { unlock:12, p0:0.00, p1:0.15 },
-  { unlock:16, p0:0.00, p1:0.10 }
+  { unlock:10, p0:0.00, p1:0.30 },
+  { unlock:16, p0:0.00, p1:0.25 },
+  { unlock:24, p0:0.00, p1:0.15 },
+  { unlock:32, p0:0.00, p1:0.10 }
 ];
 /* 85 — 장비 배너(무기·방패·목걸이)가 7·8등급 행이 있는 8행 표를 쓴다(초월 Lv55 · 불멸 Lv75 해금).
    106 — **동료 배너도 같은 8행 표**(지시 ③ «소환 확률표는 85 의 8행 표를 그대로 재사용, Lv 해금 동일»).
@@ -17995,16 +18004,30 @@ const IMMORTAL_P_MAX = 0.0010;   /* ★ 불멸 «목표 실효 확률» @ 만렙
 const IMMORTAL_P1 = IMMORTAL_P_MAX * (GRADE_ROLL.reduce((a, g) => a + g.p1, 0) + TRANSCEND_P1)
                     / (1 - IMMORTAL_P_MAX);
 const GRADE_ROLL_EQ = GRADE_ROLL.concat([
-  { unlock:20, p0:0.00, p1:TRANSCEND_P1 },
-  { unlock:24, p0:0.00, p1:IMMORTAL_P1 }
+  { unlock:40,            p0:0.00, p1:TRANSCEND_P1 },
+  { unlock:SUM_MAXLV - 1, p0:0.00, p1:IMMORTAL_P1 }   /* 496 — «만렙 직전 1레벨 램프» 는 규칙이다 */
 ]);
 const rollOf = b => BANNERS[b].g8 ? GRADE_ROLL_EQ : GRADE_ROLL;
 /* 196 — 필요 경험치는 «식» 이 아니라 **주인 확정표**다. 표는 Lv1→2 부터 Lv16→17 까지 16칸이고,
    그 뒤(Lv17~24)는 마지막 값 5,000 을 유지한다. 경험치 1 = 소환 1회(`sumAddExp(b, times)`)이므로
    만렙까지 총 **76,450 회** 다(표 합 36,450 + 5,000×8). Lv25 는 만렙이라 need 를 읽지 않는다. */
-const SUM_EXP_TABLE = [50, 200, 500, 800, 1200, 1500, 1800, 2100, 2300, 2600,
-                       3000, 3300, 3600, 4000, 4500, 5000];
-const sumNeedExp = lv => SUM_EXP_TABLE[Math.min(Math.max(lv | 0, 1), SUM_EXP_TABLE.length) - 1];
+/* 496 (2026-08-31, 저장소 주인 확정) — 그 표를 **식**으로 되돌린다: `need(n) = A + B·n`.
+   n 은 «지금 레벨»(1..SUM_MAXLV−1) 이고 값은 그 레벨에서 다음 레벨까지 필요한 뽑기 수다.
+     Lv1→2 **410** · Lv10→11 2,300 · Lv25→26 5,450 · Lv49→50 **10,490**
+     만렙까지 누적 = Σ(200 + 210n), n=1..49 = 200×49 + 210×(49×50/2) = **267,050 뽑**
+   근거(199 과금 축): ₩300만 = 2,730만 다이아 = 273,000 뽑 − 불멸 기대 5종×1,000 뽑
+   ⇒ 레벨 49 까지 «약 268,000 뽑». 267,050 은 그 목표의 **−0.35%**(주인 확정 ±1% 안).
+   ⚠ 표를 다시 손으로 적지 마라 — 만렙이 바뀌면 이 식이 그대로 따라간다(LESSONS 106-1).
+   ⚠ `SUM_EXP_TABLE_V196` 은 **구 세이브 이관 전용**이다(load() 에서만 읽는다). 살아 있는
+      곡선이 아니므로 여기 값을 고쳐서 밸런스를 조정하지 마라 — 고칠 곳은 A·B 둘이다. */
+const SUM_EXP_A = 200;
+const SUM_EXP_B = 210;
+const sumNeedExp = lv => SUM_EXP_A + SUM_EXP_B * Math.min(Math.max(lv | 0, 1), SUM_MAXLV - 1);
+const SUM_EXP_TABLE_V196 = [50, 200, 500, 800, 1200, 1500, 1800, 2100, 2300, 2600,
+                            3000, 3300, 3600, 4000, 4500, 5000];
+const SUM_MAXLV_V196 = 25;
+/* 구 곡선의 «Lv n 에서 n+1 까지» — 표 16 칸, 그 뒤는 마지막 값 고정(196 규약) */
+const sumNeedExpV196 = lv => SUM_EXP_TABLE_V196[Math.min(Math.max(lv | 0, 1), SUM_EXP_TABLE_V196.length) - 1];
 
 /* ---- 컬렉션(도감) — 작업 91 (2026-08-26, 저장소 주인 지시) : «부위 × 등급 세트» 단위로 전면 교체 ----
    구 구조(카테고리 4개 × «보유 종 수 ≥ need → 티어») 는 **폐기**한다.
@@ -19100,7 +19123,32 @@ const monthKey = () => { const d = new Date(); return d.getFullYear() + '-' + St
       (달 열쇠 하나만 비교하므로 구조적으로 그렇게 된다 — 3달 비웠다고 3통이 되지 않는다). */
 const NEW_DIA     = 1000000;
 const MONTHLY_DIA = 100000;
-const DEF = () => ({
+/* 496 — `S.sum[b].lv/.exp` 로 읽고 쓰던 자리를 «공용 하나»(`sumLv`/`sumExp`)로 넘기는 **별칭 뷰**.
+   왜 이름을 안 지웠는가: 개편의 뜻은 «다섯 벌을 하나로» 이지 «옛 이름을 없애자» 가 아니다.
+   호출부·게이트가 `S.sum.weapon.lv = 25` 로 상태를 만드는 자리가 열 곳 넘는데, 그 자리들이
+   **여전히 뜻이 통하고**(= 소환 레벨을 25 로 둔다) 이제는 다섯이 자동으로 같아진다.
+   ⓐ `enumerable:false` — `JSON.stringify(S)` 가 안 담는다. 새 세이브에는 스칼라 둘만 들어간다
+      (다섯 벌 사본이 다시 저장되면 «어느 쪽이 진실인가» 가 되살아난다).
+   ⓑ setter 는 **일부러 no-op** — `load()` 의 `Object.assign(b, d)` 가 구 세이브의 `d.sum`
+      한 덩어리를 여기로 밀어 넣는데, 그걸 그대로 받으면 별칭이 평범한 객체로 덮인다.
+      구 세이브는 아래 이관 블록이 `d.sum` 에서 **직접** 읽어 옮긴다.
+   ⓒ getter 가 `this` 를 쓰는 이유: `load()` 안에서는 상태 객체가 `S` 가 아니라 `b` 다.
+      바깥 `S` 를 잡아 두면 로드 도중 엉뚱한 객체를 가리킨다. */
+const sumAliasView = o => {
+  Object.defineProperty(o, 'sum', {
+    enumerable:false, configurable:true,
+    get(){
+      const t = this;
+      return BKEYS.reduce((m, b) => (m[b] = {
+        get lv(){ return t.sumLv; },  set lv(v){ t.sumLv  = v; },
+        get exp(){ return t.sumExp; }, set exp(v){ t.sumExp = v; }
+      }, m), {});
+    },
+    set(){}
+  });
+  return o;
+};
+const DEF = () => sumAliasView({
   nick:'U_' + String(Date.now()).slice(-13).padStart(13, '0'),
   /* 73 ② — 첫 가이드 미션이 «스킬 1회 소환» 이고 상점 최소 단위가 10연(1,000 다이아)이라
      시작 다이아가 300 이면 첫 미션부터 유료 경로가 막힌다. 지시대로 1,000 이상으로 올린다.
@@ -19128,7 +19176,11 @@ const DEF = () => ({
      이전에는 `i <= S.rank` 로 «파생» 시켰는데, 파생은 계급이 내려가면 칭호도 같이 회수돼
      «승급 성공 시에만 지급» 이라는 규칙을 표현하지 못한다(주인 지시 2026-08-27). */
   titles:{ 0:1 },
-  sum: BKEYS.reduce((o,b) => (o[b] = { lv:1, exp:0 }, o), {}),
+  /* 496 — 소환 레벨·경험치는 **전 배너 공용 하나**다(주인 확정 «소환 레벨은 다 합쳐서»).
+     구조는 `S.sum[b] = {lv,exp}` 5 벌에서 스칼라 둘로 내려왔다. `S.sum` 자체는 사라지지 않고
+     **별칭 뷰**로 남는다(아래 `defineProperty`) — 옛 이름으로 읽고 쓰는 자리가 전부 그 하나를
+     가리키게 해서, «두 배너가 서로 다른 레벨» 이라는 상태를 **구조적으로 만들 수 없게** 한다. */
+  sumLv:1, sumExp:0,
   coll:{},                                    /* 91 — 도감 «세트 키 → 받은 단계 수» (구 카테고리 카운터 폐기) */
   quest: QUESTS.reduce((o,q) => (o[q.id] = { s:0, base:0 }, o), {}),
   mail:{},
@@ -19193,7 +19245,10 @@ function load(){
     if(!raw) return null;
     const d = JSON.parse(raw), b = DEF();
     Object.assign(b, d);
-    ['lv','eqSlot','coll','quest','cnt','att','sum','dun'].forEach(k => b[k] = Object.assign(DEF()[k], d[k] || {}));
+    /* 496 — `sum` 을 이 목록에서 뺐다. 이제 `b.sum` 은 스칼라 둘을 가리키는 **별칭 뷰**라
+       `Object.assign(뷰, d.sum)` 을 하면 `weapon`·`shield`… 가 평범한 객체로 덮여 별칭이 죽는다.
+       구 세이브의 `d.sum` 은 아래 «④ 소환 레벨 공용화 이관» 블록이 직접 읽는다. */
+    ['lv','eqSlot','coll','quest','cnt','att','dun'].forEach(k => b[k] = Object.assign(DEF()[k], d[k] || {}));
     b.daily = Object.assign(DEF().daily, d.daily || {});
     delete b.daily.dun;                       /* 204 — 폐기된 일일 키. 남겨 두면 아무도 안 읽는 죽은 값이 저장된다 */
     /* 365 ② — 폐기된 광고 상품(구 a3~a6)의 죽은 수령 키. `adLeft()` 가 «없는 키 → cap 폴백» 이라
@@ -19281,19 +19336,46 @@ function load(){
        «없으면 0» 마이그레이션으로만 흡수한다(Object.assign 이 이미 기본값을 남겨 두지만,
        옛 세이브가 문자열·null 을 갖고 있어도 NaN 이 되지 않게 여기서 한 번 더 못박는다). */
     if(!Number.isFinite(b.mileage)) b.mileage = 0;
-    /* 196 — 소환 만렙 100 → 25. 구 세이브의 `sum[b].lv` 는 25 를 넘을 수 있으므로 클램프한다
-       (44 교훈 2 — KEY 는 올리지 않는다. 저장 «구조» 는 `{lv,exp}` 그대로고 값만 새 상한으로 잘린다).
-       ⓐ lv 는 1~SUM_MAXLV ⓑ 만렙이면 exp = 0(`sumAddExp` 와 같은 규약이라 바가 MAX 로 찍힌다)
-       ⓒ 그 밖에는 `need` 미만으로 자른다 — 구 곡선(need 5~401)에서 쌓인 exp 는 새 표(50~5000)
-       아래라 실제로 깎이는 세이브는 없지만, 손댄 세이브가 need 를 넘겨 오면 채움률이 1000% 로
-       찍히므로 여기서 한 번 못박는다. 두 번 돌아도 결과가 같다(멱등). */
-    BKEYS.forEach(k => {
-      const s = (b.sum[k] && typeof b.sum[k] === 'object') ? b.sum[k] : {};
-      const lv = Math.min(SUM_MAXLV, Math.max(1, Number.isFinite(s.lv) ? Math.floor(s.lv) : 1));
-      let exp = (Number.isFinite(s.exp) && s.exp > 0) ? Math.floor(s.exp) : 0;
-      exp = (lv >= SUM_MAXLV) ? 0 : Math.min(exp, sumNeedExp(lv) - 1);
-      b.sum[k] = { lv, exp };
-    });
+    /* 196 — 소환 만렙 100 → 25. 구 세이브의 `sum[b].lv` 는 25 를 넘을 수 있으므로 클램프했다.
+       496 이 그 자리를 **통째로 갈아 끼운다** — 저장 구조가 «배너 5 벌» 에서 «공용 스칼라 둘» 로
+       내려왔기 때문이다(44 교훈 2 — 그래도 KEY 는 올리지 않는다. 값이 아니라 «자리» 가 이사한
+       것이고, 없는 키는 아래에서 채운다).
+
+       ④ 소환 레벨 공용화 이관 — **손해 0 = «총 뽑기 수 보존»**
+       ⓐ 새 세이브(`sumLv` 가 이미 있다)면 그것이 진실이다 → 클램프만. 두 번 돌아도 같다(멱등).
+       ⓑ 구 세이브면 5 배너의 «지금까지 뽑은 횟수» 를 **구 곡선으로 되돌려 세서** 전부 더하고
+          (배너별 = Σ 구need(1..lv−1) + exp), 그 합을 새 곡선에 그대로 얹는다.
+          경험치 1 = 소환 1 회라 «합» 이 곧 «총 뽑기 수» 이고, 다섯 주머니를 한 주머니에
+          부었을 뿐 한 번도 안 버린다.
+       ⓒ 다만 **상한은 상한이다** — 구 5 배너 만렙(76,450×5 = 382,250 뽑)은 새 만렙까지의
+          267,050 뽑보다 크므로 그런 세이브는 Lv50 MAX 에서 멈춘다(레벨을 잃지는 않는다).
+       ⓓ 손댄 세이브 방어는 196 그대로 — 음수·문자열·null·need 초과를 전부 정상값으로 접는다. */
+    {
+      const clampLv  = v => Math.min(SUM_MAXLV, Math.max(1, Number.isFinite(v) ? Math.floor(v) : 1));
+      const clampExp = (lv, v) => (lv >= SUM_MAXLV) ? 0
+                                 : Math.min(Math.max(0, Number.isFinite(v) ? Math.floor(v) : 0), sumNeedExp(lv) - 1);
+      if(Number.isFinite(d.sumLv)){
+        b.sumLv  = clampLv(d.sumLv);
+        b.sumExp = clampExp(b.sumLv, d.sumExp);
+      } else {
+        const old = (d.sum && typeof d.sum === 'object') ? d.sum : {};
+        let pulls = 0;
+        BKEYS.forEach(k => {
+          const s = (old[k] && typeof old[k] === 'object') ? old[k] : {};
+          const lv = Math.min(SUM_MAXLV_V196, Math.max(1, Number.isFinite(s.lv) ? Math.floor(s.lv) : 1));
+          for(let n = 1; n < lv; n++) pulls += sumNeedExpV196(n);
+          /* ⓓ 196 의 방어를 **더하기 전에** 건다 — 손댄 세이브의 `exp: 999999` 를 그대로 더하면
+             «다음 레벨에 못 미치는 잔여» 였던 값이 갑자기 999,999 뽑으로 둔갑한다. 정상 세이브의
+             exp 는 구조상 늘 `구need − 1` 이하라 이 클램프로 **깎이는 진짜 진행도는 0** 이다. */
+          const cap = (lv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(lv) - 1;
+          if(Number.isFinite(s.exp) && s.exp > 0) pulls += Math.min(Math.floor(s.exp), cap);
+        });
+        let lv = 1, e = pulls;
+        while(lv < SUM_MAXLV && e >= sumNeedExp(lv)){ e -= sumNeedExp(lv); lv++; }
+        b.sumLv  = lv;
+        b.sumExp = (lv >= SUM_MAXLV) ? 0 : e;
+      }
+    }
     /* 194 — 강화석·코스튬 강화 레벨. 44 교훈 2 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
        구 세이브엔 두 키가 없다 → 강화석 0 · 전 코스튬 Lv 0 에서 시작한다(보유 코스튬은 그대로).
        레벨은 **실재하는 코스튬 id 만** 남기고 0~COS_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
@@ -23860,8 +23942,11 @@ function doRefund(bkey){
 /* ==========================================================================
    소환
    ========================================================================== */
-const sumLv  = b => S.sum[b].lv;
-const sumExp = b => S.sum[b].exp;
+/* 496 — 소환 레벨은 **전 배너 공용 하나**다. 두 접근자는 인자를 **일부러 무시**한다:
+   호출부(gradeProbs·10 상점 카드·확률 팝업·20 프로필·게이트)가 배너 이름을 넘기던 모양을
+   그대로 두고 뜻만 바꾼다. 인자를 지우면 같은 뜻의 편집이 수십 자리로 번진다. */
+const sumLv  = _b => S.sumLv;
+const sumExp = _b => S.sumExp;
 function gradeProbs(b){
   const l = sumLv(b);
   const w = rollOf(b).map(g => {          /* 85 — 장비 배너는 8행 표(GRADE_ROLL_EQ) */
@@ -23874,12 +23959,13 @@ function gradeProbs(b){
   while(p.length < GRADE.length) p.push(0);   /* 6행 배너도 GRADE.length 길이로 패딩(소비처 인덱스 안전) */
   return p;
 }
-function sumAddExp(b, n){
-  const s = S.sum[b];
-  s.exp += n;
+/* 496 — 어느 배너로 뽑아도 **같은 주머니**에 들어간다(주인 확정 «소환 레벨은 다 합쳐서»).
+   인자 `b` 는 호출부 모양을 지키려고 남겨 둔다(sumLv·sumExp 와 같은 규약). */
+function sumAddExp(_b, n){
+  S.sumExp += n;
   let up = 0;
-  while(s.lv < SUM_MAXLV && s.exp >= sumNeedExp(s.lv)){ s.exp -= sumNeedExp(s.lv); s.lv++; up++; }
-  if(s.lv >= SUM_MAXLV) s.exp = 0;
+  while(S.sumLv < SUM_MAXLV && S.sumExp >= sumNeedExp(S.sumLv)){ S.sumExp -= sumNeedExp(S.sumLv); S.sumLv++; up++; }
+  if(S.sumLv >= SUM_MAXLV) S.sumExp = 0;
   return up;
 }
 /* 작업 73 ④ — `flat` 배너(무기·방패·목걸이·스킬)는 10연 할인을 받지 않는다(10회 1,000 / 30회 3,000,
@@ -28381,7 +28467,10 @@ function renderShopPage(){
   let h = '';
   const gmFocus = typeof gmBan === 'function' ? gmBan() : null;   /* 122 ①-5 */
   SHOP_BOXES.forEach(x => {
-    const s = S.sum[x.b], need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
+    /* 496 — 소환 레벨은 공용이라 다섯 칸이 **같은 값**을 보인다(지시 ⑤). 카드에서 알약을 빼고
+       탭 상단 한 곳으로 올리는 안은 470(알약 잘림 수리)·471(레드닷 코너 통일)이 지금 이 카드의
+       같은 구간을 잡고 있어 **이 세션 범위 밖**으로 남긴다 — PROGRESS 496 행 「남은 것」 참조. */
+    const s = { lv: sumLv(x.b), exp: sumExp(x.b) }, need = sumNeedExp(s.lv), maxed = allMaxed(BANNERS[x.b].list);
     const pctFill = s.lv >= SUM_MAXLV ? 100 : Math.round(s.exp / need * 100);
     const c10 = summonCost(x.b, 10), c30 = summonCost(x.b, 30), fl = freeLeft(x.b);
     /* 122 — `gm` = 73 가이드가 «이 상자를 소환하라» 고 지목한 칸(테두리 글로우 호흡).

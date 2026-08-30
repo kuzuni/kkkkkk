@@ -51,9 +51,13 @@ const ok = (b, name, detail) => {
       : NaN,
     u7: GRADE_ROLL_EQ[7].unlock, u6: GRADE_ROLL_EQ[6].unlock, len: GRADE_ROLL_EQ.length,
     tr: GRADE_ROLL_EQ[6].p1,
+    maxlv: SUM_MAXLV,
   }));
   ok(A.tgt === 0.0010, 'A1 목표 실효 확률 상수 IMMORTAL_P_MAX = 0.0010', String(A.tgt));
-  ok(A.len === 8 && A.u6 === 20 && A.u7 === 24, 'A2 8행 표 · 해금 Lv 20/24 (196)', A.u6 + '/' + A.u7);
+  /* 496 — 사다리 비례 이동(만렙 25 → 50). 115 가 지키는 것은 «불멸이 만렙 직전 1 레벨 램프» 라
+     불멸은 만렙에서 역산해 적는다 — 만렙이 또 바뀌어도 이 줄은 안 바뀐다(LESSONS 106-1). */
+  ok(A.len === 8 && A.u6 === 40 && A.u7 === A.maxlv - 1,
+    'A2 8행 표 · 해금 Lv 초월 40 · 불멸 만렙−1 (196 → 496)', A.u6 + '/' + A.u7);
   ok(Math.abs(A.p1 - A.calc) < 1e-12, 'A3 표의 p1 은 상수에서 역산한 값(손으로 적은 값 아님)',
      A.p1.toFixed(8) + ' vs ' + A.calc.toFixed(8));
   ok(Math.abs(A.tr - 0.06) < 1e-12, 'A4 초월 가중치 0.06 미변경(② 는 제안만)', String(A.tr));
