@@ -247,7 +247,13 @@ function collect(items) {
      **호스트와 무관한 흔들림**이 섞여 들어와 잉크 상자가 회차마다 튄다(기준 `#qAll` 이
      0/0.6 ↔ −10.9/35.3 으로 흔들려 게이트가 플레이키해졌다 — 344 규칙).
      ⇒ **A 와 A2 가 서로 다른 화소는 통째로 뺀다.** 남는 것만 «호스트가 칠한 것» 이다. */
-  const diff = async (a, b, a2, clip) => page.evaluate(async ([a64, b64, a264, cl]) => {
+  /* ⚑ 4회차 신설 «상단 띠» 축 — 비평가 BQ 가 3회차에 낸 지적 하나를 자로 받는다.
+     `.ibtn`(02 사이드) 의 차분 잉크는 **아이콘 글리프 + 그 아래 라벨(`.sl`)의 합집합**이라
+     우변이 라벨 쪽에서 결정된다. 그런데 **우상단 코너에서 눈이 견주는 변은 글리프의 것**이다
+     (BQ: «달력 우변이 점 중심보다 36 시트px 왼쪽 = 겹침 0%» — union 축은 6.5px 안쪽으로 읽었다).
+     ⇒ 같은 차분을 **호스트 높이의 위 1/3 안에서만** 다시 재서 `core3` 로 싣는다.
+     ⚠ 이 축은 «union 이 틀렸다» 가 아니다 — 둘 다 맞고, 코너 규약이 쓸 것이 어느 쪽이냐다. */
+  const diff = async (a, b, a2, clip, band) => page.evaluate(async ([a64, b64, a264, cl, bandY]) => {
     const load = async (s) => {
       const img = new Image();
       await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + s; });
@@ -264,9 +270,10 @@ function collect(items) {
          · any(>10)  = 조금이라도 칠한 것 — «번짐 포함 실루엣»
          · core(>60) = 진하게 칠한 것 — **사람이 «변» 으로 보는 단단한 모양**
        규약의 기준은 core 쪽이다. 둘 다 싣는 이유는 다음 세션이 이 판단을 되짚을 수 있게 하려는 것. */
-    const bb = (th) => {
+    const bb = (th, yLim) => {
       let l = 1e9, t = 1e9, r = -1e9, bo = -1e9, n = 0;
-      for (let y = 0; y < A.height; y++) for (let x = 0; x < A.width; x++) {
+      const H = yLim === undefined ? A.height : Math.max(1, Math.min(A.height, Math.ceil(yLim - cl.y)));
+      for (let y = 0; y < H; y++) for (let x = 0; x < A.width; x++) {
         const i = (y * A.width + x) * 4;
         const d = Math.max(Math.abs(A.data[i] - B.data[i]), Math.abs(A.data[i + 1] - B.data[i + 1]),
           Math.abs(A.data[i + 2] - B.data[i + 2]), Math.abs(A.data[i + 3] - B.data[i + 3]));
@@ -278,8 +285,9 @@ function collect(items) {
       return n ? { l: cl.x + l, t: cl.y + t, r: cl.x + r + 1, b: cl.y + bo + 1, n } : null;
     };
     const any = bb(10), core = bb(60);
-    return any ? { any, core } : null;
-  }, [a.toString('base64'), b.toString('base64'), a2.toString('base64'), clip]);
+    const core3 = bandY === null ? null : bb(60, bandY);
+    return any ? { any, core, core3 } : null;
+  }, [a.toString('base64'), b.toString('base64'), a2.toString('base64'), clip, band === undefined ? null : band]);
 
   const rows = [];
   for (const sc of SCENES) {
@@ -319,9 +327,15 @@ function collect(items) {
           const h = document.querySelector('[data-p471="' + k + '"]');
           h.querySelectorAll('.updot,.bdg,s.dot,.dot').forEach(d => { d.style.visibility = d.dataset.p471h || ''; delete d.dataset.p471h; });
         }, i);
-        const got2 = await diff(A, B, A2, cl);
+        const got2 = await diff(A, B, A2, cl, row._hr.t + (row._hr.b - row._hr.t) / 3);
         if (got2) {
           const ink = got2.core || got2.any;
+          if (got2.core3) {
+            row.dxRi3 = Math.round((got2.core3.r - row._cx) * 10) / 10;
+            row.dyTi3 = Math.round((row._cy - got2.core3.t) * 10) / 10;
+            row.inkR3 = Math.round((row._hr.r - got2.core3.r) * 10) / 10;
+            row.inkT3 = Math.round((got2.core3.t - row._hr.t) * 10) / 10;
+          }
           row.ink = { w: Math.round(ink.r - ink.l), h: Math.round(ink.b - ink.t) };
           row.inkAny = got2.any ? { w: Math.round(got2.any.r - got2.any.l), h: Math.round(got2.any.b - got2.any.t) } : null;
           row.dxRi = Math.round((ink.r - row._cx) * 10) / 10;
@@ -346,13 +360,14 @@ function collect(items) {
     console.log('PROBE471 — 레드닷 자리 전수 실측 (1080×2280)' + (INK ? ' + 잉크 축' : '') + '\n');
     if (INK) {
       console.log(pad('자리', 40) + pad('n', 3) + pad('상자 dxR/dyT', 14) + pad('잉크 dxRi/dyTi', 16)
-        + pad('상자↔잉크 우/상', 16) + '잉크 w×h (core)');
-      console.log('-'.repeat(140));
+        + pad('상자↔잉크 우/상', 16) + pad('상단띠 dxRi3/dyTi3', 19) + '잉크 w×h (core)');
+      console.log('-'.repeat(160));
       rows.forEach(r => {
         if (r.missing) { console.log(pad(r.label, 40) + '  — 노드 없음 ' + (r.why || '')); return; }
         console.log(pad(r.label, 40) + pad(r.n, 3) + pad(r.dxR + '/' + r.dyT, 14)
           + pad(r.dxRi === undefined ? '—' : r.dxRi + '/' + r.dyTi, 16)
           + pad(r.inkR === undefined ? '—' : r.inkR + '/' + r.inkT, 16)
+          + pad(r.dxRi3 === undefined ? '—' : r.dxRi3 + '/' + r.dyTi3, 19)
           + (r.ink ? r.ink.w + '×' + r.ink.h : ''));
       });
       const gap = rows.filter(r => !r.missing && r.inkR !== undefined

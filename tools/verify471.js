@@ -37,8 +37,6 @@ const EXC = {
     '같은 이유(패스 하단 탭바도 프레임 변에 플러시)',
   '05 카드 .wgc>.updot':
     '코너가 `Lv.n` 잉크 자리다 — 코너에 두면 글자 오른쪽 19px 을 검정 링이 덮는다(verify283)',
-  '07 카드 .sk-card>.updot':
-    '코너가 272 해제 뱃지 `.sk-eq`(x123~172) 자리다 — 배지 둘이 한 코너를 못 나눈다(verify283)',
   '10 «10회 소환» 버튼 .cbtn.b1 (328 — 노드는 카드 자식)':
     '`.cbtn{overflow:hidden}` 이라 노드를 버튼 안에 못 넣는다 — 좌표는 카드 기준이되 `--dot-in` 에 묶여 있다',
   '89 유물 수반 #rwBasin>.updot':
@@ -53,7 +51,8 @@ const EXC = {
 const INKHOST = {
   'HUD 사이드 .ibtn .bdg':
     '`.ibtn{background:none}` — 상자를 아무도 안 칠한다. 보이는 것은 이모지+라벨뿐이고 ' +
-    '6칸 실측 잉크 우변 91~96(평균 93.5) · 상변 −5~−2(평균 −3.2) 라 상자보다 우 6.5 안쪽 · 상 3.2 위에서 끝난다',
+    '6칸 실측 잉크 우변 91~96(평균 93.5) · 상변 −5~−2(평균 −3.2) 라 상자보다 우 6.5 안쪽 · 상 3.2 위에서 끝난다. ' +
+    '4회차에 값을 17.5/8 → 20/7 로 옮겨 잉크 기준이 정확히 11/11 이 됐다(BR 3회차 «오버행이 헐겁다»)',
 };
 
 const probe = (file, ink) => {
@@ -97,7 +96,7 @@ const probe = (file, ink) => {
   /* ⚑ 음성항 — «예외 목록을 늘려서 통과» 하는 길을 막는다 */
   /* 자리 수를 **정확히** 못박는다 — 한 자리를 늘리려면 이 숫자와 위 사유를 같이 고쳐야 하고,
      그러면 «예외를 늘려서 통과» 가 조용히 일어날 수 없다(리뷰에 반드시 걸린다). */
-  ok(Object.keys(EXC).length === 6, '[A] 음성 — 예외는 정확히 6자리다 (목록을 늘려 통과하는 길을 막는다)',
+  ok(Object.keys(EXC).length === 5, '[A] 음성 — 예외는 정확히 5자리다 (목록을 늘려 통과하는 길을 막는다)',
     Object.keys(EXC).length + '자리 · ' + Object.keys(EXC).join(' / '));
   ok(Object.values(EXC).every(v => v && v.length > 20),
     '[A] 음성 — 예외마다 «왜 코너를 못 쓰는가» 가 적혀 있다', Object.values(EXC).length + '건');
@@ -142,8 +141,10 @@ const probe = (file, ink) => {
 
   Object.keys(INKHOST).forEach(k => {
     const r = has.find(x => x.label === k);
-    ok(r && Math.abs(r.dxRi - inset) <= 3 && Math.abs(r.dyTi - inset) <= 3,
-      '[F] 잉크 호스트 — 중심이 **그림** 코너에서 안쪽 --dot-in (±3px) — ' + k,
+    /* 4회차 — 허용을 ±3 → **±2 로 조였다**(넓힌 것이 아니다). 5회차가 «잉크 기준 8.5/12» 로
+       ±3 안에 겨우 서 있던 것을 20/7 로 옮겨 **정확히 11/11** 이 됐고, 다시 느슨해지면 빨개진다. */
+    ok(r && Math.abs(r.dxRi - inset) <= 2 && Math.abs(r.dyTi - inset) <= 2,
+      '[F] 잉크 호스트 — 중심이 **그림** 코너에서 안쪽 --dot-in (±2px) — ' + k,
       r ? '잉크 기준 ' + r.dxRi + '/' + r.dyTi + ' · 상자 기준 ' + r.dxR + '/' + r.dyT : '없음');
     ok(r && (Math.abs(r.inkR) > 3 || Math.abs(r.inkT) > 3),
       '[F] 음성 — 잉크 호스트는 «상자와 그림이 실제로 어긋난» 자리여야 한다 (목록을 늘려 통과하는 길)',
