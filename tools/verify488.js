@@ -167,7 +167,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('[B] 룬 [강화] 홀드 — 회당 피드백 (홀드 ' + HOLD + 'ms · 게임 루프 ON)');
   await runeSetup(1); await p.waitForTimeout(450);
   await countTries('runeBuy'); await reset();
-  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]'), HOLD);
+  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const B1 = await grab();
   console.log('  · 전부 성공 — pulse호출 ' + B1.pulse + ' · 시도 ' + B1.tries + ' · 맥박 ' + B1.hb + '/' + B1.hbx + ' · 플로터 ' + B1.node + ' (비용 ' + B1.nodeDn + ') · 토스트 ' + B1.toast + ' · 문구 ' + B1.txts.join(','));
   ok(B1.tries >= 8, '[B1] 홀드가 실제로 여러 번 시도한다(전제)', B1.tries + '회');
@@ -184,7 +184,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
 
   await runeSetup(0); await p.waitForTimeout(450);
   await countTries('runeBuy'); await reset();
-  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]'), HOLD);
+  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const B2 = await grab();
   console.log('  · 전부 실패 — 시도 ' + B2.tries + ' · 맥박 ' + B2.hb + '/' + B2.hbx + ' · 플로터 ' + B2.node + ' · 색 ' + B2.cols.join(','));
   ok(B2.hbx === B2.tries && B2.hb === 0, '[B11] ★ 전부 실패면 흔들림(jz-hbx) 수 = 시도 수 · 성공 팝 0', B2.hbx + '/' + B2.tries + ' · hb ' + B2.hb);
@@ -312,7 +312,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   });
   await p.waitForTimeout(450);
   await countTries('runeBuy'); await reset();
-  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]'), HOLD);
+  await holdTouch(await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1'   /* 490 — 결제 갈래가 하나라 버튼도 하나 */), HOLD);
   const R = await grab();
   console.log('  · (되돌림) 시도 ' + R.tries + ' · 맥박 ' + (R.hb + R.hbx) + ' · 플로터 ' + R.node + ' · 토스트 ' + R.toast);
   ok(R.tries >= 8, '[R1] 되돌린 사본에서도 홀드 자체는 그대로 돈다(수리 전 트리와 같은 조건)', R.tries + '회');
