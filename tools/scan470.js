@@ -51,6 +51,47 @@ const SCREENS = [
   ['21 도감(유물)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="relic"]']],
   ['34 축복', ['.side .ibtn[data-pop="bless"]']],
   ['19 프로필', ['#profBtn']],
+
+  /* ── 4회차(2026-08-30) 증설 — 1~3회차가 «한 번도 안 연» 자리들 ────────────────────
+     3회차 기록 §9-2 가 남긴 숙제 그대로다: 소환 확률 팝업(카드 🔍) · 12 소환 결과 팝업 ·
+     승급전·레이드 계열. 397 «스코프 구멍» 선례대로 **문을 채우는 것까지가 이 회차의 범위**다.
+     ⚠ 주인 원문이 «소환팝업쪽» 이므로 소환 계열 둘을 맨 앞에 둔다 — 1~3회차가 «10 상점 소환 탭»
+     하나만 소환으로 읽었는데, 그 탭에서 열리는 팝업이 둘 더 있다. */
+  ['11 소환 확률', ['.tab[data-t="shop"]', '#shopList [data-shinfo]']],
+  ['12 소환 결과', ['.tab[data-t="shop"]', '#shopList [data-shsum]'], 1400],
+  /* 카드 → 세부 팝업(공용 `showItem`) 계열 — 카드에서 안 잘려도 세부에서 잘릴 수 있다 */
+  ['08 스킬 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="sk"]', '#bSk [data-skit]']],
+  ['26 펫 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="pet"]', '#bPet [data-ptslot]']],
+  ['50 코스튬 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]', '#bCos [data-cosit]']],
+  ['05 방패 세부', ['.tab[data-t="hero"]', '#eqTabs .stab-c1', '#eqCards [data-eqslot="shield"]']],
+  ['05 목걸이 세부', ['.tab[data-t="hero"]', '#eqTabs .stab-c1', '#eqCards [data-eqslot="amulet"]']],
+  ['16 유물 세부', ['.tab[data-t="box"]', '#rwGrid [data-rw]']],
+  /* ⚠ 던전 카드의 문은 `[data-dun]`(=03 패널 본문의 [도전] 버튼)이 아니라 **`#dunList [data-dcard]`** 다.
+     잠긴 카드는 팝업 대신 토스트를 내므로 `RAISE` 가 올린 전투력으로 첫 칸이 열려 있어야 한다(341 선례). */
+  ['04 던전 세부', ['.tab[data-t="adv"]', '#dunList [data-dcard]']],
+  /* 21 도감 — 1~3회차는 여섯 칸 중 넷만 열었다(방어구·장신구가 빠져 있었다) */
+  ['21 도감(방어구)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="shield"]']],
+  ['21 도감(장신구)', ['.side .ibtn[data-pop="coll"]', '.cltab[data-ct="amulet"]']],
+  /* 52 ▦ 메뉴 8칸 — 1~3회차는 «가방» 하나만 열었다 */
+  ['52 우편', ['#menub', '#mnw [data-mn="mail"]']],
+  ['52 랭킹', ['#menub', '#mnw [data-mn="rank"]']],
+  ['55 설정', ['#menub', '#mnw [data-mn="conf"]']],
+  ['32 가이드', ['#menub', '#mnw [data-mn="guide"]']],
+  ['56 절전', ['#menub', '#mnw [data-mn="saver"]']],
+  /* 35 패스 4탭 — 397 이 «스캐너가 출석 패스 탭을 한 번도 안 봤다» 로 걸린 바로 그 자리다 */
+  ['35 패스(스테이지)', ['#menub', '#mnw [data-mn="pass"]']],
+  ['35 패스(시련의탑)', ['#menub', '#mnw [data-mn="pass"]', '#psBar [data-ptab="tower"]']],
+  ['35 패스(절망의탑)', ['#menub', '#mnw [data-mn="pass"]', '#psBar [data-ptab="tower2"]']],
+  ['36 패스(출석)', ['#menub', '#mnw [data-mn="pass"]', '#psBar [data-ptab="att"]']],
+  /* 33 재화 정보 팝업 — 재화 아이콘 전부가 오프너다(smoke 와 같은 `data-cur` 축) */
+  ['33 재화(골드)', ['[data-cur="gold"]']],
+  ['33 재화(다이아)', ['[data-cur="dia"]']],
+  ['33 재화(유물조각)', ['.tab[data-t="box"]', '[data-cur="relic"]']],
+  ['20 스펙 정보', ['#profBtn', '.pf-tgl>.lb']],
+  ['103 채팅', ['#botleft .ubtn[data-util="chat"]']],
+  ['승급전', ['.side .ibtn[data-pop="promo"]'], 700],
+  ['16 룰렛', ['.side .ibtn[data-pop="roul"]']],
+  ['09 일괄 강화 결과', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="sk"]', '#bSk [data-skup]'], 700],
 ];
 
 /* 레벨이 한 자리면 안 보이던 넘침도 두 자리·세 자리에서 난다 — 상태를 «가장 긴 문자열» 로 올린다.
@@ -75,6 +116,8 @@ const RAISE = `
       const e = EQUIPS.find(x => x.p === k || x.slot === k || x.part === k);
       if (e) S.eqSlot[k] = e.id;
     });
+    /* 363 «연출 스킵» — 12 소환 결과 팝업을 애니메이션 없이 최종 상태로 세운다(스캔은 정지 화면을 잰다) */
+    if (S.opt) S.opt.sumSkip = true;
     if (typeof SUM_MAXLV === 'number') Object.keys(S.sum || {}).forEach(k => {
       S.sum[k].lv = SUM_MAXLV; S.sum[k].exp = Math.floor(sumNeedExp(SUM_MAXLV) * 0.5);
     });
@@ -192,9 +235,9 @@ const SCAN = `(() => {
   console.log('  [B] 테두리 물림 = 호스트 패딩 박스를 잉크가 넘어 테두리 위로 올라탐(음수 = 물림)');
   console.log('');
 
-  const hitsC = [], hitsB = [], hitsS = [], seen = new Set();
+  const hitsC = [], hitsB = [], hitsS = [], seen = new Set(), miss = [];
   let nodes = 0, scanned = 0;
-  for (const [name, steps] of SCREENS) {
+  for (const [name, steps, extra] of SCREENS) {
     /* 화면마다 새로 시작 — 팝업이 겹쳐 열려 남의 화면을 스캔하지 않게 한다(448 교훈) */
     await p.reload();
     await p.waitForTimeout(700);
@@ -208,7 +251,9 @@ const SCAN = `(() => {
       if (!done) { ok = false; break; }
       await p.waitForTimeout(420);
     }
-    if (!ok) { console.log('  [!] ' + name + ' — 오프너 없음(건너뜀)'); continue; }
+    if (!ok) { console.log('  [!] ' + name + ' — 오프너 없음(건너뜀)'); miss.push(name); continue; }
+    /* 연출이 붙은 화면(소환 결과·승급전)은 최종 상태에 닿을 때까지 더 기다린다 */
+    if (extra) await p.waitForTimeout(extra);
     await p.evaluate(RAISE);
     await p.evaluate(() => { try { renderAll && renderAll(); } catch (e) {} });
     await p.waitForTimeout(320);
@@ -252,6 +297,8 @@ const SCAN = `(() => {
   console.log('');
   show('[C] 하드 클립', hitsC, 'C');
   show('[B] 테두리 물림', hitsB, 'B');
+  /* ⚠ 못 연 문은 «조용한 초록» 이 된다(smoke 351-13회차 교훈) — 이름을 반드시 찍는다. */
+  if (miss.length) console.log('[!] 못 연 화면 ' + miss.length + '건 — ' + miss.join(' · ') + '\n');
   console.log('스캔 화면 ' + scanned + '/' + SCREENS.length + ' · «Lv» 노드 ' + nodes
     + ' · 클립 ' + hitsC.length + ' · 물림 ' + hitsB.filter(x => !x.ok).length + ' · 획 파먹힘 ' + hitsS.length);
   console.log('페이지 에러 ' + errs.length + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
