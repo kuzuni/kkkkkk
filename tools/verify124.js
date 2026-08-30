@@ -27,10 +27,16 @@ const settled = async page => {
   await page.waitForTimeout(60);
 };
 
-/* ── 게임과 **독립인** 축복 모델 (index.html 의 상수와 같은 값을 손으로 다시 적는다) ── */
+/* ── 게임과 **독립인** 축복 모델 (index.html 의 상수와 같은 값을 손으로 다시 적는다) ──
+   495(2026-08-30) — 이 모델이 **456 이전**에 굳어 있었다: 지속을 `30분 + 레벨당 5분` 으로 적어 두어
+   §6·§7 이 6건 빨갰다(게임 Lv19 / 기대 Lv11 · 만료 −5분/−20분/−35분). 주인 지시 456(«축복은 늘
+   30분으로 해줘 렙업되도», 2026-08-30)이 나중이므로 **456 이 이긴다** — 지속은 레벨을 안 읽는다.
+   ⚠ 기대값만 갈아 끼우면 «지속이 통째로 사라져도 초록» 이 되므로, 30분이라는 **값 자체**를 §6 [6-e]
+   («만료 = 마지막 발동 + 30분»)·[6-f](3종이 서로 같다)가 따로 단언하고 §R 이 되돌림을 못박는다. */
 const B_KEYS = ['atk', 'hp', 'rate'];
-const B_BASE = 30 * 60 * 1000, B_PERLV = 5 * 60 * 1000, B_STEP = 4, B_MAXLV = 51;
-const durAt = lv => B_BASE + B_PERLV * (Math.min(B_MAXLV, Math.max(1, lv)) - 1);
+const B_DUR = 30 * 60 * 1000, B_STEP = 4, B_MAXLV = 51;
+/* 456 — 인자도 분기도 없다(레벨을 읽는 지속시간이 되살아날 자리를 이 자에도 안 남긴다) */
+const durAt = () => B_DUR;
 /* «가장 먼저 만료되는 축복 하나» 를 시간순으로 재발동. lastTime ~ min(now, until) 구간만. */
 function sim(bless, lastTime, until, now) {
   let lv = bless.lv, prog = bless.prog, fires = 0;
@@ -43,7 +49,7 @@ function sim(bless, lastTime, until, now) {
     const at = Math.max(tm, lastTime);
     if (at > end) { next = at; break; }
     if (lv < B_MAXLV) { if (++prog >= B_STEP) { prog -= B_STEP; lv++; } } else prog = 0;
-    t[k] = at + durAt(lv);
+    t[k] = at + durAt();
     last = at; fires++;
   }
   return { lv, prog, fires, exp: t, last, next };
@@ -325,6 +331,14 @@ function safeElapsed(bless, until0, cands) {
   ok('3종 만료 시각이 시뮬과 일치 (±0ms)',
     B_KEYS.every(k => got6.exp[k] === want6.exp[k]),
     B_KEYS.map(k => (got6.exp[k] - want6.exp[k])).join(' / ') + ' ms 차');
+  /* 495 — 시뮬 대조만으로는 «지속» 이라는 뜻이 자에서 빠져나간다(둘이 같이 틀리면 초록이다).
+     30분이라는 값을 게임이 낸 만료 시각에서 **직접** 읽어 못박는다. */
+  ok('[6-e] 만료 = 마지막 발동 + 30분 (456 — 지속이 레벨을 안 읽는다)',
+    B_KEYS.every(k => got6.exp[k] - want6.last === B_DUR),
+    B_KEYS.map(k => Math.round((got6.exp[k] - want6.last) / 60000) + '분').join(' / '));
+  ok('[6-f] 3종 만료 시각이 서로 같다 (레벨당 가산이면 벌어진다)',
+    got6.exp.atk === got6.exp.hp && got6.exp.hp === got6.exp.rate,
+    (got6.exp.atk - got6.exp.hp) + ' / ' + (got6.exp.hp - got6.exp.rate) + ' ms 차');
   ok('정산 후 3종이 전부 켜져 있다', got6.on.every(Boolean), JSON.stringify(got6.on));
   ok('01 오프라인 팝업에 «자동 축복 n회 발동 · 축복 Lv a→b» 한 줄', got6.lineOn
     && /자동 축복 \d+회 발동 · 축복 Lv \d+→\d+/.test(got6.line || ''), (got6.line || '(없음)').trim());
@@ -393,6 +407,40 @@ function safeElapsed(bless, until0, cands) {
   /* §6 배너 [이동] → 이용권 탭으로 간다 */
   const mv = await page.evaluate(() => { document.getElementById('cnMove').click(); return shopCat; });
   ok('§6 배너 [이동] → 이용권 탭', mv === 'pass', String(mv));
+
+  /* ================= R. 되돌림 시험 (495) =================
+     334 처방 — 자리를 비우지 않았음을 못박는다. 456 이전 곡선(`30분 + 레벨당 5분`)을 게임에 다시
+     깔면 §6 의 단언들이 **실제로** 빨개져야 하고(걷으면 초록), 그래야 «기대값만 맞춰 놓은 자» 가
+     아니다. 정산 함수를 직접 부른다 — reload 로는 정의 전에 끼어들 수 없다(456 [R] 과 같은 방식). */
+  console.log('\n[R] 되돌림 시험 — 456 이전 «레벨당 가산» 곡선을 다시 깔면 §6 이 빨개진다');
+  const rr = await page.evaluate(([b0, day, el]) => {
+    const now = Date.now(), lastTime = now - el, until = now + 30 * day;
+    const run = () => {
+      S.bless = { lv: b0.lv, prog: b0.prog, exp: { atk: 0, hp: 0, rate: 0 } };
+      S.pass = Object.assign({}, S.pass, { noAds: true, autoBlessUntil: until });
+      const r = autoBlessSettle(lastTime);
+      return { n: r ? r.n : 0, lv: S.bless.lv, prog: S.bless.prog,
+        exp: Object.assign({}, S.bless.exp) };
+    };
+    const orig = window.blessDur;
+    window.blessDur = () => 30 * 60 * 1000 + 5 * 60 * 1000 * (blessLv() - 1);  /* 456 이전 곡선 */
+    const bad = run();
+    window.blessDur = orig;                                    /* 시험이 상태를 안 남긴다 */
+    const good = run();
+    return { lastTime: lastTime, until: until, now: now, bad: bad, good: good };
+  }, [bless0, DAY, el12]);
+  const wantR = sim(bless0, rr.lastTime, rr.until, rr.now);
+  ok('[R1] 옛 곡선을 깔면 Lv·발동 수·만료가 전부 어긋난다',
+    rr.bad.lv !== wantR.lv && rr.bad.n !== wantR.fires
+    && B_KEYS.some(k => rr.bad.exp[k] !== wantR.exp[k]),
+    'Lv' + rr.bad.lv + ' · ' + rr.bad.n + '회 (기대 Lv' + wantR.lv + ' · ' + wantR.fires + '회)');
+  ok('[R2] 옛 곡선에서는 3종 만료가 서로 벌어진다 ([6-f] 가 빨개진다)',
+    !(rr.bad.exp.atk === rr.bad.exp.hp && rr.bad.exp.hp === rr.bad.exp.rate),
+    Math.round((rr.bad.exp.atk - rr.bad.exp.rate) / 60000) + '분 차');
+  ok('[R3] 되돌림을 걷으면 다시 초록 (Lv·prog·발동 수·만료 ±0ms)',
+    rr.good.lv === wantR.lv && rr.good.prog === wantR.prog && rr.good.n === wantR.fires
+    && B_KEYS.every(k => rr.good.exp[k] === wantR.exp[k]),
+    'Lv' + rr.good.lv + '·' + rr.good.prog + '/4 · ' + rr.good.n + '회');
 
   /* ================= 9. 콘솔 ================= */
   console.log('\n[9] 콘솔');
