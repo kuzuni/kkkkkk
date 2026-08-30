@@ -170,10 +170,23 @@ function variant(svg, dy) {
      'B2 그 값이 속띠 한가운데다 — 상수가 아니라 몸통에서 나온 값이다',
      '한가운데 ' + ((LT + LB) / 2).toFixed(2) + ' ↔ 선언 ' + CY);
   const ws = KEYS.map((k) => BOX[k].w), hs = KEYS.map((k) => BOX[k].h);
-  ok(Math.abs(Math.max(...ws) - 21) <= 0.05 && Math.abs(Math.max(...hs) - 21) <= 0.05
-     && Math.max(...ws) - Math.min(...ws) <= 0.05 && Math.max(...hs) - Math.min(...hs) <= 0.05,
-     'B3 덩치는 21×21 그대로다(bbox Δ0 — «자리» 로 풀었지 «크기» 를 줄여 풀지 않았다)',
-     Math.min(...ws).toFixed(2) + '~' + Math.max(...ws).toFixed(2) + ' × ' + Math.min(...hs).toFixed(2) + '~' + Math.max(...hs).toFixed(2));
+  /* 444(2026-08-30) 이관 — 이 항이 묻던 것은 «433 이 자리로 풀었지 크기를 **줄여** 풀지 않았다» 다.
+     그 뜻은 그대로 두고 «21 딱 하나» 라는 **상수**만 뺐다. 444 가 밝은 3장(잉크=테색·획=채움색)의
+     선언 덩치를 21 → 21.80 으로 **올렸기** 때문이다 — 그 장들은 가운데 정렬된 획이 제 잉크를 안쪽에서
+     0.8 씩 깎아, 선언 21 로는 «그려진 잉크» 가 19.4 로 어두운 5장(22.6)보다 16% 작았다(411 눈금 1.240).
+     ⇒ 판정은 **① 어느 장도 21 아래로 안 내려간다**(줄여 푼 수리는 여기서 즉시 빨개진다) ·
+        **② 8장이 여전히 한 세트다**(최대÷최소 ≤ 1.05 — 402 B10·430 C4 와 같은 눈금).
+     ⚠ «그려진 잉크» 의 덩치 판정 자체는 이 자가 아니라 **tools/verify444.js** 가 한다.
+        이 자는 «자리» 자다 — 덩치 축을 자리 게이트에 묶으면 실루엣 결정이 자리 결정에 인질이 된다. */
+  const MIN_W = 21, SET_R = 1.05;
+  const shrunk = KEYS.filter((k) => BOX[k].w < MIN_W - 0.05 || BOX[k].h < MIN_W - 0.05);
+  const rw433 = Math.max(...ws) / Math.min(...ws), rh433 = Math.max(...hs) / Math.min(...hs);
+  ok(shrunk.length === 0 && rw433 <= SET_R && rh433 <= SET_R,
+     'B3 덩치를 **줄여** 풀지 않았다(어느 장도 ' + MIN_W + ' 미만이 아니고 8장이 한 세트 ≤ ' + SET_R + ')',
+     (shrunk.length ? '줄어든 장 ' + shrunk.join(',') + ' · ' : '')
+     + Math.min(...ws).toFixed(2) + '~' + Math.max(...ws).toFixed(2) + ' × '
+     + Math.min(...hs).toFixed(2) + '~' + Math.max(...hs).toFixed(2)
+     + ' · 세트비 w ' + rw433.toFixed(3) + ' · h ' + rh433.toFixed(3));
 
   /* ══════════ [C] 그려진 잉크 ══════════ */
   blk('[C] 그려진 잉크(획 포함) — getBBox 가 못 보는 축');
@@ -208,10 +221,30 @@ function variant(svg, dy) {
   ok(overBad.length >= 5,
      'R2 과교정(중심 ' + (CY - 0.5) + ')하면 이번엔 위 여유가 무너진다 — 한쪽으로 더 밀 수도 없다',
      overBad.length + '장 · 최소 ' + Math.min(...KEYS.map((k) => gapT(Rover, k))).toFixed(2));
-  const sameSize = KEYS.every((k) =>
+  /* 444(2026-08-30) 이관 — R1·R2 의 빨강이 «덩치» 가 아니라 «자리» 에서 온다는 confound 가드다.
+     444 전에는 8장 전부에서 덩치가 그대로였다. 지금은 **밝은 3장에서만** 사본의 덩치가 0.7 남짓 는다.
+     그건 문양이 커진 것이 아니라, 그 세 장의 획이 몸통색이라 몸통 «안» 에서는 안 보이던 것이
+     ±0.5 밀리면서 **끝자락이 검은 테 위로 올라와 보이게 된 것**이다(444 가 선언 21 → 21.80 으로 키우면서
+     획까지 포함해 찍히는 폭이 23.40 이 됐고 보이는 속띠는 23.94 뿐이다).
+     ⇒ 두 축으로 갈랐다 — **R3** 은 confound 가드를 **R1·R2 의 빨강을 실제로 내는 표본**(흰 잉크 5장)에
+     그대로 걸고, **R3b** 는 밝은 3장이 는 이유가 «몸통 밖으로 나간 것» 임을 검은 테 위 픽셀로 못박는다.
+     한 항을 무르게 푼 것이 아니라 **한 항이 둘이 된 것**이다(R3b 가 없으면 «밝은 3장은 안 본다» 가 된다). */
+  const sameSize = WHITE.every((k) =>
     Math.abs((Rold[k].inkY2 - Rold[k].inkY1) - (M0[k].inkY2 - M0[k].inkY1)) <= 0.1 &&
     Math.abs((Rover[k].inkY2 - Rover[k].inkY1) - (M0[k].inkY2 - M0[k].inkY1)) <= 0.1);
-  ok(sameSize, 'R3 두 사본의 잉크 «덩치» 는 그대로다 — 이 자가 보는 것은 덩치가 아니라 자리다', '8/8');
+  ok(sameSize && WHITE.length === 5,
+     'R3 두 사본의 잉크 «덩치» 는 그대로다 — 이 자가 보는 것은 덩치가 아니라 자리다(R1·R2 표본 = 흰 잉크 5장)',
+     WHITE.length + '/5장');
+  /* ⚠ «몸통 밖» 의 자는 **속띠 경계**다(검은 테가 아니다) — 위쪽은 속띠와 검은 테 사이에 테색 림이 4px
+     끼어 있어(중앙 열 15 검은테 → 19 림 → 23 속띠) 위로 민 사본은 검은 테가 아니라 **림** 위로 올라간다.
+     아래쪽만 속띠가 검은 테에 바로 닿아 있다(속띠 path 가 검은 테의 안쪽 반을 덮어 그린다). */
+  const LIGHT = KEYS.filter((k) => !WHITE.includes(k));
+  const outward = LIGHT.every((k) => gapB(M0, k) > 0 && gapT(M0, k) > 0
+                                  && gapB(Rold, k) < 0 && gapT(Rover, k) < 0);
+  ok(LIGHT.length === 3 && outward,
+     'R3b 밝은 3장이 사본에서 는 것은 «문양이 커져서» 가 아니라 «몸통(속띠) 밖으로 나가서» 다',
+     LIGHT.map((k) => k + ' 지금 ' + gapT(M0, k).toFixed(2) + '/' + gapB(M0, k).toFixed(2)
+       + ' → 옛 아래 ' + gapB(Rold, k).toFixed(2) + ' · 과교정 위 ' + gapT(Rover, k).toFixed(2)).join(' · '));
   ok(Math.min(...KEYS.map((k) => gapB(M0, k))) > Math.min(...KEYS.map((k) => gapB(Rold, k))) + 0.3,
      'R4 수리가 실제로 아래 여유를 벌렸다',
      '옛 ' + Math.min(...KEYS.map((k) => gapB(Rold, k))).toFixed(2) + ' → 지금 ' + Math.min(...KEYS.map((k) => gapB(M0, k))).toFixed(2));
