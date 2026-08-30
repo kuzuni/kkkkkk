@@ -55,6 +55,23 @@ async function open(browser, file, which, freeze) {
      rAF 를 죽이면 두 캡처가 같은 초기 프레임에서 멈춘다. */
   if (freeze) { await page.waitForTimeout(60); await page.evaluate(() => { window.requestAnimationFrame = () => 0; }); }
   await page.waitForTimeout(900);
+  /* 534(2026-08-30) — rAF 를 죽이는 것만으로는 프레임이 안 굳는다. **CSS 애니메이션은 rAF 와 무관하게**
+     계속 돌기 때문이다(실측: 같은 파일을 두 번 찍으면 **685px 이 다르다** — 사이드 레드닷 `jzDotPulse`
+     4개 · NEW 리본 `nwPulse` 5개, y2020~2059 x46~126). [3] 은 «41 이 02 메인을 안 건드렸나» 를 묻는
+     자인데 그 위상 차이가 그대로 «픽셀 diff» 로 읽혀 4회 중 1회꼴로 빨갰다.
+     ⇒ 양쪽 캡처에 **같은 처방**을 건다: 뒤에 생기는 애니메이션까지 처음부터 멈추게 규칙을 얹고,
+     이미 도는 것은 `currentTime = 0` 으로 되감아 세운다(둘 다 «0 프레임» 에서 굳는다).
+     ⚠ 이건 «허용 오차를 넓힌» 것이 아니다 — 대조는 여전히 **Δ0** 을 요구하고, 41 이 실제로 그린
+     차이는 위상과 무관하게 그대로 남는다(probe534 [E] 가 못박는다). */
+  if (freeze) {
+    await page.evaluate(() => {
+      document.head.insertAdjacentHTML('beforeend',
+        '<style id="v41freeze">*,*::before,*::after{animation-play-state:paused!important;transition:none!important}</style>');
+      document.getAnimations().forEach((a) => { try { a.currentTime = 0; a.pause(); } catch (_) {} });
+    });
+    await page.waitForTimeout(120);
+    await page.evaluate(() => { document.getAnimations().forEach((a) => { try { a.currentTime = 0; a.pause(); } catch (_) {} }); });
+  }
   if (which === 'dun') await page.evaluate(() => openDungeon());
   if (which === 'rel') await page.evaluate(() => openRelw());
   await page.waitForTimeout(500);
