@@ -20167,7 +20167,13 @@ function step(dt){
     dunRun.introT += dt;
     stepAnim(player, dt);
     for(const p of pets) stepAnim(p, dt);
-    for(const e of enemies) stepAnim(e, dt);
+    /* ⚠ `e.born` 도 같이 굴린다 — 이것은 «행동» 시계가 아니라 **등장(팝인) 시계**다.
+       `drawEnemy` 가 `born < 0.3` 인 동안 스프라이트를 `born/0.3` 배로 그리므로(21391),
+       세워 두면 보스가 **5.6% 크기**로 찍혀 «등장 연출 내내 빈 바닥» 이 된다 — 비평가 CT 가
+       2회차 캡처에서 «국면 7프레임 어디에도 보스가 없다» 로 잡아낸 자리가 정확히 이것이다.
+       판정에도 영향이 없다: `born < 0.3` 은 무적·비활성 창인데 국면 동안에는 어차피 아무도 안 때린다.
+       국면이 끝나면 born 이 1.4 라 보스가 **즉시** 유효한 표적이다(= «전투 시작»). */
+    for(const e of enemies){ e.born += dt; stepAnim(e, dt); }
     if(dunRun.introT >= dunIntroLen()){ dunRun.introOn = false; dunRun.fight = true; }
     return;
   }
@@ -23630,13 +23636,14 @@ function dunIntroW(){
    ⚑ 세로는 **발밑 앵커가 아니라 «몸통 중심»** 이다. 적의 좌표 `e.y` 는 지면 앵커(그림자 자리)라
    그대로 가운데에 놓으면 보스 그림이 화면 중앙보다 위로 밀린다 — 비평가 CQ·CR 이 2인 독립으로
    **97.5 / 100px 위**(화면 높이의 8.6~8.8%)로 같은 값을 쟀다. 새 상수를 만들지 않고 이미 있는
-   반지름 `e.r` 을 쓴다(같은 값을 두 곳에 적지 않는다 — LESSONS 90-①): 실측 스프라이트 높이가
-   앵커 위 `1.96·r` 이라 그 절반 `0.98·r ≈ r` 이 곧 몸통 중심이고, r=90 이면 90px 로 두 실측(97.5·79.75)
-   사이에 든다. ⚠ 자르지 말 것 — 위로 더 밀면 보스 머리가 HUD 뒤로 들어간다. */
+   반지름 `e.r` 을 쓴다(같은 값을 두 곳에 적지 않는다 — LESSONS 90-①).
+   계수 **0.9** 는 취향이 아니라 실측의 가운데다 — 2회차에 비평가 CS·CT 가 **각자 독립으로** 그려진
+   아트의 세로 중심을 «앵커 위 79.6px»·«앵커 위 84px» 로 쟀고(r=90), 그 사이가 0.885~0.933·r 이다.
+   1회차의 `1.0·r`(=90)은 10.4px 높았다. ⚠ 위로 더 밀지 마라 — 보스 머리가 HUD 뒤로 들어간다. */
 function dunIntroPos(){
   const r = dunRun; if(!r) return null;
   const e = r.introE;
-  if(e && e.hp > 0 && enemies.indexOf(e) >= 0){ r.introP = { x:e.x, y:e.y - (e.r || 0) }; }
+  if(e && e.hp > 0 && enemies.indexOf(e) >= 0){ r.introP = { x:e.x, y:e.y - (e.r || 0)*0.9 }; }
   return r.introP;
 }
 /* 매 프레임 국면 판정 — step() 의 던전 분기가 부른다 */

@@ -106,6 +106,7 @@ const RUN = ([id]) => {
   /* 2회차 — 국면 «정지» 축. 비평가 CQ·CR 2인 독립 1순위였다: 시계만 멈추고 전투가 돌면
      «시간이 안 흐르는 창에서 치명타가 들어간다». 좌표·체력이 한 프레임도 안 움직이는지 본다. */
   let frz = null, frzMoveMax = 0, frzHpBoss = 0, frzHpPlayer = 0, frzAnim = 0;
+  let bornEnd = null, growMin = 1;
   const bar = () => parseFloat(getComputedStyle(document.getElementById('dunBarF')).width) || 0;
   const hud = () => (document.getElementById('dunTmN') || {}).textContent;
   while (dunRun && f < 60 * 10) {
@@ -123,8 +124,11 @@ const RUN = ([id]) => {
       introFrames++;
       const b = H.boss();
       /* 카메라가 맞추는 자리는 발밑 앵커가 아니라 **몸통 중심**(`e.y - e.r`)이다(2회차) */
-      if (b) camBossMin = Math.min(camBossMin, d2(cam, { x: b.x, y: b.y - (b.r || 0) }));
+      if (b) camBossMin = Math.min(camBossMin, d2(cam, { x: b.x, y: b.y - (b.r || 0) * 0.9 }));
       camPlayMaxIntro = Math.max(camPlayMaxIntro, d2(cam, player));
+      /* ⚑ «그려지는 크기» 축(2회차 비평 CT). `drawEnemy` 는 `born < 0.3` 인 적을 `born/0.3` 배로
+         그린다 — 국면이 born 을 세우면 보스가 5.6% 크기로 찍혀 «등장 연출인데 빈 바닥» 이 된다. */
+      if (b) { bornEnd = b.born; if (introFrames > 24) growMin = Math.min(growMin, b.born < 0.3 ? b.born / 0.3 : 1); }
       const now = { bx: b ? b.x : null, by: b ? b.y : null, bhp: b ? b.hp : null,
                     px: player.x, py: player.y, php: player.hp,
                     at: b ? b.at : null, pat: player.at };
@@ -153,6 +157,7 @@ const RUN = ([id]) => {
     camPlayMaxIntro: +camPlayMaxIntro.toFixed(2), camPlayAtEnd,
     wMax: +wMax.toFixed(4), wRises, wFalls, wZeroAfterOne,
     frzMoveMax: +frzMoveMax.toFixed(4), frzHpBoss, frzHpPlayer, frzAnim,
+    bornEnd: bornEnd === null ? null : +bornEnd.toFixed(3), growMin: +growMin.toFixed(4),
     tNow: r ? +r.t.toFixed(4) : null, camKeys: Object.keys(cam).sort().join(','),
   };
   H.cleanup();
@@ -228,13 +233,16 @@ const RUN_OTHER = ([mode]) => {
           (+m[1] + +m[2] + +m[3]).toFixed(2) + 's)');
   /* 2회차 — 국면은 `step()` **맨 위**의 배타적 상태 블록으로 옮겼다(액터 정지 + introT 진행 + return).
      그 자리를 소스에서 못박는다: `if(dunRun && dunRun.introOn && !dunRun.bossDown){ … return; }` */
-  const EXCL = /if\(dunRun && dunRun\.introOn && !dunRun\.bossDown\)\{[\s\S]{0,600}?return;\s*\n\s*\}/;
+  const EXCL = /if\(dunRun && dunRun\.introOn && !dunRun\.bossDown\)\{[\s\S]{0,2000}?\n    return;\n  \}/;
   is('[전제] 등장 국면이 step() 의 배타적 상태다(액터 정지 + return)', EXCL.test(src), true);
   const excl = (src.match(EXCL) || [''])[0];
   is('[전제] 그 블록이 introT 를 굴린다', /dunRun\.introT \+= dt;/.test(excl), true);
-  is('[전제] 그 블록이 스프라이트 애니메이션만 돌린다(좌표·판정 0줄)',
-     /stepAnim\(player, dt\);/.test(excl) && /for\(const e of enemies\) stepAnim\(e, dt\);/.test(excl) &&
-     !/\.x \+=|\.y \+=|hitEnemy|hurtPlayer/.test(excl), true);
+  /* 도는 것은 «그림» 뿐이다 — 스프라이트 프레임(stepAnim)과 등장 팝인 시계(born).
+     좌표를 옮기거나 피해를 주는 줄이 한 줄이라도 들어오면 이 항이 빨개진다. */
+  is('[전제] 그 블록이 그림만 돌린다(좌표·판정 0줄)',
+     /stepAnim\(player, dt\);/.test(excl) && /stepAnim\(e, dt\)/.test(excl) &&
+     /e\.born \+= dt;/.test(excl) &&
+     !/\.x \+=|\.y \+=|hitEnemy|hurtPlayer|\.hp -=/.test(excl), true);
   is('[전제] 전투 깃발이 선 뒤에만 t 가 깎인다', /else if\(dunRun\.fight\)\{\s*\n?\s*dunRun\.t -= dt;/.test(src), true);
 
   /* §R 용 «상수 0» 사본 — 상대 경로 자산 때문에 반드시 같은 폴더에 둔다(probe350 함정) */
@@ -292,6 +300,11 @@ const RUN_OTHER = ([mode]) => {
     is('[Z-b] 국면 중 보스 체력이 바뀐 프레임 수', gold.frzHpBoss, 0);
     is('[Z-c] 국면 중 플레이어 체력이 바뀐 프레임 수(재생·피격 둘 다 멈춘다)', gold.frzHpPlayer, 0);
     ge('[Z-d] 그래도 스프라이트 애니메이션은 돈다(프레임 번호가 움직인 프레임 수)', gold.frzAnim, 1);
+    /* ⚑ 2회차 비평(CS·CT 2인 독립) — 「born 까지 세우면 `drawEnemy` 의 `grow = born/0.3` 이 얼어
+       보스가 **6.6% 알파·크기**로 찍힌다 = 등장 연출인데 빈 바닥」. 그려지는 크기를 항으로 세운다. */
+    is('[Z-e] 국면 0.4초 뒤부터 보스가 «온전한 크기»로 그려진다(grow = born/0.3 이 1)', gold.growMin, 1);
+    ge('[Z-f] 국면이 끝날 때 born 이 팝인 창(0.3s)을 넘겼다 — 전투 시작에 보스가 즉시 유효한 표적',
+       gold.bornEnd !== null && gold.bornEnd >= 0.3 ? 1 : 0, 1);
   }
 
   console.log('\n[E] HUD — 국면 동안 시계는 멈춰 보이고 338 체력바는 만피다');
