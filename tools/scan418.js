@@ -45,13 +45,30 @@ const ALL = process.argv.includes('--all');
 const DSFS = [2, 3, 4];
 const TOL = Number(process.env.SCAN418_TOL || 0.005);   /* [S3] ④ 와 같은 0.5% */
 
-/* 되돌림 — 8·9회차가 놓은 «정수 상자» 두 줄을 떼면 옛 소수 상자가 돌아온다.
-   이 자가 그 둘을 다시 잡는지가 **이 자가 살아 있다는 유일한 증거**다. */
+/* 되돌림 — 지금까지 놓인 «정수 상자» 다섯 줄을 전부 떼면 옛 소수 상자가 돌아온다.
+   이 자가 그것들을 다시 잡는지가 **이 자가 살아 있다는 유일한 증거**다.
+   ⚠ 줄을 더할 때는 **정수화한 자리를 여기에도 반드시 같이 적는다** — 안 적으면 그 자리는
+     «고쳤다는 사실만 남고 무엇이 그것을 지키는지 아무도 안 묻는» 상태가 된다. */
 const REVERT_CSS = `
-  .ci-ic>i>.cic{width:1.08em !important;height:1.08em !important}
+  .ci-ic>i>.cic{width:1.08em !important;height:1.08em !important}   /* 356 8회차 — 33 재화 정보 */
   .ci-ic>i{transform:scale(.93878) !important}
-  .at-if>em>.cic{width:1.08em !important;height:1.08em !important}
+  .at-if>em>.cic{width:1.08em !important;height:1.08em !important}  /* 356 9회차 — 70 출석 */
+  .qs-i>.cic{width:1.08em !important;height:1.08em !important}      /* 418 — 22 퀘스트 */
+  .ps-bx>i>.cic{width:1.08em !important;height:1.08em !important}   /* 418 — 35 패스 */
+  #tuto .trew .ri>.cic{width:1.08em !important;height:1.08em !important} /* 418 — 전 화면 미션 배너 */
 `;
+/* 정수화가 끝난 다섯 자리 — 게이트 [S3] ② 가 «상자가 아직 정수인가» 를 묻는다.
+   ⚠ «0칸» 이 아니라 **«정수 상자»** 를 묻는 이유: 정수화해도 소수 «좌표» 가 남는 자리가 있고
+     (36 출석 패스는 행 y 가 …​.5 라 잉크에 1px 이 남는다 = +0.61%), 그건 상자가 만든 것이 아니다.
+     0칸을 물으면 이 항이 «상자와 무관한 이유로» 빨개져 결국 눌러 끄게 된다 — 그러면 정수 상자가
+     통째로 사라져도 초록인 게이트가 남는다(328 교훈). 좌표가 남긴 잔여는 아래 래칫이 센다. */
+const FIXED = [
+  { lab: '33 재화 정보 `#ciIcon`(356 8회차)', open: ['[data-cur="dia"]'], sel: '#ciw #ciIcon>img.cic', box: 98 },
+  { lab: '70 출석 `.at-if>em`(356 9회차)', open: ['.side .ibtn[data-pop="attend"]'], sel: '.at-if>em>img.cic', box: 82 },
+  { lab: '22 퀘스트 `.qs-i`(418)', open: ['.side .ibtn[data-pop="quest"]'], sel: '.qs-i>img.cic', box: 59 },
+  { lab: '35 패스 `.ps-bx>i`(418)', open: ['#menub', '#psGo'], sel: '#psTk .ps-bx>i>img.cic', box: 88 },
+  { lab: '미션 배너 `#tutoRew`(418)', open: [], sel: '#tuto .trew .ri>img.cic', box: 67 },
+];
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
 const COLLECT418 = function () {
@@ -130,7 +147,7 @@ function snapDev(rec, d) {
   return { sw, sh, dev: (sw / sh) / (rec.iw / rec.ih) - 1 };
 }
 
-module.exports = { COLLECT418, snapDev, DSFS, TOL, REVERT_CSS };
+module.exports = { COLLECT418, snapDev, DSFS, TOL, REVERT_CSS, FIXED };
 
 if (require.main !== module) return;
 

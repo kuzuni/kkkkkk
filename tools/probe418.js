@@ -109,15 +109,20 @@ const DIFF_MANY = async ([a, b, boxes, thr]) => {
   return out;
 };
 
-(async () => {
+/* ⚑ 게이트가 이 스윕을 **그대로** 부를 수 있게 함수로 내놓는다 —
+   `verify356` [S3] 이 화면별 상수 대신 이 한 벌을 쓴다(418 등재문 처방 ③). */
+async function sweep(opt) {
+  const DSF = opt.dsf || 2, REVERT = !!opt.revert, ONLY = opt.only || null;
+  const TOL = opt.tol == null ? 0.005 : opt.tol;
   const browser = await launch(chromium);
   const calc = await browser.newPage();
   await calc.setContent('<body></body>');
 
   const rows = [];
   const errs = [];
+  const wanted = (l) => !ONLY || (Array.isArray(ONLY) ? ONLY.some((o) => l.includes(o)) : l.includes(ONLY));
   for (const [label, steps] of SCREENS) {
-    if (ONLY && !label.includes(ONLY)) continue;
+    if (!wanted(label)) continue;
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: DSF });
     const page = await ctx.newPage();
     try {
@@ -128,6 +133,9 @@ const DIFF_MANY = async ([a, b, boxes, thr]) => {
         await page.waitForTimeout(420);
       }
       if (REVERT) await page.addStyleTag({ content: REVERT_CSS });
+      /* 후보 처방을 그 자리에서 시험한다 — «정수 상자로 바꾸면 편차가 사라지는가».
+         사라지면 그 자리는 소수 상자 결함이고, 안 사라지면 아트·AA 라 이 작업 밖이다. */
+      if (process.env.PROBE418_CSS) await page.addStyleTag({ content: process.env.PROBE418_CSS });
       await page.waitForTimeout(350);
       /* 애니·타이머 정지 — 차분 두 장 사이에 다른 것이 바뀌면 bbox 가 분다(8회차 교훈) */
       await page.evaluate(() => {
@@ -268,19 +276,28 @@ const DIFF_MANY = async ([a, b, boxes, thr]) => {
     at: `${g.sample.x.toFixed(4)},${g.sample.y.toFixed(4)}`,
   })).sort((a, b) => Math.abs(b.dev) - Math.abs(a.dev));
 
+  return { dsf: DSF, tol: TOL, revert: REVERT, screens: SCREENS.filter(([l]) => wanted(l)).length,
+    measured: measured.length, judged: measured.filter((r) => r.judged).length,
+    outside: outside.length, clipped: clipped.length, cells: bad.length, groups: list, errs };
+}
+
+module.exports = { sweep };
+
+if (require.main !== module) return;
+
+(async () => {
+  const R = await sweep({ dsf: DSF, revert: REVERT, only: ONLY, tol: TOL });
   if (JSON_OUT) {
-    console.log(JSON.stringify({ dsf: DSF, tol: TOL, revert: REVERT, measured: measured.length,
-      judged: measured.length - outside.length, outside: outside.length,
-      clipped: clipped.length, cells: bad.length, groups: list, errs }, null, 1));
+    console.log(JSON.stringify(R, null, 1));
   } else {
-    console.log(`[probe418]${REVERT ? ' «되돌림»' : ''} DSF${DSF} · 잉크를 잰 노드 ${measured.length}개 ` +
-      `(판정 ${measured.filter((r) => r.judged).length} · 원본비 없음 ${outside.length} · 가려짐·잘림 ${clipped.length}) · ` +
-      `종횡 편차 >${(TOL * 100).toFixed(1)}% 인 칸 ${bad.length}개 → ${list.length}자리`);
-    for (const g of list) {
+    console.log(`[probe418]${R.revert ? ' «되돌림»' : ''} DSF${R.dsf} · 화면 ${R.screens}개 · 잉크를 잰 노드 ${R.measured}개 ` +
+      `(판정 ${R.judged} · 원본비 없음 ${R.outside} · 가려짐·잘림 ${R.clipped}) · ` +
+      `종횡 편차 >${(R.tol * 100).toFixed(1)}% 인 칸 ${R.cells}개 → ${R.groups.length}자리`);
+    for (const g of R.groups) {
       console.log(`  ${g.dev > 0 ? '+' : ''}${g.dev}%  ${g.sel}  «${g.cls}»  ${g.cells}칸 · 잉크 ${g.ink}`);
       console.log(`      상자 ${g.box} @ ${g.at} · 화면: ${g.screens.join(', ')}`);
     }
-    if (errs.length) { console.log('\n[!] 화면 진입 실패'); errs.forEach((e) => console.log('  ' + e)); }
+    if (R.errs.length) { console.log('\n[!] 화면 진입 실패'); R.errs.forEach((e) => console.log('  ' + e)); }
   }
   process.exit(0);
 })();
