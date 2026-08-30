@@ -5977,8 +5977,21 @@
   .rw-mid>*{position:absolute}
   /* 수반 난색 글로우 — 구 .rw-bg 1번 레이어(radial 40%×18% at 50% 88% of 1527 = rx432·ry275
      @ 540,1344)를 수반 기준(200,171)으로 옮긴 것. 패널이 길어져도 수반을 따라간다. */
-  .rw-mid::before{content:'';position:absolute;left:-232px;top:-104px;width:864px;height:550px;
+  /* ── 작업 432 — **상자를 490 으로 얼린다(그림은 한 픽셀도 안 바뀐다).** ──
+     `.rw-panel` 은 `overflow:hidden` 인데 이 상자가 짧은 프레임에서 패널 **밖으로 나가 있었다**:
+     상자 하변 = `--rw-bt + 446` 이고 패널 높이를 P 라 하면 넘침 = **104 − --rw-g3**
+     (1600 60px · 1700 60 · 1842 45 · 1920 34.4 · 2280·2600 0 — `probe432` 실측과 일치).
+     ⚠ **잘린 것은 «내용» 이 아니라 그라디언트의 투명한 꼬리**다 — `probe432` [5] 가
+     `overflow` 를 hidden ↔ visible 로 갈아 찍어 차분한 결과 네 프레임 전부 **다른 픽셀 0개**다.
+     (ry 275 의 72% = 중심에서 198 ⇒ 잉크는 타일 y473 에서 끝나는데 1600 은 y490 에서 자른다.)
+     ⇒ **1600 이 이미 하고 있던 자르기(490)를 전 프레임의 상자 크기로 못박는다.**
+     ⚠ `background-size` 를 864×550 으로 **먼저 얼려야** 한다 — 안 얼리면 `closest-side` 의 ry 가
+        상자 높이를 따라 275 → 245 로 줄어 **글로우가 실제로 작아진다**(= 그림이 바뀐다).
+        얼린 뒤에는 상자 높이가 «타일을 어디서 자르는가» 만 정하므로 잘리는 띠가 전부 투명이다.
+     넘침은 `44 − --rw-g3`(g3 하한이 44) ⇒ **네 프레임 전부 0**, 1600 은 정확히 패널 하변에 닿는다. */
+  .rw-mid::before{content:'';position:absolute;left:-232px;top:-104px;width:864px;height:490px;
     background:radial-gradient(closest-side ellipse at 50% 50%,#3E2B1D 0%,rgba(62,42,30,0) 72%);
+    background-size:864px 550px;background-repeat:no-repeat;
     pointer-events:none}
   /* 수반 접지 그림자 — 밑동 바로 아래. 없으면 수반이 지면에 «얹힌» 것으로 안 읽힌다(비평 U) */
   .rw-mid::after{content:'';position:absolute;left:-30px;width:460px;top:198px;height:44px;
