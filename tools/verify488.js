@@ -396,7 +396,36 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
                     ladder: (SLOTS - 1) * slotW(host.getBoundingClientRect().width, SLOTS, NaN) + INK,
                     hostW: host.getBoundingClientRect().width };
     }
-    setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
+    /* 08 세부 팝업 — 호스트가 «레벨 행» 이라 봉투를 카드(`.skd`) 자식들과 맞댄다.
+       `.sk-db`(설명문)는 «홀드 중에 안 바뀌는 산문» 이라 유일하게 허용한 자리다(CSS 주석 참조). */
+    try { closeTrain(); } catch (_) {}
+    {
+      const id = SKILLS[0].id; S.own[id] = { l: 1, n: 1e9 }; S.gold = 1e15;
+      showSkillDetail(id);
+      const host = document.querySelector('#mbox .sk-lv'), card = document.querySelector('#mbox .skd');
+      const e = envs(host), h = card.getBoundingClientRect();
+      const kids = [...card.children].map(el => { const b = el.getBoundingClientRect();
+        return { cls: (el.className || '').split(/\s+/)[0], x: b.left - h.left, y: b.top - h.top, w: b.width, h: b.height }; })
+        .filter(k => k.w > 4 && k.h > 4);
+      /* 봉투는 호스트(`.sk-lv`) 기준이므로 카드 기준으로 옮겨서 맞댄다 */
+      const lr = host.getBoundingClientRect(), dx = lr.left - h.left, dy = lr.top - h.top;
+      const sh = e2 => ({ x1: e2.x1 + dx, x2: e2.x2 + dx, y1: e2.y1 + dy, y2: e2.y2 + dy });
+      out.detail = { ok: kids.filter(k => hit(sh(e.ok), k)).map(k => k.cls),
+                     pay: kids.filter(k => hit(sh(e.pay), k)).map(k => k.cls) };
+      try { closeModal(); } catch (_) {}
+    }
+    /* 89 유물 그릇 — 그릇 «안» 자식과 맞댄다 */
+    {
+      S.relic = 1e12; openRelw();
+      const host = document.getElementById('rwBasin'), e = envs(host), h = host.getBoundingClientRect();
+      const kids = [...host.querySelectorAll('*')].map(el => { const b = el.getBoundingClientRect();
+        return { cls: (el.className || '').split(/\s+/)[0], x: b.left - h.left, y: b.top - h.top, w: b.width, h: b.height }; })
+        .filter(k => k.w > 6 && k.h > 6 && !['rw-basin', 'rw-stone', 'rw-mid'].includes(k.cls));
+      out.relic = { ok: kids.filter(k => hit(e.ok, k)).map(k => k.cls),
+                    pay: kids.filter(k => hit(e.pay, k)).map(k => k.cls) };
+      try { closeRelw(); } catch (_) {}
+    }
+    openTrain(); setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
     {
       const host = document.querySelector('.tr-tp'), e = envs(host);
       out.temper = { ok: kidsOf(host, []).filter(k => hit(e.ok, k)).map(k => k.cls),
@@ -423,6 +452,17 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      '[I6] ★ 단련 — 두 봉투가 행 자식(축 이름·레벨·설명·버튼)을 한 개도 안 밟는다',
      '[' + I.temper.ok.join(',') + '] / [' + I.temper.pay.join(',') + ']');
   ok(I.temper.sep, '[I7] 단련은 한 칸에 두 줄기를 위아래로 포갰다 — 둘이 서로 안 만난다', String(I.temper.sep));
+  console.log('  · 세부 팝업 결과 [' + I.detail.ok.join(',') + '] · 비용 [' + I.detail.pay.join(',') + ']  |  유물 결과 [' + I.relic.ok.join(',') + '] · 비용 [' + I.relic.pay.join(',') + ']');
+  ok(I.detail.ok.length === 0 && I.detail.pay.every(c => c === 'sk-db'),
+     '[I8] ★ 08/50 세부 — 결과 봉투는 아무것도 안 밟고, 비용 봉투는 «설명문(.sk-db)» 하나만 밟는다',
+     '[' + I.detail.ok.join(',') + '] / [' + I.detail.pay.join(',') + ']');
+  ok(!I.detail.pay.some(c => ['sk-lv', 'sk-pb', 'sk-ct', 'sk-act'].includes(c)) &&
+     !I.detail.ok.some(c => ['sk-lv', 'sk-pb', 'sk-ct', 'sk-act'].includes(c)),
+     '[I9] ★ 그 팝업에서 «홀드 중에 바뀌는 것»(레벨·진행바·피해량 표·버튼)은 한 개도 안 밟는다',
+     '[' + I.detail.ok.concat(I.detail.pay).join(',') + ']');
+  ok(I.relic.ok.length === 0 && I.relic.pay.length === 0,
+     '[I10] 89 유물 — 두 봉투가 그릇 안 재료 행·`.rw-cost` 를 안 밟는다',
+     '[' + I.relic.ok.join(',') + '] / [' + I.relic.pay.join(',') + ']');
 
   /* ══ [R] 되돌림 시험 — 부품을 빼면 위 등식이 전부 0 이 된다 ════════ */
   console.log('[R] 되돌림 시험 — hbBeat 를 no-op 으로 바꾼 사본에서 세 축이 0 이 되는가');
