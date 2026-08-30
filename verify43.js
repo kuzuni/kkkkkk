@@ -7,7 +7,8 @@
    #defw / .df-txt 구간을 다시 손대는 세션은 손대기 전/후로 돌려 회귀 0 을 확인할 것.
 
    좌표는 전부 «프레임 px»(1080 기준)로 환산해서 본다 — #app 의 rect 를 원점·스케일로 쓴다. */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const URL = 'file://' + path.resolve(__dirname, 'index.html');
@@ -19,7 +20,7 @@ const ok = (n, c, d) => { c ? pass++ : fail++; console.log((c ? '  OK   ' : '  F
 const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(got - want) <= tol, Math.round(got * 10) / 10);
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const page = await browser.newPage({ viewport: { width: 1080, height: 2280 } });
   const errs = [];
   page.on('pageerror', e => errs.push('pageerror: ' + e.message));

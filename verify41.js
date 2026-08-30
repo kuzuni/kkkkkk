@@ -3,7 +3,8 @@
    비교 기준본은 `git show <ref>:index.html` 을 임시 파일로 떨궈서 쓴다(스크립트가 알아서 만든다).
    <ref> 는 인자로 준다 — 기본값 HEAD~1. 41 이 손대기 «전» 커밋을 줘야 회귀 대조가 유효하다.
      예) node verify41.js 0384edc   (33 이 올라온 직후 = 41 직전 상태) */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -78,7 +79,7 @@ async function open(browser, file, which, freeze) {
     else ok('회귀 기준본 = 현재 파일에서 .pcb 마크업 2개만 제거');
     fs.writeFileSync(BEFORE, stripped);
   }
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const NOW = path.resolve('index.html');
 
   /* ---------- ① 기능 체크 ---------- */

@@ -5,7 +5,8 @@
    ④ 합성: nextGradeItem 이 같은 j 유지, 다음 등급에 j 없으면 등급 내로 감아 결정적
    ⑤ 구 세이브: weapon3 장착 + 재료 세이브 로드 → 장착·레벨·재료 그대로, NaN 없음
    ⑥ 05 팝업 그리드: 일반 행에 실제 아이템 4칸 · 11 확률 팝업 행 수 = 해금 등급 아이템 수 합 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 
 const OLD_SAVE = {
@@ -17,7 +18,7 @@ const OLD_SAVE = {
 };
 
 (async () => {
-  const br = await chromium.launch();
+  const br = await launch(chromium);
   const pg = await br.newPage({ viewport: { width: 1080, height: 2280 } });
   // 44 교훈 1 — 세이브는 페이지 스크립트보다 먼저 심는다(자동 저장 루프가 덮어쓰지 못하게)
   await pg.addInitScript(sv => {

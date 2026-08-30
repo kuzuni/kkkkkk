@@ -6,8 +6,8 @@
  * 회귀 0 을 확인할 것. 통과하면 VERIFY PASS, 하나라도 어긋나면 어긋난 값과 함께 exit 1.
  * (smoke.js 는 «깨졌나» 만 보고 좌표는 안 본다 — 그래서 이게 따로 있다) */
 const path = require('path');
-const fs = require('fs');
-const { chromium } = require(path.join(__dirname, 'node_modules', 'playwright'));
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const URL = 'file://' + path.resolve(__dirname, 'index.html').replace(/\\/g, '/');
 
 const fails = [];
@@ -15,15 +15,8 @@ const fail = (m) => { fails.push(m); console.log('  X ' + m); };
 const ok = (m) => console.log('  o ' + m);
 
 (async () => {
-  /* smoke.js 와 같은 폴백 — 번들 브라우저가 없는 러너에서는 /opt/pw-browsers/chromium 을 쓴다 */
-  let browser;
-  try { browser = await chromium.launch(); }
-  catch (e) {
-    const p2 = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
-    if (!fs.existsSync(p2)) throw e;
-    console.log('[i] 번들 브라우저 없음 → ' + p2 + ' 사용');
-    browser = await chromium.launch({ executablePath: p2 });
-  }
+  /* 폴백은 `tools/pwlaunch.js` 한 곳에 모여 있다(작업 529 — 사본을 두면 다시 어긋난다) */
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];

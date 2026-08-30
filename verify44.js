@@ -1,7 +1,8 @@
 /* 44 검증 — 다이아 판매 상품 5종 + 마일리지 교환
    지시서 [3]-(가) 기계적/기능 작업: 비평가 없이 기하 단정 + T2 «기능 완성 규칙» 기능 체크 표.
    실행: node verify44.js   (playwright@1.56.0 · chromium 1194) */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, 'index.html');
 
@@ -31,7 +32,7 @@ const box = (page, sel, i) => page.evaluate(([s, n]) => {
 }, [sel, i]);
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const errs = [];
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 } });
   const page = await ctx.newPage();

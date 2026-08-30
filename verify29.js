@@ -4,7 +4,8 @@
    - 회전: 돌리기 → 감속 → «포인터가 가리킨 칸» 이 실제 당첨 칸과 일치하는지 (각도 실측)
    - 기능: 남은 횟수 차감 · 재화 증가 · localStorage 저장 · HUD 반영 · 하루 5회 소진 · 재입력 차단
 */
-const { chromium } = require('playwright');
+const { pw, launch } = require('./tools/pwlaunch');
+const { chromium } = pw();
 const path = require('path');
 const URL = 'file://' + path.resolve(__dirname, 'index.html');
 
@@ -15,7 +16,7 @@ const chk = (c, m) => (c ? ok(m) : no(m));
 const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a * 100) / 100 + ' vs ' + b + ', 허용 ±' + t + ')');
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch(chromium);
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
   const errs = [];
