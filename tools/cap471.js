@@ -49,10 +49,19 @@ const STEPS = [
       return { x: r.left, y: r.top, w: r.width, h: r.height };
     }, hostSel);
     if (!box) { console.log('  (건너뜀) ' + label + ' — 상자 없음'); return; }
-    const pad = 46;
-    const clip = { x: Math.max(0, box.x - pad), y: Math.max(0, box.y - pad),
-                   width: Math.min(1080 - Math.max(0, box.x - pad), box.w + pad * 2),
-                   height: Math.min(2280 - Math.max(0, box.y - pad), box.h + pad * 2) };
+    /* ⚑ 2회차 비평(BP) 이 드러낸 **이 자의 결함** — 1·2회차 시트는 칸마다 «호스트 전체 + 여백» 을 잘라
+       `k = min((CELL-24)/w, CELL/h, 1.6)` 로 **칸마다 다른 배율**로 붙였다. 그래서 980px 짜리 카드는
+       0.48배, 100px 짜리 아이콘은 1.6배로 실려 **같은 11px 이 시트에서 5px 과 35px 으로 보인다.**
+       비평가가 «03 은 21px 안쪽» 이라고 적은 것이 그것이다(제품 실측은 11.0).
+       «나란히 놓고 비교» 하려면 **모든 칸이 같은 배율·같은 크기의 창**이어야 한다.
+       ⇒ 호스트 전체가 아니라 **우상단 코너를 중심으로 한 고정 창(제품 240×240px)** 을 잘라
+          모든 칸을 같은 배율로 붙인다. 코너 걸침만 보는 채점이라 이 창이면 충분하고, 칸끼리
+          «몇 px 안쪽인가» 를 눈으로 직접 견줄 수 있다. */
+    const WIN = 240;
+    const cxr = box.x + box.w, cyr = box.y;
+    const clip = { x: Math.max(0, Math.min(1080 - WIN, cxr - WIN * 0.62)),
+                   y: Math.max(0, Math.min(2280 - WIN, cyr - WIN * 0.38)),
+                   width: WIN, height: WIN };
     const buf = await page.screenshot({ clip });
     shots.push({ label, note, b64: buf.toString('base64'), w: clip.width, h: clip.height });
     console.log('  ' + label.padEnd(28) + Math.round(box.w) + '×' + Math.round(box.h)
@@ -170,6 +179,7 @@ const STEPS = [
       await new Promise(r => { im.onload = r; im.src = 'data:image/png;base64,' + it.b64; });
       return { im, label: it.label, note: it.note };
     }));
+    /* 모든 칸이 같은 창(240×240 제품px, dsf2 라 480×480)이라 **배율도 하나**다 */
     const COL = 4, CELL = 470, PADT = 54;
     const rows = Math.ceil(imgs.length / COL);
     const c = document.createElement('canvas');
@@ -181,9 +191,18 @@ const STEPS = [
       g.fillStyle = '#EDEAE3'; g.font = 'bold 22px sans-serif'; g.textBaseline = 'top';
       g.fillText(o.label, cx + 12, cy + 8);
       if (o.note) { g.fillStyle = '#9AA0AA'; g.font = '18px sans-serif'; g.fillText(o.note, cx + 12, cy + 32); }
-      const k = Math.min((CELL - 24) / o.im.width, CELL / o.im.height, 1.6);
+      /* ⚠ 칸마다 다른 배율을 쓰면 «나란히» 가 거짓말이 된다(2회차 비평이 그것에 걸렸다).
+         창이 전부 같은 크기이므로 배율은 **한 값**이다. */
+      const k = (CELL - 24) / o.im.width;
       const w = o.im.width * k, h = o.im.height * k;
       g.drawImage(o.im, cx + (CELL - w) / 2, cy + PADT + (CELL - h) / 2, w, h);
+      /* 창 한복판에 호스트 코너가 오도록 잘랐다 — 십자선을 그려 «코너» 를 눈에 보이게 한다 */
+      g.strokeStyle = 'rgba(120,200,255,.55)'; g.lineWidth = 1;
+      const ox = cx + (CELL - w) / 2, oy = cy + PADT + (CELL - h) / 2;
+      g.beginPath();
+      g.moveTo(ox + w * 0.62, oy); g.lineTo(ox + w * 0.62, oy + h);
+      g.moveTo(ox, oy + h * 0.38); g.lineTo(ox + w, oy + h * 0.38);
+      g.stroke();
     });
     return c.toDataURL('image/png');
   }, shots);
