@@ -148,20 +148,65 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
   console.log('\n[7] 자동 카이팅 OFF — 적 쪽으로 «다가갈» 수 있다');
   await page.mouse.up(); await page.waitForTimeout(30);
   /* 적 전원을 남서 구석에 주차하고 «표적» 하나만 플레이어 동쪽 60px 에 세운다.
-     자동 이동은 135px 를 유지하려 하므로 그 표적에게서 «멀어져야» 한다. */
+     자동 이동은 135px 를 유지하려 하므로 그 표적에게서 «멀어져야» 한다.
+     ⚑ 546(2026-08-30) — **속도만 0 으로 두는 주차는 359 이후 결정적이 아니다.**
+       적 이동식(index.html ~21335)은 `spd = (isBoss ? … : e.sp)` 인데 **돌진 중에는 그 식을 통째로
+       건너뛰고** `spd = stat.speed × DASH.mob.spd`(115×2.6 = 299px/s)를 쓴다 = `e.sp = 0` 이 안 먹는다.
+       표적은 [1]~[6] 을 지나며 20여 초를 산 개체라 setup7 시점에 예고(0.42s)·돌진(0.26s) 한복판일 수
+       있고, 그 회차만 «멀어지기는커녕 가까워졌다» 로 빨개졌다(`node tools/probe546.js` [1]·[2] ·
+       수리 전 트리 12회 연속 실행에서 **2회 빨강**, 그때 표적이 정확히 79.7px = 돌진 1회 거리만큼
+       서쪽으로 왔다). ⇒ **대시 상태 기계까지 같이 주차한다.** 허용 오차는 한 칸도 안 넓혔다. */
   const setup7 = () => page.evaluate(() => {
     player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = player.vy = 0;
     player.inv = 999; player.dead = 0; player.hp = stat.maxHp;
-    for (const e of enemies) { e.x = 40; e.y = WORLD.h - 40; }
+    for (const e of enemies) { e.x = 40; e.y = WORLD.h - 40; e.dashT = 0; e.dashD = 0; e.dashCd = 1e9; }
     const t = enemies[0];
     t.x = player.x + 60; t.y = player.y; t.hp = 1e9; t.maxHp = 1e9; t.sp = 0;
     return Math.hypot(t.x - player.x, t.y - player.y);
   });
+  const tpos = () => page.evaluate(() => ({ x: enemies[0].x, y: enemies[0].y }));
   const d0 = await setup7();
+  const t0 = await tpos();
   await page.waitForTimeout(500);
   const autoAway = await page.evaluate(() => Math.hypot(enemies[0].x - player.x, enemies[0].y - player.y));
+  const t1 = await tpos();
+  /* [전제 7] — 546. 위 항은 «플레이어가 물러났나» 를 재는 자다. 표적이 스스로 움직이면 재는 것이
+     달라지므로, 주차가 실제로 먹었는지를 **먼저** 묻는다. 새 이동 경로가 생겨 주차가 다시 뚫리면
+     카이팅 항이 아니라 이 항이 빨개져 원인을 그 자리에서 말한다. */
+  ok('[전제] 표적은 측정 구간 내내 제자리다 (주차가 실제로 먹었다)',
+    Math.hypot(t1.x - t0.x, t1.y - t0.y) < 0.5, 'Δ' + Math.hypot(t1.x - t0.x, t1.y - t0.y).toFixed(2) + 'px');
   ok('자동 이동은 60px 근접 적에게서 멀어진다(카이팅)', autoAway > d0 + 5,
     d0.toFixed(1) + ' → ' + autoAway.toFixed(1));
+  /* [7-b] 음성항(546) — 자가 «항상 멀어진다» 를 세는 헛초록이 아님을 반대쪽으로 못박는다.
+     같은 자동 이동이 **135±30 밖**(여기선 400px)에서는 «다가가야» 한다(index.html `want = 135`). */
+  const d0far = await page.evaluate(() => {
+    const t = enemies[0]; t.x = player.x + 400; t.y = player.y;
+    player.vx = player.vy = 0;
+    return Math.hypot(t.x - player.x, t.y - player.y);
+  });
+  await page.waitForTimeout(500);
+  const autoNear = await page.evaluate(() => Math.hypot(enemies[0].x - player.x, enemies[0].y - player.y));
+  ok('[음성] 400px 먼 적에게는 반대로 «다가간다» (자가 상수가 아니다)', autoNear < d0far - 5,
+    d0far.toFixed(1) + ' → ' + autoNear.toFixed(1));
+  /* §R 되돌림 시험(546) — 주차를 «푼» 사본(돌진 상태를 되돌려 주입)에서는 위 두 항이 실제로
+     빨개져야 한다. 즉 546 의 수리는 «단언을 무르게 푼 것» 이 아니라 «표본을 결정적으로 만든 것» 이다. */
+  const dR = await page.evaluate(() => {
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = player.vy = 0;
+    player.inv = 999; player.dead = 0; player.hp = stat.maxHp;
+    const t = enemies[0];
+    t.x = player.x + 60; t.y = player.y; t.sp = 0;                 /* 구 주차 주문 그대로 */
+    t.dashT = 0; t.dashD = DASH.mob.dur; t.dvx = -1; t.dvy = 0;    /* 예고가 막 끝난 순간 */
+    return Math.hypot(t.x - player.x, t.y - player.y);
+  });
+  await page.waitForTimeout(500);
+  const awayR = await page.evaluate(() => ({
+    d: Math.hypot(enemies[0].x - player.x, enemies[0].y - player.y),
+    moved: Math.abs(enemies[0].x - (WORLD.w / 2 + 60))
+  }));
+  ok('§R 되돌림 — 구 주차 주문(sp=0)만으로는 돌진이 안 멈춘다 (표적이 70px 넘게 온다)',
+    awayR.moved > 70, 'Δ' + awayR.moved.toFixed(1) + 'px');
+  ok('§R 되돌림 — 그 상태에서는 카이팅 항이 실제로 빨개진다 (이 절은 헛초록이 아니다)',
+    !(awayR.d > dR + 5), dR.toFixed(1) + ' → ' + awayR.d.toFixed(1));
   await setup7();
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx + 300, cy); await page.waitForTimeout(400);
