@@ -293,8 +293,8 @@ const snap = page => page.evaluate(() => {
     let dl = await dunLock();
     const c = dl.cards.find(x => x.id === id);
     ok(`§10 [${id}] ${p.id} ${p.f}층 미클리어 → 잠김`, !!c && c.locked, JSON.stringify(c));
-    ok(`§10 [${id}] 잠금 라벨이 «N층 클리어»(가이드미션 아님)`,
-       !!c && /층\s*클리어/.test(c.label) && !/가이드미션/.test(c.label), c && c.label);
+    ok(`§10 [${id}] 잠금 라벨이 «레벨 N 클리어»(가이드미션 아님 · 427)`,
+       !!c && /레벨\s*<?b?>?\d/.test(c.label) && /클리어/.test(c.label) && !/가이드미션/.test(c.label), c && c.label);
     await page.evaluate(a => { S.dun[a.id] = a.f + 1; renderDunPage(); }, p);
     dl = await dunLock();
     const c2 = dl.cards.find(x => x.id === id);

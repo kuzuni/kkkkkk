@@ -164,7 +164,7 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
   ['relic2', 'relic3', 'relic4'].forEach(id => {
     ok(lk.locked[id] === true, id + ' — 이전 단 미클리어 시 잠김');
     ok(lk.afterClear[id] === false, id + ' — 이전 단 5층 클리어 후 해금');
-    ok(/5<\/b>층 클리어/.test(lk.txt[id]), id + ' — 잠금 문구 «… 5층 클리어» (실측 ' + lk.txt[id].replace(/<[^>]+>/g, '') + ')');
+    ok(/레벨 <b>5<\/b> 클리어/.test(lk.txt[id]), id + ' — 잠금 문구 «… 레벨 5 클리어»(427) (실측 ' + lk.txt[id].replace(/<[^>]+>/g, '') + ')');
   });
   ok(lk.gate.relic2 === true, 'relic2 — 이전 단 4층까지만 깨면 아직 잠김(경계 검사)');
   ok(lk.g0 === true && lk.g15 === false, 'relic1 — 61 가이드미션 15 게이트 유지');
@@ -261,8 +261,8 @@ const CUR = { gold: 'gold', dia: 'dia', relic1: 'rel', relic2: 'rel', relic3: 'r
   ok(ui.thumbs === IDS.length, '72 카드 썸네일(.th>canvas.thcv) ' + IDS.length + '장 모두 실제로 그려짐 (실측 ' + ui.thumbs + ')');
   ok(JSON.stringify(ui.locked) === JSON.stringify(['relic4']),
      'relic1~3 해금 · relic4 만 잠김 (실측 잠김 ' + (ui.locked.join(',') || '없음') + ')');
-  ok(ui.lockTxt.every(t => /용의 무덤 5층 클리어/.test(t)),
-     '잠금 칸 문구가 이전 단 이름·층으로 나옴 (실측 ' + (ui.lockTxt[0] || '') + ')');
+  ok(ui.lockTxt.every(t => /용의 무덤 레벨 5 클리어/.test(t)),
+     '잠금 칸 문구가 이전 단 이름·레벨로 나옴(427) (실측 ' + (ui.lockTxt[0] || '') + ')');
   ok(ui.leaks.length === 0, '보상 알약 글자 누출 0건'
      + (ui.leaks.length ? ' — ' + ui.leaks.map(l => l.card + ':' + l.t + ' +' + l.over + 'px').join(' | ') : ''));
 

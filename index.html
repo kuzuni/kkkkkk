@@ -23654,10 +23654,12 @@ function startDunRun(d, f){
      레퍼런스 30 에는 스테이지 표기가 0px 다(측정표 §8) → 입장하면서 지운다. */
   msgTxt = ''; msgT = 0;
   closeDungeon();                                /* 03 던전 페이지가 뒤에 남아 화면을 덮지 않게 */
-  /* 209 — 탑은 «레벨» 이 아니라 «층» 이다(03 카드·04 세부와 같은 낱말을 쓴다) */
+  /* 427 — 탑도 «레벨» 이다(주인 지시 2026-08-30 · 209 «탑은 층» 결정을 뒤집었다).
+     낱말이 하나로 합쳐져 던전·탑 분기가 통째로 사라졌다 — 데이터·규칙(S.tower·towerSetFloor·
+     «현재 레벨만 도전»·소탕 없음·입장권 없음)은 0줄 그대로다. */
   /* 257 — 타이틀은 «이름 - 레벨 n» 그대로이고, 보스가 둘 이상인 던전에만 남은 수 ●●○ 가 붙는다
      (결정 ③). `bn === 1` 인 기존 8던전·탑은 문자열이 바이트 단위로 예전과 같다 = 30 측정표 무영향. */
-  dunTtlBase = d.n + (isTower(d) ? ' - ' + f + '층' : ' - 레벨 ' + f);
+  dunTtlBase = d.n + ' - 레벨 ' + f;
   dunTtlPip = null;                                /* 다음 drawDunHud 가 반드시 한 번 쓰게 */
   $('app').classList.add('dunrun');
   drawDunHud();
@@ -23702,8 +23704,8 @@ function finishDunRun(r, cleared){
     /* 206 — 실패 «결과» 통보. 층·요구 피해는 03 던전 페이지 카드가 그대로 보여 준다.
        255 — 던전의 실패 사유가 «피해 부족» 에서 «보스를 못 잡음» 으로 바뀌었으므로 통보도 그것을 말한다.
        264 — 탑도 같은 판정이 됐으므로 **같은 문구**를 쓴다(옛 «피해 x / y» 는 이제 실패 사유가 아니다).
-       ⚠ «n층» 표기는 던전·탑 공용으로 원래부터 이 한 줄에 박혀 있던 것이라 건드리지 않았다. */
-    notify('💀 ' + d.n + ' ' + f + '층 실패 — '
+       427 — 던전·탑 공용 한 줄이라 낱말만 «레벨» 로 바뀐다(던전 쪽도 원래 «레벨» 이라 정합). */
+    notify('💀 ' + d.n + ' 레벨 ' + f + ' 실패 — '
       + (r.bossIn ? '보스 체력 <b>' + Math.round(r.bossLeft*100) + '%</b> 남음' : '보스 <b>미등장</b>'));
   }
 }
@@ -23782,7 +23784,7 @@ $('dunOut').addEventListener('click', () => { if(arena) endArena(null); else end
 function sweepDungeon(d){
   if(dunLocked(d)){ notify('🔒 ' + d.n + ' — ' + dunLockTxt(d) + ' 필요'); return; }
   const f = S.dun[d.id] - 1;
-  if(f < 1){ notify('먼저 <b>1층</b>을 클리어해야 소탕합니다'); return; }
+  if(f < 1){ notify('먼저 <b>레벨 1</b>을 클리어해야 소탕합니다'); return; }
   if(S.dunTk[d.id] <= 0){ notify('<b>' + d.n + '</b> 입장권이 없습니다 — 출석 보상마다 <b>+' + DUN_TRY + '장</b>'); return; }
   S.dunTk[d.id]--; S.cnt.dungeon++;
   giveReward(d.rw(f));
@@ -23882,7 +23884,7 @@ function dclAutoCan(){
 function dclCdTxt(){
   if(!dclAuto) return '';
   if(!dclAutoCan()) return isTower(dclDun) ? '' : '입장권 없음';
-  return Math.max(1, Math.ceil(dclCd)) + '초 뒤 ' + (dclSweep ? '자동 소탕' : '다음 층 자동 도전');
+  return Math.max(1, Math.ceil(dclCd)) + '초 뒤 ' + (dclSweep ? '자동 소탕' : '다음 레벨 자동 도전');
 }
 function dclAutoRender(){
   $('dclAuto').classList.toggle('on', dclAuto);
@@ -24679,14 +24681,14 @@ function renderDun(){
   let h = '<div class="sect"><h3><span>🏰 던전</span><em>전투력으로 도전</em></h3>'
     /* 204 — «하루 N회 리필» 폐기. 입장권은 출석마다 던전별 +2 로 쌓이고 상한이 없다(«N/2» 의 N > 2 정상). */
     + '<p>내 전투력 <b>' + fmtB(cp()) + '</b> · 입장권은 출석마다 던전별 <b>+' + DUN_TRY + '장</b> 적립(안 쓰면 쌓입니다)<br>'
-    + '요구 전투력을 넘으면 클리어하고 다음 층이 열립니다. <b>소탕</b>은 이전 층 보상을 즉시 받습니다.</p></div>';
+    + '요구 전투력을 넘으면 클리어하고 다음 레벨이 열립니다. <b>소탕</b>은 이전 레벨 보상을 즉시 받습니다.</p></div>';
   DUNGEONS.forEach(d => {
     const f = S.dun[d.id], need = d.req(f), left = S.dunTk[d.id], ok = cp() >= need;
     const rw = d.rw(f);
     const rwTxt = [rw.gold ? curIc('gold') + fmtG(rw.gold) : '', rw.dia ? curIc('dia') + fmt(rw.dia) : '',
                    rw.rel ? curIc('relic') + fmt(rw.rel) : '', rw.frag ? '🧩' + rw.frag : ''].filter(Boolean).join(' · ');
     h += '<div class="li"><div class="lt">' + d.ic + ' ' + d.n + ' <span style="color:#8fd6ff;font-size:21px">'
-      +  f + '층</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
+      +  '레벨 ' + f + '</span> <span style="float:right;font-size:21px;color:' + (left ? '#8ff0a8' : '#ff6b7f') + '">입장 '
       +  left + '/' + DUN_TRY + '</span></div>'
       +  '<div class="ls">' + d.d + '<br>보상 ' + rwTxt + ' · 요구 전투력 <b style="color:'
       +  (ok ? '#8ff0a8' : '#ff6b7f') + '">' + fmtB(need) + '</b></div>'
@@ -24835,7 +24837,7 @@ function renderDunDetail(){
 function openTowerDetail(id){
   dgdTower = towerById(id); dgdDun = null; dgdRaid = null; dgdArena = null;
   /* 46 이 갈아 끼웠을 수 있는 라벨을 탑 문구로 되돌린다(모드 전환의 상태 잔류 — 205 주석) */
-  $('dgdLvL').textContent = '층';
+  $('dgdLvL').textContent = '레벨';                 /* 427 — 탑도 «레벨» (던전과 같은 낱말) */
   $('dgdRwL').textContent = '보상';
   renderTowerDetail();
   $('dgdw').classList.add('on');
@@ -25701,7 +25703,7 @@ function dunLockTxt(d){
   const u = DUN_UI[d.id]; if(!u) return '';
   if(!u.pre) return '가이드미션 <b>' + u.gm + '</b> 클리어';
   const p = DUNGEONS.find(x => x.id === u.pre.id);
-  return (p ? p.n : u.pre.id) + ' <b>' + u.pre.f + '</b>층 클리어';
+  return (p ? p.n : u.pre.id) + ' 레벨 <b>' + u.pre.f + '</b> 클리어';
 }
 /* 121 — 카드마다 «위상·속도» 를 다르게 하는 변수 묶음. 카드 인덱스 하나에서 전부 파생시킨다
    (LESSONS 90-① — 단마다 상수를 손으로 적으면 반드시 하나가 어긋난다).
@@ -25843,7 +25845,7 @@ function renderTowerPage(){
     +  '<div class="sh"></div><div class="fr"></div>'
     +  '<div class="nm"><i>' + t.n + '</i></div>'
     +  '<div class="pill"><em>' + u.ic + '</em><i>' + u.rw[0] + '</i></div>'
-    +  '<div class="lb a"><i>층</i></div><div class="lb b"><i>입장 제한</i></div>'
+    +  '<div class="lb a"><i>레벨</i></div><div class="lb b"><i>입장 제한</i></div>'
     +  '<div class="sp lv"><em>🔥</em><i>' + f + '</i></div>'
     +  '<div class="sp tk"><em>♾️</em><i>없음</i></div>'
     +  (ready ? '<s class="dot"></s>' : '')

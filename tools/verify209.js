@@ -115,7 +115,8 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
              lock: c.classList.contains('lkd'), canvas: !!c.querySelector('canvas.thcv') };
   });
   ok(card.nm === '시련의 탑', '카드 이름 = 시련의 탑 (실측 ' + card.nm + ')');
-  ok(card.lbA === '층' && /1$/.test(card.lv || ''), '좌 캡슐 = «층» + 현재 층 1 (실측 ' + card.lbA + '/' + card.lv + ')');
+  /* 427 — 탑도 «레벨» 이다(주인 지시 2026-08-30 · 209 «탑은 층» 을 뒤집었다). 던전 카드와 같은 낱말 */
+  ok(card.lbA === '레벨' && /1$/.test(card.lv || ''), '좌 캡슐 = «레벨» + 현재 레벨 1 (실측 ' + card.lbA + '/' + card.lv + ')');
   ok(card.lbB === '입장 제한' && /없음$/.test(card.tk || ''),
      '우 캡슐 = «입장 제한 / 없음» — 입장권 표기가 아니다 (실측 ' + card.lbB + '/' + card.tk + ')');
   ok(/유물조각/.test(card.pill || ''), '보상 알약 = 유물조각 (실측 ' + card.pill + ')');
@@ -152,7 +153,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   ok(dgd.open, '카드를 누르면 세부 팝업이 열린다');
   ok(dgd.mode.tower && !dgd.mode.dun && !dgd.mode.raid && !dgd.mode.arena,
      '넷 중 탑 모드 하나만 켜진다 (' + JSON.stringify(dgd.mode) + ')');
-  ok(dgd.title === '시련의 탑' && dgd.lvL === '층', '제목·라벨이 탑 문구 (' + dgd.title + ' / ' + dgd.lvL + ')');
+  ok(dgd.title === '시련의 탑' && dgd.lvL === '레벨', '제목·라벨이 탑 문구 · 라벨은 427 «레벨» (' + dgd.title + ' / ' + dgd.lvL + ')');
   ok(dgd.floor === '1', '현재 층 표시 = 1 (실측 ' + dgd.floor + ')');
   ok(dgd.try === '무제한', '① 입장 제한 칸 = «무제한» (실측 ' + dgd.try + ')');
   ok(dgd.amt === dgd.want && dgd.amt !== '', '보상 표기 = TOWER.rw(층) (실측 ' + dgd.amt + ')');
@@ -181,7 +182,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
   });
   ok(enter.running && enter.id === 'tower' && enter.f === 1, '[도전] → 1층 런이 실제로 시작된다 (' + enter.id + ' ' + enter.f + '층)');
   ok(enter.mode, '#app.dunrun 전투 화면으로 전환된다');
-  ok(/시련의 탑 - 1층/.test(enter.ttl), 'HUD 제목이 «시련의 탑 - 1층» (실측 ' + enter.ttl + ')');
+  ok(/시련의 탑 - 레벨 1/.test(enter.ttl), 'HUD 제목이 «시련의 탑 - 레벨 1» (427 — 던전과 같은 형식, 실측 ' + enter.ttl + ')');
   ok(Number.isFinite(enter.need) && enter.need > 0, '요구 피해가 TOWER.req 에서 계산된다 (' + Math.round(enter.need) + ')');
   ok(enter.tk0 === enter.tk1, '① 입장권을 한 장도 안 쓴다 (S.dunTk 불변)');
   ok(enter.cnt === 0, '① 던전 입장 카운터(S.cnt.dungeon)도 안 올린다 — 탑은 던전이 아니다');
@@ -204,7 +205,7 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
     return { t, toast, pop, again };
   });
   ok(failRun.t === 1, '실패해도 층은 그대로 1 (실측 ' + failRun.t + ')');
-  ok(/시련의 탑 1층 실패/.test(failRun.toast) && !failRun.pop,
+  ok(/시련의 탑 레벨 1 실패/.test(failRun.toast) && !failRun.pop,
      '실패 안내가 **토스트**로 뜬다(206 — 팝업 아님) — 실측 "' + failRun.toast + '"');
   ok(failRun.again.running && failRun.again.f === 1, '② 실패한 «같은 층» 은 몇 번이든 다시 도전할 수 있다');
 

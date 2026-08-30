@@ -145,13 +145,13 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     await cleanup();
   }
 
-  /* ═══ §B 체크 — 5초 뒤 다음 층 자동 도전 (던전 8종) ══════════════════════ */
+  /* ═══ §B 체크 — 5초 뒤 다음 레벨 자동 도전 (던전 8종) ══════════════════════ */
   console.log('\n[B] 체크 — 5→1 카운트다운 · 5초에 다음 층 입장 (층 +1 · 입장권 −1) · 던전 8종');
   for (const id of DUNS) {
     const p = await clearTo(id, true, 5);
     if (blk(id + ' 클리어', p) || p.err) { no(id + ' — ' + (p.err || '')); await cleanup(); continue; }
     is(id + ' — 31 토글이 켜져 있다', p.chk, true);
-    is(id + ' — 첫 문구', p.cd, '5초 뒤 다음 층 자동 도전');
+    is(id + ' — 첫 문구', p.cd, '5초 뒤 다음 레벨 자동 도전');
     const w = await watch(60 * 8);
     if (blk(id + ' 관찰', w)) { await cleanup(); continue; }
     /* ① 그만큼 실제로 걸린다 — 한 틱 오차만 허용 */
@@ -249,7 +249,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       if (!blk('§D', r)) {
         is('§D 처음엔 둘 다 꺼짐', r.a0.chk === false && r.a0.auto === false, true);
         is('§D 31 에서 켜면 04 값도 켜진다', r.a1.chk === true && r.a1.auto === true, true);
-        is('§D 켜는 즉시 카운트다운이 선다', r.a1.cd, '5초 뒤 다음 층 자동 도전');
+        is('§D 켜는 즉시 카운트다운이 선다', r.a1.cd, '5초 뒤 다음 레벨 자동 도전');
         is('§D 04 에서 끄면 31 토글도 꺼진다', r.a2.chk === false && r.a2.auto === false, true);
         is('§D 04 토글의 표시도 꺼져 있다', r.a2.dgOn, false);
         is('§D 끄면 카운트다운 문구가 사라진다', r.a2.cd, '');
@@ -334,7 +334,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     if (!blk('§F', r) && !r.err) {
       is('§F 런 시작 시 스냅샷이 찍힌다', r.snap, true);
       is('§F 도중에 값이 바뀌어도 결과 화면은 스냅샷을 따른다', r.chk, true);
-      is('§F 카운트다운도 스냅샷 기준으로 선다', r.cd, '5초 뒤 다음 층 자동 도전');
+      is('§F 카운트다운도 스냅샷 기준으로 선다', r.cd, '5초 뒤 다음 레벨 자동 도전');
     } else if (r.err) no('§F — ' + r.err);
     await cleanup();
   }
@@ -388,7 +388,7 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
       return { f0, cd, goAt, f1: dunRun ? dunRun.f : null };
     });
     if (!blk('§H', r) && !r.err) {
-      is('§H 탑에서도 카운트다운이 뜬다', r.cd, '5초 뒤 다음 층 자동 도전');
+      is('§H 탑에서도 카운트다운이 뜬다', r.cd, '5초 뒤 다음 레벨 자동 도전');
       near('§H 자동 입장까지(초)', r.goAt, CD, 2 / 60 + 1e-6);
       is('§H 다음 층으로 자동 입장', r.f1, r.f0 + 1);
     } else if (r.err) no('§H — ' + r.err);
@@ -402,13 +402,13 @@ const near = (m, got, want, tol) => (Math.abs(got - want) <= tol
     const p = await clearTo('gold', true, 5);
     if (blk('§R 클리어', p) || p.err) no('§R — ' + (p.err || ''));
     else {
-      is('§R 토글·문구는 그대로 그려진다(«그렸다» 만으로는 통과 못 한다)', p.cd, '5초 뒤 다음 층 자동 도전');
+      is('§R 토글·문구는 그대로 그려진다(«그렸다» 만으로는 통과 못 한다)', p.cd, '5초 뒤 다음 레벨 자동 도전');
       const w = await watch(60 * 20);
       if (!blk('§R 관찰', w)) {
         (w.run === null)
           ? ok('되돌림 시험 — 시계가 없으면 20초를 흘려도 자동 입장 0 → §B 가 빨개진다')
           : no('되돌림 시험 실패 — 시계를 죽였는데도 자동 입장이 일어났다(§B 가 가짜 초록이다)');
-        is('§R 그동안 문구도 5 에서 멈춘다', w.seen.join('|'), '5초 뒤 다음 층 자동 도전');
+        is('§R 그동안 문구도 5 에서 멈춘다', w.seen.join('|'), '5초 뒤 다음 레벨 자동 도전');
       }
     }
     await ev(() => { window.dclAutoTick = window.__dclTick; });
