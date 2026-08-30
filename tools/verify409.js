@@ -45,6 +45,11 @@ const INK = '#F2BC8D';      /* 활성 라벨 색 */
 const DEGS = [0, 15, 30, 45, 60, 75];
 const MIN_TH = 5.0;         /* 등폭이면 7 근처 · 밴드면 45° 4.9 · 60° 3.5 · 75° 1.8 */
 const MAX_SPREAD = 2.0;     /* 0°~75° 편차 — 밴드는 5.2 가 나온다 */
+/* 409 2회차 — 검정 «안쪽» 축. 각도는 **코너 호 한복판**만 본다(0°·85° 는 직선부로 넘어가는 자리라
+   위·아래 코너의 기댓값이 서로 섞인다 — `probe409b` BL 0°/85° 가 B6.0/K6.0 으로 읽히는 그 자리다).
+   MIN_BEV 5.0 은 ref 6~7 · 우리 6.0~7.0 · 수리 전 2.0~4.0 사이에 그은 선이다. */
+const BEV_DEGS = [30, 45, 60, 75];
+const MIN_BEV = 5.0;
 
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
@@ -130,6 +135,22 @@ function blackNorm(s, out = 0, step = 0.5) {
         같은 등폭 링이 각도에 따라 «0.0» 으로 읽혀 자가 스스로 흔들린다(1회차 실측). */
   if (Math.abs(best[0] - c) > 6) return 0;
   return best[1] * step;
+}
+/* 409 2회차 — **검정 «바로 안쪽» 런.** 등폭이 된 검정 안쪽에서 베벨이 7·cos α 로 사라지던 것이
+   1회차의 남은 반쪽(CV D1)이라, 그 자리를 자로 만든다.
+   ⚠ **이음매 한 칸을 건너뛴다**: 검정 링의 안쪽 모서리는 그 밑 색과 섞여 각도에 따라 0.5~1.0px 짜리
+      중간색 런을 하나 남긴다(45°/60°/85° 에서만 나오고 0°/30°/75° 에서는 안 나온다 = 정수 픽셀 격자에
+      걸리는 표본 운). 그래서 «**2px 이상인 첫 런**» 을 읽는다 — 2px 은 여유가 아니라 «AA 이음매는
+      1px 를 절대 안 넘는다» 는 관측이다. 무르게 푼 것이 아님은 [R6] 이 못박는다(배경 고리를 떼면
+      같은 자가 B7.0 → B2.0 으로 빨개진다). */
+function innerRun(s, out = 0, step = 0.5) {
+  const rs = [];
+  for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], j - i]); i = j; }
+  let k = rs.findIndex(r => r[0] === 'K');
+  if (k < 0 || k > 6) return ['-', 0];
+  let si = k + 1;
+  while (rs[si] && rs[si][1] * step < 2.0) si++;
+  return rs[si] ? [rs[si][0], rs[si][1] * step] : ['-', 0];
 }
 const fmtRuns = s => {
   const out = [];
@@ -252,8 +273,9 @@ const SETTLE = () => {
     console.log('[3] 음성항 — 직선 상·하변에는 검정이 없다 (링을 네 면에 두른 게 아니다)');
     console.log('[4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 통째로 빠진다 (378)');
     console.log('[5] 밴드 대조 — 60°/75° 가 7·cos α (3.5/1.8) 를 크게 넘는다\n');
-    let faces = 0, offFaces = 0;
+    let faces = 0, offFaces = 0, deltaFaces = 0;
     for (const [name, sel, setup] of HOSTS) {
+      const botOn = {};
       try { await page.evaluate(setup); } catch (e) { ok(name + ' 진입', false, e.message.slice(0, 60)); continue; }
       await page.waitForTimeout(700);
       await page.evaluate(SETTLE);
@@ -278,6 +300,27 @@ const SETTLE = () => {
           ok('[2] ' + tag + ' — 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
           ok('[5] ' + tag + ' — 60° ' + th[4].toFixed(1) + ' > 밴드 예측 3.5 · 75° ' + th[5].toFixed(1) + ' > 1.8',
             th[4] >= 4.5 && th[5] >= 3.5, line);
+          /* [8] 409 2회차 — 검정 **안쪽** 도 각도와 무관해야 한다. ref 의 코너는 «위는 베벨 ·
+             아래는 어두운 띠» 라(384 §ref: 위 `K8 B9 F…` ↔ 아래 `K8 D8 F1 B1`) 두 축의 기댓값이
+             **서로 다르고**, 그 다름이 이 항의 음성항 노릇을 한다 — 아래 코너에 베벨을 깔면
+             384 의 감김을 덮게 되므로 아래에서는 D 를 요구한다(`probe409b` 의 C·E 가 그렇게 무너졌다). */
+          const inner = [];
+          for (const dg of BEV_DEGS) inner.push(innerRun(await ray(page, p, corner, dg)));
+          const iline = BEV_DEGS.map((d, i) => d + '°:' + inner[i][0] + inner[i][1].toFixed(1)).join(' ');
+          if (corner[0] === 'T') {
+            ok('[8] ' + tag + ' — 검정 안쪽 베벨 동심 고리 ≥ ' + MIN_BEV.toFixed(1) + 'px (7·cos α 로 안 사라진다)',
+              inner.every(r => r[0] === 'B' && r[1] >= MIN_BEV), iline);
+          } else {
+            /* ⚠ 아래 코너는 «**D 여야 한다**» 로 묻지 않는다 — 그 값은 384(바닥 띠 감김)의 소유이고,
+               `03 던전` BL 75° 는 **수리 전 트리에서도** `B7.0` 이다(직접 대조로 확인 · 곁다리 등재 438).
+               그것을 여기서 물으면 남의 결함이 이 게이트의 색을 정하게 된다(409 1회차가 `verify96`
+               [1-c] 에서 겪은 것과 반대 방향의 같은 사고). ⇒ **이 항이 실제로 주장하는 것**만 묻는다:
+               «2회차가 넣은 고리는 아래 코너를 한 픽셀도 안 건드린다» = 고리를 껐다 켜도 Δ0.
+               무른 항이 아니다 — 고리가 아래 코너로 새면(후보 C·E 가 그랬다) 즉시 빨개진다. */
+            botOn[corner] = inner;
+            ok('[8] ' + tag + ' — 검정 안쪽 런을 쟀다 (아래 코너 · Δ0 판정은 [8-Δ] 에서)',
+              inner.every(r => r[0] !== '-'), iline);
+          }
           faces++;
         }
       }
@@ -289,7 +332,33 @@ const SETTLE = () => {
         ok('[3] ' + name + ' ' + (side === 'T' ? '상변' : '하변') + ' 한복판 — 알약 안쪽에 검정 0',
           !inside.includes('K'), s);
       }
+
+      /* [8-Δ] 2회차가 넣은 배경 동심 고리를 이 호스트에서 껐다 켠다 — 아래 코너가 Δ0 이어야 한다.
+         (위 코너의 «무너진다» 쪽은 [R6] 이 한 번 문다 — 여기서 두 번 물을 필요는 없다.) */
+      if (Object.keys(botOn).length) {
+        await page.evaluate(() => {
+          const s = document.createElement('style'); s.id = 'v409bevH';
+          s.textContent = '.stab.on::after{background:none!important}';
+          document.head.appendChild(s);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        for (const corner of Object.keys(botOn)) {
+          const off = [];
+          for (const dg of BEV_DEGS) off.push(innerRun(await ray(page, p, corner, dg)));
+          const on = botOn[corner];
+          const fmtI = a => BEV_DEGS.map((d, i) => d + '°:' + a[i][0] + a[i][1].toFixed(1)).join(' ');
+          ok('[8-Δ] ' + name + ' ' + corner + ' — 고리를 껐다 켜도 Δ0 (384 의 바닥 감김을 안 덮었다)',
+            on.every((r, i) => r[0] === off[i][0] && Math.abs(r[1] - off[i][1]) < 0.01),
+            '켬 ' + fmtI(on) + '  ↔  끔 ' + fmtI(off));
+          deltaFaces++;
+        }
+        await page.evaluate(() => { const s = document.getElementById('v409bevH'); if (s) s.remove(); });
+        await page.waitForTimeout(150);
+        await shoot(page);
+      }
     }
+    ok('[8-Δ] 아래 코너를 4 면 이상 껐다 켰다 (Δ0 항이 공허하지 않다)', deltaFaces >= 4, deltaFaces + '면');
     ok('링이 살아 있는 면을 8 면 이상 쟀다', faces >= 8, faces + '면');
     ok('378 이 넘긴 면도 실제로 있었다 (음성항이 공허하지 않다)', offFaces >= 2, offFaces + '면');
 
@@ -341,6 +410,32 @@ const SETTLE = () => {
     const topBack = await vscan(page, p0, 'T');
     ok('R5 주입을 걷으면 다시 등폭이고 상변은 검정 0',
       back60 >= MIN_TH && !topBack.slice(4).includes('K'), back60.toFixed(1) + 'px / ' + topBack);
+
+    /* R6·R7 — **[8] 의 되돌림.** 2회차가 넣은 것은 `::after` 의 배경 동심 고리 한 벌뿐이라
+       그것만 떼면 1회차 상태가 그대로 돌아온다. 떼서 위 코너가 무너지고(R6) 아래 코너는
+       Δ0 이어야(R7) [8] 이 «이미 참인 것을 굳힌 항» 이 아니라는 것이 증명된다 —
+       R7 이 곧 «384 를 한 픽셀도 안 건드렸다» 의 가장 짧은 증거이기도 하다. */
+    const bevOn = [], dOn = [];
+    for (const dg of BEV_DEGS) { bevOn.push(innerRun(await ray(page, p0, 'TL', dg))); dOn.push(innerRun(await ray(page, p0, 'BL', dg))); }
+    await page.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v409bev';
+      s.textContent = '.stab.on::after{background:none!important}';
+      document.head.appendChild(s);
+    });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const bevOff = [], dOff = [];
+    for (const dg of BEV_DEGS) { bevOff.push(innerRun(await ray(page, p0, 'TL', dg))); dOff.push(innerRun(await ray(page, p0, 'BL', dg))); }
+    const fmtI = a => BEV_DEGS.map((d, i) => d + '°:' + a[i][0] + a[i][1].toFixed(1)).join(' ');
+    ok('R6 배경 동심 고리를 떼면 위 코너 베벨이 ' + MIN_BEV.toFixed(1) + ' 아래로 무너진다 ([8] 이 공허하지 않다)',
+      bevOn.every(r => r[0] === 'B' && r[1] >= MIN_BEV) && bevOff.some(r => r[0] !== 'B' || r[1] < MIN_BEV),
+      '켬 ' + fmtI(bevOn) + '  ↔  끔 ' + fmtI(bevOff));
+    ok('R7 같은 조작으로 **아래** 코너는 Δ0 — 384 의 바닥 띠 감김은 이 고리와 무관하다',
+      dOn.every((r, i) => r[0] === dOff[i][0] && Math.abs(r[1] - dOff[i][1]) < 0.01),
+      '켬 ' + fmtI(dOn) + '  ↔  끔 ' + fmtI(dOff));
+    await page.evaluate(() => { const s = document.getElementById('v409bev'); if (s) s.remove(); });
+    await page.waitForTimeout(200);
+    await shoot(page);
 
     /* ---- 6. 조작 ---- */
     console.log('\n[6] 조작 — 링이 클릭을 안 가로챈다');

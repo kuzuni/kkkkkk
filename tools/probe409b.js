@@ -27,6 +27,10 @@ const DEGS = [0, 15, 30, 45, 60, 75, 85];
 
 const VARIANTS = [
   ['A 현행(링 위 · 띠 아래)', ''],
+  /* 409 2회차 §R — **되돌림 시험.** 2회차가 넣은 것은 `::after` 의 배경 고리 한 벌뿐이므로
+     그것만 떼면 1회차 상태가 그대로 돌아온다. TL «≥2px» 가 코너로 갈수록 무너지면(B2.0/F18.0)
+     자가 진짜로 그 축을 재고 있다는 뜻이고, BL 은 A 와 Δ0 이어야 한다(384 를 안 건드렸다는 증거). */
+  ['R 되돌림(2회차 배경 고리 제거 = 1회차 상태)', '.stab.on::after{background:none!important}'],
   ['B 띠를 위로', '.stab.on::before{z-index:1}.stab.on::after{z-index:0}'],
   ['C 이중 링(검정7+베벨7)',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 0 0 14px #634F37!important}'],
@@ -86,9 +90,20 @@ function split(s, step = 0.5) {
   const rs = [];
   for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], j - i]); i = j; }
   let k = rs.findIndex(r => r[0] === 'K');
-  if (k < 0 || k > 6) return { k: 0, nx: '-', nn: 0, txt: rs.map(r => r[0] + (r[1] * step).toFixed(1)).join(' ') };
+  if (k < 0 || k > 6) return { k: 0, nx: '-', nn: 0, sx: '-', sn: 0, txt: rs.map(r => r[0] + (r[1] * step).toFixed(1)).join(' ') };
   const inner = rs[k + 1] || null;
+  /* 409 2회차 — **«안쪽» 한 칸만 보면 안티에일리어싱 이음매에 속는다.**
+     검정 링의 안쪽 모서리는 그 밑의 색과 섞이므로 각도에 따라 0.5~1.0px 짜리 중간색 런이 하나 낀다
+     (45°/60°/85° 에서만 나오고 0°/30°/75° 에서는 안 나온다 = **정수 픽셀 격자에 걸리는 표본 운**이지
+     그림의 결손이 아니다. 후보 C — 순수 CSS 동심 링 — 도 같은 자리에서 같은 값을 낸다).
+     ⇒ **기존 «안쪽» 칸은 한 글자도 안 바꾸고**(그 자리가 무엇을 세는지는 그대로 두고) 그 뒤에
+        «**2px 이상인 첫 런**» 축을 하나 더 낸다. 이음매(≤1.5px)는 이 축에서만 건너뛰고,
+        전체 런 문자열(`V409B_FULL=1`)은 그대로 찍히므로 **숨겨지는 값이 없다**. */
+  let si = k + 1;
+  while (rs[si] && rs[si][1] * step < 2.0) si++;
+  const solid = rs[si] || null;
   return { k: rs[k][1] * step, nx: inner ? inner[0] : '-', nn: inner ? inner[1] * step : 0,
+    sx: solid ? solid[0] : '-', sn: solid ? solid[1] * step : 0,
     txt: rs.map(r => r[0] + (r[1] * step).toFixed(1)).join(' ') };
 }
 
@@ -119,11 +134,15 @@ function split(s, step = 0.5) {
       await shoot(page);
       console.log('\n ── ' + name);
       for (const cor of ['TL', 'BL']) {
-        const K = [], N = [];
-        for (const d of DEGS) { const r = split(await ray(page, p, cor, d)); K.push(r.k); N.push(r.nx + r.nn.toFixed(1)); }
+        const K = [], N = [], S = [];
+        for (const d of DEGS) {
+          const r = split(await ray(page, p, cor, d));
+          K.push(r.k); N.push(r.nx + r.nn.toFixed(1)); S.push(r.sx + r.sn.toFixed(1));
+        }
         console.log('   ' + cor + '  deg  ' + DEGS.map(d => String(d).padStart(6)).join(''));
         console.log('       검정 ' + K.map(v => v.toFixed(1).padStart(6)).join(''));
         console.log('       안쪽 ' + N.map(v => v.padStart(6)).join(''));
+        console.log('      ≥2px ' + S.map(v => v.padStart(6)).join(''));
         if (process.env.V409B_FULL) for (const d of [30, 45, 60, 75]) {
           console.log('        ' + cor + ' ' + String(d).padStart(2) + '°  ' + split(await ray(page, p, cor, d)).txt);
         }
