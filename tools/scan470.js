@@ -200,7 +200,7 @@ const SCAN = `(() => {
                   t: ink.y1 - (hr.top + bt),  b: (hr.bottom - bb) - ink.y2 };
     /* [C] 잘라내는 조상의 클라이언트 박스 대비 여백 */
     const ca = clipAncestor(el);
-    let clip = null, caSel = '';
+    let clip = null, caSel = '', caOv = ['visible', 'visible'];
     if (ca) {
       const cr = ca.getBoundingClientRect(), ccs = getComputedStyle(ca);
       const cl2 = parseFloat(ccs.borderLeftWidth) || 0, cr2 = parseFloat(ccs.borderRightWidth) || 0;
@@ -208,6 +208,11 @@ const SCAN = `(() => {
       clip = { l: ink.x1 - (cr.left + cl2), r: (cr.right - cr2) - ink.x2,
                t: ink.y1 - (cr.top + ct2),  b: (cr.bottom - cb2) - ink.y2 };
       caSel = sel(ca);
+      /* ⚑ 4회차 — 축마다 «스크롤로 닿는가» 를 같이 들고 나온다. 그릇이 auto/scroll 이면
+         밖에 있는 잉크는 **스크롤하면 보인다** = 잘림이 아니다(3회차 §3 이 손으로 내린 판정과
+         같은 말인데, 자에는 그 조항이 없어서 «스크롤 위치» 하나로 결과가 흔들렸다).
+         ⚠ 이 주석에 백틱을 쓰지 마라 — SCAN 은 템플릿 문자열 안이라 그 자리에서 끊긴다. */
+      caOv = [ccs.overflowX, ccs.overflowY];
     }
     const ecs = getComputedStyle(el);
     out.push({ sel: sel(el), host: sel(host), txt: own.trim().slice(0, 12), sw: ink.sw,
@@ -216,12 +221,43 @@ const SCAN = `(() => {
                hostW: +(hr.width - bl - br).toFixed(1),
                pad: [+pad.l.toFixed(1), +pad.r.toFixed(1), +pad.t.toFixed(1), +pad.b.toFixed(1)],
                clip: clip ? [+clip.l.toFixed(1), +clip.r.toFixed(1), +clip.t.toFixed(1), +clip.b.toFixed(1)] : null,
-               ca: caSel, border: bl > 0 || bt > 0 });
+               ca: caSel, caOv: caOv, border: bl > 0 || bt > 0 });
   });
   return out;
 })()`;
 
-(async () => {
+/* ── 축 판정 한 벌 — 스캐너와 게이트가 **같은 정의**를 읽는다 ──────────────────────
+   [C] 하드 클립 = «잘라내는 조상 안에서 잉가 안 그려진다». 그릇이 그 축으로 `auto`/`scroll`
+       이면 밖에 있는 잉크는 **스크롤하면 보이므로 잘림이 아니다** — 축마다 따로 본다
+       (세로 스크롤러 안에서 가로로 넘치는 글자는 여전히 진짜 잘림이다).
+   ⚠ 이 조항이 없던 3회차의 자는 «스크롤 위치» 에 따라 같은 화면이 초록도 빨강도 됐다
+      (4회차에 10 상점 소환 탭이 그렇게 «클립 1건» 으로 찍혔다 — 화면 밖으로 스크롤된
+       배너 카드였고, 3회차 기록 §3 이 손으로 «잘림이 아니다» 라고 판정한 바로 그 자리다). */
+const scrollable = (ov) => /auto|scroll/.test(ov || '');
+function clipHit(r) {
+  if (!r.clip) return false;
+  const ov = r.caOv || ['hidden', 'hidden'];
+  const x = Math.min(r.clip[0], r.clip[1]) < -0.5 && !scrollable(ov[0]);
+  const y = Math.min(r.clip[2], r.clip[3]) < -0.5 && !scrollable(ov[1]);
+  return x || y;
+}
+const padHit = (r) => Math.min(r.pad[0], r.pad[1], r.pad[2], r.pad[3]) < -0.5;
+const strokeHit = (r) => r.sw > 0 && !/^stroke/.test(r.po);
+function classify(rows) {
+  const C = [], B = [], S = [];
+  for (const r of rows) {
+    if (strokeHit(r)) S.push(r);
+    if (clipHit(r)) C.push(r);
+    else if (padHit(r)) B.push(r);
+  }
+  return { C, B, S };
+}
+
+/* 4회차 — 게이트(`verify470`)가 이 네 조각을 그대로 읽는다. 스캐너와 자가 «같은 화면 목록·같은
+   상태 주입·같은 잉크 정의» 를 쓰지 않으면 자는 스캐너가 실제로 본 것을 못 지킨다(397 교훈). */
+module.exports = { SCREENS, RAISE, SCAN, classify, clipHit, padHit, strokeHit };
+
+if (require.main === module) (async () => {
   const b = await launch(chromium);
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -263,9 +299,9 @@ const SCAN = `(() => {
     for (const r of rows) {
       const key = name + '|' + r.sel + '|' + r.txt;
       if (seen.has(key)) continue; seen.add(key);
-      if (r.sw > 0 && !/^stroke/.test(r.po)) hitsS.push({ name, ...r });
-      if (r.clip && Math.min(...r.clip) < -0.5) hitsC.push({ name, ...r });
-      else if (Math.min(r.pad[0], r.pad[1], r.pad[2], r.pad[3]) < -0.5) hitsB.push({ name, ...r });
+      if (strokeHit(r)) hitsS.push({ name, ...r });
+      if (clipHit(r)) hitsC.push({ name, ...r });
+      else if (padHit(r)) hitsB.push({ name, ...r });
       else if (ALL) hitsB.push({ name, ok: true, ...r });
     }
   }
