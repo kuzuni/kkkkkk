@@ -23,6 +23,10 @@
 const path = require('path');
 const fs = require('fs');
 const { pw, launch } = require('./pwlaunch');
+/* 540 — «치우기» 닫개 한 벌. 여기 손으로 적혀 있던 목록에는 제품에 없는 이름
+   `closeDefeat` 가 섞여 있었고(index.html 0건), `typeof` 가드가 그것을 조용히 삼켰다.
+   ⚠ 이 파일은 **캡처 하네스**라 게이트가 아니다 — 같이 고치되 점수는 없다. */
+const { install } = require('./closers540');
 const { chromium } = pw();
 
 const R = process.argv[2] || '2';
@@ -52,14 +56,14 @@ const SCENES = {
     await p.goto(URL);
     await p.waitForFunction(() => typeof S !== 'undefined' && typeof renderUI === 'function');
     await p.waitForTimeout(1100);
+    await install(p, { arm: true });   /* 540 — 게임 루프를 돌리는 자다: 껍데기 걷개까지 건다 */
     const cdp = await ctx.newCDPSession(p);
     await p.evaluate(o => {
       if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
       if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
       /* 죽어서 패배 화면이 덮는 것만 막는다(74 규약) — 루프 자체는 돌린다 */
       if (!window.__alive) window.__alive = setInterval(() => { try { if (S.hp != null && typeof maxHp === 'function') S.hp = maxHp(); } catch (_) {} }, 200);
-      ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult', 'closeRelw']
-        .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+      window.__clear540();   /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
       S.gold = 1e18; S.rstone = 1e12; S.dia = 1e12;
       if (o.rate != null) {
         runeRate = () => o.rate;

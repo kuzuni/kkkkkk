@@ -17,6 +17,10 @@
  */
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+/* 540 — «치우기» 닫개 한 벌. 여기 손으로 적혀 있던 목록에는 제품에 없는 이름
+   `closeDefeat` 가 섞여 있었고(index.html 0건), `typeof` 가드가 그것을 조용히 삼켜
+   18 패배 화면을 치우는 팔이 한 번도 돈 적이 없다. */
+const { install, missingClosers, defeatStuck, blockedLabel } = require('./closers540');
 const { chromium } = pw();
 
 const FILE = process.env.P349_FILE || 'index.html';
@@ -36,6 +40,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   await p.goto(URL);
   await p.waitForFunction(() => typeof S !== 'undefined' && typeof renderUI === 'function');
   await p.waitForTimeout(1200);
+  await install(p, { arm: true });   /* 540 — 게임 루프를 돌리는 자다: 껍데기 걷개까지 건다 */
   const cdp = await ctx.newCDPSession(p);
 
   /* --- 계측기: runeBuy 호출 수 · 홀드 생사 표본 · 포인터 이벤트 로그 --- */
@@ -65,8 +70,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     await p.evaluate(op => {
       /* 죽어서 패배 화면이 버튼을 덮는 것만 막는다(74 규약) — 루프 자체는 돌린다 */
       if (!window.__alive) window.__alive = setInterval(() => { try { if (S.hp != null && typeof maxHp === 'function') S.hp = maxHp(); } catch (_) {} }, 200);
-      ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
-        .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+      window.__clear540();   /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
       if (op.rate0) { if (!window.__rate0) window.__rate0 = runeRate; runeRate = () => 0; }
       else if (window.__rate0) runeRate = window.__rate0;
       if (op.stopLoop) { if (typeof step === 'function') { window.__step0 = step; step = () => {}; } }
@@ -194,6 +198,15 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(d[30].cancel === 0, 'ⓘ 그 구간에서 pointercancel 이 0건이다(제스처를 안 뺏긴다)', d[30].cancel + '건');
   ok(d[45].n >= 3, 'ⓙ ±45px 에서도 유지(버튼 112 높이 안이면 «이탈» 이 아니다)', d[45].n + '회');
   ok(cTr >= 3, 'ⓚ (대조) 64 훈련 카드도 같은 규칙을 타 ±30px 에서 연속이 돈다', '+' + cTr + '레벨');
+
+  /* ⚑ 540 — 유령 재유입 차단(524 가 349 에서 겪은 «가끔 22~24/24» 의 씨앗) */
+  const cl540 = await missingClosers(p);
+  ok(cl540.length === 0,
+    '★ 540 — 닫개 이름이 전부 제품에 실재한다(typeof 가드가 유령을 삼키지 않는다)',
+    cl540.length ? '없는 이름 ' + cl540.join(' , ') : '전부 실재');
+  ok(!(await defeatStuck(p)),
+    '★ 540 — 측정이 끝난 시점에 18 패배 화면이 켜져 있지 않다(켜지면 뒤 표본이 전부 «0회» 다)',
+    await blockedLabel(p));
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
   console.log('\nPROBE349 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

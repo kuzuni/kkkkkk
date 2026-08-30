@@ -29,6 +29,10 @@
 const path = require('path');
 const fs = require('fs');
 const { pw, launch } = require('./pwlaunch');
+/* 540 — «치우기» 닫개 한 벌. 여기 손으로 적혀 있던 목록에는 제품에 없는 이름
+   `closeDefeat` 가 섞여 있었고(index.html 0건), `typeof` 가드가 그것을 조용히 삼켜
+   18 패배 화면을 치우는 팔이 한 번도 돈 적이 없다. */
+const { install, missingClosers, defeatStuck, blockedLabel } = require('./closers540');
 const { chromium } = pw();
 
 const FILE = process.env.V354_FILE || 'index.html';
@@ -51,6 +55,7 @@ const BASIN = '#relw #rwBasin';
   await p.goto(URL);
   await p.waitForFunction(() => typeof S !== 'undefined' && typeof renderUI === 'function');
   await p.waitForTimeout(1200);
+  await install(p, { arm: true });   /* 540 — 게임 루프를 돌리는 자다: 껍데기 걷개까지 건다 */
   const cdp = await ctx.newCDPSession(p);
 
   /* 계측 — 349 와 같은 규약: **제품 함수 호출을 직접 센다**(차감 ÷ 비용 은 비용이 변하면 못 쓴다) */
@@ -69,8 +74,7 @@ const BASIN = '#relw #rwBasin';
   });
 
   const clearAll = () => p.evaluate(() => {
-    ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult', 'closeRelw', 'closeTrain']
-      .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+    window.__clear540();                 /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
   });
   /* ⓐ 08 스킬 세부 팝업 — 조각 수량을 인자로 받는다([D] 가 «정확히 n회» 를 잰다) */
   const openSkill = async (frags) => {
@@ -280,6 +284,15 @@ const BASIN = '#relw #rwBasin';
   ok(await p.evaluate(() => ['#trCards [data-tr="atk"]', '#trRunes [data-runebuy]']
       .every(s => { const e = document.querySelector(s); return !e || getComputedStyle(e).touchAction === 'none'; })),
     '349 의 #trw 규칙이 그대로 살아 있다(이 작업이 그 자리를 안 건드렸다)');
+
+  /* ⚑ 540 — 유령 재유입 차단(524 가 349 에서 겪은 «가끔 22~24/24» 의 씨앗) */
+  const cl540 = await missingClosers(p);
+  ok(cl540.length === 0,
+    '★ 540 — 닫개 이름이 전부 제품에 실재한다(typeof 가드가 유령을 삼키지 않는다)',
+    cl540.length ? '없는 이름 ' + cl540.join(' , ') : '전부 실재');
+  ok(!(await defeatStuck(p)),
+    '★ 540 — 측정이 끝난 시점에 18 패배 화면이 켜져 있지 않다(켜지면 뒤 표본이 전부 «0회» 다)',
+    await blockedLabel(p));
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
   console.log('\nVERIFY354 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));

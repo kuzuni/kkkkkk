@@ -22,6 +22,10 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
+/* 540 — «치우기» 닫개 한 벌. 여기 손으로 적혀 있던 목록에는 제품에 없는 이름
+   `closeDefeat` 가 섞여 있었고(index.html 0건), `typeof` 가드가 그것을 조용히 삼켜
+   18 패배 화면을 치우는 팔이 한 번도 돈 적이 없다. 목록·껍데기는 이제 한곳에서 온다. */
+const { install, missingClosers, defeatStuck, blockedLabel } = require('./closers540');
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? (pass++, console.log('  ✓ ' + m + (d ? ' — ' + d : '')))
@@ -39,6 +43,7 @@ const table = [];
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.goto(URL);
   await p.waitForTimeout(1200);
+  await install(p);   /* 540 — `window.__clear540()` 심기 (이 자는 step 을 세우므로 arm 불요) */
 
   /* ================= [1] 재화 ================= */
   console.log('[1] 재화 — 룬강화석이 125 단일 출처와 33 재화 정보 팝업을 지난다');
@@ -400,6 +405,7 @@ const table = [];
     return { rawSt: raw.rstone, rawRune: JSON.stringify(raw.rune) };
   });
   await p.reload(); await p.waitForTimeout(1100);
+  await install(p);   /* 540 — 재로드로 페이지가 갈렸으니 다시 심는다 */
   const back = await p.evaluate(() => ({ st: S.rstone, rune: JSON.stringify(S.rune),
                                          open: RUNES.map(r => runeOpen(r.id)) }));
   ok(sav.rawSt === 24680 && sav.rawRune === '{"r1":500,"r2":123,"r3":0}', '세이브에 실제로 기록된다', sav.rawRune);
@@ -478,8 +484,7 @@ const table = [];
     /* 결정성 — 자동 전투가 30초 넘게 돌면 레벨업·보상 팝업이 버튼 위를 덮어 포인터가 그리로 간다
        (verify64·262 와 같은 규약: 게이트가 손가락을 흉내 내는 동안 게임 루프는 세운다) */
     if(typeof step === 'function') step = () => {};
-    ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
-      .forEach(fn => { try { if(typeof window[fn] === 'function') window[fn](); } catch(_){} });
+    window.__clear540();                                 /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
     S.rune = { r1: o.lv, r2: 0, r3: 0 }; S.rstone = o.stone; S.dia = 100000;
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
     return { cost: runeCost(RN.r1, runeLvOf('r1')), st: S.rstone, dia: S.dia };
@@ -620,6 +625,16 @@ const table = [];
     '★ «홀드 중 숫자» 와 «손 뗀 뒤 통짜 재렌더» 가 한 글자도 다르지 않다(262 교훈 2ⓑ)',
     same.live === same.full ? '' : '\n      live: ' + same.live + '\n      full: ' + same.full);
   ok(hitOk, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(팝업이 덮지 않았다 — 양성항)');
+
+  /* ⚑ 540 — 유령 재유입 차단. 이 두 항이 없으면 «치우기» 팔은 오타 하나로 다시 통째로 죽고,
+     그 죽음은 위 양성항의 «가끔 빨강» 으로만 새어 나온다(524 가 349 에서 겪은 22~24/24). */
+  const cl540 = await missingClosers(p);
+  ok(cl540.length === 0,
+    '★ 540 — 닫개 이름이 전부 제품에 실재한다(typeof 가드가 유령을 삼키지 않는다)',
+    cl540.length ? '없는 이름 ' + cl540.join(' , ') : '전부 실재');
+  ok(!(await defeatStuck(p)),
+    '★ 540 — 측정이 끝난 시점에 18 패배 화면이 켜져 있지 않다(켜지면 뒤 표본이 전부 «0회» 다)',
+    await blockedLabel(p));
 
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 

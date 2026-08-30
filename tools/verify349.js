@@ -40,8 +40,11 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
 const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
 
 /* 524 — reset 이 부르는 «치우기» 훅 이름. 여기 있던 `closeDefeat` 는 제품에 없는 이름이었고
-   `typeof` 가드가 그것을 조용히 삼켰다. [G] 가 이 목록의 실재를 매 실행 묻는다. */
-const RESET_CLOSERS = ['closeDunClear', 'closeModal', 'closeDungeon', 'closeSummonResult'];
+   `typeof` 가드가 그것을 조용히 삼켰다. [G] 가 이 목록의 실재를 매 실행 묻는다.
+   ⚑ 540 — 같은 유령이 자 여덟 개에 더 있었다. 목록이 아홉 벌이면 그 아홉이 어긋나는 순간
+   아무도 모르므로 **한 곳**(`tools/closers540.js`)에서 읽는다. 여기 있던 넷은 그 합집합의
+   부분집합이고, 이 자도 «치운 뒤에 자기 화면을 연다»(openTrain) 순서라 합집합이 안전하다. */
+const { RESET_CLOSERS } = require('./closers540');
 
 (async () => {
   const browser = await launch(chromium);

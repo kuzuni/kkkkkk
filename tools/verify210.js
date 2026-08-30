@@ -26,6 +26,9 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
+/* 540 — «치우기» 닫개 한 벌. 여기 손으로 적혀 있던 목록에는 제품에 없는 이름
+   `closeDefeat` 가 섞여 있었고(index.html 0건), `typeof` 가드가 그것을 조용히 삼켰다. */
+const { install, missingClosers, defeatStuck, blockedLabel } = require('./closers540');
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? (pass++, console.log('  ✓ ' + m + (d ? ' — ' + d : '')))
@@ -43,6 +46,7 @@ const table = [];
   p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.goto(URL);
   await p.waitForTimeout(1200);
+  await install(p);   /* 540 — `window.__clear540()` 심기 (이 자는 step 을 세우므로 arm 불요) */
 
   /* ================= [A] 재화 ================= */
   console.log('[A] 재화 — 단련석이 125 단일 출처와 33 재화 정보 · 53 가방을 지난다');
@@ -394,6 +398,7 @@ const table = [];
     return { rawSt: raw.tstone, rawT: JSON.stringify(raw.temper) };
   });
   await p.reload(); await p.waitForTimeout(1100);
+  await install(p);   /* 540 — 재로드로 페이지가 갈렸으니 다시 심는다 */
   const back = await p.evaluate(() => ({ st: S.tstone, t: JSON.stringify(S.temper),
                                          lv: temperLv('atk'), spent: temperSpentAll(),
                                          want: temperSpent(120) + temperSpent(7) + temperSpent(0) }));
@@ -585,8 +590,7 @@ const table = [];
       if (typeof step === 'function') step = () => {};
       /* 앞 절(절망의 탑 런)이 남긴 던전 클리어 팝업 `#dclw` 가 버튼 위를 덮는다 —
          전부 닫고 시작한다(LESSONS 263-②: 하네스가 «눌렀다» 고 믿는 자리에서 게임은 다른 답을 한다) */
-      ['closeDunClear', 'closeDefeat', 'closeModal', 'closeDungeon', 'closeSummonResult']
-        .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (_) {} });
+      window.__clear540();                            /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
       S.temper = { pts: x.pts, alloc: { atk: 0, hp: 0, regen: 0 } };
       S.tstone = x.st || 0; S.dia = x.dia == null ? 100000 : x.dia;
       openTrain(); setTrSub('temper'); renderTrain();
@@ -705,6 +709,15 @@ const table = [];
     '★ «홀드 중 숫자» 와 «손 뗀 뒤 통짜 재렌더» 가 한 글자도 다르지 않다(262 교훈 2ⓑ)',
     tSame.live === tSame.full ? '' : '\n      live: ' + tSame.live + '\n      full: ' + tSame.full);
   ok(hitOk210, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(팝업이 덮지 않았다 — 양성항)');
+
+  /* ⛑ 540 — 유령 재유입 차단(524 가 349 에서 겪은 «가끔 22~24/24» 의 씨앗) */
+  const cl540 = await missingClosers(p);
+  ok(cl540.length === 0,
+    '★ 540 — 닫개 이름이 전부 제품에 실재한다(typeof 가드가 유령을 삼키지 않는다)',
+    cl540.length ? '없는 이름 ' + cl540.join(' , ') : '전부 실재');
+  ok(!(await defeatStuck(p)),
+    '★ 540 — 측정이 끝난 시점에 18 패배 화면이 켜져 있지 않다(켜지면 뒤 표본이 전부 «0회» 다)',
+    await blockedLabel(p));
 
   ok(errs.length === 0, '콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | '));
 
