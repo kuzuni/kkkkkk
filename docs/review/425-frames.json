@@ -7,19 +7,24 @@
   "t": 15,
   "hud": "15.0",
   "camPlayer": 0,
-  "camBoss": 323.1,
+  "camBoss": 326.2,
   "pScr": [
    270,
    570
   ],
   "bScr": [
-   305.1,
-   248.9
+   552.2,
+   406.4
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 2.56,
+  "bBorn": 0.017,
+  "pFlip": false
  },
  {
   "n": 2,
@@ -28,20 +33,25 @@
   "w": 0.546,
   "t": 15,
   "hud": "15.0",
-  "camPlayer": 220.6,
-  "camBoss": 102.6,
+  "camPlayer": 216.5,
+  "camBoss": 128.5,
   "pScr": [
-   250.8,
-   789.8
+   115.8,
+   721.9
   ],
   "bScr": [
-   285.9,
-   468.6
+   398,
+   558.3
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 3.85,
+  "bBorn": 0.2,
+  "pFlip": false
  },
  {
   "n": 3,
@@ -50,20 +60,25 @@
   "w": 1,
   "t": 15,
   "hud": "15.0",
-  "camPlayer": 403.7,
-  "camBoss": 81,
+  "camPlayer": 396.2,
+  "camBoss": 114.4,
   "pScr": [
-   234.9,
-   972.1
+   -12.2,
+   848
   ],
   "bScr": [
    270,
-   651
+   684.4
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 5.01,
+  "bBorn": 0.367,
+  "pFlip": false
  },
  {
   "n": 4,
@@ -72,20 +87,25 @@
   "w": 1,
   "t": 15,
   "hud": "15.0",
-  "camPlayer": 403.7,
-  "camBoss": 81,
+  "camPlayer": 396.2,
+  "camBoss": 114.4,
   "pScr": [
-   234.9,
-   972.1
+   -12.2,
+   848
   ],
   "bScr": [
    270,
-   651
+   684.4
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 7.46,
+  "bBorn": 0.717,
+  "pFlip": false
  },
  {
   "n": 5,
@@ -94,20 +114,25 @@
   "w": 1,
   "t": 15,
   "hud": "15.0",
-  "camPlayer": 403.7,
-  "camBoss": 81,
+  "camPlayer": 396.2,
+  "camBoss": 114.4,
   "pScr": [
-   234.9,
-   972.1
+   -12.2,
+   848
   ],
   "bScr": [
    270,
-   651
+   684.4
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 9.91,
+  "bBorn": 1.067,
+  "pFlip": false
  },
  {
   "n": 6,
@@ -116,20 +141,25 @@
   "w": 0.546,
   "t": 15,
   "hud": "15.0",
-  "camPlayer": 220.6,
-  "camBoss": 102.6,
+  "camPlayer": 216.5,
+  "camBoss": 128.5,
   "pScr": [
-   250.8,
-   789.8
+   115.8,
+   721.9
   ],
   "bScr": [
-   285.9,
-   468.6
+   398,
+   558.3
   ],
   "VW": 540,
   "VH": 1140,
   "intro": true,
-  "fight": false
+  "fight": false,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 11.08,
+  "bBorn": 1.233,
+  "pFlip": false
  },
  {
   "n": 7,
@@ -139,19 +169,24 @@
   "t": 15,
   "hud": "15.0",
   "camPlayer": 1.6,
-  "camBoss": 321.4,
+  "camBoss": 324.7,
   "pScr": [
-   269.9,
-   571.6
+   268.8,
+   571.1
   ],
   "bScr": [
-   305,
-   250.5
+   551.1,
+   407.5
   ],
   "VW": 540,
   "VH": 1140,
   "intro": false,
-  "fight": true
+  "fight": true,
+  "bFlip": false,
+  "bAnim": "fly",
+  "bAt": 12.36,
+  "bBorn": 1.417,
+  "pFlip": false
  },
  {
   "n": 8,
@@ -161,18 +196,23 @@
   "t": 14.4,
   "hud": "14.4",
   "camPlayer": 16.2,
-  "camBoss": 216.3,
+  "camBoss": 219.5,
   "pScr": [
-   271.8,
-   553.9
+   284.1,
+   561.9
   ],
   "bScr": [
-   293.4,
-   355
+   459.8,
+   459.9
   ],
   "VW": 540,
   "VH": 1140,
   "intro": false,
-  "fight": true
+  "fight": true,
+  "bFlip": true,
+  "bAnim": "fly",
+  "bAt": 16.56,
+  "bBorn": 2.017,
+  "pFlip": true
  }
 ]

@@ -124,7 +124,8 @@ const RUN = ([id]) => {
       introFrames++;
       const b = H.boss();
       /* 카메라가 맞추는 자리는 발밑 앵커가 아니라 **몸통 중심**(`e.y - e.r`)이다(2회차) */
-      if (b) camBossMin = Math.min(camBossMin, d2(cam, { x: b.x, y: b.y - (b.r || 0) * 0.9 }));
+      /* 3회차 — 비추는 자리는 아틀라스에서 뽑은 «그려지는 스프라이트 중심» 이다(dunIntroMid) */
+      if (b) { const m = dunIntroMid(b); camBossMin = Math.min(camBossMin, d2(cam, { x: b.x + m.x, y: b.y + m.y })); }
       camPlayMaxIntro = Math.max(camPlayMaxIntro, d2(cam, player));
       /* ⚑ «그려지는 크기» 축(2회차 비평 CT). `drawEnemy` 는 `born < 0.3` 인 적을 `born/0.3` 배로
          그린다 — 국면이 born 을 세우면 보스가 5.6% 크기로 찍혀 «등장 연출인데 빈 바닥» 이 된다. */
@@ -287,7 +288,7 @@ const RUN_OTHER = ([mode]) => {
   if (gold) {
     is('[B-a] 가중치 최대 w = 1 에 도달(보스에 완전히 붙는다)', gold.wMax, 1);
     ge('[B-b] 국면 중 카메라가 플레이어에게서 떨어진 최대 거리(px)', Math.round(gold.camPlayMaxIntro), 100);
-    le('[B-c] 국면 중 카메라–보스 «몸통 중심»(e.y−e.r) 최소 거리(px) — 실제로 «비춘다»', gold.camBossMin, 1);
+    le('[B-c] 국면 중 카메라–보스 «그려지는 스프라이트 중심» 최소 거리(px) — 실제로 «비춘다»', gold.camBossMin, 1);
     is('[B-d] w 가 0 → 1 → 0 으로 **한 번만** 왕복(내려간 뒤 다시 안 올라간다)', gold.wZeroAfterOne, true);
     le('[B-e] 국면이 끝난 프레임의 카메라–플레이어 거리(px) — 이음매 없이 전투로', gold.camPlayAtEnd, 40);
     is('[B-f] 108 규약 — cam 필드는 그대로', gold.camKeys, 'shake,x,y,z');

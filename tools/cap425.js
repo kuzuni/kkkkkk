@@ -74,6 +74,11 @@ const OUT = path.join(ROOT, 'docs/review');
       pScr: [+(player.x - cam.x + VW / 2).toFixed(1), +(player.y - cam.y + VH / 2).toFixed(1)],
       bScr: b ? [+(b.x - cam.x + VW / 2).toFixed(1), +(b.y - cam.y + VH / 2).toFixed(1)] : null,
       VW, VH, intro: !!(dunRun && dunRun.introOn), fight: !!(dunRun && dunRun.fight),
+      /* 3회차 비평(CU·CV 2인 독립) — «정지 국면에서 보스가 좌우로 뒤집힌다» 를 픽셀로 봤다고 했다.
+         `e.flip` 은 얼어 있는 적 갱신 루프에서만 써지므로 이 값이 f1~f7 내내 같으면 그 관측은
+         «flip 이 아니라 애니메이션 프레임» 이다. 값을 직접 찍어 가른다(338 규칙 — 가설을 재현으로). */
+      bFlip: b ? !!b.flip : null, bAnim: b ? b.anim : null, bAt: b ? +b.at.toFixed(2) : null,
+      bBorn: b ? +b.born.toFixed(3) : null, pFlip: !!player.flip,
     };
   });
   const advance = (n) => page.evaluate(([k]) => { for (let i = 0; i < k; i++) window.__c425.tick(); }, [n]);
@@ -99,7 +104,8 @@ const OUT = path.join(ROOT, 'docs/review');
     console.log('  f' + (i + 1) + ' u=' + STOPS[i].toFixed(2) + 's  w=' + String(st.w).padEnd(6) +
       ' HUD ' + String(st.hud).padEnd(6) + ' t=' + String(st.t).padEnd(7) +
       ' cam↔player ' + String(st.camPlayer).padEnd(7) + ' cam↔boss ' + String(st.camBoss).padEnd(7) +
-      ' 플레이어 화면 ' + JSON.stringify(st.pScr) + ' 보스 화면 ' + JSON.stringify(st.bScr));
+      ' 보스 화면 ' + JSON.stringify(st.bScr) +
+      ' flip=' + st.bFlip + ' anim=' + st.bAnim + ' at=' + st.bAt + ' born=' + st.bBorn);
   }
   fs.writeFileSync(path.join(OUT, '425-frames.json'), JSON.stringify(rows, null, 1));
   console.log('\n표: docs/review/425-frames.json · 캡처 8장 docs/review/425-f1..f8.png (커밋 안 됨)');
