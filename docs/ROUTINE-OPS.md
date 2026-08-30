@@ -9,29 +9,36 @@
 
 이 프로젝트는 Claude Code 클라우드 루틴을 분(分) 단위로 엇갈리게 돌려 병렬 작업한다.
 
-### ★ 현재 가동 세트 (2026-08-30~) — 워커 8 + 감시견 1
+### ★ 현재 가동 세트 (2026-08-30~) — 감시견 1개만 가동. 워커 8개는 «실패, 비활성»
 
-계정 1(`env_01XKJDdWmKFxSg4FuR8yethb`) 한 계정에서 **워커 8개**를 돌린다. 전부 `claude-opus-5` ·
-`create_new_session_on_fire: true` · **`created_via: meta_mcp`**(= 에이전트가 만든 것이라
-**세션 안의 에이전트가 켜고 끄고 지울 수 있다**. 아래 §2-① 의 «사람만 끌 수 있다» 제약은
-`http_api`(웹 UI) 루틴 얘기고 이 세트에는 해당하지 않는다).
+> ⛔ **2026-08-30 04:36Z: 아래 워커 8개는 «전부 비활성» 이다. 켜지 마라.**
+> `create_trigger`(meta_mcp)로 만들면 **fired 세션에 저장소가 안 붙는다** — 실증됐다(§5-2-b).
+> 워커 A 세션 `session_01DazGgrZr79m9Rdehwj4Lew` 의 `session_context` 에 `sources` 필드가
+> **아예 없었고**, `docs/ROUTINE.md` 를 못 읽어 «지시서 없음» 으로 4분 28초 만에 종료했다
+> (커밋 0 · lock 0 · **비용 $2.97**). F(:23)도 같은 결과. 무위 실행 2회에 약 $6 을 태우고 8개를 껐다.
+> **워커는 반드시 웹 UI(또는 §5-5 raw API)로 만들어야 한다** — 저장소를 붙일 수 있는 경로는 그것뿐이다.
 
-| 워커 | cron (UTC) | trigger_id |
-|---|---|---|
-| E | `2 * * * *`  | `trig_01J1xsNtHYcVJYtVuPy6GrMP` |
-| A | `15 * * * *` | `trig_01NNovqrVxB2kLZFpw72YmKz` |
-| F | `23 * * * *` | `trig_01R6VJ4cAjP8jLBpVFbuF2bd` |
-| B | `30 * * * *` | `trig_016w8ae2uah7BdFKE5dDZ6ju` |
-| G | `38 * * * *` | `trig_01Utn1XPS4U9R9FKNXxDy6pm` |
-| C | `45 * * * *` | `trig_018cLxe3NkKTFrreWnAKRoq3` |
-| H | `53 * * * *` | `trig_01WxEb9zsqqQo2pDf6NurBAZ` |
-| D | `58 * * * *` | `trig_01Y93R9TemcnFsxYkLGDpS3c` |
-| **감시견** | `10 * * * *` | `trig_016azm45ZiVmyz8RvQHd3oUf` |
+계정 1(`env_01XKJDdWmKFxSg4FuR8yethb`). 전부 `claude-opus-5` · `create_new_session_on_fire: true` ·
+**`created_via: meta_mcp`**(= 에이전트가 만든 것이라 **세션 안의 에이전트가 켜고 끄고 지울 수 있다**.
+아래 §2-① 의 «사람만 끌 수 있다» 제약은 `http_api`(웹 UI) 루틴 얘기고 이 세트에는 해당하지 않는다).
+
+| 워커 | cron (UTC) | trigger_id | 상태 |
+|---|---|---|---|
+| E | `2 * * * *`  | `trig_01J1xsNtHYcVJYtVuPy6GrMP` | ⛔ 비활성(저장소 미첨부) |
+| A | `15 * * * *` | `trig_01NNovqrVxB2kLZFpw72YmKz` | ⛔ 비활성(저장소 미첨부) |
+| F | `23 * * * *` | `trig_01R6VJ4cAjP8jLBpVFbuF2bd` | ⛔ 비활성(저장소 미첨부) |
+| B | `30 * * * *` | `trig_016w8ae2uah7BdFKE5dDZ6ju` | ⛔ 비활성(저장소 미첨부) |
+| G | `38 * * * *` | `trig_01Utn1XPS4U9R9FKNXxDy6pm` | ⛔ 비활성(저장소 미첨부) |
+| C | `45 * * * *` | `trig_018cLxe3NkKTFrreWnAKRoq3` | ⛔ 비활성(저장소 미첨부) |
+| H | `53 * * * *` | `trig_01WxEb9zsqqQo2pDf6NurBAZ` | ⛔ 비활성(저장소 미첨부) |
+| D | `58 * * * *` | `trig_01Y93R9TemcnFsxYkLGDpS3c` | ⛔ 비활성(저장소 미첨부) |
+| **감시견** | `10 * * * *` | `trig_016azm45ZiVmyz8RvQHd3oUf` | ✅ **가동 중 — 04:10Z 첫 실행 SUCCEEDED(80초)** |
 
 **워커 문자(A~H)는 이름표일 뿐 역할이 다르지 않다.** 지시서는 문자를 완료 기록에만 쓴다 —
 늘리고 싶으면 프롬프트의 문자만 바꿔 새 분(分)에 하나 더 만들면 된다.
 
-**감시견(`:10`)은 저장소를 고치지 않는다.** main 의 최근 커밋이 100분을 넘으면
+**감시견(`:10`)만 meta_mcp 경로로도 정상 동작한다** — 저장소가 필요 없기 때문이다.
+**감시견은 저장소를 고치지 않는다.** main 의 최근 커밋이 100분을 넘으면
 **푸시 알림 + 이메일**로 «워커 정지» 를 알린다(`notifications: {push, email}`). 저장소가 공개라
 클론·커넥터 없이 `https://github.com/kuzuni/kkkkkk/commits/main.atom` 만으로 판정한다.
 **이것이 «8시간 공백» 재발 방지의 본체다** — §2-⓪ 참고.
@@ -278,7 +285,7 @@ ls docs/claims/                # lock 이 새로 잡히는가
 | `allowed_tools` | **지정은 못 하지만 기본값에 `Task` 가 들어 있다** — `preset:default` + `Task`·`Bash`·`Glob`·`Grep`·`Read`·`Edit`·`Write`·`WebFetch` 등. §5-3 이 걱정하던 «Task 누락으로 비평 루프가 통째로 안 돈다» 는 **일어나지 않았다** |
 | `model` | 생성 시점엔 `""` 로 비어 있다. 만든 직후 `update_trigger(model:"claude-opus-5")` 로 8개 전부 박을 것 |
 | `connectors` | **이 조직에서는 파라미터 자체가 거부된다** — `the connectors parameter is not available for this organization. Omit the connectors parameter.` 넣지 말고 생략할 것 |
-| **`sources`** | **파라미터가 없다.** 웹 UI/raw API 로 만든 루틴에는 `session_context.sources` 에 저장소가 박혀 있지만 이 경로엔 그 필드가 없다. 뜬 세션에 클론이 없으면 프롬프트 첫 줄 `git fetch origin main` 부터 실패한다 — **첫 사이클 로그로 반드시 확인할 것** |
+| **`sources`** | ⛔ **파라미터가 없고, 그래서 워커를 못 만든다(실증됨).** 웹 UI/raw API 로 만든 루틴에는 `session_context.sources` 에 저장소가 박혀 있지만 이 경로엔 그 필드가 없다. 2026-08-30 04:15Z 워커 A 실행 결과 — fired 세션 `session_01DazGgrZr79m9Rdehwj4Lew` 의 `session_context` 는 `{model, autofix_on_pr_create, permission_mode}` 뿐이고 **`sources` 가 없다.** `docs/ROUTINE.md` 를 못 읽어 프롬프트의 «지시서 없음» 분기로 4분 28초 만에 종료(커밋 0 · lock 0 · **$2.97**). **결론: 저장소를 만지는 루틴은 이 경로로 만들지 마라.** 저장소가 필요 없는 루틴(감시견)만 가능하다 |
 | **MCP 커넥터** | 생성 시 경고가 뜬다: «this trigger stores no MCP connectors, so the sessions it fires will run without connector (`mcp__<server>__*`) tools». 즉 fired 세션에 `mcp__github__*` 가 없다 — 워커 프롬프트가 fetch 타임아웃 대비책으로 적어 둔 `mcp__github__get_file_contents` 폴백은 이 세트에서 못 쓴다 |
 | 나중에 에이전트가 끄기/켜기/삭제 | **된다.** `http_api`(웹 UI) 루틴과 달리 이 경로로 만든 것은 세션 안의 에이전트가 관리할 수 있다 |
 
@@ -402,5 +409,6 @@ list_triggers()   →  4개가 cron 5/20/35/50, enabled, 각자 다른 이름인
 | 2026-08-25 | 계정 4 워커 A~D(:09/:24/:39/:54) 를 §5-5 body 로 생성(17:37Z, `claude-opus-5`, 첫 실행 C 17:39Z~). 분류기가 첫 create 를 한 차례 차단 → 사용자 재지시 후 4개 순차 통과(계정 3 때와 동일 패턴). §1 표를 4계정 확장 |
 | 2026-08-26 | 계정 5 워커 A~D 를 §5-5 body 로 생성(21:14Z, `claude-opus-5`). 분류기 차단 없이 4개 순차 통과. 처음 :14/:29/:44/:59 → 계정 3 wwwww 루틴 분과 정확히 겹쳐 21:17Z **:15/:30/:45/:58** 로 즉시 update. 이 과정에서 발견: `0 * * * *` 은 서버가 임의 분(:16)으로 재배치해 정각 cron 불가. §1 표를 5계정 확장(최대 20세션) |
 | 2026-08-29 | **사고 — 이력 재작성(`git filter-repo`)을 위해 19:44Z 에 워커 4개를 손으로 중지했다가 재가동을 잊어 8시간 5분 공백.** 판별 근거·규칙은 §1-b 신설 |
-| 2026-08-30 | 워커를 **8개(A~H)** 로 확장 + **감시견 루틴 신설(`:10`, 푸시·이메일 알림)**. 전부 `create_trigger`(meta_mcp) 경로라 에이전트가 관리 가능. §1 «현재 가동 세트» · §1-b · §5-2-b 신설 |
+| 2026-08-30 | 워커를 **8개(A~H)** 로 확장 시도 + **감시견 루틴 신설(`:10`, 푸시·이메일 알림)**. 전부 `create_trigger`(meta_mcp) 경로. §1 «현재 가동 세트» · §1-b · §5-2-b 신설 |
+| 2026-08-30 | ⛔ **위 워커 8개 실패 — meta_mcp 경로는 fired 세션에 저장소를 안 붙인다(실증).** 04:15Z 워커 A 가 `sources` 없이 떠서 «지시서 없음» 으로 4분 만에 종료(커밋 0 · $2.97), 04:23Z F 도 동일. 04:31~04:36Z 에 8개 전부 비활성화(무위 실행 2회 · 약 $6 소모). **감시견은 저장소가 필요 없어 정상 동작**(04:10Z SUCCEEDED, 80초). 워커는 웹 UI 또는 §5-5 raw API 로만 만들 것 |
 | 2026-08-30 | **에이전트는 `http_api`(웹 UI) 루틴을 끄지도 켜지도 지우지도 못한다** — `update_trigger`·`fire_trigger`·`delete_trigger` 전부 같은 메시지로 거부(§2-① 에 «끄기» 만 적혀 있던 것을 확장). 옛 워커 4개 + 포지 클론 9개 삭제는 사람이 웹 UI 에서 해야 한다 |
