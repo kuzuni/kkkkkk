@@ -125,12 +125,30 @@ const ok = (b, name, detail) => {
      C.id + ' 해제 ' + C.off.toFixed(3) + ' → 장착 ' + C.on.toFixed(3) + ' (×' + C.ratio + ')');
 
   /* ── ⓓ 규모(199 이관 근거) ─────────────────────────────── */
-  const D = await page.evaluate(() => ({
-    gWearTop: gWear(7), jump: GRADE_JUMP,
-    lvStep: LV_STEP, lv1: lvWear(1)
-  }));
+  const D = await page.evaluate(() => {
+    const out = { gWearTop: gWear(7), jump: GRADE_JUMP, lvStep: LV_STEP, lv1: lvWear(1) };
+    /* 199 이관 근거 — «한 벌»(불멸 장비 3 + 불멸 펫 3 + 신화 스킬 8) 을 Lv1 로 끼운 전투력.
+       주인이 199 에서 «과금 한 벌» 을 목표로 잡아 뒀으므로 그 한 벌의 크기를 숫자로 남긴다. */
+    const eqIds = SLOTS.map(s => EQUIPS.find(e => e.slot === s.k && e.g === 7));
+    const pets  = PETS.filter(p => p.g === 7).concat(PETS.filter(p => p.g === 6).slice(-2));
+    const sks   = SKILLS.filter(s => s.g === 5).slice(0, 8);
+    const keepEq = Object.assign({}, S.eqSlot), keepPet = S.eqPet.slice(), keepSk = S.eqSkill.slice();
+    S.eqSlot = { weapon: null, shield: null, amulet: null }; S.eqPet = []; S.eqSkill = []; markDirty();
+    out.cpBare = cp();
+    eqIds.concat(pets, sks).forEach(x => { S.own[x.id] = { l: 1 }; });
+    SLOTS.forEach((s, i) => { S.eqSlot[s.k] = eqIds[i].id; });
+    S.eqPet = pets.map(p => p.id); S.eqSkill = sks.map(s => s.id); markDirty();
+    out.cpSet = cp();
+    eqIds.concat(pets, sks).forEach(x => { delete S.own[x.id]; });
+    S.eqSlot = keepEq; S.eqPet = keepPet; S.eqSkill = keepSk; markDirty();
+    out.ratio = out.cpSet / Math.max(1, out.cpBare);
+    return out;
+  });
   ok(true, 'ⓓ1 현행 착용 계단 누적(g0→g7)', '×' + D.gWearTop + ' (등급당 ×' + D.jump + ')');
   ok(true, 'ⓓ2 레벨 축 lvWear(1)', D.lv1.toFixed(3) + ' (Lv당 +' + (D.lvStep * 100).toFixed(1) + '%)');
+  ok(true, 'ⓓ3 «한 벌»(불멸 장비 3 + 최상위 펫 3 + 신화 스킬 8, 전부 Lv1) 전투력 — 199 이관 근거',
+     '맨몸 ' + D.cpBare.toExponential(3) + ' → 한 벌 ' + D.cpSet.toExponential(3)
+     + ' (×' + D.ratio.toExponential(3) + ')');
 
   ok(errs.length === 0, 'ⓔ 콘솔 에러 0건', errs.slice(0, 3).join(' | ') || '없음');
   await browser.close();

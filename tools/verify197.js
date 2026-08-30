@@ -86,8 +86,10 @@ async function open(browser) {
       for (let g = 1; g < GRADE.length; g++) {
         if (!byG[g] || !byG[g - 1]) continue;
         const a = byG[g][0], b = byG[g - 1][0];
-        out.eq.push(equipVal({ g: a.g, id: '__x', slot: 'weapon', v: 1 })
-                  / equipVal({ g: b.g, id: '__y', slot: 'weapon', v: 1 }));
+        /* 472 — equipVal 이 «등급 안 자리(j = 티어)» 를 읽으므로 두 짝의 티어를 같은 값으로 고정해
+           «등급만 다른 두 장비» 를 만든다(옛 코드의 «같은 v» 와 같은 뜻이다). */
+        out.eq.push(equipVal({ g: a.g, j: 0, id: '__x', slot: 'weapon', v: 1 })
+                  / equipVal({ g: b.g, j: 0, id: '__y', slot: 'weapon', v: 1 }));
       }
       /* 스킬·펫 — 계수 m 을 고정하고 등급만 올린다 */
       S.eqSkill = []; S.eqPet = [];
@@ -101,20 +103,29 @@ async function open(browser) {
       /* power() 의 장비 분기 */
       out.pw = [];
       for (let g = 1; g < GRADE.length; g++)
-        out.pw.push(power({ g: g, id: '__x', slot: 'weapon', v: 1 }, 'equip')
-                  / power({ g: g - 1, id: '__y', slot: 'weapon', v: 1 }, 'equip'));
+        out.pw.push(power({ g: g, j: 0, id: '__x', slot: 'weapon', v: 1 }, 'equip')
+                  / power({ g: g - 1, j: 0, id: '__y', slot: 'weapon', v: 1 }, 'equip'));
       out.jump = GRADE_JUMP;
+      out.eqJump = EQ_GRADE;      /* 472 — 장비 전용 등급 배율(= EQ_TIER⁴ × GRADE_JUMP) */
       return out;
     });
     const allJump = (arr, n) => arr.length >= n && arr.every(r => near(r, B.jump, 1e-6));
-    ok(allJump(B.eq, 7), 'B1 장비 equipVal — 등급 +1 이 정확히 ×' + B.jump,
-       B.eq.map(v => v.toFixed(2)).join('/'));
+    /* 472 이관(2026-08-30, 주인 확정 수치) — **장비만** 자기 계단표(`EQ_BASE`)로 갈라져 나갔다.
+       등급 한 칸이 «5티어에서 다시 ×3» 이므로 ×1.5⁴×3 = ×15.1875 다. 197 이 세운 규약(«등급 점프는
+       전 구간 일정»)은 그대로 살아 있고 **배율만** 장비 축에서 달라진 것이라 여기서 잰다.
+       스킬(B2)·펫(B3)·`gWear` 는 여전히 GRADE_JUMP(×3) 다 — 197 이 한 글자도 안 바뀐 자리다. */
+    const allEqJump = (arr, n) => arr.length >= n && arr.every(r => near(r, B.eqJump, 1e-6));
+    ok(allEqJump(B.eq, 7), 'B1 장비 equipVal — 등급 +1 이 정확히 ×' + B.eqJump + ' (472 EQ_GRADE)',
+       B.eq.map(v => v.toFixed(4)).join('/'));
     ok(allJump(B.sk, 5), 'B2 스킬 피해 — 등급 +1 이 정확히 ×' + B.jump,
        B.sk.map(v => v.toFixed(2)).join('/'));
     ok(allJump(B.pt, 7), 'B3 펫 피해 — 등급 +1 이 정확히 ×' + B.jump,
        B.pt.map(v => v.toFixed(2)).join('/'));
-    ok(allJump(B.pw, 7), 'B4 power() 장비 순위 — 등급 +1 이 정확히 ×' + B.jump,
-       B.pw.map(v => v.toFixed(2)).join('/'));
+    ok(allEqJump(B.pw, 7), 'B4 power() 장비 순위 — 등급 +1 이 정확히 ×' + B.eqJump + ' (472 · equipVal 과 한 축)',
+       B.pw.map(v => v.toFixed(4)).join('/'));
+    ok(near(B.eqJump / Math.pow(1.5, 4), B.jump, 1e-9),
+       'B5 장비 등급 배율은 «티어 ×1.5 를 5칸 지난 뒤 다시 ×' + B.jump + '» 이다 — 197 규약과 한 몸',
+       B.eqJump + ' = 1.5⁴ × ' + B.jump);
 
     /* ---------------- [C] 동티어 ---------------- */
     const C = await page.evaluate(() => {
