@@ -111,7 +111,7 @@ const BOT_SRC = function (cfg) {
     diaIn: {},           /* 다이아 유입 출처별 */
     diaOut: {},          /* 다이아 씽크 */
     seedN: 0,
-    cnt: { dunRun: 0, dunReplay: 0, dunClear: 0, towerRun: 0, towerFold: 0, towerUp: 0 },
+    cnt: { dunRun: 0, dunReplay: 0, dunClear: 0, towerRun: 0, towerFold: 0, towerUp: 0, simSec: 0, simN: 0 },
   };
   window.BOT = B;
 
@@ -139,8 +139,18 @@ const BOT_SRC = function (cfg) {
          (`markDirty`·`giveReward`·`summonRelic` 본체·`openDunClear` 는 그대로 둔다 —
           마지막 것은 339 연속 도전이 읽는 상태를 세운다). */
     ['notify', 'fxToast', 'fxReward', 'fxAt', 'fxPop', 'fxFlash', 'fxCheck', 'fxBurst', 'fxFly', 'fxUpOk',
-     'renderUI', 'renderRelw', 'renderCoinPage', 'renderTrain', 'renderPcb', 'drawHud',
+     'renderUI', 'renderRelw', 'renderCoinPage', 'renderTrain', 'renderPcb', 'renderBless', 'drawHud',
      'syncSummonBtns', 'showSummonResult', 'hbBeat', 'openStatUp', 'openUpAll', 'showMsg'].forEach((n) => {
+      if (typeof window[n] === 'function') window[n] = function () {};
+    });
+    /* ⚑ 8회차 — 던전 한 판이 **0.40초**(≈ 23 시뮬초)나 걸렸다. 판 수가 아니라 **`step()` 한 번이
+       고스테이지에서 8배 느려서**다: 처치마다 `burst()` 가 파티클 수십 개를 만들고, 그것들을
+       그 뒤 모든 프레임이 다시 굴린다(그리지도 않는데). 파티클은 **판정에 한 줄도 안 걸린다** —
+       피해는 `hitEnemy`/`areaDamage` 가 따로 한다. 그래서 «만드는 쪽» 을 끊는다.
+       ⚠ `boomFx`·`chainBoomFx` 는 **안 끊는다** — 연쇄·범위 계열이 그 안에서 대상을 고른다. */
+    /* ⚠ `fxRing`·`fxRingFlat` 는 **못 끊는다** — 호출부가 `rings[rings.length-1]` 로 방금 넣은 고리를
+       되받아 표식을 단다(`castSkill`, 21250). 끊으면 그 줄이 즉사한다. 실제로 그렇게 죽여 봤다. */
+    ['burst', 'debris', 'dmgNum'].forEach((n) => {
       if (typeof window[n] === 'function') window[n] = function () {};
     });
   };
@@ -413,11 +423,27 @@ const BOT_SRC = function (cfg) {
      남은 판은 그 실전 판의 결과(클리어/실패)가 유지되는 동안 제품 보상표로 접는다.
      ⚠ 상한을 낮추면 «클리어하다가 어느 층에서 막히는가» 의 해상도가 떨어진다 — 3 은
        «처음·중간·끝» 을 보는 최소값이다. */
-  const REAL_CAP = 3;             /* 던전·탑마다 하루 실전으로 도는 판 수 */
+  const REAL_CAP = 2;             /* 던전·탑마다 하루 실전으로 도는 판 수 */
+  /* ⚑ 8회차 — 실전 판 하나가 **평균 15.5 시뮬초 · 0.6 실초**다(30일에 351판 = 251초). 고스테이지에서
+     `step()` 한 번이 저스테이지의 **20배**로 느려지기 때문인데(관통·투사체·펫·장판이 전부 그 프레임에 있다),
+     이것은 «판을 줄여서» 가 아니라 «**결과가 이미 정해진 판을 안 돌아서**» 줄여야 한다.
+     ⇒ 같은 던전이 실전으로 **연속 STREAK_OK 번** 클리어하면 그 던전은 «지금 화력으로는 확실하다» 로 보고
+       `RECHECK_EVERY` 일마다만 실전으로 재확인한다. 실패하면 연속 기록이 0 으로 돌아가 다음 날 다시 실전이다.
+     ⚠ **벽은 언제나 실전이 판정한다** — 접기는 «직전 실전 판이 클리어했다» 를 전제로만 열린다. */
+  const STREAK_OK = 3, RECHECK_EVERY = 4;
+  B.streak = {};
+  const skipReal = (key, day) => (B.streak[key] || 0) >= STREAK_OK && (day % RECHECK_EVERY !== 0);
+  /* ⚑ **«들어갈까» 는 제품이 이미 답을 갖고 있다.** 03 던전 카드가 `ok = cp() >= d.req(f)`(26346)로
+     칠해지고 04 세부도 같은 값을 쓴다 — 즉 요구 전투력에 못 미치면 **플레이어가 애초에 안 들어간다.**
+     8회차까지 봇은 그것을 안 보고 매일 들어가 15초를 다 쓰고 졌다(30일에 실전 348판 · 그중 대부분이
+     같은 층의 반복 실패 = 257초). 판을 줄이는 것이 아니라 **안 들어갈 판을 안 들어가는 것**이 답이다.
+     ⚠ 이것은 근사가 아니다 — 제품이 화면에 칠하는 그 조건 그대로다. 남는 표는 버려지지 않고 쌓인다(204). */
+  const canEnter = (d, f) => { try { return typeof d.req !== 'function' || cp() >= d.req(f); } catch (_) { return true; } };
   const TOWER_DAY_MAX = 60;       /* 탑은 입장권이 없다 — «하루에 오르는 층» 의 상한을 봇이 정한다 */
   const runBattle = (maxSec, done) => {
     const N = Math.round(maxSec * 30);
-    for (let i = 0; i < N; i++) { step(1 / 30); if (done()) return i / 30; }
+    for (let i = 0; i < N; i++) { step(1 / 30); if (done()) { B.cnt.simSec += i / 30; B.cnt.simN++; return i / 30; } }
+    B.cnt.simSec += maxSec; B.cnt.simN++;
     return maxSec;
   };
   /* ⚑ **입장권이 많으면 실전만으로는 예산이 안 선다.** 490 이 다이아→입장권 교환을 1,000 으로
@@ -438,23 +464,30 @@ const BOT_SRC = function (cfg) {
          이 재확인이 없으면 요구 전투력(`d.req(f)`)이 봇을 앞지른 뒤에도 영원히 클리어한다.
        · 실전 판이 **실패**하면 접지 않는다 — 남은 표는 그대로 두고 그 던전을 접는다.
      ⚠ 클리어를 못 하는 구간에서는 접기가 아예 안 열리므로 «벽» 은 언제나 실전이 판정한다. */
-  R.dungeons = () => T('던전', () => {
+  R.dungeons = (day) => T('던전', () => {
     let real = 0, fold = 0;
     const lv0 = DUNGEONS.reduce((n, d) => n + ((S.dun && S.dun[d.id]) | 0), 0);
     for (const d of DUNGEONS) {
+      /* 확실한 던전은 실전을 건너뛰고 오늘 표를 통째로 접는다 */
+      if (skipReal('d:' + d.id, day) && (S.dunTk[d.id] | 0) > 0) {
+        let n = S.dunTk[d.id] | 0;
+        while (n-- > 0 && canEnter(d, S.dun[d.id])) { const f = S.dun[d.id]; S.dunTk[d.id]--; S.dun[d.id]++; T('던전:접기', () => giveReward(d.rw(f))); fold++; }
+        continue;
+      }
       let shots = 0;
       while ((S.dunTk[d.id] | 0) > 0 && shots < REAL_CAP) {
         const tk0 = S.dunTk[d.id] | 0, f0 = (S.dun && S.dun[d.id]) | 0;
+        if (!canEnter(d, f0)) break;                        /* 요구 전투력 미달 — 플레이어는 안 들어간다 */
         challengeDungeon(d);
         if ((S.dunTk[d.id] | 0) === tk0) break;             /* 잠김·전투 중 — 더 못 돈다 */
         real++; shots++;
-        runBattle(DUN_SEC + 12, () => !dunRun);
+        runBattle(DUN_SEC + 8, () => !dunRun);
         if (dunRun) { T('던전:포기', () => { if (typeof endDunRun === 'function') endDunRun(); }); }
-        if (((S.dun && S.dun[d.id]) | 0) === f0) break;      /* 실패 — 이 던전은 여기가 한계다 */
+        if (((S.dun && S.dun[d.id]) | 0) === f0) { B.streak['d:' + d.id] = 0; break; }   /* 실패 — 여기가 한계다 */
+        B.streak['d:' + d.id] = (B.streak['d:' + d.id] || 0) + 1;
         /* 클리어했다 — 남은 표를 «다음 실전 판까지» 만큼 제품 보상표로 접는다 */
-        let n = Math.ceil((S.dunTk[d.id] | 0) / (REAL_CAP - shots + 1)) - (shots < REAL_CAP ? 0 : 0);
-        n = Math.min(n, S.dunTk[d.id] | 0);
-        while (n-- > 0) {
+        let n = Math.min(Math.ceil((S.dunTk[d.id] | 0) / (REAL_CAP - shots + 1)), S.dunTk[d.id] | 0);
+        while (n-- > 0 && canEnter(d, S.dun[d.id])) {
           const f = S.dun[d.id];
           S.dunTk[d.id]--; S.dun[d.id]++;
           T('던전:접기', () => giveReward(d.rw(f)));
@@ -470,23 +503,33 @@ const BOT_SRC = function (cfg) {
   /* 탑도 던전과 **같은 접기**를 쓴다(`challengeTower` 는 `startDunRun` 을 탄다 — 24780).
      ⚠ 진행 키가 다르다: `finishDunRun`(25284)은 탑에서 `towerSetFloor(d, f+1)` 를 쓰고
        던전에서만 `S.dun[id]++` 를 쓴다. 접기도 그 함수를 그대로 따라가야 한다. */
-  R.towers = () => T('탑', () => {
+  R.towers = (day) => T('탑', () => {
     let real = 0, up = 0, fold = 0;
     for (const id of ['tower', 'tower2']) {
       const t = towerById(id);
+      if (skipReal('t:' + id, day)) {
+        for (let k = 0; k < TOWER_DAY_MAX && canEnter(t, towerFloor(t)); k++) {
+          const f = towerFloor(t);
+          T('탑:접기', () => { towerSetFloor(t, f + 1); giveReward(t.rw(f)); });
+          up++; fold++;
+        }
+        continue;
+      }
       let shots = 0, climbed = 0;
       while (shots < REAL_CAP && climbed < TOWER_DAY_MAX) {
         const lv0 = S[id] | 0;
+        if (!canEnter(t, towerFloor(t))) break;             /* 요구 전투력 미달 — 안 들어간다 */
         T('탑:' + id, () => challengeTower(id));
         if (!dunRun) break;                                 /* 잠김·전투 중 — 못 들어갔다 */
         real++; shots++;
-        runBattle(DUN_SEC + 12, () => !dunRun);
+        runBattle(DUN_SEC + 8, () => !dunRun);
         if (dunRun) T('탑:포기', () => { if (typeof endDunRun === 'function') endDunRun(); });
-        if ((S[id] | 0) === lv0) break;                     /* 못 올라갔다 = 여기가 그 유저의 탑 한계 */
+        if ((S[id] | 0) === lv0) { B.streak['t:' + id] = 0; break; }   /* 못 올라갔다 = 그 유저의 탑 한계 */
+        B.streak['t:' + id] = (B.streak['t:' + id] || 0) + 1;
         up++; climbed++;
         /* 클리어했다 — 다음 실전 확인까지의 층을 제품 보상표로 접는다 */
         const blk = Math.ceil((TOWER_DAY_MAX - climbed) / (REAL_CAP - shots + 1));
-        for (let k = 0; k < blk && climbed < TOWER_DAY_MAX; k++) {
+        for (let k = 0; k < blk && climbed < TOWER_DAY_MAX && canEnter(t, towerFloor(t)); k++) {
           const f = towerFloor(t);
           T('탑:접기', () => { towerSetFloor(t, f + 1); giveReward(t.rw(f)); });
           up++; fold++; climbed++;
@@ -497,7 +540,11 @@ const BOT_SRC = function (cfg) {
     ledger('탑');
     return real;
   });
-  R.bless = () => T('축복', () => { let n = 0; for (const b of BLESS) { if (!blessOn(b.k) && typeof blessStart === 'function') { blessStart(b.k); n++; } } return n; });
+  /* ⚠ 함수 이름은 `activateBless`(30068)다. 7회차까지 `blessStart` 를 `typeof` 로 감싸 부르고 있었는데,
+     그 가드는 «없으면 조용히 넘어간다» 라 **축복 3종이 30일 내내 한 번도 안 켜졌고 경고도 안 났다** —
+     LESSONS 494-⑥ 이 말하는 그 실패를 내 코드가 그대로 저지른 자리다. 이제 맨 이름으로 부른다:
+     이름이 바뀌면 `T` 가 잡아 경고에 적고 게이트 [3] 이 빨개진다. */
+  R.bless = () => T('축복', () => { let n = 0; for (const b of BLESS) { if (!blessOn(b.k) && activateBless(b.k)) n++; } return n; });
 
   /* ── 재화 소진 ─────────────────────────────────────────────────────── */
   /* 소환은 «골고루» — 가장 적게 뽑은 배너부터(주인 원문). 무료분을 먼저 쓴다. */
@@ -623,7 +670,9 @@ const BOT_SRC = function (cfg) {
     T('스킬', () => {
       const own = SKILLS.filter(s => has(s.id));
       own.sort((a, b) => tierScore(b, 'skill') - tierScore(a, 'skill'));
-      const cap = S.eqSkill.length ? S.eqSkill.length : 1;
+      /* 272 — 상한은 «해금된 칸 수» 이고 제품이 그것을 `skSlotMax()` 로 이미 안다(24405).
+         현재 장착 수로 대신하면 «한 칸 열렸는데 영원히 안 채우는» 봇이 된다. */
+      const cap = (typeof skSlotMax === 'function') ? skSlotMax() : S.eqSkill.length;
       const want = own.slice(0, Math.max(1, cap)).map(s => s.id);
       if (want.length && want.join() !== S.eqSkill.join()) { S.eqSkill = want; n++; }
     });
@@ -727,7 +776,7 @@ async function runOne(page, pol, seed, days, onRow) {
            입장권은 출석 수령(하루 1회)으로 들어오고 탑은 «질 때까지» 오르는 것이라, 실제 유저도
            이 둘은 한 자리에서 몰아 한다. 접속마다 돌리면 봇이 하루에 던전 수백 판을 도는데
            그것이 6회차에 30일 1시드를 4분으로 만든 자리다. */
-        if (h === a.logins[0]) { R.dungeons(); R.towers(); }
+        if (h === a.logins[0]) { R.dungeons(day); R.towers(day); }
         /* ── 재화 소진 ── */
         R.spendAll();
         R.equipBest();
@@ -809,6 +858,7 @@ async function runOne(page, pol, seed, days, onRow) {
       report.viol.push(...r.viol.map(v => pol + '#' + (i + 1) + ' ' + v));
       await ctx.close();
       process.stdout.write(`\r[${pol}] 시드 ${i + 1}/${SEEDS} — s${r.final.stage} cp${r.final.cp} 벽${r.walls.length}   `);
+      if (ARG.prof && r.cnt) console.log(`\n  실전 전투 ${r.cnt.simN}판 · 시뮬 ${Math.round(r.cnt.simSec)}초 · 판당 ${(r.cnt.simSec / Math.max(1, r.cnt.simN)).toFixed(1)}초`);
       if (ARG.prof && r.prof) console.log('\n  프로파일: ' + Object.keys(r.prof).sort((x, y) => r.prof[y] - r.prof[x]).slice(0, 10).map(k => k + ' ' + (r.prof[k] / 1000).toFixed(1) + 's').join(' · '));
     }
     console.log('');
