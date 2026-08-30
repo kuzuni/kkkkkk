@@ -57,14 +57,38 @@ const SCREENS = [
    ⚠ 실제 상한을 넘겨 적지 않는다(제품이 스스로 자르는 값과 어긋나면 유령을 만든다). */
 const RAISE = `
   try {
-    S.gold = 1e12; S.dia = 1e7;
-    Object.keys(S.sum || {}).forEach(k => { S.sum[k].lv = SUM_MAXLV; S.sum[k].exp = Math.floor(sumNeedExp(SUM_MAXLV) * 0.5); });
-    Object.keys(S.own || {}).forEach(id => { if (S.own[id]) { S.own[id].l = MAX_LEVEL; S.own[id].n = 5; } });
-    if (S.lv)   Object.keys(S.lv).forEach(k => { if (typeof S.lv[k] === 'number') S.lv[k] = 999; });
-    if (S.skill) Object.keys(S.skill).forEach(k => { if (S.skill[k] && typeof S.skill[k].lv === 'number') S.skill[k].lv = 99; });
-    if (S.pet)   Object.keys(S.pet).forEach(k => { if (S.pet[k] && typeof S.pet[k].lv === 'number') S.pet[k].lv = 99; });
-    if (S.cos)   Object.keys(S.cos).forEach(k => { if (S.cos[k] && typeof S.cos[k].lv === 'number') S.cos[k].lv = 99; });
-    if (S.rel)   Object.keys(S.rel).forEach(k => { if (S.rel[k] && typeof S.rel[k].lv === 'number') S.rel[k].lv = 99; });
+    S.gold = 1e12; S.dia = 1e7; S.relic = 1e6; S.stage = 200;
+    /* ⚠ 1·2회차의 주입은 «세이브에 이미 있는 값» 만 올려서 대부분 빗나갔다 — 21 도감이 'Lv. 0/1',
+       89 유물이 'Lv.0', 07·26·50 슬롯은 **전 칸 잠금**이라 «Lv» 노드가 한 개도 안 잡혔다.
+       즉 긴 문자열 축이 통째로 안 돌았다. ⇒ **보유·장착부터 만들고** 레벨을 올린다.
+       (자리 찾기용 스트레스 축이다 — 제품이 스스로 자르는 상한이 있으면 그 값이 이긴다.) */
+    const own = (id, l) => { S.own[id] = S.own[id] || { l: 0, n: 0 }; S.own[id].l = l; S.own[id].n = 5; };
+    const LMAX = (typeof MAX_LEVEL === 'number' ? MAX_LEVEL : 99);
+    if (typeof SKILLS !== 'undefined') SKILLS.forEach(x => own(x.id, LMAX));
+    if (typeof EQUIPS !== 'undefined') EQUIPS.forEach(x => own(x.id, LMAX));
+    if (typeof PETS   !== 'undefined') PETS.forEach(x => own(x.id, LMAX));
+    if (typeof RELICS !== 'undefined') RELICS.forEach(x => own(x.id, LMAX));
+    if (typeof AVATARS!== 'undefined') AVATARS.forEach(x => own(x.id, LMAX));
+    if (typeof SKILLS !== 'undefined') S.eqSkill = SKILLS.slice(0, 8).map(x => x.id);
+    if (typeof PETS   !== 'undefined' && PETS.length) S.eqPet = PETS.slice(0, 8).map(x => x.id);
+    if (typeof EQUIPS !== 'undefined') ['weapon', 'shield', 'amulet'].forEach(k => {
+      const e = EQUIPS.find(x => x.p === k || x.slot === k || x.part === k);
+      if (e) S.eqSlot[k] = e.id;
+    });
+    if (typeof SUM_MAXLV === 'number') Object.keys(S.sum || {}).forEach(k => {
+      S.sum[k].lv = SUM_MAXLV; S.sum[k].exp = Math.floor(sumNeedExp(SUM_MAXLV) * 0.5);
+    });
+    /* 남은 «lv/l/level» 숫자 필드(축복·룬·단련 등 화면별 주머니)도 같이 올린다 */
+    const seen = new Set();
+    (function walk(o, d) {
+      if (!o || typeof o !== 'object' || d > 5 || seen.has(o)) return;
+      seen.add(o);
+      for (const k of Object.keys(o)) {
+        const v = o[k];
+        if (typeof v === 'number' && (k === 'lv' || k === 'level')) { o[k] = 99; continue; }
+        if (v && typeof v === 'object') walk(v, d + 1);
+      }
+    })(S, 0);
   } catch (e) {}
 `;
 
