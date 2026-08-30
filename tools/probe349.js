@@ -49,9 +49,11 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     window.__buy = [];
     const orig = window.runeBuy;
-    window.runeBuy = function (id, pay, quiet) {
+    /* 551 — 490 이후 서명은 `runeBuy(id, quiet)` 다(제품 32189). 옛 세 인자 사본은 `quiet` 를
+       `pay` 자리에 받아 «결제 갈래» 를 조용히 지어내고 있었다 — 쓰는 항이 없어 안 빨개졌을 뿐이다. */
+    window.runeBuy = function (id, quiet) {
       const r = orig.apply(this, arguments);
-      window.__buy.push({ t: performance.now(), id, pay, quiet: !!quiet, ok: !!r });
+      window.__buy.push({ t: performance.now(), id, quiet: !!quiet, ok: !!r });
       return r;
     };
     window.__ev = [];
@@ -118,8 +120,11 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     await p.waitForTimeout(120);
   };
 
-  const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]';
-  const DIA = '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="dia"]';
+  /* 551 (2026-08-30) — 490 이 결제 갈래를 «룬강화석 하나» 로 굳히며 `data-pay` 를 통째로 걷어냈다
+     (`grep -c data-pay index.html` = 0). 옛 셀렉터는 30초 `scrollIntoViewIfNeeded` 타임아웃으로
+     이 도구를 **첫 표본에서 즉사**시켜 단언이 한 항도 안 돌았다. `verify349` 가 이미 옮겨 둔
+     자리(«유일한 버튼»)를 그대로 쓴다 — 제품은 옳고 자만 낡았던 자리라 제품 0줄이다. */
+  const MAT = '#trRunes .tr-rn[data-rune="r1"] .rbt.b1';
 
   const run = async (name, sel, how, o) => {
     await setup(o || {});
@@ -137,7 +142,11 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
         aliveMs: born ? Math.round(died - born) : 0,
         cancel: e.filter(x => x.k === 'pointercancel' || x.k === 'touchcancel').length,
         moves: e.filter(x => x.k === 'pointermove').length,
-        lv: runeLvOf('r1')
+        lv: runeLvOf('r1'),
+        /* 551 — setup 이 둘 다 1e9 로 세우므로 «지금 값» 이 곧 «빠져나간 양» 이다.
+           490 이관: 옛 [B]«다이아칸» 두 항의 자리를 이 축이 받는다(자리를 비우지 않는다). */
+        dia: S.dia, rstone: S.rstone,
+        btns: document.querySelectorAll('#trRunes .tr-rn[data-rune="r1"] .rbt').length
       };
     });
     console.log('  · ' + name.padEnd(34) + ' 시도 ' + String(r.n).padStart(3)
@@ -153,9 +162,13 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   const a3 = await run('터치(가만히)', MAT, holdTouch, {});
   const a4 = await run('터치(±2px 떨림 = 실제 손가락)', MAT, holdTouchJitter, {});
 
-  console.log('[B] 룬 [강화] 다이아칸 — ⓓ 스위치');
-  const b1 = await run('마우스', DIA, holdMouse, {});
-  const b2 = await run('터치(떨림)', DIA, holdTouchJitter, {});
+  /* [B] 490 이관 — 구 «다이아칸도 홀드를 타는가» 두 항의 자리다. 다이아 결제가 폐지돼
+     그 칸 자체가 없어졌으므로, **자리를 비우지 않고**(333 처방) 같은 손·같은 홀드로
+     «결제가 정말 한 갈래인가» 를 묻는 살아 있는 축으로 갈아 끼운다.
+     [A] 와 겹치지 않는 것은 이 절이 **빠져나간 재화의 양**을 직접 세기 때문이다. */
+  console.log('[B] 결제 갈래가 하나 — 홀드가 도는 동안 룬강화석만 빠진다 (490 이관)');
+  const b1 = await run('마우스 · 재화 계측', MAT, holdMouse, {});
+  const b2 = await run('터치(떨림) · 재화 계측', MAT, holdTouchJitter, {});
 
   /* ─ 드리프트: 이 작업의 **둘째 원인**. 손가락이 버튼 «안» 에서만 굴러도 브라우저가
        터치를 스크롤 제스처로 채가 pointercancel 을 쏘면 홀드가 1회에서 멎는다. ─ */
@@ -191,8 +204,14 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(a2.n >= 3, 'ⓑ 마우스 + 게임 루프 ON + 실제 확률에서도 연속이 도는가', a2.n + '회');
   ok(a3.n >= 3, 'ⓒ 터치(가만히)에서도 연속이 도는가', a3.n + '회');
   ok(a4.n >= 3, 'ⓓ 터치(±2px 떨림 = 실제 손가락)에서도 연속이 도는가', a4.n + '회');
-  ok(b1.n >= 3, 'ⓔ 다이아칸 마우스 — 연속이 도는가(297 은 «1회» 였다)', b1.n + '회');
-  ok(b2.n >= 3, 'ⓕ 다이아칸 터치(떨림) — 연속이 도는가(297 은 «1회» 였다)', b2.n + '회');
+  /* ⓔⓕ — 490 이관. 옛 «다이아칸» 두 항이 있던 자리이고, 묻는 것은 그 뒤집힌 쪽이다:
+     칸이 하나뿐이며 그 하나가 **룬강화석만** 먹는가(다이아는 한 푼도 안 나간다). */
+  ok(b1.btns === 1 && b1.n >= 3 && b1.dia === 1e9 && b1.rstone < 1e9,
+    'ⓔ 490 — 시도 버튼은 하나뿐이고, 마우스 홀드가 도는 동안 룬강화석만 빠진다',
+    '버튼 ' + b1.btns + ' · ' + b1.n + '회 · 다이아 Δ' + (1e9 - b1.dia) + ' · 룬강화석 Δ' + (1e9 - b1.rstone));
+  ok(b2.btns === 1 && b2.n >= 3 && b2.dia === 1e9 && b2.rstone < 1e9,
+    'ⓕ 같은 것이 «실제 손가락»(터치 ±2px 떨림)에서도 성립한다',
+    '버튼 ' + b2.btns + ' · ' + b2.n + '회 · 다이아 Δ' + (1e9 - b2.dia) + ' · 룬강화석 Δ' + (1e9 - b2.rstone));
   ok(d[6].n >= 3 && d[14].n >= 3, 'ⓖ ±6·±14px 드리프트에서 연속이 유지된다', d[6].n + ' · ' + d[14].n + '회');
   ok(d[30].n >= 3, 'ⓗ ★ ±30px(실기기 1.9mm) 드리프트에서도 유지된다 — 수리 전엔 1회였다', d[30].n + '회');
   ok(d[30].cancel === 0, 'ⓘ 그 구간에서 pointercancel 이 0건이다(제스처를 안 뺏긴다)', d[30].cancel + '건');

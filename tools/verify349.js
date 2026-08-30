@@ -201,9 +201,15 @@ const { RESET_CLOSERS } = require('./closers540');
      스크롤하지 않는다. 언젠가 스크롤 영역이 생기면 이 항이 빨개져 처방을 다시 보게 만든다. */
   /* ⚠ `scrollHeight > clientHeight` 만으로는 못 잰다 — `overflow:hidden` 이면 내용이 넘쳐도
      스크롤은 «못 한다». 넘침이 아니라 **스크롤 가능성**(overflow 가 auto/scroll 인가)을 묻는다. */
+  /* 551 (2026-08-30) — 여기 남아 있던 `.rbt[data-pay="mat"]` 은 490 이 걷어낸 이름이라
+     `querySelector` 가 **null** 을 돌려주고 while 이 한 바퀴도 안 돌아 **상시 초록**이었다
+     (조상 사슬을 한 번도 안 걸었다). 셀렉터를 살아 있는 것으로 옮기고, 다시 유령이 되면
+     즉시 빨개지도록 «호스트가 실재한다» 를 판정 안에 **전제로** 넣는다(341 «전제» 절 방식). */
   ok(await p.evaluate(() => {
     const scrollable = [];
-    let el = document.querySelector('#trRunes .tr-rn .rbt[data-pay="mat"]');
+    let el = document.querySelector('#trRunes .tr-rn .rbt.b1');
+    window.__scrHost = !!el;
+    if (!el) { window.__scr = '⚠ 호스트 없음 — 셀렉터가 유령이다'; return false; }
     while (el) {
       const cs = getComputedStyle(el);
       const can = k => /auto|scroll/.test(cs['overflow' + k]);
@@ -276,16 +282,24 @@ const { RESET_CLOSERS } = require('./closers540');
     const c = await aim(MAT);
     const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
     await new Promise(r => setTimeout(r, 400));
-    const node0 = await p.evaluate(() => { window.__b0 = document.querySelector('#trRunes .rbt[data-pay="mat"]'); return true; });
+    /* 551 (2026-08-30) — 여기도 490 이 걷어낸 `[data-pay="mat"]` 이 남아 있었다.
+       `__b0` 도 비교 대상도 **null** 이라 `null === null` 이 되어 이 절의 본체 단언이
+       **상시 초록**이었다(재렌더가 노드를 갈아 끼워도 못 잡는다). 살아 있는 이름으로 옮기고
+       «호스트가 실재한다» 를 곱해 유령이면 초록이 아니라 **빨강**이 되게 한다. */
+    const node0 = await p.evaluate(() => { window.__b0 = document.querySelector('#trRunes .rbt.b1'); return !!window.__b0; });
     /* 홀드 중 통짜 렌더를 여러 번 부른다 — 노드가 갈리면 포인터 캡처가 끊겨 멎는다 */
     for (let i = 0; i < 5; i++) { await p.evaluate(() => { renderTrain(); renderTrainLive(); }); await new Promise(r => setTimeout(r, 90)); }
-    const same = await p.evaluate(() => window.__b0 === document.querySelector('#trRunes .rbt[data-pay="mat"]'));
+    const same = node0 && await p.evaluate(() => {
+      const now = document.querySelector('#trRunes .rbt.b1');
+      return !!now && window.__b0 === now;
+    });
     const a = await n();
     await new Promise(r => setTimeout(r, 400));
     const b = await n();
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await st.catch(() => {}); await p.waitForTimeout(140);
-    ok(same, '홀드 중 renderTrain() 을 5회 불러도 누른 버튼 노드가 그대로다(innerHTML 교체 없음)', node0 ? '' : '');
+    ok(same, '홀드 중 renderTrain() 을 5회 불러도 누른 버튼 노드가 그대로다(innerHTML 교체 없음)',
+      node0 ? '호스트 실재' : '⚠ 호스트 없음 — 셀렉터가 유령이다');
     ok(b > a, '그 뒤에도 반복이 계속 돈다', a + ' → ' + b + '회');
   }
 
@@ -309,6 +323,46 @@ const { RESET_CLOSERS } = require('./closers540');
   }
   ok(!/data-pay|RUNE_HOLD_DIA|RUNE_DIA/.test(fs.readFileSync(SRC, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')),
     'R2 — 490 이후 제품 줄에 `data-pay`·`RUNE_*_DIA` 가 0건이다(결제 갈래가 하나로 굳었다)');
+
+  /* ── R3 (551, 2026-08-30) — «유령 셀렉터가 초록을 만들지 못한다» 되돌림 시험 ──────────
+     R2 는 **제품**에 `data-pay` 가 없음을 단언했지만, 그것이 없어진 자리를 **자**가 계속
+     가리키고 있어도 R2 는 초록이었다. 그 자리가 [B] 스크롤 사슬 · [E] 노드 동일성 두 항이고,
+     둘 다 `querySelector` 의 null 을 그대로 삼켜 **한 바퀴도 안 돌고** 초록이었다.
+     여기서 그 셋을 못박는다: ⓐ 옛 이름은 지금 정말 null 이다 ⓑ 새 판정 꼴에 그 유령을
+     넣으면 초록이 아니라 **빨강**이 나온다 ⓒ 349 계열 자 두 파일의 단언 줄에 그 이름이 없다. */
+  {
+    /* ⚠ 아래 두 줄은 **일부러** 유령 이름을 쓴다(표본이다). R3c 가 자기 자신을 빨갛게 만들지
+       않도록 `GHOST-SAMPLE` 꼬리표를 달고, R3c 는 그 꼬리표가 달린 줄만 건너뛴다 —
+       꼬리표 없는 자리에 이름이 다시 새면 그때는 빨개진다. */
+    const ghost = await p.evaluate(() => {
+      const g = document.querySelector('#trRunes .tr-rn .rbt[data-pay="mat"]');   // GHOST-SAMPLE
+      const live = document.querySelector('#trRunes .tr-rn .rbt.b1');
+      /* 옛 [B] 꼴: null 이면 while 이 안 돌아 «스크롤 0개» 로 초록이 됐다 */
+      const oldShape = (() => { let el = g, n2 = 0; while (el) { n2++; el = el.parentElement; } return n2 === 0; })();
+      /* 새 [B] 꼴: 호스트가 없으면 곧바로 false */
+      const newShape = (() => { if (!g) return false; let el = g; while (el) el = el.parentElement; return true; })();
+      /* 옛 [E] 꼴: null === null 이라 항상 true */
+      return { gone: !g, live: !!live, oldB: oldShape, newB: newShape, oldE: (g === document.querySelector('#trRunes .rbt[data-pay="mat"]')) };   // GHOST-SAMPLE
+    });
+    ok(ghost.gone && ghost.live,
+      'R3a — 옛 이름 `.rbt[data-pay="mat"]` 은 지금 null 이고 살아 있는 `.rbt.b1` 만 있다',
+      '유령 ' + (ghost.gone ? '없음' : '있음') + ' · 살아 있는 버튼 ' + (ghost.live ? '있음' : '없음'));
+    ok(ghost.oldB === true && ghost.oldE === true && ghost.newB === false,
+      'R3b — 그 유령을 넣으면 **옛 판정 꼴은 초록**([B] while 0바퀴 · [E] null===null)이고 **새 꼴은 빨강**이다',
+      '옛[B] ' + ghost.oldB + ' · 옛[E] ' + ghost.oldE + ' · 새[B] ' + ghost.newB);
+    /* 무엇을 금지하는가를 **좁게** 적는다 — 금지 대상은 «이름이 글자로 나오는 것» 이 아니라
+       **셀렉터로 쓰이는 것**이다(항 이름·이 검사기 자신의 정규식은 이름을 담을 수밖에 없다).
+       ⇒ `querySelector(...)`·`locator(...)` 안에서 그 이름을 찾고, 주석과 일부러 쓴 표본
+       (GHOST-SAMPLE 꼬리표)은 뺀다. 꼬리표 없는 자리에 다시 새면 그때 빨개진다. */
+    const SELUSE = /(querySelector(?:All)?|locator)\s*\([^)]*data-pay/;
+    const strip = f => fs.readFileSync(path.resolve(__dirname, f), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n').filter(l => !/GHOST-SAMPLE/.test(l));
+    const dirty = ['verify349.js', 'probe349.js'].filter(f => strip(f).some(l => SELUSE.test(l)));
+    ok(dirty.length === 0,
+      'R3c — 349 계열 자 두 파일에 `data-pay` 를 **셀렉터로 쓰는 줄**이 0건이다(유령 재유입 차단)',
+      dirty.length ? '남은 파일 ' + dirty.join(' , ') : 'verify349.js · probe349.js 둘 다 0건');
+  }
 
   console.log('[G] 회귀');
   ok(aimBad === 0, '누른 좌표의 최상단 노드가 매번 그 버튼이었다(양성항 — 팝업이 덮지 않았다)',
