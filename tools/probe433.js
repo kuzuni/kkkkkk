@@ -188,15 +188,16 @@ const stripMotif = (svg) => {
   ok(badBot.length === 0, '②-a 8장 전부 그려진 잉크의 «아래 여유» 가 0.5 이상이다(밑변이 검은 테에 안 붙는다)',
      badBot.length ? badBot.map((k) => k + ' ' + gapB[k].toFixed(2)).join(', ') : '8/8');
   /* 대칭은 **흰 잉크 5장**만 묻는다 — 밝은 3장(gold·relic4·stone)은 잉크가 테색이고 획이 채움색이라
-     획이 잉크를 «바깥에서 깎는다»(그려진 잉크가 선언 박스보다 작다). 그건 자리가 아니라 실루엣·획 색의
-     결과라 이 작업의 축이 아니다 — 아래 ②-c 로 재기만 하고 별건(444)으로 등재했다. */
+     획이 잉크를 «안쪽에서 깎았다»(그려진 잉크가 선언 박스보다 작았다). 그건 자리가 아니라 실루엣·획 색의
+     결과라 이 작업의 축이 아니었다 — 아래 ②-c 로 재기만 하고 별건(444)으로 등재했고, **444 가 닫았다**
+     (paint-order="stroke fill" 로 획을 채움 밑에 깔고 선언 21 → 21.80). 판정은 tools/verify444.js. */
   const WHITE = KEYS.filter((k) => /fill="#FFFFFF" opacity="\.92"/.test(src[k]));
   const asym = WHITE.map((k) => Math.abs(gapT[k] - gapB[k]));
   ok(WHITE.length === 5 && Math.max(...asym) <= 0.5,
      '②-b 흰 잉크 5장의 위·아래 여유가 대칭이다(|Δ| ≤ 0.5)',
      WHITE.length + '장 · 최대 ' + Math.max(...asym).toFixed(2) + ' (' + WHITE[asym.indexOf(Math.max(...asym))] + ')');
   const hs = KEYS.map((k) => R[k].inkY2 - R[k].inkY1), ws = KEYS.map((k) => R[k].inkX2 - R[k].inkX1);
-  console.log('    ②-c 관측(판정 안 함 · 444 등재) — 그려진 잉크 덩치 최대÷최소  h '
+  console.log('    ②-c 관측(판정은 verify444 [B1]) — 그려진 잉크 덩치 최대÷최소  h '
               + (Math.max(...hs) / Math.min(...hs)).toFixed(3) + ' · w ' + (Math.max(...ws) / Math.min(...ws)).toFixed(3)
               + '   [흰 잉크 5장끼리는 h '
               + (Math.max(...WHITE.map((k) => R[k].inkY2 - R[k].inkY1)) / Math.min(...WHITE.map((k) => R[k].inkY2 - R[k].inkY1))).toFixed(3) + ']');
