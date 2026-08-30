@@ -24,7 +24,8 @@ const { chromium } = pw();
 
 const URL = 'file://' + path.resolve(__dirname, '../index.html');
 
-/* 껍데기 5종 — [클래스, 여는 코드] */
+/* 껍데기 5종 — [클래스, 여는 코드]
+   ⚠ `rl16` 은 대조군이다 — 464(2026-08-30)가 제품에서 지운 죽은 이름이고, 룰렛은 껍데기 없이 연다. */
 const SHELLS = [
   ['ml69', "openMail()"],
   ['q22',  "openQuest()"],

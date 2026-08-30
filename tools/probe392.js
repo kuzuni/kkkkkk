@@ -24,6 +24,7 @@ let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log('  ok   ' + m); };
 const no = (m) => { fail++; console.log('  NO   ' + m); };
 
+/* ⚠ `rl16` 은 대조군 — 464(2026-08-30)가 제품에서 지운 죽은 이름이다(룰렛은 껍데기 없이 연다). */
 const SHELLS = [
   ['ml69', 'openMail()', '69 우편함'],
   ['q22', 'openQuest()', '22 퀘스트'],

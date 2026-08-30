@@ -24897,9 +24897,10 @@ function setBody(id, html){
   return el;
 }
 /* 455 — 닫는 길은 이 함수 하나다(딤 탭·gmCloseAll·직접 호출 전부). 룰렛이 잠겨 있으면 여기서 되돌린다.
-   ⚠ **등재문이 지목한 `rl16` 은 죽은 이름이다** — `probe455` 가 «가드를 넣었는데 여전히 닫힌다» 로
-     잡았다: `rl16` 은 위 다섯 곳의 `remove()` 목록에만 있고 **`add` 하는 곳이 저장소에 없다**
-     (`grep rl16` 7건 전부 remove/주석). 껍데기로 그것을 물으면 판정은 **영원히 거짓**이다.
+   ⚠ **455 등재문이 지목한 `rl16` 은 죽은 이름이었다** — `probe455` 가 «가드를 넣었는데 여전히 닫힌다» 로
+     잡았고(껍데기로 물으면 판정이 **영원히 거짓**), **464 가 그 이름을 다섯 목록에서 걷어냈다**
+     (`probe464`: `add` 0건 · `.rl16` CSS 규칙 **0/2650** · 붙였다 떼도 bbox **Δ0.00px** = remove 가 이미 no-op).
+     16 룰렛은 껍데기 override 없이 A5 기본 규격을 그대로 쓴다 — 되살리려면 `add` 하는 곳을 먼저 만들 것.
    ⇒ «지금 모달이 룰렛인가» 도 상수·클래스가 아니라 **제품에게 묻는다**(368 처방):
      열려 있고(`on`) 그 안에 원판(`#rouDisc`)이 있는가. 그리기는 이 노드가 곧 룰렛이다.
    순서가 중요하다 — 앞의 두 항이 거짓이면 판정식을 밟지도 않으므로 다른 팝업·부팅 경로는 그대로 지난다.
@@ -24907,13 +24908,13 @@ function setBody(id, html){
 function closeModal(){
   const m = $('modal');
   if(m.classList.contains('on') && m.querySelector('#rouDisc') && rouLocked()) return false;
-  m.classList.remove('on', 'sk8', 'rl16', 'q22', 'ml69', 'at70');
+  m.classList.remove('on', 'sk8', 'q22', 'ml69', 'at70');
   return true;
 }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8', 'rl16', 'q22', 'ml69', 'at70');   /* 08·16·22·69·70 전용 껍데기 override 를 끈다 */
+  $('modal').classList.remove('sk8', 'q22', 'ml69', 'at70');   /* 08·22·69·70 전용 껍데기 override 를 끈다 (464 — 16 룰렛은 껍데기가 없다) */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -25746,7 +25747,7 @@ function openAttend(){
   if(!hd.querySelector('.at-ring'))
     hd.insertAdjacentHTML('beforeend', '<s class="at-ring l"></s><s class="at-ring r"></s>');
   const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'q22');
+  m.classList.remove('sk8', 'q22');
   m.classList.add('at70', 'on');
   const t = $('mbox').querySelector('[data-att]');
   if(t) t.onclick = () => { sfx('claim'); claimAttend(t); openAttend(); };   /* 78 */
@@ -26052,7 +26053,7 @@ function openMail(){
     +     '<b>일괄 읽기&amp;수령</b></button>'
     + '</div>';
   const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'q22');
+  m.classList.remove('sk8', 'q22');
   m.classList.add('ml69', 'on');
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
@@ -26183,7 +26184,7 @@ function openQuest(tab){
     + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
     + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>반복</i></b></div>';
   const m = $('modal');
-  m.classList.remove('sk8', 'rl16', 'ml69');
+  m.classList.remove('sk8', 'ml69');
   m.classList.add('q22', 'on');
   /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
      «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
@@ -34589,7 +34590,7 @@ function jzOpen(el){
   if(el.id === 'modal') jzModalMood();
 }
 /* ── 345 «찌그러지며 닫힘» (2026-08-29, 저장소 주인 보고) ────────────────────────────────
-   `closeModal()` 은 `remove('on','sk8','rl16','q22','ml69','at70')` 로 **가시성 스위치와 껍데기
+   `closeModal()` 은 `remove('on','sk8','q22','ml69','at70')` 로 **가시성 스위치와 껍데기
    치수를 한 번에** 뗀다. 닫힘 연출(.12s 역재생)은 그 «뒤» 에 display 를 되살려 도는데, 그 동안
    껍데기 override 가 이미 없어서 상자가 **A5 기본 규격으로 리플로우된 채** 축소된다 = «찌그러짐».
    실측(`tools/probe345.js`, 수리 전): 우편 `.mbox` 1303 → **230**(본문 `.ml69 .mbody{height:1189}`

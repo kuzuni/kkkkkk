@@ -24,6 +24,7 @@
  *   N1 등재문은 껍데기를 `rl16` 이라 했지만 그 클래스는 **`add` 하는 곳이 저장소에 없다**
  *      (remove 목록·주석뿐) ⇒ 그것으로 «지금 룰렛인가» 를 물으면 판정이 영원히 거짓이다.
  *      제품에게 묻는 축(`#modal.on` + `#rouDisc`)으로 갈았고, [A5] 가 그 사실을 못박는다.
+ *      ⚑ 464(2026-08-30)가 그 이름을 다섯 `remove()` 목록에서 걷어냈다 — [A5]·[E1a] 를 그에 맞춰 이관했다.
  *   N2 등재문의 `menuGo` 도 없는 이름이다.
  *   N3 처방 ①③(«rouPend 두 항이면 충분» · «fxAt 600 상수 재사용»)은 실측으로 둘 다 모자랐다 —
  *      `rouPend` 는 `giveReward` **앞**에서 −1 이 되고, 비행은 지급 뒤 **+1193ms** 까지 간다.
@@ -108,12 +109,19 @@ const untilFree = page => page.waitForFunction(
     ok(!!a && a.min > 0 && a.max > a.min,
        '[A4] 울타리 상수 둘 — MIN(비행이 아직 안 뜬 공백) < MAX(안 끝나도 반드시 푸는 상한)',
        'MIN=' + (a && a.min) + ' · MAX=' + (a && a.max));
-    /* §N1 — 등재문이 지목한 `rl16` 이 죽은 이름임을 게이트가 기억한다. 되살아나면 이 항이 알려 준다. */
+    /* §N1 — 등재문이 지목한 `rl16` 이 죽은 이름임을 게이트가 기억한다. 되살아나면 이 항이 알려 준다.
+       ⚑ 464 이관(2026-08-30) — 그 이름은 이제 **다섯 `remove()` 목록에서도 걷어냈다**(제품 줄 0건).
+         항의 뜻은 그대로다(«껍데기로 룰렛을 물으면 안 된다»). 다만 «add 0건» 만 물으면 목록에
+         이름만 도로 끼워 넣는 것을 못 보므로, 464 뒤에는 **제품 줄 전체**를 묻는다. 되살리려면
+         `add` 하는 곳을 **먼저** 만들어야 하고, 그때 이 항이 빨개져 판정 축을 다시 보게 한다.
+         자세한 근거·되돌림 시험은 `tools/verify464.js`. */
     const srcTxt = fs.readFileSync(SRC, 'utf8');
-    const adds = (srcTxt.match(/classList\.add\([^)]{0,80}rl16/g) || []).length;
-    ok(adds === 0,
-       '★ [A5] §N1 — `rl16` 은 여전히 «add 하는 곳이 없는» 죽은 이름이다 ⇒ 껍데기로 룰렛을 물으면 안 된다',
-       'classList.add(…rl16) ' + adds + '건');
+    const codeTxt = srcTxt.replace(/\/\*[\s\S]*?\*\//g, '');
+    const adds = (codeTxt.match(/classList\.add\([^)]{0,80}rl16/g) || []).length;
+    const rlAny = (codeTxt.match(/rl16/g) || []).length;
+    ok(adds === 0 && rlAny === 0,
+       '★ [A5] §N1 — `rl16` 은 제품에서 사라진 죽은 이름이다(464) ⇒ 껍데기로 룰렛을 물으면 안 된다',
+       '제품 줄 rl16 ' + rlAny + '건 · classList.add(…rl16) ' + adds + '건');
   }
 
   /* ══ [B] 회전 중에는 어떤 경로로도 안 닫힌다 ═══════════════════════════ */
@@ -210,7 +218,8 @@ const untilFree = page => page.waitForFunction(
        자기 `on` 을 뗀다(`$('upw')`·`$('relw')`·… 전부 `#modal` 이 아니다). 자를 «모달» 로 좁힌다.
        ⓐ 껍데기 목록을 떼는 줄이 하나뿐인가(= `closeModal()` 의 그 줄)
        ⓑ `#modal` 을 **직접 집어** `on` 을 떼는 자리가 밖에 없는가 */
-    const shell = (code.match(/remove\(\s*'on',\s*'sk8',\s*'rl16',\s*'q22',\s*'ml69',\s*'at70'\s*\)/g) || []).length;
+    /* ⚑ 464 이관 — 목록에서 죽은 `rl16` 이 빠졌다(살아 있는 넷은 그대로). 자도 같이 줄인다. */
+    const shell = (code.match(/remove\(\s*'on',\s*'sk8',\s*'q22',\s*'ml69',\s*'at70'\s*\)/g) || []).length;
     ok(shell === 1,
        '★ [E1a] 모달 껍데기를 떼는 줄은 **1건**(= `closeModal()` 안)뿐이다',
        shell + '건');

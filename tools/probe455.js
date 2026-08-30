@@ -75,7 +75,7 @@ const dimPoint = page => page.evaluate(() => {
 
 const snap = page => page.evaluate(() => ({
   on: document.getElementById('modal').classList.contains('on'),
-  rl16: document.getElementById('modal').classList.contains('rl16'),
+  rl16: document.getElementById('modal').classList.contains('rl16'),   /* 464 — 제품에서 지운 죽은 이름 · 항상 false 인 대조 축 */
   spinning: rouSpinning,
   pend: rouPend,
   dia: S.dia,
