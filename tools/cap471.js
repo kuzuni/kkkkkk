@@ -149,7 +149,13 @@ const STEPS = [
   await grab('10 10 상점 서브탭', '#shopCats .stab', '주인 스크린샷 ① «반달» 자리');
   await ev(async () => { openShopPage(null, 'summon'); });
   await wait(500);
-  await grab('11 10 «10회 소환» 카드', '#shopList .shp-card', '예외 — 노드는 카드 자식');
+  /* ⚑ 4회차 비평 — BS·BT **둘 다 이 칸을 «채점 불능»** 으로 돌려보냈다. 창을 **카드** 코너에
+     맞춰 잘랐는데 328 규약상 이 닷이 붙는 곳은 **버튼(`.cbtn.b1`) 코너**라, 십자선은 닷에서
+     70/158 제품px 떨어진 자리에 찍히고 닷 자신은 창 아래로 밀려났다(BS: «닷 중심이 창 밖 16.5
+     시트px»). 3회차에 «창이 화면 변에 물리는» 결함을 고쳤는데 이 칸은 **호스트가 뒤바뀐 채**였다.
+     ⇒ 크롭·십자선을 그 닷이 실제로 겨누는 **버튼** 코너에 맞춘다(노드가 카드 자식인 것은 그대로). */
+  await grab('11 10 «10회 소환» 버튼', '#shopList .shp-card .cbtn.b1',
+    '예외 — 노드는 카드 자식이되 좌표는 이 버튼 코너 기준(328)');
   await ev(() => closeShopPage());
   await wait(200);
 
@@ -221,7 +227,13 @@ const STEPS = [
       const ox = cx + (CELL - w) / 2, oy = cy + PADT + (CELL - h) / 2;
       /* ⚠ 0.62/0.38 고정이 아니라 **찍을 때 잰 실제 코너 자리**를 쓴다(창이 화면 변에 물리면
          코너가 그 자리에 안 온다 — 3회차 비평 BR 이 이것을 «점이 67px 밖으로 떨어졌다» 로 봤다). */
-      const fx = (o.fx === undefined ? 0.62 : o.fx), fy = (o.fy === undefined ? 0.38 : o.fy);
+      /* ⚑ 4회차 비평 — BS «01 은 십자선 세로선이 240창 안에 없어 가로를 아예 못 잰다».
+         호스트가 **프레임 우변에 플러시**면 코너 x = 1080 이고 창은 `1080 - WIN` 에 물려
+         코너가 창 안 좌표 **240**(= 창 밖 첫 픽셀)에 떨어진다. 오른쪽에는 더 잘라 올 픽셀이
+         아예 없으므로 창을 옮겨서는 못 고친다 — **선을 창의 마지막 열에 그린다**(오차 0.5px 미만,
+         그 사실을 라벨에 적는다). 안 그리면 그 칸은 «채점 불능» 이 되어 점수를 두 번 깎는다. */
+      const clampF = v => Math.max(0.002, Math.min(0.998, v));
+      const fx = clampF(o.fx === undefined ? 0.62 : o.fx), fy = clampF(o.fy === undefined ? 0.38 : o.fy);
       g.beginPath();
       g.moveTo(ox + w * fx, oy); g.lineTo(ox + w * fx, oy + h);
       g.moveTo(ox, oy + h * fy); g.lineTo(ox + w, oy + h * fy);

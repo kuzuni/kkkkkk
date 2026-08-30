@@ -164,7 +164,12 @@ function collect(items) {
       d.style.display = prev; d.style.animation = prevA;
       if (!hr.width || !dr.width) return;
       const cx = dr.left + dr.width / 2, cy = dr.top + dr.height / 2;
-      const R = dr.width / 2 + RING;
+      /* ⚑ 4회차 — 링을 상수 7.5 로 두면 **`border` 로 링을 그리는 부품**(`.tab .bdg` — 41 상자 안에
+         검정 5px)에서 바깥 반지름을 7.5px 과대평가한다. 그 칸을 프레임 변에 접하게 두면 [B] 가
+         있지도 않은 잘림 7.5px 을 잡는다(4회차에 실제로 그랬다). ⇒ **링이 상자 밖에 그려질 때만**
+         더한다 — `box-shadow` 로 그린 부품(`.updot`·`#psBar .pt>.bdg` 계열)이 그쪽이다. */
+      const outside = cs.boxShadow && cs.boxShadow !== 'none';
+      const R = dr.width / 2 + (outside ? RING : 0);
       /* ⚠ 스크롤 그릇 밖으로 밀려난 행(«지금 안 보이는 카드»)은 «잘림» 이 아니다 —
          그 자리의 결함은 스크롤하면 사라진다. 호스트가 클립 띠 안에 있을 때만 센다. */
       const inBand = hr.top >= clip.r.t - 1 && hr.bottom <= clip.r.b + 1;

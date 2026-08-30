@@ -1677,7 +1677,12 @@
         좌우 변뿐이고 탭바 **상변은 화면 안쪽**이라 위로는 얼마든지 걸칠 수 있는데, 규약 상수를 두 축에
         같이 걸어 **세로까지 안쪽으로 밀어 넣어** 놓았다(BM: «위쪽 넘김 0px, 기준은 0.56r» ·
         BN: «우 44 상 50px 떨어져 허공에 떠 있다»). ⇒ 축을 갈라 **세로는 규약 그대로**, 가로만 예외. */
-  .tab .bdg{position:absolute;--dot-r:20.5px;--dot-in-x:28px;width:41px;height:41px;border-radius:50%;
+  /* ⚑ 4회차 — 가로 예외값을 **자기 바깥 반지름**으로 바꿨다(28 → 20.5). 비평가 BT 가 «01 과 19 가
+     같은 사유(프레임 변)인데 값이 7.1px 다르다 — 둘 중 하나는 근거 없는 값» 이라고 짚었고 맞다.
+     19(`#psBar .pt>.bdg`)는 `--dot-in-x:21` = 자기 바깥 반지름이라 «프레임 변에 정확히 접하는
+     최소 후퇴량» 인데, 01 은 28 이라 2.5px 을 근거 없이 더 물러나 있었다. `.tab .bdg` 는 검정 링이
+     border 라 상자 반지름이 곧 바깥 반지름(41/2)이다 ⇒ 20.5. 이제 두 예외가 **한 식**이다. */
+  .tab .bdg{position:absolute;--dot-r:20.5px;--dot-in-x:20.5px;width:41px;height:41px;border-radius:50%;
     background:radial-gradient(circle at 50% 20%,#ff7891 0 2.5px,#f22e52 6px);
     border:5px solid #000;display:none;z-index:3}
   .tab.alert .bdg{display:block}

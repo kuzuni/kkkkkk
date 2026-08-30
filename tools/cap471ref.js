@@ -36,6 +36,16 @@ const OUT = path.resolve(__dirname, '..', 'docs', 'ref', '471-레드닷-코너.p
     document.querySelectorAll('#qAll, #qAll .updot').forEach(e => {
       e.getAnimations({ subtree: true }).forEach(a => { try { a.pause(); a.currentTime = a.effect.getTiming().duration || 0; } catch (_) {} });
     });
+    /* ⚑ 471 4회차 — **이 한 줄이 없어서 기준 그림 자체가 1~3회차 내내 틀려 있었다.**
+       `currentTime = duration` 은 `jzDotPulse` 에는 안 통한다: 그 애니는 **delay .3s** 라
+       currentTime 2000ms 가 로컬 1700ms = **85%** 를 가리키고, 키프레임 84% 가 바로 `scale:1.14`
+       봉우리다. ⇒ 기준 그림의 닷만 **코어 지름 72 device px**(base 64, **+12.5%**)로 부풀어 있었다.
+       대조 시트(`cap471.js`)와 자(`probe471.js`)는 둘 다 `animation:'none'`(= base)이라
+       **기준과 채점 대상이 서로 다른 자로 재려 있었다**(385 «자매 자 드리프트»).
+       비평가 BO(2회차)·BT(4회차)가 독립으로 «기준 비율 0.44 인데 우리는 0.50» 이라고 적은 것이
+       정확히 이 12.5% 다 — 0.44 × 1.125 = 0.495. base 로 다시 재면 기준도 **21/42 = 0.500** 이라
+       제품과 어긋남이 사라진다. **여기를 되돌리지 마라.** `verify471` [G] 가 감시한다. */
+    document.querySelectorAll('#qAll .updot').forEach(d => { d.style.animation = 'none'; });
     await wait(150);
     const r = document.getElementById('qAll').getBoundingClientRect();
     return { x: r.left, y: r.top, w: r.width, h: r.height };

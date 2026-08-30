@@ -182,6 +182,56 @@ const probe = (file, ink) => {
       r ? '칸 잉크가 상자보다 우 ' + r.inkR + 'px 좁다 (' + r.ink.w + '×' + r.ink.h + ')' : '없음');
   });
 
+  /* ── [G] 기준 그림의 자 (4회차 신설) ────────────────────────────────────────────
+     ⚑ **1~3회차의 «기준» 이 틀려 있었다.** `cap471ref.js` 가 맥박을 «끝 프레임» 으로 세우려고
+     `currentTime = duration` 을 썼는데, `jzDotPulse` 는 **delay .3s** 라 그 시점이 로컬 85% =
+     키프레임 84% 의 `scale:1.14` 봉우리다. 기준 그림의 닷만 **+12.5%** 부풀어 있었고,
+     대조 시트·`probe471` 은 `animation:'none'`(base)이라 **기준과 채점 대상의 자가 달랐다**.
+     비평가 BO(2회차)·BT(4회차)가 «기준 비율 0.44 vs 우리 0.50» 으로 독립 관측한 것이 이 12.5% 다.
+     ⇒ 기준 그림의 닷 코어(+분홍 링) 지름이 **base 값(64 device px @ dsf2 = 32 제품px)** 인지 잰다.
+        누가 다시 부풀린 프레임으로 기준을 뜨면 여기가 곧바로 빨개진다. */
+  const REF = path.join(ROOT, 'docs', 'ref', '471-레드닷-코너.png');
+  if (!fs.existsSync(REF)) {
+    ok(false, '[G] 기준 그림이 있다', REF);
+  } else {
+    const dia = execFileSync('node', ['-e', `
+      const { pw, launch } = require(${JSON.stringify(path.join(__dirname, 'pwlaunch'))});
+      const fs = require('fs');
+      (async () => {
+        const b = await launch(pw().chromium);
+        const p = await (await b.newContext()).newPage();
+        await p.goto('about:blank');
+        const s = fs.readFileSync(${JSON.stringify(REF)}).toString('base64');
+        const r = await p.evaluate(async (s) => {
+          const im = new Image();
+          await new Promise(r => { im.onload = r; im.src = 'data:image/png;base64,' + s; });
+          const c = document.createElement('canvas'); c.width = im.width; c.height = im.height;
+          const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+          const d = g.getImageData(0, 0, im.width, im.height).data;
+          let l = 1e9, t = 1e9, rr = -1, bo = -1;
+          for (let y = 0; y < im.height; y++) for (let x = 0; x < im.width; x++) {
+            const i = (y * im.width + x) * 4;
+            if (d[i] > 170 && d[i] - d[i+1] > 70 && d[i] - d[i+2] > 40) {
+              if (x < l) l = x; if (x > rr) rr = x; if (y < t) t = y; if (y > bo) bo = y; }
+          }
+          return (rr + 1 - l) + ',' + (bo + 1 - t);
+        }, s);
+        console.log('DIA ' + r);
+        await b.close();
+      })();
+    `], { cwd: ROOT, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
+    const mm = dia.match(/DIA (\d+),(\d+)/);
+    const dx = mm ? Number(mm[1]) : -1, dy = mm ? Number(mm[2]) : -1;
+    /* base = 코어 27 + 분홍 링 2.5×2 = 32 제품px → dsf2 에서 64. 맥박 봉우리면 72 로 읽힌다. */
+    ok(dx === 64 && dy === 64,
+      '[G] 기준 그림의 닷이 **맥박 정지(base)** 상태다 — 부풀면 채점 대상과 다른 자가 된다',
+      mm ? '코어+분홍 링 ' + dx + '×' + dy + ' device px (base 64 · 봉우리 72)' : '못 읽음');
+    /* 자를 다시 부풀리지 못하게 **처방 자체**도 못박는다(주석만으로는 되돌아온다). */
+    const refSrc = fs.readFileSync(path.join(__dirname, 'cap471ref.js'), 'utf8');
+    ok(/\.updot'\)\.forEach\(d => \{ d\.style\.animation = 'none'; \}\)/.test(refSrc),
+      '[G] `cap471ref.js` 가 닷 애니를 `none` 으로 끈다 (대조 시트·probe471 과 같은 자)');
+  }
+
   /* ── [E] 되돌림 시험 ── */
   fs.writeFileSync(NEG, src.replace(':root{--dot-in:' + inset + 'px}', ':root{--dot-in:34px}'));
   let negOff = -1;
