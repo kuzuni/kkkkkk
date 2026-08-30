@@ -21,8 +21,10 @@
  *       «클릭으로 도달 가능한 경로» 인지를 헤드리스로 밟는다(기능 완성 규칙 2026-08-25).
  *       각 단계에서 «상한 −1 이면 [↑] 안 열림 · 상한이면 열림» 도 같이 본다.
  *   [E] 구매 경로가 새 상한을 존중한다 — x30 이 상한을 넘겨 사지 않고, 상한에서는 «상한» 표시
- *   [F] **세이브 이관이 «없음» 이 맞다** — 구 세이브(구 상한까지 채운 값)를 넣어도 레벨이
- *       깎이거나 단계가 강등되지 않는다. n≥1 에서 구 상한 100n ≤ 신 상한 100·n(n+1)/2 이므로.
+ *   [F] **세이브 이관 — 「없음」 판정은 반만 맞았다**(작업 483 이 정정). 구 세이브를 **실제로
+ *       reload** 해서 묻는다: ① 레벨은 안 깎인다(구 상한 100n ≤ 신 상한 — 326 이 옳게 본 축)
+ *       ② 단계는 «레벨이 산 만큼» 으로 **정정된다** — 진행도의 기저(cap(단계−1))도 같이 커진 것을
+ *       326 이 놓쳐 구 세이브의 진행바가 0 에 굳어 있었다(483). ③ 326 규칙을 지킨 세이브는 무영향.
  *   [G] 안 건드린 축 — TRAIN_CAP_STEP 100 · TRAIN_BONUS 0.10 · 단계 보너스 적용식
  *   [H] 콘솔·페이지 에러 0
  */
@@ -182,20 +184,57 @@ const head = page => page.evaluate(() => ({
   eq('  상한 카드 버튼 표기', full3.btn, '상한');
   eq('  상한 카드 증가분 표기', full3.val, 'MAX');
 
-  /* ---- [F] 세이브 이관 «없음» 이 맞다 ---- */
-  console.log('[F] 구 세이브 이관 — 구 상한(단계×100)까지 채운 값이 그대로 살아 있다');
+  /* ---- [F] 세이브 이관 — 483 이 «없음» 판정을 반만 확인해 줬다 ----
+     원래 이 절은 «이관 없음이 맞다» 를 단언했다. 두 가지가 틀렸다(작업 483):
+       ① **레벨 축은 여전히 맞다** — 구 상한 100n ≤ 신 상한이라 레벨이 깎이는 일은 없다.
+       ② **단계 축이 틀렸다** — 진행도의 기저 `trainBase()`(= cap(단계−1))도 같이 커져서
+          구 규칙으로 자란 세이브(단계 9 · lv 900대)는 `trainLvRel` 이 **0 에 굳는다**.
+          483 이 load() 에서 «단계를 레벨이 산 만큼으로 내리는» 이관을 넣었다.
+     그리고 이 절은 `setup()` 이 S 를 **직접** 세팅해 로드 경로를 한 번도 안 지났다 —
+     그래서 이관이 없든 있든 초록이었다(헛초록). 이제 **실제로 reload 해서** 묻는다. */
+  console.log('[F] 구 세이브 실로드 — 레벨은 그대로 · 단계는 «레벨이 산 만큼» 으로 정정된다(483)');
   for (const st of [2, 4, 8]) {
-    await setup(page, { stage: st, atk: OLDCAP(st), hp: OLDCAP(st), regen: OLDCAP(st) });
+    const L = OLDCAP(st);
+    /* ⚠ LESSONS 363 — `page.reload()` 로는 못 잰다: `beforeunload → save()` 가 방금 심은
+       세이브를 현재 S 로 덮어쓴다. **load() 를 직접 부른다**(그것이 이관이 사는 자리다). */
+    await page.evaluate(([s, l]) => {
+      step = () => {}; S.autoBuy = false;
+      localStorage.setItem(KEY, JSON.stringify({
+        gold: 1e30, best: 60, a105: 1, autoBuy: false, trainStage: s, lv: { atk: l, hp: l, regen: l },
+      }));
+      load(); renderTrain();
+    }, [st, L]);
+    await page.waitForTimeout(120);
     const h = await head(page);
-    eq('  단계 ' + st + ' — 레벨이 안 깎였다', h.lv.atk, OLDCAP(st));
-    eq('  단계 ' + st + ' — 단계가 안 강등됐다', h.stage, st);
-    ok('  단계 ' + st + ' — 구 상한 ' + OLDCAP(st) + ' ≤ 신 상한 ' + CAP(st) + ' (넘침 없음)',
-       OLDCAP(st) <= h.cap, 'cap ' + h.cap);
-    ok('  단계 ' + st + ' — 진행도가 분모를 안 넘는다', (() => {
+    /* 계약(483): 단계 k = «전 스탯 lv ≥ cap(k−1)» 를 만족하는 가장 큰 k, 원래 단계를 넘지 않는다 */
+    let want = 1; while (want < st && CAP(want) <= L) want++;
+    eq('  구 단계 ' + st + '(lv ' + L + ') — 레벨이 안 깎였다', h.lv.atk, L);
+    ok('  구 단계 ' + st + ' — 구 상한 ' + L + ' ≤ 신 상한 ' + CAP(st) + ' (넘침 없음 = 326 이 옳게 본 축)',
+       L <= CAP(st), 'cap ' + CAP(st));
+    eq('  구 단계 ' + st + ' — 단계는 ' + want + ' 로 정정된다(483)', h.stage, want);
+    ok('  구 단계 ' + st + ' — 기저 ' + h.base + ' ≤ lv ' + h.lv.atk + ' (진행이 0 에 안 굳는다)',
+       h.base <= h.lv.atk, h.base + ' vs ' + h.lv.atk);
+    ok('  구 단계 ' + st + ' — 진행도가 분모를 안 넘는다', (() => {
       const [a, b] = h.prog.split('/').map(Number); return a <= b && a >= 0;
     })(), h.prog);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem(KEY)).lv.atk | 0);
-    eq('  단계 ' + st + ' — localStorage 세이브도 그대로', saved, OLDCAP(st));
+    eq('  구 단계 ' + st + ' — localStorage 레벨도 그대로', saved, L);
+  }
+  /* 음성항 — 326 규칙을 지켜 자란 세이브는 **한 글자도 안 닿는다**(이관이 남의 단계를 깎지 않는다) */
+  {
+    const L = CAP(5) + 11;
+    await page.evaluate(l => {
+      step = () => {}; S.autoBuy = false;
+      localStorage.setItem(KEY, JSON.stringify({
+        gold: 1e30, best: 60, a105: 1, autoBuy: false, trainStage: 6, lv: { atk: l, hp: l, regen: l },
+      }));
+      load(); renderTrain();
+    }, L);
+    await page.waitForTimeout(120);
+    const h = await head(page);
+    eq('  정상 세이브(단계 6 · lv ' + L + ') — 단계 그대로', h.stage, 6);
+    eq('  정상 세이브 — 레벨 그대로', h.lv.atk, L);
+    eq('  정상 세이브 — 진행 = (lv − cap(5))×3', h.prog, (L - CAP(5)) * 3 + '/' + 300 * 6);
   }
 
   /* ---- [G] 안 건드린 축 ---- */

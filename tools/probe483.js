@@ -84,12 +84,15 @@ const evOf = (page) => async (fn, arg) => {
       /* 기대값은 «수리 후» 로 적는다 — 수리 전 트리에서는 여기가 빨갛다(= 재현). */
       ok(st.base <= Math.min.apply(null, st.lv),
         'base(' + st.base + ') ≤ 최소 lv(' + Math.min.apply(null, st.lv) + ') — 단계가 레벨보다 앞서 있지 않다');
-      ok(st.prog > 0, '로드 직후 진행 > 0 (' + st.prog + '/' + st.max + ')');
+      /* ⚠ «진행 > 0» 을 묻지 않는다 — 단계 업 직후 0 은 183 규약상 정상이다.
+         이 세이브가 이미 산 레벨이 «이번 단계 몫» 안에 들어와 있는지를 묻는다. */
+      ok(st.prog > 0 && st.prog < st.max,
+        '이미 산 레벨이 이번 단계 눈금 안에 있다 (' + st.prog + '/' + st.max + ')');
     }
 
-    blk('A2 x1 구매 → 진행바가 같은 프레임에 +1');
+    blk('A2 x1 구매 → 진행바가 같은 프레임에 +1  ← 등재문의 완료 조건');
     const buy = await ev(() => {
-      S.buyQty = 1; S.gold = 1e30;
+      S.buyQty = 1;                       /* 골드는 세이브가 들고 온 1e30 그대로 — «살 수 있나» 도 같이 묻는다 */
       const b0 = { prog: trainProg(), lv: lv('atk'), txt: ($('trProg') || {}).textContent, w: $('trFill').style.width };
       trainBuy('atk'); renderTrainLive();
       const b1 = { prog: trainProg(), lv: lv('atk'), txt: ($('trProg') || {}).textContent, w: $('trFill').style.width };
@@ -115,6 +118,22 @@ const evOf = (page) => async (fn, arg) => {
       console.log('  base 까지 남은 레벨 : ' + gap.need.join(' / ') + '  (합 ' + gap.sum + ')');
       console.log('  cap 까지 남은 방(room) : ' + gap.room.join(' / ') + '  ← 구매는 되는데 진행바는 안 움직인다');
       ok(gap.sum === 0, '«진행이 0 에 붙어 있는 구간» 이 0 레벨이다 (지금 ' + gap.sum + ')');
+    }
+
+    /* ── A4 등재문 기본안(«레벨을 base 까지 무료로 올림») 을 값으로 기각한다 ──
+       338 규칙 — 처방 후보도 «찍힌 값» 으로 고른다. 이 절은 제품을 안 건드리고 곡선만 묻는다. */
+    blk('A4 기각 근거 — 「레벨을 base 까지 올리면」 다음 한 레벨의 값');
+    const cost = await ev(() => {
+      const u = U.atk, at = l => u.cost(l);
+      const rows = [308, 921, 983, 1000, 3600, 4500].map(l => ({ l, c: at(l) }));
+      return { rows, ratio: at(3600) / at(921), gold: S.gold };
+    });
+    if (cost.__err) { console.log('  ❌ ' + cost.__err); fail++; }
+    else {
+      cost.rows.forEach(r => console.log('  Lv ' + String(r.l).padStart(4) + ' → 다음 레벨 ' + r.c.toExponential(3) + ' 골드'));
+      console.log('  Lv 921 → 3600 배율 : ×' + cost.ratio.toExponential(3) + '   (세이브 보유 골드 ' + cost.gold.toExponential(3) + ')');
+      ok(cost.ratio > 1e30,
+        '기본안은 «못 사는 값» 을 만든다 — 진행바가 «0 에 굳음» → «살 수가 없어 안 움직임» 으로 바뀔 뿐');
     }
     await ctx.close();
   }
@@ -219,23 +238,32 @@ const evOf = (page) => async (fn, arg) => {
         lv: { atk: oldLv, hp: oldLv, regen: oldLv },
       });
       const ev = evOf(page);
-      const r = await ev(() => ({
-        stage: trainStage(), base: trainBase(), cap: trainCap(),
-        lv: lv('atk'), prog: trainProg(), max: trainMax(),
-      }));
+      const r = await ev(() => {
+        openTrain && openTrain();
+        S.buyQty = 1;
+        const before = { stage: trainStage(), base: trainBase(), cap: trainCap(), lv: lv('atk'),
+                         prog: trainProg(), max: trainMax() };
+        trainBuy('atk'); renderTrainLive();
+        return Object.assign(before, { lv2: lv('atk'), prog2: trainProg(), txt: ($('trProg') || {}).textContent });
+      });
       if (r.__err) { console.log('  ❌ 단계 ' + n + ' : ' + r.__err); fail++; }
       else {
-        rows.push(r);
-        console.log('  단계 ' + String(r.stage).padStart(2) + ' · 구 lv ' + String(oldLv).padStart(4)
-          + ' → base ' + String(r.base).padStart(5) + ' cap ' + String(r.cap).padStart(5)
-          + ' · lv ' + String(r.lv).padStart(5) + ' · 진행 ' + r.prog + '/' + r.max);
+        rows.push(Object.assign(r, { old: n, oldLv }));
+        console.log('  구 단계 ' + String(n).padStart(2) + ' lv ' + String(oldLv).padStart(4)
+          + ' → 단계 ' + String(r.stage).padStart(2)
+          + ' · base ' + String(r.base).padStart(4) + ' cap ' + String(r.cap).padStart(4)
+          + ' · 진행 ' + r.prog + '/' + r.max
+          + '  ─구매→ ' + r.prog2 + '/' + r.max + ' («' + r.txt + '»)');
       }
       await ctx.close();
     }
-    blk('C1 스윕 판정');
-    const stuck = rows.filter(r => r.prog === 0 && r.lv > 0);
-    console.log('  진행 0 에 붙은 단계 : ' + (stuck.length ? stuck.map(r => r.stage).join(', ') : '없음'));
-    ok(stuck.length === 0, '구 규칙 세이브 어느 단계에서도 진행이 0 에 굳지 않는다 (지금 ' + stuck.length + '개)');
+    blk('C1 스윕 판정 — 구매 한 번에 진행이 오르나(완료 조건)');
+    const stuck = rows.filter(r => !(r.lv2 === r.lv + 1 && r.prog2 === r.prog + 1));
+    console.log('  구매해도 진행이 안 오르는 단계 : ' + (stuck.length ? stuck.map(r => r.old).join(', ') : '없음'));
+    ok(stuck.length === 0, '구 규칙 세이브 어느 단계에서도 «사도 안 오름» 이 없다 (지금 ' + stuck.length + '개)');
+    blk('C2 단계는 «내리기만» 한다 — 이관이 단계를 선물하지 않는다');
+    const up = rows.filter(r => r.stage > r.old);
+    ok(up.length === 0, '이관 뒤 단계가 올라간 세이브 0건 (지금 ' + up.length + '건)');
   }
 
   await browser.close();
