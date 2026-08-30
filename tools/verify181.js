@@ -14,7 +14,13 @@
  *   [C] 회전 중 비활성 버튼을 5회 재터치 → 새 연출 노드 0 · `jz-sh`/`jz-why` 0 · 모달 클래스 불변
  *   [D] 정지 «후» 에는 당첨 연출이 **살아 있다** (연출을 지운 게 아니라 미룬 것이다)
  *   [E] 보상은 정확히 당첨 칸만큼 1회 지급 (회전 중에는 0)
- *   [F] 회전 중 팝업이 사라져도(닫아도) 지급된다 (65 의 «강제 닫힘» 성질 유지)
+ *   [F] 회전 중 팝업이 사라져도 지급된다 (65 의 «강제 닫힘» 성질 유지)
+ *       ⚑ **455 이관(2026-08-30)** — 이 항은 원래 `closeModal()` 로 «사라짐» 을 만들었는데,
+ *         455(주인 지시 «회전 중에는 못 닫는다»)가 그 길을 막아 표본이 성립하지 않게 됐다.
+ *         항을 눌러 초록으로 되돌리는 대신 **살아 있는 «사라짐» 경로로 갈아 끼웠다** —
+ *         `showModal()` 이 본문을 가져가면 원판(`#rouDisc`)이 모달에서 빠지고 `gone()` 이 결판낸다.
+ *         그리고 **누른 항을 묻는 항을 한 줄 더 넣었다**(LESSONS 329): [F2] 가 «`closeModal()` 은
+ *         이제 회전 중에 안 닫는다» 를 단언한다. 이 두 줄이 없으면 455 가 통째로 사라져도 초록인 게이트가 된다.
  *   [H] 회전 도중 앱을 닫아도(pagehide) 지급된다 · 두 번 와도 두 번 주지 않는다
  *   [G] 원판은 그대로 돈다 · 당첨 칸 = 포인터 아래 칸
  *
@@ -166,7 +172,7 @@ async function main() {
   if (after.spin || after.mark) fail('[E] 정지했는데 rouSpinning/rou-spin 표식이 남아 있다');
   else ok('[E-5] 정지 후 rouSpinning=false · rou-spin 제거');
 
-  /* ── [F] 회전 중 팝업이 사라져도 지급 ── */
+  /* ── [F] 회전 중 팝업이 사라져도 지급 (455 이관 — 위 머리말) ── */
   const forced = await page.evaluate(async () => {
     const out = [];
     for (let k = 0; k < 3; k++) {
@@ -174,18 +180,42 @@ async function main() {
       openRoulette();
       spinRoulette();
       await new Promise((r) => setTimeout(r, 300));
-      closeModal();                                   /* 회전 도중 강제로 닫는다 */
+      /* 455 이후에도 **살아 있는** «팝업이 사라진다» 경로 — 다른 팝업이 본문을 가져간다.
+         `#rouDisc` 가 모달에서 빠지므로 `roulSpinTo` 의 `gone()` 이 즉시 결판낸다. */
+      showModal('<h2>181</h2><p>회전 중 본문 교체</p>');
       await new Promise((r) => setTimeout(r, 900));
-      out.push({ dia: S.dia, spins: S.daily.spins, spinning: rouSpinning });
+      out.push({ dia: S.dia, spins: S.daily.spins, spinning: rouSpinning,
+                 disc: !!document.querySelector('#modal #rouDisc') });
+      closeModal();
     }
     return out;
   });
-  const bad = forced.filter((f) => !(f.dia > 0) || f.spins !== 4 || f.spinning);
-  if (bad.length) fail(`[F] 회전 중 강제 닫힘 3회 중 ${bad.length}회가 어긋났다: ${JSON.stringify(bad[0])}`);
-  else ok(`[F] 회전 중 강제 닫힘 3/3 지급됨 (💎${forced.map((f) => f.dia).join('/')} · spins 5→4 · rouSpinning=false)`);
+  const bad = forced.filter((f) => !(f.dia > 0) || f.spins !== 4 || f.spinning || f.disc);
+  if (bad.length) fail(`[F] 회전 중 강제 사라짐 3회 중 ${bad.length}회가 어긋났다: ${JSON.stringify(bad[0])}`);
+  else ok(`[F] 회전 중 강제 사라짐 3/3 지급됨 (💎${forced.map((f) => f.dia).join('/')} · spins 5→4 · rouSpinning=false)`);
+
+  /* ── [F2] 455 — 그 대신 «사용자가 닫는» 길은 회전 중 막혀 있다 (누른 항을 묻는 항, LESSONS 329) ── */
+  const locked = await page.evaluate(async () => {
+    S.daily.spins = 5; S.dia = 0; rouRot = 0; rouSpinning = false;
+    openRoulette(); spinRoulette();
+    await new Promise((r) => setTimeout(r, 300));
+    const ret = closeModal();
+    const on = document.getElementById('modal').classList.contains('on');
+    while (rouSpinning) await new Promise((r) => setTimeout(r, 100));   /* 뒤 항을 위해 비워 둔다 */
+    await new Promise((r) => setTimeout(r, 300));
+    closeModal();
+    return { ret, on, dia: S.dia };
+  });
+  if (locked.ret !== false || locked.on !== true)
+    fail(`[F2] 455 — 회전 중 closeModal() 이 닫아 버렸다 (ret=${locked.ret} · #modal.on=${locked.on})`);
+  else if (!(locked.dia > 0)) fail('[F2] 455 — 잠긴 채 끝난 회전이 지급되지 않았다');
+  else ok(`[F2] 455 — 회전 중 closeModal() 은 안 닫는다(false) · 끝나고 💎${locked.dia} 지급`);
 
   /* ── [H] 회전 도중 앱을 닫아도 지급된다 (pagehide 안전망) ── */
   const hide = await page.evaluate(async () => {
+    /* 455 이관 — 앞 항의 회전이 아직 돌고 있으면 그 지급이 이 항의 `during` 으로 새어 든다
+       (1회차에 «회전 중 이미 지급됐다 (300)» 이 그것이었다). 비어 있을 때까지 기다렸다 시작한다. */
+    while (rouSpinning || rouPend >= 0) await new Promise((r) => setTimeout(r, 100));
     S.daily.spins = 5; S.dia = 0; rouRot = 0; rouSpinning = false; openRoulette();
     spinRoulette();
     await new Promise((r) => setTimeout(r, 300));

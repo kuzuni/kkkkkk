@@ -215,7 +215,17 @@ const BTN_DOT = '#rouBtn > s.updot';
   ok(bd0.display === 'none' && bd0.red === 0, '[8] 화소도 0', 'display=' + bd0.display + ' 빨강=' + bd0.red);
 
   /* ── [9] 사이드도 같이 꺼진다 + 같은 날 재진입해도 안 켜진다 ── */
-  await page.evaluate(() => { closeModal(); uiDirty = true; renderUI(); });
+  /* ⚑ 455 이관(2026-08-30) — 회전 직후 «보상이 날아가는» 동안은 팝업이 **안 닫힌다**(주인 지시).
+     위 [8] 의 `rouSpinning===false` + 900ms 로는 그 창(실측 +1193ms)을 아직 못 넘겨,
+     닫기가 거부된 채 다음 줄의 사이드 클릭이 딤에 막혔다(1회차 TimeoutError).
+     시간을 더 박지 않고 **제품에게 묻는다**(368 처방) — 잠금이 풀릴 때까지 기다렸다 닫는다.
+     그리고 **누른 항을 묻는 항을 한 줄 넣는다**(LESSONS 329): 아래 [9-455]. */
+  const lockedRightAfter = await page.evaluate(() => (typeof rouLocked === 'function') ? rouLocked() : null);
+  await page.waitForFunction(() => (typeof rouLocked !== 'function') || !rouLocked(), null, { timeout: 15000 });
+  const closedNow = await page.evaluate(() => { const r = closeModal(); uiDirty = true; renderUI(); return r; });
+  ok(lockedRightAfter === true && closedNow !== false,
+    '[9-455] 455 — 정지 직후엔 잠겨 있고(닫기 거부) 비행이 끝나면 닫힌다',
+    '정지 직후 rouLocked=' + lockedRightAfter + ' · 풀린 뒤 closeModal()=' + closedNow);
   await page.waitForTimeout(700);
   const sideOff = await page.evaluate(() => document.querySelector('.side .ibtn[data-pop="roul"]').classList.contains('on'));
   ok(sideOff === false, '[9] 음성 — 사이드 «룰렛» 배지도 꺼졌다');
