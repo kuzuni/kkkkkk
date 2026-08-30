@@ -21,7 +21,9 @@
  *             겨눈다(코사인 ≥ 0.999) · ⓔ 돌진은 «접근» 이다(한 번마다 거리가 줄었다) ·
  *             ⓕ 대시 사이 간격이 쿨다운 하한 이상(폭주하지 않는다).
  *   §4 일반적 몹 필드 30마리에서도 대시가 일어나고(≥ 10회), 몹 대시도 «접근» 이다.
- *   §5 예산   적 30마리 · 30초에서 한 틱 처리 시간이 114 예산 안(≤ 30ms — 60fps 프레임 2배).
+ *   §5 예산   **적 30 고정 씬의 프레임당 «작업량»**(캔버스 명령 수 · Math 호출 수) — 556 이
+ *             «벽시계 ms ≤ 30» 에서 갈아 끼웠다(아래 `RUN_BUDGET` 머리말 · 237 선례).
+ *             절대 시간은 `V359_PERF=1` 전용 러너에서만 판정한다.
  *   §R 되돌림 `DASH` 창을 닫은(min 을 사거리 밖으로 민) **소스 사본**에서 대시가 0회가 되고
  *             **창 시나리오의 접근이 느려진다** — 이게 없으면 «대시가 없어도 초록» 과 구별할 수 없다
  *             (LESSONS 232-① · 334 선례).
@@ -52,6 +54,7 @@ const SRC = path.join(ROOT, 'index.html');
 const RAW = fs.readFileSync(SRC, 'utf8');
 const CODE = RAW.replace(/\/\*[\s\S]*?\*\//g, ' ');   /* 주석을 뺀 사본 — 주석 속 옛 값에 안 걸리게 */
 const SEC = Number(process.env.V359_SEC || 30);
+const PERF_ABS = process.env.V359_PERF === '1';   /* 556 — 절대 시간 판정은 전용 러너 옵트인(237 선례) */
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL ') + m + (d === undefined ? '' : ' — ' + d)); };
@@ -188,6 +191,78 @@ const RUN_DASHWIN = async ({ wins, win, dist }) => {
            pSpeed: +stat.speed.toFixed(1) };
 };
 
+/* ── §5 예산 — 556(2026-08-30) 이 축을 갈아 끼웠다 ───────────────────────────
+   옛 자는 «RUN_MOB 30초의 벽시계 ms ≤ 30» 이었고 **같은 트리에서 빨강↔초록을 오갔다**.
+   `probe556` 이 갈래 셋을 찍어 갈랐다(등재문 ⓐⓑⓒ):
+     ⓐ 러너 — [현행] ms 는 회차 간 **16.6%**(23.6~28.0ms) 흔들리는데 판정선이 30 이라
+        여유가 폭 안이다(237 이 `verify114` [8] 에서 겪은 것과 같은 병).
+     ⓑ 표본 — 라벨은 «적 30마리» 인데 그 씬은 **80마리까지 자란다**(리필 규칙이 «20 아래일 때만»).
+        표본이 안 고정된 자는 예산이 아니라 **개체 수**를 잰다(544 교훈).
+     ⓒ 워밍업 — 앞 10% 가 나머지의 0.32배로 **더 싸다**. 워밍업이 아니라 ⓑ 의 «자라남» 이다.
+   ⇒ 237 처방 그대로 **작업량 예산**으로 옮긴다. 씬은 `perf237.scene()` 과 같은 꼴로 고정하고
+     (적 30 고정 · 불멸 · 링 150~330px = `DASH.mob` 창 120~380 안), 프레임당
+     **캔버스 명령 수**(그림 몫)와 **Math 호출 수**(359 가 더한 «상태 기계» 몫)를 센다.
+     실측 폭은 각각 1.1% · 0.4% 로 러너와 무관하다. 절대 ms 는 `V359_PERF=1` 옵트인.
+   ⚠ 씬이 조용히 비면 «작업량이 작아서» 초록이 되는 헛초록이 생긴다(334 계열) —
+     그래서 [전제] 로 **표본 고정 · 대시 발생 · 기준선 대비 하한**을 같이 묻는다. */
+const BUDGET = { ops: 175, mops: 1300, opsFloor: 60, mopsFloor: 500, warm: 60, frames: 180 };
+const RUN_BUDGET = async ({ warm, frames }) => {
+  const CP = CanvasRenderingContext2D.prototype;
+  const OPS = ['fill', 'stroke', 'fillRect', 'strokeRect', 'drawImage', 'fillText', 'strokeText',
+               'clearRect', 'putImageData', 'arc', 'ellipse', 'createRadialGradient', 'createLinearGradient'];
+  const MOPS = ['hypot', 'atan2', 'sqrt', 'cos', 'sin', 'random', 'max', 'min', 'abs'];
+  const cnt = { c: 0, m: 0 }, orig = {}, morig = {};
+  const scene = n => {
+    S.stage = 30; S.best = 30; S.bossFarm = false;
+    try { sbufClear(); } catch (_) {}
+    try { markDirty(); } catch (_) {}
+    shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0;
+    rings.length = 0; parts.length = 0; enemies.length = 0; spawnQ.length = 0;
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.dead = 0; player.inv = 99; player.hp = stat.maxHp;
+    for (let i = 0; i < n; i++) makeEnemy('zombie');
+    enemies.forEach((e, i) => {
+      e.born = 1; e.hp = e.max = 1e12;
+      const a = i * 6.283 / Math.max(1, n);
+      e.x = player.x + Math.cos(a) * (150 + (i % 5) * 45);
+      e.y = player.y + Math.sin(a) * (150 + (i % 5) * 45);
+    });
+  };
+  /* 표본을 «정확히 n» 으로 유지한다 — 죽음·리필·전리품이 섞이면 그 순간 예산이 아니라 씬을 잰다 */
+  const keep = n => {
+    while (enemies.length > n) enemies.pop();
+    for (let i = enemies.length; i < n; i++) makeEnemy('zombie');
+    enemies.forEach(e => { if (e.hp < 1e11) e.hp = e.max = 1e12; });
+    player.hp = stat.maxHp; player.dead = 0; player.inv = 99;
+  };
+  const roll = (n, f, count) => {
+    scene(n);
+    if (count) { cnt.c = 0; cnt.m = 0; }
+    let dashN = 0, nMin = 1e9, nMax = 0; const seen = new Set();
+    const t0 = performance.now();
+    for (let i = 0; i < f; i++) {
+      nMin = Math.min(nMin, enemies.length); nMax = Math.max(nMax, enemies.length);
+      for (const e of enemies) {
+        const inD = e.dashT > 0 || e.dashD > 0;
+        if (inD && !seen.has(e)) { dashN++; seen.add(e); } else if (!inD) seen.delete(e);
+      }
+      step(1 / 60); draw(); keep(n);
+    }
+    return { ms: +((performance.now() - t0) / f).toFixed(3), dashN, nMin, nMax,
+             ops: +(cnt.c / f).toFixed(1), mops: +(cnt.m / f).toFixed(1) };
+  };
+  roll(30, warm, false);                                     /* 워밍업 — 시간만, 세지 않는다 */
+  const ms = roll(30, frames, false).ms;                     /* 절대 시간(참고 · 옵트인 판정) */
+  const msBase = roll(0, Math.round(frames / 3), false).ms;
+  OPS.forEach(k => { const f = CP[k]; if (typeof f !== 'function') return; orig[k] = f; CP[k] = function () { cnt.c++; return f.apply(this, arguments); }; });
+  MOPS.forEach(k => { const f = Math[k]; if (typeof f !== 'function') return; morig[k] = f; Math[k] = function () { cnt.m++; return f.apply(Math, arguments); }; });
+  const load = roll(30, frames, true);                       /* ⓐ 작업량 — 러너 무관 */
+  const base = roll(0, Math.round(frames / 3), true);
+  OPS.forEach(k => { if (orig[k]) CP[k] = orig[k]; });
+  MOPS.forEach(k => { if (morig[k]) Math[k] = morig[k]; });
+  return { ops: load.ops, mops: load.mops, opsBase: base.ops, mopsBase: base.mops,
+           dashN: load.dashN, nMin: load.nMin, nMax: load.nMax, ms, msBase, frames };
+};
+
 async function openPage(browser, file) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const page = await ctx.newPage();
@@ -232,7 +307,7 @@ async function openPage(browser, file) {
     '1-ⓓ 그 블록에 피해 문장이 없다 — 대시는 «접촉까지의 시간» 만 바꾼다(밸런스 계수 0줄)');
 
   const browser = await launch(chromium);
-  let B = null, M = null, W = null, errs = [];
+  let B = null, M = null, W = null, P = null, errs = [];
   try {
     await blk('§2·§3 보스', async () => {
       const h = await openPage(browser, SRC);
@@ -296,8 +371,31 @@ async function openPage(browser, file) {
       ok(M.dashDone > 0 && M.closer / M.dashDone >= 0.8, '4 몹 대시도 «접근» 이다(끝난 대시의 80% 이상이 거리를 줄였다)',
         `${M.closer}/${M.dashDone}`);
       ok(M.peak > M.pSpeed, '4 몹 돌진 순간 속도도 플레이어보다 빠르다', `${M.peak} px/s`);
-      console.log('\n=== §5 프레임 예산 ===');
-      ok(M.msPerTick <= 30, '5 적 30마리 틱 처리 ≤ 30ms(114 예산)', M.msPerTick + 'ms · 적 ' + M.nEnemy + '마리');
+    }
+
+    /* ── §5 예산 — 556 이 «벽시계» 에서 «작업량» 으로 갈아 끼운 절(위 RUN_BUDGET 머리말) ── */
+    console.log('\n=== §5 예산 — 적 30 고정 씬의 프레임당 작업량(러너 무관) ===');
+    await blk('§5 예산', async () => {
+      const h = await openPage(browser, SRC);
+      P = await h.page.evaluate(RUN_BUDGET, { warm: BUDGET.warm, frames: BUDGET.frames });
+      errs = errs.concat(h.errs);
+      await h.ctx.close();
+    });
+    if (P) {
+      /* [전제] — 씬이 조용히 비면 작업량이 작아져 «그냥 초록» 이 된다(334 계열 헛초록) */
+      ok(P.nMin === 30 && P.nMax === 30, '5-전제-a 표본이 고정돼 있다 — 매 프레임 정확히 적 30마리',
+        `${P.nMin}~${P.nMax}마리`);
+      ok(P.dashN > 0, '5-전제-b 그 씬에서 대시가 실제로 일어난다(빈 씬을 재는 게 아니다)', P.dashN + '회');
+      ok(P.ops >= BUDGET.opsFloor && P.mops >= BUDGET.mopsFloor,
+        `5-전제-c 작업량이 «적 0» 기준선보다 한참 위다(하한 명령 ${BUDGET.opsFloor} · Math ${BUDGET.mopsFloor})`,
+        `명령 ${P.ops} (기준선 ${P.opsBase}) · Math ${P.mops} (기준선 ${P.mopsBase})`);
+      /* [주 판정] — 실측 폭 명령 1.1% · Math 0.4%(probe556). 예산은 실측 최대 위 약 +20% */
+      ok(P.ops <= BUDGET.ops, `5-a 프레임당 캔버스 명령 ≤ ${BUDGET.ops}(그림 몫)`, String(P.ops));
+      ok(P.mops <= BUDGET.mops, `5-b 프레임당 Math 호출 ≤ ${BUDGET.mops}(틱 «상태 기계» 몫 — 359 가 더한 것)`,
+        String(P.mops));
+      /* 절대 시간은 러너 부하가 통째로 실린다(폭 16.6%) — 전용 러너에서만 판정한다(237 선례) */
+      if (PERF_ABS) ok(P.ms <= 30, `[V359_PERF] 절대 틱 ${P.ms}ms ≤ 30ms(적 30 고정 씬)`);
+      else console.log(`  (참고) 절대 틱 ${P.ms}ms · 기준선 ${P.msBase}ms — 판정하려면 V359_PERF=1`);
     }
 
     /* ── §R 되돌림 ──────────────────────────────────────────────────── */
@@ -320,6 +418,29 @@ async function openPage(browser, file) {
         ok(r.gain.length === 0, 'R3 «접근한 돌진» 표본도 0건이다', r.gain.length + '건');
       } finally { try { fs.unlinkSync(p); } catch (e) {} }
     });
+
+    /* ── §R4 주입 시험 — 556. «자를 무르게 풀지 않았다» 를 못박는 자리 ─────────────
+       옛 §5(벽시계)는 회귀를 놓쳤다: `probe556 --inject 1` 이 대시 상태 기계에 적·프레임당
+       작업을 400회 넣자 [현행] 씬의 작업량이 **×5.8**(Math 4,610 → 26,850/프레임)이 됐는데도
+       벽시계는 **더 낮게**(22.5~23.7ms → 19.0~20.6ms) 읽혔다 = 러너 폭 안에 묻힌다.
+       새 자는 같은 회귀에서 빨개져야 한다 — 그것을 여기서 실제로 굴려 보인다(LESSONS 132·237). */
+    console.log('\n=== §R4 주입 시험 — 대시 블록이 무거워지면 §5 가 빨개진다 ===');
+    await blk('§R4', async () => {
+      const anchor = 'const DK = isBoss ? DASH.boss : DASH.mob;';
+      ok(RAW.indexOf(anchor) >= 0, 'R4-0 주입 앵커(대시 상태 기계 입구)를 찾았다');
+      const heavy = RAW.replace(anchor, anchor + ' for (let __i = 0; __i < 200; __i++) Math.hypot(__i, e.x, e.y);');
+      const p = path.join(ROOT, '.v359-heavy.html');
+      fs.writeFileSync(p, heavy);
+      try {
+        const h = await openPage(browser, p);
+        const r = await h.page.evaluate(RUN_BUDGET, { warm: 30, frames: 90 });
+        await h.ctx.close();
+        ok(r.mops > BUDGET.mops, `R4-1 무거워진 사본은 Math 예산(${BUDGET.mops})을 넘는다 — 자가 실제로 문다`,
+          `${r.mops} /프레임 (청정 ${P ? P.mops : '?'})`);
+        ok(P && r.mops > P.mops * 3, 'R4-2 그리고 그 차이는 러너 잡음이 아니라 «3배 위» 다',
+          P ? `${r.mops} ↔ ${P.mops}` : '청정 측정 없음');
+      } finally { try { fs.unlinkSync(p); } catch (e) {} }
+    });
   } finally {
     await browser.close();
   }
@@ -335,7 +456,9 @@ async function openPage(browser, file) {
     console.log(`| 보스 돌진 순간 최고 | ${B.dashPeak} px/s (×${(B.dashPeak / B.pSpeed).toFixed(2)}) |`);
     console.log(`| 보스 대시 · 공격 | ${B.dashN}회 · ${B.atk}회 / ${SEC}초 |`);
     console.log(`| 첫 접촉 | ${B.tClose < 0 ? '없음' : B.tClose.toFixed(1) + 's'} |`);
-    if (M) console.log(`| 몹 대시(30마리) | ${M.dashN}회 · 접근 ${M.closer}/${M.dashDone} · 틱 ${M.msPerTick}ms |`);
+    if (M) console.log(`| 몹 대시(30마리) | ${M.dashN}회 · 접근 ${M.closer}/${M.dashDone} |`);
+    if (P) console.log(`| §5 작업량(적 30 고정) | 명령 ${P.ops}/프레임 · Math ${P.mops}/프레임 (기준선 ${P.opsBase}·${P.mopsBase}) |`);
+    if (P) console.log(`| §5 절대 시간(참고) | ${P.ms}ms · 기준선 ${P.msBase}ms |`);
   }
   console.log(`\nVERIFY359 ${pass}/${pass + fail} ` + (fail ? 'FAIL' : 'PASS'));
   process.exit(fail ? 1 : 0);
