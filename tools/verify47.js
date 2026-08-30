@@ -382,16 +382,7 @@ const SNAP = `(sel, host) => {
     const mask = g.onMask || '';           /* ::after mask-image */
     const has = re => new RegExp(re + ' 0px 0px 0px inset').test(sh);
     const BLK = 'rgb\\(0, 0, 0\\)', BEV = 'rgb\\(99, 79, 55\\)';
-    /* 409 5회차 이관 — 링이 «등폭 스프레드» 에서 **좌·우 한 쌍의 테이퍼 프레임**으로 바뀌었다
-       (`inset ±d 0 0 s`, d+s = 7). 이 항이 지키는 값은 «옆면 검정 7» 이므로 **불변식 d+s=7 을 묻는다** —
-       값이 아니라 불변식이라 다음 세션이 테이퍼 깊이 d 를 바꿔도 이 항은 계속 옳은 것을 지킨다.
-       ⚠ 기대값만 지우면 «검정이 통째로 사라져도 초록» 이 된다 — 그래서 «2겹이 있고, 좌우 대칭이고,
-          d+s = 7» 셋을 한꺼번에 묻는다. 코너의 찍힌 픽셀은 `verify409` [2][5][11] 이 문다. */
-    const rf = [...ring.matchAll(/rgb\(0, 0, 0\) (-?[\d.]+)px 0px 0px ([\d.]+)px inset/g)];
-    const ringOK = rf.length === 2
-      && Math.abs(+rf[0][1] + +rf[1][1]) < 0.01
-      && Math.abs(+rf[0][2] - +rf[1][2]) < 0.01
-      && Math.abs(Math.abs(+rf[0][1]) + +rf[0][2] - 7) < 0.01;
+    const ringOK = /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(ring);
     /* 마스크 기둥 — 좌 기둥은 «rgb(0,0,0) 0px» 로 시작하고, 우 기둥은 «rgb(0,0,0) calc(100% - 30px)» 로 끝난다 */
     const colL = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px/.test(mask);
     const colR = /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(mask.trim());
