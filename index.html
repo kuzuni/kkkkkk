@@ -20638,6 +20638,27 @@ function resetSkillCd(){
      페이즈마다 초기화하면 연출이 아니라 밸런스가 된다(등재문 ②). 선언은 위 `skillCd` 옆에 있다. */
 /* 459 — 이 판별식이 «보스전의 상대» 다. 잡몹(zombie·goblin·dark)은 여기 안 걸린다. */
 const cdFoeUp = e => e.hp > 0 && e.born >= 0.3 && (isBossKind(e.tk) || e.tk === 'promo' || e.tk === 'arena' || e.raid);
+/* ⚑ 473 (주인 지시 2026-08-30 «보스전할떄 전투시작 하기전까지 스킬 쿨타임 지나고 있으면안됨.
+   발동되고있어서도 안됨») — «아직 전투가 시작되지 않았다» 는 **새 상태가 아니다.**
+   459 의 예약(`cdArm`)이 곧 그 뜻이고, 그 예약을 푸는 자리가 바로 «상대가 표적이 되는 프레임»
+   = 전투 시작이다(바로 위 `cdFoeUp`). 그래서 이 한 줄이 세 창을 한꺼번에 덮는다:
+     ⓐ 스폰 딜레이 1.4초(`startBoss`·`startDunRun` 이 필드를 비우고 보스를 예약한 창) —
+        probe473 수리 전 실측: 스테이지·던전·탑에서 **83프레임 동안 빈 바닥에 시전 82건**
+     ⓑ 승급전·레이드·아레나의 `born < 0.3` 0.3초 창(459 가 «선 것처럼 보이는데 아무도 못 때리는
+        창» 이라고 적어 둔 자리 — 여기서 나가는 poison·meteor 가 그 «발동되고 있는» 것이다)
+     ⓒ 425·457 등장 국면이 **열리는 한 프레임**. 국면 자체는 step() 맨 위가 통째로 막지만
+        그 프레임만은 이미 위(스폰 큐)를 지나 아래로 내려온다 — 457 이 `bossT` 에서 같은 한 줄을
+        `!bossIntro` 로 막았고, probe473 이 그 프레임에서 **시전 2건**을 실측했다.
+   ⚠ `battleBusy()`(453)를 같이 묻는 이유는 «전투는 끝났는데 잠긴 채로 남는 자리» 를 안 만들기
+     위해서다 — 포기·실패로 런이 사라지면 예약은 남지만 `bossMode()` 가 빈 문자열이라 잠금은
+     그 프레임에 풀린다(459 가 «예약이 남은 채 판이 끝나도 안전하다» 고 적은 것과 같은 이유).
+   ⚠ `bossIntro` 를 OR 로 한 번 더 묻는 것은 «보스가 국면 중에 죽어 그 프레임이 아래로 내려오는»
+     갈래(21605 `dunRun.bossDown`) 하나 때문이다 — 그 프레임에는 예약이 이미 풀려 있을 수 있다.
+   ⚠ 범위는 **장착 스킬**이다(주인 원문 «스킬»). 펫 쿨(`p.cd`)·자기강화 버프(`sbuf`)는 459 의
+     결정을 그대로 두고 안 건드린다 — 이 창에서 펫 탄·지속 스킬 피해가 **구조적으로 0** 임을
+     probe473 이 실측했고(펫 탄 0발 · 회전검·오라는 `born < 0.3` 을 건너뛴다) 가드를 더 얹으면
+     이미 참인 것을 게이트로 굳히는 것이 된다(338 교훈). 그 «0» 은 `verify473` [C] 가 지킨다. */
+const preFight = () => !!bossIntro || (cdArm && battleBusy());
 function castSkillRaw(s){
   const dmg = skillDmg(s) * sbAtk();
   const px = player.x, py = player.y - 22;
@@ -20970,16 +20991,24 @@ function step(dt){
     player.y = clamp(player.y + player.vy*dt, 30, WORLD.h-16);
 
     /* ---- 장착 스킬 자동 발동 ---- */
-    const rateMul = stat.rate/1.4 * sbRate();   /* 86 — 신속의 축복·광란 */
-    for(const id of S.eqSkill){
-      const s = SK[id];
-      if(!s || s.cd <= 0) continue;
-      if(skillCd[id] === undefined) skillCd[id] = rnd(0, 0.4);
-      skillCd[id] -= dt;
-      let guard = 0;
-      while(skillCd[id] <= 0 && guard++ < 4){
-        if(!castSkill(s)){ skillCd[id] = 0.25; break; }
-        skillCd[id] += s.cd / Math.max(0.35, rateMul);
+    /* ⚑ 473 — «전투 시작 전» 에는 이 루프가 통째로 안 돈다(선언·근거는 `preFight` 주석).
+       감소(`skillCd[id] -= dt`)와 시전(`castSkill`)이 **같은 가드 안**이라야 지시 두 조항이
+       한꺼번에 지켜진다: «쿨타임이 지나면 안 된다» = 감소 자체를 멈춘다 ·
+       «발동되면 안 된다» = 시전 분기에 아예 안 들어간다.
+       ⚠ 459 의 초기화는 이 루프 **앞**(step 20881)에서 풀리므로 전투 시작 프레임에는
+         가드가 이미 열려 있다 = «첫 시전은 시작 프레임에 나간다» 는 459 의 규약이 그대로다. */
+    if(!preFight()){
+      const rateMul = stat.rate/1.4 * sbRate();   /* 86 — 신속의 축복·광란 */
+      for(const id of S.eqSkill){
+        const s = SK[id];
+        if(!s || s.cd <= 0) continue;
+        if(skillCd[id] === undefined) skillCd[id] = rnd(0, 0.4);
+        skillCd[id] -= dt;
+        let guard = 0;
+        while(skillCd[id] <= 0 && guard++ < 4){
+          if(!castSkill(s)){ skillCd[id] = 0.25; break; }
+          skillCd[id] += s.cd / Math.max(0.35, rateMul);
+        }
       }
     }
 
