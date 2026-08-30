@@ -18570,9 +18570,13 @@ const BLESS = [
   { k:'rate', n:'공격 속도', ic:'🌀', v:0.20 }   /* ⚡ 는 노랑 카드 위에서 잉크가 배경과 섞여 스캔에 안 잡힌다 */
 ];
 const BLESS_STEP  = 4;                 /* 진행바 n/4 — 축복 경험치 4를 채우면 축복 레벨 +1 */
-const BLESS_BASE  = 30 * 60 * 1000;    /* 기본 지속 30분 */
-const BLESS_PERLV = 5 * 60 * 1000;     /* 레벨당 +5분 */
+/* 456 — 지속시간은 **레벨과 무관하게 언제나 30분**이다(저장소 주인 지시 2026-08-30, 117 개정).
+   구 «레벨당 지속 증가» 상수와 그 항은 이름째 지웠다 — 상수가 남으면 되살아난다(LESSONS 295-②).
+   그래서 이 주석도 그 식별자를 안 적는다: `verify456` 이 소스 전체에서 그 이름 0건을 단언한다.
+   레벨이 사는 곳은 **효과 배율 하나**(`blessScale()`)다. */
+const BLESS_BASE  = 30 * 60 * 1000;    /* 지속 30분 — 레벨과 무관한 유일한 값 */
 /* 117 — 레벨이 «지속시간에만» 반영되던 것을 **효과 배율에도** 반영한다(저장소 주인 지시 2026-08-26).
+   456 이 그 «지속시간» 쪽을 마저 걷어내 이제 레벨은 효과 배율에만 붙는다.
    효과 = v × (1 + 0.10 × (lv − 1))  →  Lv1 20% · Lv2 22% · Lv6 30% · Lv51 120%. 골드 보너스도 같은 곡선. */
 const BLESS_EFFLV = 0.10;              /* 레벨당 효과 +10% (기본값 대비 비율) */
 const BLESS_MAXLV = 51;                /* 상한 — Lv51 에서 +500%(효과 ×6) 로 캡. 무한 성장 방지 */
@@ -28118,7 +28122,8 @@ $('shopList').addEventListener('click', e => {
    ③ 자동 축복(`S.pass.autoBlessUntil`, 30일) — 온라인은 1초 틱이 만료를 보고 activateBless() 를
       부르고, 오프라인은 로드 시 autoBlessSettle() 이 «만료 → 재발동» 을 시간순으로 시뮬한다.
       3종이 **경험치·레벨을 공유**하므로 종별로 따로 나눠 세면 안 된다(레벨이 오르면 그 다음
-      발동부터 지속시간이 길어져 이후 발동 시각이 전부 달라진다) — 항상 «가장 먼저 만료되는 축복»
+      발동부터 효과 배율이 달라진다 — 456 이후 지속은 30분 고정이라 발동 «시각» 은 안 밀린다)
+      — 항상 «가장 먼저 만료되는 축복»
       하나씩 시간순으로 처리한다. 이용권 만료 시각(또는 지금)에서 멈춘다.
    ========================================================================== */
 /* --------------------------------------------------------------------------
@@ -28151,7 +28156,7 @@ const PASS_DAILY_MAX_D = 60;                       /* 매일 보석 1회 정산 
    파일 위쪽에서 평가되기 때문이다(01 블록에 두면 TDZ 로 즉사한다). 쓰는 곳은 01 두 군데뿐. */
 const OFF_MAX_H = 6;
 const offMaxH = () => OFF_MAX_H + (passOffPlus() ? PASS_OFF_PLUS_H : 0);
-/* 오프라인 시뮬 상한 — 30일 ÷ 최소 지속 30분 × 3종 = 4,320 회가 최대다. 손댄 세이브가
+/* 오프라인 시뮬 상한 — 30일 ÷ 지속 30분(456: 레벨 무관 고정) × 3종 = 4,320 회가 최대다. 손댄 세이브가
    말도 안 되는 만료 시각을 갖고 있어도 여기서 멈춘다(무한 루프 방지). */
 const PASS_SIM_MAX = 20000;
 
@@ -28365,7 +28370,8 @@ function autoBlessSettle(lastTime){
     BLESS.forEach(x => { if(t[x.k] < tm){ tm = t[x.k]; k = x.k; } });
     const at = Math.max(tm, lastTime);
     if(at > end) break;
-    /* activateBless() 와 **같은 순서** — 경험치를 먼저 올리고, 오른 레벨의 지속시간을 쓴다 */
+    /* activateBless() 와 **같은 순서** — 경험치를 먼저 올린다(456 이후 지속은 30분 고정이라
+       이 순서가 정하는 것은 그 발동이 주는 «효과 배율» 이다) */
     if(blessLv() < BLESS_MAXLV){
       if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }
     } else S.bless.prog = 0;
@@ -28727,8 +28733,9 @@ $('tabbar').addEventListener('click', closeCurInfo, true);
 /* ---- 34 축복(버프) 팝업 (#blsw) — 측정표 docs/measure/34-축복버프팝업.md ----
    축복 3종은 «무료로 켜는 시간제 버프» 다. 켜면 지속시간 동안 bonus() 에 곱해지고(위 bonus() 참고),
    3종이 동시에 켜져 있는 동안만 «보너스 축복»(골드 +50%)이 붙는다.
-   축복을 1개 켤 때마다 축복 경험치 +1, 4 를 채우면 축복 레벨 +1 이고 레벨당 지속시간이 +5분 늘어난다.
-   117 — 레벨은 지속시간뿐 아니라 **효과 배율**에도 붙는다: 효과 = v × (1 + 0.10×(lv−1)), Lv51 에서 캡.
+   축복을 1개 켤 때마다 축복 경험치 +1, 4 를 채우면 축복 레벨 +1 이다.
+   117 — 레벨은 **효과 배율**에 붙는다: 효과 = v × (1 + 0.10×(lv−1)), Lv51 에서 캡.
+   456 — 레벨이 지속시간에도 붙던 것은 폐지됐다: **지속은 언제나 30분**이다(주인 지시 2026-08-30).
    저장 구조: `S.bless = {lv, prog, exp:{atk,hp,rate}}` — KEY 는 올리지 않고 load() 에서 «없으면 기본값». */
 function blessLv(){ return Math.min(BLESS_MAXLV, Math.max(1, S.bless.lv|0)); }
 function blessMax(){ return blessLv() >= BLESS_MAXLV; }
@@ -28737,7 +28744,8 @@ function blessScale(){ return 1 + BLESS_EFFLV * (blessLv() - 1); }
 /* 117 — 지금 레벨에서 그 축복이 실제로 주는 % (UI 표시·검증기 공용 접근자) */
 function blessPct(k){ const x = BLESS.find(b => b.k === k); return x ? x.v * blessScale() * 100 : 0; }
 function blessGoldPct(){ return BLESS_GOLD * blessScale() * 100; }
-function blessDur(){ return BLESS_BASE + BLESS_PERLV * (blessLv() - 1); }
+/* 456 — 레벨과 무관하게 항상 30분. 인자도 분기도 없다(«레벨을 읽는 지속시간» 이 되살아날 자리를 안 남긴다). */
+function blessDur(){ return BLESS_BASE; }
 function blessLeft(k){ return Math.max(0, (S.bless.exp[k] || 0) - Date.now()); }
 function blessOn(k){ return blessLeft(k) > 0; }
 function blessAll(){ return BLESS.every(x => blessOn(x.k)); }
@@ -28749,7 +28757,8 @@ function hms(ms){
 }
 function activateBless(k){
   if(blessOn(k)) return false;                       /* 이미 켜져 있으면 시간을 덧붙이지 않는다 */
-  /* 레벨 상승은 «그 활성화부터» 적용한다 — 4번째를 켠 순간 바로 지속시간·효과가 오르게 순서를 잡는다 */
+  /* 레벨 상승은 «그 활성화부터» 적용한다 — 4번째를 켠 순간 바로 효과 배율이 오르게 순서를 잡는다
+     (456 이후 지속시간은 레벨을 안 읽으므로 이 순서가 바꾸는 것은 «효과» 하나다) */
   const lv0 = blessLv();
   if(lv0 < BLESS_MAXLV){
     if(++S.bless.prog >= BLESS_STEP){ S.bless.prog -= BLESS_STEP; S.bless.lv++; }

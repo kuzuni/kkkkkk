@@ -9,7 +9,7 @@
  *   [A] 상수 — BLESS_EFFLV(0.10) · BLESS_MAXLV(51) 존재, blessScale/blessPct 접근자
  *   [B] 곡선 — Lv1 1.00 · Lv2 1.10 · Lv6 1.50 · Lv51 6.00 · Lv52 이상은 캡(6.00)
  *   [C] 실제 배율 — activateBless 4회 → lv2, bonus().atk 배율 1.22 · Lv6 → 1.30 · 골드 Lv2 → 1.55
- *   [D] 지속시간은 종전 곡선(30분 + 5분/Lv) 유지 — 레벨업은 «그 활성화부터» 즉시
+ *   [D] 지속시간은 «레벨 무관 30분»(456 이 «레벨당 +5분» 폐지) — 레벨업은 «그 활성화부터» 즉시 **효과 배율**에
  *   [E] 상한 — Lv51 에서 경험치가 멈추고 진행바가 MAX
  *   [F] UI 반영 — 카드 «+xx%» 와 보너스 «+xx%» 가 실효값, Lv 알약·진행바 갱신
  *   [G] 저장·복원 — lv 이 저장되고 새로고침 뒤에도 같은 배율. 상한 초과 세이브는 잘린다
@@ -166,16 +166,25 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
        n + ' ' + c3pred([N3.live, N3.noClock, N3.merged, N3.back][x])).join(' · ')
      + '  [합본 실측 «' + N3.merged.txt + '»]');
 
-  /* ---- [D] 지속시간 곡선은 그대로 (레벨업은 그 활성화부터 즉시) ---- */
+  /* ---- [D] 지속시간은 «레벨 무관 30분» · 레벨업은 «그 활성화부터» 즉시 (456 이관) ----
+     ⚠ 456(주인 지시 2026-08-30)이 «레벨당 +5분» 을 폐지했다. 옛 D1·D2 는 35분·55분을 단언했는데
+     그 곡선 자체가 사라졌으므로 **자리를 비우지 않고 살아 있는 단언으로 갈아 끼운다**(333 처방):
+       ① 같은 두 표본(4번째 활성으로 오른 Lv2 · Lv6)에서 지속이 **둘 다 30분**
+       ② 옛 항이 지키던 «레벨업은 그 활성화부터 즉시» 는 이제 **효과 배율**이 받는다 —
+          그 활성화 직후 `blessScale()` 이 이미 Lv2 값(1.10)이다. 지속만 물었으면 이 뜻이 사라진다. */
   const D = await page.evaluate(() => {
     S.bless = { lv: 1, prog: 3, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty();
-    activateBless('atk');                                          /* 4번째 → Lv2 → 35분 */
-    const a = { lv: S.bless.lv, left: blessLeft('atk') };
-    S.bless.lv = 6; S.bless.exp.hp = 0; activateBless('hp');
-    return { a, b: { lv: S.bless.lv, left: blessLeft('hp') } };
+    const sc0 = blessScale();                                      /* 켜기 전 Lv1 = 1.00 */
+    activateBless('atk');                                          /* 4번째 → Lv2 */
+    const a = { lv: S.bless.lv, left: blessLeft('atk'), sc: blessScale() };
+    S.bless.lv = 6; S.bless.exp.hp = 0; markDirty(); activateBless('hp');
+    return { sc0, a, b: { lv: S.bless.lv, left: blessLeft('hp'), sc: blessScale() } };
   });
-  ok(D.a.lv === 2 && Math.abs(D.a.left - 35 * 60000) < 2000, 'D1 Lv2 지속 35분 (레벨업 즉시 적용)', D.a.left);
-  ok(Math.abs(D.b.left - 55 * 60000) < 2000, 'D2 Lv6 지속 55분 (30 + 5×5)', D.b.left);
+  ok(D.a.lv === 2 && Math.abs(D.a.left - 30 * 60000) < 2000, 'D1 Lv2 지속 30분 (456 — 레벨 무관 고정)', D.a.left);
+  ok(D.b.lv === 6 && Math.abs(D.b.left - 30 * 60000) < 2000, 'D2 Lv6 도 지속 30분 (레벨이 시간을 안 늘린다)', D.b.left);
+  ok(Math.abs(D.sc0 - 1.00) < 1e-9 && Math.abs(D.a.sc - 1.10) < 1e-9 && Math.abs(D.b.sc - 1.50) < 1e-9,
+     'D3 레벨업은 «그 활성화부터» 즉시 — 효과 배율 1.00 → 1.10 (Lv6 = 1.50)',
+     D.sc0.toFixed(2) + ' → ' + D.a.sc.toFixed(2) + ' · Lv6 ' + D.b.sc.toFixed(2));
 
   /* ---- [E] 상한 ---- */
   const E = await page.evaluate(() => {
