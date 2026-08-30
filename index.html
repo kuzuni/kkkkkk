@@ -8113,10 +8113,7 @@
   .wgc{position:absolute;--if-w:148px;--if-h:158px;--if-ic:66px;
     --if-face:var(--gc);--if-rimc:var(--gr);
     border-radius:calc(var(--if-w) * var(--if-rr)) calc(var(--if-w) * var(--if-rr)) 12px 12px;
-    /* 471 ② — `overflow:hidden` 을 걷었다. 이 카드가 닷 링을 상·우 9.8px 잘랐다(probe471).
-       자를 대상이었던 하단 진행바 `.pb` 는 자기 모서리를 직접 들고(아래 border-radius) 자기
-       overflow 로 채움을 자르므로 카드 클립이 없어도 그림이 같다. */
-    overflow:visible;cursor:pointer}
+    overflow:hidden;cursor:pointer}
   .wgc.eq{border-color:#134E52;--if-face:var(--ge);--if-rimc:#35DCEE}
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:8px;height:100px;line-height:100px;text-align:center;font-size:66px}
@@ -8125,7 +8122,7 @@
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
   .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
-  .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;border-radius:0 0 12px 12px;
+  .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;
     background:linear-gradient(180deg,#8182A0 0 19px,#717799 19px);
     box-sizing:border-box;overflow:hidden}
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
@@ -10957,7 +10954,20 @@
        중심 x126.5 > 74 · y58.5 < 79 — 우상단 사분면 충족.
      · 06 `.eqsl` 은 좌상단 바깥이 부위 뱃지 `.eqbd`(left:704, 슬롯 left 724) 자리 → **우상단 바깥**
      · 버튼 둘은 라벨이 가운데 한 줄이라 안쪽 우상단이 빈다 */
-  /* 471 — 좌표 상수 삭제(규약으로 흡수). 옛값 right56/top−14 는 `.sk-eq` 를 피하려던 자리다. */
+  /* ══ 471 예외 ④ — «코너가 이미 다른 부품에 점유된 호스트» 둘 ══════════════════════════
+     규약(코너 걸침)을 그대로 적용하면 **닷이 남의 잉크 위에 올라앉는다**(`verify283` 2건이 실측으로
+     빨개진다 — 자를 무르게 풀지 않고 그대로 두었다):
+       · 05 `.wgc` — 우상단은 `Lv.n`(right:13 · 잉크 x≈70~135) 자리다. 코너에 두면 닷 안쪽 경계가
+         x116 이라 그 글자의 오른쪽 19px 을 검정 링이 덮는다.
+       · 07 `.sk-card` — 우상단은 272 해제 뱃지 `.sk-eq`(x123~172 · y−4~45) 자리다. 배지 둘이
+         한 코너를 나눠 가질 수 없다.
+     ⚠ **«빨간 점이 글자·다른 배지를 덮는 것» 은 «자리가 제각각인 것» 보다 나쁘다** — 그래서 이 둘만
+     299 가 고른 «점유물을 피한 우상단 사분면» 자리를 그대로 둔다. 여기 값들은 규약 이전 값 그대로다.
+     ⇒ **다음 회차가 주인/비평가에게 물을 것**: 코너를 닷에게 주고 점유물을 옮길 것인가
+        (`Lv.n` 을 좌상단으로 · `.sk-eq` 를 좌상단으로 — 둘 다 측정표 정오표가 필요하다),
+        아니면 이 두 자리를 영구 예외로 둘 것인가. 자는 `tools/probe471.js` 가 매번 찍는다. */
+  .sk-card>.updot{right:56px;top:-14px}
+  .wgc>.updot{right:8px;top:45px}
   /* 323 — 267 주 행동 버튼 `.ifbtn.pbtn`(승급전 시작 · 승급전 도전). 라벨 `<b>` 가 가운데
      한 줄이라 안쪽 우상단이 비어 있고, `.pbtn` 은 `position:relative`(1708행) 라 기준상자가 된다.
      `.ifbtn` 에 overflow 는 없지만 검정 테두리 안쪽으로 넣어 베벨 림을 안 밟는다 —
@@ -11074,6 +11084,11 @@
      라벨 «유물 소환» 잉크(y102~142) · `#rwCost`(y149~202) 와 세로로 안 겹친다. */
   #relw .updot{display:none}
   #relw .alert>.updot{display:block}
+  /* 471 예외 ③ — 이 호스트는 **상자의 코너가 투명하다**(수반 SVG 의 그릇 림은 x32..368 · y4..64,
+     400×216 상자의 우상단은 허공이다 — 330 실측). 규약의 «호스트 코너» 를 그대로 쓰면 닷이 그림에서
+     떨어져 뜬다 ⇒ **보이는 호스트 = 림**으로 읽고 그 코너에 같은 `--dot-in` 을 적용한다.
+     right = (400 − 368) + in − r · top = 4 + in − r — 좌표가 아니라 «림 코너» 와 규약에 묶여 있다. */
+  #rwBasin>.updot{right:calc(32px + var(--dot-in) - var(--dot-r));top:calc(4px + var(--dot-in) - var(--dot-r))}
   /* 라벨 잉크 실측 — ref 장비 69x38 / 스킬(활성) 66x36. 우리 서체는 같은 fs 에서
      높이가 5% 짧고 폭이 4% 넓다. fs 를 올려 높이를 맞추고 폭은 scaleX 로 되돌린다
      (음수 letter-spacing 은 어절 공백을 먹는다 — PROGRESS 01 교훈).

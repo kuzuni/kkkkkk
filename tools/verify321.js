@@ -153,16 +153,40 @@ const BTN_DOT = '#rouBtn > s.updot';
     d.style.animation = pa;
     return { cx: dr.left + dr.width / 2 - hr.left, cy: dr.top + dr.height / 2 - hr.top,
              hw: hr.width, hh: hr.height,
-             /* 잘림 검사 — 외곽 링(±7.5)까지 버튼 안에 있는가 */
-             inL: dr.left >= hr.left, inR: dr.right <= hr.right,
-             inT: dr.top >= hr.top, inB: dr.bottom <= hr.bottom };
+             /* ⚑ 471(2026-08-30, 주인 보고) 이관 — 옛 항은 «링까지 버튼 **안**» 이었다.
+                그 자는 471 규약(«중심이 호스트 코너에서 안쪽 `--dot-in`» = 점이 코너에 **걸친다**)과
+                정면으로 반대라, 그대로 두면 «주인이 맞다고 한 모양이면 빨간 게이트» 가 된다.
+                뜻(«닷이 잘려 보이면 안 된다»)은 그대로 두고 **자를 바꾼다**:
+                  ⓐ 중심이 버튼 테두리 바깥 상자 우상단 코너에서 안쪽 `--dot-in`(±2px)
+                  ⓑ 실제로 자르는 조상이 하나도 없다(overflow≠visible 조상들의 교집합 안).
+                ⚠ ⓑ 를 빼면 «걸치기만 하면 초록» 이 되어 옛 결함(반달)이 되돌아온다. */
+             dxR: hr.right - (dr.left + dr.width / 2),
+             dyT: (dr.top + dr.height / 2) - hr.top,
+             inset: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dot-in')),
+             cut: (() => {
+               const R = dr.width / 2 + 7.5, cx = dr.left + dr.width / 2, cy = dr.top + dr.height / 2;
+               let l = -1e9, t = -1e9, r = 1e9, b = 1e9, p = d.parentElement;
+               while (p && p !== document.documentElement) {
+                 const cs = getComputedStyle(p);
+                 if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {
+                   const q = p.getBoundingClientRect();
+                   if (cs.overflowX !== 'visible') { l = Math.max(l, q.left); r = Math.min(r, q.right); }
+                   if (cs.overflowY !== 'visible') { t = Math.max(t, q.top); b = Math.min(b, q.bottom); }
+                 }
+                 p = p.parentElement;
+               }
+               return Math.max(0, t - (cy - R), (cx + R) - r, (cy + R) - b, l - (cx - R));
+             })() };
   });
   ok(quad && quad.cx > quad.hw / 2 && quad.cy < quad.hh / 2,
     '[5] 299 규약 — 배지 중심이 버튼 우상단 사분면',
     quad ? 'cx ' + quad.cx.toFixed(1) + '/' + quad.hw.toFixed(0) + ' · cy ' + quad.cy.toFixed(1) + '/' + quad.hh.toFixed(0) : '없음');
-  ok(quad && quad.inL && quad.inR && quad.inT && quad.inB,
-    '[5] 배지가 버튼 상자 안에 온전히 들어간다 (잘리지 않는다)',
-    quad ? [quad.inL, quad.inR, quad.inT, quad.inB].join('/') : '없음');
+  ok(quad && Math.abs(quad.dxR - quad.inset) <= 2 && Math.abs(quad.dyT - quad.inset) <= 2,
+    '[5] 471 규약 — 중심이 버튼 코너에서 안쪽 --dot-in (±2px)',
+    quad ? 'dxR ' + quad.dxR.toFixed(1) + ' · dyT ' + quad.dyT.toFixed(1) + ' · 규약 ' + quad.inset : '없음');
+  ok(quad && quad.cut === 0,
+    '[5] 배지를 자르는 조상이 하나도 없다 («반달» 회귀 감시)',
+    quad ? '최대 잘림 ' + quad.cut.toFixed(1) + 'px' : '없음');
 
   /* ── [6] 166 호스트 감사 — 조건 클래스를 떼면 꺼지고 붙이면 켜진다 ── */
   const audit = await page.evaluate(() => {

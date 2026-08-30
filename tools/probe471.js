@@ -20,7 +20,12 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+/* 439 선례 — 재는 «대상 파일» 을 밖에서 갈아 끼울 수 있게 한다(`P471_FILE`).
+   `verify471` 의 되돌림 시험이 «규약을 어긴 사본» 을 만들어 이 자에게 물어보기 위해서다.
+   ⚠ 사본은 **저장소 루트**에 둔다 — /tmp 에 두면 assets/** 가 통째로 404 다. */
+const URL = process.env.P471_FILE
+  ? ('file://' + path.resolve(process.env.P471_FILE))
+  : ('file://' + path.resolve(__dirname, '..', 'index.html'));
 const KEY = 'idle_hunter_save_v4';
 const JSONOUT = process.argv.includes('--json');
 

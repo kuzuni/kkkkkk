@@ -242,9 +242,25 @@ const settle = async page => {
     /* 좌우 인셋이 같다 = «321 레드닷의 우 인셋을 거울로» 라는 자리의 근거.
        ⚠ 둘 다 CSS 값은 12 인데 화면에서는 19 로 나온다 — `.ifbtn` 의 7px 테두리 때문에 절대배치
        원점이 padding box 다(1회차에 이 한 칸으로 [G4]·[G5] 가 같이 빨갰다). 여기서는 **보이는 값**을 잰다. */
+    /* ⚑ 471(2026-08-30, 주인 보고) 이관 — **«좌우 인셋이 같다» 는 축이 주인 지시로 사라졌다.**
+       367 은 닷의 우 인셋(19)을 «이미 있는 값» 으로 보고 뱃지를 그 거울로 놓았다. 471 은 그 값을
+       규약으로 다시 정했다 — 닷 중심이 버튼 코너에서 안쪽 `--dot-in` ⇒ 보이는 우 인셋은
+       `--dot-in − 반지름` = **음수**(코너에 걸친다). 뱃지까지 밖으로 내보내라는 지시는 없으므로
+       거울은 성립할 수 없다.
+       ⇒ 333 처방대로 **자리를 비우지 않고 갈아 끼운다**: 한 항이 두 항이 된다 —
+         ⓐ 닷의 우 인셋 = 471 규약값(±1.2) ⓑ 뱃지의 좌 인셋 = 제 자리(19, ±1.2).
+       둘 중 하나만 흔들려도 빨개지므로 감시 범위는 오히려 넓어졌고, «둘이 안 겹친다» 는 [G3] 가
+       그대로 남아 원래 걱정(두 장식이 부딪힌다)을 계속 본다. */
     const insL = ax - bx, insR = (bx + bw) - (dr[0] + dr[2]);
-    ok(Math.abs(insL - insR) < 1.2, '★ [G4] 좌(뱃지)·우(레드닷) 인셋이 같다',
-       '좌 ' + px(insL) + ' · 우 ' + px(insR));
+    /* ⚠ 규약값은 제품에게 묻고(상수를 두 곳에 안 적는다), 반지름은 **이미 얼려 둔 상자**에서 쓴다 —
+       닷은 조건부로 `display:none` 이라 여기서 다시 물으면 폭이 0 으로 나온다(104 함정과 같은 꼴). */
+    const inDot = await b.page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dot-in')));
+    const conv471 = inDot - dr[2] / 2;
+    ok(Math.abs(insR - conv471) < 1.2, '★ [G4] 레드닷 우 인셋 = 471 규약(--dot-in − 반지름)',
+       '우 ' + px(insR) + ' · 규약 ' + px(conv471));
+    ok(Math.abs(insL - 19) < 1.2, '★ [G4] ▶AD 뱃지 좌 인셋은 제 자리(19)를 지킨다',
+       '좌 ' + px(insL));
     const gapT = ay - by, gapB = by + bh - ay - ah;
     ok(Math.abs(gapT - gapB) < 0.6, '[G5] 세로 가운데', '위 ' + px(gapT) + ' · 아래 ' + px(gapB));
 
@@ -262,13 +278,15 @@ const settle = async page => {
       const back = window.__rou(true);
       return { moved, back };
     });
-    const dRev = Math.abs((rev.moved.adRect[0] - rev.moved.btn[0]) -
-                          ((rev.moved.btn[0] + rev.moved.btn[2]) - (rev.moved.dotRect[0] + rev.moved.dotRect[2])));
-    const dBack = Math.abs((rev.back.adRect[0] - rev.back.btn[0]) -
-                           ((rev.back.btn[0] + rev.back.btn[2]) - (rev.back.dotRect[0] + rev.back.dotRect[2])));
+    /* 471 — 되돌림도 새 축(«닷의 우 인셋 = 규약값»)으로 갈아 끼운다. 옮긴 사본에서 빨개지고
+       원복하면 초록 — «허용 오차 1.2 를 한 칸도 안 넓혔다» 는 증거의 역할은 그대로다. */
+    const dRev = Math.abs(((rev.moved.btn[0] + rev.moved.btn[2])
+                           - (rev.moved.dotRect[0] + rev.moved.dotRect[2])) - conv471);
+    const dBack = Math.abs(((rev.back.btn[0] + rev.back.btn[2])
+                            - (rev.back.dotRect[0] + rev.back.dotRect[2])) - conv471);
     ok(dRev >= 1.2, '★ [G4r] 되돌림 — 닷을 8px 옮긴 사본에서 [G4] 는 **빨개진다** (축이 살아 있다)',
-       '사본 |좌−우| ' + px(dRev) + 'px ≥ 1.2');
-    ok(dBack < 1.2, '[G4r] 원복하면 도로 초록이다', '원복 |좌−우| ' + px(dBack) + 'px');
+       '사본 |우인셋 − 규약| ' + px(dRev) + 'px ≥ 1.2');
+    ok(dBack < 1.2, '[G4r] 원복하면 도로 초록이다', '원복 ' + px(dBack) + 'px');
 
     /* 레이아웃 불변 — 무료 구간(뱃지 없음)과 광고 구간(뱃지 있음)의 버튼 자리가 같다 */
     await b.page.evaluate(() => { S.daily.spins = 5; uiDirty = true; renderUI(); openRoulette(); });

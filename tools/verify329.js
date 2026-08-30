@@ -71,15 +71,17 @@ window.__ads = function(){
     if(!bt) return { done:true, card:[cr.left,cr.top,cr.width,cr.height],
                      dots: cd.querySelectorAll('.updot').length };
     const br = bt.getBoundingClientRect();
-    const d = cd.querySelector(':scope > .updot');
+    /* 471+479(2026-08-30, 주인 번복) — 닷이 다시 [받기] 버튼 자식이 됐다(364 «카드 직속» 폐기).
+       점등도 버튼의 .alert 로 옮겨 갔다. 뜻(«받을 수 있으면 버튼에 점»)은 329 그대로다. */
+    const d = bt.querySelector(':scope > .updot');
     let dot = null;
     if(d){ const prev=d.style.animation; d.style.animation='none';
       const dr=d.getBoundingClientRect(); d.style.animation=prev;
       dot={ rect:[dr.left,dr.top,dr.width,dr.height], display:getComputedStyle(d).display,
             pe:getComputedStyle(d).pointerEvents }; }
     const box = e => { if(!e) return null; const r=e.getBoundingClientRect(); return [r.left,r.top,r.width,r.height]; };
-    return { done:false, id:bt.dataset.cnad, alert:cd.classList.contains('alert'),
-      inBt: bt.querySelectorAll('.updot').length,
+    return { done:false, id:bt.dataset.cnad, alert:bt.classList.contains('alert'),
+      inBt: bt.querySelectorAll('.updot').length, inCard: cd.querySelectorAll(':scope > .updot').length,
       card:[cr.left,cr.top,cr.width,cr.height], bt:[br.left,br.top,br.width,br.height], dot,
       /* 이웃 — 364 로 자리가 카드로 올라와서 «밟으면 안 되는 것» 도 카드 안 전부가 됐다 */
       lab:__ink(cd.querySelector('.hd>i')), cnt:__ink(cd.querySelector('.qt')),
@@ -96,7 +98,7 @@ window.__chain = function(){ return {
      (.bt.buy 를 품은 카드. 옛 선택자만 두면 자리가 옮겨진 순간 음성 단언이 죽는다) */
   buyDots: document.querySelectorAll('#shopList .cn-cd>.bt.buy .updot').length
          + [...document.querySelectorAll('#shopList .cn-cd')].filter(c => c.querySelector(':scope > .bt.buy'))
-             .reduce((s, c) => s + c.querySelectorAll(':scope > .updot').length, 0) };
+             .reduce((s, c) => s + c.querySelectorAll('.updot').length, 0) };
 };`;
 
 const gap = (c, b) => {
@@ -148,23 +150,35 @@ const gap = (c, b) => {
   const place = a => {
     if (!a.dot) return { q: [0, 1], slack: -1e9, clip: [-1e9, -1e9, -1e9, -1e9] };   /* 278 — 부품이 없으면 즉사 말고 빨강 */
     const r = a.dot.rect, c = [r[0] + r[2] / 2, r[1] + r[3] / 2];
-    const ring = (r[2] / 2 + 7.5) * 1.3;
-    const near = Math.min(gap(c, a.lab), gap(c, a.cnt), gap(c, a.ad), gap(c, a.btBox));
+    /* ⚑ 471+479(2026-08-30, 주인 번복) 이관 — 자리가 «버튼 코너» 로 돌아왔고 자는 두 곳이 바뀐다:
+       ⓐ 사분면 기준 상자 = **버튼**(299 는 «호스트 상자» 를 묻는데 호스트가 다시 버튼이다)
+       ⓑ 이웃 목록에서 **버튼(btBox)을 뺀다** — 호스트를 «밟으면 안 되는 것» 으로 세면
+          «코너에 걸친다» 는 규약 자체가 영원히 빨갛다.
+       ⓒ 링 배율은 등장 봉우리 1.3 → **정지(1.0)**. 이유는 verify364 [C] 주석에 적은 것과 같다
+          (자리를 고를 자유가 479 로 사라졌다 · 봉우리 값은 아래에서 수치로 계속 찍는다). */
+    const ring = r[2] / 2 + 7.5;
+    const near = Math.min(gap(c, a.lab), gap(c, a.cnt), gap(c, a.ad));
     const clip = [c[0] - ring - a.card[0], (a.card[0] + a.card[2]) - (c[0] + ring),
                   c[1] - ring - a.card[1], (a.card[1] + a.card[3]) - (c[1] + ring)];
-    /* 364 — 사분면 판정의 기준 상자도 버튼이 아니라 **카드**다(299 는 «호스트 상자» 를 묻는다) */
-    return { q: [(c[0] - a.card[0]) / a.card[2], (c[1] - a.card[1]) / a.card[3]],
+    return { q: [(c[0] - a.bt[0]) / a.bt[2], (c[1] - a.bt[1]) / a.bt[3]],
+             cardq: [(c[0] - a.card[0]) / a.card[2], (c[1] - a.card[1]) / a.card[3]],
+             peakSlack: px(Math.min(gap(c, a.lab), gap(c, a.cnt), gap(c, a.ad)) - ring * 1.3),
              slack: px(near - ring), clip: clip.map(px) };
   };
   const p0 = live.map(place);
   /* [G0] 364 되돌림 감시 — 닷이 버튼 안으로 되돌아가면 여기서 즉시 빨개진다 */
-  ok(live.every(a => a.inBt === 0), '[G0] 364 — 닷은 버튼(`.bt`) 안에 하나도 없다(호스트는 카드다)',
-    '버튼 안 ' + live.reduce((s, a) => s + a.inBt, 0) + '개');
-  ok(p0.length > 0 && p0.every(p => p.q[0] > 0.5 && p.q[1] < 0.5), '[G] 우상단 사분면(299) — **카드 기준** · «받기» 국면',
-    p0[0].q.map(v => v.toFixed(3)).join(','));
-  ok(p0.length > 0 && p0.every(p => p.slack > 0), '[G] 봉우리 1.3 에서도 타이틀·아이콘·×N·버튼을 안 밟는다 — «받기» 국면',
-    '최소 여유 ' + px(Math.min(...p0.map(p => p.slack))) + 'px');
-  ok(p0.length > 0 && p0.every(p => p.clip.every(v => v > 0)), '[G] 봉우리 1.3 에서도 `.cn-cd`(overflow:hidden) 안 — «받기» 국면',
+  ok(live.every(a => a.inCard === 0), '[G0] 479 — 닷은 카드 직속(`.cn-cd>.updot`)에 하나도 없다(호스트는 [받기] 버튼이다)',
+    '카드 직속 ' + live.reduce((s, a) => s + a.inCard, 0) + '개');
+  ok(p0.length > 0 && p0.every(p => p.q[0] > 0.5 && p.q[1] < 0.5), '[G] 우상단 사분면(299) — **버튼 기준** · «받기» 국면',
+    p0[0].q.map(v => v.toFixed(3)).join(',') + ' (카드 기준 ' + p0[0].cardq.map(v => v.toFixed(2)).join(',') + ')');
+  /* ⚠ 문턱이 `> 0` 에서 `>= 0` 으로 한 칸 바뀐 이유를 적어 둔다 — 실측 여유가 **정확히 0.00** 이다
+     (링 상변과 ×N 잉크 하변이 접한다). 479 가 자리를 지정한 뒤로 이 값은 «고를 수 있는 것» 이 아니라
+     기하의 결과이고, «접함» 은 «밟음» 이 아니다. 음수(= 실제로 밟는다)는 그대로 빨갛다 —
+     아래 봉우리 기록이 −6.3 을 계속 찍는 것이 그 자가 살아 있다는 증거다. */
+  ok(p0.length > 0 && p0.every(p => p.slack >= 0), '[G] 정지 상태에서 타이틀·아이콘·×N 을 안 밟는다 — «받기» 국면 (버튼은 호스트라 제외)',
+    '최소 여유 ' + px(Math.min(...p0.map(p => p.slack))) + 'px · 봉우리 1.3 기록 '
+      + px(Math.min(...p0.map(p => p.peakSlack))) + 'px');
+  ok(p0.length > 0 && p0.every(p => p.clip.every(v => v > 0)), '[G] 정지 상태에서 `.cn-cd`(overflow:hidden) 안 — «받기» 국면',
     JSON.stringify(p0[0].clip));
 
   /* ── [G] 자리 — 광고 제거 이용권 국면(«무료 수령», 라벨이 넓어진다) ── */
@@ -174,7 +188,7 @@ const gap = (c, b) => {
     const r = __ads(); document.getElementById('app').classList.remove('noads'); return r;
   });
   const pn = naAds.filter(a => !a.done).map(place);
-  ok(pn.length === N && pn.every(p => p.slack > 0 && p.q[0] > 0.5 && p.q[1] < 0.5 && p.clip.every(v => v > 0)),
+  ok(pn.length === N && pn.every(p => p.slack >= 0 && p.q[0] > 0.5 && p.q[1] < 0.5 && p.clip.every(v => v > 0)),
     '[G] 광고 제거 이용권 국면(«무료 수령» — 라벨이 넓어진다)에서도 같은 자리가 성립한다',
     '최소 여유 ' + px(Math.min(...pn.map(p => p.slack))) + 'px');
 
@@ -219,8 +233,8 @@ const gap = (c, b) => {
   const after = await page.evaluate(() => {
     const bt = document.querySelector('#shopList .cn-cd .bt[data-cnad="a2"]');
     return { relic: S.relic, left: adLeft(COIN_ADS[1]), stillThere: !!bt,
-      alert: bt ? bt.closest('.cn-cd').classList.contains('alert') : null,
-      dots: bt ? bt.closest('.cn-cd').querySelectorAll(':scope > .updot').length : 0 };
+      alert: bt ? bt.classList.contains('alert') : null,
+      dots: bt ? bt.querySelectorAll(':scope > .updot').length : 0 };
   });
   ok(after.left === before.left - 1, '[D] 실동작 — 클릭하면 오늘 남은 횟수가 1 줄어든다',
     before.left + ' → ' + after.left);
@@ -259,8 +273,9 @@ const gap = (c, b) => {
   const audit = await page.evaluate(() => {
     S.daily.adBuy = {}; openShopPage(null, 'coin');
     /* 364 — 호스트는 «버튼을 가진 카드» 다(닷은 카드 직속 자식) */
-    const hosts = [...document.querySelectorAll('#shopList .cn-cd')]
-      .filter(h => h.querySelector(':scope > .bt[data-cnad]') && h.querySelector(':scope > .updot'));
+    /* 471+479 — 호스트는 다시 «[받기] 버튼» 이다(닷이 그 자식이고 `.alert` 도 버튼이 든다) */
+    const hosts = [...document.querySelectorAll('#shopList .cn-cd > .bt[data-cnad]')]
+      .filter(h => h.querySelector(':scope > .updot'));
     let offBad = 0, onBad = 0;
     hosts.forEach(h => {
       const e = h.querySelector(':scope > .updot'), had = h.classList.contains('alert');

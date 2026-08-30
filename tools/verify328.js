@@ -117,9 +117,17 @@ const gap = (c, b) => {
     const cx = c.dot.rect[0] + c.dot.rect[2] / 2, cy = c.dot.rect[1] + c.dot.rect[3] / 2;
     return [px(cx - (c.b1[0] + c.b1[2])), px(cy - c.b1[1])];
   });
-  ok(corner.every(d => Math.abs(d[0]) <= 0.6 && Math.abs(d[1]) <= 0.6),
-    '[A] 닷 중심이 «10회 소환 n/n» 버튼 우상단 코너에 앉는다 (294 의 카드 코너에서 이관)',
-    JSON.stringify(corner[0]) + ' (전 칸 최대 ' + px(Math.max(...corner.flat().map(Math.abs))) + 'px)');
+  /* ⚑ 471(2026-08-30, 주인 보고) 이관 — 328 은 «중심이 버튼 코너에 **정확히**» 였다(허용 ±0.6).
+     471 규약은 그 코너에서 **안쪽으로 `--dot-in`**(= 주인이 기준으로 지목한 [모두 받기] 실측 11px)
+     이므로 기대값을 그만큼 옮긴다. **허용 오차는 한 칸도 안 넓혔다**(±0.6 그대로) — 자리를 무르게
+     푼 것이 아니라 «어느 점에 앉는가» 한 값만 이동한 것이다. 규약값은 상수로 적지 않고
+     `--dot-in` 을 제품에게 물어서 쓴다(상수를 두 곳에 적으면 402 «표는 뒤처진다» 가 된다). */
+  const inset = await page.evaluate(() =>
+    parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dot-in')));
+  ok(corner.every(d => Math.abs(d[0] + inset) <= 0.6 && Math.abs(d[1] - inset) <= 0.6),
+    '[A] 닷 중심이 «10회 소환 n/n» 버튼 우상단 코너에서 안쪽 --dot-in (471 규약)',
+    JSON.stringify(corner[0]) + ' · 규약 ' + inset + ' (전 칸 최대 어긋남 '
+      + px(Math.max(...corner.map(d => Math.max(Math.abs(d[0] + inset), Math.abs(d[1] - inset))))) + 'px)');
 
   /* ── [B] 버튼 기준 299 사분면 ── */
   const quad = on.map(c => {
