@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* 351 프로브 — 9:19(1080×2280) 대비 9:13.3(1080×1600) «에서만 나빠진 것» 을 기계로 좁힌다.
  *
- * 실행: node tools/probe351.js [--only <라벨조각>] [--json <경로>]
+ * 실행: node tools/probe351.js [--only <라벨조각>] [--json <경로>] [--selftest] [--navtest]
  *
  * 왜 프로브를 먼저 두는가(338·341·350·363·368 규칙):
  *   351 은 «비평가 3명 × 전 화면» 루프라 회차가 비싸다. 등재문의 네 축 중 ⓐ 잘림 · ⓑ 겹침 ·
@@ -34,9 +34,19 @@ const JSONOUT = (() => { const i = process.argv.indexOf('--json'); return i > 0 
    1600 판에서만 `overflow:hidden` 그릇 하나에 그릇보다 확실히 큰 자식을 심고 D2 가 그것을 내는지 본다.
    0 건이면 축이 죽은 것이다(«영원히 초록인 자»). */
 const SELFTEST = process.argv.includes('--selftest');
+/* --navtest — **424 이름표의 되돌림 시험**. D7 에 붙인 `조작+그림 / 그림만` 이 «한 번도 안 켜지는
+   이름표» 가 아님을 못박는다: 1600 판에서만 탭바 위에 «불투명하고 포인터를 막는» 상자를 심고,
+   그 자리가 `조작+그림` 으로 나오는지 본다(2280 은 안 심으므로 탭바가 닿는다 ⇒ 100 → 0).
+   ⚠ 심는 자리는 SCAN **안**이다(435 교훈 — 주입과 판정이 다른 `evaluate` 라운드트립으로 갈리면
+      게임 루프가 그 사이에 노드를 다시 써서 «영원히 초록인 시험» 이 된다).
+   권장 실행: `node tools/probe351.js --only tab:hero --navtest` (오버레이가 없어 탭바가 닿는 화면). */
+const NAVTEST = process.argv.includes('--navtest');
 
 const TALL = [1080, 2280];   /* 9:19 기준 */
 const SHORT = [1080, 1600];  /* 9:13.3 — 지원 최저 세로 */
+/* D7 이름표(424)의 «닿는다» 문턱 — `tools/probe351c.js` 의 `REACH` 와 **같은 값**이다.
+   같은 질문(«눌리나»)에 두 자가 다른 문턱을 두면 424 가 잡은 자기모순이 그대로 되살아난다. */
+const NAVREACH = 50;
 
 /* 화면 목록·진입·정착은 **공용 하네스** 한 벌에서 온다(6회차, 385 «자매 자 드리프트» 예방).
    여기 있던 fresh/settle/collectOpeners/drive 를 `tools/probe351lib.js` 로 그대로 옮겼고,
@@ -44,9 +54,21 @@ const SHORT = [1080, 1600];  /* 9:13.3 — 지원 최저 세로 */
 const { fresh, settle, collectOpeners, drive } = require('./probe351lib');
 
 /* ---------------- 페이지 안에서 재는 자 ---------------- */
-const SCAN = function () {
+const SCAN = function (opts) {
   const app = document.getElementById('app');
   if (!app) return { defects: [] };
+  /* ⚑ 424 `--navtest` — 이름표 되돌림 시험용 상자. **재는 것과 같은 `evaluate` 안**에서 심는다. */
+  if (opts && opts.navtest) {
+    const nv = document.getElementById('tabbar');
+    if (nv) {
+      const nr = nv.getBoundingClientRect();
+      const box = document.createElement('div');
+      box.id = 'navtestBox';
+      box.style.cssText = 'position:fixed;left:0;width:1080px;top:' + (nr.top - 60) +
+        'px;height:' + (nr.height + 60) + 'px;background:#123456;z-index:99999';
+      app.appendChild(box);
+    }
+  }
   const A = app.getBoundingClientRect();
   const out = [];
   const seen = new Set();
@@ -226,6 +248,37 @@ const SCAN = function () {
   const tuto = document.getElementById('tuto');
   if (tuto && vis(tuto)) navs.push({ name: 'tuto', r: tuto.getBoundingClientRect(), el: tuto });
 
+  /* ⚑ 424 — 406 규약(«2280 에서 이미 안 닿는 것은 판정 불가»)을 D7 에 **분류로** 가져온다.
+     무엇이 어긋나 있었나: 406 은 `probe351c` E1 을 «덮임» → «닿음» 으로 갈면서 그 규약을
+     확정했는데(LESSONS 406-①), D7 은 여전히 «세로 겹침 px» 하나만 재서 **딤이 두 해상도
+     다 포인터를 막아 둔 자리도 «1600 전용 결함» 으로** 낸다 ⇒ 같은 자리를 두 자가 반대로
+     말한다(424 등재문 «게이트 자기모순»).
+     ⚠ **그렇다고 D7 을 E1 로 바꾸면 안 된다**(406-④ · 424 등재문). D7 이 묻는 것은 포인터가
+        아니라 **그림**이고, 390·391·400·407 이 실제로 고친 자리는 전부 «딤 뒤라 두 해상도
+        다 안 닿는» 곳이었다(407 의 `#tuto` 배너가 그 표본 — 위 407 주석이 그것을 적어 뒀다).
+        배제로 처리하면 그 넷이 자에서 통째로 사라진다.
+     ⇒ **버리지 말고 갈라 적는다.** 고정 내비가 각 해상도에서 «닿나»(`elementFromPoint`,
+        351c 와 같은 5×5 격자·같은 문턱 50%)를 같이 재서 러너가 이름표를 붙인다:
+          · 2280 닿음 ≥50 → 1600 <50  = `조작+그림` (E1 과 같은 말을 한다)
+          · 그 밖(둘 다 안 닿음 / 1600 에서도 닿음) = `그림만` (406 규약대로 조작 상실이 아니다)
+     판정 key·문턱(`ov > 2 && ox > 40`)은 한 칸도 안 건드렸으므로 **차분 건수는 그대로**다 —
+     이 변경이 더하는 것은 «건수» 가 아니라 «무슨 결함인가» 다. */
+  const navReach = {};
+  for (const nav of navs) {
+    const r = nav.r;
+    let reach = 0, tested = 0;
+    for (const fx of [0.12, 0.3, 0.5, 0.7, 0.88]) for (const fy of [0.15, 0.35, 0.5, 0.65, 0.85]) {
+      const x = r.left + r.width * fx, y = r.top + r.height * fy;
+      if (x < A.left + 0.5 || x > A.right - 0.5 || y < A.top + 0.5 || y > A.bottom - 0.5) continue;
+      tested++;
+      const hit = document.elementFromPoint(x, y);
+      if (hit && (hit === nav.el || nav.el.contains(hit))) reach++;
+    }
+    /* 표본이 8 미만이면 «안 닿는다» 가 아니라 **모른다** 다(351c reachPct 와 같은 규칙) —
+       null 을 내면 러너가 그 자리를 `조작+그림` 으로 승격하지 않는다. */
+    navReach[nav.name] = tested < 8 ? null : Math.round(100 * reach / tested);
+  }
+
   if (navs.length) {
     for (const el of all) {
       if (!vis(el)) continue;
@@ -260,7 +313,7 @@ const SCAN = function () {
       }
     }
   }
-  return { defects: out, frame: { top: A.top, bottom: A.bottom, h: A.height } };
+  return { defects: out, navReach, frame: { top: A.top, bottom: A.bottom, h: A.height } };
 };
 
 (async () => {
@@ -272,7 +325,7 @@ const SCAN = function () {
     console.log(`[351] 화면 ${openers.length}개 × 2해상도 스캔`);
 
     for (const o of openers) {
-      const scan = async ([w, h], inject) => {
+      const scan = async ([w, h], inject, navtest) => {
         const { ctx, page } = await fresh(browser, w, h);
         await drive(page, o);
         await settle(page);
@@ -295,14 +348,27 @@ const SCAN = function () {
           console.log(`        [selftest] overflow:hidden 그릇 ${hit}개에 «그릇 폭 +400px» 자식을 심었다`);
           if (!hit) console.log('        [selftest] ⚠ 주입 0개 — 시험이 성립하지 않는다');
         }
-        const r = await page.evaluate(SCAN).catch((e) => ({ defects: [], err: String(e.message || e) }));
+        const r = await page.evaluate(SCAN, { navtest: !!navtest })
+          .catch((e) => ({ defects: [], err: String(e.message || e) }));
         await ctx.close();
         return r;
       };
       const tall = await scan(TALL);
-      const short = await scan(SHORT, SELFTEST);
+      const short = await scan(SHORT, SELFTEST, NAVTEST);
       const tallKeys = new Set(tall.defects.map((d) => d.key));
       const regress = short.defects.filter((d) => !tallKeys.has(d.key));
+      /* ⚑ 424 — D7 에 406 규약 이름표를 붙인다(SCAN 의 navReach 주석 참조).
+         **거르지 않는다** — 건수는 그대로 두고 `axis` 한 칸만 더 적는다. */
+      for (const d of regress) {
+        if (d.kind !== 'D7') continue;
+        const nav = String(d.k || '').replace(/^covers:/, '');
+        const t = tall.navReach ? tall.navReach[nav] : undefined;
+        const s = short.navReach ? short.navReach[nav] : undefined;
+        const show = (v) => (v === null || v === undefined ? '?' : v + '%');
+        d.navHit = show(t) + '→' + show(s);
+        d.axis = (typeof t === 'number' && typeof s === 'number' && t >= NAVREACH && s < NAVREACH)
+          ? '조작+그림' : '그림만';
+      }
       results.push({ label: o.label, tall: tall.defects.length, short: short.defects.length, regress });
       const mark = regress.length ? `⚠ ${regress.length}` : '·';
       console.log(`  ${mark.padEnd(5)} ${o.label.padEnd(22)} 2280:${String(tall.defects.length).padStart(3)}  1600:${String(short.defects.length).padStart(3)}`);
@@ -319,6 +385,27 @@ const SCAN = function () {
   const byKind = {};
   for (const r of results) for (const d of r.regress) byKind[d.kind] = (byKind[d.kind] || 0) + 1;
   console.log('  종류별: ' + (Object.keys(byKind).length ? Object.entries(byKind).map(([k, v]) => `${k}=${v}`).join(' · ') : '없음'));
+  /* ⚑ 424 — D7 을 축별로 갈라 적는다. `그림만` 은 «딤이 두 해상도 다 막아 둔 자리» 라
+     조작 상실이 아니고(406 규약), `조작+그림` 은 351c E1 이 내는 것과 같은 말이다.
+     ⚠ **이 줄은 «면죄부» 가 아니다** — 두 축 합계는 위 `D7=` 과 항상 같다(거른 것이 0건). */
+  const d7 = [];
+  for (const r of results) for (const d of r.regress) if (d.kind === 'D7') d7.push(d);
+  if (d7.length) {
+    const op = d7.filter((d) => d.axis === '조작+그림').length;
+    console.log(`  D7 축(424): 조작+그림 ${op} · 그림만 ${d7.length - op}  (합계 ${d7.length} = 위 D7 값 — 거른 것 0건)`);
+    if (!op) console.log('    ⚠ `조작+그림` 0건 — 이름표가 한 번도 안 켜졌다. 죽은 축인지 `--navtest` 로 확인하라.');
+  }
+  if (NAVTEST) {
+    /* 심은 상자가 **나오고** 그 자리가 `조작+그림` 이어야 시험이 성립한다.
+       나오기만 하고 `그림만` 이면 이름표가 죽은 것이고, 아예 안 나오면 D7 자체가 죽은 것이다. */
+    const hit = d7.filter((d) => String(d.path).includes('#navtestBox'));
+    const okA = hit.length > 0;
+    const okB = hit.some((d) => d.axis === '조작+그림');
+    console.log(`  [navtest] 심은 상자 D7 검출 ${okA ? 'OK' : 'FAIL'} (${hit.length}건) · ` +
+      `이름표 «조작+그림» ${okB ? 'OK' : 'FAIL'}` + (hit.length ? ` (${hit.map((d) => d.axis + ' ' + d.navHit).join(', ')})` : ''));
+    if (!(okA && okB)) { console.log('  [navtest] ⚠ 되돌림 시험 실패 — 축 또는 이름표가 죽었다'); process.exit(1); }
+    console.log('  [navtest] PASS');
+  }
   if (JSONOUT) { fs.writeFileSync(JSONOUT, JSON.stringify(results, null, 1)); console.log('  JSON → ' + JSONOUT); }
   process.exit(0);
 })().catch((e) => { console.error('PROBE351 CRASH', e); process.exit(2); });
