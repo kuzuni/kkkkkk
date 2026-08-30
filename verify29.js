@@ -41,6 +41,19 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
       nseg: segs.length,
       angles: segs.map((s) => parseFloat(getComputedStyle(s).getPropertyValue('--a'))),
       labels: segs.map((s) => s.textContent.replace(/\s+/g, ' ').trim()),
+      /* 533 — 「라벨이 ROULETTE 에서 생성됨」 은 **칸마다 세 부품을 배열과 맞대서** 묻는다.
+         옛 자는 «골드»·«대박» 이라는 **옛 표본 문자열**을 찾았는데, 155(«룰렛은 다이아만»)가
+         그 두 칸을 지운 뒤로 그 항은 제품이 옳아도 영원히 빨갛다. 표본을 새 문자열로 바꿔 적으면
+         512·367 이 값을 또 옮기는 날 같은 자리가 세 번째로 썩는다 ⇒ **표본을 안 적는다.**
+         ⚠ 아이콘 칸(`r.ic` = `curIc('dia')`)은 **글자가 아니라 마크업**(`<img class="cic" …>`)이라
+         textContent 로 재면 늘 빈 문자열이다 ⇒ 그 칸만 innerHTML 로 맞댄다. */
+      lbparts: segs.map((s) => ({
+        ic: ((s.querySelector('.rlt-ic') || {}).innerHTML || '').trim(),
+        tx: ((s.querySelector('.rlt-tx') || {}).textContent || '').trim(),
+        vl: ((s.querySelector('.rlt-vl') || {}).textContent || '').trim(),
+      })),
+      want: (typeof ROULETTE === 'undefined' || typeof roulLabel !== 'function') ? null
+        : ROULETTE.map((r) => ({ ic: String(r.ic).trim(), tx: String(r.t).trim(), vl: String(roulLabel(r)).trim() })),
       bg: getComputedStyle(document.getElementById('rouDisc')).backgroundImage.slice(0, 24),
       radius: getComputedStyle(document.getElementById('rouDisc')).borderRadius,
       legacy: document.querySelectorAll('.wheel, .slot').length,
@@ -66,7 +79,14 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
   const wantA = [22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5];
   chk(JSON.stringify(geo.angles) === JSON.stringify(wantA), '세그먼트 중심각 i*45+22.5 (' + geo.angles.join(',') + ')');
   chk(geo.labels.every((t) => t.length > 0), '8칸 라벨 전부 비어 있지 않음');
-  chk(/골드/.test(geo.labels[0]) && /대박/.test(geo.labels[7]), '라벨이 ROULETTE 배열에서 생성됨 (' + geo.labels[0] + ' / ' + geo.labels[7] + ')');
+  chk(!!geo.want && geo.want.length === geo.nseg,
+      '자가 제품의 ROULETTE 를 읽었다 (' + (geo.want ? geo.want.length : 'null') + '칸 vs 세그먼트 ' + geo.nseg + ')');
+  (geo.want || []).forEach((w, i) => {
+    const g = geo.lbparts[i] || {};
+    const short = (s) => String(s || '').replace(/<img[^>]*data-cur-ic="([^"]*)"[^>]*>/, '[ic:$1]').slice(0, 40);
+    chk(g.ic === w.ic && g.tx === w.tx && g.vl === w.vl,
+      '칸 ' + i + ' 라벨 = ROULETTE[' + i + '] (' + short(g.ic) + g.tx + g.vl + ' / ' + short(w.ic) + w.tx + w.vl + ')');
+  });
   chk(geo.cnt === '5 / 5', '남은 횟수 초기 5/5 (' + geo.cnt + ')');
 
   /* ── 1b. 라벨이 자기 부채꼴(45deg) 안에 들어가는가 ──
@@ -105,6 +125,29 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
   fitres.rows.forEach((r) => chk(r.hubGap >= 0,
     '칸 ' + r.i + ' 라벨이 허브(⌀' + (fitres.hub * 2) + ')를 안 침범 (여유 ' + r.hubGap.toFixed(0) + 'px)'));
 
+  /* ── 1c. 되돌림 시험 — 라벨이 «생성» 인가 «박힌 글자» 인가 (533) ──
+     위 [1] 의 «칸 i 라벨 = ROULETTE[i]» 는 표를 그대로 렌더에 복사해 둔 사본으로도 초록이 된다.
+     그래서 표를 한 칸만 흔들어 보고(센티널) 원판이 따라오는지 묻는다 — 따라오면 «생성» 이다.
+     ⚠ 흔든 값은 반드시 되돌리고 다시 그린다(뒤 절이 실제 보상값을 그대로 쓴다). */
+  console.log('[1c] 라벨 생성 되돌림 시험');
+  const gen = await page.evaluate(() => {
+    const read = (i) => {
+      const s = document.querySelectorAll('#rouDisc .rlt-seg')[i];
+      return s ? ((s.querySelector('.rlt-vl') || {}).textContent || '').trim() : null;
+    };
+    const keep = ROULETTE[0].dia, before = read(0);
+    ROULETTE[0].dia = 77777;
+    openRoulette();
+    const moved = read(0), wantMoved = roulLabel(ROULETTE[0]);
+    ROULETTE[0].dia = keep;
+    openRoulette();
+    return { before, moved, wantMoved, back: read(0), want: roulLabel(ROULETTE[0]) };
+  });
+  chk(gen.moved === gen.wantMoved && gen.moved !== gen.before,
+      '표를 흔들면 라벨이 따라온다 — 센티널 «' + gen.wantMoved + '» / 실측 «' + gen.moved + '»');
+  chk(gen.back === gen.want && gen.back === gen.before,
+      '되돌리면 라벨도 원복 (' + gen.back + ' / ' + gen.want + ')');
+
   /* ── 2. 회전 → 감속 → 포인터 칸 = 당첨 칸 ── */
   console.log('[2] 회전·감속·당첨 정렬');
   const spin = await page.evaluate(async () => {
@@ -113,7 +156,19 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
     const before = { spins: S.daily.spins, dia: S.dia, gold: S.gold, relic: S.relic, cnt: S.cnt.spins, rot: rot() };
     document.getElementById('rouBtn').click();
     const t0 = performance.now();
-    const btnLocked = document.getElementById('rouBtn').disabled && document.getElementById('rouClose').disabled;
+    /* 533 — 옛 자는 `#rouClose`(팝업 안 [닫기] 버튼)의 `disabled` 를 읽었는데 **그 노드는 267 이 지웠다**
+       (닫기 = 딤 탭). 그래서 이 줄이 `null.disabled` 로 [2] 절을 통째로 즉사시켰다.
+       «회전 중에는 못 닫는다» 는 뜻은 살아 있고 자리만 옮겼다 — 455 가 `closeModal()` 앞에 세운
+       `rouLocked()` 가 그것이다. ⇒ **버튼 하나가 아니라 «닫기 경로» 에게 직접 묻는다**:
+       회전 중 `closeModal()` 은 false 를 돌려주고 모달은 그대로 열려 있어야 한다. */
+    const closeTry = closeModal();
+    const lock = {
+      btn: document.getElementById('rouBtn').disabled,
+      locked: rouLocked(),
+      closeTry,
+      stillOn: document.getElementById('modal').classList.contains('on'),
+    };
+    const btnLocked = lock.btn && lock.locked && lock.closeTry === false && lock.stillOn;
     const reentry = (() => { const r0 = S.daily.spins; document.getElementById('rouBtn').click(); return S.daily.spins === r0; })();
     /* rouRot 은 정지 시 mod 360 으로 정규화되므로(시각적으로는 동일 각도) 랩 점프가 섞이지 않게
        «회전 중» 샘플만 속도 계산에 쓴다 */
@@ -123,14 +178,15 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
       if (!rouSpinning) break;
     }
     const hit = [...document.querySelectorAll('#rouDisc .rlt-seg')].findIndex((s) => s.classList.contains('hit'));
-    return { before, btnLocked, reentry, samples, hit, endRot: rot(), dur: performance.now() - t0,
+    return { before, btnLocked, lock, reentry, samples, hit, endRot: rot(), dur: performance.now() - t0,
       after: { spins: S.daily.spins, dia: S.dia, gold: S.gold, relic: S.relic, cnt: S.cnt.spins },
       res: document.getElementById('rouRes').textContent.trim(),
-      btnBack: !document.getElementById('rouBtn').disabled && !document.getElementById('rouClose').disabled,
+      btnBack: !document.getElementById('rouBtn').disabled,
       saved: JSON.parse(localStorage.getItem(KEY) || '{}'),
       reward: ROULETTE[hit] };
   });
-  chk(spin.btnLocked, '회전 중 돌리기·닫기 버튼 비활성');
+  chk(spin.btnLocked, '회전 중 돌리기 비활성 + 닫기 잠금 (btn ' + spin.lock.btn + ' · rouLocked ' + spin.lock.locked
+      + ' · closeModal ' + spin.lock.closeTry + ' · 모달 유지 ' + spin.lock.stillOn + ')');
   chk(spin.reentry, '회전 중 재클릭이 횟수를 더 안 깎음(재입력 차단)');
   chk(spin.hit >= 0, '정지 후 당첨 칸 하이라이트 1칸 (idx ' + spin.hit + ')');
   chk(spin.dur > 3000 && spin.dur < 6000, '회전 시간 3.6초 부근 (' + Math.round(spin.dur) + 'ms)');
@@ -181,6 +237,29 @@ const near = (a, b, t, m) => chk(Math.abs(a - b) <= t, m + ' (' + Math.round(a *
   chk(hud.all.includes(fmtLocal(hud.S.dia)) || hud.all.length > 0, 'HUD 텍스트 읽힘');
   const hudHasDia = await page.evaluate(() => document.getElementById('top').textContent.replace(/[\s,]/g, '').includes(String(S.dia).replace(/,/g, '')) || /[0-9]/.test(document.getElementById('top').textContent));
   chk(hudHasDia, '상단 HUD 에 재화 수치 표시됨');
+
+  /* ── 3b. 닫기 잠금이 «풀리는» 쪽 (533 음성항) ──
+     [2] 의 «회전 중에는 못 닫는다» 는 `closeModal()` 이 늘 false 를 돌려줘도 초록이다.
+     그래서 반대쪽을 같이 묻는다 — 지급 비행이 끝난 뒤에는 실제로 닫혀야 한다.
+     ⚠ 닫은 뒤 다시 열어 둔다(뒤 절이 열린 원판을 그대로 쓴다 · [5] 와 같은 경로). */
+  console.log('[3b] 정지 후 닫기 잠금 해제');
+  const unlock = await page.evaluate(async () => {
+    /* 455 의 잠금은 회전 + «지급 비행» 창(ROUL_PAY_MIN..MAX)까지 이어지므로 그 창이 닫히기를 기다린다.
+       기다림 자체가 단언이다 — 안 풀리면 아래 [3b-a] 가 빨개진다. */
+    const t0 = performance.now();
+    let locked = rouLocked();
+    while (rouLocked() && performance.now() - t0 < 4000) await new Promise((r) => setTimeout(r, 50));
+    locked = rouLocked();
+    const waited = Math.round(performance.now() - t0);
+    const closed = closeModal();
+    const off = !document.getElementById('modal').classList.contains('on');
+    openRoulette();
+    return { locked, waited, closed, off, reopened: document.getElementById('modal').classList.contains('on') };
+  });
+  chk(unlock.locked === false && unlock.waited < 4000,
+      '지급 비행이 끝나면 rouLocked() 해제 (' + unlock.waited + 'ms 뒤 ' + unlock.locked + ')');
+  chk(unlock.closed === true && unlock.off, '정지 후 closeModal() 이 실제로 닫는다 (' + unlock.closed + ' / 닫힘 ' + unlock.off + ')');
+  chk(unlock.reopened, '다시 열어 다음 절로 (' + unlock.reopened + ')');
 
   /* ── 4. 하루 5회 소진 → 버튼 잠금 ── */
   console.log('[4] 하루 5회 제한');
