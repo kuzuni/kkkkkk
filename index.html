@@ -16407,16 +16407,19 @@ function frameInk(key, A){
       m = {};
       for(const nm in A.f){
         const fr = A.f[nm];
-        let t = 1e9, b = -1, l = 1e9, r = -1;
-        for(let y = fr[1]; y < fr[1]+fr[3]; y++){
-          for(let x = fr[0]; x < fr[0]+fr[2]; x++){
-            if(D[(y*W + x)*4 + 3] > 16){
-              if(y < t) t = y; if(y > b) b = y;
-              if(x < l) l = x; if(x > r) r = x;
-            }
+        const row = new Float64Array(fr[3]), col = new Float64Array(fr[2]);
+        let n = 0;
+        for(let y = 0; y < fr[3]; y++){
+          for(let x = 0; x < fr[2]; x++){
+            if(D[((y+fr[1])*W + (x+fr[0]))*4 + 3] > 16){ row[y]++; col[x]++; n++; }
           }
         }
-        m[nm] = b < 0 ? null : { t: t-fr[1], b: b-fr[1], l: l-fr[0], r: r-fr[0] };
+        /* ⚑ 5회차 — 대표점은 bbox 중심이 아니라 **잉크 행/열의 중앙값**이다. bbox 는 치켜든 날개 끝과
+           꼬리에 끌려다녀 포즈마다 크게 튀고(dragon 12포즈 편차 38.3px · 최대 27.3px), 중앙값은
+           몸통을 따라간다(편차 13.9px · 최대 **8.7px** = −68%). 비평가 CY 가 아틀라스 실측으로
+           bbox·무게중심·중앙값 셋을 견줘 고른 값이고, 같은 픽셀로 한 줄이라 새 상수가 0개다. */
+        const mid = (a) => { let c = 0; for(let i = 0; i < a.length; i++){ c += a[i]; if(c >= n/2) return i; } return a.length/2; };
+        m[nm] = n === 0 ? null : { my: mid(row), mx: mid(col) };
       }
     }
   }catch(e){ m = null; }        /* 오염된 캔버스 — 호출부가 rect 중심으로 떨어진다 */
@@ -20317,7 +20320,15 @@ function step(dt){
        2회차 캡처에서 «국면 7프레임 어디에도 보스가 없다» 로 잡아낸 자리가 정확히 이것이다.
        판정에도 영향이 없다: `born < 0.3` 은 무적·비활성 창인데 국면 동안에는 어차피 아무도 안 때린다.
        국면이 끝나면 born 이 1.4 라 보스가 **즉시** 유효한 표적이다(= «전투 시작»). */
-    for(const e of enemies){ e.born += dt; stepAnim(e, dt); }
+    /* ⚑ 5회차 — 팝인(등장 커짐 0.3초)을 **팬의 절반만큼 늦춘다.** 3회차까지는 국면이 열리는 프레임에
+       팝인이 같이 시작해 **카메라가 도착하기 0.067초 전에 이미 끝나** 있었다 — 비평가 CY·CZ 가
+       2인 독립으로 «머무는 0.70초에 담긴 등장 동작이 0%» 라고 같은 1순위를 냈다.
+       ⚠ 그렇다고 팬 내내 세우면 2회차의 «카메라가 빈 바닥으로 날아간다»(CT)가 그대로 돌아온다 —
+         두 회차의 비평이 서로 반대 방향으로 당기는 자리라 **가운데**를 잡았다: 팬의 절반(0.175초)만
+         늦추면 카메라가 도착할 때 보스는 이미 58% 로 서 있고, 남은 42% 가 화면 한가운데서 자란다.
+       새 상수를 안 만든다 — `DUN_INTRO_PAN` 하나에서 나온다. */
+    const popOn = dunRun.introT >= DUN_INTRO_PAN/2;
+    for(const e of enemies){ if(popOn) e.born += dt; stepAnim(e, dt); }
     if(dunRun.introT >= dunIntroLen()){ dunRun.introOn = false; dunRun.fight = true; }
     return;
   }
@@ -23800,8 +23811,8 @@ function dunIntroMid(e){
        비평가 CW·CX 가 4회차에 «+20 ~ +38px 아래» 로 **2인 독립·같은 부호의 상수 오차**를 쟀고,
        CW 는 아틀라스 원본을 열어 그 7.33 을 직접 짚었다. 잉크를 못 재면 rect 로 떨어진다. */
     const k = ink && ink[nm];
-    sx += (-fr[6]/2 + fr[4] + (xo[nm] || 0) + (k ? (k.l + k.r)/2 : fr[2]/2)) * s;
-    sy += (-fr[7] + fr[5] + (k ? (k.t + k.b)/2 : fr[3]/2)) * s;
+    sx += (-fr[6]/2 + fr[4] + (xo[nm] || 0) + (k ? k.mx : fr[2]/2)) * s;
+    sy += (-fr[7] + fr[5] + (k ? k.my : fr[3]/2)) * s;
     n++;
   }
   if(!n) return fb;

@@ -106,7 +106,7 @@ const RUN = ([id]) => {
   /* 2회차 — 국면 «정지» 축. 비평가 CQ·CR 2인 독립 1순위였다: 시계만 멈추고 전투가 돌면
      «시간이 안 흐르는 창에서 치명타가 들어간다». 좌표·체력이 한 프레임도 안 움직이는지 본다. */
   let frz = null, frzMoveMax = 0, frzHpBoss = 0, frzHpPlayer = 0, frzAnim = 0;
-  let bornEnd = null, growMin = 1;
+  let bornEnd = null, growMin = 1, popOnCam = 1;
   const bar = () => parseFloat(getComputedStyle(document.getElementById('dunBarF')).width) || 0;
   const hud = () => (document.getElementById('dunTmN') || {}).textContent;
   while (dunRun && f < 60 * 10) {
@@ -129,7 +129,10 @@ const RUN = ([id]) => {
       camPlayMaxIntro = Math.max(camPlayMaxIntro, d2(cam, player));
       /* ⚑ «그려지는 크기» 축(2회차 비평 CT). `drawEnemy` 는 `born < 0.3` 인 적을 `born/0.3` 배로
          그린다 — 국면이 born 을 세우면 보스가 5.6% 크기로 찍혀 «등장 연출인데 빈 바닥» 이 된다. */
-      if (b) { bornEnd = b.born; if (introFrames > 24) growMin = Math.min(growMin, b.born < 0.3 ? b.born / 0.3 : 1); }
+      /* 5회차 — 팝인을 팬의 절반만큼 늦췄다. 「온전한 크기」는 팬이 끝나고 팝인이 도는 만큼 뒤에
+         성립한다: (PAN/2 + 0.3) 초 = 0.475s ⇒ 0.55초(33프레임) 뒤부터 본다. */
+      if (b) { bornEnd = b.born; if (introFrames > 33) growMin = Math.min(growMin, b.born < 0.3 ? b.born / 0.3 : 1); }
+      if (b && !r.fight) { const g = b.born < 0.3 ? b.born/0.3 : 1; if (r.introT >= 0.35) popOnCam = Math.min(popOnCam, g); }
       const now = { bx: b ? b.x : null, by: b ? b.y : null, bhp: b ? b.hp : null,
                     px: player.x, py: player.y, php: player.hp,
                     at: b ? b.at : null, pat: player.at };
@@ -159,6 +162,7 @@ const RUN = ([id]) => {
     wMax: +wMax.toFixed(4), wRises, wFalls, wZeroAfterOne,
     frzMoveMax: +frzMoveMax.toFixed(4), frzHpBoss, frzHpPlayer, frzAnim,
     bornEnd: bornEnd === null ? null : +bornEnd.toFixed(3), growMin: +growMin.toFixed(4),
+    popOnCam: +popOnCam.toFixed(4),
     tNow: r ? +r.t.toFixed(4) : null, camKeys: Object.keys(cam).sort().join(','),
   };
   H.cleanup();
@@ -308,6 +312,12 @@ const RUN_OTHER = ([mode]) => {
     is('[Z-e] 국면 0.4초 뒤부터 보스가 «온전한 크기»로 그려진다(grow = born/0.3 이 1)', gold.growMin, 1);
     ge('[Z-f] 국면이 끝날 때 born 이 팝인 창(0.3s)을 넘겼다 — 전투 시작에 보스가 즉시 유효한 표적',
        gold.bornEnd !== null && gold.bornEnd >= 0.3 ? 1 : 0, 1);
+    /* ⚑ 5회차(CY·CZ 2인 독립 1순위) — «등장 커짐» 이 카메라 밖에서 끝나면 안 된다.
+       카메라가 도착한 뒤(introT ≥ PAN)에도 팝인이 **아직 돌고 있어야** 한다 = 그때 grow < 1 인 프레임이 있다.
+       동시에 팬 도중에 «빈 바닥» 이 되면 안 되므로 [Z-h] 가 그 반대편을 묶는다(2회차 CT 결함 재발 방지). */
+    ok('[Z-g] 카메라 도착(0.35s) 시점의 팝인 진행도 = ' + (gold.popOnCam * 100).toFixed(1) + '% (1 이면 카메라 밖에서 끝난 것)');
+    is('[Z-g] 그 진행도가 1 미만 — 커짐의 일부가 화면 한가운데서 돈다', gold.popOnCam < 1, true);
+    is('[Z-h] 그래도 팬 도착 시점에 보스가 절반 이상 자라 있다(빈 바닥 금지 · 2회차 CT)', gold.popOnCam >= 0.5, true);
   }
 
   console.log('\n[E] HUD — 국면 동안 시계는 멈춰 보이고 338 체력바는 만피다');
