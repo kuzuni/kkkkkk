@@ -84,13 +84,24 @@ const near = (n, got, want, tol) => R.push({
   eq('② U.cost(l) 가 구간별 지수 식과 일치', cur.badNew.join(',') || 'none', 'none');
   eq('③ Lv 0~무릎 비용이 112 이전과 동일', cur.badOld.join(',') || 'none', 'none');
 
-  /* ── ④ 실제 구매 ── */
+  /* ── ④ 실제 구매 ──
+     554(2026-08-31) — 이 창(pointerdown → 60ms → pointerup → 120ms = 180ms)에 **전투 킬 골드**가
+     섞여 «골드가 정확히 비용만큼 감소» 가 플레이키였다(Δ골드 40.92 vs 비용 45 — 오차는 흔들리는
+     값이 아니라 킬 한 번의 상수 4.08 이고, `probe554` 로 5회 중 2회 재현했다: 어긋난 회차는 예외
+     없이 `S.totalKills` +1 이고 그 양이 `goldWin` 증가분과 한 푼도 안 틀렸다).
+     처방 ⓐ — 다른 훈련 자들(`verify183`·`verify326`·`verify483`·`verify517`)의 setup 과 같이
+     **측정 창에서 전투 루프를 세운다**(`step = () => {}`). 자를 무디게 푼 것이 아님은 probe554 [4]
+     음성 대조가 못박는다 — 세운 창에도 골드가 들어오면 이 항은 도로 빨갛다(허용 오차 1e-9 불변).
+     오염원이 사라진 것을 **이 자 스스로도** 보게 «창 안 킬·킬 골드 0» 항을 같이 둔다:
+     정지가 풀리면 이 항이 «측정 창 오염» 이라는 이름으로 먼저 걸려 진단이 헷갈리지 않는다. */
   const buy1 = await p.evaluate(async () => {
+    step = () => {};                      /* 킬 골드·자동 진행이 측정 창에 섞이지 않게 (554) */
     S.buyQty = 1; S.autoBuy = false;
     S.lv.atk = 0;
     S.gold = 1e6; fxDisp && (fxDisp.gold = S.gold);
     openTrain(); renderTrain();
-    const before = { lv: lv('atk'), gold: S.gold, cost: U.atk.cost(lv('atk')), dmg: stat.dmg };
+    const before = { lv: lv('atk'), gold: S.gold, cost: U.atk.cost(lv('atk')), dmg: stat.dmg,
+                     kills: S.totalKills, gw: (typeof goldWin === 'number' ? goldWin : 0) };
     document.querySelector('#trw [data-tr="atk"]').dispatchEvent(
       new PointerEvent('pointerdown', { bubbles: true }));
     await new Promise(r => setTimeout(r, 60));
@@ -98,9 +109,13 @@ const near = (n, got, want, tol) => R.push({
       new PointerEvent('pointerup', { bubbles: true }));
     await new Promise(r => setTimeout(r, 120));
     return { before, lv: lv('atk'), gold: S.gold, dmg: stat.dmg,
+             dkills: S.totalKills - before.kills,
+             dgw: (typeof goldWin === 'number' ? goldWin - before.gw : 0),
              card: (document.querySelector('#trw [data-tr="atk"] .ch i') || {}).textContent };
   });
   eq('④ 강화 클릭 → Lv +1', buy1.lv - buy1.before.lv, 1);
+  eq('④ 측정 창이 깨끗하다 — 창 안 킬·킬 골드 0 (554 측정 창 오염 감지)',
+     buy1.dkills + '/' + buy1.dgw, '0/0');
   near('④ 골드가 정확히 비용만큼 감소', buy1.before.gold - buy1.gold, buy1.before.cost, 1e-9);
   yes('④ 공격력(stat.dmg) 이 실제로 올랐다', buy1.dmg > buy1.before.dmg);
   eq('④ 카드 레벨 표기 갱신', buy1.card, 'Lv. 1');
