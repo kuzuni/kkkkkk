@@ -32,7 +32,18 @@ const JSONOUT = (() => { const i = process.argv.indexOf('--json'); return i > 0 
 /* --selftest — **되돌림 시험**(334·348 처방). 10회차가 `settle()` 에 «무한 반복 연출 세우기» 를
    넣어 D2 유령을 지웠으므로, **그 대가로 실재하는 넘침까지 못 보게 된 것은 아닌지**를 못박는다:
    1600 판에서만 `overflow:hidden` 그릇 하나에 그릇보다 확실히 큰 자식을 심고 D2 가 그것을 내는지 본다.
-   0 건이면 축이 죽은 것이다(«영원히 초록인 자»). */
+   0 건이면 축이 죽은 것이다(«영원히 초록인 자»).
+
+   ⚑ 435(2026-08-30) — **이 시험은 등재될 때까지 한 번도 빨개진 적이 없었고, 그 이유가 순서였다.**
+   주입을 `page.evaluate` 하나로, 판정(SCAN)을 **또 하나로** 갈라 놓으면 그 사이에 프레임이 한 번
+   돈다. 실측(`tools/probe435.js`): 걸리는 그릇은 `#rankN`·`#diaN`(HUD 계급·다이아 **숫자**)이고
+   심은 직후에는 scrollW 232→632 · 149→549 로 D2 조건이 확실히 켜지는데, **다음 라운드트립에는
+   심은 `<s>` 가 없다**(232 · 149 로 되돌아 있다) — 게임 루프가 그 노드의 내용을 통째로 다시 쓴다.
+   ⇒ 처방 ⓐ: **주입을 SCAN 안으로 넣어** 심자마자 같은 라운드트립에서 잰다(선례 `verify421` §4).
+      ⓑ(«다시 안 쓰는 그릇 목록»)는 402 «표는 손으로 적는 목록이라 뒤처진다» 라 쓰지 않았다 —
+      원자로 만들면 **어떤 그릇을 고르든 프레임이 끼어들 수 없다.**
+   ⚠ 그리고 심은 것이 실제로 D2 로 잡히는지 **그 자리에서 단언한다**(아래 selftest 집계) —
+      안 그러면 «영원히 초록인 시험» 이 다른 모양으로 다시 선다. */
 const SELFTEST = process.argv.includes('--selftest');
 /* --navtest — **424 이름표의 되돌림 시험**. D7 에 붙인 `조작+그림 / 그림만` 이 «한 번도 안 켜지는
    이름표» 가 아님을 못박는다: 1600 판에서만 탭바 위에 «불투명하고 포인터를 막는» 상자를 심고,
@@ -54,11 +65,12 @@ const NAVREACH = 50;
 const { fresh, settle, collectOpeners, drive } = require('./probe351lib');
 
 /* ---------------- 페이지 안에서 재는 자 ---------------- */
-const SCAN = function (opts) {
+const SCAN = function (opt) {
+  opt = opt || {};
   const app = document.getElementById('app');
-  if (!app) return { defects: [] };
+  if (!app) return { defects: [], injected: [] };
   /* ⚑ 424 `--navtest` — 이름표 되돌림 시험용 상자. **재는 것과 같은 `evaluate` 안**에서 심는다. */
-  if (opts && opts.navtest) {
+  if (opt.navtest) {
     const nv = document.getElementById('tabbar');
     if (nv) {
       const nr = nv.getBoundingClientRect();
@@ -133,6 +145,27 @@ const SCAN = function (opts) {
     seen.add(key);
     out.push({ kind, path: pathOf(el), key, ...detail });
   };
+
+  /* ── --selftest 주입 (435) — **판정과 같은 라운드트립 안에서, 스캔 직전에** 심는다 ────────
+     그래서 게임 루프가 끼어들 프레임이 없다. 대상은 손으로 적은 목록이 아니라 **성질**로 고른다:
+       · `overflow-x:hidden` 이고 40px 이상 (= D2 의 ovfX 가 원리적으로 볼 수 있는 그릇)
+       · **이미 넘치고 있지 않은** 그릇만 (⚠ 이미 넘치면 2280 판에도 같은 key 가 있어 차분이
+         소거해 버린다 — 「1600 전용 1건 이상」 이라는 시험의 뜻이 사라진다)
+     심은 자리를 `pathOf` 로 그대로 돌려주므로 실행부가 «잡혔는지» 를 key 로 대조할 수 있다. */
+  const injected = [];
+  if (opt.inject) {
+    for (const el of app.querySelectorAll('*')) {
+      if (injected.length >= 2) break;
+      const cs = getComputedStyle(el);
+      if (cs.overflowX !== 'hidden' || cs.display === 'none') continue;
+      if (el.clientWidth < 40 || el.clientHeight < 40) continue;
+      if (el.scrollWidth > el.clientWidth + 2) continue;      /* 이미 넘치는 그릇은 표본이 못 된다 */
+      const s = document.createElement('s');
+      s.style.cssText = 'display:block;width:' + (el.clientWidth + 400) + 'px;height:4px';
+      el.appendChild(s);
+      injected.push({ path: pathOf(el), by: el.scrollWidth - el.clientWidth });
+    }
+  }
 
   const all = app.querySelectorAll('*');
   for (const el of all) {
@@ -313,7 +346,7 @@ const SCAN = function (opts) {
       }
     }
   }
-  return { defects: out, navReach, frame: { top: A.top, bottom: A.bottom, h: A.height } };
+  return { defects: out, navReach, injected, frame: { top: A.top, bottom: A.bottom, h: A.height } };
 };
 
 (async () => {
@@ -329,28 +362,17 @@ const SCAN = function (opts) {
         const { ctx, page } = await fresh(browser, w, h);
         await drive(page, o);
         await settle(page);
-        if (inject) {
-          const hit = await page.evaluate(() => {
-            const app = document.getElementById('app'); if (!app) return 0;
-            let n = 0;
-            for (const el of app.querySelectorAll('*')) {
-              const cs = getComputedStyle(el);
-              if (cs.overflowX !== 'hidden' || cs.display === 'none') continue;
-              if (el.clientWidth < 40 || el.clientHeight < 40) continue;
-              const s = document.createElement('s');
-              s.style.cssText = 'display:block;width:' + (el.clientWidth + 400) + 'px;height:4px';
-              el.appendChild(s);
-              n++;
-              if (n >= 2) break;
-            }
-            return n;
-          });
-          console.log(`        [selftest] overflow:hidden 그릇 ${hit}개에 «그릇 폭 +400px» 자식을 심었다`);
-          if (!hit) console.log('        [selftest] ⚠ 주입 0개 — 시험이 성립하지 않는다');
-        }
-        const r = await page.evaluate(SCAN, { navtest: !!navtest })
-          .catch((e) => ({ defects: [], err: String(e.message || e) }));
+        /* ⚑ 435 — 주입은 **SCAN 안**이다(위 SELFTEST 주석). 여기서 따로 심으면 그 사이 프레임에
+           게임 루프가 지워 시험이 통째로 무효가 된다. `--navtest`(424)도 같은 이유로 SCAN 안이다. */
+        const r = await page.evaluate(SCAN, { inject: !!inject, navtest: !!navtest })
+          .catch((e) => ({ defects: [], injected: [], err: String(e.message || e) }));
         await ctx.close();
+        if (inject) {
+          const inj = r.injected || [];
+          console.log(`        [selftest] overflow:hidden 그릇 ${inj.length}개에 «그릇 폭 +400px» 자식을 심었다`
+            + (inj.length ? ` — ${inj.map((i) => `${i.path}(+${i.by}px)`).join(' · ')}` : ''));
+          if (!inj.length) console.log('        [selftest] ⚠ 주입 0개 — 시험이 성립하지 않는다');
+        }
         return r;
       };
       const tall = await scan(TALL);
@@ -369,9 +391,15 @@ const SCAN = function (opts) {
         d.axis = (typeof t === 'number' && typeof s === 'number' && t >= NAVREACH && s < NAVREACH)
           ? '조작+그림' : '그림만';
       }
-      results.push({ label: o.label, tall: tall.defects.length, short: short.defects.length, regress });
+      /* ⚑ 435 — «심은 것이 실제로 잡혔는가» 를 **그 자리에서** 센다. 주입은 1600 판에만 했으므로
+         잡혔다면 그것은 차분에도 남아야 한다(= 1600 전용 결함). 여기서 세지 않으면 selftest 는
+         «주입 2개» 만 찍고 조용히 0건으로 끝난다 — 그것이 435 로 등재된 사고 그 자체다. */
+      const inj = short.injected || [];
+      const caught = regress.filter((d) => d.kind === 'D2' && d.k === 'ovfX' && inj.some((i) => i.path === d.path));
+      results.push({ label: o.label, tall: tall.defects.length, short: short.defects.length, regress, inj: inj.length, caught: caught.length });
       const mark = regress.length ? `⚠ ${regress.length}` : '·';
-      console.log(`  ${mark.padEnd(5)} ${o.label.padEnd(22)} 2280:${String(tall.defects.length).padStart(3)}  1600:${String(short.defects.length).padStart(3)}`);
+      console.log(`  ${mark.padEnd(5)} ${o.label.padEnd(22)} 2280:${String(tall.defects.length).padStart(3)}  1600:${String(short.defects.length).padStart(3)}`
+        + (SELFTEST ? `   [selftest] 심은 ${inj.length} · D2 로 잡힌 ${caught.length}` : ''));
       for (const d of regress.slice(0, 6)) {
         console.log(`        ${d.kind} ${d.path} ${JSON.stringify(Object.fromEntries(Object.entries(d).filter(([k]) => !['kind', 'path', 'key'].includes(k))))}`);
       }
@@ -407,5 +435,23 @@ const SCAN = function (opts) {
     console.log('  [navtest] PASS');
   }
   if (JSONOUT) { fs.writeFileSync(JSONOUT, JSON.stringify(results, null, 1)); console.log('  JSON → ' + JSONOUT); }
+
+  /* ── --selftest 판정 (435) ─────────────────────────────────────────────────
+     여기까지 오면 «주입 n개» 는 이미 찍혀 있다. 그것만으로는 아무것도 증명하지 못한다 —
+     **잡혔는지**를 묻고, 안 잡혔으면 **종료 코드로 빨개진다.** 조용한 초록이 이 자를 무효로
+     만든 것이 435 이고, 그 재발을 막는 것은 이 여덟 줄이다. */
+  if (SELFTEST) {
+    const injTot = results.reduce((a, r) => a + (r.inj || 0), 0);
+    const catTot = results.reduce((a, r) => a + (r.caught || 0), 0);
+    const dead = results.filter((r) => (r.inj || 0) > 0 && !(r.caught || 0));
+    console.log(`\n[selftest] 심은 자리 ${injTot} · D2 가 1600 전용으로 잡은 자리 ${catTot} · 화면 ${results.length}개`);
+    if (!injTot) { console.log('[selftest] ❌ 주입 0개 — 시험이 성립하지 않는다(대상 선별 조건을 볼 것)'); process.exit(1); }
+    if (dead.length) {
+      console.log(`[selftest] ❌ 심었는데 못 잡은 화면 ${dead.length}개 — ${dead.slice(0, 5).map((r) => r.label).join(' · ')}`);
+      console.log('[selftest]    D2 축이 죽었거나(문턱·기대값을 눌렀다) 주입이 판정 전에 지워졌다(435 의 뿌리).');
+      process.exit(1);
+    }
+    console.log('[selftest] ✅ D2 축이 살아 있다 — 심은 넘침을 전 화면에서 1600 전용으로 잡았다');
+  }
   process.exit(0);
 })().catch((e) => { console.error('PROBE351 CRASH', e); process.exit(2); });
