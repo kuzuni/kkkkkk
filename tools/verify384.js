@@ -299,12 +299,24 @@ async function readCorner(page, p, rel, side, n = 30) {
           «가로 인셋 + 반경 = 알약 반경 30» — 상자가 어느 쪽이든 코너 중심의 x 가 알약과 같다는 뜻이고,
           이것이 384 가 «평행이동» 으로 말하려던 바로 그 성질이다. 무르게 푼 게 아니다:
           옛 상자를 가운데 칸에 되돌리면 세로 인셋이 0 이라 아래 [2]·[5] 가 즉시 빨개진다. */
-    const boxOK = d0 && ((/^23px/.test(d0.radius) && d0.top === '7px' && d0.bottom === '7px')
-      || (/^30px/.test(d0.radius) && d0.top === '0px' && d0.bottom === '0px'));
-    ok('그 상자가 «동심 안쪽 윤곽(7 인셋·r23)» 이거나 «옛 평행이동 상자(r30)» 다',
+    /* 409 5회차 이관 (2026-08-30) — **전제가 또 한 칸 움직였다.** 4회차는 검정이 «동심 등폭 링» 이라
+       그 내변이 «사방 7 인셋 · r23»(코너 중심 x = 30)이었다. 5회차는 검정을 **테이퍼 프레임 한 쌍**
+       (`inset ±d 0 0 s` · d+s = 7)으로 바꿔 코너에서 가늘어지게 했고, 그 두 구멍의 교집합 —
+       즉 검정의 새 안쪽 윤곽 — 은 «좌·우 7 · 상·하 s 인셋 · 반경 30−s» 이고 코너 중심 x 는 **30 + d** 다.
+       ⇒ 값을 또 적어 넣지 않는다. **d 를 링에서 읽어 상자를 유도**하므로 상자와 링은 따로 놀 수 없고,
+          d=0 이면 4회차(30 · r23) · d=7 이면 끝 칸의 옛 평행이동(37 · r30)으로 **한 식이 세 경우를 덮는다.** */
+    const rf0 = d0 ? [...d0.ringSh.matchAll(/rgb\(0, 0, 0\) (-?[\d.]+)px 0px 0px ([\d.]+)px inset/g)] : [];
+    const dTap = rf0.length === 2 ? Math.abs(parseFloat(rf0[0][1])) : 0;
+    const endBox = !!d0 && d0.top === '0px' && d0.bottom === '0px';
+    const boxOK = d0 && (endBox
+      ? /^30px/.test(d0.radius)
+      : (Math.abs(parseFloat(d0.top) - (7 - dTap)) < 0.6
+         && Math.abs(parseFloat(d0.bottom) - (7 - dTap)) < 0.6
+         && Math.abs(parseFloat(d0.radius) - (23 + dTap)) < 0.6));
+    ok('그 상자가 «검정의 안쪽 윤곽(좌·우 7 · 상·하 ' + (7 - dTap) + ' · r' + (23 + dTap) + ')» 이거나 «옛 평행이동 상자(r30)» 다',
       !!boxOK, d0 ? (d0.radius + ' · top ' + d0.top + ' · bottom ' + d0.bottom) : '—');
-    ok('어느 쪽이든 «가로 인셋 + 반경 = 30» — 코너 중심 x 가 알약과 같다',
-      !!d0 && Math.abs(parseFloat(d0.left) + parseFloat(d0.radius) - 30) < 0.6,
+    ok('어느 쪽이든 «가로 인셋 + 반경 = 30 + d(테이퍼 깊이 ' + dTap + ')» — 코너 중심 x 가 링 구멍과 같다',
+      !!d0 && Math.abs(parseFloat(d0.left) + parseFloat(d0.radius) - (endBox ? 37 : 30 + dTap)) < 0.6,
       d0 ? (d0.left + ' + ' + d0.radius + ' = ' + (parseFloat(d0.left) + parseFloat(d0.radius))) : '—');
     ok('세 띠가 다 걸려 있다 — 바닥 ' + DARK + ' 7 · 바닥 베벨 14 · 상단 베벨 7',
       !!d0 && /inset/.test(d0.shadow) && (d0.shadow.match(/inset/g) || []).length === 3,
@@ -312,8 +324,8 @@ async function readCorner(page, p, rel, side, n = 30) {
     ok('`pointer-events:none` — 클릭은 그대로 칸이 받는다', !!d0 && d0.pe === 'none', d0 ? d0.pe : '—');
     /* 409 — 이 띠가 «검정 밑» 에 있다는 전제가 이제 **칠 순서**로 성립한다(::before < ::after).
        링이 사라지면 이 게이트의 기대값(아래 ROWS)도 같이 틀려지므로 여기서 한 번 묻는다. */
-    ok('그 위에 409 의 검정 등폭 링(`::after`)이 얹혀 있다',
-      !!d0 && /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(d0.ringSh), d0 ? d0.ringSh : '—');
+    ok('그 위에 409 의 검정 테이퍼 프레임 한 쌍(`::after`)이 얹혀 있다 (오프셋 + 스프레드 = 7)',
+      rf0.length === 2 && Math.abs(dTap + parseFloat(rf0[0][2]) - 7) < 0.01, d0 ? d0.ringSh : '—');
 
     /* ---- 2·3·4·5. 찍힌 픽셀 ---- */
     console.log('\n[2] 코너 — 옆띠 다음에 어두운 띠 ' + DARK + ' 가 있다 (감김)');
@@ -358,7 +370,9 @@ async function readCorner(page, p, rel, side, n = 30) {
          (378) 옛 상자를 그대로 쓰고, 거기서는 띠가 수평 줄인 것이 **정답**이다 —
          그 쪽은 `verify409` [E] 가 «옛 상자 그대로» 로 따로 문다. 여기서 두께를 요구하면
          378 이 넘긴 면에 거짓 결함이 선다. */
-      if (/^23px/.test(p.radius || '')) {
+      /* 409 5회차 — 가운데 칸 판별을 «반경 23» 이 아니라 «**세로 인셋이 0 이 아니다**» 로 바꿨다.
+         반경은 테이퍼 깊이 d 를 따라 23+d 로 움직이지만(5회차 27), 끝 칸의 옛 상자는 언제나 세로 인셋 0 이다. */
+      if (p.top && parseFloat(p.top) > 0) {
         for (const corner of ['BL', 'BR']) {
           const dk = await deepRead(page, p, corner);
           ok('[8] ' + name + ' ' + corner + ' — 깊은 코너 법선 어두운 띠 ≥ ' + MIN_DEEP.toFixed(1)
@@ -420,8 +434,15 @@ async function readCorner(page, p, rel, side, n = 30) {
     await page.waitForTimeout(200);
     await shoot(page);
     const deepOld = await deepRead(page, p0, 'BL');
-    ok('R6 옛 상자(세로 인셋 0 · r30)를 주입하면 깊은 코너가 ' + MIN_DEEP.toFixed(1) + 'px 아래로 무너진다',
-      deepOld.some(v => v < MIN_DEEP), '켬 ' + deepLine(deepOn) + '  ↔  끔 ' + deepLine(deepOld));
+    /* 409 5회차 이관 — 판정을 «어느 각도가 4.0 아래냐» 에서 «**최솟값이 1.0px 이상 내려가느냐**» 로 옮겼다.
+       5회차의 테이퍼가 코너에서 검정을 벗겨 내면서 그 자리를 **부모 그라데이션의 세 띠가 일부 메우게** 됐고,
+       그래서 옛 상자를 주입해도 4.5 로 버티는 각도가 생긴다(실측 켬 6.0/6.0 ↔ 끔 4.5/5.0).
+       ⚠ 무르게 푼 것이 아니다 — **켠 쪽의 절대 하한(R5 의 MIN_DEEP)은 그대로**이고, 이 항은 그 위에
+          «상자를 되돌리면 반드시 나빠진다» 를 얹는다. `verify409` [10-R] 도 같은 처방으로 옮겼다. */
+    ok('R6 옛 상자(세로 인셋 0 · r30)를 주입하면 깊은 코너의 최솟값이 1.0px 이상 내려간다',
+      Math.min(...deepOn) - Math.min(...deepOld) >= 1.0,
+      '켬 ' + deepLine(deepOn) + '(최소 ' + Math.min(...deepOn).toFixed(1) + ')'
+      + '  ↔  끔 ' + deepLine(deepOld) + '(최소 ' + Math.min(...deepOld).toFixed(1) + ')');
     await page.evaluate(() => { const s = document.getElementById('v384old'); if (s) s.remove(); });
     await page.waitForTimeout(200);
     await shoot(page);

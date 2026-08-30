@@ -15,7 +15,10 @@
  *   가른 축이 바로 이것이다.
  *
  * ⚑ **무른 게이트가 안 되게 네 겹으로 문다**(LESSONS 328·334 · 384 §7):
- *     [2] 코너 — 0°~75° 법선 두께가 전부 ≥5.0 이고 **편차 ≤2.0**(등폭)
+ *     [2] 코너 — **0°~45°** 법선 두께가 전부 ≥5.0 이고 **편차 ≤2.0**(등폭)
+ *     [11] 코너 — **60°~88° 는 «테이퍼»** 다(5회차): 단조로 가늘어져 접선에서 ref 처럼 사라진다.
+ *         ⚠ [2] 의 창을 좁힌 것은 무르게 푼 것이 아니다 — `probe409c.py` 로 ref 를 다시 재니
+ *           **ref 자신이 60° 부터 가늘어진다**(위 EQ_N 주석). [5] 는 한 칸도 안 넓혔다.
  *     [3] 음성항 — 직선 상·하변에는 링이 **없다**(«위·아래 테두리는 바 테두리와 공유» 07 §9 · 378)
  *     [4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 **통째로 빠진다**(378 을 링에서도 지킨다) ·
  *         반대 면은 코너까지 검정이 **있다**(«다 지웠다» 와 구분한다)
@@ -47,7 +50,24 @@ const INK = '#F2BC8D';      /* 활성 라벨 색 */
    80° 이상은 상·하변의 «공유 테두리» 구간과 섞이므로 75° 까지만 문다(probe409 ⓐ 와 같은 창). */
 const DEGS = [0, 15, 30, 45, 60, 75];
 const MIN_TH = 5.0;         /* 등폭이면 7 근처 · 밴드면 45° 4.9 · 60° 3.5 · 75° 1.8 */
-const MAX_SPREAD = 2.0;     /* 0°~75° 편차 — 밴드는 5.2 가 나온다 */
+const MAX_SPREAD = 2.0;     /* 편차 — 밴드는 5.2 가 나온다 */
+/* 409 5회차 — **«등폭» 의 창을 0°~45° 로 좁힌다.** 1~4회차는 0°~75° 를 등폭으로 물었는데,
+   `tools/probe409c.py`(열 단위 · 알약 상자 안쪽만 보는 자 — 셸 검정과 안 섞인다)로 ref 를 다시 재니
+   **ref 자신이 등폭이 아니다**: 아래 코너 열 두께가 dx 10→30 에서 10/10/8/9/7/6/4/3/3/2/1 로
+   접선까지 내려간다(법선으로 환산하면 60° 5.5~6.4 · 75° 3.9 · 88° ~1). 위 코너도 같다.
+   ⇒ 등폭은 **0~45° 까지가 ref 이고**, 그 뒤는 «테이퍼» 다 — 아래 [11] 이 그 구간을 따로 문다.
+   ⚠ [5] 밴드 대조(60° ≥4.5 · 75° ≥3.5)는 **한 칸도 안 넓혔다** — 그것이 «7·cos α 밴드» 와 갈리는
+      유일한 항이고 409 등재문의 결함이 되살아나는지를 지키는 자다(4회차 인계 §13-4 4번). */
+const EQ_N = 4;             /* DEGS 의 앞 4개(0·15·30·45) = 등폭 창 */
+/* 409 5회차 — 테이퍼 축. probe409c 로 잰 ref: 60° 5.5~6.4 → 88° ~0.1~1.2 로 **단조 감소**한다.
+   4회차 우리는 88° 에서도 7.0 이었고 마스크 경계(x=30)에서 0 으로 잘려 «3×7 사각 노치» 를 만들었다
+   (DC·DD·CY·DB 네 사람이 네 회차에 걸쳐 같은 자리를 짚었다).
+   자는 광선이 아니라 **열 두께**(`colBlack`)다 — 접선 근처에서 광선 자가 못 쓰는 이유는 그 함수의
+   주석에 적었다. ref 실측(probe409c · dx 20/24/28): **아래 코너 6/3/2 · 위 코너 4/2/0**(셸 바닥 2행 제외).
+   4회차 우리는 **7/7/6**(= 낙차 1) 이었고 dx 30 에서 0 으로 잘렸다 — 그 절벽이 «사각 노치» 다. */
+const TAPER_DX = [20, 24, 28];
+const MAX_TIP = 4;          /* ref 위 0 · ref 아래 2 · 우리 3~4 · 4회차 6 */
+const TIP_BACK = 6;         /* [11-R] — 등폭 링을 도로 주입하면 이 위로 올라간다 */
 /* 409 2회차 — 검정 «안쪽» 축. 각도는 **코너 호 한복판**만 본다(0°·85° 는 직선부로 넘어가는 자리라
    위·아래 코너의 기댓값이 서로 섞인다 — `probe409b` BL 0°/85° 가 B6.0/K6.0 으로 읽히는 그 자리다).
    MIN_BEV 5.0 은 ref 6~7 · 우리 6.0~7.0 · 수리 전 2.0~4.0 사이에 그은 선이다. */
@@ -222,6 +242,36 @@ const vscan = (page, p, side, n = 12) => page.evaluate(([box, sd, nn, pal]) => {
   return s;
 }, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, n, PAL]);
 
+/* 409 5회차 — **열 두께 자.** 접선 근처는 광선 자로 못 잰다(위 DEGS 주석: 80° 이상은 상·하변의
+   «공유 테두리» 와 섞인다 — 실제로 광선 자는 아래 코너 80° 에서 0.5 를, 88° 에서 3.5 를 내며
+   순서가 뒤집힌다). 그래서 테이퍼는 **비평가 DD 가 쓴 축 그대로** 잰다:
+   알약 상자 «안쪽» 에서 열 하나를 잡고 상/하변부터 이어지는 검정 런의 길이를 센다.
+   상자 밖(셸)은 아예 안 읽으므로 셸 검정과 섞일 자리가 없다 — `tools/probe409c.py` 와 같은 자다.
+   ⚠ 첫 2행은 AA·좌표 오차라 «검정이 그 안에서 시작하면» 인정한다(그 뒤로 끊기면 거기서 끝). */
+const colBlack = (page, p, corner, dx, n = 16) => page.evaluate(([box, cor, d, nn, pal, r]) => {
+  const g = window.__v409;
+  const bottom = cor[0] === 'B', right = cor[1] === 'R';
+  const x = Math.round(right ? box.x + box.w - 1 - d : box.x + d);
+  const cls = (R2, G2, B2) => {
+    let best = '?', bd = Infinity;
+    for (const [ch, hex] of pal) {
+      const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+      const d2 = (R2 - rr) ** 2 + (G2 - gg) ** 2 + (B2 - bb) ** 2;
+      if (d2 < bd) { bd = d2; best = ch; }
+    }
+    return best;
+  };
+  let run = 0;
+  for (let i = 0; i < nn; i++) {
+    const y = Math.round(bottom ? box.y + box.h - 1 - i : box.y + i);
+    const q = g.getImageData(x, y, 1, 1).data;
+    if (cls(q[0], q[1], q[2]) === 'K') run++;
+    else if (run) break;
+    else if (i > 1) break;
+  }
+  return run;
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, corner, dx, n, PAL, R]);
+
 const countInk = (page, box) => page.evaluate(([b, ink]) => {
   const g = window.__v409;
   const d = g.getImageData(b.x, b.y, b.w, b.h).data;
@@ -289,8 +339,21 @@ const SETTLE = () => {
     const d0 = await page.evaluate(PILL, '#bSk .stabs');
     ok('활성 알약을 찾았다', !!d0, d0 ? d0.label + ' ' + Math.round(d0.w) + '×' + Math.round(d0.h) : '없음');
     ok('알약 높이 = ' + PILL_H, !!d0 && Math.abs(d0.h - PILL_H) <= 0.6, d0 ? d0.h.toFixed(2) : '—');
-    ok('`::after` 가 스프레드 7px 검정 링이다 (`inset 0 0 0 7px`)',
-      !!d0 && /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(d0.ringSh), d0 ? d0.ringSh.slice(0, 70) : '—');
+    /* 409 5회차 — 링이 «등폭 스프레드» 에서 **«좌·우 한 쌍의 테이퍼 프레임»** 으로 바뀌었다.
+       두 그림자의 구멍은 각각 «상자를 ±d 밀고 s 만큼 오므린 것» 이라, 그 교집합이 곧 검정의 안쪽
+       윤곽이다 — 코너 중심이 (30±d, 30) 이고 반경이 23+d 인 원. **불변식은 d + s = 7**(옆면 두께)
+       이고, d 가 곧 테이퍼의 깊이다(d=0 이면 1~4회차의 동심 등폭 링으로 되돌아간다).
+       값이 아니라 **불변식을 묻는다** — 다음 세션이 d 를 조정해도 옆면 7 은 안 흔들린다. */
+    const tf = d0 ? [...d0.ringSh.matchAll(/rgb\(0, 0, 0\) (-?[\d.]+)px 0px 0px ([\d.]+)px inset/g)] : [];
+    ok('`::after` 가 좌·우 한 쌍의 **테이퍼 프레임**이다 (그림자 2겹)', tf.length === 2,
+      d0 ? d0.ringSh.slice(0, 90) : '—');
+    ok('두 프레임이 좌우 대칭이고 **오프셋 + 스프레드 = 7**(옆면 두께는 그대로다)',
+      tf.length === 2 && Math.abs(+tf[0][1] + +tf[1][1]) < 0.01
+      && Math.abs(+tf[0][2] - +tf[1][2]) < 0.01
+      && Math.abs(Math.abs(+tf[0][1]) + +tf[0][2] - 7) < 0.01,
+      tf.length === 2 ? 'd=' + tf[0][1] + ' s=' + tf[0][2] : '—');
+    ok('테이퍼 깊이 d > 0 이다 (d=0 이면 1~4회차의 동심 등폭 링이다)',
+      tf.length === 2 && Math.abs(+tf[0][1]) > 0, tf.length === 2 ? 'd=' + Math.abs(+tf[0][1]) : '—');
     ok('링에 코너 기둥 마스크가 걸려 있다 (좌·우 30px = 반경)',
       !!d0 && /linear-gradient/.test(d0.ringMask) && /30px/.test(d0.ringMask),
       d0 ? d0.ringMask.replace(/\s+/g, ' ').slice(0, 90) : '—');
@@ -308,7 +371,7 @@ const SETTLE = () => {
     console.log('[3] 음성항 — 직선 상·하변에는 검정이 없다 (링을 네 면에 두른 게 아니다)');
     console.log('[4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 통째로 빠진다 (378)');
     console.log('[5] 밴드 대조 — 60°/75° 가 7·cos α (3.5/1.8) 를 크게 넘는다\n');
-    let faces = 0, offFaces = 0, deltaFaces = 0, collapsed = 0, endCells = 0, midFaces = 0;
+    let faces = 0, offFaces = 0, deltaFaces = 0, collapsed = 0, endCells = 0, midFaces = 0, taperFaces = 0;
     for (const [name, sel, setup] of HOSTS) {
       const botOn = {}, botBev = {};
       try { await page.evaluate(setup); } catch (e) { ok(name + ' 진입', false, e.message.slice(0, 60)); continue; }
@@ -331,9 +394,25 @@ const SETTLE = () => {
             th.every(v => v <= 1.0), line);
           offFaces++;
         } else {
-          ok('[2] ' + tag + ' — 전 각도 ≥ ' + MIN_TH.toFixed(1) + 'px', th.every(v => v >= MIN_TH), line);
-          const spread = Math.max(...th) - Math.min(...th);
-          ok('[2] ' + tag + ' — 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
+          /* 409 5회차 — 창이 0°~45° 다(위 EQ_N 주석: ref 자신이 60° 부터 가늘어진다). */
+          const eq = th.slice(0, EQ_N);
+          ok('[2] ' + tag + ' — 0°~45° 전 각도 ≥ ' + MIN_TH.toFixed(1) + 'px', eq.every(v => v >= MIN_TH), line);
+          const spread = Math.max(...eq) - Math.min(...eq);
+          ok('[2] ' + tag + ' — 0°~45° 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
+          /* [11] 409 5회차 — **접선 테이퍼.** 코너 안쪽으로 들어갈수록(dx 20 → 28) 검정이 가늘어져
+             접선에서 ref 처럼 사라진다. 자는 위 `colBlack`(= 비평가 DD 의 축 · probe409c 와 같다). */
+          const tp = [];
+          for (const d of TAPER_DX) tp.push(await colBlack(page, p, corner, d));
+          const tline = TAPER_DX.map((d, i) => 'dx' + d + ':' + tp[i]).join(' ');
+          ok('[11] ' + tag + ' — dx 20→28 이 단조로 가늘어진다 (되돌아 오르지 않는다)',
+            tp.every((v, i) => i === 0 || v <= tp[i - 1]), tline);
+          /* ⚠ 이 자는 **±1px 로 양자화된다** — 알약의 좌·우변 x 가 소수라 열 하나가 통째로 밀린다
+             (같은 처방인데 07·03 의 BR 은 dx28 = 3, 06·10·23 의 BR 은 4 로 읽힌다). 그래서 «낙차» 를
+             절대값으로 묻지 않는다(4회차 낙차 1 ↔ 지금 1~2 로 겹친다). 무르게 푼 것이 아님은
+             **[11-R] 되돌림**이 못박는다 — 등폭 링을 도로 주입하면 이 자리가 6 이상으로 올라간다. */
+          ok('[11] ' + tag + ' — 접선 쪽(dx 28) ≤ ' + MAX_TIP + 'px (4회차는 6~7 이었다)',
+            tp[2] <= MAX_TIP, 'dx28 ' + tp[2] + ' : ' + tline);
+          taperFaces++;
           ok('[5] ' + tag + ' — 60° ' + th[4].toFixed(1) + ' > 밴드 예측 3.5 · 75° ' + th[5].toFixed(1) + ' > 1.8',
             th[4] >= 4.5 && th[5] >= 3.5, line);
           /* [8] 409 2회차 — 검정 **안쪽** 도 각도와 무관해야 한다. ref 의 코너는 «위는 베벨 ·
@@ -451,13 +530,20 @@ const SETTLE = () => {
              그만큼 베벨의 시작점이 안으로 밀려 바닥 쪽(75°) 한 각도는 오히려 얇아진다(ref 도 같은
              구조다: 바닥 쪽은 «띠 6.2 + 베벨 7.2» 로 둘이 자리를 나눈다). 그래서 «**가장 얇은 각도가
              올라간다**» 로 묻는다 — 축이 하나 무너지면 그 각도가 최솟값이 되어 곧바로 빨개진다. */
-          ok('[9-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 띠 뒤 베벨의 최악 각도가 내려간다',
-            botBev[corner].every(v => v >= MIN_BEV) && Math.min(...botBev[corner]) > Math.min(...bOff),
-            '켬 ' + f(botBev[corner]) + '(최악 ' + Math.min(...botBev[corner]).toFixed(1) + ')'
-            + '  ↔  끔 ' + f(bOff) + '(최악 ' + Math.min(...bOff).toFixed(1) + ')');
-          ok('[10-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 어두운 띠가 ' + MIN_DARK.toFixed(1) + ' 아래로 무너진다',
-            darkOn[corner].every(v => v >= MIN_DARK) && dOff.some(v => v < MIN_DARK),
-            '켬 ' + f(darkOn[corner]) + '  ↔  끔 ' + f(dOff));
+          /* 409 5회차 — 비교 창을 **바닥 쪽 각도**(60°·75°)로 좁혔다. 30° 는 옆면으로 넘어가는 자리라
+             이 상자와 무관하게 같은 값이 나오고(실측 03 BL 이 켬·끔 둘 다 5.5), 최솟값이 거기 박히면
+             축이 스스로 못 움직인다. [10] 이 같은 이유로 이미 DARK_DEGS 를 바닥 쪽으로 좁혀 뒀다 —
+             같은 근거를 여기에도 적용한 것이고, **켠 쪽의 절대 하한(MIN_BEV)은 네 각도 전부 그대로다.** */
+          const bOnB = botBev[corner].slice(2), bOffB = bOff.slice(2);
+          ok('[9-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 바닥 쪽 베벨의 최악 각도가 내려간다',
+            botBev[corner].every(v => v >= MIN_BEV) && Math.min(...bOnB) > Math.min(...bOffB),
+            '켬 ' + f(botBev[corner]) + '(바닥 최악 ' + Math.min(...bOnB).toFixed(1) + ')'
+            + '  ↔  끔 ' + f(bOff) + '(바닥 최악 ' + Math.min(...bOffB).toFixed(1) + ')');
+          ok('[10-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 어두운 띠의 최솟값이 1.0px 이상 내려간다',
+            darkOn[corner].every(v => v >= MIN_DARK)
+            && Math.min(...darkOn[corner]) - Math.min(...dOff) >= 1.0,
+            '켬 ' + f(darkOn[corner]) + '(최소 ' + Math.min(...darkOn[corner]).toFixed(1) + ')'
+            + '  ↔  끔 ' + f(dOff) + '(최소 ' + Math.min(...dOff).toFixed(1) + ')');
           if (bOff.some(v => v < MIN_BEV)) collapsed++;
         }
         await page.evaluate(() => { const st = document.getElementById('v409box'); if (st) st.remove(); });
@@ -470,6 +556,7 @@ const SETTLE = () => {
       collapsed >= 2, collapsed + '면');
     ok('[9]·[10] 을 가운데 칸 아래 코너 4 면 이상에서 쟀다 (표본이 공허하지 않다)', midFaces >= 4, midFaces + '면');
     ok('[E] 끝 칸도 표본에 있다 («가운데만 본다» 가 회피가 아님을 보인다)', endCells >= 2, endCells + '칸');
+    ok('[11] 테이퍼를 8 면 이상 쟀다 (축이 공허하지 않다)', taperFaces >= 8, taperFaces + '면');
     ok('링이 살아 있는 면을 8 면 이상 쟀다', faces >= 8, faces + '면');
     ok('378 이 넘긴 면도 실제로 있었다 (음성항이 공허하지 않다)', offFaces >= 2, offFaces + '면');
 
@@ -480,9 +567,12 @@ const SETTLE = () => {
     await page.evaluate(SETTLE);
     const p0 = await page.evaluate(PILL, '#bSk .stabs');
     await shoot(page);
-    const on60 = blackNorm(await ray(page, p0, 'BL', 60));
+    /* 409 5회차 — R1·R5 의 각도를 60° → **45°** 로 옮겼다. 60° 는 이제 [11] 테이퍼 구간이라
+       «등폭이다» 를 물으면 안 된다(ref 도 그 각도부터 가늘어진다). 밴드 주입을 가르는 힘은
+       그대로다 — 밴드 예측은 45° 에서 4.9 이고 등폭 창의 하한은 5.0 이라 여전히 갈린다. */
+    const on45 = blackNorm(await ray(page, p0, 'BL', 45));
     const inkOn = await countInk(page, { x: Math.round(p0.x), y: Math.round(p0.y), w: Math.round(p0.w), h: PILL_H });
-    ok('R1 지금은 60° 가 ≥ ' + MIN_TH.toFixed(1), on60 >= MIN_TH, on60.toFixed(1) + 'px');
+    ok('R1 지금은 45° 가 ≥ ' + MIN_TH.toFixed(1), on45 >= MIN_TH, on45.toFixed(1) + 'px');
 
     /* R2 — 링을 끄고 **수리 전 그 밴드**(`inset ±7px 0 0 #000`)를 그대로 되살린다.
        «링을 끄기만» 하면 검정이 통째로 0 이 되어 «밴드와 링을 구별하는가» 를 못 묻는다. */
@@ -496,8 +586,11 @@ const SETTLE = () => {
     await shoot(page);
     const band60 = blackNorm(await ray(page, p0, 'BL', 60));
     const band45 = blackNorm(await ray(page, p0, 'BL', 45));
-    ok('R2 옛 밴드를 주입하면 60° 가 7·cos60 = 3.5 근처로 떨어진다 (게이트가 실제로 가른다)',
-      band60 <= 4.5, band60.toFixed(1) + 'px (45° ' + band45.toFixed(1) + 'px)');
+    /* ⚠ R2 는 **60°** 로 문다(R1·R5 만 45° 로 옮겼다) — 45° 는 밴드 예측 4.9 라 등폭 하한 5.0 과
+       0.1px 차이여서 자가 스스로 흔들린다(실측 5.5 로 안 갈렸다). 60° 는 밴드 3.5 ↔ [5] 하한 4.5 로
+       1.0px 이 벌어져 있고, 그 항이 곧 밴드가 되살아나면 빨개지는 자다. */
+    ok('R2 옛 밴드를 주입하면 60° 가 [5] 하한(4.5) 아래 = 7·cos60 = 3.5 근처로 떨어진다 (게이트가 실제로 가른다)',
+      band60 <= 4.5, '60° ' + band60.toFixed(1) + 'px (45° ' + band45.toFixed(1) + 'px)');
     const inkBand = await countInk(page, { x: Math.round(p0.x), y: Math.round(p0.y), w: Math.round(p0.w), h: PILL_H });
     ok('R3 라벨 잉크 픽셀 수는 Δ0 — 링은 글자를 한 픽셀도 안 먹는다',
       inkOn === inkBand && inkOn > 0, '링 ' + inkOn + ' ↔ 밴드 ' + inkBand);
@@ -517,10 +610,27 @@ const SETTLE = () => {
     await page.evaluate(() => { const s = document.getElementById('v409mask'); if (s) s.remove(); });
     await page.waitForTimeout(200);
     await shoot(page);
-    const back60 = blackNorm(await ray(page, p0, 'BL', 60));
+    /* [11-R] 409 5회차 — **테이퍼 축의 되돌림.** `::after` 를 1~4회차의 동심 등폭 링으로 되돌리면
+       접선 쪽 열(dx 28)이 곧바로 두꺼워진다. 이게 없으면 [11] 은 «원래 그랬던 것을 굳힌 항» 이다(338 교훈). */
+    await page.evaluate(() => {
+      const st = document.createElement('style'); st.id = 'v409ring';
+      st.textContent = '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000)!important}';
+      document.head.appendChild(st);
+    });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const tipRing = await colBlack(page, p0, 'BL', 28);
+    await page.evaluate(() => { const st = document.getElementById('v409ring'); if (st) st.remove(); });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const tipNow = await colBlack(page, p0, 'BL', 28);
+    ok('[11-R] 등폭 링을 도로 주입하면 접선 쪽 열이 ' + TIP_BACK + 'px 이상으로 두꺼워진다 (테이퍼 축이 실제로 가른다)',
+      tipRing >= TIP_BACK && tipNow <= MAX_TIP, '등폭 ' + tipRing + 'px  ↔  테이퍼 ' + tipNow + 'px');
+
+    const back45 = blackNorm(await ray(page, p0, 'BL', 45));
     const topBack = await vscan(page, p0, 'T');
     ok('R5 주입을 걷으면 다시 등폭이고 상변은 검정 0',
-      back60 >= MIN_TH && !topBack.slice(4).includes('K'), back60.toFixed(1) + 'px / ' + topBack);
+      back45 >= MIN_TH && !topBack.slice(4).includes('K'), back45.toFixed(1) + 'px / ' + topBack);
 
     /* R6·R7 — **[8] 의 되돌림.** 2회차가 넣은 것은 `::after` 의 배경 동심 고리 한 벌뿐이라
        그것만 떼면 1회차 상태가 그대로 돌아온다. 떼서 위 코너가 무너지고(R6) 아래 코너는

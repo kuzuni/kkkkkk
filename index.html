@@ -11091,7 +11091,8 @@
      ⚠ 끝 칸(378)은 손댈 것이 없다 — 마스크가 기둥을 통째로 빼면 그 코너의 배경 타일도 같이
         사라지므로 «셸에 닿는 면» 은 지금처럼 베벨 0..7 하나뿐이다(`--pill-mask` 한 손잡이 그대로). */
   .stab.on::after{content:'';position:absolute;left:0;right:0;top:0;bottom:0;
-    border-radius:30px;pointer-events:none;box-shadow:inset 0 0 0 7px var(--pill-k,#000);
+    border-radius:30px;pointer-events:none;
+    box-shadow:inset 4px 0 0 3px var(--pill-k,#000),inset -4px 0 0 3px var(--pill-k,#000);
     background:
       radial-gradient(circle at 30px 30px,transparent 0 16px,#634F37 16px 24px,transparent 24px) 0 0/30px 30px no-repeat,
       radial-gradient(circle at 0 30px,transparent 0 16px,#634F37 16px 24px,transparent 24px) 100% 0/30px 30px no-repeat;
@@ -11148,9 +11149,9 @@
         그 면에도 **바닥 어두운 띠의 감김은 그대로 있어야 한다**(384 §2 — 검정만 셸에 넘겼지 띠는 아니다).
         ⇒ 이 층은 **양쪽 기둥을 늘 켜 두는 고정 마스크**를 쓴다. 끝 칸의 닿는 면에서도 이 상자의 윤곽은
         그 면의 베벨(`--pill-l:inset 7px`)이 끝나는 자리와 정확히 같으므로(x=7) 384 가 재던 값 그대로다. */
-  .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
-    border-radius:23px;pointer-events:none;
-    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
+  .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:3px;bottom:3px;
+    border-radius:27px;pointer-events:none;
+    box-shadow:inset 0 -7px 0 #413122,inset 0 -15px 0 #634F37,inset 0 7px 0 #634F37;
     -webkit-mask-image:linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px));
     mask-image:linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))}
   /* 409 4회차 — **끝 칸(378)은 옛 상자를 그대로 쓴다.** 새 상자는 «검정의 안쪽 윤곽» 이라는 전제 위에

@@ -315,8 +315,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         !!want && o.on.boxShadow === want, o.on.boxShadow);
       /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다. */
       const r = o.onRing;
-      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이다 (부품은 하나)',
-        !!r && r.sh === BLK + ' 0px 0px 0px 7px inset', r ? r.sh : '없음');
+      /* 409 5회차 이관 — 링이 «등폭 스프레드» 에서 **좌·우 한 쌍의 테이퍼 프레임**(`inset ±d 0 0 s`)이
+         됐다. 두 그림자의 구멍이 만드는 교집합이 곧 검정의 안쪽 윤곽이고, 그 코너 중심 x 가 **30 + d** 다.
+         값이 아니라 **불변식 d + s = 7**(옆면 두께)을 묻는다 — 아래 «코너 중심 x» 항이 그 d 를 그대로
+         받아 가로 띠 상자와 맞물리므로, 둘 중 하나만 흔들려도 빨개진다. */
+      const rf = r ? [...r.sh.matchAll(/rgb\(0, 0, 0\) (-?[\d.]+)px 0px 0px ([\d.]+)px inset/g)] : [];
+      const dTap = rf.length === 2 ? Math.abs(parseFloat(rf[0][1])) : NaN;
+      ok(n + ' — 검정은 밴드가 아니라 `::after` 테이퍼 프레임 한 쌍이다 (오프셋 + 스프레드 = 7)',
+        rf.length === 2 && Math.abs(parseFloat(rf[0][1]) + parseFloat(rf[1][1])) < 0.01
+        && Math.abs(parseFloat(rf[0][2]) - parseFloat(rf[1][2])) < 0.01
+        && Math.abs(dTap + parseFloat(rf[0][2]) - 7) < 0.01, r ? r.sh : '없음');
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
         !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
         r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
@@ -331,16 +339,23 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
          (`verify384` 가 같은 불변식을 문다). 끝 칸까지 새 상자로 옮기는 것은 **449**. */
       const endCell = !!o.onPos && (o.onPos.L || o.onPos.R);
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 상자가 그 자리의 규격이다'
-        + (endCell ? ' (끝 칸 = 옛 상자 r30 · 449)' : ' (가운데 = 동심 윤곽 7인셋·r23)'),
+        + (endCell ? ' (끝 칸 = 옛 상자 r30 · 449)' : ' (가운데 = 검정의 안쪽 윤곽 = 링 구멍)'),
         !!b && b.left === '7px' && b.right === '7px'
           && (endCell ? (b.top === '0px' && b.bottom === '0px' && /^30px/.test(b.r))
-                      : (b.top === '7px' && b.bottom === '7px' && /^23px/.test(b.r))),
+                      /* 409 5회차 — 세로 인셋 = 링의 스프레드 s(=7−d) · 반경 = 30 − s. 두 값을 **링에서
+                         유도**하므로 상자와 링이 따로 놀 수 없다(4회차는 7·r23 을 손으로 적었다). */
+                      : (Math.abs(parseFloat(b.top) - (7 - dTap)) < 0.01
+                         && Math.abs(parseFloat(b.bottom) - (7 - dTap)) < 0.01
+                         && Math.abs(parseFloat(b.r) - (23 + dTap)) < 0.01)),
         b ? [b.left, b.right, b.top, b.bottom, b.r].join(' / ') : '없음');
       /* 두 상자를 가르는 것은 **코너 중심의 x** 다 — 가운데 칸은 알약과 같고(7+23=30 = 동심),
          끝 칸은 옛 «평행이동» 이라 7 오른쪽이다(7+30=37). 값을 그냥 적지 않고 **자리에서 유도**해
          묻는다: 이 두 수 말고 다른 값이 나오면 상자가 어느 쪽도 아니라는 뜻이다. */
-      ok(n + ' — 코너 중심 x = ' + (endCell ? '37 (옛 평행이동)' : '30 (알약과 동심)'),
-        !!b && Math.abs(parseFloat(b.left) + parseFloat(b.r) - (endCell ? 37 : 30)) < 0.6,
+      /* 409 5회차 — 가운데 칸의 코너 중심 x 는 **30 + d**(테이퍼 깊이)다: 링의 두 구멍이 만드는
+         교집합의 코너 중심이 바로 그 자리이고, 가로 띠 상자는 그 윤곽을 그대로 따라야 한다.
+         d=0 이면 1~4회차의 동심(30), d=7 이면 끝 칸의 옛 평행이동(37) — 한 식이 세 경우를 다 덮는다. */
+      ok(n + ' — 코너 중심 x = ' + (endCell ? '37 (옛 평행이동)' : (30 + dTap) + ' (링 구멍과 같다 · d=' + dTap + ')'),
+        !!b && Math.abs(parseFloat(b.left) + parseFloat(b.r) - (endCell ? 37 : 30 + dTap)) < 0.6,
         b ? (b.left + ' + ' + b.r + ' = ' + (parseFloat(b.left) + parseFloat(b.r))) : '없음');
       ok(n + ' — 세 띠(그림자 3겹)는 영웅과 Δ0',
         !!b && b.sh === hero.onBand.sh, b ? b.sh.slice(0, 60) : '없음');
