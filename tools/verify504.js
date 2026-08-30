@@ -52,8 +52,12 @@ const PROBE = ['slash', 'bolt', 'drain',              /* 대조군 — 504 가 �
                'nova', 'holy', 'laser', 'meteor',     /* 폭발·빔 — 이탈이 가장 컸던 자리 */
                'poison', 'flask',                     /* 장판 */
                'lance', 'boom'];                      /* 관통·폭발 */
-/* [R] 되돌림 재료 — 504 이전의 «한 적이 받는 수» 선언. 이 표는 옛 값이므로 갱신하지 마라. */
-const OLD_HITS = { nova: 1, holy: 1, laser: 1.7, meteor: 1, poison: 5, flask: 4.5, boom: 1, lance: 3 };
+/* [R] 되돌림 재료 — 504 이전의 «한 적이 받는 수» 선언. 이 표는 옛 값이므로 갱신하지 마라.
+   ⚠ **`lance` 는 일부러 뺐다.** 옛 3 과 새 4.45 의 거리가 [C] 의 허용 오차(±40%) 안이라
+   «되돌리면 잡힌다» 를 이 자로는 **증명할 수 없다**(실행마다 37~52% 로 걸쳤다 안 걸렸다 한다).
+   못 잡는 것을 잡는다고 적으면 그게 헛초록이다 — 잡을 수 있는 7종만 적는다. lance 의 선언은
+   [C] 가 «지금 값이 맞는가» 로 지키고, «옛 값으로 못 돌아간다» 는 여기서 주장하지 않는다. */
+const OLD_HITS = { nova: 1, holy: 1, laser: 1.7, meteor: 1, poison: 5, flask: 4.5, boom: 1 };
 
 let pass = 0, fail = 0;
 const ok = (b, name, detail) => {
