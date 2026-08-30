@@ -181,7 +181,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(B1.nodeDn === B1.fPay, '[B8] 비용 플로터만 «아래로»(.dn) 진다 — 58 결제 어휘', B1.nodeDn + '/' + B1.fPay);
   ok(sumT(B1, /회 시도 · 성공/) === 1, '[B9] ★ 룬 정산 토스트는 손 뗀 뒤 «요약 한 장» 뿐이다(206 규약 유지)',
      sumT(B1, /회 시도 · 성공/) + '장 / 전체 ' + B1.toast);
-  ok(B1.txts.includes('+1 Lv'), '[B10] 성공 문구가 «+1 Lv» 다', B1.txts.join(','));
+  ok(B1.txts.includes('+1'), '[B10] 성공 문구가 «+1» 이다(5회차 — 74px 잉크가 칸 간격 74 와 같아 이웃과 붙었다)', B1.txts.join(','));
 
   await runeSetup(0); await p.waitForTimeout(450);
   await countTries('runeBuy'); await reset();
