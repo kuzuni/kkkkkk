@@ -2114,7 +2114,12 @@
   .mbody:has(.pr179){padding-top:40px;padding-bottom:32px}
   /* 조건 상자 — 옛 인라인 스타일(#0e1428 · radius 20 · padding 18/22 · margin-top 18)을 클래스로
      옮기고 글자와 같은 배율로 키운다. 글자만 2배로 하고 상자를 두면 글자가 상자를 뚫는다. */
-  .mbody .pr179 .pr-cond{text-align:left;background:#0e1428;border-radius:40px;
+  /* 515(주인 지시 2026-08-31 «권장스테이지 그거 글씨 중앙 정렬로 하라») — `left` 는 옛 «조건 목록»
+     («최고 스테이지 n/n · 전투력 n/n» 두 줄) 시절의 값이다. 320 이 한 줄만 남긴 뒤에도 이 선언이
+     안 따라와, 안쪽 폭 732 에 잉크 315~343 인 한 줄이 **왼쪽으로 192~207px** 쏠려 있었다
+     (`tools/probe515.js` [B] — 밀림 = 남는 폭 ÷ 2 로 왼쪽 정렬의 산술 그대로).
+     ⚠ 글자만 가운데로 온다 — 상자 폭·패딩·radius·margin 은 179/320 실측값이라 Δ0 이다. */
+  .mbody .pr179 .pr-cond{text-align:center;background:#0e1428;border-radius:40px;
     padding:36px 44px;margin-top:36px}
   /* 상자만 남색이라 베이지 본문의 갈색 글자(`.mbody p{color:#5A4634}`)가 그대로 깔리면
      남색 위 짙은 갈색이 된다 — 179 가 «안 보인다» 를 고치는 작업이므로 여기서 같이 뒤집는다 */
