@@ -109,10 +109,26 @@ async function collectOpeners(browser) {
   cats.forEach((k) => openers.push({ label: 'shopcat:' + k, shop: `#shopCats .shp-ct[data-cat="${k}"]` }));
   const eqtabs = await page.$$eval('#eqTabs [data-eqtab]', (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
   eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, hero: `#eqTabs [data-eqtab="${k}"]` }));
-  const slots = await page.$$eval('#eqCards [data-eqslot]', (els) => els.map((e) => e.dataset.eqslot)).catch(() => []);
-  slots.forEach((k) => openers.push({ label: 'eqslot:' + k, hero: `#eqCards [data-eqslot="${k}"]` }));
-  const costabs = await page.$$eval('#bCos [data-costab]', (els) => els.map((e) => e.dataset.costab)).catch(() => []);
-  costabs.forEach((k) => openers.push({ label: 'costab:' + k, cos: `#bCos [data-costab="${k}"]` }));
+  /* ⚑ 14회차(2026-08-30) — **`eqslot`·`costab` 두 줄은 «묻는 시점» 이 틀렸다.** 8·10·12·13회차에
+     이은 **같은 사고의 다섯 번째**이고, 앞 넷과 뿌리가 또 다르다:
+       · 8회차 = `drive` 에 갈래가 없었다 · 10회차 = 대상이 호스트 밖이라 상자가 0×0
+       · 12회차 = 손으로 적은 표(`ptab`)가 제품에 뒤처졌다 · 13회차 = 문(`[data-opencoll]`)이 죽었다
+       · **이번 = 셀렉터도 갈래도 살아 있는데, 호스트를 열기 «전» 에 물었다.**
+     `#eqCards` 는 08 영웅 시트를 열어야 채워지는 **빈 그릇**이라(`index.html` 14813 —
+     `<div id="eqCards"></div>`) 부팅 직후 물으면 언제나 `[]` 다 ⇒ `eqslot:*` 오프너가
+     **한 번도 만들어진 적이 없다.** `drive()` 의 `o.hero` 갈래도 `cap351` 의 `kind === 'eqslot'`
+     갈래도 처음부터 멀쩡히 있었는데 **부를 일이 없었다.**
+     ⚠ **`smoke.js` 는 같은 자리를 옳게 한다**(155행 — `.tab[data-t="hero"]` 를 먼저 누르고 묻는다).
+        이 자는 그 줄을 옮겨 오면서 **앞의 클릭만 빠뜨렸다** = 385 «자매 자 드리프트» 의 조용한 꼴.
+     피해: 부위 슬롯 3칸(무기·방패·목걸이)이 여는 **05 장비 세부 팝업(`#wpnw`)** 을
+     1~13회차 내내 자도 눈도 본 적이 없다(재현 표는 `docs/review/351-913가독성.md` 14회차 절).
+     ⇒ **호스트를 열고 묻는다. 0개면 던진다**(8·13회차와 같은 이유 — 조용한 실패가 초록으로 읽히면 안 된다).
+        묻는 자리를 수집 **맨 끝**으로 옮겼다: 시트를 연 페이지 상태가 뒤 질문(`#profBtn`·`#collTabs`·
+        `#psBar`)에 섞이지 않게 하기 위해서다(그 셋은 정적 마크업이라 지금은 무해하지만,
+        «앞 질문이 뒤 질문의 화면을 바꾼다» 는 것 자체가 이 사고의 뿌리다).
+     ⚑ `costab` 갈래는 **지웠다** — `data-costab` 은 제품에 **0건**이다(`grep -c` 확인).
+        50 코스튬 시트의 서브탭은 공용 `#eqTabs` 로 흡수됐고(작업 50·96), 남은 이 줄은
+        13회차의 `[data-opencoll]` 과 같은 **죽은 셀렉터**다. 되살릴 화면이 없으므로 던지지 않고 없앤다. */
   if (await page.$('#profBtn')) {
     openers.push({ label: 'prof:19', sel: '#profBtn' });
     openers.push({ label: 'prof:20-스펙', prof: '.pf-tgl>.lb' });
@@ -154,6 +170,16 @@ async function collectOpeners(browser) {
     ptabs.forEach((k) => openers.push({ label: 'ptab:' + k, pass: `#psBar [data-ptab="${k}"]` }));
   }
   openers.push({ label: 'saver:56', saver: true });
+  /* 14회차 — «호스트를 열어야 보이는» 질문은 여기, 수집의 **맨 끝**에서 한다(위 주석 참조).
+     바로 뒤가 `ctx.close()` 라 이 클릭이 다른 질문의 화면을 바꿀 여지가 원리적으로 없다. */
+  await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
+  await page.waitForTimeout(400);
+  const slots = await page.$$eval('#eqCards [data-eqslot]', (els) => els.map((e) => e.dataset.eqslot)).catch(() => []);
+  if (!slots.length) {
+    throw new Error('[351lib] 08 영웅 시트를 열었는데 `#eqCards [data-eqslot]` 이 0개다 — ' +
+      '06 장비 부위 슬롯(→ 05 세부 팝업)이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
+  }
+  slots.forEach((k) => openers.push({ label: 'eqslot:' + k, hero: `#eqCards [data-eqslot="${k}"]` }));
   await ctx.close();
   return openers;
 }

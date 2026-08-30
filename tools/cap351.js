@@ -89,6 +89,14 @@ const SET3 = [
   { id: '21-clpet', label: '21 도감 → 펫', how: 'colltab:pet' },
   { id: '21-clrelic', label: '21 도감 → 유물', how: 'colltab:relic' },
   { id: '10-cart', label: '10 상점(장바구니 잉크 D3 자리)', how: 'tab:shop' },
+  /* ⚑ 14회차(2026-08-30) — `probe351lib` 이 `#eqCards [data-eqslot]` 을 **08 영웅 시트를 열기 전에**
+     물어(빈 그릇이라 언제나 `[]`) `eqslot:*` 오프너가 한 번도 만들어진 적이 없었다 = 이 세 화면
+     (부위 슬롯이 여는 **05 장비 세부 팝업 `#wpnw`**)을 자도 눈도 1~13회차 내내 본 적이 없다.
+     `drive()` 의 `kind === 'eqslot'` 갈래는 141행에 처음부터 있었다 — 부를 일이 없었을 뿐이다.
+     라벨은 `probe351` 오프너 문자열과 맞춘다(자·눈이 같은 화면을 봐야 대조가 선다). */
+  { id: '05-eqweapon', label: '05 장비 세부(무기 슬롯)', how: 'eqslot:weapon' },
+  { id: '05-eqshield', label: '05 장비 세부(방패 슬롯)', how: 'eqslot:shield' },
+  { id: '05-eqamulet', label: '05 장비 세부(목걸이 슬롯)', how: 'eqslot:amulet' },
 ];
 
 const SET = (() => { const i = process.argv.indexOf('--set'); return i > 0 ? process.argv[i + 1] : 'r2'; })();
