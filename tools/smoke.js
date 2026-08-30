@@ -174,6 +174,10 @@ function staticSyntax() {
       await page.waitForTimeout(400);
       const cats = await page.$$eval('#shopCats .shp-ct[data-cat]', (els) => els.map((e) => e.dataset.cat)).catch(() => []);
       cats.forEach((k) => openers.push({ label: 'shopcat:' + k, sel: null, shop: `#shopCats .shp-ct[data-cat="${k}"]` }));
+      /* 478 — «재화»·«이용권» 탭 바닥 청약철회 고지 띠의 [더보기] 가 여는 A5 팝업.
+         진입이 «상점 탭 → 카테고리 → [더보기]» 3단계라 위 수집에 안 걸린다(269·429 와 같은 자리). */
+      if (await page.$('#shopLegal'))
+        ['coin', 'pass'].forEach((k) => openers.push({ label: 'shoplegal:' + k, sel: null, legal: k }));
       /* 03 던전 페이지 서브탭(레이드 · 던전) — 던전 페이지를 연 뒤에만 보이는 2단계 오프너다(작업 46).
          «레이드» 칸은 DPS 측정 던전 카드 리스트로 갈아 끼운다. */
       await page.click('.tab[data-t="adv"]', { timeout: 3000, force: true }).catch(() => {});
@@ -299,6 +303,12 @@ function staticSyntax() {
             await page.waitForTimeout(300);
           }
           await page.evaluate((t) => document.querySelector(`.qs-tg b[data-t="${t}"]`).click(), o.quest);
+        } else if (o.legal) {
+          await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.evaluate((k) => document.querySelector(`#shopCats .shp-ct[data-cat="${k}"]`).click(), o.legal);
+          await page.waitForTimeout(400);
+          await page.evaluate(() => document.getElementById('lgMore').click());
         } else if (o.shop) {
           await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);

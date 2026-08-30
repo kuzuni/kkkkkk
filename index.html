@@ -2063,6 +2063,19 @@
   .mbody .cos269 p{font-size:35px;line-height:1.55}
   .mbody .cos269 p+p{margin-top:26px}
   .mbody .cos269 p em{font-style:normal;font-weight:900;color:#B4571E}
+  /* ── 478 청약철회 규정 본문 (2026-08-30 주인 지시로 신설된 팝업) ──
+     269 와 같은 처방 — 전용 래퍼 `.lgw` 로만 손댄다(`.mbody p` 는 A5 공용이라 못 건드린다).
+     ⚠ 여기만 **왼쪽 정렬**이다: 본문이 번호 목록(1~4)이라 가운데 정렬이면 번호가 안 선다.
+     크기는 A5 공용값(24px)을 그대로 쓴다 — 20문단이라 키우면 `.mbox` 상한을 한참 넘긴다
+     (넘쳐도 `.mbody{overflow-y:auto}` 가 받는다 = 스크롤이 설계된 자리다). */
+  .mbody .lgw{text-align:left}
+  .mbody .lgw p{line-height:1.6}
+  .mbody .lgw p+p{margin-top:20px}
+  /* 주인 원문의 `<color=#FFCC44>` (유니티 표기) 자리 — 08 규격 `<em>` 주황(#B4571E)과 다른 색이라
+     이 래퍼 안에서만 노랑으로 덮는다. 베이지 위 노랑은 대비가 낮아 검정 테를 한 겹 준다. */
+  /* 주인 원문에서 이 두 줄 앞은 빈 줄이 하나 더 있다(«/ / /») = 절 나눔이라 여백을 한 단 더 준다 */
+  .mbody .lgw p.y{color:#FFCC44;-webkit-text-stroke:3px #000;paint-order:stroke fill}
+  .mbody .lgw p+p.y{margin-top:44px}
   /* 본문이 2배가 되면서 «전투력 2,000,000,000 / 1,000,000,000,000» 같은 긴 조건이 두 줄로 접히는
      계급(플래티넘 이상)에서 `.mbox` 상한 1497px 을 10px 넘겼다. 글자를 도로 줄이는 대신
      **베이지 본문 패딩**(65/48 = A5 공용값)을 승급전에서만 줄여 자리를 만든다 — 41px 확보. */
@@ -5233,6 +5246,27 @@
      07 ref 의 «바 하단 → 바닥 42» 를 부품 값으로 따른다. 상변 1960 → 1961. */
   .shp-cats{position:absolute;left:45px;right:45px;bottom:42px}
 
+  /* ── 478 (2026-08-30 주인 지시) 청약철회 고지 띠 ──────────────────────────
+     «재화»·«이용권» 두 탭의 **바닥 고정** 띠다(리스트 마지막 항목 아래가 아니다 — 주인 캡처가
+     바닥 띠였다). 부품은 **하나**고 탭이 바뀌어도 노드는 그대로다(166 «한 곳» 규약) —
+     켜고 끄는 것은 `#shopw:has(.shp-list.coin|pass)` 뿐이라 소환 탭에서는 아예 안 그려진다.
+     ⚠ 띠는 스크롤 그릇(`.shp-list`) **밖**이라 마지막 카드를 덮을 수 있다 →
+     그 두 탭에서만 리스트 하변을 띠 위로 올린다(소환 탭 Δ0px · 카드 기하 Δ0px).
+     기하: 서브탭 바 상변 = 바닥 140(.shp-cats bottom 42 + .stabs 높이 98) ·
+           띠 하변 152 ⇒ 서브탭과 **12px** · 띠 높이 90(10 + 34×2 + 12) ⇒ 상변 242 ·
+           리스트 하변 256 ⇒ 띠와 **14px**(현행 «리스트 ↔ 서브탭 14» 와 같은 여유). */
+  .shop-legal{position:absolute;left:0;right:0;bottom:152px;z-index:2;display:none;
+    padding:10px 24px 12px;background:rgba(0,0,0,.55);text-align:center;
+    font-size:23px;line-height:34px;color:#fff}
+  #shopw:has(.shp-list.coin) .shop-legal,#shopw:has(.shp-list.pass) .shop-legal{display:block}
+  /* ⚠ 스코프를 `#shopw` 로 잡는 이유는 취향이 아니라 특이성이다 — 껍데기 리셋
+     `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block;text-decoration:none}`
+     이 1-0-1 이라 `.shop-legal i`(0-1-1)로는 못 이긴다(429 가 `.ol1~.ol5` 에서 겪은 스코프 함정). */
+  #shopw .shop-legal i{display:block;font-size:23px;line-height:34px;color:#fff}
+  /* 밑줄이 링크의 표시다 — 리셋의 `text-decoration:none` 을 이 자리에서만 되돌린다 */
+  #shopw .shop-legal u{color:#4FB3FF;text-decoration:underline;text-underline-offset:4px;
+    cursor:pointer;margin-left:10px}
+  .shp-list.coin,.shp-list.pass{bottom:256px}
 
   /* ==========================================================================
      89 유물 페이지 — «유물 소환 → 자동 강화» — 측정표 docs/measure/89-유물팝업.md
@@ -14875,6 +14909,11 @@
       <div class="pcb-p pcb-d" data-cur="dia"><i data-cur-slot="dia"></i><b>0</b></div>
     </div>
     <div class="shp-list" id="shopList"></div>
+    <!-- 478(2026-08-30 주인 지시): «재화»·«이용권» 탭 바닥 청약철회 고지 띠.
+         스크롤 그릇(#shopList) **밖**의 형제다 — 리스트를 굴려도 바닥에 붙어 있어야 한다.
+         두 탭이 같은 노드를 쓰고(166 «한 곳»), 소환 탭에서는 CSS 가 통째로 끈다.
+         문구는 `LEGAL_BAND` 한 곳에서 오고 게이트가 그 상수와 DOM 을 대조한다. -->
+    <div class="shop-legal" id="shopLegal"><i></i><i></i></div>
     <!-- 45(2026-08-25 주인 지시): 특별·일일/주간은 상품이 없어 제거. `소환 · 재화` 2개를 균등 배치하고
          ✦ 구분선은 바 중앙 1개만 남긴다. NEW 리본은 «특별» 칸을 가리키던 것이라 그 칸과 함께 제거. -->
     <!-- 124(2026-08-26 주인 지시): «이용권» 탭 신설 → 2칸을 3칸으로 나눈다(.sp2 → .sp3). -->
@@ -27999,6 +28038,66 @@ function jzShineA(hex){
   const L = .2126 * (v >> 16 & 255) + .7152 * (v >> 8 & 255) + .0722 * (v & 255);
   return Math.max(.08, Math.min(.85, JZ_SHINE / Math.max(24, 255 - L))).toFixed(3);
 }
+
+/* ── 478 (2026-08-30, 저장소 주인 지시) 상점 «재화»·«이용권» 탭 청약철회 고지 ─────────────
+   주인 원문: «상점 팝업 재화, 이용권 페이지 하단에 이 표시 있게해줘» + 레퍼런스 캡처
+   (검정 반투명 띠 · 흰 작은 글씨 2줄 가운데 정렬 · 끝에 파란 밑줄 «더보기» 링크).
+   ⚑ **문구는 여기 한 곳에만 적는다** — 띠도 팝업도 이 상수를 읽고, 게이트(`tools/verify478.js`)가
+   상수 ↔ DOM 을 대조한다. 문구를 두 벌로 적으면 한쪽만 고쳐지고 그게 곧 부패다(333 교훈).
+   주인 원문의 표기 규약을 그대로 옮겼다: `''` = 빈 줄(문단 나눔) · 앞의 `*` = `<color=#FFCC44>`(노랑).
+   문단 **안**의 줄바꿈은 `<br>` 로 살린다(메일 안내 2줄이 그 자리다). */
+const LEGAL_TITLE = '청약철회 규정';
+const LEGAL_MORE  = '더보기';
+/* 띠 2줄 — 본문 첫 문단과 **같은 두 줄**이다(주인 캡처가 그렇다). 본문에서 잘라 쓰지 않고
+   따로 적으면 두 벌이 되므로, 아래 본문 배열의 앞 두 줄을 그대로 읽는다. */
+const LEGAL_WITHDRAW = [
+  '청약철회는 구매일로부터 7일 이내 가능합니다.',
+  '(단, 사용했을 경우 청약철회 불가)',
+  '',
+  'rudwpwjrwkdb1995@gmail.com 으로 메일 접수하실 수 있으며,',
+  '메일 접수 시 닉네임과 철회하고자 하는 상품의 GPA번호를 보내주시면 됩니다.',
+  '',
+  '*다음과 같은 경우는 청약철회가 제한됩니다.',
+  '',
+  '1. 결제 시 지급되는 상품(재화, 포인트, 마일리지, 아이템 등)의 일부를 사용한 경우',
+  '',
+  '2. 묶음형으로 판매된 아이템의 일부가 사용된 경우',
+  '',
+  '3. 재화 사용 후 이벤트 등으로 얻은 재화로 다시 재화를 채워놓은 경우',
+  '',
+  '4. 구매 후 효력이 즉시 발생되고 해당 효력을 이용하여 게임을 이용한 경우',
+  '',
+  '*미성년자 보호',
+  '',
+  '미성년자가 법정대리인의 동의 없이 콘텐츠 구매를 한 경우, 본인 또는 법정대리인이 계약을 취소할 수 있습니다.(단, 계약 취소 시 게임 이용에 제한이 있을 수 있습니다.)',
+  '',
+  '다만, 미성년자가 법정대리인이 허락한 재산의 범위 내에서 구매했거나 속임수로 성년자로 믿게 한 경우에는 취소가 불가합니다.',
+  '',
+  '계약 취소 시 미성년자와 법정대리인임을 증명할 서류 제출을 요청할 수 있습니다.'
+];
+const LEGAL_BAND = [LEGAL_WITHDRAW[0], LEGAL_WITHDRAW[1]];
+/* 빈 줄로 문단을 끊고, 문단 안 줄바꿈은 `<br>` 로 살린다. `*` 줄은 노랑 문단(`.y`). */
+function legalBodyHtml(){
+  const gs = [];
+  LEGAL_WITHDRAW.forEach(t => {
+    if(!t){ if(gs.length && gs[gs.length - 1].length) gs.push([]); return; }
+    if(!gs.length) gs.push([]);
+    gs[gs.length - 1].push(t);
+  });
+  return '<div class="lgw">' + gs.filter(p => p.length).map(p => {
+    const y = p[0].charAt(0) === '*';
+    const ls = y ? [p[0].slice(1)].concat(p.slice(1)) : p;
+    return '<p' + (y ? ' class="y"' : '') + '>' + ls.join('<br>') + '</p>';
+  }).join('') + '</div>';
+}
+/* 목업이 아니다(기능 완성 규칙) — A5 공용 `popup()` 으로 실제로 열리고, 본문이 길어
+   `.mbody{overflow-y:auto}` 가 세로 스크롤을 받는다(`.mbox{max-height:min(1497px,100%)}` = 423 규약). */
+function openLegalWithdraw(){ popup(LEGAL_TITLE, legalBodyHtml()); }
+$('shopLegal').innerHTML = '<i>' + LEGAL_BAND[0] + '</i><i>' + LEGAL_BAND[1]
+  + '<u id="lgMore">' + LEGAL_MORE + '</u></i>';
+$('shopLegal').addEventListener('click', e => {
+  if(e.target.closest('#lgMore')) openLegalWithdraw();
+});
 
 function renderShopPage(){
   const list = $('shopList');
