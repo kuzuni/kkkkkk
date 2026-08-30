@@ -61,6 +61,22 @@ const STEPS = [
 
   const ev = f => page.evaluate(f).catch(() => {});
   const wait = ms => page.waitForTimeout(ms);
+  /* ⚑ 1회차 비평(BM·BN 2인 독립 일치) — **세 칸이 빈 채로 채점에 나갔다**(05 던전 카드 · 16 [일괄 강화] ·
+     17 스킬 카드). 둘 다 그 셋을 «가장 나쁜 자리» 로 꼽았는데 결함은 제품이 아니라 **이 자였다** —
+     그 닷들은 조건이 맞을 때만 노드가 찍히는데 캡처가 조건을 안 만들었다. 351lib 이 여러 회차에 걸쳐
+     배운 것과 같은 사고(«조용한 실패가 채점에 그대로 실린다»)라 같은 처방을 쓴다:
+     **호스트를 점등 상태로 만들고, 노드가 없으면 만들어 준다. 못 만들면 소리 내어 건너뛴다.** */
+  const arm = (hostSel, cls) => page.evaluate(([s, c]) => {
+    const hs = [...document.querySelectorAll(s)];
+    hs.forEach(h => {
+      h.classList.add('alert');
+      if (!h.querySelector(':scope > .' + c)) {
+        const e = document.createElement('s'); e.className = c; h.appendChild(e);
+      }
+    });
+    return hs.length;
+  }, [hostSel, cls || 'updot']).then(n => { if (!n) console.log('  ⚠ arm 실패 — ' + hostSel + ' 0개'); })
+    .catch(() => console.log('  ⚠ arm 예외 — ' + hostSel));
 
   console.log('CAP471 — ' + R + '회차 대조 캡처\n');
   await ev(() => { document.querySelectorAll('#tabbar .tab').forEach(t => t.classList.add('alert')); });
@@ -76,6 +92,8 @@ const STEPS = [
   await ev(() => { document.querySelectorAll('#dunw .stab').forEach(t => t.classList.add('alert')); });
   await wait(200);
   await grab('04 03 던전 서브탭', '#dunw .stab', '');
+  await arm('#dunw .dns-list .dnc', 'dot');
+  await wait(200);
   await grab('05 03 던전 카드', '#dunw .dnc', '');
   await ev(() => { if (typeof closeDungeon === 'function') closeDungeon(); });
   await wait(200);
@@ -126,14 +144,21 @@ const STEPS = [
 
   await ev(async () => { goTab('hero', true); heroSubGo('eq'); });
   await wait(600);
+  await arm('#bEq .eqsl,.eqsl');
+  await wait(250);
   await grab('15 06 장비 슬롯', '.eqsl', '');
   await ev(async () => { heroSubGo('sk'); });
   await wait(600);
-  await grab('16 07 [일괄 강화] 버튼', '.sk-btn', '');
+  await arm('#bSk .sk-btn');
+  await arm('#bSk .sk-card');
+  await wait(250);
+  await grab('16 07 [일괄 강화] 버튼', '#bSk .sk-btn', '');
   await grab('17 07 스킬 카드', '#bSk .sk-card', '예외 — 코너가 .sk-eq 자리');
 
   await ev(async () => { openPass('stage'); });
   await wait(600);
+  await arm('#psTk .ps-bx');
+  await wait(250);
   await grab('18 35 패스 보상 칸', '#psTk .ps-bx', '');
   await grab('19 35 패스 하단 탭', '#psBar .pt', '예외 — 프레임 변');
   await ev(() => closePass());

@@ -103,7 +103,9 @@ const probe = (file) => {
   /* ── [D] 선언 위생 ── */
   const dup = (src.match(/\.ifbtn\.pbtn>\.updot\{/g) || []).length;
   ok(dup === 0, '[D] `.ifbtn.pbtn>.updot` 좌표 선언 0건 (471 ③ — 이중 선언을 지웠다)', dup + '건');
-  const formula = (src.match(/var\(--dot-in\) - var\(--dot-r\) - var\(--dot-bw,0px\)/g) || []).length;
+  /* 1회차 비평 이후 축이 갈렸다 — 가로만 예외로 미는 자리가 있어 `--dot-in-x`/`--dot-in-y` 가
+     `--dot-in` 을 폴백으로 받는다. 식 자체는 여전히 한 규칙에만 있다. */
+  const formula = (src.match(/var\(--dot-in-[xy],var\(--dot-in\)\) - var\(--dot-r\) - var\(--dot-bw,0px\)/g) || []).length;
   ok(formula === 2, '[D] 규약식(right/top)이 한 규칙에만 있다', formula + '회(= 한 규칙의 right·top)');
   ok(/\.ifbtn\{--dot-bw:var\(--gb-bw\)\}/.test(src),
     '[D] `.ifbtn` 은 자기 테두리(`--gb-bw`)를 읽는다 — 버튼마다 6/7 이 저절로 따라온다');
