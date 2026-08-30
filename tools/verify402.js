@@ -237,8 +237,11 @@ const fills = (txt) => [...txt.matchAll(/fill="(#[0-9A-Fa-f]{6})"/g)].map((m) =>
     ok(rw <= 1.05 && rh <= 1.05,
        'B10 문양 잉크 덩치가 한 세트다(최대÷최소 ≤ 1.05 — 411 이 세운 눈금)',
        'w ' + rw.toFixed(3) + ' · h ' + rh.toFixed(3) + ' · ' + ws[0].toFixed(1) + '×' + hs[0].toFixed(1));
-    const offBad = ALL8.filter((n) => Math.abs(BOX[n].cx - 32) > 1 || Math.abs(BOX[n].cy - 35.5) > 1);
-    ok(offBad.length === 0, 'B11 문양 중심이 8장 같은 자리다 (32, 35.5) ±1',
+    /* 433(2026-08-30): 중심 y 35.5 → **35** — 보이는 밝은 속띠(23..47)의 한가운데다.
+       ⚠ 이 항은 «8장이 같은 자리인가» 만 묻는다. «그 자리가 맞는 자리인가»(획까지 포함한 그려진 잉크가
+          몸통 안에 대칭으로 들어가는가)는 tools/verify433.js 가 따로 잰다 — getBBox 는 획을 안 세기 때문이다. */
+    const offBad = ALL8.filter((n) => Math.abs(BOX[n].cx - 32) > 1 || Math.abs(BOX[n].cy - 35) > 1);
+    ok(offBad.length === 0, 'B11 문양 중심이 8장 같은 자리다 (32, 35) ±1',
        offBad.length ? offBad.map((n) => n + ' (' + BOX[n].cx.toFixed(1) + ',' + BOX[n].cy.toFixed(1) + ')').join(', ')
                      : '8/8');
   }

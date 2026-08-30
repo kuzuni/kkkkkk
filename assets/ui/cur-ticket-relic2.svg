@@ -6,11 +6,16 @@
           색상환 이웃 넷(연두↔청록↔하늘↔청록2)이 «파랑 계열 넷» 으로 읽혔다(주인 «여전히 비슷함»).
        430 은 **이름이 색을 정한다**: 이 장 = 잊힌 신전 → «회색» · 채움 #85858B · 테 #3A3A40(같은 색상의 어두운 짝).
        명도도 축이다 — 8장의 L* 를 29.5~100 에 **최소 8 간격**으로 벌려 회색조(색각 이상·저해상도)에서도 갈린다.
-       속 문양은 «룬 석판» — 412 의 8종 실루엣·bbox 21×21·중심 (32,35.5) **그대로**(bbox Δ0).
+       속 문양은 «룬 석판» — 412 의 8종 실루엣·bbox 21×21 **그대로**(bbox Δ0) · 중심 (32,**35**)
+            — 433(2026-08-30)이 35.5 에서 **0.5 올렸다**: 보이는 밝은 속띠는 23..47 이고(검은 테 y45..49 의
+            안쪽 반을 속띠 path 가 나중에 덮어 그린다) 그 한가운데가 **35** 인데 문양이 35.5 에 앉아 있었다.
+            선언 21 에 획 1.6 이 붙어 «그려진 잉크» 는 22.6 이라 슬랙이 1.31 뿐 — 0.5 쏠림이 아래 여유를
+            **0.13** 으로 만들어 어두운 장의 문양 외곽선이 검은 테에 붙어 밑변이 잘려 보였다(위 1.19 ↔ 아래 0.13).
+            자는 tools/probe433.js·tools/verify433.js — «선언 bbox» 가 아니라 **획까지 포함해 그려진 잉크**를 잰다.
        문양 잉크는 흰색(opacity .92) · 외곽선·세부 획은 그 장의 테색 — 412 규격 그대로(획은 늘 잉크의 반대쪽 색).
        게이트 tools/verify430.js 가 색이름 구간·ΔE·회색조 간격·문양 대비를, tools/verify402.js [B] 가 기하·문양을 잰다. -->
   <path d="M4 17h56v10a5 5 0 0 0 0 10v10H4V37a5 5 0 0 0 0-10z" fill="#3A3A40" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
   <path d="M10 23h44v5.5a7 7 0 0 0 0 13V47H10v-5.5a7 7 0 0 0 0-13z" fill="#85858B"/>
-  <path d="M23.5 25h17a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2h-17a2 2 0 0 1-2-2V27a2 2 0 0 1 2-2z" fill="#FFFFFF" opacity=".92" stroke="#3A3A40" stroke-width="1.6" stroke-linejoin="round"/>
-  <path d="M26.5 31h11M26.5 36h11M26.5 41h6.5" stroke="#3A3A40" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M23.5 24.5h17a2 2 0 0 1 2 2v17a2 2 0 0 1-2 2h-17a2 2 0 0 1-2-2V26.5a2 2 0 0 1 2-2z" fill="#FFFFFF" opacity=".92" stroke="#3A3A40" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M26.5 30.5h11M26.5 35.5h11M26.5 40.5h6.5" stroke="#3A3A40" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

@@ -159,8 +159,9 @@ const dh = (a, b) => { let d = Math.abs(hue(a) - hue(b)); return d > 180 ? 360 -
   ok(Math.max(...ws) / Math.min(...ws) <= 1.05 && Math.max(...hs) / Math.min(...hs) <= 1.05,
      '④-a 잉크 덩치 최대÷최소 ≤ 1.05 (411 이 세운 자와 같은 눈금)',
      'w ' + (Math.max(...ws) / Math.min(...ws)).toFixed(3) + ' · h ' + (Math.max(...hs) / Math.min(...hs)).toFixed(3));
-  ok(KEYS.every((k) => Math.abs(box[k].cx - 32) <= 1 && Math.abs(box[k].cy - 35.5) <= 1),
-     '④-b 8장의 문양 중심이 같은 자리다 (32, 35.5) ±1',
+  /* 433(2026-08-30): 중심 y 35.5 → **35**(속띠 23..47 의 한가운데). */
+  ok(KEYS.every((k) => Math.abs(box[k].cx - 32) <= 1 && Math.abs(box[k].cy - 35) <= 1),
+     '④-b 8장의 문양 중심이 같은 자리다 (32, 35) ±1',
      KEYS.map((k) => box[k].cx + ',' + box[k].cy).join(' · '));
 
   blk('⑤ 회색조 — 색이 먼저 죽는 최악 경우');
