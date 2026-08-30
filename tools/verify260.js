@@ -150,12 +150,8 @@ const ok = (b, name, detail) => {
   /* ── [C] 스킬 ───────────────────────────────────────────── */
   const C = await page.evaluate(max => {
     /* stat.dps 가 실제로 쓰는 식 그대로 — 등급 안 상대 비교라 gWear·lvWear 는 약분된다 */
-    const dpsOf = s => {
-      const hits = s.id === 'shuri' ? 8 : s.id === 'bolt' ? 3
-                 : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi') / 2), 9)
-                 : s.hits || 1;
-      return s.cd > 0 ? s.m * hits / s.cd : s.m * 3;
-    };
+    /* 504 — 제품의 발수 입구를 그대로 부른다(사슬을 베껴 적지 않는다) */
+    const dpsOf = s => s.cd > 0 ? s.m * skillHits(s) / s.cd : s.m * skillHits(s);
     const rows = [];
     GRADE.forEach((_, g) => {
       const t = SKILLS.filter(s => s.g === g && !s.sup);

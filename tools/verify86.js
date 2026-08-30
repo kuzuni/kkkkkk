@@ -85,13 +85,11 @@ const OLD = { slash:[0,0.85,1.564], shuri:[0,2.20,0.506], multi:[1,1.10,0.675], 
   ok(st.old.length === 13 && !bad.length, '기존 13종 id·등급·cd·m 불변 (어긋남 ' + bad.length + '건)');
 
   /* 260(2026-08-27, 주인 지시) 회귀 방지 — 스킬은 «오름차순» 이 아니라 «등급 안 세기 편차» 를 본다.
-     척도는 stat.dps 가 쓰는 식 그대로(m × hits / cd, cd 0 은 m × 3), 상한 3.0. 상세는 verify260 [C]. */
+     척도는 stat.dps 가 쓰는 식 그대로(m × skillHits / cd, cd 0 은 m × skillHits), 상한 3.0.
+     상세는 verify260 [C] · 발수 축의 주인은 504(`tools/verify504.js`). */
   const spread = await p.evaluate(() => {
-    const dpsOf = s => {
-      const hits = s.id === 'shuri' ? 8 : s.id === 'bolt' ? 3
-                 : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi') / 2), 9) : s.hits || 1;
-      return s.cd > 0 ? s.m * hits / s.cd : s.m * 3;
-    };
+    /* 504 — 제품의 발수 입구를 그대로 부른다(사슬을 베껴 적지 않는다) */
+    const dpsOf = s => s.cd > 0 ? s.m * skillHits(s) / s.cd : s.m * skillHits(s);
     return GRADE.map((_, g) => SKILLS.filter(s => s.g === g && !s.sup))
       .filter(t => t.length > 1)
       .map((t, i) => { const d = t.map(dpsOf); return { g: t[0].g, r: Math.max(...d) / Math.min(...d) }; });

@@ -88,9 +88,8 @@ const SNAPS = [
       S.eqSkill.forEach(id => {
         const s = SK[id]; if (!s || s.sup) return;
         const dmgOld = stat.dmg * atkOldF * s.m * GRADE[s.g].mul * oldLvMul(oLv(s.id));
-        const hits = s.id === 'shuri' ? 8 : s.id === 'bolt' ? 3
-                   : s.id === 'multi' ? Math.min(3 + Math.floor(oLv('multi') / 2), 9) : s.hits || 1;
-        dpsOld += s.cd > 0 ? dmgOld * hits / (s.cd / Math.max(0.35, rateNow / 1.4)) : dmgOld * 3;
+        const hits = skillHits(s);   /* 504 — 제품의 발수 입구 하나 */
+        dpsOld += s.cd > 0 ? dmgOld * hits / (s.cd / Math.max(0.35, rateNow / 1.4)) : dmgOld * hits;
       });
       S.eqPet.forEach(id => {
         const p = PT[id]; if (!p) return;

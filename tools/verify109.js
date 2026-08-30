@@ -34,17 +34,19 @@ const FILE = 'file://' + SRC;
 /* 109 가 고친 5종과 설계 발수(주석·`hits` 와 일치해야 한다) */
 /* 193(2026-08-27) — 신설 8종 중 `cnt`(발사 수/소환 수)를 가진 7종을 표에 이어 적는다.
    ⚠ `hits`(전투력 추정용 «한 번 시전하면 몇 대 맞나»)와 `cnt` 는 **원래 같지 않아도 되는 수**다.
-   109 시절엔 «볼리 = 발수 = 타격 수» 인 5종뿐이라 우연히 같았을 뿐이다. 193 이 그 등식이
-   성립하지 않는 4종을 들여왔으므로 **예외를 표로 못박고** 나머지에만 등식을 건다:
-     whirl  8발 링 참격이지만 한 적이 실제로 받는 것은 ≈2발  → hits 2
-     bounce 1발이 4번 도약해 최대 5대                        → hits 5
-     drone  드론 2기 × 8발 연사                              → hits 16
-     flask  1병이 만드는 «불 장판» 의 총 틱 수(4.5s ÷ 0.4s ×0.4) → hits 4.5 */
+   109 시절엔 «볼리 = 발수 = 타격 수» 인 5종뿐이라 우연히 같았을 뿐이고, 193 이 그 등식이
+   성립하지 않는 4종(whirl·bounce·drone·flask)을 들여왔다.
+   ⚑ **504(2026-08-30)가 등식을 통째로 폐기했다** — `hits` 는 이제 «실제 판에서 발동 1회가
+   내는 총 타격 수»(실측)이고 `cnt` 는 «발사체 수»(설계)다. 둘은 **어느 쪽으로도 클 수 있다**:
+   관통·장판은 발사체 하나가 여러 적을 지나가 `hits > cnt`(lance 3발 → 4.50), 링형은 사방으로
+   뿌리므로 빈 방향의 발이 아무도 못 맞혀 `hits < cnt`(gale 12발 → 9.92)다.
+   ⇒ 아래 두 항은 «등식» 대신 **①「여러 적에 닿는 구조를 가진 종은 hits > 1」**(504 가 고친 결함이
+   정확히 그 자리다 — nova·holy·meteor·boom 이 «한 적» 기준 1 로 적혀 있었다) **②「선언 빈칸 0」**
+   을 본다. `cnt` 자체는 109·193 의 설계값이고 504 가 한 글자도 안 건드렸다(위 두 표가 본다). */
 const CNT = { stone: 1, arrow: 2, frost: 4, gale: 12, lance: 3 };
 /* 193 이 들여온 `cnt` 보유 7종. **`CNT` 는 건드리지 않는다** — 109 의 이름·53 가방·08 제목 절이
    «중복 키 n 에 이름이 숫자로 덮였던 바로 그 5종» 을 지목하는 표라서다(회귀의 원본 표본). */
 const CNT193 = { curve: 2, whirl: 8, rico: 2, spiral: 6, bounce: 1, drone: 2, flask: 1 };
-const HITS_NE_CNT = { whirl: 2, bounce: 5, drone: 16, flask: 4.5 };
 
 const R = [];
 const eq = (n, got, want) => R.push({ n, got: String(got), want: String(want), pass: String(got) === String(want) });
@@ -178,10 +180,15 @@ const probeNames = () => {
   Object.keys(CNT193).forEach(id => eq('발수(193) · ' + id + '.cnt', cnts[id], CNT193[id]));
   eq('발수 · cnt 를 가진 스킬 수', Object.keys(cnts).length,
      Object.keys(CNT).length + Object.keys(CNT193).length);
-  yes('발수 · `hits` 와 `cnt` 일치(예외 4종 제외)', await p.evaluate((exc) =>
-    SKILLS.filter(s => s.cnt !== undefined && !(s.id in exc)).every(s => s.hits === s.cnt), HITS_NE_CNT));
-  yes('발수 · 예외 4종의 `hits` 가 설계표와 일치(193)', await p.evaluate((exc) =>
-    Object.keys(exc).every(id => SK[id] && SK[id].hits === exc[id]), HITS_NE_CNT));
+  /* 504 — 관통 2 이상 · 링 · 장판 · 빔 · 범위는 **구조적으로** 여러 적에 닿는다. 그런 종이
+     `hits <= 1` 로 적혀 있으면 누군가 «한 적이 받는 수» 규약으로 되돌린 것이다(그것이 504 가
+     고친 결함이다 — nova·holy·meteor·boom 이 1 이었다). 옛 예외표 HITS_NE_CNT 는 그 잔재라 지웠다. */
+  yes('발수 · 여러 적에 닿는 구조(pierce≥2·ring·장판·빔·범위)는 `hits` > 1 — «한 적» 규약 잔재 0건',
+    await p.evaluate(() => SKILLS
+      .filter(s => (s.pierce >= 2) || s.ring || s.zk || s.dur || s.r !== undefined)
+      .every(s => (s.hits || 0) > 1)));
+  yes('발수 · `cnt` 를 가진 종 전부 `hits` 선언이 있다(빈칸이면 모델이 조용히 1 로 떨어진다)',
+    await p.evaluate(() => SKILLS.filter(s => s.cnt !== undefined).every(s => typeof s.hits === 'number' && s.hits > 0)));
 
   /* castGeneric 실사격: 적을 하나 놓고 스킬별로 쏜 뒤 shots/bolts 증가분을 센다 */
   const fired = await p.evaluate(ids => {
