@@ -73,7 +73,7 @@ const SCENES = {
     await p.waitForTimeout(500);
 
     const sel = sc.rate != null
-      ? '#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]'
+      ? '#trRunes .tr-rn[data-rune="r1"] .rbt.b1'
       : '#trCards [data-tr="atk"]';
     const bb = await p.locator(sel).first().boundingBox();
     const cb = await p.locator('#trw .tr-box').first().boundingBox();

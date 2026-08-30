@@ -154,7 +154,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   await p.waitForTimeout(450);
   console.log('[A] 룬 [강화] 재료칸 홀드 ' + HOLD + 'ms (rtRuneHold)');
   await reset();
-  const cA = await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]');
+  const cA = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
   if (cA) await holdTouch(cA, HOLD);
   const A = await stats(['runeBuy'], '.tr-rn[data-rune="r1"]');
   const perA = row('룬 강화', A);

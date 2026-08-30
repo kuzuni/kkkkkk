@@ -316,7 +316,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   await p.waitForTimeout(450);
   const HTS = [700, 1400, 2200, 3000];
   const hb = await (async () => {
-    const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]');
+    const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
     const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
     const t0 = Date.now(); const rows = [];
     for (const t of HTS) {
