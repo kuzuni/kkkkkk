@@ -29457,6 +29457,10 @@ $('shopList').addEventListener('click', e => {
     }else{
       /* 204 입장권과 같은 처리 — 우편 스키마에 자리가 없는 재화는 즉시 지급하고 58 연출로 보여 준다 */
       S[ex.k] = (S[ex.k] || 0) + n;
+      /* 518 3회차 — «여기서 났다» 를 화면이 **알려 준다**. 안 알려 주면 fxSrc 가 «마지막으로 누른
+         버튼» 을 추측으로 집는데, 10 상점은 페이지형(z28)이라 3회차부터 «덮는 층» 이다 ⇒ 추측
+         발원은 페이지 아래로 내려가 **진짜 보상이 안 보이게** 된다(probe518p 표의 «재화 O + 발원 X»). */
+      fxAt(ex0);
       fxReward();
     }
     uiDirty = true; save();
@@ -29478,6 +29482,7 @@ $('shopList').addEventListener('click', e => {
     if(S.dia < pr){ notify(curIc('dia') + ' <b>' + fmt(pr - S.dia) + '</b> 더 필요합니다'); return; }
     S.dia -= pr;
     S.dunTk[d.id] = (S.dunTk[d.id] | 0) + 1;
+    fxAt(dx);                                 /* 518 3회차 — 위 §9 교환과 같은 이유(아는 발원) */
     fxReward();                               /* 58 — 다른 교환·수령과 같은 피드백 */
     uiDirty = true; save();
     renderCoinPage($('shopList'));
@@ -29500,6 +29505,9 @@ $('shopList').addEventListener('click', e => {
   if(!a || adLeft(a) <= 0) return;
   if(!S.daily.adBuy) S.daily.adBuy = {};
   S.daily.adBuy[a.id] = adLeft(a) - 1;
+  /* 518 3회차 — 광고 상품 수령은 «이 버튼이 줬다» 가 분명한 자리다. 위 두 교환과 같은 이유로
+     발원을 알려 준다(안 알려 주면 페이지형 «덮는 층» 판정에 걸려 보상 연출이 페이지 아래로 묻힌다). */
+  fxAt(b);
   let got = '';
   if(a.r.dia){ S.dia += a.r.dia; got = curIc('dia') + ' ' + fmt(a.r.dia); }
   if(a.r.rel){ S.relic += a.r.rel; got = curIc('relic') + ' ' + fmt(a.r.rel); }
@@ -33835,18 +33843,33 @@ function fxZOf(el){
   const v = el ? parseInt(getComputedStyle(el).zIndex, 10) : NaN;
   return Number.isFinite(v) ? v : 0;
 }
+/* 518 3회차 — 자를 «프레임의 90%» 에서 **«전투 화면(#stagearea)의 90%»** 로 바꿨다.
+   2회차 전수 스윕이 그물 밖에 셋을 남겼다: 03 던전 `#dunw` · 10 상점 `#shopw` · 89 유물 `#relw`
+   (전부 z28 «(다) 전체화면 페이지»). 실측 1080×1996 @ y104 = 프레임의 **87.5%** 라 90% 문턱을
+   2.5%p 차이로 못 넘었는데, 못 넘은 이유는 이 셋이 **상단 HUD(0..104)와 탭바(2100..2280)를 안 덮기**
+   때문이고 그 두 띠는 애초에 전투 화면이 아니다. ⇒ 문턱을 낮추는 대신(그러면 «얼마나 낮출까» 가
+   임의값이 된다) **무엇의 90% 인가**를 고쳤다: 추측 발원을 못 믿게 만드는 것은 «프레임이 가려짐» 이
+   아니라 «**전투 화면이 가려짐**» 이다(가려지지 않은 전투 화면 위라면 그 코인은 갈 곳이 있다).
+   검산 — 이 자를 바꿔도 종전에 세던 층은 한 개도 안 빠진다(전부 전투 화면 100% 덮음: modal·collw·
+   blsw·rkw·bagw·svw·eqw·trw …) · `#tabbar`(z10)는 종전처럼 안 센다(전투 화면 겹침 **0%**). */
 let fxCovF = -1, fxCovC = false;
-function fxCovered(){                                 /* 지금 화면을 덮는 층(팝업·시트·딤)이 있는가 */
+function fxCovered(){                                 /* 지금 «전투 화면» 을 덮는 층(팝업·시트·페이지)이 있는가 */
   if(fxCovF === fxFrame) return fxCovC;               /* 프레임당 1회만 — 레이아웃 스래싱 방지 */
   fxCovF = fxFrame; fxCovC = false;
   const app = $('app'); if(!app) return false;
+  const st = fxRect($('stagearea'));
   for(const n of app.children){
-    if(n.id === 'fxl' || n.id === 'fxlc') continue;
+    if(n.id === 'fxl' || n.id === 'fxlc' || n.id === 'stagearea') continue;
     if(fxZOf(n) <= 7) continue;                       /* #fxlc(z7) 아래·같은 층은 «덮는 층» 이 아니다 */
     const cs = getComputedStyle(n);
     if(cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) continue;
     const r = fxRect(n);                              /* 프레임 px — 화면 배율은 fxRect 가 되돌린다 */
-    if(r && r.w >= FRAME_W * 0.9 && r.h >= frameH * 0.9){ fxCovC = true; break; }
+    if(!r) continue;
+    if(st && st.w > 0 && st.h > 0){
+      const ix = Math.max(0, Math.min(r.x + r.w, st.x + st.w) - Math.max(r.x, st.x));
+      const iy = Math.max(0, Math.min(r.y + r.h, st.y + st.h) - Math.max(r.y, st.y));
+      if(ix * iy >= st.w * st.h * 0.9){ fxCovC = true; break; }
+    }else if(r.w >= FRAME_W * 0.9 && r.h >= frameH * 0.9){ fxCovC = true; break; }  /* 폴백(전투 화면을 못 재는 순간) */
   }
   return fxCovC;
 }
