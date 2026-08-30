@@ -469,12 +469,31 @@ const PROJ = ['slash', 'multi', 'shuri', 'ice', 'boom', 'boomer', 'meteor',
      114 가 지키려던 것은 «연출이 스킬 표를 흔들지 않는다» 이므로 수치만 193 으로 이관한다. */
   ok(bal.len === 27 && bal.dist.join() === '4,4,5,5,5,4',
      'SKILLS 27종 · 등급 분포 [4,4,5,5,5,4] 불변 (193 도감·확률표 호환)');
-  const OLDM = { slash:[1.00,0.85], boom:[2.40,2.00], meteor:[5.00,4.00], holy:[4.00,3.00], nova:[5.20,3.60] };
+  /* 폭발 계열 5종의 [m, cd] — ⚑ 508(2026-08-30) 재정박.
+     114 가 지키는 것은 «연출(114)이 스킬 표를 흔들지 않는다» 이고, 그 축은 **쿨타임**이다(연출 길이가
+     쿨을 밀면 즉시 빨개진다). `m` 은 밸런스 값이라 뒤에 온 작업이 옮길 수 있고, 실제로 둘이 옮겼다:
+       · **484**(주인 확정 «같은 등급 DPS 동일 + 등급 ×3») — 27종의 `m` 을 통째로 재계산
+       · **504**(T1 «자 문제») — `hits` 선언이 실측과 최대 14.2배 어긋난 것을 고치자 `m` 이 따라 이동
+     ⇒ 두 축을 **한 단언에 묶어 두었던 것이 부패의 뿌리**였다(`m` 이 움직이면 «쿨이 밀렸다» 까지 같이
+        빨개져 어느 쪽이 깨졌는지 알 수 없었다). 508 이 둘로 가른다 — 쿨은 114 의 것, `m` 은 등재값이다.
+     ⚠ `m` 축의 주인은 `tools/verify484.js`(SK_DPS_REF 6.49) · 발수 축의 주인은 `tools/verify504.js` 다.
+        여기 값이 제품에서 다시 움직이면 «누가 옮겼는지» 를 이 주석에 한 줄 더 적는 것이 갱신 방법이다
+        (verify86 이 260 → 484 → 504 로 세 번 적어 둔 방식이 선례). */
+  const OLDCD = { slash:0.85, boom:2.00, meteor:4.00, holy:3.00, nova:3.60 };
+  const OLDM  = { slash:5.5165, boom:3.2049, meteor:2.5476, holy:2.0495, nova:1.6465 };
+  const cdBad = Object.keys(OLDCD).filter(id => {
+    const row = bal.m.find(r => r[0] === id);
+    return !row || row[2] !== OLDCD[id];
+  });
+  ok(cdBad.length === 0, '폭발 계열 쿨타임 불변 — 연출이 스킬 표를 안 흔든다 (어긋남 ' + cdBad.length + '건'
+     + (cdBad.length ? ': ' + cdBad.join(',') : '') + ')');
   const mBad = Object.keys(OLDM).filter(id => {
     const row = bal.m.find(r => r[0] === id);
-    return !row || row[1] !== OLDM[id][0] || row[2] !== OLDM[id][1];
+    return !row || row[1] !== OLDM[id];
   });
-  ok(mBad.length === 0, '폭발 계열 피해 계수·쿨 불변 (어긋남 ' + mBad.length + '건)');
+  ok(mBad.length === 0, '폭발 계열 피해 계수 = 484·504 등재값 (어긋남 ' + mBad.length + '건'
+     + (mBad.length ? ': ' + mBad.map(id => id + ' 기대 ' + OLDM[id] + ' 실측 '
+        + (bal.m.find(r => r[0] === id) || [])[1]).join(',') : '') + ')');
 
   /* ---------------- [8] 성능 ----------------
      237(2026-08-27) — 판정을 «절대 fps» 에서 내렸다. 이 클라우드 러너는 크로미움이 소프트웨어 렌더라

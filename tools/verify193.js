@@ -4,14 +4,16 @@
 
    [1] 구조   — 27종 · 등급 분포 [4,4,5,5,5,4] · 버프 5종 부재 · 신설 8종 존재 ·
                 기존 19종 (a) id·등급·cd 불변 = 구 세이브 호환 ·
-                          (b) `m` 이동은 등재분(260)뿐 = 밸런스 이력이 게이트에 남는다
+                          (b) `m` 이동은 등재분(260·484·504)뿐 = 밸런스 이력이 게이트에 남는다
    [2] 기능   — 신설 8종 각각 «시전 → 무엇이 생기고 적이 얼마나 깎이는가» 헤드리스 실측 +
                 **8종 고유 메커니즘**을 수치로 확인(휨 각속도 · 나선 반경 증가 · 벽 반사 ·
                 적→적 도약 · 드론 2기 연사 · 빔 축 · 착탄 장판 · 링 발사 반경)
    [3] 준수   — 185(넉백 폐지): 신규 8종 시전 중 적 변위 0 · 184(풀스크린 플래시 폐지):
                 신규 8종이 `cam.flash`/전면 오버레이를 만들지 않는다
+                (507 — [전제 p1] 스킬 없는 대조군 0px · [전제 p2] 2.5px 를 밀면 자가 본다)
    [4] 저장   — 버프 5종을 들고 있던 구 세이브가 후임 스킬로 이관(레벨·보유 수 보존, 멱등, 중복 제거)
-   [5] 밸런스 — 신규 8종의 «등급 정규화 피해»가 같은 등급 기존 스킬의 실측 범위 안
+   [5] 밸런스 — 신규 8종의 **선언 DPS**(`m × skillHits() / cd`)가 같은 등급 기존 스킬과 ±5% 안
+                (507 — 484·504 이후 «같은 것» 은 DPS 다. 총 피해 축은 등급 안에서 8.2배 갈린다)
    [6] 파급   — 04 격자 27장(5×6) · 도감 스킬 세트 6개/구성원 27 · 11 확률 27행 ·
                 시전음 매핑 8종 · 콘솔 에러 0 */
 const { pw, launch } = require('./pwlaunch');
@@ -51,14 +53,43 @@ const KEEP = {
 /* 193 이후 기존 19종의 `m` 을 옮긴 작업 — id: [옮긴 값, 근거].
    작업 260(2026-08-27, 저장소 주인 지시 «같은 등급 안에서 세기가 뒤죽박죽») 이 «등급 안 세기 편차 ≤ 3.0»
    을 맞추려고 5건을 조였다(영웅 12.73 · 전설 6.00 · 신화 3.13 → 전부 ≤ 3.0). 그중 bounce 는 193 신설분이라
-   KEEP 대상이 아니고, 여기 오는 것은 **기존 19종 중 4건**이다. 갱신하지 않으면 260 의 기준선과 이 표가
-   서로를 부순다(둘 다 통과할 수 없다). 같은 5건을 verify86 은 자기 OLD 표에서 이미 갱신했다.
-   ※ 260 은 `m` 만 건드렸다 — g·cd·id 는 19종 전부 193 기준선 그대로여야 한다(아래 [1-a] 가 그것을 가른다). */
+   KEEP 대상이 아니고, 260 이 여기 올린 것은 기존 19종 중 4건이었다. 갱신하지 않으면 그 작업의 기준선과
+   이 표가 서로를 부순다(둘 다 통과할 수 없다). 같은 건들을 verify86 은 자기 OLD 표에서 이미 갱신했다.
+
+   ⚑ **508(2026-08-30) — 이제 19종 전부가 여기 온다.** 뒤에 온 밸런스 작업 둘이 27종의 `m` 을 통째로 옮겼다:
+     · **484**(2026-08-30, 주인 확정 «스킬은 같은 등급 DPS 동일 + 등급 ×3») — 등급 안의 세기 차이를
+       **없앴다**. 260 이 «편차 ≤ 3.0» 으로 좁힌 것을 «편차 0» 으로 끝까지 민 것이고, 그러려면 발수·쿨이
+       제각각인 27종의 `m` 이 전부 움직여야 한다(축의 주인은 `tools/verify484.js` · `SK_DPS_REF`).
+     · **504**(2026-08-30, T1 «자 문제») — 484 는 손으로 적은 `hits` 선언을 믿고 `m` 을 맞췄는데 그 선언이
+       실제 타격수와 최대 14.2배 어긋나 있었다. 발수를 실측으로 다시 적자 `m` 도 따라 움직였고
+       `SK_DPS_REF` 도 1.84 → 6.49 로 재정박됐다(축의 주인은 `tools/verify504.js`).
+   ⚠ **484·504 는 `m` 과 `hits` 만 만졌다** — 세이브 호환이 걸린 축(id·등급·cd)은 19종 전부 193 기준선
+     그대로여야 하고, 아래 [1-a] 가 그것을 따로 가른다. 그래서 이 표가 19종으로 다 차도 «세이브가 깨졌다»
+     는 여전히 [1-a] 에서 빨개진다 — 두 자가 서로를 대신하지 않는다.
+   ⚠ 값을 제품에서 베껴 오지 않는다 — 여기 적힌 것은 «누가·왜 옮겼는가» 가 붙은 **등재값**이고, 제품이
+     이 값에서 다시 움직이면(누가 몰래 조이면) [1-b] 가 곧바로 빨개진다. */
 const M_MOVED = {
-  drain: [2.40, '260 — 영웅 등급 최약이라 올림'],
-  frost: [1.25, '260 — 영웅 등급 최강이라 내림(hits 4)'],
-  gale:  [0.85, '260 — 전설 등급 최강이라 내림(hits 12)'],
-  lance: [3.00, '260 — 신화 등급 최강이라 내림(hits 3)']
+  /* 260 이 한 번 옮겼고 484·504 가 다시 옮긴 4건 — «누가» 가 셋인 자리 */
+  drain:  [16.874, '260(영웅 최약 2.00→2.40) → 484(등급 DPS 균일) → 504(발수 실측 재역산 · hits 1)'],
+  frost:  [3.4073, '260(영웅 최강 1.45→1.25) → 484 → 504(hits 4)'],
+  gale:   [1.5143, '260(전설 최강 1.05→0.85) → 484 → 504(hits 12)'],
+  lance:  [3.3544, '260(신화 최강 3.20→3.00) → 484 → 504(hits 4.45)'],
+  /* 484·504 가 옮긴 나머지 15건 */
+  slash:  [5.5165, '484(등급 DPS 균일) → 504(발수 실측 재역산 · hits 1)'],
+  shuri:  [1.7848, '484 → 504(hits 8)'],
+  stone:  [4.7667, '484 → 504(hits 1.77)'],
+  multi:  [2.3797, '484 → 504(hits 3)'],
+  orbit:  [0.9759, '484 → 504(hits 6.65 · cd 0 지속형)'],
+  ice:    [3.3176, '484 → 504(hits 3.13)'],
+  aura:   [0.6904, '484 → 504(hits 9.4 · cd 0 지속형)'],
+  bolt:   [3.0287, '484 → 504(hits 3)'],
+  arrow:  [2.1443, '484 → 504(hits 4.54)'],
+  boom:   [3.2049, '484 → 504(hits 4.05)'],
+  poison: [0.7074, '484 → 504(hits 29.36 — 장판형이라 선언이 가장 크게 틀렸던 자리)'],
+  boomer: [6.1323, '484 → 504(hits 2.54)'],
+  meteor: [2.5476, '484 → 504(hits 10.19)'],
+  holy:   [2.0495, '484 → 504(hits 9.5)'],
+  nova:   [1.6465, '484 → 504(hits 14.19)']
 };
 /* 같은 등급 기존 스킬 — [5] 밸런스 대조군 */
 const PEER = { 0: ['slash', 'stone'], 1: ['ice', 'multi'], 2: ['arrow', 'bolt'],
@@ -66,10 +97,10 @@ const PEER = { 0: ['slash', 'stone'], 1: ['ice', 'multi'], 2: ['arrow', 'bolt'],
 
 /* 페이지 안에서 한 스킬만 장착해 결정적으로 돌린다.
    적은 죽지 않게 hp 를 되돌리고(피해는 따로 누적) 플레이어는 제자리에 못박는다. */
-const RUN = ({ id, frames, chase, ring }) => {
+const RUN = ({ id, frames, chase, ring, kick }) => {
   sbufClear();
-  S.own = {}; S.own[id] = { n: 0, l: 1 };
-  S.eqSkill = [id]; skillCd = {};
+  S.own = {}; if (id) S.own[id] = { n: 0, l: 1 };
+  S.eqSkill = id ? [id] : []; skillCd = {};
   shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0; drones.length = 0;
   enemies.length = 0; spawnQ.length = 0;
   markDirty();
@@ -88,12 +119,23 @@ const RUN = ({ id, frames, chase, ring }) => {
   let shotsSeen = 0, zonesSeen = 0, dronesSeen = 0, boomsSeen = 0, boltsSeen = 0;
   let maxMove = 0, maxDrones = 0, zoneKinds = {}, flash = 0;
   for (let f = 0; f < frames; f++) {
-    if (!chase) enemies.forEach(e => { e.sp = 0; });   /* 185 하네스 — 추격을 끄면 남는 이동은 넉백뿐 */
+    /* 185 하네스 — «적 자신의 이동» 을 전부 끄면 남는 변위는 넉백뿐이다.
+       ⚑ 507(2026-08-30) — `e.sp = 0` **하나로는 모자라다**. 359 가 «대시 공격» 을 잡몹에게도 주면서
+       돌진 중에는 속도가 `e.sp` 가 아니라 `stat.speed × DASH.mob.spd` 로 갈아 끼워지기 때문이다
+       (index.html 21584 `else if(dashing) spd = stat.speed * DK.spd`). 그래서 8종이 스킬과 무관하게
+       **전부 같은 79.733px** 를 냈다 — `probe507` [A3] 이 «스킬을 하나도 안 낀 대조군» 도 같은 값임을,
+       [B3] 이 그 값이 `2.6 × 115 × 0.26 = 77.74px`(DASH.mob 산식) 임을 찍어 넉백이 아님을 못박았다.
+       ⇒ 상태 기계를 프레임마다 쿨다운으로 되돌려 «돌진에 못 들어가게» 한다. 무르게 푼 것이 아님은
+       아래 [3] 의 [전제]([3-p1] 대조군 0px · [3-p2] 2.5px 를 밀면 그대로 보인다) 가 못박는다. */
+    if (!chase) enemies.forEach(e => { e.sp = 0; e.dashT = 0; e.dashD = 0; e.dashCd = 1e9; });
     player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
     player.hp = stat.maxHp; player.inv = 99; player.dead = 0;
     const s0 = shots.length, z0 = zones.length, d0 = drones.length,
           m0 = booms.length, b0 = bolts.length;
     step(1 / 60);
+    /* 507 [3-p2] 되돌림 — 지정 프레임에 적 0번을 그만큼 옆으로 민다(= «넉백 한 줄» 을 되살린 것과 같다).
+       이 손잡이가 있어야 «대시를 껐더니 자가 눈이 멀었다» 가 아님을 게이트 안에서 증명할 수 있다. */
+    if (kick && f === kick.f && enemies[0]) enemies[0].x += kick.px;
     if (shots.length > s0) shotsSeen += shots.length - s0;
     if (zones.length > z0) zonesSeen += zones.length - z0;
     if (drones.length > d0) dronesSeen += drones.length - d0;
@@ -167,11 +209,14 @@ const RUN = ({ id, frames, chase, ring }) => {
   const declared = Object.keys(M_MOVED);
   const undeclared = drift.filter(id => !M_MOVED[id]);                       /* 등재 없이 움직임 */
   const wrongVal = declared.filter(id => mOf(id) !== M_MOVED[id][0]);        /* 등재값과 제품이 다름 */
+  /* 508 — 등재 근거별로 몇 건인지까지 한 줄에 남긴다. «19종 전부 움직였다» 는 사실 자체가 이력이라
+     260 만 적혀 있던 시절의 «4건뿐» 문구를 그대로 두면 다음 워커가 또 «누가 옮겼나» 를 다시 판다. */
+  const by260 = declared.filter(id => /260/.test(M_MOVED[id][1])).length;
   ok(undeclared.length === 0 && wrongVal.length === 0
-     && drift.length === declared.length && declared.length === 4,
-     '기존 19종 `m` 이동은 등재분 4건뿐 — 260(등급 안 편차 ≤ 3.0)이 옮긴 '
-     + declared.map(id => id + ' ' + KEEP[id][2].toFixed(2) + '→' + M_MOVED[id][0].toFixed(2)).join(' · ')
-     + ' · 나머지 ' + (Object.keys(KEEP).length - declared.length) + '종은 193 기준선 그대로'
+     && drift.length === declared.length && declared.length === Object.keys(KEEP).length,
+     '기존 19종 `m` 이동은 등재분 ' + declared.length + '건뿐 — 260(등급 안 편차 ≤ 3.0) ' + by260
+     + '건을 484(등급 DPS 균일)·504(발수 실측 재역산)가 전 종으로 다시 옮겼다'
+     + ' · id·등급·cd 는 [1-a] 가 따로 지킨다'
      + (undeclared.length ? ' — 미등재 이동: ' + undeclared.join(',') : '')
      + (wrongVal.length ? ' — 등재값 불일치: '
         + wrongVal.map(id => id + ' 기대 ' + M_MOVED[id][0] + ' 실측 ' + mOf(id)).join(',') : ''));
@@ -182,6 +227,16 @@ const RUN = ({ id, frames, chase, ring }) => {
 
   /* ---------------- [2] 기능 — 신설 8종 실동작 ---------------- */
   console.log('[2] 기능 — 신설 8종 헤드리스 실측');
+  /* [3-전제] «185 넉백 0» 을 세기 전에 **자 자신**을 먼저 가른다(507).
+     p1 — 스킬을 하나도 안 낀 대조군이 0px 여야 한다(하네스가 적 자신의 이동을 확실히 껐다).
+     p2 — 그 하네스에 2.5px 를 밀면 자가 그대로 본다(껐다고 눈이 먼 것이 아니다).
+     이 둘이 없으면 «변위 0» 은 «아무것도 안 움직인다» 와 «자가 못 본다» 를 구별하지 못한다. */
+  const ctrl = await p.evaluate(RUN, { id: null, frames: 600, chase: false });
+  ok(ctrl.maxMove < 0.5, '[전제 p1] 스킬 없는 대조군의 적 변위 ' + ctrl.maxMove.toFixed(3)
+     + 'px — 하네스가 359 대시까지 껐다(안 끄면 79.733px, probe507 [A3])');
+  const kick = await p.evaluate(RUN, { id: null, frames: 600, chase: false, kick: { f: 30, px: 2.5 } });
+  ok(kick.maxMove >= 2.4, '[전제 p2] 같은 하네스에서 2.5px 를 밀면 자가 '
+     + kick.maxMove.toFixed(3) + 'px 로 본다 = 넉백은 그대로 잡힌다');
   const table = [];
   for (const sk of NEW) {
     const r = await p.evaluate(RUN, { id: sk.id, frames: 600, chase: false });
@@ -401,28 +456,54 @@ const RUN = ({ id, frames, chase, ring }) => {
      + mig.mergedEq.join(',') + ')');
 
   /* ---------------- [5] 밸런스 — 같은 등급 기존 스킬 범위 안 ---------------- */
-  console.log('[5] 밸런스 — 등급 정규화 피해가 동급 기존 스킬 범위 안');
-  const peers = {};
-  for (const g of Object.keys(PEER)) {
-    peers[g] = [];
-    for (const id of PEER[g]) {
-      const r = await p.evaluate(RUN, { id, frames: 600, chase: false });
-      peers[g].push({ id, dmg: r.dmg });
-    }
-  }
+  console.log('[5] 밸런스 — 신설 8종의 «선언 DPS» 가 동급 기존 스킬과 같다');
+  /* ⚑ 507(2026-08-30) — **축을 갈아 끼웠다**. 원래 이 절은 «링에 세운 적 6기에게 10초 동안 준 총 피해»
+     가 동급 대조군의 [0.45×최소, 1.80×최대] 안인지를 봤다. 484(«같은 등급끼리 더 쎌 필요 없고»)와
+     504(발수 실측 재정박) 이후 **같은 것은 «DPS»** 이고, 총 피해는 «몇 기를 덮는가» 로 갈린다 —
+     `probe507` [E2] 가 같은 등급 안에서 총 피해가 **최대 8.2배**(전설: flask 45,852 ↔ boomer 375,990)
+     벌어지는 것을 찍었다. 링 하네스는 광역기에 유리하고 단일 표적 지속형(레이저)에 불리해서, 그
+     편향이 그대로 «신화 laser 43,910 ∈ [75,885, …] 밖» 이라는 거짓 빨강으로 나왔다.
+     ⇒ 자는 이미 저장소 안에 있다 — 제품의 발수 입구 `skillHits()`(504) 로 세운 **선언 DPS**
+        `D(s) = m × skillHits(s) / cd`(cd 0 이면 지속형이라 나누지 않는다 — verify484 [B]·verify260 [C]
+        와 **같은 식**을 쓴다. 식을 베껴 적지 않고 같은 문장으로 맞춘다).
+     ⚠ **소유권** — `m` 축의 주인은 `tools/verify484.js`(SK_DPS_REF 6.49) · 발수 축의 주인은
+        `tools/verify504.js` 다. 여기가 묻는 것은 그 둘이 아니라 **«193 이 신설한 8종이 자기 등급 밖으로
+        새지 않는가»** 하나이므로, 대조군은 여전히 «같은 등급 기존 스킬»(PEER) 이고 밴드도 그 실측에서 낸다.
+     ⚠ 허용 폭은 ±5% 다 — 실측 편차가 0.01%(probe507 [E1] 등급 안 최대÷최소 1.0001) 라 500배 여유이고,
+        «절반으로 조였다/두 배로 키웠다» 급의 이탈은 그대로 빨개진다(§R 되돌림 시험이 그것을 못박는다). */
+  const BAND = 0.05;
+  const peers = await p.evaluate(({ PEER, NEWIDS }) => {
+    const D = s => s.cd > 0 ? s.m * skillHits(s) / s.cd : s.m * skillHits(s);
+    const out = { peer: {}, mine: {} };
+    Object.keys(PEER).forEach(g => out.peer[g] = PEER[g].map(id => ({ id, d: D(SK[id]) })));
+    NEWIDS.forEach(id => out.mine[id] = D(SK[id]));
+    return out;
+  }, { PEER, NEWIDS: NEW.map(s => s.id) });
   const balRows = [];
   for (const sk of NEW) {
-    const r = await p.evaluate(RUN, { id: sk.id, frames: 600, chase: false });
-    /* 허용 폭 [0.45×동급 최소, 1.80×동급 최대] — 대조군 자체의 폭(예: 신화 lance 12.6k ~ holy 25.2k)이
-       2 배라 «동급» 은 원래 이 정도로 넓다. 이 하네스는 적 6기를 링에 세우므로 범위 스킬이 유리하고
-       단일 표적 지속형(레이저)은 불리하다 — 그 편향까지 감안한 폭이다(review §4). */
-    const lo = Math.min(...peers[sk.g].map(x => x.dmg)) * 0.45;
-    const hi = Math.max(...peers[sk.g].map(x => x.dmg)) * 1.80;
-    const good = r.dmg >= lo && r.dmg <= hi;
-    ok(good, sk.n + ' 피해 ' + Math.round(r.dmg) + ' ∈ [' + Math.round(lo) + ', ' + Math.round(hi)
-       + '] (' + GN[sk.g] + ' 대조군 ' + peers[sk.g].map(x => x.id + ' ' + Math.round(x.dmg)).join(' · ') + ')');
-    balRows.push({ ...sk, dmg: Math.round(r.dmg), lo: Math.round(lo), hi: Math.round(hi), good });
+    const ref = peers.peer[sk.g].reduce((s, x) => s + x.d, 0) / peers.peer[sk.g].length;
+    const mine = peers.mine[sk.id];
+    const lo = ref * (1 - BAND), hi = ref * (1 + BAND);
+    const good = mine >= lo && mine <= hi;
+    ok(good, sk.n + ' 선언 DPS ' + mine.toFixed(4) + ' ∈ [' + lo.toFixed(4) + ', ' + hi.toFixed(4)
+       + '] (' + GN[sk.g] + ' 대조군 평균 ' + ref.toFixed(4) + ' — '
+       + peers.peer[sk.g].map(x => x.id + ' ' + x.d.toFixed(4)).join(' · ') + ')');
+    balRows.push({ ...sk, dps: +mine.toFixed(4), lo: +lo.toFixed(4), hi: +hi.toFixed(4), good });
   }
+  /* §R 되돌림 시험 — 신설 8종 중 하나의 `m` 을 절반으로 되돌리면 이 절이 반드시 빨개진다.
+     («±5% 로 넓혔더니 무엇이든 통과» 가 아님을 게이트 안에서 증명한다. 사본은 즉시 원복한다.) */
+  const revBand = await p.evaluate((band) => {
+    const D = s => s.cd > 0 ? s.m * skillHits(s) / s.cd : s.m * skillHits(s);
+    const s = SK.laser, keep = s.m;
+    const ref = ['holy', 'lance', 'nova'].reduce((a, id) => a + D(SK[id]), 0) / 3;
+    s.m = keep * 0.5;
+    const half = D(s);
+    s.m = keep;
+    return { half, ref, back: D(s), caught: half < ref * (1 - band) };
+  }, BAND);
+  ok(revBand.caught && Math.abs(revBand.back - peers.mine.laser) < 1e-9,
+     '§R 되돌림 — laser 의 `m` 을 절반으로 되돌리면 선언 DPS ' + revBand.half.toFixed(4)
+     + ' 가 밴드 하한 ' + (revBand.ref * (1 - BAND)).toFixed(4) + ' 아래로 떨어져 빨개진다(원복 확인)');
 
   /* ---------------- [6] 파급 ---------------- */
   console.log('[6] 파급 — 04 격자 · 도감 · 확률 팝업');
@@ -468,11 +549,11 @@ const RUN = ({ id, frames, chase, ring }) => {
   await b.close();
 
   if (process.argv.includes('--table')) {
-    console.log('\n| # | 스킬 | 등급 | 메커니즘 | 시전했을 때 무엇이 바뀌는가(실측) | 동급 허용 범위 |');
+    console.log('\n| # | 스킬 | 등급 | 메커니즘 | 시전했을 때 무엇이 바뀌는가(실측) | 동급 선언 DPS 밴드 |');
     console.log('|---|---|---|---|---|---|');
     balRows.forEach((t, i) => console.log('| ' + (i + 1) + ' | ' + t.n + ' (`' + t.id + '`) | '
       + GN[t.g] + ' | ' + t.mech + ' | ' + (table[i] ? table[i].note : '') + ' | '
-      + (t.good ? '✅ ' : '❌ ') + t.dmg + ' ∈ [' + t.lo + ', ' + t.hi + '] |'));
+      + (t.good ? '✅ ' : '❌ ') + t.dps + ' ∈ [' + t.lo + ', ' + t.hi + '] |'));
   }
 
   console.log('\nVERIFY193 ' + pass + '/' + (pass + fail) + (fail ? '  ✗ FAIL' : '  ✓ PASS'));

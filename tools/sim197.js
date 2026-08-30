@@ -91,9 +91,21 @@ const SNAPS = [
         const hits = skillHits(s);   /* 504 — 제품의 발수 입구 하나 */
         dpsOld += s.cd > 0 ? dmgOld * hits / (s.cd / Math.max(0.35, rateNow / 1.4)) : dmgOld * hits;
       });
+      /* ⚑ 508(2026-08-30) — 펫 항이 `NaN` 을 세 줄 전부에 흘리고 있었다.
+         뿌리는 **481**(2026-08-30, 주인 확정 «펫 피해 = 플레이어 공격력 그대로 · 등급은 공격 주기만»)이
+         `PETS` 에서 `m` 을 **선언째 걷어낸 것**이다 — 여기 남아 있던 `p.m` 이 `undefined` 가 되면서
+         `dpsOld` → NaN → `cpOld` → NaN 으로 번졌고, 표의 «cp 이전 / 배수 / dps 배수» 열이 통째로 NaN 이 됐다
+         (`probe507` 아님 — 이 자리는 제품 셰이프를 직접 찍어 확인했다: `PETS[0]` 의 키는
+          id·n·g·j·sp·tint·v·cd 뿐이고 `m` 은 없다).
+         ⇒ 펫에는 **197 축이 더 이상 걸리지 않는다.** 197 이 바꾼 것은 «착용값 mul→wear · 착용 레벨 기울기
+            0.18→0.012» 인데, 481 이 펫에서 등급·레벨 계수를 양쪽 규칙에서 **똑같이** 걷어냈기 때문이다.
+            남는 차이는 장비 축(`atkOldF`)이 `stat.dmg` 에 얹히는 것 하나뿐이라, 제품의 현행 식
+            (`petDmg(p)/p.cd` = `stat.dmg × bonus().pet / p.cd`)에 그 배수만 곱한다.
+         ⚠ 이 줄은 «펫 밸런스» 를 재는 자가 아니다 — 481 의 축은 `tools/verify481.js` 몫이고, 여기는
+            197 의 영향만 분리해 199 에 넘기는 입력값이다. */
       S.eqPet.forEach(id => {
         const p = PT[id]; if (!p) return;
-        dpsOld += (stat.dmg * atkOldF * p.m * GRADE[p.g].mul * oldLvMul(oLv(p.id)) * bonus().pet) / p.cd;
+        dpsOld += (stat.dmg * atkOldF * bonus().pet) / p.cd;
       });
       dpsOld *= stat.critMul;
 
