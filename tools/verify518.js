@@ -193,7 +193,7 @@ async function boot(browser, revert) {
      이 게이트가 재려는 것은 **탭이 이긴 시행**이므로 그 시행이 나올 때까지 돌린다. */
   const until = async (open, kind, pred) => {
     let last = null;
-    for (let i = 0; i < 4; i++) { last = await run(open, kind); if (pred(last)) return last; }
+    for (let i = 0; i < 6; i++) { last = await run(open, kind); if (pred(last)) return last; }
     return last;
   };
   const b1 = await until('sum', 'tap', r => r.srcTap && r.flyN > 0);
@@ -288,8 +288,15 @@ async function boot(browser, revert) {
   ok(errs.length === 0, '[X] 콘솔 에러 0건' + (errs.length ? ' — ' + errs[0] : ''));
 
   /* ── [R] 되돌림 시험 ───────────────────────────────────────────────── */
+  /* ⚠ 3회차 — 이 항은 «탭 추측이 이긴 시행» 을 재는 것인데 배경 전투 킬이 그 프레임의 발원을
+     가져가면 코인이 전투 층으로 간다(158). [B]·[C] 와 같은 규율로 그 시행이 나올 때까지 돌린다 —
+     안 그러면 자가 실행마다 흔들린다(2회차 판은 1회 시행이라 실제로 흔들렸다 · 530 계열). */
   const rv = await boot(b, true);
-  const r1 = await rv.p.evaluate(eval('(' + SCENE + ')'), { open: 'sum', srcKind: 'tap' });
+  let r1 = null;
+  for (let i = 0; i < 6; i++) {
+    r1 = await rv.p.evaluate(eval('(' + SCENE + ')'), { open: 'sum', srcKind: 'tap' });
+    if (r1.srcTap && r1.flyN > 0 && r1.flyLayers.includes('fxl')) break;
+  }
   ok(r1.flyLayers.includes('fxl'),
      '[R] 판정을 끈 사본(= 수리 전)에서는 코인이 팝업 **위**(#fxl)로 간다 — ' + JSON.stringify(r1.flyLayers)
      + ' (무르게 푼 수리가 아님을 이 항이 못박는다)');
@@ -316,7 +323,7 @@ async function boot(browser, revert) {
     };
   });
   let r2 = null;
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     r2 = await rv2.p.evaluate(eval('(' + SCENE + ')'), { open: 'shopw', srcKind: 'tap' });
     if (r2.srcTap && r2.flyLayers.includes('fxl')) break;
   }
