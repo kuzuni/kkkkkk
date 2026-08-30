@@ -19,7 +19,7 @@ const REF_TXT = process.argv[4] === 'live' ? null : { g: '40.77A', d: '1,300' };
   await page.waitForTimeout(900);
 
   await page.evaluate((w) => {
-    if (w === 'rel') openRelicPage(); else openDungeon();
+    if (w === 'rel') openRelw(); else openDungeon();
   }, which);
   await page.waitForTimeout(600);
 

@@ -21,7 +21,11 @@ const VOLATILE = ['nickN', 'cpN', 'hpT', 'chapN'];
 const GEO_SEL = {
   main: ['#top', '.prof', '.curs', '#stagearea', '#stinfo', '#slots', '#tabbar', '#sideL', '#sideR'],
   dun: ['#dunw', '.dns-list', '.dns-sub', '#dunList .dnc'],
-  rel: ['#relicw', '.rlx-strip', '.rlx-sub', '#relicBody'],
+  /* 534(2026-08-30) — 옛 이름 `#relicw`·`.rlx-strip`·`.rlx-sub`·`#relicBody` 는 89 가 유물 페이지를
+     통째로 갈아 끼울 때 사라졌다(130·133 이 같은 이름을 verify77·verify73 에서 이미 걷어냈다).
+     넷 다 문서에 0건이라 `querySelectorAll` 이 빈 집합을 돌려주고 [2] rel 이 «0종 Δ0» 으로
+     **헛초록**이었다 — 그래서 이름만 바꾸지 않고 «이 페이지가 실제로 그리는 블록» 을 적는다. */
+  rel: ['#relw', '.rw-panel', '#rwGrid', '.rw-mid', '#rwBasin', '.rw-cost', '.rw-cap'],
 };
 
 async function snap(page, which) {
@@ -52,7 +56,7 @@ async function open(browser, file, which, freeze) {
   if (freeze) { await page.waitForTimeout(60); await page.evaluate(() => { window.requestAnimationFrame = () => 0; }); }
   await page.waitForTimeout(900);
   if (which === 'dun') await page.evaluate(() => openDungeon());
-  if (which === 'rel') await page.evaluate(() => openRelicPage());
+  if (which === 'rel') await page.evaluate(() => openRelw());
   await page.waitForTimeout(500);
   await page.evaluate((v) => {
     const el = document.getElementById('view'); if (el) el.style.visibility = 'hidden';
@@ -88,7 +92,7 @@ async function open(browser, file, which, freeze) {
     const { ctx, page, errs } = await open(browser, NOW, which);
     const st = await page.evaluate(() => ({ g: S.gold, d: S.dia, key: KEY }));
     const read = () => page.evaluate((w) => {
-      const root = document.getElementById(w === 'rel' ? 'relicw' : 'dunw');
+      const root = document.getElementById(w === 'rel' ? 'relw' : 'dunw');
       const b = root.querySelector('.pcb');
       const cs = getComputedStyle(b);
       const r = b.getBoundingClientRect(), t = document.getElementById('top').getBoundingClientRect();
@@ -111,8 +115,39 @@ async function open(browser, file, which, freeze) {
     ok(`[${which}] 재화 바 렌더됨 (visible=${v.visible})`);
     if (v.coversHud) ok(`[${which}] 바가 상단 HUD 스트립을 전부 덮는다`); else no(`[${which}] HUD 스트립 미덮음`);
     if (v.zOverProf) ok(`[${which}] 프로필 플레이트 자리를 바가 점유(메인 HUD 노출 0)`); else no(`[${which}] 프로필 플레이트가 노출된다`);
-    eq(`[${which}] 초기 골드 표기 = fmt(S.gold)`, v.gold === (await page.evaluate(() => fmt(S.gold))) ? 1 : 0, 1);
-    eq(`[${which}] 초기 다이아 표기 = fmt(S.dia)`, v.dia === (await page.evaluate(() => fmt(S.dia))) ? 1 : 0, 1);
+    /* 534(2026-08-30) — 자가 «콤마 표기» 를 손으로 기대하고 있었다. 150(«골드만 접는다»)·188
+       («전투 수치도 접는다»)이 표기를 재화 종류별로 갈라 놓은 뒤로 골드는 `fmtG`(35.0A),
+       나머지 재화는 `fmt`(1,300,000) 다 — 제품이 앞서간 것이 아니라 자가 뒤처진 것이다.
+       ⇒ 숫자도 함수 이름도 자에 박지 않고 **제품의 디스패처 `fmtCur(k, n)` 하나**에게 묻는다
+       (402 «표 두 벌» 부패 방지 — 규약이 또 갈리면 제품과 자가 같이 움직인다). */
+    /* 534 — 초기 표기 두 항은 **표본이 놓인 자리**도 틀려 있었다(368 과 같은 꼴).
+       바 문자열과 `S.gold` 를 **다른 순간에** 읽는데, 부팅 직후 골드는 전투가 매 프레임 올리고
+       그 구간은 1000 미만이라 `fmtG` 가 한 자리까지 그대로 보인다 ⇒ 두 읽기 사이에 값이 움직여
+       «반영 안 됨» 이 아니라 «읽은 시각이 다름» 으로 빨개진다(실측: 바 8 ↔ S.gold 12).
+       ⇒ 한 번의 `evaluate` 안에서 둘을 같이 읽고, 58 롤링이 따라잡을 시간(≤2s)만 준다.
+       바가 정말 상태를 안 따라가면 2초 안에 한 번도 안 맞으므로 무르게 푼 것이 아니다 —
+       §R 되돌림 시험(renderPcb 정지)이 그것을 못박는다. */
+    const settle = async (w, k) => {
+      const sel = k === 'gold' ? '.pcb-g>b' : '.pcb-d>b';
+      const root = w === 'rel' ? 'relw' : 'dunw';
+      for (let i = 0; i < 20; i++) {
+        const r = await page.evaluate(({ s, rt, kk }) => {
+          const bar = document.getElementById(rt).querySelector(s).textContent;
+          return { bar, exp: fmtCur(kk, kk === 'gold' ? S.gold : S.dia) };   /* 같은 순간 */
+        }, { s: sel, rt: root, kk: k });
+        if (r.bar === r.exp) return r;
+        await page.waitForTimeout(100);
+      }
+      return await page.evaluate(({ s, rt, kk }) => {
+        const bar = document.getElementById(rt).querySelector(s).textContent;
+        return { bar, exp: fmtCur(kk, kk === 'gold' ? S.gold : S.dia) };
+      }, { s: sel, rt: root, kk: k });
+    };
+    const i0 = await settle(which, 'gold'), i1 = await settle(which, 'dia');
+    i0.bar === i0.exp ? ok(`[${which}] 초기 골드 표기 = fmtCur('gold', S.gold) (${i0.bar})`)
+      : no(`[${which}] 초기 골드 표기: 바 ${i0.bar} ≠ ${i0.exp}`);
+    i1.bar === i1.exp ? ok(`[${which}] 초기 다이아 표기 = fmtCur('dia', S.dia) (${i1.bar})`)
+      : no(`[${which}] 초기 다이아 표기: 바 ${i1.bar} ≠ ${i1.exp}`);
 
     /* 실제 게임 동작으로 재화를 움직인다 — 우편 일괄 수령(claimAllMail) */
     const gained = await page.evaluate(() => {
@@ -120,13 +155,16 @@ async function open(browser, file, which, freeze) {
       claimAllMail();
       return { before, after: { g: S.gold, d: S.dia } };
     });
-    await page.waitForTimeout(700);
+    /* 534 — 고정 700ms 대기도 상수를 베낀 자리였다(129 교훈: «게이트 대기를 늘리는 땜질» 금지).
+       58 롤링은 0 → 35,000 같은 큰 뜀을 여러 프레임에 걸쳐 수렴시키므로 700ms 안에 닿는지는
+       프레임 타이밍에 달렸다(실측: 같은 트리에서 35.0A 로 닿기도, 13.1A 에 머물기도 했다 = 플레이키).
+       ⇒ 묻는 것을 «700ms 안에 같은가» 에서 «따라잡는가(≤2s)» 로 옮긴다. */
+    const g1 = await settle(which, 'gold'), d1 = await settle(which, 'dia');
     v = await read();
-    const expG = await page.evaluate(() => fmt(S.gold)), expD = await page.evaluate(() => fmt(S.dia));
     if (gained.after.g > gained.before.g) ok(`[${which}] claimAllMail() 로 S.gold ${Math.round(gained.before.g)} → ${Math.round(gained.after.g)}`);
     else no(`[${which}] claimAllMail() 이 골드를 안 줬다`);
-    v.gold === expG ? ok(`[${which}] 골드 변동이 바에 반영 (${v.gold})`) : no(`[${which}] 골드 미반영: 바 ${v.gold} ≠ ${expG}`);
-    v.dia === expD ? ok(`[${which}] 다이아 변동이 바에 반영 (${v.dia})`) : no(`[${which}] 다이아 미반영: 바 ${v.dia} ≠ ${expD}`);
+    g1.bar === g1.exp ? ok(`[${which}] 골드 변동이 바에 반영 (${g1.bar})`) : no(`[${which}] 골드 미반영: 바 ${g1.bar} ≠ ${g1.exp}`);
+    d1.bar === d1.exp ? ok(`[${which}] 다이아 변동이 바에 반영 (${d1.bar})`) : no(`[${which}] 다이아 미반영: 바 ${d1.bar} ≠ ${d1.exp}`);
     v.gold === v.hud.gold ? ok(`[${which}] 바 표기 = 메인 HUD 표기(같은 소스)`) : no(`[${which}] 바(${v.gold}) ≠ HUD(${v.hud.gold})`);
 
     /* 세이브 반영 */
@@ -134,10 +172,20 @@ async function open(browser, file, which, freeze) {
     saved.g === gained.after.g ? ok(`[${which}] localStorage[KEY].gold 반영`) : no(`[${which}] 세이브 미반영 ${saved.g} ≠ ${gained.after.g}`);
 
     /* 소비 방향도 본다 — 재화를 빼면 바가 줄어드는가 */
-    await page.evaluate(() => { S.gold = Math.floor(S.gold / 2); uiDirty = true; });
-    await page.waitForTimeout(700);
-    const v2 = await read(), exp2 = await page.evaluate(() => fmt(S.gold));
-    v2.gold === exp2 ? ok(`[${which}] 감소 방향도 반영 (${v2.gold})`) : no(`[${which}] 감소 미반영 ${v2.gold} ≠ ${exp2}`);
+    const half = await page.evaluate(() => { S.gold = Math.floor(S.gold / 2); uiDirty = true; return S.gold; });
+    const g2 = await settle(which, 'gold');
+    g2.bar === g2.exp ? ok(`[${which}] 감소 방향도 반영 (${g2.bar} · S.gold ${half})`)
+      : no(`[${which}] 감소 미반영 ${g2.bar} ≠ ${g2.exp}`);
+
+    /* 534 — 위 세 항이 «제품 함수에게 묻는» 꼴이 됐으므로, 규약 자체가 조용히 뒤집히면
+       셋이 **같이** 초록으로 남는다. 그래서 «지금 규약이 무엇인가» 를 따로 한 항으로 못박는다
+       (150·188: 골드는 접힌 꼴 `35.0A`, 다른 재화는 세 자리 콤마). 이 항이 빨개지면
+       규약이 바뀐 것이니 150·188 과 함께 다시 판단할 것 — 위 세 항을 손대는 것은 답이 아니다. */
+    const FOLD = /^\d+(\.\d+)?[A-Z]+$/, COMMA = /^\d{1,3}(,\d{3})+$/;
+    FOLD.test(v.gold) ? ok(`[${which}] 150·188 규약 — 골드는 접힌 표기 (${v.gold})`)
+      : no(`[${which}] 골드가 접힌 표기가 아니다: ${v.gold}`);
+    COMMA.test(v.dia) ? ok(`[${which}] 150 규약 — 다이아는 콤마 표기 (${v.dia})`)
+      : no(`[${which}] 다이아가 콤마 표기가 아니다: ${v.dia}`);
 
     errs.length ? no(`[${which}] 콘솔 에러 ${errs.length}건: ${errs[0]}`) : ok(`[${which}] 콘솔 에러 0`);
     await ctx.close();
@@ -186,32 +234,55 @@ async function open(browser, file, which, freeze) {
 
   /* ---------- ④ 화면비 ---------- */
   console.log('\n[4] 화면비 5종 × 페이지 2종 — 바 기하가 프레임 좌표계에서 불변인가');
+  /* 534(2026-08-30) — 알약 기대치가 «두 페이지 공용 2개(505/805)» 로 굳어 있었다. 41 당시엔
+     03·14 가 픽셀 동일해서 맞았지만, 그 뒤 두 지시가 유물 페이지만 바꿨다:
+       · 89  — 유물 페이지에 «유물조각» 알약 신설 ⇒ 3개 (`.pcb-r{left:805px}`)
+       · 429 — 좌상단 [?] 도움말이 들어가며 세 알약을 왼쪽으로 당김
+               (`#relw .pcb-g{left:205px}` · `#relw .pcb-d{left:505px}`)
+     칸 규격(254×49 · top 31)은 두 페이지가 여전히 같은 부품이다. 측정표 41 §2 는 2개 시절
+     기록이라 정오표를 달았다(docs/measure/41-팝업내장재화바.md §2 정오표). */
+  const PILLS = {
+    dun: [[505, 31, 254, 49], [805, 31, 254, 49]],
+    rel: [[205, 31, 254, 49], [505, 31, 254, 49], [805, 31, 254, 49]],
+  };
   for (const [W, H] of [[1080, 2280], [1920, 1080], [1024, 768], [1080, 2340], [768, 1024]]) {
     for (const which of ['dun', 'rel']) {
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
       const page = await ctx.newPage();
       await page.goto('file://' + NOW); await page.waitForTimeout(800);
-      await page.evaluate((w) => { if (w === 'rel') openRelicPage(); else openDungeon(); }, which);
+      await page.evaluate((w) => { if (w === 'rel') openRelw(); else openDungeon(); }, which);
       await page.waitForTimeout(400);
-      const r = await page.evaluate((w) => {
-        const root = document.getElementById(w === 'rel' ? 'relicw' : 'dunw');
+      /* 534(2026-08-30) — 이 자리도 «유휴 루프가 굴리는 값» 위에 놓여 있었다(51 함정 3 의 기하판).
+         전투가 골드를 벌 때마다 58 이 도착 알약에 `fx-punch`(0.42s · 봉우리 ×1.17)를 건다.
+         그 프레임에 재면 골드 알약이 [485,27,294,57] 로 읽힌다(중심 고정 · 등방 ×1.16 =
+         펄스지 어긋남이 아니다). 실측으로 10칸 중 1칸이 그렇게 걸렸다 = 플레이키.
+         ⇒ 대기를 늘리는 대신 **펄스가 없는 프레임을 기다려서** 잰다(129 «상수 베끼기» 금지).
+         끝내 안 가라앉으면 마지막 측정값을 그대로 들고 빨개진다 — 가리지 않는다. */
+      const meas = async () => page.evaluate((w) => {
+        const root = document.getElementById(w === 'rel' ? 'relw' : 'dunw');
         const a = document.getElementById('app').getBoundingClientRect();
         const sc = a.width / 1080;   /* fit() 이 프레임을 scale 로 맞춘다 — 정규화해서 잰다 */
         const bar = root.querySelector('.pcb').getBoundingClientRect();
         const t = document.getElementById('top').getBoundingClientRect();
-        const pills = [...root.querySelectorAll('.pcb-p')].map((e) => {
+        const ps = [...root.querySelectorAll('.pcb-p')];
+        const pills = ps.map((e) => {
           const q = e.getBoundingClientRect();
           return [Math.round((q.left - a.left) / sc), Math.round((q.top - a.top) / sc),
             Math.round(q.width / sc), Math.round(q.height / sc)];
         });
         return { top: +((bar.top - a.top) / sc).toFixed(1), h: +(bar.height / sc).toFixed(1),
           covers: bar.top <= t.top + 0.5 && bar.bottom >= t.bottom - 0.5,
-          inside: bar.top >= a.top - 0.5 && bar.left >= a.left - 0.5 && bar.right <= a.right + 0.5, pills };
+          inside: bar.top >= a.top - 0.5 && bar.left >= a.left - 0.5 && bar.right <= a.right + 0.5, pills,
+          pulsing: ps.some((e) => getComputedStyle(e).transform !== 'none') };
       }, which);
+      let r = await meas();
+      for (let i = 0; i < 20 && r.pulsing; i++) { await page.waitForTimeout(100); r = await meas(); }
+      const pulsing = r.pulsing; delete r.pulsing;
+      const expP = JSON.stringify(PILLS[which]);
       const good = r.top === 0 && Math.abs(r.h - 108) <= 1 && r.covers && r.inside
-        && JSON.stringify(r.pills) === JSON.stringify([[505, 31, 254, 49], [805, 31, 254, 49]]);
-      good ? ok(`${W}×${H} [${which}] 바 top0 h108 · 알약 505/805 254×49 · HUD 덮음 · 프레임 안`)
-        : no(`${W}×${H} [${which}] ` + JSON.stringify(r));
+        && JSON.stringify(r.pills) === expP;
+      good ? ok(`${W}×${H} [${which}] 바 top0 h108 · 알약 ${PILLS[which].map((p) => p[0]).join('/')} 254×49 · HUD 덮음 · 프레임 안`)
+        : no(`${W}×${H} [${which}] ` + JSON.stringify(r) + ' ≠ 알약 ' + expP + (pulsing ? ' (2초 동안 펄스가 안 멎었다)' : ''));
       await ctx.close();
     }
   }
