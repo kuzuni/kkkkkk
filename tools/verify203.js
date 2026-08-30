@@ -281,16 +281,24 @@ const table = [];
                                   + ' · 천상룬 Lv0 ' + tryR.cost.r3l0 + ' (다이아는 상시 50)' });
 
   /* ================= [6] 효과 ================= */
-  console.log('[6] 효과 — 계단으로 커지고 bonus() 에 «합산 후 1회 곱» 으로 합류한다');
+  console.log('[6] 효과 — **선형**(489)이고 bonus() 에 «합산 후 1회 곱» 으로 합류한다');
   const eff = await p.evaluate(() => {
     S.rune = { r1: 0, r2: 0, r3: 0 }; markDirty();
-    /* 계단 — 각 100 레벨 경계에서 «다음 1레벨의 몫» 이 커진다 */
+    /* 489 — 계단 폐기. «다음 1레벨의 몫» 이 **전 구간 상수**여야 한다(구 경계 100·200·300·400 포함) */
     const gain = L => { S.rune.r1 = L - 1; const a = runeVal('r1', 'atk');
                         S.rune.r1 = L; return +(runeVal('r1', 'atk') - a).toFixed(9); };
     const g = [1, 100, 101, 200, 201, 300, 301, 400, 401, 500].map(gain);
-    let steps = true;
-    for (let i = 1; i < g.length; i++) if (g[i] < g[i - 1] - 1e-12) steps = false;
-    const jumped = g[2] > g[1] && g[4] > g[3] && g[6] > g[5] && g[8] > g[7];
+    const step1 = +(RN.r1.eff.atk * RUNE_LIN).toFixed(9);
+    /* 상수인가(±0) · 그 상수가 선언(eff × RUNE_LIN)과 같은가 */
+    const flat = g.every(v => Math.abs(v - g[0]) < 1e-12);
+    const declared = Math.abs(g[0] - step1) < 1e-12;
+    /* 계단이 되살아나면(경계에서 뛰면) 빨개진다 — 되돌림 방향의 음성항 */
+    const jumped = g.some((v, i) => i > 0 && v > g[i - 1] + 1e-12);
+    /* 누적이 정확히 «상수 × 레벨» 인가 — 세 지점 */
+    S.rune.r1 = 0;
+    const lin = [1, 250, 500].every(L => { S.rune.r1 = L;
+      return Math.abs(runeVal('r1', 'atk') - step1 * L) < 1e-9; });
+    S.rune.r1 = 0;
     /* bonus() 합류 — 축별로 더한 뒤 한 번만 곱한다(룬마다 곱하지 않는다) */
     S.rune = { r1: 0, r2: 0, r3: 0 }; markDirty();
     const base = { atk: bonus().atk, hp: bonus().hp, gold: bonus().gold };
@@ -309,13 +317,17 @@ const table = [];
     S.rune = { r1: 0, r2: 0, r3: 0 }; markDirty(); const cp0 = cp();
     S.rune = { r1: 300, r2: 0, r3: 0 }; markDirty(); const cp1 = cp();
     S.rune = { r1: 0, r2: 0, r3: 0 }; markDirty();
-    return { g, steps, jumped, once, notPerRune, shown, want, cp0, cp1,
+    return { g, once, notPerRune, shown, want, cp0, cp1,
              sum: { atk: runeSum('atk'), hp: runeSum('hp') },
-             stepEvery: RUNE_STEP_EVERY, stepTab: RUNE_STEP.join(',') };
+             flat, declared, jumped, lin, step1, lin3: RUNE_LIN,
+             noStepTab: typeof RUNE_STEP === 'undefined' && typeof RUNE_STEP_EVERY === 'undefined' };
   });
-  ok(eff.steps && eff.jumped, '★ 1레벨당 효과가 계단으로 커진다(100 레벨마다 한 칸)',
-    eff.g.filter((_, i) => i % 2 === 1).map(v => v.toFixed(4)).join(' → '));
-  ok(eff.stepTab === '1,1.8,3,4.6,6.6' && eff.stepEvery === 100, '계단 표 5칸(197 문법)', eff.stepTab);
+  ok(eff.flat && !eff.jumped, '★ 489 — 1레벨당 효과가 **전 구간 상수**다(구 계단 경계 100/200/300/400 포함)',
+    eff.g.map(v => v.toFixed(4)).join(' / '));
+  ok(eff.declared, '그 상수가 선언(eff × RUNE_LIN)과 한 식이다', eff.g[0] + ' = ' + eff.step1);
+  ok(eff.lin, '★ 누적 효과 = 상수 × 레벨 (Lv 1 · 250 · 500 세 지점)');
+  ok(eff.lin3 === 3, '489 — 선형 계수 RUNE_LIN = 3 (현행 Lv1~100 레벨당 증가분 ×3)', eff.lin3);
+  ok(eff.noStepTab, '★ 계단 표(RUNE_STEP/RUNE_STEP_EVERY)가 제품에 남아 있지 않다(295-② 두 벌 금지)');
   ok(eff.once, '★ bonus() 가 «축별 합산 후 1회 곱» 으로 반영한다(194·LESSONS 91-1 규칙)');
   ok(eff.notPerRune, '룬마다 곱하지 **않는다**(그랬다면 만렙 셋에서 배율이 터진다)');
   /* 271 — `.rd` 앞에 «지금 효과 — » 라벨이 붙었다(카드가 커져 ①지금/②다음 1레벨/③계단 3줄이 됐다).
@@ -323,7 +335,8 @@ const table = [];
   ok(eff.shown.indexOf(eff.want) >= 0, '카드 효과 표기가 runeVal 과 같은 식', eff.shown + ' / ' + eff.want);
   ok(eff.cp1 > eff.cp0, '룬 레벨이 전투력(cp)에 실제로 반영된다',
     Math.round(eff.cp0) + ' → ' + Math.round(eff.cp1));
-  table.push({ k: '효과(만렙 1종)', v: '일반룬 500 = 공격력 +' + (1700).toFixed(0) + '% 상당(계단 합 ×17)' });
+  table.push({ k: '효과(만렙 1종)', v: '일반룬 500 = 공격력 +' + (0.010 * 3 * 500 * 100).toFixed(0)
+    + '% (489 선형 — eff 0.010 × RUNE_LIN 3 × 500)' });
 
   /* ================= [7] 획득처 ================= */
   console.log('[7] 획득처 — 룬강화석 던전 · DPS 측정장이 실제로 지급한다');

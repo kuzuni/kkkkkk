@@ -10063,9 +10063,9 @@
   .tr-rn>.rp>i{height:78px;line-height:78px;font-size:66px;color:#B4571E}
   .tr-rn>.rp>s{height:38px;line-height:38px;font-size:30px;color:#7A5A34;text-decoration:none}
   /* 효과 — **축 하나가 한 줄**이다(최대 3줄: 공격력·체력·골드 획득).
-     왼쪽이 «지금 이 룬이 주는 것», 오른쪽이 «다음 1레벨이 더 주는 것» — 둘 다 `runeVal`/`RUNE_STEP`
+     왼쪽이 «지금 이 룬이 주는 것», 오른쪽이 «다음 1레벨이 더 주는 것» — 둘 다 `runeVal`/`RUNE_LIN`
      한 식을 지난다(203 은 자리가 없어 오른쪽을 접어 두었다).
-     ⚠ **한 줄에 세 축을 붙이면 안 된다** — 만렙 3축(«공격력 +6272% · 체력 +5018% · 골드 획득 +3136%»)이
+     ⚠ **한 줄에 세 축을 붙이면 안 된다** — 만렙 3축(489 선형 뒤 «공격력 +6000% · 체력 +4800% · 골드 획득 +3000%»)이
        fs36 에서 정확히 910px 를 넘겨 두 줄로 접히고, 접힌 줄이 아래 줄 위로 올라탄다.
        첫 구현이 그렇게 짜여 있었고 이 카드처럼 «절대좌표 한 줄 상자» 가 많은 곳의 고질이다.
        줄로 쪼개면 제일 긴 줄이 «골드 획득 +3136%»(fs34, 약 340px) 뿐이라 구조적으로 못 넘친다. */
@@ -18541,8 +18541,10 @@ const trainReady = () => TRAIN_STATS.every(id => lv(id) >= trainCap());
    ─ **효과 결합**: 세 룬의 효과를 축별로 **먼저 더한 뒤 `bonus()` 에서 한 번만** 곱한다
      (LESSONS 91-1 · 194 코스튬 강화와 같은 규칙 — 룬마다 곱하면 만렙에서 배율이 터진다).
 
-   ─ **계단**(197 문법): 레벨 1당 효과가 `RUNE_STEP_EVERY` 레벨마다 한 칸씩 커진다.
-     그래서 «다음 1레벨» 이 앞 레벨보다 항상 크고, 계단을 밟는 순간이 체감된다.
+   ─ **선형**(489, 2026-08-30 주인 확정 — 197 «계단» 문법 폐기): 레벨 1당 효과가 **전 구간 같다**.
+     주인 원문은 «지수느낌으로 1.3배씩» 이었으나 상한 500 에 1.3^500 ≈ 10^57 이라 산술적으로 불가능해
+     주인이 «지수 말고 선형으로» 로 확정했다(23:40). 상한 `RUNE_MAXLV` 는 500 그대로.
+     ⚠ **계단 표(`RUNE_STEP`/`RUNE_STEP_EVERY`)는 지웠다** — 되살리지 마라(295-② «두 벌 금지»).
      표기·`bonus()`·게이트가 **같은 식(`runeVal`)** 을 보게 한다 — 표기층이 두 벌이 되면 조용히 갈라진다.
    -------------------------------------------------------------------------- */
 const RUNE_MAXLV = 500;                       /* 주인 확정 — 룬 하나당 상한 */
@@ -18565,11 +18567,16 @@ function runeRate(l){
   for(const b of RUNE_BANDS) if(l < b.to) return b.p;
   return RUNE_BANDS[RUNE_BANDS.length - 1].p;
 }
-/* ⑤ 계단 — 100 레벨마다 «1레벨당 효과» 가 한 칸 커진다(5칸 = 500레벨). */
-const RUNE_STEP_EVERY = 100;
-const RUNE_STEP = [1, 1.8, 3.0, 4.6, 6.6];
-/* 세 룬. `eff` 는 **1레벨당(1계단 기준)** 값이고 실제 값은 계단 배수를 탄다.
-   위 단계일수록 재료도 비싸고 확률 곡선도 같지만 «1레벨의 무게» 가 배로 커진다. */
+/* ⑤ 489 — **선형 계수 하나**(주인 확정 2026-08-30 23:40). 「1레벨당 효과 = `eff[k] × RUNE_LIN`」이고
+   레벨과 무관하게 상수다. 값 3 의 근거: 지시 «현행 Lv1~100 구간의 레벨당 증가분의 ×3»
+   — 구 계단표의 첫 칸이 `RUNE_STEP[0] = 1` 이므로 3 × 1 = 3.
+   ⚠ 등재문의 괄호 조건(«Lv500 에서 구 계단표 최종값 대비 ≥ ×3»)과는 **산술적으로 양립하지 않는다**:
+      구 Lv500 누적 = 100×(1+1.8+3+4.6+6.6) = 1700 · 신 Lv500 = 3×500 = 1500(= ×0.88).
+      ≥ ×3 을 Lv500 에서 만족시키려면 `RUNE_LIN ≥ 10.2` 여야 한다. 실제로 사람이 사는 구간이
+      Lv0~100(확률 곡선상 Lv500 은 도달 불가 — review §3 기대 시도수 표)이라 **본문 조항을 따랐다.**
+      배수 확정은 199 몫이다(review 489 §4 · PROGRESS 199 행 이관). */
+const RUNE_LIN = 3;
+/* 세 룬. `eff` 는 **1레벨당(계수 1 기준)** 값이고 실제 값은 `RUNE_LIN` 을 탄다. */
 const RUNES = [
   { id:'r1', n:'일반룬', ic:'🔹', tone:'#7FD8E8', cost:{ base:12, r:1.0060 },
     eff:{ atk:0.010, hp:0.008 } },
@@ -18594,17 +18601,12 @@ const runeReqText = id => {
 };
 /* Lv l → l+1 재료 비용(룬강화석) */
 const runeCost = (r, l) => Math.ceil(r.cost.base * Math.pow(r.cost.r, Math.max(0, l)));
-/* 계단을 밟은 «누적» 효과. Σ_{i=1..L} eff[k] × RUNE_STEP[floor((i-1)/EVERY)]
-   — 구간이 5칸뿐이라 닫힌 식으로 접는다(레벨마다 루프를 돌지 않는다). */
+/* 489 — 누적 효과. 선형이라 곱셈 한 번이다: eff[k] × RUNE_LIN × L.
+   «다음 1레벨» 은 이 식의 차분이므로 항상 `eff[k] × RUNE_LIN` — 레벨과 무관한 상수다. */
+const runeStep1 = (r, k) => (r && r.eff[k] ? r.eff[k] * RUNE_LIN : 0);
 function runeVal(id, k){
   const r = RN[id]; if(!r || !r.eff[k]) return 0;
-  let l = runeLvOf(id), n = 0, seg = 0;
-  while(l > 0 && seg < RUNE_STEP.length){
-    const take = Math.min(l, RUNE_STEP_EVERY);
-    n += take * RUNE_STEP[seg];
-    l -= take; seg++;
-  }
-  return r.eff[k] * n;
+  return runeStep1(r, k) * runeLvOf(id);
 }
 /* 축별 총효과(배수 −1) — 표기와 bonus() 가 같은 식을 본다 */
 const runeSum = k => RUNES.reduce((s, r) => s + runeVal(r.id, k), 0);
@@ -19222,7 +19224,7 @@ function load(){
     /* 203 — 룬강화석·룬 레벨. 194 와 같은 «없으면 기본값» 마이그레이션(KEY 유지).
        구 세이브엔 두 키가 없다 → 룬강화석 0 · 세 룬 전부 Lv 0 에서 시작한다.
        레벨은 **실재하는 룬 id 만** 남기고 0~RUNE_MAXLV 로 자른다 — 손댄 세이브가 500 을 넘겨도
-       `runeVal()` 이 계단 표(RUNE_STEP 5칸) 밖으로 나가지 않는다. */
+       `runeVal()` 이 상한 밖으로 나가지 않는다(489 — 계단 표는 선형 계수 하나로 바뀌었다). */
     if(!Number.isFinite(b.rstone) || b.rstone < 0) b.rstone = 0; else b.rstone = Math.floor(b.rstone);
     {
       const rr = (d.rune && typeof d.rune === 'object') ? d.rune : {}, out = {};
@@ -31400,19 +31402,16 @@ function setRuneSub(id){
    표기층이 두 벌이 되면 조용히 갈라진다(LESSONS 194). 게이트가 그 동일성을 잠근다. */
 function runeCardTxt(r){
   const l = runeLvOf(r.id), max = runeMaxed(r.id), rate = runeRate(l);
-  const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
   return {
-    l, max, seg,
+    l, max,
     lv:   'Lv. ' + l + ' / ' + RUNE_MAXLV,
     bar:  (l / RUNE_MAXLV * 100).toFixed(2) + '%',
     rate: max ? 'MAX' : (rate * 100).toFixed(rate < 0.01 ? 2 : 1) + '%',
     rateS: max ? '더 올릴 수 없음' : '성공 확률',
     eff: Object.keys(r.eff).map((k, j) =>
       '<span class="rw e' + j + '"><i>' + RUNE_AXIS[k] + ' +' + pct(runeVal(r.id, k)) + '</i>'
-      + '<s>' + (max ? '최대' : '다음 +' + pct(r.eff[k] * RUNE_STEP[seg])) + '</s></span>').join(''),
-    step: '계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
-        + ' — Lv ' + (seg * RUNE_STEP_EVERY) + '~' + (seg * RUNE_STEP_EVERY + RUNE_STEP_EVERY - 1)
-        + ' 구간은 1레벨당 ×' + RUNE_STEP[seg].toFixed(1),
+      + '<s>' + (max ? '최대' : '다음 +' + pct(runeStep1(r, k))) + '</s></span>').join(''),
+    step: '1레벨당 증가폭이 Lv.1 ~ Lv.' + RUNE_MAXLV + ' 내내 같습니다 (선형)',
     mat: curIc('rstone', 34) + fmt(runeCost(r, l)),
     dia: curIc('dia', 34) + fmt(RUNE_DIA),
     okM: runeTryOk(r.id, 'mat'), okD: runeTryOk(r.id, 'dia')

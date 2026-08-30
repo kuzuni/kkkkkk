@@ -325,22 +325,21 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     '재료 0 에서도 당연히 없다(300)', JSON.stringify(dot.b.got));
 
   /* ================= [7] 표기 ================= */
-  console.log('[7] 표기 — «다음 1레벨»·«계단 n/5» 가 runeVal/RUNE_STEP 과 같은 식이다');
+  console.log('[7] 표기 — «다음 1레벨»·선형 안내줄이 runeVal/RUNE_LIN 과 같은 식이다(489)');
   const say = await p.evaluate(() => {
     const out = [];
     S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub('r1');
     [0, 99, 100, 250, 499].forEach(l => {
       S.rune.r1 = l; renderTrain();
-      const seg = Math.min(Math.floor(l / RUNE_STEP_EVERY), RUNE_STEP.length - 1);
       const rows = [...document.querySelectorAll('.tr-rn>.rd>.rw')];
       out.push({
-        l, seg, rows: rows.length,
+        l, rows: rows.length,
         cur: rows.map(e => e.querySelector('i').textContent.trim()).join(' | '),
         nx: rows.map(e => e.querySelector('s').textContent.trim()).join(' | '),
         st: document.querySelector('.tr-rn>.rst').textContent.trim(),
         wantCur: '공격력 +' + pct(runeVal('r1', 'atk')),
-        wantNx: '다음 +' + pct(RN.r1.eff.atk * RUNE_STEP[seg]),
-        wantSt: '계단 ' + (seg + 1) + ' / ' + RUNE_STEP.length
+        wantNx: '다음 +' + pct(RN.r1.eff.atk * RUNE_LIN),
+        wantSt: '1레벨당 증가폭이 Lv.1 ~ Lv.' + RUNE_MAXLV + ' 내내 같습니다'
       });
     });
     S.rune.r1 = RUNE_MAXLV; renderTrain();
@@ -356,9 +355,12 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     'Lv ' + o.l + ' — 축마다 한 줄(일반룬 2줄) · 왼쪽이 runeVal 과 같은 식',
     o.rows + '줄 · ' + o.cur));
   say.out.forEach(o => ok(o.nx.indexOf(o.wantNx) === 0,
-    'Lv ' + o.l + ' — 오른쪽 «다음 +n%» 이 eff × RUNE_STEP[' + o.seg + '] 과 같다', o.nx));
+    'Lv ' + o.l + ' — 오른쪽 «다음 +n%» 이 eff × RUNE_LIN 과 같다(489 · 레벨 무관 상수)', o.nx));
+  ok(new Set(say.out.map(o => o.nx)).size === 1,
+    '★ 489 — 다섯 레벨(0·99·100·250·499)의 «다음 +n%» 이 **글자까지 같다**(계단이 되살아나면 갈라진다)',
+    say.out.map(o => o.l + ':' + o.nx).join(' / '));
   say.out.forEach(o => ok(o.st.indexOf(o.wantSt) === 0,
-    'Lv ' + o.l + ' — «계단 ' + (o.seg + 1) + ' / 5» 로 지금 칸을 말한다', o.st));
+    'Lv ' + o.l + ' — 안내줄이 «전 구간 같은 증가폭»(선형)을 말한다', o.st));
   ok(/^최대(,최대)*$/.test(say.maxNx) && say.maxBtn && !say.hintAtMax,
     '만렙에서는 «다음 +n%» 대신 «최대» · MAX 판 · 실패 안내 없음', say.maxNx);
   ok(say.hint0.indexOf('실패해도 레벨은 그대로') >= 0,
@@ -379,18 +381,28 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
       .every(e => !e.classList.contains('lk'));
     /* ⓒ 카드가 «1장» 인 것이 우연이 아니다 — RUNES 는 여전히 3종이다 */
     const c = RUNES.length === 3 && document.querySelectorAll('.tr-rn').length === 1;
-    /* ⓓ 계단 표기가 레벨을 실제로 따라간다(고정 문자열이 아니다) */
+    /* ⓓ 489 — 안내줄(.rst)은 이제 «레벨 무관 상수 문구» 다. 그래서 «레벨을 따라간다» 를
+       그대로 물으면 거짓이 된다. 자리를 비우지 않고(333) 두 항으로 갈랐다:
+         ⓓ  레벨을 따라 실제로 바뀌는 표기가 살아 있다(지금 효과 `.rd` + Lv 줄 `.rl`)
+             — 여기까지 굳으면 «카드가 고정 문자열» 이라는 진짜 결함이다.
+         ⓓ2 안내줄 `.rst` 은 반대로 **안 바뀌는 것이 정답**이다(계단이 되살아나면 갈라진다). */
     S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub('r1'); renderTrain();
-    const d0 = document.querySelector('.tr-rn>.rst').textContent.trim();
+    const q = () => ({ st: document.querySelector('.tr-rn>.rst').textContent.trim(),
+                       ef: document.querySelector('.tr-rn>.rd').textContent.trim(),
+                       lv: document.querySelector('.tr-rn>.rl').textContent.trim() });
+    const p0 = q();
     S.rune.r1 = 300; renderTrain();
-    const d1 = document.querySelector('.tr-rn>.rst').textContent.trim();
+    const p1 = q();
     S.rune = { r1: 0, r2: 0, r3: 0 }; setRuneSub(null); S.rstone = 0; S.dia = 0; renderTrain();
-    return { a: a1 === 'r1' && a2 === 'r3', b, c, d: d0 !== d1, d0, d1 };
+    return { a: a1 === 'r1' && a2 === 'r3', b, c,
+             d: p0.ef !== p1.ef && p0.lv !== p1.lv, d0: p0.ef + ' · ' + p0.lv, d1: p1.ef + ' · ' + p1.lv,
+             d2: p0.st === p1.st, s0: p0.st };
   });
   ok(neg.a, 'ⓐ 카드는 고른 칸을 실제로 따라간다(고정 노드가 아니다)');
   ok(neg.b, 'ⓑ 잠금 표시는 «항상 켜짐» 이 아니다(전부 열면 전부 꺼진다)');
   ok(neg.c, 'ⓒ 룬은 여전히 3종인데 화면에 1장이다 — «탭으로 나눴다» 가 진짜다');
-  ok(neg.d, 'ⓓ 계단 문구가 레벨을 따라 바뀐다', neg.d0 + ' / ' + neg.d1);
+  ok(neg.d, 'ⓓ 레벨을 따라 실제로 바뀌는 표기가 있다(지금 효과 · Lv 줄)', neg.d0 + ' / ' + neg.d1);
+  ok(neg.d2, 'ⓓ2 489 — 안내줄은 레벨과 무관한 상수 문구다(계단이 되살아나면 갈라진다)', neg.s0);
 
   /* ⓔ [2] 의 «한 줄 상자가 실제로 한 줄인가» 가 진짜로 접힘을 잡는가 —
      일부러 상자를 좁혀 접히게 만들고, 같은 자로 재서 잡히는지 본다(안 잡히면 그 단언은 장식이다). */
