@@ -83,12 +83,24 @@ async function measure(browser, file, H, opt) {
       .map((e) => { const r = e.getBoundingClientRect();
         const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         return !!(h && h.closest && h.closest('#top')); });
+    /* 423 이관 — 이 표본은 원래 «조작 요소가 아니다» 만 물었다. 423 이 짧은 프레임에서
+       프로모 스트립을 «나가는 길» 로 만들면서 95% 표본이 `bls-promo` → `blsw`(딤 = 닫힘)로
+       바뀌므로, 그 뜻을 잃지 않게 **닫힘인지**를 같이 적는다(328 교훈 — 누른 항을 묻는 항을
+       한 줄 더 넣지 않으면 «423 이 통째로 사라져도 초록인 게이트» 가 된다). */
     const xBand = [0.25, 0.5, 0.75, 0.95].map((f) => {
       const y = A.top + A.height * f, x = A.left + 540;
       const h = document.elementFromPoint(x, y);
       return { f, el: h ? (h.id || String(h.className).split(' ')[0] || h.tagName) : null,
-        act: !!(h && h.closest && h.closest('button,[onclick],.gb,.tab,.ibtn')) };
+        act: !!(h && h.closest && h.closest('button,[onclick],.gb,.tab,.ibtn')),
+        close: h === w || !!(h && h.closest && h.closest('#blsX')),
+        inPromo: !!(h && h.closest && h.closest('.bls-promo')) };
     });
+    /* 423 이관의 표본 — 프레임 높이가 달라 «95%» 는 두 프레임에서 다른 것을 가리킨다.
+       그래서 비율이 아니라 **스트립 한복판**(x540 · 프로모 세로 중앙 = 버튼 밖)을 직접 잰다. */
+    const pr = box(q('#blsw .bls-promo'));
+    const ph = pr ? document.elementFromPoint(A.left + 540, A.top + pr.t + pr.h / 2) : null;
+    const promoMid = { el: ph ? (ph.id || String(ph.className).split(' ')[0] || ph.tagName) : null,
+      close: ph === w, inPromo: !!(ph && ph.closest && ph.closest('.bls-promo')) };
     const hits = [...document.querySelectorAll('.tab[data-t]')].map((t) => {
       const r = t.getBoundingClientRect();
       const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -106,7 +118,7 @@ async function measure(browser, file, H, opt) {
       coverAny: Math.max(...kids.map((k) => Math.max(0, k.b - tb.t))),
       scrollH: w.scrollHeight, clientH: w.clientHeight,
       out: kids.filter((k) => k.b > A.height + 0.5 || k.t < -0.5).map((k) => k.c),
-      hits, topHits, xBand, errs: 0,
+      hits, topHits, xBand, promoMid, errs: 0,
     };
   });
   m.errs = errs.length;
@@ -207,6 +219,13 @@ async function measure(browser, file, H, opt) {
   ok(M[1600].xBand.every((b) => !b.act),
     `[2-f 1600] 2280 ✕ 가 있던 가로 대역(x540)의 세로 전 구간에 조작 요소가 없다 — `
     + `${M[1600].xBand.map((b) => Math.round(b.f * 100) + '%:' + b.el).join(' · ')} (마지막은 딤 = 닫힘)`);
+  /* [2-f2] 423 이관 — 그 대역의 «아래쪽» 은 이제 «조작 요소가 아니다» 가 아니라 **«닫힘이다»** 다.
+     423 이 짧은 프레임에서만 스트립을 딤에 넘겼으므로 1600 은 닫힘 · 2280 은 스트립 그대로여야 한다.
+     두 프레임을 같이 물어야 «423 이 사라져도 초록» 이 안 된다(328 교훈). */
+  const pm = (H) => M[H].promoMid;
+  ok(pm(1600).close && !pm(1600).inPromo && pm(2280).inPromo && !pm(2280).close,
+    `[2-f2] 423 이관 — 스트립 한복판(x540)이 1600 에서는 «닫힘»(${pm(1600).el}) 이고 2280 에서는 스트립 그대로다(${pm(2280).el}) `
+    + `⇒ ✕ 가 비운 자리를 스트립이 짧은 프레임에서만 물려받았다 (게이트 tools/verify423.js)`);
 
   const band = M[1600].tabTop - INK, block = M[1600].flowBot - M[1600].flowTop;
   ok(Math.round(band) === 1278 && Math.round(block) === 1427,
@@ -223,7 +242,8 @@ async function measure(browser, file, H, opt) {
     `[3-c] 가려지는 글자 0 — 겹침 띠 ${M[1600].band ? M[1600].band.total : '?'}px 중 스트립이 덮은 안쪽에서 탭바를 숨겨도 `
     + `**${M[1600].band ? M[1600].band.inner : '?'}px** 바뀐다 (코너 포함 전체 ${M[1600].band ? M[1600].band.n : '?'}px)`);
   ok(M[1600].dimCloses && M[1600].xCloses,
-    `[3-d] 나갈 길 둘 다 산다 — 딤 ${M[1600].dimCloses} · ✕ ${M[1600].xCloses}`);
+    `[3-d] 나갈 길이 산다 — 딤 ${M[1600].dimCloses} · ✕ ${M[1600].xCloses} `
+    + `(423 이 짧은 프레임에서 셋째 길 «프로모 스트립» 을 더했다 — 그 길은 [2-f2]·tools/verify423.js 가 잡는다)`);
   const gTop = M[1600].flowTop - INK, gBot = M[1600].frameH - M[1600].flowBot;
   ok(Math.abs(gTop - gBot) <= 2,
     `[3-e] 블록이 «쓸 수 있는 띠(142..1600)» 한가운데 — 위 ${r1(gTop)} ≈ 아래 ${r1(gBot)} (391 자)`);
