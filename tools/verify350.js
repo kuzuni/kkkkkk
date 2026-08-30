@@ -20,9 +20,23 @@
  *   §4 bfarm  40 재도전 대기의 중앙 Ø120 해골은 **그대로 산다**(480,280,120×120).
  *   §5 왕복   보스전 → 포기(파밍) → 재도전 → 격파(평상시) 를 실제 진입점으로 돌며
  *             .kboss 가 «숨김 → Ø120 중앙 → 숨김 → 02 자리 복귀» 로 정확히 되돌아온다.
- *   §6 끼어들기 스테이지 보스전 도중 승급전이 시작되는 경로(«bfight 이미 켜짐» 케이스)에서도 숨김.
+ *   §6 갈아타기 `.bfight` 가 **켜진 채로 모드만 갈리는** 자리에서도 숨김(«bfight 이미 켜짐» 케이스)
+ *             + 453 가드 자체(보스전 도중 `startPromo()` 는 반려된다)를 같이 묻는다.
  *   §R 되돌림 숨김 목록에서 `.kboss` 만 뺀 **소스 사본**에서 §2·§3 이 실제로 빨개진다.
  *             (이게 없으면 «두 클래스가 애초에 안 켜져서 초록» 과 구별할 수 없다)
+ *   §R6 되돌림 `startPromo` 의 453 가드만 뺀 **소스 사본**에서 §6 의 가드 항이 실제로 빨개진다
+ *             (= «끼어들기가 되살아나도 초록» 이 아님을 못박는다 — 503).
+ *
+ * ⚑ 503(2026-08-30) — §6 이 원래 쓰던 표본은 «스테이지 보스전 도중 승급전 **끼어들기**» 였다.
+ *   453(주인 지시 2026-08-30 «전투 중에는 어떤 전투에도 못 들어간다»)이 `startPromo` 에
+ *   `if(battleBusy()) return;` 을 세운 뒤로 그 호출은 아무 일도 안 하고 판정은 계속 `stage` 라
+ *   1건이 굳어 빨갰다(36/37 · 수리 전 커밋 `182f6b5` 에서도 같은 1건 — 338·344 대조 규칙).
+ *   이 절이 **재는 것**은 «끼어들기» 가 아니라 «`.bfight` 토글에 변화가 없는데도 `.kboss` 가
+ *   숨는가»(= 숨김이 클래스 규칙에서 오는가) 이므로, 자리를 비우지 않고(333 처방) **살아 있는
+ *   갈아타기**로 표본을 옮겼다 — 보스전을 정상 종료(포기)시키면 `bossMode()` 는 `''` 가 되지만
+ *   HUD 를 아직 안 그렸으므로 `.bfight` 는 **켜진 채**다. 그 자리에서 승급전이 서면 토글은
+ *   «켜짐 → 켜짐» 이다. 옛 전제를 지우기만 하면 «끼어들기가 되살아나도 초록» 이 되므로
+ *   453 가드를 직접 묻는 항(§1 소스 · §6 실동작 · §R6 되돌림) 셋을 같이 세웠다.
  *   §7 에러   콘솔·페이지 에러 0건.
  *
  * ⚠ 함정 둘 (probe350 머리말과 같다):
@@ -52,6 +66,10 @@ const KC = { '#141414': '테(검정)', '#4CBAED': '링(시안)', '#2A3E81': '원
 /* 숨김 목록의 350 자리 — §R 이 이 문자열만 빼서 «수리 전» 사본을 만든다 */
 const HIDE_NEW = '#stinfo.bfight .kbar,#stinfo.bfight .knode,#stinfo.bfight .kboss,';
 const HIDE_OLD = '#stinfo.bfight .kbar,#stinfo.bfight .knode,';
+/* 503 — 453 가 `startPromo` 에 세운 «전투 중 입장 금지» 가드. §R6 이 이 한 줄만 빼서
+   «끼어들기가 되살아난» 사본을 만든다(앞 줄 `if(!r) return;` 까지 묶어야 저장소에서 유일하다). */
+const GUARD_NEW = '  if(!r) return;\n  if(battleBusy()) return;\n';
+const GUARD_OLD = '  if(!r) return;\n';
 
 /* 한 페이지를 «상태 하나» 로 만들고 .kboss / #bossHp 를 재는 공용 하네스.
    상태는 예외 없이 **실제 진입점** 으로 만든다(플래그 직접 대입 금지 — T2 기능 완성 규칙).
@@ -149,6 +167,11 @@ async function pixels(h, shotPath) {
     '`.bfarm .kboss` 를 끄는 규칙은 **없다** — 40 의 중앙 해골은 살려 둔다');
   ok(/#stinfo\.bfarm\s+\.kboss\{left:160px;top:40px;width:120px;height:120px/.test(CODE),
     '40 의 중앙 Ø120 재배치 규칙이 그대로 있다(350 이 그 자리를 안 건드렸다)');
+  /* 503 — §6 의 표본이 «끼어들기» 에서 «갈아타기» 로 옮겨간 근거가 이 한 줄이다.
+     소스에서 사라지면 §6 실동작 항과 §R6 이 같이 빨개진다(한 자리를 세 겹으로 묻는다). */
+  ok(CODE.split(GUARD_NEW).length - 1 === 1,
+    '453 가드 — `startPromo` 가 `battleBusy()` 로 «전투 중 입장» 을 막는 줄이 **정확히 1곳**',
+    (CODE.split(GUARD_NEW).length - 1) + '곳');
 
   console.log('\n=== §2 표시 — BOSS_HUD28 세 모드 전부에서 .kboss 가 안 보인다 ===');
   const FIGHT = [['stage', '스테이지 보스전'], ['raid', '46 레이드'], ['promo', '284 승급전']];
@@ -225,7 +248,10 @@ async function pixels(h, shotPath) {
       '⑤ 격파 후 — ① 과 같은 02 자리로 **정확히** 복귀(x699 Ø82)', g(4).disp + ' x=' + g(4).x + ' w=' + g(4).w);
   }
 
-  console.log('\n=== §6 끼어들기 — 스테이지 보스전 도중 승급전 («bfight 이미 켜짐» 케이스) ===');
+  console.log('\n=== §6 갈아타기 — `.bfight` 가 켜진 채 모드만 갈린다 (+ 453 가드) ===');
+  /* 503 — 표본은 «끼어들기» 가 아니라 «갈아타기» 다(머리말 ⚑ 참조). 상태는 전부 실제 진입점으로
+     만든다 — `startBoss` → (453 반려 확인) → `failBoss`(= [포기] 버튼이 부르는 그 함수)
+     → `startPromo`. HUD 를 중간에 안 그리므로 `.bfight` 는 켜진 채로 모드만 갈린다. */
   const cut = await h.ev(`(() => {
     localStorage.clear(); Object.assign(S, DEF());
     S.own.slash = { n:0, l:1 }; S.eqSkill = ['slash'];
@@ -233,17 +259,34 @@ async function pixels(h, shotPath) {
     S.gold = 1e30; S.dia = 1e12;
     promo = null; raidOn = null; bossOn = false; S.bossFarm = false;
     enemies.length = 0; spawnQ.length = 0;
+    const bf = () => document.getElementById('stinfo').classList.contains('bfight');
     startBoss(); drawBossHud();
-    const was = document.getElementById('stinfo').classList.contains('bfight');
-    startPromo(); drawBossHud();                 /* .bfight 는 «이미 켜져» 있어 토글에 변화가 없다 */
+    const was0 = bf(), md0 = bossMode();
+    /* 453 — 보스전 도중 승급전은 «반려» 가 정답이다(구 설계 «끼어들 수 있다» 는 폐지됐다) */
+    startPromo();
+    const blk = { none: promo === null, md: bossMode() };
+    /* 갈아타기 — [포기] 가 부르는 정상 종료. 모드는 '' 가 되지만 HUD 는 아직 .bfight 다 */
+    failBoss('포기');
+    const was = bf(), mdMid = bossMode();
+    startPromo(); drawBossHud();                 /* 토글은 «켜짐 → 켜짐» = 변화 없음 */
     const s = snap350();
-    return { was, md: s.md, fight: s.fight, disp: s.kboss ? s.kboss.disp : '없음', tm: s.tm, hp: s.hp };
+    return { was0, md0, blk, was, mdMid, md: s.md, fight: s.fight, farm: s.farm,
+             disp: s.kboss ? s.kboss.disp : '없음', tm: s.tm, hp: s.hp };
   })()`);
-  if (cut.__err) ok(false, '끼어들기 하네스 실패', cut.__err);
+  if (cut.__err) ok(false, '갈아타기 하네스 실패', cut.__err);
   else {
-    ok(cut.was === true, '전제 — 승급전 시작 전에 이미 `.bfight` 였다', 'was=' + cut.was);
-    eq('끼어든 뒤 bossMode()', cut.md, 'promo');
+    ok(cut.was0 === true && cut.md0 === 'stage',
+      '전제 ① — 스테이지 보스전에서 `.bfight` 가 켜졌다', 'bfight=' + cut.was0 + ' bossMode()=' + cut.md0);
+    ok(cut.blk && cut.blk.none === true && cut.blk.md === 'stage',
+      '453 가드 — 보스전 **도중** `startPromo()` 는 반려된다(끼어들기 설계 폐지)',
+      cut.blk ? 'promo=null?' + cut.blk.none + ' bossMode()=' + cut.blk.md : '?');
+    ok(cut.was === true && cut.mdMid === '',
+      '전제 ② — 정상 종료 직후: 모드는 비었는데 HUD 는 아직 `.bfight` 다(= 갈아타기 자리)',
+      'bfight=' + cut.was + ' bossMode()=«' + cut.mdMid + '»');
+    eq('갈아탄 뒤 bossMode()', cut.md, 'promo');
     ok(cut.fight === true, '`.bfight` 는 계속 켜져 있다(토글 변화 없음 = 284 가 본 자리)');
+    ok(cut.farm === false,
+      '`.bfarm` 은 안 켜진다 — 파밍 대기(S.bossFarm)가 승급전 HUD 를 덮지 않는다', 'farm=' + cut.farm);
     eq('그래도 .kboss 는 숨김 — 클래스 규칙이라 «변화 없음» 에 안 걸린다', cut.disp, 'none');
     ok(cut.tm === true && cut.hp === true, '28 HUD 나머지도 그대로', 'tm=' + cut.tm + ' hp=' + cut.hp);
   }
@@ -271,6 +314,38 @@ async function pixels(h, shotPath) {
     'R5 — 되돌린 사본에서도 .bfarm 은 Ø120 그대로 = §4 는 350 이 만든 것이 아니다(회귀 기준선)',
     rfm.kboss && rfm.kboss.w);
   fs.unlinkSync(tmp);
+
+  console.log('\n=== §R6 되돌림 — 453 가드만 빼면 §6 의 가드 항이 빨개진다 (503) ===');
+  const tmp6 = path.join(ROOT, 'index.verify350-noguard.html');
+  fs.writeFileSync(tmp6, CODE.replace(GUARD_NEW, GUARD_OLD));
+  const g = await open(browser, tmp6, 'noguard');
+  const gr = await g.ev(`(() => {
+    localStorage.clear(); Object.assign(S, DEF());
+    S.own.slash = { n:0, l:1 }; S.eqSkill = ['slash'];
+    S.stage = 246; S.best = 9999; S.guide.idx = 99; S.rank = 0;
+    S.gold = 1e30; S.dia = 1e12;
+    promo = null; raidOn = null; bossOn = false; S.bossFarm = false;
+    enemies.length = 0; spawnQ.length = 0;
+    startBoss(); drawBossHud();
+    startPromo();                                /* 가드가 없으면 «끼어들기» 가 성사된다 */
+    const blk = { none: promo === null, md: bossMode() };
+    drawBossHud();
+    const s = snap350();
+    return { blk, fight: s.fight, disp: s.kboss ? s.kboss.disp : '없음' };
+  })()`);
+  if (gr.__err) ok(false, 'R6 하네스 실패', gr.__err);
+  else {
+    ok(gr.blk && gr.blk.none === false && gr.blk.md === 'promo',
+      'R6-a — 가드를 뺀 사본에서는 끼어들기가 실제로 성사된다 ⇒ §6 의 453 가드 항이 빨개진다',
+      gr.blk ? 'promo=null?' + gr.blk.none + ' bossMode()=' + gr.blk.md : '?');
+    /* «가드가 사라져도 초록» 이 아님을 못박는 짝 — 그 사본에서도 .kboss 는 여전히 숨는다(숨김은
+       클래스 규칙이라 453 과 무관하다). 즉 §6 의 두 축(가드 · 숨김)이 서로를 대신 못 한다. */
+    ok(gr.fight === true && gr.disp === 'none',
+      'R6-b — 그래도 .kboss 는 숨는다 = §6 의 «숨김» 축은 453 과 무관한 별개의 항이다',
+      'bfight=' + gr.fight + ' kboss=' + gr.disp);
+  }
+  ok(g.errs.length === 0, 'R6 — 가드를 뺀 사본에도 콘솔·페이지 에러 0건', g.errs.length + '건');
+  fs.unlinkSync(tmp6);
 
   console.log('\n=== §7 에러 ===');
   eq('콘솔·페이지 에러(현재 파일)', h.errs.length, 0);
