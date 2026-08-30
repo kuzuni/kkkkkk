@@ -93,23 +93,56 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
                                        fill: document.getElementById('blsFill').style.width }));
   ok('E1 4번 채우면 레벨 +1', e.lv === 2, e.lv);
   ok('E2 진행 되감기 0/4', e.prog === 0, e.prog);
-  ok('E3 레벨 2 지속시간 35분(레벨업 즉시 적용)', Math.abs(e.left - 35 * 60 * 1000) < 2000, e.left);
+  /* 456(2026-08-30, 주인 지시 «축복은 늘 30분으로 해줘 렙업되도») — 지속시간에서 레벨 항이 이름째 사라졌다.
+     옛 «레벨 2 = 35분» 은 `verify456` 이 못박은 «항상 30분» 과 **정면으로 반대를 단언하던 자리**라
+     둘 중 하나는 영원히 빨갛다(333 선례: 149 ↔ 295). 나중 지시가 옳으므로 이쪽을 뒤집는다.
+     자리는 비우지 않는다 — 뜻이 «레벨업이 지속시간을 건드리지 않는다» 로 바뀌었을 뿐이고,
+     그래서 C5(Lv1 30분)와 겹치지 않게 **레벨이 오른 뒤에도** 같은 값인지를 묻는다. */
+  ok('E3 레벨 2 여도 지속시간 30분(456 — 레벨과 무관)', Math.abs(e.left - 30 * 60 * 1000) < 2000,
+     e.left + ' (Lv' + e.lv + ')');
   ok('E4 Lv 표시 갱신', e.lvTxt === 'Lv.2', e.lvTxt);
   /* 500(2026-08-30) — 진행바 분모가 «어느 레벨에서나 4» 에서 **레벨별 필요 경험치 표**로 바뀌었다.
      이 항이 묻던 뜻(«레벨업 직후 표시·채움이 되감긴다»)은 그대로 두고 분모만 Lv2 의 값(10)으로 갈아 끼운다. */
   ok('E5 진행 표시·채움 갱신 (Lv2 = 0/10)', e.pgTxt === '0/10' && parseFloat(e.fill) === 0, e.pgTxt + ' ' + e.fill);
 
-  /* ── F. «모든 축복 받기» 버튼 ── */
+  /* ── F. 프로모 스트립 [이동] ──
+     157(주인 지시 2026-08-27) 이 «모든 축복 받기»(일괄 활성화)를 **폐지**하고 그 버튼을
+     판매처(상점 «이용권» 탭)로 보내는 크로스 프로모 CTA 로 갈았다. 옛 동작을 계속 물으면
+     «버튼이 사라진 것» 을 영원히 빨갛게 세우므로, **자리를 비우지 않고** 지금 살아 있는 동작으로
+     갈아 끼운다(333 처방). 세 항이 묻는 것: ① 버튼이 제 일을 하는가 ② 폐지된 일괄 활성화가
+     되살아나지 않았는가(음성항) ③ 레이어가 늘 있고 활성인가. */
+  /* ③ 은 «축복 상태와 무관» 이 뜻이라 두 상태에서 다 본다 — 여기(E 직후)는 3종 전부 켜진 상태다 */
+  const fOn = await page.evaluate(() => ({ all: blessAll(),
+                                           off: document.getElementById('blsAll').classList.contains('off'),
+                                           w: document.getElementById('blsAll').offsetWidth }));
   await page.evaluate(() => { S.bless.exp = { atk: 0, hp: 0, rate: 0 }; S.bless.prog = 0; markDirty(); renderBless(); });
-  await page.click('#blsAll'); await page.waitForTimeout(250);
-  let f = await page.evaluate(() => ({ all: blessAll(), prog: S.bless.prog,
-                                       vis: document.getElementById('blsAll').classList.contains('off') }));
-  ok('F1 [받기] 한 번에 3종 활성', f.all);
-  ok('F2 진행 +3', f.prog === 3, f.prog);
-  /* ref 에 항상 있는 레이어라 «숨김» 이 아니라 «비활성» 이다(비평 B 1순위 지적) */
-  ok('F3 켤 게 없으면 버튼 비활성 표시(숨기지 않음)', f.vis === true, f.vis);
+  const fOff = await page.evaluate(() => ({ all: blessAll(),
+                                            off: document.getElementById('blsAll').classList.contains('off'),
+                                            w: document.getElementById('blsAll').offsetWidth,
+                                            txt: document.getElementById('blsAll').textContent.trim() }));
+  await page.click('#blsAll'); await page.waitForTimeout(300);
+  let f = await page.evaluate(() => ({ open: document.getElementById('blsw').classList.contains('on'),
+                                       shop: document.getElementById('shopw').classList.contains('on'),
+                                       cat: shopCat, all: blessAll(), prog: S.bless.prog }));
+  ok('F1 [이동] → 축복 팝업이 닫히고 상점 «이용권» 탭이 열린다', !f.open && f.shop && f.cat === 'pass',
+     'bless' + (f.open ? '열림' : '닫힘') + ' shop=' + f.shop + ' cat=' + f.cat);
+  /* 음성항 — 일괄 활성화가 되살아나면 여기가 빨개진다 */
+  ok('F2 [이동] 은 축복을 켜지 않는다(157 일괄 활성화 폐지)', !f.all && f.prog === 0, f.prog);
+  /* ref 에 항상 있는 레이어라 «숨김» 이 아니다(비평 B 1순위 지적). 157 이후로는 «비활성» 도 아니다 —
+     축복을 다 켰든 하나도 안 켰든 이동 버튼은 늘 있고 늘 활성이다. */
+  ok('F3 스트립 CTA 는 축복 상태와 무관하게 늘 있고 활성(숨기지 않는다)',
+     fOn.all && !fOn.off && fOn.w > 0 && !fOff.all && !fOff.off && fOff.w > 0 && fOff.txt === '이동',
+     '켬' + JSON.stringify(fOn) + ' 끔' + JSON.stringify(fOff));
 
   /* ── G. 저장·복원 ── */
+  /* F 가 더는 축복을 켜지 않으므로(157) G 는 **실제 사용자 경로**로 표본을 만든다 — 카드 3장 클릭.
+     Lv2 의 필요 경험치는 10(500 의 BLESS_NEED 표)이라 3 을 채워도 레벨은 2 그대로다. */
+  /* ⚠ 여기서 사이드 아이콘을 «클릭» 으로 다시 열면 F1 이 깨진 트리(축복 팝업이 안 닫히는 사본)에서
+     딤에 가려 클릭이 가로막혀 **하네스가 통째로 죽는다**(319 의 278 처방과 같은 자리 — 죽으면
+     G·H·I·J·K 가 한꺼번에 사라져 «빨강 1건» 이 «검증 안 함» 이 된다). 진입 클릭은 B2 가 이미 묻고
+     있으므로 여기서는 상태만 만든다. */
+  await page.evaluate(() => { closeShopPage(); openBless(); }); await page.waitForTimeout(250);
+  for (const k of ['atk', 'hp', 'rate']) { await page.click('#blsC_' + k); await page.waitForTimeout(150); }
   const saved = await page.evaluate(() => { save(); return JSON.parse(localStorage.getItem('idle_hunter_save_v4')).bless; });
   ok('G1 localStorage 에 bless 저장', saved && saved.lv === 2 && saved.prog === 3, JSON.stringify(saved));
   await page.reload(); await page.waitForTimeout(800);
