@@ -8649,8 +8649,28 @@
          얼려 둔 ①~④ 8점 통과 상태다), 딤 `rgba(0,20,50,.85)` 가 포인터를 다 먹어 탭은 **눌리지도 않는다**.
          1600 의 149px 덮임도 같은 종류다(`probe391` ⓑⓒ). 띠(142..1420 = 1278)가 패널 1396 보다 짧아
          «안 덮기» 는 애초에 기하가 없다. */
-  .pf{position:absolute;left:92px;top:clamp(104px, 431px, calc(100% - 1427px));
-    width:896px;height:1396px;background:#000;
+  /* 작업 415(2026-08-30) — 391 이 슬랙 62px 을 31/31 로 «정확히 반» 갈랐지만 두 비평가(CE·CF)가
+     ③=7 을 준 자리는 «가운데인가» 가 아니라 **여백의 절대값**이었다: 외곽 31px 이 팝업 **내부**
+     상단 패딩 37 · 하단 패딩 40 보다 **좁다**(6~9px 역전 — 상자가 화면 밖으로 흘러내리는 것처럼 읽힌다).
+     `probe415` 재현이 등재문의 95.7% 를 그대로 확인했고 **등재문이 안 적은 것 둘**을 같이 냈다:
+       ⓐ 역전은 상단(37)만이 아니라 **하단(40)이 더 크다** — 외곽 31 이 두 패딩 다 밑돈다.
+       ⓑ 아래 여백 31 은 **1600 만의 값이 아니다** — 상한 항이 이기는 **1600..1858 구간 전체**가 31 이다
+          (1841 도 31 · 1860 33 · 1875 48). 즉 «9:13.3 전용» 이 아니라 지원 하단 구간의 성질이었다.
+     ⇒ 391 의 «여유»형은 그대로 두고 **패널 높이 축**을 열었다(등재문 후보 ⓐ·ⓑ 대신 연속형):
+       · `--pfsh` = 프레임이 1634 아래로 내려간 만큼(최대 34px). 상수가 아니라 «48/48 이 되는 문턱
+         1634 = 142 + 48 + 1396 + 48» 에서 역산한 값이다. `--frameh` 를 쓰므로 **연속**이고
+         `.shortf` 갈래를 안 만든다(LESSONS 391-② «갈래는 공짜가 아니다» — 임계 점프 0).
+       · 줄어든 34px 은 **스크롤 그릇 `.pf-grid` 가 흡수**한다(403·404 처방). 그 아래 네 요소
+         (`.pf-msn`·`.pf-ftr`·`.pf-btn`·`.pf-tgl`)는 **같은 양만큼 같이 올라가** 서로의 간격이 Δ0 이고,
+         내부 하단 패딩 40 도 그대로다. 위쪽(`.pf-gid`·`.pf-por`·`.pf-ttl`·`.pf-tab`)은 한 픽셀도 안 움직인다.
+       · 상한을 1427 → **1444**(= 1396 + 48)로 올려 1634~1875 구간의 아래 여백도 48 로 든다.
+         1920·2280·2600 은 431 항이 이겨 **Δ0px**(`verify241` §3 · `verify415` §1 이 못박는다).
+     ⚠ `verify241` §3 의 LOCAL 표는 이 작업의 계약이라 **1600 만** 갈아 끼웠다 —
+        값을 새 상수로 적지 않고 «2280 local − pfsh» 로 물어서, 흡수 구조가 사라지면 빨개진다. */
+  .pf{position:absolute;left:92px;
+    --pfsh:clamp(0px, calc(1634px - var(--frameh, 2280px)), 34px);
+    top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px));
+    width:896px;height:calc(1396px - var(--pfsh));background:#000;
     border-radius:45px}
   /* 갈색 링 11px = 밝은 (86,68,58) 7 + 어두운 (71,57,46) 4 */
   .pf-ring{position:absolute;inset:7px;border-radius:39px;
@@ -8750,7 +8770,9 @@
   .pf-tab>i{transform:scaleX(.99)}
   .pf-tab.on>i{transform:scaleX(.96)}
   /* 콘텐츠 패널 ref (150,985) 780×544, r36, 테두리 없음 */
-  .pf-grid{left:58px;top:470px;width:780px;height:544px;background:#D0B195;border-radius:36px;
+  /* 415 — 짧은 프레임에서 패널이 줄어든 만큼(`--pfsh`) **이 그릇 하나만** 짧아진다(403·404 처방).
+     이미 `overflow-y:auto` 라 잘림이 아니라 스크롤이 되고, 아래 네 요소는 같은 양만큼 같이 올라간다. */
+  .pf-grid{left:58px;top:470px;width:780px;height:calc(544px - var(--pfsh));background:#D0B195;border-radius:36px;
     overflow-y:auto;overflow-x:hidden;box-sizing:border-box;padding:46px 30px 20px;z-index:1;
     background:linear-gradient(180deg,#A48569 0 2px,#F1D8BA 2px 5px,rgba(0,0,0,0) 5px)
       36px 0/calc(100% - 72px) 5px no-repeat,#D0B195}
@@ -8791,7 +8813,7 @@
   .pf-eqb>i{font-size:22px;color:#B4EC66;-webkit-text-stroke:3px #4C7E10;
     paint-order:stroke fill;transform:scaleX(.9)}
   /* 해금 미션 바 ref (152,1541) 776×62 — (96,76,75), 상단만 r20 */
-  .pf-msn{left:60px;top:1026px;width:776px;height:62px;line-height:62px;text-align:center;
+  .pf-msn{left:60px;top:calc(1026px - var(--pfsh));width:776px;height:62px;line-height:62px;text-align:center;
     background:#604C4B;border-radius:20px 20px 0 0;
     /* 126 8회차 — r7 비평가 O·P 가 ② 2순위로 독립 일치(225×26 vs ref 278×30), `m126t7`(임계 150)이
        세 번째로 같은 값을 냈다. §11 처방 «높이로 fs, 남은 폭을 sx»: fs 32×(30/26) = 36.9. */
@@ -8800,10 +8822,10 @@
   /* 126 ① 12회차 — m126vc 실측 Δcy **−5.5**(Δh 1). U 의 «19 띠 4.5px». */
   .pf-msn>i{position:relative;top:5.5px;transform:scaleX(1.017)}
   /* 크림 푸터 ref (150,1604) 780×148 — (255,238,212), 하단 r24 */
-  .pf-ftr{left:58px;top:1089px;width:780px;height:148px;background:#FFEED4;
+  .pf-ftr{left:58px;top:calc(1089px - var(--pfsh));width:780px;height:148px;background:#FFEED4;
     border-radius:0 0 24px 24px}
   /* [장착 중] 버튼 ref (391,1620) 298×119 — 검정7 + 밝은링(211)7 + 하단 그늘(117)7 + 회색 그라 */
-  .pf-btn{left:299px;top:1105px;width:298px;height:119px;box-sizing:border-box;
+  .pf-btn{left:299px;top:calc(1105px - var(--pfsh));width:298px;height:119px;box-sizing:border-box;
     border:7px solid #000;border-radius:36px;cursor:pointer;
     background:linear-gradient(180deg,#A8A8A8 0,#989898 55%,#8A8A8A 100%);
     box-shadow:inset 0 7px 0 #D3D3D3,inset 7px 0 0 #D3D3D3,inset -7px 0 0 #D3D3D3,
@@ -8856,7 +8878,7 @@
     text-shadow:0 calc(var(--st-small) / 2 * 1em + 2.55px) 0 #000,
                 calc(var(--st-small) / 2 * 1em + 1.67px) 0 0 #000}
   /* 하단 토글 바 ref (156,1776) 770×95 — 검정 5 + 암갈 그라, r24 */
-  .pf-tgl{left:64px;top:1261px;width:770px;height:95px;background:#000;border-radius:24px}
+  .pf-tgl{left:64px;top:calc(1261px - var(--pfsh));width:770px;height:95px;background:#000;border-radius:24px}
   .pf-tgl>.in{position:absolute;inset:5px;border-radius:20px;
     background:linear-gradient(180deg,#5D4F42 0 5px,#423528 5px,#352A1E 100%);
     box-shadow:inset 0 -2px 0 #5C4E41}

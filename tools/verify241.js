@@ -109,9 +109,19 @@ const MEAS = `(function(){
      «왜 173 인가» 를 아무도 안 묻는 자가 된다(LESSONS 328-330 의 «누른 항을 묻는 항»).
      그래서 값 항 옆에 **유도 항**을 나란히 둔다 — 여유는 상수가 아니라
      «쓸 수 있는 띠(HUD 잉크 142 .. 프레임 끝)의 남는 62px 의 절반» 이다. */
-  eq('[1600] .pf top = 상한 173 (= 1600 − 1396 − 31)', M[1600].pf.top, 173);
-  eq('[1600] .pf 아래 여백 31 (= 프레임 끝 − 바닥)', -M[1600].pf.bot, 31);
-  eq('[1600] 위 여백(= top − HUD 잉크 142) = 아래 여백 31', M[1600].pf.top - 142, 31);
+  /* 작업 415(2026-08-30) 이관 — 여유가 31 → **48** 로 올라갔다(상한 1427 → 1444).
+     ⚠ 숫자만 173 → 190 으로 갈아 끼우면 «왜 48 인가» 를 아무도 안 묻는 자가 된다(391 이 남긴 규칙).
+     48 은 상수가 아니라 **팝업 내부 패딩(상 37 · 하 40)보다 넓은 첫 8의 배수**이고, 그 값이 되도록
+     패널이 짧아진다(`--pfsh`). 그래서 값 항 셋 옆에 유도 항 셋을 나란히 둔다. */
+  eq('[1600] .pf top = 190 (= HUD 잉크 142 + 48)', M[1600].pf.top, 190);
+  eq('[1600] .pf 아래 여백 48 (= 프레임 끝 − 바닥)', -M[1600].pf.bot, 48);
+  eq('[1600] 위 여백(= top − HUD 잉크 142) = 아래 여백 48', M[1600].pf.top - 142, 48);
+  eq('[1600] 패널이 그만큼 짧아졌다 (1396 − 34)', M[1600].pf.h, 1362);
+  eq('[1600] 유도 — 여백 = (띠 1458 − 패널) ÷ 2', Math.round((1600 - 142 - M[1600].pf.h) / 2), 48);
+  ok(-M[1600].pf.bot > 37 && -M[1600].pf.bot > 40,
+    `[1600] 외곽 여백 ${-M[1600].pf.bot} 이 내부 패딩(상 37 · 하 40)보다 넓다 — 415 가 닫은 역전`);
+  /* 415 ⓑ — 아래 여백 31 은 «1600 만» 이 아니라 상한 항이 이기는 구간 전체의 성질이었다.
+     상한을 올린 지금은 그 구간(1600..1875)이 전부 48 이어야 한다. */
   for (const h of [1600, 1920, 2280, 2600]) {
     ok(M[h].pf.bot <= 1.5, `[${h}] .pf 바닥이 프레임 안 (프레임 밖 ${Math.max(0, M[h].pf.bot)}px)`);
     ok(M[h].pf.top >= 104, `[${h}] .pf 상단이 HUD(104) 아래 (top ${M[h].pf.top})`);
@@ -133,9 +143,27 @@ const MEAS = `(function(){
   eq('[2280] .pf 크기', `${M[2280].pf.w}×${M[2280].pf.h}`, '896×1396');
   /* 패널 local — 상한이 자식 앵커를 밀지 않았는가(LESSONS 189-①) */
   const LOCAL = { btn: 1105, tgl: 1261, grid: 470, tab: 402, por: 80, msn: 1026 };
-  for (const h of [1600, 1920, 2280, 2600])
+  for (const h of [1920, 2280, 2600])
     for (const k of Object.keys(LOCAL))
       eq(`[${h}] ${k} 패널 local y (자식 앵커 불변)`, M[h][k].ly, LOCAL[k]);
+  /* 작업 415 이관 — 1600 에서만 «그리드 아래 세 요소» 가 흡수분(34)만큼 같이 올라간다.
+     ⚠ 새 상수(1071·1227·992)를 적지 않는다 — 그러면 «흡수 구조가 사라져도 초록» 이 된다.
+     묻는 것은 **관계**다: ① 위쪽 앵커(tab·por·grid top)는 여전히 2280 과 같은 값이고
+     ② 아래 셋은 «2280 값 − (1396 − 패널 높이)» 이며 ③ 그 흡수는 `.pf-grid` 높이에서만 나온다. */
+  const SH = 1396 - M[1600].pf.h;                       /* 흡수분 — 상수가 아니라 실측 */
+  eq('[1600] 흡수분 = 1396 − 패널 높이', SH, 34);
+  for (const k of ['grid', 'tab', 'por'])
+    eq(`[1600] ${k} 패널 local y — 위쪽 앵커는 2280 과 같다`, M[1600][k].ly, LOCAL[k]);
+  for (const k of ['msn', 'btn', 'tgl'])
+    eq(`[1600] ${k} 패널 local y = 2280 값 − 흡수분 ${SH}`, M[1600][k].ly, LOCAL[k] - SH);
+  eq('[1600] 흡수는 스크롤 그릇 `.pf-grid` 높이에서만 난다', M[2280].grid.h - M[1600].grid.h, SH);
+  /* 아래 네 요소의 «서로의 간격» 과 내부 하단 패딩은 Δ0 이어야 한다(같이 올라갔으므로) */
+  for (const h of [1600, 2280]) {
+    eq(`[${h}] msn → btn 간격`, M[h].btn.ly - M[h].msn.ly, 79);
+    eq(`[${h}] btn → tgl 간격`, M[h].tgl.ly - M[h].btn.ly, 156);
+    eq(`[${h}] 내부 하단 패딩 (패널 − 토글 하변)`, M[h].pf.h - (M[h].tgl.ly + M[h].tgl.h), 40);
+    eq(`[${h}] 그리드 하변 → msn 간격`, M[h].msn.ly - (M[h].grid.ly + M[h].grid.h), 12);
+  }
 
   /* ── §4 1600 에서 실제로 눌린다 ── */
   console.log('§4 1600 — 두 요소가 hit-test 최상단이고 토글이 실제로 동작한다');
@@ -167,13 +195,21 @@ const MEAS = `(function(){
   for (const good of ['#pfw .pf', '#specw .spc', '#ciw .ci', '#trw .tr-sheet', '#eqw .eqp',
                       '#relw .rw-grid', '#shopw .shp-list', '#dunw .dns-list'])
     ok(CANDS.includes(good), `후보에 안쪽 박스 ${good} 가 있다`);
-  ok(/clamp\(104px,\s*431px,\s*calc\(100% - 1427px\)\)/.test(SRC), 'index.html 에 .pf top 상한이 있다 (391: 여유 8 → 31)');
+  ok(/clamp\(190px,\s*431px,\s*calc\(var\(--frameh, 2280px\) - 1444px\)\)/.test(SRC),
+    'index.html 에 .pf top 상한이 있다 (415: 여유 31 → 48 · 1427 → 1444)');
+  ok(/--pfsh:clamp\(0px,\s*calc\(1634px - var\(--frameh, 2280px\)\),\s*34px\)/.test(SRC),
+    'index.html 에 415 흡수분 `--pfsh` 가 있다 (연속형 — `.shortf` 갈래가 아니다)');
 
   /* ── §6 음성항 — 갈아 끼운 사본을 새로 열어서 잰다 ── */
   console.log('§6 음성항 — 옛 규칙 사본에서 227px 이 되살아나고 smoke 자가 빨개진다');
   const negPath = path.join(ROOT, '.v241-neg.html');
-  const neg = SRC.replace('top:clamp(104px, 431px, calc(100% - 1427px));', 'top:431px;');
-  ok(neg !== SRC, '사본에서 상한을 옛 고정값으로 되돌렸다');
+  /* 415 이관 — 사본은 **241 이전 선언 그대로**로 되돌린다(상한도 흡수분도 없는 고정 1396).
+     상한만 떼면 흡수분이 남아 밖으로 나가는 양이 227 이 아니라 193 이 되어 원 증상과 달라진다. */
+  const neg = SRC
+    .replace('top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px));', 'top:431px;')
+    .replace('height:calc(1396px - var(--pfsh));', 'height:1396px;');
+  ok(neg !== SRC && !neg.includes('calc(1396px - var(--pfsh))'),
+    '사본을 241 이전 선언(top 431 고정 · height 1396 고정)으로 되돌렸다');
   fs.writeFileSync(negPath, neg);
   try {
     const nctx = await browser.newContext({ viewport: { width: 1080, height: 1600 }, deviceScaleFactor: 1 });

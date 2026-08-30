@@ -34,10 +34,31 @@ const eq = (m, got, want) => ok(got === want, `${m} (기대 ${want} · 실제 ${
 const ROOT = path.resolve(__dirname, '..');
 const FILE = path.join(ROOT, 'index.html');
 const SRC = fs.readFileSync(FILE, 'utf8');
-const NEW = 'top:clamp(104px, 431px, calc(100% - 1427px))';
-const OLD = 'top:clamp(104px, 431px, calc(100% - 1404px))';
+/* 작업 415(2026-08-30) 이관 — 상한 1427 → **1444**, 여유 31 → **48**, 그리고 짧은 프레임에서
+   패널이 `--pfsh` 만큼 짧아진다. 391 이 «덮임은 결함이 아니다» 로 세운 §3 은 한 줄도 안 바뀌었고
+   (덮임은 오히려 149 → 132 로 줄었다), 갈아 끼운 것은 §1·§2 의 **값**과 §R 의 사본 문자열이다.
+   ⚠ §2 의 «유도» 는 그대로 살린다 — 여유는 여전히 «띠의 남는 절반» 이고 분모가 되는 패널만 짧아졌다. */
+const NEW = 'top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))';
+const NEWH = 'height:calc(1396px - var(--pfsh))';
+const REV = [   /* 415 선언 → 391 시절 선언 (사본 되돌림 — 여섯 자리를 **전부** 되돌려야 한다:
+                   `.pf` 상자만 되돌리면 자식은 올라간 채라 «없던 세 번째 상태»(내부 하단 패딩 74)가 나온다) */
+  ['top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))', 'top:clamp(104px, 431px, calc(100% - 1427px))'],
+  ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
+  ['height:calc(544px - var(--pfsh))', 'height:544px'],
+  ['top:calc(1026px - var(--pfsh))', 'top:1026px'],
+  ['top:calc(1089px - var(--pfsh))', 'top:1089px'],
+  ['top:calc(1105px - var(--pfsh))', 'top:1105px'],
+  ['top:calc(1261px - var(--pfsh))', 'top:1261px'],
+];
+/* 자식 흡수분만 되돌린다(상한은 415 그대로) — «패널만 안 짧아지면 어떻게 되나» 를 묻는 사본 */
+const REV_KIDS = REV.slice(1);
+const revert = (src, list) => list.reduce((s, [a, b]) => {
+  if (!s.includes(a)) { console.error('갈아 끼울 자리를 못 찾았다: ' + a); process.exit(2); }
+  return s.replace(a, b);
+}, src);
 const INK = 142;      /* HUD 잉크 끝 = `.pedge` 하변 (351 4회차가 못박은 축) */
-const PH = 1396;      /* `.pf` 높이 — 241 이 얼려 둔 값 */
+const PH = 1396;      /* `.pf` 높이 — 241 이 얼려 둔 값(기준 프레임) */
+const PH16 = 1362;    /* 415 — 1600 에서의 패널 높이(1396 − 흡수분 34) */
 
 const MEAS = `(function(){
   openProfile();
@@ -87,26 +108,30 @@ async function read(page, h) {
 
   /* ── §1 세 프레임 기하 ── */
   console.log('§1 기하 — 기준 프레임 두 개 Δ0px · 1600 만 올라가고 위 = 아래');
-  ok(SRC.includes(NEW), 'index.html 의 상한이 391 값이다 (1396 + 31)');
+  ok(SRC.includes(NEW), 'index.html 의 상한이 415 값이다 (1396 + 48)');
+  ok(SRC.includes(NEWH), 'index.html 의 패널 높이가 415 흡수형이다 (1396 − --pfsh)');
   for (const h of [1920, 2280]) {
     eq(`[${h}] .pf top 431 불변 (상한이 안 걸린다)`, M[h].top, 431);
-    ok(M[h].frameH - PH - 431 > 0, `[${h}] 상한 항 ${M[h].frameH - 1427} > 431 이라 431 이 이긴다`);
+    ok(M[h].frameH - 1444 > 431, `[${h}] 상한 항 ${M[h].frameH - 1444} > 431 이라 431 이 이긴다`);
+    eq(`[${h}] 패널 높이 1396 불변 (흡수분이 0)`, M[h].h, PH);
   }
-  eq('[1600] .pf top = 173', M[1600].top, 173);
-  eq('[1600] 아래 여백 31', M[1600].botGap, 31);
-  eq('[1600] 위 여백(HUD 잉크 142 기준) 31', M[1600].topGap, 31);
+  eq('[1600] .pf top = 190', M[1600].top, 190);
+  eq('[1600] 아래 여백 48', M[1600].botGap, 48);
+  eq('[1600] 위 여백(HUD 잉크 142 기준) 48', M[1600].topGap, 48);
   eq('[1600] 위 여백 = 아래 여백 (등재문의 «8px 붕괴» 가 닫혔다)', M[1600].topGap - M[1600].botGap, 0);
+  eq('[1600] 패널만 짧아졌다 (415 흡수)', M[1600].h, PH16);
   eq('[1600] HUD 잉크 끝이 142 (띠의 윗변)', M[1600].inkEnd, INK);
 
   /* ── §2 유도 — 31 은 상수가 아니라 «띠의 남는 절반» ── */
   console.log('§2 유도 — 31 = (쓸 수 있는 띠 − 패널) ÷ 2 · 프레임이 길어지면 상한은 자동으로 풀린다');
   const band = M[1600].frameH - INK;                 /* 1458 */
   eq('[1600] 쓸 수 있는 띠 = 프레임 − 142', band, 1458);
-  eq('[1600] 여유 31 = (띠 − 패널) ÷ 2', Math.round((band - PH) / 2), M[1600].botGap);
+  eq('[1600] 여유 48 = (띠 − 패널) ÷ 2', Math.round((band - M[1600].h) / 2), M[1600].botGap);
   /* 1700 은 상한이 아직 걸리는 구간(1700 − 1427 = 273 < 431) — 아래 여백은 31 로 유지된다.
      «가운데 정렬»형 처방이었다면 여기서 여백이 벌어졌을 것이고 1920 도 같이 끌려갔다. */
-  eq('[1700] 상한이 아직 걸린다 → top 273', M[1700].top, 273);
-  eq('[1700] 아래 여백은 그대로 31 (여유형이라 커지는 쪽은 위 여백뿐)', M[1700].botGap, 31);
+  eq('[1700] 상한이 아직 걸린다 → top 256', M[1700].top, 256);
+  eq('[1700] 아래 여백은 그대로 48 (여유형이라 커지는 쪽은 위 여백뿐)', M[1700].botGap, 48);
+  eq('[1700] 패널은 이미 온전한 1396 (흡수는 1634 아래에서만)', M[1700].h, PH);
   ok(M[1700].topGap > M[1600].topGap, `[1700] 위 여백만 커진다 (${M[1600].topGap} → ${M[1700].topGap})`);
 
   /* ── §3 «덮임은 결함이 아니다» ── */
@@ -114,10 +139,10 @@ async function read(page, h) {
   ok(M[1920].cover > 0, `[1920] 8점 통과 상태의 프레임도 탭바를 덮는다 (${M[1920].cover}px)`);
   eq('[2280] 기준 프레임은 안 덮는다', M[2280].cover, 0);
   ok(M[1600].cover > 0 && M[1600].cover < 172,
-    `[1600] 덮임이 줄긴 했다 (등재 당시 172 → ${M[1600].cover}) — 0 은 기하가 허락하지 않는다`);
+    `[1600] 덮임이 줄긴 했다 (391 등재 당시 172 → 391 후 149 → 415 후 ${M[1600].cover}) — 0 은 기하가 허락하지 않는다`);
   eq('[1600] 탭바 위 띠 = 1420 − 142', M[1600].tabTop - INK, 1278);
-  ok(M[1600].tabTop - INK < PH,
-    `[1600] 그 띠(${M[1600].tabTop - INK})가 패널(${PH})보다 ${PH - (M[1600].tabTop - INK)}px 짧다 ⇒ «안 덮기» 는 불가능`);
+  ok(M[1600].tabTop - INK < M[1600].h,
+    `[1600] 그 띠(${M[1600].tabTop - INK})가 패널(${M[1600].h})보다 ${M[1600].h - (M[1600].tabTop - INK)}px 짧다 ⇒ «안 덮기» 는 불가능`);
   for (const h of [1600, 2280]) {
     const a = Number((M[h].dim.match(/([\d.]+)\)$/) || [0, 0])[1]);
     ok(a >= 0.8, `[${h}] #pfw 딤이 깊은 딤 — 채점 규칙 2 제외 대상 (alpha ${a})`);
@@ -143,8 +168,14 @@ async function read(page, h) {
   /* ── §R 되돌림 시험 ── */
   console.log('§R 되돌림 — 241 값 사본에서 8px 비대칭이 되살아나고, 상한을 떼면 227px 이 프레임 밖');
   const cases = [
-    { name: '241 값(여유 8)', src: SRC.replace(NEW, OLD), want: { top: 196, botGap: 8, topGap: 54 } },
-    { name: '상한 제거(고정 431)', src: SRC.replace(NEW, 'top:431px'), want: { top: 431, botGap: -227, topGap: 289 } },
+    /* 415 이관 — «391 값으로 되돌린 사본» 이 되돌림 표본이다. 상한과 흡수분을 **둘 다** 되돌려야
+       391 당시의 31/31 이 그대로 재현된다(하나만 되돌리면 없던 세 번째 상태가 나온다). */
+    { name: '391 값(여유 31 · 흡수 없음)', src: revert(SRC, REV),
+      want: { top: 173, botGap: 31, topGap: 31, h: PH, sym: true } },
+    { name: '415 흡수만 제거(상한은 415)', src: revert(SRC, REV_KIDS),
+      want: { top: 190, botGap: 14, topGap: 48, h: PH, sym: false } },
+    { name: '상한 제거(고정 431)', src: SRC.replace(NEW, 'top:431px'),
+      want: { top: 431, botGap: -193, topGap: 289, h: PH16, sym: false } },
   ];
   for (const c of cases) {
     ok(c.src !== SRC, `사본을 만들었다 — ${c.name}`);
@@ -157,7 +188,14 @@ async function read(page, h) {
       const m = await np.evaluate(MEAS + '()');
       eq(`[음성 1600 · ${c.name}] top`, m.top, c.want.top);
       eq(`[음성 1600 · ${c.name}] 아래 여백`, m.botGap, c.want.botGap);
-      ok(m.topGap !== m.botGap, `[음성 1600 · ${c.name}] 위 ${m.topGap} ≠ 아래 ${m.botGap} — 비대칭이 되살아난다`);
+      eq(`[음성 1600 · ${c.name}] 패널 높이`, m.h, c.want.h);
+      /* 391 사본은 «대칭이되 31 로 좁다» · 나머지 둘은 «비대칭» — 무너지는 방식이 서로 다르다.
+         셋 다 공통으로 요구하는 것은 **아래 여백 48 이 안 나온다**는 것이다. */
+      ok(m.botGap !== 48, `[음성 1600 · ${c.name}] 아래 여백 48 이 무너진다 (${m.botGap})`);
+      if (c.want.sym) ok(m.topGap === m.botGap && m.botGap < 40,
+        `[음성 1600 · ${c.name}] 대칭이지만 내부 패딩(40)보다 좁다 — 415 가 잡은 역전 (${m.botGap})`);
+      else ok(m.topGap !== m.botGap,
+        `[음성 1600 · ${c.name}] 위 ${m.topGap} ≠ 아래 ${m.botGap} — 비대칭이 되살아난다`);
       await nc.close();
     } finally { fs.unlinkSync(f); }
   }

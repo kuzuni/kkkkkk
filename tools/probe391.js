@@ -28,8 +28,20 @@ const fs = require('fs');
 const path = require('path');
 
 const SRC = path.resolve(__dirname, '..', 'index.html');
-const NEW = 'top:clamp(104px, 431px, calc(100% - 1427px))';   /* 391 */
-const OLD = 'top:clamp(104px, 431px, calc(100% - 1404px))';   /* 241 */
+/* 작업 415(2026-08-30) 이관 — 「수리 후」가 391(상한 1427 · 고정 높이 1396)에서
+   415(상한 1444 · 짧은 프레임에서 패널이 `--pfsh` 만큼 짧아짐)로 갱신됐다.
+   ⚠ 「수리 전」은 그대로 **241 선언**이다 — 이 자가 재현하려는 것은 391 등재문의 값
+   (top 196 · 아래 여백 8 · 탭바 172)이고 그건 안 바뀌었다. 되돌릴 자리가 여섯으로 늘었을 뿐이다. */
+const REV241 = [
+  ['top:clamp(190px, 431px, calc(var(--frameh, 2280px) - 1444px))', 'top:clamp(104px, 431px, calc(100% - 1404px))'],
+  ['height:calc(1396px - var(--pfsh))', 'height:1396px'],
+  ['height:calc(544px - var(--pfsh))', 'height:544px'],
+  ['top:calc(1026px - var(--pfsh))', 'top:1026px'],
+  ['top:calc(1089px - var(--pfsh))', 'top:1089px'],
+  ['top:calc(1105px - var(--pfsh))', 'top:1105px'],
+  ['top:calc(1261px - var(--pfsh))', 'top:1261px'],
+];
+const NEW = REV241[0][0];
 
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d !== undefined && d !== '' ? ' — ' + d : '')); };
@@ -99,12 +111,15 @@ async function measure(browser, file, H) {
 
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
-  if (!src.includes(NEW)) {
-    console.error('probe391: `.pf` 상한(391 값 1427)을 못 찾았다 — 자리가 옮겨졌다. 갱신할 것.');
-    process.exit(2);
-  }
+  const pre = REV241.reduce((t, [a, b]) => {
+    if (!t.includes(a)) {
+      console.error('probe391: `.pf` 선언(415 값)을 못 찾았다 — 자리가 옮겨졌다. 갱신할 것: ' + a);
+      process.exit(2);
+    }
+    return t.replace(a, b);
+  }, src);
   const tmp = path.join(require('os').tmpdir(), 'probe391-pre.html');
-  fs.writeFileSync(tmp, src.replace(NEW, OLD));
+  fs.writeFileSync(tmp, pre);
 
   const browser = await launch(chromium);
   const A = {}, B = {};
@@ -117,7 +132,7 @@ async function measure(browser, file, H) {
   console.log('\n── ⓐ 기하 (프레임 좌표) ─────────────────────────────────────────');
   console.log('  frameH │ HUD잉크 │ .pf top→bot          │ 위 여백 │ 아래 여백 │ 탭바 덮임');
   for (const H of [2280, 1920, 1600]) {
-    for (const [tag, M] of [['전(241)', B[H]], ['후(391)', A[H]]]) {
+    for (const [tag, M] of [['전(241)', B[H]], ['후(415)', A[H]]]) {
       console.log(`  ${H} ${tag} │ ${r1(M.inkEnd)} │ ${r1(M.pfTop)}..${r1(M.pfBot)} (h${r1(M.pfH)}) │ `
         + `${r1(M.topGap)} │ ${r1(M.botGap)} │ ${r1(M.cover)}`);
     }
@@ -131,8 +146,12 @@ async function measure(browser, file, H) {
   }
   ok(B[1600].pfTop === 196 && B[1600].botGap === 8,
     `[ⓐ 1600] 수리 전 = 등재문 값 (top 196 · 아래 여백 8) — 실측 top ${r1(B[1600].pfTop)} · 여백 ${r1(B[1600].botGap)}`);
-  ok(A[1600].pfTop === 173 && Math.abs(A[1600].topGap - A[1600].botGap) <= 1,
+  /* 415 이관 — 「띠 한가운데」라는 성질은 그대로이고 값만 173/31 → 190/48 로 옮겼다
+     (패널이 34px 짧아진 만큼 남는 절반이 커졌다). 성질을 물으므로 상수를 안 적는다. */
+  ok(Math.abs(A[1600].topGap - A[1600].botGap) <= 1 && A[1600].pfTop === Math.round(A[1600].inkEnd + A[1600].topGap),
     `[ⓐ 1600] 수리 후 = 띠 한가운데 (top ${r1(A[1600].pfTop)} · 위 ${r1(A[1600].topGap)} = 아래 ${r1(A[1600].botGap)})`);
+  ok(A[1600].botGap > B[1600].botGap && A[1600].botGap >= 40,
+    `[ⓐ 1600] 415 가 그 절반을 더 벌렸다 (241 ${r1(B[1600].botGap)} → 415 ${r1(A[1600].botGap)} · 내부 패딩 40 초과)`);
   ok(B[1600].cover === 172,
     `[ⓐ 1600] 등재문 «탭바 172px 덮음» 재현 — 실측 ${r1(B[1600].cover)}`);
 
