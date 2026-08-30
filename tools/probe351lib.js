@@ -88,26 +88,48 @@ async function settle(page) {
 }
 
 /* ---------------- 화면 목록 (smoke.js [2] 오프너와 같은 경로) ---------------- */
+/* ⚑ 15회차(2026-08-30) — **«무엇을 묻는가» 옆에 «언제 묻는가» 를 선언으로 세운다.**
+   8·10·12·13·14회차가 같은 사고를 다섯 번 냈고(자가 화면을 한 번도 연 적이 없다), 14회차의
+   뿌리는 «호스트를 열어야 채워지는 빈 그릇에게 부팅 직후 물었다» 였다. 그 여섯 번째를 막는
+   축이 `tools/probe351f.js` 인데, 그 자가 **여기 적힌 선택자를 그대로 읽는다** — 목록을 저쪽에
+   따로 적으면 그것이 곧 385 «자매 자 드리프트» 이자 402 «표는 손으로 적는 목록이라 뒤처진다» 다.
+   ⇒ 아래 `sel` 문자열은 이 파일에 **한 번만** 적히고 수집도 감사도 같은 문자열을 쓴다.
+   `askedAfter` = 이 질문을 던지기 전에 자가 여는 호스트(없으면 부팅 직후에 묻는다는 선언). */
+const ASK_GROUPS = [
+  { key: 't',      attr: 't',      sel: '.tab[data-t]',                askedAfter: null },
+  { key: 'pop',    attr: 'pop',    sel: '.side .ibtn[data-pop]',       askedAfter: null },
+  { key: 'mn',     attr: 'mn',     sel: '#mnw [data-mn]',              askedAfter: null },
+  { key: 'cur',    attr: 'cur',    sel: '[data-cur]',                  askedAfter: null },
+  { key: 'dsub',   attr: 'dsub',   sel: '#dunSub [data-dsub]',         askedAfter: null },
+  { key: 'trsub',  attr: 'trsub',  sel: '#trSubs [data-trsub]',        askedAfter: null },
+  { key: 'cat',    attr: 'cat',    sel: '#shopCats .shp-ct[data-cat]', askedAfter: null },
+  { key: 'eqtab',  attr: 'eqtab',  sel: '#eqTabs [data-eqtab]',        askedAfter: null },
+  { key: 'ct',     attr: 'ct',     sel: '#collTabs .cltab[data-ct]',   askedAfter: null },
+  { key: 'ptab',   attr: 'ptab',   sel: '#psBar [data-ptab]',          askedAfter: null },
+  { key: 'eqslot', attr: 'eqslot', sel: '#eqCards [data-eqslot]',      askedAfter: '.tab[data-t="hero"]' },
+];
+const ASK = Object.fromEntries(ASK_GROUPS.map((g) => [g.key, g.sel]));
+
 async function collectOpeners(browser) {
   const openers = [];
   const { ctx, page } = await fresh(browser, ...TALL);
-  const tabs = await page.$$eval('.tab[data-t]', (els) => els.map((e) => e.dataset.t)).catch(() => []);
-  const pops = await page.$$eval('.side .ibtn[data-pop]', (els) => els.map((e) => e.dataset.pop)).catch(() => []);
+  const tabs = await page.$$eval(ASK.t, (els) => els.map((e) => e.dataset.t)).catch(() => []);
+  const pops = await page.$$eval(ASK.pop, (els) => els.map((e) => e.dataset.pop)).catch(() => []);
   tabs.forEach((t) => openers.push({ label: 'tab:' + t, sel: `.tab[data-t="${t}"]` }));
   pops.forEach((p) => openers.push({ label: 'side:' + p, sel: `.side .ibtn[data-pop="${p}"]` }));
   if (await page.$('#menub')) openers.push({ label: 'menu', sel: '#menub' });
   if (await page.$('#chw')) openers.push({ label: 'util:chat', sel: '#botleft .ubtn[data-util="chat"]' });
-  const mns = await page.$$eval('#mnw [data-mn]', (els) => els.map((e) => e.dataset.mn)).catch(() => []);
+  const mns = await page.$$eval(ASK.mn, (els) => els.map((e) => e.dataset.mn)).catch(() => []);
   mns.forEach((k) => openers.push({ label: 'menu:' + k, mn: k }));
-  const curs = await page.$$eval('[data-cur]', (els) => els.map((e) => e.dataset.cur)).catch(() => []);
+  const curs = await page.$$eval(ASK.cur, (els) => els.map((e) => e.dataset.cur)).catch(() => []);
   [...new Set(curs)].forEach((c) => openers.push({ label: 'cur:' + c, sel: `[data-cur="${c}"]` }));
-  const dsubs = await page.$$eval('#dunSub [data-dsub]', (els) => els.map((e) => e.dataset.dsub)).catch(() => []);
+  const dsubs = await page.$$eval(ASK.dsub, (els) => els.map((e) => e.dataset.dsub)).catch(() => []);
   dsubs.forEach((k) => openers.push({ label: 'dunsub:' + k, dun: `#dunSub [data-dsub="${k}"]` }));
-  const tsubs = await page.$$eval('#trSubs [data-trsub]', (els) => els.map((e) => e.dataset.trsub)).catch(() => []);
+  const tsubs = await page.$$eval(ASK.trsub, (els) => els.map((e) => e.dataset.trsub)).catch(() => []);
   tsubs.forEach((k) => openers.push({ label: 'trsub:' + k, tr: `#trSubs [data-trsub="${k}"]` }));
-  const cats = await page.$$eval('#shopCats .shp-ct[data-cat]', (els) => els.map((e) => e.dataset.cat)).catch(() => []);
+  const cats = await page.$$eval(ASK.cat, (els) => els.map((e) => e.dataset.cat)).catch(() => []);
   cats.forEach((k) => openers.push({ label: 'shopcat:' + k, shop: `#shopCats .shp-ct[data-cat="${k}"]` }));
-  const eqtabs = await page.$$eval('#eqTabs [data-eqtab]', (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
+  const eqtabs = await page.$$eval(ASK.eqtab, (els) => els.map((e) => e.dataset.eqtab)).catch(() => []);
   eqtabs.forEach((k) => openers.push({ label: 'eqtab:' + k, hero: `#eqTabs [data-eqtab="${k}"]` }));
   /* ⚑ 14회차(2026-08-30) — **`eqslot`·`costab` 두 줄은 «묻는 시점» 이 틀렸다.** 8·10·12·13회차에
      이은 **같은 사고의 다섯 번째**이고, 앞 넷과 뿌리가 또 다르다:
@@ -145,7 +167,7 @@ async function collectOpeners(browser) {
         조용한 실패가 초록으로 읽히면 안 된다). `coll21`(보물상자 경유)은 **경로가 사라져** 되살리지 않는다
         — 되살려도 `side:coll` 과 같은 화면이라 서명 중복만 하나 는다. */
   if (await page.$('.side .ibtn[data-pop="coll"]')) {
-    const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
+    const cts = await page.$$eval(ASK.ct, (els) => els.map((e) => e.dataset.ct)).catch(() => []);
     if (!cts.length) {
       throw new Error('[351lib] 도감 진입(`.side .ibtn[data-pop="coll"]`)은 있는데 ' +
         '`#collTabs .cltab[data-ct]` 이 0개다 — 카테고리 탭이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
@@ -162,7 +184,7 @@ async function collectOpeners(browser) {
           스캔했고(유령 화면 — 8·10회차와 **같은 사고**) ② `ptab:tower2`(절망의 탑)는 자가
           **한 번도 연 적이 없다.** 위 서브탭 계열이 전부 `$$eval` 로 제품에게 묻는데 여기만 표였다.
        ⇒ 402 «표는 손으로 적는 목록이라 뒤처진다» 처방 그대로 **제품에게 묻는다.** */
-    const ptabs = await page.$$eval('#psBar [data-ptab]', (els) => els.map((e) => e.dataset.ptab)).catch(() => []);
+    const ptabs = await page.$$eval(ASK.ptab, (els) => els.map((e) => e.dataset.ptab)).catch(() => []);
     if (!ptabs.length) {
       throw new Error('[351lib] `#psw` 는 있는데 `#psBar [data-ptab]` 이 0개다 — ' +
         '패스 탭이 통째로 안 열린 채 «결함 없음» 으로 읽힌다. 마크업을 확인할 것.');
@@ -174,7 +196,7 @@ async function collectOpeners(browser) {
      바로 뒤가 `ctx.close()` 라 이 클릭이 다른 질문의 화면을 바꿀 여지가 원리적으로 없다. */
   await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
   await page.waitForTimeout(400);
-  const slots = await page.$$eval('#eqCards [data-eqslot]', (els) => els.map((e) => e.dataset.eqslot)).catch(() => []);
+  const slots = await page.$$eval(ASK.eqslot, (els) => els.map((e) => e.dataset.eqslot)).catch(() => []);
   if (!slots.length) {
     throw new Error('[351lib] 08 영웅 시트를 열었는데 `#eqCards [data-eqslot]` 이 0개다 — ' +
       '06 장비 부위 슬롯(→ 05 세부 팝업)이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
@@ -290,4 +312,4 @@ async function drive(page, o) {
 }
 
 
-module.exports = { fresh, settle, collectOpeners, drive, FILE, TALL, SHORT };
+module.exports = { fresh, settle, collectOpeners, drive, FILE, TALL, SHORT, ASK_GROUPS, ASK };

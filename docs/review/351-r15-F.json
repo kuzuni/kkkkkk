@@ -1,0 +1,203 @@
+{
+ "rows": [
+  {
+   "key": "t",
+   "sel": ".tab[data-t]",
+   "askedAfter": null,
+   "boot": 5,
+   "bootVals": [
+    "adv",
+    "box",
+    "grow",
+    "hero",
+    "shop"
+   ],
+   "best": 5,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "pop",
+   "sel": ".side .ibtn[data-pop]",
+   "askedAfter": null,
+   "boot": 6,
+   "bootVals": [
+    "attend",
+    "bless",
+    "coll",
+    "promo",
+    "quest",
+    "roul"
+   ],
+   "best": 6,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "mn",
+   "sel": "#mnw [data-mn]",
+   "askedAfter": null,
+   "boot": 7,
+   "bootVals": [
+    "bag",
+    "conf",
+    "guide",
+    "mail",
+    "pass",
+    "rank",
+    "saver"
+   ],
+   "best": 7,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "cur",
+   "sel": "[data-cur]",
+   "askedAfter": null,
+   "boot": 3,
+   "bootVals": [
+    "dia",
+    "gold",
+    "relic"
+   ],
+   "best": 3,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "dsub",
+   "sel": "#dunSub [data-dsub]",
+   "askedAfter": null,
+   "boot": 3,
+   "bootVals": [
+    "dun",
+    "raid",
+    "tower"
+   ],
+   "best": 3,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "trsub",
+   "sel": "#trSubs [data-trsub]",
+   "askedAfter": null,
+   "boot": 3,
+   "bootVals": [
+    "rune",
+    "temper",
+    "train"
+   ],
+   "best": 3,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "cat",
+   "sel": "#shopCats .shp-ct[data-cat]",
+   "askedAfter": null,
+   "boot": 3,
+   "bootVals": [
+    "coin",
+    "pass",
+    "summon"
+   ],
+   "best": 3,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "eqtab",
+   "sel": "#eqTabs [data-eqtab]",
+   "askedAfter": null,
+   "boot": 3,
+   "bootVals": [
+    "cos",
+    "pet",
+    "sk"
+   ],
+   "best": 3,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "ct",
+   "sel": "#collTabs .cltab[data-ct]",
+   "askedAfter": null,
+   "boot": 6,
+   "bootVals": [
+    "amulet",
+    "pet",
+    "relic",
+    "shield",
+    "skill",
+    "weapon"
+   ],
+   "best": 6,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "ptab",
+   "sel": "#psBar [data-ptab]",
+   "askedAfter": null,
+   "boot": 4,
+   "bootVals": [
+    "att",
+    "stage",
+    "tower",
+    "tower2"
+   ],
+   "best": 4,
+   "bestHost": "(부팅 직후)",
+   "grew": false,
+   "handled": false,
+   "missed": []
+  },
+  {
+   "key": "eqslot",
+   "sel": "#eqCards [data-eqslot]",
+   "askedAfter": ".tab[data-t=\"hero\"]",
+   "boot": 0,
+   "bootVals": [],
+   "best": 3,
+   "bestHost": "tab:hero",
+   "grew": true,
+   "handled": true,
+   "missed": []
+  }
+ ],
+ "hosts": [
+  "tab:hero",
+  "tab:grow",
+  "tab:adv",
+  "tab:box",
+  "tab:shop",
+  "side:attend",
+  "side:roul",
+  "side:quest",
+  "side:promo",
+  "side:coll",
+  "side:bless",
+  "menu"
+ ]
+}
