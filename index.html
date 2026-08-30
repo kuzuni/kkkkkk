@@ -16202,6 +16202,7 @@ function layoutSide(hpx){
   app.style.setProperty('--ilf',  L.toFixed(2) + 'px');
   app.style.setProperty('--ilh',  L.toFixed(2) + 'px');
   measureSideBox();
+  measureHudBox();          /* 442 — 세로 짝. 같은 트리거(레이아웃 변경)로 같이 다시 잰다 */
 }
 /* 13회차 AQ①·AR#10 — 좌측 사이드 아이콘 열이 «캔버스 좌표(게임px)로 어디까지인가».
    전투 오버레이(데미지 라벨·적 HP바)가 이 띠를 피해야 하는데, 지금까지는 11회차에 DOM 을 한 번 재서
@@ -16238,6 +16239,45 @@ function fxClampX(wx, hw, wy){
 function eOnScreen(e){
   const sx = e.x + camOx, sy = e.y + camOy;
   return sx + e.r > 0 && sx - e.r < VW && sy > 0 && sy - e.r*2 < VH;
+}
+/* ⚑ 442 — «캔버스 위를 덮는 상단 HUD 띠» 를 캔버스 게로 잰다. `sideBox`(13회차 AQ①)의 **세로 짝**이고,
+   같은 이유로 상수를 안 박는다: 띠 높이는 모드마다 다르고(던전 `#dunHud` ↔ 28 규격 `#stinfo`·`#bossTm`·
+   `#bossHp`) `#stinfo` 의 top 은 프레임 높이·`#top` 유무를 타서 «그때의 화면비에서만» 맞는 값이 된다
+   (368 이 verify348 에서 겪은 병 그대로다 — 상수를 박아 둔 쪽이 틀린다).
+   ⚠ 재는 것은 **HUD 묶음뿐**이다. [포기하기]·[재도전] 버튼(`.bbtn`)은 띠가 아니라 화면 한복판의
+      단추라 여기 넣으면 클램프가 화면 절반까지 내려온다. */
+const HUD_TOP_IDS = ['dunHud', 'stinfo', 'bossTm', 'bossHp'];
+let hudBox = null, hudBoxKey = ' ';
+function measureHudBox(){
+  try{
+    const st = $('stagearea').getBoundingClientRect();
+    const ar = app.getBoundingClientRect();
+    if(!st.width || !ar.width) return (hudBox = null);
+    const sc = (ar.width/FRAME_W) * SC;          /* CSS px → 캔버스 게임px (measureSideBox 와 같은 자) */
+    if(!(sc > 0)) return (hudBox = null);
+    let y2 = -Infinity;
+    for(const id of HUD_TOP_IDS){
+      const el = $(id); if(!el) continue;
+      const r = el.getBoundingClientRect();
+      if(!r.width || !r.height) continue;        /* display:none 인 모드의 노드는 0×0 이다 */
+      y2 = Math.max(y2, (r.bottom - st.top)/sc);
+    }
+    hudBox = y2 === -Infinity ? null : { y2 };
+  }catch(e){ hudBox = null; }
+}
+/* 띠가 바뀌는 순간에만 다시 잰다 — 키는 «어떤 노드가 켜져 있나»(className 읽기라 리플로우가 없다).
+   레이아웃이 바뀌는 쪽은 `layoutSide()` 가 `measureSideBox()` 와 함께 부른다. */
+function hudBoxSync(){
+  const si = $('stinfo'), k = (app.className || '') + '|' + (si ? si.className : '') +
+    '|' + ($('bossHp') || {}).className + '|' + ($('bossTm') || {}).className;
+  if(k === hudBoxKey) return;
+  hudBoxKey = k; measureHudBox();
+}
+/* 월드 오버레이를 «상단 HUD 띠 아래» 로 미는 세로 클램프. 가로 짝(`fxClampX`)과 같은 여유 6px 을 쓴다.
+   띠를 못 재면(부팅 첫 프레임·예외) 한 줄도 안 민다 — 안 보이는 것보다 제자리가 낫다. */
+function fxClampY(wy){
+  const hb = hudBox;
+  return hb ? Math.max(wy, hb.y2 + 6 - camOy) : wy;
 }
 addEventListener('resize', fit);
 /* 폰트 로드·튜토리얼 배너 표시 등으로 고정 요소 높이가 바뀌면 캔버스도 따라가야 한다 */
@@ -16437,11 +16477,67 @@ function frameInk(key, A){
            몸통을 따라간다(편차 13.9px · 최대 **8.7px** = −68%). 비평가 CY 가 아틀라스 실측으로
            bbox·무게중심·중앙값 셋을 견줘 고른 값이고, 같은 픽셀로 한 줄이라 새 상수가 0개다. */
         const mid = (a) => { let c = 0; for(let i = 0; i < a.length; i++){ c += a[i]; if(c >= n/2) return i; } return a.length/2; };
-        m[nm] = n === 0 ? null : { my: mid(row), mx: mid(col) };
+        /* ⚑ 442 — 같은 픽셀 패스에서 **잉크 윗변**(첫 잉크 행)도 같이 돌려준다. 중앙값(`my`)은
+           «몸통이 어디냐» 를 말하지 이 프레임의 그림이 **어디서 시작하는가** 는 말하지 않는데,
+           머리 위 HP바는 후자를 앵커로 삼아야 한다(425 는 카메라라 전자가 맞았다). 픽셀을 두 번
+           읽지 않으므로 비용은 0 이고 새 상수도 0 이다. */
+        let ty = 0; while(ty < fr[3] && row[ty] === 0) ty++;
+        m[nm] = n === 0 ? null : { my: mid(row), mx: mid(col), ty };
       }
     }
   }catch(e){ m = null; }        /* 오염된 캔버스 — 호출부가 rect 중심으로 떨어진다 */
   return (frInkCache[key] = m);
+}
+
+/* ⚑ 442 — «그려진 스프라이트의 윗변»(앵커 `e.y` 기준 오프셋, 게임px). 머리 위 HP바가 쓴다.
+   종전 근사 `e.r*3.1` 은 **판정 반경**에서 그림 높이를 역산한 것인데, `r` 은 히트박스이고 배율은
+   아트마다 따로라 둘이 안 붙는다 — `probe442` 실측으로 던전 보스 gold/stone 은 바가 머리 위
+   **112px** 에 떠 있었고(빈 배경), 반대로 relic3 은 바가 그림 안으로 **107px** 파고들어 있었다.
+   ⇒ 상수를 다시 고르지 않고 **아틀라스 픽셀**에서 뽑는다(425 `frameInk` 의 `ty`).
+   ⚠ 자는 **«쉬는 자세»(`T.walk`) 프레임들의 중앙값** 하나다 — 적 종류마다 상수 하나. 두 가지를 같이 막는다:
+      ① 프레임마다 다시 재면 날갯짓을 따라 바가 떤다(dragon `fly` 6장의 잉크 윗변이 −64 ~ −42 아틀라스px
+         = 배율 3.48 에서 **76.6px** 폭으로 오르내린다).
+      ② 현재 애니메이션으로 재면 공격 모션으로 갈아탈 때 바가 튄다(knight `idle` −45 ↔ `attack_A` −63 =
+         승급 수호자 배율 4.84 에서 87px).
+      중앙값을 고른 것도 425 와 같은 이유다 — «치켜든 날개 끝» 한 장이 최소·최대를 통째로 끌고 간다
+      (dragon 6장 중 4장이 −42 인데 한 장이 −64). 중앙값은 몸통을 따라가고, 그 한 장에서만 날개 끝이
+      4px 짜리 바를 스친다(바는 스프라이트 **뒤에** 안 깔리고 위에 그려지므로 가려지지 않는다).
+   ⚠ 아틀라스가 없거나 캔버스가 오염되면 옛 근사로 떨어진다 — 바가 사라지지 않게. */
+const eHeadCache = {};
+function eHeadTop(e){
+  const T = e.T || {}, A = ATLAS[e.akey];
+  const fb = e.y - e.r*3.1;
+  if(!A || !A.a) return fb;
+  const an = T.walk && A.a[T.walk] ? T.walk : e.anim;
+  const list = A.a[an];
+  if(!list || !list.length) return fb;
+  const ck = e.akey + '|' + an;
+  let off = eHeadCache[ck];
+  if(off === undefined){
+    const ink = frameInk(e.akey, A), tops = [];
+    for(const nm of list){
+      const fr = A.f[nm]; if(!fr) continue;
+      const k = ink && ink[nm];
+      if(!k) continue;                              /* 잉크를 못 재면 이 프레임은 안 센다 */
+      tops.push(-fr[7] + fr[5] + k.ty);             /* drawFrame 목적지 상자 윗변 + 잉크 윗변 */
+    }
+    tops.sort((a, b) => a - b);
+    eHeadCache[ck] = (off = tops.length ? tops[tops.length >> 1] : null);
+  }
+  return off === null ? fb : e.y + (T.yo || 0) + off*(T.scale || 1);
+}
+
+/* ⚑ 442 — 머리 위 HP바의 «자리» 를 **한 곳에서만** 정한다.
+   종전에는 그리기(`draw`)와 게이트(`verify348` 하네스)가 같은 식을 각각 적고 있었고, 그래서
+   368 이 겪은 병이 되풀이됐다 — 앵커를 바꾸자 게이트 쪽 사본만 낡아 [3-b] 표본이 자리를 잃었다.
+   ⇒ 자리를 묻는 쪽은 전부 이 함수를 부른다(게이트도 «제품에게 묻는다» — 368 처방).
+   세로: 그려진 잉크 윗변 위 6px(`eHeadTop`) → 상단 HUD 띠 아래로 클램프(`fxClampY`).
+   가로: 13회차 AQ①·AR#10 — 좌측 사이드 아이콘 열 위에 겹치지 않게 민다(`fxClampX`).
+     (AQ 실측 게임px x 31.5..71 · AR 32.5..69.5, 둘 다 «축복» 아이콘 열 21.5..77.5 안이었다.) */
+function eBarBox(e){
+  const w = Math.max(22, e.r*2.2), h = 4;
+  const y = fxClampY(eHeadTop(e) - 6);
+  return { x: fxClampX(e.x, w/2, y) - w/2, y, w, h };
 }
 
 /* 프레임 그리기 (기준점 = 발밑) */
@@ -21638,14 +21734,10 @@ function draw(){
     /* 348(주인 지시 «몬스터들 화면 벗어났는데 hp바 보여주는거 괜히 거슬림») — 화면 밖 적은 바를 안 그린다.
        종전에는 아래 `fxClampX` 가 바를 뷰포트 안으로 밀어 넣어, 몸통이 없는 가장자리에 바만 남았다. */
     if(e.hp < e.max && grow >= 1 && eOnScreen(e)){
-      const w = Math.max(22, e.r*2.2), h = 4, by = e.y - e.r*3.1 - 6;
-      /* 13회차 AQ①·AR#10 공통 — 좌측 끝 적의 HP바가 사이드 아이콘 열 위에 그려진다
-         (AQ 실측 게임px x 31.5..71 · AR 32.5..69.5, 둘 다 «축복» 아이콘 열 21.5..77.5 안).
-         데미지 라벨만 클램프하고 HP바는 빼 놨던 것이 원인이다 — 같은 띠 판정으로 같이 민다. */
-      const bx = fxClampX(e.x, w/2, by) - w/2;
-      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(bx, by, w, h);
+      const b = eBarBox(e);
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(b.x, b.y, b.w, b.h);
       ctx.fillStyle = isBossKind(e.tk) ? '#ffca5c' : '#ff6b8a';   /* 178 — 던전 보스도 «보스 금색» */
-      ctx.fillRect(bx, by, w*clamp(e.hp/e.max, 0, 1), h);
+      ctx.fillRect(b.x, b.y, b.w*clamp(e.hp/e.max, 0, 1), b.h);
     }
   }
 
@@ -22439,6 +22531,7 @@ function drawHud(){
   $('chapN').innerHTML = 'STAGE <em>' + S.stage + '</em>';
   drawBossHud();
   drawDunHud();                      /* 30 — 던전 런 HUD(타이머·진행바) */
+  hudBoxSync();                      /* 442 — 위 두 줄이 띠를 갈아 끼웠으면 세로 클램프 자를 다시 잰다 */
   drawArnHud();                      /* 123 — 아레나 HUD(타이머·양쪽 닉네임·HP 바) */
   $('hpF').style.width = (clamp(player.hp/maxHp, 0, 1)*100) + '%';
   $('hpT').textContent = fmtB(Math.max(0, player.hp)) + ' / ' + fmtB(maxHp);

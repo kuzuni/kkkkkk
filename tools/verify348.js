@@ -31,9 +31,11 @@ const { chromium } = pw();
 const SRC = path.resolve(__dirname, '../index.html');
 const GUARD = 'if(e.hp < e.max && grow >= 1 && eOnScreen(e)){';
 const GUARD_OLD = 'if(e.hp < e.max && grow >= 1){';
-/* 368 §R2 — «클램프를 뺀» 사본을 만드는 자리. [3-b] 가 무르게 풀린 항이 아님을 이것이 못박는다 */
-const CLAMP = 'const bx = fxClampX(e.x, w/2, by) - w/2;';
-const CLAMP_OFF = 'const bx = e.x - w/2;';
+/* 368 §R2 — «클램프를 뺀» 사본을 만드는 자리. [3-b] 가 무르게 풀린 항이 아님을 이것이 못박는다.
+   ⚑ 442 이관 — 그리기 블록에 인라인으로 있던 이 줄이 공용 `eBarBox()` 안으로 들어갔다(자리를
+   한 곳에서만 정한다). 자르는 자리만 그리로 옮겼고 §R2 가 묻는 것은 한 글자도 안 바뀐다. */
+const CLAMP = 'return { x: fxClampX(e.x, w/2, y) - w/2, y, w, h };';
+const CLAMP_OFF = 'return { x: e.x - w/2, y, w, h };';
 
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log('  ok   ' + m); };
@@ -81,11 +83,17 @@ const HARNESS = () => {
     /* 372 — 그 적의 바가 **가려지지 않았다면** 나와야 할 «정확한 색» 픽셀 수의 상·하한.
        불투명 단색 fillRect 하나이므로 개수는 «온전히 덮인 칸»(lo) 이상, «걸친 칸 전부»(hi) 이하다.
        무엇이 바 위에 올라오면 lo 아래로, 다른 데서 같은 색이 새면 hi 위로 나간다.
-       그리기와 **같은 식**을 쓴다(index.html HP바 블록) — 상수를 새로 만들지 않는다. */
+       그리기와 **같은 식**을 쓴다(index.html HP바 블록) — 상수를 새로 만들지 않는다.
+       ⚑ 442 이관 — 식을 여기 다시 «적지» 않고 **제품 `eBarBox(e)` 에게 묻는다**(368 처방).
+       옛 사본(`e.y − e.r*3.1 − 6`)은 442 가 앵커를 «그려진 잉크 윗변» 으로 갈아 끼운 순간 낡았다.
+       폴백(옛 식)은 `eBarBox` 가 없는 **수리 전 사본**(§R)에서만 쓰인다. */
     band(e) {
-      const w = Math.max(22, e.r * 2.2), h = 4, by = e.y - e.r * 3.1 - 6;
-      const bx = fxClampX(e.x, w / 2, by) - w / 2;
-      const X0 = (bx + camOx) * 2, Y0 = (by + camOy) * 2;
+      const b = typeof eBarBox === 'function'
+        ? eBarBox(e)
+        : (() => { const w = Math.max(22, e.r * 2.2), h = 4, by = e.y - e.r * 3.1 - 6;
+                   return { x: fxClampX(e.x, w / 2, by) - w / 2, y: by, w, h }; })();
+      const w = b.w, h = b.h, bx = b.x;
+      const X0 = (bx + camOx) * 2, Y0 = (b.y + camOy) * 2;
       const X1 = X0 + w * clamp(e.hp / e.max, 0, 1) * 2, Y1 = Y0 + h * 2;
       const cols = Math.max(0, Math.floor(X1) - Math.ceil(X0)), rows = Math.max(0, Math.floor(Y1) - Math.ceil(Y0));
       const colsH = Math.max(0, Math.ceil(X1) - Math.floor(X0)), rowsH = Math.max(0, Math.ceil(Y1) - Math.floor(Y0));
@@ -163,9 +171,14 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
   if (!sb) return { __err: 'sideBox 가 null — 띠를 못 쟀다' };
   const e = T.mk(tk2);
   const top = md === 'mid' ? Math.max(sb.y1 + 8, Math.min(sb.y2 - 8, VH / 2)) : sb.y2 + pd;
-  T.put(e, sx2, top + e.r * 3.1 + 6);              /* 바 상변이 top 에 오도록 발밑을 잡는다 */
+  /* 442 이관 — «발밑에서 바 상변까지» 를 상수로 적지 않는다. 한 번 놓아 보고 **제품이 실제로 잡은**
+     바 상변과 발밑의 차(`dy`)를 재서 그만큼 되민다. 앵커식이 또 바뀌어도 표본이 자리를 안 잃는다. */
+  const barY = (o) => (typeof eBarBox === 'function' ? eBarBox(o).y : o.y - o.r * 3.1 - 6);
+  T.put(e, sx2, top);
+  const dy = barY(e) - e.y;
+  T.put(e, sx2, top - dy);                         /* 바 상변이 top 에 오도록 발밑을 잡는다 */
   const p = T.scan(rgb2);
-  return Object.assign(p, { barY: e.y + camOy - e.r * 3.1 - 6, y1: sb.y1, y2: sb.y2, x2: sb.x2 });
+  return Object.assign(p, { barY: barY(e) + camOy, y1: sb.y1, y2: sb.y2, x2: sb.x2 });
 }, [sx, mode, pad, tk, rgb]);
 
 (async () => {
@@ -336,7 +349,7 @@ const shotBand = (ev, sx, mode, pad, tk, rgb) => ev(([sx2, md, pd, tk2, rgb2]) =
     const body = src.slice(src.indexOf('function fxClampX'));
     const uses = (src.match(/fxClampX\(/g) || []).length;
     is(uses >= 3, '[6-b] `fxClampX` 호출부 ' + uses + '곳 — 정의 1 + 호출 2 이상(HP바 말고 다른 연출도 쓴다)');
-    is(/const bx = fxClampX\(e\.x, w\/2, by\)/.test(src), '[6-c] HP바는 «보일 때» 여전히 클램프로 그린다(사이드 열 회피 규약)');
+    is(/x: fxClampX\(e\.x, w\/2, y\) - w\/2/.test(src), '[6-c] HP바는 «보일 때» 여전히 클램프로 그린다(사이드 열 회피 규약)');
     is(!/function eOnScreen[\s\S]{0,400}?VW[\s\S]{0,200}?\bWORLD\b/.test(body.slice(0, 600)),
       '[6-d] 가시성 판정이 WORLD 가 아니라 뷰포트(VW·VH) 자다');
   }
