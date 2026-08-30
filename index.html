@@ -11106,6 +11106,20 @@
   .ifbtn{--dot-bw:var(--gb-bw)}
   .sk-btn,.wm-btn{--dot-bw:7px}
   .wgc,.at-c,.at-c7,.ps-bx{--dot-bw:5px}
+  /* ══ 516 (2026-08-31, 저장소 주인 지시) — 21 도감 세트별 [강화] 버튼 ═══════════════════
+     주인 원문: «도감에 일괄강화버튼 빨간점 알림하라» · «도감에 강화버튼도 빨간점 알림».
+     [일괄 강화](`#collAll`)는 `.ifbtn` 이라 위 한 줄로 끝나지만(`--gb-bw` 7px), 세트별
+     [강화](`.clb-btn`)는 `.ifbtn` 이 아니라 자기 `border:6px` 를 갖고 있어 따로 적는다.
+     ⚑ **471 예외 ⑤ — 가로만 규약값 11 → 16.** 이 버튼은 `.cl-body{overflow-x:hidden}`(폭 860)
+     **안**에 있고, 버튼 우변 뒤로 남는 폭이 **13px 뿐**이다(`.clb` margin-left 22 + 블록 818 =
+     840 ↔ 뷰포트 860, 버튼은 블록을 7px 넘는다). 규약 11 이면 정지 상태는 3px 여유로 들어가지만
+     **60 쥬시 등장 봉우리(`jzDotIn` scale 1.3 → 링 반지름 27.3)에서 오른쪽 3.3px 이 잘린다**
+     — 주인이 471 에서 지적한 바로 그 «반달» 이 재발한다. 329 가 같은 검사(«봉우리에서 재라»)로
+     규약값 12 를 4 로 당긴 것과 **같은 처방·반대 방향**이다: 필요 조건은 `in-x ≥ 27.3 − 13`,
+     16 이면 봉우리에서 **2.3px 여유**(맥박 1.14 는 7.4px · 정지는 8px). 세로는 클리핑이 없어
+     규약 11 그대로 둔다 — 299 «우상단 사분면» 은 두 축 다 충족한다.
+     자는 `tools/probe516.js` [D]·[E] 가 봉우리 배율까지 매번 다시 찍는다. */
+  .clb-btn{--dot-bw:6px;--dot-in-x:16px}
   /* ⚠ `.sk-card` 는 같은 `.ifr` 계열이지만 **`.ifr-in`(인셋 변형)이라 테두리가 0** 이다
      (실측 `borderRightWidth: 0px`) — 형제라고 5px 을 물려 적으면 닷이 5px 안으로 들어간다
      (4회차에 실제로 dxR 6/6 으로 빨개졌다). 되빼기가 필요 없으므로 선언 자체가 없다. */
@@ -11184,6 +11198,15 @@
   :is(#bSk,#bPet,#bCos) .alert>.updot{display:block}
   #wpnw .updot{display:none}
   #wpnw .alert>.updot{display:block}
+  /* 516 — **같은 특이성 함정이 21 도감에서 일곱 번째로 났다**(166 ⓔ · 202 §3 · 283 · 294 · 325 ·
+     519 계열). `#collw i,#collw s,#collw b,#collw em{display:inline-block}`(8543 · ID 급 1,0,1) 이
+     `.updot{display:none}`(0,1,0) 을 이겨서, 닷 노드를 달기만 하면 `.alert` 와 **무관하게 상시 점등**
+     이다(`tools/probe516.js` [B] 가 수리 전 트리에서 «`.alert` 없이도 block 27×27» 로 찍었다).
+     519 와 정확히 같은 병이고, 이 짝 두 줄이 없으면 516 은 «안 켜지던 닷» 을 «항상 켜진 닷» 으로
+     바꿔 놓는 것으로 끝난다. ⚠ 이 짝을 지우면 도감 두 버튼이 상시 점등으로 되돌아간다
+     (`verify516` [E] 되돌림 시험이 그 순간 빨개진다). */
+  #collw .updot{display:none}
+  #collw .alert>.updot{display:block}
   /* ── 294 — 10 상점 «소환 가능(무료·광고)» 레드닷 두 자리 ────────────────────────────
      ⚠ **166 ⓔ · 202 §3 · 283 과 똑같은 특이성 함정이 여기에도 있다.** `#shopw` 는
      `#shopw i,#shopw em,#shopw b,#shopw u,#shopw s{display:inline-block}`(ID 급 1,0,1) 로
@@ -30417,8 +30440,11 @@ function renderColl21(){
          }).join('')
       +  '</div>'
       +  '<i class="clb-eff">' + collEffText(st, got).replace(/([\d.]+)%/g, '<i class="g">$1%</i>') + '</i>'
-      +  '<button class="clb-btn' + (rdy ? ' rdy' : '') + '" data-c21="' + st.key + '"' + (rdy ? '' : ' disabled')
-      +  '><i>' + (max ? 'MAX' : '강화') + '</i></button>'
+      /* 516 — 세트별 [강화] 버튼 «자체» 에도 레드닷. 판정은 새로 만들지 않는다 —
+         버튼의 초록(`rdy`)·`disabled` 과 **같은 한 자**(`collReady(st.key)`)를 그대로 쓴다
+         (283 규약: 초록/회색은 «지금 눌러서 되나», 레드닷은 «누를 게 생겼다»). */
+      +  '<button class="clb-btn' + (rdy ? ' rdy alert' : '') + '" data-c21="' + st.key + '"' + (rdy ? '' : ' disabled')
+      +  '><i>' + (max ? 'MAX' : '강화') + '</i>' + (rdy ? '<s class="updot"></s>' : '') + '</button>'
       +  '</div>';
   });
   $('collList').innerHTML = h;
@@ -30431,7 +30457,12 @@ function renderColl21(){
      켜질 조건이면 버튼이 있고, 아니면 통째로 없다. 라벨의 «(n)» 은 06 무기 `wpnBtnUp` 관례. */
   const pend = collTabPend(collTab);
   $('collw').classList.toggle('upall', pend > 0);
-  $('collAll').innerHTML = '<b>일괄 강화' + (pend ? ' (' + pend + ')' : '') + '</b>';
+  /* 516 — [일괄 강화] 버튼 «자체» 에도 레드닷(283 ③ 과 같은 자리·같은 부품).
+     조건은 새로 만들지 않고 버튼의 표시 조건 그대로다 — `pend > 0` 은 `collTabReady(collTab)` 과
+     항등(18 표본을 `probe516` [C1] 이 매번 다시 확인한다). 버튼이 없는 국면에는 닷도 없다. */
+  $('collAll').classList.toggle('alert', pend > 0);
+  $('collAll').innerHTML = '<b>일괄 강화' + (pend ? ' (' + pend + ')' : '') + '</b>'
+    + (pend ? '<s class="updot"></s>' : '');
   collFitEff();                              /* 452 — 그린 직후 효과문을 버튼 앞에서 끊는다 */
   collFitLv();                               /* 487 — 카드 라벨도 같은 순간에 카드 안쪽으로 끊는다 */
 }
