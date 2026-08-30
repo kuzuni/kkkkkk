@@ -119,9 +119,10 @@ const SCEN = function (arg) {
         dunRun.t = DUN_SEC;
         enemies.forEach(function (e) { if (e.tk === 'dunboss') { e.max = 1e15; e.hp = 1e15; } });
       }
-      if (typeof dunRun !== 'undefined' && dunRun && dunRun.introOn) { out.introSeen = true; out.resetsInIntro = resets.length; }
+      /* 457 이후 등장 국면은 **모든 보스전 공용**(`bossIntro`)이다 — 던전 전용 `dunRun.introOn` 은 그 접근자다 */
+      if (typeof bossIntro !== 'undefined' && bossIntro) { out.introSeen = true; out.resetsInIntro = resets.length; }
       step(DT);
-      const inIntro = (typeof dunRun !== 'undefined' && dunRun && dunRun.introOn);
+      const inIntro = (typeof bossIntro !== 'undefined' && bossIntro);
       if (fightFr < 0 && foeUp() && !inIntro) fightFr = fr;
     }
     out.fightFr = fightFr;

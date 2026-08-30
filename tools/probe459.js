@@ -111,7 +111,7 @@ const BIG = 4.0;                                    /* «막 쓴» 상태 — �
         (e.tk === 'dunboss' || e.tk === 'boss' || e.tk === 'promo' || e.tk === 'arena' || e.raid));
       let fightFr = -1;
       for (; fr < 600; fr++) {
-        if (bossUp() && !(typeof dunRun !== 'undefined' && dunRun && dunRun.introOn)) { fightFr = fr; break; }
+        if (bossUp() && !(typeof bossIntro !== 'undefined' && bossIntro)) { fightFr = fr; break; }   /* 457 — 국면은 모든 보스전 공용 */
         step(DT);
       }
       out.fightSec = fightFr < 0 ? null : +(fightFr * DT).toFixed(3);
