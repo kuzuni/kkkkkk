@@ -218,11 +218,16 @@ const untilFree = page => page.waitForFunction(
        자기 `on` 을 뗀다(`$('upw')`·`$('relw')`·… 전부 `#modal` 이 아니다). 자를 «모달» 로 좁힌다.
        ⓐ 껍데기 목록을 떼는 줄이 하나뿐인가(= `closeModal()` 의 그 줄)
        ⓑ `#modal` 을 **직접 집어** `on` 을 떼는 자리가 밖에 없는가 */
-    /* ⚑ 464 이관 — 목록에서 죽은 `rl16` 이 빠졌다(살아 있는 넷은 그대로). 자도 같이 줄인다. */
-    const shell = (code.match(/remove\(\s*'on',\s*'sk8',\s*'q22',\s*'ml69',\s*'at70'\s*\)/g) || []).length;
-    ok(shell === 1,
-       '★ [E1a] 모달 껍데기를 떼는 줄은 **1건**(= `closeModal()` 안)뿐이다',
-       shell + '건');
+    /* ⚑ 464 이관 — 목록에서 죽은 `rl16` 이 빠졌다(살아 있는 넷은 그대로). 자도 같이 줄인다.
+       ⚑ 465 이관 — 그 줄이 `closeModal()` 안에서 **`modalShell()` 안**으로 옮겨졌다(껍데기 목록을
+       여덟 자리에 흩어 두면 낡는다 — `probe465`). 뜻은 그대로다: **껍데기를 떼는 줄은 하나**이고
+       닫는 문이 그것을 지난다. 자리를 비우지 않고 새 모양 위에서 같은 것을 묻는다(333 처방). */
+    const shell = (code.match(/classList\.remove\(\s*\.\.\.MODAL_SHELLS\s*\)/g) || []).length;
+    const inFn = /function\s+modalShell\s*\([^)]*\)\s*\{[\s\S]{0,400}?classList\.remove\(\s*\.\.\.MODAL_SHELLS\s*\)/.test(code);
+    const closeUses = /function closeModal\(\)\s*\{[\s\S]{0,400}?modalShell\(/.test(code);
+    ok(shell === 1 && inFn && closeUses,
+       '★ [E1a] 모달 껍데기를 떼는 줄은 **1건**(= `modalShell()` 안)뿐이고 `closeModal()` 이 그것을 부른다',
+       shell + '건 · modalShell 안 ' + inFn + ' · closeModal 이 호출 ' + closeUses);
     const direct = code.split(/[;\n]/).filter(t => /modal/.test(t) && /remove\(\s*'on'/.test(t)).length;
     ok(direct === 0,
        '★ [E1b] `#modal` 을 직접 집어 `on` 을 떼는 자리가 `closeModal()` 밖에 **0건** — 우회로가 생기면 여기가 빨개진다',

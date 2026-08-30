@@ -24971,16 +24971,32 @@ function setBody(id, html){
      열려 있고(`on`) 그 안에 원판(`#rouDisc`)이 있는가. 그리기는 이 노드가 곧 룰렛이다.
    순서가 중요하다 — 앞의 두 항이 거짓이면 판정식을 밟지도 않으므로 다른 팝업·부팅 경로는 그대로 지난다.
    돌려주는 값은 «실제로 닫았는가» — 게이트가 이 자리를 직접 물을 수 있게 남긴다(호출부는 안 쓴다). */
+/* 465 — 모달 껍데기(08·22·69·70 전용 **치수 override**)는 «한 번에 하나» 다.
+   종전에는 그 이름 목록이 **여덟 자리에 흩어져** 있었고 서로 비대칭이었다(`probe465` [1]:
+   켜는 자리 6곳 중 «남의 껍데기를 전부 떼는» 곳이 **0곳** — `sk8` 세 자리는 하나도 안 뗐다).
+   그래서 닫지 않고 갈아타면 껍데기가 겹쳤다(전 경로 30개 중 **12개** · 닫힘 연출 중 전환도 12개).
+   겹침의 값도 작지 않다 — 22 퀘스트 → 08 유물 세부에서 본문 높이가 739 → **1379**(Δ640px).
+   지금은 딤이 전면을 덮어 사람이 그 경로를 못 밟지만(«잠복»), 목록이 낡을 자리를 없애는 것이
+   처방이다(LESSONS 265 «그 목록은 이미 다섯 곳에 흩어져 낡는다» · 464 가 죽은 이름을 걷어낸 그 목록).
+   ⇒ **이름은 여기 한 줄** · 켜고 끄는 것도 이 함수 하나다. 새 껍데기는 배열에 한 칸을 더한다. */
+const MODAL_SHELLS = ['sk8', 'q22', 'ml69', 'at70'];
+function modalShell(cls){
+  const m = $('modal');
+  m.classList.remove(...MODAL_SHELLS);      /* 남의 껍데기는 예외 없이 전부 뗀다 */
+  if(cls) m.classList.add(cls);
+  return m;                                  /* 호출부가 이어서 'on' 을 켤 수 있게 노드를 돌려준다 */
+}
 function closeModal(){
   const m = $('modal');
   if(m.classList.contains('on') && m.querySelector('#rouDisc') && rouLocked()) return false;
-  m.classList.remove('on', 'sk8', 'q22', 'ml69', 'at70');
+  m.classList.remove('on');
+  modalShell(null);
   return true;
 }
 /* 모달 껍데기는 헤더(갈색 바) + 본문(베이지)로 고정이다.
    호출부는 예전처럼 앞머리에 <h2>제목</h2> 을 붙여 넘기고, 여기서 헤더로 옮겨 담는다. */
 function showModal(html){
-  $('modal').classList.remove('sk8', 'q22', 'ml69', 'at70');   /* 08·22·69·70 전용 껍데기 override 를 끈다 (464 — 16 룰렛은 껍데기가 없다) */
+  modalShell(null);   /* 08·22·69·70 전용 껍데기 override 를 끈다 (464 — 16 룰렛은 껍데기가 없다 · 465 — 목록은 MODAL_SHELLS 한 줄) */
   const m = /^\s*<h2[^>]*>([\s\S]*?)<\/h2>\s*/.exec(html);
   /* 레퍼런스 헤더에는 이모지가 없다. 앞에 붙은 이모지를 떼야 제목이 진짜 가운데로 온다 */
   $('mtitle').textContent = (m ? m[1] : '').replace(/^[^가-힣\w]+/, '').trim();
@@ -25290,7 +25306,7 @@ function showSkillDetail(id){
     +   '<button class="sk-u" id="mLv"' + (own && !maxed && canLevel(it) ? '' : ' disabled') + '><b>강화</b></button>'
     + '</div>';
   $('mbox').scrollTop = 0;
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const e = $('mEq'), l = $('mLv');
   if(e && own) e.onclick = () => { toggleEquip(it, 'skill'); showSkillDetail(id); };
   /* 58 — 강화 성공: 레벨 행이 흰 플래시 + 버튼 자리에서 성공 파티클
@@ -25416,7 +25432,7 @@ function showItem(id){
     + (acts ? '<div class="sk-act' + (canUp ? ' n3' : '') + '">' + acts + '</div>' : '');
   $('mbox').scrollTop = 0;
   if(cat === 'pet') petPaint($('mbox'));     /* 174 규약 — 스프라이트 캔버스는 삽입 «후» 한 번 칠한다 */
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const e = $('mEq'), l = $('mLv'), b = $('mLvAll'), c = $('mCraft');
   if(e && own) e.onclick = () => { toggleEquip(it, cat); showItem(id); };
   /* 58 — 강화 성공: 레벨 칸이 흰 플래시 + 버튼 자리에서 성공 파티클 (08 스킬과 같은 자리)
@@ -25812,9 +25828,8 @@ function openAttend(){
   const hd = document.querySelector('#modal .mhead');
   if(!hd.querySelector('.at-ring'))
     hd.insertAdjacentHTML('beforeend', '<s class="at-ring l"></s><s class="at-ring r"></s>');
-  const m = $('modal');
-  m.classList.remove('sk8', 'q22');
-  m.classList.add('at70', 'on');
+  const m = modalShell('at70');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   const t = $('mbox').querySelector('[data-att]');
   if(t) t.onclick = () => { sfx('claim'); claimAttend(t); openAttend(); };   /* 78 */
 }
@@ -26118,9 +26133,8 @@ function openMail(){
     +   '<button class="ml-all ifbtn" id="mailBtn"' + (left ? '' : ' disabled') + '>'
     +     '<b>일괄 읽기&amp;수령</b></button>'
     + '</div>';
-  const m = $('modal');
-  m.classList.remove('sk8', 'q22');
-  m.classList.add('ml69', 'on');
+  const m = modalShell('ml69');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   /* 58 — 22 와 같은 연출 계약. 재렌더가 메인 스레드를 잡으므로 «두 프레임 뒤» 에 수령을 처리한다
      (22 openQuest 주석 참고 — 한 번만 미루면 첫 페인트가 막혀 연출이 0% 상태로 멈춘다). */
   const fxThen = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
@@ -26249,9 +26263,8 @@ function openQuest(tab){
     + '<span class="sel" style="left:' + (qTab === 'daily' ? -5 : 366) + 'px"></span>'
     + '<b data-t="daily" style="left:87px"' + (qTab === 'daily' ? ' class="on"' : '') + '><i>일일</i></b>'
     + '<b data-t="rep" style="left:478px"' + (qTab === 'rep' ? ' class="on"' : '') + '><i>반복</i></b></div>';
-  const m = $('modal');
-  m.classList.remove('sk8', 'ml69');
-  m.classList.add('q22', 'on');
+  const m = modalShell('q22');   /* 465 — 껍데기는 한 번에 하나(MODAL_SHELLS) */
+  m.classList.add('on');
   /* 58 — 퀘스트 완료 연출. 수령하면 팝업이 openQuest() 로 통째로 재렌더되므로
      «누른 시점의 좌표» 로 먼저 체크·버스트를 걸고(연출 DOM 은 #fxl 에 있어 재렌더에 안 지워진다),
      재화 비행은 fxAt() 로 그 행을 출발점으로 지정만 하면 fxWatch 가 알아서 쏜다. */
@@ -30344,7 +30357,7 @@ function showCosDetail(id){
     + '</div>';
   $('mbox').scrollTop = 0;
   cosPaint($('mbox'));
-  $('modal').classList.add('on', 'sk8');
+  modalShell('sk8').classList.add('on');   /* 465 — 남의 껍데기를 먼저 뗀다(MODAL_SHELLS) */
   const w = $('mEq'), b = $('mLv');
   if(w && !w.disabled) w.onclick = () => { wearAvatar(id); cosSel = id; renderUI(); showCosDetail(id); };
   /* 262 — 보유 칸의 [강화]는 «꾹 누르면 연속»(공용 bindUpHold). 미보유 칸의 [승급전]은

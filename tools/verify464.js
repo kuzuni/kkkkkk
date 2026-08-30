@@ -118,20 +118,32 @@ async function boxes(page) {
 
   blk('[B] 무르게 풀지 않았다 — 살아 있는 넷은 그대로다');
   {
-    const want = [
-      ["closeModal()", /remove\(\s*'on',\s*'sk8',\s*'q22',\s*'ml69',\s*'at70'\s*\)/, 1],
-      ["showModal()", /classList\.remove\(\s*'sk8',\s*'q22',\s*'ml69',\s*'at70'\s*\)/, 1],
-      ["openAttend()·openMail()", /remove\(\s*'sk8',\s*'q22'\s*\)/, 2],
-      ["openQuest()", /remove\(\s*'sk8',\s*'ml69'\s*\)/, 1],
-    ];
-    for (const [name, re, n] of want) {
-      const got = (code.match(new RegExp(re.source, 'g')) || []).length;
-      ok(got === n, '★ [B] ' + name + ' 의 껍데기 목록이 «rl16 만 빠진» 그대로다', got + '/' + n + '건');
-    }
+    /* ⚑ 465 이관 — 이 절은 원래 «다섯 자리에 흩어진 remove 목록이 rl16 만 빠진 그대로인가» 를
+       자리마다 물었다. 465 가 그 다섯 목록을 **선언 한 줄 + 함수 하나**(`MODAL_SHELLS`·`modalShell()`)
+       로 모았으므로, 같은 뜻(«살아 있는 넷은 한 칸도 안 다쳤고 목록이 통째로 사라지지도 않았다»)을
+       **새 모양 위에서** 묻는다. 자리를 비우지 않는 이관이다(333 처방 · LESSONS 328). */
+    const decl = /const\s+MODAL_SHELLS\s*=\s*\[([^\]]*)\]/.exec(code);
+    ok(!!decl, '★ [B1] 껍데기 목록은 선언 한 줄이다 — `const MODAL_SHELLS = […]`', decl ? decl[0] : '없음');
+    const live = ['sk8', 'q22', 'ml69', 'at70'];
+    const inDecl = decl ? live.filter(c => decl[1].includes("'" + c + "'")) : [];
+    ok(inDecl.length === live.length,
+      '★ [B2] 살아 있는 껍데기 **넷이 전부** 그 목록에 있다(464 가 지운 것은 rl16 하나뿐)',
+      inDecl.join(',') + ' — ' + inDecl.length + '/' + live.length + '종');
+    ok(!!decl && !/rl16/.test(decl[1]),
+      '★ [B3] 그 목록에 `rl16` 이 **없다** — 이름이 목록으로 모였다고 죽은 이름이 따라 들어오지 않았다',
+      decl ? (/rl16/.test(decl[1]) ? '있다' : '없다') : 'n/a');
+    /* 목록을 실제로 읽는 자리 — 여기가 0 이면 «선언만 있고 아무도 안 쓴다» 가 된다 */
+    const uses = (code.match(/MODAL_SHELLS/g) || []).length;
+    ok(uses >= 2, '★ [B4] 그 목록을 **읽는 자리**가 있다(선언 + 사용) — 목록이 장식이 아니다', uses + '건');
     /* ⚠ `remove('on'` 을 통째로 세면 34건이다 — 오버레이 스물아홉 개가 각자 자기 `on` 을 뗀다
-       (verify455 [E] 가 같은 함정을 적어 뒀다). 자를 «껍데기 목록» 으로 좁힌다 = `'sk8'` 이 든 remove. */
-    const total = (code.match(/remove\([^)]{0,140}'sk8'/g) || []).length;
-    ok(total === 5, '[B5] 껍데기 목록을 만지는 자리는 여전히 **다섯 곳**이다(목록이 통째로 사라지지 않았다)', total + '곳');
+       (verify455 [E] 가 같은 함정을 적어 뒀다). 465 뒤로 «껍데기를 떼는 줄» 은 `modalShell()` 안 하나다. */
+    const scattered = (code.match(/remove\([^)]{0,140}'sk8'/g) || []).length;
+    ok(scattered === 0,
+      '[B5] 껍데기 이름을 **직접** 떼는 자리는 0곳이다(465 — 수리 전 5곳에 흩어져 있었고 서로 비대칭이었다)',
+      scattered + '곳');
+    const fn = /function\s+modalShell\s*\([^)]*\)\s*\{[\s\S]{0,400}?\}/.exec(code);
+    ok(!!fn && /classList\.remove\(\s*\.\.\.MODAL_SHELLS\s*\)/.test(fn[0]),
+      '[B6] 떼는 일은 `modalShell()` 이 목록을 펼쳐서 한다(하드코딩 0)', fn ? '있다' : '없다');
   }
 
   const browser = await launch(chromium);
@@ -169,16 +181,14 @@ async function boxes(page) {
 
   blk('[R] 되돌림 시험 — `rl16` 을 도로 끼운 사본 (= 수리 전 트리)');
   {
-    let rev = src
-      .replace("m.classList.remove('on', 'sk8', 'q22', 'ml69', 'at70');", "m.classList.remove('on', 'sk8', 'rl16', 'q22', 'ml69', 'at70');")
-      .replace("$('modal').classList.remove('sk8', 'q22', 'ml69', 'at70');", "$('modal').classList.remove('sk8', 'rl16', 'q22', 'ml69', 'at70');")
-      .split("m.classList.remove('sk8', 'q22');").join("m.classList.remove('sk8', 'rl16', 'q22');")
-      .replace("m.classList.remove('sk8', 'ml69');", "m.classList.remove('sk8', 'rl16', 'ml69');");
+    /* ⚑ 465 이관 — 되돌릴 자리도 «흩어진 다섯 목록» 에서 **선언 한 줄**로 옮겨졌다.
+       뜻은 그대로다: 죽은 이름을 도로 끼운 사본에서 [A] 가 빨개지는가. */
+    let rev = src.replace(/const\s+MODAL_SHELLS\s*=\s*\[\s*'sk8'/, "const MODAL_SHELLS = ['rl16', 'sk8'");
     const revCode = rev.replace(/\/\*[\s\S]*?\*\//g, '');
-    const revHits = (revCode.match(/remove\([^)]{0,140}rl16/g) || []).length;
-    ok(revHits === 5, '[R0] 전제 — 사본 편집이 실제로 먹었다 (313 교훈: 전제부터 단언한다)', 'remove(…rl16) ' + revHits + '건');
-    ok(revHits > 0 && (code.match(/remove\([^)]{0,140}rl16/g) || []).length === 0,
-      '★ [R1] 사본에서는 [A3] 이 **빨개진다** ⇒ [A] 는 이미 참인 것을 굳힌 항이 아니다', '사본 ' + revHits + '건 ↔ 현재 0건');
+    const revHits = (revCode.match(/rl16/g) || []).length;
+    ok(revHits > 0 && rev !== src, '[R0] 전제 — 사본 편집이 실제로 먹었다 (313 교훈: 전제부터 단언한다)', '제품 줄 rl16 ' + revHits + '건');
+    ok(revHits > 0 && (code.match(/rl16/g) || []).length === 0,
+      '★ [R1] 사본에서는 [A1]·[B3] 이 **빨개진다** ⇒ [A] 는 이미 참인 것을 굳힌 항이 아니다', '사본 ' + revHits + '건 ↔ 현재 0건');
 
     /* ⚠ 사본은 **저장소 루트**에 둔다 — index.html 이 자산을 상대 경로로 물어 /tmp 에 두면 404 다(verify455 [R] 주의) */
     const tmp = path.resolve(__dirname, '..', '.v464-neg.html');
