@@ -9,7 +9,8 @@
  *
  * 절:
  *   [0] 선언   — 다섯 자리가 처방대로 적혀 있는가(문자열)
- *   [1] 기하   — 프레임 4종 실측: 버튼 보임 100% · 넘침 0 · 탭바/HUD 침범 0 · 배너 숨김
+ *   [1] 기하   — 프레임 4종 실측: 버튼 보임 100% · 넘침 0 · 탭바/HUD 침범 0 ·
+ *                 배너는 **뒤의 06 시트가 이미 100% 덮는다**(등재문 셋째 항의 기각 — 아래 참조)
  *   [2] Δ0     — 2280·1920·1842 는 수리 전과 **같은 좌표**여야 한다(레퍼런스 보존)
  *   [3] 간격   — 격자 아래 세 간격(30/29/32)이 프레임과 무관하게 보존된다
  *   [4] 도달   — 1600 에서도 격자 40칸 마지막 칸에 스크롤로 닿는다(`verify186` [D] 의 짧은 프레임 짝)
@@ -67,6 +68,11 @@ async function shot(browser, file, h) {
       btnOff: q('#wpnBtnEq').offsetTop,
       tabbarTop: r('#tabbar').top, pedgeBot: r('.pedge').bottom,
       tutoShown: !!tuto && getComputedStyle(tuto).display !== 'none',
+      /* 배너가 «보이는가» 는 display 가 아니라 **뒤에 무엇이 있는가** 로 정해진다 —
+         06 장비 시트 `#eqw .eqp` 는 불투명 `#000` · 폭 1080 이라 이 화면에서는 그것이 답이다. */
+      tuto: tuto ? (() => { const b = tuto.getBoundingClientRect(); return { x1: b.left, y1: b.top, x2: b.right, y2: b.bottom }; })() : null,
+      eqp: (() => { const s = q('#eqw .eqp'); if (!s) return null; const b = s.getBoundingClientRect();
+        return { x1: b.left, y1: b.top, x2: b.right, y2: b.bottom, bg: getComputedStyle(s).backgroundColor }; })(),
       cells: grid.children.length,
     };
   });
@@ -93,8 +99,11 @@ const visPct = (b) => (b.h ? R(b.vis / b.h * 100) : 0);
     '[0-d] `.wm-tot` 앵커가 아래(192)로 뒤집혔다');
   ok(/\.wm-btn\{[^}]*bottom:32px/.test(css) && !/\.wm-btn\{[^}]*top:1184px/.test(css),
     '[0-e] `.wm-btn` 앵커가 아래(32)로 뒤집혔다');
-  ok(/#app:has\(:is\([^)]*#wpnw[^)]*\)\.on\) #tuto\{display:none\}/.test(css),
-    '[0-f] 419 배너 숨김 목록에 `#wpnw` 가 있다');
+  /* ⚑ [0-f] 는 «했다» 가 아니라 «안 했다» 를 지킨다 — 등재문 셋째 항(배너 150px)은 재현이 기각했다.
+     05 팝업은 06 장비 시트에서만 열리고 그 시트가 배너를 이미 100% 덮어 «토막» 이 원리적으로 0 이다
+     (`verify419` §R 음성항). 다음 사람이 D7 의 `covers:tuto` 만 보고 목록에 넣는 것을 막는다. */
+  ok(!/#app:has\(:is\([^)]*#wpnw[^)]*\)\.on\) #tuto\{display:none\}/.test(css),
+    '[0-f] 419 배너 숨김 목록에 `#wpnw` 를 **안** 넣었다 (뒤 06 시트가 이미 100% 덮는다)');
 
   /* ── [1] 기하 · [2] Δ0 · [3] 간격 ─────────────────────────────────────── */
   /* 2280·1920·1842 의 기대값은 **수리 전 실측**이다(probe467 baseline, 351 14회차 표와 같다). */
@@ -119,7 +128,15 @@ const visPct = (b) => (b.h ? R(b.vis / b.h * 100) : 0);
       `하변 ${R(m.wm.y2)} · 침범 ${covTab(m)}`);
     ok(covHud(m) === 0, `[1-${h}] .wm 이 HUD 판때기(하변 ${R(m.pedgeBot)})를 안 파고든다`,
       `상변 ${R(m.wm.y1)} · 침범 ${covHud(m)}`);
-    ok(!m.tutoShown, `[1-${h}] 미션 배너는 팝업이 열린 동안 숨는다(419)`);
+    /* ⚑ 등재문 셋째 항의 **기각을 값으로 지킨다** — `probe351` D7 은 «`#wpnGrid` 가 배너를 150px
+       덮는다» 를 내지만, 배너는 이 화면에서 **뒤의 06 시트에 통째로 가려 원래 안 보인다**.
+       가려짐이 깨지는 날(진입 경로가 늘거나 시트 기하가 바뀌면) 여기가 빨개지고, 그때는
+       419 목록에 `#wpnw` 를 넣는 것이 답이 된다. */
+    ok(!!m.eqp && m.eqp.bg === 'rgb(0, 0, 0)' && !!m.tuto
+      && m.eqp.x1 <= m.tuto.x1 && m.eqp.x2 >= m.tuto.x2
+      && m.eqp.y1 <= m.tuto.y1 && m.eqp.y2 >= m.tuto.y2,
+      `[1-${h}] 미션 배너는 뒤의 06 시트(#eqw .eqp 불투명)가 100% 덮는다 = 토막 0`,
+      m.eqp && m.tuto ? `시트 ${R(m.eqp.y1)}..${R(m.eqp.y2)} ⊇ 배너 ${R(m.tuto.y1)}..${R(m.tuto.y2)}` : '(못 잼)');
     ok(visPct(m.tot) === 100, `[1-${h}] «총 보유 효과» 줄도 100% 보인다`, visPct(m.tot) + '%');
     await ctx.close();
   }
@@ -180,9 +197,14 @@ const visPct = (b) => (b.h ? R(b.vis / b.h * 100) : 0);
     { id: 'R2', name: '`.wm{max-height:100%}` 로 되돌리면 1600 탭바 30 · HUD 16 침범',
       apply: (s) => s.replace('max-height:calc(100% - 60px)', 'max-height:100%'),
       check: (m) => covTab(m) === 30 && covHud(m) === 16 },
-    { id: 'R3', name: '419 목록에서 `#wpnw` 를 빼면 배너가 팝업 밑에 다시 깔린다',
-      apply: (s) => s.replace('#specw,#cfw,#wpnw).on) #tuto', '#specw,#cfw).on) #tuto'),
-      check: (m) => m.tutoShown },
+    /* ⚑ R3 는 «기각한 처방» 쪽의 되돌림이다 — 419 목록에 `#wpnw` 를 **넣어 봐도** 배너는
+       이미 안 보이던 것이라 그림이 한 픽셀도 안 바뀐다(가려짐 그대로 · 상자 좌표 Δ0).
+       처방을 안 쓴 이유를 «안 썼다» 로만 적으면 다음 사람이 다시 쓴다 — 값으로 남긴다. */
+    { id: 'R3', name: '419 목록에 `#wpnw` 를 넣어 봐도 «안 보이던 것» 의 display 만 바뀐다(상자 Δ0)',
+      apply: (s) => s.replace('#specw,#cfw).on) #tuto', '#specw,#cfw,#wpnw).on) #tuto'),
+      check: (m) => !m.tutoShown
+        && R(m.wm.y1) === R(seen[1600].wm.y1) && R(m.wm.y2) === R(seen[1600].wm.y2)
+        && m.body.sh - m.body.ch === 0 && visPct(m.b1) === 100 },
     /* ⚑ R4 는 «양성항» 이다 — 격자 흡수를 빼고 `.wm-in` 만 줄이면 버튼이 그릇 **위로** 밀려
        올라가 총효과·버튼이 격자와 겹친다. 흡수처를 안 정하면 병이 자리만 옮긴다는 것을 못박는다. */
     { id: 'R4', name: '격자 흡수(`calc(100% - 726px)`)만 빼면 격자가 총효과·버튼을 덮는다',
