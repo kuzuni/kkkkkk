@@ -53,6 +53,22 @@ const VARIANTS = [
     + '.stab.on::before{top:7px!important;bottom:7px!important;border-radius:23px!important;'
     + '-webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important;'
     + 'mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))!important}'],
+  /* 409 4회차 — **후보 K·L(다음 회차 설계안).** 네 회차에 걸쳐 **비평가 넷이 독립으로 같은 것**을 짚었다
+     (CV D2 · CY 지적4 · DB 지적1·2 · DD 지적1·2 · DC 지적1): 검정 링이 코너 상자 끝까지 **7px 등폭으로
+     끌려가다 한 열에서 잘려** 3×7 짜리 사각 노치를 만든다. ref 는 접선으로 갈수록 **가늘어진다**
+     (DD 열 두께 dx 27/28/29 = 1.20/0.51/0.10 ↔ 우리 7.28/7.19/7.11 · CY 법선 75°/80° ref 4.22/3.92).
+     ⇒ 기둥 마스크(가로)에 **세로 페이드**를 교차(mask-composite:intersect)해 접선 근처에서 링을 재운다.
+     K = 3px 램프 · L = 6px 램프. **어느 쪽이든 `verify409` [2](0~75° 등폭 ≥5.0)와 정면으로 부딪히므로**
+     그 항의 이관이 이 처방의 절반이다 — ref 자신이 60° 를 넘으면 등폭이 아니라는 것을 세 비평가가
+     각자 다른 자로 쟀다(그 이관 없이 K·L 을 넣으면 게이트가 빨개진다). */
+  ['K 접선 페이드 3px(기둥 마스크와 교차)',
+    '.stab.on::after{-webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),linear-gradient(180deg,transparent 0,#000 3px,#000 calc(100% - 3px),transparent 100%)!important;'
+    + 'mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),linear-gradient(180deg,transparent 0,#000 3px,#000 calc(100% - 3px),transparent 100%)!important;'
+    + '-webkit-mask-composite:source-in!important;mask-composite:intersect!important}'],
+  ['L 접선 페이드 6px(기둥 마스크와 교차)',
+    '.stab.on::after{-webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),linear-gradient(180deg,transparent 0,#000 6px,#000 calc(100% - 6px),transparent 100%)!important;'
+    + 'mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),linear-gradient(180deg,transparent 0,#000 6px,#000 calc(100% - 6px),transparent 100%)!important;'
+    + '-webkit-mask-composite:source-in!important;mask-composite:intersect!important}'],
   ['B 띠를 위로', '.stab.on::before{z-index:1}.stab.on::after{z-index:0}'],
   ['C 이중 링(검정7+베벨7)',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 0 0 14px #634F37!important}'],
