@@ -71,5 +71,60 @@ const KEY = 'idle_hunter_save_v4';
       (cut ? '  ✖ 안 찍힌 방향: ' + dirs.filter((_, k) => !hit[k]).join('·') : '  ✔ 온전'));
   });
   console.log('\n잘린 배지 ' + anyCut + '/' + geo.length);
+
+  /* ── §2 (4회차 신설) — 07 스킬 카드 닷: **«덮임» 은 «잘림» 과 다른 사건이다** ────────────
+     `verify471` [B] 는 조상 `overflow` 만 본다. 3회차 비평(BQ)이 «칸 11 닷 아래 40%가 검은 요소에
+     가려 반달» 을 낸 자리가 그 구멍이었다(그건 스크롤 위치로 기각됐다). 4회차에 07·26·50 카드의
+     코너를 닷에게 주면서 그 코너에 **[+] 뱃지·`Lv.n`·«장착 중» 띠** 가 같이 사는 판이 됐으므로,
+     이 자리만은 상자가 아니라 **찍힌 픽셀**로 «형제가 덮지 않는가» 를 센다(350·368 처방). */
+  const geo2 = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    if (typeof closeShopPage === 'function') { closeShopPage(); await wait(200); }
+    goTab('hero', true); await wait(250); heroSubGo('sk'); await wait(400);
+    const cards = [...document.querySelectorAll('#bSk .sk-card')].slice(0, 6);
+    const out = [];
+    cards.forEach((h, i) => {
+      h.classList.add('alert');
+      let d = h.querySelector(':scope > .updot');
+      if (!d) { d = document.createElement('s'); d.className = 'updot'; h.appendChild(d); }
+      d.style.animation = 'none';
+      const r = d.getBoundingClientRect(), q = h.getBoundingClientRect();
+      /* 스크롤 그릇 밖으로 밀린 카드는 «덮임» 이 아니다 — 보이는 것만 센다 */
+      if (!r.width || r.top < 0 || r.bottom > innerHeight) return;
+      out.push({ i, cx: r.left + r.width / 2, cy: r.top + r.height / 2, hx: q.right, hy: q.top });
+    });
+    return out;
+  });
+  await page.waitForTimeout(200);
+  const shot2 = await page.screenshot({ clip: { x: 0, y: 0, width: 1080, height: 2280 } });
+  const px2 = await page.evaluate(async (b64) => {
+    const img = new Image();
+    await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + b64; });
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    return { data: [...g.getImageData(0, 0, img.width, img.height).data], w: img.width, h: img.height };
+  }, shot2.toString('base64'));
+  const at2 = (x, y) => {
+    x = Math.round(x); y = Math.round(y);
+    if (x < 0 || y < 0 || x >= px2.w || y >= px2.h) return null;
+    const i = (y * px2.w + x) * 4;
+    return [px2.data[i], px2.data[i + 1], px2.data[i + 2]];
+  };
+  console.log('\nPROBE471b §2 — 07 스킬 카드 닷, 찍힌 픽셀 8방향 («형제가 덮는가»)\n');
+  let cov = 0;
+  geo2.forEach(g => {
+    const R = 8.4;
+    const dirs = ['상', '우상', '우', '우하', '하', '좌하', '좌', '좌상'];
+    const hit = dirs.map((d, k) => {
+      const a = -Math.PI / 2 + k * Math.PI / 4;
+      return isCore(at2(g.cx + R * Math.cos(a), g.cy + R * Math.sin(a))) ? 1 : 0;
+    });
+    const bad = hit.filter(v => !v).length;
+    cov += bad ? 1 : 0;
+    console.log(`  카드${g.i}  중심(${g.cx.toFixed(1)}, ${g.cy.toFixed(1)})  코어 표본 ${8 - bad}/8`
+      + `  코너까지 ${(g.hx - g.cx).toFixed(1)}/${(g.cy - g.hy).toFixed(1)}`
+      + (bad ? '  ✖ 안 찍힌 방향: ' + dirs.filter((_, k) => !hit[k]).join('·') : '  ✔ 온전'));
+  });
+  console.log('\n덮인 카드 닷 ' + cov + '/' + geo2.length);
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });

@@ -182,7 +182,7 @@ const STEPS = [
   await arm('#bSk .sk-card');
   await wait(250);
   await grab('16 07 [일괄 강화] 버튼', '#bSk .sk-btn', '');
-  await grab('17 07 스킬 카드', '#bSk .sk-card', '예외 — 코너가 .sk-eq 자리');
+  await grab('17 07 스킬 카드', '#bSk .sk-card', '4회차 — 점유물([+])을 좌상단으로 옮기고 코너를 닷에게 줬다');
 
   await ev(async () => { openPass('stage'); });
   await wait(600);
