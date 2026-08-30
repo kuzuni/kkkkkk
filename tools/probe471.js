@@ -25,6 +25,12 @@
  *
  * 진입·상태 강제는 `tools/verify299.js` 의 목록을 그대로 쓴다(같은 자리를 재야 대조가 된다 —
  * 385 «자매 자 드리프트» 방지). 조건부 노드는 **실물이 찍히도록 상태를 만들고** 되돌린다.
+ *
+ * ⚑ 550 «두 축을 같은 순간에 잰다»(2026-08-30) — 상자 축도 **등장 애니가 멎은 뒤**에 읽는다.
+ *   수리 전에는 `settle()` 이 잉크 루프 안에서만 돌아 상자와 잉크가 다른 프레임을 봤고,
+ *   35 패스 탭이 `jzPgIn`(scale .985, 축은 패널 중심) 한복판에서 읽혀 «어긋남 상 14.5px» 로 나왔다.
+ *   ⇒ 상자 축의 값이 4회차와 소수점에서 달라진다(예: `.pt` 20.7/10.8 → 21/11 · 닷 지름 26.6 → 27).
+ *      **자리가 바뀐 것이 아니라 흔들림이 멎은 것**이고, [A] 허용 ±2 는 한 칸도 안 넓혔다.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -38,6 +44,11 @@ const URL = process.env.P471_FILE
 const KEY = 'idle_hunter_save_v4';
 const JSONOUT = process.argv.includes('--json');
 const INK = process.argv.includes('--ink');
+/* 550 — 되돌림 시험용 손잡이. 평소에는 둘 다 꺼져 있다.
+     P471_NODRAIN=1   «멎을 때까지 기다렸다 읽기» 를 끈다(수리 전 자로 되돌린다)
+     P471_FORCEANIM=1 장면을 연 뒤 등장 애니를 0프레임으로 되돌려 최악을 결정적으로 만든다 */
+const NODRAIN = process.env.P471_NODRAIN === '1';
+const FORCEANIM = process.env.P471_FORCEANIM === '1';
 
 /* ── 장면표 ────────────────────────────────────────────────────────────────
    `open`/`close` 는 페이지 안에서 그대로 도는 소스다(`wait(ms)` 를 쓸 수 있다).
@@ -294,10 +305,71 @@ function collect(items) {
     return any ? { any, core, core3 } : null;
   }, [a.toString('base64'), b.toString('base64'), a2.toString('base64'), clip, band === undefined ? null : band]);
 
+  /* ⚑ 550 — **상자 축도 «멎은 뒤» 에 읽는다.**
+     수리 전에는 `settle()` 이 잉크 루프 **안에서만** 돌아서, 상자(`collect`)는 장면 대기가 끝난
+     순간에 읽고 잉크(클립 3장)는 그보다 뒤에 읽었다. 두 읽기 사이에 등장 애니메이션이 남아 있으면
+     **같은 호스트를 다른 순간에 잰다** — 그것이 `verify471` [F] 의 «35 패스 탭 어긋남 0.8/14.5» 였다.
+     ⚠ 뿌리는 장면 대기가 짧아서가 아니다(`wait(250)` > `jzPgIn .12s`). **패스는 여는 데만 ~190ms**
+       (493 이 리스트를 600행으로 늘렸다 — 526)라 `jz-o jz-pg` 가 대기가 끝날 무렵에야 붙는다.
+       그래서 시간을 더 주는 처방은 «지금은 초록» 일 뿐이고, 리스트가 더 길어지면 도로 빨개진다.
+     ⇒ 시간이 아니라 **상태**로 닫는다 — 도는 유한 애니가 0이 될 때까지 `settle()` 을 반복한다
+       (늦게 시작하는 애니도 다음 바퀴에 잡힌다). `probe550` [4] 가 5/5 로 이 처방을 찍었다.
+     ⚠ 이 드레인은 **잉크 축 전용이 아니다** — 두 축이 같은 상태를 봐야 대조가 성립한다.
+       부수 효과로 무한 애니(닷 맥박)도 0프레임에 서므로 상자 축의 닷 지름이 회차마다 26.6↔26.9 로
+       흔들리던 것까지 멎는다([G] 가 기준 그림에 요구하는 바로 그 base 상태다). */
+  const drain = async (tries = 12) => {
+    if (NODRAIN) return -1;
+    for (let i = 0; i < tries; i++) {
+      await settle();
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+      const live = await page.evaluate(() => document.getAnimations().filter(a => {
+        const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+        return !(t && t.iterations === Infinity) && a.playState === 'running';
+      }).length);
+      if (!live) return i;
+    }
+    return tries;
+  };
+
   const rows = [];
   for (const sc of SCENES) {
     await run(sc.open);
+    /* §R 용 — 등장 애니를 **일부러** 되돌려 «애니 중에 읽는» 최악을 결정적으로 만든다.
+       자연 경합(2~3/5회)에 기대면 되돌림 시험 자체가 플레이키해진다(344 규칙). */
+    if (FORCEANIM) await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      /* 등장 애니는 **늦게 붙는다**(패스는 리스트 600행 렌더 뒤). 붙을 때까지 잠깐 기다렸다 얼린다. */
+      for (let i = 0; i < 16 && !document.querySelector('.jz-pg'); i++) await wait(50);
+      document.querySelectorAll('.jz-pg').forEach(e => e.getAnimations().forEach(a => {
+        try { a.pause(); a.currentTime = 0; } catch (_) {}
+      }));
+    });
+    const drained = await drain();
     const got = await page.evaluate(collect, sc.items);
+    const live = await page.evaluate(() => document.getAnimations().filter(a => {
+      const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+      return !(t && t.iterations === Infinity) && a.playState === 'running';
+    }).length);
+    got.forEach(r => { r.live = live; r.drained = drained; });
+    /* ⚑ 550 «읽은 값이 흔들리지 않는다» 를 **자 자신이** 증언한다.
+       드레인이 진짜로 멎혔는지는 «도는 애니 수» 로 물으면 안 된다 — 관계 없는 자리에서
+       유한 애니가 계속 나고 지므로 그 수는 늘 0이 아니고, 그것으로 단언하면 플레이키해진다.
+       물어야 할 것은 하나다: **같은 호스트를 다시 재면 같은 값이 나오는가.**
+       (`verify471` [F] 가 재는 어긋남은 상자와 잉크의 «두 읽기» 차이라 이 값이 곧 그 상한이다.) */
+    await drain();
+    const again = await page.evaluate(() => {
+      const o = {};
+      document.querySelectorAll('[data-p471]').forEach(e => {
+        const q = e.getBoundingClientRect();
+        o[e.getAttribute('data-p471')] = { t: q.top, r: q.right, w: q.width, h: q.height };
+      });
+      return o;
+    });
+    got.forEach(r => {
+      const a = r._hr, b = again[String(r._idx)];
+      r.mv = (a && b) ? Math.round(Math.max(Math.abs(a.t - b.t), Math.abs(a.r - b.r),
+        Math.abs((a.b - a.t) - b.h), Math.abs((a.r - a.l) - b.w)) * 10) / 10 : null;
+    });
     if (INK) {
       for (const row of got) {
         if (row.missing) continue;

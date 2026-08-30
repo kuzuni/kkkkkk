@@ -55,8 +55,8 @@ const INKHOST = {
     '4회차에 값을 17.5/8 → 20/7 로 옮겨 잉크 기준이 정확히 11/11 이 됐다(BR 3회차 «오버행이 헐겁다»)',
 };
 
-const probe = (file, ink) => {
-  const env = { ...process.env };
+const probe = (file, ink, extraEnv) => {
+  const env = { ...process.env, ...(extraEnv || {}) };
   if (file) env.P471_FILE = file;
   const args = [path.join(__dirname, 'probe471.js'), '--json'];
   if (ink) args.push('--ink');
@@ -78,6 +78,19 @@ const probe = (file, ink) => {
     seen.length + '자리 · 못 연 자리 ' + rows.filter(r => r.missing).length);
   ok(rows.every(r => !r.missing), '[전제] 목록의 모든 자리에서 닷 노드를 찾았다',
     rows.filter(r => r.missing).map(r => r.label).join(' · ') || '없음');
+
+  /* ⚑ 550 신설 — **자가 흔들리면 아래 모든 절이 뜻을 잃는다.**
+     [F] 는 «상자» 와 «그림» 을 견주는데 그 둘은 서로 다른 시점에 찍힌다. 등장 애니가 남아 있으면
+     같은 호스트가 두 프레임에서 다른 상자를 내고, 그 차가 통째로 «어긋남» 으로 읽힌다 —
+     35 패스 탭이 그래서 «0.8/14.5» 로 빨갰다(`probe550`: `jzPgIn` scale .985 · 축은 패널 중심 ⇒
+     하단 탭이 14.5px 위로. 493 이 리스트를 600행으로 늘려 애니가 장면 대기 끝에야 붙는다 — 526).
+     ⇒ 자는 이제 «멎을 때까지 세우고» 읽고, 그것이 실제로 멎었는지를 **다시 재서** 증언한다.
+     ⚠ «도는 애니 수 = 0» 으로 묻지 않는다 — 관계 없는 자리에서 유한 애니가 계속 나고 지므로
+        그 수는 늘 0이 아니고, 그것으로 단언하면 자기가 플레이키해진다(344 규칙). */
+  const shaky = seen.filter(r => r.mv === null || r.mv === undefined || r.mv > 0.5);
+  ok(shaky.length === 0, '[전제] 자가 안 흔들린다 — 같은 호스트를 다시 재면 같은 상자다 (550)',
+    shaky.length ? shaky.map(r => r.label + ' ' + r.mv + 'px').join(' · ')
+                 : seen.length + '자리 전부 Δ≤0.5px (최대 ' + Math.max(...seen.map(r => r.mv || 0)) + ')');
 
   /* ── [A] 전수 — 코너 거리 ── */
   const off = seen.filter(r => !(r.label in EXC) && !(r.label in INKHOST))
@@ -246,6 +259,22 @@ const probe = (file, ink) => {
     .filter(r => !(r.label in EXC) && !(r.label in INKHOST))
     .filter(r => Math.abs(r.dxR - inset) > 2 || Math.abs(r.dyT - inset) > 2).length;
   ok(back === 0, '[E] 되돌림을 걷으면 도로 초록 (시험이 상태를 안 남긴다)', back + '자리');
+
+  /* ── [R] 되돌림 시험 — 550 의 수리가 «무르게 푼 것» 이 아님 ────────────────────────────
+     [F] 를 초록으로 만든 것이 **허용치가 아니라 드레인**임을 못박는다(허용 3 은 한 칸도 안 넓혔다).
+     자에 손잡이 둘을 두고(`P471_NODRAIN` = 수리 전 자로 되돌린다 · `P471_FORCEANIM` = 등장 애니를
+     0프레임에 얼려 «애니 중에 읽는» 최악을 **결정적으로** 만든다), 그 사본에서 같은 호스트의
+     상자가 실제로 줄어드는지를 본다. 자연 경합(2~3/5회)에 기대면 시험 자체가 플레이키해진다. */
+  const PT = '35 패스 탭 #psBar .pt>.bdg';
+  const good = probe(null, false).find(r => r.label === PT);
+  const negp = probe(null, false, { P471_NODRAIN: '1', P471_FORCEANIM: '1' }).find(r => r.label === PT);
+  ok(good && negp && good.hh - negp.hh > 1.5 && good.hw - negp.hw > 1.5,
+    '[R] 되돌림 — 드레인을 빼면 그 호스트가 실제로 `jzPgIn` 한복판(scale .985)에서 읽힌다',
+    (good ? '수리 후 ' + good.hw + '×' + good.hh : '?') + ' ↔ ' +
+    (negp ? '드레인 없음 ' + negp.hw + '×' + negp.hh : '?'));
+  ok(good && Math.abs(good.hh - 166) < 0.5,
+    '[R] 되돌림 — 수리 후에는 그 호스트가 «멎은 상자»(CSS height 166) 로 읽힌다',
+    good ? good.hh + 'px' : '?');
 
   console.log('\nVERIFY471 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
   process.exit(fail ? 1 : 0);
