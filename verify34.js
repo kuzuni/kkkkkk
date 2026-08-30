@@ -95,7 +95,9 @@ const ok = (n, c, d) => R.push({ n, c: !!c, d: d === undefined ? '' : String(d) 
   ok('E2 진행 되감기 0/4', e.prog === 0, e.prog);
   ok('E3 레벨 2 지속시간 35분(레벨업 즉시 적용)', Math.abs(e.left - 35 * 60 * 1000) < 2000, e.left);
   ok('E4 Lv 표시 갱신', e.lvTxt === 'Lv.2', e.lvTxt);
-  ok('E5 진행 표시·채움 갱신', e.pgTxt === '0/4' && parseFloat(e.fill) === 0, e.pgTxt + ' ' + e.fill);
+  /* 500(2026-08-30) — 진행바 분모가 «어느 레벨에서나 4» 에서 **레벨별 필요 경험치 표**로 바뀌었다.
+     이 항이 묻던 뜻(«레벨업 직후 표시·채움이 되감긴다»)은 그대로 두고 분모만 Lv2 의 값(10)으로 갈아 끼운다. */
+  ok('E5 진행 표시·채움 갱신 (Lv2 = 0/10)', e.pgTxt === '0/10' && parseFloat(e.fill) === 0, e.pgTxt + ' ' + e.fill);
 
   /* ── F. «모든 축복 받기» 버튼 ── */
   await page.evaluate(() => { S.bless.exp = { atk: 0, hp: 0, rate: 0 }; S.bless.prog = 0; markDirty(); renderBless(); });

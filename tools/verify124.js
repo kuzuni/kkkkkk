@@ -34,7 +34,16 @@ const settled = async page => {
    ⚠ 기대값만 갈아 끼우면 «지속이 통째로 사라져도 초록» 이 되므로, 30분이라는 **값 자체**를 §6 [6-e]
    («만료 = 마지막 발동 + 30분»)·[6-f](3종이 서로 같다)가 따로 단언하고 §R 이 되돌림을 못박는다. */
 const B_KEYS = ['atk', 'hp', 'rate'];
-const B_DUR = 30 * 60 * 1000, B_STEP = 4, B_MAXLV = 51;
+const B_DUR = 30 * 60 * 1000, B_MAXLV = 51;
+/* 500(2026-08-30) — 레벨업 «필요 경험치» 가 상수 하나에서 **레벨별 표**로 바뀌었다(주인 지시).
+   이 자의 시뮬은 그 전 규칙(«어느 레벨에서나 4»)을 손으로 적어 두고 있어서, 표로 바꾸는 순간
+   §6·§7 이 495·499 와 **같은 자리에서 세 번째로** 빨개질 참이었다 — 그래서 여기서 같이 갈아 끼운다.
+   ⚠ 값을 index.html 에서 읽어 오지 않는다(그러면 «둘이 같이 틀리면 초록» 이 된다) —
+   주인 지시문에서 다시 적고, «표대로 도는가» 자체는 `tools/verify500.js` 가 따로 못박는다. */
+const B_NEED = [4, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 100];
+const needAt = lv => B_NEED[Math.min(Math.max(1, lv), B_NEED.length) - 1];
+/* «Lv1·prog0 에서 여기까지 오는 데 든 발동 수» — 옛 닫힌 식 (lv−1)×4 + prog 의 표 버전 */
+const firesTo = (lv, prog) => { let n = prog; for (let l = 1; l < lv; l++) n += needAt(l); return n; };
 /* 456 — 인자도 분기도 없다(레벨을 읽는 지속시간이 되살아날 자리를 이 자에도 안 남긴다) */
 const durAt = () => B_DUR;
 /* «가장 먼저 만료되는 축복 하나» 를 시간순으로 재발동. lastTime ~ min(now, until) 구간만. */
@@ -48,7 +57,7 @@ function sim(bless, lastTime, until, now) {
     B_KEYS.forEach(x => { if (t[x] < tm) { tm = t[x]; k = x; } });
     const at = Math.max(tm, lastTime);
     if (at > end) { next = at; break; }
-    if (lv < B_MAXLV) { if (++prog >= B_STEP) { prog -= B_STEP; lv++; } } else prog = 0;
+    if (lv < B_MAXLV) { const need = needAt(lv); if (++prog >= need) { prog -= need; lv++; } } else prog = 0;
     t[k] = at + durAt();
     last = at; fires++;
   }
@@ -291,8 +300,8 @@ function safeElapsed(bless, until0, cands) {
   ok('만료 = 지금 + 30일 (±5초)', Math.abs(ab.until - (ab.t0 + 30 * DAY)) < 5000,
     new Date(ab.until).toISOString());
   ok('구매 즉시 3종 축복이 켜진다', ab.on.every(Boolean), JSON.stringify(ab.on));
-  ok('3회 발동분이 축복 경험치에 들어간다 (Lv1 · 3/4)', ab.lv === 1 && ab.prog === 3,
-    'Lv' + ab.lv + ' · ' + ab.prog + '/4');
+  ok('3회 발동분이 축복 경험치에 들어간다 (Lv1 · 3/' + needAt(1) + ')', ab.lv === 1 && ab.prog === 3,
+    'Lv' + ab.lv + ' · ' + ab.prog + '/' + needAt(ab.lv));
   ok('남은 일수 = 30', ab.days === 30, ab.days + '일');
 
   /* ================= 6. 오프라인 정산 — 12시간 ================= */
@@ -325,9 +334,10 @@ function safeElapsed(bless, until0, cands) {
   const want6 = sim(bless0, r6.lastTime, r6.until, got6.now);
   ok('축복 Lv 가 시뮬 기대값과 일치', got6.lv === want6.lv, '게임 Lv' + got6.lv + ' / 기대 Lv' + want6.lv);
   ok('축복 경험치(prog)가 시뮬 기대값과 일치', got6.prog === want6.prog,
-    got6.prog + '/4 / 기대 ' + want6.prog + '/4');
-  ok('발동 수 = (Lv−1)×4 + prog = ' + want6.fires,
-    (got6.lv - 1) * 4 + got6.prog === want6.fires, ((got6.lv - 1) * 4 + got6.prog) + '회');
+    got6.prog + '/' + needAt(got6.lv) + ' / 기대 ' + want6.prog + '/' + needAt(want6.lv));
+  /* 500 — 닫힌 식이 «(Lv−1)×4 + prog» 에서 **표의 누적합**으로 바뀌었다(필요량이 레벨마다 다르다) */
+  ok('발동 수 = 표 누적합(Lv−1까지) + prog = ' + want6.fires,
+    firesTo(got6.lv, got6.prog) === want6.fires, firesTo(got6.lv, got6.prog) + '회');
   ok('3종 만료 시각이 시뮬과 일치 (±0ms)',
     B_KEYS.every(k => got6.exp[k] === want6.exp[k]),
     B_KEYS.map(k => (got6.exp[k] - want6.exp[k])).join(' / ') + ' ms 차');
@@ -363,10 +373,11 @@ function safeElapsed(bless, until0, cands) {
   const want7 = sim(bless0, r7.lastTime, r7.until, got7.now);
   const wantFull = sim(bless0, r7.lastTime, r7.lastTime + 99 * DAY, got7.now);
   ok('만료 시각까지만 발동 (Lv·prog 일치)', got7.lv === want7.lv && got7.prog === want7.prog,
-    '게임 Lv' + got7.lv + '·' + got7.prog + '/4 / 기대 Lv' + want7.lv + '·' + want7.prog + '/4');
+    '게임 Lv' + got7.lv + '·' + got7.prog + '/' + needAt(got7.lv)
+    + ' / 기대 Lv' + want7.lv + '·' + want7.prog + '/' + needAt(want7.lv));
   ok('«만료 무시» 였다면 더 많이 발동했을 것 (' + want7.fires + ' < ' + wantFull.fires + ')',
-    want7.fires < wantFull.fires && (got7.lv - 1) * 4 + got7.prog === want7.fires,
-    got7.lv + '/' + got7.prog);
+    want7.fires < wantFull.fires && firesTo(got7.lv, got7.prog) === want7.fires,
+    'Lv' + got7.lv + '·' + got7.prog + ' = ' + firesTo(got7.lv, got7.prog) + '회');
   ok('만료 6시간 뒤라 지금은 축복이 전부 꺼져 있다', got7.on.every(v => v === false), JSON.stringify(got7.on));
 
   /* ================= 8. 이용권 없으면 옛 동작 그대로 ================= */
@@ -389,8 +400,8 @@ function safeElapsed(bless, until0, cands) {
   ok('구 세이브(pass 키 없음) → noAds=false · autoBlessUntil=0',
     got8.noAds === false && got8.until === 0, 'noAds=' + got8.noAds + ' until=' + got8.until);
   ok('#app.noads 안 붙음', got8.cls === false, String(got8.cls));
-  ok('자동 발동 0회 — 축복 Lv·prog 그대로(3 · 2/4)', got8.lv === 3 && got8.prog === 2,
-    'Lv' + got8.lv + ' · ' + got8.prog + '/4');
+  ok('자동 발동 0회 — 축복 Lv·prog 그대로(3 · 2/' + needAt(3) + ')', got8.lv === 3 && got8.prog === 2,
+    'Lv' + got8.lv + ' · ' + got8.prog + '/' + needAt(got8.lv));
   ok('축복은 꺼진 채로 남는다', got8.on.every(v => v === false), JSON.stringify(got8.on));
   ok('정산 한 줄도 숨김', got8.lineOn === false, String(got8.lineOn));
   const lab8 = await page.evaluate(() => {
@@ -427,7 +438,13 @@ function safeElapsed(bless, until0, cands) {
     const bad = run();
     window.blessDur = orig;                                    /* 시험이 상태를 안 남긴다 */
     const good = run();
-    return { lastTime: lastTime, until: until, now: now, bad: bad, good: good };
+    /* 500 — 두 번째 되돌림: «어느 레벨에서나 4» 를 다시 깔면 표 기반 기대값이 깨진다 */
+    const origNeed = window.blessNeed;
+    window.blessNeed = () => 4;
+    const flat = run();
+    window.blessNeed = origNeed;
+    const good2 = run();
+    return { lastTime: lastTime, until: until, now: now, bad: bad, good: good, flat: flat, good2: good2 };
   }, [bless0, DAY, el12]);
   const wantR = sim(bless0, rr.lastTime, rr.until, rr.now);
   ok('[R1] 옛 곡선을 깔면 Lv·발동 수·만료가 전부 어긋난다',
@@ -440,7 +457,15 @@ function safeElapsed(bless, until0, cands) {
   ok('[R3] 되돌림을 걷으면 다시 초록 (Lv·prog·발동 수·만료 ±0ms)',
     rr.good.lv === wantR.lv && rr.good.prog === wantR.prog && rr.good.n === wantR.fires
     && B_KEYS.every(k => rr.good.exp[k] === wantR.exp[k]),
-    'Lv' + rr.good.lv + '·' + rr.good.prog + '/4 · ' + rr.good.n + '회');
+    'Lv' + rr.good.lv + '·' + rr.good.prog + '/' + needAt(rr.good.lv) + ' · ' + rr.good.n + '회');
+  /* 500 — 표를 상수 4 로 되돌리면 §6 의 Lv·prog 가 실제로 어긋난다(발동 수·만료는 지속만 보므로 그대로다).
+     이 항이 없으면 이 자의 시뮬은 «표를 안 쓰는 게임» 앞에서도 초록일 수 있다(334 «무르게 풀지 마라»). */
+  ok('[R4] 필요 경험치를 «어느 레벨에서나 4» 로 되돌리면 Lv·prog 가 어긋난다',
+    rr.flat.lv !== wantR.lv || rr.flat.prog !== wantR.prog,
+    'Lv' + rr.flat.lv + '·' + rr.flat.prog + ' (기대 Lv' + wantR.lv + '·' + wantR.prog + ')');
+  ok('[R5] 그 되돌림을 걷으면 다시 초록',
+    rr.good2.lv === wantR.lv && rr.good2.prog === wantR.prog && rr.good2.n === wantR.fires,
+    'Lv' + rr.good2.lv + '·' + rr.good2.prog + '/' + needAt(rr.good2.lv) + ' · ' + rr.good2.n + '회');
 
   /* ================= 9. 콘솔 ================= */
   console.log('\n[9] 콘솔');

@@ -126,7 +126,10 @@ const ok = (b, name, detail) => {
     S.bless = { lv: 51, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); openBless();
     activateBless('atk'); renderBless();
     const clkMax = document.querySelector('#blsC_atk .tm>i').textContent.trim();
-    S.bless = { lv: 3, prog: 3, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty();
+    /* 500 — «4번째 활성이 레벨업» 이 아니라 «그 레벨의 마지막 한 칸» 이다(필요량이 레벨마다 다르다).
+       숫자를 손으로 안 적고 제품 접근자에서 받아 «레벨업이 걸린 활성화» 라는 뜻만 남긴다. */
+    S.bless = { lv: 3, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } };
+    S.bless.prog = blessNeed() - 1; markDirty();
     document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
     activateBless('atk'); renderBless();
     const clk1 = document.querySelector('#blsC_atk .tm>i').textContent.trim();

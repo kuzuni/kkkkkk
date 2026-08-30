@@ -215,8 +215,11 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
   ok(F.l2.vl.join(',') === '+22%,+22%,+22%' && F.l2.bn === '+55%', 'F2 Lv2 카드 +22% · 보너스 +55%',
      F.l2.vl.join(',') + ' | ' + F.l2.bn);
   ok(F.l6.vl[0] === '+30%' && F.l11.vl[0] === '+40%', 'F3 Lv6 +30% · Lv11 +40%', F.l6.vl[0] + '/' + F.l11.vl[0]);
-  ok(F.l11.lv === 'Lv.11' && F.l11.pg === '1/4' && parseFloat(F.l11.fill) === 25,
-     'F4 Lv 알약 · 경험치 1/4 · 채움 25%', F.l11.lv + ' ' + F.l11.pg + ' ' + F.l11.fill);
+  /* 500(2026-08-30) — 진행바 분모가 상수 4 에서 **레벨별 필요 경험치 표**로 바뀌었다(주인 지시).
+     여기서 묻던 뜻(«Lv 알약·경험치·채움이 같이 갱신된다»)은 그대로 두고 분모만 그 레벨의 값으로
+     갈아 끼운다 — Lv11 의 필요량은 55 이므로 «1/55 · 1.82%» 다. 상수 4 로 되돌아가면 다시 빨개진다. */
+  ok(F.l11.lv === 'Lv.11' && F.l11.pg === '1/55' && Math.abs(parseFloat(F.l11.fill) - 100 / 55) < 0.02,
+     'F4 Lv 알약 · 경험치 1/55(Lv11 필요량) · 채움 1.82%', F.l11.lv + ' ' + F.l11.pg + ' ' + F.l11.fill);
 
   /* ---- [G] 저장·복원 ---- */
   const G1 = await page.evaluate(() => {
@@ -267,14 +270,17 @@ const near = (a, b, e) => Math.abs(a - b) < (e === undefined ? 1e-9 : e);
 
   /* ---- [I] 레벨업 연출 (58 fxToast) ---- */
   const I = await page.evaluate(async () => {
-    S.bless = { lv: 3, prog: 3, exp: { atk: 0, hp: 0, rate: 0 } }; markDirty(); openBless();
+    /* 500 — «4번째» 가 아니라 «그 레벨의 마지막 한 칸» 이다(필요량이 레벨마다 다르다).
+       숫자를 손으로 적지 않고 제품의 접근자에서 받아 «마지막 한 칸에서 켜면 오른다» 는 뜻만 남긴다. */
+    S.bless = { lv: 3, prog: 0, exp: { atk: 0, hp: 0, rate: 0 } };
+    S.bless.prog = blessNeed() - 1; markDirty(); openBless();
     document.querySelectorAll('#fxl .fx-toast').forEach(e => e.remove());
     activateBless('atk');
     await new Promise(r => setTimeout(r, 120));
     const t = [...document.querySelectorAll('#fxl .fx-toast')].map(e => e.textContent).filter(s => /축복/.test(s));
     return { lv: S.bless.lv, toasts: t, popped: !!document.querySelector('#blsCards .bls-c.fx-pop') };
   });
-  ok(I.lv === 4, 'I1 4번째 활성 → Lv4', String(I.lv));
+  ok(I.lv === 4, 'I1 마지막 한 칸에서 활성 → Lv4', String(I.lv));
   ok(I.toasts.length === 1 && /축복 Lv\.4 — 효과 \+26%/.test(I.toasts[0]), 'I2 레벨업 토스트 1장 (실효 %)',
      JSON.stringify(I.toasts));
   ok(I.popped, 'I3 카드 팝 연출(fxPop) 부착', String(I.popped));
