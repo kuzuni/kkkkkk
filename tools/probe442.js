@@ -23,7 +23,9 @@ const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
-const URL = 'file://' + path.resolve(__dirname, '../index.html');
+/* 인자로 «다른 사본»(예: verify442 가 만드는 수리 전 사본)을 줄 수 있다 — 같은 자로 전·후를 재려고.
+   ⚠ 사본은 상대 경로 자산 때문에 반드시 index.html 과 같은 폴더에 두어야 한다(probe350 함정). */
+const URL = 'file://' + path.resolve(process.argv[2] || path.join(__dirname, '../index.html'));
 
 (async () => {
   const browser = await launch(chromium, { args: ['--allow-file-access-from-files'] });
@@ -98,8 +100,8 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
       const inkMed = (rectTop !== null && ik) ? rectTop + (ik.med - (fr ? 0 : 0)) * s : null;
       const inkTop = (rectTop !== null && ik) ? rectTop + ik.med * s : null;
       const inkHigh = (rectTop !== null && ik) ? rectTop + ik.min * s : null;   /* 가장 위 포즈 */
-      /* 수리 후에는 제품이 `eHeadTop()` 을 쓴다 — 있으면 그 값으로, 없으면(수리 전 트리) 옛 식으로. */
-      const barY = (typeof eHeadTop === 'function') ? eHeadTop(e) - 6 : e.y - e.r * 3.1 - 6;
+      /* **제품이 실제로 그리는 자리**를 묻는다(`eBarBox`). 수리 전 트리에는 없으므로 옛 식으로 떨어진다. */
+      const barY = (typeof eBarBox === 'function') ? eBarBox(e).y : e.y - e.r * 3.1 - 6;
       out.push({
         tk: e.tk, name: T.name || e.tk, akey: e.akey, anim: an,
         r: e.r, scale: +s.toFixed(3), yo: T.yo || 0,
@@ -155,7 +157,12 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
     let g = 0;
     while (dunRun && dunRun.introOn && g++ < 900) { step(1 / 60); }
     for (const e of enemies) { e.born = 1; e.hp = e.max * 0.5; }
-    step(1 / 60); drawHud();
+    /* [1] 이 재는 것은 **앵커**다 — 보스를 화면 한복판에 세워 세로 클램프가 안 걸리는 자리로 옮긴다.
+       스폰 좌표는 플레이어 둘레 링의 난수라, 그냥 재면 «앵커» 와 «HUD 클램프» 두 축이 섞인다
+       (클램프는 아래 [2] 가 따로 묻는다). */
+    const b = enemies.find((e) => e.tk === 'dunboss');
+    if (b) { draw(); b.x = VW / 2 - camOx; b.y = VH * 0.62 - camOy; }
+    step(1 / 60); draw(); drawHud();
     return { ok: true, n: enemies.length };
   }, [id]);
 
@@ -237,8 +244,7 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
       const wantSy = VH * f;
       e.y = wantSy - camOy;
       step(1 / 60); draw(); drawHud();
-      const raw = (typeof eHeadTop === 'function') ? eHeadTop(e) - 6 : e.y - e.r * 3.1 - 6;
-      const by = (typeof fxClampY === 'function') ? fxClampY(raw) : raw, sy = by + camOy;
+      const by = (typeof eBarBox === 'function') ? eBarBox(e).y : e.y - e.r * 3.1 - 6, sy = by + camOy;
       out.push({ f, screenY: +sy.toFixed(1), barBottom: +(sy + 4).toFixed(1), bodySy: +(e.y + camOy).toFixed(1) });
     }
     return out;
