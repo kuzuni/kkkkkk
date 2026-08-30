@@ -83,12 +83,30 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
   ok('카드1 문구 불변', R.c1.bodyTxt === '상점에서 무기, 방어구, 스킬을 소환하세요', JSON.stringify(R.c1.bodyTxt));
   ok('카드3 문구 불변', R.c3.bodyTxt.startsWith('게임 속 UI의 레드닷'), JSON.stringify(R.c3.bodyTxt));
 
-  console.log('\n[2] 카드 크기·배치 불변 (측정표 18: left 91 · w 898 · h 166 · top 705/885/1065)');
-  for (const [n, top] of [[1, 705], [2, 885], [3, 1065]]) {
+  /* ⚑ 작업 536 (2026-08-30) — 이 절의 기대 top 은 **705 / 885 / 1065** 였다(= ref y − 210).
+     그 «−210» 은 1920 프레임 시절의 **화면별 변환**이고 지시서 [2] 가 2026-08-25 에 폐기했다
+     (현행은 «프레임 y = 레퍼런스 y − 84» 하나뿐 — 상태바 84px). 제품은 그 개정을 따라갔는데
+     (엠블럼 top 458 = 542−84 · 카드 831/1011/1191) 자만 옛 값에 굳어 «+126px 밀렸다» 로 읽혔다.
+     **제품 0줄** — 재현·대조는 `node tools/probe536.js` (24/24: 앵커 5종이 전부 ref−84 ·
+     측정표 §6 gap 표가 전부 생존 · 찍힌 픽셀 838/1018/1198 = outer+검정 6).
+     그래서 숫자를 손으로 다시 적지 않고 **측정표 값에서 파생**한다 — 변환이 또 바뀌면 STATUS 한 개만
+     움직이고, «어느 변환을 쓰는 자인가» 가 코드에 남는다(402 «표 두 벌» 부패 예방). */
+  const REF_TOP = [915, 1095, 1275];  // 측정표 18 §4.1 «카드 outer 상변» (ref 1080×2340 절대 px)
+  const STATUS = 84;                  // 지시서 [2] — 프레임 y = 레퍼런스 y − 84
+  console.log('\n[2] 카드 크기·배치 불변 (측정표 18: left 91 · w 898 · h 166 · ref top '
+    + REF_TOP.join('/') + ' − 상태바 ' + STATUS + ' = ' + REF_TOP.map(t => t - STATUS).join('/') + ')');
+  for (const n of [1, 2, 3]) {
     const c = R['c' + n].card;
-    near('c' + n + ' left', c.x, 91, 1); near('c' + n + ' top', c.y, top, 1);
+    near('c' + n + ' left', c.x, 91, 1); near('c' + n + ' top', c.y, REF_TOP[n - 1] - STATUS, 1);
     near('c' + n + ' width', c.w, 898, 1); near('c' + n + ' height', c.h, 166, 1);
   }
+  /* 변환과 **무관한** 축 — 오프셋이 어떻게 바뀌어도 살아 있어야 하는 값이다(측정표 §4.1 pitch · §6 gap).
+     536 이 «제품이 옳다» 를 이 축들로 갈랐으므로 자에도 남긴다: 다음에 그릇이 진짜로 옮기면
+     top 만이 아니라 여기가 같이 빨개져 «변환 개정» 과 «회귀» 가 구별된다. */
+  near('pitch c1→c2 (측정표 §4.1 «정확히 180»)', R.c2.card.y - R.c1.card.y, 180, 1);
+  near('pitch c2→c3', R.c3.card.y - R.c2.card.y, 180, 1);
+  near('카드1 하변 → 카드2 상변 gap (측정표 §6)', R.c2.card.y - (R.c1.card.y + R.c1.card.h), 14, 1);
+  near('카드2 하변 → 카드3 상변 gap', R.c3.card.y - (R.c2.card.y + R.c2.card.h), 14, 1);
 
   console.log('\n[3] 세로 가운데 정렬 유지 · 두 겹 정합');
   ok('.df-txt align-items:center', R.c2.txtAlign === 'center', R.c2.txtAlign);
@@ -152,6 +170,33 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
   ok('«터치하여 닫기» → 패배 화면 닫힘 (회귀)', !s.defw, JSON.stringify(s));
 
   ok('기능 체크 후에도 콘솔/페이지 에러 0건', errs.length === 0, errs.join(' | '));
+
+  /* [R] 되돌림 시험 (작업 536 신설) — 334 규칙: «무르게 푼 수리가 아님» 을 자 안에서 못박는다.
+     [2] 의 기대값을 옛 변환(−210)으로 갈아 준 것이 «자리를 안 보는 항» 이 되지 않았는지,
+     실제로 카드를 옛 자리로 밀어 보고 그 항이 빨개지는지 확인한다. 원복까지 한 벌이다. */
+  console.log('\n[R] 되돌림 시험 — 옛 변환(−210) 자리로 밀면 [2] 가 빨개지는가');
+  const topOf = n => page.evaluate((k) => {
+    const app = document.getElementById('app').getBoundingClientRect();
+    const sc = app.width / 1080;
+    return (document.querySelector('.df-card.c' + k).getBoundingClientRect().y - app.y) / sc;
+  }, n);
+  await page.evaluate(() => {
+    openDefeat();
+    const st = document.createElement('style'); st.id = 'r536';
+    st.textContent = '.df-card.c1{top:705px!important}.df-card.c2{top:885px!important}.df-card.c3{top:1065px!important}';
+    document.head.appendChild(st);
+  });
+  await page.waitForTimeout(250);
+  const moved = [await topOf(1), await topOf(2), await topOf(3)];
+  ok('옛 자리로 밀면 [2] c1·c2·c3 top 항이 전부 빨개진다 (기대 ' + REF_TOP.map(t => t - STATUS).join('/') + ')',
+    moved.every((v, i) => Math.abs(v - (REF_TOP[i] - STATUS)) > 1), moved.map(v => Math.round(v)).join('/'));
+  ok('민 자리는 정확히 «ref − 210» 이다 (두 변환의 차 = 126)',
+    moved.every((v, i) => Math.abs(v - (REF_TOP[i] - 210)) <= 1), moved.map(v => Math.round(v)).join('/'));
+  await page.evaluate(() => { const st = document.getElementById('r536'); if (st) st.remove(); });
+  await page.waitForTimeout(250);
+  const back = [await topOf(1), await topOf(2), await topOf(3)];
+  ok('원복하면 다시 초록이다 (제품 자리 = ref − 84)',
+    back.every((v, i) => Math.abs(v - (REF_TOP[i] - STATUS)) <= 1), back.map(v => Math.round(v)).join('/'));
 
   console.log('\n' + (fail === 0 ? 'VERIFY43 PASS' : 'VERIFY43 FAIL') + '  ' + pass + '/' + (pass + fail));
   await browser.close();
