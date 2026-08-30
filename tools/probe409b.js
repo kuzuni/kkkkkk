@@ -32,6 +32,9 @@ const VARIANTS = [
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 0 0 14px #634F37!important}'],
   ['D 링 + 상단 베벨 복사본(코너 기둥 안에서만)',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 7px 0 #634F37!important}'],
+  ['F ::before 에 베벨 등폭 링(띠 **밑**에 깔아 감김 보존)',
+    '.stab.on::before{box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,'
+    + 'inset 0 7px 0 #634F37,inset 0 0 0 7px #634F37!important}'],
   ['E 링 + 상단 베벨 + 바닥 D·베벨 복사본',
     '.stab.on::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),inset 0 7px 0 #634F37,'
     + 'inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37!important}'],
@@ -121,6 +124,9 @@ function split(s, step = 0.5) {
         console.log('   ' + cor + '  deg  ' + DEGS.map(d => String(d).padStart(6)).join(''));
         console.log('       검정 ' + K.map(v => v.toFixed(1).padStart(6)).join(''));
         console.log('       안쪽 ' + N.map(v => v.padStart(6)).join(''));
+        if (process.env.V409B_FULL) for (const d of [30, 45, 60, 75]) {
+          console.log('        ' + cor + ' ' + String(d).padStart(2) + '°  ' + split(await ray(page, p, cor, d)).txt);
+        }
       }
       if (css) await page.evaluate(() => { const s = document.getElementById('v409b'); if (s) s.remove(); });
       await page.waitForTimeout(200);
