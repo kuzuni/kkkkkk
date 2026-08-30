@@ -11638,6 +11638,18 @@
   #dclw{position:absolute;inset:0;display:none;z-index:61;cursor:pointer;background:rgba(0,0,0,.78)}
   #dclw.on{display:block}
   #dclw i,#dclw b,#dclw s{display:inline-block;font-style:normal;transform-origin:50% 50%}
+  /* 426 — «클리어 보상» 묶음의 앵커(피벗)를 **프레임 세로 중앙**으로 (저장소 주인 지시 2026-08-30).
+     ⚑ 이 한 줄이 하는 일은 «묶음이 어디에 걸리나» 뿐이다 — 묶음 **안**의 좌표는 아래 자리들이
+     측정표(31 §1-C) 의 «frame y = ref y − 84» 값을 **글자 그대로** 그대로 쓴다. 그래서 여기 앵커는
+     상자가 아니라 **좌표계 원점**이다: 높이 0 · top = 50% − (묶음 중심 1114px).
+       묶음 bbox = 718(.dcl-spk 상변) .. 1510(.dcl-ok 하변) = h792 · 중심 **1114** (probe426 실측)
+       ⇒ 자식 top T 는 (VH/2 − 1114) + T 에 그려지고, 묶음 중심은 어떤 프레임에서도 정확히 VH/2 다.
+     ⚠ **높이를 주지 마라** — 이 딤은 «빈 면을 누르면 닫힌다»(`e.target === #dclw`)가 규약인데
+        높이 있는 상자로 싸면 빈 면 클릭이 그 상자에 먹혀 닫힘이 죽는다(probe426 ⑥ 이 그 자다).
+     ⚠ z-index 를 주지 마라 — 주면 새 쌓임 맥락이 생겨 자식 z 1~5 가 #dclw 맥락에서 빠진다.
+     ⚠ **2280 에서 묶음이 26px 내려간다**(중심 1114 → 1140). ref 이탈이지만 주인 지시가 우선이고
+        측정표 31 §1-C 에 정오표를 남겼다(360 선례). */
+  .dcl-grp{position:absolute;left:0;right:0;top:calc(50% - 1114px);height:0}
   /* 리본 그룹 — 몸통 outer top ref 852 → frame 768. 꼬리는 기본값(top 25px)이 ref 877−852=25 와 일치 */
   #dclw .upr-grp{top:768px;margin-top:0;height:130px;z-index:3}
   /* 전폭 밴드 1080×340 — 위→아래 7층(검정5·노랑6·베벨8·채움300·베벨9·노랑6·검정6 = 340).
@@ -14802,28 +14814,32 @@
   <!-- 31 던전 클리어 화면. 09·12·17·18 과 같은 «딤 위 연출» — 리본(.upr-*)은 17 CSS 재사용.
        측정표 docs/measure/31-던전클리어화면.md. challengeDungeon()·sweepDungeon() 성공 시 열린다. -->
   <div id="dclw">
-    <div class="dcl-band"></div>
-    <div class="upr-grp">
-      <div class="upr-tl l"><s></s></div>
-      <div class="upr-tl r"><s></s></div>
-      <div class="upr-rb"><i>클리어 보상</i></div>
+    <!-- 426 — 리본·밴드·타일·수량·알약·버튼·339 토글까지 «클리어 보상» 묶음 전부가 이 한 자리에
+         걸린다(앵커 = 프레임 세로 중앙). 딤(#dclw) 자신은 클릭 닫힘 대상이라 밖에 남는다. -->
+    <div class="dcl-grp">
+      <div class="dcl-band"></div>
+      <div class="upr-grp">
+        <div class="upr-tl l"><s></s></div>
+        <div class="upr-tl r"><s></s></div>
+        <div class="upr-rb"><i>클리어 보상</i></div>
+      </div>
+      <div class="dcl-spk"></div>
+      <div class="dcl-tile"></div>
+      <div class="dcl-coin" id="dclIc"></div>
+      <div class="dcl-amt"><i id="dclAmt">0</i></div>
+      <div class="dcl-pill l"></div><div class="dcl-tk l"></div><div class="dcl-cn l"><i id="dclTryL">0</i></div>
+      <div class="dcl-pill r"></div><div class="dcl-tk r"></div><div class="dcl-cn r"><i id="dclTryR">0</i></div>
+      <!-- 339 — «연속 도전» 토글(04 세부 팝업의 것과 같은 부품·양방향 동기) + 자동 도전 카운트다운.
+           체크돼 있으면 «n초 뒤 다음 층 자동 도전» 이 1초 단위로 줄고 0 에서 실제로 입장한다. -->
+      <div class="dcl-auto">
+        <button class="dcl-cb" id="dclAuto"></button>
+        <div class="dcl-cbl"><i id="dclCbL">연속 도전</i></div>
+      </div>
+      <div class="dcl-cd"><i id="dclCd"></i></div>
+      <button class="dcl-btn dcl-re" id="dclRe"><i>재도전</i></button>
+      <button class="dcl-btn dcl-ok" id="dclOk"><i>확인</i></button>
+      <button class="dcl-btn dcl-nx" id="dclNx"><i>다음</i></button>
     </div>
-    <div class="dcl-spk"></div>
-    <div class="dcl-tile"></div>
-    <div class="dcl-coin" id="dclIc"></div>
-    <div class="dcl-amt"><i id="dclAmt">0</i></div>
-    <div class="dcl-pill l"></div><div class="dcl-tk l"></div><div class="dcl-cn l"><i id="dclTryL">0</i></div>
-    <div class="dcl-pill r"></div><div class="dcl-tk r"></div><div class="dcl-cn r"><i id="dclTryR">0</i></div>
-    <!-- 339 — «연속 도전» 토글(04 세부 팝업의 것과 같은 부품·양방향 동기) + 자동 도전 카운트다운.
-         체크돼 있으면 «n초 뒤 다음 층 자동 도전» 이 1초 단위로 줄고 0 에서 실제로 입장한다. -->
-    <div class="dcl-auto">
-      <button class="dcl-cb" id="dclAuto"></button>
-      <div class="dcl-cbl"><i id="dclCbL">연속 도전</i></div>
-    </div>
-    <div class="dcl-cd"><i id="dclCd"></i></div>
-    <button class="dcl-btn dcl-re" id="dclRe"><i>재도전</i></button>
-    <button class="dcl-btn dcl-ok" id="dclOk"><i>확인</i></button>
-    <button class="dcl-btn dcl-nx" id="dclNx"><i>다음</i></button>
   </div>
   <div id="defw">
     <div class="df-emb"><svg width="116" height="107" viewBox="0 0 116 107">
