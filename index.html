@@ -24887,6 +24887,7 @@ function claimMail(id){
   /* 512 — 우편 한 통이 여러 재화를 담는다. 색을 섞지 않고 **담긴 종류마다** 제 색으로 터뜨린다. */
   fxReward(null, [m.g && 'gold', m.c && 'dia', m.r && 'relic', m.m && 'mile'].filter(Boolean));
   uiDirty = true; save();
+  reShopIfOpen();                             /* 547 — 재화 탭을 연 채 받으면 그 자리에서 따라온다 */
   fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · '));   /* 150 */
 }
 function claimAllMail(){
@@ -24900,6 +24901,7 @@ function claimAllMail(){
   if(mi) S.mileage = (S.mileage || 0) + mi;
   fxReward(null, [g && 'gold', c && 'dia', r && 'relic', mi && 'mile'].filter(Boolean));   /* 512 */
   uiDirty = true; save();
+  reShopIfOpen();                             /* 547 — 우편함은 상점 시트 «위» 라 아래가 낡은 채 남는다 */
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
      행 상태(«수령 완료»)로 그대로 보이므로 토스트만 띄우고 팝업은 재렌더로 갱신한다. */
   fxToast('우편 ' + n + '통 수령 — ' + curIc('gold') + ' ' + fmtG(g) + ' · ' + curIc('dia') + ' ' + fmt(c)
@@ -28949,6 +28951,13 @@ function syncShopSumBtns(){
     bt.classList.toggle('alert', !!a && coinAdReady(a));
   });
 }
+/* 547 — «열려 있으면 그 자리에서 다시 그린다». 선례는 153 의 `sendMail()` 이 이미 갖고 있다
+   (`fxStillOpen('ml69') → openMail()`) — 다만 상점은 모달이 아니라 **시트**(`#shopw`)라
+   `fxStillOpen` 이 못 본다. 그래서 시트용 판정을 한 곳에만 두고 부르는 쪽은 조건을 안 적는다.
+   ⚠ 재렌더는 122 쥬시 위상의 «진행 시각» 을 0 으로 되감는다(`probe547` [4] — 칸별 오프셋
+   `--jz-k` 는 렌더가 다시 계산하므로 그대로다). 그래서 **재화가 실제로 오간 자리에서만** 부른다. */
+const shopStillOpen = () => { const sw = $('shopw'); return !!(sw && sw.classList.contains('on')); };
+function reShopIfOpen(){ if(shopStillOpen()) renderShopPage(); }
 /* 164 — 상점 카테고리 키. `#shopCats` 의 `data-cat` 3종과 «한 벌» 이다(45·124).
    칸이 늘거나 줄면 마크업과 여기를 같이 고친다 — 여기만 고치면 착지 탭이 조용히 무시된다. */
 const SHOP_CATS = ['summon', 'coin', 'pass'];
@@ -29279,8 +29288,10 @@ function grantDiaPack(p){
   const m = sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0,
     b:'상점에서 구매하신 상품입니다. 보관 기간은 없으니 언제든 수령하세요.' });
   uiDirty = true; save();
-  const sw = $('shopw');
-  if(sw && sw.classList.contains('on') && shopCat === 'coin') renderCoinPage($('shopList'));
+  /* 547 — 조건을 여기 다시 적지 않는다. 예전 줄(`#shopw.on && shopCat === 'coin'`)은
+     같은 판정을 두 벌로 만들어 두는 것이라, 재화 탭 말고 다른 탭이 재화를 보이게 되면
+     한쪽만 따라오는 자리가 된다(402 «표 두 벌» 계열). 시트 판정은 `reShopIfOpen()` 한 곳이다. */
+  reShopIfOpen();
   notify('🛒 ' + diaPackName(p) + ' — 우편함으로 발송되었습니다');
   return { dia:S.dia, mileage:S.mileage, paid:S.cnt.paid, mail:m && m.id };
 }
