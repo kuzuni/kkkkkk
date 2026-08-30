@@ -10716,7 +10716,11 @@
     border:var(--sb) solid #000;box-sizing:border-box;
     background:linear-gradient(180deg,#705F4B 0 7px,#61523D 7px 77px,#705F4B 77px 84px,#61523D 84px);
     box-shadow:inset 7px 0 0 #705F4B,inset -7px 0 0 #705F4B}
-  .stabs>*{position:absolute;top:0;height:84px}
+  /* 437 — 칸 높이를 리터럴(85 → 84)로 다시 적는 대신 **패딩 상자에서 파생**시킨다.
+     절대배치 자식의 `height:100%` 는 담는 상자의 **패딩 상자**(= 바깥 − 테두리×2)라
+     «바깥 − 칸 = 테두리×2» 결속이 CSS 안에서 항등식이 된다 — 셋 중 하나만 옮기는 사고가
+     원리적으로 안 난다(`verify437` [G]★·[S]). `.stab-sep`(높이 54)은 뒤에서 덮는다. */
+  .stabs>*{position:absolute;top:0;height:100%}
   /* 337 — bottom 41 → 42. 측정표 07 §9 «바 하단 → 시트 바닥 2118 → 2160 = 42» 그대로이고,
      높이 97 과 함께 바 상변이 1960 → **1961** 로 ref(검정 상변 2021 의 −60) 에 앉는다. */
   .sk-tabs{left:58px;bottom:42px;width:950px}
