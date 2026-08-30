@@ -236,20 +236,22 @@ window.__ink492 = function (host, cardEl) {
   ok(pets.length >= 30, '[G0] 26 펫 카드를 전수로 쟀다', String(pets.length));
   const CW = await p.evaluate(() => CARD_ART.w);
   const pW = pets.filter(c => c.w >= CW - 2);                       /* 폭 상한에 걸린 칸 */
-  const pH = pets.filter(c => !(c.w >= CW - 2)).map(c => c.h);
   /* ⚠ 허용 오차 2px 은 «무르게 푼 것» 이 아니라 contain 의 반올림이다 — `drawSpriteTo` 가
      `Math.round(fr[3] × k)` 로 앉히고 림 2px 은 실루엣이 있는 변에만 붙으므로 원본 종횡에 따라
      1~2px 이 남는다(411 이 슬롯에서 쓴 오차도 3px 이다). 2/90 = 2.2% 로 411 «세로 덩치
      max/min ≤ 1.05» 눈금 안이다. */
-  ok(pH.length > 0 && pH.every(h => Math.abs(h - 90) <= 2),
-     '[G1] 폭 상한에 안 걸린 펫 칸은 전부 잉크 세로 90±2 = 코스튬과 같다',
-     `${px(Math.min(...pH))}~${px(Math.max(...pH))} · 폭 상한 ${pW.length}칸 (수리 전 57~71)`);
+  ok(pets.every(c => Math.abs(c.h - 90) <= 2),
+     '[G1] 펫 카드 **전수**가 잉크 세로 90±2 = 코스튬과 같다 (폭 상한에 걸린 칸까지)',
+     `${px(Math.min(...pets.map(c => c.h)))}~${px(Math.max(...pets.map(c => c.h)))}` +
+     ` · 폭 상한 ${pW.length}칸 (수리 전 57~71 · 1회차 후 65~87)`);
   const uni = 90 / Math.min(...pets.map(c => c.h));
-  ok(uni <= 1.45, '[G2] 코스튬↔펫 세로 덩치 (폭 상한 칸 포함) — 수리 전 1.58배에서 내려왔다',
-     `${uni.toFixed(3)} (수리 전 90/57 = 1.579)`);
-  ok(pets.every(c => c.barOv <= 0), '[G3] 펫 칸도 잉크가 진행바를 안 침범한다',
+  ok(uni <= 1.05, '[G2] 코스튬↔펫 세로 덩치 max/min ≤ 1.05 (411 통일 눈금)',
+     `${uni.toFixed(3)} (수리 전 90/57 = 1.579 · 폭 상한 96 일 때 1.385 · 120 일 때 1.111)`);
+  ok(pets.every(c => c.rW <= 1), '[G3] 펫 잉크 가로도 아이콘 영역 안이다',
+     `최대 ${Math.max(...pets.map(c => c.rW)).toFixed(3)}`);
+  ok(pets.every(c => c.barOv <= 0), '[G4] 펫 칸도 잉크가 진행바를 안 침범한다',
      `최대 겹침 ${px(Math.max(...pets.map(c => c.barOv)))}px`);
-  ok(pets.every(c => c.top <= 0.6 && c.bottom <= 0.6), '[G4] 펫 칸도 카드 밖으로 안 나간다',
+  ok(pets.every(c => c.top <= 0.6 && c.bottom <= 0.6), '[G5] 펫 칸도 카드 밖으로 안 나간다',
      `위 ${px(Math.max(...pets.map(c => c.top)))} · 아래 ${px(Math.max(...pets.map(c => c.bottom)))}`);
   await p.evaluate(() => gmHero('cos'));
   await p.waitForTimeout(700);

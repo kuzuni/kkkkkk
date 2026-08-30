@@ -188,8 +188,14 @@ const seedPets = p => p.evaluate(() => {
   const capped = s3.filter(c => c.ink && c.ink.w >= A492.w - 2);
   eq('세로를 못 채운 카드 중 폭 상한에 안 걸린 것',
      s3.filter(c => c.ink && c.ink.h < A492.h - 3 && c.ink.w < A492.w - 2).length, 0);
-  ok(capped.length > 0 && capped.length < s3.length,
-     `폭 상한에 걸리는 칸은 일부뿐이다 (${capped.length}/${s3.length})`);
+  /* 492 3회차 — 상한을 «최악 종횡(1.48)이 세로 90 에 닿는 폭» 133 으로 물리자 **폭에 걸리는 칸이
+     0** 이 됐다(96 일 때 12칸 · 120 일 때 12칸). 그래서 «일부는 걸린다» 는 항은 폐기하고,
+     그 자리에 더 센 것을 둔다 — **전 칸이 그림 자리 세로를 채운다**. 상한이 다시 내려가면
+     걸리는 칸이 생기면서 여기가 먼저 빨개진다. */
+  eq('그림 자리 세로(±3)를 못 채운 카드',
+     s3.filter(c => c.ink && Math.abs(c.ink.h - A492.h) > 3).length, 0);
+  ok(capped.length === 0,
+     `폭 상한에 걸린 칸 0 — 상한이 세로를 안 깎는다 (${capped.length}/${s3.length})`);
   const mx = s3.filter(c => c.ink).map(c => Math.max(c.ink.w, c.ink.h));
   inRange('카드 잉크 최대변 — 최솟값', Math.min(...mx), 80, A492.w + 2);
   inRange('카드 잉크 최대변 — 최댓값', Math.max(...mx), 88, A492.w + 2);
