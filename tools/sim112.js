@@ -35,7 +35,10 @@ const EG_R = num(/const eGold\s*=\s*s\s*=>\s*[\d.]+\s*\*\s*Math\.pow\(([\d.]+),/
 const EC = require('./ecurve')(SRC, 'SIM112');
 const N_MOB = num(/const ENEMY_COUNT\s*=\s*(\d+)/,        'ENEMY_COUNT');
 const OFF_H = num(/const OFF_MAX_H\s*=\s*(\d+)/,          'OFF_MAX_H');
-const CAP_S = num(/const TRAIN_CAP_STEP\s*=\s*(\d+)/,     'TRAIN_CAP_STEP');
+/* 517 — 요구치가 «구간표» 가 됐다(326 의 «단계 몫 300n» 폐기). 제품의 표를 그대로 읽는다 —
+   숫자를 여기 베끼면 표를 갈 때마다 이 시뮬이 조용히 갈라진다(LESSONS 168-③). 값은 3종 합이다. */
+const T_NEED = pick(/const TRAIN_NEED\s*=\s*\[([^\]]+)\]/, 'TRAIN_NEED')[1]
+  .split(',').map(s => parseFloat(s));
 const T_BON = num(/const TRAIN_BONUS\s*=\s*([\d.]+)/,     'TRAIN_BONUS');
 /* 클리어 보상 = eGold(직전 스테이지) × 이 배수 */
 const CLEAR_K = num(/const bonusG = eGold\(S\.stage-1\)\s*\*\s*(\d+)/, '클리어 보상 배수');
@@ -155,10 +158,11 @@ function cumTable(curve){                      /* T[L] = 3스탯을 Lv L 까지 
 }
 /* 누적 골드 G 로 3스탯을 «같은 레벨까지» 올릴 때 도달 레벨 */
 function levelFor(T, G){ let L = 0; while(L < L_MAX && T[L+1] <= G) L++; return L; }
-/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
-   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
-   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
-const TCAP  = n => CAP_S * n * (n + 1) / 2;
+/* 517 — 상한은 구간표 몫(3종 합)의 누적합이다(스탯당은 그 1/3).
+   «레벨 → 단계» 역함수는 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다. */
+const TSTEP = n => T_NEED[Math.min(Math.max(1, n), T_NEED.length) - 1] / 3;   /* 스탯당 몫 */
+const TCAP  = n => { let s = 0; for(let k = 1; k <= n; k++) s += TSTEP(k); return s; };
 const stageOf = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };   /* 326 이후 Lv 300 → 3단계 */
 
 /* ---------- 곡선 두 벌 ----------
@@ -193,7 +197,7 @@ console.log('SIM112 — 23 훈련 밸런스 (index.html 실측 상수)');
 console.log('  ' + EC.desc);
 console.log('  몹 ' + N_MOB + '마리/스테이지 · 클리어 ×' + CLEAR_K + ' · 오프라인 ' + OFF_A + '×' + OFF_B + '/초(상한 ' + OFF_H + 'h)'
           + ' · 골드던전 ' + fx(DUN_G) + '/일 · 유휴 h(s)=' + H_MAX + '×s/80');
-console.log('  훈련 상한 ' + CAP_S + '/단계 · 단계 보너스 +' + (T_BON*100) + '%');
+console.log('  훈련 몫(3종 합) ' + T_NEED.join('·') + '… · 단계 보너스 +' + (T_BON*100) + '%');
 console.log('');
 
 console.log('[A] 누적 골드(stage) — 구성비');

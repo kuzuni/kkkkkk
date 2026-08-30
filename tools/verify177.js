@@ -211,7 +211,8 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     const cross = await p.evaluate(() => {
       const tb = st => 1 + TRAIN_BONUS*(st-1);
       const ZOM = 1;                                   /* sim177 의 기준선(zombie)과 같은 정의 */
-      const at = (lv, s) => U.atk.val(lv) * tb(Math.floor(lv/TRAIN_CAP_STEP)+1) / (eHp(s)*ZOM);
+      /* 517 — «레벨 → 단계» 는 나눗셈이 아니라 구간표 누적합의 역함수다(제품 함수를 쓴다) */
+      const at = (lv, s) => U.atk.val(lv) * tb(trainStageFor(lv)) / (eHp(s)*ZOM);
       return { s20: at(78, 20), s80: at(308, 80) };    /* 도달 Lv 은 sim177 [B] 실측값 */
     });
     near('⑧ 실코드 s20 공격/적HP = sim177 [D] after 값', cross.s20, rows['20'].ratio, 5e-3);

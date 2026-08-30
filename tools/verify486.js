@@ -250,7 +250,9 @@ const shot = page => page.evaluate(() => {
   {
     const CODE = fs.readFileSync(SRC, 'utf8');
     ok(/const TRAIN_VAL_K = \{ atk:20, hp:100, regen:15 \}/.test(CODE), '  TRAIN_VAL_K 불변');
-    ok(/const TRAIN_CAP_STEP = 100;/.test(CODE), '  TRAIN_CAP_STEP 불변');
+    /* 517 — 요구치 상수는 구간표로 갈렸다(주인 지시 2026-08-31). 486 이 지키는 것은 «알약·진행바를
+       건드리지 않았다» 이므로, 요구치 축은 «표가 한 벌로 있다» 로 읽는다. */
+    ok(/const TRAIN_NEED = \[300, 300, 300, 300, 600, 600, 600, 900\];/.test(CODE), '  TRAIN_NEED 구간표 불변(517)');
     ok(/const TRAIN_BONUS = 0\.10;/.test(CODE), '  TRAIN_BONUS 불변');
     ok(/const TRAIN_QTYS = \[1, 10, 30\];/.test(CODE), '  TRAIN_QTYS 불변');
     ok(/\.tr-card>\.cv\{left:0;right:0;top:288px;height:60px;line-height:60px;text-align:center\}/.test(CODE),

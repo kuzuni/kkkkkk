@@ -136,7 +136,7 @@ const B = { atk:18, hp:160, regen:4 };       /* 기저 = 현행 Lv0 값 유지 *
   if(rows['20'] && rows['80']){
     const fight = await p.evaluate(({ r20, r80 }) => {
       const tb = s => 1 + TRAIN_BONUS * (s - 1);
-      const cap = n => TRAIN_CAP_STEP * n * (n + 1) / 2;
+      const cap = n => trainCapAt(n);   /* 517 — 상한식은 제품(구간표 누적합)의 것이다 */
       const st = L => { let n = 1; while(cap(n) <= L) n++; return n; };
       const ZOM = 1;   /* sim168 의 몹 HP 배수 기준선(zombie)과 같은 정의 */
       return {
@@ -160,18 +160,18 @@ const B = { atk:18, hp:160, regen:4 };       /* 기저 = 현행 Lv0 값 유지 *
     S.lv.atk = S.lv.hp = S.lv.regen = 300; S.trainStage = 3;
     const cap = trainCap(), ready300 = trainReady();
     S.lv.atk = S.lv.hp = S.lv.regen = cap;                 /* 326 — 3단계 상한까지 채운 상태 */
-    return { knee: TRAIN_KNEE, rt: TRAIN_COST_R, capStep: TRAIN_CAP_STEP, bonus: TRAIN_BONUS,
+    return { knee: TRAIN_KNEE, rt: TRAIN_COST_R, capStep: trainStepAt(1), bonus: TRAIN_BONUS,
              cap, ready: ready300, ready600: trainReady(), cost300: U.atk.cost(300) };
   });
   eq('④ 112 비용 무릎 Lv 불변', keep.knee, 15);
   eq('④ 112 비용 배율 불변', keep.rt, 1.05);
   eq('④ 단계당 상한 불변', keep.capStep, 100);
   eq('④ 단계당 보너스 불변', keep.bonus, 0.1);
-  /* 326 — 3단계 상한은 100+200+300 = 600 이다(구 «단계×100» = 300 에서 이관).
-     168 이 지키는 것은 «비용 곡선·보너스·상한 계수를 안 건드렸다» 이고, 상한 «식» 은 326 의 소관이다. */
-  eq('④ 3단계 상한 = 누적합 100+200+300 (326)', keep.cap, 600);
-  yes('④ 3종이 3단계 상한(600)이면 승급 준비 완료', keep.ready600 === true);
-  yes('④ 326 방향 — 3단계에서 Lv 300 은 이제 상한 미달(구 곡선이면 준비 완료였다)', keep.ready === false);
+  /* 517(326 번복) — 3단계 상한은 100+100+100 = 300 이다(주인 구간표 «1~4단계 300» 의 스탯당 몫).
+     168 이 지키는 것은 «비용 곡선·보너스를 안 건드렸다» 이고, 상한 «식» 은 326·517 의 소관이다. */
+  eq('④ 3단계 상한 = 구간표 누적합 100+100+100 (517)', keep.cap, 300);
+  yes('④ 3종이 3단계 상한(300)이면 승급 준비 완료', keep.ready600 === true);
+  yes('④ 517 방향 — 3단계에서 Lv 300 은 상한 «정확히» 다', keep.ready === true);
   near('④ Lv 300 비용은 168 전후 동일(45·1.19^15·1.05^285)',
        keep.cost300, 45 * Math.pow(1.19, 15) * Math.pow(1.05, 285), 1e-12);
 

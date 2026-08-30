@@ -38,7 +38,12 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
 const KEY = 'idle_hunter_save_v4';
-const CAP = n => 100 * n * (n + 1) / 2;          /* 326 누적합 */
+/* 517(주인 지시 2026-08-31 · 326 번복) — 상한은 구간표 몫의 누적합이다.
+   483 의 계약(«어떤 세이브에서도 한 번 사면 진행바가 한 칸 오른다»)은 한 글자도 안 바뀌었고,
+   이관이 세우는 «자연 단계» 가 517 에서 **양방향**이 됐다(상한이 작아져 올릴 일도 생겼다). */
+const DEN = n => (n <= 4 ? 300 : n <= 7 ? 600 : 900);
+const CAP = n => { let s = 0; for (let k = 1; k <= n; k++) s += DEN(k) / 3; return s; };
+const NAT = l => { let n = 1; while (CAP(n) <= l) n++; return n; };   /* 자연 단계 */
 const OLDCAP = n => 100 * n;                     /* 326 이전 — 단계×100 */
 
 let pass = 0, fail = 0;
@@ -88,8 +93,8 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
     const { ctx, page, errs } = await open(browser, SRC, oldSave(n, [L, L, L]));
     const h = await page.evaluate(() => ({ stage: trainStage(), base: trainBase(), cap: trainCap(),
       lv: S.lv.atk | 0, prog: trainProg(), max: trainMax(), txt: $('trProg').textContent }));
-    /* 계약: 단계 k 는 «전 스탯 lv ≥ cap(k−1)» 를 만족하는 가장 큰 k(원래 단계를 넘지 않는다) */
-    let want = 1; while (want < n && CAP(want) <= L) want++;
+    /* 계약(517 이후): 단계 = «자연 단계» — 산 레벨이 허락하는 자리. 내려가기도 올라가기도 한다. */
+    const want = NAT(L);
     eq('  구 단계 ' + n + '(lv ' + L + ') → 단계 ' + want, h.stage, want);
     ok(h.base <= h.lv, '  단계 ' + want + ' — 기저 ' + h.base + ' ≤ lv ' + h.lv + ' (진행이 0 에 안 굳는다)', h.base + ' vs ' + h.lv);
     eq('  단계 ' + want + ' — 레벨은 한 톨도 안 깎였다', h.lv, L);
@@ -101,9 +106,10 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
     /* 주인 스크린샷(2026-08-30 23:20) 그대로 — 9단계 · Lv 921/983/926 */
     const { ctx, page, errs } = await open(browser, SRC, oldSave(9, [921, 983, 926]));
     const h = await page.evaluate(() => ({ stage: trainStage(), txt: $('trProg').textContent, rib: $('trRib').textContent }));
-    eq('  주인 세이브 — 단계 4', h.stage, 4);
-    eq('  주인 세이브 — 진행 1030/1200 (= (921−600)+(983−600)+(926−600))', h.txt, '1030/1200');
-    ok(/훈련.*4.*단계/.test(h.rib), '  리본도 4 단계로 따라온다', h.rib);
+    /* 517 — 같은 세이브가 신 구간표에서는 7단계에 선다(cap(6)=800 ≤ 921 < cap(7)=1000) */
+    eq('  주인 세이브 — 단계 7', h.stage, 7);
+    eq('  주인 세이브 — 진행 430/600 (= (921−800)+(983−800)+(926−800))', h.txt, '430/600');
+    ok(/훈련.*7.*단계/.test(h.rib), '  리본도 7 단계로 따라온다', h.rib);
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -157,10 +163,10 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
       trHoldStart('atk', card);
       await new Promise(z => setTimeout(z, 900));
       trHoldStop(false);
-      return { p0, p1: trainProg(), txt: $('trProg').textContent, lv: lv('atk') };
+      return { p0, p1: trainProg(), txt: $('trProg').textContent, lv: lv('atk'), max: trainMax() };
     });
     ok(!r.no && r.p1 > r.p0 + 1, '  홀드 0.9초 — 진행이 여러 칸 쌓인다 (Δ' + (r.p1 - r.p0) + ')', JSON.stringify(r));
-    ok(r.txt === r.p1 + '/1200', '  홀드가 끝난 프레임의 문구도 같은 값', r.txt);
+    ok(r.txt === r.p1 + '/' + r.max, '  홀드가 끝난 프레임의 문구도 같은 값', r.txt);
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -168,17 +174,23 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
   /* ---- [E] 183 규약 ---- */
   sec('[E] 183 규약 유지 — 단계 ↑ 직후 정확히 0/새 max');
   {
-    const { ctx, page, errs } = await open(browser, SRC, oldSave(3, [600, 600, 600]));
+    /* ⚠ 517 — 세이브에 «정확히 상한» 을 적으면 그 세이브의 자연 단계가 이미 다음 단계라
+       이관이 (옳게) 한 칸 올려 버린다. 그래서 상한 아래에서 시작해 **사서** 채운다. */
+    const { ctx, page, errs } = await open(browser, SRC, oldSave(3, [CAP(2) + 1, CAP(2) + 1, CAP(2) + 1]));
     const r = await page.evaluate(() => {
+      S.buyQty = 30;
+      TRAIN_STATS.forEach(id => { for (let i = 0; i < 20; i++) trainBuy(id); });
+      renderTrainLive();
       const b = { stage: trainStage(), prog: trainProg(), max: trainMax(), ready: trainReady() };
       trainUp(); if (typeof closeModal === 'function') closeModal();
       renderTrainLive();
       return { b, stage: trainStage(), prog: trainProg(), max: trainMax(), txt: $('trProg').textContent };
     });
-    ok(r.b.ready === true, '  3단계 상한(600)에서 [↑] 가 열려 있다', String(r.b.ready));
+    eq('  3단계 상한(' + CAP(3) + ')까지 사면 진행이 꽉 찬다', r.b.prog + '/' + r.b.max, DEN(3) + '/' + DEN(3));
+    ok(r.b.ready === true, '  거기서 [↑] 가 열려 있다', String(r.b.ready));
     eq('  단계 업 직후 진행 0', r.prog, 0);
-    eq('  분모는 새 단계 몫 300×4', r.max, 1200);
-    eq('  문구도 0/1200', r.txt, '0/1200');
+    eq('  분모는 새 단계 몫 ' + DEN(4), r.max, DEN(4));
+    eq('  문구도 0/' + DEN(4), r.txt, '0/' + DEN(4));
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -198,11 +210,17 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
     await ctx.close();
   }
   {
-    /* 승급 금지 — 레벨이 단계보다 «앞서» 있어도 이관이 단계를 선물하지 않는다 */
+    /* 517 — «선물 금지» 의 뜻이 바뀌었다(자리는 안 비운다 — 333 처방).
+       상한이 작아진 개정이라 «레벨이 단계보다 앞선» 세이브는 이제 **정상**이고, 이관은 그 레벨이
+       허락하는 자리(자연 단계)에 세운다. 금지되는 것은 «그보다 **한 단계라도 더**» 주는 것이다 —
+       [↑] 가 로드 직후에 열려 있지 않다는 것이 그 증거다(더 줄 것이 남아 있지 않다). */
     const { ctx, page, errs } = await open(browser, SRC, oldSave(1, [5000, 5000, 5000]));
-    const h = await page.evaluate(() => ({ stage: trainStage(), lv: S.lv.atk | 0, cap: trainCap(), prog: trainProg() }));
-    eq('  lv 5000 · 단계 1 — 단계를 올려 주지 않는다', h.stage, 1);
-    ok(h.prog <= 300, '  진행은 분모를 안 넘는다(상한 클램프)', String(h.prog));
+    const h = await page.evaluate(() => ({ stage: trainStage(), lv: S.lv.atk | 0, cap: trainCap(),
+      prog: trainProg(), max: trainMax(), ready: trainReady() }));
+    eq('  lv 5000 · 단계 1 — 자연 단계 ' + NAT(5000) + ' 에 세운다', h.stage, NAT(5000));
+    ok(h.ready === false, '  한 단계도 더 주지 않는다 — [↑] 가 안 열려 있다', String(h.ready));
+    eq('  레벨은 그대로', h.lv, 5000);
+    ok(h.prog < h.max, '  진행은 분모 «안» 이다', h.prog + '/' + h.max);
     allErrs = allErrs.concat(errs);
     await ctx.close();
   }
@@ -225,17 +243,17 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
   {
     const { ctx, page, errs } = await open(browser, SRC, oldSave(9, [921, 983, 926]));
     const k = await page.evaluate(() => ({
-      gold: S.gold, step: TRAIN_CAP_STEP, bonus: TRAIN_BONUS,
+      gold: S.gold, step: trainStepAt(1), bonus: TRAIN_BONUS,
       cap3: trainCapAt(3), cap9: trainCapAt(9), stats: TRAIN_STATS.join(','), qtys: TRAIN_QTYS.join(','),
       lv: [S.lv.atk | 0, S.lv.hp | 0, S.lv.regen | 0].join(','),
       cost921: U.atk.cost(921),
     }));
     eq('  골드 손실 0', k.gold, 1e30);
     eq('  레벨 3종 그대로', k.lv, '921,983,926');
-    eq('  TRAIN_CAP_STEP 불변', k.step, 100);
+    eq('  1단계 몫(스탯당) 불변', k.step, 100);
     eq('  TRAIN_BONUS 불변', k.bonus, 0.1);
-    eq('  trainCapAt(3) = 600 (326 누적합 불변)', k.cap3, 600);
-    eq('  trainCapAt(9) = 4500 (326 누적합 불변)', k.cap9, 4500);
+    eq('  trainCapAt(3) = ' + CAP(3) + ' (517 구간표 누적합)', k.cap3, CAP(3));
+    eq('  trainCapAt(9) = ' + CAP(9) + ' (517 구간표 누적합)', k.cap9, CAP(9));
     eq('  훈련 3종 불변', k.stats, 'atk,hp,regen');
     eq('  구매 단위 불변', k.qtys, '1,10,30');
     ok(Math.abs(k.cost921 / 9.637e21 - 1) < 0.01, '  112 비용 곡선 불변 — Lv 921 = 9.64e21 골드', k.cost921.toExponential(3));
@@ -247,7 +265,7 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
   sec('[R] 되돌림 — 정정 한 줄을 뺀 사본에서 «사도 안 오름» 이 재현된다');
   {
     const CODE = fs.readFileSync(SRC, 'utf8');
-    const MARK = '      b.trainStage = Math.min(b.trainStage, k);';
+    const MARK = '      b.trainStage = trainStageFor(lo);';
     const hits = CODE.split(MARK).length - 1;
     eq('  R0 전제 — 정정 한 줄이 제품에 정확히 한 번 있다', hits, 1);
     const tmp = path.join(ROOT, 'index.verify483-revert.html');
@@ -256,7 +274,7 @@ const buyOnce = (page, id, qty) => page.evaluate(([k, q]) => {
       const { ctx, page } = await open(browser, tmp, oldSave(9, [921, 983, 926]));
       const h = await page.evaluate(() => ({ stage: trainStage(), prog: trainProg(), txt: $('trProg').textContent }));
       eq('  R1 — 되돌린 사본은 단계 9 를 그대로 들고 있다', h.stage, 9);
-      eq('  R2 — 그리고 진행이 0/2700 에 굳는다 (= 주인이 본 그림)', h.txt, '0/2700');
+      eq('  R2 — 그리고 진행이 0/' + DEN(9) + ' 에 굳는다 (= 주인이 본 그림)', h.txt, '0/' + DEN(9));
       const r = await buyOnce(page, 'atk', 1);
       ok(r.after.lv === r.before.lv + 1 && r.after.prog === r.before.prog,
         '  R3 — 레벨은 오르는데 진행은 안 오른다(주인 원문 «훈련 경험치 안올라가더라»)',

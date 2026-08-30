@@ -69,7 +69,10 @@ const num = (re, what) => parseFloat(pick(re, what)[1]);
 const EC = readECurve(SRC, 'SIM177');
 const N_MOB = num(/const ENEMY_COUNT\s*=\s*(\d+)/,        'ENEMY_COUNT');
 const OFF_H = num(/const OFF_MAX_H\s*=\s*(\d+)/,          'OFF_MAX_H');
-const CAP_S = num(/const TRAIN_CAP_STEP\s*=\s*(\d+)/,     'TRAIN_CAP_STEP');
+/* 517 — 요구치가 «구간표» 가 됐다(326 의 «단계 몫 300n» 폐기). 제품의 표를 그대로 읽는다 —
+   숫자를 여기 베끼면 표를 갈 때마다 이 시뮬이 조용히 갈라진다(LESSONS 168-③). 값은 3종 합이다. */
+const T_NEED = pick(/const TRAIN_NEED\s*=\s*\[([^\]]+)\]/, 'TRAIN_NEED')[1]
+  .split(',').map(s => parseFloat(s));
 const T_BON = num(/const TRAIN_BONUS\s*=\s*([\d.]+)/,     'TRAIN_BONUS');
 const BSEC  = num(/const BOSS_SEC\s*=\s*(\d+)/,           'BOSS_SEC');
 const CLEAR_K = num(/const bonusG = eGold\(S\.stage-1\)\s*\*\s*(\d+)/, '클리어 보상 배수');
@@ -123,10 +126,11 @@ const costAt = (id,l) => COST[id].b * Math.pow(COST[id].r, Math.min(l, C_KNEE))
 const T_COST = [0];
 for(let l=0;l<L_MAX;l++) T_COST[l+1] = T_COST[l] + STATS.reduce((t,id)=>t+costAt(id,l),0);
 const levelFor = G => { let L=0; while(L<L_MAX && T_COST[L+1] <= G) L++; return L; };
-/* 326 — 단계 몫이 «증가식»(스탯당 100×n) 이 되면서 상한은 누적합 `CAP_S·n(n+1)/2` 다.
-   그래서 «레벨 → 단계» 역함수도 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
-   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다(구 floor(L/100)+1 과 동일). */
-const TCAP  = n => CAP_S * n * (n + 1) / 2;
+/* 517 — 상한은 구간표 몫(3종 합)의 누적합이다(스탯당은 그 1/3).
+   «레벨 → 단계» 역함수는 나눗셈이 아니라 누적합을 넘어설 때까지 세는 것이다.
+   경계 규약은 종전과 같다 — 상한을 **정확히 찍은** 레벨은 이미 다음 단계로 센다. */
+const TSTEP = n => T_NEED[Math.min(Math.max(1, n), T_NEED.length) - 1] / 3;   /* 스탯당 몫 */
+const TCAP  = n => { let s = 0; for(let k = 1; k <= n; k++) s += TSTEP(k); return s; };
 const tstage = L => { let n = 1; while(TCAP(n) <= L) n++; return n; };
 const tb = L => 1 + T_BON*(tstage(L)-1);
 const tval = (id,l) => LIN_B[id] + LIN_K[id]*l;

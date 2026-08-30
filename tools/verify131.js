@@ -170,7 +170,9 @@ const near = (n, got, want, tol) => R.push({
   const keep = await p.evaluate(() => {
     S.lv.atk = S.lv.hp = S.lv.regen = 300; S.trainStage = 3;
     const ready = trainReady();
-    return { knee: TRAIN_KNEE, rt: TRAIN_COST_R, capStep: TRAIN_CAP_STEP, bonus: TRAIN_BONUS,
+    /* 517 — 옛 «단계당 상한 계수» 상수는 구간표로 갈렸다. 131 이 지키는 것은 «비용 곡선·보너스를
+       안 건드렸다» 이므로, 상한 축은 그 표의 1단계 몫(스탯당 100 — 값은 그대로다)으로 읽는다. */
+    return { knee: TRAIN_KNEE, rt: TRAIN_COST_R, capStep: trainStepAt(1), bonus: TRAIN_BONUS,
              cap: trainCap(), ready, cost300: U.atk.cost(300) };
   });
   eq('⑦ 112 비용 무릎 Lv 불변', keep.knee, 15);

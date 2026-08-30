@@ -68,10 +68,12 @@ async function setup(page, o){
   /* 시트 슬라이드업(약 300ms)이 끝나기 전에 재면 좌표·폭이 도착 전 값이다 (LESSONS 50-①) */
   await page.waitForTimeout(wasOpen ? 80 : 420);
 }
-/* 326 — 단계 n 까지의 스탯당 누적 상한 · 이번 단계 몫 · 진행도 분모.
+/* 517(주인 지시 2026-08-31 · 326 번복) — 단계 몫은 구간표다: 1~4단계 300 · 5~7단계 600 · 8 이후 900.
+   183 이 지키는 것은 «단계 업 직후 정확히 0/이번 단계 몫» 이고, 그 «몫» 의 값이 바뀐 것뿐이다.
    제품(`trainCapAt`)과 **독립으로** 다시 적는다 — 같은 함수를 불러 비교하면 게이트가 아무것도 안 잰다. */
-const CAP = n => 100 * n * (n + 1) / 2;
-const DEN = n => 300 * n;
+const DEN = n => (n <= 4 ? 300 : n <= 7 ? 600 : 900);        /* 진행도 분모(3종 합) */
+const CAP = n => { let s = 0; for (let k = 1; k <= n; k++) s += DEN(k) / 3; return s; };
+const OFF = 50;                                              /* [E] 표본 — 상한에서 뺄 레벨 */
 const head = page => page.evaluate(() => ({
   prog: $('trProg').textContent,
   fill: parseFloat($('trFill').style.width) || 0,
@@ -141,14 +143,15 @@ const head = page => page.evaluate(() => ({
 
   /* ---- [E] 과교정 잠금 — 저장·상한·판정은 절대값 그대로 ---- */
   console.log('[E] 표시만 상대화 — 저장값·상한·[↑] 판정은 절대값');
-  await setup(page, { stage: 4, atk: CAP(4) - 350, hp: CAP(4), regen: CAP(4) });
+  await setup(page, { stage: 4, atk: CAP(4) - OFF, hp: CAP(4), regen: CAP(4) });
   const e = await head(page);
-  eq('  S.lv.atk 저장값은 절대 레벨 그대로', e.lv.atk, CAP(4) - 350);
-  eq('  trainCap() = 누적합 100·n(n+1)/2 (326)', e.cap, CAP(4));
+  eq('  S.lv.atk 저장값은 절대 레벨 그대로', e.lv.atk, CAP(4) - OFF);
+  eq('  trainCap() = 구간표 누적합 (517)', e.cap, CAP(4));
   ok('  atk 만 상한 미달 → trainReady false', e.ready === false, 'ready ' + e.ready);
-  eq('  진행도(400−350 + 400 + 400)', e.prog, (DEN(4) - 350) + '/' + DEN(4));
+  eq('  진행도(' + CAP(4) + '−' + OFF + ' + ' + CAP(4) + ' + ' + CAP(4) + ' − 기저×3)',
+     e.prog, (DEN(4) - OFF) + '/' + DEN(4));
   const savedLv = await page.evaluate(() => JSON.parse(localStorage.getItem(KEY)).lv.atk | 0);
-  eq('  localStorage 세이브도 절대 레벨', savedLv, CAP(4) - 350);
+  eq('  localStorage 세이브도 절대 레벨', savedLv, CAP(4) - OFF);
 
   /* ---- [F] 64 회귀 — 단계 1 은 종전 표기와 동일 ---- */
   console.log('[F] 64 회귀 — 단계 1 에서는 종전과 완전히 같은 표기');

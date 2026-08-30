@@ -58,16 +58,23 @@ const evOf = (page) => async (fn, arg) => {
   catch (e) { return { __err: String((e && e.message) || e).split('\n')[0].slice(0, 220) }; }
 };
 
+/* 어느 트리에서 돌고 있는가 — 신 구간표(`TRAIN_NEED`)가 깔려 있으면 «수리 후» 다.
+   같은 명령이 두 트리에서 **둘 다 초록**이어야 한다: 이 프로브는 «무엇이 바뀌었나» 를 재는 자다.
+   (`git stash` 로 제품만 되돌려 같은 명령을 돌리면 §A·§C 가 수리 전 표를 그대로 다시 찍는다.) */
+let NEW = false;
+
 (async () => {
   const browser = await launch(chromium);
 
   /* ══════════════════════════════════════════════════════════════════════
-     §A ⓐ 현행 곡선 — 제품 함수에게 직접 묻는다
+     §A ⓐ 지금 깔린 곡선 — 제품 함수에게 직접 묻는다
      ══════════════════════════════════════════════════════════════════════ */
   {
     const { ctx, page } = await open(browser, null);
     const ev = evOf(page);
-    console.log('\n' + '='.repeat(72) + '\n  §A ⓐ 현행 곡선(326 증가식) — 제품 함수 직접 호출\n' + '='.repeat(72));
+    NEW = await ev(() => typeof TRAIN_NEED !== 'undefined') === true;
+    console.log('\n' + '='.repeat(72) + '\n  §A ⓐ 지금 깔린 곡선 — 제품 함수 직접 호출  ['
+      + (NEW ? '수리 후 · 517 구간표' : '수리 전 · 326 증가식') + ']\n' + '='.repeat(72));
 
     blk('A1 단계 1~12 의 «그 단계 몫»(3종 합)과 상한');
     const cur = await ev(() => {
@@ -80,19 +87,23 @@ const evOf = (page) => async (fn, arg) => {
       console.log('   n :  몫(3종 합)   상한(스탯당)');
       cur.forEach(r => console.log('  ' + String(r.n).padStart(2) + ' : ' + String(r.step3).padStart(10)
         + String(r.cap).padStart(14)));
-      ok(cur.every(r => r.step3 === 300 * r.n), '현행 몫은 «300×단계» 다 (326 증가식)');
-      ok(cur.every(r => r.cap === CAP_OLD(r.n)), '현행 상한은 누적합 100·n(n+1)/2 다');
+      const need = n => (NEW ? NEED_NEW(n) : 300 * n), cap = n => (NEW ? CAP_NEW(n) : CAP_OLD(n));
+      ok(cur.every(r => r.step3 === need(r.n)),
+        '몫이 ' + (NEW ? '주인 구간표(300·300·300·300·600·600·600·900…)' : '«300×단계»(326 증가식)') + ' 다');
+      ok(cur.every(r => r.cap === cap(r.n)),
+        '상한이 ' + (NEW ? '구간표 누적합' : '누적합 100·n(n+1)/2') + ' 이다');
     }
 
-    blk('A2 486 스크린샷 — 9단계에서 진행바 분모가 «2700» 인가');
+    blk('A2 486 스크린샷 — 9단계에서 진행바 분모가 얼마인가');
     const den9 = await ev(() => {
       S.trainStage = 9; return { max: trainMax(), cap: trainCap(), base: trainBase() };
     });
     if (den9.__err) { console.log('  ❌ ' + den9.__err); fail++; }
     else {
       console.log('  9단계 → 분모 ' + den9.max + ' · 상한(스탯당) ' + den9.cap + ' · 기저 ' + den9.base);
-      ok(den9.max === 2700, '주인 스크린샷의 «0/2700» 이 이 식이다');
-      ok(den9.cap === 4500, '9단계 상한(스탯당) = 4,500');
+      ok(den9.max === (NEW ? 900 : 2700), NEW ? '주인 지시대로 «8 이후 900» 이다'
+        : '주인 스크린샷의 «0/2700» 이 이 식이다');
+      ok(den9.cap === (NEW ? 1600 : 4500), '9단계 상한(스탯당) = ' + (NEW ? '1,600' : '4,500'));
     }
     await ctx.close();
   }
@@ -139,9 +150,15 @@ const evOf = (page) => async (fn, arg) => {
       console.log('  단계 ' + st.stage + ' · cap ' + st.cap + ' · base ' + st.base
         + ' · lv ' + st.lv.join('/') + ' → rel ' + st.rel.join('/'));
       console.log('  진행 ' + st.prog + '/' + st.max + ' · trainReady ' + st.ready);
-      ok(st.stage === 4, '483 이관 블록은 단계를 «안 올린다»(Math.min — 내리기 전용)');
-      ok(st.prog === st.max, '진행바가 로드 즉시 꽉 찬다 (' + st.prog + '/' + st.max + ')');
-      ok(st.ready === true, 'trainReady() 가 로드 즉시 참 — [↑] 가 열려 있다');
+      if (!NEW) {
+        ok(st.stage === 4, '483 이관 블록은 단계를 «안 올린다»(Math.min — 내리기 전용)');
+        ok(st.prog === st.max, '진행바가 로드 즉시 꽉 찬다 (' + st.prog + '/' + st.max + ')');
+        ok(st.ready === true, 'trainReady() 가 로드 즉시 참 — [↑] 가 열려 있다');
+      } else {
+        ok(st.stage === 19, '517 이관이 단계를 «자연 단계»(19)로 올려 놓는다 — [↑] 를 다 눌렀을 때와 같은 자리');
+        ok(st.prog < st.max && st.prog === 600, '진행바가 «이번 단계 몫» 안에 있다 (' + st.prog + '/' + st.max + ')');
+        ok(st.ready === false, 'trainReady() 가 거짓 — [↑] 가 로드 직후에 열려 있지 않다');
+      }
     }
 
     blk('C2 [↑] 를 계속 누르면 어디까지 오르나 — «단계 연쇄 폭등»');
@@ -155,10 +172,15 @@ const evOf = (page) => async (fn, arg) => {
     else {
       console.log('  단계 ' + climb.from + ' → ' + climb.to + ' (' + climb.presses + '회 연속 승급) · '
         + '끝난 자리 진행 ' + climb.prog + '/' + climb.max + ' · cap ' + climb.cap);
-      ok(climb.presses > 1, '한 번 열린 [↑] 가 «연쇄» 로 눌린다 — 이관 없이 두면 이렇게 된다');
-      /* «자연 단계» = `capAt(n) > lo` 를 처음 만족하는 n. lv 4,500 은 현행 cap(9)=4,500 을 «꽉»
+      /* «자연 단계» = `capAt(n) > lo` 를 처음 만족하는 n. lv 4,500 은 수리 전 cap(9)=4,500 을 «꽉»
          채우므로 9 에서도 [↑] 가 열려 10 까지 간다(경계는 ≥ 다 — `trainReady` 가 `lv >= cap`). */
-      ok(climb.to === 10, '레벨이 허락하는 자리(자연 단계 10)까지 오른다 — 폭등의 끝은 «자연 단계» 다');
+      if (!NEW) {
+        ok(climb.presses > 1, '한 번 열린 [↑] 가 «연쇄» 로 눌린다 — 이관 없이 두면 이렇게 된다');
+        ok(climb.to === 10, '레벨이 허락하는 자리(자연 단계 10)까지 오른다 — 폭등의 끝은 «자연 단계» 다');
+      } else {
+        ok(climb.presses === 0, '누를 것이 없다 — 이관이 이미 그 자리에 세워 놨다(연쇄 0회)');
+        ok(climb.to === 19, '단계는 자연 단계 19 그대로 — 이관이 «한 단계도 더» 주지 않는다');
+      }
     }
     await ctx.close();
   }
@@ -174,7 +196,8 @@ const evOf = (page) => async (fn, arg) => {
     if (st.__err) { console.log('  ❌ ' + st.__err); fail++; }
     else {
       console.log('  단계 ' + st.stage + ' · cap ' + st.cap + ' · base ' + st.base + ' · 진행 ' + st.prog + '/' + st.max);
-      ok(st.stage === 4, '483 이관이 단계를 «레벨이 산 만큼»(현행 표에서 4)으로 내려 놓는다 — 이 방향은 살려야 한다');
+      ok(st.stage === (NEW ? 7 : 4), '이관이 단계를 «레벨이 산 만큼»(' + (NEW ? '신 표 7' : '구 표 4')
+        + ')으로 내려 놓는다 — 483 이 세운 이 방향은 517 뒤에도 살아 있다');
       /* 신 표에서 같은 세이브가 놓일 자리 — 계산으로만(제품은 아직 구 표다) */
       let k = 1; while (CAP_NEW(k) <= 900) k++;
       console.log('  신 구간표에서 같은 세이브의 «자연 단계» = ' + k + ' (cap(' + (k - 1) + ')='
