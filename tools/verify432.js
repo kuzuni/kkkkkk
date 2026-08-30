@@ -66,7 +66,10 @@ const MEASURE = function () {
     rwc: getComputedStyle(pn).getPropertyValue('--rwc').trim(),
     g3, bt,
     glow: { top: bs.top, height: bs.height, width: bs.width, size: bs.backgroundSize, repeat: bs.backgroundRepeat, ptr: bs.pointerEvents },
-    pills: pcb ? [...pcb.children].map((c) => {
+    /* ⚠ `.pcb` 의 **자식 전부**를 세면 안 된다 — 429 가 같은 띠에 `[?]` 도움말(`.rl-help`)을
+       얹으면서 자식이 4개가 됐다. 이 항이 지키려는 것은 «41 재화 **알약** 3개» 이므로
+       부품 이름(`.pcb-p`)으로 집는다(형제가 늘어도 이 항의 뜻이 안 흔들린다). */
+    pills: pcb ? [...pcb.querySelectorAll(':scope>.pcb-p')].map((c) => {
       const r = c.getBoundingClientRect();
       return { cls: String(c.className || ''), y1: Math.round(r.top), y2: Math.round(r.bottom), w: Math.round(r.width), h: Math.round(r.height) };
     }) : [],
