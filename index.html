@@ -10378,13 +10378,33 @@
      림에서 18px 띄운 자리이고 세로 정확히 가운데((114−76)/2 = 19). 제목 잉크(가운데 정렬,
      폭 87×scaleX .864 ≈ 3글자 160px)와는 좌우로 350px 넘게 떨어져 절대 안 겹친다.
      `line-height` 는 헤더의 103px 상속을 끊는다(밴드 전체가 `line-height:103px` 이다). */
-  #bCos .cos-help{left:24px;top:19px;width:76px;height:76px;border-radius:38px;
+  /* 429(2026-08-30 주인 지시) — 89 유물 페이지(#relw)에도 같은 [?] 를 단다.
+     **부품을 복제하지 않고 선택자만 늘렸다** — 값을 두 벌 적으면 269 를 고칠 때 여기가 조용히
+     갈라진다(340 «보정을 한 자리에서만 걸어 둔» 결손의 정확한 반대편이다).
+     ⚠ `verify269` B3 는 «`.cos-help` 규칙이 전부 `#bCos` 로 갇혀 있나» 를 선택자 문자열로 재는데,
+       선택자 목록에 `#relw .rl-help` 를 더해도 그 항은 그대로 초록이다(07·26 시트로는 안 샌다).
+     자리는 두 후보를 실측해서 골랐다(`probe429` ⓒ, 2280·1600 둘 다):
+       ① 41 재화 바(`.pcb`) 왼쪽 빈 구간 — `#relw .pcb-g` 아이콘 좌변이 **204.6** 이라 76원이
+          **겹침 0** 으로 들어가고, 바가 108px 고정이라 프레임 높이와 무관하게 자리가 같다.
+       ② `.rw-panel` 좌상단 24/19 — `.rw-bg` · **좌측 기둥 `.rw-pil.l`(폭 85)** · `.rw-frame` 위에
+          얹히고, 2280 은 `.rw-corn`(y196) · 1600 은 `.rw-lintel`(y138) 로 **프레임마다 덮는 아트가
+          다르다**(120 의 세로 예산 배분 때문).
+     ⇒ ① 이다. 269 가 «시트 헤더 밴드 안 좌측» 인 것과 구조도 같다(화면 최상단 띠 안 좌측).
+     `position` 은 269 에서는 `:is(#bSk,#bPet,#bCos)>*` 가 줬지만 `.pcb` 자식에는 그런 규칙이
+     없으므로 공유 규칙이 직접 든다(269 쪽 계산값은 그대로 `absolute` — Δ0). */
+  #bCos .cos-help,#relw .rl-help{position:absolute;left:24px;width:76px;height:76px;border-radius:38px;
     background:linear-gradient(180deg,#8A7263,#6B564A);box-sizing:border-box;
     box-shadow:inset 0 0 0 5px #000,inset 0 0 0 9px #A98F7C;z-index:4;cursor:pointer;
     text-align:center;line-height:76px}
+  /* 세로는 각자가 앉은 띠의 정중앙이다 — 269 는 헤더 밴드 114 ⇒ (114−76)/2 = 19,
+     429 는 41 재화 바 108 ⇒ (108−76)/2 = **16**. 같은 값을 물려받으면 3px 내려앉는다. */
+  #bCos .cos-help{top:19px}
+  #relw .rl-help{top:16px}
   /* 글자 외곽선은 같은 밴드의 제목(`.sk-head>i.ol5`, 54px)과 **같은 계열**로 맞춘다 —
-     `-webkit-text-stroke` 를 쓰면 이 밴드에서 혼자 다른 두께로 보인다. 46px 이라 한 단 아래 `.ol4`. */
-  #bCos .cos-help>i{display:block;font-size:46px;color:#FFE9C6;transform:scaleX(.92)}
+     `-webkit-text-stroke` 를 쓰면 이 밴드에서 혼자 다른 두께로 보인다. 46px 이라 한 단 아래 `.ol4`.
+     ⚠ 429 — `#relw i{display:inline-block}`(ID 급 1,0,1)를 이기려면 `#relw .rl-help>i`(1,2,0)여야
+       한다. `.rl-help>i` 로만 적으면 특이성에 져서 글자가 인라인으로 눕는다(166 ⓔ 계열 함정). */
+  #bCos .cos-help>i,#relw .rl-help>i{display:block;font-size:46px;color:#FFE9C6;transform:scaleX(.92)}
   #bCos .cos-in{position:relative;width:100%}
   #bCos .cos-pad{position:absolute;left:0;width:1px;height:30px}   /* 마지막 행 아래 여백 */
   /* 194 — 옛 «등급 섹션 헤더»(`.cos-hd`) 규칙은 등급 폐지와 함께 삭제했다.
@@ -11053,20 +11073,25 @@
   .stab-sep{left:703px;top:16px;width:6px;height:54px;background:#483B2B;cursor:default}
   .stabs .sk-lock{top:15px;left:50%;margin-left:-24.5px}
 
+  /* 429 — 스코프 목록에 `.rl-help` 를 더했다. 89 유물 페이지 [?] 는 269 와 **같은 부품**인데
+     이 유틸이 세 시트·`.stabs` 안에서만 켜져 있어서, 안 더하면 같은 `<i class="ol4">?</i>` 가
+     `#relw` 에서만 **검정 외곽선 없이** 그려진다(부품이 갈라지는 자리는 늘 이런 «스코프 구멍» 이다
+     — 397 이 같은 모양으로 등재됐다). `:is()` 의 특이성은 인자 중 최대(=`#bSk` 의 1,0,0)라
+     `.rl-help` 를 더해도 특이성은 안 움직인다 ⇒ 다른 화면 계산값 Δ0. */
   /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
      흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
      레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
-  :is(#bSk,#bPet,#bCos,.stabs) .ol1,:is(#bSk,#bPet,#bCos,.stabs) .ol2,:is(#bSk,#bPet,#bCos,.stabs) .ol3,:is(#bSk,#bPet,#bCos,.stabs) .ol4,:is(#bSk,#bPet,#bCos,.stabs) .ol5{--o:#000}
-  :is(#bSk,#bPet,#bCos,.stabs) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol1,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol2,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol3,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol4,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol5{--o:#000}
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
     1px 1px 0 var(--o),1px -1px 0 var(--o),-1px 1px 0 var(--o),-1px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
     1px 2px 0 var(--o),1px -2px 0 var(--o),-1px 2px 0 var(--o),-1px -2px 0 var(--o),
     2px 1px 0 var(--o),2px -1px 0 var(--o),-2px 1px 0 var(--o),-2px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
     2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
     3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
     4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
     5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
     2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
@@ -14380,6 +14405,9 @@
   <div id="relw">
     <!-- 41 팝업 내장 재화 바 — 이 페이지는 유물조각 알약까지 3개 -->
     <div class="pcb">
+      <!-- 429(2026-08-30 주인 지시) — 좌상단 [?] 도움말. 269 코스튬과 **같은 부품**이고,
+           알약 3개가 왼쪽으로 당겨져 비어 있는 바 왼쪽 구간(0~204.6)에 앉는다(`probe429` ⓒ). -->
+      <div class="rl-help" data-rlhelp="1"><i class="ol4">?</i></div>
       <div class="pcb-p pcb-g" data-cur="gold"><i data-cur-slot="gold"></i><b>0</b></div>
       <div class="pcb-p pcb-d" data-cur="dia"><i data-cur-slot="dia"></i><b>0</b></div>
       <div class="pcb-p pcb-r" data-cur="relic"><i data-cur-slot="relic"></i><b>0</b></div>
@@ -24613,9 +24641,15 @@ function showItem(id){
             ? '최고 등급 장비라 <em>무한 강화</em>됩니다.'
             : 'Lv. <em>' + MAX_LEVEL + '</em> 달성 후 같은 장비 <em>' + CRAFT_NEED + '개</em>로<br>'
               + '<em>' + GRADE[it.g+1].n + '</em> 등급으로 합성할 수 있습니다.')
-      : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.<br>'
-        + '장착 없이 <em>보유</em>만으로 항상 적용됩니다.<br>'
-        + '유물을 소환할 때마다 유물 하나가 <em>Lv +1</em> 됩니다.';
+      /* 429(2026-08-30 주인 지시) — 여기 있던 두 줄(«장착 없이 보유만으로 항상 적용됩니다» ·
+         «유물을 소환할 때마다 유물 하나가 Lv +1 됩니다»)은 **어느 유물 칸에서도 글자 하나 안 바뀌는
+         공통 문장**이었다(`probe429` ⓐ — 표본 3칸 3/3). 89 페이지 좌상단 [?] → `relicHelp()` 로
+         옮겼다. 이 자리에는 «이 유물 하나» 가 말하는 것만 남는다(269 가 코스튬에서 한 것과 같다).
+         ⚠ 08 껍데기 기하는 1px 도 안 건드린다 — `.sk-db` 는 750×290 고정이고 코스튬이 269·346 이후
+           이미 «한 줄 + 아래 빈 면 215px» 로 서 있다(`probe429` ⓔ). 줄이 줄어도 상자는 그대로다.
+         ⚠ 미보유 분기(«유물 소환으로 획득하세요»)는 남긴다 — 공통이지만 «일반 설명» 이 아니라
+           그 칸의 상태 안내다(269 가 «조건 미달 분기» 를 남긴 것과 같은 규칙). */
+      : '<em>' + RELIC_EFF[it.eff] + '</em> 상승 유물입니다.';
   const ownNow = () => cat === 'pet'
       ? '공격 <em>+' + (own ? pct(ownVal(it)*0.6) : '0%') + '</em> 골드 <em>+' + (own ? pct(ownVal(it)) : '0%') + '</em>'
     : cat === 'equip'
@@ -26994,6 +27028,36 @@ function openRelw(){
   $('relw').classList.add('on');
 }
 function closeRelw(){ $('relw').classList.remove('on'); }
+/* 429(2026-08-30, 저장소 주인 지시 «유물 세부팝업에 유물 설명에 공통으로 되는 말들 … 도움말
+   버튼 "?" 로 된거 왼쪽 위에 만들고 해당 설명 써넣기») — 269 코스튬 [?] 와 **같은 부품·같은 껍데기**다
+   (A5 공용 `popup()` + 본문 래퍼 `.cos269`. 새 클래스를 안 만든다).
+   ⚑ 여기가 유물 **일반 설명**의 유일한 자리다 — 세부 팝업(`showItem`)의 유물 분기에 있던
+     «모든 유물에 공통인 두 줄»(«장착 없이 보유만으로 항상 적용» · «소환할 때마다 Lv +1»)은
+     이 작업으로 그 자리에서 빠졌고, 남는 것은 그 유물 하나의 효과 한 줄이다(269 와 같은 방향).
+   ⚠ 문구의 «수치·이름» 은 하나도 손으로 안 적는다 — `relicCost()` · `RELICS` · `RELIC_EFF` ·
+     `REL_DUN` · `TOWER.n` 에서 읽는다. 274 가 비용을 100 으로 고정했듯 값이 바뀌면 설명이 따라온다.
+   ⚠ 탑 표기 낱말(«층»/«레벨»)은 쓰지 않는다 — 427 이 그 낱말을 다시 정하고 있는 중이라
+     여기서 굳히면 같은 문자열을 두 작업이 잡는다. 탑은 **이름**으로만 부른다. */
+function relicHelp(){
+  const eff = Object.values(RELIC_EFF);
+  popup('유물',
+      '<div class="cos269">'
+    +   '<p>유물은 <em>장착</em>하지 않습니다. 가지고 있기만 하면 그 효과가 <em>항상</em> 적용됩니다.</p>'
+    +   '<p><em>유물조각 ' + fmt(relicCost()) + '</em>개로 한 번 소환합니다. 유물 <em>'
+    +     RELICS.length + '</em>종이 같은 확률로 나오고, 이미 가진 유물이 또 나오면 그 유물이 '
+    +     '<em>Lv +1</em> 됩니다.</p>'
+    +   '<p>그래서 유물에는 강화가 따로 없습니다 — 강화 재료도 버튼도 없고 <em>소환</em>이 곧 강화입니다.</p>'
+    +   '<p>효과는 유물마다 다릅니다(' + eff.join(' · ') + ' — <em>' + eff.length + '</em>가지). '
+    +     '같은 유물이라도 <em>Lv</em> 이 오를수록, 유물의 <em>등급</em>이 높을수록 크게 오릅니다.</p>'
+    +   '<p>유물조각은 <em>유물 던전</em>(' + REL_DUN.map(r => r.n).join(' · ') + ')과 <em>'
+    +     TOWER.n + '</em>에서 얻습니다.</p>'
+    + '</div>');
+}
+/* 429 — [?] 는 위임으로 받는다. `.pcb` 는 재렌더 대상이 아니지만 89 의 다른 조작
+   (`#rwGrid` click · `#rwBasin` pointerdown)과 같은 꼴로 맞춰 둔다. */
+$('relw').addEventListener('click', e => {
+  if(e.target.closest('[data-rlhelp]')) relicHelp();
+});
 /* 칸 터치 → 공용 아이템 상세 팝업 */
 $('rwGrid').addEventListener('click', e => {
   const c = e.target.closest('[data-rw]');

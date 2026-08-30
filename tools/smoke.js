@@ -194,6 +194,10 @@ function staticSyntax() {
          팝업 안의 깃발 서브탭 4개(무기·방어구·스킬·동료)도 각각 오프너로 돈다(작업 21). */
       await page.click('.tab[data-t="box"]', { timeout: 3000, force: true }).catch(() => {});
       await page.waitForTimeout(400);
+      /* 429 — 89 유물 페이지(#relw) 좌상단 [?] 도움말이 여는 A5 팝업. 진입이 «보물상자 탭 → [?]»
+         2단계라 위 수집(.tab/.side/[data-cur])에 안 걸린다(269 [?] 를 여기 등재한 것과 같은 자리). */
+      if (await page.$('#relw [data-rlhelp]'))
+        openers.push({ label: 'rel:help', sel: null, rel: '#relw [data-rlhelp]' });
       if (await page.$('[data-opencoll]')) {
         openers.push({ label: 'coll21', sel: null, coll: true });
         const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
@@ -261,6 +265,11 @@ function staticSyntax() {
           await page.evaluate(() => document.querySelector('#eqTabs [data-eqtab="cos"]').click());
           await page.waitForTimeout(400);
           await page.evaluate((s) => document.querySelector(s).click(), o.cos);
+        } else if (o.rel) {
+          /* 429 — «보물상자 탭 → 89 유물 페이지 → 좌상단 [?]». query+click 을 한 evaluate 안에서(LESSONS 50-①) */
+          await page.click('.tab[data-t="box"]', { timeout: 3000, force: true });
+          await page.waitForTimeout(400);
+          await page.evaluate((s) => document.querySelector(s).click(), o.rel);
         } else if (o.prof) {
           /* 2단계 — HUD 초상화로 19 를 연 뒤 하단 토글 «종합 스탯» 으로 20 으로 넘어간다 */
           await page.click('#profBtn', { timeout: 3000, force: true });
