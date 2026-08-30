@@ -113,6 +113,17 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           if (!on) return null;
           const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
           return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })(),
+        /* 409 이관 (2026-08-30) — 검정은 이제 밴드가 아니라 `::after` 의 **등폭 링**이고,
+           «어느 면에 붙는가» 는 그 링의 **코너 기둥 마스크**가 정한다. 378 의 자리 규칙이
+           손잡이 둘(밴드·마스크)로 갈렸으므로 **둘 다 읽는다** — 밴드만 물면 마스크를
+           통째로 지워도 초록이 된다. */
+        onRing: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::after');
+          return { sh: cs.boxShadow,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -133,6 +144,17 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           if (!on) return null;
           const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
           return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })(),
+        /* 409 이관 (2026-08-30) — 검정은 이제 밴드가 아니라 `::after` 의 **등폭 링**이고,
+           «어느 면에 붙는가» 는 그 링의 **코너 기둥 마스크**가 정한다. 378 의 자리 규칙이
+           손잡이 둘(밴드·마스크)로 갈렸으므로 **둘 다 읽는다** — 밴드만 물면 마스크를
+           통째로 지워도 초록이 된다. */
+        onRing: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::after');
+          return { sh: cs.boxShadow,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -153,6 +175,17 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           if (!on) return null;
           const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
           return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })(),
+        /* 409 이관 (2026-08-30) — 검정은 이제 밴드가 아니라 `::after` 의 **등폭 링**이고,
+           «어느 면에 붙는가» 는 그 링의 **코너 기둥 마스크**가 정한다. 378 의 자리 규칙이
+           손잡이 둘(밴드·마스크)로 갈렸으므로 **둘 다 읽는다** — 밴드만 물면 마스크를
+           통째로 지워도 초록이 된다. */
+        onRing: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::after');
+          return { sh: cs.boxShadow,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -173,6 +206,17 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
           if (!on) return null;
           const c = on.getBoundingClientRect(), bw = parseFloat(getComputedStyle(bar).borderLeftWidth);
           return { L: Math.abs(c.left - (b.left + bw)) <= 0.6, R: Math.abs(c.right - (b.right - bw)) <= 0.6 };
+        })(),
+        /* 409 이관 (2026-08-30) — 검정은 이제 밴드가 아니라 `::after` 의 **등폭 링**이고,
+           «어느 면에 붙는가» 는 그 링의 **코너 기둥 마스크**가 정한다. 378 의 자리 규칙이
+           손잡이 둘(밴드·마스크)로 갈렸으므로 **둘 다 읽는다** — 밴드만 물면 마스크를
+           통째로 지워도 초록이 된다. */
+        onRing: (() => {
+          const on = bar.querySelector('.stab.on');
+          if (!on) return null;
+          const cs = getComputedStyle(on, '::after');
+          return { sh: cs.boxShadow,
+            mask: (cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage) || '' };
         })() };
     }, [grab, CELL_PROPS, BAR_PROPS, INK_PROPS, SH_PROPS]);
 
@@ -181,10 +225,17 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     /* 378 이관 — 알약의 좌·우 밴드는 «면이 셸 안쪽 변에 닿는가» 하나로 정해진다.
        규칙을 **여기서 다시 조립**해 둔다 — 문자열을 통째로 박아 두면 값이 바뀔 때 뜻을 잃는다. */
     const BLK = 'rgb(0, 0, 0)', BEV = 'rgb(99, 79, 55)';
+    /* 409 이관 (2026-08-30) — **밴드에는 이제 베벨만 남는다.** 검정은 `::after` 의 등폭 링이
+       그리므로(384 §6-1 ⓐ 가 되돌린 자리 — 검정을 여기 두면 코너에서 7·cos α 로 깎인다),
+       자리 규칙은 «닿는 면은 베벨이 7 에서 시작한다»(= 검정 몫 7 을 셸에 넘겼다) 로 읽는다. */
     const shadowRule = p => !p ? null : [
-      p.L ? BEV + ' 7px 0px 0px 0px inset' : BLK + ' 7px 0px 0px 0px inset, ' + BEV + ' 14px 0px 0px 0px inset',
-      p.R ? BEV + ' -7px 0px 0px 0px inset' : BLK + ' -7px 0px 0px 0px inset, ' + BEV + ' -14px 0px 0px 0px inset',
+      (p.L ? BEV + ' 7px' : BEV + ' 14px') + ' 0px 0px 0px inset',
+      (p.R ? BEV + ' -7px' : BEV + ' -14px') + ' 0px 0px 0px inset',
     ].join(', ');
+    /* 409 이관 — 자리 규칙의 **나머지 반쪽**. 링은 코너 기둥(좌·우 30px = 반경)에만 남고,
+       셸에 닿는 면은 그 기둥이 통째로 빠진다. 문자열을 박지 않고 «기둥이 있나» 로 묻는다. */
+    const maskHasL = m => /^linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) 30px/.test(m);
+    const maskHasR = m => /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(m);
     const posName = p => !p ? '?' : (p.L ? '좌' : '') + (p.R ? '우' : '') || '가운데';
     const cmp = (label, key, props) => {
       [['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
@@ -212,8 +263,15 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     [['영웅', hero], ['06 장비', eq], ['03 던전', dun], ['10 상점', shop]].forEach(([n, o]) => {
       const want = shadowRule(o.onPos);
       if (o.onPos && (o.onPos.L || o.onPos.R)) posEnd++; else posMid++;
-      ok(n + ' 활성 칸 자리 «' + posName(o.onPos) + '» → 밴드가 그 자리 규칙과 같다',
+      ok(n + ' 활성 칸 자리 «' + posName(o.onPos) + '» → 밴드(베벨)가 그 자리 규칙과 같다',
         !!want && o.on.boxShadow === want, o.on.boxShadow);
+      /* 409 이관 — 같은 자리 규칙을 **링 쪽에서도** 묻는다. */
+      const r = o.onRing;
+      ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이다 (부품은 하나)',
+        !!r && r.sh === BLK + ' 0px 0px 0px 7px inset', r ? r.sh : '없음');
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → 링 코너 기둥이 그 자리 규칙과 같다 (닿는 면은 뺀다)',
+        !!r && !!o.onPos && maskHasL(r.mask) === !o.onPos.L && maskHasR(r.mask) === !o.onPos.R,
+        r ? ('좌기둥 ' + maskHasL(r.mask) + ' · 우기둥 ' + maskHasR(r.mask)) : '없음');
     });
     ok('두 갈래가 표본에 다 있다 (끝 ' + posEnd + ' · 가운데 ' + posMid + ')', posEnd >= 1 && posMid >= 1,
       '끝 ' + posEnd + ' / 가운데 ' + posMid);
