@@ -678,7 +678,39 @@ async function sweep(browser, inject) {
          그 흔들림이 칸 수에 미치는 폭은 4회 관측에서 **1칸**이었다.
        ⚠ `JUDGE_MIN` 은 **안 올렸다** — 이것은 결함 래칫이 아니라 «스윕이 죽었는가» 를 보는 바닥이고,
          관측 최소가 190 이지만 폭이 19 라 185 로 올리면 여유가 5밖에 안 남아 플레이키해진다. */
-    const JUDGE_MIN = 180, RATCHET_CELLS = 50, RATCHET_SITES = 13;
+    /* ⚑ 530(2026-08-30, sess-1959-16876 워커 D) — **자가 흔들리던 것을 닫자 이 두 상수의 뜻이 바뀌었다.**
+         10회차의 «45~46 / 11~12» 는 «연출이 섞인 화면» 을 잰 값이고, 그래서 실행마다 달랐다
+         (530 재현: 칸 47·49·51 · 자리 10·11 — base3 이 래칫 50 을 넘었다).
+         스윕을 «상시» 상태에서 재게 하자(연출 레이어를 내리고 · 타이머 창구를 닫고 · 무한 애니를 주기 0 에)
+         전 화면 3회가 **글자 하나까지 같은 답**을 냈다 — 판정 205 · 칸 **50** · 자리 **14** · 가려짐 19.
+         ⇒ 칸은 **50 그대로**(여유 4 → **0**, 조인 것이다) · 자리는 13 → **14**.
+       ⚠ **자리 13 → 14 는 «늘려서 초록을 만든 것» 이 아니다.** 늘어난 셋은 새로 생긴 결함이 아니라
+         **옛 자가 뜨고 지며 놓치던 자리**다(`cn-a2>.gm` +1.68% · `cn-cd.alert>.pn` −0.55% ·
+         `bgm-dia>.sp.tk` +0.50% — 앞의 둘은 수리 전 실행에서도 간헐로 나왔다). 가려짐이 39~52 → 19 로
+         줄면서 그 노드들이 판정 안으로 들어온 것이다. **숨기지 않았다는 증거는 아래 `KNOWN_SITES`** —
+         자리를 «수» 가 아니라 **이름표**로 못박아, 수가 14 라도 **목록에 없는 자리가 하나라도 나오면 빨갛다.**
+         옛 게이트는 «13자리 이하» 면 그것이 어느 자리든 초록이었다 ⇒ **이 절은 순수하게 세졌다.**
+         셋의 처리는 곁다리 **532** 로 등재했다.
+       ⚠ 다음 세션도 규칙은 그대로다 — **이 두 수는 줄이는 쪽으로만** 고치고, `KNOWN_SITES` 에서
+         자리를 뺄 때는 «그 자리를 실제로 닫았다» 는 근거를 같이 적는다. */
+    const JUDGE_MIN = 180, RATCHET_CELLS = 50, RATCHET_SITES = 14;
+    /* 530 — 결정적이 된 뒤의 자리 이름표(3회 실행 전부 같은 목록). «수» 만 세면 자리가 바뀌어도 초록이다. */
+    const KNOWN_SITES = [
+      'div#shopList>div.cn-wrap>div.cn-a2>div.gm>img.cic',
+      'div#bCos>div.shsc>div.shsc-in>div.sk-btn.sk-b2.no>i.ol3>img.cic',
+      'div#dunList>div.dnc.bgm-rel.lkd>div.pill>em>img.cic',
+      'div#shopList>div.cn-wrap.pv>div.pvc.pb.ban1>div.pil>em>img.cic',
+      'div#shopList>div.cn-wrap.pv>div.pvc.pg>div.pil>em>img.cic',
+      'div#dunList>div.dnc.bgm-gold>div.pill>em>img.cic',
+      'div#top>div.curs>div.cbox.cDia>i>img.cic',
+      'i#ciIcon>img.cic',
+      'div#shopList>div.cn-wrap>div.cn-bn>div.gem>img.cic',
+      'div#psTk>div.ps-r>div.ps-bx.c0>i>img.cic',
+      'div#dunList>div.dnc.bgm-rel.lkd>div.sp.tk>em>img.cic',
+      'div#shopList>div.cn-wrap>div.cn-cd.alert>div.pn>em>img.cic',
+      'div#dunList>div.dnc.bgm-gold>div.sp.tk>em>img.cic',
+      'div#dunList>div.dnc.bgm-dia>div.sp.tk>em>img.cic',
+    ];
 
     /* ① 정수 상자 다섯 자리 — «상자가 아직 정수인가».
        ⚠ «0칸» 이 아니라 «정수 상자» 를 묻는다: 정수화해도 소수 **좌표**가 남는 자리가 있고
@@ -736,6 +768,15 @@ async function sweep(browser, inject) {
       bad(`[S3] ③ 래칫 — 자리가 ${R.groups.length}개(래칫 ${RATCHET_SITES}): ` +
         R.groups.map((g) => g.sel).join(' / '));
     else ok(`[S3] ③ 래칫 — 자리 ${R.groups.length}개 ≤ ${RATCHET_SITES}`);
+    /* ⚑ 530 — «수» 가 아니라 «이름표» 로 묻는 항. 스윕이 결정적이 됐으니 이제 이것을 물을 수 있다.
+       수만 세면 한 자리를 닫고 다른 자리를 여는 변경이 **초록으로 지나간다**(328 교훈의 자 판). */
+    {
+      const unknown = R.groups.map((g) => g.sel).filter((s) => !KNOWN_SITES.includes(s));
+      if (unknown.length)
+        bad(`[S3] ③ 이름표 — 등재 안 된 자리 ${unknown.length}개: ${unknown.join(' / ')}\n` +
+          '        (새 자리면 닫고, 자리 이름이 바뀐 것이면 근거를 적고 KNOWN_SITES 를 고쳐라)');
+      else ok(`[S3] ③ 이름표 — 나온 자리 ${R.groups.length}개가 전부 등재된 자리다 (등재 ${KNOWN_SITES.length}개)`);
+    }
 
     /* ④ 되돌림 — 다섯 자리의 정수 상자를 **전부** 떼면 스윕이 그것들을 도로 잡는가.
        이 항이 없으면 ①~③ 은 «지금 우연히 초록» 일 뿐이고, 무엇이 그것을 지키는지 아무도 안 묻는다.

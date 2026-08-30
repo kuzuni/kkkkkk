@@ -107,13 +107,21 @@ const FX_LAYERS = ['fxlc', 'fxl'];
    ⚠ `cancel()` 이 아니라 `pause()+currentTime 0` 인 이유: cancel 은 그 애니가 유일한 가시 조건인
      노드를 통째로 지워 스코프를 조용히 줄인다(397 사고). 0 프레임은 결정적이면서 노드를 안 지운다. */
 const FREEZE = function () {
+  /* ⚑ 530 — **문을 닫는 것이 먼저다.** `clearInterval(1..20000)` 은 «그 순간» 걸려 있던 것만
+     지우므로, 게임 틱이 그 뒤에 잡는 타이머는 그대로 돈다 = 재렌더가 계속 돌고
+     **새 CSSAnimation 이 계속 태어난다**(그래서 애니를 아무리 세워도 다시 움직였다).
+     ⇒ 예약 창구 자체를 막고 나서 걸려 있던 것을 지운다. */
+  window.setTimeout = () => 0;
+  window.setInterval = () => 0;
+  window.requestAnimationFrame = () => 0;
+  for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
   let fin = 0, held = 0;
   for (const a of document.getAnimations()) {
     try { a.finish(); fin++; continue; } catch (e) {}
+    /* 무한 반복은 `finish()` 가 던진다(`Cannot finish Animation with an infinite target effect`) —
+       8회차의 `try{a.finish()}catch{}` 한 줄이 그 예외를 삼켜 122 상시 쥬시가 내내 돌고 있었다. */
     try { a.pause(); a.currentTime = 0; held++; } catch (e) {}
   }
-  for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
-  window.requestAnimationFrame = () => 0;
   return { fin, held };
 };
 
@@ -177,15 +185,16 @@ const COUNT_VIS = function () {
   return n;
 };
 
-/* ---------- 530 ⓒ — «상시 쥬시» 는 정지로 못 세운다 ----------
-   `FREEZE` 로 무한 애니를 주기 0 에 세워도 **재렌더가 새 CSSAnimation 을 계속 만든다**
-   (실측: 정지·정규화 뒤에도 `jz122Float`·`jzDotPulse`·`jzUpN` 이 `running` · 500ms 뒤 y 가 또 달랐다).
-   ⇒ 판정 직전에 «애니는 없는 것» 이라고 **선언**해 요소를 자기 **기본 자리**에 세운다 —
-   그것이 356 이 재려는 «상시» 기하다(122 의 떠다니는 프레임은 상시가 아니다).
-   ⚠ 이 선언은 스코프를 줄일 수 있다 — `fill:forwards` 로만 보이던 노드가 기본 자리로 돌아가면
-     안 보일 수 있다. 그래서 **선언 전후로 «잴 수 있는 노드» 수를 세어**(`COUNT_VIS`)
-     줄었으면 `stillLost` 로 신고한다(게이트가 0 을 단언한다). 조용히 줄지 않는다. */
-const STILL_CSS = '*,*::before,*::after{animation:none!important;transition:none!important}';
+/* ---------- 530 ⓒ — 전이(transition)만 막는다 ----------
+   ⚠ **`animation:none` 으로 밀면 안 된다(시도했다가 물렀다).** 그 선언은 무한 반복만이 아니라
+     `fill:forwards` 로 **끝난 자리를 붙들고 있던 등장 연출까지** 지워, 요소를 «등장 전» 기본
+     스타일로 되돌린다 — 실측에서 그 상태의 스윕은 결정적이긴 했지만 칸 **43~45 → 51** ·
+     자리 **9~10 → 16** 으로 늘었다. 늘어난 자리는 결함이 아니라 **우리가 만든 자세**다.
+   무한 반복은 `FREEZE` 가 주기 0 에 세우고, 그것이 다시 안 태어나게 하는 것은 «타이머 창구를
+   닫는 것»(FREEZE 첫 세 줄)이다. 여기서 막는 것은 **전이**뿐이다 — `SETTLE_FX` 가 `fx-` 클래스를
+   걷는 순간 그 자리에 transition 이 걸려 있으면 «걷는 중» 을 재게 된다. 전이의 중간값은
+   어느 «상시» 도 아니다. */
+const STILL_CSS = '*,*::before,*::after{transition:none!important}';
 
 /* 차분 계산기 — 두 PNG 를 캔버스에 올리고 상자별 bbox 를 읽는다 */
 const DIFF_MANY = async ([a, b, boxes, thr]) => {
@@ -254,6 +263,9 @@ async function sweep(opt) {
       fx.nodes += fxr.nodes; fx.cls += fxr.cls;
       const n0 = await page.evaluate(COUNT_VIS);
       await page.addStyleTag({ content: STILL_CSS });
+      /* 클래스를 걷는 동안 새로 뜬 애니(전이·재생)를 한 번 더 세운다 — 창구는 이미 닫혀 있다 */
+      const frz2 = await page.evaluate(FREEZE);
+      fx.fin += frz2.fin; fx.held += frz2.held;
       await page.waitForTimeout(160);
       const n1 = await page.evaluate(COUNT_VIS);
       fx.lost += Math.max(0, n0 - n1);
@@ -411,7 +423,7 @@ if (require.main !== module) return;
       `(판정 ${R.judged} · 원본비 없음 ${R.outside} · 가려짐·잘림 ${R.clipped}) · ` +
       `종횡 편차 >${(R.tol * 100).toFixed(1)}% 인 칸 ${R.cells}개 → ${R.groups.length}자리`);
     console.log(`  [530] 연출 정규화 — 레이어 노드 ${R.fx}개 · fx- 클래스 ${R.fxCls}개를 걷고 «상시» 상태에서 쟀다 (잔여 ${R.fxLeft})`);
-    console.log(`  [530] 애니 정지 — 유한 ${R.anFin}개 finish · 무한 ${R.anHeld}개 주기 0 · 상시 쥬시는 \`animation:none\` 으로 기본 자리에 세움 (스코프 손실 ${R.stillLost})`);
+    console.log(`  [530] 애니 정지 — 유한 ${R.anFin}개 finish · 무한 ${R.anHeld}개 주기 0 · 타이머 창구 닫음 · 전이 차단 (스코프 손실 ${R.stillLost})`);
     for (const g of R.groups) {
       console.log(`  ${g.dev > 0 ? '+' : ''}${g.dev}%  ${g.sel}  «${g.cls}»  ${g.cells}칸 · 잉크 ${g.ink}`);
       console.log(`      상자 ${g.box} @ ${g.at} · 화면: ${g.screens.join(', ')}`);

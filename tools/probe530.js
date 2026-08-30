@@ -49,7 +49,8 @@ const PICK = ['02 메인', '52 메뉴', '29 룰렛', '22 퀘스트', '33 재화 
 /* ⚑ 레이어 이름·정규화는 **한 곳**(probe418)에서 가져온다 — 두 벌로 적으면 한쪽만 늙는다(402 교훈) */
 const { SETTLE_FX, FX_LAYERS, FREEZE, STILL_CSS } = require('./probe418');
 
-/* §3 대조군 — 530 «전» 의 정지 절차(무한 반복을 못 세운다). 되돌림 시험용으로만 쓴다. */
+/* §3 대조군 — 530 «전» 의 정지 절차. 두 가지를 못 한다: 무한 반복을 못 세우고(finish 가 던진다),
+   타이머 «창구» 를 안 닫아 게임 틱이 곧바로 새 타이머·새 CSSAnimation 을 만든다. 되돌림 시험용. */
 const OLD_FREEZE = function () {
   for (const a of document.getAnimations()) { try { a.finish(); } catch (e) {} }
   for (let i = 1; i < 20000; i++) { try { clearInterval(i); clearTimeout(i); } catch (e) {} }
@@ -204,7 +205,7 @@ async function drift(browser, label, steps, freezeFn, still) {
     console.log('');
     console.log(`[probe530 §3] 13 재화 탭 카드 아이콘 y — 같은 트리 ${ITER}회, «정지» 만 갈아 끼웠다`);
     console.log(`  옛 정지(finish 만)              — 노드 ${dOld.nodes}개 · 최대 드리프트 ${dOld.worst}px (노드 #${dOld.at})`);
-    console.log(`  새 정지(+ \`animation:none\` 선언) — 노드 ${dNew.nodes}개 · 최대 드리프트 ${dNew.worst}px (노드 #${dNew.at})`);
+    console.log(`  새 정지(타이머 창구 차단 + 무한 주기 0) — 노드 ${dNew.nodes}개 · 최대 드리프트 ${dNew.worst}px (노드 #${dNew.at})`);
     console.log(`  ③ 새 정지가 0.0000 이어야 «같은 트리 = 같은 답» 이다 (문턱 ±0.5% 를 넘나들게 하던 축)`);
   }
   process.exit(0);
