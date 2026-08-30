@@ -28722,6 +28722,32 @@ const COLL21_CARD = [
   ['#E0635B','#F59B84','#5C1714','#7C2A25'], ['#E8B94C','#F7DE8C','#5C4310','#7C5D1C'],
   ['#2E6D63','#6FEFD4','#0E3028','#175A4C'], ['#7A7768','#F5F2DC','#2C2C3E','#45455E'] ];
 let collTab = 'weapon';
+/* 452 — 효과문(`.clb-eff`)이 [강화] 버튼(`.clb-btn`) 밑으로 들어가는 것을 막는다.
+   ⚑ 표(«어느 탭이 2항인가»)로 막지 않는다 — 재현(`tools/probe452.js`)이 워스트(단계 10 · 만렙)에서
+   목걸이 96.9px · 펫 43.1px · 스킬 1.3px 로 **2항 탭 셋 다** 물리는 것을 찍었다. 단계·세트 등급 배율이
+   커지면 자릿수가 늘어 어느 탭이든 물릴 수 있으므로 «상자를 버튼 앞에서 끊는» 쪽으로 푼다.
+   ⚑ 자리는 상수가 아니라 **버튼에게 묻는다**(368 처방 — 자리를 상수에서 빼고 제품에게 묻기).
+   버튼 앞 여백도 새 상수를 안 만들고 **바 자신의 좌측 여백(`padding-left`)을 거울로** 쓴다
+   (효과문은 바 안쪽에서 좌우 같은 값만큼 떨어진다 = 새 상수 0개).
+   부품은 213 이 같은 문제(기록 자릿수가 썸네일 슬롯 침범)에 쓴 `fitNum(el, maxW)` 그대로다 —
+   `raidFitNums()` 와 같은 공간 맞춤(양변을 «화면 px» 로 통일)까지 그대로 따른다.
+   ⚠ 잉크는 레이아웃 상자가 아니다 — `-webkit-text-stroke` 는 Range bbox 밖으로 절반(4.5px) 더 나간다
+   (340 교훈: 게이트가 초록이던 이유는 그것이 «레이아웃 박스» 를 쟀기 때문이다). 그 몫을 방에서 먼저 뺀다. */
+function collFitEff(){
+  document.querySelectorAll('#collList .clb').forEach(b => {
+    const eff = b.querySelector('.clb-eff'), btn = b.querySelector('.clb-btn');
+    if(!eff || !btn || !b.offsetWidth) return;
+    const bw = b.getBoundingClientRect().width;
+    if(!bw) return;                                          /* 팝업이 안 떠 있으면 잴 것이 없다 */
+    const sc = bw / b.offsetWidth;                            /* 프레임 → 화면 배율(fit()) */
+    const cs = getComputedStyle(eff);
+    const gap = parseFloat(cs.paddingLeft) || 0;              /* 좌측 여백을 거울로 */
+    const sw  = parseFloat(cs.webkitTextStrokeWidth) || 0;    /* 획 절반이 Range 밖으로 나간다 */
+    const rg = document.createRange(); rg.selectNodeContents(eff);
+    const room = btn.getBoundingClientRect().left - (gap + sw / 2) * sc - rg.getBoundingClientRect().left;
+    if(room > 0) fitNum(eff, room);
+  });
+}
 /* 91 — 블록 = 세트 하나. 뱃지 Lv = 세트 최저 Lv, 카드 라벨 = «Lv. 현재/다음 단계 요구»,
    머리 우측 «단계 받은/가능», 효과 바 = 받은 단계 기준 누적 수치, [강화] = 한 단계 올림. */
 function renderColl21(){
@@ -28769,8 +28795,11 @@ function renderColl21(){
   const pend = collTabPend(collTab);
   $('collw').classList.toggle('upall', pend > 0);
   $('collAll').innerHTML = '<b>일괄 강화' + (pend ? ' (' + pend + ')' : '') + '</b>';
+  collFitEff();                              /* 452 — 그린 직후 효과문을 버튼 앞에서 끊는다 */
 }
-function openColl21(tab){ if(tab) collTab = tab; renderColl21(); $('collList').parentNode.scrollTop = 0; $('collw').classList.add('on'); }
+/* 452 — `openColl21` 은 **숨은 채로** 그린 뒤 `.on` 을 붙인다(display:none 이면 잴 것이 0 이다).
+   그래서 보이게 만든 «뒤» 에 한 번 더 부른다 — renderColl21 안의 호출만으로는 첫 열기가 안 잡힌다. */
+function openColl21(tab){ if(tab) collTab = tab; renderColl21(); $('collList').parentNode.scrollTop = 0; $('collw').classList.add('on'); collFitEff(); }
 function closeColl21(){ $('collw').classList.remove('on'); }
 $('collw').addEventListener('click', e => {
   if(e.target.id === 'collw'){ closeColl21(); return; }
