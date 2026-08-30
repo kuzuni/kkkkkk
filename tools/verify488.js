@@ -24,6 +24,8 @@ const { chromium } = pw();
 const FILE = process.env.V488_FILE || 'index.html';
 const URL = 'file://' + path.resolve(__dirname, '..', FILE).replace(/\\/g, '/');
 const HOLD = Number(process.env.V488_HOLD || 2200);
+/* 제품 상수 `HB_SLOT_W`(플로터 칸 간격)의 사본 — [H3] 이 «잉크 폭 < 칸 간격» 을 이 값으로 판정한다 */
+const HB_SLOT_W_JS = 80;
 
 let pass = 0, fail = 0;
 const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? 'ok  ' : 'FAIL') + ' ' + msg + (extra ? '  [' + extra + ']' : '')); };
@@ -268,6 +270,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(F.tries >= 8, '[F1] 훈련 홀드가 여러 번 시도한다(전제)', F.tries + '회');
   ok(F.hb === F.tries - 1, '[F2] ★ 맥박 수 = 시도 − 1', F.hb + ' / ' + (F.tries - 1));
   ok(F.fPay === F.tries - 1, '[F3] 골드 «−n» 수 = 시도 − 1(HUD 알약 fxPay 는 종전 그대로 따로 돈다)', F.fPay + ' / ' + (F.tries - 1));
+  ok(F.fOk === 0 && F.fNo === 0, '[F4] ★ 결과 문구는 안 띄운다 — `.cv` 상시 표기 · `fx-cvswap` · 정지 시 `fxUpOk` 델타와 세 벌이 된다', (F.fOk + F.fNo) + '건');
+  ok(sumT(F, /훈련/) === 1, '[F5] 훈련 홀드에도 정산 요약 토스트가 한 장 뜬다(2회차 신설 — 세 씬 마무리 층 일치)', sumT(F, /훈련/) + '장 / 전체 ' + F.toast);
 
   /* ══ [G] 진폭 규약 — 큰 호스트는 1.02, 팝이 이웃을 안 침범한다 ═════ */
   console.log('[G] 맥박 진폭 — «큰 카드는 1.02» 가 실제로 이웃 밖으로 안 나가는가');
@@ -299,6 +303,126 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(G.cd.s === 1.02 && grow(G.cd.w, G.cd.s) * 2 < G.cd.gap, '[G4] 훈련 카드 팝이 이웃 카드와 안 겹친다',
      '자람 ' + (grow(G.cd.w, G.cd.s) * 2).toFixed(1) + ' < 틈 ' + G.cd.gap.toFixed(1));
   ok(Math.abs(G.small - 1.06) < 1e-6, '[G5] 작은 호스트는 지시 원문 그대로 1.06 이다', String(G.small));
+
+  /* ══ [H] 겹침 — 회당 한 장씩 흐르는 플로터가 서로 안 뭉치는가 ══════ */
+  console.log('[H] 동시 생존 플로터 — 겹친 쌍 (1회차에 15~16쌍이었다)');
+  await p.evaluate(() => {
+    if (window.__rate0) runeRate = window.__rate0;
+    runeRate = () => 1;
+    try { closeModal(); } catch (_) {}
+    S.rune = { r1: 0, r2: 0, r3: 0 }; S.rstone = 1e12;
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+  });
+  await p.waitForTimeout(450);
+  const HTS = [700, 1400, 2200, 3000];
+  const hb = await (async () => {
+    const c = await box('#trRunes .tr-rn[data-rune="r1"] .rbt[data-pay="mat"]');
+    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c.x, y: c.y }] });
+    const t0 = Date.now(); const rows = [];
+    for (const t of HTS) {
+      while (Date.now() - t0 < t) await new Promise(r => setTimeout(r, 5));
+      rows.push(await p.evaluate(tt => {
+        const rs = [...document.querySelectorAll('#fxl .fx-plus.hb')]
+          .filter(n => parseFloat(getComputedStyle(n).opacity) > 0.08)
+          .map(n => n.getBoundingClientRect());
+        let ov = 0;
+        for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) {
+          const a = rs[i], b = rs[j];
+          if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 &&
+              Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0) ov++;
+        }
+        return { t: tt, n: rs.length, ov, w: rs.length ? Math.round(rs[0].width) : 0 };
+      }, t));
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await st.catch(() => {});
+    await p.waitForTimeout(250);
+    return rows;
+  })();
+  hb.forEach(r => console.log('  · t=' + String(r.t).padStart(4) + 'ms · 동시 ' + r.n + '장 · 겹친 쌍 ' + r.ov + ' · 잉크 폭 ' + r.w));
+  ok(hb.every(r => r.n >= 2), '[H1] 홀드 내내 여러 장이 «흐르고» 있다(한 장 뜨고 마는 게 아니다)',
+     hb.map(r => r.n).join('·'));
+  ok(hb.every(r => r.ov === 0), '[H2] ★ 서로 겹친 쌍 0 — 칸 5개 × 간격 80px 이 수명 .3s 를 정확히 덮는다',
+     hb.map(r => r.ov).join('·'));
+  ok(hb.every(r => r.w <= HB_SLOT_W_JS), '[H3] 플로터 잉크 폭이 칸 간격(80px)보다 좁다 — 옆 칸과 안 겹치는 근거',
+     hb.map(r => r.w).join('·') + ' ≤ ' + HB_SLOT_W_JS);
+  ok(hb.every(r => r.n <= 10), '[H4] 동시 생존이 10장을 안 넘는다(FXMAX 120 · 눈이 읽을 수 있는 상한)',
+     hb.map(r => r.n).join('·'));
+
+  /* ══ [I] 가림 — 두 줄기의 «봉투» 가 호스트의 정보 요소를 밟지 않는가 ═════ */
+  console.log('[I] 봉투 대 정보 요소 — 1회차에 비평가 2인이 손으로 재던 것을 자로 옮긴다');
+  const I = await p.evaluate(() => {
+    /* 봉투 = 사다리 가로 폭 × 애니메이션 세로 이동 범위. CSS 상수와 같은 값을 여기 적어 두고
+       어긋나면 빨개지게 한다(잉크 폭 69 · 상자 높이 32 · 상승 34 · 하강 28 · 칸 5개). */
+    const INK = 69, BOXH = 32, UP = 34, DN = 28, SLOTS = 5;
+    const slotW = (w, n, dec) => Number.isFinite(dec) ? dec : Math.max(34, Math.min(80, (w - 70) / Math.max(1, n - 1)));
+    const envs = (host) => {
+      const cs = getComputedStyle(host), r = host.getBoundingClientRect();
+      const num = (k, d0) => { const v = parseFloat(cs.getPropertyValue(k)); return Number.isFinite(v) ? v : d0; };
+      const n = Math.max(2, Math.round(num('--hb-slots', SLOTS)));
+      const sw = slotW(r.width, n, num('--hb-sw', NaN)), half = (n - 1) / 2 * sw + INK / 2;
+      const mk = pay => {
+        const lane = num(pay ? '--hb-y2' : '--hb-y', r.height * (pay ? 0.66 : 0.30));
+        const cx = num(pay ? '--hb-x2' : '--hb-x', 0.5);
+        return { pay, x1: r.width * cx - half, x2: r.width * cx + half,
+                 y1: lane - (pay ? 0 : UP), y2: lane + BOXH + (pay ? DN : 0) };
+      };
+      return { r, ok: mk(false), pay: mk(true) };
+    };
+    const hit = (e, k) => !(e.x2 <= k.x || e.x1 >= k.x + k.w || e.y2 <= k.y || e.y1 >= k.y + k.h);
+    const kidsOf = (host, skip) => [...host.children]
+      .map(el => { const h = host.getBoundingClientRect(), b = el.getBoundingClientRect();
+        return { cls: (el.className || '').split(/\s+/)[0], x: b.left - h.left, y: b.top - h.top, w: b.width, h: b.height }; })
+      .filter(k => k.w > 4 && k.h > 4 && !skip.includes(k.cls));
+    const out = {};
+    openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
+    {
+      const host = document.querySelector('.tr-rn'), e = envs(host);
+      /* 카드 아래 띠를 쓰므로 «그릇(#trRunes) 안» 인지도 같이 본다 */
+      const wrap = document.getElementById('trRunes').getBoundingClientRect();
+      out.rune = { ok: kidsOf(host, []).filter(k => hit(e.ok, k)).map(k => k.cls),
+                   pay: kidsOf(host, []).filter(k => hit(e.pay, k)).map(k => k.cls),
+                   inWrap: e.ok.y2 <= wrap.height + 4 && e.pay.y2 <= wrap.height + 4,
+                   xsplit: e.ok.x2 <= e.pay.x1 };
+    }
+    setTrSub('train'); renderTrain();
+    {
+      const host = document.querySelector('.tr-card'), e = envs(host);
+      /* `.ci` 는 아이콘(아트)이라 «정보 요소» 가 아니다 — 여기만 밟는 것이 설계다 */
+      out.train = { pay: kidsOf(host, ['ci']).filter(k => hit(e.pay, k)).map(k => k.cls),
+                    inCi: (() => { const h = host.getBoundingClientRect(),
+                      ci = host.querySelector('.ci').getBoundingClientRect();
+                      return e.pay.y1 >= ci.top - h.top - 2 && e.pay.y2 <= ci.bottom - h.top + 2; })(),
+                    ladder: (SLOTS - 1) * slotW(host.getBoundingClientRect().width, SLOTS, NaN) + INK,
+                    hostW: host.getBoundingClientRect().width };
+    }
+    setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
+    {
+      const host = document.querySelector('.tr-tp'), e = envs(host);
+      out.temper = { ok: kidsOf(host, []).filter(k => hit(e.ok, k)).map(k => k.cls),
+                     pay: kidsOf(host, []).filter(k => hit(e.pay, k)).map(k => k.cls),
+                     sep: e.pay.y2 <= e.ok.y1 + 2, hostH: host.getBoundingClientRect().height };
+    }
+    return out;
+  });
+  console.log('  · 룬  결과 봉투가 밟는 자식 [' + I.rune.ok.join(',') + '] · 비용 [' + I.rune.pay.join(',') + '] · 그릇 안 ' + I.rune.inWrap + ' · 좌우 분리 ' + I.rune.xsplit);
+  console.log('  · 훈련 비용 봉투가 밟는 «정보» 자식 [' + I.train.pay.join(',') + '] · 아이콘 띠 안 ' + I.train.inCi + ' · 사다리 폭 ' + Math.round(I.train.ladder) + ' ≤ 카드 ' + Math.round(I.train.hostW));
+  console.log('  · 단련 결과 봉투 [' + I.temper.ok.join(',') + '] · 비용 봉투 [' + I.temper.pay.join(',') + '] · 두 줄기 분리 ' + I.temper.sep);
+  ok(I.rune.ok.length === 0 && I.rune.pay.length === 0,
+     '[I1] ★ 룬 — 두 봉투가 카드 자식(진행바·효과줄·버튼)을 한 개도 안 밟는다',
+     '[' + I.rune.ok.join(',') + '] / [' + I.rune.pay.join(',') + ']');
+  ok(I.rune.inWrap, '[I2] 그 자리가 그릇(#trRunes 778px) 안이다 — 팝업 밖으로 안 샌다', String(I.rune.inWrap));
+  ok(I.rune.xsplit, '[I3] 룬은 두 줄기를 좌우로 갈랐다 — 사다리 둘이 서로 안 겹친다', String(I.rune.xsplit));
+  ok(I.train.pay.length === 0 && I.train.inCi,
+     '[I4] ★ 훈련 — 비용 봉투가 «공격력»·«Lv» 같은 정보 자식을 안 밟고 아이콘 띠 안에 든다',
+     '[' + I.train.pay.join(',') + '] · inCi ' + I.train.inCi);
+  ok(I.train.ladder <= I.train.hostW + 1,
+     '[I5] ★ 좁은 호스트에서 사다리가 카드 밖(=이웃 카드 위)으로 안 나간다',
+     Math.round(I.train.ladder) + ' ≤ ' + Math.round(I.train.hostW));
+  ok(I.temper.ok.length === 0 && I.temper.pay.length === 0,
+     '[I6] ★ 단련 — 두 봉투가 행 자식(축 이름·레벨·설명·버튼)을 한 개도 안 밟는다',
+     '[' + I.temper.ok.join(',') + '] / [' + I.temper.pay.join(',') + ']');
+  ok(I.temper.sep, '[I7] 단련은 한 칸에 두 줄기를 위아래로 포갰다 — 둘이 서로 안 만난다', String(I.temper.sep));
 
   /* ══ [R] 되돌림 시험 — 부품을 빼면 위 등식이 전부 0 이 된다 ════════ */
   console.log('[R] 되돌림 시험 — hbBeat 를 no-op 으로 바꾼 사본에서 세 축이 0 이 되는가');

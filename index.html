@@ -3581,15 +3581,24 @@
        성공 #2E7D14(대비 5.2:1) · 실패 #B01B2E(7.0:1) · 비용 #7A3A10(6.4:1).
      ⚠ 0% 를 `opacity:0` 으로 두지 않는다 — 58 44회차 함정(메인 스레드가 막히면 `fill-mode:both`
        가 그 «없는» 상태를 유지해 비평가가 «반응이 통째로 사라진다» 로 읽었다). .5 에서 시작한다. */
+  /* ⚑ 수명은 **홀드 주기에서 역산한 값**이다(1회차에 .42s 로 뒀다가 실측으로 갈았다).
+     홀드는 `TR_HOLD_IVMIN` **60ms** 까지 가속하므로 «동시에 살아 있는 장수 = 수명 ÷ 60ms» 다.
+     .42s 면 한 줄기에 7장, 두 줄기 합쳐 **10장 · 서로 겹친 쌍 15~16** 이 된다(3초 홀드 실측).
+     자리를 아무리 흩어도 5칸(아래 `HB_SLOTS`)보다 많으면 반드시 겹친다 ⇒ **.30s** 로 맞춰
+     한 줄기 5장 = 칸 수와 같게 했다. 실측 겹침 15~16쌍 → **0쌍**. */
+  /* ⚑ 2회차 — 이동 거리는 «봉투(잉크 높이 + 이동)» 가 **호스트의 빈 띠 안에 들어가는가** 로 정한다.
+     비평가 BM·BN 이 1회차에 독립적으로 «진행바를 27% 가린다» · «「공격력」 라벨을 100% 덮는다» 로
+     잡은 것이 이 봉투가 남의 자리에 놓여 있었기 때문이다. 잉크 상자 32px + 상승 34 = **66px** ·
+     하강 28 = **60px** 로 두고, 그 66/60 이 들어가는 빈 띠를 호스트가 `--hb-y`/`--hb-y2` 로 지정한다. */
   @keyframes fxHb{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
-    14%{opacity:1;transform:translate(-50%,-9px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-52px) scale(.98)}}
+    18%{opacity:1;transform:translate(-50%,-7px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-34px) scale(.98)}}
   /* 비용은 «빠져나간다» — 58 결제 어휘 그대로 **아래로** 진다(방향이 곧 뜻이다) */
   @keyframes fxHbDn{0%{opacity:.5;transform:translate(-50%,0) scale(.9)}
-    14%{opacity:1;transform:translate(-50%,7px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,40px) scale(.96)}}
-  .fx-plus.hb{font-size:30px;-webkit-text-stroke:5px rgba(0,0,0,.86);animation:fxHb .42s linear both}
-  .fx-plus.hb.dn{animation:fxHbDn .42s linear both}
+    18%{opacity:1;transform:translate(-50%,6px) scale(1)}
+    100%{opacity:0;transform:translate(-50%,28px) scale(.96)}}
+  .fx-plus.hb{font-size:30px;-webkit-text-stroke:5px rgba(0,0,0,.86);animation:fxHb .3s linear both}
+  .fx-plus.hb.dn{animation:fxHbDn .3s linear both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
@@ -12501,10 +12510,20 @@
        부풀어 `.tr-box` 를 넘본다. 기본 1.06(지시 원문) · 큰 카드만 1.02(측정 근거는 review §3).
      ⚠ `jz-sh` 와 달리 **밝기를 안 건드린다** — brightness(.82)는 «죽은 버튼» 의 뜻이고(60),
        실패는 «죽었다» 가 아니라 «이번엔 안 됐다» 다. */
+  /* ⚠ 2회차 — `scale:`/`translate:` 가 아니라 **`transform:`** 으로 쓴다.
+     `jz-dn`(누르고 있는 동안 `scale:.94` 를 `both` 로 **유지**)과 같은 노드에 걸리는 호스트가 있어서다 —
+     23 훈련 카드는 «누른 것 = 카드 자신» 이라 둘이 같은 `scale` 속성을 두고 싸웠고, 1회차 캡처에서
+     비평가 BN 이 «훈련 카드만 8장 중 0장에서 팝이 없다(룬은 3장에서 1018px)» 로 잡았다.
+     `transform` 은 개별 변환 속성(`scale`/`translate`)과 **곱해져서** 적용되므로 .94 위에 1.02 가 얹힌다. */
   .jz-hb{animation:jzHb .08s ease-out both}
-  @keyframes jzHb{0%{scale:var(--hb-s,1.06)}100%{scale:1}}
-  .jz-hbx{animation:jzHbx .12s ease-out both}
-  @keyframes jzHbx{0%,100%{translate:0 0}25%{translate:-3px 0}75%{translate:3px 0}}
+  @keyframes jzHb{0%{transform:scale(var(--hb-s,1.06))}100%{transform:scale(1)}}
+  /* ⚠ 2회차 — 진폭 ±3px 는 **안 읽힌다**. BN 실측: 성공 팝은 카드 폭 998→1018(+20px)인데 실패는
+     좌변이 24→22 로 **관측 2px**, 8장 중 +3px 쪽은 0장이었다(«주인이 콕 집어 요구한 실패 쪽이
+     성공보다 6.7배 조용하다»). 58 44회차 «3px 는 1080 폭에서 육안 판별 한계» 와 같은 자리다.
+     → ±8px · 3왕복 · 140ms. `jz-sh`(±6px 340ms + brightness .82 = «죽은 버튼»)와는 여전히 다른 어휘다. */
+  .jz-hbx{animation:jzHbx .14s ease-out both}
+  @keyframes jzHbx{0%,100%{transform:translate(0,0)}
+    17%{transform:translate(-8px,0)}50%{transform:translate(8px,0)}83%{transform:translate(-5px,0)}}
   /* ⚠ 진폭 1.06 은 **작은 호스트의 값**이다. 큰 카드에 그대로 쓰면 이웃을 침범한다 — 실측:
        `.tr-rn` 998×700 안에 든 그릇 `.tr-box` 안폭 **1046** ⇒ 1.06 = 1057.9 로 **11.9px 넘친다**
        `.tr-card` 326 폭 · 이웃 간 틈 **16px**(left 18/360/701) ⇒ 1.06 = +9.8×2 = 19.6 로 **3.6px 겹친다**
@@ -12514,6 +12533,27 @@
      ⛔ 「전부 1.02 로 통일」은 안 한다 — `.sk-lv`(모달 레벨 행)·`#rwBasin`(400×216)에서는
         1.02 가 2~4px 라 1080 폭에서 육안 판별 한계다(58 44회차 «3px 는 안 읽힌다»). */
   .tr-rn,.tr-tp,.tr-card{--hb-s:1.02}
+  /* ⚑ 488 2회차 — **호스트가 자기 빈 띠를 신고한다.** `--hb-y`(결과 줄기) · `--hb-y2`(비용 줄기)는
+     호스트 상단 기준 px, `--hb-x`/`--hb-x2` 는 호스트 폭에 대한 가로 중심 비율이다.
+     값의 출처는 눈대중이 아니라 **자식 상자 전수 실측**이다(review §7 표):
+       `.tr-rn` 998×700(그릇 wrap 778) — 카드 안은 `.rb` 바 190..224 · `.rd` 효과 280..442 ·
+          `.rst` 452..492 · `.rbt` 512..624 · `.rhint` 632..672 로 **66px 빈 띠가 없다**(최대 56px).
+          카드 **아래** 700..778 이 통째로 비어 있어 두 줄기를 거기에 두고 **좌우로 갈랐다**(0.28/0.72) —
+          카드가 998 폭이라 두 사다리(각 400px)가 나란히 들어간다.
+       `.tr-card` 326×510 — 그릇 높이가 카드와 같아 아래 띠가 없다. 유일하게 정보가 아닌 띠가
+          아이콘 `.ci` 128..261 이라 비용 줄기를 그 안(132..192)에 둔다. 결과 줄기는 안 쓴다(아래 JS).
+       `.tr-tp` 998×222 — `.tn` 18..68 · `.tl` 72..112 · `.ti` 22..126 · `.tb` 128..202 · `.td` 150..186 ·
+          `.tc` 14..98(x552..) 사이의 빈 칸이 **x340..550**. 결과는 그 칸(96..162), 비용은 행 사이
+          틈(222..236)을 지나 아래로 진다(210..270). */
+  .tr-rn{--hb-y:712;--hb-x:.28;--hb-y2:704;--hb-x2:.72}
+  .tr-card{--hb-y:250;--hb-x:.5;--hb-y2:132;--hb-x2:.5}
+  /* ⚠ 단련 행은 **빈 띠가 하나뿐**이다 — x340..550 · y0..150(그 아래 `.td` 150..186 이 x26..586 을 가로지른다).
+     행 사이 틈은 14px 이고 다음 행의 `.tc` 가 y14 부터 시작해 **아래로 새는 길도 없다.**
+     ⇒ 두 줄기를 그 한 칸에 위아래로 포갠다: 비용 20..80(위) · 결과 82..148(아래, 서로 안 만난다).
+     칸이 210px 뿐이라 사다리도 **3칸 × 70px**(= 209px)로 줄인다 — 5칸이면 간격 35px 라 잉크 69px 가
+     옆 칸을 34px 씩 파고든다(그러면 «겹침 0» 규약이 이 호스트에서만 깨진다). 3칸이라 60ms 최고속에서는
+     동시 5장 중 2장이 같은 칸을 쓰지만, 옆 칸 침범 0 이 그보다 낫다. */
+  .tr-tp{--hb-y:116;--hb-x:.445;--hb-y2:20;--hb-x2:.445;--hb-slots:3;--hb-sw:70}
   /* 94 ④ — «왜 안 되는지» 캡션. 예전에는 전투 캔버스 중앙에 56px 대형 텍스트(showMsg)로 띄웠는데,
      ⓐ 팝업이 열려 있으면 딤 뒤에 가려 안 보이고 ⓑ 사유 문구가 길어 프레임 밖으로 나갔다.
      이제 흔들리는 버튼 «옆(위)» 에 작은 DOM 캡션으로 붙인다 — #fxl(z60) 안이라 팝업 위에 뜬다.
@@ -32048,6 +32088,10 @@ function trHoldStop(bad){
   const el = trCard(h.key);
   if(bad && el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);   /* 60 — 부족·상한 흔들림 */
   else if(h.n > 1 && el) fxUpOk(el, el, trDeltaTxt(el));                /* 58 — 반복분은 마지막에 한 번 */
+  /* ⚑ 488 2회차 — 정산 요약 토스트. 룬·단련 홀드에는 처음부터 있었는데 여기만 없어서, 1회차 캡처를
+     본 비평가 BM·BN 이 **독립적으로** «세 씬 중 훈련만 마무리 층이 없다»(④ 일관성)로 잡았다.
+     문구는 룬·단련과 같은 꼴(«무엇을 몇 회») 이고, 1회 누름에는 안 띄운다(종전 침묵 유지). */
+  if(!bad && h.n > 1 && U[h.key]) notify(U[h.key].name + ' 훈련 <b>' + fmt(h.n) + '회</b> (Lv. ' + fmt(lv(h.key)) + ')');
 }
 function trHoldTick(){
   const h = trHold; if(!h) return;
@@ -32060,7 +32104,12 @@ function trHoldTick(){
      +델타) 한 세트**를 두고 한 말이다(60ms 로 쏘면 #fxl 이 FXMAX 로 막힌다). 여기서 얹는 것은
      그보다 훨씬 가벼운 «맥박 + 플로터 두 장» 이고, 정지 시 정산(`trHoldStop` 의 fxUpOk)은
      한 줄도 안 건드렸다 — 재현에서 이 자리가 시도당 **0.37** 이었다(등재문 ③ 의 네 자리와 같은 병). */
-  hbBeat(trCard(h.key), true, trDeltaTxt(trCard(h.key)), bi.cost ? '−' + fmt(bi.cost) : null);
+  /* ⚠ 2회차 — 결과 문구는 **안 띄운다**(유물과 같은 규칙). 이 카드는 `.cv` 행이 상시로 «다음에 오를 양» 을
+     말하고 `fx-cvswap` 이 그 자리를 깜빡이며, 손을 떼면 `trHoldStop` 의 `fxUpOk` 가 델타를 한 장 띄운다 —
+     회당 «+n» 을 겹쳐 띄우면 같은 수가 세 곳에서 말해진다(58 19~23회차가 «두 수치 동시 노출» 로
+     네 라운드를 태운 자리다). 비용은 `fmtCur('gold', …)` 로 접는다 — BN 실측 «−2,124,070 = 149px 폭
+     (카드 안폭 317 의 47%)» 이 라벨 가림을 구조적으로 만들었다. */
+  hbBeat(trCard(h.key), true, null, bi.cost ? '−' + fmtCur('gold', bi.cost) : null);
   h.iv = Math.max(TR_HOLD_IVMIN, h.iv * TR_HOLD_ACCEL);
   h.timer = setTimeout(trHoldTick, h.iv);
 }
@@ -34697,9 +34746,22 @@ function fxDelta(el, txt){
      골드·다이아 결제의 «알약 움푹» 은 종전 그대로 같이 뜬다(두 신호가 겹치는 게 아니라 층이 다르다).
    ⚠ 노드는 셀렉터로 다시 찾는다 — 홀드 중 `live` 렌더가 노드를 갈 수 있다(64 교훈 1 · 262 ⓑ).
    ========================================================================== */
-const HB_POP = 80, HB_SHAKE = 120, HB_LIFE = 470;
-/* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 지그재그로 흩는다.
-   회당 한 장이라 자리를 안 흩으면 열 장이 한 글자처럼 뭉쳐 «한 번 뜬 것» 으로 읽힌다. */
+const HB_POP = 80, HB_SHAKE = 120, HB_LIFE = 330;
+/* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 가로로 흩는다.
+   ⚑ 칸 수·간격·수명은 눈대중이 아니라 **홀드 주기에서 역산한 값**이다(1회차 실측으로 갈았다):
+     · 홀드는 `TR_HOLD_IVMIN` 60ms 까지 가속한다 ⇒ 한 줄기에 «수명 ÷ 60ms» 장이 동시에 산다.
+     · 플로터 잉크 폭 실측 **69px** ⇒ 칸 간격이 그보다 넓어야(**80px**) 옆 칸끼리 안 겹친다.
+     · 그래서 칸을 **5개**(−160·−80·0·+80·+160)로 두고 수명을 **.3s** 로 맞췄다 —
+       5장이 5칸을 정확히 한 바퀴 돌아 **같은 칸에 두 장이 겹칠 수 없다.**
+   실측(3초 홀드, 룬 전부 성공): 겹친 쌍 **15~16 → 0**.
+   ⚠ 칸을 늘리는 대신 수명을 줄인 이유 — 카드가 998 폭이라 7칸(±240)이면 바깥 두 칸이
+     카드 밖으로 나간다. 자리는 **호스트 안에서만** 흩어야 «이 카드가 낸 것» 으로 읽힌다. */
+const HB_SLOTS = 5, HB_SLOT_W = 80;
+/* 2회차 — 칸 간격은 **호스트 폭에 맞춘다.** 80px 고정이면 사다리가 400px 라 326 폭의 훈련 카드에서는
+   양옆으로 37px 씩 삐져나가 **이웃 카드 위**에 뜬다(«이 카드가 낸 것» 이 아니게 된다).
+   잉크 실측 폭 69px 를 빼고 남는 폭을 4등분한 값과 80 중 **작은 쪽**을 쓴다(326 → 64px). */
+const hbSlotW = (w, n, dec) => Number.isFinite(dec) ? dec
+  : Math.max(34, Math.min(HB_SLOT_W, (w - 70) / Math.max(1, n - 1)));
 let hbSeq = 0;
 const hbHost = h => (typeof h === 'string' ? document.querySelector(h) : h);
 function hbPulse(host, ok){
@@ -34716,10 +34778,18 @@ function hbFloat(host, txt, kind){
   const d = document.createElement('b');
   d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '');
   d.style.color = kind === 'ok' ? '#2E7D14' : kind === 'no' ? '#B01B2E' : '#7A3A10';
-  const i = hbSeq++;
-  /* 결과는 호스트 위쪽 1/3 지점에서, 비용은 아래쪽 1/3 지점에서 — 둘이 서로를 안 덮는다 */
-  d.style.left = (r.x + r.w / 2 + ((i % 3) - 1) * 34) + 'px';
-  d.style.top  = (r.y + r.h * (kind === 'pay' ? 0.66 : 0.30) + ((i % 2) ? 9 : 0)) + 'px';
+  const i = hbSeq++, pay = kind === 'pay';
+  /* 2회차 — 두 줄기의 자리는 **호스트가 신고한 빈 띠**(`--hb-y`/`--hb-y2` · `--hb-x`/`--hb-x2`)다.
+     신고가 없으면 종전 기본값(세로 30% / 66% · 가로 한가운데)으로 떨어진다 — 작은 호스트
+     (`.sk-lv`·`#rwBasin`)는 덮을 정보가 없어 기본값으로 충분하다. */
+  let cs = null; try { cs = getComputedStyle(el); } catch(_){}
+  const num = (k, d0) => { const v = cs && parseFloat(cs.getPropertyValue(k)); return Number.isFinite(v) ? v : d0; };
+  const lane = num(pay ? '--hb-y2' : '--hb-y', r.h * (pay ? 0.66 : 0.30));
+  const cx   = num(pay ? '--hb-x2' : '--hb-x', 0.5);
+  const n    = Math.max(2, Math.round(num('--hb-slots', HB_SLOTS)));
+  const sw   = hbSlotW(r.w, n, num('--hb-sw', NaN));
+  d.style.left = (r.x + r.w * cx + ((i % n) - (n - 1) / 2) * sw) + 'px';
+  d.style.top  = (r.y + lane) + 'px';
   d.textContent = txt;
   L.appendChild(d);
   /* 프레임 밖으로 나가지 않게 좌우를 물린다(fxPay 와 같은 규칙) */
