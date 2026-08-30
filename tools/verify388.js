@@ -48,6 +48,25 @@ const idxOf = id => lines.findIndex(l => { const g = ROW.exec(l); return g && g[
    «자가 못 보는 자리» 를 표본으로 골라 놓고 조용하다(작업 422 가 그렇게 빨개졌다). */
 const NOT_YET_SHAPE = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
 const DONE_DATED_MARK = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
+/* 자의 두 번째 축(작업 445) — «비고 칸의 머리말» 만 읽는다. 위 ⚠ 가 여기에도 그대로 적용된다:
+   `verifyProgress.js` 의 `HEAD_NOT_YET`/`tailHead` 와 **같은 모양이어야** §N3 이 «자가 못 보는
+   자리» 를 표본으로 골라 놓고 조용해지지 않는다. */
+const HEAD_NOT_YET_SHAPE = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+const tailCell = line => {
+  const c = line.split('|');
+  let i = c.length - 1;
+  while (i > 0 && !c[i].trim()) i--;
+  return i > 0 ? { i, cells: c } : null;
+};
+/* «세 칸 중 ③ 만 안 고친» 모양으로 되짚는다 — 구현·점수·횟수는 **완료 상태 그대로 두고**
+   비고 머리말만 등재 상태로 돌린다. §R·§R2 의 되짚기(세 칸을 통째로 등재로)와 다른 축이다. */
+function toHeadOnlyEnrolled(line) {
+  const t = tailCell(line);
+  if (!t) return null;
+  const body = t.cells[t.i].trim().replace(/^\*\*/, '');
+  t.cells[t.i] = ' **←(등재문) 미착수 · ' + body;
+  return t.cells.join('|');
+}
 
 /* 마감 표시를 등재 모양으로 되짚는다 — 구현·점수·횟수 세 칸에는 `|` 가 없으므로
    «(등재문 …)» 표지에서 파이프를 넷 되짚으면 정확히 그 세 칸의 앞에 선다. */
@@ -103,6 +122,10 @@ for (const id of CLOSED) {
   const r = askGate(copy, 'rev' + id);
   chk(r.code === 1, '[R-' + id + '] 자가 빨갛다', '종료 코드 ' + r.code);
   chk(new RegExp('✗ ' + id + ' — 자기모순').test(r.out), '[R-' + id + '] 그 ID 를 지목한다');
+  /* 445 가 축을 하나 더 세운 뒤로는 «어느 축으로 잡았나» 까지 물어야 한다 — 두 축이 겹치는
+     자리(옛 관행 행)에서 구체적인 쪽이 먼저 대야 «구현 칸이 비었다» 는 진단이 안 사라진다. */
+  chk(new RegExp('✗ ' + id + ' — 자기모순 · 구현 칸이 «–»').test(r.out),
+      '[R-' + id + '] **구현 칸 축**으로 지목한다 — 머리말 축이 그것을 가리지 않는다(445)');
   /* 음성 짝 — 나머지 두 자리는 그 사본에서 조용해야 한다(«하나 흔들면 다 빨개지는» 자가 아니다) */
   const others = CLOSED.filter(x => x !== id);
   chk(others.every(x => !new RegExp('✗ ' + x + ' — 자기모순').test(r.out)),
@@ -135,6 +158,35 @@ console.log('[R2] 지금 등재 관행으로 되돌려도 걸리는가 (422 — 
   chk(!/✗ .* — 자기모순/.test(live2), '[R2] 넓힌 뒤에도 실물 표는 빨간 행 0건이다(넓히기가 완료행으로 안 샌다)');
 }
 
+/* ── §R3 되돌림 시험 — «세 칸 중 ③ 만 안 고친» 행 (작업 445) ──────────────────
+ * 388 이 닫은 것은 사고의 절반이다: `NOT_YET` 은 구현 칸까지 등재 상태인 행만 본다.
+ * 실물 표에 **5건**(310·337·353·382·383)이 «구현 ✅ + 머리말 미착수» 로 있었고,
+ * 그중 383 은 2026-08-30 에 워커 H 가 실제로 **재선점**해 회차를 놓았다.
+ * ⇒ 구현·점수·횟수는 **완료 그대로 두고** 머리말만 되돌린 사본에서 자가 빨간지 묻는다.
+ *   이 절이 445 의 수리가 무르지 않음을 못박는다 — `tailHead` 축을 빼면 여기가 즉시 빨개진다. */
+console.log('');
+console.log('[R3] 세 칸 중 ③(비고 머리말) 만 되돌려도 걸리는가 (445 — 388 이 닫은 절반의 나머지)');
+{
+  /* 표본을 리터럴로 박지 않는다 — «완료 표지가 있고 머리말은 정상인» 행을 표에게 물어 고른다. */
+  const done = lines.filter(l => ROW.test(l) && DONE_DATED_MARK.test(l) &&
+                                 !NOT_YET_SHAPE.test(l) &&
+                                 !(tailCell(l) && HEAD_NOT_YET_SHAPE.test(tailCell(l).cells[tailCell(l).i])));
+  chk(done.length >= 3, '[R3] 되짚을 «완료 + 머리말 정상» 행이 실제로 있다', done.length + '건');
+  for (const line of done.slice(0, 3)) {
+    const id = ROW.exec(line)[1];
+    const i = idxOf(id);
+    const rev = toHeadOnlyEnrolled(line);
+    if (rev == null) { no('[R3-' + id + '] 비고 칸을 못 찾았다'); continue; }
+    chk(!NOT_YET_SHAPE.test(rev),
+        '[R3-' + id + '] 사본은 **옛 축으로는 안 걸린다** — 구현 칸이 완료 그대로다(이게 445 의 사각이었다)');
+    const copy = lines.slice(); copy[i] = rev;
+    const r = askGate(copy, 'r3' + id);
+    chk(r.code === 1, '[R3-' + id + '] 자가 빨갛다', '종료 코드 ' + r.code);
+    chk(new RegExp('✗ ' + id + ' — 자기모순 · 구현 칸은 채웠는데').test(r.out),
+        '[R3-' + id + '] 그 ID 를 **머리말 축**으로 지목한다(진단이 구체적이다)');
+  }
+}
+
 /* ── §N 음성항 ── */
 console.log('');
 console.log('[N] 음성항 — 정상 행을 빨갛게 만들지 않는다');
@@ -154,6 +206,23 @@ for (const id of NOTYET) {
   chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
       '[N] ' + id + ' (진짜 미착수 — 완료 표지 없음) 는 안 잡힌다');
 }
+/* §N3 (445) — 머리말 축이 **진짜 미착수 행**을 끌어오지 않는다.
+   머리말만 보는 축이라 «완료 표지가 없다» 는 조건 하나가 그 행들을 지킨다.
+   ⚠ 표본을 리터럴로 박지 않는다(379 선례) — 표에게 묻고 하한을 건다. */
+{
+  const tailOnly = lines.filter(l => {
+    if (!ROW.test(l) || DONE_DATED_MARK.test(l)) return false;
+    const t = tailCell(l);
+    return t && HEAD_NOT_YET_SHAPE.test(t.cells[t.i]);
+  }).map(l => ROW.exec(l)[1]);
+  chk(tailOnly.length >= 3, '[N3] 머리말이 «미착수» 인 진짜 미착수 행이 실제로 있다(빈 배열로 초록이 아니다)',
+      tailOnly.length + '건: ' + tailOnly.slice(0, 8).join(' ') + (tailOnly.length > 8 ? ' …' : ''));
+  for (const id of tailOnly) {
+    chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
+        '[N3] ' + id + ' (완료 표지 없음 — 진짜 미착수) 는 머리말이 «미착수» 여도 안 잡힌다');
+  }
+}
+
 /* 가장 짧은 음성항: «미착수» 라는 낱말만으로는 절대 안 빨개진다 */
 {
   /* 마감된 행은 «미착수» 를 산문으로 **인용**한다(등재문 본문을 안 지우므로). 그 인용만으로 빨개지면 안 된다.

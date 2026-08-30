@@ -105,6 +105,30 @@ const DONE_MARK = /✅|완료\(/;
 const DONE_DATED = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
 const NOT_YET = /\|\s*(?:–|—|-|미착수\.?|)\s*\|\s*(?:–|—|-|)\s*\|[^|]*\|\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
 
+/* ── 남은 반쪽 (작업 445, 2026-08-30) ────────────────────────────────────────
+ * `NOT_YET` 은 «안 했다» 를 **구현 칸에서 먼저** 읽는다(`| – | – | n/5 | **미착수`).
+ * 그래서 **구현 칸은 `✅ 완료(…)` 로 제대로 채웠는데 비고 머리말만 등재 당시 그대로인 행**은
+ * 한 건도 안 세진다 — 388 이 세운 «세 칸을 같이 고쳐라» 중 ③ 만 빠뜨린 꼴이고, 실물 표에
+ * **5건**(310·337·353·382·383)이 그 상태로 있었다.
+ * ⚠ **이건 이론이 아니라 관측된 피해다** — 2026-08-30 워커 H(sess-0751-1923)가 티어 스캔에서
+ *   383 을 «←(등재문) 미착수 · T4» 로 읽고 **선점했고**, `verify383` 42/42 PASS 로 이미 끝난
+ *   작업임을 확인한 뒤 회차를 놓았다(388 머리말이 적은 371 사고와 같은 꼴).
+ *
+ * ⇒ 머리말 축을 **단독 축**으로 세운다: «비고 칸의 머리말이 미착수인가» 만 묻고 구현 칸은 안 본다.
+ *   비고 칸은 위치로 못 세므로(본문 안의 `|` — 이 파일 머리말 «§2 는 왜 칸을 «위치» 로 세지 않는가»)
+ *   **마지막 비어 있지 않은 칸**으로 잡는다. 그 칸이 곧 워커의 티어 스캔이 읽는 칸이고
+ *   (`awk -F'|' '{print $(NF-1)}'`), 표를 넘쳐 GitHub 이 **렌더에서 버리는** 칸도 여기서 걸린다
+ *   (337·382 가 그 꼴이었다 — 등재문이 8번째 칸으로 밀려 화면에서 통째로 사라져 있었다).
+ * ⚠ 두 축은 **겹친다**(옛 관행 행은 둘 다 맞는다) — 겹치면 구체적인 쪽(`impl`)을 댄다.
+ *   순서가 바뀌면 tail 축이 impl 축을 가려 «구현 칸이 비었다» 는 진단을 영영 못 낸다(§1 의 두 자와 같은 이유). */
+const HEAD_NOT_YET = /^\s*(?:\*\*)?\s*(?:←\s*)?(?:\(등재문[^)|]*\)\s*)?(미착수|등재만|착수 전)/;
+function tailHead(line) {
+  const c = line.split('|');
+  let i = c.length - 1;
+  while (i > 0 && !c[i].trim()) i--;      /* 표 행은 `|` 로 끝나므로 마지막 칸은 비어 있다 */
+  return i > 0 ? HEAD_NOT_YET.exec(c[i]) : null;
+}
+
 /* ── 검사 대상 상태 ── */
 let curText, curLabel;
 if (file) { curText = fs.readFileSync(path.resolve(file), 'utf8'); curLabel = file; }
@@ -172,11 +196,12 @@ for (const [id, { sha, subj }] of [...newestDone.entries()].sort((a, b) => a[0].
 /* ── §2 자기모순 판정 — 이력이 아니라 «지금 표» 만 본다 ── */
 const contra = [];
 for (const [id, line] of cur) {
-  const y = NOT_YET.exec(line);
-  if (!y) continue;
   const d = DONE_DATED.exec(line);
   if (!d) continue;                                /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
-  contra.push({ id, head: y[1], mark: d[0] });
+  const y = NOT_YET.exec(line);                    /* 축 ⓐ 구현 칸까지 등재 상태 (388) */
+  if (y) { contra.push({ id, head: y[1], mark: d[0], kind: 'impl' }); continue; }
+  const t = tailHead(line);                        /* 축 ⓑ 구현 칸은 채웠는데 머리말만 등재 상태 (445) */
+  if (t) contra.push({ id, head: t[1], mark: d[0], kind: 'tail' });
 }
 
 /* ── 출력 ── */
@@ -197,8 +222,11 @@ if (!quiet) {
   console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건');
 }
 for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.detail);
-for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · 구현 칸이 «–» 이고 비고가 «' + c.head +
-                                    '» 로 여는데 같은 행에 완료 표지 «' + c.mark + '» 가 있다');
+for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · ' +
+  (c.kind === 'impl'
+    ? '구현 칸이 «–» 이고 비고가 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark + '» 가 있다'
+    : '구현 칸은 채웠는데 **비고 머리말**이 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark +
+      '» 가 있다 (세 칸 중 ③ 만 안 고친 꼴 — 티어 스캔이 읽는 칸이 그 칸이다)'));
 
 if (contra.length) {
   console.log('\nPROGRESS SELF-CONTRADICTION ' + contra.length + '건 — ' + contra.map(c => c.id).join(' '));
@@ -208,6 +236,12 @@ if (contra.length) {
   console.log('    ① 구현 칸 «–» → «✅ 완료(날짜, 세션 · n회차) — 한 줄 요약»');
   console.log('    ② 루프 횟수 «0/5» → 실제 회차');
   console.log('    ③ 비고 머리말 «미착수/등재만» → 등재문임을 밝히는 말로(등재문 본문은 지우지 마라)');
+  if (contra.some(c => c.kind === 'tail')) {
+    console.log('  ⚑ «구현 칸은 채웠는데 머리말만» 인 행이 있다(445) — 고칠 곳은 ③ 한 칸이다.');
+    console.log('    비고를 «✅ 완료(…) … **↓ 아래는 등재문(보존).** <옛 본문>» 으로 열어라.');
+    console.log('    ⚠ 비고 안에 **escape 안 한 `|`** 가 있으면 그 뒤가 8번째 칸이 되어 GitHub 렌더에서');
+    console.log('      통째로 사라지고, 티어 스캔은 그 칸을 비고로 읽는다(337·382 가 그 꼴이었다).');
+  }
 }
 
 if (bad.length) {

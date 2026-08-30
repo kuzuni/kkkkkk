@@ -59,12 +59,26 @@ for (const line of text.split('\n')) {
   if (g) rows.push({ id: g[1], line: line.replace(/\s+$/, '') });
 }
 
-const contra = [], notyet = [], done = [];
+/* ⚠ 축이 둘이다(작업 445) — `SHAPE` 는 «구현 칸까지 등재 상태» 만 본다. 구현 칸은 `✅ 완료(…)` 로
+   제대로 채웠는데 **비고 머리말만** 등재 상태로 남은 행은 한 건도 안 세진다(실측 5건: 310·337·353·382·383).
+   비고 칸은 위치로 못 세므로(위 머리말) **마지막 비어 있지 않은 칸**으로 잡는다 — 그 칸이 곧
+   워커의 티어 스캔이 읽는 칸이고(`awk -F'|' '{print $(NF-1)}'`), 표를 넘쳐 GitHub 이 렌더에서
+   **버리는** 칸도 여기서 걸린다(337·382 가 그 꼴이었다). */
+function tailHead(line) {
+  const c = line.split('|');
+  let i = c.length - 1;
+  while (i > 0 && !c[i].trim()) i--;
+  return i > 0 ? HEAD_NOTYET.exec(c[i]) : null;
+}
+
+const contra = [], contraHead = [], notyet = [], done = [];
 for (const r of rows) {
   const hasDone = DONE.test(r.line);
   const hasShape = SHAPE.test(r.line);
+  const th = hasShape ? null : tailHead(r.line);
   if (hasShape && hasDone) contra.push(r);
-  else if (hasShape) notyet.push(r);
+  else if (th && hasDone) contraHead.push({ ...r, head: th[1] });
+  else if (hasShape || th) notyet.push(r);
   else if (hasDone) done.push(r);
 }
 
@@ -77,6 +91,15 @@ for (const r of contra) {
   console.log('    ✗ ' + r.id + ' — 비고 머리말 «' + m[2] + '» ↔ 완료 표지 «' + d[0] + '»');
 }
 console.log('');
+console.log('[1-b] 자기모순 — «구현 칸은 채웠는데 **비고 머리말**만 «안 했다» 로 연다» (작업 445 · 388 의 남은 반쪽)');
+console.log('      ⚑ 관측된 피해: 2026-08-30 워커 H(sess-0751-1923)가 383 을 이 모양으로 읽고 재선점했다.');
+if (!contraHead.length) console.log('    (없음)');
+for (const r of contraHead) {
+  const d = DONE.exec(r.line);
+  console.log('    ✗ ' + r.id + ' — 비고 머리말 «' + r.head + '» ↔ 완료 표지 «' + d[0] + '»' +
+              (r.line.split('|').length - 1 > 8 ? '  ⚠ 칸이 ' + (r.line.split('|').length - 2) + '개 — escape 안 한 `|` 로 비고가 쪼개져 GitHub 렌더에서 뒤 칸이 사라진다' : ''));
+}
+console.log('');
 console.log('[2] 정상 미착수 (완료 표지 없음 — 자가 건드리면 안 되는 자리) · ' + notyet.length + '건');
 console.log('    ' + notyet.map(r => r.id).join(' '));
 console.log('');
@@ -86,7 +109,7 @@ console.log('[4] 음성항 — «보류·진행» 행이 [1] 에 안 들어갔�
 for (const id of ['199', '351', '72', '14', '67', '386']) {
   const r = rows.find(x => x.id === id);
   if (!r) { console.log('    ? ' + id + ' — 행 없음'); continue; }
-  const inContra = contra.some(x => x.id === id);
+  const inContra = contra.some(x => x.id === id) || contraHead.some(x => x.id === id);
   const why = /⏸/.test(r.line) ? '⏸ 보류' : /🔧|진행 중/.test(r.line) ? '진행 중' : /✖/.test(r.line) ? '✖ 폐기' : DONE.test(r.line) ? '완료' : '미착수';
   console.log('    ' + (inContra ? '✗' : 'ok') + '  ' + id + ' — ' + why + (inContra ? ' 인데 자기모순으로 잡혔다(자가 무르다)' : ' · 안 잡힘'));
 }
@@ -99,4 +122,4 @@ console.log('    .git/shallow ' + (shallow ? '있음 — 이력이 잘려 있다
             ' · 이 실행이 볼 수 있는 done() 커밋 ' + doneCommits + '건');
 console.log('    ⚠ 이 수가 실행마다 다르면 verifyProgress 의 커버리지도 실행마다 다르다.');
 
-process.exit(contra.length ? 1 : 0);
+process.exit(contra.length + contraHead.length ? 1 : 0);
