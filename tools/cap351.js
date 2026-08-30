@@ -71,8 +71,12 @@ const SET3 = [
   { id: '22-daily', label: '22 퀘스트 → 일일', how: 'qtab:daily' },
   { id: '22-rep', label: '22 퀘스트 → 반복', how: 'qtab:rep' },
   { id: '35-pstage', label: '35 패스 → 스테이지', how: 'ptab:stage' },
-  { id: '35-pbox', label: '35 패스 → 상자', how: 'ptab:box' },
-  { id: '35-ptower', label: '35 패스 → 탑', how: 'ptab:tower' },
+  /* 12회차(2026-08-30) — 428 이 «보물상자 · 시련의탑» 을 «시련의 탑 · 절망의 탑» 으로 갈면서
+     `ptab:box` 는 **죽은 이름**이 됐다(눌리는 것이 없어 스테이지 탭이 «상자 탭» 으로 찍혔다 —
+     r12 첫 실행이 «35-pstage 와 같은 서명» 으로 그것을 잡았다). `tower2` 는 새로 생긴 탭이고
+     **자·눈이 한 번도 본 적이 없다.** 이름을 제품과 맞춘다(라벨 글자는 `PASS_TABS[].tab` 이 소유). */
+  { id: '35-ptower', label: '35 패스 → 시련의 탑', how: 'ptab:tower' },
+  { id: '35-ptower2', label: '35 패스 → 절망의 탑', how: 'ptab:tower2' },
   { id: '35-patt', label: '35 패스 → 출석', how: 'ptab:att' },
   { id: '89-collall', label: '21 도감(보물상자 경유)', how: 'coll21' },
   { id: '10-cart', label: '10 상점(장바구니 잉크 D3 자리)', how: 'tab:shop' },

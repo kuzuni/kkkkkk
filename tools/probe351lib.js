@@ -114,7 +114,18 @@ async function collectOpeners(browser) {
   openers.push({ label: 'qtab:rep', quest: 'rep' });
   if (await page.$('#psw')) {
     openers.push({ label: 'pass:35', pass: true });
-    for (const k of ['stage', 'box', 'tower', 'att']) openers.push({ label: 'ptab:' + k, pass: `#psBar [data-ptab="${k}"]` });
+    /* ⚑ 12회차(2026-08-30) — 이 한 줄만 **손으로 적은 목록**이었고, 그래서 뒤처졌다.
+       428(«보물상자 · 시련의탑» → «시련의 탑 · 절망의 탑»)이 `box` 를 지우고 `tower2` 를 만들자
+       ① `ptab:box` 는 `if(el) el.click()` 이 **아무 것도 안 눌러** 스테이지 탭을 «상자 탭» 이라 부르며
+          스캔했고(유령 화면 — 8·10회차와 **같은 사고**) ② `ptab:tower2`(절망의 탑)는 자가
+          **한 번도 연 적이 없다.** 위 서브탭 계열이 전부 `$$eval` 로 제품에게 묻는데 여기만 표였다.
+       ⇒ 402 «표는 손으로 적는 목록이라 뒤처진다» 처방 그대로 **제품에게 묻는다.** */
+    const ptabs = await page.$$eval('#psBar [data-ptab]', (els) => els.map((e) => e.dataset.ptab)).catch(() => []);
+    if (!ptabs.length) {
+      throw new Error('[351lib] `#psw` 는 있는데 `#psBar [data-ptab]` 이 0개다 — ' +
+        '패스 탭이 통째로 안 열린 채 «결함 없음» 으로 읽힌다. 마크업을 확인할 것.');
+    }
+    ptabs.forEach((k) => openers.push({ label: 'ptab:' + k, pass: `#psBar [data-ptab="${k}"]` }));
   }
   openers.push({ label: 'saver:56', saver: true });
   await ctx.close();

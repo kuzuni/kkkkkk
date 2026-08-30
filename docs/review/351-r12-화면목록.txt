@@ -1,0 +1,4 @@
+35-pstage	35 패스 → 스테이지	ptab:stage	psw@34|재화||던전+훈련+💎스테이지+소환
+35-ptower	35 패스 → 시련의 탑	ptab:tower	psw@34|재화||던전+훈련+🏰시련의 탑+소환
+35-ptower2	35 패스 → 절망의 탑	ptab:tower2	psw@34|재화||던전+훈련+🗼절망의 탑+소환
+35-patt	35 패스 → 출석	ptab:att	psw@34|재화||던전+훈련+📅출석+소환
