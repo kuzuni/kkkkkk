@@ -19306,6 +19306,9 @@ let rings = [];     /* 114 — 충격파·임팩트 플래시 링(확장 원). �
    피해 판정 없는 순수한 그림이라 밸런스 불변. */
 let ghosts = [];
 let pets = [], spawnQ = [], skillCd = {};
+/* 459 — «다음에 보스가 표적이 되는 프레임에 스킬 쿨을 0 으로 하라» 는 예약. 다섯 진입점이 걸고
+   step() 이 푼다(자세한 근거는 `resetSkillCd` 위 주석 — 왜 start 함수 «안» 이 아닌지). */
+let cdArm = false;
 let killed = 0, msgTxt = '', msgT = 0, orbitAng = 0, auraTick = 0;
 let promo = null;   /* 승급전 진행 상태 */
 let bossT = 0;      /* 28 보스전 남은 시간(초). > 0 이면 보스전 진행 중 */
@@ -19416,6 +19419,7 @@ function startBoss(){
   S.bossFarm = false; bossOn = true; stageWin = false;
   enemies.length = 0; spawnQ.length = 0; killed = 0;   /* 28 — 보스는 «단독» 스폰. 남은 잡몹은 물린다 */
   spawnQ.push({ t:'boss', delay:1.4 });
+  cdArm = true;                     /* ⚑ 459 — 예약. 보스는 1.4초 뒤에 선다(그 창은 필드가 비어 있다) */
   bossT = BOSS_SEC;
   showMsg('BOSS ' + S.stage);
   uiDirty = true;
@@ -20451,6 +20455,30 @@ function castSkill(s){
   }
   return ok;
 }
+/* ⚑ 459 (주인 지시 2026-08-30 «보스전 시작할떄 스킬 전부 쿨타임 초기화 되있어야함»)
+   — 값은 **0** 이다(23418 장착 규약과 같은 값): 스킬 틱의 `rnd(0, 0.4)` 는 «처음 보는 스킬» 을
+   서로 어긋나게 하는 규약이지 «초기화» 가 아니고, 0 으로 둬도 while 가드는 스킬마다 따로 돌아
+   한 프레임에 장착 4종이 같이 나가는 것뿐이다.
+   ⚠ 펫 쿨(`p.cd`)·자기강화 버프(`sbuf*`)는 **안 건드린다** — 주인 원문이 «스킬» 이다(review 459 §3). */
+function resetSkillCd(){
+  for(const id in skillCd) skillCd[id] = 0;
+  for(const id of S.eqSkill) skillCd[id] = 0;   /* 아직 한 번도 안 돈 장착 스킬(키 없음)까지 0 으로 못박는다 */
+}
+/* ⚑ 459 — **«전투 시작» 은 start 함수가 도는 프레임이 아니다.** 다섯 진입점은 예약만 걸고(`cdArm`),
+   실제 초기화는 «보스가 실제로 표적이 되는» 첫 프레임에 step() 이 푼다(아래 fire 자리).
+   근거는 재현이다(probe459 ④·338 규칙) — start 함수 안에서 0 으로 두면 **대상 없이도 성공하는**
+   poison·meteor 가 빈 바닥에 나가 쿨을 도로 문다:
+     · 스테이지·던전은 보스 스폰까지 1.4초(`DUN_BOSS_DLY`)가 비어 있고
+     · 승급전·레이드·아레나는 그 자리에서 서지만 `nearest()` 가 `born < 0.3` 을 건너뛰므로
+       0.3초 동안은 «선 것처럼 보이는데 아무도 못 때리는» 창이다.
+   수리 전 실측: start 안 초기화 → 보스가 선 프레임에 poison 3.18s · meteor 3.98s 가 남는다
+   (= 「초기화」 가 4종 중 2종에서 거짓말이 된다).
+   ⚠ 예약이 남은 채 판이 끝나도 안전하다 — 이 예약을 푸는 것은 «보스급 적이 표적이 되는 프레임» 뿐이고
+     그 프레임은 정의상 다음 보스전의 시작이다(잡몹은 아래 판별식이 걸러낸다).
+   ⚠ 예약을 거는 자리가 다섯 start 함수라 **던전 페이즈 2·3번째 보스에서는 안 걸린다** —
+     페이즈마다 초기화하면 연출이 아니라 밸런스가 된다(등재문 ②). 선언은 위 `skillCd` 옆에 있다. */
+/* 459 — 이 판별식이 «보스전의 상대» 다. 잡몹(zombie·goblin·dark)은 여기 안 걸린다. */
+const cdFoeUp = e => e.hp > 0 && e.born >= 0.3 && (isBossKind(e.tk) || e.tk === 'promo' || e.tk === 'arena' || e.raid);
 function castSkillRaw(s){
   const dmg = skillDmg(s) * sbAtk();
   const px = player.x, py = player.y - 22;
@@ -20687,6 +20715,14 @@ function step(dt){
       }
     }
   }
+  /* ⚑ 459 — 예약을 푸는 **유일한** 자리(주인 지시 2026-08-30). 스폰 큐 **뒤** · 스킬 틱 **앞** 이라
+     보스가 서는 바로 그 프레임(정확히는 표적이 되는 프레임)에 초기화가 먹고, 같은 프레임에 첫 시전이
+     나간다. 425 등장 국면은 step() 맨 위에서 프레임을 통째로 가져가므로 여기 오지 않는다 =
+     국면이 끝난 뒤에야 풀린다(= «전투 시작부터» 라는 지시와 같은 뜻). */
+  if(cdArm){
+    for(const e of enemies){ if(cdFoeUp(e)){ cdArm = false; resetSkillCd(); break; } }
+  }
+
   const maxHp = stat.maxHp;
 
   /* ---- 플레이어 ---- */
@@ -24295,6 +24331,8 @@ function startDunRun(d, f){
                set(v){ if(bossIntro && bossIntro.md === 'dun') bossIntro.t = v; } }
   });
   bossIntro = null;                                  /* 457 — 새 런은 언제나 국면 없이 시작한다 */
+  cdArm = true;                     /* ⚑ 459 — 예약. 던전·탑은 «스폰 딜레이 1.4초 + 425 등장 국면» 뒤에
+                                       보스가 표적이 되고, step() 이 그 프레임에 푼다(페이즈 2·3은 안 건다) */
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
@@ -24774,6 +24812,7 @@ function startPromo(){
      필드에 서므로 국면도 여기서 연다(스폰 딜레이가 없어 «선 순간» 이 곧 이 줄이다).
      `promo.t` 는 국면 동안 한 프레임도 안 깎인다 — step() 맨 위가 그 프레임을 통째로 가져간다. */
   bossIntroStart('promo', enemies[enemies.length-1]);
+  cdArm = true;                     /* ⚑ 459 — 예약만 건다. 상대는 여기서 서지만 born<0.3 인 0.3초는 아무도 못 때린다 */
   if(typeof jzFx === 'function'){ jzFx('jz-vig', 700, '', true); jzFx('jz-slam', 1000, '승급전', true); }
   showMsg('승급전 시작')            /* 94 — 남은 시간은 승급전 HUD 타이머가 표시한다 */;
   closeModal();
@@ -27227,6 +27266,9 @@ function startRaid(r){
        그 시간이 곧 «때릴 대상이 없는 측정 창» 이라 30초 예산의 4.7% 를 그냥 깎는다(주인 지시가
        재라고 한 것은 «30초 만에 넣은 피해» 다). 소리는 보스가 선 채로 울린다. */
   bossInSfx(e);
+  /* ⚑ 459 — 레이드는 1.4초 스폰 딜레이를 안 쓴다(바로 위 264 주석)지만 born 0.3초·457 국면은 그대로다.
+     46 이 재는 것은 «30초 만에 넣은 피해» 라 시작 쿨이 그 측정을 직접 흔든다 — 199 대기 항목. */
+  cdArm = true;
   /* ⚑ 457(주인 지시 2026-08-30) — 레이드도 «모든 보스전» 이다. 샌드백은 위에서 `makeEnemy` 로 이미
      필드에 섰으므로 국면은 여기서 연다. ⚠ **측정 시계(`raidT`)가 국면 동안 안 흐르는 것이 핵심**이다 —
      264 가 «1.4초 스폰 딜레이는 안 쓴다» 고 적은 이유(«30초 만에 넣은 피해» 를 재는 판)가 그대로
@@ -27343,6 +27385,9 @@ function startArena(){
     e.nopop = true;                                   /* 67 — 팝인 없이 «마주 선 채» 시작 */
     arena.foe = e;
   }
+  /* ⚑ 459 — 아레나도 상대가 여기서 마주 선다(`nopop` = 팝인조차 없다). `nopop` 은 **그리기**만 끄고
+     `nearest()` 의 born 0.3초 창은 그대로라, 초기화는 여기가 아니라 step() 이 푼다. */
+  cdArm = true;
   msgTxt = ''; msgT = 0;                              /* 30 과 같은 이유 — 로드 직후 토스트를 지운다 */
   closeDungeon();
   $('app').classList.add('dunrun', 'arn');            /* 30 의 상태(상단 HUD·탭바 숨김 + ◀)를 그대로 탄다 */
