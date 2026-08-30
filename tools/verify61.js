@@ -147,7 +147,12 @@ const snap = page => page.evaluate(() => {
   eq('§1 보상 아이콘 = 다이아 SVG', s.rewIc, 'dia');
   eq('§1 보상 아이콘은 1개만', s.rewN, 1);
   ok('§1 보상칸에 맨 이모지가 남아 있지 않다', s.rew.trim() === '', JSON.stringify(s.rew));
-  eq('§1 보상 수량', s.sub, String(G[0].dia));
+  /* 498 이관 — 보상이 만 단위가 되면서 배너가 `fmt()` 의 천 단위 쉼표를 찍는다(«11,000»).
+     자리를 비우지 않고 **쉼표를 걷어낸 뒤 같은 값인지**로 옮긴다(333 처방) — «배너가 그 보상
+     수량을 적는가» 라는 뜻은 그대로고, 값이 어긋나면 여전히 빨개진다.
+     ⚠ 쉼표만 지운다(숫자를 정규식으로 긁어 오면 «11,000» 이 «11» 로 통과한다). */
+  eq('§1 보상 수량 (쉼표 제거 후 비교 — 498)', s.sub.replace(/,/g, ''), String(G[0].dia));
+  ok('§1 보상 수량이 천 단위 쉼표로 찍힌다(fmt)', s.sub === G[0].dia.toLocaleString('en-US'), s.sub);
   ok('§1 버튼 disabled', s.dis === true);
   ok('§1 NaN/undefined 표기 0건',
      ![s.label, s.name, s.sub].some(t => /NaN|undefined|null/.test(t)),

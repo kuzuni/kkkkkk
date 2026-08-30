@@ -297,8 +297,18 @@ async function launchAny(){
   ok(bn.rew.w === 118 && bn.rew.h === 118 && bn.rew.dx === 328 && bn.rew.dy === 16,
     `보상칸 118×118 @328,16 불변 (${bn.rew.w}×${bn.rew.h} @${bn.rew.dx},${bn.rew.dy})`);
   await setMission(p, 1);
-  const sub1 = await p.evaluate(() => ({ sub: $('tutoSub').textContent, dia: gmDia(GUIDE[1]) }));
-  ok(sub1.dia === 1000 && sub1.sub.length > 0, `함수형 보상이 배너에 표기됨 (${sub1.sub})`);
+  const sub1 = await p.evaluate(() => ({ sub: $('tutoSub').textContent, dia: gmDia(GUIDE[1]),
+                                         fn: typeof GUIDE[1].dia === 'function',
+                                         c10: summonCost('weapon', 10) }));
+  /* 498 이관 — 이 항이 «1000» 을 상수로 박고 있었다. 그 1000 은 «10연 정가» 를 물려받은 값이라,
+     498 이 미션 보상을 곡선(11,000 + 2,000·i)으로 갈자 곧바로 빨개졌다(그 값을 그대로 물려
+     읽던 194·203·402 계열의 «네 번째 부패» 와 같은 꼴). 이 항이 지키려던 뜻은 «상수 1000» 이
+     아니라 **«이 칸의 보상은 함수형이고, 그 값이 다음 소환 10연을 감당하며, 배너가 그것을
+     적는다»** 셋이다 — 셋을 그대로 잰다(값은 제품에게 묻는다 · 새 상수 0개). */
+  ok(sub1.fn, `idx1 보상이 여전히 **함수형**이다(73 ② 결합 유지 · 498 은 하한 max 로 덮었다)`);
+  ok(sub1.dia >= sub1.c10, `보상 ${sub1.dia} ≥ 다음 소환 10연 ${sub1.c10} (73 ②)`);
+  ok(sub1.sub.replace(/,/g, '') === String(sub1.dia),
+     `함수형 보상이 배너에 그 값으로 표기됨 (${sub1.sub})`);
 
   /* ── §7 수령 · 저장 ──────────────────────────────────────────── */
   console.log('§7 수령 → 다이아 증가 · 저장 반영');
