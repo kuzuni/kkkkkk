@@ -89,8 +89,17 @@ const TOAST_SITES = [
   /* 153 — 교환 보상이 우편으로 가면서 문구가 바뀌었다. 토스트라는 사실은 그대로다. */
   /* 200 — 표기가 «남은 쿠폰» → «남은 마일리지» 로 바뀌었다(주인 지시). 토스트라는 사실은 그대로다. */
   ['마일리지 교환 완료',         '남은 마일리지 \' + S.mileage'],
-  ['유물조각 교환 — 다이아 부족','if(S.dia < ex.dia){ notify('],
-  ['유물조각 교환 완료',         '\'</b> → \' + curIc(\'relic\')'],
+  /* 511 — 490(주인 확정 2026-08-30 «다이아→유물조각·룬강화석 전부 1:1»)이 §9 교환을
+     «품목 3단 묶음» 에서 **품목 2종 × 수량 탭** 으로 갈아 끼우면서 두 조각이 같이 죽었다:
+     `ex.dia`(묶음 가격 필드)는 필드째 사라졌고, 완료 문구의 `curIc('relic')` 은 두 재화가
+     한 경로를 쓰게 되어 `curIc(ex.k)` 가 됐다. **490 은 잘못한 게 없다** — 옛 문구를 상수로
+     박아 둔 이쪽이 부패한 것이다(401·368 과 같은 병). 149 가 재는 성질(«팝업이 아니라
+     토스트로 나간다»)은 한 글자도 안 바뀌므로 **조각만** 살아 있는 문구로 옮긴다(333 처방).
+     이름도 «유물조각» → «재화» 로 넓힌다 — 한 자리가 두 재화를 답하는 것이 490 의 구조다.
+     ⚠ 자리를 비우지 않았다: 490 이 통째로 되돌아가 묶음 표가 살아나면 `ex.k`·`< n` 이
+       사라지므로 두 항이 «조각을 못 찾음» 으로 곧바로 빨개진다. */
+  ['재화 교환 — 다이아 부족',    'if(S.dia < n){ notify('],
+  ['재화 교환 완료(유물조각·룬강화석)', '\'</b> → \' + curIc(ex.k)'],
   ['광고 보상 수령',             'a.r.freePet) notify('],
   ['이용권 — 다이아 부족',       'if(S.dia < p.dia){ notify('],
   ['장비 일괄강화 재료 부족',    '강화할 수 있는 <b>'],
@@ -154,14 +163,46 @@ const POPUP_SITES = [
   ['길라잡이(진행·보상 목록)', '🗺️ 길라잡이'],
   ['notify 폴백(레이어 부재)', "popup('알림'"],
 ];
-/* 조각 위치에서 뒤로 훑어 가장 가까운 `notify(` / `popup(` 중 어느 쪽이 앞서는지 본다 */
-function callerOf(frag){
-  const i = SRC.indexOf(frag);
-  if (i < 0) return null;
-  const head = SRC.slice(Math.max(0, i - 900), i + frag.length);
+/* 조각 위치에서 뒤로 훑어 가장 가까운 `notify(` / `popup(` 중 어느 쪽이 앞서는지 본다.
+   ⚑ **511(2026-08-30) — 이 함수가 이 게이트의 세 번째 부패 자리였다.** 옛 판은
+   `SRC.indexOf(frag)` 로 **첫 출현 하나만** 봤다. 475(모든 보스전 격파 시퀀스)가 `bossClear`
+   절 주석에 «🏅 승급 성공!» 을 한 번 더 적자(index.html 24942) 그 주석이 첫 출현이 되었고,
+   주석 앞 900자에는 `notify(`·`popup(` 이 없어 **제품(25734 `popup('🏅 승급 성공!'`)은 내내
+   옳은데** 게이트만 «조각을 못 찾음» 으로 빨개졌다. **475 는 잘못한 게 없다.**
+   ⇒ ① 주석 안 출현은 건너뛴다(제품 코드가 아니다) ② 남은 출현을 **전부** 보고, 서로 다른
+      호출자가 나오면 «자리가 둘» 로 빨개진다 — 조용히 첫 자리만 답하지 않는다.
+   ⚠ 이 함수를 무르게 고치면(예: 조각에 `popup(` 을 넣어 자리를 특정) 그 항은 «호출자가
+     무엇인가» 를 더는 못 묻는 헛초록이 된다. 아래 §R 이 그것을 못박는다. */
+function inComment(src, i){
+  const bo = src.lastIndexOf('/*', i), bc = src.lastIndexOf('*/', i);
+  if (bo > bc) return true;                                   /* 블록 주석 안 */
+  const nl = src.lastIndexOf('\n', i);
+  const line = src.slice(nl + 1, i);
+  const lc = line.indexOf('//');
+  return lc >= 0 && line[lc - 1] !== ':';                     /* 줄 주석 안(URL 의 «://» 제외) */
+}
+function callerAt(src, i, len){
+  const head = src.slice(Math.max(0, i - 900), i + len);
   const n = head.lastIndexOf('notify('), p = head.lastIndexOf('popup(');
   if (n < 0 && p < 0) return null;
   return n > p ? 'notify' : 'popup';
+}
+function callerOf(frag, src){
+  src = src || SRC;
+  const hits = [];
+  for (let i = src.indexOf(frag); i >= 0; i = src.indexOf(frag, i + 1)){
+    if (inComment(src, i)) continue;                          /* 주석 출현은 제품이 아니다 */
+    hits.push(callerAt(src, i, frag.length));
+  }
+  if (!hits.length) return null;                              /* 조각을 못 찾음 */
+  const uniq = [...new Set(hits)];
+  return uniq.length === 1 ? uniq[0] : '자리가 ' + hits.length + '곳(' + uniq.join('/') + ')';
+}
+/* §R 전용 — 511 이 고치기 **전** 판(첫 출현 하나만 본다). 되돌림 시험의 대조군이다. */
+function callerOfNaive(frag, src){
+  src = src || SRC;
+  const i = src.indexOf(frag);
+  return i < 0 ? null : callerAt(src, i, frag.length);
 }
 
 /* ── §3 워스트케이스 문구 — 실데이터에서 «가장 긴 이름» 을 골라 조립한다 ─────────── */
@@ -217,11 +258,37 @@ const WORST = [
      /if\(!el\) popup\('알림'/.test(SRC) ? '옛 «드롭 = 팝업» 폴백이 되살아났다' : '큐 폴백');
   ck('§1-0 fxToast 가 el 을 반환', /setTimeout\(\(\) => el\.remove\(\), 1060\);\s*\n\s*return el;/.test(SRC));
   let tOk = 0;
-  TOAST_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'notify') tOk++; else ck('§1 토스트 — ' + n, false, c ? '아직 ' + c + '()' : '조각을 못 찾음'); });
+  const why = (c, want) => !c ? '조각을 못 찾음' : /^자리가/.test(c) ? c + ' — 조각이 자리를 하나로 못 가리킨다' : '아직 ' + c + '()';
+  TOAST_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'notify') tOk++; else ck('§1 토스트 — ' + n, false, why(c)); });
   ck('§1 토스트 전환 ' + tOk + '/' + TOAST_SITES.length, tOk === TOAST_SITES.length);
   let pOk = 0;
-  POPUP_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'popup') pOk++; else ck('§1 팝업 유지 — ' + n, false, c ? '토스트로 밀렸다' : '조각을 못 찾음'); });
+  POPUP_SITES.forEach(([n, f]) => { const c = callerOf(f); if (c === 'popup') pOk++; else ck('§1 팝업 유지 — ' + n, false, c === 'notify' ? '토스트로 밀렸다' : why(c)); });
   ck('§1 팝업 유지 ' + pOk + '/' + POPUP_SITES.length, pOk === POPUP_SITES.length);
+
+  /* ── §R 되돌림 시험(511) — «무르게 풀지 않았다» 를 네 못으로 박는다 ────────────────────
+     고친 것은 조각 둘(490)과 **조각을 자리로 옮기는 함수**(475 주석) 뿐이고, 게이트가 재던
+     성질(«어느 호출자가 이 문구를 내보내는가»)은 한 칸도 안 넓혔다. 사본은 메모리에서만
+     만든다 — index.html 은 읽기만 한다. */
+  const PROMO = POPUP_SITES[0][1];                       /* '🏅 승급 성공!' */
+  ck('§R-a 옛 판(첫 출현 하나)이 이 자리에서 실제로 틀린다',
+     callerOfNaive(PROMO) !== 'popup',
+     '옛 판 → ' + (callerOfNaive(PROMO) || '조각을 못 찾음') + ' · 새 판 → ' + callerOf(PROMO));
+  const noSite = SRC.replace("popup('🏅 승급 성공!'", "popup('승급 결과'");
+  ck('§R-b 주석 출현만 남으면 초록이 아니다 (주석은 제품이 아니다)',
+     callerOf(PROMO, noSite) === null,
+     '제품 호출부를 지운 사본 → ' + (callerOf(PROMO, noSite) || '조각을 못 찾음')
+     + ' · 그 사본에도 주석 출현은 남아 있다(' + (noSite.split(PROMO).length - 1) + '건)');
+  ck('§R-c 그 자리가 토스트로 밀리면 빨개진다',
+     callerOf(PROMO, SRC.replace("popup('🏅 승급 성공!'", "notify('🏅 승급 성공!'")) === 'notify',
+     '팝업 → 토스트 사본에서 notify 로 읽힌다');
+  const EXFRAGS = [TOAST_SITES.find(r => /재화 교환 — 다이아/.test(r[0]))[1],
+                   TOAST_SITES.find(r => /재화 교환 완료/.test(r[0]))[1]];
+  const exBroken = SRC.replace('if(S.dia < n){ notify(', 'if(S.dia < n){ popup(')
+                      .replace("notify(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k)",
+                               "popup(curIc('dia') + ' <b>' + fmt(n) + '</b> → ' + curIc(ex.k)");
+  ck('§R-d 새 교환 조각 둘은 popup 으로 되돌리면 빨개진다',
+     EXFRAGS.every(f => callerOf(f, exBroken) !== 'notify'),
+     EXFRAGS.map(f => callerOf(f, exBroken) || '못 찾음').join(' · '));
 
   /* ── §367 (401) — 소진 문구가 «무료» 가 아니라 «오늘» 인 **근거**를 같이 잡는다 ────────────
      위 §1 의 조각을 살아 있는 문구로 갈아 끼우는 것만으로 끝내면, 367 이 통째로 되돌아가
