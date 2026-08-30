@@ -74,6 +74,28 @@ const CLOCK = (t0) => {
   window.Date = F;
 };
 
+/* ---------------- 시드 고정 난수 ----------------
+   ⚑ **`BOT` 안에서 심으면 늦다.** 6회차 게이트 [6] 이 그것을 잡았다 — 같은 시드 두 번이
+   s290 / s291 로 갈렸다. 봇이 붙기 전에 이미 `load()`·`buildFloor()`·`spawnStage()` 가
+   `Math.random()` 을 수십 번 쓰고, 그 몫이 **첫 파도의 적 좌표**로 남아 있기 때문이다.
+   그래서 난수는 페이지가 첫 줄을 돌기 전에(=`addInitScript`) 심는다. */
+const SEEDRNG = (seed) => {
+  /* ⚑ **rAF 도 여기서 끊는다.** 부팅이 끝나고 봇이 `freeze()` 를 부르기까지의 사이에 실제
+     프레임이 «몇 장» 도는지는 기계 사정이라 매 실행 달랐다 — 그 몇 장이 첫 파도의 좌표와
+     난수 스트림을 밀어 같은 시드가 s43 / s44 로 갈렸다(6회차 게이트 [6]·[R] 이 잡은 자리).
+     `loop()` 는 자기 맨 위에서 rAF 를 다시 걸므로, 처음부터 no-op 이면 **한 장도 안 돈다**.
+     `step(dt)` 는 봇이 손으로 굴리므로 잃는 것이 없다(그리기는 어차피 안 쓴다). */
+  window.requestAnimationFrame = () => 0;
+  let s0 = (seed >>> 0) || 1;
+  window.__setSeed = (n) => { s0 = (n >>> 0) || 1; };
+  Math.random = function () {                       /* xorshift32 — 재현 가능 */
+    s0 ^= s0 << 13; s0 >>>= 0;
+    s0 ^= s0 >> 17;
+    s0 ^= s0 << 5;  s0 >>>= 0;
+    return s0 / 4294967296;
+  };
+};
+
 /* ==========================================================================
    페이지 안에서 도는 봇 본체
    ========================================================================== */
@@ -93,18 +115,10 @@ const BOT_SRC = function (cfg) {
   };
   window.BOT = B;
 
-  /* ── 시드 고정 난수 (등재문 ④ — 시드 20개) ───────────────────────────── */
-  const REAL_RANDOM = Math.random;
-  let rngS = 1;
-  const setSeed = (n) => { rngS = (n >>> 0) || 1; };
-  Math.random = function () {                       /* xorshift32 — 재현 가능 */
-    rngS ^= rngS << 13; rngS >>>= 0;
-    rngS ^= rngS >> 17;
-    rngS ^= rngS << 5;  rngS >>>= 0;
-    return rngS / 4294967296;
-  };
-  B.setSeed = setSeed;
-  B.realRandom = REAL_RANDOM;
+  /* ── 시드 (등재문 ④ — 시드 20개) ─────────────────────────────────────
+     난수 자체는 `SEEDRNG` 가 **부팅 전에** 이미 심었다(위 주석). 여기서는 필요할 때
+     같은 생성기를 다시 세우기만 한다 — 부팅이 쓴 몫까지 시드에 포함되는 것이 맞다. */
+  B.setSeed = (n) => { if (typeof window.__setSeed === 'function' && n != null) window.__setSeed(n); };
 
   /* ── rAF 정지 + «무대장치» 끄기 (probe494 [B]) ───────────────────────── */
   /* ⚑ 4회차 실측 — 예산을 먹던 것은 전투가 아니라 **`save()`** 였다. `trainBuy`·`applyBuy`·
@@ -392,7 +406,15 @@ const BOT_SRC = function (cfg) {
   });
 
   /* 던전·탑 — **실전**. 제한 시간이 곧 판정이라 접으면 뜻이 사라진다. */
-  const FOLD_STEP = 10;          /* 실전 한 판마다 접는 판 수(= 재확인 주기) */
+  /* ⚑ 6회차 — **접기 주기를 상수로 두면 예산이 «봇이 얼마나 세냐» 를 따라 터진다.**
+     5회차의 `FOLD_STEP = 10` 은 30일 실행에서 시드 하나에 4분이 걸렸다(s540 · 벽 21) —
+     전투력이 커질수록 도는 판이 늘어 실전 판도 같은 비율로 늘기 때문이다.
+     그래서 주기가 아니라 **«실전은 하루 던전·탑마다 REAL_CAP 판까지» 라는 상한**을 쓴다.
+     남은 판은 그 실전 판의 결과(클리어/실패)가 유지되는 동안 제품 보상표로 접는다.
+     ⚠ 상한을 낮추면 «클리어하다가 어느 층에서 막히는가» 의 해상도가 떨어진다 — 3 은
+       «처음·중간·끝» 을 보는 최소값이다. */
+  const REAL_CAP = 3;             /* 던전·탑마다 하루 실전으로 도는 판 수 */
+  const TOWER_DAY_MAX = 60;       /* 탑은 입장권이 없다 — «하루에 오르는 층» 의 상한을 봇이 정한다 */
   const runBattle = (maxSec, done) => {
     const N = Math.round(maxSec * 30);
     for (let i = 0; i < N; i++) { step(1 / 30); if (done()) return i / 30; }
@@ -420,17 +442,18 @@ const BOT_SRC = function (cfg) {
     let real = 0, fold = 0;
     const lv0 = DUNGEONS.reduce((n, d) => n + ((S.dun && S.dun[d.id]) | 0), 0);
     for (const d of DUNGEONS) {
-      let guard = 0;
-      while ((S.dunTk[d.id] | 0) > 0 && guard++ < 400) {
+      let shots = 0;
+      while ((S.dunTk[d.id] | 0) > 0 && shots < REAL_CAP) {
         const tk0 = S.dunTk[d.id] | 0, f0 = (S.dun && S.dun[d.id]) | 0;
         challengeDungeon(d);
         if ((S.dunTk[d.id] | 0) === tk0) break;             /* 잠김·전투 중 — 더 못 돈다 */
-        real++;
+        real++; shots++;
         runBattle(DUN_SEC + 12, () => !dunRun);
         if (dunRun) { T('던전:포기', () => { if (typeof endDunRun === 'function') endDunRun(); }); }
         if (((S.dun && S.dun[d.id]) | 0) === f0) break;      /* 실패 — 이 던전은 여기가 한계다 */
-        /* 클리어했다 — 다음 FOLD_STEP−1 판을 제품 보상표로 접는다 */
-        let n = Math.min(FOLD_STEP - 1, S.dunTk[d.id] | 0);
+        /* 클리어했다 — 남은 표를 «다음 실전 판까지» 만큼 제품 보상표로 접는다 */
+        let n = Math.ceil((S.dunTk[d.id] | 0) / (REAL_CAP - shots + 1)) - (shots < REAL_CAP ? 0 : 0);
+        n = Math.min(n, S.dunTk[d.id] | 0);
         while (n-- > 0) {
           const f = S.dun[d.id];
           S.dunTk[d.id]--; S.dun[d.id]++;
@@ -451,21 +474,22 @@ const BOT_SRC = function (cfg) {
     let real = 0, up = 0, fold = 0;
     for (const id of ['tower', 'tower2']) {
       const t = towerById(id);
-      let guard = 0;
-      while (guard++ < 200) {
+      let shots = 0, climbed = 0;
+      while (shots < REAL_CAP && climbed < TOWER_DAY_MAX) {
         const lv0 = S[id] | 0;
         T('탑:' + id, () => challengeTower(id));
         if (!dunRun) break;                                 /* 잠김·전투 중 — 못 들어갔다 */
-        real++;
+        real++; shots++;
         runBattle(DUN_SEC + 12, () => !dunRun);
         if (dunRun) T('탑:포기', () => { if (typeof endDunRun === 'function') endDunRun(); });
         if ((S[id] | 0) === lv0) break;                     /* 못 올라갔다 = 여기가 그 유저의 탑 한계 */
-        up++;
-        /* 클리어했다 — 다음 FOLD_STEP−1 층을 제품 보상표로 접고 다시 실전으로 확인한다 */
-        for (let k = 0; k < FOLD_STEP - 1 && guard < 200; k++) {
+        up++; climbed++;
+        /* 클리어했다 — 다음 실전 확인까지의 층을 제품 보상표로 접는다 */
+        const blk = Math.ceil((TOWER_DAY_MAX - climbed) / (REAL_CAP - shots + 1));
+        for (let k = 0; k < blk && climbed < TOWER_DAY_MAX; k++) {
           const f = towerFloor(t);
           T('탑:접기', () => { towerSetFloor(t, f + 1); giveReward(t.rw(f)); });
-          up++; fold++; guard++;
+          up++; fold++; climbed++;
         }
       }
     }
@@ -673,7 +697,6 @@ async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
   const res = await page.evaluate(async (a) => {
     const B = window.BOT, R = B.R;
-    B.setSeed(a.seed);
     B.freeze();
     B.ledgerSync();
     const out = { rows: [], walls: [], day1: [], sessions: 0 };
@@ -700,8 +723,11 @@ async function runOne(page, pol, seed, days, onRow) {
         /* ── 수령 ── */
         R.attend(); R.mail(); R.quest(); R.guide(); R.pass(); R.ads(); R.roulette();
         R.bless();
-        /* ── 실전(던전·탑) ── */
-        R.dungeons(); R.towers();
+        /* ── 실전(던전·탑) — **하루의 첫 접속에서만** ──
+           입장권은 출석 수령(하루 1회)으로 들어오고 탑은 «질 때까지» 오르는 것이라, 실제 유저도
+           이 둘은 한 자리에서 몰아 한다. 접속마다 돌리면 봇이 하루에 던전 수백 판을 도는데
+           그것이 6회차에 30일 1시드를 4분으로 만든 자리다. */
+        if (h === a.logins[0]) { R.dungeons(); R.towers(); }
         /* ── 재화 소진 ── */
         R.spendAll();
         R.equipBest();
@@ -750,10 +776,15 @@ async function runOne(page, pol, seed, days, onRow) {
     const page = await ctx.newPage();
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
     await page.addInitScript(CLOCK, new Date(2026, 0, 1, 8, 0, 0).getTime());
+    await page.addInitScript(SEEDRNG, 1);
     await page.goto(URL);
     await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
     await page.evaluate(BOT_SRC, {});
     report.cal = await page.evaluate(([st, sec]) => { window.BOT.freeze(); return window.BOT.calibrate(st, sec); }, [CAL_STAGES, CAL_SEC]);
+    /* 게이트 전용 손잡이(`verify494` 되돌림 시험) — 처치 간격 하한을 0 으로 두면 «화력이 크면
+       무한히 빨리 잡는다» 는 5회차 이전의 거짓 모형으로 돌아간다. 그 차이가 표에 실제로
+       나타나는지를 게이트가 확인한다. 본 실행에서는 절대 쓰지 마라. */
+    if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
     await ctx.close();
     console.log('[A] 보정치 — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3));
   }
@@ -767,6 +798,7 @@ async function runOne(page, pol, seed, days, onRow) {
       page.on('pageerror', (e) => errs.push(String(e).split('\n')[0].slice(0, 160)));
       await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
       await page.addInitScript(CLOCK, new Date(2026, 0, 1, 8, 0, 0).getTime());
+      await page.addInitScript(SEEDRNG, i + 1);
       await page.goto(URL);
       await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
       await page.evaluate(BOT_SRC, {});
