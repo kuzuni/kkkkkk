@@ -42,7 +42,11 @@ const is = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
 const GUARD = `const preFight = () => !!bossIntro || (cdArm && battleBusy());`;
 const GUARD_OFF = `const preFight = () => false;`;                 /* §R1 — 수리 전 트리와 같은 뜻 */
 const GUARD_NARROW = `const preFight = () => !!bossIntro;`;        /* §R2 — 등재문 ① 의 좁은 처방 */
-const CALL = `    if(!preFight()){`;
+/* ⚑ 475 이관(2026-08-30) — 같은 스킬 루프에 «전투가 **끝난** 뒤»(격파 시퀀스) 가드가 한 항 붙었다.
+   473 이 지키는 것은 «시작 전 창» 이고 475 는 «끝난 뒤 창» 이라 **둘이 같은 조건 안에 있어야**
+   두 지시가 한꺼번에 지켜진다(감소와 시전이 같은 가드 안이라는 473 의 규약 그대로).
+   ⚠ 호출부 문자열에서 `&& !bossClear` 만 빼고 세면 «475 가 사라져도 초록» 이 되므로 항째로 옮긴다. */
+const CALL = `    if(!preFight() && !bossClear){`;
 
 /* 페이지 안에서 도는 시나리오 — 수리본·사본이 **같은 코드**를 돈다.
    창을 셋으로 갈라(W1 스폰 딜레이 · open 국면 여는 프레임 · W2 국면 중) 프레임마다 찍는다. */

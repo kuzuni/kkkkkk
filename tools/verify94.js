@@ -100,7 +100,11 @@ let br = null;
   /* 332 — 10 → 11. 던전 보스 격파 시퀀스가 `showMsg(DUN_CLR_TXT)` 한 자리를 더했다.
      그때 이 자를 안 옮겨 **게이트가 부패한 채로 있었다**(458 세션이 발견 — 수리 전 커밋에서도
      같은 2건이 빨갰다). 맨 숫자만 올리지 않고 아래 «인자 원문 목록» 두 줄에 그 자리를 적는다. */
-  eq('소스 · 남은 showMsg 호출부 수', calls.length, 11);
+  /* ⚑ 475 이관(2026-08-30) — 11 → 10. «모든 보스전» 격파 시퀀스가 던전(332)의 `showMsg(DUN_CLR_TXT)`
+     와 스테이지 클리어의 `showMsg(msg)` **두 자리를 한 자리로 합쳤다**(`showMsg(bossClear.txt)`).
+     문구 자체는 하나도 안 사라졌고 상수 표 `BOSS_CLR_TXT` 로 모였다 — 그 표를 아래에서 같은 «짧게»
+     자로 잰다(맨 숫자만 내리면 문구가 통째로 사라져도 초록인 자리가 된다). */
+  eq('소스 · 남은 showMsg 호출부 수', calls.length, 10);
   /* 문자열 리터럴만으로 된 인자는 «짧게» 규칙을 문자 수로 검산한다(≤ 14자) */
   const lits = calls.filter(c => /^'[^']*'$/.test(c)).map(c => c.slice(1, -1));
   const tooLong = lits.filter(t => t.length > 14);
@@ -130,8 +134,8 @@ let br = null;
      [ 't',                    /* 정의부 `function showMsg(t)` — 정규식이 함께 센다 */
        "'STAGE ' + s",         /* spawnStage() — 162 이후 스테이지 시작은 언제나 몹 구간 */
        "'BOSS ' + S.stage",    /* startBoss() — 162 가 여기로 이사시켰다 */
-       'msg',                  /* 보스 격파 = 스테이지 클리어(`const msg = 'STAGE CLEAR!'`) */
-       'DUN_CLR_TXT',          /* 332 — 던전 보스 격파 시퀀스의 «클리어» 표시(상수 한 곳에서 온다) */
+       'bossClear.txt',        /* ⚑ 475 — 모든 보스전의 격파 알림 한 자리(문구는 BOSS_CLR_TXT 표에서 온다:
+                                  스테이지 «STAGE CLEAR!» · 승급전 «승급 성공!» · 던전 DUN_CLR_TXT) */
        "died ? '레이드 실패' : '레이드 중단'",   /* 458 — 사망이면 «실패», [포기] 면 «중단» */
      ].sort().join(' / '));
 
@@ -325,10 +329,21 @@ let br = null;
   /* 170(2026-08-27) — 주인 지시로 **클리어 다이아 보상 자체가 폐지**됐다. 160 이 고쳐 둔
      «낱말 다이아» 단언은 감시할 등식을 잃었으므로(LESSONS 168-② SUPERSEDED) 지우지 않고
      **뒤집어 이사**시킨다: 문구는 «STAGE CLEAR!» 한 낱말뿐이고 뒤에 아무것도 안 붙는다. */
+  /* ⚑ 475 이관 — 문구가 `const msg` 지역 변수에서 **모드 공용 표**로 옮겨 갔다. 지키는 뜻은 그대로다:
+     클리어 문구는 «STAGE CLEAR!» 한 낱말이고 뒤에 아무것도 안 붙는다(170 — 다이아 조각 폐지).
+     ⚠ 표만 보고 끝내면 «표에는 있는데 아무도 안 띄우는» 자리가 초록이 되므로 띄우는 줄
+       (`showMsg(bossClear.txt)` — 덧붙임 없는 인자 하나)까지 같이 못 박는다. */
   yes('문구 · 클리어는 «STAGE CLEAR!» 뿐 (170 — 다이아 조각 폐지)',
-      /const msg = 'STAGE CLEAR!';/.test(code) &&
-      !/msg\s*\+=/.test(code.slice(code.indexOf("const msg = 'STAGE CLEAR!';"),
-                                   code.indexOf('showMsg(msg)') + 12)));
+      /BOSS_CLR_TXT\s*=\s*\{[^}]*stage:'STAGE CLEAR!'/.test(code) &&
+      /showMsg\(bossClear\.txt\);/.test(code));
+  /* 94 규약(짧게 ≤ 14자)은 표로 옮겨 간 문구에도 그대로 적용된다 — 475 이후 이 표가 클리어 문구의
+     유일한 출처다. 표가 길어지면 여기서 빨개진다. */
+  {
+    const tbl = (code.match(/BOSS_CLR_TXT\s*=\s*\{([^}]*)\}/) || [])[1] || '';
+    const txts = (tbl.match(/'[^']*'/g) || []).map((t) => t.slice(1, -1));
+    yes('문구 · BOSS_CLR_TXT 를 실제로 훑었다(≥ 2개)', txts.length >= 2);
+    eq('문구 · BOSS_CLR_TXT 중 14자 초과', txts.filter((t) => t.length > 14).join(' | ') || 'none', 'none');
+  }
   eq('문구 · 클리어 문구에 골드 없음', (code.match(/STAGE CLEAR![^\n]*G'/g) || []).length, 0);
   /* 160 — 캔버스 텍스트 싱크(showMsg → fillText · nums → fillText)에 HTML 이 흘러들면
      태그가 «글자» 로 그려진다. 이 싱크로 가는 줄에 아이콘 마크업 생성기가 있으면 실패. */

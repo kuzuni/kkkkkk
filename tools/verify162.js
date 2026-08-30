@@ -143,6 +143,12 @@ const hud = (p) => p.evaluate(() => {
   });
   eq('§4 몹 50킬만으로는 스테이지가 안 오른다', noClear.stage, 12);
   ok(noClear.bossOn, '§4 대신 보스 도전으로 넘어간다');
+  /* ⚑ 475 이관(2026-08-30, 주인 지시 «보스전들 전부 다 죽을떄 연출있게 하고나서 그 다음에») —
+     클리어 «예약» 이 서는 시각이 **격파 프레임에서 시퀀스 끝으로** 옮겨졌다. 162 의 규약(«보스 격파 =
+     스테이지 클리어» · 예약제 · 다음 판 규격)은 하나도 안 바뀌었으므로 항을 지우지 않고 **두 시점으로
+     갈라서** 잰다: ⓐ 격파 프레임 = 아직 안 넘어간다(=475 가 만든 새 사실) ⓑ die + 1초 뒤 = 종전 그대로.
+     ⚠ 항을 «시퀀스가 끝난 뒤» 로 옮기기만 하면 «475 가 통째로 사라져도 초록» 인 게이트가 된다
+     (LESSONS 328-330 «이관이 핵심»). ⓐ 가 그 자리를 막는다. */
   const cleared = await p.evaluate(() => {
     for (let i = 0; i < 120 && !enemies.some(e => e.tk === 'boss'); i++) step(0.05);
     const b = enemies.find(e => e.tk === 'boss');
@@ -150,11 +156,21 @@ const hud = (p) => p.evaluate(() => {
     killEnemy(b);
     const win = stageWin;
     step(0.016);
-    return { stage: S.stage, win, bossOn, farm: S.bossFarm, killed, total: stageTotal(),
+    /* ⓐ 격파 직후 — 시퀀스가 돌고 있고 스테이지는 그대로 */
+    const mid = { stage: S.stage, seq: !!bossClear, pend: stageWin, mobs: spawnQ.length };
+    /* ⓑ die 애니 + 홀드가 지나면 종전과 같은 클리어 처리가 한꺼번에 일어난다 */
+    let guard = 0;
+    while (bossClear && guard++ < 600) step(1 / 60);
+    step(1 / 60);
+    return { mid, stage: S.stage, win, bossOn, farm: S.bossFarm, killed, total: stageTotal(),
              mobs: spawnQ.length, dia: S.dia - diaB, gold: S.gold - goldB, pending: stageWin };
   });
+  eq('§4+475 격파 프레임에는 아직 스테이지가 안 오른다', cleared.mid.stage, 12);
+  ok(cleared.mid.seq, '§4+475 대신 격파 시퀀스가 돈다(bossClear)');
+  ok(!cleared.mid.pend, '§4+475 시퀀스 중에는 클리어 예약도 아직 없다');
+  eq('§4+475 시퀀스 중에는 다음 파도가 안 깔린다', cleared.mid.mobs, 0);
   eq('§4 보스를 잡으면 스테이지 +1', cleared.stage, 13);
-  ok(cleared.win, '§4 격파 프레임에 클리어가 예약된다(stageWin)');
+  ok(!cleared.win, '§4 격파 프레임에는 예약이 없다(475 — 시퀀스 끝에 선다)');
   ok(!cleared.pending, '§4 클리어 처리 후 예약이 풀린다');
   ok(!cleared.bossOn && !cleared.farm, '§4 다음 스테이지는 몹 구간·파밍 아님');
   eq('§4 다음 스테이지 killed 0', cleared.killed, 0);

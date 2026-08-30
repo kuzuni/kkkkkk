@@ -20385,8 +20385,15 @@ function killEnemy(e){
   if(e.tk === 'boss'){
     cam.shake = 12; bossT = 0; S.bossFarm = false;                       /* 28 — 클리어 → 자동 진행 재개 */
     /* 162 — **보스 격파 = 스테이지 클리어**. 여기서 바로 올리지 않고 예약만 한다(선언부 주석 참고).
-       레이드 샌드백도 tk 'boss' 라서 `bossOn` 으로 «진짜 스테이지 보스» 만 걸러 낸다. */
-    if(bossOn){ bossOn = false; stageWin = true; }
+       레이드 샌드백도 tk 'boss' 라서 `bossOn` 으로 «진짜 스테이지 보스» 만 걸러 낸다.
+       ⚑ 475 — 예약을 세우는 자리가 **격파 프레임에서 시퀀스 끝으로** 옮겨졌다(`bossClearDone`).
+       보스가 터지는 동안 스테이지가 이미 바뀌어 있던 것이 주인이 본 결손이다.
+       ⚠ `bossOn` 은 시퀀스가 끝날 때까지 **켜 둔 채**다 — «지금 어느 전투인가»(`bossMode()`)가
+         시퀀스 동안 빈 문자열이 되면 ⓐ 아래 안전망이 시퀀스를 그 프레임에 지우고 ⓑ 453 가드가
+         풀려 연출 도중에 다른 전투로 들어갈 수 있다. 대신 `bossT` 는 위에서 0 이라 시계는 안 돈다. */
+    /* ⚠ 시퀀스를 못 연 경우(이미 다른 시퀀스가 돌고 있다 = 있을 수 없는 상태)는 **옛 거동으로
+       떨어진다** — 클리어가 통째로 사라지는 자리를 남기지 않는다(안전망 한 줄). */
+    if(bossOn && !bossClearStart('stage', e)){ bossOn = false; stageWin = true; }
     /* 108 — 67 의 줌인·슬로모·플래시는 폐기(주인 지시). 남는 것은 78 의 처치음·BGM 복귀뿐이다 */
     if(!e.raid) bossKillSfx();
   }
@@ -20403,13 +20410,22 @@ function killEnemy(e){
        탑은 `bn:1` 이라 첫 보스를 잡는 순간이 곧 클리어다. */
     if(dunRun){
       dunRun.bossKilled++;
-      if(dunRun.bossKilled >= dunRun.bossN) dunRun.bossDown = true;
+      /* ⚑ 475 — 332 의 시퀀스가 공용 상태로 승격됐다. 깃발(`bossDown`)은 그대로 서고, 시퀀스는
+         `bossClear` 가 굴린다(`clrT`·`clrMsg` 는 그 상태를 읽는 얇은 접근자로 남았다 — startDunRun).
+         길이는 **런이 시작될 때 재 둔 `clrDie`** 를 그대로 쓴다(런 도중 아틀라스가 바뀌어도 안 흔들린다). */
+      if(dunRun.bossKilled >= dunRun.bossN){ dunRun.bossDown = true; bossClearStart('dun', e, dunRun.clrDie); }
     }
   }
   /* 208 ③ — 승급 수호자도 «보스 크기» 가 됐으므로 처치 대접을 같이 받는다(흔들림 + 처치음 +
      메인 BGM 복귀). 스테이지 진행·파밍 플래그는 건드리지 않는다 — 승급전은 스테이지와 무관하고
      그 뒷정리는 `endPromo()` 한 곳이 한다. 실패(시간 초과)로 끝난 경우의 BGM 복귀도 거기 있다. */
-  else if(e.tk === 'promo'){ cam.shake = 12; bossKillSfx(); }
+  /* ⚑ 475 — 승급전도 «터지고 → 알림 → 1초» 를 탄다. 시퀀스는 **마지막 수호자**를 잡은 프레임에
+     열린다(지금은 한 마리뿐이지만 «남은 promo 가 없다» 로 물어야 208 이 수를 늘려도 안 갈라진다).
+     `enemies` 는 이 함수 맨 위에서 이미 splice 됐으므로 여기서 세면 «죽은 뒤 남은 수» 다. */
+  else if(e.tk === 'promo'){
+    cam.shake = 12; bossKillSfx();
+    if(promo && !enemies.some(x => x.tk === 'promo')) bossClearStart('promo', e);
+  }
 }
 /* 작업 59 — 플레이어 자동 이동 AI 상수 (구석·벽 체류 최소화).
    속도·사거리·피해는 손대지 않는다 = 밸런스 불변. 42 조이스틱 수동 중엔 적용되지 않는다. */
@@ -21068,7 +21084,11 @@ function step(dt){
        «발동되면 안 된다» = 시전 분기에 아예 안 들어간다.
        ⚠ 459 의 초기화는 이 루프 **앞**(step 20881)에서 풀리므로 전투 시작 프레임에는
          가드가 이미 열려 있다 = «첫 시전은 시작 프레임에 나간다» 는 459 의 규약이 그대로다. */
-    if(!preFight()){
+    /* ⚑ 475 — «전투가 끝난 뒤»(격파 시퀀스)도 같은 이유로 이 루프가 안 돈다. 473 이 막은 것은
+       시작 전 창이고, 끝난 뒤 창에는 대상이 없어 대부분의 스킬이 알아서 실패하지만 **poison·meteor
+       는 대상 없이도 성공한다**(459 주석) — 보스가 터지는 동안 빈 바닥에 장판이 깔린다.
+       감소와 시전이 같은 가드 안이라 «쿨이 지나지도, 발동되지도 않는다» 가 한꺼번에 지켜진다. */
+    if(!preFight() && !bossClear){
       const rateMul = stat.rate/1.4 * sbRate();   /* 86 — 신속의 축복·광란 */
       for(const id of S.eqSkill){
         const s = SK[id];
@@ -21651,6 +21671,29 @@ function step(dt){
     if(c.life <= 0) corpses.splice(i,1);
   }
 
+  /* ---- ⚑ 475 «모든 보스전» 격파 시퀀스 ---- */
+  /* 자리가 여기인 이유는 둘이다: ① **적 순회 뒤**여야 한다 — 후속 처리(`endDunRun`·`endPromo`·
+     `spawnStage`)가 `enemies` 를 통째로 비우므로 순회 도중에 부르면 그 순회가 빈 칸 위를 돈다
+     (162 stageWin 이 예약제인 것과 같은 이유) ② **모드별 시계 앞**이어야 한다 — 아래 네 시계가
+     이 상태를 보고 자기 감소를 멈춘다. 시체(die 애니)·파티클은 위 액터 절이 계속 굴린다. */
+  /* ⚑ 안전망 한 줄(457 과 같은 꼴) — 시퀀스가 **자기 전투보다 오래 살아남지 못하게** 한다.
+     새 상태를 안 만들고 이미 있는 단일 판정(`bossMode()`, 453)에 물어본다: 포기·실패·이탈로 런이
+     사라졌거나 모드가 갈렸으면 시퀀스도 그 프레임에 사라진다(332 §D «포기하면 잔존 0» 규약). */
+  if(bossClear && bossClear.md !== bossMode()) bossClear = null;
+  if(bossClear){
+    bossClear.t += dt;
+    /* ① 보스가 터질 때까지 기다린다(시체 die 애니) → ② 알림을 띄운다 */
+    if(!bossClear.msg && bossClear.t >= bossClear.die){
+      bossClear.msg = true;
+      showMsg(bossClear.txt);
+      /* 78 — «클리어» 소리는 스테이지 클리어에만 있던 것이라 그 자리(=알림 시점)로 같이 옮겼다.
+         던전은 완료 화면이, 승급전은 팝업이 각자 제 소리를 낸다. */
+      if(bossClear.md === 'stage') sfx('clear');
+    }
+    /* ③ 그로부터 1초 뒤 후속 — 던전 완료 화면 / 승급 팝업 / 다음 스테이지 */
+    if(bossClear.t >= bossClear.die + DUN_CLR_HOLD) bossClearDone();
+  }
+
   /* ---- 28 보스전 제한 시간 ---- */
   /* ⚑ 457(주인 지시 2026-08-30) — «전투 시작부터 시간이 흐른다». 등장 국면 자체는 step() 맨 위가
      통째로 막지만, 그 **앞의 스폰 딜레이 1.4초**(`startBoss` 가 `spawnQ` 에 넣는 그 값)는 여기 있었다 —
@@ -21699,16 +21742,12 @@ function step(dt){
        «터지고 → 클리어 → 1초 뒤 완료 화면»). 두 갈래는 **배타적**이다: 시퀀스에 들어간 런은
        제한 시간을 더 이상 깎지 않으므로 «연출 도중 시간이 다 돼 실패로 끝난다» 가 원천적으로 없다
        (타이머 체인이었다면 그 경합이 생긴다 — 그래서 상태 하나로 뒀다). */
-    if(dunRun.bossDown){
-      /* 425 — 등장 국면 도중에 보스가 죽으면(펫·지속 피해) 국면은 그 자리에서 닫는다.
-         닫지 않으면 격파 시퀀스가 도는 동안 카메라가 시체를 계속 비춘다. */
-      if(dunRun.introOn) bossIntroEnd();
-      dunRun.clrT += dt;
-      /* ① 보스가 터질 때까지 기다린다(시체 die 애니) → ② «클리어» 를 띄운다 */
-      if(!dunRun.clrMsg && dunRun.clrT >= dunRun.clrDie){ dunRun.clrMsg = true; showMsg(DUN_CLR_TXT); }
-      /* ③ 그로부터 1초 뒤 완료 화면. 문구는 endDunRun → spawnStage 의 «STAGE n» 이 자연히 걷어 간다 */
-      if(dunRun.clrT >= dunRun.clrDie + DUN_CLR_HOLD) endDunRun(true);
-    }else if(dunRun.fight){
+    /* ⚑ 475 — 시퀀스 자체는 위 공용 블록이 굴린다(경과·«클리어» 문구·완료 화면 전부).
+       여기 남는 뜻은 하나뿐이다: **시퀀스에 들어간 런은 제한 시간을 더 이상 깎지 않는다**
+       (332 가 «두 갈래는 배타적» 이라고 적어 둔 그 성질 — 연출 도중 시간 초과가 구조적으로 없다).
+       425 의 «국면 도중 격파면 국면을 닫는다» 는 `bossClearStart` 로 올라갔다(모드 공용). */
+    if(dunRun.bossDown){ /* 시퀀스 진행 중 — 이 런의 시계는 멈춘다 */ }
+    else if(dunRun.fight){
       dunRun.t -= dt;
       if(dunRun.t <= 0){ dunRun.t = 0; endDunRun(false); }
     }
@@ -21722,9 +21761,15 @@ function step(dt){
 
   /* ---- 승급전 진행 ---- */
   if(promo){
-    promo.t -= dt;
-    if(!enemies.some(e => e.tk === 'promo')) endPromo(true);
-    else if(promo.t <= 0) endPromo(false);
+    /* ⚑ 475 — 격파 시퀀스 중에는 승급전 시계도 멈추고 결과 팝업도 안 뜬다. 수호자가 터지는
+       동안 «시간 안에 못 잡았습니다» 로 뒤집히는 경합을 원천적으로 없앤다(던전과 같은 배타 규약).
+       승리 처리(`endPromo(true)`)는 홀드가 끝나는 프레임에 `bossClearDone` 이 부른다. */
+    if(bossClear){ /* 시퀀스 진행 중 — 승급전 시계는 멈춘다 */ }
+    else{
+      promo.t -= dt;
+      if(!enemies.some(e => e.tk === 'promo')) endPromo(true);
+      else if(promo.t <= 0) endPromo(false);
+    }
   }
 
   /* ---- 스테이지 클리어 ---- */
@@ -21742,6 +21787,12 @@ function step(dt){
        경우(페이즈 사이·이상 상태)는 바로 위 `dunBossTick` 이 세운다 — 리필은 할 일이 없다.
        ⚠ `queueMobs()` 자체는 스테이지·`failBoss`·`spawnStage` 가 계속 쓰므로 함수는 그대로 둔다. */
   }
+  /* ⚑ 475 — 격파 시퀀스 중에는 **스테이지 진행이 통째로 멈춘다**: 다음 파도(`queueMobs`)도,
+     50킬 자동 보스 도전도, 파밍 전환도 일어나지 않는다. 보스가 터지는 2초 남짓 사이에 잡몹이
+     쏟아지면 «격파 연출» 이 아니라 다음 판이 이미 시작된 그림이 된다(주인 지시의 «그 다음에»).
+     ⚠ 던전은 위 갈래가 먼저 받으므로 여기 오지 않는다(`dunBossTick` 은 계속 돌아야 한다 —
+       그 함수는 격파 깃발이 서면 맨 위에서 스스로 돌아 나간다). */
+  else if(bossClear){ /* 시퀀스 진행 중 — 스테이지 진행·잡몹 파도 정지 */ }
   /* 108 — 처치 연출이 폐기돼 «연출이 끝나기를 기다리는» cineBusy() 게이트도 함께 사라졌다 */
   /* 162 — 스테이지 한 판은 **몹 ENEMY_COUNT 킬 → 보스 도전 → 보스 격파** 3단계다.
      아래 네 갈래는 «지금 어느 단계냐» 로 갈리며 서로 배타적이다(위에서부터 우선). */
@@ -21763,10 +21814,11 @@ function step(dt){
          160 — 여기는 **캔버스 텍스트 싱크**다(showMsg → ctx.fillText). `curIc()`(125) 는 `<img …>`
          HTML 문자열이라 캔버스에 원문 그대로 그려졌다(«STAGE CLEAR! <img class="cic" …>+80»).
          ⛔ showMsg·nums 등 캔버스 문자열에는 curIc()/HTML 을 절대 넣지 마라(게이트 verify94 §문구). */
-      const msg = 'STAGE CLEAR!';
+      /* ⚑ 475 — 문구(«STAGE CLEAR!»)와 클리어 소리는 **여기가 아니라 시퀀스의 알림 시점**에 난다
+         (격파 + die 애니 뒤). 여기는 그로부터 1초 뒤의 «후속» 자리라, 문구를 여기서 또 띄우면
+         이미 시작된 다음 스테이지 위에 «STAGE CLEAR!» 가 덮인다. 화면에 남는 문구는
+         `spawnStage()` 의 «STAGE n» 이고, 그것이 클리어 문구를 자연히 걷어 간다(332 와 같은 처리). */
       spawnStage();
-      showMsg(msg);
-      sfx('clear');                                       /* 78 — 스테이지 클리어 */
       uiDirty = true;
     }
     else if(bossOn){ /* ② 보스전 진행 중 — 결판(격파·시간 초과·사망)이 날 때까지 아무것도 하지 않는다 */ }
@@ -24353,6 +24405,52 @@ function dunBossDieSec(d){
   const n = (A && A.a && A.a[nm] && A.a[nm].length) || 0;
   return clamp(n / CORPSE_FPS, 0.3, CORPSE_LIFE);
 }
+/* ⚑ 475 (주인 지시 2026-08-30 «보스전들 전부 다 죽을떄 쩄뜬 연출있게 하고나서 그다음에 다음스테이지
+   가던지 뭐 클리어 알림뜨던지 그렇게 하라») — 332 가 **던전에만** 세운 격파 시퀀스를 «모든 보스전» 의
+   **공용 상태 하나**로 승격한다(457 이 등장 국면을 `bossIntro` 로 승격한 것과 같은 방식·같은 이유:
+   모드가 넷이 되면 런에 얹은 사본은 «던전만 있는 시퀀스» 가 되고, 나머지 모드는 죽는 프레임에
+   그대로 넘어간다 = 주인이 본 그림).
+     `md`  = 'stage' | 'promo' | 'dun'  ·  `t` = 격파부터의 경과(초)
+     `die` = 그 보스가 «터지는» 데 걸리는 시간(시체 die 애니 길이)  ·  `msg` = 알림을 이미 띄웠나
+     `txt` = 그때 띄울 중앙 문구(94 규약 — 짧게)
+   ⚑ 타이머 체인이 아니라 **상태 하나**다(332 가 정한 규약 그대로) — 포기·시간 초과·사망과 경합할 수
+     없다: 시퀀스에 들어간 모드는 아래 step() 분기에서 자기 시계를 더 이상 깎지 않는다.
+   ⚠ 홀드는 **새 상수를 만들지 않고** 던전의 `DUN_CLR_HOLD`(1초)를 그대로 공유한다 — 주인 지시의 «1초»
+     가 모드마다 갈라지면 그 순간 «던전만 1초» 로 되돌아간다. */
+let bossClear = null;
+/* 승급전 문구는 `endPromo` 의 팝업(«🏅 승급 성공!»)과 **다른 자리**다 — 이것은 캔버스 중앙 문구이고
+   팝업은 홀드가 끝난 뒤에 뜬다. 94 규약(12자)·160 규약(HTML 금지) 둘 다 지킨다. */
+const BOSS_CLR_TXT = { stage:'STAGE CLEAR!', promo:'승급 성공!', dun:DUN_CLR_TXT };
+/* 던전은 카드(`dunBossDieSec`)에서 미리 재 두지만 스테이지·승급전 보스는 **필드에 선 그 적**에서
+   잰다. 두 함수가 같은 규격(프레임 수 ÷ CORPSE_FPS, 0.3~CORPSE_LIFE)을 보므로 사본이 아니다 —
+   `killEnemy` 가 세우는 시체와 **같은 애니**(`e.T.die`)를 같은 fps 로 읽는다. */
+function bossDieSec(e){
+  const A = e && e.T && ATLAS[e.T.atlas], nm = e && e.T && e.T.die;
+  const n = (A && A.a && A.a[nm] && A.a[nm].length) || 0;
+  return clamp(n / CORPSE_FPS, 0.3, CORPSE_LIFE);
+}
+/* 격파 프레임에 시퀀스를 연다. `die` 를 넘기면 그 값을 쓴다(던전은 런이 시작될 때 재 둔 `clrDie`). */
+function bossClearStart(md, e, die){
+  if(bossClear) return false;
+  /* 425/457 — 등장 국면 도중에 보스가 죽으면(펫·지속 피해) 국면은 그 자리에서 닫는다.
+     닫지 않으면 시퀀스가 도는 동안 카메라가 시체를 계속 비춘다(332 가 던전에서 이미 정한 처리). */
+  if(bossIntro) bossIntroEnd();
+  bossClear = { md, t:0, die: (die > 0 ? die : bossDieSec(e)), msg:false, txt: BOSS_CLR_TXT[md] || DUN_CLR_TXT };
+  return true;
+}
+/* 홀드가 끝나는 프레임 — «후속» 은 모드마다 다르고 **각 모드가 이미 쓰던 그 경로 그대로**다.
+   새 종료 경로를 만들지 않는다(458 이 사망을 기존 실패 경로에 붙인 것과 같은 원칙). */
+function bossClearDone(){
+  const md = bossClear ? bossClear.md : '';
+  bossClear = null;
+  if(md === 'dun'){ if(dunRun) endDunRun(true); }
+  else if(md === 'promo'){ if(promo) endPromo(true); }
+  else if(md === 'stage'){
+    /* 162 — 클리어 처리는 예약제다(적 순회 도중에 전장을 갈아엎지 않는다). 이 프레임 아래쪽
+       «스테이지 클리어» 분기가 그 예약을 받아 같은 프레임에 처리한다. */
+    bossOn = false; stageWin = true;
+  }
+}
 /* 목표 높이 = **28 스테이지 보스의 그려진 높이**. 숫자를 손으로 적지 않고 아틀라스에서 잰다 —
    ETYPE.boss 의 배율·애니가 바뀌면 던전 보스도 같이 따라가야 하고, 손으로 적은 사본은 반드시
    그 순간 갈라진다(LESSONS 90-①). 두 쪽 다 «그 애니에서 가장 큰 프레임» 으로 재야 값이 맞는다
@@ -24572,7 +24670,10 @@ function startDunRun(d, f){
   dunRun = { d:d, f:f, t:DUN_SEC, dmg:0, need:d.req(f)*DUN_DMG_K, stage:S.stage, bossQ:false, bossIn:false, bossDown:false, bossLeft:1,
              bossN: dunBossN(d), bossMode: dunBossMd(d), bossUp:0, bossKilled:0,
              fight:false, introDone:false,
-             clrT:0, clrDie: dunBossDieSec(d), clrMsg:false,
+             /* ⚑ 475 — `clrT`·`clrMsg` 는 이제 **공용 상태 `bossClear` 의 얇은 접근자**다(아래
+                defineProperties). `clrDie` 만 런의 값으로 남는다 — 그 값은 «격파 전에» 이미 있어야 하고
+                (verify332 §C 가 입장 직후에 읽는다) 시퀀스가 열릴 때 `bossClearStart` 에 그대로 넘어간다. */
+             clrDie: dunBossDieSec(d),
              /* 339 — «연속 도전» 은 **런이 시작될 때 한 번** 굳힌다(수·방식·clrDie 와 같은 이유).
                 런 도중에 04 세부 팝업이 닫히거나 다른 던전을 열어 봐도 이 런의 결과 화면은 안 흔들린다. */
              auto: dgdAutoOn };
@@ -24587,13 +24688,24 @@ function startDunRun(d, f){
                set(v){ if(!v && bossIntro && bossIntro.md === 'dun') bossIntroEnd(); } },
     introT:  { enumerable:false, configurable:true,
                get(){ return bossIntro && bossIntro.md === 'dun' ? bossIntro.t : 0; },
-               set(v){ if(bossIntro && bossIntro.md === 'dun') bossIntro.t = v; } }
+               set(v){ if(bossIntro && bossIntro.md === 'dun') bossIntro.t = v; } },
+    /* ⚑ 475 — 국면(457)과 **같은 처방**이다. 332 이후 던전 계열 게이트·재현기가 `clrT`·`clrMsg`
+       라는 이름으로 «지금 격파 시퀀스인가» 를 읽는다(`verify332` §A·§D·§F·§H · `verify255` 등) —
+       이름만 지우면 그것들이 시퀀스를 **0 으로 읽고 조용히 초록**이 된다(헛초록). 실체는 전역
+       하나뿐이고 여기서는 읽고 쓸 뿐이다(쓰기는 §H 의 «시계를 확 밀어 본다» 가 쓴다). */
+    clrT:    { enumerable:false, configurable:true,
+               get(){ return bossClear && bossClear.md === 'dun' ? bossClear.t : 0; },
+               set(v){ if(bossClear && bossClear.md === 'dun') bossClear.t = v; } },
+    clrMsg:  { enumerable:false, configurable:true,
+               get(){ return !!(bossClear && bossClear.md === 'dun' && bossClear.msg); },
+               set(v){ if(bossClear && bossClear.md === 'dun') bossClear.msg = !!v; } }
   });
   bossIntro = null;                                  /* 457 — 새 런은 언제나 국면 없이 시작한다 */
   cdArm = true;                     /* ⚑ 459 — 예약. 던전·탑은 «스폰 딜레이 1.4초 + 425 등장 국면» 뒤에
                                        보스가 표적이 되고, step() 이 그 프레임에 푼다(페이즈 2·3은 안 건다) */
   /* 레이드(46)와 같은 «전장 초기화» 절차 — 보스 파밍 상태·잔존 오브젝트를 전부 비운다 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
+  bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
@@ -27519,6 +27631,7 @@ function startRaid(r){
   save(); uiDirty = true;
   raidOn = r; raidT = r.sec; raidDmg = 0; raidStage = S.stage;
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
+  bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;                                  /* 114 */
@@ -27640,6 +27753,7 @@ function startArena(){
             myMax:Math.max(1, stat.maxHp), opMax:hp, done:false };
   /* 30·46 과 같은 «전장 초기화» 절차 */
   S.bossFarm = false; bossT = 0; bossOn = false; stageWin = false;   /* 162 — 보스 단계 플래그도 함께 비운다 */
+  bossClear = null;                 /* ⚑ 475 — 새 판은 언제나 격파 시퀀스 없이 시작한다(457 이 국면에 쓴 그 한 줄) */
   enemies.length = 0; spawnQ.length = 0; shots.length = 0; nums.length = 0;
   zones.length = 0; booms.length = 0; bolts.length = 0; corpses.length = 0; drones.length = 0; killed = 0;
   rings.length = 0;
