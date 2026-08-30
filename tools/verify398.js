@@ -18,6 +18,7 @@
  * [3]-(가) 기계적 검증: 레퍼런스 대조가 아니라 «데이터 → 지급/표기» 판정이라 비평가를 띄우지 않는다.
  */
 const { pw, launch } = require('./pwlaunch');
+const { revertMeasure } = require('./revert398');   /* 539 — §R 되돌림은 재현기(probe539)와 한 벌이다 */
 const { chromium } = pw();
 const fs = require('fs');
 const path = require('path');
@@ -194,59 +195,39 @@ const CURKEYS = "(r => Object.keys(r).filter(k => !['ic', 't', 'g', 'n', 'k'].in
     ok(errs2.length === 0, '§3 콘솔 에러 0건', errs2.slice(0, 2).join(' | ') || '없음');
     await ctx.close();
 
-    /* ══ §R 되돌림 시험 — 골드·유물조각을 되살린 사본은 반드시 빨개진다 ══ */
-    console.log('§R 되돌림 시험 — 옛 3재화를 되살린 사본');
-    const tmp = path.join(ROOT, 'tools', '.verify398-revert.html');
-    let src = SRC;
-    const passOld = `const PASS_CUR = [
-  { k:'dia', ic:curIc('dia'), n:i => 100 + i * 50 }
-];`;
-    const passRevert = `const PASS_CUR = [
-  { k:'gold',  ic:curIc('gold'), n:i => 20000 * (i + 1) * (i + 1) },
-  { k:'dia',   ic:curIc('dia'), n:i => 30 + i * 10 },
-  { k:'relic', ic:curIc('relic'), n:i => 3 + i }
-];`;
-    const rwOld = `  const cur = PASS_CUR[0], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);`;
-    const rwRevert = `  const cur = PASS_CUR[(i + c) % 3], mul = c === 0 ? 1 : (c === 1 ? 3 : 2);`;
-    /* 513 — 선언이 «1..7 순환» 으로 바뀌어 사본 편집 자리의 문자열도 같이 옮겼다.
-       되돌리는 것은 **399 축(재화 갈래)** 하나다 — 칸 수는 이 자의 물음이 아니다(그건 verify513 §R 몫). */
-    const atOld = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
-  ATTEND.push({ ic:curIc('dia'), t:'다이아', dia });`;
-    const atRevert = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
-  ATTEND.push(i % 5 === 0 ? { ic:curIc('relic'), t:'유물조각', rel:400 + i*25 }
-                          : { ic:curIc('dia'), t:'다이아', dia });`;
-    const found = [passOld, rwOld, atOld].map(x => src.includes(x));
-    ok(found.every(Boolean), '§R [전제] 사본 편집 자리 3곳을 소스에서 찾았다',
-      found.map((f, i) => (f ? '○' : '✗') + ['PASS_CUR', 'passRw', 'ATTEND'][i]).join(' '));
-    if (found.every(Boolean)) {
-      src = src.replace(passOld, passRevert).replace(rwOld, rwRevert).replace(atOld, atRevert);
-      fs.writeFileSync(tmp, src);
-      try {
-        const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-        await ctx2.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
-          [KEY, JSON.stringify({ gold: 1e6, dia: 1000, relic: 100, best: 200 })]);
-        const e2 = [];
-        const p2 = await open(ctx2, e2, 'file://' + tmp);
-        const rv = await p2.evaluate(() => {
-          const cells = [];
-          const prev = passTab; passTab = 'stage';
-          for (let i = 0; i < PASS_TABS.stage.n; i++) for (let c = 0; c < PASS_TABS.stage.cols; c++) cells.push(passRw(i, c));
-          passTab = prev;
-          return {
-            passKeys: [...new Set(cells.map(c => c.k))].sort(),
-            maxTxt: cells.reduce((a, c) => (won(c.n).length > a.length ? won(c.n) : a), ''),
-            atKeys: [...new Set(ATTEND.flatMap(r => Object.keys(r).filter(k => !['ic', 't'].includes(k))))].sort()
-          };
-        });
-        ok(rv.passKeys.length > 1 && rv.passKeys.includes('gold'),
-          '§R 패스 — 되살린 사본은 §1 이 빨개진다(키가 여럿)', '[' + rv.passKeys.join(',') + ']');
-        ok(rv.maxTxt.length > 7,
-          '§R 패스 — 되살린 사본은 «7자 이하» 항도 빨개진다(골드 칸이 9자다)', '«' + rv.maxTxt + '»');
-        ok(rv.atKeys.length > 1 && rv.atKeys.includes('rel'),
-          '§R 출석 — 되살린 사본은 §2 가 빨개진다(rel 부활)', '[' + rv.atKeys.join(',') + ']');
-        await ctx2.close();
-      } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
-    }
+    /* ══ §R 되돌림 시험 — 골드·유물조각을 되살린 사본은 반드시 빨개진다 ══
+     *
+     * 539(2026-08-30) — **소스 문자열을 통짜로 들고 있던 사본 편집을 폐기하고 «페이지 주입» 으로 옮겼다.**
+     *   옛 방식은 `index.html` 의 세 조각(PASS_CUR 선언 3줄 · passRw 한 줄 · ATTEND 루프 본문 2줄)을
+     *   **문자 그대로** 들고 있다가 치환했다. 그래서 그 루프를 만지는 작업이 올 때마다 자가 부패했다 —
+     *   498(첫날 환영 다이아)이 `const dia = …` 에 `i === 1 ? ATT_D1_DIA :` 를 끼워 넣자 [전제] 가
+     *   `✗ATTEND` 로 빨개졌고(20/21), **§R 본체는 통째로 안 돌았다** = 398·399 가 되돌아가도 못 잡는 상태.
+     *   513 이 앵커를 «현재 본문» 으로 갱신해 초록을 되찾았지만 그것은 **같은 부패를 다시 예약**하는 것이다
+     *   (499·517 이 같은 루프를 계속 만진다).
+     *   ⇒ 이제 파일을 **한 글자도 안 만진다**. 제품을 그대로 띄운 뒤 표(PASS_CUR·ATTEND)를 그 자리에서
+     *   399 이전 값으로 되돌려 붓고, **판정은 제품 함수(passRw·won)가 하게** 둔다(368·527 선례).
+     *   ⚠ 수식·배수를 베끼지 않는다 — 옛 `PASS_CUR[(i + c) % 3]` 은 «표를 그만큼 돌려 놓고
+     *   지금 제품(PASS_CUR[0])을 부르는 것» 과 같은 값이라, 회전만 시키고 계산은 제품에게 맡긴다.
+     *   그래서 제품이 표를 안 읽게 바뀌면 [전제] 의 passRw 항이 **초록이 아니라 빨강**으로 답한다. */
+    console.log('§R 되돌림 시험 — 옛 3재화를 되살린 사본(페이지 주입)');
+    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+    await ctx2.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} },
+      [KEY, JSON.stringify({ gold: 1e6, dia: 1000, relic: 100, best: 200 })]);
+    const e2 = [];
+    const p2 = await open(ctx2, e2);
+    const rv = await p2.evaluate(revertMeasure);
+    /* [전제] 는 남긴다 — 539 이전에 부패를 유일하게 알려 준 항이 이것이다. 묻는 것만 바뀌었다:
+       «소스에서 세 문자열을 찾았나» → «되돌림 주입이 세 축에 실제로 물렸나». */
+    const land = [rv.curN === 3, rv.rwReads, rv.atRel];
+    ok(land.every(Boolean), '§R [전제] 되돌림 주입이 세 축에 물렸다',
+      land.map((f, i) => (f ? '○' : '✗') + ['PASS_CUR', 'passRw', 'ATTEND'][i]).join(' '));
+    ok(rv.passKeys.length > 1 && rv.passKeys.includes('gold'),
+      '§R 패스 — 되살린 사본은 §1 이 빨개진다(키가 여럿)', '[' + rv.passKeys.join(',') + ']');
+    ok(rv.maxTxt.length > 7,
+      '§R 패스 — 되살린 사본은 «7자 이하» 항도 빨개진다(골드 칸이 9자다)', '«' + rv.maxTxt + '»');
+    ok(rv.atKeys.length > 1 && rv.atKeys.includes('rel'),
+      '§R 출석 — 되살린 사본은 §2 가 빨개진다(rel 부활)', '[' + rv.atKeys.join(',') + ']');
+    await ctx2.close();
   } finally {
     await browser.close();
   }
