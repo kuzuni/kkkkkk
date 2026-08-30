@@ -171,17 +171,33 @@ const runFrom = (cols, from, step) => {
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(500);
     const g7 = await readStable('#bSk .stabs');
-    /* 코너 반경 43 밖 · 활성 알약(가운데 칸) 밖 · 구분선 밖인 열 */
-    const XCOL = Math.round(g7.x + g7.w - 90);
+    /* 450 이관 (2026-08-30) — **열을 알약 안으로 옮겼다.** 셸 안쪽에 어두운 립(`--sl` 1.5)이 서면서
+       «알약이 안 닿는 열» 의 상변 검정은 **테두리 + 립** 이 된다(순검정 8 + 보간 1). 이 절이 무는
+       것은 «검정 런 = 테두리» 이므로, 립이 덮인 열 — 즉 **활성 알약 열** — 에서 재는 것이 그 뜻
+       그대로다(ref 도 같은 자리에서 6.97 이다: `probe450` ⓐ «상(알약 열)»).
+       립 쪽은 아래 [P-450] 이 따로 문다 — 그래야 «립이 통째로 사라져도 초록» 이 안 된다. */
+    /* ⚠ «바 한복판» 으로 잡으면 안 된다 — 07 활성 칸(스킬)의 우변이 바 중앙 바로 옆이라
+       중앙 열은 알약 **코너 반경 30 밖**으로 빠져 립이 도로 보인다(첫 판에 8px 이 나온 자리다).
+       활성 칸의 **한복판**을 쓴다. */
+    const onCell = g7.cells.find(c => c.on) || { l: g7.w / 2, w: 0 };
+    const XCOL = Math.round(g7.x + onCell.l + onCell.w / 2);
+    const XFREE = Math.round(g7.x + g7.w - 90);            /* 알약이 안 닿는 열 (립이 보인다) */
     const ys = [];
     for (let i = -4; i < BAR_H + 4; i++) ys.push(Math.round(g7.y) + i);
     const col = await readCol(page, XCOL, ys);
+    const colFree = await readCol(page, XFREE, ys);
     const top = runFrom(col, 4, +1);
     const bot = runFrom(col, ys.length - 5, -1);
-    ok('07 상변 검정 런 = ' + BORDER, top === BORDER, top + 'px @x' + XCOL);
+    ok('07 상변 검정 런 = ' + BORDER + ' (알약 열 — 립이 덮인 자리)', top === BORDER, top + 'px @x' + XCOL);
     ok('07 하변 검정 런 = ' + BORDER, bot === BORDER, bot + 'px @x' + XCOL);
     ok('07 검정 사이(칸 자리)가 ' + CELL_H + ' 이다',
       col.length - 8 - top - bot === CELL_H, (col.length - 8 - top - bot) + 'px');
+    /* [P-450] 같은 바의 «알약 안 닿는 열» — 상변만 립 몫(순검정 +1)이 붙고 하변은 그대로다.
+       두 열을 같이 재야 «테두리 7» 과 «립 1.5» 가 서로를 검산한다(`verify450` 이 본체). */
+    const topF = runFrom(colFree, 4, +1), botF = runFrom(colFree, ys.length - 5, -1);
+    ok('[P-450] 07 비알약 열 상변은 립 몫만큼 두껍다 (순검정 ' + (BORDER + 1) + ')',
+      topF === BORDER + 1, topF + 'px @x' + XFREE);
+    ok('[P-450] 07 비알약 열 하변은 립이 없다 (' + BORDER + ')', botF === BORDER, botF + 'px @x' + XFREE);
     /* 음성항 — 바 바깥 한 줄은 검정이 아니다(런이 «바 밖까지» 새고 있지 않다) */
     ok('[P-음성] 바 바로 위·아래 한 줄은 검정이 아니다',
       !isBlack(col[3]) && !isBlack(col[ys.length - 4]),

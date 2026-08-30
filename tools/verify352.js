@@ -35,6 +35,12 @@ const RADIUS = 30;          /* ⓐ */
 const BORDER = 7, BAR_H = 98, CELL_H = 84;
 const SEP_TOP = 16, SEP_H = 54, SEP_W = 6, SEP_CX = 706;  /* ⓒ — left 가 아니라 **중심**을 묻는다 */
 const RIM = 7, RIM_HEX = '#705F4B';                       /* ⓓ */
+/* 450 이관 (2026-08-30) — 셸 안쪽 **어두운 립** `--sl`. 437 이 «검정 7» 을 확정하며 곁다리로
+   남긴 자리다: ref 는 검정 뒤에 곧바로 림이 오지 않고 검정과 같은 색이 1.5px 더 있고,
+   **활성 알약이 닿는 면에서만** 알약이 그것을 덮는다(`probe450` ⓐ — 안 닿는 면 8.48~8.51 ↔
+   닿는 면 6.97~6.99 · 하변은 어디서나 6.98 = 립 없음). ⇒ 이 게이트가 재는 «알약 없는 변» 은
+   검정이 BORDER + LIP 이고 림은 그만큼 **안으로 밀린다**(두께 7 은 불변). */
+const LIP = 1.5;
 const FACE_HEX = '#61523D';
 
 const HOSTS = [
@@ -151,10 +157,18 @@ const isBlack = h => close(h, '#000000', 8);
         near(g.bar.h, BAR_H, 0.6) && near(g.border, BORDER, 0.01),
         f1(g.bar.h) + ' / ' + g.borders);
       ok(name + ' 활성 알약 반경 ' + RADIUS + 'px', g.onRadius === RADIUS + 'px', g.onRadius);
-      ok(name + ' 셸 안쪽 림 그림자 좌·우 ' + RIM + 'px (352 ⓓ)',
-        /rgb\(112, 95, 75\) 7px 0px 0px 0px inset/.test(g.shadow)
-        && /rgb\(112, 95, 75\) -7px 0px 0px 0px inset/.test(g.shadow),
+      /* 450 — 림은 립만큼 안으로 밀리므로 그림자 오프셋은 LIP + RIM 이고, 그 앞에 검정 립
+         그림자가 좌·우로 하나씩 더 있다. **둘을 같이 물어야** 한쪽이 사라져도 빨개진다. */
+      const RS = LIP + RIM;
+      ok(name + ' 셸 안쪽 림 그림자 좌·우 ' + RS + 'px = 립 ' + LIP + ' + 림 ' + RIM + ' (352 ⓓ · 450)',
+        new RegExp('rgb\\(112, 95, 75\\) ' + RS + 'px 0px 0px 0px inset').test(g.shadow)
+        && new RegExp('rgb\\(112, 95, 75\\) -' + RS + 'px 0px 0px 0px inset').test(g.shadow),
         (g.shadow || 'none').slice(0, 70));
+      ok(name + ' 셸 안쪽 어두운 립 그림자 상·좌·우 ' + LIP + 'px (450)',
+        new RegExp('rgb\\(0, 0, 0\\) 0px ' + LIP + 'px 0px 0px inset').test(g.shadow)
+        && new RegExp('rgb\\(0, 0, 0\\) ' + LIP + 'px 0px 0px 0px inset').test(g.shadow)
+        && new RegExp('rgb\\(0, 0, 0\\) -' + LIP + 'px 0px 0px 0px inset').test(g.shadow),
+        (g.shadow || 'none').slice(0, 100));
     }
 
     console.log('\n[2] ⓑ 셸 테두리 = (셸 − 알약)/2 — 셋이 한 덩어리임을 항등식으로 못박는다 (437)');
@@ -214,10 +228,13 @@ const isBlack = h => close(h, '#000000', 8);
       console.log('   ' + tag + ' ' + row.join(' '));
       console.log('     검정 %d칸(시작 %d) → 림 %d칸(시작 %d) → %s'.replace('%d칸(시작 %d)', z.nb + '칸(시작 ' + z.b + ')')
         .replace('%d칸(시작 %d)', z.nr + '칸(시작 ' + z.rimStart + ')').replace('%s', z.after.join(' ')));
-      ok('07 ' + tag + ' 검정 띠 = 테두리 ' + BORDER + ' (보간 ±1)',
-        z.b <= 1 && Math.abs(z.b + z.nb - BORDER) <= 1, '시작 ' + z.b + ' · ' + z.nb + '칸');
-      ok('07 ' + tag + ' 림 ' + RIM_HEX + ' 이 ' + RIM + '칸 (보간 ±1)',
-        Math.abs(z.nr - RIM) <= 1 && z.rimStart <= BORDER + 1, z.nr + '칸 @' + z.rimStart);
+      /* 450 — 여기 좌·우는 «알약이 안 닿는» 바 변이라 검정 = 테두리 + 립이고 림은 그만큼 밀린다.
+         ⚠ 문턱을 BORDER 로 두면 립이 통째로 사라져도(7) ±1 안이라 초록이다 — 기대값을 옮긴다. */
+      ok('07 ' + tag + ' 검정 띠 = 테두리 ' + BORDER + ' + 립 ' + LIP + ' (보간 ±1)',
+        z.b <= 1 && Math.abs(z.b + z.nb - (BORDER + LIP)) <= 1, '시작 ' + z.b + ' · ' + z.nb + '칸');
+      ok('07 ' + tag + ' 림 ' + RIM_HEX + ' 이 ' + RIM + '칸 @' + (BORDER + LIP) + ' (보간 ±1)',
+        Math.abs(z.nr - RIM) <= 1 && Math.abs(z.rimStart - (BORDER + LIP)) <= 1,
+        z.nr + '칸 @' + z.rimStart);
       ok('07 ' + tag + ' 림 다음이 바 면 ' + FACE_HEX,
         z.after.some(h => close(h, FACE_HEX, 4)), z.after.join(' '));
     }
@@ -237,9 +254,14 @@ const isBlack = h => close(h, '#000000', 8);
       const st = j;
       while (j < col.length && close(col[j], RIM_HEX, 8)) { nr++; j++; }
       console.log('   ' + tag + ' ' + col.slice(0, 16).join(' '));
-      ok('07 ' + tag + ' 검정 띠 = 테두리 ' + BORDER + ' (보간 ±1)', Math.abs(i + nb - BORDER) <= 1, i + '+' + nb);
-      ok('07 ' + tag + ' 밝은 띠 ' + RIM + 'px ' + RIM_HEX + ' — 네 면이 한 규약(색까지) (보간 ±1)',
-        Math.abs(nr - RIM) <= 1 && st <= BORDER + 1, nr + '칸 @' + st);
+      /* 450 — **상변에는 립이 있고 하변에는 없다**(ref 8.50 ↔ 6.98, 세 스크린샷 예외 없음).
+         네 면을 한 기대값으로 묶어 두면 그 비대칭이 게이트에 안 보인다 — 면마다 갈라 묻는다. */
+      const blk = tag === '상' ? BORDER + LIP : BORDER;
+      ok('07 ' + tag + ' 검정 띠 = ' + blk + (tag === '상' ? ' (테두리 + 립)' : ' (테두리 · 립 없음)')
+        + ' (보간 ±1)', Math.abs(i + nb - blk) <= 1, i + '+' + nb);
+      ok('07 ' + tag + ' 밝은 띠 ' + RIM + 'px ' + RIM_HEX + ' @' + blk
+        + ' — 네 면이 한 규약(색까지) (보간 ±1)',
+        Math.abs(nr - RIM) <= 1 && Math.abs(st - blk) <= 1, nr + '칸 @' + st);
     }
 
     /* 352 4회차 — 활성 알약 «내부 3띠» 도 같은 7px 규약이다(비평가 AW 커버리지 적분:
@@ -295,7 +317,7 @@ const isBlack = h => close(h, '#000000', 8);
     const gb = await page.evaluate(READ, '#bSk .stabs');
     ok('R4 주입을 걷으면 전부 원래대로',
       gb.onRadius === RADIUS + 'px' && near(gb.seps[0].h, SEP_H, 0.6)
-      && /rgb\(112, 95, 75\) 7px/.test(gb.shadow),
+      && new RegExp('rgb\\(112, 95, 75\\) ' + (LIP + RIM) + 'px').test(gb.shadow),   /* 450 이관 */
       gb.onRadius + ' / h' + f1(gb.seps[0].h));
 
     console.log('\n[5] 콘솔');

@@ -24,7 +24,14 @@ const { chromium } = pw();
 const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', '378.png');
 
-const SHELL_B = 6;          /* 셸 테두리 — 이 검정 하나가 닿는 면의 전부다 */
+/* 437 이관 (2026-08-30) — 셸 테두리는 6 → **7** 이다. 여기 문턱이 ±1 이라 6 인 채로도 초록이어서
+   437 이 갱신을 안 하고 지나갔다(그 상태의 게이트는 «테두리가 6 으로 되돌아가도» 초록이다). */
+const SHELL_B = 7;          /* 셸 테두리 — 이 검정 하나가 닿는 면의 전부다 */
+/* 450 이관 (2026-08-30) — 셸 **안쪽 어두운 립** 1.5px. 상·좌·우 세 면에만 있고, 활성 알약이
+   닿는 면에서는 알약이 덮는다 ⇒ 이 게이트의 세 갈래가 그대로 «립의 있고 없음» 을 가른다:
+     [2] 닿는 면 = SHELL_B (립은 알약 밑) · [4] 안 닿는 바 변 = SHELL_B + LIP · [3] 알약 면 = PILL_B.
+   ⚠ 립 경계가 반화소라 검정 런 다음에 **보간 한 칸**(#382F25)이 낀다 — 림을 찾을 때 한 칸 건너뛴다. */
+const LIP = 1.5;
 const PILL_B = 7;           /* 안 닿는 알약 면의 검정 */
 const BEVEL = '#634F37';    /* 알약 베벨 (352 6회차) */
 const PILL_FACE = '#4B3E2D';
@@ -202,7 +209,8 @@ async function measure(page, sel, i) {
     /* ---- 2·3·4. 찍힌 픽셀 ---- */
     console.log('\n[2] 찍힌 픽셀 — 셸에 «닿는» 면: 검정 ' + SHELL_B + ' (셸 테두리뿐) → 베벨 ' + BEVEL);
     console.log('[3] 양성 대조 — 셸에 «안 닿는» 알약 면: 검정 ' + PILL_B + ' 그대로 (측정표 07 §9)');
-    console.log('[4] 음성 대조 — 알약이 없는 바 변: 셸 검정 ' + SHELL_B + ' → 림 ' + RIM + ' 그대로\n');
+    console.log('[4] 음성 대조 — 알약이 없는 바 변: 셸 검정 ' + SHELL_B + ' + 립 ' + LIP
+      + ' → 림 ' + RIM + ' (450 — 립은 알약이 안 덮는 면에만 보인다)\n');
     let touched = 0;
     const snap = {};
     for (const [name, sel, setup, idxs] of HOSTS) {
@@ -223,8 +231,11 @@ async function measure(page, sel, i) {
             ok('[2] ' + tag + ' ' + side + ' — 그 다음이 알약 베벨 ' + BEVEL,
               !!b.next && close(b.next.hex, BEVEL, 8), b.next ? b.next.hex + '×' + b.next.n : '없음');
           } else {
-            ok('[4] ' + tag + ' ' + side + ' — 알약 없는 바 변: 셸 검정 ' + SHELL_B + ' → 림 ' + RIM,
-              Math.abs(b.n - SHELL_B) <= 1 && !!b.next && close(b.next.hex, RIM, 8),
+            const rimNext = b.next && close(b.next.hex, RIM, 8) ? b.next
+              : (b.next && b.next.n <= 1 ? bar[b.at + 2] : null);   /* 450 — 보간 한 칸 건너뛴다 */
+            ok('[4] ' + tag + ' ' + side + ' — 알약 없는 바 변: 셸 검정 ' + SHELL_B + ' + 립 ' + LIP
+              + ' → 림 ' + RIM,
+              Math.abs(b.n - (SHELL_B + LIP)) <= 1 && !!rimNext && close(rimNext.hex, RIM, 8),
               '검정 ' + b.n + 'px : ' + fmt(bar));
             const p = blackRun(pill);
             ok('[3] ' + tag + ' ' + side + ' — 안 닿는 알약 면은 검정 ' + PILL_B + ' 유지',
