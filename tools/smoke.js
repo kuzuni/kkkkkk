@@ -198,9 +198,15 @@ function staticSyntax() {
          2단계라 위 수집(.tab/.side/[data-cur])에 안 걸린다(269 [?] 를 여기 등재한 것과 같은 자리). */
       if (await page.$('#relw [data-rlhelp]'))
         openers.push({ label: 'rel:help', sel: null, rel: '#relw [data-rlhelp]' });
-      if (await page.$('[data-opencoll]')) {
-        openers.push({ label: 'coll21', sel: null, coll: true });
+      /* ⚑ 351 13회차(2026-08-30) — 이 문도 죽어 있었다. `[data-opencoll]`(옛 «소환 탭 → [세트 도감]»)은
+         `index.html` 에 **0건**이라 이 블록이 통째로 안 돌았고, smoke 는 **도감 카테고리 탭 여섯 칸을
+         한 번도 연 적이 없다**(사이드 레일이 여는 기본 탭 «무기» 만 `.side` 수집으로 걸렸다).
+         바로 아래 `ptab` 주석이 «죽은 키를 두면 null.click() 으로 즉사한다» 고 적어 둔 그 사고의
+         **조용한 쌍둥이** — 여기서는 즉사 대신 «검사 자체가 없던 일» 이 된다.
+         ⇒ 살아 있는 문으로 갈고, 문이 있는데 탭이 0개면 **던진다**(조용한 초록 금지). */
+      if (await page.$('.side .ibtn[data-pop="coll"]')) {
         const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
+        if (!cts.length) throw new Error('[smoke] 도감 진입은 있는데 `#collTabs .cltab[data-ct]` 이 0개다');
         cts.forEach((k) => openers.push({ label: 'colltab:' + k, sel: null, coll: `#collTabs .cltab[data-ct="${k}"]` }));
       }
       /* 22 퀘스트 팝업의 하단 2분할 토글(일일 · 반복) — 팝업을 연 뒤에만 보이는 2단계 오프너다(작업 22).
@@ -278,10 +284,9 @@ function staticSyntax() {
           await page.waitForTimeout(400);
           await page.evaluate((s) => document.querySelector(s).click(), o.prof);
         } else if (o.coll) {
-          /* 보물상자 탭 → [📖 세트 도감] → (탭 오프너면) 깃발 서브탭까지 (작업 21) */
-          await page.click('.tab[data-t="box"]', { timeout: 3000, force: true });
-          await page.waitForTimeout(400);
-          await page.evaluate(() => document.querySelector('[data-opencoll]').click());
+          /* 사이드 레일 «📚 도감» → 깃발 서브탭 (작업 21).
+             351 13회차 — 옛 «보물상자 탭 → [📖 세트 도감]» 은 문(`[data-opencoll]`)이 사라졌다. */
+          await page.click('.side .ibtn[data-pop="coll"]', { timeout: 3000, force: true });
           await page.waitForTimeout(400);
           if (typeof o.coll === 'string') await page.evaluate((s) => document.querySelector(s).click(), o.coll);
         } else if (o.quest) {

@@ -117,9 +117,23 @@ async function collectOpeners(browser) {
     openers.push({ label: 'prof:19', sel: '#profBtn' });
     openers.push({ label: 'prof:20-스펙', prof: '.pf-tgl>.lb' });
   }
-  if (await page.$('[data-opencoll]')) {
-    openers.push({ label: 'coll21', coll: true });
+  /* ⚑ 13회차(2026-08-30) — **이 갈래의 «문» 이 죽은 속성이었다.** 8·10·12회차와 **같은 사고의 네 번째**다.
+     21 도감의 옛 진입점은 «소환 탭 컬렉션 섹션의 [세트 도감] 버튼»(`[data-opencoll]`)이었는데 그 노드는
+     지금 `index.html` 에 **한 글자도 없다**(사이드 레일 `.ibtn[data-pop="coll"]` 이 대신한다 — 14450).
+     `if (await page.$('[data-opencoll]'))` 가 **false 라 블록이 통째로 안 돌았고**, 그 결과
+     ① `coll21` 도 ② `colltab:*` **여섯 칸도 오프너가 아예 만들어진 적이 없다** = 자가 도감 카테고리 탭을
+     **한 번도 연 적이 없다.** `side:coll` 이 도감을 열긴 하지만 그것은 **기본 탭(무기) 한 칸**뿐이라
+     나머지 다섯(스킬·방패·목걸이·펫·유물)은 5~13회차 내내 «결함 없음» 으로 읽혔다.
+     ⚠ 하필 **436·447 이 방금 `.cl-tabs` 기하를 1600 에서 옮긴 자리**다(리본 −26 · 탭 줄 −11).
+     ⇒ 402·12회차 처방 그대로 **살아 있는 문을 쓰고, 0개면 던진다**(8회차 `OPENER_KEYS` 와 같은 이유 —
+        조용한 실패가 초록으로 읽히면 안 된다). `coll21`(보물상자 경유)은 **경로가 사라져** 되살리지 않는다
+        — 되살려도 `side:coll` 과 같은 화면이라 서명 중복만 하나 는다. */
+  if (await page.$('.side .ibtn[data-pop="coll"]')) {
     const cts = await page.$$eval('#collTabs .cltab[data-ct]', (els) => els.map((e) => e.dataset.ct)).catch(() => []);
+    if (!cts.length) {
+      throw new Error('[351lib] 도감 진입(`.side .ibtn[data-pop="coll"]`)은 있는데 ' +
+        '`#collTabs .cltab[data-ct]` 이 0개다 — 카테고리 탭이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
+    }
     cts.forEach((k) => openers.push({ label: 'colltab:' + k, coll: `#collTabs .cltab[data-ct="${k}"]` }));
   }
   openers.push({ label: 'qtab:daily', quest: 'daily' });
@@ -230,9 +244,9 @@ async function drive(page, o) {
     await page.waitForTimeout(400);
     await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.prof);
   } else if (o.coll) {
-    await page.click('.tab[data-t="box"]', { timeout: 3000, force: true }).catch(() => {});
-    await page.waitForTimeout(400);
-    await ev(() => { const el = document.querySelector('[data-opencoll]'); if (el) el.click(); });
+    /* 13회차 — 옛 경로(보물상자 탭 → `[data-opencoll]`)는 **문이 사라졌다**. 살아 있는 진입은
+       사이드 레일 «📚 도감» 하나뿐이다(collectOpeners 의 같은 주석). */
+    await page.click('.side .ibtn[data-pop="coll"]', { timeout: 3000, force: true }).catch(() => {});
     await page.waitForTimeout(400);
     if (typeof o.coll === 'string') await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.coll);
   } else if (o.quest) {

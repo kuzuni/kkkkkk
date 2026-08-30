@@ -78,7 +78,16 @@ const SET3 = [
   { id: '35-ptower', label: '35 패스 → 시련의 탑', how: 'ptab:tower' },
   { id: '35-ptower2', label: '35 패스 → 절망의 탑', how: 'ptab:tower2' },
   { id: '35-patt', label: '35 패스 → 출석', how: 'ptab:att' },
-  { id: '89-collall', label: '21 도감(보물상자 경유)', how: 'coll21' },
+  /* ⚑ 13회차(2026-08-30) — `89-collall`(«21 도감(보물상자 경유)», `how: 'coll21'`)을 **지웠다**:
+     그 경로의 문(`[data-opencoll]`)이 제품에서 사라져 이 줄은 89 유물 페이지를 도감이라 부르며
+     찍고 있었고, 문을 살아 있는 것으로 바꾸면 `21-coll`(`side:coll`)과 **같은 화면**이 된다.
+     대신 그동안 **한 번도 찍힌 적이 없는 카테고리 탭 다섯 칸**을 세운다(기본 탭 «무기» 는
+     `21-coll` 이 이미 찍는다 — 자·눈이 같은 화면을 보게 라벨을 `probe351` 오프너와 맞춘다). */
+  { id: '21-clskill', label: '21 도감 → 스킬', how: 'colltab:skill' },
+  { id: '21-clshield', label: '21 도감 → 방패', how: 'colltab:shield' },
+  { id: '21-clamulet', label: '21 도감 → 목걸이', how: 'colltab:amulet' },
+  { id: '21-clpet', label: '21 도감 → 펫', how: 'colltab:pet' },
+  { id: '21-clrelic', label: '21 도감 → 유물', how: 'colltab:relic' },
   { id: '10-cart', label: '10 상점(장바구니 잉크 D3 자리)', how: 'tab:shop' },
 ];
 
@@ -155,9 +164,11 @@ async function drive(page, how) {
     await click('#profBtn');
     if (key !== '19') { await page.waitForTimeout(400); await tapIn('.pf-tgl>.lb'); }
   } else if (kind === 'coll21' || kind === 'colltab') {
-    await click('.tab[data-t="box"]');
-    await page.waitForTimeout(400);
-    await tapIn('[data-opencoll]');
+    /* 13회차(2026-08-30) — 옛 진입 «보물상자 탭 → [세트 도감](`[data-opencoll]`)» 은 **문이 없어졌다**
+       (`index.html` 에 그 속성이 0건 — 사이드 레일 `.ibtn[data-pop="coll"]` 이 대신한다).
+       `tapIn` 이 조용히 지나쳐 `89-collall` 은 **89 유물 페이지를 «21 도감» 이라 부르며 찍고 있었다**
+       (r13 첫 실행이 «89-relic 과 같은 서명» 으로 그것을 잡았다 — 12회차 `ptab:box` 와 같은 꼴). */
+    await click('.side .ibtn[data-pop="coll"]');
     if (kind === 'colltab') { await page.waitForTimeout(400); await tapIn(`#collTabs .cltab[data-ct="${key}"]`); }
   } else if (kind === 'quest' || kind === 'qtab') {
     await click('.side .ibtn[data-pop="quest"]');

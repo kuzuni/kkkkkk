@@ -1,0 +1,5 @@
+21-clskill	21 도감 → 스킬	colltab:skill	collw@33|재화||던전+훈련+소환+스킬
+21-clshield	21 도감 → 방패	colltab:shield	collw@33|재화||던전+훈련+소환+방패
+21-clamulet	21 도감 → 목걸이	colltab:amulet	collw@33|재화||던전+훈련+소환+목걸이
+21-clpet	21 도감 → 펫	colltab:pet	collw@33|재화||던전+훈련+소환+펫
+21-clrelic	21 도감 → 유물	colltab:relic	collw@33|재화||던전+훈련+소환+유물
