@@ -114,18 +114,26 @@ const BOT_SRC = function (cfg) {
   B.advance = (ms) => { window.__botT += ms; };
 
   /* ── 피해 감시 — `hitEnemy` 는 함수 선언이라 window 속성이다 ─────────── */
-  let dmgAcc = 0, killAcc = 0, hpAcc = 0, goldAcc = 0;
+  let dmgAcc = 0, killAcc = 0, hpRat = 0, goldRat = 0;
   const rawHit = window.hitEnemy, rawKill = window.killEnemy;
   window.hitEnemy = function (e, dmg, crit) {
     dmgAcc += Math.min(dmg, e ? e.hp : dmg);        /* 넘치는 피해는 «넣은 피해» 가 아니다 */
     return rawHit.apply(this, arguments);
   };
+  /* ⚑ 비(比)를 **처치 순간의 스테이지**로 나눠 쌓는다. 절대값으로 쌓아 두고 나중에 나누면,
+     표본 도중 스테이지가 오른 순간(보스 격파) 분모가 통째로 틀어진다 — 2회차에 κ_gold 가
+     221 로 나온 것이 정확히 그것이었다(s10 으로 나눴는데 실제로는 s40 대에서 번 골드다). */
   window.killEnemy = function (e) {
-    if (e) { killAcc++; hpAcc += e.max || 0; }
-    const g0 = S.gold; const r = rawKill.apply(this, arguments); goldAcc += S.gold - g0;
+    const s = S.stage, boss = e && (e.tk === 'boss' || e.tk === 'dunboss');
+    const g0 = S.gold, gm = stat.goldMul;
+    const r = rawKill.apply(this, arguments);
+    /* ⚑ `stat.goldMul` 을 **나눠서** 쌓는다 — 그것은 «전장의 모양» 이 아니라 **플레이어 스탯**이다
+       (`stat.goldMul = U.gold.val(lv('gold')) * mulGold()`, 19849). 3회차에 이걸 안 나눠 κ_gold 가
+       s200 에서 383 이 됐고, 접기 쪽에서 goldMul 을 **한 번 더** 곱해 골드가 제곱으로 튀었다. */
+    if (e && !boss) { killAcc++; hpRat += (e.max || 0) / eHp(s); goldRat += (S.gold - g0) / (eGold(s) * (gm || 1)); }
     return r;
   };
-  const meterReset = () => { dmgAcc = killAcc = hpAcc = goldAcc = 0; };
+  const meterReset = () => { dmgAcc = killAcc = hpRat = goldRat = 0; };
 
   /* ── try 래퍼 — 한 손잡이가 없어져도 봇 전체가 안 죽는다(LESSONS 319) ── */
   const T = (tag, fn) => { try { return fn(); } catch (e) { B.warn.push(tag + ': ' + String(e && e.message || e).slice(0, 120)); return null; } };
@@ -142,36 +150,109 @@ const BOT_SRC = function (cfg) {
   /* ======================================================================
      1. 보정치 — 구간 표본 (실전 60초)
      ====================================================================== */
-  /* 재는 것 셋:
+  /* 재는 것 다섯:
        κ_dps  = 실전 초당 유효 피해 / `stat.dps`      («수식 DPS 를 실전으로 환산»)
        κ_hp   = 실전 처치 몹 평균 체력 / `eHp(s)`     («몹 섞임» 을 한 수로)
        κ_gold = 실전 킬당 골드 / `eGold(s)`           («골드 배수» 를 한 수로)
-     ⚠ 표본은 «지금 이 세이브» 가 아니라 **스테이지만 갈아 끼운 같은 캐릭터**로 찍는다 —
-       세 비는 스탯이 아니라 «전장의 모양» 을 재는 값이라야 접기가 성립한다. */
+       κ_boss = 실전 보스 DPS / `stat.dps`            (보스는 «쫓아다니지 않는다» — 몹과 다른 값이다)
+       tFloor = 처치 간격 하한(초)                    («화력이 무한해도 이보다 빨리는 못 잡는다»)
+     ⚑ **tFloor 가 없으면 이 시뮬은 통째로 거짓말이다.** 1회차 모형은 `tKill = mobHp/dps` 라
+       화력이 커지면 처치 간격이 0 으로 갔고, 그 결과 «분당 스테이지» 가 내가 넣은 인공 상한
+       (1개/분)에만 걸려 있었다. 실측은 그 반대를 말한다 — 갓 시작한 캐릭터가 s1 에서 이미
+       60초에 62마리(0.97초/마리)이고, 화력을 1,000배로 올려도 그 값은 거의 안 내려간다.
+       하한을 정하는 것은 화력이 아니라 **스폰·접근·이동**이다.
+     ⚑ **표본은 «그 구간에 어울리는 캐릭터» 로 찍는다.** 1회차는 갓 시작한 캐릭터로 s200 을
+       재서 «60초에 0마리» = κ_hp·κ_gold 가 통째로 null 이었다. 체크포인트마다 골드를 부어
+       «보스를 제한 시간의 절반에 잡는» 화력까지 올린 뒤 잰다 — 세 비(比)는 스탯이 아니라
+       «전장의 모양» 을 재는 값이므로, 그 모양이 성립하는 대역에서 재야 뜻이 있다.
+     ⚠ 이 부풀리기는 **보정치 전용 컨텍스트**에서만 일어난다(Node 쪽이 페이지를 따로 연다).
+       봇 본 실행은 새 세이브에서 시작한다. */
+  /* ⚠ **한 번에 다 사면 안 된다.** 2회차는 `S.gold = 1e100` 을 붓고 «살 수 있는 만큼» 을
+     한 호출에 샀는데, MAX 수량이라 첫 바퀴에 목표를 **1,500만 배** 넘겨 버렸다(s10 표본의
+     `stat.dps` 가 1.9e9). 한 레벨씩 올려 목표를 처음 넘는 자리에서 멈춘다 — 과충은 최대 한 바퀴. */
+  const pumpTo = (target) => {
+    const qty0 = S.buyQty;
+    S.buyQty = 1;
+    let guard = 0;
+    while (stat.dps < target && guard++ < 4000) {
+      let bought = false;
+      for (const u of UPG) {
+        const bi = buyInfo(u);
+        if (!bi || !bi.n) continue;
+        S.gold = Math.max(S.gold, bi.cost);
+        applyBuy(u, bi.n, bi.cost); markDirty(); bought = true;
+      }
+      for (const id of TRAIN_STATS) {
+        const bi = trainBuyInfo(id);
+        if (!bi || bi.full || !bi.n) continue;
+        S.gold = Math.max(S.gold, bi.cost);
+        if (trainBuy(id)) bought = true;
+      }
+      if (typeof trainReady === 'function' && trainReady()) { T('cal.trainUp', () => trainUp()); bought = true; }
+      if (!bought) break;                             /* 더 올라갈 손잡이가 없다 */
+    }
+    S.buyQty = qty0;
+    S.gold = 0;
+    return stat.dps;
+  };
+  /* 몹 표본은 **파밍 상태**(`S.bossFarm = true`)에서 찍는다 — 제품이 그 상태에서 보스를 안 부르므로
+     60초 표본 도중에 스테이지가 오르지 않는다(2회차에 표본이 오염된 자리). */
+  const sampleMobs = (s, sec) => {
+    S.stage = s; S.bossFarm = true;
+    T('cal.spawn', () => { bossOn = false; enemies.length = 0; spawnStage(); });
+    for (let i = 0; i < 150; i++) step(1 / 30);        /* 준비 5초 — 첫 스폰·접근은 버린다 */
+    meterReset();
+    const n = Math.round(sec * 30);
+    for (let i = 0; i < n; i++) step(1 / 30);
+    return { dmg: dmgAcc, kills: killAcc, hpRat, goldRat };
+  };
+  /* ⚠ 보스는 **스폰 큐를 지나 선다**(`startBoss` 는 예약만 한다 · 425 등장 국면까지 있다).
+     3회차는 예약 직후 «보스가 없다» 를 종료로 읽어 전 행이 0.00초였다 — 먼저 «섰다» 를 기다린 뒤
+     그 프레임에서 계량을 연다. */
+  const sampleBoss = (s) => {
+    T('cal.bossSpawn', () => { enemies.length = 0; S.bossFarm = false; bossOn = false; startBoss(); });
+    const cap = Math.round((BOSS_SEC * 4 + 12) * 30);
+    let f = 0, seen = false, f0 = 0;
+    for (; f < cap; f++) {
+      step(1 / 30);
+      const on = enemies.some(e => e.tk === 'boss' && e.born >= 0.3);
+      if (on && !seen) { seen = true; f0 = f; meterReset(); }
+      else if (seen && !on) break;
+    }
+    const sec = seen ? (f - f0) / 30 : 0;
+    return { sec, dmg: dmgAcc, killed: seen && f < cap };
+  };
+
   B.calibrate = (stages, sec) => {
-    const keep = { stage: S.stage, best: S.best, farm: S.bossFarm };
     const out = [];
+    let kGuess = 1;
     for (const s of stages) {
-      S.stage = s; S.bossFarm = false;
-      T('cal.spawn', () => { bossOn = false; enemies.length = 0; spawnStage(); });
-      /* 준비 프레임 — 첫 스폰·접근이 표본을 오염시키지 않게 5초 버린다 */
-      for (let i = 0; i < 150; i++) step(1 / 30);
-      meterReset();
-      const n = Math.round(sec * 30);
-      for (let i = 0; i < n; i++) step(1 / 30);
-      const dps = stat.dps || 1;
+      S.stage = s; S.best = Math.max(S.best, s);
+      const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / kGuess;
+      const dpsNow = pumpTo(target);
+      const m = sampleMobs(s, sec);
+      const b = sampleBoss(s);
+      const kDps = (m.dmg / sec) / (dpsNow || 1);
+      if (m.kills > 3) kGuess = kDps;                 /* 다음 체크포인트의 목표에 되먹인다 */
       out.push({
-        s, sec,
-        realDps: dmgAcc / sec, formDps: dps, kDps: (dmgAcc / sec) / dps,
-        kills: killAcc,
-        kHp: killAcc ? (hpAcc / killAcc) / eHp(s) : null,
-        kGold: killAcc ? (goldAcc / killAcc) / eGold(s) : null,
+        s, sec, formDps: dpsNow, realDps: m.dmg / sec, kDps,
+        kills: m.kills,
+        tKill: m.kills ? sec / m.kills : null,
+        kHp: m.kills ? m.hpRat / m.kills : null,
+        kGold: m.kills ? m.goldRat / m.kills : null,
+        bossSec: b.sec, bossKilled: b.killed,
+        kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsNow || 1) : null,
       });
     }
-    S.stage = keep.stage; S.best = keep.best; S.bossFarm = keep.farm;
-    T('cal.restore', () => { bossOn = false; enemies.length = 0; spawnStage(); });
-    const avg = (k) => { const v = out.map(o => o[k]).filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
-    B.cal = { rows: out, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold') };
+    /* ── 처치 간격 하한 — 화력을 대역의 1,000배로 올려 «스폰·접근» 만 남긴다 ── */
+    S.stage = 1;
+    pumpTo(eHp(1) * ETYPE.boss.hp / (BOSS_SEC * 0.5) * 1000);
+    const f = sampleMobs(1, 30);
+    const tFloor = f.kills ? 30 / f.kills : 1;
+
+    const avg = (k) => { const v = out.map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
+    B.cal = { rows: out, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold'), kBoss: avg('kBoss'),
+              tFloor, floorKills: f.kills };
     return B.cal;
   };
 
@@ -182,40 +263,66 @@ const BOT_SRC = function (cfg) {
      보스 판정이 이 게임의 «벽» 그 자체다 — `BOSS_SEC` 안에 못 잡으면 스테이지가 안 오른다.
      ⚑ 스테이지를 올리는 것은 이 함수뿐이고, 「같은 스테이지에 30분」 이 곧 벽 1개다. */
   const MOB_N = ENEMY_COUNT;
+  B.botKills = 0;                                       /* 이번 스테이지에서 잡은 잡몹 수(제품 `killed` 자리) */
+  /* 보정치는 **한 수가 아니라 곡선**이다 — 표본 6개 사이를 log(스테이지)로 선형 보간한다.
+     3회차 표가 그것을 강제했다: κ_dps 가 s1 0.50 → s100 0.78 → s200 2.07 로 단조로 움직인다
+     (빌드가 커질수록 `stat.dps` 가 실전을 **과소**평가한다 — 치명타·펫이 그 식 밖이다).
+     평균 한 수로 접으면 저구간은 2배 빠르고 고구간은 3배 느린 봇이 된다. */
+  const kAt = (key, s) => {
+    const rows = B.cal.rows.filter(r => r[key] != null && isFinite(r[key]) && r[key] > 0);
+    if (!rows.length) return B.cal[key] || 1;
+    if (s <= rows[0].s) return rows[0][key];
+    for (let i = 1; i < rows.length; i++) {
+      if (s <= rows[i].s) {
+        const a = rows[i - 1], b = rows[i];
+        const t = (Math.log(s) - Math.log(a.s)) / (Math.log(b.s) - Math.log(a.s));
+        return a[key] + (b[key] - a[key]) * t;
+      }
+    }
+    return rows[rows.length - 1][key];
+  };
+  B.kAt = kAt;
   B.farmMinute = () => {
     const c = B.cal;
-    const dps = Math.max(1e-9, stat.dps * c.kDps);
-    const s = S.stage;
-    const mobHp = eHp(s) * c.kHp;
-    const tKill = mobHp / dps;                         /* 한 마리에 몇 초 */
-    let left = 60, kills = 0;
-    while (left > 0) {
-      const need = MOB_N - (S.botKills || 0);
+    const dpsMob  = Math.max(1e-9, stat.dps * kAt('kDps', S.stage));
+    const dpsBoss = Math.max(1e-9, stat.dps * kAt('kBoss', S.stage));
+    let left = 60, kills = 0, cleared = 0, tries = 0;
+    while (left > 1e-6 && tries++ < 200) {
+      const s = S.stage;
+      const mobHp = eHp(s) * kAt('kHp', s);
+      /* ⚑ 하한 — 화력이 아무리 커도 «스폰·접근» 아래로는 못 내려간다(보정치 tFloor) */
+      const tKill = Math.max(c.tFloor, mobHp / dpsMob);
+      const need = MOB_N - B.botKills;
       const canKill = Math.min(Math.max(0, need), Math.floor(left / tKill));
       if (canKill > 0) {
         kills += canKill; left -= canKill * tKill;
-        S.botKills = (S.botKills || 0) + canKill;
-        S.gold += canKill * eGold(s) * c.kGold * stat.goldMul;
+        B.botKills += canKill;
+        S.gold += canKill * eGold(s) * kAt('kGold', s) * stat.goldMul;
       }
-      if ((S.botKills || 0) < MOB_N) break;             /* 남은 시간은 다음 마리에 쓴다(반올림 손실은 다음 분으로) */
-      /* ── 보스 판정 ── */
+      if (B.botKills < MOB_N) break;                    /* 남은 시간은 다음 마리 몫 — 반올림 손실은 다음 분으로 */
+      /* ── 보스 판정. 이 게임의 «벽» 은 전부 여기서 선다 ── */
       const bossHp = eHp(s) * ETYPE.boss.hp * bossGateHp(s);
-      const tBoss = bossHp / dps;
+      const tBoss = bossHp / dpsBoss;
       if (tBoss <= BOSS_SEC) {
         left -= tBoss;
-        S.botKills = 0;
-        S.gold += eGold(s - 1 > 0 ? s - 1 : 1) * 20;    /* 클리어 보상(제품 `bonusG` 배수와 같은 자리) */
+        B.botKills = 0;
+        S.gold += eGold(Math.max(1, s - 1)) * 12 * stat.goldMul;   /* 제품 `bonusG`(22250)와 **같은 식** */
         S.stage = s + 1; if (S.stage > S.best) S.best = S.stage;
-        S.bossFarm = false;
-        return { kills, cleared: true };
+        S.bossFarm = false; cleared++;
+        continue;                                       /* 남은 시간으로 다음 스테이지를 계속 민다 */
       }
-      /* 실패 — 파밍으로 되돌아간다(제품 `failBoss` 와 같은 상태). 50킬은 다시 안 센다. */
+      /* 실패 — 제품 `failBoss` 와 같이 파밍 상태로 돌아간다.
+         ⚑ 남은 시간을 **버리지 않는다.** 주인이 확인한 재도전 규칙이 «지면 잡몹 파밍으로 골드를
+            모아 강화 한 바퀴 돌린 뒤 재도전» 이므로, 벽 안에서도 골드는 계속 들어온다.
+            여기서 끊으면 벽이 «수입 0» 이 되어 영원히 안 뚫리는 가짜 하드락이 된다. */
       left -= BOSS_SEC;
-      S.botKills = Math.max(0, MOB_N - 1);              /* 보스 재도전은 «한 마리만 더» 로 다시 열린다 */
+      const farmN = Math.max(0, Math.floor(left / tKill));
+      if (farmN > 0) { kills += farmN; S.gold += farmN * eGold(s) * kAt('kGold', s) * stat.goldMul; }
+      B.botKills = Math.max(0, MOB_N - 1);              /* 재도전은 «한 마리만 더» 로 열린다 */
       S.bossFarm = true;
-      return { kills, cleared: false };
+      break;                                            /* 이번 분은 여기까지 — 강화 한 바퀴 뒤에 다시 민다 */
     }
-    return { kills, cleared: false };
+    return { kills, cleared };
   };
 
   /* ======================================================================
@@ -309,7 +416,9 @@ const BOT_SRC = function (cfg) {
         n += 10;
       }
     }
-    const cnt = () => SHOP_BOXES.map(x => ({ b: x.b, n: (S.cnt && S.cnt['sum_' + x.b]) || 0 }));
+    /* «골고루» 의 자는 봇이 센다 — 제품 `S.cnt` 에 없는 키를 심으면 세이브를 오염시킨다 */
+    if (!B.sumCnt) B.sumCnt = {};
+    const cnt = () => SHOP_BOXES.map(x => ({ b: x.b, n: B.sumCnt[x.b] || 0 }));
     let guard = 0;
     while (guard++ < 400) {
       const order = cnt().sort((a, b) => a.n - b.n);
@@ -318,7 +427,7 @@ const BOT_SRC = function (cfg) {
       if (S.dia < cost * 1.0) break;
       const d0 = S.dia; doSummon(b, 10);
       if (S.dia === d0) break;
-      S.cnt['sum_' + b] = ((S.cnt && S.cnt['sum_' + b]) || 0) + 10;
+      B.sumCnt[b] = (B.sumCnt[b] || 0) + 10;
       n += 10;
     }
     ledger('소환');
@@ -605,14 +714,17 @@ function writeReport(rep) {
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
-  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 처치 | κ_hp | κ_gold |');
-  L.push('|---|---|---|---|---|---|---|');
+  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rep.cal.rows)
-    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} |`);
+    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} |`);
   L.push('');
-  L.push(`**평균 — κ_dps ${rep.cal.kDps.toFixed(3)} · κ_hp ${rep.cal.kHp.toFixed(3)} · κ_gold ${rep.cal.kGold.toFixed(3)}**`);
+  L.push(`**처치 간격 하한 tFloor = ${rep.cal.tFloor.toFixed(3)}초** (s1 에서 대역의 1,000배 화력 · 30초에 ${rep.cal.floorKills}마리)`);
   L.push('');
-  L.push('· κ_dps < 1 이면 «수식 DPS 가 실전보다 후하다» 는 뜻이다 — 접근·스폰 대기·투사체 비행이 그 차이다.');
+  L.push('· κ_dps 는 «수식 `stat.dps` 를 실전으로 환산하는 비» 다. **한 수로 접지 않는다** — 표 안에서 단조로 움직이므로');
+  L.push('  봇은 log(스테이지) 선형 보간으로 읽는다(저구간에서 `stat.dps` 는 실전보다 후하고, 고구간에서는 반대로 과소평가한다).');
+  L.push('· κ_gold 에서 `stat.goldMul` 은 **나눠 뒀다** — 그것은 전장이 아니라 플레이어 스탯이라 접기 쪽에서 따로 곱한다.');
+  L.push(`· 참고 평균(한 수로 봐야 할 때만) — κ_dps ${rep.cal.kDps.toFixed(3)} · κ_hp ${rep.cal.kHp.toFixed(3)} · κ_gold ${rep.cal.kGold.toFixed(3)} · κ_boss ${rep.cal.kBoss.toFixed(3)}`);
   L.push('');
 
   for (const pol of Object.keys(rep.policies)) {
