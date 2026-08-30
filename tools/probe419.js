@@ -131,6 +131,17 @@ const SCAN = function () {
   };
 };
 
+/* `--file <경로>` — 되돌림 사본(선언을 뺀 index) 을 그대로 잴 수 있게. `fresh()` 는 파일을 못 받으므로
+   같은 절차(뷰포트·goto·1100ms)를 여기서 편다. 공용 하네스(`probe351lib`)는 351 세션이 쓰고 있어 안 건드린다. */
+const SRCFILE = 'file://' + require('path').resolve(__dirname, '..', arg('--file', 'index.html'));
+async function open(browser, H) {
+  const ctx = await browser.newContext({ viewport: { width: 1080, height: H }, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  await page.goto(SRCFILE, { waitUntil: 'load' });
+  await page.waitForTimeout(1100);
+  return { ctx, page };
+}
+
 (async () => {
   const browser = await launch(chromium);
   const rows = [];
@@ -141,9 +152,12 @@ const SCAN = function () {
   const screens = ALL ? await collectOpeners(browser) : SCREENS;
   for (const s of screens) {
     for (const H of FRAMES) {
-      const { ctx, page } = await fresh(browser, 1080, H);
-      await settle(page);
+      const { ctx, page } = await open(browser, H);
+      /* ⚠ 순서가 «열고 → 세운다» 여야 한다(probe351 277~278행과 같은 순서). 1회차에 이걸 뒤집었더니
+         **열림 연출 한복판**에서 재게 돼 89 유물 페이지(`#relw`)가 `opacity:0` 로 읽혔고,
+         불투명 상자에서 빠져 «배너가 1.8% 보인다» 는 유령이 나왔다 — 찍힌 픽셀로는 0 이다. */
       await drive(page, s);
+      await settle(page);
       const r = await page.evaluate(SCAN);
       rows.push({ screen: s.label, H, ...r });
       await ctx.close();
