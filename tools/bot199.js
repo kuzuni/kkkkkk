@@ -199,6 +199,7 @@ const BOT_SRC = function (cfg) {
     else if (d < 0) B.diaOut[src] = (B.diaOut[src] || 0) - d;
   };
   B.ledgerSync = () => { diaPrev = S.dia; };
+  B.ledger = ledger;
 
   /* ======================================================================
      1. 보정치 — 구간 표본 (실전 60초)
@@ -767,6 +768,7 @@ async function runOne(page, pol, seed, days, onRow) {
         dailyCheck();
         if (lastLogout != null) {
           try { offlineReward(lastLogout); claimOffline(a.offlineMul); } catch (_) {}
+          B.ledger('오프라인');        /* 안 적으면 이 몫이 다음 장부(출석)에 얹혀 출처가 몇 % 틀어진다 */
         }
         out.sessions++;
         /* ── 수령 ── */
