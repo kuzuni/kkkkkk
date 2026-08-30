@@ -996,6 +996,11 @@
   .ibtn.on .bdg{display:block}
   /* 미해금 — 아트 밝기는 유지하고 흰 자물쇠를 슬롯 위에 크게 얹는다(레퍼런스 방식) */
   .ibtn.lock .si{opacity:.5}
+  /* 453(주인 지시 2026-08-30) — 전투 중 «못 여는» 자리(사이드 승급전 · 탭바 모험) 딤.
+     ⚠ 값을 새로 정하지 않았다 — 바로 위 `.ibtn.lock .si` 와 **같은 .5** 다(같은 뜻: 지금은 못 누른다).
+     ⚠ 기하는 한 값도 안 건드린다(width/height/font-size/margin 0줄) = 레이아웃 Δ0px.
+     ⚠ `.lock` 처럼 자물쇠를 얹지는 않는다 — 잠금(영구)과 전투 중(한때)은 다른 사건이다. */
+  .ibtn.busy .si,.tab.busy .ti{opacity:.5}
   .ibtn.lock::after{content:'🔒';position:absolute;left:0;right:0;top:0;height:var(--ih,82px);
     display:flex;align-items:center;justify-content:center;font-size:calc(var(--ih,82px)*.66);
     filter:drop-shadow(0 0 4px #000) drop-shadow(0 3px 5px #000)}
@@ -19383,7 +19388,11 @@ function spawnStage(){
      ① 몹 ENEMY_COUNT 마리를 채웠다(step 의 클리어 분기)  ② [재도전] 버튼(retryBoss).
    진행바는 stageTotal() 이 1 로 바뀌면서 «0 / 1» 로 갈아 끼워진다. */
 function startBoss(){
-  if(bossOn) return;
+  /* 453 — 종전 `if(bossOn) return`. `battleBusy()` 는 `bossOn`(= inBossFight)을 **포함**하므로
+     «이미 보스전» 은 그대로 걸러지고, 여기에 «다른 모드에서 스테이지 보스로» 가 더해진다.
+     ⚠ 50킬 자동 진입(step ③)은 잡몹 파밍 흐름이라 막히지 않는다 — 그 갈래는 던전·레이드·아레나·
+       승급전에서 애초에 실행되지 않고(step 21324~21340 의 배타 분기), 그때 `battleBusy()` 는 거짓이다. */
+  if(battleBusy()) return;
   S.bossFarm = false; bossOn = true; stageWin = false;
   enemies.length = 0; spawnQ.length = 0; killed = 0;   /* 28 — 보스는 «단독» 스폰. 남은 잡몹은 물린다 */
   spawnQ.push({ t:'boss', delay:1.4 });
@@ -22597,6 +22606,22 @@ function bossMode(){
   if(inBossFight()) return 'stage';
   return '';
 }
+/* 453(2026-08-30, 저장소 주인 지시) — «지금 전투 중인가» 는 새 상태가 아니라 바로 위 `bossMode()` 다.
+   주인 원문: «보스전, 승급전, 던전, 탑, 컨텐츠 하는 도중에 던전네비팝업 못열고 승급전 팝업못열고
+   입장도 못하게 해줘». 종전에는 입구마다 `dunRun || raidOn || arena` 를 **손으로 다시 적어서**
+   승급전(`promo`)과 스테이지 보스전(`bossOn`)이 어느 입구에서도 안 보였다 — 그래서 «던전 중에
+   승급전» «스테이지 보스전 중에 던전» 이 전부 열렸다(LESSONS 58-① «같은 값을 두 곳에 적으면
+   반드시 어긋난다 — 한쪽을 다른 쪽에서 계산해라»). 판정은 이제 여기 하나뿐이다.
+   ⚠ 탑(209)은 별도 상태가 없다 — `startDunRun` 하나로 도므로 `bossMode()` 의 'dun' 에 이미 들어 있다.
+   ⚠ 새 상태를 만들지 않는다: 켜고 끄는 곳이 늘면 «전투는 끝났는데 잠긴 채로 남는» 자리가 생긴다. */
+const battleBusy = () => bossMode() !== '';
+/* 막았으면 true. 문구를 주면 206 규약대로 토스트 한 줄을 띄운다 — 조용히 막으면 «눌러도 아무 일도
+   안 일어나는 버튼» 이 되고, 그건 423·74 가 결함으로 잡은 바로 그 모양이다. */
+function battleBlock(msg){
+  if(!battleBusy()) return false;
+  if(msg) notify(msg);
+  return true;
+}
 /* 28 규격 HUD(#stinfo.bfight · ⏱#bossTm · 체력바#bossHp)를 쓰는 모드 = «해당 HP 바 + 남은 시간» */
 const BOSS_HUD28 = { raid:1, promo:1, stage:1 };
 function drawBossHud(){
@@ -22733,7 +22758,11 @@ function drawHud(){
   /* 작업 48 — 던전 사이드 아이콘 제거로 'dun' 레드닷 대상이 없어졌다(탭바 뱃지로 대체). */
   /* 295 — 입장 게이트가 폐지돼 `canPromote()` 는 상시 참이다. 레드닷은 «권장 기준 충족» 으로 켠다
      (166 «상시 점등 금지»). 승급하면 다음 계급의 기준이 다시 올라가 저절로 꺼진다. */
-  sideAlert('promo',  promoReady());
+  /* 453 — 전투 중에는 팝업 자체가 안 열리므로 «권장 기준 충족» 신호도 내린다(321 규약).
+     같은 조건으로 아이콘을 딤 처리해 «지금은 못 누른다» 를 자리에서 말한다 — 딤 값은 새로 정하지
+     않고 같은 뜻의 선례 `.ibtn.lock .si{opacity:.5}` 를 그대로 쓴다(기하는 안 건드린다 = Δ0px). */
+  sideAlert('promo',  promoReady() && !battleBusy());
+  if(SIDEB.promo) SIDEB.promo.classList.toggle('busy', battleBusy());
   /* 작업 83 — 받을 수 있는 도감 보너스가 하나라도 있을 때만 */
   sideAlert('coll',   collAnyReady());
   /* 301 — 받을 패스 보상(해금·미수령·수령 가능 칸)이 있으면 ▦ 메뉴 버튼·메뉴 «패스» 칸에 레드닷 */
@@ -23795,6 +23824,12 @@ function spinRoulette(){
   roulSpinTo(idx);
 }
 function challengeDungeon(d){
+  /* 453 — «입장은 한 지점»(LESSONS 46-③) 규약 그대로 전투 중 차단도 여기 한 줄이다.
+     03 카드 · 04 세부 [도전] · 31 클리어 [다음]·[재도전] · 339 자동 도전이 전부 이 함수를 지난다.
+     ⚑ 339·31 이 막히지 않는 근거는 **순서**다 — `endDunRun()` 이 `dunRun = null` 로 만들고
+       `spawnStage()` 가 `bossOn = false` 로 되돌린 **뒤**에 `openDunClear()` 가 열리므로,
+       그 화면에서 이 함수에 닿는 시점의 `battleBusy()` 는 반드시 거짓이다. */
+  if(battleBlock('⚔️ 전투 중에는 입장할 수 없습니다')) return;
   /* 90 — 잠긴 던전은 03 카드가 이미 막지만, 04 세부 팝업·구 패널 등 다른 진입점도 있으므로
      «입장하는 한 지점» 에서 한 번 더 막는다(LESSONS 46-③). */
   if(dunLocked(d)){
@@ -23823,10 +23858,9 @@ function challengeDungeon(d){
    참조가 다른 객체)에서 조용히 거짓이 된다 — id 로 묻는다(던전 id 와 겹치지 않는다). */
 const isTower = d => !!d && TOWERS.some(t => t.id === d.id);
 function challengeTower(id){
-  if(dunRun || raidOn || arena){
-    notify('⚔ 다른 전투가 진행 중입니다');
-    return;
-  }
+  /* 453 — 판정을 `battleBusy()` 로 갈았다(승급전·스테이지 보스전도 «전투 중» 이다).
+     문구는 다른 입구와 한 벌로 맞춘다 — 같은 사건에 두 문장이면 사용자가 다른 일로 읽는다. */
+  if(battleBlock('⚔️ 전투 중에는 입장할 수 없습니다')) return;
   const t = towerById(id);
   startDunRun(t, towerFloor(t));
 }
@@ -24152,7 +24186,7 @@ function dunBossTick(){
 }
 
 function startDunRun(d, f){
-  if(dunRun || raidOn || arena) return;      /* 123 — 아레나 중에는 던전에 못 들어간다 */
+  if(battleBusy()) return;      /* 453 — 123 의 «셋만 보던» 가드를 단일 판정으로 갈았다(승급전·스테이지 보스전 포함) */
   /* 178 — bossQ = 보스 국면 시작 여부 · 255 — bossIn = 보스가 필드에 실제로 섰다 / bossDown = 격파(=클리어)
      257 — bossN = 이 던전의 보스 수 · bossMode = 등장 방식 · bossUp = 지금까지 세운 수 · bossKilled = 격파 수.
      수·방식은 **런이 시작될 때 한 번** 표에서 굳힌다 — 런 도중에 데이터가 바뀌어도 판정이 흔들리지 않는다. */
@@ -24415,7 +24449,7 @@ $('dclNx').addEventListener('click', e => {
 /* 지금 이 화면에서 «한 번 더 들어갈 수 있나». 못 들어가면 카운트다운을 아예 안 켠다(④). */
 function dclAutoCan(){
   const d = dclDun; if(!d) return false;
-  if(dunRun || raidOn || arena) return false;   /* 다른 전투 중이면 입장 자체가 막힌다 */
+  if(battleBusy()) return false;   /* 453 — 입장 함수와 **같은 자**를 본다(갈리면 «세다가 막히는» 카운트다운이 된다) */
   if(isTower(d)) return true;                   /* 209 — 탑은 입장권이 없다(무제한) */
   return (S.dunTk[d.id] | 0) > 0;
 }
@@ -24615,7 +24649,11 @@ function startPromo(){
   /* 295 — «조건 미달» 반려는 폐지했다(입장 제한 없음). 남은 가드는 «최고 계급이라 도전할 것이
      없다»(`!r`) 와 «이미 승급전 중»(`promo`) 둘뿐이다. 실패해도 잃는 재화·입장권은 없으므로
      (endPromo 의 실패 경로는 알림 한 줄 + `spawnStage()` 뿐) 재도전은 자유다. */
-  if(!r || promo) return;
+  /* 453(주인 지시 2026-08-30) — «승급전은 스테이지 보스전 도중에도 끼어들 수 있다» 던 설계를 뒤집었다
+     (위 bossMode() 주석의 우선순위 근거였던 그 문장이다 — 이제 끼어들 수 없다).
+     `promo` 단독 검사도 여기 흡수된다: 승급전 중이면 `bossMode()` 가 'promo' 를 돌려준다. */
+  if(!r) return;
+  if(battleBusy()) return;
   enemies.length = 0; spawnQ.length = 0;
   /* ⚑ 285 — 승급전만 60초였다(«보스전 계열» 인데 28·30 과 규격이 갈려 있던 자리). `BOSS_SEC` 참조로 통일한다. */
   promo = { t:BOSS_SEC, max:BOSS_SEC, rank:r };
@@ -25447,10 +25485,8 @@ $('dgdSweep').onclick = () => {
 $('dgdGo').onclick = () => {
   /* 123 — 아레나 모드면 «도전» 이 1:1 대전 시작이다(같은 «페이지를 닫고 전투 화면을 연다» 흐름). */
   if(dgdArena){
-    if(arena || raidOn || dunRun){
-      notify('⚔ 다른 전투가 진행 중입니다');
-      return;
-    }
+    /* 453 — 단일 판정. 205 주석대로 «팝업을 닫기 전에» 묻는 자리는 그대로다. */
+    if(battleBlock('⚔️ 전투 중에는 입장할 수 없습니다')) return;
     /* 205 — 팝업을 닫기 **전에** 판정한다. 닫고 나서 startArena 가 거절하면
        «버튼은 눌렸는데 아무 일도 안 일어난 채 화면만 닫히는» 74 계열 증상이 된다. */
     if(!arenaCanEnter()){
@@ -26310,11 +26346,18 @@ function bgmVars(i){
      · 탑     = **그 층을 깼다**(층이 오르면 요구가 1.65배로 뛴다 — 성장하면 다시 켜진다)
    ⚠ 값을 새로 정하지 않았다. 네 줄 모두 카드 렌더에 이미 적혀 있던 식을 **그대로 옮긴 것**이고,
      카드 쪽은 이제 이 함수를 부른다(양쪽이 같은 자를 쓴다는 뜻이지 조건이 바뀐 게 아니다). */
-const dunCardOk   = d => !dunLocked(d) && S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id]);
-const raidCardOk  = r => !raidLocked(r) && raidLeft() > 0 && !(raidBest(r.id).dps > 0);
+/* ⚑ 453(주인 지시 2026-08-30) — 넷 다 앞자리에 `!battleBusy()` 가 붙는다. 전투 중에는 입장이
+   전면 차단되므로 «지금 들어갈 수 있다» 가 거짓이고, 켜 두면 321 이 세운 규약(«레드닷 = 지금
+   누를 수 있다»)이 깨진 «켜지는데 못 누르는 닷» 이 된다. 값을 새로 적은 것이 아니라 입장 가드와
+   **같은 함수**를 부른다 — 갈리면 298 이 잡은 «탭은 켜지는데 카드는 안 켜지는» 사고가 재발한다.
+   ⚠ 03 던전 페이지는 전투 «중에 열리는» 일은 없어도 **열어 둔 채 스테이지 보스전이 시작되는**
+     경로가 있다(dunw 는 전체화면 페이지이고 그 아래에서 스테이지가 계속 돈다) — 그래서 탭 배지만이
+     아니라 카드 dot 도 이 자를 봐야 한다. */
+const dunCardOk   = d => !battleBusy() && !dunLocked(d) && S.dunTk[d.id] > 0 && cp() >= d.req(S.dun[d.id]);
+const raidCardOk  = r => !battleBusy() && !raidLocked(r) && raidLeft() > 0 && !(raidBest(r.id).dps > 0);
 const arenaCardOk = () => { const rec = S.arena || { w:0, l:0 };
-                            return !arenaLocked() && arenaCanEnter() && rec.w + rec.l === 0; };
-const towerCardOk = t => cp() >= t.req(towerFloor(t));
+                            return !battleBusy() && !arenaLocked() && arenaCanEnter() && rec.w + rec.l === 0; };
+const towerCardOk = t => !battleBusy() && cp() >= t.req(towerFloor(t));
 /* 서브탭 한 칸의 점등 = 그 칸 **안에 있는 카드 중 하나라도** dot 이 켜져 있다. */
 const dunSubAlert = k => k === 'raid'  ? (RAIDS.some(raidCardOk) || arenaCardOk())
                        : k === 'tower' ? TOWERS.some(towerCardOk)
@@ -26404,6 +26447,9 @@ function renderTowerPage(){
   raidPaint();
 }
 function openDungeon(){
+  /* 453 — 전투 중에는 03 던전 내비를 아예 열지 않는다(주인 지시). 이 함수가 «던전 탭 → 03» 의
+     유일한 길이라(작업 48 — 좌측 던전 아이콘 폐기) 여기 한 줄이 탭 경로 전체를 막는다. */
+  if(battleBlock('⚔️ 전투 중에는 열 수 없습니다')) return;
   if(typeof closeShopPage === 'function') closeShopPage();
   if(typeof closeTrain === 'function') closeTrain();
   if(typeof closeRelw === 'function') closeRelw();
@@ -27011,7 +27057,7 @@ function raidStep(dir){
    샌드백은 «죽지 않는 보스» 다: 체력을 크게 잡고 hitEnemy 에서 매번 되돌리며,
    공격력 0 이라 플레이어는 피해를 입지 않는다. 스테이지 진행은 step() 에서 멈춘다. */
 function startRaid(r){
-  if(raidOn || dunRun || arena) return;      /* 123 */
+  if(battleBlock('⚔️ 전투 중에는 입장할 수 없습니다')) return;   /* 453 — 123 의 «셋만 보던» 가드를 단일 판정으로 */
   /* 205 — 입장 차감은 **여기 한 곳**만 지난다(어느 진입점으로 들어와도 같은 자를 탄다).
      소진이면 시작 자체를 하지 않는다 — 버튼은 이미 회색이지만 게이트·키보드 경로가 남아 있다. */
   if(raidLeft() <= 0){
@@ -27120,7 +27166,7 @@ function arenaReward(win){
              : { gold:Math.round(g/5), dia:4, stone:Math.round(COS_ST_ARENA/5) };
 }
 function startArena(){
-  if(arena || raidOn || dunRun) return;
+  if(battleBlock('⚔️ 전투 중에는 입장할 수 없습니다')) return;   /* 453 — 단일 판정 */
   /* 205 — 무료 3회 → 없으면 다이아 100. 둘 다 안 되면 시작하지 않는다(차감은 arenaPay 한 곳). */
   if(!arenaPay()){
     notify(curIc('dia') + ' 다이아 부족 — 추가 도전 <b>' + ARENA_EXTRA_DIA + '</b> 필요');
@@ -29410,6 +29456,10 @@ $('rkList').addEventListener('click', e => {
 window.openRank = openRank;
 
 function openPromo(){
+  /* 453 — 전투 중에는 승급전 팝업을 열지 않는다(주인 지시). 사이드 «승급전» 아이콘이 유일한
+     진입점이라 여기 한 줄이면 된다. «최고 계급» 안내보다 **먼저** 묻는다 — 전투 중이라는 사실이
+     계급 상태보다 앞선 이유다(둘 다 참이면 사용자가 지금 할 수 있는 말은 «전투 중» 쪽이다). */
+  if(battleBlock('⚔️ 전투 중에는 열 수 없습니다')) return;
   const r = nextRank();
   if(!r){ notify('🏅 이미 최고 계급입니다! 🎉'); return; }
   /* 320(주인 지시 2026-08-28) — «최고 스테이지 n/n · 전투력 n/n» 두 줄 폐지. 진행도 대비
@@ -31469,6 +31519,9 @@ function renderUI(){
              : k === 'shop' ? (sumAnyReady() || coinAdAnyReady())
              : false;
     t.classList.toggle('alert', !!al);
+    /* 453 — 전투 중에는 «모험»(던전 내비)이 안 열린다. 배지는 위 `advAlert()` 가 이미 내렸고
+       여기서 아이콘만 딤 처리해 이유를 자리에서 말한다(사이드 «승급전» 과 같은 규칙·같은 값). */
+    t.classList.toggle('busy', k === 'adv' && battleBusy());
   });
   /* 166 — 던전 서브탭 배지: 탭바 «던전» 칸과 같은 기준으로 켠다(마크업에만 있고 토글이 없어 상시 점등이었다)
      298 — 이제 세 칸 전부다. 칸마다 조건이 다르므로 `t.dataset.dsub` 를 그대로 `dunSubAlert()` 에 넘긴다
