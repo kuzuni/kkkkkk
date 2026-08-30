@@ -11087,7 +11087,23 @@
        78..85 가 84 에서 잘려 바닥 띠만 7 → 6 이 됐다(다른 셋은 위 앵커라 멀쩡했다) ⇒ 네 정지점을
        한 칸씩 당긴다. ref 실측(`probe437.py` ⓑ, 07 알약 열)이 그대로 이 값이다 —
        B rel 0..7 · F 7..70 · B 70..77 · D 77..84. 352 의 «7 규약» 은 두께째 그대로다. */
-    background:linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 70px,#634F37 70px 77px,
+    /* 409 6회차 (2026-08-30) — **테이퍼가 벗겨 낸 자리를 «원래 거기 있던 층» 이 받는다.**
+       `::after` 의 검정 링이 접선 쪽에서 얇아지면 그 자리에 부모 그라데이션의 **가로 띠**가 뜨는데,
+       가로 띠는 코너에서 «몇 번째 띠인가» 가 각도마다 달라진다 — 아래 코너 75° 에서 노출 구간
+       (r 23..25.5)이 y 77 을 가로질러 **어두운 띠 1.2px + 베벨 1.3px** 로 쪼개졌다
+       (`verify409` [10] 이 D 0.0 으로, [9] 가 B 3.0 으로 잡았다).
+       ⇒ 노출 구간은 **동심**이어야 한다. 코너 네 곳에 r 23..30 짜리 고리를 부모 배경에 깔면
+          링 밑에 숨어 있다가 **테이퍼가 벗긴 만큼만** 드러난다(칠 순서: 부모 배경 → `::before` → `::after`).
+       ⚠ 색은 좌우가 아니라 **위·아래로 갈린다** — 측정표 07 §9·437 의 띠 순서가 «위는 베벨(0..7) ·
+          아래는 어두운 띠(77..84)» 이고 ref 도 그렇다(449 실측: «이 면의 가장 바깥은 어두운 띠»).
+       ⚠ 반드시 **30×30 타일 no-repeat** 이어야 한다 — 크기를 안 주면 같은 고리가 알약 한복판을
+          가로질러 지나간다(반지름 23~30 원이 x 53 · y 53 을 지난다).
+       ⚠ 테이퍼가 없는 자리에서는 **한 픽셀도 안 보인다**(검정 링 r 23..30 과 정확히 같은 고리다) —
+          `verify409` [8-Δ]·[R7] 이 «아래 코너 Δ0» 로 못박아 둔 성질을 이 층도 그대로 지킨다. */
+    background:
+      radial-gradient(circle at 30px 30px,transparent 0 23px,#634F37 23px 30px,transparent 30px) 0 0/30px 30px no-repeat,
+      radial-gradient(circle at 0 30px,transparent 0 23px,#634F37 23px 30px,transparent 30px) 100% 0/30px 30px no-repeat,
+      linear-gradient(180deg,#634F37 0 7px,#4B3E2D 7px 70px,#634F37 70px 77px,
       #413122 77px 84px);
     /* 384 2회차 (2026-08-29) — **«등폭 링» 은 여기서 안 된다. 시도하고 되돌린 기록을 남긴다.**
        1회차 채점에서 BB·BC 가 2인 독립으로 같은 것을 짚었다(BB ④4 «대각 검정 4.94 ↔ ref 7.08, −30%» ·
@@ -11107,7 +11123,15 @@
           `python3 tools/probe409.py` — 코너 원 중심에서 쏜 광선의 **법선** 두께로 재면
           ref 는 0°~60° 가 **6.0/7.0/6.5/7.0/6.5/6.5/5.5 = 등폭**이고 수리 전 우리는
           **6.5/6.0/6.5/4.5/5.0/4.0/3.5 = 7·cosα**(밴드 예측치와 ±0.5 안에서 일치)였다. */
-    box-shadow:var(--pill-l),var(--pill-r)}
+    /* 409 6회차 (2026-08-30) — **이 한 줄은 «보이는 층» 이 아니라 «AA 이음매를 메우는 층» 이다.**
+       테이퍼가 벗긴 r 23..30 을 `::before` 의 바깥 그림자가 받는데(아래 주석), 그 그림자와
+       `::before` 자신의 `inset 0 -7px` 띠는 **같은 경계선(상자 윤곽 r23)의 양쪽에서 각각 AA** 되어
+       경계 픽셀에서 알파가 1 로 안 붙는다(0.55 + 0.45 를 순차 합성하면 0.75 — 나머지 25% 로
+       밑의 `--pill-l` 베벨이 새어 **1px 밝은 실선**이 생겼다. `verify409` [10] 이 좌 코너 75° 에서
+       D 2.0 으로 잡았다 — 우 코너는 부분픽셀 위치가 달라 9.0 이라 **좌우가 갈렸다**).
+       ⇒ 그 25% 가 베벨이 아니라 **어두운 띠**를 보게 한다. 직선 구간에서는 배경 정지점
+          `#413122 77..84` 와 **같은 색·같은 자리**라 Δ0 이고(437), 코너에서만 `--pill-l` 앞에 선다. */
+    box-shadow:inset 0 -7px 0 #413122,var(--pill-l),var(--pill-r)}
   /* 409 (2026-08-29) — **검정 옆띠 = 등폭 링.** 384 가 만든 가로 띠 의사요소는 `::before` 로 내려갔고
      (선언은 그대로 · 아래) 이 `::after` 가 그 **위**에 검정 링을 얹는다.
      ⚠ **링을 네 면에 다 두르면 안 된다** — 상·하변은 «바 테두리와 공유»(측정표 07 §9 · 378)라 검정이
@@ -11142,8 +11166,41 @@
     background:
       radial-gradient(circle at 30px 30px,transparent 0 16px,#634F37 16px 24px,transparent 24px) 0 0/30px 30px no-repeat,
       radial-gradient(circle at 0 30px,transparent 0 16px,#634F37 16px 24px,transparent 24px) 100% 0/30px 30px no-repeat;
-    -webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)));
-    mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)))}
+    /* 409 6회차 (2026-08-30) — **접선 테이퍼는 «구멍을 옮기는 것» 이 아니라 «오려 내는 것» 이다.**
+       5회차가 `inset ±d 0 0 s` 족(오프셋+스프레드)으로 풀려다 되돌아갔고, 그 회차가 남긴 증명이
+       이 처방의 출발점이다(§14-7 2): 그 족의 두께는 `t(α)=30+d·cos α−√(d²cos²α+529+46d)` 라
+       **d 를 키우면 전 각도에서 얇아진다** — «0~60° 는 7 로 두고 60~90° 만 떨어뜨리는 d» 가 없다.
+       ⇒ 링의 **안쪽 윤곽(r23)은 한 글자도 안 건드리고**, 그린 뒤에 코너마다 원판 하나를 마스크에서
+          «빼기»(`mask-composite:intersect` × 여집합 원판) 한다. 링 자체(`box-shadow inset 0 0 0 7px`)와
+          기둥 손잡이 `--pill-mask` 는 **선언 그대로**다(`verify47` 의 기둥 항·`verify409` [1] 이 읽는 자리).
+       ⚑ **원판의 자리는 ref 곡선에서 역산했다**(§14-7 1 — 세 자·두 비평가 독립 일치:
+          0~60° 7.0 · 70° 5.7 · 75° 4.2 · 78° 2.9 · 86° 2.0 · 90° ~1~2).
+          코너 중심 위 k 에 반지름 ρ 인 원판을 빼면 법선 두께가
+            `t(α) = 30 − k·sin α − √(ρ² − k²·cos²α)`  (ρ² < k²cos²α 이면 «안 닿음» = 7 그대로)
+          이라 **cos α ≥ ρ/k 인 동안은 정확히 7** 이고 그 뒤에만 준다 — 5회차 족이 못 만든 바로 그 모양이다.
+          접선(90°)에서 `t = 30 − k − ρ` 이므로 **k + ρ = 28 이면 접선 2.0**(ref 값)이고,
+          남은 자유도 하나를 ref 의 70~78° 에 맞춰 재면:
+            k=21,ρ=7 → 75° **5.31** (두껍다) · k=20,ρ=8 → 70° **7.06**(꺾임이 늦다) ·
+            **k=19,ρ=9 → 67° 7.0 · 70° 5.92 · 75° 4.11 · 78° 3.33 · 86° 2.15 · 90° 2.0** ← ref 에 가장 가깝다
+       ⚠ **원판은 링 안쪽(r<23)까지 파고든다**(중심에서 10..28) — 위 두 코너에는 그 자리에 베벨 고리
+          (배경 16..24)가 있어 같이 잘린다. 그래도 그 자리는 **부모 0..7 띠와 `::before` 의 위 베벨
+          (`inset 0 7px`)이 같은 `#634F37` 로 이어 받는다**(둘 다 이 층 아래다) — [8] 이 그것을 문다.
+       ⚠ 기둥 폭 30 은 **안 넓혔다.** ref 는 접선 너머 dx 38 까지 2px 꼬리를 끄는데(§14-7 1),
+          여기서 30 → 34 로 넓히면 위·아래 **직선 변**에도 검정이 새고(R4 가 막는 자리) `verify47` 의
+          기둥 항 정규식(`calc(100% - 30px))` 로 끝난다)까지 같이 옮겨야 한다. 꼬리는 다음 회차 몫이고,
+          이 회차가 닫는 것은 **네 비평가가 네 회차에 걸쳐 같이 짚은 «3×7 사각 노치»** 다
+          (접선 열의 낙차 **7 → 2**). */
+    --pill-taper:
+      radial-gradient(circle 23px at 30px 30px,#000 0 23px,transparent 23px),
+      radial-gradient(circle 9px at 30px 11px,transparent 0 9px,#000 9px),
+      radial-gradient(circle 23px at calc(100% - 30px) 30px,#000 0 23px,transparent 23px),
+      radial-gradient(circle 9px at calc(100% - 30px) 11px,transparent 0 9px,#000 9px),
+      radial-gradient(circle 9px at 30px calc(100% - 11px),transparent 0 9px,#000 9px),
+      radial-gradient(circle 9px at calc(100% - 30px) calc(100% - 11px),transparent 0 9px,#000 9px);
+    -webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),var(--pill-taper),var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)));
+    mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),var(--pill-taper),var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px)));
+    -webkit-mask-composite:source-in,source-over,source-in,source-over,source-in,source-in,source-in,source-over;
+    mask-composite:intersect,add,intersect,add,intersect,intersect,intersect,add}
   /* 384 (2026-08-29) — **바닥 어두운 띠가 코너를 감고 올라간다.**
      `tools/probe384.py` 재현(찍힌 픽셀 · 07 활성 «스킬» 알약 좌 코너, rel 행별 클래스 런):
          ref  rel 60 K7 **D2** B8 · rel 68 K7 **D5** B10 · rel 74 K8 **D8** F1 B1
@@ -11210,7 +11267,28 @@
         (`probe463` [D] · `verify463` §2 가 음성항으로 문다). */
   .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
     border-radius:23px;pointer-events:none;
-    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
+    /* 409 6회차 (2026-08-30) — **바깥 그림자 한 줄이 «테이퍼가 벗긴 자리» 를 받는다.**
+       `::after` 의 검정이 접선 쪽에서 얇아지면 r 23..30 이 드러나는데, 아래 코너에서 그 자리를
+       부모의 `--pill-l`(`inset 14px` 가로 밴드)이 **베벨**로 덮어 ref 의 순서(«가장 바깥은
+       어두운 띠» — 449 실측 75° D5.0)가 뒤집혔다(`verify409` [10] D 0.0).
+       ⇒ 부모 배경/부모 밴드로는 못 고친다 — 그림자가 배경 **위**라, 배경에 동심 고리를 깔아도
+          `--pill-l` 이 그 위를 덮는다(6회차에 실제로 해 보고 물렸다: D 0.0 → 2.0 에서 멈췄다).
+          `::before` 는 그 밴드 **위** 층이므로 여기서 한 줄로 끝난다.
+       ⚑ **바깥(non-inset) 그림자 `0 7px 0`** 은 이 상자를 7px 내려 그린 것에서 상자를 뺀 모양이라
+          ① 위 코너에는 **한 픽셀도 안 그리고**(내려간 상자가 원 상자 안에 들어간다) ② 아래 코너에서
+          바로 이 상자의 `inset 0 -7px` 띠와 **같은 원에서 나와 이음매가 없다**(75° 에서 r 29.69..23 ↔
+          23..16.17 로 연속). 부모 밴드로 시도했을 때 남던 **0.19px 이음매**가 여기서 사라진다.
+       ⚠ 바깥 그림자는 마스크가 잘라 주므로 **직선 구간은 Δ0** 이고, 최대 반경이 29.69 < 30 이라
+          알약 윤곽 밖으로 새지 않는다.
+       ⚠ 끝 칸(378)은 이 줄을 **도로 뗀다** — 그 칸의 이 상자는 `top:0;bottom:0;r30` 이라 알약과
+          동심이고(449), `inset 0 -7px` 가 이미 r 30..23.19 를 어두운 띠로 덮는다. 게다가 상자가
+          알약 전체 높이라 바깥 그림자를 그대로 두면 **알약 아래로 7px 이 삐져나온다**. (아래 override) */
+    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37,0 7px 0 #413122;
+    /* ⚠ 마스크의 기본 `mask-clip:border-box` 는 **상자 밖에 그려지는 바깥 그림자를 통째로 자른다**
+       (6회차에 이 한 줄이 없어 위 그림자가 «안 그려진 것처럼» 보였다). 기둥 마스크는 90deg 라
+       세로로 균일하고 `mask-repeat` 기본값이 repeat 이므로 상자 밖에서도 같은 기둥이 이어진다. */
+    -webkit-mask-clip:no-clip;mask-clip:no-clip;
+    -webkit-mask-size:auto 200%;mask-size:auto 200%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
     -webkit-mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px));
     mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px))}
   /* 409 4회차 — **끝 칸(378)은 옛 상자를 그대로 쓴다.** 새 상자는 «검정의 안쪽 윤곽» 이라는 전제 위에
@@ -11225,6 +11303,8 @@
   .stabs.sp2>.stab.on:nth-of-type(2)::before,
   .stabs.sp3>.stab.on:nth-of-type(3)::before,
   .stab.on.stab-c4::before{top:0;bottom:0;border-radius:30px;
+    /* 409 6회차 — 바깥 그림자 한 줄을 도로 뗀다(바로 위 주석 ⚠ 세 번째). */
+    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
     -webkit-mask-image:none;mask-image:none}
   /* 449 (2026-08-30) — **닿는 «그 면» 의 가로 인셋만 0.** 4회차가 남긴 절반이 여기서 닫힌다.
      4회차의 판단(«끝 칸은 손대지 않는다»)은 **새 상자(사방 7 인셋 · r23)를 그대로 거는 것**에

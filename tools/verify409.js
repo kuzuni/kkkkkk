@@ -15,7 +15,11 @@
  *   가른 축이 바로 이것이다.
  *
  * ⚑ **무른 게이트가 안 되게 네 겹으로 문다**(LESSONS 328·334 · 384 §7):
- *     [2] 코너 — 0°~75° 법선 두께가 전부 ≥5.0 이고 **편차 ≤2.0**(등폭)
+ *     [2] 코너 — **0°~60°** 법선 두께가 전부 ≥5.0 이고 **편차 ≤2.0**(등폭)
+ *         ⚠ 6회차 이관: 창이 0°~75° 였는데 **ref 자신이 그 창을 통과 못 한다** — ref 는 0~60° 만
+ *           등폭 7.0 이고 70° 5.7 · 75° 4.2 · 86° 2.0 으로 준다(§14-7 1 — 세 자·두 비평가 독립 일치).
+ *           «등폭이냐» 를 물을 자리는 60° 까지이고, 그 뒤는 [11] 이 «ref 처럼 주는가» 를 묻는다.
+ *     [11] 테이퍼 — 75° 가 ref 곡선(4.2) 근처로 «주되 안 사라진다» + 60° 대비 실제로 내려간다
  *     [3] 음성항 — 직선 상·하변에는 링이 **없다**(«위·아래 테두리는 바 테두리와 공유» 07 §9 · 378)
  *     [4] 끝 칸 — 셸에 닿는 면은 코너 기둥이 **통째로 빠진다**(378 을 링에서도 지킨다) ·
  *         반대 면은 코너까지 검정이 **있다**(«다 지웠다» 와 구분한다)
@@ -46,8 +50,18 @@ const INK = '#F2BC8D';      /* 활성 라벨 색 */
 /* 각도 표본 — 0° = 변 한복판(직선부와 만나는 자리) · 90° = 상/하변.
    80° 이상은 상·하변의 «공유 테두리» 구간과 섞이므로 75° 까지만 문다(probe409 ⓐ 와 같은 창). */
 const DEGS = [0, 15, 30, 45, 60, 75];
+/* 409 6회차 — **등폭을 묻는 창은 0°~60°** 다(위 서두 ⚠). 75° 는 [11] 이 따로 묻는다.
+   창을 좁힌 것이 «무르게 푼 것» 이 아님은 셋이 못박는다: ① 하한·편차 **수치는 한 칸도 안 넓혔다**
+   ② [5] 밴드 대조(60° ≥4.5 · 75° ≥3.5)도 그대로다 — 옛 `7·cos α` 밴드는 여전히 빨갛다
+   ③ [11] 이 **위쪽**(등폭으로 되돌아가면 빨강)을 새로 막는다. */
+const FLAT_N = 5;           /* DEGS 앞 5개 = 0/15/30/45/60 */
 const MIN_TH = 5.0;         /* 등폭이면 7 근처 · 밴드면 45° 4.9 · 60° 3.5 · 75° 1.8 */
-const MAX_SPREAD = 2.0;     /* 0°~75° 편차 — 밴드는 5.2 가 나온다 */
+const MAX_SPREAD = 2.0;     /* 0°~60° 편차 — 밴드는 5.2 가 나온다 */
+/* 409 6회차 — [11] 테이퍼 창. **임계는 내 곡선이 아니라 ref 실측에서 가져왔다**(§14-9 경고):
+   ref 75° = 4.2 · 등폭 링 = 7.0 · 옛 밴드 = 1.8 ⇒ 위아래를 그 사이에 긋는다. */
+const TAPER_LO = 3.0;       /* 이 아래면 옛 «7·cos α» 밴드 쪽이다 */
+const TAPER_HI = 5.5;       /* 이 위면 등폭 링으로 되돌아간 것이다 */
+const TAPER_DROP = 1.0;     /* 60° 대비 최소 낙차 — «주는 시늉만» 을 막는다 */
 /* 409 2회차 — 검정 «안쪽» 축. 각도는 **코너 호 한복판**만 본다(0°·85° 는 직선부로 넘어가는 자리라
    위·아래 코너의 기댓값이 서로 섞인다 — `probe409b` BL 0°/85° 가 B6.0/K6.0 으로 읽히는 그 자리다).
    MIN_BEV 5.0 은 ref 6~7 · 우리 6.0~7.0 · 수리 전 2.0~4.0 사이에 그은 선이다. */
@@ -331,9 +345,15 @@ const SETTLE = () => {
             th.every(v => v <= 1.0), line);
           offFaces++;
         } else {
-          ok('[2] ' + tag + ' — 전 각도 ≥ ' + MIN_TH.toFixed(1) + 'px', th.every(v => v >= MIN_TH), line);
-          const spread = Math.max(...th) - Math.min(...th);
-          ok('[2] ' + tag + ' — 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
+          const flat = th.slice(0, FLAT_N);
+          ok('[2] ' + tag + ' — 0°~60° 전 각도 ≥ ' + MIN_TH.toFixed(1) + 'px', flat.every(v => v >= MIN_TH), line);
+          const spread = Math.max(...flat) - Math.min(...flat);
+          ok('[2] ' + tag + ' — 0°~60° 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
+          /* [11] 409 6회차 — **접선 테이퍼.** ref 는 60° 까지 등폭이다가 그 뒤로 준다(§14-7 1).
+             네 비평가가 네 회차에 걸쳐 짚은 «3×7 사각 노치» 는 «안 주는 것» 이 만든 절벽이었다. */
+          ok('[11] ' + tag + ' — 75° 가 ' + TAPER_LO.toFixed(1) + '~' + TAPER_HI.toFixed(1) + 'px (ref 4.2) 이고 60° 보다 ' + TAPER_DROP.toFixed(1) + 'px 이상 얇다',
+            th[5] >= TAPER_LO && th[5] <= TAPER_HI && (th[4] - th[5]) >= TAPER_DROP,
+            '75°:' + th[5].toFixed(1) + ' 60°:' + th[4].toFixed(1) + ' 낙차 ' + (th[4] - th[5]).toFixed(1));
           ok('[5] ' + tag + ' — 60° ' + th[4].toFixed(1) + ' > 밴드 예측 3.5 · 75° ' + th[5].toFixed(1) + ' > 1.8',
             th[4] >= 4.5 && th[5] >= 3.5, line);
           /* [8] 409 2회차 — 검정 **안쪽** 도 각도와 무관해야 한다. ref 의 코너는 «위는 베벨 ·
@@ -535,6 +555,31 @@ const SETTLE = () => {
     const topBack = await vscan(page, p0, 'T');
     ok('R5 주입을 걷으면 다시 등폭이고 상변은 검정 0',
       back60 >= MIN_TH && !topBack.slice(4).includes('K'), back60.toFixed(1) + 'px / ' + topBack);
+
+    /* R8 — **[11] 의 되돌림.** 테이퍼는 `--pill-taper`(마스크에서 원판을 빼는 층) 한 벌이 만든다.
+       그 손잡이를 «구멍 없는 원판» 으로 바꾸면 4회차의 **등폭 링**이 그대로 돌아오므로,
+       75° 가 등폭(≥5.5)으로 튀고 60° 대비 낙차가 사라져야 [11] 이 «이미 참인 것을 굳힌 항» 이
+       아님이 증명된다(338 교훈 · §14-9 «게이트가 초록인데 눈은 4점»). */
+    const tp75On = blackNorm(await ray(page, p0, 'TL', 75));
+    const tp60On = blackNorm(await ray(page, p0, 'TL', 60));
+    await page.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v409taper';
+      s.textContent = '.stab.on::after{--pill-taper:linear-gradient(#000,#000)!important;'
+        + '-webkit-mask-composite:source-in,source-over!important;mask-composite:intersect,add!important}';
+      document.head.appendChild(s);
+    });
+    await page.waitForTimeout(200);
+    await shoot(page);
+    const tp75Off = blackNorm(await ray(page, p0, 'TL', 75));
+    const tp60Off = blackNorm(await ray(page, p0, 'TL', 60));
+    ok('R8 테이퍼를 걷으면 75° 가 등폭으로 튄다 ([11] 이 공허하지 않다)',
+      tp75On <= TAPER_HI && (tp60On - tp75On) >= TAPER_DROP
+      && tp75Off > TAPER_HI && (tp60Off - tp75Off) < TAPER_DROP,
+      '켬 75°' + tp75On.toFixed(1) + '/60°' + tp60On.toFixed(1)
+      + '  ↔  끔 75°' + tp75Off.toFixed(1) + '/60°' + tp60Off.toFixed(1));
+    await page.evaluate(() => { const s = document.getElementById('v409taper'); if (s) s.remove(); });
+    await page.waitForTimeout(200);
+    await shoot(page);
 
     /* R6·R7 — **[8] 의 되돌림.** 2회차가 넣은 것은 `::after` 의 배경 동심 고리 한 벌뿐이라
        그것만 떼면 1회차 상태가 그대로 돌아온다. 떼서 위 코너가 무너지고(R6) 아래 코너는
