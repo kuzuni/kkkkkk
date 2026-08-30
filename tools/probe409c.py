@@ -42,16 +42,16 @@ def cls(c):
 def col_black(px, l, t, dx, top=True, span=20):
     """열 dx 에서 «알약 상자 안쪽 끝»(top=True 면 rel y=0)부터 이어지는 검정 런의 길이.
        ⚠ 상자 바깥(셸)은 안 본다 — 그것이 이 자가 probe409.py 와 갈리는 유일한 점이다."""
-    n = 0
-    for i in range(span):
-        y = i if top else H - 1 - i
-        if cls(px[l + dx, t + y]) == 'K':
-            n += 1
-        elif n:
-            break
-        elif i > 6:      # 상자 안쪽 끝에서 6px 안에 검정이 안 시작하면 그 열엔 검정이 없다
-            break
-    return n
+    # ⚠ **이어진 런이 아니라 «검정 픽셀 수»** 다. 셸 테두리가 상자 첫 행을 덮고 그 밑에 셸 안쪽
+    #    립이 한 줄 끼면 이어진 런은 거기서 끊긴다(ref 의 위 코너·437·450 이후의 cap 둘 다 그렇다).
+    #    바닥값(직선 구간 dx 45)을 빼는 쪽이 ref·cap 에 같은 자다 — `col()` 이 그 뺄셈을 한다.
+    return sum(1 for i in range(span)
+               if cls(px[l + dx, t + (i if top else H - 1 - i)]) == 'K')
+
+
+def col(px, l, t, dx, top=True):
+    """알약 자신의 검정 = 그 열의 검정 픽셀 수 − 직선 구간(dx 45)의 검정 픽셀 수(= 셸 몫)."""
+    return max(0, col_black(px, l, t, dx, top) - col_black(px, l, t, 45, top))
 
 
 def grid(px, l, t, tag, top=True, w=34, h=16):
@@ -65,8 +65,8 @@ def grid(px, l, t, tag, top=True, w=34, h=16):
 def curve(px, l, t, tag, top=True):
     ds = list(range(0, 31, 2)) + [31, 32, 34, 36]
     print('   %-4s dx  %s' % (tag, ' '.join('%4d' % d for d in ds)))
-    print('        검정%s' % ' '.join('%4d' % col_black(px, l, t, d, top) for d in ds))
-    return [col_black(px, l, t, d, top) for d in ds]
+    print('        검정%s' % ' '.join('%4d' % col(px, l, t, d, top) for d in ds))
+    return [col(px, l, t, d, top) for d in ds]
 
 
 def main():

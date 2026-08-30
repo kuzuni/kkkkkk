@@ -261,13 +261,15 @@ const colBlack = (page, p, corner, dx, n = 16) => page.evaluate(([box, cor, d, n
     }
     return best;
   };
+  /* ⚠ **이어진 런이 아니라 «검정 픽셀 수» 를 센다.** 셸의 검정 테두리가 알약 상자의 첫 행을
+     덮는 트리가 있고(437·450 계열), 그 밑에 셸 안쪽 립이 한 줄 끼면 «이어진 런» 은 거기서
+     끊겨 1 로 읽힌다. ref 도 위 코너에서 같은 모양이라(첫 2행이 셸 검정) **바닥값을 빼는 쪽**이
+     ref·cap 양쪽에 같은 자다 — 바닥값은 호출부가 직선 구간(dx 45)에서 재서 뺀다. */
   let run = 0;
   for (let i = 0; i < nn; i++) {
     const y = Math.round(bottom ? box.y + box.h - 1 - i : box.y + i);
     const q = g.getImageData(x, y, 1, 1).data;
     if (cls(q[0], q[1], q[2]) === 'K') run++;
-    else if (run) break;
-    else if (i > 1) break;
   }
   return run;
 }, [{ x: p.x, y: p.y, w: p.w, h: p.h }, corner, dx, n, PAL, R]);
@@ -401,8 +403,11 @@ const SETTLE = () => {
           ok('[2] ' + tag + ' — 0°~45° 편차 ≤ ' + MAX_SPREAD.toFixed(1) + 'px (등폭)', spread <= MAX_SPREAD, spread.toFixed(1) + 'px : ' + line);
           /* [11] 409 5회차 — **접선 테이퍼.** 코너 안쪽으로 들어갈수록(dx 20 → 28) 검정이 가늘어져
              접선에서 ref 처럼 사라진다. 자는 위 `colBlack`(= 비평가 DD 의 축 · probe409c 와 같다). */
+          /* 바닥값 — 직선 구간(dx 45)의 검정은 전부 셸 몫이다(378: 상·하변에 알약 검정은 없다).
+             그 값을 빼면 남는 것이 알약 자신의 검정이고, 그것이 ref 와 같은 자가 된다. */
+          const floorK = await colBlack(page, p, corner, 45);
           const tp = [];
-          for (const d of TAPER_DX) tp.push(await colBlack(page, p, corner, d));
+          for (const d of TAPER_DX) tp.push(Math.max(0, await colBlack(page, p, corner, d) - floorK));
           const tline = TAPER_DX.map((d, i) => 'dx' + d + ':' + tp[i]).join(' ');
           ok('[11] ' + tag + ' — dx 20→28 이 단조로 가늘어진다 (되돌아 오르지 않는다)',
             tp.every((v, i) => i === 0 || v <= tp[i - 1]), tline);
@@ -633,11 +638,12 @@ const SETTLE = () => {
     });
     await page.waitForTimeout(200);
     await shoot(page);
-    const tipRing = await colBlack(page, p0, 'BL', 28);
+    const floorR = await colBlack(page, p0, 'BL', 45);
+    const tipRing = await colBlack(page, p0, 'BL', 28) - floorR;
     await page.evaluate(() => { const st = document.getElementById('v409ring'); if (st) st.remove(); });
     await page.waitForTimeout(200);
     await shoot(page);
-    const tipNow = await colBlack(page, p0, 'BL', 28);
+    const tipNow = await colBlack(page, p0, 'BL', 28) - (await colBlack(page, p0, 'BL', 45));
     ok('[11-R] 등폭 링을 도로 주입하면 접선 쪽 열이 ' + TIP_BACK + 'px 이상으로 두꺼워진다 (테이퍼 축이 실제로 가른다)',
       tipRing >= TIP_BACK && tipNow <= MAX_TIP, '등폭 ' + tipRing + 'px  ↔  테이퍼 ' + tipNow + 'px');
 
