@@ -1005,10 +1005,39 @@ function writeReport(rep) {
     const faceNetMed = med(faceNet.map(f => f.length ? f.reduce((a, b) => a + b, 0) / f.length : 0));
     L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${BAND}의 배수) 정체 · 멈춤 = 밴드 안 정체**)`);
     L.push('');
+    /* ⚑ 5회차 비평 3인 일치 — «적중 n/8 · 첫 벽 · 간격 기하평균» 은 ① 의 채점 축인데 표에 없어서
+       회차마다 손으로 세다가 빠졌다(5회차 §5-5 가 셋 다 누락). 자가 매번 찍는다.
+       주인 목록(분): 30 · 180 · 1440 · 3600 · 7200 · 12960 · 21600 · 36000 (간격 ×1.4) · ±20%. */
+    const TARGET = [30, 180, 1440, 3600, 7200, 12960, 21600, 36000];
+    const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band));
+    const hitOf = (r) => {
+      const ws = wallsOf(r);
+      return TARGET.filter(t => t <= rep.days * 1440
+        && ws.some(w => Math.abs(w.min - t) <= 0.2 * t)).length;
+    };
+    const spanOf = (r) => {           /* 벽 시작 시각의 간격 기하평균 (목표 1.4) */
+      const ws = wallsOf(r); if (ws.length < 2) return 0;
+      return Math.pow(ws[ws.length - 1].min / Math.max(1, ws[0].min), 1 / (ws.length - 1));
+    };
+    const firstOf = (r) => { const ws = wallsOf(r); return ws.length ? ws[0].min : 0; };
+    const tgtN = TARGET.filter(t => t <= rep.days * 1440).length;
+    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20%)`
+      + ` · 첫 벽 p50 = ${med(runs.map(firstOf))}분 (목표 30분)`
+      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)).toFixed(2)} (목표 ×1.4)**`);
+    L.push('');
     L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
       + ` · 밴드 안 멈춤 p50 = ${med(pausesAll)}`
       + ` (30분 이상 정체 전부 = p50 ${med(runs.map(r => r.walls.length))}`
       + ` · 구 판정(len ≥ ${WALL_FRAC}×시작) 벽 p50 = ${med(runs.map(r => r.walls.filter(isWallFrac).length))})`);
+    /* ⚑ 5회차 비평 N — «밴드 안 멈춤» 이 몇 시간짜리인지 안 찍으면 «숨» 이라는 이름이 판정을 흐린다
+       (r5 부지런 15개가 전부 ≥184분 · 대충은 ≈23.5시간짜리가 다섯). 길이를 같이 적는다. */
+    {
+      const plen = runs.flatMap(r => r.walls.filter(w => !isWall(w, r.band)).map(w => w.len));
+      if (plen.length) L.push('')
+        , L.push(`멈춤 길이 — p50 ${med(plen)}분 · p90 ${q(plen, 0.9)}분 · 최대 ${Math.max.apply(null, plen)}분`
+          + ` (합 p50 = ${med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0)))}분`
+          + ` = 총 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0))) / (rep.days * 1440)).toFixed(1)}%)`);
+    }
     L.push('');
     L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 | 판정(기제) | 구 판정(비율) |');
     L.push('|---|---|---|---|---|---|---|');
@@ -1021,9 +1050,16 @@ function writeReport(rep) {
     L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동)`);
     L.push('');
     const faceNetSum = faceNet.map(f => f.reduce((a, b) => a + b, 0));
+    /* ⚑ 5회차 비평 3인 일치 — «벽당» 을 시드별 평균의 p50 으로 내면 sum/count 보다 3~18% 후하다.
+       **합 ÷ 구간 수**(= 3인이 검산에 쓴 정의)를 헤드라인으로 쓰고 옛 값은 괄호로 남긴다.
+       그리고 «벽당» 은 벽이 줄기만 해도 오르는 값이라(분모 효과) **합 쪽이 ③ 의 축**이다 — 두 수를
+       한 줄에 두어 다음 회차가 분모 효과를 헤드라인으로 못 쓰게 한다. */
+    const faceCnt   = med(faceNet.map(f => f.length));
+    const perWall   = faceCnt ? med(faceNetSum) / faceCnt : 0;
     L.push(`**실오르막 합(벽 사이 순 이동) p50 = ${med(faceNetSum)}분`
-      + ` (총 시간의 ${(100 * med(faceNetSum) / (rep.days * 1440)).toFixed(2)}%) · 벽당 ${faceNetMed.toFixed(0)}분**`
-      + ` — 4회차 비평 3인이 쓴 «순 이동» 이 이 축이다(목표: 벽당 ≥60분 급)`);
+      + ` (총 시간의 ${(100 * med(faceNetSum) / (rep.days * 1440)).toFixed(2)}% — ③ 의 축) ·`
+      + ` 벽당 = 합÷구간 ${perWall.toFixed(1)}분 (구 표기 «시드평균의 p50» ${faceNetMed.toFixed(0)}분)**`
+      + ` — 목표 벽당 ≥60분 급 · ⚠ 벽당은 벽 개수가 줄기만 해도 오른다(분모 효과)`);
     L.push('');
     L.push(`정체 밖 시간 p50 = ${med(netAll)}분 (총 시간의 ${(100 * med(netAll) / (rep.days * 1440)).toFixed(2)}%`
       + ` — 첫 벽 이전·마지막 벽 이후와 30분 미만의 숨을 포함한 넓은 자)`);
@@ -1067,11 +1103,17 @@ function writeReport(rep) {
   {
     const pols = Object.keys(rep.policies);
     if (pols.length > 1) {
+      /* ⚑ 199 5회차 비평 3인 일치 — «지속 수급» 의 장부가 회차마다 달라지면 ④ 를 못 잰다.
+         1~4회차의 «지속» 은 **일회성 3종(시작 신규 지급 100만 · 가이드미션 60만 · 우편 30만)을
+         전부 뺀** 값이고(그 자로 r4 부지런 268,527 · 대충 152,569 · 비 1.760), 5회차가 시작만
+         빼면서 같은 이름이 다른 수를 가리켰다. ⇒ **두 정의를 나란히 찍는다**(구 = 회차 간 비교용). */
+      const ONCE = ['시작(신규 지급)', '가이드미션', '우편'];
       const dayIn = (pol) => {
         const runs = rep.policies[pol];
         const tot = runs.reduce((a, r) => a + Object.values(r.diaIn).reduce((x, y) => x + y, 0), 0) / runs.length;
-        const st  = runs.reduce((a, r) => a + (r.diaIn['시작(신규 지급)'] || 0), 0) / runs.length;
-        return { all: tot / rep.days, cont: (tot - st) / rep.days };
+        const st  = runs.reduce((a, r) => a + (r.diaIn[ONCE[0]] || 0), 0) / runs.length;
+        const one = runs.reduce((a, r) => a + ONCE.reduce((x, k) => x + (r.diaIn[k] || 0), 0), 0) / runs.length;
+        return { all: tot / rep.days, cont: (tot - st) / rep.days, cont0: (tot - one) / rep.days };
       };
       const netPct = (pol) => {
         const runs = rep.policies[pol];
@@ -1085,9 +1127,10 @@ function writeReport(rep) {
       L.push('|---|' + pols.map(() => '---|').join('') + '---|');
       const rows = [
         ['유입 합/일', p => dayIn(p).all, fmtN],
-        ['지속 수급/일 (시작 지급 제외)', p => dayIn(p).cont, fmtN],
+        ['**지속 수급/일 — 구 정의(일회성 3종 제외 · 1~4회차와 같은 자 · ④ 는 이 줄로 잰다)**', p => dayIn(p).cont0, fmtN],
+        ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판)', p => dayIn(p).cont, fmtN],
         [`${rep.days}일 스테이지 p50`, stg, fmtN],
-        ['순 이동 비중(%)', netPct, x => x.toFixed(2)],
+        ['순 이동 비중(%) — ③ 축(④ 와 무관)', netPct, x => x.toFixed(2)],
       ];
       for (const [name, f, fmt] of rows) {
         const v = pols.map(f);
