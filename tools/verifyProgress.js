@@ -166,6 +166,8 @@ function tailHead(line) {
 const COLS = 7;
 const STATE_MARK = /✅|⏸|🔧|⏹|✖|🏆|완료|해결|통과|폐기|보류|종료|진행/;
 const BARE_IMPL = /^\s*(?:\*\*)?\s*(?:–|—|-|미착수\.?)?\s*(?:\*\*)?\s*$/;
+/* 축 ⓔ (604) — `BARE_IMPL` 중 «미착수» 낱말만 따로 뗀다. «–» 는 뗀 게 아니다. */
+const STALE_IMPL = /^\s*(?:\*\*)?\s*미착수\.?\s*(?:\*\*)?\s*$/;
 function cellsOf(line) {                   /* GFM 표 칸 나누기 — `\|` 는 구분자가 아니다 */
   const out = [];
   let cur = '';
@@ -271,6 +273,11 @@ for (const [id, line] of cur) {
   const cells = cellsOf(line);
   if (cells.length !== COLS) { muteWatch.push({ id, n: cells.length }); continue; }
   const impl = cells[3];
+  /* 축 ⓔ 구현 칸이 **낱말 그대로 «미착수»** 인 완료행 (604).
+     ⓐ 는 비고 머리말까지 등재 상태일 때만 울고, ⓒ 는 `BARE_IMPL` 로 이 낱말을 **면제**한다 —
+     그 사이에 «구현 칸만 등재 당시 그대로인 완료행» 이 통째로 빠져 있었다(592 가 그 꼴이었다).
+     ⚠ 범위는 «미착수» 한 낱말뿐이다 — «–» 로 닫은 완료행 40여 개는 566 이 일부러 남긴 자리다. */
+  if (STALE_IMPL.test(impl)) { contra.push({ id, head: impl.trim(), mark: d[0], kind: 'stale' }); continue; }
   if (STATE_MARK.test(impl) || BARE_IMPL.test(impl)) continue;
   contra.push({ id, head: impl.trim().replace(/\s+/g, ' ').slice(0, 46), mark: d[0], kind: 'mute' });
 }
@@ -421,10 +428,10 @@ if (!quiet) {
                 '건뿐이다. 경계 밖의 되돌림은 안 세진다.');
     console.log('    창을 넓히려면: git fetch --deepen=200 origin main  (§2 자기모순은 표만 보므로 영향 없다)');
   }
-  console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건' +
-              ' · 칸 수가 7 이 아니라 축 ⓒ 판정 불가 ' + muteWatch.length + '건');
-  /* 못 본 것을 초록으로 부르지 않되, 133건을 매 실행 나열하지도 않는다 — 목록은 재현기가 낸다. */
-  if (muteWatch.length) console.log('    ⚠  칸 수가 헤더(7)와 달라 구현 칸의 자리를 못 믿는 행이다 ' +
+  console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + (contra.length + muteWatch.length) + '건' +
+              ' (자기모순 ' + contra.length + ' · 축 ⓓ 판정 불가 ' + muteWatch.length + ')');
+  /* 못 본 것을 초록으로 부르지 않는다 — 목록은 재현기가 낸다(내역: probe566 §2). */
+  if (muteWatch.length) console.log('    ✗  칸 수가 헤더(7)와 달라 구현 칸의 자리를 못 믿는 행이다 ' +
                                     '(목록·내역: node tools/probe566.js §2)');
   if (skipRev) {
     console.log('  §3 마감 누락 검사 — 건너뜀(--rev): 자산은 작업 트리의 것이라 옛 표와 짝이 안 맞는다');
@@ -446,6 +453,9 @@ for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.
 for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · ' +
   (c.kind === 'impl'
     ? '구현 칸이 «–» 이고 비고가 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark + '» 가 있다'
+    : c.kind === 'stale'
+    ? '**구현 칸**이 등재 당시의 «' + c.head + '» 그대로인데 같은 행에 완료 표지 «' + c.mark +
+      '» 가 있다 (마감이 완료문을 그 칸에 **덮어쓰지 않고 옆 칸으로 끼워 넣은** 꼴 — 티어 스캔은 «미완료» 로 읽는다)'
     : c.kind === 'tail'
     ? '구현 칸은 채웠는데 **비고 머리말**이 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark +
       '» 가 있다 (세 칸 중 ③ 만 안 고친 꼴 — 티어 스캔이 읽는 칸이 그 칸이다)'
@@ -473,6 +483,24 @@ if (contra.length) {
     console.log('    ⚠ 비고 안에 **escape 안 한 `|`** 가 있으면 그 뒤가 8번째 칸이 되어 GitHub 렌더에서');
     console.log('      통째로 사라지고, 티어 스캔은 그 칸을 비고로 읽는다(337·382 가 그 꼴이었다).');
   }
+}
+
+/* 축 ⓓ — «판정 불가» 자체를 빨강으로 센다 (604).
+   566 이 축 ⓒ 를 세우고 572 가 132행을 7칸으로 되돌렸는데도, 자는 «판정 불가 n건» 을 경고로만
+   찍고 **종료 코드 0** 이었다. 그래서 8칸 행이 다시 생겨도 push 게이트가 조용했고, 592 가
+   구현 칸에 «미착수.» 를 단 채 완료행으로 하루를 났다. 범위는 **완료 표지가 있는 행**뿐이다 —
+   진짜 미착수 행은 위에서 이미 빠졌으므로(§2 첫 `continue`) 등재 중인 워커의 push 는 안 막는다. */
+for (const w of muteWatch) console.log('  ✗ ' + w.id + ' — 판정 불가 · 칸 수가 ' + w.n +
+  '(헤더 7)이라 구현 칸의 자리를 못 믿는다 — 완료 표지가 있는 행이다');
+
+if (muteWatch.length) {
+  console.log('\nPROGRESS UNJUDGEABLE ' + muteWatch.length + '건 — ' + muteWatch.map(w => w.id).join(' '));
+  console.log('  뜻: GitHub 은 헤더(7)를 넘는 칸을 **버리고**, 이 자의 축 ⓒ 는 자리를 못 믿어 판정을 포기한다');
+  console.log('    = 그 행 안에 자기모순이 숨어도 표도 자도 조용하다(572 등재 사유 그대로).');
+  console.log('  고치는 법: node tools/fix572.js          (미리보기 — 어디를 어떻게 합칠지만 찍는다)');
+  console.log('             node tools/fix572.js --write  (무손실 — 글자는 한 자도 안 지운다)');
+  console.log('  ⚠ 자리를 되돌린 뒤 그 행이 §2 자기모순에 걸리면 지시서 [1] 대로 **세 칸을 같이** 고쳐라 —');
+  console.log('    ① 구현 칸  ② 루프 횟수  ③ 비고 머리말. 등재문 본문은 지우지 마라.');
 }
 
 for (const u of unclosed) console.log('  ✗ ' + u.id + ' — 마감 누락 · ' + u.why + ' · ' + u.detail);
@@ -510,7 +538,7 @@ if (bad.length) {
   console.log('    있었으면 그것까지 살린다(규칙 8 «양쪽 행을 모두 살린다» 그대로).');
   process.exit(1);
 }
-if (contra.length || unclosed.length || conflicted.length) process.exit(1);
-if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음 · 마감 누락 행 없음 · 병합 표시 잔재 없음' +
+if (contra.length || muteWatch.length || unclosed.length || conflicted.length) process.exit(1);
+if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순·판정 불가 행 없음 · 마감 누락 행 없음 · 병합 표시 잔재 없음' +
                         (skipRev ? ' (§3·§4 는 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
 process.exit(0);
