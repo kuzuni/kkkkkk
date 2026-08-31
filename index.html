@@ -10330,6 +10330,19 @@
     text-align:center;line-height:64px;font-size:29px;color:#fff;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 5px #141414,0 4px 0 #3F7412}
+  /* 577 — 라벨 두 줄(«가진 단련석» / «받을 포인트»). 상자(392×64)·자리(right 20 · top 12)는 **불변**이라
+     `verify491` 의 사다리 기하([8-d]·[6-h])와 헤더 세로 예산(88)에 Δ0 이다.
+     세로는 검정 링 안쪽 띠(inset 5 ⇒ local 5..59 = 54px)에 넣는다: 27 × 2 = 54, 위 **3**.
+     ⚠ 위 여백이 5(= 링 두께와 같은 값)가 아니라 3인 것은 취향이 아니다 — «pt» 의 **p 디센더**가
+     2행 em 상자 바닥까지 내려와, 위 5 로 두면 찍힌 흰 잉크가 y 9..**59** 로 링 첫 줄을 밟는다
+     (`verify577` [4-b] 가 그 1px 을 잡는다). 2px 올리면 잉크가 7..57 로 위아래 2px 씩 뜬다.
+     ⚠ **ID 급 스코프가 필요하다** — `#trw i{display:inline-block}`(9606 · 1,0,1)이 클래스 급 규칙을
+     이기므로 스코프 없이 `display:block` 을 적으면 조용히 무시된다(519·531 이 잡은 그 함정).
+     ⚠ 아이콘도 이 줄 안에 들어와야 한다 — 34px 이면 행 상자가 27 을 넘겨 2행을 밀어낸다.
+     그래서 `temperHeadTxt` 가 26 으로 그리고 여기서 세로 정렬만 이 버튼 몫으로 다시 적는다. */
+  #trw .tr-temp>.tp-hd>.cg>i{display:block;width:100%;margin-top:3px;height:54px;
+    line-height:27px;font-size:26px}
+  .tr-temp>.tp-hd>.cg .cic{vertical-align:-3px;margin-right:6px}
   /* 202 — 누를 게 없으면 회색. 상태색은 이 두 클래스가 전부다(하드코딩 분기 없음) */
   .tr-temp>.tp-hd>.cg.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 4px 0 #5E594F}
@@ -32652,10 +32665,21 @@ function temperRowTxt(t){
     ok:  temperUpOk(t.k)
   };
 }
+/* 577 (2026-08-31, 491 8회차 비평가 CH·CI·CJ 3인 독립 관측) — [충전] 라벨은 **두 줄**이다.
+   옛 한 줄 «🪨n → 포인트 m» 은 버튼 폭 392 를 **7자리(≥1,000,000)부터** 넘어 스스로 접혔고,
+   접힌 2행은 `.cg`(height 64) 도 헤더(88)도 안 자르므로 밑변 밖 34px 로 새어 나가
+   1행 카드와의 14px 거터에 잉크 9px(높이의 31%)이 남았다(`tools/probe577.js` [2]·[3]).
+   ⚠ 폭으로는 못 푼다 — 버튼 좌단을 왼쪽으로 옮기는 길은 `verify491` [8-d] 의 사다리가
+   최악 자릿수에서 **2px** 앞까지 차 있어 막혀 있고([5]), 낱말을 빼도(«포인트»→«pt», 아예 삭제)
+   폰트를 24 로 줄여도 10자리에서 다시 넘는다([6] — 자릿수는 상한이 없다).
+   ⇒ **줄 수를 값에 맡기지 않고 못박는다**: 1행 «가진 단련석» · 2행 «받을 포인트».
+   12자리(305px)까지 여유가 남으므로 이 결함은 자릿수 축에서 **닫힌다**.
+   단위를 «포인트» 가 아니라 «pt» 로 적는 것은 같은 화면의 세 자리(`.tc i`·`.tc s`·`.tb i`)가
+   이미 쓰는 말이다(두 벌 금지) — `.pv` 의 «단련 포인트» 는 제목이라 그대로 둔다. */
 function temperHeadTxt(){
   const have = Math.floor(S.tstone) || 0;
   return { pts: '단련 포인트 <b>' + fmt(temperPts()) + '</b>',
-           chg: curIc('tstone', 34) + fmt(have) + ' → 포인트 ' + fmt(Math.floor(have / TEMPER_PT_COST)),
+           chg: curIc('tstone', 26) + fmt(have) + '<br>→ ' + fmt(Math.floor(have / TEMPER_PT_COST)) + ' pt',
            canCharge: have >= TEMPER_PT_COST };
 }
 const temperFootTxt = () => '회수하면 투자한 <b>' + fmt(temperSpentAll()) + ' pt</b> 를 전액 돌려받습니다';
