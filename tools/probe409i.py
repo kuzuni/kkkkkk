@@ -635,6 +635,74 @@ def normal_delta():
     return res
 
 
+def cov_ray(px, frame, fit, theta, inn=26.0, out0=8.0, step=0.25):
+    """**커버리지 적분** 판 법선 자 — 층 두께를 «문턱 넘은 표본 세기» 가 아니라
+       «색 소속도의 적분» 으로 잰다. 돌려주는 것은 {클래스: 두께}.
+
+    ⚑⚑ **왜 이것이 필요한가 — 문턱 자는 ref 만 1px 손해를 보게 한다.**
+       ref 는 JPEG 이라 층 경계가 2~3px 번지고 cap 은 PNG 라 칼같다. 문턱으로 세면
+       ref 의 번진 양끝이 **양쪽 다 떨어져 나가** 같은 7px 띠가 ref 6.0 / cap 7.0 으로 읽힌다
+       (실측: ref 밑변 D 는 하드런 2105..2110 = 6.0 인데 352 4회차가 커버리지 적분으로 잰
+       값은 **6.86** 이고 우리 CSS 는 7 이다). 그 1px 을 «우리가 두껍다» 로 읽고 깎으면
+       **없는 결함을 고치게 된다.**
+    ⇒ 표본마다 가장 가까운 두 팔레트 색의 선분 위로 사영해 소속도를 나눠 갖는다.
+       번짐은 양끝에서 **대칭으로** 나뉘므로 JPEG·PNG 가 같은 값을 돌려준다.
+    이 방식은 352 4회차(비평가 AW)가 이 부품의 세 띠를 6.75/6.86/7.03 으로 재어
+    «전부 7» 이라는 규약을 세울 때 쓴 것과 같은 자다."""
+    if fit is None:
+        return None
+    a, b = fit[0], fit[1]
+    P, N = ellipse_normal(frame, a, b, theta)
+    acc, d = {}, -out0
+    while d <= inn + 1e-9:
+        c = px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))]
+        ds = sorted(((sum((int(c[k]) - rc[k]) ** 2 for k in range(3)), ch, rc)
+                     for ch, rc in PAL))
+        (_, c1, p1), (_, c2, p2) = ds[0], ds[1]
+        vv = [p2[k] - p1[k] for k in range(3)]
+        den = sum(v * v for v in vv)
+        t = 0.0 if den == 0 else sum((int(c[k]) - p1[k]) * vv[k] for k in range(3)) / den
+        t = 0.0 if t < 0 else (1.0 if t > 1 else t)
+        acc[c1] = acc.get(c1, 0.0) + (1.0 - t) * step
+        acc[c2] = acc.get(c2, 0.0) + t * step
+        d += step
+    return acc
+
+
+def cov_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', 'TR')):
+    """커버리지 적분으로 아래 코너의 **D**(어두운 띠) · 위 코너의 **B**(베벨) 곡선을 훑는다."""
+    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    names = list(ims)
+    data = {}
+    for who, (pathname, bxy) in ims.items():
+        px = Image.open(pathname).convert('RGB').load()
+        data[who] = (px, find_box(px, *bxy))
+    print('══ 409-i/cov — **커버리지 적분** 법선 자 (JPEG↔PNG 번짐 편향을 없앤 두께) ══')
+    print('   아래 코너는 D(어두운 띠) · 위 코너는 B(베벨) 를 본다. θ 90° = 직선부\n')
+    out = {}
+    for corner in corners:
+        key = 'D' if corner[0] == 'B' else 'B'
+        fits = {}
+        for who in names:
+            px, box = data[who]
+            frame, samples = contour(px, box, corner)
+            fits[who] = (px, frame, fit_ellipse(samples))
+        print('  %s (%s)   θ  │ %s │  Δ' % (corner, key, ' │ '.join('%-6s' % w for w in names)))
+        th = lo
+        while th <= hi + 1e-9:
+            vs = []
+            for who in names:
+                px, frame, fit = fits[who]
+                acc = cov_ray(px, frame, fit, th)
+                vs.append(acc.get(key, 0.0) if acc else float('nan'))
+                out[(who, corner, th)] = vs[-1]
+            print('              %4.0f │ %s │  %+.2f'
+                  % (th, ' │ '.join('%6.2f' % v for v in vs), vs[-1] - vs[0]))
+            th += dth
+        print('')
+    return out
+
+
 def normal_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', 'TR')):
     """법선 자를 **각도로 훑는다** — 두 비평가가 «감쇠 곡선이 틀렸다» 고 한 그 곡선을 직접 본다.
        세 각(45/60/75)만으로는 곡선의 모양을 못 본다(직선부 90° 가 기준선이다)."""
@@ -668,11 +736,11 @@ def normal_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL'
 
 def main():
     a = sys.argv[1:]
-    if '--sweep' in a:
+    if '--sweep' in a or '--cov' in a:
         ims = None
         if '--img' in a:
             ims = {'ref': (REF7, BOX['ref']), 'cap': (a[a.index('--img') + 1], BOX['cap'])}
-        normal_sweep(ims)
+        (cov_sweep if '--cov' in a else normal_sweep)(ims)
         return 0
     if '--normal' in a:
         if '--img' in a:
