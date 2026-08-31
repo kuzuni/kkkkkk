@@ -343,7 +343,9 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
             가운데 칸은 링 하나뿐 · 끝 칸은 462 두 겹이 정확히 뒤따른다. 어느 쪽이 사라져도 빨갛다. */
       const r = o.onRing;
       const RING = BLK + ' 0px 0px 0px 7px inset';
-      const B462 = ', rgb(65, 49, 34) 0px -7px 0px 7px inset, rgb(99, 79, 55) 0px -14px 0px 7px inset';
+      /* 409 13회차 이관 (2026-08-31) — 462 의 두 겹도 세로 인셋이 **7/14 → 5/12** 로 내려갔다
+         (가운데 칸의 `::before` 와 같은 값이어야 `verify462` [3] 의 «가운데 칸과 ±1.0» 이 산다). */
+      const B462 = ', rgb(65, 49, 34) 0px -5px 0px 7px inset, rgb(99, 79, 55) 0px -12px 0px 7px inset';
       const isEnd = !!o.onPos && (o.onPos.L || o.onPos.R);
       ok(n + ' — 검정은 밴드가 아니라 `::after` 등폭 링이고 **첫 항**이다 (409)',
         !!r && (r.sh || '').startsWith(RING), r ? r.sh : '없음');
@@ -407,8 +409,16 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
         + (endCell ? ' (닿는 면 30 = 동심 · 반대 면 37 = 옛 평행이동)' : ' (알약과 동심)'),
         !!b && Math.abs(cxL - wantCxL) < 0.6 && Math.abs(cxR - wantCxR) < 0.6,
         b ? ('좌 ' + b.left + '+' + b.r + '=' + cxL + ' · 우 ' + b.right + '+' + b.r + '=' + cxR) : '없음');
-      ok(n + ' — 세 띠(그림자 3겹)는 영웅과 Δ0',
-        !!b && b.sh === hero.onBand.sh, b ? b.sh.slice(0, 60) : '없음');
+      /* ⚑ **409 13회차 이관 (2026-08-31) — 이 항도 «자리» 를 탄다(378·449 와 같은 이유).**
+         13회차가 가운데 칸의 세 띠를 7/14 → **5/12** 로 내린 것은 «링의 검정이 띠의 바깥쪽을
+         덮는다» 는 전제 위에 있다. 끝 칸의 **닿는 면**에는 그 검정이 없으므로(378) 같은 값을 쓰면
+         띠가 그대로 2px 얇아진다(`verify449` [3] 45° 5.5 → 2.5). ⇒ 끝 칸은 7/14 를 그대로 쓴다.
+         ⚠ **«영웅과 Δ0» 을 지우지 않았다** — 자리별 기대값을 적어 **둘 다** 문는다:
+            가운데는 영웅과 한 글자도 달라선 안 되고, 끝 칸은 «7/14 세 겹» 이어야 한다. */
+      const bandEndSh = 'rgb(65, 49, 34) 0px -7px 0px 0px inset, rgb(99, 79, 55) 0px -14px 0px 0px inset, '
+        + 'rgb(99, 79, 55) 0px 7px 0px 0px inset';
+      ok(n + ' — 세 띠(그림자 3겹) ' + (endCell ? '= 끝 칸 규격(7/14 — 이 면엔 검정이 없다 · 409 13회차)' : '는 영웅과 Δ0'),
+        !!b && (endCell ? b.sh === bandEndSh : b.sh === hero.onBand.sh), b ? b.sh.slice(0, 70) : '없음');
       /* ⚠ 이 층의 마스크는 «자리» 손잡이(`--pill-mask`)를 **안 쓴다** — 한 번 그렇게 썼다가
          `verify384` 가 17건으로 빨개졌다(닿는 면에도 바닥 띠 감김은 있어야 한다). 가운데 칸은
          **양쪽 기둥을 늘 켠 고정 마스크**, 끝 칸은 옛 상자라 마스크가 아예 없다. */

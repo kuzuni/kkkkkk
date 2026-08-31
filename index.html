@@ -11740,7 +11740,7 @@
     background:
       radial-gradient(23px 26px at 23px 0,transparent 0 58%,#634F37 58% 78%,transparent 78%) 0 100%/23px 26px no-repeat,
       radial-gradient(23px 26px at 0 0,transparent 0 58%,#634F37 58% 78%,transparent 78%) 100% 100%/23px 26px no-repeat;
-    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
+    box-shadow:inset 0 -5px 0 #413122,inset 0 -12px 0 #634F37,inset 0 7px 0 #634F37;
     -webkit-mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px));
     mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px))}
   /* 409 4회차 — **끝 칸(378)은 옛 상자를 그대로 쓴다.** 새 상자는 «검정의 안쪽 윤곽» 이라는 전제 위에
@@ -11754,7 +11754,12 @@
   .stab.on.stab-c1::before,
   .stabs.sp2>.stab.on:nth-of-type(2)::before,
   .stabs.sp3>.stab.on:nth-of-type(3)::before,
+  /* 409 13회차 (2026-08-31) — **끝 칸의 «닿는 면» 은 세 띠를 7/14 그대로 쓴다.**
+     13회차가 가운데 칸의 띠를 7/14 → **5/12** 로 내린 것은 «링의 검정이 띠의 바깥쪽을 덮는다» 는
+     전제 위에 있다. 이 면에는 **그 검정이 없으므로**(378 이 셸에 넘겼다) 같은 값을 쓰면 띠가
+     그대로 2px 얇아진다 — `verify449` [3] 이 45° 에서 5.5 → 2.5 로 빨개진다(ref 는 5.5). */
   .stab.on.stab-c4::before{top:0;bottom:0;border-radius:30px;background:none;
+    box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
     -webkit-mask-image:none;mask-image:none}
   /* 449 (2026-08-30) — **닿는 «그 면» 의 가로 인셋만 0.** 4회차가 남긴 절반이 여기서 닫힌다.
      4회차의 판단(«끝 칸은 손대지 않는다»)은 **새 상자(사방 7 인셋 · r23)를 그대로 거는 것**에
@@ -11825,7 +11830,7 @@
      세로 반경이 가운데 칸과 **같은 28.5** 다. 가로 반경만 23 ↔ 25.5 로 갈리는데 띠 두께는 법선각이
      정하므로 창(±1.0) 안이다. ⚠ 검정 링은 첫 항이라 스프레드 0 그대로 — 링 두께 7 은 Δ0. */
   .stab.on.stab-c4::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),
-    inset 0 -7px 0 7px #413122,inset 0 -14px 0 7px #634F37}
+    inset 0 -5px 0 7px #413122,inset 0 -12px 0 7px #634F37}
   /* 378 — 셸 **안쪽 변에 닿는** 칸만. 닿는 칸은 배치 규칙이 이미 정해 둔 그 칸이다:
      균등분할은 첫 칸(left:0)과 끝 칸(우변 = 콘텐츠 우변) · 4칸 격자는 `.stab-c1`·`.stab-c4`
      (`c4` 는 709+229 = 938 = 950−12 로 콘텐츠 우변과 같다). 가운데 칸은 한 면도 안 바뀐다. */

@@ -44,6 +44,9 @@ const DEGS = [45, 60, 75];       /* 아래 코너 — 구분선(468)이 안 닿�
 const TOP_DEGS = [45, 60, 75];   /* 위 코너 — 같은 이유 */
 const REC_DEGS = [0, 15, 30];    /* [기록] 전용 — 468 이 사는 각도 */
 const MIN_DARK = 4.0, MIN_BEV = 4.0, MIN_K = 5.0;
+/* 409 13회차 — 아래 코너 어두운 띠의 **ref 곡선**(45°/60°/75°). `probe409e --rays` 로 BL·BR 를
+   같은 광선에서 재어 평균한 값이다: BL 2.5/3.5/5.0 · BR 2.5/4.0/5.0. */
+const REF_DARK = [2.5, 3.75, 5.0], DARK_TOL = 1.5;
 const TOP_LO = 5.0, TOP_HI = 8.0;
 const EQ = 1.0;                  /* [3] 가운데 칸과의 허용 차 */
 
@@ -220,11 +223,13 @@ async function scan(page, p, cor, degs, near) {
       return page.evaluate(() => getComputedStyle(document.querySelector('#eqTabs > .stab.on'), '::after').boxShadow);
     };
     const shEnd = await rd(0), shEnd4 = await rd(3), shMid = await rd(1);
-    const hasD = s => /rgb\(65,\s*49,\s*34\)[^,]*7px 0px 7px inset/.test(s.replace(/\s+/g, ' '));
-    const hasB = s => /rgb\(99,\s*79,\s*55\)[^,]*14px 0px 7px inset/.test(s.replace(/\s+/g, ' '));
+    /* 409 13회차 이관 (2026-08-31) — 세 띠의 세로 인셋이 **7/14 → 5/12** 로 내려갔다(가운데 칸의
+       `::before` 와 같은 값 — 그래야 [3] 의 «가운데 칸과 ±1.0» 이 산다). 문자열만 갈아 끼운다. */
+    const hasD = s => /rgb\(65,\s*49,\s*34\)[^,]*5px 0px 7px inset/.test(s.replace(/\s+/g, ' '));
+    const hasB = s => /rgb\(99,\s*79,\s*55\)[^,]*12px 0px 7px inset/.test(s.replace(/\s+/g, ' '));
     const kFirst = s => /^rgb\(0,\s*0,\s*0\) 0px 0px 0px 7px inset/.test(s.trim());
-    ok('[1] 06 장비 칸1(끝) — 어두운 띠 `inset 0 -7px 0 7px #413122` 가 있다', hasD(shEnd), shEnd.slice(0, 120));
-    ok('[1] 06 장비 칸1(끝) — 그 뒤 베벨 `inset 0 -14px 0 7px #634F37` 가 있다', hasB(shEnd));
+    ok('[1] 06 장비 칸1(끝) — 어두운 띠 `inset 0 -5px 0 7px #413122` 가 있다 (409 13회차)', hasD(shEnd), shEnd.slice(0, 120));
+    ok('[1] 06 장비 칸1(끝) — 그 뒤 베벨 `inset 0 -12px 0 7px #634F37` 가 있다 (409 13회차)', hasB(shEnd));
     ok('[1] 06 장비 칸1(끝) — 검정 링이 **첫 항**이다 (계속 맨 위 · 409·378 무손상)', kFirst(shEnd), shEnd.slice(0, 60));
     ok('[1] 06 장비 칸4(끝) — 같은 두 겹 (좌·우 두 종류를 다 적었다)', hasD(shEnd4) && hasB(shEnd4));
     ok('[1] 06 장비 칸2(가운데) — 두 겹이 **없다** (스코프가 끝 칸뿐 · 가운데는 `::before` 몫)',
@@ -274,8 +279,16 @@ async function scan(page, p, cor, degs, near) {
         farN++;
         ok('[2] ' + tag + ' ' + farB + ' — 검정 뒤 첫 실런이 **어두운 띠 D** 다',
           F.a.every(r => r[0] === 'D'), fmt(DEGS, F.a.map(r => r[0] + r[1].toFixed(1))));
-        ok('[3] ' + tag + ' ' + farB + ' — 그 띠가 ≥ ' + MIN_DARK.toFixed(1) + 'px (수리 전 2.0~3.0)',
-          F.a.every(r => r[0] === 'D' && r[1] >= MIN_DARK), fmt(DEGS, F.a.map(r => r[1].toFixed(1))));
+        /* ⚑ **409 13회차 이관 (2026-08-31) — 절대 문턱 4.0 은 «ref 보다 두꺼운» 값이었다.**
+           같은 광선(`python3 tools/probe409e.py --rays`)으로 ref 를 다시 재니 아래 코너 어두운 띠는
+           **45° 2.5 · 60° 3.5~4.0 · 75° 5.0** 이다 — 45° 는 문턱 4.0 을 **ref 자신이 못 넘는다**.
+           4.0 은 4회차의 «7px 띠» 를 굳힌 값이었고, 13회차가 띠를 ref 쪽으로 내리자 곧바로 빨개졌다.
+           ⇒ 절대 문턱을 **ref 곡선 ±1.5** 로 옮긴다. 무르게 푼 게 아니라 **양쪽을 막는다** —
+              너무 얇아도(수리 전 2.0/2.0/2.0 은 60°·75° 에서 2.0/3.0 벗어남) 너무 두꺼워도 빨갛다.
+              아래 «가운데 칸과 ±1.0» 항이 그대로 두 번째 겹으로 남는다. */
+        ok('[3] ' + tag + ' ' + farB + ' — 그 띠가 ref 곡선 ±' + DARK_TOL.toFixed(1) + ' (ref ' + REF_DARK.join('/') + ' · 수리 전 2.0/2.0/2.0)',
+          F.a.every((r, i) => r[0] === 'D' && Math.abs(r[1] - REF_DARK[i]) <= DARK_TOL),
+          fmt(DEGS, F.a.map(r => r[1].toFixed(1))));
         ok('[3] ' + tag + ' ' + farB + ' — 띠 **뒤** 베벨이 ≥ ' + MIN_BEV.toFixed(1) + 'px (순서가 D→B)',
           F.b.every(r => r[0] === 'B' && r[1] >= MIN_BEV), fmt(DEGS, F.b.map(r => r[0] + r[1].toFixed(1))));
         /* ⚑ **409 8회차 이관 (2026-08-31)** — 이 항의 «≥5.0» 은 링이 **등폭**이던 시절의 값이다.

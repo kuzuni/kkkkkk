@@ -74,8 +74,16 @@ const MIN_DARK = 4.0;
       독립 윤곽으로 그려야 한다(9회차 몫 — §17-6).
    ⇒ 선은 지금(4)과 7회차(7) 사이 **4.5** 에 긋고, 되돌림은 **6.0 이상 벌어짐**을 요구한다 —
       둘 사이가 비어 있어야 자가 실제로 가른다. */
-const MAX_SEAM = 4.5;
-const MIN_SEAM_OFF = 6.0;
+/* 409 13회차 (2026-08-31) — **4.5 → 3.0.** 13회차가 `::before` 의 세 띠를 부모와 같은 자리로
+   내려(인셋 7/14 → **5/12**) 이음매를 2px(= ref 값)으로 닫았다. 선을 4.5 에 둔 채로 두면
+   그 회수분이 게이트에 안 남는다 — 지금 값(2)과 옛 값(4) 사이인 3.0 으로 조인다. */
+const MAX_SEAM = 3.0;
+/* [11-R] 되돌림 — **절대값이 아니라 «지금보다 얼마나 나쁜가» 로 묻는다.** 옛 6.0 은 8회차 그림
+   (이음매 7)을 기준으로 잡은 값이라 13회차가 띠를 내리자 주입값이 5 로 내려와 빨개졌다 —
+   제품이 나빠진 게 아니라 **자가 옛 그림에 묶여 있던 것**이다. 이제 ⓐ 주입값 ≥ 4.0 이고
+   ⓑ 지금 값보다 **2.0 이상 나쁘다** 를 같이 묻는다(주입이 안 물리면 ⓑ 가 0 이라 빨개진다). */
+const MIN_SEAM_OFF = 4.0;
+const MIN_SEAM_GAP = 2.0;
 /* 409 11회차 — 어깨(직선부 대비 검정 기둥 증가분 · `probe409f` 와 같은 축).
    선은 «수리 전 값과 ref 값 사이» 에 긋는다 — 수리 전 x25/x29 = 5/4 · ref = 2/1 · 수리 후 3/2. */
 const SH_MAX25 = 3, SH_MAX29 = 2;
@@ -589,9 +597,11 @@ const SETTLE = () => {
         /* ── [11] 409 8회차 — **코너 기둥의 이음매.** ────────────────────────────────────
            네 비평가가 네 회차에 걸쳐 «코너에서 잘린다 · 사각 노치» 로 짚은 것의 정체가 이것이다
            (§17). 마스크 경계에서 「베벨 → 어두운 띠」 경계가 튀면 안 된다 — ref 는 2px 안이다. */
+        const seamOn = {};
         for (const corner of Object.keys(botBev)) {
           const sd = corner[1];
           const inn = await colBD(page, p, sd, 29), out = await colBD(page, p, sd, 31);
+          seamOn[corner] = (inn > 0 && out > 0) ? Math.abs(inn - out) : NaN;
           ok('[11] ' + name + ' ' + corner + ' — 기둥 안(x29) ↔ 밖(x31) 이음매 ≤ ' + MAX_SEAM.toFixed(1) + 'px',
             inn > 0 && out > 0 && Math.abs(inn - out) <= MAX_SEAM,
             'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + Math.abs(inn - out) + 'px');
@@ -653,9 +663,11 @@ const SETTLE = () => {
         for (const corner of Object.keys(botBev)) {
           const sd = corner[1];
           const inn = await colBD(page, p, sd, 29), out = await colBD(page, p, sd, 31);
-          ok('[11-R] ' + name + ' ' + corner + ' — 7회차 상자를 주입하면 이음매가 ' + MIN_SEAM_OFF.toFixed(1) + 'px 이상 벌어진다',
-            inn > 0 && out > 0 && Math.abs(inn - out) >= MIN_SEAM_OFF,
-            'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + Math.abs(inn - out) + 'px');
+          const seamOff = (inn > 0 && out > 0) ? Math.abs(inn - out) : NaN;
+          ok('[11-R] ' + name + ' ' + corner + ' — 7회차 상자를 주입하면 이음매가 ' + MIN_SEAM_OFF.toFixed(1)
+            + 'px 이상이고 지금보다 ' + MIN_SEAM_GAP.toFixed(1) + 'px 이상 나쁘다',
+            seamOff >= MIN_SEAM_OFF && seamOff - seamOn[corner] >= MIN_SEAM_GAP,
+            'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + seamOff + 'px (지금 ' + seamOn[corner] + 'px)');
         }
         await page.evaluate(() => { const st = document.getElementById('v409seam'); if (st) st.remove(); });
         await page.evaluate(() => {
