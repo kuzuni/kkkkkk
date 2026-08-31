@@ -20004,6 +20004,28 @@ const isBossKind = tk => tk === 'boss' || tk === 'dunboss';
 const PLAYER_DRAW_SC = 1.5;
 const MOB_DRAW_SC    = 1.2;
 const SK_DRAW_SC     = 2;
+/* 590(주인 지시 «펫 크기도 2배로») — 541 이 만든 축의 **남은 한 갈래**. 펫은 `unitSc` 를 안 지난다:
+   그 함수의 인자는 `ETYPE` 키(`tk`)인데 펫에는 ETYPE 항이 없다(피격 대상이 아니라서 애초에 없다).
+   ⚠ **억지로 `unitSc` 에 끼우지 마라** — 시그니처를 바꾸면 잡몹·아레나·보스 세 갈래가 같이 흔들린다.
+     펫은 «따라다니는 그림» 이라 판정이 없으니 **별도 상수 + 그리기 한 곳**이 맞다.
+   ⚠ **`PET_SP[].scale` 표 값(0.34/0.16/0.62)을 손으로 2배 하지 마라** — 원본이 얼마였는지가 사라지고
+     다음 조정에서 또 곱해진다(541 ① 규약 · 585 도 같은 길). 배수는 언제나 이 상수에만 산다. */
+const PET_DRAW_SC    = 2;
+/* 590 ③ — 펫이 2배가 되자 **플레이어가 묻혔다**: 궤도를 그대로 둔 채 몸만 키우면 3마리 장착
+   한 바퀴(72 표본)에서 플레이어 잉크가 «최대 100% · 평균 75.7%» 덮인다(수리 전 40.3% · 20.0%).
+   지시대로 **크기를 되깎지 않고 자리를 벌린다** — 궤도 리터럴 셋을 상수로 뽑고 실측으로 정했다:
+     · `PET_ORB_X` 62 → **91** = 62 + (116.56 − 58.28)/2 — «커진 잉크의 절반만큼만» 벌려서
+       가장 큰 펫(dragon)의 **안쪽 변이 수리 전 자리에 그대로** 선다. 더 줄이면(88) 40.4% 로 넘친다.
+     · `PET_ORB_Y` 30 → **58** — 덮임의 봉우리는 펫이 **머리 위·발밑을 지나는 순간**이고 그 자리는
+       가로 반경이 못 건드린다(cos ≈ 0). «수리 전 최대(40.3%) 이하» 를 만족하는 **최소** 세로 반경이
+       58 이다(57 은 40.7% 로 넘친다 — 계산값 56.1, 정수 격자에서 실측으로 확정).
+     · `PET_ORB_UP` **46 불변** — 링 «중심» 은 안 옮긴다. 올리면 아래를 지나는 펫이 몸통 한복판에
+       들어와 되레 나빠진다(52 에서 47.8%).
+   결과 39.3% · 16.6% 로 **수리 전보다 덜 가린다**. ⚠ 이 셋은 «그림 자리» 다 — 펫 피해·주기(481)와
+     무관하고 `PET_CD` 는 한 글자도 안 바뀐다. */
+const PET_ORB_X  = 91;
+const PET_ORB_Y  = 58;
+const PET_ORB_UP = 46;
 const unitSc = tk => tk === 'arena' ? PLAYER_DRAW_SC : (SOLO_CHASER[tk] ? 1 : MOB_DRAW_SC);
 /* 162 — 구 `isBossStage`(= S.stage % 10 === 0) 폐기. 판정은 전부 «지금 보스전이냐» 하나로 모인다. */
 const inBossFight = () => bossOn;
@@ -22613,7 +22635,7 @@ function step(dt){
   for(let i=0;i<pets.length;i++){
     const p = pets[i];
     const a = orbitAng*0.55 + i*(6.283/Math.max(1,pets.length));
-    const tx = player.x + Math.cos(a)*62, ty = player.y - 46 + Math.sin(a)*30;
+    const tx = player.x + Math.cos(a)*PET_ORB_X, ty = player.y - PET_ORB_UP + Math.sin(a)*PET_ORB_Y;
     p.x += (tx - p.x) * Math.min(1, dt*4.5);
     p.y += (ty - p.y) * Math.min(1, dt*4.5);
     stepAnim(p, dt);
@@ -23818,11 +23840,13 @@ function draw(){
     }
   }
 
-  /* 펫 */
+  /* 펫 — 590: 배수는 `PET_DRAW_SC` 한 곳에서만 곱한다(표 값은 원본 그대로).
+     그림자도 몸과 같이 커진다(541 이 플레이어에서 `15*PLAYER_DRAW_SC` 로 정한 규약과 같은 꼴) —
+     발밑 오프셋 26 은 «중앙 앵커에서 발까지» 라 몸이 커지면 같은 비율로 내려가야 발밑에 붙는다. */
   for(const p of pets){
     const fr = curFrame(p);
-    drawShadow(p.x, p.y + 26, 9);
-    if(fr) drawFrameC(p.sp.anim ? p.def.sp : p.def.sp, fr, p.x, p.y, p.sp.scale, p.flip, 1,
+    drawShadow(p.x, p.y + 26*PET_DRAW_SC, 9*PET_DRAW_SC);
+    if(fr) drawFrameC(p.sp.anim ? p.def.sp : p.def.sp, fr, p.x, p.y, p.sp.scale*PET_DRAW_SC, p.flip, 1,
                       p.def.tint ? tinted(p.def.sp, p.def.tint) : null);
   }
 
