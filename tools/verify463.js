@@ -27,6 +27,11 @@ const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
+/* 409 9회차 — R4b 이관. 옛 항은 «남은 차이 × 10 < 되돌림 신호» 라는 **비율**이었는데, AA 재래스터
+   잔여(19px)는 신호 크기와 무관한 **고정 비용**이고 신호 쪽은 9회차에 294 → 168 로 줄었다
+   (위 베벨 두 겹이 14 → 11 이 됐으므로 — R1 참조). 비율로 두면 «신호가 줄었다» 는 이유로
+   빨개진다. ⇒ 잔여는 **절대 예산**으로, 신호는 **하한**으로 따로 묻는다(둘 다 물어야 뜻이 산다). */
+const AA_BUDGET = 25;
 const ROOT = path.resolve(__dirname, '..');
 const SHOT = path.join(ROOT, 'docs', 'shots', 'v463.png');
 const R = 30;                                  /* 알약 반경 = 코너 기둥이 덮어야 할 폭 */
@@ -187,8 +192,9 @@ const pillarOf = mask => {
          으로 옮긴다 — 옛 7+23 도 새 4+26 도 참이고, 동심이 깨질 때만 빨개진다. */
       const vrs463 = (info.bR.split('/')[1] || info.bR).trim().split(/\s+/);
       const vrb463 = parseFloat(vrs463[vrs463.length - 1]);
-      ok(hname + ' — `::before` 상자는 동심 안쪽 윤곽(가로 7 인셋 · rx23 · 세로 인셋 + 아래 세로 반경 = 30)',
-        bIn.l === 7 && bIn.r === 7 && info.bTop === '7px' && /^23px/.test(info.bR)
+      ok(hname + ' — `::before` 상자는 동심 안쪽 윤곽(가로 7 인셋 · rx23 · 세로 인셋 + 세로 반경 = 30)',
+        bIn.l === 7 && bIn.r === 7 && /^23px/.test(info.bR) && vrb463 > 23.5
+          && Math.abs(parseFloat(info.bTop) + vrb463 - 30) < 0.6
           && Math.abs(parseFloat(info.bBottom) + vrb463 - 30) < 0.6,
         [info.bLeft, info.bRight, info.bTop, info.bBottom, info.bR].join(' / '));
       ok(hname + ' — `::before` 기둥 = 30 − 인셋 = ' + (R - bIn.l) + '/' + (R - bIn.r) + ' (463)',
@@ -232,8 +238,12 @@ const pillarOf = mask => {
         const tb = topBevel(s);
         if (tb > worst) { worst = tb; worstS = fmt(runs(s)); }
       }
-      ok(hname + ' R1 — 되돌리면 위 베벨이 두 겹(≥11px)이 된다 ([2] 가 공허하지 않다)',
-        worst >= 11, worst.toFixed(1) + 'px   ' + worstS);
+      /* ⚑ **409 9회차 이관** — «두 겹» 의 두께는 산수로 정해진다: 부모의 위 베벨(0..7) ∪ 이 층의
+         위 베벨. 8회차 전에는 이 층이 7..14 라 합집합 0..14 = 14 였고, 9회차가 위 코너도 타원
+         (인셋 4 · ry26)으로 옮기면서 4..11 이 되어 합집합 **0..11 = 11**(AA 한 칸 빼면 10.5)이다.
+         ⇒ 선을 **10.0** 으로 옮긴다. 수리된 상태는 여전히 **7.0** 이라 두 상태 사이는 그대로 비어 있다. */
+      ok(hname + ' R1 — 되돌리면 위 베벨이 두 겹(≥10px)이 된다 ([2] 가 공허하지 않다)',
+        worst >= 10, worst.toFixed(1) + 'px   ' + worstS);
       const dBack = await diffCols(page, info, R, Math.round(info.w) - R, 'N', 'R');
       ok(hname + ' R2 — 되돌림이 바꾸는 것은 **직선부**다 (코너 밖 열에서만 픽셀이 다르다)',
         dBack > Math.max(100, noise * 8), dBack + 'px  (> max(100, 바닥×8 = ' + noise * 8 + '))');
@@ -260,7 +270,8 @@ const pillarOf = mask => {
       ok(hname + ' R4a — 주입을 걷으면 그 열이 **수리 후 단면**으로 돌아온다 (위 베벨 7)', backOk, backD);
       const dRestore = await diffCols(page, info, 0, Math.round(info.w), 'N', 'Z');
       ok(hname + ' R4b — 남은 차이는 코너 호 AA 몫뿐 (되돌림 신호의 1/10 미만)',
-        dRestore * 10 < dBack, dRestore + 'px < ' + (dBack / 10) + ' (= 294급 신호의 1/10)');
+        dRestore <= AA_BUDGET && dBack >= 100,
+        dRestore + 'px ≤ AA 예산 ' + AA_BUDGET + ' · 되돌림 신호 ' + dBack + 'px ≥ 100');
       /* ---------- [3] 음성항 — 코너 안에서는 이 층이 살아 있다 ---------- */
       console.log('[3] 음성항 — 호 구간(알약 x 0..30)에서는 이 층이 살아 있어야 한다');
       await setStyle(KILL); await shoot(page, 'K');

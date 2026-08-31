@@ -372,13 +372,14 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       const vrs = b ? (b.r.split('/')[1] || b.r).trim().split(/\s+/) : [];
       const vrb = vrs.length ? parseFloat(vrs[vrs.length - 1]) : NaN;
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 상자가 그 자리의 규격이다'
-        + (endCell ? ' (끝 칸 = 닿는 면 0 · r30 · 449)' : ' (가운데 = 동심 윤곽 가로 7인셋·rx23 · 아래 타원 ry28)'),
+        + (endCell ? ' (끝 칸 = 닿는 면 0 · r30 · 449)' : ' (가운데 = 동심 윤곽 가로 7인셋·rx23 · 네 코너 타원 · 인셋+반경 = 30)'),
         !!b && b.left === wantL && b.right === wantR
           && (endCell ? (b.top === '0px' && b.bottom === '0px' && /^30px/.test(b.r))
-                      : (b.top === '7px' && /^23px/.test(b.r) && vrb > 23.5)),
+                      : (/^23px/.test(b.r) && vrb > 23.5 && Math.abs(parseFloat(b.top) + vrb - 30) < 0.6)),
         b ? [b.left, b.right, b.top, b.bottom, b.r].join(' / ') : '없음');
-      ok(n + ' 자리 «' + posName(o.onPos) + '» → «세로 인셋 + 아래 세로 반경 = 30» (코너 중심 y 가 알약과 같다)',
-        !!b && Math.abs(parseFloat(b.bottom) + vrb - 30) < 0.6,
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → «세로 인셋 + 세로 반경 = 30» (위·아래 코너 중심 y 가 알약과 같다)',
+        !!b && Math.abs(parseFloat(b.bottom) + vrb - 30) < 0.6
+          && (endCell || Math.abs(parseFloat(b.top) + vrb - 30) < 0.6),
         b ? (b.bottom + ' + ' + (isNaN(vrb) ? '?' : vrb) + ' = ' + (parseFloat(b.bottom) + vrb)) : '없음');
       /* 두 상자를 가르는 것은 **코너 중심의 x** 다. 값을 그냥 적지 않고 **자리에서 유도**해 묻는다.
          · 가운데 칸은 사방 7 인셋 · r23 이라 코너 중심 x 가 알약과 같다(7+23 = **30** = 동심).
