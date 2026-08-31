@@ -8878,23 +8878,42 @@
   .clb-eff i.g{color:#BAFD60}
   /* 강화 버튼 — 6회차 실측 ref x716.5~955.5 · y779.5~869.5 → 239×90, 블록 local (586, 284).
      (블록이 1px 올라갔으므로 top 284 그대로가 ref 695.5 다. 우측이 바를 7px 넘는다) */
-  .clb-btn{left:586px;top:284px;width:239px;height:90px;border-radius:45px;border:6px solid #000;
-    /* 11회차 — 126 서체 교체로 잉크가 −15.6%(자체 실측 ref 63×32 @x806 프레임 y720~751 /
-       우리 53×27 @x810 y721~747). 34 × 32/27 ≈ 40 — 폭도 53 × 40/34 = 62 로 ref 63 에 붙는다. */
-    box-sizing:border-box;font:900 40px inherit;font-family:inherit;font-size:40px;color:#DFDFDF;
-    -webkit-text-stroke:10px #000;paint-order:stroke fill;
-    background:linear-gradient(180deg,#A9A9A9,#8A8A8A);
-    /* ref 세로 단면(x840): 상 검정테 → 밝은 림 210 → 본체 169→138 → **밝은 림 211(프레임 770)**
-       → **어두운 띠 70(778)** → 검정테. 아래쪽 2층이 빠져 있었다(비평 D 누락 3). */
-    box-shadow:inset 0 -4px 0 #464646,inset 0 -7px 0 #757575,inset 0 -13px 0 #D3D3D3,inset 0 0 0 6px #D3D3D3;
-    padding:0;cursor:pointer}
-  .clb-btn:disabled{cursor:default}
-  /* 28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
-     ref 잉크(외곽 포함) 74x43 @ y800~842(프레임 716~758) 에 맞추려면 안쪽 <i> 를 6px 올린다. */
-  /* 8회차 — K #15(3px)·L #11(2.5px) 이 «[강화] 라벨이 버튼 중심보다 더 위» 로 일치 → 3px 내린다 */
-  .clb-btn>i{position:relative;top:-3px;transform:scaleX(.94)}
-  .clb-btn.rdy{background:linear-gradient(180deg,#FFE066 0 40%,#F5A623);color:#fff;
-    -webkit-text-stroke:5px rgba(0,0,0,.4);paint-order:stroke fill}
+  /* ══ 581 (2026-08-31, 저장소 주인 지시) — 세트별 [강화]도 공용 베벨 `.ifbtn` ═════════════
+     주인 원문: «도감의 강화버튼도 초록색으로 하기». **초록은 결과지 지시가 아니다** — 주인이
+     같은 묶음에서 «일괄 받기 버튼 같은 디자인» 이라고 짚은 그 부품(`.ifbtn`)의 기본 팔레트가
+     곧 초록이다(`--gb-mid:#4CBA2E`). 그래서 여기서 `background:green` 을 새로 칠하지 않고
+     **부품을 얹는다** — 베벨 4층·검정 테두리·`:disabled` 회색·`--dot-bw` 가 전부 따라온다.
+     ⚑ 지운 것: 자기 배경 그라디언트(#A9A9A9→#8A8A8A) · 바닥 3층 inset 베벨 · `border` 선언 ·
+        `.rdy` 의 금색 그라디언트(= 준비 상태를 «금색» 으로 말하던 자리. 이제 초록이 그 말을 한다).
+     ⚑ 남긴 것(처방 ④ «크기는 호스트가 정한다»): 좌표·239×90·radius 45 는 6회차 ref 실측
+        (x716.5~955.5 · y779.5~869.5) 그대로다. 부품에서 가져오는 것은 **토큰뿐**이고
+        `--gb-bw:6px` 은 옛 `border:6px solid #000` 과 같은 값이라 padding 상자도 Δ0 이다.
+     ⚠ `--dot-bw`(11283)가 `--gb-bw` 와 같은 6 이어야 516 이 맞춰 둔 닷 자리가 안 움직인다. */
+  .clb-btn{left:586px;top:284px;width:239px;height:90px;--gb-bw:6px;border-radius:45px}
+  /* 라벨 — 296 규격(흰 잉크 + 검정 아웃라인)이고, **잉크 기하는 이 화면 실측 그대로 둔다**(처방 ④).
+     11회차 — 126 서체 교체로 잉크가 −15.6%(자체 실측 ref 63×32 @x806 프레임 y720~751 /
+     우리 53×27 @x810 y721~747). 34 × 32/27 ≈ 40 — 폭도 53 × 40/34 = 62 로 ref 63 에 붙는다.
+     ⚠⚠ **아웃라인까지 «통일» 하려다 라벨을 죽일 뻔했다(1회차)** — 두 상태의 스트로크를 base 의
+     10px #000 하나로 합쳤더니 준비 상태 흰 코어가 **64×32 → 22×10** 으로 무너졌다.
+     `-webkit-text-stroke` 는 윤곽선 «가운데» 정렬이라 절반이 글자 **안쪽**을 먹는다 — 10px 이면
+     fs40 획을 5px 씩 파먹는다. ref 63×32 를 맞춘 것은 **준비 상태의 5px 반투명** 쪽이고,
+     부품이 바꾸는 것은 **버튼 면**이지 라벨 잉크가 아니다.
+     ⇒ 스트로크는 상태별 실측값 그대로 둔다(base 10px #000 = 회색 상태 · `.rdy` 5px 40% 검정).
+       색만 부품에서 온다(`.ifbtn>b` #fff · `.ifbtn:disabled>b` #DFDFDF — **수리 전과 같은 값**)
+       ⇒ 라벨 렌더는 수리 전과 Δ0 이다(`probe581` [C1] 64×32 · 중심 118.5/38.5).
+     28 교훈 2 — `<button>` 은 내용 상자를 세로 중앙 정렬해 버려 line-height 로 글자를 못 민다.
+     8회차 — K #15(3px)·L #11(2.5px) 이 «[강화] 라벨이 버튼 중심보다 더 위» 로 일치 → 3px 내린다.
+     581 — 부품의 `padding-bottom:10px`(바닥 베벨 몫)이 flex 중앙을 5px(=10/2) 위로 올리므로
+     −3 → **+2** 로 되받는다. 잉크 세로 중심 실측 **38.5 = 수리 전과 Δ0**(`probe581` [C1]).
+     ⚠ 이 1px 을 정할 때 **등장 연출이 끝나기를 기다려야 한다** — 60 쥬시가 카드를 1.00~1.01x 로
+     올리는 동안 재면 같은 CSS 로 37.5·38.5·39.5 가 번갈아 나와서, 1회차에 그 노이즈를 보고
+     +2 를 +1 로 잘못 내렸다. `probe581` [C] 는 그래서 1500ms 를 기다린 뒤 잰다.
+     ⚠ **색을 여기서 적지 마라** — `.clb-btn>b`(0,2,0)는 `.ifbtn>b`·`.ifbtn:disabled>b`(둘 다 0,2,0)
+     보다 파일에서 **뒤**라 `color:inherit` 한 마디만 적어도 부품의 흰색·회색을 통째로 이긴다
+     (1회차에 실제로 흰 잉크가 0px 이 됐다). 색은 부품이 준다. */
+  .clb-btn>b{position:relative;top:2px;font-size:40px;
+    -webkit-text-stroke:10px #000;paint-order:stroke fill;transform:scaleX(.94)}
+  .clb-btn.rdy>b{-webkit-text-stroke:5px rgba(0,0,0,.4)}
   /* ── 266 [일괄 강화] — 깃발 서브탭 «위», 가로 가운데 ──────────────────────────────
      크기 기준은 22 퀘스트 `[모두 받기]`(272×130 · 라벨 46.6px · `--gb-bw:7px` · radius 43)다
      (243 통일 기준). 라벨이 «일괄 강화 (n)» 으로 더 길어 **폭만** 키운다 — 워스트 라벨은
@@ -13624,10 +13643,21 @@
     /* 17회차 — T «우리 좌40.91 / 우36.88 ⇒ 카드 중심에서 +2.0px 우측, 3장 동일» · U «+2px 우측 편향».
      ref 는 좌40.53 / 우39.13 (거의 대칭). 칩 폭·높이·y 는 둘 다 «완전 일치» 이므로 left 만 41 → 40
      (카드 298 복귀 기준 우여백 39 ⇒ ref 와 Δ0.5/Δ0.1). */
-  .bls-c .tm{left:40px;top:250px;width:219px;height:98px;border-radius:28px;background:#926A24;
-    box-shadow:inset 0 0 0 3px #7A561A;line-height:97px;text-align:center;
+  /* 581 — `.tm` 은 국면이 둘인 한 자리다: «시간이 남았다»(상태 칩) 와 «받기»(주 행동 버튼).
+     주인 지시(«축복의 받기 버튼도 … 일괄 받기 버튼 같은 디자인»)가 가리키는 것은 **뒤쪽 하나**이므로
+     기하(219×98 · radius 28 · 자리 40/250)는 여기 공용으로 두고, **면·테두리는 국면별로** 준다:
+       · 상태 칩  = `.bls-c:not(.off) .tm` — 34 실측 갈색 그대로(아래).
+       · 주 행동  = `.bls-c.off .tm` — 부품 `.ifbtn` 을 JS 가 얹는다(`renderBless`).
+     ⚠ 가로는 부품을 얹어도 Δ0 이다 — 검정 테두리 6px 이 좌우로 12 를 먹지만 `padding-right:20`
+     이 그대로라 콘텐츠 중심은 양쪽 다 99.5px 이다((219−20)/2 = (6+(219−6−20))/2).
+     ⚠ `padding` 은 **네 몫을 다 적는다** — `.ifbtn{padding:0 0 10px}`(0,1,0)이 이 규칙(0,2,0)에
+     지게 하려면 longhand 하나(`padding-right`)만으로는 아래쪽 10px 이 살아남는다. */
+  .bls-c .tm{left:40px;top:250px;width:219px;height:98px;border-radius:28px;
+    line-height:97px;text-align:center;
     /* ref 는 «시계+숫자» 덩어리가 칩 중심(225)에서 5px 왼쪽(중심 220)에 앉는다 — 그만큼 오른쪽에 여백 */
-    box-sizing:border-box;padding-right:20px}
+    box-sizing:border-box;padding:0 20px 0 0}
+  /* 상태 칩(축복이 걸려 있는 동안) — 325 이전부터의 34 실측값. 581 이 자리만 옮겼다(값 Δ0). */
+  .bls-c:not(.off) .tm{background:#926A24;box-shadow:inset 0 0 0 3px #7A561A}
   /* 1회차: 흰 코어 w153 (ref 169, −9.5%) — 높이는 Δ1 이라 fs 는 두고 폭만 넓힌다 */
   /* 13회차 — 칩 내용을 «시계» 와 «숫자» 로 분리했다. 12회차까지 한 `<i>` 에 «⏱ 00:01:20» 을 통째로
      넣어서 둘 중 하나만 고칠 수가 없었다(비평 I 의 «시계 아이콘 −17%» 가 «아트 대기» 로 밀린 이유).
@@ -13659,15 +13689,25 @@
   /* 비활성(만료) 카드 — 레이아웃은 그대로, 톤만 죽인다 */
   .bls-c.off>.b{background:repeating-linear-gradient(-45deg,#918576 0 30.4px,#9E9284 30.4px 64.0px)}
   .bls-c.off .vl{color:#D8D2C8}
-  /* 325 (주인 지시 2026-08-28) — «받기 버튼 초록색으로».
+  /* ══ 581 (2026-08-31, 저장소 주인 지시) — «받기» 알약을 공용 베벨 `.ifbtn` 로 ═══════════════
+     주인 원문: «축복의 받기 버튼도 다른 팝업 버튼에서 쓰는 버튼으로 하기. **일괄 받기 버튼 같은 디자인**».
      ⚠ 이 클래스 이름은 «꺼진 카드» 가 아니라 **«축복이 안 걸린 카드»** 다(`toggle('off', !blessOn(k))`).
-     즉 `.off` 국면이 바로 «지금 받을 수 있다» 이고, 알약 글자도 그때만 "받기" 다 —
-     그래서 초록은 이 한 줄에서 갈리면 되고 활성(시간 표시) 알약 `#926A24` 는 그대로 둔다.
-     색은 새로 만들지 않고 202 «가능=초록» 규약의 `.ifbtn` 팔레트에서 가져온다
-     (`--gb-mid:#4CBA2E` 본체 · `--gb-dk:#2F8F1E` 테두리). **구조는 한 픽셀도 안 바꾼다** —
-     기존과 같은 «플랫 채움 + inset 3px 어두운 링» 이라 알약 bbox·글자 자리가 유지된다
-     (34 는 통과한 화면이다 · 측정표 §15 정오표에 «주인 지시 의도적 이탈» 로 남긴다). */
-  .bls-c.off .tm{background:#4CBA2E;box-shadow:inset 0 0 0 3px #2F8F1E}
+     즉 `.off` 국면이 바로 «지금 받을 수 있다» 이고, 알약 글자도 그때만 "받기" 다.
+     ⚑ **325 가 여기서 색만 빌려 왔던 것을 부품 자체로 올린다.** 325 는 `--gb-mid`/`--gb-dk` 두 값을
+        «플랫 채움 + inset 3px 링» 에 손으로 옮겨 적었다 — 색은 같아도 **베벨이 없어** 22 [모두 받기]와
+        나란히 두면 다른 부품으로 읽혔다(주인이 지목한 결손). 부품을 얹으면 베벨 4층·검정 테두리·
+        `--dot-bw` 가 한 번에 따라온다. 새로 칠하는 색은 **0개**다.
+     ⚠ 부품은 클래스로 얹되 **국면에만** 얹는다 — `renderBless()` 가 `.alert` 를 켜는 그 한 줄에서
+        `ifbtn` 도 같이 토글한다(상태 칩 국면에 초록 베벨이 남으면 «지금 받을 수 있다» 가 거짓말이 된다).
+     ⚠ **166 특이성 함정** — `#blsw s{display:inline-block}`(1,0,1)이 `.ifbtn{display:flex}`(0,1,0)을
+        이긴다. 그래서 중앙 정렬은 부품의 flex 가 아니라 **원래대로 line-height/text-align** 이 한다
+        (13484 주석과 같은 자리). 여기서 flex 를 되살리려 스코프 짝을 새로 적지 마라 — 알약 안
+        «⏱ + 글자» 두 인라인 상자의 자리가 통째로 바뀐다.
+     ⚠ 세로만 되받으면 된다 — 검정 테두리 6px 이 line box 를 6px 내리므로 `<i>` 를 +2 → **−4** 로
+        올려 잉크 세로 중심을 수리 전과 같게 둔다(`probe581` [C2] 가 매번 다시 잰다).
+        시계 `<b class="ck">` 는 `vertical-align:top` 으로 같은 line box 를 타므로 같이 따라온다. */
+  .bls-c.off .tm>i{top:-4px}
+  .bls-c.off .tm>b.ck{top:-2px}
   .bls-c.off .glo{background:#D8D2C8}
 
   /* §7 «보너스 축복» 탭 + 보너스 바 */
@@ -31166,7 +31206,11 @@ function renderBless(){
        덮어 버려서 정작 어느 카드를 눌러야 하는지가 화면에서 사라져 있었다.
        소등·재점등은 이 한 줄이 전부다: `activateBless()` 가 즉시 `renderBless()` 를 부르고(동기 소등),
        만료는 1초 `blessTick()` 이 열려 있는 팝업을 다시 그린다(재점등). 지연 재렌더가 없다(22 와 다름). */
+    /* 581 (주인 지시 2026-08-31) — 같은 국면에서 **부품**도 같이 갈린다: «받기» 일 때만 공용
+       베벨 버튼(`.ifbtn`)이고, 시간이 남은 동안은 상태 칩이다. 판정식은 새로 만들지 않는다 —
+       바로 윗줄의 `!on` 을 그대로 쓴다(레드닷·글자·부품이 한 조건에서 갈리므로 어긋날 수 없다). */
     c.querySelector('.tm').classList.toggle('alert', !on);
+    c.querySelector('.tm').classList.toggle('ifbtn', !on);
   });
   $('blsBnV').textContent = '+' + Math.round(blessGoldPct()) + '%';
   $('blsBonus').classList.toggle('off', !blessAll());
@@ -31313,8 +31357,10 @@ function renderColl21(){
       /* 516 — 세트별 [강화] 버튼 «자체» 에도 레드닷. 판정은 새로 만들지 않는다 —
          버튼의 초록(`rdy`)·`disabled` 과 **같은 한 자**(`collReady(st.key)`)를 그대로 쓴다
          (283 규약: 초록/회색은 «지금 눌러서 되나», 레드닷은 «누를 게 생겼다»). */
-      +  '<button class="clb-btn' + (rdy ? ' rdy alert' : '') + '" data-c21="' + st.key + '"' + (rdy ? '' : ' disabled')
-      +  '><i>' + (max ? 'MAX' : '강화') + '</i>' + (rdy ? '<s class="updot"></s>' : '') + '</button>'
+      /* 581 — 공용 베벨 부품 `.ifbtn` + 라벨은 `<b>` 로 감싼다(`.qs-all`·`.cl-all` 과 같은 규약).
+         `.rdy` 는 «지금 누르면 되나» 축이라 그대로 남긴다(`collFirstBtn` 이 그 클래스를 읽는다). */
+      +  '<button class="clb-btn ifbtn' + (rdy ? ' rdy alert' : '') + '" data-c21="' + st.key + '"' + (rdy ? '' : ' disabled')
+      +  '><b>' + (max ? 'MAX' : '강화') + '</b>' + (rdy ? '<s class="updot"></s>' : '') + '</button>'
       +  '</div>';
   });
   $('collList').innerHTML = h;
