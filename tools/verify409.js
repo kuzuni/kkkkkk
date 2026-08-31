@@ -76,6 +76,11 @@ const MIN_DARK = 4.0;
       둘 사이가 비어 있어야 자가 실제로 가른다. */
 const MAX_SEAM = 4.5;
 const MIN_SEAM_OFF = 6.0;
+/* 409 11회차 — 어깨(직선부 대비 검정 기둥 증가분 · `probe409f` 와 같은 축).
+   선은 «수리 전 값과 ref 값 사이» 에 긋는다 — 수리 전 x25/x29 = 5/4 · ref = 2/1 · 수리 후 3/2. */
+const SH_MAX25 = 3, SH_MAX29 = 2;
+const SH_MIN18 = 7;         /* 음성항 — ref·수리 전 둘 다 8 이다. 여기까지 깎으면 45° 를 침범한 것 */
+const SH_OFF29 = 4;         /* 되돌림 — 원판을 0 으로 죽이면 x29 가 이 값 이상으로 돌아온다 */
 
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
@@ -240,6 +245,44 @@ const colBD = (page, p, side, lx) => page.evaluate(([box, sd, x0, pal]) => {
     prev = c;
   }
   return edge;
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, lx, PAL]);
+
+/* 409 11회차 (2026-08-31) — **«어깨» 자.** 열마다 «셸 아래 테두리를 품은 검정 기둥의 윗끝» 을 재고
+   직선부(x=39)를 기준선으로 삼아 «어깨 = 기준선 − 그 열의 윗끝» 을 낸다(`tools/probe409f.py` 와 같은 축).
+   ⚠ 검정 판정은 **RGB 평균 ≤ 42** — 순검정(0)과 그 AA(`S` 34.7)만 들어오고 바닥 띠(`D` 49.3)는 빠진다.
+      문턱을 60 으로 잡으면 바닥 띠까지 «검정» 이 되어 기준선 자체가 무너진다(probe409f 머리말). */
+const shoulder = (page, p, side, xs) => page.evaluate(([box, sd, list]) => {
+  const g = window.__v409;
+  const bx = Math.round(box.x), by = Math.round(box.y), bw = Math.round(box.w), bh = Math.round(box.h);
+  const DARK = 42, PROBE = bh + 4;                 /* 셸 아래 테두리 한복판 */
+  const top = lx => {
+    const x = sd === 'R' ? bx + bw - 1 - lx : bx + lx;
+    const at = y => { const q = g.getImageData(x, by + y, 1, 1).data; return (q[0] + q[1] + q[2]) / 3; };
+    if (at(PROBE) > DARK) return null;
+    let y = PROBE;
+    while (y - 1 >= -10 && at(y - 1) <= DARK) y--;
+    return y;
+  };
+  const base = top(39);
+  if (base === null) return null;
+  return list.map(lx => { const t = top(lx); return t === null ? null : base - t; });
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, xs]);
+
+/* 409 11회차 — **«밝은 쐐기» 자.** 기둥 **밖**(x 31·34)의 «바닥 띠 ↔ 셸 검정» 사이 한 픽셀이
+   어두운 띠(D)인가 베벨(B)인가. 수리 전에는 옆띠(`--pill-l`)가 아래 코너를 감고 올라와 **B** 였고
+   ref 는 거의 검정(S)이다 — D 는 그 사이, B 는 명백한 결함이다. */
+const wedgeCls = (page, p, side, lx) => page.evaluate(([box, sd, x0, pal]) => {
+  const g = window.__v409;
+  const bx = Math.round(box.x), bw = Math.round(box.w), bh = Math.round(box.h);
+  const x = sd === 'R' ? bx + bw - 1 - x0 : bx + x0;
+  const q = g.getImageData(x, Math.round(box.y) + bh - 2, 1, 1).data;
+  let best = '?', bd = Infinity;
+  for (const [ch, hex] of pal) {
+    const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+    const d2 = (q[0] - rr) ** 2 + (q[1] - gg) ** 2 + (q[2] - bb) ** 2;
+    if (d2 < bd) { bd = d2; best = ch; }
+  }
+  return best;
 }, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, lx, PAL]);
 
 /* 세로 단면(직선부) — 코너 기둥(반경 30) **밖**에서 위/아래로 훑는다.
@@ -518,6 +561,27 @@ const SETTLE = () => {
             inn > 0 && out > 0 && Math.abs(inn - out) <= MAX_SEAM,
             'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + Math.abs(inn - out) + 'px');
         }
+        /* ── [12]·[13] 409 11회차 (2026-08-31) — **어깨와 밝은 쐐기.** ─────────────────────
+           10회차가 §19-8 에 «남은 문제 둘» 로 남긴 자리이고, 둘은 한 뿌리의 앞뒤다.
+             [12] **어깨** — 링의 안쪽 윤곽이 셸보다 4px 위라 코너 검정이 «버티다» 기둥 끝에서 끊긴다.
+                  실측(`probe409f`, 07 좌하) 수리 전 x25/x29 = **5/4** ↔ ref **2/1** ⇒ 수리 후 **3/2**.
+             [13] **밝은 쐐기** — 옆띠(`--pill-l`)가 아래 코너를 감고 올라와 기둥 밖 y 81..84 를
+                  베벨로 칠한다. 수리 전 x31/x34 = **B** ↔ ref 는 거의 검정 ⇒ 수리 후 **D**.
+           ⚠ [12-c] 는 **음성항**이다 — 어깨를 깎다가 45° 쪽(0°~60° 등폭 구간)까지 깎으면 빨개진다.
+              «많이 깎을수록 초록» 인 자를 만들지 않는다. */
+        for (const corner of Object.keys(botBev)) {
+          const sd = corner[1];
+          const sh = await shoulder(page, p, sd, [18, 21, 25, 29]);
+          const tag2 = name + ' ' + corner;
+          const line2 = sh ? [18, 21, 25, 29].map((x, i) => 'x' + x + ':' + sh[i]).join(' ') : '—';
+          ok('[12] ' + tag2 + ' — 어깨가 ref 쪽으로 내려왔다 (x25 ≤ ' + SH_MAX25 + ' · x29 ≤ ' + SH_MAX29 + ' · 수리 전 5/4 · ref 2/1)',
+            !!sh && sh[2] !== null && sh[3] !== null && sh[2] <= SH_MAX25 && sh[3] <= SH_MAX29, line2);
+          ok('[12-c] ' + tag2 + ' — **45° 쪽은 안 깎였다** — x18 ≥ ' + SH_MIN18 + ' (원판이 0°~60° 등폭 구간에 안 닿는다)',
+            !!sh && sh[0] !== null && sh[0] >= SH_MIN18, line2);
+          const w31 = await wedgeCls(page, p, sd, 31), w34 = await wedgeCls(page, p, sd, 34);
+          ok('[13] ' + tag2 + ' — 기둥 밖 «바닥 띠 ↔ 셸» 사이가 어두운 띠다 (베벨 B 면 밝은 쐐기)',
+            w31 !== 'B' && w34 !== 'B', 'x31:' + w31 + ' x34:' + w34);
+        }
         /* ── 되돌림 ── 8회차가 **실제로 바꾼 두 층**을 하나씩 되돌린다.
            ⚠ 4회차가 쓰던 주입(«옛 상자» = `::before` 세로 인셋 0 · r30)은 **더 이상 물지 않는다** —
               8회차가 검정 링을 타원으로 바꾸면서 링이 띠를 안 덮게 돼, 상자를 되돌려도 4.5 가 나온다.
@@ -581,6 +645,39 @@ const SETTLE = () => {
           if (bOff.some(v => v < MIN_BEV)) collapsed++;
         }
         await page.evaluate(() => { const st = document.getElementById('v409box'); if (st) st.remove(); });
+        await page.waitForTimeout(150);
+        await shoot(page);
+        /* ── [12-R]·[13-R] 409 11회차 되돌림 ── 11회차가 **실제로 바꾼 두 손잡이**를 하나씩 되돌린다.
+           ⚠ 원판을 «없앤다» 가 아니라 **크기 0 으로 죽인다** — 마스크 층 수가 바뀌면 `mask-composite`
+              사슬이 통째로 어긋나 «다른 그림» 을 재게 된다(층 수를 유지해야 이 항이 어깨만 가른다). */
+        await page.evaluate(() => {
+          const st = document.createElement('style'); st.id = 'v409sh';
+          st.textContent = '.stab.on{--pill-punch:radial-gradient(0px 0px at calc(100% - 30px) calc(100% - 33px),'
+            + 'transparent 0 97%,#000 100%),radial-gradient(0px 0px at 30px calc(100% - 33px),transparent 0 97%,#000 100%)!important}';
+          document.head.appendChild(st);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        for (const corner of Object.keys(botBev)) {
+          const sh = await shoulder(page, p, corner[1], [29]);
+          ok('[12-R] ' + name + ' ' + corner + ' — 원판을 죽이면 어깨가 ' + SH_OFF29 + ' 이상으로 돌아온다 ([12] 가 공허하지 않다)',
+            !!sh && sh[0] !== null && sh[0] >= SH_OFF29, 'x29 ' + (sh ? sh[0] : '—'));
+        }
+        await page.evaluate(() => { const st = document.getElementById('v409sh'); if (st) st.remove(); });
+        await page.evaluate(() => {
+          const st = document.createElement('style'); st.id = 'v409wg';
+          st.textContent = '.stab.on{box-shadow:var(--pill-l),var(--pill-r)!important}';
+          document.head.appendChild(st);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        for (const corner of Object.keys(botBev)) {
+          const sd = corner[1];
+          const w31 = await wedgeCls(page, p, sd, 31), w34 = await wedgeCls(page, p, sd, 34);
+          ok('[13-R] ' + name + ' ' + corner + ' — 바닥 띠를 한 겹 걷으면 옆띠 감김이 **B** 로 드러난다 ([13] 이 공허하지 않다)',
+            w31 === 'B' || w34 === 'B', 'x31:' + w31 + ' x34:' + w34);
+        }
+        await page.evaluate(() => { const st = document.getElementById('v409wg'); if (st) st.remove(); });
         await page.waitForTimeout(150);
         await shoot(page);
       }

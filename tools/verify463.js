@@ -130,9 +130,17 @@ const topBevel = s => { const rs = runs(s); return rs[0] && rs[0][0] === 'B' ? r
 /* 면색 F 의 가장 긴 런 — 부모 규약은 63.0 이다 */
 const faceRun = s => Math.max(0, ...runs(s).filter(r => r[0] === 'F').map(r => r[1]));
 
+/* 409 11회차 이관 (2026-08-31) — **기둥은 «첫 층» 이다.** 11회차가 `::after` 마스크에 «어깨» 를
+   오려 내는 `radial-gradient` 층 넷(원판 2 · 보호 2)을 `mask-composite` 로 얹으면서 마스크가
+   다층이 됐다. 오른쪽 기둥을 **문자열 끝**(`$`)으로 찾던 옛 자는 그 순간 `NaN` 을 돌려주고
+   빨개진다 — 결함이 아니라 자의 전제(«마스크 = 한 층»)가 낡은 것이다.
+   ⚠ **기대값을 늘리는 이관이 아니다** — 묻는 것은 그대로 «인셋 + 기둥 = 30» 이고, 자리만
+      «첫 층» 으로 좁힌다. 기둥 층 자체가 사라지면 여전히 `NaN` 으로 빨개진다. */
+const firstLayer = mask => String(mask || '').split(/,\s*radial-gradient/)[0];
 const pillarOf = mask => {
-  const l = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) ([\d.]+)px/.exec(mask || '');
-  const r = /rgb\(0, 0, 0\) calc\(100% - ([\d.]+)px\)\)?\s*$/.exec((mask || '').trim());
+  const m = firstLayer(mask);
+  const l = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px, rgb\(0, 0, 0\) ([\d.]+)px/.exec(m);
+  const r = /rgb\(0, 0, 0\) calc\(100% - ([\d.]+)px\)\)?\s*$/.exec(m.trim());
   return { l: l ? +l[1] : NaN, r: r ? +r[1] : NaN };
 };
 

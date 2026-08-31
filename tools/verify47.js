@@ -395,9 +395,13 @@ const SNAP = `(sel, host) => {
     const has = re => new RegExp(re + ' 0px 0px 0px inset').test(sh);
     const BLK = 'rgb\\(0, 0, 0\\)', BEV = 'rgb\\(99, 79, 55\\)';
     const ringOK = /rgb\(0, 0, 0\) 0px 0px 0px 7px inset/.test(ring);
-    /* 마스크 기둥 — 좌 기둥은 «rgb(0,0,0) 0px» 로 시작하고, 우 기둥은 «rgb(0,0,0) calc(100% - 30px)» 로 끝난다 */
-    const colL = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px/.test(mask);
-    const colR = /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(mask.trim());
+    /* 마스크 기둥 — 좌 기둥은 «rgb(0,0,0) 0px» 로 시작하고, 우 기둥은 «rgb(0,0,0) calc(100% - 30px)» 로 끝난다.
+       409 11회차 이관 (2026-08-31) — 마스크가 다층이 됐다(기둥 + «어깨» 원판·보호 `radial-gradient` 넷).
+       기둥은 **첫 층**이므로 거기서만 읽는다 — 옛 자는 우 기둥을 문자열 **끝**에서 찾아, 층이 하나
+       늘어난 것만으로 빨개졌다(제품 결함이 아니다). 기둥 층이 사라지면 여전히 빨개진다. */
+    const col = mask.split(/,\s*radial-gradient/)[0];
+    const colL = /linear-gradient\(90deg, rgb\(0, 0, 0\) 0px/.test(col);
+    const colR = /rgb\(0, 0, 0\) calc\(100% - 30px\)\)$/.test(col.trim());
     const sideOK = (t, sign) => t
       ? (has(BEV + ' ' + sign + '7px') && !has(BLK + ' ' + sign + '7px')
          && !(sign === '' ? colL : colR))

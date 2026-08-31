@@ -304,7 +304,15 @@ const fmt = a => a.map(([c, n]) => c + n.toFixed(1)).join(' ');
     const onNow = [];
     for (const dg of DARK_DEGS) onNow.push(solid(await ray(page, gE, 'BL', dg))[0] || ['-', 0]);
 
-    await inject('v449R', '.stab.on.stab-c1::before{left:7px!important}');
+    /* 409 11회차 이관 (2026-08-31) — **반사실에 한 줄이 더 필요해졌다.**
+       11회차가 부모 `box-shadow` 첫 항에 바닥 띠(`inset 0 -7px 0 #413122`)를 올려 옆띠의 코너
+       감김을 덮는다. 그 띠는 449 의 인셋 7 과 **무관하게** 아래 코너의 가장 바깥을 D 로 만들므로,
+       인셋만 되돌리면 이 항은 «뒤집히지 않는다» — 449 가 무른 게 아니라 **다른 층이 같은 자리를
+       같이 지키게 된 것**이다. ⇒ 반사실은 둘을 **같이** 걷어 449 자신의 몫만 남긴다.
+       ⚠ 그래도 이 항은 공허하지 않다: 인셋 7 만 도로 주입하고 바닥 띠를 그대로 두면 [2] 는
+          초록이지만 **75° 두께**(R2)가 다시 눌린다 — 그 축은 이 층이 못 덮는다. */
+    await inject('v449R', '.stab.on.stab-c1::before{left:7px!important}'
+      + '.stab.on{box-shadow:var(--pill-l),var(--pill-r)!important}');
     const offR = [];
     for (const dg of DARK_DEGS) offR.push(solid(await ray(page, gE, 'BL', dg))[0] || ['-', 0]);
     ok('R1 인셋 7 을 도로 주입하면 가장 바깥이 **베벨 밴드 B** 로 뒤집힌다 ([2] 가 공허하지 않다)',
