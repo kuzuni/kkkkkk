@@ -359,6 +359,131 @@ async function pixelRun(page) {
     }
   }
 
+
+  /* ── §7 7회차 — **호스트 눌림**과 **첫 발 가산 오버레이** ────────────────────────────────
+     비평가 넷(CC·CD·CE·CF)이 연속으로 낸 ①축의 유일한 원인은 «눌린 순간 호스트가 0.0%» 였다.
+     대조군 23 훈련은 «누른 것 = 호스트(카드)» 라 저절로 눌리는데, 룬·단련은 488 주인 지시대로
+     «누르는 것은 버튼 · 답하는 것은 카드/행/헤더» 라 호스트가 한 픽셀도 안 움직였다.
+     ⚠ 층을 갈라 묻는다(519 교훈) — ⓐ 소스에 목록이 있다 ⓑ 실제로 클래스가 붙는다
+       ⓒ **찍힌 픽셀**로 호스트가 달라진다 ⓓ 대조군에는 **안** 붙는다(같은 `scale` 을 두고 싸우면 안 된다)
+       ⓔ 첫 발에만 오버레이가 뜬다.
+     ⚠ [7-c] 의 하한은 §3 의 `PX_MIN`(8%)을 그대로 쓰지 않는다 — 호스트는 998×88~700 으로 버튼보다
+       훨씬 커서 같은 배율이라도 «달라진 픽셀 비율» 이 낮게 나온다(가장자리만 움직인다).
+       .985 는 998폭에서 좌우 각 7.5px 이므로 998×88 헤더에서 이론 하한이 약 1.5% 다 ⇒ **1.0%** 로 둔다.
+       수리 전 값은 예외 없이 **0.00%** 였으므로 이 값이면 «부품이 빠지면 반드시 걸린다». */
+  const HOSTS = [
+    { id: 'rune',    tab: 'rune',   btn: '#trRunes .rbt.b1',        host: '#trRunes .tr-rn',        n: '룬 [강화] → 카드 `.tr-rn`' },
+    { id: 'tempup',  tab: 'temper', btn: '#trTemper .tr-tp.k0 .tb', host: '#trTemper .tr-tp.k0',    n: '단련 [투자] → 행 `.tr-tp`' },
+    { id: 'tempchg', tab: 'temper', btn: '#trTemper .tp-hd .cg',    host: '#trTemper .tp-hd',       n: '단련 [충전] → 헤더 `.tp-hd`' },
+  ];
+  const HOST_PX_MIN = 1.0;
+
+  ok(/const JZ_HOST_SEL = '[^']*\.tr-rn[^']*\.tr-tp[^']*\.tp-hd[^']*\.tr-card'/.test(src),
+     '[7-a] 소스에 호스트 목록 `JZ_HOST_SEL` 이 있고 네 호스트를 다 적는다');
+  ok(/const h = el\.closest\(JZ_HOST_SEL\);\s*\n\s*return \(h && h !== el\) \? h : null;/.test(src),
+     '[7-b] 호스트가 «누른 그 노드» 자신이면 안 고른다(같은 `scale` 을 두고 싸우지 않는다)');
+  ok(/\.jz-hdn\{scale:\.985;translate:0 6px\}/.test(src),
+     '[7-c0] `.jz-hdn` 은 **정적 값**이다 — `animation` 단축을 안 쓴다(그 자리는 488 `jz-hb` 임자)');
+  ok(/\.tr-rn,\.tr-tp,\.tr-temp>\.tp-hd,\.tr-temp>\.tp-ft\{transition:scale [^}]*translate/.test(src),
+     '[7-c1] 호스트 넷이 같은 트랜지션 한 줄을 공유한다(뗌도 같은 곡선 · `.tr-card` 는 목록 밖)');
+  ok(/@keyframes jzDn\{from\{scale:1;translate:0 0\}to\{scale:\.94;translate:0 8px\}\}/.test(src),
+     '[7-c2] 기존 누름 부품(`jzDn` .94 / 8px)은 한 글자도 안 바뀌었다 — 25자리 회귀 0');
+  ok(/rtFirstFx\(o\.host\);/.test(src) && /function rtFirstFx\(sel\)\{[\s\S]{0,400}?fxFlash\(h\)[\s\S]{0,200}?fxBurst\(h, FXPAL\.up, 10\)/.test(src),
+     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다');
+
+  const c2 = await boot(browser, SRC);
+  const pg = c2.page;
+  for (const t of HOSTS) {
+    await pg.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain();
+      setTrSub(k); if (typeof setRuneSub === 'function') setRuneSub('r1'); S.tstone = 1e6; renderTrain(); }, t.tab);
+    await pg.waitForTimeout(420);
+    const g = await pg.evaluate(([b, hs]) => {
+      const B = document.querySelector(b), H = document.querySelector(hs);
+      if (!B || !H) return null;
+      const rb = B.getBoundingClientRect(), rh = H.getBoundingClientRect();
+      const L = document.getElementById('fxl'); if (L) L.innerHTML = '';
+      return { bx: rb.x + rb.width / 2, by: rb.y + rb.height / 2, h: rh.toJSON() };
+    }, [t.btn, t.host]);
+    ok(!!g, '[7-' + t.id + '-0] ' + t.n + ' — 버튼·호스트를 찾았다');
+    if (!g) continue;
+    const clip = { x: Math.max(0, g.h.x - 4), y: Math.max(0, g.h.y - 4),
+                   width: Math.min(1080 - Math.max(0, g.h.x - 4), g.h.width + 8),
+                   height: Math.min(2280 - Math.max(0, g.h.y - 4), g.h.height + 8) };
+    const before = await pg.screenshot({ clip });
+    const rest = await pg.evaluate(([hs, bs]) => {
+      const H = document.querySelector(hs), B = document.querySelector(bs);
+      return { hw: H ? H.getBoundingClientRect().width : 0, bw: B ? B.getBoundingClientRect().width : 0 };
+    }, [t.host, t.btn]);
+    await pg.mouse.move(g.bx, g.by);
+    await pg.mouse.down();
+    /* ⚠ 7회차 — **200ms 에 읽는다.** 70ms 는 트랜지션(.07s)·맥박(.08s)이 아직 도는 한복판이라
+       같은 트리에서 1.000 ↔ 0.990 ↔ 0.995 로 흔들렸다(첫 실행이 그래서 빨갰다). 200ms 면
+       누름 트랜지션도 `jz-hb`(`both` 라 끝값 scale(1) 로 굳는다)도 다 앉아 있다.
+       그리고 `getComputedStyle().scale` 이 아니라 **실측 bbox 비**로 묻는다 — 어느 속성이
+       이겼는지와 무관하게 «화면에서 실제로 줄었는가» 를 재는 유일한 축이다. */
+    await pg.waitForTimeout(200);
+    const live = await pg.evaluate(([hs, bs]) => {
+      const H = document.querySelector(hs), B = document.querySelector(bs);
+      const L = document.getElementById('fxl');
+      const fl = L ? L.querySelectorAll('.fx-flash').length : 0;
+      const pt = L ? L.querySelectorAll('.fx-spark').length : 0;
+      return { hdn: !!(H && H.classList.contains('jz-hdn')),
+               dnOnHost: !!(H && H.classList.contains('jz-dn')),
+               scale: H ? getComputedStyle(H).scale : null, flash: fl, part: pt,
+               btnScale: B ? getComputedStyle(B).scale : null,
+               hw: H ? H.getBoundingClientRect().width : 0,
+               bw: B ? B.getBoundingClientRect().width : 0,
+               all: L ? L.childElementCount : 0 };
+    }, [t.host, t.btn]);
+    const down = await pg.screenshot({ clip });
+    const px = await diffPct(pg, before, down);
+    await release(pg);
+    ok(live.hdn, '[7-' + t.id + '-a] 누른 채 호스트에 `jz-hdn` 이 붙는다', 'scale=' + live.scale);
+    ok(!live.dnOnHost, '[7-' + t.id + '-b] 호스트에 `jz-dn`(.94)은 안 붙는다 — 어휘가 겹치지 않는다');
+    /* ⚠ 7회차 함정 — 커스텀 속성은 **상속**된다. 호스트의 `--jz-s:.985` 가 그 안의 버튼까지
+       내려가면 누름이 통째로 약해진다(첫 실행에서 실제로 0.985 로 찍혔다). 폴백은 상속을 못 막으므로
+       `.jz-dn` 이 자기 값을 직접 적는다 — 그 못이 빠지면 여기가 빨개진다. */
+    const hr = rest.hw ? live.hw / rest.hw : 0, br = rest.bw ? live.bw / rest.bw : 0;
+    /* ★ 이 두 항이 7회차의 본체다 — 첫 시안은 `animation:jzDn` 이라 488 `jz-hb`(맥박)가 캐스케이드에서
+       이겨 «클래스는 붙어 있는데 호스트가 한 픽셀도 안 줄어드는» 상태였다(같은 `animation` 단축을
+       두 부품이 두고 싸운다). 정적 `scale:` 이라야 맥박의 `transform` 과 곱해진다. */
+    ok(Math.abs(hr - 0.985) <= 0.004,
+       '[7-' + t.id + '-b3] ★★ 호스트 폭이 실제로 **.985 배**로 줄었다(맥박과 곱해진다)',
+       p2(rest.hw) + ' → ' + p2(live.hw) + ' = ×' + Math.round(hr * 10000) / 10000);
+    ok(br > 0.90 && br < 0.965,
+       '[7-' + t.id + '-b2] ★ 누른 **버튼**은 여전히 .94 배다 — 호스트 진폭이 버튼까지 약하게 만들지 않았다',
+       p2(rest.bw) + ' → ' + p2(live.bw) + ' = ×' + Math.round(br * 10000) / 10000);
+    ok(px >= HOST_PX_MIN, '[7-' + t.id + '-c] ★ 찍힌 픽셀 — 호스트가 실제로 달라진다(수리 전 0.00%)',
+       p2(px) + '% (하한 ' + HOST_PX_MIN + '%)');
+    ok(live.all >= 1, '[7-' + t.id + '-d] 첫 발에 가산 오버레이가 `#fxl` 에 뜬다',
+       'flash=' + live.flash + ' 파티클=' + live.part + ' 총 ' + live.all + '개');
+  }
+
+  /* ⓓ 대조군 — «누른 것 = 호스트» 라 `jz-hdn` 이 붙으면 안 된다(같은 `scale` 을 두고 싸운다) */
+  await pg.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub('train'); renderTrain(); });
+  await pg.waitForTimeout(420);
+  const tg = await pg.evaluate(() => {
+    const c = document.querySelector('#trCards [data-tr]'); if (!c) return null;
+    const r = c.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  });
+  if (tg) {
+    await pg.mouse.move(tg.x, tg.y);
+    await pg.mouse.down();
+    await pg.waitForTimeout(70);
+    const tr = await pg.evaluate(() => {
+      const c = document.querySelector('#trCards [data-tr]');
+      return { dn: !!(c && c.classList.contains('jz-dn')), hdn: !!(c && c.classList.contains('jz-hdn')),
+               scale: c ? getComputedStyle(c).scale : null };
+    });
+    await release(pg);
+    ok(tr.dn && !tr.hdn,
+       '[7-train] ★대조군 훈련 카드는 `jz-dn`(.94) 하나만 — `jz-hdn` 이 겹치지 않는다',
+       'dn=' + tr.dn + ' hdn=' + tr.hdn + ' scale=' + tr.scale);
+
+  }
+  ok(c2.errs.length === 0, '[7-Z] §7 실행 중 콘솔 에러 0', c2.errs.slice(0, 2).join(' | '));
+  await c2.ctx.close();
+
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
   await ctx.close();
 
@@ -426,6 +551,57 @@ async function pixelRun(page) {
       ok(!!h2 && h2.held.dn === false, '[R2-b] 같은 사본에서 jz-dn 도 함께 사라진다',
          h2 ? 'dn=' + h2.held.dn : '표본 없음');
       await b3.ctx.close();
+    } finally {
+      try { fs.unlinkSync(NEG); } catch (_) {}
+    }
+  }
+
+  /* ── §R3 되돌림(7회차) — 호스트 눌림을 걷어낸 사본은 §7 이 빨개져야 한다 ──
+     ⚠ 무르게 푸는 길이 둘 있어 **둘 다 막는다**: ⓐ 클래스만 안 붙이는 사본(JS) ⓑ CSS 정적 값을
+       종전 시안처럼 `animation` 으로 되돌린 사본. ⓑ 는 클래스가 **붙어 있는데도** 맥박에 져서
+       scale 이 `none` 이 되는 자리라, [7-*-a](클래스 유무)만 묻는 자였으면 헛초록이 났다. */
+  for (const R3 of [
+    { n: 'ⓐ 클래스를 안 붙인다',
+      rev: s0 => s0.replace("if(hst){ jzDownHost = hst; hst.classList.add('jz-hdn'); }", "if(hst){ jzDownHost = null; }") },
+    { n: 'ⓑ 정적 값 → `animation`(맥박에 진다)',
+      rev: s0 => s0.replace('.jz-hdn{scale:.985;translate:0 6px}', '.jz-hdn{animation:jzDn .06s ease-out both}') },
+  ]) {
+    const rev3 = R3.rev(src);
+    ok(rev3 !== src, '[R3-0] 되돌림 사본을 만들었다 — ' + R3.n);
+    fs.writeFileSync(NEG, rev3);
+    try {
+      const b4 = await boot(browser, NEG);
+      await b4.page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+        setTrSub('temper'); S.tstone = 1e6; renderTrain(); });
+      await b4.page.waitForTimeout(420);
+      const g4 = await b4.page.evaluate(() => {
+        const B = document.querySelector('#trTemper .tr-tp.k0 .tb'); if (!B) return null;
+        const r = B.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      if (g4) {
+        await b4.page.mouse.move(g4.x, g4.y);
+        const w0 = await b4.page.evaluate(() =>
+          document.querySelector('#trTemper .tr-tp.k0').getBoundingClientRect().width);
+        await b4.page.mouse.down();
+        /* ⚠ ⓑ 사본은 «안 줄어든다» 가 아니라 **«고르지 않다»** 로 틀린다 — 맥박이 도는 프레임에는
+           `jz-hb` 가 `animation` 을 가져가 누름이 통째로 사라지고, 맥박 사이에는 `jzDn` 이 이겨
+           .94(호스트에는 너무 센 값)로 튄다. 한 순간만 재면 우연히 .985 근처가 나올 수 있으므로
+           **세 시각을 재서 «하나라도 .985 가 아니면 빨강»** 으로 묻는다. */
+        const smp = [];
+        for (const ms of [100, 100, 100]) {
+          await b4.page.waitForTimeout(ms);
+          smp.push(await b4.page.evaluate(() =>
+            document.querySelector('#trTemper .tr-tp.k0').getBoundingClientRect().width));
+        }
+        const hdn3 = await b4.page.evaluate(() =>
+          !!document.querySelector('#trTemper .tr-tp.k0').classList.contains('jz-hdn'));
+        await b4.page.mouse.up();
+        const rs = smp.map(w => w0 ? w / w0 : 1);
+        ok(rs.some(r => Math.abs(r - 0.985) > 0.004),
+           '[R3-a] ★ 되돌린 사본에서는 호스트가 «.985 배로 고르게» 줄지 않는다 — ' + R3.n,
+           'hdn=' + hdn3 + ' ×' + rs.map(r => Math.round(r * 10000) / 10000).join(' / '));
+      }
+      await b4.ctx.close();
     } finally {
       try { fs.unlinkSync(NEG); } catch (_) {}
     }

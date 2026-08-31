@@ -12742,6 +12742,24 @@
   .jz-up{animation:jzUp .18s linear both}
   @keyframes jzUp{0%{scale:.94;translate:0 8px;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
     55%{scale:1.04;translate:0 0;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;translate:0 0}}
+  /* ⚑ 491 7회차 — **호스트 눌림**(①축의 유일한 원인 · 비평가 CC·CD·CE·CF 넷 연속 지적).
+     대조군 23 훈련은 «누른 것 = 카드» 라 호스트가 저절로 눌리는데(64 홀드), 룬·단련은 488 주인
+     지시대로 «누르는 것은 버튼, 회당 피드백의 호스트는 카드/행/헤더» 라 **호스트가 0.0% 움직였다.**
+     ⇒ 누른 버튼의 조상에서 호스트를 찾아 «같은 어휘·작은 진폭» 으로 같이 누른다(JS `JZ_HOST_SEL`).
+     ⚠⚠ **`animation` 으로 쓰면 안 된다 — 이 자리는 이미 임자가 있다.** 호스트는 홀드가 도는 내내
+       488 `jz-hb`(맥박)를 60~160ms 마다 다시 받는데, 둘 다 `animation` **단축**이라 한 요소에서
+       캐스케이드가 하나만 고른다(뒤에 선언된 `.jz-hb` 가 이긴다). 첫 시안이 실제로 그랬다 —
+       `jz-hdn` 은 붙어 있는데 `getComputedStyle(host).scale` 이 **none** 이었다(맥박이 이겼다).
+       ⇒ 누름은 **애니메이션이 아니라 정적 값 + 트랜지션**으로 준다. `scale`/`translate` 는
+       `jz-hb` 가 쓰는 `transform` 과 **다른 속성**이라 둘이 곱해진다(1.02 × .985 = 1.0047 로
+       팝의 상한이 오히려 내려간다 = 그릇을 안 넘는다). 뗌은 클래스를 떼면 같은 트랜지션이 되돌린다.
+     ⚠ 값은 취향이 아니다 — `.tr-rn` 998폭에서 .985 = **−15px** 로 대조군 카드의 −19px 의 79% 다.
+       .94 를 그대로 쓰면 998 → 938 로 그릇(`.tr-box` 안폭 1046)을 흔들어 이웃이 같이 튄다.
+     ⚠ 가라앉음도 `jz-dn` 과 같은 부등식(translate > h(1−s)/2)을 지킨다: h=700(룬 카드)에서 5.25px 라 **6px**.
+     ⚠ `.tr-card`(대조군)는 «누른 것 = 호스트» 라 JS 가 스스로 걸러 낸다 — 여기 트랜지션 목록에도 없다.
+       두 번 걸면 `jz-dn` 의 `scale:.94` 와 같은 속성을 두고 싸운다. */
+  .tr-rn,.tr-tp,.tr-temp>.tp-hd,.tr-temp>.tp-ft{transition:scale .07s ease-out,translate .07s ease-out}
+  .jz-hdn{scale:.985;translate:0 6px}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
   /* ⚑ 488 — 홀드 «회당» 호스트 반응. `jz-dn/jz-up`(누름·뗌)·`jz-sh`(정지) 와 **다른 어휘**다:
@@ -32911,6 +32929,25 @@ function rtHoldTick(){
    여섯 자리는 27~36%). 주인이 이름을 댄 두 곳이 정확히 이 셋 안에 있다.
    ⚠ 실패 갈래에서는 세운 표시를 **`o.end()` 전에** 도로 내린다 — `end` 안의 `renderTrain()` 은
    종전대로 «통짜» 로 돌아야 한다(안 내리면 실패 뒤 화면이 live 갱신에 갇힌다). */
+/* ⚑ 491 7회차 — **첫 발의 «가산 오버레이»**(흰 링 + 파티클). 비평가 CE·CF 가 2인 공통으로
+   «대조군에는 있고 룬·단련에는 통째로 없다» 로 낸 축이다(CF 실측 「호스트 외곽 10px 밴드의
+   변화율 대조군 88.65% ↔ 룬·단련 0.00%」). 대조군 23 훈련의 그 그림은 `trHoldStart` 의
+   `fxUpOk(card, card, txt)` 한 줄이고, 룬·단련은 488 이 «회당 피드백» 만 달아 이 한 세트가 빠져 있었다.
+   ⇒ **같은 부품을 같은 시점(첫 발)에** 건다 — 새 연출을 만들지 않는다(1회차가 «규격 3종» 으로
+   ④ 감점받은 자리다).
+   ⚠ `fxUpOk` 를 통째로 부르지 않고 두 조각(`fxFlash`+`fxBurst`)만 쓴다. 빠뜨린 셋은 이유가 있다:
+     · `fxHitEl`(대상 자체 scale) — `transform` 을 쓰는데 488 `jz-hb` 가 홀드 내내 같은 속성을
+       점유한다(둘 다 `animation` 단축이라 뒤에 선언된 `.jz-hb` 가 캐스케이드에서 이긴다).
+       그리고 «대상 자체가 튄다» 는 이번 회차의 `jz-hdn` 이 이미 맡는다.
+     · 델타 문구(`fxDelta`) — 회당 «+1»·«−n» 은 `hbBeat` 사다리가 이미 말한다. 겹치면 58 이
+       네 라운드 태운 «같은 수가 두 곳에서 말해진다» 가 된다.
+   ⚠ 첫 발에만 건다(대조군과 같다). 반복분에 걸면 60ms 마다 링이 나 `#fxl` 이 FXMAX 로 막힌다. */
+function rtFirstFx(sel){
+  const h = sel && document.querySelector(sel);
+  if(!h) return;
+  if(typeof fxFlash === 'function') fxFlash(h);
+  if(typeof fxBurst === 'function') fxBurst(h, FXPAL.up, 10);
+}
 function rtHoldStart(o){
   rtHoldStop(false);
   rtHold = { tag:o.tag, sel:o.sel, once:o.once, live:o.live, end:o.end, n:0, iv:TR_HOLD_IV0, timer:0 };
@@ -32919,6 +32956,7 @@ function rtHoldStart(o){
     o.end(0, false); rtShake(o.sel); return;
   }
   rtHold.n = 1;
+  rtFirstFx(o.host);                                         /* 491 7회차 — 첫 발 가산 오버레이 */
   o.live();
   rtHold.timer = setTimeout(rtHoldTick, TR_HOLD_DELAY);
 }
@@ -32934,7 +32972,7 @@ function rtRuneHold(id){
   let tries = 0, succ = 0;
   const lv0 = runeLvOf(id);
   rtHoldStart({
-    tag:'rune', sel,
+    tag:'rune', sel, host:sel0,                     /* 491 7회차 — 첫 발 가산 오버레이의 호스트(= hbBeat 와 같은 노드) */
     once: () => {
       if(!runeOpen(id) || runeMaxed(id) || !runeTryOk(id)){
         if(!tries) runeBuy(id);               /* 첫 누름의 잠금·만렙·부족 안내는 기존 문구 그대로 */
@@ -32979,7 +33017,7 @@ function rtTemperHold(k){
   const sel = host + ' .tb';
   let n = 0;
   rtHoldStart({
-    tag:'temper', sel,
+    tag:'temper', sel, host,                        /* 491 7회차 — 첫 발 가산 오버레이의 호스트 */
     once: () => {
       if(!temperUpOk(k)){ if(!n) temperUpBtn(k); return false; }
       const cost = temperCost(k);             /* 488 — 계단이라 «오르기 전» 값이 이번에 낸 값이다 */
@@ -33008,7 +33046,7 @@ function rtChargeHold(){
   const HD = '#trTemper .tp-hd';                 /* 491 4회차 — 회당 피드백 호스트(형제: 룬 카드 · 투자 행) */
   let got = 0;
   rtHoldStart({
-    tag:'temper', sel,
+    tag:'temper', sel, host:HD,                     /* 491 7회차 — 첫 발 가산 오버레이의 호스트 */
     once: () => {
       const before = temperPts(), stone0 = Math.floor(S.tstone) || 0;
       if(!temperChargeBtn(true)){ if(!got) temperChargeBtn(); return false; }
@@ -36999,7 +37037,23 @@ function jzTarget(t){
   return best;
 }
 const jzDead = el => !!(el.disabled || (el.matches && el.matches('[disabled],.lock,.off,.dis,.disabled')));
+/* ⚑ 491 7회차 — «회당 피드백의 호스트» 목록. 488 주인 지시(«카드 자체에»)로 룬·단련은
+   누르는 것과 답하는 것이 **다른 노드**가 됐고, 그 뒤로 호스트가 누름에 0.0% 반응했다.
+   여기 적힌 것은 `hbBeat` 가 실제로 받는 호스트 넷과 같다(`rtRuneHold` `sel0` · `rtTemperHold` `host` ·
+   `rtChargeHold` `HD` · `.tp-ft` 회수 행) + 대조군 `.tr-card`.
+   ⚠ `.tr-card` 는 «누른 것 = 호스트» 라 아래에서 **스스로 걸러진다**(host === el 이면 안 건다) —
+     목록에 둔 이유는 «어디까지가 호스트인가» 를 한 곳에서 읽게 하려는 것이고, 두 번 누르면
+     같은 `scale:` 속성을 `jz-dn`(.94)과 `jz-hdn`(.985)이 두고 싸운다(2회차 `transform` 사고와 같은 꼴). */
+const JZ_HOST_SEL = '.tr-rn,.tr-tp,.tr-temp>.tp-hd,.tr-temp>.tp-ft,.tr-card';
+let jzDownHost = null;
+function jzHostOf(el){
+  if(!el || !el.closest) return null;
+  const h = el.closest(JZ_HOST_SEL);
+  return (h && h !== el) ? h : null;
+}
 function jzRelease(){
+  /* 491 7회차 — 호스트 눌림은 트랜지션이라 «떼면» 같은 곡선으로 되돌아간다(위 CSS 머리말) */
+  if(jzDownHost){ jzDownHost.classList.remove('jz-hdn'); jzDownHost = null; }
   if(!jzDown) return;
   const el = jzDown; jzDown = null;
   el.classList.remove('jz-dn');
@@ -37421,6 +37475,9 @@ function jzInit(){
     jzRelease();
     sfx('tap');                                          /* 78 — 버튼 탭 */
     jzDown = el; el.classList.add('jz-dn');
+    /* 491 7회차 — 호스트도 같이 누른다(위 `JZ_HOST_SEL` 머리말). 죽은 버튼은 위에서 이미 return 했다. */
+    const hst = jzHostOf(el);
+    if(hst){ jzDownHost = hst; hst.classList.add('jz-hdn'); }
   }, true);
   addEventListener('pointerup', jzRelease, true);
   addEventListener('pointercancel', jzRelease, true);
