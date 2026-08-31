@@ -13,17 +13,20 @@
  *   §2 두 벌  — 방향을 정하는 자리가 `faceFlip` 하나뿐이다(옛 하드코딩 두 줄이 되살아나면 빨강)
  *   §3 실동작 — 단독 직진 3종 · 자동 전투 무리 · 조이스틱 수동 = 이동 방향과 일치
  *   §4 전수   — knight 계열 적(승급 수호자·아레나) · 시체 승계 · 펫 불변
- *   §5 깜빡임 — 뒤집힘 빈도를 **기록**한다(⚠ 판정 안 함 — 축에 재현성이 없다. 598 로 등재)
+ *   §5 깜빡임 — 뒤집힘 빈도를 **결정적 판**에서 잰다(598 — 시드 고정 · step 수동 구동 · 배우 못박기)
  *   §R 되돌림 — ⓐ 표를 옛 하드코딩으로 되돌린 사본에서 고블린이 90% 대로 돌아온다
- *               ⓑ 히스테리시스를 뺀 사본의 뒤집힘도 나란히 **기록**한다(판정은 ⓐ 가 낸다)
+ *               ⓑ 히스테리시스를 뺀 사본이 §5 와 **같은 바를 넘는다**(바에 판별력이 있다는 증명)
  *
  * ⚠ 이 자와 `probe587` 은 **같은 함수**를 쓴다(`tools/atlasface587.js` · 385 규약 — 자는 한 벌).
+ * ⚠ §5·§R-b 의 깜빡임 시나리오도 `probe598` 과 **같은 함수**다(`tools/flap598lib.js`).
  */
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { measureReach } = require('./atlasface587');
+/* 598 — 깜빡임 축은 **결정적 시나리오** 한 벌에서만 온다(probe598 과 같은 함수 · 385 규약) */
+const { FLAP_DET, PLAY_DET, SUB_HYST } = require('./flap598lib');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
@@ -33,6 +36,7 @@ const NEG_B = path.join(ROOT, '.v587-neg-b.html');
 let pass = 0, fail = 0;
 const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL  ') + m + (d ? ' — ' + d : '')); };
 const p1 = n => Math.round(n * 10) / 10;
+const p2 = n => (typeof n === 'number' ? n.toFixed(2) : String(n));   /* 598 — 깜빡임 값 표기(부동소수 꼬리 제거) */
 
 /* 실측으로 확정된 원본 방향(근거는 docs/review/587-스프라이트방향.md §2 — 자 하나 + 비평가 3인) */
 const REF = { knight: true, zombie: true, elvesG: false, elvesB: true, bird: true, robo: true, dragon: true };
@@ -100,32 +104,12 @@ const CROWD = `(async (ms, step) => {
   return out;
 })`;
 
-/* 깜빡임 — 개체당 «초당 몇 번 뒤집히는가».
-   ⚠⚠ **인구를 고정하지 않으면 이 축은 못 쓴다.** 자연 상태로 재면 살아 있는 마릿수·밀집도·
-   스테이지 진행이 회차마다 달라져 값이 0.26~0.89 로 춤춘다 — 실제로 그렇게 재다가 §R-b 가
-   «고친 쪽 0.885 ↔ 뺀 쪽 0.852» 로 **부호가 뒤집힌 회차**가 나왔다(무엇을 재는지 틀린 자).
-   ⇒ 좀비 24마리를 세우고 **안 죽게 붙잡은 채** 같은 창에서 잰다. 그러면 두 트리가 같은 조건이다. */
-const FLAP = `(async (ms) => {
-  enemies.length = 0; spawnQ.length = 0;
-  for (let i = 0; i < 24; i++) makeEnemy('zombie');
-  const tr = {}, pl = [];
-  const t0 = performance.now();
-  let n = 0;
-  while (performance.now() - t0 < ms) {
-    await new Promise(r => requestAnimationFrame(r));
-    n++; pl.push(player.flip);
-    for (const e of enemies) {
-      e.hp = e.max = 1e9;
-      if (!e.__id) e.__id = 'e' + (Math.random() * 1e9 | 0);
-      (tr[e.__id] = tr[e.__id] || []).push(e.flip);
-    }
-  }
-  let flips = 0, frames = 0;
-  for (const t of Object.values(tr)) { if (t.length < 60) continue; frames += t.length; for (let i = 1; i < t.length; i++) if (t[i] !== t[i - 1]) flips++; }
-  let pf = 0; for (let i = 1; i < pl.length; i++) if (pl[i] !== pl[i - 1]) pf++;
-  const secs = n / 60;
-  return { mob: frames ? flips / (frames / 60) : null, player: pl.length ? pf / (pl.length / 60) : null };
-})`;
+/* 598 — 깜빡임 판정의 손잡이. 시드 둘은 `probe598` §C 가 잰 다섯 시드의 **최대·최소 자리**다
+   (11 = 고친 쪽 15.674 로 가장 많이 도는 시드 · 44 = 13.632 로 가장 적게 도는 시드).
+   바 16.4 는 두 무리(고침 13.63~15.67 ↔ 뺌 17.21~19.41) 사이 한복판이고 여유가 대칭이다. */
+const DET_SEEDS = [11, 44];
+const DET_FRAMES = 720;          /* 12초 @ 60fps — 587 의 자연 측정과 같은 «게임 시간» */
+const BAR_FLAP = 16.4;
 
 async function boot(browser, file) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -309,21 +293,40 @@ async function boot(browser, file) {
     `${petId.filter(r => r.now === r.old).length}/${petId}`.replace(/,\[object Object\]/g, '').replace('[object Object]', '6'));
 
   /* ── §5 깜빡임 ────────────────────────────────────────────────────── */
-  console.log('\n§5 깜빡임 — 방향을 맞히느라 스프라이트가 떨지 않는다 ───────');
-  /* FLAP 이 인구(좀비 24마리·불사)를 스스로 세운다 — 그래야 이 트리와 §R-b 의 사본이 같은 조건이다 */
-  const flap = await page.evaluate(`(${FLAP})(12000)`);
-  /* 실측 폭 0.26~0.55회(자연 상태). 바를 0.75 로 두어 밀집도 흔들림에 안 찢어지게 하고,
-     «히스테리시스가 실제로 일을 하는가» 라는 본질은 §R-b 의 **비**가 잡는다(뺀 사본 1.36회). */
-  /* ⚠⚠ **이 축은 «기록» 이지 «통과선» 이 아니다.** 히스테리시스가 필요하다는 근거 자체는 단단하다
-     (수리 직후 같은 스크립트로 나란히 재서 0.13 → 0.96 → 0.26회/s). 그런데 그 값을 **게이트로**
-     쓰려고 하니 회차마다 0.26~0.89 로 흔들렸고, 인구를 24마리로 고정한 뒤에도 사본과의 **부호가
-     두 번 뒤집혔다**(고친 쪽 0.885 ↔ 뺀 쪽 0.852 · 0.621 ↔ 0.36). 무엇이 이 값을 흔드는지 아직
-     모르는 채로 임계를 박으면 **플레이키 게이트**가 하나 더 생긴다(344·372·591 이 그 부류다).
-     ⇒ 값을 찍기만 하고 판정하지 않는다. 축을 제대로 세우는 일은 **598** 로 등재했다. */
-  ok(true, '[5-a] 잡몹 뒤집힘(기록 — 판정 안 함)',
-    `${p1(flap.mob * 100) / 100}회/s · 이 축은 아직 재현성이 없다 → 598`);
-  ok(flap.player !== null && flap.player <= 3.20,
-    '[5-b] 플레이어 뒤집힘 ≤ 초당 3.20회', `${p1(flap.player * 100) / 100}회 (수리 전 2.6~2.9 · 임계만 쓰면 4.15)`);
+  console.log('\n§5 깜빡임 — 방향을 맞히느라 스프라이트가 떨지 않는다(결정적 판) ───');
+  /* ⚑ **598 이 이 절을 통째로 갈아 끼웠다.** 587 은 이 축을 «기록만» 으로 두고 넘겼다 —
+     자연 상태로 재면 회차마다 0.26~1.04 로 춤췄고 사본과 **부호가 뒤집히는 회차**까지 나왔기
+     때문이다(고친 쪽 1.038 ↔ 뺀 쪽 1.022). 598 이 재현으로 찾아낸 답은 **«축이 아니라 판이
+     흔들렸다»** 였다(`probe598` §B·§C):
+        · rAF 로 굴리면 같은 12초에 굴러간 프레임이 334~357 로 다르고(dt 가 안 같다)
+        · 스폰 좌표·스월 부호·돌진 시각이 전부 `Math.random` 이고
+        · 부팅 워밍업이 남긴 배우 상태(플레이어 좌표·조준·스킬 쿨·투사체)가 회차마다 다르다
+     ⇒ `flap598lib` 이 그 셋을 못박는다 — 루프를 멈추고 `step(1/60)` 을 손으로 굴리고,
+        `Math.random` 을 시드 LCG 로 갈고, 좌표·스월·배우를 선언으로 세운다.
+        같은 시드면 값이 **완전히 같다**(`probe598` [B2] 3/3 · 아래 [5-c] 가 매 실행 다시 확인).
+     ⚠ 바는 «넉넉히 벌려 초록» 이 아니다 — 시드 5개 실측이 **두 무리로 갈라져 있다**:
+        고친 쪽 13.63~15.67 ↔ 뺀 쪽 17.21~19.41. 바 16.4 는 그 사이 한복판이고
+        양쪽으로 4.6% / 4.7% 여유가 대칭이다. 판별력은 §R-b 가 **같은 바**로 낸다. */
+  const detMob = [];
+  for (const sd of DET_SEEDS) detMob.push(await page.evaluate(`(${FLAP_DET})(${DET_FRAMES}, ${sd})`));
+  DET_SEEDS.forEach((sd, i) => ok(detMob[i].mob !== null && detMob[i].mob <= BAR_FLAP,
+    `[5-${'ab'[i]}] 잡몹 뒤집힘(결정적 · 시드 ${sd}) ≤ 초당 ${BAR_FLAP}회`,
+    `${p2(detMob[i].mob)}회/s · 깜빡임 ${p2(detMob[i].flick)} · ${detMob[i].mobs}마리`));
+  const again = await page.evaluate(`(${FLAP_DET})(${DET_FRAMES}, ${DET_SEEDS[0]})`);
+  ok(Math.abs(again.mob - detMob[0].mob) < 1e-9,
+    '[5-c] **같은 시드를 다시 재면 값이 같다**(축에 재현성이 있다 — 598 의 본체)',
+    `${p2(again.mob)} = ${p2(detMob[0].mob)} (오차 ${(Math.abs(again.mob - detMob[0].mob)).toExponential(1)})`);
+  /* 플레이어 — 각본(0.75초마다 여섯 국면 · 세로만 둘 · 임계 언저리 둘)대로 손가락을 꺾는다.
+     각본이 요구하는 가로 전환은 12초에 8번이고 고친 쪽은 9번(0.75회/s)으로 **거의 그것뿐**이다.
+     ⚠ 판정은 «몇 번 도나» 가 아니라 **«돌았다가 0.25초 안에 되돌아오나»** 로 한다 — 바닥이 0 이라
+        환경이 달라져도 안 흔들리고, 587 §6 이 말한 병(«카이팅 중 홱홱 돈다»)이 정확히 그것이다. */
+  const detPl = await page.evaluate(`(${PLAY_DET})(${DET_FRAMES}, ${DET_SEEDS[0]})`);
+  ok(detPl.flick === 0,
+    '[5-d] 플레이어 — 각본을 도는 동안 **0.25초 안에 되돌아오는 뒤집힘이 0건**',
+    `깜빡임 ${p2(detPl.flick)}회/s · 전체 ${p2(detPl.player)}회/s`);
+  ok(detPl.player <= 1.0,
+    '[5-e] 플레이어 뒤집힘 ≤ 초당 1.0회(각본이 요구하는 전환 8번 + 여유)',
+    `${p2(detPl.player)}회/s (뺀 사본 0.83~1.33)`);
 
   ok(errs.length === 0, '[X] 콘솔 예외 0건', errs.slice(0, 2).join(' | '));
   await ctx.close();
@@ -334,19 +337,8 @@ async function boot(browser, file) {
     /* ⓐ 표를 «아틀라스 하나 = 방향 하나» 로 접는다 = 402 가 겪은 그 부패의 방향 판 */
     [`  'elves:green': false,`, `  'elves:green': true,`]
   ];
-  const SUB_B = [
-    /* ⓑ 히스테리시스를 빼고 임계 하나로 되돌린다 */
-    [`      spd <= 0        ? dx > 0        /* 멈춰 서서 때리는 중(대시 예고·공격 모션) → 상대를 본다 */
-      : evx >  MOVE_EPS ? true
-      : evx < -MOVE_EPS ? false
-      :                   curRight);  /* 밀치느라 흔들리는 구간 — 돌지 않는다 */`,
-     `      Math.abs(evx) > MOVE_EPS ? evx > 0 : dx > 0);`],
-    [`        player.vx >  MOVE_EPS ? true
-      : player.vx < -MOVE_EPS ? false
-      : moving                ? faceR                      /* 세로로만 간다 — 돌지 않는다 */
-      :                         Math.cos(player.aim) > 0); /* 제자리 — 표적을 본다 */`,
-     `        Math.abs(player.vx) > MOVE_EPS ? player.vx > 0 : Math.cos(player.aim) > 0);`]
-  ];
+  /* ⓑ 히스테리시스를 뺀 사본 — 치환표는 `flap598lib` 한 곳에 있다(probe598 과 같은 앵커) */
+  const SUB_B = SUB_HYST;
   const mk = (subs, out) => {
     let neg = src;
     subs.forEach(([a, b], i) => {
@@ -367,11 +359,21 @@ async function boot(browser, file) {
   try {
     mk(SUB_B, NEG_B);
     const b = await boot(browser, NEG_B);
-    const f = await b.page.evaluate(`(${FLAP})(12000)`);
-    /* **같은 조건**(둘 다 자연 상태)에서 견준다 — 절대값은 밀집도에 흔들리지만 비는 안 흔들린다 */
-    /* 같은 이유로 **기록만** 한다(위 [5-a] 주석 · 598). 되돌림의 판별력은 [R-a] 가 낸다. */
-    ok(true, '[R-b] 히스테리시스를 뺀 사본의 뒤집힘(기록 — 판정 안 함)',
-      `고친 쪽 ${p1(flap.mob * 100) / 100}회 ↔ 뺀 쪽 ${p1(f.mob * 100) / 100}회 → 598`);
+    /* **같은 시드·같은 각본**으로 견준다. 견줄 수 있는 근거: `flip` 은 그리기에만 쓰이고 물리로
+       되먹임되지 않으므로(`.flip` 참조가 전부 drawFrame/시체 승계다) 두 트리의 **궤적이 같다** —
+       차는 궤적이 아니라 **규칙 하나**다. 587 이 못 잡던 «부호 뒤집힘» 이 여기서 사라진다. */
+    const nb = [];
+    for (const sd of DET_SEEDS) nb.push(await b.page.evaluate(`(${FLAP_DET})(${DET_FRAMES}, ${sd})`));
+    DET_SEEDS.forEach((sd, i) => ok(nb[i].mob > BAR_FLAP,
+      `[R-b:${sd}] 히스테리시스를 뺀 사본은 **같은 바(${BAR_FLAP})를 넘는다** = 바에 판별력이 있다`,
+      `뺀 쪽 ${p2(nb[i].mob)} ↔ 고친 쪽 ${p2(detMob[i].mob)} (×${p2(nb[i].mob / detMob[i].mob)})`));
+    ok(nb.every((x, i) => x.mob / detMob[i].mob >= 1.15),
+      '[R-c] 배수가 시드마다 1.15 이상이다(실측 1.22~1.26 — 무르게 푼 수리가 아니다)',
+      nb.map((x, i) => '×' + p2(x.mob / detMob[i].mob)).join(' · '));
+    const np = await b.page.evaluate(`(${PLAY_DET})(${DET_FRAMES}, ${DET_SEEDS[0]})`);
+    ok(np.flick > 0,
+      '[R-d] 뺀 사본은 **플레이어가 각본 도중 되돌아온다**(고친 쪽 0건 · [5-d] 의 음성항)',
+      `깜빡임 ${p2(np.flick)}회/s · 전체 ${p2(np.player)}회/s`);
     await b.ctx.close();
   } catch (e) { ok(false, '[R-b] 되돌림 ⓑ', e.message); }
   for (const f of [NEG_A, NEG_B]) { try { fs.unlinkSync(f); } catch (e) {} }
