@@ -44,6 +44,13 @@ const CROP = path.join(DIR, '611-r' + R + '-crop.png');
   await page.waitForTimeout(300);
   await page.screenshot({ path: FULL });
 
+  /* 2회차 — 하단 스크롤 끝 1장 더(비평가 CB 1회차: «캡처 1장엔 20/36장만 보인다»). 36/36 커버. */
+  await page.evaluate(() => { const g = document.getElementById('wpnGrid'); g.scrollTop = g.scrollHeight; });
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: FULL.replace('-full.png', '-full2.png') });
+  await page.evaluate(() => { document.getElementById('wpnGrid').scrollTop = 0; });
+  await page.waitForTimeout(250);
+
   /* crop 격자 — 점등 카드 중 «첫 열 · 마지막 열(c4) · 임의 중간 열» 3장의 우상단 코너 주변 */
   const rects = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('#wpnGrid .wgc.alert')];
