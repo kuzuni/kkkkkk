@@ -8,11 +8,13 @@
      §3 목걸이 무료 10연 2회 소진 — 2→1→0, 3번째는 «무료 소환 소진» 안내 + 상태 불변.
         (218 — 안내 자리는 149 이후 팝업이 아니라 `#fxl .fx-toast` 다. 아래 §3 주석 참조)
      §4 구 세이브 호환 — ⓐ freeSum 에 amulet 키 없음 → freeLeft 가 SHOP_FREE 폴백 + dailyCheck 가 채움
-        ⓑ S.sum 에 amulet 없음 → load() 가 {lv:1,exp:0} 로 채움
+        ⓑ S.sum 에 amulet 없음 → 496 이관이 «총 뽑기 수 보존» 으로 공용 레벨을 만든다
+           (568 — 옛 기대 `{lv:1,exp:0}` 은 배너 5 벌 시절의 «없으면 기본값» 이다)
         ⓒ 가이드 gv≤2 · idx≥6 → idx+1 이관, idx<6 은 그대로, gv=3 은 무이관, idx=20(완주) → GUIDE.length 클램프
            (154 로 미션이 21→20 개가 되면서 그 클램프값도 20 이다).
      §5 11 확률 정보 팝업 — openProbInfo('amulet') 가 열리고 목록이 목걸이 아이템만이다.
-     §6 미션표 — idx5 = 방패 미션(보상 = 목걸이 10연 1,000) · idx6 = 목걸이 미션(ban:amulet) ·
+     §6 미션표 — idx5 = 방패 미션(보상이 목걸이 10연에 «결합» 돼 있는가 — 568, 값이 아니라 배선) ·
+                 idx6 = 목걸이 미션(ban:amulet) ·
                  (256 이 이름을 «… 1회 소환하기» → «… 1종 보유하기» 로 갈았다 — 자리·배선은 그대로) ·
         가이드 이동 gmShop('amulet') 이 목걸이 카드로 스크롤.
      §7 콘솔 에러 0 */
@@ -152,7 +154,10 @@ async function launchAny(){
     const run = old => {                        /* localStorage 에 심고 load() 로 통과시킨다 */
       localStorage.setItem(KEY, JSON.stringify(old));
       load();
-      const r = { free: freeLeft('amulet'), sum: S.sum.amulet && S.sum.amulet.lv === 1 && S.sum.amulet.exp === 0,
+      const r = { free: freeLeft('amulet'),
+                  /* 568 — 496 이후 «목걸이 칸» 은 별칭 뷰가 공용 스칼라 둘을 비춘 것이다 */
+                  lv: S.sum.amulet && S.sum.amulet.lv, exp: S.sum.amulet && S.sum.amulet.exp,
+                  allSame: BKEYS.every(b => S.sum[b].lv === S.sumLv && S.sum[b].exp === S.sumExp),
                   idx: S.guide.idx, gv: S.guide.gv, prog: S.guide.prog };
       return r;
     };
@@ -163,14 +168,57 @@ async function launchAny(){
     oldSave.sum = { skill: { lv: 3, exp: 2 }, weapon: { lv: 1, exp: 0 }, shield: { lv: 1, exp: 0 },
                     pet: { lv: 1, exp: 0 }, relic: { lv: 1, exp: 0 } };
     oldSave.guide = { idx: 7, prog: 55, gv: 2 };
+    /* 568 — 뼈대가 `JSON.stringify(S)` 라 **496 이 신설한 `sumLv`/`sumExp` 가 딸려 온다.**
+       그 두 키가 있으면 `load()` 는 ⓐ(새 세이브 — 클램프만) 로 빠져 여기서 재려는
+       ⓑ(구 세이브 — `d.sum` 을 되돌려 센다) 경로를 **한 번도 안 밟는다**. 지워야 구 세이브다. */
+    delete oldSave.sumLv; delete oldSave.sumExp;
     const r1 = run(oldSave);
+    /* 568 [전제] — 그 두 키를 남긴 사본은 ⓑ 로 안 간다(= 위의 delete 가 이 절의 조건이다).
+       이 항이 없으면 다음 워커가 delete 를 지워도 표본만 조용히 죽고 게이트는 초록이다. */
+    const keepKeys = JSON.parse(JSON.stringify(oldSave));
+    keepKeys.sumLv = 1; keepKeys.sumExp = 7;
+    const rK = run(keepKeys);
+    /* 568 음성 대조 — freeSum 에 amulet 이 **있으면** 폴백이 아니라 그 값이 나온다
+       (= ⓐ 항이 «폴백» 을 실제로 재는 자다. 상수 2 를 우연히 맞히는 것이 아니다) */
+    const hasKey = JSON.parse(JSON.stringify(oldSave));
+    hasKey.daily.freeSum = { weapon: 1, shield: 2, skill: 0, amulet: 0 };
+    const rH = run(hasKey);
     oldSave.guide = { idx: 5, prog: 3, gv: 2 };  const r2 = run(oldSave);
     oldSave.guide = { idx: 7, prog: 0, gv: 3 };  const r3 = run(oldSave);
     oldSave.guide = { idx: 20, prog: 0, gv: 2 }; const r4 = run(oldSave);
+
+    /* 568 ⓑ 의 기대값 — 496 규약 «총 뽑기 수 보존» 을 **구 곡선으로 되돌려 세서** 만든다.
+       숫자(252)를 손으로 적지 않는 이유: 곡선 상수(A·B·구 표)가 바뀌면 그 사본은 헛초록이 된다.
+       여기 식은 `load()` 의 이관 블록과 같은 규약을 읽으므로 만렙·곡선이 바뀌어도 따라온다. */
+    const want = (() => {
+      let pulls = 0;
+      BKEYS.forEach(k => {
+        const o = (oldSave.sum && oldSave.sum[k]) || {};
+        const lv = Math.min(SUM_MAXLV_V196, Math.max(1, Number.isFinite(o.lv) ? Math.floor(o.lv) : 1));
+        for (let n = 1; n < lv; n++) pulls += sumNeedExpV196(n);
+        const cap = (lv >= SUM_MAXLV_V196) ? 0 : sumNeedExpV196(lv) - 1;
+        if (Number.isFinite(o.exp) && o.exp > 0) pulls += Math.min(Math.floor(o.exp), cap);
+      });
+      let lv = 1, e = pulls;
+      while (lv < SUM_MAXLV && e >= sumNeedExp(lv)) { e -= sumNeedExp(lv); lv++; }
+      return { pulls, lv, exp: (lv >= SUM_MAXLV) ? 0 : e };
+    })();
+
     Object.assign(S, JSON.parse(snap)); save();  /* 원상 복구 */
-    return { r1, r2, r3, r4, glen: GUIDE.length, ver: GUIDE_V };
+    return { r1, r2, r3, r4, rK, rH, want, free0: SHOP_FREE, glen: GUIDE.length, ver: GUIDE_V };
   });
-  ok(mig.r1.free === 2 && mig.r1.sum, 'ⓐⓑ amulet 키 없음 → freeLeft 2(폴백) · S.sum.amulet {lv1,exp0}');
+  /* 568 — 옛 항은 «amulet 키 없음 → S.sum.amulet {lv1,exp0}» 이었다. 그 기대는 소환 레벨이
+     **배너 5 벌**이던 시절의 «없으면 기본값» 이고, 496 이 그 자리를 «공용 스칼라 둘» 로 갈면서
+     이관 규약도 «없으면 1» 이 아니라 **«다섯 주머니의 총 뽑기 수를 한 주머니에 붓는다»** 가 됐다.
+     ⚠ 값(exp 252)만 다시 적으면 곡선 상수를 베낀 사본이라 이관이 통째로 사라져도 초록이다 —
+        기대값은 위 `want` 가 **같은 규약을 되돌려 세서** 만든다. 자리는 안 비운다(333 처방). */
+  ok(mig.r1.free === mig.free0 && mig.r1.lv === mig.want.lv && mig.r1.exp === mig.want.exp && mig.r1.allSame,
+    `ⓐⓑ amulet 키 없음 → freeLeft ${mig.free0}(폴백) · 496 이관이 총 뽑기 ${mig.want.pulls} 를 보존 `
+    + `(실제 lv${mig.r1.lv}·exp${mig.r1.exp} / 기대 lv${mig.want.lv}·exp${mig.want.exp} · 다섯 배너 동일 ${mig.r1.allSame})`);
+  ok(mig.rK.exp === 7,
+    `ⓑ [전제] 496 의 \`sumLv\`/\`sumExp\` 가 남은 사본은 ⓑ 로 안 간다 — 그것이 «구 세이브» 표본의 조건 (실제 exp${mig.rK.exp})`);
+  ok(mig.rH.free === 0,
+    `ⓐ 음성 대조 — freeSum 에 amulet 이 있으면 폴백이 아니라 그 값이다 (실제 ${mig.rH.free})`);
   /* 154 — 이관 후 gv 는 «그때의 최신 버전» 이다(3 고정이 아니다). 76 이 보는 것은 «idx 가 8 로
      밀렸는가 · 기준선이 미확정으로 돌아갔는가» 이므로 버전은 현재 GUIDE_V 와 대조한다. */
   ok(mig.r1.idx === 8 && mig.r1.prog === -1 && mig.r1.gv === mig.ver, `ⓒ gv2·idx7 → idx8 이관 + 기준선 -1 (실제 idx${mig.r1.idx}·gv${mig.r1.gv})`);
@@ -196,7 +244,36 @@ async function launchAny(){
   /* ── §6 미션표 ───────────────────────────────────────────────── */
   console.log('§6 가이드 미션 — 방패 개명 · 목걸이 삽입 · 이동');
   const gm = await p.evaluate(() => {
-    const d5 = typeof GUIDE[5].dia === 'function' ? GUIDE[5].dia() : GUIDE[5].dia;
+    /* 568 — 옛 항은 «idx5 의 보상 = 목걸이 10연 1,000» 을 **값으로** 물었다. 498(주인 위임
+       «첫날 100만»)이 가이드 보상을 곡선 `gmDiaAt(i)` 으로 갈면서 73 ② 결합을
+       `max(곡선, 그 상자 10연)` **하한**으로 남겼고, 곡선(21,000)이 10연 정가(1,000)를 이겨
+       그 값이 더는 안 나온다. 76 이 물으려던 것은 값이 아니라 **«idx5 ↔ 목걸이» 배선**이므로
+       565 가 `verify195` [G] 에 깔아 둔 자를 이 칸 하나에 맞춰 가져온다:
+       ⓐ 하한 항등식 · ⓑ 상자를 곡선 위로 올리면 따라오는가 · ⓒ 반응하는 상자가 목걸이 하나뿐인가
+       ⓓ 상수로 굳힌 사본에서는 안 따라온다(= ⓑ 가 실제로 결합을 재는 자다) ⓔ 되돌리면 곡선값.
+       ⚠ 값만 21,000 으로 다시 적으면 곡선 상수를 베낀 사본 = 결합이 사라져도 초록이다. */
+    const HIGH = 90000;                       /* 10연 900,000 — 곡선 최대(idx19)보다 확실히 크다 */
+    const d5    = gmDia(GUIDE[5]);
+    const fn5   = typeof GUIDE[5].dia === 'function';
+    const cur5  = gmDiaAt(5);
+    const c10a  = summonCost('amulet', 10);
+    const sweep = () => {
+      const hit = [];
+      for (const b of BKEYS) {
+        const keep = BANNERS[b].cost;
+        BANNERS[b].cost = HIGH;
+        if (gmDia(GUIDE[5]) === summonCost(b, 10)) hit.push(b);
+        BANNERS[b].cost = keep;               /* 즉시 복원 — 뒤 절을 오염시키지 않는다 */
+      }
+      return hit;
+    };
+    const moved = sweep();
+    const keepFn = GUIDE[5].dia;              /* 음성 사본 — «지금 값» 상수로 굳힌다 */
+    GUIDE[5].dia = d5;
+    const negMoved = sweep();
+    GUIDE[5].dia = keepFn;
+    const back = gmDia(GUIDE[5]);
+
     Object.assign(S, DEF());
     S.guide.idx = 6; S.guide.prog = -1; gmBase(GUIDE[6]);
     uiDirty = true; renderUI(); drawTuto();
@@ -204,14 +281,23 @@ async function launchAny(){
     const li = $('shopList');
     const c = li.children[2];
     const cr = c.getBoundingClientRect(), lr = li.getBoundingClientRect();
-    return { n5: GUIDE[5].n, d5, n6: GUIDE[6].n, ban6: GUIDE[6].ban,
+    return { n5: GUIDE[5].n, d5, fn5, cur5, c10a, moved, negMoved, back,
+             restored: typeof GUIDE[5].dia === 'function',
+             n6: GUIDE[6].n, ban6: GUIDE[6].ban,
              shopOn: $('shopw').classList.contains('on'),
              inView: cr.top >= lr.top - 1 && cr.bottom <= lr.bottom + 1 };
   });
   /* 256(2026-08-27, 주인 지시) — 목표축이 «n회 소환» → «n종 보유» 로 바뀌면서 이름이 갈렸다.
      76 이 묻는 것은 이름이 아니라 **자리와 배선**이다: idx5 가 방패 · idx6 이 목걸이(ban:amulet) ·
      idx5 의 보상이 목걸이 10연(1,000)을 감당하는가. 부위 낱말로 단언을 옮긴다(185-④). */
-  ok(/방패/.test(gm.n5) && gm.d5 === 1000, `idx5 «${gm.n5}» 보상 ${gm.d5} = 목걸이 10연`);
+  ok(/방패/.test(gm.n5) && gm.fn5 && gm.d5 === Math.max(gm.cur5, gm.c10a),
+    `idx5 «${gm.n5}» 보상 = max(498 곡선 ${gm.cur5}, 목걸이 10연 ${gm.c10a}) — 하한 결합 그대로 (실제 ${gm.d5})`);
+  ok(gm.moved.join(',') === 'amulet',
+    `idx5 ★ 결합이 살아 있다 — 목걸이 10연을 곡선 위로 올리면 그 값을 따라가고, 따라오는 상자는 그것뿐 [${gm.moved.join(',') || '없음'}]`);
+  ok(gm.negMoved.length === 0,
+    `idx5 ☆ 되돌림 — 그 칸을 상수로 굳힌 사본에서는 어느 상자도 못 움직인다 (앞 항이 실제로 결합을 잰다) [${gm.negMoved.join(',') || '0개'}]`);
+  ok(gm.back === gm.cur5 && gm.restored,
+    `idx5 상자를 되돌리면 다시 곡선값 — max 는 «대체» 가 아니라 «하한» (실제 ${gm.back})`);
   ok(/목걸이/.test(gm.n6) && gm.ban6 === 'amulet', `idx6 «${gm.n6}» ban:${gm.ban6}`);
   ok(gm.shopOn && gm.inView, '미완 배너 클릭 → 상점 열림 + 목걸이 카드 뷰 안');
 
