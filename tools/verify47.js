@@ -176,7 +176,19 @@ const SNAP = `(sel, host) => {
       || getComputedStyle(cells[onIdx], '::after').webkitMaskImage || '') : '',
     labels: cells.map(c => (c.querySelector('i') || {}).textContent || ''),
     ink, seps, host: hostEl ? R(hostEl) : null,
-    bdg: [...bar.querySelectorAll('.bdg')].map(b => ({ cell: cells.findIndex(c => c.contains(b)), r: R(b) })),
+    /* 563 (2026-08-31) — 471 규약값도 같이 읽어 온다. 게이트가 «11» 을 손으로 들면 규약이
+       움직일 때마다 빨개진다(276 «리터럴 기대값은 그때의 데이터를 감시한다», 185-①) —
+       자리는 제품이 선언한 --dot-in (호스트별 예외는 --dot-in-x) 에서 파생시킨다.
+       ⚠ 이 블록은 SNAP 템플릿 리터럴 안이라 주석에도 백틱을 쓰면 안 된다(서두 경고 — 실제로 밟았다). */
+    bdg: [...bar.querySelectorAll('.bdg')].map(b => {
+      const ci = cells.findIndex(c => c.contains(b));
+      const bs = getComputedStyle(b), cc = ci >= 0 ? getComputedStyle(cells[ci]) : null;
+      const v = n => (bs.getPropertyValue(n) || '').trim();
+      return { cell: ci, r: R(b),
+        dotIn: v('--dot-in'), dotInX: v('--dot-in-x'), dotInY: v('--dot-in-y'),
+        dotR: v('--dot-r'), dotBw: v('--dot-bw'),
+        cellBw: cc ? (parseFloat(cc.borderRightWidth) || 0) : 0 };
+    }),
   };
 }`;
 
@@ -413,12 +425,49 @@ const SNAP = `(sel, host) => {
       ok('칸' + (i + 1) + ' 라벨 외곽선 = ' + (on ? 'ol4(활성)' : 'ol3(비활성)'),
         on ? (k.ol4 && !k.ol3) : (k.ol3 && !k.ol4), 'ol3=' + k.ol3 + ' ol4=' + k.ol4);
     });
+    /* ══ 563 이관 (2026-08-31) — «칸 안 (돌출 0)» 은 471 **이전**의 기준선이었다 ═══════════
+       이 항이 네 바에서 **11 자리 전부** 빨갰고 돌출량이 어디서나 정확히 2.5px 이었다.
+       338 규칙대로 처방 전에 `tools/probe563.js` 로 재현했고 **뿌리는 제품이 아니라 이 항**이다:
+         · 찍힌 화소로 칸 오른변 «밖» 에 닷이 실제로 그려진다(11/11) — 그리고 **안 잘린다**
+           (오른쪽 검정 외곽이 끝까지 있다 = 471 이 고친 «반달» 이 아니다).
+         · 중심은 자리마다 **칸 우상단 코너 안쪽 11.0/11.0** = 471 규약 그대로다.
+         · 돌출량은 규약식이 만드는 **닫힌 값**이다 — index.html 의
+           right: calc(var(--dot-in-x, var(--dot-in)) - var(--dot-r) - var(--dot-bw, 0px))
+           ⇒ 돌출 = --dot-r + --dot-bw − --dot-in = 13.5 + 0 − 11 = **2.5**.
+       즉 «돌출 0» 과 471 규약(«닷 중심이 호스트 코너 안쪽 --dot-in» = 바깥 링이 코너에 «걸친다»)은
+       **동시에 참일 수 없다.** 471 이 15+ 호스트를 한 규약으로 통일할 때 이 자만 옛 기준선에 굳었다.
+       처방은 333·334·368 과 같다 — 허용을 넓히지 않는다(«2.5 까지 봐준다» 로 풀면 닷이 코너를
+       떠나도 초록이라 «레드닷 자리» 라는 뜻을 통째로 잃는다). **묻는 자리를 옮긴다**:
+       «칸 안» → «중심이 칸 우상단 코너에서 안쪽 --dot-in», 그리고 그 값은 손으로 적지 않고
+       **제품이 선언한 것을 읽는다**(276 · 185-①). 무르게 푼 수리가 아님은 `tools/neg563.js` 가 못박는다.
+       ⚠ 47 이 여기서 지키던 뜻(«배지는 자기 칸의 것이고 이웃 칸으로 옮겨 가지 않는다»)은 ③ 이
+         그대로 받는다 — 걸치는 면은 **코너 쪽 둘뿐**이고 좌·하변은 칸 안이다.
+       ⚠ «잘림 0(반달)» 은 여기서 다시 묻지 않는다 — `verify471` [B][C] 가 조상 overflow 와
+         찍힌 화소로 이미 문다(자매 자 드리프트 방지 · 385). */
+    ok('전제 — 배지가 있고 471 규약 상수를 제품이 선언한다 (--dot-in · --dot-r = 상자 반지름)',
+      g.bdg.length > 0 && g.bdg.every(d => d.cell >= 0
+        && parseFloat(d.dotInX || d.dotIn) > 0
+        && Math.abs(parseFloat(d.dotR) - d.r.w / 2) <= 0.6),
+      g.bdg.length ? '배지 ' + g.bdg.length + '개 · --dot-in ' + (g.bdg[0].dotInX || g.bdg[0].dotIn)
+        + ' · --dot-r ' + g.bdg[0].dotR + ' ↔ 상자 반지름 ' + f1(g.bdg[0].r.w / 2)
+        + ' · 칸 테두리 ' + f1(g.bdg[0].cellBw) : '배지 0개');
     g.bdg.forEach(d => {
       const c = g.cells[d.cell];
-      ok('레드닷 27x27 · 칸' + (d.cell + 1) + ' 안 (돌출 0)',
-        near(d.r.w, 27, 0.8) && near(d.r.h, 27, 0.8)
-        && d.r.x >= c.x - 0.5 && d.r.x + d.r.w <= c.x + c.w + 0.5,
-        f1(d.r.w) + 'x' + f1(d.r.h) + ' @' + f1(d.r.x - c.x) + '..' + f1(d.r.x + d.r.w - c.x) + ' / 칸 ' + f1(c.w));
+      const inX = parseFloat(d.dotInX || d.dotIn) || 0;
+      const inY = parseFloat(d.dotInY || d.dotIn) || 0;
+      /* 471 규약의 기준은 «테두리 **바깥** 상자» = 사람이 보는 칸 변이고, rect 가 곧 그것이다
+         (되빼기 `--dot-bw` 는 절대배치가 패딩 상자 기준이라 생기는 값 — 칸은 테두리 0 이라 0). */
+      const dxR = (c.x + c.w) - (d.r.x + d.r.w / 2);        /* 칸 우변 ↔ 닷 중심 */
+      const dyT = (d.r.y + d.r.h / 2) - c.y;                /* 칸 상변 ↔ 닷 중심 */
+      ok('레드닷 상자 27x27 · 칸' + (d.cell + 1),
+        near(d.r.w, 27, 0.8) && near(d.r.h, 27, 0.8), f1(d.r.w) + 'x' + f1(d.r.h));
+      ok('레드닷 중심 = 칸' + (d.cell + 1) + ' 우상단 코너에서 안쪽 --dot-in (471 규약 · ±0.5)',
+        Math.abs(dxR - inX) <= 0.5 && Math.abs(dyT - inY) <= 0.5,
+        '안쪽 ' + f1(dxR) + '/' + f1(dyT) + ' vs 규약 ' + f1(inX) + '/' + f1(inY)
+          + ' · 코너 걸침 ' + f1(d.r.x + d.r.w - (c.x + c.w)) + 'px');
+      ok('레드닷이 걸치는 면은 코너 쪽 둘뿐 — 칸' + (d.cell + 1) + ' 좌·하변은 안 넘는다',
+        d.r.x >= c.x - 0.5 && d.r.y + d.r.h <= c.y + c.h + 0.5,
+        '좌 여유 ' + f1(d.r.x - c.x) + ' · 하 여유 ' + f1(c.y + c.h - (d.r.y + d.r.h)));
     });
     ok('바가 호스트(' + b.host + ') 안 (잘림 0)',
       !!g.host && g.bar.x >= g.host.x - 0.6 && g.bar.x + g.bar.w <= g.host.x + g.host.w + 0.6
