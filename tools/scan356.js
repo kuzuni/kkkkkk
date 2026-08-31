@@ -170,6 +170,25 @@ const SCREENS = [
   ['17 스탯업 보너스', ['js:openStatUp({ ic:"⚔️", desc:"훈련 2 단계 달성! 모든 능력치 10% 증가" })']],
   ['18 패배', ['js:openDefeat()']],
   ['31 던전 클리어', ['js:openDunClear(DUNGEONS[0], 1, false, false)']],
+  /* ⚑ 18회차(2026-08-31) — **«상태가 있어야 보이는 노드» 다섯 자리**(15회차 프런티어 소진).
+     부팅 세이브는 우편 0통 · 던전 2해금 · 유물 0보유라 아래 노드들은 여태 «없는 노드» 였다:
+     우편 보상 썸네일(MAIL_RW 4종 curIc) · 해금 던전 카드 알약 · 12 소환 결과의 **펫 캔버스**와
+     장비 배너 그리드 · 89 유물 보유 칸 아트. 상태는 전부 **합법 세이브 + 제품 진입점**으로
+     만든다(cap72 «--unlock» 선례 · 336 «값은 제품에게 묻는다»): 우편 4통은 sendMail(실제 생산자 ·
+     통당 한 재화 = 한 화면에서 4 썸네일 전부), 던전 해금은 S.guide.idx + DUN_UI[].pre 층수,
+     소환은 doSummonFree(보상 경유) · 유물은 던전 수입 범위의 S.relic + summonRelic(실제 경로) 8회.
+     재현은 `tools/probe356r18.js` 가 먼저 했다(338 규칙) — 2280·1600 두 프레임 **비균등 0** =
+     제품은 건강했고, 이 다섯 줄은 «앞으로도 0 인지» 를 래칫 [B] 밑에 두는 것이다. */
+  ['53 우편(보상 통)', ['js:sendMail({t:"📦 골드", g:12345});sendMail({t:"📦 다이아", c:678});'
+    + 'sendMail({t:"📦 유물조각", r:90});sendMail({t:"📦 마일리지", m:3});', '#menub', '#mnw [data-mn="mail"]']],
+  ['03 던전(전량 해금)', ['js:S.guide.idx = 99;'
+    + 'Object.keys(DUN_UI).forEach(function(id){ if(DUN_UI[id].pre) S.dun[id] = 1; });'
+    + 'Object.values(DUN_UI).forEach(function(u){ if(u.pre) S.dun[u.pre.id] = (u.pre.f|0) + 1; });',
+    '.tab[data-t="adv"]']],
+  ['12 소환 결과(펫)', ['js:doSummonFree("pet", 10, true)']],
+  ['12 소환 결과(무기)', ['js:doSummonFree("weapon", 10, true)']],
+  ['89 유물(보유)', ['.tab[data-t="box"]',
+    'js:S.relic = Math.max(S.relic, relicCost() * 8 + 100); for(var i=0;i<8;i++) summonRelic(true);']],
 ];
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
