@@ -60,6 +60,19 @@ const POLS    = POLICY === 'both' ? ['diligent', 'casual'] : [POLICY];
 const STAMP   = new Date().toISOString().slice(0, 10);
 const OUT     = ARG.out ? path.resolve(ROOT, String(ARG.out))
                         : path.join(ROOT, 'docs', 'review', `199-bot-${STAMP}.md`);
+/* ⚑ 199 9회차(정정9 — V) — [A] 보정치가 매 실행 실측이라 같은 설정 두 실행이 ③ 에서 11.7%
+   갈렸다(κ_dps s100 0.752 ↔ 0.866 · κ_boss 0.806 ↔ 0.636). `--calib=<파일>` 로 κ 표를 캐시한다:
+   파일이 있으면 읽어 실측을 생략하고, 없으면 실측해 저장한다. 어느 쪽이든 표 머리에 κ 표의
+   sha256(12자)을 찍는다 — 두 표의 해시가 같아야 «같은 자로 잰 비교» 다. */
+const CALIB   = ARG.calib ? path.resolve(ROOT, String(ARG.calib)) : null;
+/* ⚑ 199 9회차(8-7 2 — X 경고) — `isWall` 이 `stage % ES_BAND` 라 밴드를 올리면 관문 후보
+   자체가 준다(40→60: 30일 도달권에서 20→13개). 두 밴드를 «같은 벽 정의» 로 비교할 때만
+   `--wallband=40` 으로 분류 주기를 제품 밴드에서 분리한다. 본 판정 표에서는 쓰지 마라
+   (자연 정의 = 제품의 관문이 §0 의 자다) — 쓰면 표 머리에 경고가 찍힌다. */
+const WALLBAND = ARG.wallband ? Math.max(1, parseInt(ARG.wallband, 10)) : null;
+/* `--replay=<json>` — 이전 실행의 `--json` 산출을 다시 표로 접는다(시뮬 없음). 같은 런을
+   다른 벽 정의(--wallband)로 재분류할 때 5분짜리 재실행을 아끼는 자리다. */
+const REPLAY  = ARG.replay ? path.resolve(ROOT, String(ARG.replay)) : null;
 
 /* ---------------- 가짜 시계 ----------------
    `today()`(index.html 19114)·`monthKey()`(19118)이 `new Date()` 를 쓰므로 **생성자까지** 간다.
@@ -778,7 +791,8 @@ const isWallFrac = w => (w.lenCal != null ? w.lenCal : w.len) >= WALL_FRAC * Mat
    바뀌는 것은 1건(s720)뿐임을 4회차 비평이 미리 검산했다).
    ⚠ 구 판정(WALL_FRAC)도 표에 «구 판정» 칸으로 그대로 남긴다 — 두 자가 어디서 갈리는지
    다음 회차가 검산할 수 있어야 한다(4회차 규약 그대로). */
-const isWall = (w, band) => w.stage % Math.max(1, band || 40) === 0;
+/* 9회차 — WALLBAND(비교 전용 강제 주기)가 있으면 그것이 이긴다. 없으면 제품 밴드. */
+const isWall = (w, band) => w.stage % Math.max(1, WALLBAND || band || 40) === 0;
 
 async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
@@ -884,11 +898,29 @@ async function runOne(page, pol, seed, days, onRow) {
 /* ---------------- 실행 ---------------- */
 (async () => {
   const t0 = Date.now();
+
+  /* ---- 리플레이 — 시뮬 없이 이전 --json 산출을 현재 분류(--wallband)로 다시 접는다 ---- */
+  if (REPLAY) {
+    const report = JSON.parse(fs.readFileSync(REPLAY, 'utf8'));
+    report.calHash = calHashOf(report.cal);
+    report.replayFrom = path.relative(ROOT, REPLAY);
+    writeReport(report);
+    console.log(`BOT199 — 리플레이 ${report.replayFrom} → ${path.relative(ROOT, OUT)}` + (WALLBAND ? ` (벽 분류 강제 ${WALLBAND})` : ''));
+    process.exit(0);
+  }
+
   const browser = await launch(chromium);
   const report = { stamp: STAMP, days: DAYS, seeds: SEEDS, policies: {}, cal: null, viol: [], warn: [] };
 
-  /* 보정치는 «깨끗한 세이브 한 벌» 에서 한 번만 찍는다 — 정책·시드와 무관한 값이다 */
-  {
+  /* 보정치는 «깨끗한 세이브 한 벌» 에서 한 번만 찍는다 — 정책·시드와 무관한 값이다.
+     9회차(정정9) — 값이 «정책·시드와 무관» 이어야 하는데 실측이 실행마다 15% 갈렸다.
+     캐시가 있으면 실측 자체를 생략한다(재현 가능성이 정확도보다 먼저다 — 잡음 바닥 ±11.7%
+     가 ④ 의 창 ±10% 보다 넓으면 어떤 스윕도 판정 불가다). */
+  if (CALIB && fs.existsSync(CALIB)) {
+    report.cal = JSON.parse(fs.readFileSync(CALIB, 'utf8'));
+    report.calFrom = '캐시 ' + path.relative(ROOT, CALIB);
+    if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
+  } else {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
@@ -898,13 +930,16 @@ async function runOne(page, pol, seed, days, onRow) {
     await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
     await page.evaluate(BOT_SRC, {});
     report.cal = await page.evaluate(([st, sec]) => { window.BOT.freeze(); return window.BOT.calibrate(st, sec); }, [CAL_STAGES, CAL_SEC]);
+    /* 캐시는 nofloor 오염 전 원본으로 저장한다 — 게이트 손잡이가 캐시에 굳으면 안 된다 */
+    if (CALIB) { fs.writeFileSync(CALIB, JSON.stringify(report.cal, null, 1)); report.calFrom = '실측 → 저장 ' + path.relative(ROOT, CALIB); }
     /* 게이트 전용 손잡이(`verify494` 되돌림 시험) — 처치 간격 하한을 0 으로 두면 «화력이 크면
        무한히 빨리 잡는다» 는 5회차 이전의 거짓 모형으로 돌아간다. 그 차이가 표에 실제로
        나타나는지를 게이트가 확인한다. 본 실행에서는 절대 쓰지 마라. */
     if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
     await ctx.close();
-    console.log('[A] 보정치 — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3));
   }
+  report.calHash = calHashOf(report.cal);
+  console.log('[A] 보정치(' + (report.calFrom || '실측') + ' · sha ' + report.calHash + ') — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3));
 
   for (const pol of POLS) {
     const runs = [];
@@ -945,6 +980,11 @@ async function runOne(page, pol, seed, days, onRow) {
 })();
 
 /* ---------------- 표 ---------------- */
+/* 9회차 — κ 표 지문. rows 의 수치만 접는다(파일 경로·주석 무관). 12자면 눈으로 대조하기 충분하다. */
+function calHashOf(cal) {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(JSON.stringify(cal)).digest('hex').slice(0, 12);
+}
 function pct(a, b) { return b ? ((a / b) * 100).toFixed(1) + '%' : '—'; }
 function med(v) { const w = v.slice().sort((a, b) => a - b); return w.length ? w[Math.floor(w.length / 2)] : 0; }
 function q(v, p) { const w = v.slice().sort((a, b) => a - b); return w.length ? w[Math.min(w.length - 1, Math.floor(w.length * p))] : 0; }
@@ -954,8 +994,10 @@ function writeReport(rep) {
   const L = [];
   L.push(`# 199 봇 플레이 표 — ${rep.stamp}`);
   L.push('');
-  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds}\` · 실행 ${rep.elapsedSec.toFixed(1)}초`);
+  L.push(`> \`node tools/bot199.js --days=${rep.days} --seeds=${rep.seeds}\` · ${rep.replayFrom ? '리플레이 ' + rep.replayFrom : '실행 ' + rep.elapsedSec.toFixed(1) + '초'}`);
   L.push('> **이 표는 계수를 안 건드린 «현재 값» 의 사진이다.** 조정은 199 몫(작업 494 등재문 마지막 줄).');
+  L.push(`> [A] κ 표 ${rep.calFrom || '실측(캐시 없음)'} · **calib sha ${rep.calHash || calHashOf(rep.cal)}** — 해시가 같은 표끼리만 «같은 자로 잰 비교» 다(정정9).`);
+  if (WALLBAND) L.push(`> ⚠ **벽 분류 주기 강제 ${WALLBAND}** (\`--wallband\` — 밴드 비교 전용. §0 판정에는 자연 정의 표를 써라).`);
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
