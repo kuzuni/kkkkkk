@@ -10551,14 +10551,26 @@
   .tr-tp.k1{top:338px}
   .tr-tp.k2{top:574px}
   .tr-tp>*{position:absolute}
-  /* 아이콘 액자 — 룬 카드(.ri)와 같은 «면 + 검정 테» 규격을 축소한 것. 이모지는 아트 자리이고
-     bbox(104×104)를 정확히 차지한다(지시서 [3] «아트 자리 규칙») */
-  .tr-tp>.ti{left:26px;top:22px;width:104px;height:104px;border-radius:20px;
-    background:var(--tt,#E0654F);box-shadow:inset 0 0 0 6px #141414;
-    text-align:center;line-height:104px;font-size:62px}
-  .tr-tp>.tn{left:150px;top:18px;height:50px;line-height:50px;font-size:42px;color:#2C1E10}
-  .tr-tp>.tl{left:150px;top:72px;height:40px;line-height:40px;font-size:31px;color:#7A5A34}
-  .tr-tp>.td{left:26px;top:150px;width:560px;height:36px;line-height:36px;font-size:26px;color:#5E4823}
+  /* 아이콘 액자 — 룬 카드(.ri)와 같은 «면 + 검정 테» 규격. 612(주인 «단련부분에 아이콘들 좀 작은데
+     크게되게해»)가 «축소한 것»(104 · 링 6 · r20)을 해제했다 — 크기는 발명이 아니라 뺄셈이다:
+     행 222 에서 위 여백 22 를 아래에도 주고 남는 전부 = **178**(.tr-up 의 «두 축 잠그고 남는 축» 방식).
+     테·radius 는 이제 .ri(200)와 같은 급이라 그 규격(링 8 · r32)을 그대로 쓴다.
+     이모지는 아트 자리이고 그림은 `TEMPER_ART`(411 «그림 자리» — SLOT_ART/115 × 178)가 정한다.
+     font-size 는 측정 실패 시의 폴백(62 × 178/104 ≈ 106). */
+  .tr-tp>.ti{left:26px;top:22px;width:178px;height:178px;border-radius:32px;
+    background:var(--tt,#E0654F);box-shadow:inset 0 0 0 8px #141414;
+    text-align:center;line-height:178px;font-size:106px}
+  /* 612 — ⚠ `#trw i{display:inline-block}`(1,0,1 ID 급)가 클래스 급을 이긴다(519·531·577·584 의
+     그 함정, 다섯 번째 자리). 여기 두 줄은 (1,3,0)·(1,3,1)이라 이긴다. */
+  #trw .tr-tp>.ti{display:flex;align-items:center;justify-content:center}
+  #trw .tr-tp>.ti>i.sa-e{display:block;line-height:1;font-style:normal;
+    transform:translate(var(--sa-dx,0px),var(--sa-dy,0px))}
+  /* 612 — 아이콘 우변이 130 → 204 로 오면서 글줄이 따라온다(여백 20 유지 = 224).
+     `.td` 는 한 줄로는 못 산다(잉크 최악 411px > 남는 폭 392) — «·» 자리를 <br> 로 갈라
+     두 줄(값 줄 · «다음 1레벨» 줄)로 담는다. 우변 616 ↔ `.tb` 좌변 632 = 16px(verify584 [7-b]). */
+  .tr-tp>.tn{left:224px;top:18px;height:50px;line-height:50px;font-size:42px;color:#2C1E10}
+  .tr-tp>.tl{left:224px;top:72px;height:40px;line-height:40px;font-size:31px;color:#7A5A34}
+  .tr-tp>.td{left:224px;top:118px;width:392px;height:68px;line-height:34px;font-size:26px;color:#5E4823}
   /* 지금 서 있는 구간의 1업글 비용 — 주인 지시 ⓑ-2 «UI 에 현재 구간 비용 표기» 가 이 줄이다 */
   .tr-tp>.tc{right:26px;top:14px;width:420px;text-align:right}
   .tr-tp>.tc>i{height:52px;line-height:52px;font-size:40px;color:#B4571E}
@@ -13255,7 +13267,17 @@
      하나가 아니었던 셈이다(그 회차 주석에 폭 이야기만 적혀 있어 6회차가 한 번 밟았다).
      ⇒ 값을 되돌린다. **x 축으로 푸는 길은 이 행에서 막혀 있다** — 다음 회차는 세로(발마다 레인을
      흔든다)나 잉크 폭 쪽으로 가야 하고, 그 전에 [I6] 의 봉투식으로 **빈 칸을 먼저 재야** 한다. */
-  .tr-tp{--hb-y:116;--hb-x:.445;--hb-y2:20;--hb-x2:.445;--hb-slots:2;--hb-sw:104}
+  /* ⚑ 612 — 아이콘이 104 → 178 로 커지며 글줄(.tn/.tl/.td)이 옛 빈 띠(중앙 x357..530)로 들어왔다 —
+     그 자리에 봉투를 두면 [I6] 이 [td]/[tn] 으로 빨개진다(위 4회차와 같은 «빈 칸이 사라진» 꼴).
+     남은 빈 칸(글줄 우단 407 ↔ 비용 상자 552 = 145px)은 봉투 폭 173(칸 2×104 + 잉크/2)이 못 들어간다.
+     ⇒ **훈련 카드의 처방**을 그대로 — 훈련은 비용 줄기를 아이콘 띠(.ci) 위에 두고 [I4] 가 `.ci` 를
+     «정보 요소가 아니다» 로 비켜 준다. 단련도 두 줄기를 아이콘(26..204, 중심 115 = .1152) 위로:
+     pay 20..76 · ok 92..148 이 액자(22..200) 안에 위아래로 갈라 든다([I7] 분리 유지).
+     `verify488` [I6] 도 같은 규약으로 이관(`.ti` skip + [I6b] «액자 안» 신설).
+     ⚠ 칸은 104 → **88** · pad 는 훈련 카드와 같은 **12** — 중심 115 에서 104 면 왼 칸(63)이
+     클램프 하한(잉크/2+pad)에 걸려 11px 밀리고([K3]), 88 이면 최악 잉크(sw−8=80)까지
+     양끝이 액자 안(31..199 ⊂ 26..204)이다. */
+  .tr-tp{--hb-y:116;--hb-x:.1152;--hb-y2:20;--hb-x2:.1152;--hb-slots:2;--hb-sw:88;--hb-pad:12}
   /* 613 — [충전] 회당 피드백 호스트(.tp-hd)의 hbBeat 신고는 버튼과 함께 걷어냈다 —
      헤더는 더 이상 누를 수 있는 부품이 아니다(491 4·8회차의 사다리 기하 기록은 review 491 §31). */
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
@@ -24993,6 +25015,13 @@ function saInk(ch, art){
 const SLOT_BOX = 115, RI_BOX = 200;
 const RUNE_ART = { w: +(SLOT_ART.w / SLOT_BOX * RI_BOX).toFixed(1),
                    h: +(SLOT_ART.h / SLOT_BOX * RI_BOX).toFixed(1) };
+/* ---- 612 «그림 자리» 세 번째 자리 (2026-09-01, 주인 «단련부분에 아이콘들 좀 작은데 크게되게해») ----
+   단련 축 액자 `.ti` 104 → 178(행 222 − 여백 22×2 — CSS 주석의 뺄셈). 그림은 RUNE_ART 와 같은
+   파생 — 411 비(SLOT_ART/115)를 178 로 옮긴다(⇒ 133.1×123.8 · 잉크비 0.6957 = 411 대비 100%).
+   덤: 세 글리프(⚔️❤️✨)가 saInk 로 정규화돼 «서로 고른가» 가 구성상 1.000 이다(fs62 시절엔 글리프마다 달랐다). */
+const TI_BOX = 178;
+const TEMPER_ART = { w: +(SLOT_ART.w / SLOT_BOX * TI_BOX).toFixed(1),
+                     h: +(SLOT_ART.h / SLOT_BOX * TI_BOX).toFixed(1) };
 
 const PET_TH = {
   up:   { w:90, h:90, fit:13 },   /* 09 일괄 강화 결과 `.upr-card>b` — 192 가 정한 값(잉크 최대변 64) */
@@ -33301,7 +33330,9 @@ function temperRowTxt(t){
   const l = temperLv(t.k), c = temperCost(t.k), seg = Math.floor(l / TEMPER_SEG);
   return {
     lv:  'Lv. ' + fmt(l),
-    eff: t.n + ' +' + pct(temperVal(t.k)) + ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
+    /* 612 — 아이콘 178 확대로 `.td` 가 «아이콘 옆 두 줄» 이 됐다(폭 392 < 한 줄 잉크 최악 411).
+       «·» 구분을 <br> 로 — liveTemper 의 `.td` 경로도 html 로 짝을 맞춘다(584 `.tb` 와 같은 규칙). */
+    eff: t.n + ' +' + pct(temperVal(t.k)) + '<br>다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
     /* 613 — 비용 단위가 pt → 단련석. 열(.tc)에도 화폐 아이콘을 같이 적는다(125 규약 —
        화폐 자리는 이모지가 아니라 .cic 아이콘. 숫자만 남기면 단위를 잃는다) */
     cost: curIc('tstone', 34) + fmt(c),
@@ -33339,7 +33370,7 @@ function renderTemper(){
   TEMPERS.forEach((t, i) => {
     const x = temperRowTxt(t);
     h += '<div class="tr-tp k' + i + '" data-temper="' + t.k + '" style="--tt:' + t.tone + '">'
-      +  '<span class="ti">' + t.ic + '</span>'
+      +  '<span class="ti">' + slotEmoji(t.ic, TEMPER_ART) + '</span>'   /* 612 — 411 «그림 자리» 를 읽는다 */
       +  '<span class="tn"><i>' + t.n + ' 단련</i></span>'
       +  '<span class="tl"><i>' + x.lv + '</i></span>'
       +  '<span class="td"><i>' + x.eff + '</i></span>'
@@ -33365,9 +33396,9 @@ function liveTemper(){
     const row = w.querySelector('.tr-tp[data-temper="' + CSS.escape(t.k) + '"]'); if(!row) return;
     const x = temperRowTxt(t);
     put(row, '.tl i', x.lv);
-    put(row, '.td i', x.eff);
-    /* 584·613 — 라벨에 화폐 `<img>` 가 들어왔다(.tc·.tb 둘 다). `textContent` 로 두면 홀드 중
-       첫 갱신에 태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 표기층에서 깨지는 자리). */
+    /* 612 — eff 에 <br> 이 들어왔다 · 584·613 — .tc·.tb 라벨에 화폐 `<img>`. 셋 다 `textContent` 로
+       두면 홀드 중 첫 갱신에 태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 깨지는 자리). */
+    put(row, '.td i', x.eff, true);
     put(row, '.tc i', x.cost, true);
     put(row, '.tc s', x.seg);
     put(row, '.tb i', x.btn, true);

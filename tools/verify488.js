@@ -601,8 +601,15 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     openTrain(); setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
     {
       const host = document.querySelector('.tr-tp'), e = envs(host);
-      out.temper = { ok: kidsOf(host, []).filter(k => hit(e.ok, k)).map(k => k.cls),
-                     pay: kidsOf(host, []).filter(k => hit(e.pay, k)).map(k => k.cls),
+      /* 612 — 아이콘 104 → 178 확대로 글줄이 옛 빈 띠(중앙)로 왔다. 봉투는 훈련 카드와 같은 처방으로
+         아이콘 위로 옮겨졌다 — `.ti` 는 아트라 «정보 요소» 가 아니다([I4] 의 `.ci` skip 과 같은 규약).
+         대신 무르게 풀리지 않게 [I6b] 가 «두 봉투가 액자 안에 드는가» 를 같이 잰다. */
+      const hR = host.getBoundingClientRect(), tiR = host.querySelector('.ti').getBoundingClientRect();
+      const ti = { x1: tiR.left - hR.left, x2: tiR.right - hR.left, y1: tiR.top - hR.top, y2: tiR.bottom - hR.top };
+      const inBox = ev => ev.x1 >= ti.x1 - 4 && ev.x2 <= ti.x2 + 4 && ev.y1 >= ti.y1 - 4 && ev.y2 <= ti.y2 + 4;
+      out.temper = { ok: kidsOf(host, ['ti']).filter(k => hit(e.ok, k)).map(k => k.cls),
+                     pay: kidsOf(host, ['ti']).filter(k => hit(e.pay, k)).map(k => k.cls),
+                     inTi: inBox(e.ok) && inBox(e.pay),
                      sep: e.pay.y2 <= e.ok.y1 + 2, hostH: host.getBoundingClientRect().height };
     }
     return out;
@@ -622,8 +629,9 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
      '[I5] ★ 좁은 호스트에서 사다리가 카드 밖(=이웃 카드 위)으로 안 나간다',
      Math.round(I.train.ladder) + ' ≤ ' + Math.round(I.train.hostW));
   ok(I.temper.ok.length === 0 && I.temper.pay.length === 0,
-     '[I6] ★ 단련 — 두 봉투가 행 자식(축 이름·레벨·설명·버튼)을 한 개도 안 밟는다',
+     '[I6] ★ 단련 — 두 봉투가 «정보» 자식(축 이름·레벨·설명·버튼)을 한 개도 안 밟는다(아이콘 .ti 는 아트 — [I4] 규약)',
      '[' + I.temper.ok.join(',') + '] / [' + I.temper.pay.join(',') + ']');
+  ok(I.temper.inTi, '[I6b] ★ 612 — 두 봉투가 아이콘 액자(178) 안에 든다(빈 띠가 액자로 옮겨진 것을 잠근다)', String(I.temper.inTi));
   ok(I.temper.sep, '[I7] 단련은 한 칸에 두 줄기를 위아래로 포갰다 — 둘이 서로 안 만난다', String(I.temper.sep));
   console.log('  · 세부 팝업 결과 [' + I.detail.ok.join(',') + '] · 비용 [' + I.detail.pay.join(',') + ']  |  유물 결과 [' + I.relic.ok.join(',') + '] · 비용 [' + I.relic.pay.join(',') + ']');
   ok(I.detail.ok.length === 0 && I.detail.pay.every(c => c === 'sk-db'),
