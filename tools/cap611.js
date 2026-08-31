@@ -44,10 +44,15 @@ const CROP = path.join(DIR, '611-r' + R + '-crop.png');
   await page.waitForTimeout(300);
   await page.screenshot({ path: FULL });
 
-  /* 2회차 — 하단 스크롤 끝 1장 더(비평가 CB 1회차: «캡처 1장엔 20/36장만 보인다»). 36/36 커버. */
-  await page.evaluate(() => { const g = document.getElementById('wpnGrid'); g.scrollTop = g.scrollHeight; });
+  /* 2회차 — 하단 스크롤 끝 1장 더(CB 1회차: «캡처 1장엔 20/36장만 보이다»").
+     3회차 — 중간 1장 더(CC 2회차: 그릇이 ~3.3행이라 상+하 두 장으로는 행 3·4가 어느 캡처에도
+     완전 노출되지 않는다 — 26/36). scrollTop 570 = 행 3 상변(602)이 뷰포트 안 32px 에 오는 값. */
+  await page.evaluate(() => { const g = document.getElementById('wpnGrid'); g.scrollTop = 570; });
   await page.waitForTimeout(250);
   await page.screenshot({ path: FULL.replace('-full.png', '-full2.png') });
+  await page.evaluate(() => { const g = document.getElementById('wpnGrid'); g.scrollTop = g.scrollHeight; });
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: FULL.replace('-full.png', '-full3.png') });
   await page.evaluate(() => { document.getElementById('wpnGrid').scrollTop = 0; });
   await page.waitForTimeout(250);
 
