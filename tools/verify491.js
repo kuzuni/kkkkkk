@@ -433,12 +433,36 @@ async function pixelRun(page) {
       return { hw: H ? H.getBoundingClientRect().width : 0, bw: B ? B.getBoundingClientRect().width : 0 };
     }, [t.host, t.btn]);
     await pg.mouse.move(g.bx, g.by);
+    /* ⚑ 594 — **표본을 «한 점» 에서 «구간» 으로 옮긴다.** 7회차는 200ms 한 점의 bbox 비를 물었고
+       그것이 이 자의 유일한 플레이키였다(PROGRESS 594 · 재현 `tools/probe594.js`).
+       뿌리는 값이 아니라 **표본의 자리**다 — 홀드 반복은 `TR_HOLD_DELAY`(350ms)에 시작해
+       60~160ms 마다 488 맥박(`jz-hb`, `transform:scale(1.02~1.06)` · .08s)을 다시 쏘고,
+       그 맥박은 누름(`scale:.985`)과 **다른 속성이라 곱해진다**. 그래서 350ms 를 넘겨 읽은
+       프레임은 ×0.9888 ~ ×1.0047 로 흩어진다. 200ms 가 초록이었던 것은 «.985 가 맞아서» 가
+       아니라 **그 점이 아직 350ms 앞이라서**이고, `probe594` 실측 실경과는 **241~315ms**
+       (여유 35~62ms) — 스크린샷 두 장이 끼는 이 자에서 그 여유는 부하 한 번에 사라진다.
+       ⇒ rAF 전수 표본으로 갈고 축을 둘로 나눈다(579-④):
+         ⓐ **화면에서 실제로 줄었는가** — 구간 **최솟값**. 맥박은 `scale ≥ 1` 로만 곱하므로
+           최솟값이 곧 누름의 진폭이다(양쪽으로 조인다 — 빠지면 1.0, 세면 .94 라 둘 다 빨강).
+         ⓑ **누름 부품이 캐스케이드를 이겼는가** — 맥박과 다른 속성인 computed `scale` 자신을
+           홀드 **전 구간**에서 묻는다(7회차의 원래 결손 «클래스는 붙었는데 scale 이 none» 자리).
+       ⚠ 수집은 `mouse.down` **전에** 걸어 둔다 — 스크린샷·픽셀 대조가 도는 동안에도 계속 찍혀야
+         한다(그 사이가 곧 맥박 구간이다). 눌린 시각은 `__dn` 으로 따로 찍어 정착 프레임을 가른다. */
+    const SWEEP = 900, SETTLE = 150;
+    await pg.evaluate(([hs, bs, dur]) => {
+      window.__sw = []; window.__dn = 0;
+      const H = document.querySelector(hs), B = document.querySelector(bs);
+      (function step(now) {
+        const cs = getComputedStyle(H);
+        window.__sw.push({ t: now, w: H.getBoundingClientRect().width,
+                           bw: B ? B.getBoundingClientRect().width : 0, sc: cs.scale });
+        if (!window.__dn || now - window.__dn < dur) requestAnimationFrame(step);
+      })(performance.now());
+    }, [t.host, t.btn, SWEEP]);
     await pg.mouse.down();
-    /* ⚠ 7회차 — **200ms 에 읽는다.** 70ms 는 트랜지션(.07s)·맥박(.08s)이 아직 도는 한복판이라
-       같은 트리에서 1.000 ↔ 0.990 ↔ 0.995 로 흔들렸다(첫 실행이 그래서 빨갰다). 200ms 면
-       누름 트랜지션도 `jz-hb`(`both` 라 끝값 scale(1) 로 굳는다)도 다 앉아 있다.
-       그리고 `getComputedStyle().scale` 이 아니라 **실측 bbox 비**로 묻는다 — 어느 속성이
-       이겼는지와 무관하게 «화면에서 실제로 줄었는가» 를 재는 유일한 축이다. */
+    await pg.evaluate(() => { window.__dn = performance.now(); });
+    /* 오버레이(`fx-flash` .34s)와 클래스는 **이른 점**에서 읽어야 한다 — 그 축은 «떠 있는가» 라
+       한 점이 맞다(구간으로 옮길 이유가 없고, .34s 안에 읽어야 한다). */
     await pg.waitForTimeout(200);
     const live = await pg.evaluate(([hs, bs]) => {
       const H = document.querySelector(hs), B = document.querySelector(bs);
@@ -455,22 +479,43 @@ async function pixelRun(page) {
     }, [t.host, t.btn]);
     const down = await pg.screenshot({ clip });
     const px = await diffPct(pg, before, down);
+    /* 594 — 수집이 홀드 전 구간을 덮을 때까지 기다렸다가 거둔다(스크린샷이 이미 그 일부를 썼다) */
+    await pg.waitForFunction(d => window.__dn && performance.now() - window.__dn >= d, SWEEP,
+                             { timeout: SWEEP + 2000 });
+    const sw = await pg.evaluate(() => ({ f: window.__sw, dn: window.__dn }));
     await release(pg);
     ok(live.hdn, '[7-' + t.id + '-a] 누른 채 호스트에 `jz-hdn` 이 붙는다', 'scale=' + live.scale);
     ok(!live.dnOnHost, '[7-' + t.id + '-b] 호스트에 `jz-dn`(.94)은 안 붙는다 — 어휘가 겹치지 않는다');
     /* ⚠ 7회차 함정 — 커스텀 속성은 **상속**된다. 호스트의 `--jz-s:.985` 가 그 안의 버튼까지
        내려가면 누름이 통째로 약해진다(첫 실행에서 실제로 0.985 로 찍혔다). 폴백은 상속을 못 막으므로
        `.jz-dn` 이 자기 값을 직접 적는다 — 그 못이 빠지면 여기가 빨개진다. */
-    const hr = rest.hw ? live.hw / rest.hw : 0, br = rest.bw ? live.bw / rest.bw : 0;
-    /* ★ 이 두 항이 7회차의 본체다 — 첫 시안은 `animation:jzDn` 이라 488 `jz-hb`(맥박)가 캐스케이드에서
-       이겨 «클래스는 붙어 있는데 호스트가 한 픽셀도 안 줄어드는» 상태였다(같은 `animation` 단축을
-       두 부품이 두고 싸운다). 정적 `scale:` 이라야 맥박의 `transform` 과 곱해진다. */
-    ok(Math.abs(hr - 0.985) <= 0.004,
-       '[7-' + t.id + '-b3] ★★ 호스트 폭이 실제로 **.985 배**로 줄었다(맥박과 곱해진다)',
-       p2(rest.hw) + ' → ' + p2(live.hw) + ' = ×' + Math.round(hr * 10000) / 10000);
-    ok(br > 0.90 && br < 0.965,
-       '[7-' + t.id + '-b2] ★ 누른 **버튼**은 여전히 .94 배다 — 호스트 진폭이 버튼까지 약하게 만들지 않았다',
-       p2(rest.bw) + ' → ' + p2(live.bw) + ' = ×' + Math.round(br * 10000) / 10000);
+    const dn0 = sw.dn || 0;
+    const held = sw.f.filter(f => f.t >= dn0);                     /* 누른 뒤 프레임 */
+    const settled = held.filter(f => f.t >= dn0 + SETTLE);         /* 들어가는 트랜지션(.07s)이 앉은 뒤 */
+    const hrs = held.map(f => (rest.hw ? f.w / rest.hw : 0));
+    const brs = held.map(f => (rest.bw ? f.bw / rest.bw : 0));
+    const hMin = hrs.length ? Math.min(...hrs) : 0, bMin = brs.length ? Math.min(...brs) : 0;
+    const scs = [...new Set(settled.map(f => f.sc))];
+    /* ★ 전제 — 표본이 실제로 모였다. 없으면 아래 «최솟값» 축이 통째로 헛초록이 된다. */
+    ok(held.length >= 8 && settled.length >= 4,
+       '[7-' + t.id + '-b0] 전제 — 홀드 구간 rAF 표본이 모였다(최솟값 축이 «표본 0» 으로 헛초록이 되지 않는다)',
+       '누른 뒤 ' + held.length + '프레임 · 정착 ' + settled.length + '프레임 / ' + SWEEP + 'ms');
+    /* ★ ⓐ 화면 — 이 항이 7회차의 본체다. 첫 시안은 `animation:jzDn` 이라 488 `jz-hb`(맥박)가
+       캐스케이드에서 이겨 «클래스는 붙어 있는데 호스트가 한 픽셀도 안 줄어드는» 상태였다.
+       ⚠ 594 — **최솟값**이다(한 점이 아니다). 맥박은 `scale ≥ 1` 로만 곱하므로 구간 최솟값이 곧
+         누름의 진폭이고, 양쪽으로 조인다: 부품이 빠지면 1.0 · `.94` 가 새어 들면 .94 라 둘 다 빨강. */
+    ok(Math.abs(hMin - 0.985) <= 0.004,
+       '[7-' + t.id + '-b3] ★★ 호스트 폭이 실제로 **.985 배**로 줄었다 — 홀드 구간 최솟값(594: 맥박과 곱해지므로 «한 점» 이 아니다)',
+       p2(rest.hw) + ' → 최소 ' + p2(Math.min(...held.map(f => f.w))) + ' = ×' + Math.round(hMin * 10000) / 10000
+       + ' (구간 ×' + Math.round(hMin * 1e4) / 1e4 + '~' + Math.round(Math.max(...hrs) * 1e4) / 1e4 + ')');
+    /* ★ ⓑ 캐스케이드 — 맥박과 **다른 속성**인 자기 값으로 묻는다(579-④ⓐ). 맥박이 `animation` 을
+       가져가 누름이 사라지면 여기는 `none` 이 되므로, 위 ⓐ 와 달리 **맥박 구간에서도** 답한다. */
+    ok(scs.length === 1 && Math.abs(parseFloat(scs[0]) - 0.985) <= 0.0005,
+       '[7-' + t.id + '-b3s] ★★ 누름 부품이 홀드 **전 구간** 자기 속성을 지킨다 — computed `scale` 이 정착 뒤 «.985» 한 값뿐(맥박이 `animation` 을 가져가면 `none` 이 된다)',
+       scs.map(s => '«' + s + '»').join(' , ') + ' / ' + settled.length + '프레임');
+    ok(bMin > 0.90 && bMin < 0.965,
+       '[7-' + t.id + '-b2] ★ 누른 **버튼**은 여전히 .94 배다 — 호스트 진폭이 버튼까지 약하게 만들지 않았다(594: 같은 구간 최솟값)',
+       p2(rest.bw) + ' → 최소 ' + p2(Math.min(...held.map(f => f.bw))) + ' = ×' + Math.round(bMin * 10000) / 10000);
     ok(px >= HOST_PX_MIN, '[7-' + t.id + '-c] ★ 찍힌 픽셀 — 호스트가 실제로 달라진다(수리 전 0.00%)',
        p2(px) + '% (하한 ' + HOST_PX_MIN + '%)');
     ok(live.all >= 1, '[7-' + t.id + '-d] 첫 발에 가산 오버레이가 `#fxl` 에 뜬다',
@@ -688,24 +733,38 @@ async function pixelRun(page) {
         await b4.page.mouse.move(g4.x, g4.y);
         const w0 = await b4.page.evaluate(() =>
           document.querySelector('#trTemper .tr-tp.k0').getBoundingClientRect().width);
-        await b4.page.mouse.down();
         /* ⚠ ⓑ 사본은 «안 줄어든다» 가 아니라 **«고르지 않다»** 로 틀린다 — 맥박이 도는 프레임에는
            `jz-hb` 가 `animation` 을 가져가 누름이 통째로 사라지고, 맥박 사이에는 `jzDn` 이 이겨
-           .94(호스트에는 너무 센 값)로 튄다. 한 순간만 재면 우연히 .985 근처가 나올 수 있으므로
-           **세 시각을 재서 «하나라도 .985 가 아니면 빨강»** 으로 묻는다. */
-        const smp = [];
-        for (const ms of [100, 100, 100]) {
-          await b4.page.waitForTimeout(ms);
-          smp.push(await b4.page.evaluate(() =>
-            document.querySelector('#trTemper .tr-tp.k0').getBoundingClientRect().width));
-        }
+           .94(호스트에는 너무 센 값)로 튄다.
+           ⚑ 594 — 종전에는 «세 시각 중 하나라도 .985 가 아니면 빨강» 이었는데, 그것은 **성한 트리도
+             만족한다**: 홀드 반복(350ms~)이 쏘는 맥박이 성한 트리의 폭도 ×0.9888~1.0047 로 흔들어
+             (`probe594` [C2] 실측: 500ms 한 점에서 tempup 7/8 이 밴드 밖) 세 점 중 하나는 늘 밴드를
+             벗어난다 ⇒ **되돌림을 안 해도 초록인 항**이었다. §7 과 **같은 축**(구간 최솟값)으로 옮긴다:
+             맥박은 `scale ≥ 1` 로만 곱하므로 최솟값은 흔들리지 않고, ⓐ 사본은 1.0 · ⓑ 사본은 .94 로
+             내려가 둘 다 밴드 밖이다. */
+        const SW3 = 900;
+        await b4.page.evaluate(dur => {
+          window.__sw = []; window.__dn = 0;
+          const H = document.querySelector('#trTemper .tr-tp.k0');
+          (function step(now) {
+            window.__sw.push({ t: now, w: H.getBoundingClientRect().width });
+            if (!window.__dn || now - window.__dn < dur) requestAnimationFrame(step);
+          })(performance.now());
+        }, SW3);
+        await b4.page.mouse.down();
+        await b4.page.evaluate(() => { window.__dn = performance.now(); });
+        await b4.page.waitForFunction(d => window.__dn && performance.now() - window.__dn >= d, SW3,
+                                      { timeout: SW3 + 2000 });
+        const sw3 = await b4.page.evaluate(() => ({ f: window.__sw, dn: window.__dn }));
         const hdn3 = await b4.page.evaluate(() =>
           !!document.querySelector('#trTemper .tr-tp.k0').classList.contains('jz-hdn'));
         await b4.page.mouse.up();
-        const rs = smp.map(w => w0 ? w / w0 : 1);
-        ok(rs.some(r => Math.abs(r - 0.985) > 0.004),
-           '[R3-a] ★ 되돌린 사본에서는 호스트가 «.985 배로 고르게» 줄지 않는다 — ' + R3.n,
-           'hdn=' + hdn3 + ' ×' + rs.map(r => Math.round(r * 10000) / 10000).join(' / '));
+        const rs = sw3.f.filter(f => f.t >= sw3.dn).map(f => (w0 ? f.w / w0 : 1));
+        const mn = rs.length ? Math.min(...rs) : 1;
+        ok(rs.length >= 8 && Math.abs(mn - 0.985) > 0.004,
+           '[R3-a] ★ 되돌린 사본에서는 호스트가 «.985 배로» 줄지 않는다(구간 최솟값) — ' + R3.n,
+           'hdn=' + hdn3 + ' · ' + rs.length + '프레임 · 최소 ×' + Math.round(mn * 10000) / 10000
+           + ' · 최대 ×' + Math.round(Math.max(...rs) * 10000) / 10000);
       }
       await b4.ctx.close();
     } finally {
