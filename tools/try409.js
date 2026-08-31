@@ -15,7 +15,8 @@ const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
 const arg = process.argv[2] || '--base';
-const OUT = process.argv[3] || path.resolve(__dirname, '..', 'docs/review/409-try.png');
+const OUT = (arg === '--raw' ? process.argv[4] : process.argv[3])
+  || path.resolve(__dirname, '..', 'docs/review/409-try.png');
 
 (async () => {
   const browser = await launch(chromium);
@@ -26,7 +27,16 @@ const OUT = process.argv[3] || path.resolve(__dirname, '..', 'docs/review/409-tr
     await page.waitForTimeout(1200);
     await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
     await page.waitForTimeout(800);
-    if (arg !== '--base') {
+    /* 17회차 신설 — `--raw` 는 인자를 **CSS 그대로** 얹는다(`::after` 배경 말고 다른 층을 시험할 때).
+       예:  node tools/try409.js --raw '.stab.on::before{box-shadow:inset 0 -5px 0 #413122,inset 0 -11px 0 #634F37,inset 0 7px 0 #634F37!important}' out.png
+       ⚠ 출력 경로를 `96-*.png` 로 주지 마라 — 그 파일은 비평가가 읽는 캡처다. */
+    if (arg === '--raw') {
+      await page.evaluate((css) => {
+        const s = document.createElement('style'); s.id = 'try409'; s.textContent = css;
+        document.head.appendChild(s);
+      }, process.argv[3] || '');
+      await page.waitForTimeout(300);
+    } else if (arg !== '--base') {
       await page.evaluate((css) => {
         const s = document.createElement('style');
         s.id = 'try409';
