@@ -750,8 +750,23 @@ const WALL_MIN = 30;           /* 같은 스테이지 이 분 이상 정체 = �
    주인 목표 «간격 ×1.4» 자체가 «벽 = 그 구간의 큰 몫» 을 함의한다(스윕 표 §4-2).
    ⚠ 원 목록(30분 이상 전부)도 표에 그대로 남긴다 — 문턱을 옮기면 숫자가 어떻게 갈라지는지
    다음 회차가 검산할 수 있어야 한다. */
-const WALL_FRAC = 0.08;        /* len ≥ 이 비율 × 시작(분) 이어야 «벽» — 미만은 «상승면 멈춤» */
-const isWall = w => w.len >= WALL_FRAC * Math.max(1, w.min);
+const WALL_FRAC = 0.08;        /* (구 판정, 대조용으로만 남긴다) len ≥ 이 비율 × 시작(분) = 벽 */
+const isWallFrac = w => w.len >= WALL_FRAC * Math.max(1, w.min);
+/* ⚑ 199 5회차 — 분류를 «비율» 에서 **기제**로 바꾼다 (4회차 비평 J·K·L 3인 일치).
+   4회차의 WALL_FRAC 0.08 은 **부지런 시드1에서만** 갈렸다: 부지런 간극 ×3.3 ○ 인데
+   대충은 ×1.39 뿐이라 #7(1,433분·0.101 = 벽) ↔ #9(1,420분·0.071 = 멈춤)이 **길이 차 0.9%**
+   에 판정이 반대로 났다 — 가른 것은 정체의 성질이 아니라 **달력**(시작 시각이 분모라
+   같은 정체도 30일째면 «멈춤», 3일째면 «벽»)이다. 48.5시간 정체(#13)가 «벽 아님» 이 된 것도
+   같은 뿌리다.
+   기제는 이 게임 안에 이미 있다 — `BOSS_GATE_N = ES_BAND` 의 배수 스테이지가 **관문**
+   (보스 체력 ×BOSS_GATE_HP)이고, 그 사이는 `ES_RAMP` 비탈뿐인 **밴드 안**이다. 그래서
+     · 관문 스테이지에서의 정체 = **벽**(구간 점프를 못 넘은 것)
+     · 밴드 안 스테이지에서의 정체 = **멈춤**(오르막 중 하루 주기 성장을 기다리는 숨)
+   로 가른다. 문턱도 분모도 없으니 **달력 의존이 소멸**한다(K 처방 — 부지런 24건 중 판정이
+   바뀌는 것은 1건(s720)뿐임을 4회차 비평이 미리 검산했다).
+   ⚠ 구 판정(WALL_FRAC)도 표에 «구 판정» 칸으로 그대로 남긴다 — 두 자가 어디서 갈리는지
+   다음 회차가 검산할 수 있어야 한다(4회차 규약 그대로). */
+const isWall = (w, band) => w.stage % Math.max(1, band || 40) === 0;
 
 async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
@@ -829,6 +844,10 @@ async function runOne(page, pol, seed, days, onRow) {
       if (Math.abs(inSum - outSum - S.dia) > 0.5)
         B.viol.push('장부 항등식 위반: 유입 ' + inSum + ' − 씽크 ' + outSum + ' − 잔고 ' + S.dia + ' = ' + (inSum - outSum - S.dia));
     }
+    /* 199 5회차 — 분류·순 이동을 재는 데 필요한 두 값. 밴드 주기는 상수를 손으로 적지 않고
+       **제품에게 묻는다**(ES_BAND 를 199 가 다시 돌리면 자가 조용히 옛 주기로 센다). */
+    out.band = (typeof ES_BAND === 'number' ? ES_BAND : 40);
+    out.minutes = minute;
     out.diaIn = B.diaIn; out.diaOut = B.diaOut; out.viol = B.viol.slice(); out.warn = B.warn.slice();
     out.final = B.snap('final', minute);
     out.cnt = B.cnt;
@@ -952,32 +971,61 @@ function writeReport(rep) {
     for (const s of (runs[0] ? runs[0].day1 : []))
       L.push(`| ${s.minute} | ${s.stage} | ${fmtN(s.cp)} | ${fmtN(s.dia)} | ${fmtN(s.gold)} | ${s.own} |`);
     L.push('');
-    /* 벽 — 199 4회차: «벽»(len ≥ WALL_FRAC×시작)과 «상승면 멈춤» 을 갈라 센다. 원 목록도 남긴다. */
-    const wallsAll  = runs.map(r => r.walls.filter(isWall).length);
-    const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w)).length);
+    /* 벽 — 199 5회차: 분류는 **기제**(관문 스테이지 정체 = 벽 · 밴드 안 정체 = 멈춤)다.
+       구 판정(WALL_FRAC)은 대조 칸으로만 남는다. */
+    const BAND = (runs[0] && runs[0].band) || 40;
+    const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band)).length);
+    const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r.band)).length);
     const faceOf = (r) => {
-      const w = r.walls.filter(isWall); const f = [];
+      const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
       for (let i = 0; i + 1 < w.length; i++) f.push(w[i + 1].min - (w[i].min + w[i].len));
       return f;
     };
+    /* ⚑ 199 5회차 — «실오르막»(순 이동). 4회차의 «상승면 9.64%» 는 3인 비평이 실측으로
+       뒤집었다: 그 95.4% 가 같은 스테이지에 30분 이상 서 있는 **멈춤**이었고 순 이동은
+       203분(0.47%)뿐이었다. 상승면은 «벽과 벽 사이의 달력 길이» 라 멈춤을 통째로 삼킨다.
+       ⇒ 목표 축을 **정체를 뺀 시간**으로 옮긴다 — 이 표에서 ③ 을 읽을 때는 이 줄을 봐라.
+         · 순 이동 = 전체 경과 − Σ(30분 이상 정체 전부: 벽 + 멈춤)
+         · 벽당 실오르막 = 상승면 하나에서 그 안의 멈춤을 뺀 값 (목표: 벽당 ≥ 60분 급) */
+    const stallOf   = (r) => r.walls.reduce((a, w) => a + w.len, 0);
+    const netOf     = (r) => Math.max(0, (r.minutes || rep.days * 1440) - stallOf(r));
+    const faceNetOf = (r) => {
+      const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
+      for (let i = 0; i + 1 < w.length; i++) {
+        const a = w[i].min + w[i].len, b = w[i + 1].min;
+        const pause = r.walls.filter(x => !isWall(x, r.band) && x.min >= a && x.min < b)
+                             .reduce((s, x) => s + Math.min(x.len, b - x.min), 0);
+        f.push(Math.max(0, b - a - pause));
+      }
+      return f;
+    };
     const faceSum = runs.map(r => faceOf(r).reduce((a, b) => a + b, 0));
-    L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체 · 벽 판정 len ≥ ${WALL_FRAC}×시작)`);
+    const netAll  = runs.map(netOf);
+    const faceNet = runs.map(r => faceNetOf(r));
+    const faceNetMed = med(faceNet.map(f => f.length ? f.reduce((a, b) => a + b, 0) / f.length : 0));
+    L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${BAND}의 배수) 정체 · 멈춤 = 밴드 안 정체**)`);
     L.push('');
     L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
-      + ` · 상승면 멈춤 p50 = ${med(pausesAll)}`
-      + ` (구 30분 기준 전부 = p50 ${med(runs.map(r => r.walls.length))})`);
+      + ` · 밴드 안 멈춤 p50 = ${med(pausesAll)}`
+      + ` (30분 이상 정체 전부 = p50 ${med(runs.map(r => r.walls.length))}`
+      + ` · 구 판정(len ≥ ${WALL_FRAC}×시작) 벽 p50 = ${med(runs.map(r => r.walls.filter(isWallFrac).length))})`);
     L.push('');
-    L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 | 판정 |');
-    L.push('|---|---|---|---|---|---|');
+    L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 | 판정(기제) | 구 판정(비율) |');
+    L.push('|---|---|---|---|---|---|---|');
     (runs[0] ? runs[0].walls : []).slice(0, 40).forEach((w, i) => {
       const h = Math.floor(w.min / 60), m = w.min % 60;
-      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 | ${isWall(w) ? '벽' : '멈춤'} |`);
+      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 |`
+        + ` ${isWall(w, runs[0].band) ? '벽' : '멈춤'} | ${isWallFrac(w) ? '벽' : '멈춤'} |`);
     });
     L.push('');
-    L.push(`### [D2] 상승면 — ${P} (벽 끝 → 다음 벽 시작, 멈춤 포함)`);
+    L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동)`);
     L.push('');
-    L.push(`상승면 합 p50 = ${med(faceSum)}분 (총 시간의 ${(100 * med(faceSum) / (rep.days * 1440)).toFixed(2)}%)`
-      + ` · 시드1 상승면(분): ${faceOf(runs[0] || { walls: [] }).join(' · ') || '-'}`);
+    L.push(`**순 이동 합 p50 = ${med(netAll)}분 (총 시간의 ${(100 * med(netAll) / (rep.days * 1440)).toFixed(2)}%)**`
+      + ` · 벽당 실오르막 p50 = ${faceNetMed.toFixed(0)}분`);
+    L.push('');
+    L.push(`상승면 합 p50 = ${med(faceSum)}분 (총 시간의 ${(100 * med(faceSum) / (rep.days * 1440)).toFixed(2)}% — 멈춤 포함, 4회차까지의 축)`
+      + ` · 시드1 상승면(분): ${faceOf(runs[0] || { walls: [], band: BAND }).join(' · ') || '-'}`);
+    L.push(`시드1 실오르막(분): ${faceNetOf(runs[0] || { walls: [], band: BAND }).join(' · ') || '-'}`);
     L.push('');
     /* 실전으로 돈 전투 */
     const cnts = runs.map(r => r.cnt).filter(Boolean);
@@ -1006,6 +1054,43 @@ function writeReport(rep) {
     L.push('|---|---|');
     Object.keys(outAll).sort((a, b) => outAll[b] - outAll[a]).forEach(k => L.push(`| ${k} | ${fmtN(outAll[k])} |`));
     L.push('');
+  }
+
+  /* ⚑ 199 5회차 — [G] 정책 대조. 4회차 비평 ⓒ 는 «스윕 표에 정책비 열이 없어 ④ 가 창 밖으로
+     밀린 것을 사전에 못 봤다»(측정 누락)였다. 손잡이 하나를 돌릴 때마다 두 정책의 비가 같이
+     찍히게 한다 — 한 정책만 재면 ④ 는 언제나 사후에 발견된다. */
+  {
+    const pols = Object.keys(rep.policies);
+    if (pols.length > 1) {
+      const dayIn = (pol) => {
+        const runs = rep.policies[pol];
+        const tot = runs.reduce((a, r) => a + Object.values(r.diaIn).reduce((x, y) => x + y, 0), 0) / runs.length;
+        const st  = runs.reduce((a, r) => a + (r.diaIn['시작(신규 지급)'] || 0), 0) / runs.length;
+        return { all: tot / rep.days, cont: (tot - st) / rep.days };
+      };
+      const netPct = (pol) => {
+        const runs = rep.policies[pol];
+        const v = runs.map(r => Math.max(0, (r.minutes || rep.days * 1440) - r.walls.reduce((a, w) => a + w.len, 0)));
+        return 100 * med(v) / (rep.days * 1440);
+      };
+      const stg = (pol) => med(rep.policies[pol].map(r => r.final.stage));
+      L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
+      L.push('');
+      L.push('| 축 | ' + pols.map(p => POLICIES[p].name).join(' | ') + ' | 비(부지런/대충) |');
+      L.push('|---|' + pols.map(() => '---|').join('') + '---|');
+      const rows = [
+        ['유입 합/일', p => dayIn(p).all, fmtN],
+        ['지속 수급/일 (시작 지급 제외)', p => dayIn(p).cont, fmtN],
+        [`${rep.days}일 스테이지 p50`, stg, fmtN],
+        ['순 이동 비중(%)', netPct, x => x.toFixed(2)],
+      ];
+      for (const [name, f, fmt] of rows) {
+        const v = pols.map(f);
+        const ratio = v[1] ? (v[0] / v[1]).toFixed(3) : '-';
+        L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
+      }
+      L.push('');
+    }
   }
 
   L.push('## [F] 규칙 위반 (등재문 ⑦ — 0 이어야 결과를 믿는다)');
