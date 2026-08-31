@@ -8,8 +8,9 @@
  *   [B] 라우팅 — fxFly 가 combat 출발점이면 #fxlc, 아니면 #fxl 에 DOM 을 만드는가 (+n 포함)
  *   [C] 스태킹 — 대표 오버레이(상점·던전·유물·훈련·장비·소환결과·퀘스트 모달) 위에서
  *       elementFromPoint 프로브: #fxlc 의 요소는 오버레이에 가려지고 #fxl 의 요소는 위에 보이는가
- *   [D] 통합 — 상점 페이지를 연 채 실제 자동 전투 10초: 새로 생기는 .fx-fly/.fx-plus 가
- *       전부 #fxlc 에만 생기는가 (#fxl 0건)
+ *   [D] 통합 — 상점 페이지를 연 채 실제 자동 전투 10초
+ *       [D-a] 592 이관 — 잡몹 킬만 도는 구간에는 재화 연출이 0건(킬 드랍 코인 폐지)
+ *       [D-b] 살아 있는 전투 발(스테이지 클리어 보너스)은 **여전히** 전부 #fxlc 에만 생긴다 (#fxl 0건)
  *   [E] 회귀 — 전투 킬을 막고 UI 힌트(fxAt 무태그) + 재화 증가 → #fxl 에 비행이 생기는가
  * 부산물: docs/shots/77-*.png (상점 열고 전투 프레임 6장 + 메인 전투 코인 3장) — 비평가 확인용
  */
@@ -262,9 +263,30 @@ function launchOpts(){
       await page.screenshot({ path: path.join(SHOTS, `77-shop-combat-f${i}.png`) });
     }
     await page.waitForTimeout(10000 - 1600 - 90 * 5);
+    /* ⚑ 592 이관 — **이 항은 방향이 뒤집혔다(333 처방 · 지우지 않았다).**
+       종전 [D] 는 «10초 동안 #fxlc 에 연출이 0건이면 실패» 였고, 그 연출을 대 주던 것이
+       **킬 드랍 코인**(`killEnemy` 의 `fxAt(…,'combat')`)이었다. 592 가 주인 지시로 그것을
+       폐지했으므로 같은 문장을 그대로 두면 **77 이 아니라 592 를 재는 빨강**이 된다.
+       77 이 지키는 규칙 자체(«전투 발 재화 연출은 팝업 아래 #fxlc»)는 한 글자도 안 바뀌었고,
+       그 규칙의 **살아 있는 발원**이 ⑵ 스테이지 클리어 · ⑶ 파도 전멸 보너스로 바뀌었을 뿐이다.
+       ⇒ 항을 둘로 가른다: [D-a] 는 592 가 뺀 것(킬 드랍 = 0)을, [D-b] 는 77 의 규칙을
+       **살아 있는 전투 발**로 다시 문다. [D-b] 가 없으면 이 절은 «비어서 초록» 이 된다. */
     const r = await page.evaluate(() => { const c = window.__c77; const g = S.gold; return { ...c, gold: g }; });
-    if (r.fxlc > 0) ok(`전투 획득 연출 ${r.fxlc}건 → #fxlc`); else fail('10초 동안 #fxlc 에 연출이 0건 (전투 획득이 없었나?)');
-    if (r.fxl === 0) ok('#fxl 은 0건 (팝업 위로 새는 연출 없음)'); else fail(`#fxl 에 ${r.fxl}건 — 팝업 위로 뚫는 연출이 남아 있다`);
+    if (r.fxlc === 0 && r.fxl === 0)
+      ok(`592 — 잡몹 킬만 도는 10초에는 재화 연출이 한 건도 안 난다 (#fxlc ${r.fxlc} · #fxl ${r.fxl})`);
+    else fail(`592 — 킬 드랍 연출이 남아 있다: #fxlc ${r.fxlc} · #fxl ${r.fxl}`);
+    /* [D-b] 살아 있는 전투 발 — ⑵ 스테이지 클리어 보너스. 같은 창(상점 페이지가 열린 채)에서
+       그 코인이 **여전히 페이지 아래**(#fxlc)로 가는가가 77 의 본래 질문이다. */
+    const r2 = await page.evaluate(async () => {
+      window.__c77.fxl = 0; window.__c77.fxlc = 0;
+      const g0 = S.gold;
+      stageWin = true;                                   /* 162 ① — 다음 틱이 «보스 격파 = 클리어» 갈래를 탄다 */
+      await new Promise(res => setTimeout(res, 2500));
+      return { ...window.__c77, gold: Math.round(S.gold - g0) };
+    });
+    if (r2.fxlc > 0) ok(`살아 있는 전투 발(스테이지 클리어 보너스 +${r2.gold}) 연출 ${r2.fxlc}건 → #fxlc`);
+    else fail(`살아 있는 전투 발조차 #fxlc 에 0건 (보너스 +${r2.gold} · 전투 발 라우팅이 죽었다)`);
+    if (r2.fxl === 0) ok('#fxl 은 0건 (팝업 위로 새는 연출 없음)'); else fail(`#fxl 에 ${r2.fxl}건 — 팝업 위로 뚫는 연출이 남아 있다`);
     await page.evaluate(() => closeShopPage());
   }
 
