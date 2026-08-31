@@ -263,8 +263,11 @@ const ck199 = (n, pass, got, why) => { R.push({ n, pass: !!pass, got: String(got
 
 
 ck('① 249 표기가 설치돼 있다 (eScale = eSmooth(eBand(s)))', EC.form === '249', EC.form);
-ck('② 주기 ES_BAND = 10 — 162 가 폐기한 구 isBossStage(s%10===0) 의 벽 주기',
-   BAND === 10 && PACE_162, BAND + '/' + (PACE_162 ? '162 확인' : '구 규칙 잔존'));
+/* 199 3회차 이관 — 주기 10(구 isBossStage 잔재) → 40. 주기는 199 손잡이 ①(구간 점프)의 벽 개수
+   축이다(2회차 봇 실측 30일 벽 32칸 = 목표 4배). 항은 안 지우고 방향만 바꾼다(333 · M1 선례):
+   «주기가 199 확정값과 같고, 162 페이싱(모든 스테이지 = 50킬+보스)은 그대로인가». */
+ck('② 주기 ES_BAND = 40 — 199 3회차 확정(벽 개수 손잡이 · 162 페이싱 불변)',
+   BAND === 40 && PACE_162, BAND + '/' + (PACE_162 ? '162 확인' : '구 규칙 잔존'));
 let flat = true, jump = true;
 for(let s=1;s<=S_END;s++) if(Math.abs(EC.eHp(s) - EC.HB*EC.eSmooth(EC.eBand(s))) > 1e-9) flat = false;
 for(let s=BAND;s<=KNEE;s+=BAND) if(!(EC.eHp(s) > EC.eHp(s-1)*1.0001)) jump = false;

@@ -45,8 +45,13 @@ const near = (name, got, want, tol) =>
    끼운다(333 처방) — ES_M1 은 «불변» 이 아니라 «199 가 정한 값과 같은가» 를 묻고, 나머지 넷은
    그대로 «불변(177)» 이다. 값의 근거는 sim177 ⑤(상한 1.03063)와 sim249 ⑨(톱니 진폭, 실측
    상한 ~1.024) 두 자를 **동시에** 통과하는 최대값이라는 것이다. */
+/* ⚑ 199 3회차 이관(2026-08-31) — **BAND·GATE_N 10 → 40.** 10 은 «구 isBossStage 의 벽 주기» 에서
+   온 값이었는데, 봇 실측(199 2회차)에서 30일 벽 32칸 = 주인 목표(간격 ×1.4 · 30일에 ~8칸)의
+   4배였다. 주기는 199 행이 연 손잡이 ①(구간 점프)이라 M1 과 같은 꼴로 항을 지우지 않고 방향만
+   바꾼다(333 처방) — BAND 는 «불변(162 잔재)» 이 아니라 «199 가 벽 개수에서 정한 값과 같은가»
+   를 묻는다. 스윕 근거는 199 review §3(sim177 ⑧ 불변 · 진폭 1.98 → 2.42 · 관문 상한 3.2035). */
 const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:10, GATE_N:10, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22 };
+            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
 const wHp    = s => C.HB * smooth(eband(s));
@@ -54,8 +59,8 @@ const wDmg   = s => C.DB * Math.pow(smooth(eband(s)), C.A);
 const wGate  = s => (s % C.GATE_N === 0 ? C.GATE_HP : 1);
 
 /* 곡선을 볼 스테이지 — 구간 안(같아야 함) · 관문(올라야 함) · 무릎 앞뒤 */
-const IN_BAND = [11, 13, 17, 19];
-const GATES   = [10, 20, 40, 80];
+const IN_BAND = [11, 13, 17, 39];   /* 199 3회차 — 전부 첫 구간(1..39) 안 · 39 는 경계 검사용 */
+const GATES   = [40, 80, 120, 160]; /* 199 3회차 — GATE_N 40 의 배수 */
 const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 200];
 
 (async () => {
@@ -143,8 +148,8 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   ok(IN_BAND.every(s => Math.abs(norm(s) - norm(IN_BAND[0])) < 1e-9),
      '[C] 구간 안(s' + IN_BAND.join('·s') + ') 몹 체력이 서로 같다',
      IN_BAND.map(s => norm(s).toExponential(4)).join(' '));
-  ok(norm(20) > norm(19) * 1.5, '[C] 관문 s20 에서 몹 체력이 뛴다',
-     (norm(20)/norm(19)).toFixed(3) + '배');
+  ok(norm(40) > norm(39) * 1.5, '[C] 구간 경계 s40 에서 몹 체력이 뛴다',
+     (norm(40)/norm(39)).toFixed(3) + '배');
   GATES.forEach(s => {
     const r = byS[s];
     ok(r.bossMax !== null, '[D] s' + s + ' 스테이지 보스가 실제로 스폰됐다');
@@ -229,7 +234,7 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   ok(shown.txt.indexOf('10스테이지마다 보스') < 0, '[G] 구 문구(«10스테이지마다 보스»)가 화면에 없다');
 
   /* ── [H] 음성 — ES_BAND=1 사본(=249 이전)에서는 계단이 사라진다 ─── */
-  const negSrc = src.replace(/const ES_BAND = 10;/, 'const ES_BAND = 1;');
+  const negSrc = src.replace(/const ES_BAND = \d+;/, 'const ES_BAND = 1;');   /* 199 3회차 — 설치값 리터럴에 안 묶는다 */
   ok(negSrc !== src, '[H] 음성 사본에 «구간 계단 없음»(ES_BAND=1)을 실제로 심었다');
   fs.writeFileSync(NEG, negSrc);
   const np = await ctx.newPage();

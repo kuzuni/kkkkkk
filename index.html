@@ -19970,7 +19970,13 @@ const ES_A    = 0.5872;     /* = ln(1.14)/ln(1.25) — 적 «맷집 대 화력»
    ⛔ eGold(경제 축) · 훈련 비용/값 · ES_* 다섯 상수는 **한 글자도 안 바꾼다.**
    게이트: `node tools/sim249.js`(톱니 진폭·주기 수치) · `node tools/verify249.js`(실동작)
    기록 `docs/review/249-스테이지톱니.md` */
-const ES_BAND = 10;         /* 톱니 주기 = 구 isBossStage(s%10===0) 의 벽 주기 */
+/* ⚑ 199 3회차(2026-08-31) — 주기 10 → **40**. 10 은 «구 isBossStage 의 벽 주기» 에서 온 값이었는데
+   봇 실측(2회차)에서 30일 벽이 32칸 = 주인 목표(30일에 ~8칸 · 간격 ×1.4)의 4배였다. 주기는
+   199 행이 명시로 연 손잡이 ①(구간 점프)이다 — 벽 «개수» 의 유일한 자리라 4배 넓혔다.
+   스윕(sim177·sim249 실측): 20/30/40 전부 안전 — 40 에서 톱니 진폭 1.98 → 2.42(③ 축),
+   관문 역산 상한 3.2035(설치 1.44 여유 ↑), sim177 ⑧ 최악 0.441초/4.68초 불변(벽 스테이지는
+   매끈 곡선 위 그대로라 «훈련만 s ≤ 80 무벽» 이 구조적으로 유지된다). */
+const ES_BAND = 40;         /* 톱니 주기 — 199 3회차: 벽 개수 손잡이(구 10 = isBossStage 잔재) */
 const eBand   = s => Math.max(1, ES_BAND * Math.floor(s / ES_BAND));
 const eSmooth = a => (1 + ES_K*(a-1))
                   * Math.pow(ES_M1, Math.min(a, ES_KNEE) - 1)
@@ -20328,6 +20334,7 @@ const DEF = () => sumAliasView({
           /* 190 — 그 중 «광고 없이» 쓸 수 있는 남은 횟수. 키가 없는 구 세이브는 noAdSumLeft() 가
              cap(SHOP_NOAD)으로 폴백한다(«없는 키는 cap» 관례 — freeLeft 와 같다. KEY 안 올린다). */
           noAdSum: SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {}),
+          offMin:0,                           /* 199 — 오늘 발행된 오프라인 분(배수 포함 환산) */
           q:{}, qb:null },                    /* 일일 퀘스트 수령 여부 / 자정 카운터 스냅샷 (22) */
   dun: DUNGEONS.reduce((o,d) => (o[d.id]=1, o), {}),   /* 던전 층 */
   /* 204 — 던전별 **입장권 보유 수(영구)**. 일일 리셋 없음 · 상한 없음.
@@ -20766,6 +20773,7 @@ function dailyCheck(){
     S.daily.freeSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_FREE, o), {});
     S.daily.noAdSum = SHOP_BOXES.reduce((o,x) => (o[x.b]=SHOP_NOAD, o), {});   /* 190 — 무광고 1회도 매일 충전 */
     S.daily.adBuy = {};               /* 13 재화 탭 광고 상품 수령 횟수(없으면 cap 으로 폴백) */
+    S.daily.offMin = 0;               /* 199 — 오늘 발행된 오프라인 분(배수 포함 환산, 상한 OFF_DAY_CAP_MIN) */
     S.daily.q = {}; S.daily.qb = dqSnap();   /* 일일 퀘스트 리셋 (22) */
     uiDirty = true;
   }
@@ -30757,6 +30765,14 @@ const OFF_MAX_H = 6;
    ⚠ 값을 `sec/1.25` 같은 나눗셈으로 적지 않는다 — «분당 몇 개» 가 이 곡선의 뜻이라
      상수를 그 단위로 두어야 다음 회차가 자릿수를 안 헷갈린다(541 ① 규약). */
 const OFF_DIA_PM = 48;   /* 오프라인 보상 — 분당 다이아 */
+/* 199 3회차 — 오프라인 보상은 «수령 횟수» 가 아니라 **실제 경과 오프라인 분**에 붙는다.
+   2회차 비평(E)의 실측: 부지런 유저가 하루 1,624.5분(1,440분의 112.8%)을 발행받고 있었다 —
+   광고 ×1.5 배수가 «존재하지 않는 184.5분» 을 만든 것. ⇒ 하루에 발행되는 오프라인 분
+   (배수 포함 환산)은 실존하는 1,440분을 넘을 수 없다. 오늘 발행분은 `S.daily.offMin` 이 들고
+   `dailyCheck()` 가 리셋한다(구 세이브는 `|| 0` 폴백 — adBuy 규약, KEY 불변).
+   ⚠ 1회 적립 상한 `offMaxH()`(6h · 151 이용권 +4h)는 **그대로다** — 그것은 151 이 파는 상품의
+   뜻이라 여기서 안 건드린다. «1회 상한 vs 하루 예산» 계약 자체는 주인 결정(결3)으로 넘겼다. */
+const OFF_DAY_CAP_MIN = 1440;   /* 하루 오프라인 발행 상한(분 환산·배수 포함) = 실존하는 시간 */
 const offMaxH = () => OFF_MAX_H + (passOffPlus() ? PASS_OFF_PLUS_H : 0);
 /* 오프라인 시뮬 상한 — 30일 ÷ 지속 30분(456: 레벨 무관 고정) × 3종 = 4,320 회가 최대다. 손댄 세이브가
    말도 안 되는 만료 시각을 갖고 있어도 여기서 멈춘다(무한 루프 방지). */
@@ -34663,8 +34679,15 @@ function showOfflineReward(sec, gold, dia){
 function closeOfflineReward(){ $('offw').classList.remove('on'); offPend = null; }
 function claimOffline(mul){
   if(!offPend) return;
-  S.gold += offPend.gold * mul;
-  S.dia  += Math.floor(offPend.dia * mul);
+  /* 199 3회차 — 하루 발행 예산(OFF_DAY_CAP_MIN)에서 이번 수령의 분 환산(배수 포함)을 꺼내 쓴다.
+     표시(offPend)는 이미 남은 예산 안으로 잘려 있으므로 ×1 수령은 항상 그대로이고,
+     ×1.5(광고)가 예산을 넘길 때만 넘치는 몫이 깎인다. */
+  const eq   = (offPend.sec / 60) * mul;
+  const room = Math.max(0, OFF_DAY_CAP_MIN - (S.daily.offMin || 0));
+  const k    = eq > 0 ? Math.min(1, room / eq) : 0;
+  S.daily.offMin = (S.daily.offMin || 0) + eq * k;
+  S.gold += offPend.gold * mul * k;
+  S.dia  += Math.floor(offPend.dia * mul * k);
   fxReward(null, [offPend.gold && 'gold', offPend.dia && 'dia'].filter(Boolean));   /* 58·512 */
   markDirty();
   closeOfflineReward();
@@ -34672,7 +34695,9 @@ function claimOffline(mul){
 
 function offlineReward(lastTime){
   if(!lastTime) return;
-  const sec = Math.min((Date.now()-lastTime)/1000, offMaxH()*3600);   /* 151 — 이용권 보유 시 +4시간 */
+  let sec = Math.min((Date.now()-lastTime)/1000, offMaxH()*3600);   /* 151 — 이용권 보유 시 +4시간 */
+  /* 199 3회차 — 하루 발행 예산의 남은 몫까지만 계산에 넣는다(표시 = ×1 수령과 정확히 일치) */
+  sec = Math.min(sec, Math.max(0, OFF_DAY_CAP_MIN - (S.daily.offMin || 0)) * 60);
   if(sec < 60) return;
   const gold = eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5;
   const dia = Math.floor(sec * OFF_DIA_PM / 60);
