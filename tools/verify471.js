@@ -75,9 +75,21 @@ const probe = (file, ink, extraEnv) => {
   return JSON.parse(out.slice(out.indexOf('[\n')));
 };
 
-/* [T] 용 — 자매 자를 그대로 돌려 **stdout 을 읽는다**(JSON 이 아닌 자라 표를 그대로 파싱한다). */
+/* [F6]·[T] 용 — 자매 자를 그대로 돌려 **stdout 을 읽는다**(JSON 이 아닌 자라 표를 그대로 파싱한다). */
 const run = (args) => execFileSync('node', args.map((a, i) => i === 0 ? path.join(ROOT, a) : a),
   { cwd: ROOT, maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' });
+
+/* `probe471c` 는 한 번만 돌린다(브라우저 한 판이 30~40초다) — [F6] 과 [T] 가 같은 표를 쓴다. */
+let _pc = undefined;
+const pc = () => {
+  if (_pc !== undefined) return _pc;
+  try {
+    const out = run(['tools/probe471c.js']);
+    _pc = [...out.matchAll(/^\d+\s+\S+\s+\S*\s+[\d.]+ \/ [\d.]+\s+([\d.]+) \/ ([\d.]+)\s+[\d.]+,[\d.]+\s+([\d.]+) \/ ([\d.]+)/gm)]
+      .map(m => ({ r: +m[1], t: +m[2], dx: +m[3], dy: +m[4] }));
+  } catch (e) { _pc = null; }
+  return _pc;
+};
 
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
@@ -175,13 +187,45 @@ const run = (args) => execFileSync('node', args.map((a, i) => i === 0 ? path.joi
     const r = has.find(x => x.label === k);
     /* 4회차 — 허용을 ±3 → **±2 로 조였다**(넓힌 것이 아니다). 5회차가 «잉크 기준 8.5/12» 로
        ±3 안에 겨우 서 있던 것을 20/7 로 옮겨 **정확히 11/11** 이 됐고, 다시 느슨해지면 빨개진다. */
-    ok(r && Math.abs(r.dxRi - inset) <= 2 && Math.abs(r.dyTi - inset) <= 2,
-      '[F] 잉크 호스트 — 중심이 **그림** 코너에서 안쪽 --dot-in (±2px) — ' + k,
-      r ? '잉크 기준 ' + r.dxRi + '/' + r.dyTi + ' · 상자 기준 ' + r.dxR + '/' + r.dyT : '없음');
+    /* 4회차 — 허용을 ±3 → **±2 로 조였다**(넓힌 것이 아니다).
+       ⚑⚑ 7회차 이관 — `.ibtn` 자리는 **대표 한 칸이 아니라 6칸 평균**으로 묻는다(아래 [F6]).
+       `probe471` 은 선택자마다 대표 한 칸만 잉크를 재는데, 이 부품은 칸마다 **글리프가 다른 그림**
+       이라 그 한 칸(📅 출석)이 하필 가장 좁아 «11/11 정확히 맞음» 으로 읽혔다. 6칸을 한 칸씩 재면
+       평균이 13.58 이었고 세 칸은 걸침이 절반으로 주저앉아 있었다(7회차 BY·BX 2인 독립 지적).
+       ⇒ 한 칸짜리 단언은 **여기서 빼고** [F6] 이 대신한다 — 자리를 비우지 않는다(333 처방). */
+    if (k === 'HUD 사이드 .ibtn .bdg') {
+      ok(r && Math.abs(r.dyTi - inset) <= 2,
+        '[F] 잉크 호스트 — **세로**는 대표 칸으로도 규약이다 (가로는 칸마다 글리프가 달라 [F6] 이 본다) — ' + k,
+        r ? '잉크 세로 ' + r.dyTi + ' · 상자 기준 ' + r.dxR + '/' + r.dyT : '없음');
+    } else {
+      ok(r && Math.abs(r.dxRi - inset) <= 2 && Math.abs(r.dyTi - inset) <= 2,
+        '[F] 잉크 호스트 — 중심이 **그림** 코너에서 안쪽 --dot-in (±2px) — ' + k,
+        r ? '잉크 기준 ' + r.dxRi + '/' + r.dyTi + ' · 상자 기준 ' + r.dxR + '/' + r.dyT : '없음');
+    }
     ok(r && (Math.abs(r.inkR) > 3 || Math.abs(r.inkT) > 3),
       '[F] 음성 — 잉크 호스트는 «상자와 그림이 실제로 어긋난» 자리여야 한다 (목록을 늘려 통과하는 길)',
       r ? '어긋남 ' + r.inkR + '/' + r.inkT : '없음');
   });
+
+  /* ── [F6] 02 사이드 6칸 — **평균으로 묻되, 편차도 같이 적는다** (7회차 신설) ────────────────
+     §10 ③ 이 «시트가 6칸 중 1칸만 보여 준다» 로 잡은 결함이 **자에도 게이트에도** 있었다.
+     여기서 묻는 것은 둘이다: ⓐ 6칸 평균이 규약 11 인가(상수가 옳게 앉았는가) ·
+     ⓑ 칸끼리의 편차가 얼마인가(**상수로는 못 덮는 몫 = 글리프 폭 = 아트**). ⓑ 는 «작아야 통과» 가
+     아니라 **«기록되어야 통과»** 다 — 편차가 있다는 사실 자체가 A2 §7 «아트 필요» 의 근거이고,
+     그 값이 갑자기 0 이 되면(칸별 상수를 손으로 박으면) 이 항이 그것을 말해 준다. */
+  const pcRows = pc();
+  const pcOK = pcRows && pcRows.length === 6;
+  ok(pcOK, '[F6] 전제 — 02 사이드 6칸을 «한 칸씩» 쟀다 (대표 한 칸으로는 편차를 물어볼 대상이 없다)',
+    pcRows ? pcRows.length + '칸' : '자가 표를 못 냈다');
+  const avgX = pcOK ? pcRows.reduce((s, r) => s + r.dx, 0) / 6 : null;
+  const avgY = pcOK ? pcRows.reduce((s, r) => s + r.dy, 0) / 6 : null;
+  ok(avgX !== null && Math.abs(avgX - inset) <= 1,
+    '[F6] 6칸 **평균**이 규약 11 이다 (한 칸에 맞춘 상수는 여기서 빨개진다)',
+    avgX === null ? '?' : '평균 dxRi ' + avgX.toFixed(2) + ' · 세로 ' + avgY.toFixed(2));
+  const sprX = pcOK ? Math.max(...pcRows.map(r => r.dx)) - Math.min(...pcRows.map(r => r.dx)) : null;
+  ok(sprX !== null && sprX > 2,
+    '[F6] 음성 — 칸끼리 실제로 벌어져 있다 (0 이 되면 칸별 상수를 손으로 박은 것이다 — 규약이 하나가 아니게 된다)',
+    sprX === null ? '?' : '가로 편차 ' + sprX.toFixed(2) + 'px = 상수로 못 덮는 몫(글리프 폭 · A2 §7 아트 필요)');
 
   /* ⚑ 3인 비평의 나머지 절반을 **기각한 것**을 못박는다 — 이 셋이 흔들리면 판단을 다시 해야 한다.
      («탭바·상점 서브탭도 상자가 그림보다 넓다» 는 2회차 시트의 배율 결함이 만든 값이었다.) */
@@ -346,9 +390,7 @@ const run = (args) => execFileSync('node', args.map((a, i) => i === 0 ? path.joi
     outside.length ? outside.map(c => '#' + c.i + ' ' + c.ix + ' > ' + c.bx).join(' · ')
       : '6칸 전부 상자 안 (' + Math.min(...capInk.map(c => c.bx - c.ix)).toFixed(1) + '~'
         + Math.max(...capInk.map(c => c.bx - c.ix)).toFixed(1) + 'px 왼쪽)');
-  const pc = run(['tools/probe471c.js']);
-  const pcInk = [...pc.matchAll(/^\d+\s+\S+\s+\S*\s+[\d.]+ \/ [\d.]+\s+([\d.]+) \/ ([\d.]+)/gm)]
-    .map(m => ({ r: +m[1], t: +m[2] }));
+  const pcInk = pc() || [];
   const drift = capInk.length === 6 && pcInk.length === 6
     ? capInk.map((c, i) => Math.max(Math.abs(c.ix - pcInk[i].r), Math.abs(c.iy - pcInk[i].t))) : null;
   ok(drift && Math.max(...drift) <= 1,

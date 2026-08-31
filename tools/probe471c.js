@@ -73,11 +73,30 @@ const r2 = v => Math.round(v * 100) / 100;
   /* 클립 3장 차분 → 잉크 bbox (페이지 좌표). probe471 의 방식과 같은 문턱·같은 배제 규칙. */
   const inkOf = async (idx, clip) => {
     const shot = () => page.screenshot({ clip });
+    /* ⚠⚠ **닷을 세 장 모두에서 숨긴 채로 잰다.** 닷이 켜져 있으면 그것이 글리프의 **우상단을 덮어**
+       A·B 양쪽에서 같은 화소가 되고 그 자리는 차분에서 사라진다 ⇒ 잉크 상자가 «안쪽으로» 작게
+       읽힌다(수리 전 이 자: 우 −2.5 · 상 +2.5). 하필 우리가 재려는 것이 그 코너다.
+       `probe471 --ink` 는 처음부터 닷을 숨기고 재므로 안 맞추면 자매 자가 갈린다(385). */
+    const dot = (show) => page.evaluate(([i, sh]) => {
+      const d = document.querySelectorAll('.side .ibtn')[i].querySelector('.bdg');
+      if (d) d.style.visibility = sh ? '' : 'hidden';
+    }, [idx, show]);
+    /* ⚠⚠⚠ **잉크를 잴 때는 전투 캔버스를 도로 보이게 한다** — `probe471` 이 `--ink` 에서 그러는 것과
+       같은 이유다(281행 «자가 만든 유령»). 숨긴 채로 재면 뒤가 새까매서 `.si` 의 근흑 외곽선
+       (`drop-shadow` 4방향 · 2.3px)이 «검정 위 검정» 이라 차분에서 사라지고 잉크 상자가
+       **우 −2.5 · 상 −2.5px** 작게 나온다. `step` 은 이미 빈 함수라 정지 화면이다. */
+    const view = (show) => page.evaluate(sh => {
+      const v = document.getElementById('view'); if (v) v.style.visibility = sh ? '' : 'hidden';
+    }, show);
+    await view(true);
+    await dot(false);
     const A = await shot();
     await page.evaluate(i => { const e = document.querySelectorAll('.side .ibtn')[i].querySelector('.si'); e.dataset.v471 = e.style.visibility || ''; e.style.visibility = 'hidden'; }, idx);
     const B = await shot();
     await page.evaluate(i => { const e = document.querySelectorAll('.side .ibtn')[i].querySelector('.si'); e.style.visibility = e.dataset.v471 || ''; delete e.dataset.v471; }, idx);
     const A2 = await shot();
+    await dot(true);
+    await view(false);
     return page.evaluate(async ([a64, b64, a264, cl, dsf]) => {
       const load = async (s) => {
         const img = new Image();
@@ -155,7 +174,7 @@ const r2 = v => Math.round(v * 100) / 100;
     const X = mm(dxs), Y = mm(dys);
     const cs = rows[0].geo;
     console.log('\n요약');
-    console.log('  제품 상수  — `--dot-in-x` ' + cs.inX + ' · `--dot-in-y` ' + cs.inY + ' (6칸 공용 · 4회차가 «6칸 평균 잉크» 로 정한 값)');
+    console.log('  제품 상수  — `--dot-in-x` ' + cs.inX + ' · `--dot-in-y` ' + cs.inY + ' (6칸 공용 · 7회차에 «진짜 6칸 평균» 으로 다시 앉혔다 — 4회차의 20 은 대표 한 칸 값이었다)');
     console.log('  잉크 dxRi  — 최소 ' + r2(X.min) + ' · 최대 ' + r2(X.max) + ' · 평균 ' + r2(X.avg) + ' ⇒ **편차 ' + r2(X.max - X.min) + 'px**');
     console.log('  잉크 dyTi  — 최소 ' + r2(Y.min) + ' · 최대 ' + r2(Y.max) + ' · 평균 ' + r2(Y.avg) + ' ⇒ 편차 ' + r2(Y.max - Y.min) + 'px');
     /* 배치(상자) 축은 흔들리지 않는다는 반대편 사실도 같이 싣는다 — BX 의 «배치 편차 0.0px» 검산. */
