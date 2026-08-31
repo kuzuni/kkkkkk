@@ -34,9 +34,12 @@ const ok = (c, m) => { c ? pass++ : fail++; console.log((c ? '  ok   ' : '  FAIL
    킬 수가 시행마다 갈리면 «0 이 나온 이유» 가 «안 죽어서» 인지 «연출을 껐기» 때문인지 못 가른다.
    적이 모자라면 제품의 스폰 경로(`queueMobs`)로 채운다(손으로 만든 가짜 적을 넣지 않는다 —
    `e.T`·`e.gold` 가 없으면 `burst`·드랍이 통째로 안 돌아 [3] 이 헛초록이 된다). */
-const KILLS = `async ({ killfx, n }) => {
+const KILLS = `async ({ killfx, n, stall }) => {
   const raf = () => new Promise(r => requestAnimationFrame(r));
   if (killfx) FX_COMBAT_FX.kill = true;
+  /* 603 §R — «표시값이 정말로 안 따라잡으면» 이 축이 빨개지는가. 롤 길이를 60초로 늘려
+     제품의 수렴을 멈춰 세운다(제품 파일은 안 건드린다 — 자가 자기 대조군을 만든다). */
+  if (stall) fxRollDur.gold = 60;
   S.bossFarm = true;                                  /* 273 «파밍 대기» — 새 보스전이 서지 않는다 */
   document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n2 => n2.remove());
   await new Promise(r => setTimeout(r, 900));
@@ -58,32 +61,51 @@ const KILLS = `async ({ killfx, n }) => {
   const partCol = new Set();
   let killed2 = 0, partMax = 0, lcMax = 0, held = 0, frames = 0, lagMax = 0, dips = 0;
   let prevDisp = fxDisp.gold;
+  /* 603 — «따라잡았는가» 를 **한 순간이 아니라 창 전체**로 잰다.
+     뿌리(probe603): 이 씬은 S.bossFarm 으로 새 보스전만 막고 **주변 자동 전투는 그대로 돈다** —
+     꼬리 창에도 킬이 3회쯤 더 떨어지고, 롤링은 목표가 바뀔 때마다 처음부터 다시 도는 0.32초 트윈이다.
+     그래서 «마지막 프레임의 남은 차이» 는 제품이 아니라 **마지막 킬이 언제 떨어졌는지**를 잰다
+     (probe603 12회: 마지막 수입이 320ms 안이면 예외 없이 빨강 8회 · 밖이면 예외 없이 초록 4회).
+     대신 재는 것: **수입이 끊긴 뒤 못 따라잡고 있는 시간의 최대치**(maxStale). 제품이 멈춰 있으면
+     이 값이 창 길이만큼 커지고, 정상이면 롤 길이 안에 머문다. */
+  let prevGold = S.gold, tLastGain = performance.now(), tPrev = performance.now();
+  let maxStale = 0, convFrames = 0, frameMax = 0, tailGains = 0, tailMs = 0, maxGap = 0;
+  const sample = (tail) => {
+    frames++;
+    const now = performance.now();
+    frameMax = Math.max(frameMax, now - tPrev); tPrev = now;
+    /* maxGap = 창 안의 가장 긴 «수입이 없는» 구간. 표시값과 무관한 값이라 [6c] 의 전제로 쓴다 —
+       이것이 허용치보다 짧으면 [6c] 는 애초에 빨개질 수 없다(헛초록). */
+    if (S.gold > prevGold + 1e-9) { maxGap = Math.max(maxGap, now - tLastGain); tLastGain = now; prevGold = S.gold; if (tail) tailGains++; }
+    partMax = Math.max(partMax, parts.length);
+    for (const q of parts) if (q && q.c) partCol.add(q.c);
+    lcMax = Math.max(lcMax, document.getElementById('fxlc').childElementCount);
+    if (fxHold.gold > now) held++;
+    const lag = S.gold - fxDisp.gold;
+    lagMax = Math.max(lagMax, lag);
+    if (lag > 1e-9) maxStale = Math.max(maxStale, now - tLastGain); else convFrames++;
+    if (fxDisp.gold < prevDisp - 1e-9) dips++; prevDisp = fxDisp.gold;
+  };
   /* «초당 수십 킬» 구간 — 한 프레임에 여러 마리씩 죽인다(592 ⑥ 이 재려는 그 구간이다) */
   for (let i = 0; i < 40 && killed2 < n; i++) {
     if (enemies.length < 3) queueMobs();
     for (let j = 0; j < 4 && killed2 < n && enemies.length; j++) { killEnemy(enemies[0]); killed2++; }
     await raf();
-    frames++;
-    partMax = Math.max(partMax, parts.length);
-    for (const q of parts) if (q && q.c) partCol.add(q.c);
-    lcMax = Math.max(lcMax, document.getElementById('fxlc').childElementCount);
-    if (fxHold.gold > performance.now()) held++;
-    lagMax = Math.max(lagMax, S.gold - fxDisp.gold);
-    if (fxDisp.gold < prevDisp - 1e-9) dips++; prevDisp = fxDisp.gold;
+    sample(false);
   }
   /* 묶음이 뒤늦게 발사될 수 있으므로(디바운스 45ms · 누적 900ms) 충분히 더 돈다 */
-  for (let i = 0; i < 90; i++) {
-    await raf(); frames++;
-    partMax = Math.max(partMax, parts.length);
-    for (const q of parts) if (q && q.c) partCol.add(q.c);
-    lcMax = Math.max(lcMax, document.getElementById('fxlc').childElementCount);
-    if (fxHold.gold > performance.now()) held++;
-    lagMax = Math.max(lagMax, S.gold - fxDisp.gold);
-    if (fxDisp.gold < prevDisp - 1e-9) dips++; prevDisp = fxDisp.gold;
-  }
+  const tTail = performance.now();
+  for (let i = 0; i < 90; i++) { await raf(); sample(true); }
+  tailMs = Math.round(performance.now() - tTail);
   mo.disconnect();
   return {
     dips, endLag: +Math.max(0, S.gold - fxDisp.gold).toFixed(6),
+    sinceLastGain: Math.round(performance.now() - tLastGain),
+    maxStaleMs: Math.round(maxStale), convFrames, frames, frameMaxMs: Math.round(frameMax),
+    maxGapMs: Math.round(Math.max(maxGap, performance.now() - tLastGain)),
+    tailGains, tailMs,
+    /* 롤 길이는 **제품에게 묻는다** — 자에 상수를 적으면 표가 두 벌이 된다(402·338). */
+    rollMs: Math.round((fxRollDur.gold || FXROLL) * 1000),
     killed: killed2, realKills: S.totalKills - k0, gold: +(S.gold - g0).toFixed(3),
     fly:  born.filter(b => /fx-fly/.test(b.cls)).length,
     flyL: [...new Set(born.filter(b => /fx-fly/.test(b.cls)).map(b => b.layer))],
@@ -234,7 +256,27 @@ async function boot(browser) {
      ⓒ 끝에 **따라잡는가** 셋이다. 되돌린 사본에서 ⓐ 가 34% 로 뜨는 것이 이 자의 대조군이다([R3]). */
   ok(k.heldPct === 0, '[6a] 비행이 HUD 숫자를 붙잡는 프레임 0% — ' + k.heldPct + '%');
   ok(k.dips === 0, '[6b] 표시값이 뒤로 가는 프레임 0(떨림) — ' + k.dips);
-  ok(k.endLag === 0, '[6c] 창이 끝날 때 표시값이 실제 보유량을 따라잡았다 — 남은 차이 ' + k.endLag);
+  /* ⚠ 603 — 여기는 「창이 끝나는 한 프레임」 을 보던 자리였고 그래서 실행마다 흔들렸다.
+     같은 질문(«따라잡는가»)을 **창 전체**에 묻는다: 수입이 끊긴 뒤에도 뒤처져 있는 시간의 최대치.
+     ⓐ 이 축이 유효한 것은 [6a] 가 «홀드 0%» 를 같은 실행에서 못박기 때문이다(홀드는 «일부러 붙잡는»
+        시간이라 그게 있으면 정체는 정상이다). ⓑ 허용치는 롤 길이 + 프레임 두 장이고, 제품이 정말
+        멈추면 이 값은 창 길이(~2000ms)로 커진다 = 대여섯 배 밖이다(무르게 넓힌 오차가 아니다 · §R5). */
+  /* 허용치 = 롤 길이 + 프레임 두 장. 프레임 몫에 상한(100ms)을 둔 이유: 롤은 dt 누적이 아니라
+     **시작 시각 기준** 트윈이라(58 14회차) 프레임이 길어져도 안 늘어난다 — 프레임 몫은 «한 프레임에
+     한 번만 재는» 표본 간격을 갚는 것뿐이다. 상한이 없으면 부하가 심한 기계에서 허용치가 같이 부풀어
+     «느려질수록 무르게 통과하는» 자가 된다. */
+  const rollAllow = k.rollMs + 2 * Math.min(k.frameMaxMs, 100);
+  ok(k.maxGapMs > rollAllow,
+     '[6c-전제] 창 안에 «수입이 끊긴» 구간이 허용치보다 길게 있다(없으면 아래 항은 빨개질 수 없다) — 최장 공백 '
+     + k.maxGapMs + 'ms > ' + rollAllow + 'ms');
+  ok(k.maxStaleMs <= rollAllow,
+     '[6c] 수입이 끊기면 표시값은 **롤 길이 안에** 반드시 따라잡는다 — 최대 정체 ' + k.maxStaleMs
+     + 'ms (허용 ' + k.rollMs + '+2프레임=' + rollAllow + 'ms · 창 ' + k.tailMs + 'ms)');
+  ok(k.endLag === 0 || k.sinceLastGain < k.rollMs,
+     '[6d] 마지막 프레임이 뒤처져 있다면 그것은 «롤이 아직 도는 중» 일 때뿐이다 — 남은 차이 '
+     + k.endLag + ' · 마지막 수입 ' + k.sinceLastGain + 'ms 전 (꼬리 창 수입 ' + k.tailGains + '회)');
+  ok(k.convFrames > 0,
+     '[6e] 그 창에서 표시값이 실제로 «따라잡은» 프레임이 있다(축이 헛초록이 아니다) — ' + k.convFrames + '/' + k.frames + '프레임');
   ok(k.lcMax === 0, '[8] 그 구간의 `#fxlc` 동시 노드 0 — ' + k.lcMax);
 
   /* ── [4] 보스 킬 big 분기 ─────────────────────────────────────────────── */
@@ -276,7 +318,25 @@ async function boot(browser) {
      + ' (= [6] 의 0 은 스위치가 만든 값이다)');
   ok(rk.partMax > 0 && JSON.stringify(rk.partCols.slice(0, 3)) !== '[]',
      '[R4] 되돌린 사본의 사망 파티클도 살아 있다 — 최대 ' + rk.partMax + '개 (파티클은 스위치와 무관 = [3] 이 코인 얘기가 아니다)');
-  const errs = rv.errs.concat(cur.errs, c1.errs, c2.errs);
+  /* ── §R5(603) — [6c] 의 되돌림 시험. 제품의 수렴을 멈춰 세우면 그 축이 **빨개져야** 한다.
+     안 그러면 [6c] 는 «표시값이 영영 안 따라잡아도 초록» 인 무른 항이다. 비교 기준은
+     이번 실행에서 [6c] 가 실제로 쓴 그 허용치(k.rollMs + 2프레임)를 그대로 쓴다. */
+  const sv = await boot(b);
+  const st = await sv.p.evaluate(eval('(' + KILLS + ')'), { killfx: false, n: 20, stall: true });
+  console.log('  [i] 정체(롤 60초로 세움) — ' + JSON.stringify({
+    maxStaleMs: st.maxStaleMs, convFrames: st.convFrames, endLag: st.endLag, tailMs: st.tailMs }));
+  const bound = rollAllow;
+  /* ⚑ 둘로 나눠 놓은 이유 — [R5] 는 수입 간격과 무관하게 항상 성립하고(정체된 표시값은 창 130프레임
+     내내 한 번도 못 따라잡는다), [R6] 은 «공백이 허용치보다 긴 구간이 있었나» 에 매달린다.
+     그래서 [R6] 은 그 전제(st.maxGapMs)를 같은 줄에 적어 둔다 — [6c-전제] 와 같은 자다. */
+  ok(st.convFrames === 0,
+     '[R5] 표시값의 수렴을 멈춰 세우면 창 내내 **한 번도** 따라잡지 못한다([6e] 빨강) — 따라잡은 프레임 '
+     + st.convFrames + '/' + st.frames + ' (정상 실행은 ' + k.convFrames + '/' + k.frames + ')');
+  ok(st.maxStaleMs > bound,
+     '[R6] 그 사본은 [6c] 도 같이 빨개진다 — 정체 ' + st.maxStaleMs + 'ms > 허용 ' + bound
+     + 'ms (그 사본의 최장 공백 ' + st.maxGapMs + 'ms · 정상 실행은 ' + k.maxStaleMs + 'ms = 무르게 넓힌 오차가 아니다)');
+  const errs = rv.errs.concat(cur.errs, c1.errs, c2.errs, sv.errs);
+  await sv.ctx.close();
   await rv.ctx.close();
 
   ok(errs.length === 0, '[X] 콘솔 에러 0건 — ' + JSON.stringify(errs.slice(0, 3)));
