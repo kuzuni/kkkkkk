@@ -15,12 +15,34 @@
      복도 다이아 x1040.0 흔들림 0.6px(리뷰 «1040 · 0px») · 퍼짐 181.4px(≤200) ·
      첫 도착 548ms / 마지막 1265~1305ms(선언 500/1220 + 프레임 granularity 40~70ms) · 관통 0.
 
+   ⚑ 570(2026-08-31) — 타이밍 축 셋을 «벽시계 표본» 에서 **제품 자신의 신호**로 갈아 끼웠다.
+      증상: 단독 6회 연속 21/21 인데 같은 자 3개를 동시에 돌리면 19/21 · 20/21 로 갈렸다.
+      `tools/probe570.js` 로 갈래를 갈랐다(부하 = 16ms 마다 메인 스레드를 n ms 태운다):
+        · **«역행» 이 빨간 것은 역행 때문이 아니었다** — 실패문이 `역행 0/31표본 (0)` 이다.
+          한 `ok()` 안에 «표본 40개 이상» 이라는 **전제**와 «역행 0» 이라는 **본체**가 같이 들어 있어,
+          프레임이 성기면 전제가 먼저 무너진다(표본 59 → 31). 표본 수는 **러너 속도**이지 사양이 아니다.
+        · **피크는 표본 위상이 아니라 «제품 프레임 간격» 에 물린다.** `fxPzTick` 은 고원
+          `FX3_PZ_HOLD`(50ms)를 `h -= dt` 로 깎고 h ≤ 0 이면 **dt 전체**로 감쇠한다 —
+          dt 가 50ms 를 넘는 순간 봉우리가 한 프레임도 안 남고 ×1.220 → **×1.072 로 계단**이 진다.
+          즉 «표본을 촘촘히 해서» 되찾을 수 있는 값이 아니다(부하 20ms 에서 고원 안 제품 프레임 0/4).
+        · 듀티도 같은 뿌리 — 표본 기준 42.9~57.1% 로 판정선 55 를 **가로지른다.**
+      ⇒ 처방(등재문 ⓐ · 556 «벽시계 → 작업량 예산» 과 같은 길): 축을 **연출 자신의 신호**로 다시 적는다.
+        · 국면은 제품의 `f.t`/`f.ha` 에서 읽는다(«100px 위로 갔으면 흡수» 라는 눈대중 폐기).
+        · 봉우리·듀티는 제품이 **선언한** 것(비트 로그 `fxBeatLog` · `fxPz` 진폭)과
+          **그린 것**(인라인 `style.transform`)을 각각 묻는다. 둘 다 프레임 간격과 무관하다.
+        · 샘플러 자신이 부하다 — `getBoundingClientRect`+`getComputedStyle` 로 프레임마다
+          레이아웃을 강제하던 것을 인라인 transform 읽기로 바꿨다(`probe570` 대조 **최대 Δ 0.00px**).
+      **허용 오차는 한 칸도 안 넓혔다**(듀티 55 · 봉우리 1.15 그대로) — 되돌림 시험은 `node tools/verify570.js`.
+
    실행: node tools/verify93.js */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
 
-const URL = 'file://' + path.resolve(__dirname, '../index.html');
+/* 570 — 되돌림 시험(`tools/verify570.js`)이 «주입 사본» 을 물릴 수 있게 하는 손잡이.
+   ⚠ 사본은 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 assets/** 가
+      통째로 404 다(360·367·438·439·453·467·471·541 선례). 평소에는 이 변수가 없다. */
+const URL = 'file://' + path.resolve(__dirname, '..', process.env.V93_SRC || 'index.html');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ✓ ' + m); } else { fail++; console.log('  ✗ ' + m); } };
 
@@ -81,9 +103,49 @@ async function run(scene, span) {
     };
     const cards = [...document.querySelectorAll('.tr-card')].map(rect);
 
+    /* ── 570 — 제품 자신의 신호를 남긴다(표본이 아니다) ────────────────────────
+       ⓐ `plog` : 제품의 틱(`fxPzTick`)이 **그린** 인라인 scale. 프레임마다 한 줄.
+       ⓑ `mism` : 그 틱에서 «그림(인라인 scale) ≠ 선언(`fxPz` 진폭)» 인 프레임.
+       ⓒ `dlog` : 비트(`fxPzHit`) **직후의 진폭** — 프레임과 무관한 «선언» 그 자체.
+       셋 다 레이아웃을 안 건드린다(인라인 style 읽기 · Map 조회). */
+    const scaleInline = (el) => {
+      if (!el || !el.style) return 1;
+      const m = /scale\(([-\d.]+)\)/.exec(el.style.transform || '');
+      return m ? parseFloat(m[1]) : 1;
+    };
+    const xyInline = (el) => {
+      const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec((el.style && el.style.transform) || '');
+      return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : null;
+    };
+    const plog = [], mism = [], dlog = [];
+    const gp0 = pillEl('gold'), dp0 = pillEl('dia');
+    const oTick = window.fxPzTick, oHit = window.fxPzHit;
+    window.fxPzTick = function () {
+      const r = oTick.apply(this, arguments);
+      for (const el of [gp0, dp0]) {
+        const st = (typeof fxPz !== 'undefined') ? fxPz.get(el) : null;
+        if (!st) continue;
+        const want = +(1 + st.a).toFixed(4), got = scaleInline(el);
+        if (Math.abs(want - got) > 1e-4) mism.push([Math.round(performance.now()), want, got]);
+      }
+      /* `h` = 고원의 잔량. h > 0 인 틱은 «진폭을 안 깎은 틱» 이므로 그 프레임에는 봉우리가
+         반드시 그려져 있어야 한다 — [4-e] 의 등급 가능 조건을 시각으로 «추정» 하지 않고 여기서 읽는다. */
+      const sg1 = (typeof fxPz !== 'undefined' && fxPz.get(gp0)) ? fxPz.get(gp0).h : -1;
+      const sd1 = (typeof fxPz !== 'undefined' && fxPz.get(dp0)) ? fxPz.get(dp0).h : -1;
+      plog.push([performance.now(), scaleInline(gp0), scaleInline(dp0), sg1, sd1]);
+      return r;
+    };
+    window.fxPzHit = function (el) {
+      const r = oHit.apply(this, arguments);
+      const st = (typeof fxPz !== 'undefined') ? fxPz.get(el) : null;
+      if (st) dlog.push([Math.round(performance.now()), st.a, st.h, el === dp0 ? 'd' : 'g']);
+      return r;
+    };
+
     const frames = [];
     const t0 = performance.now();
     let p0 = null;
+    const beat0 = (typeof fxBeatLog !== 'undefined') ? fxBeatLog.length : 0;
     const punch0 = (typeof fxPunchN === 'number') ? fxPunchN : 0;
     if (sc === 'quest') {
       const b = document.getElementById('qAll');
@@ -99,23 +161,30 @@ async function run(scene, span) {
     await new Promise((res) => {
       const tick = () => {
         const t = performance.now() - t0;
-        const list = [...document.querySelectorAll('.fx-fly')].map((el) => {
+        /* 570 — 좌표는 «제품이 쓴 인라인 transform» 을 그대로 읽는다(레이아웃 강제 0회).
+           `probe570` 대조: rect 중심 ↔ 인라인 translate **최대 Δ 0.00px** — 같은 것을 잰다.
+           국면(`ph`)은 제품의 `fxFlies` 에서 온다 — «몇 px 올라갔나» 로 국면을 추정하지 않는다. */
+        const phMap = new Map();
+        if (typeof fxFlies !== 'undefined') for (const f of fxFlies) if (f.ui) phMap.set(f.el, f);
+        const list = [];
+        for (const el of document.querySelectorAll('.fx-fly')) {
           if (el.__v93 === undefined) el.__v93 = (window.__v93n = (window.__v93n || 0) + 1);
-          const r = el.getBoundingClientRect();
+          const g = xyInline(el); if (!g) continue;      /* transform 이 아직 안 걸린 프레임 = 배치 전 */
           const ic = el.querySelector('.cic');
-          return {
+          const f = phMap.get(el);
+          list.push({
             i: el.__v93, cur: ic ? ic.getAttribute('data-cur-ic') : '?',
-            x: r.left + r.width / 2, y: r.top + r.height / 2,
+            x: g.x, y: g.y, ph: f ? { t: f.t, ha: f.ha } : null,
             lo: !!el.closest('#fxlc'), up: !!el.closest('#fxl'),
-          };
-        });
+          });
+        }
         const delta = [...document.querySelectorAll('.fx-delta')].map((el) => {
           const r = el.getBoundingClientRect();
           return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
         });
         frames.push({
           t: Math.round(t), list, delta,
-          sg: scaleOf(gp), sd: scaleOf(dp),
+          sg: scaleInline(gp), sd: scaleInline(dp),
           punch: ((typeof fxPunchN === 'number') ? fxPunchN : 0) - punch0,
           gold: (document.getElementById('goldN') || {}).textContent,
           dia: (document.getElementById('diaN') || {}).textContent,
@@ -126,8 +195,12 @@ async function run(scene, span) {
       requestAnimationFrame(tick);
     });
     const leftover = document.querySelectorAll('.fx-fly, .fx-plus, .fx-lit').length;
+    window.fxPzTick = oTick; window.fxPzHit = oHit;
+    const beats = (typeof fxBeatLog !== 'undefined')
+      ? fxBeatLog.slice(beat0).map(b => [b[0] - t0, b[1]]).filter(v => v[0] >= -1) : [];
     return {
-      frames, rows, cards, p0, leftover,
+      frames, rows, cards, p0, leftover, beats, mism: mism.length,
+      plog: plog.map(r => [Math.round(r[0] - t0), r[1], r[2], r[3], r[4]]), dlog,
       goldPill: pillC('gold'), diaPill: pillC('dia'),
       outX: (typeof fx3Out === 'function' && p0) ? fx3Out(p0) : 0,
       K: {
@@ -135,6 +208,8 @@ async function run(scene, span) {
         ARR0: typeof FX3_ARR0 === 'number' ? FX3_ARR0 : 0.50,
         ARR1: typeof FX3_ARR1 === 'number' ? FX3_ARR1 : 1.22,
         PZMAX: typeof FX3_PZ_MAX === 'number' ? FX3_PZ_MAX : 0.22,
+        PZHOLD: typeof FX3_PZ_HOLD === 'number' ? FX3_PZ_HOLD : 0.05,
+        PZTAU: typeof FX3_PZ_TAU === 'number' ? FX3_PZ_TAU : 0.045,
         FLYMAX: typeof FXFLY_MAX === 'number' ? FXFLY_MAX : 32,
         FLYMAXC: typeof FXFLY_MAX_C === 'number' ? FXFLY_MAX_C : 12,
         /* 42회차 — 이 창은 «리터럴 330» 이 아니라 **소스 상수에서 파생**시킨다.
@@ -241,29 +316,87 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
     ok(mx - mn <= 14, `복도 ${k} 흔들림 ${(mx - mn).toFixed(1)}px (≤14)`);
   }
 
-  /* ── [3] 흡수 중 아래로 되돌아가는 프레임 0 ─────────────────── */
-  console.log('[3] 흡수 개시 뒤 y 역행 0 (머묾의 «부유» 는 사양이라 세지 않는다)');
+  /* ── [3] 흡수 중 아래로 되돌아가는 프레임 0 ───────────────────
+     ⚑ 570 — 전제와 본체를 갈랐다(341 «[전제] 절» 선례). 종전 한 줄은
+       `ok(moved > 40 && backs === 0, …)` 이라 **표본이 40개 안 되면 «역행» 이 빨개진다** —
+       3중 부하에서 실제로 그렇게 죽었다(`역행 0/31표본 (0)`: 역행은 0인데 빨강).
+       전제는 «표본 수»(= 러너 속도) 가 아니라 **아이콘 수**(= 사양, 543 이후 3~6)로 세운다.
+     ⚑ 국면도 «첫 표본에서 100px 위» 라는 눈대중을 버리고 제품의 `f.t ≥ f.ha` 로 읽는다.
+       흡수 국면의 y 는 시간의 순함수(단조)라 **허용 오차 0px** 이 정확한 자다 —
+       종전 «+2px» 은 머묾의 부유를 흘려보내려던 완충인데, 표본 간격이 벌어지면
+       같은 부유가 한 표본에 2px 을 넘어 «역행» 으로 찍힌다(자가 러너 속도를 재는 자리). */
+  console.log('[3] 흡수 국면 y 역행 0 — 국면은 제품 자신의 f.t/f.ha 로 고른다 (570)');
   let backs = 0, moved = 0; const stM = new Map();
   for (const f of q.frames) for (const s of f.list) {
-    if (!placed(s)) continue;
+    if (!placed(s) || !s.ph || s.ph.t < s.ph.ha) continue;
     const key = s.cur + ':' + s.i;
-    const st = stM.get(key) || { y0: s.y, on: false, prev: s.y };
-    if (!st.on && s.y < st.y0 - 100) st.on = true;
-    if (st.on) { moved++; if (s.y > st.prev + 2) backs++; }
+    const st = stM.get(key) || { prev: s.y, n: 0 };
+    moved++; st.n++; if (s.y > st.prev) backs++;
     st.prev = s.y; stM.set(key, st);
   }
-  ok(moved > 40 && backs === 0, `역행 ${backs}/${moved}표본 (0)`);
+  const absFly = [...stM.values()].filter(v => v.n >= 2).length;
+  ok(absFly >= 3, `[3-전제] 흡수 국면 표본이 2개 이상인 아이콘 ${absFly}종 (≥3 = [5] 하한과 같은 사양)`);
+  ok(backs === 0, `역행 ${backs}/${moved}표본 (0 — 허용 0px)`);
 
-  /* ── [4] 알약 펄스 (93 12회차) ──────────────────────────── */
-  console.log('[4] 알약 펄스 — 피크 · 왕복 · 듀티 (93 12회차)');
+  /* ── [4] 알약 펄스 (93 12회차 · 570 재작성) ──────────────────────────
+     ⚑ 570 — «표본으로 봉우리를 세는» 자를 폐기했다. 뿌리는 표본 위상이 아니라 **제품 프레임 간격**이다:
+       `fxPzTick` 은 고원(`FX3_PZ_HOLD`)을 `h -= dt` 로 깎고 h ≤ 0 이면 **dt 전체**로 감쇠하므로,
+       dt > 50ms 인 순간 봉우리가 한 프레임도 «그려지지» 않는다(×1.220 → ×1.072 계단).
+       그건 이 기기의 프레임 사정이지 연출의 규격이 아니다 — 규격은 셋으로 갈라 묻는다.
+         [4-a] 선언  : 비트마다 진폭이 FX3_PZ_MAX 로 올라간다      (프레임 무관 — fxPzHit 직후 값)
+         [4-b] 그림  : 제품이 매 틱 «선언한 값 그대로» 그린다      (프레임 무관 — 인라인 scale ↔ fxPz.a)
+         [4-c] 고원  : 고원이 60fps 한 프레임보다 길다             (설계 보장 — 정상 기기면 반드시 보인다)
+       셋이 참이면 «봉우리 ×1.22 가 화면에 남는다» 가 따라 나온다. 아래 [4-e] 는 그 귀결을
+       실제로 그려진 값으로 한 번 더 확인하되, **고원 안에 제품 프레임이 하나도 없던 실행**
+       (= 이 기기가 느렸던 실행)에서는 등급하지 않는다 — 그 자리는 [4-a]~[4-c] 가 문다. */
+  console.log('[4] 알약 펄스 — 선언 · 그림 · 고원 · 듀티 (93 12회차 · 570 재작성)');
   const scaleKey = dia.first !== null ? 'sd' : 'sg';
-  const win = q.frames.filter(f => f.t >= (A.first || 0) - 40 && f.t <= (B.last || 1300) + 120);
-  const peak = Math.max(...win.map(f => f[scaleKey]));
+  const pi = scaleKey === 'sd' ? 2 : 1;
+  const hits = q.dlog.filter(r => r[3] === (scaleKey === 'sd' ? 'd' : 'g'));
+  const declMin = hits.length ? Math.min(...hits.map(r => r[1])) : 0;
+  ok(hits.length >= 4 && declMin >= K.PZMAX - 1e-9,
+    `[4-a] 선언 — 비트 ${hits.length}회(≥4) 전부 진폭 ≥ FX3_PZ_MAX ${K.PZMAX} (최소 ${declMin.toFixed(4)})`);
+  ok(q.mism === 0, `[4-b] 그림 = 선언 — 제품 틱 ${q.plog.length}회 중 인라인 scale ≠ 1+a 인 프레임 ${q.mism}건 (0)`);
+  ok(K.PZHOLD * 1000 >= 1000 / 60, `[4-c] 고원 ${(K.PZHOLD * 1000).toFixed(0)}ms ≥ 60fps 한 프레임 16.7ms (FX3_PZ_HOLD)`);
   const beats = Math.max(...q.frames.map(f => f.punch));
-  const duty = win.filter(f => f[scaleKey] > 1.005).length / Math.max(1, win.length);
-  ok(peak >= 1.15 && peak <= 1 + K.PZMAX + 0.02, `피크 배율 ×${peak.toFixed(3)} (1.15 ~ ${(1 + K.PZMAX).toFixed(2)} = 1+FX3_PZ_MAX)`);
   ok(beats >= 4, `왕복(fxPunchN 증가) ${beats}회 (≥4)`);
-  ok(duty >= 0.55, `듀티 ${(duty * 100).toFixed(1)}% (≥55%)`);
+
+  /* [4-d] 듀티 — 비트 시각(`fxBeatLog`)과 감쇠 법칙만으로 «켜져 있는 시간의 비» 를 낸다.
+     종전 «표본 중 scale>1.005 인 프레임 비율» 은 부하에서 42.9~57.1% 로 판정선 55 를 가로질렀다.
+     여기서 쓰는 것은 제품이 선언한 값뿐이다 — 고원 + τ·ln(진폭/문턱). 판정선 55 는 그대로다. */
+  const ONMS = K.PZHOLD * 1000 + K.PZTAU * 1000 * Math.log(K.PZMAX / 0.005);
+  /* 비트 시각은 «내가 재는 그 알약» 의 것만 골라야 한다. 재화 구분은 **요소 동일성**(`el === dp0`)으로
+     한다 — 제품의 `fxBeatLog` 둘째 칸('d'/'g')도 같은 답을 내지만(아래 관측 줄이 매 실행 대조한다),
+     그 칸은 `className` 에 'cDia' 가 있는지로 가르므로 알약 마크업이 바뀌면 조용히 어긋난다. */
+  const bcur = scaleKey === 'sd' ? 'd' : 'g';
+  const bt = q.dlog.filter(r => r[3] === bcur && Math.abs(r[2] - K.PZHOLD) < 1e-9)
+    .map(r => r[0]).sort((a, b) => a - b);
+  let duty = 0;
+  if (bt.length >= 2) {
+    let on = 0;
+    for (let i = 0; i < bt.length; i++) on += Math.min(ONMS, (i + 1 < bt.length ? bt[i + 1] : Infinity) - bt[i]);
+    duty = on / Math.max(1, bt[bt.length - 1] + ONMS - bt[0]);
+  }
+  ok(bt.length >= 4, `[4-d 전제] ${bcur === 'd' ? '다이아' : '골드'} 비트 ${bt.length}건 (≥4 — fxPzHit 직후의 고원 개시, 표본이 아니다)`);
+  ok(duty >= 0.55, `[4-d] 듀티(선언) ${(duty * 100).toFixed(1)}% (≥55% · 켜짐 ${ONMS.toFixed(0)}ms = 고원 + τ·ln(${K.PZMAX}/0.005))`);
+
+  /* [4-e] 그려진 봉우리 — 고원 안에 제품 프레임이 있었던 비트만 등급한다 */
+  /* 등급 가능 조건을 시각으로 «추정» 하지 않는다 — 제품이 남긴 고원 잔량 `h` 를 직접 읽는다.
+     h > 0 인 틱 = 그 프레임에서 `fxPzTick` 이 진폭을 한 번도 안 깎았다 = 봉우리가 그려져 있어야 한다.
+     프레임이 고원(50ms)보다 성긴 실행에서는 그런 틱이 **한 장도 없고**(등급 불가), 그 자리는
+     [4-a](선언) · [4-b](그림=선언) · [4-c](고원 길이)가 대신 문다. 판정선 1.15 는 그대로다. */
+  const hi = pi === 2 ? 4 : 3;
+  const live = q.plog.filter(r => r[hi] > 0);
+  const peakOn = live.length ? Math.min(...live.map(r => r[pi])) : 0;
+  const peakAll = Math.max(...q.plog.map(r => r[pi]), 1);
+  const tail = live.length === 0
+    ? ' — 이 실행은 프레임이 고원보다 성겨 등급 불가, [4-a]~[4-c] 가 문다'
+    : ' · 1.15 ~ ' + (1 + K.PZMAX).toFixed(2);
+  ok(live.length === 0 || (peakOn >= 1.15 && peakOn <= 1 + K.PZMAX + 0.02),
+    `[4-e] 고원(h>0)이 살아 있던 틱 ${live.length}장의 최소 배율 ×${peakOn.toFixed(3)}${tail}`);
+  const btLog = q.beats.filter(b => b[1] === bcur).length;
+  console.log(`      (관측) 전 구간 그려진 최대 배율 ×${peakAll.toFixed(3)} · 제품 틱 ${q.plog.length}회`
+    + ` · 비트 ${bt.length}회 (fxBeatLog 같은 재화 ${btLog}회 — 두 신호가 어긋나면 알약 마크업이 바뀐 것)`);
 
   /* ── [5] 아이콘 수 ─────────────────────────────────────── */
   console.log('[5] 아이콘 수 상한 (선언 FXFLY_MAX)');
