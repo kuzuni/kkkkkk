@@ -51,7 +51,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     if (S.opt) { S.opt.sfx = false; S.opt.bgm = false; }
     if (typeof bgmApply === 'function') { try { bgmApply(); } catch (_) {} }
     if (!window.__alive) window.__alive = setInterval(() => { try { if (S.hp != null && typeof maxHp === 'function') S.hp = maxHp(); } catch (_) {} }, 200);
-    window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [] };
+    window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [] };
     let __n = 0; const __ids = new WeakMap();
     window.__id = el => { if (!__ids.has(el)) __ids.set(el, ++__n); return __ids.get(el); };
     const oP = window.hbPulse, oF = window.hbFloat;
@@ -65,6 +65,11 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
         if (/\bfx-toast\b/.test(c)) { window.__C.toast++; window.__C.toastTxt = (window.__C.toastTxt || []); window.__C.toastTxt.push((n.textContent || '').slice(0, 40)); }
         if (/\bfx-plus\b/.test(c) && /\bhb\b/.test(c)) {
           window.__C.node.push({ dn: /\bdn\b/.test(c), col: n.style.color, txt: n.textContent });
+        }
+        /* 583 이관 — «금액» 을 뺀 자리를 무엇이 대신 말하는가: 화폐 알갱이(`.fx-fly.fx-spd`) */
+        if (/\bfx-spd\b/.test(c)) {
+          const im = n.querySelector && n.querySelector('img.cic');
+          window.__C.spd.push(im ? im.dataset.curIc : '?');
         }
       }
     }).observe(L, { childList: true, subtree: true });
@@ -90,7 +95,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     }).observe(document.body, { attributes: true, attributeFilter: ['class'], attributeOldValue: true, subtree: true });
   });
 
-  const reset = () => p.evaluate(() => { window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [] }; window.__T = 0; });
+  const reset = () => p.evaluate(() => { window.__C = { pulse: [], float: [], node: [], toast: 0, cls: [], spd: [] }; window.__T = 0; });
   const grab = () => p.evaluate(() => {
     const C = window.__C;
     return {
@@ -104,7 +109,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
       cols: [...new Set(C.node.map(x => x.col))],
       txts: [...new Set(C.node.map(x => x.txt))].slice(0, 6),
       hb: C.cls.filter(x => x.c === 'jz-hb').length, hbx: C.cls.filter(x => x.c === 'jz-hbx').length,
-      toast: C.toast, toastTxt: C.toastTxt || [], tries: window.__T || 0
+      toast: C.toast, toastTxt: C.toastTxt || [], tries: window.__T || 0,
+      spd: C.spd.length, spdCur: [...new Set(C.spd)]
     };
   });
 
@@ -274,7 +280,14 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('  · 시도 ' + F.tries + ' · 맥박 ' + F.hb + ' · 플로터 ' + F.node + ' · 비용 ' + F.fPay);
   ok(F.tries >= 8, '[F1] 훈련 홀드가 여러 번 시도한다(전제)', F.tries + '회');
   ok(F.hb === F.tries, '[F2] ★ 맥박 수 = 시도 수', F.hb + ' / ' + F.tries);
-  ok(F.fPay === F.tries, '[F3] 골드 «−n» 수 = 시도 수(HUD 알약 fxPay 는 종전 그대로 따로 돈다)', F.fPay + ' / ' + F.tries);
+  /* ⚑ 583 이관 — 주인 지시(2026-08-31 «그 훈련할때 금액 마이너스로 되는 연출 빼기»)로 **훈련만**
+     비용 «−n» 이 사라졌다(룬 [B5]·단련 [C3]·유물 [E3] 은 그대로다 — 주인이 지목한 것은 훈련이다).
+     자리를 비우지 않고 **갈아 끼운다**(333 처방): 「얼마를 냈나」 대신 「무엇으로 냈나」를 묻는다.
+     ⇒ 음성항(금액 0)과 양성항(골드 알갱이가 실제로 뜬다)을 **같이** 세운다 — 한쪽만이면
+        «연출이 통째로 사라져도 초록» 이 된다. */
+  ok(F.fPay === 0 && F.spd >= 3 && F.spdCur.length === 1 && F.spdCur[0] === 'gold',
+     '[F3] ★ 583 — 훈련은 «금액» 대신 **골드 알갱이**로 말한다(비용 플로터 0 · 화폐 알갱이 ≥ 3, 전부 gold)',
+     '비용 ' + F.fPay + ' · 알갱이 ' + F.spd + ' [' + F.spdCur.join(',') + ']');
   ok(F.fOk === 0 && F.fNo === 0, '[F4] ★ 결과 문구는 안 띄운다 — `.cv` 상시 표기 · `fx-cvswap` · 정지 시 `fxUpOk` 델타와 세 벌이 된다', (F.fOk + F.fNo) + '건');
   ok(sumT(F, /훈련/) === 1, '[F5] 훈련 홀드에도 정산 요약 토스트가 한 장 뜬다(2회차 신설 — 세 씬 마무리 층 일치)', sumT(F, /훈련/) + '장 / 전체 ' + F.toast);
 

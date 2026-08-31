@@ -395,8 +395,19 @@ async function pixelRun(page) {
   ok(/(^|;)scale:\.94(;|$)/.test(dnRule) && /(^|;)translate:0 8px(;|$)/.test(dnRule) && !/animation:/.test(dnRule),
      '[7-c2] 기존 누름 부품의 진폭(.94 / 8px)은 한 글자도 안 바뀌었다 — 25자리 회귀 0 (579: 정적 값)',
      dnRule.slice(0, 80));
-  ok(/rtFirstFx\(o\.host\);/.test(src) && /function rtFirstFx\(sel\)\{[\s\S]{0,400}?fxFlash\(h\)[\s\S]{0,200}?fxBurst\(h, FXPAL\.up, 10\)/.test(src),
-     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다');
+  /* ⚑ 583 이관 — 종전 regex 는 `rtFirstFx(o.host)` 와 «`fxFlash` 다음이 `fxBurst`» 를 글자로 물었다.
+     583 이 그 자리에 **화폐 축**을 얹으면서(주인 지시 «단련·룬도 전부 강화하는 화폐 아이콘으로»)
+     인자와 부품 순서가 바뀐다. **묻는 뜻은 그대로 두고 자리만 옮긴다**(333 처방 · [7-c2] 와 같은 꼴) —
+     ① 첫 발 자리에서 부른다 ② 대조군(`fxUpOk`)과 **같은 갈아 끼움 규칙**을 쓴다
+        (화폐 알갱이가 서면 그것, 못 쏘면 종전 앰버 버스트가 그대로 바닥이다)
+     ③ 화폐 키를 **자리마다 손으로 적지 않는다** — `PAY_CUR[o.tag]` 한 표에서 온다.
+     ⇒ 헐거워지지 않는다: `fxBurst(h, FXPAL.up, 10)` 폴백이 사라지면 여기가 빨개진다. */
+  ok(/rtFirstFx\(o\.host, PAY_CUR\[o\.tag\]\);/.test(src)
+     && /function rtFirstFx\(sel, cur\)\{[\s\S]{0,600}?fxFlash\(h\)[\s\S]{0,500}?fxSpend\(cur, h\)[\s\S]{0,300}?fxBurst\(h, FXPAL\.up, 10\)/.test(src),
+     '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다(583 — 화폐 축 포함)');
+  ok(/const PAY_CUR = \{ train:'gold', rune:'rstone', temper:'tstone' \}/.test(src)
+     && /fxUpOk\(card, card, txt, bi0\.cur\)/.test(src),
+     '[7-d1] 583 — 대조군(훈련 카드)도 **같은 표**에서 화폐 키를 받는다(결제가 돌려준다 · 자리마다 문자열 금지)');
 
   const c2 = await boot(browser, SRC);
   const pg = c2.page;
