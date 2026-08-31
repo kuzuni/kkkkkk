@@ -37,6 +37,18 @@ const ARMS = {
   anim:   { t: 'ⓔ 카드 안 애니메이션 전부 끔', css: '#shopw .shp-card *,#shopw .shp-card{animation:none!important}' },
   jzp:    { t: 'ⓕ 본문 빛 입자(.jzp)만 끔', css: '#shopw .shp-card .jzp{display:none}' },
   btn:    { t: 'ⓖ 버튼 3종(.cbtn)만 끔', css: '#shopw .shp-card .cbtn{visibility:hidden}' },
+  /* ⓔ 를 둘로 가른다 — 카드 목록은 `jzStagger` 대상이라(자식 5장이 클래스가 같다) 카드 **자신**이
+     등장 스태거 `jz-st`(opacity 0 → 1)를 달고 있고, **자식**들은 상시 앰비언트 루프다.
+     둘은 처방이 완전히 다르므로(전자는 «등장 연출», 후자는 «칠하기 비용») 반드시 갈라 재야 한다. */
+  stg:    { t: 'ⓔ-1 카드 자신의 등장 스태거만 끔', css: '#shopw .shp-card{animation:none!important}' },
+  kids:   { t: 'ⓔ-2 카드 안 앰비언트 루프만 끔', css: '#shopw .shp-card *{animation:none!important}' },
+  /* ⓞ — ⓔ-2 와 **같은 절약을 노리되 그림은 한 픽셀도 안 바꾸는** 팔.
+     `animation:none` 은 기본 스타일(0% 아닌 «선언값»)로 되돌리는데, 이 루프들은 전부
+     **음수 delay**(`-1.25s` …)로 시작 위상이 한복판이라 그림이 달라진다.
+     `animation-play-state:paused` 는 그 «음수 delay 가 가리키는 위상» 에 그대로 멈춘다
+     ⇒ 찍히는 그림은 지금과 같고, 프레임마다 돌 일만 없어진다. */
+  pause:  { t: 'ⓞ 앰비언트 루프를 «그 위상에» 멈춤(그림 동일)',
+            css: '#shopw .shp-card *{animation-play-state:paused!important}' },
   re:     { t: 'ⓜ 두 번째 열기(지금 코드 — 매번 다시 그린다)', css: '' },
   renc:   { t: 'ⓝ 두 번째 열기 · 다시 그리기 없음(«안 바뀌면 안 그린다» 상한)', css: '' },
   /* ⓗ~ⓙ — «층» 이 아니라 «장수» 를 묻는 팔. 목록은 5장인데 뷰포트에는 3.7장뿐이다
