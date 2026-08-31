@@ -248,6 +248,14 @@ for (const [id, { sha, subj }] of [...newestDone.entries()].sort((a, b) => a[0].
 /* ── §2 자기모순 판정 — 이력이 아니라 «지금 표» 만 본다 ── */
 const contra = [];
 const muteWatch = [];                              /* 축 ⓒ 를 «칸 수» 때문에 못 잰 행 (566) */
+/* 위쪽 «작업 단위» 표(헤더 4칸: ID·작업·주 편집 구간·상태)는 자리 규약이 다르다 — 축 ⓒ 는
+   «화면별 상태» 표(7칸)의 자리를 읽는 축이므로 그 표만 본다 (572). */
+const headOnly = new Set();
+for (const line of curText.split('\n')) {
+  if (/^\|\s*#\s*\|\s*화면\s*\|/.test(line)) break;
+  const g = ROW.exec(line);
+  if (g) headOnly.add(g[1]);
+}
 for (const [id, line] of cur) {
   const d = DONE_DATED.exec(line);
   if (!d) continue;                                /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
@@ -257,6 +265,9 @@ for (const [id, line] of cur) {
   if (t) { contra.push({ id, head: t[1], mark: d[0], kind: 'tail' }); continue; }
   /* 축 ⓒ 세 칸이 다 «미착수» 라는 낱말을 안 쓰는데 구현 칸이 아무 말도 안 한다 (566).
      ⓐ·ⓑ 가 이미 댄 행은 위에서 `continue` 로 빠졌다 — 겹치면 구체적인 쪽을 댄다. */
+  /* ⓐ·ⓑ 는 «낱말» 을 읽으므로 표가 달라도 그대로 도는데, ⓒ 는 **자리**를 읽는다 —
+     헤더가 4칸인 위쪽 «작업 단위» 표는 자리 규약이 달라 ⓒ 의 범위 밖이다 (572). */
+  if (headOnly.has(id)) continue;
   const cells = cellsOf(line);
   if (cells.length !== COLS) { muteWatch.push({ id, n: cells.length }); continue; }
   const impl = cells[3];

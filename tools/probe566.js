@@ -67,6 +67,17 @@ function rowsOf(text) {
   }
   return m;
 }
+/* 위쪽 «작업 단위» 표(헤더 4칸: ID·작업·주 편집 구간·상태)의 ID 들. 자리 규약이 «화면별 상태»
+ * 표(7칸)와 다르므로 칸 수를 세는 축의 범위 밖이다 — 572 가 그 표도 헤더에 맞춰 4칸으로 되돌렸다. */
+function headIds(text) {
+  const out = new Set();
+  for (const line of text.split('\n')) {
+    if (/^\|\s*#\s*\|\s*화면\s*\|/.test(line)) break;
+    const g = ROW.exec(line);
+    if (g) out.add(g[1]);
+  }
+  return out;
+}
 function tailHead(line) {
   const c = line.split('|');
   let i = c.length - 1;
@@ -122,11 +133,25 @@ if (require.main === module) {
 
   /* ── §2 판정 불가 — 칸 수가 7 이 아닌 완료행 ── */
   console.log('\n[2] 판정 불가 — 칸 수가 헤더(7)와 다른 완료행');
+  const head = headIds(text);
   const un = [];
-  for (const [id, line] of rows) { const m = muteOf(line); if (m && m.state === 'unmeasurable') un.push(id + '(' + m.n + '칸)'); }
-  ok('[2-a] 판정 불가 행을 조용히 넘기지 않고 셀 수 있다', un.length > 0, un.length + '건');
-  console.log('       ' + (listAll ? un.join(' ') : un.slice(0, 24).join(' ') + (un.length > 24 ? ' … (전체는 --list)' : '')));
-  ok('[2-b] ⚠ 이 행들은 GitHub 이 8번째 칸부터 버린다 — 별개의 결함이고 566 의 범위 밖이다', true, '범위 표시');
+  for (const [id, line] of rows) {
+    if (head.has(id)) continue;                      /* 헤더가 4칸인 위쪽 표는 범위 밖 (572) */
+    const m = muteOf(line); if (m && m.state === 'unmeasurable') un.push(id + '(' + m.n + '칸)');
+  }
+  /* ⚑ 이관(572): 등재 당시 이 항은 «판정 불가가 실제로 있다»(132건)를 재현하는 항이었다.
+     572 가 137행을 7칸으로 되돌려 그 자리가 닫혔으므로 **뜻을 뒤집어** 지금의 참을 묻는다.
+     자리를 비우지 않는다(333) — 되돌림 항 [2-c] 가 «다시 갈리면 다시 잡힌다» 를 못박는다. */
+  ok('[2-a] 판정 불가 행이 0건이다 — 572 가 137행을 7칸으로 되돌렸다', un.length === 0, un.length + '건');
+  if (un.length) console.log('       ' + (listAll ? un.join(' ') : un.slice(0, 24).join(' ') + (un.length > 24 ? ' … (전체는 --list)' : '')));
+  ok('[2-b] ⚠ 이 행들은 GitHub 이 8번째 칸부터 버린다 — 그것이 572 의 등재 사유였다', true, '범위 표시');
+  {
+    const one = [...rows].filter(([id, l]) => !head.has(id) && l.includes('<br>') && DONE_DATED.test(l))[0];
+    const back = one ? one[1].replace('<br>', '|') : null;
+    const m = back ? muteOf(back) : null;
+    ok('[2-c] 되돌림 — 합친 자리를 도로 `|` 로 가르면 그 행이 다시 «판정 불가» 로 잡힌다',
+       !!m && m.state === 'unmeasurable', one ? one[0] + ' → ' + (m ? m.n + '칸' : '안 잡힘') : '표본 없음');
+  }
 
   /* ── §3 축이 짚는 자리 — 수리 전 모양을 합성해 되짚는다 ── */
   console.log('\n[3] 축 ⓒ — 마감된 행의 구현 칸을 산문으로 되돌리면 짚힌다');
@@ -182,4 +207,4 @@ if (require.main === module) {
   process.exit(fail ? 1 : 0);
 }
 
-module.exports = { cellsOf, rowsOf, muteOf, synthMute, tailHead, DONE_DATED, NOT_YET, STATE_MARK, BARE_IMPL, COLS, ROW };
+module.exports = { cellsOf, rowsOf, headIds, muteOf, synthMute, tailHead, DONE_DATED, NOT_YET, STATE_MARK, BARE_IMPL, COLS, ROW };
