@@ -198,8 +198,23 @@ def cmp_reg():
                  c[2] - r[2]))
 
 
+def img_read(pathname):
+    """[I] 임의의 캡처 한 장을 cap 상자로 읽는다 — `try409.js` 후보값을 재는 입구."""
+    px = Image.open(pathname).convert('RGB').load()
+    bx, by = BOX_RC['cap']
+    print('══ 409-h/img — %s (cap 상자 %d,%d) ══' % (pathname, bx, by))
+    for corner in ('BL', 'BR', 'TL', 'TR'):
+        print('  %-3s diag      %s' % (corner, fmt(diag(px, bx, by, corner))))
+        for dg in (45, 60, 75):
+            print('      rays %2d°  %s' % (dg, fmt(ray(px, bx, by, corner, dg))))
+
+
 def main():
-    if '--cmp' in sys.argv[1:]:
+    a = sys.argv[1:]
+    if '--img' in a:
+        img_read(a[a.index('--img') + 1])
+        return 0
+    if '--cmp' in a:
         cmp_reg()
         return 0
     try:
