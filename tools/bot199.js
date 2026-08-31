@@ -1020,8 +1020,13 @@ function writeReport(rep) {
     L.push('');
     L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동)`);
     L.push('');
-    L.push(`**순 이동 합 p50 = ${med(netAll)}분 (총 시간의 ${(100 * med(netAll) / (rep.days * 1440)).toFixed(2)}%)**`
-      + ` · 벽당 실오르막 p50 = ${faceNetMed.toFixed(0)}분`);
+    const faceNetSum = faceNet.map(f => f.reduce((a, b) => a + b, 0));
+    L.push(`**실오르막 합(벽 사이 순 이동) p50 = ${med(faceNetSum)}분`
+      + ` (총 시간의 ${(100 * med(faceNetSum) / (rep.days * 1440)).toFixed(2)}%) · 벽당 ${faceNetMed.toFixed(0)}분**`
+      + ` — 4회차 비평 3인이 쓴 «순 이동» 이 이 축이다(목표: 벽당 ≥60분 급)`);
+    L.push('');
+    L.push(`정체 밖 시간 p50 = ${med(netAll)}분 (총 시간의 ${(100 * med(netAll) / (rep.days * 1440)).toFixed(2)}%`
+      + ` — 첫 벽 이전·마지막 벽 이후와 30분 미만의 숨을 포함한 넓은 자)`);
     L.push('');
     L.push(`상승면 합 p50 = ${med(faceSum)}분 (총 시간의 ${(100 * med(faceSum) / (rep.days * 1440)).toFixed(2)}% — 멈춤 포함, 4회차까지의 축)`
       + ` · 시드1 상승면(분): ${faceOf(runs[0] || { walls: [], band: BAND }).join(' · ') || '-'}`);

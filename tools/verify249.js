@@ -50,6 +50,13 @@ const near = (name, got, want, tol) =>
    4배였다. 주기는 199 행이 연 손잡이 ①(구간 점프)이라 M1 과 같은 꼴로 항을 지우지 않고 방향만
    바꾼다(333 처방) — BAND 는 «불변(162 잔재)» 이 아니라 «199 가 벽 개수에서 정한 값과 같은가»
    를 묻는다. 스윕 근거는 199 review §3(sim177 ⑧ 불변 · 진폭 1.98 → 2.42 · 관문 상한 3.2035). */
+/* ⚑ 199 5회차 이관(2026-08-31) — **BAND·GATE_N 40 → 80.** 3회차가 이 항을 «벽 개수» 축으로
+   돌려놓았고, 5회차가 같은 상수의 **둘째 뜻**을 실측으로 찾았다 — 벽당 실오르막(순 이동) ≈
+   밴드 칸수 × 판당 최소 소요라, 주기가 곧 «오르막의 길이» 다(봇 4시드 30일: 40 → 21분 ·
+   80 → 41분 · 120 → 53분). 80 에서 부지런 30일 벽이 12 → 8칸 = 주인 목표 그 값이다.
+   방향은 3회차와 같다(«199 가 정한 값과 같은가») — 바뀐 것은 값과 표본 자리뿐이고, 표본은
+   리터럴이 아니라 **C.BAND 에서 파생**시켜 다음 회차가 주기를 다시 돌려도 표본이 따라오게 했다.
+   스윕 근거는 199 review §5-2. */
 /* ⚑ 199 4회차 이관(2026-08-31) — **ES_RAMP 0.2 신설(밴드 내 상승면).** 구간 안이 완전 평지면
    벽을 깬 순간 40칸이 기계 시간 13분으로 무너져 «연속 돌파» 국면이 없다(3회차 비평 ③ 전원 3점).
    구간 몫 성장(R = eSmooth(a+40)/eSmooth(a))의 RAMP 비율을 구간 안 비탈로 깐다 —
@@ -58,7 +65,7 @@ const near = (name, got, want, tol) =>
    램프 비율» 로 방향을 바꾼다(333 처방 — M1·BAND 와 같은 꼴). 스윕 근거는 199 review §4
    (γ 0→0.35 × GATE 스윕 · 상승면 0.36% → 9.33% · 벽 12 불변 · GATE↑ 기각). */
 const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
+            BAND:80, GATE_N:80, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
 const wScale = s => { const a = eband(s);
@@ -68,9 +75,17 @@ const wDmg   = s => C.DB * Math.pow(wScale(s), C.A);
 const wGate  = s => (s % C.GATE_N === 0 ? C.GATE_HP : 1);
 
 /* 곡선을 볼 스테이지 — 구간 안(같아야 함) · 관문(올라야 함) · 무릎 앞뒤 */
-const IN_BAND = [11, 13, 17, 39];   /* 199 3회차 — 전부 첫 구간(1..39) 안 · 39 는 경계 검사용 */
-const GATES   = [40, 80, 120, 160]; /* 199 3회차 — GATE_N 40 의 배수 */
-const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 200];
+/* 199 5회차 — 표본을 리터럴이 아니라 C.BAND 에서 파생시킨다(주기를 또 돌려도 자가 따라온다).
+   경계 표본은 «관문 직전 칸»(BAND−1) 이고, 관문 표본은 GATE_N 의 배수 넷이다. */
+const B1      = C.BAND - 1;                                   /* 첫 구간의 마지막 칸(경계 검사) */
+const IN_BAND = [11, 13, 17, B1];   /* 전부 첫 구간(1..B1) 안 · B1 은 경계 검사용 */
+const GATES   = [1,2,3,4].map(k => k * C.GATE_N);             /* GATE_N 의 배수 */
+/* ⚠ 표본은 **줄이지 않는다** — 파생만 하면 39/40 이 79/80 에 흡수돼 항이 4개 줄었다(103 → 99).
+   옛 자리(주기 40 시절의 경계)도 그대로 두고 새 경계를 **더한다**: 옛 주기의 경계는 이제
+   «구간 한복판» 이라 램프식이 거기서도 맞는지를 묻는 새 뜻을 얻는다. */
+const CURVE_S = Array.from(new Set([1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 200,
+                                    B1, C.BAND, C.BAND + 1, C.KNEE - 1, C.KNEE, C.KNEE + 1, 3 * C.BAND]))
+                     .sort((a, b) => a - b);
 
 (async () => {
   const src = fs.readFileSync(SRCF, 'utf8');
@@ -167,8 +182,8 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   ok(IN_BAND.every(s => Math.abs(norm(s) / norm(IN_BAND[0]) - wScale(s) / wScale(IN_BAND[0])) < 1e-9),
      '[C] 구간 안(s' + IN_BAND.join('·s') + ') 몹 체력 비 = 램프식 비 (개체로 본 상승면)',
      IN_BAND.map(s => norm(s).toExponential(4)).join(' '));
-  ok(norm(40) > norm(39) * 1.5, '[C] 구간 경계 s40 에서 몹 체력이 뛴다 — 벽은 벽대로 남는다',
-     (norm(40)/norm(39)).toFixed(3) + '배');
+  ok(norm(C.BAND) > norm(B1) * 1.5, '[C] 구간 경계 s' + C.BAND + ' 에서 몹 체력이 뛴다 — 벽은 벽대로 남는다',
+     (norm(C.BAND)/norm(B1)).toFixed(3) + '배');
   GATES.forEach(s => {
     const r = byS[s];
     ok(r.bossMax !== null, '[D] s' + s + ' 스테이지 보스가 실제로 스폰됐다');
@@ -187,7 +202,7 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   });
 
   /* ── [E] 파급 — 다른 «보스» 들은 관문 배수를 안 탄다 ───────────── */
-  const ripple = await page.evaluate(async () => {
+  const ripple = await page.evaluate(async (a) => {
     S.stage = 20;
     const promoHp = eHp(S.stage)*60;                    /* 208 승급 수호자 식 */
     /* 던전 보스(178) — 요구 피해에서 나오므로 스테이지 곡선과 무관하다 */
@@ -198,8 +213,8 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     const ar = enemies.find(e => e.tk === 'arena');
     const arMax = ar ? ar.max : null, arMul = ar ? ETYPE.arena.hp : null;
     enemies.length = 0;
-    return { promoHp, dunK, arMax, arMul, gate: bossGateHp(40), notGate: bossGateHp(39) };   /* 199 3회차 — 관문 = GATE_N(40) 배수 */
-  });
+    return { promoHp, dunK, arMax, arMul, gate: bossGateHp(a.gate), notGate: bossGateHp(a.gate - 1) };  /* 관문 = GATE_N 배수 (199 5회차: 리터럴 대신 C 에서 받는다) */
+  }, { gate: C.GATE_N });
   near('[E] 승급 수호자 체력 = eHp(s)×60 (관문 배수 없음)', ripple.promoHp, wHp(20)*60, 1e-9);
   near('[E] 아레나 도전자 체력 = eHp×ETYPE.arena.hp (관문 배수 없음)', ripple.arMax, wHp(20)*ripple.arMul, 1e-9);
   ok(ripple.dunK !== null, '[E] 던전 보스는 DUN_BOSS_HPK(요구 피해) 축이라 스테이지 곡선과 무관', ripple.dunK);
@@ -207,9 +222,9 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
      '[E] bossGateHp — 관문 ' + C.GATE_HP + ' · 비관문 1', ripple.gate + '/' + ripple.notGate);
 
   /* ── [F] 실동작 — 관문 스테이지를 실제로 «격파해서» 넘는다 ──────── */
-  const play = await page.evaluate(async () => {
-    /* 관문 s40(199 3회차 — GATE_N 40) 로 세팅하고 50킬을 채운 뒤 보스를 실제로 잡는다(판정은 건드리지 않는다) */
-    S.stage = 40; S.best = Math.max(S.best, 40); S.bossFarm = false;
+  const play = await page.evaluate(async (G) => {
+    /* 관문(GATE_N 배수 — 199 5회차부터 80) 로 세팅하고 50킬을 채운 뒤 보스를 실제로 잡는다(판정은 건드리지 않는다) */
+    S.stage = G; S.best = Math.max(S.best, G); S.bossFarm = false;
     bossOn = false; enemies.length = 0; spawnQ.length = 0;
     spawnStage();
     for(let i=0;i<120 && enemies.length === 0;i++) await new Promise(r => requestAnimationFrame(r));
@@ -223,17 +238,17 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     for(let i=0;i<240 && S.stage === before;i++) await new Promise(r => requestAnimationFrame(r));
     return { bossMax, before, after: S.stage, best: S.best, goldUp: S.gold > goldBefore,
              newBand: eBand(S.stage), curHp: eHp(S.stage) };
-  }).catch(e => ({ err: String(e) }));
+  }, C.GATE_N).catch(e => ({ err: String(e) }));
   if(play.err){
     ok(false, '[F] 관문 보스 격파 실동작', play.err);
   } else {
-    ok(play.after === play.before + 1, '[F] 관문 s40 보스를 격파하니 스테이지가 올랐다',
+    ok(play.after === play.before + 1, '[F] 관문 s' + C.GATE_N + ' 보스를 격파하니 스테이지가 올랐다',
        play.before + ' → ' + play.after);
     ok(play.best >= play.after, '[F] S.best 가 따라 올랐다 (세이브 반영)', play.best);
     ok(play.goldUp, '[F] 클리어 보상 골드가 들어왔다');
-    ok(play.newBand === 40, '[F] 다음 스테이지(41)는 새 구간(앵커 40) 안이다 — 계단이 실제 진행에 붙었다',
+    ok(play.newBand === C.BAND, '[F] 다음 스테이지(' + (C.GATE_N + 1) + ')는 새 구간(앵커 ' + C.BAND + ') 안이다 — 계단이 실제 진행에 붙었다',
        play.newBand);
-    near('[F] s41 적 체력 = 앵커 40 × 램프 1칸 (상승면 첫 칸)', play.curHp, wHp(41), 1e-9);
+    near('[F] s' + (C.GATE_N + 1) + ' 적 체력 = 앵커 ' + C.BAND + ' × 램프 1칸 (상승면 첫 칸)', play.curHp, wHp(C.GATE_N + 1), 1e-9);
   }
 
   /* ── [G] 화면 반영 — 재화/정보 팝업의 «현재 스테이지 적 체력» ───── */
@@ -278,12 +293,13 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   await np2.goto('file://' + NEG.replace(/\\/g, '/'));
   await np2.waitForFunction(() => typeof eHp === 'function');
   await np2.waitForTimeout(600);
-  const neg2 = await np2.evaluate(() => ({
-    flatBack: Math.abs(eHp(59) - eHp(41)) < 1e-9, anchor: eHp(40)
-  }));
-  ok(neg2.flatBack, '[H] N3 — 램프를 빼면 구간 안이 도로 평지다 (설치본은 s41 ≠ s59)');
-  near('[H] N4 — 램프를 빼도 앵커(관문 s40)는 같은 값이다 : 램프가 앵커를 안 움직였다는 증명',
-     neg2.anchor, wHp(40), 1e-12);
+  const neg2 = await np2.evaluate((a) => ({
+    flatBack: Math.abs(eHp(a.mid) - eHp(a.lo)) < 1e-9, anchor: eHp(a.gate)
+  }), { gate: C.GATE_N, lo: C.GATE_N + 1, mid: C.GATE_N + Math.floor(C.BAND / 2) });
+  ok(neg2.flatBack, '[H] N3 — 램프를 빼면 구간 안이 도로 평지다 (설치본은 s'
+     + (C.GATE_N + 1) + ' ≠ s' + (C.GATE_N + Math.floor(C.BAND / 2)) + ')');
+  near('[H] N4 — 램프를 빼도 앵커(관문 s' + C.GATE_N + ')는 같은 값이다 : 램프가 앵커를 안 움직였다는 증명',
+     neg2.anchor, wHp(C.GATE_N), 1e-12);
   await np2.close();
   try{ fs.unlinkSync(NEG); }catch(e){}
 
