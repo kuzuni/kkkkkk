@@ -104,9 +104,15 @@ const column = (page, p, lx, slot) => page.evaluate(([box, x, key, pal]) => {
    신호(≥24) 사이에 있고 어느 쪽에도 가깝지 않다 — 예산을 넓혀 «≤60 이면 같다» 로
    푸는 것과 다르다(그러면 진짜 결함 294px 의 1/5 까지 눈감는 자가 된다). */
 const AA = 8;
-const diffCols = (page, p, x0, x1, a, b) => page.evaluate(([box, lo, hi, ka, kb, tol]) => {
+/* `half` — null 이면 알약 전 높이, 'top'/'bot' 이면 위/아래 절반만 센다.
+   ⚑ **409 17회차 신설.** 17회차가 `::after` 배경에서 «아래 코너 고리» 두 줄을 걷어냈으므로
+      «배경을 끄면 코너가 바뀐다» 를 전 높이로 물으면 **위 코너 몫만으로 초록**이 된다
+      (= 라벨이 «아래» 라고 적힌 항이 위를 세는 헛초록). 절반씩 따로 물어야 뜻이 산다. */
+const diffCols = (page, p, x0, x1, a, b, half) => page.evaluate(([box, lo, hi, ka, kb, tol, hf]) => {
   const A = window['__g463' + ka], B = window['__g463' + kb];
-  const y0 = Math.round(box.y), h = Math.round(box.h);
+  let y0 = Math.round(box.y), h = Math.round(box.h);
+  if (hf === 'top') h = Math.round(h / 2);
+  else if (hf === 'bot') { const c = Math.round(h / 2); y0 += c; h -= c; }
   const w = Math.max(0, Math.round(hi) - Math.round(lo));
   if (!w) return 0;
   const da = A.getImageData(Math.round(box.x + lo), y0, w, h).data;
@@ -117,7 +123,7 @@ const diffCols = (page, p, x0, x1, a, b) => page.evaluate(([box, lo, hi, ka, kb,
     if (d > tol) n++;
   }
   return n;
-}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, x0, x1, a, b, AA]);
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, x0, x1, a, b, AA, half || null]);
 
 function runs(s, step = 0.5) {
   const rs = [];
@@ -303,11 +309,19 @@ const pillarOf = mask => {
       const dNarrow = await diffCols(page, info, 0, R, 'T', 'S');
       ok(hname + ' — 기둥을 16 으로 좁히면 코너가 바뀐다 (23 은 «호를 다 덮는» 하한이다)',
         dNarrow > Math.max(40, noise * 4), dNarrow + 'px  (> max(40, 바닥×4 = ' + noise * 4 + '))');
-      /* 409 14회차 신설 — **고리가 실제로 그린다**(위 이관이 공허해지지 않게 하는 짝).
-         고리를 끄면 아래 코너가 바뀐다 — 끄고 찍은 'T' 와 원본 'N' 의 차이가 곧 고리의 몫이다. */
-      const dRing = await diffCols(page, info, 0, R, 'N', 'T');
-      ok(hname + ' [3-고리] — 아래 코너 등폭 고리를 끄면 코너가 바뀐다 (고리가 공허하지 않다)',
-        dRing > Math.max(20, noise * 4), dRing + 'px  (> max(20, 바닥×4 = ' + noise * 4 + '))');
+      /* 409 14회차 신설 · **17회차에 방향을 갈아 끼웠다**(333 처방 — 자리를 비우지 않는다).
+         14회차의 «배경을 끄면 코너가 바뀐다» 는 그때 배경이 위·아래 네 겹이라 성립했다.
+         17회차가 **아래 두 겹을 걷어냈으므로**(그 고리는 1.32px 틀린 ref 읽기 위에 서 있었다 —
+         제품 주석 참조) 같은 질문을 전 높이로 던지면 **위 코너 몫만으로 초록**이 된다.
+         ⇒ 절반씩 따로 묻는다. 두 항이 곧 17회차 결정의 되돌림 시험이다 —
+           · 위: 16회차 타원 고리가 사라지면 빨갛다.
+           · 아래: 누가 아래 코너 고리를 **다시 얹으면** 그 즉시 빨갛다(Δ0 이 깨진다). */
+      const dRingT = await diffCols(page, info, 0, R, 'N', 'T', 'top');
+      ok(hname + ' [3-고리] — 배경을 끄면 **위** 코너가 바뀐다 (16회차 타원 고리가 공허하지 않다)',
+        dRingT > Math.max(20, noise * 4), dRingT + 'px  (> max(20, 바닥×4 = ' + noise * 4 + '))');
+      const dRingB = await diffCols(page, info, 0, R, 'N', 'T', 'bot');
+      ok(hname + ' [3-고리] — 배경을 끄면 **아래** 코너는 Δ0 (17회차: 아래 코너는 배경이 안 그린다)',
+        dRingB <= Math.max(AA_BUDGET, noise), dRingB + 'px ≤ max(AA 예산 ' + AA_BUDGET + ', 바닥 ' + noise + ')');
       await setStyle(null);
 
     }

@@ -11860,9 +11860,18 @@
     box-shadow:inset 0 0 0 7px var(--pill-k,#000);
     background:
       radial-gradient(23px 25.3px at 30px 33px,transparent 0 69.6%,#634F37 69.6% 100%,transparent 100%) 0 0/30px 33px no-repeat,
-      radial-gradient(23px 25.3px at 0 33px,transparent 0 69.6%,#634F37 69.6% 100%,transparent 100%) 100% 0/30px 33px no-repeat,
-      radial-gradient(13.24px 14.56px at 30px 0,transparent 0 92.4%,#634F37 92.4% 100%,transparent 100%) 0 100%/30px 33px no-repeat,
-      radial-gradient(13.24px 14.56px at 0 0,transparent 0 92.4%,#634F37 92.4% 100%,transparent 100%) 100% 100%/30px 33px no-repeat;
+      radial-gradient(23px 25.3px at 0 33px,transparent 0 69.6%,#634F37 69.6% 100%,transparent 100%) 100% 0/30px 33px no-repeat;
+    /* 409 17회차 (2026-08-31) — ⛔ **15회차의 «아래 코너 등폭 고리» 두 줄을 걷어냈다.**
+       그 고리는 «ref 의 D+B 가 11.0 인데 우리는 10.0» 이라는 읽기 위에 서 있었는데,
+       17회차가 그 읽기의 **상자가 1.32px 틀렸다**는 것을 찾았다(`probe409i` 가 알약 네 변을
+       직선 스캔으로 잡는다 — cap 에서 DOM 실측과 0.14px 로 검산된다). 상자를 그림에서 잡으면
+       ref 의 D+B 는 11.0 이 아니라 **8.5** 이고, 고리는 채우는 게 아니라 **넘치게** 하고 있었다.
+       형상 앵커 광선(45°/60°/75°)으로 잰 아래 코너 **베벨** L1(ref 대비):
+           고리 있음(15·16회차)  8.5 / 8.0 / 7.5  →  L1 **4.75**
+           고리 없음(이 회차)    7.0 / 6.5 / 6.5  →  L1 **1.25**   (ref 6.0 / 6.5 / 6.75)
+       어두운 띠 D 는 두 경우 다 3.0 / 4.5 / 6.0 으로 **Δ0** 이다(ref 3.0 / 4.25 / 6.0) —
+       15회차가 늘린 것은 띠가 아니라 베벨이었다. ⚠ **위 코너 두 줄(16회차)은 그대로 둔다**
+       — 그쪽은 같은 자로 재도 ref 에 붙는다(L1 5.5). */
     -webkit-mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),
       var(--pill-keep),var(--pill-punch);
     mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),
