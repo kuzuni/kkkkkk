@@ -336,16 +336,25 @@ async function readCorner(page, p, rel, side, n = 30) {
           옛 상자(7/23)도 새 상자(2/28)도 이 식을 만족하고, **동심이 깨지는 순간에만** 빨개진다.
        ⚠ 무르게 푼 게 아니다 — 아래 [2]·[5]·R6 이 그림 자체를 법선으로 재고 있고, 8회차는 R6 의
           주입을 «이 회차가 바꾼 층»(원 링)으로 옮겨 되돌림의 물림을 되살렸다. */
+    /* 409 12회차 이관 (2026-08-31) — **위·아래 세로 반경이 갈렸다**(위 26 · 아래 28.5). 12회차가
+       아래 두 코너의 호를 어깨 원판(세로 반경 28.5)에 맞추면서 아래만 옮겼기 때문이다.
+       옛 자는 «마지막 값 하나» 를 위·아래에 같이 썼으므로 위 항이 `4 + 28.5 = 32.5` 로 빨개졌다 —
+       결함이 아니라 자가 «네 코너가 같다» 를 전제하던 것이다.
+       ⇒ **코너별로 읽는다.** 묻는 것은 그대로 «인셋 + 그 코너의 세로 반경 = 30»(= 코너 중심 y 가
+          알약과 같다)이고, 이제 위·아래를 **따로** 물으므로 한쪽만 어긋나도 빨개진다(더 조인다). */
     const vr = d0 ? (d0.radius.split('/')[1] || d0.radius).trim().split(/\s+/) : [];
-    const vrb = vr.length ? parseFloat(vr[vr.length - 1]) : NaN;
+    const vrb = vr.length ? parseFloat(vr[vr.length - 1]) : NaN;   /* 아래 코너 */
+    const vrt = vr.length ? parseFloat(vr[0]) : NaN;               /* 위 코너 */
     const boxOK = d0 && ((/^23px/.test(d0.radius) && vrb > 23.5)
       || (/^30px/.test(d0.radius) && d0.top === '0px' && d0.bottom === '0px'));
     ok('그 상자가 «동심 안쪽 윤곽(가로 7 인셋·rx23 · 네 코너 타원 ry>rx)» 이거나 «옛 평행이동 상자(r30)» 다',
       !!boxOK, d0 ? (d0.radius + ' · top ' + d0.top + ' · bottom ' + d0.bottom) : '—');
-    ok('«위 인셋 + 위 세로 반경 = 30» — 위 코너 중심 y 도 알약과 같다 (409 9회차)',
+    ok('«인셋 + 그 코너 세로 반경 = 30» — 위·아래 코너 중심 y 가 둘 다 알약과 같다 (409 9·12회차)',
       !!d0 && (/^30px/.test(d0.radius) ? d0.top === '0px'
-        : Math.abs(parseFloat(d0.top) + vrb - 30) < 0.6),
-      d0 ? (d0.top + ' + ' + (isNaN(vrb) ? '?' : vrb) + ' = ' + (parseFloat(d0.top) + vrb)) : '—');
+        : (Math.abs(parseFloat(d0.top) + vrt - 30) < 0.6
+           && Math.abs(parseFloat(d0.bottom) + vrb - 30) < 0.6)),
+      d0 ? ('위 ' + d0.top + '+' + (isNaN(vrt) ? '?' : vrt) + '=' + (parseFloat(d0.top) + vrt)
+            + ' · 아래 ' + d0.bottom + '+' + (isNaN(vrb) ? '?' : vrb) + '=' + (parseFloat(d0.bottom) + vrb)) : '—');
     ok('어느 쪽이든 «가로 인셋 + 반경 = 30» — 코너 중심 x 가 알약과 같다',
       !!d0 && Math.abs(parseFloat(d0.left) + parseFloat(d0.radius) - 30) < 0.6,
       d0 ? (d0.left + ' + ' + d0.radius + ' = ' + (parseFloat(d0.left) + parseFloat(d0.radius))) : '—');

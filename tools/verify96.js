@@ -276,7 +276,12 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
     /* 409 이관 (2026-08-30) — **밴드에는 이제 베벨만 남는다.** 검정은 `::after` 의 등폭 링이
        그리므로(384 §6-1 ⓐ 가 되돌린 자리 — 검정을 여기 두면 코너에서 7·cos α 로 깎인다),
        자리 규칙은 «닿는 면은 베벨이 7 에서 시작한다»(= 검정 몫 7 을 셸에 넘겼다) 로 읽는다. */
+    /* 409 11회차 이관 (2026-08-31) — 부모 `box-shadow` **첫 항에 바닥 띠**(`#413122`)가 한 겹 올라갔다
+       (옆띠가 아래 코너를 감고 올라와 만들던 «밝은 쐐기» 를 덮는다 — 409 §20). 자리 규칙은
+       그대로 «옆띠 두 개» 이고, 그 앞에 자리와 **무관한** 한 겹이 붙었을 뿐이라 규칙 문자열에
+       그대로 적는다 — 빼면 이 항이 빨개진다(무르게 안 풀었다). */
     const shadowRule = p => !p ? null : [
+      'rgb(65, 49, 34) 0px -7px 0px 0px inset',
       (p.L ? BEV + ' 7px' : BEV + ' 14px') + ' 0px 0px 0px inset',
       (p.R ? BEV + ' -7px' : BEV + ' -14px') + ' 0px 0px 0px inset',
     ].join(', ');
@@ -292,7 +297,10 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
        그러면 다음에 어느 층의 인셋이 바뀌어도 이 자가 곧바로 그 층에게 맞는 값을 요구한다. */
     const COL = 30;                                   /* 알약 반경 = 코너 기둥의 폭(352 §10) */
     const maskHasLn = (m, n) => new RegExp('^linear-gradient\\(90deg, rgb\\(0, 0, 0\\) 0px, rgb\\(0, 0, 0\\) ' + n + 'px').test(m);
-    const maskHasRn = (m, n) => new RegExp('rgb\\(0, 0, 0\\) calc\\(100% - ' + n + 'px\\)\\)$').test((m || '').trim());
+    /* 409 11회차 이관 — 마스크가 다층이 됐다(기둥 + «어깨» 원판·보호 `radial-gradient`).
+       기둥은 **첫 층**이므로 거기서만 읽는다 — 층이 하나 는 것만으로 빨개지던 자를 옮긴다. */
+    const maskHasRn = (m, n) => new RegExp('rgb\\(0, 0, 0\\) calc\\(100% - ' + n + 'px\\)\\)$')
+      .test(String(m || '').split(/,\s*radial-gradient/)[0].trim());
     /* 링(`::after`)은 인셋 0 이라 30 — 아래 [1-c] 링 항이 이 짝을 쓴다. */
     const maskHasL = m => maskHasLn(m, COL);
     const maskHasR = m => maskHasRn(m, COL);
@@ -369,18 +377,23 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
          세로로 늘어난 타원이 됐다(ref 실측 — `tools/probe409e.py --rays`). 그래서 값을 넓히는 대신
          **가로와 같은 불변식**(인셋 + 반경 = 30)을 세로에도 세우고, 그 위에서 «가운데 칸은 아래
          두 코너가 타원(세로 반경 > 가로 반경)» 을 따로 못박는다 — 끝 칸(r30 · 449)과 안 헷갈린다. */
+      /* 409 12회차 이관 (2026-08-31) — 위·아래 세로 반경이 갈렸다(위 26 · 아래 28.5 — 12회차가
+         아래 호만 어깨 원판에 맞췄다). 한 값으로 위·아래를 같이 묻던 자를 **코너별**로 옮긴다:
+         불변식(인셋 + 그 코너 세로 반경 = 30)은 그대로이고, 이제 한쪽만 어긋나도 빨개진다. */
       const vrs = b ? (b.r.split('/')[1] || b.r).trim().split(/\s+/) : [];
-      const vrb = vrs.length ? parseFloat(vrs[vrs.length - 1]) : NaN;
+      const vrb = vrs.length ? parseFloat(vrs[vrs.length - 1]) : NaN;   /* 아래 */
+      const vrt = vrs.length ? parseFloat(vrs[0]) : NaN;                /* 위 */
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 상자가 그 자리의 규격이다'
         + (endCell ? ' (끝 칸 = 닿는 면 0 · r30 · 449)' : ' (가운데 = 동심 윤곽 가로 7인셋·rx23 · 네 코너 타원 · 인셋+반경 = 30)'),
         !!b && b.left === wantL && b.right === wantR
           && (endCell ? (b.top === '0px' && b.bottom === '0px' && /^30px/.test(b.r))
-                      : (/^23px/.test(b.r) && vrb > 23.5 && Math.abs(parseFloat(b.top) + vrb - 30) < 0.6)),
+                      : (/^23px/.test(b.r) && vrb > 23.5 && vrt > 23.5 && Math.abs(parseFloat(b.top) + vrt - 30) < 0.6)),
         b ? [b.left, b.right, b.top, b.bottom, b.r].join(' / ') : '없음');
       ok(n + ' 자리 «' + posName(o.onPos) + '» → «세로 인셋 + 세로 반경 = 30» (위·아래 코너 중심 y 가 알약과 같다)',
         !!b && Math.abs(parseFloat(b.bottom) + vrb - 30) < 0.6
-          && (endCell || Math.abs(parseFloat(b.top) + vrb - 30) < 0.6),
-        b ? (b.bottom + ' + ' + (isNaN(vrb) ? '?' : vrb) + ' = ' + (parseFloat(b.bottom) + vrb)) : '없음');
+          && (endCell || Math.abs(parseFloat(b.top) + vrt - 30) < 0.6),
+        b ? ('아래 ' + b.bottom + '+' + (isNaN(vrb) ? '?' : vrb) + '=' + (parseFloat(b.bottom) + vrb)
+             + ' · 위 ' + b.top + '+' + (isNaN(vrt) ? '?' : vrt) + '=' + (parseFloat(b.top) + vrt)) : '없음');
       /* 두 상자를 가르는 것은 **코너 중심의 x** 다. 값을 그냥 적지 않고 **자리에서 유도**해 묻는다.
          · 가운데 칸은 사방 7 인셋 · r23 이라 코너 중심 x 가 알약과 같다(7+23 = **30** = 동심).
          · 449 — 끝 칸은 **면마다 다르다**: 닿는 면은 검정이 없어 세 띠가 알약 윤곽에서 시작하므로

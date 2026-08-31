@@ -198,11 +198,15 @@ const pillarOf = mask => {
          463 이 지키는 것은 «기둥 폭 = 30 − 가로 인셋» 이라는 **가로** 불변식이고 거기엔 변화가 없다.
          세로는 값 대신 같은 꼴의 불변식(세로 인셋 + 아래 세로 반경 = 30 = 코너 중심 y 가 알약과 같다)
          으로 옮긴다 — 옛 7+23 도 새 4+26 도 참이고, 동심이 깨질 때만 빨개진다. */
+      /* 409 12회차 이관 (2026-08-31) — 위·아래 세로 반경이 갈렸다(위 26 · 아래 28.5). 한 값으로
+         위·아래를 같이 묻던 자를 **코너별**로 옮긴다 — 불변식(인셋 + 그 코너 세로 반경 = 30)은
+         한 글자도 안 바뀌고, 이제 한쪽만 어긋나도 빨개진다. */
       const vrs463 = (info.bR.split('/')[1] || info.bR).trim().split(/\s+/);
-      const vrb463 = parseFloat(vrs463[vrs463.length - 1]);
-      ok(hname + ' — `::before` 상자는 동심 안쪽 윤곽(가로 7 인셋 · rx23 · 세로 인셋 + 세로 반경 = 30)',
-        bIn.l === 7 && bIn.r === 7 && /^23px/.test(info.bR) && vrb463 > 23.5
-          && Math.abs(parseFloat(info.bTop) + vrb463 - 30) < 0.6
+      const vrb463 = parseFloat(vrs463[vrs463.length - 1]);   /* 아래 */
+      const vrt463 = parseFloat(vrs463[0]);                   /* 위 */
+      ok(hname + ' — `::before` 상자는 동심 안쪽 윤곽(가로 7 인셋 · rx23 · 코너별 «세로 인셋 + 세로 반경 = 30»)',
+        bIn.l === 7 && bIn.r === 7 && /^23px/.test(info.bR) && vrb463 > 23.5 && vrt463 > 23.5
+          && Math.abs(parseFloat(info.bTop) + vrt463 - 30) < 0.6
           && Math.abs(parseFloat(info.bBottom) + vrb463 - 30) < 0.6,
         [info.bLeft, info.bRight, info.bTop, info.bBottom, info.bR].join(' / '));
       ok(hname + ' — `::before` 기둥 = 30 − 인셋 = ' + (R - bIn.l) + '/' + (R - bIn.r) + ' (463)',

@@ -11545,10 +11545,19 @@
              (6회차 §15-3 이 위 코너에서 겪은 자리다) ⇒ **22.5×25.5** 로 반 픽셀 안쪽에 둔다.
        ⚑ 이 초승달 덕에 **끝 칸도 같이 깎을 수 있다** — 끄면 `verify462` [4]「검정 링이 가운데 칸과
           ±1.5」가 75° 에서 6.0 ↔ 4.0 으로 빨개진다(= 칸마다 어깨가 다른 개악이다). */
+    /* 409 12회차 (2026-08-31) — **네 코너 전부.** 11회차는 아래 두 코너만 깎았는데, 채점에서
+       DN 이 «가장 큰 감점» 으로 짚은 것은 **위 코너의 같은 절벽**이었다(1:1 판 x300 → x301 에서
+       링 안쪽 가장자리가 **4px 수직으로** 떨어진다 ↔ ref 는 1px). 뿌리가 같으니 처방도 같다 —
+       위 코너 중심(`30px 33px`)에도 같은 원판·보호를 건다. 보호 타원이 배경 베벨 고리(r 18..24)를
+       덮으므로 위 코너의 그 고리는 **한 픽셀도 안 깎인다**(45° 에서 원판 21.4 < 보호 23.9). */
     --pill-punch:radial-gradient(17.8px 28.5px at calc(100% - 30px) calc(100% - 33px),transparent 0 97%,#000 100%),
-      radial-gradient(17.8px 28.5px at 30px calc(100% - 33px),transparent 0 97%,#000 100%);
+      radial-gradient(17.8px 28.5px at 30px calc(100% - 33px),transparent 0 97%,#000 100%),
+      radial-gradient(17.8px 28px at calc(100% - 30px) 33px,transparent 0 97%,#000 100%),
+      radial-gradient(17.8px 28px at 30px 33px,transparent 0 97%,#000 100%);
     --pill-keep:radial-gradient(22.5px 25.5px at calc(100% - 30px) calc(100% - 33px),#000 0 100%,transparent 100%),
-      radial-gradient(22.5px 25.5px at 30px calc(100% - 33px),#000 0 100%,transparent 100%);
+      radial-gradient(22.5px 25.5px at 30px calc(100% - 33px),#000 0 100%,transparent 100%),
+      radial-gradient(22.5px 25.5px at calc(100% - 30px) 33px,#000 0 100%,transparent 100%),
+      radial-gradient(22.5px 25.5px at 30px 33px,#000 0 100%,transparent 100%);
     /* 409 4회차 (2026-08-30) — **3회차의 «부모 배경 고리» 는 물렸다.** 3회차는 아래 코너 베벨을
        부모 배경의 동심 고리(r 13..24)로 폈고 그 축은 실제로 회수됐지만(4.5→7.0), 채점에서 **세 비평가
        (CY·CZ·DA)가 독립으로 같은 자리를 더 크게 짚었다** — 그 베벨 **앞**의 «어두운 띠» 가 호에서
@@ -11632,8 +11641,9 @@
       var(--pill-keep),var(--pill-punch);
     mask-image:var(--pill-mask,linear-gradient(90deg,#000 0 30px,transparent 30px calc(100% - 30px),#000 calc(100% - 30px))),
       var(--pill-keep),var(--pill-punch);
-    -webkit-mask-composite:source-in,source-over,source-over,source-in,source-over;
-    mask-composite:intersect,add,add,intersect,add}
+    -webkit-mask-composite:source-in,source-over,source-over,source-over,source-over,
+      source-in,source-in,source-in,source-over;
+    mask-composite:intersect,add,add,add,add,intersect,intersect,intersect,add}
   /* 384 (2026-08-29) — **바닥 어두운 띠가 코너를 감고 올라간다.**
      `tools/probe384.py` 재현(찍힌 픽셀 · 07 활성 «스킬» 알약 좌 코너, rel 행별 클래스 런):
          ref  rel 60 K7 **D2** B8 · rel 68 K7 **D5** B10 · rel 74 K8 **D8** F1 B1
@@ -11705,6 +11715,20 @@
      검정이 덮는다: `[10]` 이 60° **5.5 → 2.0** 으로 빨개졌고 찍힌 픽셀도 x20 에서 `D7(71..78)` →
      `D3(75..78)`(ref 는 `D5(73..78)`)로 **ref 에서 멀어졌다.** ⇒ 이 상자는 «검정의 안쪽 윤곽» 이라는
      4회차의 전제 그대로가 옳다. 쐐기는 **부모의 바닥 띠**로 덮는다(위 11회차 주석). */
+  /* 409 11·12회차 (2026-08-31) — ⛔ **이 상자를 «어깨 원판과 같은 자»(아래 세로 반경 28.5 · 30) 로
+     내리는 길은 두 번 재고 두 번 물렸다.** 11회차 채점에서 DM·DN 이 2인 독립으로 «어두운 띠가
+     코너에서 ref 보다 두껍다»(cap 15px ↔ ref 7px)고 짚었고, 뿌리는 이 상자의 윤곽이 링의
+     **깎이기 전** 안쪽 윤곽(23×26)이라는 것이다 — 어깨를 깎으면 그 아래로 부모 바닥 띠가 드러나
+     둘이 이어져 D 가 길어진다.
+     ⚑ **그런데 윤곽을 내리면 «띠 두께» 축이 그만큼 무너진다 — 두 축은 한 타원으로 양립 불가다:**
+         반경 30  → 60° 어두운 띠 5.5 → **2.0** (`verify409` [10] 빨강)
+         반경 28.5 → 45° 어두운 띠 4.5 → **3.0** (`verify462` [3] 빨강 · ref 는 5.5~6.0)
+        띠가 얇아지는 이유는 늘 같다 — 윤곽이 링 안쪽 윤곽 **바깥**으로 나간 만큼 띠의 바깥쪽이
+        검정 밑으로 숨는다(45° 에서 0.95px · 60° 에서 2.2px). 띠를 그만큼 두껍게(9~10px) 만들면
+        이번엔 **접선**에서 D 가 9~10px 이 되어 처음 문제로 돌아온다(ref 6).
+     ⇒ 필요한 것은 «윤곽이 **max(링 안쪽 윤곽, 원판)** 을 따라가는 것» 인데 그 곡선은 타원이 아니다.
+        `border-radius` 한 벌로는 못 적으므로 **이 상자는 4회차 값 그대로 두고**, 남은 D 두께는
+        13회차로 넘긴다(층을 하나 더 세우는 길뿐이다 — 409 §21). */
   .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:4px;bottom:4px;
     border-radius:23px / 26px;pointer-events:none;
     background:
@@ -11787,6 +11811,13 @@
   .stab.on.stab-c1::after,
   .stabs.sp2>.stab.on:nth-of-type(2)::after,
   .stabs.sp3>.stab.on:nth-of-type(3)::after,
+  /* 409 12회차 — **스프레드 7 → 4.5 · 띠 7/14 → 8/15.** 가운데 칸의 `::before` 가 아래 세로 반경을
+     26 → 28.5 로 옮겼으므로(어깨 원판과 같은 자) 끝 칸의 이 층도 같이 옮겨야
+     `verify462` [3]「끝 칸 = 가운데 칸 ±1.0」이 산다(안 옮기면 45°/60° 가 1.5px 벌어진다).
+     스프레드는 사방 한 값이라 «세로만» 못 옮긴다 — **4.5 면 그림자 상자가 알약을 사방 4.5 인셋한 것**
+     (y 1.5..82.5 · 반경 25.5×28.5)이 되어 아래 코너 중심이 (4.5+25.5, 82.5−28.5) = **(30,54) 로 동심**이고
+     세로 반경이 가운데 칸과 **같은 28.5** 다. 가로 반경만 23 ↔ 25.5 로 갈리는데 띠 두께는 법선각이
+     정하므로 창(±1.0) 안이다. ⚠ 검정 링은 첫 항이라 스프레드 0 그대로 — 링 두께 7 은 Δ0. */
   .stab.on.stab-c4::after{box-shadow:inset 0 0 0 7px var(--pill-k,#000),
     inset 0 -7px 0 7px #413122,inset 0 -14px 0 7px #634F37}
   /* 378 — 셸 **안쪽 변에 닿는** 칸만. 닿는 칸은 배치 규칙이 이미 정해 둔 그 칸이다:

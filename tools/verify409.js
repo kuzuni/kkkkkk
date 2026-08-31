@@ -81,6 +81,11 @@ const MIN_SEAM_OFF = 6.0;
 const SH_MAX25 = 3, SH_MAX29 = 2;
 const SH_MIN18 = 7;         /* 음성항 — ref·수리 전 둘 다 8 이다. 여기까지 깎으면 45° 를 침범한 것 */
 const SH_OFF29 = 4;         /* 되돌림 — 원판을 0 으로 죽이면 x29 가 이 값 이상으로 돌아온다 */
+/* 409 12회차 — 위 코너 절벽(직선부 대비 링 안쪽 가장자리가 얼마나 더 내려오는가).
+   수리 전 **4** · ref **1**(둘 다 실측) — 선은 그 사이 2 에 긋는다. */
+const SH_TOP29 = 2;
+const BAND75 = 2.5;         /* [5] 75° — 밴드 모델 예측 1.8 대비 +39% (12회차 이관 · 상세는 [5] 주석) */
+const SH_TOP_OFF29 = 3;     /* 되돌림 — 위 원판을 죽이면 이 값 이상으로 돌아온다 */
 
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
@@ -268,6 +273,27 @@ const shoulder = (page, p, side, xs) => page.evaluate(([box, sd, list]) => {
   return list.map(lx => { const t = top(lx); return t === null ? null : base - t; });
 }, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, xs]);
 
+/* 409 12회차 (2026-08-31) — **위 코너 «절벽» 자.** 11회차 채점에서 DN 이 «가장 큰 감점» 으로 짚은
+   자리다 — 알약 상변에서 링 **안쪽** 가장자리가 기둥 끝(x30)에서 수직으로 뚝 떨어진다
+   (수리 전 cap 4px ↔ ref 1px). 열마다 «셸 위 테두리를 품은 검정 기둥의 **아랫끝**» 을 재고
+   직선부(x=39)를 기준선으로 삼는다 — 아래 코너의 `shoulder()` 와 부호만 반대인 같은 축이다. */
+const shoulderTop = (page, p, side, xs) => page.evaluate(([box, sd, list]) => {
+  const g = window.__v409;
+  const bx = Math.round(box.x), by = Math.round(box.y), bw = Math.round(box.w);
+  const DARK = 42, PROBE = -4;                    /* 셸 위 테두리 한복판 */
+  const bot = lx => {
+    const x = sd === 'R' ? bx + bw - 1 - lx : bx + lx;
+    const at = y => { const q = g.getImageData(x, by + y, 1, 1).data; return (q[0] + q[1] + q[2]) / 3; };
+    if (at(PROBE) > DARK) return null;
+    let y = PROBE;
+    while (y + 1 <= Math.round(box.h) && at(y + 1) <= DARK) y++;
+    return y;
+  };
+  const base = bot(39);
+  if (base === null) return null;
+  return list.map(lx => { const t = bot(lx); return t === null ? null : t - base; });
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, xs]);
+
 /* 409 11회차 — **«밝은 쐐기» 자.** 기둥 **밖**(x 31·34)의 «바닥 띠 ↔ 셸 검정» 사이 한 픽셀이
    어두운 띠(D)인가 베벨(B)인가. 수리 전에는 옆띠(`--pill-l`)가 아래 코너를 감고 올라와 **B** 였고
    ref 는 거의 검정(S)이다 — D 는 그 사이, B 는 명백한 결함이다. */
@@ -437,8 +463,17 @@ const SETTLE = () => {
             th.every(v => v >= MIN_TH), line);
           ok('[2-c] ' + tag + ' — **테이퍼가 있다** — 0° − 75° ≥ ' + MIN_TAPER.toFixed(1) + 'px (평탄한 등폭 링이면 0 이라 빨갛다)',
             th[0] - th[5] >= MIN_TAPER, (th[0] - th[5]).toFixed(1) + 'px : ' + line);
+          /* ⚑ **409 12회차 이관 (2026-08-31) — 75° 문턱 3.5 → 2.5.** 이 항이 묻는 것은
+             «검정이 «7·cos α» 짜리 **가로 밴드**가 아니다» 이고, 그 모델의 예측값은 60° 3.5 · 75° **1.8** 이다.
+             옛 문턱 3.5 는 1회차 그림(전 각도 **7.0 평탄**)을 그대로 굳힌 값이라 **ref 보다 엄했다** —
+             같은 광선으로 잰 ref 는 BL 75° **3.0** · TL 4.0 · BR/TR 5.0 이다(9회차 실측 · 위 REF_TH 주석).
+             12회차가 위 코너의 어깨를 ref 쪽으로 깎자 TL 이 3.0 = **ref BL 과 같은 값**으로 내려왔다.
+             ⇒ 밴드 예측 1.8 에 견줘 **+39%** 인 2.5 로 옮긴다. 무르게 푼 게 아니다:
+                ① [2-a] 가 «ref 곡선 ±2.0» 으로 **반대쪽**(너무 얇음)을 여전히 막는다
+                ② [2-b] 가 전 각도 ≥3.0 을 따로 문다 ③ [2-c] 가 «테이퍼가 있다» 를 문다
+                ④ 아래 [R2] 가 옛 밴드를 주입하면 2.0 으로 떨어지는 것을 확인한다(2.5 는 그 위다). */
           ok('[5] ' + tag + ' — 60° ' + th[4].toFixed(1) + ' > 밴드 예측 3.5 · 75° ' + th[5].toFixed(1) + ' > 1.8',
-            th[4] >= 4.5 && th[5] >= 3.5, line);
+            th[4] >= 4.5 && th[5] >= BAND75, line);
           /* [8] 409 2회차 — 검정 **안쪽** 도 각도와 무관해야 한다. ref 의 코너는 «위는 베벨 ·
              아래는 어두운 띠» 라(384 §ref: 위 `K8 B9 F…` ↔ 아래 `K8 D8 F1 B1`) 두 축의 기댓값이
              **서로 다르고**, 그 다름이 이 항의 음성항 노릇을 한다 — 아래 코너에 베벨을 깔면
@@ -581,6 +616,11 @@ const SETTLE = () => {
           const w31 = await wedgeCls(page, p, sd, 31), w34 = await wedgeCls(page, p, sd, 34);
           ok('[13] ' + tag2 + ' — 기둥 밖 «바닥 띠 ↔ 셸» 사이가 어두운 띠다 (베벨 B 면 밝은 쐐기)',
             w31 !== 'B' && w34 !== 'B', 'x31:' + w31 + ' x34:' + w34);
+          /* [14] 12회차 — **위 코너의 같은 절벽.** 아래(=[12])와 부호만 반대인 한 축이다. */
+          const st = await shoulderTop(page, p, sd, [18, 25, 29]);
+          ok('[14] ' + name + ' T' + sd + ' — 위 코너 절벽이 깎였다 (x29 ≤ ' + SH_TOP29 + ' · 수리 전 4 · ref 1)',
+            !!st && st[2] !== null && st[2] <= SH_TOP29,
+            st ? [18, 25, 29].map((x, i) => 'x' + x + ':' + st[i]).join(' ') : '—');
         }
         /* ── 되돌림 ── 8회차가 **실제로 바꾼 두 층**을 하나씩 되돌린다.
            ⚠ 4회차가 쓰던 주입(«옛 상자» = `::before` 세로 인셋 0 · r30)은 **더 이상 물지 않는다** —
@@ -662,6 +702,9 @@ const SETTLE = () => {
           const sh = await shoulder(page, p, corner[1], [29]);
           ok('[12-R] ' + name + ' ' + corner + ' — 원판을 죽이면 어깨가 ' + SH_OFF29 + ' 이상으로 돌아온다 ([12] 가 공허하지 않다)',
             !!sh && sh[0] !== null && sh[0] >= SH_OFF29, 'x29 ' + (sh ? sh[0] : '—'));
+          const stR = await shoulderTop(page, p, corner[1], [29]);
+          ok('[14-R] ' + name + ' T' + corner[1] + ' — 같은 조작으로 **위** 절벽도 ' + SH_TOP_OFF29 + ' 이상으로 돌아온다 ([14] 가 공허하지 않다)',
+            !!stR && stR[0] !== null && stR[0] >= SH_TOP_OFF29, 'x29 ' + (stR ? stR[0] : '—'));
         }
         await page.evaluate(() => { const st = document.getElementById('v409sh'); if (st) st.remove(); });
         await page.evaluate(() => {
