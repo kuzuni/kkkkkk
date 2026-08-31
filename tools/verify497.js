@@ -10,7 +10,12 @@
  *       마일리지 패널 문구·33 재화 정보 «마일리지» 획득처가 **팩 표에서 파생**(하드코딩 잔재 부재)
  *   [C] 지급 경로 — `devBuyDia` 5종 → 우편 1통 → 수령 시 `S.dia` 증가분이 새 값(153 회귀) ·
  *       마일리지 교환 10개 → 500만
- *   [D] 안 건드린 것 — 이용권 대체가(`PASS_OFFPLUS_DIA` 5만)·룰렛·광고 상품 다이아 수량은 지시 ③ 대로 불변
+ *   [D] 안 건드린 것 — 룰렛·광고 상품 다이아 수량은 지시 ③ 대로 불변
+ *       ⚠ **588(2026-08-31) 이관** — 이 절이 «이용권 대체가 `PASS_OFFPLUS_DIA` 5만 불변» 으로 재던 자리는
+ *       주인 지시(«그 이용권들은 다이아로 못사게 하기»)로 **선언째 사라졌다.** 497 의 결정이 뒤집힌 것이
+ *       아니라 그 상품의 다이아 경로 자체가 없어진 것이므로, 자리를 비우지 않고(333 처방) 같은 성질을
+ *       **반대 방향**으로 묻는다: 세 상수·`PASS_ITEMS[].dia` 가 전부 없고, 그래도 497 이 만진 판매
+ *       축(`DIA_PACKS`)은 한 칸도 안 흔들렸는가.
  *   [E] 구 세이브 — 이미 받은 다이아·쿠폰 무변경(마이그레이션 없음, KEY 안 올림)
  *   [R] 되돌림 시험 — 116 의 «÷2» 값으로 되돌린 사본은 [A]·[C] 가 빨개진다(무르게 풀지 않았다는 증거)
  */
@@ -137,12 +142,22 @@ const openCoin = page => page.evaluate(() => {
 
   /* ================= [D] 안 건드린 것 ================= */
   const D = await page.evaluate(() => ({
-    offplus: typeof PASS_OFFPLUS_DIA === 'undefined' ? null : PASS_OFFPLUS_DIA,
+    /* 588 이관 — 옛 «5만 불변» 이 아니라 «셋 다 선언째 없다» 를 묻는다 */
+    passDiaConst: ['PASS_ADFREE_DIA', 'PASS_ABLESS_DIA', 'PASS_OFFPLUS_DIA']
+      .filter(k => { try { return typeof eval(k) !== 'undefined'; } catch (e) { return false; } }),
+    passDiaField: (typeof PASS_ITEMS === 'undefined' ? [] : PASS_ITEMS).filter(q => 'dia' in q).map(q => q.id),
+    passWon: (typeof PASS_ITEMS === 'undefined' ? [] : PASS_ITEMS).map(q => q.won),
     newDia: typeof NEW_DIA === 'undefined' ? null : NEW_DIA,
     monthDia: typeof MONTHLY_DIA === 'undefined' ? null : MONTHLY_DIA,
     adDia: (typeof COIN_ADS === 'undefined' ? [] : COIN_ADS).map(a => (a.r && a.r.dia) || 0),
   }));
-  ok(D.offplus === 50000, 'D1 이용권 대체가 PASS_OFFPLUS_DIA 50,000 불변 — 지시 ③(상점 재화로 파는 것만)', String(D.offplus));
+  ok(D.passDiaConst.length === 0 && D.passDiaField.length === 0,
+     'D1 588 — 이용권 다이아 대체가가 상수·필드 **둘 다** 0건(값만 0 으로 남기지 않았다)',
+     '상수 ' + (D.passDiaConst.join(',') || '0건') + ' · 필드 ' + (D.passDiaField.join(',') || '0건'));
+  /* 588 이 이용권을 «못 사는 상품» 으로 만들지 않았다는 것까지가 이 절의 짝이다 — 원화가는 그대로 산다 */
+  ok(JSON.stringify(D.passWon) === JSON.stringify([14900, 22900, 7500]),
+     'D1-b 588 이후에도 이용권 원화가(14,900·22,900·7,500)는 그대로 — 가격을 지운 것이 아니다',
+     D.passWon.join('/'));
   ok(D.adDia.filter(Boolean).every(v => v === 100), 'D2 13 광고 상품 보석 ×100 불변(365)', D.adDia.join('/'));
   /* 497 은 «상점 재화로 파는 것» 만 만졌다 — 같은 화폐의 **수급** 축(180 신규 100만 · 월별 10만)은
      손이 미끄러지기 쉬운 자리라 여기서 불변을 못박는다. 그 곡선은 498·199 몫이다. */

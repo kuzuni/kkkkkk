@@ -33760,7 +33760,14 @@ function passClaimAll(){
 /* 지급은 함수 하나로 모여 있다(44 와 같은 꼴). **589 가 그 «결제를 붙일 때» 를 목업으로 당겼다** —
    아래 `buyPassPrem()` 이 `payMock()` 을 지나 이 함수를 부른다. 실제 SDK 가 붙어도 갈아 끼울 자리는
    `payMock()` 한 곳이라 이 함수는 그대로 산다. */
-function grantPassPrem(t){ S.pass.prem[t || passTab] = 1; save(); renderPass(); uiDirty = true; }
+function grantPassPrem(t){
+  /* 589 — 20181 의 세이브 이관과 같은 방어. 옛 세이브의 `prem` 은 boolean 이었고 손댄 세이브는
+     숫자일 수도 있다. 이 함수는 이제 **버튼에서** 불리므로(옛날엔 디버그 전용) 그 자리에서
+     즉사하면 안 된다 — 이관을 못 지난 상태로 들어와도 여기서 빈 표로 세운다. */
+  if(!S.pass) S.pass = {};
+  if(!S.pass.prem || typeof S.pass.prem !== 'object') S.pass.prem = S.pass.prem ? { stage:1 } : {};
+  S.pass.prem[t || passTab] = 1; save(); renderPass(); uiDirty = true;
+}
 window.devPassPrem = grantPassPrem;
 /* 589 — 프리미엄 패스 «구매»(목업). 프리미엄은 **계정 권한**이라 `PAY_INSTANT` 목록의 상품이다:
    보상은 패스 트랙의 칸에 그대로 있고(활성화가 그 칸을 연다) 우편에 실을 재화가 없다.
@@ -33768,7 +33775,7 @@ window.devPassPrem = grantPassPrem;
       권한 상품에서도 지키는 자리이고, `sendMail` 이 그 예외를 썸네일(`ic`)로 받는다. */
 function buyPassPrem(t){
   const tab = t || passTab, T = PASS_TABS[tab];
-  if(!T || (S.pass.prem && S.pass.prem[tab])) return false;
+  if(!T || (S.pass && S.pass.prem && S.pass.prem[tab])) return false;
   /* `price` 는 표시 문자열(«₩14,900»)이라 숫자 축은 여기서 뽑는다 — 상품표는 하나로 둔다(402 «표 두 벌») */
   payMock({ k:'prem:' + tab, n:'프리미엄 패스 · ' + (T.tab || tab),
     won:parseInt(String(T.price).replace(/\D/g, ''), 10) || 0, deliver:() => {

@@ -18,10 +18,10 @@
  *   [B] 찍힌 픽셀(350 처방) — 안내문 띠를 캡처해 페이지로 되돌려 흰 잉크의 실제 좌우 끝이
  *       프레임 안(테 6px 여유)인지. 클립 밖은 아예 안 찍히므로 «잘림» 이 픽셀로 잡힌다.
  *   [C] 서브탭과 안 겹친다 — 안내문 하변 ↔ `#shopw .stabs` 상변 ≥ 8px.
- *   [D] 카드별 대체가 — `.pvd` 가 이용권 수만큼 있고, 금액이 제품 상수(`PASS_ITEMS[].dia`)에서
- *       나오며, 잉크가 제 상자 안이고, **원화 버튼·리본·일러스트와 겹침 0**.
- *   [E] 늘어나도 안 잘린다(등재문 ②) — 이름을 가장 길게·금액을 9자리로 키워 다시 그려도
- *       ⓐ 하단 줄은 **폭이 그대로**(총론이라 파생이 없다) ⓑ `.pvd` 잉크가 제 상자 안.
+ *   [D] **588 이관** — 카드에 «다이아 대체가» 가 **0건**이다. 477 이 이 절에서 소유한 성질은
+ *       «카드의 값은 카드 안에서 말한다(하단 줄에 안 이어 붙인다)» 였고, 588 이 그 값을 통째로
+ *       없앴다(주인 «그 이용권들은 다이아로 못사게 하기»). 자리를 비우지 않고(333 처방) 반대
+ *       방향으로 묻는다: `.pvd` 0개 · 카드/하단 어디에도 «대체» 문구 0건 · 그래도 가격 버튼은 살아 있다.
  *   [F] 두 프레임(2280 · 1600) 다 — [A]~[D] 를 프레임마다 돈다.
  *   [R] 되돌림 시험 — 무르게 푼 수리가 아님을 못박는다:
  *       R1 옛 «3종 한 줄» 문자열을 도로 주입하면 [A] 의 자가 **빨개진다**
@@ -112,7 +112,9 @@ async function paintedInk(page, band, H) {
         buy: [...document.querySelectorAll('.pvc>.bt')].map(el => R(el)),
         rb:  [...document.querySelectorAll('.pvc>.rb')].map(el => R(el)),
         art: [...document.querySelectorAll('.pvc>.art')].map(el => R(el)),
-        dia: PASS_ITEMS.map(q => fmt(q.dia)),
+        diaField: PASS_ITEMS.filter(q => 'dia' in q).length,
+        won: [...document.querySelectorAll('.pvc>.bt>i')].map(el => el.textContent),
+        pageTxt: (document.getElementById('shopList') || document.body).innerText,
         stabs: stabs ? R(stabs) : null,
       };
     })()`);
@@ -139,23 +141,14 @@ async function paintedInk(page, band, H) {
     const gap = st.stabs ? +(st.stabs.y1 - band.y2).toFixed(2) : null;
     ok(gap !== null && gap >= 8, 'C1 H' + H + ' 안내문 하변 ↔ 서브탭 상변 ≥ 8px', gap + 'px');
 
-    /* [D] 카드별 대체가 */
-    ok(st.pvd.length === st.dia.length, 'D1 H' + H + ' `.pvd` 가 이용권 수만큼 있다',
-      st.pvd.length + ' / ' + st.dia.length);
-    ok(st.pvd.every((d, i) => d.txt.replace(/\s+/g, '').includes(st.dia[i].replace(/\s+/g, ''))),
-      'D2 H' + H + ' 금액이 제품 상수(`PASS_ITEMS[].dia`)에서 나온다',
-      st.pvd.map(d => d.txt).join(' / '));
-    const outD = st.pvd.map(d => d.ink ? Math.max(+(d.rect.x1 - d.ink.x1).toFixed(2), +(d.ink.x2 - d.rect.x2).toFixed(2)) : 99);
-    ok(outD.every(v => v <= 0), 'D3 H' + H + ' `.pvd` 잉크가 제 상자(308px) 안',
-      '초과 ' + outD.join(' / ') + 'px');
-    const hit = (a, c) => !(a.x2 <= c.x1 || a.x1 >= c.x2 || a.y2 <= c.y1 || a.y1 >= c.y2);
-    const bad = [];
-    st.pvd.forEach((d, i) => {
-      st.buy.forEach((q, j) => { if (hit(d.rect, q)) bad.push('pvd' + i + '×원화버튼' + j); });
-      st.rb.forEach((q, j) => { if (hit(d.rect, q)) bad.push('pvd' + i + '×리본' + j); });
-      st.art.forEach((q, j) => { if (hit(d.rect, q)) bad.push('pvd' + i + '×일러스트' + j); });
-    });
-    ok(bad.length === 0, 'D4 H' + H + ' `.pvd` 가 원화 버튼·리본·일러스트와 겹침 0', bad.join(', ') || '0건');
+    /* [D] 588 — «다이아 대체가» 가 화면 어디에도 없다 */
+    ok(st.pvd.length === 0, 'D1 H' + H + ' 588 — `.pvd`(다이아 대체가) 0개', st.pvd.length + '개');
+    ok(st.diaField === 0, 'D2 H' + H + ' 588 — 상품표에 `dia` 필드 0건', st.diaField + '건');
+    ok(!/대체/.test(st.pageTxt), 'D3 H' + H + ' 588 — 이용권 탭 글자에 «대체» 0건',
+      (st.pageTxt.match(/[^\s]{0,6}대체[^\s]{0,6}/g) || []).join(' / ') || '0건');
+    /* ⚠ 짝 — 588 이 «못 사는 상품» 을 만들지 않았다는 것까지가 이 절이다(589 가 그 자리를 받는다) */
+    ok(st.buy.length === 3 && st.won.every(t => /원$/.test(t.trim())),
+      'D4 H' + H + ' 588 이후에도 가격 버튼 3개가 원화로 살아 있다', st.won.join(' | '));
 
     /* [A] 자동 축복 보유 상태 — 줄이 하나 늘고 문구가 바뀐다 */
     const own = await page.evaluate(`(() => { ${HELPERS}
@@ -191,22 +184,38 @@ async function paintedInk(page, band, H) {
   await openPass(pageE);
   const E = await pageE.evaluate(`(() => { ${HELPERS}
     const before = INK([...document.querySelectorAll('.pv-bt')].pop());
-    const keepN = PASS_ITEMS.map(q => q.n), keepD = PASS_ITEMS.map(q => q.dia);
-    PASS_ITEMS.forEach(q => { q.n = '아주아주긴이용권이름스무자넘김'; q.dia = 999999999; });
+    /* 588 — 늘릴 것이 «이름·원화가» 로 줄었다(대체가가 없다). 하단 줄이 그 둘에도 안 딸리는지 본다 */
+    /* 588 이관 — «카드의 값은 카드 안에서 말한다» 를 재는 상자는 이제 카드(.pvc) 다.
+       버튼 상자로 재면 라벨 잉크가 원래부터 좌우 7.3px 씩 넘는다(테 6px + 자간 — 588 이전에도
+       같았다). 그건 이 작업이 만든 것도, 477 이 소유한 것도 아니다. */
+    const buyInk0 = [...document.querySelectorAll('.pvc>.bt')]
+      .map(el => ({ rect: R(el.closest('.pvc')), ink: INK(el) }));
+    const keepN = PASS_ITEMS.map(q => q.n), keepW = PASS_ITEMS.map(q => q.won);
+    PASS_ITEMS.forEach(q => { q.n = '아주아주긴이용권이름스무자넘김'; q.won = 999999999; });
     renderShopPage();
     const li = document.getElementById('shopList'); li.scrollTop = li.scrollHeight;
     const after = INK([...document.querySelectorAll('.pv-bt')].pop());
-    const pvd = [...document.querySelectorAll('.pvc>.pvd')].map(el => ({ rect: R(el), ink: INK(el) }));
-    PASS_ITEMS.forEach((q, i) => { q.n = keepN[i]; q.dia = keepD[i]; });
+    const buyInk = [...document.querySelectorAll('.pvc>.bt')].map(el => ({ rect: R(el), ink: INK(el) }));
+    PASS_ITEMS.forEach((q, i) => { q.n = keepN[i]; q.won = keepW[i]; });
     renderShopPage();
-    return { before, after, pvd };
+    return { before, after, buyInk, buyInk0 };
   })()`);
   ok(Math.abs(E.after.w - E.before.w) < 0.5, 'E1 하단 줄 폭이 이용권 이름·금액에 안 딸린다(총론)',
     '수리 후 ' + E.before.w + ' → 이름/금액 확대 후 ' + E.after.w);
   ok(E.after.x1 >= BOX.x1 && E.after.x2 <= BOX.x2, 'E2 그 상태에서도 하단 줄이 상자 안',
     E.after.x1 + '..' + E.after.x2);
-  const outE = E.pvd.map(d => d.ink ? Math.max(+(d.rect.x1 - d.ink.x1).toFixed(2), +(d.ink.x2 - d.rect.x2).toFixed(2)) : 99);
-  ok(outE.every(v => v <= 0), 'E3 금액 9자리에서도 `.pvd` 잉크가 제 상자 안', '초과 ' + outE.join(' / ') + 'px');
+  /* 588 이관 — 옛 E3 은 `.pvd`(대체가) 잉크가 제 308px 상자 안인지를 봤다. 그 노드가 사라졌으니
+     같은 성질(«카드의 값은 카드 안에서 다 말해진다»)을 **가격 버튼**으로 옮겨 잰다.
+     ⚠ 9자리 확대판은 여기 안 쓴다 — `.pvd` 는 `nowrap` + 고정 308 상자라 9자리를 견뎠지만
+        `.pvc>.bt` 는 그런 상자가 아니고(버튼 라벨), 실제 원화가는 5자리다. 없는 상품으로
+        만든 초과폭을 결함으로 세면 «그 버튼을 고쳐라» 라는 거짓 신호가 된다(A3-ⓑ 교훈).
+        9자리에서 지켜야 하는 것은 **하단 총론 줄**이고 그건 E1·E2 가 이미 잰다. */
+  const outE = E.buyInk0.map(d => d.ink ? Math.max(+(d.rect.x1 - d.ink.x1).toFixed(2), +(d.ink.x2 - d.rect.x2).toFixed(2)) : 99);
+  ok(outE.every(v => v <= 0), 'E3 실제 원화가에서 가격 잉크가 **카드** 안', '초과 ' + outE.join(' / ') + 'px');
+  /* 그 «9자리» 실측은 버리지 않고 기록으로 남긴다 — 상품이 커지면 무엇이 먼저 깨지는지의 자료다 */
+  const out9 = E.buyInk.map(d => d.ink ? +(Math.max(d.rect.x1 - d.ink.x1, d.ink.x2 - d.rect.x2)).toFixed(2) : 99);
+  console.log('  (참고) 원화가 9자리 가정 시 가격 버튼 잉크가 버튼 상자를 넘는 폭: ' + out9.join(' / ')
+    + 'px — 실제 5자리에서는 7.32px(테 6 + 자간)이고, 하단 총론 줄은 E1·E2 로 불변이다');
 
   /* ── [R] 되돌림 시험 ──────────────────────────────────────────────── */
   console.log('');
@@ -229,30 +238,40 @@ async function paintedInk(page, band, H) {
     '초과 ' + (R1.bad.x2 - 1080).toFixed(2) + 'px');
   ok(R1.good.x2 <= BOX.x2, 'R1c 되돌리면 도로 초록', '잉크 우끝 ' + R1.good.x2);
 
+  /* 588 이관 — 옛 R2·R3 은 `.pvd` 가 **있다**는 전제 위에 서 있었다. 그 전제가 죽었으므로
+     되돌림도 방향을 뒤집는다: 대체가를 **도로 주입**하면 새 [D] 가 실제로 빨개지는가. */
   const R2 = await pageE.evaluate(`(() => { ${HELPERS}
-    const before = document.querySelectorAll('.pvc>.pvd').length;
-    document.querySelectorAll('.pvc>.pvd').forEach(el => el.remove());
-    const gone = document.querySelectorAll('.pvc>.pvd').length;
+    const c = document.querySelector('.pvc');
+    const before = { pvd: document.querySelectorAll('.pvc>.pvd').length,
+                     txt: /대체/.test(document.getElementById('shopList').innerText) };
+    const el = document.createElement('div');
+    el.className = 'pvd'; el.textContent = '대체 ' + curIc('dia') + ' 75,000';
+    c.appendChild(el);
+    const hurt = { pvd: document.querySelectorAll('.pvc>.pvd').length,
+                   txt: /대체/.test(document.getElementById('shopList').innerText) };
     renderShopPage();
-    const back = document.querySelectorAll('.pvc>.pvd').length;
-    return { before, gone, back };
+    const back = { pvd: document.querySelectorAll('.pvc>.pvd').length,
+                   txt: /대체/.test(document.getElementById('shopList').innerText) };
+    return { before, hurt, back };
   })()`);
-  ok(R2.before === 3 && R2.gone === 0 && R2.back === 3,
-    'R2 `.pvd` 를 지우면 [D] 의 자가 못 찾는다(헛초록 아님)',
-    R2.before + ' → ' + R2.gone + ' → ' + R2.back);
+  ok(R2.before.pvd === 0 && R2.before.txt === false,
+    'R2 588 — 지금은 `.pvd` 0개 · «대체» 문구 0건', JSON.stringify(R2.before));
+  ok(R2.hurt.pvd === 1 && R2.hurt.txt === true,
+    'R2b 대체가를 도로 주입하면 [D1]·[D3] 이 그것을 본다(헛초록 아님)', JSON.stringify(R2.hurt));
+  ok(R2.back.pvd === 0 && R2.back.txt === false,
+    'R2c 재렌더하면 도로 초록 — 제품이 그것을 다시 그리지 않는다', JSON.stringify(R2.back));
 
-  const R3 = await pageE.evaluate(`(() => { ${HELPERS}
-    const hit = (a,c) => !(a.x2<=c.x1 || a.x1>=c.x2 || a.y2<=c.y1 || a.y1>=c.y2);
-    const d = document.querySelector('.pvc>.pvd'), b = d.parentElement.querySelector('.bt');
-    const before = hit(R(d), R(b));
-    d.style.bottom = '60px';                     /* 버튼 위로 내려앉힌다 */
-    const after = hit(R(d), R(b));
-    d.style.bottom = '';
-    return { before, after };
+  /* 589 되돌림 — 588 이 «못 사는 상품» 을 만들지 않았음을 실동작으로 못박는다.
+     ⚠ 다이아를 **0** 으로 두고 산다: 옛 경로가 되살아나면 «부족» 으로 막혀 여기가 빨개진다. */
+  const R3 = await pageE.evaluate(`(() => {
+    S.pass = { prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} };
+    S.dia = 0; S.mailx = []; S.mailSeq = 0; S.mail = {};
+    const p0 = S.cnt.paid | 0, r = buyPass('noads');
+    return { r, dia: S.dia, own: passOwned('noads'),
+             dPaid: (S.cnt.paid | 0) - p0, mails: (S.mailx || []).length };
   })()`);
-  ok(R3.before === false && R3.after === true,
-    'R3 `.pvd` 를 버튼 위로 내리면 [D4] 겹침 탐지기가 실제로 잡는다',
-    '원 자리 겹침 ' + R3.before + ' → 내린 뒤 ' + R3.after);
+  ok(R3.r === true && R3.dia === 0 && R3.own === true && R3.dPaid === 1 && R3.mails === 1,
+    'R3 589 — 다이아 0 에서도 구매된다(결제 1건 · 우편 1통 · 권한 즉시)', JSON.stringify(R3));
 
   ok(errs.length === 0, 'H1 콘솔·페이지 에러 0건', errs.slice(0, 3).join(' | ') || '0건');
 

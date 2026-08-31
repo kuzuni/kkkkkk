@@ -188,33 +188,51 @@ function safeElapsed(bless, until0, cands) {
   ok('카드 밖으로 새는 요소 0 (의도한 돌출 제외)', pv.spill.every(a => a.length === 0), JSON.stringify(pv.spill));
   ok('페이지 높이 = 카드 3장을 담는다(≥2000)', pv.wrapH >= 2000, pv.wrapH + 'px');
 
-  /* ================= 3. 다이아 부족 → 구매 거절 ================= */
-  console.log('\n[3] 다이아 부족 시 구매 거절 (재화가 줄지 않는다)');
+  /* ================= 3. 588 — 다이아 경로가 아예 없다 =================
+     ⚠ **이 절은 588(2026-08-31, 주인 «그 이용권들은 다이아로 못사게 하기») 이관이다.**
+     원래 여기는 «다이아가 모자라면 구매 거절» 을 쟀다 — 그 명제는 이용권을 다이아로 사던 시절의
+     것이라 지시로 통째로 죽었다. 자리를 비우지 않고(333 처방) **정확히 반대 명제**로 갈아 끼운다:
+     다이아가 10 밖에 없어도 사지고, 그래도 다이아는 **1도 안 줄어든다**.
+     ⚑ 이 두 항은 588 이 사라지면(대체가가 되살아나면) 첫 항이, 589 가 사라지면(못 사게 되면)
+        둘째 항이 빨개진다 — 어느 쪽으로 되돌려도 잡힌다. */
+  console.log('\n[3] 588 — 다이아로는 사지도 차감되지도 않는다');
   const lack = await page.evaluate(() => {
-    S.dia = 10; renderPassPage(document.getElementById('shopList'));
+    S.dia = 10; S.mailx = []; S.mailSeq = 0; S.mail = {};
+    renderPassPage(document.getElementById('shopList'));
     const before = S.dia, r = buyPass('noads');
-    return { r: r, dia: S.dia, before: before, noAds: !!S.pass.noAds };
+    return { r: r, dia: S.dia, before: before, noAds: !!S.pass.noAds,
+             field: PASS_ITEMS.filter(q => 'dia' in q).length,
+             src: /S\.dia\s*-=/.test(String(buyPass)) };
   });
   await page.evaluate(() => closeModal && closeModal());
-  ok('구매 실패(false) · 다이아 그대로 · noAds 미설정',
-    lack.r === false && lack.dia === lack.before && lack.noAds === false,
-    'r=' + lack.r + ' dia=' + lack.dia + ' noAds=' + lack.noAds);
+  ok('588 — 다이아 10 뿐이어도 구매 성공 · 다이아 Δ0 · 권한은 즉시 반영',
+    lack.r === true && lack.dia === lack.before && lack.noAds === true,
+    'r=' + lack.r + ' dia=' + lack.dia + '/' + lack.before + ' noAds=' + lack.noAds);
+  ok('588 — 상품표에 `dia` 필드 0건 · `buyPass` 본문에 다이아 차감 0건',
+    lack.field === 0 && lack.src === false, '필드 ' + lack.field + '개 · 차감식 ' + lack.src);
 
   /* ================= 4. 광고 제거 구매 → 표식·문구·저장 ================= */
   console.log('\n[4] 평생 광고 제거 구매');
   const buy = await page.evaluate(() => {
     S.dia = 1e9; S.mailx = []; S.mailSeq = 0; S.mail = {}; S.mileage = 0;
+    /* 588 이후 [3] 절이 실제로 «구매에 성공» 하므로 여기서 권한을 되돌려 놓아야 이 절이 산다
+       (옛날엔 [3] 이 «거절» 이라 이 초기화가 필요 없었다 — 588 이관이 만든 자리다). */
+    S.pass = { prem:{}, got:{}, noAds:false, autoBlessUntil:0, offPlus:false, dailyAt:{} };
+    syncNoAds();
     const p = PASS_ITEMS.find(x => x.id === 'noads'), d0 = S.dia, m0 = S.mileage || 0;
+    const paid0 = S.cnt.paid | 0;
     const r = buyPass('noads');
     /* 153 — «즉시 보석»·마일리지 쿠폰은 **상점 구매품** 이라 우편함으로 간다(`grantPass()` 의
        `sendMail()`). 그래서 구매 순간 지갑에서 나가는 것은 **정가 그대로**이고, once 는 우편을
        수령해야 비로소 들어온다. 옛 기대식(`p.dia − p.once`)은 153 이전의 «즉시 입금» 을 전제한
        것이라 부패했다 — 기대값은 게이트 상수가 아니라 PASS_ITEMS·S.mailx 런타임에서 뽑는다. */
-    const cost = d0 - S.dia, price = p.dia;
+    /* 588 — 옛 «정가(다이아 대체가)만큼 차감» 은 죽었다. 이제 기대 차감은 **0** 이다. */
+    const cost = d0 - S.dia, price = 0;
     const mail = (S.mailx || []).find(m => (m.t || '').indexOf(p.n) >= 0) || null;
     const c0 = S.dia, cp0 = S.mileage || 0;
     if (mail) claimMail(mail.id);
     return { r: r, cost: cost, price: price, once: p.once || 0, cp: p.cp || 0,
+      dPaid: (S.cnt.paid | 0) - paid0,
       dCp: cp0 - m0, mails: (S.mailx || []).length,
       mailC: mail ? mail.c : null, mailM: mail ? mail.m : null,
       claimedDia: S.dia - c0, claimedCp: (S.mileage || 0) - cp0,
@@ -223,7 +241,7 @@ function safeElapsed(bless, until0, cands) {
       saved: !!(JSON.parse(localStorage.getItem('idle_hunter_save_v4') || '{}').pass || {}).noAds };
   });
   await page.evaluate(() => closeModal && closeModal());
-  ok('구매 성공 · 다이아 순차감 = 정가 그대로(153 — 즉시 보석은 우편)',
+  ok('588·153 — 구매 성공 · 다이아 순차감 0(가격은 원화, 지급은 우편)',
     buy.r === true && buy.cost === buy.price,
     '차감 ' + buy.cost + ' / 기대 ' + buy.price);
   /* 위 단언만으로는 «once 를 0 으로 지워도» 통과한다 — 즉시 보석이 실제로 존재하고 우편으로
@@ -233,6 +251,9 @@ function safeElapsed(bless, until0, cands) {
     buy.once > 0 && buy.cp > 0, 'once=' + buy.once + ' cp=' + buy.cp);
   ok('153 — 구매 순간 지갑에 즉시 보석·쿠폰이 들어오지 않는다',
     buy.dCp === 0 && buy.cost === buy.price, 'Δ쿠폰=' + buy.dCp + ' Δ다이아=' + buy.cost);
+  /* 589 — 결제가 «일어났다» 는 이력이 남는가. 이 항이 없으면 «지급만 하고 결제는 안 센» 경로가 초록이 된다 */
+  ok('589 — 이용권 구매가 결제 1건으로 세어진다(S.cnt.paid +1)',
+    buy.dPaid === 1, '+' + buy.dPaid);
   ok('153 — 구매가 우편 1통을 만든다(즉시 보석 + 쿠폰)',
     buy.mails === 1 && buy.mailC === buy.once && buy.mailM === buy.cp,
     buy.mails + '통 · c=' + buy.mailC + '/' + buy.once + ' m=' + buy.mailM + '/' + buy.cp);

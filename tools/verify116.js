@@ -21,7 +21,11 @@
  *   [E] 교환 — 쿠폰 10개로 `mileageExchange()` → 다이아 **+5,000,000** · 쿠폰 −10 · 부족하면 false(Δ0) ·
  *       결과 안내는 149 이후 **팝업이 아니라 토스트**(`#fxl .fx-toast`)다
  *   [F] 44 회귀 — 가격 `won`(1,000/5,000/11,000/55,000/110,000)·`MILE_NEED`=10 불변 ·
- *       카드 [구매] 클릭은 «준비 중» 팝업만(지급 0) · 쿠폰 10 미만이면 교환 버튼에 `#cnExch` 자체가 없음
+ *       카드 [구매] 클릭 · 쿠폰 10 미만이면 교환 버튼에 `#cnExch` 자체가 없음
+ *       ⚠ **589(2026-08-31) 이관** — F4 가 재던 «클릭 → «결제 준비 중» 팝업만» 은 주인 지시
+ *       («클릭시 걍 결제된거로 쳐주기»)로 폐기됐다. 116 이 이 자리에서 소유한 성질은 «클릭이
+ *       지갑을 직접 안 건드린다»(= 즉시 지급 0) 였고 **그건 그대로 참**이다 — 지급이 우편으로
+ *       가기 때문이다(153). 그래서 «Δ지갑 0» 은 남기고 문구만 새 진실로 갈아 끼운다.
  *   [G] 구 세이브 — 이미 받은 다이아는 안 건드린다(마이그레이션 없음). 44 교훈 1 대로 `addInitScript` 로 심는다
  *   [H] 콘솔 에러 0건 · 화면 텍스트에 NaN/undefined 0건
  */
@@ -207,14 +211,26 @@ const openCoin = async page => page.evaluate(() => {
   const F = await page.evaluate(() => {
     S.mileage = 0; S.dia = 1000; renderCoinPage(document.getElementById('shopList'));
     const noEx = !document.getElementById('cnExch') && !!document.querySelector('#cnMile.off');
-    const d0 = S.dia;
+    const d0 = S.dia, p0 = S.cnt.paid | 0, n0 = (S.mailx || []).length;
     document.querySelector('#shopList [data-diabuy="d5"]').click();
     const txt = document.body.innerText;
-    return { noEx, dDia: S.dia - d0, ready: txt.includes('결제 준비 중'), won: txt.includes('110,000원') };
+    const mail = (S.mailx || [])[(S.mailx || []).length - 1] || null;
+    return { noEx, dDia: S.dia - d0, dPaid: (S.cnt.paid | 0) - p0, dMail: (S.mailx || []).length - n0,
+             mailDia: mail ? mail.c : null, ready: txt.includes('결제 준비 중'),
+             done: txt.includes('결제 완료') && txt.includes('우편함'),
+             won: [...document.querySelectorAll('#shopList [data-diabuy="d5"]')]
+                    .some(el => el.textContent.includes('110,000원')) };
   });
   ok(F.noEx, 'F3 쿠폰 10 미만이면 교환 버튼 id(#cnExch) 자체가 없음(비활성 클릭 = Δ0)');
-  ok(F.dDia === 0 && F.ready, 'F4 카드 [구매] 클릭 → «결제 준비 중» 팝업만, 지급 0', 'Δ' + F.dDia);
-  ok(F.won, 'F5 구매 팝업에 원화가 «110,000원» 표기');
+  /* 589 이관 — «지갑을 직접 안 건드린다» 는 116 의 성질이라 그대로 남기고, 그 뒤에 무엇이
+     일어나는가를 새 진실로 적는다. 옛 문구가 되살아나면 F4-b 가 빨개진다(자리를 안 비웠다). */
+  ok(F.dDia === 0, 'F4 카드 [구매] 클릭이 지갑을 직접 안 건드린다(지급은 우편 — 153)', 'Δ' + F.dDia);
+  ok(F.dPaid === 1 && F.dMail === 1 && F.mailDia === 2000000,
+     'F4-a 589 — 클릭 = 결제 완료 1건 · 우편 1통 · 그 통에 d5 다이아 200만',
+     '결제 +' + F.dPaid + ' · 우편 +' + F.dMail + ' · c=' + F.mailDia);
+  ok(F.done && !F.ready, 'F4-b 589 — 안내가 «우편함 확인» 이고 옛 «결제 준비 중» 은 0건',
+     '완료 ' + F.done + ' · 준비중 ' + F.ready);
+  ok(F.won, 'F5 구매 버튼에 원화가 «110,000원» 표기');
 
   /* ---- [G] 구 세이브 보존 — 이미 받은 다이아는 안 건드린다(지시 ④) ---- */
   const ctx2 = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });

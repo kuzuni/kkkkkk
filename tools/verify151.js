@@ -30,10 +30,13 @@ const ok = (n, c, d) => {
 const near = (a, b, t) => Math.abs(a - b) <= (t == null ? 1.5 : t);
 /* ⚠ 기대값은 게임 데이터에서 **파생하지 않고** 여기 다시 적는다 — `PASS_ITEMS` 로 기대값을 만들면
    그 배열이 통째로 0 이 돼도 «기대 0 = 실측 0» 으로 통과하는 공허한 게이트가 된다(음성 테스트로 확인). */
+/* ⚠ **588(2026-08-31, 주인 «그 이용권들은 다이아로 못사게 하기») 이관** — `dia`(다이아 대체가)
+   칸을 표에서 지웠다. 값을 0 으로 남기면 «아무도 안 읽는 기대값» 이 굳는다(295-② · 460 선례).
+   대신 그 자리는 아래 [B] 가 **반대 명제**(«다이아가 1도 안 줄어든다»)로 지킨다. */
 const EXPECT = {
-  noads:   { won: 14900, dia: 75000, cp: 1, daily: 1500, once: 10000, perm: true },
-  abless:  { won: 22900, dia: 35000, cp: 2, daily: 1500, once: 16000, perm: false },
-  offplus: { won: 7500,  dia: 50000, cp: 1, daily: 750,  once: 5000,  perm: true }
+  noads:   { won: 14900, cp: 1, daily: 1500, once: 10000, perm: true },
+  abless:  { won: 22900, cp: 2, daily: 1500, once: 16000, perm: false },
+  offplus: { won: 7500,  cp: 1, daily: 750,  once: 5000,  perm: true }
 };
 const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
 
@@ -78,7 +81,10 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
       rb2: cs.map(c => (c.querySelector('.rb2') || {}).textContent || ''),
       ti: cs.map(c => (c.querySelector('.pvt>i') || {}).textContent || ''),
       old: document.querySelectorAll('.cn-cd.pv').length,
-      items: PASS_ITEMS.map(p => ({ id: p.id, won: p.won, cp: p.cp, daily: p.daily, once: p.once, dia: p.dia }))
+      /* 588 — `dia` 는 상품표에서 사라졌다. «없다» 를 값이 아니라 **키의 유무**로 실어 보낸다
+         (`dia: p.dia` 로 두면 undefined 가 직렬화에서 빠져 «없음» 과 «0» 을 못 가른다). */
+      items: PASS_ITEMS.map(p => ({ id: p.id, won: p.won, cp: p.cp, daily: p.daily, once: p.once,
+                                    hasDia: 'dia' in p }))
     };
   });
   ok('A1 카드 3장', A.n === 3, 'n=' + A.n);
@@ -96,7 +102,7 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
     && A.rb2[1].replace(/[^0-9]/g, '') === String(EXPECT.abless.once), A.rb1[0] + ' / ' + A.rb2[1]);
   ok('A11 상품 데이터가 지시서 값 그대로',
     A.items.every(it => { const e = EXPECT[it.id];
-      return e && it.won === e.won && it.dia === e.dia && it.cp === e.cp
+      return e && it.won === e.won && it.hasDia === false && it.cp === e.cp
         && it.daily === e.daily && it.once === e.once; }), JSON.stringify(A.items));
   ok('A9 3번 카드 = 오프라인 보상 증가', /오프라인/.test(A.ti[2]), A.ti[2]);
   ok('A10 2번 카드 불릿에 «4시간 증가» 없음 (효과 중복 판매 방지)',
@@ -107,13 +113,17 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
   /* ⚠ 153(상점 구매품 우편 지급, 2026-08-27 주인 지시)이 **151 의 재화 지급 경로를 우편으로 옮겼다**.
      그래서 «구매 즉시 다이아가 늘어난다» 는 더 이상 참이 아니다 — 참인 것은
      ⓐ 정가만큼 차감 ⓑ 권한(광고 제거·자동 축복·오프라인 +4h)은 **즉시** ⓒ 쿠폰·즉시 보석은
-     **우편 한 통**으로 가고, 그 우편을 수령하면 그때 재화가 된다. 세 층을 다 본다(LESSONS 156-2). */
-  console.log('\n[B] 구매 — 차감 · 권한 즉시 · 재화는 우편(153)');
+     **우편 한 통**으로 가고, 그 우편을 수령하면 그때 재화가 된다. 세 층을 다 본다(LESSONS 156-2).
+     ⚠ **588·589 가 ⓐ 를 뒤집었다** — 차감할 다이아가 없다. 이 자리에서 재는 것은 이제
+     «다이아 Δ0 인데도 권한이 켜지고 우편이 온다» 이고, ⓑⓒ 는 한 글자도 안 바뀐다.
+     ⚑ 무르게 푼 것이 아니다: 옛 «−75,000» 을 «0» 으로 고치기만 했으면 «구매가 통째로 사라져도
+        초록» 이 된다 — 그래서 결제 이력(`S.cnt.paid` +1)을 같은 절에서 같이 묻는다(589). */
+  console.log('\n[B] 구매 — 다이아 Δ0(588) · 결제 1건(589) · 권한 즉시 · 재화는 우편(153)');
   for (const id of ['noads', 'abless', 'offplus']) {
     const r = await page.evaluate(i => {
       S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
       S.dia = 3e6; S.mileage = 0; S.mailx = []; S.mail = S.mail || {};
-      const d0 = S.dia, m0 = S.mileage | 0;
+      const d0 = S.dia, m0 = S.mileage | 0, p0 = S.cnt.paid | 0;
       /* 같은 tick 안에서 Δ 를 잰다 — 자동 전투가 재화를 흔들 수 없다(LESSONS 156-3) */
       const okr = buyPass(i);
       const mails = (S.mailx || []).map(m => ({ t: m.t, c: m.c, m: m.m, src: m.src }));
@@ -122,10 +132,13 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
       const d1 = S.dia, m1 = S.mileage | 0;
       (S.mailx || []).forEach(m => claimMail(m.id));
       return { okr, dBuy, mBuy, mails, dClaim: S.dia - d1, mClaim: (S.mileage | 0) - m1,
+        dPaid: (S.cnt.paid | 0) - p0,
         own: passOwned(i), twice: buyPass(i) };
     }, id);
     const e = EXPECT[id];
-    ok('B:' + id + ' 정가만큼 차감', r.dBuy === -e.dia, r.dBuy + ' (기대 ' + (-e.dia) + ')');
+    ok('B:' + id + ' 588 — 다이아가 1도 안 줄어든다', r.okr === true && r.dBuy === 0,
+      'Δ' + r.dBuy + ' (기대 0) · 구매 ' + r.okr);
+    ok('B:' + id + ' 589 — 결제 1건으로 세어진다(S.cnt.paid +1)', r.dPaid === 1, '+' + r.dPaid);
     ok('B:' + id + ' 구매 시점에는 재화가 안 들어온다(153 — 우편 경유)',
       r.mBuy === 0, 'Δ쿠폰 ' + r.mBuy);
     ok('B:' + id + ' 우편 1통 · 즉시 보석 ' + e.once + ' · 쿠폰 ' + e.cp,
@@ -136,13 +149,15 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
     ok('B:' + id + ' 권한은 즉시 켜진다', r.own === true);
     ok('B:' + id + ' 중복 구매 차단', r.twice === false);
   }
+  /* 588 이관 — 옛 «다이아가 모자라면 아무 일도 없다» 의 반대 명제. 다이아 0 에서도 다 된다.
+     ⚠ 이 항이 «589 가 없어도 초록» 이 되지 않게 우편·권한까지 같이 묻는다. */
   const lack = await page.evaluate(() => {
     S.pass = { prem: {}, got: {}, noAds: false, autoBlessUntil: 0, offPlus: false, dailyAt: {} };
-    S.dia = 10; S.mailx = []; const d0 = S.dia; const r = buyPass('noads');
+    S.dia = 0; S.mailx = []; S.mail = S.mail || {}; const d0 = S.dia; const r = buyPass('noads');
     return { r, dDia: S.dia - d0, own: passOwned('noads'), mails: (S.mailx || []).length };
   });
-  ok('B:부족 다이아가 모자라면 구매도 지급도 우편도 없다',
-    lack.r === false && lack.dDia === 0 && lack.own === false && lack.mails === 0, JSON.stringify(lack));
+  ok('B:588 다이아 0 에서도 구매된다 — 지급 우편 1통 · 권한 즉시 · 다이아 Δ0',
+    lack.r === true && lack.dDia === 0 && lack.own === true && lack.mails === 1, JSON.stringify(lack));
 
   /* ================= [C] 오프라인 상한 ================= */
   console.log('\n[C] 오프라인 보상 상한 6 → 10시간');
@@ -330,8 +345,9 @@ const OFF_BASE_H = 6, OFF_PLUS_H = 4, DAILY_MAX_D = 60;
   await page.waitForTimeout(260);
   const after = await page.evaluate(() => ({ dia: S.dia, own: passOwned('noads'),
     modal: document.querySelectorAll('.modal.on, #modal.on').length }));
-  ok('G6 가격 버튼 실제 클릭으로 구매된다', after.own === true && after.dia < before,
-    'dia ' + before + ' → ' + after.dia);
+  /* 588 — 클릭이 «샀다» 는 증거는 이제 «다이아가 줄었다» 가 아니라 «권한이 켜졌다 + 다이아는 그대로» 다 */
+  ok('G6 가격 버튼 실제 클릭으로 구매된다(588 — 다이아는 그대로)',
+    after.own === true && after.dia === before, 'dia ' + before + ' → ' + after.dia);
   const G7 = await page.evaluate(() => {
     renderPassPage($('shopList'));
     const c = document.querySelector('.pvc[data-pv="noads"]');
