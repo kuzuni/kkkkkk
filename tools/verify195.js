@@ -14,7 +14,9 @@
  *     [D] 실동작   펫 상자 [💎10연]·[💎30연] **버튼을 실제로 눌러** 차감액·획득 수·결과 팝업·세이브 반영 확인
  *     [E] 부족표시 102 «회색+빨강» 경계가 새 가격을 따라간다 — 999 다이아면 lack, 1,000 이면 해제
  *     [F] 무료     무료 10연(`data-shfree`)은 가격과 무관하게 그대로 (차감 0 · freeLeft −1)
- *     [G] 체인     73 ② 가이드 보상은 `summonCost()` 계산식이라 하드코딩 유입 0 · 펫 소환 미션 없음(확인)
+ *     [G] 체인     73 ② 가이드 보상은 `summonCost()` 결합이라 하드코딩 유입 0 · 펫 소환 미션 없음(확인)
+ *                  (565 — 498 이 그 결합을 `max(곡선, 10연)` **하한**으로 남겼다. 값이 아니라
+ *                   «상자 값을 올리면 따라오는가» 로 재고, 상수 사본에서 빨개지는지까지 본다)
  *     [H] 세이브   가격은 세이브에 안 들어간다 — 구 세이브를 그대로 읽고 새 가격으로 소환된다(마이그레이션 불요)
  *     [I] 콘솔     에러 0건
  *
@@ -183,15 +185,72 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
   ok(F0.fl - F.fl === 1 && F.open, 'F2 무료 횟수 −1 · 결과 팝업', F0.fl + ' → ' + F.fl);
 
   /* ---------------- [G] 73 ② 보상 체인 ---------------- */
-  const G = await page.evaluate(() => ({
-    /* 보상이 함수(=summonCost 계산)인 항목과, 소환 미션의 배너 목록 */
-    fnDia: GUIDE.filter(m => typeof m.dia === 'function').length,
-    fnVals: GUIDE.filter(m => typeof m.dia === 'function').map(m => m.dia()),
-    bans: GUIDE.filter(m => m.ban).map(m => m.ban),
-    petMission: GUIDE.some(m => m.ban === 'pet')
-  }));
-  ok(G.fnDia > 0 && G.fnVals.every(v => v === 1000), 'G1 함수형 보상 = 그 소환의 10연(1,000) — 하드코딩 유입 0',
-    G.fnVals.join(','));
+  /* 565 (2026-08-31) — 옛 G1 은 «함수형 보상 = 그 소환의 10연(1,000)» 을 **값으로** 물었다.
+     498(주인 위임 «첫날 100만»)이 가이드 보상을 한 줄 곡선 `gmDiaAt(i)` 으로 갈면서 세 칸을
+     `max(곡선, 원래 함수)` = **하한**으로 남겼고, 곡선(13,000·19,000·21,000)이 10연 정가(1,000)를
+     이겨 옛 항이 빨개졌다. `probe565` 로 재현해 등재문의 갈래 ⓐ(«하드코딩으로 되돌아갔다»)를
+     **기각**했다 — 표는 여전히 함수형이고, 셋 다 곡선값과 1원 단위로 같다.
+     ⇒ 자리를 비우지 않고(333 처방) 같은 뜻을 **살아 있는 증언**으로 갈아 끼운다:
+     «값이 1,000 인가» 가 아니라 **«그 값이 상자 가격을 실제로 따라오는가»** 를 묻는다.
+     ⚠ 값만 다시 적으면(1,000 → 13,000) 곡선 상수를 베낀 사본이 되고, 결합이 통째로
+        사라져도 초록이다. 그래서 [G1-b] 가 **상자를 곡선 위로 올려** 따라오는지 보고,
+        [G1-d] 가 **상수로 갈아 끼운 사본**에서 그 항이 빨개지는지까지 본다. */
+  const HIGH195 = 90000;   /* 10연 = 900,000 — 곡선 최대(idx19 = 49,000)보다 확실히 크다 */
+  const G = await page.evaluate((HIGH) => {
+    const fnIdx = GUIDE.map((m, i) => (typeof m.dia === 'function' ? i : -1)).filter(i => i >= 0);
+    const vals  = fnIdx.map(i => gmDia(GUIDE[i]));
+    const curve = fnIdx.map(i => gmDiaAt(i));
+    const c10   = BKEYS.reduce((o, b) => (o[b] = summonCost(b, 10), o), {});
+    const nextBan = fnIdx.map(i => (GUIDE[i + 1] || {}).ban || null);
+
+    /* 상자를 한 종류씩 곡선 위로 올려 «어느 칸이 따라오는가» 를 행동으로 잰다 */
+    const probe = () => {
+      const moved = {};
+      for (const b of BKEYS) {
+        const keep = BANNERS[b].cost;
+        BANNERS[b].cost = HIGH;
+        const want = summonCost(b, 10);
+        moved[b] = fnIdx.filter(i => gmDia(GUIDE[i]) === want);
+        BANNERS[b].cost = keep;                       /* 즉시 복원 — 뒤 절을 오염시키지 않는다 */
+      }
+      return moved;
+    };
+    const moved = probe();
+
+    /* 음성 사본 — 세 칸을 «지금 값 그대로» 상수로 굳히면 결합이 죽어야 한다 */
+    const keepFns = fnIdx.map(i => GUIDE[i].dia);
+    fnIdx.forEach((i, k) => { GUIDE[i].dia = vals[k]; });
+    const negMoved = probe();
+    fnIdx.forEach((i, k) => { GUIDE[i].dia = keepFns[k]; });
+
+    return { fnIdx, vals, curve, c10, nextBan, moved, negMoved,
+             back: fnIdx.map(i => gmDia(GUIDE[i])),
+             stillFn: fnIdx.every(i => typeof GUIDE[i].dia === 'function'),
+             bans: GUIDE.filter(m => m.ban).map(m => m.ban),
+             petMission: GUIDE.some(m => m.ban === 'pet') };
+  }, HIGH195);
+
+  const gPair = {};
+  Object.entries(G.moved).forEach(([b, a]) => a.forEach(i => { gPair[i] = b; }));
+  const gMovedAll = Object.values(G.moved).reduce((a, x) => a.concat(x), []).sort((a, b) => a - b);
+  const gNegAll   = Object.values(G.negMoved).reduce((a, x) => a.concat(x), []);
+
+  ok(G.fnIdx.length === 3 && G.stillFn &&
+     G.vals.every((v, k) => v === Math.max(G.curve[k], G.c10[G.nextBan[k]])),
+    'G1 함수형 보상 3칸 = max(498 곡선, 다음 상자 10연) — 하한 결합 그대로',
+    G.fnIdx.map((i, k) => 'idx' + i + ' ' + G.vals[k] + '=max(' + G.curve[k] + ',' + G.c10[G.nextBan[k]] + ')').join(' · '));
+  ok(gMovedAll.join(',') === G.fnIdx.join(','),
+    'G1-b ★ 결합이 살아 있다 — 상자 10연을 곡선 위로 올리면 세 칸이 그 값을 그대로 따라간다 (하드코딩 유입 0)',
+    '[' + gMovedAll.join(',') + '] / 함수형 [' + G.fnIdx.join(',') + ']');
+  ok(gMovedAll.length === new Set(gMovedAll).size &&
+     G.fnIdx.every((i, k) => gPair[i] === G.nextBan[k]),
+    'G1-c 73 ② — 각 칸이 반응하는 상자 = **다음 미션의 상자**(칸↔상자 1:1)',
+    G.fnIdx.map((i, k) => 'idx' + i + '→' + gPair[i] + '(다음 ' + G.nextBan[k] + ')').join(' · '));
+  ok(gNegAll.length === 0,
+    'G1-d ☆ 되돌림 — 세 칸을 상수로 굳힌 사본에서는 어느 상자도 칸을 못 움직인다 (G1-b 가 실제로 결합을 잰다)',
+    gNegAll.length ? '움직인 칸 [' + gNegAll.join(',') + ']' : '0칸');
+  ok(G.back.every((v, k) => v === G.curve[k]),
+    'G1-e 상자 값을 되돌리면 다시 곡선값 — max 는 «대체» 가 아니라 «하한»', G.back.join(','));
   ok(!G.petMission, 'G2 가이드에 «펫 소환» 미션 없음 → 73 ② 체인 영향 0', G.bans.join(',') || '없음');
 
   /* ---------------- [H] 구 세이브 ---------------- */
