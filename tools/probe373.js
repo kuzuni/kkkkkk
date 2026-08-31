@@ -2,10 +2,10 @@
  * 등재문의 두 처방(ⓐ F2 목록을 좁힌다 / ⓑ 스윕에 ▦ 메뉴를 넣고 제품 글리프를 바꾼다) 중
  * 어느 쪽인지를 «가설» 이 아니라 **찍힌 값**으로 가른다 (338 규칙).
  *
- *   node tools/probe373.js
+ *   node tools/probe373.js          (P373_BEFORE=<ref> 로 «수리 전» 판본을 직접 지정할 수 있다)
  *
  * 재는 것 —
- *   [1] 현행 F2 스윕이 ▦ 메뉴를 여는가 (등재문: «초록인 이유는 판정이 아니라 스윕이 좁아서다»)
+ *   [1] 수리 전 F2 스윕이 ▦ 메뉴를 여는가 (등재문: «초록인 이유는 판정이 아니라 스윕이 좁아서다»)
  *   [2] 메뉴를 열면 F2 가 실제로 빨개지는가 — 🎫 를 담은 **호스트 노드**와 rect
  *   [3] 그 자리가 아트 자리인가 — 형제 6칸의 글리프·부품이 같은가 · A1 은 그 줄을 면제하는가
  *   [4] 스윕에 메뉴를 더하면 곁다리로 무엇이 그 화면을 «처음» 보는가 — F1·F3·E1 실측
@@ -14,6 +14,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 
@@ -21,6 +22,52 @@ const ROOT = path.resolve(__dirname, '..');
 const URL = 'file://' + path.join(ROOT, 'index.html').replace(/\\/g, '/');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const GATE = fs.readFileSync(path.join(ROOT, 'tools', 'verify125.js'), 'utf8');
+
+/* ── «수리 전» 사본은 **고정된 커밋**에서 꺼낸다 (작업 608 · 573 선례) ──────────
+ * 이 재현기는 [1] 을 «현행 `tools/verify125.js`» 에서 읽었다. 그런데 **373 자신의 수리가
+ * 그 파일의 스윕에 ▦ 메뉴를 넣는다** — 수리가 올라간 순간 «수리 전 세계» 를 묻는 항이
+ * «수리 후» 를 읽어 구조적으로 영원히 빨개졌다(12/13). 표본이 낡은 게 아니라
+ * **표본을 가리키는 손가락이 지금을 가리킨다**는 것이 뿌리다(566·573 과 같은 병).
+ *   ⇒ 항을 지워서 초록으로 만들지 않는다(328~330 교훈) — 그러면 «373 이 통째로 사라져도
+ *     초록인 재현기» 가 된다. 대신 **묻는 시점을 둘로 가른다**:
+ *     [1-a] 수리 **전**(고정 커밋)은 메뉴를 안 열었다 · [1-b] 수리 **후**(지금)는 연다.
+ * ⚠ 화면 수도 고정 커밋에서 읽는다 — 607 이 스윕을 21 → 22 화면으로 넓혔으므로
+ *   «21» 을 손으로 박으면 그 숫자가 다음 스윕 확장 때 또 거짓말을 한다.
+ * ⚠ SHA 를 손으로 박기만 하면 이 저장소에서는 또 썩는다(2026-08-30 이력 재작성) —
+ *   **커밋 제목으로 찾고** 박은 SHA 는 폴백이다.
+ * ⚠⚠ 그물은 **제목(`%s`)** 으로만 좁힌다 — 이 저장소의 기록은 사고를 «인용» 하므로
+ *   본문 매칭은 남의 커밋을 문다(LESSONS 571-④ · 573 1회차가 실제로 그랬다).
+ * ⚠ 여러 번이면 **가장 오래된** 수리의 부모가 «수리 전» 이다. */
+const GOPT = { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] };
+const gitShow = r => { try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; } };
+const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e) { return null; } };
+const BEFORE_FALLBACK = '81a4352';         /* claim(373) — 373 의 수리(wip) 직전 */
+function pickBefore() {
+  if (process.env.P373_BEFORE) return { ref: process.env.P373_BEFORE, how: 'P373_BEFORE 환경변수' };
+  for (const head of ['wip(373):', 'done(373):']) {
+    const list = (gitQ(['rev-list', '--fixed-strings', '--grep=' + head, 'HEAD']) || '')
+      .split('\n').filter(Boolean)
+      .filter(sha => (gitQ(['log', '-1', '--format=%s', sha]) || '').startsWith(head));
+    if (!list.length) continue;
+    const first = list[list.length - 1];   /* rev-list 는 최신순 — 끝이 가장 오래된 수리다 */
+    const parent = gitQ(['rev-parse', '--short', first + '^']);
+    if (parent) return { ref: parent, how: '`' + head + '` 첫 커밋의 부모' };
+  }
+  return { ref: BEFORE_FALLBACK, how: '폴백 SHA(이력에서 373 수리 커밋을 못 찾았다)' };
+}
+const BEFORE = pickBefore();
+const GATE_BEFORE = gitShow(BEFORE.ref + ':tools/verify125.js');
+
+/* 스윕 블록을 «어느 판본에서든» 같은 자로 읽는다 — 자가 갈리면 전·후 대조가 아니다 */
+const sweepOf = g => {
+  const i = g.indexOf('const steps = [');
+  if (i < 0) return null;
+  const block = g.slice(i, g.indexOf('];', i));
+  const shut = g.indexOf('const shut = ()') >= 0 ? g.slice(g.indexOf('const shut = ()'), i) : '';
+  return { n: (block.match(/\n\s*\['/g) || []).length,
+           opensMenu: /openMenu|menub/.test(block),
+           closesMenu: /closeMenu/.test(shut) };
+};
 
 /* verify125 와 **같은 집합**을 쓴다 — 다른 잣대로 재면 재현이 아니다 */
 const PURE = ['\u{1FA99}', '\u{1F4B0}', '\u{1F39F}', '\u{1F3AB}'];
@@ -36,15 +83,32 @@ const ok = (b, name, detail) => { console.log((b ? 'PASS' : 'FAIL') + ' ' + name
 const ART_NODE = [{ sel: '#mnw .mn-b[data-mn="pass"] > i.mn-i', g: '\u{1F3AB}' }];
 
 (async () => {
-  /* ── [1] 스윕이 ▦ 메뉴를 여는가 (게이트 소스) ───────────────────────── */
-  const stepsBlock = GATE.slice(GATE.indexOf('const steps = ['), GATE.indexOf('];', GATE.indexOf('const steps = [')));
-  const nSteps = (stepsBlock.match(/\n\s*\['/g) || []).length;
-  const opensMenu = /openMenu|menub/.test(stepsBlock);
-  const shutBlock = GATE.slice(GATE.indexOf('const shut = ()'), GATE.indexOf('const steps = ['));
-  console.log('[1] F2 스윕 ' + nSteps + '화면 · openMenu 등장 ' + (opensMenu ? '있음' : '**없음**')
-    + ' · shut() 에 closeMenu ' + (/closeMenu/.test(shutBlock) ? '있음' : '**없음**'));
-  ok(!opensMenu, '[1] 현행 스윕은 ▦ 메뉴를 한 번도 열지 않는다(F2 가 초록인 진짜 이유)',
-     nSteps + '화면 중 0');
+  /* ── [1] 스윕이 ▦ 메뉴를 여는가 (게이트 소스 — 수리 «전» 과 «후» 를 갈라 묻는다) ── */
+  const now = sweepOf(GATE);
+  const bef = GATE_BEFORE ? sweepOf(GATE_BEFORE) : null;
+  console.log('[1] F2 스윕 — 지금: ' + now.n + '화면 · openMenu ' + (now.opensMenu ? '있음' : '**없음**')
+    + ' · shut() closeMenu ' + (now.closesMenu ? '있음' : '**없음**'));
+  if (bef) {
+    console.log('    수리 전(' + BEFORE.ref + ' · ' + BEFORE.how + '): ' + bef.n + '화면 · openMenu '
+      + (bef.opensMenu ? '있음' : '**없음**'));
+    ok(!bef.opensMenu && bef.n > 0,
+       '[1-a] «수리 전» 스윕은 ▦ 메뉴를 한 번도 열지 않았다(F2 가 초록이던 진짜 이유)',
+       bef.n + '화면 중 0');
+    /* 고른 ref 가 정말 «373 수리 전» 인가 — 이력 그래프가 아니라 **373 이 넣은 부품**으로 못박는다
+     * (얕은 클론에서는 조상 경로가 끊겨 있어 `rev-list --ancestry-path` 로는 못 묻는다) */
+    const mark = ['ART_NODE', 'F2b'];
+    const inNow = mark.filter(k => GATE.indexOf(k) >= 0);
+    const inBef = mark.filter(k => GATE_BEFORE.indexOf(k) >= 0);
+    ok(inNow.length === mark.length && inBef.length === 0,
+       '[1-c] 고른 판본이 정말 «373 수리 전» 이다(373 이 넣은 부품이 지금엔 있고 거기엔 없다)',
+       '지금 ' + inNow.join('·') + ' / 수리 전 ' + (inBef.join('·') || '없음'));
+  } else {
+    console.log('  –   [1-a]·[1-c] 건너뜀 — «수리 전» 판본(' + BEFORE.ref + ' · ' + BEFORE.how
+      + ')을 못 읽는다(얕은 클론)');
+  }
+  ok(now.opensMenu && now.closesMenu,
+     '[1-b] «지금» 스윕은 ▦ 메뉴를 연다 — 373 의 수리가 살아 있다(항을 지워서 초록이 된 게 아니다)',
+     now.n + '화면 · openMenu ' + now.opensMenu + ' · closeMenu ' + now.closesMenu);
 
   /* ── A1 은 그 자리를 면제하는가 (소스) ──────────────────────────────── */
   const BARE = stripComments(SRC);
