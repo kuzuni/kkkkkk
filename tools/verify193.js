@@ -519,10 +519,15 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     const cs = getComputedStyle(gp);
     const sets = COLL_SETS.filter(x => x.tab === 'skill');
     const ids = new Set(sets.reduce((a, x) => a.concat(x.it), []));
+    /* ⚠ 549(2026-08-31) — 옛 코드는 `openProbInfo('skill', PRB_STEPS[i].unlock)` 뒤에
+         `prbStep = i; renderProbInfo();` 로 단계를 **덮어썼다**. `PRB_STEPS` 는 250 이후
+         «소환 레벨 숫자 배열»(1..SUM_MAXLV)이라 `.unlock` 은 `undefined` 이고, `openProbInfo` 는
+         예외 없이 «현재 소환 레벨» 로 떨어진다(522-②). 즉 **인자는 죽었고 결과만 우연히 맞았다** —
+         덮어쓰기 줄이 사라지면 이 절은 조용히 8/27 종만 보면서 계속 초록이다(`probe549` [3]).
+         ⇒ 단계를 정하는 것은 **인자 하나**로 모은다(`verify75` 246행과 같은 꼴). */
     const seen = new Set();
-    PRB_STEPS.forEach((_, i) => {
-      openProbInfo('skill', PRB_STEPS[i].unlock);
-      prbStep = i; renderProbInfo();
+    PRB_STEPS.forEach(lv => {
+      openProbInfo('skill', lv);
       document.querySelectorAll('#prbList .prb-row .nm>i').forEach(e => seen.add(e.textContent));
     });
     document.getElementById('prbw').classList.remove('on');

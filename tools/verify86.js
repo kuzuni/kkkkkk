@@ -241,11 +241,17 @@ const OLD = { slash:[0,0.85,5.5165], shuri:[0,2.20,1.7848], multi:[1,1.10,2.3797
        193 이후 27종. */
     const sk = COLL_SETS.filter(x => x.tab === 'skill');
     const skIds = new Set(sk.reduce((a2, x) => a2.concat(x.it), []));
-    /* 확률 팝업은 «그 레벨에서 확률이 0 이 아닌 등급»만 그린다 — 전 단계를 훑어 24종이 다 나오는지 본다 */
+    /* 확률 팝업은 «그 레벨에서 확률이 0 이 아닌 등급»만 그린다 — 전 단계를 훑어 24종이 다 나오는지 본다.
+       ⚠ 549(2026-08-31) — 옛 코드는 `openProbInfo('skill', PRB_STEPS[i].unlock)` 뒤에
+          `prbStep = i; renderProbInfo();` 로 단계를 **덮어썼다**. `PRB_STEPS` 는 250 이후
+          «소환 레벨 숫자 배열»(1..SUM_MAXLV)이라 `.unlock` 은 `undefined` 이고, `openProbInfo` 는
+          예외 없이 «현재 소환 레벨» 로 떨어진다(522-② «숫자가 틀렸는데 에러가 안 나면 가장 오래 사는 부패»).
+          즉 **인자는 죽었고 결과만 덮어쓰기 줄 덕에 우연히 맞았다** — 그 줄을 누가 정리하면 이 절은
+          조용히 8/27 종만 보면서 계속 초록이 된다(`probe549` [3] 실측).
+          ⇒ 단계를 정하는 것은 **인자 하나**로 모은다(`verify75` 246행과 같은 꼴). */
     const seen = new Set(); let maxHeads = 0;
-    PRB_STEPS.forEach((_, i) => {
-      openProbInfo('skill', PRB_STEPS[i].unlock);
-      prbStep = i; renderProbInfo();
+    PRB_STEPS.forEach(lv => {
+      openProbInfo('skill', lv);
       document.querySelectorAll('#prbList .prb-row .nm>i').forEach(e => seen.add(e.textContent));
       maxHeads = Math.max(maxHeads, document.querySelectorAll('#prbList .prb-gh').length);
     });
