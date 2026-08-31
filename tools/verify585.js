@@ -24,11 +24,14 @@
  *   §4 세부권  04 세부 입장권 — 18° bbox 의 묶는 축이 ref 69 와 ±1%,
  *              그리고 **같은 슬롯의 비-입장권(209 탑 보상 재화)은 안 커진다**(상자 밖으로 안 나간다).
  *   §5 pcb     `.pcb` 골드·다이아가 **불변**이고 03 ↔ 10 이 같은 값이다(공용 부품이 안 갈렸다).
+ *              [전제]로 «잰 순간 알약에 펄스가 안 걸려 있었다» 를 먼저 못박는다(609).
  *   §6 특이성  4491 의 ID 급 짝(`#dunw .pcb-p>i{display:flex}`)이 살아 있다.
  *   §7 543     13 재화 탭 예외 가드가 그대로다(`.cbox i>.cic` 55).
  *   §8 잘림    9:19 · 9:13.3 둘 다 — 잉크가 호스트 카드/팝업과 프레임 안에 있다.
  *   §9 겹침    카드 입장권 잉크가 위 라벨(`.lb`)·옆 숫자(`.sp.tk>i`)와 안 겹친다.
  *   §R 되돌림  옛 배율을 심은 사본에서 §2·§3·§4 가 **빨개진다**(무르게 푼 자가 아님을 못박는다).
+ *              [R4](609) `.pcb-p` 에 **정적** 배율을 심은 사본에서 §5 가 빨개진다 —
+ *              «펄스를 껐다» 가 §5 를 무르게 푼 것이 아님을 못박는다.
  *   §E 에러    pageerror 0건.
  */
 'use strict';
@@ -148,20 +151,43 @@ async function open(ctx, css, w, h) {
   if (css) await page.evaluate((t) => { const s = document.createElement('style'); s.textContent = t; document.head.appendChild(s); }, css);
   await page.evaluate(() => document.querySelector('#tabbar [data-t="adv"]').click());
   await page.waitForTimeout(600);
-  /* ⚠ 58 «펀치» 연출(`.fx-punch`)을 **재기 전에 무력화한다.** 이 자는 크기를 묻는 자인데
-       그 연출은 알약 조상에 한시적 배율을 얹는다 — 그 프레임에 재면 «`.pcb` 가 커졌다» 는
+  /* ⚠ 58/93 «톡톡» 펄스를 **재기 전에 무력화한다.** 이 자는 크기를 묻는 자인데
+       그 연출은 알약에 한시적 배율을 얹는다 — 그 프레임에 재면 «`.pcb` 가 커졌다» 는
        **거짓 신호**가 난다(이 자의 실행마다 골드가 65.3 / 66.85 / 70.01 로 흔들렸다).
      ⚠ «연출이 걷힐 때까지 기다린다» 로는 못 잡는다 — 게임이 자동 전투로 골드를 계속 벌어
-       펀치가 **반복해서 다시 붙는다**(기다림이 잡는 것은 순간의 틈뿐이다).
-       무력화는 정상 상태와 같은 값을 준다(정상 상태의 `.pcb-p` 에는 transform 이 없다). */
+       펄스가 **반복해서 다시 붙는다**(기다림이 잡는 것은 순간의 틈뿐이다).
+     ⚑ **609 — 종전 무력화는 «결과» 를 눌렀고, 그래서 절반만 덮었다.**
+       옛 처방은 `.pcb-p.fx-punch{animation:none!important;transform:none!important}` 였는데
+       93/13회차가 «UI 발» 펄스를 CSS 애니메이션에서 **JS 진폭 경로**로 옮긴 뒤
+       (`fxPzHit` → `fxPzTick` 이 매 프레임 `el.style.transform` 을 직접 쓴다)
+       그 선택자가 자리를 통째로 지나쳤다 — **클래스가 안 붙는다.**
+       `probe609` [2] 가 어긋난 프레임에서 «클래스 `pcb-p pcb-g` · 인라인 `scale(1.0345)`» 을 찍었고,
+       [3] 이 «골드는 결정적 드리프트 · 다이아는 플레이키» 라는 등재문의 **두 갈래를 기각**했다
+       (둘이 같은 `fxPz` 표에 같이 올라 **같은 배율**로 어긋난다 — 뿌리도 처방도 하나다).
+     ⇒ 결과가 아니라 **만드는 쪽(두 입구)** 을 끈다. 그래야 제품이 `.pcb-p` 에 **정적** 배율을
+       얹는 회귀는 자가 여전히 본다(`probe609` [6] · 아래 §R4 가 못박는다).
+       끈 상태는 쉬는 상태와 같은 값을 준다(§5 [전제] 가 «인라인 transform 0건» 으로 확인한다). */
   await page.evaluate(() => {
-    const s = document.createElement('style');
-    s.textContent = '.pcb-p.fx-punch{animation:none!important;transform:none!important}';
-    document.head.appendChild(s);
+    window.fxPunch = () => false;      /* 전투 발 — `fx-punch` 클래스 경로 */
+    window.fxPzHit = () => false;      /* UI 발 — JS 진폭 경로(93/13회차) */
+    try { fxPz.clear(); } catch (e) { /* 표가 없으면 끌 것도 없다 */ }
+    document.querySelectorAll('.pcb-p').forEach((e) => {
+      e.classList.remove('fx-punch', 'fx-punch2');
+      e.style.transform = ''; e.style.transformOrigin = '';
+    });
   });
   await page.waitForTimeout(150);
   return { page, errs };
 }
+
+/* 609 — §5 [전제]. «잰 순간의 알약이 정말 쉬는 상태였나» 를 같은 프레임에 같이 찍는다.
+   이 항이 없으면 무력화가 다시 새는 날 자는 **조용히 흔들리기만** 한다(609 가 그랬다). */
+const PCBST = `(function(sel){
+  return Array.prototype.map.call(document.querySelectorAll(sel), function(p){
+    return { cls: p.className, tr: p.style.transform || '',
+             pz: (typeof fxPz !== 'undefined' && fxPz.get(p)) ? fxPz.get(p).a : null };
+  });
+})`;
 
 const DUN_SEL = [
   { n: 'tkCard', q: '#dunw .dnc .sp.tk>em>.cic', host: '.dnc' },
@@ -208,6 +234,7 @@ const OLD_CSS =
   /* ── 본 측정 ─────────────────────────────────────────────────────────── */
   const { page, errs } = await open(ctx, null, 1080, 2280);
   const dun = await page.evaluate(PICK + '(' + JSON.stringify(DUN_SEL) + ')');
+  const pcbSt = await page.evaluate(PCBST + '("#dunw .pcb-p")');
   const neigh = await page.evaluate(NEIGH + '()');
   await page.evaluate(() => openDunDetail(DUNGEONS.find((d) => d.id === 'gold')));
   await page.waitForTimeout(400);
@@ -319,6 +346,14 @@ const OLD_CSS =
 
   /* ── §5 ─────────────────────────────────────────────────────────────── */
   blk('§5 `.pcb` 불변 — 이 행이 손대지 않은 것(공용 부품이 안 갈렸다)');
+  /* [전제] 609 — 아래 세 항은 «쉬는 상태의 크기» 를 묻는 자다. 펄스가 걸린 프레임에서 재면
+     세 항 전부 뜻을 잃으므로, 잰 순간이 정말 쉬는 상태였는지를 **먼저** 못박는다.
+     ⚠ 이것이 빨개지면 «제품이 커졌다» 가 아니라 «무력화가 다시 샌다» 는 뜻이다(609 의 자리). */
+  const live = pcbSt.filter((p) => p.tr || /fx-punch/.test(p.cls) || p.pz != null);
+  ok(pcbSt.length >= 2, '[전제] `#dunw .pcb-p` 알약 표본을 얻었다', pcbSt.length + '칸');
+  ok(live.length === 0,
+    '[전제] 잰 순간 알약에 펄스가 안 걸려 있다 — 인라인 transform · `fx-punch` · `fxPz` 항 0건',
+    live.length ? live.map((p) => '[' + p.cls + '] ' + (p.tr || 'a=' + p.pz)).join(' · ') : '0건');
   const dg = dun.find((r) => r.slot === 'pcbG'), dd = dun.find((r) => r.slot === 'pcbD');
   const sg = shp.find((r) => r.slot === 'pcbG'), sd = shp.find((r) => r.slot === 'pcbD');
   ok(near(ink(dg).w, 65.3, 0.5), '03 `.pcb` 골드 잉크 65.3 그대로 (340 값)', r2(ink(dg).w));
@@ -402,6 +437,17 @@ const OLD_CSS =
     r2(okd.rw) + ' vs 69 (' + r2((okd.rw / 69 - 1) * 100) + '%)');
   const oErr = o.errs.slice();
   await o.page.close();
+
+  /* [R4] 609 — «펄스를 껐다» 가 §5 를 무르게 푼 것이 아님을 못박는다.
+     끈 것은 **연출을 만드는 쪽**이지 `.pcb-p` 의 transform 자체가 아니므로,
+     제품이 그 알약에 **정적** 배율을 얹으면 §5 는 그대로 빨개져야 한다. */
+  const o2 = await open(ctx, '#dunw .pcb-p{transform:scale(1.05)}', 1080, 2280);
+  const r4rows = await o2.page.evaluate(PICK + '(' + JSON.stringify(DUN_SEL) + ')');
+  const r4g = r4rows.find((r) => r.slot === 'pcbG'), r4d = r4rows.find((r) => r.slot === 'pcbD');
+  ok(!near(ink(r4g).w, 65.3, 0.5) && !near(ink(r4d).w, 59.06, 0.5),
+    '[R4] `.pcb-p` 에 정적 `scale(1.05)` 을 심은 사본에서 §5 골드·다이아가 둘 다 빨개진다',
+    r2(ink(r4g).w) + ' / ' + r2(ink(r4d).w) + ' (기대 65.3 / 59.06)');
+  await o2.page.close();
 
   /* ── §E ────────────────────────────────────────────────────────────── */
   blk('§E 콘솔');
