@@ -749,6 +749,10 @@ async function runOne(page, pol, seed, days, onRow) {
     const B = window.BOT, R = B.R;
     B.freeze();
     B.ledgerSync();
+    /* 3회차([E] 장부 결손 수리) — 새 세이브의 시작 잔고(NEW_DIA 100만)는 ledgerSync 가 diaPrev 로
+       삼켜 유입 표에서 통째로 빠졌다. 그래서 «씽크+잔고−유입» 이 3표 전수 +100만이었다(2회차 2-6).
+       시작 잔고를 유입 행으로 싣는다 — 이것이 «신규 지급» 의 장부상 자리다. */
+    B.diaIn['시작(신규 지급)'] = S.dia;
     const out = { rows: [], walls: [], day1: [], sessions: 0 };
     let lastLogout = null;
     let minute = 0, lastStage = -1, stageSince = 0;
@@ -805,6 +809,16 @@ async function runOne(page, pol, seed, days, onRow) {
     /* 마지막 정체도 벽으로 센다 */
     if (lastStage >= 0 && minute - stageSince >= a.wallMin)
       out.walls.push({ stage: lastStage, min: stageSince, len: minute - stageSince });
+    /* 3회차 — 장부 항등식을 [F] 규칙 위반으로 검사한다. 마지막 ledger 호출 뒤의 잔여 diff 를
+       «기타(미귀속)» 으로 flush 하면 매 diff 가 어느 행엔가 실리므로(망원 합) 유입−씽크 = 잔고가
+       구성상 정확히 성립해야 한다 — 어긋나면 봇의 어떤 경로가 장부 밖에서 다이아를 만든 것이다. */
+    B.ledger('기타(미귀속)');
+    {
+      const inSum  = Object.values(B.diaIn).reduce((a, b) => a + b, 0);
+      const outSum = Object.values(B.diaOut).reduce((a, b) => a + b, 0);
+      if (Math.abs(inSum - outSum - S.dia) > 0.5)
+        B.viol.push('장부 항등식 위반: 유입 ' + inSum + ' − 씽크 ' + outSum + ' − 잔고 ' + S.dia + ' = ' + (inSum - outSum - S.dia));
+    }
     out.diaIn = B.diaIn; out.diaOut = B.diaOut; out.viol = B.viol.slice(); out.warn = B.warn.slice();
     out.final = B.snap('final', minute);
     out.cnt = B.cnt;
