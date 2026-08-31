@@ -31,7 +31,7 @@
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { SCREENS, URL } = require('./scan356');
+const { SCREENS, URL, STEP } = require('./scan356');
 const { REVERT_CSS } = require('./scan418');
 
 const argv = process.argv.slice(2);
@@ -242,7 +242,10 @@ async function sweep(opt) {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+        /* 356 12회차 — 단계 해석은 `scan356.STEP` 한 곳이다(`js:` 단계 포함).
+           여기 직접 `querySelector` 를 적어 두면 04 던전 세부처럼 «누를 문이 없는» 화면에서
+           `SyntaxError` 로 그 화면이 통째로 진입 실패한다. */
+        await STEP(page, s);
         await page.waitForTimeout(420);
       }
       if (REVERT) await page.addStyleTag({ content: REVERT_CSS });
