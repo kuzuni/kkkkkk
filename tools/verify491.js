@@ -306,10 +306,18 @@ async function pixelRun(page) {
                   return { t: n.textContent, x: r.x, y: r.y, w: r.width, h: r.height }; }));
     await pg.waitForTimeout(670);                       /* 누적 800ms — 자멸(≈350ms) 을 넘긴다 */
     const held = await snap();
+    /* 5회차 — 비평 캡처가 보는 두 시각(`-hold` ≈800ms · `-up` ≈940ms)에 **회당 플로터가 남아 있는가**.
+       [충전]은 발이 하나뿐이라 그 한 장의 수명이 곧 «결과가 남아 있는 시간» 이다(CA·CB 2인 공통 1순위). */
+    const inkAt = () => pg.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
+      .filter(n => +getComputedStyle(n).opacity > 0.08)
+      .map(n => ({ t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2), oh: n.offsetHeight })));
+    const flHold = await inkAt();
     await pg.mouse.up();
-    await pg.waitForTimeout(650);                       /* 되튐 200 + 밀린 렌더 210 + 여유 */
+    await pg.waitForTimeout(140);
+    const flUp = await inkAt();
+    await pg.waitForTimeout(510);                       /* 되튐 200 + 밀린 렌더 210 + 여유 */
     const after = await snap();
-    return { g, fl, held, after };
+    return { g, fl, held, after, flHold, flUp };
   };
   {
     const h = await holdRun(page);
@@ -330,6 +338,12 @@ async function pixelRun(page) {
       ok(h.fl.length >= 1 && h.fl.every(n => n.h >= 34),
          '[6-g] ★ 잉크 세로 ≥ 34px — 3회차 «형제 대비 −55%»(10~20px)의 회수. 4회차 실측 형제 43px',
          h.fl.map(n => Math.round(n.h)).join('·'));
+      ok(h.flHold.length >= 1 && h.flHold.every(n => n.a > 0.08),
+         '[6-j] ★ 누른 채 800ms(비평 `-hold` 프레임)에도 회당 플로터가 남아 있다 — 4회차 «0px» 의 회수',
+         JSON.stringify(h.flHold.map(n => n.t + ' α' + n.a)));
+      ok(h.flUp.length >= 1 && h.flUp.every(n => n.a > 0.08),
+         '[6-k] ★ 뗀 뒤 140ms(비평 `-up` 프레임 ≈940ms)에도 남아 있다',
+         JSON.stringify(h.flUp.map(n => n.t + ' α' + n.a)));
       ok(/const TEMPER_PT_COST\s*=\s*1;/.test(src),
          '[6-i] ★ 줄기가 하나인 **전제**(단련석 → 포인트 1:1)가 소스에 그대로다 — 199 가 전환비를 바꾸면 여기가 먼저 빨개진다');
       ok(h.fl.length >= 1 && h.fl.every(n => n.x >= h.g.pv.x + h.g.pv.width - 1 && n.x + n.w <= h.g.b.x + 1),

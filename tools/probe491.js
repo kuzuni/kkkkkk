@@ -268,7 +268,11 @@ async function diffPct(page2, a, b, tol) {
        vis(f140).map(n => n.t + ' α' + n.a).join(' · '));
     ok(vis(f300).length >= 2, '[F5] ★ 300ms 에도 남아 있다 — 옛 .3s 는 여기서 이미 α 0 이었다(2회차 «0px» 의 정체)',
        vis(f300).map(n => n.t + ' α' + n.a).join(' · ') || '0장');
-    ok(vis(f420).length >= 1, '[F6] 420ms 까지는 살아 있다(불투명 구간 10~72% = 56~403ms)',
+    /* ⚑ 5회차 — 수명이 .56s → 1.3s 로 바뀌어 불투명 구간이 **130~936ms** 다. 4회차까지 이 항이
+       «420ms» 를 물었던 것은 .56s 의 꼬리(403ms) 바로 뒤라 하네스 누적 대기의 드리프트에 걸려
+       기준선에서도 빨갛게 나던 자리다(4회차 착수 시 수리 전 트리에서 60/61 로 확인). 이제는
+       그 시각이 불투명 구간 **한복판**이라 드리프트에 안 흔들린다. */
+    ok(vis(f420).length >= 2, '[F6] 420ms 에 두 장 다 살아 있다(불투명 구간 130~936ms 의 한복판)',
        vis(f420).length + '장');
     await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
     await page.waitForTimeout(200);
