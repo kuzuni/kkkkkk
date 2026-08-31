@@ -290,10 +290,24 @@ const pillarOf = mask => {
       const dKill = await diffCols(page, info, 0, R, 'N', 'K');
       ok(hname + ' — 기둥을 0 으로 죽이면 코너가 바뀐다 (이 층이 코너를 실제로 그린다)',
         dKill > Math.max(100, noise * 8), dKill + 'px  (> max(100, 바닥×8 = ' + noise * 8 + '))');
-      await setStyle(injBefore(16)); await shoot(page, 'S');
-      const dNarrow = await diffCols(page, info, 0, R, 'N', 'S');
+      /* ⚑ **409 14회차 이관 (2026-08-31)** — **이 항은 `::before` 기둥의 몫만 재야 한다.**
+         14회차가 `::after` 배경에 «아래 코너 등폭 고리» 를 한 겹 얹었는데(코너 띠 블록 D+B
+         10.0 → **11.0** = ref), 그 고리가 이 항이 세던 42px 중 **3px 을 같은 색으로 덮는다**
+         (42 → 39). 문턱 40 은 그대로 두고 **비교 대상을 바꾼다** — 두 장 다 고리를 끈 채로 찍으면
+         `::after` 는 두 장에서 동일하므로 차분에서 지워지고, 남는 것은 `::before` 기둥의 몫뿐이다.
+         ⚠ 문턱을 내려서 풀지 않았다 — 내리면 «고리가 통째로 사라져도 초록» 이 된다.
+            고리 자체는 `verify409` 와 아래 [3-고리] 가 따로 문다. */
+      const RINGOFF = '.stab.on::after{background-image:none!important}';
+      await setStyle(RINGOFF); await shoot(page, 'T');
+      await setStyle(RINGOFF + injBefore(16)); await shoot(page, 'S');
+      const dNarrow = await diffCols(page, info, 0, R, 'T', 'S');
       ok(hname + ' — 기둥을 16 으로 좁히면 코너가 바뀐다 (23 은 «호를 다 덮는» 하한이다)',
         dNarrow > Math.max(40, noise * 4), dNarrow + 'px  (> max(40, 바닥×4 = ' + noise * 4 + '))');
+      /* 409 14회차 신설 — **고리가 실제로 그린다**(위 이관이 공허해지지 않게 하는 짝).
+         고리를 끄면 아래 코너가 바뀐다 — 끄고 찍은 'T' 와 원본 'N' 의 차이가 곧 고리의 몫이다. */
+      const dRing = await diffCols(page, info, 0, R, 'N', 'T');
+      ok(hname + ' [3-고리] — 아래 코너 등폭 고리를 끄면 코너가 바뀐다 (고리가 공허하지 않다)',
+        dRing > Math.max(20, noise * 4), dRing + 'px  (> max(20, 바닥×4 = ' + noise * 4 + '))');
       await setStyle(null);
 
     }
