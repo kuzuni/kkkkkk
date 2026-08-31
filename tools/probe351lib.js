@@ -107,6 +107,15 @@ const ASK_GROUPS = [
   { key: 'ct',     attr: 'ct',     sel: '#collTabs .cltab[data-ct]',   askedAfter: null },
   { key: 'ptab',   attr: 'ptab',   sel: '#psBar [data-ptab]',          askedAfter: null },
   { key: 'eqslot', attr: 'eqslot', sel: '#eqCards [data-eqslot]',      askedAfter: '.tab[data-t="hero"]' },
+  /* ⚑ 19회차(2026-08-31) — **`costab` 을 되살렸다. 14회차가 «제품에 0건» 이라며 지운 것이 오진이었다.**
+     14회차 주석은 `grep -c data-costab index.html` 로 «죽은 셀렉터» 라 판정했는데, 그 속성은
+     **정적 마크업에 없고 `subTabs('cos','costab')` 이 그릴 때 붙는다**(index.html 32683 — 소스에
+     남은 한 건은 위임 핸들러 32756 뿐이다). 즉 `eqslot` 과 **완전히 같은 사고**(호스트를 열기 전에
+     물었다)를 옆 줄에서 저지르면서 그 이유를 «셀렉터가 죽었다» 로 잘못 적었다 — 같은 회차, 같은 파일.
+     ⚠ `smoke.js` 는 이 자리도 옳게 한다(166행 — 영웅 탭 → `#eqTabs[data-eqtab="cos"]` 를 누르고 묻는다).
+        385 «자매 자 드리프트» 가 **두 번째**로 같은 함수에서 났다. */
+  { key: 'costab', attr: 'costab', sel: '#bCos [data-costab]',
+    askedAfter: '.tab[data-t="hero"] → #eqTabs [data-eqtab="cos"]' },
 ];
 const ASK = Object.fromEntries(ASK_GROUPS.map((g) => [g.key, g.sel]));
 
@@ -192,6 +201,24 @@ async function collectOpeners(browser) {
     ptabs.forEach((k) => openers.push({ label: 'ptab:' + k, pass: `#psBar [data-ptab="${k}"]` }));
   }
   openers.push({ label: 'saver:56', saver: true });
+  /* ⚑ 19회차(2026-08-31) — **스코프 구멍 셋. `smoke.js` 는 열고 이 자는 안 여는 화면들이었다.**
+     18회차가 «오프너 54화면 전부 통과» 로 루프를 닫았는데, 같은 트리에서 `smoke.js` 는 **66개**를
+     연다. 차이 12개가 통째로 이 자의 스캔 밖이었고 그중 셋은 **팝업이 신설된 지 하루가 지난 것**이다:
+       · `rel:help`      — 429(2026-08-30) 89 유물 페이지 좌상단 [?] A5 팝업
+       · `shoplegal:*`   — 478(2026-08-30) 10 상점 재화·이용권 탭 청약철회 고지 [더보기] A5 팝업
+       · `cos:*`         — 269 코스튬 시트 [?] 도움말과 [착용]·[강화]·[소환]
+     18회차의 «루프가 다시 열리는 조건 = 오프너가 54 보다 늘어날 때» 는 **이 자가 셀 수 있는 것만**
+     세고 있었다 — 새 팝업이 `.tab`/`.side`/`[data-mn]`/`[data-cur]`/서브탭 **어느 계열에도 안 속하면**
+     오프너 수는 영원히 54 다. 397 «뿌리는 자리 하나가 아니라 스코프 구멍이다» 와 같은 꼴이고,
+     8·10·12·13·14회차 «자가 화면을 한 번도 연 적이 없다» 의 **여섯 번째**다.
+     ⇒ 처방은 목록을 늘리는 것이 아니라 **자매 자와 같은 문을 쓰는 것**이다(385) — 아래 세 블록은
+        `smoke.js` 169·180·204행과 **같은 셀렉터**를 쓰고, 문이 있는데 답이 0개면 **던진다**. */
+  if (await page.$('#relw [data-rlhelp]')) openers.push({ label: 'rel:help', rel: '#relw [data-rlhelp]' });
+  if (await page.$('#shopLegal')) {
+    /* 고지 띠는 «재화»·«이용권» 두 탭에만 붙는다(478) — 카테고리는 위에서 제품에게 이미 물었다. */
+    cats.filter((k) => k === 'coin' || k === 'pass')
+      .forEach((k) => openers.push({ label: 'shoplegal:' + k, legal: k }));
+  }
   /* 14회차 — «호스트를 열어야 보이는» 질문은 여기, 수집의 **맨 끝**에서 한다(위 주석 참조).
      바로 뒤가 `ctx.close()` 라 이 클릭이 다른 질문의 화면을 바꿀 여지가 원리적으로 없다. */
   await page.click('.tab[data-t="hero"]', { timeout: 3000, force: true }).catch(() => {});
@@ -202,6 +229,18 @@ async function collectOpeners(browser) {
       '06 장비 부위 슬롯(→ 05 세부 팝업)이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
   }
   slots.forEach((k) => openers.push({ label: 'eqslot:' + k, hero: `#eqCards [data-eqslot="${k}"]` }));
+  /* 19회차 — 코스튬 시트를 **연 뒤** 묻는다(위 ASK_GROUPS `costab` 주석 = 14회차 오진 정정). */
+  await page.evaluate(() => { const el = document.querySelector('#eqTabs [data-eqtab="cos"]'); if (el) el.click(); }).catch(() => {});
+  await page.waitForTimeout(400);
+  const costabs = await page.$$eval(ASK.costab, (els) => els.map((e) => e.dataset.costab)).catch(() => []);
+  if (!costabs.length) {
+    throw new Error('[351lib] 50 코스튬 시트를 열었는데 `#bCos [data-costab]` 이 0개다 — ' +
+      '시트 안 서브탭 줄이 통째로 안 열린 채 «결함 없음» 으로 읽힌다.');
+  }
+  costabs.forEach((k) => openers.push({ label: 'costab:' + k, cos: `#bCos [data-costab="${k}"]` }));
+  for (const b of ['data-coswear', 'data-cosup', 'data-cosun', 'data-coshelp']) {
+    if (await page.$(`#bCos [${b}]`)) openers.push({ label: 'cos:' + b, cos: `#bCos [${b}]` });
+  }
   await ctx.close();
   return openers;
 }
@@ -213,7 +252,9 @@ async function collectOpeners(browser) {
    8회차 비평가 셋(CH·CI·CJ)이 각자 1순위로 짚은 «상점 [받기]·[이동] 이 스크롤 0 에서 0% 보임» 을
    자는 5·6·7회차 내내 조용히 지나쳤다. 조용한 실패가 초록으로 읽히는 것을 막는 것이
    이 목록의 유일한 일이다(LESSONS 356-⑬ «진입 서명» 과 같은 처방, 341 [전제] 절과 같은 이유). */
-const OPENER_KEYS = ['sel', 'hero', 'mn', 'dun', 'tr', 'shop', 'pass', 'cos', 'prof', 'coll', 'quest', 'saver'];
+const OPENER_KEYS = ['sel', 'hero', 'mn', 'dun', 'tr', 'shop', 'pass', 'cos', 'prof', 'coll', 'quest', 'saver',
+  /* 19회차 — 429 유물 [?] · 478 상점 고지 [더보기]. 갈래를 안 더하면 위 `throw` 가 즉시 잡는다. */
+  'rel', 'legal'];
 
 async function drive(page, o) {
   const ev = (fn, arg) => page.evaluate(fn, arg).catch(() => {});
@@ -287,6 +328,18 @@ async function drive(page, o) {
     await ev(() => { const el = document.querySelector('#eqTabs [data-eqtab="cos"]'); if (el) el.click(); });
     await page.waitForTimeout(400);
     await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.cos);
+  } else if (o.rel) {
+    /* 19회차 · 429 — «보물상자 탭 → 89 유물 페이지 → 좌상단 [?]»(smoke.js 282행과 같은 문) */
+    await page.click('.tab[data-t="box"]', { timeout: 3000, force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+    await ev((s) => { const el = document.querySelector(s); if (el) el.click(); }, o.rel);
+  } else if (o.legal) {
+    /* 19회차 · 478 — «상점 탭 → 카테고리(재화·이용권) → 고지 띠 [더보기]»(smoke.js 306행과 같은 문) */
+    await page.click('.tab[data-t="shop"]', { timeout: 3000, force: true }).catch(() => {});
+    await page.waitForTimeout(400);
+    await ev((k) => { const el = document.querySelector(`#shopCats .shp-ct[data-cat="${k}"]`); if (el) el.click(); }, o.legal);
+    await page.waitForTimeout(400);
+    await ev(() => { const el = document.getElementById('lgMore'); if (el) el.click(); });
   } else if (o.prof) {
     await page.click('#profBtn', { timeout: 3000, force: true }).catch(() => {});
     await page.waitForTimeout(400);

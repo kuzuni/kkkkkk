@@ -99,8 +99,25 @@ const SET3 = [
   { id: '05-eqamulet', label: '05 장비 세부(목걸이 슬롯)', how: 'eqslot:amulet' },
 ];
 
+/* ⚑ 19회차(2026-08-31) — **`smoke.js` 는 열고 351 은 안 열던 화면들.** 18회차가 «오프너 54화면
+   전부 통과» 로 루프를 닫은 그 트리에서 smoke 는 66개를 연다. 차이 12개가 통째로 스캔 밖이었고,
+   그중 셋은 **팝업이 신설된 지 하루가 지난 것**(429 유물 [?] · 478 상점 고지 [더보기] · 269 코스튬 [?])
+   이다 — 18회차가 적은 재개 조건(«오프너가 54 보다 늘어날 때»)이 **이 자가 셀 수 있는 계열만**
+   세고 있었기 때문이다(뿌리·처방은 `probe351lib` 19회차 주석).
+   여기 세우는 다섯은 `probe351` 오프너 중 **팝업을 여는 것**만 고른 것이다 —
+   `costab:*` 넷과 `cos:data-coswear|cosup` 은 08·06 시트로 되돌아가 이미 찍힌 화면과 같고
+   (`probe351c` 나갈길 5→5 = 시트 · 1→1 = 모달), `pass:back` 은 화면이 아니라 되돌아가기다. */
+const SET4 = [
+  { id: '89-relhelp', label: '89 유물 → [?] 도움말(429)', how: 'rel:help' },
+  { id: '10-legalcoin', label: '10 상점 재화 → 청약철회 고지(478)', how: 'shoplegal:coin' },
+  { id: '10-legalpass', label: '10 상점 이용권 → 청약철회 고지(478)', how: 'shoplegal:pass' },
+  { id: '50-coshelp', label: '50 코스튬 → [?] 도움말(269)', how: 'cos:data-coshelp' },
+  { id: '50-cosun', label: '50 코스튬 → [소환]', how: 'cos:data-cosun' },
+];
+
 const SET = (() => { const i = process.argv.indexOf('--set'); return i > 0 ? process.argv[i + 1] : 'r2'; })();
-const SCREENS = SET === 'r1' ? SET1 : SET === 'r3' ? SET3 : SET === 'all' ? [...SET1, ...SET2, ...SET3] : SET2;
+const SCREENS = SET === 'r1' ? SET1 : SET === 'r3' ? SET3 : SET === 'r4' ? SET4
+  : SET === 'all' ? [...SET1, ...SET2, ...SET3, ...SET4] : SET2;
 
 /* ⚑ 10회차(2026-08-29) — **재화 알약이 지금 화면에 없으면 «호스트» 를 먼저 연다.**
    `cur:relic` 은 8회차의 상점 세 화면과 **같은 사고**를 내고 있었다: 유물조각 알약은 89 유물
@@ -156,6 +173,25 @@ async function drive(page, how) {
     await tapIn('#eqTabs [data-eqtab="cos"]');
     await page.waitForTimeout(400);
     await tapIn(`#bCos [data-costab="${key}"]`);
+  } else if (kind === 'cos') {
+    /* 19회차 — 코스튬 시트 헤더/액션 버튼(`data-coshelp` 등). 키가 곧 속성 이름이다. */
+    await click('.tab[data-t="hero"]');
+    await page.waitForTimeout(400);
+    await tapIn('#eqTabs [data-eqtab="cos"]');
+    await page.waitForTimeout(400);
+    await tapIn(`#bCos [${key}]`);
+  } else if (kind === 'rel') {
+    /* 19회차 · 429 — «보물상자 탭 → 89 유물 페이지 → 좌상단 [?]» */
+    await click('.tab[data-t="box"]');
+    await page.waitForTimeout(400);
+    await tapIn('#relw [data-rlhelp]');
+  } else if (kind === 'shoplegal') {
+    /* 19회차 · 478 — «상점 탭 → 카테고리 → 고지 띠 [더보기]» */
+    await click('.tab[data-t="shop"]');
+    await page.waitForTimeout(400);
+    await tapIn(`#shopCats .shp-ct[data-cat="${key}"]`);
+    await page.waitForTimeout(400);
+    await tapIn('#lgMore');
   } else if (kind === 'dunsub') {
     await click('.tab[data-t="adv"]');
     await page.waitForTimeout(400);

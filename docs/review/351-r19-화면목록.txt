@@ -1,0 +1,5 @@
+89-relhelp	89 유물 → [?] 도움말(429)	rel:help	modal@30,relw@28|유물/재화||던전+훈련+소환
+10-legalcoin	10 상점 재화 → 청약철회 고지(478)	shoplegal:coin	modal@30,shopw@28|청약철회 규정/재화||던전+훈련+재화
+10-legalpass	10 상점 이용권 → 청약철회 고지(478)	shoplegal:pass	modal@30,shopw@28|청약철회 규정/재화||던전+훈련+이용권
+50-coshelp	50 코스튬 → [?] 도움말(269)	cos:data-coshelp	modal@30,panel@9|코스튬/재화|#bCos|던전+훈련+소환
+50-cosun	50 코스튬 → [소환]	cos:data-cosun	modal@30,panel@9|견습 기사/Lv. 0|#bCos|던전+훈련+소환

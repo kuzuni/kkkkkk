@@ -43,14 +43,30 @@ const lib = require('./probe351lib');
 const JSON_OUT = (() => { const i = process.argv.indexOf('--json'); return i > 0 ? process.argv[i + 1] : null; })();
 const SELFTEST = process.argv.includes('--selftest');
 
-/* 호스트 = «누르면 화면이 갈리는 최상위 진입점». 이 목록도 제품에게 묻는다(표를 안 적는다). */
+/* 호스트 = «누르면 화면이 갈리는 최상위 진입점». 이 목록도 제품에게 묻는다(표를 안 적는다).
+   ⚑ 19회차(2026-08-31) — **한 칸짜리 호스트만 열면 두 칸 뒤의 질문은 영원히 «안 늘어난다».**
+   `costab`(`#bCos [data-costab]`)이 그랬다: 진입이 «영웅 탭 → 시트 안 코스튬 탭» 2단계라
+   아래 세 계열을 한 번씩 눌러 봐야 0 이고, 그래서 이 자는 그것을 «처방이 무의미해졌다»(dead)로
+   찍었다 — 실제로는 **감사가 그 자리에 닿지 못한 것**이다. 그러면 14회차의 사고(늦게 물어야 하는데
+   일찍 묻는다)가 2단계 자리에서 나면 이 자가 못 본다 = 이 자 자신이 여섯 번째 사고의 사각이 된다.
+   ⇒ 목록을 손으로 늘리지 않는다(402) — **`ASK_GROUPS` 가 이미 자기 진입 경로를 `askedAfter` 에
+      선언해 두었으므로 그것을 그대로 호스트로 읽는다**(선언이 곧 출처 · 385 드리프트 0). */
 async function hosts(page) {
   const out = [];
   const tabs = await page.$$eval('.tab[data-t]', (els) => els.map((e) => e.dataset.t)).catch(() => []);
-  tabs.forEach((t) => out.push({ label: 'tab:' + t, sel: `.tab[data-t="${t}"]` }));
+  tabs.forEach((t) => out.push({ label: 'tab:' + t, steps: [`.tab[data-t="${t}"]`] }));
   const pops = await page.$$eval('.side .ibtn[data-pop]', (els) => els.map((e) => e.dataset.pop)).catch(() => []);
-  pops.forEach((p) => out.push({ label: 'side:' + p, sel: `.side .ibtn[data-pop="${p}"]` }));
-  if (await page.$('#menub')) out.push({ label: 'menu', sel: '#menub' });
+  pops.forEach((p) => out.push({ label: 'side:' + p, steps: [`.side .ibtn[data-pop="${p}"]`] }));
+  if (await page.$('#menub')) out.push({ label: 'menu', steps: ['#menub'] });
+  const seen = new Set(out.map((h) => h.steps.join(' → ')));
+  for (const g of lib.ASK_GROUPS) {
+    if (!g.askedAfter) continue;
+    const steps = g.askedAfter.split('→').map((s) => s.trim()).filter(Boolean);
+    const sig = steps.join(' → ');
+    if (!steps.length || seen.has(sig)) continue;
+    seen.add(sig);
+    out.push({ label: 'askedAfter:' + g.key, steps });
+  }
   return out;
 }
 
@@ -89,8 +105,13 @@ function groups() {
 
   for (const h of HS) {
     const { ctx: c2, page: p2 } = await lib.fresh(b, ...lib.TALL);
-    await p2.click(h.sel, { timeout: 3000, force: true }).catch(() => {});
-    await p2.waitForTimeout(500);
+    /* 19회차 — 호스트는 «한 칸» 이 아니라 경로다. 두 번째 칸부터는 방금 그려진 노드라
+       `click()` 의 가시성 판정에 걸리므로 `evaluate` 안에서 눌러야 한다(LESSONS 50-①). */
+    for (let s = 0; s < h.steps.length; s++) {
+      if (s === 0) await p2.click(h.steps[0], { timeout: 3000, force: true }).catch(() => {});
+      else await p2.evaluate((sel) => { const el = document.querySelector(sel); if (el) el.click(); }, h.steps[s]).catch(() => {});
+      await p2.waitForTimeout(s === h.steps.length - 1 ? 500 : 400);
+    }
     const c = await countAll(p2);
     for (const g of lib.ASK_GROUPS) {
       if (c[g.key].length > best[g.key].n) best[g.key] = { n: c[g.key].length, vals: c[g.key], host: h.label };
