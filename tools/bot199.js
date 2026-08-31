@@ -70,6 +70,22 @@ const CALIB   = ARG.calib ? path.resolve(ROOT, String(ARG.calib)) : null;
    `--wallband=40` 으로 분류 주기를 제품 밴드에서 분리한다. 본 판정 표에서는 쓰지 마라
    (자연 정의 = 제품의 관문이 §0 의 자다) — 쓰면 표 머리에 경고가 찍힌다. */
 const WALLBAND = ARG.wallband ? Math.max(1, parseInt(ARG.wallband, 10)) : null;
+/* ⚑ 199 10회차(9-9 4 — Y·AA) — «창 안 중복 8~10» 의 뿌리는 등간격 관문(밴드 배수 ~31개) vs
+   등비 목표 9칸이다. `--wallgeo=<g0>,<r>` 는 관문 격자를 **기하 수열**(g0·r^k 를 제품 밴드의
+   배수로 스냅)로 바꿔 리플레이 재분류만 한다 — 제품은 0줄, 판정 표에는 쓰지 마라(경고가 찍힌다).
+   기하 격자에서 빠진 밴드 배수의 정체는 «멈춤» 으로 내려간다(관문 체력 스파이크가 없으면
+   그 자리 정체의 대부분이 서지 않는다는 가정 — 유망하면 제품 스윕으로 확인한다. 결6·결7 대기). */
+const GEO = ARG.wallgeo ? String(ARG.wallgeo).split(',').map(Number) : null;
+const geoSetOf = (band) => {
+  const b = Math.max(1, band || 40), s = new Set();
+  let last = 0;
+  for (let k = 0; ; k++) {
+    const v = Math.max(last + b, Math.round(GEO[0] * Math.pow(GEO[1], k) / b) * b);
+    if (v > 40000) break;
+    s.add(v); last = v;
+  }
+  return s;
+};
 /* `--replay=<json>` — 이전 실행의 `--json` 산출을 다시 표로 접는다(시뮬 없음). 같은 런을
    다른 벽 정의(--wallband)로 재분류할 때 5분짜리 재실행을 아끼는 자리다. */
 const REPLAY  = ARG.replay ? path.resolve(ROOT, String(ARG.replay)) : null;
@@ -346,7 +362,13 @@ const BOT_SRC = function (cfg) {
         return a[key] + (b[key] - a[key]) * t;
       }
     }
-    return rows[rows.length - 1][key];
+    /* 10회차(정정2 — Z) — 마지막 앵커 밖은 클램프가 아니라 **같은 log(s) 선형의 외삽**이다.
+       9회차까지는 s>200 전부가 s200 값 고정이었다(«결정적 ≠ 정확»). 외삽 폭이 큰 실행은
+       표 머리의 «κ 외삽» 경고가 같이 말한다 — 앵커(s1200)를 넘는 구간이 좁을 때만 믿어라. */
+    if (rows.length < 2) return rows[rows.length - 1][key];
+    const a = rows[rows.length - 2], b = rows[rows.length - 1];
+    const t = (Math.log(s) - Math.log(a.s)) / (Math.log(b.s) - Math.log(a.s));
+    return Math.max(1e-9, a[key] + (b[key] - a[key]) * t);
   };
   B.kAt = kAt;
   B.farmMinute = () => {
@@ -407,7 +429,22 @@ const BOT_SRC = function (cfg) {
     ledger(first ? '출석(1일차 환영)' : '출석');
     return S.dia - before;
   });
-  R.mail   = () => T('우편', () => { claimAllMail(); ledger('우편'); });
+  /* ⚑ 199 10회차(정정4 — Z) — 우편은 한 바구니가 아니다. «📅 월별 다이아»(180 · `src:'monthly'`
+     · 월 100,000)는 영구 반복인데 9회차까지 통째로 일회성 장부(`ONCE`)에 있어 대충 꼬리율이
+     +3,333/일(+7.7%) 과소였다. 수령 직전에 월별분을 세어 두고, 수령 후 그 몫만 «우편(월)» 로
+     옮긴다 — 장부 항등식(유입−씽크=잔고)은 행 사이 이동이라 그대로 성립한다. */
+  R.mail   = () => T('우편', () => {
+    const mon = (typeof allMails === 'function' ? allMails() : [])
+      .filter(m => !S.mail[m.id] && m.src === 'monthly')
+      .reduce((a, m) => a + (m.c || 0), 0);
+    claimAllMail();
+    ledger('우편(1회성)');
+    const moved = Math.min(mon, B.diaIn['우편(1회성)'] || 0);
+    if (moved > 0) {
+      B.diaIn['우편(1회성)'] -= moved;
+      B.diaIn['우편(월)'] = (B.diaIn['우편(월)'] || 0) + moved;
+    }
+  });
   R.quest  = () => T('퀘스트', () => { claimAllQuests(); ledger('퀘스트'); });
   R.guide  = () => T('가이드미션', () => { for (let i = 0; i < 12; i++) { const b = S.dia; claimGuide(); if (S.dia === b) break; } ledger('가이드미션'); });
   R.pass   = () => T('패스', () => { for (const k of Object.keys(PASS_TABS || {})) { T('패스:' + k, () => passClaimAll(k)); } ledger('패스'); });
@@ -746,6 +783,11 @@ const BOT_SRC = function (cfg) {
       trainStage: S.trainStage, own: Object.keys(S.own).length, grade,
       tower: S.tower | 0, tower2: S.tower2 | 0,
       dunTk: DUNGEONS.reduce((n, d) => n + (S.dunTk[d.id] | 0), 0),
+      /* 10회차(정정1 — 3인 일치) — ④ 는 «나눈 값» 이 아니라 **교차 실측**으로 잰다. 그 자가
+         스냅마다 누적 장부 세 값을 실어야 선다: 유입 전체 · 일회성 몫 · 소환 외 씽크. */
+      inAll: Object.values(B.diaIn).reduce((a, b) => a + b, 0),
+      inOnce: (B.onceKeys || []).reduce((a, k) => a + (B.diaIn[k] || 0), 0),
+      outNS: Object.keys(B.diaOut).reduce((a, k) => a + (k === '소환' ? 0 : B.diaOut[k]), 0),
     };
   };
 
@@ -761,8 +803,16 @@ const POLICIES = {
   diligent: { name: '부지런한 유저', logins: [8, 12.5, 19, 22.5], activeMin: 45, offlineMul: 1.5, summonAll: true },
   casual:   { name: '대충 유저',     logins: [21],                 activeMin: 30, offlineMul: 1.0, summonAll: false },
 };
-const CAL_STAGES = [1, 10, 30, 50, 100, 200];
+/* ⚑ 199 10회차(정정2 — Z) — 앵커가 s200 에서 끝나는데 시뮬은 s1,240 까지 갔다. s>200 전부가
+   s200 값 고정(클램프) 위였고 캐시가 그 오차를 7표에 복제했다. 앵커를 s1200 까지 늘리고
+   `kAt` 는 마지막 앵커 밖을 클램프가 아니라 **외삽**으로 읽는다(표 머리에 외삽 경고). */
+const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 800, 1200];
 const CAL_SEC = 60;
+/* ⚑ 199 10회차 — 일회성 장부 키를 한 곳에 모은다(스냅 `inOnce` 와 [G] 가 같은 목록을 읽어야
+   ④ 의 두 자가 어긋나지 않는다). 정정4 — «우편» 을 «우편(1회성)/우편(월)» 로 갈랐다:
+   월별분은 지속 수급이다. 레거시 키 «우편» 은 옛 --json 리플레이용으로 남긴다(옛 실행은
+   전체 우편이 그 키 하나였고, 그때의 뜻(통째 일회성)을 그대로 보존해 읽는다). */
+const ONCE_KEYS = ['시작(신규 지급)', '가이드미션', '우편', '우편(1회성)', '출석(1일차 환영)'];
 const WALL_MIN = 30;           /* 같은 스테이지 이 분 이상 정체 = 벽 1개 */
 /* 199 4회차 — 정체를 «벽» 과 «상승면 멈춤» 으로 가른다.
    ES_RAMP(밴드 내 상승면)가 생기면 벽 사이의 «오르막» 에서 하루 주기 성장 사이의 숨(수 시간
@@ -791,14 +841,17 @@ const isWallFrac = w => (w.lenCal != null ? w.lenCal : w.len) >= WALL_FRAC * Mat
    바뀌는 것은 1건(s720)뿐임을 4회차 비평이 미리 검산했다).
    ⚠ 구 판정(WALL_FRAC)도 표에 «구 판정» 칸으로 그대로 남긴다 — 두 자가 어디서 갈리는지
    다음 회차가 검산할 수 있어야 한다(4회차 규약 그대로). */
-/* 9회차 — WALLBAND(비교 전용 강제 주기)가 있으면 그것이 이긴다. 없으면 제품 밴드. */
-const isWall = (w, band) => w.stage % Math.max(1, WALLBAND || band || 40) === 0;
+/* 9회차 — WALLBAND(비교 전용 강제 주기)가 있으면 그것이 이긴다. 없으면 제품 밴드.
+   10회차 — GEO(기하 관문 격자 재분류)가 있으면 그것이 또 이긴다(리플레이 전용). */
+const isWall = (w, band) => GEO ? geoSetOf(band).has(w.stage)
+  : w.stage % Math.max(1, WALLBAND || band || 40) === 0;
 
 async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
   const res = await page.evaluate(async (a) => {
     const B = window.BOT, R = B.R;
     B.freeze();
+    B.onceKeys = a.once;                /* 10회차 — 스냅 `inOnce` 가 [G] 와 같은 일회성 목록을 읽는다 */
     B.ledgerSync();
     /* 3회차([E] 장부 결손 수리) — 새 세이브의 시작 잔고(NEW_DIA 100만)는 ledgerSync 가 diaPrev 로
        삼켜 유입 표에서 통째로 빠졌다. 그래서 «씽크+잔고−유입» 이 3표 전수 +100만이었다(2회차 2-6).
@@ -890,7 +943,7 @@ async function runOne(page, pol, seed, days, onRow) {
     out.cnt = B.cnt;
     out.prof = B.prof;
     return out;
-  }, { seed, days, logins: P.logins, activeMin: P.activeMin, offlineMul: P.offlineMul, wallMin: WALL_MIN });
+  }, { seed, days, logins: P.logins, activeMin: P.activeMin, offlineMul: P.offlineMul, wallMin: WALL_MIN, once: ONCE_KEYS });
   if (onRow) onRow(res);
   return res;
 }
@@ -998,6 +1051,15 @@ function writeReport(rep) {
   L.push('> **이 표는 계수를 안 건드린 «현재 값» 의 사진이다.** 조정은 199 몫(작업 494 등재문 마지막 줄).');
   L.push(`> [A] κ 표 ${rep.calFrom || '실측(캐시 없음)'} · **calib sha ${rep.calHash || calHashOf(rep.cal)}** — 해시가 같은 표끼리만 «같은 자로 잰 비교» 다(정정9).`);
   if (WALLBAND) L.push(`> ⚠ **벽 분류 주기 강제 ${WALLBAND}** (\`--wallband\` — 밴드 비교 전용. §0 판정에는 자연 정의 표를 써라).`);
+  if (GEO) L.push(`> ⚠ **벽 분류 = 기하 관문 격자 ${GEO[0]}×${GEO[1]}^k** (\`--wallgeo\` — 재분류 스윕 전용. §0 판정에는 자연 정의 표를 써라).`);
+  /* 10회차(정정2 — Z) — 시뮬 최고 스테이지가 κ 앵커 밖이면 그 구간의 ①③④ 전부가 외삽 위다.
+     앵커 안이 될 때까지(또는 앵커를 늘릴 때까지) 장기 수치를 표식 없이 믿지 마라. */
+  {
+    const maxAnchor = rep.cal && rep.cal.rows && rep.cal.rows.length ? rep.cal.rows[rep.cal.rows.length - 1].s : 0;
+    const allRuns = [].concat(...Object.values(rep.policies || {}));
+    const maxStage = allRuns.reduce((m, r) => Math.max(m, (r.final && (r.final.best || r.final.stage)) || 0), 0);
+    if (maxStage > maxAnchor) L.push(`> ⚠⚠ **κ 외삽** — 시뮬 최고 s${maxStage} > κ 앵커 s${maxAnchor}. 그 밖 구간은 log(s) 선형 외삽이다(정정2) — 앵커를 s${maxStage} 이상으로 늘려 재보정하기 전에는 그 구간 수치에 (외삽) 표식을 붙여 읽어라.`);
+  }
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
@@ -1341,7 +1403,9 @@ function writeReport(rep) {
       /* ⚑ 199 8회차(정정8 · U) — 네 번째 항 «출석(1일차 환영)» 을 넣는다. §7-3 이 스스로
          «첫날 축에 속한 값이지 지속 수급이 아니다» 라고 선언한 100,000 이 아직 분모(3,333/일)
          안이었다. 이 한 줄을 고치기 전에는 ④ 를 «창 안» 이라고 부를 수 없다. */
-      const ONCE = ['시작(신규 지급)', '가이드미션', '우편', '출석(1일차 환영)'];
+      /* 10회차(정정4) — 목록은 모듈 상수 `ONCE_KEYS` 하나다(스냅 `inOnce` 와 같은 자).
+         «우편(월)» 은 여기 없다 — 월별 다이아는 지속 수급이다. */
+      const ONCE = ONCE_KEYS;
       /* ⚑ 199 8회차 정정1(V·W·X **3인 일치**) — 이 줄이 **평균**인데 ④ 도달일은 **중앙값**이라
          «비 = 지속 수급 비» 항등식이 0.27~0.35% 깨져 있었다(1.856 vs 1.861). 7회차 정정1 이
          잡은 병이 자리만 옮겨 살아남은 것이다. ⇒ **같은 통계(med)로 통일**한다. 옛 평균 값은
@@ -1393,7 +1457,11 @@ function writeReport(rep) {
            · 소환 예산 장부(결2 ⓑ) = 거기서 **소환 이외의 씽크**(입장권교환 등)를 더 뺀다
          도달일 = (목표 2,730만 − 일회성 선지급) ÷ 지속 수급/일 — 일회성은 첫날 통째로 들어오므로
          분자에서 빼는 것이 «누적이 목표를 지나는 날» 의 정의다(§0 ②). */
-      const GOAL_DIA = 27300000;
+      /* 10회차(정정12 — Z) — §0 의 자기 산수는 소환 Lv50 26,705,000 + 불멸 기대 5종×1,000뽑
+         ×100다이아 = 500,000 ⇒ **27,205,000** 이다. 주인의 «2,730만» 은 그 반올림 호칭이고,
+         상수가 27,300,000 이면 교차일이 +0.5일급으로 밀린다. 산수 쪽으로 정오한다
+         (옛 값 27,300,000 — 1~9회차 표의 도달일은 그 상수 위 수다). */
+      const GOAL_DIA = 27205000;
       /* ⚑ 199 8회차(정정1 · S·T 독립 일치) — 7회차의 «비 1.840» 은 **시드별 도달일의 중앙값끼리
          나눈 값**이었다. 도달일 두 칸의 분자는 같은 (목표 − 일회성) 이므로 비는 **반드시 지속
          수급의 비와 같아야 한다**(정책이 일회성을 같은 값으로 받으므로). med(비) ≠ 비(med) 라
@@ -1413,31 +1481,61 @@ function writeReport(rep) {
         }));
         return per > 0 ? (GOAL_DIA - one) / per : 0;
       };
+      /* ⚑ 10회차(정정1 — Y·Z·AA 3인 일치) — ④ 는 «하루치로 나눈 값» 이 아니라 **누적 곡선이
+         목표를 지나는 날의 실측**이다. 스냅의 `inAll`/`outNS` 로 교차일을 직접 검출하고,
+         창 밖(측정 일수 안에 못 지난 시드)은 **말미 구간율 외삽 + (외삽) 표식**으로 찍는다 —
+         9회차의 «전(前)엔 보정, 후(後)엔 무보정» 비대칭 자가 이 한 함수로 사라진다. */
+      const crossOf = (pol, mode) => {
+        const runs = rep.policies[pol];
+        const W = Math.max(7, Math.min(30, Math.floor(rep.days / 4)));   /* 말미 구간(일) */
+        const vals = [];
+        let miss = 0;
+        for (const r of runs) {
+          const day = (d) => r.rows.filter(x => x.label === 'D' + d)[0];
+          const v = (s) => (mode === 'summon' ? s.inAll - s.outNS : s.inAll);
+          const end = day(rep.days);
+          if (!end || end.inAll == null) { miss++; continue; }           /* 옛 --json — 필드 없음 */
+          let hit = null;
+          for (let d = 1; d <= rep.days; d++) { const s = day(d); if (s && v(s) >= GOAL_DIA) { hit = { d, ex: false }; break; } }
+          if (!hit) {
+            const w0 = day(Math.max(1, rep.days - W));
+            const rate = w0 ? (v(end) - v(w0)) / Math.max(1, rep.days - Math.max(1, rep.days - W)) : 0;
+            if (rate > 0) hit = { d: rep.days + (GOAL_DIA - v(end)) / rate, ex: true };
+          }
+          if (hit) vals.push(hit);
+        }
+        if (!vals.length) return null;
+        const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
+        return { p50: med(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
+      };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
+      /* 10회차(정정10 — AA 처방3) — 판정 줄마다 **(장부 · 창 · 통계)** 라벨을 병기한다.
+         9회차의 장부 수치 5곳 오차가 전부 «어느 장부·어느 창·어느 통계인가» 를 안 적어 생겼다. */
       L.push('| 축 | ' + pols.map(p => POLICIES[p].name).join(' | ') + ' | 비 |');
       L.push('|---|' + pols.map(() => '---|').join('') + '---|');
       const rows = [
-        ['유입 합/일', p => dayIn(p).all, fmtN],
+        ['유입 합/일 〔유입 장부 · ' + rep.days + '일 · p50〕', p => dayIn(p).all, fmtN],
         /* ⚑ 8회차 정정(X 결손4) — 라벨이 «3종» 인데 `ONCE` 는 8회차에 **4종**이 됐다. 찍히는 수는
            4종 값이므로 라벨을 고치고, 회차 간 비교용 3종 값은 아래 줄에 따로 둔다. */
-        ['**지속 수급/일 — 일회성 **4종** 제외(출석 1일차 포함) · ④ 는 이 줄로 잰다 · p50**', p => dayIn(p).cont0, fmtN],
-        ['지속 수급/일 — 같은 4종·**평균**(1~7회차의 자 — 회차 간 비교용)', p => dayIn(p).contMean, fmtN],
-        ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판)', p => dayIn(p).cont, fmtN],
+        ['**지속 수급/일 — 일회성 제외(`ONCE_KEYS` · 우편(월)은 지속) 〔지속 장부 · ' + rep.days + '일 · p50〕**', p => dayIn(p).cont0, fmtN],
+        ['지속 수급/일 — 같은 목록·**평균**(1~7회차의 자 — 회차 간 비교용) 〔지속 장부 · ' + rep.days + '일 · 평균〕', p => dayIn(p).contMean, fmtN],
+        ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판) 〔· ' + rep.days + '일 · p50〕', p => dayIn(p).cont, fmtN],
         [`${rep.days}일 스테이지 p50`, stg, fmtN],
-        ['순 이동 비중(%) — ③ 축(④ 와 무관)', netPct, x => x.toFixed(2)],
-        ['**§0 «한 축 ≤50%» — 최대 유입 축 비중(%) · 지속 장부**(일회성 4종 제외)',
+        ['순 이동 비중(%) — ③ 축(④ 와 무관) 〔활성 분 자 · ' + rep.days + '일 · p50〕', netPct, x => x.toFixed(2)],
+        ['**§0 «한 축 ≤50%» — 최대 유입 축 비중(%) 〔지속 장부(일회성 제외) · ' + rep.days + '일 · 평균〕**',
           p => topOf(p, true).pct, x => x.toFixed(2)],
-        ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) · 유입 장부(전체)',
+        ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) 〔유입 장부(전체) · ' + rep.days + '일 · 평균〕',
           p => topOf(p, false).pct, x => x.toFixed(2)],
         /* ⚑ 8회차 정정(W 반박5) — [G] 가 실제로 쓰는 장부는 **셋**인데 8회차 초판이 둘만 찍었고,
            빠진 셋째(소환 예산 = 지속 − 소환 외 씽크)가 제일 나쁘다. ④ 의 둘째 줄이 이미 그
            분모를 쓰고 있으므로 §0 도 같은 자로 한 줄 더 찍어야 판정이 갈리는 것이 보인다. */
-        ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) · **소환 예산 장부**(결2 ⓑ · ④ 둘째 줄과 같은 분모)',
+        ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) 〔**소환 예산 장부**(결2 ⓑ) · ' + rep.days + '일 · 평균〕',
           p => topOf(p, true, true).pct, x => x.toFixed(2)],
-        ['**④ 도달일(2,730만) — 유입 장부** · 목표 부지런 100±10 · 대충 180~200 · 비 1.8~2.0',
+        /* 10회차(정정1) — «나눈 값» 두 줄은 참고로 강등한다. ④ 의 판정 줄은 아래 «교차 실측» 이다. */
+        ['④ 도달일(2,720.5만 · **' + rep.days + '일 나눈 값 — 참고**) 〔유입 장부 · p50 성분〕',
           p => reachOf(p, 'in'), x => x.toFixed(1), true],
-        ['④ 도달일(2,730만) — 소환 예산 장부(결2 ⓑ · 소환 외 씽크 차감)',
+        ['④ 도달일(2,720.5만 · ' + rep.days + '일 나눈 값 — 참고) 〔소환 예산 장부(결2 ⓑ) · p50 성분〕',
           p => reachOf(p, 'summon'), x => x.toFixed(1), true],
       ];
       /* 비 칸 — 기본은 부지런/대충이지만 **도달일만 대충/부지런**이다(주인 목표 1.8~2.0 이 그 향이다).
@@ -1447,6 +1545,19 @@ function writeReport(rep) {
         const ratio = inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
                           : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
+      }
+      /* 10회차(정정1·11) — ④ 판정 줄 = 교차 실측. p50 옆에 산포(p10~p90)와 외삽 시드 수를
+         같이 찍는다(외삽 = 측정 일수 안에 목표를 못 지나 말미 구간율로 민 시드). */
+      for (const mode of ['in', 'summon']) {
+        const nm = mode === 'in' ? '유입 장부' : '소환 예산 장부(결2 ⓑ)';
+        const c = pols.map(p => crossOf(p, mode));
+        if (c.every(x => !x)) {
+          L.push(`| **④ 교차일(2,720.5만 · 실측) 〔${nm}〕** | (스냅에 누적 장부 없음 — 10회차 이전 --json) | — | — |`);
+          continue;
+        }
+        const cell = (x) => x ? `${x.p50.toFixed(1)} [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
+        const ratio = c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-';
+        L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${nm} · ${rep.days}일 창 · p50 [p10~p90]〕** | ${c.map(cell).join(' | ')} | ${ratio} |`);
       }
       L.push('');
       L.push('_최대 유입 축의 이름 — ' + pols.map(p =>
