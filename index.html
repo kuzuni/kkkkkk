@@ -26633,11 +26633,13 @@ function bindUpHold(btn, o){
 /* 뗌·취소는 버튼 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다(64 와 같은 규칙) */
 addEventListener('pointerup', () => upHoldStop(false));
 addEventListener('pointercancel', () => upHoldStop(false));
-/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 좌표로 판정한다 */
+/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 좌표로 판정한다
+   567 — 그려진 자리를 놓치면 **연출(jz-dn·jz-hb)을 벗긴 배치 자리**로 한 번 더 묻는다(jzRestRect 주석). */
 addEventListener('pointermove', e => {
   if(!upHold) return;
   const t = document.elementFromPoint(e.clientX, e.clientY);
-  if(!t || !t.closest || t.closest('button') !== upHold.btn) upHoldStop(false);
+  if(t && t.closest && t.closest('button') === upHold.btn) return;
+  if(!jzHoldOver(upHold.btn, e.clientX, e.clientY)) upHoldStop(false);
 });
 
 /* ── 08 스킬 세부 팝업 ── 측정표: docs/measure/08-스킬세부팝업.md
@@ -32768,12 +32770,16 @@ $('trw').addEventListener('pointerdown', e => {
 /* 뗌·취소는 카드 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다 */
 addEventListener('pointerup', () => trHoldStop(false));
 addEventListener('pointercancel', () => trHoldStop(false));
-/* «leave» — 손가락이 그 카드 밖으로 나가면 정지. 노드가 매 회 바뀌므로 좌표로 판정한다 */
+/* «leave» — 손가락이 그 카드 밖으로 나가면 정지. 노드가 매 회 바뀌므로 좌표로 판정한다
+   567 — 그려진 자리를 놓치면 **연출(jz-dn·jz-hb)을 벗긴 배치 자리**로 한 번 더 묻는다(jzRestRect 주석).
+   ⚠ 여기는 호스트가 «누른 카드 자신» 이라 눌림 .94 가 326 폭에서 좌우 9.8px 씩을 먹는다 —
+     룬 버튼보다 오히려 넓은 자리다. */
 addEventListener('pointermove', e => {
   if(!trHold) return;
   const t = document.elementFromPoint(e.clientX, e.clientY);
   const c = t && t.closest ? t.closest('[data-tr]') : null;
-  if(!c || c.dataset.tr !== trHold.key) trHoldStop(false);
+  if(c && c.dataset.tr === trHold.key) return;
+  if(!jzHoldOver(trCard(trHold.key), e.clientX, e.clientY)) trHoldStop(false);
 });
 
 /* --------------------------------------------------------------------------
@@ -33001,11 +33007,14 @@ $('trw').addEventListener('pointerdown', e => {
 /* 뗌·취소는 버튼 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다(64 와 같은 규칙) */
 addEventListener('pointerup', () => { rtHoldStop(false); rtRenderFlush(); });
 addEventListener('pointercancel', () => { rtHoldStop(false); rtRenderFlush(); });
-/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 노드가 바뀔 수 있으므로 좌표로 판정한다 */
+/* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 노드가 바뀔 수 있으므로 좌표로 판정한다
+   567 — 그려진 자리를 놓치면 **연출(jz-dn·jz-hb)을 벗긴 배치 자리**로 한 번 더 묻는다(jzRestRect 주석).
+   이 자리가 567 의 재현 표본이다 — 버튼 안 11px 지점이 맥박 위상에 따라 «밖» 으로 읽혔다. */
 addEventListener('pointermove', e => {
   if(!rtHold) return;
   const t = document.elementFromPoint(e.clientX, e.clientY);
-  if(!t || !t.closest || !t.closest(rtHold.sel)) rtHoldStop(false);
+  if(t && t.closest && t.closest(rtHold.sel)) return;
+  if(!jzHoldOver(document.querySelector(rtHold.sel), e.clientX, e.clientY)) rtHoldStop(false);
 });
 
 /* ---- 탭 전환 ----
@@ -36826,6 +36835,51 @@ const jzOn = (el, cls, ms) => {
   });
   el[key] = setTimeout(() => { if(el[gkey] === gen) off(); }, hooked ? Math.max(ms, 2500) : ms);
 };
+
+/* ⚑ 567 — **연출은 «보이는 것» 이지 «만지는 것» 이 아니다.**
+   홀드 4형제(05/06 `upHold` · 64 훈련 `trHold` · 297 룬·단련 `rtHold`)의 «이탈» 판정은
+   `document.elementFromPoint` 로 «지금 그려진» 기하를 맞힌다. 그런데 같은 노드 위에
+   60 쥬시의 변형 둘이 상시로 얹혀 있다 — `jz-dn`(누르고 있는 **동안** scale .94 를 `both` 로 유지) ·
+   `jz-hb`(488 회당 맥박, 호스트 카드 scale `--hb-s`). ⇒ **손가락은 가만있는데 버튼이 밑에서 줄어든다.**
+   실측(룬 [강화] `.rbt.b1` 배치 420×112 @ 330,1667 · 눌림 .94 × 카드 맥박 1.02):
+     그려진 상자가 **402.7×107.4 @ 338.7,1681.8** 로 줄고 **4.4px 아래**로 밀린다
+     ⇒ 버튼 «안» 인 y**1678**(위 가장자리에서 11px 안쪽)이 **3.8px 차이로 밖**이 된다.
+   맥박은 홀드 주기(60~160ms)마다 다시 시작하므로 **같은 자리가 위상에 따라 «안» 도 «밖» 도 된다** —
+   `verify349` [B] 의 ±45px 항이 같은 트리에서 4회(FAIL) ↔ 12~13회(PASS)로 갈리던 뿌리가 이것이다
+   (이웃 ±30px 은 위 가장자리에서 26px 안쪽이라 연출이 다 먹어도 안 걸린다 = «드리프트 폭 축» 이 아니다).
+   ⇒ 그려진 자리를 놓쳤다고 곧바로 «이탈» 로 읽지 않고, **연출을 벗긴 «배치 자리»** 로 한 번 더 묻는다.
+   ⚠ 벗기는 것은 `jz-` 클래스가 붙은 조상**뿐**이다 — `#app` 의 `fit()` scale 은 «진짜 기하» 라
+     같이 벗기면 판정이 화면 밖까지 넓어진다(63 규약).
+   ⚠ 인라인 선언은 애니메이션에 진다(캐스케이드에서 애니메이션이 위다) — `!important` 로 덮어야 이긴다.
+     읽고 나서 **같은 태스크 안에서** 되돌리므로 페인트가 끼어들 수 없다(화면에는 한 프레임도 안 나간다).
+   ⚠ 미스 경로에서만 돈다 — 평상시 pointermove 는 종전대로 `elementFromPoint` 한 번뿐이다. */
+const JZ_TF_PROPS = ['transform', 'scale', 'translate', 'rotate'];
+const jzTfHost = n => !!(n && n.classList && [].some.call(n.classList, c => c.indexOf('jz-') === 0));
+function jzRestRect(el){
+  if(!el || !el.getBoundingClientRect) return null;
+  const undo = [];
+  for(let n = el; n && n.nodeType === 1 && n !== document.documentElement; n = n.parentElement){
+    if(!jzTfHost(n)) continue;
+    const s = n.style;
+    JZ_TF_PROPS.forEach(k => {
+      undo.push([s, k, s.getPropertyValue(k), s.getPropertyPriority(k)]);
+      s.setProperty(k, 'none', 'important');
+    });
+  }
+  const r = el.getBoundingClientRect();
+  for(let i = undo.length - 1; i >= 0; i--){
+    const u = undo[i];
+    if(u[2]) u[0].setProperty(u[1], u[2], u[3]); else u[0].removeProperty(u[1]);
+  }
+  return r;
+}
+/* 홀드 «이탈» 공용 손 — 그려진 자리를 놓치면 배치 자리로 한 번 더 묻는다.
+   호스트가 사라졌으면(재렌더로 노드가 날아갔으면) «안» 이라고 우기지 않는다 = 종전대로 정지. */
+function jzHoldOver(el, x, y){
+  const r = jzRestRect(el);
+  if(!r || !r.width || !r.height) return false;
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
 
 /* ⚑ 491 3회차 — **«눌렸다» 와 «꺼졌다» 는 같은 어휘를 쓰면 안 된다.**
    상태 갱신(`liveTemper()` 등)이 «누르고 있는 그 프레임» 에 돌면 202 의 회색(`.no`)이 누름 위에 덮여
