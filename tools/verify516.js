@@ -327,7 +327,9 @@ const ok = (b, name, detail) => {
         let rules; try { rules = sh.cssRules; } catch (e) { continue; }
         for (let i = rules.length - 1; i >= 0; i--) {
           const s = rules[i].selectorText || '';
-          if (/^#collw\s+\.updot$/.test(s) || /^#collw\s+\.alert\s*>\s*\.updot$/.test(s)) {
+          /* ⚑ 531 이관 — 531 예방 짝(1,1,1)이 `#collw` 짝(1,1,0) 뒤를 받치므로 같이 걷는다(tools/dot531.js) */
+          if (/^#collw\s+\.updot$/.test(s) || /^#collw\s+\.alert\s*>\s*\.updot$/.test(s)
+              || /s\.updot,\s*s\.bdg,\s*s\.dot/.test(s)) {
             killed.push({ sh, i, text: rules[i].cssText });
             sh.deleteRule(i);
           }
@@ -350,7 +352,7 @@ const ok = (b, name, detail) => {
       btn.classList.add('alert');
       return { killed: killed.length, noAlert, withAlert, back };
     });
-    ok(r.killed === 2, 'R1 되돌림 대상 규칙 2줄을 찾았다', r.killed + '줄');
+    ok(r.killed === 4, 'R1 되돌림 대상 규칙 4줄을 찾았다 — 516 짝 2줄 + 531 예방 짝 2줄(이관)', r.killed + '줄');
     ok(r.noAlert.d !== 'none' && r.noAlert.w > 0,
       'R2 짝을 빼면 `.alert` 없이도 닷이 그려진다(= 상시 점등으로 되돌아간다)',
       'display=' + r.noAlert.d + ' w=' + r.noAlert.w);

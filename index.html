@@ -11089,6 +11089,31 @@
     text-decoration:none;transform:none;display:none;pointer-events:none;z-index:6;--dot-r:13.5px;
     box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .alert>.updot{display:block}
+  /* ══ 531 (2026-08-31) — «상시 점등» 함정의 **재료**를 미리 덮는 스코프 짝 ═══════════════
+     166 ⓔ · 202 §3 · 283 · 294 · 325 · 516 · 519 로 **일곱 번** 난 계열이다. 매번 같은 순서였다:
+     주인이 거짓 신호를 보고 → 워커가 재현 → 짝 두 줄. 그래서 이번에는 사고가 난 자리가 아니라
+     **아직 노드가 없는 자리**를 덮는다 — 규칙을 한 번 더 적는 것보다 깔아 두는 쪽이 싸다.
+
+     ⚑ **자리 목록은 «셀렉터 모양» 이 아니라 «심어서 잰 display» 로 골랐다.** 등재문이 근거로 삼은
+     `scan519 [2]`(모양을 세는 자)는 `#X … (s|i|b|em|u)` 그룹의 **마지막 항**만 보므로 두 쪽으로 틀린다:
+       · `#eqw i,#eqw em,#eqw b,#eqw u` 처럼 **`<s>` 를 안 켜는** 스코프를 함정으로 찍고(허수 12자리 —
+         `#stinfo`·`#bossTm`·`#dunTm`·`#arnTm`·`#hpwrap`·`#tuto`·`#ldBar`·`#dunw`·`#eqw`·`#upw`·`#statw`·`#defw`)
+       · 짝이 **자리별로만**(`#mnw .mn-b>.bdg` 처럼) 있는 스코프를 «짝 있음» 으로 놓친다(누락 12자리 —
+         `#bSk`·`#bPet`·`#bCos`·`#shopw`·`#relw`·`#trw`·`#wpnw`·`#mnw`·`#blsw`·`#collw`·`#psw`·`#stDesc`).
+     `tools/probe531.js` 가 `#app` 안 id 요소마다 **진짜 닷을 심어 보고** display 를 읽어 아래 23자리를
+     골랐다(모양 23 ↔ 실측 23 인데 **양쪽으로 12자리씩 다르다** — 우연히 개수만 같다).
+
+     ⚠ **`<s>` 꼴로만 적는다.** `.bdg` 는 레드닷 배지 말고 10 상점 배너 리본(`<div class="bdg">`)에도
+     쓰이는 이름이라, 클래스만으로 적으면 그 리본 3장이 같이 꺼진다(probe531 [3] 1차 실행이 찍었다).
+     ⚠ **`.on` 을 점등 축으로 쓰지 마라.** `.stab.on` 은 «지금 고른 서브탭» 이지 «알림» 이 아니다 —
+     넣었더니 고른 탭 배지 4개가 켜졌다(probe531 [3] 1차 실행).
+     ⚠ **`#dunw` 는 일부러 뺐다.** 03 던전 카드 닷(341 `.dnc .dot`)은 `display` 선언 자체가 없고
+     «노드를 만들거나 말거나» 로 켜는 자리라, 여기에 짝을 깔면 그 닷 2장이 **꺼진다**(같은 실행이 찍었다).
+     이 짝을 지우면 `verify531` [R] 이 빨개진다. 새 화면을 만들면 그 id 를 아래 목록에 더한다. */
+  :is(#bSk,#bPet,#bCos,#shopw,#relw,#trw,#wpnw,#prbw,#mnw,#ciw,#blsw,#collw,#psw,#pfw,#sumw,
+      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw) :is(s.updot,s.bdg,s.dot){display:none}
+  :is(#bSk,#bPet,#bCos,#shopw,#relw,#trw,#wpnw,#prbw,#mnw,#ciw,#blsw,#collw,#psw,#pfw,#sumw,
+      #stDesc,#dclw,#specw,#bagw,#cfw,#rkw,#chw,#svw) .alert>:is(s.updot,s.bdg,s.dot){display:block}
   /* ══ 471 (2026-08-30, 저장소 주인 보고) — 레드닷 «호스트 우상단 코너» 규약 ═════════════
      주인 원문: «저거 빨간점도 짤려보임. 팝업에 빨간점들이 오른쪽위에 딱있어야하는데 위치가 다 어정쩡함».
      `node tools/probe471.js` 재현(수리 전) — 자리 27곳의 «호스트 테두리 바깥 상자 우상단 코너 ↔

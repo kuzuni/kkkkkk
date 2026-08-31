@@ -356,12 +356,22 @@ const HELPERS = () => {
     '[기준선] 갈아 끼우지 않은 사본 — ⓐ ⓑ 새지 않음 · ⓒ 노드 유지',
     'a=' + base.a + ' b=' + base.b + ' c=' + base.c);
 
-  const n1 = await withSrc(SRC.replace(PAIR_SHEET, ''), async p => ({ a: await measSheet(p), b: await measWpn(p), c: await measTick(p) }));
+  /* ⚑ 531 이관 — 화면별 짝만 지운 사본은 «상시 점등» 이 안 된다. 531 이 깐 예방 짝(1,1,1)이
+     `:is(#bSk,#bPet,#bCos) .updot`(1,1,0)·`#wpnw .updot` 의 뒤를 받치기 때문이다. 두 음성항의
+     뜻(«이 두 줄이 실제로 일한다»)을 살리려면 사본에서 531 의 짝도 같이 빼야 한다.
+     ⚠ 자를 자꾸 무르게 푸는 것처럼 보이지 않게 [N0] 이 «실제로 뺐다» 를 먼저 못박는다. */
+  const { SRC_RE: RE531 } = require('./dot531');
+  const noPair531 = src => src.replace(RE531, '');
+  ok(noPair531(SRC) !== SRC && (SRC.match(RE531) || []).length === 2,
+    '[N0 전제] 사본에서 531 예방 짝 2줄을 실제로 뺐다(이관)',
+    (SRC.match(RE531) || []).length + '줄');
+
+  const n1 = await withSrc(noPair531(SRC.replace(PAIR_SHEET, '')), async p => ({ a: await measSheet(p), b: await measWpn(p), c: await measTick(p) }));
   ok(n1.a === true && n1.b === false && n1.c === true,
     '[N1] `:is(#bSk,#bPet,#bCos) .updot` 스코프 짝 제거 → **07 시트만** 상시 점등(166 ⓔ 특이성 함정 부활)',
     'a=' + n1.a + ' b=' + n1.b + ' c=' + n1.c);
 
-  const n2 = await withSrc(SRC.replace(PAIR_WPN, ''), async p => ({ a: await measSheet(p), b: await measWpn(p), c: await measTick(p) }));
+  const n2 = await withSrc(noPair531(SRC.replace(PAIR_WPN, '')), async p => ({ a: await measSheet(p), b: await measWpn(p), c: await measTick(p) }));
   ok(n2.a === false && n2.b === true && n2.c === true,
     '[N2] `#wpnw .updot` 스코프 짝 제거 → **05 팝업만** 상시 점등',
     'a=' + n2.a + ' b=' + n2.b + ' c=' + n2.c);

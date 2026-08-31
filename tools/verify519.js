@@ -222,7 +222,10 @@ const CASES = [
       let rs; try { rs = sh.cssRules; } catch (e) { continue; }
       for (let i = rs.length - 1; i >= 0; i--) {
         const r = rs[i];
-        if (r.type === 1 && /^#trw \.stab(\.alert)?\s*>\s*\.bdg$/.test((r.selectorText || '').trim())) {
+        /* ⚑ 531 이관 — 화면별 짝만 걷으면 안 켜진다. 531 이 깐 예방 짝(1,1,1)이 이 두 줄(1,2,0)의
+           뒤를 받치고 있어서, 그것까지 같이 걷어야 «수리 전 그리기» 가 된다. 식은 tools/dot531.js. */
+        const st = (r.selectorText || '').trim();
+        if (r.type === 1 && (/^#trw \.stab(\.alert)?\s*>\s*\.bdg$/.test(st) || /s\.updot,\s*s\.bdg,\s*s\.dot/.test(st))) {
           killed.push({ sh, i, text: r.cssText }); sh.deleteRule(i);
         }
       }
@@ -232,7 +235,7 @@ const CASES = [
     const b = eval(js)(spec);                       /* 되돌리면 다시 꺼지는가 */
     return { killedN: killed.length, revert: a, restored: b };
   }, [SNAP, { ts: 0, pts: 0, alloc: {} }]);
-  ok(rev.killedN === 2, '[R-a] 걷어낸 규칙이 정확히 2줄이다', rev.killedN + '줄');
+  ok(rev.killedN === 4, '[R-a] 걷어낸 규칙이 정확히 4줄이다 — 519 의 짝 2줄 + 531 예방 짝 2줄(이관)', rev.killedN + '줄');
   ok(rev.revert.display !== 'none' && rev.revert.area > 0,
     '[R-b] ⓓ 되돌림 — 두 줄을 걷으면 **소등이 옳은 상태에서도 닷이 그려진다**(수리 전)',
     'display=' + rev.revert.display + ' · 면적=' + rev.revert.area);

@@ -332,8 +332,10 @@ const NOW = () => Date.now();
       if (!d) return { wasNone: false, now: 'none', missing: true };
       const wasNone = getComputedStyle(d).display === 'none';
       /* 스코프 짝만 빼고 클래스 급 규칙만 남긴 상태를 흉내낸다 */
+      /* ⚑ 531 이관 — `#blsw .updot`(1,1,0) 만 무력화하면 531 예방 짝(1,1,1)이 그대로 눌러 둔다.
+         같은 급(`#blsw s.updot` = 1,1,1)으로 올려 둘 다 걷는다. 식은 tools/dot531.js 참조. */
       const s = document.createElement('style');
-      s.textContent = '#blsw .updot{display:revert}';
+      s.textContent = '#blsw .updot,#blsw s.updot{display:revert}';
       document.head.appendChild(s);
       const now = getComputedStyle(d).display;
       s.remove();
