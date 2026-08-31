@@ -25,8 +25,10 @@ const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const { measureReach } = require('./atlasface587');
-/* 598 — 깜빡임 축은 **결정적 시나리오** 한 벌에서만 온다(probe598 과 같은 함수 · 385 규약) */
-const { FLAP_DET, PLAY_DET, SUB_HYST } = require('./flap598lib');
+/* 598 — 깜빡임 축은 **결정적 시나리오** 한 벌에서만 온다(probe598 과 같은 함수 · 385 규약)
+   606 — §3·§4 실동작 하네스도 **같은 구동**을 쓴다(rAF 표본 폐지 · 아래 §3 머리말) */
+const { FLAP_DET, PLAY_DET, SUB_HYST,
+        SOLO_DET, CROWD_DET, JOY_DET, CORPSE_DET } = require('./flap598lib');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'index.html');
@@ -67,42 +69,19 @@ function score(samples, faceRight, minDx) {
            pctSt: steady ? p1(wrongSt / steady * 100) : null };
 }
 
-/* 단독 개체를 «플레이어와 같은 높이의 먼 자리» 에 되돌려 놓아 **깨끗한 직진**만 표집한다.
-   (무리·근접 궤도는 방향 전환이 잦아 33ms 창 효과가 실린다 — 규칙을 재는 자리가 아니다) */
-const SOLO = `(async (tk, ms) => {
-  enemies.length = 0; spawnQ.length = 0; makeEnemy(tk);
-  if (!enemies[0]) return [];
-  const out = []; let skip = 0, side = 1;
-  const t0 = performance.now();
-  while (performance.now() - t0 < ms) {
-    await new Promise(r => requestAnimationFrame(r));
-    const e = enemies[0]; if (!e) break;
-    e.hp = e.max = 1e9;
-    if (Math.hypot(player.x - e.x, player.y - e.y) < 420) {
-      side = -side;
-      e.x = side > 0 ? Math.max(90, player.x - 520) : Math.min(WORLD.w - 90, player.x + 520);
-      e.y = player.y; skip = 4; continue;
-    }
-    if (skip > 0) { skip--; continue; }
-    if (e.born > 0.35) out.push({ x: e.x, flip: e.flip });
-  }
-  return out;
-})`;
-
-/* 무리 — 개체별로 갈라 담는다 */
-const CROWD = `(async (ms, step) => {
-  const out = {}; const t0 = performance.now(); let last = -1e9;
-  while (performance.now() - t0 < ms) {
-    await new Promise(r => requestAnimationFrame(r));
-    const now = performance.now();
-    if (now - last < step) continue; last = now;
-    for (const e of enemies) {
-      if (!e.__id) e.__id = 'e' + (Math.random() * 1e9 | 0);
-      (out[e.__id] = out[e.__id] || []).push({ tk: e.tk, x: e.x, flip: e.flip, born: e.born });
-    }
-  }
-  return out;
-})`;
+/* 606 — 실동작 표본의 손잡이. **벽시계(ms)가 아니라 프레임 수**다: `step(1/60)` 을 손으로
+   굴리므로 «12초» 가 회차마다 334~357프레임으로 달라지던 일이 없다(598 §5 가 깐 길).
+   프레임 수는 옛 벽시계와 **같은 게임 시간**으로 맞췄다(12초·16초·4.5초·9초 = 720·960·270·540). */
+const ACT_FRAMES = 720;          /* [3-a] 단독 직진 — 12초 */
+const CROWD_FRAMES = 960;        /* [3-b] 무리 — 16초 */
+const CROWD_EVERY = 2;           /* 2프레임(33ms)마다 표집 — 옛 판의 «30ms 마다» 와 같은 뜻 */
+const JOY_FRAMES = 270;          /* [3-c] 방향당 4.5초 */
+const JOY_WARM = 30;             /* 꺾은 직후 0.5초 버리기(옛 판과 같은 규약) */
+const JOY_EVERY = 2;
+const KN_FRAMES = 540;           /* [4-a] knight 계열 — 9초 */
+/* 시드는 하나면 된다(값 자체에는 뜻이 없다 — «회차마다 같기만 하면» 된다).
+   §5 가 쓰는 11 을 그대로 써서 이 자가 굴리는 판이 두 벌이 되지 않게 한다. */
+const ACT_SEED = 11;
 
 /* 598 — 깜빡임 판정의 손잡이. 시드 둘은 `probe598` §C 가 잰 다섯 시드의 **최대·최소 자리**다
    (11 = 고친 쪽 15.674 로 가장 많이 도는 시드 · 44 = 13.632 로 가장 적게 도는 시드).
@@ -192,8 +171,16 @@ async function boot(browser, file) {
 
   /* ── §3 실동작 ────────────────────────────────────────────────────── */
   console.log('\n§3 실동작 — 이동 방향과 찍힌 방향이 같다 ──────────────────');
+  /* ⚑ **606 이 이 절과 §4 의 구동을 갈아 끼웠다.** 여기까지는 rAF 표본이라 **머신 부하가 곧 값**이었다 —
+     같은 커밋·같은 트리에서 `[4-a:promo]` 가 2.1 · 2.9 · 4.7 · 5.7 · 6.6%(바 4.0)로 흔들렸고
+     `[3-c]` 표본 수는 72 ↔ 28 로 2.6배 갈렸다. 598 이 §5 에서 찾은 답을 그대로 넓힌다:
+     루프를 멈추고 `step(1/60)` 을 손으로 굴리고, `Math.random` 을 시드 LCG 로 갈고,
+     배우·좌표·스월을 선언으로 세운다(`flap598lib` 의 `SOLO_DET`·`CROWD_DET`·`JOY_DET`·`CORPSE_DET`).
+     ⚠ **표본 규약은 한 줄도 안 바꿨다**(되돌려 놓기 · 4프레임 버리기 · born 필터 · 0.5초 워밍업) —
+       바뀐 것은 «무엇이 굴리는가» 뿐이다. 그래서 바(4%)도 **한 칸도 안 넓혔다**: 판별력은
+       임계가 아니라 §R-a(표를 접으면 100%)가 낸다. */
   for (const tk of ['zombie', 'goblin', 'dark']) {
-    const s = await page.evaluate(`(${SOLO})('${tk}', 12000)`);
+    const s = await page.evaluate(`(${SOLO_DET})('${tk}', ${ACT_FRAMES}, ${ACT_SEED})`);
     const r = score(s, REF[TK_FACE[tk]], MIN_VX / 60);
     /* ⚠ 바를 1% 로 조였다가 느린 다크엘프가 5/440 = 1.1% 로 걸렸다. 이 항이 잡아야 하는 것은
        «규칙이 통째로 반대인가»(수리 전 **98.7%**)이지 마지막 1% 가 아니다 — 잔차는 히스테리시스
@@ -202,45 +189,34 @@ async function boot(browser, file) {
     ok(r.moving > 150 && r.pct <= RESID_RT, `[3-a:${tk}] 단독 직진 — 반대인 프레임 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
   }
-  await page.evaluate(() => { enemies.length = 0; spawnQ.length = 0; queueMobs(); });
-  const crowd = await page.evaluate(`(${CROWD})(16000, 30)`);
+  /* ⚑ 606 — `queueMobs()` 를 안 쓴다. 그 함수는 종을 `S.stage`(부팅 세이브!)와 난수로 뽑아서
+     실측 3회 내내 **zombie 한 종만** 채점됐다(고블린·다크엘프 항은 «빨간» 게 아니라 아예 없었다).
+     `CROWD_DET` 이 세 종을 선언으로 세우므로 이 항은 이제 **언제나 셋**이다. */
+  const crowd = await page.evaluate(`(${CROWD_DET})(${CROWD_FRAMES}, ${ACT_SEED}, ${CROWD_EVERY})`);
   {
     const by = {};
     for (const t of Object.values(crowd)) {
       const tk = t[0] && t[0].tk; if (!tk) continue;
       (by[tk] = by[tk] || []).push(t.filter(x => x.born > 0.35));
     }
-    for (const tk of Object.keys(by)) {
+    ok(Object.keys(by).filter(tk => TK_FACE[tk]).length === 3,
+      '[3-b0] 무리에 세 종이 **전부** 서 있다(한 종만 채점되던 자리 — 606)', Object.keys(by).join('·'));
+    for (const tk of Object.keys(by).sort()) {
       const fk = TK_FACE[tk]; if (!fk) continue;
       let st = 0, w = 0, mv = 0;
-      for (const t of by[tk]) { const r = score(t, REF[fk], MIN_VX * 0.03); st += r.steady; w += r.wrongSt; mv += r.moving; }
+      /* 최소 이동 눈금은 **표집 간격에서 유도**한다(옛 벽시계 상수 0.03 은 간격과 갈라진다) */
+      for (const t of by[tk]) { const r = score(t, REF[fk], MIN_VX * CROWD_EVERY / 60); st += r.steady; w += r.wrongSt; mv += r.moving; }
       const pct = st ? p1(w / st * 100) : null;
       ok(mv > 200 && pct !== null && pct <= RESID_RT,
         `[3-b:${tk}] 무리(${by[tk].length}마리) — 곧게 가는 구간에서 반대 ≤ ${RESID_RT}%`, `${w}/${st} = ${pct}%`);
     }
   }
-  const joy = await page.evaluate(`(async () => {
-    enemies.length = 0; spawnQ.length = 0; for (let i = 0; i < 6; i++) makeEnemy('zombie');
-    const out = [];
-    for (const dir of [1, -1]) {
-      joy.on = true; joy.dx = dir; joy.dy = 0; joy.mag = 1;
-      /* ⚠ 손가락을 **반대로 꺾은 직후**의 가감속 구간은 버린다(0.5초). 그 구간은 «규칙이 맞나» 가
-         아니라 관성이 방향을 뒤집는 과도 구간이고, 표본이 60개뿐이면 그 한 프레임이 통째로
-         1.6% 가 되어 게이트가 3회 중 1회 빨개진다(실측). 표집 시간도 늘려 분모를 키운다. */
-      const t0 = performance.now(); let last = -1e9;
-      while (performance.now() - t0 < 4500) {
-        await new Promise(r => requestAnimationFrame(r));
-        const now = performance.now();
-        if (now - t0 < 500) continue;
-        if (now - last < 30) continue; last = now;
-        out.push({ dir, t: now, x: player.x, flip: player.flip });
-      }
-    }
-    joy.on = false; joy.dx = joy.dy = 0; joy.mag = 0;
-    return out;
-  })()`);
+  /* ⚠ 손가락을 **반대로 꺾은 직후**의 가감속 구간은 버린다(0.5초 = 30프레임). 그 구간은 «규칙이
+     맞나» 가 아니라 관성이 방향을 뒤집는 과도 구간이고, 표본이 60개뿐이면 그 한 프레임이 통째로
+     1.6% 가 되어 게이트가 3회 중 1회 빨개진다(587 실측). 그 규약은 `JOY_DET` 이 그대로 갖고 있다. */
+  const joy = await page.evaluate(`(${JOY_DET})(${JOY_FRAMES}, ${ACT_SEED}, ${JOY_EVERY}, ${JOY_WARM})`);
   for (const dir of [1, -1]) {
-    const r = score(joy.filter(s => s.dir === dir), REF.knight, MIN_VX * 0.03);
+    const r = score(joy.filter(s => s.dir === dir), REF.knight, MIN_VX * JOY_EVERY / 60);
     ok(r.moving > 15 && r.pct <= RESID_RT,
       `[3-c] 조이스틱 ${dir > 0 ? '오른쪽' : '왼쪽'}(수동 이동 42) — 반대인 프레임 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
@@ -249,24 +225,17 @@ async function boot(browser, file) {
   /* ── §4 전수 ──────────────────────────────────────────────────────── */
   console.log('\n§4 전수 — knight 계열 적 · 시체 · 펫 ───────────────────────');
   for (const tk of ['promo', 'arena']) {
-    const s = await page.evaluate(`(${SOLO})('${tk}', 9000)`);
+    const s = await page.evaluate(`(${SOLO_DET})('${tk}', ${KN_FRAMES}, ${ACT_SEED})`);
     const r = score(s, REF.knight, MIN_VX / 60);
     /* ⚠ 이 둘은 `SOLO_CHASER` 라 **대시**를 쓴다 — 예고가 끝나는 순간 방향을 잠그고(359) 그 구간은
        조향이 통째로 무시되므로, 잡몹보다 창 효과가 조금 더 실린다. 잡몹 바(1%)가 아니라 무리 바를 쓴다. */
     ok(r.moving > 100 && r.pct <= RESID_RT, `[4-a:${tk}] knight 아틀라스를 쓰는 적 — 반대 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
   }
-  const corpse = await page.evaluate(`(async () => {
-    enemies.length = 0; spawnQ.length = 0; corpses.length = 0;
-    makeEnemy('zombie');
-    await new Promise(r => setTimeout(r, 900));
-    const n0 = corpses.length;
-    const alive = enemies.map(e => ({ x: e.x, flip: e.flip }));
-    for (const e of enemies.slice()) hitEnemy(e, e.hp + 1, false);
-    for (let k = 0; k < 30 && corpses.length === n0; k++) await new Promise(r => requestAnimationFrame(r));
-    const made = corpses.slice(n0).map(c => ({ x: c.x, flip: c.flip }));
-    return { alive, made };
-  })()`);
+  /* ⚑ 606 — 옛 판은 0.9초 동안 판을 **그대로 굴려** 두었고, 그 사이 플레이어가 그 좀비를 먼저
+     죽이면 `enemies` 가 비어 «시체 0구» 로 빨개졌다(실측 1회). 스킬 봉인 + 체력 붙잡기로
+     «내가 죽이는 순간» 말고는 아무도 안 죽는다 — 판정(방향 승계)은 한 글자도 안 바꿨다. */
+  const corpse = await page.evaluate(`(${CORPSE_DET})(${ACT_SEED})`);
   ok(corpse.made.length > 0 && corpse.made.every(c => {
     let best = null, bd = 1e9;
     for (const a of corpse.alive) { const d = Math.abs(a.x - c.x); if (d < bd) { bd = d; best = a; } }
@@ -350,7 +319,8 @@ async function boot(browser, file) {
   try {
     mk(SUB_A, NEG_A);
     const a = await boot(browser, NEG_A);
-    const s = await a.page.evaluate(`(${SOLO})('goblin', 10000)`);
+    /* 606 — 음성항도 **같은 판**에서 재야 «같은 자로 잰 두 값» 이다(양성 0% ↔ 음성 100%) */
+    const s = await a.page.evaluate(`(${SOLO_DET})('goblin', ${ACT_FRAMES}, ${ACT_SEED})`);
     const r = score(s, REF.elvesG, MIN_VX / 60);
     ok(r.moving > 100 && r.pct >= 80,
       '[R-a] 표를 한 값으로 접은 사본에서 고블린이 **되돌아간다**(≥80%)', `${r.wrong}/${r.moving} = ${r.pct}%`);
