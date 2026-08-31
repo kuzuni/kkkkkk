@@ -137,6 +137,46 @@ function tailHead(line) {
   return i > 0 ? HEAD_NOT_YET.exec(c[i]) : null;
 }
 
+/* ── 세 번째 반쪽 (작업 566, 2026-08-31) ─────────────────────────────────────
+ * ⓐ(388)·ⓑ(445)는 둘 다 **«미착수» 라는 낱말**을 찾는다 — ⓐ 는 구현 칸에서, ⓑ 는 비고 머리말에서.
+ * 그래서 **셋 다 제대로 닫혔는데 구현 칸에 «낱말이 아닌 산문» 이 들어찬 행**은 두 자가 다 조용하다:
+ *   512 `— (T2 기능·연출 · 지시서 [3]-(가) …)` · 517 `— (수치는 review §1·§4)` ·
+ *   144·266·327 `docs/measure/…` 경로 · 333 «게이트만 수정 — …»
+ * 그 칸이 하는 말은 «안 했다» 도 «했다» 도 아닌 **아무 말도 아니다** — 그리고 워커의 티어 스캔이
+ * 실제로 그 칸을 읽는다(2026-08-31 sess-0146-21673 이 여섯 행을 «미완료 후보» 로 집어 올려
+ * 하나씩 열어 보는 값을 치렀고, sess-0258-9414 의 첫 스캔도 같은 값을 치렀다).
+ *
+ * ── 왜 «칸이 정확히 7개» 를 전제로 다는가 ────────────────────────────────────
+ * 이 축만은 칸을 **위치로** 읽어야 한다(모양으로 앵커할 «낱말» 이 없는 것이 정의다).
+ * 그래서 위치를 믿을 수 있는 행에서만 판정한다 — 표 헤더가 7칸이므로 GitHub 은 8번째부터
+ * **버리고**, 7칸인 행에서는 렌더·꼬리·머리 세 읽기가 **한 칸을 가리킨다**.
+ * 칸이 7이 아닌 행은 조용히 넘기지 않고 «관찰» 로 세어 찍는다(실측 2026-08-31: 568행 중 142행).
+ * ⚠ 칸을 셀 때 `\|`(escape)는 구분자가 아니다 — GFM 이 그렇게 읽는다. 순진하게 `split('|')`
+ *   하면 7칸 행이 413행으로 세지지만 escape 를 지키면 **426행**이다(13행이 헛되이 «판정 불가» 가 된다).
+ *
+ * ── 무엇을 «벙어리» 로 부르지 않는가 (범위) ──────────────────────────────────
+ * 구현 칸이 **정확히** «–/—/-/미착수./빈칸» 인 행은 이 축 밖이다. 그 모양은 ⓐ 의 것이고
+ * (비고 머리말이 같이 «미착수» 일 때만 빨갛다), 실물 표에 **그 꼴로 닫힌 완료행이 50행 넘게** 있다.
+ * 그것까지 빨갛게 하면 이 자는 모든 워커의 push 를 한꺼번에 막는다 — 헛빨강 하나의 값이
+ * 놓친 자리 하나보다 비싸다(§3 머리말과 같은 저울). */
+const COLS = 7;
+const STATE_MARK = /✅|⏸|🔧|⏹|✖|🏆|완료|해결|통과|폐기|보류|종료|진행/;
+const BARE_IMPL = /^\s*(?:\*\*)?\s*(?:–|—|-|미착수\.?)?\s*(?:\*\*)?\s*$/;
+function cellsOf(line) {                   /* GFM 표 칸 나누기 — `\|` 는 구분자가 아니다 */
+  const out = [];
+  let cur = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '\\' && line[i + 1] === '|') { cur += '\\|'; i++; continue; }
+    if (ch === '|') { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  if (out.length && !out[0].trim()) out.shift();                    /* 행은 `|` 로 연다 */
+  if (out.length && !out[out.length - 1].trim()) out.pop();         /* 행은 `|` 로 닫는다 */
+  return out;
+}
+
 /* ── 검사 대상 상태 ── */
 let curText, curLabel;
 if (file) { curText = fs.readFileSync(path.resolve(file), 'utf8'); curLabel = file; }
@@ -203,13 +243,21 @@ for (const [id, { sha, subj }] of [...newestDone.entries()].sort((a, b) => a[0].
 
 /* ── §2 자기모순 판정 — 이력이 아니라 «지금 표» 만 본다 ── */
 const contra = [];
+const muteWatch = [];                              /* 축 ⓒ 를 «칸 수» 때문에 못 잰 행 (566) */
 for (const [id, line] of cur) {
   const d = DONE_DATED.exec(line);
   if (!d) continue;                                /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
   const y = NOT_YET.exec(line);                    /* 축 ⓐ 구현 칸까지 등재 상태 (388) */
   if (y) { contra.push({ id, head: y[1], mark: d[0], kind: 'impl' }); continue; }
   const t = tailHead(line);                        /* 축 ⓑ 구현 칸은 채웠는데 머리말만 등재 상태 (445) */
-  if (t) contra.push({ id, head: t[1], mark: d[0], kind: 'tail' });
+  if (t) { contra.push({ id, head: t[1], mark: d[0], kind: 'tail' }); continue; }
+  /* 축 ⓒ 세 칸이 다 «미착수» 라는 낱말을 안 쓰는데 구현 칸이 아무 말도 안 한다 (566).
+     ⓐ·ⓑ 가 이미 댄 행은 위에서 `continue` 로 빠졌다 — 겹치면 구체적인 쪽을 댄다. */
+  const cells = cellsOf(line);
+  if (cells.length !== COLS) { muteWatch.push({ id, n: cells.length }); continue; }
+  const impl = cells[3];
+  if (STATE_MARK.test(impl) || BARE_IMPL.test(impl)) continue;
+  contra.push({ id, head: impl.trim().replace(/\s+/g, ' ').slice(0, 46), mark: d[0], kind: 'mute' });
 }
 
 /* ── §3 마감 누락 판정 — 표가 아니라 «표 ↔ 저장소 자산» 을 본다 (작업 557) ───────────
@@ -318,7 +366,11 @@ if (!quiet) {
                 '건뿐이다. 경계 밖의 되돌림은 안 세진다.');
     console.log('    창을 넓히려면: git fetch --deepen=200 origin main  (§2 자기모순은 표만 보므로 영향 없다)');
   }
-  console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건');
+  console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건' +
+              ' · 칸 수가 7 이 아니라 축 ⓒ 판정 불가 ' + muteWatch.length + '건');
+  /* 못 본 것을 초록으로 부르지 않되, 133건을 매 실행 나열하지도 않는다 — 목록은 재현기가 낸다. */
+  if (muteWatch.length) console.log('    ⚠  칸 수가 헤더(7)와 달라 구현 칸의 자리를 못 믿는 행이다 ' +
+                                    '(목록·내역: node tools/probe566.js §2)');
   if (skipRev) {
     console.log('  §3 마감 누락 검사 — 건너뜀(--rev): 자산은 작업 트리의 것이라 옛 표와 짝이 안 맞는다');
   } else {
@@ -332,8 +384,11 @@ for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.
 for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · ' +
   (c.kind === 'impl'
     ? '구현 칸이 «–» 이고 비고가 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark + '» 가 있다'
-    : '구현 칸은 채웠는데 **비고 머리말**이 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark +
-      '» 가 있다 (세 칸 중 ③ 만 안 고친 꼴 — 티어 스캔이 읽는 칸이 그 칸이다)'));
+    : c.kind === 'tail'
+    ? '구현 칸은 채웠는데 **비고 머리말**이 «' + c.head + '» 로 여는데 같은 행에 완료 표지 «' + c.mark +
+      '» 가 있다 (세 칸 중 ③ 만 안 고친 꼴 — 티어 스캔이 읽는 칸이 그 칸이다)'
+    : '비고는 완료 표지 «' + c.mark + '» 로 닫혔는데 **구현 칸**이 아무 말도 안 한다: «' + c.head +
+      '…» (완료·보류·진행 표지도 «–» 도 아닌 산문 — 구현 칸을 읽는 티어 스캔은 이 행을 «미완료» 로 본다)'));
 
 if (contra.length) {
   console.log('\nPROGRESS SELF-CONTRADICTION ' + contra.length + '건 — ' + contra.map(c => c.id).join(' '));
@@ -343,6 +398,13 @@ if (contra.length) {
   console.log('    ① 구현 칸 «–» → «✅ 완료(날짜, 세션 · n회차) — 한 줄 요약»');
   console.log('    ② 루프 횟수 «0/5» → 실제 회차');
   console.log('    ③ 비고 머리말 «미착수/등재만» → 등재문임을 밝히는 말로(등재문 본문은 지우지 마라)');
+  if (contra.some(c => c.kind === 'mute')) {
+    console.log('  ⚑ «구현 칸이 아무 말도 안 하는» 행이 있다(566) — 고칠 곳은 ① 한 칸이다.');
+    console.log('    그 칸의 산문을 지우지 말고 **앞에** 완료 표지를 붙여라 —');
+    console.log('    «✅ **완료(날짜, 세션 · n회차)** — <한 줄 요약> · <원래 있던 산문>».');
+    console.log('    요약은 `docs/review/<ID>-*.md` 에 이미 있다. ⚠ 남의 행을 «완료» 로 **판정**하지 마라 —');
+    console.log('    비고 머리말이 이미 완료로 닫아 둔 행만 이 축에 걸린다(그 판정은 그 세션이 이미 했다).');
+  }
   if (contra.some(c => c.kind === 'tail')) {
     console.log('  ⚑ «구현 칸은 채웠는데 머리말만» 인 행이 있다(445) — 고칠 곳은 ③ 한 칸이다.');
     console.log('    비고를 «✅ 완료(…) … **↓ 아래는 등재문(보존).** <옛 본문>» 으로 열어라.');
