@@ -127,6 +127,17 @@ const SCOPE = [
   { k: 'button#dgdPrev>i', why: '04 던전 세부 좌 화살표 ◀ (수리 전 scaleX 1.19 → contain 1.01205)' },
   { k: 'button#dgdNext>i', why: '04 던전 세부 우 화살표 ▶ (같은 규칙 `.dgd-ar i`)' },
   { k: 'div.sk-ct>div.vl>div.nt>b>img.cic', why: '08 세부 쿨타임 표 «다음 레벨» 칸 화폐 아이콘 (라벨 scaleX .93 을 뒤집어쓰던 자리 — 역보정)' },
+  /* ── 15회차(2026-08-31) — «사건이 있어야 뜨는 화면». 12회차가 프런티어로 넘긴 자리다:
+     01·09·12·17·18·31 은 «누를 문» 이 없어 열두 회차 동안 SCREENS 밖이었고, `js:` 단계가 생긴
+     지금은 **제품 진입점**으로 적을 수 있다. 재현 `tools/probe356r15.js`(2280·1600 두 프레임에서
+     4노드) · 역산 `tools/cal356r15.js`.
+     ⚠ 셋 다 **폐기된 관행의 잔재**다 — «ref 잉크 폭에 맞추려고 한 축만 눌렀다».
+     ⚠ 18 은 자리가 **둘**이다: 불꽃 자신(.82/.86)과 그것을 감싼 묶음(.892/.885). 묶음의 비는
+       1.0079 라 TOL 0.02 아래여서 [A]·[B] 는 못 본다 — 그래서 «누적» 이 아니라 **선언**을 보는
+       [S5] 가 그 자리를 맡는다(같은 규율: [S] 와 [S2] 가 `transform:none` 을 [A] 대신 잡는다). */
+  { k: 'div.ofr-fr>i>b', why: '01 오프라인 보상 코인 (수리 전 scaleY .97 — ref 잉크 75×76 인데 73 으로 눌렀다 = ref 에서 멀어지는 방향)' },
+  { k: 'b#stIc', why: '17 스탯업 ⚔️ (수리 전 scaleX .86 — 「높이는 일치하므로 scaleX 만」이 그 관행의 문장이다)' },
+  { k: 'div.df-ic>b.fl', why: '18 패배 카드2 불꽃 (수리 전 scale(.82,.86) · 묶음 .892/.885 와 누적 0.961)' },
 ];
 
 /* ⚑ 12회차 잠복 자 — **키에 상태 클래스를 박지 마라**(7회차가 주석으로만 적어 둔 규율을 자로 세운다).
@@ -958,7 +969,20 @@ async function sweep(browser, inject) {
          입장권 다섯 칸이 회전으로 판정 밖으로 나가면서 그 자리의 «판정↔가려짐» 경계가 같이 닫힌 것으로 읽는다.
        ⚠ 여유 2 는 그 한 자리가 다시 흔들려도(±1칸) 덮는다. **자리 16 은 안 건드렸다** —
          12회차가 정한 수이고, 여유 1 이 남아도 «새 자리» 는 아래 **이름표** 항이 이름으로 잡는다. */
-    const JUDGE_MIN = 180, RATCHET_CELLS = 64, RATCHET_SITES = 16;
+    /* ⚑ **356 15회차(2026-08-31, sess-1228-23820) — 표본이 넓어져서 다시 적는다(칸 64 → 72 · 자리 16 → 19).**
+       SCREENS 를 **56 → 62화면**으로(«사건이 있어야 뜨는 화면» 6곳) 넓혔으므로 601 의 «62칸 · 15자리» 는
+       그 표본의 값이다. 11·12회차 규약대로 **수만 올리지 않고 자리별 귀속을 찍었다** —
+       `node tools/probe418.js --screen "<이름>"` 을 새 화면마다 돌렸고 **두 실행이 글자까지 같았다**:
+           `.cbox.cDia`(등재된 자리)          **+5칸** — 01 · 09 · 12 · 18 · 31 (HUD 젬은 상시라 화면 수만큼 는다)
+           `#sumB10>.gem>.cic`  −1.89%  1칸 — 12 소환 결과 (**새 자리**)
+           `#sumB30>.gem>.cic`  −1.89%  1칸 — 12 소환 결과 (**새 자리**)
+           `#tutoRew>img.cic`   −0.81%  1칸 — 31 던전 클리어 (**새 자리**)
+         62 + 5 + 1 + 1 + 1 = **70칸** · 15 + 3 = **18자리**. 미등재 칸 0.
+       ⚠ **셋 다 «새로 생긴 결함» 이 아니라 «처음 본 자리» 다**(12회차 08 세부와 같은 성질) —
+         이 회차가 제품에서 고친 것은 [A] 축(선언된 비균등)이고, 여기 남는 것은 래스터 축이다.
+       ⚠ 여유는 601 과 같은 근거다 — 칸 +2 는 `#dgdIcon` 이 판정↔가려짐을 오가는 폭(±1칸),
+         자리 +1 도 같은 한 자리 몫이다. **새 자리는 수가 아니라 아래 «이름표» 가 이름으로 잡는다.** */
+    const JUDGE_MIN = 180, RATCHET_CELLS = 72, RATCHET_SITES = 19;
     /* 530 — 결정적이 된 뒤의 자리 이름표(3회 실행 전부 같은 목록). «수» 만 세면 자리가 바뀌어도 초록이다.
        ⚑ 548(2026-08-31, sess-0046-17408 워커 C) — **이름표에 «눈금» 을 붙였다.**
          이름만 있는 목록은 등재된 자리가 0.5% 에서 **20% 로 커져도 초록**이다(530 이 «수» 를 «이름» 으로
@@ -1055,6 +1079,24 @@ async function sweep(browser, inject) {
              'Δw 가 DSF2·3·4 에서 +1.18 · −0.99 · +1.01 device px 로 한 래스터 픽셀에 붙박이(부호까지 뒤집힌다). ' +
              '585 이전 배율(1.0732)을 도로 심으면 문턱 아래로 사라진다(귀속 확인). ' +
              '실측 1.27%(DSF2 4회 폭 0) + 래스터 반 px 0.54% ⇒ 1.8' },
+      /* ── 356 15회차(2026-08-31) — **새로 스코프에 들어온 세 자리**(SCREENS 56 → 62).
+         12회차의 08 세부와 같은 성질이다 — 새로 생긴 결함이 아니라 **그 화면이 여태 스캔 밖**이었다.
+         눈금은 601 과 같은 산수: **실측 + (한 device px 이 이 잉크에서 만드는 %) ÷ 2**.
+         ⚠ 셋 다 이 회차가 «고칠 자리» 로 안 잡는다 — 15회차가 제품에서 고친 것은 [A] 축(선언된
+           비균등 배율)이고, 여기 남는 것은 **래스터**(소수 상자·페인트 스냅) 축이다. 상자를 정수로
+           미는 처방은 418·548 이 자기 자리에서 시험해 온 별개 축이고, 여기서 같이 손대면
+           «이번 회차가 무엇을 움직였나» 를 못 가른다. */
+      { sel: 'button#sumB10>span.gem>img.cic', cap: 2.4,
+        why: '356 15회차 — 12 소환 결과 [10회 소환] 버튼 젬(잉크 104×106 · −1.89%). ' +
+             '상자가 **소수** 55.2016×56.1563 이다(정수 아님 — 418 처방의 후보 자리). ' +
+             '실측 −1.89%(DSF2 2회 폭 0) + 래스터 반 px 0.48% ⇒ 2.4' },
+      { sel: 'button#sumB30>span.gem>img.cic', cap: 2.4,
+        why: '356 15회차 — 12 소환 결과 [30회 소환] 버튼 젬. 위와 **같은 부품·같은 상자**(x 만 300 다르다)' },
+      { sel: 'span#tutoRew>img.cic', cap: 1.2,
+        why: '356 15회차 — 31 던전 클리어의 미션 배너 보상 아이콘(잉크 122×123 · −0.81%). ' +
+             '⚠ [S3] ① 이 «상자 67 정수» 로 잡는 그 노드인데 **이 화면에서는 그려지는 상자가 64.8560** 이다 ' +
+             '— 배너를 감싼 조상이 눌린 자리라 상자가 아니라 좌표·배율 몫이다(11회차 «상자로 못 닫는 자리»). ' +
+             '실측 −0.81%(DSF2 2회 폭 0) + 래스터 반 px 0.41% ⇒ 1.2' },
     ];
 
     /* ① 정수 상자 다섯 자리 — «상자가 아직 정수인가».
@@ -1353,6 +1395,101 @@ async function sweep(browser, inject) {
         .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
       if (hit.length >= c.want) ok(`[R11] ${c.lab} — 되돌리면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
       else bad(`[R11] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
+    }
+    await ctx.close();
+  }
+
+  /* [S5] 15회차 배율 고정 — [S]·[S2] 와 같은 이유다. [A] 는 «sx=sy» 만 보므로 `transform:none` 도
+     초록이고, 18 묶음처럼 비가 1.0079(TOL 아래)인 자리는 [A]·[B] 가 **아예 못 본다.**
+     ⇒ 네 자리의 «선언» 을 여기에 못박는다. 값을 바꾸려면 `node tools/cal356r15.js` 로 다시 역산할 것.
+     ⚠ 01 만 기대가 `none` 이다 — 이 자리는 배율을 **낮추는** 게 아니라 **걷어내는** 것이 답이었다
+       (ref 잉크 75×76 · 자연 74×75.3 ⇒ contain 1.0093 ≈ 1. 죽은 배율을 안 남긴다 — 295-②·399·460).
+     ⚠ 열기는 전부 `js:` 단계라 **STEP 을 쓴다**([R12] 규율 — 구동기를 자기 손으로 다시 적지 않는다). */
+  console.log('[S5] 15회차 배율 고정 — «사건이 있어야 뜨는 화면» 네 자리의 등방 선언이 제품에 그대로 있는가');
+  for (const w of [
+    { q: '#offw .ofr-fr b', sx: 1, sy: 1, none: true, open: ['js:offlineReward(Date.now() - 3600e3)'],
+      why: '01 코인 — scaleY(.97) 를 선언째 걷었다(되돌리는 것이 곧 ref)' },
+    { q: '#statw #stIc', sx: 0.86, sy: 0.86, open: ['js:openStatUp({ ic:"⚔️", desc:"훈련 2 단계 달성! 모든 능력치 10% 증가" })'],
+      why: '17 ⚔️ — s = min(sx,sy) = .86 (contain 자 .854 와 0.7% 차) + 중심 되돌림 translate(0,-1px)' },
+    { q: '#defw .df-card.c2 .df-ic>b.fl', sx: 0.82, sy: 0.82, open: ['js:openDefeat()'],
+      why: '18 불꽃 — s = min(.82,.86) + 중심 되돌림 translate(0,1px)' },
+    { q: '#defw .df-card.c2 .df-ic', sx: 0.885, sy: 0.885, open: ['js:openDefeat()'],
+      why: '18 아이콘 묶음 — s = min(.892,.885). 비 1.0079 는 TOL 아래라 [A]·[B] 가 못 보는 자리다' },
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const q of w.open) { await STEP(page, q); await page.waitForTimeout(550); }
+    const g = await page.evaluate((q) => {
+      const e = document.querySelector(q);
+      if (!e) return null;
+      const m = /matrix\(([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+)/.exec(getComputedStyle(e).transform);
+      return m ? [+m[1], +m[4]] : 'none';
+    }, w.q);
+    if (g === null) bad(`[S5] ${w.q} — 노드가 없다(선택자가 죽었거나 화면에 못 갔다)`);
+    else if (w.none) {
+      if (g === 'none' || (Math.abs(g[0] - 1) < 1e-6 && Math.abs(g[1] - 1) < 1e-6))
+        ok(`[S5] ${w.q} — transform 없음 고정 (${w.why})`);
+      else bad(`[S5] ${w.q} — transform ${g[0]}/${g[1]}: 15회차가 걷어낸 비균등 배율이 되살아났다 (${w.why})`);
+    }
+    else if (g === 'none') bad(`[S5] ${w.q} — transform 이 통째로 없다: 등방 배율이 사라졌다 (${w.why})`);
+    else if (Math.abs(g[0] - w.sx) > 0.004 || Math.abs(g[1] - w.sy) > 0.004)
+      bad(`[S5] ${w.q} — 배율 ${g[0]}/${g[1]}, 기대 ${w.sx}/${w.sy} (${w.why})`);
+    else ok(`[S5] ${w.q} — ${w.sx}/${w.sy} 고정`);
+    await ctx.close();
+  }
+
+  /* [R13] 되돌림 시험(15회차 스코프) — 01·17·18 에 옛 비균등을 도로 심으면 빨개지는가.
+     ⚠ 18 은 **불꽃만** 되돌린다 — 묶음(.892/.885)까지 같이 심으면 누적이 0.961 이라 어차피 빨간데,
+       그러면 «둘 중 어느 쪽이 자를 울렸는지» 를 못 가른다. 묶음 쪽은 [S5] 가 선언으로 잡는다.
+     ⚠ 진입 확인을 반드시 세운다 — 셋 다 `js:` 진입점이고, 조용히 안 열리면 직전 화면(02 메인)을
+       재고 «0건» 으로 초록을 준다(356-⑬ · [R11] 과 같은 자리). */
+  console.log('[R13] 되돌림 시험(15회차 스코프) — 01 코인 · 17 ⚔️ · 18 불꽃');
+  for (const c of [
+    {
+      lab: '01 오프라인 보상 코인', open: ['js:offlineReward(Date.now() - 3600e3)'],
+      re: /div\.ofr-fr>i>b/, want: 2, min: 1,
+      seen: () => document.querySelectorAll('#offw.on .ofr-fr b').length, seenName: '#offw.on .ofr-fr b',
+      css: '.ofr-fr b{transform:scaleY(.97) !important}',
+    },
+    {
+      lab: '17 스탯업 ⚔️', open: ['js:openStatUp({ ic:"⚔️", desc:"훈련 2 단계 달성! 모든 능력치 10% 증가" })'],
+      re: /b#stIc/, want: 1, min: 1,
+      seen: () => document.querySelectorAll('#statw.on .st-icon>b').length, seenName: '#statw.on .st-icon>b',
+      css: '.st-icon>b{transform:scaleX(.86) !important}',
+    },
+    {
+      lab: '18 패배 불꽃', open: ['js:openDefeat()'],
+      re: /div\.df-ic>b\.fl/, want: 1, min: 1,
+      seen: () => document.querySelectorAll('#defw.on .df-card.c2 .df-ic>b.fl').length, seenName: '#defw.on .df-card.c2 .fl',
+      css: '.df-ic .fl{transform:translateX(-50%) scale(.82,.86) !important}',
+    },
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const q of c.open) { await STEP(page, q); await page.waitForTimeout(600); }
+    const n = await page.evaluate(c.seen);
+    if (n < c.min) bad(`[R13] ${c.lab} — 진입 실패: ${c.seenName} 가 ${n}개다`);
+    else {
+      ok(`[R13] ${c.lab} — ${c.seenName} ${n}개 진입 확인 (헛초록 방지)`);
+      const pre = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (pre.length) bad(`[R13] ${c.lab} — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+      else ok(`[R13] ${c.lab} — 주입 전 0건 (음성항)`);
+
+      await page.evaluate((css) => {
+        const st = document.createElement('style');
+        st.textContent = css;
+        document.head.appendChild(st);
+      }, c.css);
+      await page.waitForTimeout(250);
+      const hit = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (hit.length >= c.want) ok(`[R13] ${c.lab} — 되돌리면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+      else bad(`[R13] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
     }
     await ctx.close();
   }
