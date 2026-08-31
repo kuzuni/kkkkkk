@@ -90,6 +90,15 @@ const SCENES = [
     await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false);
                                 if (typeof trHoldStop === 'function') trHoldStop(false); });
     await page.waitForTimeout(400);
+    /* ⚑ 6회차 — **2패스 전에 재고를 되돌린다.** 5회차 비평가 둘이 «tempchg 의 `-up` 만 플로터 0px» 을
+       독립으로 냈는데(CC 「hold 4,758px → up 0px」 · CD 「940ms 에 소멸」), 재현해 보니 **제품이 아니라
+       하네스**였다: [충전]은 1패스에서 «보유분 전부» 를 이미 바꿔서, 2패스의 탭은 재고가 0 이라
+       `once()` 가 false 를 돌려 **beat 자체가 안 난다.** 즉 그 0px 은 «수명이 짧다» 가 아니라
+       «아무 일도 안 일어난 탭» 을 찍은 것이다(자를 고치는 쪽이 맞다 — `verify491` [6-k] 는 같은 시각에
+       α 0.46 을 재고 있었고 둘이 어긋난 이유가 이것이다). 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다. */
+    await page.evaluate(() => { S.gold = 1e18; S.dia = 1e9; S.rstone = 1e6; S.tstone = 1e6;
+                                if (S.temper) S.temper.pts = 500; renderTrain(); });
+    await page.waitForTimeout(300);
     /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
     await page.mouse.down();
     await page.waitForTimeout(60);
