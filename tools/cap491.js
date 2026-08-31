@@ -68,11 +68,24 @@ const SCENES = [
       await page.screenshot({ clip: box, path: f });
       made.push(path.relative(path.resolve(__dirname, '..'), f));
     };
+    /* ⚠ 2회차 — **캡처 한 장이 누름을 늘린다.** `page.screenshot` 은 수백 ms 를 먹으므로 «-down 을 찍고
+       손을 떼는» 옛 순서는 실제로 ≈360ms 를 누른 것이 되고, `-up` 프레임은 «누름 뒤 ≈500ms» 다.
+       회당 플로터 수명이 .3s 라 그 프레임에는 이미 없다 — 1회차 비평가 둘이 «뗀 뒤 140ms 에 잉크 0» 으로
+       읽은 것의 절반이 이 드리프트였다. ⇒ **누름을 두 번 나눠** 찍는다: 1패스는 idle·down, 2패스는
+       «짧게 눌렀다 떼고 140ms» 만 재현해 up 을 찍는다. 두 패스의 상태 차이는 «시도 1회» 뿐이다. */
     await shot('idle');
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
     await page.mouse.down();
     await page.waitForTimeout(60);
     await shot('down');
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+    await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false);
+                                if (typeof trHoldStop === 'function') trHoldStop(false); });
+    await page.waitForTimeout(400);
+    /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
+    await page.mouse.down();
+    await page.waitForTimeout(60);
     await page.mouse.up();
     await page.waitForTimeout(140);
     await shot('up');

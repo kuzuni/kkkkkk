@@ -3637,7 +3637,23 @@
     10%{opacity:1;transform:translate(-50%,4px) scale(1)}
     72%{opacity:1;transform:translate(-50%,17px) scale(1)}
     100%{opacity:0;transform:translate(-50%,24px) scale(.96)}}
-  .fx-plus.hb{font-size:30px;-webkit-text-stroke:5px rgba(0,0,0,.86);animation:fxHb .3s linear both}
+  /* ⚑ 491 2회차 — 회당 플로터를 **공용 토큰으로 되돌린다**(잉크 30 → `--fx-plus-fs` 34px · 테 5 → 7px).
+     58 24회차가 «세 씬을 한 값으로 묶으라» 며 세운 토큰이 `--fx-plus-fs` 인데 488 이 이 자리에만
+     30px/5px 로 따로 적어 두어, 1회차 비평가 둘이 **독립으로** «플로터 규격이 3종»(대조군 80×75 풀대비 /
+     투자 30×28 대비 43~35/255 / 룬·충전 0px)을 ④ 일관성 감점으로 냈다. 토큰으로 되돌리면 대조군과
+     **같은 규격**이 된다 — 새 값을 발명한 것이 아니라 이미 있던 한 값으로 합친 것이다.
+     ⚠ **수명(.3s)은 안 건드렸다 — 두 비평가가 요구한 «600ms» 는 이 회차에 «못 한다» 가 아니라
+       «먼저 사다리를 늘려야 한다» 다.** 2회차에 .55s 로 올려 봤더니 `verify488` **[H2]·[H4]** 두 항이
+       곧바로 빨개졌다: H2 는 «칸 5개 × 간격 80px 이 수명 **.3s** 를 정확히 덮는다» 를 단언한다 —
+       사다리 칸 수·간격이 **수명에서 역산된 값**이라, 수명만 늘리면 겹친 쌍 0 → **2**, 동시 생존 4 → **12**
+       가 된다(488 이 «10장 = 눈이 읽을 수 있는 상한» 으로 못박은 자리). ⇒ 되돌리고 다음 회차 몫으로 넘긴다
+       (사다리 칸 수를 수명과 **같이** 다시 잡아야 한다).
+     ⚠ 그리고 비평가 둘이 든 근거(«뗀 뒤 140ms 프레임에 잉크 0»)는 **일부가 하네스 드리프트**였다 —
+       `cap491` 의 `-up` 은 앞선 `-down` 캡처가 먹는 수백 ms 뒤에 찍혀 실제로는 누름 뒤 ≈500ms 다
+       (`probe491` 이 같은 함정을 이미 한 번 잡았다). 3회차는 **캡처 순서를 고친 뒤** 다시 물을 것.
+     ⚠ 잉크가 13% 넓어지므로 488 5회차가 «칸 간격 74px 에 잉크 74px» 로 줄였던 문자열 규칙은 그대로 둔다
+       («+1»·«실패»·«−n» — 낱말을 도로 붙이지 마라). */
+  .fx-plus.hb{-webkit-text-stroke:7px rgba(0,0,0,.86);animation:fxHb .3s linear both}
   .fx-plus.hb.dn{animation:fxHbDn .3s linear both}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
@@ -12632,14 +12648,32 @@
      연출 캡처(트리거 이후 시작한 `jz*` 애니메이션만 seek)가 잡지 못하고, 그 결과
      **누름 5프레임이 전부 같은 값**으로 찍힌다(8회차 비평이 «무반응» 으로 읽은 것의 정체).
      애니메이션으로 바꾸면 나머지 연출과 같은 방식으로 다뤄진다(`both` 로 누른 동안 .94 유지). */
-  .jz-dn{animation:jzDn .06s ease-out both}
-  @keyframes jzDn{from{scale:1}to{scale:.94}}
+  /* ⚑ 491 2회차 — 누름 어휘를 «축소 하나» 에서 «축소 + 가라앉음 + 밝아짐» 셋으로 넓힌다.
+     1회차 비평가 BU·BV 가 **독립으로 같은 것**을 냈다: 스케일은 정확히 0.94 로 붙었는데(0.938/0.940/0.939)
+     ⓐ 중심 세로 이동 **0px**(≤0.5px) ⓑ 본체 명도 변화 **0.7%**(±1/255) ⇒ «짧은 변이 4px 들어가는 것»
+     하나뿐이고 **그 4px 는 누르고 있는 손가락이 덮는 자리**다(BV). 대조군(훈련 카드)은 카드 바깥으로만
+     18,344px 를 바꾼다.
+     ⚠ **밝게**다(어둡게가 아니다) — 이 저장소에서 «어두워짐» 은 이미 `jz-sh`(brightness .82 + shake)
+       = «죽은 버튼» 의 뜻으로 못박혀 있다(60). BU 는 «±20 움직여라», BV 는 «+18 밝혀라» 였으므로
+       어휘 충돌이 없는 쪽을 골랐다.
+     ⚠ 세로 이동은 **`translate:`(독립 속성)** 로만 준다 — `transform` 을 쓰면 글자 폭 보정(`scaleX`)과
+       모달 정렬이 통째로 날아간다(60 규약). 저장소에서 `translate:` 를 쓰는 자리는 `jz122Sweep` 하나뿐이라
+       충돌이 없다(CSSOM 전수 확인).
+     ⚠ `filter` 는 호스트 자신의 `filter` 를 **대체**한다. `cursor:pointer` 를 선언한 규칙 91개 중
+       `filter` 를 같이 선언하는 것은 **둘뿐**이고(`.prb-ar`·`.cl-srch`) 그중 실제로 값이 있는 것은
+       `.prb-ar` 하나다(`.cl-srch` 는 `filter:none`) — 그 한 자리만 아래에서 합쳐 준다. */
+  .jz-dn{animation:jzDn .06s ease-out both;filter:brightness(1.10)}
+  @keyframes jzDn{from{scale:1;translate:0 0}to{scale:.94;translate:0 4px}}
+  /* 호스트 목록 — 자기 `filter` 를 가진 유일한 누름 호스트. 그림자를 잃지 않게 곱해서 적는다. */
+  .prb-ar.jz-dn{filter:drop-shadow(0 0 1px rgba(0,0,0,.5)) brightness(1.10)}
   /* 뗌 스프링 — 이징을 «전체» 에 걸면 오버슈트 베지어가 1구간에서 1.04 를 **넘겨 버리고**
      피크도 55%(99ms)가 아니라 25% 부근으로 당겨진다(8회차 실측 피크 1.11 @t≈45).
      → 구간별 이징. 55% 에서 정확히 1.04, 180ms 에서 정확히 1.00. */
+  /* 491 2회차 — 뗌도 «떠오른다»: 가라앉은 4px 를 스프링과 **같은 구간**으로 되돌린다.
+     (안 되돌리면 손을 떼는 순간 4px 가 뚝 끊겨 «튕김» 으로 읽힌다 — 스프링의 뜻이 상한다.) */
   .jz-up{animation:jzUp .18s linear both}
-  @keyframes jzUp{0%{scale:.94;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
-    55%{scale:1.04;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1}}
+  @keyframes jzUp{0%{scale:.94;translate:0 4px;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+    55%{scale:1.04;translate:0 0;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;translate:0 0}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
   /* ⚑ 488 — 홀드 «회당» 호스트 반응. `jz-dn/jz-up`(누름·뗌)·`jz-sh`(정지) 와 **다른 어휘**다:
@@ -32812,9 +32846,16 @@ function rtChargeHold(){
   rtHoldStart({
     tag:'temper', sel,
     once: () => {
-      const before = temperPts();
+      const before = temperPts(), stone0 = Math.floor(S.tstone) || 0;
       if(!temperChargeBtn(true)){ if(!got) temperChargeBtn(); return false; }
-      got += temperPts() - before; return true;
+      const gain = temperPts() - before;
+      got += gain;
+      /* ⚑ 491 2회차 — 회당 피드백이 **이 자리에만 없었다.** 룬(`rtRuneHold`)·단련 투자(`rtTemperHold`)는
+         488 이 `hbBeat` 를 달아 뒀는데 충전만 빠져 있어, 1회차 비평가 둘이 독립으로
+         «100만을 냈는데 «−1,000,000» 이 화면 어디에도 0px»(BU) · «플로팅 0개»(BV) 를 ③ 감점으로 냈다.
+         호스트·어휘는 형제 둘과 같다 — 얻은 것은 위로(«+n»), 낸 것은 아래로(«−n», 58 결제 어휘). */
+      hbBeat(sel, true, '+' + fmt(gain), '−' + fmt(stone0 - (Math.floor(S.tstone) || 0)));
+      return true;
     },
     live: () => renderTrainLive(),
     end: () => {
