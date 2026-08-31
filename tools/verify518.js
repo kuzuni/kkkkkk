@@ -182,8 +182,19 @@ async function boot(browser, revert) {
      '[A2] 두 자리 모두 «전투 발원 표시»(fxAt(…, \'combat\')) 를 단다 — ' + bonus.map(b => b.line + ':' + (b.tagged ? 'O' : '✗')).join(' '));
   ok(/function fxCovered\(\)/.test(src), '[A3] «덮는 층» 판정 부품 fxCovered() 가 있다');
   ok(/el:fxTapEl, tap:true/.test(src), '[A4] 탭 폴백 발원에 «추측» 표시(tap:true)가 붙는다');
-  ok(/const buried = !combat && !!\(from && from\.tap\) && \(fxCovered\(\) \|\| fxOverlaid\(from\.el\)\)/.test(src),
-     '[A5] fxFly 가 «추측 + 덮는 층» 일 때만 층을 내린다(전투 발·아는 발원은 안 건드린다)');
+  /* ⚑ 578 이관 — 종전 [A5] 는 이 판정을 **문자열 그대로** 못박고 있었다. 578 이 축을 «추측인가» 에서
+     «근거가 있는가» 로 넓히자(발원 불명도 같은 급) 곧바로 빨개졌는데, **새 문자열로 다시 못박으면
+     «578 이 통째로 사라져도 초록인 게이트» 가 된다** — 329 가 `verify166` 에서 겪은 그 자리다.
+     ⇒ 항을 눌러 되돌리지 않고 **뜻을 묻는 두 항으로 가른다**: [A5] 는 518 의 뜻(«덮는 층이 있을 때만 ·
+     전투 발은 안 건드린다 · 추측은 내린다»), [A5b] 는 578 이 새로 세운 축을 묻는다.
+     실동작 쪽은 `verify578` [B]·[C]·[R] 이 «찍힌 층» 으로 따로 잰다. */
+  const guardSrc = ((src.match(/const guess\s*=[^\n]*/) || [''])[0] + '\n'
+                  + (src.match(/const buried\s*=[^\n]*/) || [''])[0]);
+  ok(/!combat/.test(guardSrc) && /from\.tap/.test(guardSrc)
+     && /fxCovered\(\)/.test(guardSrc) && /fxOverlaid\(/.test(guardSrc),
+     '[A5] fxFly 의 «층 내림» 판정이 네 축을 다 본다 — 전투 발 제외(!combat) · 추측(from.tap) · 덮는 층(fxCovered) · 자리를 소유한 층(fxOverlaid)');
+  ok(/!from\b/.test(guardSrc) || /!fxPt\(from\)/.test(guardSrc),
+     '[A5b] 578 — «발원 불명»(스냅샷이 null 이라 추측조차 못 한 묶음)도 «추측» 과 같은 급으로 내린다 (안 그러면 근거가 더 약한 쪽이 더 높은 층을 얻는다)');
   ok(/combat: combat \|\| buried/.test(src),
      '[A6] 묶음이 «내려간 층» 을 기억한다 = `+n` 이 코인과 같은 층에 뜬다(층이 갈리면 팝업 위에 숫자만 남는다)');
   /* 3회차 — 자의 «무엇의 90% 인가» 를 프레임에서 전투 화면으로 옮긴 것이 이번 회차의 본체다.

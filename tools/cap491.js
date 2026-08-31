@@ -45,6 +45,10 @@ const SCENES = [
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     S.gold = 1e18; S.dia = 1e9; S.rstone = 1e6; S.tstone = 1e6;
     if (S.temper) S.temper.pts = 500;
+    /* 578 — 재고를 «채우는» 것도 제품에게는 획득이다(아래 되돌림 주석과 같은 이유).
+       장면이 시작되기 전에 기준선을 맞춰 둔다 — 안 맞추면 1번 장면에 «+1,000,000» 이 얹힌다. */
+    if (typeof fxSeen === 'object' && fxSeen)
+      for (const k in fxSeen) { const v = fxS(k); if (Number.isFinite(v)) fxSeen[k] = v; }
     openTrain();
   });
   await page.waitForTimeout(600);
@@ -56,7 +60,10 @@ const SCENES = [
        플로터가 다음 장면의 `-idle`·`-down` 프레임까지 살아 넘어왔다 — CF 「tempchg `-up` 에
        «+1,000,000» 이 헤더와 **공격력 단련 행**에 하나씩 = +2,000,000 으로 오독된다」가 그것이고,
        그 행 좌표(y258-291)는 **앞 장면(tempup)의 사다리 자리**다. 제품이 아니라 캡처의 잔상이다. */
-    await page.evaluate(() => { const L = document.getElementById('fxl'); if (L) L.innerHTML = ''; });
+    await page.evaluate(() => { for (const id of ['fxl', 'fxlc']) {
+      /* 578 — **두 층을 같이 비운다.** 6·8회차가 `#fxl` 만 비웠는데 발원이 «전투 발» 이거나
+         «추측» 이면 같은 `+n` 이 `#fxlc`(z7)로 가므로, 한 층만 비우면 다른 층에 남는다. */
+      const L = document.getElementById(id); if (L) L.innerHTML = ''; } });
     await page.waitForTimeout(450);
     const box = await page.evaluate(() => {
       const b = document.querySelector('#trw .tr-box').getBoundingClientRect();
@@ -89,7 +96,10 @@ const SCENES = [
        앞 장면의 토스트(`fx-toast`)가 새로 앉아 «손대기 전» 프레임에 결과물이 남는다 —
        CH 실측 「흰 «1,000,000» 이 tempup-idle·hold·up · tempchg-idle **4장**에 상단 4px 만 노출된 채
        남아 있다」가 그것이다. `-idle` 은 정의상 «아무것도 날고 있지 않은» 프레임이므로 비우는 것이 맞다. */
-    await page.evaluate(() => { const L = document.getElementById('fxl'); if (L) L.innerHTML = ''; });
+    await page.evaluate(() => { for (const id of ['fxl', 'fxlc']) {
+      /* 578 — **두 층을 같이 비운다.** 6·8회차가 `#fxl` 만 비웠는데 발원이 «전투 발» 이거나
+         «추측» 이면 같은 `+n` 이 `#fxlc`(z7)로 가므로, 한 층만 비우면 다른 층에 남는다. */
+      const L = document.getElementById(id); if (L) L.innerHTML = ''; } });
     await page.waitForTimeout(120);
     await shot('idle');
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
@@ -118,7 +128,14 @@ const SCENES = [
          2패스가 «두 번째 충전» 이 되고, `-up` 잔액이 1,000,494 → **2,000,494** 로 한 번 더 늘었다 —
          CG·CH 가 독립으로 「재고 0인데 얻은 것만 또 는다 · 화면의 숫자만 더하면 100만이 설명되지 않는다」로
          ③ 감점했다. 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다는 규약이 여기서도 답이다. */
-      await page.evaluate(p0 => { S.tstone = 1e6; if (S.temper) S.temper.pts = p0; renderTrain(); }, pts0);
+      /* ⚑ 578 — **되돌림은 «장면의 사실» 이 아니라 하네스의 사정이다.** `S.tstone = 1e6` 은 제품에게는
+         «단련석 100만을 얻었다» 와 구별할 수 없는 사건이라 `fxWatch` 가 정직하게 «+1,000,000» 을
+         띄웠고, 그 사본이 `-up` 프레임에 남아 비평가 2인이 «값이 안 바뀐 이웃 행이 +1,000,000 을
+         말한다» 로 읽었다(등재문 578 · CI y258~290 · CJ x491~670 = 프레임 (502,1250)~(681,1282)).
+         ⇒ 되돌린 «뒤에» 감시자의 기준선을 같이 옮겨 이 되돌림만 조용하게 만든다. 제품의 판정은
+         한 줄도 안 바꾼다 — 진짜 획득은 그대로 연출된다. */
+      await page.evaluate(p0 => { S.tstone = 1e6; if (S.temper) S.temper.pts = p0; renderTrain();
+        if (typeof fxSeen === 'object' && fxSeen) fxSeen.tstone = S.tstone; }, pts0);
       await page.waitForTimeout(300);
     }
     /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
