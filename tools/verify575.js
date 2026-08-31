@@ -133,6 +133,46 @@ const PLAN_POINT = [{ cur: 'stone', n: 5, combat: true, at: { x: 540, y: 800 } }
      '[E2] 한 줄은 #fxl · 한 줄은 #fxlc', E.nodes.map(n => n.lay).join('+'));
   ok(E.worst === 0, '[E3] 그런데도 겹침 0px (수리 전 이 조합이 25.6~40.1px 였다)', E.worst + 'px');
 
+  /* ── [F] 값의 뜻 — 등재문 ② «플로트 값 ↔ 알약 델타가 서로를 설명하지 못한다» ──
+     두 수는 **다른 것을 말하는 것이 맞다**(플로트 = 이번에 늘어난 양 · 알약 = 지금 가진 양).
+     비평가가 «설명하지 못한다» 고 읽은 것은 93 롤링 계단이 아직 안 끝난 프레임을 잡았기 때문이고,
+     ① 을 닫아 «한 재화 한 줄» 이 되면 그 두 수는 서로를 정확히 설명한다. 여기서 그것을 못박는다.
+     ⚠ 골드가 아니라 **다이아**로 잰다 — 전투 킬이 골드를 계속 흘려 넣어 «늘어난 양» 이 흔들린다. */
+  console.log('\n[F] 플로트 = «이번에 늘어난 양» · 알약 = «지금 가진 양» (등재문 ②)');
+  {
+    const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const p = await ctx.newPage();
+    await p.goto('file://' + SRC);
+    await p.waitForTimeout(1100);
+    const F = await p.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      S.dia = 5e6; await wait(1400);                    /* 롤링이 끝나 알약이 정착할 때까지 */
+      document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove()); fxPlusLive.length = 0;
+      const before = S.dia, GAIN = 1000;
+      S.dia += GAIN; fxFlush();
+      /* ⚠ 골드 플로터가 같은 창에 떠 있다(전투 킬) — **색으로** 다이아 줄만 고른다.
+         색은 `FXCUR` 표에서 읽는다(리터럴을 자에 두지 않는다 · 512 ⑵). */
+      const probe = document.createElement('b');
+      probe.style.color = FXCUR.dia.col; document.body.appendChild(probe);
+      const want = getComputedStyle(probe).color; probe.remove();
+      let txt = null;
+      for (let i = 0; i < 60 && !txt; i++) {
+        await wait(40);
+        const el = [...document.querySelectorAll('#fxl .fx-plus, #fxlc .fx-plus')]
+          .find(n => getComputedStyle(n).color === want);
+        if (el) txt = el.textContent;
+      }
+      await wait(2500);                                  /* 롤링·비행이 다 끝난 뒤 알약을 읽는다 */
+      const pillEl = document.querySelector('.cDia');
+      return { txt, gain: '+' + fmtCur('dia', GAIN), total: '+' + fmtCur('dia', before + GAIN),
+               pill: pillEl ? pillEl.textContent.trim() : null, want: fmtCur('dia', S.dia) };
+    });
+    await ctx.close();
+    ok(F.txt === F.gain, '[F1] 플로트는 **늘어난 양**을 말한다', F.txt + ' (기대 ' + F.gain + ')');
+    ok(F.txt !== F.total, '[F2] 총액이 아니다 — 그 둘이 헷갈릴 수 없는 표본으로 쟀다(보유 5,000,000)', F.total);
+    ok(!!F.pill && F.pill.includes(F.want), '[F3] 알약은 **지금 가진 양**을 말한다(롤링이 끝난 뒤)', F.pill + ' ⊃ ' + F.want);
+  }
+
   /* ── [R] 되돌림 시험 ── */
   console.log('\n[R] 되돌림 시험 — 두 줄을 각각 무력화하면 빨개지는가');
   const fMerge = copyWith('merge', 'const same = fxPlusLive.find(e => e.cur === cur && e.lay === lay);',
