@@ -141,15 +141,15 @@ const GOLD_READ = () => ({
     badge: getComputedStyle(document.querySelector('.side .ibtn[data-pop="attend"] .bdg')).display,
     fx: document.querySelectorAll('#fxl > *').length,
   }));
-  /* 513 — 표가 7칸 순환이라 n=9 가 받는 칸은 #2 = **3일차 440**(옛 «10일차 650» 자리) */
+  /* 513 — 표가 7칸 순환이라 n=9 가 받는 칸은 #2 = **3일차 5,280**(옛 440 — 199 9회차가 곡선을 ×12 로 확정했다) */
   ok('오늘 카드 탭 → 보상 실지급 (S 반영)', after.dia + after.rel + after.gold > before.dia + before.rel + before.gold,
     `Δdia ${after.dia - before.dia} · Δrel ${after.rel - before.rel} · Δgold ${Math.round(after.gold - before.gold)}`);
   /* 399 — 재화 갈래가 «다이아 하나» 로 합쳐졌다(유물석은 한 톨도 안 는다는 항을 같이 둔다).
-     513 — 순환으로 칸이 #9 → #2 로 바뀌면서 값이 650 → **440** 이 됐다. 상수를 박지 않고 **표에 묻는다**
+     513 — 순환으로 칸이 #9 → #2 로 바뀌면서 값이 650 → 440 이 됐고, **199 9회차가 ×12 로 5,280** 이다. 상수를 박지 않고 **표에 묻는다**
      (328 교훈 — 항을 눌러 초록으로 되돌리면 «표가 통째로 바뀌어도 초록인 게이트» 가 된다). */
   const atWant = await p.evaluate(() => ATTEND[9 % ATTEND.length].dia);
   ok('3일차 보상 = 다이아 ' + atWant + ' (ATTEND[n % 길이] 데이터 그대로)',
-    after.dia - before.dia === atWant && atWant === 440, String(after.dia - before.dia) + ' vs ' + atWant);
+    after.dia - before.dia === atWant && atWant === 5280, String(after.dia - before.dia) + ' vs ' + atWant);
   /* 527 ⓐ — 동기 창(수령 그 한 태스크). 유물조각은 전투가 안 주므로 창 전체로도 같이 못박는다. */
   ok('3일차에 유물석·골드는 0 (399 — 다이아 말고는 안 준다 · 527 동기 창)',
     sync.dg === 0 && sync.dr === 0 && after.rel === before.rel,

@@ -224,7 +224,8 @@ const READ_VIEW = n => {
   const tmp = path.join(ROOT, 'tools', '.verify513-revert.html');
   const nowDecl = `for(let i=1;i<=7;i++){`;
   const oldDecl = `for(let i=1;i<=28;i++){`;
-  const nowDia = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);`;
+  /* 199 9회차 — 곡선 ×12 확정에 맞춰 «지금 소스» 표식만 갱신(되돌림 사본은 여전히 28칸 세계다) */
+  const nowDia = `  const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 18000 + i*720 : 4200 + i*360);`;
   const oldDia = `  const dia = i === 1 ? ATT_D1_DIA
             : (i % 28 === 0 ? 5000 : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30));`;
   const nowView = `  const day = S.att.n % ATTEND.length, can = S.att.date !== today();
@@ -292,7 +293,7 @@ const READ_VIEW = n => {
   if (t) {
     const perDay  = Math.round(t.total / CYCLE);                                   /* 첫 순환 */
     /* 199 7회차 — 1일차가 1회성이 된 뒤로 «하루 평균» 이 둘이다. ④ 가 읽는 것은 **지속** 쪽이다. */
-    const steady  = Math.round((t.total - t.dias[0] + 380) / CYCLE);
+    const steady  = Math.round((t.total - t.dias[0] + 4560) / CYCLE);   /* 199 9회차 — ATT_D1_CURVE 4,560 */
     note('출석 하루 평균 — 첫 순환', perDay.toLocaleString('en-US') + '/일  (28칸 시절 4,647/일 · +'
          + Math.round((perDay / 4647 - 1) * 100) + '%)');
     note('출석 하루 평균 — **지속(2주차 이후 · ④ 가 읽는 자)**',
@@ -302,7 +303,7 @@ const READ_VIEW = n => {
          + ' 이 28일이 아니라 **7일마다** 돌아온다');
     note('지렛대 둘 — **199 7회차가 ⓐ 를 골랐다**',
          'ⓐ 1일차 «환영» 칸을 **첫 순환 1회성**으로(`attRow()`) · ⓑ 그대로 둔다 → **ⓐ 채택**, '
-         + '2주차 이후 1일차 = 곡선값 380. 값이 아니라 **주기**를 고친 것이라 첫날 축(DAY1_DIA 100만)은 Δ0');
+         + '2주차 이후 1일차 = 곡선값(199 9회차부터 4,560). 값이 아니라 **주기**를 고친 것이라 첫날 축(DAY1_DIA 100만)은 Δ0');
   }
 
   await browser.close();
