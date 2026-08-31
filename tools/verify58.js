@@ -133,6 +133,10 @@ async function run(scene, span, step) {
           t: Math.round(t), n: flies.length, flies,
           up: flies.filter((f) => f.up).length, lo: flies.filter((f) => f.lo).length,
           plus, spark: document.querySelectorAll('.fx-spark').length,
+          /* ⚑ 583 — 강화 자리의 «알갱이» 는 이제 두 얼굴이다: 종전 방사형 불꽃(`.fx-spark`)과
+             화폐 알갱이(`.fx-fly.fx-spd` — «무엇으로 샀는가»). 씬 C(훈련 강화)는 후자로 갈렸다. */
+          spd: document.querySelectorAll('.fx-spd').length,
+          spdCur: [...new Set([...document.querySelectorAll('.fx-spd img.cic')].map(i => i.dataset.curIc))],
           flash: document.querySelectorAll('.fx-flash').length,
           check: document.querySelectorAll('.fx-check').length,
           toastOp: toast ? parseFloat(getComputedStyle(toast).opacity) : -1,
@@ -286,7 +290,15 @@ async function run(scene, span, step) {
 
   console.log('[7] 강화 피드백 3종 (씬 C)');
   ok(Math.max(...upg.samples.map(s => s.flash)) >= 1, '흰 플래시가 난다');
-  ok(Math.max(...upg.samples.map(s => s.spark)) >= 10, `방사형 불꽃 ${Math.max(...upg.samples.map(s => s.spark))}개 (≥10)`);
+  /* ⚑ 583 이관 — 주인 지시(«그 알갱이가 골드아이콘으로 되게 하기 왜냐면 골드로 강화하니까»)로
+     씬 C 의 앰버 불꽃이 **골드 알갱이로 갈렸다**(겹쳐 쏘지 않는다 — index.html `fxUpOk` 머리말).
+     묻는 뜻은 그대로다: «강화 자리에 알갱이 층이 실재하는가». 헐거워지지 않게 **화폐 신원까지**
+     같이 못박는다 — 둘 다 사라지면 여기가 빨개진다(333 처방 · 자리를 비우지 않는다). */
+  const upSpark = Math.max(...upg.samples.map(s => s.spark));
+  const upSpd = Math.max(...upg.samples.map(s => s.spd));
+  const upCur = [...new Set(upg.samples.flatMap(s => s.spdCur || []))];
+  ok((upSpd >= 3 && upCur.length === 1 && upCur[0] === 'gold') || upSpark >= 10,
+    `알갱이 층 — 화폐 알갱이 ${upSpd}개 [${upCur.join(',')}] (≥3·gold) 또는 방사형 불꽃 ${upSpark}개 (≥10)`);
   ok(Math.max(...upg.samples.map(s => s.plus.length)) >= 1, '델타 «+n» 플로터가 난다');
 
   console.log('[8] «+n» 플로터 글자 크기가 세 씬 공통 (24회차 --fx-plus-fs)');
