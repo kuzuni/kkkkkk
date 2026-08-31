@@ -179,16 +179,34 @@ const SCREENS = [
      소환은 doSummonFree(보상 경유) · 유물은 던전 수입 범위의 S.relic + summonRelic(실제 경로) 8회.
      재현은 `tools/probe356r18.js` 가 먼저 했다(338 규칙) — 2280·1600 두 프레임 **비균등 0** =
      제품은 건강했고, 이 다섯 줄은 «앞으로도 0 인지» 를 래칫 [B] 밑에 두는 것이다. */
+  /* ⚑ 19회차(2026-08-31) — 18회차가 «대표 표본» 이라고 **스스로 이름을 남긴** 상태 축 셋을 넓혔다:
+     «배너 3종 중 무기만, 유물 8/전종, 우편 4재화/아이콘 우편(`m.ic`) 제외».
+     재현은 `tools/probe356r19.js` 가 먼저 했다(338 규칙) — 2280·1600 두 프레임 **비균등 0** ·
+     **귀속(그 상태가 만든 노드가 자에 들어온 수)** 방패 6 · 목걸이 6 · 유물 10 · 우편 10.
+     ⚠ 우편은 **썸네일 종류가 둘**이라는 것이 이 회차의 관측이다 —
+       재화 통은 `span.ml-i.ifr > img.cic`(media), 아이콘 통(`m.ic`)은 `span.ml-i.ifr` **자신이
+       이모지 글리프**(emoji)다. 자의 `kind` 가 갈리는 자리라 18회차 표본은 한쪽만 밟고 있었다.
+       아래 두 줄(34206 프리미엄 패스가 실제로 보내는 꼴)을 **같은 통에 섞어** 나란히 둔다.
+     ⚠ 방패·목걸이는 무기와 **다른 아이콘 표**(EQUIPS.slot 별)를 그린다 — 배너가 갈리면 그림도 갈린다. */
   ['53 우편(보상 통)', ['js:sendMail({t:"📦 골드", g:12345});sendMail({t:"📦 다이아", c:678});'
-    + 'sendMail({t:"📦 유물조각", r:90});sendMail({t:"📦 마일리지", m:3});', '#menub', '#mnw [data-mn="mail"]']],
+    + 'sendMail({t:"📦 유물조각", r:90});sendMail({t:"📦 마일리지", m:3});'
+    + 'sendMail({t:"🎫 프리미엄 패스 — 스테이지", ic:"🎫", iq:"프리미엄", ig:4});'
+    + 'sendMail({t:"🎫 프리미엄 패스 — 출석", ic:"🎟️", iq:"프리미엄", ig:3});',
+    '#menub', '#mnw [data-mn="mail"]']],
   ['03 던전(전량 해금)', ['js:S.guide.idx = 99;'
     + 'Object.keys(DUN_UI).forEach(function(id){ if(DUN_UI[id].pre) S.dun[id] = 1; });'
     + 'Object.values(DUN_UI).forEach(function(u){ if(u.pre) S.dun[u.pre.id] = (u.pre.f|0) + 1; });',
     '.tab[data-t="adv"]']],
   ['12 소환 결과(펫)', ['js:doSummonFree("pet", 10, true)']],
   ['12 소환 결과(무기)', ['js:doSummonFree("weapon", 10, true)']],
-  ['89 유물(보유)', ['.tab[data-t="box"]',
-    'js:S.relic = Math.max(S.relic, relicCost() * 8 + 100); for(var i=0;i<8;i++) summonRelic(true);']],
+  ['12 소환 결과(방패)', ['js:doSummonFree("shield", 10, true)']],
+  ['12 소환 결과(목걸이)', ['js:doSummonFree("amulet", 10, true)']],
+  /* 19회차 — 8회 난수(18회차)는 RELICS **10종** 중 평균 5~6칸만 켠다(쿠폰 수집가).
+     «전 10종이 켜질 때까지» 로 바꿔 보유 칸 아트를 전부 판정에 넣는다. 값은 상수로 박지 않고
+     제품에게 묻고(`relicCost()`), 조각은 «모자라면 한 판 벌어 온다» 로 채운다(합법 세이브). */
+  ['89 유물(전 10종 보유)', ['.tab[data-t="box"]',
+    'js:for(var i=0;i<400 && !RELICS.every(function(r){return has(r.id);});i++){'
+    + 'if(S.relic < relicCost()) S.relic += relicCost(); summonRelic(true); }']],
 ];
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
