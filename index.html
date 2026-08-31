@@ -14981,8 +14981,16 @@
   #svw .sv-r:nth-of-type(2){top:143px}
   #svw .sv-r:nth-of-type(3){top:237px}
   /* 아이콘 박스 48×48, 중심 cx 329.5 = pill 좌변 + 40 */
+  /* ★ 561(T1 버그) — **`<u>` 의 기본 `text-decoration:underline` 을 이 화면에서는 아무도 껐던 적이 없다.**
+     `<u>` 는 여기서 «아이콘 슬롯» 을 뜻하는 태그일 뿐 밑줄 의미가 아니다. 148 과 같은 함정이되
+     `-webkit-text-stroke` 가 0 이라 «검정 막대» 가 아니라 **#0E0E0E 알약 위의 흰 선**이었다
+     (probe561: ⏱️ 57px · 💀 115px 이 y 45~50 세~네 줄에 걸쳐 글자색으로 찍혔다).
+     ⚠ 상자를 안 움직인다 — `--icfs`·`--icsx` 기하는 손대지 않았고 u·i 상자 Δ0.00px 이다(probe561 [E]).
+     ⚠ 같은 화면의 `.sv-st>s`(스컬 배지)는 **고칠 것이 없다** — 글자가 `position:absolute` 인 `<em>` 안에
+     있어 취소선이 자손으로 안 내려간다(probe561 [F] 찍힌 픽셀 0px). 감사에는 «사각지대» 로 보이지만
+     그리기에는 안 나온다. */
   #svw .sv-r>u{position:absolute;left:16px;top:8px;width:48px;height:48px;line-height:48px;
-    text-align:center;font-size:var(--icfs,37.5px);
+    text-align:center;font-size:var(--icfs,37.5px);text-decoration:none;
     transform:translateY(var(--icdy,0px)) scaleX(var(--icsx,1))}
   /* 폭은 3종 모두 0px 로 맞았고 높이만 4~7% 작았다(비평 C·D 2회차) — fs 를 올린 만큼 scaleX 로 폭을 되돌린다 */
   #svw .sv-r:nth-of-type(1)>u{--icfs:39.3px;--icsx:.706}  /* ⏱️ → ref 잉크 36x44 */

@@ -3364,7 +3364,14 @@ BLESS_EFFLV = 0.10   BLESS_MAXLV = 51   blessLv() = clamp(S.bless.lv, 1, 51)
 - [x] 방치 요약 3행 = **절전 진입 이후 증분**(방치 시간 `HH:MM:SS` · 처치 수 · 획득 골드 `+`), 1초마다 갱신
 - [x] 배터리는 `navigator.getBattery()` 실제 잔량, API 없으면 **배지 숨김**(가짜 값 금지)
 - [x] 해제: 탭 1회 또는 **120 프레임px 이상 스와이프**(스케일 보정 포함)
-- 게이트: `node tools/verify56.js`(실동작 20항목) · `node tools/cap56.js`(캡처) · `python3 tools/scan56.py cmp <png>`(잉크 대조)
+- [x] **561** — 방치 요약 알약의 아이콘 슬롯 `<u>` 두 칸(⏱️·💀)에 `<u>` 의 **기본 밑줄**이 살아 있었다
+      (`#0E0E0E` 알약 위 흰 선 ⏱️ 57px · 💀 115px). `#svw .sv-r>u{text-decoration:none}` 한 항으로 껐다 —
+      148 과 같은 함정이되 `-webkit-text-stroke` 가 0 이라 «검정 막대» 가 아니라 «선만» 보이는 쪽이다.
+      기하(`--icfs`·`--icsx`)는 불변 · 레이아웃 Δ0.00px.
+      ⚠ **같은 화면 `.sv-st>s`(스컬 배지)는 고칠 것이 없다** — 글자가 `position:absolute` 인 `<em>` 손자에 있어
+      취소선이 전파되지 않는다(찍힌 픽셀 0px). `audit148` 은 이 자리를 «못 보는» 것이지 «놓친» 것이 아니다.
+- 게이트: `node tools/verify56.js`(실동작 20항목) · **`node tools/verify561.js`(아이콘 슬롯 밑줄 32항목 · §R 되돌림)**
+  · `node tools/probe561.js`(재현) · `node tools/cap56.js`(캡처) · `python3 tools/scan56.py cmp <png>`(잉크 대조)
   · `tools/smoke.js` 에 화면비 6종 «절전 모드 잘림 없음» 추가
 
 ---
