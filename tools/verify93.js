@@ -94,13 +94,8 @@ async function run(scene, span) {
       if (!el) return null; const r = el.getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     };
-    const scaleOf = (el) => {
-      if (!el) return 1;
-      const m = getComputedStyle(el).transform;
-      if (!m || m === 'none') return 1;
-      const n = m.match(/matrix\(([^)]+)\)/);
-      return n ? parseFloat(n[1].split(',')[0]) : 1;
-    };
+    /* 570 — `getComputedStyle` 로 알약 배율을 읽던 `scaleOf` 는 아래 `scaleInline` 이 대신한다
+       (같은 값 · 레이아웃 강제 0회). 프레임마다 부르던 자리라 자 자신이 부하였다. */
     const cards = [...document.querySelectorAll('.tr-card')].map(rect);
 
     /* ── 570 — 제품 자신의 신호를 남긴다(표본이 아니다) ────────────────────────
