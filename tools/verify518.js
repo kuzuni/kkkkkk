@@ -17,6 +17,7 @@
  * [B] 팝업 열림 + 추측 발원  → 코인·`+n` 이 #fxlc · 알약 복제 0
  * [C] 팝업 열림 + 아는 발원  → 종전 그대로 #fxl (무르게 풀지 않았음 = 이 항이 못박는다)
  * [D] 덮는 층 없음(메인) + 추측 발원 → 종전 그대로 #fxl (58/93 회귀)
+ *     [D5] 592 이관 — 같은 창에서 «적을 실제로 죽여도 코인 0»(방향을 뒤집어 갈아 끼운 항)
  * [R] 되돌림 시험 — `fxCovered()` 를 «항상 false» 로 묶은 사본에서 [B] 가 빨개진다
  *
  * 실행: node tools/verify518.js
@@ -145,6 +146,57 @@ const SCENE = `async ({ open, srcKind }) => {
   };
 }`;
 
+/* ⚑ 592 이관 — [D5] 씬. 한 창에서 **둘을 같이** 잰다:
+     ⓐ 제품 경로(`killEnemy`)로 적을 실제로 죽였을 때 코인이 나는가(592 가 폐지한 그것)
+     ⓑ 같은 창에서 «화면이 안 준» 증가분(표시 없는 `S.gold += n`)의 UI 발이 여전히 #fxl 인가(518 의 뜻)
+   ⚠ 둘을 갈라 재면 안 된다 — ⓐ 의 0 이 «연출을 껐기» 때문인지 «적이 안 죽어서» 인지 못 가른다. */
+const DKILL = `async () => {
+  const raf = () => new Promise(r => requestAnimationFrame(r));
+  S.bossFarm = true;
+  for (let i = 0; i < 60 && fxCovered(); i++) await raf();
+  document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
+  await new Promise(r => setTimeout(r, 800));
+  document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
+  fxTapEl = null;
+
+  /* ⓐ 킬 드랍 — 아직 탭 추측도 심지 않은 «순수한 전투만» 구간이다 */
+  const seenA = [];
+  const layerOf = el => el.closest('#fxl') ? 'fxl' : (el.closest('#fxlc') ? 'fxlc' : '?');
+  const moA = new MutationObserver(recs => {
+    for (const rec of recs) for (const n of rec.addedNodes)
+      if (n.nodeType === 1 && n.classList && n.classList.contains('fx-fly')) seenA.push(layerOf(n));
+  });
+  moA.observe(document.body, { childList: true, subtree: true });
+  const g0 = S.gold, k0 = S.totalKills;
+  let kills = 0;
+  for (let i = 0; i < 30 && kills < 12; i++) {
+    if (enemies.length < 3) queueMobs();
+    for (let j = 0; j < 3 && kills < 12 && enemies.length; j++) { killEnemy(enemies[0]); kills++; }
+    await raf();
+  }
+  for (let i = 0; i < 70; i++) await raf();              /* 묶음 디바운스·누적(최대 900ms)까지 기다린다 */
+  moA.disconnect();
+
+  /* ⓑ 같은 창에서 «화면이 안 준» 증가분 — 518 의 [D] 가 재던 그것 그대로 */
+  document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
+  const seenB = [];
+  const moB = new MutationObserver(recs => {
+    for (const rec of recs) for (const n of rec.addedNodes)
+      if (n.nodeType === 1 && n.classList && n.classList.contains('fx-fly')) seenB.push(layerOf(n));
+  });
+  moB.observe(document.body, { childList: true, subtree: true });
+  (document.getElementById('menub') || document.body).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  await raf();
+  S.gold += 54321;
+  for (let i = 0; i < 40; i++) await raf();
+  moB.disconnect();
+  return {
+    kills: S.totalKills - k0, gold: Math.round(S.gold - g0 - 54321),
+    killFly: seenA.length, killLayers: [...new Set(seenA)],
+    uiFly: seenB.length, uiLayers: [...new Set(seenB)]
+  };
+}`;
+
 async function boot(browser, revert) {
   const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
   const p = await ctx.newPage();
@@ -269,6 +321,22 @@ async function boot(browser, revert) {
      '[D2] 그 시행의 UI 발은 종전 그대로 팝업 위 층(#fxl) 에서 난다 — ' + JSON.stringify(dTap && dTap.flyLayers));
   ok(!!dTap && dTap.flyLayers.every(l => l === 'fxl' || l === 'fxlc'),
      '[D4] 같은 창의 나머지 비행은 전투 발의 #fxlc 뿐이다(77 규약) — ' + JSON.stringify(dTap && dTap.flyLayers));
+  /* ⚑ 592 이관 — **이 항은 방향이 뒤집혔다.** 종전에 [D4] 가 이빨을 가졌던 이유는 그 창의 fxlc 가
+     **킬 드랍 코인**이었기 때문이다(수리 전 실측 `["fxl","fxlc"]`). 592 가 주인 지시로 킬 드랍을
+     폐지하자 같은 창의 층이 `["fxl"]` 하나가 되어 [D4] 의 `every` 는 **잴 것이 없어 초록**이 됐다 —
+     그대로 두면 «592 가 통째로 되살아나도 초록인 게이트» 다(329 가 `verify166` 에서 겪은 그 자리).
+     ⇒ 333 처방대로 **항을 지우지 않고 방향을 뒤집어 갈아 끼운다**: 518 의 뜻(«그 화면이 안 준
+     재화의 UI 발은 종전 그대로 #fxl»)은 [D5b] 가 그대로 지키고, 없어진 이빨은 [D5a] 가 «적을
+     **실제로 죽여도** 코인 0» 으로 다시 문다. 두 항이 한 씬에서 같이 나온다는 것이 핵심이다 —
+     따로 재면 «코인이 0 인 이유» 가 «죽지 않아서» 일 수 있다. */
+  const dk = await p.evaluate(eval('(' + DKILL + ')'));
+  ok(dk.kills >= 10 && dk.gold > 0,
+     '[D5] 그 화면에서 적을 **실제로** 죽였다(킬 ' + dk.kills + ' · 골드 +' + dk.gold + ') — 아래 두 항의 전제');
+  ok(dk.killFly === 0,
+     '[D5a] 592 — 그런데 킬 드랍 코인은 0 이다(종전 [D4] 가 세던 그 fxlc 코인) — ' + dk.killFly + '개 ' + JSON.stringify(dk.killLayers));
+  ok(dk.uiFly > 0 && dk.uiLayers.includes('fxl'),
+     '[D5b] 같은 창에서 «화면이 안 준» 증가분의 UI 발은 **종전 그대로 #fxl** (518 의 뜻은 한 값도 안 바뀐다) — '
+     + dk.uiFly + '개 ' + JSON.stringify(dk.uiLayers));
 
   /* ── [E]·[F] 3회차 — «(다) 전체화면 페이지» 3화면(z28) ───────────────
      2회차 전수 스윕이 남긴 그물 밖 셋이다. 실측 1080×1996 @ y104 = 프레임의 87.5% 라
