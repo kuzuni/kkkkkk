@@ -694,22 +694,49 @@ async function sweep(browser, inject) {
        ⚠ 다음 세션도 규칙은 그대로다 — **이 두 수는 줄이는 쪽으로만** 고치고, `KNOWN_SITES` 에서
          자리를 뺄 때는 «그 자리를 실제로 닫았다» 는 근거를 같이 적는다. */
     const JUDGE_MIN = 180, RATCHET_CELLS = 50, RATCHET_SITES = 14;
-    /* 530 — 결정적이 된 뒤의 자리 이름표(3회 실행 전부 같은 목록). «수» 만 세면 자리가 바뀌어도 초록이다. */
+    /* 530 — 결정적이 된 뒤의 자리 이름표(3회 실행 전부 같은 목록). «수» 만 세면 자리가 바뀌어도 초록이다.
+       ⚑ 548(2026-08-31, sess-0046-17408 워커 C) — **이름표에 «눈금» 을 붙였다.**
+         이름만 있는 목록은 등재된 자리가 0.5% 에서 **20% 로 커져도 초록**이다(530 이 «수» 를 «이름» 으로
+         올린 다음 칸이 여기다). 548 이 세 자리를 418 §5 방식으로 그 자리에서 시험했으므로, 그 셋에
+         **«왜 남는가» + 편차 상한**을 적고 아래 `[S3] ③ 눈금` 이 상한을 단언한다.
+       ⚠ **상한은 «실측 + 여유» 지 «초록으로 만드는 값» 이 아니다.** 여유의 근거는 실측 폭이다 —
+         A 는 형제 가림이 들락거려 3.01 ↔ 2.00px(1.68 ↔ 1.11%) 를 오가고, B·C 는 1px 래스터가
+         부호를 뒤집는 폭이다. **줄이는 쪽으로만 고쳐라.**
+       ⚠ `cap: null` 은 «548 이 안 잰 자리» 다 — **안 잰 값을 적으면 그것이 헛초록이다.**
+         다음 세션이 `node tools/probe548.js` 의 `CASES` 에 그 자리를 더해 재고 나서 채운다. */
     const KNOWN_SITES = [
-      'div#shopList>div.cn-wrap>div.cn-a2>div.gm>img.cic',
-      'div#bCos>div.shsc>div.shsc-in>div.sk-btn.sk-b2.no>i.ol3>img.cic',
-      'div#dunList>div.dnc.bgm-rel.lkd>div.pill>em>img.cic',
-      'div#shopList>div.cn-wrap.pv>div.pvc.pb.ban1>div.pil>em>img.cic',
-      'div#shopList>div.cn-wrap.pv>div.pvc.pg>div.pil>em>img.cic',
-      'div#dunList>div.dnc.bgm-gold>div.pill>em>img.cic',
-      'div#top>div.curs>div.cbox.cDia>i>img.cic',
-      'i#ciIcon>img.cic',
-      'div#shopList>div.cn-wrap>div.cn-bn>div.gem>img.cic',
-      'div#psTk>div.ps-r>div.ps-bx.c0>i>img.cic',
-      'div#dunList>div.dnc.bgm-rel.lkd>div.sp.tk>em>img.cic',
-      'div#shopList>div.cn-wrap>div.cn-cd.alert>div.pn>em>img.cic',
-      'div#dunList>div.dnc.bgm-gold>div.sp.tk>em>img.cic',
-      'div#dunList>div.dnc.bgm-dia>div.sp.tk>em>img.cic',
+      /* 548 §4-A — 상자는 이미 **정수 96**이고 95·96·97 어느 정수를 심어도 Δw 가 +2.00px 로 안 움직인다.
+         기저값 3.01px 중 1px 은 형제 몫이다(`.gm` 은 상자가 겹치는 세 장 110·96·106 을 한 칸에 포갠다)
+         — DSF2 에서는 그 가림이 «가려짐» 문턱 3% 를 못 넘어 판정에 남고 DSF3 에서는 넘어 나간다.
+         남는 2px 은 DSF4 에서 그 화면 전체가 0칸이 되므로 **자의 바닥**이다(356 9회차 규칙). */
+      { sel: 'div#shopList>div.cn-wrap>div.cn-a2>div.gm>img.cic', cap: 2.6,
+        why: '548 — 형제 가림 1px + 아트·AA 2px. 상자는 정수 96, 95·97 을 심어도 Δw +2.00px 로 불변(✗ 상자 아님)' },
+      { sel: 'div#bCos>div.shsc>div.shsc-in>div.sk-btn.sk-b2.no>i.ol3>img.cic', cap: null, why: '' },
+      { sel: 'div#dunList>div.dnc.bgm-rel.lkd>div.pill>em>img.cic', cap: null,
+        why: '418 §5 — 그려지는 상자 50.9938. 50 도 51 도 안 통했다(50 은 악화)' },
+      { sel: 'div#shopList>div.cn-wrap.pv>div.pvc.pb.ban1>div.pil>em>img.cic', cap: null, why: '' },
+      { sel: 'div#shopList>div.cn-wrap.pv>div.pvc.pg>div.pil>em>img.cic', cap: null, why: '' },
+      { sel: 'div#dunList>div.dnc.bgm-gold>div.pill>em>img.cic', cap: null, why: '418 §5 — 위와 같은 부품' },
+      { sel: 'div#top>div.curs>div.cbox.cDia>i>img.cic', cap: null, why: '' },
+      { sel: 'i#ciIcon>img.cic', cap: null, why: '' },
+      { sel: 'div#shopList>div.cn-wrap>div.cn-bn>div.gem>img.cic', cap: null,
+        why: '418 §5 — 상자 99.3594 를 99 로 심어도 편차가 그대로였다(✗ 상자 아님)' },
+      { sel: 'div#psTk>div.ps-r>div.ps-bx.c0>i>img.cic', cap: null,
+        why: '418 §5 — 상자는 정수 88 인데 행 y 가 1003.5 다(좌표 몫 · 상자로는 못 닫는다)' },
+      { sel: 'div#dunList>div.dnc.bgm-rel.lkd>div.sp.tk>em>img.cic', cap: null, why: '548 C 와 같은 부품(입장권)' },
+      /* 548 §4-B — 상자는 이미 **정수 120** 이고 119·121 을 심어도 Δw 가 −1.00px 로 불변이다.
+         Δw 가 정확히 1 device px = 래스터가 한 축을 1px 더 먹는 그 1px 이고, DSF3·4 에서 사라진다. */
+      { sel: 'div#shopList>div.cn-wrap>div.cn-cd.alert>div.pn>em>img.cic', cap: 1.4,
+        why: '548 — 래스터 1px(Δw −1.00px). 상자는 정수 120, 119·121 을 심어도 불변 · DSF3·4 에서 사라진다' },
+      { sel: 'div#dunList>div.dnc.bgm-gold>div.sp.tk>em>img.cic', cap: null, why: '548 C 와 같은 부품(입장권)' },
+      /* 548 §4-C — **Δw 가 0.47px 로 한 device 픽셀보다 작다** = 더 정확해질 자리가 없다.
+         ⚠ 부모 `em` 이 `transform:scale(.8269)` 라 **선언 상자(60.4688) ≠ 그려지는 상자(50.0016)** 다 —
+           `width:50px` 를 심으면 그려지는 상자가 41.35 가 되어 다른 것을 묻게 된다(548 §3).
+           그려지는 상자를 49·50.0000 으로 맞춰도 편차는 한 자리도 안 움직였다.
+         ⚠ 51 로 키우면 «초록» 이 되지만 그것은 수리가 아니라 **스코프 손실**이다
+           (그 실행의 판정 12 → 7 · 가려짐 0 → 5 — 다섯 노드가 판정 밖으로 나갔다). */
+      { sel: 'div#dunList>div.dnc.bgm-dia>div.sp.tk>em>img.cic', cap: 1.4,
+        why: '548 — Δw +0.47px(1px 미만 = 자의 바닥). 그려지는 상자 50.0016 을 49·50.0000 으로 맞춰도 불변' },
     ];
 
     /* ① 정수 상자 다섯 자리 — «상자가 아직 정수인가».
@@ -771,11 +798,29 @@ async function sweep(browser, inject) {
     /* ⚑ 530 — «수» 가 아니라 «이름표» 로 묻는 항. 스윕이 결정적이 됐으니 이제 이것을 물을 수 있다.
        수만 세면 한 자리를 닫고 다른 자리를 여는 변경이 **초록으로 지나간다**(328 교훈의 자 판). */
     {
-      const unknown = R.groups.map((g) => g.sel).filter((s) => !KNOWN_SITES.includes(s));
+      const known = new Map(KNOWN_SITES.map((k) => [k.sel, k]));
+      const unknown = R.groups.map((g) => g.sel).filter((s) => !known.has(s));
       if (unknown.length)
         bad(`[S3] ③ 이름표 — 등재 안 된 자리 ${unknown.length}개: ${unknown.join(' / ')}\n` +
           '        (새 자리면 닫고, 자리 이름이 바뀐 것이면 근거를 적고 KNOWN_SITES 를 고쳐라)');
       else ok(`[S3] ③ 이름표 — 나온 자리 ${R.groups.length}개가 전부 등재된 자리다 (등재 ${KNOWN_SITES.length}개)`);
+
+      /* ⚑ 548 — «이름표» 다음 칸: **눈금**. 이름만 물으면 등재된 자리가 0.5% 에서 20% 로 커져도 초록이다.
+         548 이 그 자리에서 시험해 «왜 남는가» 를 적은 자리(cap 이 있는 자리)만 상한을 단언한다 —
+         **안 잰 자리(cap: null)에 숫자를 적으면 그것이 헛초록이다.** */
+      const capped = KNOWN_SITES.filter((k) => k.cap != null);
+      const over = R.groups.filter((g) => known.get(g.sel) && known.get(g.sel).cap != null &&
+        Math.abs(g.dev) > known.get(g.sel).cap);
+      if (over.length)
+        bad(`[S3] ③ 눈금 — 실측 상한을 넘은 자리 ${over.length}개: ` +
+          over.map((g) => `${g.sel} ${g.dev > 0 ? '+' : ''}${g.dev}% > ${known.get(g.sel).cap}%`).join(' / ') +
+          '\n        (등재된 자리라도 «커지는 것» 은 새 결함이다 — 548 §4 처럼 그 자리에서 다시 시험하고,\n' +
+          '         상한은 줄이는 쪽으로만 고쳐라)');
+      else ok(`[S3] ③ 눈금 — 실측 상한이 붙은 ${capped.length}자리가 전부 상한 안이다 (` +
+        capped.map((k) => {
+          const g = R.groups.find((z) => z.sel === k.sel);
+          return `${g ? (g.dev > 0 ? '+' : '') + g.dev : '문턱 아래'}/${k.cap}%`;
+        }).join(' · ') + ')');
     }
 
     /* ④ 되돌림 — 다섯 자리의 정수 상자를 **전부** 떼면 스윕이 그것들을 도로 잡는가.
