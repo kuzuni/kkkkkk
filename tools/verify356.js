@@ -97,6 +97,13 @@ const SCOPE = [
      아이콘 쪽에 `scaleX(1.15473)` 을 걸어 누적을 1.0 으로 되돌렸다. 그래서 이 키가 보는 노드의
      **자기** 배율은 1.15473 로 비등방이고, 스캐너가 세는 것은 «누적» 이라 초록이다. */
   { k: 'i.ol3>img.cic', why: '50 코스튬 [강화] 라벨 안 강화석 아이콘 (라벨 scaleX .866 을 뒤집어쓰던 자리 — 역보정)' },
+  /* ── 11회차 — **56 절전(`#svw`)**. 이 화면은 1~10회차 내내 `SCREENS` 에 없어서 [A]·[B]·[S3] 셋 다
+     «0건» 으로 읽고 있었다(397 36 출석 패스 · 443 패스 탭 · 5회차 23 훈련에 이어 네 번째 스코프 구멍).
+     차집합을 고른 근거는 351 오프너 목록(55화면) ↔ 356 SCREENS(42화면)이고, 재현은 probe356r11.
+     ⚠ 라벨은 그대로 둔다 — `.sv-st>i`(STAGE 80) `.sv-r>i`(라벨) `.sv-r>b`(값)의 scaleX 는
+       **글자**라 이 지시의 대상이 아니다(3회차 `u.pr` 선례). 대상은 아이콘 셋뿐이다. */
+  { k: 'div.sv-st>s>em', why: '56 절전 STAGE 배지 💀 (수리 전 scaleX 1.19 → contain .82222)' },
+  { k: 'div.sv-r>u', why: '56 절전 요약 pill 아이콘 3칸 ⏱️·💀·🪙 (수리 전 scaleX .706/.862 → contain .89744/.93333)' },
 ];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
 const REMAIN = 0;    /* ⚑ 7회차(2026-08-29, sess-1005-3302 워커 D) — **0**. 노드 수로도 16 → **0**.
@@ -929,6 +936,65 @@ async function sweep(browser, inject) {
       else bad(`[R7] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
       await ctx.close();
     }
+  }
+
+  /* [R9] 되돌림 시험(11회차 스코프) — 56 절전.
+     ⚠ 이 자리는 «옛 값 주입» 이 곧 되돌림이다(`scaleX` 를 도로 심는다 — ⓐ 갈래).
+     ⚠ 진입 확인을 반드시 세운다 — 절전은 **메뉴 뒤 2단계**라 첫 클릭이 조용히 실패하면
+       메뉴 시트를 재고 «0건» 으로 초록을 준다(LESSONS 356-⑬). */
+  console.log('[R9] 되돌림 시험(11회차 스코프) — 56 절전');
+  {
+    const c = {
+      lab: '56 절전', open: ['#menub', '#mnw [data-mn="saver"]'], re: /sv-(st|r)/, want: 3,
+      seen: () => document.querySelectorAll('#svw .sv-r>u').length,
+      seenName: '#svw .sv-r>u', min: 3,
+      css: '#svw .sv-st>s>em{transform:scaleX(1.19) !important}'
+         + '#svw .sv-r:nth-of-type(1)>u{transform:scaleX(.706) !important}'
+         + '#svw .sv-r:nth-of-type(2)>u{transform:scaleX(.862) !important}',
+    };
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const q of c.open) {
+      await page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); }, q);
+      await page.waitForTimeout(550);
+    }
+    const n = await page.evaluate(c.seen);
+    if (n < c.min) bad(`[R9] ${c.lab} — 진입 실패: ${c.seenName} 가 ${n}개다`);
+    else {
+      ok(`[R9] ${c.lab} — ${c.seenName} ${n}개 진입 확인 (헛초록 방지)`);
+      const pre = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (pre.length) bad(`[R9] ${c.lab} — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+      else ok(`[R9] ${c.lab} — 주입 전 0건 (음성항)`);
+
+      await page.evaluate((css) => {
+        const st = document.createElement('style');
+        st.textContent = css;
+        document.head.appendChild(st);
+      }, c.css);
+      await page.waitForTimeout(250);
+      const hit = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (hit.length >= c.want) ok(`[R9] ${c.lab} — 되돌리면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+      else bad(`[R9] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
+    }
+    await ctx.close();
+  }
+
+  /* [R10] 11회차 — **죽은 `--icsx` 가 되살아나지 않는가**(531 «잠복 재료» 계열).
+     3행 아이콘은 `.cic`(이미지)라 `:has(>.cic)` 가 배율을 안 주지만, 규칙에는 `--icsx:.833` 이
+     남아 있었다 — 이미지가 이모지로 되돌아가는 날 그 값이 그대로 되살아난다.
+     자는 «지금 안 그려진다» 가 아니라 **«선언이 없다»** 를 묻는다(그래야 잠복이 안 남는다). */
+  {
+    const src = fs.readFileSync(HTML, 'utf8');
+    const svBlock = /#svw \.sv-r:nth-of-type\(3\)>u\{([^}]*)\}/.exec(src);
+    if (!svBlock) bad('[R10] 56 절전 3행 규칙을 소스에서 못 찾았다 (선택자가 바뀌었다)');
+    else if (/--icsx/.test(svBlock[1])) bad(`[R10] 56 절전 3행에 죽은 \`--icsx\` 가 남아 있다: {${svBlock[1]}}`);
+    else ok('[R10] 56 절전 3행 — 죽은 `--icsx` 선언 0건 (이미지가 이모지로 되돌아가도 안 되살아난다)');
+    if (/scaleX\(var\(--icsx/.test(src)) bad('[R10] `--icsx` 를 읽는 scaleX 가 아직 소스에 있다');
+    else ok('[R10] `--icsx` 를 읽는 scaleX 선언 0건 (손잡이째 사라졌다)');
   }
 
   /* [C] 397 — SCREENS 자체의 «무음 실패» 감시.

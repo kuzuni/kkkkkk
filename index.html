@@ -15154,8 +15154,15 @@
   /* 스컬 배지 — 아트 자리(58×56). 원판 #801828 + 외곽 링 #101010, 안쪽 해골은 이모지 대체 */
   #svw .sv-st>s{position:absolute;left:368px;top:0;width:57px;height:56px;border-radius:50%;
     background:#801828;box-shadow:inset 0 0 0 4.5px #101010}
+  /* ★ 356(11회차) — 여기 있던 `scaleX(1.19)` 는 **356 이 폐기한 관행**이다(«fs 를 올린 만큼
+     scaleX 로 폭을 되돌린다» — 397 의 눌린 젬과 같은 자리). 등방 contain 으로 갈았다:
+     자연 잉크 37×45 · ref 흰 해골 잉크 **41×37**(측정표 §3-4 보강 — 11회차가 ref 픽셀 스캔으로 신규 측정)
+     ⇒ s = min(41/37, 37/45) = **.82222**, 세로 배율이 처음 생겨 딸려 오는 중심은 d=(0,.73px)로 되돌린다.
+     ⚠ 잔여는 **아트**다 — 이모지 💀 는 세로로 길고(.822) ref 해골은 가로로 넓다(1.108).
+       contain 이라 ref 상자를 넘지는 않지만 폭이 30.4 로 ref 41 에 10.6 모자란다(측정표 «아트 필요» 행). */
   #svw .sv-st>s>em{position:absolute;left:0;right:0;top:var(--skty,4px);height:44px;line-height:44px;
-    text-align:center;font-size:var(--skfs,40.5px);transform:scaleX(var(--sksx,1.19))}
+    text-align:center;font-size:var(--skfs,40.5px);
+    transform:translate(var(--skdx,0px),var(--skdy,.73px)) scale(var(--sksc,.82222))}
 
   /* E 방치 요약 패널 — 601×351 @ (239.5,1128) · #272727 · radius 36 · 내부 패딩 50 균일
      검산(LESSONS 52-①): 50 + 64×3 + 30×2 + 50 = 352 ≈ 실측 351 */
@@ -15177,14 +15184,21 @@
      그리기에는 안 나온다. */
   #svw .sv-r>u{position:absolute;left:16px;top:8px;width:48px;height:48px;line-height:48px;
     text-align:center;font-size:var(--icfs,37.5px);text-decoration:none;
-    transform:translateY(var(--icdy,0px)) scaleX(var(--icsx,1))}
-  /* 폭은 3종 모두 0px 로 맞았고 높이만 4~7% 작았다(비평 C·D 2회차) — fs 를 올린 만큼 scaleX 로 폭을 되돌린다 */
-  #svw .sv-r:nth-of-type(1)>u{--icfs:39.3px;--icsx:.706}  /* ⏱️ → ref 잉크 36x44 */
-  #svw .sv-r:nth-of-type(2)>u{--icfs:40.2px;--icsx:.862}  /* 💀 → ref 잉크 48x45 */
-  #svw .sv-r:nth-of-type(3)>u{--icfs:42px;--icsx:.833;--icdy:-.5px}  /* 〈125 이전〉 🪙 → ref 잉크 45x47 */
+    transform:translate(var(--icdx,0px),var(--icdy,0px)) scale(var(--icsc,1))}
+  /* ★ 356(11회차) — 옛 주석은 «폭은 맞았고 높이만 4~7% 작아서 fs 를 올린 만큼 scaleX 로 폭을 되돌린다» 였다.
+     그 관행이 **주인 지시(«아이콘은 원본 비율»)로 폐기된 바로 그것**이다. 등방 contain 으로 갈았다
+     (s = min(refW/natW, refH/natH) · 중심 되돌림 d 는 `tools/cal356r11.js` 역산값):
+       1행 ⏱️ 자연 39×44 · ref 35×42 ⇒ s .89744 → 35.0×39.5 (폭 Δ0)
+       2행 💀 자연 38×45 · ref 47×42 ⇒ s .93333 → 35.5×42.0 (높이 Δ0)
+     ⚠ 남는 축은 **아트**다(이모지 종횡 ≠ ref 아트 종횡) — 측정표 «아트 필요» 행이 받는다. */
+  #svw .sv-r:nth-of-type(1)>u{--icfs:39.3px;--icsc:.89744;--icdx:.05px;--icdy:-.21px}  /* ⏱️ → ref 잉크 35x42 */
+  #svw .sv-r:nth-of-type(2)>u{--icfs:40.2px;--icsc:.93333;--icdx:.07px;--icdy:-.1px}   /* 💀 → ref 잉크 47x42 */
+  /* 3행은 `.cic`(이미지)라 아래 `:has` 규칙이 배율을 안 준다. 11회차가 여기 남아 있던
+     **죽은 `--icsx:.833`** 을 지웠다 — 이미지가 다시 이모지로 바뀌는 날 되살아나는 «잠복 재료»다(531 계열). */
+  #svw .sv-r:nth-of-type(3)>u{--icfs:42px;--icdy:-.5px}  /* 〈125 이전〉 🪙 → ref 잉크 45x47 */
   /* 125 — 골드 아이콘이 이미지로 바뀌었다. 이미지는 정사각이므로 글리프 보정(scaleX)을 지우고
      ref 잉크 45×47 을 직접 쓴다(세로 중심 −2 는 그대로 둔다). */
-  #svw .sv-r>u:has(>.cic){transform:translateY(var(--icdy,0px))}
+  #svw .sv-r>u:has(>.cic){transform:translate(var(--icdx,0px),var(--icdy,0px))}
   #svw .sv-r>u>.cic{width:45px;height:47px}
   /* 라벨 — 좌단 x360 = pill 좌변 + 70.5, 세로 중앙. 잉크 h26.5 → font 35 */
   #svw .sv-r>i{position:absolute;left:67.5px;top:var(--rlty,16px);height:30px;line-height:30px;

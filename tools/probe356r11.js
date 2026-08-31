@@ -73,7 +73,13 @@ const SIG = function () {
           ? [+r.width.toFixed(1), +r.height.toFixed(1)] : null;
       }, sig);
       if (!seen) { errs.push(`${label}: 진입 실패 — 고유 노드 '${sig}' 가 안 보인다 (직전 화면을 쟀을 수 있다)`); }
-      const s = await page.evaluate(SIG);
+      /* ⚠ 큰 상자 서명만으로는 05 세 슬롯을 못 가른다 — 셋 다 `#wpnw` **한 껍데기**를 쓰므로
+         상자·id 가 바이트로 같다. 그래서 «내용 서명» 을 같이 잡는다(부위 이름·아이템 이름).
+         이것을 안 하면 «서명이 같다 = 안 열렸다» 를 유령으로 세 번 보고하게 된다. */
+      const s = await page.evaluate(SIG) + '‖' + await page.evaluate(() => {
+        const t = (q) => (document.querySelector(q)?.textContent || '').trim();
+        return [t('#wpnHead>i'), t('#wpnName'), t('#mtitle')].join('/');
+      });
       if (sigs.has(s)) errs.push(`${label}: 서명이 '${sigs.get(s)}' 과 같다 — 둘 중 하나는 안 열렸다`);
       else sigs.set(s, label);
 
