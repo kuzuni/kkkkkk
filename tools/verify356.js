@@ -206,8 +206,11 @@ async function sweep(browser, inject) {
   console.log('[A] 스코프 — 전 화면 상시 크롬 아이콘의 비균등 0건');
   /* [A-s] 12회차 잠복 — 스코프 키가 «상태» 를 물고 있으면 그 항은 언젠가 조용히 늙는다(위 STATE_CLS 주석) */
   {
+    /* ⚠ 첫 판이 `span.lk`(A4 슬롯 **자물쇠 아이콘**)를 잡았다 — 거기의 `.lk` 는 «잠김 상태» 가
+       아니라 **그 요소의 이름**이다. 갈래는 «앞에 다른 클래스가 붙어 있는가» 로 갈린다:
+       `s.tm.alert` 처럼 **클래스 위에 겹쳐 적힌** 것만 상태다(`span.lk` 는 태그 뒤 첫 클래스). */
     const keyTxt = (s) => s.k;
-    const rot = SCOPE.filter((s) => STATE_CLS.some((c) => keyTxt(s).includes(c)));
+    const rot = SCOPE.filter((s) => STATE_CLS.some((c) => new RegExp('\\.[\\w-]+\\' + c + '(?![\\w-])').test(keyTxt(s))));
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
