@@ -6790,7 +6790,8 @@
     font-size:36px;line-height:40px;text-decoration:none;white-space:nowrap;
     -webkit-text-stroke:7px #000;paint-order:stroke fill}
   /* ⑦ 가격 버튼 — 우하단 초록(ref 외곽 307×98 · 우 여백 73 · 바닥 31).
-     표기는 원화(주인 지시), 실제 결제는 미연동이라 다이아 대체가를 함께 적는다(44 관례) */
+     표기는 원화(주인 지시)이고, **588·589 이후 그 원화가 유일한 가격**이다 — 다이아 대체가는
+     걷어냈고 클릭은 589 의 목업 결제(`payMock`)로 간다. 상자 기하는 한 픽셀도 안 움직였다. */
   .pvc>.bt{right:72px;bottom:31px;width:308px;height:101px;border-radius:40px;border:6px solid #000;
     background:linear-gradient(180deg,#ADFF83 0 8px,#77E536 8px 56px,#76DA25 56px 88px,
       #3EBC2C 88px 101px);cursor:pointer}
@@ -6800,13 +6801,10 @@
   .pvc>.bt.on{background:#1C8D5E;cursor:default}
   /* 477 — «다이아 대체가» 는 그 카드의 값이라 카드에 붙는다(하단 한 줄에 3종을 다 이어 붙였더니
      폭 1278 로 858 상자를 419px 넘어 프레임 밖에서 잘렸다 — `probe477`).
-     자리는 가격 버튼 바로 위 같은 폭(우 72 · 폭 308)이다. 세로는 bottom 기준이라
-     불릿형(690)·배너형(534) 둘 다 같은 식으로 앉는다: 버튼 상변(bottom−132) 위 13px.
-     ⚠ 151 이 «버튼 **안** 두 줄» 을 시도했다가 원화 글자와 겹치고 검정 테를 뚫었다 — 버튼 밖이다. */
-  .pvc>.pvd{right:72px;bottom:145px;width:308px;text-align:center;color:#FFE9A8;
-    font-size:30px;line-height:34px;white-space:nowrap;
-    -webkit-text-stroke:6px #000;paint-order:stroke fill}
-  .pvc>.pvd>.cic{width:32px;height:32px;vertical-align:-5px}
+     ⚠ **588(2026-08-31) 이 그 대체가를 통째로 없앴다** — 이용권은 다이아로 못 산다.
+     그래서 `.pvc>.pvd` 규칙도 **선언째** 걷어냈다(값만 비워 두면 아무도 안 읽는 자리가 굳는다).
+     477 이 소유한 성질(«하단은 총론 한 줄, 카드 정보는 카드 안»)은 그대로다 — 카드 안에서
+     말할 것이 «가격 버튼» 하나로 줄었을 뿐이고, 그 버튼 자리는 한 픽셀도 안 움직였다. */
   /* 보유 중 카드 — 몸통을 한 단 눌러 «판매 중» 과 구분한다(13 `.done` 문법) */
   .pvc.own>.bg,.pvc.own>.hdb{filter:brightness(.72) saturate(.8)}
   /* 안내문 — 카드 아래 2줄(효과 설명). 배너·패널을 새로 만들지 않고 텍스트만 둔다 */
@@ -19850,7 +19848,10 @@ const PROMO_BASE = ETYPE.promo;
 /* ── 34 축복(버프) — 측정표 docs/measure/34-축복버프팝업.md §10 «우리 게임 설계» ──
    레퍼런스는 «햄지 공격력 / 매옹이 공격력 / 체력» 3칸이지만 우리 게임은 캐릭터가 «용사» 1명이라
    (UI-REFERENCE «설계 확정» 1번) 3칸을 «공격력 / 체력 / 공격 속도» 로 바꾼다. 레이아웃은 그대로.
-   광고 SDK 가 없으므로 활성화는 **무료**다(44 의 «결제 미연동» 과 같은 사유로 목업을 만들지 않는다). */
+   광고 SDK 가 없으므로 활성화는 **무료**다(44 의 «결제 미연동» 과 같은 사유).
+   ⚠ 이 줄이 원래 «…같은 사유로 **목업을 만들지 않는다**» 였다 — **589(2026-08-31)가 그 방침을
+      번복했다**(주인 «개발중이니까 클릭시 걍 결제된거로 쳐주기»). 다만 번복 범위는 «원화 표기 상품»
+      뿐이고, 광고는 여전히 상품이 아니라 무료다 — 여기는 안 바뀐다. */
 const BLESS = [
   { k:'atk',  n:'공격력',   ic:'⚔️', v:0.20 },
   { k:'hp',   n:'체력',     ic:'❤️', v:0.20 },
@@ -25377,8 +25378,14 @@ function sendMail(o){
   if(!Array.isArray(S.mailx)) S.mailx = [];
   const m = { id:'x' + (S.mailSeq = (S.mailSeq | 0) + 1), t:o.t, b:o.b || '',
               g:o.g || 0, c:o.c || 0, r:o.r || 0, m:o.m || 0, src:o.src || 'shop', ts:Date.now() };
-  if(m.g + m.c + m.r + m.m <= 0) return null;   /* 보상 0통은 만들지 않는다 — 행 썸네일이 설 자리가 없다 */
+  /* 589 — «보상 0통 금지» 를 «썸네일이 설 자리가 없는 통 금지» 로 좁혔다. 153 이 이 줄에 적어 둔
+     사유는 «행 썸네일이 설 자리가 없다» 였지, «보상이 0이다» 가 아니다 — 그러니 안내 우편이
+     제 썸네일(`ic`)을 들고 오면 그 사유는 사라진다. 안내 우편은 권한 상품(이용권·프리미엄 패스)이
+     쓴다: 권한은 `MAIL_RW` 네 키(g·c·r·m)로 실을 수 없어 «구매 확인» 만 남는다. */
+  if(o.ic){ m.ic = o.ic; m.iq = o.iq || '보유'; m.ig = o.ig | 0; }
+  if(m.g + m.c + m.r + m.m <= 0 && !m.ic) return null;
   S.mailx.push(m);
+  trimMailx();                                  /* 589 — 목업 결제는 공짜라 무한히 살 수 있다 */
   sideAlert('mail', true);                      /* ▦ 메뉴 레드닷 — 받을 우편이 생겼다 */
   uiDirty = true; save();
   /* 우편함을 열어 둔 채 샀으면 그 자리에서 늘어난다. `fxStillOpen` 은 파일 아래쪽의 `const` 라
@@ -25386,6 +25393,54 @@ function sendMail(o){
   if(typeof fxStillOpen === 'function' && fxStillOpen('ml69')) openMail();
   return m;
 }
+/* 589 — `S.mailx` 상한. 25309(`delReadMail`)가 이미 «안 그러면 구매 횟수만큼 무한히 자란다» 고
+   경고해 뒀고, 결제가 목업이 되면서 «구매» 가 공짜·무제한이 되어 그 위험이 실제가 됐다.
+   ⚠ **미수령(0)은 한 통도 안 지운다** — 지우면 받을 보상이 조용히 사라진다(153 «기간 무한»).
+   지울 수 있는 것은 이미 수령한(1) 통뿐이고, 오래된 것부터 고른다. 미수령만 쌓여 상한을 넘는
+   상태는 «받을 것이 밀려 있다» 는 뜻이라 그대로 두는 것이 맞다(그 목록은 사용자가 비운다). */
+const MAILX_MAX = 100;
+function trimMailx(){
+  if(!Array.isArray(S.mailx)) return 0;
+  let over = S.mailx.length - MAILX_MAX;
+  if(over <= 0) return 0;
+  const keep = [], drop = [];
+  S.mailx.forEach(m => {
+    if(over > 0 && S.mail[m.id]){ drop.push(m.id); over--; }
+    else keep.push(m);
+  });
+  if(!drop.length) return 0;
+  S.mailx = keep;
+  drop.forEach(id => { delete S.mail[id]; });    /* 동적 우편은 상태 키도 같이 뺀다(delReadMail 과 같은 꼴) */
+  return drop.length;
+}
+/* ---- 589 결제 목업(2026-08-31, 저장소 주인 지시) ------------------------------
+   주인 원문: «결제시스템 아직 연동안햇으니까 … 개발중이니까 **클릭시 걍 결제된거로 쳐주기**» ·
+   «결제하는거들 클릭시 결제된거로 치고 재화 주던지 하쇼 그리고 **우편함으로 보내줘야함**.
+   **우편함확인하라고 해주기**».
+   ⚠ **이 함수는 방침 번복이다** — 34 축복 위(19746)와 44 가 «결제 미연동이므로 목업을 만들지
+      않는다» 고 적어 뒀다. 그 방침은 «가짜 결제로 재화를 뿌리지 않는다» 는 뜻이었고, 주인이
+      «개발중이니까» 라며 정반대를 지시했다. 근거는 `docs/review/589-결제목업우편지급.md`.
+   **원화 표기 상품은 예외 없이 이 함수 하나를 지난다.** 상품마다 제 결제 흉내를 내면 나중에
+   실제 SDK 를 붙일 때 갈아 끼울 자리가 여러 곳이 된다 — 그 자리는 여기 한 곳이다.
+   `deliver` 가 «무엇을 주는가» 이고 이 함수는 «결제됐다 · 세었다 · 알렸다» 만 한다. */
+const payName = o => o && o.n || '상품';
+function payMock(o){
+  if(!o) return null;
+  /* 결제 사건 자체 — 수령 여부와 무관한 이력이다(44 가 세운 «횟수» 의미, 26211) */
+  S.cnt.paid = (S.cnt.paid || 0) + 1;
+  const r = typeof o.deliver === 'function' ? o.deliver() : null;
+  uiDirty = true; save();
+  /* 주인 지시 «우편함확인하라고 해주기». 149 규칙대로 팝업이 아니라 토스트 한 장이고,
+     문구는 상품 이름 하나만 끼운다(nowrap 이라 길어지면 프레임 밖으로 나간다). */
+  notify('💳 결제 완료 — ' + payName(o) + ' · 우편함을 확인하세요');
+  return Object.assign({ pay:o.k, won:o.won | 0, paid:S.cnt.paid }, r || {});
+}
+/* 589 — «즉시 반영» 예외 목록. 원칙은 «지급은 우편함으로» 이고(153), 예외는 **계정 권한**뿐이다:
+   `sendMail` 이 실을 수 있는 것은 재화 넷(g·c·r·m)이라 권한은 담을 것이 없고, 담으면 «수령 전에는
+   광고가 그대로 뜨는» 상태가 생긴다(153 스코프 주석). 이 목록 밖의 상품이 즉시 지급하면 게이트가
+   빨개진다 — 목록이 곧 선언이다. 소환(가챠)은 결제 상품이 아니라 게임 내 다이아 소비다. */
+const PAY_INSTANT = ['pass:noads', 'pass:abless', 'pass:offplus',
+                     'prem:stage', 'prem:att', 'prem:tower', 'prem:despair'];
 /* ---- 69 우편함 — 보상 목록화 · 행별 수령 -------------------------------------
    레퍼런스 행은 «보상 썸네일 1칸 + 초록 요약(«햇병아리 외 2개»)» 이다. 우리 우편의 보상은
    골드·다이아·유물조각 3종이라 **가장 값이 큰 것 하나를 대표 썸네일**로 올리고 나머지는 «외 n개» 로 접는다.
@@ -25416,10 +25471,15 @@ function claimMail(id){
   S.gold += m.g || 0; S.dia += m.c || 0; S.relic += m.r || 0;
   if(m.m) S.mileage = (S.mileage || 0) + m.m;
   /* 512 — 우편 한 통이 여러 재화를 담는다. 색을 섞지 않고 **담긴 종류마다** 제 색으로 터뜨린다. */
-  fxReward(null, [m.g && 'gold', m.c && 'dia', m.r && 'relic', m.m && 'mile'].filter(Boolean));
+  const kinds = [m.g && 'gold', m.c && 'dia', m.r && 'relic', m.m && 'mile'].filter(Boolean);
+  /* 589 — 안내 우편(권한 상품의 구매 확인)은 재화가 0이라 «획득» 연출이 없다. 518 이 «재화를 얻지
+     않았는데 재화 연출이 터진다» 를 전수로 잡은 자리라, 여기서 빈 배열을 그대로 넘기면 안 된다. */
+  if(kinds.length) fxReward(null, kinds);
   uiDirty = true; save();
   reShopIfOpen();                             /* 547 — 재화 탭을 연 채 받으면 그 자리에서 따라온다 */
-  fxToast('우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · '));   /* 150 */
+  fxToast(kinds.length
+    ? '우편 수령 — ' + mailRw(m).map(t => t.ic + ' ' + fmtCur(t.k === 'g' ? 'gold' : '', t.v)).join(' · ')
+    : '우편 확인 — ' + m.t.replace(/^[^가-힣\w]+/, '').trim());   /* 150 */
 }
 function claimAllMail(){
   let g = 0, c = 0, r = 0, mi = 0, n = 0;
@@ -25430,7 +25490,9 @@ function claimAllMail(){
   if(!n) return;
   S.gold += g; S.dia += c; S.relic += r;
   if(mi) S.mileage = (S.mileage || 0) + mi;
-  fxReward(null, [g && 'gold', c && 'dia', r && 'relic', mi && 'mile'].filter(Boolean));   /* 512 */
+  /* 512 · 589 — 안내 우편만 받은 «일괄 수령» 은 재화가 0이라 획득 연출이 없다(518 규약) */
+  const kinds = [g && 'gold', c && 'dia', r && 'relic', mi && 'mile'].filter(Boolean);
+  if(kinds.length) fxReward(null, kinds);
   uiDirty = true; save();
   reShopIfOpen();                             /* 547 — 우편함은 상점 시트 «위» 라 아래가 낡은 채 남는다 */
   /* 69 — 예전에는 여기서 `popup()` 을 띄워 우편함을 **통째로 덮었다**. 새 우편함은 수령 결과가
@@ -27818,8 +27880,13 @@ addEventListener('pagehide', () => {
 function mailRowHtml(m){
   const done = !!S.mail[m.id];
   const rw = mailRw(m);
-  /* 153 — 보상 0통은 `sendMail` 이 만들지 않지만, 손댄 세이브가 들어와도 행이 죽지 않게 폴백을 둔다 */
-  const top = rw.slice().sort((a, b) => b.v - a.v)[0] || { n:'보상', ic:curIc('gold'), g:0, k:'g', v:0 };
+  /* 153 — 보상 0통은 `sendMail` 이 만들지 않지만, 손댄 세이브가 들어와도 행이 죽지 않게 폴백을 둔다.
+     589 — 그 «0통 금지» 에 예외가 하나 생겼다: 권한 상품의 «구매 확인» 안내 우편은 재화가 없는
+     대신 제 썸네일(`m.ic` = 그 이용권의 아이콘)을 들고 온다. 그 자리를 여기서 채운다 —
+     썸네일이 있으므로 153 이 걱정한 «설 자리가 없는 행» 은 생기지 않는다. */
+  const top = rw.slice().sort((a, b) => b.v - a.v)[0]
+    || (m.ic ? { n:m.iq || '보유', ic:m.ic, g:m.ig | 0, k:'', v:0 }
+             : { n:'보상', ic:curIc('gold'), g:0, k:'g', v:0 });
   const sum = top.n + (rw.length > 1 ? ' 외 ' + (rw.length - 1) + '개' : '');
   /* 10회차 — 내용을 **고정 높이 147px 래퍼**로 감싼다. 상자는 접히는데 자식은 안 접혀서
      «잘린 채 읽히는 프레임» 이 4회차째 축을 바꿔 가며 재발했다(하변 → 우변 → **상변**).
@@ -27831,7 +27898,9 @@ function mailRowHtml(m){
     + '<div class="ml-s"><i>' + sum + '</i></div>'
     + '<div class="ml-d"><i>' + (done ? '수령 완료' : '기한 없음') + '</i></div>'
     + '<span class="ml-i ifr" style="--face:' + SUM_CARD[top.g].face + ';--rim:' + SUM_CARD[top.g].rim + '">'
-    +   top.ic + '<i class="ifq">' + fmtShort(top.v, top.k === 'g' ? 'gold' : '') + '</i></span>'
+    /* 589 — 안내 우편(재화 0)은 수량 배지를 안 단다. «×0» 이 찍히면 «0개를 준다» 로 읽힌다. */
+    +   top.ic + (top.v > 0 ? '<i class="ifq">' + fmtShort(top.v, top.k === 'g' ? 'gold' : '') + '</i>' : '')
+    +   '</span>'
     + '<button class="ml-b ifbtn" data-ml="' + m.id + '"' + (done ? ' disabled' : '') + '>'
     +   '<b>' + (done ? '완료' : '받기') + '</b></button>'
     + '</div></div>';
@@ -29799,8 +29868,9 @@ function coinResetTxt(){
 }
 /* ---- 44 다이아 판매 상품 5종 + 마일리지 (UI-REFERENCE 13 «우리 게임 설계» — 저장소 주인 지시) ----
    가격 오름차순. 쿠폰(cp)은 위 2개(90만·200만) 상품에만 붙는다. `won` 은 표시용 원화가.
-   **결제 연동은 없다** — 구매 버튼은 가격 표시 + «준비 중». 실제 지급은 `grantDiaPack()` 하나로
-   모이며, 디버그 지급(`window.devBuyDia(id)`)과 나중 붙일 결제 콜백이 그 함수를 같이 쓴다. */
+   **결제 SDK 는 아직 없다** — 589(2026-08-31 주인 지시 «클릭시 걍 결제된거로 쳐주기»)가 그 자리를
+   **목업**으로 채웠다: 구매 버튼 → `buyDiaPack()` → `payMock()`(결제) → `grantDiaPack()`(우편 지급).
+   디버그 지급(`window.devBuyDia(id)`)과 나중 붙일 실제 결제 콜백이 그 경로를 같이 쓴다. */
 /* 작업 116(2026-08-26, 저장소 주인 지시) — 다이아 상품 5종·마일리지 교환 다이아를 전부 «÷2».
    ⚠ **이 결정은 497(2026-08-31, 주인 확정)이 되돌렸다** — 아래 497 절이 지금 값의 근거다.
    116 의 나머지 규약(가격·쿠폰·MILE_NEED 불변 · 라벨 fmt 파생 · 구 세이브 무변경)은 그대로 산다.
@@ -29817,8 +29887,10 @@ function coinResetTxt(){
 /* 작업 497(2026-08-31, 저장소 주인 확정) — 116 의 «÷2» 를 **되돌린다**: 다이아 상품 5종·마일리지
    교환 다이아를 전부 «×2»(주인 원문 «다이아 보급이 많아 과금할 이유가 없어 보임 → 상점 팩 2배 ·
    마일리지도 2배»). 최대 팩이 무과금 며칠치인가가 근거다 — 200만 ÷ 하루 27만 = 7.4일치(관례 1~2주).
-   **가격(`won`)·쿠폰(`cp`)·`MILE_NEED` 는 그대로**(지시 ③)이고, 이용권 대체가(`PASS_*_DIA`)·룰렛·
-   광고 상품 다이아도 안 건드린다(주인 원문은 «상점 재화로 파는 것»). 구 세이브도 무변경(④).
+   **가격(`won`)·쿠폰(`cp`)·`MILE_NEED` 는 그대로**(지시 ③)이고, 룰렛·광고 상품 다이아도
+   안 건드린다(주인 원문은 «상점 재화로 파는 것»).
+   ⚠ 497 이 «안 건드린다» 목록에 적어 둔 **이용권 대체가(`PASS_*_DIA`)는 588 이 통째로 없앴다** —
+      497 의 결정이 뒤집힌 것이 아니라 그 상품의 다이아 경로 자체가 사라진 것이다. 구 세이브도 무변경(④).
    수량 라벨 `q` 는 여전히 **손으로 적지 않고 `fmt()` 로 파생**한다 — 값과 라벨이 어긋날 수 없다
    (LESSONS 111-1). 자연폭 주석은 이번 값에서 실제로 잰 값이다(`probe497` [2]). */
 const DIA_PACKS = [
@@ -29834,9 +29906,10 @@ const diaPackName = p => '다이아 ' + p.q.slice(1) + '개';
 /* 다이아 상품 지급 — 결제 성공 시 호출될 지점. 재화·쿠폰·누적 결제수를 한 번에 반영하고 저장한다. */
 /* 153(2026-08-27 주인 지시) — 지급은 **우편함**으로 간다. 재화·쿠폰을 여기서 바로 더하지 않는다.
    결제 카운터(`S.cnt.paid`)만 «구매» 사건이므로 즉시 오른다 — 수령 여부와 무관한 결제 이력이다. */
+/* 589 — `S.cnt.paid` 는 여기서 안 올린다. «결제 사건» 은 `payMock()` 한 곳이 센다
+   (이 함수는 지급 전용이라 결제 없이도 불릴 수 있어야 한다 — 나중 보상·보정 지급). */
 function grantDiaPack(p){
   if(!p) return null;
-  S.cnt.paid = (S.cnt.paid || 0) + 1;
   const m = sendMail({ t:'🛒 ' + diaPackName(p), c:p.dia, m:p.cp || 0,
     b:'상점에서 구매하신 상품입니다. 보관 기간은 없으니 언제든 수령하세요.' });
   uiDirty = true; save();
@@ -29844,11 +29917,15 @@ function grantDiaPack(p){
      같은 판정을 두 벌로 만들어 두는 것이라, 재화 탭 말고 다른 탭이 재화를 보이게 되면
      한쪽만 따라오는 자리가 된다(402 «표 두 벌» 계열). 시트 판정은 `reShopIfOpen()` 한 곳이다. */
   reShopIfOpen();
-  notify('🛒 ' + diaPackName(p) + ' — 우편함으로 발송되었습니다');
   return { dia:S.dia, mileage:S.mileage, paid:S.cnt.paid, mail:m && m.id };
 }
+/* 589 — 다이아 팩 «구매». 결제 흉내는 여기 없다 — `payMock()` 이 결제를 치고, 지급은 위
+   `grantDiaPack()`(우편) 이 그대로 한다. 안내 토스트도 `payMock` 한 곳이다. */
+function buyDiaPack(p){
+  return p ? payMock({ k:'dia:' + p.id, n:diaPackName(p), won:p.won, deliver:() => grantDiaPack(p) }) : null;
+}
 /* 디버그 지급 — 결제가 없는 동안 마일리지 적립·교환을 실제로 굴려 보기 위한 유일한 경로 */
-window.devBuyDia = id => grantDiaPack(DIA_PACKS.find(x => x.id === id));
+window.devBuyDia = id => buyDiaPack(DIA_PACKS.find(x => x.id === id));
 function mileageExchange(){
   if((S.mileage || 0) < MILE_NEED) return false;
   /* 153 — 쿠폰은 즉시 차감(교환 행위)하고 보상 다이아는 우편으로 보낸다 */
@@ -30143,12 +30220,11 @@ $('shopList').addEventListener('click', e => {
       + (S.dunTk[d.id] | 0) + '장)');
     return;
   }
-  /* 44 다이아 상품 — 결제 연동 전이라 가격만 알리고 지급하지 않는다(지시서 «③ 결제») */
+  /* 44·589 다이아 상품 — **클릭 = 결제 완료**(주인 지시 2026-08-31, 목업). 지급은 우편함(153)이고
+     안내 토스트는 `payMock()` 한 곳이 띄운다. 옛 «결제 준비 중» 안내는 그 지시로 폐기됐다. */
   const dp = e.target.closest('[data-diabuy]');
   if(dp){
-    const p = DIA_PACKS.find(x => x.id === dp.dataset.diabuy);
-    /* 206 — «준비 중» 안내에는 고를 것이 없다. 가격·마일리지는 그 상품 카드가 그대로 띄운다 */
-    if(p) notify(diaPackName(p) + ' <b>' + wonTxt(p.won) + '</b> — 결제 준비 중입니다');
+    buyDiaPack(DIA_PACKS.find(x => x.id === dp.dataset.diabuy));
     return;
   }
   if(e.target.closest('#cnExch')){ mileageExchange(); return; }
@@ -30182,8 +30258,9 @@ $('shopList').addEventListener('click', e => {
      시간 되면 알아서 축복 쓴 걸로 — 서버 없이, 오랜만에 켜면 그동안 축복 시간 될 때마다 켰던
      것으로 계산해서 축복 경험치·레벨이 올라 있으면 됨.»
 
-   ① 가격 — 44 규칙(결제 미연동)대로 원화가 아니라 **다이아 대체가**다. 13 다이아 상품표의
-      원화가에 맞춰 잡았다: 광고 제거 75,000💎 = d3(11,000원) · 자동 축복 35,000💎 = d2(5,000원).
+   ① 가격 — **원화 하나**다. 124 가 적어 둔 «44 규칙(결제 미연동)대로 다이아 대체가» 는
+      **588(2026-08-31, 주인 «그 이용권들은 다이아로 못사게 하기»)이 걷어냈고**, 그 자리는
+      589 의 원화 목업 결제가 받는다. 옛 대체가(75,000💎·35,000💎·50,000💎)는 선언째 사라졌다.
    ② 평생 광고 제거(`S.pass.noAds`) — 광고 SDK 가 없어 지금도 «시청 없이 즉시 수령» 이므로
       기능 차이는 **표식과 문구**다: 13 광고 상품 6칸의 ▶AD 뱃지·10 무료 소환 ▶AD·01 «1.5배 받기» AD
       가 사라지고 라벨이 «받기» → «무료 수령» 이 되며, 13 §6 배너가 «구매 완료» 로 잠긴다.
@@ -30201,9 +30278,9 @@ $('shopList').addEventListener('click', e => {
      지금 이용권 탭 카드들 대신 이 디자인이 들어가면 됨» + «3번째 카드: 오프라인 보상 +4시간 ₩7,500».
      레퍼런스 `docs/ref/151-이용권-카드.png` · 측정표 `docs/measure/151-이용권카드.md`.
 
-   ⓐ 가격 표기는 **원화**다(지시). 결제 SDK 는 없으므로 **구매 동작은 124 경로 그대로**
-      (다이아 대체가 차감 → 지급). 대체가는 카드에도 적어 «₩ 를 눌렀더니 다이아가 빠졌다» 가
-      되지 않게 한다 — 44 «결제 미연동» 관례를 표기로 드러내는 것까지가 이 작업 범위다.
+   ⓐ 가격 표기는 **원화**다(지시). ⚠ **588·589(2026-08-31)가 그 아래 두 줄을 뒤집었다** —
+      옛 구매 동작(«다이아 대체가 차감 → 지급»)은 폐기됐고, 이제 «₩ 를 누르면 결제된 것으로 치고
+      권한은 즉시·보상은 우편함» 이다. 카드에 적던 대체가(`.pvd`)도 같이 사라졌다.
    ⓑ ref 상단 알약 2개(불꽃 +1000/+1600 · Ⓜ +100/+160)는 **빼고** «마일리지 쿠폰 +n» 알약 1개만.
       쿠폰은 13 의 `S.mileage`(MILE_NEED 10개 → 다이아 교환) 와 **같은 재화**다.
    ⓒ 리본 2줄(«매일 보석 지급» · «구매 즉시 보석 지급»)은 **실제로 지급**된다 —
@@ -30214,9 +30291,12 @@ $('shopList').addEventListener('click', e => {
       는 **뺐다**(같은 효과를 두 상품이 파는 것을 막는다 — PROGRESS 151 «기본» 지시).
    -------------------------------------------------------------------------- */
 const PASS_DAY_MS      = 24 * 3600 * 1000;
-const PASS_ADFREE_DIA  = 75000;                    /* 평생 광고 제거 — 13 d3(11,000원) 대체가 */
-const PASS_ABLESS_DIA  = 35000;                    /* 자동 축복 30일 — 13 d2(5,000원) 대체가 */
-const PASS_OFFPLUS_DIA = 50000;                    /* 오프라인 +4시간 — ₩7,500 (d2 5,000 ↔ d3 11,000 사이) */
+/* 588(2026-08-31, 저장소 주인 지시 «그 이용권들은 다이아로 못사게 하기») — 이용권 3종의 다이아
+   **대체가**(`PASS_ADFREE_DIA` 75,000 · `PASS_ABLESS_DIA` 35,000 · `PASS_OFFPLUS_DIA` 50,000)를
+   **선언째** 걷어냈다. 값만 0 으로 두면 «아무도 안 읽는 상태» 가 굳는다(LESSONS 295-② · 460 선례).
+   ⚠ 그 대체가는 «가격» 이 아니라 44 의 «결제 미연동» 관례가 만든 우회로였다 — 그러니 이 줄을
+   지우면 이용권이 «못 사는 상품» 이 된다. 그 자리는 **589 의 원화 목업 결제**가 받는다
+   (`buyPass()` → `payMock()`). 두 행은 한 벌이다. 근거 `docs/review/588-이용권다이아결제제거.md`. */
 const PASS_ABLESS_DAYS = 30;
 const PASS_OFF_PLUS_H  = 4;                        /* 오프라인 보상 상한 증가분(시간) */
 const PASS_DAILY_MAX_D = 60;                       /* 매일 보석 1회 정산 상한(일) — 깨진 세이브 방어 */
@@ -30247,21 +30327,21 @@ function syncNoAds(){ const a = $('app'); if(a) a.classList.toggle('noads', noAd
    카드 사이 간격 74(ref 36) 안에 아래 카드의 상태 탭(위로 56)이 들어간다 — ref 와 같은 물림이다. */
 const PVC_W = 978, PVC_H_BAN = 534, PVC_H_BL4 = 772, PVC_BL_ROW = 82, PVC_GAP = 74, PV_Y0 = 470;
 const pvCardH = p => p.ban ? PVC_H_BAN : PVC_H_BL4 - (4 - p.bl.length) * PVC_BL_ROW;
-/* 151 — 카드 3장. `won`(표기) · `dia`(대체 결제) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
+/* 151 — 카드 3장. `won`(가격 · 588 이후 유일한 가격) · `cp`(마일리지 쿠폰) · `daily`/`once`(보석 지급) ·
    `bl`(★ 불릿) · `ban`(1번 카드 티켓형 배너 문구) 이 한 상품의 전부다.
    ref 팔레트: 1장 파랑 · 2장 초록 · 3장(신설)은 둘과 구분되는 **보라**. */
 const PASS_ITEMS = [
-  { id:'noads', n:'광고 제거', ic:'🚫', dia:PASS_ADFREE_DIA, won:14900, perm:true, cp:1,
+  { id:'noads', n:'광고 제거', ic:'🚫', won:14900, perm:true, cp:1,
     q:'평생', pal:'b', val:'2000%', daily:1500, once:10000,
     ban:'모든 광고 평생 스킵', art:'▶',
     bl:['모든 광고 보상을 시청 없이 즉시 수령', '광고 표식 전부 제거', '일일 수령 횟수 제한은 그대로'],
     nt:'모든 광고 보상을 시청 없이 바로 받습니다 (일일 횟수 제한은 그대로)' },
-  { id:'abless', n:'전투 효율 증가', ic:'✨', dia:PASS_ABLESS_DIA, won:22900, perm:false, cp:2,
+  { id:'abless', n:'전투 효율 증가', ic:'✨', won:22900, perm:false, cp:2,
     q:'30일', pal:'g', val:'2000%', daily:1500, once:16000,
     art:'🎟',
     bl:['축복 만료 시 자동 재발동', '게임을 꺼 둔 동안도 자동 축복 계산', '축복 경험치·레벨 그대로 누적'],
     nt:'축복 3종이 만료될 때마다 자동으로 다시 켜집니다 (게임을 꺼 둔 동안도 계산)' },
-  { id:'offplus', n:'오프라인 보상 증가', ic:'⏰', dia:PASS_OFFPLUS_DIA, won:7500, perm:true, cp:1,
+  { id:'offplus', n:'오프라인 보상 증가', ic:'⏰', won:7500, perm:true, cp:1,
     q:'평생', pal:'p', val:'1000%', daily:750, once:5000,
     art:'⏳',
     bl:['오프라인 보상 최대 시간 ' + PASS_OFF_PLUS_H + '시간 증가',
@@ -30310,9 +30390,10 @@ function renderPassPage(list){
       +  rib('rb2', '구매 즉시 보석 지급', p.once, RB.w2, RB.g2)
       +  (own
           ? '<div class="bt on"><i>이용 중</i></div>'
-          /* 477 — 이 카드의 다이아 대체가. 버튼 «밖» 바로 위(151 이 버튼 안 두 줄로 겹쳤던 자리) */
-          : '<div class="pvd">대체 ' + curIc('dia') + ' ' + fmt(p.dia) + '</div>'
-            + '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
+          /* 477 이 이 자리(`.pvd`)에 놓았던 «대체 💎 n» 은 **588 이 지웠다** — 다이아로는 못 산다.
+             477 이 소유한 성질(«하단 줄은 총론 한 줄 · 카드 정보는 카드 안»)은 그대로 살아 있고,
+             카드 안에서 말할 것이 «가격 버튼» 하나로 줄었을 뿐이다. */
+          : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
       +  '<div class="fr"></div></div>';
   });
   /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
@@ -30326,13 +30407,15 @@ function renderPassPage(list){
   } else {
     h += '<div class="pv-bt" style="top:' + (barY + 4) + 'px">보유 중인 기간제 이용권이 없습니다</div>';
   }
-  /* 44·151 — 결제 SDK 가 없어 «원화 표기 · 다이아 대체 결제» 다. 그 사실을 화면에도 적는다
-     (버튼 안에 두 줄로 넣었더니 원화 글자와 겹치고 검정 테를 뚫었다 — 비평 1회차 ①). */
   /* 477 — 여기는 **총론 한 줄**만이다. 이용권 3종의 이름·아이콘·금액을 다 이어 붙였더니
      한 줄 폭이 1278 로 858 상자를 419px 넘어 프레임(1080) 밖에서 잘렸다(`probe477` 재현).
-     각 카드의 대체가는 그 카드의 `.pvd`(가격 버튼 위)로 갔다 — 이용권이 늘어도 이 줄은 안 늘어난다. */
-  h += '<div class="pv-bt" style="top:' + (barY + 66) + 'px">결제 미연동 — 구매 시 '
-    + curIc('dia') + ' 다이아로 대체 결제됩니다</div>';
+     그 규칙은 588 이후에도 그대로다 — 상품마다 늘어나는 말은 여기 안 적는다. */
+  /* 588·589 — «다이아 대체 결제» 는 끝났다. 지금 문구가 말해야 하는 것은 두 가지다:
+     ⓐ 결제가 아직 **목업**이라는 것(주인 «개발중이니까» — 숨기지 않는 표기가 안전하다.
+        478 청약철회 고지·477 총론과 말이 맞아야 한다) ⓑ 지급이 **우편함**으로 간다는 것(153).
+     ⚠ 477 이 못 박은 성질 그대로 **총론 한 줄**이다 — 이용권이 늘어도 이 줄은 안 늘어난다. */
+  h += '<div class="pv-bt" style="top:' + (barY + 66) + 'px">'
+    + '결제 시스템 준비 중 — 구매 시 즉시 적용되며 보상은 우편함으로 발송됩니다</div>';
   h += '</div>';
   list.innerHTML = h;
 }
@@ -30399,20 +30482,21 @@ function passDailyTick(){
 setInterval(passDailyTick, 60000);        /* 온라인 — 1분마다. 오프라인분은 로드 직후 1회로 정산된다 */
 let passDailyPend = 0;                    /* 로드 정산분 — 149 규칙대로 «단순 안내» 는 토스트로 */
 
-/* 구매 — 44 규칙대로 «결제 미연동» 이라 다이아로 산다. 지급 지점은 grantPass() 하나뿐이다. */
+/* 구매 — **588·589**. 다이아 차감은 걷어냈고(588) 결제는 목업 진입점 `payMock()` 한 곳이다(589).
+   지급 지점은 여전히 `grantPass()` 하나뿐이다.
+   ⚠ 이용권은 `PAY_INSTANT` 목록에 있는 **권한 상품**이라 효과가 즉시 반영된다(153 스코프) —
+      우편으로 가는 것은 그 상품의 «구매 즉시 보석·마일리지 쿠폰» 뿐이고, 그 통이 곧 구매 확인이다
+      (세 상품 다 `cp`·`once` 를 들고 있어 별도 안내 우편을 한 통 더 만들지 않는다). */
 function buyPass(id){
   const p = PASS_ITEMS.find(x => x.id === id);
   if(!p || passOwned(p.id)) return false;
-  /* 125 — 화폐 표시는 CUR_ICON 이미지로. 모달 «제목» 에는 아이콘을 넣지 않는다(showModal 이 글자로 흘린다) */
-  if(S.dia < p.dia){ notify(curIc('dia') + ' <b>' + fmt(p.dia - S.dia) + '</b> 더 필요합니다'); return false; }
-  S.dia -= p.dia;
-  grantPass(p.id);                                   /* 151 — 효과·쿠폰·즉시 보석이 여기 한 곳에 모인다 */
-  renderUI();
-  renderPassPage($('shopList'));
-  fxReward();                                        /* 58 — «얻은 순간» 피드백 */
-  /* 206 — 구매 «완료» 통보다. 지급 내역은 153 대로 우편함에 남고, 효과·기간은 이용권 카드가
-     계속 띄워 두므로 한 줄만 남긴다(«무엇을 샀나 · 얼마나 가나 · 어디로 갔나») */
-  notify('🎫 ' + p.n + ' 이용권 — ' + (p.perm ? '평생' : PASS_ABLESS_DAYS + '일') + ' 적용 · 보상은 우편함');
+  payMock({ k:'pass:' + p.id, n:p.n + ' 이용권', won:p.won, deliver:() => {
+    grantPass(p.id);                                 /* 151 — 효과·쿠폰·즉시 보석이 여기 한 곳에 모인다 */
+    renderUI();
+    renderPassPage($('shopList'));
+    fxReward();                                      /* 58 — «얻은 순간» 피드백 */
+    return { pass:p.id, perm:!!p.perm };
+  }});
   return true;
 }
 $('shopList').addEventListener('click', e => {
@@ -33673,10 +33757,28 @@ function passClaimAll(){
   notify('🎫 <b>일괄 받기</b> ' + n + '칸 — ' + curIc('dia') + ' +' + won(sum));
   save(); renderPass(); uiDirty = true; renderUI();
 }
-/* 결제 연동은 아직 없다 — 44 와 같이 지급을 함수 하나로 모아 두고 버튼은 «준비 중» 이다.
-   결제를 붙일 때 아래 버튼 핸들러 한 줄만 이 함수를 부르게 바꾸면 된다. */
+/* 지급은 함수 하나로 모여 있다(44 와 같은 꼴). **589 가 그 «결제를 붙일 때» 를 목업으로 당겼다** —
+   아래 `buyPassPrem()` 이 `payMock()` 을 지나 이 함수를 부른다. 실제 SDK 가 붙어도 갈아 끼울 자리는
+   `payMock()` 한 곳이라 이 함수는 그대로 산다. */
 function grantPassPrem(t){ S.pass.prem[t || passTab] = 1; save(); renderPass(); uiDirty = true; }
 window.devPassPrem = grantPassPrem;
+/* 589 — 프리미엄 패스 «구매»(목업). 프리미엄은 **계정 권한**이라 `PAY_INSTANT` 목록의 상품이다:
+   보상은 패스 트랙의 칸에 그대로 있고(활성화가 그 칸을 연다) 우편에 실을 재화가 없다.
+   ⚠ 그래서 이 상품만 «보상 0통» 인 **구매 확인 우편**을 보낸다 — 주인 지시(«우편함으로 보내줘야함»)를
+      권한 상품에서도 지키는 자리이고, `sendMail` 이 그 예외를 썸네일(`ic`)로 받는다. */
+function buyPassPrem(t){
+  const tab = t || passTab, T = PASS_TABS[tab];
+  if(!T || (S.pass.prem && S.pass.prem[tab])) return false;
+  /* `price` 는 표시 문자열(«₩14,900»)이라 숫자 축은 여기서 뽑는다 — 상품표는 하나로 둔다(402 «표 두 벌») */
+  payMock({ k:'prem:' + tab, n:'프리미엄 패스 · ' + (T.tab || tab),
+    won:parseInt(String(T.price).replace(/\D/g, ''), 10) || 0, deliver:() => {
+    grantPassPrem(tab);
+    sendMail({ t:'🎫 프리미엄 패스 — ' + (T.tab || tab), ic:'🎫', iq:'프리미엄', ig:4,
+      b:'프리미엄 패스가 활성화되었습니다. 잠겨 있던 보상 칸은 패스 화면에서 받으실 수 있습니다.' });
+    return { prem:tab };
+  }});
+  return true;
+}
 const PASS_RH = 229.85;   /* 행 pitch — 측정표 §5-2 최소제곱 */
 /* 526(2026-08-31) — **창 가상화**. 493 이 단계를 600 으로 늘리자 트랙이 14,044노드·137,910px 가 되어
    열기가 27 → 303ms(중앙값 · `tools/probe526.js` [1][2])가 됐다. 493 이 «DOM 을 안 줄이는» 후보 셋
@@ -33841,8 +33943,9 @@ $('psTk').addEventListener('click', e => {
   const [i, c] = b.dataset.pt.split(':').map(Number);
   passClaim(i, c);
 });
-/* 206 — «준비 중» 안내라 토스트다 */
-$('psBuy').onclick = () => notify('💳 프리미엄 패스 — 결제 연동 준비 중입니다');
+/* 589 — 옛 «결제 연동 준비 중» 토스트는 주인 지시(«클릭시 걍 결제된거로 쳐주기»)로 폐기됐다.
+   안내는 `payMock()` 한 곳이 띄운다(상품별 흉내 0건). */
+$('psBuy').onclick = () => buyPassPrem();
 /* 302 — [일괄 받기]. 재화 비행 출발점을 버튼으로 지정만 하면 fxWatch 가 알아서 쏜다(22 qAll 관례) */
 $('psAll').onclick = () => { fxAt($('psAll')); passClaimAll(); };
 
