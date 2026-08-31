@@ -256,8 +256,7 @@ const BOT_SRC = function (cfg) {
   const pumpTo = (target) => {
     const qty0 = S.buyQty;
     S.buyQty = 1;
-    let guard = 0;
-    while (stat.dps < target && guard++ < 4000) {
+    const goldOnce = () => {                          /* 골드 손잡이 한 눈금 — 샀으면 true */
       let bought = false;
       for (const u of UPG) {
         const bi = buyInfo(u);
@@ -272,10 +271,70 @@ const BOT_SRC = function (cfg) {
         if (trainBuy(id)) bought = true;
       }
       if (typeof trainReady === 'function' && trainReady()) { T('cal.trainUp', () => trainUp()); bought = true; }
-      if (!bought) break;                             /* 더 올라갈 손잡이가 없다 */
+      return bought;
+    };
+    let guard = 0;
+    while (stat.dps < target && guard++ < 4000) if (!goldOnce()) break;
+    /* ⚑ 10회차(정정2) — s400+ 목표는 골드 손잡이(UPG·훈련)만으로는 **물리적으로 닿지 않는다**
+       (상한 ≈1.3e10 vs s400 목표 3.1e21 — 실측. 옆 주석의 «어울리는 캐릭터» 규약이 s>200 에서
+       깨져 있었다 — 옆 주석이 1회차에 s200 에서 잡은 바로 그 병의 재발이다). 그 구간의
+       캐릭터는 소환 축(장비·스킬·펫·일괄 강화)을 가진다 — 보정 전용 컨텍스트에서만 다이아를
+       부어 소환 한 바퀴와 골드 한 바퀴를 **교대로** 돈다(소환이 새 등급을 열면 강화 여지도
+       새로 생긴다). 골드와 같은 «무한 재화 + 실측» 원칙이고, 이 컨텍스트는 본 실행과 분리된
+       페이지라 세이브·장부를 오염시키지 않는다(ledger 는 이 컨텍스트의 B.diaIn 에만 적혀 버려진다). */
+    let sg = 0, budget = 1e6, rbudget = 1e5;
+    const STEP = 1.05;                                /* «눈금이 올렸다» 의 문턱 — 5% */
+    while (stat.dps < target && sg++ < 600) {
+      const d0 = stat.dps, R2 = B.R;
+      if (!R2) break;
+      /* ⓐ 10뽑 한 눈금 — 제일 덜 뽑은 배너 하나만. 한 번에 R.summon 을 통째로 돌리면
+         (10뽑 ×400 가드) 목표를 수백 배 넘겨 κ_dps 가 «오버킬 클리핑» 으로 무너진다 —
+         2회차 «한 번에 다 사면 안 된다» 와 같은 병이라 같은 처방(한 눈금씩)이다. */
+      if (!B.sumCnt) B.sumCnt = {};
+      let bb = null;
+      for (const x of SHOP_BOXES) { const c = (B.sumCnt[x.b] || 0); if (!bb || c < bb.c) bb = { b: x.b, c }; }
+      if (bb) {
+        S.dia = Math.max(S.dia, summonCost(bb.b, 10));
+        T('cal.sum10', () => doSummon(bb.b, 10));
+        B.sumCnt[bb.b] = (B.sumCnt[bb.b] || 0) + 10;
+        S.dia = 0;
+      }
+      T('cal.equip', () => R2.equipBest());
+      if (stat.dps >= target) break;
+      /* ⓑ 뽑기 눈금이 5% 도 못 올리면 강화 «예산 눈금» — 골드를 10배씩 늘려 가며 일괄 강화.
+         예산이 점프 폭을 묶는다(무한 골드로 levelUpAll 을 부르면 한 호출이 만렙까지 간다). */
+      if (stat.dps < d0 * STEP && stat.dps < target / 5) {
+        /* 거친 손잡이(일괄 강화·소환 레벨)는 목표의 1/5 아래에서만 — 마지막 구간은 10뽑·골드
+           눈금으로만 다가간다. 과충(오버킬 클리핑)보다 소폭 미달이 자로서 안전하다:
+           미달은 표본이 «느리게 잡는» 진짜 그림이고, 과충은 실전 DPS 를 처리량 상한으로
+           눌러 κ_dps 를 거짓으로 깎는다(10회차 실측 — s200 과충 ×12 에서 κ_dps 2.64 → 0.19). */
+        S.gold = budget;
+        T('cal.lvl', () => { R2.levelAll(); R2.equipBest(); });
+        budget = Math.min(budget * 2, 1e33);
+        /* ⓒ 그래도 안 오르면 나머지 축(유물 소환·룬·도감·골드 손잡이) 한 바퀴 */
+        if (stat.dps < d0 * STEP) {
+          /* 유물 다이아도 예산 눈금 — 고정 1e9 를 주면 이 한 바퀴가 ×10 이상을 점프해
+             s200 표본을 ×12 과충시켰다(10회차 실측). */
+          S.dia = Math.max(S.dia, rbudget); S.gold = Math.max(S.gold, budget);
+          T('cal.rest', () => { R2.relicSummon(); R2.runes(); R2.collection(); R2.equipBest(); });
+          rbudget = Math.min(rbudget * 2, 1e12);
+          S.dia = 0;
+          guard = 0;
+          while (stat.dps < target && guard++ < 400) if (!goldOnce()) break;
+          /* ⓓ 마지막 축 — 소환 «레벨»(등급 개방 · `S.sumLv`). 만렙 50 까지 26.8만 뽑이라
+             뽑기로 올리면 보정이 분 단위가 된다 — 레벨을 한 눈금씩 직접 올린다. 늦은 구간
+             (s800+)의 캐릭터는 실플레이로도 이 레벨대를 갖고 있으므로(d120 실측 — 봇이
+             하루 천여 뽑을 한다) «어울리는 캐릭터» 규약 안이다. 다른 어떤 손잡이 조합도
+             s800 목표에 못 닿는 것을 실측한 뒤에만 온다(이 분기 순서가 그 증명이다). */
+          if (stat.dps < d0 * STEP) {
+            if (typeof SUM_MAXLV === 'number' && (S.sumLv | 0) < SUM_MAXLV) S.sumLv = (S.sumLv | 0) + 1;
+            else if (budget >= 1e33) break;            /* 전 축이 다 올랐다 — 진짜 상한 */
+          }
+        }
+      }
     }
     S.buyQty = qty0;
-    S.gold = 0;
+    S.gold = 0; S.dia = 0;
     return stat.dps;
   };
   /* 몹 표본은 **파밍 상태**(`S.bossFarm = true`)에서 찍는다 — 제품이 그 상태에서 보스를 안 부르므로
@@ -306,37 +365,33 @@ const BOT_SRC = function (cfg) {
     return { sec, dmg: dmgAcc, killed: seen && f < cap };
   };
 
-  B.calibrate = (stages, sec) => {
-    const out = [];
-    let kGuess = 1;
-    for (const s of stages) {
-      S.stage = s; S.best = Math.max(S.best, s);
-      const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / kGuess;
-      const dpsNow = pumpTo(target);
-      const m = sampleMobs(s, sec);
-      const b = sampleBoss(s);
-      const kDps = (m.dmg / sec) / (dpsNow || 1);
-      if (m.kills > 3) kGuess = kDps;                 /* 다음 체크포인트의 목표에 되먹인다 */
-      out.push({
-        s, sec, formDps: dpsNow, realDps: m.dmg / sec, kDps,
-        kills: m.kills,
-        tKill: m.kills ? sec / m.kills : null,
-        kHp: m.kills ? m.hpRat / m.kills : null,
-        kGold: m.kills ? m.goldRat / m.kills : null,
-        bossSec: b.sec, bossKilled: b.killed,
-        kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsNow || 1) : null,
-      });
-    }
-    /* ── 처치 간격 하한 — 화력을 대역의 1,000배로 올려 «스폰·접근» 만 남긴다 ── */
+  /* ⚑ 10회차 — 앵커마다 **새 캐릭터**로 잰다(Node 가 앵커마다 새 페이지에서 calibrateOne 을
+     부른다). 한 캐릭터로 체크포인트를 이어 돌면 소환 축이 생긴 뒤로는 앞 앵커의 화력이
+     다음 앵커의 목표를 이미 넘어(실측 s200 에서 ×12.25) 내릴 방법이 없다 — 과충은 오버킬
+     클리핑으로 κ_dps 를 거짓으로 깎는다. kGuess 되먹임은 Node 쪽이 행 사이에서 잇는다. */
+  B.calibrateOne = (s, sec, kGuess) => {
+    S.stage = s; S.best = Math.max(S.best, s);
+    const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / (kGuess || 1);
+    const dpsNow = pumpTo(target);
+    const m = sampleMobs(s, sec);
+    const b = sampleBoss(s);
+    const kDps = (m.dmg / sec) / (dpsNow || 1);
+    return {
+      s, sec, formDps: dpsNow, realDps: m.dmg / sec, kDps,
+      pump: target > 0 ? dpsNow / target : null,   /* 달성/목표 비 — 1 에서 멀면 «어울리는 캐릭터» 밖 */
+      kills: m.kills,
+      tKill: m.kills ? sec / m.kills : null,
+      kHp: m.kills ? m.hpRat / m.kills : null,
+      kGold: m.kills ? m.goldRat / m.kills : null,
+      bossSec: b.sec, bossKilled: b.killed,
+      kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsNow || 1) : null,
+    };
+  };
+  B.calibrateFloor = () => {
     S.stage = 1;
     pumpTo(eHp(1) * ETYPE.boss.hp / (BOSS_SEC * 0.5) * 1000);
     const f = sampleMobs(1, 30);
-    const tFloor = f.kills ? 30 / f.kills : 1;
-
-    const avg = (k) => { const v = out.map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
-    B.cal = { rows: out, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold'), kBoss: avg('kBoss'),
-              tFloor, floorKills: f.kills };
-    return B.cal;
+    return { tFloor: f.kills ? 30 / f.kills : 1, floorKills: f.kills };
   };
 
   /* ======================================================================
@@ -805,8 +860,14 @@ const POLICIES = {
 };
 /* ⚑ 199 10회차(정정2 — Z) — 앵커가 s200 에서 끝나는데 시뮬은 s1,240 까지 갔다. s>200 전부가
    s200 값 고정(클램프) 위였고 캐시가 그 오차를 7표에 복제했다. 앵커를 s1200 까지 늘리고
-   `kAt` 는 마지막 앵커 밖을 클램프가 아니라 **외삽**으로 읽는다(표 머리에 외삽 경고). */
-const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400, 800, 1200];
+   `kAt` 는 마지막 앵커 밖을 클램프가 아니라 **외삽**으로 읽는다(표 머리에 외삽 경고).
+   (실측 비용은 9앵커 전체 보정 포함 12초급 — verify494 의 예산(30일 1시드 ≤ 120초) 안이다.) */
+const CAL_STAGES = [1, 10, 30, 50, 100, 200, 400];
+/* ⚠ s800·1200 앵커는 접었다(10회차 실측) — «보스를 제한 시간 절반에» 화력이 **어떤 손잡이
+   조합으로도 물리적으로 닿지 않는다**(전 축 만개 후 달성/목표 1.2e-13 · 1.1e-31). 그 자리 표본은
+   60초 0마리 = «대역 밖»(231행 규약 위반)이라 자로 쓸 수 없다. s>400 은 s200→400 기울기의
+   외삽 + 표 머리 경고로 읽는다 — 그리고 이 실측 자체가 ⚑ 상신감이다(적 곡선이 s500 언저리에서
+   도달 가능 화력 상한을 추월한다 — r9 의 s1240 도달은 s200 클램프 자 위의 그림이었을 수 있다). */
 const CAL_SEC = 60;
 /* ⚑ 199 10회차 — 일회성 장부 키를 한 곳에 모은다(스냅 `inOnce` 와 [G] 가 같은 목록을 읽어야
    ④ 의 두 자가 어긋나지 않는다). 정정4 — «우편» 을 «우편(1회성)/우편(월)» 로 갈랐다:
@@ -974,22 +1035,43 @@ async function runOne(page, pol, seed, days, onRow) {
     report.calFrom = '캐시 ' + path.relative(ROOT, CALIB);
     if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
   } else {
-    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
-    const page = await ctx.newPage();
-    await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
-    await page.addInitScript(CLOCK, new Date(2026, 0, 1, 8, 0, 0).getTime());
-    await page.addInitScript(SEEDRNG, 1);
-    await page.goto(URL);
-    await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
-    await page.evaluate(BOT_SRC, {});
-    report.cal = await page.evaluate(([st, sec]) => { window.BOT.freeze(); return window.BOT.calibrate(st, sec); }, [CAL_STAGES, CAL_SEC]);
+    /* 10회차 — 앵커마다 새 페이지(새 캐릭터). 한 캐릭터로 이어 돌면 소환 축 이후 앞 앵커의
+       화력이 다음 앵커 목표를 이미 넘는다(과충 ×12 실측 — kAt 위 주석). kGuess 는 여기서 잇는다. */
+    const calPage = async () => {
+      const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+      const page = await ctx.newPage();
+      await page.addInitScript(() => { try { localStorage.clear(); } catch (_) {} });
+      await page.addInitScript(CLOCK, new Date(2026, 0, 1, 8, 0, 0).getTime());
+      await page.addInitScript(SEEDRNG, 1);
+      await page.goto(URL);
+      await page.waitForFunction(() => typeof step === 'function' && typeof S !== 'undefined' && S.daily, null, { timeout: 30000 });
+      await page.evaluate(BOT_SRC, {});
+      return { ctx, page };
+    };
+    const rows = [];
+    let kGuess = 1;
+    for (const s of CAL_STAGES) {
+      const { ctx, page } = await calPage();
+      const row = await page.evaluate(([st, sec, kg]) => { window.BOT.freeze(); return window.BOT.calibrateOne(st, sec, kg); }, [s, CAL_SEC, kGuess]);
+      await ctx.close();
+      if (row.kills > 3) kGuess = row.kDps;             /* 다음 앵커의 목표에 되먹인다(구 calibrate 와 같은 규칙) */
+      rows.push(row);
+    }
+    const fl = await (async () => {
+      const { ctx, page } = await calPage();
+      const f = await page.evaluate(() => { window.BOT.freeze(); return window.BOT.calibrateFloor(); });
+      await ctx.close();
+      return f;
+    })();
+    const avg = (k) => { const v = rows.map(o => o[k]).filter(x => x != null && isFinite(x) && x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 1; };
+    report.cal = { rows, kDps: avg('kDps'), kHp: avg('kHp'), kGold: avg('kGold'), kBoss: avg('kBoss'),
+                   tFloor: fl.tFloor, floorKills: fl.floorKills };
     /* 캐시는 nofloor 오염 전 원본으로 저장한다 — 게이트 손잡이가 캐시에 굳으면 안 된다 */
     if (CALIB) { fs.writeFileSync(CALIB, JSON.stringify(report.cal, null, 1)); report.calFrom = '실측 → 저장 ' + path.relative(ROOT, CALIB); }
     /* 게이트 전용 손잡이(`verify494` 되돌림 시험) — 처치 간격 하한을 0 으로 두면 «화력이 크면
        무한히 빨리 잡는다» 는 5회차 이전의 거짓 모형으로 돌아간다. 그 차이가 표에 실제로
        나타나는지를 게이트가 확인한다. 본 실행에서는 절대 쓰지 마라. */
     if (ARG.nofloor) { report.cal.tFloor = 0; report.nofloor = true; }
-    await ctx.close();
   }
   report.calHash = calHashOf(report.cal);
   console.log('[A] 보정치(' + (report.calFrom || '실측') + ' · sha ' + report.calHash + ') — κ_dps ' + report.cal.kDps.toFixed(3) + ' · κ_hp ' + report.cal.kHp.toFixed(3) + ' · κ_gold ' + report.cal.kGold.toFixed(3));
@@ -1063,10 +1145,10 @@ function writeReport(rep) {
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
-  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|');
+  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | κ_boss | pump(달성/목표) |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rep.cal.rows)
-    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} |`);
+    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${r.pump == null ? '— (10회차 이전 표)' : r.pump.toFixed(2)} |`);
   L.push('');
   L.push(`**처치 간격 하한 tFloor = ${rep.cal.tFloor.toFixed(3)}초** (s1 에서 대역의 1,000배 화력 · 30초에 ${rep.cal.floorKills}마리)`);
   L.push('');
