@@ -182,18 +182,28 @@ async function boot(ctx, url) {
      '[F2] 층을 비우는 두 자리가 **둘 다** `#fxl`·`#fxlc` 를 같이 비운다(6·8회차는 한 층만 비웠다)');
   ok(/for \(const k in fxSeen\)/.test(cap),
      '[F3] 장면 시작 전 재고 «채우기» 도 기준선을 맞춘다(안 맞추면 1번 장면에 사본이 얹힌다)');
+  /* ⚠ 1회차 자백 — 이 항을 «`.fx-plus` 전부» 로 세면 **플레이키**다. 배경 전투가 이 창에도 골드를 벌어
+     `#fxlc` 에 «+128A» 같은 노드를 얹으므로, 되돌림과 무관한 이유로 셈이 1 이 된다(실제로 한 번 그렇게
+     빨개졌다). ⇒ **되돌린 그 재화의 문자열만** 센다 — 골드는 `fmtG` 라 알파벳 단위(150)여서 안 겹친다.
+     남은 노드는 진단용으로 같이 신고한다. */
   const F = await cur.p.evaluate(async () => {
     const raf = () => new Promise(r => requestAnimationFrame(r));
     document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
+    S.tstone = 0;
+    if (typeof fxSeen === 'object' && fxSeen) for (const k in fxSeen) { const v = fxS(k); if (Number.isFinite(v)) fxSeen[k] = v; }
     await new Promise(r => setTimeout(r, 700));
     document.querySelectorAll('#fxl > *, #fxlc > *').forEach(n => n.remove());
     /* cap491 이 하는 그대로 — 값을 되돌리고 기준선을 같이 옮긴다 */
     S.tstone = 1e6; if (typeof fxSeen === 'object' && fxSeen) fxSeen.tstone = S.tstone;
     for (let i = 0; i < 10; i++) await raf();
     await new Promise(r => setTimeout(r, 300));
-    return document.querySelectorAll('#fxl .fx-plus, #fxlc .fx-plus').length;
+    const want = '+' + fmtCur('tstone', 1e6);
+    const all = Array.from(document.querySelectorAll('#fxl .fx-plus, #fxlc .fx-plus'))
+      .map(d => (d.textContent || '').trim());
+    return { hit: all.filter(t => t === want).length, want, all };
   });
-  ok(F === 0, '[F4] 그 되돌림을 실제로 돌리면 «+n» 이 한 개도 안 난다 — ' + F + '개');
+  ok(F.hit === 0, '[F4] 그 되돌림을 실제로 돌리면 그 재화의 «' + F.want + '» 가 한 개도 안 난다 — '
+     + F.hit + '개 (같은 창에 함께 있던 것: ' + JSON.stringify(F.all) + ' ← 배경 전투 골드는 이 항과 무관하다)');
 
   ok(cur.errs.length === 0, '[X] 콘솔 에러 0건 — ' + JSON.stringify(cur.errs.slice(0, 3)));
 
