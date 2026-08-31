@@ -44,11 +44,18 @@ module.exports = function readECurve(SRC, tag){
     const eSmooth = a => (1 + K*(a-1))
                       * Math.pow(M1, Math.min(a, KNEE) - 1)
                       * Math.pow(M2, Math.max(0, a - KNEE));
-    const eScale = s => eSmooth(band(s));
+    /* 199 4회차 — 밴드 내 «상승면»(ES_RAMP). 구간 안이 완전 평지면 벽을 깬 순간 40칸이
+       기계 시간(13분)으로 즉시 무너진다 — 돌파 국면이 없다(199 3회차 비평 ③ 전원 3점).
+       eScale(s) = eSmooth(a) × (eSmooth(a+BAND)/eSmooth(a))^(RAMP·(s−a)/BAND), a = eBand(s).
+       앵커(관문 스테이지)는 정확히 eSmooth(a) 그대로이고, RAMP = 0 이면 종전 계단과 동일하다. */
+    const RAMP = one(/const ES_RAMP\s*=\s*([\d.]+)/) || 0;
+    const eScale = (BAND && RAMP)
+      ? (s => { const a = band(s); return eSmooth(a) * Math.pow(eSmooth(a + BAND) / eSmooth(a), RAMP * (s - a) / BAND); })
+      : (s => eSmooth(band(s)));
     const gateN  = BAND ? (GATE_N || BAND) : null;
     return {
       form: BAND ? '249' : '177', K, KNEE, M1, M2, A, HB, DB, EG_B, EG_R,
-      BAND, GATE_N: gateN, GATE_HP, eSmooth, eBand: band, eScale,
+      BAND, RAMP, GATE_N: gateN, GATE_HP, eSmooth, eBand: band, eScale,
       eHp:  s => HB * eScale(s),
       eDmg: s => DB * Math.pow(eScale(s), A),
       /* 스테이지 보스의 실체력 배수 — 249 관문 스테이지에서만 1 이 아니다 */
@@ -57,6 +64,7 @@ module.exports = function readECurve(SRC, tag){
       desc: 'eHp ' + HB + '×eScale(s) · eDmg ' + DB + '×eScale(s)^' + A
           + ' · eSmooth = (1+' + K + '(a-1))×' + M1 + '^min(a,' + KNEE + ')-1×' + M2 + '^max(0,a-' + KNEE + ')'
           + (BAND ? ' · a = eBand(s) = max(1,' + BAND + '×floor(s/' + BAND + ')) [249 구간 계단]'
+                  + (RAMP ? ' · 밴드 내 상승면 ^(RAMP ' + RAMP + '·(s−a)/' + BAND + ') [199 4회차]' : '')
                   + ' · 관문 보스 ×' + GATE_HP + ' (s%' + gateN + '===0)'
                   : ' · a = s [177 매끈]')
           + ' · eGold ' + EG_B + '×' + EG_R + '^(s-1)'
