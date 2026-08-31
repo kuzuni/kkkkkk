@@ -80,10 +80,20 @@ const SCOPE = [
   { k: 'div#blsC_hp>div.b>s.ic', why: '34 축복 카드2 ❤️ (scaleX .858 + fs 153 — 둘이 한 벌이었다)' },
   { k: 'div#blsC_rate>div.b>s.ic', why: '34 축복 카드3 🌀 (scaleX .875)' },
   /* ⚠ 세 카드를 **각각** 적는다 — 스캐너 경로가 `div#blsC_<k>` 로 id 를 물고 시작하므로
-     `s.tm.alert>b.ck` 한 키로는 세 자리 중 아무것도 부분 일치가 안 된다(5회차 `div.pill.p2` 선례). */
-  { k: 'div#blsC_atk>div.b>s.tm.alert>b.ck', why: '34 축복 카드1 ⏱ 시계 (scaleX .97)' },
-  { k: 'div#blsC_hp>div.b>s.tm.alert>b.ck', why: '34 축복 카드2 ⏱ 시계 (같은 규칙 `.bls-c .tm>b.ck`)' },
-  { k: 'div#blsC_rate>div.b>s.tm.alert>b.ck', why: '34 축복 카드3 ⏱ 시계 (같은 규칙)' },
+     `s.tm>b.ck` 한 키로는 세 자리 중 아무것도 부분 일치가 안 된다(5회차 `div.pill.p2` 선례).
+     ⚑ 602(2026-08-31) — 이 세 키는 6회차에 `s.tm.**alert**>b.ck` 로 적혀 있었고 581 이 «받기»
+     국면에 부품 클래스를 하나 더 얹자(`classList.toggle('ifbtn', !on)`) 실제 경로가
+     `s.tm.alert.**ifbtn**>b.ck` 가 되어 **세 키가 한꺼번에 회색**이 됐다(«노드를 한 개도 못 봤다»).
+     제품은 멀쩡했다 — 시계는 부팅 상태에서도 3개 다 그려져 있다(`probe602` ①②).
+     ⇒ 바로 아래 7회차 주석의 «키에 **상태 클래스를 넣지 않는다**» 를 6회차 키에도 적용한다:
+     `s.tm` 까지만 물면 두 국면(«받기» = `.tm.alert.ifbtn` · «시간이 남았다» = `.tm`) 다 잡힌다.
+     ⚠ 느슨해진 것이 아니다 — `.tm` 아래에서 수집기가 아이콘으로 세는 노드는 시계(`b.ck`) 하나뿐이고
+     (`>i` 는 «받기»·«00:09:59» 라 라벨, `s.updot` 은 빈 상자), 시계가 사라지면 여전히 «노드 0개» 로
+     빨개진다(334 가 같은 화면에서 잡은 «시계가 통째로 사라져도 초록» 을 되살리지 않는다).
+     국면이 갈려도 안 놓치는지는 [R5] 의 «국면 무관» 항이 매 실행 다시 묻는다. */
+  { k: 'div#blsC_atk>div.b>s.tm', why: '34 축복 카드1 ⏱ 시계 (scaleX .97)' },
+  { k: 'div#blsC_hp>div.b>s.tm', why: '34 축복 카드2 ⏱ 시계 (같은 규칙 `.bls-c .tm>b.ck`)' },
+  { k: 'div#blsC_rate>div.b>s.tm', why: '34 축복 카드3 ⏱ 시계 (같은 규칙)' },
   { k: 'div#blsBonus>s.ic', why: '34 보너스 바 💰 (그룹 scale(.706,.748) — 형제 .ch 와 한 그림)' },
   /* ── 7회차 — **남은 전부**(23 훈련 3 · 33 재화 정보 2 · 50 코스튬 1). 이 회차로 REMAIN 이 0 이 된다.
      ⚠ 키에 **상태 클래스를 넣지 않는다** — 스캐너 경로는 `div.tr-card.no` · `div.sk-btn.sk-b2.no`
@@ -519,6 +529,28 @@ async function sweep(browser, inject) {
       .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && RE.test(r.sel));
     if (hit.length >= 7) ok(`[R5] 34 축복 — 옛 값을 심으면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
     else bad(`[R5] 34 축복 — 심어도 ${hit.length}건뿐(≥7 이어야 한다): 이 자리는 감시 밖이다`);
+    /* ⚑ 602 — 합계만 세면 **시계 3자리가 통째로 빠져도 ≥7 이 찬다**(카드 아이콘 3 + 보너스 2 + … ).
+       실제로 581 이후 이 절은 «5건뿐» 으로 빨갰지만, 그 숫자만 보면 «어느 자리가 빠졌는지» 를 말하지
+       못한다. 그래서 심은 갈래별로 나눠 묻는다 — 시계(`b.ck`)가 빨간 목록 안에 셋 다 있는가. */
+    const hitCk = hit.filter((r) => /b\.ck$/.test(r.sel));
+    if (hitCk.length >= 3) ok(`[R5] 34 축복 — 그 중 ⏱ 시계가 ${hitCk.length}노드 (581 이 얹은 부품 클래스에 키가 안 물린다)`);
+    else bad(`[R5] 34 축복 — 심은 ⏱ scaleX(.97) 이 ${hitCk.length}노드뿐(3 이어야 한다): 시계 3자리가 감시 밖이다`);
+
+    /* ⚑ 602 — «국면 무관» 항. `.tm` 은 국면이 둘이고(581) 클래스가 그때그때 갈린다:
+       «받기» = `.tm.alert.ifbtn` · «시간이 남았다» = `.tm`. 키가 한쪽 국면의 클래스에 물리면
+       다른 국면에서 조용히 0개가 된다 — 그것이 602 가 고친 결함 자체다.
+       325·117 이 쓰던 상태 주입 그대로 축복 3개를 켜고(새 경로 안 만든다) 같은 스코프를 다시 센다. */
+    await page.evaluate(() => {
+      S.bless.exp = { atk: Date.now() + 6e5, hp: Date.now() + 6e5, rate: Date.now() + 6e5 };
+      markDirty(); renderBless();
+    });
+    await page.waitForTimeout(250);
+    const phase = await page.evaluate(() => [...document.querySelectorAll('.bls-c .tm')].map((t) => [...t.classList].join('.')));
+    const onCk = (await page.evaluate(COLLECT, { all: false }))
+      .filter((r) => inScope(r.sel) && /b\.ck$/.test(r.sel));
+    if (phase.every((p) => !/alert/.test(p)) && onCk.length === 3)
+      ok(`[R5] 34 축복 — 국면을 갈아도(«${phase[0]}») 스코프가 ⏱ 3노드를 그대로 본다 (키가 상태 클래스에 안 물린다)`);
+    else bad(`[R5] 34 축복 — 국면을 갈면 스코프가 ⏱ ${onCk.length}노드만 본다(3 이어야 한다 · .tm=«${phase.join(' | ')}»)`);
     await ctx.close();
   }
 
