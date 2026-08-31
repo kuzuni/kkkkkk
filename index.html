@@ -34528,8 +34528,20 @@ const hhmm = sec => Math.floor(sec/3600) + '시간 ' + Math.floor(sec%3600/60) +
 
 /* 보상을 계산해 팝업을 띄운다. mul 배를 곱해 지급한다. */
 function showOfflineReward(sec, gold, dia){
-  offPend = { sec: sec, gold: gold, dia: dia };
-  $('ofrMax').textContent = '최대 ' + offMaxH() + '시간 0분';   /* 151 — 이용권 보유 시 +4시간 */
+  offPend = { sec: sec, gold: gold, dia: dia, date: today() };
+  /* 199 4회차 결손A — 예산 소진일에 ×1.5 광고 버튼의 실효 이득이 정확히 0 이 된다
+     (지급식 k = min(1, room/eq) 라 room ≤ sec/60 이면 1.5×k = 1.000 — 표시와 지급이 갈린다).
+     실효 배수(= min(1.5, room/분))를 여기서 계산해 offPend 에 싣고, 버튼 라벨·투명도로 눈에도
+     보이게 한다(CSS 는 안 만진다 — 199 는 계수·JS 만. 인라인 투명도라 되돌림도 한 줄이다).
+     남은 예산은 상한 줄(ofrMax)에 같이 적는다 — 결손A 처방 «버튼 비활성 + 잔여 예산 표기». */
+  const room = Math.max(0, OFF_DAY_CAP_MIN - (S.daily.offMin || 0));
+  const gain = sec >= 60 ? Math.min(1.5, room / (sec / 60)) : 1.5;
+  offPend.gain = gain;
+  const b15 = $('ofrGet15'), noGain = gain <= 1.0005;
+  b15.querySelector('i').textContent = noGain ? '내일 다시' : gain < 1.4995 ? '×' + gain.toFixed(2) + ' 받기' : '1.5배 받기';
+  b15.style.opacity = noGain ? .45 : '';
+  $('ofrMax').textContent = '최대 ' + offMaxH() + '시간 0분'   /* 151 — 이용권 보유 시 +4시간 */
+    + (room < OFF_DAY_CAP_MIN ? ' · 오늘 남은 ' + Math.floor(room / 60) + '시간 ' + Math.floor(room % 60) + '분' : '');
   $('ofrTime').textContent = hhmm(sec);
   $('ofrAmt').textContent = fmtG(gold);
   autoBlessLine();                            /* 124 — 자동 축복 정산 한 줄(없으면 숨김) */
@@ -34538,6 +34550,17 @@ function showOfflineReward(sec, gold, dia){
 function closeOfflineReward(){ $('offw').classList.remove('on'); offPend = null; }
 function claimOffline(mul){
   if(!offPend) return;
+  /* 199 4회차 결손B — 자정을 넘겨 열어 둔 팝업은 «어제 예산» 으로 계산된 표다. 받지 않고
+     오늘 표로 다시 계산해 다시 보여 준다(23:59↔00:01 수령 차 최대 17,280 다이아가 여기서 닫힌다).
+     offPend.at 은 offlineReward 가 박아 둔 원본 lastTime — 직접 showOfflineReward 를 부른
+     자리(검증 도구 등)에는 없으므로 그때는 이 분기를 안 탄다. */
+  if(offPend.date !== today() && offPend.at){
+    const lt = offPend.at; closeOfflineReward(); dailyCheck(); offlineReward(lt); return;
+  }
+  /* 199 4회차 결손A — 실효 이득 0 인 ×1.5 는 받지 않는다(광고만 보고 지급은 ×1 과 같아지는 상태) */
+  if(mul > 1 && offPend.gain !== undefined && offPend.gain <= 1.0005){
+    fxToast('오늘 오프라인 보상 한도를 모두 받았어요'); return;
+  }
   /* 199 3회차 — 하루 발행 예산(OFF_DAY_CAP_MIN)에서 이번 수령의 분 환산(배수 포함)을 꺼내 쓴다.
      표시(offPend)는 이미 남은 예산 안으로 잘려 있으므로 ×1 수령은 항상 그대로이고,
      ×1.5(광고)가 예산을 넘길 때만 넘치는 몫이 깎인다. */
@@ -34561,6 +34584,7 @@ function offlineReward(lastTime){
   const gold = eGold(S.stage) * stat.goldMul * 1.2 * sec * 0.5;
   const dia = Math.floor(sec * OFF_DIA_PM / 60);
   showOfflineReward(sec, gold, dia);
+  offPend.at = lastTime;                      /* 199 4회차 결손B — 자정 재계산용 원본 시각 */
 }
 
 /* ==========================================================================
