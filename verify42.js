@@ -198,7 +198,22 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
     t.dashT = 0; t.dashD = DASH.mob.dur; t.dvx = -1; t.dvy = 0;    /* 예고가 막 끝난 순간 */
     return Math.hypot(t.x - player.x, t.y - player.y);
   });
-  await page.waitForTimeout(500);
+  /* ⚑ 580 이관(2026-08-31) — 이 절은 **끝 거리 한 장**으로 쟀는데, 580 이 플레이어 이속을 ×2 로
+     올리자 500ms 창 안에서 돌진(dur 0.26초)이 끝나고 **그 뒤 플레이어가 계속 달아나는 구간**까지
+     한 장에 섞였다(실측 60.0 → 134.1). 즉 «주차가 풀렸다» 는 상태는 그대로인데 재는 자리가
+     창 밖으로 밀린 것이라, 표본을 «구간 최소 거리» 로 바꾼다 — 돌진이 카이팅을 뚫고 실제로
+     닿았는지가 이 절이 묻는 것이고, 그건 속도가 몇 배가 되든 같은 질문이다(368 처방 —
+     상수·타이밍을 게이트에 박아 두지 말고 제품에게 묻는다). 허용 오차는 한 칸도 안 넓혔다. */
+  const minD = await page.evaluate(() => new Promise(res => {
+    let m = Infinity;
+    const t0 = performance.now();
+    const tick = () => {
+      const e = enemies[0];
+      if (e) m = Math.min(m, Math.hypot(e.x - player.x, e.y - player.y));
+      if (performance.now() - t0 < 500) requestAnimationFrame(tick); else res(m);
+    };
+    tick();
+  }));
   const awayR = await page.evaluate(() => ({
     d: Math.hypot(enemies[0].x - player.x, enemies[0].y - player.y),
     moved: Math.abs(enemies[0].x - (WORLD.w / 2 + 60))
@@ -206,7 +221,7 @@ const near = (n, got, want, tol) => ok(n + ' = ' + want + ' ±' + tol, Math.abs(
   ok('§R 되돌림 — 구 주차 주문(sp=0)만으로는 돌진이 안 멈춘다 (표적이 70px 넘게 온다)',
     awayR.moved > 70, 'Δ' + awayR.moved.toFixed(1) + 'px');
   ok('§R 되돌림 — 그 상태에서는 카이팅 항이 실제로 빨개진다 (이 절은 헛초록이 아니다)',
-    !(awayR.d > dR + 5), dR.toFixed(1) + ' → ' + awayR.d.toFixed(1));
+    !(minD > dR + 5), dR.toFixed(1) + ' → 구간 최소 ' + minD.toFixed(1) + ' (끝 ' + awayR.d.toFixed(1) + ')');
   await setup7();
   await page.mouse.move(cx, cy); await page.mouse.down();
   await page.mouse.move(cx + 300, cy); await page.waitForTimeout(400);
