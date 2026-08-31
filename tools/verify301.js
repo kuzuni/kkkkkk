@@ -89,16 +89,35 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
       return { alert: el ? el.classList.contains('alert') : null,
                shown: b ? getComputedStyle(b).display : 'no-node' };
     };
-    const cells = [...document.querySelectorAll('#psTk .ps-bx')];
+    /* 526 이관 — 창 가상화 뒤로 «한 번 열고 `#psTk .ps-bx` 를 전부 센다» 는 **창 안 24행만** 센다.
+       ④ 의 뜻(«받을 수 있는 칸만 점등 · 그 외에는 노드조차 없다»)은 전수여야 살아 있으므로
+       **리스트를 끝까지 훑어서** 모은다. 훑은 단계 수(`seen`)를 같이 돌려받아 표본이 전 단계임을 못박는다. */
     const dot = c => { const d = c.querySelector('s.updot'); return d ? getComputedStyle(d).display : null; };
-    const lit = cells.filter(c => c.classList.contains('alert'));
+    /* ⚠ 노드를 모아 뒀다 나중에 `getComputedStyle` 로 물으면 안 된다 — 창을 갈아 끼우는 순간
+       그 노드는 **문서에서 떨어져** 계산 스타일이 빈 문자열이 된다(1회차에 여기서 한 번 빨개졌다).
+       그래서 «보이는가» 도 훑는 그 자리에서 바로 읽어 **숫자로** 모은다. */
+    const L = document.getElementById('psList'), seen = new Set();
+    let othersNoDot = true, litN = 0, litFree = 0, litDots = 0;
+    const scan = () => document.querySelectorAll('#psTk .ps-r:not(.ps-hr)').forEach(row => {
+      if (seen.has(+row.dataset.pr)) return;
+      seen.add(+row.dataset.pr);
+      row.querySelectorAll('.ps-bx').forEach(c => {
+        if (c.classList.contains('alert')) {
+          litN++;
+          if (c.classList.contains('c0')) litFree++;
+          if (dot(c) === 'block') litDots++;
+        } else if (c.querySelector('s.updot')) othersNoDot = false;
+      });
+    });
+    const maxSc = L.scrollHeight - L.clientHeight;
+    for (let s = 0; s <= maxSc + 1; s += PASS_RH * 4) { L.scrollTop = Math.min(s, maxSc); passFillRows(); scan(); }
+    L.scrollTop = 0; passFillRows();
     return {
+      seen: seen.size, nSteps: passT().n, readyCnt: passReadyCnt(),
       stage: tab('stage'), att: tab('att'), box: tab('box'), tower: tab('tower'), tower2: tab('tower2'),
-      litN: lit.length,
-      litAllFree: lit.every(c => c.classList.contains('c0')),
-      litDotsShown: lit.every(c => dot(c) === 'block'),
+      litN, litAllFree: litN === litFree, litDotsShown: litN === litDots,
       /* 프리미엄(잠긴) 칸·미해금 행 칸에는 updot 노드 자체가 없다 */
-      othersNoDot: cells.filter(c => !c.classList.contains('alert')).every(c => !c.querySelector('s.updot')),
+      othersNoDot,
       upall: document.getElementById('psw').classList.contains('upall'),
       btnShown: getComputedStyle(document.getElementById('psAll')).display !== 'none',
       btnLabel: document.querySelector('#psAll>b').textContent,
@@ -118,7 +137,12 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
   ok(inpass.tower.alert === false && inpass.tower2.alert === false,
      '[3] ③ 두 탑 패스는 꺼짐 — 이 세이브는 한 레벨도 안 깼다',
      inpass.tower.alert + '/' + inpass.tower2.alert);
-  ok(inpass.litN === 3, '[3] ④ 받을 수 있는 보상 칸 = 3(단계 3 × 무료)', String(inpass.litN));
+  /* 526 이관 — 훑기가 전 단계를 봤는지부터 잰다(안 그러면 아래 셋이 «창 안에서만» 참일 수 있다) */
+  ok(inpass.seen === inpass.nSteps, '[3] ④ 전제 — 훑기가 전 단계를 봤다(창 가상화)',
+     inpass.seen + '/' + inpass.nSteps + '단계');
+  ok(inpass.litN === 3 && inpass.litN === inpass.readyCnt,
+     '[3] ④ 받을 수 있는 보상 칸 = 3(단계 3 × 무료) — 모델(passReadyCnt)과 같은 수',
+     inpass.litN + ' / 모델 ' + inpass.readyCnt);
   ok(inpass.litAllFree === true, '[3] ④ 점등 칸은 전부 무료 컬럼(166 — 프리미엄 미보유 칸 제외)');
   ok(inpass.litDotsShown === true, '[3] ④ 점등 칸 레드닷이 실제로 보인다(우상단 — 299 규약)');
   ok(inpass.othersNoDot === true, '[3] ④ 그 외 칸에는 updot 노드 자체가 없다');
@@ -189,7 +213,8 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
   ok(after.ready === false && after.any === false, '[6] passReady 전부 false');
   ok(after.upall === false, '[6] [일괄 받기] 가 사라진다');
   ok(after.tabAlert === false, '[6] «스테이지» 탭 레드닷 꺼짐');
-  ok(after.litN === 0, '[6] 보상 칸 레드닷 0');
+  /* 526 — `litN` 은 창 안 값이다. 전수의 뜻은 바로 위 두 항(`passReadyTab`·`passReadyAny` = 모델)이 진다. */
+  ok(after.litN === 0, '[6] 보상 칸 레드닷 0(창) · 전수는 passReadyAny 가 진다');
   const dbg6 = await page.evaluate(() => ({ keys: JSON.stringify(MENUB_KEYS), ml: mailLeft(), mailx: S.mailx.length }));
   ok(after.mbAlert === false, '[6] ▦ 메뉴 버튼 레드닷 꺼짐(우편 0 이므로)',
      'keys=' + dbg6.keys + ' mailLeft=' + dbg6.ml + ' mailx=' + dbg6.mailx);
@@ -202,8 +227,9 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
                .every(c => !c.classList.contains('c0')),
              litN: document.querySelectorAll('#psTk .ps-bx.alert').length };
   });
+  /* 526 — `litN`·`litPrem` 은 창 안 표본이다(존재 + «점등된 것은 전부 프리미엄»). 전수는 `ready` 가 진다. */
   ok(prem.ready === true && prem.litN > 0 && prem.litPrem === true,
-     '[7] 프리미엄 활성화 → 프리미엄 칸만 새로 점등', 'lit ' + prem.litN);
+     '[7] 프리미엄 활성화 → 프리미엄 칸만 새로 점등(창 표본)', 'lit ' + prem.litN);
 
   /* ── [8] 우편과 ▦ 배지 OR — 패스가 꺼져도 우편이 있으면 켜진 채다 ── */
   const or8 = await page.evaluate(() => {

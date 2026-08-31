@@ -110,14 +110,20 @@ async function boot(browser, save) {
       /* 493 이관 — 이 항이 재는 것은 «탭을 눌렀더니 **리스트가 실제로 선다**» 이지 «탑 패스가 30단이다»
          가 아니다. 길이를 손으로 적어 두면 길이가 바뀌는 지시마다(2026-08-31 30 → 100) 이 자리가 같이
          빨개진다 — 길이 자체는 `verify493` [A] 가 못박는다. 대신 «비어 있지 않다 · 칸이 행×3» 을 남긴다. */
+      /* 526 이관 — 창 가상화 뒤로 **DOM 의 행 수는 «창» 이지 «길이» 가 아니다**(1080×2280 에서 23~24행).
+         «리스트가 실제로 선다» 를 재는 자리는 이제 **트랙 높이**다 — 그것이 n 단계 전부를 실제로 깔았다는
+         선언이고(스크롤바·`passScroll()` 규약이 그 위에 산다), 창은 «비어 있지 않다 · 칸이 행×cols» 로 잰다. */
+      trackH: +parseFloat(document.getElementById('psTk').style.height).toFixed(2),
+      wantH: +((PASS_TABS[passTab].head ? 226.5 : 0) + PASS_TABS[passTab].n * PASS_RH).toFixed(2),
       want: PASS_TABS[passTab].n, cols: PASS_TABS[passTab].cols,
       on: document.querySelector('#psBar .pt.on').dataset.ptab,
       toast: [...document.querySelectorAll('.fx-toast')].map(e => e.textContent).join(' | ')
     }));
     ok(r.tab === k && r.on === k, k + ' — 그 탭으로 갈아탄다 (실측 ' + r.tab + '/' + r.on + ')');
     ok(r.toast === '', k + ' — «준비 중 / 해금되지 않은» 토스트 0건', r.toast || '0건');
-    ok(r.rows > 0 && r.rows === r.want && r.boxes === r.rows * r.cols,
-       k + ' — 리스트가 실제로 선다 (' + r.rows + '행 × ' + r.cols + '칸 = ' + r.boxes + '칸)');
+    ok(r.rows > 0 && r.boxes === r.rows * r.cols && Math.abs(r.trackH - r.wantH) < 0.5,
+       k + ' — 리스트가 실제로 선다 (트랙 ' + r.trackH + 'px = ' + r.want + '단 · 창 '
+       + r.rows + '행 × ' + r.cols + '칸 = ' + r.boxes + '칸)');
     ok(r.stl === '최고 레벨 :', k + ' — 스탯 라벨이 427 낱말 «최고 레벨» (실측 ' + r.stl + ')');
     ok(r.price === '₩9,900', k + ' — 가격 ₩9,900 (실측 ' + r.price + ')');
   }
@@ -252,10 +258,17 @@ async function boot(browser, save) {
              got: Object.keys(S.pass.got).sort().join(','),
              prem: JSON.stringify(S.pass.prem),
              premHere: passPrem(), rows: document.querySelectorAll('#psTk .ps-r').length,
+             /* 526 이관 — 위 [C] 와 같은 이유. 해금 육각 «4개» 는 창 안에서 세도 뜻이 산다:
+                해금은 **앞에서부터 연속**이고(목표가 단조 증가) `openPass` 직후 창이 리스트 머리를 덮는다
+                (S.tower 5 ⇒ passLast 3 ⇒ scrollTop 459.7 ⇒ 창 0..16행). 그 전제를 여기서 같이 잰다. */
+             winTop: (() => { const e = document.querySelector('#psTk .ps-r:not(.ps-hr)'); return e ? +e.dataset.pr : -1; })(),
+             trackH: +parseFloat(document.getElementById('psTk').style.height).toFixed(2),
+             wantH: +(PASS_TOWER_N * PASS_RH).toFixed(2),
              want: PASS_TOWER_N };                       /* 493 이관 — 위와 같은 이유(길이는 verify493) */
   });
-  ok(mig.rows > 0 && mig.rows === mig.want && mig.open === 4,
-     '새 탭 키가 없는 구 세이브에서도 탑 패스가 정상으로 선다 (S.tower ' + mig.tower + ' → ' + mig.open + '단계)');
+  ok(mig.rows > 0 && Math.abs(mig.trackH - mig.wantH) < 0.5 && mig.winTop === 0 && mig.open === 4,
+     '새 탭 키가 없는 구 세이브에서도 탑 패스가 정상으로 선다 (트랙 ' + mig.trackH + 'px = ' + mig.want
+     + '단 · 창 머리 ' + mig.winTop + ' · S.tower ' + mig.tower + ' → ' + mig.open + '단계)');
   ok(mig.tower2 === 1, '없던 S.tower2 는 기본 1 로 정화된다(210 의 자가 이미 지키는 자리)', String(mig.tower2));
   ok(mig.got.includes('stage:0:0') && !mig.got.includes('tower:'),
      '구 세이브의 got 은 그대로 · 새 탭 키는 저절로 안 생긴다 (' + mig.got + ')');

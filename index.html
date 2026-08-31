@@ -33145,6 +33145,82 @@ function passClaimAll(){
 function grantPassPrem(t){ S.pass.prem[t || passTab] = 1; save(); renderPass(); uiDirty = true; }
 window.devPassPrem = grantPassPrem;
 const PASS_RH = 229.85;   /* 행 pitch — 측정표 §5-2 최소제곱 */
+/* 526(2026-08-31) — **창 가상화**. 493 이 단계를 600 으로 늘리자 트랙이 14,044노드·137,910px 가 되어
+   열기가 27 → 303ms(중앙값 · `tools/probe526.js` [1][2])가 됐다. 493 이 «DOM 을 안 줄이는» 후보 셋
+   (`content-visibility:auto` · 껍데기 `.ps-cv` · `loading=lazy`)을 전부 찍힌 픽셀·시간으로 기각해 뒀으므로
+   (`docs/review/493-패스길이확장.md` §3) 남은 정답은 **DOM 을 실제로 줄이는 것** 하나다.
+   ⚑ **트랙 높이·행 top·스파인·가장자리(.ps-eg)는 한 픽셀도 안 건드린다** — 행은 원래 `position:absolute`
+      이고 트랙 높이를 `.ps-tk` 가 직접 들고 있어서, 창 밖 행을 빼도 스크롤바·좌표·`passScroll()` 규약이
+      그대로 산다(그래서 이 화면은 가상화 비용이 «자리 계산» 이 아니라 «게이트 이관» 이다).
+   ⚑ **남아 있는 행은 손대지 않는다** — 창을 갈아 끼울 때 통째로 다시 그리면 `.alert>.updot` 의 등장
+      애니(`jzDotIn`)가 다시 돌아 레드닷이 스크롤 내내 깜빡인다(301·302 규약). 그래서 innerHTML 을
+      다시 쓰지 않고 **나간 행만 지우고 들어온 행만 만든다.**
+   ⚑ DOM 순서는 단계 순으로 유지한다 — `.ps-hex`(z5)가 행 상자를 넘어 이웃 행과 겹치는 자리가 있어
+      같은 z 안에서는 **DOM 순서가 곧 층**이다(493 §3 ⓐ 가 층으로 무너진 바로 그 자리). */
+const PASS_WIN = 8;       /* 창 여유 행 수 — 뷰포트(1389px = 6.04행) 위·아래로 이만큼 더 그린다 */
+let passVirt = true;      /* §R 되돌림 축 — false 면 전 행을 한 번에 그린다(= 수리 전 그림) */
+let psRow = new Map();    /* 지금 DOM 에 있는 행: 단계 i → 노드 */
+let psOff = 0;            /* 선두 라벨 행 높이(36 은 226.5) — 스크롤 ↔ 단계 번호 변환의 원점 */
+/* 한 행의 마크업. 렌더도 창 갈아 끼우기도 이 한 곳만 읽는다(«그린 것 = 선언» — 402 규약) */
+function passRowHtml(i){
+  const T = passT(), prem = passPrem(), op = passOpen(i);
+  let bx = '';
+  for(let c = 0; c < T.cols; c++){
+    const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !prem;
+    const ready = op && !got && !lock;                  /* 301 — 지금 받을 수 있는 칸 */
+    const rim = PASS_GRADE[r.g][0], fill = PASS_GRADE[r.g][1];
+    /* 수령완료도 «등급색 × 0.5» 라 색을 여기서 계속 인라인으로 준다 —
+       .ps-bx.dn 은 색을 안 잡고 아이콘·수량 회색화만 한다(그래서 «인라인 > 클래스» 충돌이 없다) */
+    bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + (ready ? ' alert' : '') + '" data-pt="' + i + ':' + c + '"'
+        + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
+        /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00A» 로 줄여 버린다(3회차 비평 C-10,
+           LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
+        /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
+           398(2026-08-29): 골드 칸(20,000×(i+1)² = 9자)이 사라져 **최장 표기가 6자**다
+           (36 프리미엄 «30,000» — 35 는 새 다이아 곡선의 최대가 «6,150» 5자다).
+           ⇒ 8자·10자 분기(.ln2/.ln3)는 헛도는 분기라 CSS 와 함께 지웠고, **자리를 비우지는 않았다** —
+           `verify398` §1 이 «두 탭 전 칸 표기 ≤ 7자 · 잉크가 칸 안쪽 146 을 안 넘는다» 로 대신 지킨다.
+           (7자를 넘기는 곡선을 199 가 다시 넣으면 그 항이 빨개진다 = 클램프를 다시 만들라는 신호다) */
+        + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 6 ? 'ln1' : '')
+        + '"><em>' + won(r.n) + '</em></b>'
+        + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : ''))
+        + (ready ? '<s class="updot"></s>' : '') + '</div>';        /* 301 — 우상단 레드닷(299 규약) */
+  }
+  return '<div class="ps-r" data-pr="' + i + '" style="top:' + (psOff + i * PASS_RH).toFixed(2) + 'px">'
+       + '<div class="ps-cf"></div><div class="ps-cp"></div>'
+       + '<div class="ps-hex' + (op ? '' : ' lk') + '"><s><s></s></s><i><b>' + passTier(i) + '</b></i></div>'
+       + bx + '</div>';
+}
+/* 지금 스크롤 자리에서 «DOM 에 있어야 하는 단계 구간» [a, b) */
+function passWin(){
+  const T = passT();
+  if(!passVirt) return [0, T.n];
+  const L = $('psList'), vh = L.clientHeight || 1389, st = L.scrollTop;   /* 열기 전(display:none)엔 0 이라 폴백 */
+  return [Math.max(0, Math.floor((st - psOff) / PASS_RH) - PASS_WIN),
+          Math.min(T.n, Math.ceil((st + vh - psOff) / PASS_RH) + PASS_WIN)];
+}
+/* 창을 지금 스크롤 자리에 맞춘다 — 나간 행만 지우고 들어온 행만 만든다(남은 행은 무변경) */
+function passFillRows(){
+  const tk = $('psTk'); if(!tk) return;
+  const [a, b] = passWin();
+  for(const [i, el] of psRow) if(i < a || i >= b){ el.remove(); psRow.delete(i); }
+  for(let i = a; i < b; i++){
+    if(psRow.has(i)) continue;
+    const box = document.createElement('div');
+    box.innerHTML = passRowHtml(i);
+    const node = box.firstChild;
+    let nx = null;                                     /* 단계 순 삽입 자리 = 나보다 큰 첫 행 */
+    for(let j = i + 1; j < b; j++) if(psRow.has(j)){ nx = psRow.get(j); break; }
+    tk.insertBefore(node, nx);
+    psRow.set(i, node);
+  }
+}
+/* 게이트·프로브가 «단계 i 의 행» 을 집는 한 곳. 창이 생긴 뒤로 `querySelectorAll('.ps-r')[i]` 는
+   «i 번째 단계» 가 아니다 — 창 밖 단계는 **창을 그리로 옮겨야** 볼 수 있다(그게 이 화면의 사실이다). */
+function passRowEl(i){
+  if(!psRow.has(i)){ $('psList').scrollTop = Math.max(0, psOff + (i - 2) * PASS_RH); passFillRows(); }
+  return psRow.get(i) || null;
+}
 function renderPass(){
   const T = passT(), prem = passPrem();
   $('psTtl').textContent  = T.ttl;
@@ -33182,38 +33258,15 @@ function renderPass(){
         + (T.head ? '<div class="ps-r ps-hr" style="top:0;height:' + off + 'px">'
                   + '<div class="ps-cf"></div><div class="ps-cp"></div>'
                   + '<div class="ps-lb"><i>' + T.head + '</i></div></div>' : '');
-  for(let i = 0; i < T.n; i++){
-    const op = passOpen(i);
-    let bx = '';
-    for(let c = 0; c < T.cols; c++){
-      const r = passRw(i, c), got = passGot(i, c), lock = c > 0 && !prem;
-      const ready = op && !got && !lock;                  /* 301 — 지금 받을 수 있는 칸 */
-      const rim = PASS_GRADE[r.g][0], fill = PASS_GRADE[r.g][1];
-      /* 수령완료도 «등급색 × 0.5» 라 색을 여기서 계속 인라인으로 준다 —
-         .ps-bx.dn 은 색을 안 잡고 아이콘·수량 회색화만 한다(그래서 «인라인 > 클래스» 충돌이 없다) */
-      bx += '<div class="ps-bx c' + c + (got ? ' dn' : '') + (ready ? ' alert' : '') + '" data-pt="' + i + ':' + c + '"'
-          + ' style="--rim:' + (got ? passDim(rim) : rim) + ';--fill:' + (got ? passDim(fill) : fill) + '">'
-          /* ⚠ 레퍼런스 실측은 «1,000 / 30,000» 쉼표다 — fmt() 는 «1.00A» 로 줄여 버린다(3회차 비평 C-10,
-             LESSONS «표시처가 같은 함수를 쓴다고 믿지 말고 표기 포맷까지 확인하라» 의 재발) */
-          /* 자릿수가 길면 칸(안쪽 146px)을 넘어간다 — 6회차 비평 J 가 «3,380,000 잉크 216px, 칸 158 을 이탈» 로 잡았다.
-             398(2026-08-29): 골드 칸(20,000×(i+1)² = 9자)이 사라져 **최장 표기가 6자**다
-             (36 프리미엄 «30,000» — 35 는 새 다이아 곡선의 최대가 «6,150» 5자다).
-             ⇒ 8자·10자 분기(.ln2/.ln3)는 헛도는 분기라 CSS 와 함께 지웠고, **자리를 비우지는 않았다** —
-             `verify398` §1 이 «두 탭 전 칸 표기 ≤ 7자 · 잉크가 칸 안쪽 146 을 안 넘는다» 로 대신 지킨다.
-             (7자를 넘기는 곡선을 199 가 다시 넣으면 그 항이 빨개진다 = 클램프를 다시 만들라는 신호다) */
-          + '<i>' + r.ic + '</i><b class="' + (won(r.n).length >= 6 ? 'ln1' : '')
-          + '"><em>' + won(r.n) + '</em></b>'
-          + (got ? '<s class="ck">✔</s>' : (lock ? '<s class="lk"><em>🔒</em></s>' : ''))
-          + (ready ? '<s class="updot"></s>' : '') + '</div>';        /* 301 — 우상단 레드닷(299 규약) */
-    }
-    h += '<div class="ps-r" style="top:' + (off + i * PASS_RH).toFixed(2) + 'px">'
-       + '<div class="ps-cf"></div><div class="ps-cp"></div>'
-       + '<div class="ps-hex' + (op ? '' : ' lk') + '"><s><s></s></s><i><b>' + passTier(i) + '</b></i></div>'
-       + bx + '</div>';
-  }
+  /* 526 — 행은 여기서 안 그린다. 트랙(높이·스파인·가장자리·라벨 행)만 세우고 **창이 행을 채운다.**
+     높이를 innerHTML 보다 **먼저** 준다 — 순서가 바뀌면 그 한 프레임 동안 scrollHeight 가 0 이라
+     브라우저가 scrollTop 을 0 으로 눌러 `passScroll()` 규약이 깨진다. */
   const tk = $('psTk');
+  psOff = off;
   tk.style.height = (off + T.n * PASS_RH).toFixed(2) + 'px';
   tk.innerHTML = h;
+  psRow.clear();
+  passFillRows();
 }
 /* 하단 탭바 — 비활성 190 · 활성 289(+99) · 구분선 5~6 · 뒤로가기 195 고정(측정표 §3-1).
    활성 칸이 바뀌면 폭이 재분배되므로 좌표를 매번 다시 깐다. */
@@ -33228,7 +33281,10 @@ function passBarLayout(){
 }
 /* 레퍼런스는 «현재 단계» 근처가 보이는 상태다 — 마지막 해금 단계를 두 번째 행에 맞춘다.
    선두 라벨 행(36)이 있는 탭은 초반 단계에서 0 으로 떨어져 라벨이 그대로 보인다(측정표 36 §11). */
-function passScroll(){ $('psList').scrollTop = Math.max(0, (passLast() - 1) * PASS_RH); }
+function passScroll(){ $('psList').scrollTop = Math.max(0, (passLast() - 1) * PASS_RH); passFillRows(); }
+/* 526 — 손으로 스크롤할 때도 창이 따라온다. scroll 이벤트는 «다음 그림 전» 에 오고 여유가 8행
+   (1,838px = 뷰포트 1.3화면)이라 빈 행이 그려질 틈이 없다(`probe526` [5] 가 전 구간을 훑어 0 을 못박는다). */
+$('psList').addEventListener('scroll', () => { if(passVirt) passFillRows(); });
 function openPass(t){
   if(t && PASS_TABS[t]) passTab = t;
   renderPass();

@@ -286,10 +286,14 @@ const openAttTab = async (page) => {
                  /* 493 이관 — 이 항이 재는 것은 «망가진 세이브를 흡수하고 **리스트가 선다**» 이지
                     «출석 패스가 30일이다» 가 아니다. 길이를 여기 손으로 적어 두면 길이가 바뀔 때마다
                     이 자리가 빨개진다(2026-08-31, 30 → 100). 길이 자체는 `verify493` [A] 가 못박는다. */
+                 /* 526 이관 — 창 가상화 뒤로 DOM 의 행 수는 «창»(23행)이지 «길이» 가 아니다.
+                    «리스트가 선다» 는 이제 **트랙 높이**가 말한다(선두 라벨 행 226.5 + n × pitch). */
+                 trackH: +parseFloat(document.getElementById('psTk').style.height).toFixed(2),
+                 wantH: +(226.5 + PASS_TABS.att.n * PASS_RH).toFixed(2),
                  want: PASS_TABS.att.n };
       }, v === undefined ? undefined : v);
       if (!res.err && res.t === 'object' && res.prem === 'object' && res.got === 'object'
-          && res.rows === res.want && res.rows > 0)
+          && Math.abs(res.trackH - res.wantH) < 0.5 && res.rows > 0)
         ok('마이그레이션 — pass=' + JSON.stringify(v) + ' → 기본값 흡수');
       else no('마이그레이션 실패 pass=' + JSON.stringify(v) + ': ' + JSON.stringify(res));
     }

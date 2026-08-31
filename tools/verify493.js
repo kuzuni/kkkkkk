@@ -105,18 +105,31 @@ async function boot(browser, save) {
        '«' + cur[k].longest + '» ' + cur[k].longest.length + '자 · 최대 ' + cur[k].max);
   });
   /* 표기가 칸 안쪽(146px)을 안 넘는가 — 실제로 그려서 잰다(자릿수만으로는 못 잰다) */
+  /* 526 이관 — 창 가상화 뒤로 «한 번 열고 전부 센다» 는 **창 안 24행만** 센다(600행 중 4%).
+     자를 무르게 풀지 않고 **리스트를 끝까지 훑는다** — 창 반 칸(pitch/2)씩 스크롤하며 그 자리에
+     그려진 칸을 재고, 마지막에 «몇 단계를 실제로 봤나» 를 같이 돌려받아 **전 단계 표본**임을 못박는다.
+     (그냥 창만 재고 초록이면 «601번째 단계의 잉크가 칸을 넘어도 초록» 인 자가 된다.) */
   const ink = await p.evaluate(() => {
     S.best = 3000; S.pass.prem = { stage: 1 }; openPass('stage');
+    const L = document.getElementById('psList'), seen = new Set();
     let w = 0, over = 0, worst = '';
-    document.querySelectorAll('#psTk .ps-bx>b>em').forEach(e => {
-      const r = e.getBoundingClientRect();
-      if (r.width > 146) over++;
-      if (r.width > w) { w = r.width; worst = e.textContent; }
+    const scan = () => document.querySelectorAll('#psTk .ps-r:not(.ps-hr)').forEach(row => {
+      seen.add(+row.dataset.pr);
+      row.querySelectorAll('.ps-bx>b>em').forEach(e => {
+        const r = e.getBoundingClientRect();
+        if (r.width > 146) over++;
+        if (r.width > w) { w = r.width; worst = e.textContent; }
+      });
     });
-    return { w: +w.toFixed(1), over, worst };
+    const max = L.scrollHeight - L.clientHeight;
+    for (let s = 0; s <= max + 1; s += PASS_RH * 4) {
+      L.scrollTop = Math.min(s, max); passFillRows(); scan();
+    }
+    L.scrollTop = 0; passFillRows();
+    return { w: +w.toFixed(1), over, worst, seen: seen.size, n: PASS_TABS.stage.n };
   });
-  ok(ink.over === 0, '[B] 그려진 수량 잉크가 칸 안쪽 146px 을 안 넘는다',
-     '최대 ' + ink.w + 'px («' + ink.worst + '») · 초과 ' + ink.over + '칸');
+  ok(ink.over === 0 && ink.seen === ink.n, '[B] 그려진 수량 잉크가 칸 안쪽 146px 을 안 넘는다 (전 단계 훑음)',
+     '최대 ' + ink.w + 'px («' + ink.worst + '») · 초과 ' + ink.over + '칸 · 표본 ' + ink.seen + '/' + ink.n + '단계');
 
   /* ══ [C] 실동작 — 마지막 단계 ═════════════════════════════════════ */
   console.log('\n[C] 실동작 — 세 탭의 마지막 단계가 열리고 받으면 남는다');
@@ -134,7 +147,9 @@ async function boot(browser, save) {
       try { saved = JSON.parse(localStorage.getItem('idle_hunter_save_v4') || 'null'); } catch (e) {}
       return { openLast, tier, got: S.dia - before, want,
                savedKey: saved && saved.pass && !!saved.pass.got[t + ':' + i + ':0'],
-               hexOpen: !document.querySelectorAll('#psTk .ps-hex')[i].classList.contains('lk') };
+               /* 526 이관 — `querySelectorAll('.ps-hex')[i]` 는 창이 생긴 뒤로 «i 단계» 가 아니다.
+                  마지막 단계(599)는 창 밖이므로 **창을 그리로 옮겨서** 집는다(`passRowEl`). */
+               hexOpen: !passRowEl(i).querySelector('.ps-hex').classList.contains('lk') };
     }, [tab, setup]);
     ok(r.openLast === true && r.hexOpen === true,
        '[C] ' + tab + ' — 마지막 단계(목표 ' + r.tier + ')가 실제로 해금된다', 'hex ' + (r.hexOpen ? '열림' : '잠김'));
@@ -153,16 +168,20 @@ async function boot(browser, save) {
   const b2 = await boot(browser, oldSave);
   const mig = await b2.p.evaluate(() => {
     openPass('stage');
-    const cell = i => document.querySelectorAll('#psTk .ps-r')[i].querySelector('.ps-bx.c0');
+    /* 526 이관 — 창 가상화 뒤로 «DOM 의 i 번째 행» ≠ «i 단계» 다. 단계를 이름으로 집는다(`passRowEl`).
+       행 수를 세던 자리는 **트랙 높이**로 옮겼다(위 [C]·verify428·verify36 과 같은 이관). */
+    const cell = i => passRowEl(i).querySelector('.ps-bx.c0');
     const r = { keys: Object.keys(S.pass.got).sort().join(','),
                 got39: cell(39).classList.contains('dn'), got0: cell(0).classList.contains('dn'),
                 got40: cell(40).classList.contains('dn'),
+                trackH: +parseFloat(document.getElementById('psTk').style.height).toFixed(2),
+                wantH: +(PASS_TABS.stage.n * PASS_RH).toFixed(2),
                 rows: document.querySelectorAll('#psTk .ps-r').length,
                 readyStage: passReadyTab('stage') };
     openPass('att');
-    r.att29 = document.querySelectorAll('#psTk .ps-r:not(.ps-hr)')[29].querySelector('.ps-bx.c0').classList.contains('dn');
+    r.att29 = passRowEl(29).querySelector('.ps-bx.c0').classList.contains('dn');
     openPass('tower');
-    r.tw29 = document.querySelectorAll('#psTk .ps-r')[29].querySelector('.ps-bx.c0').classList.contains('dn');
+    r.tw29 = passRowEl(29).querySelector('.ps-bx.c0').classList.contains('dn');
     return r;
   });
   ok(mig.keys === 'att:29:0,stage:0:0,stage:39:0,tower:29:0', '[D] 구 키가 한 자도 안 바뀐다', mig.keys);
@@ -170,7 +189,9 @@ async function boot(browser, save) {
      '[D] 구 세이브가 받아 둔 칸이 **같은 칸**으로 그대로 표시된다(수령완료)',
      'stage0 ' + mig.got0 + ' · stage39 ' + mig.got39 + ' · att29 ' + mig.att29 + ' · tower29 ' + mig.tw29);
   ok(mig.got40 === false, '[D] 새로 생긴 단계(40)는 «안 받은» 상태다 — 옛 키가 새 칸으로 새지 않는다');
-  ok(mig.rows === 600, '[D] 구 세이브에서도 리스트는 새 길이로 선다', String(mig.rows));
+  /* 526 이관 — 행 수는 창이다. «새 길이로 선다» 는 트랙 높이가 말한다(600 × 229.85 = 137,910px). */
+  ok(Math.abs(mig.trackH - mig.wantH) < 0.5, '[D] 구 세이브에서도 리스트는 새 길이로 선다',
+     mig.trackH + 'px (기대 ' + mig.wantH + ' = 600 × ' + 229.85 + ') · 창 ' + mig.rows + '행');
   ok(mig.readyStage === true, '[D] 늘어난 구간이 «받을 것 있음»(301)으로 잡힌다 — best 200 이라 40단계까지 열렸다');
 
   /* ══ [E] 스크롤 ═══════════════════════════════════════════════════ */
@@ -198,6 +219,8 @@ async function boot(browser, save) {
   });
   const perRow = perf.nodes / perf.rows;
   ok(perf.med < 1200, '[F] 열기 중앙값 < 1200ms (10배 회귀 감지선 — 실측 ' + perf.med + 'ms)', perf.med + 'ms');
+  /* 526 — `rows` 는 이제 «창» 이다(600행 중 24). 행당 노드는 그래도 같은 뜻이라 그대로 둔다 —
+     열기 시간의 상한은 526 이 `verify526` 에서 150ms 로 다시 좁혀 잡는다(여기 1200 은 10배 회귀선). */
   ok(perRow < 30, '[F] 행당 노드 < 30 (마크업이 더 무거워지면 여기서 잡힌다)',
      perRow.toFixed(1) + ' = ' + perf.nodes + ' / ' + perf.rows);
 
@@ -208,7 +231,8 @@ async function boot(browser, save) {
     PASS_TABS.tower.n = 30; PASS_TABS.tower2.n = 30;
     S.best = 3000; openPass('stage');
     const T = PASS_TABS.stage;
-    const r = { last: T.n * T.step, rows: document.querySelectorAll('#psTk .ps-r').length };
+    const r = { last: T.n * T.step, rows: document.querySelectorAll('#psTk .ps-r').length,
+                trackH: +parseFloat(document.getElementById('psTk').style.height).toFixed(2) };
     /* 되돌린 사본에서 «3000 단계» 는 아예 없다 */
     r.has3000 = [...document.querySelectorAll('#psTk .ps-hex i b')].some(e => e.textContent === '3000');
     PASS_TABS.stage.n = 600; PASS_TABS.att.n = 100;
@@ -217,8 +241,10 @@ async function boot(browser, save) {
     r.has3000after = [...document.querySelectorAll('#psTk .ps-hex i b')].some(e => e.textContent === '3000');
     return r;
   });
-  ok(rev.last === 200 && rev.rows === 40, '[R] 되돌린 사본은 [A] 가 빨개진다 (마지막 목표 200 · 40행)',
-     rev.last + ' / ' + rev.rows + '행');
+  /* 526 이관 — 되돌린 사본의 «40행» 도 트랙 높이로 읽는다(40 × 229.85 = 9,194px · 창은 15행뿐이다) */
+  ok(rev.last === 200 && Math.abs(rev.trackH - 40 * 229.85) < 0.5,
+     '[R] 되돌린 사본은 [A] 가 빨개진다 (마지막 목표 200 · 트랙 ' + rev.trackH + 'px = 40단)',
+     rev.last + ' / ' + rev.trackH + 'px · 창 ' + rev.rows + '행');
   ok(rev.has3000 === false && rev.has3000after === true,
      '[R] «3000» 육각은 되돌리면 사라지고 원복하면 돌아온다 — [A]·[C] 는 공짜가 아니다',
      '되돌림 ' + rev.has3000 + ' → 원복 ' + rev.has3000after);
