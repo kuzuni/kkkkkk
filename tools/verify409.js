@@ -26,6 +26,9 @@
 const fs = require('fs');
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
+/* 605 — 살아 있는 판을 3~4분 돌리는 자라 «죽으면 화면 전체를 덮고 안 걷히는» 껍데기(18 패배 화면)를
+   반드시 걷어야 한다. 손으로 목록을 적지 않는다(작업 540 · `verify540` [A2]). */
+const { install, blockedLabel } = require('./closers540');
 const { chromium } = pw();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -403,6 +406,9 @@ const SETTLE = () => {
        등폭 판정이 무너진다. 이 게이트가 재는 것은 알약 테두리의 기하이지 배지가 아니다. */
     await page.addStyleTag({ content: '.fx-fly,.fx-plus,.fx-spark,.fx-toast,.fx-check,.fx-flash{display:none!important}'
       + '.stab>.bdg,.stabs .sk-lock{display:none!important}' });
+    /* 605 — 껍데기 걷개(540). `arm` 은 `openDefeat` 의 **제품 경로는 그대로 부르고** 껍데기만 걷으며
+       걷은 횟수를 센다 — 이 자는 판을 세우지 않고 3~4분 돌기 때문에 그 사이 사망이 실재한다. */
+    await install(page, { arm: true });
 
     /* ---- 1. 선언 — 손잡이가 넷이다 ---- */
     console.log('\n[1] 선언 — 검정은 밴드가 아니라 `::after` 의 등폭 링이고, 면별 손잡이는 마스크다');
@@ -827,16 +833,56 @@ const SETTLE = () => {
 
     /* ---- 6. 조작 ---- */
     console.log('\n[6] 조작 — 링이 클릭을 안 가로챈다');
-    const hit = await page.evaluate(sel => {
+    /* 605 (2026-08-31) — **재기 전에 치우고 내 화면을 다시 연다.** 이 항이 3회 중 1회 빨개지던 뿌리는
+       링도 알약도 아니라 «게이트가 여기 닿기까지 3~4분 도는 동안 **살아 있는 판이 띄운 껍데기**» 였다:
+       플레이어가 죽으면 18 패배 화면(`#defw` · z39 · `inset:0`)이 화면 전체를 덮고 **스스로 안 걷힌다**
+       ⇒ `elementFromPoint` 가 알약이 아니라 그 껍데기를 돌려준다(`probe605` [B]·[C] — 살아 있는 판
+       60초에서 440 표본 중 110 이 그랬고 첫 어긋남이 t=44.8s 다). 등재문이 인용한 `on jz-o jz-pg` 는
+       **그 껍데기의 className** 이고(막 열려서 붙은 60 쥬시 표시) 애니 자체는 표본을 못 뒤집는다 —
+       `jz-o jz-pg` 를 걸어 놓고(scale .985 가 실제로 도는 프레임에서) 재도 답은 `ol4` 다(`probe605` [D]).
+       ⇒ 껍데기는 540 공용 팔이 부팅에서 `arm` 으로 걷고, 여기서는 «치우고 → 내 화면을 연다» 순서만 지킨다. */
+    await page.evaluate(() => window.__clear540());
+    await page.evaluate(() => { goTab('hero', true); heroSubGo('sk'); });
+    await page.waitForTimeout(500);
+    await page.evaluate(SETTLE);
+    const HIT6 = sel => {
       const bar = document.querySelector(sel);
       const cells = [...bar.querySelectorAll(':scope > .stab')];
       const on = cells.findIndex(c => c.classList.contains('on'));
-      const b = cells[on].getBoundingClientRect();
-      const el = document.elementFromPoint(b.x + 8, b.y + b.height - 8);   /* 링이 덮는 코너 */
+      const c = cells[on];
+      const b = c.getBoundingClientRect();
+      const px = b.x + 8, py = b.y + b.height - 8;                          /* 링이 덮는 코너 */
+      const el = document.elementFromPoint(px, py);
+      const kid = c.querySelector('.ol4');
+      const kb = kid && kid.getBoundingClientRect();
+      const rad = parseFloat(getComputedStyle(c).borderBottomLeftRadius) || 0;
       return { tag: el ? (el.className || el.tagName) : null,
-        inside: !!el && (el === cells[on] || cells[on].contains(el)) };
-    }, '#bSk .stabs');
+        inside: !!el && (el === c || c.contains(el)),
+        /* 전제 — 표본점은 알약의 **둥근 코너 밖**(그래서 «링이 덮는 자리» 다)이고 자식 `ol4` 상자 **안**이다 */
+        outPill: Math.hypot(px - (b.x + rad), py - (b.bottom - rad)) - rad,
+        inKid: kb ? Math.min(px - kb.x, kb.bottom - py) : -1 };
+    };
+    const hit = await page.evaluate(HIT6, '#bSk .stabs');
+    ok('[6-전제] 표본점이 알약의 둥근 코너 **밖** · 자식 `ol4` 상자 **안** 이다 (표본이 뜻을 갖는다)',
+      hit.outPill > 0 && hit.inKid > 2,
+      '윤곽 밖 ' + hit.outPill.toFixed(2) + 'px · `ol4` 안 ' + hit.inKid.toFixed(2) + 'px');
     ok('링이 덮는 코너 자리의 히트 테스트가 활성 칸으로 간다', hit.inside, String(hit.tag));
+    /* [6-R] — 무르게 푼 수리가 아님을 못박는다. 그 자리를 덮는 것은 자식 `ol4` 이므로 그 손잡이를 끄면
+       표본은 알약 밖(이웃 칸)으로 떨어져야 한다 — 안 떨어지면 이 항은 «무엇을 재도 초록» 이다. */
+    await page.evaluate(() => {
+      const s = document.createElement('style'); s.id = 'v409hit';
+      s.textContent = '.stab.on>.ol4{pointer-events:none}';
+      document.head.appendChild(s);
+    });
+    await page.waitForTimeout(150);
+    const hitOff = await page.evaluate(HIT6, '#bSk .stabs');
+    await page.evaluate(() => { const s = document.getElementById('v409hit'); if (s) s.remove(); });
+    await page.waitForTimeout(150);
+    const hitBack = await page.evaluate(HIT6, '#bSk .stabs');
+    ok('[6-R] `ol4` 의 손잡이를 끄면 그 표본이 알약 밖으로 떨어진다 (항이 공허하지 않다)',
+      hitOff.inside === false, String(hitOff.tag));
+    ok('[6-R] 되살리면 다시 활성 칸이다', hitBack.inside === true, String(hitBack.tag));
+    console.log('    (18 패배 껍데기를 걷은 횟수 — ' + (await blockedLabel(page)) + ')');
 
     console.log('\n[7] 콘솔');
     ok('콘솔 에러 0건', errs.length === 0, errs.length + '건' + (errs[0] ? ' — ' + errs[0].slice(0, 80) : ''));
