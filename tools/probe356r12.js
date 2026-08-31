@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-/* 356 12회차 재현기 — 스코프 구멍을 **두 축**으로 다시 판다
+/* 356 12·13회차 재현기 — 스코프 구멍을 **두 축**으로 판다
+ *
+ * ⚠ 12회차는 **두 세션이 동시에 돌았다**(review §20 머리말). 이 파일은 그중 `sess-0958-10124` 판이고,
+ *   [A] 화면 축이 찾은 넷(269·429·478×2)은 다른 판이 `scan356` SCREENS 에 **이미 등재했다**
+ *   (48 → 56화면). 그래서 [A] 는 이제 «닫힌 축의 회귀» 이고, **살아 있는 물음은 [B] 프레임 축**이다.
  *
  *   node tools/probe356r12.js            # [A] 화면 축 + [B] 프레임 축을 둘 다
  *   node tools/probe356r12.js --only A   # 화면 축만 (smoke 오프너 차집합 3화면)
- *   node tools/probe356r12.js --only B   # 프레임 축만 (48화면 × 1080×1600)
+ *   node tools/probe356r12.js --only B   # 프레임 축만 (스캐너 전 화면 × 1080×1600)
  *   node tools/probe356r12.js --json
  *
  * [B] 프레임 축이 왜 필요한가:
@@ -11,7 +15,7 @@
  *   기기는 하나가 더 있다 — **9:13.3(1080×1600)** 이고, 351·403·404 가 그 프레임 전용으로 등재된
  *   작업이다. 세로가 680px 짧아지면 `flex` 아이가 **교차축으로 눌린다**(shrink) — 그것이 바로
  *   이 작업이 잡는 «찌그러짐» 이고, 2280 에서는 한 픽셀도 안 보인다.
- *   ⇒ 같은 48화면을 1600 에서 한 번 더 돌려 **프레임에 따라 달라지는 자리**를 찾는다.
+ *   ⇒ 스캐너의 `SCREENS` 를 **그대로** 1600 에서 한 번 더 돌려 «프레임에 따라 달라지는 자리» 를 찾는다.
  *
  * 왜 또 스코프인가(338 규칙 — 처방 전에 재현):
  *   11회차가 스코프를 42 → 48화면으로 넓힌 근거는 **351 오프너 목록**(`tools/cap351.js`)이었다.
@@ -33,7 +37,12 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { COLLECT, URL, TOL, SCREENS } = require('./scan356.js');
+/* ⚠ `STEP` 도 **반드시 스캐너에서 받아 쓴다.** 12회차가 단계 종류 `js:<식>` 을 새로 만들었는데
+   이 자가 «셀렉터를 누른다» 한 줄을 자기 손으로 다시 적고 있어서, 새 종류를 만나자
+   `querySelector('js:openDunDetail(…)')` 로 **던지고 04 던전 세부를 통째로 놓쳤다**
+   (직전 화면 «03 던전» 을 두 번 세고 초록을 줬다 — 385 «자매 자 드리프트» 가 두 시간 만에 재발).
+   ⇒ 수집기(COLLECT)뿐 아니라 **구동기(STEP)도 한 벌**이어야 한다. */
+const { COLLECT, URL, TOL, SCREENS, STEP } = require('./scan356.js');
 
 const JSON_OUT = process.argv.includes('--json');
 const ONLY = (() => { const i = process.argv.indexOf('--only'); return i > 0 ? process.argv[i + 1] : null; })();
@@ -70,15 +79,15 @@ const SIG = function () {
   const errs = [];
   const sigs = new Map();
 
-  for (const [label, steps, sig] of CAND) {
+  for (const [label, steps, sig] of (RUN_A ? CAND : [])) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     try {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
-        if (!found) errs.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다`);
+        const found = await STEP(page, s);
+        if (!found) errs.push(`${label}: 무음 실패 — 단계 '${s}' 가 안 먹었다`);
         await page.waitForTimeout(450);
       }
       await page.waitForTimeout(300);
@@ -104,7 +113,7 @@ const SIG = function () {
     }
     await ctx.close();
   }
-  /* ── [B] 프레임 축 — 스캐너의 48화면을 그대로, 1080×1600 에서 한 번 더 ── */
+  /* ── [B] 프레임 축 — 스캐너의 `SCREENS` 를 그대로, 1080×1600 에서 한 번 더 ── */
   const rowsB = [];
   const errsB = [];
   if (RUN_B) {
@@ -115,8 +124,8 @@ const SIG = function () {
         await page.goto(URL, { waitUntil: 'load' });
         await page.waitForTimeout(700);
         for (const s of steps) {
-          const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
-          if (!found) errsB.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다`);
+          const found = await STEP(page, s);
+          if (!found) errsB.push(`${label}: 무음 실패 — 단계 '${s}' 가 안 먹었다`);
           await page.waitForTimeout(420);
         }
         await page.waitForTimeout(250);

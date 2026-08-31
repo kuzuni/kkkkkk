@@ -20,6 +20,7 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const fs = require('fs');
+const path = require('path');
 const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan356.js');
 
 const TOL = 0.02;
@@ -1261,6 +1262,43 @@ async function sweep(browser, inject) {
     catch (e) { threw = String(e.message || e); }
     if (threw) ok('[R8] `#psBar` 를 지운 사본에는 **던진다** (무음으로 빈 목록을 내지 않는다)');
     else bad('[R8] `#psBar` 가 없는데도 조용히 목록을 냈다 — 무음 실패를 다른 무음으로 갈아 끼운 것이다');
+  }
+
+  /* [R12] 자매 자 드리프트(385) — **구동기도 한 벌인가.**
+     13회차(2026-08-31) 실측: 12회차가 단계 종류 `js:<식>` 을 새로 만든 지 **두 시간** 만에
+     `probe356r12.js` 가 그것을 놓쳤다. 그 자는 수집기(COLLECT)는 스캐너에서 받아 쓰면서
+     **구동기 한 줄(«셀렉터를 눌러라»)만 자기 손으로 다시 적고 있었고**, 새 종류를 만나자
+     `querySelector('js:openDunDetail(…)')` 로 던져 **04 던전 세부를 통째로 건너뛰었다**
+     — 직전 화면 «03 던전» 을 두 번 세고 초록을 줬다(443 «조용한 초록» 의 다른 얼굴).
+     ⇒ 이 절은 «자를 두 벌로 적지 마라» 를 **말이 아니라 자로** 지킨다. 브라우저를 안 쓴다. */
+  console.log('[R12] 자매 자 드리프트 — 화면 구동기(STEP)가 한 벌인가');
+  {
+    const scanSrc = fs.readFileSync(path.join(__dirname, 'scan356.js'), 'utf8');
+    if (/module\.exports\s*=\s*\{[^}]*\bSTEP\b/.test(scanSrc))
+      ok('[R12-a] `scan356.js` 가 `STEP` 을 내보낸다 (형제 자가 받아 쓸 수 있다)');
+    else bad('[R12-a] `scan356.js` 가 `STEP` 을 안 내보낸다 — 형제 자는 다시 적는 수밖에 없어진다');
+
+    const jsSteps = SCREENS.filter(([, st]) => st.some((s) => String(s).startsWith('js:')));
+    if (jsSteps.length) ok(`[R12-b] SCREENS 에 \`js:\` 단계를 쓰는 화면 ${jsSteps.length}개 — 이 축은 살아 있다 (${jsSteps.map((x) => x[0]).join(' · ')})`);
+    else bad('[R12-b] SCREENS 에 `js:` 단계가 0개다 — 이 절이 지킬 것이 없다면 [R12-c] 도 헛초록이다');
+
+    /* ⓒ 검출기: «스캐너의 SCREENS 를 받아 쓰면서 구동기는 자기 손으로 적은» 파일.
+       손으로 적었다는 표시 = `querySelector(<변수>)` + `.click()` 이 한 줄에 같이 있는 것. */
+    const HAND = /document\.querySelector\(\s*[a-z]\w*\s*\)[^;\n]*\.click\(\)/;
+    const drift = (src) => /require\(['"]\.\/scan356(\.js)?['"]\)/.test(src) && HAND.test(src) && !/\bSTEP\b/.test(src);
+    const sibs = fs.readdirSync(__dirname).filter((f) => f.endsWith('.js') && f !== 'scan356.js' && f !== 'verify356.js')
+      .filter((f) => /require\(['"]\.\/scan356(\.js)?['"]\)/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
+    const drifted = sibs.filter((f) => drift(fs.readFileSync(path.join(__dirname, f), 'utf8')));
+    if (!sibs.length) bad('[R12-c] `scan356` 를 받아 쓰는 형제 자가 0개다 — 검출기가 아무것도 안 보고 있다(헛초록)');
+    else if (!drifted.length) ok(`[R12-c] \`scan356\` 를 받아 쓰는 형제 자 ${sibs.length}개(${sibs.join(' · ')}) 전부 \`STEP\` 을 같이 쓴다 — 구동기를 다시 적은 자 0개`);
+    else bad(`[R12-c] 구동기를 자기 손으로 다시 적은 형제 자 ${drifted.length}개: ${drifted.join(' · ')} — \`js:\` 단계를 조용히 건너뛴다`);
+
+    /* ⓓ 되돌림 — 검출기가 정말 «잡는가». 13회차 수리 **전** 모양을 사본으로 만들어 먹인다.
+       (기대값만 뒤집는 무른 수리를 막는다 — 334 처방) */
+    const sample = `const { COLLECT, URL, TOL, SCREENS } = require('./scan356.js');\n`
+      + `const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);\n`;
+    if (drift(sample)) ok('[R12-d] 되돌림 — 수리 전 모양(자기 손 구동기 + STEP 없음)을 사본으로 먹이면 검출기가 잡는다');
+    else bad('[R12-d] 되돌림 실패 — 검출기가 수리 전 모양조차 못 잡는다 (regex 가 늙었다)');
   }
 
   await browser.close();
