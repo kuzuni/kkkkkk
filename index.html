@@ -2280,6 +2280,16 @@
   .sk-ct b{font-size:28px;-webkit-text-stroke:8px #000;transform:scaleX(.93)}
   .sk-ct .vl b{font-size:28px}
   .sk-ct .nt b{color:#96A4FC}
+  /* 356 12회차 — 위 `.sk-ct b{transform:scaleX(.93)}` 은 **라벨 글자**의 잉크 폭 보정이라
+     지시 대상이 아니다(«라벨의 scaleX 는 제외»). 그런데 08 껍데기의 «다음 레벨» 칸은
+     `mdLive()` 가 `v.cell` 을 **innerHTML** 로 넣는 자리라(27259 `put('.sk-ct .vl .nt b', v.cell, true)`)
+     50 코스튬 세부에서 그 안에 화폐 아이콘(`<img class="cic">`)이 들어오고, 그 img 가 .93 을
+     같이 뒤집어쓴다(A1 `.tab>.ti` · A2 `.ibtn>.si` 와 같은 «감싼 상자가 거는» 구조).
+     라벨을 못 건드리는 자리의 답은 **아이콘만 역보정**이다
+     (3회차 `.cn-cd>.bt.buy>.pr>.cic` · 7회차 `.sk-btn>i>.cic` 선례) —
+     .93 × 1.07527 = 1.00000 으로 누적이 원본 비율로 돌아온다.
+     ⚠ transform 은 레이아웃을 안 건드리므로 라벨 글자 자리·표 상자는 Δ0px 다. */
+  .sk-ct b>.cic{transform:scaleX(1.07527)}
 
   /* «스킬 설명» 알약은 설명 박스 상단을 28px 파고든다 (실측 §2.6) */
   .sk-sl{left:250px;top:367px;width:300px;height:58px;box-sizing:border-box;z-index:2;
@@ -8236,7 +8246,16 @@
   .dgd-ar{width:81px;height:84px;top:450px;padding:0;border:0;background:none;cursor:pointer;
     font-family:inherit;font-size:79px;line-height:84px;font-weight:900;color:#fff;
     -webkit-text-stroke:10px #000;paint-order:stroke fill}
-  .dgd-ar i{display:inline-block;font-style:normal;transform:translateY(-1px) scaleX(1.19)}
+  /* 356 12회차 — 여기 있던 `scaleX(1.19)` 는 356 이 **정책으로 폐기한 관행**이었다:
+     이모지 글리프 `◀`(자연 잉크 70×83 · 종횡 .8434)를 ref 화살표 bbox(81×84 · 종횡 .9643)에
+     맞추려고 **가로만** 1.19배 늘려 83×84 를 만든 것이다(측정표 04 §4). 04 던전 세부는
+     1~11회차 내내 `scan356` SCREENS 밖이라 자에게는 «0건» 이었다(11회차 56 절전과 같은 사고).
+     ⇒ 4·5·6·7·11회차와 같은 contain 으로 등방화한다(`tools/cal356r12.js`):
+        s = min(81/70, 84/83) = 1.01205 · 중심 되돌림 d = (−0.50, −0.45)(좌 −.48 · 우 −.52 의 평균).
+     ⚠ 남는 거리(폭 70.8 vs ref 81 = −10.2px)는 CSS 가 아니라 **아트**다 — `◀` 는 크로뮴에서
+       이모지 글리프로 그려져 `color:#fff` 도 `-webkit-text-stroke` 도 안 먹는다(흰 채움 픽셀 0건).
+       측정표 «아트 필요» 표가 받는다. **다시 scaleX 로 폭을 되돌리지 마라.** */
+  .dgd-ar i{display:inline-block;font-style:normal;transform:translate(-0.5px,-0.45px) scale(1.01205)}
   .dgd-ar.l{left:170px}
   .dgd-ar.r{left:512px}
   .dgd-ar:disabled{opacity:.38;cursor:default}

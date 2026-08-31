@@ -20,7 +20,7 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const fs = require('fs');
-const { SCREENS, COLLECT, URL, derivePassScreens, HTML } = require('./scan356.js');
+const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan356.js');
 
 const TOL = 0.02;
 
@@ -114,7 +114,25 @@ const SCOPE = [
        **글자**라 이 지시의 대상이 아니다(3회차 `u.pr` 선례). 대상은 아이콘 셋뿐이다. */
   { k: 'div.sv-st>s>em', why: '56 절전 STAGE 배지 💀 (수리 전 scaleX 1.19 → contain .82222)' },
   { k: 'div.sv-r>u', why: '56 절전 요약 pill 아이콘 3칸 ⏱️·💀·🪙 (수리 전 scaleX .706/.862 → contain .89744/.93333)' },
+  /* ── 12회차 — **04 던전 세부(`#dgdw`)와 08 세부 껍데기**. 둘 다 1~11회차 내내 SCREENS 밖이었다.
+     04 는 «누를 수 있는 문이 없어서»(카드 [도전] 이 입장권 0이면 disabled) 목록에 적을 방법 자체가
+     없었고 — 그래서 `js:` 단계를 새로 뒀다 —, 08 세부는 «카드를 눌러야 열려서» 세 목록
+     (356·351·smoke) 어디에도 없었다. 재현은 `tools/probe356r12.js`, 배율 역산은 `tools/cal356r12.js`.
+     ⚠ 08 세부의 자리는 **역보정**이다(7회차 `i.ol3>img.cic` 과 같은 꼴) — 호스트 `.sk-ct b` 는
+       쿨타임 표의 **글자**라 scaleX(.93)이 지시 대상이 아니고, 그 칸에 `mdLive()` 가 화폐 아이콘을
+       innerHTML 로 넣는 50 코스튬 세부에서만 img 가 그 .93 을 뒤집어쓴다. 그래서 이 키가 보는 노드의
+       **자기** 배율은 1.07527 로 비등방이고, 스캐너가 세는 «누적» 은 1.0 이라 초록이다. */
+  { k: 'button#dgdPrev>i', why: '04 던전 세부 좌 화살표 ◀ (수리 전 scaleX 1.19 → contain 1.01205)' },
+  { k: 'button#dgdNext>i', why: '04 던전 세부 우 화살표 ▶ (같은 규칙 `.dgd-ar i`)' },
+  { k: 'div.sk-ct>div.vl>div.nt>b>img.cic', why: '08 세부 쿨타임 표 «다음 레벨» 칸 화폐 아이콘 (라벨 scaleX .93 을 뒤집어쓰던 자리 — 역보정)' },
 ];
+
+/* ⚑ 12회차 잠복 자 — **키에 상태 클래스를 박지 마라**(7회차가 주석으로만 적어 둔 규율을 자로 세운다).
+   6회차가 `s.tm.alert>b.ck` 로 적은 세 줄이 581 의 클래스 하나(`.ifbtn`)에 부분 일치가 끊겨
+   [A] 세 항 + [R5] 가 통째로 빨개져 있었다(착수 기준선 106/112 · 제품 0줄). 상태는 세이브·지시로
+   언제든 바뀌므로, 상태를 문 키는 «노드 0개» 라는 **다른 무음**으로 늙는다.
+   ⚠ 이 목록은 «본 적 있는 상태 클래스» 다 — 새 상태 클래스가 생기면 여기 더한다. */
+const STATE_CLS = ['.alert', '.ifbtn', '.on', '.off', '.no', '.ok', '.dim', '.lk', '.sel', '.open'];
 /* [B] 래칫 — 2026-08-29 1회차 실측. 줄이면 같이 내려 적을 것. */
 const REMAIN = 0;    /* ⚑ 7회차(2026-08-29, sess-1005-3302 워커 D) — **0**. 노드 수로도 16 → **0**.
                         닫은 것은 남은 전부다: 23 훈련 3자리(⚔️ · 코인 wrap+img) · 33 재화 정보 2자리
@@ -147,7 +165,11 @@ const oks = [];
 const ok = (m) => { oks.push(m); console.log('  ✓ ' + m); };
 const bad = (m) => { fails.push(m); console.log('  ✗ ' + m); };
 
-const inScope = (sel) => SCOPE.find((s) => sel.includes(s.k));
+/* ⚑ 12회차 — 여기 잠깐 정규식(rx) 키를 뒀다가 **걷어냈다**: 같은 시각 다른 세션이 602 로
+   같은 부패를 «키를 `s.tm` 까지만 문다» 로 고쳐 상류에 먼저 올렸고, 그 판을 받으면 rx 의
+   소비처가 0 이 된다(죽은 코드 금지 — 295-② · 399 · 460). 판정은 부분 일치 하나로 되돌린다. */
+const hitsKey = (s, sel) => sel.includes(s.k);
+const inScope = (sel) => SCOPE.find((s) => hitsKey(s, sel));
 
 /* ⚑ 443 — [A]·[B] 가 **실제로 돈 스윕**에서 무음 실패가 있었는지. [C] 는 스윕이 끝난 뒤 새 페이지에서
    다시 물어보는 자라, 스윕 자신의 숫자(관측 노드 수·래칫)가 어느 화면을 빼먹고 나온 값인지는 못 말한다.
@@ -163,7 +185,8 @@ async function sweep(browser, inject) {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
+        /* 12회차 — 단계 해석은 `scan356.STEP` 한 곳(`js:` 단계 포함 · [C] 와 같은 자를 쓴다) */
+        const found = await STEP(page, s);
         if (!found && !SWEEP_MISS.includes(`«${label}» → '${s}'`)) SWEEP_MISS.push(`«${label}» → '${s}'`);
         await page.waitForTimeout(400);
       }
@@ -181,6 +204,13 @@ async function sweep(browser, inject) {
   const browser = await launch(chromium);
 
   console.log('[A] 스코프 — 전 화면 상시 크롬 아이콘의 비균등 0건');
+  /* [A-s] 12회차 잠복 — 스코프 키가 «상태» 를 물고 있으면 그 항은 언젠가 조용히 늙는다(위 STATE_CLS 주석) */
+  {
+    const keyTxt = (s) => s.k;
+    const rot = SCOPE.filter((s) => STATE_CLS.some((c) => keyTxt(s).includes(c)));
+    if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
+    else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
+  }
   const rows = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
@@ -190,8 +220,8 @@ async function sweep(browser, inject) {
 
   const badRows = rows.filter((r) => Math.abs(r.ratio - 1) > TOL);
   for (const s of SCOPE) {
-    const hit = badRows.filter((r) => r.sel.includes(s.k));
-    const seen = rows.filter((r) => r.sel.includes(s.k));
+    const hit = badRows.filter((r) => hitsKey(s, r.sel));
+    const seen = rows.filter((r) => hitsKey(s, r.sel));
     if (!seen.length) bad(`${s.k} (${s.why}) — 노드를 한 개도 못 봤다: 셀렉터가 바뀌었거나 화면이 안 열렸다`);
     else if (hit.length) {
       const w = hit[0];
@@ -1059,6 +1089,55 @@ async function sweep(browser, inject) {
     else ok('[R10] `--icsx` 를 읽는 scaleX 선언 0건 (손잡이째 사라졌다)');
   }
 
+  /* [R11] 되돌림 시험(12회차 스코프) — 04 던전 세부 화살표 · 08 세부 쿨타임 표 화폐 아이콘.
+     ⚠ 두 자리의 «되돌림» 이 서로 다르다 — 화살표는 옛 `scaleX(1.19)` 를 **도로 심고**(ⓐ 갈래),
+       08 세부는 **역보정을 빼는 것**이 되돌림이다(7회차 `i.ol3>img.cic` 과 같은 꼴 —
+       거기 `transform:none` 을 주면 호스트 라벨의 .93 이 그대로 드러나 누적이 비등방이 된다).
+     ⚠ 진입 확인을 반드시 세운다 — 04 는 `js:` 단계, 08 코스튬 세부는 **카드를 두 번** 눌러야
+       열리므로 한 번이라도 조용히 실패하면 직전 화면을 재고 «0건» 으로 초록을 준다(356-⑬). */
+  console.log('[R11] 되돌림 시험(12회차 스코프) — 04 던전 세부 화살표 · 08 세부 쿨타임 표 아이콘');
+  for (const c of [
+    {
+      lab: '04 던전 세부 화살표', open: ['.tab[data-t="adv"]', 'js:openDunDetail(DUNGEONS[0])'],
+      re: /#dgd(Prev|Next)>i/, want: 2, min: 2,
+      seen: () => document.querySelectorAll('#dgdw.on .dgd-ar>i').length, seenName: '#dgdw.on .dgd-ar>i',
+      css: '.dgd-ar i{transform:translateY(-1px) scaleX(1.19) !important}',
+    },
+    {
+      lab: '08 코스튬 세부 쿨타임 칸', open: ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]', '#bCos [data-cosit]', '#bCos [data-cosit]'],
+      re: /div\.nt>b>img\.cic/, want: 1, min: 1,
+      seen: () => document.querySelectorAll('#mbox .sk-ct .vl .nt b>img.cic').length, seenName: '#mbox .sk-ct .nt b>img.cic',
+      css: '.sk-ct b>.cic{transform:none !important}',
+    },
+  ]) {
+    const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    await page.goto(URL, { waitUntil: 'load' });
+    await page.waitForTimeout(800);
+    for (const q of c.open) { await STEP(page, q); await page.waitForTimeout(550); }
+    const n = await page.evaluate(c.seen);
+    if (n < c.min) bad(`[R11] ${c.lab} — 진입 실패: ${c.seenName} 가 ${n}개다`);
+    else {
+      ok(`[R11] ${c.lab} — ${c.seenName} ${n}개 진입 확인 (헛초록 방지)`);
+      const pre = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (pre.length) bad(`[R11] ${c.lab} — 주입 «전» 에 이미 ${pre.length}건 빨강: ${pre[0].sel} ${pre[0].ratio}`);
+      else ok(`[R11] ${c.lab} — 주입 전 0건 (음성항)`);
+
+      await page.evaluate((css) => {
+        const st = document.createElement('style');
+        st.textContent = css;
+        document.head.appendChild(st);
+      }, c.css);
+      await page.waitForTimeout(250);
+      const hit = (await page.evaluate(COLLECT, { all: false }))
+        .filter((r) => Math.abs(r.ratio - 1) > TOL && inScope(r.sel) && c.re.test(r.sel));
+      if (hit.length >= c.want) ok(`[R11] ${c.lab} — 되돌리면 ${hit.length}노드가 빨개진다 (자가 살아 있다)`);
+      else bad(`[R11] ${c.lab} — 되돌려도 ${hit.length}건뿐(≥${c.want} 이어야 한다): 이 자리는 감시 밖이다`);
+    }
+    await ctx.close();
+  }
+
   /* [C] 397 — SCREENS 자체의 «무음 실패» 감시.
      scan356 의 단계는 `querySelector(q); if (el) el.click()` 이라 셀렉터가 안 맞아도
      예외가 안 난다 = 화면 이름만 있고 한 번도 못 간 줄이 조용히 생긴다(397 이 그 사고다).
@@ -1073,12 +1152,10 @@ async function sweep(browser, inject) {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        const found = await page.evaluate((q) => {
-          const el = document.querySelector(q);
-          if (el) el.click();
-          return !!el;
-        }, s);
-        if (!found) { bad(`[C] «${label}» 단계가 무음 실패: '${s}' 가 DOM 에 없다`); dead++; }
+        /* 12회차 — 단계 해석은 `scan356.STEP` **한 곳**이다(`js:` 단계 포함).
+           여기에 다시 적으면 두 벌이 되어 한쪽만 늙는다([S3] 주석 · 385 «자매 자 드리프트»). */
+        const found = await STEP(page, s);
+        if (!found) { bad(`[C] «${label}» 단계가 무음 실패: '${s}' 가 DOM 에 없다(또는 던졌다)`); dead++; }
         await page.waitForTimeout(420);
       }
     }

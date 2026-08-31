@@ -64,6 +64,18 @@ function derivePassScreens(src) {
 }
 const PASS_SCREENS = derivePassScreens(fs.readFileSync(HTML, 'utf8'));
 
+/* ⚑ 12회차(2026-08-31) — 단계 종류를 하나 더 둔다: **`js:<식>`**.
+   여태 단계는 «셀렉터를 눌러라» 하나뿐이었고, 그래서 **누를 수 있는 문이 없는 화면**은
+   목록에 적을 방법 자체가 없었다 — 04 던전 세부(`#dgdw`)가 그 자리다: 03 카드의 [도전] 버튼은
+   입장권이 0이면 `disabled`(27533) 라 부팅 세이브로는 눌리지 않는다. 1~11회차 내내
+   «스캔 밖» 이었던 이유가 스코프 판단이 아니라 **자의 표현력**이었다.
+   ⚠ 여기에 화면을 «그리는» 코드를 적지 마라 — **제품의 진입점만** 부른다(그리는 것은 제품이어야
+     하고, 자가 그리면 그 화면은 제품이 깨져도 초록이다).
+   ⚠ 던지면 `false` 를 돌려 [C]·스윕이 **무음 실패로 잡는다**(443 규율 — 조용한 초록 금지). */
+const STEP = (page, q) => (q.startsWith('js:')
+  ? page.evaluate((code) => { try { (0, eval)(code); return true; } catch (e) { return false; } }, q.slice(3))
+  : page.evaluate((s) => { const el = document.querySelector(s); if (el) el.click(); return !!el; }, q));
+
 const SCREENS = [
   ['02 메인', []],
   ['A1 탭바 열림', ['.tab[data-t="hero"]']],
@@ -122,6 +134,25 @@ const SCREENS = [
   ['55 길라잡이', ['#menub', '#mnw [data-mn="guide"]']],
   ['56 절전', ['#menub', '#mnw [data-mn="saver"]']],
   ['22 퀘스트(반복)', ['.side .ibtn[data-pop="quest"]', '.qs-tg b[data-t="rep"]']],
+  /* ⚑ 12회차(2026-08-31) — **스코프 구멍 여덟 자리, 다섯 번째 같은 사고.**
+     11회차의 표본이던 «351 오프너와의 차집합» 은 이제 비었다(남은 `10-summon`·`22-daily` 는
+     기본 탭이라 `10 상점`·`22 퀘스트` 줄과 같은 화면이고, `probe356r12` 가 둘 다 0건으로 확인했다).
+     ⇒ 이번 표본은 **더 넓은 목록** 하나다 — `tools/smoke.js` 의 오프너 «우주».
+        smoke 는 목록을 손으로 안 적고 DOM 속성에서 파생하므로(data-mn·data-cat·data-coshelp·
+        data-rlhelp·#shopLegal …) 351(56화면)보다 넓고, 그중 **넷**이 여기 없었다:
+        269 코스튬 도움말 · 429 유물 도움말 · 478 청약철회 둘.
+     ⇒ 거기에 **«카드를 눌러야 열리는 세부 팝업» 넷**을 더한다(04 던전 세부 · 08 스킬/펫/코스튬 세부).
+        세 목록(356·351·smoke) 어디에도 없던 자리이고, 아이콘이 가장 빽빽한 화면들이다.
+     재현은 `tools/probe356r12.js` 가 먼저 했다(338 규칙) — 04 세부 화살표 2 · 08 코스튬 세부 1 = **3노드**.
+     ⚠ 08 코스튬 카드는 «한 번 = 선택 · 두 번 = 세부» 라 같은 자리를 두 번 누른다(32653~32657). */
+  ['04 던전 세부', ['.tab[data-t="adv"]', 'js:openDunDetail(DUNGEONS[0])']],
+  ['08 스킬 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="sk"]', '#bSk [data-skit]']],
+  ['08 펫 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="pet"]', '#bPet [data-ptit]']],
+  ['08 코스튬 세부', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]', '#bCos [data-cosit]', '#bCos [data-cosit]']],
+  ['50 코스튬 도움말(269)', ['.tab[data-t="hero"]', '#eqTabs [data-eqtab="cos"]', '#bCos [data-coshelp]']],
+  ['89 유물 도움말(429)', ['.tab[data-t="box"]', '#relw [data-rlhelp]']],
+  ['13 재화 청약철회(478)', ['.tab[data-t="shop"]', '#shopCats .shp-ct[data-cat="coin"]', '#lgMore']],
+  ['124 이용권 청약철회(478)', ['.tab[data-t="shop"]', '#shopCats .shp-ct[data-cat="pass"]', '#lgMore']],
 ];
 
 /* ---------- 페이지 안에서 도는 수집기 ---------- */
@@ -241,7 +272,7 @@ const COLLECT = function (opt) {
   return out;
 };
 
-module.exports = { SCREENS, COLLECT, URL, TOL, derivePassScreens, PASS_SCREENS, HTML };
+module.exports = { SCREENS, COLLECT, URL, TOL, derivePassScreens, PASS_SCREENS, HTML, STEP };
 
 if (require.main !== module) return;
 
@@ -258,8 +289,8 @@ if (require.main !== module) return;
       for (const s of steps) {
         /* ⚑ 443 — 안 맞는 셀렉터는 **조용히 넘어가지 않는다**. 예전에는 `if (el) el.click()` 이라
            그 줄이 직전 화면을 두 번 세고도 아무 표시가 없었다(397·443 이 같은 자리에서 두 번). */
-        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
-        if (!found) errs.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다`);
+        const found = await STEP(page, s);
+        if (!found) errs.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다(또는 던졌다)`);
         await page.waitForTimeout(420);
       }
       await page.waitForTimeout(250);
