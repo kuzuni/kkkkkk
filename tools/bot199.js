@@ -751,7 +751,10 @@ const WALL_MIN = 30;           /* 같은 스테이지 이 분 이상 정체 = �
    ⚠ 원 목록(30분 이상 전부)도 표에 그대로 남긴다 — 문턱을 옮기면 숫자가 어떻게 갈라지는지
    다음 회차가 검산할 수 있어야 한다. */
 const WALL_FRAC = 0.08;        /* (구 판정, 대조용으로만 남긴다) len ≥ 이 비율 × 시작(분) = 벽 */
-const isWallFrac = w => w.len >= WALL_FRAC * Math.max(1, w.min);
+/* ⚠ 7회차 — 구 판정은 **달력 자**로 정의된 것이다(len·min 둘 다 벽시계였다). 7회차가 `len` 을
+   활성 분으로 바꿨으므로 이 칸만 `lenCal`(벽시계 길이)로 읽어 **옛 판정을 옛 자로** 유지한다 —
+   섞어 읽으면 «구 판정» 칸이 두 자의 잡종이 되어 대조 칸의 뜻을 잃는다. */
+const isWallFrac = w => (w.lenCal != null ? w.lenCal : w.len) >= WALL_FRAC * Math.max(1, w.min);
 /* ⚑ 199 5회차 — 분류를 «비율» 에서 **기제**로 바꾼다 (4회차 비평 J·K·L 3인 일치).
    4회차의 WALL_FRAC 0.08 은 **부지런 시드1에서만** 갈렸다: 부지런 간극 ×3.3 ○ 인데
    대충은 ×1.39 뿐이라 #7(1,433분·0.101 = 벽) ↔ #9(1,420분·0.071 = 멈춤)이 **길이 차 0.9%**
@@ -780,7 +783,19 @@ async function runOne(page, pol, seed, days, onRow) {
     B.diaIn['시작(신규 지급)'] = S.dia;
     const out = { rows: [], walls: [], day1: [], sessions: 0 };
     let lastLogout = null;
+    /* ⚑ 199 7회차 — 시계가 둘이다(6회차 비평 R · 정정6).
+       `minute` 은 **벽시계**라 접속 점프(`minute = target`)를 그대로 먹는다 — 로그아웃 15시간이
+       «같은 스테이지에 서 있던 시간» 으로 계상돼 대충 유저 «멈춤» p50 이 1,415분(로그인 주기
+       1,440분의 98.3%)이었다. 정체의 길이는 **활성 분**(파밍 루프가 실제로 돈 분)으로 잰다.
+         · `minute`/`stageSince` = 벽시계 — ① 목표 칸 «시각»(w.min)은 달력 자라 그대로 쓴다
+         · `amin`/`stageSinceA` = 활성 — 길이(w.len)·문턱(wallMin)·③ 분모가 이 자를 쓴다
+       두 축을 다 실어야 [D2] 상승면이 «벽 끝 → 다음 벽 시작» 을 같은 자 안에서 뺄 수 있다. */
     let minute = 0, lastStage = -1, stageSince = 0;
+    let amin = 0, stageSinceA = 0;
+    const pushWall = () => out.walls.push({
+      stage: lastStage, min: stageSince, amin: stageSinceA,
+      len: amin - stageSinceA, lenCal: minute - stageSince,
+    });
 
     const mark = (label) => {
       const s = B.snap(label, minute);
@@ -818,11 +833,10 @@ async function runOne(page, pol, seed, days, onRow) {
           B.farmMinute();
           B.prof['파밍'] = (B.prof['파밍'] || 0) + (performance.now() - _t);
           if (m % 5 === 4) R.spendGold();          /* 재도전 사이 «강화 한 바퀴» */
-          minute++; B.advance(60000);
+          minute++; amin++; B.advance(60000);
           if (S.stage !== lastStage) {
-            if (lastStage >= 0 && minute - stageSince >= a.wallMin)
-              out.walls.push({ stage: lastStage, min: stageSince, len: minute - stageSince });
-            lastStage = S.stage; stageSince = minute;
+            if (lastStage >= 0 && amin - stageSinceA >= a.wallMin) pushWall();
+            lastStage = S.stage; stageSince = minute; stageSinceA = amin;
           }
           if (day === 1 && minute % 10 === 0) mark('D1+' + minute + 'm');
         }
@@ -832,8 +846,7 @@ async function runOne(page, pol, seed, days, onRow) {
       B.audit('day' + day + ' 끝');
     }
     /* 마지막 정체도 벽으로 센다 */
-    if (lastStage >= 0 && minute - stageSince >= a.wallMin)
-      out.walls.push({ stage: lastStage, min: stageSince, len: minute - stageSince });
+    if (lastStage >= 0 && amin - stageSinceA >= a.wallMin) pushWall();
     /* 3회차 — 장부 항등식을 [F] 규칙 위반으로 검사한다. 마지막 ledger 호출 뒤의 잔여 diff 를
        «기타(미귀속)» 으로 flush 하면 매 diff 가 어느 행엔가 실리므로(망원 합) 유입−씽크 = 잔고가
        구성상 정확히 성립해야 한다 — 어긋나면 봇의 어떤 경로가 장부 밖에서 다이아를 만든 것이다. */
@@ -848,6 +861,7 @@ async function runOne(page, pol, seed, days, onRow) {
        **제품에게 묻는다**(ES_BAND 를 199 가 다시 돌리면 자가 조용히 옛 주기로 센다). */
     out.band = (typeof ES_BAND === 'number' ? ES_BAND : 40);
     out.minutes = minute;
+    out.amin = amin;               /* 7회차 — ③ 의 분모(활성 총 분 = 로그인 수 × activeMin) */
     out.diaIn = B.diaIn; out.diaOut = B.diaOut; out.viol = B.viol.slice(); out.warn = B.warn.slice();
     out.final = B.snap('final', minute);
     out.cnt = B.cnt;
@@ -976,9 +990,15 @@ function writeReport(rep) {
     const BAND = (runs[0] && runs[0].band) || 40;
     const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band)).length);
     const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r.band)).length);
+    /* ⚑ 7회차 — 상승면·실오르막도 **활성 자**로 잰다(정정6). 벽시계로 재면 상승면이 로그아웃
+       시간을 통째로 삼켜 ③ 의 분자가 부풀고, 분모(달력 총 분)와 함께 두 쪽이 다 오염된다.
+       `w.amin` = 정체 시작의 활성 분 · `w.len` = 정체의 활성 길이 ⇒ 같은 자 안에서 뺀다. */
+    const wA = (w) => (w.amin != null ? w.amin : w.min);
+    const actTot = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
+    const ACT = med(runs.map(actTot)) || (rep.days * 1440);
     const faceOf = (r) => {
       const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
-      for (let i = 0; i + 1 < w.length; i++) f.push(w[i + 1].min - (w[i].min + w[i].len));
+      for (let i = 0; i + 1 < w.length; i++) f.push(wA(w[i + 1]) - (wA(w[i]) + w[i].len));
       return f;
     };
     /* ⚑ 199 5회차 — «실오르막»(순 이동). 4회차의 «상승면 9.64%» 는 3인 비평이 실측으로
@@ -988,13 +1008,13 @@ function writeReport(rep) {
          · 순 이동 = 전체 경과 − Σ(30분 이상 정체 전부: 벽 + 멈춤)
          · 벽당 실오르막 = 상승면 하나에서 그 안의 멈춤을 뺀 값 (목표: 벽당 ≥ 60분 급) */
     const stallOf   = (r) => r.walls.reduce((a, w) => a + w.len, 0);
-    const netOf     = (r) => Math.max(0, (r.minutes || rep.days * 1440) - stallOf(r));
+    const netOf     = (r) => Math.max(0, actTot(r) - stallOf(r));
     const faceNetOf = (r) => {
       const w = r.walls.filter(x => isWall(x, r.band)); const f = [];
       for (let i = 0; i + 1 < w.length; i++) {
-        const a = w[i].min + w[i].len, b = w[i + 1].min;
-        const pause = r.walls.filter(x => !isWall(x, r.band) && x.min >= a && x.min < b)
-                             .reduce((s, x) => s + Math.min(x.len, b - x.min), 0);
+        const a = wA(w[i]) + w[i].len, b = wA(w[i + 1]);
+        const pause = r.walls.filter(x => !isWall(x, r.band) && wA(x) >= a && wA(x) < b)
+                             .reduce((s, x) => s + Math.min(x.len, b - wA(x)), 0);
         f.push(Math.max(0, b - a - pause));
       }
       return f;
@@ -1003,27 +1023,46 @@ function writeReport(rep) {
     const netAll  = runs.map(netOf);
     const faceNet = runs.map(r => faceNetOf(r));
     const faceNetMed = med(faceNet.map(f => f.length ? f.reduce((a, b) => a + b, 0) / f.length : 0));
-    L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${BAND}의 배수) 정체 · 멈춤 = 밴드 안 정체**)`);
+    L.push(`### [D] 벽 — ${P} (같은 스테이지 **활성** ${WALL_MIN}분 이상 정체 · **벽 = 관문 스테이지(${BAND}의 배수) 정체 · 멈춤 = 밴드 안 정체**)`);
     L.push('');
     /* ⚑ 5회차 비평 3인 일치 — «적중 n/8 · 첫 벽 · 간격 기하평균» 은 ① 의 채점 축인데 표에 없어서
        회차마다 손으로 세다가 빠졌다(5회차 §5-5 가 셋 다 누락). 자가 매번 찍는다.
        주인 목록(분): 30 · 180 · 1440 · 3600 · 7200 · 12960 · 21600 · 36000 (간격 ×1.4) · ±20%. */
     const TARGET = [30, 180, 1440, 3600, 7200, 12960, 21600, 36000];
+    /* ⚑ 199 7회차 — ① 의 자 두 곳을 주인 목록에서 **역산한 값**으로 바꾼다(6회차 비평 P·Q).
+       ⓐ **분모** — 30분·3h 칸은 **첫 접속 이전**이다(부지런 첫 로그인 480분 · 대충 1,260분).
+          봇이 아직 한 분도 안 논 시각에 벽이 설 길이 없으므로 그 두 칸은 «못 맞힌 것» 이 아니라
+          **구조적 도달 불가**다. 분모를 도달 가능한 6칸(1,440~36,000)으로 하고, 옛 8칸 분모도
+          괄호로 남긴다(회차 간 비교용).
+       ⓑ **간격 목표 ×1.4 는 주인 목록의 값이 아니다** — 목록 자체의 기하평균은
+          6칸 구간 (36000/1440)^(1/5) = **1.904** · 전 8칸 (36000/30)^(1/7) = **2.754** 다.
+          «×1.4» 는 주인이 말한 «간격이 커진다» 의 어림수였고, 자는 **목록에서 역산한 값**을 쓴다. */
+    const REACH  = TARGET.filter(t => t >= 1440);          /* 첫 접속 이후 = 도달 가능한 칸 */
+    const gmOf   = (a) => a.length < 2 ? 0
+      : Math.pow(a[a.length - 1] / a[0], 1 / (a.length - 1));
+    const SPAN_T = gmOf(REACH);                            /* 1.904 */
+    const SPAN_T8 = gmOf(TARGET);                          /* 2.754 */
     const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band));
-    const hitOf = (r) => {
+    const hitIn = (list, r) => {
       const ws = wallsOf(r);
-      return TARGET.filter(t => t <= rep.days * 1440
+      return list.filter(t => t <= rep.days * 1440
         && ws.some(w => Math.abs(w.min - t) <= 0.2 * t)).length;
     };
-    const spanOf = (r) => {           /* 벽 시작 시각의 간격 기하평균 (목표 1.4) */
+    const hitOf  = (r) => hitIn(REACH, r);
+    const hit8Of = (r) => hitIn(TARGET, r);
+    const spanOf = (r) => {           /* 벽 시작 시각의 간격 기하평균 (목표 = SPAN_T) */
       const ws = wallsOf(r); if (ws.length < 2) return 0;
       return Math.pow(ws[ws.length - 1].min / Math.max(1, ws[0].min), 1 / (ws.length - 1));
     };
     const firstOf = (r) => { const ws = wallsOf(r); return ws.length ? ws[0].min : 0; };
-    const tgtN = TARGET.filter(t => t <= rep.days * 1440).length;
-    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20%)`
-      + ` · 첫 벽 p50 = ${med(runs.map(firstOf))}분 (목표 30분)`
-      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)).toFixed(2)} (목표 ×1.4)**`);
+    const tgtN  = REACH.filter(t => t <= rep.days * 1440).length;
+    const tgtN8 = TARGET.filter(t => t <= rep.days * 1440).length;
+    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20% · 도달 가능한 칸만)`
+      + ` · 첫 벽 p50 = ${med(runs.map(firstOf))}분 (목표 = 첫 도달 가능 칸 ${REACH[0]}분)`
+      + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)).toFixed(2)} (목표 ×${SPAN_T.toFixed(3)})**`);
+    L.push('');
+    L.push(`_(옛 자 — 8칸 분모: 적중 ${med(runs.map(hit8Of))}/${tgtN8} · 간격 목표 ×${SPAN_T8.toFixed(3)}`
+      + ` · 첫 벽 옛 목표 30분. 30분·3h 칸은 첫 접속(부지런 480분 · 대충 1,260분) 이전이라 구조적 도달 불가)_`);
     L.push('');
     L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
       + ` · 밴드 안 멈춤 p50 = ${med(pausesAll)}`
@@ -1036,18 +1075,18 @@ function writeReport(rep) {
       if (plen.length) L.push('')
         , L.push(`멈춤 길이 — p50 ${med(plen)}분 · p90 ${q(plen, 0.9)}분 · 최대 ${Math.max.apply(null, plen)}분`
           + ` (합 p50 = ${med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0)))}분`
-          + ` = 총 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0))) / (rep.days * 1440)).toFixed(1)}%)`);
+          + ` = 활성 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0))) / ACT).toFixed(1)}%)`);
     }
     L.push('');
-    L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 | 판정(기제) | 구 판정(비율) |');
-    L.push('|---|---|---|---|---|---|---|');
+    L.push('| # | 스테이지 | 시작(분·달력) | 길이(활성 분) | 길이(달력 분) | 시작 시각 | 판정(기제) | 구 판정(비율·달력) |');
+    L.push('|---|---|---|---|---|---|---|---|');
     (runs[0] ? runs[0].walls : []).slice(0, 40).forEach((w, i) => {
       const h = Math.floor(w.min / 60), m = w.min % 60;
-      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 |`
+      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${w.lenCal == null ? '—' : w.lenCal} | ${h}시간 ${m}분 |`
         + ` ${isWall(w, runs[0].band) ? '벽' : '멈춤'} | ${isWallFrac(w) ? '벽' : '멈춤'} |`);
     });
     L.push('');
-    L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동)`);
+    L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동) — **7회차부터 활성 분 자**`);
     L.push('');
     const faceNetSum = faceNet.map(f => f.reduce((a, b) => a + b, 0));
     /* ⚑ 5회차 비평 3인 일치 — «벽당» 을 시드별 평균의 p50 으로 내면 sum/count 보다 3~18% 후하다.
@@ -1057,14 +1096,14 @@ function writeReport(rep) {
     const faceCnt   = med(faceNet.map(f => f.length));
     const perWall   = faceCnt ? med(faceNetSum) / faceCnt : 0;
     L.push(`**실오르막 합(벽 사이 순 이동) p50 = ${med(faceNetSum)}분`
-      + ` (총 시간의 ${(100 * med(faceNetSum) / (rep.days * 1440)).toFixed(2)}% — ③ 의 축) ·`
+      + ` (활성 시간 ${ACT}분의 ${(100 * med(faceNetSum) / ACT).toFixed(2)}% — ③ 의 축) ·`
       + ` 벽당 = 합÷구간 ${perWall.toFixed(1)}분 (구 표기 «시드평균의 p50» ${faceNetMed.toFixed(0)}분)**`
       + ` — 목표 벽당 ≥60분 급 · ⚠ 벽당은 벽 개수가 줄기만 해도 오른다(분모 효과)`);
     L.push('');
-    L.push(`정체 밖 시간 p50 = ${med(netAll)}분 (총 시간의 ${(100 * med(netAll) / (rep.days * 1440)).toFixed(2)}%`
+    L.push(`정체 밖 시간 p50 = ${med(netAll)}분 (활성 시간 ${ACT}분의 ${(100 * med(netAll) / ACT).toFixed(2)}%`
       + ` — 첫 벽 이전·마지막 벽 이후와 30분 미만의 숨을 포함한 넓은 자)`);
     L.push('');
-    L.push(`상승면 합 p50 = ${med(faceSum)}분 (총 시간의 ${(100 * med(faceSum) / (rep.days * 1440)).toFixed(2)}% — 멈춤 포함, 4회차까지의 축)`
+    L.push(`상승면 합 p50 = ${med(faceSum)}분 (활성 시간의 ${(100 * med(faceSum) / ACT).toFixed(2)}% — 멈춤 포함, 4회차까지의 축)`
       + ` · 시드1 상승면(분): ${faceOf(runs[0] || { walls: [], band: BAND }).join(' · ') || '-'}`);
     L.push(`시드1 실오르막(분): ${faceNetOf(runs[0] || { walls: [], band: BAND }).join(' · ') || '-'}`);
     L.push('');
@@ -1117,13 +1156,38 @@ function writeReport(rep) {
       };
       const netPct = (pol) => {
         const runs = rep.policies[pol];
-        const v = runs.map(r => Math.max(0, (r.minutes || rep.days * 1440) - r.walls.reduce((a, w) => a + w.len, 0)));
-        return 100 * med(v) / (rep.days * 1440);
+        /* 7회차 — 분자·분모 둘 다 **활성 분**이다(정정6). 벽시계로 재면 분모가 로그아웃까지
+           세어 ③ 이 구조적으로 1% 아래에 눌린다(43,200 vs 5,400). */
+        const at = (r) => (r.amin != null ? r.amin : (r.minutes || rep.days * 1440));
+        const v = runs.map(r => Math.max(0, at(r) - r.walls.reduce((a, w) => a + w.len, 0)));
+        const d = med(runs.map(at)) || (rep.days * 1440);
+        return 100 * med(v) / d;
       };
       const stg = (pol) => med(rep.policies[pol].map(r => r.final.stage));
+      /* ⚑ 199 7회차 — ④ 는 «며칠에 닿는가» 인데 자가 «하루에 얼마» 까지만 찍어 회차마다 손으로
+         나눴다(6회차 비평 Q·R 독립 일치). 도달일을 **두 장부로** 찍는다 — 결2 가 아직 미응답이라
+         어느 쪽이 ④ 의 축인지 주인만 정할 수 있고, 두 장부의 판정이 실제로 갈린다.
+           · 유입 장부  = 유입 전체 − 일회성 3종 (1~6회차의 ④ 는 이 자)
+           · 소환 예산 장부(결2 ⓑ) = 거기서 **소환 이외의 씽크**(입장권교환 등)를 더 뺀다
+         도달일 = (목표 2,730만 − 일회성 선지급) ÷ 지속 수급/일 — 일회성은 첫날 통째로 들어오므로
+         분자에서 빼는 것이 «누적이 목표를 지나는 날» 의 정의다(§0 ②). */
+      const GOAL_DIA = 27300000;
+      const reachOf = (pol, mode) => {
+        const runs = rep.policies[pol];
+        return med(runs.map(r => {
+          const inAll = Object.values(r.diaIn).reduce((a, b) => a + b, 0);
+          const one   = ONCE.reduce((x, k) => x + (r.diaIn[k] || 0), 0);
+          const off   = mode === 'summon'
+            ? Object.keys(r.diaOut || {}).filter(k => k !== '소환')
+                    .reduce((a, k) => a + r.diaOut[k], 0)
+            : 0;
+          const per = (inAll - one - off) / rep.days;
+          return per > 0 ? (GOAL_DIA - one) / per : 0;
+        }));
+      };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
-      L.push('| 축 | ' + pols.map(p => POLICIES[p].name).join(' | ') + ' | 비(부지런/대충) |');
+      L.push('| 축 | ' + pols.map(p => POLICIES[p].name).join(' | ') + ' | 비 |');
       L.push('|---|' + pols.map(() => '---|').join('') + '---|');
       const rows = [
         ['유입 합/일', p => dayIn(p).all, fmtN],
@@ -1131,10 +1195,17 @@ function writeReport(rep) {
         ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판)', p => dayIn(p).cont, fmtN],
         [`${rep.days}일 스테이지 p50`, stg, fmtN],
         ['순 이동 비중(%) — ③ 축(④ 와 무관)', netPct, x => x.toFixed(2)],
+        ['**④ 도달일(2,730만) — 유입 장부** · 목표 부지런 100±10 · 대충 180~200 · 비 1.8~2.0',
+          p => reachOf(p, 'in'), x => x.toFixed(1), true],
+        ['④ 도달일(2,730만) — 소환 예산 장부(결2 ⓑ · 소환 외 씽크 차감)',
+          p => reachOf(p, 'summon'), x => x.toFixed(1), true],
       ];
-      for (const [name, f, fmt] of rows) {
+      /* 비 칸 — 기본은 부지런/대충이지만 **도달일만 대충/부지런**이다(주인 목표 1.8~2.0 이 그 향이다).
+         한 표에서 향이 섞이면 다음 회차가 역수를 그대로 읽는다 — 행마다 향을 적는다. */
+      for (const [name, f, fmt, inv] of rows) {
         const v = pols.map(f);
-        const ratio = v[1] ? (v[0] / v[1]).toFixed(3) : '-';
+        const ratio = inv ? (v[0] ? (v[1] / v[0]).toFixed(3) + ' (대충/부지런)' : '-')
+                          : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
       }
       L.push('');
