@@ -63,6 +63,19 @@ const ok = (name, got, want, tol) => {
       tabs: [...document.querySelectorAll('.tab')].map(e => ({
         t: e.dataset.t, cell: g(e), ti: g(e.querySelector('.ti')),
         bdg: g(e.querySelector('.bdg')), nw: g(e.querySelector('.nw')), tx: g(e.querySelector('.tx')),
+        /* 509 — 배지의 «그려진 외곽» 은 상자가 아니라 링(box-shadow spread)까지다.
+           바깥 링 반지름 = 상자 반지름 + 가장 큰 spread. 링이 사라지면 이 값이 곧바로 무너진다. */
+        bdgRing: (() => {
+          const b = e.querySelector('.bdg'); if (!b) return null;
+          const sh = getComputedStyle(b).boxShadow || '';
+          let mx = 0;
+          sh.replace(/rgba?\([^)]*\)/g, 'C').split(',').forEach(part => {
+            if (/inset/.test(part)) return;
+            const px = part.match(/-?[\d.]+px/g) || [];
+            if (px.length >= 4) mx = Math.max(mx, parseFloat(px[3]));   /* x y blur spread */
+          });
+          return +(b.getBoundingClientRect().width + 2 * mx).toFixed(1);
+        })(),
         vis: getComputedStyle(e.querySelector('.tx')).display,
         cs: getComputedStyle(e), tiFs: getComputedStyle(e.querySelector('.ti')).fontSize
       }))
@@ -132,7 +145,15 @@ const ok = (name, got, want, tol) => {
          주인 지시가 레퍼런스보다 우선이므로 **의도적 이탈**이다(354·360·403 선례).
          ⇒ 못을 규약값 «칸 상변 +11»(= `--dot-in`)로 옮긴다. 측정표 A1 §6 에 정오표. */
   A.tabs.filter(t => t.bdg && ['grow', 'adv', 'box'].includes(t.t)).forEach(t => {
-    ok('레드닷 ' + t.t + ' 외곽 ⌀41', t.bdg.w, 41, 0.6);
+    /* ★ 509 이관(2026-08-31) — 못 하나를 **둘로 쪼갰다**(334 처방 ①).
+       수리 전 이 항은 «상자 폭 41» 을 물었고, 그 41 은 «코어 31 + 검정 테 5×2» 였다.
+       509 가 이 배지를 표준 닷 부품으로 갈면서 상자는 **코어만**(27) 남고 분홍·검정은
+       `box-shadow` 링으로 갔다 — 상자 폭만 물으면 링이 통째로 사라져도 초록이다.
+       ⇒ ① 코어 상자 27 ② **그려진 외곽 42**(= 상자 + spread×2) 를 **각각** 단언한다.
+       레퍼런스 근거: 03 §3-6 «코어 Ø24~26 · 밝은 림 포함 Ø31~33 · 검정 포함 Ø41~43».
+       이 표(§6)의 «채움 31» 은 그 «밝은 림 포함» 지름이라 정오표를 같이 썼다. */
+    ok('레드닷 ' + t.t + ' 코어 상자 ⌀27 (509 표준 부품)', t.bdg.w, 27, 0.6);
+    ok('레드닷 ' + t.t + ' 그려진 외곽 ⌀42 (링 포함 — ref 41~43)', t.bdgRing, 42, 1.0);
     ok('레드닷 ' + t.t + ' 중심 x = 칸 오른쪽 −21 (= 자기 바깥 반지름 · 471 예외식)',
        t.bdg.x + t.bdg.w / 2, t.cell.x + t.cell.w - 21, 1.0);
     ok('레드닷 ' + t.t + ' 중심 y = 칸 상변 +11 (471 규약 · 레퍼런스 2119.5 에서 의도적 이탈)',

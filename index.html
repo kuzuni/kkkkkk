@@ -723,8 +723,12 @@
      기본은 꺼짐, `sideAlert('mail', …)` 이 #menub 에 `.alert` 를 토글한다.
      아래 `#menub.mnon .bdg{display:none}` 은 «메뉴 열림» 이라 특이성이 같고 뒤에 와서 이긴다(순서 유지할 것). */
   /* 299 — 레드닷 규약: 부모 우상단. 좌표는 그대로(102−71.5−40=−9.5), left → right 로 의미만 맞춘다 */
-  #menub .bdg{position:absolute;--dot-r:20px;width:30px;height:30px;border-radius:50%;
-    background:#F22E52;border:5px solid #000;box-sizing:content-box;font-size:0;display:none}
+  /* 509 — 부품 모양을 표준 닷으로 통일(상세는 «509 — 레드닷 부품 모양» 절).
+     수리 전: 코어 Ø30 을 통째로 진한 빨강으로 칠하고 검정 5 를 `border` 로 둘러 외곽 Ø40 ·
+     **분홍 림 0**. 표준은 코어 Ø27 + 분홍 2.5 + 검정 5 = 외곽 Ø42(03 §3-6 레퍼런스).
+     ⚠ 상자가 40(테 포함) → 27 로 줄지만 `--dot-r` 을 20 → 13.5 로 같이 갈아 **중심 Δ0** 이다. */
+  #menub .bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;font-size:0;display:none;box-shadow:var(--dot-paint)}
   #menub.alert .bdg{display:block}
   /* 열림 상태 — 레퍼런스 52 는 **같은 자리에서 ▦ 글리프만 ✕ 로 바뀐다**(새 버튼이 생기는 게 아니다).
      ✕ 잉크 ref x954..1017 y280..339 = 64×60, 중심 (985,310) → 버튼 로컬 정중앙 (51,50).
@@ -834,7 +838,7 @@
      만들지 않는다(칸이 100px 로 서브탭 칸과 비슷한 크기라 27px 이 그대로 맞는다). */
   #mnw .mn-b>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
   #mnw .mn-b.alert>.bdg{display:block}
   /* 아이콘 자리 — 오염 안 된 5칸(1·3·4·5·6)으로 잡은 «칸 로컬» 규격: 잉크 높이 51 · 중심 칸top+32.
      **아트 자리 규칙**: 이모지는 임시 대체물이고 이 슬롯(높이 51 · 중심 x 칸중앙)이 나중에 이미지가 들어올 bbox 다.
@@ -1017,9 +1021,18 @@
         기각됐다** — `probe471` 에 «호스트 높이 위 1/3» 축(`dxRi3`)을 신설해 다시 쟀더니 6칸 중
         5칸이 union 과 **같은 값**이었다(라벨은 y82~114 로 애초에 띠 밖이다). 남는 것은 위의 5px
         글리프 편차뿐이고, 그건 이모지를 아트로 갈 때 닫히는 자리다. */
-  .ibtn .bdg{position:absolute;--dot-in-x:20px;--dot-in-y:7px;--dot-r:calc(var(--ih,82px)*.256);
-    width:calc(var(--ih,82px)*.512);height:calc(var(--ih,82px)*.512);border-radius:50%;
-    background:#f22e52;border:calc(var(--ih,82px)*.069) solid #000;font-size:0;display:none}
+  /* 509 — 부품 모양을 표준 닷으로 통일(상세는 «509 — 레드닷 부품 모양» 절).
+     수리 전: 코어 Ø(--ih×.512 − 테×2) 를 통째로 진한 빨강으로 칠하고 검정을 `border` 로 —
+     ih 82 에서 코어 Ø30.7 · 외곽 Ø42 · **분홍 림 0**.
+     ⚠ **비율은 그대로 둔다** — 이 배지만 `layoutSide()` 의 `--ih` 에 묶여 있고(짧은 프레임에서
+     아이콘과 같이 줄어든다) 그것은 A2 가 정한 사이드 열의 설계다. 509 는 «모양» 이지 «크기» 가
+     아니므로 세 띠를 **같은 비율로** 나눠 적는다 — ih 82 에서 13.5 / 2.5 / 7.5 = 표준값.
+     ⚠ 상자가 .512 → .3293 로 줄지만 `--dot-r` 을 .256 → .16463 으로 같이 갈아 **중심 Δ0** 이다. */
+  .ibtn .bdg{position:absolute;--dot-in-x:20px;--dot-in-y:7px;--dot-r:calc(var(--ih,82px)*.16463);
+    width:calc(var(--ih,82px)*.32927);height:calc(var(--ih,82px)*.32927);border-radius:50%;
+    background:#F22E52;font-size:0;display:none;
+    box-shadow:inset 0 calc(var(--ih,82px)*.07317) 0 calc(var(--ih,82px)*-.02439) rgba(255,117,150,.85),
+      0 0 0 calc(var(--ih,82px)*.03049) #FF7596,0 0 0 calc(var(--ih,82px)*.09146) #000}
   .ibtn.on .bdg{display:block}
   /* 미해금 — 아트 밝기는 유지하고 흰 자물쇠를 슬롯 위에 크게 얹는다(레퍼런스 방식) */
   .ibtn.lock .si{opacity:.5}
@@ -1682,9 +1695,15 @@
      19(`#psBar .pt>.bdg`)는 `--dot-in-x:21` = 자기 바깥 반지름이라 «프레임 변에 정확히 접하는
      최소 후퇴량» 인데, 01 은 28 이라 2.5px 을 근거 없이 더 물러나 있었다. `.tab .bdg` 는 검정 링이
      border 라 상자 반지름이 곧 바깥 반지름(41/2)이다 ⇒ 20.5. 이제 두 예외가 **한 식**이다. */
-  .tab .bdg{position:absolute;--dot-r:20.5px;--dot-in-x:20.5px;width:41px;height:41px;border-radius:50%;
-    background:radial-gradient(circle at 50% 20%,#ff7891 0 2.5px,#f22e52 6px);
-    border:5px solid #000;display:none;z-index:3}
+  /* 509 — 부품 모양을 표준 닷으로 통일(상세는 «509 — 레드닷 부품 모양» 절).
+     수리 전: 코어 Ø31 을 통째로 진한 빨강(윗점 하나짜리 radial-gradient)으로 칠하고 검정 5 를
+     `border` 로 둘러 외곽 Ø41 · **분홍 림 0**. 레퍼런스(03 §3-6)는 그 31 이 «밝은 림 포함»
+     지름이고 안에 코어 Ø25 가 따로 있다 ⇒ 표준 27 + 2.5 + 5 = 외곽 Ø42.
+     ⚠ `--dot-in-x` 는 «자기 **바깥** 반지름» 이라는 식이므로 외곽이 41 → 42 가 되면 20.5 → **21**
+     이다 — A1 §6 레퍼런스 못(«칸 오른쪽 −21»)과 정확히 같은 값이 되고 `#psBar .pt>.bdg` 와도
+     한 식이다. 중심 이동은 그 0.5px 하나뿐이고 **레퍼런스 쪽으로** 간다. */
+  .tab .bdg{position:absolute;--dot-r:13.5px;--dot-in-x:21px;width:27px;height:27px;border-radius:50%;
+    background:#F22E52;box-shadow:var(--dot-paint);display:none;z-index:3}
   .tab.alert .bdg{display:block}
   /* 패널이 열려 있는 탭은 ✕ 버튼 칸으로 치환된다 — 칸 폭 296, 바탕은 평면 near-black,
      나머지 4칸은 196 으로 좁아지고 아이콘만 0.85배로 줄어든다 (라벨은 그대로) */
@@ -5053,7 +5072,7 @@
   /* 레드닷 — 중심 rel(+969,+14), 코어 25 + 검정 외곽선 5 */
   /* 299 — 우상단 규약. 같은 자리(980−956−27=−3), left → right 로 의미만 맞춘다 */
   .dnc .dot{--dot-r:13.5px;width:27px;height:27px;border-radius:50%;background:#F22E52;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
 
   /* 잠금 — 딤 .65 + 흰 자물쇠(106x123, 카드 중앙, y+60) + 조건 문구(y+223) */
   .dnc .lk{inset:8px 7px;border-radius:5px;background:rgba(0,0,0,.65);pointer-events:none}
@@ -11047,7 +11066,7 @@
      **각 칸의 카드가 dot 을 켜는 조건**을 그대로 OR 한 것이라 탭과 카드가 같이 켜지고 같이 꺼진다. */
   .stab>.bdg{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
   /* 471 §2 — 주인 스크린샷 ①(«반달») 의 실제 뿌리. `.stabs>*` 는 절대배치 형제이고 활성 알약이
      이웃 칸 위로 11.75px 오버행해서(379) **다음 칸이 앞 칸의 배지를 덮었다**(probe471b 코어 7/8).
      클리핑이 아니라 쌓임 순서였다 — 배지를 칸 위로 올린다(`.updot` 의 z6 과 같은 층). */
@@ -11087,7 +11106,7 @@
      이 짝을 지우면 두 화면에서 레드닷이 «강화 가능 여부와 무관하게 상시 점등» 으로 돌아간다. */
   .updot{position:absolute;width:27px;height:27px;border-radius:50%;background:#F22E52;
     text-decoration:none;transform:none;display:none;pointer-events:none;z-index:6;--dot-r:13.5px;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
   .alert>.updot{display:block}
   /* ══ 531 (2026-08-31) — «상시 점등» 함정의 **재료**를 미리 덮는 스코프 짝 ═══════════════
      166 ⓔ · 202 §3 · 283 · 294 · 325 · 516 · 519 로 **일곱 번** 난 계열이다. 매번 같은 순서였다:
@@ -11131,6 +11150,27 @@
      `--dot-r` 로 식을 세운다. 크기를 바꿔도 중심은 코너에 그대로 남는다.
      ⇒ 새 부품·새 호스트는 아래 목록에 셀렉터만 더하면 된다. **좌표 상수를 새로 적지 마라.** */
   :root{--dot-in:11px}
+  /* ══ 509 (2026-08-31) — 레드닷 «부품 모양» 을 한 곳에서 선언한다 ═══════════════════════
+     471 4회차 비평가 BS 의 곁다리 관측: «01 탭바 · 02 사이드 · 03 ▦ 메뉴 세 자리만 분홍 링이
+     없고 코어가 크다 — 글로벌 UI 레이어가 통째로 구형 노드다». `probe509` 로 **찍힌 화소**를
+     다시 재서 확인했다(시트px 이 아니라 1080 프레임 화소):
+       표준(`.updot`·`.stab>.bdg`·`.mn-b>.bdg`) 코어R **13.5** · 분홍 2 · 외곽R 20.5~21
+       글로벌 세 자리                            코어R **15~16** · 분홍 **0** · 외곽R 20~22
+     ⚑ **기준은 레퍼런스이고, 그 레퍼런스를 그대로 그린 것이 `.updot` 이다.**
+       `docs/measure/03-던전팝업.md` §3-6 이 이 부품의 띠를 **셋으로 갈라** 재 놓았다 —
+       코어 Ø24~26 · **밝은 림 포함 Ø31~33** · 검정 포함 Ø41~43(외곽선 5).
+       A1 §6 «채움 Ø31 · 외곽 ≈41» 과 A2 §1-5 «채움 Ø31 / 외곽 Ø41~42» 는 **같은 부품**을
+       코어와 림을 안 가르고 잰 것이다(그 둘의 «채움 31» = 03 의 «밝은 림 포함 31~33»).
+       ⇒ 세 표가 한 부품을 말하고 있고, 글로벌 세 자리는 그 «밝은 림 포함 31» 을 통째로
+         진한 코어로 칠해 **림 한 겹을 잃은** 것이다. A1 §6 에 정오표.
+     ⚠ **자리는 한 픽셀도 안 옮긴다** — 471 규약식이 «중심 = 코너 안쪽 `--dot-in`» 이고
+       중심 오프셋은 `--dot-in-x − --dot-bw` 라 **`--dot-r` 이 상자 반지름과 짝만 맞으면
+       크기를 바꿔도 중심이 안 움직인다**(위 471 주석의 마지막 줄). 세 자리 전부 그 짝을
+       같이 갈았다. 유일한 예외가 `.tab .bdg{--dot-in-x}` 인데, 그 값은 «자기 **바깥** 반지름
+       = 프레임 변에 정확히 접하는 최소 후퇴량» 이라는 식이라(A1 §6 정오표 · 4회차 비평가 BT)
+       외곽이 20.5 → 21 이 되면 따라서 21 이다 = **A1 레퍼런스 못 «칸 오른쪽 −21» 과 정확히
+       같은 값**이고 35 패스 탭(`#psBar .pt>.bdg{--dot-in-x:21px}`)과도 한 식이다. */
+  :root{--dot-paint:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
   .updot,.stab>.bdg,#menub .bdg,#mnw .mn-b>.bdg,.ibtn .bdg,.tab .bdg,
   .dnc .dot,.tr-card>.dot,.cltab>s.dot,#collw .cltab>s.dot,#psBar .pt>.bdg{
     right:calc(var(--dot-in-x,var(--dot-in)) - var(--dot-r) - var(--dot-bw,0px));
@@ -13736,7 +13776,7 @@
   /* 301 — 받을 수 있는 보상 칸 레드닷(우상단 — 299 규약). 프리미엄 미보유 칸은 «불가능» 이라 대상 아님(166). */
   #psw .ps-bx>s.updot{position:absolute;--dot-r:13.5px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;z-index:6;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
   #psw .ps-bx.alert>s.updot{display:block}
   /* 5회차: G·H 가 **독립적으로 같은 값**(ref 82×67 · 우리 73×45, h −32.8%)을 냈고 자체 스캔도 일치했다.
      36 세션도 같은 회차에 같은 결론(ref 82×66)에 도달했다 — 값이 2% 안에서 겹쳐 서로를 검산해 준다.
@@ -13757,7 +13797,7 @@
      ⚠ `#psw s{display:inline-block}` 태그 리셋(ID 급)이 있어 기본 꺼짐도 ID 급으로 명시한다(202 함정). */
   #psBar .pt>.bdg{position:absolute;--dot-r:13.5px;--dot-in-x:21px;width:27px;height:27px;border-radius:50%;
     background:#F22E52;text-decoration:none;transform:none;display:none;
-    box-shadow:inset 0 6px 0 -2px rgba(255,117,150,.85),0 0 0 2.5px #FF7596,0 0 0 7.5px #000}
+    box-shadow:var(--dot-paint)}
   #psBar .pt.alert>.bdg{display:block}
   /* 아이콘·라벨 위치는 **바 본체 상단(=div 상단) 기준 상대값**으로 잡는다 —
      탭바는 바닥 앵커라 프레임 24px 잔차가 그대로 들어가므로 절대 y 로 맞추면 안 된다.
