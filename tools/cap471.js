@@ -394,7 +394,11 @@ const STEPS = [
     const imgs = await Promise.all(items.map(async it => {
       const im = new Image();
       await new Promise(r => { im.onload = r; im.src = 'data:image/png;base64,' + it.b64; });
-      return { im, label: it.label, note: it.note, fx: it.fx, fy: it.fy };
+      /* ⚑ 7회차 — `bx`/`by` 를 여기서 **떨어뜨리고 있었다.** 6회차가 «점선 = 빈 상자 코너» 를
+         라벨에 약속해 놓고 이 map 이 두 값을 안 실어 보내 아래 그리기 절이 통째로 건너뛰었다
+         ⇒ 8회차 비평가 CA·CB·BZ 셋이 독립으로 «점선이 아예 없다» 고 적었다(BZ 는 3배 밝기까지 올려 봤다).
+         **라벨이 약속한 것을 그림이 안 지키면 자가 거짓말을 하는 것**이다 — 값을 실어 보낸다. */
+      return { im, label: it.label, note: it.note, fx: it.fx, fy: it.fy, bx: it.bx, by: it.by };
     }));
     /* 모든 칸이 같은 창(240×240 제품px, dsf2 라 480×480)이라 **배율도 하나**다 */
     const COL = 4, CELL = 470, PADT = 54;

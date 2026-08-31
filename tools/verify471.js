@@ -397,6 +397,16 @@ const pc = () => {
     '[T] 시트와 자가 같은 코너를 본다 — `cap471` 잉크 코너 ↔ `probe471c` 글리프 잉크 (≤1px)',
     drift ? '최대 드리프트 ' + Math.max(...drift).toFixed(2) + 'px' : '자가 6칸을 못 냈다');
 
+  /* [T] 나머지 둘 — 8회차가 잡은 «시트가 라벨과 다른 그림을 보여 준다» 두 자리 (7회차 신설) */
+  const capSrc = fs.readFileSync(path.join(ROOT, 'tools/cap471.js'), 'utf8');
+  ok(!/currentTime\s*=\s*\(?\s*(a|an)\.effect\.getTiming\(\)\.duration/.test(capSrc)
+     && /iterations === Infinity/.test(capSrc),
+    '[T] 시트가 무한 애니(맥박)를 «끝 프레임» 으로 보내지 않는다 (그 프레임은 base 가 아니라 **부푼** 상태다 — 닷이 +14% 로 찍힌다)',
+    /iterations === Infinity/.test(capSrc) ? 'settle 규칙(무한 → 0프레임) 사용' : '무조건 duration 이동이 남아 있다');
+  ok(/bx:\s*it\.bx/.test(capSrc) && /by:\s*it\.by/.test(capSrc),
+    '[T] 라벨이 약속한 «점선 = 빈 상자 코너» 를 시트가 실제로 그린다 (합성 map 이 좌표를 떨어뜨리면 라벨만 남는다)',
+    /bx:\s*it\.bx/.test(capSrc) ? '합성 map 이 bx/by 를 싣는다' : '떨어뜨린다');
+
   console.log('\nVERIFY471 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
