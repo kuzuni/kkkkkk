@@ -31,10 +31,13 @@ const SITES = {
   /* 584 가 키운 룬 [강화] 버튼 안 화폐(`curIc('rstone', TR_CUR_PX)`) */
   A: { sel: 'div#trRunes>div.tr-rn>span.rbt.b1.no>i>img.cic',
        lab: '23 룬 — [강화] 버튼 안 룬강화석(584 `TR_CUR_PX = 53`)', screen: '23 룬' },
-  /* 585 가 배율을 올린 03 던전 재화 알약 — **잠금이 안 걸린** 유물 던전 칸.
-     이미 등재된 `.dnc.bgm-rel.lkd>.pill` 과 같은 부품의 다른 상태다. */
+  /* 585 가 배율을 올린 `.dnc` 재화 알약 — **잠금이 안 걸린** 유물 계열 칸.
+     ⚑ 1회차 오측 정정: 이 자리는 «03 던전» 이 아니라 **«03 탑»** 에 있다(같은 `#dunList` 를
+       세 서브탭이 나눠 쓴다). 03 던전만 열고 재면 이 셀렉터는 0개라 자가 «문턱 밖» 으로 답한다 —
+       그것이 «편차가 없다» 는 뜻으로 읽히면 그대로 헛초록이다.
+     이미 등재된 `.dnc.bgm-rel.lkd>.pill`(03 던전)과 **같은 부품의 다른 상태**다. */
   B: { sel: 'div#dunList>div.dnc.bgm-rel>div.pill>em>img.cic',
-       lab: '03 던전 — 유물 던전(해금) 재화 알약(585 `scale(1.14664)`)', screen: '03 던전' },
+       lab: '03 탑 — 유물 계열(해금) 재화 알약(585 `scale(1.14664)`)', screen: '03 탑' },
 };
 
 const CASES = [
@@ -56,16 +59,20 @@ const CASES = [
   { id: 'A-xint2', screen: '23 룬', dsf: 2, want: ['A'], why: 'A: x 만 정수로(491.5625 → 491)',
     css: '#trRunes .rbt>i>.cic{position:relative;left:-0.5625px}' },
 
-  /* ── B: 바닥값 + DSF 수렴 ── */
-  { id: 'B-base2', screen: '03 던전', dsf: 2, css: '', want: ['B'], why: '바닥값(DSF2)' },
-  { id: 'B-base3', screen: '03 던전', dsf: 3, css: '', want: ['B'], why: 'DSF 수렴 시험' },
-  { id: 'B-base4', screen: '03 던전', dsf: 4, css: '', want: ['B'], why: 'DSF 수렴 시험' },
+  /* ── B: 바닥값 + DSF 수렴 (화면은 «03 탑» — 위 SITES 주석의 오측 정정) ── */
+  { id: 'B-base2', screen: '03 탑', dsf: 2, css: '', want: ['B'], why: '바닥값(DSF2)' },
+  { id: 'B-base3', screen: '03 탑', dsf: 3, css: '', want: ['B'], why: 'DSF 수렴 시험' },
+  { id: 'B-base4', screen: '03 탑', dsf: 4, css: '', want: ['B'], why: 'DSF 수렴 시험' },
   /* ── B: 548 §4-C 와 같은 함정 — 부모 `em` 이 `scale(1.14664)` 라 **선언 상자 ≠ 그려지는 상자**다.
          그려지는 상자 54.4833 을 54·55 로 맞추려면 선언값을 배율로 나눠 심는다. ── */
-  { id: 'B-r54', screen: '03 던전', dsf: 2, want: ['B'], why: 'B: 그려지는 상자 54.4833 → 54',
+  { id: 'B-r54', screen: '03 탑', dsf: 2, want: ['B'], why: 'B: 그려지는 상자 54.4833 → 54',
     css: '.dnc .pill>em>.cic{width:47.0968px!important;height:47.0968px!important}' },
-  { id: 'B-r55', screen: '03 던전', dsf: 2, want: ['B'], why: 'B: 그려지는 상자 54.4833 → 55',
+  { id: 'B-r55', screen: '03 탑', dsf: 2, want: ['B'], why: 'B: 그려지는 상자 54.4833 → 55',
     css: '.dnc .pill>em>.cic{width:47.9690px!important;height:47.9690px!important}' },
+  /* ── B: **귀속** — 585 이전 배율(1.0732)을 도로 심으면 이 자리가 문턱 아래로 내려가는가.
+         내려가면 «585 가 만든 자리», 안 내려가면 «585 전에도 있던 자리» 다(338·344 규칙). ── */
+  { id: 'B-pre585', screen: '03 탑', dsf: 2, want: ['B'], why: 'B: 585 이전 배율(1.0732)을 도로 심는다',
+    css: '.dnc .pill>em:has(>[data-cur-ic="relic"]){transform:scale(1.0732)!important}' },
 ];
 
 /* 편차 %를 device px 로 되돌린다(548 과 같은 식) — dev = (w/h)/ref − 1 ⇒ 기대 폭 = ref × h */
