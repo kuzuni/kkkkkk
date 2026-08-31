@@ -21,6 +21,12 @@
  *   §5 홀드 — 350ms 넘게 누르면 반복이 돌고 그동안 노드가 안 갈린다
  *   §R 되돌림 — 옛 순서로 되돌린 사본에서는 §2·§3 이 빨개진다(무르게 풀지 않았다는 증명)
  *   §Z 콘솔 에러 0
+ *
+ * ⚑ 613·614 이관(2026-08-31): [충전](.cg)·[회수](.tp-ft)가 기능째 폐지됐다 — 그 두 자리를 보던
+ *   항(§6 헤더 사다리 [6-e..l]·[6-i] 전환비 전제 · §8 ⓑ 자릿수 자리 · NAMED/HOSTS 의 tempchg)은
+ *   대상과 함께 걷어냈다. §6 의 본체(«자멸 뒤에도 손 밑에서 노드를 안 간다»)는 [충전] 특유가
+ *   아니라 가드(rtDownIn)의 성질이므로 **[단련] 행 + 잔액 1개**(1발 뒤 자멸)로 이식했다.
+ *   기하 기록은 review 491 §31 에 남아 있다.
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -53,7 +59,6 @@ async function boot(browser, file) {
   await page.evaluate(() => {
     const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden';
     S.gold = 1e18; S.dia = 1e9; S.rstone = 1e6; S.tstone = 1e6;
-    if (S.temper) S.temper.pts = 500;
     /* 78 — `sfx` 는 최상위 함수 선언이라 전역 객체 속성이다. 감싸서 호출을 센다(§4). */
     window.__sfx = [];
     const _s = window.sfx;
@@ -146,8 +151,7 @@ async function diffPct(page, a, b) {
 
 const NAMED = [
   { id: 'rune',    tab: 'rune',   sel: '#trRunes .rbt.b1',        n: '룬 [강화]' },
-  { id: 'tempup',  tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb', n: '단련 [투자]' },
-  { id: 'tempchg', tab: 'temper', sel: '#trTemper .tp-hd .cg',    n: '단련 [충전]' },
+  { id: 'tempup',  tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb', n: '단련 [단련]' },
   { id: 'train',   tab: 'train',  sel: '#trCards [data-tr]',      n: '★대조 훈련 카드' },
 ];
 
@@ -270,29 +274,29 @@ async function pixelRun(page) {
        now[t.id] ? 'alive=' + now[t.id].alive + ' dn=' + now[t.id].dn : '없음');
 
   /* ── §6 4회차 — 홀드가 «자멸» 해도 손 밑에서 노드를 안 간다 ─────────────────────────────
-     [충전]은 «보유분 전부» 를 한 번에 바꾸므로 2회째 시도가 재고 없이 실패해 홀드가 ≈350ms 에
-     스스로 멎는다. 그 뒤에도 손은 눌려 있는데 서명(pts·tstone)은 이미 달라져 있어, 옛 코드에서는
-     0.35초 주기의 `renderTrainLive()` → `renderTemper()` 가 **누른 손 밑에서** 헤더를 갈아 끼웠다
-     (`probe491` [G] 실측: 400ms 같은 노드 → 700ms 교체·`jz-dn` 소실·회색). 그래서 이 절은
-     **자멸 시각을 훌쩍 넘긴 800ms** 에 묻는다 — 350ms 안에서만 물으면 옛 코드도 초록이다.
+     613 이식 — 옛 표본이던 [충전](보유분 전부 1발 → 자멸)이 폐지돼, 같은 성질을 **[단련] 행 +
+     잔액 = 첫 비용 1발분**으로 만든다: 1발 사고 나면 재고가 없어 홀드가 ≈350ms 에 스스로 멎고,
+     그 뒤에도 손은 눌려 있는데 서명(tstone·lv)은 이미 달라져 있다 — 옛 코드에서는 0.35초 주기의
+     `renderTrainLive()` → `renderTemper()` 가 **누른 손 밑에서** 행을 갈아 끼웠다.
+     그래서 이 절은 **자멸 시각을 훌쩍 넘긴 800ms** 에 묻는다 — 350ms 안에서만 물으면 옛 코드도 초록이다.
      ⚠ 반대 결함(«미뤄 놓고 영영 안 돈다»)도 같이 묻는다 — [6-d] 가 그 자리다. */
   const holdRun = async (pg) => {
     await pg.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
-      setTrSub('temper'); S.tstone = 1e6; renderTrain(); });
+      setTrSub('temper'); S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
+      S.tstone = 1; renderTrain(); });                 /* 비용 1 × 1발 뒤 자멸 */
     await pg.waitForTimeout(450);
     const g = await pg.evaluate(() => {
-      const b = document.querySelector('#trTemper .tp-hd .cg');
-      const pv = document.querySelector('#trTemper .tp-hd .pv');
-      const hd = document.querySelector('#trTemper .tp-hd');
-      if (!b || !pv || !hd) return null;
+      const b = document.querySelector('#trTemper .tr-tp.k0 .tb');
+      const hd = document.querySelector('#trTemper .tr-tp.k0');
+      if (!b || !hd) return null;
       b.dataset.v491 = 'stamp';
       const r = b.getBoundingClientRect();
       return { x: r.x + r.width / 2, y: r.y + r.height / 2,
-               b: r.toJSON(), pv: pv.getBoundingClientRect().toJSON(), hd: hd.getBoundingClientRect().toJSON() };
+               b: r.toJSON(), hd: hd.getBoundingClientRect().toJSON() };
     });
     if (!g) return null;
     const snap = () => pg.evaluate(() => {
-      const el = document.querySelector('#trTemper .tp-hd .cg');
+      const el = document.querySelector('#trTemper .tr-tp.k0 .tb');
       return { same: !!(el && el.dataset && el.dataset.v491 === 'stamp'),
                dn: !!(el && el.classList.contains('jz-dn')),
                no: !!(el && el.classList.contains('no')) };
@@ -323,39 +327,18 @@ async function pixelRun(page) {
   };
   {
     const h = await holdRun(page);
-    ok(!!h, '[6-0] 단련 [충전] 버튼·헤더를 찾았다');
+    ok(!!h, '[6-0] 단련 [단련] 버튼·행을 찾았다(613 이식 — 잔액 1발분 자멸 표본)');
     if (h) {
       ok(h.held.same, '[6-a] ★ 자멸 뒤에도(누른 채 800ms) **누른 그 노드**가 살아 있다', 'same=' + h.held.same);
       ok(h.held.dn, '[6-b] ★ 그동안 jz-dn(눌림)이 유지된다', 'dn=' + h.held.dn);
       ok(!h.held.no, '[6-c] 누르는 중에는 회색(.no)이 안 덮인다(3회차 jzNo 회귀)', 'no=' + h.held.no);
       ok(!h.after.same && h.after.no,
-         '[6-d] ★ 손을 뗀 뒤에는 밀린 통짜 렌더가 **실제로 돌아** 정합이 맞는다(«영영 안 갱신» 의 반대 결함 없음)',
+         '[6-d] ★ 손을 뗀 뒤에는 밀린 통짜 렌더가 **실제로 돌아** 정합이 맞는다(«영영 안 갱신» 의 반대 결함 없음 — 잔액 0 이라 회색이 옳다)',
          'same=' + h.after.same + ' no=' + h.after.no);
       const inHd = n => n.y >= h.g.hd.y - 1 && n.y + n.h <= h.g.hd.y + h.g.hd.height + 1;
-      ok(h.fl.length === 1, '[6-e] [충전] 한 발에 회당 플로터가 **한 줄기**다(1:1 전환이라 둘째 줄기는 중복)',
-         h.fl.length + '장 ' + JSON.stringify(h.fl.map(n => n.t)));
       ok(h.fl.length >= 1 && h.fl.every(inHd),
-         '[6-f] ★ 두 줄기의 호스트가 **헤더(998×88)** 다 — 버튼(392×64) 안이 아니다',
+         '[6-f] 회당 플로터의 호스트가 **행(.tr-tp)** 이다(488 규약 유지)',
          JSON.stringify(h.fl.map(n => Math.round(n.y) + '..' + Math.round(n.y + n.h))));
-      ok(h.fl.length >= 1 && h.fl.every(n => n.h >= 34),
-         '[6-g] ★ 잉크 세로 ≥ 34px — 3회차 «형제 대비 −55%»(10~20px)의 회수. 4회차 실측 형제 43px',
-         h.fl.map(n => Math.round(n.h)).join('·'));
-      ok(h.flHold.length >= 1 && h.flHold.every(n => n.a > 0.08),
-         '[6-j] ★ 누른 채 800ms(비평 `-hold` 프레임)에도 회당 플로터가 남아 있다 — 4회차 «0px» 의 회수',
-         JSON.stringify(h.flHold.map(n => n.t + ' α' + n.a)));
-      ok(h.flUp.length >= 1 && h.flUp.every(n => n.a > 0.08),
-         '[6-k] ★ 뗀 뒤 140ms(비평 `-up` 프레임 ≈940ms)에도 남아 있다',
-         JSON.stringify(h.flUp.map(n => n.t + ' α' + n.a)));
-      ok(h.flHold.length >= 1 && h.flHold.every(n => n.y1 >= h.g.hd.y + 6 && n.y2 <= h.g.hd.y + h.g.hd.height - 6),
-         '[6-l] ★ 800ms(가장 높이 떠오른 자리)에도 잉크가 헤더 안쪽 면(테두리 8px 안) 안이다 — 상변에 안 얹힌다',
-         JSON.stringify(h.flHold.map(n => Math.round(n.y1) + '..' + Math.round(n.y2))) + ' in '
-         + Math.round(h.g.hd.y + 6) + '..' + Math.round(h.g.hd.y + h.g.hd.height - 6));
-      ok(/const TEMPER_PT_COST\s*=\s*1;/.test(src),
-         '[6-i] ★ 줄기가 하나인 **전제**(단련석 → 포인트 1:1)가 소스에 그대로다 — 199 가 전환비를 바꾸면 여기가 먼저 빨개진다');
-      ok(h.fl.length >= 1 && h.fl.every(n => n.x >= h.g.pv.x + h.g.pv.width - 1 && n.x + n.w <= h.g.b.x + 1),
-         '[6-h] 자리가 «`.pv` 오른끝 ↔ 버튼 왼끝» 빈 칸 안이다 — 글자를 안 덮는다',
-         JSON.stringify(h.fl.map(n => Math.round(n.x) + '..' + Math.round(n.x + n.w))) + ' band '
-         + Math.round(h.g.pv.x + h.g.pv.width) + '..' + Math.round(h.g.b.x));
     }
   }
 
@@ -373,19 +356,19 @@ async function pixelRun(page) {
        수리 전 값은 예외 없이 **0.00%** 였으므로 이 값이면 «부품이 빠지면 반드시 걸린다». */
   const HOSTS = [
     { id: 'rune',    tab: 'rune',   btn: '#trRunes .rbt.b1',        host: '#trRunes .tr-rn',        n: '룬 [강화] → 카드 `.tr-rn`' },
-    { id: 'tempup',  tab: 'temper', btn: '#trTemper .tr-tp.k0 .tb', host: '#trTemper .tr-tp.k0',    n: '단련 [투자] → 행 `.tr-tp`' },
-    { id: 'tempchg', tab: 'temper', btn: '#trTemper .tp-hd .cg',    host: '#trTemper .tp-hd',       n: '단련 [충전] → 헤더 `.tp-hd`' },
+    { id: 'tempup',  tab: 'temper', btn: '#trTemper .tr-tp.k0 .tb', host: '#trTemper .tr-tp.k0',    n: '단련 [단련] → 행 `.tr-tp`' },
   ];
   const HOST_PX_MIN = 1.0;
 
-  ok(/const JZ_HOST_SEL = '[^']*\.tr-rn[^']*\.tr-tp[^']*\.tp-hd[^']*\.tr-card'/.test(src),
-     '[7-a] 소스에 호스트 목록 `JZ_HOST_SEL` 이 있고 네 호스트를 다 적는다');
+  ok(/const JZ_HOST_SEL = '[^']*\.tr-rn[^']*\.tr-tp[^']*\.tr-card'/.test(src)
+     && !/JZ_HOST_SEL = '[^']*tp-(hd|ft)/.test(src),
+     '[7-a] 소스에 호스트 목록 `JZ_HOST_SEL` 이 있고 산 호스트만 적는다(613·614 — 헤더·회수 행 제외)');
   ok(/const h = el\.closest\(JZ_HOST_SEL\);\s*\n\s*return \(h && h !== el\) \? h : null;/.test(src),
      '[7-b] 호스트가 «누른 그 노드» 자신이면 안 고른다(같은 `scale` 을 두고 싸우지 않는다)');
   ok(/\.jz-hdn\{scale:\.985;translate:0 6px;filter:brightness\(1\.05\)\}/.test(src),
      '[7-c0] `.jz-hdn` 은 **정적 값**이다 — `animation` 단축을 안 쓴다(그 자리는 488 `jz-hb` 임자)');
-  ok(/\.tr-rn,\.tr-tp,\.tr-temp>\.tp-hd,\.tr-temp>\.tp-ft\{transition:scale [^}]*translate/.test(src),
-     '[7-c1] 호스트 넷이 같은 트랜지션 한 줄을 공유한다(뗌도 같은 곡선 · `.tr-card` 는 목록 밖)');
+  ok(/\.tr-rn,\.tr-tp\{transition:scale [^}]*translate/.test(src),
+     '[7-c1] 살아 있는 호스트 둘이 같은 트랜지션 한 줄을 공유한다(뗌도 같은 곡선 · `.tr-card` 는 목록 밖)');
   /* ⚑ 579 이관 — 이 항은 «누름 부품의 **진폭**(.94 / 8px)이 안 바뀌었다» 를 묻는 자리다(25자리 회귀 0).
      종전에는 그 진폭이 `@keyframes jzDn` 안에 있어 키프레임 문자열을 그대로 물었는데, 579 가
      `.jz-dn` 을 **정적 값 + 트랜지션**으로 갈면서(이유는 여기 [7-c0] 과 같다 — 488 맥박이 `animation`
@@ -585,49 +568,7 @@ async function pixelRun(page) {
     ok(String(hold.scale).indexOf('0.985') === 0,
        '[8-c] 같은 시각에 스케일도 유지된다(.985)', 'scale=' + hold.scale);
 
-    /* ⓑ 최악 자릿수에서도 사다리가 «`.pv` 잉크 우단 ↔ 버튼 좌단» 안이다 */
-    for (const pts of [500, 999999999]) {
-      const b8 = await p3.evaluate(p0 => {
-        S.temper.pts = p0; S.tstone = 1e6; renderTrain();
-        const hd = document.querySelector('#trTemper .tp-hd'), H = hd.getBoundingClientRect();
-        const pv = hd.querySelector('.pv'); const rg = document.createRange(); rg.selectNodeContents(pv);
-        const rr = rg.getBoundingClientRect();
-        const cg = hd.querySelector('.cg').getBoundingClientRect();
-        const cs = getComputedStyle(hd);
-        const x = parseFloat(cs.getPropertyValue('--hb-x'));
-        const mw = parseFloat(cs.getPropertyValue('--hb-mw'));
-        const n = parseFloat(cs.getPropertyValue('--hb-slots'));
-        const sw = parseFloat(cs.getPropertyValue('--hb-sw'));
-        return { ink2: rr.x + rr.width - H.x, btn: cg.x - H.x, w: H.width, x, mw, n, sw };
-      }, pts);
-      /* ⚠ 사다리는 중심에서 ±(n−1)/2 × sw 만큼 흩어진다 — 그 몫을 빼면 자가 무르다
-         (첫 시안이 그것을 빼먹어 [6-h] 가 «우단이 버튼을 8px 밟는다» 로 잡았다). */
-      const half = b8.mw / 2 + ((b8.n - 1) / 2) * b8.sw;
-      const c = b8.w * b8.x, l = c - half, r = c + half;
-      ok(l >= b8.ink2 && r <= b8.btn,
-         '[8-d' + String(pts).length + '] 사다리(잉크 ' + b8.mw + 'px + 흩뿌림 ±'
-         + p2(((b8.n - 1) / 2) * b8.sw) + 'px)가 자릿수 ' + String(pts).length + ' 에서도 빈 칸 안이다',
-         '사다리 ' + p2(l) + '..' + p2(r) + ' ⊂ 빈 칸 ' + p2(b8.ink2) + '..' + p2(b8.btn)
-         + ' (여유 좌 ' + p2(l - b8.ink2) + ' · 우 ' + p2(b8.btn - r) + ')');
-    }
-    /* ⚠ 이 헤더에 **두 줄기를 가로로** 넣는 길이 막혀 있다는 것도 자로 못박는다(4회차 «한 줄기» 의 기하 근거) */
-    const pair = await p3.evaluate(() => {
-      S.temper.pts = 999999999; renderTrain();
-      const hd = document.querySelector('#trTemper .tp-hd'), H = hd.getBoundingClientRect();
-      const pv = hd.querySelector('.pv'); const rg = document.createRange(); rg.selectNodeContents(pv);
-      const rr = rg.getBoundingClientRect();
-      const cg = hd.querySelector('.cg').getBoundingClientRect();
-      /* 「−1,000,000」 실측 잉크 폭 — 같은 서체·같은 규격으로 재 본다 */
-      const b = document.createElement('b');
-      b.className = 'fx-plus hb dn'; b.textContent = '−1,000,000';
-      b.style.position = 'absolute'; b.style.left = '-9999px';
-      (document.getElementById('fxl') || document.body).appendChild(b);
-      const w = b.getBoundingClientRect().width; b.remove();
-      return { band: (cg.x - (rr.x + rr.width)), ink: w };
-    }, null);
-    ok(pair.band < pair.ink * 2,
-       '[8-e] ★ 최악 자릿수의 빈 칸에는 **두 줄기가 가로로 못 들어간다**(4회차 «한 줄기» 의 기하 근거)',
-       '빈 칸 ' + p2(pair.band) + 'px < 「−1,000,000」 잉크 ' + p2(pair.ink) + 'px × 2');
+    /* ⓑ(사다리 자릿수 자리)는 [충전] 헤더와 함께 폐지 — 기하 기록은 review 491 §31 */
     ok(c3.errs.length === 0, '[8-Z] §8 실행 중 콘솔 에러 0', c3.errs.slice(0, 2).join(' | '));
     await c3.ctx.close();
   }
@@ -663,7 +604,7 @@ async function pixelRun(page) {
   try {
     const b2 = await boot(browser, NEG);
     const back = await pixelRun(b2.page);
-    const three = ['rune', 'tempup', 'tempchg'];
+    const three = ['rune', 'tempup'];
     /* ⚠ 되돌림의 **주 축은 픽셀이 아니라 노드 생존**이다 — 「단련 [충전]」은 누름 반응이 0 이어도
        머리 띠의 «포인트 n» 이 통째로 바뀌어 bbox 픽셀이 76% 변한다. 그건 «결과» 지 «누름» 이 아니다.
        픽셀만 보는 자였으면 그 자리를 «초록» 으로 읽고 수리 전과 못 갈랐다(1회차에 실제로 그랬다). */

@@ -15,7 +15,8 @@
  *                룬 [강화]·단련 [단련]이 그 값과 ±3%. 세 자산 viewBox 가 같은 64 라 상자 = 잉크다.
  *   [3] ③      — `.tr-up` 이 커졌고(수리 전 108×107) 이웃과 겹침 0 · 진행바 세로 중심 유지
  *   [4] ②      — 룬 액자 안 잉크비가 411 `SLOT_ART` 비와 ±3% · 값이 **파생**이지 손으로 적은 수가 아니다
- *   [5] ④      — 라벨이 «단련» + `tstone` 아이콘 **1장** + «n pt» · 제품 문자열에 «투자» 0건(토스트 포함)
+ *   [5] ④      — 라벨이 «단련» + `tstone` 아이콘 **1장** + «n»(613 — «pt» 는 죽은 말) ·
+ *                제품 문자열에 «투자» 0건(토스트 포함)
  *   [6] 297    — 통짜 렌더와 `liveTemper()` 가 **같은 문자열**(라벨에 태그가 들어와 깨지기 쉬운 자리)
  *   [7] 210·519·166 — 단련 탭 다섯 줄 겹침 0 · 레드닷 판정 불변 · 351(9:13.3) 잘림 0
  *   §R  되돌림 — 라벨·룬 그림자리·↑ 버튼을 각각 수리 전으로 되돌리면 **그 절만** 빨개진다
@@ -248,7 +249,8 @@ const openAt = async (browser, h) => {
   ok(!/투자/.test(lab.txt) && !/투자/.test(lab.html), '[5-b] 라벨에 «투자» 가 없다');
   ok(lab.imgs === 1 && lab.cur === 'tstone',
     '[5-c] ★ «어떤 화폐 쓰는지» 를 아이콘으로 말한다(tstone 1장)', lab.cur + ' ×' + lab.imgs);
-  ok(/\d[\d,]* pt$/.test(lab.txt), '[5-d] ⚠ «pt» 단위를 안 지웠다(단련은 «단련석 → 포인트» 2단계)', '«' + lab.txt + '»');
+  ok(/\d[\d,]*$/.test(lab.txt) && !/pt/.test(lab.txt),
+    '[5-d] 613 — 라벨이 숫자로 끝나고 «pt» 가 없다(그 수가 곧 단련석 지불액)', '«' + lab.txt + '»');
   /* 제품 문자열(주석 아님)에서 «투자» 가 0건 — 버튼·토스트 둘 다 */
   const codeHits = CODE.split('\n').filter(l => /(['"])투자 /.test(l) || /\(투자 /.test(l));
   ok(codeHits.length === 0, '[5-e] ★ 제품 문자열에 «투자» 표기 0건(버튼 + 홀드 토스트)',
@@ -264,8 +266,8 @@ const openAt = async (browser, h) => {
     const full = [...w.querySelectorAll('.tr-tp .tb i')].map(n => n.innerHTML);
     liveTemper();
     const live = [...w.querySelectorAll('.tr-tp .tb i')].map(n => n.innerHTML);
-    /* 값이 바뀐 뒤에도 같은가 — 홀드 중 갱신 경로 */
-    S.tstone += 500; temperCharge && temperCharge();
+    /* 값이 바뀐 뒤에도 같은가 — 홀드 중 갱신 경로 (613 — 전환 없이 잔액·레벨을 직접 바꾼다) */
+    S.tstone += 500; S.temper.alloc.atk = (S.temper.alloc.atk || 0) + 100;
     liveTemper();
     const live2 = [...w.querySelectorAll('.tr-tp .tb i')].map(n => n.innerHTML);
     w.dataset.sig = ''; renderTrain();
@@ -283,7 +285,7 @@ const openAt = async (browser, h) => {
   const reg = await page.evaluate(() => {
     setTrSub('temper'); renderTrain();
     const rc = s => window.__rc(s, '#trTemper');
-    const rows = ['.tp-hd', '.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2', '.tp-ft'].map(s => rc(s));
+    const rows = ['.tp-hd', '.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2'].map(s => rc(s));   /* 614 — 회수 줄 없음 */
     const tb = window.__rc('#trTemper .tr-tp.k0 .tb', '#trTemper .tr-tp.k0');
     const td = window.__rc('#trTemper .tr-tp.k0 .td', '#trTemper .tr-tp.k0');
     const tc = window.__rc('#trTemper .tr-tp.k0 .tc', '#trTemper .tr-tp.k0');
@@ -291,17 +293,17 @@ const openAt = async (browser, h) => {
     const dot = () => { const d = document.querySelector('#trSubs [data-trsub="temper"]');
       return { alert: d.classList.contains('alert'),
                disp: getComputedStyle(d.querySelector('.bdg')).display }; };
-    const before = { pts: S.temper && S.temper.pts, tstone: S.tstone };
-    S.tstone = 0; if (S.temper) S.temper.pts = 0; renderTrain();
+    const before = { tstone: S.tstone };
+    S.tstone = 0; renderTrain();
     const off = { judge: temperAlert(), ui: dot() };
     S.tstone = 1e6; renderTrain();
     const on = { judge: temperAlert(), ui: dot() };
-    S.tstone = before.tstone; if (S.temper) S.temper.pts = before.pts; renderTrain();
+    S.tstone = before.tstone; renderTrain();
     return { rows, tb, td, tc, off, on };
   });
   let overlap = 0;
   for (let i = 1; i < reg.rows.length; i++) if (reg.rows[i].y < reg.rows[i - 1].y2) overlap++;
-  ok(overlap === 0, '[7-a] 210 — 단련 탭 다섯 줄이 여전히 겹침 0', reg.rows.map(r => r.y + '..' + r.y2).join(' · '));
+  ok(overlap === 0, '[7-a] 210 — 단련 탭 네 줄이 여전히 겹침 0(614 — 회수 줄 없음)', reg.rows.map(r => r.y + '..' + r.y2).join(' · '));
   ok(reg.tb.x >= reg.td.x2, '[7-b] ★ 넓힌 [단련] 버튼이 같은 행 효과 줄(`.td`)과 겹치지 않는다',
     `버튼 좌변 ${reg.tb.x} ↔ .td 우변 ${reg.td.x2} (여유 ${p1(reg.tb.x - reg.td.x2)})`);
   ok(reg.tb.y >= reg.tc.y2, '[7-c] 같은 행 비용 줄(`.tc`)과도 겹치지 않는다',
@@ -326,7 +328,7 @@ const openAt = async (browser, h) => {
         if (o > 0) out.push({ s, out: +o.toFixed(1) }); }); };
     chk('train', ['#trw .tr-up', '#trw .tr-up>svg', '#trw .tr-cards']);
     chk('rune', ['#trw .tr-rn>.ri', '#trw .tr-rn>.rbt', '#trw .tr-rn>.rbt .cic']);
-    chk('temper', ['#trTemper .tp-hd', '#trTemper .tp-ft', '#trTemper .tr-tp.k2 .tb', '#trTemper .tr-tp.k0 .tb .cic']);
+    chk('temper', ['#trTemper .tp-hd', '#trTemper .tp-hd .pv', '#trTemper .tr-tp.k2 .tb', '#trTemper .tr-tp.k0 .tb .cic']);
     setTrSub('train'); renderTrain();
     return out;
   });

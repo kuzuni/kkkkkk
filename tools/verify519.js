@@ -3,9 +3,12 @@
  *
  *   node tools/verify519.js
  *
+ * ⚑ 613·614 이관(2026-08-31): «포인트» 전환 단계·다이아 회수가 폐지됐다. 판정의 뜻은 그대로 —
+ *   «실제로 올릴 수 있는 축이 있는가» — 이고, 이제 그 판정이 한 단계(단련석 직접 비교)다.
+ *   «보유 ≥ 1 이면 점등»(수리 전 식)으로 되돌아가면 §2·§R 이 잡는다. 포인트 표본은 제거.
+ *
  * 이 결함은 **층이 둘**이었고 둘 다 실재했다(`tools/probe519.js` 가 재현):
- *   ⓑ 판정 — `temperAlert()` 첫 항이 `(S.tstone|0) >= TEMPER_PT_COST` 이고 `TEMPER_PT_COST = 1` 이라
- *      사실상 «단련석을 1개라도 들고 있는가» = 상시 참. 전환해도 못 올리면 누를 것이 없다.
+ *   ⓑ 판정 — 옛 식은 사실상 «단련석을 1개라도 들고 있는가» = 상시 참. 못 올리면 누를 것이 없다.
  *   ⓓ 그리기 — `#trw i,#trw em,#trw b,#trw u,#trw s{display:inline-block}`(ID 급 1,0,1) 이
  *      `.stab>.bdg{display:none}`(0,2,0) 을 이겨 **`.alert` 와 무관하게 상시 점등**(166 ⓔ 계열 5번째).
  *
@@ -30,7 +33,7 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
    ⚠ 325 함정 — 등장 애니메이션(scale 0 시작)이 rect 를 0 으로 만든다. 잴 때만 끈다. */
 const SNAP = `(spec => {
   S.tstone = spec.ts;
-  S.temper = { pts: spec.pts, alloc: spec.alloc || {} };
+  S.temper = { alloc: spec.alloc || {} };
   if (spec.dia != null) S.dia = spec.dia;
   setTrSub('temper'); renderRunes(); renderTrain();
   const tab = document.querySelector('#trSubs [data-trsub="temper"]');
@@ -44,16 +47,15 @@ const SNAP = `(spec => {
     display: cs ? cs.display : '(없음)',
     area: r ? Math.round(r.width * r.height * 100) / 100 : -1,
     rect: r ? [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)] : null,
-    pts: temperPts(),
+    st: Math.floor(S.tstone) || 0,
     minCost: Math.min.apply(null, TEMPERS.map(t => temperCost(t.k))),
-    /* 진실 — «전환까지 마친 뒤 실제로 올릴 수 있는 축이 하나라도 있는가» */
+    /* 진실 — «실제로 올릴 수 있는 축이 하나라도 있는가» (게이트 독립 계산 — 613 직접 지불) */
     truly: (() => {
-      const p = temperPts() + Math.floor((Math.floor(S.tstone) || 0) / TEMPER_PT_COST);
-      return TEMPERS.some(t => p >= temperCost(t.k));
+      const st = Math.floor(S.tstone) || 0;
+      return TEMPERS.some(t => st >= temperCost(t.k));
     })(),
-    /* 수리 전 식 — §R 이 이것으로 «되돌리면 빨갛다» 를 본다 */
-    oldAlert: (Math.floor(S.tstone) || 0) >= TEMPER_PT_COST || TEMPERS.some(t => temperUpOk(t.k)),
-    resetOk: !!temperResetOk()
+    /* 수리 전 식(«보유 ≥ 1 이면 점등») — §R 이 이것으로 «되돌리면 빨갛다» 를 본다 */
+    oldAlert: (Math.floor(S.tstone) || 0) >= 1 || TEMPERS.some(t => temperUpOk(t.k))
   };
   if (bdg) bdg.style.animation = prevA;
   return out;
@@ -81,18 +83,15 @@ async function open(browser, seed) {
   return { page, errs, ev: js => page.evaluate('(' + js + ')') };
 }
 
-/* 세 축 전부 Lv100 = 구간 1 → 다음 1레벨 3pt (temperSegCost(1) = 3) */
+/* 세 축 전부 Lv100 = 구간 1 → 다음 1레벨 3 (temperSegCost(1) = 3). 613 — 포인트 표본은 죽었다 */
 const HI = { atk: 100, hp: 100, regen: 100 };
 const CASES = [
-  { n: '① 단련석 0 · 포인트 0',                       s: { ts: 0, pts: 0, alloc: {} },       want: false },
-  { n: '② 단련석 1 · 포인트 0 · 비용 1',              s: { ts: 1, pts: 0, alloc: {} },       want: true  },
-  { n: '③ 단련석 0 · 포인트 1 · 비용 1',              s: { ts: 0, pts: 1, alloc: {} },       want: true  },
-  { n: '④ 단련석 1 · 포인트 0 · 비용 3  ← 수리 전 점등', s: { ts: 1, pts: 0, alloc: HI },     want: false },
-  { n: '⑤ 단련석 2 · 포인트 0 · 비용 3  ← 수리 전 점등', s: { ts: 2, pts: 0, alloc: HI },     want: false },
-  { n: '⑥ 단련석 2 · 포인트 1 · 비용 3',              s: { ts: 2, pts: 1, alloc: HI },       want: true  },
-  { n: '⑦ 단련석 3 · 포인트 0 · 비용 3',              s: { ts: 3, pts: 0, alloc: HI },       want: true  },
-  { n: '⑧ 단련석 0 · 포인트 2 · 비용 3',              s: { ts: 0, pts: 2, alloc: HI },       want: false },
-  { n: '⑨ 단련석 0 · 포인트 3 · 비용 3',              s: { ts: 0, pts: 3, alloc: HI },       want: true  }
+  { n: '① 단련석 0',                                  s: { ts: 0, alloc: {} },              want: false },
+  { n: '② 단련석 1 · 비용 1',                          s: { ts: 1, alloc: {} },              want: true  },
+  { n: '④ 단련석 1 · 비용 3  ← 수리 전 점등',           s: { ts: 1, alloc: HI },              want: false },
+  { n: '⑤ 단련석 2 · 비용 3  ← 수리 전 점등',           s: { ts: 2, alloc: HI },              want: false },
+  { n: '⑥ 축 하나만 비용 1 · 단련석 1',                 s: { ts: 1, alloc: { atk: 100 } },    want: true  },
+  { n: '⑦ 단련석 3 · 비용 3',                          s: { ts: 3, alloc: HI },              want: true  }
 ];
 
 (async () => {
@@ -107,25 +106,25 @@ const CASES = [
   ok(/#trw i,#trw em,#trw b,#trw u,#trw s\{display:inline-block/.test(CODE),
     '[1-c] 함정의 재료는 **아직 그대로다** — 짝이 그것을 이기는 것이지 지운 것이 아니다',
     '이 줄을 지워서 «고쳤다» 고 하면 #trw 안 모든 <i><b><s> 타이포가 무너진다');
-  const alertSrc = (CODE.match(/const temperAlert = [\s\S]{0,420}?\n\};/) || [''])[0];
-  ok(/temperPts\(\)\s*\+\s*Math\.floor\(/.test(alertSrc),
-    '[1-d] ⓑ 판정 — 전환분과 보유분을 **한 판정으로 합친다**(두 벌 금지)');
-  ok(!/>=\s*TEMPER_PT_COST[\s\S]{0,40}\|\|/.test(alertSrc),
+  const alertSrc = (CODE.match(/const temperAlert = [^\n]*/) || [''])[0];
+  ok(/TEMPERS\.some\(t => temperUpOk\(t\.k\)\)/.test(alertSrc),
+    '[1-d] ⓑ 판정 — temperUpOk 와 **같은 식**을 본다(두 벌 금지 · 613 직접 지불)', alertSrc);
+  ok(!/\|\|/.test(alertSrc) && !/TEMPER_PT_COST/.test(alertSrc),
     '[1-e] 옛 OR 꼴(«단련석 ≥ 전환비 || …»)이 돌아오지 않았다');
-  ok(!/S\.dia|TEMPER_RESET_DIA/.test(alertSrc),
-    '[1-f] 다이아 회수는 판정 축이 아니다(31790 주석 유지 — 회수는 상시 가능하다)');
+  ok(!/S\.dia/.test(alertSrc),
+    '[1-f] 다이아는 판정 축이 아니다(614 — 회수 자체가 폐지됐다)');
 
   /* ══ §2 판정 — 실로드 상태 표 ═════════════════════════════════════════════ */
   console.log('\n=== §2 판정 — 실로드한 세이브에서 「점등 ≡ 올릴 수 있는 축 존재」 ===');
   ok(!!KEY, '[2-0] 세이브 KEY 를 소스에서 읽었다', KEY);
   for (const c of CASES) {
-    const seed = JSON.stringify({ tstone: c.s.ts, temper: { pts: c.s.pts, alloc: c.s.alloc }, time: Date.now() });
+    const seed = JSON.stringify({ tstone: c.s.ts, temper: { alloc: c.s.alloc }, time: Date.now() });
     const h = await open(browser, seed);
     const r = await h.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, c.s]);
     ok(r.alert === c.want && r.truly === c.want,
       '[2] ' + c.n + ' → ' + (c.want ? '점등' : '소등'),
       '판정=' + (r.alert ? '점등' : '소등') + ' · 진실=' + (r.truly ? '가능' : '없음')
-      + ' · pts=' + r.pts + ' · 최소비용=' + r.minCost);
+      + ' · 단련석=' + r.st + ' · 최소비용=' + r.minCost);
     await h.page.context().close();
   }
 
@@ -168,14 +167,14 @@ const CASES = [
   };
 
   /* «올릴 수 있는 축이 있는» 상태 = 점등이 옳은 자리 */
-  const onSnap = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 50, pts: 0, alloc: {} }]);
+  const onSnap = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 50, alloc: {} }]);
   await h3.page.waitForTimeout(700);                       /* 60 등장 쥬시가 앉을 때까지 */
   const onPix = await dotPixels('on');
   ok(onSnap.alert === true && onSnap.hasClass === true, '[3-a] 전제 — 이 상태는 점등이 옳다(`.alert` 가 붙었다)');
   ok(onPix.n > 200, '[3-b] 점등 상태에서 닷 색 픽셀이 실제로 찍힌다', onPix.n + 'px / ' + onPix.w + '×' + onPix.h);
 
   /* «누를 것이 없는» 상태 = 소등이 옳은 자리 */
-  const offSnap = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 0, pts: 0, alloc: {} }]);
+  const offSnap = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 0, alloc: {} }]);
   await h3.page.waitForTimeout(400);
   const offPix = await dotPixels('off');
   ok(offSnap.alert === false && offSnap.hasClass === false, '[3-c] 전제 — 이 상태는 소등이 옳다(`.alert` 가 없다)');
@@ -194,7 +193,7 @@ const CASES = [
     '[3-e] `.alert` 클래스 하나로 그림이 갈린다', 'alert 없음=' + forced.off + ' · 있음=' + forced.on);
 
   /* ══ §4 이웃 회귀 ═══════════════════════════════════════════════════════════ */
-  console.log('\n=== §4 이웃 — 300(룬은 대상 아님) · 회수 축 ===');
+  console.log('\n=== §4 이웃 — 300(룬은 대상 아님) · 다이아 비관여(614) ===');
   const nodes = await h3.page.evaluate(() => {
     const o = {};
     ['train', 'rune', 'temper'].forEach(k => {
@@ -206,11 +205,10 @@ const CASES = [
   ok(nodes.rune && nodes.rune.bdg === 0 && nodes.rune.alert === false,
     '[4-a] 300 회귀 — 룬 칸에는 배지 노드도 `.alert` 도 없다', JSON.stringify(nodes.rune));
   ok(nodes.train && nodes.train.bdg === 0, '[4-b] 훈련 칸에도 배지 노드가 없다');
-  /* 회수만 가능한 상태 — 다이아 넉넉 + 투자 이력 있음 + 올릴 수 있는 축 없음 → 소등이 옳다 */
-  const rst = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 0, pts: 2, alloc: HI, dia: 999999 }]);
-  ok(rst.resetOk === true, '[4-c] 전제 — 이 상태에서 «회수» 는 실제로 가능하다(다이아·투자 이력 충족)');
+  /* 다이아가 아무리 많아도 판정과 무관하다 — 614 이후 회수 자체가 없다 */
+  const rst = await h3.page.evaluate(([js, spec]) => eval(js)(spec), [SNAP, { ts: 0, alloc: HI, dia: 999999 }]);
   ok(rst.alert === false && rst.area === 0,
-    '[4-d] 회수만 가능한 상태는 **소등** — 회수는 상시 가능하므로 신호 축이 아니다',
+    '[4-c] 다이아 99만 + 투자 이력이어도 단련석이 없으면 **소등**(다이아는 판정 축이 아니다 — 614)',
     '판정=' + (rst.alert ? '점등' : '소등') + ' · 닷 면적=' + rst.area);
 
   /* ══ §R 되돌림 — 두 층을 각각 되돌리면 빨개진다 ════════════════════════════ */
@@ -234,7 +232,7 @@ const CASES = [
     killed.reverse().forEach(k => k.sh.insertRule(k.text, k.i));
     const b = eval(js)(spec);                       /* 되돌리면 다시 꺼지는가 */
     return { killedN: killed.length, revert: a, restored: b };
-  }, [SNAP, { ts: 0, pts: 0, alloc: {} }]);
+  }, [SNAP, { ts: 0, alloc: {} }]);
   ok(rev.killedN === 4, '[R-a] 걷어낸 규칙이 정확히 4줄이다 — 519 의 짝 2줄 + 531 예방 짝 2줄(이관)', rev.killedN + '줄');
   ok(rev.revert.display !== 'none' && rev.revert.area > 0,
     '[R-b] ⓓ 되돌림 — 두 줄을 걷으면 **소등이 옳은 상태에서도 닷이 그려진다**(수리 전)',

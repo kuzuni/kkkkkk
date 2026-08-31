@@ -100,7 +100,7 @@ const INSTALL = () => {
   /* ⚠ 표본 재화는 **작게** 넣는다 — 1e18 은 float64 ulp 가 128 이라 «−45» 를 빼도 값이 안 바뀌어
      `fxWatch` 의 감소 판정이 통째로 안 돈다(probe583 1회차가 그 함정에 걸렸다). */
   await p.evaluate(() => { S.gold = 5e8; S.dia = 1e6; S.rstone = 1e6; S.tstone = 1e6;
-    try { temperObj().pts = 1e6; } catch (_) {} openTrain(); });
+    openTrain(); });   /* 613 — 단련은 tstone 직접 지불(포인트 시드 불요·pts 는 죽은 필드) */
   await p.waitForTimeout(400);
   await p.evaluate(INSTALL);
 

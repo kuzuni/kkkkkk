@@ -142,8 +142,7 @@ const INK_FN = `
     res.rune = one('#trw .tr-rn>.rbt .cic');
     res.runeBtnTxt = (document.querySelector('#trw .tr-rn>.rbt') || {}).textContent;
     setTrSub('temper'); renderTrain();
-    res.tempCharge = one('#trTemper .tp-hd .cg .cic');
-    res.tempReset = one('#trTemper .tp-ft .rb .cic');
+    /* 613·614 — [충전]·[회수] 폐지: 그 두 표본은 죽었다 */
     res.tempUp = one('#trTemper .tr-tp .tb .cic');
     res.tempUpTxt = (document.querySelector('#trTemper .tr-tp .tb i') || {}).textContent;
     setTrSub('train'); renderTrain();
@@ -283,7 +282,7 @@ const INK_FN = `
       setTrSub(k); renderTrain();
       const sels = k === 'train' ? ['#trw .tr-up', '#trw .tr-prog', '#trw .tr-cards']
         : k === 'rune' ? ['#trw .tr-rn>.ri', '#trw .tr-rn>.rbt']
-        : ['#trTemper .tp-hd', '#trTemper .tp-ft', '#trTemper .tr-tp .tb'];
+        : ['#trTemper .tp-hd', '#trTemper .tr-tp .tb'];   /* 614 — 회수 줄 없음 */
       res.tabs[k] = sels.map(s => { const n = document.querySelector(s); if (!n) return { s, miss: 1 };
         const r = n.getBoundingClientRect();
         return { s, y: +r.y.toFixed(1), y2: +(r.y + r.height).toFixed(1),

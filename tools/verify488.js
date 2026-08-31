@@ -212,9 +212,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('[C] 단련 [투자] 홀드 — 같은 부품 · 확정 처리라 실패 갈래 없음');
   await p.evaluate(() => {
     if (window.__rate0) runeRate = window.__rate0;
-    S.tstone = 1e12; openTrain(); setTrSub('temper'); renderTrain();
-    try { temperCharge(1e9); } catch (_) {}
-    renderTrain();
+    S.tstone = 1e12; openTrain(); setTrSub('temper'); renderTrain();   /* 613 — 직접 지불이라 전환 없음 */
   });
   await p.waitForTimeout(450);
   await countTries('temperUpBtn'); await reset();
@@ -224,7 +222,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   console.log('  · 시도 ' + C.tries + ' · 맥박 ' + C.hb + '/' + C.hbx + ' · 플로터 ' + C.node + ' · 토스트 ' + C.toast);
   ok(C.tries >= 8, '[C1] 단련 홀드가 여러 번 시도한다(전제)', C.tries + '회');
   ok(C.hb === C.tries && C.hbx === 0, '[C2] ★ 맥박 수 = 시도 수 · 확정 처리라 흔들림 0', C.hb + '/' + C.tries);
-  ok(C.fOk === C.tries && C.fPay === C.tries, '[C3] ★ «+1 Lv» · «−n pt» 각각 시도 수', C.fOk + '·' + C.fPay + ' / ' + C.tries);
+  ok(C.fOk === C.tries && C.fPay === C.tries, '[C3] ★ «+1 Lv» · «−n(단련석)» 각각 시도 수', C.fOk + '·' + C.fPay + ' / ' + C.tries);
   ok(sumT(C, /단련/) === 1, '[C4] 단련 정산 토스트는 요약 한 장', sumT(C, /단련/) + '장 / 전체 ' + C.toast);
 
   /* ══ [D] 08 세부 팝업 [강화] 홀드(bindUpHold) ═══════════════════════ */
@@ -308,10 +306,10 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
        올라왔다(형제 둘과 같은 꼴). 호스트가 늘었으니 이 절이 그 자리도 같이 지켜야 한다 —
        헤더는 룬 카드와 **같은 998폭**이라 기본 진폭 1.06 이면 그릇을 11.9px 넘본다. */
     const hd = document.querySelector('#trTemper .tp-hd');
-    out.hd = { s: hd ? rd(hd) : 0, w: hd ? hd.getBoundingClientRect().width : 0,
-               h: hd ? hd.getBoundingClientRect().height : 0,
-               gap: (hd && tps[0]) ? tps[0].getBoundingClientRect().top - hd.getBoundingClientRect().bottom : 0,
-               box: boxEl.getBoundingClientRect().width };
+    /* 613 — [충전] 폐지로 헤더는 더 이상 피드백 호스트가 아니다. --hb-s 신고가 남아 있으면
+       죽은 부품이 되살아난 것이다(getPropertyValue 는 미선언이면 빈 문자열을 준다). */
+    out.hd = { decl: hd ? getComputedStyle(hd).getPropertyValue('--hb-s').trim() : '(노드 없음)',
+               present: !!hd };
     setTrSub('train'); renderTrain();
     const cds = [...document.querySelectorAll('.tr-card')];
     out.cd = { s: cds[0] ? rd(cds[0]) : 0, w: cds[0] ? cds[0].getBoundingClientRect().width : 0,
@@ -329,12 +327,9 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(G.cd.s === 1.02 && grow(G.cd.w, G.cd.s) * 2 < G.cd.gap, '[G4] 훈련 카드 팝이 이웃 카드와 안 겹친다',
      '자람 ' + (grow(G.cd.w, G.cd.s) * 2).toFixed(1) + ' < 틈 ' + G.cd.gap.toFixed(1));
   ok(Math.abs(G.small - 1.06) < 1e-6, '[G5] 작은 호스트는 지시 원문 그대로 1.06 이다', String(G.small));
-  ok(G.hd.s === 1.02 && G.hd.w * G.hd.s <= G.hd.box,
-     '[G6] ★ 단련 헤더(491 4회차 신규 호스트) 팝이 그릇 .tr-box 안폭을 안 넘는다',
-     '진폭 ' + G.hd.s + ' · ' + (G.hd.w * G.hd.s).toFixed(1) + ' ≤ ' + G.hd.box.toFixed(1));
-  ok(G.hd.s > 0 && grow(G.hd.h, G.hd.s) * 2 < G.hd.gap,
-     '[G7] 단련 헤더 팝이 아래 첫 행과의 틈 안에 든다',
-     '자람 ' + (grow(G.hd.h, G.hd.s) * 2).toFixed(1) + ' < 틈 ' + G.hd.gap.toFixed(1));
+  ok(G.hd.present && G.hd.decl === '',
+     '[G6] 613 — 단련 헤더는 더 이상 피드백 호스트가 아니다(--hb-s 신고 0건 — [충전]과 함께 폐지)',
+     'decl=«' + G.hd.decl + '»');
 
   /* ══ [H] 겹침 — 회당 한 장씩 흐르는 플로터가 서로 안 뭉치는가 ══════ */
   console.log('[H] 동시 생존 플로터 — 겹친 쌍 (1회차에 15~16쌍이었다)');
@@ -598,7 +593,7 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
                     pay: kids.filter(k => hit(e.pay, k)).map(k => k.cls) };
       try { closeRelw(); } catch (_) {}
     }
-    openTrain(); setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
+    openTrain(); setTrSub('temper'); S.tstone = 1e12; renderTrain();   /* 613 — 직접 지불 */
     {
       const host = document.querySelector('.tr-tp'), e = envs(host);
       /* 612 — 아이콘 104 → 178 확대로 글줄이 옛 빈 띠(중앙)로 왔다. 봉투는 훈련 카드와 같은 처방으로
@@ -685,8 +680,8 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     };
     openTrain(); setTrSub('rune'); setRuneSub('r1'); renderTrain();
     meas('룬 카드', '.tr-rn', ['+1', '실패', '−1,234']);
-    setTrSub('temper'); try { temperCharge(1e9); } catch (_) {} renderTrain();
-    meas('단련 행', '.tr-tp', ['+1', '−1,234 pt']);
+    setTrSub('temper'); S.tstone = 1e12; renderTrain();   /* 613 — 직접 지불 */
+    meas('단련 행', '.tr-tp', ['+1', '−1,234']);
     setTrSub('train'); renderTrain();
     meas('훈련 카드', '.tr-card', ['−53', '−2.12M']);
     return out;

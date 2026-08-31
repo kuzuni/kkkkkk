@@ -1,5 +1,10 @@
-/* 작업 210 — «단련» 시스템 신설 (23 훈련 팝업 3번째 탭 · 단련석 · 포인트 자유 배분).
+/* 작업 210 — «단련» 시스템 (23 훈련 팝업 3번째 탭 · 단련석 자유 배분).
  * 실행: node tools/verify210.js [--table]
+ *
+ * ⚑ 613·614 이관(2026-08-31, 주인 지시): «포인트» 중간 개념·[충전]·[회수(1000 다이아)]가
+ *   **기능째 폐지**됐다 — 단련석을 직접 지불해 단련한다. 이 게이트의 [D](회수 보존)·[E]의
+ *   전환/회수 클릭·[I]의 충전/회수 홀드는 그 기능과 함께 죽었고, 뜻을 잇는 항으로 갈아
+ *   끼웠다(333·399 규약 — 자리는 비우지 않는다). 폐지가 되살아나는 쪽은 verify614 가 막는다.
  *
  * ROUTINE «기능 완성 규칙»(T2 는 «만들어 놓음» 이 아니라 «실제 게임 데이터로 동작하고 결과가
  * 저장(S)·HUD·다른 화면에 반영됨» 이어야 완료) 에 맞춘 게이트다. 절 구성:
@@ -8,19 +13,19 @@
  *                 ⚠ **434**(2026-08-30): «입장권은 5종» 상수를 걷어내고 «단련석이 입장권 목록에
  *                 끼어들지 않는다 · 권종 집합 = DUNGEONS 가 쓰는 집합» 으로 갈아 끼웠다(402·430 이관)
  *   [B] 팝업 탭  — «훈련 · 룬 · 단련» 3칸(96 공용 부품 `.sp3`) 이고, **탭이 3개가 돼도 23 의
- *                 좌표가 안 움직인다**(훈련 5요소 bbox Δ0, 세 탭 왕복) · 단련 5줄 겹침 0 · 잘림 0
- *   [C] 비용 계단 — 주인 예시 «~99: 1pt · 100~: 3pt · 200~: 6pt» 와 **정확히 일치** · 구간 폭 100 ·
+ *                 좌표가 안 움직인다**(훈련 5요소 bbox Δ0, 세 탭 왕복) · 단련 4줄 겹침 0 · 잘림 0
+ *   [C] 비용 계단 — 주인 예시 «~99: 1 · 100~: 3 · 200~: 6» 과 **정확히 일치** · 구간 폭 100 ·
  *                 맥스 없음(구간이 계속 연장) · 단조 증가 · **UI 가 현재 구간 비용을 적는다**(주인 ⓑ-2)
- *   [D] 회수 보존 — ★ 이 작업의 핵심 불변식(주인 ⓒ). 무작위 배분 → 회수 → 재투자 왕복에서
- *                 총 포인트가 **1pt 도 어긋나지 않는다** · 계단을 넘나든 배분에서도 같다
- *   [E] 실동작   — 전환·투자·회수 **버튼을 실제로 클릭**해서 S 가 바뀌는지(목업 아님)
+ *   [D] 지불 장부 — ★ 613 핵심 불변식. 무작위 배분에서 «단련석이 줄어든 총량» 이
+ *                 «계단 비용의 합» 과 **1개도 어긋나지 않는다** · 계단을 넘나든 배분에서도 같다
+ *   [E] 실동작   — [단련] **버튼을 실제로 클릭**해서 S 가 바뀌는지(목업 아님) · 519 레드닷
  *   [F] 효과     — bonus() 에 «축별로 한 번만 곱» 으로 합류 · 3축이 각각 제 축에만 붙는다 ·
  *                 168 훈련·203 룬과 **겹치지 않는 별도 축**
- *   [G] 저장     — 저장·재로드 보존 · 구 세이브(키 없음) 마이그레이션 · 손댄 값 방어
+ *   [G] 저장     — 저장·재로드 보존 · 구 세이브(키 없음)·구 pts 잔액(→ 단련석 1:1) 마이그레이션
  *   [H] 되돌림 시험 — 일부러 깨 보고 이 게이트가 정말 잡는지(LESSONS 43-①)
- *   [I] 홀드     — **297**(2026-08-28 주인 재지시): 단련 투자·충전 «꾹 누르면 연속».
+ *   [I] 홀드     — **297**(2026-08-28 주인 재지시): 단련 «꾹 누르면 연속».
  *                 진짜 마우스 포인터로 누르고 뗀다 · 단발 1회 · 1초 홀드 3회 이상 · 가속 ·
- *                 뗌 정지 · 포인트 3회분이면 정확히 3회 · **회수는 홀드 제외** ·
+ *                 뗌 정지 · 단련석 3회분이면 정확히 3회 ·
  *                 «홀드 중 숫자» == «통짜 재렌더 숫자»(262 교훈 2ⓑ)
  */
 const { pw, launch } = require('./pwlaunch');
@@ -81,8 +86,8 @@ const table = [];
   ok(cur.info && cur.ways === 2, '33 재화 정보 팝업에 단련석 등재 · 획득처 2줄', String(cur.ways));
   ok(/절망의 탑/.test(cur.way0), '33 획득처 첫 줄이 «절망의 탑»(주인 지시 ②)', cur.way0);
   ok(cur.val === 777, 'curVal(tstone) 이 보유량을 그대로 읽는다', String(cur.val));
-  ok(cur.def === 0 && cur.defT === '{"pts":0,"alloc":{"atk":0,"hp":0,"regen":0}}',
-    'DEF() 에 tstone·temper 신설', cur.defT);
+  ok(cur.def === 0 && cur.defT === '{"alloc":{"atk":0,"hp":0,"regen":0}}',
+    'DEF() 에 tstone·temper — 613 이후 pts 없이 alloc 만', cur.defT);
   ok(cur.bag, '53 가방 «재화» 탭에 단련석 보유량이 뜬다');
   ok(cur.apart, '194 강화석 · 203 룬강화석과 별개 재화(아이콘·잔고 모두)');
   ok(!cur.hasTkTstone && cur.tstoneAsTicket.length === 0,
@@ -121,7 +126,7 @@ const table = [];
                        return [+(r.x - b.x).toFixed(2), +(r.y - b.y).toFixed(2),
                                +r.width.toFixed(2), +r.height.toFixed(2)]; };
     const KEYS = Object.keys(PIN);
-    S.tstone = 500; S.dia = 1e6; S.temper = { pts: 300, alloc: { atk: 5, hp: 0, regen: 0 } };
+    S.tstone = 500; S.dia = 1e6; S.temper = { alloc: { atk: 5, hp: 0, regen: 0 } };
     openTrain(); setTrSub('train');
     const before = KEYS.map(loc);
     const bar = document.getElementById('trSubs');
@@ -131,7 +136,8 @@ const table = [];
     setTrSub('temper');
     const hidden = KEYS.every(k => getComputedStyle(document.querySelector(k)).display === 'none')
                 && getComputedStyle(document.querySelector('.tr-runes')).display === 'none';
-    const rows = ['.tp-hd', '.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2', '.tp-ft']
+    /* 613·614 — 회수 줄(.tp-ft)은 기능째 사라졌다. 본문은 «보유 헤더 + 축 카드 3» 4줄이다 */
+    const rows = ['.tp-hd', '.tr-tp.k0', '.tr-tp.k1', '.tr-tp.k2']
       .map(s => document.querySelector(s)).map(e => e && e.getBoundingClientRect());
     const barR = bar.getBoundingClientRect();
     const sheet = document.querySelector('.tr-sheet').getBoundingClientRect();
@@ -141,7 +147,9 @@ const table = [];
     const last = rows[rows.length - 1];
     /* 단련 카드 3장 안에 축 3종이 «각각 하나씩» 있다(중복·누락 0) */
     const keys = [...document.querySelectorAll('.tr-tp')].map(e => e.dataset.temper);
-    const btns = ['[data-tpchg]', '[data-tempup]', '[data-tpreset]'].map(s => !!document.querySelector(s));
+    const btns = { up: !!document.querySelector('[data-tempup]'),
+                   chg: !!document.querySelector('[data-tpchg]'),
+                   rst: !!document.querySelector('[data-tpreset]') };
     setTrSub('train');
     const after = KEYS.map(loc);
     return {
@@ -171,10 +179,11 @@ const table = [];
   ok(tab.same, '룬·단련을 거쳐 돌아와도 훈련 좌표가 그대로(3탭 왕복 Δ0)',
     tab.same ? '' : JSON.stringify(tab.before) + ' vs ' + JSON.stringify(tab.after));
   ok(tab.hidden, '단련 탭에서는 훈련 5요소·룬 본문이 display:none — 같은 자리를 번갈아 쓴다');
-  ok(tab.rows === 5, '단련 본문 5줄(충전 · 축 카드 3 · 회수)이 전부 그려진다', String(tab.rows));
-  ok(tab.overlap === 0, '단련 5줄 서로 겹침 0건', String(tab.overlap));
+  ok(tab.rows === 4, '단련 본문 4줄(보유 헤더 · 축 카드 3)이 전부 그려진다(613·614 — 회수 줄 없음)', String(tab.rows));
+  ok(tab.overlap === 0, '단련 4줄 서로 겹침 0건', String(tab.overlap));
   ok(tab.keys === 'atk,hp,regen', '축 3종이 각각 카드 하나씩(중복·누락 0)', tab.keys);
-  ok(tab.btns.every(Boolean), '전환·투자·회수 버튼이 실제 노드로 있다', JSON.stringify(tab.btns));
+  ok(tab.btns.up && !tab.btns.chg && !tab.btns.rst,
+    '[단련] 버튼만 실제 노드로 있다 — 전환·회수 버튼은 0개(613·614)', JSON.stringify(tab.btns));
   ok(tab.belowBar, '단련 본문이 서브탭 바 위에서 끝난다(바를 안 침범)');
   ok(tab.inSheet, '서브탭 바·단련 본문이 시트 안에 들어간다(잘림 0)');
   ok(tab.onTrain && tab.showTrain === 'block', '기본 탭은 여전히 «훈련» 이다', tab.showTrain);
@@ -182,7 +191,7 @@ const table = [];
   /* ================= [C] 비용 계단 ================= */
   console.log('[C] 비용 계단 — 주인 예시 1/3/6 과 정확히 일치 · 구간 폭 100 · 맥스 없음');
   const cost = await p.evaluate(() => {
-    const at = l => { S.temper = { pts: 0, alloc: { atk: l, hp: 0, regen: 0 } }; return temperCost('atk'); };
+    const at = l => { S.temper = { alloc: { atk: l, hp: 0, regen: 0 } }; return temperCost('atk'); };
     const seg = [0, 1, 2, 3, 4, 5].map(temperSegCost);
     const probe = [0, 1, 98, 99, 100, 101, 199, 200, 201, 299, 300, 999].map(l => [l, at(l)]);
     /* 단조 비감소 — 레벨이 올라가는데 비용이 싸지는 구간이 있으면 안 된다 */
@@ -190,7 +199,7 @@ const table = [];
     for (let l = 0; l <= 1200; l++) { const c = at(l); if (c < prev) mono = false; prev = c; }
     /* «맥스 없음»(주인 ⓑ) — 상한 상수가 없고 아주 높은 레벨도 유한한 비용이 나온다 */
     const far = at(100000);
-    return { seg, probe, mono, far, width: TEMPER_SEG, reset: TEMPER_RESET_DIA };
+    return { seg, probe, mono, far, width: TEMPER_SEG };
   });
   ok(cost.width === 100, '구간 폭이 주인 예시대로 100', String(cost.width));
   ok(cost.seg.slice(0, 3).join(',') === '1,3,6',
@@ -203,29 +212,41 @@ const table = [];
     [0, 99, 100, 199, 200].map(l => l + ':' + cmap[l]).join(' '));
   ok(cost.mono, '0~1200 레벨 전수에서 비용이 단조 비감소');
   ok(Number.isFinite(cost.far) && cost.far > 0, '맥스 없음 — Lv 100000 도 유한한 비용', String(cost.far));
-  ok(cost.reset === 1000, '회수 비용이 주인 확정값 1000 다이아', String(cost.reset));
 
   const ui = await p.evaluate(() => {
-    S.tstone = 0; S.dia = 1e6; S.temper = { pts: 5, alloc: { atk: 150, hp: 0, regen: 0 } };
+    S.tstone = 5; S.dia = 1e6; S.temper = { alloc: { atk: 150, hp: 0, regen: 0 } };
     openTrain(); setTrSub('temper'); renderTemper();
     const card = document.querySelector('.tr-tp[data-temper="atk"]');
-    return { tc: card.querySelector('.tc').textContent, tb: card.querySelector('.tb').textContent,
+    return { tc: card.querySelector('.tc i').textContent.trim()
+                 + ' | ' + card.querySelector('.tc s').textContent,
+             tb: card.querySelector('.tb').textContent,
+             tcIc: /cur-tstone\.svg/.test(card.querySelector('.tc i').innerHTML),
+             tbIc: /cur-tstone\.svg/.test(card.querySelector('.tb i').innerHTML),
              cost: temperCost('atk') };
   });
-  ok(ui.cost === 3 && /3\s*pt/.test(ui.tc) && /100~199/.test(ui.tc),
-    '★ UI 가 «현재 구간 비용» 을 적는다(주인 ⓑ-2) — Lv150 → 3pt · 100~199 구간', ui.tc.replace(/\s+/g, ' '));
-  ok(/3\s*pt/.test(ui.tb), '투자 버튼에도 같은 비용이 적힌다(표기층 두 벌 금지)', ui.tb.replace(/\s+/g, ' '));
+  ok(ui.cost === 3 && ui.tc.split(' | ')[0] === '3' && /100~199/.test(ui.tc),
+    '★ UI 가 «현재 구간 비용» 을 적는다(주인 ⓑ-2) — Lv150 → 3 · 100~199 구간', ui.tc.replace(/\s+/g, ' '));
+  ok(/단련\s*3/.test(ui.tb.replace(/\s+/g, ' ')), '단련 버튼에도 같은 비용이 적힌다(표기층 두 벌 금지)', ui.tb.replace(/\s+/g, ' '));
+  ok(ui.tcIc && ui.tbIc, '613 — 비용 열·버튼 둘 다 단련석 아이콘으로 화폐를 말한다(125 · «pt» 죽은 말)');
+  ok(!/pt/.test(ui.tc) && !/pt/.test(ui.tb), '613 — «pt» 라는 말이 화면에서 사라졌다',
+    (ui.tc + ' / ' + ui.tb).replace(/\s+/g, ' '));
 
-  /* ================= [D] 회수 보존 ================= */
-  console.log('[D] ★ 회수 보존 — 투자 → 회수 → 재투자 왕복에서 총 포인트가 1pt 도 안 어긋난다');
+  /* ================= [D] 지불 장부 ================= */
+  console.log('[D] ★ 지불 장부 — 무작위 배분에서 «단련석 감소 총량 = 계단 비용의 합» (오차 0)');
   const rt = await p.evaluate(() => {
     /* 재현 가능한 의사난수(Date.now/Math.random 없이) — 배분이 회차마다 같아야 실패를 재현한다 */
     let s = 20260827;
     const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+    /* 게이트 자체 닫힌 식 — 제품이 계단(temperSegCost)을 밟아 실제로 뺀 총액과 대조한다.
+       (제품의 temperSpent 는 614 회수와 함께 폐지됐다 — 여기서 독립으로 계산해야 대조가 산다) */
+    const spentTo = L => {
+      const f = Math.floor(L / TEMPER_SEG), rem = L - f * TEMPER_SEG;
+      return TEMPER_SEG * (f * (f + 1) * (f + 2) / 6) + rem * temperSegCost(f);
+    };
     const runs = [];
     for (let t = 0; t < 40; t++) {
       const budget = 50 + Math.floor(rnd() * 60000);      /* 계단을 여러 개 넘나드는 예산 */
-      S.dia = 1e9; S.tstone = 0; S.temper = { pts: budget, alloc: { atk: 0, hp: 0, regen: 0 } };
+      S.tstone = budget; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
       const keys = ['atk', 'hp', 'regen'];
       let spins = 0;
       /* 무작위 축에 살 수 있는 만큼 산다 — «올빵» 도 «골고루» 도 섞여 나온다 */
@@ -237,99 +258,88 @@ const table = [];
         }
         temperUp(k); spins++;
       }
-      const left = temperPts(), lv = keys.map(temperLv);
-      const back = temperReset();
-      runs.push({ budget, left, lv, back, after: temperPts(),
-                  keep: temperPts() === budget, zero: keys.every(k => temperLv(k) === 0) });
+      const left = Math.floor(S.tstone), lv = keys.map(temperLv);
+      const paid = budget - left, owe = lv.reduce((a, l) => a + spentTo(l), 0);
+      runs.push({ budget, left, lv, paid, owe, keep: paid === owe });
     }
-    return { runs, allKeep: runs.every(r => r.keep), allZero: runs.every(r => r.zero),
+    return { runs, allKeep: runs.every(r => r.keep),
              spread: runs.some(r => r.lv[0] > 100) && runs.some(r => r.lv.every(x => x > 0)) };
   });
   const bad = rt.runs.filter(r => !r.keep);
-  ok(rt.allKeep, '★ 무작위 배분 40회 전부 «회수 후 총 포인트 = 처음 예산» (오차 0pt)',
+  ok(rt.allKeep, '★ 무작위 배분 40회 전부 «낸 단련석 = 계단 비용의 합» (오차 0)',
     bad.length ? JSON.stringify(bad[0]) : rt.runs.length + '회');
-  ok(rt.allZero, '회수하면 3축 레벨이 전부 0 으로 돌아간다');
   ok(rt.spread, '시험 배분이 계단을 실제로 넘고(>Lv100) 3축 분산도 섞였다(단언이 공허하지 않다)');
   const cross = await p.evaluate(() => {
-    /* 계단 경계를 정확히 걸친 배분 — 닫힌 식과 «한 레벨씩 더한 값» 이 같은가 */
+    /* 계단 경계를 정확히 걸친 배분 — «한 레벨씩 실제로 산 값» 과 닫힌 식이 같은가 */
+    const spentTo = L => {
+      const f = Math.floor(L / TEMPER_SEG), rem = L - f * TEMPER_SEG;
+      return TEMPER_SEG * (f * (f + 1) * (f + 2) / 6) + rem * temperSegCost(f);
+    };
     const out = [];
     [0, 1, 99, 100, 101, 250, 1000].forEach(L => {
-      let sum = 0;
-      S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
-      for (let i = 0; i < L; i++) { sum += temperCost('atk'); S.temper.alloc.atk = i + 1; }
-      out.push([L, sum, temperSpent(L)]);
+      S.tstone = 1e9; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
+      const t0 = Math.floor(S.tstone);
+      for (let i = 0; i < L; i++) temperUp('atk');
+      out.push([L, t0 - Math.floor(S.tstone), spentTo(L), temperLv('atk')]);
     });
     return out;
   });
-  ok(cross.every(r => r[1] === r[2]),
-    '★ 닫힌 식 temperSpent(L) 이 «한 레벨씩 실제로 낸 합» 과 정확히 같다',
+  ok(cross.every(r => r[1] === r[2] && r[3] === r[0]),
+    '★ 경계 표본(0·1·99·100·101·250·1000)에서 «실제로 낸 합» = 닫힌 식 · 레벨도 정확',
     cross.map(r => r[0] + ':' + r[1]).join(' '));
 
   /* ================= [E] 실동작 ================= */
-  console.log('[E] 실동작 — 전환·투자·회수 버튼을 실제로 클릭해서 S 가 바뀐다(목업 아님)');
+  console.log('[E] 실동작 — [단련] 버튼을 실제로 클릭해서 S 가 바뀐다(목업 아님 · 613 직접 지불)');
   await p.evaluate(() => {
-    S.tstone = 120; S.dia = 5000; S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
+    S.tstone = 120; S.dia = 5000; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
     openTrain(); setTrSub('temper'); renderTemper();
   });
-  await p.click('[data-tpchg]'); await p.waitForTimeout(120);
-  const e1 = await p.evaluate(() => ({ st: S.tstone, pts: temperPts() }));
-  ok(e1.st === 0 && e1.pts === 120, '[전환] 클릭 → 단련석 120 이 포인트 120 이 된다',
-    '단련석 ' + e1.st + ' · 포인트 ' + e1.pts);
   await p.click('.tr-tp[data-temper="atk"] [data-tempup]'); await p.waitForTimeout(120);
   await p.click('.tr-tp[data-temper="regen"] [data-tempup]'); await p.waitForTimeout(120);
   const e2 = await p.evaluate(() => ({ a: temperLv('atk'), h: temperLv('hp'), r: temperLv('regen'),
-                                       pts: temperPts() }));
-  ok(e2.a === 1 && e2.r === 1 && e2.h === 0 && e2.pts === 118,
-    '[투자] 클릭 → 누른 축만 Lv+1 · 포인트가 그만큼 빠진다',
+                                       st: Math.floor(S.tstone) }));
+  ok(e2.a === 1 && e2.r === 1 && e2.h === 0 && e2.st === 118,
+    '★ [단련] 클릭 → 누른 축만 Lv+1 · **단련석이 그만큼 직접 빠진다**(중간 전환 없음)',
     JSON.stringify(e2));
   const e3 = await p.evaluate(() => {
     /* «한 스탯 올빵» 이 실제로 가능한가(주인 ⓐ — 골고루 강제 없음) */
-    S.temper = { pts: 60, alloc: { atk: 0, hp: 0, regen: 0 } };
+    S.tstone = 60; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
     for (let i = 0; i < 60; i++) temperUp('atk');
-    return { a: temperLv('atk'), h: temperLv('hp'), r: temperLv('regen'), pts: temperPts() };
+    return { a: temperLv('atk'), h: temperLv('hp'), r: temperLv('regen'), st: Math.floor(S.tstone) };
   });
-  ok(e3.a === 60 && e3.h === 0 && e3.r === 0 && e3.pts === 0,
+  ok(e3.a === 60 && e3.h === 0 && e3.r === 0 && e3.st === 0,
     '한 축 «올빵» 이 가능하다(골고루 강제 없음 — 주인 ⓐ)', JSON.stringify(e3));
-  const diaBefore = await p.evaluate(() => { S.dia = 5000; renderTemper(); return S.dia; });
-  await p.click('[data-tpreset]'); await p.waitForTimeout(150);
-  const e4 = await p.evaluate(() => ({ dia: S.dia, pts: temperPts(), a: temperLv('atk') }));
-  ok(e4.dia === diaBefore - 1000 && e4.a === 0 && e4.pts === 60,
-    '[회수] 클릭 → 다이아 1000 차감 · 레벨 0 · 포인트 60 전액 환급',
-    '다이아 ' + e4.dia + ' · 포인트 ' + e4.pts);
   const e5 = await p.evaluate(() => {
     /* 못 사는 상황에서는 실제로 막힌다(회색 버튼이 장식이 아니다) */
-    S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } }; S.tstone = 0; S.dia = 10;
+    S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } }; S.tstone = 0; S.dia = 10;
     renderTemper();
-    const before = { pts: temperPts(), dia: S.dia };
-    const gray = ['[data-tpchg]', '.tr-tp[data-temper="atk"] [data-tempup]', '[data-tpreset]']
+    const before = { st: Math.floor(S.tstone), dia: S.dia };
+    const gray = ['.tr-tp[data-temper="atk"] [data-tempup]', '.tr-tp[data-temper="hp"] [data-tempup]',
+                  '.tr-tp[data-temper="regen"] [data-tempup]']
       .every(s => document.querySelector(s).classList.contains('no'));
     const upBlocked = temperUp('atk') === false;
-    const chgBlocked = temperCharge() === 0;
-    const rstBlocked = temperReset() === 0;
-    return { gray, upBlocked, chgBlocked, rstBlocked,
-             same: temperPts() === before.pts && S.dia === before.dia };
+    return { gray, upBlocked,
+             same: Math.floor(S.tstone) === before.st && S.dia === before.dia };
   });
-  ok(e5.gray, '재화가 없으면 세 버튼이 전부 회색(.no)이다(202 상태색)');
-  ok(e5.upBlocked && e5.chgBlocked && e5.rstBlocked && e5.same,
-    '회색일 때 실제로도 막힌다 — 포인트·다이아가 1도 안 움직인다');
+  ok(e5.gray, '단련석이 없으면 세 축 버튼이 전부 회색(.no)이다(202 상태색)');
+  ok(e5.upBlocked && e5.same,
+    '회색일 때 실제로도 막힌다 — 단련석·다이아가 1도 안 움직인다');
   const e6 = await p.evaluate(() => {
     /* 서브탭 레드닷(166) — «누를 게 있다» 일 때만.
        ⚠ 탭 상태(on/alert)를 켜고 끄는 곳은 `renderRunes()` **한 곳뿐**이다(203 이 세운 규약).
        `renderTemper()` 는 본문만 그린다 — 그래서 여기서도 renderTrain() 으로 한 바퀴를 돌린다. */
     const tab = () => document.querySelector('#trSubs [data-trsub="temper"]');
     const lit = () => tab().classList.contains('alert');
-    S.tstone = 0; S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
+    S.tstone = 0; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
     renderTrain();
     const off = !lit();
     S.tstone = 10; renderTrain();
     const on = lit();
-    /* 519 이관(2026-08-31) — 위 두 표본은 **옛 식에서도 초록이었다.** 옛 첫 항이
-       «단련석 ≥ TEMPER_PT_COST(=1)» 였으므로 tstone 0/10 은 둘 다 그 항만으로 갈린다
-       ⇒ 519 가 통째로 사라져도 이 항은 안 빨개진다(328 교훈 — 그 순간 게이트는 뜻을 잃는다).
-       가르는 표본을 한 줄 더 놓는다: 세 축을 Lv100 까지 올려 다음 1레벨을 3pt 로 만든 뒤
-       **단련석 1개**만 쥐어 준다 — 전환해 봐야 1pt 라 올릴 수 있는 축이 없다 = 소등이 옳다.
-       옛 식은 여기서 점등이었다(주인이 본 그림). */
-    S.tstone = 1; S.temper = { pts: 0, alloc: { atk: 100, hp: 100, regen: 100 } };
+    /* 519 이관(2026-08-31 · 613 갱신) — 뜻은 그대로 «실제로 올릴 수 있는 축이 있는가» 다.
+       가르는 표본: 세 축을 Lv100 까지 올려 다음 1레벨을 3 으로 만든 뒤 **단련석 1개**만
+       쥐어 준다 — 올릴 수 있는 축이 없다 = 소등이 옳다(«보유 ≥1 이면 점등» 으로 되돌아가면
+       여기가 빨개진다 — 주인이 본 그림의 재발 방지). */
+    S.tstone = 1; S.temper = { alloc: { atk: 100, hp: 100, regen: 100 } };
     renderTrain();
     const short = !lit(), cost = Math.min.apply(null, TEMPERS.map(t => temperCost(t.k)));
     S.tstone = 3; renderTrain();
@@ -343,23 +353,23 @@ const table = [];
     if (b) b.style.animation = pa;
     return { off, on, short, enough, cost, drawnOff };
   });
-  ok(e6.off && e6.on, '단련 서브탭 레드닷이 «전환·투자할 게 있을 때만» 켜진다(166)');
-  ok(e6.short, '519 — 전환해도 올릴 축이 없으면 **소등**(단련석 1 · 다음 1레벨 ' + e6.cost + 'pt)');
-  ok(e6.enough, '519 음성 대조 — 전환하면 올릴 수 있으면 점등(단련석 3 · ' + e6.cost + 'pt)');
+  ok(e6.off && e6.on, '단련 서브탭 레드닷이 «단련할 게 있을 때만» 켜진다(166)');
+  ok(e6.short, '519 — 보유해도 올릴 축이 없으면 **소등**(단련석 1 · 다음 1레벨 ' + e6.cost + ')');
+  ok(e6.enough, '519 음성 대조 — 올릴 수 있으면 점등(단련석 3 · ' + e6.cost + ')');
   ok(!e6.drawnOff, '519 ⓓ — `.alert` 를 떼면 배지가 **안 그려진다**(`#trw` 스코프 짝이 살아 있다)');
 
   /* ================= [F] 효과 ================= */
   console.log('[F] 효과 — bonus() 에 축별로 한 번만 곱해 붙는다 · 168·203 과 별개 축');
   const eff = await p.evaluate(() => {
-    const zero = () => { S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } }; markDirty(); return bonus(); };
+    const zero = () => { S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } }; markDirty(); return bonus(); };
     const b0 = Object.assign({}, zero());
-    S.temper = { pts: 0, alloc: { atk: 50, hp: 0, regen: 0 } }; markDirty();
+    S.temper = { alloc: { atk: 50, hp: 0, regen: 0 } }; markDirty();
     const bA = Object.assign({}, bonus());
-    S.temper = { pts: 0, alloc: { atk: 0, hp: 50, regen: 0 } }; markDirty();
+    S.temper = { alloc: { atk: 0, hp: 50, regen: 0 } }; markDirty();
     const bH = Object.assign({}, bonus());
-    S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 50 } }; markDirty();
+    S.temper = { alloc: { atk: 0, hp: 0, regen: 50 } }; markDirty();
     const bR = Object.assign({}, bonus());
-    S.temper = { pts: 0, alloc: { atk: 50, hp: 0, regen: 0 } }; markDirty();
+    S.temper = { alloc: { atk: 50, hp: 0, regen: 0 } }; markDirty();
     const once = bonus().atk / b0.atk;                 /* 축별 1회 곱이면 정확히 1 + 50×계수 */
     const back = Object.assign({}, zero());
     return {
@@ -372,9 +382,9 @@ const table = [];
       /* 168 훈련·203 룬과 겹치지 않는 별개 축인가 — 훈련·룬을 0 으로 두고도 단련만으로 오른다 */
       apart: (function () {
         S.rune = { r1: 0, r2: 0, r3: 0 };
-        S.temper = { pts: 0, alloc: { atk: 100, hp: 0, regen: 0 } }; markDirty();
+        S.temper = { alloc: { atk: 100, hp: 0, regen: 0 } }; markDirty();
         const withT = bonus().atk;
-        S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } }; markDirty();
+        S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } }; markDirty();
         return withT > bonus().atk;
       })()
     };
@@ -386,7 +396,7 @@ const table = [];
   ok(eff.off, '레벨을 0 으로 되돌리면 효과도 정확히 사라진다(«켜 두고 안 끄는» 버그 방지)');
   ok(eff.apart, '203 룬을 전부 0 으로 둬도 단련만으로 공격력이 오른다(별도 축 — 주인 ⓓ)');
   const show = await p.evaluate(() => {
-    S.temper = { pts: 0, alloc: { atk: 25, hp: 0, regen: 0 } };
+    S.temper = { alloc: { atk: 25, hp: 0, regen: 0 } };
     openTrain(); setTrSub('temper'); renderTemper();
     const td = document.querySelector('.tr-tp[data-temper="atk"] .td').textContent;
     return { td, want: pct(temperVal('atk')) };
@@ -397,21 +407,18 @@ const table = [];
   /* ================= [G] 저장 ================= */
   console.log('[G] 저장 — 재로드 보존 · 구 세이브 마이그레이션 · 손댄 값 방어');
   const sav = await p.evaluate(() => {
-    S.tstone = 13579; S.temper = { pts: 246, alloc: { atk: 120, hp: 7, regen: 0 } }; save();
+    S.tstone = 13579; S.temper = { alloc: { atk: 120, hp: 7, regen: 0 } }; save();
     const raw = JSON.parse(localStorage.getItem(KEY));
     return { rawSt: raw.tstone, rawT: JSON.stringify(raw.temper) };
   });
   await p.reload(); await p.waitForTimeout(1100);
   await install(p);   /* 540 — 재로드로 페이지가 갈렸으니 다시 심는다 */
   const back = await p.evaluate(() => ({ st: S.tstone, t: JSON.stringify(S.temper),
-                                         lv: temperLv('atk'), spent: temperSpentAll(),
-                                         want: temperSpent(120) + temperSpent(7) + temperSpent(0) }));
-  ok(sav.rawSt === 13579 && sav.rawT === '{"pts":246,"alloc":{"atk":120,"hp":7,"regen":0}}',
-    '세이브에 실제로 기록된다', sav.rawT);
-  ok(back.st === 13579 && back.t === '{"pts":246,"alloc":{"atk":120,"hp":7,"regen":0}}',
+                                         lv: temperLv('atk') }));
+  ok(sav.rawSt === 13579 && sav.rawT === '{"alloc":{"atk":120,"hp":7,"regen":0}}',
+    '세이브에 실제로 기록된다(pts 없이 — 613)', sav.rawT);
+  ok(back.st === 13579 && back.t === '{"alloc":{"atk":120,"hp":7,"regen":0}}' && back.lv === 120,
     '재로드 후 보존된다', back.t);
-  ok(back.lv === 120 && back.spent === back.want && back.spent > 0,
-    '재로드 후 «회수하면 돌려줄 총액» 도 그대로', String(back.spent));
 
   const mig = await p.evaluate(() => {
     /* 구 세이브 = 두 키가 아예 없는 상태(210 이전). 203 과 같은 «없으면 기본값» 마이그레이션 */
@@ -420,38 +427,49 @@ const table = [];
     localStorage.setItem(KEY, JSON.stringify(d));
     load();
     const a = { st: S.tstone, t: JSON.stringify(S.temper) };
-    /* 손댄 세이브 = 범위 밖·다른 타입·없는 축 */
+    /* 613 — «pts 잔액이 남은» 구 세이브: 잔액이 단련석으로 1:1 되돌아오고 pts 필드는 죽는다 */
+    const dp = JSON.parse(localStorage.getItem(KEY));
+    dp.tstone = 7; dp.temper = { pts: 246, alloc: { atk: 3, hp: 0, regen: 0 } };
+    localStorage.setItem(KEY, JSON.stringify(dp));
+    load();
+    const b = { st: Math.floor(S.tstone), t: JSON.stringify(S.temper) };
+    /* 손댄 세이브 = 범위 밖·다른 타입·없는 축 (음수 pts 는 이관 대상이 아니다 — 0 취급) */
     const d2 = JSON.parse(localStorage.getItem(KEY));
     d2.tstone = -50; d2.temper = { pts: -9, alloc: { atk: 12.7, hp: 'x', zzz: 7 } };
     localStorage.setItem(KEY, JSON.stringify(d2));
     load();
-    return { old: a, bad: { st: S.tstone, t: JSON.stringify(S.temper) },
+    return { old: a, pts: b, bad: { st: S.tstone, t: JSON.stringify(S.temper) },
              ver: (JSON.parse(localStorage.getItem(KEY)) || {}).v };
   });
-  ok(mig.old.st === 0 && mig.old.t === '{"pts":0,"alloc":{"atk":0,"hp":0,"regen":0}}',
-    '구 세이브(키 없음) → 단련석 0 · 포인트 0 · 3축 Lv0 (KEY 안 올림)', mig.old.t);
-  ok(mig.bad.st === 0 && mig.bad.t === '{"pts":0,"alloc":{"atk":12,"hp":0,"regen":0}}',
-    '손댄 세이브는 음수→0 · 소수→내림 · 없는 축은 버린다', mig.bad.st + ' / ' + mig.bad.t);
+  ok(mig.old.st === 0 && mig.old.t === '{"alloc":{"atk":0,"hp":0,"regen":0}}',
+    '구 세이브(키 없음) → 단련석 0 · 3축 Lv0 (KEY 안 올림)', mig.old.t);
+  ok(mig.pts.st === 253 && mig.pts.t === '{"alloc":{"atk":3,"hp":0,"regen":0}}',
+    '★ 613 — 구 pts 잔액 246 이 단련석으로 1:1 환급(7+246=253) · pts 필드는 죽는다', 
+    mig.pts.st + ' / ' + mig.pts.t);
+  ok(mig.bad.st === 0 && mig.bad.t === '{"alloc":{"atk":12,"hp":0,"regen":0}}',
+    '손댄 세이브는 음수→0 · 소수→내림 · 없는 축은 버린다(음수 pts 환급 없음)', mig.bad.st + ' / ' + mig.bad.t);
 
   /* ================= [H] 되돌림 시험 ================= */
   console.log('[H] 되돌림 시험 — 일부러 깨 보고 이 게이트가 잡는지(LESSONS 43-①)');
   const neg = await p.evaluate(() => {
     const out = {};
-    /* ⓐ 회수를 «레벨 수 × 1pt» 로 계산하면(계단 무시) 보존이 깨지는가 —
-       그렇다면 [D] 의 단언이 공허하지 않다 */
-    S.temper = { pts: 0, alloc: { atk: 250, hp: 0, regen: 0 } };
-    out.a = temperSpentAll() !== 250 && temperSpentAll() > 250;
+    /* ⓐ 지불을 «레벨 수 × 1» 로 세면(계단 무시) 장부가 어긋나는가 —
+       그렇다면 [D] 의 단언이 공허하지 않다. Lv250 까지 실제로 사면 250개보다 많이 낸다. */
+    S.tstone = 1e9; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
+    { const t0 = Math.floor(S.tstone); for (let i = 0; i < 250; i++) temperUp('atk');
+      const paid = t0 - Math.floor(S.tstone);
+      out.a = paid !== 250 && paid > 250; }
     /* ⓑ 구간 폭을 100 이 아닌 값으로 읽으면 경계가 어긋나는가 */
     out.b = temperSegCost(Math.floor(99 / 100)) !== temperSegCost(Math.floor(100 / 100));
     /* ⓒ 계단이 실제로 «다음 구간이 더 비싸다» 인가(단조 단언이 공허하지 않은가) */
     out.c = temperSegCost(1) > temperSegCost(0) && temperSegCost(2) > temperSegCost(1);
     /* ⓓ 효과가 레벨에 실제로 비례하는가(0 이 아닌 계수인가) */
-    S.temper = { pts: 0, alloc: { atk: 10, hp: 0, regen: 0 } };
+    S.temper = { alloc: { atk: 10, hp: 0, regen: 0 } };
     const v10 = temperVal('atk');
     S.temper.alloc.atk = 20;
     out.d = temperVal('atk') > v10 && v10 > 0;
-    /* ⓔ 포인트가 모자란데 투자되면 안 된다 */
-    S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
+    /* ⓔ 단련석이 모자란데 단련되면 안 된다 */
+    S.tstone = 0; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
     out.e = temperUp('atk') === false && temperLv('atk') === 0;
     /* ⓕ **434** — [A] 의 갈아 끼운 «입장권» 두 항이 무르게 풀린 게 아님을 못박는다.
        단련석 입장권을 일부러 끼워 넣으면 두 항이 **둘 다** 빨개져야 하고, 원복하면 초록이어야
@@ -467,11 +485,11 @@ const table = [];
     out.f = g0 && red && !CUR_ICON.tkTstone && same();
     return out;
   });
-  ok(neg.a, 'ⓐ 회수액이 «레벨 수» 가 아니라 «계단을 밟은 총액» 이다(250Lv → 250pt 아님)');
+  ok(neg.a, 'ⓐ 지불이 «레벨 수» 가 아니라 «계단을 밟은 총액» 이다(250Lv → 250개 아님)');
   ok(neg.b, 'ⓑ 구간 경계(99/100)가 실제로 비용을 가른다');
   ok(neg.c, 'ⓒ 계단이 실제로 올라간다(단조 단언이 공허하지 않다)');
   ok(neg.d, 'ⓓ 효과가 레벨에 비례한다(계수가 0 이 아니다)');
-  ok(neg.e, 'ⓔ 포인트가 모자라면 투자가 실제로 막힌다');
+  ok(neg.e, 'ⓔ 단련석이 모자라면 단련이 실제로 막힌다');
   ok(neg.f, 'ⓕ 434 — 단련석 입장권을 끼워 넣으면 [A] 의 «입장권» 두 항이 빨개진다(원복하면 초록)');
 
   /* ================= [I] 절망의 탑 (주인 지시 ②) ================= */
@@ -564,19 +582,21 @@ const table = [];
     '구 세이브(키 없음)·손댄 값이 1층으로 정화된다(209 와 같은 자)', twSave.old + '/' + twSave.bad);
   /* 단련의 «수급 → 전환 → 투자» 가 실제로 한 바퀴 도는가 — 기능 완성 규칙의 핵심 */
   const loop = await p.evaluate(() => {
-    S.tower2 = 1; S.tstone = 0; S.temper = { pts: 0, alloc: { atk: 0, hp: 0, regen: 0 } };
+    S.tower2 = 1; S.tstone = 0; S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
     markDirty(); const atk0 = bonus().atk;
     challengeTower('despair'); endDunRun(true, false);      /* 절망의 탑 1층 클리어 */
     const got = Math.floor(S.tstone);
-    const pts = temperCharge();                             /* 전환 */
-    const up = temperUp('atk');                             /* 투자 */
+    const cost = temperCost('atk');
+    const up = temperUp('atk');                             /* 613 — 직접 지불로 단련 */
     markDirty();
-    return { got, pts, up, lv: temperLv('atk'), atkUp: bonus().atk > atk0,
+    return { got, cost, up, left: Math.floor(S.tstone), lv: temperLv('atk'),
+             atkUp: bonus().atk > atk0,
              bag: bagCur().some(r => r.n === '단련석') };
   });
   ok(loop.got > 0, '★ 절망의 탑 클리어 → 단련석 획득', String(loop.got));
-  ok(loop.pts === loop.got, '★ 전환 → 단련 포인트', String(loop.pts));
-  ok(loop.up && loop.lv === 1, '★ 투자 → 공격력 단련 Lv1');
+  ok(loop.up && loop.lv === 1 && loop.left === loop.got - loop.cost,
+    '★ 단련 → 공격력 Lv1 · 단련석이 비용만큼 직접 빠진다(전환 단계 없음 — 613)',
+    loop.got + ' → ' + loop.left);
   ok(loop.atkUp, '★ 그 결과가 bonus() 전투력에 실제로 반영된다(목업 아님 — 기능 완성 규칙)');
 
   /* ================= [I] 297 «꾹 누르면 연속» =================
@@ -584,10 +604,8 @@ const table = [];
      못 박아 뒀던 자리가 뒤집혔다(«단련 부분도 토글하는 거 연속으로 강화되게 돼야 하는데»).
      **진짜 마우스 포인터**로 누르고 뗀다 — LESSONS 262-1(게이트는 «어떤 리스너에 걸렸나» 가
      아니라 «사용자가 무엇을 하나» 를 흉내 내야 구현 방식이 바뀌어도 산다). */
-  console.log('[I] 297 — 단련 투자·충전 «꾹 누르면 연속»(주인 재지시)');
+  console.log('[I] 297 — 단련 «꾹 누르면 연속»(주인 재지시 · 613 직접 지불)');
   const TB = '.tr-tp[data-temper="atk"] [data-tempup]';
-  const CG = '#trTemper [data-tpchg]';
-  const RS = '#trTemper [data-tpreset]';
   const setT = async o => {
     const r = await p.evaluate(x => {
       /* 결정성 — 자동 전투가 도는 채로 30초를 지나면 레벨업·보상 팝업이 버튼을 덮는다 */
@@ -595,10 +613,10 @@ const table = [];
       /* 앞 절(절망의 탑 런)이 남긴 던전 클리어 팝업 `#dclw` 가 버튼 위를 덮는다 —
          전부 닫고 시작한다(LESSONS 263-②: 하네스가 «눌렀다» 고 믿는 자리에서 게임은 다른 답을 한다) */
       window.__clear540();                            /* 540 — 닫개 + 이름 없는 껍데기(#defw) */
-      S.temper = { pts: x.pts, alloc: { atk: 0, hp: 0, regen: 0 } };
+      S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } };
       S.tstone = x.st || 0; S.dia = x.dia == null ? 100000 : x.dia;
       openTrain(); setTrSub('temper'); renderTrain();
-      return { pts: temperPts(), cost: temperCost('atk') };
+      return { st: Math.floor(S.tstone), cost: temperCost('atk') };
     }, o);
     /* ⚠ 23 팝업은 슬라이드 애니메이션이 있다 — 곧바로 재면 아직 움직이는 중의 좌표를 집는다(164) */
     await p.waitForTimeout(420);
@@ -632,22 +650,22 @@ const table = [];
   };
   const lvAtk = () => p.evaluate(() => temperLv('atk'));
 
-  await setT({ pts: 100000 });
+  await setT({ st: 100000 });
   await press210(TB, 0);
   const t1 = await lvAtk();
-  ok(t1 === 1, '단발 탭 = 정확히 1회 투자(누를 때 1 + 뗄 때 1 이 아니다 — 64 ⓐ)', 'Lv ' + t1);
+  ok(t1 === 1, '단발 탭 = 정확히 1회 단련(누를 때 1 + 뗄 때 1 이 아니다 — 64 ⓐ)', 'Lv ' + t1);
 
-  await setT({ pts: 100000 });
+  await setT({ st: 100000 });
   await press210(TB, 1000);
   const tHold = await lvAtk();
-  ok(tHold >= 3, '★ 꾹 누르면 연속 투자된다 — 1초 홀드에 3회 이상', tHold + '회');
-  table.push('홀드 1초 = ' + tHold + '회 투자');
+  ok(tHold >= 3, '★ 꾹 누르면 연속 단련된다 — 1초 홀드에 3회 이상', tHold + '회');
+  table.push('홀드 1초 = ' + tHold + '회 단련');
 
   const tStop = await lvAtk();
   await p.waitForTimeout(500);
   ok(await lvAtk() === tStop, '손을 떼면 즉시 멈춘다(뗀 뒤 500ms 동안 0회)');
 
-  await setT({ pts: 100000 });
+  await setT({ st: 100000 });
   {
     await aim(TB);
     await p.mouse.down();
@@ -660,47 +678,28 @@ const table = [];
       mid + ' → ' + (end - mid));
   }
 
-  /* 포인트가 딱 3회분이면 «정확히 3회» 에서 조용히 멈춘다(119 G4 — 반복분은 무알림) */
-  await setT({ pts: 3 });
+  /* 단련석이 딱 3회분이면 «정확히 3회» 에서 조용히 멈춘다(119 G4 — 반복분은 무알림) */
+  await setT({ st: 3 });
   await press210(TB, 2000);
-  const t3 = await p.evaluate(() => ({ lv: temperLv('atk'), pts: temperPts() }));
-  ok(t3.lv === 3 && t3.pts === 0, '포인트가 3회분이면 정확히 3회에서 조용히 멈춘다',
-    'Lv ' + t3.lv + ' · 남은 ' + t3.pts + 'pt');
-
-  /* 충전도 같은 경로(pointerdown)를 탄다 — 다만 «보유분 전부» 를 바꾸므로 1회에 끝난다 */
-  await setT({ pts: 0, st: 250 });
-  await press210(CG, 1200);
-  const tc = await p.evaluate(() => ({ st: S.tstone, pts: temperPts() }));
-  ok(tc.st === 0 && tc.pts === 250, '[전환] 도 pointerdown 경로 — 꾹 눌러도 보유분 전부 1회에 끝',
-    '단련석 ' + tc.st + ' · 포인트 ' + tc.pts);
-
-  /* 회수는 홀드 대상이 아니다(1000 다이아 1회성) — 꾹 눌러도 1회분만 나간다 */
-  await setT({ pts: 0, dia: 100000 });
-  await p.evaluate(() => { S.temper = { pts: 0, alloc: { atk: 50, hp: 0, regen: 0 } }; renderTrain(); });
-  await p.waitForTimeout(120);
-  const rd0 = await p.evaluate(() => S.dia);
-  await press210(RS, 1200);
-  const rdSpent = rd0 - (await p.evaluate(() => S.dia));
-  const resetCost = await p.evaluate(() => TEMPER_RESET_DIA);
-  ok(rdSpent === resetCost, '[회수] 는 홀드 대상이 아니다 — 1.2초를 눌러도 ' + resetCost + ' 다이아 1회분만',
-    rdSpent + ' 다이아');
+  const t3 = await p.evaluate(() => ({ lv: temperLv('atk'), st: Math.floor(S.tstone) }));
+  ok(t3.lv === 3 && t3.st === 0, '단련석이 3회분이면 정확히 3회에서 조용히 멈춘다',
+    'Lv ' + t3.lv + ' · 남은 ' + t3.st);
 
   /* ★ 262 교훈 2ⓑ — 표기층이 두 벌이 됐으므로 «홀드 중 숫자» == «통짜 재렌더 숫자» 를 잠근다 */
   const tSame = await p.evaluate(() => {
     const read = () => {
       const w = document.getElementById('trTemper');
       const row = w.querySelector('.tr-tp[data-temper="atk"]');
-      return [w.querySelector('.tp-hd .pv i').innerHTML, w.querySelector('.tp-hd .cg i').innerHTML,
+      return [w.querySelector('.tp-hd .pv i').innerHTML,
               row.querySelector('.tl i').textContent, row.querySelector('.td i').textContent,
-              row.querySelector('.tc i').textContent, row.querySelector('.tc s').textContent,
-              row.querySelector('.tb i').textContent,
-              row.querySelector('.tb').classList.contains('no') ? 'no' : 'ok',
-              w.querySelector('.tp-ft .rs i').innerHTML].join(' | ');
+              row.querySelector('.tc i').innerHTML, row.querySelector('.tc s').textContent,
+              row.querySelector('.tb i').innerHTML,
+              row.querySelector('.tb').classList.contains('no') ? 'no' : 'ok'].join(' | ');
     };
-    S.temper = { pts: 500, alloc: { atk: 0, hp: 0, regen: 0 } }; S.tstone = 40;
+    S.temper = { alloc: { atk: 0, hp: 0, regen: 0 } }; S.tstone = 40;
     openTrain(); setTrSub('temper'); renderTrain();
     rtHold = { tag: 'temper' };                    /* 홀드 중인 척 — liveTemper 경로로 그린다 */
-    S.temper.alloc.atk = 137; S.temper.pts = 42; S.tstone = 7; markDirty();
+    S.temper.alloc.atk = 137; S.tstone = 7; markDirty();
     renderTemper();
     const live = read();
     rtHold = null;

@@ -84,9 +84,8 @@ async function diffPct(page2, a, b, tol) {
   const TARGETS = [
     { id: 'R-buy',   tab: 'rune',   sel: '#trRunes .rbt.b1',              n: '룬 [강화] 버튼(홀드)' },
     { id: 'R-sub',   tab: 'rune',   sel: '#rnSubs [data-runesub]',        n: '룬 하위 탭 «일반룬»' },
-    { id: 'T-chg',   tab: 'temper', sel: '#trTemper .tp-hd .cg',          n: '단련 [충전] 버튼' },
-    { id: 'T-up',    tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb',       n: '단련 [투자] 버튼(홀드)' },
-    { id: 'T-reset', tab: 'temper', sel: '#trTemper .tp-ft .rb',          n: '단련 [회수] 버튼' },
+    /* 613·614 — [충전](.cg)·[회수](.tp-ft)는 기능째 폐지돼 표본에서 뺐다 */
+    { id: 'T-up',    tab: 'temper', sel: '#trTemper .tr-tp.k0 .tb',       n: '단련 [단련] 버튼(홀드)' },
     { id: 'T-tab',   tab: 'temper', sel: '#trSubs [data-trsub="temper"]', n: '팝업 탭 «단련»' },
     /* ── 대조군 ── */
     { id: 'X-train', tab: 'train',  sel: '#trCards [data-tr]',            n: '★대조 훈련 카드(홀드·64)' },

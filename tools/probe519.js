@@ -99,13 +99,17 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     const onAlert  = withAlert(true);
 
     /* ── [B-R] 되돌림 — 519 가 놓은 «같은 급 짝» 두 줄을 실제로 걷어내고 다시 잰다.
-       이것이 수리 전 트리다. 걷으면 `#trw s`(1,0,1) 가 다시 이겨 «상시 점등» 으로 돌아가야 한다. */
+       이것이 수리 전 트리다. 걷으면 `#trw s`(1,0,1) 가 다시 이겨 «상시 점등» 으로 돌아가야 한다.
+       ⚑ 531 이관(613 세션이 잡음 — 수리 전 커밋에서도 같은 실패임을 대조로 확인): 화면별 짝만
+       걷으면 531 이 깐 예방 짝(s.updot,s.bdg,s.dot)이 뒤를 받쳐 안 켜진다 — verify519 §R 과
+       같은 4줄을 걷어야 «수리 전 트리» 가 된다. */
     const killed = [];
     for (const sh of document.styleSheets) {
       let rs; try { rs = sh.cssRules; } catch (e) { continue; }
       for (let i = rs.length - 1; i >= 0; i--) {
         const r = rs[i];
-        if (r.type === 1 && /^#trw \.stab(\.alert)?\s*>\s*\.bdg$/.test((r.selectorText || '').trim())) {
+        const st = (r.selectorText || '').trim();
+        if (r.type === 1 && (/^#trw \.stab(\.alert)?\s*>\s*\.bdg$/.test(st) || /s\.updot,\s*s\.bdg,\s*s\.dot/.test(st))) {
           killed.push({ sh, i, text: r.cssText });
           sh.deleteRule(i);
         }
@@ -118,26 +122,29 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
     /* ── [C] 상태 표 ── */
     const minCost = () => Math.min(...TEMPERS.map(t => temperCost(t.k)));
     /* 수리 전 식(519 등재문 ⓑ 가 인용한 그대로) — 표에서 «옛 판정» 칸으로 나란히 세운다 */
-    const oldAlert = () => (Math.floor(S.tstone) || 0) >= TEMPER_PT_COST
+    /* 613 이후 TEMPER_PT_COST(=1)·temperPts 는 제품에서 폐지 — 재현 표가 리터럴로 대신 든다 */
+    const oldAlert = () => (Math.floor(S.tstone) || 0) >= 1
                         || TEMPERS.some(t => temperUpOk(t.k));
     /* 전환까지 합쳐서 «실제로 올릴 수 있는 축이 있는가» (등재문 권장식과 같은 뜻) */
+    const legacyPts = () => Math.max(0, Math.floor((S.temper || {}).pts) || 0);
+    /* «실제로 올릴 수 있는 축이 있는가» — 613 직접 지불 기준 */
     const trulyAny = () => {
-      const pts = temperPts() + Math.floor((Math.floor(S.tstone) || 0) / TEMPER_PT_COST);
-      return TEMPERS.some(t => pts >= temperCost(t.k));
+      const st = Math.floor(S.tstone) || 0;
+      return TEMPERS.some(t => st >= temperCost(t.k));
     };
     const table = [];
+    /* 613 — 포인트 표본은 죽었다(런타임 pts 는 판정 축이 아니다 — load() 이관 전용) */
     const cases = [
-      { n: '① 단련석 0 · 포인트 0',                    ts: 0,  pts: 0,  alloc: {} },
-      { n: '② 단련석 1 · 포인트 0 (최소 비용 1)',       ts: 1,  pts: 0,  alloc: {} },
-      { n: '③ 단련석 0 · 포인트 1 (최소 비용 1)',       ts: 0,  pts: 1,  alloc: {} },
-      /* 세 축을 전부 100 레벨까지 올려 구간을 1 → 2 로 밀면 다음 1레벨이 3pt 다 */
-      { n: '④ 단련석 1 · 포인트 0 · 모든 축 Lv100(비용 3)', ts: 1, pts: 0, alloc: { atk: 100, hp: 100, regen: 100 } },
-      { n: '⑤ 단련석 2 · 포인트 1 · 모든 축 Lv100(비용 3)', ts: 2, pts: 1, alloc: { atk: 100, hp: 100, regen: 100 } },
-      { n: '⑥ 단련석 3 · 포인트 0 · 모든 축 Lv100(비용 3)', ts: 3, pts: 0, alloc: { atk: 100, hp: 100, regen: 100 } }
+      { n: '① 단련석 0',                              ts: 0,  alloc: {} },
+      { n: '② 단련석 1 (최소 비용 1)',                 ts: 1,  alloc: {} },
+      /* 세 축을 전부 100 레벨까지 올려 구간을 1 → 2 로 밀면 다음 1레벨이 3 이다 */
+      { n: '④ 단련석 1 · 모든 축 Lv100(비용 3)',        ts: 1, alloc: { atk: 100, hp: 100, regen: 100 } },
+      { n: '⑤ 단련석 2 · 모든 축 Lv100(비용 3)',        ts: 2, alloc: { atk: 100, hp: 100, regen: 100 } },
+      { n: '⑥ 단련석 3 · 모든 축 Lv100(비용 3)',        ts: 3, alloc: { atk: 100, hp: 100, regen: 100 } }
     ];
     for (const c of cases) {
-      S.tstone = c.ts; S.temper = { pts: c.pts, alloc: c.alloc };
-      table.push({ n: c.n, ts: c.ts, pts: temperPts(), minCost: minCost(),
+      S.tstone = c.ts; S.temper = { alloc: c.alloc };
+      table.push({ n: c.n, ts: c.ts, pts: legacyPts(), minCost: minCost(),
                    now: !!temperAlert(), old: !!oldAlert(), truly: trulyAny() });
     }
 
@@ -195,11 +202,11 @@ const ok = (c, m, d) => { c ? pass++ : fail++; console.log((c ? '  ok  ' : 'FAIL
   ok(c2.now === true && c2.truly === true,
      '[C1] 음성 대조 — 「단련석 1 · 비용 1」 은 전환하면 실제로 올릴 수 있으므로 점등이 옳다',
      '현행=' + (c2.now ? '점등' : '소등'));
-  const c4 = m.table[3];
+  const c4 = m.table[2];   /* ④ — 613 표가 5칸으로 줄었다 */
   ok(c4.old === true && c4.now === false && c4.truly === false,
      '[C2] **주인이 본 자리 재현** — 「단련석 1 · 최소 비용 3」: 옛 식 점등 → 현행 소등',
      '옛=' + (c4.old ? '점등' : '소등') + ' · 현행=' + (c4.now ? '점등' : '소등'));
-  const c6 = m.table[5];
+  const c6 = m.table[4];   /* ⑥ */
   ok(c6.now === true && c6.truly === true, '[C3] 음성 대조 — 「단련석 3 · 비용 3」 은 점등이 옳다');
   ok(mismatch === 0, '[C4] 현행 판정이 「올릴 수 있는 축 존재」와 **완전 일치**', mismatch + '건 어긋남');
   console.log('     → 옛 식이 어긋나던 칸: ' + oldMismatch + ' / ' + m.table.length
