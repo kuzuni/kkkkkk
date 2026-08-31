@@ -1,0 +1,3 @@
+05-eqweapon	05 장비 세부(무기 슬롯)	eqslot:weapon	wpnw@31,eqw@28|재화||던전+훈련+소환
+05-eqshield	05 장비 세부(방패 슬롯)	eqslot:shield	wpnw@31,eqw@28|재화||던전+훈련+소환
+05-eqamulet	05 장비 세부(목걸이 슬롯)	eqslot:amulet	wpnw@31,eqw@28|재화||던전+훈련+소환
