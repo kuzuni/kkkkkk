@@ -122,12 +122,27 @@ const READ_VIEW = n => {
     S.att.n = n; S.att.date = '';
     const d0 = S.dia;
     claimAttend(null);
-    return { n, idx: n % ATTEND.length, want: ATTEND[n % ATTEND.length].dia, got: S.dia - d0, nAfter: S.att.n };
+    /* ⚑ 199 7회차 — 규칙이 «표 그대로» 에서 **«표 + 1일차 첫 순환 한정»** 으로 바뀌었다(333 처방:
+       항을 지우지 않고 방향만 갈아 끼운다). 자는 `attRow()` 에게 되묻지 않고 **규칙을 직접 적는다** —
+       접근자에게 물으면 «제품이 제 답을 채점하는» 항이 되어 되돌림 시험이 통과해 버린다. */
+    const idx = n % ATTEND.length;
+    const want = (idx === 0 && n >= ATTEND.length) ? ATT_D1_CURVE : ATTEND[idx].dia;
+    return { n, idx, want, got: S.dia - d0, nAfter: S.att.n, d1: ATT_D1_DIA, cur: ATT_D1_CURVE };
   }), days);
   if (claims) {
     const bad = claims.filter(c => c.got !== c.want);
-    ok(bad.length === 0, '[B-a] 전 표본에서 지급액 = ATTEND[n % 7].dia',
+    ok(bad.length === 0, '[B-a] 전 표본에서 지급액 = 규칙값(표 · 단 1일차는 첫 순환만 «환영» 칸)',
        bad.length ? bad.map(b => 'n' + b.n + ' ' + b.got + '≠' + b.want).join(' · ') : days.length + '개 표본 일치');
+    /* [B-a2] 199 7회차 — «1회성» 을 못박는 음성항. 2주차 이후의 1일차가 다시 «환영» 100,000 이 되면
+       (= 513 이 만든 4배 재지급이 되살아나면) 이 항이 곧바로 빨개진다. */
+    const c0 = claims.filter(c => c.idx === 0);
+    const first = c0.filter(c => c.n < CYCLE), later = c0.filter(c => c.n >= CYCLE);
+    ok(first.length > 0 && first.every(c => c.got === c.d1),
+       '[B-a2] 첫 순환의 1일차는 «환영» 칸 그대로 (498 이 나르는 100,000)',
+       first.map(c => 'n' + c.n + '→' + c.got).join(' · ') || '표본 없음');
+    ok(later.length > 0 && later.every(c => c.got === c.cur && c.got !== c.d1),
+       '[B-a3] 2주차 이후의 1일차는 곡선값 — «환영» 칸이 다시 안 돈다 (199 7회차 · ④ 지속 수급 축)',
+       later.map(c => 'n' + c.n + '→' + c.got).join(' · ') || '표본 없음');
     const modOk = claims.every(c => c.idx === c.n % CYCLE && c.idx < CYCLE);
     ok(modOk, '[B-b] 칸 index 가 언제나 `n % 7` (8일차 이후 칸 0건)',
        claims.map(c => 'n' + c.n + '→#' + c.idx).join(' · '));
@@ -217,7 +232,9 @@ const READ_VIEW = n => {
   const oldView = `  const day = S.att.n % 28, can = S.att.date !== today();
   const base = Math.floor(day / 7) * 7;
   const card = (i) => {`;
-  const nowIdx = `    const idx = i, r = ATTEND[idx], sev = i === 6;`;
+  /* 199 7회차 — 렌더가 표를 직접 읽지 않고 접근자 `attRow()` 를 읽는다. 되돌림 사본은
+     그 자리를 «base + i» 시절의 표 직독으로 되돌린다(28칸 세계의 모양 그대로). */
+  const nowIdx = `    const idx = i, r = attRow(idx), sev = i === 6;`;
   const oldIdx = `    const idx = base + i, r = ATTEND[idx], sev = i === 6;`;
   const found = [nowDecl, nowDia, nowView, nowIdx].map(x => src.includes(x));
   ok(found.every(Boolean), '[R-a] [전제] 사본 편집 자리 4곳을 소스에서 찾았다',
@@ -248,15 +265,44 @@ const READ_VIEW = n => {
     } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
   }
 
+  /* ── [R2] 되돌림 시험 — 199 7회차의 «1회성» 자신 ─────────────────
+     [B-a3] 이 «무르게 푼 항» 이 아님을 못박는다: 수령 경로의 접근자를 표 직독으로 되돌린 사본에서는
+     2주차 1일차(n=7)가 다시 «환영» 100,000 을 준다. 되돌리면 빨갛고 원복하면 초록이어야 자다. */
+  const nowClaim = `  const day = S.att.n % ATTEND.length, r = attRow(day);`;
+  const oldClaim = `  const day = S.att.n % ATTEND.length, r = ATTEND[day];`;
+  ok(src.includes(nowClaim), '[R2-a] [전제] 수령 경로가 접근자 `attRow(day)` 를 읽는다');
+  if (src.includes(nowClaim)) {
+    fs.writeFileSync(tmp, src.replace(nowClaim, oldClaim));
+    try {
+      const { page: p3 } = await open(browser, 'file://' + tmp);
+      const r2 = await ev(p3, () => {
+        S.att.n = 7; S.att.date = '';
+        const d0 = S.dia; claimAttend(null);
+        return { got: S.dia - d0, d1: ATT_D1_DIA, cur: ATT_D1_CURVE };
+      });
+      if (r2) ok(r2.got === r2.d1 && r2.got !== r2.cur,
+        '[R2-b] 되돌린 사본은 [B-a3] 가 빨갛다 (n=7 이 다시 «환영» ' + (r2.d1 || '') + ' 을 준다)',
+        '지급 ' + r2.got);
+      else ok(false, '[R2] 되돌림 사본을 못 읽었다');
+    } finally { try { fs.unlinkSync(tmp); } catch (e) {} }
+  }
+
   /* ── ⏸199 대기 — 실패로 세지 않는다(326·331·398 과 같은 처리) ── */
   blk('[199] ⏸ 대기 — 수급 곡선(값 확정은 199 몫 · 실패로 안 센다)');
   if (t) {
-    const perDay = Math.round(t.total / CYCLE);
-    note('출석 하루 평균', perDay.toLocaleString('en-US') + '/일  (28칸 시절 4,647/일 · +'
+    const perDay  = Math.round(t.total / CYCLE);                                   /* 첫 순환 */
+    /* 199 7회차 — 1일차가 1회성이 된 뒤로 «하루 평균» 이 둘이다. ④ 가 읽는 것은 **지속** 쪽이다. */
+    const steady  = Math.round((t.total - t.dias[0] + 380) / CYCLE);
+    note('출석 하루 평균 — 첫 순환', perDay.toLocaleString('en-US') + '/일  (28칸 시절 4,647/일 · +'
          + Math.round((perDay / 4647 - 1) * 100) + '%)');
+    note('출석 하루 평균 — **지속(2주차 이후 · ④ 가 읽는 자)**',
+         steady.toLocaleString('en-US') + '/일  (28칸 시절 4,647/일 대비 '
+         + (steady >= 4647 ? '+' : '') + Math.round((steady / 4647 - 1) * 100) + '%)');
     note('뿌리는 «값» 이 아니라 «주기»', '1일차 = 498 «환영» 칸 ' + t.dias[0].toLocaleString('en-US')
          + ' 이 28일이 아니라 **7일마다** 돌아온다');
-    note('지렛대 둘', 'ⓐ 1일차를 곡선값(380)으로 내리고 «환영 100만» 을 1회성 축으로 · ⓑ 그대로 둔다');
+    note('지렛대 둘 — **199 7회차가 ⓐ 를 골랐다**',
+         'ⓐ 1일차 «환영» 칸을 **첫 순환 1회성**으로(`attRow()`) · ⓑ 그대로 둔다 → **ⓐ 채택**, '
+         + '2주차 이후 1일차 = 곡선값 380. 값이 아니라 **주기**를 고친 것이라 첫날 축(DAY1_DIA 100만)은 Δ0');
   }
 
   await browser.close();

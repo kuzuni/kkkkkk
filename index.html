@@ -19166,6 +19166,21 @@ for(let i=1;i<=7;i++){
   const dia = i === 1 ? ATT_D1_DIA : (i % 7 === 0 ? 1500 + i*60 : 350 + i*30);
   ATTEND.push({ ic:curIc('dia'), t:'다이아', dia });
 }
+/* ⚑ 199 7회차 — **1일차 «환영» 칸은 첫 순환 한 번만**이다(513 이 이름을 붙여 199 로 넘긴 지렛대 ⓐ).
+   513 이 표를 28칸에서 7칸으로 줄이자 498 의 «환영 100,000» 칸이 4배 자주 돌아와 출석 수입이
+   4,647 → 14,896/일(+220%)이 됐다. 그 몫은 **첫날 축**(DAY1_DIA 100만)에 속한 값이지 지속 수급이
+   아니다 — 그런데 지속 수급에 얹혀 ④ 의 두 정책 간격을 좁히고 있었다(대충 쪽이 상대적으로 더 크게
+   먹는다: 하루 1접속이라 출석 몫의 비중이 부지런의 1.9배).
+   ⇒ 표는 그대로 두고 **접근자 한 겹**을 세운다(500·517 선례 — 표 값을 손으로 갈면 498 §1
+   «네 상수의 합 = 100만» 항등식이 깨진다).
+     · `S.att.n < ATTEND.length` = 아직 첫 순환 ⇒ 표 그대로(1일차 100,000 — 498 이 나르는 칸)
+     · 그 이후 ⇒ 1일차도 곡선값(350 + 30·1 = 380)으로 내려앉는다
+   ⚠ 바꾼 것은 **2주차 이후의 1일차 칸 하나**다. 첫 순환의 값·칸 수·순서·아이콘은 한 글자도 안 바뀐다
+   (그래서 498·513 의 게이트가 보는 «첫날»·«7칸 순환» 은 그대로 초록이다). */
+const ATT_D1_CURVE = 350 + 30;   /* 2주차 이후의 1일차 = 곡선값 380 */
+const attRow = (i) => (i === 0 && S.att.n >= ATTEND.length)
+  ? { ic: ATTEND[0].ic, t: ATTEND[0].t, dia: ATT_D1_CURVE }
+  : ATTEND[i];
 
 /* ---- 룰렛 (하루 5회) ----
    155(2026-08-27, 저장소 주인 지시): «룰렛에는 다이아만, 100~1000개로».
@@ -25996,7 +26011,7 @@ function giveReward(r){
 function claimAttend(at){
   if(S.att.date === today()) return '';
   /* 513 — 길이는 표가 정한다(`% 28` 리터럴 폐지). 표를 늘리든 줄이든 여기가 안 어긋난다. */
-  const day = S.att.n % ATTEND.length, r = ATTEND[day];
+  const day = S.att.n % ATTEND.length, r = attRow(day);   /* 199 7회차 — 1일차 환영 칸은 첫 순환만 */
   S.att.n++; S.att.date = today();
   if(at){ fxAt(at); fxCheck(at); }             /* 연출 DOM 은 #fxl 에 — 재렌더에 안 지워진다 */
   let txt = giveReward(r);
@@ -28003,7 +28018,7 @@ const AT_F7X = [309.5];
 function openAttend(){
   const day = S.att.n % ATTEND.length, can = S.att.date !== today();
   const card = (i) => {                                 /* 513 — i = 0..6 = 표 인덱스 그 자체 */
-    const idx = i, r = ATTEND[idx], sev = i === 6;
+    const idx = i, r = attRow(idx), sev = i === 6;      /* 199 7회차 — 표시도 같은 접근자로 */
     /* `day` 는 «다음에 받을» 칸이다 — 오늘 몫을 이미 받았어도 그 칸은 아직 «미래» 지 «완료» 가 아니다
        (구 달력의 `i===day && !can` 을 그대로 두면 내일 보상이 회색으로 죽어 보인다) */
     const got = idx < day, now = idx === day && can;
