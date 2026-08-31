@@ -37198,6 +37198,14 @@ function jzRestRect(el){
   for(let n = el; n && n.nodeType === 1 && n !== document.documentElement; n = n.parentElement){
     if(!jzTfHost(n)) continue;
     const s = n.style;
+    /* ⚑ 579 — 벗기기 전에 **트랜지션부터 끈다.** 579 가 누름(`.jz-dn`)을 `animation` 이 아니라
+       «정적 값 + 0.06s 트랜지션» 으로 주므로, 트랜지션이 켜진 채 `scale:none` 을 박으면 값이
+       «지금부터 0.06초에 걸쳐» 돌아간다 — 같은 태스크에서 읽는 rect 는 **여전히 눌린 값**이다
+       (`verify567` 실측: 폭 394.8 vs 배치 420 · 상변 1678.4 vs 1667). 애니메이션에는 없던 함정이다.
+       ⚠ 되돌리기는 역순이라 변형 속성이 먼저 복구되고 트랜지션이 나중에 살아난다 =
+         복구도 애니메이션 없이 한 프레임에 끝난다(화면에는 한 프레임도 안 나간다). */
+    undo.push([s, 'transition', s.getPropertyValue('transition'), s.getPropertyPriority('transition')]);
+    s.setProperty('transition', 'none', 'important');
     JZ_TF_PROPS.forEach(k => {
       undo.push([s, k, s.getPropertyValue(k), s.getPropertyPriority(k)]);
       s.setProperty(k, 'none', 'important');
