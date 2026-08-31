@@ -96,9 +96,10 @@ document.querySelectorAll('.pcb-p').forEach(e => {
 |---|---|
 | `node tools/verify585.js` | **44/44 PASS** — **연속 3회**(등재문이 요구한 «1회로 닫지 마라») · 39/41 → 44/44 (신설 3항: [전제] 2 + [R4] 1) |
 | `node tools/probe609.js` | **13/13 PASS 신설** |
-| `node tools/verify596.js` | 무수정 통과 |
-| `node tools/verify356.js` [S3] | 무수정 통과 |
-| `node tools/smoke.js` | SMOKE PASS |
+| `node tools/verify596.js` | **39/39 PASS** 무수정 |
+| `node tools/verify356.js` | **134/134 PASS** 무수정 ([S3] 포함) |
+| `node tools/verifyProgress.js` | 종료 코드 0 (§1~§4 빨강 0건) |
+| `node tools/smoke.js` | **SMOKE PASS** |
 
 ## 7. 다음 세션이 볼 것
 
