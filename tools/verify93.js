@@ -197,7 +197,8 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   ok(xmax <= XCAP, `퍼짐 최대 x ${xmax.toFixed(1)} (≤ ${XCAP.toFixed(0)} = outX ${q.outX} − FX3_BSOM ${q.K.BSOM} + 27)`);
   ok(rmax > 10 && rmax <= 200, `퍼짐 세로 반경 ${rmax.toFixed(1)}px @${rmaxT}ms (10 < r ≤ 200)`);
   const spreadN = Math.max(...q.frames.filter(f => f.t >= 120 && f.t <= HAT).map(f => f.list.filter(placed).length), 0);
-  ok(spreadN >= 8, `퍼짐 구간에 동시 ${spreadN}개 (≥8 — «퍼짐» 이 프레임에 실재한다)`);
+  /* 543 이관 — 알갱이가 3배(잉크 36 → 108px)가 되면서 개수가 8~16 → 3~6 으로 내려갔다. */
+  ok(spreadN >= 3, `퍼짐 구간에 동시 ${spreadN}개 (≥3 — «퍼짐» 이 프레임에 실재한다)`);
 
   console.log('[2] (c) 흡수 — 도착 봉투 (선언 FX3_ARR0/ARR1)');
   const dia = arrT(q, 'dia'), gold = arrT(q, 'gold');
@@ -267,7 +268,8 @@ const inBox = (r, g) => g.x >= r.x && g.x <= r.x + r.w && g.y >= r.y && g.y <= r
   /* ── [5] 아이콘 수 ─────────────────────────────────────── */
   console.log('[5] 아이콘 수 상한 (선언 FXFLY_MAX)');
   const qPeak = Math.max(...q.frames.map(f => f.list.length));
-  ok(qPeak >= 8 && qPeak <= K.FLYMAX, `UI 발 동시 최대 ${qPeak}개 (8 ~ FXFLY_MAX ${K.FLYMAX})`);
+  /* 543 이관 — 하한 8 → 3(개수를 잉크 면적과 맞바꿨다). 상한은 종전대로 제품의 FXFLY_MAX 를 읽는다. */
+  ok(qPeak >= 3 && qPeak <= K.FLYMAX, `UI 발 동시 최대 ${qPeak}개 (3 ~ FXFLY_MAX ${K.FLYMAX})`);
 
   /* ── [6] 전투 발은 3박자를 쓰지 않는다 ──────────────────── */
   console.log('[6] 전투 발 — 3박자 밖 · 팝업 아래 레이어(작업 77)');

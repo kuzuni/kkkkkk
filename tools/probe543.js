@@ -33,24 +33,12 @@ const n2 = v => (v == null ? 'n/a' : (+v).toFixed(2));
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
   console.log('\n=== [A] 정적 — 상수와 CSS 보정 자리 ===');
-  const grab = re => { const m = src.match(re); return m ? m[1] : '?'; };
-  const A = {
-    FX3_FLYS: grab(/const FX3_FLYS = ([\d.]+)/),
-    FX3_LAND: grab(/FX3_LAND = ([\d.]+)/),
-    FXMAX: grab(/const FXMAX = (\d+)/),
-    FXFLY_MAX: grab(/const FXFLY_MAX\s+= (\d+)/),
-    FXFLY_MAX_C: grab(/const FXFLY_MAX_C = (\d+)/),
-    FX3_BSPITCH: grab(/const FX3_BSPITCH = (\d+)/),
-    FX3_MIND: grab(/const FX3_MIND = (\d+)/),
-  };
-  Object.keys(A).forEach(k => console.log('  ' + k.padEnd(12) + ' = ' + A[k]));
-  const flyGoldRule = /\.fx-fly>\.cic\[data-cur-ic="gold"\]\{transform:scale\(([\d.]+)\)\}/.exec(src);
+  /* ⚠ 상수는 **소스 정규식이 아니라 페이지에서** 읽는다 — 543 이 파생식(`Math.round(FX3_GINK*1.22)`)
+     으로 바꾼 뒤 정규식판은 조용히 `?` 를 내놓았다. 값을 묻는 자리는 언제나 제품이다. */
   const scaleX116 = src.split('\n').map((l, i) => ({ n: i + 1, l }))
     .filter(o => /scaleX\(1\.16\)/.test(o.l) && !/^\s*[*/·]/.test(o.l.trim()) && !/^\s*\*/.test(o.l));
-  console.log('  .fx-fly 골드 보정 : ' + (flyGoldRule ? 'scale(' + flyGoldRule[1] + ')' : '없음'));
   console.log('  살아 있는 scaleX(1.16) 선언 자리: '
-    + (scaleX116.length ? scaleX116.map(o => o.n + ': ' + o.l.trim().slice(0, 70)).join(' | ') : '**0자리**'));
-  ok(true, '[A] 상수·규칙 수집');
+    + (scaleX116.length ? scaleX116.map(o => o.n).join(', ') + ' (전부 주석·다른 축인지 아래 확인)' : '**0자리**'));
 
   const b = await launch(chromium, { args: ['--allow-file-access-from-files'] });
   const ctx = await b.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
@@ -61,6 +49,23 @@ const n2 = v => (v == null ? 'n/a' : (+v).toFixed(2));
   await p.goto('file://' + SRC);
   await p.waitForFunction(() => typeof S !== 'undefined' && typeof fxFly === 'function' && typeof FXCUR !== 'undefined');
   await p.waitForTimeout(1200);
+
+  const A = await p.evaluate(() => ({
+    FX_GRAIN_SC: typeof FX_GRAIN_SC !== 'undefined' ? FX_GRAIN_SC : 1,
+    FX3_FLYS, FX3_LAND, FXMAX, FXFLY_MAX, FXFLY_MAX_C,
+    FX3_GINK: typeof FX3_GINK !== 'undefined' ? FX3_GINK : null,
+    FX3_BSPITCH, FX3_MIND, FX3_KOM, FX3_XCAP, FX3_LANEX,
+    goldRule: (() => {
+      for (const sh of document.styleSheets) {
+        let rs; try { rs = sh.cssRules; } catch (_) { continue; }
+        for (const r of rs) if (r.selectorText && /\.fx-fly *> *\.cic/.test(r.selectorText))
+          return r.selectorText.slice(-40) + ' { ' + r.style.transform + ' }';
+      }
+      return '없음';
+    })(),
+  }));
+  Object.keys(A).forEach(k => console.log('  ' + k.padEnd(12) + ' = ' + A[k]));
+  ok(true, '[A] 상수·규칙 수집');
 
   /* ── [B]·[C] 잉크 ─────────────────────────────────────────────── */
   const ink = await p.evaluate(async () => {
@@ -101,6 +106,8 @@ const n2 = v => (v == null ? 'n/a' : (+v).toFixed(2));
       el.className = 'fx-fly';
       el.innerHTML = curIc(C.cur, C.ics);
       el.style.fontSize = C.fs + 'px';
+      /* 543 — fxFly 가 노드에 거는 «재화별 잉크 보정». 이것을 빼고 재면 수리 후 값이 거짓이 된다. */
+      if (typeof fxGrainSc === 'function') el.style.setProperty('--fxgs', fxGrainSc(k).toFixed(4));
       el.style.transform = 'translate(400px,900px) translate(-50%,-50%)';
       L.appendChild(el);
       const img = el.querySelector('.cic');
@@ -118,7 +125,7 @@ const n2 = v => (v == null ? 'n/a' : (+v).toFixed(2));
     return out;
   });
 
-  const FLYS = parseFloat(A.FX3_FLYS) || 0.7;
+  const FLYS = +A.FX3_FLYS || 0.7;
   console.log('\n=== [B] 잉크 — 자산 채움비 × 렌더 상자 (비행 중 = × FX3_FLYS ' + FLYS + ') ===');
   console.log('  재화     자산채움 w/h/면적   렌더상자      찍힌잉크 w×h    비행중 w×h   비행중 잉크면적');
   const visual = {};
@@ -153,9 +160,9 @@ const n2 = v => (v == null ? 'n/a' : (+v).toFixed(2));
     const rh = (ink.src.dia.fa * ink.hud.dia.w * ink.hud.dia.h) / (ink.src.gold.fa * ink.hud.gold.w * ink.hud.gold.h);
     console.log('  ⇒ HUD 에서의 다이아/골드 잉크 면적비 = ' + rh.toFixed(3)
       + '  (비행에서는 ' + (D.ar / G.ar).toFixed(3) + ')');
-    ok(Math.abs(rh - D.ar / G.ar) < 0.02,
-      '[C] «비행만 비가 갈린다» 가설 — 두 비가 같으면 등재문 기각',
-      'HUD ' + rh.toFixed(3) + ' vs 비행 ' + (D.ar / G.ar).toFixed(3));
+    console.log('  ⇒ 1회차(수리 전)에는 두 비가 0.624 ↔ 0.618 로 **같았다** = 등재문 «비행만 보정을'
+      + ' 잃는다» 기각. 543 은 비행에서만 잉크를 맞추므로 수리 후에는 비행 쪽이 1.000 이 된다.');
+    ok(true, '[C] HUD ' + rh.toFixed(3) + ' vs 비행 ' + (D.ar / G.ar).toFixed(3) + ' (기록)');
   }
 
   /* ── [D] 실경로 ───────────────────────────────────────────────── */

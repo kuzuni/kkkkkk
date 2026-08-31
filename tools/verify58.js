@@ -245,7 +245,20 @@ async function run(scene, span, step) {
 
   console.log('[2] UI 발 아이콘 수');
   const qPeak = Math.max(...quest.samples.map(s => s.n));
-  ok(qPeak >= 8 && qPeak <= 32, `동시 최대 ${qPeak}개 (8~32 = 8~16 × 재화 2종)`);
+  /* ⚑ 543 이관 — 주인 지시 «다이아 크기 기준 3배» 로 알갱이 잉크가 36 → 108px(면적 9배)이 됐다.
+     개수는 그 면적과 맞바꿔 8~16 → **3~6** 이 됐다(밴드 피치가 44 → 132 라 16슬롯이 2112px 로
+     프레임보다 넓어진다 — index.html fxFly 의 543 주석). 상한도 32 → FXFLY_MAX 12 다.
+     ⚠ 이 항을 «숫자만 낮춘» 것으로 두지 않는다 — 아래 [2b] 가 «그래서 총 잉크가 줄었나» 를 묻는다. */
+  const src58 = require('fs').readFileSync(require('path').resolve(__dirname, '../index.html'), 'utf8');
+  const num58 = (re, d) => { const m = src58.match(re); return m ? +m[1] : d; };
+  const K58 = { FLYMAX: num58(/const FXFLY_MAX\s+= (\d+)/, 32),
+                GINK:   num58(/const FX3_GINK\s+= ([\d.]+)/, 0) };
+  ok(qPeak >= 3 && qPeak <= K58.FLYMAX, `동시 최대 ${qPeak}개 (3 ~ FXFLY_MAX ${K58.FLYMAX})`);
+  /* [2b] 543 — «개수를 줄인 대가로 무엇을 샀나». 알갱이 하나의 잉크 면적 × 동시 개수가
+     프레임(1080×2280)의 5% 를 넘으면 «손맛» 이 아니라 «화면이 덮인다» 다. */
+  const ink58 = K58.GINK ? Math.PI * (K58.GINK / 2) ** 2 : 0;
+  const cov58 = ink58 * qPeak / (1080 * 2280) * 100;
+  ok(!K58.GINK || cov58 <= 5, `동시 잉크 점유 ${cov58.toFixed(2)}% (≤5% — 개수×잉크 맞바꿈이 실제로 성립하는가)`);
 
   console.log('[3] 전투 발 레이어 (작업 77 — 팝업 아래 #fxlc)');
   const gLo = Math.max(...gain.samples.map(s => s.lo)), gUp = Math.max(...gain.samples.map(s => s.up));
