@@ -123,6 +123,16 @@ function deltaPx(inkStr, devPct) {
     const mine = out.filter((r) => r.site === k);
     if (!mine.length) continue;
     console.log(`  ${k} — ${SITES[k].lab}`);
+    /* ⚑ 3회차(sess-1035-19169) — **[전제]**. 1회차가 B 를 «03 던전» 에서 재고 다섯 줄을
+       «판정 밖/문턱 아래» 로 남겼는데, 그것은 «편차가 작다» 가 아니라 **«아무것도 안 쟀다»** 였다
+       (그 화면의 유물 칸은 전부 `.lkd` 라 이 셀렉터가 0개다). 2회차가 화면은 고쳤지만
+       **같은 사고를 막는 항은 자에 없다** — 화면 이름이 또 낡으면 표는 다시 조용히 «괜찮다» 로 읽힌다.
+       ⇒ 바닥값(`*-base2`)에서 자리가 판정 안에 없으면 그 자리의 시험 전체를 «무효» 로 크게 찍는다.
+       ⚠ 이 항은 «편차가 작은 것» 을 무효라 하지 않는다 — base2 **하나만** 본다. */
+    const base = mine.find((r) => /base2$/.test(r.case));
+    if (base && base.dev == null)
+      console.log('      ⚠⚠ [전제] 무효 — 바닥값(base2)에서 이 자리가 판정 안에 없다.\n' +
+        `         아래 줄들은 «편차가 작다» 가 아니라 «안 쟀다» 는 뜻이다. 화면 이름(\`${SITES[k].screen}\`)부터 확인하라.`);
     for (const r of mine) {
       console.log(`      ${r.case.padEnd(9)} ${r.dev == null ? '판정 밖/문턱 아래' :
         `${r.dev > 0 ? '+' : ''}${r.dev}%  Δw ${r.dw > 0 ? '+' : ''}${r.dw}px`}   ${r.why}`);
