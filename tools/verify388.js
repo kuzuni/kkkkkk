@@ -201,22 +201,47 @@ for (const [id, why] of Object.entries(QUIET)) {
   if (i < 0) { no('행 ' + id + ' 을 찾지 못했다'); continue; }
   chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out), '[N] ' + id + ' (' + why + ') 는 안 잡힌다');
 }
-chk(NOTYET.length >= 3, '[N] 진짜 미착수 표본이 실제로 있다(빈 배열로 초록이 아니다)', NOTYET.length + '건: ' + NOTYET.join(' '));
+/* ── 하한을 «표의 미착수 재고» 에 걸지 않는다 (작업 573) ─────────────────────
+ * 379 는 표본을 **리터럴로** 박아서 이 자를 빨갛게 했고, 처방은 «표에게 물어라» 였다.
+ * 그런데 표에게 묻는 것도 **움직이는 것을 손가락으로 가리키는 일**이다 — 재고는 마른다.
+ * 실제로 573 이 닫히는 순간 §N3 재고가 3 → **2** 로 내려가 «축은 멀쩡한데» 빨개졌고,
+ * §N 은 그때 정확히 **3건**(548·570·572)이라 다음 워커가 하나만 닫아도 같은 자리에서 터진다.
+ * (573 이 `probe566` 에서 잡은 것과 같은 병 — 표본이 낡은 게 아니라 손가락이 움직인다.)
+ *   ⇒ 하한이 지키려던 뜻은 «빈 배열로 초록이 아니다» 하나다. 그 뜻은 **합성 표본**이 지킨다:
+ *     표에 없는 번호로 «완료 표지 없음 + 미착수» 행을 얹고 그 행이 안 잡히는지 묻는다.
+ *     재고와 무관하게 이 음성항은 늘 한 건을 본다(333 — 자리를 비우지 않는다).
+ *     실물 재고는 **있는 대로 전부** 검사한다(줄이지 않았다 · 하한만 뺐다).
+ * ⚠ 합성 행은 임시 사본에만 얹는다 — `docs/PROGRESS.md` 는 한 글자도 안 건드린다. */
+const SYN_ID = '9001';                    /* 표의 «가장 큰 번호 + 1» 규칙 밖 — 자 전용, 실물에 안 들어간다 */
+const SYN_ROW = '| ' + SYN_ID + ' | **합성 음성 표본(자 전용 — 실물 표에 없는 번호)** | – | 미착수. | – | 0/5 |' +
+                ' **←(등재문) 미착수 · 자가 만든 표본** |';
+function synNegative(tag, label) {
+  const r = askGate(lines.concat([SYN_ROW]), tag);
+  chk(!new RegExp('✗ ' + SYN_ID + ' — 자기모순').test(r.out), label);
+  return r;
+}
+chk(ROW.test(SYN_ROW) && NOT_YET_SHAPE.test(SYN_ROW) && !DONE_DATED_MARK.test(SYN_ROW) &&
+    (() => { const t = tailCell(SYN_ROW); return !!t && HEAD_NOT_YET_SHAPE.test(t.cells[t.i]); })(),
+    '[N-합성] 전제: 합성 행이 실제로 «완료 표지 없음 + 구현 칸·머리말 둘 다 미착수» 모양이다');
+synNegative('nsyn', '[N-합성] 재고가 말라도 이 음성항은 산다 — 합성 미착수 행은 안 잡힌다');
+console.log('       ⓘ 실물 미착수 재고 ' + NOTYET.length + '건: ' + (NOTYET.join(' ') || '0건') +
+            ' — 재고는 있는 대로 전부 검사하되 **하한은 안 건다**(573: 재고는 마른다).');
 for (const id of NOTYET) {
   chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
       '[N] ' + id + ' (진짜 미착수 — 완료 표지 없음) 는 안 잡힌다');
 }
 /* §N3 (445) — 머리말 축이 **진짜 미착수 행**을 끌어오지 않는다.
    머리말만 보는 축이라 «완료 표지가 없다» 는 조건 하나가 그 행들을 지킨다.
-   ⚠ 표본을 리터럴로 박지 않는다(379 선례) — 표에게 묻고 하한을 건다. */
+   ⚠ 표본을 리터럴로 박지 않는다(379 선례) · ⚠ 하한도 재고에 걸지 않는다(573 — 바로 위 주석). */
 {
   const tailOnly = lines.filter(l => {
     if (!ROW.test(l) || DONE_DATED_MARK.test(l)) return false;
     const t = tailCell(l);
     return t && HEAD_NOT_YET_SHAPE.test(t.cells[t.i]);
   }).map(l => ROW.exec(l)[1]);
-  chk(tailOnly.length >= 3, '[N3] 머리말이 «미착수» 인 진짜 미착수 행이 실제로 있다(빈 배열로 초록이 아니다)',
-      tailOnly.length + '건: ' + tailOnly.slice(0, 8).join(' ') + (tailOnly.length > 8 ? ' …' : ''));
+  synNegative('n3syn', '[N3-합성] 재고가 말라도 이 음성항은 산다 — 머리말이 «미착수» 인 합성 행은 안 잡힌다');
+  console.log('       ⓘ 실물 머리말 재고 ' + tailOnly.length + '건: ' +
+              (tailOnly.slice(0, 8).join(' ') || '0건') + (tailOnly.length > 8 ? ' …' : ''));
   for (const id of tailOnly) {
     chk(!new RegExp('✗ ' + id + ' — 자기모순').test(live.out),
         '[N3] ' + id + ' (완료 표지 없음 — 진짜 미착수) 는 머리말이 «미착수» 여도 안 잡힌다');

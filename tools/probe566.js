@@ -36,6 +36,37 @@ const ROOT = path.resolve(__dirname, '..');
 const REL = 'docs/PROGRESS.md';
 const listAll = process.argv.slice(2).includes('--list');
 
+/* stderr 는 삼킨다 — 못 읽는 ref 는 «건너뜀» 한 줄로 말한다(git 의 fatal 이 끼면 채점표가 안 읽힌다) */
+const GOPT = { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28, stdio: ['ignore', 'pipe', 'ignore'] };
+const gitShow = r => { try { return execFileSync('git', ['show', r], GOPT); } catch (e) { return null; } };
+const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e) { return null; } };
+
+/* ── «수리 전» 사본은 **고정된 커밋**에서 꺼낸다 (작업 573) ────────────────────
+ * 566 은 이 자리를 `origin/main` 으로 읽었다. 그 ref 는 **566 자신의 push 로 움직인다** —
+ * 수리가 origin/main 에 올라간 순간 «수리 전» 이 «수리 후» 를 가리켜 [4-a] 가 «칸 7» 로
+ * 빨개졌고([4-a] 는 8 을 기대한다), [4-b]·[4-c] 는 **자기 자신과 비교하는 헛초록**이 됐다.
+ * 표본이 낡은 게 아니라 **표본을 가리키는 손가락이 움직이는 것**이 뿌리다.
+ *   ⇒ 등재문 처방 ⓐ(살아 있는 8칸 행으로 갈아 끼우기)를 안 골랐다. 그러면 572(«칸 수 7 초과»
+ *     131행 정리)가 그 행을 7칸으로 만드는 순간 **같은 방식으로 또 썩는다** — 573 은 이미
+ *     «572 와 같은 자리» 라고 등재돼 있다. ⓑ(개수로 묻기)도 같은 이유로 기각: 572 가 끝나면
+ *     «7 을 넘는 행» 자체가 0 이 되어 항이 뜻을 잃는다.
+ * ⚠ SHA 를 손으로 박기만 하면 이 저장소에서는 또 썩는다 — 이력을 재작성한 적이 있다
+ *   (2026-08-30 캡처 PNG 이력 제거). 그래서 **커밋 메시지로 찾고** 손으로 박은 SHA 는 폴백이다.
+ * ⚠ ref 는 **정체**로 고른다(«566 의 수리 커밋의 부모»). «553 이 8칸으로 보이는 ref» 로 고르면
+ *   [4-a] 가 자기를 증명하는 헛초록이 된다(무르게 푼 수리). 고른 뒤 값은 따로 단언한다. */
+const BEFORE_FALLBACK = '842dc2f';         /* claim(566) — 566 의 수리(wip) 직전 */
+function pickBefore() {
+  if (process.env.P566_BEFORE) return { ref: process.env.P566_BEFORE, how: 'P566_BEFORE 환경변수' };
+  for (const msg of ['wip(566)', 'done(566)']) {
+    const sha = gitQ(['rev-list', '-1', '--fixed-strings', '--grep=' + msg, 'HEAD']);
+    if (!sha) continue;
+    const parent = gitQ(['rev-parse', '--short', sha + '^']);
+    if (parent) return { ref: parent, how: '`' + msg + '` 의 부모' };
+  }
+  return { ref: BEFORE_FALLBACK, how: '폴백 SHA(이력에서 566 수리 커밋을 못 찾았다)' };
+}
+const BEFORE = pickBefore();
+
 /* ── 자(verifyProgress §2 축 ⓒ)와 **같은 규칙**을 쓴다 — 자와 재현기가 갈리면 둘 다 못 믿는다 ── */
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
 const DONE_DATED = /(?:완료|해결|통과|폐기)\s*\(\s*20\d\d-\d\d-\d\d/;
@@ -177,11 +208,11 @@ if (require.main === module) {
 
   /* ── §4 등재문 정정 — 553·554 는 «칸이 하나 더» 였다 ── */
   console.log('\n[4] 등재문 정정 — 553·554 의 뿌리는 산문이 아니라 «칸 수» 였다');
-  const gitShow = r => { try { return execFileSync('git', ['show', r], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 }); } catch (e) { return null; } };
-  const before = gitShow('origin/main:' + REL);
+  const before = gitShow(BEFORE.ref + ':' + REL);
   if (!before) {
-    console.log('  –   [4-a]~[4-c] 건너뜀 — origin/main 판본을 못 읽는다(얕은 클론)');
+    console.log('  –   [4-a]~[4-d] 건너뜀 — «수리 전» 판본(' + BEFORE.ref + ' · ' + BEFORE.how + ')을 못 읽는다(얕은 클론)');
   } else {
+    console.log('       수리 전 사본 = ' + BEFORE.ref + ' (' + BEFORE.how + ')');
     const bRows = rowsOf(before);
     const n553 = bRows.has('553') ? cellsOf(bRows.get('553').replace(/\s+$/, '')).length : -1;
     const n512 = bRows.has('512') ? cellsOf(bRows.get('512').replace(/\s+$/, '')).length : -1;
@@ -189,6 +220,17 @@ if (require.main === module) {
     ok('[4-b] 수리 전 512 는 칸이 정확히 7개다 — 같은 무리가 아니다', n512 === 7, '칸 ' + n512);
     const now553 = cellsOf(rows.get('553').replace(/\s+$/, '')).length;
     ok('[4-c] 지금 553 은 7칸이다(여분 칸을 앞 칸에 `<br>` 로 합쳤다 · 지운 글자 0)', now553 === 7, '칸 ' + now553);
+    /* 되돌림 시험(573) — 566 이 쓰던 «움직이는 ref» 로 되돌리면 이 절이 다시 빨개진다.
+       이 항이 초록인 동안 [4-a] 의 «8» 은 고정 커밋에서만 나오는 값이고,
+       [4-c] 의 «7» 과의 대조도 살아 있다(둘이 같아지면 §4 는 자기 자신을 비교하는 헛초록이다). */
+    const mv = gitShow('origin/main:' + REL);
+    if (!mv) {
+      console.log('  –   [4-d] 건너뜀 — origin/main 판본을 못 읽는다');
+    } else {
+      const nMv = rowsOf(mv).has('553') ? cellsOf(rowsOf(mv).get('553').replace(/\s+$/, '')).length : -1;
+      ok('[4-d] 되돌림 시험 — 옛 «움직이는 ref»(origin/main)로 읽으면 8이 아니다 = 573 이 빨갰던 이유',
+         nMv !== 8 && nMv !== -1, 'origin/main 칸 ' + nMv + ' ↔ 고정 커밋 칸 ' + n553);
+    }
   }
 
   /* ── §5 음성 경계 — 구현 칸이 «–» 인 완료행은 축 밖이다 ── */
