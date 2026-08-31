@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388 · 557)
+/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388 · 557 · 571)
  *
- * 자가 셋이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
+ * 자가 넷이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
  *   §1 되돌림  (374) — 완료행이 **병합으로** 등재문으로 되돌아간다. 이력(그 done 커밋)과 대조한다.
  *   §2 자기모순(388) — **되돌림이 아니다.** `done(<ID>)` 커밋 **자신**이 완료문을 비고 칸
  *                      «끝에만» 덧붙이고 구현 칸·루프 횟수·비고 머리말을 등재 상태로 남긴다.
@@ -9,6 +9,10 @@
  *   §3 마감 누락(557) — **모순도 아니다.** 세션이 제품·자·review 를 전부 push 하고 표를 **아예 안 건드린다**.
  *                      행은 «일관되게 미착수» 라 §2 가 볼 모순이 없고, done() 커밋이 얕은 클론
  *                      경계 밖이면 §1 도 못 본다 — 표가 아니라 **표 ↔ 저장소 자산**을 대조해야 한다.
+ *   §4 병합 표시 (571) — 표가 «무엇을 말하는가» 보다 앞선다. `claim.js` 의 autostash pop 이 충돌하면
+ *                      작업 트리에 병합 표시가 남는데 pull 은 **종료 코드 0** 이라 조용하다.
+ *                      그 뒤 `git add -A` 가 표시째 커밋한다 — §1~§3 이 읽을 표 자체가 깨진다.
+ *                      모든 워커의 push 전 게이트가 이 자 하나뿐이라 여기에 세운다(지시서 [4]).
  *
  *   node tools/verifyProgress.js                 작업 트리의 docs/PROGRESS.md 를 본다
  *   node tools/verifyProgress.js --rev <rev>     그 리비전의 PROGRESS 를 본다(§R 되돌림 시험용)
@@ -351,6 +355,46 @@ if (!skipRev) {
   }
 }
 
+/* ── §4 병합 표시 잔재 판정 (작업 571) ────────────────────────────────────────
+ * §1~§3 은 «표가 무엇을 말하는가» 를 본다. 여기서 보는 것은 그보다 앞선 것이다 —
+ * **표가 아예 깨진 채로 커밋되는** 자리다.
+ *   `claim.js` 의 `pull --rebase`(rebase.autoStash)는 stash pop 이 충돌해도 **종료 코드 0** 이라
+ *   작업 트리에 병합 표시를 남긴 채 조용히 끝난다(재현: `tools/probe571.js` [1]).
+ *   그 뒤 지시서 [1] 이 시키는 `git add -A` + 커밋이 그 표시를 **그대로 담는다**([3]).
+ *   2026-08-31 `618d000` 이 그랬고(569 행 두 벌 · LESSONS 에 표시 3줄), 363 이 `UI-REFERENCE.md` 에서
+ *   같은 것을 걷어냈다 = **재발**이다. 자리를 옮겨 가며 재발하므로 «그 파일» 이 아니라
+ *   «모든 워커가 push 전에 반드시 지나는 문» 하나에 세운다(지시서 [4] 규칙이 이 자를 그렇게 쓴다).
+ *
+ * ── 왜 표시 한 줄이 아니라 «세 짝» 을 보는가 ────────────────────────────────
+ * 이 저장소의 기록(PROGRESS·LESSONS·ROUTINE)은 사고를 적을 때 표시 문자열을 **인용한다**
+ * (571 등재문 자신이 그렇다). 줄 첫머리 한 종류만 세면 그 인용이 헛빨강이 된다. 그래서
+ * ⓐ 열림 `<<<<<<< ` ⓑ 가름 `=======`(줄 전체) ⓒ 닫힘 `>>>>>>> ` 이 **그 순서로** 다 있어야 빨강이다.
+ * 짝이 안 맞는 한 짝만 있는 파일은 조용히 넘기지 않고 «관찰» 로 찍는다.
+ * 인덱스의 unmerged 항목은 해석의 여지가 없으므로 그 자체로 빨강이다.
+ *
+ * ⚠ 이 파일·자기 시험(`verify571`)·재현기(`probe571`)는 표시를 **런타임에 조립**한다 —
+ *   소스에 줄 첫머리로 적으면 자가 자기를 빨갛게 만든다. */
+const MK_OPEN = '<'.repeat(7) + ' ';
+const MK_MID = '='.repeat(7);
+const MK_CLOSE = '>'.repeat(7) + ' ';
+const conflicted = [];   /* 빨강 — 병합 표시가 남은 파일 */
+const halfMark = [];     /* 관찰 — 표시가 짝을 못 이룬다(인용일 수 있다) */
+const unmergedIdx = ((gitQ('diff', '--name-only', '--diff-filter=U') || '').trim().split('\n').filter(Boolean));
+if (!skipRev) {
+  const listed = (gitQ('grep', '-lI', '--no-color', '-e', '^' + MK_OPEN) || '').trim();
+  for (const f of listed.split('\n').filter(Boolean)) {
+    let lines;
+    try { lines = fs.readFileSync(path.join(ROOT, f), 'utf8').split('\n'); } catch (e) { continue; }
+    const o = lines.findIndex(l => l.startsWith(MK_OPEN));
+    const m = lines.findIndex((l, i) => i > o && l === MK_MID);
+    const c = lines.findIndex((l, i) => i > m && m > o && l.startsWith(MK_CLOSE));
+    if (o >= 0 && m > o && c > m) conflicted.push({ f, at: o + 1, to: c + 1 });
+    else halfMark.push({ f, at: o + 1 });
+  }
+}
+const seen = new Set(conflicted.map(x => x.f));
+for (const f of unmergedIdx) if (!seen.has(f)) conflicted.push({ f, at: 0, to: 0, idx: true });
+
 /* ── 출력 ── */
 if (!quiet) {
   console.log('PROGRESS 되돌림 검사 — ' + curLabel + ' · done() 기록 ' + newestDone.size + '건');
@@ -378,6 +422,13 @@ if (!quiet) {
                 (noGate ? ' · ⚠ --no-gate: 자를 안 돌렸다(§3 의 E2 축이 꺼져 있다)' : ''));
     for (const h of held) console.log('    –  ' + h.id + ' — 제외 · lock ' + h.lk.sid + '(' + h.lk.min + '분 전) · review ' + h.rv.length + '건 · 자 ' + (h.gate || '없음'));
     for (const w of watch) console.log('    ⚠  ' + w.id + ' — 관찰 · ' + w.why);
+  }
+  if (skipRev) {
+    console.log('  §4 병합 표시 잔재 — 건너뜀(--rev): 표시는 **작업 트리**의 것이라 옛 리비전과 짝이 안 맞는다');
+  } else {
+    console.log('  §4 병합 표시 잔재 — 빨강 ' + conflicted.length + '건 · 짝을 못 이룬 표시(인용일 수 있다) ' + halfMark.length + '건'
+                + ' · 인덱스 unmerged ' + unmergedIdx.length + '건');
+    for (const h of halfMark) console.log('    ⚠  ' + h.f + ':' + h.at + ' — 관찰 · 열림 표시는 있는데 «' + MK_MID + '»·닫힘이 그 뒤에 없다(인용으로 읽는다)');
   }
 }
 for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.detail);
@@ -426,6 +477,20 @@ if (unclosed.length) {
   console.log('    안 끝났으면 표를 «완료» 로 고치지 말고 `node tools/claim.js <ID> <SID>` 로 잡아 이어서 해라.');
 }
 
+for (const c of conflicted) console.log('  ✗ ' + c.f + ' — 병합 표시 잔재 · '
+  + (c.idx ? '인덱스에 unmerged 로 남아 있다(`git status` 의 UU)' : c.at + '~' + c.to + '행에 열림·«' + MK_MID + '»·닫힘이 그대로 있다'));
+
+if (conflicted.length) {
+  console.log('\nMERGE MARKERS ' + conflicted.length + '건 — ' + conflicted.map(c => c.f).join(' '));
+  console.log('  뜻: 병합이 안 풀린 채다. 지금 `git add -A` 로 커밋하면 표시가 **기록에 그대로 들어간다**');
+  console.log('    (2026-08-31 618d000 이 그랬다 — PROGRESS 569 행이 두 벌 · LESSONS 에 표시 3줄. 뿌리는 작업 571).');
+  console.log('  고치는 법: 지시서 [4] 대로 **양쪽을 모두 살려** 손으로 푼다 —');
+  console.log('    표시 세 줄만 지우고 위·아래 내용은 **둘 다** 남긴다(남의 완료 행을 지우면 §1 이 빨개진다)');
+  console.log('    → git add <그 파일들>  → `git stash list` 에 autostash 가 남아 있으면 확인 후 git stash drop');
+  console.log('  ⚠ 뿌리는 `claim.js` 의 `pull --rebase`(autoStash)다 — pop 이 충돌해도 **종료 코드 0** 이라 조용하다.');
+  console.log('    지금은 claim.js 가 그 자리에서 멈춘다(작업 571). 재현: node tools/probe571.js');
+}
+
 if (bad.length) {
   console.log('\nPROGRESS REVERTED ' + bad.length + '건 — ' + bad.map(b => b.id).join(' '));
   console.log('  고치는 법: 그 `done(<ID>)` 커밋의 행을 그대로 되살린다.');
@@ -434,7 +499,7 @@ if (bad.length) {
   console.log('    있었으면 그것까지 살린다(규칙 8 «양쪽 행을 모두 살린다» 그대로).');
   process.exit(1);
 }
-if (contra.length || unclosed.length) process.exit(1);
-if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음 · 마감 누락 행 없음' +
-                        (skipRev ? ' (§3 은 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
+if (contra.length || unclosed.length || conflicted.length) process.exit(1);
+if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음 · 마감 누락 행 없음 · 병합 표시 잔재 없음' +
+                        (skipRev ? ' (§3·§4 는 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
 process.exit(0);

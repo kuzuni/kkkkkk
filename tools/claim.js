@@ -113,12 +113,37 @@ function surrender(why) {
      - claim/release 는 커밋·push 를 하므로 pull 이 필요하다. 다만 더러운 트리에서도 죽지 않게
        `rebase.autoStash` 로 돌린다 — 여기서 실패하면 lock 을 못 잡거나(claim)
        못 푸는데(release), 못 푸는 쪽은 그 작업을 90분간 통째로 막는다. */
+/* ── autostash 충돌 감시 (작업 571) ────────────────────────────────────────────
+ * `rebase.autoStash` 는 **rebase 가 끝난 뒤** stash 를 되돌려 놓는데, 그 pop 이 충돌하면
+ * git 은 stderr 에 «Applying autostash resulted in conflicts» 만 적고 **종료 코드 0** 으로 끝난다
+ * (재현: `node tools/probe571.js` [1]). 아래 `=== null` 검사는 그래서 그대로 통과했고,
+ * 작업 트리에는 병합 표시가 남은 채 claim.js 는 계속 굴러갔다. 그 다음이 피해다 —
+ *   · release 는 lock 을 **지운 뒤** 커밋에서 «unmerged files» 로 거부당해(코드 128) uncaught 예외로
+ *     끝났다(지시서가 말한 «Node 배너»). lock 은 사라졌는데 커밋은 없는 **반쯤 해제** 상태다.
+ *   · 그 상태에서 지시서 [1] 이 시키는 `git add -A` + 커밋이 병합 표시를 **그대로 커밋한다**
+ *     (2026-08-31 `618d000`: PROGRESS 569 행이 두 벌 · LESSONS 에 표시 3줄. 363 이 겪은 것과 같은 자리다).
+ * ⇒ 처방 ⓐ — 조용한 성공을 **종료 코드로 바꾼다**. 아무것도 지우기 **전에** 멈추므로 반쯤 해제도 없다.
+ *   워커의 변경은 두 곳에 살아 있다(작업 트리의 양쪽 표시 + `stash@{0}`) — 아무것도 잃지 않는다. */
+const unmerged = () => (gitQ('diff', '--name-only', '--diff-filter=U') || '').split('\n').filter(Boolean);
+function stopOnConflict(when) {
+  const u = unmerged();
+  if (!u.length) return;
+  die(1, '오류 — 작업 트리에 **풀리지 않은 병합 표시**가 있다(' + when + '): ' + u.join(', ')
+       + '\n  ⚠ 지금 `git add -A` 로 커밋하면 «' + '<'.repeat(7) + ' Updated upstream» 째로 기록에 들어간다(작업 571).'
+       + '\n  네 변경은 안 잃었다 — 그 파일들 안에 **양쪽이 다 들어 있고** `git stash list` 에도 남아 있다.'
+       + '\n  풀는 법(지시서 [4] «양쪽을 모두 살린다»): 표시를 손으로 지워 양쪽 행을 다 남기고'
+       + '\n    → git add ' + u.join(' ') + '  → 필요하면 git stash drop  → 이 명령을 다시 실행.'
+       + (mode === 'release' ? '\n  lock 은 **안 건드렸다** — 다시 실행하면 그대로 해제된다.' : ''));
+}
+
 gitQ('fetch', 'origin', 'main');
 if (mode === 'claim' || mode === 'release') {
+  stopOnConflict('pull 전부터 남아 있었다');
   if (gitQ('-c', 'rebase.autoStash=true', 'pull', '--rebase', 'origin', 'main') === null) {
     gitQ('rebase', '--abort');
     die(1, '오류 — git pull --rebase 실패. `git status` · `git stash list` 를 보고 손으로 정리한 뒤 다시 실행할 것.');
   }
+  stopOnConflict('autostash pop 이 충돌했다 — pull 자신은 «성공»(코드 0)으로 끝난다');
 }
 
 if (mode === 'check') {
