@@ -384,7 +384,16 @@ const BOT_SRC = function (cfg) {
      ====================================================================== */
   const R = {};
 
-  R.attend = () => T('출석', () => { const before = S.dia; claimAttend(null); ledger('출석'); return S.dia - before; });
+  /* ⚑ 199 8회차(정정8) — 출석 **1일차 «환영» 칸**은 498 의 첫날 100만 축에 속한 값이고
+     7회차(§7-3)가 제품에서 «첫 순환 1회성» 으로 굳혔는데(`attRow`), 장부에서는 아직 «출석» 한
+     바구니에 섞여 **지속 수급 분모 안**에 있었다. ④ 도달일이 그만큼 후하게 나온다.
+     ⇒ 첫 순환의 1일차 수령만 따로 적는다(`S.att.n === 0` 인 단 한 번 — 8일차는 이미 380 곡선). */
+  R.attend = () => T('출석', () => {
+    const before = S.dia, first = !((S.att && S.att.n) > 0);
+    claimAttend(null);
+    ledger(first ? '출석(1일차 환영)' : '출석');
+    return S.dia - before;
+  });
   R.mail   = () => T('우편', () => { claimAllMail(); ledger('우편'); });
   R.quest  = () => T('퀘스트', () => { claimAllQuests(); ledger('퀘스트'); });
   R.guide  = () => T('가이드미션', () => { for (let i = 0; i < 12; i++) { const b = S.dia; claimGuide(); if (S.dia === b) break; } ledger('가이드미션'); });
@@ -1037,32 +1046,82 @@ function writeReport(rep) {
        ⓑ **간격 목표 ×1.4 는 주인 목록의 값이 아니다** — 목록 자체의 기하평균은
           6칸 구간 (36000/1440)^(1/5) = **1.904** · 전 8칸 (36000/30)^(1/7) = **2.754** 다.
           «×1.4» 는 주인이 말한 «간격이 커진다» 의 어림수였고, 자는 **목록에서 역산한 값**을 쓴다. */
-    const REACH  = TARGET.filter(t => t >= 1440);          /* 첫 접속 이후 = 도달 가능한 칸 */
     const gmOf   = (a) => a.length < 2 ? 0
       : Math.pow(a[a.length - 1] / a[0], 1 / (a.length - 1));
-    const SPAN_T = gmOf(REACH);                            /* 1.904 */
     const SPAN_T8 = gmOf(TARGET);                          /* 2.754 */
     const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band));
-    const hitIn = (list, r) => {
+    /* ⚑ 199 8회차 — ① 의 자를 **네 곳** 고친다(7회차 비평 S·U 독립 일치 · 정정7·9·10).
+       7회차까지의 ① 은 «점수를 못 매기는 자» 였고, 5·6·7회차가 세 번 연속 그 위에서 계수를 돌렸다.
+         ⓐ **분모가 정책 공통 6칸이었다.** 대충은 첫 로그인 1,260분 · 세션 30활성분이라
+            1,440칸(창 1,152~1,728)에 벽을 세우려면 **첫 세션 30분 전부**를 한 스테이지에 서 있어야
+            한다([B] 실측은 같은 30분에 s55 → s164) ⇒ 1/6 은 실은 **1/5** 였다(정정7).
+            도달 가능은 상수 목록이 아니라 **누적 활성 분**으로 판정한다 — 창 끝(1.2t)까지 쌓인
+            활성 분이 벽 문턱(${WALL_MIN}분)을 **넘어야** 그 칸에 벽이 설 수 있다.
+            같은 한 줄이 7회차의 «30분·3h 는 첫 접속 이전» 도 포함한다(부지런 6칸 · 대충 5칸).
+         ⓑ **`hitIn` 이 §0 의 절반만 쟀다**(정정10) — «칸마다 벽이 하나라도 있나» 만 세어
+            한 벽이 여러 칸에 · 여러 벽이 한 칸에 겹쳐 세어졌다(부지런 시드1 벽 13 vs 칸 6 ·
+            36,000칸 하나에 3중 계상). ⇒ **1:1 유일 배정**(상대오차가 작은 짝부터)으로 바꾸고,
+            어느 칸에도 못 붙은 **«잉여 벽»** 을 헤드라인에 같이 찍는다 — 그것이 §0 의 나머지
+            절반(«없어야 할 벽이 없다»)이다.
+         ⓒ **`spanOf` 의 지수가 «벽 개수−1»** 이었다(정정9). 목표 SPAN_T 는 «칸 개수−1» 에서
+            나온 값이라 한 줄에 비교 불가능한 두 수를 찍고 있었다(같은 표를 벽 11개로 재면 1.474 ·
+            칸 6으로 재면 2.346 으로 **부호가 뒤집힌다**) ⇒ 지수를 **칸 개수−1** 로 통일한다.
+         ⓓ **벽의 ① 좌표가 정체의 왼쪽 끝**이었다. 대충 #4 는 활성 330분을 달력 15,840분에 편
+            정체라 최대 배치 오차가 ±15,840분이다 ⇒ **달력 중앙**(min + lenCal/2)으로 잰다. */
+    const wallT  = (w) => w.min + (w.lenCal != null ? w.lenCal : 0) / 2;      /* ⓓ */
+    const actBy  = (a, t) => {          /* 시각 t(달력 분)까지 쌓인 활성 분 */
+      let s = 0;
+      for (let d = 0; d * 1440 <= t; d++)
+        for (const h of a.logins) {
+          const st = d * 1440 + h * 60;
+          if (st < t) s += Math.min(a.activeMin, t - st);
+        }
+      return s;
+    };
+    const POL_A  = POLICIES[pol] || POLICIES.diligent;
+    const REACH  = TARGET.filter(t => t <= rep.days * 1440                    /* ⓐ 정책별 */
+      && actBy(POL_A, 1.2 * t) > WALL_MIN);
+    const SPAN_T = gmOf(REACH);
+    const pairOf = (r) => {             /* ⓑ 1:1 유일 배정 — 상대오차가 작은 짝부터 */
+      const ws = wallsOf(r), cand = [];
+      REACH.forEach((t, si) => ws.forEach((w, wi) => {
+        const e = Math.abs(wallT(w) - t) / t;
+        if (e <= 0.2) cand.push({ si, wi, e });
+      }));
+      cand.sort((x, y) => x.e - y.e);
+      const us = new Set(), uw = new Set();
+      for (const c of cand) {
+        if (us.has(c.si) || uw.has(c.wi)) continue;
+        us.add(c.si); uw.add(c.wi);
+      }
+      return { hit: us.size, extra: ws.length - uw.size };
+    };
+    const hitOf   = (r) => pairOf(r).hit;
+    const extraOf = (r) => pairOf(r).extra;
+    /* 옛 자(회차 간 비교용) — 겹쳐 세는 구 판정 그대로. 8칸 분모·왼쪽 끝 좌표. */
+    const hitOld = (list, r) => {
       const ws = wallsOf(r);
       return list.filter(t => t <= rep.days * 1440
         && ws.some(w => Math.abs(w.min - t) <= 0.2 * t)).length;
     };
-    const hitOf  = (r) => hitIn(REACH, r);
-    const hit8Of = (r) => hitIn(TARGET, r);
-    const spanOf = (r) => {           /* 벽 시작 시각의 간격 기하평균 (목표 = SPAN_T) */
-      const ws = wallsOf(r); if (ws.length < 2) return 0;
-      return Math.pow(ws[ws.length - 1].min / Math.max(1, ws[0].min), 1 / (ws.length - 1));
+    const hit8Of = (r) => hitOld(TARGET, r);
+    const spanOf = (r) => {           /* ⓒ 지수는 «칸 개수−1» — 목표 SPAN_T 와 같은 자 */
+      const ws = wallsOf(r);
+      if (ws.length < 2 || REACH.length < 2) return 0;
+      return Math.pow(wallT(ws[ws.length - 1]) / Math.max(1, wallT(ws[0])), 1 / (REACH.length - 1));
     };
-    const firstOf = (r) => { const ws = wallsOf(r); return ws.length ? ws[0].min : 0; };
-    const tgtN  = REACH.filter(t => t <= rep.days * 1440).length;
+    const firstOf = (r) => { const ws = wallsOf(r); return ws.length ? Math.round(wallT(ws[0])) : 0; };
+    const tgtN  = REACH.length;
     const tgtN8 = TARGET.filter(t => t <= rep.days * 1440).length;
-    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20% · 도달 가능한 칸만)`
-      + ` · 첫 벽 p50 = ${med(runs.map(firstOf))}분 (목표 = 첫 도달 가능 칸 ${REACH[0]}분)`
+    L.push(`**① 축 — 목표 칸 적중 p50 = ${med(runs.map(hitOf))}/${tgtN} (±20% · 1:1 유일 배정 · 달력 중앙 좌표)`
+      + ` · **잉여 벽 p50 = ${med(runs.map(extraOf))}**(어느 칸에도 안 드는 벽 = «없어야 할 벽»)`
+      + ` · 첫 벽 p50 = ${med(runs.map(firstOf))}분 (목표 = 첫 도달 가능 칸 ${REACH[0] || '—'}분)`
       + ` · 벽 간격 기하평균 p50 = ${med(runs.map(spanOf)).toFixed(2)} (목표 ×${SPAN_T.toFixed(3)})**`);
     L.push('');
-    L.push(`_(옛 자 — 8칸 분모: 적중 ${med(runs.map(hit8Of))}/${tgtN8} · 간격 목표 ×${SPAN_T8.toFixed(3)}`
-      + ` · 첫 벽 옛 목표 30분. 30분·3h 칸은 첫 접속(부지런 480분 · 대충 1,260분) 이전이라 구조적 도달 불가)_`);
+    L.push(`_도달 가능 칸(정책별 · 창 끝 1.2t 까지 쌓인 활성 분 > ${WALL_MIN}) = ${REACH.join(' · ')}분_`);
+    L.push('');
+    L.push(`_(옛 자 — 8칸 분모·겹쳐 세기·왼쪽 끝 좌표: 적중 ${med(runs.map(hit8Of))}/${tgtN8}`
+      + ` · 간격 목표 ×${SPAN_T8.toFixed(3)} · 첫 벽 옛 목표 30분)_`);
     L.push('');
     L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
       + ` · 밴드 안 멈춤 p50 = ${med(pausesAll)}`
@@ -1078,13 +1137,37 @@ function writeReport(rep) {
           + ` = 활성 시간의 ${(100 * med(runs.map(r => r.walls.filter(w => !isWall(w, r.band)).reduce((a, w) => a + w.len, 0))) / ACT).toFixed(1)}%)`);
     }
     L.push('');
-    L.push('| # | 스테이지 | 시작(분·달력) | 길이(활성 분) | 길이(달력 분) | 시작 시각 | 판정(기제) | 구 판정(비율·달력) |');
-    L.push('|---|---|---|---|---|---|---|---|');
-    (runs[0] ? runs[0].walls : []).slice(0, 40).forEach((w, i) => {
-      const h = Math.floor(w.min / 60), m = w.min % 60;
-      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${w.lenCal == null ? '—' : w.lenCal} | ${h}시간 ${m}분 |`
-        + ` ${isWall(w, runs[0].band) ? '벽' : '멈춤'} | ${isWallFrac(w) ? '벽' : '멈춤'} |`);
-    });
+    /* ⚑ 8회차 — «① 좌표»(달력 중앙)와 «배정된 칸» 을 같이 찍는다. 앞 회차들이 이 표를 눈으로
+       세면서 왼쪽 끝을 좌표로 읽었고, 그것이 정정10 의 3중 계상이 안 보이던 이유다. */
+    {
+      const r0 = runs[0];
+      const ws0 = r0 ? r0.walls.filter(w => isWall(w, r0.band)) : [];
+      const seat = new Map();                       /* 벽 → 배정된 칸 (1:1) */
+      if (r0) {
+        const cand = [];
+        REACH.forEach((t) => ws0.forEach((w, wi) => {
+          const e = Math.abs(wallT(w) - t) / t;
+          if (e <= 0.2) cand.push({ t, wi, e });
+        }));
+        cand.sort((x, y) => x.e - y.e);
+        const us = new Set();
+        for (const c of cand) {
+          if (us.has(c.t) || seat.has(c.wi)) continue;
+          us.add(c.t); seat.set(c.wi, c.t);
+        }
+      }
+      let wi = -1;
+      L.push('| # | 스테이지 | 시작(분·달력) | **① 좌표(달력 중앙)** | 길이(활성 분) | 길이(달력 분) | 시작 시각 | 판정(기제) | **배정 칸** | 구 판정(비율·달력) |');
+      L.push('|---|---|---|---|---|---|---|---|---|---|');
+      (r0 ? r0.walls : []).slice(0, 40).forEach((w, i) => {
+        const h = Math.floor(w.min / 60), m = w.min % 60;
+        const isW = isWall(w, r0.band);
+        if (isW) wi++;
+        const st = isW ? (seat.has(wi) ? seat.get(wi) + '분' : '**잉여**') : '—';
+        L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${Math.round(wallT(w))} | ${w.len} | ${w.lenCal == null ? '—' : w.lenCal} | ${h}시간 ${m}분 |`
+          + ` ${isW ? '벽' : '멈춤'} | ${st} | ${isWallFrac(w) ? '벽' : '멈춤'} |`);
+      });
+    }
     L.push('');
     L.push(`### [D2] 상승면 · **실오르막** — ${P} (상승면 = 벽 끝 → 다음 벽 시작(멈춤 포함) · 실오르막 = 거기서 멈춤을 뺀 순 이동) — **7회차부터 활성 분 자**`);
     L.push('');
@@ -1146,7 +1229,10 @@ function writeReport(rep) {
          1~4회차의 «지속» 은 **일회성 3종(시작 신규 지급 100만 · 가이드미션 60만 · 우편 30만)을
          전부 뺀** 값이고(그 자로 r4 부지런 268,527 · 대충 152,569 · 비 1.760), 5회차가 시작만
          빼면서 같은 이름이 다른 수를 가리켰다. ⇒ **두 정의를 나란히 찍는다**(구 = 회차 간 비교용). */
-      const ONCE = ['시작(신규 지급)', '가이드미션', '우편'];
+      /* ⚑ 199 8회차(정정8 · U) — 네 번째 항 «출석(1일차 환영)» 을 넣는다. §7-3 이 스스로
+         «첫날 축에 속한 값이지 지속 수급이 아니다» 라고 선언한 100,000 이 아직 분모(3,333/일)
+         안이었다. 이 한 줄을 고치기 전에는 ④ 를 «창 안» 이라고 부를 수 없다. */
+      const ONCE = ['시작(신규 지급)', '가이드미션', '우편', '출석(1일차 환영)'];
       const dayIn = (pol) => {
         const runs = rep.policies[pol];
         const tot = runs.reduce((a, r) => a + Object.values(r.diaIn).reduce((x, y) => x + y, 0), 0) / runs.length;
@@ -1164,6 +1250,21 @@ function writeReport(rep) {
         return 100 * med(v) / d;
       };
       const stg = (pol) => med(rep.policies[pol].map(r => r.final.stage));
+      /* ⚑ 199 8회차(정정3 · T·U 독립 일치) — §0 의 «한 축 ≤50%» 를 자가 한 번도 안 찍었다.
+         7회차에 두 장부의 판정이 실제로 갈렸는데(유입 38.4% 통과 ↔ 지속 54.47% 초과) 그것을
+         손으로 세어야 알 수 있었다. 두 값을 나란히 찍고 **최대 축의 이름까지** 적는다 —
+         어느 장부가 §0 의 축인가는 결2 로 올라간다. */
+      const topOf = (pol, cont) => {
+        const runs = rep.policies[pol], acc = {};
+        runs.forEach(r => { for (const k in r.diaIn) {
+          if (cont && ONCE.indexOf(k) >= 0) continue;
+          acc[k] = (acc[k] || 0) + r.diaIn[k] / runs.length;
+        } });
+        const tot = Object.values(acc).reduce((a, b) => a + b, 0);
+        let nm = '—', mx = 0;
+        for (const k in acc) if (acc[k] > mx) { mx = acc[k]; nm = k; }
+        return { pct: tot ? 100 * mx / tot : 0, name: nm };
+      };
       /* ⚑ 199 7회차 — ④ 는 «며칠에 닿는가» 인데 자가 «하루에 얼마» 까지만 찍어 회차마다 손으로
          나눴다(6회차 비평 Q·R 독립 일치). 도달일을 **두 장부로** 찍는다 — 결2 가 아직 미응답이라
          어느 쪽이 ④ 의 축인지 주인만 정할 수 있고, 두 장부의 판정이 실제로 갈린다.
@@ -1172,18 +1273,24 @@ function writeReport(rep) {
          도달일 = (목표 2,730만 − 일회성 선지급) ÷ 지속 수급/일 — 일회성은 첫날 통째로 들어오므로
          분자에서 빼는 것이 «누적이 목표를 지나는 날» 의 정의다(§0 ②). */
       const GOAL_DIA = 27300000;
+      /* ⚑ 199 8회차(정정1 · S·T 독립 일치) — 7회차의 «비 1.840» 은 **시드별 도달일의 중앙값끼리
+         나눈 값**이었다. 도달일 두 칸의 분자는 같은 (목표 − 일회성) 이므로 비는 **반드시 지속
+         수급의 비와 같아야 한다**(정책이 일회성을 같은 값으로 받으므로). med(비) ≠ 비(med) 라
+         그 항등식이 0.3% 깨져 있었고, 하한 1.8 대비 마진이 2.2% → 1.9% 로 다르게 읽혔다.
+         ⇒ 도달일을 **성분의 중앙값**으로 짓는다 — 그러면 비가 지속 수급 비와 소수점까지 같다. */
       const reachOf = (pol, mode) => {
         const runs = rep.policies[pol];
-        return med(runs.map(r => {
+        const one = med(runs.map(r => ONCE.reduce((x, k) => x + (r.diaIn[k] || 0), 0)));
+        const per = med(runs.map(r => {
           const inAll = Object.values(r.diaIn).reduce((a, b) => a + b, 0);
-          const one   = ONCE.reduce((x, k) => x + (r.diaIn[k] || 0), 0);
+          const o1    = ONCE.reduce((x, k) => x + (r.diaIn[k] || 0), 0);
           const off   = mode === 'summon'
             ? Object.keys(r.diaOut || {}).filter(k => k !== '소환')
                     .reduce((a, k) => a + r.diaOut[k], 0)
             : 0;
-          const per = (inAll - one - off) / rep.days;
-          return per > 0 ? (GOAL_DIA - one) / per : 0;
+          return (inAll - o1 - off) / rep.days;
         }));
+        return per > 0 ? (GOAL_DIA - one) / per : 0;
       };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
@@ -1195,6 +1302,10 @@ function writeReport(rep) {
         ['지속 수급/일 — 시작 지급만 제외(5회차 [G] 초판)', p => dayIn(p).cont, fmtN],
         [`${rep.days}일 스테이지 p50`, stg, fmtN],
         ['순 이동 비중(%) — ③ 축(④ 와 무관)', netPct, x => x.toFixed(2)],
+        ['**§0 «한 축 ≤50%» — 최대 유입 축 비중(%) · 지속 장부**(일회성 4종 제외)',
+          p => topOf(p, true).pct, x => x.toFixed(2)],
+        ['§0 «한 축 ≤50%» — 최대 유입 축 비중(%) · 유입 장부(전체)',
+          p => topOf(p, false).pct, x => x.toFixed(2)],
         ['**④ 도달일(2,730만) — 유입 장부** · 목표 부지런 100±10 · 대충 180~200 · 비 1.8~2.0',
           p => reachOf(p, 'in'), x => x.toFixed(1), true],
         ['④ 도달일(2,730만) — 소환 예산 장부(결2 ⓑ · 소환 외 씽크 차감)',
@@ -1208,6 +1319,9 @@ function writeReport(rep) {
                           : (v[1] ? (v[0] / v[1]).toFixed(3) : '-');
         L.push(`| ${name} | ${v.map(fmt).join(' | ')} | ${ratio} |`);
       }
+      L.push('');
+      L.push('_최대 유입 축의 이름 — ' + pols.map(p =>
+        `${POLICIES[p].name}: 지속 «${topOf(p, true).name}» · 유입 «${topOf(p, false).name}»`).join(' / ') + '_');
       L.push('');
     }
   }
