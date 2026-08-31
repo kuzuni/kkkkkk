@@ -882,7 +882,16 @@ const SETTLE = () => {
     ok('[6-R] `ol4` 의 손잡이를 끄면 그 표본이 알약 밖으로 떨어진다 (항이 공허하지 않다)',
       hitOff.inside === false, String(hitOff.tag));
     ok('[6-R] 되살리면 다시 활성 칸이다', hitBack.inside === true, String(hitBack.tag));
-    console.log('    (18 패배 껍데기를 걷은 횟수 — ' + (await blockedLabel(page)) + ')');
+    /* [6-A] — **팔이 «늘 0» 이면 아무것도 증명하지 않는다**(LESSONS 353-④). 실행마다 사망이 나는 것은
+       아니므로(3회 연속 실행에서 0회) 제품 경로를 직접 한 번 불러 그 자리를 결정적으로 세운다:
+       팔이 없으면 여기서 표본이 `#defw` 로 가고, 팔이 있으면 껍데기가 걷혀 `ol4` 그대로다(`probe605` [C]↔[E]). */
+    await page.evaluate(() => { openDefeat(); });
+    await page.waitForTimeout(200);
+    const hitDef = await page.evaluate(HIT6, '#bSk .stabs');
+    const stuck = await page.evaluate(() => { const d = document.getElementById('defw'); return !!d && d.classList.contains('on'); });
+    ok('[6-A] 18 패배 화면을 실제로 한 번 세워도 표본이 활성 칸으로 간다 (605 가 닫은 창)',
+      hitDef.inside === true && stuck === false, String(hitDef.tag) + ' · #defw.on=' + stuck
+      + ' · ' + (await blockedLabel(page)));
 
     console.log('\n[7] 콘솔');
     ok('콘솔 에러 0건', errs.length === 0, errs.length + '건' + (errs[0] ? ' — ' + errs[0].slice(0, 80) : ''));
