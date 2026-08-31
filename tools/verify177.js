@@ -40,14 +40,21 @@ const near = (n, got, want, tol) => R.push({
 /* 285 — 보스 체력 배수와 공격력 배수가 **갈렸다**(둘 다 22 였다). 보스전 제한 시간이 30 → 15초로
    반이 되면서 체력만 ×22 → ×11 로 같이 내렸고(시간만 줄이면 설계 플레이어가 못 잡는다), 공격력은
    그대로다 — «오래 걸리는 것이지 즉사가 아니다»(249 ②). 승급 수호자 배수도 60 → BOSS_SEC(15). */
-const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6, BAND:10, GATE_N:10, GATE_HP:1.44,
-            BOSS_HP:11, BOSS_DMG:22, BOSS_SEC:15, PROMO_HP:15 };
-/* 249 — 곡선에 «구간 계단» 이 얹혔다: eScale(s) = eSmooth(eBand(s)) 이고, 10 의 배수 스테이지의
-   **스테이지 보스**만 체력 배수 GATE_HP 를 탄다. 177 이 푼 다섯 상수(K·KNEE·M1·M2·A)와
-   «s1 = 55/6» 은 그대로라 아래 대조는 전부 유효하다 — 기대식만 249 를 따라간다. */
+/* ⚑ 199 4회차 이관(2026-08-31) — **이 게이트는 199 1·3회차 이관에서 빠져 있었다**(게이트 부패).
+   r1 이 ES_M1 1.010 → 1.020 을, r3 이 BAND·GATE_N 10 → 40 을 옮기며 verify249·sim249 만 갈아
+   끼우고 여기는 안 건드려, 수리 전 커밋(433ee10)에서도 **63/100 FAIL** 이었다(직접 대조 실행).
+   333 처방대로 항을 지우지 않고 기대 상수를 199 확정값으로 갈아 끼운다 — M1 = 199 r1(두 자 동시
+   상한의 최대값) · BAND = r3(벽 개수 손잡이) · RAMP = r4(밴드 내 상승면, 스윕 review §4). */
+const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6, BAND:40, GATE_N:40, GATE_HP:1.44,
+            RAMP:0.2, BOSS_HP:11, BOSS_DMG:22, BOSS_SEC:15, PROMO_HP:15 };
+/* 249 — 곡선에 «구간 계단» 이 얹혔고, 199 4회차가 구간 안에 «램프»(상승면)를 깔았다:
+   eScale(s) = eSmooth(a)·(eSmooth(a+B)/eSmooth(a))^(RAMP·(s−a)/B), a = eBand(s).
+   GATE_N 의 배수 스테이지의 **스테이지 보스**만 체력 배수 GATE_HP 를 탄다. 177 이 푼 다섯 상수와
+   «s1 = 55/6» 은 그대로라 아래 대조는 전부 유효하다 — 기대식만 249·199 를 따라간다. */
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const band  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
-const scale = s => smooth(band(s));
+const scale = s => { const a = band(s);
+  return smooth(a) * Math.pow(smooth(a + C.BAND) / smooth(a), C.RAMP * (s - a) / C.BAND); };
 const wantHp  = s => C.HB * scale(s);
 const wantDmg = s => C.DB * Math.pow(scale(s), C.A);
 const wantBossHp = s => wantHp(s) * C.BOSS_HP * (s % C.GATE_N === 0 ? C.GATE_HP : 1);
@@ -97,10 +104,12 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
   }, C.BAND);
   yes('③ eHp·eDmg 가 s 1..400 비감소 (249 — 구간 안은 그대로가 설계)', shape.mono);
   yes('③ eHp·eDmg 가 구간(' + C.BAND + ')마다 강증가', shape.bandUp);
-  yes('③ 무릎 앞뒤 구간 배율이 M2/M1 그대로다 — s80→90 '
+  /* 199 4회차 — BAND 40 + 램프에서 s80→90 은 구간 안(램프) 비, s70→80 은 경계 점프 비다.
+     «M2/M1 그대로» 라는 옛 라벨의 실체는 «기대식(scale)과 항등» 이므로 그 뜻으로 갈아 끼운다. */
+  yes('③ 무릎 앞뒤 배율 = 기대식(계단×램프) 그대로 — s80→90 '
       + shape.atKnee.toFixed(4) + ' vs s70→80 ' + shape.below.toFixed(4),
-      Math.abs(shape.atKnee - smooth(90)/smooth(80)) < 1e-9
-      && Math.abs(shape.below - smooth(80)/smooth(70)) < 1e-9);
+      Math.abs(shape.atKnee - scale(90)/scale(80)) < 1e-9
+      && Math.abs(shape.below - scale(80)/scale(70)) < 1e-9);
 
   /* ── ④ 실제로 스폰된 개체 ── */
   const spawn = await p.evaluate(async ss => {
@@ -203,7 +212,13 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     if(negSrc === simSrc) negErr = 'sim177.js 에서 `const DPS_K = DK.K;` 를 못 찾았다';
     else {
       fs.writeFileSync(SIMNEG, negSrc);
-      const negOut = execFileSync(process.execPath, [SIMNEG], { encoding:'utf8' });
+      /* 199 4회차 — M1 1.020(r1 이관)부터 옛 대용식 사본은 sim177 자체가 FAIL(비관 4.64배)로
+         **exit 1** 을 낸다. execFileSync 가 그때 stdout 을 버리고 던져 이 항이 «— Command failed»
+         로 굳어 있었다(수리 전 커밋에서도 같은 실패 — 게이트 부패). 사본이 빨간 것 자체가 정상이니
+         exit 코드와 무관하게 stdout 의 «DPS 계수» 를 읽는다. */
+      let negOut = '';
+      try { negOut = execFileSync(process.execPath, [SIMNEG], { encoding:'utf8' }); }
+      catch(e){ negOut = String(e && e.stdout || ''); if(!negOut) throw e; }
       const negK = parseFloat((negOut.match(/DPS 계수 ([\d.]+)/) || [])[1]);
       negRatio = fight.real / (fight.atk * negK);
     }
@@ -260,9 +275,12 @@ const STAGES = [1,2,5,10,20,40,79,80,81,120,200,300];
     });
     near('⑧ 실코드 s20 공격/적HP = sim177 [D] after 값', cross.s20, rows['20'].ratio, 5e-3);
     near('⑧ 실코드 s80 공격/적HP = sim177 [D] after 값', cross.s80, rows['80'].ratio, 5e-3);
-    yes('⑧ 무릎 아래는 «훈련만» 으로도 비가 1 근처다 (s20 ' + cross.s20.toFixed(2)
-        + ' · s80 ' + cross.s80.toFixed(2) + ') — 177 이 벽을 걷어냈다',
-        cross.s20 > 0.8 && cross.s80 > 0.8);
+    /* 199 4회차 — «비가 1 근처» 는 M1 1.010 시절 값이다(r1 이 1.020 으로 올려 s80 비 0.43 이
+       설계값이 됐다 — 수리 전 커밋에서도 같은 실패). 이 항이 지키려던 성질은 «무릎 아래 무벽»
+       이고, 그 실체는 시간 예산이다: 몹 처치 = eHp/(공격×DPS 계수) ≤ 1초 ⇔ 비×K ≥ 1. */
+    yes('⑧ 무릎 아래는 «훈련만» 으로도 몹 1초 예산 안이다 (s20 ×' + (cross.s20*simK).toFixed(2)
+        + ' · s80 ×' + (cross.s80*simK).toFixed(2) + ' ≥ 1) — 177 이 벽을 걷어냈다',
+        cross.s20*simK >= 1 && cross.s80*simK >= 1);
   }
 
   /* ── ⑨ 음성 — 구 지수 곡선 사본을 **새로 열어서** 잰다 ─────────────────────

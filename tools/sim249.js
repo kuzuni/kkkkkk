@@ -262,17 +262,27 @@ const ck199 = (n, pass, got, why) => { R.push({ n, pass: !!pass, got: String(got
                                        if(!pass) D199.push({ n, got: String(got), why }); };
 
 
-ck('① 249 표기가 설치돼 있다 (eScale = eSmooth(eBand(s)))', EC.form === '249', EC.form);
+ck('① 249 표기가 설치돼 있다 (eScale = eSmooth(eBand(s)) × 램프' + (EC.RAMP ? ' ^' + EC.RAMP : '') + ')', EC.form === '249', EC.form);
 /* 199 3회차 이관 — 주기 10(구 isBossStage 잔재) → 40. 주기는 199 손잡이 ①(구간 점프)의 벽 개수
    축이다(2회차 봇 실측 30일 벽 32칸 = 목표 4배). 항은 안 지우고 방향만 바꾼다(333 · M1 선례):
    «주기가 199 확정값과 같고, 162 페이싱(모든 스테이지 = 50킬+보스)은 그대로인가». */
 ck('② 주기 ES_BAND = 40 — 199 3회차 확정(벽 개수 손잡이 · 162 페이싱 불변)',
    BAND === 40 && PACE_162, BAND + '/' + (PACE_162 ? '162 확인' : '구 규칙 잔존'));
+/* 199 4회차 — «구간 안 평지» 를 «구간 안 = 정확히 램프식» 으로 갈아 끼운다(333 처방 — 항을
+   지우지 않고 방향만). 3회차 비평 ③(전원 3점)의 진단이 «평지라 돌파 국면이 13분» 이었고,
+   ES_RAMP 가 구간 몫 성장의 RAMP 비율을 구간 안 비탈로 깐다. RAMP = 0 이면 구식과 동일하다. */
+const RAMP = EC.RAMP || 0;
+const rampAt = s => { const a = EC.eBand(s);
+  return EC.eSmooth(a) * Math.pow(EC.eSmooth(a + BAND) / EC.eSmooth(a), RAMP * (s - a) / BAND); };
 let flat = true, jump = true;
-for(let s=1;s<=S_END;s++) if(Math.abs(EC.eHp(s) - EC.HB*EC.eSmooth(EC.eBand(s))) > 1e-9) flat = false;
+for(let s=1;s<=S_END;s++) if(Math.abs(EC.eHp(s)/(EC.HB*rampAt(s)) - 1) > 1e-9) flat = false;
 for(let s=BAND;s<=KNEE;s+=BAND) if(!(EC.eHp(s) > EC.eHp(s-1)*1.0001)) jump = false;
-ck('③ 구간 안에서는 적 스탯이 그대로 (계단) · 구간 첫 칸에서 오른다', flat && jump,
-   (flat?'ok':'계단 아님') + '/' + (jump?'ok':'벽 없음'));
+/* 벽이 벽으로 남는다 — 구간 경계 점프(R^(1−RAMP·(B−1)/B))가 구간 내 총 상승(R^(RAMP·(B−1)/B))보다
+   크려면 RAMP·(B−1)/B < 0.5 여야 한다. 문턱이 아니라 두 항등식에서 나오는 부등식이다. */
+const wallDom = RAMP * (BAND - 1) / BAND < 0.5;
+ck('③ 구간 안 = 정확히 램프식(RAMP ' + RAMP + ' 항등 · 1e-9) · 구간 첫 칸에서 오른다 · 경계 점프 > 구간 내 총 상승',
+   flat && jump && wallDom,
+   (flat?'ok':'램프식 이탈') + '/' + (jump?'ok':'벽 없음') + '/' + (wallDom?'ok':'RAMP 과대'));
 ck('④ 스테이지 1 은 여전히 구 곡선과 동일 — eHp ' + EC.eHp(1).toFixed(4) + ' · eDmg ' + EC.eDmg(1).toFixed(4),
    Math.abs(EC.eHp(1)-55) < 1e-9 && Math.abs(EC.eDmg(1)-6) < 1e-9, EC.eHp(1) + '/' + EC.eDmg(1));
 ck199('⑤ 설치 BOSS_GATE_HP ' + GATE_HP + ' ≤ 역산 상한 ' + (GATE_MAX === null ? '없음' : GATE_MAX.toFixed(4)),
@@ -291,22 +301,37 @@ ck('⑦ 모든 구간에서 벽 = 관문 스테이지(구간 첫 칸) · 최속 
 /* ⑧ **이빨 높이에는 자유도가 없다** — 구간 안에서 적이 고정이므로 진폭(관문 배수를 뺀 계단 몫)은
    «그 구간에서 내가 자란 배수» 와 **항등**이다. 임의의 목표 진폭을 고르는 대신 그 항등을 단언한다.
    (관문 배수는 그 위에 곱으로 얹히므로 총 진폭 = 성장배수 × 관문 몫이다) */
+/* 199 4회차 — ⑧ 항등의 «평지» 전제를 램프로 넓힌다: 계단+램프 몫 진폭(관문 제외)은
+   «구간 안 성장배수 ÷ 구간 내 램프 상승» 과 항등이다. 여전히 목표값이 없는 항등 검사다. */
 let idOk = true, idWorst = 0;
-const T_STEP = mkT(hpBand, one);                       /* 계단만 — 관문 배수 제외 */
+const T_STEP = mkT(hpBand, one);                       /* 계단+램프만 — 관문 배수 제외 */
 TH_AFT.forEach(x => {
   const amp0 = T_STEP(H_MAX, x.a) / T_STEP(H_MAX, x.a + BAND - 1);
+  const rise = Math.pow(EC.eSmooth(x.a + BAND) / EC.eSmooth(x.a), RAMP * (BAND - 1) / BAND);
   const grow = TPof(H_MAX, x.a + BAND - 1) / TPof(H_MAX, x.a);
-  const d = Math.abs(amp0 - grow) / grow;
+  const d = Math.abs(amp0 - grow / rise) / (grow / rise);
   if(d > idWorst) idWorst = d;
   if(d > 1e-9) idOk = false;
 });
-ck('⑧ 계단 몫 진폭 = 구간 안 훈련 축 성장배수 (항등 · 최악 상대오차 ' + idWorst.toExponential(1) + ')',
+ck('⑧ 계단·램프 몫 진폭 = 성장배수 ÷ 구간 내 램프 상승 (항등 · 최악 상대오차 ' + idWorst.toExponential(1) + ')',
    idOk, idWorst.toExponential(1));
-/* ⑨ 톱니가 실제로 생겼다 — 전 구간에서 after 진폭이 before(매끈) 진폭보다 크다 */
-const ampMin = Math.min(...TH_AFT.map(x=>x.amp)), ampBef = Math.max(...TH_BEF.map(x=>x.amp));
-const grew = TH_AFT.every((x,i) => x.amp > TH_BEF[i].amp);
-ck('⑨ 전 구간에서 진폭이 before 보다 크다 — after 최소 ' + ampMin.toFixed(2) + ' vs before 최대 ' + ampBef.toFixed(2),
-   grew, ampMin.toFixed(2) + ' vs ' + ampBef.toFixed(2));
+/* ⑨ 톱니가 실제로 생겼다 — 199 4회차 재정박: 램프는 구간 «안» 진폭을 의도적으로 상승면에
+   나눠 주므로(그것이 ③ 축 처방이다) 구 «구간 진폭 after > before» 는 램프와 정면 모순이다.
+   톱니의 자리는 이제 **관문 스텝** — 벽 진입 한 칸의 t 비(after)가 매끈 곡선의 같은 칸 스텝
+   (before)보다 «구간 몫» 만큼 크다. 값은 고른 것이 아니라 항등에서 나온다:
+   after 스텝 ≈ R^(1−RAMP·(B−1)/B)×관문 몫 · before 스텝 ≈ R^(1/B). 이 비가 ≥ 2 인 것은
+   wallDom(③)과 같은 부등식의 다른 얼굴이다. 구간 안 «돌파 가속» 은 그대로 단언한다 —
+   after 구간 진폭 > 1 (성장배수가 램프 상승보다 크다 = 구간 안에서 뒤로 갈수록 빨라진다). */
+const stepAt = (Tf, s) => Tf(H_MAX, s) / Tf(H_MAX, s - 1);
+let stepOk = true, stepWorst = Infinity;
+for(let a = BAND; a + BAND - 1 <= KNEE; a += BAND){
+  const r = stepAt(T_AFT, a) / stepAt(T_BEF, a);
+  if(r < stepWorst) stepWorst = r;
+  if(!(r >= 2)) stepOk = false;
+}
+const ampMin = Math.min(...TH_AFT.map(x=>x.amp));
+ck('⑨ 벽 스텝(관문 진입 t 비)이 before 매끈 스텝의 ≥2배 (최악 ×' + stepWorst.toFixed(2) + ') · 구간 안 돌파 가속(진폭 최소 ' + ampMin.toFixed(2) + ' > 1)',
+   stepOk && ampMin > 1, '×' + stepWorst.toFixed(2) + ' / ' + ampMin.toFixed(2));
 /* ⑨ 새 곡선은 어디서도 177 곡선보다 세지 않다 — 177 의 «무벽» 확인이 그대로 유효하다 */
 let notHarder = true;
 for(let s=1;s<=S_END;s++) if(EC.eHp(s) > EC.HB*EC.eSmooth(s) + 1e-9) notHarder = false;

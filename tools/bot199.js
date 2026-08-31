@@ -742,6 +742,16 @@ const POLICIES = {
 const CAL_STAGES = [1, 10, 30, 50, 100, 200];
 const CAL_SEC = 60;
 const WALL_MIN = 30;           /* 같은 스테이지 이 분 이상 정체 = 벽 1개 */
+/* 199 4회차 — 정체를 «벽» 과 «상승면 멈춤» 으로 가른다.
+   ES_RAMP(밴드 내 상승면)가 생기면 벽 사이의 «오르막» 에서 하루 주기 성장 사이의 숨(수 시간
+   멈춤)이 끼는데, 이것을 벽으로 세면 주인 목표 벽 목록(±20%)에 «없어야 할 벽» 이 잔뜩 생긴다.
+   실측이 가른다 — 진짜 벽은 len/시작시각 이 0.17~0.81(막힘이 진행 시간의 큰 몫), 오르막 숨은
+   0.01~0.05 로 **한 자릿수 차이**다(r4 스윕 4시드 전수). 문턱 0.08 은 그 사이 빈 구간의 값이고,
+   주인 목표 «간격 ×1.4» 자체가 «벽 = 그 구간의 큰 몫» 을 함의한다(스윕 표 §4-2).
+   ⚠ 원 목록(30분 이상 전부)도 표에 그대로 남긴다 — 문턱을 옮기면 숫자가 어떻게 갈라지는지
+   다음 회차가 검산할 수 있어야 한다. */
+const WALL_FRAC = 0.08;        /* len ≥ 이 비율 × 시작(분) 이어야 «벽» — 미만은 «상승면 멈춤» */
+const isWall = w => w.len >= WALL_FRAC * Math.max(1, w.min);
 
 async function runOne(page, pol, seed, days, onRow) {
   const P = POLICIES[pol];
@@ -942,18 +952,32 @@ function writeReport(rep) {
     for (const s of (runs[0] ? runs[0].day1 : []))
       L.push(`| ${s.minute} | ${s.stage} | ${fmtN(s.cp)} | ${fmtN(s.dia)} | ${fmtN(s.gold)} | ${s.own} |`);
     L.push('');
-    /* 벽 */
-    const wallsAll = runs.map(r => r.walls.length);
-    L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체)`);
+    /* 벽 — 199 4회차: «벽»(len ≥ WALL_FRAC×시작)과 «상승면 멈춤» 을 갈라 센다. 원 목록도 남긴다. */
+    const wallsAll  = runs.map(r => r.walls.filter(isWall).length);
+    const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w)).length);
+    const faceOf = (r) => {
+      const w = r.walls.filter(isWall); const f = [];
+      for (let i = 0; i + 1 < w.length; i++) f.push(w[i + 1].min - (w[i].min + w[i].len));
+      return f;
+    };
+    const faceSum = runs.map(r => faceOf(r).reduce((a, b) => a + b, 0));
+    L.push(`### [D] 벽 — ${P} (같은 스테이지 ${WALL_MIN}분 이상 정체 · 벽 판정 len ≥ ${WALL_FRAC}×시작)`);
     L.push('');
-    L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`);
+    L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
+      + ` · 상승면 멈춤 p50 = ${med(pausesAll)}`
+      + ` (구 30분 기준 전부 = p50 ${med(runs.map(r => r.walls.length))})`);
     L.push('');
-    L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 |');
-    L.push('|---|---|---|---|---|');
-    (runs[0] ? runs[0].walls : []).slice(0, 24).forEach((w, i) => {
+    L.push('| # | 스테이지 | 시작(분) | 길이(분) | 시작 시각 | 판정 |');
+    L.push('|---|---|---|---|---|---|');
+    (runs[0] ? runs[0].walls : []).slice(0, 40).forEach((w, i) => {
       const h = Math.floor(w.min / 60), m = w.min % 60;
-      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 |`);
+      L.push(`| ${i + 1} | ${w.stage} | ${w.min} | ${w.len} | ${h}시간 ${m}분 | ${isWall(w) ? '벽' : '멈춤'} |`);
     });
+    L.push('');
+    L.push(`### [D2] 상승면 — ${P} (벽 끝 → 다음 벽 시작, 멈춤 포함)`);
+    L.push('');
+    L.push(`상승면 합 p50 = ${med(faceSum)}분 (총 시간의 ${(100 * med(faceSum) / (rep.days * 1440)).toFixed(2)}%)`
+      + ` · 시드1 상승면(분): ${faceOf(runs[0] || { walls: [] }).join(' · ') || '-'}`);
     L.push('');
     /* 실전으로 돈 전투 */
     const cnts = runs.map(r => r.cnt).filter(Boolean);

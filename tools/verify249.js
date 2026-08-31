@@ -7,8 +7,8 @@
  *
  * 검사 항목 — 전부 **살아 있는 페이지**에서 잰다(정규식 대조는 [A] 한 절뿐이다).
  *   [A] 배선   — ES_BAND·eBand·eSmooth·eScale·BOSS_GATE_* 정의 각 1곳 · makeEnemy 의 관문 분기
- *   [B] 곡선   — 살아 있는 eHp/eDmg 가 «구간 계단» 과 정확히 일치(1e-12) · 구간 안 동일 · 앵커에서 점프
- *   [C] 개체   — 실제 스폰된 **몹**이 구간 안에서 같은 체력이고 관문에서 오른다(표시가 아니라 개체)
+ *   [B] 곡선   — 살아 있는 eHp/eDmg 가 «구간 계단 × 램프» 와 정확히 일치(1e-12) · 구간 안은 정확히 램프 비율로 오르고 앵커에서 점프
+ *   [C] 개체   — 실제 스폰된 **몹**이 구간 안에서 램프 비율 그대로이고 관문에서 뛴다(표시가 아니라 개체)
  *   [D] 관문   — 관문 스테이지의 **스테이지 보스**만 체력 ×BOSS_GATE_HP · 비관문은 ×1 · 공격력은 불변
  *   [E] 파급   — 던전 보스(178)·승급 수호자(208)·아레나(123)는 관문 배수를 **안** 탄다
  *   [F] 실동작 — 관문 스테이지에서 보스를 실제로 격파하면 S.stage/S.best 가 오르고 다음 구간이 선다
@@ -50,12 +50,21 @@ const near = (name, got, want, tol) =>
    4배였다. 주기는 199 행이 연 손잡이 ①(구간 점프)이라 M1 과 같은 꼴로 항을 지우지 않고 방향만
    바꾼다(333 처방) — BAND 는 «불변(162 잔재)» 이 아니라 «199 가 벽 개수에서 정한 값과 같은가»
    를 묻는다. 스윕 근거는 199 review §3(sim177 ⑧ 불변 · 진폭 1.98 → 2.42 · 관문 상한 3.2035). */
+/* ⚑ 199 4회차 이관(2026-08-31) — **ES_RAMP 0.2 신설(밴드 내 상승면).** 구간 안이 완전 평지면
+   벽을 깬 순간 40칸이 기계 시간 13분으로 무너져 «연속 돌파» 국면이 없다(3회차 비평 ③ 전원 3점).
+   구간 몫 성장(R = eSmooth(a+40)/eSmooth(a))의 RAMP 비율을 구간 안 비탈로 깐다 —
+   eScale(s) = eSmooth(a)·R^(RAMP·(s−a)/40). 앵커(관문 스테이지)는 정확히 eSmooth(a) 그대로라
+   [D] 관문·[F] 실동작·sim249 ⑭ 는 값이 안 변하고, [B][C] 의 «구간 안 동일» 만 «구간 안 = 정확히
+   램프 비율» 로 방향을 바꾼다(333 처방 — M1·BAND 와 같은 꼴). 스윕 근거는 199 review §4
+   (γ 0→0.35 × GATE 스윕 · 상승면 0.36% → 9.33% · 벽 12 불변 · GATE↑ 기각). */
 const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22 };
+            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
-const wHp    = s => C.HB * smooth(eband(s));
-const wDmg   = s => C.DB * Math.pow(smooth(eband(s)), C.A);
+const wScale = s => { const a = eband(s);
+  return smooth(a) * Math.pow(smooth(a + C.BAND) / smooth(a), C.RAMP * (s - a) / C.BAND); };
+const wHp    = s => C.HB * wScale(s);
+const wDmg   = s => C.DB * Math.pow(wScale(s), C.A);
 const wGate  = s => (s % C.GATE_N === 0 ? C.GATE_HP : 1);
 
 /* 곡선을 볼 스테이지 — 구간 안(같아야 함) · 관문(올라야 함) · 무릎 앞뒤 */
@@ -77,7 +86,11 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
      '[A] ES_BAND 설치값 = ' + C.BAND, (src.match(/const ES_BAND\s*=\s*(\d+)/) || [])[1]);
   ok(parseFloat((src.match(/const BOSS_GATE_HP\s*=\s*([\d.]+)/) || [])[1]) === C.GATE_HP,
      '[A] BOSS_GATE_HP 설치값 = ' + C.GATE_HP, (src.match(/const BOSS_GATE_HP\s*=\s*([\d.]+)/) || [])[1]);
-  ok(/const eScale = s => eSmooth\(eBand\(s\)\);/.test(src), '[A] eScale = eSmooth(eBand(s))');
+  ok(/const eScale = s => \{ const a = eBand\(s\);\s*\n\s*return eSmooth\(a\) \* Math\.pow\(eSmooth\(a \+ ES_BAND\) \/ eSmooth\(a\), ES_RAMP \* \(s - a\) \/ ES_BAND\); \};/.test(src),
+     '[A] eScale = eSmooth(eBand(s)) × 램프(ES_RAMP) — 199 4회차 표기');
+  ok(cnt(/const ES_RAMP\s*=/g) === 1,      '[A] ES_RAMP 정의 1곳', cnt(/const ES_RAMP\s*=/g));
+  ok(parseFloat((src.match(/const ES_RAMP\s*=\s*([\d.]+)/) || [])[1]) === C.RAMP,
+     '[A] ES_RAMP 설치값 = ' + C.RAMP + ' (199 4회차 스윕 확정)', (src.match(/const ES_RAMP\s*=\s*([\d.]+)/) || [])[1]);
   ok(/const hp = eHp\(s\) \* T2\.hp \* \(tk === 'boss' \? bossGateHp\(s\) : 1\);/.test(src),
      '[A] makeEnemy 가 스테이지 보스에만 관문 배수를 건다');
   /* 177 이 푼 다섯 상수는 249 가 한 글자도 안 건드린다 */
@@ -103,18 +116,23 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     near('[B] eHp(' + r.s + ') = 55·eSmooth(eBand)', r.hp, wHp(r.s), 1e-12);
     near('[B] eDmg(' + r.s + ') = 6·eSmooth(eBand)^A', r.dmg, wDmg(r.s), 1e-12);
   });
-  const bandFlat = await page.evaluate(B => {
-    let flat = true, up = true, drop = false;
+  /* 199 4회차 — «구간 안 동일» 을 «구간 안 = 정확히 램프 비율» 로 갈아 끼운다(333 처방).
+     구간 안 이웃 칸의 비가 R^(RAMP/BAND) 와 1e-9 로 같아야 한다 — 평지(비 1)도, 임의 기울기도 빨갛다. */
+  const bandFlat = await page.evaluate(([B, RAMP]) => {
+    let ramp = true, up = true, drop = false;
     for(let s=1;s<400;s++){
       const a = Math.max(1, B*Math.floor(s/B)), a2 = Math.max(1, B*Math.floor((s+1)/B));
-      if(a === a2 && Math.abs(eHp(s+1) - eHp(s)) > 1e-9) flat = false;   /* 같은 구간이면 같아야 한다 */
-      if(a !== a2 && !(eHp(s+1) > eHp(s))) up = false;                   /* 구간이 바뀌면 올라야 한다 */
+      if(a === a2){
+        const want = Math.pow(eSmooth(a + B) / eSmooth(a), RAMP / B);
+        if(Math.abs(eHp(s+1)/eHp(s) - want) > 1e-9) ramp = false;        /* 같은 구간이면 정확히 램프 비율 */
+      }
+      if(a !== a2 && !(eHp(s+1) > eHp(s)*1.0001)) up = false;            /* 구간이 바뀌면 뛰어야 한다 */
       if(eHp(s+1) < eHp(s) - 1e-9 || eDmg(s+1) < eDmg(s) - 1e-9) drop = true;
     }
-    return { flat, up, drop };
-  }, C.BAND);
-  ok(bandFlat.flat, '[B] 구간 안에서는 적 스탯이 한 글자도 안 오른다 (s 1..400)');
-  ok(bandFlat.up,   '[B] 구간이 바뀌는 칸(관문)에서 반드시 오른다 (s 1..400)');
+    return { ramp, up, drop };
+  }, [C.BAND, C.RAMP]);
+  ok(bandFlat.ramp, '[B] 구간 안 이웃 칸 비 = R^(RAMP/BAND) — 정확히 램프 비율로만 오른다 (s 1..400)');
+  ok(bandFlat.up,   '[B] 구간이 바뀌는 칸(관문)에서 반드시 뛴다 (s 1..400)');
   ok(!bandFlat.drop,'[B] 어느 스테이지에서도 적이 약해지지 않는다');
   near('[B] 스테이지 1 은 여전히 55', live[0].hp, 55, 1e-12);
   near('[B] 스테이지 1 은 여전히 6',  live[0].dmg, 6, 1e-12);
@@ -143,12 +161,13 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     ok(r.mobMax !== null, '[C] s' + s + ' 몹이 실제로 스폰됐다');
     if(r.mobMax !== null) near('[C] s' + s + ' 스폰된 몹 체력 = 계단 eHp×종족배수', r.mobMax, wHp(s)*r.mobMul, 1e-9);
   });
-  /* 구간 안 네 스테이지의 «같은 종족 기준» 체력이 서로 같다 — 개체로 본 계단 */
+  /* 199 4회차 — 구간 안 네 스테이지의 «같은 종족 기준» 체력이 서로 «램프 비율 그대로» 다.
+     (구 «서로 같다» 는 평지 전제 — 개체로 본 계단이 이제 개체로 본 비탈이다) */
   const norm = s => byS[s].mobMax / byS[s].mobMul;
-  ok(IN_BAND.every(s => Math.abs(norm(s) - norm(IN_BAND[0])) < 1e-9),
-     '[C] 구간 안(s' + IN_BAND.join('·s') + ') 몹 체력이 서로 같다',
+  ok(IN_BAND.every(s => Math.abs(norm(s) / norm(IN_BAND[0]) - wScale(s) / wScale(IN_BAND[0])) < 1e-9),
+     '[C] 구간 안(s' + IN_BAND.join('·s') + ') 몹 체력 비 = 램프식 비 (개체로 본 상승면)',
      IN_BAND.map(s => norm(s).toExponential(4)).join(' '));
-  ok(norm(40) > norm(39) * 1.5, '[C] 구간 경계 s40 에서 몹 체력이 뛴다',
+  ok(norm(40) > norm(39) * 1.5, '[C] 구간 경계 s40 에서 몹 체력이 뛴다 — 벽은 벽대로 남는다',
      (norm(40)/norm(39)).toFixed(3) + '배');
   GATES.forEach(s => {
     const r = byS[s];
@@ -214,7 +233,7 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     ok(play.goldUp, '[F] 클리어 보상 골드가 들어왔다');
     ok(play.newBand === 40, '[F] 다음 스테이지(41)는 새 구간(앵커 40) 안이다 — 계단이 실제 진행에 붙었다',
        play.newBand);
-    near('[F] s41 적 체력 = 앵커 40 값 (돌파 구간)', play.curHp, wHp(41), 1e-9);
+    near('[F] s41 적 체력 = 앵커 40 × 램프 1칸 (상승면 첫 칸)', play.curHp, wHp(41), 1e-9);
   }
 
   /* ── [G] 화면 반영 — 재화/정보 팝업의 «현재 스테이지 적 체력» ───── */
@@ -244,10 +263,28 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   const neg = await np.evaluate(() => ({
     same: Math.abs(eHp(19) - eHp(11)) < 1e-9, hp19: eHp(19), hp11: eHp(11), hp1: eHp(1)
   }));
-  ok(!neg.same, '[H] N1 — 계단이 없으면 구간 안 s11 ≠ s19 (설치본에서는 같다)',
+  ok(!neg.same, '[H] N1 — 계단이 없으면 구간 안 s11 ≠ s19 (설치본에서는 램프 비율 차이)',
      neg.hp11.toExponential(4) + ' vs ' + neg.hp19.toExponential(4));
   near('[H] N2 — 그래도 s1 은 55 다 : [B] 의 s1 항목만으로는 회귀를 못 잡는다는 증명', neg.hp1, 55, 1e-12);
   await np.close();
+  try{ fs.unlinkSync(NEG); }catch(e){}
+
+  /* 199 4회차 — 되돌림 시험 둘째 벌: ES_RAMP=0 사본(= 3회차의 «평지 계단»)에서는 구간 안이
+     도로 평지가 된다. [B][C] 의 램프 검사가 진짜로 램프를 보고 있다는 증명이다. */
+  const negSrc2 = src.replace(/const ES_RAMP = [\d.]+;/, 'const ES_RAMP = 0;');
+  ok(negSrc2 !== src, '[H] 음성 사본 2 에 «상승면 없음»(ES_RAMP=0)을 실제로 심었다');
+  fs.writeFileSync(NEG, negSrc2);
+  const np2 = await ctx.newPage();
+  await np2.goto('file://' + NEG.replace(/\\/g, '/'));
+  await np2.waitForFunction(() => typeof eHp === 'function');
+  await np2.waitForTimeout(600);
+  const neg2 = await np2.evaluate(() => ({
+    flatBack: Math.abs(eHp(59) - eHp(41)) < 1e-9, anchor: eHp(40)
+  }));
+  ok(neg2.flatBack, '[H] N3 — 램프를 빼면 구간 안이 도로 평지다 (설치본은 s41 ≠ s59)');
+  near('[H] N4 — 램프를 빼도 앵커(관문 s40)는 같은 값이다 : 램프가 앵커를 안 움직였다는 증명',
+     neg2.anchor, wHp(40), 1e-12);
+  await np2.close();
   try{ fs.unlinkSync(NEG); }catch(e){}
 
   ok(errs.length === 0, '[I] 콘솔·런타임 에러 0', errs.length + (errs.length ? ' : ' + errs.slice(0,3).join(' | ') : ''));
