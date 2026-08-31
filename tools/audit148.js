@@ -17,9 +17,17 @@ const { chromium } = pw();
   await p.evaluate(() => document.fonts.ready);
 
   /* 정적 마크업만으로는 «렌더될 때만 생기는» 자리를 못 본다 → 팝업·탭을 최대한 열어 둔 뒤 훑는다.
-     smoke.js 의 오프너 목록과 같은 정신이되, 여기서는 실패해도 그냥 넘어간다. */
+     smoke.js 의 오프너 목록과 같은 정신이다.
+     ⚠ 545(2026-08-31) — 예전에는 «실패해도 그냥 넘어간다» 였고, 그 침묵이 이 자를 반쯤 눈감게 했다:
+       `openRelicPage()` 가 429·432·534 를 거치며 `openRelw()` 로 바뀐 뒤에도 목록은 옛 이름을 들고
+       있었는데 `catch (_) {}` 가 ReferenceError 를 삼켜 **89 유물 페이지가 한 번도 스캔된 적이 없었다**.
+       그런데 출력은 내내 «없음 ✅ / 총 0건» = «전수 감사» 로 읽혔다.
+       397(스캐너 SCREENS 가 출석 패스 탭을 한 번도 안 열었다) · 133(`aspect63` 의 죽은 셀렉터가
+       `missing:true` 로 조용히 빠져 두 화면이 통째로 누락)과 **같은 계열**이다.
+     ⇒ 이제 실패를 **세어서 이름과 함께 찍고 종료 코드 1** 로 낸다. 감사 결과가 «0건» 이어도
+       오프너가 하나라도 안 열렸으면 그 «0건» 은 전수가 아니다 — 그 사실이 침묵하면 안 된다. */
   const openers = ['openQuest()', 'openProfile()', 'openMail()', 'openShopPage("skill")',
-                   'openRelicPage()', 'goTab("hero")', 'goTab("train")', 'goTab("shop")'];
+                   'openRelw()', 'goTab("hero")', 'goTab("train")', 'goTab("shop")'];
   const hits = new Map();
   const scan = async (where) => {
     const rows = await p.evaluate(() => {
@@ -43,8 +51,11 @@ const { chromium } = pw();
   };
 
   await scan('메인');
+  const dead = [];                                   /* 545 — 열지 못한 오프너(이름 + 이유) */
   for (const o of openers) {
-    try { await p.evaluate(o); await p.waitForTimeout(350); await scan(o); } catch (_) {}
+    try { await p.evaluate(o); } catch (e) { dead.push({ o, why: String(e.message || e).split('\n')[0] }); continue; }
+    await p.waitForTimeout(350);
+    await scan(o);
     try { await p.evaluate(() => { closeModal(); gmCloseAll(); }); await p.waitForTimeout(150); } catch (_) {}
   }
 
@@ -53,5 +64,13 @@ const { chromium } = pw();
   for (const v of hits.values())
     console.log(`  · ${v.id.padEnd(28)} «${v.txt}»  deco=${v.deco} stroke=${v.stroke}  ${v.risk}   [${v.where}]`);
   console.log('총 ' + hits.size + '건');
+
+  /* 545 — 스코프의 정직한 보고. «0건» 이 «전수 0건» 인지 «못 본 화면이 있는 0건» 인지 여기서 갈린다. */
+  console.log(`열지 못한 오프너 ${dead.length}건 / ${openers.length}건 중` +
+              (dead.length ? '' : ' ✅ (감사 범위 = 오프너 전부)'));
+  for (const d of dead) console.log(`  ✖ ${d.o} — ${d.why}`);
+  if (dead.length) console.log('  ⚠ 이 오프너가 여는 화면은 위 «총 ' + hits.size + '건» 에 들어 있지 않다 — 전수가 아니다.');
+
   await b.close();
+  process.exit(dead.length ? 1 : 0);
 })();
