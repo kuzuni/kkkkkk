@@ -5099,6 +5099,17 @@
      ① #dunw.on = 재생  ② #app.sv(56 절전) = 정지  ③ 잠금 카드(.lkd) = 정지 (지시 ④) */
   #dunw.on .dnc>.bgm::before,#dunw.on .dnc>.bgm::after{animation-play-state:running;will-change:transform}
   #dunw.on .dnc>.th>canvas{animation-play-state:running}
+  /* ⚑ 586 — **여는 프레임에는 카드를 «칠하지» 않는다.** (2026-08-31, 주인 보고 «열 때 깜빡인다»)
+     `probe586` 실측(찍힌 픽셀 · T_show = 켠 시각 → 페이지가 실제로 화면에 나오기까지, 중앙값):
+       카드 그대로 **786ms** · `.dnc{visibility:hidden}` **152ms** · 내용 없는 불투명 면(계측 바닥) **137ms**.
+     즉 «켰는데 아래 화면이 그대로 보이는» 0.6초는 **전부 카드 8장의 첫 래스터**다(레이아웃이 아니다 —
+     `visibility:hidden` 은 배치를 그대로 두고 칠하기만 건너뛰는데 그것만으로 바닥까지 내려간다).
+     ⚠ 이것은 «빈 상자 한 프레임» 을 새로 만드는 것이 아니다 — 카드는 어차피 `jz-st` 가
+     `0%{opacity:0}` + `--jzd` **60ms** 로 붙들고 있어 **처음 60ms 는 원래 안 보인다**(13226·37613).
+     여기서는 그 «안 보이는 구간» 을 **칠하지도 않게** 할 뿐이고, `.warm` 은 다음 프레임에 붙는다.
+     ⚠ `content-visibility:hidden`(실측 184ms)이 아니라 `visibility:hidden`(152ms)을 쓴다 —
+     전자는 크기 억제까지 걸려 그 한 프레임에 리스트 스크롤 높이가 접힌다. */
+  #dunw.on:not(.warm) .dnc{visibility:hidden}
   /* ⚠ 던전 캔버스에는 `will-change` 를 주지 않는다(72 8회차). 액자 6칸을 통째로 합성 레이어
      (≈300×300 텍스처)로 올리면 03 리스트 스크롤에서 121 §7 유지율이 **73% → 69%** 로 떨어진다
      (A/B 실측 2쌍씩). 들썩은 4% 스쿼시 + 15px 이동이라 레이어 승격 없이도 충분히 부드럽다.
@@ -13182,13 +13193,24 @@
      ⚠ 11회차 — 170 → 120ms. 페이지 페이드는 **그 안의 카드 stagger 와 곱해진다**(결함 4 의 절반).
      페이드를 짧게 끝내고 카드는 그 뒤부터 시작시켜(`JZ_STAG_BASE`) 곱셈 구간을 아예 없앤다. */
   .jz-o.jz-pg{animation:jzPgIn .12s ease-out both}
-  .jz-c.jz-pg{animation:jzPgIn .12s ease-in reverse both}
+  .jz-c.jz-pg{animation:jzPgIn .12s ease-in reverse both,jzPgFade .12s linear both}
   /* ⚠ 12회차 — `from{opacity:0}` 은 **아래 화면이 그대로 비쳐 보이는 크로스페이드**다.
      11회차 캡처 t=60(예산의 50%)에서 비평가가 «상단 골드 알약이 2개(중심 55px 어긋난 이중상) ·
      새 화면 탭 글자가 옛 화면 자물쇠 위에 겹쳐 둘 다 판독 가능 · 구31%/신69% 동시 표시» 로 잡아냈다.
      전체화면 페이지는 «아래 화면을 대체하는 면» 이므로 반투명 구간이 길면 안 된다 —
-     불투명도를 앞 35%(42ms)에 다 태우고, 나머지 78ms 는 scale 로만 안착시킨다. */
-  @keyframes jzPgIn{0%{opacity:0;scale:.985}35%{opacity:1}100%{opacity:1;scale:1}}
+     불투명도를 앞 35%(42ms)에 다 태우고, 나머지 78ms 는 scale 로만 안착시킨다.
+     ⚑ 586(2026-08-31, 주인 보고 «던전 팝업 열 때 깜빡인다») — **그 «앞 35%» 마저 폐기한다.**
+     12회차가 남긴 42ms 는 «애니메이션이 제때 돈다» 를 전제로 한 예산인데, 전체화면 페이지가
+     켜지는 프레임은 그 인터랙션에서 **가장 비싼 프레임**이다(display:none → block 으로 카드 8장 ·
+     캔버스 8장 · will-change 레이어가 한꺼번에 서고, 그 뒤에야 첫 커밋이 난다). 그동안 `0%{opacity:0}`
+     이 페이지를 투명하게 붙들어 **아래 화면이 그대로 보인다** — 42ms 예산이 실측 **최대 734ms** 였다.
+     `probe586` 실측(찍힌 픽셀 · α = 렌더된 페이지 불투명도, 중앙값): 현행 **578ms** ↔ 페이드를 뺀
+     사본 **206ms** ↔ 내용 없는 불투명 면(계측 바닥) **76ms** ⇒ 구멍의 **74%가 이 한 줄**이었다.
+     ⇒ 여는 쪽은 **scale 만** 준다(불투명도는 첫 커밋부터 1). 닫는 쪽 페이드는 «아래 화면을 되돌려
+     주는» 연출이라 그대로 살리되, `reverse` 로 얻어 쓰던 것을 자기 애니메이션으로 가른다
+     (jzBoxOut·jzBoxFade 가 같은 이유로 이미 갈라져 있다 — 한 곡선으로 두 속성을 못 낸다). */
+  @keyframes jzPgIn{0%{scale:.985}100%{scale:1}}
+  @keyframes jzPgFade{0%{opacity:1}100%{opacity:0}}
   /* 바닥 시트 — 아래에서 슬라이드업 + 오버슈트 **8px**
      ⚠ 여기에 오버슈트 이징을 «전체» 로 걸면 안 된다. 이동거리가 시트 높이(≈2100px)라
      베지어 최대치 1.098 이 그대로 **205px 물리 오버슈트**가 된다 — 화면 바닥에 200px 구멍이 뚫린다
@@ -28408,11 +28430,21 @@ function openDungeon(){
   $('dunw').classList.add('on');
   $('dunList').scrollTop = 0;
   syncDunNav(true);
+  dunWarm();
+}
+/* 586 — 카드를 «다음 프레임부터» 칠한다(CSS `#dunw.on:not(.warm) .dnc` 머리말 참고).
+   rAF 를 **두 번** 거는 것이 핵심이다: 한 번짜리 콜백은 «이번 프레임을 그리기 직전» 에 돌아서
+   클래스가 같은 프레임에 반영된다 — 미루는 효과가 0 이다. 두 번째 rAF 라야 «첫 커밋 다음» 이다. */
+function dunWarm(){
+  const w = $('dunw');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if(w.classList.contains('on')) w.classList.add('warm');
+  }));
 }
 function closeDungeon(){
   const w = $('dunw');
   if(!w || !w.classList.contains('on')) return;
-  w.classList.remove('on');
+  w.classList.remove('on', 'warm');
   syncDunNav(false);
 }
 /* 작업 24 — 전체화면 상점(syncShopNav)·훈련(syncTrainNav)과 같은 규칙:
