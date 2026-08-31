@@ -114,7 +114,16 @@ const STEPS = [
       const all = document.querySelectorAll(s);
       const h = all[i || 0];
       if (!h) return null;
-      h.getAnimations({ subtree: true }).forEach(a => { try { a.pause(); a.currentTime = (a.effect.getTiming().duration || 0); } catch (_) {} });
+      /* ⚑⚑ 7회차 2차 — **무한 애니를 «끝 프레임» 으로 보내면 안 된다.** `duration` 은 무한 반복이라도
+         유한한 한 바퀴 길이(맥박 2000ms)라 그 자리는 base 가 아니라 **부푼 프레임**이다.
+         그 뒤에 `animation:'none'` 을 얹어도 `#menub .bdg` 는 base 로 안 돌아왔다(실측: 상자 27 → 30.75 ·
+         그려진 지름 42 → 48 = **+14%**) — 5·7회차 네 비평가(BU·BV·BY·BZ)가 독립으로 45.6~47.4 를
+         읽은 값이 정확히 이것이다. 제품은 결백하다(base 에서 재면 42, 다른 칸과 같다).
+         ⇒ `probe471` 의 `settle()` 과 **같은 규칙**을 쓴다: 무한은 0프레임에 세우고 유한만 끝으로 보낸다. */
+      h.getAnimations({ subtree: true }).forEach(a => { try {
+        const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+        if (t && t.iterations === Infinity) { a.currentTime = 0; a.pause(); } else { a.finish(); }
+      } catch (_) {} });
       /* ⚑ 3회차 비평(BR) — 04·15 가 «세로 인셋비 0.82(기준의 1.9배)» 로 읽혔다. 제품 실측은 11px 이다.
          뿌리는 **닷의 맥박 애니메이션을 «끝 프레임» 에 세운 것**이다(위 줄) — 무한 반복 키프레임의
          100% 는 base 가 아니라 커진·밀린 상태라 시트의 점이 자 값과 다른 자리에 찍힌다.
@@ -129,7 +138,10 @@ const STEPS = [
          측정과 촬영 사이에 자리가 바뀌면 십자선만 옛 자리에 남는다(3회차 십자선 결함의 재발형).
          ⇒ **조상 쪽 애니도 끝 프레임에 세운다**(`probe471` 은 이미 멎은 뒤에 읽는다 — 자매 자를 맞춘다). */
       for (let a = h.parentElement; a; a = a.parentElement) {
-        a.getAnimations().forEach(an => { try { an.pause(); an.currentTime = (an.effect.getTiming().duration || 0); } catch (_) {} });
+        a.getAnimations().forEach(an => { try {
+          const t = an.effect && an.effect.getTiming ? an.effect.getTiming() : null;
+          if (t && t.iterations === Infinity) { an.currentTime = 0; an.pause(); } else { an.finish(); }
+        } catch (_) {} });
       }
       let r = h.getBoundingClientRect();
       /* ⚑ 3회차 — 스크롤 그릇 밖으로 밀려난 자리(35 패스 보상 칸)는 «상자 없음» 으로 조용히 빠져
