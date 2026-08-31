@@ -126,8 +126,11 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
        **전부 같은 79.733px** 를 냈다 — `probe507` [A3] 이 «스킬을 하나도 안 낀 대조군» 도 같은 값임을,
        [B3] 이 그 값이 `2.6 × 115 × 0.26 = 77.74px`(DASH.mob 산식) 임을 찍어 넉백이 아님을 못박았다.
        ⇒ 상태 기계를 프레임마다 쿨다운으로 되돌려 «돌진에 못 들어가게» 한다. 무르게 푼 것이 아님은
-       아래 [3] 의 [전제]([3-p1] 대조군 0px · [3-p2] 2.5px 를 밀면 그대로 보인다) 가 못박는다. */
-    if (!chase) enemies.forEach(e => { e.sp = 0; e.dashT = 0; e.dashD = 0; e.dashCd = 1e9; });
+       아래 [3] 의 [전제]([3-p1] 대조군 0px · [3-p2] 2.5px 를 밀면 그대로 보인다) 가 못박는다.
+       ⚑ 555(2026-08-31) — 그 «한 줄» 을 이 파일 안의 헬퍼 `park(e)` 하나로 접었다(546-④).
+       주차 주문이 두 벌로 갈리면 한쪽만 늙어도 아무도 못 센다 — 실제로 [2b]·[3] 의 표본
+       여섯 자리가 507 이전의 `e.sp = 0` 하나로 남아 있었다(`probe555` [B] 79.73px). */
+    if (!chase) enemies.forEach(park);
     player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
     player.hp = stat.maxHp; player.inv = 99; player.dead = 0;
     const s0 = shots.length, z0 = zones.length, d0 = drones.length,
@@ -166,6 +169,17 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
   await p.waitForFunction(() => typeof player !== 'undefined' && typeof step === 'function',
                           null, { timeout: 20000 });
   await p.waitForTimeout(900);
+
+  /* 555 — «적을 세운다» 는 이 파일에 딱 한 벌만 있어야 한다.
+     507 이 [2]/[3] 의 주 루프(130행)를 고쳤을 때 [2b]·[3] 의 표본 여섯 자리는 옛 주문
+     (`e.sp = 0` 하나)으로 남아 두 벌이 됐다. 359 돌진은 속도를 `e.sp` 가 아니라
+     `stat.speed × DASH.mob.spd` 로 갈아 끼우므로 옛 주문은 그 자리를 못 막는다 —
+     하필 표본 링(150~200)이 `DASH.mob` 창(120~380) 한복판이라 긴 루프(3.0~3.33s)에서는
+     초기 쿨다운 `rnd(0.6, 8.0)` 이 실제로 끝난다(`probe555` [E] 40회 중 17·21회 · 변위 79.73px).
+     ⇒ 페이지에 헬퍼를 한 번만 얹고 전부 그것을 부른다. 다음 세대가 `park(` 로 셀 수 있다(546-④). */
+  await p.evaluate(() => {
+    window.park = e => { e.sp = 0; e.dashT = 0; e.dashD = 0; e.dashCd = 1e9; };
+  });
 
   /* ---------------- [1] 구조 ---------------- */
   console.log('[1] 구조');
@@ -263,10 +277,19 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
       for (let i = 0; i < (foes === undefined ? 6 : foes); i++) makeEnemy('zombie');
       enemies.forEach((e, i) => {
         const a = i * (6.2832 / Math.max(1, enemies.length));
-        e.born = 1; e.hp = e.max = 1e12; e.sp = 0;
+        e.born = 1; e.hp = e.max = 1e12; park(e);
         e.x = player.x + Math.cos(a) * ring; e.y = player.y + Math.sin(a) * ring;
       });
+      snap();
     };
+    /* 555 [전제] — «주차가 실제로 먹었나». 표본을 세운 자리를 적어 두고 매 표본이 끝날 때
+       가장 많이 움직인 적의 변위를 모은다. 여기가 0 이 아니면 아래 [2b] 의 수치는
+       «가만히 선 적» 이 아니라 «돌진하다 지나간 적» 에서 잰 것이다(probe555 [B] 79.73px). */
+    let parkMax = 0, p0 = [];
+    const snap = () => { p0 = enemies.map(e => ({ x: e.x, y: e.y })); };
+    const mark = () => enemies.forEach((e, i) => {
+      if (p0[i]) parkMax = Math.max(parkMax, Math.hypot(e.x - p0[i].x, e.y - p0[i].y));
+    });
     const out = {};
 
     /* ② 곡선탄 — 발사 직후와 0.3s 뒤의 진행각이 유의하게 다르고, 두 발이 서로 반대로 휜다 */
@@ -274,6 +297,7 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     castSkill(SK.curve);
     const c0 = shots.map(b => Math.atan2(b.vy, b.vx));
     for (let i = 0; i < 18; i++) step(1 / 60);
+    mark();
     const c1 = shots.slice(0, c0.length).map(b => Math.atan2(b.vy, b.vx));
     out.curve = { n: c0.length,
                   d: c0.map((a, i) => (c1[i] === undefined ? 0 : ((c1[i] - a + Math.PI * 3) % 6.283) - Math.PI)) };
@@ -283,6 +307,7 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     castSkill(SK.spiral);
     const sp0 = shots.map(b => ({ r: b.sr, a: b.sa }));
     for (let i = 0; i < 24; i++) step(1 / 60);
+    mark();
     const live = shots.filter(b => b.sr !== undefined);
     out.spiral = { n: sp0.length, hasPolar: sp0.every(x => x.r !== undefined),
                    dR: live.length ? live[0].sr - sp0[0].r : 0,
@@ -304,6 +329,7 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     rb.x = -camOx + 18; rb.vx = -Math.abs(rb.vx) || -400; rb.vy = 0;
     const vx0 = rb.vx;
     step(1 / 60);
+    mark();
     out.rico = { wb0, wb1: rb.wb, vx0, vx1: rb.vx, flipped: rb.vx > 0 && vx0 < 0 };
 
     /* ⑦ 도약 연쇄탄 — 첫 표적을 맞힌 뒤 «가장 가까운 다른 적» 으로 각이 꺾인다 */
@@ -321,6 +347,7 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
       }
       enemies.forEach(e => { if (e.hp < 1e11) e.hp = 1e12; });
     }
+    mark();
     out.bounce = { bnc0, bnc1: bb.bnc, hitN, turned };
 
     /* ⑥ 레이저 — zones 에 k:'laser' 가 얹히고, «빔 축 위» 적만 깎인다 */
@@ -328,10 +355,12 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     /* 적 2기를 정반대에 세운다 — 빔이 향한 쪽만 맞아야 한다 */
     enemies[0].x = player.x + 200; enemies[0].y = player.y - 22;
     enemies[1].x = player.x - 200; enemies[1].y = player.y - 22;
+    snap();
     castSkill(SK.laser);
     const lz = zones.find(z => z.k === 'laser');
     const lh0 = enemies.map(e => e.hp);
-    for (let i = 0; i < 40; i++) { step(1 / 60); enemies.forEach(e => { e.sp = 0; }); }
+    for (let i = 0; i < 40; i++) { step(1 / 60); enemies.forEach(park); }
+    mark();
     out.laser = { made: !!lz, len: lz && lz.len, w: lz && lz.r,
                   d0: lh0[0] - enemies[0].hp, d1: lh0[1] - enemies[1].hp };
 
@@ -342,9 +371,10 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     const fh0 = enemies.reduce((s, e) => s + e.hp, 0);
     for (let i = 0; i < 200; i++) {
       step(1 / 60);
-      enemies.forEach(e => { e.sp = 0; });
+      enemies.forEach(park);
       if (!fz) fz = zones.find(z => z.k === 'fire') || null;
     }
+    mark();
     out.flask = { made: !!fz, r: fz && fz.r, life: fz && fz.life,
                   dmg: fh0 - enemies.reduce((s, e) => s + e.hp, 0) };
 
@@ -357,12 +387,53 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
       const s0 = shots.length; step(1 / 60);
       shotsFromDrone += Math.max(0, shots.length - s0);
       peak = Math.max(peak, drones.length);
-      enemies.forEach(e => { e.sp = 0; if (e.hp < 1e11) e.hp = 1e12; });
+      enemies.forEach(e => { park(e); if (e.hp < 1e11) e.hp = 1e12; });
     }
-    for (let i = 0; i < 180; i++) { step(1 / 60); enemies.forEach(e => { e.sp = 0; }); }
+    for (let i = 0; i < 180; i++) { step(1 / 60); enemies.forEach(park); }
+    mark();
     out.drone = { spawned: dn0, peak, shotsFromDrone, gone: drones.length };
+    out.parkMax = parkMax;
     return out;
   });
+
+  /* 555 [전제] — 아래 [2b] 의 수치는 «가만히 선 적» 에서 잰 것이어야 한다.
+     546 [전제] 선례대로 «주차가 실제로 먹었나» 를 먼저 묻고, 곧이어 «자가 눈이 멀지 않았나» 를
+     대조군으로 묻는다 — 둘이 같이 있어야 [2b-p1] 의 0 이 «막았다» 인지 «못 본다» 인지 갈린다. */
+  const parkRev = await p.evaluate(() => {
+    /* 화염병 표본(ring 150 · 3기 · 200프레임)을 **옛 주문**(`e.sp = 0` 하나)으로 다시 돌린다.
+       초기 쿨다운은 제품이 `rnd(0.6, 8.0)` 로 굴리므로 결정적이게 0 으로 박는다 —
+       그 값 자체가 제품의 사거리(rnd 하한 0.6s < 표본 3.33s) 안이라 실제로 오는 상태다. */
+    S.own = {}; S.eqSkill = []; skillCd = {};
+    shots.length = 0; zones.length = 0; bolts.length = 0; booms.length = 0; drones.length = 0;
+    enemies.length = 0; spawnQ.length = 0;
+    player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+    player.dead = 0; player.inv = 99; player.hp = stat.maxHp;
+    for (let i = 0; i < 3; i++) makeEnemy('zombie');
+    const s0 = [];
+    enemies.forEach((e, i) => {
+      const a = i * (6.2832 / enemies.length);
+      e.born = 1; e.hp = e.max = 1e12; e.sp = 0;
+      e.dashCd = 0; e.dashT = 0; e.dashD = 0; e.dvx = 0; e.dvy = 0;
+      e.x = player.x + Math.cos(a) * 150; e.y = player.y + Math.sin(a) * 150;
+      s0.push({ x: e.x, y: e.y });
+    });
+    let m = 0;
+    for (let i = 0; i < 200; i++) {
+      enemies.forEach(e => { e.sp = 0; });                 /* ← 555 이전의 «옛 주문» 그대로 */
+      player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+      player.hp = stat.maxHp; player.inv = 99; player.dead = 0;
+      step(1 / 60);
+    }
+    enemies.forEach((e, i) => { m = Math.max(m, Math.hypot(e.x - s0[i].x, e.y - s0[i].y)); });
+    return { move: m, expect: stat.speed * DASH.mob.spd * DASH.mob.dur };
+  });
+  ok(mech.parkMax === 0,
+     '[2b-p1] 전제 — 표본 8종을 도는 동안 적이 한 번도 안 움직였다 (최대 변위 '
+     + mech.parkMax.toFixed(2) + 'px) = `park()` 가 실제로 먹었다');
+  ok(parkRev.move > 20,
+     '[2b-p2] 되돌림 — 같은 표본을 555 이전의 옛 주문(`e.sp = 0` 하나)으로 돌리면 '
+     + parkRev.move.toFixed(2) + 'px 움직인다(DASH.mob 산식 ' + parkRev.expect.toFixed(2)
+     + 'px) = [2b-p1] 의 0 은 «자가 못 본 것» 이 아니다');
 
   ok(mech.curve.n === 2 && mech.curve.d.every(d => Math.abs(d) > 0.3)
      && mech.curve.d[0] * mech.curve.d[1] < 0,
@@ -397,7 +468,7 @@ const RUN = ({ id, frames, chase, ring, kick }) => {
     const cv = SK.curve.cv; SK.curve.cv = 0;
     S.own = { curve: { n: 0, l: 1 } }; S.eqSkill = ['curve']; skillCd = {};
     shots.length = 0; enemies.length = 0; makeEnemy('zombie');
-    enemies[0].born = 1; enemies[0].hp = enemies[0].max = 1e12; enemies[0].sp = 0;
+    enemies[0].born = 1; enemies[0].hp = enemies[0].max = 1e12; park(enemies[0]);
     enemies[0].x = player.x + 200; enemies[0].y = player.y;
     castSkill(SK.curve);
     const a0 = shots.map(b => Math.atan2(b.vy, b.vx));
