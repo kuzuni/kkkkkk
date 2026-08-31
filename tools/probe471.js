@@ -331,18 +331,47 @@ function collect(items) {
     return tries;
   };
 
+  /* §R 용 — 등장 애니를 **일부러** 되돌려 «애니 중에 읽는» 최악을 결정적으로 만든다.
+     ⚑ 560 (2026-08-31) — «열고 나서 찾아 얼린다» 는 **그 자체가 경합**이었다.
+       `jzOpen` 은 등장 애니가 끝나면 `jzDoneThen` 이 `jz-o jz-pg` 를 **떼므로**, 장면 대기
+       (`openPass('stage'); await wait(250)`) 안에 애니가 끝나 버린 회차에는 **얼릴 것이 남아 있지 않다.**
+       그러면 드레인이 있으나 없으나 «멎은 상자»(289×166) 를 읽어 `verify471` [R] 이
+       «두 읽기가 같다» 로 죽는다 — 실측 `probe560` **14회 중 1회**(결정적 사망이 아니라 플레이키).
+       늘 그렇듯 **시간을 더 주는 처방은 방향이 반대다**(550-②): 기다릴수록 애니는 더 확실히 끝나 있다.
+     ⇒ 장면을 **열기 전에** 감시자를 걸어 `jz-pg` 가 붙는 **그 순간** 0프레임에 세운다.
+       `MutationObserver` 콜백은 클래스가 붙은 스크립트가 스택을 비우는 즉시(마이크로태스크) 도는데,
+       `jzDoneThen` 의 `finish`/`animationend` 는 **그보다 뒤 태스크**라 클래스가 아직 살아 있다.
+       얼린 애니는 영영 안 끝나므로 `offO` 는 2.5초 타임아웃까지 안 돈다 = 읽는 동안 상태가 고정된다.
+     ⚠ 이 손잡이는 켠 회차에서 «몇 개를 얼렸는가»(`froze`)를 같이 싣는다 — 0이면 최악을 못 만든 것이고,
+       그 회차의 [R] 은 «시험이 죽은 것» 이 아니라 **«시험을 못 돌린 것»** 이다. `verify471` [R] 전제항이
+       그 구별을 묻는다(333 처방 — 항을 지우거나 허용을 넓혀서 닫지 않는다). */
+  if (FORCEANIM) await page.evaluate(() => {
+    window.__p471froze = 0;
+    const grab = (el) => el.getAnimations().forEach(a => {
+      try { a.pause(); a.currentTime = 0; window.__p471froze++; } catch (_) {}
+    });
+    const mo = new MutationObserver(recs => {
+      for (const r of recs) {
+        const el = r.target;
+        if (el && el.classList && el.classList.contains('jz-pg')) grab(el);
+      }
+    });
+    mo.observe(document.documentElement,
+      { subtree: true, attributes: true, attributeFilter: ['class'] });
+    window.__p471mo = mo;
+    document.querySelectorAll('.jz-pg').forEach(grab);   /* 이미 붙어 있던 것도 한 번 */
+  });
+
   const rows = [];
   for (const sc of SCENES) {
+    /* `froze` 는 **장면마다** 센다 — 그래야 PT 장면이 실제로 얼려졌는지를 [R] 이 물을 수 있다. */
+    if (FORCEANIM) await page.evaluate(() => { window.__p471froze = 0; });
     await run(sc.open);
-    /* §R 용 — 등장 애니를 **일부러** 되돌려 «애니 중에 읽는» 최악을 결정적으로 만든다.
-       자연 경합(2~3/5회)에 기대면 되돌림 시험 자체가 플레이키해진다(344 규칙). */
+    /* 감시자가 이미 얼렸다 — 여기서는 «얼릴 것이 붙었는지» 만 기다린다(붙는 데 렌더 시간이 든다).
+       끝까지 0이면 그 장면엔 등장 애니가 없었다는 뜻이고, 그 사실이 `froze` 로 그대로 실린다. */
     if (FORCEANIM) await page.evaluate(async () => {
       const wait = ms => new Promise(r => setTimeout(r, ms));
-      /* 등장 애니는 **늦게 붙는다**(패스는 리스트 600행 렌더 뒤). 붙을 때까지 잠깐 기다렸다 얼린다. */
-      for (let i = 0; i < 16 && !document.querySelector('.jz-pg'); i++) await wait(50);
-      document.querySelectorAll('.jz-pg').forEach(e => e.getAnimations().forEach(a => {
-        try { a.pause(); a.currentTime = 0; } catch (_) {}
-      }));
+      for (let i = 0; i < 16 && !window.__p471froze; i++) await wait(50);
     });
     const drained = await drain();
     const got = await page.evaluate(collect, sc.items);
@@ -350,7 +379,8 @@ function collect(items) {
       const t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
       return !(t && t.iterations === Infinity) && a.playState === 'running';
     }).length);
-    got.forEach(r => { r.live = live; r.drained = drained; });
+    const froze = await page.evaluate(() => (window.__p471froze === undefined ? null : window.__p471froze));
+    got.forEach(r => { r.live = live; r.drained = drained; r.froze = froze; });
     /* ⚑ 550 «읽은 값이 흔들리지 않는다» 를 **자 자신이** 증언한다.
        드레인이 진짜로 멎혔는지는 «도는 애니 수» 로 물으면 안 된다 — 관계 없는 자리에서
        유한 애니가 계속 나고 지므로 그 수는 늘 0이 아니고, 그것으로 단언하면 플레이키해진다.

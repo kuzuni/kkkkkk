@@ -268,6 +268,15 @@ const probe = (file, ink, extraEnv) => {
   const PT = '35 패스 탭 #psBar .pt>.bdg';
   const good = probe(null, false).find(r => r.label === PT);
   const negp = probe(null, false, { P471_NODRAIN: '1', P471_FORCEANIM: '1' }).find(r => r.label === PT);
+  /* ⚑ 560 (2026-08-31) — **먼저 «최악을 실제로 만들었는가» 를 묻는다.**
+     `P471_FORCEANIM` 이 «열고 나서 찾아 얼리는» 동안에는 얼릴 것이 이미 없어진 회차가 있었고
+     (`jzOpen` 이 애니 종료에 맞춰 `jz-pg` 를 뗀다 — 실측 `probe560`: 되돌림 사본 14회 중 1회가
+     **얼린 애니 0개**), 그 회차의 아래 두 항은 «시험이 죽었다» 가 아니라 **«시험을 못 돌렸다»** 다.
+     둘은 처방이 정반대라(표본 교체 ↔ 자 수리) 구별을 자 밖에 두면 다음 세션이 갈래부터 틀린다.
+     ⇒ 얼린 애니 수를 전제항으로 세운다. 이 항이 빨가면 [R] 본항의 빨강은 읽지 마라. */
+  ok(negp && negp.froze > 0,
+    '[R] 전제 — 되돌림 사본이 등장 애니를 실제로 0프레임에 얼렸다 (얼릴 것이 없으면 시험이 아니라 무연산이다)',
+    negp ? '얼린 애니 ' + negp.froze + '개' : '?');
   ok(good && negp && good.hh - negp.hh > 1.5 && good.hw - negp.hw > 1.5,
     '[R] 되돌림 — 드레인을 빼면 그 호스트가 실제로 `jzPgIn` 한복판(scale .985)에서 읽힌다',
     (good ? '수리 후 ' + good.hw + '×' + good.hh : '?') + ' ↔ ' +
