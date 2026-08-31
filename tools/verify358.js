@@ -46,8 +46,14 @@ const eq = (m, got, want) => ok(got === want, m, `기대 ${want} · 실제 ${got
 const blk = async (nm, fn) => { try { await fn(); } catch (e) { ok(false, nm + ' — 블록이 던졌다', String(e && e.message || e)); } };
 
 /* 제품이 못박은 상수. 여기 숫자를 바꾸려면 제품과 이 줄을 **같이** 바꿔야 한다(하네스 상수 부패 방지 — 336 교훈 ②) */
-const SPEED_SRC = (CODE.match(/const PLAYER_SPEED\s*=\s*([\d.]+)\s*;/) || [])[1];
-const SPEED = Number(SPEED_SRC);
+/* ⚑ 580 이관(2026-08-31) — 정의가 «리터럴» 에서 «원본 × 배수»(`115 * SPD_SC`)로 바뀌었다.
+   358 이 못박은 뜻은 «리터럴이어야 한다» 가 **아니라** «상태가 안 섞인다» 이므로, 모양은 식으로 열되
+   ⓒ2 에서 «상태 참조 0건» 을 따로 단언한다(무르게 푼 것이 아니라 축을 옮긴 것이다 — 334 처방 ①).
+   식은 `SPD_SC` 하나만 받는 순수식이라 그 값만 넣어 그대로 계산한다(값을 손으로 적으면 336 ② 부패). */
+const SPEED_SRC = (CODE.match(/const PLAYER_SPEED\s*=\s*([^;]+);/) || [])[1];
+const SPD_SC_SRC = (CODE.match(/const SPD_SC\s*=\s*([\d.]+)\s*;/) || [])[1];
+const SPEED = SPEED_SRC === undefined ? NaN
+  : Function('SPD_SC', 'return (' + SPEED_SRC + ');')(Number(SPD_SC_SRC));
 
 /* 성장 상태 8종. 전부 «세이브에 들어갈 수 있는 값» 으로만 만든다(플래그 직접 대입 금지 — T2 실동작 규칙). */
 const KINDS = ['fresh', 'oldspd', 'train', 'rank', 'relic', 'bless', 'coll', 'all'];
@@ -122,6 +128,11 @@ async function run(page, kind) {
   console.log('=== §1 소스 ===');
   ok(SPEED_SRC !== undefined, '1-ⓒ `const PLAYER_SPEED` 정의가 1곳 있다', SPEED_SRC);
   eq('1-ⓒ 정의는 정확히 1곳', (CODE.match(/const PLAYER_SPEED\s*=/g) || []).length, 1);
+  /* 580 이관의 짝 — 모양을 열어 준 대신 «무엇이 들어오면 안 되는가» 를 여기서 막는다 */
+  ok(SPEED_SRC !== undefined && Number.isFinite(SPEED) && SPEED > 0,
+    '1-ⓒ2 그 정의는 상수만으로 계산된다', `${SPEED_SRC} = ${SPEED}`);
+  ok(SPEED_SRC !== undefined && !/\bS\.|\bU\.|lv\(|bonus\(|stat\.|\bmul[A-Z]|\bsb[A-Z]/.test(SPEED_SRC),
+    '1-ⓒ2 그 정의에 **상태가 한 항도 안 섞인다**(성장·장비·유물·축복 어느 것도 못 읽는다)', SPEED_SRC);
   eq("1-ⓐ UPG 에 `id:'spd'` 행 0곳 (358 이 지운 그 축)", (CODE.match(/\{ id:'spd',/g) || []).length, 0);
   eq("1-ⓐ `U.spd` 참조 0곳", (CODE.match(/U\.spd\b/g) || []).length, 0);
   eq("1-ⓐ `lv\\('spd'\\)` 참조 0곳", (CODE.match(/lv\('spd'\)/g) || []).length, 0);
