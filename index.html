@@ -10473,7 +10473,7 @@
      갖지만 다른 화면이라 별도 등재 — PROGRESS 354.)
      자리는 JS 가 실제로 무는 훅(`data-*`)에 건다 — 클래스에 걸면 마크업이 바뀔 때 조용히 새어
      나간다(64 교훈 1 의 자매 함정). */
-  #trw .tr-card,#trw [data-runebuy],#trw [data-tempup],#trw [data-tpchg]{touch-action:none}
+  #trw .tr-card,#trw [data-runebuy],#trw [data-tempup]{touch-action:none}
   /* 354 — 349 가 «다른 화면이라 범위 밖» 으로 뒀던 나머지 두 홀드 호스트. 규칙·근거는 위와 같고
      `tools/probe354.js` 로 **같은 축에서 같은 값**이 나오는 것을 먼저 재현했다(338 규칙):
      ±0/±6/±14px → #mLv 11~13회 · #rwBasin 3~8회 인데 **±30px 에서 둘 다 1회 · pointercancel 1**,
@@ -10530,32 +10530,13 @@
   .tr-box.temper>.tr-temp{display:block}
   .tr-temp{left:24px;top:34px;width:998px;height:900px}
   .tr-temp>*{position:absolute}
-  /* 충전 줄 — 보유 포인트(왼쪽)와 «단련석 → 포인트» 버튼(오른쪽). 카드 껍데기와 같은 베벨 체계 */
+  /* 보유 줄(613) — 현재 단련석 개수 한 줄. [충전] 버튼(.cg)은 전환 단계와 함께 사라졌다.
+     카드 껍데기와 같은 베벨 체계 */
   .tr-temp>.tp-hd{left:0;top:0;width:998px;height:88px;border-radius:22px;background:#FFFDF2;
     box-shadow:inset 0 0 0 8px #141414,0 0 0 2px #8B6A38,0 0 0 3px #C6A470,0 5px 0 #5E4823}
   .tr-temp>.tp-hd>*{position:absolute}
   .tr-temp>.tp-hd>.pv{left:28px;top:16px;height:56px;line-height:56px;font-size:36px;color:#2C1E10}
   .tr-temp>.tp-hd>.pv b{color:#B4571E}
-  .tr-temp>.tp-hd>.cg{right:20px;top:12px;width:392px;height:64px;border-radius:18px;cursor:pointer;
-    text-align:center;line-height:64px;font-size:29px;color:#fff;
-    background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
-    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #3F7412}
-  /* 577 — 라벨 두 줄(«가진 단련석» / «받을 포인트»). 상자(392×64)·자리(right 20 · top 12)는 **불변**이라
-     `verify491` 의 사다리 기하([8-d]·[6-h])와 헤더 세로 예산(88)에 Δ0 이다.
-     세로는 검정 링 안쪽 띠(inset 5 ⇒ local 5..59 = 54px)에 넣는다: 27 × 2 = 54, 위 **3**.
-     ⚠ 위 여백이 5(= 링 두께와 같은 값)가 아니라 3인 것은 취향이 아니다 — «pt» 의 **p 디센더**가
-     2행 em 상자 바닥까지 내려와, 위 5 로 두면 찍힌 흰 잉크가 y 9..**59** 로 링 첫 줄을 밟는다
-     (`verify577` [4-b] 가 그 1px 을 잡는다). 2px 올리면 잉크가 7..57 로 위아래 2px 씩 뜬다.
-     ⚠ **ID 급 스코프가 필요하다** — `#trw i{display:inline-block}`(9606 · 1,0,1)이 클래스 급 규칙을
-     이기므로 스코프 없이 `display:block` 을 적으면 조용히 무시된다(519·531 이 잡은 그 함정).
-     ⚠ 아이콘도 이 줄 안에 들어와야 한다 — 34px 이면 행 상자가 27 을 넘겨 2행을 밀어낸다.
-     그래서 `temperHeadTxt` 가 26 으로 그리고 여기서 세로 정렬만 이 버튼 몫으로 다시 적는다. */
-  #trw .tr-temp>.tp-hd>.cg>i{display:block;width:100%;margin-top:3px;height:54px;
-    line-height:27px;font-size:26px}
-  .tr-temp>.tp-hd>.cg .cic{vertical-align:-3px;margin-right:6px}
-  /* 202 — 누를 게 없으면 회색. 상태색은 이 두 클래스가 전부다(하드코딩 분기 없음) */
-  .tr-temp>.tp-hd>.cg.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
-    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #5E594F}
   .tr-temp>.tp-hd .cic{vertical-align:-4px;margin-right:6px}
   /* 축 카드 3장 — 자리는 클래스로 못 박는다(nth-of-type 은 형제가 늘면 조용히 어긋난다: 203 교훈) */
   .tr-tp{width:998px;height:222px;border-radius:26px;background:#FFFDF2;
@@ -10575,6 +10556,8 @@
   /* 지금 서 있는 구간의 1업글 비용 — 주인 지시 ⓑ-2 «UI 에 현재 구간 비용 표기» 가 이 줄이다 */
   .tr-tp>.tc{right:26px;top:14px;width:420px;text-align:right}
   .tr-tp>.tc>i{height:52px;line-height:52px;font-size:40px;color:#B4571E}
+  /* 613 — 비용 열에도 화폐 아이콘(34px). 잉크 중심을 숫자 x-height 중심에 맞춘다 */
+  .tr-tp>.tc .cic{vertical-align:-4px;margin-right:6px}
   .tr-tp>.tc>s{height:32px;line-height:32px;font-size:25px;color:#7A5A34;text-decoration:none}
   /* 584 — 라벨이 «투자 n pt» → «단련 🪨n pt» 로 길어졌다(화폐 아이콘 53 + 여백 6 = 59px 추가).
      폭 300 이면 내부 예산 290 중 글자 몫이 231 뿐이라 `probe584` §E 스윕에서 **8자리부터** 넘친다.
@@ -10592,18 +10575,7 @@
   .tr-tp>.tb .cic{vertical-align:-17.5px;margin-right:6px}
   .tr-tp>.tb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
-  /* 회수 줄 — 왼쪽에 «돌려받을 총량», 오른쪽에 다이아 가격 버튼(102 «가격을 버튼에 적는다») */
-  .tr-temp>.tp-ft{left:0;top:810px;width:998px;height:88px;border-radius:22px;background:#F2E8D2;
-    box-shadow:inset 0 0 0 6px #141414}
-  .tr-temp>.tp-ft>*{position:absolute}
-  .tr-temp>.tp-ft>.rs{left:26px;top:16px;height:56px;line-height:56px;font-size:28px;color:#5E4823}
-  .tr-temp>.tp-ft>.rb{right:18px;top:11px;width:330px;height:66px;border-radius:18px;cursor:pointer;
-    text-align:center;line-height:66px;font-size:29px;color:#fff;
-    background:linear-gradient(180deg,#F0894A 0,#DF6E2C 55%,#B4571E 100%);
-    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #7A3A10}
-  .tr-temp>.tp-ft>.rb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
-    box-shadow:inset 0 0 0 5px #141414,0 4px 0 #5E594F}
-  .tr-temp>.tp-ft .cic{vertical-align:-4px;margin-right:6px}
+  /* (614) 회수 줄(.tp-ft)은 기능째 폐지 — CSS 도 선언째 걷어냈다(죽은 코드 금지 규약) */
 
   #eqw{position:absolute;left:0;right:0;top:0;bottom:180px;display:none;z-index:28}
   #eqw.on{display:block}
@@ -13169,7 +13141,7 @@
      ⚠ 가라앉음도 `jz-dn` 과 같은 부등식(translate > h(1−s)/2)을 지킨다: h=700(룬 카드)에서 5.25px 라 **6px**.
      ⚠ `.tr-card`(대조군)는 «누른 것 = 호스트» 라 JS 가 스스로 걸러 낸다 — 여기 트랜지션 목록에도 없다.
        두 번 걸면 `jz-dn` 의 `scale:.94` 와 같은 속성을 두고 싸운다. */
-  .tr-rn,.tr-tp,.tr-temp>.tp-hd,.tr-temp>.tp-ft{transition:scale .07s ease-out,translate .07s ease-out}
+  .tr-rn,.tr-tp{transition:scale .07s ease-out,translate .07s ease-out}
   /* ⚑ 8회차 — **밝기도 같이 준다(홀드 내내).** 7회차는 스케일·이동만 줘서 «누른 채 800ms» 프레임에서
      호스트가 idle 과 구별되지 않았다(CG·CH 2인 공통: 「`-hold` 호스트 채움이 idle 과 0/255 동일」).
      재현이 뿌리를 한 칸에 짚었다 — 800ms 에 대조군 `.tr-card` 는 `filter:brightness(1.1)` 을 달고 있고
@@ -13276,42 +13248,8 @@
      ⇒ 값을 되돌린다. **x 축으로 푸는 길은 이 행에서 막혀 있다** — 다음 회차는 세로(발마다 레인을
      흔든다)나 잉크 폭 쪽으로 가야 하고, 그 전에 [I6] 의 봉투식으로 **빈 칸을 먼저 재야** 한다. */
   .tr-tp{--hb-y:116;--hb-x:.445;--hb-y2:20;--hb-x2:.445;--hb-slots:2;--hb-sw:104}
-  /* ⚑ 491 4회차 — [충전]의 회당 피드백 호스트를 **버튼 `.cg`(392×64) → 헤더 `.tp-hd`(998×88)** 로 올린다.
-     형제 둘이 이미 그렇게 한다(룬은 카드 `.tr-rn` · 투자는 행 `.tr-tp`) — ④ 일관성이 같이 오른다.
-     ⚠ 자리가 아니라 **폭이 뿌리다**: 옛 호스트는 신고가 없어 기본값(높이의 30%/66% = 19/42px)으로 떨어져
-       두 줄기가 **버튼 안**에 놓였고, `hbFloat` 의 «긴 문자열은 칸에 눌러 넣는다» 가 버튼 폭 392 → 칸 80px
-       에서 16px 하한까지 밀어 「+1,000,000」(7자리)이 잉크 10~20px 로 뭉갰다(비평가 BY·BZ 3회차 공통 —
-       «형제의 23~26px 대비 −55% · 상단 테두리에 30~40% 걸침»). **폰트 상수를 키우는 처방은 오답이다.**
-     자리는 3회차 실측이 정했다 — 헤더 아래 빈 띠는 **14px** 뿐이라 아래로는 길이 없고, 헤더 **안 왼쪽에
-     빈 칸**(`.pv` 오른끝 ↔ 버튼 왼끝 627)이 있다. ⚠ **그 빈 칸은 «324px 고정» 이 아니다** — `.pv` 는 폭이
-     자동이라 포인트 자릿수를 따라 늘어난다(4회차 재현: 1,000,500 pt 에서 오른끝 **404** ⇒ 빈 칸 223px).
-     그래서 자리는 «빈 칸의 한복판»(.425 = 465px, 3회차 처방)이 아니라 **버튼 쪽으로 붙인** .475(= 515px)다:
-     칸 둘 × 104px 에 잉크 최대 96px 라 415..511 · 519..615 로 양끝에 11~12px 이 남는다(.425 면 왼쪽이
-     `.pv` 를 39px 문다 — 3회차 실측은 포인트가 세 자리일 때의 값이었다).
-     ⚑ **줄기는 하나다** — 전환비가 `TEMPER_PT_COST = 1`(1:1)이라 «+n»(얻은 포인트)과 «−n»(쓴 단련석)이
-     **같은 수**다. 488 5회차 교훈 그대로(«바로 아래 줄이 상시로 말하는 것을 플로터가 한 번 더 말하느라
-     자리를 두 배로 쓴다») 둘째 줄기를 걷어낸다 — 그래야 남은 한 줄기가 칸을 통째로 쓴다.
-     그 전제는 `verify491` [6-i] 가 지킨다(199 가 전환비를 바꾸면 곧바로 빨개진다).
-     ⇒ 칸 간격은 **24px**(한 줄기라 이웃 압력이 없다) · 잉크 상한은 `--hb-mw` **200px** 로 따로 신고한다.
-     결과: fs 34 유지(형제와 같은 값) · 잉크 176×43 · 자리 415..591 로 빈 칸(404..627) 안 · 세로 34..77
-     (끝 10..53)로 헤더 안쪽 면(8..80) 안이다.
-     ⚠ 맥박 진폭도 같이 신고한다 — 헤더는 룬 카드와 **같은 998폭**이라 기본 1.06 이면 1057.9 로
-       그릇 `.tr-box` 안폭 1046 을 11.9px 넘는다(위 [G] 규약). 1.02 = 1018 ≤ 1046 · 세로는 +0.9px 씩이라
-       아래 첫 행과의 틈 14px 안에 든다. */
-  /* ⚑ 8회차 — 자리를 **최악 자릿수**로 다시 잡았다. `.475` 는 «단련 포인트 500»(세 자리) 기준이라
-     잔액이 자라면 사다리가 그 숫자에 붙는다 — CH 실측 「1,000,494 우단 x394 ↔ +1,000,000 좌단 x401 =
-     **7px**. 같은 헤더의 낱말 간격 13px 보다 좁아 «1,000,494+1,000,000» 한 문자열로 읽힌다」.
-     재현으로 빈 칸을 자릿수별로 쟀다(호스트 998 기준 · `.pv` 잉크 우단 ↔ 버튼 좌단 586):
-       3자리 261.7 → **324.3px** · 8자리 381.4 → **204.6px** · 9자리 408.3 → **177.7px**
-     ⇒ 최악 칸 **408.3..586** 의 한가운데 497 = 비율 **.498**.
-     ⚠ 잉크 상한은 **170 이 아니라 150** 이다 — 사다리는 칸 2 × 간격 24 라 노드가 중심에서 **±12px**
-       흩어진다(첫 시안 170 은 그 12 를 빼먹어 `verify491` **[6-h]** 가 «우단 635 > 버튼 627» 로 잡았다).
-       필요 폭 = 잉크 + 2×12 ≤ 177.7 ⇒ 잉크 ≤ 153.7. ⇒ **150**(실제 범위 410..584 ⊂ 408.3..586).
-     ⚠ 이 빈 칸에는 **두 줄기가 가로로 못 들어간다** — 「−1,000,000」 잉크가 181px 라 한 쌍이면
-       362px + 틈 이고 최악 칸은 177.7px 다. 4회차가 [충전] 비용 줄기를 껐던 판단에는
-       의미(1:1 전환)뿐 아니라 **기하**도 있었다는 것이 이번 실측으로 드러났다 — 상세는 review §31. */
-  .tr-temp>.tp-hd{--hb-s:1.02;--hb-y:34;--hb-x:.498;--hb-y2:34;--hb-x2:.498;--hb-slots:2;--hb-sw:24;--hb-mw:150;
-    --hb-rise:22px}
+  /* 613 — [충전] 회당 피드백 호스트(.tp-hd)의 hbBeat 신고는 버튼과 함께 걷어냈다 —
+     헤더는 더 이상 누를 수 있는 부품이 아니다(491 4·8회차의 사다리 기하 기록은 review 491 §31). */
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
      (`--hb-x` 는 호스트 폭에 대한 비율이라 1 을 넘어도 된다 — 그래서 카드 어디로든 보낼 수 있다).
      `.skd` 자식 실측: `.sk-ic` 24–173(x25–174) · `.sk-gr` 35–85(x216–426) · `.sk-lv` 103–173 ·
@@ -19765,31 +19703,30 @@ function runeTry(id){
 
 /* ==========================================================================
    210 «단련» — 23 훈련 팝업 세 번째 탭 (2026-08-27, 저장소 주인 지시)
+   613·614 (2026-09-01, 저장소 주인 재지시) — **«포인트» 중간 개념 폐지 · 다이아 회수 폐지**:
+     «단련석을 포인트로 바꿔서 강화가 아니라 걍 단련석으로 단련가능하게 해라» ·
+     «단련석 포인트 보여주는 부분 없애고 그부분에 현재 단련석 개수나 보여주게하셈» ·
+     «단련석 회수 다이아써서 회수 안되게 바꿔 그 기능을 없애».
+   ⇒ 비용 계단은 그대로 두되 단위가 pt → **단련석**이다. 전환(temperCharge)·포인트 잔액
+     (S.temper.pts)·회수(temperReset)는 **선언째** 사라졌고, 구 세이브의 pts 는 load() 가
+     단련석으로 되돌린다(구 전환비가 1:1 이라 값 손실 0 — KEY 유지).
    --------------------------------------------------------------------------
-   ─ 주인이 못 박은 것만 상수로 굳힌다. 그 밖의 값(효과 계수·전환비·재료 수급량)은
+   ─ 주인이 못 박은 것만 상수로 굳힌다. 그 밖의 값(효과 계수·재료 수급량)은
      **199(최종 밸런스 비평 라운드)의 몫**이다 — 203 룬과 같은 취급이다.
-       ⓐ 공격력·체력·체력회복 3종에 **포인트 자유 배분**(골고루 강제 없음 — 한 스탯 올빵 가능)
+       ⓐ 공격력·체력·체력회복 3종에 **단련석 자유 배분**(골고루 강제 없음 — 한 스탯 올빵 가능)
        ⓑ **맥스 없음**
-       ⓑ-2 업글 비용이 레벨 구간마다 **계단으로 상승** — 주인 예시 «~99: 1pt · 100~: 3pt · 200~: 6pt»
-       ⓒ **회수 = 1000 다이아**, 회수량은 계단 비용을 정확히 반영(**실제로 소모한 포인트 총량 전액**)
-       ⓓ 포인트당 효과 계수는 199 평가 대상 — 168 선형 훈련·203 룬과 겹치지 않는 **별도 축**이다
+       ⓑ-2 업글 비용이 레벨 구간마다 **계단으로 상승** — 주인 예시 «~99: 1 · 100~: 3 · 200~: 6»
+       ⓒ (폐지 — 614) ~~회수 = 1000 다이아~~ 회수 기능 자체가 없다
+       ⓓ 단련석당 효과 계수는 199 평가 대상 — 168 선형 훈련·203 룬과 겹치지 않는 **별도 축**이다
 
    ─ **비용 계단의 연장(주인 예시 1/3/6 의 뒤)**: 구간 s(0-based)의 1업글 비용을 `(s+1)(s+2)/2`
      로 둔다 — 1 · 3 · 6 · 10 · 15 … 삼각수다. 주인이 준 세 값과 **정확히 일치**하면서 «맥스 없음»
      을 만족하는 가장 단순한 연장이고, 계차가 1씩 커져 상위 구간이 저절로 무거워진다.
 
-   ─ **회수 보존(ⓒ)이 이 절의 핵심 불변식**이다. 반환액은 «레벨 수 × 무엇» 이 아니라
-     `temperSpent(lv)` — 계단을 밟아 실제로 낸 총액의 **닫힌 식**이다. 투자 1회가 빼는 값과
-     같은 표를 지나므로 «투자 → 회수 → 재투자» 왕복에서 총 포인트가 **1pt 도 어긋나지 않는다**
-     (게이트 verify210 [D] 가 무작위 배분 왕복으로 확인한다).
-     ⚠ 누적 소모액을 따로 저장하지 않는 이유: 두 벌이 되면 조용히 갈라진다(203 «표기층» 교훈과 같은 자리).
-
    ─ **88 «스탯 훈련» 의 부활이 아니다.** 88 이 폐기한 것은 «캐릭터 레벨·경험치에 연동된 포인트»
-     였고 이번은 «재료(단련석) 수급형 포인트» 다 — 레벨·경험치 개념이 없다(혼동 금지).
+     였고 이번은 «재료(단련석) 직접 지불» 이다 — 레벨·경험치 개념이 없다(혼동 금지).
    ========================================================================== */
 const TEMPER_SEG       = 100;     /* 주인 확정 — 비용 계단의 구간 폭 */
-const TEMPER_RESET_DIA = 1000;    /* 주인 확정 — 회수(전액 리셋) 1회 비용 */
-const TEMPER_PT_COST   = 1;       /* 단련석 → 포인트 전환비(1:1). 199 평가 대상 */
 /* 구간 s 의 «1업글당 포인트». 주인 예시와 일치: s0=1 · s1=3 · s2=6 (그 뒤 10 · 15 …) */
 const temperSegCost = s => (s + 1) * (s + 2) / 2;
 /* 축 3종. 아이콘은 아트 자리(이모지)이고 훈련 카드와 같은 bbox 를 차지한다 */
@@ -19802,56 +19739,28 @@ const TEMPERS = [
    (LESSONS 91-1 · 194 코스튬 강화 · 203 룬과 같은 규칙). 값 자체는 199 의 몫이다. */
 const TEMPER_EFF = { atk:0.02, hp:0.02, regen:0.02 };
 
-const temperObj = () => (S.temper && typeof S.temper === 'object') ? S.temper : (S.temper = { pts:0, alloc:{} });
-const temperPts = () => Math.max(0, Math.floor(temperObj().pts) || 0);
+const temperObj = () => (S.temper && typeof S.temper === 'object') ? S.temper : (S.temper = { alloc:{} });
+/* 613 — 단련이 쓰는 재화 잔액은 S.tstone 하나다(중간 포인트 없음). 음수·NaN·비정수 방어 한 벌 */
+const tstoneHave = () => Math.max(0, Math.floor(S.tstone) || 0);
 const temperLv  = k => { const a = temperObj().alloc || {}; return Math.max(0, Math.floor(a[k]) || 0); };
 /* 다음 1레벨의 비용 — «지금 서 있는 구간» 의 값이다(UI 가 이 수를 그대로 적는다: 주인 지시 ⓑ-2) */
 const temperCost = k => temperSegCost(Math.floor(temperLv(k) / TEMPER_SEG));
-/* 레벨 L 까지 올리는 데 실제로 낸 포인트 총액 — 닫힌 식.
-   f = 완주한 구간 수, rem = 그 위 남은 레벨.
-   Σ_{s<f} TEMPER_SEG·(s+1)(s+2)/2 = TEMPER_SEG · f(f+1)(f+2)/6  (+ rem × 현재 구간 비용) */
-function temperSpent(l){
-  l = Math.max(0, Math.floor(l) || 0);
-  const f = Math.floor(l / TEMPER_SEG), rem = l - f * TEMPER_SEG;
-  return TEMPER_SEG * (f * (f + 1) * (f + 2) / 6) + rem * temperSegCost(f);
-}
-const temperSpentAll = () => TEMPERS.reduce((s, t) => s + temperSpent(temperLv(t.k)), 0);
 /* 축 하나의 효과(배수 −1) — 표기·bonus()·게이트가 **같은 식**을 본다 */
 const temperVal = k => (TEMPER_EFF[k] || 0) * temperLv(k);
-const temperUpOk = k => temperPts() >= temperCost(k);
-/* 투자 1회 — 확정 구매다(확률 없음). 포인트를 빼고 그 축 레벨을 1 올린다. */
+/* 613 — «지금 이 축을 한 번 단련할 수 있는가». 재화는 단련석 직접 지불이다(전환 단계 없음) */
+const temperUpOk = k => tstoneHave() >= temperCost(k);
+/* 단련 1회 — 확정 구매다(확률 없음). 단련석을 빼고 그 축 레벨을 1 올린다. */
 function temperUp(k){
   if(!TEMPERS.some(t => t.k === k) || !temperUpOk(k)) return false;
   const o = temperObj(), c = temperCost(k);
   if(!o.alloc || typeof o.alloc !== 'object') o.alloc = {};
-  o.pts = temperPts() - c;
+  S.tstone = tstoneHave() - c;
   o.alloc[k] = temperLv(k) + 1;
   markDirty(); uiDirty = true; save();
   return true;
 }
-/* 단련석 → 포인트 전환. n 을 안 주면 보유분 전부를 바꾼다. */
-function temperCharge(n){
-  const have = Math.max(0, Math.floor(S.tstone) || 0);
-  const use  = Math.max(0, Math.min(have, Math.floor(n == null ? have : n) || 0));
-  if(use < TEMPER_PT_COST) return 0;
-  const got = Math.floor(use / TEMPER_PT_COST), pay = got * TEMPER_PT_COST;
-  S.tstone = have - pay;
-  temperObj().pts = temperPts() + got;
-  uiDirty = true; save();
-  return got;
-}
-/* 회수(전액 리셋) — 주인 지시 ⓒ. 다이아를 내고 **소모한 포인트 총량을 전액** 돌려받는다.
-   레벨은 3축 전부 0 으로 돌아가고 포인트는 그대로 남아 즉시 재배분할 수 있다. */
-const temperResetOk = () => S.dia >= TEMPER_RESET_DIA && temperSpentAll() > 0;
-function temperReset(){
-  if(!temperResetOk()) return 0;
-  const back = temperSpentAll(), o = temperObj();
-  S.dia -= TEMPER_RESET_DIA;
-  o.alloc = {};
-  o.pts = temperPts() + back;
-  markDirty(); uiDirty = true; save();
-  return back;
-}
+/* (614) 회수(temperReset)·전환(temperCharge)·닫힌 식(temperSpent)은 **선언째** 없앴다 —
+   되살리려는 커밋은 verify614 가 막는다(«죽은 분기와 게이트 항을 같이 걷어낸다» — 333·399 규약). */
 
 /* ---- 재화 교환 (다이아 → 유물조각 · 룬강화석) ----
    ⚑ **490(주인 확정 2026-08-30): «다이아→유물조각 다이아→룬석 전부 1:1 로».**
@@ -20285,10 +20194,10 @@ const DEF = () => sumAliasView({
   cosLv:{},                                   /* 194 — 코스튬 id → 강화 레벨 0~COS_MAXLV(없으면 0) */
   rstone:0,                                   /* 203 — 룬강화석(룬 강화 전용 재화) */
   rune: RUNES.reduce((o,r) => (o[r.id]=0, o), {}),   /* 203 — 룬 id → 레벨 0~RUNE_MAXLV */
-  tstone:0,                                   /* 210 — 단련석(단련 포인트 전환 전용 재화) */
-  /* 210 — 단련. `pts` = 미배분 포인트 · `alloc` = 축별 투자 레벨(상한 없음).
-     누적 소모액은 저장하지 않는다 — `temperSpent(lv)` 가 계단 표에서 역산한다(두 벌 금지). */
-  temper:{ pts:0, alloc: TEMPERS.reduce((o,t) => (o[t.k]=0, o), {}) },
+  tstone:0,                                   /* 210·613 — 단련석(단련에 직접 지불하는 재화) */
+  /* 210·613 — 단련. `alloc` = 축별 단련 레벨(상한 없음). 포인트 잔액(pts)은 613 이 폐지했다 —
+     구 세이브의 pts 는 load() 가 단련석으로 되돌린다(1:1 · 죽은 필드 정리). */
+  temper:{ alloc: TEMPERS.reduce((o,t) => (o[t.k]=0, o), {}) },
   mileage:0,                                  /* 44 마일리지 쿠폰 — 다이아 90만/200만 상품 구매 시에만 지급 */
   bossFarm:false,                             /* 28 보스 도전 «대기» — 실패·사망 후 그 스테이지 파밍(재도전 버튼 노출).
                                                  273 — 잡몹에게 죽어도 켜지고, 켜져 있는 동안은 50킬로도 보스가 자동으로 서지 않는다 */
@@ -20526,10 +20435,12 @@ function load(){
       b.rune = out;
     }
     /* 210 — 단련석·단련 배분. 203 과 같은 «없으면 기본값» 마이그레이션(KEY 유지).
-       구 세이브엔 두 키가 없다 → 단련석 0 · 포인트 0 · 3축 전부 Lv 0.
+       구 세이브엔 두 키가 없다 → 단련석 0 · 3축 전부 Lv 0.
        레벨은 **실재하는 축만** 남긴다. 상한은 «맥스 없음»(주인 지시 ⓑ)이라 자르지 않지만,
-       손댄 세이브가 넣은 음수·NaN·비정수는 여기서 0/내림으로 막는다 — `temperSpent()` 의
-       닫힌 식이 정수 구간 밖으로 나가면 회수 보존(ⓒ)이 깨진다. */
+       손댄 세이브가 넣은 음수·NaN·비정수는 여기서 0/내림으로 막는다.
+       613 — 구 세이브의 «단련 포인트 잔액»(temper.pts)은 **단련석으로 되돌린다**(구 전환비
+       TEMPER_PT_COST 가 1:1 이었으므로 값 손실 0 — KEY 안 올림이 정답인 근거).
+       pts 필드 자체는 여기서 죽는다(402 despair.tk 와 같은 죽은 필드 정리 — b.temper 에 안 싣는다). */
     if(!Number.isFinite(b.tstone) || b.tstone < 0) b.tstone = 0; else b.tstone = Math.floor(b.tstone);
     {
       const t = (d.temper && typeof d.temper === 'object') ? d.temper : {};
@@ -20538,7 +20449,8 @@ function load(){
         const v = a[x.k];
         out[x.k] = (Number.isFinite(v) && v > 0) ? Math.floor(v) : 0;
       });
-      b.temper = { pts: (Number.isFinite(t.pts) && t.pts > 0) ? Math.floor(t.pts) : 0, alloc: out };
+      if(Number.isFinite(t.pts) && t.pts > 0) b.tstone += Math.floor(t.pts);
+      b.temper = { alloc: out };
     }
     {
       const c = (d.cosLv && typeof d.cosLv === 'object') ? d.cosLv : {}, out = {};
@@ -21044,7 +20956,7 @@ const cp = () => Math.round(stat.dps*1.2 + stat.maxHp*0.6 + stat.regen*80 + stat
    ── 왜 호출부 계측이 아니라 «감시자» 인가 ────────────────────────────────────
    `cp()` 를 올리는 경로가 15곳이다 — `levelUp`·`levelUpMax`(강화) · `power`(장착·해제) ·
    `wpnEquip`(무기 장착) · `claimColl`(도감 단계) · `trainBuy`·`trainUp`(훈련) ·
-   `temperUp`·`temperReset`(단련) · `runeTry`(룬) · `cosUpgrade`(코스튬) · `craft`(합성) ·
+   `temperUp`(단련 — 회수는 614 가 폐지) · `runeTry`(룬) · `cosUpgrade`(코스튬) · `craft`(합성) ·
    `doSummon`·`doSummonFree`·`summonRelic`(소환) · `activateBless`(축복) · 승급 성공.
    자리마다 스냅샷을 심으면 «새 경로가 생기면 조용히 빠지는» 계측이 된다 — 58 이 재화 획득
    연출을 호출부가 아니라 `fxWatch` 하나로 모은 것과 같은 이유다. 저 15곳은 **예외 없이 이미
@@ -25979,7 +25891,7 @@ function giveReward(r){
   if(r.stone){   S.stone += r.stone; kinds.push('stone');  out.push(curIc('stone') + ' ' + fmt(r.stone)); }
   /* 203 — 룬강화석(룬 강화 전용). 강화석과 같은 «숫자 그대로» 표기(150) */
   if(r.rstone){  S.rstone += r.rstone; kinds.push('rstone'); out.push(curIc('rstone') + ' ' + fmt(r.rstone)); }
-  /* 210 — 단련석(단련 포인트 전환 전용). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
+  /* 210·613 — 단련석(단련에 직접 지불). 강화석 계열과 같은 «숫자 그대로» 표기(150) */
   if(r.tstone){  S.tstone += r.tstone; kinds.push('tstone'); out.push(curIc('tstone') + ' ' + fmt(r.tstone)); }
   if(r.gold){    S.gold += r.gold;   kinds.push('gold');   out.push(curIc('gold') + ' ' + fmtG(r.gold)); }
   /* 399 — `r.goldMul`(스테이지 환산 골드) 분기는 지웠다. 이 표를 쓰던 곳은 ATTEND 하나뿐이었고
@@ -31340,8 +31252,8 @@ const CURINFO = {
   /* 210 — 단련석. 획득처는 주인 지시 ② 그대로 «절망의 탑» 한 곳이다(단일 수급처). */
   tstone:{ ic:curIc('tstone'), n:'단련석',
     get:() => S.tstone,
-    d:'단련 포인트로 바꿔 공격력·체력·체력회복에 자유롭게 투자합니다. 상한은 없습니다.',
-    ways:[TOWER_DESPAIR_N, '단련석 ' + TEMPER_PT_COST + ' = 단련 포인트 1'] },
+    d:'단련 탭에서 바로 지불해 공격력·체력·체력회복에 자유롭게 투자합니다. 상한은 없습니다.',
+    ways:[TOWER_DESPAIR_N, '단련 탭에서 바로 사용'] },
   /* 292 — 마일리지. 53 가방이 «화폐만» 이 되면서 가방 목록과 CURINFO 종류를 맞췄다(지시 ③):
      가방에 칸이 있는데 CURINFO 에 없으면 그 칸만 클릭이 죽는다. 수급·씽크는 44(다이아 팩)·13 그대로. */
   mile:  { ic:curIc('mile'), n:'마일리지',
@@ -33366,22 +33278,15 @@ function runeBuy(id, quiet){
 
 /* ==========================================================================
    210 단련 탭 — 23 훈련 팝업 «훈련 · 룬 · 단련» 세 번째 탭 (2026-08-27, 저장소 주인 지시)
-   데이터·판정은 전부 위 단련 모델(temperCost/temperUp/temperCharge/temperReset)을 지난다 —
+   데이터·판정은 전부 위 단련 모델(temperCost/temperUp — 613·614 이후 전환·회수 없음)을 지난다 —
    여기서는 그리기만 한다. 표기에 쓰는 식은 bonus()·게이트가 보는 그 식이다(두 벌 금지).
    ========================================================================== */
-/* 서브탭 레드닷 — «지금 누를 게 있다» 일 때만(166 규약). 다이아 회수는 상시 가능하므로 뺀다.
-   519 (2026-08-31, 저장소 주인 보고 «단련할 게 없는데 빨간점») — 옛 식은 두 항의 OR 였고
-   첫 항이 `(S.tstone|0) >= TEMPER_PT_COST` 였다. `TEMPER_PT_COST = 1`(18878) 이므로 그것은
-   사실상 «단련석을 1개라도 들고 있는가» 이고, 단련석은 던전에서 계속 들어오므로 **상시 참**이다.
-   그런데 전환해 봐야 `temperUpOk` 를 만족하는 축이 하나도 없으면 **누를 것이 없다** —
-   구간이 오를수록 1레벨 비용이 1 → 3 → 6 … 으로 커지므로(temperSegCost) 그 어긋남은 계속 넓어진다.
-   ⇒ **전환과 투자를 한 판정으로 합친다**(두 벌 금지 — 203 «표기층» 교훈과 같은 자리):
-   «지금 가진 포인트 + 전환해서 얻을 포인트» 로 실제로 올릴 수 있는 축이 하나라도 있는가.
-   (`temperCharge` 가 `floor(use / TEMPER_PT_COST)` 로 주는 그 수를 여기서도 같은 식으로 센다.) */
-const temperAlert = () => {
-  const pts = temperPts() + Math.floor((Math.floor(S.tstone) || 0) / TEMPER_PT_COST);
-  return TEMPERS.some(t => pts >= temperCost(t.k));
-};
+/* 서브탭 레드닷 — «지금 누를 게 있다» 일 때만(166 규약).
+   519 (저장소 주인 보고 «단련할 게 없는데 빨간점»)의 판정 뜻은 그대로다 — «실제로 올릴 수 있는
+   축이 하나라도 있는가». 613 이 전환 단계를 없애 그 판정이 **한 단계**가 됐다: 519 가 합쳤던
+   «가진 포인트 + 전환해서 얻을 포인트» 는 이제 그냥 «가진 단련석» 이다(temperUpOk 와 같은 식 —
+   두 벌 금지, 203 «표기층» 교훈). 단련석 보유 여부 단독 판정으로 되돌아가면 519 재발이다. */
+const temperAlert = () => TEMPERS.some(t => temperUpOk(t.k));
 /* 297 — 룬과 같은 규칙: 레벨·포인트를 타는 문자열을 **함수 한 벌**로 뽑아
    통짜 렌더와 `liveTemper()` 가 같은 식을 보게 한다(262 교훈 2ⓐ). */
 function temperRowTxt(t){
@@ -33389,56 +33294,40 @@ function temperRowTxt(t){
   return {
     lv:  'Lv. ' + fmt(l),
     eff: t.n + ' +' + pct(temperVal(t.k)) + ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
-    cost: fmt(c) + ' pt',
+    /* 613 — 비용 단위가 pt → 단련석. 열(.tc)에도 화폐 아이콘을 같이 적는다(125 규약 —
+       화폐 자리는 이모지가 아니라 .cic 아이콘. 숫자만 남기면 단위를 잃는다) */
+    cost: curIc('tstone', 34) + fmt(c),
     seg: (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당',
     /* 584 — 주인 지시 «**투자 버튼 말고 단련으로 이름 바꾸고** 해당 화폐 거기에 표시 되게 해줘
-       **어떤 화폐 쓰는지 버튼 내에**». ⚠ «pt» 는 **안 지운다** — 단련은 «단련석 → 포인트»
-       2단계라(519 가 그 판정을 고쳤다) 버튼은 두 가지를 같이 말해야 뜻이 산다:
-       무엇을 쓰는가(🪨 단련석 아이콘) · 얼마를 쓰는가(n pt). */
-    btn: '단련 ' + curIc('tstone', TR_CUR_PX) + fmt(c) + ' pt',
+       **어떤 화폐 쓰는지 버튼 내에**». 613 이후 «pt» 는 죽은 말이다 — 버튼이 말할 것은
+       무엇을 쓰는가(단련석 아이콘) · 얼마를 쓰는가(n) 둘이고, 그 수가 곧 지불액이다. */
+    btn: '단련 ' + curIc('tstone', TR_CUR_PX) + fmt(c),
     ok:  temperUpOk(t.k)
   };
 }
-/* 577 (2026-08-31, 491 8회차 비평가 CH·CI·CJ 3인 독립 관측) — [충전] 라벨은 **두 줄**이다.
-   옛 한 줄 «🪨n → 포인트 m» 은 버튼 폭 392 를 **7자리(≥1,000,000)부터** 넘어 스스로 접혔고,
-   접힌 2행은 `.cg`(height 64) 도 헤더(88)도 안 자르므로 밑변 밖 34px 로 새어 나가
-   1행 카드와의 14px 거터에 잉크 9px(높이의 31%)이 남았다(`tools/probe577.js` [2]·[3]).
-   ⚠ 폭으로는 못 푼다 — 버튼 좌단을 왼쪽으로 옮기는 길은 `verify491` [8-d] 의 사다리가
-   최악 자릿수에서 **2px** 앞까지 차 있어 막혀 있고([5]), 낱말을 빼도(«포인트»→«pt», 아예 삭제)
-   폰트를 24 로 줄여도 10자리에서 다시 넘는다([6] — 자릿수는 상한이 없다).
-   ⇒ **줄 수를 값에 맡기지 않고 못박는다**: 1행 «가진 단련석» · 2행 «받을 포인트».
-   12자리(305px)까지 여유가 남으므로 이 결함은 자릿수 축에서 **닫힌다**.
-   단위를 «포인트» 가 아니라 «pt» 로 적는 것은 같은 화면의 세 자리(`.tc i`·`.tc s`·`.tb i`)가
-   이미 쓰는 말이다(두 벌 금지) — `.pv` 의 «단련 포인트» 는 제목이라 그대로 둔다. */
+/* 613 — 헤더는 «현재 단련석 개수» 한 줄이다(주인 보강 «단련석 포인트 보여주는 부분 없애고
+   그부분에 현재 단련석 개수나 보여주게하셈»). [충전] 버튼(.cg)과 그 두 줄 라벨(577)은
+   전환 단계와 함께 통째로 사라졌다 — 자릿수 접힘 결함(577)도 대상이 없어져 같이 닫힌다. */
 function temperHeadTxt(){
-  const have = Math.floor(S.tstone) || 0;
-  return { pts: '단련 포인트 <b>' + fmt(temperPts()) + '</b>',
-           chg: curIc('tstone', 26) + fmt(have) + '<br>→ ' + fmt(Math.floor(have / TEMPER_PT_COST)) + ' pt',
-           canCharge: have >= TEMPER_PT_COST };
+  return { stone: curIc('tstone', 36) + ' 단련석 <b>' + fmt(tstoneHave()) + '</b>' };
 }
-const temperFootTxt = () => '회수하면 투자한 <b>' + fmt(temperSpentAll()) + ' pt</b> 를 전액 돌려받습니다';
 function renderTemper(){
   const w = $('trTemper'); if(!w) return;
-  /* 297 — 룬과 같다: 꾹 누르는 동안에는 노드를 갈지 않고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ) */
-  /* ⚑ 491 4회차 — 조건이 «홀드가 도는가» 로는 **좁다**. [충전]은 보유분을 한 번에 바꿔 2회째 시도가
-     재고 없이 실패하므로 홀드가 ≈350ms 에 자멸하는데, 손은 그대로 눌려 있고 서명(pts·tstone)은 이미
-     달라져 있다 ⇒ 바로 다음 주기 렌더가 **누른 손 밑에서** 헤더를 갈아 끼운다. 조건을 «손가락이
-     이 안을 누르고 있는가» 로 넓히고, 미룬 통짜 렌더는 손을 뗄 때 `rtRenderFlush()` 가 친다.
-     ⚠ 서명(`w.dataset.sig`)은 **여기서 안 갱신한다** — 갱신하면 미룬 렌더가 «값이 그대로» 로 읽혀
-       영영 안 돈다(값은 `liveTemper()` 가 이미 맞춰 놓지만 구조는 아니다). */
+  /* 297 — 룬과 같다: 꾹 누르는 동안에는 노드를 갈지 않고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ)
+     491 4회차의 «손가락이 이 안을 누르고 있는가» 넓힘도 그대로다 — 미룬 통짜 렌더는
+     손을 뗄 때 `rtRenderFlush()` 가 친다(서명은 여기서 안 갱신한다 — 갱신하면 영영 안 돈다). */
   if(rtHoldOn('temper') || rtDownIn('#trTemper')){ liveTemper(); rtPendRender = 1; return; }
   /* ⚠ renderRunes 와 같은 이유로 «보이는 값이 달라졌을 때만» 다시 그린다 —
      0.35초 주기 재렌더가 pointerdown 과 click 사이에 버튼을 지우면 탭이 통째로 유실된다
-     (LESSONS 50-① · 작업 74·142). 서명에 그리기 입력이 전부 들어간다. */
+     (LESSONS 50-① · 작업 74·142). 서명에 그리기 입력이 전부 들어간다.
+     613·614 — pts·dia 는 서명에서 죽었다(그리기 입력이 아니게 됐다 — 포인트·회수 폐지). */
   const sig = trSub + '|' + TEMPERS.map(t => temperLv(t.k)).join(',')
-            + '|' + temperPts() + '|' + (Math.floor(S.tstone) || 0) + '|' + Math.floor(S.dia);
+            + '|' + tstoneHave();
   if(w.dataset.sig === sig) return;
   w.dataset.sig = sig;
-  const hd = temperHeadTxt(), canReset = temperResetOk();
+  const hd = temperHeadTxt();
   let h = '<div class="tp-hd">'
-    + '<span class="pv"><i>' + hd.pts + '</i></span>'
-    + '<span class="cg' + (hd.canCharge ? '' : ' no') + '" data-tpchg="1"><i>'
-    + hd.chg + '</i></span></div>';
+    + '<span class="pv"><i>' + hd.stone + '</i></span></div>';
   TEMPERS.forEach((t, i) => {
     const x = temperRowTxt(t);
     h += '<div class="tr-tp k' + i + '" data-temper="' + t.k + '" style="--tt:' + t.tone + '">'
@@ -33451,10 +33340,7 @@ function renderTemper(){
       +    x.btn + '</i></span>'
       +  '</div>';
   });
-  h += '<div class="tp-ft">'
-    +  '<span class="rs"><i>' + temperFootTxt() + '</i></span>'
-    +  '<span class="rb' + (canReset ? '' : ' no') + '" data-tpreset="1"><i>'
-    +  curIc('dia', 32) + fmt(TEMPER_RESET_DIA) + ' 회수</i></span></div>';
+  /* 614 — 회수 줄(.tp-ft)은 기능째 사라졌다. 자리를 새 부품으로 메우지 않는다(빈 여백이 정답). */
   w.innerHTML = h;
 }
 /* 297 — 홀드 중 «숫자만» 갱신. 단련은 만렙이 없어(주인 지시 ⓑ) 구조가 바뀌지 않는다. */
@@ -33466,48 +33352,29 @@ function liveTemper(){
     else if(n.textContent !== txt) n.textContent = txt;
   };
   const hd = temperHeadTxt();
-  put(w, '.tp-hd .pv i', hd.pts, true);
-  put(w, '.tp-hd .cg i', hd.chg, true);
-  /* 491 3회차 — 회색은 «누르는 중» 에는 미룬다(위 `jzNo` 머리말). 판정은 그대로 `hd.canCharge` 다. */
-  jzNo(w.querySelector('.tp-hd .cg'), !hd.canCharge);
+  put(w, '.tp-hd .pv i', hd.stone, true);
   TEMPERS.forEach(t => {
     const row = w.querySelector('.tr-tp[data-temper="' + CSS.escape(t.k) + '"]'); if(!row) return;
     const x = temperRowTxt(t);
     put(row, '.tl i', x.lv);
     put(row, '.td i', x.eff);
-    put(row, '.tc i', x.cost);
+    /* 584·613 — 라벨에 화폐 `<img>` 가 들어왔다(.tc·.tb 둘 다). `textContent` 로 두면 홀드 중
+       첫 갱신에 태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 표기층에서 깨지는 자리). */
+    put(row, '.tc i', x.cost, true);
     put(row, '.tc s', x.seg);
-    /* 584 — 라벨에 화폐 `<img>` 가 들어왔다. 여기만 `textContent` 로 두면 홀드 중 첫 갱신에
-       태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 표기층에서 깨지는 자리) — html 경로로. */
     put(row, '.tb i', x.btn, true);
     jzNo(row.querySelector('.tb'), !x.ok);
   });
-  put(w, '.tp-ft .rs i', temperFootTxt(), true);
-  jzNo(w.querySelector('.tp-ft .rb'), !temperResetOk());
 }
-/* 단련석 → 포인트 전환(보유분 전부) */
-function temperChargeBtn(quiet){
-  if((Math.floor(S.tstone) || 0) < TEMPER_PT_COST){
-    if(!quiet){
-      notify(curIc('tstone') + ' <b>단련석</b>이 부족합니다 — ' + TOWER_DESPAIR_N + '에서 얻습니다');
-      sfx('err');
-    }
-    return false;
-  }
-  const got = temperCharge();
-  sfx('up');
-  if(quiet) return true;                       /* 297 — 반복분(보유분 전부를 바꾸므로 사실상 1회에 끝난다) */
-  fxReward();
-  notify('단련 포인트 <b>+' + fmt(got) + '</b>');
-  renderTrain();
-  return true;
-}
-/* 투자 1회 — 확정 구매다(룬과 달리 확률이 없다). 그래서 실패 문구도 «부족» 하나뿐이다. */
+/* 단련 1회 — 확정 구매다(룬과 달리 확률이 없다). 그래서 실패 문구도 «부족» 하나뿐이다.
+   613 — 재화가 단련석 직접 지불이 되면서 부족 문구도 재화 이름으로 말한다(수급처 안내는
+   옛 [충전] 부족 문구가 하던 말을 그대로 물려받았다 — 단일 수급처 규약 210). */
 function temperUpBtn(k, quiet){
   const t = TEMPERS.find(x => x.k === k); if(!t) return false;
   if(!temperUpOk(k)){
     if(!quiet){
-      notify('단련 포인트가 부족합니다 — ' + t.n + ' 다음 1레벨 <b>' + fmt(temperCost(k)) + ' pt</b>');
+      notify(curIc('tstone') + ' <b>단련석</b>이 부족합니다 — ' + t.n + ' 다음 1레벨 <b>'
+        + fmt(temperCost(k)) + '</b> · ' + TOWER_DESPAIR_N + '에서 얻습니다');
       sfx('err');
     }
     return false;
@@ -33516,20 +33383,6 @@ function temperUpBtn(k, quiet){
   sfx('up');
   if(quiet) return true;                       /* 297 — 반복분: 토스트·통짜 재렌더 없이 홀드가 정산한다 */
   notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>');
-  renderTrain();
-  return true;
-}
-/* 회수 — 주인 지시 ⓒ. 전액이고, 돌려받는 값은 «실제로 낸 총량» 이다(계단을 정확히 반영). */
-function temperResetBtn(){
-  if(temperSpentAll() <= 0){ notify('아직 투자한 단련이 없습니다'); sfx('err'); return false; }
-  if(S.dia < TEMPER_RESET_DIA){
-    notify(curIc('dia') + ' <b>다이아</b>가 부족합니다 (' + fmt(TEMPER_RESET_DIA) + ')');
-    sfx('err'); return false;
-  }
-  const back = temperReset();
-  if(!back) return false;
-  sfx('up'); fxReward();
-  notify('단련 회수 — 단련 포인트 <b>' + fmt(back) + ' pt</b> 를 전액 돌려받았습니다');
   renderTrain();
   return true;
 }
@@ -33566,12 +33419,11 @@ $('trw').addEventListener('click', e => {
      카드 덮개(.rlk)가 개방 조건을 말한다(186 관례 — 토스트를 겹쳐 띄우지 않는다). */
   const rs = e.target.closest('[data-runesub]');
   if(rs){ setRuneSub(rs.dataset.runesub); return; }
-  /* 297(2026-08-28, 저장소 주인 재지시) — 룬 강화 시도 · 단련 투자 · 단련석 충전은
+  /* 297(2026-08-28, 저장소 주인 재지시) — 룬 강화 시도 · 단련은
      **pointerdown 에서 처리**한다(아래 rtHoldStart). 203 이 «확률 시도라 한 번 누르면 한 번»
      으로, 210 이 «확정 처리라 꾹 누르기 없음» 으로 의도해 뒀던 판단을 주인 지시가 뒤집었다.
      여기서 click 까지 사면 «누를 때 1 + 뗄 때 1» 로 두 번 사진다 — 아무것도 하지 않는다(64 ⓐ).
-     회수([data-tpreset])는 1000 다이아 1회성이라 홀드 대상이 아니다 → click 그대로. */
-  if(e.target.closest('[data-tpreset]')){ temperResetBtn(); return; }
+     613·614 — [충전](data-tpchg)·[회수](data-tpreset)는 기능째 사라져 여기서도 죽었다. */
   const q = e.target.closest('[data-trq]');
   if(q){ S.buyQty = +q.dataset.trq; save(); renderTrain(); return; }
   if(e.target.closest('#trUp')){
@@ -33894,10 +33746,9 @@ function rtTemperHold(k){
       const cost = temperCost(k);             /* 488 — 계단이라 «오르기 전» 값이 이번에 낸 값이다 */
       if(!temperUpBtn(k, true)) return false;
       n++;
-      /* 488 — 단련은 확정 처리라 실패 갈래가 없다. 회당 «+1 Lv» + «−n pt» 한 벌 */
-      /* 5회차 — 문자열 축약. « pt» 도 뺐다: 행이 상시로 «단련 포인트» 를 말하고 있고,
-         「−1,234 pt」는 잉크 130px 라 칸 70px 에 눌러 넣어도 20px 하한에서 87px 로 남아 이웃과 붙는다
-         (58 26회차 «바로 아래 줄이 말하는 낱말을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴다»). */
+      /* 488 — 단련은 확정 처리라 실패 갈래가 없다. 회당 «+1 Lv» + «−n» 한 벌.
+         613 — «−n» 의 단위는 이제 단련석이다(행 라벨·버튼이 상시로 아이콘을 말하므로 숫자만 —
+         58 26회차 «바로 아래 줄이 말하는 낱말을 플로터가 한 번 더 말하느라 자리를 두 배로 쓴다»). */
       hbBeat(host, true, '+1', '−' + fmt(cost));
       return true;
     },
@@ -33910,42 +33761,11 @@ function rtTemperHold(k){
     }
   });
 }
-/* 단련석 → 포인트 충전. `temperCharge()` 가 «보유분 전부» 를 바꾸므로 사실상 1회에 끝나지만,
-   손맛을 세 버튼에서 같게 하려고 같은 경로에 태운다(2회째는 재고가 없어 조용히 멈춘다). */
-function rtChargeHold(){
-  const sel = '#trTemper .tp-hd .cg';
-  const HD = '#trTemper .tp-hd';                 /* 491 4회차 — 회당 피드백 호스트(형제: 룬 카드 · 투자 행) */
-  let got = 0;
-  rtHoldStart({
-    tag:'temper', sel, host:HD,                     /* 491 7회차 — 첫 발 가산 오버레이의 호스트 */
-    once: () => {
-      const before = temperPts(), stone0 = Math.floor(S.tstone) || 0;
-      if(!temperChargeBtn(true)){ if(!got) temperChargeBtn(); return false; }
-      const gain = temperPts() - before;
-      got += gain;
-      /* ⚑ 491 2회차 — 회당 피드백이 **이 자리에만 없었다.** 룬(`rtRuneHold`)·단련 투자(`rtTemperHold`)는
-         488 이 `hbBeat` 를 달아 뒀는데 충전만 빠져 있어, 1회차 비평가 둘이 독립으로
-         «100만을 냈는데 «−1,000,000» 이 화면 어디에도 0px»(BU) · «플로팅 0개»(BV) 를 ③ 감점으로 냈다.
-         호스트·어휘는 형제 둘과 같다 — 얻은 것은 위로(«+n»), 낸 것은 아래로(«−n», 58 결제 어휘). */
-      /* ⚑ 491 4회차 — 호스트는 버튼이 아니라 **헤더**다(형제 둘과 같은 꼴 · 위 CSS 머리말).
-         홀드 정지(`sel`)·흔들림은 종전대로 버튼이 받는다 — 뜻이 다르다. */
-      /* ⚠ 비용 줄기는 **안 띄운다** — 전환비 1:1 이라 «−단련석» 이 «+포인트» 와 같은 수다(위 CSS 머리말).
-         쓴 단련석은 버튼 라벨(«단련석 n → 포인트 n»)이 상시로 말하고, 총량은 손 뗀 뒤 토스트가 말한다. */
-      hbBeat(HD, true, '+' + fmt(gain), TEMPER_PT_COST === 1 ? '' : '−' + fmt(stone0 - (Math.floor(S.tstone) || 0)));
-      return true;
-    },
-    live: () => renderTrainLive(),
-    end: () => {
-      rtRender();
-      if(!got) return;
-      fxReward(); notify('단련 포인트 <b>+' + fmt(got) + '</b>');
-    }
-  });
-}
+/* 613 — [충전] 홀드(rtChargeHold)는 전환 단계와 함께 선언째 사라졌다.
+   491 이 이 자리에 달았던 회당 피드백(hbBeat)은 형제 둘(룬·단련)에 그대로 남아 있다. */
 $('trw').addEventListener('pointerdown', e => {
   const rb = e.target.closest('[data-runebuy]');
   if(rb){ rtRuneHold(rb.dataset.runebuy); return; }   /* 490 — 결제 갈래가 하나라 분기가 없다 */
-  if(e.target.closest('[data-tpchg]')){ rtChargeHold(); return; }
   const tu = e.target.closest('[data-tempup]');
   if(tu){ rtTemperHold(tu.dataset.tempup); return; }
 });
@@ -38175,12 +37995,12 @@ function jzTarget(t){
 const jzDead = el => !!(el.disabled || (el.matches && el.matches('[disabled],.lock,.off,.dis,.disabled')));
 /* ⚑ 491 7회차 — «회당 피드백의 호스트» 목록. 488 주인 지시(«카드 자체에»)로 룬·단련은
    누르는 것과 답하는 것이 **다른 노드**가 됐고, 그 뒤로 호스트가 누름에 0.0% 반응했다.
-   여기 적힌 것은 `hbBeat` 가 실제로 받는 호스트 넷과 같다(`rtRuneHold` `sel0` · `rtTemperHold` `host` ·
-   `rtChargeHold` `HD` · `.tp-ft` 회수 행) + 대조군 `.tr-card`.
+   여기 적힌 것은 `hbBeat` 가 실제로 받는 호스트 둘과 같다(`rtRuneHold` `sel0` · `rtTemperHold` `host`)
+   + 대조군 `.tr-card`. 613·614 — [충전] 헤더(.tp-hd)·회수 행(.tp-ft)은 기능째 사라져 목록에서도 뺐다.
    ⚠ `.tr-card` 는 «누른 것 = 호스트» 라 아래에서 **스스로 걸러진다**(host === el 이면 안 건다) —
      목록에 둔 이유는 «어디까지가 호스트인가» 를 한 곳에서 읽게 하려는 것이고, 두 번 누르면
      같은 `scale:` 속성을 `jz-dn`(.94)과 `jz-hdn`(.985)이 두고 싸운다(2회차 `transform` 사고와 같은 꼴). */
-const JZ_HOST_SEL = '.tr-rn,.tr-tp,.tr-temp>.tp-hd,.tr-temp>.tp-ft,.tr-card';
+const JZ_HOST_SEL = '.tr-rn,.tr-tp,.tr-card';
 let jzDownHost = null;
 function jzHostOf(el){
   if(!el || !el.closest) return null;
