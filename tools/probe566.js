@@ -53,15 +53,24 @@ const gitQ = a => { try { return execFileSync('git', a, GOPT).trim(); } catch (e
  * ⚠ SHA 를 손으로 박기만 하면 이 저장소에서는 또 썩는다 — 이력을 재작성한 적이 있다
  *   (2026-08-30 캡처 PNG 이력 제거). 그래서 **커밋 메시지로 찾고** 손으로 박은 SHA 는 폴백이다.
  * ⚠ ref 는 **정체**로 고른다(«566 의 수리 커밋의 부모»). «553 이 8칸으로 보이는 ref» 로 고르면
- *   [4-a] 가 자기를 증명하는 헛초록이 된다(무르게 푼 수리). 고른 뒤 값은 따로 단언한다. */
+ *   [4-a] 가 자기를 증명하는 헛초록이 된다(무르게 푼 수리). 고른 뒤 값은 따로 단언한다.
+ * ⚠⚠ **커밋 «본문» 매칭으로는 못 찾는다 — 이 저장소의 기록은 사고를 «인용» 한다**(LESSONS 571-④).
+ *   573 의 1회차가 실제로 그랬다: `done(573)` 커밋 본문에 «커밋 메시지(`wip(566)`)의 부모로 찾고» 라고
+ *   적자마자 `--grep` 이 **그 커밋**을 물어 «수리 전» 이 `wip(574)` 를 가리켰고 [4-a] 가 다시 빨개졌다
+ *   (움직이는 ref 를 고정 커밋으로 바꿨더니 이번엔 **고르는 그물**이 움직였다 — 같은 병의 세 번째 얼굴).
+ *   ⇒ 후보를 받아 **제목(`%s`)이 그 말머리로 시작하는지**로 거른다(본문 인용은 제목이 아니다).
+ * ⚠ 여러 번이면 **가장 오래된 것**의 부모가 «수리 전» 이다(2회차 wip 의 부모는 이미 수리 후다). */
 const BEFORE_FALLBACK = '842dc2f';         /* claim(566) — 566 의 수리(wip) 직전 */
 function pickBefore() {
   if (process.env.P566_BEFORE) return { ref: process.env.P566_BEFORE, how: 'P566_BEFORE 환경변수' };
-  for (const msg of ['wip(566)', 'done(566)']) {
-    const sha = gitQ(['rev-list', '-1', '--fixed-strings', '--grep=' + msg, 'HEAD']);
-    if (!sha) continue;
-    const parent = gitQ(['rev-parse', '--short', sha + '^']);
-    if (parent) return { ref: parent, how: '`' + msg + '` 의 부모' };
+  for (const head of ['wip(566):', 'done(566):']) {
+    const list = (gitQ(['rev-list', '--fixed-strings', '--grep=' + head, 'HEAD']) || '')
+      .split('\n').filter(Boolean)
+      .filter(sha => (gitQ(['log', '-1', '--format=%s', sha]) || '').startsWith(head));
+    if (!list.length) continue;
+    const first = list[list.length - 1];    /* rev-list 는 최신순 — 끝이 가장 오래된 수리다 */
+    const parent = gitQ(['rev-parse', '--short', first + '^']);
+    if (parent) return { ref: parent, how: '`' + head + '` 첫 커밋의 부모' };
   }
   return { ref: BEFORE_FALLBACK, how: '폴백 SHA(이력에서 566 수리 커밋을 못 찾았다)' };
 }
@@ -230,6 +239,17 @@ if (require.main === module) {
       const nMv = rowsOf(mv).has('553') ? cellsOf(rowsOf(mv).get('553').replace(/\s+$/, '')).length : -1;
       ok('[4-d] 되돌림 시험 — 옛 «움직이는 ref»(origin/main)로 읽으면 8이 아니다 = 573 이 빨갰던 이유',
          nMv !== 8 && nMv !== -1, 'origin/main 칸 ' + nMv + ' ↔ 고정 커밋 칸 ' + n553);
+    }
+    /* [4-e] 고르는 그물이 «본문 인용» 을 물지 않았는지 **이름을 달고** 묻는다.
+       이것 없이 그물이 미끄러지면 [4-a] 가 «칸 7» 이라는 엉뚱한 이름으로 빨개진다
+       (573 1회차가 그렇게 한 시간을 썼다 — LESSONS 571-④·573-⑥). */
+    if (!process.env.P566_BEFORE) {
+      /* BEFORE 의 **바로 다음** 커밋(HEAD 로 가는 길 위) 제목을 본다 */
+      const path = (gitQ(['rev-list', '--ancestry-path', BEFORE.ref + '..HEAD']) || '').split('\n').filter(Boolean);
+      const child = path.length ? gitQ(['log', '-1', '--format=%s', path[path.length - 1]]) : null;
+      ok('[4-e] 고른 «수리 전» 의 **바로 다음** 커밋이 566 의 수리다(그물이 본문 인용을 안 물었다)',
+         /^(wip|done)\(566\):/.test(String(child || '')),
+         '다음 커밋 «' + String(child || '?').slice(0, 46) + '»');
     }
   }
 
