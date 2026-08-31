@@ -9885,7 +9885,25 @@
      외곽선도 ref 는 (0,0,0) 순검정이라 #141414 가 아니다. */
   /* 8회차: ref 검정 외곽선 border-box 는 y1202..1308 = **h107** (x908 세로 스캔: 위 1202..1207 6px,
      아래 1302..1308 7px). 7회차 것은 1203..1308(105) 이었다 — K P9 지적 그대로. */
-  .tr-up{left:838px;top:139px;width:108px;height:107px;border-radius:34px;cursor:pointer;
+  /* ── 584(2026-08-31, 저장소 주인 지시 «훈련부분에 업글 버튼 크기 존내 작으니까 더 크게하고») ──
+     **레퍼런스 이탈이고 그것이 지시다**(354·425 선례 — 측정표 23 정오표 필수).
+     ref 는 108×107 이었고 그 값은 위 8회차가 못박은 실측이다. 지시는 «최대화» 가 아니라
+     같은 팝업의 주 행동 버튼 `.rbt`(420×112)와 **같은 급으로 읽히는 크기**다.
+     ⚑ 값은 취향이 아니라 `probe584` §A 실측 뺄셈이다 — 이 버튼이 쓸 수 있는 자리는
+       · 아래 : 배수 바 `.tr-qty` 상변 **265**
+       · 위·좌: 진행바 `.tr-prog`(177..845 · y165..220) 와 리본 `.tr-rib`(247..798)
+       · 우  : 박스 우변 **1046**
+     두 축을 다음 규칙으로 잠근다(둘 다 «지금 그림» 을 보존하는 축이다):
+       ⓐ **좌변 838 고정** — 진행바 우측 캡을 7px 덮는 지금 관계를 그대로 둔다(옮기면 바와의
+          정렬이 새 결정이 된다). ⓑ **세로 중심 192.5 고정** = 진행바 세로 중심(139+53.5)과
+          정확히 같은 값이라, 커져도 «바에 얹힌 버튼» 이라는 읽기가 유지된다.
+     ⇒ 한 변 S 는 아래가 잡는다: 192.5 + S/2 ≤ 265 − 8(여유) ⇒ S ≤ 129 → **128**
+       (top 128.5 · 하변 256.5 = `.tr-qty` 까지 8.5px · 우변 966 = 박스 우변까지 80px).
+       면적은 11,556 → 16,384 이고 `.rbt` 와의 격차가 **4.07배 → 2.87배**로 좁는다.
+     ⚠ 링 두께(검정 6 · 밝은 13)는 **안 키운다** — 이 팝업의 베벨 문법이고(`.rbt` 는 5px)
+       비례로 키우면 같은 팝업 안에서 테 두께가 버튼마다 갈린다. radius 만 같은 비(128/108)로
+       34 → 40 · 안쪽 도형 28 → 34(40−6) 로 따라간다. */
+  .tr-up{left:838px;top:128.5px;width:128px;height:128px;border-radius:40px;cursor:pointer;
     background:linear-gradient(180deg,#A2A2A2 0,#9A9A9A 55%,#909090 100%);
     box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #D3D3D3;text-align:center}
   .tr-up.on{background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
@@ -9912,7 +9930,9 @@
      «상자 도형 − 위로 6px 민 같은 도형» 이라 **radius 를 그대로 따라가는 둥근 사각 링**이 되고,
      두께가 코너에서도 유지되며 상단이 코너에서 위로 휜다. 층 순서는 «먼저 적은 것이 위» 라
      6px(어두움) 을 앞, 12px(밝음) 을 뒤에 둔다. 검정 테두리(inset 0 0 0 6px)와 평탄부는 불변. */
-  .tr-up::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;border-radius:28px;
+  /* 584 — 안쪽 도형 radius 는 «바깥 40 − 인셋 6» 이다(28 → 34). 14회차가 적어 둔 클램프 함정은
+     그대로 적용된다 — 이 값이 인셋과 어긋나면 코너에서 띠 두께가 다시 무너진다. */
+  .tr-up::after{content:'';position:absolute;left:6px;right:6px;top:6px;bottom:6px;border-radius:34px;
     box-shadow:inset 0 -6px 0 #757575,inset 0 -12px 0 #D3D3D3}
   .tr-up.on::after{box-shadow:inset 0 -6px 0 #5E9A17,inset 0 -12px 0 #E4FA92}
   /* 화살표 — 글리프(스트로크가 초록을 먹음)도, CSS 도형+drop-shadow(꼭짓점 톱니)도 아니고 SVG.
@@ -9923,7 +9943,11 @@
   /* 22회차(ε P15): 검정 링 두께는 6px 로 맞았는데 **화살표 전체가 2px 위**였다 —
      ref 초록 잉크는 y1223..1274(중심 1248.5 = 버튼 중심 1255 보다 6.5px 위) 인데 우리는 1221..1272
      (8.5px 위)였다. 잉크 높이 52 는 양쪽 같으므로(ε P8 «h 52=52») **SVG 만 2px 내린다.** */
-  .tr-up>svg{position:absolute;left:16.5px;top:11.5px;width:73px;height:69px}
+  /* 584 — 버튼이 108 → 128(×1.1852) 이므로 화살표는 **비례로만** 따라간다. 네 값을 전부 같은
+     배율로 곱해 잉크 중심과 버튼 중심의 관계(22회차가 정한 «중심보다 6.5px 위» 광학 보정)를
+     보존한다: 16.5→19.6 · 11.5→13.6 · 73→86.5 · 69→81.8. viewBox 가 같이 늘어나므로
+     `stroke-width:7`(편측 3.5) 도 자동으로 비례한다 — 17회차의 «외곽선 두께» 결론은 불변이다. */
+  .tr-up>svg{position:absolute;left:19.6px;top:13.6px;width:86.5px;height:81.8px}
   /* 10회차(P P5·P6): 초록 잉크는 ref 57x53 / 우리 55x53 으로 이미 Δ≤2 다(건드리지 않는다).
      차이는 **검정 외곽선 두께**뿐 — 자루 행(ref y1272)에서 ref 는 좌 5px(x889..893)·우 6px(x921..926) 인데
      stroke-width:16 은 한쪽 8px 이라 스트로크 포함 bbox 가 +3/+5px 컸다. 12 → 한쪽 6px. */
@@ -10268,6 +10292,14 @@
   .tr-rn>.ri{left:44px;top:40px;width:200px;height:200px;border-radius:32px;
     background:var(--rt,#7FD8E8);box-shadow:inset 0 0 0 8px #141414;
     text-align:center;line-height:200px;font-size:118px}
+  /* ── 584 — 액자 안 그림은 `RUNE_ART`(411 비를 200 액자로 옮긴 값)가 정한다 ──────────────
+     `font-size:118` 은 이제 **측정 실패 시의 폴백**으로만 남는다(411 의 `.sk-si` 와 같은 규약).
+     ⚠ **ID 급 스코프가 필요하다** — `#trw i{display:inline-block}`(9606 · 1,0,1)가 클래스 급을
+       이기므로 `.sa-e` 를 클래스로만 적으면 조용히 무시되고 `--sa-dy` 보정이 안 걸린다
+       (519·531·577 이 잡은 그 함정). 여기 두 줄은 (1,3,1)·(1,2,0) 이라 이긴다. */
+  #trw .tr-rn>.ri{display:flex;align-items:center;justify-content:center}
+  #trw .tr-rn>.ri>i.sa-e{display:block;line-height:1;font-style:normal;
+    transform:translate(var(--sa-dx,0px),var(--sa-dy,0px))}
   .tr-rn>.rn{left:276px;top:46px;height:68px;line-height:68px;font-size:58px;color:#2C1E10}
   .tr-rn>.rl{left:276px;top:126px;height:50px;line-height:50px;font-size:36px;color:#7A5A34}
   /* 진행바 — 06/50 의 `.sk-slv` 계열과 같은 «트랙 + 채움» 2겹 */
@@ -10332,7 +10364,10 @@
   #modal #mLv,#relw #rwBasin{touch-action:none}
   .tr-rn>.rbt.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
-  .tr-rn>.rbt .cic{vertical-align:-4px;margin-right:6px}
+  /* 584 — 화폐가 34 → 53(훈련 기준선)으로 커지면서 옛 `-4px` 로는 잉크가 버튼 안에서 **위로 떠**
+     여백이 위 18 / 아래 41 로 갈렸다(`verify584` [2-h] 가 그 대칭을 잰다). line-height 112 의
+     기준선에서 11.5px 더 내려 상하 29.5 로 맞춘다 — 같은 줄 숫자 잉크와도 중심이 맞는다. */
+  .tr-rn>.rbt .cic{vertical-align:-15.5px;margin-right:6px}
   /* 실패해도 레벨이 안 내려간다는 사실은 이 시스템에서 제일 자주 묻는 것이다 — 버튼 밑에 상시 적는다 */
   .tr-rn>.rhint{left:44px;top:632px;right:44px;height:40px;line-height:40px;
     text-align:center;font-size:28px;color:#8B7A5E}
@@ -10420,10 +10455,20 @@
   .tr-tp>.tc{right:26px;top:14px;width:420px;text-align:right}
   .tr-tp>.tc>i{height:52px;line-height:52px;font-size:40px;color:#B4571E}
   .tr-tp>.tc>s{height:32px;line-height:32px;font-size:25px;color:#7A5A34;text-decoration:none}
-  .tr-tp>.tb{right:26px;top:128px;width:300px;height:74px;border-radius:20px;cursor:pointer;
+  /* 584 — 라벨이 «투자 n pt» → «단련 🪨n pt» 로 길어졌다(화폐 아이콘 53 + 여백 6 = 59px 추가).
+     폭 300 이면 내부 예산 290 중 글자 몫이 231 뿐이라 `probe584` §E 스윕에서 **8자리부터** 넘친다.
+     ⇒ 340 으로 넓힌다(내부 330 · 글자 몫 271 ⇒ 10자리까지 여유). 넓히는 쪽은 **왼쪽**이고
+     `right:26` 은 불변이라 우측 정렬(같은 행 `.tc` 와 같은 축)은 그대로다.
+     ⚠ 왼쪽 한계는 같은 행의 효과 줄 `.td`(26..586)다 — 340 이면 좌변 **632** 로 46px 뜬다
+     (`verify210` [B] «다섯 줄 겹침 0» 불변). 세로(top 128 · h74)는 한 픽셀도 안 건드린다. */
+  .tr-tp>.tb{right:26px;top:128px;width:340px;height:74px;border-radius:20px;cursor:pointer;
     text-align:center;line-height:74px;font-size:31px;color:#fff;
     background:linear-gradient(180deg,#8FDC33 0,#7ACB27 55%,#63B41C 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #3F7412}
+  /* 584 — 버튼 안 화폐. 세로 정렬은 «잉크 중심 = 버튼 중심» 으로 잡는다 — 값은 취향이 아니라
+     실측이다(`verify584` [2-i] 가 상하 여백의 **대칭**을 잰다): −17.5px 에서 위 10.5 / 아래 10.5
+     로 갈린다(53px 그림 + 검정 링 5px ⇒ 안쪽 예산 64). 같은 줄 숫자 잉크와도 중심이 맞는다. */
+  .tr-tp>.tb .cic{vertical-align:-17.5px;margin-right:6px}
   .tr-tp>.tb.no{background:linear-gradient(180deg,#B9B2A4 0,#A29A8B 55%,#8B8375 100%);
     box-shadow:inset 0 0 0 5px #141414,0 5px 0 #5E594F}
   /* 회수 줄 — 왼쪽에 «돌려받을 총량», 오른쪽에 다이아 가격 버튼(102 «가격을 버튼에 적는다») */
@@ -24687,14 +24732,19 @@ const cosCardSc = () => Math.max(1, Math.round(Math.min(CARD_ART.h / COS_INK.h, 
    빈 칸이 되는 것이 제일 나쁘다(192 규칙). */
 const SA_P = 100, saCache = {};
 let saFam = null;
-function slotEmoji(ch){
-  const m = saInk(ch);
+/* 584 — 담을 «그림 자리» 를 인자로 받는다(기본값은 411 의 슬롯). 자리마다 상자가 다를 뿐
+   식·캐시·폴백은 한 벌이다 — 두 벌로 적으면 다음 자리에서 또 갈린다(411·492 와 같은 규약). */
+function slotEmoji(ch, art){
+  const m = saInk(ch, art);
   return m ? '<i class="sa-e" style="font-size:' + m.fs + 'px;--sa-dx:' + m.dx + 'px'
            + ';--sa-dy:' + m.dy + 'px">' + ch + '</i>'
            : ch;
 }
-function saInk(ch){
-  if(ch in saCache) return saCache[ch];
+function saInk(ch, art){
+  const AB = art || SLOT_ART;                      /* 584 — «그림 자리». 이름이 A 가 아닌 것은 아래
+                                                      블록의 `A`(어센트)와 겹치지 않게 하려는 것이다 */
+  const key = ch + '|' + AB.w + 'x' + AB.h;        /* 584 — 캐시 키에 상자를 넣는다(자리마다 값이 다르다) */
+  if(key in saCache) return saCache[key];
   let r = null;
   try{
     if(saFam === null){
@@ -24723,7 +24773,7 @@ function saInk(ch){
       const iw = x1 - x0 + 1, ih = y1 - y0 + 1, mt = g.measureText(ch);
       const A = mt.fontBoundingBoxAscent || mt.actualBoundingBoxAscent || SA_P * 0.8;
       const D = mt.fontBoundingBoxDescent || mt.actualBoundingBoxDescent || SA_P * 0.2;
-      const s = Math.min(SLOT_ART.h / ih, SLOT_ART.w / iw);
+      const s = Math.min(AB.h / ih, AB.w / iw);
       /* 세로 보정 — 블록 상자 중심과 잉크 중심의 차. line-height 는 식에서 상쇄되므로
          («반 레딩 + 어센트» 와 «상자 절반» 이 서로 지운다) 상자 높이를 몰라도 된다. */
       r = { fs: +(SA_P * s).toFixed(1),
@@ -24731,8 +24781,18 @@ function saInk(ch){
             dy: +(((D - A) / 2 - (y0 - Y) - ih / 2) * s).toFixed(1) };
     }
   }catch(_){ r = null; }
-  return (saCache[ch] = r);
+  return (saCache[key] = r);
 }
+/* ---- 584 «그림 자리» 두 번째 자리 (2026-08-31, 저장소 주인 지시) -----------------------------
+   주인 원문: «룬부분 아이콘 크기 존나 작은데 좀 **다른 팝업들의 슬롯들처럼** 크기 정상적으로 크게좀».
+   ⇒ 기준은 새로 만들지 않는다 — 주인이 지목한 «다른 팝업들의 슬롯» 이 곧 411 이 정한 `SLOT_ART` 다.
+   그 자리의 비(SLOT_ART.h 80 ÷ `.sk-slot` 115 = **0.6957**)를 룬 액자 `.ri`(200)에 그대로 옮긴다.
+   `probe584` §C 수리 전 실측 — 🔹 잉크가 액자의 **0.2419**(411 비의 34.8%)였다. 뿌리는 fs118 이라는
+   한 상수다: 이모지 잉크비가 0.53~1.16 으로 갈리므로(411) 한 font-size 로는 어떤 글자도 못 맞춘다.
+   ⚠ 폭은 411 과 같은 규약으로 **상한**이다(눈금은 세로 · 폭은 넘침만 막는다). */
+const SLOT_BOX = 115, RI_BOX = 200;
+const RUNE_ART = { w: +(SLOT_ART.w / SLOT_BOX * RI_BOX).toFixed(1),
+                   h: +(SLOT_ART.h / SLOT_BOX * RI_BOX).toFixed(1) };
 
 const PET_TH = {
   up:   { w:90, h:90, fit:13 },   /* 09 일괄 강화 결과 `.upr-card>b` — 192 가 정한 값(잉크 최대변 64) */
@@ -32721,6 +32781,18 @@ $('eqTabs').addEventListener('click', e => {
 /* 카드 3장의 표시값 — 골드/실수치 */
 /* 486 — `gain`(증가분)은 **화면에서는 사라졌지만 데이터에서는 남는다.** 58 «+n» 플로터가
    «방금 얻은 양» 을 말해야 하기 때문이다(아래 trDeltaTxt). 지우면 플로터가 총량을 띄운다. */
+/* ---- 584 «화폐 아이콘 기준선» (2026-08-31, 저장소 주인 지시) ---------------------------------
+   주인 원문: «룬, 단련 버튼에 화폐 크기가 너무 작음. **훈련 팝업에서 처럼** 화폐 크기 크게하기».
+   기준을 임의로 정하지 않는다 — 주인이 «훈련 팝업에서 처럼» 이라고 **기준을 지목**했으므로
+   훈련 카드 비용 줄의 코인(`.tr-card>.cb>s` 안 `.cic`)이 실제로 찍히는 크기를 그대로 쓴다.
+   `probe584` §B 실측(수리 전): 훈련 **52.97** ↔ 룬 [강화] 34(64.2%) ↔ 단련 [투자] **0장**.
+   계산으로도 닫힌다 — `.cb>s` fs 50.9 × `.cic` 1.08em × `scale(.96364)` = **52.97**.
+   ⚠ 이 상수를 읽는 곳은 «누르면 화폐를 쓰는» 버튼 둘(룬 [강화] · 단련 [단련])이다.
+     같은 탭의 [충전](헤더)·[회수](바닥)은 **못 올린다** — 577 이 [충전] 라벨을 27px 두 줄로
+     못박았고(34px 이면 2행이 헤더 88 밖으로 샌다) [회수]는 66px 띠 안이라 53 이 안 들어간다.
+     그 둘까지 올리려면 210 이 정한 단련 탭 세로 예산(898)을 통째로 다시 짜야 한다 —
+     측정표 23 정오표에 그 이유를 남긴다. */
+const TR_CUR_PX = 53;
 function trainCardData(){
   return TRAIN_STATS.map(k => {
     const u = U[k], l = lv(k), bi = trainBuyInfo(k);
@@ -32863,7 +32935,7 @@ function runeCardTxt(r){
       '<span class="rw e' + j + '"><i>' + RUNE_AXIS[k] + ' +' + pct(runeVal(r.id, k)) + '</i>'
       + '<s>' + (max ? '최대' : '다음 +' + pct(runeStep1(r, k))) + '</s></span>').join(''),
     step: '1레벨당 증가폭이 Lv.1 ~ Lv.' + RUNE_MAXLV + ' 내내 같습니다 (선형)',
-    mat: curIc('rstone', 34) + fmt(runeCost(r, l)),
+    mat: curIc('rstone', TR_CUR_PX) + fmt(runeCost(r, l)),   /* 584 — 훈련 탭 기준선 */
     okM: runeTryOk(r.id)
   };
 }
@@ -32917,7 +32989,7 @@ function renderRunes(){
     const t = runeCardTxt(r);
     h += '<div class="tr-rn' + (open ? '' : ' lk') + '" data-rune="' + r.id + '"'
       +  ' style="--rt:' + r.tone + '">'
-      +  '<span class="ri">' + r.ic + '</span>'
+      +  '<span class="ri">' + slotEmoji(r.ic, RUNE_ART) + '</span>'   /* 584 — 411 «그림 자리» 를 읽는다 */
       +  '<span class="rn"><i>' + r.n + '</i></span>'
       +  '<span class="rl"><i>' + t.lv + '</i></span>'
       +  '<span class="rb"><i style="width:' + t.bar + '"></i></span>'
@@ -33011,7 +33083,11 @@ function temperRowTxt(t){
     eff: t.n + ' +' + pct(temperVal(t.k)) + ' · 다음 1레벨 +' + pct(TEMPER_EFF[t.k]),
     cost: fmt(c) + ' pt',
     seg: (seg * TEMPER_SEG) + '~' + ((seg + 1) * TEMPER_SEG - 1) + ' 구간 · 1레벨당',
-    btn: '투자 ' + fmt(c) + ' pt',
+    /* 584 — 주인 지시 «**투자 버튼 말고 단련으로 이름 바꾸고** 해당 화폐 거기에 표시 되게 해줘
+       **어떤 화폐 쓰는지 버튼 내에**». ⚠ «pt» 는 **안 지운다** — 단련은 «단련석 → 포인트»
+       2단계라(519 가 그 판정을 고쳤다) 버튼은 두 가지를 같이 말해야 뜻이 산다:
+       무엇을 쓰는가(🪨 단련석 아이콘) · 얼마를 쓰는가(n pt). */
+    btn: '단련 ' + curIc('tstone', TR_CUR_PX) + fmt(c) + ' pt',
     ok:  temperUpOk(t.k)
   };
 }
@@ -33093,7 +33169,9 @@ function liveTemper(){
     put(row, '.td i', x.eff);
     put(row, '.tc i', x.cost);
     put(row, '.tc s', x.seg);
-    put(row, '.tb i', x.btn);
+    /* 584 — 라벨에 화폐 `<img>` 가 들어왔다. 여기만 `textContent` 로 두면 홀드 중 첫 갱신에
+       태그가 **글자로** 찍힌다(297 «통짜 렌더와 같은 식» 이 표기층에서 깨지는 자리) — html 경로로. */
+    put(row, '.tb i', x.btn, true);
     jzNo(row.querySelector('.tb'), !x.ok);
   });
   put(w, '.tp-ft .rs i', temperFootTxt(), true);
@@ -33520,7 +33598,7 @@ function rtTemperHold(k){
       rtRender();
       if(!n) return;
       notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>'
-        + (n > 1 ? ' (투자 ' + fmt(n) + '회)' : ''));
+        + (n > 1 ? ' (단련 ' + fmt(n) + '회)' : ''));   /* 584 — 버튼과 같은 말로(«투자» 폐지) */
     }
   });
 }
