@@ -179,7 +179,7 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
     const ar = enemies.find(e => e.tk === 'arena');
     const arMax = ar ? ar.max : null, arMul = ar ? ETYPE.arena.hp : null;
     enemies.length = 0;
-    return { promoHp, dunK, arMax, arMul, gate: bossGateHp(20), notGate: bossGateHp(19) };
+    return { promoHp, dunK, arMax, arMul, gate: bossGateHp(40), notGate: bossGateHp(39) };   /* 199 3회차 — 관문 = GATE_N(40) 배수 */
   });
   near('[E] 승급 수호자 체력 = eHp(s)×60 (관문 배수 없음)', ripple.promoHp, wHp(20)*60, 1e-9);
   near('[E] 아레나 도전자 체력 = eHp×ETYPE.arena.hp (관문 배수 없음)', ripple.arMax, wHp(20)*ripple.arMul, 1e-9);
@@ -189,8 +189,8 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
 
   /* ── [F] 실동작 — 관문 스테이지를 실제로 «격파해서» 넘는다 ──────── */
   const play = await page.evaluate(async () => {
-    /* 관문 s20 로 세팅하고 50킬을 채운 뒤 보스를 실제로 잡는다(판정은 건드리지 않는다) */
-    S.stage = 20; S.best = Math.max(S.best, 20); S.bossFarm = false;
+    /* 관문 s40(199 3회차 — GATE_N 40) 로 세팅하고 50킬을 채운 뒤 보스를 실제로 잡는다(판정은 건드리지 않는다) */
+    S.stage = 40; S.best = Math.max(S.best, 40); S.bossFarm = false;
     bossOn = false; enemies.length = 0; spawnQ.length = 0;
     spawnStage();
     for(let i=0;i<120 && enemies.length === 0;i++) await new Promise(r => requestAnimationFrame(r));
@@ -208,13 +208,13 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   if(play.err){
     ok(false, '[F] 관문 보스 격파 실동작', play.err);
   } else {
-    ok(play.after === play.before + 1, '[F] 관문 s20 보스를 격파하니 스테이지가 올랐다',
+    ok(play.after === play.before + 1, '[F] 관문 s40 보스를 격파하니 스테이지가 올랐다',
        play.before + ' → ' + play.after);
     ok(play.best >= play.after, '[F] S.best 가 따라 올랐다 (세이브 반영)', play.best);
     ok(play.goldUp, '[F] 클리어 보상 골드가 들어왔다');
-    ok(play.newBand === 20, '[F] 다음 스테이지(21)는 새 구간(앵커 20) 안이다 — 계단이 실제 진행에 붙었다',
+    ok(play.newBand === 40, '[F] 다음 스테이지(41)는 새 구간(앵커 40) 안이다 — 계단이 실제 진행에 붙었다',
        play.newBand);
-    near('[F] s21 적 체력 = 앵커 20 값 (돌파 구간)', play.curHp, wHp(21), 1e-9);
+    near('[F] s41 적 체력 = 앵커 40 값 (돌파 구간)', play.curHp, wHp(41), 1e-9);
   }
 
   /* ── [G] 화면 반영 — 재화/정보 팝업의 «현재 스테이지 적 체력» ───── */
