@@ -114,6 +114,30 @@ const SCAN = () => {
      '[D] 침묵으로 삼켜지던 실패는 정확히 1건이었다',
      `옛 ${before.thrown.length}건 → 새 ${after.thrown.length}건`);
 
+  /* [E0] «위험 0건» 이 헛초록이 아님을 먼저 못박는다 — 유물 페이지에 «글자 든 <s>/<u>» 자체가
+     몇 개나 있는가(deco 무관). 여기가 0 이면 «위험 0» 은 «볼 것이 없었다» 는 뜻이고,
+     여기가 양수면 «봤는데 전부 안전» 이라는 뜻이다. 534 가 겪은 «헛초록»(잴 게 0종인 회귀) 예방. */
+  await page.evaluate(() => { try { closeModal(); gmCloseAll(); } catch (e) {} });
+  await page.evaluate('openRelw()');
+  await page.waitForTimeout(350);
+  const inRel = await page.evaluate(() => {
+    const root = document.getElementById('relw');
+    let text = 0, all = 0, deco = 0;
+    for (const el of root.querySelectorAll('s,u,strike')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      all++;
+      const t = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.data).join('').trim();
+      if (!t) continue;
+      text++;
+      if (getComputedStyle(el).textDecorationLine !== 'none') deco++;
+    }
+    return { all, text, deco, on: root.classList.contains('on') };
+  });
+  ok(inRel.on, '[E0a] #relw 가 열려 있다(수집 전제)');
+  ok(inRel.text > 0, '[E0b] 유물 페이지에 «글자 든 <s>/<u>» 가 실제로 있다 = 위험 0 은 헛초록이 아니다',
+     `보이는 s/u/strike ${inRel.all}개 중 글자 든 것 ${inRel.text}개 · 그중 deco≠none ${inRel.deco}개`);
+
   /* [E] 새로 스캔되는 자리에 위험 항목이 있는가 */
   const uniq = new Map();
   for (const h of after.hits) uniq.set(h.id + '|' + h.txt, h);
@@ -123,6 +147,53 @@ const SCAN = () => {
     console.log(`     · ${v.id.padEnd(28)} «${v.txt}»  deco=${v.deco} stroke=${v.stroke}`);
   console.log('     총 ' + uniq.size + '건');
   ok(true, '[E] 유물 페이지 위험 자리 수집 완료(등재 판단용 · 실패 아님)', uniq.size + '건');
+
+  /* [F] 목록 자체가 좁다 — audit148 의 오프너는 **손으로 적은 8개**이고, `smoke.js` 는 같은 일을
+     DOM 에서 파생한다(`.tab[data-t]` · `.side .ibtn[data-pop]` · `[data-mn]` …). 손 목록은 개명에
+     썩고 신설에 뒤처진다(545 가 바로 그 사고다). 그래서 «고친 8개로 0건» 이 «전수 0건» 인지를
+     여기서 한 번 더 묻는다 — 이 절은 **읽기만 한다**(제품·감사 파일을 안 고친다). */
+  const wide = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const seen = new Map();
+    const sel = [...document.querySelectorAll('.tab[data-t]')].map(e => ['tab', e.dataset.t])
+      .concat([...document.querySelectorAll('.side .ibtn[data-pop]')].map(e => ['pop', e.dataset.pop]))
+      .concat([...document.querySelectorAll('[data-mn]')].map(e => ['mn', e.dataset.mn]));
+    const scan = (where) => {
+      for (const el of document.querySelectorAll('s,u,strike')) {
+        const t = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.data).join('').trim();
+        if (!t) continue;
+        const cs = getComputedStyle(el);
+        if (cs.textDecorationLine === 'none') continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const id = (el.closest('[id]') ? '#' + el.closest('[id]').id + ' ' : '') + el.tagName.toLowerCase() +
+                   (el.className ? '.' + String(el.className).split(' ')[0] : '');
+        if (!seen.has(id + '|' + t)) seen.set(id + '|' + t, { id, txt: t.slice(0, 20), deco: cs.textDecorationLine,
+                                                             stroke: +(parseFloat(cs.webkitTextStrokeWidth) || 0).toFixed(2), where });
+      }
+    };
+    let opened = 0;
+    for (const [kind, k] of sel) {
+      try {
+        const node = kind === 'tab' ? document.querySelector(`.tab[data-t="${k}"]`)
+                   : kind === 'pop' ? document.querySelector(`.side .ibtn[data-pop="${k}"]`)
+                   : document.querySelector(`[data-mn="${k}"]`);
+        if (!node) continue;
+        node.click(); opened++;
+        await wait(260);
+        scan(kind + ':' + k);
+        try { closeModal(); gmCloseAll(); } catch (e) {}
+        await wait(120);
+      } catch (e) {}
+    }
+    return { opened, rows: [...seen.values()] };
+  });
+  console.log(`\n  -- [F] DOM 에서 파생한 넓은 스윕(${wide.opened}개 입구 · 읽기 전용) --`);
+  if (!wide.rows.length) console.log('     위험 자리 없음');
+  for (const v of wide.rows)
+    console.log(`     · ${v.id.padEnd(28)} «${v.txt}»  deco=${v.deco} stroke=${v.stroke}   [${v.where}]`);
+  ok(wide.opened >= 8, '[F1] 손 목록(8개)보다 넓은 입구를 실제로 열었다', wide.opened + '개');
+  ok(true, '[F2] 넓은 스윕의 위험 자리 수(등재 판단용 · 실패 아님)', wide.rows.length + '건');
 
   console.log(`\nPROBE545 ${pass}/${pass + fail}` + (fail ? '  ← FAIL ' + fail : ''));
   await browser.close();
