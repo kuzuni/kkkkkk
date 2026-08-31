@@ -34517,6 +34517,28 @@ function fxZOf(el){
    검산 — 이 자를 바꿔도 종전에 세던 층은 한 개도 안 빠진다(전부 전투 화면 100% 덮음: modal·collw·
    blsw·rkw·bagw·svw·eqw·trw …) · `#tabbar`(z10)는 종전처럼 안 센다(전투 화면 겹침 **0%**). */
 let fxCovF = -1, fxCovC = false;
+/* 518 4회차 — «덮는 층» 은 전투 화면을 **다** 가리는 층만 센다. 그 그물에 07 스킬·26 펫·50 코스튬
+   시트가 안 걸린다: 그 셋은 `#panel`(z9)이라 전투 화면의 **74%**(616..2100 vs 104..2100)만 가린다.
+   그런데 시트의 버튼을 누른 직후 배경 전투 골드가 들어오면 발원은 «추측»(그 버튼)이고 코인은
+   **시트 위**에 그려졌다 — 비평가 CX·CY 가 2인 독립으로 잡은 그림(f1 금화 5개 x136..278 / y806..966,
+   «+ 슬롯» 버튼을 통째로 가림 · f2 3개가 «St.80» 라벨 위).
+   ⚠ 문턱을 74% 로 내리는 길은 518-⑥ 이 막아 뒀다(그 값의 근거를 아무도 못 적고, 다음엔 60% 가 나온다).
+   대신 **누가 그 자리를 소유하는가**를 묻는다 — 추측한 발원이 얹힌 층이 «전투 화면 한복판을 가진 층»
+   (= 지금 플레이어가 보고 있는 시트·페이지·팝업)이면 그 코인은 그 층 «위» 에 그려질 것이므로 묻는다.
+   ⚑ 화면 가장자리 크롬(사이드 레일·탭바·상단 HUD)은 한복판을 안 가지므로 **한 값도 안 바뀐다** —
+     메인 화면의 UI 발(58·93)은 종전 그대로 `#fxl` 에서 난다(게이트 [D2]·[H3]). */
+function fxOverlaid(el){
+  if(!el || !el.closest) return false;
+  const host = el.closest('#app > *');
+  if(!host || host.id === 'fxl' || host.id === 'fxlc' || host.id === 'stagearea') return false;
+  if(fxZOf(host) <= 7) return false;
+  const cs = getComputedStyle(host);
+  if(cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) return false;
+  const st = fxRect($('stagearea')), r = fxRect(host);
+  if(!st || !r || st.w <= 0 || st.h <= 0) return false;
+  const cx = st.x + st.w / 2, cy = st.y + st.h / 2;      /* 전투 화면 한복판 */
+  return r.x <= cx && cx <= r.x + r.w && r.y <= cy && cy <= r.y + r.h;
+}
 function fxCovered(){                                 /* 지금 «전투 화면» 을 덮는 층(팝업·시트·페이지)이 있는가 */
   if(fxCovF === fxFrame) return fxCovC;               /* 프레임당 1회만 — 레이아웃 스래싱 방지 */
   fxCovF = fxFrame; fxCovC = false;
@@ -34547,7 +34569,7 @@ function fxFly(from, cur, n){
   const combat = !!(from && from.combat);
   /* 518 — 팝업이 떠 있는데 발원이 «탭 추측» 이면 UI 발 그대로 날리되 **층만** 팝업 아래로 내린다.
      타이밍·개수·소리·경로는 한 값도 안 바뀐다(아래 계산은 전부 `combat` 만 본다). */
-  const buried = !combat && !!(from && from.tap) && fxCovered();
+  const buried = !combat && !!(from && from.tap) && (fxCovered() || fxOverlaid(from.el));
   const C = FXCUR[cur], L = (combat || buried) ? fxLC() : fxL(); if(!C || !L) return;
   const pill = fxPill(C);
   const p0 = fxPt(from) || { x:FRAME_W/2, y:frameH*0.5 };

@@ -69,6 +69,14 @@ const SCENE = `async ({ open, srcKind }) => {
     const pgw = document.getElementById(open);
     for (let i = 0; i < 150 && Number(getComputedStyle(pgw).opacity) < 0.95; i++) await raf();
     await wait(3);
+  } else if (open === 'sheet') {
+    /* 4회차 — 07 스킬 시트. 이 시트는 #panel(z9)이라 «덮는 층» 이 **아니다**(전투 화면의 74%만 가린다).
+       그런데도 시트 «안» 을 누른 뒤의 추측 발원 코인은 시트 아래로 가야 한다(fxOverlaid). */
+    jzHush(() => { const t = document.querySelector('.tab[data-t="hero"]'); if (t) t.click(); });
+    await wait(20);
+    jzHush(() => { const e = document.querySelector('#eqTabs [data-eqtab="sk"]'); if (e) e.click(); });
+    for (let i = 0; i < 150 && !document.querySelector('#panel .sk-slot'); i++) await raf();
+    await wait(3);
   } else {
     /* ⚠ 60 쥬시 닫힘 연출이 도는 동안에는 팝업이 «아직 화면에 있다»(display:block · opacity 감쇠).
        그것을 «덮는 층 없음» 으로 세면 [D] 가 재려는 상태가 아니다 — 연출이 끝날 때까지 기다린다. */
@@ -80,7 +88,8 @@ const SCENE = `async ({ open, srcKind }) => {
   /* ⚠ 89 유물은 #rwBasin 이 **pointerdown 에서 실제로 소환**한다 — 발원 표본으로 쓰면
      «재화를 안 얻었다» 는 전제가 깨진다. 페이지마다 «아무것도 안 주는» 자리를 고른다. */
   const HOST = { sum: '#sumGridIn > *', up: '#upw .upr-cel',
-                 dunw: '#dunList .dnc', shopw: '#shopList .cn-cd', relw: '#relw .pcb-p' };
+                 dunw: '#dunList .dnc', shopw: '#shopList .cn-cd', relw: '#relw .pcb-p',
+                 sheet: '#panel .sk-slot' };
   const host = document.querySelector(HOST[open] || '#menub') || document.body;
   host.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
   if (srcKind === 'known') fxAt(host);
@@ -150,7 +159,9 @@ async function boot(browser, revert) {
      재는 축(배경 전투 골드 · 발원 · 층)은 한 값도 안 바뀐다 — 파도 전멸 보너스도 전투 발이다. */
   await p.evaluate(() => { S.bossFarm = true; });
   /* [R] 되돌림 — 수리 «전» 과 같은 상태(덮는 층 판정을 통째로 끈다) */
-  if (revert) await p.evaluate(() => { window.fxCovered = () => false; });
+  /* 4회차 — 되돌림은 **두 판정을 다** 꺼야 «수리 전» 이다(3회차까지는 fxCovered 하나였다).
+     `fxOverlaid` 를 살려 두면 팝업도 «한복판을 가진 층» 이라 그대로 묻혀 [R] 이 초록으로 읽힌다. */
+  if (revert) await p.evaluate(() => { window.fxCovered = () => false; window.fxOverlaid = () => false; });
   return { p, errs };
 }
 
@@ -171,7 +182,7 @@ async function boot(browser, revert) {
      '[A2] 두 자리 모두 «전투 발원 표시»(fxAt(…, \'combat\')) 를 단다 — ' + bonus.map(b => b.line + ':' + (b.tagged ? 'O' : '✗')).join(' '));
   ok(/function fxCovered\(\)/.test(src), '[A3] «덮는 층» 판정 부품 fxCovered() 가 있다');
   ok(/el:fxTapEl, tap:true/.test(src), '[A4] 탭 폴백 발원에 «추측» 표시(tap:true)가 붙는다');
-  ok(/const buried = !combat && !!\(from && from\.tap\) && fxCovered\(\)/.test(src),
+  ok(/const buried = !combat && !!\(from && from\.tap\) && \(fxCovered\(\) \|\| fxOverlaid\(from\.el\)\)/.test(src),
      '[A5] fxFly 가 «추측 + 덮는 층» 일 때만 층을 내린다(전투 발·아는 발원은 안 건드린다)');
   ok(/combat: combat \|\| buried/.test(src),
      '[A6] 묶음이 «내려간 층» 을 기억한다 = `+n` 이 코인과 같은 층에 뜬다(층이 갈리면 팝업 위에 숫자만 남는다)');
@@ -182,6 +193,14 @@ async function boot(browser, revert) {
   const shopFx = ['fxAt(ex0)', 'fxAt(dx)', 'fxAt(b)'].filter(s2 => src.includes(s2));
   ok(shopFx.length === 3,
      '[A8] 10 상점 «재화» 탭의 지급 3경로가 발원을 알려 준다(§9 재화 교환 · §10 입장권 교환 · 광고 상품) — ' + shopFx.join(' '));
+
+  /* 4회차 — «전수» 의 스코프를 자가 지킨다. 397·351(8·10·12·13·14회차)이 다섯 번 겪은 사고가
+     전부 «스캐너가 화면 목록을 손으로 들고 있다가 뒤처졌다» 이므로, 518 의 전수 스윕도
+     목록을 적지 않고 **351 의 수집기에게 묻는다**(제품에게 묻는 그것). 이 항이 빨개지면
+     새 화면이 그물 밖으로 조용히 빠진 것이다 — «전 화면 0» 이라는 말 자체가 무너진다. */
+  const sweepSrc = fs.readFileSync(path.resolve(__dirname, 'probe518t.js'), 'utf8');
+  ok(/require\('\.\/probe351lib'\)/.test(sweepSrc) && /collectOpeners\(b\)/.test(sweepSrc),
+     '[A9] 전수 스윕(probe518t)이 화면 목록을 **제품에게 묻는다**(351 수집기 재사용 — 손으로 적은 목록 0)');
 
   const b = await launch(chromium);
 
@@ -295,6 +314,19 @@ async function boot(browser, revert) {
      '[G2] 그 보상 코인이 **페이지 위**(#fxl) 에서 난다 — ' + gN + '시행 중 ' + gHit + '회 · 마지막 ' + JSON.stringify(g1.layers)
      + ' (그물만 넓히고 fxAt 를 안 달았으면 6시행 전부 fxlc = 받은 보상이 한 번도 안 보인다)');
 
+  /* ── [H] 4회차 — «덮는 층» 이 아닌데 «그 자리를 소유한» 층 ─────────────
+     07 스킬·26 펫·50 코스튬 시트는 `#panel`(z9)이라 전투 화면의 74%만 가려 [E] 그물에 안 걸린다.
+     비평가 CX·CY 가 2인 독립으로 이 자리를 잡았다(f1 금화 5개가 시트 위 · «+ 슬롯» 버튼을 통째로 가림).
+     ⇒ `fxOverlaid()` — 추측 발원이 «전투 화면 한복판을 가진 층» 안에 있으면 그 코인도 묻는다. */
+  const h1 = await until('sheet', 'tap', r => r.srcTap && r.flyN > 0);
+  ok(h1.covered === false,
+     '[H1] 07 스킬 시트는 «덮는 층» 이 아니다(전투 화면의 74%) — 이 항이 초록이어야 [H2] 가 «새 자리» 를 재는 것이다');
+  ok(h1.flyN > 0 && h1.flyLayers.every(l => l === 'fxlc'),
+     '[H2] 그래도 시트 «안» 을 누른 뒤의 추측 발원 코인은 **시트 아래**(#fxlc) — ' + JSON.stringify(h1.flyLayers)
+     + ' · ' + h1.flyN + '개');
+  ok(!h1.plusLayers.includes('fxl') && h1.litN === 0,
+     '[H3] 그 묶음의 «+n»·딤 위 알약 복제도 시트 위에 안 남는다 — ' + JSON.stringify(h1.plusLayers) + ' · lit ' + h1.litN);
+
   ok(errs.length === 0, '[X] 콘솔 에러 0건' + (errs.length ? ' — ' + errs[0] : ''));
 
   /* ── [R] 되돌림 시험 ───────────────────────────────────────────────── */
@@ -315,6 +347,7 @@ async function boot(browser, revert) {
      자를 2회차 판(프레임의 90%)으로 되돌린 사본에서는 페이지형 3화면이 다시 그물 밖이 된다.
      이 항이 없으면 «어차피 팝업이 다 잡았을 것» 과 구별이 안 된다. */
   const rv2 = await boot(b, false);
+  await rv2.p.evaluate(() => { window.fxOverlaid = () => false; });   /* 4회차 판정도 같이 되돌려야 «2회차 판» 이다 */
   await rv2.p.evaluate(() => {
     let f = -1, c = false;
     window.fxCovered = function () {                  /* 2회차 원본 그대로 — 프레임 90%×90% */
@@ -340,6 +373,22 @@ async function boot(browser, revert) {
   ok(r2.covered === false && r2.flyLayers.includes('fxl'),
      '[R2] 자를 «프레임 90%»(2회차 판)로 되돌린 사본에서는 10 상점 페이지가 다시 그물 밖이고 코인이 페이지 **위**로 간다 — 덮음 '
      + (r2.covered ? 'O' : '·') + ' · ' + JSON.stringify(r2.flyLayers));
+
+  /* ── [R3] 4회차 되돌림 시험 — «자리를 소유한 층» 판정만 끈다 ───────────
+     [R] 은 판정을 통째로 끄므로 «어차피 [E] 그물이 잡았을 것» 과 구별이 안 된다.
+     여기서는 `fxOverlaid` 만 false 로 묶어 **07 스킬 시트에서만** 수리 전 그림이 되살아나는지 본다
+     (되살아나야 이 회차가 실제로 새 자리를 편입한 것이다). */
+  const rv3 = await boot(b, false);
+  await rv3.p.evaluate(() => { window.fxOverlaid = () => false; });
+  let r3 = null;
+  for (let i = 0; i < 8; i++) {
+    r3 = await rv3.p.evaluate(eval('(' + SCENE + ')'), { open: 'sheet', srcKind: 'tap' });
+    if (r3.srcTap && r3.flyLayers.includes('fxl')) break;
+  }
+  ok(r3.covered === false && r3.flyLayers.includes('fxl'),
+     '[R3] `fxOverlaid` 만 끈 사본에서는 07 스킬 시트 코인이 다시 **시트 위**(#fxl)로 간다 — 덮음 '
+     + (r3.covered ? 'O' : '·') + ' · ' + JSON.stringify(r3.flyLayers)
+     + ' (4회차가 실제로 새 자리를 편입했다는 증거)');
 
   await b.close();
   console.log('\nVERIFY518 ' + pass + '/' + (pass + fail) + (fail ? ' FAIL' : ' PASS'));
