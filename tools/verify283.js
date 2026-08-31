@@ -96,8 +96,9 @@ const HELPERS = () => {
   ok(await seen('#bPet [data-ptup]>.updot'),    '[26 [일괄 강화] 버튼] 버튼 자체에 레드닷 — 보인다');
 
   /* ── §1b 잘림·겹침 — 배지가 «잘리는 상자» 안에 온전히 들어가고, 이미 있는 것과 안 겹친다 ──
-     실측으로 셋 다 부딪혔다: `.sk-card` 우상단은 272 해제 뱃지(`.sk-eq`) 자리 · `.wgc` 는 자기
-     `overflow:hidden` 이라 바깥에 두면 잘린다 · `.eqsl` 좌상단 바깥은 부위 뱃지(`.eqbd`) 자리. */
+     실측으로 셋 다 부딪혔다: `.sk-card` 우상단은 272 해제 뱃지(`.sk-eq`) 자리 · `.wgc` 우상단은
+     `Lv.n` 자리(611 이 Lv 를 좌상단 거울로 옮겨 코너를 닷에게 줬다 — 이 겹침 자는 그 되돌림도
+     잡는다) · `.eqsl` 좌상단 바깥은 부위 뱃지(`.eqbd`) 자리. */
   console.log('\n§1b 잘림·겹침 — 잘리는 상자 안에 온전히 · 기존 요소와 0 겹침');
   await page.evaluate(() => {
     window.__clip = sel => {
@@ -141,7 +142,7 @@ const HELPERS = () => {
   ]) ok((await page.evaluate(s => window.__clip(s), sel)) === 'ok',
         '[' + n + '] 잘리는 조상 안에 온전히 들어간다', await page.evaluate(s => window.__clip(s), sel));
   ok((await page.evaluate(() => window.__hit('#wpnGrid .wgc.alert>.updot', '#wpnGrid .wgc.alert>.lv'))) === 'ok',
-    '[05 무기 카드] 배지가 `Lv.n`(우상단) 과 안 겹친다');
+    '[05 무기 카드] 배지가 `Lv.n`(611 이후 좌상단) 과 안 겹친다');
   ok((await page.evaluate(() => window.__hit('#eqCards .eqsl.alert>.updot', '#eqCards .eqbd'))) === 'ok',
     '[06 부위 슬롯] 배지가 부위 뱃지 `.eqbd`(좌상단) 와 안 겹친다');
 

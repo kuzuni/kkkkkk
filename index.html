@@ -8508,21 +8508,27 @@
      아래 테두리는 재료 진행바(`.pb`)가 끊고 지나가므로 **아래 코너 12 만 이 화면 고유값**이고,
      위 코너는 공용 비율(148×.233 = 34.5 ≈ 원래 35)을 그대로 쓴다.
      수량 배지(`.ifq`)는 이 칸에 없다 — 05 의 «하단» 은 수량이 아니라 재료 진행바다(측정표 규격). */
+  /* 611 — `overflow:hidden` 제거: 레드닷이 코너에 «걸치는» 규약(471)을 카드 자신이 자르고 있었다.
+     이 클립의 실사용처는 하단 진행바(`.pb`)의 사각 코너 하나뿐이라, 그 코너는 `.pb` 자신의
+     border-radius(아래 — 바깥 12 − 테두리 5 = 7)로 대신 접는다. `.sk-card`(ifr-in)와 같은 구조. */
   .wgc{position:absolute;--if-w:148px;--if-h:158px;--if-ic:66px;
     --if-face:var(--gc);--if-rimc:var(--gr);
     border-radius:calc(var(--if-w) * var(--if-rr)) calc(var(--if-w) * var(--if-rr)) 12px 12px;
-    overflow:hidden;cursor:pointer}
+    cursor:pointer}
   .wgc.eq{border-color:#134E52;--if-face:var(--ge);--if-rimc:#35DCEE}
   .wgc>*{position:absolute}
   .wgc .ic{left:0;right:0;top:8px;height:100px;line-height:100px;text-align:center;font-size:66px}
-  /* Lv.n 은 «우상단» 정렬이다 (좌상단 아님) — 우여백 15 / 상여백 19 */
-  .wgc .lv{right:13px;top:9px;height:28px;line-height:28px;font-size:28px;color:#fff;
+  /* Lv.n — 레퍼런스는 «우상단»(우여백 15 / 상여백 19)이지만, 611(주인 재보고 2026-09-01
+     «빨간점들 오른쪽 위로 해야하는데 위치 존나 어정쩡함»)이 우상단 코너를 레드닷에게 줬다.
+     471 4회차 `.sk-card`([+]/[─] 거울 이동)와 같은 처방 — **좌상단 거울**(left 13 = 구 right 13).
+     의도적 레퍼런스 이탈 · 측정표 05 정오표. 세로는 Δ0. scaleX 원점도 좌단 고정으로 뒤집는다. */
+  .wgc .lv{left:13px;top:9px;height:28px;line-height:28px;font-size:28px;color:#fff;
     -webkit-text-stroke:4px #000;paint-order:stroke fill}
-  .wgc .lv>i{transform:scaleX(1.19);transform-origin:100% 50%}
+  .wgc .lv>i{transform:scaleX(1.19);transform-origin:0 50%}
   /* 하단 재료 진행바 — 카드 안쪽 전폭, 카드 하단에 플러시(h39, 위 테두리 5px) */
   .wgc .pb{left:0;right:0;bottom:0;height:34px;border-top:5px solid #000;
     background:linear-gradient(180deg,#8182A0 0 19px,#717799 19px);
-    box-sizing:border-box;overflow:hidden}
+    box-sizing:border-box;overflow:hidden;border-radius:0 0 7px 7px}  /* 611 — 구 카드 클립의 대체 */
   .wgc .pb>s{position:absolute;left:0;top:0;bottom:0;background:#FFB514}
   .wgc .pb>i{position:absolute;left:0;right:0;top:5px;height:20px;line-height:20px;
     text-align:center;font-size:20px;color:#fff;transform:scaleX(1.6);
@@ -11499,24 +11505,26 @@
      · 07·26 `.sk-card`(폭 168) 우상단 코너는 272 의 해제 뱃지 `.sk-eq` 가 쓰고 있었다 →
        **471 4회차에 그 뱃지를 좌상단 코너로 옮기고 코너를 닷에게 줬다**(규약 `--dot-in` 11px).
        299 «우상단 사분면» 은 코너 그 자체이므로 당연히 충족된다.
-     · 05 `.wgc`(폭 148, **overflow:hidden** 이라 안쪽) 우상단 코너는 `.lv`(right:13 top:9 h28, 잉크 x≈70~135)
-       자리 → **Lv 아래로 비켜** right:8 top:45(닷 x113~140 · 링 상단 37.5 > lv 하단 37).
-       중심 x126.5 > 74 · y58.5 < 79 — 우상단 사분면 충족.
      · 06 `.eqsl` 은 좌상단 바깥이 부위 뱃지 `.eqbd`(left:704, 슬롯 left 724) 자리 → **우상단 바깥**
      · 버튼 둘은 라벨이 가운데 한 줄이라 안쪽 우상단이 빈다 */
-  /* ══ 471 예외 ④ — «코너가 이미 다른 부품에 점유된 호스트» ══════════════════════════════
-     규약(코너 걸침)을 그대로 적용하면 **닷이 남의 잉크 위에 올라앉는다**(`verify283` 이 실측으로
-     빨개진다 — 자를 무르게 풀지 않고 그대로 두었다):
-       · 05 `.wgc` — 우상단은 `Lv.n`(right:13 · 잉크 x≈70~135) 자리다. 코너에 두면 닷 안쪽 경계가
-         x116 이라 그 글자의 오른쪽 19px 을 검정 링이 덮는다.
-     ⚠ **«빨간 점이 글자·다른 배지를 덮는 것» 은 «자리가 제각각인 것» 보다 나쁘다** — 그래서 이 한
-     자리만 299 가 고른 «점유물을 피한 우상단 사분면» 자리를 그대로 둔다(규약 이전 값 그대로).
-     ⇒ **4회차에 07·26·50 `.sk-card` 는 예외에서 빠졌다** — 점유물(`.sk-eq`)을 좌상단 코너로 옮기고
-        코너를 닷에게 줬다(위 `.sk-card>.sk-eq`). 비평가 5인 독립 불납득이 근거이고, 대가는
-        레퍼런스 이탈 둘(뱃지 자리 · `Lv.n` +34px)이다. `.wgc` 는 같은 처방을 쓰려면 `Lv.n` 을
-        오른쪽 정렬에서 왼쪽으로 뒤집어야 해 이탈이 더 크다 — 5인이 지적한 자리도 아니라 남겨 둔다.
-     자는 `tools/probe471.js` 가 매번 찍는다. */
-  .wgc>.updot{right:8px;top:45px}
+  /* ══ 611 — 구 «471 예외 ④»(05 `.wgc` 코너 점유) 폐지 ══════════════════════════════════
+     471 은 `.wgc` 만 예외로 남겼었다(우상단이 `Lv.n` 자리 + 자기 `overflow:hidden` — right:8/top:45).
+     주인이 611 로 그 자리를 다시 지목했다(«장비에 슬롯들에 빨간점들 오른쪽 위로 해야하는데
+     위치 존나 어정쩡함» — 스크린샷의 «오른쪽 변 안쪽·코너 아래» = 정확히 이 예외 좌표).
+     ⇒ 4회차 `.sk-card` 와 같은 처방으로 «점유·임의 좌표» 예외를 닫았다:
+       · 점유물 `Lv.n` 을 좌상단 거울로(위 `.wgc .lv{left:13}` — 레퍼런스 이탈 · 측정표 05 정오표)
+       · 카드 `overflow:hidden` 제거(`.pb` 가 자기 radius 로 코너를 접는다 — `.sk-card` 와 같은 구조)
+       · 좌표 상수 선언(right:8/top:45)은 삭제 — 공용 규약식이 받는다.
+     ⚠ **가로만 규약값 11 → 22(516 예외 ⑤ 와 같은 꼴·같은 산수).** 격자 우변 뒤 여유가 6px 뿐이다
+       (마지막 열 카드 우변 838 ↔ `.wm-grid{overflow-x:hidden}` 844) — 그리고 그 열은 더미가 아니라
+       **실물이다**(무기 등급당 5종 = WPN_COLS 와 같다 · probe471 실측 잘림 4px). 규약 11 이면 정지
+       상태부터 잘리고 60 쥬시 등장 봉우리(scale 1.3 → 링 27.3)에선 10.3px 반달이 된다. 필요 조건
+       `in-x ≥ 27.3 − 6 = 21.3` → **22**(봉우리 0.7px 여유 · 맥박 1.14 는 4.1px · 정지는 7px).
+       세로는 클리핑이 없어 규약 11 그대로 — 링이 카드 상변 밖으로 10px «걸친다».
+       열마다 값을 가르지 않는 이유: 같은 격자 안에서 닷 자리가 두 무리가 되는 것이 곧 471 이
+       고친 병이다(«위치가 다 어정쩡함») — 한 값으로 통일하고 그 값의 근거를 산수로 남긴다.
+     자는 `tools/probe471.js` 가 매번 찍는다(`verify471` EXC 사유도 이 산수로 갈았다). */
+  .wgc{--dot-in-x:22px}
   /* 323 — 267 주 행동 버튼 `.ifbtn.pbtn`(승급전 시작 · 승급전 도전). 라벨 `<b>` 가 가운데
      한 줄이라 안쪽 우상단이 비어 있고, `.pbtn` 은 `position:relative`(1708행) 라 기준상자가 된다.
      `.ifbtn` 에 overflow 는 없지만 검정 테두리 안쪽으로 넣어 베벨 림을 안 밟는다 —
