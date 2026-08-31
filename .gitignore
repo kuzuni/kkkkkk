@@ -233,3 +233,5 @@ tools/*.png
 # ⚠ 저장소 루트에 둔다 — /tmp 에 두면 index.html 이 상대 경로로 무는 assets/** 가 통째로 404 다
 #    (360·367·438·439·453·467·471·541 선례).
 .v491-neg.html
+# 541 probe541 이 마지막 실행의 수치를 떨구는 파일(사람이 읽는 근거는 review .md 에 있다)
+docs/review/.probe541.json
