@@ -113,13 +113,28 @@ const PICK = `(function(sels){
   return out;
 })`;
 
-/* 겹침 축 — 카드 입장권 잉크가 위 라벨·옆 숫자와 안 겹치는지 볼 이웃들 */
+/* 겹침 축 — 카드 입장권 잉크가 위 라벨·옆 숫자와 안 겹치는지 볼 이웃들
+   ⚑ 596 이관 — 라벨은 **상자가 아니라 잉크**로 잰다. 이 자는 «커진 아이콘이 이웃을 밟는가» 를
+   묻는데, `.lb.b` 상자(400..438)는 글리프가 없는 반각 여백까지 물고 있어 596 이 티켓을 눕히자
+   «밟는다»(−3.6) 는 **거짓 신호**를 냈다. 찍힌 픽셀(`probe596` [4] 차분)은 401..432 이고
+   아래 자(canvas TextMetrics)도 **같은 401..432** 를 준다 — 검산이 붙은 자다(`verify596` §5).
+   ⚠ 무르게 푼 것이 아니다: 잉크가 상자 밖으로 나가면(= 자가 헛값을 주면) [전제] 항이 빨개진다. */
 const NEIGH = `(function(){
   var c = document.querySelector('#dunw .dnc');
   if(!c) return null;
   var q = function(s){ var e = c.querySelector(s); if(!e) return null; var r = e.getBoundingClientRect();
                        return { x:r.x, y:r.y, w:r.width, h:r.height }; };
-  return { card: q(':scope'), lb: q('.lb.b'), num: q('.sp.tk>i'), pill: q('.sp.tk') };
+  var ink = function(s){
+    var e = c.querySelector(s); if(!e) return null;
+    var cs = getComputedStyle(e), r = e.getBoundingClientRect();
+    var g = document.createElement('canvas').getContext('2d');
+    g.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + '/' + cs.lineHeight + ' ' + cs.fontFamily;
+    var m = g.measureText(e.textContent), lh = parseFloat(cs.lineHeight);
+    var base = r.y + (lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+    var sw = (parseFloat(cs.webkitTextStrokeWidth) || 0) / 2;
+    return { top: base - m.actualBoundingBoxAscent - sw, bottom: base + m.actualBoundingBoxDescent + sw };
+  };
+  return { card: q(':scope'), lb: q('.lb.b'), num: q('.sp.tk>i'), pill: q('.sp.tk'), lbInk: ink('.lb.b') };
 })`;
 
 async function open(ctx, css, w, h) {
@@ -156,8 +171,11 @@ const DUN_SEL = [
 ];
 
 /* 옛 배율을 되돌리는 사본 — §R 이 심는다 */
+/* ⚠ 596 이관 — 카드 입장권 규칙이 `:has(>[data-cur-ic^="tk"])` 로 좁아지면서 특이도가 올랐다.
+   옛 `.dnc .sp.tk>em` 한 줄로는 **더 이상 안 덮이고**, 그러면 [R1] 이 «옛 값에서도 초록» 이 되어
+   되돌림 시험이 통째로 죽는다(헛초록). 같은 스코프로 적어 특이도를 맞춘다. */
 const OLD_CSS =
-  '.dnc .sp.tk>em{transform:scale(.8269)}'
+  '.dnc .sp.tk>em:has(>[data-cur-ic^="tk"]){transform:scale(.8269);top:0}'
   + '.dnc .pill>em:has(>[data-cur-ic="dia"]),.dnc .pill>em:has(>[data-cur-ic="relic"]),'
   + '.dnc .pill>em:has(>[data-cur-ic="stone"]),.dnc .pill>em:has(>[data-cur-ic="rstone"])'
   + '{transform:scale(1.0732)}'
@@ -242,7 +260,16 @@ const OLD_CSS =
   const cw = cards.map((c) => ink(c).w);
   ok(Math.max(...cw) / Math.min(...cw) <= 1.005, '8종이 서로 ±0.5%',
     '최대÷최소 ' + r2(Math.max(...cw) / Math.min(...cw)));
-  ok(k0.w > 46.51 * 1.3, '수리 전(46.51)보다 30% 이상 커졌다', r2(k0.w));
+  /* ⚑ 596 이관 — 눈금이 «잉크 폭» 이면 각도가 붙는 순간 뜻을 잃는다. 585 는 평평한 티켓이라
+     폭 = 차지하는 자리였지만, 596 이 −18° 를 얹은 뒤로는 **차지하는 자리 = 회전 bbox** 이고
+     제 축 폭은 오히려 줄어든다(63.99 → 56.83 — 같은 자리를 눕혀서 채우니 당연하다).
+     그래서 «커졌는가» 는 **찍히는 면적의 제곱근(시각 덩치)** 으로 묻는다 — 585 의 뜻
+     («주인이 작다고 한 것보다 커졌다»)은 그대로 두고 각도에 안 흔들리는 축으로만 옮긴다.
+     수리 전 46.51 × 26.36(평평) ⇒ 덩치 35.02 · 지금 64.00 × 48.19 ⇒ 55.5(+58%). */
+  const bulk0 = Math.sqrt(k0.rw * k0.rh), bulkPre = Math.sqrt(46.51 * 26.36);
+  ok(bulk0 > bulkPre * 1.3, '수리 전(덩치 35.02 = 46.51×26.36)보다 30% 이상 커졌다',
+    r2(bulk0) + ' / ' + r2(bulkPre) + ' = +' + r2((bulk0 / bulkPre - 1) * 100) + '%');
+  ok(k0.w > 46.51, '제 축 폭도 수리 전보다는 크다 (줄어든 것이 아니다)', r2(k0.w) + ' > 46.51');
 
   /* ── §3 ─────────────────────────────────────────────────────────────── */
   blk('§3 03 카드 보상 알약 코인 8칸 — ref 51 × 53 (측정표 §3-4-1)');
@@ -342,9 +369,14 @@ const OLD_CSS =
   blk('§9 겹침 — 커진 입장권이 이웃을 밟지 않는가');
   const kc = ink(cards[0]);
   const top = cards[0].cy - kc.rh / 2, right = cards[0].cx + kc.rw / 2;
-  ok(neigh && neigh.lb, '이웃 표본(라벨 `.lb.b` · 숫자 `.sp.tk>i`)을 얻었다');
-  ok(top >= neigh.lb.y + neigh.lb.h - 0.5, '위 라벨과 안 겹친다',
-    '잉크 상변 ' + r2(top) + ' ≥ 라벨 하변 ' + r2(neigh.lb.y + neigh.lb.h));
+  ok(neigh && neigh.lb && neigh.lbInk, '이웃 표본(라벨 `.lb.b` · 숫자 `.sp.tk>i`)을 얻었다');
+  ok(neigh.lbInk.top >= neigh.lb.y - 0.5 && neigh.lbInk.bottom <= neigh.lb.y + neigh.lb.h + 0.5,
+    '[전제] 라벨 잉크 자가 헛값이 아니다 — 잉크가 제 상자 안에 있다',
+    '잉크 ' + r2(neigh.lbInk.top) + '..' + r2(neigh.lbInk.bottom) + ' ⊂ 상자 '
+    + r2(neigh.lb.y) + '..' + r2(neigh.lb.y + neigh.lb.h));
+  ok(top >= neigh.lbInk.bottom - 0.5, '위 라벨 **잉크**와 안 겹친다 (596 이관 — 상자가 아니라 잉크)',
+    '잉크 상변 ' + r2(top) + ' ≥ 라벨 잉크 하변 ' + r2(neigh.lbInk.bottom)
+    + ' (여유 ' + r2(top - neigh.lbInk.bottom) + 'px · ref 4.5px)');
   ok(right <= neigh.num.x + 0.5, '옆 숫자와 안 겹친다',
     '잉크 우변 ' + r2(right) + ' ≤ 숫자 좌변 ' + r2(neigh.num.x));
 
