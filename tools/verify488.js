@@ -420,8 +420,94 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(lagMed <= 25, '[J2] ★ 애니메이션이 «만든 그 순간» 시작한다 — 나이와 진행의 차(중앙값) ≤ 25ms',
      lagMed.toFixed(0) + 'ms · 최대 ' + lagMax.toFixed(0) + ' (3회차엔 86~131ms 였다)');
   ok(late > 0, '[J3] ★ 수명 뒤쪽(>200ms)까지 도는 표본이 있다 — 페이드아웃이 실제로 보인다', late + '개');
-  ok(opaque / J.length >= 0.5, '[J4] ★ 표본의 절반 이상이 완전 불투명(α=1) — 판독 하한 아래로 오래 안 머문다',
-     opaque + '/' + J.length);
+
+  /* ⚑ 574 — **[J4] 는 «표본의 α» 를 세던 자리였고, 그것이 재던 것은 설계가 아니라 «위상» 이었다.**
+     옛 판정 `α=1 표본 / 전체 표본 ≥ 0.5` 는 문턱에 붙어 흔들렸다(등재문: 7회 중 2회 빨강 · 16/36 · 18/38).
+     `tools/probe574.js` 로 뿌리를 갈랐다 —
+       ⓐ 플로터는 **주기**(실측 69~72ms)로 태어나고 한 beat 에 두 줄기라 스냅숏당 표본이 **8~9장뿐**이다.
+          한 장이 불투명 창을 드나들면 비율이 **11~17%p** 움직이는데, 문턱(50%)과 설계값(62.5%) 사이는
+          **12.5%p** — 즉 «노드 한 장» 이다. 난수가 아니라 **격자와 표본 시각의 위상차**가 답을 정한다.
+       ⓑ 표본에 수명이 다른 두 종류(반복분 `.hb` .3s · 한 발 `.hb.lng` 1.3s)가 섞여 든다(스로틀 아래에서는 절반).
+       ⓒ 부하를 걸면(CPU ×4) 같은 트리에서 **6라운드 중 5라운드가 빨강**(36.4~50.0%)이 된다 = 등재문이 본 그림.
+       ⓓ **수리 전 대조**(491 5회차 전 = `.lng` .56s/570ms 사본)에서는 같은 조건에 **6/6 빨강**(0~42.9%)이다 —
+          흔들림은 491 보다 앞서고, 5회차가 수명을 늘린 것은 이 비율을 **올렸다**(등재문 예측대로).
+     ⇒ 등재문 처방 ⓐ 를 골랐다: **한 노드의 수명 중 불투명 구간 비율**을 «위상을 훑어» 직접 잰다.
+        애니메이션을 세우고 `currentTime` 을 0→100% 로 옮기며 α 를 읽으므로 rAF 격자·부하가 안 들어온다.
+     ⚠ **문턱 0.5 는 한 칸도 안 내렸다**(등재문 금지 사항) — 재는 대상만 «표본» 에서 «수명» 으로 옮겼다.
+        [J6] 되돌림 시험이 그 자리가 여전히 빨개질 수 있음을 못박고, [J7] 이 «애니 길이 = 노드 수명» 을 묶어
+        (옛 자가 살아 있는 노드를 읽어서 덤으로 갖고 있던 성질) 이 자가 무르게 풀리지 않았음을 채운다. */
+  console.log('  · (기록만 · 574) 옛 축 «α=1 표본 비율» ' + opaque + '/' + J.length +
+    ' = ' + (opaque / J.length * 100).toFixed(1) + '% — 위상 격자에 ±12%p 흔들려 판정에서 뺐다');
+  const SW = await (async () => {
+    await p.evaluate(() => {
+      /* 위상 훑기 — 애니를 세우고 currentTime 을 옮기며 α 를 읽는다. fxBye 가 걷어가도 다시 붙여 끝낸다. */
+      window.__sw574 = (sel, N) => {
+        const L = document.getElementById('fxl'), n = document.querySelector(sel);
+        if (!n) return null;
+        void n.offsetWidth;                       /* animation-name 을 갈아 끼운 직후를 위해 한 번 플러시 */
+        const a = n.getAnimations()[0]; if (!a) return null;
+        a.pause();
+        const dur = a.effect.getComputedTiming().duration, ops = [];
+        for (let i = 0; i <= N; i++) {
+          if (!n.isConnected) L.appendChild(n);
+          a.currentTime = dur * i / N;
+          ops.push(parseFloat(getComputedStyle(n).opacity));
+        }
+        try { n.remove(); } catch (_) {}
+        const first = ops.findIndex(o => o >= 0.99);
+        let last = -1; for (let i = ops.length - 1; i >= 0; i--) if (ops[i] >= 0.99) { last = i; break; }
+        return { dur, lo: first < 0 ? 0 : first / N, hi: last < 0 ? 0 : last / N,
+                 frac: first < 0 ? 0 : (last - first) / N };
+      };
+      window.__life574 = { rep: typeof HB_LIFE !== 'undefined' ? HB_LIFE : null,
+                           lone: typeof HB_LIFE_LONE !== 'undefined' ? HB_LIFE_LONE : null };
+    });
+    const c2 = await box('#trRunes .tr-rn[data-rune="r1"] .rbt.b1');
+    const st = cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: c2.x, y: c2.y }] });
+    /* 첫 beat 가 «한 발»(1.3s)이고 그 뒤가 반복분(.3s)이라, 둘이 같이 살아 있는 창을 기다린다.
+       ⚠ 시각을 상수로 박지 않는다 — 부하가 걸리면 그 창이 늦게 열린다(574 가 스로틀에서 본 것). */
+    let have = null;
+    for (let i = 0; i < 20; i++) {
+      await p.waitForTimeout(120);
+      have = await p.evaluate(() => ({ rep: !!document.querySelector('#fxl .fx-plus.hb:not(.lng)'),
+                                       lone: !!document.querySelector('#fxl .fx-plus.hb.lng') }));
+      if (have.rep && have.lone) break;
+    }
+    const rep  = await p.evaluate(() => window.__sw574('#fxl .fx-plus.hb:not(.lng)', 300));
+    const lone = await p.evaluate(() => window.__sw574('#fxl .fx-plus.hb.lng', 300));
+    /* 되돌림 시험 — «페이드가 수명의 70% 를 먹는» 키프레임을 씌운 사본에서 같은 자가 빨개지는가 */
+    const bad = await p.evaluate(() => {
+      const s = document.createElement('style');
+      s.textContent = '@keyframes fx574Bad{0%{opacity:1}30%{opacity:1}100%{opacity:0}}' +
+                      '.fx-plus.hb.bad574{animation-name:fx574Bad !important}';
+      document.head.appendChild(s);
+      const n = document.querySelector('#fxl .fx-plus.hb:not(.lng)');
+      if (n) n.classList.add('bad574');
+      const v = window.__sw574('#fxl .fx-plus.hb.bad574', 300);
+      s.remove();
+      return v;
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await st.catch(() => {});
+    await p.waitForTimeout(250);
+    return { rep, lone, bad, life: await p.evaluate(() => window.__life574) };
+  })();
+  const fr = s => (s ? (s.frac * 100).toFixed(1) + '%' : '노드 없음');
+  console.log('  · 위상 훑기 — 반복분 애니 ' + (SW.rep ? SW.rep.dur + 'ms · α=1 ' + (SW.rep.lo * 100).toFixed(1) + '~' + (SW.rep.hi * 100).toFixed(1) + '% = ' + fr(SW.rep) : '노드 없음') +
+    ' · 한 발 ' + (SW.lone ? SW.lone.dur + 'ms = ' + fr(SW.lone) : '노드 없음') +
+    ' · 되돌림 사본 ' + fr(SW.bad) + ' · 제거 시각 ' + SW.life.rep + '/' + SW.life.lone + 'ms');
+  ok(!!SW.rep && SW.rep.frac >= 0.5,
+     '[J4] ★ 불투명 구간이 수명의 절반을 넘는다 — 페이드가 수명의 반을 먹지 않는다(574: 표본 비율 대신 위상 훑기)',
+     fr(SW.rep) + ' ≥ 50% · 설계 62.5%(키프레임 10~72%)');
+  ok(!!SW.lone && SW.lone.frac >= 0.5,
+     '[J5] ★ «한 발»(.lng 1.3s)도 같다 — 491 5회차가 늘린 수명이 페이드에 먹히지 않았다',
+     fr(SW.lone) + ' ≥ 50% · 설계 64%(키프레임 8~72%)');
+  ok(!!SW.bad && SW.bad.frac < 0.5,
+     '[J6] ★ 되돌림 시험 — 페이드가 70% 를 먹는 키프레임을 씌운 사본에서 이 자가 빨개진다(무르지 않다)',
+     fr(SW.bad) + ' < 50%');
+  ok(!!SW.rep && !!SW.lone && Math.abs(SW.life.rep - SW.rep.dur) <= 60 && Math.abs(SW.life.lone - SW.lone.dur) <= 60,
+     '[J7] ★ «수명» 이 애니 길이와 같은 것을 가리킨다 — CSS 길이와 JS 제거 시각이 안 어긋난다(어긋나면 다 진 뒤 남는 유령)',
+     (SW.rep ? SW.life.rep + '↔' + SW.rep.dur : '-') + ' · ' + (SW.lone ? SW.life.lone + '↔' + SW.lone.dur : '-') + 'ms');
 
   /* ══ [I] 가림 — 두 줄기의 «봉투» 가 호스트의 정보 요소를 밟지 않는가 ═════ */
   console.log('[I] 봉투 대 정보 요소 — 1회차에 비평가 2인이 손으로 재던 것을 자로 옮긴다');
