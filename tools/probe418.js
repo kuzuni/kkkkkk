@@ -226,6 +226,11 @@ const DIFF_MANY = async ([a, b, boxes, thr]) => {
 async function sweep(opt) {
   const DSF = opt.dsf || 2, REVERT = !!opt.revert, ONLY = opt.only || null;
   const TOL = opt.tol == null ? 0.005 : opt.tol;
+  /* 356 17회차 — 차분 문턱. 기본 12 는 그대로다(래칫·게이트가 이 값 위에 서 있다).
+     knob 은 **재현용**이다 — 어두운 배경 위 검은 외곽선은 경계 칸의 diff 가 문턱 근처라,
+     같은 프레임을 문턱만 바꿔 읽으면 잉크 폭이 칸 단위로 들락거린다(16회차 −2.92% 의 정체).
+     그 «걸침» 을 보이는 자가 필요해서 뚫었다. 게이트 실행에서 이 env 를 세팅하지 마라. */
+  const THR = Number(process.env.PROBE418_THR || 12);
   const browser = await launch(chromium);
   const calc = await browser.newPage();
   await calc.setContent('<body></body>');
@@ -238,6 +243,9 @@ async function sweep(opt) {
     if (!wanted(label)) continue;
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: DSF });
     const page = await ctx.newPage();
+    /* 356 17회차 — DSF4 는 한 장이 4320×9120(39MP)이라 기본 30초를 넘겨 «진입 실패» 로 읽혔다
+       (16회차 «잰 노드 0개» 의 정체 — 진입이 아니라 **캡처**가 죽은 것). 배율에 비례해 늘린다. */
+    page.setDefaultTimeout(30000 * DSF);
     try {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
@@ -295,7 +303,7 @@ async function sweep(opt) {
       await page.waitForTimeout(120);
 
       const solo = nodes.filter((n) => !over.has(n.id));
-      const got = solo.length ? await calc.evaluate(DIFF_MANY, [on, off, solo.map(clipOf), 12]) : [];
+      const got = solo.length ? await calc.evaluate(DIFF_MANY, [on, off, solo.map(clipOf), THR]) : [];
       solo.forEach((n, k) => { n.ink = got[k]; });
 
       /* 겹친 노드는 한 장씩 따로 — 자기만 끄고 두 장을 찍는다 */
@@ -308,7 +316,7 @@ async function sweep(opt) {
         const b = (await page.screenshot({ clip })).toString('base64');
         await page.evaluate(SETONE, [n.id, '']);
         await page.waitForTimeout(60);
-        const d = await calc.evaluate(DIFF_MANY, [a, b, [[0, 0, 1e9, 1e9]], 12]);
+        const d = await calc.evaluate(DIFF_MANY, [a, b, [[0, 0, 1e9, 1e9]], THR]);
         n.ink = d[0]; n.solo = true;
       }
 
@@ -353,7 +361,7 @@ async function sweep(opt) {
     await rp.evaluate(() => { for (const e of document.querySelectorAll('[data-ref]')) e.style.opacity = '0'; });
     await rp.waitForTimeout(150);
     const rbb = (await rp.screenshot()).toString('base64');
-    const got = await refCalc.evaluate(DIFF_MANY, [ra, rbb, boxes, 12]);
+    const got = await refCalc.evaluate(DIFF_MANY, [ra, rbb, boxes, THR]);
     /* 기준은 «비율» 과 «상자를 얼마나 채우는가» 둘 다 남긴다 — 후자가 «가려짐» 판별자다 */
     srcs.forEach((s, i) => {
       if (got[i] && got[i].w >= 20 && got[i].h >= 20 && !got[i].edge) {
