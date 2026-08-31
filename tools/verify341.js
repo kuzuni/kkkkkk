@@ -32,7 +32,12 @@
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
 const path = require('path');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const fs = require('fs');
+const SRC = path.resolve(__dirname, '..', 'index.html');
+const URL = 'file://' + SRC;
+/* 559 — 측정표 03 §3-6 「우상단 레드닷」 상대 중심 **(+969, +14)**. 세로만 상수로 남긴다
+   (가로는 규약값과 1px 차라 아래 [D] 가로 항이 그대로 받는다). */
+const REF_CY = 14;
 const W = 1080, H = 2280;
 
 let pass = 0, fail = 0;
@@ -210,16 +215,46 @@ window.__arm = function(){
 
   /* ══ [D] 자리 — ref 대조 · 299 사분면 · 클리핑 ═══════════════════════ */
   console.log('\n── [D] 자리 ──');
-  await page.evaluate(() => { DUNGEONS.forEach(d => { S.dunTk[d.id] = 2; }); __arm(); renderDunPage(); });
+  /* ⚠ 559 — `renderDunPage()` 만으로는 **서브탭 배지가 안 따라온다.** 이 하네스는 게임 루프를
+     얼려 두므로(`window.step = () => {}`) `markDirty()` 가 세운 깃발을 걷어 갈 주체가 없고,
+     아래 [E] 가 읽는 `g.sub` 이 «누가 renderUI 를 대신 돌려 줬는가» 에 따라 참·거짓을 오갔다
+     (같은 트리에서 3회 중 1회 빨강 — 555·546 이 말하는 «얼리지 않은 주차» 와 같은 병이다).
+     ⇒ [E] 자신이 두 줄 아래에서 쓰는 것과 **같은 주문**을 여기에도 건다. */
+  await page.evaluate(() => {
+    DUNGEONS.forEach(d => { S.dunTk[d.id] = 2; }); __arm(); renderDunPage();
+    uiDirty = true; renderUI();
+  });
   const g = await read();
   const gc = g.cards[0], d0 = gc.dot;
-  console.log('      ref(AP/AQ 실측) : x1005..1032 · 26~28 × 31 · 카드상변 −1~+29');
-  console.log('      현행 코어 실측   : x' + px(d0.rect[0]) + '..' + px(d0.rect[0] + d0.rect[2])
-    + ' · ' + px(d0.rect[2]) + ' × ' + px(d0.rect[3]) + ' · 카드상변 +' + px(d0.dy));
+  const coreR = d0.rect[3] / 2, cyDot = d0.dy + coreR;
+  console.log('      ref(측정표 03 §3-6) : x1005..1032 · 26~28 × 31 · 중심 카드상변 +' + REF_CY);
+  console.log('      현행 코어 실측      : x' + px(d0.rect[0]) + '..' + px(d0.rect[0] + d0.rect[2])
+    + ' · ' + px(d0.rect[2]) + ' × ' + px(d0.rect[3]) + ' · 카드상변 +' + px(d0.dy)
+    + ' (중심 +' + px(cyDot) + ')');
   ok(Math.abs(d0.rect[0] - 1005) <= 3 && Math.abs(d0.rect[0] + d0.rect[2] - 1032) <= 3,
     '[D] 가로 자리가 ref 와 3px 이내', 'x' + px(d0.rect[0]) + '..' + px(d0.rect[0] + d0.rect[2]));
-  ok(d0.dy >= -2 && d0.dy + d0.rect[3] <= 31,
-    '[D] 세로 자리가 ref 봉투(카드상변 −1~+29) 안', '+' + px(d0.dy) + '..+' + px(d0.dy + d0.rect[3]));
+  /* ══ 559 (2026-08-31) — 세로 자리는 «상수» 가 아니라 **제품이 선언한 규약**에게 묻는다 ══════
+     빨갛던 항은 `d0.dy >= -2 && d0.dy + h <= 31`, 즉 ref 봉투 «카드상변 −1~+29» 였다.
+     그것은 **471 이전 자리**다 — 471(주인 지시 «레드닷 코너 통일»)이 이 닷의 좌표 상수
+     `.dnc .dot{right:-3;top:0}` 를 **지우고** 코너 규약 `--dot-in`(11px)에 묶으면서
+     중심이 ref +14 → **+11** 로 3px 올라갔다(`docs/review/471-레드닷코너통일.md` §3 «지운 좌표
+     상수 20개» 목록에 `.dnc .dot −3/0` 가 그대로 적혀 있다). 즉 이 항과 `verify471` [A]
+     («예외 밖 전 자리는 코너 안쪽 `--dot-in` ±2») 는 **서로 반대를 단언하고 있었다** —
+     333(149 ↔ 295) 과 같은 꼴이고, 나중 지시(471)가 옳은 쪽이다.
+     ⚠ **허용 오차를 넓혀서 풀지 않았다.** 봉투(폭 30)를 규약 한 점(±0.5)으로 **좁혔다** —
+       335·368 의 «자리를 상수에서 빼고 제품에게 묻는다» 와 같은 처방이고, 무르게 안 풀렸음은
+       아래 §R3 되돌림 시험(471 이전 좌표를 되씌우면 이 항이 빨개지고 옛 봉투가 초록이 된다)이
+       못박는다. ref 봉투는 지우지 않고 [D-ref] 로 남겨 **이탈 폭 3px 을 감시**한다(334 처방 ①). */
+  const inset = parseFloat((fs.readFileSync(SRC, 'utf8').match(/:root\{--dot-in:([\d.]+)px\}/) || [])[1]);
+  ok(inset > 0, '[D] 전제 — 제품이 471 코너 규약 `--dot-in` 을 선언한다(못 읽으면 아래 두 항이 뜻을 잃는다)',
+    inset + 'px');
+  ok(Math.abs(cyDot - inset) <= 0.5,
+    '[D] 세로 중심 = 471 코너 규약 자리(`--dot-in` − 코어반경) — 봉투가 아니라 한 점으로 단언',
+    '중심 +' + px(cyDot) + ' ↔ 규약 ' + inset + ' (코어반경 ' + px(coreR) + ' ⇒ 상변 ' + px(inset - coreR) + ')');
+  ok(Math.abs(REF_CY - inset - 3) <= 0.01,
+    '[D-ref] 규약이 측정표 03 §3-6(중심 +' + REF_CY + ')에서 벗어난 폭은 471 이 설명하는 3px 뿐이다'
+    + ' — `--dot-in` 을 건드리면 여기가 빨개지고 §3-6 정오표를 다시 봐야 한다',
+    'ref +' + REF_CY + ' − 규약 ' + inset + ' = ' + px(REF_CY - inset) + 'px');
   const cx = d0.rect[0] + d0.rect[2] / 2, cy = d0.rect[1] + d0.rect[3] / 2;
   ok(cx > gc.card[0] + gc.card[2] / 2 && cy < gc.card[1] + gc.card[3] / 2,
     '[D] 299 규약 — 중심이 카드 우상단 사분면',
@@ -280,6 +315,34 @@ window.__arm = function(){
     '[R2] 조건이 거짓인데 노드를 강제로 넣으면 «상시 점등» 상태가 만들어진다 — [B-2] 가 그것을 잡는 항이다',
     'left=' + r2s.cards[0].left + ' node=' + r2s.cards[0].node + ' (' + r2 + ')');
   await set(() => { const d = DUNGEONS[0]; S.dunTk[d.id] = 2; renderDunPage(); });
+
+  /* ══ [R3] 559 — 새 세로 항이 «무르게» 안 풀렸음을 471 이전 좌표로 못박는다 ══════════════
+     ⚑ 이 시험이 하는 말은 두 가지고, 둘 다 필요하다:
+       ① 새 항(규약 한 점 ±0.5)은 닷이 3px 만 움직여도 **실제로 빨개진다** — 봉투를 넓힌 게 아니다.
+       ② 옛 봉투(−1~+29)는 쓰레기가 아니라 **471 이전 자리를 정확히 재고 있던 자**다 —
+          되씌우면 그것이 초록으로 돌아온다. 즉 둘은 «맞다/틀리다» 가 아니라 «전/후» 였다.
+     되씌우는 값은 471 이 지운 그 값 그대로다(`docs/review/471-…md` §3 «`.dnc .dot` −3/0»). */
+  await page.evaluate(() => {
+    const st = document.createElement('style'); st.id = '__r3';
+    st.textContent = '#dunList .dnc>.dot{top:0px!important;right:-3px!important}';
+    document.head.appendChild(st);
+  });
+  await freezeDot(page);
+  const r3 = await read();
+  const r3d = r3.cards[0].dot, r3cy = r3d.dy + r3d.rect[3] / 2;
+  ok(Math.abs(r3cy - inset) > 0.5,
+    '[R3] 되돌림 — 471 이전 좌표(`top:0`)를 되씌우면 **새 규약 항이 빨개진다**(자가 실제로 문다)',
+    '중심 +' + px(r3cy) + ' ↔ 규약 ' + inset + ' · 어긋남 ' + px(r3cy - inset) + 'px');
+  ok(r3d.dy >= -2 && r3d.dy + r3d.rect[3] <= 31,
+    '[R3] 그리고 그 자리에서는 **옛 ref 봉투(−1~+29)가 초록이 된다** — 두 자는 «전/후» 였다',
+    '+' + px(r3d.dy) + '..+' + px(r3d.dy + r3d.rect[3]));
+  await page.evaluate(() => { const s = document.getElementById('__r3'); if (s) s.remove(); });
+  await freezeDot(page);
+  const r3b = await read();
+  const r3bd = r3b.cards[0].dot;
+  ok(Math.abs(r3bd.dy + r3bd.rect[3] / 2 - inset) <= 0.5,
+    '[R3] 되돌림을 걷으면 도로 규약 자리다 (시험이 상태를 안 남긴다)',
+    '중심 +' + px(r3bd.dy + r3bd.rect[3] / 2));
 
   /* ══ [G] 회귀 — 닷이 카드 기하를 한 픽셀도 안 민다 ═══════════════════ */
   console.log('\n── [G] 회귀 — 레이아웃 Δ0px ──');
