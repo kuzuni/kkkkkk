@@ -171,7 +171,10 @@ async function measure(file) {
   ok(!/const FX3_(BSPITCH|MIND) = \d+;/.test(src), '피치·최소거리에 남은 리터럴 0개');
 
   console.log('[E] 대가 — 개수·상한·화면 점유');
-  ok(M.run.maxN >= 3 && M.run.maxN <= K.FLYMAX, `동시 알갱이 최대 ${M.run.maxN}개 (3 ~ FXFLY_MAX ${K.FLYMAX})`);
+  /* ⚠ FXFLY_MAX 는 «UI 12 + 전투 12» 의 총합이다(index.html 543 주석). UI 발만 재는 이 자리는
+     그 절반을 상한으로 쓴다 — 총합으로 재면 «UI 가 전투 몫까지 다 써도 초록» 이 되어 자가 무뎌진다. */
+  ok(M.run.maxN >= 3 && M.run.maxN <= K.FLYMAX / 2,
+     `UI 발 동시 알갱이 최대 ${M.run.maxN}개 (3 ~ ${K.FLYMAX / 2} = FXFLY_MAX ${K.FLYMAX} 의 UI 몫)`);
   ok(M.run.maxDom <= K.FXMAX, `#fxl DOM 최대 ${M.run.maxDom} (≤ FXMAX ${K.FXMAX} — 조용한 드롭 0)`);
   const cov = Math.PI * (K.GINK / 2) ** 2 * M.run.maxN / (1080 * 2280) * 100;
   ok(cov <= 5, `동시 잉크 점유 ${cov.toFixed(2)}% (≤5% — «3배» 를 개수와 맞바꿨다)`);

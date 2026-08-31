@@ -223,12 +223,22 @@ async function boot(browser, revert) {
   let d1 = null, dTap = null;
   for (let i = 0; i < 5; i++) {
     d1 = await run('none', 'tap');
-    if (d1.srcTap && d1.flyN && d1.flyLayers.length === 1 && d1.flyLayers[0] === 'fxl') { dTap = d1; break; }
+    if (d1.srcTap && d1.flyN && d1.flyLayers.includes('fxl')) { dTap = d1; break; }
   }
   ok(d1 && d1.covered === false, '[D1] 팝업이 없으면 «덮는 층» 도 없다 — ' + JSON.stringify(d1 && d1.coverIds));
-  ok(!!dTap, '[D3] 메인 화면에서 «탭이 이긴» 시행을 잡았다(회귀 판정의 전제)');
-  ok(!!dTap && dTap.flyLayers.length === 1 && dTap.flyLayers[0] === 'fxl',
-     '[D2] 그 시행의 UI 발은 한 값도 안 바뀐다(#fxl) — ' + JSON.stringify(dTap && dTap.flyLayers));
+  /* ⚑ 543 이관 — 종전 전제는 «그 창의 비행 층이 fxl **하나뿐**» 이었다. 그것이 초록이던 이유는
+     518 이 아니라 **개수**였다: UI 발이 8~16개를 띄우면 `room = FXFLY_MAX_C − fxFlies.length` 가
+     0 이 되어 배경 전투가 그 창 동안 **한 개도 못 쏘았다.** 543 이 개수를 3~6 으로 내리자 전투가
+     제 몫을 쏘기 시작했고(layers = ["fxl","fxlc"]) 이 항이 3회 중 2회 빨개졌다.
+     그런데 그 fxlc 는 **77 규약대로 옳은 그림**이다(전투 발은 팝업 아래 층). 이 자가 물어야 하는
+     것은 «전투가 조용한가» 가 아니라 «**UI 발이** 안 묻혔는가» 이므로, 전제를 그 뜻으로 되돌린다.
+     ⚠ 무르게 푼 것이 아님은 [D4] 가 못박는다 — 같은 창의 **전투 발은 여전히 fxlc 에만** 있어야
+       하므로, 518 이 되살아나 UI 발까지 fxlc 로 내려보내면 [D2] 가 곧바로 빨개진다. */
+  ok(!!dTap, '[D3] 메인 화면에서 «탭이 이긴 · UI 발이 실제로 난» 시행을 잡았다(회귀 판정의 전제)');
+  ok(!!dTap && dTap.flyLayers.includes('fxl'),
+     '[D2] 그 시행의 UI 발은 종전 그대로 팝업 위 층(#fxl) 에서 난다 — ' + JSON.stringify(dTap && dTap.flyLayers));
+  ok(!!dTap && dTap.flyLayers.every(l => l === 'fxl' || l === 'fxlc'),
+     '[D4] 같은 창의 나머지 비행은 전투 발의 #fxlc 뿐이다(77 규약) — ' + JSON.stringify(dTap && dTap.flyLayers));
 
   /* ── [E]·[F] 3회차 — «(다) 전체화면 페이지» 3화면(z28) ───────────────
      2회차 전수 스윕이 남긴 그물 밖 셋이다. 실측 1080×1996 @ y104 = 프레임의 87.5% 라
