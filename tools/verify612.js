@@ -184,7 +184,8 @@ const evOf = p => async (fn, a) => {
     openTrain(); setTrSub('temper'); renderTrain();
     const sh = document.querySelector('#trw .tr-sheet').getBoundingClientRect();
     const out = [];
-    ['#trTemper .tr-tp.k0 .ti', '#trTemper .tr-tp.k2 .ti', '#trTemper .tr-tp.k2 .tb', '#trTemper .tp-ft']
+    /* 614 가 푸터(.tp-ft 회수 띠)를 걷어냈다 — 죽은 표본을 살아 있는 마지막 행 요소로(333 규약) */
+    ['#trTemper .tr-tp.k0 .ti', '#trTemper .tr-tp.k2 .ti', '#trTemper .tr-tp.k2 .tb', '#trTemper .tr-tp.k2 .td']
       .forEach(s => { const n = document.querySelector(s); if (!n) { out.push(s + ' 없음'); return; }
         const r = n.getBoundingClientRect();
         const o = Math.max(0, (r.y + r.height) - (sh.y + sh.height), sh.y - r.y);
