@@ -1,16 +1,21 @@
 #!/usr/bin/env node
-/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388)
+/* PROGRESS 완료행 부패 탐지 — 끝난 작업이 표에서 «미착수» 로 읽히는 것을 잡는다 (작업 374 · 388 · 557)
  *
- * 자가 둘이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
+ * 자가 셋이다. **뿌리가 다르고, 하나가 다른 하나를 대신하지 못한다.**
  *   §1 되돌림  (374) — 완료행이 **병합으로** 등재문으로 되돌아간다. 이력(그 done 커밋)과 대조한다.
  *   §2 자기모순(388) — **되돌림이 아니다.** `done(<ID>)` 커밋 **자신**이 완료문을 비고 칸
  *                      «끝에만» 덧붙이고 구현 칸·루프 횟수·비고 머리말을 등재 상태로 남긴다.
  *                      이력과는 아무 차이가 없으므로 §1 은 **영원히 초록**이다 — 표 자체를 봐야 한다.
+ *   §3 마감 누락(557) — **모순도 아니다.** 세션이 제품·자·review 를 전부 push 하고 표를 **아예 안 건드린다**.
+ *                      행은 «일관되게 미착수» 라 §2 가 볼 모순이 없고, done() 커밋이 얕은 클론
+ *                      경계 밖이면 §1 도 못 본다 — 표가 아니라 **표 ↔ 저장소 자산**을 대조해야 한다.
  *
  *   node tools/verifyProgress.js                 작업 트리의 docs/PROGRESS.md 를 본다
  *   node tools/verifyProgress.js --rev <rev>     그 리비전의 PROGRESS 를 본다(§R 되돌림 시험용)
  *   node tools/verifyProgress.js --file <path>   파일 하나를 본다(합성 시험용)
  *   node tools/verifyProgress.js --quiet         빨간 항목만 찍는다
+ *   node tools/verifyProgress.js --no-gate       §3 이 자를 실행하지 않는다(빠름 — 대신 «안 쟀다» 를 찍는다)
+ *   node tools/verifyProgress.js --gate-timeout <초>   §3 의 자 실행 상한(기본 180)
  *
  * 종료 코드: 0 = 되돌아간 행 없음 · 1 = 되돌아간 행 있음(내용은 stdout) · 2 = 도구 오류
  *
@@ -65,13 +70,16 @@ const gitQ = (...a) => { try { return git(...a); } catch (e) { return null; } };
 
 /* ── 인자 ── */
 const argv = process.argv.slice(2);
-let rev = null, file = null, quiet = false;
+let rev = null, file = null, quiet = false, noGate = false, gateTimeout = 180;
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--rev') rev = argv[++i];
   else if (argv[i] === '--file') file = argv[++i];
   else if (argv[i] === '--quiet') quiet = true;
-  else { console.error('사용법: node tools/verifyProgress.js [--rev <rev>] [--file <path>] [--quiet]'); process.exit(2); }
+  else if (argv[i] === '--no-gate') noGate = true;
+  else if (argv[i] === '--gate-timeout') gateTimeout = Number(argv[++i]);
+  else { console.error('사용법: node tools/verifyProgress.js [--rev <rev>] [--file <path>] [--quiet] [--no-gate] [--gate-timeout <초>]'); process.exit(2); }
 }
+if (!(gateTimeout > 0)) { console.error('--gate-timeout 은 양수 초여야 한다'); process.exit(2); }
 
 /* ── 표 행 읽기 — «| <ID> |» 로 시작하는 줄 하나가 작업 단위 하나다 ── */
 const ROW = /^\|\s*([0-9]+|[A-Z][0-9]+)\s*\|/;
@@ -204,6 +212,92 @@ for (const [id, line] of cur) {
   if (t) contra.push({ id, head: t[1], mark: d[0], kind: 'tail' });
 }
 
+/* ── §3 마감 누락 판정 — 표가 아니라 «표 ↔ 저장소 자산» 을 본다 (작업 557) ───────────
+ * §1·§2 가 «초록» 을 내는 것이 옳은 자리가 하나 남아 있었다: 세션이 제품·자·review 를 전부
+ * push 하고 **PROGRESS 를 아예 안 건드리는** 경우. 그 행은 완료 표지가 0건이라 §2 의 모순이
+ * 성립하지 않고(모순의 정의가 «완료 표지 ↔ 미착수 머리말» 이다), done() 커밋이 `.git/shallow`
+ * 경계 밖이면 §1 도 못 본다. 498(sess-1821-21145)이 그렇게 남아 티어 스캔에 «T2 미착수 첫 행» 으로
+ * 읽혔고 워커 D 가 통째로 재선점했다(371·378·308·383 에 이어 다섯 번째). 재현은 `tools/probe557.js`.
+ *
+ * ── 정밀도를 왜 재현율보다 앞에 두는가 ────────────────────────────────────
+ * 이 자는 **모든 워커의 push 전 게이트**다([4] 규칙). 빨개지면 그 행이 마감될 때까지 저장소
+ * 전체의 push 가 막힌다 — 헛빨강 하나의 값이 놓친 자리 하나보다 비싸다. 그래서 «자산이 있다» 를
+ * 곧장 완료로 읽지 않고 **증거 사다리**를 탄다. 못 본 자리는 조용히 넘기지 않고 요약에 세어 찍는다.
+ *   E1 done(<ID>) 커밋이 이력에 있다        → 빨강 (결정적)
+ *   E2 `tools/verify<ID>.js` 가 있고 **초록** → 빨강 (그 작업의 자가 통과한다 = 끝난 일이다)
+ *      ⚠ 자가 **빨강**이면 조용하다 — 아직 안 끝난 일일 수 있다(요약에만 찍는다).
+ *      ⚠ 자가 **못 돌면**(playwright 없음·시간 초과) «초록» 으로 부르지 않고 판정 불가로 찍는다.
+ *   E3 `docs/review/<ID>-*.md` 가 스스로 «완료(날짜)» 라고 적었다 → 빨강
+ *      ⚠ 재현율이 반쪽이다(probe557 [5] 실측: 마감된 554 의 review 에는 표지가 없다).
+ *   그 밖(자산은 있는데 셋 다 아님) → 관찰로만 찍는다.
+ *
+ * ── lock 이 살아 있는 행은 왜 제외인가 ────────────────────────────────────
+ * 지시서 [1] 이 «회차마다 review 를 커밋하라» 고 못박으므로 **진행 중인 작업도 자산을 갖는다**.
+ * 진행 중과 마감 누락을 가르는 것은 자산이 아니라 `docs/claims/<ID>.lock` 이다(probe557 [4]).
+ * 그래서 lock 이 있으면 제외하되 **조용히 빼지 않고** 요약에 몇 건을 왜 뺐는지 찍는다.
+ *
+ * ⚠ `--rev` 에서는 §3 을 돌리지 않는다 — 자산은 **작업 트리**의 것이라 옛 표와 짝이 안 맞는다.
+ *   (`--file` 합성 표는 작업 트리 자산과 짝이 맞는 것이 시험의 전제라 그대로 돈다.) */
+const CLAIMS = path.join(ROOT, 'docs', 'claims');
+const reviewOf = id => {
+  try { return fs.readdirSync(path.join(ROOT, 'docs', 'review')).filter(f => f.startsWith(id + '-') && f.endsWith('.md')); }
+  catch (e) { return []; }
+};
+const gateOf = id => (fs.existsSync(path.join(ROOT, 'tools', 'verify' + id + '.js')) ? 'tools/verify' + id + '.js' : null);
+const lockOf = id => {
+  const p = path.join(CLAIMS, id + '.lock');
+  if (!fs.existsSync(p)) return null;
+  const m = /^(\S+)\s+(\S+)/.exec(fs.readFileSync(p, 'utf8').trim()) || [];
+  const at = m[1] ? Date.parse(m[1]) : NaN;
+  return { sid: m[2] || '?', min: isNaN(at) ? null : Math.round((Date.now() - at) / 60000) };
+};
+const reviewSaysDone = id => reviewOf(id).some(f => {
+  try { return DONE_DATED.test(fs.readFileSync(path.join(ROOT, 'docs', 'review', f), 'utf8')); } catch (e) { return false; }
+});
+function runGate(rel) {
+  try {
+    execFileSync('node', [rel], { cwd: ROOT, encoding: 'utf8', timeout: gateTimeout * 1000, stdio: ['ignore', 'pipe', 'pipe'] });
+    return { state: 'pass' };
+  } catch (e) {
+    const out = String((e.stdout || '') + (e.stderr || ''));
+    if (e.killed || e.signal) return { state: 'unrun', why: gateTimeout + '초 시간 초과' };
+    if (e.status === 2 || /playwright|Cannot find module|Executable doesn't exist/i.test(out)) return { state: 'unrun', why: '실행 불가(종료 코드 ' + e.status + ')' };
+    return { state: 'fail', why: '종료 코드 ' + e.status };
+  }
+}
+
+const unclosed = [];   /* 빨강 — 끝났는데 표가 «미착수» 다 */
+const held = [];       /* 제외 — lock 이 살아 있다(진행 중) */
+const watch = [];      /* 관찰 — 자산은 있는데 «끝났다» 를 결정적으로 못 읽었다 */
+const skipRev = !!rev;
+if (!skipRev) {
+  for (const [id, line] of cur) {
+    if (DONE_DATED.test(line)) continue;                 /* 행에 완료 표지가 있으면 §2 의 몫이다 */
+    if (!(NOT_YET.exec(line) || tailHead(line))) continue; /* 표가 «미착수» 로 안 읽힌다 */
+    const rv = reviewOf(id), gate = gateOf(id);
+    if (!rv.length && !gate) continue;                   /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */
+    const lk = lockOf(id);
+    if (lk) { held.push({ id, lk, rv, gate }); continue; }
+    if (newestDone.has(id)) {                            /* E1 */
+      unclosed.push({ id, why: 'done(' + id + ') 커밋이 이력에 있다', detail: newestDone.get(id).sha.slice(0, 7) + ' «' + newestDone.get(id).subj.slice(0, 60) + '»' });
+      continue;
+    }
+    if (gate) {                                          /* E2 — 자가 있으면 자의 답이 결정한다 */
+      if (noGate) { watch.push({ id, why: '자 `' + gate + '` 를 안 돌렸다(--no-gate)' }); continue; }
+      const r = runGate(gate);
+      if (r.state === 'pass') { unclosed.push({ id, why: '그 작업의 자가 초록이다', detail: '`' + gate + '` 통과 — 끝난 일이다' }); continue; }
+      if (r.state === 'fail') { watch.push({ id, why: '자 `' + gate + '` 가 빨갛다(' + r.why + ') — 아직 안 끝난 일일 수 있다' }); continue; }
+      watch.push({ id, why: '자 `' + gate + '` 를 못 돌렸다(' + r.why + ') — 판정 불가' });
+      continue;
+    }
+    if (reviewSaysDone(id)) {                            /* E3 */
+      unclosed.push({ id, why: 'review 파일이 스스로 «완료(날짜)» 라고 적었다', detail: rv.join(' ') });
+      continue;
+    }
+    watch.push({ id, why: 'review ' + rv.length + '건은 있는데 완료 표지가 없다 — 회차 기록일 수 있다(' + rv.join(' ') + ')' });
+  }
+}
+
 /* ── 출력 ── */
 if (!quiet) {
   console.log('PROGRESS 되돌림 검사 — ' + curLabel + ' · done() 기록 ' + newestDone.size + '건');
@@ -220,6 +314,14 @@ if (!quiet) {
     console.log('    창을 넓히려면: git fetch --deepen=200 origin main  (§2 자기모순은 표만 보므로 영향 없다)');
   }
   console.log('  §2 자기모순 검사 — 표 행 ' + cur.size + '건 · 빨강 ' + contra.length + '건');
+  if (skipRev) {
+    console.log('  §3 마감 누락 검사 — 건너뜀(--rev): 자산은 작업 트리의 것이라 옛 표와 짝이 안 맞는다');
+  } else {
+    console.log('  §3 마감 누락 검사 — 빨강 ' + unclosed.length + '건 · 진행 중이라 제외 ' + held.length + '건 · 관찰 ' + watch.length + '건' +
+                (noGate ? ' · ⚠ --no-gate: 자를 안 돌렸다(§3 의 E2 축이 꺼져 있다)' : ''));
+    for (const h of held) console.log('    –  ' + h.id + ' — 제외 · lock ' + h.lk.sid + '(' + h.lk.min + '분 전) · review ' + h.rv.length + '건 · 자 ' + (h.gate || '없음'));
+    for (const w of watch) console.log('    ⚠  ' + w.id + ' — 관찰 · ' + w.why);
+  }
 }
 for (const b of bad) console.log('  ✗ ' + b.id + ' — ' + b.why + ' · ' + b.detail);
 for (const c of contra) console.log('  ✗ ' + c.id + ' — 자기모순 · ' +
@@ -244,6 +346,19 @@ if (contra.length) {
   }
 }
 
+for (const u of unclosed) console.log('  ✗ ' + u.id + ' — 마감 누락 · ' + u.why + ' · ' + u.detail);
+
+if (unclosed.length) {
+  console.log('\nPROGRESS UNCLOSED ' + unclosed.length + '건 — ' + unclosed.map(u => u.id).join(' '));
+  console.log('  뜻: 그 작업의 자산(제품·자·review)은 저장소에 있는데 **표만 «미착수»** 다 =');
+  console.log('    다음 워커의 티어 스캔이 그 행을 «안 한 일» 로 읽고 통째로 재선점한다(498 이 실제로 그랬다).');
+  console.log('  고치는 법: 그 행의 세 칸을 지시서 [1] 대로 채워 **마감**한다 —');
+  console.log('    ① 구현 칸 «–» → «✅ 완료(날짜, 세션 · n회차) — 한 줄 요약»  ② 루프 횟수  ③ 비고 머리말');
+  console.log('    요약은 `docs/review/<ID>-*.md` 에 이미 있다 — 등재문 본문은 지우지 마라.');
+  console.log('  ⚠ 마감 전에 그 review 의 마지막 회차 기록을 읽고 **정말 끝났는지** 확인해라 —');
+  console.log('    안 끝났으면 표를 «완료» 로 고치지 말고 `node tools/claim.js <ID> <SID>` 로 잡아 이어서 해라.');
+}
+
 if (bad.length) {
   console.log('\nPROGRESS REVERTED ' + bad.length + '건 — ' + bad.map(b => b.id).join(' '));
   console.log('  고치는 법: 그 `done(<ID>)` 커밋의 행을 그대로 되살린다.');
@@ -252,6 +367,7 @@ if (bad.length) {
   console.log('    있었으면 그것까지 살린다(규칙 8 «양쪽 행을 모두 살린다» 그대로).');
   process.exit(1);
 }
-if (contra.length) process.exit(1);
-if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음');
+if (contra.length || unclosed.length) process.exit(1);
+if (!quiet) console.log('\nPROGRESS OK — 되돌아간 완료행 없음 · 자기모순 행 없음 · 마감 누락 행 없음' +
+                        (skipRev ? ' (§3 은 --rev 라 안 돌았다)' : noGate ? ' (§3 의 자 실행은 --no-gate 로 껐다)' : ''));
 process.exit(0);
