@@ -11,6 +11,7 @@
  * 절:
  *   [A] 스코프(전 화면 상시 크롬) 비균등 0건
  *   [B] 잔여 자리 래칫 — 스코프 밖 비균등 «자리 수» 가 등재값보다 늘면 빨강(새로 만들면 걸린다)
+ *   [F] 프레임 축 래칫 — **9:13.3(1080×1600)** 에서도 비균등 «자리» 0 (14회차 신설 · 351·403·404 의 그 프레임)
  *   [C] 잘림 0 — 스코프 아이콘의 글리프 advance 가 호스트 상자를 안 넘는다(357 함정)
  *   [R] 되돌림 시험 — 스코프 노드에 scaleX 를 도로 주입하면 [A] 가 실제로 빨개진다
  *
@@ -177,8 +178,24 @@ const inScope = (sel) => SCOPE.find((s) => hitsKey(s, sel));
    428 사고의 나머지 절반이 그것이다 — «92/93» 한 줄이 빨개지는 동안 [A]·[B] 는 초록이었다. */
 const SWEEP_MISS = [];
 
+/* ── [F] 프레임 축 (14회차 신설) ─────────────────────────────────────────────
+   스캐너는 **1080×2280 한 프레임**에서만 돈다. 그런데 주인이 명시적으로 요구한 기기가 하나 더
+   있다 — **9:13.3(1080×1600)** 이고, 351·403·404 가 그 프레임 전용으로 등재된 작업이다.
+   세로가 680px 짧아지면 `flex` 아이가 **교차축으로 눌린다**(shrink) — 그것이 바로 이 작업이
+   잡는 «찌그러짐» 이고 2280 에서는 한 픽셀도 안 보인다. 13회차가 `probe356r12 --only B` 로
+   그 축을 처음 쟀고(0자리) «게이트에 넣을 거면 [S3] 처럼 래칫으로, 지금 값 0 을 상한으로»
+   라고 넘겼다 — 이 절이 그 숙제다. */
+const FRAME_F = { width: 1080, height: 1600 };
+/* [F] 래칫 — 13회차 `probe356r12 --only B` 실측 **0자리**(56화면 · 3531노드),
+   14회차 `probe356r14` 가 두 방법으로 재확인. [B] 와 같은 규율이다:
+   ⚠ «줄었다» 는 안 막는다. **늘어난 것만** 잡고, 자리를 닫았으면 이 값을 내려 적어라.
+   ⚠ 0 이 된 뒤로 이 자는 «짧은 프레임에서만 눌리는 아이콘이 하나라도 생기면 빨강» 이다. */
+const FRAME_REMAIN = 0;
+
 async function sweep(browser, inject) {
   const rows = [];
+  const rowsF = [];       /* [F] 프레임 축 — 같은 화면을 1080×1600 으로 줄인 뒤 한 번 더 수집한 것 */
+  const seenF = [];       /* 화면별 «리사이즈가 정말 먹었나» — innerHeight 실측 (무음 실패 감시) */
   for (const [label, steps] of SCREENS) {
     const ctx = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
@@ -195,10 +212,24 @@ async function sweep(browser, inject) {
       await page.waitForTimeout(200);
       const got = await page.evaluate(COLLECT, { all: false });
       for (const g of got) rows.push(Object.assign({ screen: label }, g));
+
+      /* ── [F] 프레임 축 (14회차) — **스윕을 한 벌 더 돌지 않는다** ──────────────────
+         비용의 거의 전부는 위의 ①컨텍스트 ②goto ③단계 클릭이고 `COLLECT` 는 evaluate 한 번이다.
+         그래서 같은 페이지를 9:13.3 으로 **줄여서 한 번 더 수집**한다 —
+         프레임 축이 «스윕 한 벌» 이 아니라 «evaluate 한 번» 값이 된다.
+         ⚠ 이것이 «처음부터 1600 에서 몰기» 와 같은 값이라는 근거는 손이 아니라 자에 있다:
+            `node tools/probe356r14.js` 가 두 방법을 56화면에서 나란히 돌려 세 축
+            (노드 수 · 비균등 자리 · 공통 노드 ratio 드리프트)으로 대조한다. 갈리면 그 자가 말한다. */
+      await page.setViewportSize(FRAME_F);
+      /* `fit()` 이 resize 핸들러에서 돌고, 그 뒤 레이아웃·페인트가 한 프레임 더 필요하다. */
+      await page.waitForTimeout(420);
+      seenF.push([label, await page.evaluate(() => window.innerHeight)]);
+      const gotF = await page.evaluate(COLLECT, { all: false });
+      for (const g of gotF) rowsF.push(Object.assign({ screen: label }, g));
     } catch (e) { /* 화면 하나가 안 열려도 나머지는 본다 — 진입 실패는 smoke 의 몫이다 */ }
     await ctx.close();
   }
-  return rows;
+  return { rows, rowsF, seenF };
 }
 
 (async () => {
@@ -215,7 +246,7 @@ async function sweep(browser, inject) {
     if (rot.length) bad(`[A-s] 스코프 키 ${rot.length}건이 상태 클래스를 물고 있다(581 사고 재발 예약): ${rot.map((s) => s.k).join(' · ')}`);
     else ok(`[A-s] 스코프 키 ${SCOPE.length}건 전부가 상태 클래스를 안 문다 (581 «.ifbtn» 이 끊은 그 부분 일치가 다시 안 생긴다)`);
   }
-  const rows = await sweep(browser, null);
+  const { rows, rowsF, seenF } = await sweep(browser, null);
   if (!rows.length) bad('아이콘 노드를 한 개도 못 봤다 (스캐너가 죽었다 — 헛초록 방지)');
   else ok(`아이콘 노드 ${rows.length}개 관측`);
   /* ⚑ 443 — 이 숫자와 아래 [B] 래칫이 «전 화면» 을 본 값인지. 한 단계라도 무음 실패면 아니다. */
@@ -240,6 +271,65 @@ async function sweep(browser, inject) {
   const outSel = new Set(badRows.filter((r) => !inScope(r.sel)).map((r) => r.sel));
   if (outSel.size > REMAIN) bad(`잔여 자리 ${outSel.size} > 등재값 ${REMAIN} — 새 비균등 아이콘이 생겼다`);
   else ok(`잔여 자리 ${outSel.size} ≤ 등재값 ${REMAIN}` + (outSel.size < REMAIN ? ' (줄었다 — REMAIN 을 내려 적어라)' : ''));
+
+  console.log(`[F] 프레임 축 래칫 — 9:13.3(${FRAME_F.width}×${FRAME_F.height})에서도 비균등 «자리» 0`);
+  {
+    /* ⓐ 전제 — 리사이즈가 **정말 먹었나**. 안 먹으면 이 절은 2280 을 두 번 잰 것이고 그건 헛초록이다.
+       ([A] 가 «무음 실패한 단계» 를 세는 것과 같은 자리 — 443·12·13회차가 세 번 데인 그 모양이다.) */
+    const wrong = seenF.filter(([, h]) => h !== FRAME_F.height);
+    if (!seenF.length) bad('[F-a] 프레임 축을 잰 화면이 0개다 — 스윕이 1600 수집에 한 번도 못 닿았다(헛초록 방지)');
+    else if (wrong.length) bad(`[F-a] 리사이즈가 안 먹은 화면 ${wrong.length}개 — 이 절은 2280 을 두 번 잰 값이다: ${wrong.map(([l, h]) => `${l}(${h})`).join(' · ')}`);
+    else ok(`[F-a] ${seenF.length}화면 전부 innerHeight ${FRAME_F.height} 에서 쟀다 (리사이즈가 먹었다)`);
+
+    /* ⓑ 전제 — 짧은 프레임에서 노드가 통째로 사라지면 «비균등 0» 은 «안 봤다» 는 뜻이다.
+       문턱은 2280 관측 수의 90% — 시트가 짧아지며 몇 칸이 뷰포트 밖으로 나가는 것은 정상이고,
+       화면 하나가 통째로 빠지는 것(56화면 중 1개 ≈ 2%)보다 훨씬 크게 잡아 둔다. */
+    const floor = Math.floor(rows.length * 0.9);
+    if (rowsF.length < floor) bad(`[F-b] 1600 관측 노드 ${rowsF.length}개 < 바닥 ${floor}(2280 의 ${rows.length}개 × 0.9) — 짧은 프레임에서 스코프가 줄었다`);
+    else ok(`[F-b] 1600 관측 노드 ${rowsF.length}개 ≥ 바닥 ${floor} (2280 은 ${rows.length}개)`);
+
+    /* ⓒ 래칫 — [B] 와 같이 «자리»(셀렉터)로 접는다. 비율로 접으면 60 쥬시의 `.jz-st` 때문에
+       실행마다 값이 흔들린다([B] 주석). */
+    const badF = rowsF.filter((r) => Math.abs(r.ratio - 1) > TOL);
+    const selF = new Set(badF.map((r) => r.sel));
+    /* «프레임 전용» = 1600 에서만 눌리는 자리. 이 절의 존재 이유가 바로 이 집합이다. */
+    const sel2280 = new Set(rows.filter((r) => Math.abs(r.ratio - 1) > TOL).map((r) => r.sel));
+    const onlyShort = [...selF].filter((s) => !sel2280.has(s));
+    if (selF.size > FRAME_REMAIN)
+      bad(`[F-c] 래칫 — 1600 에서 비균등인 자리 ${selF.size}개(래칫 ${FRAME_REMAIN}) · 그중 «1600 에서만» ${onlyShort.length}개:\n` +
+          badF.slice(0, 12).map((r) => `      ${r.ratio} [${r.kind}] ${r.sel} «${r.txt}» ${r.w}×${r.h} @${r.screen}`).join('\n'));
+    else ok(`[F-c] 래칫 — 1600 비균등 자리 ${selF.size}개 ≤ ${FRAME_REMAIN}` + (selF.size < FRAME_REMAIN ? ' (줄었다 — FRAME_REMAIN 을 내려 적어라)' : ''));
+
+    /* ⓓ·ⓔ 되돌림·음성 — **검출기가 짧은 프레임에서도 정말 잡는가.**
+       래칫이 0 인 자는 «아무것도 안 잡는 자» 와 겉모습이 같다(334 처방). 화면 하나(02 메인)를
+       1600 으로 열어 ⓓ 비균등(scaleX)·ⓔ 등방(scale)을 차례로 주입해 갈라 본다 — 컨텍스트 1개짜리다. */
+    const ctx = await browser.newContext({ viewport: FRAME_F, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(URL, { waitUntil: 'load' });
+      await page.waitForTimeout(700);
+      const probe = async (css) => {
+        await page.evaluate((c) => {
+          document.getElementById('f356probe')?.remove();
+          const st = document.createElement('style');
+          st.id = 'f356probe'; st.textContent = c;
+          document.head.appendChild(st);
+        }, css);
+        await page.waitForTimeout(150);
+        const got = await page.evaluate(COLLECT, { all: false });
+        return got.filter((g) => g.sel.includes('span.ti') && Math.abs(g.ratio - 1) > TOL).length;
+      };
+      const base = await probe('');
+      const nonUni = await probe('.tab span.ti{transform:scaleX(.8)}');
+      const uni = await probe('.tab span.ti{transform:scale(.8)}');
+      if (base !== 0) bad(`[F-d] 전제 — 주입 전 A1 탭 아이콘이 이미 비균등 ${base}건이다 (되돌림 시험의 기준선이 안 선다)`);
+      else if (nonUni > 0) ok(`[F-d] 되돌림 — 1600 에서 \`scaleX(.8)\` 을 주입하면 검출기가 ${nonUni}건 잡는다 (래칫 0 이 «안 보는 자» 가 아니다)`);
+      else bad('[F-d] 되돌림 실패 — 1600 에서 `scaleX(.8)` 을 주입해도 검출기가 0건이다 (이 절은 무엇도 안 보고 있다)');
+      if (uni === 0) ok('[F-e] 음성항 — 등방 `scale(.8)` 은 안 잡는다 (크기 변경은 결함이 아니다)');
+      else bad(`[F-e] 음성항 실패 — 등방 \`scale(.8)\` 을 ${uni}건 잡는다 (상시 빨강이 된다)`);
+    } catch (e) { bad('[F-d] 되돌림 시험이 예외로 끝났다: ' + String(e.message || e).split('\n')[0]); }
+    await ctx.close();
+  }
 
   console.log('[C] 잘림 0 — 스코프 아이콘 advance 가 호스트를 안 넘는다');
   {
