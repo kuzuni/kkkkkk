@@ -363,12 +363,23 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
       const endCell = !!o.onPos && (o.onPos.L || o.onPos.R);
       const wantL = endCell && o.onPos.L ? '0px' : '7px';
       const wantR = endCell && o.onPos.R ? '0px' : '7px';
+      /* ⚑ **409 8회차 이관 (2026-08-31)** — 가운데 칸의 세로는 이제 «7px / r23» 이 아니라
+         «2px / 아래 세로 반경 28» 이다. **자리가 바뀐 게 아니라 호의 모양이 바뀌었다** —
+         코너 중심의 y 는 2 + 28 = **30** 으로 4회차의 7 + 23 = 30 과 같은 값이고, 아래 두 코너만
+         세로로 늘어난 타원이 됐다(ref 실측 — `tools/probe409e.py --rays`). 그래서 값을 넓히는 대신
+         **가로와 같은 불변식**(인셋 + 반경 = 30)을 세로에도 세우고, 그 위에서 «가운데 칸은 아래
+         두 코너가 타원(세로 반경 > 가로 반경)» 을 따로 못박는다 — 끝 칸(r30 · 449)과 안 헷갈린다. */
+      const vrs = b ? (b.r.split('/')[1] || b.r).trim().split(/\s+/) : [];
+      const vrb = vrs.length ? parseFloat(vrs[vrs.length - 1]) : NaN;
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 상자가 그 자리의 규격이다'
-        + (endCell ? ' (끝 칸 = 닿는 면 0 · r30 · 449)' : ' (가운데 = 동심 윤곽 7인셋·r23)'),
+        + (endCell ? ' (끝 칸 = 닿는 면 0 · r30 · 449)' : ' (가운데 = 동심 윤곽 가로 7인셋·rx23 · 아래 타원 ry28)'),
         !!b && b.left === wantL && b.right === wantR
           && (endCell ? (b.top === '0px' && b.bottom === '0px' && /^30px/.test(b.r))
-                      : (b.top === '7px' && b.bottom === '7px' && /^23px/.test(b.r))),
+                      : (b.top === '7px' && /^23px/.test(b.r) && vrb > 23.5)),
         b ? [b.left, b.right, b.top, b.bottom, b.r].join(' / ') : '없음');
+      ok(n + ' 자리 «' + posName(o.onPos) + '» → «세로 인셋 + 아래 세로 반경 = 30» (코너 중심 y 가 알약과 같다)',
+        !!b && Math.abs(parseFloat(b.bottom) + vrb - 30) < 0.6,
+        b ? (b.bottom + ' + ' + (isNaN(vrb) ? '?' : vrb) + ' = ' + (parseFloat(b.bottom) + vrb)) : '없음');
       /* 두 상자를 가르는 것은 **코너 중심의 x** 다. 값을 그냥 적지 않고 **자리에서 유도**해 묻는다.
          · 가운데 칸은 사방 7 인셋 · r23 이라 코너 중심 x 가 알약과 같다(7+23 = **30** = 동심).
          · 449 — 끝 칸은 **면마다 다르다**: 닿는 면은 검정이 없어 세 띠가 알약 윤곽에서 시작하므로
@@ -392,9 +403,21 @@ const grab = `(el, props) => { const cs = getComputedStyle(el); const o = {};
          직선부 7px 까지 이 층이 살아 남아 위 베벨이 두 겹이 된다(`probe463` [C]). */
       const colB = b ? COL - parseFloat(b.left) : NaN;
       const colBr = b ? COL - parseFloat(b.right) : NaN;
+      /* ⚑ **409 8회차 이관 (2026-08-31)** — 끝 칸의 이 층에도 마스크가 생겼다: **닿는 면 기둥 하나만**.
+         8회차 전에는 마스크가 없어 이 층이 끝 칸의 **반대** 코너에도 띠를 그렸고, 같은 자리를
+         462 의 두 겹(`::after` 스프레드)이 다시 그려 **한 코너를 두 층이 겹쳐 칠하고 있었다**.
+         링이 타원이 되면서 그 겹침이 1.5px 짜리 면색 이음매로 드러났다(`verify462` [3] D→B 순서).
+         ⇒ 반대 코너는 462 한 층에게 넘기고, 이 층은 449 가 맡은 **닿는 면**만 그린다.
+         ⚠ 값을 넓힌 게 아니라 **자리에서 유도한 규칙이 하나 늘었다** — 「없음」 이던 칸이
+            「닿는 면 기둥만 · 반대 면 기둥 없음」 이 됐고, 어느 쪽이 어긋나도 빨개진다
+            (반대 코너를 다시 그리기 시작하면 `verify462` R1 이 같이 빨개진다). */
+      const endMaskOK = endCell && b && (o.onPos.L
+        ? (maskHasLn(b.mask, COL) && !maskHasRn(b.mask, COL))
+        : (maskHasRn(b.mask, COL) && !maskHasLn(b.mask, COL)));
       ok(n + ' 자리 «' + posName(o.onPos) + '» → 가로 띠 마스크가 그 자리의 규격이다'
-        + (endCell ? '' : ' (기둥 = 30 − 인셋 = ' + colB + '/' + colBr + ' · 463)'),
-        !!b && (endCell ? (!b.mask || b.mask === 'none')
+        + (endCell ? ' (끝 칸 = 닿는 면 기둥 30 하나만 · 409 8회차)'
+                   : ' (기둥 = 30 − 인셋 = ' + colB + '/' + colBr + ' · 463)'),
+        !!b && (endCell ? endMaskOK
                         : (maskHasLn(b.mask, colB) && maskHasRn(b.mask, colBr))),
         b ? (b.mask && b.mask !== 'none'
           ? ('좌기둥 ' + maskHasLn(b.mask, colB) + ' · 우기둥 ' + maskHasRn(b.mask, colBr)

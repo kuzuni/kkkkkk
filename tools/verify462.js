@@ -154,15 +154,22 @@ function runs(s, step = 0.5) {
   for (let i = 0; i < s.length;) { let j = i; while (j < s.length && s[j] === s[i]) j++; rs.push([s[i], (j - i) * step]); i = j; }
   return rs;
 }
-/* 검정 링 → 그 뒤 첫 실런 → 그 다음 실런. AA 이음매(<1.5px)는 건너뛴다(449 §5-3 과 같은 폭). */
+/* 검정 링 → 그 뒤 첫 실런 → 그 다음 실런. AA 이음매는 건너뛴다.
+   ⚑ **409 8회차 이관 (2026-08-31): 1.5 → 2.0.** 8회차가 아래 두 코너의 링을 타원(30/33)으로 바꾸면서
+      **링의 안쪽 윤곽과 띠의 바깥 윤곽이 같은 자리에 놓였다**(둘 다 23/26) — 그 전에는 원 r23 ↔ 상자 r23
+      으로 어긋나 있어 AA 가 한쪽에만 났다. 두 경계가 겹치면 AA 도 겹쳐 한 칸 두꺼워진다(실측 F **1.5**).
+      2.0 은 지어낸 값이 아니라 **형제 게이트가 같은 목적으로 이미 쓰는 폭**이다
+      (`tools/verify409.js` 의 `darkRun`·`bevelRun` — 같은 코너·같은 광선에서 «≥2.0 이라야 실런»).
+   ⚠ 무르게 푼 게 아니다: 건너뛴 런의 **클래스는 안 본다**가 아니라 여전히 «그 다음 실런이 B 인가» 를
+      묻고, 두께 문턱(≥4.0)도 그대로다. 2.0 이상 뜨면 그 즉시 빨개진다. */
 function layers(s) {
   const rs = runs(s);
   let i = 0;
   while (rs[i] && rs[i][0] !== 'K') i++;
   const k = rs[i] ? rs[i][1] : 0;
-  let j = i + 1; while (rs[j] && rs[j][1] < 1.5) j++;
+  let j = i + 1; while (rs[j] && rs[j][1] < 2.0) j++;
   const a = rs[j] || ['-', 0];
-  let m = j + 1; while (rs[m] && rs[m][1] < 1.5) m++;
+  let m = j + 1; while (rs[m] && rs[m][1] < 2.0) m++;
   const b = rs[m] || ['-', 0];
   return { k, a, b };
 }
@@ -271,8 +278,22 @@ async function scan(page, p, cor, degs, near) {
           F.a.every(r => r[0] === 'D' && r[1] >= MIN_DARK), fmt(DEGS, F.a.map(r => r[1].toFixed(1))));
         ok('[3] ' + tag + ' ' + farB + ' — 띠 **뒤** 베벨이 ≥ ' + MIN_BEV.toFixed(1) + 'px (순서가 D→B)',
           F.b.every(r => r[0] === 'B' && r[1] >= MIN_BEV), fmt(DEGS, F.b.map(r => r[0] + r[1].toFixed(1))));
-        ok('[4] ' + tag + ' ' + farB + ' — 검정 링은 여전히 ≥ ' + MIN_K.toFixed(1) + 'px (378·409 무손상)',
-          F.k.every(v => v >= MIN_K), fmt(DEGS, F.k.map(v => v.toFixed(1))));
+        /* ⚑ **409 8회차 이관 (2026-08-31)** — 이 항의 «≥5.0» 은 링이 **등폭**이던 시절의 값이다.
+           8회차가 ref 를 대조군까지 빼고 다시 재니(§17) ref 의 아래 두 코너 링은 등폭이 아니라
+           **바닥으로 갈수록 얇아진다**(ref 실측 60° 5.5 · 75° 4.0 ↔ 옛 우리 7.0 고정).
+           ⇒ 절대 문턱 대신 **같은 호스트 가운데 칸의 링과 ±1.5** 로 묻는다 — 이 항의 뜻(«462 의 두 겹이
+              378·409 의 링을 갉아먹지 않았는가»)은 그대로이고, 링이 설계대로 테이퍼져도 안 흔들린다.
+           ⚠ 무르게 푼 게 아니다: 가운데 칸의 링 자체는 `verify409` [2] 가 ≥5.0·편차 ≤2.0 으로 여전히
+              물고 있으므로, 두 항을 이으면 끝 칸도 그 창 밖으로 못 나간다. 링이 사라지면 즉시 빨갛다. */
+        if (mid && mid[farB[1]]) {
+          const MK = mid[farB[1]].k;
+          ok('[4] ' + tag + ' ' + farB + ' — 검정 링이 가운데 칸과 ±1.5 (378·409 무손상)',
+            F.k.every((v, i) => v >= 2.0 && Math.abs(v - MK[i]) <= 1.5),
+            fmt(DEGS, F.k.map((v, i) => v.toFixed(1) + '↔' + MK[i].toFixed(1))));
+        } else {
+          ok('[4] ' + tag + ' ' + farB + ' — 검정 링은 여전히 ≥ ' + MIN_K.toFixed(1) + 'px (378·409 무손상)',
+            F.k.every(v => v >= MIN_K), fmt(DEGS, F.k.map(v => v.toFixed(1))));
+        }
 
         /* [4] 반대 면 위 코너 — 안 건드렸다 */
         const T = await scan(page, p, farT, TOP_DEGS);
@@ -334,8 +355,13 @@ async function scan(page, p, cor, degs, near) {
     await shoot(page);
     const now = await scan(page, pe, 'BR', DEGS);
     const rOff = await inject(OFF);
-    ok('R1 두 겹을 빼면 어두운 띠가 ≤3.0 으로 납작해진다 ([2][3] 이 공허하지 않다)',
-      rOff.a.every(r => r[1] <= 3.0),
+    /* ⚑ **409 8회차 이관** — 8회차가 끝 칸 `::before` 를 «닿는 면 기둥» 으로 마스크하면서, 이 코너의
+       띠를 그리는 층이 **462 의 두 겹 하나뿐**이 됐다(전에는 `::before` 의 옛 상자가 밑에 겹쳐 있었다).
+       그래서 두 겹을 빼면 띠가 얇아지는 게 아니라 **아예 D 가 아니게 된다**(실측 B5.5/B6.0/B8.0).
+       ⇒ «≤3.0» 을 «D 가 아니거나, D 라도 ≤3.0» 으로 옮긴다 — 더 강한 무너짐을 통과로 세는 것이지
+          선을 넓히는 것이 아니다(D 가 4.0 이상으로 남으면 여전히 빨갛다). */
+    ok('R1 두 겹을 빼면 어두운 띠가 사라지거나 ≤3.0 으로 납작해진다 ([2][3] 이 공허하지 않다)',
+      rOff.a.every(r => r[0] !== 'D' || r[1] <= 3.0),
       '지금 ' + now.a.map(r => r[0] + r[1].toFixed(1)).join(' ') + '  ↔  뺀 뒤 ' + rOff.a.map(r => r[0] + r[1].toFixed(1)).join(' '));
     const rEll = await inject(ELL);
     ok('R2 등재문 ⓐ(타원 반경 23px 30px)로는 안 된다 — 띠가 D 로 안 남는다',

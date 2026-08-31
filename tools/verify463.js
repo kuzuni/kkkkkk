@@ -181,8 +181,15 @@ const pillarOf = mask => {
       const bIn = { l: parseFloat(info.bLeft), r: parseFloat(info.bRight) };
       const aIn = { l: parseFloat(info.aLeft), r: parseFloat(info.aRight) };
       const bp = pillarOf(info.bMask), ap = pillarOf(info.aMask);
-      ok(hname + ' — `::before` 상자는 4회차 규격(사방 7 인셋 · r23)',
-        bIn.l === 7 && bIn.r === 7 && info.bTop === '7px' && info.bBottom === '7px' && /^23px/.test(info.bR),
+      /* ⚑ **409 8회차 이관 (2026-08-31)** — 세로가 «7px · r23» 에서 «4px · 아래 세로 반경 26» 으로 갔다.
+         463 이 지키는 것은 «기둥 폭 = 30 − 가로 인셋» 이라는 **가로** 불변식이고 거기엔 변화가 없다.
+         세로는 값 대신 같은 꼴의 불변식(세로 인셋 + 아래 세로 반경 = 30 = 코너 중심 y 가 알약과 같다)
+         으로 옮긴다 — 옛 7+23 도 새 4+26 도 참이고, 동심이 깨질 때만 빨개진다. */
+      const vrs463 = (info.bR.split('/')[1] || info.bR).trim().split(/\s+/);
+      const vrb463 = parseFloat(vrs463[vrs463.length - 1]);
+      ok(hname + ' — `::before` 상자는 동심 안쪽 윤곽(가로 7 인셋 · rx23 · 세로 인셋 + 아래 세로 반경 = 30)',
+        bIn.l === 7 && bIn.r === 7 && info.bTop === '7px' && /^23px/.test(info.bR)
+          && Math.abs(parseFloat(info.bBottom) + vrb463 - 30) < 0.6,
         [info.bLeft, info.bRight, info.bTop, info.bBottom, info.bR].join(' / '));
       ok(hname + ' — `::before` 기둥 = 30 − 인셋 = ' + (R - bIn.l) + '/' + (R - bIn.r) + ' (463)',
         Math.abs(bp.l - (R - bIn.l)) < 0.01 && Math.abs(bp.r - (R - bIn.r)) < 0.01,

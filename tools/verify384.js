@@ -327,13 +327,27 @@ async function readCorner(page, p, rel, side, n = 30) {
           «가로 인셋 + 반경 = 알약 반경 30» — 상자가 어느 쪽이든 코너 중심의 x 가 알약과 같다는 뜻이고,
           이것이 384 가 «평행이동» 으로 말하려던 바로 그 성질이다. 무르게 푼 게 아니다:
           옛 상자를 가운데 칸에 되돌리면 세로 인셋이 0 이라 아래 [2]·[5] 가 즉시 빨개진다. */
-    const boxOK = d0 && ((/^23px/.test(d0.radius) && d0.top === '7px' && d0.bottom === '7px')
+    /* 409 8회차 이관 (2026-08-31) — **세로도 «인셋 + 반경 = 30» 으로 묻는다.**
+       4회차 이관은 가로만 불변식으로 적고 세로는 «7px/7px» 라는 **값**으로 적었다. 8회차가 아래 두
+       코너를 타원(가로 반경 23 · **세로 반경 28**)으로 바꾸면서 세로 인셋이 7 → **2** 가 됐는데,
+       바뀐 것은 «어디에 있는가» 가 아니라 «호가 어떤 모양인가» 다 — 코너 중심의 y 는 2 + 28 = **30**
+       으로 **그대로**이고, 이는 4회차의 7 + 23 = 30 과 같은 값이다.
+       ⇒ 값을 갈아 끼우는 대신 **가로와 같은 불변식**(세로 인셋 + 아래 세로 반경 = 30)으로 옮긴다.
+          옛 상자(7/23)도 새 상자(2/28)도 이 식을 만족하고, **동심이 깨지는 순간에만** 빨개진다.
+       ⚠ 무르게 푼 게 아니다 — 아래 [2]·[5]·R6 이 그림 자체를 법선으로 재고 있고, 8회차는 R6 의
+          주입을 «이 회차가 바꾼 층»(원 링)으로 옮겨 되돌림의 물림을 되살렸다. */
+    const vr = d0 ? (d0.radius.split('/')[1] || d0.radius).trim().split(/\s+/) : [];
+    const vrb = vr.length ? parseFloat(vr[vr.length - 1]) : NaN;
+    const boxOK = d0 && ((/^23px/.test(d0.radius) && d0.top === '7px')
       || (/^30px/.test(d0.radius) && d0.top === '0px' && d0.bottom === '0px'));
-    ok('그 상자가 «동심 안쪽 윤곽(7 인셋·r23)» 이거나 «옛 평행이동 상자(r30)» 다',
+    ok('그 상자가 «동심 안쪽 윤곽(가로 7 인셋·rx23)» 이거나 «옛 평행이동 상자(r30)» 다',
       !!boxOK, d0 ? (d0.radius + ' · top ' + d0.top + ' · bottom ' + d0.bottom) : '—');
     ok('어느 쪽이든 «가로 인셋 + 반경 = 30» — 코너 중심 x 가 알약과 같다',
       !!d0 && Math.abs(parseFloat(d0.left) + parseFloat(d0.radius) - 30) < 0.6,
       d0 ? (d0.left + ' + ' + d0.radius + ' = ' + (parseFloat(d0.left) + parseFloat(d0.radius))) : '—');
+    ok('«세로 인셋 + 아래 세로 반경 = 30» — 코너 중심 y 도 알약과 같다 (409 8회차)',
+      !!d0 && Math.abs(parseFloat(d0.bottom) + vrb - 30) < 0.6,
+      d0 ? (d0.bottom + ' + ' + (isNaN(vrb) ? '?' : vrb) + ' = ' + (parseFloat(d0.bottom) + vrb)) : '—');
     ok('세 띠가 다 걸려 있다 — 바닥 ' + DARK + ' 7 · 바닥 베벨 14 · 상단 베벨 7',
       !!d0 && /inset/.test(d0.shadow) && (d0.shadow.match(/inset/g) || []).length === 3,
       d0 ? d0.shadow.replace(/\s+/g, ' ').slice(0, 110) : '—');
@@ -449,15 +463,23 @@ async function readCorner(page, p, rel, side, n = 30) {
        «호를 따라가는가» 하나만 갈린다. */
     const deepOn = await deepRead(page, p0, 'BL');
     ok('R5 지금은 깊은 코너가 ≥ ' + MIN_DEEP.toFixed(1) + 'px', deepOn.every(v => v >= MIN_DEEP), deepLine(deepOn));
+    /* 409 8회차 이관 (2026-08-31) — **주입 대상을 «옛 상자» 에서 «원 링» 으로 옮겼다.**
+       옛 주입(`::before` 를 세로 인셋 0 · r30 으로)은 8회차 전까지 깊은 코너를 2.0~2.8 로 무너뜨렸는데,
+       8회차가 **검정 링**(`::after`)의 아래 두 코너를 타원(30/33)으로 바꾸면서 그 링이 더 이상 띠를
+       덮지 않게 되어, 상자를 되돌려도 4.5 가 나온다 — 되돌림이 **물지 못하게** 됐다.
+       ⚠ 이럴 때 선을 내리면 «원래 그랬던 것을 굳힌 게이트» 가 된다(338 교훈). 대신 **이 회차가 실제로
+          바꾼 층**을 되돌린다: 링을 원(r30 · bottom 0)으로 돌리면 링의 안쪽 윤곽이 원 r23 이 되어
+          띠(윤곽 타원 23/28)의 바깥 절반을 통째로 덮는다 ⇒ 깊은 코너가 무너진다.
+          옛 주입은 아래 R6b 로 남겨 «그때 무엇이 무너졌는지» 기록을 잃지 않는다. */
     await page.evaluate(() => {
       const s = document.createElement('style'); s.id = 'v384old';
-      s.textContent = '.stab.on::before{top:0!important;bottom:0!important;border-radius:30px!important}';
+      s.textContent = '.stab.on::after{bottom:0!important;border-radius:30px!important}';
       document.head.appendChild(s);
     });
     await page.waitForTimeout(200);
     await shoot(page);
     const deepOld = await deepRead(page, p0, 'BL');
-    ok('R6 옛 상자(세로 인셋 0 · r30)를 주입하면 깊은 코너가 ' + MIN_DEEP.toFixed(1) + 'px 아래로 무너진다',
+    ok('R6 검정 링을 원(r30)으로 되돌리면 깊은 코너가 ' + MIN_DEEP.toFixed(1) + 'px 아래로 무너진다',
       deepOld.some(v => v < MIN_DEEP), '켬 ' + deepLine(deepOn) + '  ↔  끔 ' + deepLine(deepOld));
     await page.evaluate(() => { const s = document.getElementById('v384old'); if (s) s.remove(); });
     await page.waitForTimeout(200);

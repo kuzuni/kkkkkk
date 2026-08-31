@@ -11513,8 +11513,8 @@
         즉 검정 링(0..7) 바로 안쪽 7px 다. 알약 바깥 반경 30 은 안 건드린다(352 §10).
      ⚠ 끝 칸(378)은 손댈 것이 없다 — 마스크가 기둥을 통째로 빼면 그 코너의 배경 타일도 같이
         사라지므로 «셸에 닿는 면» 은 지금처럼 베벨 0..7 하나뿐이다(`--pill-mask` 한 손잡이 그대로). */
-  .stab.on::after{content:'';position:absolute;left:0;right:0;top:0;bottom:0;
-    border-radius:30px;pointer-events:none;
+  .stab.on::after{content:'';position:absolute;left:0;right:0;top:0;bottom:-3px;
+    border-radius:30px 30px 30px 30px / 30px 30px 33px 33px;pointer-events:none;
     box-shadow:inset 0 0 0 7px var(--pill-k,#000);
     background:
       radial-gradient(circle at 30px 30px,transparent 0 16px,#634F37 16px 24px,transparent 24px) 0 0/30px 30px no-repeat,
@@ -11585,8 +11585,11 @@
         두 층의 기둥 폭이 다른 것은 오타가 아니라 **상자가 다르기 때문**이다(`좌 인셋 + 기둥 = 30`).
      ⚠ 코너(알약 x 0..30)는 한 픽셀도 안 바뀐다 — 걷어 내는 것은 호가 끝난 **뒤** 구간뿐이다
         (`probe463` [D] · `verify463` §2 가 음성항으로 문다). */
-  .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:7px;
-    border-radius:23px;pointer-events:none;
+  .stab.on::before{content:'';position:absolute;left:7px;right:7px;top:7px;bottom:4px;
+    border-radius:23px 23px 23px 23px / 23px 23px 26px 26px;pointer-events:none;
+    background:
+      radial-gradient(23px 26px at 23px calc(100% - 26px),transparent 0 58%,#634F37 58% 78%,transparent 78%),
+      radial-gradient(23px 26px at calc(100% - 23px) calc(100% - 26px),transparent 0 58%,#634F37 58% 78%,transparent 78%);
     box-shadow:inset 0 -7px 0 #413122,inset 0 -14px 0 #634F37,inset 0 7px 0 #634F37;
     -webkit-mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px));
     mask-image:linear-gradient(90deg,#000 0 23px,transparent 23px calc(100% - 23px),#000 calc(100% - 23px))}
@@ -11601,7 +11604,7 @@
   .stab.on.stab-c1::before,
   .stabs.sp2>.stab.on:nth-of-type(2)::before,
   .stabs.sp3>.stab.on:nth-of-type(3)::before,
-  .stab.on.stab-c4::before{top:0;bottom:0;border-radius:30px;
+  .stab.on.stab-c4::before{top:0;bottom:0;border-radius:30px;background:none;
     -webkit-mask-image:none;mask-image:none}
   /* 449 (2026-08-30) — **닿는 «그 면» 의 가로 인셋만 0.** 4회차가 남긴 절반이 여기서 닫힌다.
      4회차의 판단(«끝 칸은 손대지 않는다»)은 **새 상자(사방 7 인셋 · r23)를 그대로 거는 것**에
@@ -11630,10 +11633,14 @@
            450~461 을 차례로 먼저 올렸다). 340·418·449 선례대로 **나중 등재가 비켜 준다**. */
   .stabs.sp2>.stab.on:nth-of-type(1)::before,
   .stabs.sp3>.stab.on:nth-of-type(1)::before,
-  .stab.on.stab-c1::before{left:0}
+  .stab.on.stab-c1::before{left:0;
+    -webkit-mask-image:linear-gradient(90deg,#000 0 30px,transparent 30px);
+    mask-image:linear-gradient(90deg,#000 0 30px,transparent 30px)}
   .stabs.sp2>.stab.on:nth-of-type(2)::before,
   .stabs.sp3>.stab.on:nth-of-type(3)::before,
-  .stab.on.stab-c4::before{right:0}
+  .stab.on.stab-c4::before{right:0;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0 calc(100% - 30px),#000 calc(100% - 30px));
+    mask-image:linear-gradient(90deg,transparent 0 calc(100% - 30px),#000 calc(100% - 30px))}
   /* 462 (2026-08-30) — **449 가 남긴 나머지 절반: 셸에 «안» 닿는 면.**
      그 면엔 검정 링이 있어 세 띠가 시작해야 할 자리는 «검정의 안쪽 윤곽»(사방 7 인셋 · r23)인데,
      끝 칸의 `::before` 는 449 가 닿는 면을 위해 **세로 0 · r30** 으로 둔 옛 상자라 이 면의 코너

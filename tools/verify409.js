@@ -58,6 +58,16 @@ const MIN_BEV = 5.0;
    MIN_DARK 4.0 은 ref 6.1~6.2(CZ) · 우리 6.0 · 옛 상자 2.0~2.5 사이에 그은 선이다. */
 const DARK_DEGS = [60, 75];
 const MIN_DARK = 4.0;
+/* 409 8회차 — 이음매 창. 기둥 안(x29)↔밖(x31)의 「베벨→어두운 띠」 경계 차이 —
+     ref **2px**(x29 76 ↔ x31 76~78) · 7회차 **7px** · 8회차 **4px**.
+   ⚠ 남은 2px 은 취향이 아니라 **끝 칸이 만든 제약**이다: 끝 칸의 띠는 링(`::after`)의 스프레드가
+      그리므로 그 윤곽이 곧 «링의 안쪽»(23/26)이고, 가운데 칸만 더 내리면 `verify462` [3] 의
+      «끝 칸 = 가운데 칸 ±1.0» 이 깨진다. ref 를 그대로 맞추려면 끝 칸의 띠를 링에서 떼어
+      독립 윤곽으로 그려야 한다(9회차 몫 — §17-6).
+   ⇒ 선은 지금(4)과 7회차(7) 사이 **4.5** 에 긋고, 되돌림은 **6.0 이상 벌어짐**을 요구한다 —
+      둘 사이가 비어 있어야 자가 실제로 가른다. */
+const MAX_SEAM = 4.5;
+const MIN_SEAM_OFF = 6.0;
 
 const HOSTS = [
   ['07 스킬', '#bSk .stabs', () => { goTab('hero', true); heroSubGo('sk'); }],
@@ -195,6 +205,34 @@ const fmtRuns = s => {
   }
   return out.map(([c, n]) => c + (n * 0.5).toFixed(1)).join(' ');
 };
+
+/* 409 8회차 — **마스크 경계의 이음매**를 재는 자 (`tools/probe409e.py` 의 열 단면을 게이트로).
+   1~7회차의 자는 전부 코너 원 중심에서 쏘는 «광선» 이라, 코너 기둥(알약 x 30)에서 층이 **끊기는지**를
+   구조적으로 못 봤다 — 광선은 그 선을 가로지르지 않는다. 열을 세로로 훑으면 곧바로 보인다:
+     8회차 전  x29 `B7(68..75) D7(75..82)` ↔ x31 `B7(70..77) D7(77..84)`  = 베벨/띠가 **7px 점프**
+     ref      x29 `B7(69..76) D6(77..83)` ↔ x31 `B7(69..76) D5(78..83)`  = **2px 이내**
+   ⇒ 「베벨 → 어두운 띠」 경계의 y 를 기둥 **안**(x=29)과 **밖**(x=31)에서 재어 차이를 묻는다. */
+const colBD = (page, p, side, lx) => page.evaluate(([box, sd, x0, pal]) => {
+  const g = window.__v409;
+  const x = Math.round(box.x + (sd === 'R' ? box.w - 1 - x0 : x0));
+  const cls = (R2, G2, B2) => {
+    let best = '?', bd = Infinity;
+    for (const [ch, hex] of pal) {
+      const rr = parseInt(hex.slice(1, 3), 16), gg = parseInt(hex.slice(3, 5), 16), bb = parseInt(hex.slice(5, 7), 16);
+      const d2 = (R2 - rr) ** 2 + (G2 - gg) ** 2 + (B2 - bb) ** 2;
+      if (d2 < bd) { bd = d2; best = ch; }
+    }
+    return best;
+  };
+  let prev = '', edge = -1;
+  for (let y = 50; y <= Math.round(box.h) + 2; y++) {
+    const q = g.getImageData(x, Math.round(box.y) + y, 1, 1).data;
+    const c = cls(q[0], q[1], q[2]);
+    if (prev === 'B' && c === 'D') edge = y;
+    prev = c;
+  }
+  return edge;
+}, [{ x: p.x, y: p.y, w: p.w, h: p.h }, side, lx, PAL]);
 
 /* 세로 단면(직선부) — 코너 기둥(반경 30) **밖**에서 위/아래로 훑는다.
    ⚠ 알약 가로 한복판은 못 쓴다 — 거기엔 **라벨 글자의 검은 외곽선**이 있어(잉크 rel 20~57)
@@ -448,29 +486,75 @@ const SETTLE = () => {
           ok('[10] ' + name + ' ' + corner + ' — 바닥 쪽 어두운 띠 ≥ ' + MIN_DARK.toFixed(1) + 'px (띠도 호를 따라간다)',
             dk.every(v => v >= MIN_DARK), DARK_DEGS.map((d, i) => d + '°:' + dk[i].toFixed(1)).join(' '));
         }
+        /* ── [11] 409 8회차 — **코너 기둥의 이음매.** ────────────────────────────────────
+           네 비평가가 네 회차에 걸쳐 «코너에서 잘린다 · 사각 노치» 로 짚은 것의 정체가 이것이다
+           (§17). 마스크 경계에서 「베벨 → 어두운 띠」 경계가 튀면 안 된다 — ref 는 2px 안이다. */
+        for (const corner of Object.keys(botBev)) {
+          const sd = corner[1];
+          const inn = await colBD(page, p, sd, 29), out = await colBD(page, p, sd, 31);
+          ok('[11] ' + name + ' ' + corner + ' — 기둥 안(x29) ↔ 밖(x31) 이음매 ≤ ' + MAX_SEAM.toFixed(1) + 'px',
+            inn > 0 && out > 0 && Math.abs(inn - out) <= MAX_SEAM,
+            'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + Math.abs(inn - out) + 'px');
+        }
+        /* ── 되돌림 ── 8회차가 **실제로 바꾼 두 층**을 하나씩 되돌린다.
+           ⚠ 4회차가 쓰던 주입(«옛 상자» = `::before` 세로 인셋 0 · r30)은 **더 이상 물지 않는다** —
+              8회차가 검정 링을 타원으로 바꾸면서 링이 띠를 안 덮게 돼, 상자를 되돌려도 4.5 가 나온다.
+              선을 내리면 «원래 그랬던 것을 굳힌 게이트» 가 된다(338 교훈) ⇒ **주입 대상을 옮겼다.**
+             · [9-R]  `::before` 의 **동심 베벨 고리**(배경)를 끈다 → 띠 뒤 베벨이 무너진다.
+             · [10-R] `::after` 를 **원 링**으로 되돌린다 → 링이 띠의 바깥 절반을 덮어 띠가 무너진다.
+             · [11-R] `::before` 를 **7회차 상자**(사방 7 인셋 · r23)로 되돌린다 → 이음매가 벌어진다. */
         await page.evaluate(() => {
-          const st = document.createElement('style'); st.id = 'v409box';
-          st.textContent = '.stab.on::before{top:0!important;bottom:0!important;border-radius:30px!important;'
-            + '-webkit-mask-image:none!important;mask-image:none!important}';
+          const st = document.createElement('style'); st.id = 'v409bev';
+          st.textContent = '.stab.on::before{background:none!important}';
+          document.head.appendChild(st);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        const bevOff = {};
+        for (const corner of Object.keys(botBev)) {
+          const a = [];
+          for (const dg of BEV_DEGS) a.push(bevelRun(await ray(page, p, corner, dg)));
+          bevOff[corner] = a;
+        }
+        await page.evaluate(() => { const st = document.getElementById('v409bev'); if (st) st.remove(); });
+        await page.evaluate(() => {
+          const st = document.createElement('style'); st.id = 'v409seam';
+          st.textContent = '.stab.on::before{top:7px!important;bottom:7px!important;border-radius:23px!important}';
           document.head.appendChild(st);
         });
         await page.waitForTimeout(180);
         await shoot(page);
         for (const corner of Object.keys(botBev)) {
-          const bOff = [], dOff = [];
-          for (const dg of BEV_DEGS) bOff.push(bevelRun(await ray(page, p, corner, dg)));
+          const sd = corner[1];
+          const inn = await colBD(page, p, sd, 29), out = await colBD(page, p, sd, 31);
+          ok('[11-R] ' + name + ' ' + corner + ' — 7회차 상자를 주입하면 이음매가 ' + MIN_SEAM_OFF.toFixed(1) + 'px 이상 벌어진다',
+            inn > 0 && out > 0 && Math.abs(inn - out) >= MIN_SEAM_OFF,
+            'x29 ' + inn + ' ↔ x31 ' + out + ' = ' + Math.abs(inn - out) + 'px');
+        }
+        await page.evaluate(() => { const st = document.getElementById('v409seam'); if (st) st.remove(); });
+        await page.evaluate(() => {
+          const st = document.createElement('style'); st.id = 'v409box';
+          st.textContent = '.stab.on::after{bottom:0!important;border-radius:30px!important}';
+          document.head.appendChild(st);
+        });
+        await page.waitForTimeout(180);
+        await shoot(page);
+        for (const corner of Object.keys(botBev)) {
+          const bOff = bevOff[corner], dOff = [];
           for (const dg of DARK_DEGS) dOff.push(darkRun(await ray(page, p, corner, dg)));
           const f = a => a.map(v => v.toFixed(1)).join(' / ');
           /* ⚠ «전 각도에서 두꺼워진다» 로는 못 쓴다 — 4회차는 어두운 띠를 **두껍게** 만들었고
              그만큼 베벨의 시작점이 안으로 밀려 바닥 쪽(75°) 한 각도는 오히려 얇아진다(ref 도 같은
              구조다: 바닥 쪽은 «띠 6.2 + 베벨 7.2» 로 둘이 자리를 나눈다). 그래서 «**가장 얇은 각도가
              올라간다**» 로 묻는다 — 축이 하나 무너지면 그 각도가 최솟값이 되어 곧바로 빨개진다. */
-          ok('[9-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 띠 뒤 베벨의 최악 각도가 내려간다',
+          ok('[9-R] ' + name + ' ' + corner + ' — 동심 베벨 고리를 끄면 띠 뒤 베벨의 최악 각도가 내려간다',
             botBev[corner].every(v => v >= MIN_BEV) && Math.min(...botBev[corner]) > Math.min(...bOff),
             '켬 ' + f(botBev[corner]) + '(최악 ' + Math.min(...botBev[corner]).toFixed(1) + ')'
             + '  ↔  끔 ' + f(bOff) + '(최악 ' + Math.min(...bOff).toFixed(1) + ')');
-          ok('[10-R] ' + name + ' ' + corner + ' — 옛 상자로 되돌리면 어두운 띠가 ' + MIN_DARK.toFixed(1) + ' 아래로 무너진다',
-            darkOn[corner].every(v => v >= MIN_DARK) && dOff.some(v => v < MIN_DARK),
+          /* ⚠ «4.0 아래로» 로는 못 쓴다 — 원 링으로 되돌려도 부모 배경의 바닥 띠가 4.0 을 딱 채운다.
+             무너짐은 **낙폭**으로 묻는다(각 각도에서 1.5px 이상 · 실측 6.0→4.0 · 7.0→4.0). */
+          ok('[10-R] ' + name + ' ' + corner + ' — 링을 원으로 되돌리면 어두운 띠가 각 각도에서 1.5px 이상 내려간다',
+            darkOn[corner].every(v => v >= MIN_DARK) && dOff.every((v, i) => darkOn[corner][i] - v >= 1.5),
             '켬 ' + f(darkOn[corner]) + '  ↔  끔 ' + f(dOff));
           if (bOff.some(v => v < MIN_BEV)) collapsed++;
         }
@@ -480,7 +564,7 @@ const SETTLE = () => {
       }
     }
     ok('[8-Δ] 아래 코너를 4 면 이상 껐다 켰다 (Δ0 항이 공허하지 않다)', deltaFaces >= 4, deltaFaces + '면');
-    ok('[9-R] 옛 상자로 되돌리면 MIN_BEV(' + MIN_BEV.toFixed(1) + ') 아래로 무너지는 면이 실제로 있다 (선 자체가 문다)',
+    ok('[9-R] 고리를 끄면 MIN_BEV(' + MIN_BEV.toFixed(1) + ') 아래로 무너지는 면이 실제로 있다 (선 자체가 문다)',
       collapsed >= 2, collapsed + '면');
     ok('[9]·[10] 을 가운데 칸 아래 코너 4 면 이상에서 쟀다 (표본이 공허하지 않다)', midFaces >= 4, midFaces + '면');
     ok('[E] 끝 칸도 표본에 있다 («가운데만 본다» 가 회피가 아님을 보인다)', endCells >= 2, endCells + '칸');
