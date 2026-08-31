@@ -10066,7 +10066,8 @@ D7 을 «덮임(감점)» / «깊은 딤 다이얼로그의 가림(비감점)» 
       사본에서 두께·radius·면색이 실제로 빨개진다). `probe582` **8/8 신설**.
 - [x] 이관·회귀 **무수정** `verify179` 135/135 · `verify182` 92/92 · `verify320` 102/102 ·
       `verify411` 34/34 · `verify515` 24/24 · `verify518` 39/39 · `verify492` 39/39 · `verify194` 54/54 ·
-      `verify272` 39/39 · `verify174` 82/82 · `verify87` 48/48 · `verify429` 50/50 · **SMOKE PASS**.
+      `verify272` 39/39 · `verify174` 82/82 · `verify87` 48/48 · `verify429` 50/50 ·
+      `verify356` **112/112**(아이콘 비율 전수 스윕) · **SMOKE PASS**.
 - [x] 기록 `docs/review/582-승급계열디자인통일.md` · 측정표 정오표 `docs/measure/07-스킬팝업.md`
       (승급 계열은 레퍼런스가 없어 `docs/measure/` 에 행이 없다 — 슬롯 부품의 집에 적었다) ·
       교훈 `docs/LESSONS.md` «582».
