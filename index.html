@@ -33866,6 +33866,43 @@ function fx3Span(bx0, bx1, holes){
   for(const h of holes) w -= Math.max(0, Math.min(h[1], bx1) - Math.max(h[0], bx0));
   return Math.max(1, w);
 }
+/* ⚑ 564 — 밴드 x 범위와 구멍(라벨 keep-out)을 **한곳에서** 정한다.
+   종전에는 이 산수가 코인 루프 «안» 에 있어 코인마다 같은 값을 다시 냈고(probe564 계측:
+   `fx3Span` 5회/코인), 개수를 정하는 쪽에서 같은 식을 한 벌 더 적어야 했다 — 두 벌이 되면
+   부패한다(211·289). 여기는 «어디에 놓을 수 있는가» 만 돌려주고 판정은 안 한다. */
+function fx3BandX(p0, outX, escY, nsl){
+  let holes = (escY.free && escY.keep && escY.keep.length) ? escY.keep : [];
+  let bx1 = Math.min(p0.x + FX3_BSX0 + Math.max(FX3_BSX1 - FX3_BSX0, nsl*FX3_BSPITCH),
+                     outX - FX3_BSOM);
+  /* ⚑ 564 — 구멍이 있으면 **오른쪽도 복도 끝까지** 연다. 36회차는 왼쪽만 열었고, 그때는
+     밴드가 «슬롯 수 × 피치» 에 묶여 있어도 남는 폭이 충분했다. 543 이 피치를 44 → 132 로
+     키우자 그 묶임이 곧 병목이 됐다(`probe564`: nsl 4 면 bx1 이 706 에서 걸려 오른쪽 264px 을
+     안 쓴다). 복도 상한은 종전과 같은 `outX − FX3_BSOM` 이라 새 상수가 없다. */
+  if(holes.length) bx1 = outX - FX3_BSOM;
+  let bx0 = Math.min(p0.x + FX3_BSX0, bx1 - 60);
+  if(escY.free) bx0 = Math.max(fx3PanL + FX3_BSOM, Math.min(bx0, bx1 - nsl*FX3_BSPITCH));
+  if(holes.length){
+    /* ⚑ 564 — 왼쪽으로 «모자란 만큼» 연다. 36회차의 한 방 계산(`need` = 슬롯폭 + 지금 걸린 구멍 몫)은
+       **연고 나서 새로 걸리는 구멍**을 못 세어 늘 모자랐다(실측 nsl 4: 484 로 멈춰 123 에 2px 미달).
+       모자람이 0 이 되거나 왼쪽 하한에 닿을 때까지 최대 3번 되민다 — 구멍이 1~2개라 바로 수렴한다. */
+    const want = nsl*FX3_BSPITCH, lim = fx3PanL + FX3_BSOM;
+    for(let k = 0; k < 3 && bx0 > lim && fx3Span(bx0, bx1, holes) < want; k++){
+      bx0 = Math.max(lim, bx0 - (want - fx3Span(bx0, bx1, holes)));
+    }
+    /* 36회차의 마지막 안전판 — 복도를 다 열어도 슬롯당 최소 중심거리를 못 만들면 회피를 버린다.
+       ⚠ 564 의 개수 상한(`fx3SlotCap`)이 정상 경로에서 여기 닿기 전에 막는다. 남겨 두는 이유는
+       «개수를 1 로 줄여도 안 되는 화면» 에서 밴드가 깨지는 것보다는 낫기 때문(36회차 판단 유지). */
+    if(fx3Span(bx0, bx1, holes)/nsl < FX3_MIND) holes = [];
+  }
+  return { bx0, bx1, holes };
+}
+/* ⚑ 564 — 그 밴드에 «최소 중심거리를 지키면서» 놓을 수 있는 슬롯 수. 회피를 **버리는** 대신
+   개수를 이 값으로 깎는다 — 543 이 «개수는 잉크 면적과 맞바꾼다» 고 한 것과 같은 저울이다.
+   어떤 개수로도 회피가 안 서면 0 을 돌려 종전 거동(버림)에 맡긴다. */
+function fx3SlotCap(p0, outX, escY, nsl){
+  for(let n = nsl; n >= 2; n--) if(fx3BandX(p0, outX, escY, n).holes.length) return n;
+  return 0;
+}
 function fx3MapX(u, bx0, bx1, holes){
   let x = bx0 + u;
   for(const h of holes){
@@ -34461,6 +34498,20 @@ function fxFly(from, cur, n){
   const band = combat ? null : fx3Band();            /* 21회차 — 상단 STAGE 헤더 밴드(관통 완화용) */
   /* 4회차 — 두 재화가 같이 날 때의 «각도 레인». −1 = 단독(부채꼴 전체를 쓴다) */
   const lane = combat ? -1 : (fxCnt2 ? (cur === 'dia' ? 0 : 1) : -1);
+  /* ⚑ 564 — 라벨 회피를 «버리는» 대신 **개수를 줄인다.**
+     `probe564` 실측(543 이후): 자유 밴드의 복도는 176..970 = 794px 이고 «모두 받기» 글자 구멍이
+     284px 이라 남는 폭이 510px 이다. 6슬롯이면 슬롯당 85px < `FX3_MIND` 123 이라 36회차의
+     안전판이 매번 물어 **회피가 통째로 버려졌고**, 코인이 라벨 위에 머물렀다(머묾 창 최소 여유
+     −48 ~ −80px). 같은 자를 `FX_GRAIN_SC = 1` 사본으로 돌리면 회피가 그대로 서므로(여유 26~34px)
+     뿌리는 543 의 «잉크 ×3» 이다 — 543 이 잘못한 게 아니라, 개수를 정하는 자리가 밴드를 안 봤다.
+     ⇒ 밴드가 담을 수 있는 슬롯 수로 개수를 깎는다(510/123 ⇒ 4슬롯). 단독이면 6 → 4,
+       두 재화면 3+3 → 2+2 로 **동시 4개**가 되어 `verify58 [2]`·`verify93` 의 «≥ 3» 은 유지된다. */
+  if(!combat && outX && escY && escY.free && escY.keep && escY.keep.length){
+    const nsl0 = lane < 0 ? cnt : 2*cnt;
+    const cap = fx3SlotCap(p0, outX, escY, nsl0);
+    const c2 = cap > 0 ? Math.max(1, lane < 0 ? cap : Math.floor(cap/2)) : cnt;
+    if(c2 < cnt){ cnt = c2; batch.cnt = cnt; }
+  }
   /* 28회차 — 27차 2인 공통 «퍼짐이 아직 표로 읽힌다». 두 비평가가 독립으로 **주범은 열이 아니라
      행**이라고 잡았다(AW «행간 74.9px / 행내 σ 8.1px = 분리비 9.2σ · 두 밴드 사이 47px 에 아이콘 0개» ·
      AX «행1 y[898.5,922.5] · 행2 y[971,997.5] · 빈 띠 48~50px = 코인 지름의 1.5배 · 16개 중 상대 행
@@ -34576,26 +34627,23 @@ function fxFly(from, cur, n){
            두 재화를 깍지 끼면 피치가 27px 로 잉크 32.5 아래로 떨어진다(28회차가 겪은 겹침).
            16슬롯 × 40px = 640 이면 피치 40 > 잉크 32.5 라 밀어내기(FX3_MIND 37) 없이도 안 겹친다. */
         const nsl = lane < 0 ? cnt : 2*cnt;
-        let bx1 = Math.min(p0.x + FX3_BSX0 + Math.max(FX3_BSX1 - FX3_BSX0, nsl*FX3_BSPITCH),
-                           outX - FX3_BSOM);
-        let bx0 = Math.min(p0.x + FX3_BSX0, bx1 - 60);
+        /* ⚑ 564 — 이 산수는 코인마다 같은 값이라 `fx3BandX` 한 함수로 뺐다(위 주석). 종전 본문:
+             bx1 = min(p0.x + BSX0 + max(BSX1−BSX0, nsl·BSPITCH), outX − BSOM)
+             bx0 = max(fx3PanL + BSOM, min(p0.x + BSX0, bx1 − nsl·BSPITCH))   ← free 밴드
+           달라진 것은 «구멍이 있으면 오른쪽도 복도 끝까지 연다» 한 줄뿐이다. */
+        const bd = fx3BandX(p0, outX, escY, nsl);
+        const bx0 = bd.bx0, bx1 = bd.bx1;
         /* 33회차 — 행 밴드는 출발점 «오른쪽» 만 쓴다(왼쪽은 자기 행의 아이콘·라벨이다). 그런데
            `free` 밴드(일괄 버튼)는 **왼쪽도 비어 있다** — 버튼이 패널 가운데 있고 그 y 대역에
            행이 없기 때문이다. 오른쪽만 쓰면 폭이 396px 라 16슬롯 피치가 24.8px 로 잉크 32.5 보다
            좁아져(=32회차가 실측한 겹침) 밴드를 켠 의미가 없다. 왼쪽으로 열어 ⓐ 의 선언 폭
            «슬롯 수 × FX3_BSPITCH» 를 실제로 확보한다(16×44 = 704 → 피치 44 > FX3_MIND 37). */
-        if(escY.free) bx0 = Math.max(fx3PanL + FX3_BSOM, Math.min(bx0, bx1 - nsl*FX3_BSPITCH));
-        /* 36회차 — 공통1(라벨 가림) 가로 회피. 구멍만큼 밴드를 **왼쪽으로 더 연다**(오른쪽은
-           복도 여유 FX3_BSOM 에 이미 걸려 있다). 왼쪽 하한(패널 안쪽 + BSOM)까지 열어도
-           «남는 폭 / 슬롯» 이 FX3_MIND 밑이면 **회피를 통째로 버린다** — 구멍을 지키자고 피치를
-           잉크 아래로 떨어뜨리면 28~32회차가 다섯 라운드 걸려 회수한 겹침이 되돌아온다.
-           그때는 종전 거동(=라벨을 덮는 그림)이지만, 밴드가 깨지는 것보다는 낫다. */
-        holes = (escY.free && escY.keep && escY.keep.length) ? escY.keep : [];
-        if(holes.length){
-          const need = nsl*FX3_BSPITCH + (fx3Span(bx0, bx1, []) - fx3Span(bx0, bx1, holes));
-          if(bx1 - bx0 < need) bx0 = Math.max(fx3PanL + FX3_BSOM, bx1 - need);
-          if(fx3Span(bx0, bx1, holes)/nsl < FX3_MIND) holes = [];
-        }
+        /* 36회차 — 공통1(라벨 가림) 가로 회피. 구멍만큼 밴드를 더 연다. 왼쪽 하한(패널 안쪽 + BSOM)·
+           오른쪽 상한(복도 여유 FX3_BSOM)까지 열어도 «남는 폭 / 슬롯» 이 FX3_MIND 밑이면
+           **회피를 통째로 버린다** — 구멍을 지키자고 피치를 잉크 아래로 떨어뜨리면 28~32회차가
+           다섯 라운드 걸려 회수한 겹침이 되돌아온다. 그 판정은 이제 `fx3BandX` 안에 있고,
+           564 의 개수 상한이 정상 경로에서 그 버림에 닿기 전에 막는다. */
+        holes = bd.holes;
         /* ⓑ 깍지 — 종전에는 여기서 밴드를 좌우로 갈라 골드를 왼쪽 절반·다이아를 오른쪽 절반에
            몰았다(«HUD 알약 순서» 를 근거로 한 16회차 결정). 그 결과가 «x 범위가 한 픽셀도 안 겹치고
            통화 교대 0회» 이고, 두 비평가가 이것을 사양 위반으로 같이 올렸다.
