@@ -21809,6 +21809,15 @@ function hitEnemy(e, dmg, crit){
    필요한데, 아래 리터럴에 숫자로 박혀 있으면 **사본이 갈라진다**(LESSONS 90-①). 상수로 올려
    `dunBossDieSec()` 과 **같은 값 하나**를 보게 한다 — 값은 예전 그대로다(10fps · 1.6초). */
 const CORPSE_FPS = 10, CORPSE_LIFE = 1.6;
+/* ⚑ 592 (저장소 주인 지시 2026-08-31 «적죽을때 골드 이펙트 뜨는거 빼줘 안쓸래 그거») —
+   「전투 발(發) 재화 연출」 스위치 **한 표**.
+   `fxAt(…, 'combat')`(77 — 전투 발 태그)가 찍히는 자리는 소스 전체에 **셋뿐**이고, 셋은 서로 다른
+   사건이다: ⑴ 적을 죽여 떨어지는 골드(`killEnemy`) · ⑵ 스테이지 클리어 보너스 · ⑶ 파도 전멸 보너스.
+   주인이 지목한 것은 **⑴ 하나**다(⑵⑶ 은 «적이 죽을 때» 가 아니라 «스테이지가 끝날 때» — 475 가
+   격파와 ⑵ 사이에 1초를 넣어 둔 것도 둘이 다른 사건이기 때문이다). 그래서 **끄는 것은 ⑴ 뿐**이되,
+   나중에 «그것도 빼라» 가 왔을 때 자리를 세 군데 다시 찾지 않도록 판정을 여기 한 표에 모은다.
+   ⚠ 이 표는 «그리기» 스위치다 — 재화 자체(`S.gold += …`)는 어느 값에서도 그대로 들어온다. */
+const FX_COMBAT_FX = { kill:false, stageClear:true, waveBonus:true };
 function killEnemy(e){
   const i = enemies.indexOf(e);
   if(i < 0) return;
@@ -21816,7 +21825,13 @@ function killEnemy(e){
   const g = e.gold * stat.goldMul;
   /* 58 — «획득 지점»에서 날아가야 하므로 적이 죽은 자리를 출발점으로 알려 준다.
      실제 비행은 fxWatch() 가 증가분을 묶어서 한 번에 쏜다(연속 킬이 아이콘 폭탄이 되지 않게). */
-  fxAt(fxWorld(e.x, e.y - e.r), 'combat');   /* 77 — 전투 발 태그: 코인 비행이 팝업 아래 #fxlc 로 간다 */
+  /* ⚑ 592 — ⑴ 킬 드랍은 **꺼져 있다**(위 FX_COMBAT_FX). ⚠ «발원 표시를 그냥 안 찍는다» 로는
+     안 꺼진다 — 표시가 없는 증가분은 `fxSrc` 가 «마지막으로 누른 버튼»(창 1200ms)을 **추측**으로
+     집어 UI 발(#fxl · 팝업 **위**)로 만들어 더 나쁜 그림이 된다(158·518·578 이 세 번 겪은 자리).
+     ⇒ 그 몫을 «연출 없는 증가» 로 fxWatch 에 직접 적어 준다(`fxSilent`) — 묶음·홀드·롤링에
+     아예 안 들어가므로 HUD 골드 숫자는 그 프레임에 바로 오른다. */
+  if(FX_COMBAT_FX.kill) fxAt(fxWorld(e.x, e.y - e.r), 'combat');   /* 77 — 전투 발 태그: 코인 비행이 팝업 아래 #fxlc 로 간다 */
+  else fxSilent('gold', g);
   S.gold += g; goldWin += g; S.totalKills++; killed++;
   /* 170 — ⛔ 보스 킬 다이아(`250 + S.stage*25`, 최고 기록 갱신 시)는 **폐지**했다(주인 지시 2026-08-27:
      «스테이지 클리어했다고 다이아 보상 주면 안 됨 — 골드만»). 162 이후 보스 격파 = 스테이지 클리어라
@@ -23310,7 +23325,10 @@ function step(dt){
          ⇒ 팝업을 열어 둔 채 스테이지가 클리어되면 코인이 그 버튼에서 튀어나와 #fxl(z60 · 팝업 **위**)로
          날고 딤 위에 밝은 골드 알약 복제(fx-lit)까지 켠다 = 주인이 본 «쌩뚱맞은 곳의 골드 이펙트».
          77 이 만든 «전투 발은 #fxlc(z7 · 팝업 아래)» 규칙을 이 줄이 안 타고 있었을 뿐이다. */
-      fxAt(fxWorld(player.x, player.y - player.r), 'combat');
+      /* 592 — ⑵ 스테이지 클리어 보너스는 **켜져 있다**(FX_COMBAT_FX.stageClear) — 주인이 뺀 것은
+         «적이 죽을 때» 뿐이다. 판정만 한 표로 모았고 기본값에서 그림은 한 픽셀도 안 바뀐다. */
+      if(FX_COMBAT_FX.stageClear) fxAt(fxWorld(player.x, player.y - player.r), 'combat');
+      else fxSilent('gold', bonusG);
       S.gold += bonusG; goldWin += bonusG;
       /* 94 — 골드는 58 코인 비행이 보여 주므로 문구에서 뺐다.
          170 — ⛔ **스테이지 클리어 보상은 골드뿐이다(주인 지시 2026-08-27).** 최고 기록 첫 돌파 시
@@ -23336,7 +23354,9 @@ function step(dt){
          보스는 [스테이지 재도전](retryBoss) 으로만 선다. */
       if(S.bossFarm){
         const bonusG = eGold(S.stage) * 12 * stat.goldMul;
-        fxAt(fxWorld(player.x, player.y - player.r), 'combat');   /* 518 — 위 클리어 보너스와 같은 이유 */
+        /* 592 — ⑶ 파도 전멸 보너스도 **켜져 있다**(FX_COMBAT_FX.waveBonus) — ⑵ 와 같은 사건 급이다. */
+        if(FX_COMBAT_FX.waveBonus) fxAt(fxWorld(player.x, player.y - player.r), 'combat');   /* 518 — 위 클리어 보너스와 같은 이유 */
+        else fxSilent('gold', bonusG);
         S.gold += bonusG; goldWin += bonusG;
         /* 94 — 웨이브가 전멸할 때마다 반복되던 30자 문구는 없다. 파밍 골드는
            58 재화 감시(fxWatch)가 S.gold 증가를 보고 코인 비행으로 이미 보여 준다. */
@@ -37226,6 +37246,15 @@ const fxAcc  = fxMap(0), fxAccT = fxMap(0), fxAccS = fxMap(0);
 const fxAccSrc = fxMap(null);
 /* 비행이 «도착할 때까지» 표시값을 붙잡아 둔다(0 = 안 붙잡음). 도착이 없으면 1.2초 뒤 스스로 풀린다. */
 const fxHold = fxMap(0);
+/* ⚑ 592 — 「연출을 끈 증가분」의 몫.
+   `fxWatch` 는 상태(S)를 **감시**만 하는 구조라 «누가 올렸는지» 를 모른다 — 그래서 연출을 끄는
+   판정을 여기서 할 수가 없고, 올린 쪽이 그 몫을 적어 두고 fxWatch 가 델타에서 **먼저** 빼는 꼴이
+   된다. 여기서 빼면 그 증가분은 묶음(`fxAcc`)·홀드(`fxHold`)·롤링(`fxRoll`) 어디에도 안 들어가고,
+   HUD 숫자는 `fxDisp` 수렴만 타고 그 프레임에 바로 오른다(592 ③).
+   ⚠ 토큰은 **한 프레임짜리**다 — 남으면 그 프레임 끝에 버린다. 안 버리면 «같은 프레임에 골드를
+   더 많이 썼다» 같은 순간에 토큰이 살아남아 **다음에 진짜로 받은 재화의 연출**을 지운다. */
+const fxMute = fxMap(0);
+function fxSilent(cur, n){ if(n > 0 && fxMute[cur] != null) fxMute[cur] += n; }
 /* 롤링은 «고정 길이» 트윈이다. 지수 수렴(`d *= dt*7`)으로 두면 남은 차이가 반씩만 줄어
    0.8초 예산 안에 목표에 못 닿는다(4회차: 645ms 에 26% 진행 — 비평가 2명이 독립적으로 잡았다). */
 const FXROLL = 0.32;
@@ -37243,9 +37272,14 @@ function fxWatch(now){
   for(const k in FXCUR){
     const v = fxS(k);                                 /* 512 — 마일리지만 상태 키가 다르다(FXCUR.mile.st) */
     if(!Number.isFinite(v)) continue;
-    if(fxSeen[k] === null){ fxSeen[k] = v; continue; }
-    const d = v - fxSeen[k];
+    if(fxSeen[k] === null){ fxSeen[k] = v; fxMute[k] = 0; continue; }
+    let d = v - fxSeen[k];
     fxSeen[k] = v;
+    /* ⚑ 592 — «연출을 끈 몫»(fxSilent)을 델타에서 **먼저** 덜어낸다. 여기가 유일한 자리다:
+       아래 `fxAcc`/`fxHold` 는 fxFly 를 부르기 **전에** 걸리므로, fxFly 안에서 되돌리면 비행만
+       안 나고 HUD 숫자는 2초를 붙잡힌 채 나중에 튄다(592 ③ 이 막으려는 그림 그대로다).
+       남은 토큰은 이 프레임에서 버린다(위 fxMute 주석 — 다음 획득을 잘못 지우지 않게). */
+    if(fxMute[k]){ if(d > 0) d -= Math.min(d, fxMute[k]); fxMute[k] = 0; }
     /* ⚑ 43회차 — 종전 주석은 «소모(감소)에는 연출을 걸지 않는다» 였다. 그것이 42차 2인 공통ㅅ
        «세 씬 중 upg 만 HUD 반응 0» 의 뿌리다 — 이제 감소에는 **비행 없이** 알약 «움푹» + `−n` 만
        건다(`fxPay`). 아래 묶음·홀드·롤링 기계는 **증가 전용 그대로**다: 결제는 «묶어서 쏠» 비행이
