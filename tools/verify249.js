@@ -39,7 +39,13 @@ const near = (name, got, want, tol) =>
    30 → 15초로 반이 되면서 **체력만** ×22 → ×11 로 같이 내렸다 — 시간만 줄이면 «훈련만» 설계
    플레이어가 평범한 보스조차 못 잡는다(sim249 [C] 상한이 «없음» 으로 떨어진다). 공격력은 그대로다.
    ⚑ GATE_HP 1.44 는 **안 바뀐다**: 시간과 체력이 같은 비율로 줄어 역산 상한(1.4469)이 불변이다. */
-const C = { K:0.888, KNEE:80, M1:1.010, M2:1.127, A:0.5872, HB:55, DB:6,
+/* ⚑ 199 1회차 이관(2026-08-31) — **M1 1.010 → 1.020.** 249 는 «ES_* 다섯 상수를 한 글자도
+   안 건드린다» 를 자기 범위 제한으로 적어 두고 [A] 로 그것을 지켰는데, 199 의 손잡이 ①(적 체력
+   지수)은 주인이 199 행에 명시로 열어 둔 축이다. 그래서 항을 **지우지 않고 방향만 바꿔** 갈아
+   끼운다(333 처방) — ES_M1 은 «불변» 이 아니라 «199 가 정한 값과 같은가» 를 묻고, 나머지 넷은
+   그대로 «불변(177)» 이다. 값의 근거는 sim177 ⑤(상한 1.03063)와 sim249 ⑨(톱니 진폭, 실측
+   상한 ~1.024) 두 자를 **동시에** 통과하는 최대값이라는 것이다. */
+const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
             BAND:10, GATE_N:10, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
@@ -70,9 +76,10 @@ const CURVE_S = [1, 2, 5, 9, 10, 11, 19, 20, 39, 40, 79, 80, 81, 89, 90, 120, 20
   ok(/const hp = eHp\(s\) \* T2\.hp \* \(tk === 'boss' \? bossGateHp\(s\) : 1\);/.test(src),
      '[A] makeEnemy 가 스테이지 보스에만 관문 배수를 건다');
   /* 177 이 푼 다섯 상수는 249 가 한 글자도 안 건드린다 */
+  const M1_LBL = { ES_M1: ' = 199 1회차 확정값(sim177 ⑤ · sim249 ⑨ 동시 상한)' };
   [['ES_K',C.K],['ES_KNEE',C.KNEE],['ES_M1',C.M1],['ES_M2',C.M2],['ES_A',C.A]].forEach(([k,v]) =>
     ok(parseFloat((src.match(new RegExp('const ' + k + '\\s*=\\s*([\\d.]+)')) || [])[1]) === v,
-       '[A] ' + k + ' 불변(177)', v));
+       '[A] ' + k + (M1_LBL[k] || ' 불변(177)'), v));
   ok(/const eGold\s*=\s*s\s*=>\s*4\s*\*\s*Math\.pow\(1\.175,\s*s-1\)/.test(src), '[A] eGold(경제 축) 불변(112)');
 
   const browser = await launch(chromium);
