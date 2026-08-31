@@ -16,6 +16,8 @@
  *       scrollTop 이 min(300, 최대스크롤) 이상. 뗀 뒤 0.6초 값도 같이 기록한다
  *       (재렌더로 0 으로 되돌아가는 화면이 있는데 그건 작업 107 소관이라 95 통과를 막지 않는다)
  *   [B] 클릭 억제 — 드래그(≥8px)한 제스처는 click 이 발화하지 않는다(74 합성기 포함)
+ *   [B2] 같은 규칙을 **느린 제스처**로도 (562) — 떼기 전 3.2초 머문 드래그도 click 0건.
+ *        [B] 하나만 두면 판정을 기계 속도가 정한다(74 삼키기 창이 down 기준 3초다)
  *   [C] 탭 회귀 — 5px 만 움직인 제스처는 click 이 정상 발화한다(74 탭 유실 수정 유지)
  *   [D] 휠 — mouse.wheel 로 scrollTop 이 증가한다(막는 리스너 없음)
  *   [E] 관성 — 빠른 드래그 뒤 손을 떼도 scrollTop 이 더 흐른다
@@ -144,11 +146,16 @@ const SEED = (light) => {
     return info;
   };
 
-  const drag = async (page, x, y, dy, steps = 12, hold = 12) => {
+  /* pause — 스텝을 다 밟은 뒤 **떼기 전에** 머무는 시간(562). 포인터가 안 움직이므로
+     거리·속도는 그대로고 **제스처 길이만** 늘어난다. */
+  const drag = async (page, x, y, dy, steps = 12, hold = 12, pause = 0) => {
+    const t0 = Date.now();
     await page.mouse.move(x, y);
     await page.mouse.down();
     for (let i = 1; i <= steps; i++) { await page.mouse.move(x, y + (dy * i) / steps); await page.waitForTimeout(hold); }
+    if (pause) await page.waitForTimeout(pause);
     await page.mouse.up();
+    return Date.now() - t0;
   };
   /* 관성이 멎을 때까지 훑어 최댓값 — 재렌더로 한 프레임 사라지는 화면이 있어 단발 측정은 못 믿는다 */
   const peak = async (page, ms = 320) => {
@@ -190,11 +197,27 @@ const SEED = (light) => {
     const info = await open(page, `openShopPage()`, '.shp-list');
     section('[B] 드래그 = 탭 아님 (click 억제)');
     await page.evaluate(() => { window.__clk = 0; });
-    await drag(page, info.x, info.y, -260);
+    const bms = await drag(page, info.x, info.y, -260);
     await page.waitForTimeout(400);
     const c = await page.evaluate(() => window.__clk);
-    if (c === 0) ok('260px 드래그 → click 0건');
-    else fail(`260px 드래그인데 click ${c}건 발화 (74 합성기 억제 실패)`);
+    if (c === 0) ok(`260px 드래그 → click 0건 (제스처 ${bms}ms)`);
+    else fail(`260px 드래그인데 click ${c}건 발화 (74 합성기 억제 실패 · 제스처 ${bms}ms)`);
+
+    /* 562 — 위 한 줄만으로는 **기계 속도가 판정을 정한다.** 74 의 네이티브 click 삼키기는
+       pointerdown 으로부터 3초짜리 창이라, 같은 제스처가 한가한 기계에서는 1.5초에 끝나
+       초록이고 밀린 기계에서는 4초가 걸려 빨갛다(2026-08-31 실측: 워커 A 는 연속 4회 빨강,
+       다른 컨테이너는 연속 4회 초록 — 같은 커밋이다). 그래서 **길이를 자가 정하는** 항을
+       하나 더 세운다: 궤적·거리·속도는 [B] 와 같고 떼기 전에 3.2초 머문다.
+       이 항이 초록이려면 제품이 «드래그로 끝났다» 를 시간과 무관하게 알아야 한다. */
+    section('[B2] 느린 드래그도 탭 아님 — 떼기 전 3.2초 머묾 (562)');
+    await page.waitForTimeout(400);
+    await page.evaluate(() => { window.__clk = 0; });
+    const b2ms = await drag(page, info.x, info.y, -260, 12, 12, 3200);
+    await page.waitForTimeout(400);
+    const c3 = await page.evaluate(() => window.__clk);
+    if (b2ms < 3000) fail(`[B2] 전제 — 제스처가 ${b2ms}ms 로 3초를 못 넘겼다(이 항이 아무것도 안 재고 있다)`);
+    else if (c3 === 0) ok(`3.2초 머문 드래그(제스처 ${b2ms}ms) → click 0건`);
+    else fail(`3.2초 머문 드래그(제스처 ${b2ms}ms)인데 click ${c3}건 발화 — 562 재발(네이티브 click 이 삼키기 창 밖으로 샜다)`);
 
     section('[C] 탭 회귀 — 5px 이동은 click 정상');
     await page.waitForTimeout(400);                      /* 74 ③ 딤 가드(250ms) 를 지나서 누른다 */
