@@ -382,7 +382,7 @@ async function pixelRun(page) {
      '[7-a] 소스에 호스트 목록 `JZ_HOST_SEL` 이 있고 네 호스트를 다 적는다');
   ok(/const h = el\.closest\(JZ_HOST_SEL\);\s*\n\s*return \(h && h !== el\) \? h : null;/.test(src),
      '[7-b] 호스트가 «누른 그 노드» 자신이면 안 고른다(같은 `scale` 을 두고 싸우지 않는다)');
-  ok(/\.jz-hdn\{scale:\.985;translate:0 6px\}/.test(src),
+  ok(/\.jz-hdn\{scale:\.985;translate:0 6px;filter:brightness\(1\.05\)\}/.test(src),
      '[7-c0] `.jz-hdn` 은 **정적 값**이다 — `animation` 단축을 안 쓴다(그 자리는 488 `jz-hb` 임자)');
   ok(/\.tr-rn,\.tr-tp,\.tr-temp>\.tp-hd,\.tr-temp>\.tp-ft\{transition:scale [^}]*translate/.test(src),
      '[7-c1] 호스트 넷이 같은 트랜지션 한 줄을 공유한다(뗌도 같은 곡선 · `.tr-card` 는 목록 밖)');
@@ -482,6 +482,93 @@ async function pixelRun(page) {
 
   }
   ok(c2.errs.length === 0, '[7-Z] §7 실행 중 콘솔 에러 0', c2.errs.slice(0, 2).join(' | '));
+
+  /* ── §8 8회차 — **홀드 내내 유지되는 호스트 밝기**와 **최악 자릿수 자리** ────────────────
+     ⓐ 7회차의 첫 발 오버레이(`fx-flash` .34s)는 340ms 에 꺼진다. 그 뒤 «누른 채» 구간(800ms)에서
+       호스트가 idle 과 구별되지 않는 것이 CG·CH 2인 공통 ② 감점이었다. 재현이 뿌리를 짚었다 —
+       800ms 에 대조군 `.tr-card` 는 `brightness(1.1)`(자기가 눌린 노드라 `jz-dn` 을 그대로 쓴다),
+       세 표적 호스트는 `filter:none`. ⇒ `.jz-hdn` 이 같은 어휘를 1.05 로 준다.
+     ⓑ 헤더 사다리 자리는 «단련 포인트 500»(세 자리) 기준이라 잔액이 자라면 숫자에 붙었다(CH 7px).
+       **최악 자릿수**에서도 «`.pv` 잉크 우단 ↔ 버튼 좌단» 안에 들어가는지 직접 묻는다. */
+  {
+    const c3 = await boot(browser, SRC);
+    const p3 = c3.page;
+    await p3.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+      setTrSub('temper'); S.tstone = 1e6; renderTrain(); });
+    await p3.waitForTimeout(420);
+    const g3 = await p3.evaluate(() => {
+      const B = document.querySelector('#trTemper .tr-tp.k0 .tb');
+      const r = B.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    await p3.mouse.move(g3.x, g3.y);
+    await p3.mouse.down();
+    await p3.waitForTimeout(800);                       /* 비평 캡처의 `-hold` 와 같은 시각 */
+    const hold = await p3.evaluate(() => {
+      const H = document.querySelector('#trTemper .tr-tp.k0');
+      const L = document.getElementById('fxl');
+      const cs = getComputedStyle(H);
+      return { filter: cs.filter, scale: cs.scale,
+               flash: L ? L.querySelectorAll('.fx-flash').length : -1 };
+    });
+    await p3.mouse.up();
+    await p3.waitForTimeout(150);
+    await p3.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
+    /* ★ «첫 발 오버레이가 이미 꺼진 시각» 이어야 이 항이 뜻을 갖는다 — 그것부터 못박는다 */
+    ok(hold.flash === 0, '[8-a] 800ms 에는 첫 발 오버레이(`fx-flash`)가 이미 꺼져 있다(이 항의 전제)',
+       'flash=' + hold.flash);
+    ok(/brightness\(1\.05\)/.test(hold.filter),
+       '[8-b] ★ 그런데도 호스트는 **밝기를 유지**한다 — 눌린 채 800ms 에 idle 과 구별된다',
+       'filter=' + hold.filter);
+    ok(String(hold.scale).indexOf('0.985') === 0,
+       '[8-c] 같은 시각에 스케일도 유지된다(.985)', 'scale=' + hold.scale);
+
+    /* ⓑ 최악 자릿수에서도 사다리가 «`.pv` 잉크 우단 ↔ 버튼 좌단» 안이다 */
+    for (const pts of [500, 999999999]) {
+      const b8 = await p3.evaluate(p0 => {
+        S.temper.pts = p0; S.tstone = 1e6; renderTrain();
+        const hd = document.querySelector('#trTemper .tp-hd'), H = hd.getBoundingClientRect();
+        const pv = hd.querySelector('.pv'); const rg = document.createRange(); rg.selectNodeContents(pv);
+        const rr = rg.getBoundingClientRect();
+        const cg = hd.querySelector('.cg').getBoundingClientRect();
+        const cs = getComputedStyle(hd);
+        const x = parseFloat(cs.getPropertyValue('--hb-x'));
+        const mw = parseFloat(cs.getPropertyValue('--hb-mw'));
+        const n = parseFloat(cs.getPropertyValue('--hb-slots'));
+        const sw = parseFloat(cs.getPropertyValue('--hb-sw'));
+        return { ink2: rr.x + rr.width - H.x, btn: cg.x - H.x, w: H.width, x, mw, n, sw };
+      }, pts);
+      /* ⚠ 사다리는 중심에서 ±(n−1)/2 × sw 만큼 흩어진다 — 그 몫을 빼면 자가 무르다
+         (첫 시안이 그것을 빼먹어 [6-h] 가 «우단이 버튼을 8px 밟는다» 로 잡았다). */
+      const half = b8.mw / 2 + ((b8.n - 1) / 2) * b8.sw;
+      const c = b8.w * b8.x, l = c - half, r = c + half;
+      ok(l >= b8.ink2 && r <= b8.btn,
+         '[8-d' + String(pts).length + '] 사다리(잉크 ' + b8.mw + 'px + 흩뿌림 ±'
+         + p2(((b8.n - 1) / 2) * b8.sw) + 'px)가 자릿수 ' + String(pts).length + ' 에서도 빈 칸 안이다',
+         '사다리 ' + p2(l) + '..' + p2(r) + ' ⊂ 빈 칸 ' + p2(b8.ink2) + '..' + p2(b8.btn)
+         + ' (여유 좌 ' + p2(l - b8.ink2) + ' · 우 ' + p2(b8.btn - r) + ')');
+    }
+    /* ⚠ 이 헤더에 **두 줄기를 가로로** 넣는 길이 막혀 있다는 것도 자로 못박는다(4회차 «한 줄기» 의 기하 근거) */
+    const pair = await p3.evaluate(() => {
+      S.temper.pts = 999999999; renderTrain();
+      const hd = document.querySelector('#trTemper .tp-hd'), H = hd.getBoundingClientRect();
+      const pv = hd.querySelector('.pv'); const rg = document.createRange(); rg.selectNodeContents(pv);
+      const rr = rg.getBoundingClientRect();
+      const cg = hd.querySelector('.cg').getBoundingClientRect();
+      /* 「−1,000,000」 실측 잉크 폭 — 같은 서체·같은 규격으로 재 본다 */
+      const b = document.createElement('b');
+      b.className = 'fx-plus hb dn'; b.textContent = '−1,000,000';
+      b.style.position = 'absolute'; b.style.left = '-9999px';
+      (document.getElementById('fxl') || document.body).appendChild(b);
+      const w = b.getBoundingClientRect().width; b.remove();
+      return { band: (cg.x - (rr.x + rr.width)), ink: w };
+    }, null);
+    ok(pair.band < pair.ink * 2,
+       '[8-e] ★ 최악 자릿수의 빈 칸에는 **두 줄기가 가로로 못 들어간다**(4회차 «한 줄기» 의 기하 근거)',
+       '빈 칸 ' + p2(pair.band) + 'px < 「−1,000,000」 잉크 ' + p2(pair.ink) + 'px × 2');
+    ok(c3.errs.length === 0, '[8-Z] §8 실행 중 콘솔 에러 0', c3.errs.slice(0, 2).join(' | '));
+    await c3.ctx.close();
+  }
+
   await c2.ctx.close();
 
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
@@ -564,7 +651,8 @@ async function pixelRun(page) {
     { n: 'ⓐ 클래스를 안 붙인다',
       rev: s0 => s0.replace("if(hst){ jzDownHost = hst; hst.classList.add('jz-hdn'); }", "if(hst){ jzDownHost = null; }") },
     { n: 'ⓑ 정적 값 → `animation`(맥박에 진다)',
-      rev: s0 => s0.replace('.jz-hdn{scale:.985;translate:0 6px}', '.jz-hdn{animation:jzDn .06s ease-out both}') },
+      rev: s0 => s0.replace('.jz-hdn{scale:.985;translate:0 6px;filter:brightness(1.05)}',
+                            '.jz-hdn{animation:jzDn .06s ease-out both}') },
   ]) {
     const rev3 = R3.rev(src);
     ok(rev3 !== src, '[R3-0] 되돌림 사본을 만들었다 — ' + R3.n);
@@ -602,6 +690,42 @@ async function pixelRun(page) {
            'hdn=' + hdn3 + ' ×' + rs.map(r => Math.round(r * 10000) / 10000).join(' / '));
       }
       await b4.ctx.close();
+    } finally {
+      try { fs.unlinkSync(NEG); } catch (_) {}
+    }
+  }
+
+  /* ── §R4 되돌림(8회차) — 밝기를 걷어낸 사본은 «누른 채 800ms» 에서 idle 과 구별되지 않아야 한다 ──
+     [8-b] 를 무르게 푸는 길은 하나뿐이다: «`fx-flash` 가 아직 살아 있는 시각» 에 묻는 것.
+     그러면 오버레이가 대신 답해 밝기가 없어도 초록이다 — [8-a] 가 그 전제를 먼저 못박고,
+     여기서는 **밝기만 뺀 사본**이 실제로 빨개지는지를 직접 실행해 본다. */
+  {
+    const rev4 = src.replace('.jz-hdn{scale:.985;translate:0 6px;filter:brightness(1.05)}',
+                             '.jz-hdn{scale:.985;translate:0 6px}');
+    ok(rev4 !== src, '[R4-0] 되돌림 사본을 만들었다(호스트 밝기만 걷어낸다)');
+    fs.writeFileSync(NEG, rev4);
+    try {
+      const b5 = await boot(browser, NEG);
+      await b5.page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+        setTrSub('temper'); S.tstone = 1e6; renderTrain(); });
+      await b5.page.waitForTimeout(420);
+      const g5 = await b5.page.evaluate(() => {
+        const B = document.querySelector('#trTemper .tr-tp.k0 .tb');
+        const r = B.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      await b5.page.mouse.move(g5.x, g5.y);
+      await b5.page.mouse.down();
+      await b5.page.waitForTimeout(800);
+      const h5 = await b5.page.evaluate(() => {
+        const H = document.querySelector('#trTemper .tr-tp.k0');
+        const L = document.getElementById('fxl');
+        return { filter: getComputedStyle(H).filter, flash: L ? L.querySelectorAll('.fx-flash').length : -1 };
+      });
+      await b5.page.mouse.up();
+      ok(h5.flash === 0 && !/brightness/.test(h5.filter),
+         '[R4-a] ★ 밝기를 뺀 사본은 800ms 에 오버레이도 밝기도 없다 — 호스트가 idle 과 구별되지 않는다',
+         'flash=' + h5.flash + ' filter=' + h5.filter);
+      await b5.ctx.close();
     } finally {
       try { fs.unlinkSync(NEG); } catch (_) {}
     }

@@ -62,6 +62,8 @@ const SCENES = [
       const b = document.querySelector('#trw .tr-box').getBoundingClientRect();
       return { x: Math.round(b.x) - 6, y: Math.round(b.y) - 6, width: Math.round(b.width) + 12, height: Math.round(b.height) + 12 };
     });
+    /* 8회차 — [충전] 2패스 되돌림에 쓸 «1패스 전» 잔액 */
+    const pts0 = await page.evaluate(() => (S.temper && S.temper.pts) || 0);
     const r = await page.evaluate(sel => {
       const e = document.querySelector(sel); if (!e) return null;
       const b = e.getBoundingClientRect();
@@ -83,6 +85,12 @@ const SCENES = [
        밑에서 꺼진다» 로 수렴했는데 그 일은 홀드가 자멸하는 ≈350ms **뒤**에 일어나므로, 60ms 짜리
        `-down` 한 장으로는 고쳤는지 안 고쳤는지가 그림에 안 나온다(캡처 드리프트로 우연히 보였을 뿐이다).
        ⇒ 자멸 시각을 넘긴 자리를 **약속된 시각**으로 한 장 더 찍는다. */
+    /* ⚑ 8회차 — **`-idle` 바로 앞에서 한 번 더 비운다.** 장면 전환 직후에만 비우면 그 뒤 450ms 안에
+       앞 장면의 토스트(`fx-toast`)가 새로 앉아 «손대기 전» 프레임에 결과물이 남는다 —
+       CH 실측 「흰 «1,000,000» 이 tempup-idle·hold·up · tempchg-idle **4장**에 상단 4px 만 노출된 채
+       남아 있다」가 그것이다. `-idle` 은 정의상 «아무것도 날고 있지 않은» 프레임이므로 비우는 것이 맞다. */
+    await page.evaluate(() => { const L = document.getElementById('fxl'); if (L) L.innerHTML = ''; });
+    await page.waitForTimeout(120);
     await shot('idle');
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
     await page.mouse.down();
@@ -106,7 +114,11 @@ const SCENES = [
        `-up` 프레임의 숫자가 `-hold` 보다 **뒤로 간다**(CF 「Lv.7 인데 잔액이 down 비트맵과 0px 동일 =
        스테일 라벨 롤백」). 되돌림이 필요한 것은 «재고를 한 번에 다 쓰는» 이 버튼 하나뿐이다. */
     if (s.id === 'tempchg') {
-      await page.evaluate(() => { S.tstone = 1e6; renderTrain(); });
+      /* ⚑ 8회차 — 재고뿐 아니라 **포인트 잔액도** 되돌린다. 6회차는 `S.tstone` 만 되돌려서
+         2패스가 «두 번째 충전» 이 되고, `-up` 잔액이 1,000,494 → **2,000,494** 로 한 번 더 늘었다 —
+         CG·CH 가 독립으로 「재고 0인데 얻은 것만 또 는다 · 화면의 숫자만 더하면 100만이 설명되지 않는다」로
+         ③ 감점했다. 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다는 규약이 여기서도 답이다. */
+      await page.evaluate(p0 => { S.tstone = 1e6; if (S.temper) S.temper.pts = p0; renderTrain(); }, pts0);
       await page.waitForTimeout(300);
     }
     /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
