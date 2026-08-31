@@ -35,8 +35,8 @@ const W = 1080, H = 2280;
 const TM_W = 219, TM_H = 98;
 const BASE = {                          /* 카드1 기준. 카드2·3 은 +315 / +630 */
   tm: [116, 1045], ck: [165.79, 1049, 38.8, 97], i_claim: [212.62, 1047, 56.55, 97],
-  /* 356 6회차 이관 — 시계의 **레이아웃 상자**(transform 무관). 알약 로컬 좌표라 카드마다 같다. */
-  ckLay: [49, 4, 40, 97],
+  /* 581 이관 — 옛 `ckLay: [49,4,40,97]` 상수는 여기서 **뺐다.** 그 축은 상수 대조에서
+     «배지 있음 ↔ 뺀 뒤» 차분으로 옮겼다(아래 [H]) — 자리를 비운 것이 아니라 옮긴 것이다. */
 };
 const GREEN = [76, 186, 46];            /* #4CBA2E — 202 «가능=초록» (.ifbtn --gb-mid) */
 const BROWN = [146, 106, 36];           /* #926A24 — 활성(시간 표시) 알약, 34 원본 */
@@ -96,12 +96,40 @@ async function state(page) {
       out.push({
         id: c.id, k: c.dataset.bless, off: c.classList.contains('off'),
         alert: tm.classList.contains('alert'), txt: i.textContent,
-        tmBg: getComputedStyle(tm).backgroundColor, tmSh: getComputedStyle(tm).boxShadow,
+        /* 581 이관 — 알약이 공용 부품 `.ifbtn` 이 되면서 초록이 `background-color` 가 아니라
+           **베벨 그라디언트**로 온다(색은 그대로 `--gb-mid:#4CBA2E`). 옛 항은 «면 색» 을 묻는데
+           읽는 자리가 하나뿐이라 `rgba(0,0,0,0)` 을 보고 빨개졌다 — 물음이 틀린 게 아니라
+           **읽는 자리가 한 곳뿐**이었다. 그래서 «지금 이 알약의 면이 무슨 색인가» 를 두 자리에서
+           읽어 하나로 돌려준다: 그라디언트면 그 본체 밴드(`--gb-mid`), 아니면 `background-color`.
+           ⚠ 무르게 푼 것이 아니다 — 색을 바꾸면 `--gb-mid` 가 달라져 즉시 빨개지고, 부품을 통째로
+           떼면 `background-color` 가 투명이라 또 빨개진다. 게다가 같은 절의 **찍힌 화소** 항
+           («알약 bbox 안 초록 화소 > 8000»)이 옆에서 같은 것을 원 화소로 다시 묻는다. */
+        tmBg: (getComputedStyle(tm).backgroundImage !== 'none'
+                 ? getComputedStyle(tm).getPropertyValue('--gb-mid').trim()
+                 : getComputedStyle(tm).backgroundColor),
+        tmSh: getComputedStyle(tm).boxShadow,
         tm: R(tm), i: R(i), ck: R(ck),
         /* 356 6회차 이관 — [H] «배지가 무엇도 밀지 않았다» 는 **레이아웃** 물음이라
            레이아웃 상자로 잰다. `getBoundingClientRect` 는 transform 이 실린 값이라
            356 이 아이콘 배율을 손볼 때마다 이 자가 같이 빨개졌다(=두 작업이 한 수를 공유). */
         ckLay: [ck.offsetLeft, ck.offsetTop, ck.offsetWidth, ck.offsetHeight],
+        /* 581 이관 — 옛 항은 상수 `[49,4,40,97]` 를 박고 있었는데, `offsetLeft/Top` 은
+           **offsetParent(= 알약)의 패딩 상자** 기준이다. 581 이 알약에 부품의 검정 테두리 6px 을
+           얹자 그 원점 자체가 (+6, +6) 움직여 상수가 (43, −2) 로 읽혔다 — **그려진 자리는 Δ0**
+           이고(같은 절의 ««받기» 글자 잉크 자리·폭 불변» 이 `getBoundingClientRect` 로 통과한다)
+           움직인 것은 좌표계다. 상수를 새 값으로 갈아 적으면 다음에 테두리가 또 바뀔 때 같은
+           헛빨강이 난다. ⇒ [H] 가 묻는 것(«배지가 무엇도 밀지 않았다»)을 **그대로** 묻는다:
+           같은 트리에서 배지 노드를 뺐다 넣었을 때 시계 상자가 한 픽셀도 안 움직이는가.
+           ⚠ 이것이 더 센 자다 — 상수 판은 «배지를 넣어도 상수와 같다» 였지만 이 판은
+             «배지를 넣은 것 때문에 움직였는가» 를 직접 가른다(원점 이동에 면역). */
+        ckLayNoDot: (() => {
+          if (!d) return [ck.offsetLeft, ck.offsetTop, ck.offsetWidth, ck.offsetHeight];
+          const par = d.parentNode, nxt = d.nextSibling;
+          par.removeChild(d);
+          const v = [ck.offsetLeft, ck.offsetTop, ck.offsetWidth, ck.offsetHeight];
+          par.insertBefore(d, nxt);
+          return v;
+        })(),
         nDot: dots.length, dotDisp: d ? getComputedStyle(d).display : 'none',
         dotRect: d ? R(d) : null, card: R(c),
       });
@@ -116,7 +144,12 @@ async function state(page) {
   });
 }
 
-const rgb = s => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
+/* 581 이관 — `rgb(a,b,c)` 뿐 아니라 `#RRGGBB`(부품 토큰이 돌려주는 모양)도 읽는다 */
+const rgb = s => {
+  const h = String(s).trim().match(/^#([0-9a-f]{6})$/i);
+  if (h) return [0, 2, 4].map(i => parseInt(h[1].slice(i, i + 2), 16));
+  return (String(s).match(/\d+/g) || []).slice(0, 3).map(Number);
+};
 const isCol = (s, c) => { const v = rgb(s); return v[0] === c[0] && v[1] === c[1] && v[2] === c[2]; };
 /* «닷이 켜져 있다» 의 논리 요약 — 노드가 있고 .alert 이고 computed display 가 none 이 아니다 */
 const lit = o => o.nDot === 1 && o.alert && o.dotDisp !== 'none';
@@ -185,8 +218,9 @@ const NOW = () => Date.now();
             («옮겼으면 옮긴 자리에서 물어야 한다» — 328~330 이 남긴 이관 교훈. 값 49,4,40,97 이
             수리 전·수리 후·transform 없음 **세 상태에서 모두 같다**는 것은 직접 재서 확인했다:
             즉 이 항은 무엇도 무르게 풀지 않았고, 애초에 356 의 축을 안 보던 항이다.) */
-      ok(o.ckLay.every((v, j) => near(v, BASE.ckLay[j], 0.5)),
-        `[H] ${o.id} 시계 ⏱ 레이아웃 상자 불변(배지가 안 민다)`, o.ckLay.join(','));
+      ok(o.ckLay.every((v, j) => near(v, o.ckLayNoDot[j], 0.5)),
+        `[H] ${o.id} 시계 ⏱ 레이아웃 상자 불변(배지가 안 민다)`,
+        '배지 있음 ' + o.ckLay.join(',') + ' ↔ 뺀 뒤 ' + o.ckLayNoDot.join(','));
     });
     /* [G] 299 + overflow 클립
        ⚠ 319 처방(278) — 배지 노드가 아예 없는 트리(되돌림 시험)에서 `o.dotRect` 가 null 이면
