@@ -220,6 +220,60 @@ async function diffPct(page2, a, b, tol) {
   for (const r of rows) if (!r.miss)
     ok(r.d450 >= CPCT, '[D] ' + r.id + ' 홀드 끝(≈450ms+)에도 변화가 남아 있다', p2(r.d450) + '%');
 
+  /* ── [F] 회당 플로터 — 3회차 ⅰ «룬 [강화] 플로터가 0px» 의 재현 ────────────────────────
+     비평가 BW·BX 가 2회차에 **독립으로** «down·up 어디에도 0px» 을 봤다. 338 규칙대로 새 연출을
+     얹기 전에 제품에게 먼저 묻는다 — 갈래는 셋이고 처방이 전혀 다르다:
+       ⓐ `hbFloat` 가 false 로 빠진다(`fxL()`·`hbHost()`·`FXMAX`) → 노드가 아예 없다
+       ⓑ 노드는 생기는데 자리가 캡처 clip 밖이거나 남에게 가린다
+       ⓒ 노드도 자리도 맞는데 **너무 빨리 진다**(캡처 한 장이 수백 ms 를 먹는다 — 2회차가 `-up` 에서
+          이미 한 번 겪은 하네스 드리프트의 다른 얼굴)
+     그래서 «몇 장인가 · 어디인가 · 언제까지 보이는가» 를 시각별로 갈라 적는다. */
+  console.log('\n[F] 회당 플로터 — 한 발(lone) 수명 · 자리');
+  await front();
+  await page.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub('rune'); renderTrain(); });
+  await page.waitForTimeout(400);
+  const fRect = await page.evaluate(() => {
+    const b = document.querySelector('#trRunes .rbt.b1'), c = document.querySelector('#trRunes .tr-rn');
+    return b && c ? { b: b.getBoundingClientRect().toJSON(), c: c.getBoundingClientRect().toJSON() } : null;
+  });
+  const fSnap = async () => await page.evaluate(() => {
+    const L = document.getElementById('fxl'); if (!L) return [];
+    return [...L.querySelectorAll('.fx-plus.hb')].map(n => {
+      const r = n.getBoundingClientRect();
+      return { t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2),
+               x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height),
+               lng: n.classList.contains('lng') };
+    });
+  });
+  if (fRect) {
+    await page.mouse.move(fRect.b.x + fRect.b.width / 2, fRect.b.y + fRect.b.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(50);  const f60  = await fSnap();
+    await page.mouse.up();          /* 한 발 — 홀드 반복이 안 끼게 곧바로 뗀다 */
+    await page.waitForTimeout(95);  const f140 = await fSnap();
+    await page.waitForTimeout(160); const f300 = await fSnap();
+    await page.waitForTimeout(120); const f420 = await fSnap();
+    const vis = a => a.filter(n => n.a > 0.08);
+    for (const [nm, a] of [['60ms', f60], ['140ms', f140], ['300ms', f300], ['420ms', f420]])
+      console.log('  · ' + nm.padStart(6) + ' — ' + vis(a).length + '장 보임 ' +
+        JSON.stringify(vis(a).map(n => n.t + '@' + n.y + '(α' + n.a + (n.lng ? ',lng' : '') + ')')));
+    ok(f60.length >= 2, '[F1] 한 발에 회당 플로터가 두 줄기(결과·비용) 다 생긴다', f60.length + '장');
+    ok(f60.every(n => n.lng), '[F2] 한 발은 «lone» 으로 잡혀 긴 수명(.56s)을 받는다',
+       f60.map(n => n.lng).join('·'));
+    ok(f60.every(n => n.y > fRect.c.y && n.y + n.h < fRect.c.y + fRect.c.height),
+       '[F3] 자리가 호스트(룬 카드) 안이다 — «캡처 clip 밖» 갈래를 기각한다',
+       JSON.stringify(f60.map(n => n.y)) + ' in ' + Math.round(fRect.c.y) + '..' +
+       Math.round(fRect.c.y + fRect.c.height));
+    ok(vis(f140).length >= 2, '[F4] ★ 뗀 뒤 140ms(비평 캡처 시각)에도 두 장이 α>0.08 로 남아 있다',
+       vis(f140).map(n => n.t + ' α' + n.a).join(' · '));
+    ok(vis(f300).length >= 2, '[F5] ★ 300ms 에도 남아 있다 — 옛 .3s 는 여기서 이미 α 0 이었다(2회차 «0px» 의 정체)',
+       vis(f300).map(n => n.t + ' α' + n.a).join(' · ') || '0장');
+    ok(vis(f420).length >= 1, '[F6] 420ms 까지는 살아 있다(불투명 구간 10~72% = 56~403ms)',
+       vis(f420).length + '장');
+    await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
+    await page.waitForTimeout(200);
+  } else ok(false, '[F] 룬 [강화] 버튼/카드를 못 찾았다');
+
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
 
   console.log('\nPROBE491 ' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));

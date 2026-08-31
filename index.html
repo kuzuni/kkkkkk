@@ -3655,6 +3655,18 @@
        («+1»·«실패»·«−n» — 낱말을 도로 붙이지 마라). */
   .fx-plus.hb{-webkit-text-stroke:7px rgba(0,0,0,.86);animation:fxHb .3s linear both}
   .fx-plus.hb.dn{animation:fxHbDn .3s linear both}
+  /* ⚑ 491 3회차 — **«한 번 눌렀다» 와 «홀드 반복» 은 수명이 달라야 한다.**
+     2회차가 «.55s 로 올리면 `verify488` [H2]·[H4] 가 곧바로 빨개진다» 로 되돌린 자리인데,
+     그 두 항이 재는 것은 **홀드 한복판**(t=700·1400·2200·3000ms)이다 — 사다리(칸 5 × 간격)가
+     수명에서 역산된 값인 것도 **60ms 주기로 쏟아지는 반복분** 때문이다. 한 번 톡 누르고 마는
+     발에는 사다리 압력이 아예 없다(동시 생존 1~2장) ⇒ 그 발만 길게 두면 둘 다 만족한다.
+     ⚠ 왜 길어야 하는가: 3회차 재현(`probe491` [F])이 «비평가 둘이 독립으로 «플로터 0px»» 의
+       뿌리를 찍었다 — 노드는 **정상으로 생기고**(60ms 에 «+1» «−12» 두 장 · α 1.0) 자리도 카드 안인데,
+       .3s 짜리라 **260ms 에 이미 α 0** 이다. 캡처 한 장이 수백 ms 를 먹으므로 사람 눈에도 캡처에도
+       «없는» 것이 된다(2회차가 `-up` 에서만 고친 하네스 드리프트가 `-down` 에도 그대로 있었다).
+     ⇒ 불투명 구간(10~72%)이 .56s 에서 **56~403ms** = 비평가 요구 «수명 ≥200ms · 140ms 프레임에 남을 것»
+       을 두 배 여유로 넘는다. 반복분은 **.3s 그대로** 라 [H2]·[H4] 는 한 항도 안 움직인다. */
+  .fx-plus.hb.lng,.fx-plus.hb.dn.lng{animation-duration:.56s}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
@@ -12669,8 +12681,15 @@
      ⚠ `filter` 는 호스트 자신의 `filter` 를 **대체**한다. `cursor:pointer` 를 선언한 규칙 91개 중
        `filter` 를 같이 선언하는 것은 **둘뿐**이고(`.prb-ar`·`.cl-srch`) 그중 실제로 값이 있는 것은
        `.prb-ar` 하나다(`.cl-srch` 는 `filter:none`) — 그 한 자리만 아래에서 합쳐 준다. */
+  /* ⚑ 491 3회차 — 가라앉음 4 → **8px**. 2회차의 4px 는 «가라앉는다» 로 읽히지 않았다(BW·BX 2인 공통):
+     축소 .94 는 **중심 기준**이라 짧은 변의 절반(112px 버튼이면 3.36px)이 위아래로 **각각** 먹힌다 —
+     4px 를 더하면 윗변 +3.36+4 = **+7.4px**, 아랫변 −3.36+4 = **+0.6px** 라 아랫변이 사실상 제자리고
+     그림은 «가라앉음» 이 아니라 **«윗변만 깎임»** 이 된다(실측 윗변 +8 / 아랫변 0 · 대조군은 +18/−11).
+     8px 이면 아랫변도 **+4.6px** 내려가 두 변이 같은 쪽으로 간다 = 눈이 «내려갔다» 로 읽는다.
+     ⚠ 값은 «축소가 먹는 절반» 보다 커야 한다는 부등식에서 나온 것이지 취향이 아니다:
+       translate > h(1−s)/2. 이 저장소에서 가장 낮은 누름 호스트(h≈40px)도 1.2px 라 8 은 전부 만족한다. */
   .jz-dn{animation:jzDn .06s ease-out both;filter:brightness(1.10)}
-  @keyframes jzDn{from{scale:1;translate:0 0}to{scale:.94;translate:0 4px}}
+  @keyframes jzDn{from{scale:1;translate:0 0}to{scale:.94;translate:0 8px}}
   /* 호스트 목록 — 자기 `filter` 를 가진 유일한 누름 호스트. 그림자를 잃지 않게 곱해서 적는다. */
   .prb-ar.jz-dn{filter:drop-shadow(0 0 1px rgba(0,0,0,.5)) brightness(1.10)}
   /* 뗌 스프링 — 이징을 «전체» 에 걸면 오버슈트 베지어가 1구간에서 1.04 를 **넘겨 버리고**
@@ -12679,7 +12698,7 @@
   /* 491 2회차 — 뗌도 «떠오른다»: 가라앉은 4px 를 스프링과 **같은 구간**으로 되돌린다.
      (안 되돌리면 손을 떼는 순간 4px 가 뚝 끊겨 «튕김» 으로 읽힌다 — 스프링의 뜻이 상한다.) */
   .jz-up{animation:jzUp .18s linear both}
-  @keyframes jzUp{0%{scale:.94;translate:0 4px;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
+  @keyframes jzUp{0%{scale:.94;translate:0 8px;animation-timing-function:cubic-bezier(.25,.6,.4,1)}
     55%{scale:1.04;translate:0 0;animation-timing-function:cubic-bezier(.4,0,.4,1)}100%{scale:1;translate:0 0}}
   /* 비활성을 누르면 좌우 6px 3회 + 살짝 어두워짐 */
   .jz-sh{animation:jzShake .34s ease-out both;filter:brightness(.82)}
@@ -32487,7 +32506,8 @@ function liveTemper(){
   const hd = temperHeadTxt();
   put(w, '.tp-hd .pv i', hd.pts, true);
   put(w, '.tp-hd .cg i', hd.chg, true);
-  const cg = w.querySelector('.tp-hd .cg'); if(cg) cg.classList.toggle('no', !hd.canCharge);
+  /* 491 3회차 — 회색은 «누르는 중» 에는 미룬다(위 `jzNo` 머리말). 판정은 그대로 `hd.canCharge` 다. */
+  jzNo(w.querySelector('.tp-hd .cg'), !hd.canCharge);
   TEMPERS.forEach(t => {
     const row = w.querySelector('.tr-tp[data-temper="' + CSS.escape(t.k) + '"]'); if(!row) return;
     const x = temperRowTxt(t);
@@ -32496,10 +32516,10 @@ function liveTemper(){
     put(row, '.tc i', x.cost);
     put(row, '.tc s', x.seg);
     put(row, '.tb i', x.btn);
-    const b = row.querySelector('.tb'); if(b) b.classList.toggle('no', !x.ok);
+    jzNo(row.querySelector('.tb'), !x.ok);
   });
   put(w, '.tp-ft .rs i', temperFootTxt(), true);
-  const rb = w.querySelector('.tp-ft .rb'); if(rb) rb.classList.toggle('no', !temperResetOk());
+  jzNo(w.querySelector('.tp-ft .rb'), !temperResetOk());
 }
 /* 단련석 → 포인트 전환(보유분 전부) */
 function temperChargeBtn(quiet){
@@ -35597,6 +35617,12 @@ function fxDelta(el, txt){
    ⚠ 노드는 셀렉터로 다시 찾는다 — 홀드 중 `live` 렌더가 노드를 갈 수 있다(64 교훈 1 · 262 ⓑ).
    ========================================================================== */
 const HB_POP = 80, HB_SHAKE = 100, HB_LIFE = 310;   /* 3회차 — 애니 .3s 뒤 유령 30ms 를 10ms 로 */
+/* ⚑ 491 3회차 — «한 발»(직전 시도로부터 HB_LONE_GAP 넘게 떨어진 beat)만 수명이 길다.
+   판정을 **호스트별**로 두는 이유: 두 화면이 우연히 같은 400ms 안에 울려도 서로의 수명을 깎으면 안 된다.
+   400ms 는 홀드 주기(TR_HOLD_IVMIN 60ms · 첫 반복까지 TR_HOLD_DELAY)보다 훨씬 커서
+   «홀드 반복분은 예외 없이 짧다» 가 성립한다. */
+const HB_LIFE_LONE = 570, HB_LONE_GAP = 400;
+const hbAt = new WeakMap();
 /* 연속으로 나오는 플로터가 **정확히 같은 자리에 겹치지 않게** 가로로 흩는다.
    ⚑ 칸 수·간격·수명은 눈대중이 아니라 **홀드 주기에서 역산한 값**이다(1회차 실측으로 갈았다):
      · 홀드는 `TR_HOLD_IVMIN` 60ms 까지 가속한다 ⇒ 한 줄기에 «수명 ÷ 60ms» 장이 동시에 산다.
@@ -35621,7 +35647,7 @@ function hbPulse(host, ok){
   return true;
 }
 /* kind: 'ok'(성공·초록·위로) · 'no'(실패·빨강·위로) · 'pay'(비용·갈색·아래로) */
-function hbFloat(host, txt, kind){
+function hbFloat(host, txt, kind, lone){
   const L = fxL(), el = hbHost(host); if(!L || !el || !txt) return false;
   let r = fxRect(el); if(!r) return false;
   /* ⚑ 4회차 — 호스트 상자에서 **지금 걸려 있는 변형을 벗긴다.** 회당 맥박(`jz-hb` 팝 · `jz-hbx` −10px)이
@@ -35638,7 +35664,7 @@ function hbFloat(host, txt, kind){
   } catch(_){}
   if(L.childElementCount >= FXMAX) return false;
   const d = document.createElement('b');
-  d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '');
+  d.className = 'fx-plus hb' + (kind === 'pay' ? ' dn' : '') + (lone ? ' lng' : '');
   d.style.color = kind === 'ok' ? '#2E7D14' : kind === 'no' ? '#B01B2E' : '#7A3A10';
   const i = hbSeq++, pay = kind === 'pay';
   /* 2회차 — 두 줄기의 자리는 **호스트가 신고한 빈 띠**(`--hb-y`/`--hb-y2` · `--hb-x`/`--hb-x2`)다.
@@ -35695,14 +35721,20 @@ function hbFloat(host, txt, kind){
      16 + 흔들림 진폭 10 = 26 이면 어느 위상에서도 안쪽 면에서 ≥6px 떨어진다. */
   if(r.w > 2 * half + 2 * pad){ lo = Math.max(lo, r.x + half + pad); hi = Math.min(hi, r.x + r.w - half - pad); }
   if(hi > lo) d.style.left = Math.max(lo, Math.min(hi, parseFloat(d.style.left))) + 'px';
-  fxBye(d, HB_LIFE);
+  fxBye(d, lone ? HB_LIFE_LONE : HB_LIFE);
   return true;
 }
 /* 시도 한 번의 전부. `cost` 는 «이번 시도에 실제로 빠져나간 것» 의 표기 문자열(없으면 생략). */
 function hbBeat(host, ok, txt, cost){
+  /* «한 발인가» 는 **beat 단위**로 한 번만 판정한다 — 한 beat 의 두 줄기(결과·비용)는 같은 시도이므로
+     둘째 줄기가 첫째를 보고 «반복» 이라고 읽으면 안 된다. */
+  const el0 = hbHost(host);
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const lone = !el0 || !(now - (hbAt.get(el0) || -1e9) < HB_LONE_GAP);
+  if(el0) hbAt.set(el0, now);
   hbPulse(host, ok);
-  if(txt)  hbFloat(host, txt, ok ? 'ok' : 'no');
-  if(cost) hbFloat(host, cost, 'pay');
+  if(txt)  hbFloat(host, txt, ok ? 'ok' : 'no', lone);
+  if(cost) hbFloat(host, cost, 'pay', lone);
 }
 function fxToast(txt){
   const L = fxL(); if(!L || !txt) return;
@@ -36650,6 +36682,20 @@ const jzOn = (el, cls, ms) => {
   });
   el[key] = setTimeout(() => { if(el[gkey] === gen) off(); }, hooked ? Math.max(ms, 2500) : ms);
 };
+
+/* ⚑ 491 3회차 — **«눌렸다» 와 «꺼졌다» 는 같은 어휘를 쓰면 안 된다.**
+   상태 갱신(`liveTemper()` 등)이 «누르고 있는 그 프레임» 에 돌면 202 의 회색(`.no`)이 누름 위에 덮여
+   버튼이 «눌렸다» 가 아니라 «꺼졌다» 로 읽힌다 — 비평가 BW·BX 가 2인 공통으로 낸 [충전] 지적
+   (down 프레임 버튼 안 92.7% 가 회색 180,172,155)이 정확히 이것이다. 60 의 어휘 표에서
+   «어두워짐/회색» 은 이미 `jz-sh` = «못 누르는 것» 자리이므로 충돌을 여기서 끊는다.
+   ⇒ 누르고 있는 동안에는 «꺼짐» 을 **미룬다.** 손을 뗀 뒤 통짜 렌더(`renderTrain()`)나 다음 live 틱이
+   같은 함수를 다시 부르며 그때 붙는다 — 판정식은 한 줄도 안 건드린다(어디까지나 «표시의 순서»다).
+   ⚠ 미루는 것은 «꺼짐» 뿐이다. «켜짐»(on=false)은 즉시 반영한다 — 그쪽은 누름과 어휘가 안 겹친다. */
+function jzNo(el, on){
+  if(!el || !el.classList) return;
+  if(on && el.classList.contains('jz-dn')) return;      /* 누르는 중 — 이번 틱은 건너뛴다 */
+  el.classList.toggle('no', !!on);
+}
 
 /* ── ① 누를 수 있는 것 전부 ── */
 let jzDown = null;
