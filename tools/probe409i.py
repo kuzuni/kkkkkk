@@ -308,13 +308,385 @@ def img_read(pathname):
                   % (corner, dg, fmt(ss), a[0], a[1], b[0], b[1]))
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 18회차 (2026-08-31) — **법선 자** (§26-8 ⓪ 가 시킨 첫 일)
+#
+#   17회차까지의 광선은 코너를 **원 30** 으로 가정하고 «중심에서 반지름 30 지점» 부터
+#   안으로 훑었다. 그런데 이 코너는 `.stab.on::after{border-radius:30px / 33px}` =
+#   **30 × 33 타원**이다. 두 가지가 동시에 틀어진다:
+#     ⓐ **출발점** — 타원 45° 의 참 반지름은 31.39 라 «30 에서 출발» 은 이미 1.39px **안**이다
+#        (검정 링이 7.0 인데 6.0 으로 읽히던 그 1px).
+#     ⓑ **방향** — 원이 아니면 «중심에서 나가는 선» 은 법선이 아니다. 층 두께는 법선 위에서만
+#        참값이고, 반지름 위에서 재면 cos(반지름↔법선 각) 만큼 **부풀어** 읽힌다.
+#   ⇒ 이 자는 둘 다 없앤다: 코너 윤곽(검정 **바깥** 모서리)을 그림에서 서브픽셀로 잡고,
+#      그 윤곽의 **국소 법선** 위에서만 층을 읽는다. 모델(원이든 타원이든)을 안 쓴다.
+#
+#   ⚑ 왜 이 자가 옳은가 — 비평가 DU·DV 가 서로 다른 방법(DV 컨투어 법선 · DU 이등분선 +
+#      0.5° 스윕 최소거리)으로 «아래 코너 D 가 −20~30%» 라는 **같은 값**을 냈는데,
+#      원 30 자만 «ref ≈ cap» 으로 읽었다. 갈리면 법선 자가 옳다(§26-8).
+#
+#   ⚠ 상자 자(`find_box`)와 윤곽 자는 **다른 것을 잰다** — 상자는 좌·우에서 «검정 바깥»,
+#      위·아래에서 «검정 안쪽»(그 검정은 알약이 아니라 바 테두리다)을 잡는다. 법선 자는
+#      네 방향 전부 «검정 **바깥** 모서리» 한 정의로만 잡는다(코너에서는 알약의 검정과
+#      바 테두리가 같은 검정이라 그것이 유일하게 일관된 정의다).
+
+NRMAX = 52.0        # 윤곽 탐색 시작 거리(중심에서) — 아래로 52px 이면 바 밖 밝은 배경이다
+NSMOOTH = 6.0       # 법선을 낼 때 r(φ) 를 국소 2차로 매끈하게 하는 창(±도)
+
+
+def _corner_frame(box, corner):
+    """(중심x, 중심y, sx, sy) — sx·sy 는 그 코너의 «바깥» 방향 부호."""
+    x0, y0, w, h = box
+    bottom, right = corner[0] == 'B', corner[1] == 'R'
+    cx = x0 + (w - R if right else R)
+    cy = y0 + (h - R if bottom else R)
+    return cx, cy, (1 if right else -1), (1 if bottom else -1)
+
+
+def outer_edge(px, cx, cy, sx, sy, deg, rmax=NRMAX, step=0.25, minrun=2.0):
+    """코너 중심에서 **밖으로** 훑어 알약 검정 링의 **바깥** 모서리까지의 거리(서브픽셀).
+
+    ⚠⚠ **밖에서 안으로 훑으면 안 된다** — 알약 아래 검정과 서브탭 바 **자신의 아래 테두리**가
+       다른 물건인데 같은 검정이다. 실측(cap, BL): x=305 열은 알약 링 2040..2047 · **셸림
+       2049..2050** · 바 테두리 2051..2057 로 **셋이 갈라져 있고**, x=420(직선부)에서는 알약
+       링과 바 테두리가 **같은 2051..2057 한 줄로 붙는다.** 밖에서 들어오면 코너에서는 바
+       테두리를 알약으로 읽어 윤곽이 8~10px 부풀고, 직선부에서는 우연히 맞는다 =
+       **코너에서만 틀리는 자** 가 된다(이 작업이 11회차째 쫓던 바로 그 종류의 오차다).
+    ⇒ 안에서 밖으로 나가면 처음 만나는 검정이 **반드시 알약 자신의 링**이라 애매함이 없다.
+       코너 중심(코너 반지름만큼 안쪽)은 라벨 글자에서 멀어 `diag` 가 겪던 «글자 외곽선을
+       링으로 읽는» 함정도 없다.
+    `minrun` 은 JPEG AA 한두 표본을 링으로 읽지 않기 위한 최소 두께다."""
+    a = math.radians(deg)
+    ux, uy = sx * math.cos(a), sy * math.sin(a)
+    t, dark_at, prev = 4.0, None, None
+    while t <= rmax:
+        v = lum(px, cx + ux * t, cy + uy * t)
+        if dark_at is None:
+            if v <= EDGE_T:
+                pv, pt = prev if prev else (v, t)
+                f = (pv - EDGE_T) / (pv - v) if pv != v else 0.0
+                dark_at = pt + f * (t - pt)
+        elif v > EDGE_T:
+            if t - dark_at >= minrun:
+                pv, pt = prev
+                f = (EDGE_T - pv) / (v - pv) if v != pv else 0.0
+                return pt + f * (t - pt)
+            dark_at = None            # 너무 얇았다 = AA · 계속 나간다
+        prev, t = (v, t), t + step
+    return None
+
+
+def inner_edge(px, cx, cy, sx, sy, deg, rmax=NRMAX, step=0.25):
+    """코너 중심에서 **밖으로** 훑어 검정 링의 **안쪽** 모서리까지의 거리(서브픽셀).
+
+    ⚑⚑ **이 자가 윤곽으로 삼는 것은 링의 «바깥» 이 아니라 «안» 이다.** 바깥은 잴 수 없다 —
+       알약의 검정과 서브탭 바 자신의 테두리가 **아래 직선부에서 한 줄로 붙기** 때문이다
+       (cap 실측: x=420 은 알약 D 2044..2050 · 검정 2051..2057 인데 그 검정은 바 테두리와
+       같은 줄이고, x=305 코너에서는 알약 링 2040..2047 · 셸림 2049..2050 · 바 테두리
+       2051..2057 로 **셋이 갈라진다**). 바깥으로 맞춘 타원은 그래서 b 가 33 이 아니라
+       **38** 로 나오고 K 가 7 이 아니라 **9.5~12** 로 읽힌다 = 바 테두리를 알약으로 센 값이다.
+       안쪽 모서리는 «알약의 색이 시작하는 자리» 라 그런 오염이 **원리적으로** 없다.
+    ⚠ 그래서 이 자가 돌려주는 타원은 `::after` 의 **안쪽** 반지름이다(우리 CSS 로는
+       30−7 × 33−7 = **23 × 26**). 법선 방향은 안·바깥 어느 쪽으로 맞춰도 같은 곡선족이므로
+       층 두께를 재는 데 필요한 것은 이것으로 충분하다."""
+    a = math.radians(deg)
+    ux, uy = sx * math.cos(a), sy * math.sin(a)
+    prev, t = None, 4.0
+    while t <= rmax:
+        v = lum(px, cx + ux * t, cy + uy * t)
+        if v <= EDGE_T:
+            if prev is None:
+                return None
+            pv, pt = prev
+            f = (pv - EDGE_T) / (pv - v) if pv != v else 0.0
+            return pt + f * (t - pt)
+        prev, t = (v, t), t + step
+    return None
+
+
+def contour(px, box, corner, lo=0.0, hi=90.0, dphi=0.5, edge='inner'):
+    """코너 한 사분면의 윤곽을 극좌표로 — [(φ, r)] (φ 0° = 바깥 가로 · 90° = 바깥 세로).
+       `edge='inner'` 는 검정 링 **안쪽** 모서리(기본 · 위 주석), `'outer'` 는 바깥 모서리."""
+    cx, cy, sx, sy = _corner_frame(box, corner)
+    fn = inner_edge if edge == 'inner' else outer_edge
+    out, ph = [], lo
+    while ph <= hi + 1e-9:
+        r = fn(px, cx, cy, sx, sy, ph)
+        if r is not None:
+            out.append((ph, r))
+        ph += dphi
+    return (cx, cy, sx, sy), out
+
+
+def fit_ellipse(samples, lo=6.0, hi=84.0):
+    """코너 윤곽점들에 **타원**을 최소제곱으로 맞춘다 → (a, b, 잔차RMS, 표본수).
+
+    ⚑ 왜 모델을 맞추는가 — 법선은 윤곽의 **미분**이라 표본 잡음(서브픽셀 ±0.25px)에
+       그대로 증폭된다(생 미분은 φ=60° 근처에서 ±40° 로 튄다). 그런데 이 코너는 ref 든
+       우리든 **둥근 사각형의 모서리** = 타원 하나이고, 타원은 `u·X² + v·Y² = 1`
+       (u=1/a², v=1/b²) 로 **파라미터에 선형**이라 두 미지수 최소제곱으로 닫힌다.
+       ⇒ 잡음은 평균되고 법선은 해석적으로 나온다.
+    ⚠ 이것은 «반지름 30» 을 **가정하는 것이 아니다** — a·b 를 그림에서 **재는 것**이다.
+       잔차가 크면(>0.6px) 타원이 아니라는 뜻이니 그때는 이 자를 믿지 마라.
+    직선부(φ<6°·>84°)는 뺀다 — 거기서는 윤곽이 코너가 아니라 변이다."""
+    P = [(r * math.cos(math.radians(p)), r * math.sin(math.radians(p)))
+         for p, r in samples if lo <= p <= hi]
+    if len(P) < 12:
+        return None
+    s11 = sum(X ** 4 for X, _ in P)
+    s12 = sum((X ** 2) * (Y ** 2) for X, Y in P)
+    s22 = sum(Y ** 4 for _, Y in P)
+    t1 = sum(X ** 2 for X, _ in P)
+    t2 = sum(Y ** 2 for _, Y in P)
+    det = s11 * s22 - s12 * s12
+    if abs(det) < 1e-9:
+        return None
+    u = (t1 * s22 - t2 * s12) / det
+    v = (s11 * t2 - s12 * t1) / det
+    if u <= 0 or v <= 0:
+        return None
+    a, b = u ** -0.5, v ** -0.5
+    res = 0.0
+    for X, Y in P:
+        rr = math.hypot(X, Y)
+        th = math.atan2(Y / b, X / a) if rr else 0.0
+        # 같은 방향의 타원 위 점까지의 거리로 잔차를 잰다(반지름 방향 잔차)
+        c, s = X / rr, Y / rr
+        den = math.sqrt((c / a) ** 2 + (s / b) ** 2)
+        res += (rr - 1.0 / den) ** 2
+    return a, b, (res / len(P)) ** 0.5, len(P)
+
+
+def ellipse_normal(frame, a, b, theta):
+    """바깥 법선이 `theta`(0°=가로 · 90°=세로)인 타원 위 점 P 와 그 **바깥 법선** 단위벡터.
+       매개변수 t 에서 점 (a cos t, b sin t) · 법선 ∝ (cos t / a, sin t / b)
+       ⇒ tan θ = (a/b)·tan t 로 t 를 직접 푼다."""
+    cx, cy, sx, sy = frame
+    th = math.radians(theta)
+    t = math.atan2(math.sin(th) * b, math.cos(th) * a)
+    X, Y = a * math.cos(t), b * math.sin(t)
+    nx, ny = math.cos(t) / a, math.sin(t) / b
+    L = math.hypot(nx, ny)
+    return (cx + sx * X, cy + sy * Y), (sx * nx / L, sy * ny / L)
+
+
+def _fit(samples, ph0, win=NSMOOTH):
+    """φ=ph0 근방을 국소 2차로 맞춰 (r, dr/dφ[rad]) — JPEG 잡음이 미분을 흔드는 것을 막는다."""
+    xs = [(p - ph0, r) for p, r in samples if abs(p - ph0) <= win]
+    if len(xs) < 5:
+        return None
+    n = float(len(xs))
+    s1 = sum(d for d, _ in xs)
+    s2 = sum(d * d for d, _ in xs)
+    s3 = sum(d ** 3 for d, _ in xs)
+    s4 = sum(d ** 4 for d, _ in xs)
+    t0 = sum(r for _, r in xs)
+    t1 = sum(d * r for d, r in xs)
+    t2 = sum(d * d * r for d, r in xs)
+    # [n s1 s2; s1 s2 s3; s2 s3 s4] · [c0 c1 c2] = [t0 t1 t2]
+    m = [[n, s1, s2, t0], [s1, s2, s3, t1], [s2, s3, s4, t2]]
+    for i in range(3):
+        p = max(range(i, 3), key=lambda k: abs(m[k][i]))
+        if abs(m[p][i]) < 1e-12:
+            return None
+        m[i], m[p] = m[p], m[i]
+        for k in range(i + 1, 3):
+            f = m[k][i] / m[i][i]
+            for j in range(i, 4):
+                m[k][j] -= f * m[i][j]
+    c = [0.0] * 3
+    for i in (2, 1, 0):
+        c[i] = (m[i][3] - sum(m[i][j] * c[j] for j in range(i + 1, 3))) / m[i][i]
+    return c[0], c[1] * 180.0 / math.pi      # r(ph0), dr/dφ(라디안)
+
+
+def normal_at(frame, samples, ph):
+    """윤곽점 P(φ) 와 그 자리의 **바깥 법선** 단위벡터, 그리고 그 법선의 각도(도).
+
+    극좌표 r(φ) 곡선의 접선은 (dr/dφ)·r̂ + r·φ̂ 이고 바깥 법선은 그것을 90° 돌린
+    r·r̂ − (dr/dφ)·φ̂ 를 정규화한 것이다. 코너 프레임(sx, sy)에서 화면 좌표로 옮긴다."""
+    cx, cy, sx, sy = frame
+    f = _fit(samples, ph)
+    if f is None:
+        return None
+    r, dr = f
+    a = math.radians(ph)
+    ca, sa = math.cos(a), math.sin(a)
+    px_, py_ = cx + sx * r * ca, cy + sy * r * sa
+    # 코너 프레임 안에서의 바깥 법선 (r̂ = (ca,sa) · φ̂ = (−sa,ca))
+    nx = r * ca - dr * (-sa)
+    ny = r * sa - dr * ca
+    L = math.hypot(nx, ny)
+    if L < 1e-9:
+        return None
+    nx, ny = nx / L, ny / L
+    ang = math.degrees(math.atan2(ny, nx))
+    return (px_, py_), (sx * nx, sy * ny), ang
+
+
+def ray_normal(px, frame, fit, theta, inn=24.0, out0=10.0, step=0.5):
+    """**법선 자** — 맞춘 타원(링 안쪽 모서리) 위에서 바깥 법선이 `theta` 인 점을 잡아
+       그 점의 **바깥으로 `out0`** 물러섰다가 안쪽 법선 방향으로 층을 읽는다.
+       바깥에서 출발하는 이유는 옛 자와 같은 `gate_layers`(검정 링 → 1층 → 2층)를
+       그대로 쓰기 위해서다. 보폭·읽는 길이는 옛 자와 같게 둔다.
+       ⚠ 이렇게 읽은 **K 는 알약 링 + 바 테두리의 합**일 수 있다(위 `inner_edge` 주석).
+          이 자가 참값으로 말하는 것은 K 뒤의 **1층·2층**(D·B)이다."""
+    if fit is None:
+        return None, None
+    a, b = fit[0], fit[1]
+    P, N = ellipse_normal(frame, a, b, theta)
+    out, d = '', -out0
+    while d <= inn + 1e-9:
+        out += cls(px[int(round(P[0] - N[0] * d)), int(round(P[1] - N[1] * d))])
+        d += step
+    return out, P
+
+
+def norm_layers(s, out0=10.0, step=0.5):
+    """법선 자 전용 층 읽기 — `gate_layers` 와 규칙은 같고 **두 가지만** 다르다.
+
+    ① **«마지막» 검정 런을 링으로 잡는다.** 바깥에서 출발하면 코너에서 바 테두리 검정이
+       먼저 오고 셸림이 한 칸 끼었다가 알약 링이 온다(실측 cap 60°: `K3.0 R1.0 K6.0 …`).
+       첫 K 를 잡으면 그 뒤 «1층» 이 알약 링 자신이 되어 표가 통째로 한 칸 밀린다.
+    ② **K 바로 뒤의 S 런은 건너뛴다.** `S`(#2B231A)는 셸 바닥색이지 알약 층이 아니고,
+       ref 는 JPEG 이라 검정↔띠 경계에 1~2px 이 그 색으로 번진다(cap 에는 없다).
+       이것을 안 건너뛰면 ref 75° 가 «1층 = S 2.0» 으로 읽혀 ref 만 −2px 손해를 본다."""
+    rs = layers(s, step)
+    anchor = out0 + 1.5
+    i, d, best = 0, 0.0, None
+    for i in range(len(rs)):
+        if rs[i][0] == 'K' and d <= anchor:
+            best = i
+        d += rs[i][1]
+    if best is None:
+        return 0.0, ('-', 0.0), ('-', 0.0)
+    k = rs[best][1]
+
+    def nxt(j):
+        while j < len(rs) and (rs[j][1] < 2.0 or rs[j][0] == 'S'):
+            j += 1
+        return j
+    j = nxt(best + 1)
+    a = rs[j] if j < len(rs) else ('-', 0.0)
+    m = nxt(j + 1)
+    b = rs[m] if m < len(rs) else ('-', 0.0)
+    return k, a, b
+
+
+def normal_table(imgs=None):
+    """ref ↔ cap 을 **법선 자**로 나란히 — §26-8 ⓪."""
+    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    print('══ 409-i/normal — **법선 자** (윤곽을 그림에서 잡고 그 국소 법선 위에서만 읽는다) ══')
+    print('   K 검정 · B 베벨#634F37 · F 채움#4B3E2D · D 바닥띠#413122 · R 셸림 · S 셸바닥')
+    print('   θ 0° = 바깥 가로 · 90° = 바깥 세로 (옛 광선 자와 같은 각도 규약)\n')
+    data = {}
+    for who, (pathname, bxy) in ims.items():
+        px = Image.open(pathname).convert('RGB').load()
+        box = find_box(px, *bxy)
+        data[who] = (px, box)
+        print('  %-3s 상자 (%.2f, %.2f, %.2f×%.2f)' % ((who,) + tuple(box)))
+    print('')
+    res = {}
+    print('  [코너 타원] 윤곽에 맞춘 a(가로)×b(세로) — 우리 CSS 는 `30px / 33px` 이다')
+    for corner in ('BL', 'BR', 'TL', 'TR'):
+        row = []
+        for who in ('ref', 'cap'):
+            px, box = data[who]
+            frame, samples = contour(px, box, corner)
+            fit = fit_ellipse(samples)
+            res[(who, corner, 'fit')] = (frame, fit)
+            row.append('%s %.2f×%.2f (잔차 %.2f · n%d)' % ((who,) + tuple(fit)) if fit else who + ' —')
+        print('    %-3s  %s   %s' % (corner, row[0], row[1]))
+    print('')
+    for corner in ('BL', 'BR', 'TL', 'TR'):
+        print('  %s' % corner)
+        for who in ('ref', 'cap'):
+            px, box = data[who]
+            frame, fit = res[(who, corner, 'fit')]
+            for th in DEGS:
+                s, P = ray_normal(px, frame, fit, th)
+                if s is None:
+                    print('    %-3s %2d°  (타원 못 맞춤)' % (who, th))
+                    continue
+                k, a, b = norm_layers(s)
+                res[(who, corner, th)] = (k, a, b)
+                print('    %-3s %2d°  %-42s  K%.1f  %s%.1f  %s%.1f'
+                      % (who, th, fmt(s), k, a[0], a[1], b[0], b[1]))
+        print('')
+    return res
+
+
+def normal_delta():
+    """법선 자로 «ref ↔ cap» 차이만 요약 — 18회차가 무엇을 향해 깎는지."""
+    res = normal_table()
+    print('══ 요약 — 법선 자로 잰 ref ↔ cap (층 이름은 ref 기준) ══\n')
+    for corner in ('BL', 'BR', 'TL', 'TR'):
+        print('  %s' % corner)
+        print('    θ   │  K ref/cap      │  1층 ref/cap            │  2층 ref/cap')
+        for th in DEGS:
+            r = res.get(('ref', corner, th))
+            c = res.get(('cap', corner, th))
+            if not r or not c:
+                continue
+            print('    %2d° │  %4.1f / %4.1f    │  %s %4.1f / %s %4.1f  (%+.1f)  │  %s %4.1f / %s %4.1f'
+                  % (th, r[0], c[0], r[1][0], r[1][1], c[1][0], c[1][1],
+                     c[1][1] - r[1][1], r[2][0], r[2][1], c[2][0], c[2][1]))
+        print('')
+    return res
+
+
+def normal_sweep(imgs=None, lo=30.0, hi=90.0, dth=5.0, corners=('BL', 'BR', 'TL', 'TR')):
+    """법선 자를 **각도로 훑는다** — 두 비평가가 «감쇠 곡선이 틀렸다» 고 한 그 곡선을 직접 본다.
+       세 각(45/60/75)만으로는 곡선의 모양을 못 본다(직선부 90° 가 기준선이다)."""
+    ims = imgs or {'ref': (REF7, BOX['ref']), 'cap': (CAP7, BOX['cap'])}
+    data = {}
+    for who, (pathname, bxy) in ims.items():
+        px = Image.open(pathname).convert('RGB').load()
+        box = find_box(px, *bxy)
+        data[who] = (px, box)
+    print('══ 409-i/sweep — 법선 자 각도 훑기 (1층 두께 · θ 90° = 직선부) ══\n')
+    for corner in corners:
+        fits = {}
+        for who in ims:
+            px, box = data[who]
+            frame, samples = contour(px, box, corner)
+            fits[who] = (px, frame, fit_ellipse(samples))
+        names = list(ims)
+        print('  %s   θ  │ %s' % (corner, ' │ '.join('%-12s' % w for w in names)))
+        th = lo
+        while th <= hi + 1e-9:
+            cells = []
+            for who in names:
+                px, frame, fit = fits[who]
+                s, _ = ray_normal(px, frame, fit, th)
+                k, a, b = norm_layers(s) if s else (0, ('-', 0), ('-', 0))
+                cells.append('%s%4.1f  (K%4.1f)' % (a[0], a[1], k))
+            print('       %4.0f │ %s' % (th, ' │ '.join(cells)))
+            th += dth
+        print('')
+
+
 def main():
     a = sys.argv[1:]
+    if '--sweep' in a:
+        ims = None
+        if '--img' in a:
+            ims = {'ref': (REF7, BOX['ref']), 'cap': (a[a.index('--img') + 1], BOX['cap'])}
+        normal_sweep(ims)
+        return 0
+    if '--normal' in a:
+        if '--img' in a:
+            normal_table({'ref': (REF7, BOX['ref']),
+                          'cap': (a[a.index('--img') + 1], BOX['cap'])})
+            return 0
     if '--img' in a:
         img_read(a[a.index('--img') + 1])
         return 0
     if '--ref-curve' in a:
         ref_curve()
+        return 0
+    if '--normal' in a:
+        normal_delta()
         return 0
     table()
     return 0
