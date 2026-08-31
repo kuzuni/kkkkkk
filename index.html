@@ -2156,12 +2156,23 @@
   .mbody .pr179 .pr-note{margin-top:32px}
   /* 클리어 보상 — 코스튬 스프라이트(50 `cos-cv`) + 칭호. 라벨은 본문과 같은 48px 계열이되
      «표제» 라 한 단 작게(40) 두고, 부제(등급·보유 효과)는 36 이다. */
-  .mbody .pr179 .pr-rw{margin-top:36px;background:#F7ECDA;border:3px solid #C8B091;
-    border-radius:40px;padding:26px 30px 30px}
-  .mbody .pr179 .pr-rw>h3{margin:0 0 20px;font-size:40px;line-height:40px;font-weight:900;color:#B4571E}
+  /* 582 ④ — «승급 계열 상자» 토큰. 179 클리어 보상 상자와 182 획득 코스튬 상자가 리터럴을 각자
+     들고 있었다(2168 주석이 «톤만 가져왔다» 고 적어 둔 그 자리 — 손으로 옮긴 값은 한쪽만 바뀐다).
+     면·테두리·표제 색·radius 를 여기 한 곳에 적고 두 팝업이 읽는다. */
+  :root{--pr-bx:#F7ECDA;--pr-bd:#C8B091;--pr-h:#B4571E;--pr-r:40px}
+  .mbody .pr179 .pr-rw{margin-top:36px;background:var(--pr-bx);border:3px solid var(--pr-bd);
+    border-radius:var(--pr-r);padding:26px 30px 30px}
+  .mbody .pr179 .pr-rw>h3{margin:0 0 20px;font-size:40px;line-height:40px;font-weight:900;color:var(--pr-h)}
   .mbody .pr179 .pr-rw-b{display:flex;align-items:center;justify-content:center;gap:28px}
-  .mbody .pr179 .pr-rw-c{flex:0 0 auto;width:150px;height:189px;display:flex;
-    align-items:flex-end;justify-content:center;background:#0e1428;border-radius:24px}
+  /* 582 — 미리보기 칸이 공용 슬롯 프레임(`.slotfr`)을 쓴다. 면색(#0e1428)·radius 24 짜리
+     **자체 상자는 폐기**했다(그 둘이 «이 팝업에만 있는 프레임» 이었다).
+     ⚑ **그림은 한 픽셀도 안 줄인다** — 칸이 링에게 내준 만큼(패딩 12 × 2 = 24)을 폭으로 되받아
+     150 → 174 다. 안쪽 150×165 에 캔버스가 그대로 들어가고 잉크(42×45 × cossc 3 = 126×135)도 Δ0 이다.
+     ⚠ 높이는 안 늘렸다 — 캔버스 189 는 잉크 135 보다 54 크던 여유라, 24 를 링에 내주고도 남는다.
+     ⚠ 보상 줄은 `justify-content:center` 라 폭 +24 는 줄 전체를 12px 씩 재배치할 뿐이고
+     남는 폭이 275.78px 였다(`probe582` [D]) — 글자 칸을 밀지 않는다. 측정표 179 정오표에 적는다. */
+  .mbody .pr179 .pr-rw-c{flex:0 0 auto;box-sizing:border-box;width:174px;height:189px;
+    padding:var(--slot-w);display:flex;align-items:flex-end;justify-content:center}
   .mbody .pr179 .pr-rw-t{flex:0 1 auto;text-align:left}
   .mbody .pr179 .pr-rw-t b{display:block;font-size:44px;line-height:1.3;font-weight:900}
   .mbody .pr179 .pr-rw-t i{display:block;font-size:36px;line-height:1.45;font-style:normal;
@@ -2173,18 +2184,28 @@
      손대지 않은 A5 공용값이고, 이 작업이 바꿀 이유가 없다. 상자 톤(베이지 #F7ECDA · 테두리 #C8B091 ·
      표제 #B4571E)만 `.pr-rw` 에서 그대로 가져와 «같은 화면의 같은 보상 상자» 로 읽히게 한다.
      칸은 50 시트 카드(168×171)의 축소판이고 테두리는 등급색(--r)이라 무엇을 받았는지 색으로도 읽힌다. */
-  .mbody .pr182{margin-top:18px;background:#F7ECDA;border:3px solid #C8B091;
-    border-radius:28px;padding:16px 18px 20px}
-  .mbody .pr182>h3{margin:0 0 14px;font-size:30px;line-height:30px;font-weight:900;color:#B4571E}
+  /* 582 ④ — 톤을 손으로 옮겨 적던 세 리터럴(면·테두리·표제)과 radius 를 179 와 **같은 토큰**에서
+     읽는다. radius 28 → `--pr-r`(40) 는 «같은 화면의 같은 보상 상자» 라는 2168 의 뜻을 값으로도
+     맞춘 것이다(종전에는 톤만 같고 모서리가 갈려 있었다). 글자 크기는 179 가 2배 본문이라
+     여기서 안 따라간다 — 2166 주석 그대로다. */
+  .mbody .pr182{margin-top:18px;background:var(--pr-bx);border:3px solid var(--pr-bd);
+    border-radius:var(--pr-r);padding:16px 18px 20px}
+  .mbody .pr182>h3{margin:0 0 14px;font-size:30px;line-height:30px;font-weight:900;color:var(--pr-h)}
   .mbody .pr182 .pg-grid{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
-  /* 칸 96×118 · 5열 기준 폭 = 5×96 + 4×12 = 528 < 본문 폭. 22칸(계급 1)이면 5행이 된다 */
-  .mbody .pr182 .pg-c{position:relative;box-sizing:border-box;width:96px;height:118px;
-    background:#0e1428;border:3px solid var(--r,#C8B091);border-radius:16px;
+  /* 582 — 칸도 179 와 **같은 공용 슬롯 프레임**(`.slotfr`)을 쓴다. 자체 상자였던
+     «면 #0e1428 + border 3px + radius 16» 은 폐기다(세 자리가 각자 그리던 것이 이 행의 결손이다).
+     ⚑ **그림은 한 픽셀도 안 줄인다** — 179 와 같은 처방으로 링이 먹는 12×2 를 폭으로 되받아
+     96 → 108(캔버스 84 Δ0). 세로는 안 늘렸다: 캔버스가 y14..98 이라 링 안쪽(12..106)에 이미 든다.
+     5열 폭 = 5×108 + 4×12 = 588 < 격자 안쪽 778(`probe582` [D] — 5열 상한 146). 행 pitch Δ0. */
+  .mbody .pr182 .pg-c{position:relative;box-sizing:border-box;width:108px;height:118px;
     display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
   .mbody .pr182 .pg-c>canvas{display:block;width:84px;height:84px;margin-bottom:20px}
+  /* 582 — 라벨은 슬롯의 `Lv.n`(`.sk-slv`)과 같은 «흰 잉크 + 검정 외곽선» 이다.
+     ⚠ 종전 `color:var(--r)` 는 이제 **림과 같은 색**이라, 라벨 아래쪽이 림 위에 얹히는 5px 에서
+     글자가 사라진다(슬롯도 `.sk-slv` 가 76..108 로 링 위에 5px 얹힌다 — 같은 자리 같은 처방). */
   .mbody .pr182 .pg-c>u{position:absolute;left:0;right:0;bottom:4px;text-align:center;
     font-size:20px;line-height:20px;font-weight:900;font-style:normal;text-decoration:none;
-    color:var(--r,#EADCC6)}
+    color:#fff}
 
   /* ── 08 스킬 세부 팝업 — docs/measure/08-스킬세부팝업.md (레퍼런스 08 PIL 실측) ──
      껍데기는 A5 공용 모달을 그대로 쓰고, 08 에서만 다른 3가지만 `.sk8` 로 override 한다:
@@ -10742,9 +10763,24 @@
      측정표 4-1 의 «x24 · w1032 · 테두리 7» 은 램프를 테두리 시작으로 오독한 값이다. */
   .sk-eqp{left:14px;top:149px;width:1037px;height:197px;border-radius:43px;background:#F0D9BA;
     box-shadow:inset 0 0 0 8px #C7B39A,inset 0 0 0 16px #F4E5D2}
-  /* 슬롯 8칸 115x115 · pitch 125 · gap 10 · 패널기준 (21,41) */
-  .sk-slot{position:absolute;top:41px;width:115px;height:115px;border-radius:40px;
-    background:var(--f);box-shadow:inset 0 0 0 5px #000,inset 0 0 0 12px var(--r);cursor:pointer}
+  /* ── 582 «슬롯 프레임» 공용 부품 (저장소 주인 지시 2026-08-31) ─────────────────────
+     주인 원문 — «승급전팝업에 코스튬 보여주는거 **원래 다른 팝업에서도 쓰고잇는 슬롯에 쓰는 그
+     디자인**으로 프레임해주기». 주인이 가리킨 «그 슬롯» 이 바로 아래 `.sk-slot`(07 스킬 · 26 동료 ·
+     50 코스튬 세 시트가 공유하는 장착 슬롯 — 411 이 «세 시트가 한 부품» 으로 확인한 그것)이다.
+     ⇒ **새 프레임을 그리지 않는다.** 이 단면을 토큰으로 빼서 179 클리어 보상 미리보기(`.pr-rw-c`)와
+     182 획득 코스튬 칸(`.pg-c`)이 **같은 클래스**를 달고 같은 토큰을 읽게 한다
+     (488 이 `hbBeat`/`hbPulse` 를 공용으로 올린 길 · 581 과 같은 정신).
+     단면은 «검정 --slot-k + 림 --slot-w 까지 var(--r) + 면 var(--f)» 이고 **세 자리에서 두께·radius 가
+     같다** — 칸 크기가 달라도 프레임은 스케일하지 않는다(`box-shadow` inset 은 원래 안 스케일된다.
+     찍힌 픽셀 대조는 `tools/verify582.js` [B]).
+     ⚠ 색 리터럴을 여기 적지 않는다 — 면·림은 호스트가 인라인(`--f`/`--r`)으로 준다.
+     50 코스튬은 `COS_FILL`/`COS_RIM`, 179·182 는 그 위에 «그 코스튬의 틴트»(194 규약)를 림으로 얹는다.
+     여기에 색을 또 적으면 402 가 잡은 «표 두 벌» 부패가 된다. */
+  :root{--slot-r:40px;--slot-k:5px;--slot-w:12px}
+  .slotfr{background:var(--f);border-radius:var(--slot-r);
+    box-shadow:inset 0 0 0 var(--slot-k) #000,inset 0 0 0 var(--slot-w) var(--r)}
+  /* 슬롯 8칸 115x115 · pitch 125 · gap 10 · 패널기준 (21,41) — 프레임은 위 `.slotfr` 가 준다 */
+  .sk-slot{position:absolute;top:41px;width:115px;height:115px;cursor:pointer}
   .sk-slot.lock{background:#43485B;box-shadow:inset 0 0 0 6px #000,inset 0 0 0 13px #5D646A;
     cursor:default}
   /* 슬롯 아이콘 자리 — 411(주인 지시 2026-08-29) 로 **링 안쪽 91x91 전체**가 됐다.
@@ -11983,20 +12019,25 @@
      `#relw` 에서만 **검정 외곽선 없이** 그려진다(부품이 갈라지는 자리는 늘 이런 «스코프 구멍» 이다
      — 397 이 같은 모양으로 등재됐다). `:is()` 의 특이성은 인자 중 최대(=`#bSk` 의 1,0,0)라
      `.rl-help` 를 더해도 특이성은 안 움직인다 ⇒ 다른 화면 계산값 Δ0. */
+  /* 582 — 같은 «스코프 구멍» 이 하나 더 있었다: 182 승급 성공 팝업의 코스튬 이름
+     `<u class="ol1">` 은 이 목록 밖이라 **외곽선이 한 번도 안 걸렸다**(찍힌 픽셀로 확인 — `probe582`).
+     종전에는 남색 면 위 틴트 글자라 티가 안 났지만, 582 가 칸을 공용 슬롯 프레임으로 바꾸면서
+     라벨이 흰 잉크로 «면 + 림» 두 색 위에 걸치게 되어 외곽선이 실제로 필요해졌다.
+     429 와 같은 이유·같은 처방이고 특이성도 그대로다(`:is()` 특이성 = 인자 최대 = `#bSk` 1,0,0). */
   /* 외곽선 유틸 — `-webkit-text-stroke` 는 글리프 «중심»에 걸려 획이 얇은 우리 폰트에서는
      흰 면을 통째로 먹어 글자가 속 빈 윤곽선이 된다(fs52 «스킬» 실측: 흰 잉크 h48 → h15).
      레퍼런스는 «solid 흰 면 + 바깥 검정 외곽선» 이므로 바깥으로만 나가는 text-shadow 로 그린다. */
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol1,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol2,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol3,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol4,:is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol5{--o:#000}
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol1,:is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol2,:is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol3,:is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol4,:is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol5{--o:#000}
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol1{text-shadow:1px 0 0 var(--o),-1px 0 0 var(--o),0 1px 0 var(--o),0 -1px 0 var(--o),
     1px 1px 0 var(--o),1px -1px 0 var(--o),-1px 1px 0 var(--o),-1px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol2{text-shadow:2px 0 0 var(--o),-2px 0 0 var(--o),0 2px 0 var(--o),0 -2px 0 var(--o),
     1px 2px 0 var(--o),1px -2px 0 var(--o),-1px 2px 0 var(--o),-1px -2px 0 var(--o),
     2px 1px 0 var(--o),2px -1px 0 var(--o),-2px 1px 0 var(--o),-2px -1px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol3{text-shadow:3px 0 0 var(--o),-3px 0 0 var(--o),0 3px 0 var(--o),0 -3px 0 var(--o),
     2px 2px 0 var(--o),2px -2px 0 var(--o),-2px 2px 0 var(--o),-2px -2px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol4{text-shadow:4px 0 0 var(--o),-4px 0 0 var(--o),0 4px 0 var(--o),0 -4px 0 var(--o),
     3px 3px 0 var(--o),3px -3px 0 var(--o),-3px 3px 0 var(--o),-3px -3px 0 var(--o)}
-  :is(#bSk,#bPet,#bCos,.stabs,.rl-help) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
+  :is(#bSk,#bPet,#bCos,.stabs,.rl-help,.pr182) .ol5{text-shadow:5px 0 0 var(--o),-5px 0 0 var(--o),0 5px 0 var(--o),0 -5px 0 var(--o),
     4px 4px 0 var(--o),4px -4px 0 var(--o),-4px 4px 0 var(--o),-4px -4px 0 var(--o),
     5px 2px 0 var(--o),-5px 2px 0 var(--o),5px -2px 0 var(--o),-5px -2px 0 var(--o),
     2px 5px 0 var(--o),2px -5px 0 var(--o),-2px 5px 0 var(--o),-2px -5px 0 var(--o)}
@@ -26460,7 +26501,10 @@ function endPromo(win, died){
           /* 194 — 등급 폐지. 림 색은 «등급 색» 이 아니라 **그 코스튬 자신의 틴트**(av0 은 무틴트라
              기본 림)이고, 라벨은 등급명이 아니라 코스튬 이름이다 — 등급이 없어진 뒤로
              칸을 구분하는 정보는 그 둘뿐이다. */
-          + gotCos.map(a => '<div class="pg-c" data-pgc="' + a.id + '" style="--r:' + (a.tint || COS_RIM) + '">'
+          /* 582 — 칸이 179 와 같은 공용 슬롯 프레임(`.slotfr`)을 단다. 면 `COS_FILL` 은 50 시트
+             장착 슬롯과 같은 값이고, 림은 위 194 규약 그대로 «그 코스튬의 틴트» 다 — 두 팝업이
+             같은 부품·같은 토큰을 읽으므로 «디자인 통일감»(주인 지시)의 자가 토큰 대조가 된다. */
+          + gotCos.map(a => '<div class="pg-c slotfr" data-pgc="' + a.id + '" style="--f:' + COS_FILL + ';--r:' + (a.tint || COS_RIM) + '">'
               + '<canvas class="cos-cv" width="96" height="96" data-cosav="' + a.id + '" data-coslite></canvas>'
               + '<u class="ol1">' + a.n + '</u></div>').join('')
           + '</div></div>' : ''));
@@ -31598,7 +31642,12 @@ function openPromo(){
        잉크 색은 인라인 대신 `.pr-cond p b`(남색 상자용 밝은 베이지) 규칙이 준다. */
     + '<div class="pr-cond"><p>권장 스테이지 <b>' + r.stage + '</b></p></div>'
     + '<div class="pr-rw"><h3>클리어 보상</h3><div class="pr-rw-b">'
-    + (rw ? '<div class="pr-rw-c"><canvas class="cos-cv" width="150" height="189" data-cosav="'
+    /* 582 — 미리보기 칸이 공용 슬롯 프레임(`.slotfr`)을 단다. 면은 50 시트 슬롯과 **같은**
+       `COS_FILL`, 림은 194 규약대로 «그 코스튬 자신의 틴트»(없으면 `COS_RIM`) — 색을 CSS 에
+       또 적지 않고 여기서 토큰으로 준다(402 «표 두 벌» 방지). 캔버스 높이 189 → 165 는 칸이
+       링에게 내준 패딩(12×2)만큼이고, 잉크(cossc 3 ⇒ 126×135)는 한 픽셀도 안 줄어든다. */
+    + (rw ? '<div class="pr-rw-c slotfr" style="--f:' + COS_FILL + ';--r:' + (rw.tint || COS_RIM) + '">'
+            + '<canvas class="cos-cv" width="150" height="165" data-cosav="'
             + rw.id + '" data-cossc="3"></canvas></div>' : '')
     + '<div class="pr-rw-t">'
     /* 194 — 등급 폐지. 대표 이름의 색은 «등급 색» 이 아니라 그 코스튬의 **틴트**이고(av0 은
@@ -31713,14 +31762,14 @@ function renderSkill(){
            ② 해제는 [─] 뱃지(`[data-skun]`)에만 건다 — 구조에서는 슬롯 전체가 해제 버튼이라
               아이콘·레벨 어디를 눌러도 장착이 풀렸다(주인 보고 «"-" 누른 게 아닌데 장착 해제»). */
     h += it
-      ? '<div class="sk-slot" data-skslot="' + id + '" style="' + L
+      ? '<div class="sk-slot slotfr" data-skslot="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
         /* 411 — 맨 이모지가 아니라 «그림 자리에 담긴» 이모지다(글자마다 크기·중심이 다르다) */
         + '<b class="sk-si">' + slotEmoji(it.ic) + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
         + '<s class="sk-eq m" data-skun="' + id + '"></s></div>'
       : i < open
-        ? '<div class="sk-slot free" style="' + L + '"><span class="sk-plus"></span></div>'
-        : '<div class="sk-slot lock" style="' + L + '"><span class="sk-lock"></span>'
+        ? '<div class="sk-slot slotfr free" style="' + L + '"><span class="sk-plus"></span></div>'
+        : '<div class="sk-slot slotfr lock" style="' + L + '"><span class="sk-lock"></span>'
           + '<u class="sk-slk ol2">St.' + skSlotNeed(i) + '</u></div>';
   }
   h += '</div>';
@@ -31820,14 +31869,14 @@ function renderPet(){
   for(let i = 0; i < 3; i++){
     const id = eq[i], it = id ? PT[id] : null, L = 'left:' + (336 + i*125) + 'px';
     h += it
-      ? '<div class="sk-slot" data-ptslot="' + id + '" style="' + L
+      ? '<div class="sk-slot slotfr" data-ptslot="' + id + '" style="' + L
         + ';--f:' + SK_FILL[it.g] + ';--r:' + SK_RIM[it.g] + '">'
         /* 174 — 이모지(🐦/🤖/🐉) 폐기. 전투 씬과 같은 sp+tint 스프라이트 캔버스 */
         + '<b class="sk-si pt">' + petIcon(it, 'slot') + '</b><u class="sk-slv ol2">Lv. ' + oLv(id) + '</u>'
         + '<s class="sk-eq m" data-ptun="' + id + '"></s></div>'
       /* 272 — 펫 3칸은 스테이지 해금이 없다 → 빈 칸은 자물쇠가 아니라 [+] 자리다.
                해제도 스킬과 같이 [─] 뱃지에만 건다(슬롯 아무 데나 눌러 풀리던 것 차단) */
-      : '<div class="sk-slot free" style="' + L + '"><span class="sk-plus"></span></div>';
+      : '<div class="sk-slot slotfr free" style="' + L + '"><span class="sk-plus"></span></div>';
   }
   h += '</div>';
 
@@ -32012,7 +32061,7 @@ function renderCos(){
      194 — 슬롯 라벨이 «등급명» 에서 **Lv.n** 으로 바뀌었다(07 스킬 슬롯과 같은 자리·같은 뜻).
      면·림은 등급 8단이 아니라 COS_FILL/COS_RIM 한 벌이다. */
   h += '<div class="sk-eqp">'
-    +  '<div class="sk-slot" data-cosun="' + cur + '" style="left:461px'
+    +  '<div class="sk-slot slotfr" data-cosun="' + cur + '" style="left:461px'
     +  ';--f:' + COS_FILL + ';--r:' + COS_RIM + '">'
     /* 411 — 캔버스가 곧 «그림 자리» 다. `drawHeroTo` 는 잉크 밑동을 캔버스 바닥에 앉히므로
        캔버스를 잉크와 같은 크기로 역산해 두면 잉크가 캔버스를 정확히 채우고, 그러면
