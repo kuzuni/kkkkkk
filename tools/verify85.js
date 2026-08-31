@@ -7,8 +7,10 @@
  *   [A] 데이터 — EQUIPS 108종 · 부위별 등급 분포 [5,5,5,5,5,5,5,1] · id 유일 · 구 54종 id 전부 보존
  *   [B] 등급 상수 — GRADE 8단(초월·불멸) · REFUND/SUM_CARD/WGRADE/BAG_G 8행 · GRADE_ROLL_EQ 8행(20/24 해금 — 196)
  *   [C] 최고 등급 판정 — topG: 장비 g7 만 top, g6 은 아님 · «신화 스킬 = MAX» 유지(비장비는 5 가 top)
- *   [D] 확률 — 장비 배너 Lv100 에서 g6·g7 > 0, 합 = 1 · 스킬 배너는 g6·g7 = 0 (6행 표 유지)
- *   [E] 소환 시뮬 — 무기 10연 ×300 (Lv100) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
+ *   [D] 확률 — 장비 배너 **만렙**(SUM_MAXLV)에서 g6·g7 > 0, 합 = 1 · 스킬 배너는 g6·g7 = 0 (6행 표 유지)
+ *   [E] 소환 시뮬 — 무기 10연 ×300 (**만렙**) 에서 8등급(g7) 실제 등장 + 아이템 undefined 0건
+ *   ⚠ 528(2026-08-31) — [D]·[E]·[G] 의 «만렙» 은 제품 `SUM_MAXLV` 에서 읽는다. 손으로 적으면
+ *      만렙이 바뀌는 날 조용히 다른 레벨을 재게 된다(115 → 196 → 496 에서 두 번 그랬다 — 522·528).
  *   [F] 합성 — weapon5(Lv100+5개) → g6 5종 중 하나 · weapon6 → 'weapon7' 고정 · weapon7 은 canCraft false
  *   [G] 11 확률 팝업 — 무기 MAX 단계에 «초월·불멸» 행 · 스킬 팝업엔 없음 · NaN/undefined 0건
  *   [H] 05 팝업 — (186) 페이징 폐지: 한 화면에 8행 40칸 · 초월·불멸 행 렌더 · NaN/undefined 0건
@@ -133,22 +135,35 @@ const ok = (b, name, detail) => {
   ok(C.lvP, 'C2c 불멸 동료도 Lv100 상한(무한 강화는 불멸 장비 전용)');
   ok(C.lvInf && C.lv6 && C.lvS, 'C3 무한 강화는 불멸 장비만 (g6 장비·신화 스킬은 Lv100 상한)');
 
-  /* [D] 확률 */
+  /* [D] 확률 — **만렙에서** 재는 절이다.
+     528(2026-08-31) — 옛 코드는 `S.sum.weapon.lv = 100` 을 세웠다. 100 은 만렙 100 시절의 숫자이고
+     196·496 이 만렙을 25 → 50 으로 옮긴 뒤에는 **합법 레벨이 아니다**. 지금 초록인 것은 맞아서가
+     아니라 `gradeProbs` 의 `t` 가 1 로 clamp 돼 «우연히» 만렙과 같은 값이 나오기 때문이다
+     (`probe528` A3). 만렙이 100 **이상**으로 오르는 날 이 절은 조용히 «만렙 아래 한 레벨» 을 재고
+     D2 가 거짓이 된다(`probe528` B4 — 그 사본에서 최고 등급 확률이 0.0000%). 숫자를 50 으로 갈아
+     끼우면 522 가 fnchk115 에서 겪은 부패를 **세 번째로** 되풀이하므로 제품에서 역산한다.
+     ⚠ 「만렙에 서 있다」는 것 자체를 D0 이 단언한다 — 별칭 뷰에 클램프가 생기거나 접근자가 바뀌어
+        `S.sum[b].lv` 가 만렙을 못 받게 되면 아래 셋이 조용히 «다른 레벨» 을 재는 대신 여기가 빨개진다. */
   const D = await page.evaluate(() => {
-    S.sum.weapon.lv = 100; S.sum.skill.lv = 100;
+    S.sum.weapon.lv = SUM_MAXLV; S.sum.skill.lv = SUM_MAXLV;
     const pw = gradeProbs('weapon'), ps = gradeProbs('skill');
     const sum = a => a.reduce((x, y) => x + y, 0);
     return { lw: pw.length, ls: ps.length, w6: pw[6], w7: pw[7], s6: ps[6], s7: ps[7],
+             max: SUM_MAXLV, lv: sumLv('weapon'), lvS: sumLv('skill'),
              sw: sum(pw), ss: sum(ps), nan: pw.concat(ps).some(x => !isFinite(x)) };
   });
+  ok(D.lv === D.max && D.lvS === D.max, 'D0 전제 — 두 배너가 실제로 만렙(Lv' + D.max + ')에 서 있다',
+     'weapon Lv' + D.lv + ' · skill Lv' + D.lvS + ' / 만렙 ' + D.max);
   ok(D.lw === 8 && D.ls === 8, 'D1 확률 배열 GRADE.length 로 패딩', D.lw + '/' + D.ls);
-  ok(D.w6 > 0 && D.w7 > 0, 'D2 장비 Lv100 에서 초월·불멸 확률 > 0', D.w6.toFixed(4) + '/' + D.w7.toFixed(4));
+  ok(D.w6 > 0 && D.w7 > 0, 'D2 장비 만렙(Lv' + D.max + ')에서 초월·불멸 확률 > 0',
+     D.w6.toFixed(4) + '/' + D.w7.toFixed(4));
   ok(D.s6 === 0 && D.s7 === 0, 'D3 스킬 배너는 초월·불멸 0 (6행 표 유지)');
   ok(Math.abs(D.sw - 1) < 1e-9 && Math.abs(D.ss - 1) < 1e-9 && !D.nan, 'D4 확률 합 1 · NaN 없음');
 
-  /* [E] 소환 시뮬 — 무기 10연 ×300, Lv100 */
+  /* [E] 소환 시뮬 — 무기 10연 ×300, **만렙**(528 — D 와 같은 이유로 숫자를 제품에서 읽는다.
+     불멸은 만렙 직전 1레벨 램프라 이 절이 만렙에 안 서면 E2 가 0건이 된다 — `probe528` B5). */
   const E = await page.evaluate(() => {
-    S.sum.weapon.lv = 100;
+    S.sum.weapon.lv = SUM_MAXLV;
     const got = {}; let bad = 0;
     for (let i = 0; i < 3000; i++) {
       const r = summonOne('weapon');
@@ -180,16 +195,26 @@ const ok = (b, name, detail) => {
   ok(F.can6 && F.nx6 === 'weapon7', 'F2 weapon6 합성 → weapon7 고정(1종)', String(F.nx6));
   ok(!F.can7 && !F.canSk, 'F3 불멸 장비·신화 스킬은 합성 불가');
 
-  /* [G] 11 확률 팝업 */
+  /* [G] 11 확률 팝업 — 이 절의 단언문이 «MAX 단계» 라고 말하므로 **MAX 단계에 서야** 한다.
+     528(2026-08-31) — 옛 코드는 `openProbInfo('weapon', 100)` 이었다. `openProbInfo` 는 «cur 이하
+     가장 높은 단계» 로 떨어지므로 100 > 만렙 50 인 지금은 MAX 로 튕겨 우연히 초록이다(`probe528` A1).
+     만렙이 100 이상이 되는 날엔 그냥 «Lv100 단계» 를 열고 불멸 행이 사라져 단언문과 화면이 어긋난다
+     (`probe528` B2). 만렙은 제품에서 읽는다 — 522 가 fnchk115 ③ 에서 쓴 길과 같다.
+     ⚠ G0 이 「정말 MAX 단계인가」를 화면 라벨(`#prbLv`)로 되묻는다. 이 항이 없으면 «단계가 어디든
+        초월·불멸 행만 있으면 초록» 이라 openProbInfo 의 단계 규칙이 바뀌어도 조용하다. */
   const G = await page.evaluate(() => {
-    openProbInfo('weapon', 100);
+    openProbInfo('weapon', SUM_MAXLV);
     const hw = document.getElementById('prbList').innerHTML;
-    openProbInfo('skill', 100);
+    const lvW = document.getElementById('prbLv').textContent;
+    openProbInfo('skill', SUM_MAXLV);
     const hs = document.getElementById('prbList').innerHTML;
+    const lvS = document.getElementById('prbLv').textContent;
     closeProbInfo();
     return { w6: hw.includes('초월'), w7: hw.includes('불멸'), s6: hs.includes('초월') || hs.includes('불멸'),
-             bad: /NaN|undefined/.test(hw + hs) };
+             lvW, lvS, max: SUM_MAXLV, bad: /NaN|undefined/.test(hw + hs) };
   });
+  ok(G.lvW === 'MAX' && G.lvS === 'MAX', 'G0 전제 — 두 배너 모두 실제로 MAX 단계를 열었다(만렙 ' + G.max + ')',
+     '무기 «' + G.lvW + '» · 스킬 «' + G.lvS + '»');
   ok(G.w6 && G.w7, 'G1 무기 확률 팝업 MAX 단계에 초월·불멸 행');
   ok(!G.s6, 'G2 스킬 확률 팝업엔 초월·불멸 없음');
   ok(!G.bad, 'G3 확률 팝업 NaN/undefined 0건');

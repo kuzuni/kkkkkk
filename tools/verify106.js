@@ -300,16 +300,23 @@ const v496Pulls = (lv, exp) => { let t = exp || 0; for (let n = 1; n < lv; n++) 
   ok(E.lvUp2.u === 1 && E.lvUp2.lv === 2, 'E5b 표 한 칸(need)을 채우면 Lv +1 (196)', JSON.stringify(E.lvUp2));
   ok(E.stray.length === 0, 'E6 S.own 에 미확인 id 유입 0', E.stray.join(',') || '없음');
 
-  /* [E7] 11 확률 팝업이 펫 배너로 열리고 36행이 나온다 */
-  await page.evaluate(() => { closeSummonResult && closeSummonResult(); openProbInfo('pet', 100); });
+  /* [E7] 11 확률 팝업이 펫 배너로 열리고 36행이 나온다 — «전 등급이 보이는» MAX 단계에서 센다.
+     528(2026-08-31) — 옛 코드는 `openProbInfo('pet', 100)` 이었다. 100 은 만렙 100 시절의 숫자이고
+     496(만렙 50) 아래에서는 `openProbInfo` 의 «cur 이하 가장 높은 단계» 규칙에 걸려 MAX 로 튕기는
+     덕에 우연히 초록이다(`probe528` A2). 만렙이 100 이상으로 오르는 날엔 해금 안 된 등급이 표에서
+     빠져 36행이 무너진다(`probe528` B3 — 만렙 150 사본에서 35행/7등급). 만렙은 제품에서 읽는다. */
+  await page.evaluate(() => { closeSummonResult && closeSummonResult(); openProbInfo('pet', SUM_MAXLV); });
   await page.waitForTimeout(250);
   const E7 = await page.evaluate(() => ({
     on: $('prbw').classList.contains('on'),
+    lv: $('prbLv').textContent, max: SUM_MAXLV,
     rows: document.querySelectorAll('#prbList .prb-row').length,
     heads: document.querySelectorAll('#prbList .prb-gh').length,
     empty: [...document.querySelectorAll('#prbList .prb-row .ic')].filter(e => !e.textContent.trim()).length,
     q: [...document.querySelectorAll('#prbList .prb-row .ic')].filter(e => e.textContent.trim() === '❔').length
   }));
+  ok(E7.lv === 'MAX', 'E7-a 전제 — 확률 팝업이 실제로 MAX 단계를 열었다(만렙 ' + E7.max + ')',
+    '단계 «' + E7.lv + '»');
   ok(E7.on && E7.rows === 36 && E7.heads === 8, 'E7 11 확률 팝업 — 8등급 · 36행',
     E7.heads + '등급 / ' + E7.rows + '행');
   ok(E7.empty === 0 && E7.q === 0, 'E8 확률 팝업 아이콘 빈칸·❔ 0건', 'empty=' + E7.empty + ' ❔=' + E7.q);
