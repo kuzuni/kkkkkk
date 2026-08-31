@@ -12,8 +12,12 @@
  *   [B] 일반 스테이지 전투 60초 — 플레이어 `anim` 표본이 `idle`·`run`·`die` 외 **0건**.
  *   [C] 보스전 30초 — 같은 표본, 같은 0건.
  *   [D] 원인 자리 — 스킬을 실제로 시전한 프레임에 `attack_A` 0건 · 피격당한 프레임에 `get_hit` 0건.
- *   [E] 둘이 실제로 **갈린다** — 속도를 주면 `run`, 0 으로 두면 `idle`.
+ *   [E] 둘이 실제로 **갈린다** — 제품이 스스로 달리면 `run`, 입력을 끄고 스스로 멈추면 `idle`.
  *       ⚠ 이 절이 없으면 «둘 다 idle 로 굳은» 사본도 [B]·[C] 를 통과한다.
+ *       ⚑ 593 — 표본에서 **속도를 박는 것**을 걷어냈다. 박아 둔 0 은 자동 이동 AI 가 한 프레임 만에
+ *         되미는데 그 잔여가 `stat.speed` 비례라, 580(속도 ×2) 이 그것을 갈림값 위로 올려 [E2] 가
+ *         빨개져 있었다 — 제품이 아니라 **자가 플레이어 속도를 표본 안에 박아 둔 것**이 결손이었다.
+ *         [E0]·[E3] 은 그 새 표본이 실제로 «달렸다/멈췄다» 를 재는 전제이고, [R4] 가 되돌림이다.
  *   [F] 사망 `die` 는 살아 있고 부활하면 `idle` 로 돌아온다(주인 원문 밖 — 지시서 판단 근거는 review).
  *   [G] 에셋은 안 지웠다 — 아틀라스의 `attack_A`·`get_hit` 프레임이 그대로 있고,
  *       **적**(승급 수호자·아레나 도전자)은 여전히 `attack_A` 로 때린다(범위는 «플레이어» 뿐).
@@ -98,6 +102,30 @@ const SAMPLE = `((N) => {
   return { n: N, cnt, casts, castBad, hits, hitBad };
 })`;
 
+/* [E] 표본 — 이동 ↔ 정지. **속도를 박지 않는다**(593. 근거는 [E] 블록 주석).
+   되돌림 사본도 **같은 표본**을 굴려야 «자를 무르게 풀지 않았다» 가 증명되므로 문자열로 뽑아 둔다. */
+const E_SAMPLE = `(() => {
+  const field = () => { enemies.length = 0; shots.length = 0; };
+  const eps = (typeof MOVE_EPS !== 'undefined') ? MOVE_EPS : 25;
+  field();
+  player.dead = 0; player.hp = stat.maxHp;
+
+  /* ① 이동 — 조이스틱을 잡으면 제품이 «스스로» 자기 속도로 달린다(리터럴 속도를 안 적는다) */
+  player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+  joy.on = true; joy.dx = 1; joy.dy = 0; joy.mag = 1;
+  for (let i = 0; i < 20; i++) { field(); step(1 / 60); }
+  const moving = player.anim, movSp = Math.hypot(player.vx, player.vy);
+
+  /* ② 정지 — 입력을 놓고 월드 중앙에 세운다(59 ④ 의 \`d > 40\` 가지를 안 탄다).
+     이후 속도를 **한 번도 안 건드리고** 굴려 «제품이 스스로 멈춘» 프레임을 읽는다. */
+  joy.on = false; joy.dx = 0; joy.dy = 0; joy.mag = 0;
+  player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+  let stillSp = 0;
+  for (let i = 0; i < 6; i++) { field(); step(1 / 60); stillSp = Math.hypot(player.vx, player.vy); }
+  const still = player.anim;
+  return { moving, still, movSp, stillSp, eps };
+})`;
+
 async function runSamples(page) {
   const ev = async (expr, arg) => {
     try { return await page.evaluate(new Function('a', 'return ' + expr + '(a)'), arg); }
@@ -179,28 +207,32 @@ const badNames = (r) => Object.keys(r.cnt).filter((k) => !ALLOW.includes(k));
 
   /* ── [E] 둘이 갈리는가 ────────────────────────────────────────────── */
   blk('[E] 이동 ↔ 정지 전환');
+  /* ⚑ 593 — 옛 표본은 `player.vx/vy` 를 세 프레임 **내내 박아** 두고 마지막 프레임의 anim 을 읽었다.
+       그런데 `step()` 은 매 프레임 자동 이동 AI(59 ④ «적이 없으면 천천히 중앙 복귀»)로 속도를
+       **다시 계산**하므로, 박아 둔 0 은 한 프레임의 lerp(`dt*9` = 0.15)만큼 곧바로 되밀린다.
+       그 잔여는 `stat.speed` 에 **정확히 비례**한다(probe593 [2] — 배수 5종에서 잔여÷배수 최대÷최소 1.000):
+       속도 115 일 때 17.3 < 임계 25 → idle 이었는데, **580** 이 `SPD_SC` 로 230 을 만들자 34.5 > 25 → run 이다.
+       ⇒ 표본이 «속도가 0 인 상태» 를 못 만드는 것이지 제품이 틀린 게 아니다 — **460 도 580 도 잘못이 없고**,
+       플레이어 속도를 표본 안에 암묵적으로 박아 둔 쪽이 이 자다(368 «자리를 상수에서 빼고 제품에게 물어라»).
+       ⚠ 임계 25 나 프레임 수를 손으로 키워 초록을 만들면 «속도 ×3» 에서 또 빨개진다 — 값을 안 건드렸다.
+       처방: 속도를 박지 말고 **이동 입력을 끄고**(적 0 · 조이스틱 해제 · 월드 중앙 = 59 ④ 의 `d > 40`
+       가지를 안 탄다) 제품이 **스스로 멈춘** 프레임을 읽는다. 이동 쪽도 같은 꼴로 뒤집어
+       조이스틱을 잡아 **제품이 스스로 내는 속도**로 달리게 한다(400 이라는 리터럴도 같이 사라졌다).
+       그러면 속도 배수가 몇이든 참이다 — probe593 [4] 가 ×1·×2·×3·×5 에서 확인한다. */
   const e = await (async () => {
-    try {
-      return await page.evaluate(() => {
-        enemies.length = 0; shots.length = 0;
-        player.dead = 0; player.hp = stat.maxHp;
-        const at = (vx, vy) => {
-          player.vx = vx; player.vy = vy;
-          /* step 이 속도를 다시 계산하므로 «그 프레임의 선택» 을 보려면 선택 로직만 재현하면 안 된다 —
-             제품을 한 프레임 굴리고 그 결과를 읽는다. 관성 때문에 몇 프레임 필요하다. */
-          for (let i = 0; i < 3; i++) { player.vx = vx; player.vy = vy; step(1 / 60); }
-          return player.anim;
-        };
-        const moving = at(400, 0);
-        const still = at(0, 0);
-        return { moving, still };
-      });
-    } catch (err) { return { __err: String((err && err.message) || err).slice(0, 200) }; }
+    try { return await page.evaluate(new Function('return ' + E_SAMPLE + '()')); }
+    catch (err) { return { __err: String((err && err.message) || err).slice(0, 200) }; }
   })();
   if (e.__err) { fail++; console.log('  ❌ [E] 블록 예외: ' + e.__err); }
   else {
-    ok(e.moving === 'run', 'E1 속도를 주면 run', '찍힘 ' + e.moving);
-    ok(e.still === 'idle', 'E2 속도를 0 으로 두면 idle', '찍힘 ' + e.still);
+    /* [E0]·[E3] 은 전제다 — 새 표본이 «둘 다 안 움직이는» 헛초록으로 굳는 것을 막는다.
+       ⚠ 이 둘이 빨개지면 표본이 무너진 것이지 460 이 무너진 것이 아니다(읽는 순서를 적어 둔다). */
+    ok(e.movSp > e.eps, 'E0 이동 표본이 실제로 임계 위로 달렸다(전제)',
+       '속도 ' + Math.round(e.movSp * 10) / 10 + ' > ' + e.eps);
+    ok(e.moving === 'run', 'E1 제품이 스스로 달리면 run', '찍힘 ' + e.moving);
+    ok(e.still === 'idle', 'E2 입력을 끄고 제품이 스스로 멈추면 idle', '찍힘 ' + e.still);
+    ok(e.stillSp < e.eps, 'E3 정지 표본이 실제로 임계 아래로 멈췄다(전제)',
+       '속도 ' + Math.round(e.stillSp * 10) / 10 + ' < ' + e.eps);
   }
 
   /* ── [F] 사망·부활 ────────────────────────────────────────────────── */
@@ -303,6 +335,34 @@ const badNames = (r) => Object.keys(r.cnt).filter((k) => !ALLOW.includes(k));
   ok(negCast !== null && negCast > 0,
      'R3 되돌린 사본은 시전 프레임이 다시 attack_A 다 — [D2] 가 헛초록이 아니다',
      '찍힘 ' + negCast + '회 (수리 후 0)');
+
+  /* ⚑ 593 — [E] 표본을 갈아 끼웠으니 그 자리에도 되돌림이 필요하다.
+     새 표본이 «어차피 아무것도 안 시험하는» 헛초록이 아님을, **애니 갈림을 `run` 으로 굳힌 사본**에
+     **같은 표본**을 굴려 못박는다: 거기서는 [E2] 가 반드시 빨개져야 한다.
+     ⚠ 허용 오차·임계·프레임 수는 한 칸도 안 넓혔다 — 무르게 푼 수리가 아니라는 증거가 이 항이다. */
+  let negStill = null;
+  const STUCK = ['    const moving = Math.hypot(player.vx, player.vy) > 25;',
+                 '    const moving = true;   /* 593 [R4] — «run 으로 굳은» 사본 */'];
+  try {
+    if (!src.includes(STUCK[0])) throw new Error('[R4] 치환 앵커가 옮겨졌다');
+    fs.writeFileSync(NEG, src.split(STUCK[0]).join(STUCK[1]));
+    const c3 = await browser.newContext({ viewport: { width: 1080, height: 2280 }, deviceScaleFactor: 1 });
+    const p3 = await c3.newPage();
+    await p3.goto('file://' + NEG);
+    await p3.waitForTimeout(1200);
+    await p3.evaluate(() => { window.requestAnimationFrame = () => 0; });
+    await p3.evaluate(new Function('a', 'return (() => ' + SETUP(false) + ')(a)'));
+    const en = await p3.evaluate(new Function('return ' + E_SAMPLE + '()'));
+    negStill = en && en.still;
+    await p3.close(); await c3.close();
+  } catch (err) {
+    fail++; console.log('  ❌ [R4] 블록 예외: ' + String((err && err.message) || err).slice(0, 220));
+  } finally {
+    try { fs.unlinkSync(NEG); } catch (_) { /* 이미 없으면 그만 */ }
+  }
+  ok(negStill === 'run',
+     'R4 `run` 으로 굳은 사본은 같은 표본에서 [E2] 가 빨개진다 — 새 [E2] 가 헛초록이 아니다',
+     '찍힘 ' + negStill + ' (수리 후 idle)');
 
   ok(errs.length === 0, '콘솔 에러 0건', errs.length ? errs.slice(0, 2).join(' | ') : '');
 
