@@ -72,6 +72,30 @@ const A_BOX  = '레드닷 상자 27x27';
 const A_CTR  = '레드닷 중심 = 칸';
 const A_SIDE = '레드닷이 걸치는 면은 코너 쪽 둘뿐';
 
+/* ── [C] 절 — 같은 563 행의 나머지 한 건(`verify360` [27]) ────────────────────────────
+   상류가 563 을 «레드닷 계열 12건» 으로 넓히며 붙인 자리다. 뿌리도 같다(509 가 «상자» 와
+   «그려진 것» 을 가른 뒤 자가 상자를 붙들고 있었다). 처방도 같아서 — 기대값 `--ih`×.512 는
+   한 칸도 안 넓히고 **재는 대상**만 «상자» → «그려진 바깥 지름» 으로 옮겼다 — 그것이
+   «봐주기» 가 아님을 여기서 증명한다. */
+const IBTN_ON = at('IBTN_ON', /^\s*\.ibtn\.on \.bdg\{display:block\}\s*$/,
+  '`.ibtn .bdg` 규칙 바로 뒤 한 줄(주입 자리)');
+const afterI = css => IBTN_ON == null ? null : cat(IBTN_ON, '\n', ind(IBTN_ON), css);
+const C1_CSS = afterI('.ibtn .bdg{width:27px!important;height:27px!important}');
+const C2_CSS = afterI('.ibtn .bdg{box-shadow:none!important}');
+const C3_CSS = afterI('.ibtn .bdg{cursor:default}');
+const B_RING = '출석 레드닷 «그려진» 바깥 지름';
+const B_PROP = '출석 레드닷은 --ih 파생이다';
+const B_PAIR = '전제 — 출석 레드닷 상자 = 2 × --dot-r';
+
+const CTESTS = [
+  { id: 'C1', why: '배지 상자를 27px 리터럴로 못박는다 — `--ih` 파생이 끊긴다(아트가 줄어도 배지는 그대로)',
+    edit: [[IBTN_ON, C1_CSS]], want: [B_PROP], not: [B_RING, B_PAIR] },
+  { id: 'C2', why: '검정·분홍 링(box-shadow)을 걷는다 — 상자는 그대로 27 인데 **그려진** 지름이 42 → 27 로 준다',
+    edit: [[IBTN_ON, C2_CSS]], want: [B_RING], not: [B_PROP, B_PAIR] },
+  { id: 'C3', why: '★ 양성 대조 — 무해한 선언 한 줄만 끼운다(주입 기법 자체가 빨강을 만들지 않는다)',
+    edit: [[IBTN_ON, C3_CSS]], green: true },
+];
+
 const TESTS = [
   { id: 'N1', why: '★ 옛 기준선 복귀 — 닷을 칸 «안» 으로 되돌린다(돌출 0). 옛 항이었다면 여기가 초록이다',
     edit: [[Z6, N1_CSS]], want: [A_CTR], not: [A_PRE, A_BOX, A_SIDE] },
@@ -95,11 +119,11 @@ const TESTS = [
 let pass = 0, fail = 0;
 const ok = (n, c, d) => { c ? pass++ : fail++; console.log('  ' + (c ? 'PASS' : 'FAIL') + ' ' + n + (d ? ' — ' + d : '')); };
 
-const runGate = () => {
+const runGate = (gate, envKey) => {
   let out;
   try {
-    out = execFileSync('node', [path.join(__dirname, 'verify47.js')],
-      { cwd: ROOT, env: Object.assign({}, process.env, { V47_SRC: TMP }), encoding: 'utf8', maxBuffer: 8 << 20 });
+    out = execFileSync('node', [path.join(__dirname, gate || 'verify47.js')],
+      { cwd: ROOT, env: Object.assign({}, process.env, { [envKey || 'V47_SRC']: TMP }), encoding: 'utf8', maxBuffer: 8 << 20 });
   } catch (e) { out = (e.stdout || '') + (e.stderr || ''); }
   return out.split('\n').filter(l => /^\s*FAIL /.test(l)).map(l => l.trim().replace(/^FAIL /, ''));
 };
@@ -120,8 +144,9 @@ const runGate = () => {
     ok('R4 제품이 규약 상수를 실제로 들고 있다(:root --dot-in)',
       ROOT_IN != null && /--dot-in:\s*11px/.test(ROOT_IN), (ROOT_IN || '').trim());
 
-    console.log('\n[B] 되돌림 시험 — 갈아 끼운 사본에서 verify47 이 무엇을 무는가');
-    for (const t of TESTS) {
+    const suite = (title, tests, gate, envKey) => {
+      console.log('\n' + title);
+      for (const t of tests) {
       const edits = (t.edit || []).filter(Boolean);
       const bad = edits.length !== (t.edit || []).length
         || edits.some(([from, to]) => from == null || to == null || from === to);
@@ -133,7 +158,7 @@ const runGate = () => {
       }
       if (!applied) { ok(t.id + ' ' + t.why, false, '원문에서 그 줄을 못 찾았다'); continue; }
       fs.writeFileSync(TMP, src);
-      const fails = runGate();
+      const fails = runGate(gate, envKey);
       const hit = p => fails.some(f => f.startsWith(p));
       if (t.green) {
         ok(t.id + ' ' + t.why, fails.length === 0,
@@ -145,7 +170,10 @@ const runGate = () => {
           'FAIL ' + fails.length + '건' + (wantOK ? '' : ' · 기대한 항이 안 빨개졌다')
           + (notOK ? '' : ' · 안 빨개져야 할 항이 빨개졌다') + (fails.length ? ' — ' + fails[0] : ''));
       }
-    }
+      }
+    };
+    suite('[B] 되돌림 시험 — 갈아 끼운 사본에서 verify47 이 무엇을 무는가', TESTS, 'verify47.js', 'V47_SRC');
+    suite('[C] 되돌림 시험 — 같은 행의 나머지 한 건: verify360 [4] 출석 배지', CTESTS, 'verify360.js', 'V360_SRC');
   } finally {
     try { fs.unlinkSync(TMP); } catch (_) {}
   }

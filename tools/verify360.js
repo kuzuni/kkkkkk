@@ -271,6 +271,39 @@ async function survey(p) {
       out.cy = +(bd.offsetTop + bd.offsetHeight / 2).toFixed(2);
       out.cw = +cell.offsetWidth.toFixed(2); out.chArt = 82;
       out.size = +bd.offsetWidth.toFixed(2);
+      /* ── 563 이관 (2026-08-31) — **재는 대상이 낡았다.** 509 가 이 배지를 표준 닷으로 통일하며
+         검정·분홍을 `border` 에서 **box-shadow 스프레드**로 옮겼다: 상자는 `--ih`×.512 → ×.32927
+         (82 에서 41.98 → 27)로 줄었지만 **그려진 지름은 그대로 42** 다(스프레드 7.5 ×2 를 되더한다).
+         아래 세 값을 같이 가져와 «그려진 것» 으로 물음을 옮긴다 — 상세는 verify360 [4] 절 주석. */
+      const csb = getComputedStyle(bd);
+      const sh = csb.boxShadow === 'none' ? '' : csb.boxShadow;
+      let sp = 0;
+      sh.replace(/rgba?\([^)]*\)/g, 'C').split(',').forEach(part => {
+        if (/inset/.test(part)) return;
+        const px = part.match(/-?[\d.]+px/g) || [];
+        if (px.length >= 4) sp = Math.max(sp, parseFloat(px[3]));
+      });
+      out.spread = +sp.toFixed(2);
+      /* ⚠ **여기서 쓸 수 있는 자는 셋 중 하나뿐이다**(위 «rect 는 0×0» 주석의 연장):
+           · `getBoundingClientRect` — 얼린 등장 애니의 scale(0) 을 먹어 **0**
+           · `offsetWidth`           — 레이아웃 값이라 살아 있지만 **정수 반올림**(13.5 → 14)
+           · `getComputedStyle().width` — **사용값(px, 소수 유지)** 이고 transform 과 무관하다 ← 이것
+         소수 반 픽셀이 판정을 가르는 항(41.98 · 절반 13.5)이라 셋째를 쓴다. */
+      const cw = e => parseFloat(getComputedStyle(e).width) || 0;
+      out.wUsed = +cw(bd).toFixed(2);
+      out.ring = +(cw(bd) + 2 * sp).toFixed(2);
+      /* `--dot-r` 은 여기서 calc() 문자열이라 parseFloat 로는 못 읽는다 — 브라우저에게 풀린 값을 묻는다.
+         `--dot-r` 은 배지에 선언돼 있으므로 **배지의 자식**으로 넣어야 상속된다. */
+      const t = document.createElement('div');
+      t.style.cssText = 'position:absolute;height:0;visibility:hidden;width:var(--dot-r)';
+      bd.appendChild(t); out.dotR = +cw(t).toFixed(2); t.remove();
+      /* «아트가 줄면 배지도 따라 주나» — 360 이 지키던 뜻 그 자체를 직접 물어본다 */
+      const w0 = cw(bd);
+      const keep = cell.style.getPropertyValue('--ih');
+      cell.style.setProperty('--ih', '41px');
+      const w1 = cw(bd);
+      if (keep) cell.style.setProperty('--ih', keep); else cell.style.removeProperty('--ih');
+      out.halfRatio = w0 > 0 ? +(w1 / w0).toFixed(3) : 0;
     } catch (e) { out.err = e.message; }
     return out;
   });
@@ -282,9 +315,28 @@ async function survey(p) {
     ok(dot.cx > dot.cw / 2 && dot.cy < dot.chArt / 2,
        '출석 레드닷이 아트의 우상단 사분면 (299 규약)', `중심 ${dot.cx}/${dot.cw} · ${dot.cy}/${dot.chArt}`);
     /* 등재문 ⓒ — 배지는 `--ih` 파생이라 아트가 101 → 82 로 줄면 크기도 따라와야 한다.
-       따라오지 않으면 «출석만 배지가 큰» 새 결함이 생긴다(주인이 본 병의 재발). */
-    ok(near(dot.size, 82 * 0.512, 1.5),
-       '출석 레드닷 크기가 --ih 파생값(82×.512 = 41.98) — 아트 축소를 따라왔다', dot.size);
+       따라오지 않으면 «출석만 배지가 큰» 새 결함이 생긴다(주인이 본 병의 재발).
+       ══ 563 이관 (2026-08-31) — **기대값(41.98)은 옳고, 재던 대상이 낡았다** ═══════════════
+       이 한 항이 main 에서 `27` 로 빨갰다. `tools/probe563.js` [2] 로 재현했더니 **제품은
+       눈에 보이는 크기를 한 픽셀도 안 바꿨다**:
+         상자 27.00 + 바깥 스프레드 7.50×2 = **42.00** · **찍힌 화소로 잰 지름도 42** ↔ 82×.512 = 41.98
+       509 가 이 배지를 표준 닷으로 통일하며 검정·분홍을 `border` 에서 **box-shadow 스프레드**로
+       옮긴 것이 전부다(index.html `.ibtn .bdg` 주석: «상자가 .512 → .3293 로 줄지만 `--dot-r` 을
+       .256 → .16463 으로 같이 갈아 **중심 Δ0**»). 즉 `verify47` 11건과 **같은 종의 부패**다 —
+       규약이 «상자» 와 «그려진 것» 을 가른 뒤에도 자가 상자를 붙들고 있었다.
+       처방도 같다: 허용을 27 까지 넓히면(=기대값을 갈면) «배지가 통째로 작아져도 초록» 이 되므로
+       **묻는 대상을 옮긴다** — 상자 → **그려진 바깥 지름**. 기대값 `--ih`×.512 는 한 칸도 안 넓혔다.
+       그리고 이 항이 원래 지키던 뜻(«아트가 줄면 배지도 따라 준다»)은 리터럴 대조로는 반만 물어지므로
+       **비례 시험**을 따로 세운다 — `--ih` 를 절반으로 주면 배지도 절반이 되는지 제품에게 직접 묻는다. */
+    ok(near(dot.wUsed, 2 * dot.dotR, 0.6),
+       '전제 — 출석 레드닷 상자 = 2 × --dot-r (509 «상자↔반지름 짝» — 짝이 깨지면 중심이 밀린다)',
+       dot.wUsed + ' vs ' + (2 * dot.dotR));
+    ok(near(dot.ring, 82 * 0.512, 1.5),
+       '출석 레드닷 «그려진» 바깥 지름이 --ih 파생값(82×.512 = 41.98) — 아트 축소를 따라왔다',
+       '상자 ' + dot.wUsed + ' + 스프레드 ' + dot.spread + '×2 = ' + dot.ring);
+    ok(Math.abs(dot.halfRatio - 0.5) <= 0.02,
+       '출석 레드닷은 --ih 파생이다 — --ih 를 절반(41px)으로 주면 배지도 절반이 된다',
+       '비 ' + dot.halfRatio);
   }
 
   ok(errs.length === 0, '[5] 콘솔·런타임 에러 0건', errs.length ? errs.join(' | ') : '없음');

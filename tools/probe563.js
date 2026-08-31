@@ -167,9 +167,80 @@ const CORE = [242, 46, 82], RIM = [255, 117, 150];
     if (b.close) await page.evaluate(o => eval(o), b.close);
     await page.waitForTimeout(200);
   }
+  /* ══ [2] 02 사이드 «출석» 배지 — `verify360` [27] 이 «41.98 이어야 하는데 27» 이라고 문 자리 ══
+     563 행이 상류에서 «레드닷 계열 12건» 으로 넓어지며 이 한 건이 같이 들어왔다.
+     [1] 과 같은 물음이다: **자가 «무엇을» 재고 있나.** 509 가 이 배지를 표준 부품으로 통일하면서
+     검정·분홍을 `border` 에서 **box-shadow 스프레드**로 옮겼다 — 상자는 줄고(.512 → .32927)
+     그려진 바깥 지름은 그대로여야 한다는 것이 509 의 선언이다. 그걸 화소로 검산한다. */
+  const side = await (async () => {
+    const page2 = page;
+    const g = await page2.evaluate(() => {
+      const cell = document.querySelector('#sideL .ibtn[data-pop="attend"]');
+      if (!cell) return { missing: true };
+      const bd = cell.querySelector('.bdg');
+      sideAlert('attend', true);
+      bd.style.setProperty('animation', 'none', 'important');
+      bd.style.setProperty('transform', 'none', 'important');
+      const cs = getComputedStyle(bd), cc = getComputedStyle(cell);
+      /* 바깥 스프레드 — inset 이 아닌 그림자 중 네 번째 길이의 최대값(probe509 와 같은 읽기) */
+      const sh = cs.boxShadow === 'none' ? '' : cs.boxShadow;
+      let sp = 0;
+      sh.replace(/rgba?\([^)]*\)/g, 'C').split(',').forEach(part => {
+        if (/inset/.test(part)) return;
+        const px = part.match(/-?[\d.]+px/g) || [];
+        if (px.length >= 4) sp = Math.max(sp, parseFloat(px[3]));
+      });
+      const r = bd.getBoundingClientRect();
+      /* ⚠ `--dot-r` 은 여기서 **calc() 문자열**이다(`.stab>.bdg` 처럼 리터럴이 아니다) —
+         `parseFloat` 로는 못 읽는다. 임시 노드에 `width:var(--dot-r)` 를 주어 브라우저가
+         풀게 한 뒤 그 폭을 읽는다(새 상수 0개). */
+      const t = document.createElement('div');
+      t.style.cssText = 'position:absolute;height:0;visibility:hidden;width:var(--dot-r)';
+      bd.appendChild(t);
+      const dotRpx = +t.getBoundingClientRect().width.toFixed(2);
+      t.remove();
+      /* «--ih 를 갈면 따라 줄어드나» — 360 이 지키던 뜻 그 자체를 직접 물어본다.
+         ⚠ `offsetWidth` 는 정수 반올림이라 13.5 를 14 로 준다 → rect 로 잰다(transform 은 껐다). */
+      const before = bd.getBoundingClientRect().width;
+      const keep = cell.style.getPropertyValue('--ih');
+      cell.style.setProperty('--ih', '41px');
+      const half = bd.getBoundingClientRect().width;
+      if (keep) cell.style.setProperty('--ih', keep); else cell.style.removeProperty('--ih');
+      return { box: +bd.getBoundingClientRect().width.toFixed(2), spread: +sp.toFixed(2),
+        ring: +(bd.getBoundingClientRect().width + 2 * sp).toFixed(2),
+        dotR: (cs.getPropertyValue('--dot-r') || '').trim(), dotRpx,
+        ih: (cc.getPropertyValue('--ih') || '').trim(),
+        borderW: parseFloat(cs.borderTopWidth) || 0,
+        half: +half.toFixed(2), before: +before.toFixed(2),
+        cx: r.x + r.width / 2, cy: r.y + r.height / 2 };
+    });
+    if (g.missing) return g;
+    /* 찍힌 화소 — 중심에서 좌우로 훑어 «빨강/분홍/검정» 이 끝나는 지점 = 그려진 바깥 지름 */
+    const R = 34;
+    const clip = { x: Math.round(g.cx - R), y: Math.round(g.cy - 1), width: R * 2, height: 3 };
+    const png = (await page.screenshot({ clip })).toString('base64');
+    const drawn = await page.evaluate(async ({ png }) => {
+      const img = new Image();
+      await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + png; });
+      const cv = document.createElement('canvas');
+      cv.width = img.width; cv.height = img.height;
+      const c = cv.getContext('2d'); c.drawImage(img, 0, 0);
+      const d = c.getImageData(0, 0, cv.width, cv.height).data;
+      const y = Math.min(1, cv.height - 1);
+      const px = x => { const i = (y * cv.width + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+      const isDot = p => (Math.abs(p[0] - 242) <= 26 && Math.abs(p[1] - 46) <= 26 && Math.abs(p[2] - 82) <= 26)
+        || (Math.abs(p[0] - 255) <= 40 && Math.abs(p[1] - 117) <= 40 && Math.abs(p[2] - 150) <= 40)
+        || (p[0] < 60 && p[1] < 60 && p[2] < 60);
+      let lo = -1, hi = -1;
+      for (let x = 0; x < cv.width; x++) if (isDot(px(x))) { if (lo < 0) lo = x; hi = x; }
+      return lo < 0 ? 0 : hi - lo + 1;
+    }, { png });
+    return Object.assign(g, { drawn });
+  })();
+
   await browser.close();
 
-  if (JSONOUT) { console.log(JSON.stringify({ rows, errs }, null, 2)); return; }
+  if (JSONOUT) { console.log(JSON.stringify({ rows, side, errs }, null, 2)); return; }
 
   console.log('PROBE563 — 서브탭 레드닷이 «칸 밖으로» 나가는가 (1080×2280 · 찍힌 화소)\n');
   console.log('  바 / 칸                     상자     돌출   코너안쪽    규약식   밖 화소  검정꼬리  자르는 조상');
@@ -198,4 +269,22 @@ const CORE = [242, 46, 82], RIM = [255, 117, 150];
   console.log('  콘솔 에러 ' + errs.length + '건');
   console.log('\n  ⇒ ⓐ·ⓑ 가 참이고 ⓒ 가 거짓이면 «제품이 471 규약대로 걸쳐 있고, «돌출 0» 을 묻는');
   console.log('     `verify47` 쪽이 471 이전의 옛 기준선» 이다(자 부패).');
+
+  console.log('\n[2] 02 사이드 «출석» 배지 — `verify360` [27] 자리');
+  if (!side || side.missing) { console.log('  노드 없음'); return; }
+  const ihn = parseFloat(side.ih) || 0;
+  console.log('  --ih ' + side.ih + ' · 상자 ' + f2(side.box) + ' · --dot-r ' + side.dotR
+    + ' · border ' + f2(side.borderW) + ' · 바깥 스프레드 ' + f2(side.spread));
+  console.log('  상자 + 2×스프레드 = ' + f2(side.ring) + ' · **찍힌 화소로 잰 지름** ' + side.drawn
+    + ' · --ih × .512 = ' + f2(ihn * 0.512));
+  console.log('  --ih 를 41(절반)로 주면 상자 ' + f2(side.before) + ' → ' + f2(side.half)
+    + ' (비 ' + f2(side.half / side.before) + ')');
+  console.log('  ⓓ 상자 = 2 × --dot-r (509 «짝»)                 : '
+    + (Math.abs(side.box - 2 * side.dotRpx) <= 0.6 ? '예' : '아니오'));
+  console.log('  ⓔ **그려진** 지름 = --ih × .512 (360 의 원래 기대값): '
+    + (Math.abs(side.ring - ihn * 0.512) <= 1.5 ? '예 — 눈에 보이는 크기는 안 변했다' : '아니오'));
+  console.log('  ⓕ 아트가 줄면 배지도 따라 준다(--ih 파생)          : '
+    + (Math.abs(side.half / side.before - 0.5) <= 0.02 ? '예' : '아니오'));
+  console.log('\n  ⇒ ⓓ·ⓔ·ⓕ 가 참이면 «509 가 검정·분홍을 border 에서 box-shadow 로 옮겨 **상자만** 줄었고');
+  console.log('     그려진 크기는 그대로» 이다 — `verify360` [27] 이 «상자» 를 재고 있는 것이 부패다.');
 })();
