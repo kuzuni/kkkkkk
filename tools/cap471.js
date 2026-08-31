@@ -39,9 +39,10 @@ const STEPS = [
 
   /* 화면을 차례로 열며 «호스트 상자 + 여백 46» 을 잘라 모은다. 진입은 verify299/probe471 과 같은 목록. */
   const shots = [];
-  const grab = async (label, hostSel, note) => {
-    const box = await page.evaluate((s) => {
-      const h = document.querySelector(s);
+  const grab = async (label, hostSel, note, idx) => {
+    const box = await page.evaluate(([s, i]) => {
+      const all = document.querySelectorAll(s);
+      const h = all[i || 0];
       if (!h) return null;
       h.getAnimations({ subtree: true }).forEach(a => { try { a.pause(); a.currentTime = (a.effect.getTiming().duration || 0); } catch (_) {} });
       /* ⚑ 3회차 비평(BR) — 04·15 가 «세로 인셋비 0.82(기준의 1.9배)» 로 읽혔다. 제품 실측은 11px 이다.
@@ -63,10 +64,15 @@ const STEPS = [
          눈으로만 재던 값을 **시트 자신이 텍스트로 같이 뱉게** 한다(자를 자로 검산 — 385 처방).
          맥박 봉우리면 여기 40 이 아니라 45.6 이 찍힌다. */
       const d0 = h.querySelector('.updot,.bdg,s.dot,.dot');
+      /* ⚑ 6회차 — 호스트에 점등 클래스를 얹어도 **다시 그려지면서 벗겨지는** 자리가 있다
+         (사이드 `promo`·`coll` 칸이 그랬다: `.on` 을 얹었는데 촬영 시점엔 `display:none`).
+         1회차가 «빈 칸 셋» 으로 잃은 그 사고라, 클래스에 기대지 말고 **노드 자신을 켠다**
+         (`probe471` 도 같은 방식으로 잰다 — 자매 자를 맞춘다). */
+      if (d0 && getComputedStyle(d0).display === 'none') d0.style.display = 'block';
       const dr = d0 ? d0.getBoundingClientRect() : null;
-      return { x: r.left, y: r.top, w: r.width, h: r.height,
+      return { x: r.left, y: r.top, w: r.width, h: r.height, n: all.length,
         dw: dr && dr.width ? Math.round(dr.width * 100) / 100 : null };
-    }, hostSel);
+    }, [hostSel, idx || 0]);
     if (!box) { console.log('  (건너뜀) ' + label + ' — 상자 없음'); return; }
     /* ⚑ 2회차 비평(BP) 이 드러낸 **이 자의 결함** — 1·2회차 시트는 칸마다 «호스트 전체 + 여백» 을 잘라
        `k = min((CELL-24)/w, CELL/h, 1.6)` 로 **칸마다 다른 배율**로 붙였다. 그래서 980px 짜리 카드는
@@ -117,8 +123,19 @@ const STEPS = [
   console.log('CAP471 — ' + R + '회차 대조 캡처\n');
   await ev(() => { document.querySelectorAll('#tabbar .tab').forEach(t => t.classList.add('alert')); });
   await wait(200);
-  await grab('01 탭바 «상점» 칸', '#tabbar .tab:last-child', '예외 — 프레임 변');
-  await grab('02 사이드 아이콘', '.side .ibtn.on', '');
+  await grab('01 탭바 «상점» 칸', '#tabbar .tab:last-child', '예외 — 프레임 변(우변 1080 플러시 ⇒ 21)');
+  /* ⚑ 6회차 — §10 ③. 5회차까지 이 자리는 **6칸 중 «출석» 한 칸만** 시트에 실렸다. 그런데 제품의
+     `--dot-in-x/y` 는 6칸 **평균 잉크**로 잡은 상수이고 칸별 잉크 우변 편차가 6~11px 이라,
+     비평가는 매번 «규약 11 에 2px 못 미친다» 를 보고 그것이 그 한 칸의 편차인지 상수의 결함인지
+     **구별할 재료가 없었다**(BU·BV 5회차 일치 지적). 여섯 칸을 다 붙이면 «상수 하나로 5px 편차를
+     못 덮는다» 가 그림에서 바로 읽힌다 — 자가 못 보여 줘서 지던 자리를 자로 갚는다. */
+  /* ⚠ 점등은 `.ibtn.on .bdg{display:block}` 이라 **여섯 칸을 다 켜 놓고** 찍어야 한다 —
+     안 켜면 4·5번 칸이 «닷 없는 빈 칸» 으로 채점에 실린다(1회차가 정확히 그 사고로 셋을 잃었다). */
+  await ev(() => { document.querySelectorAll('.side .ibtn').forEach(b => b.classList.add('on')); });
+  await wait(200);
+  for (let i = 0; i < 6; i++) {
+    await grab('02 사이드 아이콘 #' + (i + 1) + '/6', '.side .ibtn', i === 0 ? '6칸 전수 — 잉크 편차가 상수 하나로 안 덮인다' : '', i);
+  }
   await ev(() => { document.getElementById('menub').classList.add('alert'); });
   await wait(150);
   await grab('03 ▦ 메뉴 버튼', '#menub', '');
@@ -196,13 +213,50 @@ const STEPS = [
   await wait(250);
   await grab('16 07 [일괄 강화] 버튼', '#bSk .sk-btn', '');
   await grab('17 07 스킬 카드', '#bSk .sk-card', '4회차 — 점유물([+])을 좌상단으로 옮기고 코너를 닷에게 줬다');
+  /* ⚑ 6회차 신설 — **주인이 지목한 «그 슬롯들»**(재지시 2026-08-31: «그 슬롯들에 빨간점 위치
+     여전히 좆같음»). 5회차까지 시트는 07 스킬 시트 한 장만 실었고 **장착 슬롯 줄(`.sk-slot`)과
+     26 펫·50 코스튬은 한 칸도 없었다** — 주인이 보고 있는 자리가 채점표에 아예 없었던 것이다.
+     세 시트가 같은 부품을 공유한다는 것은 «한 장만 봐도 된다» 는 뜻이 아니다(411 교훈:
+     «따로 보면 셋 다 그럴듯하다» — 나란히 놓아야 어긋남이 보인다). */
+  await arm('#bSk .sk-slot');
+  await wait(200);
+  await grab('20 07 스킬 장착슬롯', '#bSk .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
+  await ev(async () => { heroSubGo('pet'); });
+  await wait(650);
+  await arm('#bPet .sk-slot');
+  await arm('#bPet .sk-card');
+  await wait(250);
+  await grab('21 26 펫 장착슬롯', '#bPet .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
+  await grab('22 26 펫 카드', '#bPet .sk-card', '6회차 신설');
+  await ev(async () => { heroSubGo('cos'); });
+  await wait(650);
+  await arm('#bCos .sk-slot');
+  await arm('#bCos .sk-card');
+  await wait(250);
+  await grab('23 50 코스튬 장착슬롯', '#bCos .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
+  await grab('24 50 코스튬 카드', '#bCos .sk-card', '6회차 신설');
+  /* 21 도감 세트별 [강화] — 516 이 471 5회차 «뒤에» 만든 여섯 번째 예외(가로만 16). 시트에 없었다. */
+  await ev(async () => { openColl21(); });
+  await wait(650);
+  await arm('#collw .clb-btn');
+  await wait(250);
+  await grab('25 21 도감 세트 [강화]', '#collw .clb-btn', '예외 — .cl-body 가로 클리핑 13px ⇒ 16(516)');
+  await ev(() => { if (typeof closeColl21 === 'function') closeColl21(); });
+  await wait(250);
+  await ev(async () => { goTab('hero', true); heroSubGo('sk'); });
+  await wait(650);
 
   await ev(async () => { openPass('stage'); });
   await wait(600);
   await arm('#psTk .ps-bx');
   await wait(250);
   await grab('18 35 패스 보상 칸', '#psTk .ps-bx', '');
-  await grab('19 35 패스 하단 탭', '#psBar .pt', '예외 — 프레임 변');
+  /* ⚑ 6회차 — §10 ① ⓒ. 5회차까지 이 자리는 **첫 칸(200..489)** 을 찍었다. 예외 사유(«프레임 변»)가
+     보이는 칸은 **마지막 칸(884..1074)** 뿐이라, 비평가는 «십자선 오른쪽 91px 에 형제 탭이 그대로
+     있는데 왜 물러나 있나» 로 두 회차 연속 돌려보냈다(BU·BV 독립 일치 — 그리고 그 지적은 옳았다).
+     01(`.tab:last-child`)은 처음부터 마지막 칸을 찍어 이 문제가 없었다. 같은 규칙으로 맞춘다. */
+  await grab('19 35 패스 하단 탭 (마지막 칸)', '#psBar .pt:last-child',
+    '예외 — 프레임 변(우변 1074 ⇒ 1074+21−1080 = 15)');
   await ev(() => closePass());
 
   /* 한 장으로 붙인다 — 나란히 안 놓으면 어긋남이 안 보인다(411 교훈) */

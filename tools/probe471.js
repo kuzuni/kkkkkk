@@ -85,6 +85,32 @@ const SCENES = [
     { label: '07 [일괄 강화] .sk-btn>.updot', dot: '.sk-btn>.updot', host: '.sk-btn', mk: { host: '.sk-btn', cls: 'updot' } },
     { label: '07 시트 서브탭 .stab>.bdg', dot: '#bSk .stab>.bdg,#eqTabs .stab>.bdg', host: '.stab' },
   ] },
+  /* ══ 6회차 신설 — 주인이 지목한 «그 슬롯들» (2026-08-31 재지시) ═══════════════════════════
+     주인 원문: «그 슬롯들에 빨간점 위치 여전히 좆같음 수정해주기». 5회차까지 이 자는
+     07 스킬 시트 **한 장만** 보고 있었고 26 펫·50 코스튬은 **한 번도 안 쟀다** — 세 시트가
+     같은 부품(`.sk-card`·`.sk-slot`·`.sk-btn`)을 공유한다는 이유로 07 을 대표로 삼은 것인데,
+     그러면 «시트마다 다르면 어쩔 것인가» 를 자가 대답할 수 없다. 주인이 «슬롯들»(복수)이라고
+     한 이상 **셋을 각각 재고 값이 같다는 것 자체를 자가 말하게** 한다. */
+  { open: "heroSubGo('pet'); await wait(350);", close: '', items: [
+    { label: '26 펫 카드 .sk-card>.updot', dot: '#bPet .sk-card>.updot', host: '.sk-card', mk: { host: '#bPet .sk-card', cls: 'updot' } },
+    { label: '26 펫 장착슬롯 .sk-slot>.updot', dot: '#bPet .sk-slot>.updot', host: '.sk-slot', mk: { host: '#bPet .sk-slot', cls: 'updot' } },
+    { label: '26 [일괄 강화] .sk-btn>.updot', dot: '#bPet .sk-btn>.updot', host: '.sk-btn', mk: { host: '#bPet .sk-btn', cls: 'updot' } },
+  ] },
+  { open: "heroSubGo('cos'); await wait(350);", close: '', items: [
+    { label: '50 코스튬 카드 .sk-card>.updot', dot: '#bCos .sk-card>.updot', host: '.sk-card', mk: { host: '#bCos .sk-card', cls: 'updot' } },
+    { label: '50 코스튬 장착슬롯 .sk-slot>.updot', dot: '#bCos .sk-slot>.updot', host: '.sk-slot', mk: { host: '#bCos .sk-slot', cls: 'updot' } },
+  ] },
+  /* 07 의 장착 슬롯 줄도 같은 이유로 따로 잰다(411 이 «세 시트가 한 부품» 이라고 적은 그 줄이다) */
+  { open: "heroSubGo('sk'); await wait(350);", close: '', items: [
+    { label: '07 스킬 장착슬롯 .sk-slot>.updot', dot: '#bSk .sk-slot>.updot', host: '.sk-slot', mk: { host: '#bSk .sk-slot', cls: 'updot' } },
+  ] },
+  /* ══ 6회차 신설 — 21 도감 세트별 [강화] `.clb-btn` ═════════════════════════════════════
+     **516 이 471 5회차 «뒤에» 완료되면서 예외를 하나 더 만들었다**(`--dot-in-x:16px` — `.cl-body`
+     가로 클리핑 13px 때문). 그 자리를 이 자는 한 번도 안 봤다 = 471 의 [A] 음성항(«예외는 정확히
+     5자리»)이 **제품에 있는 여섯 번째 예외를 못 보고 초록이었다.** 자에 태우는 것이 먼저다. */
+  { open: 'openColl21(); await wait(300);', close: 'closeColl21(); await wait(120);', items: [
+    { label: '21 도감 세트 [강화] .clb-btn>.updot (516)', dot: '#collw .clb-btn>.updot', host: '.clb-btn', mk: { host: '#collw .clb-btn', cls: 'updot' } },
+  ] },
   { open: 'openTrain(); await wait(200);', close: 'closeTrain(); await wait(120);', items: [
     { label: '23 카드 .tr-card>.dot', dot: '.tr-card>.dot', host: '.tr-card' },
   ] },
@@ -155,10 +181,17 @@ function collect(items) {
   };
   items.forEach((it, idx) => {
     let dots = [...document.querySelectorAll(it.dot)];
-    let tmp = null;
+    /* ⚑ 6회차 — `mk`(조건부 노드를 만들어 주는 길)가 **첫 호스트 한 칸만** 만들고 있었다.
+       그래서 `.sk-card`·`.eqsl` 처럼 격자로 여러 칸인 자리가 자에는 늘 **n=1** 로 실렸고,
+       칸끼리의 편차(`spread`)를 물어볼 대상이 애초에 없었다 — §10 ③ 이 «시트가 6칸 중 1칸만
+       보여 준다» 로 잡은 것과 **같은 결함이 자 쪽에도 있었던 것**이다(비평가가 아니라 자가 진다).
+       ⇒ 매칭되는 호스트를 **전부** 무장한다. 값이 칸마다 같다는 것은 이제 자가 말한다. */
+    let tmp = [];
     if (!dots.length && it.mk) {
-      const h = document.querySelector(it.mk.host);
-      if (h) { tmp = document.createElement(it.mk.tag || 's'); tmp.className = it.mk.cls; h.appendChild(tmp); dots = [tmp]; }
+      [...document.querySelectorAll(it.mk.host)].forEach(h => {
+        const e = document.createElement(it.mk.tag || 's'); e.className = it.mk.cls;
+        h.appendChild(e); tmp.push(e); dots.push(e);
+      });
     }
     if (!dots.length) { out.push({ label: it.label, missing: true }); return; }
     const seen = [];
@@ -200,20 +233,27 @@ function collect(items) {
         host: h.className || h.id,
         hw: Math.round(hr.width), hh: Math.round(hr.height),
         cut, clipper: clip.host ? (clip.host.id || clip.host.className).slice(0, 28) : '',
-        _cx: cx, _cy: cy,
+        _cx: cx, _cy: cy, _R: Math.round(R * 10) / 10,
         _hr: { l: hr.left, t: hr.top, r: hr.right, b: hr.bottom },
       };
       seen.push(row);
       if (!rep) { rep = { el: h, dots: [d] }; } else if (rep.el === h) { rep.dots.push(d); }
     });
-    if (tmp) tmp.remove();
+    tmp.forEach(e => e.remove());
     if (!seen.length) { out.push({ label: it.label, missing: true, why: '상자 0' }); return; }
     /* 같은 자리는 첫 개만 대표로 싣되, 편차가 있으면 최댓값도 싣는다 */
     const r0 = seen[0];
     const spread = Math.round(Math.max(...seen.map(s => Math.abs(s.dxR - r0.dxR))) * 10) / 10;
     const cutMax = [0, 1, 2, 3].map(i => Math.max(...seen.map(s => s.cut[i])));
     if (rep) rep.el.setAttribute('data-p471', String(idx));
-    out.push({ label: it.label, n: seen.length, ...r0, spread, cutMax, _idx: idx });
+    /* ⚑ 6회차 신설 — «프레임 변» 예외의 산수를 자가 직접 풀 수 있게 재료를 싣는다.
+       필요 후퇴 = **가장 오른쪽 칸의 우변 + 바깥 반지름 − 프레임 폭**.
+       첫 칸(`r0`)만으로는 못 푼다 — 프레임에 묶이는 것은 늘 **마지막 칸**이고, 5회차까지
+       시트도 자도 첫 칸을 보고 있어 «근거가 그림과 안 맞는다» 로 두 회차를 잃었다(§10 ①). */
+    const maxHR = Math.round(Math.max(...seen.map(s => s._hr.r)) * 10) / 10;
+    const outR = Math.round(Math.max(...seen.map(s => s._R)) * 10) / 10;
+    out.push({ label: it.label, n: seen.length, ...r0, spread, cutMax, _idx: idx,
+      maxHR, outR, needIn: Math.round((maxHR + outR - 1080) * 10) / 10 });
   });
   return out;
 }
