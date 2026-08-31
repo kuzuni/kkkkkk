@@ -39,6 +39,53 @@ const STEPS = [
 
   /* 화면을 차례로 열며 «호스트 상자 + 여백 46» 을 잘라 모은다. 진입은 verify299/probe471 과 같은 목록. */
   const shots = [];
+
+  /* ⚑⚑ 7회차 2차 수리 — 잉크 호스트의 «칠해진 화소» 우상단을 **클립 차분**으로 잰다.
+     A(그대로) · B(닷 아닌 자식들을 숨김) · A2(되돌림) 세 장을 찍어 A↔B 로 달라진 화소 중
+     **A↔A2 도 달라진 것(스스로 다시 그리는 화소)을 뺀다** — `probe471 --ink`·`probe471c` 와 같은 규칙이라
+     시트와 자가 같은 것을 본다(385 «자매 자 드리프트» 방지). 문턱도 같은 core(>60):
+     번짐(glow·shadow)까지 세면 사람이 «변» 으로 보는 모양이 아니게 된다. */
+  const inkCorner = async (hostSel, idx, box) => {
+    const clip = {
+      x: Math.max(0, Math.floor(box.x - 30)), y: Math.max(0, Math.floor(box.y - 30)),
+      width: Math.min(1080 - Math.max(0, Math.floor(box.x - 30)), Math.ceil(box.w + 60)),
+      height: Math.min(2280 - Math.max(0, Math.floor(box.y - 30)), Math.ceil(box.h + 60)),
+    };
+    if (clip.width < 2 || clip.height < 2) return null;
+    const kids = (on) => page.evaluate(([s, i, show]) => {
+      const h = document.querySelectorAll(s)[i];
+      if (!h) return 0;
+      const ks = [...h.children].filter(e => !e.matches('.updot,.bdg,s.dot,.dot'));
+      ks.forEach(e => { e.style.visibility = show ? '' : 'hidden'; });
+      return ks.length;
+    }, [hostSel, idx, on]);
+    const A = await page.screenshot({ clip });
+    if (!await kids(false)) return null;
+    const B = await page.screenshot({ clip });
+    await kids(true);
+    const A2 = await page.screenshot({ clip });
+    return page.evaluate(async ([a64, b64, a264, cl, dsf]) => {
+      const load = async (s) => {
+        const img = new Image();
+        await new Promise(r => { img.onload = r; img.src = 'data:image/png;base64,' + s; });
+        const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+        c.getContext('2d').drawImage(img, 0, 0);
+        return c.getContext('2d').getImageData(0, 0, img.width, img.height);
+      };
+      const A = await load(a64), B = await load(b64), A2 = await load(a264);
+      if (A.width !== B.width || A.height !== B.height || A2.width !== A.width) return null;
+      let t = 1e9, r = -1e9, cnt = 0;
+      for (let y = 0; y < A.height; y++) for (let x = 0; x < A.width; x++) {
+        const i = (y * A.width + x) * 4;
+        const d = Math.max(Math.abs(A.data[i] - B.data[i]), Math.abs(A.data[i + 1] - B.data[i + 1]),
+          Math.abs(A.data[i + 2] - B.data[i + 2]), Math.abs(A.data[i + 3] - B.data[i + 3]));
+        const j = Math.max(Math.abs(A.data[i] - A2.data[i]), Math.abs(A.data[i + 1] - A2.data[i + 1]),
+          Math.abs(A.data[i + 2] - A2.data[i + 2]), Math.abs(A.data[i + 3] - A2.data[i + 3]));
+        if (d > 60 && j <= 10) { cnt++; if (x > r) r = x; if (y < t) t = y; }
+      }
+      return cnt ? { r: cl.x + (r + 1) / dsf, t: cl.y + t / dsf, n: cnt } : null;
+    }, [A.toString('base64'), B.toString('base64'), A2.toString('base64'), clip, 2]);
+  };
   const grab = async (label, hostSel, note, idx) => {
     const box = await page.evaluate(([s, i]) => {
       const all = document.querySelectorAll(s);
@@ -81,13 +128,17 @@ const STEPS = [
          독립으로 «19.4px 안쪽 = 걸침 소실» 을 읽었다 — 주어진 그림 안에서는 옳은 읽기다.
          ⇒ 잉크 호스트는 **칠해진 화소의 우상단**을 코너로 삼는다. 상자 코너도 회색 점선으로
          같이 그려 «둘이 왜 다른가» 를 그림이 말하게 한다(라벨에도 적는다). */
+      /* ⚑⚑ 7회차 2차 수리 — **«자식 상자» 는 «칠해진 화소» 가 아니다.**
+         위 주석대로 «칠해진 화소의 우상단» 을 코너로 삼겠다고 적어 놓고 실제로는 자식들의
+         `getBoundingClientRect()` 합집합을 썼다. `.ibtn .si` 는 **폭이 `--ih×1.6`(131px)** 이라
+         100px 짜리 버튼 밖으로 좌우 15.5px 씩 일부러 넘치는 상자다(1004·948행 주석) ⇒
+         그 상자의 우변은 **167** 인데 글리프가 실제로 칠해지는 우변은 **133~138** 이다.
+         십자선을 167 에 그으면 점(중심 125)이 «코너에서 42px 안쪽» 으로 보인다 — 6회차에
+         고치려던 그 오독을 **더 크게** 되풀이하는 것이다.
+         ⇒ 상자는 여기서 «잉크 호스트인가» 만 말하고, **코너는 클립 차분으로 페이지 밖에서 잰다**
+            (`probe471 --ink`·`probe471c` 와 같은 방식 = 자매 자를 맞춘다). */
       const INK = ['ibtn'];
-      let ink = null;
-      if (INK.some(c => h.classList.contains(c))) {
-        const kids = [...h.children].filter(e => !e.matches('.updot,.bdg,s.dot,.dot'));
-        kids.forEach(e => { const b = e.getBoundingClientRect(); if (!b.width) return;
-          ink = ink ? { r: Math.max(ink.r, b.right), t: Math.min(ink.t, b.top) } : { r: b.right, t: b.top }; });
-      }
+      const isInk = INK.some(c => h.classList.contains(c));
       const d0 = h.querySelector('.updot,.bdg,s.dot,.dot');
       /* ⚑ 6회차 — 호스트에 점등 클래스를 얹어도 **다시 그려지면서 벗겨지는** 자리가 있다
          (사이드 `promo`·`coll` 칸이 그랬다: `.on` 을 얹었는데 촬영 시점엔 `display:none`).
@@ -95,8 +146,7 @@ const STEPS = [
          (`probe471` 도 같은 방식으로 잰다 — 자매 자를 맞춘다). */
       if (d0 && getComputedStyle(d0).display === 'none') d0.style.display = 'block';
       const dr = d0 ? d0.getBoundingClientRect() : null;
-      return { x: r.left, y: r.top, w: r.width, h: r.height, n: all.length,
-        ix: ink ? ink.r : null, iy: ink ? ink.t : null,
+      return { x: r.left, y: r.top, w: r.width, h: r.height, n: all.length, isInk,
         dw: dr && dr.width ? Math.round(dr.width * 100) / 100 : null };
     }, [hostSel, idx || 0]);
     if (!box) { console.log('  (건너뜀) ' + label + ' — 상자 없음'); return; }
@@ -109,9 +159,15 @@ const STEPS = [
           모든 칸을 같은 배율로 붙인다. 코너 걸침만 보는 채점이라 이 창이면 충분하고, 칸끼리
           «몇 px 안쪽인가» 를 눈으로 직접 견줄 수 있다. */
     const WIN = 240;
-    /* 7회차 — 잉크 호스트는 «칠해진 화소» 의 우상단이 제품이 겨눈 코너다(위 주석). */
-    const cxr = box.ix === null || box.ix === undefined ? box.x + box.w : box.ix;
-    const cyr = box.iy === null || box.iy === undefined ? box.y : box.iy;
+    /* 7회차 — 잉크 호스트는 «칠해진 화소» 의 우상단이 제품이 겨눈 코너다(위 주석).
+       ⚠ 실패하면 **소리 내어** 상자 코너로 되돌린다 — 조용히 되돌리면 라벨만 «잉크 기준» 이라
+       적힌 채 상자 코너를 보여 주게 되어 비평가를 두 번 속인다(1회차 «빈 칸» 사고와 같은 뿌리). */
+    let cxr = box.x + box.w, cyr = box.y, isInk = false;
+    if (box.isInk) {
+      const ink = await inkCorner(hostSel, idx || 0, box);
+      if (ink) { cxr = ink.r; cyr = ink.t; isInk = true; }
+      else console.log('  ⚠ 잉크 측정 실패 — ' + label + ' → 상자 코너로 되돌림(라벨도 안 붙인다)');
+    }
     const bxr = box.x + box.w, byr = box.y;   /* 상자 코너 — 회색 점선으로 같이 그린다 */
     const clip = { x: Math.max(0, Math.min(1080 - WIN, cxr - WIN * 0.62)),
                    y: Math.max(0, Math.min(2280 - WIN, cyr - WIN * 0.38)),
@@ -123,7 +179,6 @@ const STEPS = [
        코너가 창 안 196·190 에 오는데 십자선은 148.8 에 그려졌다 ⇒ 사람 눈에는 점이 코너에서
        **67·57px 밖으로 떨어진 것**으로 보인다(BR 실측과 정확히 일치 — 제품은 둘 다 11px 이다).
        ⇒ 십자선 자리를 **창 안의 실제 코너 좌표**로 같이 실어 보낸다. */
-    const isInk = box.ix !== null && box.ix !== undefined;
     shots.push({ label: label + (isInk ? '  [잉크 코너 기준]' : ''),
       note: isInk ? (note ? note + ' · ' : '') + '실선 = 칠해진 그림의 코너(제품이 겨눈 곳) · 점선 = 빈 상자 코너' : note,
       b64: buf.toString('base64'), w: clip.width, h: clip.height,
@@ -132,7 +187,12 @@ const STEPS = [
       by: isInk ? (byr - clip.y) / clip.height : null });
     console.log('  ' + label.padEnd(28) + Math.round(box.w) + '×' + Math.round(box.h)
       + ' @ (' + Math.round(box.x) + ',' + Math.round(box.y) + ')'
-      + '  닷Ø' + (box.dw === null ? '—' : box.dw) + (note ? '  ' + note : ''));
+      + '  닷Ø' + (box.dw === null ? '—' : box.dw)
+      /* 잉크 칸은 «상자 코너 ↔ 그림 코너» 를 stdout 에도 싣는다 — 시트가 어디에 십자선을
+         그었는지를 숫자로 되짚을 수 있어야 다음 세션이 자를 의심할 수 있다(385 처방). */
+      + (isInk ? '  잉크코너 (' + Math.round(cxr * 10) / 10 + ',' + Math.round(cyr * 10) / 10
+        + ') ↔ 상자코너 (' + Math.round(bxr) + ',' + Math.round(byr) + ')' : '')
+      + (note ? '  ' + note : ''));
   };
 
   const ev = f => page.evaluate(f).catch(() => {});

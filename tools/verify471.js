@@ -75,6 +75,10 @@ const probe = (file, ink, extraEnv) => {
   return JSON.parse(out.slice(out.indexOf('[\n')));
 };
 
+/* [T] 용 — 자매 자를 그대로 돌려 **stdout 을 읽는다**(JSON 이 아닌 자라 표를 그대로 파싱한다). */
+const run = (args) => execFileSync('node', args.map((a, i) => i === 0 ? path.join(ROOT, a) : a),
+  { cwd: ROOT, maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' });
+
 (async () => {
   const src = fs.readFileSync(SRC, 'utf8');
   const inset = parseFloat((src.match(/:root\{--dot-in:([\d.]+)px\}/) || [])[1]);
@@ -322,6 +326,34 @@ const probe = (file, ink, extraEnv) => {
   ok(good && Math.abs(good.hh - 166) < 0.5,
     '[R] 되돌림 — 수리 후에는 그 호스트가 «멎은 상자»(CSS height 166) 로 읽힌다',
     good ? good.hh + 'px' : '?');
+
+  /* ── [T] 시트와 자가 «같은 코너» 를 본다 — 자매 자 드리프트 (7회차 신설) ─────────────────
+     이 루프에서 «9 를 막는 단 하나» 가 여섯 번 자였고, 그 중 두 번(3회차 십자선 · 6회차 잉크 호스트)은
+     **시트가 제품이 겨눈 자리가 아닌 곳에 십자선을 그은 것**이었다. 7회차에 세 번째가 나왔다:
+     `cap471` 이 «칠해진 화소» 를 쓰겠다고 주석에 적어 놓고 실제로는 **자식들의 상자 합집합**을 썼는데,
+     `.ibtn .si` 는 폭이 `--ih×1.6`(131px)이라 100px 버튼 밖으로 넘치는 상자다 ⇒ 십자선이 우변
+     **167** 에 그어져 점(중심 125)이 «코너에서 42px 안쪽» 으로 보였다.
+     ⇒ 값을 적어 두고 비교하는 대신 **두 자를 같이 돌려 같은 수를 내는지** 묻는다. 이 항이 있으면
+        어느 한쪽만 고친 미래의 변경에서 저절로 빨개진다. */
+  const cap = run(['tools/cap471.js', '0']);
+  const capInk = [...cap.matchAll(/02 사이드 아이콘 #(\d)\/6.*?잉크코너 \(([-\d.]+),([-\d.]+)\) ↔ 상자코너 \((\d+),(\d+)\)/g)]
+    .map(m => ({ i: +m[1], ix: +m[2], iy: +m[3], bx: +m[4], by: +m[5] }));
+  ok(capInk.length === 6, '[T] 전제 — 대조 시트가 잉크 칸(02 사이드)을 6칸 다 실었다 (빠지면 채점에서 안 보인다)',
+    capInk.length + '칸');
+  const outside = capInk.filter(c => c.ix > c.bx - 1);
+  ok(capInk.length === 6 && outside.length === 0,
+    '[T] 시트의 «그림 코너» 가 호스트 상자 **밖**이 아니다 (자식 상자 합집합으로 되돌아가면 우변이 상자보다 22px 오른쪽이 된다)',
+    outside.length ? outside.map(c => '#' + c.i + ' ' + c.ix + ' > ' + c.bx).join(' · ')
+      : '6칸 전부 상자 안 (' + Math.min(...capInk.map(c => c.bx - c.ix)).toFixed(1) + '~'
+        + Math.max(...capInk.map(c => c.bx - c.ix)).toFixed(1) + 'px 왼쪽)');
+  const pc = run(['tools/probe471c.js']);
+  const pcInk = [...pc.matchAll(/^\d+\s+\S+\s+\S*\s+[\d.]+ \/ [\d.]+\s+([\d.]+) \/ ([\d.]+)/gm)]
+    .map(m => ({ r: +m[1], t: +m[2] }));
+  const drift = capInk.length === 6 && pcInk.length === 6
+    ? capInk.map((c, i) => Math.max(Math.abs(c.ix - pcInk[i].r), Math.abs(c.iy - pcInk[i].t))) : null;
+  ok(drift && Math.max(...drift) <= 1,
+    '[T] 시트와 자가 같은 코너를 본다 — `cap471` 잉크 코너 ↔ `probe471c` 글리프 잉크 (≤1px)',
+    drift ? '최대 드리프트 ' + Math.max(...drift).toFixed(2) + 'px' : '자가 6칸을 못 냈다');
 
   console.log('\nVERIFY471 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
   process.exit(fail ? 1 : 0);
