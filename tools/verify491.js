@@ -386,8 +386,15 @@ async function pixelRun(page) {
      '[7-c0] `.jz-hdn` 은 **정적 값**이다 — `animation` 단축을 안 쓴다(그 자리는 488 `jz-hb` 임자)');
   ok(/\.tr-rn,\.tr-tp,\.tr-temp>\.tp-hd,\.tr-temp>\.tp-ft\{transition:scale [^}]*translate/.test(src),
      '[7-c1] 호스트 넷이 같은 트랜지션 한 줄을 공유한다(뗌도 같은 곡선 · `.tr-card` 는 목록 밖)');
-  ok(/@keyframes jzDn\{from\{scale:1;translate:0 0\}to\{scale:\.94;translate:0 8px\}\}/.test(src),
-     '[7-c2] 기존 누름 부품(`jzDn` .94 / 8px)은 한 글자도 안 바뀌었다 — 25자리 회귀 0');
+  /* ⚑ 579 이관 — 이 항은 «누름 부품의 **진폭**(.94 / 8px)이 안 바뀌었다» 를 묻는 자리다(25자리 회귀 0).
+     종전에는 그 진폭이 `@keyframes jzDn` 안에 있어 키프레임 문자열을 그대로 물었는데, 579 가
+     `.jz-dn` 을 **정적 값 + 트랜지션**으로 갈면서(이유는 여기 [7-c0] 과 같다 — 488 맥박이 `animation`
+     단축의 임자다) 그 키프레임이 사라졌다. **묻는 뜻은 그대로 두고 자리만 옮긴다**(333 처방):
+     진폭 두 값과 «`animation` 을 안 쓴다» 를 같이 못박는다 — 헐거워지지 않는다. */
+  const dnRule = (src.match(/\.jz-dn\{([^}]*)\}/) || [])[1] || '';
+  ok(/(^|;)scale:\.94(;|$)/.test(dnRule) && /(^|;)translate:0 8px(;|$)/.test(dnRule) && !/animation:/.test(dnRule),
+     '[7-c2] 기존 누름 부품의 진폭(.94 / 8px)은 한 글자도 안 바뀌었다 — 25자리 회귀 0 (579: 정적 값)',
+     dnRule.slice(0, 80));
   ok(/rtFirstFx\(o\.host\);/.test(src) && /function rtFirstFx\(sel\)\{[\s\S]{0,400}?fxFlash\(h\)[\s\S]{0,200}?fxBurst\(h, FXPAL\.up, 10\)/.test(src),
      '[7-d0] 첫 발 가산 오버레이가 `rtHoldStart` 의 **첫 발 자리**에서 대조군과 같은 부품을 쓴다');
 

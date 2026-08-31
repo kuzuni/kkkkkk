@@ -12783,8 +12783,21 @@
      8px 이면 아랫변도 **+4.6px** 내려가 두 변이 같은 쪽으로 간다 = 눈이 «내려갔다» 로 읽는다.
      ⚠ 값은 «축소가 먹는 절반» 보다 커야 한다는 부등식에서 나온 것이지 취향이 아니다:
        translate > h(1−s)/2. 이 저장소에서 가장 낮은 누름 호스트(h≈40px)도 1.2px 라 8 은 전부 만족한다. */
-  .jz-dn{animation:jzDn .06s ease-out both;filter:brightness(1.10)}
-  @keyframes jzDn{from{scale:1;translate:0 0}to{scale:.94;translate:0 8px}}
+  /* ⚑ 579 — **`animation` 이 아니라 정적 값 + 트랜지션**이다(491 7회차가 `.jz-hdn` 에서 고른 길과 같다).
+     종전 `animation:jzDn .06s both` 은 «누른 것 = 호스트» 인 노드(23 훈련 카드)에서 488 맥박
+     (`jz-hb`/`jz-hbx`)과 **같은 `animation` 단축 자리**를 두고 싸워 **졌다** — 둘 다 특이성 0,1,0 이라
+     뒤에 선언된 `.jz-hb` 가 이기고, 그 프레임에는 누름이 통째로 사라진다(클래스는 붙어 있는데
+     `getComputedStyle(card).scale` 이 `none`).
+     `probe579` 실측(홀드 1.3초 · rAF 전수 표본): 누름이 살아 있는 프레임 **13.0%**(6/46) ·
+     맥박이 겹친 34프레임은 **0장**. 게다가 맥박이 꺼질 때마다 `jzDn` 이 «새 애니메이션» 으로
+     0% 부터 다시 시작해(60ms 램프) 맥박 사이 구간의 절반도 램프였다 — 그래서 «가끔 눌린다» 조차 아니다.
+     ⇒ `scale`/`translate` 는 **개별 변환 속성**이라 맥박의 `transform` 과 곱해진다(.94 × 1.02).
+     ⚠ 값(.94 / 8px)은 한 자도 안 바꿨다 — 누름이 걸리는 25자리의 진폭 회귀 0.
+     ⚠ 트랜지션은 이 규칙 **안**에 적는다: 클래스가 붙는 순간의 after-change 스타일에 있으므로
+       들어갈 때 종전 애니와 같은 0.06s 로 램프하고, 뗌은 `jz-up` 스프링이 0%(.94/8px)에서 이어받는다.
+     ⚠ `jz-sh`(흔들림)·`fx-hit`(팝)처럼 **다른 어휘의 애니메이션**과는 이제 겹쳐도 서로를 안 지운다 —
+       저쪽은 `animation`, 이쪽은 정적 속성이라 층이 다르다. */
+  .jz-dn{scale:.94;translate:0 8px;filter:brightness(1.10);transition:scale .06s ease-out,translate .06s ease-out}
   /* 호스트 목록 — 자기 `filter` 를 가진 유일한 누름 호스트. 그림자를 잃지 않게 곱해서 적는다. */
   .prb-ar.jz-dn{filter:drop-shadow(0 0 1px rgba(0,0,0,.5)) brightness(1.10)}
   /* 뗌 스프링 — 이징을 «전체» 에 걸면 오버슈트 베지어가 1구간에서 1.04 를 **넘겨 버리고**
@@ -37227,6 +37240,13 @@ function jzRelease(){
   if(!jzDown) return;
   const el = jzDown; jzDown = null;
   el.classList.remove('jz-dn');
+  /* ⚑ 579 — 뗌 스프링(`jz-up`)은 이 노드의 `animation` 자리 임자다. «누른 것 = 호스트» 인 자리
+     (23 훈련 카드)는 손을 떼는 순간에도 488 맥박(`jz-hb`/`jz-hbx` 수명 80~100ms)이 살아 있을 수
+     있고, 그러면 같은 단축을 두고 싸워 **스프링이 그 시간만큼 아예 안 돈다**(`probe579` [E] 실측:
+     뗀 뒤 `jz-up` 이 붙은 프레임의 승자가 `jzHb`). 홀드는 이미 끝났고 정산은 `trHoldStop` 이 따로
+     말하므로, 맥박 한 발의 꼬리를 자르고 스프링을 살린다.
+     ⚠ 누른 것 ≠ 호스트인 자리(룬·단련)는 맥박이 **카드**에 붙으므로 이 줄은 무해한 no-op 이다. */
+  el.classList.remove('jz-hb', 'jz-hbx');
   jzOn(el, 'jz-up', 200);
 }
 /* 94 ④ — 비활성 버튼 사유 캡션. `#fxl`(z60, pointer-events:none) 안에 버튼 «위» 로 띄운다.
