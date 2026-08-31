@@ -125,7 +125,13 @@ async function measure(page) {
     MOB_DRAW_SC: (typeof MOB_DRAW_SC !== 'undefined') ? MOB_DRAW_SC : null,
     SK_DRAW_SC: (typeof SK_DRAW_SC !== 'undefined') ? SK_DRAW_SC : null,
     table: { bird: PET_SP.bird.scale, robo: PET_SP.robo.scale, dragon: PET_SP.dragon.scale },
-    faceRight: { bird: !!PET_SP.bird.faceRight, robo: !!PET_SP.robo.faceRight, dragon: !!PET_SP.dragon.faceRight },
+    /* 587 이 «원본 방향» 을 `PET_SP[].faceRight` 에서 `SPRITE_FACE` 한 표로 승격했다 —
+       제품에게 **지금 쓰는 표**를 묻는다(옛 자리는 폴백으로만 남긴다). */
+    faceRight: ['bird', 'robo', 'dragon'].reduce((o, k) => {
+      o[k] = (typeof faceFlip === 'function') ? !faceFlip(k, PET_SP[k].anim, true) : !!PET_SP[k].faceRight;
+      return o;
+    }, {}),
+    faceOnPetSp: ['bird', 'robo', 'dragon'].some(k => 'faceRight' in PET_SP[k]),
     unitSc: { arena: unitSc('arena'), zombie: unitSc('zombie'), boss: unitSc('boss') },
     petCd: (typeof PET_CD !== 'undefined') ? PET_CD.slice() : null
   }));

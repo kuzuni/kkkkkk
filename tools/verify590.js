@@ -125,11 +125,18 @@ const src = fs.readFileSync(SRC, 'utf8');
   eq('[D3] `PET_DRAW_SC` 가 판정·밸런스 자리에 안 샌다(그리기·그림자 2곳 + 선언 1곳뿐)',
      (src.match(/PET_DRAW_SC/g) || []).length, 5);
 
-  /* ─────────── [E] 587 불변 ─────────── */
-  eq('[E1] `PET_SP[].faceRight` 표 불변(587 이 승격할 그 표 — 이 행은 안 건드린다)',
+  /* ─────────── [E] 587 불변 ───────────
+     ⚑ **이관(2026-08-31)** — 이 절은 처음에 `PET_SP[].faceRight` 를 물었는데, 같은 날 **587 이 그 표를
+     걷어내고 `SPRITE_FACE` 한 표로 승격**했다(두 벌 금지). 항을 눌러 초록으로 되돌리는 대신
+     **새 진실로 갈아 끼운다**(333·329 처방): 묻는 것은 여전히 «펫의 원본 방향이 이 행 때문에 흔들리지
+     않았는가» 이고, 출처만 587 이 정한 자리로 옮겼다. [E3] 이 «옛 자리가 실제로 비었는가» 를 같이 묻는다 —
+     안 물으면 `faceRight` 가 되살아나 표가 두 벌이 돼도 이 절은 초록이다. */
+  eq('[E1] 펫 원본 방향(`SPRITE_FACE` 경유) 불변 — 이 행은 587 의 표를 안 건드린다',
      JSON.stringify(now.consts.faceRight), JSON.stringify(neg.consts.faceRight));
-  eq('[E2] 펫 flip 이 여전히 `faceRight` 를 지난다',
-     /p\.flip\s*=\s*p\.sp\.faceRight\s*\?/.test(src), true);
+  eq('[E2] 펫 flip 이 587 의 공용 `faceFlip()` 을 지난다',
+     /p\.flip\s*=\s*faceFlip\(p\.akey,\s*p\.anim,\s*tgt\.x\s*>\s*p\.x\)/.test(src), true);
+  eq('[E3] 원본 방향이 **한 표에만** 있다 — `PET_SP` 에 `faceRight` 가 되살아나지 않았다',
+     now.consts.faceOnPetSp, false);
 
   /* ─────────── [F] 겹침 — 수리 전보다 나쁘지 않다 ─────────── */
   ok('[F0] 수리 전 프로필(사본) — 최대 · 평균 · 한 마리',
