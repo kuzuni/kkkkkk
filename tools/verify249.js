@@ -64,8 +64,14 @@ const near = (name, got, want, tol) =>
    [D] 관문·[F] 실동작·sim249 ⑭ 는 값이 안 변하고, [B][C] 의 «구간 안 동일» 만 «구간 안 = 정확히
    램프 비율» 로 방향을 바꾼다(333 처방 — M1·BAND 와 같은 꼴). 스윕 근거는 199 review §4
    (γ 0→0.35 × GATE 스윕 · 상승면 0.36% → 9.33% · 벽 12 불변 · GATE↑ 기각). */
+/* ⚑ 199 6회차 이관(2026-08-31) — **BAND·GATE_N 80 → 40 원복.** 5회차의 80 은 벽 «개수» 를
+   목표에 맞췄지만 3인 전원이 ① 을 3·3·4 로 막았다: 이 상수는 경계 점프 R^(1−RAMP·(B−1)/B)
+   (B 80 → ×2,155 · B 40 → ×47)를 통째로 정하고, ×2,155 이빨 하나(s640)가 30일의 29.5% 를
+   먹어 «9일 칸» 을 삼켰다. 40 에서 ① 목표 칸 적중 3 → 6/8 · 첫 벽 754 → 525분 ·
+   간격 기하평균 1.69 → 1.47. 항은 여기서도 안 지운다 — 값만 199 확정값을 따라간다
+   (3·5회차 선례 · 표본은 아래에서 C.BAND 파생이라 자동으로 따라온다). 근거 review §6-1·§6-2. */
 const C = { K:0.888, KNEE:80, M1:1.020, M2:1.127, A:0.5872, HB:55, DB:6,
-            BAND:80, GATE_N:80, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
+            BAND:40, GATE_N:40, GATE_HP:1.44, BOSS_HP:11, BOSS_DMG:22, RAMP:0.2 };
 const smooth = a => (1 + C.K*(a-1)) * Math.pow(C.M1, Math.min(a, C.KNEE)-1) * Math.pow(C.M2, Math.max(0, a-C.KNEE));
 const eband  = s => Math.max(1, C.BAND*Math.floor(s/C.BAND));
 const wScale = s => { const a = eband(s);
