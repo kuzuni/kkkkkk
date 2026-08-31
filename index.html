@@ -3678,14 +3678,20 @@
        사다리가 세로로도 겹친다(`verify488` [H] 가 재는 자리). lone 만 자기 키프레임을 쓴다. */
   .fx-plus.hb.lng{animation-name:fxHbLng}
   .fx-plus.hb.dn.lng{animation-name:fxHbLngDn}
+  /* ⚠ 6회차 후반 — **이동 거리는 호스트가 정한다**(`--hb-rise`, 기본 48px). 48 을 상수로 박았더니
+     비평가 CE 가 곧바로 잡았다: 단련 헤더는 **88px 띠**라 잉크 43px 가 48px 올라가면 800ms 시점에
+     상변이 헤더 위 테두리에 얹힌다(CE 「hold y48..77 = 30px · 위 4px(11.8%)이 평평하게 잘린 것처럼
+     보인다」). 산수로 닫히지 않는다 — 안쪽 면 8..80 에 «시작 L+43 ≤ 80» 과 «끝 L−48 ≥ 8» 은 동시에
+     못 선다. ⇒ 큰 호스트(카드 700px · 행 222px)는 48 그대로, **헤더만 22px**(끝 12..55 로 안쪽 면 안).
+     키프레임 안의 `var()` 는 요소마다 풀리므로 부품은 하나로 남는다. */
   @keyframes fxHbLng{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
-    8%{opacity:1;transform:translate(-50%,-7px) scale(1)}
-    72%{opacity:1;transform:translate(-50%,-34px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,-48px) scale(.98)}}
+    8%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * -.146)) scale(1)}
+    72%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * -.708)) scale(1)}
+    100%{opacity:0;transform:translate(-50%,calc(var(--hb-rise,48px) * -1)) scale(.98)}}
   @keyframes fxHbLngDn{0%{opacity:.6;transform:translate(-50%,0) scale(.9)}
-    8%{opacity:1;transform:translate(-50%,7px) scale(1)}
-    72%{opacity:1;transform:translate(-50%,34px) scale(1)}
-    100%{opacity:0;transform:translate(-50%,48px) scale(.96)}}
+    8%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * .146)) scale(1)}
+    72%{opacity:1;transform:translate(-50%,calc(var(--hb-rise,48px) * .708)) scale(1)}
+    100%{opacity:0;transform:translate(-50%,calc(var(--hb-rise,48px) * 1)) scale(.96)}}
 
   /* 알약 근처 `+1,234` 플로팅 텍스트 */
   /* 24회차 — 23차 비평 AN·AP 가 2인 공통으로 «세 씬 간 글자 크기 일관성이 깨졌다» 를 냈다
@@ -12855,7 +12861,8 @@
      ⚠ 맥박 진폭도 같이 신고한다 — 헤더는 룬 카드와 **같은 998폭**이라 기본 1.06 이면 1057.9 로
        그릇 `.tr-box` 안폭 1046 을 11.9px 넘는다(위 [G] 규약). 1.02 = 1018 ≤ 1046 · 세로는 +0.9px 씩이라
        아래 첫 행과의 틈 14px 안에 든다. */
-  .tr-temp>.tp-hd{--hb-s:1.02;--hb-y:34;--hb-x:.475;--hb-y2:34;--hb-x2:.475;--hb-slots:2;--hb-sw:24;--hb-mw:200}
+  .tr-temp>.tp-hd{--hb-s:1.02;--hb-y:34;--hb-x:.475;--hb-y2:34;--hb-x2:.475;--hb-slots:2;--hb-sw:24;--hb-mw:200;
+    --hb-rise:22px}
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
      (`--hb-x` 는 호스트 폭에 대한 비율이라 1 을 넘어도 된다 — 그래서 카드 어디로든 보낼 수 있다).
      `.skd` 자식 실측: `.sk-ic` 24–173(x25–174) · `.sk-gr` 35–85(x216–426) · `.sk-lv` 103–173 ·
@@ -35873,6 +35880,11 @@ function hbFloat(host, txt, kind, lone){
   const sw   = hbSlotW(r.w, n, num('--hb-sw', NaN));
   d.style.left = (r.x + r.w * cx + ((i % n) - (n - 1) / 2) * sw) + 'px';
   d.style.top  = (r.y + lane) + 'px';
+  /* ⚠ 6회차 — **`--hb-rise` 는 «상속» 으로 못 받는다.** 이 노드는 `#fxl`(오버레이) 자식이지 호스트의
+     자손이 아니다 — 커스텀 속성은 DOM 을 타고 내려오므로, 호스트에만 적으면 키프레임의 `var()` 가
+     기본값 48px 로 떨어진다(6회차에 실제로 그렇게 났다: `verify491` [6-l] 이 «잉크가 헤더 위 테두리에
+     얹힌다» 로 빨갛게 잡았다). 자리 값들과 **같은 길**로 — 호스트에서 읽어 노드에 직접 적는다. */
+  { const rise = num('--hb-rise', NaN); if(Number.isFinite(rise)) d.style.setProperty('--hb-rise', rise + 'px'); }
   d.textContent = txt;
   L.appendChild(d);
   /* ⚑ 4회차 계측 — **애니메이션이 붙자마자 시작하지 않는다.** 노드를 넣어도 CSS 애니메이션의

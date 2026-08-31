@@ -310,7 +310,9 @@ async function pixelRun(page) {
        [충전]은 발이 하나뿐이라 그 한 장의 수명이 곧 «결과가 남아 있는 시간» 이다(CA·CB 2인 공통 1순위). */
     const inkAt = () => pg.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
       .filter(n => +getComputedStyle(n).opacity > 0.08)
-      .map(n => ({ t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2), oh: n.offsetHeight })));
+      .map(n => { const r = n.getBoundingClientRect();
+                  return { t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2), oh: n.offsetHeight,
+                           y1: r.y, y2: r.y + r.height }; }));
     const flHold = await inkAt();
     await pg.mouse.up();
     await pg.waitForTimeout(140);
@@ -344,6 +346,10 @@ async function pixelRun(page) {
       ok(h.flUp.length >= 1 && h.flUp.every(n => n.a > 0.08),
          '[6-k] ★ 뗀 뒤 140ms(비평 `-up` 프레임 ≈940ms)에도 남아 있다',
          JSON.stringify(h.flUp.map(n => n.t + ' α' + n.a)));
+      ok(h.flHold.length >= 1 && h.flHold.every(n => n.y1 >= h.g.hd.y + 6 && n.y2 <= h.g.hd.y + h.g.hd.height - 6),
+         '[6-l] ★ 800ms(가장 높이 떠오른 자리)에도 잉크가 헤더 안쪽 면(테두리 8px 안) 안이다 — 상변에 안 얹힌다',
+         JSON.stringify(h.flHold.map(n => Math.round(n.y1) + '..' + Math.round(n.y2))) + ' in '
+         + Math.round(h.g.hd.y + 6) + '..' + Math.round(h.g.hd.y + h.g.hd.height - 6));
       ok(/const TEMPER_PT_COST\s*=\s*1;/.test(src),
          '[6-i] ★ 줄기가 하나인 **전제**(단련석 → 포인트 1:1)가 소스에 그대로다 — 199 가 전환비를 바꾸면 여기가 먼저 빨개진다');
       ok(h.fl.length >= 1 && h.fl.every(n => n.x >= h.g.pv.x + h.g.pv.width - 1 && n.x + n.w <= h.g.b.x + 1),

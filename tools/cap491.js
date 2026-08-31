@@ -52,6 +52,11 @@ const SCENES = [
   const made = [];
   for (const s of SCENES) {
     await page.evaluate(k => { if (!$('trw').classList.contains('on')) openTrain(); setTrSub(k); renderTrain(); }, s.tab);
+    /* ⚠ 6회차 — **장면 사이에 `#fxl` 을 비운다.** 5회차에 «한 발» 수명을 1.3s 로 늘리자 앞 장면의
+       플로터가 다음 장면의 `-idle`·`-down` 프레임까지 살아 넘어왔다 — CF 「tempchg `-up` 에
+       «+1,000,000» 이 헤더와 **공격력 단련 행**에 하나씩 = +2,000,000 으로 오독된다」가 그것이고,
+       그 행 좌표(y258-291)는 **앞 장면(tempup)의 사다리 자리**다. 제품이 아니라 캡처의 잔상이다. */
+    await page.evaluate(() => { const L = document.getElementById('fxl'); if (L) L.innerHTML = ''; });
     await page.waitForTimeout(450);
     const box = await page.evaluate(() => {
       const b = document.querySelector('#trw .tr-box').getBoundingClientRect();
@@ -95,10 +100,15 @@ const SCENES = [
        하네스**였다: [충전]은 1패스에서 «보유분 전부» 를 이미 바꿔서, 2패스의 탭은 재고가 0 이라
        `once()` 가 false 를 돌려 **beat 자체가 안 난다.** 즉 그 0px 은 «수명이 짧다» 가 아니라
        «아무 일도 안 일어난 탭» 을 찍은 것이다(자를 고치는 쪽이 맞다 — `verify491` [6-k] 는 같은 시각에
-       α 0.46 을 재고 있었고 둘이 어긋난 이유가 이것이다). 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다. */
-    await page.evaluate(() => { S.gold = 1e18; S.dia = 1e9; S.rstone = 1e6; S.tstone = 1e6;
-                                if (S.temper) S.temper.pts = 500; renderTrain(); });
-    await page.waitForTimeout(300);
+       α 0.46 을 재고 있었고 둘이 어긋난 이유가 이것이다). 두 패스의 상태 차이는 «시도 1회» 뿐이어야 한다.
+       ⚠ **[충전] 에서만 되돌린다.** 6회차에 네 재화를 다 되돌려 봤더니 비평가 CF 가 곧바로 잡았다 —
+       룬·투자·훈련은 1패스의 홀드가 레벨·잔액을 실제로 여러 칸 움직이는데 2패스에서 그것을 되돌리면
+       `-up` 프레임의 숫자가 `-hold` 보다 **뒤로 간다**(CF 「Lv.7 인데 잔액이 down 비트맵과 0px 동일 =
+       스테일 라벨 롤백」). 되돌림이 필요한 것은 «재고를 한 번에 다 쓰는» 이 버튼 하나뿐이다. */
+    if (s.id === 'tempchg') {
+      await page.evaluate(() => { S.tstone = 1e6; renderTrain(); });
+      await page.waitForTimeout(300);
+    }
     /* 2패스 — 캡처가 끼지 않은 «진짜» 짧은 탭 */
     await page.mouse.down();
     await page.waitForTimeout(60);
