@@ -51,6 +51,16 @@ const STEPS = [
          `probe471` 은 같은 자리를 `animation:'none'`(= base)으로 잰다 ⇒ **두 자가 다른 것을 보고 있었다**
          (385 «자매 자 드리프트»). 시트 쪽을 자에 맞춘다. */
       h.querySelectorAll('.updot,.bdg,s.dot,.dot').forEach(d => { d.style.animation = 'none'; });
+      /* ⚑⚑ 7회차 (550 «드레인» 의 재발) — **조상의 등장 애니가 호스트를 움직인다.**
+         6회차 비평가 BW·BX 가 «15 장비 슬롯은 십자선이 빈 여백에 떠 있고 점은 22px 아래» 로
+         일치했는데 `probe471` 은 같은 자리를 11/11 로 읽었다 — 두 자가 갈리면 자를 의심한다.
+         뿌리: `.eqsl.s1{top:calc(134px + 0.09502 × (100% − 160px))}` 이라 **부모 높이가 애니 중이면
+         상자가 세로로 움직이는데**, 위 줄은 호스트 «자신의 subtree» 만 멎게 하고 조상은 안 멎게 했다.
+         측정과 촬영 사이에 자리가 바뀌면 십자선만 옛 자리에 남는다(3회차 십자선 결함의 재발형).
+         ⇒ **조상 쪽 애니도 끝 프레임에 세운다**(`probe471` 은 이미 멎은 뒤에 읽는다 — 자매 자를 맞춘다). */
+      for (let a = h.parentElement; a; a = a.parentElement) {
+        a.getAnimations().forEach(an => { try { an.pause(); an.currentTime = (an.effect.getTiming().duration || 0); } catch (_) {} });
+      }
       let r = h.getBoundingClientRect();
       /* ⚑ 3회차 — 스크롤 그릇 밖으로 밀려난 자리(35 패스 보상 칸)는 «상자 없음» 으로 조용히 빠져
          **빈 칸이 채점에 실렸다**(1회차 비평이 빈 칸 셋을 «가장 나쁜 자리» 로 꼽았던 그 사고).
@@ -63,6 +73,21 @@ const STEPS = [
       /* ⚑ 4회차 비평(BV) — «03 메뉴 버튼 닷만 바깥지름 45.6 = 선언 40 의 1.14배, 맥박 잔재 의심».
          눈으로만 재던 값을 **시트 자신이 텍스트로 같이 뱉게** 한다(자를 자로 검산 — 385 처방).
          맥박 봉우리면 여기 40 이 아니라 45.6 이 찍힌다. */
+      /* ⚑⚑ 7회차 — **잉크 호스트는 십자선을 «상자» 코너에 그리면 안 된다.**
+         `.ibtn{background:none}` 이라 상자를 아무도 안 칠하고 보이는 것은 이모지+라벨뿐이라,
+         4회차가 `--dot-in-x/y` 를 **잉크 기준 11/11** 이 되게 20/7 로 옮겨 놓았다
+         (`verify471` [F] · `probe471 --ink`). 그런데 이 시트는 십자선을 상자 코너에 그려
+         **제품이 겨눈 자리가 아닌 곳**을 «코너» 라고 보여 줬고, 6회차 비평가 BW·BX 가
+         독립으로 «19.4px 안쪽 = 걸침 소실» 을 읽었다 — 주어진 그림 안에서는 옳은 읽기다.
+         ⇒ 잉크 호스트는 **칠해진 화소의 우상단**을 코너로 삼는다. 상자 코너도 회색 점선으로
+         같이 그려 «둘이 왜 다른가» 를 그림이 말하게 한다(라벨에도 적는다). */
+      const INK = ['ibtn'];
+      let ink = null;
+      if (INK.some(c => h.classList.contains(c))) {
+        const kids = [...h.children].filter(e => !e.matches('.updot,.bdg,s.dot,.dot'));
+        kids.forEach(e => { const b = e.getBoundingClientRect(); if (!b.width) return;
+          ink = ink ? { r: Math.max(ink.r, b.right), t: Math.min(ink.t, b.top) } : { r: b.right, t: b.top }; });
+      }
       const d0 = h.querySelector('.updot,.bdg,s.dot,.dot');
       /* ⚑ 6회차 — 호스트에 점등 클래스를 얹어도 **다시 그려지면서 벗겨지는** 자리가 있다
          (사이드 `promo`·`coll` 칸이 그랬다: `.on` 을 얹었는데 촬영 시점엔 `display:none`).
@@ -71,6 +96,7 @@ const STEPS = [
       if (d0 && getComputedStyle(d0).display === 'none') d0.style.display = 'block';
       const dr = d0 ? d0.getBoundingClientRect() : null;
       return { x: r.left, y: r.top, w: r.width, h: r.height, n: all.length,
+        ix: ink ? ink.r : null, iy: ink ? ink.t : null,
         dw: dr && dr.width ? Math.round(dr.width * 100) / 100 : null };
     }, [hostSel, idx || 0]);
     if (!box) { console.log('  (건너뜀) ' + label + ' — 상자 없음'); return; }
@@ -83,7 +109,10 @@ const STEPS = [
           모든 칸을 같은 배율로 붙인다. 코너 걸침만 보는 채점이라 이 창이면 충분하고, 칸끼리
           «몇 px 안쪽인가» 를 눈으로 직접 견줄 수 있다. */
     const WIN = 240;
-    const cxr = box.x + box.w, cyr = box.y;
+    /* 7회차 — 잉크 호스트는 «칠해진 화소» 의 우상단이 제품이 겨눈 코너다(위 주석). */
+    const cxr = box.ix === null || box.ix === undefined ? box.x + box.w : box.ix;
+    const cyr = box.iy === null || box.iy === undefined ? box.y : box.iy;
+    const bxr = box.x + box.w, byr = box.y;   /* 상자 코너 — 회색 점선으로 같이 그린다 */
     const clip = { x: Math.max(0, Math.min(1080 - WIN, cxr - WIN * 0.62)),
                    y: Math.max(0, Math.min(2280 - WIN, cyr - WIN * 0.38)),
                    width: WIN, height: WIN };
@@ -94,8 +123,13 @@ const STEPS = [
        코너가 창 안 196·190 에 오는데 십자선은 148.8 에 그려졌다 ⇒ 사람 눈에는 점이 코너에서
        **67·57px 밖으로 떨어진 것**으로 보인다(BR 실측과 정확히 일치 — 제품은 둘 다 11px 이다).
        ⇒ 십자선 자리를 **창 안의 실제 코너 좌표**로 같이 실어 보낸다. */
-    shots.push({ label, note, b64: buf.toString('base64'), w: clip.width, h: clip.height,
-      fx: (cxr - clip.x) / clip.width, fy: (cyr - clip.y) / clip.height });
+    const isInk = box.ix !== null && box.ix !== undefined;
+    shots.push({ label: label + (isInk ? '  [잉크 코너 기준]' : ''),
+      note: isInk ? (note ? note + ' · ' : '') + '실선 = 칠해진 그림의 코너(제품이 겨눈 곳) · 점선 = 빈 상자 코너' : note,
+      b64: buf.toString('base64'), w: clip.width, h: clip.height,
+      fx: (cxr - clip.x) / clip.width, fy: (cyr - clip.y) / clip.height,
+      bx: isInk ? (bxr - clip.x) / clip.width : null,
+      by: isInk ? (byr - clip.y) / clip.height : null });
     console.log('  ' + label.padEnd(28) + Math.round(box.w) + '×' + Math.round(box.h)
       + ' @ (' + Math.round(box.x) + ',' + Math.round(box.y) + ')'
       + '  닷Ø' + (box.dw === null ? '—' : box.dw) + (note ? '  ' + note : ''));
@@ -218,23 +252,24 @@ const STEPS = [
      26 펫·50 코스튬은 한 칸도 없었다** — 주인이 보고 있는 자리가 채점표에 아예 없었던 것이다.
      세 시트가 같은 부품을 공유한다는 것은 «한 장만 봐도 된다» 는 뜻이 아니다(411 교훈:
      «따로 보면 셋 다 그럴듯하다» — 나란히 놓아야 어긋남이 보인다). */
-  await arm('#bSk .sk-slot');
-  await wait(200);
-  await grab('20 07 스킬 장착슬롯', '#bSk .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
+  /* ⚑⚑ 7회차 — **장착 슬롯 줄(`.sk-slot`)은 시트에서 뺐다.** 6회차에 «주인이 «슬롯» 이라 했으니
+     슬롯을 싣자» 며 `arm()` 으로 닷 노드를 **만들어 붙였는데**, 제품은 `.sk-slot` 에 레드닷을
+     **한 번도 안 만든다**(`updot` 을 뱉는 자리는 `canLevel(it)` 카드 31797·31900 과
+     `.sk-btn` 31818·31919 뿐이다). ⇒ 비평가 둘이 **존재할 수 없는 그림**을 채점했고, 둘 다
+     «링이 흰 배지를 4.0/8.1px 덮는다» 로 감점했다. 그 지적 자체는 **설계 사실로서 유효**하므로
+     버리지 않고 review §11-5 ② 에 남겼다(훗날 슬롯에 닷을 다는 지시가 오면 그 자리부터 본다).
+     ⚠ **«강제 점등»(좌표를 재려고 켜는 것)과 «이 화면에 원래 닷이 있는가» 는 다른 질문이다.**
+        섞으면 이번 같은 일이 또 난다. 카드(22·24)는 실제로 닷이 뜨는 자리라 남긴다. */
   await ev(async () => { heroSubGo('pet'); });
   await wait(650);
-  await arm('#bPet .sk-slot');
   await arm('#bPet .sk-card');
   await wait(250);
-  await grab('21 26 펫 장착슬롯', '#bPet .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
-  await grab('22 26 펫 카드', '#bPet .sk-card', '6회차 신설');
+  await grab('22 26 펫 카드', '#bPet .sk-card', '6회차 신설 — 주인 지목 시트');
   await ev(async () => { heroSubGo('cos'); });
   await wait(650);
-  await arm('#bCos .sk-slot');
   await arm('#bCos .sk-card');
   await wait(250);
-  await grab('23 50 코스튬 장착슬롯', '#bCos .sk-slot', '주인 지목 «슬롯» — 6회차 신설');
-  await grab('24 50 코스튬 카드', '#bCos .sk-card', '6회차 신설');
+  await grab('24 50 코스튬 카드', '#bCos .sk-card', '6회차 신설 — 주인 지목 시트');
   /* 21 도감 세트별 [강화] — 516 이 471 5회차 «뒤에» 만든 여섯 번째 예외(가로만 16). 시트에 없었다. */
   await ev(async () => { openColl21(); });
   await wait(650);
@@ -299,6 +334,16 @@ const STEPS = [
       g.moveTo(ox + w * fx, oy); g.lineTo(ox + w * fx, oy + h);
       g.moveTo(ox, oy + h * fy); g.lineTo(ox + w, oy + h * fy);
       g.stroke();
+      /* 7회차 — 잉크 호스트는 «빈 상자» 코너도 회색 점선으로 같이 그린다.
+         둘이 왜 다른지를 그림이 스스로 말해야 비평가가 자를 의심하지 않는다. */
+      if (o.bx !== null && o.bx !== undefined) {
+        const bfx = clampF(o.bx), bfy = clampF(o.by);
+        g.save(); g.setLineDash([6, 6]); g.strokeStyle = 'rgba(170,175,185,.75)';
+        g.beginPath();
+        g.moveTo(ox + w * bfx, oy); g.lineTo(ox + w * bfx, oy + h);
+        g.moveTo(ox, oy + h * bfy); g.lineTo(ox + w, oy + h * bfy);
+        g.stroke(); g.restore();
+      }
     });
     return c.toDataURL('image/png');
   }, shots);
