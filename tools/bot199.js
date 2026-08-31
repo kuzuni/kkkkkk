@@ -1079,7 +1079,10 @@ function writeReport(rep) {
     /* ⚑ 5회차 비평 3인 일치 — «적중 n/8 · 첫 벽 · 간격 기하평균» 은 ① 의 채점 축인데 표에 없어서
        회차마다 손으로 세다가 빠졌다(5회차 §5-5 가 셋 다 누락). 자가 매번 찍는다.
        주인 목록(분): 30 · 180 · 1440 · 3600 · 7200 · 12960 · 21600 · 36000 (간격 ×1.4) · ±20%. */
-    const TARGET = [30, 180, 1440, 3600, 7200, 12960, 21600, 36000];
+    /* ⚑ 199 9회차 정정(AA 반박5) — §0 의 11칸 중 8칸만 적혀 있었다. 40·65·100일 칸(57,600 ·
+       93,600 · 144,000분)이 빠져, 120일 표가 그 자리의 벽 4개+를 «창 밖» 으로 세었다(창밖 16 은
+       ~25% 과대). 30일 표는 `t <= days*1440` 필터로 그 칸들을 원래 못 보므로 **Δ0** 이다. */
+    const TARGET = [30, 180, 1440, 3600, 7200, 12960, 21600, 36000, 57600, 93600, 144000];
     /* ⚑ 199 7회차 — ① 의 자 두 곳을 주인 목록에서 **역산한 값**으로 바꾼다(6회차 비평 P·Q).
        ⓐ **분모** — 30분·3h 칸은 **첫 접속 이전**이다(부지런 첫 로그인 480분 · 대충 1,260분).
           봇이 아직 한 분도 안 논 시각에 벽이 설 길이 없으므로 그 두 칸은 «못 맞힌 것» 이 아니라
@@ -1090,7 +1093,8 @@ function writeReport(rep) {
           «×1.4» 는 주인이 말한 «간격이 커진다» 의 어림수였고, 자는 **목록에서 역산한 값**을 쓴다. */
     const gmOf   = (a) => a.length < 2 ? 0
       : Math.pow(a[a.length - 1] / a[0], 1 / (a.length - 1));
-    const SPAN_T8 = gmOf(TARGET);                          /* 2.754 */
+    const TARGET8 = TARGET.slice(0, 8);   /* 9회차 — «옛 자» 줄은 8칸 시절 그대로 얼린다 */
+    const SPAN_T8 = gmOf(TARGET8);                         /* 2.754 */
     const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band));
     /* ⚑ 199 8회차 — ① 의 자를 **네 곳** 고친다(7회차 비평 S·U 독립 일치 · 정정7·9·10).
        7회차까지의 ① 은 «점수를 못 매기는 자» 였고, 5·6·7회차가 세 번 연속 그 위에서 계수를 돌렸다.
@@ -1184,7 +1188,7 @@ function writeReport(rep) {
       return list.filter(t => t <= rep.days * 1440
         && ws.some(w => Math.abs(w.min - t) <= 0.2 * t)).length;
     };
-    const hit8Of = (r) => hitOld(TARGET, r);
+    const hit8Of = (r) => hitOld(TARGET8, r);
     const spanOf = (r) => {           /* ⓒ 지수 «칸 개수−1» · ⓘ 끝점은 **배정된** 벽 */
       const ws = seatedOf(r);
       if (ws.length < 2 || REACH.length < 2) return 0;
@@ -1193,7 +1197,7 @@ function writeReport(rep) {
     const firstOf = (r) => { const ws = seatedOf(r); return ws.length ? Math.round(wallT(ws[0])) : 0; };
     const firstAnyOf = (r) => { const ws = wallsOf(r); return ws.length ? Math.round(wallT(ws[0])) : 0; };
     const tgtN  = REACH.length;
-    const tgtN8 = TARGET.filter(t => t <= rep.days * 1440).length;
+    const tgtN8 = TARGET8.filter(t => t <= rep.days * 1440).length;
     /* ⓙ §0 대조는 «창 밖» 줄로만 한다. ⓛ 널 기준선(V·X 독립 일치) — ±20% 창들이 측정 구간의
        몇 %를 덮는지, 그래서 «아무 데나 뿌렸을 때» 기대 적중이 몇인지 같이 찍는다.
        그 값이 곧 이 점수의 바닥이다(부지런 창 합 76.67% ⇒ 기대 3.68/6). */
