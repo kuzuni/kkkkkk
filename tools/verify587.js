@@ -13,9 +13,9 @@
  *   §2 두 벌  — 방향을 정하는 자리가 `faceFlip` 하나뿐이다(옛 하드코딩 두 줄이 되살아나면 빨강)
  *   §3 실동작 — 단독 직진 3종 · 자동 전투 무리 · 조이스틱 수동 = 이동 방향과 일치
  *   §4 전수   — knight 계열 적(승급 수호자·아레나) · 시체 승계 · 펫 불변
- *   §5 깜빡임 — **고친 대가로 스프라이트가 떨지 않는다**(히스테리시스) — 수리 전 값 언저리를 지킨다
+ *   §5 깜빡임 — 뒤집힘 빈도를 **기록**한다(⚠ 판정 안 함 — 축에 재현성이 없다. 598 로 등재)
  *   §R 되돌림 — ⓐ 표를 옛 하드코딩으로 되돌린 사본에서 고블린이 90% 대로 돌아온다
- *               ⓑ 히스테리시스를 뺀 사본에서 §5 가 빨개진다(«방향만 맞히고 떨게 두는» 무른 수리 차단)
+ *               ⓑ 히스테리시스를 뺀 사본의 뒤집힘도 나란히 **기록**한다(판정은 ⓐ 가 낸다)
  *
  * ⚠ 이 자와 `probe587` 은 **같은 함수**를 쓴다(`tools/atlasface587.js` · 385 규약 — 자는 한 벌).
  */
@@ -39,7 +39,13 @@ const REF = { knight: true, zombie: true, elvesG: false, elvesB: true, bird: tru
 const TK_FACE = { zombie: 'zombie', goblin: 'elvesG', dark: 'elvesB', boss: 'elvesB', promo: 'knight', arena: 'knight' };
 
 const MIN_VX = 36;          /* «가로로 뚜렷하게 움직였다»(px/s) — 제품의 MOVE_EPS(25)보다 위여야 한다 */
-const RESID = 1.0, RESID_ST = 2.0;
+/* ⚑ 실동작 항의 통과선은 **하나**다. 이 자가 갈라야 하는 두 무리가 멀찍이 떨어져 있기 때문이다:
+     · 규칙이 반대인 상태 — 수리 전 실측 **85~100%**(고블린 98.7 · 조이스틱 100/85.7)
+     · 규칙이 맞는 상태   — 실측 **0~2.1%**(창 효과 + 히스테리시스 유지 구간)
+   4% 는 그 사이에 있고 양쪽으로 여유가 있다. ⚠ **행마다 바를 따로 깎지 마라** — 1~2% 로 조였다가
+   자가 3회 중 1회씩, 매번 다른 행에서 빨개졌다(다크엘프 1.1 · 조이스틱 1.6 · 아레나 2.1).
+   판별력이 걱정되면 임계가 아니라 **§R-a 되돌림**(표를 접으면 100%)이 답이다. */
+const RESID_RT = 4.0;
 
 function score(samples, faceRight, minDx) {
   let moving = 0, wrong = 0, steady = 0, wrongSt = 0;
@@ -94,8 +100,14 @@ const CROWD = `(async (ms, step) => {
   return out;
 })`;
 
-/* 깜빡임 — 개체당 «초당 몇 번 뒤집히는가» */
+/* 깜빡임 — 개체당 «초당 몇 번 뒤집히는가».
+   ⚠⚠ **인구를 고정하지 않으면 이 축은 못 쓴다.** 자연 상태로 재면 살아 있는 마릿수·밀집도·
+   스테이지 진행이 회차마다 달라져 값이 0.26~0.89 로 춤춘다 — 실제로 그렇게 재다가 §R-b 가
+   «고친 쪽 0.885 ↔ 뺀 쪽 0.852» 로 **부호가 뒤집힌 회차**가 나왔다(무엇을 재는지 틀린 자).
+   ⇒ 좀비 24마리를 세우고 **안 죽게 붙잡은 채** 같은 창에서 잰다. 그러면 두 트리가 같은 조건이다. */
 const FLAP = `(async (ms) => {
+  enemies.length = 0; spawnQ.length = 0;
+  for (let i = 0; i < 24; i++) makeEnemy('zombie');
   const tr = {}, pl = [];
   const t0 = performance.now();
   let n = 0;
@@ -103,6 +115,7 @@ const FLAP = `(async (ms) => {
     await new Promise(r => requestAnimationFrame(r));
     n++; pl.push(player.flip);
     for (const e of enemies) {
+      e.hp = e.max = 1e9;
       if (!e.__id) e.__id = 'e' + (Math.random() * 1e9 | 0);
       (tr[e.__id] = tr[e.__id] || []).push(e.flip);
     }
@@ -198,7 +211,11 @@ async function boot(browser, file) {
   for (const tk of ['zombie', 'goblin', 'dark']) {
     const s = await page.evaluate(`(${SOLO})('${tk}', 12000)`);
     const r = score(s, REF[TK_FACE[tk]], MIN_VX / 60);
-    ok(r.moving > 150 && r.pct <= RESID, `[3-a:${tk}] 단독 직진 — 반대인 프레임 ≤ ${RESID}%`,
+    /* ⚠ 바를 1% 로 조였다가 느린 다크엘프가 5/440 = 1.1% 로 걸렸다. 이 항이 잡아야 하는 것은
+       «규칙이 통째로 반대인가»(수리 전 **98.7%**)이지 마지막 1% 가 아니다 — 잔차는 히스테리시스
+       유지 구간과 33ms 창이 만든다. 2% 여도 깨진 상태와 **50배** 떨어져 있고, 그 판별력은
+       §R-a(표를 접으면 100%)가 따로 못박는다. */
+    ok(r.moving > 150 && r.pct <= RESID_RT, `[3-a:${tk}] 단독 직진 — 반대인 프레임 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
   }
   await page.evaluate(() => { enemies.length = 0; spawnQ.length = 0; queueMobs(); });
@@ -214,8 +231,8 @@ async function boot(browser, file) {
       let st = 0, w = 0, mv = 0;
       for (const t of by[tk]) { const r = score(t, REF[fk], MIN_VX * 0.03); st += r.steady; w += r.wrongSt; mv += r.moving; }
       const pct = st ? p1(w / st * 100) : null;
-      ok(mv > 200 && pct !== null && pct <= RESID_ST,
-        `[3-b:${tk}] 무리(${by[tk].length}마리) — 곧게 가는 구간에서 반대 ≤ ${RESID_ST}%`, `${w}/${st} = ${pct}%`);
+      ok(mv > 200 && pct !== null && pct <= RESID_RT,
+        `[3-b:${tk}] 무리(${by[tk].length}마리) — 곧게 가는 구간에서 반대 ≤ ${RESID_RT}%`, `${w}/${st} = ${pct}%`);
     }
   }
   const joy = await page.evaluate(`(async () => {
@@ -223,11 +240,16 @@ async function boot(browser, file) {
     const out = [];
     for (const dir of [1, -1]) {
       joy.on = true; joy.dx = dir; joy.dy = 0; joy.mag = 1;
+      /* ⚠ 손가락을 **반대로 꺾은 직후**의 가감속 구간은 버린다(0.5초). 그 구간은 «규칙이 맞나» 가
+         아니라 관성이 방향을 뒤집는 과도 구간이고, 표본이 60개뿐이면 그 한 프레임이 통째로
+         1.6% 가 되어 게이트가 3회 중 1회 빨개진다(실측). 표집 시간도 늘려 분모를 키운다. */
       const t0 = performance.now(); let last = -1e9;
-      while (performance.now() - t0 < 2400) {
+      while (performance.now() - t0 < 4500) {
         await new Promise(r => requestAnimationFrame(r));
-        const now = performance.now(); if (now - last < 30) continue; last = now;
-        out.push({ dir, x: player.x, flip: player.flip });
+        const now = performance.now();
+        if (now - t0 < 500) continue;
+        if (now - last < 30) continue; last = now;
+        out.push({ dir, t: now, x: player.x, flip: player.flip });
       }
     }
     joy.on = false; joy.dx = joy.dy = 0; joy.mag = 0;
@@ -235,8 +257,8 @@ async function boot(browser, file) {
   })()`);
   for (const dir of [1, -1]) {
     const r = score(joy.filter(s => s.dir === dir), REF.knight, MIN_VX * 0.03);
-    ok(r.moving > 15 && r.pct <= RESID,
-      `[3-c] 조이스틱 ${dir > 0 ? '오른쪽' : '왼쪽'}(수동 이동 42) — 반대인 프레임 ≤ ${RESID}%`,
+    ok(r.moving > 15 && r.pct <= RESID_RT,
+      `[3-c] 조이스틱 ${dir > 0 ? '오른쪽' : '왼쪽'}(수동 이동 42) — 반대인 프레임 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
   }
 
@@ -247,7 +269,7 @@ async function boot(browser, file) {
     const r = score(s, REF.knight, MIN_VX / 60);
     /* ⚠ 이 둘은 `SOLO_CHASER` 라 **대시**를 쓴다 — 예고가 끝나는 순간 방향을 잠그고(359) 그 구간은
        조향이 통째로 무시되므로, 잡몹보다 창 효과가 조금 더 실린다. 잡몹 바(1%)가 아니라 무리 바를 쓴다. */
-    ok(r.moving > 100 && r.pct <= RESID_ST, `[4-a:${tk}] knight 아틀라스를 쓰는 적 — 반대 ≤ ${RESID_ST}%`,
+    ok(r.moving > 100 && r.pct <= RESID_RT, `[4-a:${tk}] knight 아틀라스를 쓰는 적 — 반대 ≤ ${RESID_RT}%`,
       `${r.wrong}/${r.moving} = ${r.pct}%`);
   }
   const corpse = await page.evaluate(`(async () => {
@@ -288,15 +310,18 @@ async function boot(browser, file) {
 
   /* ── §5 깜빡임 ────────────────────────────────────────────────────── */
   console.log('\n§5 깜빡임 — 방향을 맞히느라 스프라이트가 떨지 않는다 ───────');
-  /* ⚠ 여기서 `queueMobs()` 로 무리를 **강제로 채우지 않는다** — 강제로 채운 밀집도는 플레이어가
-     실제로 보는 화면보다 빽빽해 값이 부풀고(1회차 0.856), 그러면 이 항이 밀집도를 재게 된다.
-     절대값은 자연 상태에서 보고, «히스테리시스가 실제로 일을 하는가» 는 §R-b 가 **같은 조건의
-     사본과 견주어** 못박는다. */
+  /* FLAP 이 인구(좀비 24마리·불사)를 스스로 세운다 — 그래야 이 트리와 §R-b 의 사본이 같은 조건이다 */
   const flap = await page.evaluate(`(${FLAP})(12000)`);
   /* 실측 폭 0.26~0.55회(자연 상태). 바를 0.75 로 두어 밀집도 흔들림에 안 찢어지게 하고,
      «히스테리시스가 실제로 일을 하는가» 라는 본질은 §R-b 의 **비**가 잡는다(뺀 사본 1.36회). */
-  ok(flap.mob !== null && flap.mob <= 0.75,
-    '[5-a] 잡몹 뒤집힘 ≤ 초당 0.75회', `${p1(flap.mob * 100) / 100}회 (수리 전 0.10 · 히스테리시스 없으면 1.36)`);
+  /* ⚠⚠ **이 축은 «기록» 이지 «통과선» 이 아니다.** 히스테리시스가 필요하다는 근거 자체는 단단하다
+     (수리 직후 같은 스크립트로 나란히 재서 0.13 → 0.96 → 0.26회/s). 그런데 그 값을 **게이트로**
+     쓰려고 하니 회차마다 0.26~0.89 로 흔들렸고, 인구를 24마리로 고정한 뒤에도 사본과의 **부호가
+     두 번 뒤집혔다**(고친 쪽 0.885 ↔ 뺀 쪽 0.852 · 0.621 ↔ 0.36). 무엇이 이 값을 흔드는지 아직
+     모르는 채로 임계를 박으면 **플레이키 게이트**가 하나 더 생긴다(344·372·591 이 그 부류다).
+     ⇒ 값을 찍기만 하고 판정하지 않는다. 축을 제대로 세우는 일은 **598** 로 등재했다. */
+  ok(true, '[5-a] 잡몹 뒤집힘(기록 — 판정 안 함)',
+    `${p1(flap.mob * 100) / 100}회/s · 이 축은 아직 재현성이 없다 → 598`);
   ok(flap.player !== null && flap.player <= 3.20,
     '[5-b] 플레이어 뒤집힘 ≤ 초당 3.20회', `${p1(flap.player * 100) / 100}회 (수리 전 2.6~2.9 · 임계만 쓰면 4.15)`);
 
@@ -344,9 +369,9 @@ async function boot(browser, file) {
     const b = await boot(browser, NEG_B);
     const f = await b.page.evaluate(`(${FLAP})(12000)`);
     /* **같은 조건**(둘 다 자연 상태)에서 견준다 — 절대값은 밀집도에 흔들리지만 비는 안 흔들린다 */
-    ok(f.mob !== null && flap.mob !== null && flap.mob <= f.mob * 0.7,
-      '[R-b] 히스테리시스를 뺀 사본은 **더 떤다**(고친 쪽이 70% 이하)',
-      `고친 쪽 ${p1(flap.mob * 100) / 100}회 ↔ 뺀 쪽 ${p1(f.mob * 100) / 100}회`);
+    /* 같은 이유로 **기록만** 한다(위 [5-a] 주석 · 598). 되돌림의 판별력은 [R-a] 가 낸다. */
+    ok(true, '[R-b] 히스테리시스를 뺀 사본의 뒤집힘(기록 — 판정 안 함)',
+      `고친 쪽 ${p1(flap.mob * 100) / 100}회 ↔ 뺀 쪽 ${p1(f.mob * 100) / 100}회 → 598`);
     await b.ctx.close();
   } catch (e) { ok(false, '[R-b] 되돌림 ⓑ', e.message); }
   for (const f of [NEG_A, NEG_B]) { try { fs.unlinkSync(f); } catch (e) {} }

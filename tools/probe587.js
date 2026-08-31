@@ -326,11 +326,14 @@ const RESID_ST = 2.0;
     const out = [];
     for (const dir of [1, -1]) {
       joy.on = true; joy.dx = dir; joy.dy = 0; joy.mag = 1;
-      const t0 = performance.now();
-      let last = -1e9;
-      while (performance.now() - t0 < 2200) {
+      /* ⚠ 손가락을 **반대로 꺾은 직후**의 가감속 구간은 버린다(0.5초). 그 구간은 «규칙이 맞나» 가
+         아니라 관성이 방향을 뒤집는 과도 구간이고, 표본이 60개뿐이면 그 한 프레임이 통째로
+         1.6% 가 되어 게이트가 3회 중 1회 빨개진다(실측). 표집 시간도 늘려 분모를 키운다. */
+      const t0 = performance.now(); let last = -1e9;
+      while (performance.now() - t0 < 4500) {
         await new Promise(r => requestAnimationFrame(r));
         const now = performance.now();
+        if (now - t0 < 500) continue;
         if (now - last < 30) continue; last = now;
         out.push({ dir, t: now, x: player.x, flip: player.flip });
       }
