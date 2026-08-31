@@ -12804,6 +12804,29 @@
      — 5회차에 훈련에서 겪은 것과 같은 «잉크 ≥ 칸» 결함이다. 2칸이면 gap 104−96 = 8px 이 남는다.
      ⚠ 칸이 둘이라 최고속에서는 같은 칸을 다시 쓰지만, «두 알림이 한 문자열로 붙는 것» 보다 낫다. */
   .tr-tp{--hb-y:116;--hb-x:.445;--hb-y2:20;--hb-x2:.445;--hb-slots:2;--hb-sw:104}
+  /* ⚑ 491 4회차 — [충전]의 회당 피드백 호스트를 **버튼 `.cg`(392×64) → 헤더 `.tp-hd`(998×88)** 로 올린다.
+     형제 둘이 이미 그렇게 한다(룬은 카드 `.tr-rn` · 투자는 행 `.tr-tp`) — ④ 일관성이 같이 오른다.
+     ⚠ 자리가 아니라 **폭이 뿌리다**: 옛 호스트는 신고가 없어 기본값(높이의 30%/66% = 19/42px)으로 떨어져
+       두 줄기가 **버튼 안**에 놓였고, `hbFloat` 의 «긴 문자열은 칸에 눌러 넣는다» 가 버튼 폭 392 → 칸 80px
+       에서 16px 하한까지 밀어 「+1,000,000」(7자리)이 잉크 10~20px 로 뭉갰다(비평가 BY·BZ 3회차 공통 —
+       «형제의 23~26px 대비 −55% · 상단 테두리에 30~40% 걸침»). **폰트 상수를 키우는 처방은 오답이다.**
+     자리는 3회차 실측이 정했다 — 헤더 아래 빈 띠는 **14px** 뿐이라 아래로는 길이 없고, 헤더 **안 왼쪽에
+     빈 칸**(`.pv` 오른끝 ↔ 버튼 왼끝 627)이 있다. ⚠ **그 빈 칸은 «324px 고정» 이 아니다** — `.pv` 는 폭이
+     자동이라 포인트 자릿수를 따라 늘어난다(4회차 재현: 1,000,500 pt 에서 오른끝 **404** ⇒ 빈 칸 223px).
+     그래서 자리는 «빈 칸의 한복판»(.425 = 465px, 3회차 처방)이 아니라 **버튼 쪽으로 붙인** .475(= 515px)다:
+     칸 둘 × 104px 에 잉크 최대 96px 라 415..511 · 519..615 로 양끝에 11~12px 이 남는다(.425 면 왼쪽이
+     `.pv` 를 39px 문다 — 3회차 실측은 포인트가 세 자리일 때의 값이었다).
+     ⚑ **줄기는 하나다** — 전환비가 `TEMPER_PT_COST = 1`(1:1)이라 «+n»(얻은 포인트)과 «−n»(쓴 단련석)이
+     **같은 수**다. 488 5회차 교훈 그대로(«바로 아래 줄이 상시로 말하는 것을 플로터가 한 번 더 말하느라
+     자리를 두 배로 쓴다») 둘째 줄기를 걷어낸다 — 그래야 남은 한 줄기가 칸을 통째로 쓴다.
+     그 전제는 `verify491` [6-i] 가 지킨다(199 가 전환비를 바꾸면 곧바로 빨개진다).
+     ⇒ 칸 간격은 **24px**(한 줄기라 이웃 압력이 없다) · 잉크 상한은 `--hb-mw` **200px** 로 따로 신고한다.
+     결과: fs 34 유지(형제와 같은 값) · 잉크 176×43 · 자리 415..591 로 빈 칸(404..627) 안 · 세로 34..77
+     (끝 10..53)로 헤더 안쪽 면(8..80) 안이다.
+     ⚠ 맥박 진폭도 같이 신고한다 — 헤더는 룬 카드와 **같은 998폭**이라 기본 1.06 이면 1057.9 로
+       그릇 `.tr-box` 안폭 1046 을 11.9px 넘는다(위 [G] 규약). 1.02 = 1018 ≤ 1046 · 세로는 +0.9px 씩이라
+       아래 첫 행과의 틈 14px 안에 든다. */
+  .tr-temp>.tp-hd{--hb-s:1.02;--hb-y:34;--hb-x:.475;--hb-y2:34;--hb-x2:.475;--hb-slots:2;--hb-sw:24;--hb-mw:200}
   /* 08/50 세부 팝업 — 호스트가 «레벨 행»(139×70)이라 **띠를 카드(`.skd` 800×701) 좌표로 신고한다**
      (`--hb-x` 는 호스트 폭에 대한 비율이라 1 을 넘어도 된다 — 그래서 카드 어디로든 보낼 수 있다).
      `.skd` 자식 실측: `.sk-ic` 24–173(x25–174) · `.sk-gr` 35–85(x216–426) · `.sk-lv` 103–173 ·
@@ -32350,7 +32373,9 @@ function renderRunes(){
   /* 297 — 꾹 누르고 있는 동안에는 통짜 재렌더를 멈추고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ —
      누른 노드를 innerHTML 로 날리면 터치의 암묵적 포인터 캡처가 끊긴다).
      `dataset.sig` 를 갱신하지 않으므로 손을 뗀 «뒤» 첫 렌더가 저절로 통짜로 돈다. */
-  if(rtHoldOn('rune')){ liveRunes(curId); return; }
+  /* 491 4회차 — 단련 헤더와 **같은 조건**으로 넓힌다(위 `rtDownIn` 머리말). 룬은 재료가 떨어지면
+     홀드가 같은 꼴로 자멸하므로 병도 같다 — 한 부품으로 둘을 같이 막는다(④ 일관성). */
+  if(rtHoldOn('rune') || rtDownIn('#trRunes')){ liveRunes(curId); rtPendRender = 1; return; }
   /* ⚠ 이 함수는 `renderTrainLive()` 를 타고 **0.35초마다** 불린다. 무조건 innerHTML 을 갈아 끼우면
      pointerdown 과 click 사이에 버튼 노드가 사라져 탭이 통째로 유실된다
      (LESSONS 50-① «재렌더에 진 클릭» · 작업 74·142 가 같은 병으로 등재됐다).
@@ -32481,7 +32506,13 @@ const temperFootTxt = () => '회수하면 투자한 <b>' + fmt(temperSpentAll())
 function renderTemper(){
   const w = $('trTemper'); if(!w) return;
   /* 297 — 룬과 같다: 꾹 누르는 동안에는 노드를 갈지 않고 «숫자만» 고쳐 쓴다(64 교훈 1 · 262 ⓑ) */
-  if(rtHoldOn('temper')){ liveTemper(); return; }
+  /* ⚑ 491 4회차 — 조건이 «홀드가 도는가» 로는 **좁다**. [충전]은 보유분을 한 번에 바꿔 2회째 시도가
+     재고 없이 실패하므로 홀드가 ≈350ms 에 자멸하는데, 손은 그대로 눌려 있고 서명(pts·tstone)은 이미
+     달라져 있다 ⇒ 바로 다음 주기 렌더가 **누른 손 밑에서** 헤더를 갈아 끼운다. 조건을 «손가락이
+     이 안을 누르고 있는가» 로 넓히고, 미룬 통짜 렌더는 손을 뗄 때 `rtRenderFlush()` 가 친다.
+     ⚠ 서명(`w.dataset.sig`)은 **여기서 안 갱신한다** — 갱신하면 미룬 렌더가 «값이 그대로» 로 읽혀
+       영영 안 돈다(값은 `liveTemper()` 가 이미 맞춰 놓지만 구조는 아니다). */
+  if(rtHoldOn('temper') || rtDownIn('#trTemper')){ liveTemper(); rtPendRender = 1; return; }
   /* ⚠ renderRunes 와 같은 이유로 «보이는 값이 달라졌을 때만» 다시 그린다 —
      0.35초 주기 재렌더가 pointerdown 과 click 사이에 버튼을 지우면 탭이 통째로 유실된다
      (LESSONS 50-① · 작업 74·142). 서명에 그리기 입력이 전부 들어간다. */
@@ -32775,6 +32806,44 @@ function rtShake(sel){
   const el = rtEl(sel);
   if(el && typeof jzOn === 'function') jzOn(el, 'jz-sh', 380);      /* 60 — 부족·상한 흔들림 */
 }
+/* ⚑ 491 4회차 — «누른 손 밑에서 노드를 갈지 않는다» 의 **세 번째 얼굴**.
+   1회차가 닫은 것은 «홀드가 시작될 때»(297 규약이 첫 프레임에만 꺼져 있었다), 3회차가 닫은 것은
+   «홀드가 도는 중»(`jzNo` — 회색을 미룬다)이었다. 남은 하나는 **«홀드가 스스로 멎을 때»** 다:
+   [충전]은 «보유분 전부» 를 한 번에 바꾸므로 2회째 시도에서 재고가 없어 `once()` 가 false 를 돌리고
+   홀드가 ≈350ms 에 자멸하는데(`rtChargeHold` 머리말 «2회째는 조용히 멈춘다»), 그 `end:` 의 통짜
+   `renderTrain()` 이 **손가락이 아직 눌려 있는 채로** 노드를 갈아 끼운다 ⇒ `jz-dn`(scale .94)이
+   옛 노드와 함께 죽고 새 노드는 202 의 회색을 입은 채 나온다. 3회차 실측(누른 채 시각별 표본):
+     60ms 같은 노드·`jz-dn`·초록 → 200ms 같음 → **400ms 노드 교체·`jz-dn` 없음·`.no` 회색**.
+   비평가 BZ 「충전만 down 에서 휘도 −10.4% · 크기 반응 0%」 · BY 「up 프레임에 플로터 0/2 잔존」이
+   독립으로 같은 자리를 짚었고, 캡처 한 장이 수백 ms 를 먹으므로 둘의 `-down` 은 예외 없이 그 «뒤» 를 본다.
+   ⇒ **판정·값은 한 줄도 안 건드리고 «표시의 순서» 만 바꾼다** — 통짜 렌더를 손 뗄 때까지 미룬다.
+   ⚠ 갈래를 가르는 자는 `jzDown` 하나면 된다(따로 깃발을 만들지 마라): 60 의 `jzRelease` 는
+     `addEventListener('pointerup', jzRelease, true)` = **캡처 단계**라 같은 이벤트의 버블에서 도는
+     이 파일의 `rtHoldStop` 보다 **항상 먼저** 돈다(실측 `probe491` [G2]). 그래서 여기서 `jzDown` 이
+     살아 있다는 것은 «정상 release 가 아니다» = 자멸·이탈·팝업 닫힘뿐이다. 정상 release 는 종전대로
+     그 자리에서 통짜로 돈다(**«다음 탭까지 화면이 안 갱신되는» 정반대 결함을 만들지 않는다**).
+   ⚠ 밀린 렌더는 **뗌의 되튐(`jz-up` 200ms)이 끝난 뒤**에 돈다 — 손을 뗀 프레임에 갈아 끼우면
+     이번엔 되튐이 새 노드와 함께 죽는다(같은 병의 네 번째 얼굴을 스스로 만드는 셈이다).
+     값은 이미 `live()` 가 맞춰 놓았으므로 이 렌더는 «정합 확인» 이고 210ms 늦어도 보이는 것이 없다. */
+const RT_RENDER_UP = 210;               /* 60 `jz-up` 200ms + 여유 10 */
+let rtPendRender = 0;
+/* 이 팝업 안의 노드를 **지금 손가락이 누르고 있는가**. 297 규약의 `rtHoldOn(tag)` 은 «홀드가 도는가» 라
+   더 좁다 — 홀드가 자멸한 뒤에도 손은 그대로 눌려 있고, 그 사이에 0.35초 주기의 `renderTrainLive()` →
+   `renderTemper()` 가 통짜로 갈아 끼운다(4회차 재현 `probe491` [G]: 400ms 같은 노드 → **700ms 교체·회색**).
+   즉 자멸의 실제 범인은 `end:` 의 한 번이 아니라 **주기 렌더**였다 — `end:` 만 미루면 300ms 뒤에 같은 일이 난다. */
+function rtDownIn(root){
+  if(typeof jzDown === 'undefined' || !jzDown || !jzDown.closest) return false;
+  return !!(document.body.contains(jzDown) && jzDown.closest(root));
+}
+function rtRender(){
+  if(typeof jzDown !== 'undefined' && jzDown && document.body.contains(jzDown)){ rtPendRender = 1; return; }
+  renderTrain();
+}
+function rtRenderFlush(){
+  if(!rtPendRender) return;
+  rtPendRender = 0;
+  setTimeout(() => { if(typeof renderTrain === 'function') renderTrain(); }, RT_RENDER_UP);
+}
 function rtHoldStop(bad){
   const h = rtHold; if(!h) return;
   rtHold = null; clearTimeout(h.timer);
@@ -32847,7 +32916,7 @@ function rtRuneHold(id){
     },
     live: () => renderTrainLive(),
     end: () => {
-      renderTrain();                          /* 손 뗀 «뒤» 한 번만 통짜로 정합을 맞춘다 */
+      rtRender();                             /* 손 뗀 «뒤» 한 번만 통짜로 정합을 맞춘다(491 4회차 — 손 밑이면 미룬다) */
       if(!tries) return;                      /* 첫 누름부터 막혔다 — 안내는 위에서 이미 했다 */
       const lv = runeLvOf(id);
       if(tries === 1){
@@ -32883,7 +32952,7 @@ function rtTemperHold(k){
     },
     live: () => renderTrainLive(),
     end: () => {
-      renderTrain();
+      rtRender();
       if(!n) return;
       notify(t.n + ' 단련 <b>Lv. ' + fmt(temperLv(k)) + '</b>'
         + (n > 1 ? ' (투자 ' + fmt(n) + '회)' : ''));
@@ -32894,6 +32963,7 @@ function rtTemperHold(k){
    손맛을 세 버튼에서 같게 하려고 같은 경로에 태운다(2회째는 재고가 없어 조용히 멈춘다). */
 function rtChargeHold(){
   const sel = '#trTemper .tp-hd .cg';
+  const HD = '#trTemper .tp-hd';                 /* 491 4회차 — 회당 피드백 호스트(형제: 룬 카드 · 투자 행) */
   let got = 0;
   rtHoldStart({
     tag:'temper', sel,
@@ -32906,12 +32976,16 @@ function rtChargeHold(){
          488 이 `hbBeat` 를 달아 뒀는데 충전만 빠져 있어, 1회차 비평가 둘이 독립으로
          «100만을 냈는데 «−1,000,000» 이 화면 어디에도 0px»(BU) · «플로팅 0개»(BV) 를 ③ 감점으로 냈다.
          호스트·어휘는 형제 둘과 같다 — 얻은 것은 위로(«+n»), 낸 것은 아래로(«−n», 58 결제 어휘). */
-      hbBeat(sel, true, '+' + fmt(gain), '−' + fmt(stone0 - (Math.floor(S.tstone) || 0)));
+      /* ⚑ 491 4회차 — 호스트는 버튼이 아니라 **헤더**다(형제 둘과 같은 꼴 · 위 CSS 머리말).
+         홀드 정지(`sel`)·흔들림은 종전대로 버튼이 받는다 — 뜻이 다르다. */
+      /* ⚠ 비용 줄기는 **안 띄운다** — 전환비 1:1 이라 «−단련석» 이 «+포인트» 와 같은 수다(위 CSS 머리말).
+         쓴 단련석은 버튼 라벨(«단련석 n → 포인트 n»)이 상시로 말하고, 총량은 손 뗀 뒤 토스트가 말한다. */
+      hbBeat(HD, true, '+' + fmt(gain), TEMPER_PT_COST === 1 ? '' : '−' + fmt(stone0 - (Math.floor(S.tstone) || 0)));
       return true;
     },
     live: () => renderTrainLive(),
     end: () => {
-      renderTrain();
+      rtRender();
       if(!got) return;
       fxReward(); notify('단련 포인트 <b>+' + fmt(got) + '</b>');
     }
@@ -32925,8 +32999,8 @@ $('trw').addEventListener('pointerdown', e => {
   if(tu){ rtTemperHold(tu.dataset.tempup); return; }
 });
 /* 뗌·취소는 버튼 노드가 재렌더로 사라진 뒤일 수 있으므로 window 에서 받는다(64 와 같은 규칙) */
-addEventListener('pointerup', () => rtHoldStop(false));
-addEventListener('pointercancel', () => rtHoldStop(false));
+addEventListener('pointerup', () => { rtHoldStop(false); rtRenderFlush(); });
+addEventListener('pointercancel', () => { rtHoldStop(false); rtRenderFlush(); });
 /* «leave» — 손가락이 그 버튼 밖으로 나가면 정지. 노드가 바뀔 수 있으므로 좌표로 판정한다 */
 addEventListener('pointermove', e => {
   if(!rtHold) return;
@@ -35771,7 +35845,12 @@ function hbFloat(host, txt, kind, lone){
   {
     /* ⚠ 두 번 돌린다 — 잉크 폭은 글자 크기에 **비례하지 않는다**: `-webkit-text-stroke:5px` 가 좌우로
        5px 씩 더해지는 상수항이라 한 번의 비례 축소로는 목표를 못 맞춘다(1회 91→78 · 2회 70). 네 번 돌린다. */
-    const maxW = Math.max(24, sw - 8);
+    /* ⚑ 491 4회차 — **«칸 간격» 과 «잉크 상한» 은 같은 값일 필요가 없다.** 상한이 `sw − 8` 이었던 것은
+       «이웃 칸과 안 붙는다» 를 지키기 위해서인데, 그 압력은 **한 beat 에 두 줄기가 뜰 때**만 있다.
+       [충전]처럼 한 줄기만 뜨는 호스트에서는 칸 간격을 좁히면서 잉크는 넓게 둘 수 있다 — 안 그러면
+       「+1,000,000」(7자리)이 16px 하한까지 눌려 형제(fs 34 · 43px)의 **47%** 가 된다(4회차 실측).
+       ⇒ 호스트가 `--hb-mw`(잉크 상한 px)로 따로 신고한다. 신고가 없으면 종전 그대로 `sw − 8`. */
+    const maxW = Math.max(24, num('--hb-mw', sw - 8));
     for(let i = 0; i < 4 && d.offsetWidth > maxW; i++){
       const base = parseFloat(getComputedStyle(d).fontSize) || 30;
       d.style.fontSize = Math.max(16, base * maxW / d.offsetWidth).toFixed(1) + 'px';

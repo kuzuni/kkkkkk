@@ -269,17 +269,101 @@ async function pixelRun(page) {
        '[2-b] ' + t.n + ' — 누른 그 노드가 살아남고 jz-dn 이 붙는다(§3 과 같은 누름에서)',
        now[t.id] ? 'alive=' + now[t.id].alive + ' dn=' + now[t.id].dn : '없음');
 
+  /* ── §6 4회차 — 홀드가 «자멸» 해도 손 밑에서 노드를 안 간다 ─────────────────────────────
+     [충전]은 «보유분 전부» 를 한 번에 바꾸므로 2회째 시도가 재고 없이 실패해 홀드가 ≈350ms 에
+     스스로 멎는다. 그 뒤에도 손은 눌려 있는데 서명(pts·tstone)은 이미 달라져 있어, 옛 코드에서는
+     0.35초 주기의 `renderTrainLive()` → `renderTemper()` 가 **누른 손 밑에서** 헤더를 갈아 끼웠다
+     (`probe491` [G] 실측: 400ms 같은 노드 → 700ms 교체·`jz-dn` 소실·회색). 그래서 이 절은
+     **자멸 시각을 훌쩍 넘긴 800ms** 에 묻는다 — 350ms 안에서만 물으면 옛 코드도 초록이다.
+     ⚠ 반대 결함(«미뤄 놓고 영영 안 돈다»)도 같이 묻는다 — [6-d] 가 그 자리다. */
+  const holdRun = async (pg) => {
+    await pg.evaluate(() => { if (!$('trw').classList.contains('on')) openTrain();
+      setTrSub('temper'); S.tstone = 1e6; renderTrain(); });
+    await pg.waitForTimeout(450);
+    const g = await pg.evaluate(() => {
+      const b = document.querySelector('#trTemper .tp-hd .cg');
+      const pv = document.querySelector('#trTemper .tp-hd .pv');
+      const hd = document.querySelector('#trTemper .tp-hd');
+      if (!b || !pv || !hd) return null;
+      b.dataset.v491 = 'stamp';
+      const r = b.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2,
+               b: r.toJSON(), pv: pv.getBoundingClientRect().toJSON(), hd: hd.getBoundingClientRect().toJSON() };
+    });
+    if (!g) return null;
+    const snap = () => pg.evaluate(() => {
+      const el = document.querySelector('#trTemper .tp-hd .cg');
+      return { same: !!(el && el.dataset && el.dataset.v491 === 'stamp'),
+               dn: !!(el && el.classList.contains('jz-dn')),
+               no: !!(el && el.classList.contains('no')) };
+    });
+    await pg.mouse.move(g.x, g.y);
+    await pg.mouse.down();
+    await pg.waitForTimeout(130);
+    const fl = await pg.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
+      .filter(n => +getComputedStyle(n).opacity > 0.08)
+      .map(n => { const r = n.getBoundingClientRect();
+                  return { t: n.textContent, x: r.x, y: r.y, w: r.width, h: r.height }; }));
+    await pg.waitForTimeout(670);                       /* 누적 800ms — 자멸(≈350ms) 을 넘긴다 */
+    const held = await snap();
+    await pg.mouse.up();
+    await pg.waitForTimeout(650);                       /* 되튐 200 + 밀린 렌더 210 + 여유 */
+    const after = await snap();
+    return { g, fl, held, after };
+  };
+  {
+    const h = await holdRun(page);
+    ok(!!h, '[6-0] 단련 [충전] 버튼·헤더를 찾았다');
+    if (h) {
+      ok(h.held.same, '[6-a] ★ 자멸 뒤에도(누른 채 800ms) **누른 그 노드**가 살아 있다', 'same=' + h.held.same);
+      ok(h.held.dn, '[6-b] ★ 그동안 jz-dn(눌림)이 유지된다', 'dn=' + h.held.dn);
+      ok(!h.held.no, '[6-c] 누르는 중에는 회색(.no)이 안 덮인다(3회차 jzNo 회귀)', 'no=' + h.held.no);
+      ok(!h.after.same && h.after.no,
+         '[6-d] ★ 손을 뗀 뒤에는 밀린 통짜 렌더가 **실제로 돌아** 정합이 맞는다(«영영 안 갱신» 의 반대 결함 없음)',
+         'same=' + h.after.same + ' no=' + h.after.no);
+      const inHd = n => n.y >= h.g.hd.y - 1 && n.y + n.h <= h.g.hd.y + h.g.hd.height + 1;
+      ok(h.fl.length === 1, '[6-e] [충전] 한 발에 회당 플로터가 **한 줄기**다(1:1 전환이라 둘째 줄기는 중복)',
+         h.fl.length + '장 ' + JSON.stringify(h.fl.map(n => n.t)));
+      ok(h.fl.length >= 1 && h.fl.every(inHd),
+         '[6-f] ★ 두 줄기의 호스트가 **헤더(998×88)** 다 — 버튼(392×64) 안이 아니다',
+         JSON.stringify(h.fl.map(n => Math.round(n.y) + '..' + Math.round(n.y + n.h))));
+      ok(h.fl.length >= 1 && h.fl.every(n => n.h >= 34),
+         '[6-g] ★ 잉크 세로 ≥ 34px — 3회차 «형제 대비 −55%»(10~20px)의 회수. 4회차 실측 형제 43px',
+         h.fl.map(n => Math.round(n.h)).join('·'));
+      ok(/const TEMPER_PT_COST\s*=\s*1;/.test(src),
+         '[6-i] ★ 줄기가 하나인 **전제**(단련석 → 포인트 1:1)가 소스에 그대로다 — 199 가 전환비를 바꾸면 여기가 먼저 빨개진다');
+      ok(h.fl.length >= 1 && h.fl.every(n => n.x >= h.g.pv.x + h.g.pv.width - 1 && n.x + n.w <= h.g.b.x + 1),
+         '[6-h] 자리가 «`.pv` 오른끝 ↔ 버튼 왼끝» 빈 칸 안이다 — 글자를 안 덮는다',
+         JSON.stringify(h.fl.map(n => Math.round(n.x) + '..' + Math.round(n.x + n.w))) + ' band '
+         + Math.round(h.g.pv.x + h.g.pv.width) + '..' + Math.round(h.g.b.x));
+    }
+  }
+
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
   await ctx.close();
 
-  /* ── §R 되돌림 — 옛 순서로 되돌린 사본은 빨개져야 한다 ── */
-  const revert = src.replace(
+  /* ── §R 되돌림 — 옛 순서로 되돌린 사본은 빨개져야 한다 ──
+     ⚑ **4회차에 이 절의 사본이 한 겹 늘었다.** 4회차가 놓은 가드(`rtDownIn` — «손가락이 이 안을 누르고
+     있으면 통짜 렌더를 미룬다»)는 1회차가 막던 «첫 프레임» 도 같이 덮는다(60 위임이 `#app` 캡처에서
+     `jzDown` 을 먼저 세우므로, 홀드가 시작되는 그 프레임에도 이미 손이 눌려 있다). 그래서 **순서만**
+     되돌린 사본은 이제 안 빨개진다 — 4회차 실행으로 확인했다(세 자리 alive=true · dn=true).
+     자를 무르게 하지 않으려면 답은 둘 중 하나다: ⓐ 기대값을 낮춘다 ⓑ **두 겹을 다 걷어낸 사본**으로
+     묻는다. ⓑ 를 쓴다 — 이 절이 지키는 것은 «이 방어가 통째로 없으면 반드시 빨개진다» 이지
+     «1회차 한 줄만으로 빨개진다» 가 아니다. 1회차 축 자체는 §1 [1-b]·[1-c] 가 소스에서 계속 못박고,
+     4회차 축 하나만 걷어낸 사본은 아래 §R2 가 따로 묻는다(두 축이 각각 살아 있다는 증명). */
+  const revert0 = src.replace(
     /  rtHold = \{ tag:o\.tag[\s\S]*?rtHold\.timer = setTimeout\(rtHoldTick, TR_HOLD_DELAY\);/,
     `  if(!o.once()){ o.end(0, false); rtShake(o.sel); return; }
   o.live();
   rtHold = { tag:o.tag, sel:o.sel, once:o.once, live:o.live, end:o.end, n:1, iv:TR_HOLD_IV0, timer:0 };
   rtHold.timer = setTimeout(rtHoldTick, TR_HOLD_DELAY);`);
-  ok(revert !== src, '[R-0] 되돌림 사본을 만들었다(옛 순서 = 표시를 첫 발 뒤에 세운다)');
+  const revert = revert0
+    .replace("if(rtHoldOn('temper') || rtDownIn('#trTemper')){ liveTemper(); rtPendRender = 1; return; }",
+             "if(rtHoldOn('temper')){ liveTemper(); return; }")
+    .replace("if(rtHoldOn('rune') || rtDownIn('#trRunes')){ liveRunes(curId); rtPendRender = 1; return; }",
+             "if(rtHoldOn('rune')){ liveRunes(curId); return; }");
+  ok(revert !== src && revert !== revert0,
+     '[R-0] 되돌림 사본을 만들었다(옛 순서 + 4회차 가드 제거 = 방어 두 겹을 다 걷어낸 상태)');
   fs.writeFileSync(NEG, revert);
   try {
     const b2 = await boot(browser, NEG);
@@ -303,6 +387,28 @@ async function pixelRun(page) {
     await b2.ctx.close();
   } finally {
     try { fs.unlinkSync(NEG); } catch (_) {}
+  }
+
+  /* ── §R2 되돌림(4회차) — 가드를 «홀드가 도는가» 로 되돌린 사본은 §6 이 빨개져야 한다 ──
+     이 자를 무르게 푸는 길은 하나뿐이다: [6-a] 를 **자멸 전(≈350ms 안)** 에 묻는 것. 그러면 옛 코드도
+     초록이라 자가 죽는다. 그래서 «되돌리면 실제로 빨개지는가» 를 직접 실행해 못박는다. */
+  {
+    const rev2 = src.replace(/if\(rtHoldOn\('temper'\) \|\| rtDownIn\('#trTemper'\)\)\{ liveTemper\(\); rtPendRender = 1; return; \}/,
+                             "if(rtHoldOn('temper')){ liveTemper(); return; }");
+    ok(rev2 !== src, '[R2-0] 되돌림 사본을 만들었다(가드를 «홀드가 도는가» 로만 되돌린다)');
+    fs.writeFileSync(NEG, rev2);
+    try {
+      const b3 = await boot(browser, NEG);
+      const h2 = await holdRun(b3.page);
+      ok(!!h2 && h2.held.same === false,
+         '[R2-a] ★ 되돌린 사본에서는 자멸 뒤 800ms 에 «누른 그 노드» 가 죽는다(주기 렌더에 진다)',
+         h2 ? 'same=' + h2.held.same : '표본 없음');
+      ok(!!h2 && h2.held.dn === false, '[R2-b] 같은 사본에서 jz-dn 도 함께 사라진다',
+         h2 ? 'dn=' + h2.held.dn : '표본 없음');
+      await b3.ctx.close();
+    } finally {
+      try { fs.unlinkSync(NEG); } catch (_) {}
+    }
   }
 
   console.log('\nVERIFY491 ' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));

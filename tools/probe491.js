@@ -274,6 +274,129 @@ async function diffPct(page2, a, b, tol) {
     await page.waitForTimeout(200);
   } else ok(false, '[F] 룬 [강화] 버튼/카드를 못 찾았다');
 
+  /* ── [G] 4회차 — [충전] 이 «누른 손 밑에서 꺼진다» 의 경로 ─────────────────────────────────
+     3회차 §13 이 시각별 표본으로 «400ms 에 노드가 교체되고 `.no` 회색이 입혀진다» 까지 찍었다.
+     4회차는 그 앞의 **가정 하나**를 먼저 못박는다 — 처방(`jzDown` 하나로 갈래를 가른다)이
+     그 가정 위에 서 있기 때문이다: 「정상 release 에서는 60 의 `jzRelease`(캡처)가 이 파일의
+     `rtHoldStop`(버블)보다 **먼저** 돌아 `jzDown` 이 이미 비어 있다」.
+     그래서 `renderTrain` 을 감싸 **호출 시각마다 `jzDown` 의 생사**를 적는다(제품은 안 건드린다).
+       · 자멸(누른 채) 호출 → `dn:true`  = 손 밑에서 갈아 끼우는 그 호출
+       · 정상 release 호출 → `dn:false` = 종전대로 그 자리에서 돌아야 하는 호출
+     수리 전에는 앞의 것이 **있고**, 수리 뒤에는 **0건**이어야 한다(뒤의 것은 둘 다 있어야 한다). */
+  console.log('\n[G] [충전] 자멸 렌더 — 누른 손 밑에서 노드가 갈리는가');
+  await front();
+  await page.evaluate(() => {
+    if(!$('trw').classList.contains('on')) openTrain();
+    setTrSub('temper'); S.tstone = 1e6; renderTrain();
+    window.__p491g = [];
+    const orig = window.renderTrain;
+    window.__p491orig = orig;
+    window.renderTrain = function(){
+      window.__p491g.push({ t: Math.round(performance.now()),
+                            dn: !!(typeof jzDown !== 'undefined' && jzDown),
+                            hold: !!(typeof rtHold !== 'undefined' && rtHold) });
+      return orig.apply(this, arguments);
+    };
+  });
+  await page.waitForTimeout(300);
+  const gRect = await page.evaluate(() => {
+    const b = document.querySelector('#trTemper .tp-hd .cg'), hd = document.querySelector('#trTemper .tp-hd');
+    const pv = document.querySelector('#trTemper .tp-hd .pv');
+    if(!b || !hd) return null;
+    b.dataset.p491g = 'stamp';
+    return { b: b.getBoundingClientRect().toJSON(), hd: hd.getBoundingClientRect().toJSON(),
+             pv: pv ? pv.getBoundingClientRect().toJSON() : null };
+  });
+  if (gRect) {
+    const gAt = async () => await page.evaluate(() => {
+      const el = document.querySelector('#trTemper .tp-hd .cg');
+      const fl = [...document.querySelectorAll('#fxl .fx-plus.hb')].map(n => {
+        const r = n.getBoundingClientRect();
+        return { t: n.textContent, a: +(+getComputedStyle(n).opacity).toFixed(2),
+                 x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height),
+                 /* ⚠ rect 는 «지금 걸린 변형» 을 물고 있다(키프레임 0% 가 scale .9) — 크기 축은
+                    변형 밖의 레이아웃 상자(offsetW/H)와 실제 글자 크기로 잰다. 4회차에 rect 로만
+                    쟀다가 같은 노드를 20 ↔ 24px 로 두 번 다르게 읽었다. */
+                 ow: n.offsetWidth, oh: n.offsetHeight, fs: Math.round(parseFloat(getComputedStyle(n).fontSize)) };
+      });
+      return { same: !!(el && el.dataset && el.dataset.p491g === 'stamp'),
+               dn: !!(el && el.classList.contains('jz-dn')),
+               no: !!(el && el.classList.contains('no')),
+               bg: el ? getComputedStyle(el).backgroundColor : null, fl };
+    });
+    await page.mouse.move(gRect.b.x + gRect.b.width / 2, gRect.b.y + gRect.b.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(60);  const g60  = await gAt();
+    await page.waitForTimeout(140); const g200 = await gAt();
+    await page.waitForTimeout(200); const g400 = await gAt();
+    await page.waitForTimeout(300); const g700 = await gAt();
+    await page.mouse.up();
+    await page.waitForTimeout(400);                              /* 되튐(200) + 밀린 렌더(210) 뒤 */
+    const gAfter = await gAt();
+    const calls = await page.evaluate(() => { const a = window.__p491g.slice();
+      window.renderTrain = window.__p491orig; return a; });
+    for (const [nm, s] of [['60ms', g60], ['200ms', g200], ['400ms', g400], ['700ms', g700], ['뗀 뒤', gAfter]])
+      console.log('  · ' + nm.padStart(6) + ' — 같은노드 ' + (s.same ? 'O' : '✗')
+        + ' · jz-dn ' + (s.dn ? 'O' : '·') + ' · .no ' + (s.no ? 'O' : '·')
+        + ' · ' + s.bg + ' · 플로터 ' + s.fl.filter(n => n.a > 0.08).length + '장');
+    console.log('  · renderTrain 호출 ' + JSON.stringify(calls));
+    ok(g400.same && g700.same, '[G1] ★ 누른 채 400·700ms 에도 **누른 그 노드**가 살아 있다(자멸 렌더가 안 갈아 끼운다)',
+       '400=' + g400.same + ' 700=' + g700.same);
+    ok(g400.dn && g700.dn, '[G2] ★ 그 사이 `jz-dn`(눌림)이 유지된다', '400=' + g400.dn + ' 700=' + g700.dn);
+    ok(!g400.no && !g700.no, '[G3] 누르는 중에는 «회색(.no)» 이 안 덮인다(3회차 `jzNo` 회귀)',
+       '400=' + g400.no + ' 700=' + g700.no);
+    ok(calls.filter(c => c.dn).length === 0,
+       '[G4] ★ `jzDown` 이 살아 있는 동안 통짜 렌더가 **한 번도** 안 돈다',
+       JSON.stringify(calls.map(c => c.dn)));
+    ok(calls.some(c => !c.dn), '[G5] 뗀 뒤에는 통짜 렌더가 돈다(정합 확인 · 밀린 것이 사라지지 않는다)',
+       calls.length + '회');
+    /* 플로터 — 3회차 지적 «잉크 10~20px(형제 23~26 대비 −55%) · 상단 테두리 걸침» */
+    const fl = g60.fl.filter(n => n.a > 0.08);
+    const inHd = n => n.y >= gRect.hd.y && n.y + n.h <= gRect.hd.y + gRect.hd.height;
+    console.log('  · 60ms 플로터 ' + JSON.stringify(fl.map(n => n.t + '@' + n.x + ',' + n.y + ' rect '
+      + n.w + '×' + n.h + ' box ' + n.ow + '×' + n.oh + ' fs' + n.fs)));
+    /* 4회차 — 줄기는 **하나**다(전환비 1:1 이라 «−단련석» 이 «+포인트» 와 같은 수 · 488 5회차 교훈).
+       그 대가로 남은 한 줄기가 칸을 통째로 써서 형제와 같은 fs 34 를 지킨다. */
+    ok(fl.length === 1, '[G6] [충전] 한 발에 회당 플로터가 **한 줄기**다(중복 제거)', fl.length + '장');
+    /* 형제(단련 [투자] 행)를 **같은 실행에서** 재서 «같은 급인가» 를 상대값으로 묻는다 —
+       절대 임계는 문자열 길이에 따라 흔들리고(여기는 7자리, 형제는 2~4자리) 비교 없이는 수치가 안 된다. */
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    const sib = await (async () => {
+      const r = await page.evaluate(() => {
+        const b = document.querySelector('#trTemper .tr-tp.k0 .tb'); if (!b) return null;
+        const q = b.getBoundingClientRect(); return { x: q.x + q.width / 2, y: q.y + q.height / 2 };
+      });
+      if (!r) return [];
+      await page.mouse.move(r.x, r.y); await page.mouse.down();
+      await page.waitForTimeout(70);
+      const out = await page.evaluate(() => [...document.querySelectorAll('#fxl .fx-plus.hb')]
+        .filter(n => +getComputedStyle(n).opacity > 0.08)
+        .map(n => ({ t: n.textContent, oh: n.offsetHeight, ow: n.offsetWidth,
+                     fs: Math.round(parseFloat(getComputedStyle(n).fontSize)) })));
+      await page.mouse.up(); await page.waitForTimeout(300);
+      return out;
+    })();
+    console.log('  · 형제(투자) 플로터 ' + JSON.stringify(sib.map(n => n.t + ' ' + n.ow + '×' + n.oh + ' fs' + n.fs)));
+    const sibH = sib.length ? Math.min(...sib.map(n => n.oh)) : 0;
+    const myH = fl.length ? Math.min(...fl.map(n => n.oh)) : 0;
+    ok(sibH > 0 && myH >= sibH * 0.85,
+       '[G7] ★ 잉크 세로가 형제(단련 [투자])의 85% 이상 — 3회차 지적 «−55%» 의 회수',
+       '충전 ' + myH + 'px(fs ' + fl.map(n => n.fs).join('·') + ') ↔ 투자 ' + sibH + 'px(fs '
+       + sib.map(n => n.fs).join('·') + ') = ' + (sibH ? Math.round(myH / sibH * 100) : 0) + '%');
+    ok(fl.every(inHd), '[G8] ★ 두 줄기가 헤더(998×88) 안이다 — 버튼 안이 아니다',
+       JSON.stringify(fl.map(n => n.y + '..' + (n.y + n.h))) + ' in '
+       + Math.round(gRect.hd.y) + '..' + Math.round(gRect.hd.y + gRect.hd.height));
+    ok(fl.every(n => n.x + n.w <= gRect.b.x - 4) && (!gRect.pv || fl.every(n => n.x >= gRect.pv.x + gRect.pv.width - 4)),
+       '[G9] 자리가 «`.pv` 오른끝 ↔ 버튼 왼끝» 빈 칸 안이다(글자를 안 덮는다)',
+       JSON.stringify(fl.map(n => n.x + '..' + (n.x + n.w))) + ' band '
+       + Math.round(gRect.pv ? gRect.pv.x + gRect.pv.width : 0) + '..' + Math.round(gRect.b.x));
+    ok(fl.every(n => n.fs >= 30), '[G10] 글자 크기가 눌리지 않았다(형제와 같은 fs 34 · 16px 하한이 아니다)',
+       fl.map(n => 'fs' + n.fs).join('·'));
+    await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false); });
+    await page.waitForTimeout(200);
+  } else ok(false, '[G] 단련 [충전] 버튼/헤더를 못 찾았다');
+
   ok(errs.length === 0, '[Z] 콘솔 에러 0', errs.slice(0, 3).join(' | '));
 
   console.log('\nPROBE491 ' + pass + '/' + (pass + fail) + (fail ? '  FAIL ' + fail : '  PASS'));

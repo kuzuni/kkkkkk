@@ -7,6 +7,7 @@
  * 장면마다 세 장을 같은 clip 으로 찍는다(비평가가 겹쳐 보게):
  *   -idle : 손을 대기 «전»
  *   -down : 누른 채(pointerdown 후 ≥60ms · 손은 아직 안 뗐다)
+ *   -hold : 누른 채 ≈800ms(4회차 신설 — 홀드 자멸(≈350ms) 을 넘긴 자리. 여기가 3회차 감점의 자리다)
  *   -up   : 뗀 뒤 140ms(결과가 화면에 남았는가)
  *
  * ⚠ «0/50/150ms 세 장» 이 아니라 «idle/down/up» 인 이유는 `probe491` 이 찍었다 —
@@ -73,11 +74,17 @@ const SCENES = [
        회당 플로터 수명이 .3s 라 그 프레임에는 이미 없다 — 1회차 비평가 둘이 «뗀 뒤 140ms 에 잉크 0» 으로
        읽은 것의 절반이 이 드리프트였다. ⇒ **누름을 두 번 나눠** 찍는다: 1패스는 idle·down, 2패스는
        «짧게 눌렀다 떼고 140ms» 만 재현해 up 을 찍는다. 두 패스의 상태 차이는 «시도 1회» 뿐이다. */
+    /* ⚑ 4회차 — 장면이 하나 늘었다: **`-hold`(누른 채 800ms)**. 3회차 감점이 둘 다 «[충전]이 누른 손
+       밑에서 꺼진다» 로 수렴했는데 그 일은 홀드가 자멸하는 ≈350ms **뒤**에 일어나므로, 60ms 짜리
+       `-down` 한 장으로는 고쳤는지 안 고쳤는지가 그림에 안 나온다(캡처 드리프트로 우연히 보였을 뿐이다).
+       ⇒ 자멸 시각을 넘긴 자리를 **약속된 시각**으로 한 장 더 찍는다. */
     await shot('idle');
     await page.mouse.move(r.x + r.w / 2, r.y + r.h / 2);
     await page.mouse.down();
     await page.waitForTimeout(60);
     await shot('down');
+    await page.waitForTimeout(420);            /* -down 캡처가 먹은 시간까지 합쳐 ≈800ms */
+    await shot('hold');
     await page.mouse.up();
     await page.waitForTimeout(400);
     await page.evaluate(() => { if (typeof rtHoldStop === 'function') rtHoldStop(false);

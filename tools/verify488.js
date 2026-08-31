@@ -291,6 +291,14 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
     const tps = [...document.querySelectorAll('.tr-tp')];
     out.tp = { s: tps[0] ? rd(tps[0]) : 0, h: tps[0] ? tps[0].getBoundingClientRect().height : 0,
                pitch: tps[1] ? tps[1].getBoundingClientRect().top - tps[0].getBoundingClientRect().top : 0 };
+    /* ⚑ 491 4회차 — [충전]의 회당 피드백 호스트가 버튼 `.cg`(392×64) → **헤더 `.tp-hd`(998×88)** 로
+       올라왔다(형제 둘과 같은 꼴). 호스트가 늘었으니 이 절이 그 자리도 같이 지켜야 한다 —
+       헤더는 룬 카드와 **같은 998폭**이라 기본 진폭 1.06 이면 그릇을 11.9px 넘본다. */
+    const hd = document.querySelector('#trTemper .tp-hd');
+    out.hd = { s: hd ? rd(hd) : 0, w: hd ? hd.getBoundingClientRect().width : 0,
+               h: hd ? hd.getBoundingClientRect().height : 0,
+               gap: (hd && tps[0]) ? tps[0].getBoundingClientRect().top - hd.getBoundingClientRect().bottom : 0,
+               box: boxEl.getBoundingClientRect().width };
     setTrSub('train'); renderTrain();
     const cds = [...document.querySelectorAll('.tr-card')];
     out.cd = { s: cds[0] ? rd(cds[0]) : 0, w: cds[0] ? cds[0].getBoundingClientRect().width : 0,
@@ -308,6 +316,12 @@ const ok = (c, msg, extra) => { (c ? pass++ : fail++); console.log('  ' + (c ? '
   ok(G.cd.s === 1.02 && grow(G.cd.w, G.cd.s) * 2 < G.cd.gap, '[G4] 훈련 카드 팝이 이웃 카드와 안 겹친다',
      '자람 ' + (grow(G.cd.w, G.cd.s) * 2).toFixed(1) + ' < 틈 ' + G.cd.gap.toFixed(1));
   ok(Math.abs(G.small - 1.06) < 1e-6, '[G5] 작은 호스트는 지시 원문 그대로 1.06 이다', String(G.small));
+  ok(G.hd.s === 1.02 && G.hd.w * G.hd.s <= G.hd.box,
+     '[G6] ★ 단련 헤더(491 4회차 신규 호스트) 팝이 그릇 .tr-box 안폭을 안 넘는다',
+     '진폭 ' + G.hd.s + ' · ' + (G.hd.w * G.hd.s).toFixed(1) + ' ≤ ' + G.hd.box.toFixed(1));
+  ok(G.hd.s > 0 && grow(G.hd.h, G.hd.s) * 2 < G.hd.gap,
+     '[G7] 단련 헤더 팝이 아래 첫 행과의 틈 안에 든다',
+     '자람 ' + (grow(G.hd.h, G.hd.s) * 2).toFixed(1) + ' < 틈 ' + G.hd.gap.toFixed(1));
 
   /* ══ [H] 겹침 — 회당 한 장씩 흐르는 플로터가 서로 안 뭉치는가 ══════ */
   console.log('[H] 동시 생존 플로터 — 겹친 쌍 (1회차에 15~16쌍이었다)');
