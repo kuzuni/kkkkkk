@@ -4342,7 +4342,10 @@
      이모지에 -webkit-text-stroke 는 안 먹으므로 drop-shadow 를 4방향 연쇄한다.
      filter 는 «초록 채움을 가진 .ofr-fr i» 에 걸면 그 사각 박스가 그림자를 만들므로
      글리프만 감싸는 안쪽 요소에 걸어야 한다. */
-  .ofr-fr b{display:block;font-weight:400;transform:scaleY(.97);
+  /* 356 15회차 — `scaleY(.97)` 폐기(주인 지시 «원본 비율»). 이 자리는 **되돌리는 것이 곧 ref** 다:
+     ref 코인 잉크 75×76(측정표 §7-2, 검정 테 포함)인데 자연 잉크가 74×75.3 이고 .97 은 그것을
+     73 으로 눌러 **ref 에서 멀어지는** 방향이었다. ⇒ 배율을 낮추지 않고 **선언째 걷어낸다**(죽은 배율 0). */
+  .ofr-fr b{display:block;font-weight:400;
     filter:drop-shadow(4px 0 0 #000) drop-shadow(-4px 0 0 #000)
            drop-shadow(0 4px 0 #000) drop-shadow(0 -4px 0 #000)}
   .ofr-amt{left:0;top:393px;width:1080px;text-align:center;height:60px;line-height:60px;
@@ -12783,8 +12786,13 @@
     border:5px solid #000;border-radius:28px;background:#B41C3C;
     box-shadow:0 26px 22px -8px rgba(0,0,0,.45),inset 0 0 0 6px #F33E69;
     display:flex;align-items:center;justify-content:center}
-  /* 이모지 잉크 167 폭 → ref 아트 잉크 144×166. 높이는 일치하므로 scaleX 만 */
-  .st-icon>b{font-size:150px;line-height:200px;transform:scaleX(.86)}
+  /* 이모지 잉크 167 폭 → ref 아트 잉크 144×166.
+     356 15회차 — 「높이는 일치하므로 scaleX 만」은 **폐기된 관행**이다(주인 지시 «원본 비율»).
+     등방으로 갈면 ref 폭 144 에 맞추는 대가로 높이가 169 → 145 로 내려온다 — 이모지가 ref 아트보다
+     17% 넓기 때문이고, 두 축을 다 맞추는 길은 아트뿐이다(7회차 23 훈련 ⚔️ 와 같은 자리).
+     s = min(sx,sy) = .86(contain 자 .854 와 0.7% 차 · `tools/cal356r15.js`), 세로 배율이 새로
+     생기며 잉크 중심이 1px 딸려 오는 것을 translate 로 되돌린다(잔차 0.00 실측). */
+  .st-icon>b{font-size:150px;line-height:200px;transform:translate(0,-1px) scale(.86)}
   /* 설명 1줄 — 잉크 h45(→48px)·중심 x540·프레임 y1357–1402. 외곽선 실측 5~7 → stroke 11 */
   .st-desc{position:absolute;left:0;right:0;top:1345px;height:70px;line-height:70px;text-align:center;
     font-size:48px;font-weight:900;color:#fff;white-space:nowrap;
@@ -13017,9 +13025,13 @@
   .df-ic1 .cLock{left:45px;width:31px;top:33px;height:29px;z-index:2;border-radius:4px;
     box-sizing:border-box;border:3px solid #000;
     background:linear-gradient(180deg,#FFE688 0,#FFD247 45%,#E9A81E 100%)}
-  /* c2 는 ref 아트(불꽃 62×76 + 흰·분홍 얼굴 2개)를 3요소 합성 */
-  .df-card.c2 .df-ic{display:block;transform:translate(10.5px,-1.5px) scale(.892,.885)}
-  .df-ic .fl{position:absolute;left:50%;top:2px;transform:translateX(-50%) scale(.82,.86);
+  /* c2 는 ref 아트(불꽃 62×76 + 흰·분홍 얼굴 2개)를 3요소 합성.
+     356 15회차 — 두 자리 다 비균등이었다(묶음 .892/.885 = 1.008 · 불꽃 .82/.86 = 0.953 ⇒ 누적 0.961).
+     둘 다 «작은 쪽으로»(397 처방 · s = min(sx,sy))로 갈아 **누적 종횡 1.000**. 크기는 안 건드린다 —
+     불꽃 단독 ref 는 62×76 이지만 이 카드의 아이콘 묶음은 패널 안쪽 100 박스에 contain 으로 이미
+     18 의 폴리시가 정한 값이고, 356 의 작업 단위는 «종횡» 이지 «크기» 가 아니다. */
+  .df-card.c2 .df-ic{display:block;transform:translate(10.5px,-1.5px) scale(.885)}
+  .df-ic .fl{position:absolute;left:50%;top:2px;transform:translateX(-50%) translate(0,1px) scale(.82);
     transform-origin:50% 0;font-size:74px;line-height:80px}
   .df-ic .f1{position:absolute;left:-3px;bottom:-3px;font-size:46px;line-height:46px}
   .df-ic .f2{position:absolute;right:-3px;bottom:-3px;font-size:46px;line-height:46px}
