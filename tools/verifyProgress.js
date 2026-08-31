@@ -271,8 +271,13 @@ const held = [];       /* 제외 — lock 이 살아 있다(진행 중) */
 const watch = [];      /* 관찰 — 자산은 있는데 «끝났다» 를 결정적으로 못 읽었다 */
 const skipRev = !!rev;
 if (!skipRev) {
+  const namedBy1 = new Set(bad.map(b => b.id));
   for (const [id, line] of cur) {
     if (DONE_DATED.test(line)) continue;                 /* 행에 완료 표지가 있으면 §2 의 몫이다 */
+    /* §1 이 이미 그 행을 댔으면 §3 은 입을 다문다 — **진단이 갈리면 고치는 법도 갈린다.**
+       되돌린 행은 «그 done 커밋의 행을 되살려라» 이고 마감 누락은 «세 칸을 채워라» 다.
+       둘을 같이 찍으면 어느 쪽을 하라는 건지 읽는 사람이 모른다(§1 이 더 구체적인 쪽이다). */
+    if (namedBy1.has(id)) continue;
     if (!(NOT_YET.exec(line) || tailHead(line))) continue; /* 표가 «미착수» 로 안 읽힌다 */
     const rv = reviewOf(id), gate = gateOf(id);
     if (!rv.length && !gate) continue;                   /* 진짜 미착수 — 자가 건드리면 안 되는 자리 */

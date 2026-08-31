@@ -159,6 +159,36 @@ try {
   ok('[H-a] §2 가 그 행을 자기모순으로 잡는다', /PROGRESS SELF-CONTRADICTION/.test(h.out) && /✗ 498 — 자기모순/.test(h.out));
   ok('[H-b] §3 은 그 행을 안 건드린다(이중 계상 없음)', !/498 — 마감 누락/.test(h.out) && !/498 — 관찰/.test(h.out));
 
+  /* ── [I] 경계 — §1 이 이미 댄 행은 §3 이 다시 안 댄다 ──
+   * 되돌린 행은 완료 표지를 잃으므로 §3 의 후보 모양과 **정확히 같아진다**. 둘 다 찍으면
+   * 고치는 법이 갈린다(§1 «done 커밋의 행을 되살려라» ↔ §3 «세 칸을 채워라») — 더 구체적인 §1 이 댄다.
+   * ⚠ 이 항이 없으면 `verify374` R2(«§1 빨간 행이 정확히 되돌린 그 행뿐»)가 조용히 빨개진다(1회차 실측). */
+  console.log('\n[I] 경계 — §1 이 댄 행은 §3 이 다시 안 댄다');
+  const realRows = P.rowsOf(REAL);
+  const doneIds = [...new Set((execFileSync('git', ['log', 'HEAD', '--format=%s', '--', 'docs/PROGRESS.md'],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 }).split('\n')
+    .map(s => /^done\(([0-9A-Z, ]+)\)/.exec(s)).filter(Boolean)
+    .flatMap(g => g[1].split(',').map(x => x.trim()))))];
+  /* 표본 조건: ① 이력에 done() 이 보이고 ② 지금 행이 완료로 닫혀 있고 ③ 자산이 있고 ④ lock 이 없고
+     ⑤ **합성 사본에서 완료 표지가 통째로 걷힌다**. ⑤ 를 안 물으면 «칸에 `|` 가 있어 구현 칸이 밀린 행»
+     (예: 559)이 뽑혀 사본에 ✅ 가 남고, §1 이 아니라 **§3 의 DONE_DATED 제외**가 [I-a] 를 통과시킨다
+     = 시험이 엉뚱한 축을 재게 된다(1회차 실측). */
+  const donePick = doneIds.find(id => {
+    const row = realRows.get(id);
+    if (!(row && P.DONE_DATED.test(row) && (P.reviewOf(id).length || P.gateOf(id)) && !P.lockOf(id))) return false;
+    try { return !/✅|완료\(/.test(P.rowsOf(P.synth(REAL, id)).get(id)); } catch (e) { return false; }
+  });
+  if (!donePick) {
+    console.log('  –   [I-a]~[I-c] 건너뜀 — 얕은 창에 «완료 표지 + 자산» 을 다 가진 done 행이 없다');
+  } else {
+    /* 그 행을 «미착수» 로 되돌린 사본 = §1(표지 회귀)과 §3(마감 누락)의 후보 모양이 겹치는 자리 */
+    const both = P.synth(REAL, donePick);
+    const i = run(['--file', write('Pboth.md', both), '--no-gate']);
+    ok('[I-0] 전제: 그 사본이 §1 을 빨갛게 한다', new RegExp('✗ ' + donePick + ' — (완료 표지가 사라졌다|정확 되돌림)').test(i.out), donePick);
+    ok('[I-a] §3 은 같은 행을 다시 안 부른다(이중 진단 없음)', !new RegExp('✗ ' + donePick + ' — 마감 누락').test(i.out));
+    ok('[I-b] §3 요약이 그 행을 관찰로도 안 센다', !new RegExp('⚠  ' + donePick + ' — 관찰').test(i.out));
+  }
+
   /* ── [P] 재현기 ── */
   console.log('\n[P] 재현기');
   const p = run(['--no-gate'], 'tools/probe557.js');
