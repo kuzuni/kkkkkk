@@ -28,7 +28,9 @@
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { SCREENS } = require('./scan356');
+/* ⚠ 356 13회차 — 구동기는 `scan356.STEP` 한 벌이다(자기 손으로 다시 적으면 `js:<식>` 단계를
+   조용히 건너뛴다 · `verify356` [R12] 가 지킨다). */
+const { SCREENS, STEP } = require('./scan356');
 
 const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 const JSON_OUT = process.argv.includes('--json');
@@ -106,11 +108,7 @@ async function visit(browser, steps, diag) {
     await page.waitForTimeout(700);
     let sig = await page.evaluate(SIG);
     for (const s of steps) {
-      const found = await page.evaluate((q) => {
-        const el = document.querySelector(q);
-        if (el) el.click();
-        return !!el;
-      }, s);
+      const found = await STEP(page, s);
       await page.waitForTimeout(420);
       const now = await page.evaluate(SIG);
       /* ⚑ 448 — `moved` 도 같은 뿌리로 무음이었다. 예전 자는 서명 해시를 **정확 비교**해서,

@@ -1284,7 +1284,7 @@ async function sweep(browser, inject) {
 
     /* ⓒ 검출기: «스캐너의 SCREENS 를 받아 쓰면서 구동기는 자기 손으로 적은» 파일.
        손으로 적었다는 표시 = `querySelector(<변수>)` + `.click()` 이 한 줄에 같이 있는 것. */
-    const HAND = /document\.querySelector\(\s*[a-z]\w*\s*\)[^;\n]*\.click\(\)/;
+    const HAND = /document\.querySelector\(\s*[a-z]\w*\s*\)[\s\S]{0,140}?\.click\(\)/;
     const drift = (src) => /require\(['"]\.\/scan356(\.js)?['"]\)/.test(src) && HAND.test(src) && !/\bSTEP\b/.test(src);
     const sibs = fs.readdirSync(__dirname).filter((f) => f.endsWith('.js') && f !== 'scan356.js' && f !== 'verify356.js')
       .filter((f) => /require\(['"]\.\/scan356(\.js)?['"]\)/.test(fs.readFileSync(path.join(__dirname, f), 'utf8')));
@@ -1297,6 +1297,11 @@ async function sweep(browser, inject) {
        (기대값만 뒤집는 무른 수리를 막는다 — 334 처방) */
     const sample = `const { COLLECT, URL, TOL, SCREENS } = require('./scan356.js');\n`
       + `const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);\n`;
+    /* 음성항 — 고친 모양(STEP 을 받아 쓴다)은 **안 잡혀야** 한다. 안 그러면 [R12-c] 가 상시 빨강이다. */
+    const fixed = `const { COLLECT, URL, TOL, SCREENS, STEP } = require('./scan356.js');\n`
+      + `const found = await STEP(page, s);\n`;
+    if (!drift(fixed)) ok('[R12-e] 음성항 — 고친 모양(STEP 을 받아 쓴다)은 검출기가 안 잡는다');
+    else bad('[R12-e] 검출기가 고친 모양까지 잡는다 — 상시 빨강이 된다');
     if (drift(sample)) ok('[R12-d] 되돌림 — 수리 전 모양(자기 손 구동기 + STEP 없음)을 사본으로 먹이면 검출기가 잡는다');
     else bad('[R12-d] 되돌림 실패 — 검출기가 수리 전 모양조차 못 잡는다 (regex 가 늙었다)');
   }

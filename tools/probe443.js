@@ -24,7 +24,9 @@ const path = require('path');
 const fs = require('fs');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { SCREENS, COLLECT, URL, derivePassScreens, HTML } = require('./scan356.js');
+/* ⚠ 356 13회차 — 구동기는 `scan356.STEP` 한 벌이다(자기 손으로 다시 적으면 `js:<식>` 단계를
+   조용히 건너뛴다 · `verify356` [R12] 가 지킨다). */
+const { SCREENS, COLLECT, URL, derivePassScreens, HTML, STEP } = require('./scan356.js');
 
 const JSON_OUT = process.argv.includes('--json');
 
@@ -97,7 +99,7 @@ const keysOf = (screens) => screens.flatMap(([, st]) => st)
     await p2.goto(URL, { waitUntil: 'load' });
     await p2.waitForTimeout(700);
     for (const s of ['#menub', '#psGo', `#psBar [data-ptab="${k}"]`]) {
-      await p2.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+      await STEP(p2, s);
       await p2.waitForTimeout(400);
     }
     await p2.waitForTimeout(200);

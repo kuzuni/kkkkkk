@@ -19,7 +19,9 @@
  */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { COLLECT, URL, TOL, SCREENS } = require('./scan356.js');
+/* ⚠ 356 13회차 — 구동기는 `scan356.STEP` 한 벌이다(자기 손으로 다시 적으면 `js:<식>` 단계를
+   조용히 건너뛴다 · `verify356` [R12] 가 지킨다). */
+const { COLLECT, URL, TOL, SCREENS, STEP } = require('./scan356.js');
 
 const JSON_OUT = process.argv.includes('--json');
 
@@ -60,7 +62,7 @@ const SIG = function () {
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        const found = await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); return !!el; }, s);
+        const found = await STEP(page, s);
         if (!found) errs.push(`${label}: 무음 실패 — '${s}' 가 DOM 에 없다`);
         await page.waitForTimeout(450);
       }

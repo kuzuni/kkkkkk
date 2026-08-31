@@ -37,7 +37,9 @@
 const path = require('path');
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
-const { SCREENS, URL } = require('./scan356');
+/* ⚠ 356 13회차 — 구동기는 `scan356.STEP` 한 벌이다(자기 손으로 다시 적으면 `js:<식>` 단계를
+   조용히 건너뛴다 · `verify356` [R12] 가 지킨다). */
+const { SCREENS, URL, STEP } = require('./scan356');
 
 const JSON_OUT = process.argv.includes('--json');
 const REVERT = process.argv.includes('--revert');
@@ -162,7 +164,7 @@ if (require.main !== module) return;
       await page.goto(URL, { waitUntil: 'load' });
       await page.waitForTimeout(700);
       for (const s of steps) {
-        await page.evaluate((q) => { const el = document.querySelector(q); if (el) el.click(); }, s);
+        if (!(await STEP(page, s))) errs.push(`${label}: 무음 실패 — 단계 '${s}' 가 안 먹었다`);
         await page.waitForTimeout(420);
       }
       if (REVERT) await page.addStyleTag({ content: REVERT_CSS });
