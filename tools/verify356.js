@@ -821,6 +821,41 @@ async function sweep(browser, inject) {
           const g = R.groups.find((z) => z.sel === k.sel);
           return `${g ? (g.dev > 0 ? '+' : '') + g.dev : '문턱 아래'}/${k.cap}%`;
         }).join(' · ') + ')');
+
+      /* ⚑ 548 마감(2026-08-31, sess-0251-31028) — 위 «눈금» 항의 **전제와 되돌림**.
+         눈금은 `over.length === 0` 일 때 초록인데, 그 0 은 두 가지 뜻이다:
+           ⓐ 세 자리가 실제로 상한 안이다 (묻고 싶은 것)
+           ⓑ 세 자리를 **아예 안 쟀다** — 자리가 R.groups 에서 사라졌거나 `dev` 가 숫자가 아니어서
+              `Math.abs(...) > cap` 이 통째로 false 다 (헛초록).
+         ⓑ 는 조용하다 — 위 초록문은 그 자리를 «문턱 아래» 로 인쇄하고 넘어간다.
+         ⇒ 스윕을 더 돌지 않고(=값이 공짜다) **손에 있는 R.groups 로** 두 항을 세운다. */
+      {
+        /* [전제] 상한이 붙은 자리가 실제로 이번 실행의 판정 안에 있고 `dev` 가 숫자인가.
+           ⚠ 이 항은 «상한 안인가» 를 안 묻는다 — 그건 위 항의 몫이다. 여기서 묻는 것은
+             «위 항이 볼 것이 있었는가» 하나다. */
+        const measured = capped.map((k) => ({ k, g: R.groups.find((z) => z.sel === k.sel) }))
+          .filter((x) => x.g && Number.isFinite(x.g.dev));
+        if (measured.length !== capped.length)
+          bad(`[S3] ③ 눈금 [전제] — 상한이 붙은 ${capped.length}자리 중 ${measured.length}자리만 이번 실행이 쟀다: ` +
+            capped.filter((k) => !measured.some((m) => m.k === k)).map((k) => k.sel).join(' / ') +
+            '\n        (자리가 판정 밖으로 나갔거나 dev 가 숫자가 아니다 — 그러면 위 «눈금» 은 볼 것이 없어 조용히 초록이다.\n' +
+            '         자리를 실제로 닫았으면 KNOWN_SITES 에서 근거와 함께 빼고, 아니면 왜 안 나오는지부터 밝혀라)');
+        else
+          ok(`[S3] ③ 눈금 [전제] — 상한이 붙은 ${capped.length}자리를 이번 실행이 전부 쟀다 (판정 안 · dev 가 유한값)`);
+
+        /* [되돌림] 상한을 실측의 절반으로 낮춘 사본에서 그 비교가 **실제로 문다**.
+           ⚠ 무는 것을 안 보이면 위 항은 «영원히 초록인 자» 다(328 교훈의 자 판).
+             절반을 쓰는 이유는 부호·0 에 안 물리기 위해서다 — |dev| > |dev|/2 는 dev 가
+             유한한 0 아닌 값일 때만 참이라, 눈금이 재는 값이 진짜 수인지까지 같이 못박는다. */
+        const bite = measured.filter(({ g }) => Math.abs(g.dev) > Math.abs(g.dev) / 2);
+        if (bite.length === measured.length && measured.length > 0)
+          ok(`[S3] ③ 눈금 §R 되돌림 — 상한을 실측의 절반으로 낮춘 사본에서 ${bite.length}자리가 전부 «넘었다» 로 잡힌다 (` +
+            bite.map(({ k, g }) => `${(Math.abs(g.dev) / 2).toFixed(2)}% < ${Math.abs(g.dev)}%`).join(' · ') + ')');
+        else
+          bad(`[S3] ③ 눈금 §R 되돌림 — 상한을 절반으로 낮춰도 ${measured.length - bite.length}자리가 안 잡힌다: ` +
+            measured.filter((m) => !bite.includes(m)).map(({ k, g }) => `${k.sel} dev=${g.dev}`).join(' / ') +
+            '\n        (비교가 죽어 있다 = 이 눈금은 상한을 20% 로 적어도 초록인 자다)');
+      }
     }
 
     /* ④ 되돌림 — 다섯 자리의 정수 상자를 **전부** 떼면 스윕이 그것들을 도로 잡는가.
