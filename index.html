@@ -30793,14 +30793,37 @@ function rwHoldStop(bad){
    ↩ 되돌리려면 이 함수 본문을 `upFx('relic', $('rwBasin'), PAY_CUR.relic, first ? 10 : null, true, null)`
      한 줄로 되돌리면 1회차(요소 버스트)로 돌아간다. */
 const RW_FX_N0 = 10;                     /* 첫 발 — 619 어휘(`fxUpOk` 의 10알)와 같은 값 */
+/* ⚑⚑ 3회차 — 2회차(점 버스트)를 비평가 2인이 **또** 8 아래로 잡았다(최저 3·4). 둘의 «단 하나» 가
+   같은 자리를 가리켰다: ⓐ 「선명한 동안(불투명 구간 0~198ms)에는 입자가 100% 버튼 상자 안이고,
+   밖으로 나가는 2~3알은 이미 흐려진 뒤다 · 최대 반경 164px < 버튼 반폭 197px 이라 좌우로는 구조적으로
+   못 나간다」 ⓑ 「중심 스폰이라 첫 80~180ms 를 **버튼 라벨(«유물 소환»)과 비용 알약 위**에서 보낸다」.
+   ⇒ 손잡이 둘을 이 자리에서만 돌린다(공용 `fxBurst` 의 상수 `rnd(80,150)` 은 전투·보상 버스트가
+     같이 쓰는 값이라 **한 글자도 안 건드린다** — 16회차가 «±450px 드리프트» 로 좁힌 자리다):
+   ① **발원점을 그릇 아가리로 올린다**(`RW_FX_Y` = 상자 높이의 28%). 라벨 잉크(상자 중앙)와
+      비용 알약(하단)에서 둘 다 벗어나고, «수반에서 솟는다» 는 이 화면의 그림과도 맞는다.
+   ② **이동 거리를 이 버스트에만 ×`RW_FX_FLY`** 한다. 자리는 `fxBurst` 가 노드에 적어 둔
+      `--dx/--dy`(px)이고, 스폰 직후 **내가 만든 노드에만** 곱한다. 검산: 기저 80~150 × 2.0 =
+      160~300px 이고 `fxSpark` 는 **52% 지점까지 불투명**(그때 이동 0.78d = 125~234px)이라
+      세로 반높이 107px 를 **불투명한 채로** 넘는다 — 비평가 D 의 처방(«130ms 에 4~5알이 상자 밖»)과
+      같은 산수다. 프레임 밖으로는 안 나간다(중심 540 ± 300 = 240~840 · 세로도 안쪽).
+   ⚠ 수명·색·개수·크기는 한 값도 안 건드렸다 — 바꾼 것은 «어디서 나서 얼마나 멀리 가는가» 둘뿐이다.
+   ↩ 되돌림: `RW_FX_Y` 를 0.5 로, `RW_FX_FLY` 를 1 로 두면 2회차와 픽셀 동일하다. */
+const RW_FX_Y = 0.28, RW_FX_FLY = 2.0;
 function rwSummonFx(it, first){
   const el = it && $('rwGrid').querySelector('[data-rw="' + it.id + '"]');
   if(el){ fxFlash(el); fxHitEl(el); }
   const L = (typeof fxL === 'function') ? fxL() : null;
-  const p = (typeof fxPt === 'function') ? fxPt($('rwBasin')) : null;
-  if(!L || !p) return false;
+  const r = (typeof fxRect === 'function') ? fxRect($('rwBasin')) : null;
+  if(!L || !r) return false;
   const n = Math.max(1, Math.min(first ? RW_FX_N0 : UPFX_N, FXMAX - L.childElementCount - 1));
-  fxBurst(p, FXPAL.up, n, false, null, PAY_CUR.relic);
+  const before = new Set(L.children);
+  fxBurst({ x:r.x + r.w / 2, y:r.y + r.h * RW_FX_Y }, FXPAL.up, n, false, null, PAY_CUR.relic);
+  for(const nd of L.children){
+    if(before.has(nd)) continue;
+    const dx = parseFloat(nd.style.getPropertyValue('--dx')), dy = parseFloat(nd.style.getPropertyValue('--dy'));
+    if(Number.isFinite(dx)) nd.style.setProperty('--dx', (dx * RW_FX_FLY).toFixed(1) + 'px');
+    if(Number.isFinite(dy)) nd.style.setProperty('--dy', (dy * RW_FX_FLY).toFixed(1) + 'px');
+  }
   return true;
 }
 function rwHoldTick(){

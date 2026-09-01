@@ -61,7 +61,11 @@ const ARM = () => {
     let intended = 380;
     try { const d = parseFloat(getComputedStyle(nd).animationDuration); if (d > 0) intended = d * 1000; } catch (_) {}
     /* 2회차 — «이동» 축(아래 [C3]). 입자는 CSS 변수 `--dx/--dy` 만큼 날아간다 —
-       끝점을 프레임에서 다시 재는 것보다 **제품이 적어 둔 값**을 읽는 쪽이 정확하다(619 12회차 규약). */
+       끝점을 프레임에서 다시 재는 것보다 **제품이 적어 둔 값**을 읽는 쪽이 정확하다(619 12회차 규약).
+       ⚠ **3회차 — append 시점에 읽으면 안 된다.** 제품이 스폰 «직후» 에 그 값을 손보는 자리가
+         생겼으므로(`rwSummonFx` 의 `RW_FX_FLY`), append 훅에서 읽으면 **손보기 전 값**이 잡혀
+         자가 «안 고쳤다» 고 말한다(3회차 1차 실행에서 실제로 118px = 기저값이 나왔다).
+         → 마이크로태스크로 미뤄 **그 프레임의 최종값**을 읽는다. */
     const dx = parseFloat(nd.style.getPropertyValue('--dx')) || 0;
     const dy = parseFloat(nd.style.getPropertyValue('--dy')) || 0;
     const rec = { k: kindOf(nd), t, born: t, intended, dx, dy,
@@ -69,6 +73,11 @@ const ARM = () => {
                   cur: im ? (im.getAttribute('data-cur-ic') || '') : '',
                   img: !!im, txt: (nd.textContent || '').trim().slice(0, 24) };
     nd.__v666 = rec; P.add.push(rec);
+    queueMicrotask(() => {                            /* 위 머리말 — 손본 «최종» 이동값으로 갱신 */
+      const fx = parseFloat(nd.style.getPropertyValue('--dx')), fy = parseFloat(nd.style.getPropertyValue('--dy'));
+      if(Number.isFinite(fx)) rec.dx = fx;
+      if(Number.isFinite(fy)) rec.dy = fy;
+    });
   };
   const ap = L.appendChild.bind(L);
   L.appendChild = nd => { const r = ap(nd); stamp(nd); return r; };
@@ -122,16 +131,17 @@ const inBox = (a, r, M) => a.x >= r.x - M && a.x <= r.x + r.w + M && a.y >= r.y 
      body ? '본문 ' + body.length + '자' : '본문을 못 찾았다');
   ok(/function rwSummonFx\(it, first\)\{/.test(code),
      'A2 회당 연출이 **한 함수**(`rwSummonFx`)다 — 첫 발·홀드 틱이 같은 자리를 지난다(1:1 축의 뿌리)');
-  ok(/fxPt\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(p, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code),
-     'A3 발화가 «버튼(`#rwBasin`) 중심점» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(2회차 — 점 버스트)');
+  ok(/fxRect\(\$\('rwBasin'\)\)/.test(code) && /fxBurst\(\{ x:r\.x[^;]*PAY_CUR\.relic\)/.test(code)
+     && /const RW_FX_Y = [\d.]+, RW_FX_FLY = [\d.]+;/.test(code),
+     'A3 발화가 «버튼 상자 안의 한 점(그릇 아가리)» 에서 «표가 말하는 재화(`PAY_CUR.relic`)» 로 터진다(3회차)');
   ok(/const PAY_CUR = \{[^}]*relic:'relic'/.test(code),
      'A4 `PAY_CUR` 표에 유물 소환 자리가 있다 — 화폐 문자열을 호출부에 손으로 안 적는다(402 규약)');
   /* 2회차 — `upFx` 의 세대 큐를 안 타므로 상한을 **여기서** 지킨다. `fxBurst` 의 FXMAX 가드는
      «넘으면 통째로 return» 이라 그대로 두면 발화가 조용히 빠진다([E1] 이 깨진다). */
   ok(/Math\.max\(1, Math\.min\(first \? RW_FX_N0 : UPFX_N, FXMAX - L\.childElementCount - 1\)\)/.test(code),
      'A5 상한을 «걷기» 가 아니라 «개수 줄이기» 로 지키고 바닥 1알을 보장한다(660 처방 · 발화는 안 빠진다)');
-  ok(/fxBurst\(p, FXPAL\.up, n, false, null,/.test(code) && !/fxBurst\(p,[^)]*iv/.test(code),
-     'A5b `iv` 를 버스트에 안 넘긴다 — 입자가 제 수명을 끝까지 산다(660 캔슬 금지 규약)');
+  ok(/, FXPAL\.up, n, false, null, PAY_CUR\.relic\)/.test(code) && /RW_FX_FLY\)\.toFixed\(1\)/.test(code),
+     'A5b `iv` 는 안 넘기고(수명 그대로) **이동만** 이 자리에서 `RW_FX_FLY` 로 늘린다 — 공용 상수는 불변(3회차)');
   const rw = nc((code.split('function rwHoldTick(){')[1] || '').split('\n[\'pointerup\'')[0]);
   ok(/rwSummonFx\(it, false\)/.test(rw) && /rwSummonFx\(it, true\)/.test(rw),
      'A6 두 호출부(홀드 틱 · 첫 발)가 그 함수를 지난다', rw ? '' : 'rwHold 절을 못 찾았다');
