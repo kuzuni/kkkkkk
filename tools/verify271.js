@@ -144,8 +144,8 @@ const URL = 'file://' + path.resolve(__dirname, '../index.html');
   ok(geo.hd && geo.hd[1] === 24 && geo.hd[3] === 88,
     '★ 687 — 재화 잔량 헤더가 본문 머리(박스 local top 24) · 높이 88 = 단련 .tp-hd 와 같은 부품 급',
     geo.hd && geo.hd[1] + ' / ' + geo.hd[3]);
-  ok(geo.dn[1] === 132 && geo.dn[3] === 98,
-    '하위 바가 헤더 아래(박스 local top 132 = 24+88+20) · 부품 높이 98', geo.dn[1] + ' / ' + geo.dn[3]);
+  ok(geo.dn[1] === 130 && geo.dn[3] === 98,
+    '하위 바가 헤더 아래(박스 local top 130 = 24+88+18) · 부품 높이 98', geo.dn[1] + ' / ' + geo.dn[3]);
   ok(geo.card === 1, '★ 한 화면에 룬 카드 1장(행 나열 폐기)', String(geo.card));
   ok(geo.overlap === 0, '687 헤더 · 하위 바 · 카드 · 총효과 요약 · 상위 바 서로 겹침 0건', String(geo.overlap));
   ok(geo.order, '세로 순서 — 687 헤더 → 하위 바 → 카드 → 총효과 요약 → 상위 바');

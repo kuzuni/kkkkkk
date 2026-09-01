@@ -100,11 +100,16 @@ const boot = async (browser, h) => {
     const hb = hd.getBoundingClientRect();
     const rg = document.createRange(); rg.selectNodeContents(i);
     const ib = rg.getBoundingClientRect();
+    /* 4회차 — 중앙은 상자가 아니라 **잉크**로 잰다: rstone 아트는 정사각 상자에 잉크 폭
+       상자×0.625(§5161 표)라 좌우 투명 여백을 낀 상자 중심은 «보이는 중앙» 과 +5px 어긋난다
+       (비평 3회차 2인이 그 값을 실측으로 짚었다 — CSS margin-left −10 이 보정한다). */
+    const im = i.querySelector('img.cic').getBoundingClientRect();
+    const inkL = im.left + (im.width - im.width * 0.625) / 2;
     return {
       txt: i.textContent.replace(/\s+/g, ' ').trim(),
       hangul: (i.textContent.match(/[가-힣]/g) || []).length,
       imgs: i.querySelectorAll('img.cic').length,
-      dCx: Math.abs((hb.left + hb.right) / 2 - (ib.left + ib.right) / 2),
+      dCx: Math.abs((hb.left + hb.right) / 2 - (inkL + ib.right) / 2),
       inX: ib.left >= hb.left && ib.right <= hb.right,
       inY: ib.top >= hb.top - 1 && ib.bottom <= hb.bottom + 1
     };
@@ -112,7 +117,7 @@ const boot = async (browser, h) => {
   ok(/^[\d,]+$/.test(fmtc.txt), '★ 글자는 수(콤마 포함)뿐이다', '«' + fmtc.txt + '»');
   ok(fmtc.hangul === 0, '★ 한글 라벨 0자(«룬강화석» 금지 — 보강 01:25)', fmtc.hangul + '자');
   ok(fmtc.imgs === 1, '아이콘 1장(이모지 아님 — 125 규약 .cic)', String(fmtc.imgs));
-  ok(fmtc.dCx <= 2, '★ 잉크(아이콘+수)가 헤더 가로 중앙이다(Δ≤2px)', 'Δ' + fmtc.dCx.toFixed(2) + 'px');
+  ok(fmtc.dCx <= 2, '★ **잉크**(아이콘 잉크+수)가 헤더 가로 중앙이다(Δ≤2px — 광학 중앙, 4회차)', 'Δ' + fmtc.dCx.toFixed(2) + 'px');
   ok(fmtc.inX && fmtc.inY, '잉크가 헤더 상자 안에 온전하다(잘림 0)');
 
   /* ══ [4] 자리 — 탭 «위» · 겹침 0 · 다른 탭에서는 없음 · 공용 재화 하나 ══ */
