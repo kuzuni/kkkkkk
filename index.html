@@ -6874,10 +6874,34 @@
   .pvc.pp{--c:#A874E8;--s:#7A45BE;--h:#D5B4FF;--d:#6C3AAE}   /* 3장 보라 (151 신설 — 제3색) */
   /* 몸통 + 안쪽 밝은 림. ref 림은 **좌·우·아래 3변에만** 있고 윗변에는 없다(헤더 밴드가 물린다) */
   .pvc>.bg{left:10px;top:10px;right:10px;bottom:10px;
-    background:repeating-linear-gradient(45deg,transparent 0 30px,rgba(0,0,0,.05) 30px 60px),var(--c);
-    border:12px solid var(--h);border-top:0;border-radius:31px}
+    /* ⑤-7 몸통 «마름모 격자» — ref 는 **두 톤 마름모 체커**다(측정표 §1-2: 몸통 #39C48D ↔ 패턴 #34B380).
+       옛 값은 45° **한 방향** 줄무늬 + `rgba(0,0,0,.05)` 라 ⓐ 마름모가 아니라 사선이고 ⓑ 대비가 ref 의
+       절반이었다. conic 4분면(대각선으로 갈린 삼각형 4개)을 60px 로 깔면 이웃 타일의 삼각형끼리 붙어
+       **마름모 체커**가 된다. 알파는 ref 실측 비(52/57 · 179/196 · 128/141 = 0.912)의 여집합 **.088**. */
+    background:conic-gradient(from 45deg,rgba(0,0,0,.088) 0 25%,#0000 0 50%,
+      rgba(0,0,0,.088) 0 75%,#0000 0) 0 0/60px 60px,var(--c);
+    border:12px solid var(--h);border-top:0;border-radius:31px;
+    -webkit-mask:var(--ntc-bg);mask:var(--ntc-bg)}
   .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
-  .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none}
+  .pvc>.fr{left:0;top:0;right:0;bottom:0;border:10px solid #000;border-radius:44px;pointer-events:none;
+    -webkit-mask:var(--ntc-fr);mask:var(--ntc-fr)}
+  /* ⑧ 우변 «물결 노치» — ref 카드 실루엣의 규칙이다(측정표 §1-3: «카드 우변은 손그림 물결»).
+     초록 카드 실측 깊이 15.6 · 세로 51 · 하변에서 위로 110.7 → k=2.0628 로 깊이 **32** · 길이 **105** ·
+     `bottom:108`. 파랑(배너형)도 하변에서 106.3 이라 **하변 기준 상수 하나**로 두 형이 같이 맞는다
+     («카드 높이의 몇 %» 가 아니다 — 두 카드 높이가 771/534 로 달라서 비율로 걸면 한 장이 틀린다).
+     ⚠ **깎지 않고 «구멍 + 덧댄 호»** 다 — LESSONS 151-⑥(리본 제비꼬리)이 못 박은 대로 `clip-path` 를
+     `.pvc` 에 걸면 밖으로 나가는 자식(상태 탭·알약·뱃지·리본)이 같이 잘린다. 그래서 마스크는
+     **자식이 없는 두 칠면**(`.bg` 몸통+림 · `.fr` 검정 테)에만 걸고, 잘린 자리의 검정 외곽선은
+     `.ntc` 가 **속이 빈 링**으로 덧댄다. ⚠ 속을 배경색으로 칠하지 않은 이유 — 카드 뒤 바탕은 단색이
+     아니라 (54,54,63)~(49,49,58) 로 흐른다(실측). 색을 박으면 자리마다 어긋난다. 구멍이라 진짜 뒤가 비친다.
+     타원 중심은 카드 우변 위(x=978)라 **왼쪽 절반만** 카드 안이다 = 깊이 = 가로 반지름 32. */
+  .pvc{--ntc-cy:calc(100% - 160.5px);                        /* 하변 108 + 세로 반지름 52.5 */
+    --ntc-fr:radial-gradient(32px 52.5px at 100% var(--ntc-cy),#0000 98%,#000 100%);
+    /* `.bg` 는 사방 10px 안쪽이라 같은 점이 «우변 밖 10px · 하변에서 150.5» 다 */
+    --ntc-bg:radial-gradient(32px 52.5px at calc(100% + 10px) calc(100% - 150.5px),#0000 98%,#000 100%)}
+  .pvc>.ntc{right:0;bottom:108px;width:32px;height:105px;overflow:hidden;z-index:2;pointer-events:none}
+  #shopw .pvc>.ntc>s{position:absolute;left:0;top:0;width:64px;height:105px;box-sizing:border-box;
+    border:10px solid #000;border-radius:50%}
   /* ① 상태 탭 — 카드 윗변에 걸쳐 **위로 56px** 나온다(ref 27 × k). 아래변 테두리는 없다 */
   .pvc>.stt{left:29px;top:-56px;width:250px;height:68px;border-radius:30px 30px 0 0;
     border:7px solid #000;border-bottom:0;background:var(--d);z-index:2}
@@ -31309,7 +31333,8 @@ function renderPassPage(list){
              477 이 소유한 성질(«하단 줄은 총론 한 줄 · 카드 정보는 카드 안»)은 그대로 살아 있고,
              카드 안에서 말할 것이 «가격 버튼» 하나로 줄었을 뿐이다. */
           : '<div class="bt" data-pvbuy="' + p.id + '"><i>' + wonTxt(p.won) + '</i></div>')
-      +  '<div class="fr"></div></div>';
+      /* ⑧ 우변 물결 노치 — `.fr` **다음**에 둔다(마스크로 뚫린 검정 테 자리에 호를 덧댄다) */
+      +  '<div class="fr"></div><div class="ntc"><s></s></div></div>';
   });
   /* 기간제 이용권 남은 기간 바 — 보유 중일 때만(자동 축복) */
   const barY = y + 10;
