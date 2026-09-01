@@ -307,3 +307,7 @@ tools/.v646-rev169-*.js
 tools/.*.html
 tools/.*.js
 tools/.*.json
+
+# 751 probe751.js §R 이 되돌림 시험용으로 잠깐 뽑는 사본 (시험이 끝나면 지운다)
+# ⚠ 저장소 루트에 둔다 — index.html 이 assets/** 를 상대 경로로 물고 있어 /tmp 에서는 404 다
+.v751-neg-*.html

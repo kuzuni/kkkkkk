@@ -19,6 +19,9 @@
                    그 규칙의 게이트는 `tools/verify273.js` 이고, 여기서는 «자동으로 서지 않는다» 만 확인한다.
      §6 회귀     던전·레이드·아레나 진입이 보스 단계를 비운다 · 레이드 샌드백(tk 'boss') 처치가
                  스테이지를 올리지 않는다(28·46·123 구간 불변).
+                 ⚑ 751(2026-09-01) — 453 시절의 «보스전 중에는 입장이 막힌다» 2항은 665(주인 지시
+                   2026-09-02)가 그 설계를 다시 뒤집어 **폐지됐다.** 자리를 비우지 않고 방향을
+                   뒤집었다(333 처방): «막힌다» → «**선 보스 단계를 비우고** 들어간다».
      §7 콘솔 에러 0. */
 const { pw, launch } = require('./pwlaunch');
 const { chromium } = pw();
@@ -239,15 +242,32 @@ const hud = (p) => p.evaluate(() => {
     S.stage = 20; spawnStage(); killed = 30;
     startBoss();
     const before = bossOn;
-    /* ⚑ 453(주인 지시 2026-08-30) — 여기는 원래 «보스전 한복판에서 던전 입장» 표본이었다.
-       주인이 그 설계를 뒤집어 **전투 중 입장이 전면 차단**됐으므로, 죽은 표본을 붙들지 않고
-       살아 있는 규칙 두 개로 갈아 끼운다(333·402 처방):
-         ⓐ 보스전 중에는 입장 자체가 **막힌다**(453 이 새로 세운 규칙 — 여기서 한 번 더 잰다)
-         ⓑ «입장이 보스 단계를 비운다» 는 여전히 참이다 — 들어갈 수 있는 상태에서 잰다.
-       ⓑ 의 표본은 **파밍 대기**(`S.bossFarm` · `bossOn=false`)다: 파밍은 «전투 중» 이 아니라
-       입장이 열려 있고, 그 깃발이 안 비워지면 던전에서 나올 때 되살아난다(162 가 원래 잡던 그것). */
+    /* ⚑ 751(2026-09-01) — 여기는 453(주인 지시 2026-08-30) 시절의 «보스전 중에는 입장이 막힌다»
+       표본이었다. 665(주인 지시 2026-09-02 «스테이지 도전하다가 던전·승급전 도전 가능하게»)가
+       `battleBusy()` 가드를 `battleLocked()` 로 갈아 그 설계를 **다시 뒤집었다** — 스테이지
+       도전(일반·보스전)에서는 입장이 열린다. 폐지된 규약을 아직 단언하던 쪽이 자였다
+       (333·399·728 계열 — 나중 지시가 남의 자를 뒤집는다).
+       333 처방대로 자리를 비우지 않고 **방향을 뒤집는다**:
+         ⓐ (준비) 보스전 한복판에서도 던전에 **들어간다**.
+         ⓑ 그 입장이 **선 보스 단계를 비운다** — `bossOn` 이 참인 상태에서 거짓으로 내려가고
+            시계가 0 이 되며 클리어 예약이 풀린다. 이것이 162 고유의 축이다:
+            아래 파밍 대기 표본은 `bossOn` 이 **처음부터 거짓**이라 그 전이를 증명하지 못한다
+            (여기가 «bossOn true → false» 를 잡는 유일한 자리다).
+       ⚑ `verify665` [B] 와 겹치지 않는다 — 저기는 «열리나/막히나 · 오판정 0 · 이중 지급 0» 을
+          모드 쌍 전수로 보고, 여기는 **스테이지 런 자신의 깃발**(bossOn·bossT·stageWin·S.bossFarm
+          — 162 가 §2~§5 내내 쓰는 어휘)만 본다. 아레나는 665 매트릭스에 아예 없다.
+       ⚠ «`failBoss('모드 전환')` 이 돌았나» 를 직접 묻지 않는 이유(probe751 실측):
+          `leaveStageRun()` 단독은 bossOn 15→0·farm false→true 를 만들지만, 뒤이어 도는
+          `startDunRun` 이 같은 깃발을 자기 손으로 다시 정리해 **입장 직후 시점에는 그 잔재가
+          관측되지 않는다**(무력화 사본과 값이 한 자리도 안 갈린다). 관측 안 되는 것을 단언하면
+          «이미 참인 것을 굳힌 게이트»(338 이 잡은 그 모양)가 된다. 명시 종료 자체의 게이트는
+          `verify665` 몫이고, 여기서는 **관측되는 것만** 잰다. */
     startDunRun(DUNGEONS[0], 1);
-    const blocked = !dunRun;
+    const enter = { run: !!dunRun, bossOn, bossT, stageWin, stage: S.stage };
+    /* 파밍 대기 표본(162 가 원래 잡던 그것 — 깃발이 안 비워지면 던전에서 나올 때 되살아난다)은
+       **런을 접고** 다시 잰다. 안 접으면 `battleLocked()` 가 «던전 → 던전» 을 막아
+       두 번째 입장이 조용히 무산되고, 그때도 초록인 헛자가 된다. */
+    endDunRun(false, true); dunRun = null;
     bossOn = false; stageWin = false; S.bossFarm = true; bossT = 7;
     startDunRun(DUNGEONS[0], 1);
     const mid = { bossOn, farm: S.bossFarm, bossT, run: !!dunRun, stage: S.stage };
@@ -256,12 +276,15 @@ const hud = (p) => p.evaluate(() => {
     step(0.016);
     const during = { stage: S.stage, bossOn, q: spawnQ.length };
     endDunRun(false, true);
-    return { before, blocked, mid, during };
+    return { before, enter, mid, during };
   }).catch(e => ({ err: String(e) }));
   ok(!dun.err, '§6 던전 경로가 예외 없이 돈다', dun.err);
   if (!dun.err) {
     ok(dun.before, '§6 (준비) 보스전이 실제로 섰다');
-    ok(dun.blocked, '§6+453 보스전 한복판에서는 던전 입장이 막힌다(주인 지시 2026-08-30)');
+    ok(dun.enter.run, '§6 (준비) 665 이후 — 보스전 한복판에서도 던전에 들어간다(주인 지시 2026-09-02)');
+    ok(!dun.enter.bossOn && dun.enter.bossT === 0 && !dun.enter.stageWin,
+       '§6+665 던전 입장이 «선» 보스 단계를 비운다(bossOn true → false · 시계 0 · 클리어 예약 해제)',
+       `bossOn ${dun.enter.bossOn} · bossT ${dun.enter.bossT} · stageWin ${dun.enter.stageWin}`);
     ok(dun.mid.run, '§6 (준비) 파밍 대기에서는 던전에 들어간다');
     ok(!dun.mid.bossOn && dun.mid.bossT === 0 && !dun.mid.farm,
        '§6 던전 입장이 보스 단계·파밍 깃발을 비운다');
@@ -294,18 +317,26 @@ const hud = (p) => p.evaluate(() => {
   const arn = await p.evaluate(() => {
     dunRun = null; raidOn = null; arena = null;
     S.stage = 40; spawnStage(); killed = 10; startBoss();
-    /* 453 — 던전 쪽과 같은 갈아 끼움: 보스전 중에는 막히고, 파밍 대기에서는 들어가며 깃발을 비운다 */
+    /* ⚑ 751 — 던전 쪽과 같은 방향 뒤집기(665). 보스전 한복판에서도 들어가고, 그 입장이 «선»
+       보스 단계를 비운다. 아레나는 `verify665` [B] 매트릭스에 없어 이 자리가 유일한 자다. */
+    const bfBoss = bossOn;
     startArena();
-    const blocked = !arena;
+    const enter = { on: !!arena, bossOn, bossT, stageWin };
+    /* 던전 쪽과 같은 이유로 런을 접고 파밍 대기 표본을 다시 잰다(안 접으면 락에 걸린다). */
+    arena = null; S.stage = 40; spawnStage();
     bossOn = false; stageWin = false; S.bossFarm = true; bossT = 7;
     startArena();
     const mid = { bossOn, farm: S.bossFarm, bossT, on: !!arena };
     arena = null; S.stage = 40; spawnStage();
-    return { blocked, mid };
+    return { bfBoss, enter, mid };
   }).catch(e => ({ err: String(e) }));
   ok(!arn.err, '§6 아레나 경로가 예외 없이 돈다', arn.err);
   if (!arn.err) {
-    ok(arn.blocked, '§6+453 보스전 한복판에서는 아레나 입장이 막힌다(주인 지시 2026-08-30)');
+    ok(arn.bfBoss, '§6 (준비) 아레나 표본에서도 보스전이 실제로 섰다');
+    ok(arn.enter.on, '§6 (준비) 665 이후 — 보스전 한복판에서도 아레나에 들어간다(주인 지시 2026-09-02)');
+    ok(!arn.enter.bossOn && arn.enter.bossT === 0 && !arn.enter.stageWin,
+       '§6+665 아레나 입장이 «선» 보스 단계를 비운다(bossOn true → false · 시계 0 · 클리어 예약 해제)',
+       `bossOn ${arn.enter.bossOn} · bossT ${arn.enter.bossT} · stageWin ${arn.enter.stageWin}`);
     ok(arn.mid.on, '§6 (준비) 파밍 대기에서는 아레나에 들어간다');
     ok(!arn.mid.bossOn && arn.mid.bossT === 0 && !arn.mid.farm,
        '§6 아레나 입장이 보스 단계·파밍 깃발을 비운다');
