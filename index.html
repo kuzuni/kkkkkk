@@ -6902,12 +6902,18 @@
   .pvc.pp{--c:#A874E8;--s:#7A45BE;--h:#D5B4FF;--d:#6C3AAE}   /* 3장 보라 (151 신설 — 제3색) */
   /* 몸통 + 안쪽 밝은 림. ref 림은 **좌·우·아래 3변에만** 있고 윗변에는 없다(헤더 밴드가 물린다) */
   .pvc>.bg{left:10px;top:10px;right:10px;bottom:10px;
-    /* ⑤-7 몸통 «마름모 격자» — ref 는 **두 톤 마름모 체커**다(측정표 §1-2: 몸통 #39C48D ↔ 패턴 #34B380).
-       옛 값은 45° **한 방향** 줄무늬 + `rgba(0,0,0,.05)` 라 ⓐ 마름모가 아니라 사선이고 ⓑ 대비가 ref 의
-       절반이었다. conic 4분면(대각선으로 갈린 삼각형 4개)을 60px 로 깔면 이웃 타일의 삼각형끼리 붙어
-       **마름모 체커**가 된다. 알파는 ref 실측 비(52/57 · 179/196 · 128/141 = 0.912)의 여집합 **.088**. */
-    background:conic-gradient(from 45deg,rgba(0,0,0,.088) 0 25%,#0000 0 50%,
-      rgba(0,0,0,.088) 0 75%,#0000 0) 0 0/60px 60px,var(--c);
+    /* ⑤-7 몸통 «마름모 격자» — ref 는 **가는 선이 교차하는 격자**이지 «반반 체커» 가 아니다.
+       옛 값은 45° **한 방향** 줄무늬 + `rgba(0,0,0,.05)` 라 ⓐ 방향이 하나뿐이고 ⓑ 대비가 ref 의 절반이었다.
+       ⚠ 1회차에 conic 4분면(60px 체커)으로 갈았던 것도 **틀렸다** — 비평가 AR·AS 가 2인 독립으로
+       ref 를 다시 재서 «어두운 쪽이 면적의 절반» 이 아님을 보였다(AS 전이 실측 45·52 / 103·110 / 161·168:
+       **선 폭 7 · x축 주기 58**(ref px) = 어두운 면적 **12%**. AR 방향성 실측: ref 는 (1,1)·(1,−1) 양방향
+       3.97/3.88 로 **둘 다** 변한다 = 교차선). ⇒ 45°·−45° 두 겹의 «가는 선».
+       x축 주기 58 → 환산 119.7, 선 폭 7 → 환산 14.4 이고, 45° 선의 **수직** 간격은 거기에 sin45 를 곱한다:
+       주기 119.7×.7071 = **84.6** · 선 폭 14.4×.7071 = **10.2**. 알파는 ref 실측 비
+       (52/57 · 179/196 · 128/141 = 0.912)의 여집합 **.088**. 교차점만 두 겹이 겹쳐 더 어둡지만
+       그 면적은 12%×12% ≈ 1.4% 라 톤 판정에 안 잡힌다. */
+    background:repeating-linear-gradient(45deg,rgba(0,0,0,.088) 0 10.2px,#0000 10.2px 84.6px),
+      repeating-linear-gradient(-45deg,rgba(0,0,0,.088) 0 10.2px,#0000 10.2px 84.6px),var(--c);
     border:12px solid var(--h);border-top:0;border-radius:31px;
     -webkit-mask:var(--ntc-bg);mask:var(--ntc-bg)}
   .pvc>.hdb{left:10px;top:10px;right:10px;height:102px;background:var(--s);border-radius:31px 31px 0 0}
@@ -6953,16 +6959,24 @@
       100% 46.9%,89.8% 58.4%,97.3% 72.1%,82.1% 76.6%,83.6% 92.2%,68.5% 88.3%,63.5% 100%,
       50% 92.3%,36.5% 100%,31.5% 88.3%,16.4% 92.2%,17.9% 76.6%,2.7% 72.1%,10.2% 58.4%,
       0 46.9%,11.8% 37.1%,8.9% 21.5%,23.9% 22.4%,26.8% 6.7%,41.3% 12.4%)}
-  .pvc>.bdg>i{position:absolute;left:0;right:0;top:38px;text-align:center;color:#FFFC7E;
+  /* ⚑ 667 — 두 줄이 뱃지 안에서 **위로 19px** 치우쳐 있었다(비평가 AR −19.0 · AS −19, 2인 독립 일치).
+     ref 는 잉크 중심이 뱃지 중심에서 −4.1(환산 −3.1)이라 **+15** 가 정답이다(38→53 · 88→103).
+     ⚠ **글자 크기는 안 건드렸다** — 두 비평가가 잉크 «폭» 을 −7.6% 로 냈지만 **높이는 −0.9%/−3.3% 로 맞다**.
+     같은 문자열에서 폭만 좁은 것은 **서체 모양**이고, 지시서 [3] 이 감점 사유에서 뺀 자리다.
+     키우면 맞던 높이가 +7% 로 어긋난다(폭을 좇다 높이를 잃는 380 함정). */
+  .pvc>.bdg>i{position:absolute;left:0;right:0;top:53px;text-align:center;color:#FFFC7E;
     font-size:46px;line-height:48px;-webkit-text-stroke:8px #000;paint-order:stroke fill;
     transform:rotate(-10deg)}
-  .pvc>.bdg>b{position:absolute;left:0;right:0;top:88px;text-align:center;color:#FFFC7E;
+  .pvc>.bdg>b{position:absolute;left:0;right:0;top:103px;text-align:center;color:#FFFC7E;
     font-size:36px;line-height:40px;font-weight:400;-webkit-text-stroke:7px #000;
     paint-order:stroke fill;transform:rotate(-10deg)}
   /* ④ 타이틀 행 — 헤더 밴드 안. ✦ 는 밴드 색보다 밝은 림 색이다(ref) */
   .pvc>.pvt{left:38px;top:37px;right:200px;height:64px}
-  .pvc>.pvt>s{position:absolute;left:0;top:16px;font-size:24px;line-height:27px;color:var(--h)}
-  .pvc>.pvt>i{position:absolute;left:35px;top:0;font-size:57px;line-height:60px;color:#fff;
+  /* ⚑ 667 — ✦ 는 **−11% 작고 3px 낮았다**(AR 24×24@y51 vs 환산 27×27@y48 · AS 동일) ⇒ 27 · top 13.
+     제목 글자는 잉크 좌단이 **−5px**(AR 68.5 · AS 68~69 vs 환산 73.5) 이라 `>i` 만 35→40 으로 민다.
+     ⚠ `.pvt{left}` 를 통째로 미는 처방(AR)은 **✦ 까지 같이 밀어 맞던 것을 깬다**(✦ x37 ↔ 환산 38). */
+  .pvc>.pvt>s{position:absolute;left:0;top:13px;font-size:27px;line-height:30px;color:var(--h)}
+  .pvc>.pvt>i{position:absolute;left:40px;top:0;font-size:57px;line-height:60px;color:#fff;
     white-space:nowrap;-webkit-text-stroke:12px #000;paint-order:stroke fill}
   /* ⑤-1 티켓형 배너(1장) — 네 모서리가 «물린» 노랑 표. 좌 36% 크림 · 우 64% 노랑(ref 실측) */
   .pvc>.ban{left:50px;top:138px;width:462px;height:113px;border:7px solid #000;border-radius:10px;
@@ -6986,7 +7000,8 @@
   .pvc>.pvl{left:41px;top:133px;width:545px;z-index:1}
   .pvc>.pvl>.pvb{position:relative;height:72px;margin-bottom:10px;border-radius:18px;
     background:rgba(61,20,10,.56)}
-  .pvc>.pvl>.pvb>s{position:absolute;left:18px;top:14px;font-size:38px;line-height:44px;color:#FCC12B;
+  /* ⚑ 667 — ★ 잉크 좌단이 판 좌단에서 20px(환산 17.5)이라 +14% 였다(AR·AS 2인 일치) ⇒ 18 → 16 */
+  .pvc>.pvl>.pvb>s{position:absolute;left:16px;top:14px;font-size:38px;line-height:44px;color:#FCC12B;
     -webkit-text-stroke:6px #000;paint-order:stroke fill}
   .pvc>.pvl>.pvb>i{position:absolute;left:79px;right:10px;top:20px;font-size:32px;line-height:36px;
     color:#fff;white-space:nowrap;-webkit-text-stroke:6px #000;paint-order:stroke fill}
