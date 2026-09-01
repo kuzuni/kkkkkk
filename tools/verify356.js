@@ -1336,8 +1336,16 @@ async function sweep(browser, inject) {
         const cs = getComputedStyle(el); return [parseFloat(cs.width), parseFloat(cs.height)];
       }, f.sel);
       if (!got) bad(`[S3] ① ${f.lab} — 진입 실패: \`${f.sel}\` 가 0개다 (헛초록 방지)`);
-      else if (Math.abs(got[0] - f.box) > 0.01 || Math.abs(got[1] - f.box) > 0.01)
-        bad(`[S3] ① ${f.lab} — 상자 ${got[0]}×${got[1]}, 기대 ${f.box} 정수 (소수 상자 1.08em 이 되살아났다)`);
+      else if (Math.abs(got[0] - f.box) > 0.01 || Math.abs(got[1] - f.box) > 0.01) {
+        /* 743 — «소수 상자(418 의 원래 결함)» 와 «정수인데 기대값이 다르다(FIXED 표가 제품 규격
+           변경을 안 따라왔다 — 644 꼴)» 는 다른 병이라 문구를 가른다. 후자를 전자로 적으면
+           다음 세션이 418 회귀로 오독한다(743 등재 회차가 실제로 그랬다). */
+        const isInt = (v) => Math.abs(v - Math.round(v)) < 0.01;
+        const why = (isInt(got[0]) && isInt(got[1]))
+          ? '정수 상자인데 기대값이 다르다 — 제품 규격이 바뀌었으면 FIXED 표를 따라잡을 것(644 꼴)'
+          : '소수 상자 1.08em 이 되살아났다';
+        bad(`[S3] ① ${f.lab} — 상자 ${got[0]}×${got[1]}, 기대 ${f.box} 정수 (${why})`);
+      }
       else ok(`[S3] ① ${f.lab} — 상자 ${f.box} 정수 고정`);
       await ctx.close();
     }

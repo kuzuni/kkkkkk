@@ -67,7 +67,7 @@ const REVERT_CSS = `
 const FIXED = [
   { lab: '33 재화 정보 `#ciIcon`(356 8회차)', open: ['[data-cur="dia"]'], sel: '#ciw #ciIcon>img.cic', box: 98 },
   { lab: '70 출석 `.at-if>em`(356 9회차)', open: ['.side .ibtn[data-pop="attend"]'], sel: '.at-if>em>img.cic', box: 82 },
-  { lab: '22 퀘스트 `.qs-i`(418)', open: ['.side .ibtn[data-pop="quest"]'], sel: '.qs-i>img.cic', box: 59 },
+  { lab: '22 퀘스트 `.qs-i`(418 · 644 가 55 로)', open: ['.side .ibtn[data-pop="quest"]'], sel: '.qs-i>img.cic', box: 55 },
   { lab: '35 패스 `.ps-bx>i`(418)', open: ['#menub', '#psGo'], sel: '#psTk .ps-bx>i>img.cic', box: 88 },
   { lab: '미션 배너 `#tutoRew`(418)', open: [], sel: '#tuto .trew .ri>img.cic', box: 67 },
 ];
