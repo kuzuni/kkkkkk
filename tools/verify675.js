@@ -153,12 +153,12 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
       return { n: ns.length, x1, y1, x2, y2 };
     }, { cardSel, ci, copySel });
     if (!g) { await unpark(cardSel, ci); return null; }
-    if (!g.n) { await unpark(cardSel, ci); return { n: 0, ink: 0, killed: 0, noise: 0 }; }
+    if (!g.n) { await unpark(cardSel, ci); return { n: 0, ink: 0, killed: 0, touched: 0, noise: 0 }; }
 
     const bx = { x1: Math.floor(g.x1) - 2, y1: Math.floor(g.y1) - 2, x2: Math.ceil(g.x2) + 2, y2: Math.ceil(g.y2) + 2 };
     const clip = { x: bx.x1 - 4, y: bx.y1 - 4, width: (bx.x2 - bx.x1) + 8, height: (bx.y2 - bx.y1) + 8 };
     const box = { x1: bx.x1 - clip.x, y1: bx.y1 - clip.y, x2: bx.x2 - clip.x, y2: bx.y2 - clip.y };
-    if (clip.width <= 8 || clip.height <= 8) { await unpark(cardSel, ci); return { n: g.n, ink: 0, killed: 0, noise: 0 }; }
+    if (clip.width <= 8 || clip.height <= 8) { await unpark(cardSel, ci); return { n: g.n, ink: 0, killed: 0, touched: 0, noise: 0 }; }
 
     const setVis = async (hideCopy, hideNeigh) => {
       await p.evaluate(({ hideCopy, hideNeigh }) => {
@@ -181,15 +181,21 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
       const g = im => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const x = cv.getContext('2d'); x.drawImage(im, 0, 0); return x.getImageData(0, 0, w, h).data; };
       const [dA, dA2, dB, dC] = [g(A), g(A2), g(B), g(C)];
       const d = (p, q, i) => Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]));
-      let ink = 0, killed = 0, noise = 0;
+      let ink = 0, killed = 0, touched = 0, noise = 0;
       for (let y = box.y1; y < box.y2; y++) for (let x = box.x1; x < box.x2; x++) {
         const i = (y * w + x) * 4;
         if (d(dA, dA2, i) > D) noise++;
         if (d(dB, dC, i) <= D) continue;
         ink++;
-        if (d(dA, dB, i) > D && d(dA, dC, i) <= D) killed++;
+        /* ⚑ 축은 **«사본이 이웃 잉크 화소를 바꾸는가»**(touched) 다.
+           655 가 쓴 «잉크가 «글자 없는 장» 으로 되돌아간다»(killed)는 **더 좁다** —
+           그 자리에서는 덮는 획(검정)과 그 밑(검정 알약)이 같은 색이라 성립했지만,
+           다른 색으로 덮는 사본은 그 조건을 못 만족해 **결함인데 초록**으로 읽힌다
+           (675 1회차: `.stk{border-width:40px}` 양성 통제가 killed 로는 0 이었다).
+           killed 는 부분집합으로 같이 세어 둔다. */
+        if (d(dA, dB, i) > D) { touched++; if (d(dA, dC, i) <= D) killed++; }
       }
-      return { ink, killed, noise };
+      return { ink, killed, touched, noise };
     }, { a: A, a2: A2, b: B, c: C, w: clip.width, h: clip.height, box, D });
     await unpark(cardSel, ci);
     return { n: g.n, ...r };
@@ -285,14 +291,15 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
   const rs1 = await sweep(SUM);
   const rs2 = await sweep(CN);
   const all = [...rs1, ...rs2];
-  const killedRows = all.filter(r => r.killed > 0);
+  const killedRows = all.filter(r => r.touched > 0);
   const inkSum = all.reduce((s, r) => s + r.ink, 0);
   const noiseMax = all.reduce((s, r) => Math.max(s, r.noise), 0);
   const noNeigh = all.filter(r => r.n === 0);
   console.log('     사본 ' + all.length + '개 · 이웃 쌍 ' + all.reduce((s, r) => s + r.n, 0)
-    + ' · 잰 잉크 ' + inkSum + 'px · 지워짐 ' + all.reduce((s, r) => s + r.killed, 0) + 'px');
-  ok(killedRows.length === 0, '[B1] 지워진 이웃 잉크 0px (' + killedRows.length + '개 사본이 덮는다'
-    + (killedRows.length ? ' — ' + killedRows.slice(0, 3).map(r => r.copy + '#' + (r.ci + 1) + ' ' + r.killed + 'px').join(' ;; ') : '') + ')');
+    + ' · 잰 잉크 ' + inkSum + 'px · 사본이 바꾼 잉크 ' + all.reduce((s, r) => s + r.touched, 0) + 'px'
+    + '(그중 «글자 없는 장» 으로 되돌아간 것 ' + all.reduce((s, r) => s + r.killed, 0) + 'px)');
+  ok(killedRows.length === 0, '[B1] 사본이 바꾼 이웃 잉크 0px (' + killedRows.length + '개 사본이 닿는다'
+    + (killedRows.length ? ' — ' + killedRows.slice(0, 3).map(r => r.copy + '#' + (r.ci + 1) + ' ' + r.touched + 'px').join(' ;; ') : '') + ')');
   ok(inkSum >= INK_LO, '[B2] 잰 잉크 총량 ' + inkSum + 'px ≥ ' + INK_LO + ' («잉크 0 으로 얻은 초록» 금지)');
   ok(noiseMax === 0, '[B3] 널 대조 최대 ' + noiseMax + 'px = 0 (의사요소까지 얼렸다)');
   ok(noNeigh.length <= 2, '[B4] «먼저 그려지는 잉크 이웃» 이 0 인 사본 ' + noNeigh.length + '개 ≤ 2'
@@ -311,21 +318,21 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
   await patch('#shopList .shp-card .clv{z-index:2 !important}');   /* 655 를 되돌린다 */
   const r1 = await measureCopy(SUM.card, 0, '.stkbar');
   await patch('');
-  ok(r1 && r1.killed > 0, '[R1] `.clv{z-index:2}`(655 되돌림) → `.stkbar` 가 «Lv.n» 잉크 '
-    + (r1 ? r1.killed : '?') + 'px 를 지운다 > 0');
+  ok(r1 && r1.touched > 0, '[R1] `.clv{z-index:2}`(655 되돌림) → `.stkbar` 가 «Lv.n» 잉크 '
+    + (r1 ? r1.touched : '?') + 'px 를 지운다 > 0');
 
   await patch('#shopList .shp-card .stk{border-width:40px !important}');
   const r2 = await measureCopy(SUM.card, 0, '.stk1');
   await patch('');
-  ok(r2 && r2.killed > 0, '[R2] `.stk{border-width:40px}` → 소환 버튼 라벨 잉크 '
-    + (r2 ? r2.killed : '?') + 'px 를 지운다 > 0');
+  ok(r2 && r2.touched > 0, '[R2] `.stk{border-width:40px}` → 소환 버튼 라벨 잉크 '
+    + (r2 ? r2.touched : '?') + 'px 를 지운다 > 0');
 
   await tab('coin');
   await patch('#shopList .cn-cd>.btstk{border-width:30px !important}');
   const r3 = await measureCopy(CN.card, 0, '.btstk');
   await patch('');
-  ok(r3 && r3.killed > 0, '[R3] `.btstk{border-width:30px}` → [받기] 라벨 잉크 '
-    + (r3 ? r3.killed : '?') + 'px 를 지운다 > 0');
+  ok(r3 && r3.touched > 0, '[R3] `.btstk{border-width:30px}` → [받기] 라벨 잉크 '
+    + (r3 ? r3.touched : '?') + 'px 를 지운다 > 0');
 
   /* ── [H] 원복 · 위생 ────────────────────────────────────────────── */
   const left = await p.evaluate(() => {
@@ -338,7 +345,7 @@ const CN = { tab: 'coin', card: '#shopList .cn-cd', copies: ['.btstk'] };
 
   await tab('summon');
   const back = await measureCopy(SUM.card, 0, '.stkbar');
-  ok(back && back.killed === 0, '[H3] 원복 뒤 다시 초록 — 지워진 잉크 ' + (back ? back.killed : '?') + 'px');
+  ok(back && back.touched === 0, '[H3] 원복 뒤 다시 초록 — 지워진 잉크 ' + (back ? back.touched : '?') + 'px');
   ok(errs.length === 0, '[H4] 페이지 에러 0' + (errs.length ? ' — ' + errs[0] : ''));
 
   console.log('');
