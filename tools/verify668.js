@@ -361,9 +361,43 @@ const HARNESS = () => {
       '재화 ' + r3.coin + ' · 소환 ' + r3.summon);
   }
 
+  /* ================= [H] ×1000 에서 12 결과 팝업이 실제로 그려지는가 ================= */
+  /* ⚠ 위 절들은 `showSummonResult` 를 가로채 «뽑기» 만 쟀다. 여기서만 **진짜 팝업**을 그린다 —
+     30,000 장의 결과가 187·327 이 세운 «중복은 개수로 합친다 · 그리드 고정 876» 안에 들어오는지,
+     프레임을 잡아먹지 않는지는 가로챈 상태로는 한 번도 안 물어본 축이다. */
+  {
+    await page.evaluate(() => { window.showSummonResult = window.__origShow; });
+    const H = await page.evaluate(({ B }) => {
+      window.__seed(31); window.__reset(0);
+      const t0 = performance.now();
+      doSummon(B, 30000);                      /* 30회 × ×1000 = 최악 */
+      const ms = performance.now() - t0;
+      const grid = document.getElementById('sumGridIn');
+      const cells = grid.children.length;
+      const gr = document.getElementById('sumGrid').getBoundingClientRect();
+      let over = 0, sum = 0;
+      [...grid.children].forEach(c => {
+        const r = c.getBoundingClientRect();
+        if (r.left < gr.left - .5 || r.right > gr.right + .5) over++;
+        sum += +(c.querySelector('.ifq i') || { textContent: 0 }).textContent.replace(/,/g, '') || 0;
+      });
+      const species = BANNERS[B].list.length;
+      return { ms, cells, over, sum, species, open: document.getElementById('sumw').classList.contains('on'),
+               scrollH: grid.scrollHeight, viewH: gr.height };
+    }, { B });
+    ok(H.open, '[H1] ×1000 결과 팝업이 열린다', '열림 ' + H.open);
+    ok(H.cells > 0 && H.cells <= H.species,
+      '[H2] 칸은 «고유 종» 만큼만 늘어난다(187·327 «중복은 개수로 합친다»)',
+      H.cells + '칸 / 배너 종수 ' + H.species + ' (30,000 장)');
+    ok(H.sum === 30000, '[H3] 칸의 개수 표기 합이 뽑은 수와 정확히 같다(한 장도 안 샌다)', H.sum + '/30000');
+    ok(!H.over, '[H4] 칸이 그리드 가로 밖으로 안 나간다', H.over + '칸 넘침');
+    ok(H.ms < 3000, '[H5] 30,000 장 소환+렌더가 3초 안에 끝난다', H.ms.toFixed(1) + 'ms'
+      + ' · 그리드 ' + H.scrollH + '/' + Math.round(H.viewH));
+    await page.evaluate(() => { closeSummonResult(); });
+  }
+
   ok(!errs.length, '[Z] 콘솔 에러 0건', errs.length ? errs.slice(0, 2).join(' | ') : '0건');
 
-  await page.evaluate(() => { window.showSummonResult = window.__origShow; });
   await ctx.close(); await browser.close();
   console.log('\nverify668: ' + pass + '/' + (pass + fail));
   process.exit(fail ? 1 : 0);
