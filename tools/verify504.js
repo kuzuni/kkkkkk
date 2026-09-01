@@ -127,18 +127,33 @@ const ok = (b, name, detail) => {
     const one = (id) => {
       /* ⚑ 판을 **통째로** 되돌린다. 아래 넷 중 하나라도 남으면 «몇 번째로 잰 종인가» 가 값을
          바꾼다 — 504 1회차에 poison 이 프로브(15번째)와 게이트(8번째)에서 29.4 ↔ 42.1 로
-         갈렸고, 뿌리는 `killed`(누적 처치 → 보스 소환 눈금)와 죽어 있던 플레이어였다. */
-      S.stage = 20; killed = 0;
-      player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
-      player.dead = 0; player.hp = stat.maxHp;
-      enemies.length = 0; shots.length = 0; zones.length = 0;
-      if (typeof drones !== 'undefined') drones.length = 0;
+         갈렸고, 뿌리는 `killed`(누적 처치 → 보스 소환 눈금)와 죽어 있던 플레이어였다.
+         ⚑ 620 — 그 «되돌린다» 를 **손으로 적은 목록**에서 제품의 «새 판» 입구 `spawnStage()`
+         하나로 옮겼다. 손목록은 504 를 쓸 당시의 세계에 굳어 있어서, 그 뒤 들어온 보스전 상태
+         (457 `bossIntro` · 459 `cdArm` · 162 `bossOn`/`bossT` · 475 `bossClear`)를 하나도
+         안 되돌렸다 — 7번째 판에서 `killed` 가 눈금에 차 보스가 서고 **등장 국면이 열린 채**
+         판이 끝나면, 다음 판 입구의 `enemies.length = 0` 이 국면 중인 보스를 «격파가 아닌
+         경로로» 지운다. 그러면 23372 의 자기치유 항 `(bossT < BOSS_SEC || enemies.some(boss))`
+         이 **둘 다 거짓**이라(국면이 `!bossIntro` 로 시계를 한 프레임도 안 흘렸다) 시계가
+         영영 안 흘러 `bossMode()` 가 `stage` 로 굳고, 473 가드 `cdArm && battleBusy()` 가
+         22708 의 스킬 루프를 **그 뒤 모든 판에서** 막았다(`probe620` [2]·[3]·[5]).
+         ⚠ 그래서 여기 «보스전 상태를 끄는 줄» 을 새로 적지 마라 — 같은 목록이 또 뒤처진다.
+           `spawnStage()` 는 `bossOn`·`bossT`·`stageWin`·`S.bossFarm` 을 스스로 끄고,
+           `bossIntro`·`bossClear` 는 `bossMode()` 가 빈 문자열이 되는 순간 22542·23339 가
+           자기 자리에서 닫는다. 굳은 판이 다시 생기면 아래 [C0] 이 이름으로 잡는다. */
+      S.stage = 20;
+      spawnStage();
+      /* 눈금 쪽 조건은 그 뒤에 얹는다 — `spawnStage()` 가 깐 50마리 파도(`queueMobs`)를 비워
+         **개체수도 종도 아래 채움 루프(zombie 고정)가 혼자 정한다**. 안 비우면 스테이지 20 의
+         고블린·다크가 섞여 «몇 번째 판인가» 가 다시 값을 바꾼다(위 ⚠ 두 줄과 같은 이유). */
+      enemies.length = 0; spawnQ.length = 0;
+      player.vx = 0; player.vy = 0;
       for (const k of Object.keys(skillCd)) delete skillCd[k];
       /* ⚑ 보유 상태를 **격리**한다. `S.own` 에 앞서 시험한 스킬이 쌓이면 `bonus()` 의 보유 효과가
          커져 플레이어가 점점 세지고, 적이 빨리 죽어 장판·범위형의 타격수가 순서에 따라 갈린다
          (504 1회차에 poison 이 11.1 ↔ 18.1 로 갈린 원인이 정확히 이것이다). */
       ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
-      let hits = 0, casts = 0;
+      let hits = 0, casts = 0, shut = 0;
       window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
       window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
       for (let f = 0; f < 60 * SEC; f++) {
@@ -152,10 +167,18 @@ const ok = (b, name, detail) => {
           enemies.splice(wi, 1);
         }
         while (enemies.length < POP) { const b = enemies.length; makeEnemy('zombie'); if (enemies.length === b) break; }
+        /* ⚑ 620 — 눈금의 이름이 «자유 전투» 다. 개체수를 고정해 두면 25초 안에 처치가
+           `ENEMY_COUNT` 를 넘어(162 의 50킬 자동 진입) 판이 도중에 **보스전으로 바뀐다** —
+           그때 473 가드가 스킬 루프를 닫으므로 재는 창이 종마다 다른 길이로 잘린다.
+           `killed` 를 0 으로 눌러 두는 것은 개체수를 POP 으로 눌러 두는 것과 **같은 조건**이고,
+           위 초기화 주석이 이미 `killed` 를 «보스 소환 눈금» 이라고 부른 그 자리다.
+           ⚠ 이것을 빼면 [C0] 이 곧바로 빨개진다(그것이 [R3] 되돌림 시험이다). */
+        killed = 0;
+        if (preFight() || bossClear) shut++;
       }
       window.castSkill = rawCast; window.hitEnemy = rawHit;
       S.own = ownSave; markDirty();
-      return { per: casts ? hits / casts : 0, hps: hits / SEC, casts };
+      return { per: casts ? hits / casts : 0, hps: hits / SEC, casts, shut };
     };
     const out = [];
     for (const id of ids) {
@@ -166,7 +189,8 @@ const ok = (b, name, detail) => {
       const spread = mean ? (Math.max(...v) - Math.min(...v)) / mean : 0;
       out.push({ id, cd: s.cd, decl: skillHits(s), mean: +mean.toFixed(3),
                  each: v.map(x => +x.toFixed(2)), spread: +spread.toFixed(3),
-                 casts: Math.round(runs.reduce((a, r) => a + r.casts, 0) / K) });
+                 casts: Math.round(runs.reduce((a, r) => a + r.casts, 0) / K),
+                 shut: runs.reduce((a, r) => a + r.shut, 0) });
     }
     S.eqSkill = ['slash']; markDirty();
     return out;
@@ -181,6 +205,13 @@ const ok = (b, name, detail) => {
   rows.forEach(x => console.log('     ' + x.id.padEnd(8) + String(x.decl).padEnd(9)
     + String(x.mean).padEnd(11) + ((x.off * 100).toFixed(0) + '%').padEnd(9)
     + ('±' + (x.tol * 100).toFixed(0) + '%').padEnd(8) + x.each.join('/')));
+  /* ⚑ 620 [C0] «전제» — [C1] 보다 **먼저** 묻는다. 판이 22708 의 가드가 닫힌 채로 시작하면
+     그 판은 «약한 종» 이 아니라 «잰 적이 없는 종» 이고, 그때 [C1]·[C2] 가 말하는 «미발동» 은
+     스킬이 아니라 하네스를 가리킨다. 이 항이 없으면 굳은 판이 다시 생겨도 이유가 표에 안 남는다
+     (315·333·341 이 «자리를 비우지 말고 전제를 세워라» 로 남긴 자리와 같은 꼴). */
+  ok(rows.every(x => x.shut === 0), 'C0 전제 — 재는 동안 22708 가드가 **한 프레임도** 안 닫혔다(473 `preFight` · 475 `bossClear`)',
+     rows.filter(x => x.shut).map(x => x.id + ' ' + x.shut + '프레임').join(' / ')
+     || '닫힌 프레임 0 / ' + (PROBE.length * K * SEC * 60) + '프레임');
   ok(rows.every(x => x.casts > 0), 'C1 표본 ' + PROBE.length + '종이 실제 전투에서 발동했다',
      rows.filter(x => !x.casts).map(x => x.id).join(',') || '미발동 0종');
   const cBad = rows.filter(x => x.off > x.tol);

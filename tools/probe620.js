@@ -1,18 +1,19 @@
-/* probe620 — verify504 [C] 표본이 8번째 판부터 «시전 0» 이 되는 자리를 찍는다.
+/* probe620 — verify504 의 눈금 504-RUL 이 8번째 판부터 «시전 0» 으로 굳는 자리를 찍고,
+ *            수리(620)가 그것을 실제로 푸는지, 그리고 남은 [C2] poison 이탈이
+ *            **내 변경이 만든 값이 아님**을 같은 자리에서 대조한다(338·344 규칙).
  *
- * 무엇을 묻나: verify504 의 눈금 504-RUL 은 한 종을 K=6 회 굴린다(슬래시 6 · 볼트 6 · …).
- * 2026-09-01 실행에서 slash 6/6 · bolt 1/6 · 그 뒤 9종 0/6 으로 **시전이 통째로 멈춘다**.
- * 「판이 문제」가 아니라 「앞 판이 남긴 상태」라면 멈춘 자리 뒤로는 무엇을 굴려도 0 이다.
+ *   node tools/probe620.js
  *
- * 그래서 이 자는 값을 재지 않고 **가드의 세 항**(475 `bossClear` · 473 `preFight` 의
- * `bossIntro` · `cdArm && battleBusy()`)을 판마다 찍는다 — 22708 의
- *   if(!preFight() && !bossClear){ … 스킬 루프 … }
- * 에서 어느 항이 참으로 굳는지가 곧 뿌리다.
+ * 세 절:
+ *   [1] 옛 초기화 목록(504 원본)으로 굴리면 어느 판부터 굳고, 그 뒤로는 종을 바꿔도 0 이다.
+ *   [2] 새 초기화(620 — `spawnStage()` + `killed` 고정)로 같은 순서를 굴리면 안 굳는다.
+ *   [3] poison 을 **첫 종으로** K회 재면(굳기 전 창) 옛 초기화도 새 초기화와 같은 값을 준다
+ *       = 47% 이탈은 620 의 수리가 만든 것이 아니라 원래 그 자리에 있던 값이다.
  */
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
-const URL = 'file://' + path.resolve(__dirname, '..', 'index.html');
+const URL = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/\\/g, '/');
 
 const IDS = ['slash', 'bolt', 'drain', 'nova', 'holy'];
 const K = 6, SEC = 25, POP = 23;
@@ -37,33 +38,38 @@ const ok = (b, name, detail) => {
   await page.waitForFunction(() => typeof SKILLS !== 'undefined' && typeof step === 'function');
   await page.waitForTimeout(500);
 
-  const R = await page.evaluate(({ ids, K, SEC, POP }) => {
-    const rawCast = window.castSkill;
+  /* 한 하네스로 «옛/새» 를 둘 다 돈다 — 두 사본을 만들면 다른 것이 갈릴 수 있다 */
+  const run = (mode, ids, k) => page.evaluate(({ mode, ids, K, SEC, POP }) => {
+    const rawCast = window.castSkill, rawHit = window.hitEnemy;
     const log = [];
-    let ownSave;
+    let ownSave, n = 0;
     const snap = () => ({
-      intro: !!bossIntro,
-      clear: !!bossClear,
-      clearMd: bossClear ? bossClear.md : '',
-      clearT: bossClear ? +bossClear.t.toFixed(2) : 0,
-      clearDie: bossClear ? bossClear.die : null,
+      intro: !!bossIntro, clear: !!bossClear,
       cdArm: typeof cdArm !== 'undefined' ? !!cdArm : null,
       busy: typeof battleBusy === 'function' ? !!battleBusy() : null,
-      mode: typeof bossMode === 'function' ? bossMode() : '?',
-      bossT: typeof bossT !== 'undefined' ? +bossT.toFixed(2) : null,
-      best: S.best, stage: S.stage
+      mode: typeof bossMode === 'function' ? bossMode() : '?'
     });
-    const one = (id, n) => {
-      S.stage = 20; killed = 0;
-      player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
-      player.dead = 0; player.hp = stat.maxHp;
-      enemies.length = 0; shots.length = 0; zones.length = 0;
-      if (typeof drones !== 'undefined') drones.length = 0;
-      for (const k of Object.keys(skillCd)) delete skillCd[k];
+    const one = (id) => {
+      if (mode === 'old') {
+        /* 504 원본의 «판을 통째로 되돌린다» 목록 — 보스전 상태가 하나도 없다 */
+        S.stage = 20; killed = 0;
+        player.x = WORLD.w / 2; player.y = WORLD.h / 2; player.vx = 0; player.vy = 0;
+        player.dead = 0; player.hp = stat.maxHp;
+        enemies.length = 0; shots.length = 0; zones.length = 0;
+        if (typeof drones !== 'undefined') drones.length = 0;
+      } else {
+        /* 620 — 제품의 «새 판» 입구 하나 + 눈금 쪽 조건 */
+        S.stage = 20;
+        spawnStage();
+        enemies.length = 0; spawnQ.length = 0;
+        player.vx = 0; player.vy = 0;
+      }
+      for (const key of Object.keys(skillCd)) delete skillCd[key];
       ownSave = S.own; S.own = { [id]: { l: 0 } }; S.eqSkill = [id]; markDirty();
       const before = snap();
-      let casts = 0;
+      let casts = 0, hits = 0, shut = 0;
       window.castSkill = function (sk) { const r = rawCast.apply(this, arguments); if (r && sk.id === id) casts++; return r; };
+      window.hitEnemy = function () { hits++; return rawHit.apply(this, arguments); };
       for (let f = 0; f < 60 * SEC; f++) {
         step(1 / 60);
         while (enemies.length > POP) {
@@ -75,56 +81,67 @@ const ok = (b, name, detail) => {
           enemies.splice(wi, 1);
         }
         while (enemies.length < POP) { const b = enemies.length; makeEnemy('zombie'); if (enemies.length === b) break; }
+        if (mode !== 'old') killed = 0;
+        if (preFight() || bossClear) shut++;
       }
-      window.castSkill = rawCast;
-      const after = snap();
+      window.castSkill = rawCast; window.hitEnemy = rawHit;
       S.own = ownSave; markDirty();
-      log.push({ n, id, casts, before, after });
+      log.push({ n: ++n, id, casts, shut, per: casts ? +(hits / casts).toFixed(2) : 0, before });
     };
-    let n = 0;
-    outer:
-    for (const id of ids) {
-      for (let k = 0; k < K; k++) {
-        one(id, ++n);
-        if (log.length >= 2 && log[log.length - 1].casts === 0 && log[log.length - 2].casts === 0) break outer;
-      }
-    }
+    for (const id of ids) for (let i = 0; i < K; i++) one(id);
     S.eqSkill = ['slash']; markDirty();
     return log;
-  }, { ids: IDS, K, SEC, POP });
+  }, { mode, ids, K: k, SEC, POP });
 
-  console.log('\nprobe620 — 판별 표 (판 = 504-RUL 한 번, ' + SEC + '초)');
-  console.log('     ' + '판'.padEnd(5) + 'id'.padEnd(8) + '시전'.padEnd(7)
-    + '판 시작 상태'.padEnd(30) + '판 끝 상태');
   const fmt = s => 'intro=' + (s.intro ? 1 : 0) + ' clear=' + (s.clear ? 1 : 0)
-    + (s.clear ? '(' + s.clearMd + ' t=' + s.clearT + '/die=' + s.clearDie + ')' : '')
     + ' cdArm=' + (s.cdArm ? 1 : 0) + ' busy=' + (s.busy ? 1 : 0) + ' mode="' + s.mode + '"';
-  for (const r of R) {
-    console.log('     ' + String(r.n).padEnd(5) + r.id.padEnd(8) + String(r.casts).padEnd(7)
-      + fmt(r.before).padEnd(30) + ' | ' + fmt(r.after));
-  }
+  const show = (title, log) => {
+    console.log('\n  ' + title);
+    console.log('     ' + '판'.padEnd(5) + 'id'.padEnd(8) + '시전'.padEnd(7) + '닫힌프레임'.padEnd(12) + '판 시작 상태');
+    for (const r of log) console.log('     ' + String(r.n).padEnd(5) + r.id.padEnd(8)
+      + String(r.casts).padEnd(7) + String(r.shut).padEnd(12) + fmt(r.before));
+  };
 
-  const first0 = R.find(r => r.casts === 0);
-  const tail = R.filter(r => first0 && r.n >= first0.n);
-
-  ok(R.some(r => r.casts > 0), '[1] 굳기 전에는 실제로 시전된다(하네스 자체는 살아 있다)',
-     R.filter(r => r.casts > 0).length + '판 시전 > 0');
-  ok(!!first0, '[2] 어느 판부터 «시전 0» 이 되는 자리가 있다',
-     first0 ? first0.n + '번째 판(' + first0.id + ')부터' : '없음');
-  ok(!!first0 && tail.every(r => r.casts === 0),
-     '[3] 그 뒤로는 종을 바꿔도 **한 번도** 안 나간다 = 판이 아니라 «남은 상태» 다',
-     tail.length + '판 연속 0');
+  /* ── [1] 옛 초기화 — 굳는다 ─────────────────────────────── */
+  const OLD = await run('old', IDS, K);
+  show('[1] 옛 초기화 목록(504 원본)', OLD);
+  const first0 = OLD.find(r => r.casts === 0);
+  ok(OLD.some(r => r.casts > 0) && !!first0,
+     '[1-a] 옛 초기화는 어느 판부터 «시전 0» 으로 굳는다',
+     first0 ? first0.n + '번째 판(' + first0.id + ')부터' : '안 굳었다');
+  ok(!!first0 && OLD.filter(r => r.n >= first0.n).every(r => r.casts === 0),
+     '[1-b] 그 뒤로는 **종을 바꿔도** 한 번도 안 나간다 = 판이 아니라 «앞 판이 남긴 상태» 다',
+     first0 ? OLD.filter(r => r.n >= first0.n).length + '판 연속 0' : '—');
   const latched = first0 ? first0.before : null;
-  ok(!!latched && (latched.clear || latched.intro || (latched.cdArm && latched.busy)),
-     '[4] 굳은 판은 **시작 시점에 이미** 22708 가드가 닫혀 있다',
+  ok(!!latched && !latched.clear && latched.cdArm && latched.busy && latched.mode === 'stage',
+     '[1-c] 닫은 항은 473 `cdArm && battleBusy()` 다 — 475 `bossClear` 가 아니다',
      latched ? fmt(latched) : '—');
-  ok(!!latched && latched.clear && !latched.intro,
-     '[5] 닫은 항은 475 `bossClear` 다(473 `bossIntro`·`cdArm` 이 아니다)',
-     latched ? 'clear=' + (latched.clear ? 1 : 0) + ' intro=' + (latched.intro ? 1 : 0)
-       + ' cdArm=' + (latched.cdArm ? 1 : 0) + ' busy=' + (latched.busy ? 1 : 0) : '—');
-  ok(!!latched && latched.clear && !(latched.clearDie > 0),
-     '[6] `bossClear.die` 가 «> 0» 이 아니라 23351 `t >= die + HOLD` 가 영원히 거짓이다',
-     latched && latched.clear ? 'die=' + latched.clearDie + ' t=' + latched.clearT : '—');
+
+  /* ── [2] 새 초기화 — 안 굳는다 ──────────────────────────── */
+  const NEW = await run('new', IDS, K);
+  show('[2] 새 초기화(620 — `spawnStage()` + `killed` 고정)', NEW);
+  ok(NEW.every(r => r.casts > 0), '[2-a] 모든 판에서 시전된다(굳는 판 0)',
+     NEW.filter(r => !r.casts).length + '판 0');
+  ok(NEW.every(r => r.shut === 0), '[2-b] 재는 동안 22708 가드가 한 프레임도 안 닫혔다',
+     NEW.reduce((a, r) => a + r.shut, 0) + '프레임');
+
+  /* ── [3] poison 이탈은 620 이 만든 값이 아니다 ──────────── */
+  /* 굳기 전 창에서 재려고 poison 을 **첫 종**으로 놓는다 — 옛 초기화로도 여기까지는 잰다. */
+  const PO_OLD = await run('old', ['poison'], K);
+  const PO_NEW = await run('new', ['poison'], K);
+  const mean = l => +(l.reduce((a, r) => a + r.per, 0) / l.length).toFixed(2);
+  const mo = mean(PO_OLD), mn = mean(PO_NEW);
+  const decl = await page.evaluate(() => skillHits(SK.poison));
+  console.log('\n  [3] poison — 선언 ' + decl + ' / 옛 초기화 ' + mo + ' / 새 초기화 ' + mn);
+  console.log('       옛 ' + PO_OLD.map(r => r.per).join('/') + '  ·  새 ' + PO_NEW.map(r => r.per).join('/'));
+  ok(PO_OLD.every(r => r.casts > 0), '[3-a] poison 을 첫 종으로 놓으면 옛 초기화로도 굳기 전에 잰다',
+     PO_OLD.filter(r => !r.casts).length + '판 0');
+  ok(Math.abs(mn / mo - 1) <= 0.15,
+     '[3-b] 옛·새 초기화가 **같은 값**을 준다 = 47% 이탈은 620 의 수리가 만든 값이 아니다',
+     '옛 ' + mo + ' ↔ 새 ' + mn + ' = ' + ((mn / mo - 1) * 100).toFixed(1) + '%');
+  ok(Math.abs(mn / decl - 1) > 0.40,
+     '[3-c] 그런데 둘 다 선언(' + decl + ')에서 40% 넘게 벗어난다 = 선언 쪽이 낡았다(621 로 등재)',
+     '이탈 ' + ((1 - mn / decl) * 100).toFixed(0) + '%');
 
   console.log('\nPROBE620 ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
   await browser.close();
