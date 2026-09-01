@@ -34916,6 +34916,10 @@ function offlineReward(lastTime){
    길이 0.3~0.8초 · 입력 비차단(#fxl 은 pointer-events:none) · DOM 파티클 상한 FXMAX.
    ========================================================================== */
 const FXMAX = 120;                                   /* #fxl 동시 DOM 상한 (캔버스 parts 320 과 별개) */
+/* ⚑ 625 — «같은 자리» 로 볼 허용 오차(px). 누름 스프링(`jz-up`)이 호스트 transform 을 잡고 있어
+   홀드 중 rect 가 한두 px 흔들린다 — 정확 일치로 물으면 그 흔들림마다 새 장이 쌓인다.
+   버튼 사이 간격(단련 행 pitch 74·룬 112)보다 한참 작아 «다른 버튼» 을 같은 자리로 오인하지 않는다. */
+const FXFLASH_SAME = 8;
 /* ⚑ 543(주인 지시 2026-08-31 «재화 흡수 이펙트 … 다이아 크기 기준 3배») — **알갱이 크기 손잡이는
    이것 하나다.** 값은 «기준 재화(다이아)의 찍힌 잉크가 몇 배가 되는가» 이고, 아래 모든 것이
    여기서 파생된다: 비행 크기(FX3_FLYS) · 잉크 지름(FX3_GINK) · 밴드 피치 · 최소 중심거리 ·
@@ -37046,8 +37050,29 @@ function fxBurst(t, col, n, strict){
 function fxFlash(el){
   const L = fxL(), r = fxRect(el); if(!L || !r) return;
   if(L.childElementCount >= FXMAX) return;
+  /* ⚑ 625 — **한 자리에 플래시 한 장.** 종전에는 부를 때마다 새 <s> 를 append 만 했다.
+     수명 500ms 인데 홀드 틱 간격이 60~160ms 라 연속 강화에서는 겹이 쌓인다 —
+     `probe625` §2 실측 평균 **1.9~2.1 겹** · 홀드 프레임의 **98%** 가 덮개 · 누적 알파 0.35~0.55.
+     한 겹 .26 워시만으로도 흰 라벨은 G = .26×193 + .74×255 = 238.9 로 «순백(245)» 에서 탈락하고,
+     겹이 쌓이면 면이 통째로 올리브 판때기로 굳어 **«눌렀다» 가 «꺼졌다» 로 읽힌다**
+     (60 어휘에서 저대비 = `jz-sh` = «못 누르는 것»).
+     ⇒ 같은 자리의 앞 장을 걷고 새로 붙인다 = **재시작**. 누적 알파가 한 겹(.26)을 절대 안 넘고,
+     619 «틱마다 터진다»(주인 지시)는 **재시작이 곧 발화**라 그대로 산다.
+     ⚠ 583 알갱이·스파크는 한 줄도 안 건드린다 — `probe625` §3 이 범인이 아님을 못박았다
+       (알갱이를 죽여도 흰 라벨 복귀 0~17% · fxFlash 를 죽이면 87~95%).
+     575(«한 앵커에 한 재화 한 줄»)와 같은 축이다 — «그 자리에 무엇이 이미 떠 있는가» 를 묻는다. */
+  const same = (a, b) => Math.abs(a - b) <= FXFLASH_SAME;
+  for(const nd of Array.prototype.slice.call(L.children)){
+    if(!nd.classList || !nd.classList.contains('fx-flash')) continue;
+    const q = nd.__fxr;
+    if(nd.__fxHost === el ||
+       (q && same(q.x, r.x) && same(q.y, r.y) && same(q.w, r.w) && same(q.h, r.h))){
+      try { nd.remove(); } catch(_){}
+    }
+  }
   const d = document.createElement('s');
   d.className = 'fx-flash';
+  d.__fxHost = el; d.__fxr = r;                       /* 625 — 다음 발화가 «같은 자리» 를 알아보는 표 */
   d.style.left = r.x + 'px'; d.style.top = r.y + 'px';
   d.style.width = r.w + 'px'; d.style.height = r.h + 'px';
   try { d.style.borderRadius = getComputedStyle(el).borderRadius; } catch(_){}
