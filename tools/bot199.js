@@ -500,8 +500,21 @@ const BOT_SRC = function (cfg) {
      같이 버리면 자가 통째로 선다.
      ⇒ 몹 축은 살리고 보스 축의 결손은 **`bossKilled` 를 참말로 만들어 표에 드러낸 채** 넘긴다. */
   const PUMP_MIN = 0.5;
-  const calValid = r => r.pump != null && isFinite(r.pump) && r.pump >= PUMP_MIN
-                     && (r.kills | 0) > 3;
+  /* ⚑ 199 13회차 — 유효 조건이 **셋**이 됐다(12회차 정정3·4 · EE 처방 1·2).
+     ⓒ **판정 분모에서 `kGuess` 되먹임을 뺀다**(`pump0`). 옛 `pump` 는 목표가
+        `target0 / kGuess` 라, 같은 s640 이 앵커 목록에 따라 ×1.678 움직였다(12-2-1 실측) —
+        스윕마다 문턱의 뜻이 달라지는 자였다. `pump0 = formDps / target0` 은 제품항만의 비다.
+        ⚠ `kGuess < 1` 이라 `pump0 = pump / kGuess ≥ pump` = **문턱이 느슨해지는 방향**이다.
+        r12 표에서 유효 행은 pump 1.03~2.24 · 실패 행은 ≤ 0.02 라 이 교체로 뒤집히는 행은 없다
+        (s640 은 0.0311 → 0.052 로 여전히 미달) — 축을 바꾸되 표본은 안 건드렸다는 증거다.
+     ⓓ **«다른 캐릭터인가»** — 12회차가 s600·620·630·639 에 앵커를 끼워 «창을 줄였다» 고
+        적었으나 넷의 `formDps` 가 16자리까지 같았다(같은 캐릭터에 목표만 낮게 준 것).
+        그 위에서 κ_dps 가 ±17% 로 흔들리고 `kAt` 이 그것을 곡선으로 읽는다. ⇒ 직전 **유효**
+        앵커 대비 화력이 ×1.05 이상 오른 행만 유효로 세고, 미달 행은 `sameBuild` 로 접는다. */
+  const BUILD_MIN = 1.05;
+  const calValid = r => r.pump0 != null && isFinite(r.pump0) && r.pump0 >= PUMP_MIN
+                     && (r.kills | 0) > 3
+                     && !(r.buildRat != null && r.buildRat < BUILD_MIN);
   /* ⚑ 615 — **보스 축은 자기 유효 조건을 따로 갖는다.** 몹 축(κ_dps·κ_hp·κ_gold)과 보스 축
      (κ_boss)은 서로 다른 캐릭터로 찍히므로(생존 펌프가 그 사이에 돈다) 한 `valid` 로 묶으면
      둘 중 하나가 반드시 거짓말을 한다. 둘 다여야 유효:
@@ -514,9 +527,12 @@ const BOT_SRC = function (cfg) {
   /* 615 — 재현 프로브가 **같은 조각**을 부른다(사본을 짜면 자와 프로브가 갈린다). */
   B.pumpTo = pumpTo; B.pumpSurv = pumpSurv; B.BOSS_OVER = BOSS_OVER; B.sampleBoss = sampleBoss; B.sampleMobs = sampleMobs;
   B.survHave = survHave; B.survNeed = survNeed;
-  B.calibrateOne = (s, sec, kGuess) => {
+  B.calibrateOne = (s, sec, kGuess, prevForm) => {
     S.stage = s; S.best = Math.max(S.best, s);
-    const target = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5) / (kGuess || 1);
+    /* 13회차 — 목표를 둘로 가른다. `target0` = 제품항만(되먹임 없음, 판정의 분모) ·
+       `target` = 그것을 직전 유효 앵커의 κ_dps 로 나눈 값(옛 규칙 그대로, 펌프의 목표). */
+    const target0 = eHp(s) * ETYPE.boss.hp * bossGateHp(s) / (BOSS_SEC * 0.5);
+    const target = target0 / (kGuess || 1);
     const dpsNow = pumpTo(target);
     const m = sampleMobs(s, sec);
     /* ⚑ 12회차(615) — 여기서 축이 갈린다. 몹 표본은 위에서 «화력이 목표에 맞는 캐릭터» 로
@@ -529,7 +545,11 @@ const BOT_SRC = function (cfg) {
     const row = {
       s, sec, formDps: dpsNow, realDps: m.dmg / sec, kDps,
       pump: target > 0 ? dpsNow / target : null,   /* 달성/목표 비 — 1 에서 멀면 «어울리는 캐릭터» 밖 */
-      target,                                      /* 재현용 — 실패 프로브의 «목표» 가 표에 남아야 좌표가 산다 */
+      /* 13회차 — **판정은 이 칸**이다(되먹임 없는 제품항 비). `pump` 는 재현·회차 간 비교용으로 남긴다. */
+      pump0: target0 > 0 ? dpsNow / target0 : null,
+      target, target0,                             /* 재현용 — 실패 프로브의 «목표» 가 표에 남아야 좌표가 산다 */
+      /* 13회차 — 직전 «유효» 앵커 대비 화력비. null 이면 첫 유효 앵커(비교 대상 없음). */
+      buildRat: prevForm > 0 ? dpsNow / prevForm : null,
       kills: m.kills,
       tKill: m.kills ? sec / m.kills : null,
       kHp: m.kills ? m.hpRat / m.kills : null,
@@ -547,6 +567,8 @@ const BOT_SRC = function (cfg) {
       kBoss: b.sec > 0 ? (b.dmg / b.sec) / (dpsBoss || 1) : null,
     };
     row.valid = calValid(row);
+    /* 13회차 — «왜 무효인가» 를 행이 들고 다닌다(판정만 남기면 다음 세대가 원인을 못 캔다). */
+    row.sameBuild = row.buildRat != null && row.buildRat < BUILD_MIN;
     row.bossValid = bossValid(row);
     return row;
   };
@@ -1125,9 +1147,15 @@ async function runOne(page, pol, seed, days, onRow) {
        두 축을 다 실어야 [D2] 상승면이 «벽 끝 → 다음 벽 시작» 을 같은 자 안에서 뺄 수 있다. */
     let minute = 0, lastStage = -1, stageSince = 0;
     let amin = 0, stageSinceA = 0;
-    const pushWall = () => out.walls.push({
+    /* ⚑ 199 13회차(12회차 정정1 · GG 처방 2) — **테이프의 끝은 벽이 아니다.**
+       12회차가 «대충 20/20 이 밴드 경계 s600 에 걸려 있다» 고 적었는데, 그 정체는 창이 끝나
+       잘린 것이었다(45일로 늘리자 전 시드가 돌파). 판별식은 «정체가 관측 끝까지 이어졌는가»
+       = `w.amin + w.len === out.amin` 이고, 그것을 사후에 재계산하지 말고 **자를 때 표식**한다.
+       표에는 남기되 ① 적중·개수·간격에서는 뺀다(§12-1 실패 프로브와 같은 규약). */
+    const pushWall = (trunc) => out.walls.push({
       stage: lastStage, min: stageSince, amin: stageSinceA,
       len: amin - stageSinceA, lenCal: minute - stageSince,
+      trunc: !!trunc,
     });
 
     const mark = (label) => {
@@ -1178,8 +1206,8 @@ async function runOne(page, pol, seed, days, onRow) {
       mark('D' + day);
       B.audit('day' + day + ' 끝');
     }
-    /* 마지막 정체도 벽으로 센다 */
-    if (lastStage >= 0 && amin - stageSinceA >= a.wallMin) pushWall();
+    /* 마지막 정체도 벽으로 센다 — 단 이것은 **관측 창이 끝나서** 잘린 정체다(13회차 `trunc`). */
+    if (lastStage >= 0 && amin - stageSinceA >= a.wallMin) pushWall(true);
     /* 3회차 — 장부 항등식을 [F] 규칙 위반으로 검사한다. 마지막 ledger 호출 뒤의 잔여 diff 를
        «기타(미귀속)» 으로 flush 하면 매 diff 가 어느 행엔가 실리므로(망원 합) 유입−씽크 = 잔고가
        구성상 정확히 성립해야 한다 — 어긋나면 봇의 어떤 경로가 장부 밖에서 다이아를 만든 것이다. */
@@ -1252,15 +1280,19 @@ if (require.main === module) (async () => {
     };
     const rows = [];
     let kGuess = 1;
+    /* 13회차 — 직전 «유효» 앵커의 화력. `calValid` 의 ⓓ 항이 이 값을 쓴다(앵커를 끼워도
+       같은 캐릭터면 창이 안 줄고 κ 잡음만 는다 — 12회차 정정4). 되먹임과 **같은 자리에서**
+       잇는다: 무효 행은 kGuess 도 prevForm 도 안 움직인다. */
+    let prevForm = 0;
     for (const s of CAL_LIST) {
       const { ctx, page } = await calPage();
-      const row = await page.evaluate(([st, sec, kg]) => { window.BOT.freeze(); return window.BOT.calibrateOne(st, sec, kg); }, [s, CAL_SEC, kGuess]);
+      const row = await page.evaluate(([st, sec, kg, pf]) => { window.BOT.freeze(); return window.BOT.calibrateOne(st, sec, kg, pf); }, [s, CAL_SEC, kGuess, prevForm]);
       await ctx.close();
       /* 11회차 — 되먹임도 **유효 행에서만** 잇는다. 실패 프로브(s800·1200)의 kDps 는 화력
          미달이 만든 수라, 그것을 다음 앵커 목표에 나누면 목표가 거짓으로 헐거워진다.
          (실패 행 뒤에 유효 앵커가 오는 순서는 지금 목록엔 없지만, 앵커를 더 끼울 다음 회차가
          이 줄을 다시 읽는다 — 순서 가정에 기대지 않는다.) */
-      if (row.valid) kGuess = row.kDps;                 /* 다음 앵커의 목표에 되먹인다(구 calibrate 와 같은 규칙) */
+      if (row.valid) { kGuess = row.kDps; prevForm = row.formDps; }   /* 다음 앵커의 목표·화력 기준에 되먹인다 */
       rows.push(row);
     }
     const fl = await (async () => {
@@ -1329,6 +1361,16 @@ function calHashOf(cal) {
 }
 function pct(a, b) { return b ? ((a / b) * 100).toFixed(1) + '%' : '—'; }
 function med(v) { const w = v.slice().sort((a, b) => a - b); return w.length ? w[Math.floor(w.length / 2)] : 0; }
+/* ⚑ 199 13회차(12회차 정정10 — FF #7 · **3회차째 미이행분을 여기서 닫는다**) — 짝수 표본에서
+   `med` 는 «상위 한 점» 이라 20시드면 11번째 시드 하나가 판정을 정한다(부지런 최종 dps
+   1.784e41 ↔ 보간 1.717e41 = 3.9% 차). 판정은 회차 간 연속성 때문에 `med` 로 두되,
+   **판정 줄에는 보간 중앙값을 병기**한다 — 두 수가 갈리면 그 자리가 한 시드에 물린 자리다. */
+function medI(v) {
+  const w = v.slice().sort((a, b) => a - b);
+  if (!w.length) return 0;
+  const i = (w.length - 1) / 2, lo = Math.floor(i), hi = Math.ceil(i);
+  return w[lo] + (w[hi] - w[lo]) * (i - lo);
+}
 function q(v, p) { const w = v.slice().sort((a, b) => a - b); return w.length ? w[Math.min(w.length - 1, Math.floor(w.length * p))] : 0; }
 function fmtN(n) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 }); }
 
@@ -1381,8 +1423,10 @@ function writeReport(rep) {
   L.push('');
   L.push('## [A] 보정치 — 실전/수식');
   L.push('');
-  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | 창이 끝난 이유 | 생존(달성/목표) | κ_boss | pump(달성/목표) | 몹 축 | 보스 축 |');
-  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
+  /* 13회차 — 칸 둘 신설: **`pump0`**(되먹임 없는 판정 분모 · 정정3) · **화력비**(직전 유효
+     앵커 대비 · 정정4). 옛 `pump` 도 남긴다 — 회차 간 비교와 재현 경로가 그 칸에 있다. */
+  L.push('| 스테이지 | 실전 DPS | 수식 `stat.dps` | κ_dps | 60초 처치 | 처치 간격 | κ_hp | κ_gold | 보스 실전(초) | 창이 끝난 이유 | 생존(달성/목표) | κ_boss | pump(되먹임 포함) | **pump0(판정)** | **화력비(직전 유효)** | 몹 축 | 보스 축 |');
+  L.push('|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|');
   for (const r of rep.cal.rows) {
     /* 11회차 — pump 가 1e-3 아래로 내려가면 소수점 두 자리는 «0.00» 이라 좌표를 못 읽는다 */
     const pumpTxt = r.pump == null ? '— (10회차 이전 표)' : (r.pump < 0.01 ? r.pump.toExponential(1) : r.pump.toFixed(2));
@@ -1392,7 +1436,14 @@ function writeReport(rep) {
                  : ({ kill: '격파', death: '**플레이어 사망**', cap: '시간 초과(cap)', gone: '사라짐(원인 미상)', none: '보스 안 섬' })[r.bossEndBy] || r.bossEndBy;
     const svTxt = r.survPump == null ? '—' : (r.survPump < 0.01 ? r.survPump.toExponential(1) : r.survPump.toFixed(2))
                  + (r.bossOver != null && r.bossOver > 1.0000001 ? ` (화력 과충 ×${r.bossOver.toExponential(1)})` : '');
-    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${endTxt} | ${svTxt} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${r.valid === false ? '✖ **대역 밖**(실패 프로브)' : '✔'} | ${r.bossValid === false ? '✖ **대역 밖**' : '✔'} |`);
+    const p0Txt = r.pump0 == null ? '— (12회차 이전 표)' : (r.pump0 < 0.01 ? r.pump0.toExponential(1) : r.pump0.toFixed(2));
+    /* 13회차 — 화력비가 1.05 미만이면 «앵커를 끼웠지만 같은 캐릭터» 다. 그 사실이 표에 없으면
+       다음 세대가 또 «창을 줄였다» 고 읽는다(12회차 정정4 가 그렇게 났다). */
+    const brTxt = r.buildRat == null ? '— (첫 유효 앵커)'
+                : `×${r.buildRat.toPrecision(3)}${r.sameBuild ? ' ⚠ **같은 캐릭터**' : ''}`;
+    const badTxt = r.valid === false
+      ? (r.sameBuild ? '✖ **같은 캐릭터**(화력비 < 1.05)' : '✖ **대역 밖**(실패 프로브)') : '✔';
+    L.push(`| ${r.s} | ${fmtN(r.realDps)} | ${fmtN(r.formDps)} | ${r.kDps.toFixed(3)} | ${r.kills} | ${r.tKill == null ? '—' : r.tKill.toFixed(2) + 's'} | ${r.kHp == null ? '—' : r.kHp.toFixed(3)} | ${r.kGold == null ? '—' : r.kGold.toFixed(3)} | ${r.bossSec.toFixed(2)}${r.bossKilled ? '' : ' (미격파)'} | ${endTxt} | ${svTxt} | ${r.kBoss == null ? '—' : r.kBoss.toFixed(3)} | ${pumpTxt} | ${p0Txt} | ${brTxt} | ${badTxt} | ${r.bossValid === false ? '✖ **대역 밖**' : '✔'} |`);
   }
   {
     const bad = (rep.cal.rows || []).filter(r => r.valid === false);
@@ -1453,7 +1504,9 @@ function writeReport(rep) {
     /* 벽 — 199 5회차: 분류는 **기제**(관문 스테이지 정체 = 벽 · 밴드 안 정체 = 멈춤)다.
        구 판정(WALL_FRAC)은 대조 칸으로만 남는다. */
     const BAND = (runs[0] && runs[0].band) || 40;
-    const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band)).length);
+    /* 13회차 — 개수도 잘린 정체를 뺀다(위 `wallsOf` 와 같은 규약). 잘린 개수는 따로 찍는다. */
+    const wallsAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band) && w.trunc !== true).length);
+    const truncAll  = runs.map(r => r.walls.filter(w =>  isWall(w, r.band) && w.trunc === true).length);
     const pausesAll = runs.map(r => r.walls.filter(w => !isWall(w, r.band)).length);
     /* ⚑ 7회차 — 상승면·실오르막도 **활성 자**로 잰다(정정6). 벽시계로 재면 상승면이 로그아웃
        시간을 통째로 삼켜 ③ 의 분자가 부풀고, 분모(달력 총 분)와 함께 두 쪽이 다 오염된다.
@@ -1509,7 +1562,13 @@ function writeReport(rep) {
       : Math.pow(a[a.length - 1] / a[0], 1 / (a.length - 1));
     const TARGET8 = TARGET.slice(0, 8);   /* 9회차 — «옛 자» 줄은 8칸 시절 그대로 얼린다 */
     const SPAN_T8 = gmOf(TARGET8);                         /* 2.754 */
-    const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band));
+    /* ⚑ 13회차(12회차 정정1 · GG 처방 2) — ① 의 자에서 **잘린 정체**(`trunc`)를 뺀다.
+       12회차의 «대충 20/20 이 s600 에 걸려 있다» 는 그 한 줄이 없어서 난 오독이다(45일로
+       늘리자 전 시드가 돌파 — §12-4-1). 잘린 정체는 «그 자리에 벽이 있다» 가 아니라
+       «관측이 끝났다» 는 뜻이라, 적중·개수·간격에 넣으면 창 길이가 점수를 만든다.
+       [D] 표에는 남긴다(§12-1 실패 프로브와 같은 규약 — 재현 경로를 지우지 않는다). */
+    const isTrunc = (w) => w.trunc === true;
+    const wallsOf = (r) => r.walls.filter(w => isWall(w, r.band) && !isTrunc(w));
     /* ⚑ 199 8회차 — ① 의 자를 **네 곳** 고친다(7회차 비평 S·U 독립 일치 · 정정7·9·10).
        7회차까지의 ① 은 «점수를 못 매기는 자» 였고, 5·6·7회차가 세 번 연속 그 위에서 계수를 돌렸다.
          ⓐ **분모가 정책 공통 6칸이었다.** 대충은 첫 로그인 1,260분 · 세션 30활성분이라
@@ -1645,6 +1704,12 @@ function writeReport(rep) {
     L.push('');
     L.push(`_(옛 자 — 8칸 분모·겹쳐 세기·왼쪽 끝 좌표: 적중 ${med(runs.map(hit8Of))}/${tgtN8}`
       + ` · 간격 목표 ×${SPAN_T8.toFixed(3)} · 첫 벽 옛 목표 30분)_`);
+    L.push('');
+    /* 13회차 — 잘린 정체를 뺐다는 사실과 그 개수를 표가 직접 말한다(안 적으면 다음 세대가
+       «벽이 줄었다» 로 읽는다). 잘린 정체가 시드마다 1개면 그것이 창 끝의 구조다. */
+    L.push(`**잘린 정체(관측 끝까지 이어진 관문 정체 — ① 에서 제외) p50 = ${med(truncAll)}개**`
+      + ` (전 시드 합 ${truncAll.reduce((a, b) => a + b, 0)}개 · 판별식 \`w.amin + w.len === r.amin\`)`
+      + ` — 12회차가 이것을 벽으로 세어 «대충은 s600 에 걸려 있다» 고 읽었다(§12-4-1 에서 45일 재측정으로 기각).`);
     L.push('');
     L.push(`벽 개수 p10/p50/p90 = ${q(wallsAll, 0.1)} / ${med(wallsAll)} / ${q(wallsAll, 0.9)}`
       + ` · 밴드 안 멈춤 p50 = ${med(pausesAll)}`
@@ -1837,9 +1902,14 @@ function writeReport(rep) {
          목표를 지나는 날의 실측**이다. 스냅의 `inAll`/`outNS` 로 교차일을 직접 검출하고,
          창 밖(측정 일수 안에 못 지난 시드)은 **말미 구간율 외삽 + (외삽) 표식**으로 찍는다 —
          9회차의 «전(前)엔 보정, 후(後)엔 무보정» 비대칭 자가 이 한 함수로 사라진다. */
-      const crossOf = (pol, mode) => {
+      /* ⚑ 13회차(12회차 FF #9) — 말미 창 `W` 를 **인자로 뺀다.** 12회차가 «W=3 → 199.9 ·
+         7 → 174.2 · 29 → 101.2» 를 본문에만 적었는데, ④ 가 판정 줄이면서 그 창 하나에
+         ±50% 를 먹는다는 사실이 표에 없으면 다음 세대는 174.2 를 단일 실측으로 읽는다.
+         기본값은 옛 식 그대로라 판정 줄의 수는 안 움직인다 — 민감도 행만 늘어난다. */
+      const crossOf = (pol, mode, wOpt) => {
         const runs = rep.policies[pol];
-        const W = Math.max(7, Math.min(30, Math.floor(rep.days / 4)));   /* 말미 구간(일) */
+        const W = wOpt ? Math.max(1, Math.min(rep.days - 1, wOpt))
+                       : Math.max(7, Math.min(30, Math.floor(rep.days / 4)));   /* 말미 구간(일) */
         const vals = [];
         let miss = 0;
         for (const r of runs) {
@@ -1858,7 +1928,7 @@ function writeReport(rep) {
         }
         if (!vals.length) return null;
         const ds = vals.map(x => x.d), ex = vals.filter(x => x.ex).length;
-        return { p50: med(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
+        return { p50: med(ds), p50i: medI(ds), p10: q(ds, 0.1), p90: q(ds, 0.9), ex, n: vals.length, miss, W };
       };
       L.push('## [G] 정책 대조 — ④ 정책 간격 · ③ 순 이동 (손잡이를 돌릴 때마다 같이 본다)');
       L.push('');
@@ -1907,9 +1977,19 @@ function writeReport(rep) {
           L.push(`| **④ 교차일(2,720.5만 · 실측) 〔${nm}〕** | (스냅에 누적 장부 없음 — 10회차 이전 --json) | — | — |`);
           continue;
         }
-        const cell = (x) => x ? `${x.p50.toFixed(1)} [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
+        const cell = (x) => x ? `${x.p50.toFixed(1)} (보간 ${x.p50i.toFixed(1)}) [${x.p10.toFixed(0)}~${x.p90.toFixed(0)}]${x.ex ? ` (외삽 ${x.ex}/${x.n} · 말미 ${x.W}일 구간율)` : ' (전 시드 실측)'}` : '—';
         const ratio = c[0] && c[1] && c[0].p50 > 0 ? (c[1].p50 / c[0].p50).toFixed(3) + ' (대충/부지런)' : '-';
-        L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${nm} · ${rep.days}일 창 · p50 [p10~p90]〕** | ${c.map(cell).join(' | ')} | ${ratio} |`);
+        L.push(`| **④ 교차일(2,720.5만 · 실측 — 판정은 이 줄) 〔${nm} · ${rep.days}일 창 · p50 (보간 med) [p10~p90]〕** | ${c.map(cell).join(' | ')} | ${ratio} |`);
+        /* ⚑ 13회차 — 같은 줄의 **말미 창 민감도**. 외삽 시드가 0 이면 W 가 안 쓰이므로 생략한다
+           (전 시드 실측이면 W 를 흔들어도 같은 수다 — 그 사실 자체가 판정의 강도다). */
+        if (c.some(x => x && x.ex)) {
+          const WS = [3, 7, 14, 29].filter(w => w < rep.days);
+          const scell = (p) => WS.map(w => { const x = crossOf(p, mode, w); return `W${w} ${x ? x.p50.toFixed(1) : '—'}`; }).join(' / ');
+          const sp = pols.map(scell);
+          const first = crossOf(pols[0], mode, WS[0]), last = crossOf(pols[0], mode, WS[WS.length - 1]);
+          const swing = first && last && last.p50 > 0 ? '×' + (first.p50 / last.p50).toFixed(2) : '—';
+          L.push(`| ④ 교차일 — **말미 창 W 민감도**(외삽 시드에만 적용) 〔${nm} · p50〕 | ${sp.join(' | ')} | ${swing} (W${WS[0]}/W${WS[WS.length - 1]} · ${POLICIES[pols[0]].name}) |`);
+        }
       }
       L.push('');
       L.push('_최대 유입 축의 이름 — ' + pols.map(p =>
